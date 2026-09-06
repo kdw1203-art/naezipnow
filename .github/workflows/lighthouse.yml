@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # [968 · 50] 대표 5화면에 단지 상세·공개 노트 상세를 더한다 — 트래픽이 실제로 떨어지는
       # 동적 페이지 둘이 예산 밖에 있었다. URL 은 2026-09-06 sitemap-complexes.xml ·
       # sitemap-notes.xml 의 첫 항목(둘 다 200 확인). 노트가 비공개로 바뀌거나 단지가
