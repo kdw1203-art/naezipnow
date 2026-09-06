@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -9,6 +16,18 @@ import { ThemeToggle } from "./ThemeToggle";
 import { PushSubscribe } from "@/components/PushSubscribe";
 import { Icon } from "./Icon";
 import { getSessionLite } from "@/lib/client/session-lite";
+import { useScrollLock } from "@/lib/client/use-scroll-lock";
+import { isInstalled, trackPwa } from "@/lib/client/pwa-install";
+import {
+  captureInstallPrompt,
+  isIosSafari,
+  requestIosInstallHint,
+  takeDeferredInstallPrompt,
+  useInstallPromptAvailable,
+} from "@/lib/client/pwa-install-prompt";
+
+/** [968 · 36] 시트를 오른쪽(가장자리 쪽)으로 이만큼 끌면 닫힌다 */
+const SWIPE_CLOSE_PX = 60;
 
 /** 모바일 전체 메뉴 — ☰ 트리거 + 우측 슬라이드 글래스 시트 (md:hidden)
  *  GNB 4 대분류 + 서비스·내 계정·고객지원 섹션까지 노출하는 전체 사이트 디렉토리.
@@ -102,14 +121,87 @@ export function MobileMenu() {
     setOpen(false);
   }, [pathname]);
 
+  /* [968 · 35] 배경 스크롤 잠금 — 예전 body.style.overflow="hidden" 은 iOS 사파리가
+     무시해 시트 뒤 페이지가 그대로 스크롤됐다. 공용 훅(body fixed + 위치 복원)으로. */
+  useScrollLock(open);
+
+  /* [968 · 36] 스와이프 닫기 — 시트(오른쪽에서 나온 패널) 위에서 손가락을 오른쪽으로
+     60px 이상 끌면 닫힌다. 세로 이동이 더 크면 목록 스크롤로 보고 손을 뗀다.
+     리스너는 전부 passive(스크롤을 막지 않는다) · 마우스는 제외(터치·펜만). */
+  const swipe = useRef<{ id: number; x: number; y: number; decided: boolean } | null>(null);
+  const onPanelPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse") return;
+    swipe.current = { id: e.pointerId, x: e.clientX, y: e.clientY, decided: false };
+  }, []);
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const el = panelRef.current;
+    if (!el) return;
+    const onMove = (e: PointerEvent) => {
+      const s = swipe.current;
+      if (!s || s.id !== e.pointerId) return;
+      const dx = e.clientX - s.x;
+      const dy = e.clientY - s.y;
+      if (!s.decided) {
+        /* 축 판정: 어느 쪽이든 8px 넘게 움직인 첫 순간에 한 번만 정한다 */
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        s.decided = true;
+        if (Math.abs(dy) > Math.abs(dx)) {
+          swipe.current = null; // 세로 스크롤 — 제스처 포기
+          return;
+        }
+      }
+      if (dx >= SWIPE_CLOSE_PX) {
+        swipe.current = null;
+        setOpen(false);
+      }
+    };
+    const onEnd = () => {
+      swipe.current = null;
+    };
+    el.addEventListener("pointermove", onMove, { passive: true });
+    el.addEventListener("pointerup", onEnd, { passive: true });
+    el.addEventListener("pointercancel", onEnd, { passive: true });
     return () => {
-      document.body.style.overflow = prev;
+      el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerup", onEnd);
+      el.removeEventListener("pointercancel", onEnd);
+      swipe.current = null;
     };
   }, [open]);
+
+  /* [968 · 47] "홈 화면에 추가" — 브라우저가 beforeinstallprompt 를 보내 왔으면(Chromium)
+     그 이벤트로 설치 다이얼로그를 띄우고, iOS 사파리면 공유 시트 안내(IosInstallHint)를
+     연다. 이미 앱으로 실행 중(standalone)이거나 둘 다 아니면 항목을 그리지 않는다 —
+     눌러도 아무 일도 없는 버튼은 만들지 않는다. */
+  const installAvailable = useInstallPromptAvailable();
+  const [iosSafari, setIosSafari] = useState(false);
+  const [standalone, setStandalone] = useState(false);
+  useEffect(() => {
+    captureInstallPrompt();
+    setIosSafari(isIosSafari());
+    setStandalone(isInstalled());
+  }, []);
+  const showInstallItem = !standalone && (installAvailable || iosSafari);
+  const onInstallClick = useCallback(async () => {
+    setOpen(false);
+    const deferred = takeDeferredInstallPrompt();
+    if (deferred) {
+      trackPwa("pwa_install_menu_click", { via: "prompt" });
+      try {
+        await deferred.prompt();
+        const choice = await deferred.userChoice;
+        trackPwa("pwa_install_prompt_result", { outcome: choice.outcome, source: "menu" });
+      } catch {
+        /* 이미 소비된 이벤트 — 조용히 넘긴다(다음 페이지 로드에 다시 온다) */
+      }
+      return;
+    }
+    if (isIosSafari()) {
+      trackPwa("pwa_install_menu_click", { via: "ios-hint" });
+      requestIosInstallHint();
+    }
+  }, []);
 
   /* 항목 48 — 모바일 주 내비게이션인데 ESC·포커스 이동·복원이 전부 없었다.
      열리면 패널로 포커스를 옮기고, ESC 로 닫으며, 닫히면 연 버튼으로 되돌린다.
@@ -189,6 +281,16 @@ export function MobileMenu() {
           <div
             ref={panelRef}
             tabIndex={-1}
+            onPointerDown={onPanelPointerDown}
+            /* [968 · 35] 링크를 누르면 **내비게이션 전에** 닫는다(캡처 단계). 스크롤 잠금
+               해제가 이전 스크롤 위치를 복원하는데, pathname 효과로 닫으면 새 페이지가
+               커밋된 뒤라 새 페이지가 옛 위치로 튄다. 클릭 이벤트 안의 setState 는
+               라우터 전환(transition)보다 먼저 커밋·효과 실행되므로 복원이 옛 페이지에서
+               끝난 뒤 이동한다. */
+            onClickCapture={(e) => {
+              const t = e.target as Element | null;
+              if (t?.closest("a")) setOpen(false);
+            }}
             /* glass-strong(backdrop-filter) 제거 — 패널 배경이 불투명 surface 라
                블러는 보이지 않으면서 비용만 냈다. 그림자로 대체.
                전환은 transform 만(합성기 전용) — 레이아웃·페인트 비용 0. */
@@ -312,6 +414,18 @@ export function MobileMenu() {
                 <div className="grid grid-cols-2 items-center gap-x-1">
                   <ThemeToggle />
                   <PushSubscribe />
+                  {/* [968 · 47] 홈 화면에 추가 — 설치 배너(3일째 방문 조건)를 기다리지 않고
+                      사용자가 직접 누르는 진입점. 설치 앱에서는 숨긴다. */}
+                  {showInstallItem && (
+                    <button
+                      type="button"
+                      onClick={onInstallClick}
+                      className="flex items-center gap-2.5 rounded-[10px] px-3 py-[9px] text-[13px] font-semibold text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)] active:text-primary"
+                    >
+                      <Icon name="square-plus" size={17} />
+                      <span className="truncate">홈 화면에 추가</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

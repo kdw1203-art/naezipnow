@@ -8,10 +8,14 @@
  * 동의한 경우에만 GA4 로더(components/ga4-gtag-loader.tsx)가 싣는다.
  */
 import Link from "next/link";
+import type { CSSProperties } from "react";
+import { usePathname } from "next/navigation";
 import { useCookieConsent } from "./use-cookie-consent";
+import { consentBannerBottom } from "@/lib/client/shell-gates";
 
 export function CookieConsentBanner() {
   const { state, decide } = useCookieConsent();
+  const pathname = usePathname() ?? "/";
   if (state.status !== "undecided") return null;
 
   return (
@@ -21,11 +25,12 @@ export function CookieConsentBanner() {
       /* 제안 웹1(2026-08-03): 데스크탑에서 중앙 하단 배치가 모든 화면의 본문·CTA
          를 가렸다(캡처 6장 전부). md+ 는 우하단 코너 카드로 내리고, 모바일은
          탭바 위 중앙 유지. */
-      /* 모바일6 — 결정 전에는 탭바가 접히므로(TabBar 조기 반환) 88px 띄울
-         이유가 없다. 탭바 자리(bottom 16px)로 내려 하단이 한 층이 된다.
-         md+ 는 탭바가 없어 원래도 무관 — 코너 카드 유지. */
-      className="fixed inset-x-0 z-[70] px-4 md:inset-x-auto md:right-5 md:px-0"
-      style={{ bottom: "max(16px, env(safe-area-inset-bottom, 0px))" }}
+      /* [968 · 40] 예전(모바일6)엔 결정 전 탭바를 접고 배너가 그 자리(bottom 16px)에
+         섰다 — 첫 방문자는 결정 전까지 탭에 손이 안 닿았다. 이제 탭바는 늘 있고
+         배너가 탭바 위에 컴팩트하게 선다(bottom 은 CSS 변수로 — 인라인 값이 md+ 의
+         코너 카드 위치를 덮지 않게 사용자 정의 속성으로 넘긴다). */
+      className="fixed inset-x-0 z-[70] bottom-[var(--nz-consent-bottom)] px-3.5 md:inset-x-auto md:bottom-5 md:right-5 md:px-0"
+      style={{ "--nz-consent-bottom": consentBannerBottom(pathname) } as CSSProperties}
       /* [966] 인쇄 제외 표식 — 고정 클래스가 없어 속성으로 잡는다(globals.css @media print) */
       data-noprint
     >
@@ -34,8 +39,12 @@ export function CookieConsentBanner() {
           UI 다 — 배경을 사실상 불투명(94%)으로 올리고 여백을 줄인다. */}
       {/* [#89] 흰색 고정 배경이 다크에서 회색 글자와 만나 읽을 수 없었다 —
           글래스 토큰(양 테마 정의됨)으로 교체. */}
-      <div className="mx-auto flex max-w-[560px] flex-col gap-2 rounded-2xl border border-line bg-[var(--glass-bg-strong)] p-3.5 shadow-[var(--shadow-md)] backdrop-blur-md md:max-w-[360px]">
-        <p className="text-[12px] leading-[1.55] text-text-1">
+      {/* [968 · 40] 컴팩트: 여백 14→12px, 문구는 두 줄 안(모바일 폭 기준), 버튼은
+          40px 높이 한 줄. 탭바와 같이 서도 하단 1/3 을 넘지 않는다. 블러(backdrop-blur)는
+          걷었다 — 탭바 글래스 위에 블러 층을 하나 더 얹을 이유가 없고(항목 13), 블러
+          없이 80% 유리면 밑 글자가 비치므로 면은 불투명 surface 토큰(양 테마)으로. */}
+      <div className="mx-auto flex max-w-[560px] flex-col gap-2 rounded-2xl border border-line bg-surface p-3 shadow-[var(--shadow-md)] md:max-w-[360px] md:p-3.5">
+        <p className="text-[12px] leading-[1.5] text-text-1">
           내집나우는 서비스 운영에 필요한 필수 쿠키를 사용해요. 이용 통계 분석 쿠키는{" "}
           <b>동의하신 경우에만</b> 사용합니다.{" "}
           <Link href="/legal/privacy" className="font-bold text-primary underline">
@@ -46,14 +55,14 @@ export function CookieConsentBanner() {
           <button
             type="button"
             onClick={() => decide(false)}
-            className="flex-1 rounded-[10px] border border-line bg-surface px-3 py-2 text-[12px] font-bold text-text-1"
+            className="min-h-[40px] flex-1 rounded-[10px] border border-line bg-surface px-3 py-2 text-[12px] font-bold text-text-1"
           >
             필수만 허용
           </button>
           <button
             type="button"
             onClick={() => decide(true)}
-            className="btn-primary flex-1 rounded-[10px] px-3 py-2 text-[12px]"
+            className="btn-primary min-h-[40px] flex-1 rounded-[10px] px-3 py-2 text-[12px]"
           >
             모두 허용
           </button>

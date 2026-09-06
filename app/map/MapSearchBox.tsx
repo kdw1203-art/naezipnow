@@ -233,6 +233,11 @@ export function MapSearchBox({
         <span aria-hidden="true" className="text-[13px] text-text-3">
           ⌕
         </span>
+        {/* [968 · 26] 모바일 글자 크기는 여기서 키우지 않는다 — 16px 은 타입 램프 밖이다.
+            globals.css [968 · 28] 의 전역 규칙(767px 이하 input { font-size: 1rem },
+            특이성 (0,3,1))이 이 text-[13px] 유틸리티(0,1,0)를 이기므로 iOS 포커스 확대가
+            나지 않는다. enterKeyHint 는 키보드 확인 키를 "검색"으로, 자동완성·자동교정은
+            단지명(고유명사)에 방해라 끈다. */}
         <input
           type="search"
           value={query}
@@ -243,6 +248,10 @@ export function MapSearchBox({
           onKeyDown={onKeyDown}
           placeholder={placeholder}
           aria-label="단지·주소 검색"
+          enterKeyHint="search"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
           className="min-w-0 flex-1 bg-transparent text-[13px] text-text-1 outline-none placeholder:text-text-3"
         />
         {query && (

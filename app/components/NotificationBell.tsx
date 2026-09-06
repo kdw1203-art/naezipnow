@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
 import { NOTIFICATIONS_READ_EVENT, readNotificationsReadDetail } from "@/lib/notifications/read-event";
+import { useShellActive } from "@/lib/client/viewport-shell";
 
 /** 탭 복귀 재조회 최소 간격 — 탭을 오갈 때마다 서버를 두드리지 않는다 */
 const REFETCH_MIN_INTERVAL_MS = 30_000;
@@ -15,6 +16,11 @@ const REFETCH_MIN_INTERVAL_MS = 30_000;
 export function NotificationBell({ variant }: { variant: "desktop" | "mobile" }) {
   const [count, setCount] = useState(0);
   const lastFetchAtRef = useRef(0);
+  /* [968 · 41] 헤더는 이 벨을 두 벌(desktop=hidden md:flex · mobile=md:hidden) 마운트한다.
+     보이지 않는 벌까지 마운트마다 /api/notifications/unread-count 를 불러 페이지마다
+     같은 요청이 두 번 나갔다. 실제 뷰포트에 보이는 벌만 조회·리스너를 시작한다
+     (판정·래치 규칙은 lib/client/viewport-shell — 홈 두 벌 섬과 같은 방식). */
+  const active = useShellActive(variant);
 
   const refetch = useCallback((force: boolean) => {
     const now = Date.now();
@@ -30,6 +36,7 @@ export function NotificationBell({ variant }: { variant: "desktop" | "mobile" })
   }, []);
 
   useEffect(() => {
+    if (!active) return;
     /* 첫 조회는 그대로 — 간격 제한 없이 마운트 즉시 */
     refetch(true);
 
@@ -50,7 +57,7 @@ export function NotificationBell({ variant }: { variant: "desktop" | "mobile" })
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onFocus);
     };
-  }, [refetch]);
+  }, [refetch, active]);
 
   /* 모바일25 — 홈 화면 아이콘 배지(App Badging API). PWA 설치 사용자의
      앱 아이콘에 미읽음 수를 싣는다. 지원 브라우저(설치된 PWA 한정)에서만

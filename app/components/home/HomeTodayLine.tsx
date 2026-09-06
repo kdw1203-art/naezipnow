@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { getHomePersonal } from "@/lib/client/home-personal";
+import { useShellActive, type Shell } from "@/lib/client/viewport-shell";
 import type { KpiRegion, KpiTemp } from "./HomeKpiRow";
 
 /* ============================================================
@@ -35,6 +36,9 @@ type Personal = {
 type Slide = { key: string; text: string; href: string };
 
 const ROTATE_MS = 9000; // [950] 6→9초: 한 문장을 읽기 전에 넘어간다는 지적
+/* [968 · 38] 손을 떼거나 포커스가 나간 뒤 이만큼은 더 멈춰 있는다 — 탭한 직후 바로
+   문장이 바뀌면 "내가 누른 게 뭐였지"가 된다. 3초면 방금 읽던 문장을 마저 읽는다. */
+const RESUME_GRACE_MS = 3000;
 
 function regionSentence(r: KpiRegion): string {
   const d = r.delta.replace(/[▲▼]/g, "").trim();
@@ -54,6 +58,7 @@ export function HomeTodayLine({
   baseRate,
   loanRate,
   publicNotes,
+  shell,
 }: {
   region: KpiRegion | null;
   temp: KpiTemp | null;
@@ -61,11 +66,15 @@ export function HomeTodayLine({
   baseRate?: string | null;
   loanRate?: string | null;
   publicNotes?: number | null;
+  /** [968 · 8] 어느 벌인지 — 안 보이는 벌은 개인화 조회·회전 타이머를 시작하지 않는다 */
+  shell?: Shell;
 }) {
+  const active = useShellActive(shell);
   /* 서버는 대표 지역으로 그린다(ISR 캐시 유지). 로그인 사용자는 붙은 뒤
      자기 관심지역으로 바뀐다 — 개인 정보가 공유 캐시에 섞이지 않게. */
   const [mine, setMine] = useState<Personal | null>(null);
   useEffect(() => {
+    if (!active) return;
     let dead = false;
     getHomePersonal<Personal>()
       .then((j) => {
@@ -77,7 +86,7 @@ export function HomeTodayLine({
     return () => {
       dead = true;
     };
-  }, []);
+  }, [active]);
 
   const personalized = Boolean(mine?.primaryRegion && mine?.regionMarket);
   const shown: KpiRegion | null = personalized
@@ -137,13 +146,47 @@ export function HomeTodayLine({
   }, [slides.length, i]);
 
   useEffect(() => {
-    if (slides.length < 2 || paused) return;
+    /* [968 · 8] 안 보이는 벌은 돌리지 않는다 — 폰에서 9초 인터벌 2개 → 1개 */
+    if (!active || slides.length < 2 || paused) return;
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return; // 자동 전환을 원치 않는 설정 — 점으로만 넘긴다
     }
     const t = window.setInterval(() => setI((v) => (v + 1) % slides.length), ROTATE_MS);
     return () => window.clearInterval(t);
-  }, [slides.length, paused]);
+  }, [active, slides.length, paused]);
+
+  /* [968 · 38] 멈춤/재개 — 손이 닿거나(pointerdown·touchstart) 포커스가 들어오면 즉시
+     멈추고, 떼거나 나가면 RESUME_GRACE_MS 뒤에 다시 돈다. 예전엔 hover·focus 만
+     멈췄는데 터치 화면엔 hover 가 없다 — 읽으려고 손을 댄 순간 문장이 바뀌었다. */
+  const graceRef = useRef<number | null>(null);
+  const hold = useCallback(() => {
+    if (graceRef.current !== null) {
+      window.clearTimeout(graceRef.current);
+      graceRef.current = null;
+    }
+    setPaused(true);
+  }, []);
+  const release = useCallback(() => {
+    if (graceRef.current !== null) window.clearTimeout(graceRef.current);
+    graceRef.current = window.setTimeout(() => {
+      graceRef.current = null;
+      setPaused(false);
+    }, RESUME_GRACE_MS);
+  }, []);
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || !active) return;
+    /* touchstart 는 passive 로 — 스크롤을 막지 않는다(React 프롭은 passive 보장이 없다) */
+    el.addEventListener("touchstart", hold, { passive: true });
+    el.addEventListener("touchend", release, { passive: true });
+    el.addEventListener("touchcancel", release, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", hold);
+      el.removeEventListener("touchend", release);
+      el.removeEventListener("touchcancel", release);
+      if (graceRef.current !== null) window.clearTimeout(graceRef.current);
+    };
+  }, [active, hold, release]);
 
   const go = useCallback(
     (next: number) => {
@@ -164,10 +207,14 @@ export function HomeTodayLine({
       /* [946 리브랜딩 · 홈 프리뷰 ③] 흰 카드 → 딥 네이비 + 심볼 워터마크.
          글자는 한지색 — #F6F1E7 on #0B2545 ≈ 14:1. */
       className="brand-navy-card overflow-hidden rounded-2xl px-[18px] py-4"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocusCapture={() => setPaused(true)}
-      onBlurCapture={() => setPaused(false)}
+      onMouseEnter={hold}
+      onMouseLeave={release}
+      /* [968 · 38] 포인터(마우스·펜·터치 공통)와 포커스 — 닿으면 멈춤, 떼면 3초 뒤 재개 */
+      onPointerDown={hold}
+      onPointerUp={release}
+      onPointerCancel={release}
+      onFocusCapture={hold}
+      onBlurCapture={release}
       onKeyDown={(e) => {
         if (e.key === "ArrowRight") go(i + 1);
         if (e.key === "ArrowLeft") go(i - 1);

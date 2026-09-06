@@ -3,13 +3,12 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SwRegister } from "./components/SwRegister";
 import { InstallPrompt } from "./components/InstallPrompt";
-import { IosInstallHint } from "./components/IosInstallHint";
 import { AdSenseLoader } from "./components/AdSenseLoader";
-import { BrandSplash } from "./components/motion/BrandSplash";
-import { PullToRefresh } from "./components/motion/PullToRefresh";
+import { ConditionalIslands } from "./components/ConditionalIslands";
 import { BackToTop } from "./components/BackToTop";
 import { OfflineBanner } from "./components/OfflineBanner";
-import { getAdSenseClient } from "@/lib/ads/adsense-policy";
+import { ADSENSE_EXCLUDED_PATH_PREFIXES, getAdSenseClient } from "@/lib/ads/adsense-policy";
+import { buildAdSenseBootScript } from "@/lib/ads/adsense-boot";
 import { WebVitalsReporter } from "./components/WebVitalsReporter";
 import { ClientErrorReporter } from "./components/ClientErrorReporter";
 import { TrafficRecorder } from "./components/TrafficRecorder";
@@ -26,7 +25,6 @@ import { ViewportGroupTracker } from "./components/ViewportGroupTracker";
 import { MomentProvider } from "./components/motion/MomentProvider";
 import { NavigationProgress } from "./components/motion/NavigationProgress";
 import { PageTransition } from "./components/motion/PageTransition";
-import { DragScroll } from "./components/motion/DragScroll";
 import { RevealOnScroll } from "./components/motion/RevealOnScroll";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -71,7 +69,20 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: "#f7f9fc",
   viewportFit: "cover", // 세이프에어리어(env safe-area-inset-*) 활성화
+  /* [968 · 30] 안드로이드 크롬 108+ 는 기본이 resizes-visual — 가상 키보드가 뜨면
+     레이아웃 뷰포트는 그대로라 `position: fixed` 하단 바(노트 저장 바·단지 액션 바)가
+     키보드 뒤에 깔려 눌리지 않았다. resizes-content 로 레이아웃 뷰포트가 키보드
+     위까지로 줄어 fixed 요소가 키보드 위로 올라온다(iOS 는 원래 이 동작). */
+  interactiveWidget: "resizes-content",
 };
+
+/* [968 · 13] 저사양 판정 — 첫 페인트 전에 html 에 표식을 남긴다(글래스 backdrop-filter
+   를 CSS 가 즉시 끈다: globals.css html[data-lowend]). deviceMemory 는 크로미움만
+   노출(0.25~8 의 2의 거듭제곱)하고 사파리는 undefined → 표식 없음(= 지금과 동일).
+   인라인인 이유: 하이드레이션 뒤 붙이면 그 사이 블러가 한 번 그려진다. nonce 불요 —
+   CSP script-src 가 'unsafe-inline'(폰트 스왑 인라인 스크립트와 같은 조건). */
+const LOWEND_SCRIPT =
+  "(function(){try{var m=navigator.deviceMemory;if(typeof m==='number'&&m<=4)document.documentElement.setAttribute('data-lowend','1');}catch(e){}})();";
 
 /**
  * 페이지 함수 실행 상한(초) — 이 레이아웃 아래 **모든 페이지**에 적용된다.
@@ -98,6 +109,10 @@ export default function RootLayout({
   return (
     <html lang="ko" className="h-full antialiased" suppressHydrationWarning>
       <head>
+        {/* [968 · 13] 저사양(deviceMemory ≤ 4GB) 표식 — 위 LOWEND_SCRIPT 주석 참고.
+            <html> 은 suppressHydrationWarning 이라(테마 class 와 같은 이유) 속성이 붙어도
+            하이드레이션 경고가 없다. */}
+        <script dangerouslySetInnerHTML={{ __html: LOWEND_SCRIPT }} />
         {/* G7 — 폰트 CDN 사전 연결.
             preconnect 없이는 DNS→TCP→TLS 세 왕복이 링크를 만난 뒤에야 시작된다.
             미리 열어 두면 그 왕복이 HTML 파싱과 겹친다. crossOrigin 은 필수 —
@@ -184,23 +199,31 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
-        {/* [960] 구글 애드센스 공식 스니펫 — 소유자 제공(2026-09-03) 그대로 <head> 에.
-            정적 HTML 에 있어야 애드센스 "코드 삽입" 확인과 자동 광고가 동작한다
-            (예전엔 AdSenseLoader 가 세션 판정 뒤 클라이언트에서 끼워 넣어 크롤러가
-            못 볼 수 있었다). 대신 광고 **요청**은 pauseAdRequests=1 로 잠근 채
-            시작하고, AdSenseLoader 가 제외 경로(/payment·/my…)·광고 없는 플랜
-            (pro/expert/enterprise) 판정을 마친 뒤에만 푼다 — 스크립트는 모든
-            페이지에 있지만 광고는 정책이 허용하는 자리에만 나온다. */}
+        {/* [960] 구글 애드센스 — 광고 **요청**은 pauseAdRequests=1 로 잠근 채 시작하고,
+            AdSenseLoader 가 제외 경로(/payment·/my…)·광고 없는 플랜(pro/expert/enterprise)
+            판정을 마친 뒤에만 푼다. 사이트 연결 확인은 메타(google-adsense-account, 위
+            metadata.other)와 ads.txt 가 정적으로 담당한다.
+            [968 · 15] 스크립트 태그는 정적 async 태그 대신 <head> 인라인 부트
+            (lib/ads/adsense-boot)가 넣는다 — 뷰포트 ≥1024px 은 지금처럼 head 파싱 중 즉시
+            (fetchpriority=low 만 추가), <1024px 은 load 뒤 idle 에, 제외 경로는 생략.
+            모바일에서 수동 유닛은 `hidden lg:block` 이라 그려지지도 않는데 스크립트가
+            LCP 자원과 대역폭을 나누던 것을 없앤다(요청 1건이 LCP 뒤로 밀린다).
+            판정에 뷰포트가 필요해 서버(ISR 캐시)에서는 결정할 수 없다 — 그래서 인라인. */}
         <script
           dangerouslySetInnerHTML={{
             __html: "window.adsbygoogle=window.adsbygoogle||[];window.adsbygoogle.pauseAdRequests=1;",
           }}
         />
-        <script
-          async
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(getAdSenseClient() ?? "")}`}
-          crossOrigin="anonymous"
-        />
+        {getAdSenseClient() && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: buildAdSenseBootScript(
+                getAdSenseClient() ?? "",
+                ADSENSE_EXCLUDED_PATH_PREFIXES,
+              ),
+            }}
+          />
+        )}
         {/* S16/G16 — Organization·WebSite JSON-LD (정적 값만, 데이터 페칭 없음) */}
         <SiteJsonLd />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -238,8 +261,6 @@ export default function RootLayout({
                   <NavigationProgress />
                   <PageTransition />
                   <RevealOnScroll />
-                  {/* 가로 스크롤 레일 마우스 드래그(문서 위임·렌더 없음) */}
-                  <DragScroll />
                   {/* 친구 추천 리딤 트리거 (ref_code 쿠키 → 리딤, 렌더 없음) */}
                   <ReferralRedeem />
                   <SwRegister />
@@ -247,15 +268,11 @@ export default function RootLayout({
                       (안 오면 아무것도 렌더하지 않는다). SwRegister 바로 뒤에 둔 건
                       순서 의존이 아니라 읽는 사람 편의 — 둘 다 PWA 관련이다. */}
                   <InstallPrompt />
-                  {/* iOS 사파리는 beforeinstallprompt 가 없어 위 배너가 절대 안 뜬다.
-                      주소창·도구막대를 없애는 유일한 경로("공유 → 홈 화면에 추가")를
-                      안내만 하는 컴포넌트를 따로 둔다. */}
-                  <IosInstallHint />
                   <AdSenseLoader />
-                  {/* [961] 홈 화면 설치 앱으로 열 때만, 세션당 한 번 — 로고가 그려지는 1.4초 */}
-                  <BrandSplash />
-                  {/* [962] 설치 앱에서만 — 당겨서 새로고침(온점 물방울) */}
-                  <PullToRefresh />
+                  {/* [968 · 14] 조건부 섬 넷 — DragScroll(마우스) · IosInstallHint(iOS 사파리) ·
+                      BrandSplash·PullToRefresh(설치 앱) — 은 환경을 한 번 판정한 뒤 맞는 것만
+                      next/dynamic 으로 받아 마운트한다. 모바일 브라우저는 넷 다 안 받는다. */}
+                  <ConditionalIslands />
                   {/* [966] 800px 넘게 내려가면 우하단에 "맨 위로" — /town·/notes 는 글쓰기 FAB 위로 비킨다 */}
                   <BackToTop />
                   {/* [966] 끊기면 탭바 위 알약으로 알리고, 돌아오면 2.5초 뒤 접는다 */}

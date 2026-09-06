@@ -1,4 +1,4 @@
-import { loadRentHistory } from "./section-loaders";
+import { loadRentHistory, withSectionBudget } from "./section-loaders";
 import {
   type ComplexRentHistory,
 } from "@/lib/market/complex-rent";
@@ -34,7 +34,8 @@ export async function ComplexRentSection({
   let hist: ComplexRentHistory | null = null;
   try {
     // [949] 본문이 미리 띄운 같은 인자의 조회를 그대로 받는다(section-loaders)
-    hist = await loadRentHistory(region, name);
+    // [968 · 1] 공유 예산 3초 — 넘기면 아래 catch 로 접힌다(실패와 같은 취급)
+    hist = await withSectionBudget(loadRentHistory(region, name));
   } catch {
     return null; // 곁다리 섹션 — 못 읽으면 접는다 (본문 실거래와 달리 페이지 정체성이 아님)
   }
@@ -45,7 +46,8 @@ export async function ComplexRentSection({
   const wolseTotal = hist.months.reduce((s, m) => s + m.wolseCount, 0);
 
   return (
-    <section className="rise-in-5 mt-6">
+    /* [968 · 7] cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미룬다(page.tsx 주석 참고) */
+    <section className="cv-auto rise-in-5 mt-6">
       <h2 className="mb-2 px-1 t-section text-ink">
         전월세 실거래 이력{" "}
         <span className="t-sub font-medium text-text-3">
@@ -54,7 +56,44 @@ export async function ComplexRentSection({
           {hist.truncated ? " · 표본 상한 도달" : ""}
         </span>
       </h2>
-      <div className="card overflow-x-auto rounded-2xl px-4 py-2">
+      {/* [968 · 6] 767px 이하 — 월별 2행 카드. 예전엔 5열 표(min-w 520px)만 있어 360px
+          화면에서 가로 스크롤이 필요했고 페이드·고정 열도 없었다. 같은 값을 월 단위로
+          접어 보여 준다: 1행 전세 중앙값·건수, 2행 월세(보증금/월세)·건수. md+ 는 아래 표. */}
+      <ul className="card flex flex-col divide-y divide-divider rounded-2xl px-4 md:hidden">
+        {shown.map((m) => (
+          <li key={m.month} className="flex flex-col gap-1 py-2.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="t-sub font-bold text-ink tabular-nums">{fmtYm(m.month)}</span>
+              <span className="t-caption text-text-3">전세 · 월세</span>
+            </div>
+            <div className="flex items-baseline justify-between gap-3 t-body">
+              <span className="shrink-0 text-text-3">전세 중앙값</span>
+              <span className="flex min-w-0 items-baseline gap-2">
+                <span className="font-extrabold text-ink tabular-nums">
+                  {fmtEok(m.jeonseMedianDepositKrw)}
+                </span>
+                <span className="t-sub text-text-2 tabular-nums">
+                  {m.jeonseCount > 0 ? `${m.jeonseCount}건` : "—"}
+                </span>
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between gap-3 t-body">
+              <span className="shrink-0 text-text-3">월세 (보증금/월세)</span>
+              <span className="flex min-w-0 items-baseline gap-2">
+                <span className="font-bold text-ink tabular-nums">
+                  {m.wolseCount > 0
+                    ? `${fmtEok(m.wolseMedianDepositKrw)} / ${fmtManwon(m.wolseMedianMonthlyKrw)}`
+                    : "—"}
+                </span>
+                <span className="t-sub text-text-2 tabular-nums">
+                  {m.wolseCount > 0 ? `${m.wolseCount}건` : "—"}
+                </span>
+              </span>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className="card hidden overflow-x-auto rounded-2xl px-4 py-2 md:block">
         <table className="w-full min-w-[520px] t-body">
           <thead>
             <tr className="border-b border-line text-left t-sub text-text-3">

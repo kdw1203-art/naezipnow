@@ -19,6 +19,7 @@ import { resolveComplexHref } from "@/lib/newui/complex-link";
 import { getOnboardingPersonalization } from "@/lib/onboarding/personalization";
 import { saveLastGood, loadLastGood } from "@/lib/cache/last-good";
 import { formatKrwManwon } from "@/lib/format/krw";
+import { resolveNaverMapClientId } from "@/lib/map/naver-maps-sdk";
 
 /* auth·searchParams 때문에 요청마다 렌더. 지역 시세 마커는
    lib/map/region-market.ts 의 unstable_cache(10분)로 DB 부하를 줄인다. */
@@ -732,13 +733,30 @@ export default async function MapPage({
       ? { ok: true as const, value: markersRun.value }
       : { ok: false as const };
 
+  /* [968 · 23] 지도 SDK Client ID 를 서버에서 내려준다. /api/map/sdk-config 가 주는
+     값과 같은 함수(resolveNaverMapClientId)라 결과도 같다 — 이 페이지는 force-dynamic
+     이라 런타임 env 실값을 읽는다. 공개 값(maps.js URL 에 노출, NCP 도메인 등록으로
+     보호)이므로 HTML 에 실려도 새는 게 없다. 브라우저는 "청크 → sdk-config fetch →
+     maps.js → 타일" 에서 fetch 한 왕복을 통째로 건너뛴다. */
+  const ncpKeyId = resolveNaverMapClientId();
+
   return (
     <>
+      {/* [968 · 23] SDK·타일 호스트 preconnect — React 19 가 <head> 로 끌어올린다.
+          host 는 실제 요청과 CSP(lib/security/content-security-policy.ts) 가 허용하는
+          것만: oapi.map.naver.com(script-src, maps.js) · nrbe.pstatic.net(script-src
+          https://*.pstatic.net 의 SDK 번들 + img-src https: 의 래스터 타일 —
+          scripts/measure-map-overlays.mjs 가 차단 목록에 적어 둔 실측 호스트).
+          crossOrigin 은 붙이지 않는다 — <script src>·<img> 는 비-CORS 연결이라
+          anonymous 로 미리 연 소켓은 재사용되지 않는다. */}
+      <link rel="preconnect" href="https://oapi.map.naver.com" />
+      <link rel="preconnect" href="https://nrbe.pstatic.net" />
       {/* [C003 2026-08-31] 이 페이지에 h1 이 없었다(12페이지 실측 중 유일).
           지도는 시각 UI 라 보이는 제목이 어색하므로 sr-only 로 문서 제목만 준다 —
           검색엔진·스크린리더에게 "이 문서의 주제"를 말하는 최소한의 기본기. */}
       <h1 className="sr-only">지도에서 실거래가 비교</h1>
       <MapClient
+        ncpKeyId={ncpKeyId}
         initialLevel={initialLevel}
       danji={dbLoaded.ok ? dbLoaded.value.items : []}
       regionLabel={dbLoaded.ok ? dbLoaded.value.region : "수도권"}

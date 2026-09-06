@@ -43,7 +43,8 @@ export default function ForgotPasswordPage() {
 
   return (
     <main
-      className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col px-7 pb-8"
+      /* [968 · 31] 100vh → dvh: iOS 주소창이 보일 때 아래 "로그인" 링크가 주소창 뒤로 밀렸다 */
+      className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col px-7 pb-8"
       style={{ paddingTop: "max(20px, env(safe-area-inset-top, 0px))" }}
     >
       <div className="flex justify-end">
@@ -116,6 +117,8 @@ export default function ForgotPasswordPage() {
                 placeholder="가입한 이메일 주소"
                 autoComplete="email"
                 inputMode="email"
+                /* [968 · 29] 한 칸짜리 폼 — Enter 가 곧 제출이라 "완료" */
+                enterKeyHint="done"
                 aria-invalid={Boolean(error)}
                 className="rounded-[10px] border border-line bg-surface px-4 py-3 text-[13px] text-ink outline-none focus:border-primary"
               />

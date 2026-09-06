@@ -1,7 +1,11 @@
 import Link from "next/link";
-import { getServiceSupabase } from "@/lib/supabase/service";
-import { readRelatedTownPosts } from "@/lib/newui/board-posts";
-import { logger } from "@/lib/log";
+import {
+  loadHubInspectionNotes,
+  loadRelatedNews,
+  withSectionBudget,
+  type HubInspectionNoteRow,
+  type HubNewsRow,
+} from "./section-loaders";
 
 /* ============================================================================
    단지 홈 하단 — 이 단지 임장노트 · 관련 기사 · AI 분석 진입
@@ -21,109 +25,11 @@ import { logger } from "@/lib/log";
    실패를 0건처럼 그리지 않는다.
    ========================================================================== */
 
-interface NoteRow {
-  id: string;
-  title: string;
-  region: string | null;
-  visitDate: string | null;
-}
-
-/** 단지명 정규화 — /api/map/complex-notes 와 같은 기준 */
-function normalizeName(s: string): string {
-  return s.replace(/\s+/g, "").replace(/아파트$/, "");
-}
-
-async function loadNotes(
-  complexId: string,
-  name: string,
-): Promise<{ notes: NoteRow[]; failed: boolean }> {
-  const sb = getServiceSupabase();
-  if (!sb) return { notes: [], failed: true };
-  const core = normalizeName(name).replace(/[%_]/g, "");
-  try {
-    // complexId 가 정규 키다. 표기가 달라도 같은 단지로 묶인다.
-    const byId = complexId
-      ? await sb
-          .from("inspection_notes")
-          .select("id, title, region, visit_date")
-          .filter("metadata->>complexId", "eq", complexId)
-          .eq("is_public", true)
-          .order("created_at", { ascending: false })
-          .limit(6)
-      : null;
-    let rows = (byId?.data ?? []) as Array<Record<string, unknown>>;
-
-    // 옛 노트에는 metadata.complexId 가 없다 — 이름으로 한 번 더 찾는다.
-    if (rows.length === 0 && core.length >= 2) {
-      const byName = await sb
-        .from("inspection_notes")
-        .select("id, title, region, visit_date, apt_name")
-        .ilike("apt_name", `%${core}%`)
-        .eq("is_public", true)
-        .order("created_at", { ascending: false })
-        .limit(20);
-      if (byName.error) throw byName.error;
-      rows = ((byName.data ?? []) as Array<Record<string, unknown>>).filter(
-        (r) => normalizeName(String(r.apt_name ?? "")) === core,
-      );
-    }
-
-    return {
-      notes: rows.slice(0, 6).map((r) => ({
-        id: String(r.id),
-        title: String(r.title ?? "임장노트"),
-        region: r.region ? String(r.region) : null,
-        visitDate: r.visit_date ? String(r.visit_date).slice(0, 10) : null,
-      })),
-      failed: false,
-    };
-  } catch (err) {
-    logger.error("[complex] 임장노트 조회 실패", err);
-    return { notes: [], failed: true };
-  }
-}
-
-interface NewsRow {
-  id: string;
-  title: string;
-  href: string;
-  source: string | null;
-  when: string | null;
-}
-
-async function loadNews(name: string, region: string): Promise<NewsRow[]> {
-  try {
-    const posts = await readRelatedTownPosts();
-    const core = normalizeName(name);
-    // 지역명은 "서울 노원구" 처럼 붙어 오므로 토막으로 쪼개 각각 본다.
-    const regionTokens = region
-      .split(/\s+/)
-      .map((t) => t.trim())
-      .filter((t) => t.length >= 2);
-
-    const scored = posts
-      .map((p) => {
-        const hay = `${p.title ?? ""} ${(p.tags ?? []).join(" ")}`.replace(/\s+/g, "");
-        if (core.length >= 2 && hay.includes(core)) return { p, score: 2 };
-        if (regionTokens.some((t) => hay.includes(t))) return { p, score: 1 };
-        return null;
-      })
-      .filter((v): v is { p: (typeof posts)[number]; score: number } => v !== null)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
-
-    return scored.map(({ p }) => ({
-      id: String(p.id),
-      title: String(p.title ?? ""),
-      href: `/town/news/${encodeURIComponent(String(p.id))}`,
-      source: p.sourceName ? String(p.sourceName) : null,
-      when: p.createdAt ? String(p.createdAt).slice(0, 10) : null,
-    }));
-  } catch (err) {
-    logger.error("[complex] 관련 기사 조회 실패", err);
-    return [];
-  }
-}
+/* [968 · 1] loadNotes·loadNews 는 section-loaders.ts(loadHubInspectionNotes·loadRelatedNews)로
+   옮겼다 — 본문이 대표행을 받는 순간 미리 띄우고 여기서는 같은 인자로 받기만 한다
+   (예전엔 이 컴포넌트가 본문 파도 뒤에 조회를 시작해 세 번째 파도였다). */
+type NoteRow = HubInspectionNoteRow;
+type NewsRow = HubNewsRow;
 
 export async function ComplexNotesNewsAi({
   complexId,
@@ -139,9 +45,13 @@ export async function ComplexNotesNewsAi({
   hasPrice: boolean;
   tradeCount: number;
 }) {
+  /* [968 · 1] 공유 예산(3초) — 넘기면 노트는 "못 읽음"(0건으로 그리지 않는다), 기사는 생략.
+     두 로더는 내부에서 실패를 이미 삼키므로 여기서 거절되는 건 예산 초과뿐이다. */
   const [{ notes, failed: notesFailed }, news] = await Promise.all([
-    loadNotes(complexId, name),
-    loadNews(name, region),
+    withSectionBudget(loadHubInspectionNotes(complexId, name)).catch(
+      (): { notes: NoteRow[]; failed: boolean } => ({ notes: [], failed: true }),
+    ),
+    withSectionBudget(loadRelatedNews(name, region)).catch((): NewsRow[] => []),
   ]);
 
   const noteHref = `/notes/new?${new URLSearchParams({
@@ -152,7 +62,8 @@ export async function ComplexNotesNewsAi({
   const analysisHref = `/analysis?complexId=${encodeURIComponent(complexId)}`;
 
   return (
-    <section className="mt-6 grid gap-4 lg:grid-cols-3">
+    /* [968 · 7] cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미룬다(page.tsx 주석 참고) */
+    <section className="cv-auto mt-6 grid gap-4 lg:grid-cols-3">
       {/* ── 이 단지 임장노트 ─────────────────────────────────────────────── */}
       <div className="card rounded-2xl p-5">
         <div className="flex items-baseline justify-between">

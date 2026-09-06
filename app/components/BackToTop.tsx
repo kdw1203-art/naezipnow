@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useScrolledPast } from "@/lib/client/use-scroll-state";
 
 /** 이만큼 내려갔을 때만 뜬다 — 한 화면 남짓은 손가락으로 올리는 게 더 빠르다 */
 const SHOW_AFTER_PX = 800;
@@ -20,25 +20,9 @@ const SHOW_AFTER_PX = 800;
  */
 export function BackToTop() {
   const pathname = usePathname();
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    let raf = 0;
-    const measure = () => {
-      raf = 0;
-      setVisible(window.scrollY > SHOW_AFTER_PX);
-    };
-    /* 스크롤마다 setState 하지 않는다 — 프레임당 한 번 */
-    const onScroll = () => {
-      if (!raf) raf = window.requestAnimationFrame(measure);
-    };
-    measure();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      if (raf) window.cancelAnimationFrame(raf);
-    };
-  }, []);
+  /* [968 · 12] 자체 scroll 리스너 대신 공용 스크롤 상태(헤더·탭바와 리스너 하나를 공유).
+     800px 경계를 넘나들 때만 리렌더한다. */
+  const visible = useScrolledPast(SHOW_AFTER_PX);
 
   const lifted = pathname.startsWith("/town") || pathname.startsWith("/notes");
 

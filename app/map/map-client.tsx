@@ -13,6 +13,14 @@ import Link from "next/link";
 import { Logo } from "../components/Logo";
 import { WelcomeHandoff } from "./WelcomeHandoff";
 import { summarizeMapFilters } from "@/lib/map/filter-summary";
+import {
+  CHROME_COMPACT_MEDIA,
+  CHROME_RESTORE_DELAY_MS,
+  nextChromeState,
+  shouldScheduleRestore,
+  type MapChromeEvent,
+  type MapChromeState,
+} from "@/lib/map/chrome-state";
 import { NaverMap, type MapIdleInfo, type MapMarkerData } from "@/components/map/NaverMap";
 import {
   MapSearchBox,
@@ -61,6 +69,9 @@ import {
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { useCopy } from "@/lib/ui/use-copy";
 import { formatKrwManwon, formatKrwWon } from "@/lib/format/krw";
+
+/** [968 · 25] 모바일 목록 뷰 한 번에 그리는 카드 수 — "더 보기" 마다 이만큼 더 */
+const MAP_LIST_PAGE_SIZE = 40;
 
 /** A1 — 지도 첫 방문 3스텝 안내. 대상이 화면에 없으면 그 스텝은 자동 생략된다. */
 const MAP_TOUR_STEPS: CoachmarkStep[] = [
@@ -332,6 +343,8 @@ interface MapClientProps {
   } | null;
   /** URL `?type=sale|jeonse|monthly` — 매물 레이어 거래유형 */
   initialListingType?: string | null;
+  /** [968 · 23] 서버가 읽은 NCP Client ID(공개 값) — NaverMap 의 sdk-config fetch 를 건너뛴다 */
+  ncpKeyId?: string | null;
 }
 
 /* ===== 서버 클러스터링 (/api/map/clusters) ===== */
@@ -671,6 +684,7 @@ export function MapClient({
   initialComplexFocus = null,
   initialBudget = null,
   initialListingType = null,
+  ncpKeyId = null,
 }: MapClientProps) {
   /* 좌표 단독 공유 URL 은 name 이 "" 다 — 라벨은 기본값으로 폴백(|| 가 의도) */
   const focusedRegion = initialFocus?.name || null;
@@ -981,6 +995,73 @@ export function MapClient({
   /** 모바일 접이식 범례 (item7) — 기본 접힘 */
   const [mobileLegendOpen, setMobileLegendOpen] = useState(false);
 
+  /* ===== [968 · 24] 모바일 지도 크롬 접기 =====
+     640px 폰에서 헤더+검색+줌 탭+필터 칩(≈210px)과 하단 목록 토글·범례·매물 등록이
+     지도 가시 영역을 절반 이하로 만들었다. 손으로 끌기 시작하면 검색·필터·줌 탭을
+     칩 한 줄(검색·필터 N·레이어 N)로 접고 하단 버튼을 가렸다가, 멈춘 뒤 1.2초
+     또는 탭에 다시 편다. 전이 규칙은 lib/map/chrome-state.ts(순수 함수·단위테스트).
+     접힌 동안에도 컨트롤은 DOM 에 남는다(inert) — 없애는 게 아니라 잠깐 비키는 것. */
+  const [chromeState, setChromeState] = useState<MapChromeState>("expanded");
+  const chromeStateRef = useRef<MapChromeState>("expanded");
+  chromeStateRef.current = chromeState;
+  const chromeNarrowRef = useRef(false);
+  const chromeRestoreTimerRef = useRef<number | null>(null);
+  const chromeLockRef = useRef({ filtersExpanded, mobileView });
+  chromeLockRef.current = { filtersExpanded, mobileView };
+  const dispatchChrome = useCallback((evt: MapChromeEvent) => {
+    if (chromeRestoreTimerRef.current !== null) {
+      window.clearTimeout(chromeRestoreTimerRef.current);
+      chromeRestoreTimerRef.current = null;
+    }
+    /* 입력 중(검색창 포커스)에 접으면 blur → 키보드가 닫힌다. 필터 패널·목록 뷰가
+       열려 있을 때도 접지 않는다 — 그 화면들은 크롬이 곧 내용이다. */
+    const ae = typeof document !== "undefined" ? document.activeElement : null;
+    const typing = ae instanceof HTMLInputElement || ae instanceof HTMLTextAreaElement;
+    const ctx = {
+      narrow: chromeNarrowRef.current,
+      locked:
+        typing || chromeLockRef.current.filtersExpanded || chromeLockRef.current.mobileView === "list",
+    };
+    const next = nextChromeState(evt, chromeStateRef.current, ctx);
+    if (next !== chromeStateRef.current) {
+      /* ref 를 즉시 맞춘다 — 리렌더 전에 다음 이벤트(dragstart 직후 idle)가 와도
+         낡은 상태로 판정하지 않게 */
+      chromeStateRef.current = next;
+      setChromeState(next);
+    }
+    if (shouldScheduleRestore(evt, next)) {
+      chromeRestoreTimerRef.current = window.setTimeout(() => {
+        chromeRestoreTimerRef.current = null;
+        dispatchChrome("idle-timeout");
+      }, CHROME_RESTORE_DELAY_MS);
+    }
+  }, []);
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia(CHROME_COMPACT_MEDIA);
+    const sync = () => {
+      chromeNarrowRef.current = mq.matches;
+      if (!mq.matches) dispatchChrome("widen");
+    };
+    sync();
+    mq.addEventListener("change", sync);
+    return () => {
+      mq.removeEventListener("change", sync);
+      if (chromeRestoreTimerRef.current !== null) window.clearTimeout(chromeRestoreTimerRef.current);
+    };
+  }, [dispatchChrome]);
+  const chromeCompact = chromeState === "compact";
+  /* 접기/펴기 전환 — 투명 + 살짝 위로. 감속 모션 설정이면 전환 없이 즉시(motion-safe:).
+     접힌 요소는 inert 로 포커스·탭·접근성 트리에서도 빠진다(보이지 않는데 눌리는 일 방지). */
+  /* Tailwind v4 의 translate-* 는 transform 이 아니라 `translate` 속성이다 — 전환 대상도 그것. */
+  const chromeFoldClass = `motion-safe:transition-[opacity,translate] motion-safe:duration-200 ${
+    chromeCompact ? "-translate-y-2 opacity-0" : ""
+  }`;
+  /* 하단 요소는 아래로 비킨다 */
+  const chromeFoldDownClass = `motion-safe:transition-[opacity,translate] motion-safe:duration-200 ${
+    chromeCompact ? "translate-y-2 opacity-0" : ""
+  }`;
+
   /* ===== C1 시세 색상 오버레이 =====
      한때 있던 히트맵(#A2)은 구 단위 평균이 하드코딩 목업이라 사실 우선 원칙에 따라 걷어냈다.
      그 자리를 국토교통부 실거래(매매) 평단가로 다시 채운 것이 이 오버레이다.
@@ -1226,6 +1307,19 @@ export function MapClient({
       (k) => ranges[k][0] !== null || ranges[k][1] !== null,
     ).length;
 
+  /* [968 · 24] 접힌 칩 행의 "레이어 N" — 주소창 layers= 토큰과 같은 집합(가짜 숫자 금지) */
+  const activeLayerCount = [
+    showPriceOverlay,
+    showListings,
+    showRedevelopment,
+    showSupply,
+    showMyNotes,
+    showRentShare,
+    showAuctions,
+    showSchools,
+    showStations,
+  ].filter(Boolean).length;
+
   /* [967 · 23] 접힌 필터 바에 적을 요약 토막 — 토막 수는 activeCount 와 같다 */
   const filterSummary = useMemo(
     () =>
@@ -1297,6 +1391,20 @@ export function MapClient({
       return m !== undefined && m <= commuteThreshold;
     });
   }, [rangeFilteredDanji, commuteActive, commuteMinutes, commuteThreshold]);
+
+  /* ===== [968 · 25] 모바일 목록 뷰 페이지 — 처음 40개, "더 보기" 마다 +40 =====
+     예전엔 filteredDanji 전체를 한 번에 그렸다(전국 시드 수백 개 → 카드 수백 개 마운트).
+     상한은 "이 filteredDanji 배열에 대한 값"으로 들고 있어, 필터·뷰포트가 바뀌어
+     배열이 새로 만들어지면(useMemo 재계산) 자동으로 40 으로 돌아간다 — effect 로
+     setState 하는 대신 렌더에서 도출(React "props 변경 시 state 조정" 패턴). */
+  const [listPage, setListPage] = useState<{ source: DanjiItem[]; limit: number } | null>(
+    null,
+  );
+  const listLimit =
+    listPage && listPage.source === filteredDanji ? listPage.limit : MAP_LIST_PAGE_SIZE;
+  const visibleDanji =
+    filteredDanji.length > listLimit ? filteredDanji.slice(0, listLimit) : filteredDanji;
+  const listRemaining = filteredDanji.length - visibleDanji.length;
 
   /* ===== 마커 호버 요약 =====
      누르기 전에는 지도에서 값 하나(또는 이름 하나)밖에 알 수 없었다. 그래서 여러
@@ -1872,7 +1980,11 @@ export function MapClient({
       </p>
 
       {/* ===== 지도 레이어 — 정비사업(실적재 공개 자료) ===== */}
-      <div className="flex flex-col gap-1.5 border-t border-[rgba(16,28,54,.08)] pt-2.5">
+      {/* [968 · 24] id — 접힌 칩 행의 "레이어 N" 이 패널을 열고 여기로 스크롤한다 */}
+      <div
+        id="map-layer-section"
+        className="flex flex-col gap-1.5 border-t border-[rgba(16,28,54,.08)] pt-2.5"
+      >
         <div className="t-sub font-bold text-text-3">지도 레이어</div>
         <div className="flex flex-wrap gap-1.5">
           {/* C1 시세 색상 오버레이 토글 — 실거래 평단가 구간별 색 */}
@@ -2475,8 +2587,13 @@ export function MapClient({
     }, 800);
   }, []);
 
+  /* [968 · 24] 손으로 끌기·핀치 시작 — 모바일이면 크롬을 접는다(NaverMap dragstart/pinchstart) */
+  const handleMapInteractionStart = useCallback(() => dispatchChrome("dragstart"), [dispatchChrome]);
+
   const handleMapIdle = useCallback(
     (info: MapIdleInfo) => {
+      /* [968 · 24] 지도가 멈췄다 — 접혀 있었다면 1.2초 뒤 크롬 복원 타이머 */
+      dispatchChrome("idle");
       const bounds = info.bounds;
       if (!bounds) return;
       lastBoundsRef.current = bounds;
@@ -2489,7 +2606,7 @@ export function MapClient({
       // 중심 = 뷰포트 사각형의 중점 (idle 시점 기준)
       syncUrl((bounds.swLat + bounds.neLat) / 2, (bounds.swLng + bounds.neLng) / 2, info.zoom);
     },
-    [fetchListings, scheduleClusterFetch, schedulePopularFetch, fetchFacets, syncUrl],
+    [fetchListings, scheduleClusterFetch, schedulePopularFetch, fetchFacets, syncUrl, dispatchChrome],
   );
 
   // 매매/전세 토글 변경 → 마지막 뷰포트로 즉시 재조회
@@ -3638,7 +3755,18 @@ export function MapClient({
     // dvh 미지원 브라우저는 inset-0(bottom:0)이 폴백으로 풀스크린 유지.
     <div
       ref={mapWrapRef}
-      className="fixed inset-0 h-[100dvh] w-full overflow-hidden bg-gradient-to-br from-line to-line-strong"
+      /* [968 · 26] touch-manipulation: 더블탭 확대를 끄면 브라우저가 탭마다 두 번째 탭을
+         기다리는 300ms 지연이 사라진다(지도 위 칩·버튼 응답). 핀치 줌은 그대로 — 지도
+         SDK 가 자기 캔버스에서 직접 처리한다.
+         [968 · 27] data-ptr-ignore: 지도 루트는 fixed inset-0 라 scrollY 가 늘 0 이다 —
+         설치 앱(standalone)에서 지도를 아래로 끌면 당겨서 새로고침이 72px 에 발동해
+         router.refresh() 로 지도가 통째로 다시 떴다. PullToRefresh 가 이 속성을 보고
+         제스처를 무시한다(/map 은 경로로도 끈다 — 이 속성은 다른 화면에 삽입된 지도용). */
+      data-ptr-ignore=""
+      className="fixed inset-0 h-[100dvh] w-full touch-manipulation overflow-hidden bg-gradient-to-br from-line to-line-strong"
+      /* [968 · 24] 탭(끌지 않고 뗀 터치)은 클릭으로 온다 — 접힌 크롬을 즉시 편다.
+         끌기는 click 을 만들지 않으므로 접힌 채 유지된다. */
+      onClick={chromeCompact ? () => dispatchChrome("tap") : undefined}
     >
       <Suspense fallback={null}>
         <WelcomeHandoff />
@@ -3650,6 +3778,8 @@ export function MapClient({
         level={level}
         rounded={false}
         showControls={false}
+        ncpKeyId={ncpKeyId}
+        onInteractionStart={handleMapInteractionStart}
         /* 모바일22 — 지도 화면에 현재 위치 버튼이 아예 없었다(매물 등록 폼에만
            있었음). 한 손 조작 반경(우하단)·44px·탭바 위. 위치 권한은 버튼을
            누른 순간에만 요청된다(NaverMap 내부 — 자동 요청 없음). */
@@ -3859,16 +3989,73 @@ export function MapClient({
       </div>
 
       {/* ===== 모바일 검색 (md 미만) — 패널 열려 있으면 숨김 ===== */}
+      {/* [968 · 24] 접힌 동안은 투명·inert 로 비킨다(언마운트하지 않는다 — 입력값 유지).
+          감속 모션이면 전환 없이 즉시(motion-safe). */}
       {!selected && !infoComplex && (
         <div
-          className="absolute left-4 right-4 z-40 md:hidden"
+          className={`absolute left-4 right-4 z-40 md:hidden ${chromeFoldClass}`}
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 82px)" }}
+          inert={chromeCompact}
         >
           <MapSearchBox
             variant="floating"
             onSelectComplex={handleSearchSelectComplex}
             onSelectAddress={handleSearchSelectAddress}
           />
+        </div>
+      )}
+
+      {/* ===== [968 · 24] 접힌 크롬 — 칩 한 줄 (md 미만, 끌기 중~멈춘 뒤 1.2초) =====
+           검색·필터·레이어 셋 다 여기서 닿는다: 누르면 크롬을 펴고(검색), 펴면서
+           상세 필터 패널을 연다(필터·레이어 — 레이어 토글은 그 패널 안 "지도 레이어"
+           절에 있다). 숫자는 실제 적용 수(activeCount·activeLayerCount). */}
+      {chromeCompact && !selected && !infoComplex && (
+        <div
+          role="group"
+          aria-label="접힌 지도 컨트롤"
+          className="glass-strong absolute left-4 z-40 flex items-center gap-1 rounded-full p-1 md:hidden motion-safe:animate-[fadeIn_.16s_ease-out]"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 82px)" }}
+        >
+          <button
+            type="button"
+            onClick={() => dispatchChrome("tap")}
+            className="map-chip"
+            aria-label="검색 펼치기"
+          >
+            ⌕ 검색
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              dispatchChrome("tap");
+              setFiltersExpanded(true);
+              setSelectedId(null);
+              setInfoComplex(null);
+            }}
+            className={`map-chip ${activeCount > 0 ? "map-chip-soft" : ""}`}
+            aria-label={`필터 ${activeCount}개 적용 중, 펼치기`}
+          >
+            필터{activeCount > 0 ? ` ${activeCount}` : ""}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              dispatchChrome("tap");
+              setFiltersExpanded(true);
+              setSelectedId(null);
+              setInfoComplex(null);
+              /* 패널이 열린 다음 프레임에 레이어 절로 스크롤 — 패널은 열릴 때 마운트된다 */
+              window.requestAnimationFrame(() => {
+                document
+                  .getElementById("map-layer-section")
+                  ?.scrollIntoView({ block: "nearest" });
+              });
+            }}
+            className={`map-chip ${activeLayerCount > 0 ? "map-chip-soft" : ""}`}
+            aria-label={`레이어 ${activeLayerCount}개 켜짐, 펼치기`}
+          >
+            레이어 {activeLayerCount}
+          </button>
         </div>
       )}
 
@@ -3885,8 +4072,14 @@ export function MapClient({
            (소유자 스크린샷: 시·군·구 알약이 매물 칩을 절반쯤 덮은 상태)
            md 이상은 검색바가 헤더 안으로 들어가 그 레인이 비므로 88 을 쓴다.
            inline style 은 반응형 top 클래스를 덮어쓰므로 top 은 클래스로만 준다. */}
+      {/* [968 · 24] 접힌 동안 투명·inert (md 미만에서만 접힌다).
+          [968 · 27] 가로 스크롤 레일 — 설치 앱의 당겨서 새로고침이 여기서 시작되지 않게. */}
       {!selected && (
-        <div className="scroll-x-hidden-bar absolute left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+176px)] z-30 flex items-center gap-1.5 py-0.5 md:left-[356px] md:right-[240px] md:top-[calc(env(safe-area-inset-top,0px)+88px)] lg:hidden [&>*]:shrink-0">
+        <div
+          data-ptr-ignore=""
+          inert={chromeCompact}
+          className={`scroll-x-hidden-bar absolute left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+176px)] z-30 flex items-center gap-1.5 py-0.5 md:left-[356px] md:right-[240px] md:top-[calc(env(safe-area-inset-top,0px)+88px)] lg:hidden [&>*]:shrink-0 ${chromeFoldClass}`}
+        >
           {filterBar}
         </div>
       )}
@@ -4184,8 +4377,10 @@ export function MapClient({
       {/* ===== 줌 레벨 탭 (xl 미만 — xl 이상은 헤더에 표시) =====
            지도 위 플로팅 판은 우측 마커 라벨 위에 뜬다. 넓은 화면은 헤더로
            올렸고(위 헤더 블록), 이 판은 헤더에 자리가 없는 폭에서만 남는다. */}
+      {/* [968 · 24] 모바일 접힘 대상 — 줌 탭도 상단 크롬(128~166 레인)이다 */}
       <div
-        className="glass absolute right-5 z-30 mt-9 flex items-center gap-0.5 rounded-full p-1 md:mt-0 md:translate-y-9 xl:hidden"
+        inert={chromeCompact}
+        className={`glass absolute right-5 z-30 mt-9 flex items-center gap-0.5 rounded-full p-1 md:mt-0 md:translate-y-9 xl:hidden ${chromeFoldClass}`}
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 92px)" }}
       >
         <ZoomTabButtons zoom={zoom} onSelect={handleZoomTab} />
@@ -4398,7 +4593,9 @@ export function MapClient({
               className="flex flex-1 flex-col gap-2 overflow-y-auto px-4"
               style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 96px)" }}
             >
-              {filteredDanji.map((d) => (
+              {/* [968 · 25] 처음 40개만 + "더 보기". 각 카드는 .cv-auto(content-visibility:
+                  auto, globals.css [968 · 7]) — 스크롤 밖 카드는 레이아웃·페인트를 미룬다. */}
+              {visibleDanji.map((d) => (
                 <button
                   key={d.id}
                   type="button"
@@ -4406,7 +4603,7 @@ export function MapClient({
                     selectDanji(d.id);
                     setMobileView("map"); // 상세 패널이 지도 위에 뜨므로 지도로 복귀
                   }}
-                  className="card flex flex-col gap-1.5 rounded-[14px] bg-surface px-4 py-3.5 text-left"
+                  className="cv-auto card flex flex-col gap-1.5 rounded-[14px] bg-surface px-4 py-3.5 text-left"
                 >
                   <div className="flex items-center justify-between">
                     <div className="t-body font-bold text-ink">{d.name}</div>
@@ -4419,6 +4616,20 @@ export function MapClient({
                   </div>
                 </button>
               ))}
+              {listRemaining > 0 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setListPage({
+                      source: filteredDanji,
+                      limit: listLimit + MAP_LIST_PAGE_SIZE,
+                    })
+                  }
+                  className="btn-soft mt-1 rounded-[14px] px-4 py-3 t-body font-bold"
+                >
+                  더 보기 ({listRemaining.toLocaleString("ko-KR")}개 남음)
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -4427,11 +4638,13 @@ export function MapClient({
       {/* 모바일 지도↔목록 토글 (탭바 위 플로팅) */}
       {/* 상세 필터 패널이 열려 있으면 숨긴다 — 패널이 이 버튼(131~271 × 737~778)
           위에 그대로 덮여(실측 140×41px) 눌리지 않는다. */}
+      {/* [968 · 24] 끌기 중엔 아래로 비킨다(inert) — 멈추면 1.2초 뒤 제자리 */}
       {!selected && !filtersExpanded && (
         <button
           type="button"
+          inert={chromeCompact}
           onClick={() => setMobileView((v) => (v === "map" ? "list" : "map"))}
-          className="glass-strong absolute left-1/2 z-40 -translate-x-1/2 rounded-full px-5 py-2.5 t-body font-extrabold text-ink shadow-[0_8px_22px_rgba(16,28,54,.2)] md:hidden"
+          className={`glass-strong absolute left-1/2 z-40 -translate-x-1/2 rounded-full px-5 py-2.5 t-body font-extrabold text-ink shadow-[0_8px_22px_rgba(16,28,54,.2)] md:hidden ${chromeFoldDownClass}`}
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 96px)" }}
         >
           {mobileView === "map" ? "☰ 목록으로 보기" : "🗺 지도로 보기"}
@@ -4814,9 +5027,11 @@ export function MapClient({
            버튼(638~748)의 왼쪽 26px 을 덮었다(실측 26×43px). 패널이 떠 있는
            동안은 lg 이상에서만 둔다 — 덮인 버튼은 눌리지 않으면서 눌릴 것처럼
            보인다. lg 에서는 패널이 200~500 이라 겹치지 않는다. */
+        /* [968 · 24] 모바일 끌기 중엔 비킨다 — md 이상에서는 chromeCompact 가 늘 false */
+        inert={chromeCompact}
         className={`btn-primary btn-cta absolute right-5 z-30 items-center gap-1.5 rounded-full px-4 py-3 text-[13px] font-extrabold text-white shadow-[0_10px_28px_rgba(29,79,216,.42)] ${
           filtersExpanded ? "hidden lg:flex" : "flex"
-        }`}
+        } ${chromeFoldDownClass}`}
         style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 220px)" }}
       >
         <span className="text-[15px] leading-none">＋</span>
@@ -4897,7 +5112,9 @@ export function MapClient({
            통째로 덮어(실측 57×30px) 범례 토글이 보이지도 눌리지도 않는다. */}
       {!filtersExpanded && (
       <div
-        className="absolute left-4 z-30 flex flex-col items-start gap-1.5 md:hidden"
+        /* [968 · 24] 끌기 중엔 비킨다 — 범례가 열려 있어도 같이(읽는 중이면 탭으로 즉시 복귀) */
+        inert={chromeCompact}
+        className={`absolute left-4 z-30 flex flex-col items-start gap-1.5 md:hidden ${chromeFoldDownClass}`}
         style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 88px)" }}
       >
         {mobileLegendOpen && (

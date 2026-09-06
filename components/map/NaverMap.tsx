@@ -213,6 +213,18 @@ interface NaverMapProps {
   declutter?: boolean;
   /** 라벨 최대 개수(0 이하면 상한 없음). 겹치지 않아도 100개를 읽지는 않는다. */
   declutterMaxLabels?: number;
+  /**
+   * [968 · 23] 서버가 내려준 NCP Client ID(공개 값 — maps.js URL 에 그대로 노출된다).
+   * 있으면 /api/map/sdk-config fetch 를 건너뛰어 "청크 → fetch → maps.js → 타일"
+   * 4단 직렬이 3단이 된다. 없으면(HomeMiniMap 등 다른 화면) 예전처럼 fetch 로 푼다.
+   */
+  ncpKeyId?: string | null;
+  /**
+   * [968 · 24] 사용자가 손으로 지도를 움직이기 시작했을 때(dragstart·pinchstart).
+   * 프로그램적 setCenter/setZoom 은 이 이벤트를 내지 않는다 — 모바일 크롬 접기의
+   * 입력이라, 사람이 끌 때만 접혀야 한다.
+   */
+  onInteractionStart?: () => void;
 }
 
 /** naver.maps.Circle 최소 인터페이스 */
@@ -250,10 +262,17 @@ export function NaverMap({
   onMarkerHover,
   declutter = false,
   declutterMaxLabels = 0,
+  ncpKeyId = null,
+  onInteractionStart,
 }: NaverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
+  const onInteractionStartRef = useRef(onInteractionStart);
+  onInteractionStartRef.current = onInteractionStart;
+  /* SDK 로드 effect 는 마운트에 한 번만 돈다 — prop 은 ref 로 읽어 deps 를 늘리지 않는다 */
+  const ncpKeyIdRef = useRef(ncpKeyId);
+  ncpKeyIdRef.current = ncpKeyId;
 
   /* 모바일4 — 폴백 확정을 부모에게 알린다(성공 로드로 회복되면 false).
      render 중 부모 setState 금지라 effect 로 미룬다. */
@@ -319,6 +338,10 @@ export function NaverMap({
     // 런타임 Client ID 우선 — 빌드 시 env 마스킹("[SENSITIVE]")으로 번들에
     // 폴백 상수가 박혀도, 서버 런타임의 실값(/api/map/sdk-config)으로 로드한다.
     const resolveRuntimeClientId = async (): Promise<string> => {
+      /* [968 · 23] 서버 컴포넌트가 prop 으로 실값을 내려줬으면 왕복 없이 바로 쓴다.
+         형식 검사는 fetch 경로와 동일 — 플레이스홀더("[SENSITIVE]")는 거른다. */
+      const fromProp = ncpKeyIdRef.current?.trim();
+      if (fromProp && /^[a-z0-9]{6,24}$/i.test(fromProp)) return fromProp;
       try {
         const res = await fetch("/api/map/sdk-config", { cache: "force-cache" });
         if (res.ok) {
@@ -520,6 +543,13 @@ export function NaverMap({
     };
 
     maps.Event.addListener(map, "idle", emit);
+
+    /* [968 · 24] 사람이 지도를 움직이기 시작하는 순간 — 끌기(dragstart)와 두 손가락
+       확대(pinchstart)만. zoomstart 는 ＋/－ 버튼·setZoom 에도 오므로 제외한다.
+       리스너는 idle 과 같은 이유로 한 번만 붙이고, 쓸지 말지는 ref 가 정한다. */
+    const emitInteractionStart = () => onInteractionStartRef.current?.();
+    maps.Event.addListener(map, "dragstart", emitInteractionStart);
+    maps.Event.addListener(map, "pinchstart", emitInteractionStart);
   }, [loaded]);
 
   // 반경 원 오버레이(C3) — circle prop 있을 때만 생성/갱신, 없으면 제거. 기존 지도엔 영향 없음.
@@ -1020,6 +1050,9 @@ export function NaverMap({
        풀릴 때의 바닥이다 — 이걸 빼면 그런 자리에서 다시 0 이 된다.
        바깥 상자의 min-h 는 CLS 방어로 그대로 둔다. */
     <div
+      /* [968 · 27] 지도 위의 끌기는 지도 것 — 설치 앱의 당겨서 새로고침(PullToRefresh)이
+         홈 미니맵·정비사업 등 문서 맨 위(scrollY 0)에 놓인 지도에서 발동하지 않게. */
+      data-ptr-ignore=""
       className={cn(
         "relative h-full w-full min-h-[200px] overflow-hidden",
         rounded && "rounded-2xl",

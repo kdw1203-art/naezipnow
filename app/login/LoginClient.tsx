@@ -390,7 +390,9 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
 
   return (
     <main
-      className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col px-7 pb-8"
+      /* [968 · 31] min-h-screen(100vh) → min-h-dvh: iOS 주소창이 보일 때 100vh 는 실제
+         화면보다 커서 아래 링크가 주소창 뒤로 밀렸다 */
+      className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col px-7 pb-8"
       style={{ paddingTop: "max(20px, env(safe-area-inset-top, 0px))" }}
     >
       <div className="flex justify-end">
@@ -491,6 +493,10 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
         >
           {/* [961] 떠오르는 라벨(인터랙션 라이브러리 03) — placeholder 가 아니라 실제 <label>
               이라 접근 가능한 이름이 그대로 남고(항목 47), 입력이 시작되면 위로 올라간다. */}
+          {/* [968 · 29] 키보드 힌트 — 이메일은 "다음"(Enter 로 비밀번호 칸 이동), 비밀번호는
+              "완료"(제출). 힌트만 붙이면 Enter 가 폼을 바로 제출해 빈 비밀번호로 실패하므로
+              이메일 칸의 Enter 는 다음 칸으로 포커스를 옮긴다. inputMode="email" 은
+              @ 가 있는 자판. */}
           <div className="njn-field">
             <input
               id="login-email"
@@ -499,6 +505,13 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
               onChange={(e) => setEmail(e.target.value)}
               placeholder=" "
               autoComplete="email"
+              inputMode="email"
+              enterKeyHint="next"
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+                e.preventDefault();
+                document.getElementById("login-password")?.focus();
+              }}
             />
             <label htmlFor="login-email">이메일</label>
           </div>
@@ -510,6 +523,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
               onChange={(e) => setPassword(e.target.value)}
               placeholder=" "
               autoComplete="current-password"
+              enterKeyHint="done"
             />
             <label htmlFor="login-password">비밀번호</label>
           </div>

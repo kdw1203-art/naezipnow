@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useScrollLock } from "@/lib/client/use-scroll-lock";
+import { decideSwipeAxis, SHEET_AXIS_SLOP, shouldCloseSheet } from "@/lib/client/swipe-gesture";
 
 /**
  * 공용 모달 오버레이 (#227).
@@ -102,20 +104,76 @@ export function Modal({
      함께 `data-modal-open` 을 붙인다: 이 오버레이는 화면 전체를 덮으므로
      그 아래 배너(앱 설치 안내 등)는 보이기만 하고 눌리지 않는다. 배너 쪽이
      "지금 위에 모달이 있다"를 알 방법이 필요해서 body 에 표식을 남긴다.
-     여러 모달이 겹칠 수 있으니 열린 개수를 세서 마지막 하나가 닫힐 때 지운다. */
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const depth = Number(document.body.dataset.modalOpen ?? "0") + 1;
-    document.body.dataset.modalOpen = String(depth);
-    return () => {
-      document.body.style.overflow = prev;
-      const next = Number(document.body.dataset.modalOpen ?? "1") - 1;
-      if (next > 0) document.body.dataset.modalOpen = String(next);
-      else delete document.body.dataset.modalOpen;
-    };
-  }, [open]);
+     여러 모달이 겹칠 수 있으니 열린 개수를 세서 마지막 하나가 닫힐 때 지운다.
+     [968 · 35] body.style.overflow 는 iOS Safari 가 무시한다 — 공용 훅(body fixed +
+     top 복원)으로 바꿨다. `data-modal-open` 계약은 훅의 markModal 이 그대로 지킨다. */
+  useScrollLock(open, { markModal: true });
+
+  /* [968 · 36] 바텀시트 끌어서 닫기 — 핸들(상단 44px 띠)에서 시작한 포인터만 본다.
+     시트 본문에서 시작한 끌기는 본문 스크롤 몫이라 건드리지 않는다.
+     축은 8px 에서 한 번만 정하고(가로면 무시), 아래로 60px 넘게 끌고 놓으면 닫힌다.
+     끌리는 동안은 translateY 로 손가락을 따라가고(감속 모션 설정이면 생략), 임계
+     미만이면 제자리로 돌아간다. 상태로 다시 그리지 않고 ref 로 style 만 만진다 —
+     move 마다 리렌더하면 저가 기기에서 손가락이 시트보다 앞서간다. */
+  const drag = useRef<{
+    id: number;
+    x: number;
+    y: number;
+    axis: "x" | "y" | null;
+    follow: boolean;
+  } | null>(null);
+
+  const setPanelOffset = (dy: number, animate: boolean) => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    panel.style.transition = animate ? "transform 180ms ease-out" : "";
+    panel.style.transform = dy > 0 ? `translateY(${dy}px)` : "";
+  };
+
+  const onHandlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    let follow = true;
+    try {
+      follow = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch {
+      follow = true;
+    }
+    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, axis: null, follow };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* 캡처를 못 받아도 핸들 위에서의 끌기는 그대로 동작한다 */
+    }
+  };
+
+  const onHandlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (d.axis === null) {
+      d.axis = decideSwipeAxis(dx, dy, SHEET_AXIS_SLOP);
+      if (d.axis === "x") {
+        drag.current = null;
+        return;
+      }
+      if (d.axis === null) return;
+    }
+    if (d.follow) setPanelOffset(dy, false);
+  };
+
+  const endHandleDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    drag.current = null;
+    const dy = e.clientY - d.y;
+    if (shouldCloseSheet(d.axis, dy)) {
+      setPanelOffset(0, false);
+      handleClose();
+      return;
+    }
+    setPanelOffset(0, d.follow);
+  };
 
   // 열릴 때 패널로 포커스를 옮기고, 닫히면 원래 버튼으로 돌려준다.
   useEffect(() => {
@@ -132,6 +190,9 @@ export function Modal({
 
   return createPortal(
     <div
+      /* [968 · 27] 오버레이 위에서는 body 가 잠겨 scrollY 가 늘 0 — 설치 앱의 당겨서
+         새로고침이 배경·시트 어디를 끌어도 시작하지 않게 한다. */
+      data-ptr-ignore=""
       className="fixed inset-0 flex items-end justify-center bg-[rgba(16,24,40,.45)] backdrop-blur-[2px] sm:items-center"
       style={{ zIndex: MODAL_Z }}
       onMouseDown={(e) => {
@@ -153,9 +214,26 @@ export function Modal({
            베타 안내 모달의 버튼 두 개가 아래 여백 20px 로 끝나 14px 이 인디케이터
            안에 들어가 있었다(390x844, inset-bottom 34).
            sm 이상은 `items-center` 로 가운데 뜨므로 인셋을 더할 이유가 없다 —
-           더하면 안 붙은 쪽에 빈 띠만 생긴다. */
-        className="modal-in max-h-[90vh] w-full overflow-y-auto rounded-t-3xl bg-surface p-5 pb-[calc(20px+env(safe-area-inset-bottom,0px))] outline-none sm:rounded-3xl sm:pb-5"
+           더하면 안 붙은 쪽에 빈 띠만 생긴다.
+           [968 · 35] 90vh → 90dvh: iOS 주소창이 보일 때 vh 는 실제 화면보다 커서 시트
+           바닥 버튼이 툴바 뒤로 들어갔다.
+           [968 · 36] 모바일은 위 여백을 핸들(pt-0 + 핸들 44px)에게 준다 — p-5 의 위쪽
+           20px 자리에 핸들 띠가 들어가고 sm 이상은 종전 p-5 그대로. */
+        className="modal-in max-h-[90dvh] w-full overflow-y-auto rounded-t-3xl bg-surface p-5 pt-0 pb-[calc(20px+env(safe-area-inset-bottom,0px))] outline-none sm:rounded-3xl sm:pt-5 sm:pb-5"
       >
+        {/* [968 · 36] 끌기 핸들 — 44px 높이의 띠 전체가 포인터 영역, 가운데 막대는 장식.
+            touch-none: 핸들 위에서는 브라우저 스크롤을 끄고 우리가 손가락을 본다(시트
+            본문은 그대로 스크롤된다). sm 이상은 가운데 뜨는 대화상자라 핸들이 없다. */}
+        <div
+          aria-hidden="true"
+          onPointerDown={onHandlePointerDown}
+          onPointerMove={onHandlePointerMove}
+          onPointerUp={endHandleDrag}
+          onPointerCancel={endHandleDrag}
+          className="-mx-5 flex h-11 touch-none cursor-grab select-none items-center justify-center sm:hidden"
+        >
+          <span className="h-1 w-10 rounded-full bg-line-strong" />
+        </div>
         {children}
       </div>
     </div>,

@@ -2,9 +2,10 @@
   "name": "내집나우 — 임장노트 플랫폼",
   "short_name": "내집나우",
   "description": "3분 기록 → AI 정리 → 지도 비교. 부동산 임장노트 플랫폼 내집나우.",
+  "id": "/",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#0B2545",
   "theme_color": "#0B2545",
   "lang": "ko",
@@ -34,6 +35,22 @@
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/screenshot-narrow.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "내집나우 홈 — 단지 검색과 이번 주 시장 온도"
+    },
+    {
+      "src": "/icons/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "내집나우 홈 — 단지 검색·시장 온도·임장노트 AI 정리"
     }
   ],
   "shortcuts": [

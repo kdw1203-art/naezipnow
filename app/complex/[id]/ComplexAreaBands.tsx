@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { loadAreaBands } from "./section-loaders";
-import { logger } from "@/lib/log";
+import { loadAreaBands, logSectionFailure, withSectionBudget } from "./section-loaders";
 import { formatKrwManwon } from "@/lib/format/krw";
 
 /* D5 — 면적대별 시세표 허브 승격. market_transactions 실거래 면적 구간별 최근가·평균가.
@@ -28,10 +27,11 @@ export async function ComplexAreaBands({
   /** 상단 배치 시 여백·패딩을 줄여 밀도 확보 */
   compact?: boolean;
 }) {
-  const bands = await loadAreaBands(complexId).then(
+  /* [968 · 1] 공유 예산 3초 — 넘기면 아래 실패 갈래("불러오지 못했어요")로 간다 */
+  const bands = await withSectionBudget(loadAreaBands(complexId)).then(
     (data) => ({ ok: true as const, data }),
     (e: unknown) => {
-      logger.error("[complex] 면적대별 시세 조회 실패", e);
+      logSectionFailure("면적대별 시세", e);
       return { ok: false as const };
     },
   );

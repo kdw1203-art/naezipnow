@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
+import { getSessionLite } from "@/lib/client/session-lite";
 
 /* ============================================================
    최근 본 단지 (호갱노노 벤치마크 — 재방문 동선 단축)
@@ -89,8 +90,17 @@ function fetchServerRecents(): Promise<{ items?: RecentComplex[] } | null> {
   if (serverRecentsCache && Date.now() - serverRecentsCache.at < SERVER_RECENTS_TTL_MS) {
     return serverRecentsCache.promise;
   }
-  const promise = fetch("/api/me/recent-complexes", { cache: "no-store" })
-    .then((r) => (r.ok ? (r.json() as Promise<{ items?: RecentComplex[] }>) : null))
+  /* [968 · 8] 세션을 먼저 본다 — 비로그인에게 서버는 어차피 `{ items: [] }` 를 돌려주므로
+     요청 자체가 낭비였다(게스트 홈마다 1회). 세션 조회는 헤더가 이미 하고 모듈 캐시를
+     공유하니 요청이 늘지 않는다. 비로그인 결과(null)는 캐시하지 않는다 — 로그인 직후
+     같은 페이지 수명 안에서 다시 시도할 수 있게. */
+  const promise = getSessionLite()
+    .then((s) => {
+      if (!s?.user?.email) return null;
+      return fetch("/api/me/recent-complexes", { cache: "no-store" }).then((r) =>
+        r.ok ? (r.json() as Promise<{ items?: RecentComplex[] }>) : null,
+      );
+    })
     .catch(() => null)
     .then((j) => {
       if (j === null && serverRecentsCache?.promise === promise) serverRecentsCache = null;
@@ -108,7 +118,11 @@ function fetchServerRecents(): Promise<{ items?: RecentComplex[] } | null> {
  * 레포 어디에도 없는 상태였다. 홈 "이어서 보기" 패널이 같은 데이터를 쓰도록
  * 훅으로 빼서, 읽기 경로를 실제로 사용자에게 연결한다.
  */
-export function useRecentComplexes(): {
+export function useRecentComplexes(
+  /** [968 · 8] false 면 읽기·병합을 시작하지 않는다 — 홈의 안 보이는 벌(모바일/데스크톱
+      섹션 중 뷰포트에 없는 쪽)이 로컬 읽기·서버 조회를 반복하지 않게. 기본 true. */
+  enabled = true,
+): {
   items: RecentComplex[];
   /** 서버 병합 응답 전인지 — 빈 목록과 "아직 못 불러옴"을 구분하기 위함 */
   loading: boolean;
@@ -118,6 +132,7 @@ export function useRecentComplexes(): {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!enabled) return;
     const local = readRecents();
     setItems(local);
     // B8 — 로그인 사용자는 서버 기록과 병합(크로스디바이스). 최신순·id 중복 제거.
@@ -142,7 +157,7 @@ export function useRecentComplexes(): {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [enabled]);
 
   const remove = (id: string) => {
     serverRecentsCache = null; // [967 · 27] 지운 항목이 캐시에서 되살아나지 않게

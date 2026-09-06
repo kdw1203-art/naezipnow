@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   FALLBACK_BOTTOM,
   bottomAboveTabBar,
@@ -12,6 +12,12 @@ import {
   rememberDismiss,
   trackPwa,
 } from "@/lib/client/pwa-install";
+import {
+  captureInstallPrompt,
+  subscribeInstallPrompt,
+  getDeferredInstallPrompt,
+  takeDeferredInstallPrompt,
+} from "@/lib/client/pwa-install-prompt";
 
 /**
  * G9 — PWA 설치 프롬프트
@@ -36,12 +42,6 @@ import {
  *   Chromium 의 판정만 따른다 — 두 경로가 서로의 조건을 넘보지 않는다.
  */
 
-/** Chromium 전용 이벤트라 lib.dom 타입에 없다. 필요한 두 멤버만 좁혀서 선언한다. */
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
-};
-
 /**
  * 닫으면 30일간 다시 안 띄운다.
  * 이벤트는 페이지를 열 때마다 다시 발생하므로, 기억하지 않으면 닫아도 다음 방문에
@@ -52,20 +52,19 @@ const DISMISS_KEY = "nuguzip:pwa-install-dismissed-at";
 export function InstallPrompt() {
   const [visible, setVisible] = useState(false);
   const [bottom, setBottom] = useState(FALLBACK_BOTTOM);
-  const deferredRef = useRef<BeforeInstallPromptEvent | null>(null);
-  /* 화면 전체를 덮는 모달이 열려 있는 동안에는 배너를 내린다.
-     2026-07-28: 홈의 클로즈 베타 안내 모달이 이 배너 위를 덮으면서 "추가하기"가
-     보이는데 눌리지 않는 상태가 됐다(E2E 가 pointer interception 으로 잡음).
-     보이지만 못 누르는 컨트롤은 없는 것보다 나쁘다 — 모달이 닫히면 다시 뜬다.
-     표식은 ui/Modal 이 body 에 남긴다(data-modal-open). */
+  /* 화면 전체를 덮는 모달(ui/Modal · 소프트 가입 등)이 열려 있는 동안에는 배너를 내린다 —
+     보이지만 못 누르는 컨트롤은 없는 것보다 나쁘다. 표식은 ui/Modal 이 body 에 남긴다
+     (data-modal-open). [968 · 47] 이 규칙의 계기였던 홈 베타 "모달"은 인라인 배너가 돼
+     더는 겹치지 않는다 — 옵저버는 배너가 **떠 있는 동안만** 단다(늘 도는 옵저버 하나 삭감). */
   const [modalOpen, setModalOpen] = useState(false);
   useEffect(() => {
+    if (!visible) return;
     const read = () => setModalOpen(document.body.dataset.modalOpen != null);
     read();
     const observer = new MutationObserver(read);
     observer.observe(document.body, { attributes: true, attributeFilter: ["data-modal-open"] });
     return () => observer.disconnect();
-  }, []);
+  }, [visible]);
 
   /* 위치는 탭바를 실제로 재서 정한다(lib/client/pwa-install) — 상수를 박으면
      탭바 디자인이 바뀔 때 배너만 조용히 겹친다. */
@@ -76,11 +75,22 @@ export function InstallPrompt() {
     /* [개선 #14] 오늘 방문을 기록 — 3일째 방문부터 권한다(아래 가드) */
     recordVisitDay();
 
-    const onBeforeInstallPrompt = (e: Event) => {
-      /* 기본 동작(브라우저 자체 미니 인포바)을 막고 이벤트를 쥐고 있는다.
-         쥐고 있지 않으면 나중에 prompt() 를 호출할 방법이 없다. */
-      e.preventDefault();
-      deferredRef.current = e as BeforeInstallPromptEvent;
+    /* [968 · 47] 이벤트 보관은 lib/client/pwa-install-prompt 가 한다(전체 메뉴의
+       "홈 화면에 추가"와 공유). 여기서는 보관된 이벤트가 생기면 배너를 띄울지만 정한다. */
+    captureInstallPrompt();
+    let shown = false;
+    const onChange = () => {
+      const ev = getDeferredInstallPrompt();
+      if (!ev) {
+        /* 이벤트가 사라졌다 = 설치됐거나(appinstalled) 다른 진입점이 prompt() 를 썼다.
+           어느 쪽이든 배너는 치운다. */
+        if (shown) {
+          shown = false;
+          setVisible(false);
+        }
+        return;
+      }
+      if (shown) return;
       if (dismissedRecently(DISMISS_KEY)) return;
       /* 모바일 실측 29 — 쿠키 동의가 미결정이면 띄우지 않는다. 첫 방문에
          동의 배너 + 설치 배너가 겹치면 화면 하단이 배너로 덮인다. 동의를
@@ -89,6 +99,7 @@ export function InstallPrompt() {
       /* [개선 #14, 2026-08-22] 첫 방문 즉시 권하지 않는다 — 30일 실측에서
          노출 243회 대비 수락이 극소수였다. 3일째 방문부터. */
       if (!engagedEnoughForInstall()) return;
+      shown = true;
       measure();
       setVisible(true);
       trackPwa("pwa_install_prompt_view");
@@ -96,15 +107,16 @@ export function InstallPrompt() {
 
     const onInstalled = () => {
       /* 배너를 거치지 않고 브라우저 메뉴로 설치했을 수도 있다. 어느 쪽이든 즉시 치운다. */
-      deferredRef.current = null;
+      shown = false;
       setVisible(false);
       trackPwa("pwa_installed");
     };
 
-    window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+    onChange();
+    const unsubscribe = subscribeInstallPrompt(onChange);
     window.addEventListener("appinstalled", onInstalled);
     return () => {
-      window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+      unsubscribe();
       window.removeEventListener("appinstalled", onInstalled);
     };
   }, [measure]);
@@ -122,13 +134,12 @@ export function InstallPrompt() {
   }, []);
 
   const install = useCallback(async () => {
-    const deferred = deferredRef.current;
-    if (!deferred) {
-      setVisible(false);
-      return;
-    }
+    /* [968 · 47] 꺼내면서 비운다 — beforeinstallprompt 이벤트는 1회용이라 전체 메뉴와
+       이 배너가 같은 이벤트를 두 번 prompt() 하면 반드시 실패한다 */
+    const deferred = takeDeferredInstallPrompt();
     /* 브라우저 설치 다이얼로그가 뜨는 동안 배너가 뒤에 남아 있을 이유가 없다 */
     setVisible(false);
+    if (!deferred) return;
     try {
       await deferred.prompt();
       const choice = await deferred.userChoice;
@@ -137,9 +148,6 @@ export function InstallPrompt() {
       if (choice.outcome === "dismissed") rememberDismiss(DISMISS_KEY);
     } catch {
       /* 이미 소비된 이벤트를 다시 prompt() 하면 예외가 난다. 조용히 넘긴다. */
-    } finally {
-      /* beforeinstallprompt 이벤트는 1회용이다 — 재사용하면 반드시 실패한다 */
-      deferredRef.current = null;
     }
   }, []);
 

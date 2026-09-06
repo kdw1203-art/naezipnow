@@ -1,4 +1,4 @@
-import { loadUpcomingSupply } from "./section-loaders";
+import { loadUpcomingSupply, withSectionBudget } from "./section-loaders";
 
 /* [948→949] 지역 키 6시간 데이터 캐시 + 요청 내 프리페치 dedupe — 둘 다
    section-loaders.ts 에 있다(실패는 던져서 캐시에 남지 않는다; 아래 .catch 가
@@ -23,7 +23,8 @@ export async function UpcomingSupply({ area }: { area: string }) {
   const name = area.trim();
   if (!name) return null;
 
-  const items = await loadUpcomingSupply(name).catch(() => []);
+  // [968 · 1] 공유 예산 3초 — 넘기면 이번 렌더만 접는다
+  const items = await withSectionBudget(loadUpcomingSupply(name)).catch(() => []);
   if (items.length === 0) return null;
 
   // 향후(현재월 이상) 우선, 부족하면 최근 물량으로 채움
@@ -35,7 +36,8 @@ export async function UpcomingSupply({ area }: { area: string }) {
   const totalHouseholds = shown.reduce((s, i) => s + (i.households ?? 0), 0);
 
   return (
-    <section className="rise-in-5 mt-6">
+    /* [968 · 7] cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미룬다(page.tsx 주석 참고) */
+    <section className="cv-auto rise-in-5 mt-6">
       <h2 className="mb-2 px-1 t-section text-ink">
         인근 입주물량{" "}
         <span className="t-sub font-medium text-text-3">

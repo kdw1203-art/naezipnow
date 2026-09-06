@@ -16,6 +16,9 @@
 */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useScrollLock } from "@/lib/client/use-scroll-lock";
+import { horizontalSwipeDelta } from "@/lib/client/swipe-gesture";
+import { buildImageSrcSet, canOptimizeImage } from "@/lib/images/srcset";
 
 type Props = {
   photos: string[];
@@ -23,14 +26,28 @@ type Props = {
   label?: string;
 };
 
+/* [968 · 17] srcset 선택 힌트 — 무대는 본문 칼럼(모바일 전폭, lg 는 1240 − 400 사이드바
+   − 여백 ≈ 760px), 썸네일은 74px 고정이라 가장 작은 변환(384w)만 받는다. 예전엔 무대·
+   썸네일·팝업 전부 1600px 원본을 그대로 받았다 — 10장 노트면 썸네일만으로 원본 10장. */
+const STAGE_SIZES = "(max-width: 1023px) 100vw, 760px";
+const THUMB_SIZES = "74px";
+const ZOOM_SIZES = "(max-width: 1100px) 100vw, 1100px";
+
 export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
   const total = photos.length;
   const [idx, setIdx] = useState(0);
   const [zoom, setZoom] = useState(false);
   const [failed, setFailed] = useState<Record<number, boolean>>({});
+  /* [968 · 17] 변환(/_next/image)이 죽은 장은 원본으로 한 번 더 — CoverImage 와 같은 3단
+     (변환 → 원본 → 실패). 변환 실패를 곧장 "실패" 로 적으면 멀쩡한 원본까지 숨긴다. */
+  const [rawOnly, setRawOnly] = useState<Record<number, boolean>>({});
   const stageRef = useRef<HTMLDivElement | null>(null);
   const railRef = useRef<HTMLDivElement | null>(null);
-  const touchX = useRef<number | null>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+
+  /* [968 · 35] 팝업이 떠 있는 동안 배경 스크롤 잠금 — body.style.overflow 는 iOS Safari 가
+     무시한다. 공용 훅이 body 를 fixed 로 못 박고 닫힐 때 위치를 되돌린다. */
+  useScrollLock(zoom);
 
   const go = useCallback(
     (delta: number) => {
@@ -58,23 +75,32 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
       else if (e.key === "ArrowRight") go(1);
     };
     document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
     };
   }, [zoom, go]);
 
+  /* 변환 srcset 을 쓰는 장인지 — 허용 호스트이고 아직 변환이 실패하지 않았을 때 */
+  const isOptimized = useCallback(
+    (i: number) => canOptimizeImage(photos[i]) && !rawOnly[i],
+    [photos, rawOnly],
+  );
+
   // 인접 사진 프리로드 — 넘길 때마다 원본을 그때 받기 시작하면 큰 차트
   // 이미지에서 빈 무대가 눈에 띈다. 다음·이전 한 장씩만 미리 받는다.
+  // [968 · 17] 무대와 같은 srcset·sizes 로 받아야 캐시가 맞는다 — 원본 src 만 주면
+  // 원본을 미리 받아 놓고 무대는 변환본을 또 받는 이중 다운로드가 된다.
   useEffect(() => {
     if (total < 2) return;
     for (const i of [(idx + 1) % total, (idx - 1 + total) % total]) {
       const img = new Image();
+      if (isOptimized(i)) {
+        img.sizes = STAGE_SIZES;
+        img.srcset = buildImageSrcSet(photos[i]);
+      }
       img.src = photos[i];
     }
-  }, [idx, total, photos]);
+  }, [idx, total, photos, isOptimized]);
 
   if (total === 0) return null;
 
@@ -84,6 +110,18 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
   const markFailed = (i: number) =>
     setFailed((f) => (f[i] ? f : { ...f, [i]: true }));
 
+  /* [968 · 17] 로드 실패 3단 — 변환본이 죽으면 원본으로, 원본도 죽으면 실패로 */
+  const onImgError = (i: number) => {
+    if (isOptimized(i)) setRawOnly((r) => (r[i] ? r : { ...r, [i]: true }));
+    else markFailed(i);
+  };
+
+  /* [968 · 17] src + (허용 호스트면) srcSet·sizes — 무대·썸네일·팝업이 같은 규칙을 쓴다 */
+  const imgSrcProps = (i: number, sizes: string) =>
+    isOptimized(i)
+      ? { src: photos[i], srcSet: buildImageSrcSet(photos[i]), sizes }
+      : { src: photos[i] };
+
   const stageKey = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowLeft") {
       e.preventDefault();
@@ -91,7 +129,27 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
     } else if (e.key === "ArrowRight") {
       e.preventDefault();
       go(1);
+    } else if (e.key === "Enter" && !isFailed) {
+      /* [968 · 37] 가운데 탭이 크게 보기가 됐으니 키보드도 같은 길을 준다 */
+      e.preventDefault();
+      setZoom(true);
     }
+  };
+
+  /* [968 · 37] 터치 스와이프 — 시작점(x,y)을 잡고 끝점에서 축을 판정한다.
+     예전엔 |dx|>40 만 봐서 세로 스크롤 중 손가락이 조금만 비껴도 사진이 넘어갔다.
+     이제 |dx|>40 이면서 |dx|>1.5·|dy| 일 때만 넘긴다(lib/client/swipe-gesture). */
+  const onStageTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStart.current = t ? { x: t.clientX, y: t.clientY } : null;
+  };
+  const onStageTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStart.current;
+    touchStart.current = null;
+    const end = e.changedTouches[0];
+    if (!start || !end) return;
+    const delta = horizontalSwipeDelta(end.clientX - start.x, end.clientY - start.y);
+    if (delta !== 0) go(delta);
   };
 
   return (
@@ -104,20 +162,24 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
         aria-label={`${label} ${total}장`}
         tabIndex={0}
         onKeyDown={stageKey}
-        onTouchStart={(e) => {
-          touchX.current = e.touches[0]?.clientX ?? null;
-        }}
-        onTouchEnd={(e) => {
-          const start = touchX.current;
-          touchX.current = null;
-          const end = e.changedTouches[0]?.clientX;
-          if (start == null || end == null) return;
-          const dx = end - start;
-          if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
-        }}
-        className="brand-photo-frame relative w-full min-w-0 overflow-hidden rounded-[14px] outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        onTouchStart={onStageTouchStart}
+        onTouchEnd={onStageTouchEnd}
+        /* [968 · 37] touch-pan-y — 세로 스크롤은 브라우저에 맡기고 가로만 우리가 본다.
+           [968 · 27] data-ptr-ignore — 설치 앱의 당겨서 새로고침이 무대 위 끌기에 끼어들지 않게. */
+        data-ptr-ignore=""
+        className="brand-photo-frame relative w-full min-w-0 touch-pan-y overflow-hidden rounded-[14px] outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
-        <div className="flex h-[248px] w-full items-center justify-center sm:h-[340px] lg:h-[400px]">
+        {/* [968 · 37] 가운데(양쪽 22% 를 뺀 56%)를 탭하면 크게 보기 — 예전엔 좌우 38% 투명
+            버튼이 무대 대부분을 덮어 사진을 눌러도 넘어가기만 했다. 접근 가능한 진입로는
+            아래 "크게 보기" 버튼과 무대 Enter 키가 이미 있다. */}
+        <div
+          onClick={() => {
+            if (!isFailed) setZoom(true);
+          }}
+          className={`flex h-[248px] w-full items-center justify-center sm:h-[340px] lg:h-[400px] ${
+            isFailed ? "" : "cursor-zoom-in"
+          }`}
+        >
           {isFailed ? (
             <div className="flex flex-col items-center gap-1 px-6 text-center">
               <span className="t-body font-extrabold text-[var(--brand-hanji)]">
@@ -130,13 +192,15 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              key={src}
-              src={src}
+              key={`${src}-${rawOnly[idx] ? "raw" : "opt"}`}
+              {...imgSrcProps(idx, STAGE_SIZES)}
               alt={`${label} ${idx + 1} / ${total}`}
               // 첫 장은 바로 보여야 하므로 lazy 를 걸지 않는다.
+              // [968 · 17] 첫 장은 이 화면의 LCP 후보 — fetchPriority="high" 로 선점한다.
               loading={idx === 0 ? "eager" : "lazy"}
+              {...(idx === 0 ? { fetchPriority: "high" as const } : {})}
               decoding="async"
-              onError={() => markFailed(idx)}
+              onError={() => onImgError(idx)}
               className="max-h-full max-w-full object-contain"
             />
           )}
@@ -144,19 +208,20 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
 
         {total > 1 && (
           <>
-            {/* 좌·우 절반 클릭으로 넘긴다 — 화살표를 정확히 누르지 않아도 된다.
-                버튼 위에 겹치지 않도록 화살표를 뒤에 더 높은 z 로 올린다. */}
+            {/* 좌·우 가장자리 클릭으로 넘긴다 — 화살표를 정확히 누르지 않아도 된다.
+                버튼 위에 겹치지 않도록 화살표를 뒤에 더 높은 z 로 올린다.
+                [968 · 37] 38% → 22%: 가운데 56% 는 탭 확대에 준다. */}
             <button
               type="button"
               aria-label="이전 사진"
               onClick={() => go(-1)}
-              className="absolute inset-y-0 left-0 w-[38%] cursor-pointer bg-transparent"
+              className="absolute inset-y-0 left-0 w-[22%] cursor-pointer bg-transparent"
             />
             <button
               type="button"
               aria-label="다음 사진"
               onClick={() => go(1)}
-              className="absolute inset-y-0 right-0 w-[38%] cursor-pointer bg-transparent"
+              className="absolute inset-y-0 right-0 w-[22%] cursor-pointer bg-transparent"
             />
 
             <span
@@ -201,6 +266,8 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
       {total > 1 && (
         <div
           ref={railRef}
+          /* [968 · 27] 가로 레일 — 당겨서 새로고침과 겹치지 않게 */
+          data-ptr-ignore=""
           className="flex w-full min-w-0 gap-1.5 overflow-x-auto pb-1"
         >
           {photos.map((p, i) => (
@@ -224,11 +291,13 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={p}
+                  key={rawOnly[i] ? "raw" : "opt"}
+                  /* [968 · 17] 74px 썸네일에 1600px 원본을 받던 것 → 384w 변환 */
+                  {...imgSrcProps(i, THUMB_SIZES)}
                   alt=""
                   loading="lazy"
                   decoding="async"
-                  onError={() => markFailed(i)}
+                  onError={() => onImgError(i)}
                   className="h-full w-full object-cover"
                 />
               )}
@@ -248,6 +317,9 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
           role="dialog"
           aria-modal="true"
           aria-label={`${label} 크게 보기`}
+          /* [968 · 27] 팝업 위에서는 body 가 잠겨 scrollY 가 늘 0 — 당겨서 새로고침이
+             72px 끌기만으로 화면을 통째로 다시 띄우지 않게 막는다. */
+          data-ptr-ignore=""
           className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 p-3 sm:p-6"
           onClick={() => setZoom(false)}
         >
@@ -276,10 +348,11 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={src}
+                  key={`${src}-${rawOnly[idx] ? "raw" : "opt"}`}
+                  {...imgSrcProps(idx, ZOOM_SIZES)}
                   alt={`${label} ${idx + 1} / ${total}`}
                   decoding="async"
-                  onError={() => markFailed(idx)}
+                  onError={() => onImgError(idx)}
                   /* 높이 상한을 뷰포트로 직접 잰다 — 부모 max-h 만으로는 이미지가
                      min-height:auto 를 타고 원본 크기로 커진다(위 주석). */
                   className="max-h-[calc(100dvh-96px)] max-w-full rounded-lg object-contain sm:max-h-[calc(100dvh-120px)]"
@@ -321,7 +394,14 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
                     }`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p} alt="" loading="lazy" className="h-full w-full object-cover" />
+                    <img
+                      key={rawOnly[i] ? "raw" : "opt"}
+                      {...imgSrcProps(i, THUMB_SIZES)}
+                      alt=""
+                      loading="lazy"
+                      onError={() => onImgError(i)}
+                      className="h-full w-full object-cover"
+                    />
                   </button>
                 ))}
               </div>

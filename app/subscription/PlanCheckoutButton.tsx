@@ -46,6 +46,22 @@ export function PlanCheckoutButton({
     if (busy) return;
     setNotice(null);
 
+    /* [968 · T2] 주간권(단건)은 로그인 확인 **없이** 체크아웃으로 보낸다.
+       왜: 토스 도메인 변경 심사역은 계정 없이 사이트를 훑는데, 예전 순서
+       (세션 확인 → /login)로는 결제창을 한 번도 못 보고 "연동 안 됨" 판정을
+       받았다(2026-09-06 반려). 체크아웃 화면이 비로그인에게도 위젯을 미리 그리고
+       결제 시점에 로그인을 요구한다([968 · T1]) — 서버 주문은 여전히 로그인 필수라
+       게스트 주문은 만들어지지 않는다. 월간·연간(빌링)은 서버 발급 customerKey 가
+       있어야 카드 등록창이 열리므로 아래 로그인 우선 흐름을 그대로 탄다.
+       파라미터명은 CheckoutClient.parseParams 가 읽는 tier·billing·returnTo 그대로. */
+    if (billing === "weekly" && tossClientKey()) {
+      const rt = currentReturnTo();
+      const q = `tier=${tier}&billing=weekly${rt ? `&returnTo=${encodeURIComponent(rt)}` : ""}`;
+      setConfirming(false);
+      window.location.href = `/subscription/checkout?${q}`;
+      return;
+    }
+
     // 1) 로그인 확인 — 비로그인 시 로그인 페이지로 (callbackUrl 유지)
     let authed = false;
     let sessionEmail: string | null = null;
@@ -145,11 +161,12 @@ export function PlanCheckoutButton({
       /* [965] 빌링이 아직 개방되지 않았으면(전자계약 전) 월간·연간을 빌링창으로
          보내지 않는다 — 그 화면은 "준비 중" 카드로 /subscription 에 돌려보내
          사용자가 원을 돌았다. 그 경우 아래 단건 레일(카카오페이·카드)로 내려간다. */
-      if (tossClientKey() && (billing === "weekly" || isTossBillingOpenClient())) {
+      /* [968 · T2] 주간권+토스 키는 위에서 이미 체크아웃으로 갔다 — 여기 오는 주간권은
+         토스 키가 없는 경우뿐이라 아래 "토스 카드 결제로만" 안내로 떨어진다. */
+      if (tossClientKey() && billing !== "weekly" && isTossBillingOpenClient()) {
         const rt = currentReturnTo();
         const q = `tier=${tier}&billing=${billing}${rt ? `&returnTo=${encodeURIComponent(rt)}` : ""}`;
-        window.location.href =
-          billing === "weekly" ? `/subscription/checkout?${q}` : `/subscription/billing?${q}`;
+        window.location.href = `/subscription/billing?${q}`;
         return;
       }
 

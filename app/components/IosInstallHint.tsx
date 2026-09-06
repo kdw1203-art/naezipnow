@@ -10,6 +10,11 @@ import {
   rememberDismiss,
   trackPwa,
 } from "@/lib/client/pwa-install";
+import {
+  IOS_INSTALL_HINT_EVENT,
+  consumeIosInstallHintRequest,
+  isIosSafari,
+} from "@/lib/client/pwa-install-prompt";
 
 /**
  * iOS Safari 전용 "홈 화면에 추가" 안내 (2026-08-04, 소유자 요청).
@@ -37,42 +42,12 @@ const DISMISS_KEY = "nuguzip:ios-a2hs-dismissed-at";
 const VISIT_KEY = "nuguzip:visits";
 const MIN_VISITS = 2;
 
-/* 베타 안내 모달이 아직 안 끝났으면 순서를 양보한다.
-   실측(로컬 프로덕션, iPhone 13 UA): 안내가 600ms 에 떴다가 900ms 에 열리는
-   베타 모달 때문에 사라졌다 — 깜빡였다 사라지는 안내는 읽히지 않는다.
-   베타 공지는 첫 방문 1회성이고 이 안내는 다음 방문에 다시 뜰 수 있으므로,
-   기다리는 쪽은 이쪽이다. (키·기간은 BetaNoticeModal 과 같은 값) */
-const BETA_NOTICE_KEY = "nuguzip:beta-notice-v1";
-const BETA_DISMISS_MS = 30 * 24 * 60 * 60 * 1000;
-
-function betaNoticePending(): boolean {
-  try {
-    const raw = localStorage.getItem(BETA_NOTICE_KEY);
-    if (!raw) return true;
-    const at = Date.parse(raw);
-    if (!Number.isFinite(at)) return true;
-    return Date.now() - at >= BETA_DISMISS_MS;
-  } catch {
-    /* 저장소를 못 읽으면 베타 모달도 뜨는 쪽을 택한다 — 겹치지 않게 이쪽이 물러난다 */
-    return true;
-  }
-}
-
-/** 홈 화면 추가 메뉴가 **없는** 인앱 웹뷰들 — 여기서 안내하면 틀린 설명이 된다 */
-const IN_APP = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\/|DaumApps|everytimeApp|Snapchat|Threads/i;
-/** iOS 의 다른 브라우저 — 공유 시트 구성이 사파리와 달라 같은 안내를 쓸 수 없다 */
-const OTHER_IOS_BROWSER = /CriOS|FxiOS|EdgiOS|OPiOS|Whale|SamsungBrowser/i;
-
-function isIosSafari(): boolean {
-  if (typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent;
-  /* iPadOS 13+ 는 스스로를 Macintosh 라고 말한다 — 터치 지원으로 가려낸다 */
-  const isIos =
-    /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
-  if (!isIos) return false;
-  if (IN_APP.test(ua) || OTHER_IOS_BROWSER.test(ua)) return false;
-  return /Safari/.test(ua);
-}
+/* [968 · 47] 예전엔 "베타 안내 **모달**이 안 끝났으면 양보"하는 betaNoticePending() 가
+   있었다(모달이 600ms 뒤 이 안내를 덮던 실측 때문). 그 공지는 홈의 인라인 배너가 돼
+   더는 이 안내와 겹치지 않는데, 가드는 남아 배너를 닫지 않은 사람에게 이 안내가
+   영영 안 뜨게 막고 있었다 — 가드를 뺀다.
+   UA 판정(isIosSafari)은 전체 메뉴의 "홈 화면에 추가"와 공유하려고
+   lib/client/pwa-install-prompt 로 옮겼다(규칙은 그대로). */
 
 /** 문서 로드 횟수를 세어 돌려준다(저장소가 막혀 있으면 0 — 그러면 안 띄운다) */
 function bumpVisits(): number {
@@ -92,29 +67,43 @@ export function IosInstallHint() {
      보이는데 눌리지 않는 컨트롤은 없는 것보다 나쁘다). */
   const [modalOpen, setModalOpen] = useState(false);
 
+  /* [968 · 47] 옵저버는 안내가 떠 있는 동안만(InstallPrompt 와 같은 이유) */
   useEffect(() => {
+    if (!visible) return;
     const read = () => setModalOpen(document.body.dataset.modalOpen != null);
     read();
     const observer = new MutationObserver(read);
     observer.observe(document.body, { attributes: true, attributeFilter: ["data-modal-open"] });
     return () => observer.disconnect();
-  }, []);
+  }, [visible]);
 
   useEffect(() => {
     if (isInstalled()) return;
     if (!isIosSafari()) return;
-    /* 방문 수는 다른 조건보다 **먼저** 센다. 뒤에서 세면 베타 모달이 떠 있는
-       동안의 방문이 한 번도 집계되지 않아, 모달을 닫은 뒤 다시 두 번을 채워야
-       안내가 뜬다(= 사실상 안 뜬다). */
-    const visits = bumpVisits();
-    if (!cookieConsentDecided()) return;
-    if (dismissedRecently(DISMISS_KEY)) return;
-    if (betaNoticePending()) return;
-    if (visits < MIN_VISITS) return;
 
-    setBottom(bottomAboveTabBar());
-    setVisible(true);
-    trackPwa("pwa_ios_hint_view");
+    /* [968 · 47] 전체 메뉴 "홈 화면에 추가"가 부르면 — 닫은 기록·방문 수와 무관하게
+       바로 연다(사용자가 직접 요청한 안내는 가드 대상이 아니다). 청크가 늦게 붙어
+       요청이 먼저 왔을 수도 있으니 마운트 때 한 번 확인한다. */
+    const openOnRequest = () => {
+      if (!consumeIosInstallHintRequest()) return;
+      setBottom(bottomAboveTabBar());
+      setVisible(true);
+      trackPwa("pwa_ios_hint_view", { source: "menu" });
+    };
+    window.addEventListener(IOS_INSTALL_HINT_EVENT, openOnRequest);
+    openOnRequest();
+
+    /* 방문 수는 다른 조건보다 **먼저** 센다 — 뒤에서 세면 가드에 걸린 방문이
+       집계되지 않아 두 번을 더 채워야 안내가 뜬다(= 사실상 안 뜬다). */
+    const visits = bumpVisits();
+    const autoShow =
+      cookieConsentDecided() && !dismissedRecently(DISMISS_KEY) && visits >= MIN_VISITS;
+    if (autoShow) {
+      setBottom(bottomAboveTabBar());
+      setVisible(true);
+      trackPwa("pwa_ios_hint_view");
+    }
+    return () => window.removeEventListener(IOS_INSTALL_HINT_EVENT, openOnRequest);
   }, []);
 
   const measure = useCallback(() => setBottom(bottomAboveTabBar()), []);

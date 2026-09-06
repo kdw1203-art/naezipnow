@@ -10,8 +10,16 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  /* [968 · 23] 브라우저 max-age 를 함께 준다. 예전엔 s-maxage(CDN)만 있어 브라우저는
+     매 방문마다 이 JSON 을 다시 받았다 — 그 왕복이 maps.js 로드 앞에 직렬로 놓여
+     첫 타일이 그만큼 늦었다. 값은 공개 Client ID 라 1시간 캐시해도 안전하고,
+     /map 은 이제 서버가 prop 으로 내려 이 fetch 를 건너뛴다(HomeMiniMap 등은 유지). */
   return NextResponse.json(
     { ncpKeyId: resolveNaverMapClientId() },
-    { headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=600" } },
+    {
+      headers: {
+        "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=600",
+      },
+    },
   );
 }

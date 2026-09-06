@@ -33,19 +33,21 @@ import {
   type HubNote,
   type HubListing,
 } from "./hub-client";
-import type { PricePoint } from "./PriceTrendChart";
+/* [968 · 4] 차트는 서버가 그려 탭 컴포넌트에 엘리먼트로 넘긴다(클라이언트 번들 밖) */
+import { PriceTrendChart, type PricePoint } from "./PriceTrendChart";
 import { complexCanonicalPath, decodeComplexId } from "@/lib/complex/complex-store";
 import { ComplexAxisSummary } from "./ComplexAxisSummary";
 import { pureIdFromParam, complexHrefFromId} from "@/lib/seo/complex-slug";
 import { geocodeAndCache } from "@/lib/map/complex-geocode";
-import { settle, startDeadline } from "@/lib/data/section-budget";
+import { settle, startDeadline, SIDE_SECTION_BUDGET_MS } from "@/lib/data/section-budget";
 import { getMarketFreshnessDateLabel } from "@/lib/newui/freshness";
 import { RecentComplexRecorder } from "../../components/RecentComplexes";
 import { QaBlock } from "../../components/QaBlock";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { BrandWatermark } from "@/app/components/BrandWatermark";
 import type { FaqItem } from "@/lib/seo/jsonld";
-import { ComplexReviews } from "../ComplexReviews";
+/* [968 · 3 · 4] 후기 섹션은 뷰포트 근처에서 청크·데이터를 함께 받는 래퍼로 */
+import { ComplexReviewsLazy } from "./ComplexReviewsLazy";
 import { ComplexAreaBands } from "./ComplexAreaBands";
 import { RegionRelative } from "./RegionRelative";
 import { NearbyRedevelopment } from "./NearbyRedevelopment";
@@ -127,6 +129,26 @@ export function generateStaticParams(): { id: string }[] {
  *  뜻을 유지하려고 5/6 이던 기준을 4/5 로 함께 낮춘다.)
  */
 const SIDE_FAILURE_ABORT_THRESHOLD = 4;
+
+/* [968 · 1] 곁다리 예산을 둘로 나눈다.
+   - 실거래(tx)는 히어로(시세·KPI 6칸·타이틀·OG)의 정체성이다 — 종전 공유 예산(8초)을
+     그대로 둔다. 3초로 줄이면 느린 DB 에서 "조회 실패" 히어로가 6시간 캐시에 얼어붙는
+     빈도가 늘어난다(base 와 함께 "히어로 파도"를 이룬다).
+   - 나머지 넷(이야기·인근·좌표·매물)은 5초(오케스트레이터 조정 — 3초로 두면 DB 가
+     3~5초로 느린 저녁 집계 창에서 4/5 실패 → 5xx 가 잦아진다. 5초는 "느리지만 완성본"과
+     "빈 껍데기 캐시 방지" 사이의 절충). 넘기면 settle() 이 { ok:false } 로 접고
+     toView 가 "노트 ?"·"매물 ?"(조회 실패)로 정직하게 그린다 — 확인: 예전 8초 때와 같은
+     경로라 새 폴백 코드는 없다. 이 넷이 렌더를 8초까지 붙들 이유가 없었다.
+   - 섹션 컴포넌트 7종(면적대·지역대비·전월세·Q&A·정비사업·입주물량·노트/기사)도 같은
+     3초 시계(section-loaders.ts withSectionBudget)를 본다 — 예전엔 상한이 없어 로더
+     하나가 읽기 타임아웃(최대 45초)까지 페이지를 붙들 수 있었다.
+   왜 Suspense 가 아닌가: 이 라우트는 ISR(generateStaticParams + revalidate) 이고
+   Next 15.5 는 정적 생성 렌더에서 스트림의 allReady 를 기다린 뒤 첫 바이트를 낸다
+   (next/dist/server/stream-utils/node-web-streams-helper.js continueFizzStream,
+   app-render.js generateStaticHTML = supportsDynamicResponse !== true). 경계를 둬도
+   ISR 미스의 TTFB 는 그대로이고, 캐시 정책 게이트(check-cache-policy.mjs)가 요구하는
+   ISR 분류를 깨지 않는 한 스트리밍은 불가능하다. 그래서 파도 수·상한만 줄인다. */
+const SIDE_QUERY_BUDGET_MS = 5_000;
 
 /**
  * generateMetadata 와 본문은 같은 요청 안에서 각자 이 둘을 불렀다 — 즉 렌더
@@ -571,11 +593,12 @@ async function loadView(id: string): Promise<HubView | null> {
   }).catch(() => undefined);
   const row: ComplexRow = base; // name·district·canonical_id·address 는 enrich 가 바꾸지 않는다
 
-  /* 곁다리 6개가 **함께** 쓰는 8초 예산.
+  /* 곁다리가 **함께** 쓰는 예산 — [968 · 1] 실거래(히어로) 8초 · 나머지 넷 3초.
      예전에는 각 조회가 `.catch(() => [])` 로 실패를 빈 배열로 바꿔서
      "없다"고 그렸고, 느릴 때는 각자 읽기 타임아웃(25초)을 꽉 채워 페이지가
      통째로 매달렸다. 이제 늦거나 실패한 섹션만 접고 페이지는 제때 그린다. */
-  const budget = startDeadline();
+  const heroBudget = startDeadline(SIDE_SECTION_BUDGET_MS);
+  const budget = startDeadline(SIDE_QUERY_BUDGET_MS);
   /* 항목 25: budget.signal 을 로더에 넘겨, 예산 초과로 접힌 섹션의 PostgREST
      요청이 실제로 끊기게 한다(안 끊으면 최대 45초 더 살아 연결을 붙잡는다).
      loadTxHistory 는 React cache() 로 렌더 내 재사용(아래 tx 재호출)되므로
@@ -587,7 +610,7 @@ async function loadView(id: string): Promise<HubView | null> {
        null 을 준다. 그래서 실거래가 160~212건 있는 단지가 조용히 빈 배열을 받아
        "실거래 없음 · 시세 준비 중"으로 그려지고 있었다(2026-08-05 표본 12개 중 6개).
        canonical_id 는 항상 name-id 라 decode 가 반드시 성공한다. */
-    settle(`${row.name} 실거래 이력`, loadTxHistory(row.canonical_id, TX_HISTORY_MONTHS), budget.expired),
+    settle(`${row.name} 실거래 이력`, loadTxHistory(row.canonical_id, TX_HISTORY_MONTHS), heroBudget.expired),
     settle(
       `${row.name} 단지 이야기`,
       rowP.then((r) => getComplexPosts((r ?? row).id, 12, budget.signal)),
@@ -617,6 +640,7 @@ async function loadView(id: string): Promise<HubView | null> {
     ),
   ]);
   budget.done();
+  heroBudget.done();
   /* [949 · 계측] 본문 파도 시간 — 대표행(base)과 enrich+곁다리 파도를 따로 잰다.
      느린 렌더(600ms↑)는 전부, 나머지는 5% 표본만 남긴다. ISR 미스의 TTFB 는
      이 두 파도 + 섹션 파도이므로, 배포 뒤 이 로그로 "어느 파도가 남았는지"를 읽는다. */
@@ -637,6 +661,9 @@ async function loadView(id: string): Promise<HubView | null> {
      빈 화면이 revalidate=120 으로 2분간 고정된다. 5xx 는 캐시되지 않으므로
      던지는 쪽이 정확하다 — "지금은 못 준다"가 "이 단지는 원래 비어 있다"보다
      참이다. */
+  /* [968 · 1] 예산이 5초로 짧아졌으니 "4개 실패"에는 5초를 넘긴 것도 든다. DB 가
+     5~8초로 느린 동안엔 예전처럼 늦게라도 완성본을 내는 대신 5xx(캐시 안 됨)가
+     난다 — 그 상태의 반쪽짜리 페이지가 6시간 얼어붙는 것보다 낫다는 같은 판단이다. */
   const sideResults = [txR, postsR, sameDongR, coordR, listingsR];
   const sideFailures = sideResults.filter((r) => !r.ok).length;
   if (sideFailures >= SIDE_FAILURE_ABORT_THRESHOLD) {
@@ -883,182 +910,199 @@ export default async function ComplexHubPage({
       {/* 최근 본 단지 기록 (localStorage nz_recent_complexes · 목업 폴백은 미기록) */}
       <RecentComplexRecorder id={v.id} name={v.name} region={v.dong} />
 
-      {/* 브레드크럼 칩 — ‹ 지도 · 동 · 단지명 */}
-      <div className="rise-in flex flex-wrap gap-1.5">
-        <Link
-          href="/map"
-          className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2"
-        >
-          ‹ 지도
-        </Link>
-        {/* 동/구 칩 — 예전엔 옆의 "‹ 지도" Link 와 완전히 같은 생김새인데 href 가
-            없었다. 지역 지도로 실제로 이동하게 한다(?region= 지원 추가됨). */}
-        <Link
-          href={`/map?region=${encodeURIComponent(v.dong)}`}
-          className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2"
-        >
-          {v.dong}
-        </Link>
-        <span className="chip bg-brand-navy px-2.5 py-1 t-sub font-extrabold text-surface">
-          {v.name}
-        </span>
-      </div>
-
-      {/* 단지명 + 팔로우 — 가격 히어로와 한 덩어리.
-          [962] 옅은 파랑 그라데이션 → 브랜드 네이비 면 + 심볼 워터마크(홈 시안 "딥 네이비 단색 + 심볼").
-          시세 캡션 앞의 숨쉬는 온점 = "지금 값"(티커와 같은 언어). 델타 색은 남색 위 전용. */}
-      <div className="brand-navy-card rise-in mt-3 rounded-[18px] px-4 py-4 sm:px-5">
-        <BrandWatermark />
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="t-title tracking-tight text-on-dark">
-              {v.name}
-            </h1>
-            <p className="mt-0.5 t-sub text-on-dark-muted">
-              {v.dong}
-              {v.city && v.city !== v.dong ? ` · ${v.city}` : ""}
-            </p>
-          </div>
-          <WatchlistButton complexId={v.id} complexName={v.name} tone="dark" />
+      {/* [968 · 2] fold — 첫 화면(브레드크럼·히어로·축 요약·행동 알약·KPI·스펙)은 767px
+          이하에서 rise-in 지연 리빌을 끈다(globals.css `.fold.rise-in`, `.fold [class^="rise-in"]`).
+          `backwards` 채움이라 애니메이션이 시작되기 전까지 LCP 후보(히어로 시세)가
+          투명했다. 래퍼는 스타일 없는 블록이라 레이아웃·LCP 요소 순서에 영향이 없다. */}
+      <div className="fold">
+        {/* 브레드크럼 칩 — ‹ 지도 · 동 · 단지명 */}
+        <div className="rise-in flex flex-wrap gap-1.5">
+          <Link
+            href="/map"
+            className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2"
+          >
+            ‹ 지도
+          </Link>
+          {/* 동/구 칩 — 예전엔 옆의 "‹ 지도" Link 와 완전히 같은 생김새인데 href 가
+              없었다. 지역 지도로 실제로 이동하게 한다(?region= 지원 추가됨). */}
+          <Link
+            href={`/map?region=${encodeURIComponent(v.dong)}`}
+            className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2"
+          >
+            {v.dong}
+          </Link>
+          <span className="chip bg-brand-navy px-2.5 py-1 t-sub font-extrabold text-surface">
+            {v.name}
+          </span>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <div className="inline-flex items-center gap-1.5 t-caption font-bold uppercase tracking-wide text-on-dark-muted">
-              <span className="njn-dot njn-dot--breathe" style={{ width: 6, height: 6, background: "var(--brand-red-on-dark)" }} aria-hidden="true" />
-              최근 실거래 평균
+        {/* 단지명 + 팔로우 — 가격 히어로와 한 덩어리.
+            [962] 옅은 파랑 그라데이션 → 브랜드 네이비 면 + 심볼 워터마크(홈 시안 "딥 네이비 단색 + 심볼").
+            시세 캡션 앞의 숨쉬는 온점 = "지금 값"(티커와 같은 언어). 델타 색은 남색 위 전용.
+            [968 · 2] 클래스 문자열이 rise-in 으로 시작하지 않아 `.fold.rise-in` 이 맞도록 fold 를 직접 단다. */}
+        <div className="brand-navy-card fold rise-in mt-3 rounded-[18px] px-4 py-4 sm:px-5">
+          <BrandWatermark />
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="t-title tracking-tight text-on-dark">
+                {v.name}
+              </h1>
+              <p className="mt-0.5 t-sub text-on-dark-muted">
+                {v.dong}
+                {v.city && v.city !== v.dong ? ` · ${v.city}` : ""}
+              </p>
             </div>
-            <div className="mt-0.5 flex items-baseline gap-2">
-              <span className="t-title leading-none text-on-dark tabular-nums">
-                {v.metric.price}
-              </span>
-              <span className={`text-[13px] font-extrabold ${v.metric.priceSubDarkClass}`}>
-                {v.metric.priceSub}
-              </span>
-            </div>
+            <WatchlistButton complexId={v.id} complexName={v.name} tone="dark" />
           </div>
-          {typeof v.lat === "number" && typeof v.lng === "number" && (
-            <RoadviewButton lat={v.lat} lng={v.lng} label={v.name} />
+
+          <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <div className="inline-flex items-center gap-1.5 t-caption font-bold uppercase tracking-wide text-on-dark-muted">
+                <span className="njn-dot njn-dot--breathe" style={{ width: 6, height: 6, background: "var(--brand-red-on-dark)" }} aria-hidden="true" />
+                최근 실거래 평균
+              </div>
+              <div className="mt-0.5 flex items-baseline gap-2">
+                <span className="t-title leading-none text-on-dark tabular-nums">
+                  {v.metric.price}
+                </span>
+                <span className={`text-[13px] font-extrabold ${v.metric.priceSubDarkClass}`}>
+                  {v.metric.priceSub}
+                </span>
+              </div>
+            </div>
+            {typeof v.lat === "number" && typeof v.lng === "number" && (
+              <RoadviewButton lat={v.lat} lng={v.lng} label={v.name} />
+            )}
+          </div>
+
+          {v.chips.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1">
+              {v.chips.map((c) => (
+                <span
+                  key={c}
+                  className="brand-photo-chip rounded-full px-2.5 py-[4px] t-sub font-bold"
+                >
+                  {c}
+                </span>
+              ))}
+            </div>
           )}
         </div>
 
-        {v.chips.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1">
-            {v.chips.map((c) => (
-              <span
-                key={c}
-                className="brand-photo-chip rounded-full px-2.5 py-[4px] t-sub font-bold"
-              >
-                {c}
-              </span>
-            ))}
+        {/* [OPT-48] 허브 2.0 — AI 워크벤치와 같은 라이브 컨텍스트 요약(1.2초 예산·자체 생략).
+            regionName 은 dec.region 포맷("서울 중랑구")과 같아야 한다 — city===dong 중복 방어. */}
+        <ComplexAxisSummary complexId={v.id} regionName={axisRegionName(v.city, v.dong)} />
+
+        {/* [개선 #32] 행동 3종 — 보고 끝나는 화면에서 다음 행동이 있는 화면으로.
+            ① 임장노트 쓰기(이 단지 프리필) ② 지역 허브(내부 연결) ③ 공유 */}
+        {(() => {
+          const regionId = regionIdForName(v.city ?? "") ?? regionIdForName(v.dong ?? "");
+          /* [968 · 34] 터치 기기에서만 최소 높이 44px(Tailwind v4 `pointer-coarse:` 변형 →
+             @media (pointer: coarse)). `.chip` 의 보이지 않는 ::after 확장을 못 쓰는 이유:
+             이 알약은 `tap-ripple` 이 이미 ::after 로 잉크 리플을 그리고 overflow:hidden 이라
+             같은 의사요소를 두고 충돌한다(리플이 44px 띠로 깨진다). 데스크탑(fine)은 그대로. */
+          const pill =
+            "inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 py-2 text-[13px] font-bold text-ink tap-ripple pointer-coarse:min-h-11";
+          return (
+            /* [967 · 17] id 는 하단 액션 바의 감시 대상 — 이 줄이 화면에 있으면 바를 숨긴다 */
+            <div
+              id="complex-actions-top"
+              className="rise-in-1 mt-3 flex flex-wrap items-center gap-2"
+            >
+              <Link href={noteHref} className={pill}>
+                <Icon name="notebook-pen" size={14} />이 단지 임장노트 쓰기
+              </Link>
+              {regionId && (
+                <Link href={`/region/${regionId}`} className={pill}>
+                  <Icon name="pin" size={14} />
+                  {v.city || v.dong} 시장 보기
+                </Link>
+              )}
+              <ShareLinkButton title={`${v.name} 시세·임장노트`} className={pill} />
+            </div>
+          );
+        })()}
+
+        {/* 지표 6칸 — 시세·거래·매물·노트·세대·연차 */}
+        <div className="rise-in-1 mt-3 grid grid-cols-3 gap-1.5 md:grid-cols-6">
+          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
+            <div className="t-caption text-text-3">시세</div>
+            <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
+              {v.metric.price}
+            </div>
+            <div className={`mt-0.5 truncate text-[10px] font-bold ${v.metric.priceSubClass}`}>
+              {v.metric.priceSub}
+            </div>
+          </div>
+          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
+            <div className="t-caption text-text-3">거래</div>
+            <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
+              {v.metric.deals}
+            </div>
+            <div className="mt-0.5 truncate t-caption text-text-3">{v.metric.dealsSub}</div>
+          </div>
+          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
+            <div className="t-caption text-text-3">매물</div>
+            <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
+              {v.metric.listings}
+            </div>
+            <div className="mt-0.5 truncate t-caption text-text-3">{v.metric.listingsSub}</div>
+          </div>
+          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
+            <div className="t-caption text-text-3">노트</div>
+            <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
+              {v.metric.notes}
+            </div>
+            <div className="mt-0.5 truncate t-caption text-text-3">{v.metric.notesSub}</div>
+          </div>
+          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
+            <div className="t-caption text-text-3">세대</div>
+            <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
+              {v.households ? `${v.households.toLocaleString("ko-KR")}` : "—"}
+            </div>
+            <div className="mt-0.5 truncate t-caption text-text-3">
+              {v.households ? "공공데이터" : "미확인"}
+            </div>
+          </div>
+          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
+            <div className="t-caption text-text-3">연차</div>
+            <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
+              {v.metric.age}
+            </div>
+            <div className="mt-0.5 truncate t-caption text-text-3">{v.metric.ageSub}</div>
+          </div>
+        </div>
+
+        {/* 스펙 시트 — 3열 밀도 */}
+        {v.infoRows.length > 0 && (
+          <div className="rise-in-1 card mt-3 rounded-2xl px-4 py-3">
+            <div className="mb-1 flex items-baseline justify-between">
+              <div className="t-body font-extrabold text-ink">단지 스펙</div>
+              <div className="t-caption text-text-3">{v.infoRows.length}항목</div>
+            </div>
+            <div className="grid grid-cols-1 gap-x-5 sm:grid-cols-2 lg:grid-cols-3">
+              {v.infoRows.map((r) => (
+                <div
+                  key={r.label}
+                  className="flex items-baseline justify-between gap-3 border-b border-divider py-[6px] text-xs last:border-b-0"
+                >
+                  <span className="shrink-0 text-text-3">{r.label}</span>
+                  <span className="truncate text-right font-bold text-ink">{r.value}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
+      {/* [968 · 2] fold 끝 — 여기서부터는 스크롤 아래(리빌 유지) */}
 
-      {/* [OPT-48] 허브 2.0 — AI 워크벤치와 같은 라이브 컨텍스트 요약(1.2초 예산·자체 생략).
-          regionName 은 dec.region 포맷("서울 중랑구")과 같아야 한다 — city===dong 중복 방어. */}
-      <ComplexAxisSummary complexId={v.id} regionName={axisRegionName(v.city, v.dong)} />
-
-      {/* [개선 #32] 행동 3종 — 보고 끝나는 화면에서 다음 행동이 있는 화면으로.
-          ① 임장노트 쓰기(이 단지 프리필) ② 지역 허브(내부 연결) ③ 공유 */}
-      {(() => {
-        const regionId = regionIdForName(v.city ?? "") ?? regionIdForName(v.dong ?? "");
-        const pill =
-          "inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 py-2 text-[13px] font-bold text-ink tap-ripple";
-        return (
-          /* [967 · 17] id 는 하단 액션 바의 감시 대상 — 이 줄이 화면에 있으면 바를 숨긴다 */
-          <div
-            id="complex-actions-top"
-            className="rise-in-1 mt-3 flex flex-wrap items-center gap-2"
-          >
-            <Link href={noteHref} className={pill}>
-              <Icon name="notebook-pen" size={14} />이 단지 임장노트 쓰기
-            </Link>
-            {regionId && (
-              <Link href={`/region/${regionId}`} className={pill}>
-                <Icon name="pin" size={14} />
-                {v.city || v.dong} 시장 보기
-              </Link>
-            )}
-            <ShareLinkButton title={`${v.name} 시세·임장노트`} className={pill} />
-          </div>
-        );
-      })()}
-
-      {/* 지표 6칸 — 시세·거래·매물·노트·세대·연차 */}
-      <div className="rise-in-1 mt-3 grid grid-cols-3 gap-1.5 md:grid-cols-6">
-        <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
-          <div className="t-caption text-text-3">시세</div>
-          <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
-            {v.metric.price}
-          </div>
-          <div className={`mt-0.5 truncate text-[10px] font-bold ${v.metric.priceSubClass}`}>
-            {v.metric.priceSub}
-          </div>
-        </div>
-        <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
-          <div className="t-caption text-text-3">거래</div>
-          <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
-            {v.metric.deals}
-          </div>
-          <div className="mt-0.5 truncate t-caption text-text-3">{v.metric.dealsSub}</div>
-        </div>
-        <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
-          <div className="t-caption text-text-3">매물</div>
-          <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
-            {v.metric.listings}
-          </div>
-          <div className="mt-0.5 truncate t-caption text-text-3">{v.metric.listingsSub}</div>
-        </div>
-        <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
-          <div className="t-caption text-text-3">노트</div>
-          <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
-            {v.metric.notes}
-          </div>
-          <div className="mt-0.5 truncate t-caption text-text-3">{v.metric.notesSub}</div>
-        </div>
-        <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
-          <div className="t-caption text-text-3">세대</div>
-          <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
-            {v.households ? `${v.households.toLocaleString("ko-KR")}` : "—"}
-          </div>
-          <div className="mt-0.5 truncate t-caption text-text-3">
-            {v.households ? "공공데이터" : "미확인"}
-          </div>
-        </div>
-        <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
-          <div className="t-caption text-text-3">연차</div>
-          <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
-            {v.metric.age}
-          </div>
-          <div className="mt-0.5 truncate t-caption text-text-3">{v.metric.ageSub}</div>
-        </div>
-      </div>
-
-      {/* 스펙 시트 — 3열 밀도 */}
-      {v.infoRows.length > 0 && (
-        <div className="rise-in-1 card mt-3 rounded-2xl px-4 py-3">
-          <div className="mb-1 flex items-baseline justify-between">
-            <div className="t-body font-extrabold text-ink">단지 스펙</div>
-            <div className="t-caption text-text-3">{v.infoRows.length}항목</div>
-          </div>
-          <div className="grid grid-cols-1 gap-x-5 sm:grid-cols-2 lg:grid-cols-3">
-            {v.infoRows.map((r) => (
-              <div
-                key={r.label}
-                className="flex items-baseline justify-between gap-3 border-b border-divider py-[6px] text-xs last:border-b-0"
-              >
-                <span className="shrink-0 text-text-3">{r.label}</span>
-                <span className="truncate text-right font-bold text-ink">{r.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 면적대·지역 대비 — 상단 밀도 블록 */}
-      <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
+      {/* 면적대·지역 대비 — 상단 밀도 블록.
+          [968 · 7] cv-auto — 화면 밖이면 레이아웃·페인트를 미룬다(globals.css
+          `.cv-auto{content-visibility:auto;contain-intrinsic-size:auto 420px}`). 모바일에서는
+          스펙 시트 아래라 첫 화면 밖이다. 래퍼를 새로 두지 않고 기존 루트에 단다 —
+          main 의 data-autotrim(`> :empty`)이 빈 블록을 접는 규칙을 그대로 타게. 아래
+          섹션 컴포넌트들도 각자의 <section> 루트에 같은 클래스를 단다. */}
+      <div className="cv-auto mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
         <ComplexAreaBands complexId={complexId} compact />
         <RegionRelative complexId={complexId} compact />
       </div>
@@ -1107,7 +1151,19 @@ export default async function ComplexHubPage({
           complexName={v.name}
           noteHref={noteHref}
           listings={v.listings}
-          priceSeries={v.priceSeries}
+          /* [968 · 4] 차트는 여기(서버)서 한 번 그려 엘리먼트로 넘긴다 — 요약·시세 탭이
+             같은 엘리먼트를 쓰고, 차트 코드·점 배열은 클라이언트 번들·props 에서 빠진다.
+             그라데이션 id 씨앗은 단지 id(문서 안에서 유일). */
+          priceChart={
+            v.priceSeries.length >= 2 ? (
+              <PriceTrendChart points={v.priceSeries} gradientId={complexId} />
+            ) : null
+          }
+          latestAvgManwon={
+            v.priceSeries.length > 0
+              ? Math.round(v.priceSeries[v.priceSeries.length - 1]?.avgManwon ?? 0)
+              : 0
+          }
         />
 
         {/* 데스크탑 우측 — 중복 스펙 대신 한눈에 + 인근 + CTA */}
@@ -1174,9 +1230,13 @@ export default async function ComplexHubPage({
         </aside>
       </div>
 
-      {/* 내부 링크 그물(#34) — 모바일·전체 그리드 */}
+      {/* 내부 링크 그물(#34) — 모바일·전체 그리드.
+          [968 · 7] 탭 아래 섹션 전부 cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미루고
+          스크롤로 다가오면 그때 그린다(브라우저가 온디맨드로 렌더). 이 페이지에는
+          #id 앵커·scrollIntoView 대상 섹션이 없고(?tab= 은 탭 전환만), 하단 CTA
+          sentinel(#complex-actions-bottom)은 cv-auto 밖에 둔다. */}
       {v.nearby.length > 0 && (
-        <section className="rise-in-5 mt-6">
+        <section className="cv-auto rise-in-5 mt-6">
           <h2 className="mb-2 px-1 t-section text-ink">
             {v.dong} 다른 단지{" "}
             <span className="t-sub font-medium text-text-3">{v.nearby.length}곳</span>
@@ -1200,8 +1260,8 @@ export default async function ComplexHubPage({
 
       {/* 거주민 후기 (호갱노노 벤치마크) — 실단지 매칭 시에만 (목업 폴백엔 미표시) */}
       {v.id === complexId && complexId !== "mock-1" && (
-        <section className="rise-in-5 mt-6">
-          <ComplexReviews complexId={complexId} complexName={v.name} />
+        <section className="cv-auto rise-in-5 mt-6">
+          <ComplexReviewsLazy complexId={complexId} complexName={v.name} />
         </section>
       )}
 
@@ -1247,11 +1307,11 @@ export default async function ComplexHubPage({
             a: `${v.name}는 ${v.dong}에 위치한 총 ${v.households.toLocaleString("ko-KR")}세대 단지입니다 (공동주택 공공데이터 기준).`,
           });
         }
-        return <div className="mt-6"><QaBlock title={`${v.name} Q&A`} items={faq} /></div>;
+        return <div className="cv-auto mt-6"><QaBlock title={`${v.name} Q&A`} items={faq} /></div>;
       })()}
 
       {/* N17 — 위젯 배포 진입점. 위젯에는 출처 링크가 박혀 있으므로 퍼가기가 곧 백링크다. */}
-      <div className="rise-in-5 mt-6 flex flex-col gap-1 rounded-[14px] border border-line bg-surface p-4">
+      <div className="cv-auto rise-in-5 mt-6 flex flex-col gap-1 rounded-[14px] border border-line bg-surface p-4">
         <span className="t-body font-extrabold text-ink">
           이 단지 시세를 블로그에 붙이기
         </span>

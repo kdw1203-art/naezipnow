@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getSessionLite } from "@/lib/client/session-lite";
+import { useShellActive, type Shell } from "@/lib/client/viewport-shell";
 import { HomeWatchlistBrief } from "@/app/components/HomeWatchlistBrief";
 import { RecentComplexChips } from "@/app/components/RecentComplexes";
 
@@ -23,12 +24,21 @@ import { RecentComplexChips } from "@/app/components/RecentComplexes";
  * 레이아웃: 자식이 확정되기 전에는 `contents`(상자를 만들지 않음)라 부모 flex 의 gap
  * 도 생기지 않는다. 채워질 때 한 번 아래가 밀리는 것은 로그인 사용자에게만 일어나고,
  * 위치를 미리 잡아 두면(고정 높이) 비었을 때 빈 칸이 남으므로 그쪽을 택하지 않았다. */
-export function HomeMyRail({ className = "" }: { className?: string }) {
+export function HomeMyRail({
+  className = "",
+  shell,
+}: {
+  className?: string;
+  /** [968 · 8] 어느 벌인지 — 안 보이는 벌은 세션 조회도, 자식 마운트도 하지 않는다 */
+  shell?: Shell;
+}) {
+  const active = useShellActive(shell);
   const [authed, setAuthed] = useState(false);
   const [briefHas, setBriefHas] = useState<boolean | null>(null);
   const [recentHas, setRecentHas] = useState<boolean | null>(null);
 
   useEffect(() => {
+    if (!active) return;
     let alive = true;
     void getSessionLite()
       .then((s) => {
@@ -38,7 +48,7 @@ export function HomeMyRail({ className = "" }: { className?: string }) {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [active]);
 
   if (!authed) return null;
 

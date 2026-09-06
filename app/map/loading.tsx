@@ -5,6 +5,12 @@ import { Skeleton } from "@/components/Skeleton";
 export default function MapLoading() {
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-bg">
+      {/* [968 · 23] SDK·타일 호스트 preconnect — page.tsx 와 같은 두 호스트. 여기 한 번 더
+          두는 이유: 이 스켈레톤은 page.tsx 의 DB await 이전에 스트리밍되는 셸이라,
+          여기서 낸 힌트가 페이지 HTML 보다 수백 ms 먼저 브라우저에 닿는다. 중복은
+          브라우저가 연결 단위로 합친다(같은 origin 두 번 열지 않는다). */}
+      <link rel="preconnect" href="https://oapi.map.naver.com" />
+      <link rel="preconnect" href="https://nrbe.pstatic.net" />
       {/* 지도 캔버스 자리 */}
       <Skeleton className="absolute inset-0 rounded-none" />
       {/* 상단 검색바 자리.

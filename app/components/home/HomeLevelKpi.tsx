@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { getHomePersonal } from "@/lib/client/home-personal";
+import { useShellActive, type Shell } from "@/lib/client/viewport-shell";
 
 /* KPI ④ 내 임장 레벨 — 로그인 시 /api/home/personal 의 regionLevel(실측
  * 노트 카운트 기반), 비로그인은 시작 CTA. 조회 실패는 실패라고 말하지 않고
@@ -14,7 +15,9 @@ interface PersonalLevelSlice {
   regionLevel: { regionCount: number; topLevel: number; topLabel: string | null } | null;
 }
 
-export function HomeLevelKpi() {
+export function HomeLevelKpi({ shell }: { shell?: Shell } = {}) {
+  /* [968 · 8] 안 보이는 벌은 세션·개인화 조회를 시작하지 않는다(스켈레톤인 채로 숨어 있다) */
+  const active = useShellActive(shell);
   const [state, setState] = useState<
     | { kind: "loading" }
     | { kind: "anon" }
@@ -23,6 +26,7 @@ export function HomeLevelKpi() {
   >({ kind: "loading" });
 
   useEffect(() => {
+    if (!active) return;
     let cancelled = false;
     void (async () => {
       const session = await getSessionLite();
@@ -50,7 +54,7 @@ export function HomeLevelKpi() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [active]);
 
   if (state.kind === "loading") {
     return (

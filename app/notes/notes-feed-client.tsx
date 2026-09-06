@@ -117,7 +117,8 @@ function StoryRail({ notes }: { notes: FeedNote[] }) {
 }
 
 /* ── 그리드 타일 (탐색·프로필 그리드) ── */
-function GridTile({ n }: { n: FeedNote }) {
+/* [968 · 17] priority — 목록 첫 타일(LCP 후보)만 true. lazy 를 풀고 선점 요청한다. */
+function GridTile({ n, priority = false }: { n: FeedNote; priority?: boolean }) {
   return (
     <Link
       href={noteHref(n)}
@@ -127,6 +128,10 @@ function GridTile({ n }: { n: FeedNote }) {
       <CoverImage
         src={n.coverUrl}
         alt={n.isExample ? "" : `${n.title} 커버 사진`}
+        priority={priority}
+        /* [968 · 17] 실제 열 수(모바일 3열·md 4열·xl 5열)를 말한다 — 기본 50vw 는
+           3열 타일에 한 단계 큰 변환(DPR2 기준 640w→384w)을 내려받게 했다. */
+        sizes="(max-width: 768px) 33vw, (max-width: 1280px) 25vw, 224px"
         imgClassName="absolute inset-0 h-full w-full object-cover md:transition-transform md:duration-300 md:group-hover:scale-[1.06]"
         fallback={
           <span
@@ -161,7 +166,8 @@ function GridTile({ n }: { n: FeedNote }) {
 }
 
 /* ── 피드 포스트 카드 (홈 피드) ── */
-function PostCard({ n }: { n: FeedNote }) {
+/* [968 · 17] priority — 피드 첫 카드(LCP 후보)만 true */
+function PostCard({ n, priority = false }: { n: FeedNote; priority?: boolean }) {
   const detailHref = noteHref(n);
   return (
     <article className="mx-auto w-full max-w-[468px] overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_1px_2px_rgba(16,28,54,.04),0_10px_26px_rgba(16,28,54,.05)]">
@@ -196,6 +202,10 @@ function PostCard({ n }: { n: FeedNote }) {
         <CoverImage
           src={n.coverUrl}
           alt={`${n.title} 커버 사진`}
+          priority={priority}
+          /* [968 · 17] 전폭 카드(최대 468px)인데 기본 힌트(50vw)를 받고 있었다 —
+             모바일에서 절반 해상도 변환이 내려와 흐릿하게 확대됐다. */
+          sizes="(max-width: 768px) 100vw, 468px"
           imgClassName="absolute inset-0 h-full w-full object-cover"
           fallback={
             <div
@@ -533,14 +543,15 @@ export function NotesFeedClient({
         ) : view === "grid" ? (
           // 모바일: 가장자리까지 붙는 촘촘한 3열(인스타 앱). 데스크탑: 넓은 4~5열 보드(둥근 카드·호버·여백)
           <div className="-mx-5 grid grid-cols-3 gap-0.5 md:mx-0 md:grid-cols-4 md:gap-3.5 xl:grid-cols-5">
-            {visible.map((n) => (
-              <GridTile key={n.id} n={n} />
+            {/* [968 · 17] 첫 타일만 priority — 그리드·피드 중 한 뷰만 그려지므로 한 화면에 하나다 */}
+            {visible.map((n, i) => (
+              <GridTile key={n.id} n={n} priority={i === 0} />
             ))}
           </div>
         ) : (
           <div className="flex flex-col gap-5">
-            {visible.map((n) => (
-              <PostCard key={n.id} n={n} />
+            {visible.map((n, i) => (
+              <PostCard key={n.id} n={n} priority={i === 0} />
             ))}
           </div>
         )}

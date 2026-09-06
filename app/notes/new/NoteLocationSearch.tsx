@@ -132,6 +132,9 @@ export function NoteLocationSearch({
               value={q}
               onChange={(e) => setQ(e.target.value)}
               {...compositionProps}
+              /* [968 · 29] <form> 밖의 검색 입력 — 자판에 "검색" 키를 준다 */
+              enterKeyHint="search"
+              aria-label="단지·주소 검색"
               placeholder="단지명 또는 주소 (예: 은마아파트, 대치동)"
               className="w-full bg-transparent t-body text-ink outline-none placeholder:text-text-3"
             />

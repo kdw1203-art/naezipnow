@@ -1,36 +1,43 @@
 "use client";
 
 /**
- * 클로즈 베타 안내 팝업 (홈 전용).
+ * 클로즈 베타 안내 (홈 전용) — [968 · 39] 모달 → 본문 상단 한 줄 배너.
  *
  * 왜 필요한가 — 지금 내집나우는 정식 서비스가 아니다. 화면·기능·데이터 범위가
  * 계속 바뀌는데, 처음 들어온 사람은 그걸 알 방법이 없다. "왜 이 지역은 비어
  * 있지?", "왜 이 숫자가 —로 나오지?" 를 서비스 결함으로 읽고 나가는 대신,
  * 지금이 어떤 단계인지를 먼저 말해 준다.
  *
+ * 왜 모달을 접었나(2026-09-06 모바일 감사 항목 39) — 첫 방문의 인터럽션이
+ * 겹쳤다: 쿠키 배너 → 900ms 뒤 이 모달 → 설치 배너/iOS 힌트. 화면을 덮는 것이
+ * 세 개면 사람은 셋 다 안 읽고 닫는다. 안내는 사실이지 허락을 구하는 일이
+ * 아니므로 **본문 위 한 줄**로 충분하다 — 검색창은 그대로 눌리고, 읽고 싶으면
+ * 읽고, 닫으면 30일 동안 다시 안 뜬다.
+ *
  * 문구 원칙(사실 우선):
  *   - 정식 출시 시점은 오너가 말한 범위("하반기") 그대로만 적는다. 월·일을
  *     지어내지 않는다. 날짜가 정해지면 이 파일의 문구와 STORAGE_KEY 의 버전을
  *     함께 올려 다시 안내한다.
- *   - "데이터가 곧 채워집니다" 같은 약속은 하지 않는다. 대신 지금 무엇이
- *     확인된 값이고 무엇이 비어 있는지를 말한다.
+ *   - "데이터가 곧 채워집니다" 같은 약속은 하지 않는다. 확인 안 된 값은 — 로
+ *     비워 둔다는 사실만 말한다.
  *
  * 표시 규칙:
- *   - 브라우저 기본 대화상자(confirm/alert)는 쓰지 않는다 — 공용 Modal 사용.
- *   - 쿠키 동의 배너가 아직 떠 있으면(결정 전) 띄우지 않는다. 오버레이 두 개가
- *     겹치면 둘 다 읽히지 않고 둘 다 닫힌다.
- *   - 같은 이유로 **앱 설치 안내 배너**가 떠 있는 동안에도 띄우지 않는다.
- *     2026-07-28 실측: 홈에서 설치 프롬프트가 뜬 상태로 900ms 가 지나면 이
- *     모달이 그 위를 덮어 "추가하기" 버튼이 눌리지 않았다(E2E 3건 실패로 잡힘).
- *     설치 배너는 사용자가 닫거나 설치를 끝내면 사라지므로, 사라진 뒤에 연다.
- *   - 닫으면 localStorage 에 시각을 남기고 DISMISS_DAYS 동안 다시 띄우지
- *     않는다. 서버에 저장하지 않으므로 이 브라우저에만 남는 값이다.
- *   - LCP 와 겹치지 않게 마운트 후 잠깐 뒤에 연다.
+ *   - 쿠키 동의가 결정되기 전에는 그리지 않는다(동의 배너와 같은 화면에 두 안내가
+ *     동시에 뜨지 않게). 결정 직후에는 바로 나타난다 — 사용자 입력 500ms 안의
+ *     레이아웃 이동은 CLS 로 세지 않는다.
+ *   - `document.body[data-modal-open]`(ui/Modal · useScrollLock 표식)이 붙어 있는
+ *     동안은 숨긴다 — 모달 뒤에서 한 줄이 새로 생기면 배경이 움직여 보인다.
+ *   - 닫기는 localStorage 에 시각을 남기고 DISMISS_DAYS 동안 다시 띄우지 않는다
+ *     (키는 모달 시절 그대로 — 이미 닫은 사람에게 다시 묻지 않는다).
+ *   - 서버 HTML 에는 없다(null). 게스트 캐시·LCP 요소는 그대로다. 재방문자에게
+ *     하이드레이션 뒤 한 줄(약 36px)이 끼어드는 이동은 감수한다 — 화면 전체를
+ *     덮던 모달보다 싸다.
+ *
+ * 파일명·export 이름(BetaNoticeModal)은 호출부(app/page.tsx)를 위해 유지한다.
  */
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Modal, ModalHeader } from "./ui/Modal";
 import { useCookieConsent } from "@/components/consent/use-cookie-consent";
 
 /** 문구가 바뀌면 뒤 숫자를 올린다 — 이미 닫은 사람에게도 새 안내가 한 번 더 간다. */
@@ -38,19 +45,6 @@ const STORAGE_KEY = "nuguzip:beta-notice-v1";
 
 /** 닫은 뒤 다시 띄우지 않는 기간. 베타 기간 내내 매번 뜨면 그건 공지가 아니라 방해다. */
 const DISMISS_DAYS = 30;
-
-/** 첫 화면이 그려진 다음에 연다(ms). */
-const OPEN_DELAY_MS = 900;
-
-/** 앱 설치 안내 배너 — InstallPrompt 가 보일 때만 이 노드를 그린다. */
-const INSTALL_BANNER_SELECTOR = '[role="region"][aria-label="앱 설치 안내"]';
-
-function installBannerShowing(): boolean {
-  return (
-    typeof document !== "undefined" &&
-    document.querySelector(INSTALL_BANNER_SELECTOR) !== null
-  );
-}
 
 function dismissedRecently(): boolean {
   try {
@@ -65,43 +59,33 @@ function dismissedRecently(): boolean {
   }
 }
 
+/** body 의 data-modal-open 표식을 따라간다 — 모달이 떠 있는 동안은 배너를 숨긴다 */
+function useModalOpen(): boolean {
+  const [modalOpen, setModalOpen] = useState(false);
+  useEffect(() => {
+    const read = () => setModalOpen(document.body.dataset.modalOpen != null);
+    read();
+    const observer = new MutationObserver(read);
+    observer.observe(document.body, { attributes: true, attributeFilter: ["data-modal-open"] });
+    return () => observer.disconnect();
+  }, []);
+  return modalOpen;
+}
+
 export function BetaNoticeModal() {
-  const [open, setOpen] = useState(false);
+  const [show, setShow] = useState(false);
   const { state } = useCookieConsent();
   const consentSettled = state.status === "decided";
+  const modalOpen = useModalOpen();
 
   useEffect(() => {
     if (!consentSettled) return;
     if (dismissedRecently()) return;
-
-    let observer: MutationObserver | null = null;
-
-    /* 설치 배너가 떠 있으면 기다렸다가, 사라진 뒤에 연다. 폴링 대신
-       MutationObserver 를 쓰는 이유는 배너가 언제 닫힐지 알 수 없어서다 —
-       주기적으로 깨어나 확인하는 것보다 없어지는 순간에 반응하는 편이 정확하다. */
-    const openWhenClear = () => {
-      if (!installBannerShowing()) {
-        setOpen(true);
-        return;
-      }
-      observer = new MutationObserver(() => {
-        if (installBannerShowing()) return;
-        observer?.disconnect();
-        observer = null;
-        setOpen(true);
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
-    };
-
-    const t = window.setTimeout(openWhenClear, OPEN_DELAY_MS);
-    return () => {
-      window.clearTimeout(t);
-      observer?.disconnect();
-    };
+    setShow(true);
   }, [consentSettled]);
 
   function close() {
-    setOpen(false);
+    setShow(false);
     try {
       localStorage.setItem(STORAGE_KEY, new Date().toISOString());
     } catch {
@@ -109,51 +93,34 @@ export function BetaNoticeModal() {
     }
   }
 
+  if (!show || modalOpen) return null;
+
   return (
-    <Modal open={open} onClose={close} label="클로즈 베타 안내" maxWidth={420}>
-      <ModalHeader title="지금은 클로즈 베타입니다" onClose={close} />
-
-      <div className="space-y-3 text-[13px] leading-relaxed text-text-1">
-        <p>
-          내집나우는 아직 클로즈 베타 단계예요. 지금 보이는 화면과 기능은 정식 출시 전까지 바뀔 수
-          있습니다.
-        </p>
-        <p>
-          <b className="text-ink">정식 출시는 올해 하반기</b>를 목표로 준비하고 있어요. 날짜가
-          정해지면 이 자리에서 다시 안내드릴게요.
-        </p>
-
-        <div className="rounded-2xl bg-primary-soft p-3 text-[13px] text-text-2">
-          <p className="mb-1.5 font-bold text-primary">베타 기간에 알아 두시면 좋은 것</p>
-          <p>
-            시세·실거래는 공공데이터를 그대로 옮겨 보여 드립니다. 아직 확인되지 않은 값은 채워
-            넣지 않고 <b className="text-text-1">—</b> 로 비워 둡니다. 지역에 따라 비어 있는 화면이
-            보일 수 있어요.
-          </p>
-        </div>
-
-        <p className="text-[13px] text-text-2">
-          쓰다가 이상한 점이나 아쉬운 점이 있으면 알려 주세요. 베타 기간의 의견이 정식 출시 모습을
-          정합니다.
-        </p>
-      </div>
-
-      <div className="mt-4 flex gap-2">
+    <div
+      role="status"
+      aria-label="클로즈 베타 안내"
+      data-noprint
+      className="mb-2.5 flex items-center gap-2 rounded-xl border border-line bg-primary-soft px-3 py-2 text-[12px] leading-[1.45] text-text-1"
+    >
+      <p className="m-0 min-w-0 flex-1">
+        <b className="text-primary">클로즈 베타예요.</b> 정식 출시(올해 하반기)까지 화면이 바뀔 수
+        있고, 확인 안 된 값은 <b className="text-ink">—</b> 로 비워 둬요.{" "}
         <Link
           href="/support"
           onClick={close}
-          className="press flex-1 rounded-xl border border-border bg-surface py-2.5 text-center text-[13px] font-bold text-text-1"
+          className="whitespace-nowrap font-bold text-primary underline"
         >
           의견 보내기
         </Link>
-        <button
-          type="button"
-          onClick={close}
-          className="press flex-1 rounded-xl bg-primary py-2.5 text-center text-[13px] font-bold text-white"
-        >
-          확인했어요
-        </button>
-      </div>
-    </Modal>
+      </p>
+      <button
+        type="button"
+        onClick={close}
+        aria-label="베타 안내 닫기"
+        className="tap shrink-0 rounded-full px-1.5 py-0.5 t-caption font-extrabold text-text-3 hover:text-ink"
+      >
+        닫기
+      </button>
+    </div>
   );
 }

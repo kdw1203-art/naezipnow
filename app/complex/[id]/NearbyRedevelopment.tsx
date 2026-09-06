@@ -1,8 +1,7 @@
 import Link from "next/link";
 import type { listProjects } from "@/lib/redevelopment/store";
-import { loadRedevelopment } from "./section-loaders";
+import { loadRedevelopment, logSectionFailure, withSectionBudget } from "./section-loaders";
 import { PROJECT_TYPES, stageLabel } from "@/lib/redevelopment/types";
-import { logger } from "@/lib/log";
 
 /* D3 — 인근 정비사업 섹션. 단지 소재 시군구의 정비사업을 보여준다.
    예전에는 listDbProjects(시드 폴백 없음)를 써서 DB가 비어 있는 동안 항상 숨겨졌다.
@@ -21,9 +20,10 @@ export async function NearbyRedevelopment({ sigungu }: { sigungu: string }) {
   /* 곁다리 섹션이라 실패해도 단지 페이지 전체를 죽이지는 않는다. 다만 조용히
      삼키지는 않는다 — 이 섹션이 계속 안 보이는데 로그가 없으면 "그 구에 정비사업이
      없다"와 "조회가 실패했다"를 아무도 구분할 수 없다. */
-  const projects = await loadRedevelopment(gu).catch(
+  /* [968 · 1] 공유 예산 3초 — 넘기면 이번 렌더만 접는다(아래 catch) */
+  const projects = await withSectionBudget(loadRedevelopment(gu)).catch(
     (e: unknown) => {
-      logger.error(`[NearbyRedevelopment] ${gu} 정비사업 조회 실패 — 섹션을 접습니다: ${String(e)}`);
+      logSectionFailure(`[NearbyRedevelopment] ${gu} 정비사업(섹션을 접습니다)`, e);
       return [] as Awaited<ReturnType<typeof listProjects>>;
     },
   );
@@ -35,7 +35,8 @@ export async function NearbyRedevelopment({ sigungu }: { sigungu: string }) {
   const hasSeed = projects.some((p) => p.asOf != null);
 
   return (
-    <section className="rise-in-5 mt-6">
+    /* [968 · 7] cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미룬다(page.tsx 주석 참고) */
+    <section className="cv-auto rise-in-5 mt-6">
       <h2 className="mb-2 px-1 t-section text-ink">
         인근 정비사업 <span className="t-sub font-medium text-text-3">{gu}</span>
       </h2>

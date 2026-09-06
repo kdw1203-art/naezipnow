@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { getHomePersonal } from "@/lib/client/home-personal";
+import { useShellActive, type Shell } from "@/lib/client/viewport-shell";
 import { NaverMap } from "@/components/map/NaverMapLazy";
 import type { MapMarkerData } from "@/components/map/NaverMap";
 import {
@@ -70,14 +71,35 @@ function toMomPct(delta: string, tone: HomeMiniRegion["tone"]): number | undefin
   return tone === "down" ? -v : v;
 }
 
+/* [968 · 10] 보인 뒤에도 곧바로 SDK 를 싣지 않는다 — 메인 스레드가 한가해질 때
+   (requestIdleCallback) 마운트한다. 지원하지 않는 브라우저(사파리)는 1.5초 뒤. */
+const IDLE_FALLBACK_MS = 1500;
+type IdleWindow = Window & {
+  requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+  cancelIdleCallback?: (id: number) => void;
+};
+function whenIdle(cb: () => void): () => void {
+  const w = window as IdleWindow;
+  if (typeof w.requestIdleCallback === "function") {
+    const id = w.requestIdleCallback(cb, { timeout: IDLE_FALLBACK_MS * 2 });
+    return () => w.cancelIdleCallback?.(id);
+  }
+  const t = window.setTimeout(cb, IDLE_FALLBACK_MS);
+  return () => window.clearTimeout(t);
+}
+
 export function HomeMiniMap({
   regions,
   className = "",
+  shell,
 }: {
   regions: HomeMiniRegion[];
   className?: string;
+  /** [968 · 8] 어느 벌인지 — 안 보이는 벌은 옵저버·개인화 조회를 시작하지 않는다 */
+  shell?: Shell;
 }) {
   const router = useRouter();
+  const active = useShellActive(shell);
   const [focus, setFocus] = useState<{
     center: { lat: number; lng: number };
     level: number;
@@ -98,33 +120,46 @@ export function HomeMiniMap({
      마커를 교체한다. 해석 실패·비로그인이면 종전(홈 카드) 유지. */
   const [personalRegions, setPersonalRegions] = useState<HomeMiniRegion[] | null>(null);
   /* 최적화 11 — 지연 마운트. 네이버 지도 SDK(외부 스크립트)가 홈 첫 페인트에
-     같이 실렸다. 카드가 뷰포트 300px 안에 들어올 때만 지도를 마운트한다 —
-     그 전에는 같은 크기의 정적 자리(그라데이션)만. 관측 실패(구형 브라우저)
-     시 즉시 마운트로 폴백. */
+     같이 실렸다. 카드가 뷰포트에 들어올 때만 지도를 마운트한다 —
+     그 전에는 같은 크기의 정적 자리(그라데이션 + "지도 열기" 링크)만. 관측 실패(구형 브라우저)
+     시 즉시 마운트로 폴백.
+     [968 · 10] rootMargin 300px → 0px. 예전 값은 208px 짜리 카드가 대부분 폰에서
+     하이드레이션 직후 "가깝다"로 판정돼 sdk-config fetch → maps.js → 타일이 첫 화면
+     작업과 겹쳤다. 이제 실제로 보일 때, 그리고 메인 스레드가 한가할 때(whenIdle) 싣는다.
+     [968 · 8] 안 보이는 벌은 관측 자체를 하지 않는다(display:none 은 어차피 교차하지 않지만
+     옵저버 하나와 콜백은 아꼈다). */
   const [near, setNear] = useState(false);
   const rootElRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const el = rootElRef.current;
-    if (!el) return;
+    if (!el || !active) return;
+    let cancelIdle: (() => void) | null = null;
+    const mountWhenIdle = () => {
+      cancelIdle = whenIdle(() => setNear(true));
+    };
     if (typeof IntersectionObserver !== "function") {
-      setNear(true);
-      return;
+      mountWhenIdle();
+      return () => cancelIdle?.();
     }
     const io = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {
-          setNear(true);
           io.disconnect();
+          mountWhenIdle();
         }
       },
-      { rootMargin: "300px" },
+      { rootMargin: "0px" },
     );
     io.observe(el);
-    return () => io.disconnect();
-  }, []);
+    return () => {
+      io.disconnect();
+      cancelIdle?.();
+    };
+  }, [active]);
 
   // 로그인 시 관심지역으로 중심 이동 (세션/알림 기반) — 실패·비로그인 시 조용히 유지
   useEffect(() => {
+    if (!active) return;
     let cancelled = false;
     (async () => {
       try {
@@ -187,7 +222,7 @@ export function HomeMiniMap({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [active]);
 
   const shownRegions = personalRegions ?? regions;
 
@@ -309,6 +344,8 @@ export function HomeMiniMap({
             onFallbackChange={setFallbackActive}
           />
         ) : (
+          /* [968 · 10] 정적 자리 — 같은 높이의 그라데이션. "지도 열기" 링크는 아래 하단 바가
+             near 와 무관하게 늘 그려져 있어, SDK 없이도 /map 으로 갈 수 있다. */
           <div
             aria-hidden
             className="h-full w-full bg-gradient-to-br from-primary-soft to-line-strong"

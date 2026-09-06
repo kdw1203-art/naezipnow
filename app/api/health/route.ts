@@ -13,6 +13,10 @@ import {
 } from "@/lib/newui/supabase-read";
 import { getSupabaseUrl } from "@/lib/supabase/env";
 import { classifyIngestRun, type IngestOutcome } from "@/lib/market/ingest-outcome";
+/* [968 · T5] 토스 구성 진단 — 접두사 판정(boolean·enum)만, 키 값은 어디에도 싣지 않는다 */
+import { tossDiagnostics } from "@/lib/payments/toss-diagnostics";
+import { isTossBillingEnabled } from "@/lib/payments/toss-billing";
+import { DEFAULT_DESKTOP_ORIGIN } from "@/lib/platform-shell";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -432,6 +436,19 @@ export async function GET(req: Request) {
     email: { resend },
 
     payment: { stripe, toss: tossSecret, tossClient },
+
+    /* [968 · T5] 도메인 변경 심사 대응 — "키 종류·빌링 개방·웹훅 검증"을 콘솔을
+       열지 않고 확인한다. 토큰 게이트 안(상세 모드)에만 있고, 값은 startsWith 판정
+       결과(boolean·enum)뿐이다. 키 문자열·길이·일부는 담지 않는다(단위테스트 고정). */
+    toss: tossDiagnostics({
+      clientKey: process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY,
+      secretKey: process.env.TOSS_SECRET_KEY,
+      billingClientKey: process.env.NEXT_PUBLIC_TOSS_BILLING_CLIENT_KEY,
+      billingSecretKey: process.env.TOSS_BILLING_SECRET_KEY,
+      billingEnabledFlag: process.env.NEXT_PUBLIC_TOSS_BILLING_ENABLED,
+      billingEnabled: isTossBillingEnabled(),
+      siteOrigin: DEFAULT_DESKTOP_ORIGIN,
+    }),
 
     push: { vapid },
 

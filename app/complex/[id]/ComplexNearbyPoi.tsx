@@ -28,7 +28,8 @@ export async function ComplexNearbyPoi({
   if (poi.schools.length === 0 && poi.stations.length === 0) return null;
 
   return (
-    <section className="rise-in-5 mt-6">
+    /* [968 · 7] cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미룬다(page.tsx 주석 참고) */
+    <section className="cv-auto rise-in-5 mt-6">
       <h2 className="mb-2 px-1 t-section text-ink">
         {name} 도보권 학교·역{" "}
         <span className="t-sub font-medium text-text-3">직선거리 기준</span>

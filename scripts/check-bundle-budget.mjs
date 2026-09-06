@@ -26,6 +26,11 @@ const BUDGETS_KB = {
   "/analysis/page": 490, // 실측 453KB
   "/analysis/ai/[tool]/page": 480, // 실측 441KB
   "/notes/new/page": 470, // 실측 434KB — VoiceMemoRecorder 분리 후
+  /* [968 · 4] 단지 허브 — 홈(466KB)보다 큰 468KB(2026-09-06 제안서 실측)인데 목록에 없었다.
+     사이트맵 URL 의 대부분(2.5만)이 이 라우트라 회귀를 가장 먼저 잡아야 할 곳이다.
+     예산 470 은 실측 + 여유 0.4% — PriceTrendChart 서버 컴포넌트화·시세/내 기록 탭
+     next/dynamic 분리 뒤의 값을 빌드에서 확인하고 낮추는 방향으로 조정한다. */
+  "/complex/[id]/page": 470,
 };
 
 let manifest;

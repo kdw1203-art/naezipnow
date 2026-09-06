@@ -3,6 +3,7 @@
 import { hasSession } from "@/lib/client/has-session";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useShellActive, type Shell } from "@/lib/client/viewport-shell";
 
 /* [개선 #11·#12·#29, 2026-08-22] 홈 참여 카드 — 로그인 사용자 전용.
  *
@@ -37,12 +38,49 @@ type State =
    목표를 상점 최고 아이템(매물 상단 노출 7일, 500P)으로 바꿨다. */
 const SHOP_GOAL_COST = 500; // lib/points/catalog.ts listing_boost_7d 와 동일 (표시용)
 
-export function HomeEngagementCard() {
+/* [968 · 8] 카드 데이터 3건(출석·포인트·온보딩)을 페이지 수명 안에서 한 번만 받는다.
+   홈은 이 카드를 모바일·데스크톱 두 벌로 마운트하므로 예전엔 로그인 홈 한 번에
+   fetch 6건이 나갔다. shell 판정으로 안 보이는 벌은 아예 안 부르지만, 경계를 넘나드는
+   창(태블릿 회전)처럼 두 벌이 다 살아나는 경우를 위해 공유 프라미스도 둔다.
+   실패는 캐시하지 않는다(일시 오류가 30초 "카드 없음"으로 굳지 않게). 출석 체크(POST)
+   뒤 값은 컴포넌트 상태로 갱신하므로 이 캐시를 건드릴 필요가 없다. */
+type AttendanceJson = { checkedToday?: unknown; streak?: unknown; totalPoints?: unknown };
+type PointsJson = { balance?: unknown };
+type OnboardingJson = { steps?: unknown };
+type EngagementPayload = [AttendanceJson | null, PointsJson | null, OnboardingJson | null];
+const ENGAGEMENT_TTL_MS = 30_000;
+let engagementCache: { at: number; promise: Promise<EngagementPayload> } | null = null;
+function fetchEngagement(): Promise<EngagementPayload> {
+  if (engagementCache && Date.now() - engagementCache.at < ENGAGEMENT_TTL_MS) {
+    return engagementCache.promise;
+  }
+  const promise: Promise<EngagementPayload> = Promise.all([
+    fetch("/api/me/attendance", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
+    fetch("/api/me/points", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
+    fetch("/api/me/onboarding", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
+  ]).then(
+    (v) => {
+      if (!v[0] && engagementCache?.promise === promise) engagementCache = null;
+      return v as EngagementPayload;
+    },
+    (e) => {
+      if (engagementCache?.promise === promise) engagementCache = null;
+      throw e;
+    },
+  );
+  engagementCache = { at: Date.now(), promise };
+  return promise;
+}
+
+export function HomeEngagementCard({ shell }: { shell?: Shell } = {}) {
   const [st, setSt] = useState<State>({ phase: "none" });
   const [checking, setChecking] = useState(false);
   const [justEarned, setJustEarned] = useState<number | null>(null);
+  /* [968 · 8] 안 보이는 벌은 세션 조회·데이터 3건을 시작하지 않는다(null 그대로) */
+  const active = useShellActive(shell);
 
   useEffect(() => {
+    if (!active) return;
     let cancelled = false;
     /* [967 · 33] 게스트 판정은 세션 API 로(httpOnly 쿠키는 스크립트에 안 보인다 —
        예전 정규식 판정은 항상 게스트라 이 카드가 한 번도 렌더되지 않았다). */
@@ -55,23 +93,16 @@ export function HomeEngagementCard() {
     };
     function load() {
       setSt({ phase: "loading" });
-      Promise.all([
-        fetch("/api/me/attendance", { cache: "no-store" }).then((r) =>
-          r.ok ? r.json() : null,
-        ),
-        fetch("/api/me/points", { cache: "no-store" }).then((r) =>
-          r.ok ? r.json() : null,
-        ),
-        fetch("/api/me/onboarding", { cache: "no-store" }).then((r) =>
-          r.ok ? r.json() : null,
-        ),
-      ])
+      fetchEngagement()
         .then(([att, pts, onb]) => {
+          if (cancelled) return;
           if (!att) {
             setSt({ phase: "none" });
             return;
           }
-          const steps: string[] = Array.isArray(onb?.steps) ? onb.steps : [];
+          const steps: string[] = Array.isArray(onb?.steps)
+            ? onb.steps.filter((x): x is string => typeof x === "string")
+            : [];
           setSt({
             phase: "ready",
             checkedToday: Boolean(att.checkedToday),
@@ -85,7 +116,7 @@ export function HomeEngagementCard() {
           if (!cancelled) setSt({ phase: "none" });
         });
     }
-  }, []);
+  }, [active]);
 
   const checkIn = useCallback(async () => {
     if (checking) return;

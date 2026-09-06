@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PageShell } from "@/app/components/PageShell";
 import { CheckoutClient } from "./CheckoutClient";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
+import { isTossBillingEnabled } from "@/lib/payments/toss-billing";
 
 export const metadata: Metadata = {
   title: "결제하기 | 내집나우",
@@ -25,8 +26,14 @@ export default function CheckoutPage() {
   return (
     <PageShell breadcrumb="구독 · 결제" title="결제하기">
       <CheckoutClient />
-      {/* 수익 문구 미기재 방침 + 제공기간·환불 요약 — 결제 직전 화면에도 고지 */}
-      <div className="mt-4"><ComplianceNotice variant="payment" /></div>
+      {/* 수익 문구 미기재 방침 + 제공기간·환불 요약 — 결제 직전 화면에도 고지.
+          [968 · T3] recurringOpen 을 /subscription(page.tsx) 과 같은 서버 판정으로
+          내려준다 — 빌링이 열린 뒤에도 이 화면만 "모든 이용권은 1회성 단건" 이라
+          적혀 있어, 구독 안내와 결제 화면의 법적 고지가 서로 달랐다(심사역이 두
+          화면을 나란히 보면 어느 쪽이 사실인지 알 수 없다). */}
+      <div className="mt-4">
+        <ComplianceNotice variant="payment" recurringOpen={isTossBillingEnabled()} />
+      </div>
     </PageShell>
   );
 }

@@ -173,7 +173,8 @@ export default function ResetPasswordPage() {
 
   return (
     <main
-      className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col px-7 pb-8"
+      /* [968 · 31] 100vh → dvh: iOS 주소창이 보일 때 아래 "로그인" 링크가 주소창 뒤로 밀렸다 */
+      className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col px-7 pb-8"
       style={{ paddingTop: "max(20px, env(safe-area-inset-top, 0px))" }}
     >
       <div className="flex justify-end">
@@ -248,6 +249,13 @@ export default function ResetPasswordPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="새 비밀번호 (8자 이상)"
+                  /* [968 · 29] "다음" — Enter 는 제출이 아니라 확인 칸으로 */
+                  enterKeyHint="next"
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+                    e.preventDefault();
+                    document.getElementById("reset-password-confirm")?.focus();
+                  }}
                   aria-describedby="reset-password-hint"
                   className="w-full rounded-[10px] border border-line bg-surface px-4 py-3 pr-14 text-[13px] text-ink outline-none focus:border-primary"
                 />
@@ -281,6 +289,7 @@ export default function ResetPasswordPage() {
                 value={password2}
                 onChange={(e) => setPassword2(e.target.value)}
                 placeholder="비밀번호 확인"
+                enterKeyHint="done"
                 aria-invalid={Boolean(password2) && password !== password2}
                 className="rounded-[10px] border border-line bg-surface px-4 py-3 text-[13px] text-ink outline-none focus:border-primary"
               />

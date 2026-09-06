@@ -195,7 +195,9 @@ export function WelcomeClient() {
 
   if (!ready) {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-[440px] items-center justify-center px-7">
+      /* [968 · 31] 100vh → dvh: iOS 주소창이 보일 때 100vh 는 실제 화면보다 커서
+         가운데 정렬·아래 버튼이 주소창 뒤로 밀렸다 */
+      <main className="mx-auto flex min-h-dvh w-full max-w-[440px] items-center justify-center px-7">
         <span className="text-[13px] text-text-3">준비 중…</span>
       </main>
     );
@@ -203,7 +205,7 @@ export function WelcomeClient() {
 
   return (
     <main
-      className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col gap-4 px-7 pb-8"
+      className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col gap-4 px-7 pb-8"
       style={{ paddingTop: "max(20px, env(safe-area-inset-top, 0px))" }}
     >
       {/* 헤더 — progress dots + 건너뛰기 (항상 노출) */}

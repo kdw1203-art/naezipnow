@@ -2,9 +2,9 @@
   {
     "path": "/*",
     "timings": [
-      { "metric": "largest-contentful-paint", "budget": 4000 },
+      { "metric": "largest-contentful-paint", "budget": 3000 },
       { "metric": "cumulative-layout-shift", "budget": 0.1 },
-      { "metric": "total-blocking-time", "budget": 600 },
+      { "metric": "total-blocking-time", "budget": 300 },
       { "metric": "interactive", "budget": 7000 }
     ],
     "resourceSizes": [

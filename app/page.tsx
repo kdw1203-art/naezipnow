@@ -366,6 +366,11 @@ export default async function Home() {
              대상이 아니라 항상 숨은 채로 있는다.) */}
         <h1 className="sr-only">{HOME_PAGE_H1}</h1>
 
+        {/* [968 · 39] 클로즈 베타 안내 — 화면을 덮던 모달 대신 본문 위 한 줄. 쿠키 동의가
+            결정된 뒤에만, 30일에 한 번, 모달이 떠 있지 않을 때만 뜬다. 서버 HTML 에는
+            없어(null) 게스트 캐시·LCP 는 그대로다. (예전 자리: TabBar 뒤) */}
+        <BetaNoticeModal />
+
         {/* 개인화 대형 블록(PersonalHome)은 소유자 지시(2026-08-16 "팝업형식
             또는 제거")로 내렸다 — 새 홈(검색·KPI·칩)이 개인화 조각을 이미
             흡수했고, 남은 핵심(작성 중 노트 복귀)만 우하단 팝업으로 남는다. */}
@@ -393,7 +398,10 @@ export default async function Home() {
             <p className="rise-in -mt-1 text-center t-sub text-text-2">{HOME_HERO_SUBLINE_SHORT}</p>
             <div className="rise-in-1">
               {/* [963] 커버리지 한 줄은 칩 행 안으로 — 두 줄이던 보조 정보를 한 줄로 */}
+              {/* [968 · 8] shell="mobile" — 두 벌 중 뷰포트에 없는 벌은 타이머·조회를 시작하지
+                  않는다(lib/client/viewport-shell). 서버 HTML 은 그대로 두 벌이다. */}
               <HomeHeroSearch
+                shell="mobile"
                 regionChips={heroRegionChips}
                 coverage={
                   <HomeCoverageLine coverage={coverage} publicNotes={data.publicNotesTotal} />
@@ -405,13 +413,13 @@ export default async function Home() {
           {/* [967 · 27] 내 관심 레일 — 로그인 사용자만, 클라이언트 섬. 서버 HTML(공유
               캐시)에는 없어 비로그인 히어로·티커 위치가 그대로다. 관심단지 변동 카드는
               예전에 레벨 KPI 아래(L434 부근)에 홀로 있었다 — 최근 본 단지와 묶어 올린다. */}
-          <HomeMyRail />
+          <HomeMyRail shell="mobile" />
 
           {/* #408 시세 티커 — 소유자 캡처 지시(2026-08-17): 헤더 밑이 아니라
               검색 아래·상황판 위로. 검색이 첫인상, 숫자 밴드가 상황판의 머리가 된다. */}
           {tickerItems.length > 0 && (
             <div className="rise-in-2">
-              <HomeTicker items={tickerItems} />
+              <HomeTicker items={tickerItems} shell="mobile" />
             </div>
           )}
 
@@ -420,6 +428,7 @@ export default async function Home() {
               사라진다. 가장 큰 변화 하나를 문장으로 말하고 나머지는 그 아래 작게. */}
           <div className="rise-in-2">
             <HomeTodayLine
+              shell="mobile"
               region={kpiRegion}
               temp={kpiTemp}
               saleIndex={saleIndexSeoul}
@@ -432,8 +441,8 @@ export default async function Home() {
           {/* 개인 영역 — 시장 사실과 **분리**한다. (A01)
               내 임장 레벨은 시장 지표가 아니라 나의 상태다. 예전엔 KPI 4번째 칸에
               있어서 앞의 셋(지역 평균·온도·거래량)과 같은 종류로 읽혔다. */}
-          <HomeEngagementCard />
-          <HomeLevelKpi />
+          <HomeEngagementCard shell="mobile" />
+          <HomeLevelKpi shell="mobile" />
 
           {/* [OPT-47] 내 워치 단지 최근 거래 브리핑은 [967 · 27] 위 "내 관심" 레일로 올라갔다 */}
 
@@ -449,7 +458,7 @@ export default async function Home() {
 
           {/* 관심지역 실지도 — 스크롤 아래로 이동 (시안 B) */}
           <div data-reveal="">
-            <HomeMiniMap regions={mapRegions} className="h-[208px]" />
+            <HomeMiniMap regions={mapRegions} className="h-[208px]" shell="mobile" />
           </div>
 
           {/* "지금 어디부터 할까요?"(JourneyBanner) 는 홈에서 제거했다
@@ -562,9 +571,13 @@ export default async function Home() {
           </div>
 
           {/* 허브 밀도 축소 — 다이제스트·모임·안전 등 한 카드로 */}
+          {/* [968 · 19] 이 카드의 링크 8개는 prefetch={false} — 홈 아래쪽 목록이라 스크롤해
+              뷰포트에 들어오는 순간 8개 화면의 RSC 페이로드를 한꺼번에 받아 오던 것을 멈춘다.
+              누르면(터치 시작·호버) 그때 받는다. 데스크톱 사이드바의 같은 카드도 동일. */}
           <div data-reveal="" className="card flex flex-col gap-2 rounded-2xl px-4 py-4">
             <h2 className="text-[13px] font-extrabold text-ink">더 알아보기</h2>
             <Link
+prefetch={false}
               href="/digest"
               className="flex items-center justify-between gap-2 py-1.5 t-body no-underline"
             >
@@ -581,6 +594,7 @@ export default async function Home() {
             {/* 분석 도구 행은 위 컴팩트 스트립 신설로 중복이 돼 자료실로 교체 —
                 크리에이터 판매 루프(유료 리포트)의 홈 발견 경로가 없었다. */}
             <Link
+prefetch={false}
               href="/town/library"
               className="flex justify-between py-1.5 t-body font-semibold text-text-1 no-underline"
             >
@@ -588,24 +602,28 @@ export default async function Home() {
             </Link>
             {/* 수익모델·팀 서사 동선(#홈비판) — 리포트 판매와 만든 사람 이야기 */}
             <Link
+prefetch={false}
               href="/creators"
               className="flex justify-between py-1.5 t-body font-semibold text-text-1 no-underline"
             >
               크리에이터 입점 · 리포트 판매 <span className="text-primary">›</span>
             </Link>
             <Link
+prefetch={false}
               href="/town/groups"
               className="flex justify-between py-1.5 t-body font-semibold text-text-1 no-underline"
             >
               임장 모임 <span className="text-primary">›</span>
             </Link>
             <Link
+prefetch={false}
               href="/about"
               className="flex justify-between py-1.5 t-body font-semibold text-text-1 no-underline"
             >
               내집나우 이야기 <span className="text-primary">›</span>
             </Link>
             <Link
+prefetch={false}
               href="/safety"
               className="flex justify-between py-1.5 t-body font-semibold text-text-1 no-underline"
             >
@@ -614,7 +632,7 @@ export default async function Home() {
             {/* 동네이야기는 목록의 죽은 라벨이 아니라 **살아 있는 입구**여야 한다. (A18)
                 주간 다이제스트 행이 티저를 다는 것과 같은 규칙 — 지금 저기 무엇이
                 있는지 한 줄 보여야 눌러 볼 이유가 생긴다. 글이 없으면 없다고 쓴다. */}
-            <Link href="/town" className="flex flex-col gap-0.5 py-1.5 no-underline">
+            <Link prefetch={false} href="/town" className="flex flex-col gap-0.5 py-1.5 no-underline">
               <span className="flex items-center justify-between t-body font-semibold text-text-1">
                 동네이야기 <span className="text-primary">›</span>
               </span>
@@ -631,6 +649,7 @@ export default async function Home() {
             {/* [950] 수익모델이 홈에 없다는 지적(투자자 ④) — 무엇이 유료인지 한 줄로 잇는다.
                 수익 약속 표현은 쓰지 않는다(푸터 고지와 같은 원칙). */}
             <Link
+prefetch={false}
               href="/subscription"
               className="flex justify-between py-1.5 t-body font-semibold text-text-1 no-underline"
             >
@@ -659,7 +678,9 @@ export default async function Home() {
             {/* [950] 무엇이 다른 서비스인지 한 줄(홈 비판 ①) */}
             <p className="-mt-1 text-center t-sub text-text-2">{HOME_HERO_SUBLINE_SHORT}</p>
             {/* [963] 커버리지 한 줄은 칩 행 안으로 — 두 줄이던 보조 정보를 한 줄로 */}
+            {/* [968 · 8] shell="desktop" — 폰에서는 이 벌이 정적 마크업으로만 남는다 */}
             <HomeHeroSearch
+              shell="desktop"
               regionChips={heroRegionChips}
               coverage={
                 <HomeCoverageLine coverage={coverage} publicNotes={data.publicNotesTotal} />
@@ -669,7 +690,7 @@ export default async function Home() {
 
           {/* [967 · 27] 내 관심 레일(데스크톱) — 모바일과 같은 클라이언트 섬. 관심단지
               변동 카드는 데스크톱 홈에 아예 없었다(모바일 전용이었다). */}
-          <HomeMyRail className="mb-4" />
+          <HomeMyRail className="mb-4" shell="desktop" />
 
           {/* [963] 슬로건 띠 ↔ 시세 티커 자리 맞바꿈 (소유자 지시 2026-09-04).
               검색 바로 아래는 브랜드의 한 줄(한지·세리프)이고, 숫자 밴드는 그 다음에
@@ -681,7 +702,7 @@ export default async function Home() {
               검색 아래·KPI 위 전폭 밴드로. 검색(질문)이 먼저, 숫자(상황판)가 다음. */}
           {tickerItems.length > 0 && (
             <div className="rise-in-1 mb-4">
-              <HomeTicker items={tickerItems} />
+              <HomeTicker items={tickerItems} shell="desktop" />
             </div>
           )}
 
@@ -695,6 +716,7 @@ export default async function Home() {
                   같은 숫자(시장 온도·거래 건수·매매지수)를 이미 말한다 — 한 화면에
                   같은 사실 두 벌은 소유자가 지적한 "주제가 안 보인다"의 전형이다. */}
               <HomeTodayLine
+              shell="desktop"
               region={kpiRegion}
               temp={kpiTemp}
               saleIndex={saleIndexSeoul}
@@ -705,10 +727,10 @@ export default async function Home() {
             </div>
 
             {/* [개선 #11·12·29] 로그인 사용자의 매일 루프 (게스트에겐 미렌더) */}
-            <HomeEngagementCard />
+            <HomeEngagementCard shell="desktop" />
             {/* 내 진행 — 시장 지표와 분리한다 (A01) */}
             <div className="rise-in-1">
-              <HomeLevelKpi />
+              <HomeLevelKpi shell="desktop" />
             </div>
 
             {/* 지도 | 도구 추천 — "보고 → 파고" 동선 (시안 A). 도구 스트립은
@@ -720,7 +742,7 @@ export default async function Home() {
                 도구는 모바일 홈과 /analysis 허브가 맡는다.
                 주 행동(임장노트 쓰기)은 지도 아래 전체 폭 막대로 남긴다. */}
             <div className="rise-in-1 flex flex-col gap-3">
-              <HomeMiniMap regions={mapRegions} className="h-[360px]" />
+              <HomeMiniMap regions={mapRegions} className="h-[360px]" shell="desktop" />
               {/* [961] 자석 버튼 — 홈의 핵심 CTA 하나에만(커서를 살짝 따라감, 데스크톱) */}
               <MagneticLink
                 href={HOME_CTA_NOTE.href}
@@ -917,6 +939,7 @@ export default async function Home() {
                 더 알아보기
               </h2>
               <Link
+prefetch={false}
                 href="/digest"
                 className="flex flex-col gap-0.5 py-1.5 no-underline"
               >
@@ -927,6 +950,7 @@ export default async function Home() {
                 <span className="truncate text-[12px] text-text-3">{digestTeaser}</span>
               </Link>
               <Link
+prefetch={false}
                 href="/safety"
                 className="flex justify-between py-1.5 t-body font-semibold text-text-1 no-underline"
               >
@@ -934,6 +958,7 @@ export default async function Home() {
                 <span className="text-primary">›</span>
               </Link>
               <Link
+prefetch={false}
                 href="/town/experts"
                 className="flex justify-between py-1.5 t-body font-semibold text-text-1 no-underline"
               >
@@ -941,6 +966,7 @@ export default async function Home() {
                 <span className="text-primary">›</span>
               </Link>
               <Link
+prefetch={false}
                 href="/town/experts/join"
                 className="flex justify-between py-1.5 t-body font-semibold text-text-1 no-underline"
               >
@@ -949,6 +975,7 @@ export default async function Home() {
               </Link>
               {/* 자료실 — 유료 리포트 판매 루프의 홈 발견 경로 (전에는 없었다) */}
               <Link
+prefetch={false}
                 href="/town/library"
                 className="flex justify-between py-1.5 t-body font-semibold text-text-1 no-underline"
               >
@@ -957,6 +984,7 @@ export default async function Home() {
               </Link>
               {/* 수익모델·팀 서사 동선(#홈비판) */}
               <Link
+prefetch={false}
                 href="/creators"
                 className="flex justify-between py-1.5 t-body font-semibold text-text-1 no-underline"
               >
@@ -964,6 +992,7 @@ export default async function Home() {
                 <span className="text-primary">›</span>
               </Link>
               <Link
+prefetch={false}
                 href="/town/groups"
                 className="flex justify-between py-1.5 t-body font-semibold text-text-1 no-underline"
               >
@@ -971,6 +1000,7 @@ export default async function Home() {
                 <span className="text-primary">›</span>
               </Link>
               <Link
+prefetch={false}
                 href="/about"
                 className="flex justify-between py-1.5 t-body font-semibold text-text-1 no-underline"
               >
@@ -979,6 +1009,7 @@ export default async function Home() {
               </Link>
               {/* [950] 수익모델 동선(투자자 ④) — 수익 약속 표현 없음 */}
               <Link
+prefetch={false}
                 href="/subscription"
                 className="flex flex-col gap-0.5 py-1.5 no-underline"
               >
@@ -995,6 +1026,7 @@ export default async function Home() {
                   {meetings.map((m) => (
                     <li key={m.id}>
                       <Link
+prefetch={false}
                         href={`/town/groups/${m.id}`}
                         className="block truncate text-[12px] text-text-3 no-underline hover:text-primary"
                       >
@@ -1018,6 +1050,7 @@ export default async function Home() {
                           있었다. 홈은 제목·가격을 보여 주는데 눌러서 간 곳은
                           없다고 말하는 상태였다(지금은 그 페이지도 읽는다). */}
                       <Link
+prefetch={false}
                         href="/town/library#reports"
                         className="flex justify-between gap-2 text-[12px] no-underline hover:text-primary"
                       >
@@ -1048,9 +1081,6 @@ export default async function Home() {
       <Footer />
 
       <TabBar />
-
-      {/* 클로즈 베타 안내 — 30일에 한 번, 쿠키 동의 배너가 걷힌 뒤에만 뜬다 */}
-      <BetaNoticeModal />
     </>
   );
 }

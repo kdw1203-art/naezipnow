@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "./Logo";
@@ -10,6 +9,7 @@ import { MobileMenu } from "./MobileMenu";
 import { NotificationBell } from "./NotificationBell";
 import { NAV } from "./nav-data";
 import { Icon } from "./Icon";
+import { useScrolledPast } from "@/lib/client/use-scroll-state";
 
 /** 9m GNB — 호버 드롭다운(리퀴드 글래스) · 트렌드 갱신: 스크롤 인지 · 언더라인 인디케이터
  *  NAV 데이터는 nav-data.ts 공유 (데스크탑 GNB · 모바일 전체 메뉴 동기화) */
@@ -20,32 +20,26 @@ export function Header() {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  // 스크롤 인지 — 내려가면 헤더 축소·글래스 강화·그림자 상승 (SSR: window 가드)
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  /* [968 · 12] 스크롤 인지 — 공용 스크롤 상태(리스너 하나·rAF)에서 8px 경계만 받는다.
+     예전엔 이 컴포넌트가 scroll 이벤트마다 setState 했다(터치는 프레임당 여러 번). */
+  const scrolled = useScrolledPast(8);
 
   return (
     <header
-      className="sticky top-0 z-50 px-3.5 md:px-5"
-      style={{
-        paddingTop: scrolled
-          ? "max(8px, env(safe-area-inset-top, 0px))"
-          : "max(14px, env(safe-area-inset-top, 0px))",
-        transition: "padding-top var(--dur-sm) var(--ease-out)",
-      }}
+      /* [968 · 12] 축소는 transform 으로만 — 예전엔 padding-top 14→8 · h-12→h-11 로
+         sticky 상자 높이를 바꿔 **문서 전체를 리플로우**시켰다(스크롤마다 8px 경계를
+         오갈 때). 이제 바깥 상자는 그대로 두고 안쪽 셸을 scale(.96) 한다(CSS
+         .header-scrolled, 합성기 전용). 상자가 안 줄어 생기는 투명 띠는 pointer-events
+         로 본문에 넘긴다(.site-header). */
+      className="site-header sticky top-0 z-50 px-3.5 md:px-5"
+      style={{ paddingTop: "max(14px, env(safe-area-inset-top, 0px))" }}
     >
       <div
         className={`header-shell mx-auto flex max-w-[1240px] items-center gap-3 rounded-2xl px-4 md:gap-6 md:px-5 ${
           /* 모바일3 — 본문 밀도를 줄인 뒤(2026-08-03 토큰 축소) 헤더가 상대적으로
-             커 보였다. 모바일만 한 단계 축소: 56→48px(비스크롤), 48→44px(스크롤).
-             44px 는 터치 타깃 하한선이라 그 밑으로는 내리지 않는다. md+ 원복. */
-          scrolled ? "glass-strong header-scrolled h-11 md:h-12" : "glass h-12 md:h-14"
+             커 보였다. 모바일만 한 단계 축소: 56px→48px. 44px 는 터치 타깃 하한선이라
+             그 밑으로는 내리지 않는다(스크롤 축소도 48×.96=46px 에서 멈춘다). md+ 원복. */
+          scrolled ? "glass-strong header-scrolled h-12 md:h-14" : "glass h-12 md:h-14"
         }`}
       >
         <Link href="/" aria-label="내집나우 홈" className="press njn-logo shrink-0">

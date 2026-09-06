@@ -1,24 +1,31 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import nextDynamic from "next/dynamic";
 import { AIPanel } from "../../components/AIPanel";
-import { PriceTrendChart, type PricePoint } from "./PriceTrendChart";
 import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { Icon } from "@/app/components/Icon";
-import { Segmented } from "@/app/components/ui/Segmented";
-import {
-  ALL_BANDS,
-  TRADE_SORTS,
-  tradeBandChips,
-  tradeTotals,
-  viewTrades,
-  type HubTrade,
-  type TradeSort,
-} from "@/lib/complex/hub-trades";
-import { MyRecordsTab } from "./MyRecordsTab";
+import type { HubTrade } from "@/lib/complex/hub-trades";
+import { TradeRow } from "./TradeRow";
+import { primeWatching, readWatching } from "./watchlist-status";
+import { canOfferPush, pushResultMessage, subscribeToPush } from "@/lib/push/subscribe-client";
+
+/* [968 · 4] 기본 탭(요약)이 아닌 탭의 본문은 서버 HTML 에 없고 탭을 열 때만 필요하다.
+   정적 import 는 첫 로드 JS 에 그대로 실리므로 next/dynamic 으로 뗀다. ssr:false 인
+   이유: 첫 하이드레이션은 언제나 기본 탭이라 서버가 이 둘을 그릴 일이 없다(hub-client
+   가 "use client" 라 ssr:false 도 허용된다 — MapClientLazy 주석 참고). */
+const tabFallback = <div className="sk h-[180px] w-full rounded-[14px]" aria-hidden />;
+const MyRecordsTab = nextDynamic(
+  () => import("./MyRecordsTab").then((m) => m.MyRecordsTab),
+  { ssr: false, loading: () => tabFallback },
+);
+const PriceTab = nextDynamic(() => import("./PriceTab").then((m) => m.PriceTab), {
+  ssr: false,
+  loading: () => tabFallback,
+});
 
 /* 시안 23b — 단지 허브 탭 5개(요약·노트·매물·시세·내 기록) 전환 서브컴포넌트 */
 
@@ -87,17 +94,14 @@ export function WatchlistButton({
      한 줄로 말한다. tone 으로 색만 가른다. */
   const [message, setMessage] = useState<{ text: string; tone: "error" | "ok" } | null>(null);
 
+  /* [968 · 3] 세션이 비면 요청 없이 false, 있으면 단지별 공유 프라미스(30초) —
+     히어로 버튼과 하단 바가 같은 왕복 하나를 나눠 받고, 하단 바가 스크롤마다
+     다시 마운트돼도 요청이 또 나가지 않는다(watchlist-status.ts). */
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/me/watchlist?complexId=${encodeURIComponent(complexId)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j: { watching?: boolean } | null) => {
-        // 비로그인(401)이면 j 가 null — "관심 없음"이 아니라 "모름"이므로 false 로 시작한다.
-        if (!cancelled) setWatching(j ? Boolean(j.watching) : false);
-      })
-      .catch(() => {
-        if (!cancelled) setWatching(false);
-      });
+    readWatching(complexId).then((w) => {
+      if (!cancelled) setWatching(w);
+    });
     return () => {
       cancelled = true;
     };
@@ -154,9 +158,28 @@ export function WatchlistButton({
         return;
       }
       const next = !watching;
-      if (next) say("저장했어요 · 시세 변동 시 알림을 받아요", "ok");
-      else if (variant === "bar") showToast("관심 단지에서 뺐어요");
+      if (next) {
+        /* [968 · 46] 관심 등록의 뜻이 "시세 변동 알림"인데 그 자리에서 푸시를 권하지
+           않았다(옵트인은 전체 메뉴 안에만). 아직 묻지 않은(default) 브라우저에만 토스트
+           액션으로 권한다 — 권한 프롬프트는 액션 탭 핸들러 안(사용자 제스처)에서만 열리고,
+           자동으로 묻는 일은 없다. 이미 허용·차단했거나 미지원이면 예전 문구 그대로. */
+        if (canOfferPush()) {
+          if (variant !== "bar") setMessage({ text: "저장했어요 · 시세 변동 시 알림을 받아요", tone: "ok" });
+          showToast("저장했어요 · 시세 변동을 푸시로도 받을 수 있어요", {
+            label: "푸시로 받기",
+            onClick: () => {
+              void subscribeToPush().then((r) => {
+                const m = pushResultMessage(r);
+                if (m) showToast(m);
+              });
+            },
+          });
+        } else {
+          say("저장했어요 · 시세 변동 시 알림을 받아요", "ok");
+        }
+      } else if (variant === "bar") showToast("관심 단지에서 뺐어요");
       setWatching(next);
+      primeWatching(complexId, next);
       window.dispatchEvent(
         new CustomEvent<WatchlistDetail>(WATCHLIST_EVENT, { detail: { complexId, watching: next } }),
       );
@@ -260,29 +283,7 @@ function hrefWithTab(tab: Tab): string {
   return `${window.location.pathname}${s ? `?${s}` : ""}${window.location.hash}`;
 }
 
-function deltaClass(tone: "up" | "down" | "flat"): string {
-  return tone === "down" ? "delta-down" : tone === "up" ? "delta-up" : "delta-flat";
-}
-
-/** 실거래 표 한 줄 — 요약 탭 미리보기·시세 탭 전체가 같은 모양 */
-function TradeRow({ t, divider }: { t: HubTrade; divider: "top" | "bottom" | "none" }) {
-  return (
-    <div
-      className={`flex items-center justify-between px-3.5 py-[7px] text-[12px] ${
-        divider === "top" ? "border-t border-line" : divider === "bottom" ? "border-b border-divider" : ""
-      }`}
-    >
-      <span className="text-text-2">
-        {t.date}
-        <span className="ml-1.5 text-text-3">{t.sub}</span>
-      </span>
-      <span className="flex shrink-0 items-baseline gap-1.5">
-        <span className="font-extrabold text-ink">{t.price}</span>
-        <span className={`text-[10px] ${deltaClass(t.tone)}`}>{t.delta}</span>
-      </span>
-    </div>
-  );
-}
+/* TradeRow·deltaClass 는 [968 · 4] 에서 ./TradeRow.tsx 로 옮겼다(시세 탭과 공유). */
 
 export function ComplexHubTabs({
   aiTitle,
@@ -293,7 +294,8 @@ export function ComplexHubTabs({
   notesFailed = false,
   notesWriteHref,
   listings,
-  priceSeries,
+  priceChart,
+  latestAvgManwon,
   complexId,
   complexName,
   noteHref,
@@ -309,7 +311,11 @@ export function ComplexHubTabs({
   /** 이 단지에 연결된 글을 쓰러 가는 주소 (/town/write?complex=…) */
   notesWriteHref?: string;
   listings: HubListing[];
-  priceSeries: PricePoint[];
+  /** [968 · 4] 서버(page.tsx)가 그린 PriceTrendChart — 요약·시세 탭이 같은 엘리먼트를 쓴다.
+   *  시계열이 2개월 미만이면 null. 클라이언트로 점 배열·차트 코드를 보내지 않는다. */
+  priceChart: ReactNode;
+  /** 가장 최근 달 평균 매매가(만원) — 계산기 프리필용. 없으면 0. */
+  latestAvgManwon: number;
   /** 순수 단지 id — 내 기록 API 조회 키·지도 딥링크(/map?complexId=) */
   complexId?: string;
   /** 계산기 프리필의 출처 표기용 단지명 (D69) */
@@ -346,22 +352,8 @@ export function ComplexHubTabs({
     }
   };
 
-  /* 가장 최근 달의 평균 매매가(만원) — 계산기 프리필용. priceSeries 는 오름차순이다. */
-  const latestAvgManwon = priceSeries.length > 0
-    ? Math.round(priceSeries[priceSeries.length - 1]?.avgManwon ?? 0)
-    : 0;
-
-  /* [967 · 16] 시세 탭 면적대 필터·정렬 — 이미 받은 행 위에서만(추가 질의 없음).
-     주소에는 싣지 않는다(탭까지만 URL 동기화). */
-  const [band, setBand] = useState<string>(ALL_BANDS);
-  const [sort, setSort] = useState<TradeSort>("latest");
-  const bandChips = useMemo(() => tradeBandChips(trades), [trades]);
-  const shownTrades = useMemo(() => viewTrades(trades, band, sort), [trades, band, sort]);
-  const totals = tradeTotals(shownTrades);
-  const chipCls = (active: boolean) =>
-    `chip press shrink-0 px-3 py-1.5 t-sub ${
-      active ? "chip-active" : "border border-line bg-surface text-text-2"
-    }`;
+  /* latestAvgManwon 은 서버(page.tsx)가 계산해 넘긴다 — 시세 탭 필터·정렬 상태는
+     [968 · 4] PriceTab.tsx 로 옮겼다(탭이 열릴 때만 내려받는 청크). */
 
   /* [967 · 15] 요약 탭의 "내 기록" 카드 — 예전엔 서버가 넘긴 고정 문구("로그인하면…")
      였다. 방문자 공용 HTML 에 개인 상태를 단정하는 문장은 못 싣는다. 탭으로 보내는
@@ -380,8 +372,14 @@ export function ComplexHubTabs({
   );
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* 탭 칩 5개 — [967 · 14] tablist/tab 의미론 + 선택 상태 */}
+    /* [968 · 2] fold — 767px 이하에서 이 안의 rise-in-* 리빌을 끈다(globals.css 의
+       `.fold [class^="rise-in"]`). 탭 줄·기본 탭 본문은 첫 화면 안에 있어 지연 리빌이
+       LCP 후보의 표시를 늦추기만 한다. 다른 탭 본문도 같은 자리에 뜨므로 함께 끈다. */
+    <div className="fold flex flex-col gap-3">
+      {/* 탭 칩 5개 — [967 · 14] tablist/tab 의미론 + 선택 상태.
+          [968 · 34] `chip` — 보이는 높이(≈37px)는 그대로 두고 터치 기기에서만 히트 영역을
+          44px 로 넓힌다(globals.css `button.chip::after`, pointer: coarse). `.chip` 이
+          font-weight 600 을 강제하므로 선택 탭의 700 은 `font-bold!` 로 지킨다. */}
       <div className="rise-in-2 flex flex-wrap gap-1.5 t-body" role="tablist" aria-label="단지 정보 탭">
         {TABS.map((t) => (
           <button
@@ -390,10 +388,10 @@ export function ComplexHubTabs({
             role="tab"
             aria-selected={tab === t}
             onClick={() => setTab(t)}
-            className={`rounded-full px-3.5 py-2 font-bold transition-colors ${
+            className={`chip px-3.5 py-2 transition-colors ${
               tab === t
-                ? "bg-brand-navy text-surface"
-                : "border border-line bg-surface font-semibold text-text-2"
+                ? "bg-brand-navy font-bold! text-surface"
+                : "border border-line bg-surface text-text-2"
             }`}
           >
             {t}
@@ -405,7 +403,7 @@ export function ComplexHubTabs({
       {tab === "요약" && (
         <div className="rise-in-3 flex flex-col gap-3" role="tabpanel">
           <AIPanel title={aiTitle}>{aiBody}</AIPanel>
-          {priceSeries.length >= 2 && <PriceTrendChart points={priceSeries} />}
+          {priceChart}
           {myRecordCard}
           {trades.length > 0 ? (
             <div className="card flex flex-col rounded-[14px] px-3.5 py-2">
@@ -536,105 +534,15 @@ export function ComplexHubTabs({
         </div>
       )}
 
-      {/* ===== 시세 ===== */}
+      {/* ===== 시세 ===== [968 · 4] 본문은 PriceTab.tsx(동적 청크) — 필터·정렬·전체 표 */}
       {tab === "시세" && (
         <div className="rise-in-3 flex flex-col gap-2.5" role="tabpanel">
-          <div className="px-1 text-xs font-extrabold text-text-3">
-            실거래 히스토리 <span className="font-medium text-text-3">· 국토교통부 기준</span>
-          </div>
-          {/* 실거래 가격 추이 차트 (실데이터 2개월 이상일 때만) */}
-          {priceSeries.length >= 2 && <PriceTrendChart points={priceSeries} />}
-          {trades.length > 0 ? (
-            <>
-              {/* [967 · 16] 필터 줄 — 면적대 칩(행에 실제로 있는 구간만, AREA_BANDS 순) + 정렬.
-                  면적대 칩은 분할 데이터가 있을 때만 그린다(구 로더로 만든 행은 bands 가 비어
-                  있고, 그때 "전체" 하나만 있는 칩 줄은 누를 게 없는 장식이다). */}
-              <div className="flex flex-col gap-2">
-                {bandChips.length > 0 && (
-                  <div
-                    className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                    role="group"
-                    aria-label="면적대"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setBand(ALL_BANDS)}
-                      aria-pressed={band === ALL_BANDS}
-                      className={chipCls(band === ALL_BANDS)}
-                    >
-                      전체
-                    </button>
-                    {bandChips.map((c) => (
-                      <button
-                        key={c.slug}
-                        type="button"
-                        onClick={() => setBand(c.slug)}
-                        aria-pressed={band === c.slug}
-                        className={chipCls(band === c.slug)}
-                      >
-                        {c.label}
-                        <span className="ml-1 opacity-70">{c.dealCount}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Segmented
-                    options={TRADE_SORTS}
-                    value={sort}
-                    onChange={setSort}
-                    ariaLabel="실거래 정렬"
-                  />
-                  <span className="t-sub font-bold text-text-2 tabular-nums" role="status">
-                    {totals.months}개월 · {totals.deals}건
-                  </span>
-                </div>
-              </div>
-              {shownTrades.length > 0 ? (
-                <div className="card flex flex-col overflow-hidden rounded-[14px] px-0 py-0">
-                  <div className="border-b border-line bg-bg px-3.5 py-2 t-sub font-bold text-text-2">
-                    {band === ALL_BANDS
-                      ? `전체 ${trades.length}개월 · 국토교통부`
-                      : `${bandChips.find((c) => c.slug === band)?.label ?? ""} ${shownTrades.length}개월 · 국토교통부`}
-                  </div>
-                  {/* [967 · 18] key = yyyymm — 필터·정렬을 바꿔도 같은 달은 같은 노드 */}
-                  {shownTrades.map((t, i) => (
-                    <TradeRow
-                      key={t.ym}
-                      t={t}
-                      divider={i < shownTrades.length - 1 ? "bottom" : "none"}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="card rounded-[14px] px-[15px] py-6 text-center t-body text-text-3">
-                  이 면적대의 실거래가 표에 없어요
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="card rounded-[14px] px-[15px] py-6 text-center t-body text-text-3">
-              아직 수집된 국토교통부 실거래가 없어요
-            </div>
-          )}
-          {/* [D69] 계산기로 **이 단지의 실거래가를 들고** 간다.
-              예전엔 계산기가 어디서도 값을 받지 못해 8.4억이라는 예시 숫자에서
-              늘 새로 시작했다 — 방금 시세를 보고 온 사람에게 그건 남의 숫자다.
-              최근 달 평균 매매가(만원)를 그대로 넘긴다. 값이 없으면 링크를
-              만들지 않는다(빈손으로 보내면 예시 숫자가 자기 단지인 척한다). */}
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <Link href="/analysis/price" className="btn-soft rounded-xl p-3 text-center t-body">
-              AI 시세 분석 보기
-            </Link>
-            {latestAvgManwon > 0 && (
-              <Link
-                href={`/calculator?price=${latestAvgManwon}${complexName ? `&from=${encodeURIComponent(complexName)}` : ""}`}
-                className="btn-soft rounded-xl p-3 text-center t-body"
-              >
-                이 시세로 대출 계산
-              </Link>
-            )}
-          </div>
+          <PriceTab
+            trades={trades}
+            latestAvgManwon={latestAvgManwon}
+            complexName={complexName}
+            priceChart={priceChart}
+          />
         </div>
       )}
 

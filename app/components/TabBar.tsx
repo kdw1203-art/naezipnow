@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "./Icon";
-import { useCookieConsent } from "@/components/consent/use-cookie-consent";
+import { useTabBarCompact } from "@/lib/client/use-scroll-state";
 
 /** 균형 5슬롯(2-＋-2) — ＋가 정중앙에 오도록 재배치(2026-07-21 리디자인).
  *  홈·지도·기록(＋)·동네·마이. 통일 라인 아이콘 사용. */
@@ -27,34 +26,14 @@ export function TabBar() {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  /* 모바일6 — 쿠키 배너(결정 전)와 탭바가 하단에 두 층으로 쌓였다(캡처).
-     동의는 첫 화면에서 탭 한 번이면 끝나는 결정이라, 결정 전에는 탭바를
-     잠시 접어 한 층만 보이게 한다. 결정 즉시(localStorage 반영) 복원. */
-  const { state: consentState } = useCookieConsent();
+  /* [968 · 12] 접기 판정은 공용 스크롤 상태(리스너 하나·rAF)에서 받는다 — 규칙(아래로
+     8px 이상 + 160px 아래면 접고, 위로 8px 이상이면 즉시 펼침)은 lib/client/
+     use-scroll-state 의 순수 함수 nextTabBarCompact 그대로다. */
+  const compact = useTabBarCompact();
 
-  const [compact, setCompact] = useState(false);
-  const lastY = useRef(0);
-  const ticking = useRef(false);
-  useEffect(() => {
-    const onScroll = () => {
-      if (ticking.current) return;
-      ticking.current = true;
-      window.requestAnimationFrame(() => {
-        const y = window.scrollY;
-        const dy = y - lastY.current;
-        /* 미세 떨림(관성 스크롤 끝)에 반응하지 않도록 8px 이상만 판정 */
-        if (dy > 8 && y > 160) setCompact(true);
-        else if (dy < -8 || y <= 160) setCompact(false);
-        lastY.current = y;
-        ticking.current = false;
-      });
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  // 모바일6 — 쿠키 결정 전에는 배너 한 층만(훅 뒤 조기 반환).
-  if (consentState.status === "undecided") return null;
+  /* [968 · 40] 예전(모바일6)에는 쿠키 동의가 미결정이면 탭바를 통째로 접었다(null) —
+     첫 방문자는 결정 전까지 지도·기록·동네 탭에 손이 닿지 않았다. 이제 배너 쪽이
+     탭바 **위**(bottom: --nz-tabbar-offset)에 컴팩트하게 서고 탭바는 늘 그린다. */
 
   return (
     <nav
@@ -97,7 +76,10 @@ export function TabBar() {
               key={tab.label}
               href={tab.href}
               aria-current={isActive(tab.href) ? "page" : undefined}
-              className={`relative flex flex-col items-center gap-[2px] py-1 transition-colors ${
+              /* [968 · 34] 탭 한 칸 = py 6 + 아이콘 20 + 간격 2 + 글자 12 + py 6 = 46px
+                 (예전 py-1 은 42px 로 44px 터치 하한 미달). 바는 4px 자라 56px —
+                 globals.css --nz-tabbar-offset 도 64→68px 로 같이 올렸다. */
+              className={`relative flex flex-col items-center gap-[2px] py-1.5 transition-colors ${
                 isActive(tab.href) ? "text-brand-navy" : "text-text-3"
               }`}
             >

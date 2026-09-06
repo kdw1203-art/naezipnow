@@ -1,5 +1,4 @@
-import { loadRegionRelative } from "./section-loaders";
-import { logger } from "@/lib/log";
+import { loadRegionRelative, logSectionFailure, withSectionBudget } from "./section-loaders";
 
 /* D6 — 지역 대비 상대 위치. 단지 ㎡당 시세를 소재 구 평균(REB 실집계)과 비교.
    데이터 없으면 렌더 생략(사실 우선).
@@ -18,10 +17,11 @@ export async function RegionRelative({
   complexId: string;
   compact?: boolean;
 }) {
-  const res = await loadRegionRelative(complexId).then(
+  /* [968 · 1] 공유 예산 3초 — 넘기면 아래 실패 갈래로 간다 */
+  const res = await withSectionBudget(loadRegionRelative(complexId)).then(
     (data) => ({ ok: true as const, data }),
     (e: unknown) => {
-      logger.error("[complex] 지역 대비 시세 조회 실패", e);
+      logSectionFailure("지역 대비 시세", e);
       return { ok: false as const };
     },
   );

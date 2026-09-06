@@ -7,7 +7,7 @@
  * - 비로그인 작성 시도(401) → A3 소프트 가입 프롬프트 (즉시 리다이렉트 대신 그 자리에서 설명)
  * - 신고: 기존 ReportButton 재사용 (postId = "complex-review:<id>")
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ReportButton } from "../components/ReportButton";
 import { Icon } from "@/app/components/Icon";
@@ -183,9 +183,35 @@ export function ComplexReviews({
     }
   }, [complexId]);
 
+  /* [968 · 3] 이 섹션은 단지 페이지 아래쪽(탭·인근 단지 아래)인데 마운트 즉시 조회했다 —
+     첫 화면만 보고 떠나는 방문자에게도 하이드레이션 직후 XHR 하나가 나갔다.
+     뷰포트 200px 앞에 들어올 때 한 번만 읽는다. IntersectionObserver 가 없는 환경은
+     예전처럼 바로 읽는다(기능을 빼지 않는다). 후기 등록 뒤의 재조회(submit → load)는 그대로. */
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [nearViewport, setNearViewport] = useState(false);
+
   useEffect(() => {
-    void load();
-  }, [load]);
+    const el = rootRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") {
+      setNearViewport(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setNearViewport(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "200px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (nearViewport) void load();
+  }, [nearViewport, load]);
 
   const submit = async () => {
     if (CATEGORIES.some((c) => scores[c.key] < 1)) {
@@ -242,7 +268,7 @@ export function ComplexReviews({
   };
 
   return (
-    <div className="card rounded-[18px] px-[18px] py-4">
+    <div ref={rootRef} className="card rounded-[18px] px-[18px] py-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="t-section text-ink">거주민 후기</h2>
         {!formOpen && (

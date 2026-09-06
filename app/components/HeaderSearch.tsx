@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent }
 import { useRouter } from "next/navigation";
 import { pushRecentSearch, readRecentSearches } from "@/lib/search/recent-searches";
 import { useSettledSearchQuery } from "@/lib/search/settle";
+import { useShellActive } from "@/lib/client/viewport-shell";
 
 /* P2-14: 데스크탑 GNB 검색 — input + 통합 자동완성.
    /api/search/unified?q= (대기 규칙은 lib/search/settle) · 단지·매물·노트·뉴스 그룹 제안.
@@ -60,6 +61,11 @@ export function HeaderSearch() {
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const { query: settledQuery, compositionProps } = useSettledSearchQuery(q);
+  /* [968 · 41] 이 인풋은 lg 미만에서 display:none(hidden lg:block)인데 전역 keydown·
+     mousedown 리스너는 모든 뷰포트에서 등록됐다. 데스크톱 뷰포트(md+, 키보드가 있는
+     쪽)에서만 리스너를 단다 — 서버 HTML(인풋 마크업)은 그대로. 판정·래치 규칙은
+     lib/client/viewport-shell(홈 두 벌 섬과 동일). */
+  const desktop = useShellActive("desktop");
 
   const hasQuery = q.trim().length > 0;
   const showRecents = open && !hasQuery && recents.length > 0;
@@ -73,6 +79,7 @@ export function HeaderSearch() {
   /* 항목 12 — `/` 단축키로 검색 진입. 입력 중(폼 요소·contentEditable)에는
      끼어들지 않는다. 헤더 인풋이 화면에 없는 뷰포트(lg 미만)에서는 /search 로. */
   useEffect(() => {
+    if (!desktop) return;
     function onKey(e: KeyboardEvent) {
       /* [OPT-45] ⌘K/Ctrl+K 도 검색 진입 — 다른 도구들에서 몸에 밴 단축키를 존중 */
       const isCmdK = (e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "k";
@@ -95,7 +102,7 @@ export function HeaderSearch() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [router]);
+  }, [router, desktop]);
 
   /* 통합 서제스트 — 대기 시간은 lib/search/settle 에 모아 뒀다(값이 화면마다
      달랐던 이유가 어디에도 없었다). 한글 조합 중에는 더 길게 기다린다:
@@ -143,14 +150,15 @@ export function HeaderSearch() {
     return () => ac.abort();
   }, [settledQuery]);
 
-  /* 바깥 클릭 시 드롭다운 닫기 */
+  /* 바깥 클릭 시 드롭다운 닫기 — [968 · 41] 인풋이 보이는 뷰포트에서만 */
   useEffect(() => {
+    if (!desktop) return;
     function onDown(e: MouseEvent) {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
-  }, []);
+  }, [desktop]);
 
   function submit() {
     const query = q.trim();

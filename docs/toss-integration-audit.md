@@ -155,3 +155,26 @@ start API 가 weekly 를 400 으로 거절한다).
 
 남긴 것(의도): P15 유료 리포트 결제(`reportId`)는 진입 화면이 없어 그대로 둔다 —
 상품을 열 때 `toss/create` 에 `kind:"report"` 분기와 화면을 함께 만든다.
+
+---
+
+## G. 968 (2026-09-06) — 도메인 변경 심사 반려 대응
+
+토스가 nuguzip.com → naezipnow.com 도메인 변경을 "결제창과 연동이 안 되어 있다"로
+반려했다. 코드에는 위젯 연동이 있었지만 **계정 없는 심사역이 도달할 수 있는 화면에는
+없었다** — `/subscription/checkout` 은 세션이 없으면 "로그인하기" 카드에서 멈췄고
+(`toss/create` 401), 위젯을 한 번도 그리지 않았다. 재신청 안내는
+`docs/toss-domain-change-review.md`(소유자용) 에 있다.
+
+| # | 반영 | 위치 |
+|---|---|---|
+| T1 | 비로그인 **미리보기(preview)** 단계 — 세션이 없거나 create 가 401 이면 판매가 단일 출처(`billing-periods`)로 표시용 금액을 계산해 로그인 경로와 **같은 코드**(`renderWidgets`)로 위젯을 그린다(ANONYMOUS customerKey). 서버 주문은 만들지 않고 주문번호는 "로그인 후 발급", 버튼은 "로그인하고 결제하기"(callbackUrl = 이 화면, 966 returnTo 보존). ck 키면 위젯 없이 요약·안내·버튼만(주문 없이는 결제창 불가). `widgetsRef` 는 비워 둬 주문번호 없는 requestPayment 경로가 존재하지 않는다 | `app/subscription/checkout/CheckoutClient.tsx`, `lib/payments/checkout-preview.ts` |
+| T2 | `/subscription` 주간권 버튼은 게스트를 로그인이 아니라 체크아웃으로 먼저 보낸다. 월간·연간(빌링)은 서버 발급 customerKey 가 필요하므로 로그인 우선 유지 | `app/subscription/PlanCheckoutButton.tsx` |
+| T3 | 결제 화면 `ComplianceNotice` 에 `recurringOpen={isTossBillingEnabled()}` — `/subscription` 과 같은 서버 판정. 빌링 개방 뒤에도 결제 화면만 "모든 이용권 단건" 이던 불일치 제거. `/payment/success`·`/payment/fail` 에는 제공기간 고지가 없고 환불 한 줄(7일 청약철회)만 있어 그대로 | `app/subscription/checkout/page.tsx` |
+| T4 | 위젯 자리 예약(제안 33): gck 키에서 `#toss-payment-methods` `min-h-[420px]` + 스켈레톤 오버레이(로딩 문구 포함, 형제 요소), `#toss-agreement` `min-h-[88px]`, 요약 카드 스켈레톤. ck 키·오류·위젯 실패 뒤에는 예약 해제(빈 상자 없음) | `CheckoutClient.tsx` |
+| T5 | `/api/health?detail=1&token=…` 의 `services.toss` — 접두사 판정(boolean/enum)만: `clientKeyMode`·`clientKeyKind`·`keyPairOk`·`billingClientKeyKind`·`billingEnabled`·`webhookSecret`(= `TOSS_SECRET_KEY`, v2 웹훅은 서명이 없어 재조회로 검증)·`webhookUrl`·`siteOrigin`·`successUrlOrigin: runtime`. 게이트는 그대로. 키 재료 미포함은 단위테스트로 고정 | `app/api/health/route.ts`, `lib/payments/toss-diagnostics.ts` |
+| T7 | 결제 코드(`app/subscription`·`app/payment`·`app/api/payments`·`lib/payments`·`lib/subscriptions`·`lib/billing`)에 이메일 외 `nuguzip.com` 참조 0건. `check-toss-review-freeze`·`check-plan-labels` PASS | — |
+
+심사 고정 게이트(LOCKED)와의 관계: 가격·고지 문구·환불 앵커는 한 글자도 바꾸지
+않았다. 미리보기 금액은 같은 상수(`WEEKLY_PASS`·`BILLING_PERIOD_PRICES`)를 읽고,
+`tests/unit/toss-968.test.ts` 가 서버(`plans.ts`) 금액과의 일치를 고정한다.

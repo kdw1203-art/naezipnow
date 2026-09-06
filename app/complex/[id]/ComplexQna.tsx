@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { loadComplexQuestions } from "./section-loaders";
-import { logger } from "@/lib/log";
+import { loadComplexQuestions, logSectionFailure, withSectionBudget } from "./section-loaders";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
 
 /* D2 — 단지 Q&A 임베드. 이 단지(complex_name 일치)의 실 질문만.
@@ -32,10 +31,11 @@ export async function ComplexQna({
   /* 2026-07-26: `.catch(() => [])` 였다. 조회가 실패하면 아래 빈 상태 CTA
      ("첫 질문을 남겨 보세요")가 뜨는데, 이미 남아 있는 질문을 없는 것처럼
      보이게 만든다. 실패는 실패라고 쓴다 — 질문 남기기 링크는 그대로 둔다. */
-  const loaded = await loadComplexQuestions(name).then(
+  /* [968 · 1] 공유 예산 3초 — 넘기면 아래 실패 갈래("지금 불러오지 못했어요")로 간다 */
+  const loaded = await withSectionBudget(loadComplexQuestions(name)).then(
     (items) => ({ ok: true as const, items }),
     (err: unknown) => {
-      logger.error("[complex] 단지 Q&A 조회 실패", err);
+      logSectionFailure("단지 Q&A", err);
       return { ok: false as const };
     },
   );
@@ -48,7 +48,8 @@ export async function ComplexQna({
 
   if (!loaded.ok) {
     return (
-      <section className="rise-in-5 mt-6">
+      /* [968 · 7] cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미룬다(page.tsx 주석 참고) */
+      <section className="cv-auto rise-in-5 mt-6">
         <div className="mb-2 flex items-center justify-between gap-2 px-1">
           <h2 className="t-section text-ink">이 단지 Q&amp;A</h2>
           <Link href={listHref} className="t-sub font-bold text-primary">
@@ -71,7 +72,8 @@ export async function ComplexQna({
   }
 
   return (
-    <section className="rise-in-5 mt-6">
+    /* [968 · 7] cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미룬다(page.tsx 주석 참고) */
+    <section className="cv-auto rise-in-5 mt-6">
       <div className="mb-2 flex items-center justify-between gap-2 px-1">
         <h2 className="t-section text-ink">이 단지 Q&amp;A</h2>
         <Link href={listHref} className="t-sub font-bold text-primary">

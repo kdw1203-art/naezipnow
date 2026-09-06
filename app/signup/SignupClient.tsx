@@ -242,7 +242,8 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
   if (done) {
     return (
       <main
-        className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col justify-center gap-4 px-7 pb-8"
+        /* [968 · 31] 100vh → dvh: iOS 주소창이 보일 때 세로 가운데 정렬이 아래로 밀렸다 */
+        className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col justify-center gap-4 px-7 pb-8"
         style={{ paddingTop: "max(20px, env(safe-area-inset-top, 0px))" }}
       >
         <div className="rise-in card flex flex-col items-center gap-3 rounded-[18px] p-7 text-center">
@@ -333,7 +334,8 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
 
   return (
     <main
-      className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col gap-4 px-7 pb-8"
+      /* [968 · 31] 100vh → dvh (위 완료 화면과 같은 이유) */
+      className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col gap-4 px-7 pb-8"
       style={{ paddingTop: "max(20px, env(safe-area-inset-top, 0px))" }}
     >
       <div className="flex items-center justify-between">
@@ -399,6 +401,8 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
         <label htmlFor="signup-name" className="sr-only">
           이름 (선택)
         </label>
+        {/* [968 · 29] 키보드 힌트 — 이름·이메일은 "다음"(Enter 로 다음 칸), 비밀번호는 "완료".
+            힌트만 붙이면 Enter 가 폼을 바로 제출하므로 앞 두 칸의 Enter 는 포커스 이동으로. */}
         <input
           id="signup-name"
           type="text"
@@ -406,6 +410,12 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
           onChange={(e) => setName(e.target.value)}
           placeholder="이름 (선택)"
           autoComplete="name"
+          enterKeyHint="next"
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+            e.preventDefault();
+            document.getElementById("signup-email")?.focus();
+          }}
           className="rounded-[10px] border border-line bg-surface px-4 py-3 text-[13px] text-ink outline-none focus:border-primary"
         />
         <label htmlFor="signup-email" className="sr-only">
@@ -418,6 +428,13 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="이메일"
           autoComplete="email"
+          inputMode="email"
+          enterKeyHint="next"
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+            e.preventDefault();
+            document.getElementById("signup-password")?.focus();
+          }}
           className="rounded-[10px] border border-line bg-surface px-4 py-3 text-[13px] text-ink outline-none focus:border-primary"
         />
         <label htmlFor="signup-password" className="sr-only">
@@ -431,6 +448,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="비밀번호 (8자 이상)"
             autoComplete="new-password"
+            enterKeyHint="done"
             className="w-full rounded-[10px] border border-line bg-surface px-4 py-3 pr-14 text-[13px] text-ink outline-none focus:border-primary"
           />
           <button

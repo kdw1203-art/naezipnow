@@ -1,10 +1,13 @@
-"use client";
-
-import { useId } from "react";
 import { formatKrwManwon } from "@/lib/format/krw";
 
 /* 단지 실거래 가격 추이 차트 (사실 우선 — market_transactions 실거래만, 해제분 제외).
-   외부 차트 라이브러리 없이 인라인 SVG로 렌더. 좌→우 = 과거→최신. */
+   외부 차트 라이브러리 없이 인라인 SVG로 렌더. 좌→우 = 과거→최신.
+
+   [968 · 4] 서버 컴포넌트. 예전엔 "use client" 였는데 훅은 useId 하나뿐이었고, 그마저
+   그라데이션 id 충돌 방지용이었다. id 는 부모(page.tsx)가 단지 id 로 만들어 넘기고,
+   차트는 page.tsx 가 그려 ComplexHubTabs 에 **엘리먼트로** 넘긴다 — 그래야 이 파일과
+   krw 포맷터가 클라이언트 번들에서 빠진다(hub-client 가 import 하면 클라이언트 모듈이
+   된다). 상태·이벤트가 없으니 SVG 는 RSC 페이로드로 그대로 실린다. */
 
 export type PricePoint = {
   /** "YYYYMM" */
@@ -35,8 +38,21 @@ function changeMeta(curr: number, base: number): { pct: string; arrow: string; c
     : { pct: `${Math.abs(diff).toFixed(1)}%`, arrow: "▼", color: "#1565d8" };
 }
 
-export function PriceTrendChart({ points }: { points: PricePoint[] }) {
-  const gradId = useId();
+/** SVG id 로 쓸 수 있는 문자만 남긴다 — 단지 id 에는 base64 의 `+/=`·kapt 의 `.` 이 섞인다 */
+function safeSvgId(seed: string): string {
+  const s = seed.replace(/[^A-Za-z0-9_-]/g, "");
+  return s.length > 0 ? s : "chart";
+}
+
+export function PriceTrendChart({
+  points,
+  gradientId,
+}: {
+  points: PricePoint[];
+  /** [968 · 4] 그라데이션 id 씨앗 — 같은 문서에 이 차트가 둘이면 서로 달라야 한다 */
+  gradientId: string;
+}) {
+  const gradId = `ptc-${safeSvgId(gradientId)}`;
   if (!points || points.length < 2) return null;
 
   const values = points.map((p) => p.avgManwon);

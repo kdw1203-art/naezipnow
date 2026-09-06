@@ -6,8 +6,10 @@
    ============================================================ */
 
 :root {
-  /* 하단 크롬(탭바·토스트·PWA 배너) 공통 오프셋 — 겹침 방지 */
-  --nz-tabbar-offset: calc(64px + env(safe-area-inset-bottom, 0px));
+  /* 하단 크롬(탭바·토스트·PWA 배너) 공통 오프셋 — 겹침 방지.
+     [968 · 34] 64→68px: 탭 한 칸을 44px 터치 하한에 맞추며(py-1→py-1.5) 탭바가
+     52→56px 로 4px 자랐다(bottom 6px + 56px = 윗단 62px, 여기까지 6px 여유). */
+  --nz-tabbar-offset: calc(68px + env(safe-area-inset-bottom, 0px));
   --nz-toast-bottom: calc(var(--nz-tabbar-offset) + 20px);
   /* /map 하단 예약 레인 — 가운데 떠 있는 카테고리 바(bottom 20px · 높이 51px)가
      차지하는 띠. 예전에는 좌우 열이 각자 `bottom-5` 를 써서 이 띠 위로 그대로
@@ -1395,15 +1397,32 @@ body:has(textarea:focus-visible) .tabbar-autohide {
 }
 
 /* ── 헤더 다이나믹 (스크롤 인지 · 언더라인 인디케이터) ── */
+/* [968 · 12] 축소는 transform 으로만. 예전엔 height(48→44)·바깥 padding-top(14→8)이
+   바뀌어 sticky 상자 높이가 변했고 8px 경계를 오갈 때마다 문서 전체가 리플로우됐다.
+   scale 은 합성기에서만 처리돼 레이아웃·페인트가 없다. 바깥 <header>(.site-header)는
+   높이가 고정이라 축소 뒤 아래 남는 투명 띠는 pointer-events 로 본문에 넘긴다. */
+.site-header {
+  pointer-events: none;
+}
+.site-header > .header-shell {
+  pointer-events: auto;
+}
 .header-shell {
+  transform-origin: top center;
   transition:
-    height var(--dur-sm) var(--ease-out),
+    transform var(--dur-sm) var(--ease-out),
     box-shadow var(--dur-sm) var(--ease-out),
     background-color var(--dur-sm) var(--ease-out),
     border-color var(--dur-sm) var(--ease-out);
 }
 .header-scrolled {
   box-shadow: var(--shadow-md);
+  transform: scale(0.96);
+}
+@media (prefers-reduced-motion: reduce) {
+  .header-shell {
+    transition: none;
+  }
 }
 /* 나브 아이템 언더라인 인디케이터 — hover/active 시 좌→우 확장 */
 .nav-underline {
@@ -4103,5 +4122,100 @@ a.rank-row:hover {
 @media (max-width: 767px) {
   .map-filter-summary {
     max-width: 200px;
+  }
+}
+
+/* ===== [968 · 모바일 셸·CSS] ===== */
+/* [968 · 2] 767px 이하 첫 화면 블록은 리빌 애니메이션 없이 즉시 그린다 (LCP 후보가 투명으로 시작하지 않게)
+   .rise-in* 원 규칙(위 19a #4)은 fill-mode backwards 라 지연 구간 동안 opacity 0 이다 —
+   !important 로 animation 자체를 끄면 fill 도 사라져 첫 프레임부터 불투명·제자리다.
+   (.fold 자신이 rise-in-N 을 단 경우도 잡도록 자기 선택자 두 개를 더했다.) */
+@media (max-width: 767px) {
+  .fold.rise-in,
+  .fold[class^="rise-in"],
+  .fold[class*=" rise-in"],
+  .fold [class^="rise-in"],
+  .fold [class*=" rise-in"] {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+/* [968 · 7] 화면 밖 섹션 — 첫 렌더 레이아웃 생략 */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
+}
+/* [968 · 38] 손·포커스가 닿아 있는 동안 — HomeTicker 가 .ticker-paused 를 붙인다 */
+.ticker-band.ticker-paused .ticker-track {
+  animation-play-state: paused;
+}
+
+/* [968 · 13] 글래스·블롭 GPU 비용 — 767px 이하.
+   blur 22/26px + saturate 가 헤더·탭바·배지·액션바·저장바에 동시에 걸리면 스크롤마다
+   그 뒤 화면을 다시 흐린다. 모바일은 12px·saturate 없음으로(두 토큰을 같은 값으로 두어
+   glass→glass-strong 스왑이 필터를 바꾸지 않는다 — 배경 알파만 바뀐다).
+   body 블롭(560/640px 원 + blur 80px + 26/32s 무한 애니메이션)은 정지하고, 정지해도
+   비싼 80px 블러·큰 원은 40px·절반 크기로(오프셋도 절반 — 보이는 비율은 같다). */
+@media (max-width: 767px) {
+  :root {
+    --glass-blur: blur(12px);
+    --glass-blur-strong: blur(12px);
+  }
+  body::before,
+  body::after {
+    animation: none;
+    filter: blur(40px);
+  }
+  body::before {
+    width: 280px;
+    height: 280px;
+    left: -70px;
+    top: -60px;
+  }
+  body::after {
+    width: 320px;
+    height: 320px;
+    right: -90px;
+  }
+}
+/* [968 · 13] 저사양(deviceMemory ≤ 4, app/layout.tsx 인라인 스크립트가 표식) — 글래스는
+   불투명 surface 토큰(양 테마)으로, 블롭은 아예 그리지 않는다. 미지원 폴백(@supports not,
+   위 500번대)과 같은 뜻이되 다크에서도 맞는 토큰을 쓴다. */
+html[data-lowend] .glass,
+html[data-lowend] .glass-strong {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: var(--surface);
+}
+html[data-lowend] body::before,
+html[data-lowend] body::after {
+  display: none;
+}
+
+/* [968 · 28] iOS 사파리는 포커스된 입력의 글자가 16px 미만이면 화면을 확대한다(줌인 뒤
+   돌아오지 않아 레이아웃이 어긋난 채 남는다). 767px 이하에서 모든 텍스트 입력·select·
+   textarea 를 1rem(=16px) 로 — 타입 램프(10·12·13·15·19…)에 16 이 없어 px 대신 1rem 을
+   **의도적으로** 쓴다(scripts/check-type-ramp.mjs 는 px 만 본다). 체크·라디오·range 는
+   글자가 없어 제외. 특이성 (0,3,1) 이라 .njn-field input(13px)·t-body·Tailwind
+   text-[13px](유틸 레이어) 모두 이 규칙이 이긴다. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 1rem;
+  }
+}
+
+/* [968 · 30] 키보드가 뜬 동안(터치 기기에서 입력에 포커스) 하단 고정 바를 숨긴다 —
+   위 .tabbar-autohide 규칙과 같은 판정. viewport interactiveWidget=resizes-content 로
+   fixed 요소가 키보드 위로 올라오긴 하지만, 남은 화면의 아래 60px 을 바가 가리면
+   입력 중인 줄이 안 보인다. 포커스가 풀리면 다시 나타난다. */
+@media (pointer: coarse) {
+  body:has(input:focus-visible) .note-savebar,
+  body:has(textarea:focus-visible) .note-savebar,
+  body:has(input:focus-visible) .complex-actionbar,
+  body:has(textarea:focus-visible) .complex-actionbar {
+    display: none;
   }
 }

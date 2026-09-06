@@ -1,7 +1,7 @@
 # [#91] Web Vitals 랩 예산 — Lighthouse CI (주 1회 + 수동).
 #
 # RUM(실사용, Vercel Web Analytics + /api/vitals 수집)은 이미 돌고 있다.
-# 이 워크플로는 그 짝인 "배포 전/후 랩 측정"이다: 대표 5개 화면을 프로덕션에서
+# 이 워크플로는 그 짝인 "배포 전/후 랩 측정"이다: 대표 7개 화면을 프로덕션에서
 # 재고, lighthouse-budget.json 의 예산(LCP·CLS·TBT·전송량)을 넘으면 실패로 표시한다.
 #
 # 왜 빌드가 아니라 프로덕션을 재는가: 이 저장소의 CI 에는 DB env 가 없어
@@ -27,7 +27,11 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Lighthouse CI (프로덕션 대표 5화면)
+      # [968 · 50] 대표 5화면에 단지 상세·공개 노트 상세를 더한다 — 트래픽이 실제로 떨어지는
+      # 동적 페이지 둘이 예산 밖에 있었다. URL 은 2026-09-06 sitemap-complexes.xml ·
+      # sitemap-notes.xml 의 첫 항목(둘 다 200 확인). 노트가 비공개로 바뀌거나 단지가
+      # 빠지면 이 줄만 사이트맵 첫 항목으로 갈아 끼운다.
+      - name: Lighthouse CI (프로덕션 대표 7화면)
         id: lhci
         uses: treosh/lighthouse-ci-action@v12
         with:
@@ -37,6 +41,12 @@ jobs:
             https://naezipnow.com/region/gangnam
             https://naezipnow.com/town
             https://naezipnow.com/analysis/gap
+            https://naezipnow.com/complex/%EC%95%88%EC%96%91-%EB%A7%8C%EC%95%88%EA%B5%AC-%EB%9E%98%EB%AF%B8%EC%95%88%EC%95%88%EC%96%91%EB%A9%94%EA%B0%80%ED%8A%B8%EB%A6%AC%EC%95%84.7JWI7JaRIOunjOyViOq1rAHrnpjrr7jslYjslYjslpHrqZTqsIDtirjrpqzslYQ
+            https://naezipnow.com/notes/28344724-47e0-4210-a5c7-2802aab80e9b
+          # [968 · 50] 예산 단계 하향: LCP 4,000 → 3,000ms · TBT 600 → 300ms (JSON 이라 주석을
+          # 못 달아 여기 적는다). 다음 단계는 LCP 2,500ms(코어 웹 바이탈 '좋음' 경계) —
+          # 7화면이 3,000 을 두 주 연속 지키면 내린다. 한 번에 2,500 으로 내리면 게이트가
+          # 상시 빨간불이 되고, 상시 빨간불인 게이트는 아무도 안 본다.
           budgetPath: ./lighthouse-budget.json
           uploadArtifacts: true
           temporaryPublicStorage: true

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ReactNode } from "react";
+import { buildImageSrcSet, canOptimizeImage } from "@/lib/images/srcset";
 
 /* 이미지 폴백 (#18) — 커버/썸네일 이미지가 없거나(로드 실패 포함) 깨질 때
    브라우저 기본 "깨진 이미지" 아이콘 대신 지정한 폴백(그라디언트·아이콘)을 노출한다.
@@ -28,20 +29,17 @@ type CoverImageProps = {
   scrim?: boolean;
   /** srcset 선택 힌트 — 그리드 카드 기본값. 넓은 히어로는 호출부가 넓게 준다 */
   sizes?: string;
+  /**
+   * [968 · 17] 첫 화면의 LCP 후보(목록 첫 카드·히어로)에만 true.
+   * lazy 를 풀고 fetchPriority="high" 로 선점 요청한다 — 기본 lazy 는 뷰포트 안 이미지도
+   * 스크립트가 붙은 뒤에야 받기 시작해 첫 카드가 LCP 를 끌어내렸다(/notes 실측 근거,
+   * 제안 17). 한 화면에 하나만 준다: 여러 장에 주면 우선순위가 의미를 잃는다.
+   */
+  priority?: boolean;
 };
 
-/* next.config images.remotePatterns 와 같은 판정만 통과시킨다 — 허용 밖 URL 을
-   /_next/image 로 보내면 400 이라, 여기서 거르는 편이 한 번에 그려진다. */
-const OPTIMIZABLE = /^https:\/\/([a-z0-9-]+\.supabase\.co|[a-z0-9.-]+\.pstatic\.net)\//;
-
-/** Next 기본 허용 폭(deviceSizes∪imageSizes)의 부분집합만 쓴다 */
-const WIDTHS = [384, 640, 828, 1080] as const;
-
-function optimizedSrcSet(src: string): string {
-  return WIDTHS.map(
-    (w) => `/_next/image?url=${encodeURIComponent(src)}&w=${w}&q=75 ${w}w`,
-  ).join(", ");
-}
+/* 허용 호스트 판정·srcSet 조립은 lib/images/srcset 으로 옮겼다([968 · 17]) —
+   노트 사진 캐러셀과 규칙을 한 곳에서 공유한다. */
 
 export function CoverImage({
   src,
@@ -50,10 +48,11 @@ export function CoverImage({
   fallback = null,
   scrim = false,
   sizes = "(max-width: 768px) 50vw, 33vw",
+  priority = false,
 }: CoverImageProps) {
   /* ok → (최적화 실패 시) raw → (원본도 실패 시) fallback */
   const [state, setState] = useState<"ok" | "raw" | "failed">("ok");
-  const canOptimize = Boolean(src) && OPTIMIZABLE.test(src as string);
+  const canOptimize = canOptimizeImage(src);
   const show = Boolean(src) && state !== "failed";
 
   if (!show) return <>{fallback}</>;
@@ -65,9 +64,11 @@ export function CoverImage({
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src as string}
-        {...(useOptimized ? { srcSet: optimizedSrcSet(src as string), sizes } : {})}
+        {...(useOptimized ? { srcSet: buildImageSrcSet(src as string), sizes } : {})}
         alt={alt}
-        loading="lazy"
+        /* [968 · 17] priority 면 eager + high — 그 외는 종전대로 lazy */
+        loading={priority ? "eager" : "lazy"}
+        {...(priority ? { fetchPriority: "high" as const } : {})}
         decoding="async"
         onError={() => setState((s) => (s === "ok" && canOptimize ? "raw" : "failed"))}
         className={imgClassName}

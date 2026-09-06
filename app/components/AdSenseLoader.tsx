@@ -4,6 +4,7 @@ import { getSessionLite } from "@/lib/client/session-lite";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { getAdSenseClient, isAdsExcludedPath } from "@/lib/ads/adsense-policy";
+import { ensureAdSenseScript } from "@/lib/ads/adsense-boot";
 
 /**
  * Google AdSense — 광고 요청 게이트 (960 에서 역할이 바뀌었다).
@@ -12,9 +13,11 @@ import { getAdSenseClient, isAdsExcludedPath } from "@/lib/ads/adsense-policy";
  * 끼워 넣었다. 정책 게이트(경로·플랜)는 맞았지만, 스크립트가 정적 HTML 에 없어서
  * 애드센스 "코드 삽입" 확인 크롤러가 못 볼 수 있었고 자동 광고도 판정 지연만큼 늦었다.
  *
- * 지금: 공식 스니펫은 app/layout.tsx <head> 에 그대로 있고(모든 페이지), 그 앞에서
+ * 지금: <head> 의 인라인 부트 스크립트(lib/ads/adsense-boot)가 뷰포트·경로 규칙대로
+ * 스크립트 태그를 넣고([968 · 15] 데스크톱 즉시·모바일 load 뒤·제외 경로 생략), 그 앞에서
  * `adsbygoogle.pauseAdRequests = 1` 로 **광고 요청만** 잠근다. 이 컴포넌트는
- * 두 게이트를 판정한 뒤 잠금을 푼다(0) — 스크립트 유무가 아니라 요청 여부를 다룬다.
+ * 두 게이트를 판정한 뒤 잠금을 푼다(0) — 여기에 더해 제외 경로에서 시작해 클라이언트
+ * 내비게이션으로 일반 경로에 들어온 경우 스크립트가 아직 없으므로 같은 규칙으로 넣는다.
  *
  * 1) **경로 제외** — `/payment`·`/my`·`/subscription`·`/map` 등(adsense-policy 목록).
  *    결제 화면 위 광고는 정책 위반 소지, `/my` 는 결제 내역이 보이는 자리다.
@@ -80,6 +83,13 @@ export function AdSenseLoader() {
   useEffect(() => {
     if (!client) return;
     setPaused(excludedPath || adFree !== false);
+  }, [client, excludedPath, adFree]);
+
+  /* [968 · 15] 스크립트 보장 — 광고 대상으로 확정된 경로에서만, 없을 때만(멱등).
+     첫 문서가 제외 경로(/map·/my…)였다면 부트 스크립트가 태그를 넣지 않았다. */
+  useEffect(() => {
+    if (!client || excludedPath || adFree !== false) return;
+    ensureAdSenseScript(client);
   }, [client, excludedPath, adFree]);
 
   return null;

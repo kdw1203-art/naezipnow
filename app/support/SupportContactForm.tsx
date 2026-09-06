@@ -137,16 +137,26 @@ export function SupportContactForm() {
           </button>
         ))}
       </div>
+      {/* [968 · 29] 제목은 "다음"(Enter 로 내용 칸 이동 — 힌트만 붙이면 Enter 가 빈 내용으로
+          제출된다), 내용 textarea 는 Enter 가 줄바꿈이라 힌트 없음, 이메일은 "완료". */}
       <input
+        id="support-subject"
         type="text"
         value={subject}
         onChange={(e) => setSubject(e.target.value)}
         placeholder="제목 (2~200자)"
         maxLength={200}
         aria-label="문의 제목"
+        enterKeyHint="next"
+        onKeyDown={(e) => {
+          if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+          e.preventDefault();
+          document.getElementById("support-message")?.focus();
+        }}
         className="rounded-[10px] border border-line bg-surface px-3.5 py-3 text-[13px] text-ink outline-none placeholder:text-text-3 focus:border-primary"
       />
       <textarea
+        id="support-message"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         placeholder="문의 내용을 자세히 적어 주세요 (10~3000자)"
@@ -165,6 +175,9 @@ export function SupportContactForm() {
         onChange={(e) => setEmail(e.target.value)}
         placeholder="답변 받을 이메일"
         aria-label="답변 받을 이메일"
+        autoComplete="email"
+        inputMode="email"
+        enterKeyHint="done"
         className="rounded-[10px] border border-line bg-surface px-3.5 py-3 text-[13px] text-ink outline-none placeholder:text-text-3 focus:border-primary"
       />
       {error && (

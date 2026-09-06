@@ -9,6 +9,12 @@ import {
 } from "@/lib/subscriptions/billing-periods";
 import Link from "next/link";
 import { safeInternalPath } from "@/lib/safe-path";
+import { SkLine } from "@/app/components/ui/Skeleton";
+import {
+  checkoutLoginCallback,
+  previewAmount,
+  previewBillingLabel,
+} from "@/lib/payments/checkout-preview";
 import {
   isTossTestEnv,
   isWidgetKey,
@@ -35,6 +41,15 @@ import {
    - 테스트 키(test_ck_)면 "실제 청구 없음"을 화면에 명시한다.
    - 위젯 렌더 실패는 실패라고 말하고(구독 페이지로 되돌아가는 길 제공),
      빈 화면으로 결제가 되는 척하지 않는다.
+
+   [968 · T1] 비로그인 미리보기(preview):
+   - 토스 도메인 변경 심사(2026-09-06)가 "결제창과 연동이 안 되어 있다"로 반려됐다.
+     심사역은 계정 없이 이 URL 을 여는데, 세션이 없으면 "로그인하기" 카드에서
+     멈춰 위젯을 한 번도 그리지 않았기 때문이다. 이제 세션이 없거나 create 가
+     401 이면 판매가 단일 출처(billing-periods)로 **표시용 금액**을 계산해 로그인
+     경로와 똑같이 위젯을 그린다(ANONYMOUS customerKey). 서버 주문은 만들지
+     않는다 — 결제 버튼 자리는 "로그인하고 결제하기"(callbackUrl = 이 화면)이고,
+     로그인 뒤 돌아오면 기존 흐름(세션 → 주문 → 위젯 → 결제)이 그대로 돈다.
    ============================================================ */
 
 type Phase =
@@ -44,7 +59,15 @@ type Phase =
      연다. API 키 문서: widgets() 는 위젯 연동 키(gck) 전용이라 ck 키로 부르면
      INVALID_CLIENT_KEY 가 난다. 키 종류에 맞는 흐름을 자동으로 고른다. */
   | { kind: "window-ready"; orderId: string; amount: number }
-  | { kind: "login" }
+  /* [968 · T1] 비로그인 미리보기 — amount 는 표시용(서버가 다시 계산한다).
+       widget: shown = gck 키로 위젯을 그렸다 · none = ck 키(주문 없이는 결제창을
+       열 수 없어 요약·안내·로그인 버튼만) · failed = gck 인데 SDK/렌더 실패. */
+  | {
+      kind: "preview";
+      amount: number;
+      widget: "shown" | "none" | "failed";
+      loginHref: string;
+    }
   | { kind: "error"; msg: string };
 
 /* 플랜명은 단일 출처 — lib/subscriptions/labels.planLabel (게이트: check:plan-labels) */
@@ -152,6 +175,90 @@ function CheckoutSummary({
   );
 }
 
+/* ============================================================
+   [968 · T4] 자리 예약(제안 33) — 위젯이 마운트되는 순간 아래 요소가 튀지 않게.
+
+   예전에는 #toss-payment-methods / #toss-agreement 가 빈 div 였다. 로딩 카드가
+   사라지고 요약 카드·위젯(400px 남짓)·버튼이 한 번에 나타나면서 화면이 통째로
+   내려앉았다 — 결제 직전 화면에서 가장 나쁜 순간에 생기는 점프다.
+   요약 카드는 최종 카드와 같은 5줄 모양으로, 위젯 자리는 min-h 로 먼저 잡고
+   로딩 문구는 그 자리 **안**에서 보여 준다. 스켈레톤은 기존 .sk(전역 CSS)만
+   쓰고, 감속 모션에서는 반짝임을 끈다(motion-reduce).
+   ============================================================ */
+function CheckoutSummarySkeleton() {
+  return (
+    <div aria-hidden className="card flex flex-col gap-2 rounded-2xl px-4 py-5">
+      <div className="flex items-center justify-between">
+        <SkLine w="18%" h={12} className="motion-reduce:animate-none" />
+        <SkLine w="42%" h={12} className="motion-reduce:animate-none" />
+      </div>
+      <div className="flex items-center justify-between">
+        <SkLine w="22%" h={12} className="motion-reduce:animate-none" />
+        <SkLine w="48%" h={12} className="motion-reduce:animate-none" />
+      </div>
+      <div className="flex items-center justify-between border-t border-divider pt-2">
+        <SkLine w="20%" h={12} className="motion-reduce:animate-none" />
+        <SkLine w="36%" h={20} className="motion-reduce:animate-none" />
+      </div>
+      <div className="mt-1 flex flex-col gap-1.5 rounded-xl bg-bg px-3 py-2.5">
+        <SkLine w="92%" h={10} className="motion-reduce:animate-none" />
+        <SkLine w="84%" h={10} className="motion-reduce:animate-none" />
+        <SkLine w="60%" h={10} className="motion-reduce:animate-none" />
+      </div>
+      <SkLine w="40%" h={10} className="motion-reduce:animate-none" />
+    </div>
+  );
+}
+
+/** 위젯 자리 위에 겹쳐 두는 로딩 오버레이 — 형제 요소로 둔다(SDK 컨테이너의 자식을
+ *  SDK 가 어떻게 다루는지 보장이 없어, 컨테이너 안에는 아무것도 넣지 않는다). */
+function WidgetSkeletonOverlay({ msg }: { msg: string }) {
+  return (
+    <div
+      role="status"
+      className="absolute inset-0 flex flex-col gap-3 rounded-2xl border border-line bg-surface px-4 py-5"
+    >
+      <p className="t-body text-text-3">{msg}</p>
+      <div aria-hidden className="flex flex-col gap-3">
+        <SkLine w="34%" h={14} className="motion-reduce:animate-none" />
+        <div className="grid grid-cols-2 gap-2">
+          <SkLine w="100%" h={52} className="motion-reduce:animate-none" />
+          <SkLine w="100%" h={52} className="motion-reduce:animate-none" />
+          <SkLine w="100%" h={52} className="motion-reduce:animate-none" />
+          <SkLine w="100%" h={52} className="motion-reduce:animate-none" />
+        </div>
+        <SkLine w="28%" h={14} className="mt-1 motion-reduce:animate-none" />
+        <SkLine w="100%" h={44} className="motion-reduce:animate-none" />
+        <SkLine w="100%" h={44} className="motion-reduce:animate-none" />
+      </div>
+    </div>
+  );
+}
+
+/* [968 · T1] 비로그인 안내 — 위젯 위, 요약 카드 바로 아래. 무엇이 필요한지와
+   로그인 뒤 어디로 돌아오는지를 한 카드에서 말한다. */
+function GuestNotice({ widget }: { widget: "shown" | "none" | "failed" }) {
+  return (
+    <div role="status" className="card flex flex-col gap-1 rounded-2xl px-4 py-3.5">
+      <p className="t-body font-bold text-ink">결제하려면 로그인이 필요해요</p>
+      <p className="t-sub text-text-2">
+        로그인하면 이 화면으로 돌아와 그대로 결제할 수 있어요. 주문번호는 로그인 뒤
+        발급돼요.
+      </p>
+      {widget === "none" && (
+        /* ck(결제창형) 키는 주문번호가 있어야 결제창을 열 수 있다 — 주문은 로그인
+           뒤 서버가 만들므로 게스트에게는 요약·안내·로그인 버튼까지만 보여 준다. */
+        <p className="t-sub text-text-3">카드 결제창은 로그인해서 주문이 만들어진 뒤 열려요.</p>
+      )}
+      {widget === "failed" && (
+        <p role="alert" className="t-sub font-bold text-danger">
+          결제 수단 화면을 불러오지 못했어요. 로그인한 뒤 다시 시도해 주세요.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function CheckoutClient() {
   const [phase, setPhase] = useState<Phase>({ kind: "loading", msg: "주문 준비 중…" });
   const [params, setParams] = useState<ReturnType<typeof parseParams>>(null);
@@ -186,22 +293,75 @@ export function CheckoutClient() {
       return;
     }
 
+    /* 위젯 렌더 — 로그인 경로와 [968 · T1] 게스트 미리보기가 **같은 코드**를 쓴다.
+       심사역이 보는 화면과 실제 결제 화면이 다르면 미리보기가 거짓이 된다. */
+    async function renderWidgets(amount: number): Promise<TossWidgets> {
+      const TossPayments = await loadTossSdk();
+      const widgets = TossPayments(tossClientKey() as string).widgets({
+        /* 개인정보(이메일)를 토스 대시보드 식별자로 남기지 않는다 —
+           일회성 결제라 비회원 상수로 충분하다(빌링 전환 시 서버 발급 키로). */
+        customerKey: TossPayments.ANONYMOUS,
+      });
+      await widgets.setAmount({ currency: "KRW", value: amount });
+      /* 결제위젯 소개서(소유자 전달본 2026-08-14) 반영: 상점관리자 어드민에서
+         만든 결제 UI(프로모션 배지·특정 카드사 강조·무이자 안내·A/B 등)는
+         variantKey 로 지정한다. 계약 후 어드민에서 UI 를 만들면 Vercel 에
+         NEXT_PUBLIC_TOSS_WIDGET_VARIANT_KEY 만 넣으면 된다 — 코드 수정 없이
+         운영(소개서의 "유지보수 5분" 경로). 미설정이면 기본 UI. */
+      const variantKey = process.env.NEXT_PUBLIC_TOSS_WIDGET_VARIANT_KEY?.trim();
+      await Promise.all([
+        widgets.renderPaymentMethods({
+          selector: "#toss-payment-methods",
+          ...(variantKey ? { variantKey } : {}),
+        }),
+        widgets.renderAgreement({ selector: "#toss-agreement" }),
+      ]);
+      return widgets;
+    }
+
+    /* [968 · T1] 게스트 미리보기 — 서버 주문 없이 표시용 금액으로 위젯만 그린다.
+       widgetsRef 는 채우지 않는다: 주문번호 없는 requestPayment 경로를 아예 만들지
+       않기 위해서다(pay() 는 phase.kind === "ready" 에서만 돈다). */
+    async function startGuestPreview(q: NonNullable<ReturnType<typeof parseParams>>) {
+      const amount = previewAmount(q.tier, q.billing);
+      const loginHref = checkoutLoginCallback(window.location.pathname, window.location.search);
+      if (amount === null) {
+        setPhase({ kind: "error", msg: "결제할 수 있는 상품이 아니에요. 구독 페이지에서 다시 골라 주세요." });
+        return;
+      }
+      if (!isWidgetKey()) {
+        /* ck(결제창형) 키: payment().requestPayment 는 orderId 가 필수라 주문 없이는
+           결제창을 열 수 없다 — 요약·안내·로그인 버튼만 보여 준다. */
+        setPhase({ kind: "preview", amount, widget: "none", loginHref });
+        return;
+      }
+      setPhase({ kind: "loading", msg: "결제 수단 불러오는 중…" });
+      try {
+        await renderWidgets(amount);
+        setPhase({ kind: "preview", amount, widget: "shown", loginHref });
+      } catch {
+        /* 실패를 숨기지 않는다 — 안내 카드가 "불러오지 못했어요"를 말한다. */
+        setPhase({ kind: "preview", amount, widget: "failed", loginHref });
+      }
+    }
+
     void (async () => {
-      // 1) 로그인 확인
+      // 1) 로그인 확인 — [968 · T1] 세션이 없으면 로그인 카드 대신 미리보기
+      let sessionEmail: string | null = null;
       try {
         const res = await fetch("/api/auth/session", { cache: "no-store" });
         const j = (await res.json().catch(() => null)) as
           | { user?: { email?: string | null } }
           | null;
-        if (!j?.user?.email) {
-          setPhase({ kind: "login" });
-          return;
-        }
-        setEmail(j.user.email);
+        sessionEmail = j?.user?.email ?? null;
       } catch {
-        setPhase({ kind: "login" });
+        sessionEmail = null;
+      }
+      if (!sessionEmail) {
+        await startGuestPreview(p);
         return;
       }
+      setEmail(sessionEmail);
 
       // 2) 서버 주문 생성 (금액은 서버 계산 — 클라이언트 금액을 믿지 않는다)
       setPhase({ kind: "loading", msg: "주문 생성 중…" });
@@ -225,7 +385,8 @@ export function CheckoutClient() {
           error?: string;
         };
         if (res.status === 401) {
-          setPhase({ kind: "login" });
+          /* 세션 응답과 서버 판정이 어긋난 경우(만료 직후 등) — 같은 미리보기로 */
+          await startGuestPreview(p);
           return;
         }
         if (!res.ok || !j.orderId || !Number.isFinite(j.amount)) {
@@ -255,30 +416,10 @@ export function CheckoutClient() {
         return;
       }
 
-      // 4) 위젯 렌더 (gck 키)
+      // 4) 위젯 렌더 (gck 키) — 게스트 미리보기와 같은 renderWidgets
       setPhase({ kind: "loading", msg: "결제 수단 불러오는 중…" });
       try {
-        const TossPayments = await loadTossSdk();
-        const widgets = TossPayments(tossClientKey() as string).widgets({
-          /* 개인정보(이메일)를 토스 대시보드 식별자로 남기지 않는다 —
-             일회성 결제라 비회원 상수로 충분하다(빌링 전환 시 서버 발급 키로). */
-          customerKey: TossPayments.ANONYMOUS,
-        });
-        await widgets.setAmount({ currency: "KRW", value: amount });
-        /* 결제위젯 소개서(소유자 전달본 2026-08-14) 반영: 상점관리자 어드민에서
-           만든 결제 UI(프로모션 배지·특정 카드사 강조·무이자 안내·A/B 등)는
-           variantKey 로 지정한다. 계약 후 어드민에서 UI 를 만들면 Vercel 에
-           NEXT_PUBLIC_TOSS_WIDGET_VARIANT_KEY 만 넣으면 된다 — 코드 수정 없이
-           운영(소개서의 "유지보수 5분" 경로). 미설정이면 기본 UI. */
-        const variantKey = process.env.NEXT_PUBLIC_TOSS_WIDGET_VARIANT_KEY?.trim();
-        await Promise.all([
-          widgets.renderPaymentMethods({
-            selector: "#toss-payment-methods",
-            ...(variantKey ? { variantKey } : {}),
-          }),
-          widgets.renderAgreement({ selector: "#toss-agreement" }),
-        ]);
-        widgetsRef.current = widgets;
+        widgetsRef.current = await renderWidgets(amount);
         setPhase({ kind: "ready", orderId, amount });
       } catch {
         /* 위젯 렌더 실패 → 결제창형으로 후퇴. 주문은 이미 만들어져 있으므로
@@ -366,8 +507,19 @@ export function CheckoutClient() {
   }
 
   const label = params ? (planLabel(params.tier)) : "";
-  const billingLabel =
-    params?.billing === "annual" ? "연간" : params?.billing === "weekly" ? "주간권(7일 단건)" : "월간";
+  const billingLabel = params ? previewBillingLabel(params.billing) : "";
+
+  /* [968 · T4] 위젯 자리를 언제 예약할지. gck 키에서만 위젯이 그려지므로 ck 키
+     (결제창형)·오류·위젯 실패 뒤에는 예약을 풀어 420px 빈 상자를 남기지 않는다.
+     loading 동안은 스켈레톤이 그 자리를 채우고, 위젯이 마운트되면 오버레이만
+     걷힌다 — 아래 요소(동의 위젯·버튼)의 위치는 그대로다. */
+  const widgetExpected = isWidgetKey();
+  const widgetReserved =
+    widgetExpected &&
+    (phase.kind === "loading" ||
+      phase.kind === "ready" ||
+      (phase.kind === "preview" && phase.widget === "shown"));
+  const showWidgetSkeleton = widgetExpected && phase.kind === "loading";
 
   return (
     <div className="mx-auto flex w-full max-w-[520px] flex-col gap-3">
@@ -382,22 +534,6 @@ export function CheckoutClient() {
         </p>
       )}
 
-      {phase.kind === "login" && (
-        <div className="card flex flex-col items-center gap-2.5 rounded-2xl px-4 py-8 text-center">
-          <p className="t-section text-ink">결제하려면 로그인이 필요해요</p>
-          <Link
-            href={`/login?callbackUrl=${encodeURIComponent(
-              typeof window !== "undefined"
-                ? window.location.pathname + window.location.search
-                : "/subscription",
-            )}`}
-            className="btn-primary btn-sm no-underline"
-          >
-            로그인하기
-          </Link>
-        </div>
-      )}
-
       {phase.kind === "error" && (
         <div className="card flex flex-col items-center gap-2.5 rounded-2xl px-4 py-8 text-center">
           <p className="t-section text-ink">결제를 시작하지 못했어요</p>
@@ -408,8 +544,10 @@ export function CheckoutClient() {
         </div>
       )}
 
-      {phase.kind === "loading" && (
-        <div className="card rounded-2xl px-4 py-8 text-center t-body text-text-3">
+      {/* [968 · T4] 위젯이 예상되는(gck) 동안의 로딩 문구는 위젯 자리 안에서 보여 준다 —
+          이 카드가 사라지며 생기던 점프를 없앤다. ck 키(위젯 없음)에서만 예전 카드. */}
+      {phase.kind === "loading" && !widgetExpected && (
+        <div role="status" className="card rounded-2xl px-4 py-8 text-center t-body text-text-3">
           {phase.msg}
         </div>
       )}
@@ -419,17 +557,45 @@ export function CheckoutClient() {
           DOM 에 있어야 하므로 항상 마운트하고(display:none 은 위젯이 크기를 못 잰다),
           순서만 바꾼다. */}
       <div className="flex flex-col gap-2">
-        {(phase.kind === "ready" || phase.kind === "window-ready") && params && (
-          <CheckoutSummary
-            planName={label}
-            billing={params.billing}
-            billingLabel={billingLabel}
-            amount={phase.amount}
-            orderId={phase.orderId}
-          />
+        {(phase.kind === "ready" || phase.kind === "window-ready" || phase.kind === "preview") &&
+          params && (
+            <CheckoutSummary
+              planName={label}
+              billing={params.billing}
+              billingLabel={billingLabel}
+              amount={phase.amount}
+              /* [968 · T1] 게스트는 주문이 없다 — 있는 척하지 않는다 */
+              orderId={phase.kind === "preview" ? "로그인 후 발급" : phase.orderId}
+            />
+          )}
+        {phase.kind === "loading" && widgetExpected && <CheckoutSummarySkeleton />}
+        {phase.kind === "preview" && <GuestNotice widget={phase.widget} />}
+        <div className={`relative overflow-hidden rounded-2xl ${widgetReserved ? "min-h-[420px]" : ""}`}>
+          <div id="toss-payment-methods" className={widgetReserved ? "min-h-[420px]" : ""} />
+          {showWidgetSkeleton && phase.kind === "loading" && (
+            <WidgetSkeletonOverlay msg={phase.msg} />
+          )}
+        </div>
+        <div
+          id="toss-agreement"
+          className={`overflow-hidden rounded-2xl ${widgetReserved ? "min-h-[88px]" : ""}`}
+        />
+
+        {/* [968 · T1] 게스트의 1차 행동 — 로그인 뒤 이 화면(쿼리 포함)으로 복귀 */}
+        {phase.kind === "preview" && (
+          <>
+            <Link
+              href={phase.loginHref}
+              className="btn-primary btn-cta rounded-[14px] p-[14px] text-center t-body font-bold no-underline"
+            >
+              로그인하고 결제하기
+            </Link>
+            <p className="text-center t-sub text-text-3">
+              {phase.amount.toLocaleString("ko-KR")}원 · 로그인하면 같은 화면에서 결제가 이어져요.
+            </p>
+          </>
         )}
-        <div id="toss-payment-methods" className="overflow-hidden rounded-2xl" />
-        <div id="toss-agreement" className="overflow-hidden rounded-2xl" />
+
         {phase.kind === "ready" && params && (
           <>
             <button
@@ -468,7 +634,7 @@ export function CheckoutClient() {
         )}
         {/* [966] 되돌아갈 길은 오류 상태에만 있었다 — 위젯이 오래 걸리거나 마음이
             바뀌어도 브라우저 뒤로가기뿐이었다. 모든 상태에서 한 줄 링크. */}
-        {phase.kind !== "error" && phase.kind !== "login" && (
+        {phase.kind !== "error" && (
           <Link
             href={params?.returnTo ?? "/subscription"}
             className="mt-1 text-center t-sub font-bold text-text-3 no-underline"

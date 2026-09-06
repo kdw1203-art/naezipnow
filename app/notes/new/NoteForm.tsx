@@ -885,6 +885,14 @@ export function NoteForm({
   const uploading = uploads.some((u) => u.status === "uploading");
   const uploadSeqRef = useRef(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  /* [968 · 32] 촬영 직행 input — capture="environment" 는 iOS 에서 "사진 보관함/촬영"
+     시트를 건너뛰고 후면 카메라를 바로 연다. 같은 onPickFiles 로 흘러 업로드 로직은 하나. */
+  const captureRef = useRef<HTMLInputElement>(null);
+  /* 두 input 의 값을 함께 비운다 — 같은 파일을 연달아 고를 수 있게(change 는 값이 바뀔 때만) */
+  const resetPickers = () => {
+    if (fileRef.current) fileRef.current.value = "";
+    if (captureRef.current) captureRef.current.value = "";
+  };
 
   const [savedDraft, setSavedDraft] = useState(false);
   /* [967 · 4] 마지막 임시저장 시각 — 하단 저장 바의 상태 문구 재료 */
@@ -1279,11 +1287,11 @@ export function NoteForm({
     const remain = MAX_PHOTOS - photos.length - inFlight;
     if (remain <= 0) {
       setSaveError(`사진은 최대 ${MAX_PHOTOS}장까지 첨부할 수 있어요.`);
-      if (fileRef.current) fileRef.current.value = "";
+      resetPickers();
       return;
     }
     const picked = Array.from(files).slice(0, remain);
-    if (fileRef.current) fileRef.current.value = "";
+    resetPickers();
     setSaveError(null);
     /* [#134] 촬영 시각 — 리사이즈(canvas 재인코딩)가 EXIF 를 지우므로 그 전에
        원본에서 읽는다. 가장 이른 촬영 시각 하나만 보관(방문 시간 배지·방문일 재료). */
@@ -1757,21 +1765,55 @@ export function NoteForm({
             버튼이 폼 하단(메모 아래)에만 있었다. 상단에서 같은 input(fileRef)을
             연다 — 업로드 로직·한도 전부 기존 그대로. 촬영 사진은 하단 사진
             줄에 쌓인다. */}
-        {!isEdit && (
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading || photos.length >= MAX_PHOTOS}
-            className="flex min-h-[44px] items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-line-strong bg-surface px-4 py-2.5 t-body font-bold text-text-2 disabled:opacity-60"
-          >
-            <Icon name="📷" size={16} className="inline align-middle" />
-            {uploading
-              ? "업로드 중…"
-              : photos.length > 0
-                ? `사진 먼저 담기 (${photos.length}/${MAX_PHOTOS})`
-                : "사진 먼저 담기 — 현장이면 지금 찍어 두세요"}
-          </button>
-        )}
+        {/* [968 · 32] "촬영" 을 옆에 둔다 — accept="image/*" 하나면 iOS 는 매번 "사진 보관함 /
+            사진 찍기" 시트를 거친다. 퀵모드(현장)는 촬영이 첫 행동이라 앞에, 평소엔 담기가
+            앞. 둘 다 같은 onPickFiles → 업로드 로직은 그대로 하나다. 마우스 기기(pointer:fine)
+            는 capture 를 무시하고 파일 창만 띄우므로 촬영 버튼을 숨긴다. */}
+        {!isEdit &&
+          (() => {
+            const pickBtn = (
+              <button
+                key="pick"
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading || photos.length >= MAX_PHOTOS}
+                className="flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-line-strong bg-surface px-4 py-2.5 t-body font-bold text-text-2 disabled:opacity-60"
+              >
+                <Icon name="📷" size={16} className="inline shrink-0 align-middle" />
+                <span className="truncate">
+                  {uploading
+                    ? "업로드 중…"
+                    : photos.length > 0
+                      ? `사진 먼저 담기 (${photos.length}/${MAX_PHOTOS})`
+                      : "사진 먼저 담기 — 현장이면 지금 찍어 두세요"}
+                </span>
+              </button>
+            );
+            const captureBtn = (
+              <button
+                key="capture"
+                type="button"
+                onClick={() => captureRef.current?.click()}
+                disabled={uploading || photos.length >= MAX_PHOTOS}
+                aria-label="카메라로 촬영해 사진 추가"
+                className={`flex min-h-[44px] shrink-0 items-center justify-center gap-1.5 rounded-[10px] px-4 py-2.5 t-body font-bold disabled:opacity-60 pointer-fine:hidden ${
+                  quickMode
+                    ? "btn-primary"
+                    : "border-[1.5px] border-line-strong bg-surface text-text-1"
+                }`}
+              >
+                <Icon name="camera" size={16} className="inline shrink-0 align-middle" />
+                촬영
+              </button>
+            );
+            /* DOM 순서까지 바꾼다 — 시각 순서만 뒤집으면(flex-row-reverse) 스크린리더·
+               Tab 순서는 여전히 담기가 먼저다. */
+            return (
+              <div className="flex gap-2">
+                {quickMode ? [captureBtn, pickBtn] : [pickBtn, captureBtn]}
+              </div>
+            );
+          })()}
 
         {/* 위치 카드 — 단지·주소 검색으로 연결 */}
         <NoteLocationSearch value={loc} onChange={setLoc} />
@@ -1961,6 +2003,8 @@ export function NoteForm({
                 value={weather}
                 onChange={(e) => setWeather(e.target.value.slice(0, 40))}
                 placeholder="직접 입력 (선택)"
+                /* [968 · 29] 한 줄 입력 — Enter 는 자판 닫기("완료") */
+                enterKeyHint="done"
                 className="w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-text-1 outline-none"
                 aria-label="방문 날씨"
               />
@@ -2218,6 +2262,8 @@ export function NoteForm({
                 }}
                 placeholder="예: 조용한 단지"
                 aria-label="추가할 태그"
+                /* [968 · 29] Enter = 추가 — 자판에도 "완료" 로 보인다 */
+                enterKeyHint="done"
                 className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 text-[13px] text-text-1 outline-none placeholder:text-text-3 focus:border-primary"
               />
               <button
@@ -2311,6 +2357,8 @@ export function NoteForm({
                 }}
                 placeholder="예: 저녁 시간대 주차 상황 확인"
                 aria-label="추가할 고려사항"
+                /* [968 · 29] Enter = 추가 — 자판에도 "완료" 로 보인다 */
+                enterKeyHint="done"
                 className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 text-[13px] text-text-1 outline-none placeholder:text-text-3 focus:border-primary"
               />
               <button
@@ -2385,6 +2433,18 @@ export function NoteForm({
             multiple
             className="hidden"
             aria-label="현장 사진 선택"
+            onChange={(e) => onPickFiles(e.target.files)}
+          />
+          {/* [968 · 32] 촬영 직행 — capture="environment": 후면 카메라로 바로. 한 번에 한 장
+              (카메라 앱은 multiple 을 무시한다). 같은 onPickFiles 로 흘러 한도·리사이즈·
+              업로드 전부 종전 그대로. */}
+          <input
+            ref={captureRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            aria-label="카메라로 촬영"
             onChange={(e) => onPickFiles(e.target.files)}
           />
           {/* [967 · 5] 사진 줄 — ◀ ▶ 로 순서, "대표" 로 맨 앞(= 목록 커버). 버튼만
@@ -2543,17 +2603,30 @@ export function NoteForm({
               )}
             </div>
           )}
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading || photos.length >= MAX_PHOTOS}
-            className="flex items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-line-strong p-[11px] text-center t-body font-bold text-text-2 disabled:opacity-60"
-          >
-            <Icon name="📷" size={16} className="inline align-middle" />
-            {uploading
-              ? "업로드 중…"
-              : `사진 추가 (${photos.length}/${MAX_PHOTOS})`}
-          </button>
+          {/* [968 · 32] 하단에도 촬영 버튼 — 수정 모드(상단 블록 없음)에서도 현장 촬영이 되게 */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading || photos.length >= MAX_PHOTOS}
+              className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-line-strong p-[11px] text-center t-body font-bold text-text-2 disabled:opacity-60"
+            >
+              <Icon name="📷" size={16} className="inline shrink-0 align-middle" />
+              {uploading
+                ? "업로드 중…"
+                : `사진 추가 (${photos.length}/${MAX_PHOTOS})`}
+            </button>
+            <button
+              type="button"
+              onClick={() => captureRef.current?.click()}
+              disabled={uploading || photos.length >= MAX_PHOTOS}
+              aria-label="카메라로 촬영해 사진 추가"
+              className="flex shrink-0 items-center justify-center gap-1.5 rounded-[10px] border-[1.5px] border-line-strong bg-surface px-4 p-[11px] t-body font-bold text-text-1 disabled:opacity-60 pointer-fine:hidden"
+            >
+              <Icon name="camera" size={16} className="inline shrink-0 align-middle" />
+              촬영
+            </button>
+          </div>
         </div>
 
         {/* 공개/비공개 선택 — 기본 비공개, 저장 직전 명시적 선택 */}
