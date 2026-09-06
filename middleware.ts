@@ -3,7 +3,7 @@ import { applyPrivateSiteGate } from "@/lib/site-private-edge";
 import { DEFAULT_DESKTOP_ORIGIN, detectShellFromHost, normalizeHost } from "@/lib/platform-shell";
 import { WOODONG_PATHNAME_HEADER } from "@/lib/seo/request-pathname";
 import { safeInternalPath } from "@/lib/safe-path";
-import { EXACT_REDIRECTS, legacyRedirectStatus } from "@/lib/seo/redirect-map";
+import { EXACT_REDIRECTS, legacyRedirectStatus, resolvePrefixRedirect } from "@/lib/seo/redirect-map";
 import { expectedComplexParam } from "@/lib/seo/complex-slug";
 import { updateSession } from "@/utils/supabase/middleware";
 import {
@@ -390,6 +390,24 @@ export async function middleware(request: NextRequest) {
     return applySecurityHeaders(redirect, request);
   }
 
+  /* [967 · 30d] 꼬리가 가변인 구 URL(/area/<지역명>, /community/tag/<태그>) — 표는
+     lib/seo/redirect-map.ts PREFIX_REDIRECTS. 상태 코드·쿠키 처리는 위 정확 일치와 같다.
+     원 요청의 쿼리는 대상이 이미 가진 키(?q= 등)를 덮지 않게만 이어 붙인다. */
+  const prefixTarget = resolvePrefixRedirect(path);
+  if (prefixTarget) {
+    const u = new URL(prefixTarget, request.url);
+    request.nextUrl.searchParams.forEach((v, k) => {
+      if (k === "next") {
+        if (!u.searchParams.has("callbackUrl")) u.searchParams.set("callbackUrl", v);
+      } else if (!u.searchParams.has(k)) {
+        u.searchParams.set(k, v);
+      }
+    });
+    const redirect = NextResponse.redirect(u, legacyRedirectStatus(request.method));
+    copyCookies(sessionResponse, redirect);
+    return applySecurityHeaders(redirect, request);
+  }
+
   // 구 커뮤니티 게시글 경로(/post/:id, /community/:id) → /town 피드로 1홉 직행.
   // (/community, /community/write, /community/create 는 위 EXACT_REDIRECTS 에서 먼저 처리됨)
   const postMatch = /^\/(?:post|community)\/([^/]+)$/.exec(path);
@@ -415,7 +433,9 @@ export const config = {
      * [OPT-14] 정적 자산 제외 목록 확장 — sw.js·manifest·icons·fonts·robots·
      * sitemap·feed·.well-known 은 미들웨어(110KB)를 지날 이유가 없다.
      * /api 는 유지 — 보안 헤더·캐시 헤더 로직이 API 응답에도 걸려 있다.
+     * [967 · 30b·30c] security.txt·app-ads.txt(public/ 정적 파일)도 같은 이유로 제외 —
+     * 미들웨어를 지나면 문서로 오인돼 no-store 가 덮여 next.config 의 하루 캐시가 죽는다.
      */
-    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|robots\\.txt|sitemap[^/]*\\.xml|feed\\.xml|icons/|fonts/|\\.well-known/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|robots\\.txt|security\\.txt|app-ads\\.txt|sitemap[^/]*\\.xml|feed\\.xml|icons/|fonts/|\\.well-known/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
   ],
 };

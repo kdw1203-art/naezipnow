@@ -18,6 +18,7 @@ import {
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { Radar } from "@/app/components/viz/Radar";
 import { SkTable } from "@/app/components/ui/Skeleton";
+import { formatKrwWon } from "@/lib/format/krw";
 
 /* ---------- 단지 선택기 → 비교 트레이에 담기 (검색·지도·딥링크 공용) ---------- */
 
@@ -160,10 +161,10 @@ type CompareItem = {
   latest: { ym: string; amountKrw: number; areaM2: number | null; floor: number | null } | null;
 };
 
+/** [967 · 31] 원 → "8.45억" — lib/format/krw.ts "eok". null 만 "—" 이고 0 은 "0억" 이던 기존 얼굴 유지 */
 function fmtEok(krw: number | null): string {
   if (krw === null) return "—";
-  const e = krw / 100_000_000;
-  return `${(e >= 10 ? e.toFixed(1) : e.toFixed(2)).replace(/\.?0+$/, "")}억`;
+  return formatKrwWon(krw, { style: "eok", below: "eok", empty: false });
 }
 
 function fmtManwon(krw: number | null): string {

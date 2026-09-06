@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { loadAreaBands } from "./section-loaders";
 import { logger } from "@/lib/log";
+import { formatKrwManwon } from "@/lib/format/krw";
 
 /* D5 — 면적대별 시세표 허브 승격. market_transactions 실거래 면적 구간별 최근가·평균가.
    실거래 없으면 렌더 생략(사실 우선).
@@ -9,10 +10,10 @@ import { logger } from "@/lib/log";
    .catch(() => []) 로 빈 배열이 되어 섹션이 통째로 사라졌고, 사용자에게는 이 단지에
    신고된 거래가 없는 것처럼 보였다. 실패는 실패라고 적는다. */
 
+/** [967 · 31] 만원 → "8.4억"/"9,800만"/"—" — lib/format/krw.ts "eok1".
+ *  입력은 complex-store 가 Math.round 한 정수라 만 분기의 반올림이 출력에 영향을 주지 않는다 */
 function manwon(m: number): string {
-  if (!Number.isFinite(m) || m <= 0) return "—";
-  if (m >= 10000) return `${(m / 10000).toFixed(1).replace(/\.0$/, "")}억`;
-  return `${m.toLocaleString("ko-KR")}만`;
+  return formatKrwManwon(m, { style: "eok1" });
 }
 
 function ymLabel(s: string): string {

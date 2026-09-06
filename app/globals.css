@@ -4043,3 +4043,65 @@ a.rank-row:hover {
 @page {
   margin: 14mm;
 }
+
+/* ===== [967 · 임장노트 작성폼] ===== */
+/* [967 · 4] 하단 고정 저장 바(app/notes/new/NoteForm.tsx) — 탭바 위 8px.
+   원래 CTA 가 화면에 들어오면 React 가 아예 떼어 내므로 여기서는 위치·등장만 맡는다.
+   등장은 riseIn 재사용, 감속 모션에서는 즉시 표시. */
+.note-savebar {
+  bottom: calc(var(--nz-tabbar-offset) + 8px);
+  animation: riseIn var(--dur-md) var(--ease-out) backwards;
+}
+/* [967 · 5] 사진 줄 — iOS 관성 스크롤 + 얇은 스크롤바(줄이 잘린 모양이 스크롤 힌트) */
+.note-photo-strip {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+@media (prefers-reduced-motion: reduce) {
+  .note-savebar {
+    animation: none;
+  }
+}
+
+/* ===== [967 · 단지 페이지] ===== */
+/* [967 · 17] 모바일 하단 액션 바(app/complex/[id]/MobileActionBar.tsx) — 탭바 위 8px.
+   원래 CTA 블록이 화면에 들어오면 React 가 떼어 내므로 여기서는 위치·등장만 맡는다.
+   등장은 riseIn 재사용, 감속 모션에서는 즉시 표시(note-savebar 와 같은 규칙). */
+.complex-actionbar {
+  bottom: calc(var(--nz-tabbar-offset) + 8px);
+  animation: riseIn var(--dur-md) var(--ease-out) backwards;
+}
+/* 바가 마운트된 동안 본문 끝이 바에 가리지 않게 — md 미만에서만(바 자체가 md:hidden) */
+@media (max-width: 767px) {
+  body.nz-has-actionbar {
+    padding-bottom: 64px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .complex-actionbar {
+    animation: none;
+  }
+}
+
+/* ===== [967 · 동네·지도·알림·홈] ===== */
+/* [967 · 23] 지도 상단 접힌 필터 바의 요약 알약(app/map/map-client.tsx filterBar).
+   버튼이 아니라 읽는 글자라 map-chip 의 hover 색 변화·채움 규칙을 따르지 않는다.
+   헤더(lg+)는 폭이 빠듯해 길면 말줄임 — 전문은 title 로. 색은 토큰만(다크 모드). */
+.map-filter-summary {
+  display: inline-block;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: var(--radius-pill);
+  padding: 5px 10px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-soft);
+  vertical-align: middle;
+}
+@media (max-width: 767px) {
+  .map-filter-summary {
+    max-width: 200px;
+  }
+}

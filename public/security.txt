@@ -1,0 +1,6 @@
+# 내집나우 (naezipnow.com) — 보안 취약점 제보 안내 · RFC 9116
+# 취약점을 발견하셨다면 아래 주소로 알려 주세요. 재현 절차와 영향 범위를 함께 적어 주시면 빨리 확인할 수 있어요.
+Contact: mailto:nuguzip@naver.com
+Expires: 2027-09-06T00:00:00.000Z
+Preferred-Languages: ko, en
+Canonical: https://naezipnow.com/.well-known/security.txt

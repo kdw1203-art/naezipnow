@@ -6,7 +6,11 @@ import {
   createNote,
   listNotes,
   listPublicNotes,
+  listPublicNotesPage,
+  PUBLIC_NOTES_PAGE_MAX,
 } from "@/lib/inspection/store-db";
+import { buildFeedNotes } from "@/lib/notes/feed-note";
+import { listAlertSubscriptions } from "@/lib/alerts/subscriptions";
 import { awardPoints } from "@/lib/points/ledger";
 import { guToken, tierReachedAt } from "@/lib/gamification/region-levels";
 import { appendOnboardingStep } from "@/lib/onboarding/append-step";
@@ -57,6 +61,57 @@ export async function GET(req: Request) {
     const hay = `${n.title} ${n.region} ${n.aptName ?? ""} ${n.summary ?? ""}`.toLowerCase();
     return hay.includes(q);
   };
+
+  /* [967 · 19] 공개 피드 커서 페이지 — /notes 의 "더 보기" 가 부른다.
+     ?public=1&before=<createdAt ISO>&limit=<≤50>. 응답은 페이지가 그리는 것과
+     **같은 카드 모양**(FeedNote — lib/notes/feed-note)이다: 단지 링크·관심 지역·
+     상대시각은 서버만 만들 수 있어서다. 첫 페이지의 60초 캐시는 여기 없다 —
+     커서마다 키를 만들면 캐시가 아니라 누수라 실조회한다. is_public 행만 나간다. */
+  if (url.searchParams.get("public") === "1") {
+    const limitRaw = Number(url.searchParams.get("limit") ?? "30");
+    const limit = Number.isFinite(limitRaw)
+      ? Math.max(1, Math.min(PUBLIC_NOTES_PAGE_MAX, Math.floor(limitRaw)))
+      : 30;
+    const beforeRaw = (url.searchParams.get("before") ?? "").trim();
+    const before = beforeRaw && Number.isFinite(Date.parse(beforeRaw)) ? beforeRaw : null;
+    if (beforeRaw && !before) {
+      return NextResponse.json({ error: "before 는 ISO 시각이어야 합니다." }, { status: 400 });
+    }
+    let rows;
+    try {
+      rows = await listPublicNotesPage({ limit, before });
+    } catch (e) {
+      return NextResponse.json(
+        {
+          error: "공개 임장노트를 조회하지 못했습니다. 노트가 없는 것이 아니라 조회가 실패했습니다.",
+          detail: e instanceof Error ? e.message : String(e),
+        },
+        { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "300" } },
+      );
+    }
+    /* 관심 지역 대조는 페이지(app/notes/page.tsx)와 같은 근거 — 실패는 칩 판정만 비운다 */
+    let interestRegions: string[] = [];
+    const viewer = session?.user?.email ?? null;
+    if (viewer) {
+      try {
+        interestRegions = (await listAlertSubscriptions(viewer))
+          .filter((s) => s.type === "region")
+          .map((s) => s.value);
+      } catch {
+        interestRegions = [];
+      }
+    }
+    const items = await buildFeedNotes(rows, { interestRegions });
+    const last = rows[rows.length - 1];
+    return NextResponse.json(
+      {
+        items,
+        nextCursor: rows.length >= limit && last ? last.createdAt : null,
+        hasMore: rows.length >= limit,
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
 
   if (all) {
     /* 조회 실패를 `{items: []}` 로 돌려주면 받아 간 쪽이 "공개 노트가 없다" 고

@@ -5,6 +5,8 @@
  * 이 파일은 서버/클라이언트 어디서나 import 가능한 순수 타입·포맷터만 둔다.
  */
 
+import { formatKrwWon } from "@/lib/format/krw";
+
 /** 개발물건 유형 */
 export const DEAL_TYPES = [
   "재건축",
@@ -119,25 +121,13 @@ export interface DevInquiry {
 /**
  * 원(KRW) → 억/조 표기. 예) 42000000000 → "420억", 1500000000000 → "1조 5,000억".
  * null·0·음수·비유한값이면 "미정".
+ *
+ * [967 · 31] 본체는 lib/format/krw.ts "jo" 스타일. 예전엔 로케일 인자 없는
+ * toLocaleString() 이었는데(서버 기본 로케일 의존) 공통 함수는 ko-KR 로 고정한다 —
+ * 천단위 구분 결과는 같다.
  */
 export function formatKrwEok(krw: number | null | undefined): string {
-  if (krw == null || !Number.isFinite(krw) || krw <= 0) return "미정";
-  const JO = 1e12;
-  const EOK = 1e8;
-  if (krw >= JO) {
-    const jo = Math.floor(krw / JO);
-    const remEok = Math.round((krw - jo * JO) / EOK);
-    return remEok > 0
-      ? `${jo.toLocaleString()}조 ${remEok.toLocaleString()}억`
-      : `${jo.toLocaleString()}조`;
-  }
-  if (krw >= EOK) {
-    const eok = krw / EOK;
-    const rounded = eok % 1 === 0 ? eok : Math.round(eok * 10) / 10;
-    return `${rounded.toLocaleString()}억`;
-  }
-  const man = Math.round(krw / 1e4);
-  return `${man.toLocaleString()}만`;
+  return formatKrwWon(krw, { style: "jo", empty: "미정" });
 }
 
 /** 면적(㎡) 표기 — null 이면 "—" */

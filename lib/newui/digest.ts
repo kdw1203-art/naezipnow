@@ -22,6 +22,7 @@ import { getMarketFreshnessDateLabel } from "@/lib/newui/freshness";
 import { getAllRegionSnapshots } from "@/lib/market/store";
 import { logger } from "@/lib/log";
 import type { Post } from "@/lib/types/post";
+import { formatKrwWon } from "@/lib/format/krw";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const NEWS_LIMIT = 8;
@@ -89,10 +90,9 @@ const MAJOR_REGIONS: Array<{ id: string; city: string }> = [
   { id: "incheon-bupyeong", city: "인천" },
 ];
 
+/** [967 · 31] 홈 카드와 같은 "eok" 얼굴 — 본체는 lib/format/krw.ts */
 function formatEok(won: number): string {
-  const eok = won / 100_000_000;
-  const s = eok >= 10 ? eok.toFixed(1) : eok.toFixed(2);
-  return `${s.replace(/\.?0+$/, "")}억`;
+  return formatKrwWon(won, { style: "eok", below: "eok", empty: false });
 }
 
 function deltaOf(changePct: number | undefined): { delta: string; tone: DigestDeltaTone } {

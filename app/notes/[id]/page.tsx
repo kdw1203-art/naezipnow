@@ -34,6 +34,12 @@ import { CompareTrayButton } from "@/app/components/CompareTrayButton";
 import { listComplexesInDistrict } from "@/lib/complex/complex-store";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { NoteMiniMap } from "./NoteMiniMap";
+import { noteCoordsFromMetadata } from "@/lib/notes/note-coords";
+import { NoteComments, type NoteCommentView } from "./NoteComments";
+import { listNoteCommentsForViewer } from "@/lib/inspection/note-comments";
+import { relativeTime } from "@/lib/notes/feed-note";
+import { isAdmin } from "@/lib/auth/is-admin";
 
 /* 시안 6c(노트 상세 + AI) + 10f(AI 노트 분석) + 20a(공개 임장노트 표준 11항목) + 20b(SEO)
    실데이터: inspection_notes → getNote(id) — 공개 노트만 index, 비공개·목업은 noindex */
@@ -523,7 +529,12 @@ export default async function NoteDetailPage({
       : "";
   const visitApt = realNote.aptName?.trim() ?? "";
   const wantsNearby = isOwner && Boolean(aiStatus) && Boolean(realNote.region.trim());
-  const [purchasedAccess, complexHref, groupedR, nearbyRowsR] = await Promise.all([
+  /* [967 · 12] 댓글은 공개 노트(또는 소유자 본인)에만 — 이 페이지는 force-dynamic 이라
+     요청마다 렌더되므로 다른 요청별 조회(구매 확인·회차 목록)와 같은 방식으로 서버에서
+     함께 읽는다. 공개 캐시가 없으니 뷰어별 "내 댓글" 판정을 서버에서 해도 새지 않는다.
+     실패는 댓글 섹션만 "못 불러왔다" 로 접는다(노트 본문이 우선). */
+  const wantsComments = realNote.isPublic || isOwner;
+  const [purchasedAccess, complexHref, groupedR, nearbyRowsR, commentsR] = await Promise.all([
     (async () => {
       if (realNote.isPublic || isOwner || !viewerEmail) return false;
       const reportId = await findPaidReportIdByNote(realNote.id);
@@ -546,6 +557,15 @@ export default async function NoteDetailPage({
       ? listComplexesInDistrict(realNote.region.trim(), 6).then(
           (rows) => ({ ok: true as const, rows }),
           () => ({ ok: false as const }),
+        )
+      : Promise.resolve({ ok: false as const }),
+    wantsComments
+      ? listNoteCommentsForViewer(realNote.id, viewerEmail).then(
+          (r) => ({ ok: true as const, ...r }),
+          (e: unknown) => {
+            console.error("[/notes/[id]] 댓글 조회 실패:", e);
+            return { ok: false as const };
+          },
         )
       : Promise.resolve({ ok: false as const }),
   ]);
@@ -587,6 +607,16 @@ export default async function NoteDetailPage({
 
   const v = toView(realNote, visits);
   const hasLlmAi = v.aiBadge === "AI 생성";
+  /* [967 · 11] 미니맵 좌표 — metadata.lat/lng (NoteForm 이 저장, OG 이미지도 같은 값을 쓴다) */
+  const noteCoords = noteCoordsFromMetadata(
+    (realNote.metadata ?? null) as Record<string, unknown> | null,
+  );
+  /* [967 · 12] 댓글 뷰 — 상대시각은 서버에서 계산해 넘긴다(hydration 불일치 방지) */
+  const commentViews: NoteCommentView[] = commentsR.ok ? commentsR.comments : [];
+  const commentLabels = Object.fromEntries(
+    commentViews.map((c) => [c.id, relativeTime(c.createdAt)]),
+  );
+  const canModerateComments = isOwner || isAdmin(session);
   const complexIdFromHref =
     complexHref && complexHref.startsWith("/complex/")
       ? complexHref.slice("/complex/".length)
@@ -935,6 +965,22 @@ export default async function NoteDetailPage({
                     mode: hasLlmAi ? "llm" : "rule",
                     badge: v.aiBadge,
                   }}
+                />
+              </div>
+            )}
+
+            {/* [967 · 11] 위치 미니맵 — 좌표가 저장된 노트만. 지역 칩 글자로만 읽히던
+                "어디" 를 지도로 보여 주고 /map 좌표 포커스로 잇는다. */}
+            {noteCoords && (
+              <div className="flex flex-col gap-1.5 rounded-[14px] border border-line bg-surface p-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="t-sub font-extrabold text-text-3">위치</span>
+                  <span className="t-caption text-text-3">{v.regionLabel}</span>
+                </div>
+                <NoteMiniMap
+                  lat={noteCoords.lat}
+                  lng={noteCoords.lng}
+                  label={realNote.aptName?.trim() || realNote.title}
                 />
               </div>
             )}
@@ -1299,6 +1345,31 @@ export default async function NoteDetailPage({
               허구 패널이라 제거했다. 편향 분석이 실제로 붙으면 그때 되살린다. */}
         </aside>
       </div>
+
+      {/* [967 · 12] 댓글 — 공개 노트(과 소유자 본인)에만. id="comments" 는 받은편지함
+          알림(/notes/[id]#comments)의 착지점이다 — 지우면 알림이 글 맨 위로 떨어진다. */}
+      {wantsComments && (
+        <section
+          id="comments"
+          className="rise-in-2 card mt-5 flex scroll-mt-24 flex-col gap-3 rounded-[18px] p-6"
+        >
+          {commentsR.ok ? (
+            <NoteComments
+              noteId={realNote.id}
+              comments={commentViews}
+              relativeLabels={commentLabels}
+              ownCommentIds={commentsR.ownCommentIds}
+              canModerate={canModerateComments}
+              loggedIn={Boolean(viewerEmail)}
+            />
+          ) : (
+            /* 조회 실패를 "댓글 없음" 으로 그리지 않는다 */
+            <p role="alert" className="t-body text-text-2">
+              댓글을 불러오지 못했어요. 잠시 후 새로고침해 주세요.
+            </p>
+          )}
+        </section>
+      )}
 
       {/* 항목 38 — 가치를 받은 화면의 상주 안내. AI 정리가 실제로 반영된
           노트를 보는 무료 소유자에게만 보인다(한도 문구가 아니라 가치 문구). */}

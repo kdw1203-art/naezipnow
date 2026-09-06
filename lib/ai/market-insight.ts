@@ -9,6 +9,7 @@ import { matchRegionByName } from "@/lib/market/region-code";
 import { getRegionSnapshot } from "@/lib/market/store";
 import { callLlmChat, type LlmMessage } from "@/lib/ai/llm-provider";
 import { defaultModelIdFromEnv, getModelOption } from "@/lib/ai/llm-models";
+import { formatKrwWon } from "@/lib/format/krw";
 
 export const AI_DISCLAIMER =
   "본 분석은 참고용이며 투자 판단의 책임은 이용자에게 있습니다";
@@ -31,11 +32,11 @@ export type AnalysisRegionSnapshot = {
   tradeCount: number | null;
 };
 
-/** 원 단위 → "8.4억" 표기 (10억 미만은 소수 2자리) */
+/** 원 단위 → "8.4억" 표기 (10억 미만은 소수 2자리)
+ *  [967 · 31] 본체는 lib/format/krw.ts "eok" 스타일. 1억 미만도 "0.85억", 0 도 "0억" —
+ *  AI 코멘트 본문이 이 얼굴로 굳어 있어 방어(empty)를 켜지 않는다 */
 export function formatEokWon(won: number): string {
-  const eok = won / 100_000_000;
-  const s = eok >= 10 ? eok.toFixed(1) : eok.toFixed(2);
-  return `${s.replace(/\.?0+$/, "")}억`;
+  return formatKrwWon(won, { style: "eok", below: "eok", empty: false });
 }
 
 /** 지역명(자유 표기)으로 실시세 스냅샷 조회. 실패/미보유 시 null (graceful). */

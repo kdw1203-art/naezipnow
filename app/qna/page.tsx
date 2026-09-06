@@ -13,6 +13,7 @@ import { logger } from "@/lib/log";
 import { QNA_TOPICS } from "@/lib/qna/topics";
 import { AskForm } from "./AskForm";
 import { QnaListClient, type QnaRow } from "./QnaListClient";
+import { relativeTimeLabel } from "@/lib/format/relative-time";
 
 /* 비용 실측(2026-08-10): 서버는 원래도 100건을 한 번 받아 메모리에서 걸렀다 —
    ?status/sort/topic/q 를 읽는 것만이 이 라우트를 영구 동적으로 만들고 있었다.
@@ -44,19 +45,10 @@ const QNA_THEME = {
    대신 이미 불러온 100건 안에서 하므로, 결과가 0이어도 "그 단지 질문이 아직
    없다"가 아니라 "최근 100건 중에는 없다"로 문구를 적는다 — 없는 것을 단정하지
    않는다. */
-/** 상대/짧은 날짜 — 하루 이내는 시간, 30일 이내는 N일 전, 이후는 YYYY.MM.DD. */
+/** 상대/짧은 날짜 — 하루 이내는 시간, 30일 이내는 N일 전, 이후는 YYYY.MM.DD.
+ *  [967 · 32] 본체는 lib/format/relative-time.ts (시간 단위 · 30일) */
 function shortDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const diff = Date.now() - d.getTime();
-  const day = 24 * 60 * 60 * 1000;
-  if (diff < day) {
-    const h = Math.floor(diff / (60 * 60 * 1000));
-    return h < 1 ? "방금 전" : `${h}시간 전`;
-  }
-  if (diff < 30 * day) return `${Math.floor(diff / day)}일 전`;
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}`;
+  return relativeTimeLabel(iso, Date.now(), { unit: "hour", maxDays: 30 });
 }
 
 /* ---------- 카드 ---------- */

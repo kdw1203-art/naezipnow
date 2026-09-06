@@ -13,6 +13,7 @@ import { logger } from "@/lib/log";
 import type { QnaAnswer } from "@/lib/qna/types";
 import { topicsOf, QNA_TOPIC_BY_KEY } from "@/lib/qna/topics";
 import { AnswerForm } from "./AnswerForm";
+import { relativeTimeLabel } from "@/lib/format/relative-time";
 
 /* 비용 실측(2026-08-10): force-dynamic 이라 크롤 1회 = 함수 호출 1회였다.
    렌더에 auth·cookies·쿼리 파라미터·쓰기 부작용 0건(check-cache-policy 감시).
@@ -53,18 +54,10 @@ const loadQuestion = cache(
     ),
 );
 
+/** [967 · 32] 하루 이내는 시간, 30일 이내는 N일 전, 이후는 YYYY.MM.DD — Q&A 목록과 같은 얼굴.
+ *  본체는 lib/format/relative-time.ts */
 function shortDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const diff = Date.now() - d.getTime();
-  const day = 24 * 60 * 60 * 1000;
-  if (diff < day) {
-    const h = Math.floor(diff / (60 * 60 * 1000));
-    return h < 1 ? "방금 전" : `${h}시간 전`;
-  }
-  if (diff < 30 * day) return `${Math.floor(diff / day)}일 전`;
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}`;
+  return relativeTimeLabel(iso, Date.now(), { unit: "hour", maxDays: 30 });
 }
 
 export async function generateMetadata({

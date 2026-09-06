@@ -7,6 +7,7 @@ import {
   type ComplexRow,
   type ComplexTransactionRow,
 } from "@/lib/complex/complex-store";
+import { formatKrwManwon } from "@/lib/format/krw";
 
 /* ============================================================
    항목 H39 — 임베드 위젯 (블로그·카페 배포)
@@ -33,10 +34,9 @@ export const metadata: Metadata = {
 
 // ── 포맷 헬퍼 (단지 허브 page.tsx 와 동일 규칙 — 임베드는 독립 파일이라 로컬 정의) ──
 
+/* [967 · 31] 본체는 lib/format/krw.ts "eok1" — 허브 page.tsx 의 formatManwon 과 같은 규칙 */
 function formatManwon(manwon: number): string {
-  if (!Number.isFinite(manwon) || manwon <= 0) return "—";
-  if (manwon >= 10_000) return `${(manwon / 10_000).toFixed(1).replace(/\.0$/, "")}억`;
-  return `${Math.round(manwon).toLocaleString("ko-KR")}만`;
+  return formatKrwManwon(manwon, { style: "eok1" });
 }
 
 function pctDelta(curr: number, prev: number | undefined): number | null {

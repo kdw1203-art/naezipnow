@@ -251,6 +251,32 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "public, max-age=3600" },
         ],
       },
+      /* [967 · 30b] security.txt(RFC 9116) — 정식 위치 /.well-known/ 과 구 위치 루트 두 곳.
+         7일 404 로그에 /security.txt 8회(보안 스캐너·연구자). 정적 파일은 public/ 에 두고
+         여기서는 문자셋과 하루 캐시만 명시한다(본문에 한글 안내 주석이 있어 charset 필요).
+         /.well-known/ 은 미들웨어 매처에서 빠져 있고 /security.txt 는 매처 제외 목록에 추가. */
+      {
+        source: "/.well-known/security.txt",
+        headers: [
+          { key: "Content-Type", value: "text/plain; charset=utf-8" },
+          { key: "Cache-Control", value: "public, max-age=86400" },
+        ],
+      },
+      {
+        source: "/security.txt",
+        headers: [
+          { key: "Content-Type", value: "text/plain; charset=utf-8" },
+          { key: "Cache-Control", value: "public, max-age=86400" },
+        ],
+      },
+      /* [967 · 30c] app-ads.txt — /ads.txt 라우트와 같은 게시자 선언의 정적 사본(7일 404 7회). */
+      {
+        source: "/app-ads.txt",
+        headers: [
+          { key: "Content-Type", value: "text/plain; charset=utf-8" },
+          { key: "Cache-Control", value: "public, max-age=86400" },
+        ],
+      },
     ];
     /* [#88] /embed/* 만 CSP 를 임베드용으로 교체. 캐치올(/:path*)이 embed 를
        포함하면 CSP 헤더가 두 벌 나가고 브라우저는 **교집합**을 강제해

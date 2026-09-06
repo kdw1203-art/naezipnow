@@ -2,6 +2,7 @@
    server-only 의존이 없어 "use client" 파일에서도 안전하게 쓸 수 있다. */
 
 import type { Post } from "@/lib/types/post";
+import { relativeTimeLabel } from "@/lib/format/relative-time";
 
 /* 지역/출처 문자열을 시드로 결정적 그라디언트를 고른다(사진 없는 카드의 커버 폴백). */
 const GRADIENTS = [
@@ -79,18 +80,10 @@ export function hostOf(url?: string | null): string | null {
   }
 }
 
-/** ISO 시각 → 상대 시간(방금 전·N분 전·N시간 전·N일 전·날짜) */
-export function relativeTime(iso: string): string {
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return "";
-  const min = Math.floor((Date.now() - t) / 60000);
-  if (min < 1) return "방금 전";
-  if (min < 60) return `${min}분 전`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}시간 전`;
-  const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}일 전`;
-  return new Date(t).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" });
+/** ISO 시각 → 상대 시간(방금 전·N분 전·N시간 전·N일 전·"08. 19.")
+ *  [967 · 32] 본체는 lib/format/relative-time.ts — 7일부터는 ko-KR 두 자리 월.일 (동네이야기 카드의 기존 얼굴) */
+export function relativeTime(iso: string, now: number = Date.now()): string {
+  return relativeTimeLabel(iso, now, { fallback: "md-ko" });
 }
 
 /** 공개 임장노트 작성자 마스킹(이메일 비노출) */

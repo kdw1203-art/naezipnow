@@ -23,6 +23,7 @@ import {
 } from "@/lib/market/complex-pairs";
 import { breadcrumbJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { formatKrwShort } from "@/lib/market/format";
 
 /* ============================================================
    N10 — 단지 vs 단지 비교 랜딩 · /complex/compare/[slug]
@@ -60,14 +61,7 @@ const SAMPLE_LIMIT = 400;
 
 /* ---------- 포맷 ---------- */
 
-function formatKrwShort(krw: number | null | undefined): string {
-  if (krw === null || krw === undefined || !Number.isFinite(krw) || krw <= 0) return "—";
-  if (krw >= 1e8) {
-    const eok = krw / 1e8;
-    return `${(eok >= 100 ? Math.round(eok) : Math.round(eok * 10) / 10).toLocaleString("ko-KR")}억`;
-  }
-  return `${Math.round(krw / 1e4).toLocaleString("ko-KR")}만`;
-}
+/* [967 · 31] 여기 있던 formatKrwShort 사본은 lib/market/format 의 공통 함수로 대체 — 출력 동일 */
 
 function formatYm(ym: string): string {
   return ym.length === 6 ? `${ym.slice(0, 4)}.${ym.slice(4)}` : ym;

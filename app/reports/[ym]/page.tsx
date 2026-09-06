@@ -8,6 +8,7 @@ import { PressSummaryBlock } from "../../components/PressSummaryBlock";
 import { getMonthlyReport, formatYmKo, isValidYm } from "@/lib/reports/monthly";
 import { breadcrumbJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { formatKrwWon } from "@/lib/format/krw";
 
 /* ============================================================
    S11/G7/G8/G14 — 월간 실거래 리포트 상세.
@@ -35,10 +36,9 @@ export function generateStaticParams(): { ym: string }[] {
   return [];
 }
 
+/** [967 · 31] 원 → "8.45억", null·0 이하 "—" — lib/format/krw.ts "eok" 스타일 */
 function eok(krw: number | null): string {
-  if (krw === null || krw <= 0) return "—";
-  const e = krw / 100_000_000;
-  return `${(e >= 10 ? e.toFixed(1) : e.toFixed(2)).replace(/\.?0+$/, "")}억`;
+  return formatKrwWon(krw, { style: "eok", below: "eok" });
 }
 
 function manwon(krw: number | null): string {

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { resolveRegion } from "./region-map";
 import { useSettledSearchQuery } from "@/lib/search/settle";
+import { formatKrwManwon } from "@/lib/format/krw";
 
 /* ============================================================
    단지 선택기 (분석 도구 공용) — 검색 → 서제스트 드롭다운 → 단지 선택.
@@ -29,13 +30,10 @@ export type PickedComplex = {
 
 type Suggestion = { id: string; name: string; region: string; dong: string };
 
+/** [967 · 31] 만원 → "12억"/"8.0억"/"8,200만", 없으면 null — lib/format/krw.ts "listing" 스타일 */
 function manwonLabel(manwon: number | null | undefined): string | null {
   if (manwon == null || !Number.isFinite(manwon) || manwon <= 0) return null;
-  if (manwon >= 10_000) {
-    const eok = manwon / 10_000;
-    return `${eok >= 10 ? Math.round(eok).toLocaleString("ko-KR") : eok.toFixed(1)}억`;
-  }
-  return `${Math.round(manwon).toLocaleString("ko-KR")}만`;
+  return formatKrwManwon(manwon, { style: "listing" });
 }
 
 function toPicked(

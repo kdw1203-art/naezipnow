@@ -91,8 +91,10 @@ export function AiBriefingCard({
           <p className="t-body font-bold text-ink">{draft.summary}</p>
           {draft.evidence.length > 0 && (
             <ul className="flex flex-col gap-1">
-              {draft.evidence.slice(0, 6).map((e) => (
-                <li key={e} className="t-sub text-text-2">
+              {/* [967 · 18] AI 가 만든 문장 목록엔 id 가 없고 같은 문장이 반복될 수 있다 —
+                  문장+순번으로 키를 짓는다(순번만 쓰면 목록이 바뀔 때 노드가 어긋난다) */}
+              {draft.evidence.slice(0, 6).map((e, i) => (
+                <li key={`${e}-${i}`} className="t-sub text-text-2">
                   · {e}
                 </li>
               ))}
@@ -102,8 +104,8 @@ export function AiBriefingCard({
             <div>
               <div className="t-sub font-extrabold text-text-1">현장에서 확인할 것</div>
               <ul className="mt-1 flex flex-col gap-1">
-                {draft.todo.slice(0, 5).map((t) => (
-                  <li key={t} className="t-sub text-text-2">
+                {draft.todo.slice(0, 5).map((t, i) => (
+                  <li key={`${t}-${i}`} className="t-sub text-text-2">
                     ☐ {t}
                   </li>
                 ))}

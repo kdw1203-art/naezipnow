@@ -5,6 +5,7 @@ import { PageShell } from "../../components/PageShell";
 import { EmptyState, ErrorState } from "@/app/components/ui/EmptyState";
 import { safeAuth } from "@/lib/safe-auth";
 import { listBookmarks } from "@/lib/bookmarks/store";
+import { formatKrwShort } from "@/lib/market/format";
 import {
   getListingById,
   LISTING_TYPE_LABEL,
@@ -25,14 +26,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-function formatKrwShort(krw: number | null | undefined): string {
-  if (krw === null || krw === undefined || !Number.isFinite(krw) || krw <= 0) return "—";
-  if (krw >= 1e8) {
-    const eok = krw / 1e8;
-    return `${(eok >= 100 ? Math.round(eok) : Math.round(eok * 10) / 10).toLocaleString("ko-KR")}억`;
-  }
-  return `${Math.round(krw / 1e4).toLocaleString("ko-KR")}만`;
-}
+/* [967 · 31] 여기 있던 formatKrwShort 사본은 lib/market/format 의 공통 함수로 대체 — 출력 동일 */
 
 function priceLine(l: ListingDetail): string {
   if (l.listingType === "sale") return `매매 ${formatKrwShort(l.priceKrw)}`;

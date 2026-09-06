@@ -16,6 +16,7 @@ import { RegionSelect } from "./RegionSelect";
 import { complexHrefFromNames } from "@/lib/seo/complex-slug";
 import { pickRegionByAnyName } from "@/lib/regions/param";
 import { findCatalogRegionById } from "@/lib/region/catalog";
+import { formatKrwWon } from "@/lib/format/krw";
 
 /* 면적대별 **실거래** 시세 분석 — 예전엔 이 경로가 손으로 적은 "적정가 산정 예시"
    (수치 전부 하드코딩)였다. 이제 tx_band_landing/complex 뷰(국토교통부 실거래)
@@ -32,11 +33,9 @@ export const metadata = buildPageMetadata({
 
 export const revalidate = 3600;
 
+/** [967 · 31] 원 → "8.45억"(1억 미만도 억), 빈값 "—" — lib/format/krw.ts "eok" 스타일 */
 function eok(won: number): string {
-  if (!won || won <= 0) return "—";
-  const e = won / 100_000_000;
-  const s = e >= 10 ? e.toFixed(1) : e.toFixed(2);
-  return `${s.replace(/\.?0+$/, "")}억`;
+  return formatKrwWon(won, { style: "eok", below: "eok" });
 }
 
 /** 원/평 → "3,500만/평" (없으면 "—") */

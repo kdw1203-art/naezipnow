@@ -9,6 +9,7 @@ import { NextRequest } from "next/server";
 import { OG_SIZE } from "@/lib/og/theme";
 import { OG_FONT_FAMILY, ogFonts } from "@/lib/og/font";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { formatKrwWon } from "@/lib/format/krw";
 
 export const runtime = "nodejs";
 export const revalidate = 21600; // 6h — 하루 1회 데이터에 충분
@@ -49,7 +50,8 @@ async function loadSeries(region: string, name: string): Promise<Pt[]> {
     .sort((a, b) => a.ym.localeCompare(b.ym));
 }
 
-const eok = (v: number) => `${(v / 1e8).toFixed(1).replace(/\.0$/, "")}억`;
+/* [967 · 31] "8.4억" — lib/format/krw.ts "eok1"(1억 미만도 "0.5억", 기존 그대로) */
+const eok = (v: number) => formatKrwWon(v, { style: "eok1", below: "eok", empty: false });
 
 export async function GET(req: NextRequest) {
   const region = (req.nextUrl.searchParams.get("region") ?? "").trim().slice(0, 30);

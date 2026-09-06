@@ -47,6 +47,8 @@ export default async function NoteEditPage({
     photos: note.photos,
     isPublic: note.isPublic,
     metadata: (note.metadata ?? null) as Record<string, unknown> | null,
+    /* [967 · 10] 수정 초안 복원 판정 기준 — 이보다 나중에 적힌 초안만 묻는다 */
+    updatedAt: note.updatedAt ?? null,
   };
 
   return <NoteForm initialNote={initial} />;

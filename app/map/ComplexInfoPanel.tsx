@@ -9,6 +9,7 @@ import { useToast } from "@/app/components/toast/ToastProvider";
 import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
 import { regionIdForName } from "@/lib/region/catalog";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
+import { formatKrwManwon } from "@/lib/format/krw";
 
 /* ============================================================
    단지 정보 패널 — 검색/마커/목록 선택 시.
@@ -113,13 +114,10 @@ export interface ComplexInfoPanelProps {
   onLoaded?: (info: { id: string; name: string; lat: number; lng: number }) => void;
 }
 
+/** [967 · 31] 만원 → "12억"/"8.0억"/"8,200만", 없으면 null — lib/format/krw.ts "listing" 스타일 */
 function manwonLabel(manwon: number | null | undefined): string | null {
   if (manwon == null || !Number.isFinite(manwon) || manwon <= 0) return null;
-  if (manwon >= 10_000) {
-    const eok = manwon / 10_000;
-    return `${eok >= 10 ? Math.round(eok).toLocaleString("ko-KR") : eok.toFixed(1)}억`;
-  }
-  return `${Math.round(manwon).toLocaleString("ko-KR")}만`;
+  return formatKrwManwon(manwon, { style: "listing" });
 }
 
 function ymLabel(yyyymm: string): string {

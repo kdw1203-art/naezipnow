@@ -6,9 +6,9 @@ import { Icon } from "@/app/components/Icon";
 import { safeAuth } from "@/lib/safe-auth";
 import {
   listNotes,
-  listPublicNotes,
   type InspectionNote,
 } from "@/lib/inspection/store-db";
+import { listPublicNotesWithFallback } from "@/lib/inspection/public-notes-cached";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { loadHubTeasers, type HubTeaser } from "./hub-teasers";
 import { loadHomeCoverage } from "@/lib/newui/home-coverage";
@@ -220,8 +220,10 @@ export default async function AnalysisHubPage({
          피드와 같은 판단). 이 허브는 하루 500회 넘게 열리는 동적 페이지라 방문마다
          공개 노트 24건을 다시 읽고 있었다. */
       const { unstable_cache } = await import("next/cache");
-      const rows = await unstable_cache(
-        () => listPublicNotes(24),
+      /* [967 · 29a] DB 가 밀리는 시간대의 TimeoutError(6시간 ~20회)를 마지막 정상본으로
+         받는다 — 미리보기는 모두에게 같은 값이라 하루 안의 사본이면 충분하다. */
+      const { notes: rows } = await unstable_cache(
+        () => listPublicNotesWithFallback(24),
         ["analysis-public-preview-v1"],
         { revalidate: 60 },
       )();

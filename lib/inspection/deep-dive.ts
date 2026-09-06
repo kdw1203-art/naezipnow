@@ -18,6 +18,7 @@
 import type { InspectionNote } from "@/lib/inspection/store-db";
 import type { Grounded, NoteGrounding } from "@/lib/inspection/note-grounding";
 import { groundingFailures } from "@/lib/inspection/note-grounding";
+import { formatKrwManwon } from "@/lib/format/krw";
 
 /**
  * 스키마 버전. 축 구성·문구 규칙이 바뀌면 올린다.
@@ -80,14 +81,10 @@ export const DEEP_DIVE_DISCLAIMER =
 
 const SRC_NOTE = "작성자 노트";
 
+/** [967 · 31] 만원 → "8.45억" / "9,800만원" / "-" — 본체는 lib/format/krw.ts "eok" 스타일.
+ *  리포트 본문이라 1억 미만에 "만원" 을 붙이고 빈값은 "-" (기존 얼굴) */
 function manwonText(man: number | null | undefined): string {
-  if (typeof man !== "number" || !Number.isFinite(man) || man <= 0) return "-";
-  if (man >= 10_000) {
-    const eok = man / 10_000;
-    const s = eok >= 10 ? eok.toFixed(1) : eok.toFixed(2);
-    return `${s.replace(/\.?0+$/, "")}억`;
-  }
-  return `${Math.round(man).toLocaleString("ko-KR")}만원`;
+  return formatKrwManwon(man, { style: "eok", manUnit: "만원", empty: "-" });
 }
 
 function pctText(n: number | null | undefined, signed = true): string {

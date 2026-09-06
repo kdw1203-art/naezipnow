@@ -6,13 +6,19 @@ import {
   type InspectionNote,
 } from "@/lib/inspection/store-db";
 import { regionIdForName } from "@/lib/region/catalog";
+import { rankRelatedNotes } from "@/lib/notes/region-match";
 import { logger } from "@/lib/log";
 
 /* [3차] 같은 지역의 다른 임장노트 — 노트 상세의 이탈 지점을 순환 지점으로.
  * 공개 노트 19건 규모에서는 전량(50) 로드 후 지역 일치 필터가 가장 단순하고
  * 정확하다(전용 쿼리·인덱스는 노트가 수백 건이 될 때 붙인다 — 그때의 일).
  * 지역이 같은 노트가 없으면 최신 공개 노트로 대체하고, 그마저 없으면 섹션을
- * 그리지 않는다. 조회 실패도 섹션 생략(fail-soft — 상세 본문이 우선이다). */
+ * 그리지 않는다. 조회 실패도 섹션 생략(fail-soft — 상세 본문이 우선이다).
+ * [967 · 13] "같은 지역" 은 `region ===` 정확 일치가 아니라 lib/notes/region-match 의
+ * 관대한 매칭이다 — 같은 동 → 같은 구 → 같은 시 순으로, /notes 의 관심 지역 칩과
+ * 같은 잣대. "서울 송파구 가락동" 옆에 "서울 송파구 잠실동" 노트가 나온다. 최대 6건. */
+
+const RELATED_CAP = 6;
 
 export async function RelatedNotes({
   currentId,
@@ -29,13 +35,13 @@ export async function RelatedNotes({
     return null;
   }
   const regionTrim = region.trim();
-  const sameRegion = notes.filter(
-    (n) => n.id !== currentId && regionTrim && n.region.trim() === regionTrim,
-  );
-  const pool = (sameRegion.length > 0 ? sameRegion : notes.filter((n) => n.id !== currentId)).slice(
-    0,
-    4,
-  );
+  const sameRegion = regionTrim
+    ? rankRelatedNotes(notes, { id: currentId, region: regionTrim }, RELATED_CAP)
+    : [];
+  const pool =
+    sameRegion.length > 0
+      ? sameRegion
+      : notes.filter((n) => n.id !== currentId).slice(0, RELATED_CAP);
   if (pool.length === 0) return null;
 
   const regionId = regionIdForName(regionTrim);

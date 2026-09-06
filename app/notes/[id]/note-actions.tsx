@@ -14,7 +14,10 @@ import { ShareLinkButton } from "../../components/ShareLinkButton";
      아니라 신뢰 소모라서, 공개 전환을 먼저 안내한다.
      [966] 시트→클립보드→토스트 순서는 공용 ShareLinkButton 이 맡는다 — 여기는
      비공개 가드와 utm 붙은 주소만 정한다.
-   - 소유자: 수정(/notes/[id]/edit) + 공개/비공개 토글 — PATCH /api/inspection/notes/[id] */
+   - 소유자: 수정(/notes/[id]/edit) + 공개/비공개 토글 — PATCH /api/inspection/notes/[id]
+   - [967 · 3] 소유자: 삭제 — DELETE /api/inspection/notes/[id](이미 있던 핸들러, 소유자만).
+     화면에 삭제 버튼이 없어 API 만 살아 있었다. window.confirm 대신 같은 자리에서
+     2단계 인라인 확인 — 되돌릴 수 없는 일이라 문구에 그 사실을 적는다. */
 
 export function NoteDetailActions({
   noteId,
@@ -29,6 +32,32 @@ export function NoteDetailActions({
   const { showToast } = useToast();
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [busy, setBusy] = useState(false);
+  /* [967 · 3] 삭제 확인 단계 — 첫 탭은 확인 문구만 연다 */
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const deleteNote = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/inspection/notes/${noteId}`, { method: "DELETE" });
+      if (res.status === 401) {
+        router.push("/login");
+        return;
+      }
+      if (!res.ok) {
+        showToast("삭제에 실패했어요. 잠시 후 다시 시도해 주세요");
+        return;
+      }
+      showToast("노트를 삭제했어요");
+      router.push("/notes");
+      router.refresh();
+    } catch {
+      showToast("네트워크 오류가 발생했어요");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   /* 상대 경로 — ShareLinkButton 이 누를 때 현재 origin 으로 푼다(SSR 에서 window 불필요) */
   const shareUrl = `/notes/${encodeURIComponent(noteId)}?utm_source=share&utm_medium=note`;
@@ -110,6 +139,45 @@ export function NoteDetailActions({
         >
           공유 링크
         </button>
+      )}
+      {/* [967 · 3] 삭제 — 소유자만. 확인 단계는 버튼 줄 안에서 펼친다(모달·confirm 없이). */}
+      {isOwner && !confirmDelete && (
+        <button
+          type="button"
+          onClick={() => setConfirmDelete(true)}
+          className="btn-soft px-3.5 py-2 t-body text-danger"
+        >
+          삭제
+        </button>
+      )}
+      {isOwner && confirmDelete && (
+        <div
+          role="alertdialog"
+          aria-label="노트 삭제 확인"
+          className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5"
+        >
+          <span className="t-body font-bold text-ink">
+            이 노트를 삭제할까요? 되돌릴 수 없어요
+          </span>
+          <span className="ml-auto flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => void deleteNote()}
+              disabled={deleting}
+              className="rounded-[10px] bg-danger px-3.5 py-1.5 t-body font-bold text-on-dark disabled:opacity-60"
+            >
+              {deleting ? "삭제 중…" : "삭제"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(false)}
+              disabled={deleting}
+              className="btn-soft px-3.5 py-1.5 t-body"
+            >
+              취소
+            </button>
+          </span>
+        </div>
       )}
     </div>
   );

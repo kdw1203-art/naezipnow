@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
+import { formatKrwWon } from "@/lib/format/krw";
 
 /* [#80] 관심단지 주간 브리핑 — 주간 다이제스트 크론에서 사용자별로 호출.
  * 관심 단지들의 최근 7일 매매 신고를 단지명 매칭으로 집계해 한 줄 요약을 만든다.
@@ -19,9 +20,9 @@ export type WatchlistBrief = {
   linkLabel?: string;
 };
 
+/** [967 · 31] "8.40억" — 뒤 0 을 지우지 않는 이메일 브리프 얼굴. 본체는 lib/format/krw.ts */
 function krwEok(v: number): string {
-  const eok = v / 100_000_000;
-  return eok >= 10 ? `${eok.toFixed(1)}억` : `${eok.toFixed(2)}억`;
+  return formatKrwWon(v, { style: "eok", below: "eok", empty: false, trimZeros: false });
 }
 
 export async function buildWatchlistBrief(email: string): Promise<WatchlistBrief | null> {

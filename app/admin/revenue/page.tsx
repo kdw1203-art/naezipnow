@@ -12,21 +12,19 @@ import {
 } from "@/lib/admin/subscription-metrics";
 import { loadIndexCoverage } from "@/lib/admin/seo-metrics";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { formatKrwWon } from "@/lib/format/krw";
 
 export const dynamic = "force-dynamic";
 
 const darkCard =
   "rounded-[14px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.05)]";
 
-/** 원(KRW) → "2,140만" / "2.6억" / "0원" */
+/** 원(KRW) → "2,140만" / "2.6억" / "0원"
+ *  [967 · 31] 억·만 분기는 lib/format/krw.ts "short". 1만 미만 "N원"·빈값 "0원" 은 매출 화면 고유 */
 function won(n: number): string {
   if (!Number.isFinite(n) || n <= 0) return "0원";
-  if (n >= 1e8) {
-    const eok = n / 1e8;
-    return `${(eok >= 100 ? Math.round(eok) : Math.round(eok * 10) / 10).toLocaleString("ko-KR")}억`;
-  }
-  if (n >= 1e4) return `${Math.round(n / 1e4).toLocaleString("ko-KR")}만`;
-  return `${Math.round(n).toLocaleString("ko-KR")}원`;
+  if (n < 1e4) return `${Math.round(n).toLocaleString("ko-KR")}원`;
+  return formatKrwWon(n, { style: "short" });
 }
 
 function pct(part: number, whole: number): string {

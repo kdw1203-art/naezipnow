@@ -2,25 +2,16 @@ import Link from "next/link";
 import { CountUp } from "@/app/components/motion/CountUp";
 import { BrandWatermark } from "@/app/components/BrandWatermark";
 import { PageShell } from "../components/PageShell";
-import { readTownPosts } from "@/lib/newui/board-posts";
-import {
-  listPublicNotes,
-  inspectionAverageScore,
-  isLabNoteLabel,
-  type InspectionNote,
-} from "@/lib/inspection/store-db";
-import { maskNoteAuthor } from "./shared";
-import { listHiddenPostIds } from "@/lib/moderation/reports-store";
+/* [967 · 19] 카드 변환·병합은 lib/town/feed.ts 로 옮겼다 — "더 보기"(/api/town/feed)와
+   첫 장이 같은 코드로 카드를 만들어야 하기 때문이다. */
+import { loadTownFeed, TOWN_FEED_FIRST_PAGE } from "@/lib/town/feed";
 import { TownFeed, type FeedCard } from "./feed-client";
 import { AdZone } from "../components/ads/AdZone";
-import type { Post } from "@/lib/types/post";
 import { TownCategoryNav } from "./TownCategoryNav";
 import { TownPromptCard } from "./TownPromptCard";
 import { Icon } from "@/app/components/Icon";
 import { TownExpertBand } from "./TownExpertBand";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
-import { logger } from "@/lib/log";
-import { postAttachments } from "@/lib/community/attachments";
 
 export const metadata = buildPageMetadata({
   title: "동네이야기",
@@ -64,87 +55,18 @@ function shortcutActivity(cards: FeedCard[], name: string): number {
   }).length;
 }
 
-function noteToCard(n: InspectionNote): FeedCard {
-  const oneLiner = n.summary?.trim() || n.sections.pros?.trim() || n.title;
-  const lab = isLabNoteLabel(n.authorLabel);
-  const tags: string[] = [];
-  if (n.aptName?.trim()) tags.push(n.aptName.trim());
-  /* [959] Lab 노트는 현장 방문이 아니라 데이터 카드 — "직접방문" 태그를 달지 않는다 */
-  if (n.visitDate && !lab) tags.push("직접방문");
-  if (lab) tags.push("데이터 분석");
-  if (n.metadata?.visitVerified) tags.push("현장 인증"); // [#71]
-  // 허수 제거(#9): 예전의 "저장수 = 평균 평점×40 + 체크 수" 계산식을 없앴다.
-  // 노트에는 실측 저장 지표가 없으므로 saves 미표시, 실데이터인 평균 평점만 노출.
-  const rating = inspectionAverageScore(n.scores);
-  return {
-    id: n.id,
-    href: `/notes/${n.id}`,
-    kind: "note",
-    cover: n.photos.find(Boolean) ?? null,
-    title: oneLiner.length > 40 ? `${oneLiner.slice(0, 40)}…` : oneLiner,
-    author: maskNoteAuthor(n.authorLabel, n.authorEmail),
-    region: n.region || "전국",
-    rating: rating > 0 ? rating : null,
-    tags,
-    visited: Boolean(n.visitDate) && !lab,
-    createdAt: Date.parse(n.createdAt) || 0,
-    isExample: false,
-    lab,
-    aptName: n.aptName?.trim() || null,
-  };
-}
-
-function postToCard(p: Post): FeedCard {
-  const region = p.city && p.district ? `${p.city} ${p.district}` : p.city || "전국";
-  return {
-    id: p.id,
-    href: `/town/news/${p.id}`,
-    kind: "post",
-    /* [B31] 첨부 사진의 첫 장이 커버다. 예전엔 무조건 null 이라 사진 우선
-       격자에서 이야기 글만 늘 그라디언트 상자였다 — 저장은 되는데 읽는 코드가
-       한 줄도 없던 값이다(lib/community/attachments.ts 주석 참고). */
-    cover: postAttachments(p)[0] ?? null,
-    title: p.title,
-    author: p.authorLabel || "이웃",
-    region,
-    /* 저장(북마크)만 — 좋아요로 채워 저장 지표를 부풀리지 않는다 */
-    saves: typeof p.bookmarkCount === "number" ? p.bookmarkCount : undefined,
-    tags: p.tags ?? [],
-    visited: false,
-    createdAt: Date.parse(p.createdAt) || 0,
-    isExample: false,
-    /* 포인트 추천글 부스트 — 만료(과거)면 자연 소멸이라 false */
-    boosted: Boolean(p.boostUntil && Date.parse(p.boostUntil) > Date.now()),
-  };
-}
-
 export default async function TownPage() {
   /* 실데이터: 공개 임장노트(사진 우선) + 커뮤니티 글(비자동 posts). 뉴스(자동수집)는 /town/news로 분리.
      이 페이지는 revalidate 가 있어 `next build` 가 프리렌더한다 — 여기서 던지면
      DB 가 잠깐 흔들린 것만으로 배포가 깨진다. 그래서 잡되, **삼키지는 않는다**:
      실패는 loadFailed 로 화면까지 들고 가서 "글이 없어요"와 다르게 말한다. */
-  const [notesR, postsR] = await Promise.allSettled([
-    listPublicNotes(40),
-    readTownPosts(),
-  ]);
-  if (notesR.status === "rejected") logger.error("[TownPage] 임장노트 조회 실패", notesR.reason);
-  if (postsR.status === "rejected") logger.error("[TownPage] 이웃 글 조회 실패", postsR.reason);
-  const notes: InspectionNote[] = notesR.status === "fulfilled" ? notesR.value : [];
-  const posts: Post[] = postsR.status === "fulfilled" ? postsR.value : [];
-  const loadFailed = notesR.status === "rejected" || postsR.status === "rejected";
-
-  const noteCards = notes.map(noteToCard);
-  // 신고 누적/처리로 숨김된 글(posts.visibility="hidden")은 피드에서 제외(#7)
-  const communityPosts = posts.filter((p) => !p.isAutomated);
-  const hiddenIds = await listHiddenPostIds(communityPosts.map((p) => p.id)).catch(
-    () => new Set<string>(),
-  );
-  const postCards = communityPosts.filter((p) => !hiddenIds.has(p.id)).map(postToCard);
-
-  /* 노트·글을 섞어 최신순 기본 정렬 (클라이언트에서 추천/최신/유형별 재정렬) */
-  const cards: FeedCard[] = [...noteCards, ...postCards].sort(
-    (a, b) => b.createdAt - a.createdAt,
-  );
+  const { cards, loadFailed, notesMaybeMore } = await loadTownFeed(TOWN_FEED_FIRST_PAGE);
+  /* [967 · 19] 첫 장은 40장까지만 HTML 에 싣고 나머지는 "더 보기"가 /api/town/feed 로
+     이어받는다. 예전엔 커뮤니티 글은 전량(최대 300)이 한 번에 내려갔다.
+     hasMore 는 "지금 손에 든 것 너머가 있는가" — 노트 창(40)이 가득 찼으면 글이
+     40장 안 되더라도 더 오래된 노트가 남아 있을 수 있어 참으로 둔다. */
+  const firstPage: FeedCard[] = cards.slice(0, TOWN_FEED_FIRST_PAGE);
+  const hasMore = cards.length > TOWN_FEED_FIRST_PAGE || notesMaybeMore;
 
   /* [B25] 활동이 있는 동네를 앞으로. 같은 수면 원래 순서를 지킨다(임의 재배열 금지). */
   const shortcuts = TOWN_HOME_SHORTCUTS.map((r, i) => ({
@@ -253,7 +175,8 @@ export default async function TownPage() {
           유료 플랜의 광고 제거는 AdSlot 안의 AdFreeGate 가 클라이언트에서 처리한다(캐시 유지).
           등록 배너도 하우스 광고도 없으면 AdSlot 이 null 을 반환해 자리를 안 만든다. */}
       <TownFeed
-        cards={cards}
+        cards={firstPage}
+        hasMore={hasMore}
         loadFailed={loadFailed}
         ad={<AdZone placement="community_feed" seed={0} plan={null} />}
       />

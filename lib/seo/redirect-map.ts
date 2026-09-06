@@ -267,3 +267,66 @@ export const EXACT_REDIRECTS: Record<string, string> = Object.fromEntries(
 export function legacyRedirectStatus(method: string): 301 | 308 {
   return method === "GET" || method === "HEAD" ? 301 : 308;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   [967 · 30d] 접두 패턴 리다이렉트
+   ───────────────────────────────────────────────────────────────────────────
+   위 표는 정확 일치라 `/area/강남구` 같은 **꼬리가 가변인** 구 URL 은 잡지 못한다.
+   2026-09-06 Vercel 7일 404 로그: `/area/<한글 지역명>` 3회, `/community/tag/<한글>`
+   5회 — 구 Vite 앱의 지역·태그 페이지를 검색엔진과 북마크가 아직 기억하고 있다.
+   미들웨어에 정규식을 직접 박지 않고(그건 /post·/community 한 건으로 충분히 지저분하다)
+   여기 표로 둔다. 규칙은 정확 일치 표와 같다 — 1홉, 실존 라우트, 살아 있는 라우트를
+   가리지 않음. scripts/check-redirect-map.mjs 가 to("probe") 의 결과와 접두의
+   그림자 여부를 같이 검사한다.
+
+   `/glossary/<모르는 슬러그>` 는 여기 넣지 않는다 — /glossary/[term] 은 살아 있는
+   라우트고, 없는 용어는 그 페이지가 404 로 정직하게 답하는 것이 맞다. */
+
+export type PrefixRedirectRule = {
+  /** 접두 경로 — 앞 "/", 뒤 "/" 로 끝난다. 접두 뒤에 한 글자 이상 있어야 규칙이 산다. */
+  fromPrefix: string;
+  /** 접두를 뗀 나머지(퍼센트 디코딩·앞뒤 공백 제거·첫 세그먼트만)를 받아 이동 대상을 만든다. */
+  to: (rest: string) => string;
+  reason: string;
+  since: string;
+};
+
+export const PREFIX_REDIRECTS: readonly PrefixRedirectRule[] = [
+  {
+    fromPrefix: "/area/",
+    /* 지역명 → 통합 검색. /region/[id] 로 보내려면 이름→id 표가 미들웨어에 실려야
+       하는데(엣지 번들 비대), 검색 페이지는 ?q= 를 그대로 입력창에 채워 준다. */
+    to: (rest) => `/search?q=${encodeURIComponent(rest)}`,
+    reason: "구 Vite 앱 지역 페이지(/area/<지역명>) — 통합 검색으로 이관",
+    since: "2026-09-06",
+  },
+  {
+    fromPrefix: "/community/tag/",
+    /* 태그별 목록은 현 IA 에 없다. 태그 값과 무관하게 뉴스·동네 소식 허브로. */
+    to: () => "/town/news",
+    reason: "구 커뮤니티 태그 목록(/community/tag/<태그>) — /town/news 로 흡수",
+    since: "2026-09-06",
+  },
+];
+
+/**
+ * 접두 규칙 조회 — 맞는 규칙이 있으면 이동 대상 경로(쿼리 포함 가능), 없으면 null.
+ * path 는 미들웨어가 넘기는 값과 같은 꼴(뒤 슬래시 제거, 퍼센트 인코딩 유지)이어야 한다.
+ * 디코딩이 깨진 꼬리(잘린 %EA 등)는 원문 그대로 넘긴다 — 규칙이 알아서 다시 인코딩한다.
+ */
+export function resolvePrefixRedirect(path: string): string | null {
+  for (const rule of PREFIX_REDIRECTS) {
+    if (!path.startsWith(rule.fromPrefix)) continue;
+    const rawRest = path.slice(rule.fromPrefix.length).split("/")[0] ?? "";
+    let rest = rawRest;
+    try {
+      rest = decodeURIComponent(rawRest);
+    } catch {
+      /* 깨진 인코딩은 원문 그대로 */
+    }
+    rest = rest.trim();
+    if (!rest) return null;
+    return rule.to(rest);
+  }
+  return null;
+}

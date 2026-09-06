@@ -316,19 +316,46 @@ export async function loadComplexEntries(): Promise<MetadataRoute.Sitemap> {
   });
 }
 
+/** [967 · 28b] 둘 중 더 최근 시각. 둘 다 없으면 undefined(lastmod 생략 — 기존 규칙). */
+function latestOf(a: Date | undefined, b: Date | null | undefined): Date | undefined {
+  const valid = [a, b].filter(
+    (d): d is Date => d instanceof Date && !Number.isNaN(d.getTime()),
+  );
+  if (valid.length === 0) return undefined;
+  return valid.reduce((x, y) => (y > x ? y : x));
+}
+
 /** 지역 허브 SEO 페이지 — market_region_price 61개 지역 (/region/[id]) */
 export async function loadRegionEntries(): Promise<MetadataRoute.Sitemap> {
   return section("지역", async () => {
     const { getAllRegionSnapshots } = await import("@/lib/market/store");
     const { recentReportSlugs } = await import("@/lib/region/monthly-report");
+    const { listTxRegions } = await import("@/lib/market/tx-bands");
+    const { findByRegionNameCandidates } = await import("@/lib/market/region-name-candidates");
     const snapshots = await getAllRegionSnapshots();
+    /* [967 · 28b] lastmod 가 07-01 에 굳어 있었다(SEO 탐침 critical). periodToDate(period) 는
+       시세 스냅샷의 **월초**라 그 달 내내 같은 날짜를 내는데, 지역 페이지의 본문(실거래
+       구간·최근 거래)은 매일 밤 적재로 바뀐다. 실거래 지역의 last_data_at(적재 시각)과
+       비교해 더 최근 쪽을 쓴다. 지역 대조는 /region/[id] 페이지와 같은 후보 이름 규칙
+       (findTxRegionForMarketRegion)이고, listTxRegions() 는 빌드당 한 번만 부른다 —
+       모듈 캐시가 있긴 하지만 지역 62개 × 조회를 원칙으로 두지 않는다.
+       실거래 목록을 못 읽으면 예전 규칙(월초)으로 그대로 낸다 — lastmod 는 선택 항목이고
+       사이트맵 전체를 실거래 조회에 볼모 잡히게 하지 않는다. */
+    let txRegions: Awaited<ReturnType<typeof listTxRegions>> = [];
+    try {
+      txRegions = await listTxRegions();
+    } catch (e) {
+      logger.warn("[sitemap] 지역 lastmod 보정용 실거래 지역 목록을 읽지 못했습니다 — 월초 규칙으로 냅니다", e);
+    }
     const entries: MetadataRoute.Sitemap = [];
     /* [#79] 월간 리포트 — 최근 완결 6개월만 싣는다(사이트맵은 안전 부분집합:
        실거래가 있는 지역·월이 대부분이고, 없는 조합은 페이지가 404 로 정직하게
        말하지만 그런 URL 을 제출하지는 않도록 스냅샷 있는 지역만 돈다). */
     const reportSlugs = recentReportSlugs(6);
     for (const s of snapshots.values()) {
-      const at = periodToDate(s.period);
+      const periodAt = periodToDate(s.period);
+      const txAt = findByRegionNameCandidates(txRegions, s.regionId, s.regionName)?.lastDataAt ?? null;
+      const at = latestOf(periodAt, txAt);
       entries.push({
         url: `${BASE_URL}/region/${s.regionId}`,
         ...(at ? { lastModified: at } : {}),

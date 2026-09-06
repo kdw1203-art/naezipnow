@@ -19,6 +19,7 @@ import {
   type ListingType,
   type PropertyKind,
 } from "@/lib/listings/store-db";
+import { formatKrwWon } from "@/lib/format/krw";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,13 +47,9 @@ function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v));
 }
 
+/** [967 · 31] 원 → "12억"/"8.0억"/"8,200만"/"-" — lib/format/krw.ts "listing" 스타일 */
 function eokManLabel(krw: number | null): string {
-  if (krw == null || !Number.isFinite(krw) || krw <= 0) return "-";
-  if (krw >= 100_000_000) {
-    const eok = krw / 100_000_000;
-    return `${eok >= 10 ? Math.round(eok).toLocaleString("ko-KR") : eok.toFixed(1)}억`;
-  }
-  return `${Math.round(krw / 10_000).toLocaleString("ko-KR")}만`;
+  return formatKrwWon(krw, { style: "listing", empty: "-" });
 }
 
 function manwonLabel(krw: number | null): string {

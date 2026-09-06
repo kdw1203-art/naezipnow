@@ -4,6 +4,7 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { listListingsInBounds } from "@/lib/listings/store-db";
 import { logger } from "@/lib/log";
 import type { RedevelopmentProject } from "./types";
+import { formatKrwWon } from "@/lib/format/krw";
 
 /**
  * 정비사업 구역 ↔ 매물·실거래 연계.
@@ -35,14 +36,10 @@ export type NearbyResult = {
   regionLabel: string;
 };
 
-/** 원(₩) → "12.3억"/"8,200만" (없으면 "-") */
+/** 원(₩) → "12억"/"8.0억"/"8,200만" (없으면 "-")
+ *  [967 · 31] 본체는 lib/format/krw.ts "listing" 스타일(지도 매물과 같은 얼굴) */
 function eokMan(krw: number | null): string {
-  if (krw == null || !Number.isFinite(krw) || krw <= 0) return "-";
-  if (krw >= 100_000_000) {
-    const eok = krw / 100_000_000;
-    return `${eok >= 10 ? Math.round(eok).toLocaleString("ko-KR") : eok.toFixed(1)}억`;
-  }
-  return `${Math.round(krw / 10_000).toLocaleString("ko-KR")}만`;
+  return formatKrwWon(krw, { style: "listing", empty: "-" });
 }
 
 function manwon(krw: number | null): string {

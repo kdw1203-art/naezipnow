@@ -6,6 +6,7 @@ import { getWeeklyPriceHighs } from "@/lib/market/weekly-highs";
 import { buildApplyCalendar } from "@/lib/applyhome/calendar";
 import { regionIdForName } from "@/lib/region/catalog";
 import { logger } from "@/lib/log";
+import { formatKrwWon } from "@/lib/format/krw";
 
 /* ============================================================
    [#111·#116 통합] 주간 시황 자동 발행 — "이번 주 숫자"를 동네이야기 공식 글로.
@@ -31,7 +32,8 @@ function isoWeekLabel(now = new Date()): { key: string; label: string } {
   };
 }
 
-const eok = (v: number) => `${(v / 1e8).toFixed(1).replace(/\.0$/, "")}억`;
+/* [967 · 31] "8.4억" — lib/format/krw.ts "eok1"(1억 미만도 "0.5억", 기존 그대로) */
+const eok = (v: number) => formatKrwWon(v, { style: "eok1", below: "eok", empty: false });
 
 export type WeeklyPostResult =
   | { posted: true; postId: string }

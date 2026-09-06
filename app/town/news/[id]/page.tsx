@@ -9,7 +9,7 @@ import { relatedInCluster } from "@/lib/news/cluster";
 import { isPostHidden } from "@/lib/moderation/reports-store";
 import type { Post } from "@/lib/types/post";
 import { logger } from "@/lib/log";
-import { newsImageUrl } from "../../shared";
+import { newsImageUrl, relativeTime } from "../../shared";
 import { LocationMap } from "../../LocationMap";
 import { regionIdForName } from "@/lib/region/catalog";
 import {
@@ -48,20 +48,7 @@ export function generateStaticParams() {
 
 /* ---------- 헬퍼 ---------- */
 
-function relativeTime(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(diff / 60000);
-  if (min < 1) return "방금 전";
-  if (min < 60) return `${min}분 전`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}시간 전`;
-  const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}일 전`;
-  return new Date(iso).toLocaleDateString("ko-KR", {
-    month: "2-digit",
-    day: "2-digit",
-  });
-}
+/* [967 · 32] 여기 있던 relativeTime 사본(뉴스 목록 ../shared 와 같은 규칙)은 shared 의 것을 import 한다 */
 
 function fullDateTime(iso: string) {
   const d = new Date(iso);

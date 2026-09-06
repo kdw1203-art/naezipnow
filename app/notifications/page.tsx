@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { PageShell } from "../components/PageShell";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { isInternalPath } from "@/lib/safe-path";
+import { emitNotificationsRead } from "@/lib/notifications/read-event";
 import {
   CHECK_SHORT,
   foldOpsAlerts,
@@ -569,7 +570,12 @@ export default function NotificationsPage() {
     const now = new Date().toISOString();
     const channel = tab === "운영" ? "ops" : "user";
     if (channel === "ops") setOps((prev) => prev?.map((i) => ({ ...i, readAt: i.readAt ?? now })) ?? prev);
-    else setInbox((prev) => prev.map((i) => ({ ...i, readAt: i.readAt ?? now })));
+    else {
+      setInbox((prev) => prev.map((i) => ({ ...i, readAt: i.readAt ?? now })));
+      /* [967 · 24] 헤더 벨에 바로 알린다 — 벨은 사용자 채널만 세므로 운영 탭의
+         "모두 읽음"은 벨 숫자와 무관하다(그래서 여기서만 보낸다). */
+      emitNotificationsRead(0);
+    }
     try {
       await fetch(`/api/notifications/read-all?channel=${channel}`, { method: "POST" });
     } catch {
@@ -593,6 +599,9 @@ export default function NotificationsPage() {
         setInbox((prev) =>
           prev.map((i) => (idSet.has(i.id) ? { ...i, readAt: i.readAt ?? now } : i)),
         );
+        /* [967 · 24] 남은 미읽음 = 지금 목록에서 이 묶음을 뺀 수(목록 상한 100건 안에서
+           센 값 — 벨이 focus 때 다시 세어 맞춘다) */
+        emitNotificationsRead(inbox.filter((i) => !i.readAt && !idSet.has(i.id)).length);
       }
       try {
         await Promise.all(

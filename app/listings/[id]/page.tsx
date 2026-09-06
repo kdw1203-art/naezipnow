@@ -28,6 +28,7 @@ import {
 import { realEstateListingJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { JsonLd } from "@/app/components/JsonLd";
 import { RoadviewButton } from "@/components/map/RoadviewButton";
+import { formatKrwShort } from "@/lib/market/format";
 
 /** undefined 값을 가진 키를 제거한다(JSON-LD 직렬화 전 정리용). */
 function pruneUndefined<T extends Record<string, unknown>>(obj: T): T {
@@ -92,15 +93,7 @@ export async function generateMetadata({
   };
 }
 
-/** 원(KRW) → "28.6억" / "9,800만" */
-function formatKrwShort(krw: number | null | undefined): string {
-  if (krw === null || krw === undefined || !Number.isFinite(krw) || krw <= 0) return "—";
-  if (krw >= 1e8) {
-    const eok = krw / 1e8;
-    return `${(eok >= 100 ? Math.round(eok) : Math.round(eok * 10) / 10).toLocaleString("ko-KR")}억`;
-  }
-  return `${Math.round(krw / 1e4).toLocaleString("ko-KR")}만`;
-}
+/* [967 · 31] 여기 있던 formatKrwShort 사본은 lib/market/format 의 공통 함수로 대체 — 출력 동일 */
 
 function priceLine(l: ListingDetail): string {
   if (l.listingType === "sale") return `매매 ${formatKrwShort(l.priceKrw)}`;

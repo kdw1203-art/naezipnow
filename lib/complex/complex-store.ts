@@ -19,6 +19,8 @@ import {
 } from "@/lib/complex/master-match";
 import { logger } from "@/lib/log";
 import { decoratedParam } from "@/lib/seo/complex-slug";
+/* [967 · 16] 월별 접기(면적대 분할 포함) — getTransactionHistoryWithBands 가 쓴다 */
+import { foldTradesByMonth, type TxMonthBandSlice } from "@/lib/complex/tx-month-fold";
 
 /**
  * 조회 실패는 던진다 — "없음"으로 답하지 않는다.
@@ -973,6 +975,41 @@ export async function getTransactionHistory(
       deal_count: v.n,
       source: "molit",
     }));
+}
+
+/* [967 · 16] 월별 집계 + 면적대 분할 — 단지 허브 시세 표의 면적 필터용.
+   getTransactionHistory 와 같은 조건(매매·해제 제외·금액>0)에 area_m2 한 컬럼만
+   더 읽는다(행은 어차피 전부 읽어 월별로 접으므로 비용은 컬럼 하나). 월별 숫자는
+   기존 함수와 같은 규칙으로 접힌다(lib/complex/tx-month-fold.ts, 단위테스트로 고정).
+   기존 함수를 바꾸지 않은 이유: 여섯 곳(지도·임베드·상세 API·노트 근거…)이 그
+   반환 모양을 그대로 내보낸다. */
+export type ComplexTxBandSlice = TxMonthBandSlice;
+export type ComplexTransactionRowWithBands = ComplexTransactionRow & {
+  bands: ComplexTxBandSlice[];
+};
+
+export async function getTransactionHistoryWithBands(
+  complexId: string,
+  limit = 12,
+): Promise<ComplexTransactionRowWithBands[]> {
+  const dec = decodeComplexIdForQuery(complexId, "getTransactionHistoryWithBands");
+  if (!dec) return [];
+  const sb = getServiceSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from("market_transactions")
+    .select("contract_ym, deal_amount_krw, area_m2")
+    .eq("complex_name", dec.name)
+    .eq("region_name", dec.region)
+    .eq("transaction_type", "trade")
+    .eq("is_cancelled", false)
+    .gt("deal_amount_krw", 0);
+  /* 빈 배열은 "신고된 거래가 없다"는 강한 주장 — 조회 실패를 그렇게 위장하지 않는다 */
+  if (error) throw dbError(`market_transactions (실거래 이력·면적대 ${dec.name})`, error);
+  const rows =
+    (data as { contract_ym: string; deal_amount_krw: number; area_m2: number | null }[] | null) ??
+    [];
+  return foldTradesByMonth(rows, complexId, limit);
 }
 
 export async function upsertTransactions(_rows: ComplexTransactionRow[]): Promise<void> {

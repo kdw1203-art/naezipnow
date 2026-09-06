@@ -14,6 +14,7 @@ import {
 } from "@/lib/reports/seasonal";
 import { breadcrumbJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { formatKrwWon } from "@/lib/format/krw";
 
 /* ============================================================
    N12 — 계절(이사철) 리포트.
@@ -45,10 +46,9 @@ export function generateStaticParams(): { slug: string }[] {
   return [];
 }
 
+/** [967 · 31] 원 → "8.45억", 빈값 "—" — lib/format/krw.ts "eok" 스타일 */
 function eok(krw: number | null): string {
-  if (krw === null || !Number.isFinite(krw) || krw <= 0) return "—";
-  const e = krw / 100_000_000;
-  return `${(e >= 10 ? e.toFixed(1) : e.toFixed(2)).replace(/\.?0+$/, "")}억`;
+  return formatKrwWon(krw, { style: "eok", below: "eok" });
 }
 
 function pct(v: number): string {

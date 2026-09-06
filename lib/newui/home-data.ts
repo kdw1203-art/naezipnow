@@ -32,6 +32,7 @@ import { isLabNoteLabel } from "@/lib/inspection/store-db";
 import { readRelatedTownPosts } from "@/lib/newui/board-posts";
 import { DELTA_UNKNOWN } from "@/lib/newui/delta-label";
 import { logger } from "@/lib/log";
+import { formatKrwWon } from "@/lib/format/krw";
 
 export type DeltaTone = "up" | "down" | "flat";
 
@@ -185,11 +186,10 @@ const CARD_REGIONS: Array<{ id: string; name: string; city: string }> = [
   { id: "namyangju", name: "남양주", city: "경기" },
 ];
 
-/** 원 단위 평균 매매가 → "32.5억" 형식 */
+/** 원 단위 평균 매매가 → "32.5억" 형식
+ *  [967 · 31] 본체는 lib/format/krw.ts "eok" 스타일(AI 코멘트 formatEokWon 과 같은 얼굴) */
 function formatEok(won: number): string {
-  const eok = won / 100_000_000;
-  const s = eok >= 10 ? eok.toFixed(1) : eok.toFixed(2);
-  return `${s.replace(/\.?0+$/, "")}억`;
+  return formatKrwWon(won, { style: "eok", below: "eok", empty: false });
 }
 
 /* 캡처 개선(2026-08-04) — 관심지역 행별 시세 칩이 이 포맷터를 재사용한다.

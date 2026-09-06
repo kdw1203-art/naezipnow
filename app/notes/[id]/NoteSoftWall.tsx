@@ -1,5 +1,6 @@
 "use client";
 
+import { hasSession } from "@/lib/client/has-session";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -21,40 +22,43 @@ import Link from "next/link";
 const KEY = "nz_note_reads";
 const FREE_PER_DAY = 3;
 
-function hasSessionCookie(): boolean {
-  try {
-    return /(?:^|;\s*)(?:__Secure-)?(?:next-auth|authjs)\.session-token=/.test(document.cookie);
-  } catch {
-    return false;
-  }
-}
-
 export function NoteSoftWall({ noteId }: { noteId: string }) {
   const [walled, setWalled] = useState(false);
 
   useEffect(() => {
-    if (hasSessionCookie()) return;
-    try {
-      const today = new Date().toISOString().slice(0, 10);
-      const raw = localStorage.getItem(KEY);
-      let state: { date: string; ids: string[] } = { date: today, ids: [] };
-      if (raw) {
-        const parsed = JSON.parse(raw) as { date?: string; ids?: string[] };
-        if (parsed.date === today && Array.isArray(parsed.ids)) {
-          state = { date: today, ids: parsed.ids.map(String) };
+    let cancelled = false;
+    /* [967 · 33] 로그인 판정은 세션 API 로 — 예전 document.cookie 정규식은 httpOnly
+       쿠키를 못 보므로 항상 "비로그인" 이었고, 로그인 사용자에게도 벽이 섰다. */
+    void hasSession().then((authed) => {
+      if (cancelled || authed) return;
+      applyWall();
+    });
+    return () => {
+      cancelled = true;
+    };
+    function applyWall() {
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const raw = localStorage.getItem(KEY);
+        let state: { date: string; ids: string[] } = { date: today, ids: [] };
+        if (raw) {
+          const parsed = JSON.parse(raw) as { date?: string; ids?: string[] };
+          if (parsed.date === today && Array.isArray(parsed.ids)) {
+            state = { date: today, ids: parsed.ids.map(String) };
+          }
         }
+        const already = state.ids.includes(noteId);
+        if (!already && state.ids.length >= FREE_PER_DAY) {
+          setWalled(true); // 무료 쿼터 소진 — 이 글은 세지 않고 벽만 세운다
+          return;
+        }
+        if (!already) {
+          state.ids.push(noteId);
+          localStorage.setItem(KEY, JSON.stringify(state));
+        }
+      } catch {
+        /* 저장소 접근 불가 — 벽 없이 통과 */
       }
-      const already = state.ids.includes(noteId);
-      if (!already && state.ids.length >= FREE_PER_DAY) {
-        setWalled(true); // 무료 쿼터 소진 — 이 글은 세지 않고 벽만 세운다
-        return;
-      }
-      if (!already) {
-        state.ids.push(noteId);
-        localStorage.setItem(KEY, JSON.stringify(state));
-      }
-    } catch {
-      /* 저장소 접근 불가 — 벽 없이 통과 */
     }
   }, [noteId]);
 
@@ -80,10 +84,16 @@ export function NoteSoftWall({ noteId }: { noteId: string }) {
             무료로 가입하면 모든 임장노트를 제한 없이 읽고, 내 노트도 기록할 수
             있어요. 가입만 해도 출석·기록으로 포인트가 쌓입니다.
           </p>
-          <Link href="/signup" className="btn-primary btn-cta rounded-2xl p-3.5 t-body no-underline">
+          <Link
+            href="/signup"
+            className="btn-primary btn-cta rounded-2xl p-3.5 t-body no-underline"
+          >
             30초 무료 가입하고 계속 읽기
           </Link>
-          <Link href="/login" className="t-sub font-bold text-text-3 no-underline">
+          <Link
+            href="/login"
+            className="t-sub font-bold text-text-3 no-underline"
+          >
             이미 계정이 있어요 — 로그인
           </Link>
         </div>

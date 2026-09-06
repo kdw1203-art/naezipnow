@@ -4,6 +4,7 @@ import { safeAuth } from "@/lib/safe-auth";
 import { adoptComment, getPost } from "@/lib/posts-store";
 import { awardPoints } from "@/lib/points/ledger";
 import { logger } from "@/lib/log";
+import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 
@@ -21,11 +22,37 @@ export async function GET(
   const { id } = await ctx.params;
   const session = await safeAuth();
   const email = session?.user?.email?.trim().toLowerCase() ?? null;
-  if (!email) return NextResponse.json({ isAuthor: false });
+  if (!email) return NextResponse.json({ isAuthor: false, ownCommentIds: [] });
   const post = await getPost(id);
-  if (!post) return NextResponse.json({ isAuthor: false });
+  if (!post) return NextResponse.json({ isAuthor: false, ownCommentIds: [] });
   const owner = post.notifyEmail?.trim().toLowerCase() ?? null;
-  return NextResponse.json({ isAuthor: owner !== null && owner === email });
+  /* [967 · 25] 뷰어가 쓴 댓글 id — 스레드가 "삭제" 버튼을 그릴 근거. 이메일은 절대
+     내려보내지 않고 id 목록만 준다(권한 판정의 진실은 DELETE 가 다시 한다).
+     getPost 는 응답용이라 comments 의 authorEmail 을 일부러 벗긴다(rowToPost 주석) —
+     Supabase 백엔드에서는 comments jsonb 를 직접 읽는다(softDeleteCommentSb 와 같은 이유).
+     실패는 빈 목록 — 버튼이 안 보일 뿐 삭제 자체는 서버가 지킨다. */
+  let ownCommentIds: string[] = [];
+  try {
+    const sb = getServiceSupabase();
+    let raw: Array<{ id?: unknown; authorEmail?: unknown; deletedAt?: unknown }> = [];
+    if (sb) {
+      const { data } = await sb.from("posts").select("comments").eq("id", id).maybeSingle();
+      raw = Array.isArray(data?.comments) ? data.comments : [];
+    } else {
+      raw = post.comments;
+    }
+    ownCommentIds = raw
+      .filter(
+        (c) =>
+          !c.deletedAt &&
+          typeof c.authorEmail === "string" &&
+          c.authorEmail.trim().toLowerCase() === email,
+      )
+      .map((c) => String(c.id));
+  } catch (e) {
+    logger.warn("[comment-adopt] ownCommentIds 조회 실패", e);
+  }
+  return NextResponse.json({ isAuthor: owner !== null && owner === email, ownCommentIds });
 }
 
 export async function POST(

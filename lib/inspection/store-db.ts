@@ -345,6 +345,53 @@ export async function listPublicNotes(limit = 50): Promise<InspectionNote[]> {
   return (data ?? []).map((r) => mapRow(r as Record<string, unknown>));
 }
 
+/** [967 · 19] 공개 노트 커서 페이지 — 한 번에 가져올 수 있는 상한(API 도 같은 값으로 막는다) */
+export const PUBLIC_NOTES_PAGE_MAX = 50;
+
+/**
+ * [967 · 19] 공개 임장노트 커서 페이지 (최신순).
+ *
+ * /notes 는 `listPublicNotes(50)` 한 번으로 끝나서 51번째 노트부터는 어디서도
+ * 보이지 않았다(사이트맵·RSS 도 같은 함수를 쓴다). 오프셋 대신 `created_at`
+ * 커서를 쓴다 — 목록을 보는 사이 새 노트가 공개돼도 페이지 경계가 밀리지 않고,
+ * (note_id, created_at) 정렬이 그대로라 인덱스를 타는 단순 `.lt()` 한 줄이다.
+ * 컬럼 목록·anon 폴백 규칙은 listPublicNotes 와 같다(위 주석). 실패는 던진다.
+ */
+export async function listPublicNotesPage(opts: {
+  limit: number;
+  /** 이 시각(ISO) **이전**에 만들어진 노트만 — 직전 페이지 마지막 노트의 createdAt */
+  before?: string | null;
+}): Promise<InspectionNote[]> {
+  const limit = Math.max(1, Math.min(PUBLIC_NOTES_PAGE_MAX, Math.floor(opts.limit)));
+  const sb = getReadOnlySupabase();
+  if (!sb) {
+    throw new Error(
+      "inspection_notes 를 읽을 수단이 없습니다 — SUPABASE_SERVICE_ROLE_KEY 도 " +
+        "NEXT_PUBLIC_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_ANON_KEY 도 설정되지 않았습니다.",
+    );
+  }
+  const table = sb.from("inspection_notes");
+  /* listPublicNotes 와 같은 이유로 두 가지 모두 한 줄 리터럴이어야 한다 */
+  const q = readOnlyClientHasServiceRole()
+    ? table.select("id,author_email,author_label,title,region,apt_name,visit_date,weather,transportation,summary,score_location,score_school,score_transport,score_facility,score_future,checklist,sections,photos,ai_analysis,metadata,is_public,created_at,updated_at")
+    : table.select("id,author_label,title,region,apt_name,visit_date,weather,transportation,summary,score_location,score_school,score_transport,score_facility,score_future,checklist,sections,photos,ai_analysis,metadata,is_public,created_at,updated_at");
+  let filtered = q.eq("is_public", true);
+  const before = opts.before?.trim();
+  if (before && Number.isFinite(Date.parse(before))) {
+    filtered = filtered.lt("created_at", before);
+  }
+  const { data, error } = await filtered
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    throw new Error(
+      `inspection_notes 조회 실패 (공개 노트 페이지) — ${error.message}` +
+        `${error.code ? ` [${error.code}]` : ""}${error.hint ? ` · 힌트: ${error.hint}` : ""}`,
+    );
+  }
+  return (data ?? []).map((r) => mapRow(r as Record<string, unknown>));
+}
+
 /** 목록 카드 한 장에 실제로 그려지는 것만. 본문·사진·jsonb 는 여기 없다. */
 export type PublicNoteCard = {
   id: string;

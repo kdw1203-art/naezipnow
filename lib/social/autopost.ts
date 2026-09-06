@@ -3,6 +3,7 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { enqueueUpload } from "@/lib/social/store";
 import { renderNoteFrames, renderPromoFrames } from "@/lib/social/video/frames";
 import { encodeSlideshow } from "@/lib/social/video/encode";
+import { formatKrwWon } from "@/lib/format/krw";
 
 /**
  * 소셜 자동 소재 — 임장노트 1건 또는 홈페이지 홍보 1건을 영상으로 만들어 큐에 넣는다.
@@ -97,7 +98,8 @@ async function buildPromo(dayIndex: number) {
         const highs = await getWeeklyPriceHighs(1);
         if (highs.length === 0) throw new Error("이번 주 신고가 없음 — 소재 건너뜀");
         const h = highs[0];
-        const eok = (n: number) => `${(n / 1e8).toFixed(1).replace(/\.0$/, "")}억`;
+        /* [967 · 31] "8.4억" — lib/format/krw.ts "eok1"(1억 미만도 "0.5억", 기존 그대로) */
+        const eok = (n: number) => formatKrwWon(n, { style: "eok1", below: "eok", empty: false });
         // headline/sub 를 실데이터로 교체 (아래 스프레드에서 count 결과가 statValue 로 감)
         return `${h.regionName} ${h.complexName} ${h.areaM2}㎡ ${eok(h.priceKrw)}`;
       },

@@ -1,9 +1,10 @@
 import type { PlanTier } from "@/components/ui-kit";
 import { getPlan, PLAN_DEFINITIONS, type PlanDefinition } from "@/lib/subscriptions/plans";
+import { formatKrwWon } from "@/lib/format/krw";
 
+/** [967 · 31] "₩9,900" / 0 이하 "무료" — 본체는 lib/format/krw.ts "currency" 스타일 */
 export function formatPriceKrw(amount: number): string {
-  if (amount <= 0) return "무료";
-  return `₩${amount.toLocaleString("ko-KR")}`;
+  return formatKrwWon(amount, { style: "currency", empty: "무료" });
 }
 
 export function formatPlanMonthly(plan: PlanDefinition): string {

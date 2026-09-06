@@ -1,13 +1,19 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { getHomePersonal } from "@/lib/client/home-personal";
 import Link from "next/link";
 import { seedGradient, seedCoverHeight } from "./shared";
 import { ExampleBadge } from "../components/ExampleBadge";
 import { Icon } from "@/app/components/Icon";
 import { CoverImage } from "@/app/components/CoverImage";
-import { useScrollRestore, useScrollRestoreKey } from "@/lib/client/use-scroll-restore";
+import { useScrollRestore } from "@/lib/client/use-scroll-restore";
+import {
+  parseTownFeedFilters,
+  townFeedFilterQuery,
+  type TownFeedFilters,
+} from "@/lib/town/feed-filters";
 
 /* 동네이야기 통합 피드 — 오늘의집/인스타그램형 사진 우선 카드 그리드(매소너리).
    공개 임장노트(사진 우선) + 커뮤니티 글을 한 피드로 섞어 보여준다.
@@ -229,12 +235,58 @@ function recommendScore(c: FeedCard): number {
   return c.createdAt + ratingBoost + savesBoost;
 }
 
+/* [967 · 19] "더 보기"로 받은 다음 장은 sessionStorage 에 잠깐 남긴다 — 상세로 갔다
+   뒤로 오면 서버는 첫 장(40장)만 다시 그리므로, 이게 없으면 스크롤 복원이 목록
+   길이보다 아래를 가리켜 실패한다. 30분 지나면 버린다(오래된 목록을 붙이지 않기). */
+const MORE_CACHE_KEY = "nz_town_feed_more";
+const MORE_CACHE_TTL_MS = 30 * 60_000;
+const PAGE_SIZE = 30;
+
+/** 첫 장의 가장 오래된 카드 시각 — 다음 장이 "어디서부터"인지의 경계 */
+function oldestOf(cards: FeedCard[]): number {
+  const stamps = cards.map((c) => c.createdAt).filter((t) => t > 0);
+  return stamps.length > 0 ? Math.min(...stamps) : 0;
+}
+
+function readMoreCache(firstOldest: number): { extra: FeedCard[]; more: boolean } | null {
+  try {
+    const raw = window.sessionStorage.getItem(MORE_CACHE_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as { extra?: FeedCard[]; more?: boolean; at?: number; firstOldest?: number };
+    if (!Array.isArray(v.extra) || typeof v.at !== "number") return null;
+    if (Date.now() - v.at > MORE_CACHE_TTL_MS) return null;
+    /* 첫 장의 경계가 그때와 다르면(새 글이 들어와 첫 장이 밀렸다) 붙이지 않는다 —
+       경계와 캐시 사이에 못 본 카드가 끼어 빈틈이 생긴다. */
+    if (v.firstOldest !== firstOldest) return null;
+    return { extra: v.extra, more: Boolean(v.more) };
+  } catch {
+    return null;
+  }
+}
+
+function writeMoreCache(extra: FeedCard[], more: boolean, firstOldest: number) {
+  try {
+    if (extra.length === 0) window.sessionStorage.removeItem(MORE_CACHE_KEY);
+    else {
+      window.sessionStorage.setItem(
+        MORE_CACHE_KEY,
+        JSON.stringify({ extra, more, at: Date.now(), firstOldest }),
+      );
+    }
+  } catch {
+    /* 저장소 차단(프라이빗 모드) — 뒤로가기 때 첫 장만 보일 뿐 */
+  }
+}
+
 export function TownFeed({
   cards,
+  hasMore = false,
   loadFailed = false,
   ad = null,
 }: {
   cards: FeedCard[];
+  /** [967 · 19] 서버가 준 첫 장 너머에 카드가 더 있는가 — "더 보기" 버튼의 첫 상태 */
+  hasMore?: boolean;
   /**
    * 피드 소스 조회가 **실패**했는가. 빈 목록이 "아직 없음"인지 "못 불러옴"인지는
    * 목록만 봐서는 구분이 안 된다 — 둘을 다르게 말하려면 이 플래그가 필요하다.
@@ -245,13 +297,116 @@ export function TownFeed({
 }) {
   const [kind, setKind] = useState<KindId>("all");
   const [sort, setSort] = useState<SortId>("reco");
-  /* [966] 상세 → 뒤로가기 스크롤 복원. 카드는 props 로 이미 와 있고 커버 높이는
-     시드로 먼저 확정되므로(위 Cover 주석) 첫 렌더가 곧 ready 다. */
-  useScrollRestore(useScrollRestoreKey(), cards.length > 0);
   /* 내 관심지역 — 로그인 사용자만. 홈에서 정한 지역이 여기서 초기화되던 문제(B21).
      null = 아직 모름 / [] = 설정 안 함 → 칩을 그리지 않는다. */
   const [myRegions, setMyRegions] = useState<string[] | null>(null);
   const [onlyMine, setOnlyMine] = useState(false);
+
+  /* [967 · 21] 필터 ↔ URL 동기화(?kind=&sort=&mine=1) — 새로고침·공유해도 같은 목록.
+     이 페이지는 revalidate(ISR) 라 useSearchParams 를 쓰면 프리렌더 HTML 에서 피드
+     서브트리가 Suspense 폴백으로 비어 나간다(/town/news 에서 실측한 교훈,
+     NewsListClient 주석). 그래서 마운트 후 location.search 를 한 번 읽고, 이후엔
+     history.replaceState 로 쓴다(서버 왕복 없음 — search-client 와 같은 방식).
+     첫 렌더는 URL 과 무관하게 기본값이라 SSR HTML 과 하이드레이션이 일치한다. */
+  const [urlRead, setUrlRead] = useState(false);
+  useEffect(() => {
+    const apply = () => {
+      const f = parseTownFeedFilters(window.location.search);
+      setKind(f.kind);
+      setSort(f.sort);
+      setOnlyMine(f.mine);
+    };
+    apply();
+    setUrlRead(true);
+    /* 뒤로가기·앞으로가기로 쿼리가 바뀌면 다시 읽는다 */
+    window.addEventListener("popstate", apply);
+    return () => window.removeEventListener("popstate", apply);
+  }, []);
+  const filters: TownFeedFilters = useMemo(() => ({ kind, sort, mine: onlyMine }), [kind, sort, onlyMine]);
+  useEffect(() => {
+    if (!urlRead) return; // URL 을 읽기 전에 기본값으로 덮어쓰면 딥링크가 지워진다
+    try {
+      const next = townFeedFilterQuery(filters, window.location.search);
+      const cur = window.location.search;
+      if (next !== cur) {
+        window.history.replaceState(null, "", `${window.location.pathname}${next}`);
+      }
+    } catch {
+      /* history 갱신 실패 — 목록 동작과 무관 */
+    }
+  }, [filters, urlRead]);
+
+  /* [967 · 19] 다음 장 — /api/town/feed 로 이어 붙인다 */
+  const [extra, setExtra] = useState<FeedCard[]>([]);
+  const [more, setMore] = useState(hasMore);
+  const [moreLoading, setMoreLoading] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
+  const [moreRestored, setMoreRestored] = useState(false);
+  const firstOldest = useMemo(() => oldestOf(cards), [cards]);
+  useEffect(() => {
+    const cached = readMoreCache(firstOldest);
+    if (cached && cached.extra.length > 0) {
+      setExtra(cached.extra);
+      setMore(cached.more);
+    }
+    setMoreRestored(true);
+    // 첫 장은 서버 props 라 마운트 때 한 번만 맞춰 본다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (!moreRestored) return;
+    writeMoreCache(extra, more, firstOldest);
+  }, [extra, more, moreRestored, firstOldest]);
+
+  const allCards = useMemo(() => {
+    if (extra.length === 0) return cards;
+    const seen = new Set(cards.map((c) => c.id));
+    return [...cards, ...extra.filter((c) => !seen.has(c.id))];
+  }, [cards, extra]);
+
+  const loadMore = useCallback(async () => {
+    if (moreLoading) return;
+    const oldest = oldestOf(allCards);
+    if (oldest <= 0) {
+      setMore(false);
+      return;
+    }
+    const before = new Date(oldest).toISOString();
+    setMoreLoading(true);
+    setMoreError(null);
+    try {
+      const r = await fetch(
+        `/api/town/feed?before=${encodeURIComponent(before)}&limit=${PAGE_SIZE}&seen=${allCards.length}`,
+        { cache: "no-store" },
+      );
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = (await r.json()) as { items?: FeedCard[]; hasMore?: boolean; loadFailed?: boolean };
+      const items = Array.isArray(j.items) ? j.items : [];
+      setExtra((prev) => {
+        const have = new Set([...cards, ...prev].map((c) => c.id));
+        return [...prev, ...items.filter((c) => !have.has(c.id))];
+      });
+      /* 한쪽 소스가 실패한 장은 "마지막"이 아니라 "일부를 못 받았다"고 말하고,
+         버튼을 남겨 다시 누를 수 있게 한다 */
+      setMore(Boolean(j.hasMore) || Boolean(j.loadFailed));
+      if (j.loadFailed) setMoreError("일부 글을 불러오지 못했어요. 잠시 후 다시 눌러 주세요.");
+    } catch {
+      setMoreError("더 불러오지 못했어요. 잠시 후 다시 눌러 주세요.");
+    } finally {
+      setMoreLoading(false);
+    }
+  }, [allCards, cards, moreLoading]);
+
+  /* [966] 상세 → 뒤로가기 스크롤 복원. 카드는 props 로 이미 와 있고 커버 높이는
+     시드로 먼저 확정되므로(위 Cover 주석) 첫 렌더가 곧 ready 다.
+     [967 · 21] 키는 경로 + **현재 필터 쿼리**로 직접 조립한다 — 마운트 때 한 번 읽는
+     기본 키(useScrollRestoreKey)는 필터를 바꾼 뒤 나갈 때와 돌아올 때가 어긋난다.
+     ready 는 URL 을 읽어 필터가 확정되고(urlRead) 다음 장 캐시까지 붙은 뒤(moreRestored). */
+  const pathname = usePathname();
+  useScrollRestore(
+    `${pathname}${townFeedFilterQuery(filters, "")}`,
+    urlRead && moreRestored && allCards.length > 0,
+  );
   useEffect(() => {
     let dead = false;
     getHomePersonal<{ primaryRegion: string | null; regions: string[] | null }>()
@@ -290,27 +445,27 @@ export function TownFeed({
      개수는 **유형**에만 붙인다(정렬은 같은 목록을 다시 세우는 것이라 수가 같다). */
   const counts = useMemo<Record<KindId, number>>(
     () => ({
-      all: cards.length,
-      note: cards.filter((c) => c.kind === "note").length,
-      post: cards.filter((c) => c.kind === "post").length,
+      all: allCards.length,
+      note: allCards.filter((c) => c.kind === "note").length,
+      post: allCards.filter((c) => c.kind === "post").length,
     }),
-    [cards],
+    [allCards],
   );
 
   const mineCount = useMemo(
-    () => (myRegions && myRegions.length > 0 ? cards.filter(matchesMine).length : 0),
-    [cards, myRegions, matchesMine],
+    () => (myRegions && myRegions.length > 0 ? allCards.filter(matchesMine).length : 0),
+    [allCards, myRegions, matchesMine],
   );
 
   const visible = useMemo(() => {
-    let list = onlyMine ? cards.filter(matchesMine) : cards;
+    let list = onlyMine ? allCards.filter(matchesMine) : allCards;
     if (kind !== "all") list = list.filter((c) => c.kind === kind);
     /* 포인트 추천글은 정렬과 무관하게 맨 앞 — 배지('추천글')로 이유를 밝힌다 */
     const byBoost = (a: FeedCard, b: FeedCard) => Number(b.boosted ?? false) - Number(a.boosted ?? false);
     if (sort === "latest")
       return [...list].sort((a, b) => byBoost(a, b) || b.createdAt - a.createdAt);
     return [...list].sort((a, b) => byBoost(a, b) || recommendScore(b) - recommendScore(a));
-  }, [cards, kind, sort, onlyMine, matchesMine]);
+  }, [allCards, kind, sort, onlyMine, matchesMine]);
 
   return (
     <>
@@ -398,18 +553,24 @@ export function TownFeed({
       {visible.length === 0 ? (
         <div className="rise-in-3 card flex flex-col items-center gap-2 px-5 py-12 text-center">
           <div className="t-title"><Icon name="📍" size={26} /></div>
-          {/* 조회 실패로 목록이 비었을 때 "글이 없어요"라고 하면 사실이 아니다. */}
+          {/* 조회 실패로 목록이 비었을 때 "글이 없어요"라고 하면 사실이 아니다.
+              [967 · 19] 아직 안 받은 장이 남아 있을 때도 마찬가지 — "없다"가 아니라
+              "지금까지 받은 것에는 없다"고 말하고 더 보기로 잇는다. */}
           <div className="t-section text-ink">
             {loadFailed
               ? "글을 불러오지 못했어요"
-              : onlyMine
-                ? "내 관심지역 글이 아직 없어요 — 첫 글을 남겨 보세요"
-                : "이 조건의 글이 아직 없어요 — 첫 글을 남겨 보세요"}
+              : more
+                ? "지금까지 받은 글에는 이 조건이 없어요"
+                : onlyMine
+                  ? "내 관심지역 글이 아직 없어요 — 첫 글을 남겨 보세요"
+                  : "이 조건의 글이 아직 없어요 — 첫 글을 남겨 보세요"}
           </div>
           <div className="t-sub text-text-3">
             {loadFailed
               ? "데이터 조회가 실패했습니다. 잠시 후 다시 시도해 주세요."
-              : "첫 임장노트나 동네이야기를 남기면 가장 먼저 노출돼요"}
+              : more
+                ? "더 보기로 이전 글을 이어서 볼 수 있어요"
+                : "첫 임장노트나 동네이야기를 남기면 가장 먼저 노출돼요"}
           </div>
           <Link href="/town/write" className="btn-primary btn-md mt-2">
             글쓰기
@@ -429,6 +590,34 @@ export function TownFeed({
           </div>
           {ad && visible.length <= AD_AFTER_INDEX && <div className="mt-1">{ad}</div>}
         </>
+      )}
+
+      {/* [967 · 19] 더 보기 / 마지막 — 필터와 무관하게 전체 피드의 다음 장을 붙인다
+          (유형·정렬·관심지역은 받은 카드 위에서 다시 계산된다). 빈 화면에서도
+          그려야 "첫 장엔 없지만 다음 장엔 있는" 노트를 찾아갈 수 있다. */}
+      {(more || allCards.length > 0) && (
+        <div className="mt-2 flex flex-col items-center gap-2">
+          {moreError && (
+            <p role="alert" className="t-sub text-text-2">
+              {moreError}
+            </p>
+          )}
+          {more ? (
+            <button
+              type="button"
+              onClick={loadMore}
+              disabled={moreLoading}
+              aria-busy={moreLoading}
+              className="btn-soft tap rounded-xl px-5 py-2.5 t-body font-bold disabled:opacity-60"
+            >
+              {moreLoading ? "불러오는 중…" : "더 보기"}
+            </button>
+          ) : (
+            <p role="status" className="t-sub text-text-3">
+              마지막이에요 · {allCards.length.toLocaleString("ko-KR")}개를 다 봤어요
+            </p>
+          )}
+        </div>
       )}
     </>
   );

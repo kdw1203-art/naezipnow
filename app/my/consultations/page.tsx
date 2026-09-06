@@ -24,6 +24,7 @@ import {
   type ExpertConsultation,
   type ConsultStatus,
 } from "@/lib/expert-consultations/store-db";
+import { relativeTimeLabel } from "@/lib/format/relative-time";
 
 /* ============================================================
    상담함 · /my/consultations (953 재설계)
@@ -52,16 +53,9 @@ const TYPE_LABEL: Record<ExpertConsultation["type"], string> = {
   visit: "방문 상담",
 };
 
+/** [967 · 32] "방금 전 / N분 전 / N시간 전 / N일 전 / YYYY.MM.DD" — 본체는 lib/format/relative-time.ts 기본값 */
 function timeAgo(iso: string): string {
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return "";
-  const diff = Date.now() - t;
-  if (diff < 60_000) return "방금 전";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}분 전`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}시간 전`;
-  if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)}일 전`;
-  const d = new Date(t);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  return relativeTimeLabel(iso);
 }
 
 function startOfMonthIso(): string {

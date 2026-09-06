@@ -1,5 +1,6 @@
 "use client";
 
+import { hasSession } from "@/lib/client/has-session";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -36,43 +37,54 @@ type State =
    목표를 상점 최고 아이템(매물 상단 노출 7일, 500P)으로 바꿨다. */
 const SHOP_GOAL_COST = 500; // lib/points/catalog.ts listing_boost_7d 와 동일 (표시용)
 
-function hasSessionCookie(): boolean {
-  try {
-    return /(?:^|;\s*)(?:__Secure-)?(?:next-auth|authjs)\.session-token=/.test(document.cookie);
-  } catch {
-    return false;
-  }
-}
-
 export function HomeEngagementCard() {
   const [st, setSt] = useState<State>({ phase: "none" });
   const [checking, setChecking] = useState(false);
   const [justEarned, setJustEarned] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!hasSessionCookie()) return; // 게스트 — 자리도 만들지 않는다
-    setSt({ phase: "loading" });
-    Promise.all([
-      fetch("/api/me/attendance", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/me/points", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/me/onboarding", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
-    ])
-      .then(([att, pts, onb]) => {
-        if (!att) {
-          setSt({ phase: "none" });
-          return;
-        }
-        const steps: string[] = Array.isArray(onb?.steps) ? onb.steps : [];
-        setSt({
-          phase: "ready",
-          checkedToday: Boolean(att.checkedToday),
-          streak: Number(att.streak) || 0,
-          balance: Number(pts?.balance ?? att.totalPoints) || 0,
-          needNoteMission: !steps.includes("inspection"),
-          needRegionSetup: !steps.includes("profile_region"),
+    let cancelled = false;
+    /* [967 · 33] 게스트 판정은 세션 API 로(httpOnly 쿠키는 스크립트에 안 보인다 —
+       예전 정규식 판정은 항상 게스트라 이 카드가 한 번도 렌더되지 않았다). */
+    void hasSession().then((authed) => {
+      if (cancelled || !authed) return; // 게스트 — 자리도 만들지 않는다
+      load();
+    });
+    return () => {
+      cancelled = true;
+    };
+    function load() {
+      setSt({ phase: "loading" });
+      Promise.all([
+        fetch("/api/me/attendance", { cache: "no-store" }).then((r) =>
+          r.ok ? r.json() : null,
+        ),
+        fetch("/api/me/points", { cache: "no-store" }).then((r) =>
+          r.ok ? r.json() : null,
+        ),
+        fetch("/api/me/onboarding", { cache: "no-store" }).then((r) =>
+          r.ok ? r.json() : null,
+        ),
+      ])
+        .then(([att, pts, onb]) => {
+          if (!att) {
+            setSt({ phase: "none" });
+            return;
+          }
+          const steps: string[] = Array.isArray(onb?.steps) ? onb.steps : [];
+          setSt({
+            phase: "ready",
+            checkedToday: Boolean(att.checkedToday),
+            streak: Number(att.streak) || 0,
+            balance: Number(pts?.balance ?? att.totalPoints) || 0,
+            needNoteMission: !steps.includes("inspection"),
+            needRegionSetup: !steps.includes("profile_region"),
+          });
+        })
+        .catch(() => {
+          if (!cancelled) setSt({ phase: "none" });
         });
-      })
-      .catch(() => setSt({ phase: "none" }));
+    }
   }, []);
 
   const checkIn = useCallback(async () => {
@@ -93,7 +105,10 @@ export function HomeEngagementCard() {
                 ...prev,
                 checkedToday: true,
                 streak: data.streak ?? prev.streak,
-                balance: typeof data.balance === "number" ? data.balance : prev.balance,
+                balance:
+                  typeof data.balance === "number"
+                    ? data.balance
+                    : prev.balance,
               }
             : prev,
         );
@@ -120,7 +135,9 @@ export function HomeEngagementCard() {
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="text-[13px] font-extrabold text-ink">
-                {st.checkedToday ? "오늘 출석 완료" : "오늘 출석하고 포인트 받기"}
+                {st.checkedToday
+                  ? "오늘 출석 완료"
+                  : "오늘 출석하고 포인트 받기"}
                 {st.streak > 1 && (
                   <span className="ml-1.5 text-[12px] font-bold text-warning">
                     🔥 연속 {st.streak}일
@@ -155,10 +172,16 @@ export function HomeEngagementCard() {
           <div>
             <div className="mb-1 flex items-center justify-between text-[12px]">
               <span className="text-text-3">
-                내 포인트 <b className="text-ink">{st.balance.toLocaleString("ko-KR")}P</b>
+                내 포인트{" "}
+                <b className="text-ink">
+                  {st.balance.toLocaleString("ko-KR")}P
+                </b>
               </span>
               {st.balance >= SHOP_GOAL_COST ? (
-                <Link href="/points/shop" className="font-extrabold text-primary no-underline">
+                <Link
+                  href="/points/shop"
+                  className="font-extrabold text-primary no-underline"
+                >
                   상점에서 교환 가능 ›
                 </Link>
               ) : (
@@ -173,7 +196,9 @@ export function HomeEngagementCard() {
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg">
               <div
                 className="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${Math.min(100, Math.round((st.balance / SHOP_GOAL_COST) * 100))}%` }}
+                style={{
+                  width: `${Math.min(100, Math.round((st.balance / SHOP_GOAL_COST) * 100))}%`,
+                }}
               />
             </div>
           </div>

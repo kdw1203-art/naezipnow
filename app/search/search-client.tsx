@@ -14,6 +14,7 @@ import { useSettledSearchQuery } from "@/lib/search/settle";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { trackPlatformEvent } from "@/lib/platform-events-client";
 import { useScrollRestore } from "@/lib/client/use-scroll-restore";
+import { formatKrwManwon } from "@/lib/format/krw";
 
 /* ============================================================
    통합 검색 경험 — 단지·매물·임장노트·뉴스 통합 결과
@@ -477,9 +478,8 @@ export function SearchClient() {
                     </div>
                     {c.avgPriceManwon != null && c.avgPriceManwon > 0 && (
                       <span className="shrink-0 t-sub font-bold text-text-2">
-                        {c.avgPriceManwon >= 10_000
-                          ? `${(c.avgPriceManwon / 10_000).toFixed(1).replace(/\.0$/, "")}억`
-                          : `${c.avgPriceManwon.toLocaleString("ko-KR")}만`}
+                        {/* [967 · 31] 단지 허브와 같은 "eok1" 얼굴 — 값은 bigint 라 만 분기 반올림 무영향 */}
+                        {formatKrwManwon(c.avgPriceManwon, { style: "eok1" })}
                       </span>
                     )}
                   </Link>

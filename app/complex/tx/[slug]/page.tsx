@@ -17,6 +17,7 @@ import {
 import { encodeComplexId } from "@/lib/complex/complex-store";
 import { getPublicRecordsForComplex } from "@/lib/market/public-records";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { formatKrwShort } from "@/lib/market/format";
 
 /* ============================================================
    단지 실거래 상세 — /complex/tx/[slug]
@@ -41,15 +42,7 @@ export function generateStaticParams(): { slug: string }[] {
 
 /* ---------- 포맷 헬퍼 ---------- */
 
-/** 원(KRW) → "28.6억" / "9,800만" */
-function formatKrwShort(krw: number | null | undefined): string {
-  if (krw === null || krw === undefined || !Number.isFinite(krw) || krw <= 0) return "—";
-  if (krw >= 1e8) {
-    const eok = krw / 1e8;
-    return `${(eok >= 100 ? Math.round(eok) : Math.round(eok * 10) / 10).toLocaleString("ko-KR")}억`;
-  }
-  return `${Math.round(krw / 1e4).toLocaleString("ko-KR")}만`;
-}
+/* [967 · 31] 여기 있던 formatKrwShort 사본은 lib/market/format 의 공통 함수로 대체 — 출력 동일 */
 
 /** "202607" → "2026.07" */
 function formatYm(ym: string): string {

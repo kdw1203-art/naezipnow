@@ -17,6 +17,7 @@ import "server-only";
 import { getReadOnlySupabase, readOnlyClientHasServiceRole } from "@/lib/newui/supabase-read";
 import { logger } from "@/lib/log";
 import { DEFAULT_ADMIN_EMAIL } from "@/lib/brand/business-info";
+import { relativeTimeLabel } from "@/lib/format/relative-time";
 
 export interface AdminKpiCard {
   label: string;
@@ -163,14 +164,10 @@ interface ContentReportRowLite {
   created_at: string | null;
 }
 
+/** [967 · 32] 관리자 지표의 상대시각 — 분→시→일 반올림("0분 전" 가능), 날짜 폴백 없음, 시각 없으면 "대기".
+ *  본체는 lib/format/relative-time.ts (round 모드) */
 function relativeLabel(iso: string | null): string {
-  const t = iso ? Date.parse(iso) : NaN;
-  if (!Number.isFinite(t)) return "대기";
-  const mins = Math.max(0, Math.round((Date.now() - t) / 60_000));
-  if (mins < 60) return `${mins}분 전`;
-  const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  return `${Math.round(hours / 24)}일 전`;
+  return relativeTimeLabel(iso ?? NaN, Date.now(), { round: true, maxDays: Infinity, invalid: "대기" });
 }
 
 async function loadPendingReports(): Promise<AdminPendingItem[]> {

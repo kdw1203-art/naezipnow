@@ -1,20 +1,15 @@
 import Link from "next/link";
 import { loadComplexQuestions } from "./section-loaders";
 import { logger } from "@/lib/log";
+import { relativeTimeLabel } from "@/lib/format/relative-time";
 
 /* D2 — 단지 Q&A 임베드. 이 단지(complex_name 일치)의 실 질문만.
    질문이 없으면 첫 질문 유도 CTA(참여 유도) — 조작 데이터 아님. */
 
-/** ISO → "N일 전 / YYYY.MM.DD" */
+/** ISO → "1분 전 … / N시간 전 / N일 전 / YYYY.MM.DD"
+ *  [967 · 32] 본체는 lib/format/relative-time.ts — 이 목록은 "방금 전" 없이 1분 미만도 "1분 전" 이던 얼굴(minOneMinute) */
 function timeAgo(iso: string): string {
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return "";
-  const diff = Date.now() - t;
-  if (diff < 3_600_000) return `${Math.max(1, Math.floor(diff / 60_000))}분 전`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}시간 전`;
-  if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)}일 전`;
-  const d = new Date(t);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  return relativeTimeLabel(iso, Date.now(), { minOneMinute: true });
 }
 
 export async function ComplexQna({

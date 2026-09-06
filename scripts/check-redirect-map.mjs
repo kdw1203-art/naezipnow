@@ -17,6 +17,8 @@
  *  5. 형식 — 앞 "/", 뒤 슬래시 없음, from 에 쿼리·해시 없음
  *  6. reason·since 가 채워져 있는가 (since 는 YYYY-MM-DD, 미래 날짜 금지)
  *  7. 배선 — middleware.ts 가 이 표를 import 해서 쓰는가
+ *  9. [967 · 30d] 접두 규칙표(PREFIX_REDIRECTS) — to(rest) 가 실존 라우트·1홉인지,
+ *     접두가 살아 있는 라우트를 가리지 않는지, 미들웨어가 resolvePrefixRedirect() 를 쓰는지
  *
  * from 중복은 redirect-map.ts 가 모듈 로드 시점에 스스로 던지므로, 이 스크립트가
  * import 하는 순간 함께 잡힌다(아래 8번에서 개수로 한 번 더 확인).
@@ -93,10 +95,14 @@ function matchesDynamic(p) {
 const MAP_PATH = path.join(ROOT, "lib/seo/redirect-map.ts");
 let REDIRECT_RULES;
 let EXACT_REDIRECTS;
+let PREFIX_REDIRECTS;
+let resolvePrefixRedirect;
 try {
   const mod = await import(`file://${MAP_PATH}`);
   REDIRECT_RULES = mod.REDIRECT_RULES;
   EXACT_REDIRECTS = mod.EXACT_REDIRECTS;
+  PREFIX_REDIRECTS = mod.PREFIX_REDIRECTS;
+  resolvePrefixRedirect = mod.resolvePrefixRedirect;
 } catch (err) {
   console.error(
     `✗ lib/seo/redirect-map.ts 를 읽지 못했습니다 — ${err.message}\n` +
@@ -184,6 +190,90 @@ if (!/legacyRedirectStatus\(/.test(middlewareSrc)) {
   fail("middleware.ts 가 legacyRedirectStatus() 를 쓰지 않습니다 — 상태 코드 정책이 표와 따로 놉니다.");
 }
 
+/* ── 9. [967 · 30d] 접두 규칙(PREFIX_REDIRECTS) ──────────────────────────────
+   정확 일치 표와 같은 세 원칙을 접두 표에도 건다.
+   (a) to(rest) 가 실존 라우트로 간다 — 한글·공백이 섞인 꼬리로 호출해 본다.
+   (b) 접두가 살아 있는 라우트를 가리지 않는다 — 접두로 시작하는 정적 라우트, 그리고
+       접두 뒤에 한 조각(또는 두 조각)을 붙인 경로를 잡는 동적 라우트가 없어야 한다.
+   (c) 2단 홉 금지 — to() 의 결과가 정확 일치 표의 from 이거나 다른 접두에 걸리면 안 된다.
+   (d) 형식·메타데이터 — 접두는 "/" 로 시작·끝나고, since 는 정확 일치 표와 같은 규칙. */
+if (!Array.isArray(PREFIX_REDIRECTS)) {
+  fail("PREFIX_REDIRECTS 가 export 되지 않았습니다.");
+} else {
+  const PROBES = ["x", "강남구", "동네%20이야기", "a-b_c"];
+  for (const rule of PREFIX_REDIRECTS) {
+    const { fromPrefix, to, reason, since } = rule;
+    const label = `접두 "${fromPrefix}"`;
+
+    if (typeof fromPrefix !== "string" || !fromPrefix.startsWith("/") || !fromPrefix.endsWith("/") || fromPrefix.length < 3) {
+      fail(`${label} — 접두는 "/" 로 시작하고 "/" 로 끝나야 합니다(예: "/area/").`);
+      continue;
+    }
+    if (typeof to !== "function") {
+      fail(`${label} — to 는 (rest) => string 함수여야 합니다.`);
+      continue;
+    }
+
+    // (b) 그림자 — 정적
+    for (const r of staticRoutes) {
+      if (r === fromPrefix.slice(0, -1) || r.startsWith(fromPrefix)) {
+        fail(`${label} 은 살아 있는 라우트 "${r}" 을 가립니다 — 규칙을 지우거나 페이지를 지우세요.`);
+      }
+    }
+    // (b) 그림자 — 동적
+    for (const probe of [`${fromPrefix}probe`, `${fromPrefix}probe/probe`]) {
+      const shadowed = matchesDynamic(probe);
+      if (shadowed) {
+        fail(`${label} 은 동적 라우트 "${shadowed.source}" 에 잡히는 경로("${probe}")를 가립니다.`);
+      }
+    }
+
+    // (a)·(c) 대상 검사 — 여러 꼬리로 호출해 전부 실존 라우트·1홉인지 본다
+    for (const probe of PROBES) {
+      let target;
+      try {
+        target = resolvePrefixRedirect(`${fromPrefix}${probe}`);
+      } catch (err) {
+        fail(`${label} — to("${probe}") 가 던졌습니다: ${err.message}`);
+        continue;
+      }
+      if (typeof target !== "string" || !target.startsWith("/")) {
+        fail(`${label} — to("${probe}") 결과 "${target}" 는 사이트 내부 경로가 아닙니다.`);
+        continue;
+      }
+      const dest = stripQuery(target);
+      if (!staticRoutes.has(dest) && !matchesDynamic(dest)) {
+        fail(`${label} — to("${probe}") = "${target}" 에 대응하는 라우트가 없습니다(404 로 떨어집니다).`);
+      }
+      if (sources.has(dest)) {
+        fail(`${label} — to("${probe}") = "${target}" 는 정확 일치 표의 from 이라 2단 홉입니다.`);
+      }
+      if (dest.startsWith(fromPrefix) || PREFIX_REDIRECTS.some((o) => dest.startsWith(o.fromPrefix))) {
+        fail(`${label} — to("${probe}") = "${target}" 가 다시 접두 규칙에 걸립니다(루프·2단 홉).`);
+      }
+    }
+    // 빈 꼬리는 규칙이 살지 않아야 한다(/area → 404 가 맞다. /area/ 는 미들웨어가 슬래시를 벗긴다)
+    if (resolvePrefixRedirect(fromPrefix.slice(0, -1)) !== null || resolvePrefixRedirect(`${fromPrefix}%20`) !== null) {
+      fail(`${label} — 꼬리가 비었는데도 규칙이 적용됩니다.`);
+    }
+
+    // (d) 메타데이터
+    if (!reason || !reason.trim()) fail(`${label} — reason 이 비었습니다.`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(since ?? "")) fail(`${label} — since 는 YYYY-MM-DD 형식이어야 합니다(받은 값: ${JSON.stringify(since)}).`);
+    else if (Number.isNaN(Date.parse(since))) fail(`${label} — since "${since}" 는 존재하지 않는 날짜입니다.`);
+    else if (since > today) fail(`${label} — since "${since}" 가 미래입니다(오늘: ${today}).`);
+  }
+  // 정확 일치 표의 from 이 접두에 걸리면 정확 일치가 먼저 이기므로 동작은 하지만, 표가 둘로 갈린다.
+  for (const rule of REDIRECT_RULES) {
+    const hit = PREFIX_REDIRECTS.find((p) => rule.from.startsWith(p.fromPrefix));
+    if (hit) fail(`정확 일치 "${rule.from}" 이 접두 "${hit.fromPrefix}" 안에 있습니다 — 한쪽으로 합치세요.`);
+  }
+  // 배선
+  if (!/resolvePrefixRedirect\(/.test(middlewareSrc)) {
+    fail("middleware.ts 가 resolvePrefixRedirect() 를 쓰지 않습니다 — 접두 표가 실제로 동작하지 않습니다.");
+  }
+}
+
 if (errors.length > 0) {
   console.error(`✗ 리다이렉트 맵 검사 실패 — ${errors.length}건`);
   for (const e of errors) console.error(`  · ${e}`);
@@ -191,6 +281,6 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `✓ 리다이렉트 맵 검사 통과 — 규칙 ${REDIRECT_RULES.length}개 전부 1홉 · 실라우트 타깃 · ` +
+  `✓ 리다이렉트 맵 검사 통과 — 정확 일치 ${REDIRECT_RULES.length}개 · 접두 ${PREFIX_REDIRECTS.length}개 전부 1홉 · 실라우트 타깃 · ` +
     `살아 있는 페이지를 가리지 않음 (정적 라우트 ${staticRoutes.size} · 동적 ${dynamicRoutes.length} 대조)`,
 );

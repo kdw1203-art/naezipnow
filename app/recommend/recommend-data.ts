@@ -25,6 +25,7 @@ import { regionIdForName } from "@/lib/region/catalog";
 import { SEOUL_DISTRICTS } from "@/lib/map/seoul-districts";
 import type { RegionMarketSnapshot } from "@/lib/market/types";
 import { logger } from "@/lib/log";
+import { formatKrwWon } from "@/lib/format/krw";
 
 const MAX_ITEMS = 6;
 const EOK = 100_000_000;
@@ -83,11 +84,9 @@ export const EMPTY_RESULT: RecommendResult = {
 
 const SEOUL_IDS = new Set(SEOUL_DISTRICTS.map((d) => d.id));
 
-/** 원 단위 평균가 → "10.4억" (홈 카드와 동일한 표기) */
+/** 원 단위 평균가 → "10.4억" (홈 카드와 동일한 표기) — [967 · 31] 본체는 lib/format/krw.ts "eok" */
 function formatEok(won: number): string {
-  const eok = won / EOK;
-  const s = eok >= 10 ? eok.toFixed(1) : eok.toFixed(2);
-  return `${s.replace(/\.?0+$/, "")}억`;
+  return formatKrwWon(won, { style: "eok", below: "eok", empty: false });
 }
 
 function deltaOf(changePct: number | undefined): { delta: string; tone: DeltaTone } {

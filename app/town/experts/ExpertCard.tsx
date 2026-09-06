@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ConsultButton } from "./ConsultButton";
 import { Icon } from "@/app/components/Icon";
+import { expertTrustLine } from "@/lib/experts/trust-line";
 
 /* 전문가 목록 카드 (953 개편).
    953 전에는 카드 안에 상세 모달이 하나 더 있었다 — 상세 페이지(/town/experts/[id])가
@@ -51,6 +52,16 @@ export function Stars({ rating, size = 12 }: { rating: number; size?: number }) 
 export function ExpertCard({ e, index }: { e: ExpertCardData; index: number }) {
   const href = e.id ? `/town/experts/${e.id}` : "/town/experts";
   const intro = e.introduction.trim();
+  /* [967 · 26] 이름 아래 신뢰 한 줄 — 카드에 이미 실린 실측(인증·답변 수·응답·후기 수)만.
+     예전엔 이 값들이 맨 아래 지표 줄에 흩어져 있어 "누구인지"와 "믿을 만한지"가
+     카드의 양 끝으로 갈라져 있었다. 위로 올리고, 아래 줄은 평점 별·상담료만 남긴다
+     (같은 숫자를 두 번 적지 않는다). 없는 값은 토막째 빠진다(null 이면 줄도 없다). */
+  const trust = expertTrustLine({
+    verified: e.verified,
+    consultations: e.consultations,
+    responseLabel: e.responseLabel,
+    reviews: e.reviews,
+  });
 
   return (
     <article
@@ -88,6 +99,11 @@ export function ExpertCard({ e, index }: { e: ExpertCardData; index: number }) {
               )
             )}
           </div>
+          {trust && (
+            <p className="mt-0.5 truncate t-caption text-text-2" title={trust}>
+              {trust}
+            </p>
+          )}
           <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 t-sub text-text-2">
             <span className="font-bold">{e.typeLabel}</span>
             {e.title && e.title !== e.typeLabel && <span className="text-text-3">· {e.title}</span>}
@@ -122,21 +138,18 @@ export function ExpertCard({ e, index }: { e: ExpertCardData; index: number }) {
         </div>
       )}
 
-      {/* 지표 — 실측만. 없는 건 지표처럼 보이지 않게 뺀다 */}
+      {/* 지표 — 실측만. 없는 건 지표처럼 보이지 않게 뺀다.
+          [967 · 26] 답변 수·응답 안내·후기 건수는 위 신뢰 한 줄로 올라갔다 — 여기는
+          평점 별(값)과 상담료만. */}
       <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 t-caption text-text-3">
         {e.reviews > 0 ? (
           <span className="inline-flex items-center gap-1">
             <Stars rating={e.rating} />
             <b className="t-num text-ink">{e.rating.toFixed(1)}</b>
-            <span>({e.reviews})</span>
           </span>
         ) : (
           <span>후기 아직 없음</span>
         )}
-        <span>
-          상담 완료 <b className="t-num text-ink">{e.consultations}</b>
-        </span>
-        {e.responseLabel && <span className="text-success">{e.responseLabel}</span>}
         {e.consultFeeLabel !== "—" && <span className="ml-auto">상담료 {e.consultFeeLabel}</span>}
       </div>
 

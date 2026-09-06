@@ -2,6 +2,8 @@
 
 import { ActionButton } from "@/app/components/ui/ActionButton";
 import { Switch } from "@/app/components/ui/Switch";
+import { CharCount } from "@/app/components/ui/CharCount";
+import { useToast } from "@/app/components/toast/ToastProvider";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -21,10 +23,24 @@ import {
   type InspectionChecklistIntent,
 } from "@/lib/inspection/checklist";
 import { checklistHintsFromVoice } from "@/lib/inspection/voice-checklist-keywords";
-import { NOTE_DRAFT_KEY as DRAFT_KEY } from "@/lib/notes/draft-summary";
+import {
+  isDraftNewerThan,
+  noteDraftKey,
+  stableStringify,
+} from "@/lib/notes/draft-summary";
+import {
+  localDateIso,
+  makeCoverPhoto,
+  mergeUploadedPhotos,
+  movePhoto,
+  runWithConcurrency,
+  uploadFailureLabel,
+  uploadProgressLabel,
+  visitDateFromTakenAt,
+} from "@/lib/notes/note-form-utils";
 import { resizeImageFiles } from "@/lib/client/image-resize";
 import { readExifTakenAt } from "@/lib/client/exif-datetime";
-import { useDirtyTracker, useUnsavedGuard } from "@/lib/client/use-unsaved-guard";
+import { useUnsavedGuard } from "@/lib/client/use-unsaved-guard";
 /* [OPT-27] 음성 녹음기는 새 노트에서만 쓰인다 — 폼 첫 로드 번들에서 분리 */
 import nextDynamic from "next/dynamic";
 const VoiceMemoRecorder = nextDynamic(
@@ -36,7 +52,8 @@ const VoiceMemoRecorder = nextDynamic(
    - 작성: POST /api/inspection/notes → /api/inspection/ai(AI 정리) → 상세 이동
    - 수정: PATCH /api/inspection/notes/[id] (소유자 전용 — /notes/[id]/edit)
    - 템플릿: /notes/new?tpl={id} → 서버에서 읽어 props 로 전달, 고려사항 체크리스트 프리셋 주입
-   - #45 임시저장: 작성 모드에서만 localStorage(nz_note_draft) 1초 디바운스 자동 저장 */
+   - #45 임시저장: localStorage 1초 디바운스 자동 저장 — 작성은 nz_note_draft,
+     수정은 nz_note_draft:edit:<id> ([967 · 9·10] noteDraftKey) */
 
 const LEVELS = ["좋음", "보통", "아쉬움"] as const;
 type Level = (typeof LEVELS)[number];
@@ -143,6 +160,32 @@ const TODO_DEFAULTS: TodoItem[] = [
 const LEVEL_SCORE: Record<Level, number> = { 좋음: 5, 보통: 3, 아쉬움: 1 };
 
 const MAX_PHOTOS = 10;
+/* [967 · 6] 동시 업로드 수 — /api/upload 는 1분 10회 제한이라 3이면 10장이 한
+   번에 가도 한도 안이고, 모바일 회선에서 한 장씩 차례로 기다리는 것보다 빠르다. */
+const UPLOAD_CONCURRENCY = 3;
+/* [967 · 8] 본문 상한 — 서버(app/api/inspection/notes/route.ts · lib/inspection/
+   store-db.ts)에 summary/memo 길이 제한이 없어 폼에서 정한 값. 카운터·maxLength 가
+   같은 수를 본다. */
+const MEMO_MAX = 5000;
+/* [967 · 7] 인라인 추가 입력의 상한 — 예전 window.prompt 의 slice 와 같은 수 */
+const TAG_MAX = 20;
+const TODO_MAX = 80;
+
+/* [967 · 1·6] 파일 하나의 업로드 상태 — 진행 줄과 재시도의 단위 */
+type UploadItem = {
+  id: string;
+  name: string;
+  status: "uploading" | "done" | "failed";
+  /** XHR upload.onprogress 가 준 실제 % (lengthComputable 일 때만) */
+  pct?: number;
+  /** 리사이즈된 파일 — 실패분 재시도에 그대로 쓴다 */
+  file: File;
+  /** 미리보기용 object URL — 항목이 빠질 때 revoke */
+  preview: string | null;
+  error?: string;
+  /** 401 이면 로그인 안내로 이어진다 */
+  httpStatus?: number;
+};
 
 export type NoteFormTemplate = {
   id: string;
@@ -203,11 +246,14 @@ export type NoteFormInitialNote = {
   photos: string[];
   isPublic: boolean;
   metadata?: Record<string, unknown> | null;
+  /** [967 · 10] 마지막 서버 저장 시각 — 이보다 나중에 적힌 수정 초안만 복원 제안 */
+  updatedAt?: string | null;
 };
 
-/* ===== #45 임시저장 (localStorage — 작성 모드 전용) ===== */
+/* ===== #45 임시저장 (localStorage — [967 · 10] 작성·수정 모두) ===== */
 
-/* 임시저장 키는 홈 "이어서 보기" 배너와 공유 — 상단 import 의 DRAFT_KEY (고도화 8·21) */
+/* 임시저장 키는 홈 "이어서 보기" 배너와 공유 — noteDraftKey(null) = nz_note_draft
+   (고도화 8·21). 수정 모드는 noteDraftKey(id) 로 노트별 분리 [967 · 9]. */
 
 type NoteDraft = {
   v: 1;
@@ -228,6 +274,8 @@ type NoteDraft = {
   /** 모바일8 — 체크리스트 섹션 접기 상태(그룹 id → 열림). 긴 폼에서 접어 둔
       구성을 복원해 스크롤 소모를 줄인다. */
   openGroups?: Record<string, boolean>;
+  /** [967 · 2] 방문일(YYYY-MM-DD) — 사진 촬영일로 채운 값도 여기 남는다 */
+  visitDate?: string;
 };
 
 function isStringArray(v: unknown): v is string[] {
@@ -302,10 +350,60 @@ function parseDraft(raw: string | null): NoteDraft | null {
       groupChecked: Object.keys(groupChecked).length ? groupChecked : undefined,
       weather: typeof o.weather === "string" ? o.weather : undefined,
       openGroups: Object.keys(openGroups).length ? openGroups : undefined,
+      visitDate:
+        typeof o.visitDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(o.visitDate)
+          ? o.visitDate
+          : undefined,
     };
   } catch {
     return null;
   }
+}
+
+/* [967 · 10] 초안 ↔ 폼 상태 "내용이 같은가" 비교용 정규형. 저장 시각·접기 상태
+   같은 표시용 필드는 뺀다 — 그것만 달라진 초안을 복원하라고 묻는 건 소음이다. */
+type DraftComparable = {
+  checks: Record<string, Level>;
+  visit: Record<string, string>;
+  tags: string[];
+  doneTodos: string[];
+  satisfaction: number;
+  memo: string;
+  loc?: NoteLocation;
+  photos?: string[];
+  isPublic?: boolean;
+  groupChecked?: Record<string, boolean>;
+  weather?: string;
+  visitDate?: string;
+};
+
+function draftComparable(d: DraftComparable): string {
+  return stableStringify({
+    checks: d.checks,
+    visit: d.visit,
+    tags: d.tags,
+    doneTodos: d.doneTodos,
+    satisfaction: d.satisfaction,
+    memo: d.memo,
+    loc: d.loc ?? null,
+    photos: d.photos ?? [],
+    isPublic: d.isPublic ?? false,
+    /* 끄면 false 로 남는 키가 있어 "켜진 것"만 센다 — 켰다 끈 항목은 안 바뀐 것 */
+    groupChecked: Object.entries(d.groupChecked ?? {})
+      .filter(([, on]) => on)
+      .map(([k]) => k)
+      .sort(),
+    weather: d.weather ?? "",
+    visitDate: d.visitDate ?? "",
+  });
+}
+
+/** [967 · 4] "HH:MM" — 저장 바·복구 배너의 시각 표기 */
+function clockLabel(iso: string): string | null {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return null;
+  const d = new Date(t);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 /* ===== 수정 모드 초기값 매핑 ===== */
@@ -434,8 +532,11 @@ export function NoteForm({
   const { showMoment } = useMoment();
   const { handleUpgradeResponse, promptUpgrade } = useUpgradePaywall();
   const { promptSignup } = useSoftSignup();
+  const { showToast } = useToast();
   const isEdit = Boolean(initialNote);
   const editId = initialNote?.id ?? null;
+  /* [967 · 9] 작성은 nz_note_draft, 수정은 노트별 키 */
+  const draftKey = noteDraftKey(editId);
 
   /** welcome 루프면 지도로, 아니면 노트 상세로 */
   const afterSaveHref = (noteId: string, aiFlag: string, quota: boolean) => {
@@ -504,6 +605,17 @@ export function NoteForm({
   const [visit, setVisit] = useState<Record<string, string>>(() =>
     visitFromNote(initialNote),
   );
+  /* [967 · 2] 방문일 — 예전엔 상태도 입력도 없이 저장 시 "오늘"(수정은 원래 값)로
+     굳었다. 어제 다녀온 단지를 오늘 적으면 방문일이 틀렸고 고칠 길이 없었다.
+     기본은 오늘(로컬 달력), 사진 EXIF 촬영일이 있고 손대지 않았으면 그 날짜. */
+  const [visitDate, setVisitDate] = useState<string>(() => {
+    const saved = initialNote?.visitDate?.slice(0, 10);
+    return saved && /^\d{4}-\d{2}-\d{2}$/.test(saved) ? saved : localDateIso();
+  });
+  /* 수정 모드는 저장된 날짜가 곧 사용자의 선택 — EXIF 로 덮지 않는다 */
+  const visitDateTouchedRef = useRef(Boolean(isEdit));
+  const [visitDateFromPhoto, setVisitDateFromPhoto] = useState(false);
+  const todayIso = localDateIso();
   const [tagDefs, setTagDefs] = useState<TagDef[]>(() => tagDefsFromNote(initialNote));
   const [tags, setTags] = useState<string[]>(() =>
     initialNote
@@ -670,6 +782,16 @@ export function NoteForm({
   /* [#134] 사진 EXIF 촬영 시각 — 가장 이른 1개 (방문 시간 배지 재료, 장식 신호) */
   const [photoTakenAt, setPhotoTakenAt] = useState<string | null>(null);
 
+  /* [967 · 2] 촬영일 → 방문일 프리필. 사용자가 날짜를 건드린 뒤에는 덮지 않는다
+     (EXIF 는 힌트지 사실 판정이 아니다). 채웠다는 사실은 화면에 적는다. */
+  useEffect(() => {
+    if (visitDateTouchedRef.current) return;
+    const d = visitDateFromTakenAt(photoTakenAt);
+    if (!d) return;
+    setVisitDate(d);
+    setVisitDateFromPhoto(true);
+  }, [photoTakenAt]);
+
   /* [#133] 음성 메모 URL 목록 (metadata.voiceMemos) */
   const [voiceMemos, setVoiceMemos] = useState<string[]>(
     Array.isArray(initialNote?.metadata?.voiceMemos)
@@ -757,31 +879,51 @@ export function NoteForm({
     });
   };
 
-  const [uploading, setUploading] = useState(false);
+  /* [967 · 1·6] 파일별 업로드 상태. uploading 은 여기서 파생한다 — 별도 불리언을
+     들고 있으면 병렬 업로드에서 "하나 끝났다 = 전부 끝났다"로 어긋난다. */
+  const [uploads, setUploads] = useState<UploadItem[]>([]);
+  const uploading = uploads.some((u) => u.status === "uploading");
+  const uploadSeqRef = useRef(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [savedDraft, setSavedDraft] = useState(false);
+  /* [967 · 4] 마지막 임시저장 시각 — 하단 저장 바의 상태 문구 재료 */
+  const [lastAutosaveAt, setLastAutosaveAt] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [aiRunning, setAiRunning] = useState(false);
   const [needLogin, setNeedLogin] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   /* [966] 새로고침·탭 닫기 가드.
-     작성 모드: 1초 자동 임시저장이 아직 못 따라온 구간(draftPending)에서만 묻는다 —
-       저장본이 있으면 나가도 잃는 게 없다.
-     수정 모드: 자동 저장이 없으니 처음 연 값과 달라졌으면 묻는다(되돌리면 풀린다).
-     저장 요청 중(saving)에는 묻지 않는다 — 노트는 이미 서버로 가고 있다. */
+     [967 · 10] 작성·수정 모두 1초 자동 임시저장이 도니, 아직 못 따라온 구간
+     (draftPending)에서만 묻는다 — 저장본이 있으면 나가도 잃는 게 없다(수정 모드는
+     다시 열 때 복원 배너가 받는다). 저장 요청 중(saving)에는 묻지 않는다 —
+     노트는 이미 서버로 가고 있다. */
   const [draftPending, setDraftPending] = useState(false);
-  const editSnapshot = { checks, visit, tags, doneTodos, satisfaction, memo, loc, photos, isPublic, weather };
-  const [editBaseline] = useState(editSnapshot);
-  const editChanged = useDirtyTracker(editSnapshot, editBaseline);
-  useUnsavedGuard(!saving && (isEdit ? editChanged : draftPending));
+  /* 처음 연 값의 정규형 — 수정 초안이 "노트와 다른가"의 기준 [967 · 10] */
+  const [editBaseline] = useState(() =>
+    draftComparable({
+      checks,
+      visit,
+      tags,
+      doneTodos,
+      satisfaction,
+      memo,
+      loc,
+      photos,
+      isPublic,
+      groupChecked,
+      weather,
+      visitDate,
+    }),
+  );
+  useUnsavedGuard(!saving && draftPending);
 
   const loginHref = `/login?callbackUrl=${encodeURIComponent(
     editId ? `/notes/${editId}/edit` : "/notes/new",
   )}`;
 
-  /* #45 복구 배너용 드래프트 스냅샷 — 작성 모드에서만 */
+  /* #45 복구 배너용 드래프트 스냅샷 — [967 · 10] 수정 모드도(노트별 키) */
   const [pendingDraft, setPendingDraft] = useState<NoteDraft | null>(null);
 
   /* 모바일19 — 오프라인 안내. 지하주차장 등 무신호 현장에서 작성하다 저장이
@@ -803,14 +945,29 @@ export function NoteForm({
   }, []);
   const hydratedRef = useRef(false);
 
+  /* [967 · 10] 열 때 초안 확인.
+     작성: 있으면 그대로 배너(예전과 같다).
+     수정: 노트 마지막 저장(updatedAt)보다 나중에 적혔고 지금 불러온 노트와 내용이
+     다를 때만 배너. 같거나 낡은 초안은 지운다 — 다음에 또 묻지 않게. */
   useEffect(() => {
-    if (isEdit) return;
     try {
-      setPendingDraft(parseDraft(window.localStorage.getItem(DRAFT_KEY)));
+      const d = parseDraft(window.localStorage.getItem(draftKey));
+      if (!d) return;
+      if (!isEdit) {
+        setPendingDraft(d);
+        return;
+      }
+      const worth =
+        isDraftNewerThan(d.savedAt, initialNote?.updatedAt) &&
+        draftComparable(d) !== editBaseline;
+      if (worth) setPendingDraft(d);
+      else window.localStorage.removeItem(draftKey);
     } catch {
       /* 프라이빗 모드 등 접근 불가 — 배너 없이 진행 */
     }
-  }, [isEdit]);
+    // editBaseline 은 마운트 시 고정값 — 초기 1회만 판단하면 된다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit, draftKey]);
 
   const buildDraft = (): NoteDraft => ({
     v: 1,
@@ -827,12 +984,15 @@ export function NoteForm({
     groupChecked,
     weather,
     openGroups,
+    visitDate,
   });
 
   const writeDraft = () => {
     try {
-      window.localStorage.setItem(DRAFT_KEY, JSON.stringify(buildDraft()));
+      const d = buildDraft();
+      window.localStorage.setItem(draftKey, JSON.stringify(d));
       setSavedDraft(true);
+      setLastAutosaveAt(d.savedAt);
       setDraftPending(false);
     } catch {
       /* 저장 불가 환경 — 조용히 무시 */
@@ -841,15 +1001,16 @@ export function NoteForm({
 
   const clearDraft = () => {
     try {
-      window.localStorage.removeItem(DRAFT_KEY);
+      window.localStorage.removeItem(draftKey);
     } catch {
       /* no-op */
     }
   };
 
-  /* 입력 변경 시 1초 디바운스 자동 저장 (첫 렌더·수정 모드 제외) */
+  /* 입력 변경 시 1초 디바운스 자동 저장 (첫 렌더 제외).
+     [967 · 10] 수정 모드도 같은 경로 — 키만 노트별(draftKey). 예전엔 수정 중
+     새로고침 한 번에 고친 내용이 전부 사라졌다. */
   useEffect(() => {
-    if (isEdit) return;
     if (!hydratedRef.current) {
       hydratedRef.current = true;
       return;
@@ -857,11 +1018,12 @@ export function NoteForm({
     setDraftPending(true); /* [966] 입력 → 저장 사이 1초가 가드 구간 */
     const t = setTimeout(() => {
       try {
+        const savedAt = new Date().toISOString();
         window.localStorage.setItem(
-          DRAFT_KEY,
+          draftKey,
           JSON.stringify({
             v: 1,
-            savedAt: new Date().toISOString(),
+            savedAt,
             checks,
             visit,
             tags,
@@ -874,9 +1036,11 @@ export function NoteForm({
             groupChecked,
             weather,
             openGroups,
+            visitDate,
           } satisfies NoteDraft),
         );
         setSavedDraft(true);
+        setLastAutosaveAt(savedAt);
         setDraftPending(false);
       } catch {
         /* no-op */
@@ -884,7 +1048,7 @@ export function NoteForm({
     }, 1000);
     return () => clearTimeout(t);
   }, [
-    isEdit,
+    draftKey,
     checks,
     visit,
     tags,
@@ -897,6 +1061,7 @@ export function NoteForm({
     groupChecked,
     weather,
     openGroups,
+    visitDate,
   ]);
 
   const restoreDraft = () => {
@@ -924,6 +1089,12 @@ export function NoteForm({
       const saved = pendingDraft.openGroups;
       setOpenGroups((prev) => ({ ...prev, ...saved }));
     }
+    /* [967 · 2] 방문일 — 초안에 있으면 사용자가 정한 값으로 본다(EXIF 로 안 덮게) */
+    if (pendingDraft.visitDate) {
+      setVisitDate(pendingDraft.visitDate);
+      visitDateTouchedRef.current = true;
+      setVisitDateFromPhoto(false);
+    }
     setPendingDraft(null);
   };
 
@@ -937,10 +1108,16 @@ export function NoteForm({
     const t = Date.parse(pendingDraft.savedAt);
     if (!Number.isFinite(t)) return null;
     const d = new Date(t);
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mm = String(d.getMinutes()).padStart(2, "0");
-    return `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm} 저장됨`;
+    return `${d.getMonth() + 1}/${d.getDate()} ${clockLabel(pendingDraft.savedAt)} 저장됨`;
   })();
+
+  /* [967 · 4] 하단 저장 바의 임시저장 상태 문구 — 사실만 말한다: 대기 중이면
+     대기 중, 저장했으면 그 시각. 한 번도 안 했으면 자동 저장이 된다는 안내. */
+  const autosaveStatus = draftPending
+    ? "임시저장 대기 중…"
+    : lastAutosaveAt
+      ? `${clockLabel(lastAutosaveAt) ?? ""} 임시저장됨`.trim()
+      : "입력하면 이 기기에 자동 임시저장돼요";
 
   const toggleTag = (label: string) =>
     setTags((prev) =>
@@ -951,39 +1128,165 @@ export function NoteForm({
       prev.includes(text) ? prev.filter((t) => t !== text) : [...prev, text],
     );
 
-  const addCustomTag = () => {
-    const raw = window.prompt("추가할 태그를 입력하세요 (예: 조용한 단지)");
-    const label = raw?.trim().slice(0, 20);
+  /* [967 · 7] window.prompt 대신 인라인 미니 입력 — 966 에서 prompt/confirm 을
+     전부 걷어냈는데 이 두 곳이 남아 있었다(prompt 는 모바일 키보드·IME 와
+     어긋나고 다크 모드도 못 따른다). Enter 추가 · Esc 취소 · 중복은 토스트. */
+  const [tagInputOpen, setTagInputOpen] = useState(false);
+  const [tagInput, setTagInput] = useState("");
+  const [todoInputOpen, setTodoInputOpen] = useState(false);
+  const [todoInput, setTodoInput] = useState("");
+
+  const submitCustomTag = () => {
+    const label = tagInput.trim().slice(0, TAG_MAX);
     if (!label) return;
+    if (tags.includes(label)) {
+      showToast("이미 있어요");
+      return;
+    }
     setTagDefs((prev) =>
       prev.some((d) => d.label === label) ? prev : [...prev, { label, tone: "pos" }],
     );
     setTags((prev) => (prev.includes(label) ? prev : [...prev, label]));
+    setTagInput("");
+    setTagInputOpen(false);
   };
 
-  const addTodo = () => {
-    const raw = window.prompt("추가할 고려사항을 입력하세요");
-    const text = raw?.trim().slice(0, 80);
+  const submitTodo = () => {
+    const text = todoInput.trim().slice(0, TODO_MAX);
     if (!text) return;
-    setTodoItems((prev) =>
-      prev.some((t) => t.text === text) ? prev : [...prev, { text, level: "보통" }],
-    );
+    if (todoItems.some((t) => t.text === text)) {
+      showToast("이미 있어요");
+      return;
+    }
+    setTodoItems((prev) => [...prev, { text, level: "보통" }]);
+    setTodoInput("");
+    setTodoInputOpen(false);
   };
 
-  /* 사진 업로드 — 기존 업로드 인프라(/api/upload) 실연결, 최대 10장 */
+  /* [967 · 1·6] 사진 업로드 — 파일마다 독립 요청(XHR, 진행률), 3개씩 병렬.
+     예전엔 for 루프가 첫 실패에서 return 해 그때까지 올라간 사진의 URL 이
+     setPhotos 에 닿지 못했다 — 서버에는 있는데 노트에는 없는 사진이 생겼다.
+     이제 성공분은 성공한 순간 photos 에 붙고, 실패분만 줄에 남아 재시도한다. */
+  const previewUrlsRef = useRef(new Set<string>());
+  useEffect(() => {
+    const urls = previewUrlsRef.current;
+    return () => {
+      for (const u of urls) URL.revokeObjectURL(u);
+      urls.clear();
+    };
+  }, []);
+
+  const makePreview = (file: File): string | null => {
+    try {
+      const u = URL.createObjectURL(file);
+      previewUrlsRef.current.add(u);
+      return u;
+    } catch {
+      return null;
+    }
+  };
+
+  /* 항목을 목록에서 빼면서 미리보기 URL 도 놓아준다 */
+  const dropUploads = (pred: (u: UploadItem) => boolean) =>
+    setUploads((prev) => {
+      for (const u of prev) {
+        if (pred(u) && u.preview) {
+          URL.revokeObjectURL(u.preview);
+          previewUrlsRef.current.delete(u.preview);
+        }
+      }
+      return prev.filter((u) => !pred(u));
+    });
+
+  const patchUpload = (id: string, patch: Partial<UploadItem>) =>
+    setUploads((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u)));
+
+  /** 한 파일 업로드 — fetch 대신 XHR: upload.onprogress 로 실제 진행률을 받는다.
+      던지지 않고 결과로 말한다(병렬 배치에서 한 장 실패가 나머지를 못 막게). */
+  const uploadOne = (
+    item: UploadItem,
+  ): Promise<{ ok: true; url: string } | { ok: false; status: number; error: string }> =>
+    new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/upload");
+      xhr.upload.onprogress = (e) => {
+        if (!e.lengthComputable) return;
+        patchUpload(item.id, { pct: Math.min(99, Math.round((e.loaded / e.total) * 100)) });
+      };
+      xhr.onload = () => {
+        let json: { url?: string; error?: string } = {};
+        try {
+          json = JSON.parse(xhr.responseText) as { url?: string; error?: string };
+        } catch {
+          /* 본문이 JSON 이 아니면 아래 상태 코드로만 판단 */
+        }
+        if (xhr.status >= 200 && xhr.status < 300 && json.url) {
+          resolve({ ok: true, url: String(json.url) });
+        } else {
+          resolve({
+            ok: false,
+            status: xhr.status,
+            error:
+              json.error ??
+              (xhr.status === 401 ? "로그인이 필요해요." : "사진 업로드에 실패했어요."),
+          });
+        }
+      };
+      xhr.onerror = () =>
+        resolve({ ok: false, status: 0, error: "네트워크 오류로 사진을 올리지 못했어요." });
+      xhr.onabort = () => resolve({ ok: false, status: 0, error: "업로드가 취소됐어요." });
+      const fd = new FormData();
+      fd.append("file", item.file);
+      fd.append("folder", "notes");
+      xhr.send(fd);
+    });
+
+  /** 항목 묶음을 3개씩 올린다 — 신규 선택과 실패분 재시도가 같은 경로 */
+  const runUploads = async (items: UploadItem[]) => {
+    if (items.length === 0) return;
+    setSaveError(null);
+    setNeedLogin(false);
+    let unauthorized = false;
+    await runWithConcurrency(items, UPLOAD_CONCURRENCY, async (item) => {
+      const r = await uploadOne(item);
+      if (r.ok) {
+        /* 성공한 순간 붙인다 — 뒤 파일이 실패해도 이 사진은 이미 노트에 있다 */
+        setPhotos((prev) => mergeUploadedPhotos(prev, [r.url], MAX_PHOTOS));
+        patchUpload(item.id, { status: "done", pct: 100 });
+      } else {
+        if (r.status === 401) unauthorized = true;
+        patchUpload(item.id, { status: "failed", error: r.error, httpStatus: r.status });
+      }
+    });
+    if (unauthorized) setNeedLogin(true);
+    /* 다 성공했으면 진행 줄을 치운다. 실패가 있으면 done 도 같이 남겨
+       "N장 중 M장 실패" 집계가 사실과 맞게 한다. */
+    setUploads((prev) => {
+      if (prev.some((u) => u.status === "failed" || u.status === "uploading")) return prev;
+      for (const u of prev) {
+        if (u.preview) {
+          URL.revokeObjectURL(u.preview);
+          previewUrlsRef.current.delete(u.preview);
+        }
+      }
+      return [];
+    });
+  };
+
   const onPickFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    const remain = MAX_PHOTOS - photos.length;
+    const inFlight = uploads.filter((u) => u.status === "uploading").length;
+    const remain = MAX_PHOTOS - photos.length - inFlight;
     if (remain <= 0) {
       setSaveError(`사진은 최대 ${MAX_PHOTOS}장까지 첨부할 수 있어요.`);
+      if (fileRef.current) fileRef.current.value = "";
       return;
     }
     const picked = Array.from(files).slice(0, remain);
-    setUploading(true);
+    if (fileRef.current) fileRef.current.value = "";
     setSaveError(null);
-    setNeedLogin(false);
     /* [#134] 촬영 시각 — 리사이즈(canvas 재인코딩)가 EXIF 를 지우므로 그 전에
-       원본에서 읽는다. 가장 이른 촬영 시각 하나만 보관(방문 시간 배지 재료). */
+       원본에서 읽는다. 가장 이른 촬영 시각 하나만 보관(방문 시간 배지·방문일 재료). */
     void (async () => {
       try {
         const times = (
@@ -997,38 +1300,94 @@ export function NoteForm({
         /* 장식 신호 — 실패 무시 */
       }
     })();
+    let list: File[];
     try {
       /* 업로드 전 클라 리사이즈(#23) — 폰 원본(4000px·수 MB)을 긴 변 1600px 로
          줄여 올린다. 줄일 수 없으면 원본이 그대로 오므로 업로드는 막히지 않는다. */
-      const list = await resizeImageFiles(picked);
-      const uploaded: string[] = [];
-      for (const f of list) {
-        const fd = new FormData();
-        fd.append("file", f);
-        fd.append("folder", "notes");
-        const res = await fetch("/api/upload", { method: "POST", body: fd });
-        if (res.status === 401) {
-          setNeedLogin(true);
-          return;
-        }
-        const json: { url?: string; error?: string } = await res.json().catch(() => ({}));
-        if (!res.ok || !json.url) {
-          setSaveError(json.error ?? "사진 업로드에 실패했어요.");
-          return;
-        }
-        uploaded.push(String(json.url));
-      }
-      setPhotos((prev) => [...prev, ...uploaded].slice(0, MAX_PHOTOS));
+      list = await resizeImageFiles(picked);
     } catch {
-      setSaveError("네트워크 오류로 사진을 올리지 못했어요.");
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
+      list = picked;
     }
+    const items: UploadItem[] = list.map((file, i) => {
+      uploadSeqRef.current += 1;
+      return {
+        id: `u${uploadSeqRef.current}`,
+        name: picked[i]?.name ?? file.name,
+        status: "uploading",
+        file,
+        preview: makePreview(file),
+      };
+    });
+    /* 이전 배치의 성공분은 치우고 실패분은 남긴다(아직 재시도할 수 있게) */
+    dropUploads((u) => u.status === "done");
+    setUploads((prev) => [...prev, ...items]);
+    await runUploads(items);
+  };
+
+  /* [967 · 1] 실패분만 다시 — 파일은 이미 리사이즈된 것을 들고 있다 */
+  const retryFailedUploads = () => {
+    const failed = uploads.filter((u) => u.status === "failed");
+    if (failed.length === 0) return;
+    const remain = MAX_PHOTOS - photos.length - uploads.filter((u) => u.status === "uploading").length;
+    const retrying = failed.slice(0, Math.max(0, remain));
+    if (retrying.length === 0) {
+      setSaveError(`사진은 최대 ${MAX_PHOTOS}장까지 첨부할 수 있어요.`);
+      return;
+    }
+    const ids = new Set(retrying.map((u) => u.id));
+    setUploads((prev) =>
+      prev.map((u) =>
+        ids.has(u.id) ? { ...u, status: "uploading", pct: undefined, error: undefined } : u,
+      ),
+    );
+    void runUploads(retrying.map((u) => ({ ...u, status: "uploading" as const })));
   };
 
   const removePhoto = (url: string) =>
     setPhotos((prev) => prev.filter((p) => p !== url));
+
+  /* [967 · 5] 순서·대표 — 드래그 없이 버튼만(모바일 스크롤과 충돌하지 않게).
+     대표 = photos[0]: 목록 카드(app/notes/page.tsx coverUrl)가 첫 장을 쓴다. */
+  const shiftPhoto = (index: number, dir: -1 | 1) =>
+    setPhotos((prev) => movePhoto(prev, index, dir));
+  const setCoverPhoto = (index: number) => setPhotos((prev) => makeCoverPhoto(prev, index));
+
+  const uploadDone = uploads.filter((u) => u.status === "done").length;
+  const uploadFailed = uploads.filter((u) => u.status === "failed").length;
+  const uploadProgressText = uploadProgressLabel(uploadDone + uploadFailed, uploads.length);
+  const uploadFailureText = uploading ? null : uploadFailureLabel(uploads.length, uploadFailed);
+
+  /* [967 · 8] 본문 자동 높이 — 내용만큼 자라고(4줄 최소) 40vh 에서 멈춰 안에서
+     스크롤. height 대신 min-height 를 밀어 사용자가 손잡이로 키운 높이는 지킨다. */
+  const memoRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = memoRef.current;
+    if (!el) return;
+    el.style.minHeight = "0px";
+    const cap = Math.round(window.innerHeight * 0.4);
+    el.style.minHeight = `${Math.min(el.scrollHeight, cap)}px`;
+    el.style.maxHeight = `${cap}px`;
+  }, [memo]);
+
+  /* [967 · 4] 하단 고정 저장 바 — 원래 CTA 가 화면에 없을 때만 보인다(두 번 보이지
+     않게). 관찰 대상은 CTA 블록 자체. 처음엔 "보인다"로 시작해 관찰 결과가 오기
+     전 한 프레임 겹쳐 뜨는 걸 막는다. */
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const [ctaInView, setCtaInView] = useState(true);
+  useEffect(() => {
+    const el = ctaRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const e = entries[0];
+        if (e) setCtaInView(e.isIntersecting);
+      },
+      { threshold: 0 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  const showSaveBar = !ctaInView;
 
   const handleSave = async () => {
     if (saving || uploading) return;
@@ -1065,7 +1424,8 @@ export function NoteForm({
         title: `${aptName} 임장 기록`,
         region,
         aptName,
-        visitDate: initialNote?.visitDate ?? new Date().toISOString().slice(0, 10),
+        /* [967 · 2] 폼의 방문일 — 작성·수정 모두 사용자가 정한(또는 촬영일로 채운) 값 */
+        visitDate: /^\d{4}-\d{2}-\d{2}$/.test(visitDate) ? visitDate : localDateIso(),
         transportation: visit["시간대"] ?? null,
         weather: weather.trim() || null,
         summary: memo.trim() || null,
@@ -1151,7 +1511,10 @@ export function NoteForm({
         setSaveError(json.error ?? "저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
         return;
       }
-      if (!editId) clearDraft(); // 정식 저장 완료 — 임시저장본 제거
+      /* 정식 저장 완료 — 임시저장본 제거. [967 · 9] 수정 모드도 노트별 키를 지운다
+         (남겨 두면 다음에 열 때 방금 저장한 내용을 "저장하지 않은 수정"이라 묻는다). */
+      clearDraft();
+      setDraftPending(false);
       /* 저장이 확정된 지점에서 부른다. 바로 아래 AI 호출은 실패해도 저장은
          성공이므로, 그 결과를 기다렸다가 부르면 "저장됐다"는 사실이 AI 성패에
          따라 달라진다 — 사실과 연출을 묶으면 안 된다. */
@@ -1256,7 +1619,10 @@ export function NoteForm({
   const progressPct = Math.round((progressDone / progressItems.length) * 100);
 
   return (
-    <div className="mx-auto flex w-full max-w-[560px] flex-col px-5 pb-10">
+    /* [967 · 4] 저장 바가 떠 있는 동안 아래 여백을 더 준다 — 마지막 입력을 바가 덮지 않게 */
+    <div
+      className={`mx-auto flex w-full max-w-[560px] flex-col px-5 ${showSaveBar ? "pb-28" : "pb-10"}`}
+    >
       {/* 상단 바 */}
       <div className="glass sticky top-3.5 z-40 mt-3.5 flex items-center justify-between rounded-2xl px-4 py-3">
         <Link
@@ -1275,17 +1641,14 @@ export function NoteForm({
             {progressItems.length} 항목 입력
           </div>
         </div>
-        {isEdit ? (
-          <span className="w-[52px]" aria-hidden="true" />
-        ) : (
-          <button
-            type="button"
-            onClick={writeDraft}
-            className="t-body font-bold text-primary"
-          >
-            {savedDraft ? "저장됨 ✓" : "임시저장"}
-          </button>
-        )}
+        {/* [967 · 10] 수정 모드도 임시저장이 도니 버튼을 같이 보인다 */}
+        <button
+          type="button"
+          onClick={writeDraft}
+          className="t-body font-bold text-primary"
+        >
+          {savedDraft ? "저장됨 ✓" : "임시저장"}
+        </button>
       </div>
 
       {(preferAi || fromWelcome) && !isEdit && (
@@ -1326,8 +1689,8 @@ export function NoteForm({
       </div>
 
       <div className="mt-3.5 flex flex-col gap-3">
-        {/* 모바일19 — 오프라인 안내(작성 모드 = 임시저장이 실제로 도는 조건) */}
-        {offline && !isEdit && (
+        {/* 모바일19 — 오프라인 안내. [967 · 10] 수정 모드도 임시저장이 돌아 같이 보인다 */}
+        {offline && (
           <div
             role="status"
             className="rise-in flex items-center gap-2.5 rounded-[14px] border border-warning-border bg-warning-soft px-4 py-3"
@@ -1340,13 +1703,16 @@ export function NoteForm({
             </p>
           </div>
         )}
-        {/* #45 임시저장 복구 배너 */}
+        {/* #45 임시저장 복구 배너 — [967 · 10] 수정 모드는 "저장하지 않은 수정" 문구 */}
         {pendingDraft && (
-          <div className="rise-in flex items-center gap-2.5 rounded-[14px] border border-[rgba(29,79,216,.2)] bg-[rgba(29,79,216,.06)] px-4 py-3">
+          <div
+            role="status"
+            className="rise-in flex items-center gap-2.5 rounded-[14px] border border-[rgba(29,79,216,.2)] bg-[rgba(29,79,216,.06)] px-4 py-3"
+          >
             <Icon name="📝" size={18} className="shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="text-xs font-extrabold text-ink">
-                작성 중이던 노트가 있어요
+                {isEdit ? "저장하지 않은 수정 내용이 있어요" : "작성 중이던 노트가 있어요"}
               </div>
               {draftSavedLabel && (
                 <div className="t-caption text-text-3">{draftSavedLabel}</div>
@@ -1357,14 +1723,14 @@ export function NoteForm({
               onClick={restoreDraft}
               className="shrink-0 rounded-[10px] bg-primary px-3 py-2 t-sub font-bold text-white"
             >
-              이어서 쓰기
+              {isEdit ? "복원" : "이어서 쓰기"}
             </button>
             <button
               type="button"
               onClick={discardDraft}
               className="shrink-0 rounded-[10px] border border-line bg-surface px-3 py-2 t-sub font-bold text-text-2"
             >
-              삭제
+              {isEdit ? "버리기" : "삭제"}
             </button>
           </div>
         )}
@@ -1530,6 +1896,34 @@ export function NoteForm({
               </div>
             </div>
           ))}
+          {/* [967 · 2] 방문일 — 오늘까지만. 촬영일로 채웠으면 그 사실을 적는다 */}
+          <div className="flex items-start gap-2">
+            <label htmlFor="note-visit-date" className="w-14 shrink-0 pt-1.5 text-xs text-text-2">
+              방문일
+            </label>
+            <div className="flex flex-1 flex-col gap-1">
+              <input
+                id="note-visit-date"
+                type="date"
+                value={visitDate}
+                max={todayIso}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  visitDateTouchedRef.current = true;
+                  setVisitDateFromPhoto(false);
+                  /* 빈 값(지우기)은 오늘로 — 방문일 없는 노트는 목록에서 정렬이 깨진다 */
+                  setVisitDate(v && v <= todayIso ? v : todayIso);
+                }}
+                className="w-full min-h-[36px] rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-text-1 outline-none"
+                aria-label="방문일"
+              />
+              {visitDateFromPhoto && (
+                <span role="status" className="t-caption text-text-3">
+                  사진 촬영일로 채웠어요
+                </span>
+              )}
+            </div>
+          </div>
           <div className="flex items-start gap-2">
             <span className="w-14 shrink-0 pt-1.5 text-xs text-text-2">날씨</span>
             <div className="flex flex-1 flex-col gap-1.5">
@@ -1794,12 +2188,59 @@ export function NoteForm({
             })}
             <button
               type="button"
-              onClick={addCustomTag}
+              onClick={() => setTagInputOpen((v) => !v)}
+              aria-expanded={tagInputOpen}
               className="rounded-full bg-bg px-3 py-1.5 text-xs text-text-3"
             >
               ＋ 직접 입력
             </button>
           </div>
+          {/* [967 · 7] 인라인 태그 입력 — Enter 추가 · Esc 닫기 */}
+          {tagInputOpen && (
+            <div className="flex items-center gap-2">
+              <input
+                id="note-tag-input"
+                type="text"
+                autoFocus
+                value={tagInput}
+                maxLength={TAG_MAX}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.nativeEvent.isComposing) return; // 한글 조합 중 Enter 는 무시
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    submitCustomTag();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    setTagInput("");
+                    setTagInputOpen(false);
+                  }
+                }}
+                placeholder="예: 조용한 단지"
+                aria-label="추가할 태그"
+                className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 text-[13px] text-text-1 outline-none placeholder:text-text-3 focus:border-primary"
+              />
+              <button
+                type="button"
+                onClick={submitCustomTag}
+                disabled={!tagInput.trim()}
+                className="btn-soft min-h-[40px] shrink-0 rounded-lg px-3 t-sub font-bold disabled:opacity-60"
+              >
+                추가
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTagInput("");
+                  setTagInputOpen(false);
+                }}
+                aria-label="태그 입력 닫기"
+                className="tap grid h-7 w-7 shrink-0 place-items-center rounded-full text-text-3"
+              >
+                <Icon name="x" size={14} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 고려사항 — 추가 확인 항목 (중요/보통) */}
@@ -1847,13 +2288,61 @@ export function NoteForm({
               </button>
             );
           })}
-          <button
-            type="button"
-            onClick={addTodo}
-            className="flex items-center gap-2 rounded-xl border-[1.5px] border-dashed border-line-strong px-3 py-[11px] t-body text-text-3"
-          >
-            ＋ 고려사항 추가
-          </button>
+          {/* [967 · 7] 인라인 고려사항 입력 — Enter 추가 · Esc 닫기 */}
+          {todoInputOpen ? (
+            <div className="flex items-center gap-2">
+              <input
+                id="note-todo-input"
+                type="text"
+                autoFocus
+                value={todoInput}
+                maxLength={TODO_MAX}
+                onChange={(e) => setTodoInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.nativeEvent.isComposing) return;
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    submitTodo();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    setTodoInput("");
+                    setTodoInputOpen(false);
+                  }
+                }}
+                placeholder="예: 저녁 시간대 주차 상황 확인"
+                aria-label="추가할 고려사항"
+                className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 text-[13px] text-text-1 outline-none placeholder:text-text-3 focus:border-primary"
+              />
+              <button
+                type="button"
+                onClick={submitTodo}
+                disabled={!todoInput.trim()}
+                className="btn-soft min-h-[40px] shrink-0 rounded-lg px-3 t-sub font-bold disabled:opacity-60"
+              >
+                추가
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTodoInput("");
+                  setTodoInputOpen(false);
+                }}
+                aria-label="고려사항 입력 닫기"
+                className="tap grid h-7 w-7 shrink-0 place-items-center rounded-full text-text-3"
+              >
+                <Icon name="x" size={14} />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setTodoInputOpen(true)}
+              aria-expanded={false}
+              className="flex items-center gap-2 rounded-xl border-[1.5px] border-dashed border-line-strong px-3 py-[11px] t-body text-text-3"
+            >
+              ＋ 고려사항 추가
+            </button>
+          )}
         </div>
 
           </>
@@ -1867,20 +2356,26 @@ export function NoteForm({
               현장에서 본 그대로
             </span>
           </div>
+          {/* [967 · 8] 자동 높이(4줄~40vh) · 세로 손잡이 · 글자 수(maxLength 와 같은 상한) */}
           <textarea
+            ref={memoRef}
             value={memo}
-            onChange={(e) => setMemo(e.target.value)}
+            onChange={(e) => setMemo(e.target.value.slice(0, MEMO_MAX))}
             onBlur={() => {
               const hints = checklistHintsFromVoice(memo).filter(
                 (h) => !groupChecked[h.id],
               );
               setMemoHints(hints);
             }}
-            rows={3}
-            className="min-h-16 w-full resize-none rounded-xl bg-bg p-3.5 text-[13px] leading-[1.55] text-text-1 outline-none placeholder:text-text-3"
+            rows={4}
+            maxLength={MEMO_MAX}
+            className="w-full resize-y overflow-y-auto rounded-xl bg-bg p-3.5 text-[13px] leading-[1.55] text-text-1 outline-none placeholder:text-text-3"
             placeholder="예: 남향이라 오후 채광 좋음. 단지 뒤 도로 소음 약간 있음"
             aria-label="메모"
           />
+          <div className="-mt-1.5 flex justify-end">
+            <CharCount value={memo} max={MEMO_MAX} />
+          </div>
 
           {/* 사진 업로드 — /api/upload 실연결 (최대 10장) */}
           <input
@@ -1892,26 +2387,160 @@ export function NoteForm({
             aria-label="현장 사진 선택"
             onChange={(e) => onPickFiles(e.target.files)}
           />
+          {/* [967 · 5] 사진 줄 — ◀ ▶ 로 순서, "대표" 로 맨 앞(= 목록 커버). 버튼만
+              쓴다: 가로 스크롤 줄에서 드래그는 스크롤과 싸운다. 보이는 버튼은 28px,
+              .tap 이 44px 로 넓힌다. */}
           {photos.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto">
-              {photos.map((p) => (
-                <div key={p} className="relative shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img loading="lazy" decoding="async"
-                    src={p}
-                    alt="현장 사진"
-                    className="h-[62px] w-[84px] rounded-[10px] object-cover"
-                  />
-                  <button
-                    type="button"
-                    aria-label="사진 삭제"
-                    onClick={() => removePhoto(p)}
-                    className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-brand-navy t-caption text-surface"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
+            <ul className="note-photo-strip flex gap-3 overflow-x-auto pb-1" aria-label="첨부한 사진">
+              {photos.map((p, i) => {
+                const isCover = i === 0;
+                const isLast = i === photos.length - 1;
+                return (
+                  <li key={p} className="w-[132px] shrink-0">
+                    <div className="relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        loading="lazy"
+                        decoding="async"
+                        src={p}
+                        alt={isCover ? `대표 사진 (${i + 1}번째)` : `현장 사진 ${i + 1}번째`}
+                        className="h-[88px] w-[132px] rounded-[10px] object-cover"
+                      />
+                      {isCover && (
+                        <span className="pointer-events-none absolute left-1.5 top-1.5 rounded-md bg-brand-navy px-1.5 py-0.5 t-caption font-bold text-on-dark">
+                          대표
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        aria-label={`${i + 1}번째 사진 삭제`}
+                        onClick={() => removePhoto(p)}
+                        className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full bg-brand-navy/85 text-on-dark after:absolute after:-inset-2 after:content-['']"
+                      >
+                        <Icon name="x" size={13} />
+                      </button>
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between">
+                      <button
+                        type="button"
+                        aria-label="앞으로"
+                        disabled={isCover}
+                        onClick={() => shiftPhoto(i, -1)}
+                        className="tap grid h-7 w-7 place-items-center rounded-lg border border-line bg-surface text-[13px] text-text-2 disabled:opacity-40"
+                      >
+                        ◀
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={isCover ? "대표 사진이에요" : "대표 사진으로"}
+                        aria-pressed={isCover}
+                        disabled={isCover}
+                        onClick={() => setCoverPhoto(i)}
+                        className={`tap h-7 rounded-lg px-2 t-caption font-bold ${
+                          isCover
+                            ? "bg-primary text-white"
+                            : "border border-line bg-surface text-text-2"
+                        }`}
+                      >
+                        대표
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="뒤로"
+                        disabled={isLast}
+                        onClick={() => shiftPhoto(i, 1)}
+                        className="tap grid h-7 w-7 place-items-center rounded-lg border border-line bg-surface text-[13px] text-text-2 disabled:opacity-40"
+                      >
+                        ▶
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {/* [967 · 1·6] 업로드 진행 줄 — 파일별 done/failed, XHR 진행률이 오면 % */}
+          {uploads.length > 0 && (
+            <div className="flex flex-col gap-2 rounded-xl border border-line bg-bg/60 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                {/* 라이브 영역은 요약 줄만 — 파일별 % 까지 읽어 주면 소음이 된다 */}
+                <span role="status" className="t-sub font-bold text-text-1">
+                  {uploadProgressText ?? uploadFailureText ?? "업로드 완료"}
+                </span>
+                {uploadFailed > 0 && !uploading && (
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={retryFailedUploads}
+                      className="btn-soft min-h-[36px] rounded-lg px-3 t-sub font-bold"
+                    >
+                      다시 시도
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => dropUploads((u) => u.status !== "uploading")}
+                      aria-label="실패한 사진 목록 닫기"
+                      className="tap grid h-7 w-7 place-items-center rounded-full text-text-3"
+                    >
+                      <Icon name="x" size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+              <ul className="flex gap-2 overflow-x-auto" aria-label="업로드 중인 사진">
+                {uploads.map((u) => (
+                  <li key={u.id} className="relative shrink-0" title={u.error ?? u.name}>
+                    {u.preview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={u.preview}
+                        alt={u.name}
+                        className={`h-12 w-16 rounded-lg object-cover ${
+                          u.status === "failed" ? "opacity-50 grayscale" : ""
+                        }`}
+                      />
+                    ) : (
+                      <span className="grid h-12 w-16 place-items-center rounded-lg bg-bg text-text-3">
+                        <Icon name="camera" size={16} />
+                      </span>
+                    )}
+                    {u.status === "uploading" && (
+                      <span className="absolute inset-0 grid place-items-center rounded-lg bg-brand-navy/45 t-caption font-bold text-on-dark">
+                        {typeof u.pct === "number" ? (
+                          `${u.pct}%`
+                        ) : (
+                          <span className="njn-ring" aria-hidden="true" />
+                        )}
+                      </span>
+                    )}
+                    {u.status === "done" && (
+                      <span className="absolute -right-1 -top-1 grid h-[18px] w-[18px] place-items-center rounded-full bg-success text-on-dark">
+                        <Icon name="check" size={11} />
+                      </span>
+                    )}
+                    {u.status === "failed" && (
+                      <span className="absolute inset-x-0 bottom-0 rounded-b-lg bg-danger px-1 text-center t-caption font-bold text-white">
+                        실패
+                      </span>
+                    )}
+                    <span className="sr-only">
+                      {u.name} —{" "}
+                      {u.status === "uploading"
+                        ? "업로드 중"
+                        : u.status === "done"
+                          ? "완료"
+                          : `실패${u.error ? `: ${u.error}` : ""}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {uploadFailed > 0 && !uploading && (
+                <p className="t-caption text-text-3">
+                  {uploads.find((u) => u.status === "failed")?.error ?? "사진 업로드에 실패했어요."}
+                  {" "}성공한 사진은 그대로 남아 있어요.
+                </p>
+              )}
             </div>
           )}
           <button
@@ -1973,8 +2602,8 @@ export function NoteForm({
         )}
       </div>
 
-      {/* 하단 CTA */}
-      <div className="mt-4 flex flex-col gap-2">
+      {/* 하단 CTA — [967 · 4] 이 블록이 화면에 보이면 고정 저장 바는 숨는다 */}
+      <div ref={ctaRef} className="mt-4 flex flex-col gap-2">
         {needLogin && (
           <div className="rounded-[14px] border border-[rgba(29,79,216,.2)] bg-[rgba(29,79,216,.08)] px-4 py-3 text-center t-body text-primary">
             저장하려면 로그인이 필요해요 — 작성한 내용은 유지돼요.{" "}
@@ -2005,6 +2634,41 @@ export function NoteForm({
           저장할 때만 로그인 · 체크 항목은 다음 임장에도 유지
         </div>
       </div>
+
+      {/* [967 · 4] 하단 고정 저장 바 — 긴 폼의 중간에서도 저장·상태가 손에 닿게.
+          탭바 위(--nz-tabbar-offset), 인쇄 제외, 원래 CTA 가 보이면 숨김. 같은
+          handleSave 라 동작이 두 갈래가 아니다. */}
+      {showSaveBar && (
+        <div
+          data-noprint
+          role="region"
+          aria-label="저장"
+          className="note-savebar fixed inset-x-0 z-30 flex justify-center px-3"
+        >
+          <div className="glass flex w-full max-w-[560px] items-center gap-3 rounded-2xl px-3.5 py-2.5 shadow-[0_12px_32px_rgba(16,28,54,.16)]">
+            <div className="min-w-0 flex-1">
+              <div role="status" className="truncate t-caption text-text-3">
+                {autosaveStatus}
+              </div>
+              <div className="truncate t-sub font-bold text-text-1">
+                {isPublic ? "공개 노트" : "비공개 노트"}
+                {uploading ? " · 사진 올리는 중" : ""}
+              </div>
+            </div>
+            <ActionButton
+              state={saving || uploading || aiRunning ? "busy" : saveError ? "error" : "idle"}
+              onClick={handleSave}
+              busyLabel={aiRunning ? "AI 정리 중" : uploading ? "사진 올리는 중" : "저장 중"}
+              errorLabel="다시 시도"
+              /* 원래 CTA(아래)가 이미 상태를 읽어 준다 — 같은 변화를 두 번 알리지 않는다 */
+              aria-live="off"
+              className="btn-cta min-h-[44px] shrink-0 rounded-xl px-4 t-body"
+            >
+              {isEdit ? "수정 완료" : "기록 완료"}
+            </ActionButton>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

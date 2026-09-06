@@ -119,3 +119,21 @@ Security Advisor 재실행(대시보드 → Advisors → Security) 또는 MCP `g
 - `plan_expires_at`·`is_banned` 를 읽는 시점에 적용(`lib/auth/profile-rules.ts`, 단위검증).
 - Auth 사용자 조회의 1,000명 상한(listUsers 5페이지) 제거 — `app_users.supabase_user_id`
   + `public.auth_user_id_by_email()`(service_role 전용).
+
+---
+
+## 967 (2026-09-06) — security.txt 게시
+
+- **`/.well-known/security.txt` + `/security.txt`(구 위치 사본)** 를 RFC 9116 형식으로
+  게시했다(`public/`). 7일 404 로그에 `/security.txt` 8회 — 보안 스캐너·연구자가 제보
+  창구를 찾다 빈손으로 돌아가고 있었다. `Contact: mailto:nuguzip@naver.com`(사이트가
+  이미 공개한 고객 지원 주소 — lib/brand/business-info.ts), `Expires: 2027-09-06`,
+  `Preferred-Languages: ko, en`, `Canonical` 은 정식 위치.
+- **`Policy:` 는 일부러 비워 뒀다** — RFC 의 Policy 는 취약점 공개 정책 문서 링크인데,
+  그런 문서가 아직 없다. `/safety` 는 전세 보증금 자가진단 화면이라 거기로 걸면 거짓
+  안내가 된다. 정책 문서를 쓰면 그때 한 줄 추가한다.
+- **Expires 갱신 의무**: 2027-09-06 이전에 두 파일의 `Expires` 를 늘려야 한다. 단위테스트
+  `tests/unit/seo-967.test.ts` 가 만료 뒤에는 실패해 잊지 않게 한다.
+- 미들웨어 매처에서 `security.txt`·`app-ads.txt` 를 제외했고(정적 파일이 문서로 오인돼
+  `no-store` 가 덮이던 문제), `next.config.ts` headers 로 `text/plain; charset=utf-8` 과
+  하루 캐시를 명시했다.

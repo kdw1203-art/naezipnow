@@ -7,6 +7,7 @@ import {
   PRICE_BANDS,
   type BandKind,
 } from "@/lib/market/bands";
+import { findByRegionNameCandidates } from "@/lib/market/region-name-candidates";
 
 /**
  * A5 — 지역 × 구간(면적대·가격대) 실거래 집계 로더 (서버 전용).
@@ -416,29 +417,20 @@ export async function findTxRegionBySlug(slug: string): Promise<TxRegionSummary 
  * 두 테이블의 지역 표기가 다르다:
  *   market_region_price : "강남구" · "고양시 덕양구"
  *   market_transactions : "서울 강남구" · "고양 덕양구"
- * lib/market/store.ts 의 transactionNameCandidates 와 같은 규칙이다. 그 함수는
- * 모듈 내부용(export 안 됨)이라 여기서 같은 변환을 다시 쓰되, 결과를 **실제
- * 존재하는 지역 목록과 대조**해서만 링크를 만든다. 추측한 이름으로 링크를 걸면
- * 404 로 이어지는 내부 링크가 생긴다.
+ * [967 · 28b] 후보 이름 규칙은 lib/market/region-name-candidates.ts 로 뽑아냈다 —
+ * 사이트맵(loadRegionEntries)이 같은 대조로 lastmod 를 구해야 해서 사본이 셋이 될 뻔했다.
+ * 결과를 **실제 존재하는 지역 목록과 대조**해서만 링크를 만드는 원칙은 그대로다.
+ * 추측한 이름으로 링크를 걸면 404 로 이어지는 내부 링크가 생긴다.
  */
+export { marketRegionNameCandidates } from "@/lib/market/region-name-candidates";
+
 export async function findTxRegionForMarketRegion(
   regionId: string,
   regionName: string,
 ): Promise<TxRegionSummary | null> {
-  const name = regionName.trim();
-  if (!name) return null;
-  const candidates = new Set<string>([name]);
-  if (name.includes(" ")) {
-    candidates.add(name.replace("시 ", " "));
-  } else if (name.endsWith("구")) {
-    candidates.add(regionId.startsWith("incheon-") ? `인천 ${name}` : `서울 ${name}`);
-  }
+  if (!regionName.trim()) return null;
   const regions = await listTxRegions();
-  for (const c of candidates) {
-    const hit = regions.find((r) => r.name === c);
-    if (hit) return hit;
-  }
-  return null;
+  return findByRegionNameCandidates(regions, regionId, regionName);
 }
 
 /** 특정 셀 하나 */

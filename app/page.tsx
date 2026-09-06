@@ -12,7 +12,7 @@ import { Footer } from "./components/Footer";
 import { HomeTicker, type TickerItem } from "./components/home/HomeTicker";
 import { HomeHeroSearch } from "./components/home/HomeHeroSearch";
 import { HomeEngagementCard } from "./components/home/HomeEngagementCard";
-import { HomeWatchlistBrief } from "./components/HomeWatchlistBrief";
+import { HomeMyRail } from "./components/home/HomeMyRail";
 import { BrandSloganBand } from "./components/BrandSloganBand";
 import type { KpiRegion, KpiTemp } from "./components/home/HomeKpiRow";
 import { HomeTodayLine } from "./components/home/HomeTodayLine";
@@ -402,6 +402,11 @@ export default async function Home() {
             </div>
           </div>
 
+          {/* [967 · 27] 내 관심 레일 — 로그인 사용자만, 클라이언트 섬. 서버 HTML(공유
+              캐시)에는 없어 비로그인 히어로·티커 위치가 그대로다. 관심단지 변동 카드는
+              예전에 레벨 KPI 아래(L434 부근)에 홀로 있었다 — 최근 본 단지와 묶어 올린다. */}
+          <HomeMyRail />
+
           {/* #408 시세 티커 — 소유자 캡처 지시(2026-08-17): 헤더 밑이 아니라
               검색 아래·상황판 위로. 검색이 첫인상, 숫자 밴드가 상황판의 머리가 된다. */}
           {tickerItems.length > 0 && (
@@ -430,8 +435,7 @@ export default async function Home() {
           <HomeEngagementCard />
           <HomeLevelKpi />
 
-          {/* [OPT-47] 내 워치 단지 최근 거래 브리핑 — 같은 원칙(클라이언트 섬·ISR 유지) */}
-          <HomeWatchlistBrief />
+          {/* [OPT-47] 내 워치 단지 최근 거래 브리핑은 [967 · 27] 위 "내 관심" 레일로 올라갔다 */}
 
           <Link
             href={HOME_CTA_NOTE.href}
@@ -662,6 +666,10 @@ export default async function Home() {
               }
             />
           </div>
+
+          {/* [967 · 27] 내 관심 레일(데스크톱) — 모바일과 같은 클라이언트 섬. 관심단지
+              변동 카드는 데스크톱 홈에 아예 없었다(모바일 전용이었다). */}
+          <HomeMyRail className="mb-4" />
 
           {/* [963] 슬로건 띠 ↔ 시세 티커 자리 맞바꿈 (소유자 지시 2026-09-04).
               검색 바로 아래는 브랜드의 한 줄(한지·세리프)이고, 숫자 밴드는 그 다음에

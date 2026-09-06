@@ -18,6 +18,7 @@ import { getNote } from "@/lib/inspection/store-db";
 import { resolveComplexHref } from "@/lib/newui/complex-link";
 import { getOnboardingPersonalization } from "@/lib/onboarding/personalization";
 import { saveLastGood, loadLastGood } from "@/lib/cache/last-good";
+import { formatKrwManwon } from "@/lib/format/krw";
 
 /* auth·searchParams 때문에 요청마다 렌더. 지역 시세 마커는
    lib/map/region-market.ts 의 unstable_cache(10분)로 DB 부하를 줄인다. */
@@ -32,11 +33,9 @@ export const metadata = {
   alternates: seoAlternates("/map"),
 };
 
-/** 만원 단위 → "8.4억" / "8,200만" 라벨 */
+/** 만원 단위 → "8.4억" / "8,200만" 라벨 — [967 · 31] lib/format/krw.ts "eok1"(단지 허브와 같은 얼굴) */
 function formatManwon(manwon: number): string {
-  if (!Number.isFinite(manwon) || manwon <= 0) return "—";
-  if (manwon >= 10_000) return `${(manwon / 10_000).toFixed(1).replace(/\.0$/, "")}억`;
-  return `${Math.round(manwon).toLocaleString("ko-KR")}만`;
+  return formatKrwManwon(manwon, { style: "eok1" });
 }
 
 function toTrades(tx: ComplexTransactionRow[]): TradeItem[] {

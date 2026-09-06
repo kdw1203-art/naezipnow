@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import { formatKrwManwon } from "@/lib/format/krw";
 
 /* 단지 실거래 가격 추이 차트 (사실 우선 — market_transactions 실거래만, 해제분 제외).
    외부 차트 라이브러리 없이 인라인 SVG로 렌더. 좌→우 = 과거→최신. */
@@ -14,10 +15,9 @@ export type PricePoint = {
   dealCount: number;
 };
 
+/** [967 · 31] 만원 → "8.4억"/"9,800만"/"—" — 허브 표(lib/complex/hub-trades formatManwon)와 같은 "eok1" */
 function fmtEok(manwon: number): string {
-  if (!Number.isFinite(manwon) || manwon <= 0) return "—";
-  if (manwon >= 10_000) return `${(manwon / 10_000).toFixed(1).replace(/\.0$/, "")}억`;
-  return `${Math.round(manwon).toLocaleString("ko-KR")}만`;
+  return formatKrwManwon(manwon, { style: "eok1" });
 }
 
 function ymLabel(ym: string): string {
@@ -108,8 +108,10 @@ export function PriceTrendChart({ points }: { points: PricePoint[] }) {
         <line x1={padL} y1={padT + innerH} x2={W - padR} y2={padT + innerH} stroke="#eef1f6" strokeWidth="1" />
         <path d={areaPath} fill={`url(#${gradId})`} />
         <path d={linePath} fill="none" stroke="#1d4fd8" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        {/* [967 · 18] key = 월(yyyymm) — 점은 월별 집계라 유일하다. 순번 키는 앞 달이
+            빠질 때 점들이 통째로 한 칸씩 어긋난 채 재사용된다. */}
         {coords.map((c, i) => (
-          <circle key={i} cx={c.x} cy={c.y} r={i === coords.length - 1 ? 3.5 : 2} fill="#1d4fd8" />
+          <circle key={c.p.ym} cx={c.x} cy={c.y} r={i === coords.length - 1 ? 3.5 : 2} fill="#1d4fd8" />
         ))}
         {/* 최신 포인트 강조 링 */}
         <circle cx={lastC.x} cy={lastC.y} r="6" fill="none" stroke="rgba(29,79,216,0.25)" strokeWidth="2" />

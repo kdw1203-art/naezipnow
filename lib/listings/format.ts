@@ -7,14 +7,13 @@
  * 생성기·필터 모듈은 삭제했다. 자세한 사유는 커밋 메시지 참고.
  */
 
-/** 가격(원)을 억/만 라벨로 — 예: 12.5억, 8,500만 */
+import { formatKrwWon } from "@/lib/format/krw";
+
+/** 가격(원)을 억/만 라벨로 — 예: 12.5억, 8.0억, 8,500만
+ *  [967 · 31] 본체는 lib/format/krw.ts "listing" 스타일(10억 미만은 소수 한 자리 고정 —
+ *  실거래 요약의 "short" 와 달리 "8.0억" 을 "8억" 으로 줄이지 않는다. 매물 화면의 기존 얼굴) */
 export function formatPriceKrw(won: number): string {
-  if (!Number.isFinite(won) || won <= 0) return "—";
-  if (won >= 100_000_000) {
-    const eok = won / 100_000_000;
-    return `${eok >= 10 ? Math.round(eok).toLocaleString("ko-KR") : eok.toFixed(1)}억`;
-  }
-  return `${Math.round(won / 10_000).toLocaleString("ko-KR")}만`;
+  return formatKrwWon(won, { style: "listing" });
 }
 
 /** 월세 표기 — 보증금/월 (예: 5,000만/85만) */

@@ -25,6 +25,7 @@ import {
   SEOUL_DISTRICTS,
   METRO_EXPLORE_DISTRICTS,
 } from "@/lib/map/seoul-districts";
+import { formatKrwWon } from "@/lib/format/krw";
 
 /* ---------- 공용 타입 ---------- */
 
@@ -44,9 +45,9 @@ export type ToolTraceEntry = {
 
 const M2_PER_PYEONG = 3.305785;
 
+/** [967 · 31] 도구 응답용 "8.45억" — 본체는 lib/format/krw.ts "eok" 스타일(방어 없음, 기존 그대로) */
 function eok(krw: number): string {
-  const e = krw / 100_000_000;
-  return `${(e >= 10 ? e.toFixed(1) : e.toFixed(2)).replace(/\.?0+$/, "")}억`;
+  return formatKrwWon(krw, { style: "eok", below: "eok", empty: false });
 }
 
 /* ---------- 도구 스키마 (모델에게 주는 계약) ---------- */

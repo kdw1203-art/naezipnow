@@ -13,6 +13,7 @@ import {
   type Inquiry,
   type InquiryStatus,
 } from "@/lib/listings/inquiries";
+import { relativeTimeLabel } from "@/lib/format/relative-time";
 
 /* ============================================================
    받은 문의 — /my/leads (로그인 + 공인중개사 인증 필수)
@@ -33,17 +34,9 @@ const STATUS_META: Record<InquiryStatus, { label: string; cls: string }> = {
   archived: { label: "보관", cls: "bg-[rgba(0,0,0,.05)] text-text-3" },
 };
 
-/** ISO → "방금 전 / N분 전 / N시간 전 / N일 전 / YYYY.MM.DD" */
+/** ISO → "방금 전 / N분 전 / N시간 전 / N일 전 / YYYY.MM.DD" — [967 · 32] 본체는 lib/format/relative-time.ts 기본값 */
 function timeAgo(iso: string): string {
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return "";
-  const diff = Date.now() - t;
-  if (diff < 60_000) return "방금 전";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}분 전`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}시간 전`;
-  if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)}일 전`;
-  const d = new Date(t);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  return relativeTimeLabel(iso);
 }
 
 export default async function MyLeadsPage() {

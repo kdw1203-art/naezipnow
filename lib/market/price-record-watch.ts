@@ -3,6 +3,7 @@ import "server-only";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { regionIdForName } from "@/lib/region/catalog";
 import { logger } from "@/lib/log";
+import { formatKrwWon } from "@/lib/format/krw";
 
 /* [#81] 신고가 자동 소식 — 매일 들어오는 실거래에서 "3년 최고가를 3%+ 경신한
  * 당월·전월 계약"을 골라 하루 1건의 자동 글로 발행한다.
@@ -32,9 +33,9 @@ export type PriceRecordResult = {
   postId?: string;
 };
 
+/** [967 · 31] "8.40억" — 뒤 0 을 지우지 않는 신고가 알림 얼굴. 본체는 lib/format/krw.ts */
 function krwEok(v: number): string {
-  const eok = v / 100_000_000;
-  return eok >= 10 ? `${eok.toFixed(1)}억` : `${eok.toFixed(2)}억`;
+  return formatKrwWon(v, { style: "eok", below: "eok", empty: false, trimZeros: false });
 }
 
 function pyeong(area: number): string {

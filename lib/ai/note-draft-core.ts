@@ -1,4 +1,5 @@
 import type { LiveToolContext } from "@/lib/ai/live-context";
+import { formatKrwWon } from "@/lib/format/krw";
 
 /* ============================================================
    [944 · AI 대개편] 임장노트 AI 초안 — "쓰기 전에 절반을 채워 준다".
@@ -47,10 +48,9 @@ export type NoteDraft = {
   model: string | null;
 };
 
-const fmtManwon = (krw: number): string => {
-  const eok = krw / 100_000_000;
-  return eok >= 1 ? `${eok.toFixed(1).replace(/\.0$/, "")}억` : `${Math.round(krw / 10_000).toLocaleString("ko-KR")}만원`;
-};
+/* [967 · 31] "8.4억" / "9,800만원" — 본체는 lib/format/krw.ts "eok1" 스타일(초안 본문은 만원 단위) */
+const fmtManwon = (krw: number): string =>
+  formatKrwWon(krw, { style: "eok1", manUnit: "만원", empty: false });
 const ym = (v: string | null | undefined): string =>
   v && /^\d{6}/.test(v) ? `${v.slice(0, 4)}.${v.slice(4, 6)}` : (v ?? "");
 

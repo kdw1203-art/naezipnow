@@ -4,19 +4,12 @@ import {
   type ComplexSummary,
 } from "@/lib/market/complex-transactions";
 import { complexHrefFromNames } from "@/lib/seo/complex-slug";
+import { formatKrwShort } from "@/lib/market/format";
 
 /* 단지별 실거래 요약 테이블 — /region/[id] · /complex/browse 공용 (서버 컴포넌트).
    국토부 실거래가 기반, 매물 호가 아님. */
 
-/** 원(KRW) → "28.6억" / "9,800만" */
-function formatKrwShort(krw: number | null | undefined): string {
-  if (krw === null || krw === undefined || !Number.isFinite(krw) || krw <= 0) return "—";
-  if (krw >= 1e8) {
-    const eok = krw / 1e8;
-    return `${(eok >= 100 ? Math.round(eok) : Math.round(eok * 10) / 10).toLocaleString("ko-KR")}억`;
-  }
-  return `${Math.round(krw / 1e4).toLocaleString("ko-KR")}만`;
-}
+/* [967 · 31] 여기 있던 formatKrwShort 사본은 lib/market/format 의 공통 함수로 대체 — 출력 동일 */
 
 /** "202607" → "26.07" */
 function shortYm(ym: string): string {

@@ -2,37 +2,28 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PageShell } from "../components/PageShell";
 import { ExampleBadge } from "../components/ExampleBadge";
 import { EmptyState } from "@/app/components/ui/EmptyState";
+import { Segmented } from "@/app/components/ui/Segmented";
 import { CoverImage } from "@/app/components/CoverImage";
 import { Icon } from "@/app/components/Icon";
 import { useScrollRestore, useScrollRestoreKey } from "@/lib/client/use-scroll-restore";
+import type { FeedNote, TagTone } from "@/lib/notes/feed-note";
 
 /* 공개 임장노트 — 인스타그램형(스토리 줄 + 3열 그리드 ⇄ 피드 전환) */
 
-export type TagTone = "pos" | "neg";
+/* [967 · 19] 카드 타입은 lib/notes/feed-note 로 올렸다(서버 빌더와 한 곳) — 기존
+   import 경로(./notes-feed-client 의 FeedNote)는 재수출로 그대로 산다. */
+export type { FeedNote, TagTone };
 
-export type FeedNote = {
-  id: string;
-  author: string;
-  meta: string;
-  score: number; // 0~100
-  scoreTone: "primary" | "muted";
-  title: string;
-  excerpt: string;
-  tags: { label: string; tone: TagTone }[];
-  footer: string[];
-  /** 서버에서 사용자의 지역 알림 구독과 대조해 채운다 (전에는 전부 false 고정이었다) */
-  interested: boolean;
-  region?: string;
-  /** 커버 이미지(첫 사진). 없으면 그라디언트 타일 폴백 */
-  coverUrl?: string | null;
-  /** 단지 허브(/complex/[id]) 링크 — 실 id를 못 찾으면 undefined → 링크 숨김 */
-  complexHref?: string;
-  /** 더미 1개 원칙: 실데이터 0건일 때만 노출되는 테스트용 샘플 표시 */
-  isExample?: boolean;
-};
+/** [967 · 20] 공개/내 노트 세그먼트 값 — URL 의 ?tab= 과 1:1 */
+type NotesTab = "public" | "mine";
+const TAB_OPTIONS: ReadonlyArray<{ value: NotesTab; label: string }> = [
+  { value: "public", label: "공개 노트" },
+  { value: "mine", label: "내 노트" },
+];
 
 /* 정렬·필터 칩.
    "인기" 였던 칩은 "점수순" 으로 바꿨다 — 정렬 키가 작성자 본인이 매긴 임장 점수라
@@ -307,18 +298,35 @@ export function NotesFeedClient({
   mine = false,
   loadError = null,
   showInterestFilter = false,
+  loggedIn = false,
+  hasMore = false,
+  pageSize = 30,
 }: {
   notes: FeedNote[];
-  /** 내 노트 뷰(?mine=1) — 세션 사용자의 노트(비공개 포함) */
+  /** 내 노트 뷰(?mine=1 · ?tab=mine) — 세션 사용자의 노트(비공개 포함) */
   mine?: boolean;
   /** 조회 자체가 실패했을 때의 사유. "노트가 없다" 와 반드시 구분해 표시한다. */
   loadError?: string | null;
   /** 지역 알림 구독이 1건 이상일 때만 true. false 면 "내 관심 지역" 칩을 아예 감춘다 */
   showInterestFilter?: boolean;
+  /** [967 · 20] 로그인 상태 — 세그먼트(공개/내 노트)는 로그인했을 때만 그린다 */
+  loggedIn?: boolean;
+  /** [967 · 19] 첫 페이지가 꽉 찼는지(더 볼 것이 있을 가능성). 공개 뷰에서만 의미 있다 */
+  hasMore?: boolean;
+  /** [967 · 19] 다음 페이지 크기 — 서버 첫 페이지와 같은 값 */
+  pageSize?: number;
 }) {
+  const router = useRouter();
   const [filter, setFilter] = useState<Filter>("최신");
   const [view, setView] = useState<ViewMode>("grid");
-  const exampleOnly = notes.length > 0 && notes.every((n) => n.isExample);
+  /* [967 · 19] "더 보기" 로 이어 붙인 카드 — 서버 첫 페이지(props) 뒤에 붙는다.
+     필터·정렬은 합친 목록에 건다(붙인 카드도 관심 지역·점수순을 똑같이 따른다). */
+  const [extra, setExtra] = useState<FeedNote[]>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
+  const [reachedEnd, setReachedEnd] = useState(!hasMore);
+  const allNotes = extra.length > 0 ? [...notes, ...extra] : notes;
+  const exampleOnly = allNotes.length > 0 && allNotes.every((n) => n.isExample);
   /* [966] 상세 → 뒤로가기 스크롤 복원. 노트는 서버가 내려준 props 라 첫 렌더에 이미
      그려져 있다(ready) — 타일은 3:4 고정 비율이라 사진이 늦게 와도 높이가 안 변한다. */
   useScrollRestore(useScrollRestoreKey(), notes.length > 0);
@@ -330,16 +338,71 @@ export function NotesFeedClient({
 
   const visible =
     activeFilter === "점수순"
-      ? [...notes].sort((a, b) => b.score - a.score)
+      ? [...allNotes].sort((a, b) => b.score - a.score)
       : activeFilter === "내 관심 지역"
-        ? notes.filter((n) => n.interested)
-        : notes;
+        ? allNotes.filter((n) => n.interested)
+        : allNotes;
+
+  /* [967 · 20] 세그먼트 → URL(?tab=mine). 내 노트는 서버가 세션으로 읽는 목록이라
+     클라이언트가 필터로 흉내 낼 수 없다 — replace 로 서버 렌더를 다시 받는다.
+     scroll:false — 세그먼트는 같은 화면의 상태 전환이지 페이지 이동이 아니다. */
+  const switchTab = (next: NotesTab) => {
+    if ((next === "mine") === mine) return;
+    router.replace(next === "mine" ? "/notes?tab=mine" : "/notes", { scroll: false });
+  };
+
+  /* [967 · 19] 다음 페이지 — 마지막 카드의 createdAt 을 커서로 넘긴다. 응답이 페이지
+     크기보다 짧으면 끝. 실패는 "노트가 없다" 가 아니라 실패라고 적는다. */
+  const loadMore = async () => {
+    if (loadingMore || reachedEnd) return;
+    const last = allNotes[allNotes.length - 1];
+    const cursor = last?.createdAt;
+    if (!cursor) {
+      setReachedEnd(true);
+      return;
+    }
+    setLoadingMore(true);
+    setMoreError(null);
+    try {
+      const qs = new URLSearchParams({ public: "1", before: cursor, limit: String(pageSize) });
+      const res = await fetch(`/api/inspection/notes?${qs.toString()}`, { cache: "no-store" });
+      if (!res.ok) {
+        setMoreError("더 불러오지 못했어요. 잠시 후 다시 시도해 주세요");
+        return;
+      }
+      const data = (await res.json().catch(() => null)) as {
+        items?: FeedNote[];
+        hasMore?: boolean;
+      } | null;
+      const items = Array.isArray(data?.items) ? data.items : [];
+      /* 커서 경계에서 같은 시각의 노트가 겹칠 수 있다 — id 로 한 번 거른다 */
+      const seen = new Set(allNotes.map((n) => n.id));
+      const fresh = items.filter((n) => !seen.has(n.id));
+      if (fresh.length > 0) setExtra((prev) => [...prev, ...fresh]);
+      if (items.length < pageSize || data?.hasMore === false) setReachedEnd(true);
+    } catch {
+      setMoreError("네트워크 오류가 발생했어요");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   return (
     <PageShell>
       <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4 md:gap-5">
         {/* 헤더 */}
         <div className="px-1">
+          {/* [967 · 20] 공개/내 노트 세그먼트 — 로그인했을 때만. 예전엔 내 노트로 가는
+              길이 /my 의 링크 하나뿐이라 목록 화면 안에서는 전환이 없었다. */}
+          {loggedIn && (
+            <Segmented<NotesTab>
+              options={TAB_OPTIONS}
+              value={mine ? "mine" : "public"}
+              onChange={switchTab}
+              ariaLabel="노트 범위"
+              className="mb-3 w-fit"
+            />
+          )}
           <h1 className="t-title text-ink md:t-title">
             {mine ? "내 임장노트" : "공개 임장노트"}
           </h1>
@@ -436,7 +499,7 @@ export function NotesFeedClient({
         {visible.length === 0 ? (
           /* 빈 상태를 한 문장으로 뭉뚱그리면 "노트가 없다"와 "필터가 걸러 냈다"가
              섞인다. 노트는 있는데 필터 결과만 0건인 경우를 따로 적는다. */
-          notes.length > 0 ? (
+          allNotes.length > 0 ? (
             <EmptyState
               icon="file-text"
               title={
@@ -446,7 +509,7 @@ export function NotesFeedClient({
               }
               desc={
                 activeFilter === "내 관심 지역"
-                  ? `노트 ${notes.length}건 중 내가 구독한 지역과 겹치는 건 없었어요. 필터를 '최신'으로 바꾸면 전체를 볼 수 있어요.`
+                  ? `노트 ${allNotes.length}건 중 내가 구독한 지역과 겹치는 건 없었어요. 필터를 '최신'으로 바꾸면 전체를 볼 수 있어요.`
                   : "필터를 바꾸면 다른 노트를 볼 수 있어요."
               }
               action={{ label: "임장노트 쓰기", href: "/notes/new" }}
@@ -479,6 +542,34 @@ export function NotesFeedClient({
             {visible.map((n) => (
               <PostCard key={n.id} n={n} />
             ))}
+          </div>
+        )}
+
+        {/* [967 · 19] 더 보기 — 공개 뷰에서만(내 노트는 listNotes 가 200건까지 한 번에 준다).
+            첫 페이지가 꽉 찼을 때만 버튼을 그리고, 짧은 응답이 오면 "마지막이에요" 로 닫는다.
+            버튼은 목록 아래 제자리라 스크롤 위치가 그대로 유지된다(위로 튀지 않는다). */}
+        {!mine && !loadError && hasMore && allNotes.length > 0 && (
+          <div className="flex flex-col items-center gap-2 py-1">
+            {reachedEnd ? (
+              <p role="status" className="t-sub text-text-3">
+                마지막이에요 — {allNotes.length}건을 모두 봤어요
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void loadMore()}
+                disabled={loadingMore}
+                aria-busy={loadingMore}
+                className="btn-soft px-5 py-2.5 t-body font-bold disabled:opacity-60"
+              >
+                {loadingMore ? "불러오는 중…" : "더 보기"}
+              </button>
+            )}
+            {moreError && (
+              <p role="alert" className="t-sub font-bold text-danger">
+                {moreError}
+              </p>
+            )}
           </div>
         )}
 

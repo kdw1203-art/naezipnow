@@ -7,6 +7,7 @@ import {
   readNoteDraftSummary,
   type NoteDraftSummary,
 } from "@/lib/notes/draft-summary";
+import { relativeTimeLabel } from "@/lib/format/relative-time";
 
 /* 홈 개인화 블록(PersonalHome) 제거에 따른 대체 — 소유자 지시(2026-08-16):
  * "팝업형식 또는 제거". 블록이 담던 것 중 실제로 잃으면 아까운 단 하나
@@ -22,14 +23,13 @@ import {
 
 const DISMISS_KEY = "nz_resume_popup_dismissed";
 
+/** [967 · 32] "1분 전 … / N시간 전 / N일 전"(날짜 폴백 없음). 파싱 실패·미래 시각이면 null 로 문구를 숨긴다(기존 그대로).
+ *  본체는 lib/format/relative-time.ts */
 function savedAgo(iso: string): string | null {
   const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return null;
-  const diff = Date.now() - t;
-  if (diff < 0) return null;
-  if (diff < 3_600_000) return `${Math.max(1, Math.floor(diff / 60_000))}분 전`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}시간 전`;
-  return `${Math.floor(diff / 86_400_000)}일 전`;
+  const now = Date.now();
+  if (!Number.isFinite(t) || now - t < 0) return null;
+  return relativeTimeLabel(t, now, { minOneMinute: true, maxDays: Infinity });
 }
 
 export function ResumeDraftPopup() {

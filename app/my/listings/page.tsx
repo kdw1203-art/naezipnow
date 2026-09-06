@@ -21,6 +21,7 @@ import {
   type ListingStaleStage,
 } from "@/lib/listings/store-db";
 import { getOwnerInquiryStats } from "@/lib/listings/inquiries";
+import { formatKrwShort } from "@/lib/market/format";
 
 /* ============================================================
    내 매물 — /my/listings (로그인 필수)
@@ -49,14 +50,7 @@ const STATUS_META: Record<ListingStatus, { label: string; cls: string }> = {
   closed: { label: "마감", cls: "bg-[rgba(0,0,0,.06)] text-text-3" },
 };
 
-function formatKrwShort(krw: number | null | undefined): string {
-  if (krw === null || krw === undefined || !Number.isFinite(krw) || krw <= 0) return "—";
-  if (krw >= 1e8) {
-    const eok = krw / 1e8;
-    return `${(eok >= 100 ? Math.round(eok) : Math.round(eok * 10) / 10).toLocaleString("ko-KR")}억`;
-  }
-  return `${Math.round(krw / 1e4).toLocaleString("ko-KR")}만`;
-}
+/* [967 · 31] 여기 있던 formatKrwShort 사본은 lib/market/format 의 공통 함수로 대체 — 출력 동일 */
 
 function priceLine(l: ListingDetail): string {
   if (l.listingType === "sale") return `매매 ${formatKrwShort(l.priceKrw)}`;

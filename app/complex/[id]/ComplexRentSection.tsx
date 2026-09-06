@@ -2,6 +2,7 @@ import { loadRentHistory } from "./section-loaders";
 import {
   type ComplexRentHistory,
 } from "@/lib/market/complex-rent";
+import { formatKrwWon } from "@/lib/format/krw";
 
 /* [#94 잔여] 단지 전월세 이력 — 지역 페이지 전월세 탭(1회차)의 단지 버전.
    market_transactions(rent) 를 (region_name, complex_name) 등치로 읽어
@@ -13,11 +14,9 @@ function fmtYm(ym: string): string {
   return ym.length === 6 ? `${ym.slice(0, 4)}.${ym.slice(4)}` : ym;
 }
 
+/** [967 · 31] 원 → "8.4억"/"9,800만"/"—" — lib/format/krw.ts "eok1"(허브 시세 표와 같은 얼굴) */
 function fmtEok(krw: number | null): string {
-  if (krw === null || !Number.isFinite(krw) || krw <= 0) return "—";
-  const eok = krw / 100_000_000;
-  if (eok >= 1) return `${eok.toFixed(1).replace(/\.0$/, "")}억`;
-  return `${Math.round(krw / 10_000).toLocaleString("ko-KR")}만`;
+  return formatKrwWon(krw, { style: "eok1" });
 }
 
 function fmtManwon(krw: number | null): string {

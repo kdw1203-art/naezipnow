@@ -48,6 +48,7 @@ import {
 } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { regionTitle } from "@/lib/seo/title-experiment";
+import { formatKrwShort } from "@/lib/market/format";
 
 /* ============================================================
    N9 — 지역 종합 가이드 (/region/[id])
@@ -129,15 +130,7 @@ const SIDE_FAILURE_ABORT_THRESHOLD = 5;
 
 /* ---------- 포맷 헬퍼 ---------- */
 
-/** 원(KRW) → "12.4억" / "9,800만" */
-function formatKrwShort(krw: number | undefined): string {
-  if (krw === undefined || !Number.isFinite(krw) || krw <= 0) return "—";
-  if (krw >= 1e8) {
-    const eok = krw / 1e8;
-    return `${(eok >= 100 ? Math.round(eok) : Math.round(eok * 10) / 10).toLocaleString("ko-KR")}억`;
-  }
-  return `${Math.round(krw / 1e4).toLocaleString("ko-KR")}만`;
-}
+/* [967 · 31] 여기 있던 formatKrwShort 사본은 lib/market/format 의 공통 함수로 대체 — 출력 동일 */
 
 /** "202606" → "2026.06" */
 function formatYm(ym: string): string {

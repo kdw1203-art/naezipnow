@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@/app/components/Icon";
 import { useSettledSearchQuery } from "@/lib/search/settle";
+import { formatKrwManwon } from "@/lib/format/krw";
 
 /* ============================================================
    지도 단지 검색 박스 (6a·item1) — 아파트명·주소 자동완성.
@@ -31,14 +32,11 @@ interface SuggestItem {
   lng?: number | null;
 }
 
-/** 만원 → "12.3억" / "8,200만". 없으면 null (호출부가 자리를 비운다) */
+/** 만원 → "12억" / "8.0억" / "8,200만". 없으면 null (호출부가 자리를 비운다)
+ *  [967 · 31] 본체는 lib/format/krw.ts "listing" — 지도 마커와 같은 구분 없는 얼굴(groupEok:false) */
 function priceLabel(manwon: number | null | undefined): string | null {
   if (manwon == null || !Number.isFinite(manwon) || manwon <= 0) return null;
-  if (manwon >= 10_000) {
-    const eok = manwon / 10_000;
-    return `${eok >= 10 ? Math.round(eok) : eok.toFixed(1)}억`;
-  }
-  return `${Math.round(manwon).toLocaleString("ko-KR")}만`;
+  return formatKrwManwon(manwon, { style: "listing", groupEok: false });
 }
 
 interface GeocodeItem {

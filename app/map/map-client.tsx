@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { Logo } from "../components/Logo";
 import { WelcomeHandoff } from "./WelcomeHandoff";
+import { summarizeMapFilters } from "@/lib/map/filter-summary";
 import { NaverMap, type MapIdleInfo, type MapMarkerData } from "@/components/map/NaverMap";
 import {
   MapSearchBox,
@@ -59,6 +60,7 @@ import {
 } from "@/lib/map/price-tiers";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { useCopy } from "@/lib/ui/use-copy";
+import { formatKrwManwon, formatKrwWon } from "@/lib/format/krw";
 
 /** A1 — 지도 첫 방문 3스텝 안내. 대상이 화면에 없으면 그 스텝은 자동 생략된다. */
 const MAP_TOUR_STEPS: CoachmarkStep[] = [
@@ -349,14 +351,11 @@ interface ClusterItem {
   txCount?: number;
 }
 
-/** 만원 → "12.3억" / "8,200만" 라벨 (없으면 null) */
+/** 만원 → "12억" / "8.0억" / "8,200만" 라벨 (없으면 null)
+ *  [967 · 31] 본체는 lib/format/krw.ts "listing" 스타일 — null 은 호출부가 자리를 비우는 신호라 여기서 유지 */
 function manwonLabel(manwon: number | undefined): string | null {
   if (manwon === undefined || !Number.isFinite(manwon) || manwon <= 0) return null;
-  if (manwon >= 10_000) {
-    const eok = manwon / 10_000;
-    return `${eok >= 10 ? Math.round(eok).toLocaleString("ko-KR") : eok.toFixed(1)}억`;
-  }
-  return `${Math.round(manwon).toLocaleString("ko-KR")}만`;
+  return formatKrwManwon(manwon, { style: "listing" });
 }
 
 interface ClusterPointItem {
@@ -407,14 +406,11 @@ const LISTING_TYPE_LABEL: Record<ComplexListingItem["listingType"], string> = {
   monthly: "월세",
 };
 
-/** 원(₩) → "12.3억" / "8,200만". 값이 없으면 null — 0 으로 적으면 "0원 매물"이 된다. */
+/** 원(₩) → "12억" / "8.0억" / "8,200만". 값이 없으면 null — 0 으로 적으면 "0원 매물"이 된다.
+ *  [967 · 31] 본체는 lib/format/krw.ts "listing" — 마커 라벨은 억 정수부에 천단위 구분이 없던 얼굴(groupEok:false) */
 function wonShort(krw: number | null): string | null {
   if (krw == null || !Number.isFinite(krw) || krw <= 0) return null;
-  if (krw >= 100_000_000) {
-    const eok = krw / 100_000_000;
-    return `${eok >= 10 ? Math.round(eok) : eok.toFixed(1)}억`;
-  }
-  return `${Math.round(krw / 10_000).toLocaleString("ko-KR")}만`;
+  return formatKrwWon(krw, { style: "listing", groupEok: false });
 }
 
 /** 매물 가격 라벨 — 유형별로 읽는 컬럼이 다르다 */
@@ -565,13 +561,10 @@ function withinSel(value: number | null, sel: RangeSel): boolean {
   return true;
 }
 
-/** 만원 → "12.3억" / "8,200만" */
+/** 만원 → "12억" / "8.0억" / "8,200만"
+ *  [967 · 31] 본체는 lib/format/krw.ts "listing"(구분 없음). 빈값 방어가 없던 함수라 empty:false 로 기존 출력 유지 */
 function manwonShort(manwon: number): string {
-  if (manwon >= 10_000) {
-    const eok = manwon / 10_000;
-    return `${eok >= 10 ? Math.round(eok) : eok.toFixed(1)}억`;
-  }
-  return `${Math.round(manwon).toLocaleString("ko-KR")}만`;
+  return formatKrwManwon(manwon, { style: "listing", groupEok: false, empty: false });
 }
 
 /* ===== 매물 레이어 (/api/map/listings) — 유저 등록 매물을 지도 마커로 ===== */
@@ -644,6 +637,22 @@ function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): num
 /** C3 반경 프리셋(m) */
 const RADIUS_PRESETS = [300, 500, 1000, 2000, 3000] as const;
 
+/* [967 · 22] URL 이 목적지를 말하는 파라미터 — 하나라도 있으면 자동 현재위치 이동을
+   하지 않는다. 서버(app/map/page.tsx)가 읽는 키 + 클라이언트가 마운트 후 푸는 ?q=,
+   idle 때 써 두는 ?lat&lng&z, 웰컴 핸드오프 ?from= 까지. */
+const URL_FOCUS_PARAMS = [
+  "region",
+  "district",
+  "q",
+  "complexId",
+  "noteId",
+  "apt",
+  "lat",
+  "lng",
+  "z",
+  "from",
+] as const;
+
 /** 거리 표기 — 1km 미만은 m, 그 이상은 소수 둘째 자리 km. */
 function formatDistanceM(m: number): string {
   if (!Number.isFinite(m) || m < 0) return "—";
@@ -713,12 +722,22 @@ export function MapClient({
      예전에는 늘 단지 좌표 평균(사실상 수도권 어딘가)에서 시작했다. 처음 들어온
      사람은 자기 동네를 직접 찾아 들어가야 했다.
 
-     세 가지를 지킨다.
+     네 가지를 지킨다.
        · ?region=·complexId·noteId 로 지목된 목적지가 있으면 그쪽이 우선이다.
+         [967 · 22] 서버가 못 푼 ?q=(단지명), 공유·뒤로가기의 ?lat&lng&z(idle 때
+         써 두는 "마지막 화면" — 이 지도는 localStorage 가 아니라 URL 에 마지막
+         화면을 남긴다), /welcome 핸드오프(?from=welcome)도 목적지다.
+       · [967 · 22] **권한이 이미 허용된 경우에만** 움직인다. 예전에는 들어오자마자
+         getCurrentPosition 을 불러 첫 방문자에게 위치 권한 창부터 띄웠다 — 아래
+         NaverMap 의 "내 위치" 버튼 주석("자동 요청 없음")과도 어긋나던 동작이다.
+         permissions.query 가 prompt/denied 를 돌려주거나 API 자체가 없으면
+         (구형 Safari) 아무것도 하지 않는다. 권한 창은 버튼을 누른 손에만 뜬다.
        · 한 번만 시도한다. 지도를 옮긴 뒤 다시 끌려가면 안 된다.
        · 국내 대략 범위 밖 좌표는 버린다. VPN·기기 오차로 태평양 한복판을 잡으면
          단지가 하나도 없는 빈 지도가 되어 "고장" 처럼 보인다.
-     거부하거나 실패하면 조용히 기존 시작 위치를 쓴다. */
+     거부하거나 실패하면 조용히 기존 시작 위치를 쓴다. 이동 자체는 NaverMap 의
+     "내 위치" 버튼과 같은 결과(center·level props)로 간다 — 버튼 내부 함수는
+     컴포넌트 밖으로 노출돼 있지 않아 같은 props 경로를 쓴다. */
   const [geoApplied, setGeoApplied] = useState(false);
   const geoTriedRef = useRef(false);
   useEffect(() => {
@@ -726,19 +745,33 @@ export function MapClient({
     if (geoTriedRef.current) return;
     if (typeof navigator === "undefined" || !navigator.geolocation) return;
     geoTriedRef.current = true;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
-        if (latitude < 32.5 || latitude > 39.5 || longitude < 124 || longitude > 132.5) return;
-        setCenter({ lat: latitude, lng: longitude });
-        setZoom("danji");
-        setLevel(LEVEL_BY_ZOOM.danji);
-        setGeoApplied(true);
-      },
-      () => undefined,
-      { enableHighAccuracy: false, timeout: 8_000, maximumAge: 300_000 },
-    );
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      if (URL_FOCUS_PARAMS.some((k) => sp.has(k))) return;
+    } catch {
+      /* URL 파싱 실패 — 목적지가 없다고 보고 진행 */
+    }
+    const perms = navigator.permissions;
+    if (!perms || typeof perms.query !== "function") return;
+    perms
+      .query({ name: "geolocation" })
+      .then((status) => {
+        if (status.state !== "granted") return;
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const { latitude, longitude } = pos.coords;
+            if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+            if (latitude < 32.5 || latitude > 39.5 || longitude < 124 || longitude > 132.5) return;
+            setCenter({ lat: latitude, lng: longitude });
+            setZoom("danji");
+            setLevel(LEVEL_BY_ZOOM.danji);
+            setGeoApplied(true);
+          },
+          () => undefined,
+          { enableHighAccuracy: false, timeout: 8_000, maximumAge: 300_000 },
+        );
+      })
+      .catch(() => undefined);
   }, [hasEntryFocus]);
 
   // 위치로 맞췄다는 안내는 잠깐만 — 지도 위에 계속 떠 있을 이유가 없다.
@@ -1193,6 +1226,21 @@ export function MapClient({
       (k) => ranges[k][0] !== null || ranges[k][1] !== null,
     ).length;
 
+  /* [967 · 23] 접힌 필터 바에 적을 요약 토막 — 토막 수는 activeCount 와 같다 */
+  const filterSummary = useMemo(
+    () =>
+      summarizeMapFilters({
+        tradeKey: listingTradeKey,
+        propertyKindKey,
+        roomsKey,
+        bathroomsKey,
+        parkingKey,
+        commuteKey,
+        ranges,
+      }),
+    [listingTradeKey, propertyKindKey, roomsKey, bathroomsKey, parkingKey, commuteKey, ranges],
+  );
+
   const resetFilters = useCallback(() => {
     setRanges(EMPTY_RANGES);
     setListingTradeKey("all");
@@ -1540,6 +1588,21 @@ export function MapClient({
       >
         <Icon name="🏠" size={14} className="inline align-middle" /> 매물
       </button>
+      {/* [967 · 23] 접힌 상태의 요약 — "필터 3" 숫자만으로는 무엇이 걸려 있는지
+          알 수 없어 지도가 왜 비었는지 되짚기 어려웠다. 걸린 축을 글자로 적는다
+          (summarizeMapFilters, lib/map/filter-summary.ts). 패널이 열려 있으면 안
+          그린다 — 패널이 곧 요약이다. 폭이 좁은 헤더에서는 잘리고 title 로 전문.
+          자리는 토글 **앞**: "무엇이 걸렸나 → 바꾸기(필터) → 초기화" 순서로 읽힌다. */}
+      {!filtersExpanded && filterSummary.length > 0 && (
+        <span
+          className="map-filter-summary t-caption"
+          title={`${filterSummary.join(" · ")} · ${filterSummary.length}개 적용`}
+          role="status"
+          aria-label={`적용된 필터: ${filterSummary.join(", ")}`}
+        >
+          {filterSummary.join(" · ")} · {filterSummary.length}개 적용
+        </span>
+      )}
       <button
         type="button"
         aria-expanded={filtersExpanded}

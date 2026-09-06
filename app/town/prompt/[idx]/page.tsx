@@ -13,6 +13,7 @@ import {
   todayPromptIndex,
 } from "@/lib/town/prompts";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { relativeTimeLabel } from "@/lib/format/relative-time";
 
 /* [#63] 글감 스레드 — 질문 하나 = 고정 URL 하나(/town/prompt/0~13).
  * 같은 질문이 14일 주기로 돌아오며 답변이 이 페이지에 계속 쌓인다 —
@@ -42,12 +43,9 @@ export async function generateMetadata({
   };
 }
 
+/** [967 · 32] 일 단위 — "오늘 / 어제 / N일 전(30일) / 8월 19일". 본체는 lib/format/relative-time.ts */
 function relativeDay(iso: string): string {
-  const days = Math.floor((Date.now() - Date.parse(iso)) / 86_400_000);
-  if (days <= 0) return "오늘";
-  if (days === 1) return "어제";
-  if (days < 30) return `${days}일 전`;
-  return new Date(iso).toLocaleDateString("ko-KR", { month: "long", day: "numeric" });
+  return relativeTimeLabel(iso, Date.now(), { unit: "day", yesterday: true, maxDays: 30, fallback: "md-long" });
 }
 
 export default async function PromptThreadPage({

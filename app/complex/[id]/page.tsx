@@ -7,12 +7,18 @@ import { PageShell } from "../../components/PageShell";
 import {
   getComplexBaseById,
   enrichComplexRow,
-  getTransactionHistory,
+  getTransactionHistoryWithBands,
   getComplexPosts,
   listComplexesInDistrict,
   type ComplexRow,
   type ComplexTransactionRow,
+  type ComplexTransactionRowWithBands,
 } from "@/lib/complex/complex-store";
+/* [967 · 16] 억/만 표기·전월비·행 변환은 클라이언트 필터(면적대·정렬)와 같은
+   구현을 써야 하므로 lib 로 옮겼다 — 이 파일 안의 사본을 지웠다. */
+import { formatManwon, pctDelta, deltaLabel, toHubTrades } from "@/lib/complex/hub-trades";
+/* [967 · 17] 모바일 하단 액션 바(관심·노트·상담) — 클라이언트, 원래 CTA 가 보이면 숨김 */
+import { MobileActionBar } from "./MobileActionBar";
 import {
   prefetchComplexSections,
   prefetchAxisSummary,
@@ -182,7 +188,9 @@ const loadComplexRow = cache(async (id: string) => {
      getComplexById 와 같은 계약. 시간 상한은 base 쪽에만 있었으므로 그대로 둔다. */
   return enrichComplexRow(base);
 });
-const loadTxHistory = cache(getTransactionHistory);
+/* [967 · 16] area_m2 를 함께 읽어 월별 행에 면적대 분할(bands)을 싣는 로더로 교체.
+   월별 숫자는 getTransactionHistory 와 같은 규칙 — 메타데이터·본문이 같은 값을 본다. */
+const loadTxHistory = cache(getTransactionHistoryWithBands);
 
 /** 위 두 loader 가 쓰는 실거래 이력 개월 수 — 메타데이터·본문이 반드시 같아야 한다.
  *  허브 밀도: 18→24개월 (패널 detail API 와 맞춤). */
@@ -217,7 +225,9 @@ interface HubView {
   chips: string[];
   aiTitle: string;
   aiBody: string;
-  myRecord: string;
+  /* [967 · 15] myRecord 문자열은 지웠다 — ISR HTML 은 방문자 공용이라 "로그인하면…"
+     같은 개인 상태 문구를 서버가 그릴 수 없다. 내 기록 탭은 클라이언트가
+     /api/me/complex-records 로 직접 읽는다. */
   listingsLabel: string;
   infoRows: { label: string; value: string }[];
   trades: HubTrade[];
@@ -246,13 +256,9 @@ interface HubView {
   loadFailures: string[];
 }
 
-/* ===== 실데이터 변환 (map/page.tsx 방식) ===== */
-
-function formatManwon(manwon: number): string {
-  if (!Number.isFinite(manwon) || manwon <= 0) return "—";
-  if (manwon >= 10_000) return `${(manwon / 10_000).toFixed(1).replace(/\.0$/, "")}억`;
-  return `${Math.round(manwon).toLocaleString("ko-KR")}만`;
-}
+/* ===== 실데이터 변환 (map/page.tsx 방식) =====
+   formatManwon·pctDelta·deltaLabel·toTrades 는 [967 · 16] 에서
+   lib/complex/hub-trades.ts 로 옮겼다(클라이언트 필터와 같은 구현). */
 
 /** 부스트 활성 여부 (만료·null 은 false) */
 function isBoostActive(boostUntil: string | null): boolean {
@@ -282,6 +288,8 @@ function toHubListing(l: PublicListing): HubListing {
       .filter(Boolean)
       .join(" · ") || "실매물";
   return {
+    /* [967 · 18] React key — 같은 가격의 매물이 둘이면 price 키가 충돌한다 */
+    id: l.id,
     badge: LISTING_TYPE_LABEL[l.listingType],
     urgent: boost,
     price: listingPriceLine(l),
@@ -289,43 +297,6 @@ function toHubListing(l: PublicListing): HubListing {
     meta,
     agent: l.authorLabel,
   };
-}
-
-function pctDelta(curr: number, prev: number | undefined): number | null {
-  if (!prev || prev <= 0 || !Number.isFinite(curr)) return null;
-  return Math.round(((curr - prev) / prev) * 1000) / 10;
-}
-
-function deltaLabel(pct: number | null): { delta: string; tone: "up" | "down" | "flat" } {
-  if (pct === null || pct === 0) return { delta: "—", tone: "flat" };
-  return pct > 0
-    ? { delta: `▲ ${Math.abs(pct).toFixed(1)}%`, tone: "up" }
-    : { delta: `▼ ${Math.abs(pct).toFixed(1)}%`, tone: "down" };
-}
-
-function toTrades(tx: ComplexTransactionRow[]): HubTrade[] {
-  // getTransactionHistory 는 과거→최신 순 반환 — 최신순으로 뒤집기
-  const items: HubTrade[] = [];
-  for (let i = tx.length - 1; i >= 0; i--) {
-    const row = tx[i];
-    const prev = i > 0 ? tx[i - 1].avg_manwon : undefined;
-    const { delta, tone } = deltaLabel(pctDelta(row.avg_manwon, prev));
-    const range =
-      row.min_manwon != null &&
-      row.max_manwon != null &&
-      row.min_manwon !== row.max_manwon
-        ? ` · ${formatManwon(row.min_manwon)}~${formatManwon(row.max_manwon)}`
-        : "";
-    const area = row.area_m2 != null ? ` · ${Math.round(row.area_m2)}㎡` : "";
-    items.push({
-      date: `${row.yyyymm.slice(0, 4)}.${row.yyyymm.slice(4, 6)}`,
-      price: formatManwon(row.avg_manwon),
-      sub: `${row.deal_count}건${area}${range}`,
-      delta,
-      tone,
-    });
-  }
-  return items;
 }
 
 interface ComplexPostRow {
@@ -390,7 +361,8 @@ function txDetailHref(row: ComplexRow, txRows: ComplexTransactionRow[]): string 
 
 function toView(
   row: ComplexRow,
-  tx: ComplexTransactionRow[],
+  /* [967 · 16] 면적대 분할(bands)이 실린 월별 행 — 시세 탭 필터 재료 */
+  tx: ComplexTransactionRowWithBands[],
   posts: ComplexPostRow[],
   nearby: HubView["nearby"],
   txHref: string | null,
@@ -408,7 +380,7 @@ function toView(
   // D8: 이 단지 실 매물(승인) 연결 — 없으면 빈 배열(클라이언트가 안내 문구 표시)
   const hubListings = listingRows.map(toHubListing);
   // 사실 우선: 실거래 데이터가 없으면 목업 대신 빈 배열(클라이언트가 안내 문구 표시)
-  const trades = tx.length > 0 ? toTrades(tx) : [];
+  const trades = tx.length > 0 ? toHubTrades(tx) : [];
   // 차트용 월별 평균 시계열 (tx는 과거→최신 정렬) — 실데이터만
   const priceSeries: PricePoint[] = tx.map((r) => ({
     ym: r.yyyymm,
@@ -428,6 +400,8 @@ function toView(
             .filter(Boolean)
             .join(" · ");
           return {
+            /* [967 · 18] React key — 제목이 같은 글이 둘이면 title 키가 충돌한다 */
+            id: p.id,
             title: p.title,
             author: `${p.district ?? dong} · ${p.created_at.slice(5, 10).replace("-", ".")}`,
             score: eng || `공감 ${p.like_count ?? 0}`,
@@ -545,7 +519,6 @@ function toView(
             .filter(Boolean)
             .join(" · ")
         : "실거래·후기가 쌓이면 AI 요약을 제공합니다.",
-    myRecord: "로그인하면 이 단지에 남긴 임장노트를 볼 수 있어요",
     listingsLabel: listingsFailed
       ? "매물 정보를 지금 불러오지 못했습니다 — 등록된 매물이 없다는 뜻이 아닙니다."
       : hubListings.length > 0
@@ -860,21 +833,33 @@ export default async function ComplexHubPage({
     ]),
   ];
 
+  /* [967 · 17] 임장노트 프리필 주소를 한 번만 만든다 — CTA·상단 알약·하단 액션 바·
+     내 기록 탭이 전부 같은 주소여야 한다(NoteForm 은 ?apt=&region=&complexId=&lat=&lng=
+     를 읽는다). 예전엔 세 곳이 각자 조립해 좌표가 빠지는 곳이 있었다. */
+  const noteHref = (() => {
+    const params = new URLSearchParams({ apt: v.name });
+    if (v.dong) params.set("region", v.dong);
+    if (complexId) params.set("complexId", complexId);
+    if (typeof v.lat === "number" && typeof v.lng === "number") {
+      params.set("lat", String(v.lat));
+      params.set("lng", String(v.lng));
+    }
+    return `/notes/new?${params.toString()}`;
+  })();
+  /* [967 · 17] 상담 — 이 페이지에는 전문가 상담 링크가 없었다. 전문가 목록을
+     시/도 키("서울"·"경기")로 좁혀 보낸다(ExpertsClient 의 ?region= 은 지역
+     문자열의 첫 토큰으로 맞춘다). */
+  const consultHref = (() => {
+    const key = (v.city || v.dong || "").split(/[\s·]/)[0];
+    return key ? `/town/experts?region=${encodeURIComponent(key)}` : "/town/experts";
+  })();
+
   const cta = (
     <div className="flex flex-col gap-2">
       <div className="flex gap-2">
         {/* 연결성: 단지명·지역·단지ID·좌표 프리필로 임장노트 작성 진입 */}
         <Link
-          href={(() => {
-            const params = new URLSearchParams({ apt: v.name });
-            if (v.dong) params.set("region", v.dong);
-            if (complexId) params.set("complexId", complexId);
-            if (typeof v.lat === "number" && typeof v.lng === "number") {
-              params.set("lat", String(v.lat));
-              params.set("lng", String(v.lng));
-            }
-            return `/notes/new?${params.toString()}`;
-          })()}
+          href={noteHref}
           className="btn-primary btn-cta flex-1 rounded-[10px] p-3 text-center t-body"
         >
           이 단지 임장노트 쓰기
@@ -978,18 +963,16 @@ export default async function ComplexHubPage({
       {/* [개선 #32] 행동 3종 — 보고 끝나는 화면에서 다음 행동이 있는 화면으로.
           ① 임장노트 쓰기(이 단지 프리필) ② 지역 허브(내부 연결) ③ 공유 */}
       {(() => {
-        const noteQs = new URLSearchParams();
-        if (v.name) noteQs.set("apt", v.name);
-        if (v.dong) noteQs.set("region", v.dong);
-        noteQs.set("complexId", v.id);
-        if (typeof v.lat === "number") noteQs.set("lat", String(v.lat));
-        if (typeof v.lng === "number") noteQs.set("lng", String(v.lng));
         const regionId = regionIdForName(v.city ?? "") ?? regionIdForName(v.dong ?? "");
         const pill =
           "inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 py-2 text-[13px] font-bold text-ink tap-ripple";
         return (
-          <div className="rise-in-1 mt-3 flex flex-wrap items-center gap-2">
-            <Link href={`/notes/new?${noteQs.toString()}`} className={pill}>
+          /* [967 · 17] id 는 하단 액션 바의 감시 대상 — 이 줄이 화면에 있으면 바를 숨긴다 */
+          <div
+            id="complex-actions-top"
+            className="rise-in-1 mt-3 flex flex-wrap items-center gap-2"
+          >
+            <Link href={noteHref} className={pill}>
               <Icon name="notebook-pen" size={14} />이 단지 임장노트 쓰기
             </Link>
             {regionId && (
@@ -1110,14 +1093,19 @@ export default async function ComplexHubPage({
         <ComplexHubTabs
           aiTitle={v.aiTitle}
           aiBody={v.aiBody}
-          myRecord={v.myRecord}
           listingsLabel={v.listingsLabel}
           trades={v.trades}
           notes={v.notes}
           notesFailed={v.notesFailed}
           notesWriteHref={v.notesWriteHref}
-          complexId={id}
+          /* [967 · 15] 내 기록 탭의 API 조회 키 — 노트 metadata.complexId 와 같은
+             순수 id(complexId)여야 한다. 라우트 파라미터(id)는 슬러그 장식이 붙어
+             있을 수 있어 조회에 못 쓴다. 지도 딥링크(/map?complexId=)도 순수 id 로. */
+          complexId={complexId}
+          /* 대장 매칭 시 v.id 는 kapt.… — 예전 링크로 쓴 노트가 그 id 를 달고 있다 */
+          altComplexId={v.id !== complexId ? v.id : undefined}
           complexName={v.name}
+          noteHref={noteHref}
           listings={v.listings}
           priceSeries={v.priceSeries}
         />
@@ -1180,12 +1168,7 @@ export default async function ComplexHubPage({
             complexId={complexId}
             region={v.dong ?? v.city ?? ""}
             aptName={v.name}
-            noteHref={(() => {
-              const p = new URLSearchParams({ apt: v.name });
-              if (v.dong) p.set("region", v.dong);
-              if (complexId) p.set("complexId", complexId);
-              return `/notes/new?${p.toString()}`;
-            })()}
+            noteHref={noteHref}
           />
           <AdZone placement="sidebar" seed={0} plan={null} />
         </aside>
@@ -1284,8 +1267,21 @@ export default async function ComplexHubPage({
         </Link>
       </div>
 
-      {/* 모바일 CTA 2개 (시안 하단) */}
-      <div className="rise-in-4 mt-4 lg:hidden">{cta}</div>
+      {/* 모바일 CTA 2개 (시안 하단) — id 는 하단 액션 바의 감시 대상([967 · 17]) */}
+      <div id="complex-actions-bottom" className="rise-in-4 mt-4 lg:hidden">
+        {cta}
+      </div>
+
+      {/* [967 · 17] 모바일 하단 액션 바 — 관심 등록·노트 쓰기·상담. 위 두 CTA 블록이
+          화면에 있으면 숨겨 같은 행동이 두 번 보이지 않게 한다. 사용자별 상태(관심
+          여부)는 바 안의 WatchlistButton 이 마운트 뒤 읽는다 — ISR HTML 은 공용이다. */}
+      <MobileActionBar
+        complexId={v.id}
+        complexName={v.name}
+        noteHref={noteHref}
+        consultHref={consultHref}
+        sentinelIds={["complex-actions-top", "complex-actions-bottom"]}
+      />
     </PageShell>
   );
 }

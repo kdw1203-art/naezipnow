@@ -57,8 +57,13 @@ export async function POST(req: NextRequest) {
   // FK 버그 수정(#1) — 노트 신고 버튼도 postId 에 노트 id 를 담아 보낸다. 노트 id 를
   // content_reports.post_id(->posts FK)에 넣으면 위반이므로, 대상이 임장노트면
   // target_note_id 로 분기한다. 호출부(ReportButton 등) 시그니처는 그대로 유지.
+  /* [967 · 12] 노트 **댓글** 신고도 commentId 를 싣고 온다(app/notes/[id]/NoteComments).
+     예전엔 commentId 가 있으면 노트 확인을 건너뛰어 post_id 에 노트 id 가 들어갔다
+     (→ posts FK 위반으로 접수 실패). 이제 commentId 유무와 무관하게 대상 id 가
+     노트면 target_note_id 로 적재한다 — comment_id 는 FK 없는 text 라 그대로 싣는다.
+     아래 누적 자동 숨김은 여전히 본문 신고(!commentId)만 센다. */
   let targetType: ReportTargetType = "post";
-  if (!commentId) {
+  {
     const note = await getNote(postId).catch(() => null);
     if (note) targetType = "note";
   }

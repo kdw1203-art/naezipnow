@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 
@@ -79,6 +79,27 @@ export function RecentComplexRecorder({
   return null;
 }
 
+/* [967 · 27] 이 훅은 홈에서 히어로 검색(모바일·데스크톱)과 "내 관심" 레일이 같이 쓴다 —
+   한 페이지에서 네 번 마운트된다. 서버 기록 조회는 한 번이면 되므로 같은 페이지 수명
+   안의 짧은 공유 캐시로 접는다(getSessionLite 와 같은 방식). 실패는 캐시하지 않는다.
+   삭제(remove)는 캐시를 비워 다음 마운트가 서버를 다시 본다. */
+const SERVER_RECENTS_TTL_MS = 30_000;
+let serverRecentsCache: { at: number; promise: Promise<{ items?: RecentComplex[] } | null> } | null = null;
+function fetchServerRecents(): Promise<{ items?: RecentComplex[] } | null> {
+  if (serverRecentsCache && Date.now() - serverRecentsCache.at < SERVER_RECENTS_TTL_MS) {
+    return serverRecentsCache.promise;
+  }
+  const promise = fetch("/api/me/recent-complexes", { cache: "no-store" })
+    .then((r) => (r.ok ? (r.json() as Promise<{ items?: RecentComplex[] }>) : null))
+    .catch(() => null)
+    .then((j) => {
+      if (j === null && serverRecentsCache?.promise === promise) serverRecentsCache = null;
+      return j;
+    });
+  serverRecentsCache = { at: Date.now(), promise };
+  return promise;
+}
+
 /**
  * 최근 본 단지 목록 훅 — localStorage 즉시 표시 후 서버 기록과 병합.
  *
@@ -101,8 +122,7 @@ export function useRecentComplexes(): {
     setItems(local);
     // B8 — 로그인 사용자는 서버 기록과 병합(크로스디바이스). 최신순·id 중복 제거.
     let cancelled = false;
-    fetch("/api/me/recent-complexes", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
+    fetchServerRecents()
       .then((j: { items?: RecentComplex[] } | null) => {
         if (cancelled) return;
         if (!j || !Array.isArray(j.items) || j.items.length === 0) return;
@@ -125,6 +145,7 @@ export function useRecentComplexes(): {
   }, []);
 
   const remove = (id: string) => {
+    serverRecentsCache = null; // [967 · 27] 지운 항목이 캐시에서 되살아나지 않게
     setItems((prev) => {
       const next = prev.filter((r) => r.id !== id);
       writeRecents(next);
@@ -142,8 +163,25 @@ export function useRecentComplexes(): {
 }
 
 /** 최근 본 단지 칩 행 — 기록이 있을 때만 렌더 */
-export function RecentComplexChips({ className }: { className?: string }) {
-  const { items, remove } = useRecentComplexes();
+export function RecentComplexChips({
+  className,
+  onResolved,
+}: {
+  className?: string;
+  /** [967 · 27] 목록이 확정될 때마다(로컬 즉시 → 서버 병합 뒤) 비었는지 알린다 —
+      홈 "내 관심" 레일이 자식이 모두 비면 레일째 숨기기 위해. */
+  onResolved?: (hasContent: boolean) => void;
+}) {
+  const { items, loading, remove } = useRecentComplexes();
+  const onResolvedRef = useRef(onResolved);
+  onResolvedRef.current = onResolved;
+  useEffect(() => {
+    /* 로컬 기록은 마운트 직후 items 에 들어오고, 서버 병합은 loading 이 끝나며 확정된다.
+       둘 중 어느 시점이든 "있음"은 곧바로, "없음"은 병합이 끝난 뒤에만 말한다 —
+       서버 기록이 오기 전에 없다고 단정하면 레일이 깜빡인다. */
+    if (items.length > 0) onResolvedRef.current?.(true);
+    else if (!loading) onResolvedRef.current?.(false);
+  }, [items, loading]);
 
   if (items.length === 0) return null;
 

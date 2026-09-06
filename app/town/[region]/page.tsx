@@ -17,6 +17,7 @@ import { KeywordAlertButton } from "@/app/components/KeywordAlertButton";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { logger } from "@/lib/log";
+import { relativeTimeLabel } from "@/lib/format/relative-time";
 
 /* ============================================================
    [#64] 동네 홈 — /town/{regionId}
@@ -72,16 +73,10 @@ function noteMatchesRegion(n: PublicNoteCard, nameKey: string): boolean {
   return Boolean(k && (k.includes(nameKey) || nameKey.includes(k)));
 }
 
+/** [967 · 32] 지역 홈 카드의 상대시각 — 시간 단위("방금"·N시간 전·N일 전(30일)·UTC "08.19").
+ *  분 표기가 없고 "방금" 인 기존 얼굴을 그대로 옵션으로 넘긴다. 본체는 lib/format/relative-time.ts */
 function relTime(iso: string): string {
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return "";
-  const diff = Date.now() - t;
-  const h = Math.floor(diff / 3_600_000);
-  if (h < 1) return "방금";
-  if (h < 24) return `${h}시간 전`;
-  const d = Math.floor(h / 24);
-  if (d < 30) return `${d}일 전`;
-  return new Date(t).toISOString().slice(5, 10).replace("-", ".");
+  return relativeTimeLabel(iso, Date.now(), { unit: "hour", justNow: "방금", maxDays: 30, fallback: "md-utc" });
 }
 
 export default async function TownRegionHomePage({

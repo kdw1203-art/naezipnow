@@ -12,6 +12,7 @@ import {
 } from "@/lib/map/seoul-districts";
 import { pickRegionByAnyName } from "@/lib/regions/param";
 import { useCopy } from "@/lib/ui/use-copy";
+import { formatKrwWon } from "@/lib/format/krw";
 
 /* ============================================================
    시장·대출 시나리오 — 기준 시세를 지역 실데이터(스냅샷 평균가)로 프리필.
@@ -84,10 +85,9 @@ function manwon(won: number): string {
   return `${Math.round(won / 10_000).toLocaleString("ko-KR")}만`;
 }
 
+/** [967 · 31] 원 → "8.45억" — lib/format/krw.ts "eok" 스타일(방어 없음, 기존 그대로) */
 function eok(won: number): string {
-  const e = won / 100_000_000;
-  const s = e >= 10 ? e.toFixed(1) : e.toFixed(2);
-  return `${s.replace(/\.?0+$/, "")}억`;
+  return formatKrwWon(won, { style: "eok", below: "eok", empty: false });
 }
 
 /** "202607" | "20260701" → "2026.07". 형식이 다르면 원문 그대로. */
