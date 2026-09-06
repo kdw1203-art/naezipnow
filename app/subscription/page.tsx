@@ -677,14 +677,17 @@ export default async function SubscriptionPage({
         dangerouslySetInnerHTML={{ __html: jsonLdScript(faqJsonLd(SUBSCRIPTION_FAQ)) }}
       />
 
-      <p className="mx-auto mt-5 w-full max-w-[1080px] t-sub text-text-3">
-        {/* "언제든 해지 가능"만 적어 두면 화면 어딘가에 해지 버튼이 있다는 뜻으로 읽힌다.
-            셀프서비스 해지는 아직 없으므로 실제 접수 경로를 함께 적는다(E1). */}
+      {/* [969] 하이드레이션 불일치 원인 수정 — 예전엔 아래 안내 <div>(안에 <p>)가 이 <p>
+          **안에** 있었다. 브라우저는 <p> 안의 <div> 를 만나면 <p> 를 먼저 닫아 버리므로
+          서버 HTML 과 React 트리가 달라졌고, /subscription 모바일에서 React #418 이 6회 중
+          1회꼴로 났다(dev 서버 실측: "In HTML, <p> cannot be a descendant of <p>"). 형제로 분리. */}
       <div className="mx-auto mt-4 w-full max-w-[1080px]">
         {/* 수익 문구 미기재 방침 + 서비스 제공기간(무형재화 판매정책 필수 표기) */}
         <ComplianceNotice variant="payment" recurringOpen={recurringOpen} />
       </div>
-
+      <p className="mx-auto mt-5 w-full max-w-[1080px] t-sub text-text-3">
+        {/* "언제든 해지 가능"만 적어 두면 화면 어딘가에 해지 버튼이 있다는 뜻으로 읽힌다.
+            셀프서비스 해지는 아직 없으므로 실제 접수 경로를 함께 적는다(E1). */}
         해지·환불은 고객센터 1:1 문의로 접수 · 결제 7일 이내 전액 환불 · 부가세 포함 · 커뮤니티
         글·공개 노트·채팅 등 모든 닉네임 노출 지점에 동일 배지 적용
       </p>

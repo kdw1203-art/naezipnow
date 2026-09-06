@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cache } from "react";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -37,7 +38,13 @@ import { seoAlternates } from "@/lib/seo/alternates";
 import { NoteMiniMap } from "./NoteMiniMap";
 import { noteCoordsFromMetadata } from "@/lib/notes/note-coords";
 import { NoteComments, type NoteCommentView } from "./NoteComments";
-import { listNoteCommentsForViewer } from "@/lib/inspection/note-comments";
+import { listNoteCommentsForViewer, type NoteComment } from "@/lib/inspection/note-comments";
+import {
+  getPublicNoteCached,
+  listPublicNoteCommentsCached,
+  listPublicVisitGroupCached,
+  shouldLogNoteTiming,
+} from "@/lib/inspection/note-cache";
 import { relativeTime } from "@/lib/notes/feed-note";
 import { isAdmin } from "@/lib/auth/is-admin";
 
@@ -89,21 +96,32 @@ type NoteView = {
    아래 loadNote() 의 3분기(정상·미존재·조회실패)로 대체한다. */
 
 type LoadResult =
-  | { kind: "ok"; note: InspectionNote }
-  | { kind: "missing" }
+  | { kind: "ok"; note: InspectionNote; source: "cache" | "db" }
+  | { kind: "missing"; source: "db" }
   | { kind: "error"; message: string };
 
-async function loadNote(id: string): Promise<LoadResult> {
+/* [969 · 20] 노트 행 — 공개 노트는 데이터 캐시(5분, note:<id>)에서 먼저 찾는다.
+   누가 보든 같은 값이라 뷰어별 분기(소유자·구매 열람)는 이 결과 위에서 그대로 한다.
+   캐시 로더(lib/inspection/note-cache.ts)는 공개가 아닌 행을 절대 돌려주지 않고(null),
+   여기서는 그 null 을 "비공개거나 없음" 으로만 읽어 실조회로 내려간다 — 비공개 본문은
+   캐시에 실리지 않는다. 캐시 결과를 쓰기 전에 isPublic 을 한 번 더 확인한다(방어).
+
+   React cache(): generateMetadata 와 페이지가 같은 요청 안에서 getNote 를 **각각**
+   불렀다 — 요청당 노트 조회 2회 중 1회는 그냥 중복이었다. 이제 한 번만 한다
+   (공개·비공개 모두). 실패는 던지지 않고 3분기(정상·미존재·조회실패)로 돌려준다. */
+const loadNote = cache(async (id: string): Promise<LoadResult> => {
   try {
+    const cached = await getPublicNoteCached(id);
+    if (cached && cached.isPublic) return { kind: "ok", note: cached, source: "cache" };
     const note = await getNote(id);
-    return note ? { kind: "ok", note } : { kind: "missing" };
+    return note ? { kind: "ok", note, source: "db" } : { kind: "missing", source: "db" };
   } catch (err) {
     return {
       kind: "error",
       message: err instanceof Error ? err.message : String(err),
     };
   }
-}
+});
 
 /* ---------- 실데이터 → 표준 뷰 변환 ---------- */
 
@@ -317,12 +335,10 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  let note: InspectionNote | null = null;
-  try {
-    note = await getNote(id);
-  } catch {
-    note = null;
-  }
+  /* [969 · 20] 페이지와 같은 요청 메모(React cache) — 예전엔 여기서 getNote 를 따로 불러
+     요청마다 노트 조회가 두 번이었다. 실패·없음은 예전처럼 noindex 로 접는다. */
+  const loaded = await loadNote(id);
+  const note: InspectionNote | null = loaded.kind === "ok" ? loaded.note : null;
   if (!note || !note.isPublic) {
     // 비공개 노트·없는 노트·조회 실패는 색인 금지 (20b 색인 정책)
     return {
@@ -486,7 +502,10 @@ export default async function NoteDetailPage({
   /* [949] 세션과 노트 본문은 서로 독립이라 나란히 받는다 — 예전엔 세션(Auth 쿠키
      검증) 뒤에 노트를 읽어 왕복 하나가 통째로 직렬이었다. 이 페이지는 동적
      렌더라 요청마다 이 직렬이 그대로 TTFB 였다(실측 콜드 0.98s). */
+  /* [969 · 20] 계측 — 파도별 ms 를 아래 [note-timing] 한 줄로 남긴다(표본 1/20) */
+  const t0 = Date.now();
   const [session, loaded] = await Promise.all([safeAuth(), loadNote(id)]);
+  const tNote = Date.now();
   const viewerEmail = session?.user?.email?.trim().toLowerCase() ?? null;
 
   // 조회 실패 — "노트가 없다"고 말하면 거짓이므로 실패 그대로 알린다.
@@ -534,6 +553,16 @@ export default async function NoteDetailPage({
      함께 읽는다. 공개 캐시가 없으니 뷰어별 "내 댓글" 판정을 서버에서 해도 새지 않는다.
      실패는 댓글 섹션만 "못 불러왔다" 로 접는다(노트 본문이 우선). */
   const wantsComments = realNote.isPublic || isOwner;
+  /* [969 · 20] 뷰어와 무관한 조회만 데이터 캐시로 — **공개 노트 + 비소유자** 에서만.
+     · 회차 목록: 캐시본은 공개 회차만 담는다(비소유자 화면과 같은 집합). 소유자는
+       비공개 회차도 봐야 하므로 실조회 그대로.
+     · 댓글: 비로그인 뷰어만 캐시. 로그인 뷰어의 "내 댓글" 판정은 author_email 이
+       필요한데 공개 응답 모양에는 없으므로 실조회(listNoteCommentsForViewer).
+     · 단지 링크(resolveComplexHref)는 이미 6시간 데이터 캐시([948])라 손대지 않는다.
+     · 구매 확인·인근 단지·세션·플랜은 뷰어별 값이라 캐시하지 않는다.
+     캐시 로더는 공개 노트가 아니면 던지므로(assertPublic) 조건을 여기서 먼저 건다. */
+  const useCachedVisits = realNote.isPublic && !isOwner;
+  const useCachedComments = realNote.isPublic && !isOwner && !viewerEmail;
   const [purchasedAccess, complexHref, groupedR, nearbyRowsR, commentsR] = await Promise.all([
     (async () => {
       if (realNote.isPublic || isOwner || !viewerEmail) return false;
@@ -545,9 +574,11 @@ export default async function NoteDetailPage({
     resolveComplexHref(realNote.aptName, realNote.region).catch((): string | null => null),
     // 방문 기록 비교 — complexId 우선, 없으면 aptName. 비소유자는 공개 회차만.
     visitComplexId || visitApt
-      ? (visitComplexId
-          ? listNotesByAuthorForComplex(realNote.authorEmail, visitComplexId)
-          : listNotesByAuthorForApt(realNote.authorEmail, visitApt)
+      ? (useCachedVisits
+          ? listPublicVisitGroupCached(realNote)
+          : visitComplexId
+            ? listNotesByAuthorForComplex(realNote.authorEmail, visitComplexId)
+            : listNotesByAuthorForApt(realNote.authorEmail, visitApt)
         ).then(
           (rows) => ({ ok: true as const, rows }),
           () => ({ ok: false as const }),
@@ -560,7 +591,15 @@ export default async function NoteDetailPage({
         )
       : Promise.resolve({ ok: false as const }),
     wantsComments
-      ? listNoteCommentsForViewer(realNote.id, viewerEmail).then(
+      ? (useCachedComments
+          ? listPublicNoteCommentsCached(realNote).then(
+              (comments): { comments: NoteComment[]; ownCommentIds: string[] } => ({
+                comments,
+                ownCommentIds: [],
+              }),
+            )
+          : listNoteCommentsForViewer(realNote.id, viewerEmail)
+        ).then(
           (r) => ({ ok: true as const, ...r }),
           (e: unknown) => {
             console.error("[/notes/[id]] 댓글 조회 실패:", e);
@@ -569,6 +608,25 @@ export default async function NoteDetailPage({
         )
       : Promise.resolve({ ok: false as const }),
   ]);
+  /* [969 · 20] [note-timing] — 노트 파도(세션∥노트행)와 곁다리 파도를 따로 잰다.
+     path=cache 면 노트 행이 데이터 캐시에서 왔다는 뜻이고, visits/comments 는 그 조회가
+     캐시(cache)·실조회(db)·생략(skip) 중 무엇이었는지다. 배포 뒤 이 줄로 "공개 비로그인
+     열람에서 DB 왕복이 실제로 0이 됐는지" 를 읽는다. 이메일·제목은 싣지 않는다. */
+  const tSide = Date.now();
+  if (shouldLogNoteTiming()) {
+    const viewerKind = isOwner ? "owner" : viewerEmail ? "member" : "anon";
+    const visitsPath = !(visitComplexId || visitApt) ? "skip" : useCachedVisits ? "cache" : "db";
+    const commentsPath = !wantsComments ? "skip" : useCachedComments ? "cache" : "db";
+    /* 생략(skip)은 실패가 아니다 — 조회를 한 것만 센다 */
+    const fail =
+      (visitsPath !== "skip" && !groupedR.ok ? 1 : 0) +
+      (commentsPath !== "skip" && !commentsR.ok ? 1 : 0);
+    console.info(
+      `[note-timing] path=${loaded.source} public=${realNote.isPublic ? 1 : 0} viewer=${viewerKind} ` +
+        `visits=${visitsPath} comments=${commentsPath} note=${tNote - t0}ms side=${tSide - tNote}ms ` +
+        `total=${tSide - t0}ms fail=${fail} id=${id.slice(0, 8)}`,
+    );
+  }
   if (!realNote.isPublic && !isOwner && !purchasedAccess) notFound();
 
   let visits: Visit[] | undefined;

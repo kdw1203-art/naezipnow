@@ -48,8 +48,13 @@ export function buildContentSecurityPolicy(
     isDev
       ? `script-src 'self' 'unsafe-eval' 'unsafe-inline' ${naverMapScript} ${tossScript} https://*.vercel-scripts.com https://va.vercel-scripts.com ${vercelLive}${kakaoScript}`
       : `script-src 'self' 'unsafe-inline' ${naverMapScript} ${tossScript} https://*.vercel-scripts.com https://va.vercel-scripts.com ${vercelLive} ${googleAdsScript}${kakaoScript}`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
-    `font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net ${vercelLive}`,
+    /* [969 · 16] 폰트 셀프호스팅 — style-src 의 fonts.googleapis.com·cdn.jsdelivr.net,
+       font-src 의 fonts.gstatic.com·cdn.jsdelivr.net 을 뺐다. 브라우저가 이 도메인에서
+       CSS·폰트를 받는 곳이 더는 없다(app/layout.tsx 는 /fonts/, 슬로건 @font-face 는
+       globals.css). 남은 사용처(app/api/og · lib/inspection/report-pdf · lib/seo)는
+       전부 서버 측 fetch 라 문서 CSP 와 무관하다. */
+    "style-src 'self' 'unsafe-inline'",
+    `font-src 'self' ${vercelLive}`,
     "img-src 'self' data: blob: https: http:",
     `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com ${naverMapConnect} https://maps.apigw.ntruss.com https://naveropenapi.apigw.ntruss.com https://sens.apigw.ntruss.com https://nid.naver.com http://openapi.seoul.go.kr:8088 https://openapi.seoul.go.kr ${tossConnect} https://*.vercel-insights.com https://vitals.vercel-insights.com ${vercelLive} https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://accounts.google.com ${googleAdsConnect}${kakaoConnect}`,
     "worker-src 'self' blob:",

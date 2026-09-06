@@ -97,9 +97,12 @@ const LOWEND_SCRIPT =
  */
 export const maxDuration = 120;
 
-/* 슬로건 "오래 머물 집을, 지금." + 빈 화면 문구 글자만 담은 Noto Serif KR 서브셋 CSS. */
-const BRAND_SERIF_CSS =
-  "https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600&display=swap&text=%EC%98%A4%EB%9E%98%20%EB%A8%B8%EB%AC%BC%20%EC%A7%91%EC%9D%84%2C%20%EC%A7%80%EA%B8%88.%EC%95%84%EC%A7%81%20%EA%B8%B0%EB%A1%9D%EC%9D%B4%20%EC%97%86%EC%96%B4%EC%9A%94";
+/* [969 · 16] 본문 폰트 CSS — 셀프호스팅(public/fonts/pretendard/). 전에는
+   cdn.jsdelivr.net 의 pretendardvariable-dynamic-subset.min.css 였다. 파일 내용은
+   원본과 같고 url() 만 /fonts/pretendard/ 로 바뀌었다(파일 머리 주석 참고).
+   슬로건 세리프(Noto Serif KR)는 globals.css 끝의 @font-face 로 옮겨 여기서 링크할
+   CSS 가 없다 — 예전 BRAND_SERIF_CSS(fonts.googleapis.com text= 서브셋) 상수는 삭제. */
+const PRETENDARD_CSS = "/fonts/pretendard/pretendardvariable-dynamic-subset.css";
 
 export default function RootLayout({
   children,
@@ -113,18 +116,15 @@ export default function RootLayout({
             <html> 은 suppressHydrationWarning 이라(테마 class 와 같은 이유) 속성이 붙어도
             하이드레이션 경고가 없다. */}
         <script dangerouslySetInnerHTML={{ __html: LOWEND_SCRIPT }} />
-        {/* G7 — 폰트 CDN 사전 연결.
-            preconnect 없이는 DNS→TCP→TLS 세 왕복이 링크를 만난 뒤에야 시작된다.
-            미리 열어 두면 그 왕복이 HTML 파싱과 겹친다. crossOrigin 은 필수 —
-            폰트는 CORS 로 받으므로 이게 없으면 연결이 재사용되지 않고 따로
-            하나 더 열린다.
-            (이 주석은 원래 "아래 stylesheet 은 렌더 블로킹"이라고 적혀 있었다.
-             아래에서 media=print→all 스왑으로 비차단으로 바꾼 뒤에도 문장이
-             남아 있었다. 낡은 설명은 낡은 코드보다 위험하다 — 다음 사람이
-             있지도 않은 차단을 없애려고 시간을 쓴다. 지금은 차단이 아니고,
-             preconnect 가 줄이는 건 '폰트가 늦게 뜨는 시간'이다.) */}
-        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+        {/* [969 · 16] 폰트 원점 3 → 0. 여기 있던 G7 preconnect/dns-prefetch(cdn.jsdelivr.net)
+            와 아래 [949] preconnect(fonts.gstatic.com)를 지웠다 — 폰트 CSS·woff2 가 전부
+            same-origin(/fonts/) 이 되어 미리 열 연결이 없다. 예전에는 폰트 때문에
+            cdn.jsdelivr.net · fonts.googleapis.com · fonts.gstatic.com 세 원점에 각각
+            DNS→TCP→TLS 를 열어야 했고(preconnect 는 그 왕복을 HTML 파싱과 겹칠 뿐
+            없애지는 못한다), 모바일 4G 에서는 원점 하나당 왕복 3~4회가 든다. 이제 HTML 을
+            받은 연결(HTTP/2 재사용)로 폰트까지 받는다 — 핸드셰이크 0회, 요청 수도
+            구글 CSS 1건이 준다(@font-face 가 globals.css 안으로 들어갔다).
+            CSP(style-src/font-src)에서도 세 도메인을 뺐다(lib/security/content-security-policy). */}
         {/* N3 — RSS 자동 발견. 리더·크롤러는 이 태그로 피드를 찾는다. 메타데이터
             규약(alternates.types)에 두지 않은 이유는, 페이지가 canonical 을
             지정하면 alternates 객체가 통째로 덮여 피드 링크가 사라지기 때문이다.
@@ -146,18 +146,16 @@ export default function RootLayout({
             비서브셋 통짜 파일은 2,009KB — 즉 서브셋으로 이미 84% 를 안 받고 있다.
             더 줄이려면 글자를 직접 골라 셀프호스팅해야 하는데, 사용자가 입력한
             단지명·지역명이 본문에 그대로 나오는 사이트라 고정 글자 집합을 만들 수
-            없다. 없는 글자가 시스템 폰트로 튀는 쪽이 330KB 보다 나쁘다. */}
-        <link
-          rel="preload"
-          as="style"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
-        />
-        <link
-          id="pretendard-font"
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
-          media="print"
-        />
+            없다. 없는 글자가 시스템 폰트로 튀는 쪽이 330KB 보다 나쁘다.
+
+            [969 · 16] 같은 dynamic-subset CSS 를 **셀프호스팅**으로 바꿨다(위
+            PRETENDARD_CSS). 92조각 unicode-range 분할은 그대로라 받는 양은 같고,
+            원점만 cdn.jsdelivr.net → same-origin. 비차단 패턴(preload → print→all
+            스왑 → noscript 폴백)은 그대로 둔다 — 원점이 같아도 CSS 는 여전히
+            첫 페인트 뒤에 와도 되는 자원이다. /fonts/ 는 next.config 가 immutable
+            1년 캐시를 주고 서비스워커가 cache-first 로 든다([968 · 43]). */}
+        <link rel="preload" as="style" href={PRETENDARD_CSS} />
+        <link id="pretendard-font" rel="stylesheet" href={PRETENDARD_CSS} media="print" />
         <script
           dangerouslySetInnerHTML={{
             __html:
@@ -165,32 +163,21 @@ export default function RootLayout({
           }}
         />
         <noscript>
-          <link
-            rel="stylesheet"
-            href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
-          />
+          <link rel="stylesheet" href={PRETENDARD_CSS} />
         </noscript>
-        {/* [946] 브랜드 슬로건 세리프 — text= 파라미터로 슬로건 글자만 서브셋(수 KB).
+        {/* [946] 브랜드 슬로건 세리프 — text= 파라미터로 슬로건 글자만 서브셋.
             통짜 Noto Serif KR(수백 KB)을 문장 하나 때문에 싣지 않는다.
             [949] 946 에서는 이 링크가 **렌더 차단** stylesheet 였다 — 모든 페이지가
             첫 페인트 전에 fonts.googleapis.com 으로 DNS·TCP·TLS 를 새로 열고 CSS 를
             받아야 했다(슬로건이 없는 단지 페이지까지). 실사용 web_vitals 14일:
             /complex FCP p75 2.3s 중 TTFB 를 뺀 0.9s 가 이런 차단 자원 몫이다.
-            Pretendard 와 같은 preload → media=print→all 스왑으로 비차단화하고,
-            폰트 파일 호스트(gstatic)를 미리 연결한다. 슬로건은 display=swap 이라
-            시스템 세리프로 먼저 그려지고 로드 후 바뀐다. */}
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="preload" as="style" href={BRAND_SERIF_CSS} />
-        <link id="brand-serif-font" rel="stylesheet" href={BRAND_SERIF_CSS} media="print" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "(function(){var l=document.getElementById('brand-serif-font');if(!l)return;function a(){l.media='all'}l.addEventListener('load',a);if(l.sheet)a();})();",
-          }}
-        />
-        <noscript>
-          <link rel="stylesheet" href={BRAND_SERIF_CSS} />
-        </noscript>
+            → preload → media=print→all 스왑으로 비차단화했었다.
+            [969 · 16] 여기 있던 링크 세트(preconnect gstatic · preload · stylesheet
+            media=print · 스왑 스크립트 · noscript)를 전부 지웠다. 구글이 text= 로 돌려준
+            woff2(51,372 bytes) 를 public/fonts/noto-serif-kr/ 에 두고 @font-face 는
+            globals.css 끝에 있다(font-display: swap · unicode-range 동일). 이제 이 폰트는
+            원점 둘(googleapis + gstatic)·요청 둘이 아니라 same-origin 요청 하나이고,
+            슬로건이 없는 페이지는 unicode-range 덕에 파일을 받지도 않는다. */}
         {/* #19 PWA — iOS 홈 화면 아이콘 · 웹앱 메타
             G9: .svg → .png 로 교체했다. Safari 는 apple-touch-icon 으로 SVG 를
             받지 않는다 — 지금까지 iOS 에서 홈 화면에 추가하면 아이콘이 아니라

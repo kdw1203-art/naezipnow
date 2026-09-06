@@ -1,10 +1,7 @@
 import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
-import {
-  listPublicNotes,
-  inspectionAverageScore,
-  type InspectionNote,
-} from "@/lib/inspection/store-db";
+import { inspectionAverageScore, type PublicNoteCard } from "@/lib/inspection/store-db";
+import { listRelatedNotePoolCached, shouldLogNoteTiming } from "@/lib/inspection/note-cache";
 import { regionIdForName } from "@/lib/region/catalog";
 import { rankRelatedNotes } from "@/lib/notes/region-match";
 import { logger } from "@/lib/log";
@@ -16,7 +13,10 @@ import { logger } from "@/lib/log";
  * 그리지 않는다. 조회 실패도 섹션 생략(fail-soft — 상세 본문이 우선이다).
  * [967 · 13] "같은 지역" 은 `region ===` 정확 일치가 아니라 lib/notes/region-match 의
  * 관대한 매칭이다 — 같은 동 → 같은 구 → 같은 시 순으로, /notes 의 관심 지역 칩과
- * 같은 잣대. "서울 송파구 가락동" 옆에 "서울 송파구 잠실동" 노트가 나온다. 최대 6건. */
+ * 같은 잣대. "서울 송파구 가락동" 옆에 "서울 송파구 잠실동" 노트가 나온다. 최대 6건.
+ * [969 · 20] 풀은 데이터 캐시(5분, public-notes 태그)의 **카드 컬럼** 50장이다 — 예전엔
+ * 요청마다 전체 행(jsonb 5개 포함) 50건을 실조회했고, 이 조회는 Suspense 경계가 없어
+ * 공개 노트 상세의 TTFB 에 그대로 얹혔다. 매칭·정렬(rankRelatedNotes)은 그대로다. */
 
 const RELATED_CAP = 6;
 
@@ -27,12 +27,16 @@ export async function RelatedNotes({
   currentId: string;
   region: string;
 }) {
-  let notes: InspectionNote[] = [];
+  let notes: PublicNoteCard[] = [];
+  const t0 = Date.now();
   try {
-    notes = await listPublicNotes(50);
+    notes = await listRelatedNotePoolCached();
   } catch (e) {
     logger.error("[related-notes]", e);
     return null;
+  }
+  if (shouldLogNoteTiming()) {
+    console.info(`[note-timing] related pool=${Date.now() - t0}ms rows=${notes.length}`);
   }
   const regionTrim = region.trim();
   const sameRegion = regionTrim

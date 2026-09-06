@@ -11,6 +11,7 @@ import {
   type InspectionChecklistItem,
   type InspectionScores,
 } from "@/lib/inspection/store-db";
+import { invalidateNoteCache } from "@/lib/inspection/note-cache";
 
 function mapScores(report: StructuredReport): InspectionScores {
   const s = report.scores;
@@ -106,6 +107,9 @@ export async function syncSessionToInspectionNote(
       aiAnalysis: payload.aiAnalysis,
       metadata: payload.metadata,
     });
+    /* [969 · 20] 제목·점수·본문이 바뀐다 — 상세 데이터 캐시를 비운다. 잡 러너(요청 밖)에서
+       불리면 revalidateTag 가 못 돌고 경고만 남는다(5분 만료가 안전망). */
+    invalidateNoteCache(session.noteId, "content");
     return { noteId: session.noteId };
   }
 

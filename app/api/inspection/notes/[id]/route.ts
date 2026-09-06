@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { appendOnboardingStep } from "@/lib/onboarding/append-step";
 import { deleteNote, getNote, updateNote } from "@/lib/inspection/store-db";
+import { invalidateNoteCache } from "@/lib/inspection/note-cache";
 import { awardPoints } from "@/lib/points/ledger";
 import { dbUnavailable } from "@/lib/api/db-unavailable";
 import { looksLikeEmail } from "@/lib/privacy/mask-email";
@@ -104,6 +105,10 @@ export async function PATCH(
     return dbUnavailable("inspection-note-update", e);
   }
   if (!updated) return NextResponse.json({ error: "없음" }, { status: 404 });
+  /* [969 · 20] 상세의 데이터 캐시(노트 행·공개 회차·관련 노트 풀)를 비운다 — 저장 직후
+     리다이렉트되는 /notes/[id] 가 5분 전 본문을 보여 주면 "저장이 안 됐다" 로 읽힌다.
+     공개→비공개 전환도 여기서 잡힌다(행 캐시가 비워지고 다음 조회는 null 을 저장한다). */
+  invalidateNoteCache(id, "content");
   if (updated.isPublic) {
     void appendOnboardingStep(session.user.email, "share");
     // 비공개 → 공개 전환 시에만 적립. refId=noteId 로 재공개 중복 지급 방지.
@@ -137,5 +142,8 @@ export async function DELETE(
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
   await deleteNote(id);
+  /* [969 · 20] 지운 노트의 행·댓글·관련 노트 풀 캐시를 비운다 — 안 비우면 공개 링크가
+     5분간 살아 있는 것처럼 열린다(존재하지 않는 기록을 사실처럼 보이는 것) */
+  invalidateNoteCache(id, "delete");
   return NextResponse.json({ ok: true });
 }

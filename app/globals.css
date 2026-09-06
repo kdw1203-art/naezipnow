@@ -1781,7 +1781,8 @@ body:has(textarea:focus-visible) .tabbar-autohide {
   color: var(--on-dark-muted);
   animation: njnFadeUp 450ms ease-out 700ms backwards;
 }
-/* 슬로건 한 줄 — 세리프(서브셋 로드) · 마침표는 주홍 온점 */
+/* 슬로건 한 줄 — 세리프(서브셋 로드) · 마침표는 주홍 온점
+   [969 · 16] "Noto Serif KR" 은 파일 끝 @font-face(셀프호스팅 서브셋)가 정의한다 */
 .moment-slogan {
   font-family: "Noto Serif KR", "Nanum Myeongjo", Batang, serif;
   font-size: 12px; /* 램프 sub */
@@ -2988,6 +2989,7 @@ a.rank-row:hover {
   padding: 12px 16px;
 }
 .brand-slogan-band .slg {
+  /* [969 · 16] "Noto Serif KR" 은 파일 끝 @font-face(셀프호스팅 서브셋)가 정의한다 */
   font-family: "Noto Serif KR", "Nanum Myeongjo", Batang, serif;
   font-size: 13px; /* 램프 13 */
   font-weight: 600;
@@ -4218,4 +4220,23 @@ html[data-lowend] body::after {
   body:has(textarea:focus-visible) .complex-actionbar {
     display: none;
   }
+}
+
+/* ===== [969 · 폰트 셀프호스팅] ===== */
+/* [969 · 16] 슬로건 세리프 — Noto Serif KR 600, 구글 폰트가 text= 서브셋으로 돌려준
+   woff2 한 장(51,372 bytes)을 그대로 받아 public/fonts/noto-serif-kr/ 에 둔다.
+   946~949 에서는 <head> 가 fonts.googleapis.com CSS(preload + print→all 스왑) 를
+   받은 뒤 fonts.gstatic.com 에서 파일을 받았다 — 원점 둘, 요청 둘. 이제 @font-face
+   가 앱 CSS 안에 있어 CSS 요청은 없어지고 파일은 same-origin(/fonts/ immutable
+   1년 캐시 · SW cache-first [968 · 43]). font-family 이름은 그대로 — 위
+   .moment-slogan · .brand-slogan-band .slg 규칙이 그대로 맞는다. unicode-range 는
+   구글이 준 값 그대로(슬로건·빈 화면 문구 글자만) — 범위 밖 글자는 폴백 세리프.
+   라이선스: SIL OFL 1.1 (Noto Serif KR). */
+@font-face {
+  font-family: "Noto Serif KR";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/fonts/noto-serif-kr/noto-serif-kr-600-slogan-subset.woff2) format("woff2");
+  unicode-range: U+20, U+2c, U+2e, U+1100, U+1105-1106, U+110b-110c, U+1161-1162, U+1165, U+1169, U+116d-116e, U+1173, U+1175, U+11a8, U+11af, U+11b7-11b9, U+ac00-ac01, U+ac08, U+ac10-ac12, U+ac1c-ac1d, U+ac24, U+ac2c-ac2e, U+ac70-ac71, U+ac78, U+ac80-ac82, U+ace0-ace1, U+ace8, U+acf0-acf2, U+ad50-ad51, U+ad58, U+ad60-ad62, U+ad6c-ad6d, U+ad74, U+ad7c-ad7e, U+adf8-adf9, U+ae00, U+ae08-ae0a, U+ae30-ae31, U+ae38, U+ae40-ae42, U+b77c-b77d, U+b784, U+b78c-b78e, U+b798-b799, U+b7a0, U+b7a8-b7aa, U+b7ec-b7ed, U+b7f4, U+b7fc-b7fe, U+b85c-b85d, U+b864, U+b86c-b86e, U+b8cc-b8cd, U+b8d4, U+b8dc-b8de, U+b8e8-b8e9, U+b8f0, U+b8f8-b8fa, U+b974-b975, U+b97c, U+b984-b986, U+b9ac-b9ad, U+b9b4, U+b9bc-b9be, U+b9c8-b9c9, U+b9d0, U+b9d8-b9da, U+b9e4-b9e5, U+b9ec, U+b9f4-b9f6, U+ba38-ba39, U+ba40, U+ba48-ba4a, U+baa8-baa9, U+bab0, U+bab8-baba, U+bb18-bb19, U+bb20, U+bb28-bb2a, U+bb34-bb35, U+bb3c, U+bb44-bb46, U+bbc0-bbc1, U+bbc8, U+bbd0-bbd2, U+bbf8-bbf9, U+bc00, U+bc08-bc0a, U+c544-c545, U+c54c, U+c554-c556, U+c560-c561, U+c568, U+c570-c572, U+c5b4-c5b5, U+c5bc, U+c5c4-c5c6, U+c624-c625, U+c62c, U+c634-c636, U+c694-c695, U+c69c, U+c6a4-c6a6, U+c6b0-c6b1, U+c6b8, U+c6c0-c6c2, U+c73c-c73d, U+c744, U+c74c-c74e, U+c774-c775, U+c77c, U+c784-c786, U+c790-c791, U+c798, U+c7a0-c7a2, U+c7ac-c7ad, U+c7b4, U+c7bc-c7be, U+c800-c801, U+c808, U+c810-c812, U+c870-c871, U+c878, U+c880-c882, U+c8e0-c8e1, U+c8e8, U+c8f0-c8f2, U+c8fc-c8fd, U+c904, U+c90c-c90e, U+c988-c989, U+c990, U+c998-c99a, U+c9c0-c9c1, U+c9c8, U+c9d0-c9d2;
 }

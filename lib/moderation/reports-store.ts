@@ -1,5 +1,6 @@
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { pushInboxNotification } from "@/lib/notifications/inbox";
+import { invalidateNoteCache } from "@/lib/inspection/note-cache";
 import { logger } from "@/lib/log";
 
 export type ReportStatus = "open" | "reviewed" | "dismissed";
@@ -148,6 +149,9 @@ export async function hideReportedContent(
           updated_at: new Date().toISOString(),
         })
         .eq("id", targetId);
+      /* [969 · 20] 숨긴 노트의 상세 데이터 캐시(행·회차·관련 풀)를 비운다 — 안 비우면
+         신고 누적으로 가린 글이 공개 링크로 5분간 그대로 열린다. 숨김이 성공한 때만. */
+      if (!error) invalidateNoteCache(targetId, "content");
       return !error;
     }
     const { data: post } = await sb

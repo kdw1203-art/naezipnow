@@ -44,6 +44,7 @@ import {
   filledAxisCount,
 } from "@/lib/inspection/deep-dive";
 import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { invalidateNoteCache } from "@/lib/inspection/note-cache";
 
 /** 임장노트 metadata 확장 필드 — AI 재분석 캐시·직전 결과 1개 보관 */
 type InspectionAiCacheMeta = InspectionNoteMetadata & {
@@ -353,6 +354,9 @@ export async function POST(req: Request) {
         aiAnalysis: analysis,
         metadata: nextMeta as InspectionNoteMetadata,
       });
+      /* [969 · 20] 상세의 노트 행 캐시를 비운다 — AI 재시도 직후 화면이 5분간 "규칙 기반
+         요약" 그대로면 재시도가 안 된 것으로 보인다. 목록엔 안 실리는 값이라 행만. */
+      invalidateNoteCache(note.id, "metadata");
     }
 
     try {

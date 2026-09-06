@@ -9,6 +9,7 @@ import {
   listPublicNotesPage,
   PUBLIC_NOTES_PAGE_MAX,
 } from "@/lib/inspection/store-db";
+import { invalidateNoteCache } from "@/lib/inspection/note-cache";
 import { buildFeedNotes } from "@/lib/notes/feed-note";
 import { listAlertSubscriptions } from "@/lib/alerts/subscriptions";
 import { awardPoints } from "@/lib/points/ledger";
@@ -202,6 +203,8 @@ export async function POST(req: Request) {
     if (isPublic) {
       revalidatePath("/notes");
       revalidatePath("/");
+      /* [969 · 20] 다른 노트 상세의 "관련 노트" 풀(public-notes)에 새 공개 노트가 바로 들어가게 */
+      invalidateNoteCache(note.id, "content");
       // 공개 상태로 최초 생성 시에도 100P 적립.
       // refId=note.id 멱등 — 이후 PATCH(비공개→공개)에서 같은 refId 로 중복 지급되지 않음.
       await awardPoints(session.user.email, "note_public", note.id);

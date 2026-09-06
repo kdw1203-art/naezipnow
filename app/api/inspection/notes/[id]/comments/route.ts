@@ -8,6 +8,7 @@ import {
   softDeleteNoteComment,
   NOTE_COMMENT_MAX_LEN,
 } from "@/lib/inspection/note-comments";
+import { invalidateNoteCache } from "@/lib/inspection/note-cache";
 import { appendInboxNotification } from "@/lib/notifications/inbox";
 import { applyRateLimit, rateLimit, tooManyRequests, WRITE_RATE_LIMIT } from "@/lib/rate-limit";
 import { dbUnavailable } from "@/lib/api/db-unavailable";
@@ -122,6 +123,9 @@ export async function POST(
             : "답글 대상 댓글을 찾을 수 없어요.";
     return NextResponse.json({ error: msg }, { status: 400 });
   }
+  /* [969 · 20] 비로그인 뷰어용 댓글 목록 캐시(60초)를 비운다 — 작성자는 로그인 상태라
+     실조회로 자기 댓글을 바로 보지만, 공유 링크로 들어온 사람도 같은 목록을 봐야 한다 */
+  invalidateNoteCache(id, "comment");
 
   /* 소유자에게 인앱 알림 — 착지점은 상세의 #comments. 본인 댓글은 알리지 않는다.
      알림 실패가 댓글 성공을 바꾸지 않는다(fail-soft). */
@@ -179,5 +183,7 @@ export async function DELETE(
   if (!result) {
     return NextResponse.json({ error: "댓글을 찾을 수 없어요." }, { status: 404 });
   }
+  /* [969 · 20] 지운 댓글이 캐시본에 본문 그대로 남지 않게 — 마스킹은 즉시 보여야 한다 */
+  invalidateNoteCache(id, "comment");
   return NextResponse.json({ ok: true, comment: result });
 }

@@ -159,8 +159,10 @@ test("toss 진단 — 미설정은 null/false, 종류·환경이 어긋나면 ke
   assert.equal(mismatch.clientKeyKind, "widget");
   assert.equal(mismatch.billingClientKeyKind, "api");
   // 형식이 토스 키가 아닌 값은 종류를 알 수 없다 → null (raw 는 절대 반환하지 않음)
+  // [969] 픽스처 교체: 예전 값 "sk_live_…" 은 gitleaks stripe-access-token 규칙에 걸려
+  // 2026-09-06 968 배포 워크플로가 시크릿 스캔 단계에서 멈췄다. 토스 접두사가 아니기만 하면 된다.
   const invalid = tossDiagnostics({
-    clientKey: "sk_live_notatosskey",
+    clientKey: "not-a-toss-key-format",
     secretKey: undefined,
     billingClientKey: undefined,
     billingSecretKey: undefined,

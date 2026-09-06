@@ -7,6 +7,7 @@ import { emailLayout, escapeHtml } from "@/lib/email/templates";
 import { getBusinessInfo } from "@/lib/brand/business-info";
 import { logger } from "@/lib/log";
 import { maskEmailPublic } from "@/lib/privacy/mask-email";
+import { invalidateNoteCache } from "@/lib/inspection/note-cache";
 import { DELETE_CONFIRM_WORD, DELETE_GRACE_DAYS as GRACE_DAYS } from "@/lib/account/deletion";
 
 export const runtime = "nodejs";
@@ -145,6 +146,9 @@ export async function POST(req: NextRequest) {
       .eq("is_public", true)
       .select("id");
     hidden.inspection_notes = data?.length ?? 0;
+    /* [969 · 20] 비공개로 돌린 노트의 상세 데이터 캐시를 비운다 — 탈퇴 접수 뒤에도 공개
+       링크가 5분간 열리면 "공개 콘텐츠 비공개" 가 지켜지지 않은 것이다 */
+    for (const row of data ?? []) invalidateNoteCache(String(row.id), "content");
   } catch {
     hidden.inspection_notes = "error";
   }

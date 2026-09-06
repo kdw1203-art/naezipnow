@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { getNote, updateNote } from "@/lib/inspection/store-db";
+import { invalidateNoteCache } from "@/lib/inspection/note-cache";
 import { toCardSource } from "@/lib/notes/card-source";
 import { normalizeConfig } from "@/lib/notes/card-config";
 import { applyRateLimit, AUTH_RATE_LIMIT } from "@/lib/rate-limit";
@@ -56,6 +57,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     logger.error("[card-config] 저장 실패", e);
     return NextResponse.json({ error: "저장에 실패했어요. 다시 시도해 주세요." }, { status: 503 });
   }
+  /* [969 · 20] metadata 가 바뀌었으니 상세의 노트 행 캐시를 비운다(목록엔 안 실리는 값) */
+  invalidateNoteCache(id, "metadata");
 
   return NextResponse.json({ ok: true, config: normalized });
 }
