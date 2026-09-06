@@ -299,12 +299,11 @@ export function HeaderSearch() {
       {/* 항목 12 — 빈 입력 포커스: 최근 검색어 드롭다운
           [966] 옵션은 tabIndex=-1 — 포커스는 인풋에 두고 activedescendant 로 가리킨다.
           마우스 올림도 같은 활성 상태를 쓴다(강조가 두 갈래로 갈리지 않게). */}
+      {/* [970 · A-02] 두 드롭다운의 인라인 흰 배경을 걷었다 — 다크에서 흰 판 위 밝은 글자.
+          .popover-surface 는 surface 토큰 92%(양 테마, globals.css). */}
       {showRecents && (
         <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-[300px]">
-          <div
-            className="glass-strong overflow-hidden rounded-2xl p-1.5 [animation:riseIn_180ms_var(--ease-out)_backwards]"
-            style={{ background: "rgba(255,255,255,.9)" }}
-          >
+          <div className="glass-strong popover-surface overflow-hidden rounded-2xl p-1.5 [animation:riseIn_180ms_var(--ease-out)_backwards]">
             <div id="hs-recents-label" className="px-3 pb-1 pt-1.5 text-[10px] font-extrabold text-text-3">
               최근 검색
             </div>
@@ -336,10 +335,7 @@ export function HeaderSearch() {
 
       {showResults && (
         <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-[300px]">
-          <div
-            className="glass-strong overflow-hidden rounded-2xl p-1.5 [animation:riseIn_180ms_var(--ease-out)_backwards]"
-            style={{ background: "rgba(255,255,255,.9)" }}
-          >
+          <div className="glass-strong popover-surface overflow-hidden rounded-2xl p-1.5 [animation:riseIn_180ms_var(--ease-out)_backwards]">
             {items.length > 0 ? (
               <div role="listbox" id={LISTBOX_ID} aria-label="검색 제안">
                 {items.map((it, i) => (

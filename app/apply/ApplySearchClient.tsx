@@ -281,9 +281,10 @@ export function ApplySearchClient({ initial }: Props) {
   const displayItems = sortItems(state.items, sortKey);
   const hasResults = !error && !loading && state.items.length > 0;
 
+  /* [970 · B-06] 네이비 알약 글자 text-surface → text-on-dark(다크에서 안 보였다) */
   const sortPill = (on: boolean) =>
     on
-      ? "press rounded-full bg-brand-navy px-3 py-1.5 text-[12px] font-bold text-surface"
+      ? "press rounded-full bg-brand-navy px-3 py-1.5 text-[12px] font-bold text-on-dark"
       : "press glass rounded-full px-3 py-1.5 text-[12px] font-semibold text-text-2";
 
   return (
@@ -400,10 +401,11 @@ export function ApplySearchClient({ initial }: Props) {
       ) : state.items.length === 0 ? (
         <div className="rise-in-2">
           {state.mode === "mock" ? (
+            /* [970 · C-44] env 변수명(DATA_GO_KR_SERVICE_KEY)이 사용자 화면에 나갔다 — 일반 문구로 */
             <EmptyState
               icon="lock"
-              title="청약홈 공공데이터 연동이 아직 설정되지 않았어요"
-              desc="DATA_GO_KR_SERVICE_KEY 가 없어 실데이터를 부를 수 없습니다. 지어낸 수치로 표를 채우지는 않아요."
+              title="청약홈 연동 준비 중이에요"
+              desc="아직 청약홈 공공데이터가 연결되지 않아 실데이터를 부를 수 없어요. 지어낸 수치로 표를 채우지는 않아요."
               action={{ href: "https://www.applyhome.co.kr", label: "청약홈에서 직접 보기 ↗" }}
             />
           ) : filteredMode && !state.detailAvailable ? (

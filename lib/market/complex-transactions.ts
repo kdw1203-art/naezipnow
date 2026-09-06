@@ -251,7 +251,7 @@ function derivePerPyeong(rec: ComplexTransactionRecord): number | null {
  * 수십만 건 있는데 잠깐 못 읽었을 뿐인 상황에서 방문자와 크롤러 모두에게
  * 거짓을 말하는 문장이다. 빈 배열은 "정말로 거래가 없다"만 뜻하게 둔다.
  *
- * 서비스 키가 없는 경우(CI 프리렌더)는 장애가 아니므로 그대로 빈 배열이다.
+ * [970 · B-43] 서비스 키가 없는 경우도 던진다 — 예전엔 빈 배열이라 "상위 0개"로 나갔다.
  */
 async function fetchDistrictTransactions(
   region: ComplexTxRegion,
@@ -260,7 +260,14 @@ async function fetchDistrictTransactions(
   signal?: AbortSignal,
 ): Promise<ComplexTransactionRecord[]> {
   const sb = getServiceSupabase();
-  if (!sb) return [];
+  /* [970 · B-43] 키가 없으면 던진다 — 빈 배열로 돌려주면 /complex/browse 가 "상위 0개"·
+     "거래 없음"으로 그렸다(같은 파일의 listComplexTransactions 와 같은 판단). 호출측
+     (browse 의 try/catch, /region 의 settle)은 이미 실패 분기를 갖고 있다. */
+  if (!sb) {
+    throw new Error(
+      `[complex-transactions] ${region.id}: Supabase 서비스 키가 없어 구 단위 실거래를 조회할 수 없습니다.`,
+    );
+  }
   let q = sb
     .from("market_transactions")
     .select(TX_SELECT)

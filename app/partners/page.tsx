@@ -2,17 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "../components/PageShell";
 import { PartnerForm } from "./PartnerForm";
+import { buildPageMetadata } from "@/lib/seo/page-metadata";
 
 /* ============================================================
    중개사 제휴 안내 — /partners
    혜택 안내 + 제휴 신청 폼 → partnership_inquiries 저장 (POST /api/partners).
    ============================================================ */
 
-export const metadata: Metadata = {
-  title: "중개사 제휴 안내 · 내집나우",
+/* [970 · A-31|C-25] `· 내집나우` 접미를 buildPageMetadata 경유(`| 내집나우` 자동)로 —
+   사이트맵에 있는 공개 페이지라 canonical 도 같이 붙는다. */
+export const metadata: Metadata = buildPageMetadata({
+  title: "중개사 제휴 안내",
   description:
     "개업공인중개사를 위한 내집나우 제휴 프로그램 — 매물 노출, 전문가 프로필, 상담 연결까지.",
-};
+  path: "/partners",
+});
 
 const BENEFITS = [
   {
@@ -32,7 +36,9 @@ const BENEFITS = [
 export default function PartnersPage() {
   return (
     <PageShell breadcrumb="홈 › 중개사 제휴">
-      <div className="mb-6 max-w-[720px]">
+      {/* [970 · A-37] 데스크톱 폭 혼재(720 · 전폭 · 640 · 720)를 한 래퍼(760px 가운데)로 통일 */}
+      <div className="mx-auto w-full max-w-[760px]">
+      <div className="mb-6">
         <h1 className="rise-in text-[24px] font-extrabold leading-[1.35] text-ink">
           동네 매물, 내집나우에서 더 많은 이웃에게
         </h1>
@@ -60,18 +66,19 @@ export default function PartnersPage() {
         ))}
       </div>
 
-      <div className="rise-in-1 max-w-[640px]">
+      <div className="rise-in-1">
         <h2 className="mb-3 text-[15px] font-extrabold text-ink">제휴 신청</h2>
         <PartnerForm />
       </div>
 
-      <div className="mt-8 max-w-[720px] rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[12px] leading-[1.7] text-text-3">
+      <div className="mt-8 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[12px] leading-[1.7] text-text-3">
         제휴는 개업공인중개사(중개사무소 등록번호 보유)에 한해 가능합니다. 신청
         내용은 검토 목적으로만 사용하며,{" "}
         <Link href="/legal/privacy" className="underline">
           개인정보처리방침
         </Link>
         에 따라 처리됩니다.
+      </div>
       </div>
     </PageShell>
   );

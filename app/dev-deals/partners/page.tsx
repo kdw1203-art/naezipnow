@@ -17,7 +17,8 @@ import { ComplianceNotice } from "@/app/components/ComplianceNotice";
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: "협력업체 디렉터리 · 개발물건 중개 · 내집나우",
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+  title: "협력업체 디렉터리 — 개발물건 중개 | 내집나우",
   description:
     "시공사·설계사·신탁·PF·마케팅·감리 등 개발사업 협력업체를 찾고, 우리 회사를 등록해 개발물건 매칭을 받아 보세요.",
   robots: { index: true, follow: true },

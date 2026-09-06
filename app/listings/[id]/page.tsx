@@ -51,8 +51,9 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우`(폴백·정상 경로 둘 다) */
   const base: Metadata = {
-    title: "매물 상세 · 내집나우",
+    title: "매물 상세 | 내집나우",
     description:
       "집주인 직접·중개사 등록 매물의 상세 정보. 실거래가와 비교하며 확인하세요.",
   };
@@ -72,7 +73,7 @@ export async function generateMetadata({
     `&area=${encodeURIComponent(area)}` +
     `&type=${encodeURIComponent(LISTING_TYPE_LABEL[listing.listingType])}`;
 
-  const title = `${listing.complexName} · ${priceLine(listing)} · 내집나우`;
+  const title = `${listing.complexName} · ${priceLine(listing)} | 내집나우`;
   const description =
     `${listing.regionName ? `${listing.regionName} · ` : ""}${LISTING_TYPE_LABEL[listing.listingType]} 매물 — 실거래가와 비교하며 확인하세요.`;
 
@@ -448,7 +449,8 @@ export default async function ListingDetailPage({
             </section>
           ) : (
             <Link
-              href={txHref ?? "/complex/tx"}
+              /* [970 · B-18] /complex/tx 인덱스는 리다이렉트만 있다 — 목적지로 바로 보낸다 */
+              href={txHref ?? "/complex/browse"}
               className="w-fit text-[13px] font-bold text-primary underline"
             >
               실거래가 비교 →

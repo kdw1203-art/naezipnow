@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageShell } from "../../components/PageShell";
 import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useMoment } from "@/app/components/motion/MomentProvider";
 import { COMMUNITY_SUBCATEGORIES } from "@/lib/subcategories";
 import { CITY_OPTIONS, DISTRICTS } from "@/lib/regions";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
@@ -15,7 +16,7 @@ import { useDirtyTracker, useUnsavedGuard } from "@/lib/client/use-unsaved-guard
 /* ============================================================
    동네이야기 글쓰기 — POST /api/community/posts 실연동
    필수 필드: title(2자+), body(5자+), city, district, category
-   401 → 인라인 로그인 안내, 성공 → /town 이동
+   401 → 인라인 로그인 안내, 성공 → 방금 쓴 글 상세로 이동(+ 적립 안내) [970 · C-02]
    ============================================================ */
 
 type CityOption = (typeof CITY_OPTIONS)[number];
@@ -114,6 +115,7 @@ function TownWriteForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { promptSignup } = useSoftSignup();
+  const { showMoment } = useMoment();
   /* /complex/[id] 의 "이 단지 이야기 쓰기"에서 넘어온 값. 이름은 화면 표시용일
      뿐이고, 저장되는 연결 키는 complexId 하나다(서버가 다시 검증한다). */
   const complexId = (searchParams.get("complex") ?? "").trim();
@@ -344,8 +346,31 @@ function TownWriteForm() {
       clearDraft();
       setSavedAt(null);
       setPosted(true); /* [966] 올라갔다 — 가드 해제 */
-      // 단지에서 넘어왔으면 그 단지로 돌려보낸다 — 방금 쓴 글이 붙은 자리다.
-      router.push(complexId ? `/complex/${encodeURIComponent(complexId)}` : "/town");
+      /* [970 · C-02] 예전엔 /town 으로 보냈는데 피드는 ISR(120초)이라 방금 쓴 글이 안 보였고,
+         성공했다는 말도 포인트 안내도 없었다. 서버가 revalidatePath 로 피드를 새로 굽고,
+         여기서는 **글 상세**로 보내면서(방금 쓴 글은 그 자리에 확실히 있다) 노트 저장과
+         같은 장면(showMoment)으로 적립 포인트를 알린다. 단지에서 왔으면 종전대로 단지로. */
+      const data = (await res.json().catch(() => null)) as {
+        post?: { id?: string };
+        pointsAwarded?: number;
+      } | null;
+      const points = Number(data?.pointsAwarded ?? 0);
+      showMoment({
+        title: "글이 올라갔어요",
+        subtitle:
+          points > 0
+            ? `+${points.toLocaleString("ko-KR")}P 적립 · 동네이야기 피드에 바로 보여요`
+            : "동네이야기 피드에 바로 보여요",
+        kind: points > 0 ? "celebrate" : "success",
+      });
+      const newId = data?.post?.id ? String(data.post.id) : "";
+      router.push(
+        complexId
+          ? `/complex/${encodeURIComponent(complexId)}`
+          : newId
+            ? `/town/news/${encodeURIComponent(newId)}`
+            : "/town",
+      );
       router.refresh();
     } catch {
       setError("네트워크 오류가 발생했어요. 잠시 후 다시 시도해 주세요.");
@@ -469,10 +494,12 @@ function TownWriteForm() {
 
         {/* 제목 · 본문 */}
         <div className="rise-in-3 card flex flex-col gap-3 rounded-[18px] p-5">
+          {/* [970 · C-27] placeholder 만 있던 입력 — 스크린리더는 값이 차면 이름을 잃는다. aria-label */}
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={80}
+            aria-label="제목"
             placeholder="제목을 입력하세요 (2글자 이상)"
             className={inputClass}
           />
@@ -480,6 +507,7 @@ function TownWriteForm() {
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={9}
+            aria-label="본문"
             placeholder="이웃과 나누고 싶은 이야기를 적어주세요 (5글자 이상)"
             className={`${inputClass} min-h-[200px] resize-y leading-[1.6]`}
           />

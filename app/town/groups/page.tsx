@@ -8,6 +8,7 @@ import { Icon } from "@/app/components/Icon";
 import { TownCategoryNav } from "../TownCategoryNav";
 import { TownPageHead } from "../TownPageHead";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
+import { formatKstMeetingTime } from "@/lib/format/kst";
 
 /* 시안 6q(지역별 임장 모임 목록) 고도화 — meetings 실데이터 연동.
    지역·상태 필터 + 임박순/최신순 정렬 + 모임 만들기(POST /api/groups) 실배선.
@@ -36,16 +37,14 @@ export const metadata = buildPageMetadata({
 
 /* ---------- 헬퍼 ---------- */
 
+/* [970 · C-01] 서버(UTC)의 getHours() 로 찍던 일시가 9시간 이르게 나갔다 — 19:00 모임이
+   "10:00". 한국 시간으로 고정한다(라벨 얼굴 "9.6 (토) 14:30" 은 그대로). */
 function formatWhen(iso: string | null): { label: string; ts: number } {
   if (!iso) return { label: "일정 미정", ts: Number.MAX_SAFE_INTEGER };
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return { label: "일정 미정", ts: Number.MAX_SAFE_INTEGER };
-  const week = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
-  const p = (n: number) => String(n).padStart(2, "0");
-  return {
-    label: `${d.getMonth() + 1}.${d.getDate()} (${week}) ${p(d.getHours())}:${p(d.getMinutes())}`,
-    ts: d.getTime(),
-  };
+  const ts = Date.parse(iso);
+  const label = formatKstMeetingTime(ts);
+  if (!Number.isFinite(ts) || !label) return { label: "일정 미정", ts: Number.MAX_SAFE_INTEGER };
+  return { label, ts };
 }
 
 /** UserMeeting → 공개 뷰. organizerEmail 등 비공개 필드는 여기서 떨어진다 —
@@ -131,9 +130,10 @@ export default async function TownGroupsPage() {
             <Icon name="warning" size={22} />
           </div>
           <p className="text-[13px] font-bold text-ink">모임 목록을 불러오지 못했어요</p>
+          {/* [970 · C-20] 합니다체 → 해요체 통일 */}
           <p className="max-w-xs text-xs leading-[1.6] text-text-3">
             일시적인 오류예요. 모임이 없는 게 아니라, 지금 목록을 읽지 못한
-            상태입니다. 잠시 뒤 새로고침해 주세요.
+            상태예요. 잠시 뒤 새로고침해 주세요.
           </p>
           <Link href="/town/groups" className="btn-soft rounded-lg px-4 py-2 text-xs no-underline">
             다시 불러오기

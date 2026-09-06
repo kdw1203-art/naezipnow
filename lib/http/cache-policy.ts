@@ -192,6 +192,10 @@ export const PUBLIC_CACHE_PATTERN_RULES: readonly PublicCachePatternRule[] = [
      게이트가 그 페이지의 개인화 여부를 한 번도 확인하지 않게 되므로, 앞자리에
      제 이름으로 올려 검사 대상에 넣는다. 아래 `/digest/archive` 도 같은 이유다. */
   { route: "/complex/browse", test: /^\/complex\/browse$/, sMaxAge: 3600, swr: 86400 },
+  /* [970 · B-18] `/complex/tx` 인덱스는 /complex/browse 로 보내는 리다이렉트 페이지 —
+     `[id]` 패턴에 가려진 실제 페이지라 위와 같은 이유로 제 이름으로 올린다. 응답은
+     308 리다이렉트뿐이므로 짧게 캐시해도 개인화 위험이 없다. */
+  { route: "/complex/tx", test: /^\/complex\/tx$/, sMaxAge: 3600, swr: 86400 },
   /* 프로그래매틱 SEO 의 몸통 — 사이트맵 27,427개 중 25,310개가 여기다.
      라우트 자체는 revalidate 120 이지만 CDN 눈금은 일부러 더 길게 잡는다.
      둘은 재는 대상이 다르다: revalidate 는 "오리진이 들고 있는 사본이 얼마나

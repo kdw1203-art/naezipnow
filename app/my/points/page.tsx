@@ -8,11 +8,19 @@ import { getBalance, getHistory, type LedgerRow } from "@/lib/points/ledger";
 import { EARN_RULES, getSpendItem, POINTS_GRATUITOUS_NOTICE } from "@/lib/points/catalog";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { AttendanceButton } from "./AttendanceButton";
+import { GuestGate } from "@/app/components/GuestGate";
+import { formatKstDate, isSameKstMonth } from "@/lib/format/kst";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "포인트 지갑" };
+/* [970 · A-31|C-25|C-26] 접미 없던 제목에 `| 내집나우` + 비어 있던 description.
+   robots.txt 가 /points 를 disallow 하므로 noindex 는 따로 두지 않는다. */
+export const metadata = {
+  title: "포인트 지갑 | 내집나우",
+  description:
+    "사용 가능한 포인트와 이번 달 적립·사용, 적립·소비 내역, 적립 방법을 확인해요. 포인트는 현금 전환이 안 되는 무상 리워드예요.",
+};
 
 /* ── 표시 헬퍼 ── */
 
@@ -20,13 +28,8 @@ function fmtP(n: number): string {
   return `${Math.abs(n).toLocaleString("ko-KR")}P`;
 }
 
-function fmtDate(iso: string): string {
-  const d = new Date(iso);
-  if (!Number.isFinite(d.getTime())) return "";
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}.${mm}.${dd}`;
-}
+/* [970 · C-01] 서버(UTC) getDate() → 한국 날짜로 고정(자정 전후 적립이 전날로 찍히던 것) */
+const fmtDate = formatKstDate;
 
 /** 원장 reason → 한글 라벨 (적립: EARN_RULES · 소비: SPEND_ITEMS · 만료: expire)
     판매 중단 상품(spend:ai_analysis · spend:complex_report)의 과거 이력은
@@ -40,11 +43,9 @@ function reasonLabel(reason: string): string {
   return EARN_RULES[reason]?.label ?? "포인트 적립";
 }
 
+/* [970 · C-01] "이번 달" 도 한국 달력 기준으로 */
 function sameMonth(iso: string, now: Date): boolean {
-  const d = new Date(iso);
-  return (
-    d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
-  );
+  return isSameKstMonth(iso, now);
 }
 
 /** 포인트로 산 닉네임 오로라가 지금 켜져 있는지 — 지갑에서 상태를 보여준다.
@@ -82,8 +83,10 @@ function EarnGuide() {
   return (
     <div className="rise-in-3 card rounded-2xl p-5">
       <div className="text-[13px] font-extrabold text-ink">포인트 적립 방법</div>
+      {/* [970 · A-11] "1P≈1원" 은 2026-08-23 토스 회신(원화 환산 표기 제거)과 어긋나는
+          환금성 암시 문구다 — 무상 리워드 규칙(현금 전환·구매 불가, 서비스 내 혜택 전용)만 적는다. */}
       <div className="mt-0.5 t-sub text-text-3">
-        활동하면 자동으로 쌓여요 · 1P는 약 1원의 가치예요
+        활동하면 자동으로 쌓여요 · 현금 전환·구매 불가 무상 리워드 · 서비스 내 혜택 전용
       </div>
       <div className="mt-3 flex flex-col">
         {Object.values(EARN_RULES).map((rule, i, arr) => (
@@ -118,28 +121,14 @@ function EarnGuide() {
   );
 }
 
-/* ── 비로그인 안내 ── */
+/* ── 비로그인 안내 — [970 · C-40] 공용 GuestGate(h1 포함) ── */
 function GuestView() {
   return (
-    <div className="mx-auto flex max-w-[640px] flex-col gap-3">
-      <div className="rise-in ai-panel flex flex-col items-center gap-2 rounded-[18px] px-5 py-8 text-center">
-        <Icon name="🪙" size={24} className="text-white" />
-        <div className="mt-1 text-[15px] font-extrabold text-white">
-          로그인하고 내 포인트를 확인하세요
-        </div>
-        <div className="text-xs leading-[1.6] text-ai-muted">
-          매물 등록 · 임장노트 공개 · 출석으로 포인트가 쌓이고,
-          <br />
-          상점에서 매물 상단 노출·닉네임 꾸미기로 교환할 수 있어요
-        </div>
-        <Link
-          href="/login?callbackUrl=/my/points"
-          className="btn-primary mt-3 rounded-[10px] px-6 py-2.5 text-[13px]"
-        >
-          로그인하고 시작하기
-        </Link>
-      </div>
-
+    <GuestGate
+      title="로그인하고 내 포인트를 확인하세요"
+      desc="매물 등록 · 임장노트 공개 · 출석으로 포인트가 쌓이고, 상점에서 매물 상단 노출·닉네임 꾸미기로 교환할 수 있어요."
+      pathname="/my/points"
+    >
       <Link
         href="/points/shop"
         className="rise-in-1 flex items-center justify-between rounded-2xl bg-primary-soft px-4 py-[15px]"
@@ -154,7 +143,7 @@ function GuestView() {
       </Link>
 
       <EarnGuide />
-    </div>
+    </GuestGate>
   );
 }
 
@@ -314,11 +303,9 @@ export default async function PointsWalletPage() {
     Promise.all([getBalance(email), getHistory(email, 50)]).then(
       ([balance, history]) => ({ ok: true as const, balance, history }),
       (err: unknown) => {
+        /* [970 · C-09] 원인 원문은 로그로만 — 화면엔 고정 문구 */
         logger.error("[my/points] 포인트 조회 실패", err);
-        return {
-          ok: false as const,
-          cause: err instanceof Error ? err.message : String(err),
-        };
+        return { ok: false as const };
       },
     ),
     readNicknameEffectUntil(email),
@@ -326,12 +313,13 @@ export default async function PointsWalletPage() {
 
   if (!loaded.ok) {
     return (
-      <PageShell breadcrumb="포인트 지갑">
+      /* [970 · A-33] 로그인 뷰는 h1 이 없었다(게스트 뷰는 GuestGate 가 h1) — PageShell 제목으로 */
+      <PageShell title="포인트 지갑" breadcrumb="포인트 지갑">
         <div className="mx-auto w-full max-w-[640px]">
           <ErrorState
             title="포인트 지갑을 지금 불러올 수 없어요"
-            desc="포인트 내역이 없는 게 아니라 조회 자체가 실패했습니다. 잠시 후 다시 시도해 주세요."
-            cause={loaded.cause}
+            /* [970 · C-20] 해요체 통일 */
+            desc="포인트 내역이 없는 게 아니라 조회가 실패했어요. 잠시 후 새로고침해 주세요."
             action={{ label: "마이로 이동", href: "/my" }}
           />
         </div>
@@ -340,7 +328,8 @@ export default async function PointsWalletPage() {
   }
 
   return (
-    <PageShell breadcrumb="포인트 지갑">
+    /* [970 · A-33] 로그인 뷰 h1 — 지갑 히어로엔 제목 요소가 없다 */
+    <PageShell title="포인트 지갑" breadcrumb="포인트 지갑">
       <WalletView
         balance={loaded.balance}
         history={loaded.history}

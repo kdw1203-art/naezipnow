@@ -9,7 +9,9 @@ import { RecentComplexChips } from "../components/RecentComplexes";
    ============================================================ */
 
 export const metadata: Metadata = {
-  title: "통합 검색",
+  /* [970 · A-31|C-25] 접미 없던 제목에 `| 내집나우`. buildPageMetadata 를 안 쓰는 이유:
+     아래 robots 가 index:false·follow:true 라 헬퍼의 noIndex(follow:false)와 다르다. */
+  title: "통합 검색 | 내집나우",
   description: "단지·매물·임장노트·뉴스를 한 번에 검색하세요.",
   /* 검색 결과 화면은 색인 대상이 아니다(항목 46a) — 내용이 쿼리마다 다르고
      검색엔진 자신의 결과와 경쟁하는 빈 껍데기로 읽힌다. 사이트맵에서도 뺐다. */

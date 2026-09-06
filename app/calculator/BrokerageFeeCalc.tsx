@@ -46,9 +46,10 @@ function krw(n: number): string {
 
 const inputCls =
   "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[13px] text-ink placeholder:text-text-3";
+/* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
 const chip = (on: boolean) =>
   `press rounded-full px-3.5 py-2 text-[13px] ${
-    on ? "bg-brand-navy font-bold text-surface" : "border border-line bg-surface font-semibold text-text-2"
+    on ? "bg-brand-navy font-bold text-on-dark" : "border border-line bg-surface font-semibold text-text-2"
   }`;
 
 export function BrokerageFeeCalc() {

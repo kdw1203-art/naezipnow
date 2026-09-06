@@ -117,6 +117,8 @@ export function ListingsListClient({
       (!filter.gu || l.regionName === filter.gu) &&
       (!filter.complex || l.complexName === filter.complex),
   );
+  /* [970 · C-39] 빈 상태 분기의 근거 — 어떤 필터든 걸려 있는가 */
+  const filtersActive = Boolean(filter.type || filter.gu || filter.complex);
 
   return (
     <>
@@ -180,22 +182,45 @@ export function ListingsListClient({
       </div>
 
       {list.length === 0 ? (
+        /* [970 · C-39] 필터 때문에 0건인지, 등록 매물 자체가 0건인지를 가른다 —
+           필터로 0건이면 "베타라 공급이 적다" 는 엉뚱한 말이고, 초기화 버튼이 없어
+           칩을 하나씩 되돌려야 했다. */
         <div className="rise-in-1 card card-pad-sm flex flex-col items-center gap-3 py-14 text-center">
           <div className="text-[15px] font-extrabold text-ink">
-            이 조건에 검수된 매물이 아직 없어요
+            {filtersActive
+              ? "이 조건에 맞는 매물이 아직 없어요"
+              : "검수를 통과한 매물이 아직 없어요"}
           </div>
           <p className="max-w-[420px] text-[13px] leading-[1.7] text-text-3">
-            베타 기간에는 매물 공급이 적을 수 있어요. 집주인은 소유 확인 후 직접 등록하고,
-            중개사무소는 제휴로 노출할 수 있어요. 임장 기록은{" "}
-            <Link href="/notes/new" className="font-bold text-primary underline">
-              임장노트
-            </Link>
-            로 이어가세요.
+            {filtersActive ? (
+              <>
+                유형·지역 조건을 바꾸거나 필터를 초기화해 전체 {items.length}건을 볼 수 있어요.
+              </>
+            ) : (
+              <>
+                베타 기간에는 매물 공급이 적을 수 있어요. 집주인은 소유 확인 후 직접 등록하고,
+                중개사무소는 제휴로 노출할 수 있어요. 임장 기록은{" "}
+                <Link href="/notes/new" className="font-bold text-primary underline">
+                  임장노트
+                </Link>
+                로 이어가세요.
+              </>
+            )}
           </p>
-          <div className="flex gap-2">
-            <Link href="/listings/new" className="btn-primary btn-md">
-              매물 등록하기
-            </Link>
+          <div className="flex flex-wrap justify-center gap-2">
+            {filtersActive ? (
+              <button
+                type="button"
+                onClick={() => set({ type: "", gu: "", complex: "" })}
+                className="btn-primary btn-md"
+              >
+                필터 초기화
+              </button>
+            ) : (
+              <Link href="/listings/new" className="btn-primary btn-md">
+                매물 등록하기
+              </Link>
+            )}
             <Link href="/partners" className="btn-outline btn-md">
               중개사 제휴 안내
             </Link>

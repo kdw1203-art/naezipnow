@@ -7,7 +7,8 @@ import { DealForm } from "./DealForm";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "개발물건 등록 · 내집나우",
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+  title: "개발물건 등록 | 내집나우",
   description:
     "시행사·부동산사업자가 개발물건을 등록하고 시공사·설계사·신탁·PF 등 협력업체의 참여 문의를 받습니다.",
   robots: { index: false, follow: false },

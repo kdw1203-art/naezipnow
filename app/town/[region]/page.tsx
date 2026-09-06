@@ -8,7 +8,7 @@ import {
   normalizeRegionKey,
 } from "@/lib/region/catalog";
 import { readTownPosts } from "@/lib/newui/board-posts";
-import { listPublicNoteCards, type PublicNoteCard } from "@/lib/inspection/store-db";
+import { isLabNoteLabel, listPublicNoteCards, type PublicNoteCard } from "@/lib/inspection/store-db";
 import { getRegionSnapshot } from "@/lib/market/store";
 import type { RegionMarketSnapshot } from "@/lib/market/types";
 import type { Post } from "@/lib/types/post";
@@ -18,6 +18,7 @@ import { seoAlternates } from "@/lib/seo/alternates";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { logger } from "@/lib/log";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
+import { cityOfRegion, groupRegionsByCity } from "@/lib/town/region-groups";
 
 /* ============================================================
    [#64] 동네 홈 — /town/{regionId}
@@ -47,7 +48,8 @@ export async function generateMetadata({
   const { region: id } = await params;
   const region = findCatalogRegionById(id);
   if (!region) return { title: "동네를 찾을 수 없습니다 | 내집나우" };
-  const title = `${region.name} 동네 홈 — 이웃 글·뉴스·시세 한눈에`;
+  /* [970 · C-25] 접미 없던 제목에 `| 내집나우`(폴백 제목과 동일 접미) */
+  const title = `${region.name} 동네 홈 — 이웃 글·뉴스·시세 한눈에 | 내집나우`;
   const description = `${region.name} 이웃들의 임장·거주 이야기, 오늘의 ${region.name} 부동산 뉴스, 아파트 시세 요약을 한 화면에서. 키워드 알림으로 새 소식을 받아보세요.`;
   return {
     title,
@@ -117,6 +119,8 @@ export default async function TownRegionHomePage({
   const snapshot: RegionMarketSnapshot | null =
     snapR.status === "fulfilled" ? snapR.value : null;
   const postsFailed = postsR.status === "rejected";
+  /* [970 · C-17] "다른 동네" 접기에서 기본으로 펼칠 시·도 = 지금 보는 동네의 시·도 */
+  const ownCity = cityOfRegion(id);
 
   return (
     <PageShell wide>
@@ -203,9 +207,10 @@ export default async function TownRegionHomePage({
             </div>
           ) : communityPosts.length === 0 ? (
             <div className="card flex flex-col items-start gap-2 rounded-2xl px-5 py-6">
+              {/* [970 · C-20] 해요체 통일 */}
               <p className="t-body text-text-2">
                 아직 {region.name} 이웃 글이 없어요. 이 동네에 다녀오셨다면 첫 이야기를
-                남겨 주세요 — 글 작성 시 포인트가 적립됩니다.
+                남겨 주세요 — 글을 쓰면 포인트가 적립돼요.
               </p>
               <Link
                 href={`/town/write?region=${encodeURIComponent(region.name)}`}
@@ -296,9 +301,10 @@ export default async function TownRegionHomePage({
         </div>
         {notes.length === 0 ? (
           <div className="card flex flex-col items-start gap-2 rounded-2xl px-5 py-6">
+            {/* [970 · C-20] 해요체 통일 */}
             <p className="t-body text-text-2">
               아직 {region.name} 공개 임장노트가 없어요. 직접 다녀온 기록이 이 동네의 첫
-              번째 현장 자료가 됩니다.
+              번째 현장 자료가 돼요.
             </p>
             <Link
               href={`/notes/new?region=${encodeURIComponent(region.name)}`}
@@ -318,7 +324,14 @@ export default async function TownRegionHomePage({
                 <div className="truncate t-body font-extrabold text-ink">{n.title}</div>
                 <div className="mt-1 flex items-center gap-2 t-sub text-text-3">
                   {n.aptName && <span className="truncate">{n.aptName}</span>}
-                  {n.visitDate && <span className="shrink-0">직접방문</span>}
+                  {/* [970 · C-11] Lab(데이터 분석) 노트는 방문 기록이 아니다 — 피드(/town)는
+                      "Lab 데이터", 여기는 "직접방문" 으로 같은 노트를 다르게 불렀다. 같은 판정
+                      (isLabNoteLabel — lib/town/feed.ts 와 동일)으로 맞춘다. */}
+                  {isLabNoteLabel(n.authorLabel) ? (
+                    <span className="shrink-0">Lab 데이터</span>
+                  ) : (
+                    n.visitDate && <span className="shrink-0">직접방문</span>
+                  )}
                 </div>
                 {n.summary && (
                   <p className="mt-1.5 line-clamp-2 t-sub text-text-2">
@@ -331,27 +344,45 @@ export default async function TownRegionHomePage({
         )}
       </section>
 
-      {/* 다른 동네 + 지도 */}
-      <section className="rise-in-4 mt-8">
-        <h2 className="mb-2 px-1 t-body font-extrabold text-ink">다른 동네 홈</h2>
-        <div className="flex flex-wrap gap-1.5">
-          {REGION_CATALOG.filter((r) => r.id !== id)
-            .slice(0, 16)
-            .map((r) => (
-              <Link
-                key={r.id}
-                href={`/town/${r.id}`}
-                className="chip border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-2"
-              >
-                {r.name}
-              </Link>
-            ))}
+      {/* 다른 동네 + 지도 — [970 · C-17] 예전엔 카탈로그 앞 16곳(서울 위주)만 보였다.
+          시·도별 <details> 로 전량을 접어 두고, 지금 보는 동네의 시·도만 기본 펼침. */}
+      <section className="rise-in-4 mt-8" aria-labelledby="other-towns-title">
+        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 px-1">
+          <h2 id="other-towns-title" className="t-body font-extrabold text-ink">
+            다른 동네 홈
+          </h2>
           <Link
             href={`/map?region=${encodeURIComponent(region.name)}`}
-            className="chip border border-line bg-surface px-3 py-1.5 t-sub font-bold text-primary"
+            className="t-sub font-bold text-primary"
           >
             지도에서 {region.name} 보기 ›
           </Link>
+        </div>
+        <div className="card flex flex-col divide-y divide-line rounded-2xl px-4">
+          {groupRegionsByCity(REGION_CATALOG, id).map((g) => (
+            <details key={g.key} className="group py-2.5" open={g.city === ownCity}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-1 t-body font-bold text-ink">
+                <span>
+                  {g.city}
+                  <span className="ml-1.5 t-caption font-semibold text-text-3">{g.items.length}곳</span>
+                </span>
+                <span className="shrink-0 text-text-3 transition-transform group-open:rotate-45" aria-hidden="true">
+                  +
+                </span>
+              </summary>
+              <div className="flex flex-wrap gap-1.5 pb-1.5 pt-1">
+                {g.items.map((r) => (
+                  <Link
+                    key={r.id}
+                    href={`/town/${r.id}`}
+                    className="chip border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-2"
+                  >
+                    {r.name}
+                  </Link>
+                ))}
+              </div>
+            </details>
+          ))}
         </div>
       </section>
     </PageShell>

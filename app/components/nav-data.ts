@@ -4,7 +4,13 @@
 export type NavItem = {
   label: string;
   href: string;
-  children?: { label: string; href: string }[];
+  children?: {
+    label: string;
+    href: string;
+    /** [970 · A-26] 모바일 전체 메뉴(2열 · truncate)용 짧은 라벨 — 없으면 label 그대로.
+     *  데스크탑 드롭다운은 nowrap 으로 긴 라벨을 다 보이므로 label 을 쓴다. */
+    shortLabel?: string;
+  }[];
 };
 
 export const NAV: NavItem[] = [
@@ -21,7 +27,8 @@ export const NAV: NavItem[] = [
     label: "지도",
     href: "/map",
     children: [
-      { label: "통합 지도 (탐색·실거래·매물)", href: "/map" },
+      /* [970 · A-26] 전체 메뉴 2열 칸(~150px)에서 "통합 지도 (탐색·실거래…" 로 잘렸다 */
+      { label: "통합 지도 (탐색·실거래·매물)", shortLabel: "통합 지도", href: "/map" },
       { label: "매물 등록", href: "/listings/new" },
     ],
   },

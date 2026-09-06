@@ -293,6 +293,10 @@
   --color-surface: var(--surface);
   --color-line: var(--border);
   --color-line-strong: var(--border-strong);
+  /* [970 · B-05] `border-border`(62곳)·`divide-border`(2곳)가 쓰이는데 유틸이 없어
+     currentColor 테두리로 그려지고 있었다. --border 는 라이트(:root)·다크(.dark) 양쪽에
+     정의돼 있으므로 그대로 잇는다 — border-line 과 같은 값의 별칭. */
+  --color-border: var(--border);
   --color-divider: var(--divider);
   --color-ai-accent: var(--ai-accent);
   /* [952] 브랜드·다크면 토큰을 유틸로 — text-brand-red · bg-brand-navy · text-on-dark-muted */
@@ -425,12 +429,15 @@ body:has(textarea:focus-visible) .tabbar-autohide {
   a:hover {
     color: var(--primary-strong);
   }
-}
-
-/* 15b focus: 2px primary 링 · 오프셋 2px */
-:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
+  /* 15b focus: 2px primary 링 · 오프셋 2px.
+     [970 · A-27] 레이어 밖에 있던 규칙을 base 로 내렸다 — 레이어 밖 규칙은 특이성과
+     무관하게 utilities 레이어를 이기므로, 껍데기(.field-focus)가 링을 대신 그리는
+     인풋의 `outline-none` 이 먹지 않아 링이 두 겹(껍데기 + 인풋)으로 떴다
+     (HeaderSearch · /search 검색창). base 레이어면 utilities 가 언제나 이긴다. */
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
 }
 
 /* [E84] 입력칸을 감싼 상자가 포커스를 대신 보여 주는 자리.
@@ -1531,7 +1538,11 @@ body:has(textarea:focus-visible) .tabbar-autohide {
   --brand-hanji: #262119;
   --brand-hanji-ink: #F6F1E7;
 }
-.dark [style*="linear-gradient(135deg"] {
+/* [970 · C-07] `:not(:has(img))` — 시드 그라디언트는 사진 컨테이너의 **로딩 전 바탕**으로도
+   깔린다(town/feed-client 커버 · LibraryBrowser 타일). 그 컨테이너까지 잡히면 실제
+   사진이 62% 어둡게 눌렸다. 사진(<img>)이 들어 있으면 그라디언트는 보이지 않으므로
+   필터도 걸지 않는다 — 사진 없는 시드 타일만 어둡게 내린다. */
+.dark [style*="linear-gradient(135deg"]:not(:has(img)) {
   filter: brightness(0.62) saturate(0.82);
 }
 
@@ -3030,7 +3041,10 @@ a.rank-row:hover {
 }
 .brand-photo-chip {
   background: rgba(246, 241, 231, 0.14);
-  color: var(--brand-hanji);
+  /* [970 · C-05] --brand-hanji 는 다크에서 어두운 웜 서피스(#262119)로 뒤집혀 네이비
+     프레임 위 칩 글자가 사라졌다. 프레임은 양 테마 모두 네이비이므로 글자는 테마와
+     무관한 "어두운 면 위 글자" 토큰(--on-dark = #F6F1E7 고정)이어야 한다. */
+  color: var(--on-dark);
   border: 1px solid rgba(246, 241, 231, 0.18);
 }
 .brand-photo-chip:hover {
@@ -3438,8 +3452,11 @@ a.rank-row:hover {
 }
 
 /* ── 06 FAB · 토글 · 관심 · 단계 ── */
+/* [970 · B-01] `position: relative` 를 뺐다 — 이 규칙은 레이어 밖이라 /notes·/town 의
+   글쓰기 FAB 가 단 utilities `fixed` 를 이겨 버려, FAB 가 화면에 떠 있지 않고 문서
+   흐름 안(푸터 위)에 그려져 잘렸다. ::after 파문은 absolute 라 fixed 부모에서도
+   그대로 동작하고, 탭바의 ＋ 원(TabBar.tsx)은 유틸 `relative` 를 직접 단다. */
 .njn-fab {
-  position: relative;
   background: var(--brand-navy);
   color: var(--on-dark);
   box-shadow: 0 6px 18px rgba(11, 37, 69, 0.3);
@@ -3966,12 +3983,19 @@ a.rank-row:hover {
     visibility 0s linear 200ms;
 }
 /* /town·/notes 는 같은 자리에 글쓰기 FAB(52px)가 있어 그 위로 60px(52 + 여백 8).
-   그 FAB 는 md:hidden 이라 md 부터는 원래 자리로 내린다. */
-.back-to-top[data-lifted="true"] {
+   그 FAB 는 md:hidden 이라 md 부터는 원래 자리로 내린다.
+   [970 · B-08] 판정은 lib/client/shell-gates backToTopLane — 예전 `startsWith("/notes")`
+   는 FAB 가 없는 /notes/[id]·/notes/new 까지 올려 저장 바와 맞닿았다. 이제 FAB 가 실제로
+   있는 /notes·/town 정확 일치만 "lifted", 저장 바 화면(/notes/new·/notes/[id]/edit)은
+   "savebar" 레인(바 높이 64 + 바닥 12 + 여백 12 = 88px · 탭바 없는 화면이라 safe-area 기준). */
+.back-to-top[data-lane="lifted"] {
   bottom: calc(var(--nz-tabbar-offset) + 72px);
 }
+.back-to-top[data-lane="savebar"] {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 88px);
+}
 @media (min-width: 768px) {
-  .back-to-top[data-lifted="true"] {
+  .back-to-top[data-lane="lifted"] {
     bottom: calc(var(--nz-tabbar-offset) + 12px);
   }
 }
@@ -4070,7 +4094,9 @@ a.rank-row:hover {
    원래 CTA 가 화면에 들어오면 React 가 아예 떼어 내므로 여기서는 위치·등장만 맡는다.
    등장은 riseIn 재사용, 감속 모션에서는 즉시 표시. */
 .note-savebar {
-  bottom: calc(var(--nz-tabbar-offset) + 8px);
+  /* [970 · B-07] /notes/new · /notes/[id]/edit 는 PageShell 을 쓰지 않아 탭바가 없다 —
+     탭바 오프셋(68px)만큼 바가 허공에 떠 있었다. 홈 인디케이터만 피하고 바닥에 붙인다. */
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
   animation: riseIn var(--dur-md) var(--ease-out) backwards;
 }
 /* [967 · 5] 사진 줄 — iOS 관성 스크롤 + 얇은 스크롤바(줄이 잘린 모양이 스크롤 힌트) */
@@ -4239,4 +4265,100 @@ html[data-lowend] body::after {
   font-display: swap;
   src: url(/fonts/noto-serif-kr/noto-serif-kr-600-slogan-subset.woff2) format("woff2");
   unicode-range: U+20, U+2c, U+2e, U+1100, U+1105-1106, U+110b-110c, U+1161-1162, U+1165, U+1169, U+116d-116e, U+1173, U+1175, U+11a8, U+11af, U+11b7-11b9, U+ac00-ac01, U+ac08, U+ac10-ac12, U+ac1c-ac1d, U+ac24, U+ac2c-ac2e, U+ac70-ac71, U+ac78, U+ac80-ac82, U+ace0-ace1, U+ace8, U+acf0-acf2, U+ad50-ad51, U+ad58, U+ad60-ad62, U+ad6c-ad6d, U+ad74, U+ad7c-ad7e, U+adf8-adf9, U+ae00, U+ae08-ae0a, U+ae30-ae31, U+ae38, U+ae40-ae42, U+b77c-b77d, U+b784, U+b78c-b78e, U+b798-b799, U+b7a0, U+b7a8-b7aa, U+b7ec-b7ed, U+b7f4, U+b7fc-b7fe, U+b85c-b85d, U+b864, U+b86c-b86e, U+b8cc-b8cd, U+b8d4, U+b8dc-b8de, U+b8e8-b8e9, U+b8f0, U+b8f8-b8fa, U+b974-b975, U+b97c, U+b984-b986, U+b9ac-b9ad, U+b9b4, U+b9bc-b9be, U+b9c8-b9c9, U+b9d0, U+b9d8-b9da, U+b9e4-b9e5, U+b9ec, U+b9f4-b9f6, U+ba38-ba39, U+ba40, U+ba48-ba4a, U+baa8-baa9, U+bab0, U+bab8-baba, U+bb18-bb19, U+bb20, U+bb28-bb2a, U+bb34-bb35, U+bb3c, U+bb44-bb46, U+bbc0-bbc1, U+bbc8, U+bbd0-bbd2, U+bbf8-bbf9, U+bc00, U+bc08-bc0a, U+c544-c545, U+c54c, U+c554-c556, U+c560-c561, U+c568, U+c570-c572, U+c5b4-c5b5, U+c5bc, U+c5c4-c5c6, U+c624-c625, U+c62c, U+c634-c636, U+c694-c695, U+c69c, U+c6a4-c6a6, U+c6b0-c6b1, U+c6b8, U+c6c0-c6c2, U+c73c-c73d, U+c744, U+c74c-c74e, U+c774-c775, U+c77c, U+c784-c786, U+c790-c791, U+c798, U+c7a0-c7a2, U+c7ac-c7ad, U+c7b4, U+c7bc-c7be, U+c800-c801, U+c808, U+c810-c812, U+c870-c871, U+c878, U+c880-c882, U+c8e0-c8e1, U+c8e8, U+c8f0-c8f2, U+c8fc-c8fd, U+c904, U+c90c-c90e, U+c988-c989, U+c990, U+c998-c99a, U+c9c0-c9c1, U+c9c8, U+c9d0-c9d2;
+}
+
+/* ===== [970 · 셸·다크·레이아웃] ===== */
+/* [970 · B-09] /complex/[id] 하단 액션 바(MobileActionBar 가 마운트 동안 body 에
+   .nz-has-actionbar 를 단다) 위로 "맨 위로"를 올린다 — 바(bottom 탭바+8 · 높이 60)의
+   윗단이 탭바+68 이라 기본 자리(탭바+12)면 바의 3번째 칸을 덮었다. 바가 보이는
+   조건(원래 CTA 가 화면 밖)과 무관하게 마운트 동안 고정 — 스크롤 중 자리가 튀지 않게.
+   바 자체가 md:hidden 이라 md 부터는 원래 자리. */
+@media (max-width: 767px) {
+  body.nz-has-actionbar .back-to-top {
+    bottom: calc(var(--nz-tabbar-offset) + 76px);
+  }
+}
+
+/* [970 · A-39 · A-20] 쿠키 동의 배너가 떠 있는 동안(cookie-consent-banner 가 결정 전
+   body 에 클래스를 단다 — 판정은 lib/client/shell-gates consentBodyClasses):
+   - .nz-consent-open: 맨 위로 FAB 를 숨긴다 — 모바일(탭바 위 중앙 배너)·데스크탑(우하단
+     코너 카드) 모두 FAB 자리(right 14 · bottom 탭바+12)를 배너가 덮어 눌리지 않는 버튼이 됐다.
+   - .nz-consent-pad: md+ 에서 body 아래 여백을 배너 높이만큼 준다(카드 ~132px + bottom 20
+     + 여백 16) — 우하단 코너 카드가 /subscription 플랜 카드 CTA 처럼 화면 우하단에 오는
+     버튼을 덮었다. 중앙 하단으로 옮기는 안은 2026-08-03(제안 웹1)에 "모든 화면의 본문·CTA 를
+     가린다"로 이미 기각됐으므로, 자리는 두고 스크롤로 빠져나갈 수 있게만 한다. /map 은
+     지도 루트가 fixed inset-0 라 여백이 빈 스크롤만 만들어 pad 를 달지 않는다. */
+body.nz-consent-open .back-to-top {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 200ms var(--ease-out),
+    visibility 0s linear 200ms;
+}
+@media (min-width: 768px) {
+  body.nz-consent-pad {
+    padding-bottom: 168px;
+  }
+}
+
+/* [970 · A-01 · A-02] 헤더 드롭다운·검색 제안·계정 메뉴 판 — 예전엔 인라인
+   `rgba(255,255,255,.9)` 라 다크에서 흰 판 위에 밝은 글자가 얹혀 항목이 안 보였다.
+   surface 토큰(양 테마)을 92% 로 얹어 글래스 느낌은 남기고 글자는 늘 읽히게 한다.
+   color-mix 미지원 브라우저는 불투명 surface. .glass-strong 뒤에 와서 그 배경을 덮는다. */
+.popover-surface {
+  background: var(--surface);
+}
+@supports (background: color-mix(in srgb, red 50%, transparent)) {
+  .popover-surface {
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+  }
+}
+
+/* [970 · A-03] 다크에서 네이비 FAB(탭바 ＋ 원 · /notes·/town 글쓰기)가 다크 글래스
+   (#171b22) 와 명도가 같아 원이 사라지고 아이콘만 떠 보였다. --brand-navy 자체를
+   다크에서 밝게 뒤집으면 그 위 한지 글자(--on-dark)를 쓰는 네이비 카드 전부가
+   대비를 잃으므로 토큰은 두고, FAB 에만 한지 링으로 윤곽을 준다(그림자도 다크용). */
+.dark .njn-fab {
+  box-shadow:
+    0 0 0 1.5px var(--on-dark-faint),
+    0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+/* [970 · B-30] 랭킹 행(RankBars)의 막대 — `flex: 1 1 34%` 는 라벨(flex-1)과 남은 폭을
+   나눠 가져 모바일에서 단지 이름이 4글자에서 잘렸다. 행 안에서는 막대가 자라지 않고
+   34% 에서 40% 사이로만 두어 라벨이 먼저 폭을 가진다. .rank-track 을 직접 고치지
+   않는 이유: /map 인기 목록·/analysis/temperature 는 세로 flex 안에서 막대를 전폭으로
+   쓰므로 max-width 가 그쪽을 40% 로 잘라 버린다. */
+.rank-row .rank-track {
+  flex: 0 1 34%;
+  max-width: 40%;
+}
+
+/* [970 · B-36] /auctions 테마(보라) — 예전엔 page.tsx 인라인 style 로 라이트 값만
+   심어 다크에서도 연보라(#f1ebfe) 배경이 그대로 떠 형광처럼 보였다. 클래스로 옮기고
+   다크 값을 따로 둔다. 다크 --primary 는 표면(#171b22) 위 5.4:1, --primary-soft 위
+   4.7:1 로 루트 다크 파랑(#5b8bff)과 같은 급을 맞췄다(흰 글자 버튼도 루트와 같은 3.2:1). */
+.theme-auction {
+  --primary: #7c3aed;
+  --primary-soft: #f1ebfe;
+  --primary-strong: #6528d6;
+}
+.dark .theme-auction {
+  --primary: #9b7cf5;
+  --primary-soft: #2a1f47;
+  --primary-strong: #b79bff;
+}
+
+/* [970 · C-18] /qna 테마(청록) — 위와 같은 사유. 다크 --primary 는 표면 위 5.5:1,
+   --primary-soft(#0f2a27) 위 4.9:1. */
+.qna-theme {
+  --primary: #0d9488;
+  --primary-soft: #e3f5f2;
+  --primary-strong: #0a7a70;
+}
+.dark .qna-theme {
+  --primary: #1ca392;
+  --primary-soft: #0f2a27;
+  --primary-strong: #2dd4bf;
 }

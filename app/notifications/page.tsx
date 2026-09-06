@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageShell } from "../components/PageShell";
 import { useToast } from "@/app/components/toast/ToastProvider";
+import { GuestGate } from "@/app/components/GuestGate";
+import { hasSession } from "@/lib/client/has-session";
 import { isInternalPath } from "@/lib/safe-path";
 import { emitNotificationsRead } from "@/lib/notifications/read-event";
 import {
@@ -490,6 +492,16 @@ export default function NotificationsPage() {
     let cancelled = false;
     (async () => {
       try {
+        /* [970 · C-43] 비로그인 방문마다 /api/notifications 가 401 을 내며 콘솔에 빨간 줄이
+           남았다. 세션(페이지당 1회 수렴되는 공유 프라미스 — 헤더 아바타와 같은 호출)을
+           먼저 보고, 없으면 요청 없이 guest. 게스트의 /api/auth/session 본문은 null 이라
+           판정 실패와 구분되지 않는다 — hasSession 과 같은 기준(null = 비로그인)을 쓴다. */
+        const authed = await hasSession();
+        if (cancelled) return;
+        if (!authed) {
+          setMode("guest");
+          return;
+        }
         const res = await fetch("/api/notifications");
         if (res.status === 401) {
           if (!cancelled) setMode("guest");
@@ -682,21 +694,16 @@ export default function NotificationsPage() {
         </div>
         )}
 
-        {/* 비로그인 — 가짜 샘플 알림 대신 로그인 안내 빈 상태(#10) */}
+        {/* 비로그인 — 가짜 샘플 알림 대신 로그인 안내 빈 상태(#10)
+            [970 · C-40] 공용 GuestGate — 위에 h1("알림")이 있으므로 카드 제목은 h2 */}
         {mode === "guest" && (
-          <div className="rise-in-1 card mt-3 flex flex-col items-center gap-2.5 rounded-[14px] px-[15px] py-10 text-center">
-            <div className="t-section text-ink">
-              로그인하면 알림을 모아볼 수 있어요
-            </div>
-            <p className="max-w-[300px] t-body text-text-3">
-              매물 승인·관심 지역 새 매물·댓글·포인트 소식이 이곳에 쌓여요.
-            </p>
-            <Link
-              href="/login?callbackUrl=/notifications"
-              className="btn-primary mt-1 rounded-xl px-5 py-2.5 t-body font-bold no-underline"
-            >
-              로그인
-            </Link>
+          <div className="rise-in-1 mt-3">
+            <GuestGate
+              as="h2"
+              title="로그인하면 알림을 모아볼 수 있어요"
+              desc="매물 승인·관심 지역 새 매물·댓글·포인트 소식이 이곳에 쌓여요."
+              pathname="/notifications"
+            />
           </div>
         )}
 

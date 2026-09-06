@@ -110,7 +110,14 @@ export default async function TownExpertsPage() {
             </Link>
           </div>
         </div>
-        {/* 커버리지 — 실측만. 0 이면 0 */}
+        {/* 커버리지 — 실측만. 0 이면 0.
+            [970 · C-13] 다만 등록 전문가가 아예 0명이면 "0 · 0 · —" 세 칸은 지표가 아니라
+            빈 칸 세 개다 — 모집 중이라는 사실 한 줄로 바꾼다(조회 실패는 목록 쪽이 말한다). */}
+        {loaded.ok && loaded.items.length === 0 ? (
+          <p className="mt-5 border-t border-on-dark-faint pt-4 t-sub text-on-dark-muted">
+            모집 중 — 인증 심사를 통과한 순서로 공개돼요
+          </p>
+        ) : (
         <div className="mt-5 grid grid-cols-3 gap-2 border-t border-on-dark-faint pt-4">
           <div>
             <div className="t-section text-on-dark t-num">{loaded.ok ? <CountUp value={verified.length} /> : "—"}</div>
@@ -125,6 +132,7 @@ export default async function TownExpertsPage() {
             <div className="t-caption text-on-dark-muted">{avgRating !== null ? "평균 후기 평점" : "후기 아직 없음"}</div>
           </div>
         </div>
+        )}
       </section>
 
       {/* ---------- 목록 ---------- */}

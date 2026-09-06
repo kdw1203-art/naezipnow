@@ -228,7 +228,9 @@ export function ComplexPicker({
 
   return (
     <div ref={boxRef} className="relative flex flex-col gap-1.5">
-      <span className="text-[12px] font-bold text-text-3">{label}</span>
+      {/* [970 · B-27] label="" 이면 줄 자체를 안 그린다 — 호출측이 이미 제목을 붙인 자리
+          (워크벤치 "① 단지 선택")에서 라벨이 두 번 보였다. 접근성 이름은 아래 폴백. */}
+      {label && <span className="text-[12px] font-bold text-text-3">{label}</span>}
       {/* 검색 입력 + 지도로 찾기 — 이름을 모르면 지도에서 눌러 고른다.
           지도(/map)는 단지 선택 시 '/analysis?complexId=' 로 되돌려보내고,
           이 선택기가 그 값을 읽어 자동 선택한다(맞물린 왕복). */}
@@ -241,7 +243,7 @@ export function ComplexPicker({
             if (items.length) setOpen(true);
           }}
           placeholder={placeholder}
-          aria-label={label}
+          aria-label={label || "단지 검색"}
           className="min-w-0 flex-1 rounded-[10px] border border-line bg-surface px-3 py-2 text-xs font-bold text-ink outline-none focus:border-primary"
         />
         <Link

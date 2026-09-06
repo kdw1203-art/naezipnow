@@ -25,6 +25,8 @@ import { AdZone } from "@/app/components/ads/AdZone";
 import { ReadingProgress } from "./ReadingProgress";
 import { PostActions, CommentForm, LikeButton } from "./PostInteractions";
 import { CommentThread } from "./CommentThread";
+import { NewsHero } from "./NewsHero";
+import { formatKstDateTime, formatKstShortDate } from "@/lib/format/kst";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import {
   readNewsMeta,
@@ -50,16 +52,10 @@ export function generateStaticParams() {
 
 /* [967 · 32] 여기 있던 relativeTime 사본(뉴스 목록 ../shared 와 같은 규칙)은 shared 의 것을 import 한다 */
 
-function fullDateTime(iso: string) {
-  const d = new Date(iso);
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-
-function shortDate(iso: string) {
-  const d = new Date(iso);
-  return `${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
+/* [970 · C-04] 바이라인·관련글 날짜가 서버(UTC)의 getHours()/getDate() 라 9시간 이르게
+   찍혔다(자정 전후 기사는 날짜까지 하루 어긋남). 한국 시간으로 고정 — lib/format/kst. */
+const fullDateTime = formatKstDateTime;
+const shortDate = formatKstShortDate;
 
 /** 포인트 상점 '닉네임 오로라' — 글 작성자 프로필의 settings.nickname_effect 를
     읽어 **만료 전일 때만** 종류를 돌려준다. rowToPost 는 개인정보 보호로
@@ -368,7 +364,9 @@ export default async function TownNewsDetailPage({
     : paragraphs(post.body)
         .slice(0, 3)
         .map((t, i) => `${["①", "②", "③"][i] ?? "·"} ${t.slice(0, 55)}`);
-  const activeComments = post.comments.filter((c) => !c.deletedAt).slice(0, 8);
+  /* [970 · C-34] 예전 slice(0, 8) — 9번째부터는 어디서도 볼 수 없었다("댓글 12" 인데 8개).
+     전량을 내리고 접기는 CommentThread(클라이언트)가 "댓글 N개 더 보기"로 편다. */
+  const activeComments = post.comments.filter((c) => !c.deletedAt);
   const commentCount = post.commentCount;
   const likeCount = post.likeCount;
   const saveCount = post.bookmarkCount ?? 0;
@@ -512,22 +510,10 @@ export default async function TownNewsDetailPage({
                 같은 데이터로 실사진을 이미 보여 주고 있었으므로, 없는 사진을
                 설명하는 상자 대신 있는 사진을 보여 준다. 없으면 아무것도 그리지
                 않는다 — 빈 상자는 자리만 밀고 정보가 없다. */}
-            {heroImage ? (
-              /* 최적화 22 — 로드 전 높이 0 → 로드 후 본문이 밀리는 CLS.
-                 16:9 비율 상자를 먼저 잡아 레이아웃을 고정한다(og:image 표준 비율). */
-              <div className="relative aspect-[16/9] max-h-[380px] w-full overflow-hidden rounded-[14px] bg-bg">
-                <CoverImage
-                  src={heroImage}
-                  alt=""
-                  imgClassName="absolute inset-0 h-full w-full object-cover"
-                />
-                {post.sourceName && (
-                  <span className="absolute bottom-0 left-0 rounded-tr-[10px] bg-[var(--glass-bg)] px-3 py-[5px] text-[12px] text-text-3">
-                    사진: {post.sourceName}
-                  </span>
-                )}
-              </div>
-            ) : null}
+            {/* [970 · C-12] 상자·캡션·이미지를 NewsHero(클라이언트) 한 덩어리로 — og:image 가
+                죽으면 380px 빈 상자와 "사진: ○○" 캡션만 남던 것을 통째로 지운다.
+                16:9 선점(최적화 22)은 그 안에서 그대로. */}
+            {heroImage ? <NewsHero src={heroImage} sourceName={post.sourceName} /> : null}
 
             {/* [B31] 이웃이 올린 사진 — 저장은 되는데(automation_meta.attachments)
                 그리는 코드가 없어 한 장도 화면에 나온 적이 없던 값이다.
@@ -738,7 +724,9 @@ export default async function TownNewsDetailPage({
                   href={`/town/news/${encodeURIComponent(newerPost.id)}`}
                   className="card tile flex flex-col gap-1 rounded-[14px] px-4 py-3 no-underline"
                 >
-                  <span className="text-[10px] font-bold text-text-3">‹ 더 최신 글</span>
+                  {/* [970 · C-33] "더 최신 글 / 이전 글" 은 축이 달랐다(신선도 vs 순서) — 같은
+                      축("다음 글(최신) / 이전 글")으로 맞춘다 */}
+                  <span className="text-[10px] font-bold text-text-3">‹ 다음 글(최신)</span>
                   <span className="line-clamp-2 text-[13px] font-bold leading-snug text-ink">
                     {newerPost.title}
                   </span>
@@ -794,43 +782,49 @@ export default async function TownNewsDetailPage({
 
         {/* ---------- 사이드바 ---------- */}
         <aside className="flex flex-col gap-3.5">
-          {/* 기사 속 위치 */}
-          <div className="rise-in-2 card flex flex-col gap-2.5 rounded-[18px] p-[18px]">
-            <div className="text-[13px] font-extrabold text-ink">
-              기사 속 위치
-            </div>
-            {/* 예전엔 "네이버/카카오 지도 SDK 영역" 이라고 적힌 그라디언트 상자에
-                지역명 배지를 절대 좌표로 얹어 둔 그림이었다. 실지도 컴포넌트가
-                모임 상세에 이미 있었으므로(LocationMap) 같은 것을 쓴다. */}
-            <div className="relative">
-              <LocationMap
-                region={post.city}
-                city={post.city}
-                district={post.district}
-                label={region}
-                className="h-[150px]"
-              />
-              <Link
-                href={mapHref}
-                className="absolute bottom-2.5 right-2.5 rounded-lg bg-[var(--glass-bg)] px-2.5 py-[5px] text-[12px] font-bold text-primary"
-              >
-                {regionQuery ? `${regionQuery} 지도 열기` : "지도에서 열기"} ›
-              </Link>
-            </div>
-            {post.relatedSite && (
-              <div className="flex justify-between text-xs">
-                <span className="text-text-2">연관 단지</span>
-                {/* 고도화 26 — 리졸브되면 단지 시세로 크로스링크, 아니면 텍스트 */}
-                {relatedSiteHref ? (
-                  <Link href={relatedSiteHref} className="font-bold text-primary">
-                    {post.relatedSite} 시세 ›
-                  </Link>
-                ) : (
-                  <span className="font-bold text-ink">{post.relatedSite}</span>
-                )}
+          {/* 기사 속 위치 — [970 · C-32] 지역이 비어 있는 전국 기사(자동수집 대부분)에는
+              "장소 미정" 지도 카드가 떴다 — 없는 위치를 지도로 그리지 않는다. 연관 단지
+              줄은 위치와 무관하므로 지역 없이도 남긴다. */}
+          {(post.city || post.district || post.relatedSite) && (
+            <div className="rise-in-2 card flex flex-col gap-2.5 rounded-[18px] p-[18px]">
+              <div className="text-[13px] font-extrabold text-ink">
+                {post.city || post.district ? "기사 속 위치" : "연관 단지"}
               </div>
-            )}
-          </div>
+              {/* 예전엔 "네이버/카카오 지도 SDK 영역" 이라고 적힌 그라디언트 상자에
+                  지역명 배지를 절대 좌표로 얹어 둔 그림이었다. 실지도 컴포넌트가
+                  모임 상세에 이미 있었으므로(LocationMap) 같은 것을 쓴다. */}
+              {(post.city || post.district) && (
+                <div className="relative">
+                  <LocationMap
+                    region={post.city}
+                    city={post.city}
+                    district={post.district}
+                    label={region}
+                    className="h-[150px]"
+                  />
+                  <Link
+                    href={mapHref}
+                    className="absolute bottom-2.5 right-2.5 rounded-lg bg-[var(--glass-bg)] px-2.5 py-[5px] text-[12px] font-bold text-primary"
+                  >
+                    {regionQuery ? `${regionQuery} 지도 열기` : "지도에서 열기"} ›
+                  </Link>
+                </div>
+              )}
+              {post.relatedSite && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-text-2">연관 단지</span>
+                  {/* 고도화 26 — 리졸브되면 단지 시세로 크로스링크, 아니면 텍스트 */}
+                  {relatedSiteHref ? (
+                    <Link href={relatedSiteHref} className="font-bold text-primary">
+                      {post.relatedSite} 시세 ›
+                    </Link>
+                  ) : (
+                    <span className="font-bold text-ink">{post.relatedSite}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 이 지역 임장노트 — 사실 우선: 허위 노트 목록·건수 제거, 작성/열람 진입만 */}
           <div className="rise-in-3 card flex flex-col gap-2.5 rounded-[18px] p-[18px]">
@@ -891,17 +885,17 @@ export default async function TownNewsDetailPage({
                 <Link
                   key={s.title}
                   href={s.id ? `/town/news/${s.id}` : "/town/news"}
-                  className={`flex gap-2.5 py-[7px] ${
+                  className={`flex flex-col gap-0.5 py-[7px] ${
                     i < similarPosts.length - 1 ? "border-b border-divider" : ""
                   }`}
                 >
-                  <div className="h-[38px] w-[52px] shrink-0 rounded-lg bg-gradient-to-br from-[#e8edf5] to-bg" />
-                  <div>
-                    <div className="line-clamp-2 text-xs font-bold leading-[1.4] text-ink">
-                      {s.title}
-                    </div>
-                    <div className="text-[10px] text-text-3">{s.meta}</div>
+                  {/* [970 · C-19] 왼쪽의 52×38 회색 그라디언트 상자(하드코딩 hex, 사진 아님)를
+                      지웠다 — 정보가 없는 자리표시자였고 다크에서 밝은 얼룩으로 보였다.
+                      관련 보도 카드와 같은 제목+메타 줄로. */}
+                  <div className="line-clamp-2 text-xs font-bold leading-[1.4] text-ink">
+                    {s.title}
                   </div>
+                  <div className="text-[10px] text-text-3">{s.meta}</div>
                 </Link>
               ))}
             </div>

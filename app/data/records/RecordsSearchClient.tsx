@@ -103,12 +103,13 @@ export function RecordsSearchClient() {
           onChange={(e) => setInput(e.target.value)}
           maxLength={40}
           placeholder="단지명으로 검색 (예: 은마아파트)"
-          className="flex-1 rounded-xl border border-line bg-surface px-3.5 py-2 text-[13px] text-ink outline-none placeholder:text-text-3"
+          /* [970 · B-21] min-w-0 — input 의 기본 최소 폭이 남아 좁은 화면에서 "조회" 버튼을 밖으로 밀었다 */
+          className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3.5 py-2 text-[13px] text-ink outline-none placeholder:text-text-3"
         />
         <button
           type="submit"
           disabled={status === "loading"}
-          className="btn-primary rounded-[10px] px-4 py-2 text-[13px] disabled:opacity-60"
+          className="btn-primary shrink-0 rounded-[10px] px-4 py-2 text-[13px] disabled:opacity-60"
         >
           {status === "loading" ? "조회 중…" : "조회"}
         </button>

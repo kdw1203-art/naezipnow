@@ -162,8 +162,9 @@ export function JeonseWolse() {
               type="button"
               onClick={() => setDir(key)}
               className={`flex-1 rounded-full p-[9px] text-center text-[13px] ${
+                /* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
                 dir === key
-                  ? "bg-brand-navy font-bold text-surface"
+                  ? "bg-brand-navy font-bold text-on-dark"
                   : "border border-line bg-surface font-semibold text-text-2"
               }`}
             >
@@ -328,8 +329,9 @@ export function RealEstateTools() {
             type="button"
             onClick={() => setTool(t)}
             className={`flex-1 rounded-full p-[9px] text-center text-[13px] ${
+              /* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
               tool === t
-                ? "bg-brand-navy font-bold text-surface"
+                ? "bg-brand-navy font-bold text-on-dark"
                 : "border border-line bg-surface font-semibold text-text-2"
             }`}
           >

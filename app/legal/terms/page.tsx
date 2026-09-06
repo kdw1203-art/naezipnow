@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { BusinessDisclosureBlock } from "../BusinessDisclosureBlock";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
+import { planLabel } from "@/lib/subscriptions/labels";
 
 export const metadata = buildPageMetadata({
   title: "이용약관",
@@ -9,7 +10,38 @@ export const metadata = buildPageMetadata({
   path: "/legal/terms",
 });
 
-const UPDATED = "2025년 6월 1일";
+/* [970 · A-12] 시행일이 2025-06-01 인데 본문 제8조 ④(주간권 단건·정기결제 고지, 2026-08-12
+   심사 회신)·제8조의2(포인트 무상성, 2026-08-23 토스 회신)는 2026-08/09 변경분이라
+   문서가 자기 시행일과 어긋났다. v1.3 항목을 이력에 올리고 시행일을 그에 맞춘다.
+   날짜는 이 회차(2026-09-06) 게시 기준 — 운영자가 공지 일자를 따로 정하면 여기 한 곳만. */
+const TERMS_VERSIONS = [
+  {
+    version: "1.3",
+    effectiveDate: "2026-09-06",
+    summary: "유료 서비스 결제 방식(주간권 단건·월간/연간 정기결제) 고지, 포인트(제8조의2) 무상성 명문화, 서비스명 내집나우 표기.",
+  },
+  {
+    version: "1.2",
+    effectiveDate: "2025-06-01",
+    summary: "AI·유료 플랜·투자 면책 조항 정비.",
+  },
+  {
+    version: "1.1",
+    effectiveDate: "2024-12-01",
+    summary: "커뮤니티·전문가 서비스 범위 확장.",
+  },
+  {
+    version: "1.0",
+    effectiveDate: "2024-06-01",
+    summary: "최초 공개 약관.",
+  },
+];
+
+/** 현행 시행일 — 이력 맨 앞 항목에서 유도한다(두 곳에 따로 적어 다시 어긋나지 않게) */
+const UPDATED = (() => {
+  const [y, m, d] = TERMS_VERSIONS[0].effectiveDate.split("-").map(Number);
+  return `${y}년 ${m}월 ${d}일`;
+})();
 
 const Section = ({
   num,
@@ -29,24 +61,6 @@ const Section = ({
     <div className="mt-2 space-y-2 text-[13px] leading-7 text-text-1">{children}</div>
   </section>
 );
-
-const TERMS_VERSIONS = [
-  {
-    version: "1.2",
-    effectiveDate: "2025-06-01",
-    summary: "AI·유료 플랜·투자 면책 조항 정비.",
-  },
-  {
-    version: "1.1",
-    effectiveDate: "2024-12-01",
-    summary: "커뮤니티·전문가 서비스 범위 확장.",
-  },
-  {
-    version: "1.0",
-    effectiveDate: "2024-06-01",
-    summary: "최초 공개 약관.",
-  },
-];
 
 export default function TermsPage() {
   return (
@@ -147,7 +161,8 @@ export default function TermsPage() {
 
         {/* P2-8: /subscription "환불 규정 안내" 링크의 앵커 (#refund) — 청약철회·환불 조항 */}
         <Section num="8" title="유료 서비스 및 결제" id="refund">
-          <p>① 유료 서비스(PRO·EXPERT 플랜 등)를 이용하려면 회사가 정한 요금을 납부하여야 합니다.</p>
+          {/* [970 · A-08] 플랜명은 단일 출처(planLabel) — 판매 상품명은 플러스·프로다 */}
+          <p>① 유료 서비스({planLabel("pro")}·{planLabel("expert")} 플랜 등)를 이용하려면 회사가 정한 요금을 납부하여야 합니다.</p>
           <p>② 요금 및 결제 방식, 구독 갱신 주기는 서비스 내 요금제 페이지에서 확인할 수 있습니다.</p>
           <p>③ 구독 요금 결제 후 7일 이내에 한해 전자상거래법에 따른 청약철회(환불)가 가능합니다. 단, 디지털 콘텐츠를 이미 소비(다운로드 또는 열람)한 경우에는 청약철회가 제한될 수 있습니다.</p>
           <p>④ 주간권은 1회성 단건 결제로 자동 갱신되지 않습니다. 월간·연간 구독은 정기결제(자동 갱신형)로, 결제 전에 갱신 주기·금액·해지 방법을 고지하고 회원이 카드 등록 과정에서 명시적으로 동의한 경우에만 개시되며, 등록한 결제 주기마다 같은 금액이 자동 청구됩니다. 회원은 언제든지 구독 관리 화면 또는 고객센터를 통해 해지를 신청할 수 있고, 해지 시 다음 결제 예정일부터 청구되지 않습니다. 이용 기간 중 중도 해지 시 잔여 기간은 일할 계산하여 환불합니다(고객센터 접수).</p>

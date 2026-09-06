@@ -52,8 +52,9 @@ export default async function ReportDetailPage({
   const read = await getReport(id).then(
     (r) => ({ ok: true as const, r }),
     (err: unknown) => {
+      /* [970 · C-09] 원인 원문(DB 오류 메시지·테이블명)은 로그에만 — 화면엔 고정 문구 */
       logger.error("[library/[id]] 리포트 조회 실패", err);
-      return { ok: false as const, cause: err instanceof Error ? err.message : String(err) };
+      return { ok: false as const };
     },
   );
   if (!read.ok) {
@@ -62,8 +63,7 @@ export default async function ReportDetailPage({
         <div className="mx-auto w-full max-w-[680px]">
           <ErrorState
             title="리포트를 지금 불러올 수 없어요"
-            desc="리포트가 없는 게 아니라 조회 자체가 실패했습니다. 잠시 후 다시 시도해 주세요."
-            cause={read.cause}
+            desc="리포트가 없는 게 아니라 조회 자체가 실패했어요. 잠시 후 새로고침해 주세요."
             action={{ label: "자료실로 이동", href: "/town/library" }}
           />
         </div>

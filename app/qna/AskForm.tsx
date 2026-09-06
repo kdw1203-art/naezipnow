@@ -135,8 +135,10 @@ export function AskForm() {
         </button>
       </div>
 
+      {/* [970 · C-27] placeholder 만 있던 입력 다섯 칸 — 값이 차면 이름을 잃는다. aria-label */}
       <input
         className={INPUT}
+        aria-label="질문 제목"
         placeholder="질문 제목 (예: 은마아파트 재건축 진행 상황이 궁금해요)"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
@@ -144,6 +146,7 @@ export function AskForm() {
       />
       <textarea
         className={`${INPUT} min-h-[120px] resize-y`}
+        aria-label="질문 내용"
         placeholder="궁금한 내용을 자세히 적어주세요. (선택)"
         value={body}
         onChange={(e) => setBody(e.target.value)}
@@ -157,6 +160,7 @@ export function AskForm() {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <input
           className={INPUT}
+          aria-label="단지명"
           placeholder="단지명 (선택)"
           value={complexName}
           onChange={(e) => setComplexName(e.target.value)}
@@ -164,6 +168,7 @@ export function AskForm() {
         />
         <input
           className={INPUT}
+          aria-label="지역"
           placeholder="지역 (선택, 예: 서울 강남구)"
           value={region}
           onChange={(e) => setRegion(e.target.value)}
@@ -173,6 +178,7 @@ export function AskForm() {
 
       <input
         className={INPUT}
+        aria-label="태그"
         placeholder="태그 (쉼표로 구분, 예: 재건축,학군)"
         value={tags}
         onChange={(e) => setTags(e.target.value)}

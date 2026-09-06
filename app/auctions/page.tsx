@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import type { CSSProperties } from "react";
 import { PageShell } from "@/app/components/PageShell";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
@@ -33,12 +32,9 @@ export const metadata: Metadata = {
 };
 
 /** 테마 구분: 공매·경매 = 보라 (딜·긴급). subtree 안에서 text-primary·bg-primary-soft·
- *  chip-active·btn-primary 가 보라로 재테마됨 (예시 배지 앰버는 그대로 대비 유지). */
-const AUCTION_THEME = {
-  "--primary": "#7c3aed",
-  "--primary-soft": "#f1ebfe",
-  "--primary-strong": "#6528d6",
-} as CSSProperties;
+ *  chip-active·btn-primary 가 보라로 재테마됨 (예시 배지 앰버는 그대로 대비 유지).
+ *  [970 · B-36] 인라인 style 은 라이트 값만 심어 다크에서 연보라 배경이 형광처럼 떴다 —
+ *  globals.css `.theme-auction`(+ `.dark .theme-auction`)로 옮겼다. */
 
 export default async function AuctionsPage() {
   /* 2026-07-26: store 가 실패 때 `[]`·`0` 을 돌려주던 걸 던지도록 고쳤다.
@@ -61,7 +57,7 @@ export default async function AuctionsPage() {
       <PageShell breadcrumb="동네이야기 › 공매 물건" wide>
         <TownCategoryNav stick />
         <TownPageHead href="/auctions" title="공매 물건" sub="온비드 진행·예정 물건 — 감정가·최저입찰가·입찰일" />
-        <div style={AUCTION_THEME}>
+        <div className="theme-auction">
           <ErrorState
             title="공매 물건을 지금 불러오지 못했어요"
             desc="진행 중인 물건이 0건인 게 아니라 조회 자체가 실패했습니다. 잠시 후 새로고침해 주세요. 급하시면 온비드에서 직접 확인하실 수 있어요."
@@ -76,7 +72,7 @@ export default async function AuctionsPage() {
     <PageShell breadcrumb="동네이야기 › 공매 물건" wide>
       <TownCategoryNav stick />
       <TownPageHead href="/auctions" title="공매 물건" sub="온비드 진행·예정 물건 — 감정가·최저입찰가·입찰일" />
-      <div style={AUCTION_THEME}>
+      <div className="theme-auction">
         <AuctionsClient
           initialItems={slimAuctionItems(loaded.items)}
           initialActiveTotal={loaded.activeTotal}

@@ -14,6 +14,7 @@ import { Stars } from "../ExpertCard";
 import { QuoteRequestLink } from "../QuoteRequest";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { DEFAULT_DESKTOP_ORIGIN } from "@/lib/platform-shell";
+import { formatKstDate } from "@/lib/format/kst";
 
 /* 전문가 상세 (953 개편).
    공유·색인되는 유일한 전문가 주소. 인증 전문가만 index, 심사 중은 noindex.
@@ -57,12 +58,8 @@ function feeLabel(v: number): string {
   return v > 0 ? `${v.toLocaleString("ko-KR")}원` : "—";
 }
 
-function dateLabel(iso: string): string {
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return "";
-  const d = new Date(t);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
+/* [970 · C-04] 서버(UTC) getDate() → 한국 날짜 고정(후기·등록일이 자정 전후 하루 어긋나던 것) */
+const dateLabel = formatKstDate;
 
 function Section({ title, children, delay = 1 }: { title: string; children: React.ReactNode; delay?: number }) {
   return (

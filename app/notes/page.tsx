@@ -5,6 +5,7 @@ import { safeAuth } from "@/lib/safe-auth";
 import { listAlertSubscriptions } from "@/lib/alerts/subscriptions";
 import { NotesFeedClient, type FeedNote } from "./notes-feed-client";
 import { buildFeedNotes } from "@/lib/notes/feed-note";
+import { listBestNoteMonths } from "@/lib/inspection/best-notes";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 
 /* 시안 7a — 공개 임장노트 피드. 실데이터: inspection_notes(is_public) → listPublicNotes
@@ -119,6 +120,32 @@ export default async function NotesFeedPage({
   /* 콜드스타트: 공작아파트 예시 카드를 넣지 않는다.
      0건이면 NotesFeedClient 의 empty+CTA(노트 쓰기 / 지도)로 정직하게 안내한다. */
 
+  /* [970 · B-25] 헤더의 /notes/best 링크는 뽑힌 달이 있을 때만. 그 판정은 공개 노트
+     전량(≤500행)을 읽는 계산이라 /notes/best 와 같은 30분 캐시에 두고, 이 동적 페이지가
+     그 조회를 기다리다 늦지 않도록 3초 안에 안 오면 "모름"(= 링크 숨김)으로 간다 —
+     캐시 함수 밖에서 끊어야 타임아웃이 30분 동안 "없음"으로 굳지 않는다. */
+  const hasBestMonth = await (async () => {
+    try {
+      const { unstable_cache } = await import("next/cache");
+      const cached = unstable_cache(
+        async () => (await listBestNoteMonths()).length > 0,
+        ["notes-best-has-month-v1"],
+        { revalidate: 1800 },
+      );
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(false), 3000);
+      });
+      try {
+        return await Promise.race<boolean>([cached(), timeout]);
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    } catch {
+      return false;
+    }
+  })();
+
   return (
     <NotesFeedClient
       key="public"
@@ -128,6 +155,7 @@ export default async function NotesFeedPage({
       hasMore={hasMore}
       pageSize={FIRST_PAGE}
       showInterestFilter={interestRegions.length > 0}
+      hasBestMonth={hasBestMonth}
     />
   );
 }

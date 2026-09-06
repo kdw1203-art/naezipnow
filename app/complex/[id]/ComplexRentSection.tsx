@@ -19,9 +19,9 @@ function fmtEok(krw: number | null): string {
   return formatKrwWon(krw, { style: "eok1" });
 }
 
+/** [970 · B-41] 월세(원) → "80만" — 자체 포맷터 대신 lib/format/krw.ts(1억 미만 "N,NNN만", 빈값 "—") */
 function fmtManwon(krw: number | null): string {
-  if (krw === null || !Number.isFinite(krw) || krw <= 0) return "—";
-  return `${Math.round(krw / 10_000).toLocaleString("ko-KR")}만`;
+  return formatKrwWon(krw);
 }
 
 export async function ComplexRentSection({
@@ -53,6 +53,8 @@ export async function ComplexRentSection({
         <span className="t-sub font-medium text-text-3">
           {hist.periodLabel} · 전세 {jeonseTotal.toLocaleString("ko-KR")}건 · 월세{" "}
           {wolseTotal.toLocaleString("ko-KR")}건
+          {/* [970 · B-41] 건수는 기간 전체 합인데 표는 12개월만 — 그 차이를 적는다 */}
+          {hist.months.length > shown.length ? ` · 최근 ${shown.length}개월 표시` : ""}
           {hist.truncated ? " · 표본 상한 도달" : ""}
         </span>
       </h2>

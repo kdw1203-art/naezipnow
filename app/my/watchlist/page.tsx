@@ -31,7 +31,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "관심 단지 · 내집나우",
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+  title: "관심 단지 | 내집나우",
   robots: { index: false, follow: false },
 };
 
@@ -62,11 +63,13 @@ export default async function WatchlistDashboardPage() {
   const email = session.user.email;
 
   let items: WatchlistItem[] = [];
-  let listFailed: string | null = null;
+  let listFailed = false;
   try {
     items = (await listWatchlist(email)).slice(0, MAX_ROWS);
   } catch (e) {
-    listFailed = e instanceof Error ? e.message : String(e);
+    /* [970 · C-09] 원인 원문은 로그로만 — 화면엔 고정 문구 */
+    logger.error("[my/watchlist] 관심 단지 조회 실패", e);
+    listFailed = true;
   }
 
   const [prices, notesR] = await Promise.all([
@@ -102,8 +105,8 @@ export default async function WatchlistDashboardPage() {
       {listFailed ? (
         <ErrorState
           title="관심 단지를 지금 불러오지 못했어요"
-          desc="담아 둔 단지가 0곳인 게 아니라 조회 자체가 실패했습니다. 잠시 후 새로고침해 주세요."
-          cause={listFailed}
+          /* [970 · C-20] 해요체 통일 */
+          desc="담아 둔 단지가 0곳인 게 아니라 조회가 실패했어요. 잠시 후 새로고침해 주세요."
         />
       ) : items.length === 0 ? (
         /* [966] 빈 상태 정본화 */

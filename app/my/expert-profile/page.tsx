@@ -5,14 +5,19 @@ import { getExpertByOwnerEmail } from "@/lib/experts/store-db";
 import { getLatestExpertApplication } from "@/lib/experts/verification-store";
 import { EXPERT_VERIFICATION_PIPELINE } from "@/lib/experts/verification-policy";
 import { ExpertProfileForm } from "./ExpertProfileForm";
+import { GuestGate } from "@/app/components/GuestGate";
+import { formatKstDate, formatKstLongDate } from "@/lib/format/kst";
 
 /* 전문가 프로필 수정 — 승인 후 프로필을 본인이 관리하는 유일한 화면.
    PATCH /api/experts/[id] 는 예전부터 완성돼 있었지만(권한 검사 포함) 부르는
    UI 가 하나도 없어서, 승인 시 복사된 값(소개·전문분야·경력·상담료)이 영원히
    얼어 있었다. 연락처(전화·카카오)는 여기서 본인이 채울 때만 공개된다. */
 
+/* [970 · C-25|C-26] 제목 접미 통일 `| 내집나우` + 비어 있던 description */
 export const metadata = {
-  title: "전문가 프로필 관리 · 내집나우",
+  title: "전문가 프로필 관리 | 내집나우",
+  description:
+    "승인된 전문가가 소개·전문 분야·경력·상담료·연락처를 직접 고치는 화면이에요. 신청 중이면 심사 상태를 보여줘요.",
   robots: { index: false, follow: false },
 };
 export const dynamic = "force-dynamic";
@@ -22,17 +27,15 @@ export default async function ExpertProfilePage() {
   const email = session?.user?.email ?? null;
 
   if (!email) {
+    /* [970 · C-40] 공용 GuestGate — h1 이 없던 게스트 뷰에 제목을 준다 */
     return (
       <PageShell breadcrumb="마이 › 전문가 프로필">
-        <div className="card mx-auto mt-8 max-w-[520px] rounded-2xl px-5 py-8 text-center">
-          <p className="t-section text-ink">로그인이 필요해요</p>
-          <Link
-            href="/login?callbackUrl=/my/expert-profile"
-            className="btn-primary btn-md mt-3 inline-block no-underline"
-          >
-            로그인
-          </Link>
-        </div>
+        <GuestGate
+          title="전문가 프로필은 로그인 후 관리할 수 있어요"
+          desc="인증된 전문가 계정으로 로그인하면 소개·전문 분야·상담료·연락처를 여기서 직접 고칠 수 있어요."
+          pathname="/my/expert-profile"
+          className="mt-8"
+        />
       </PageShell>
     );
   }
@@ -115,11 +118,8 @@ function ApplicationStatusCard({
 }: {
   application: NonNullable<Awaited<ReturnType<typeof getLatestExpertApplication>>>;
 }) {
-  const submitted = new Date(application.createdAt).toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  /* [970 · C-01] timeZone 없는 toLocaleDateString — 서버(UTC)에서 자정 전후 접수가 전날로. 한국 날짜 고정 */
+  const submitted = formatKstLongDate(application.createdAt);
   const reviewFlags = application.fraudFlags.filter((f) => f.severity !== "block");
   const stageIndex = (() => {
     if (application.status === "approved") return EXPERT_VERIFICATION_PIPELINE.length - 1;
@@ -157,7 +157,7 @@ function ApplicationStatusCard({
         <h1 className="t-section text-ink">인증은 승인됐는데 프로필을 아직 못 찾았어요</h1>
         <p className="mt-2 t-sub text-text-2">
           잠시 후 새로고침해 보시고, 계속 보이지 않으면 고객센터에 알려 주세요. 승인일:{" "}
-          {application.reviewedAt ? new Date(application.reviewedAt).toLocaleDateString("ko-KR") : "-"}
+          {application.reviewedAt ? formatKstDate(application.reviewedAt) : "-"}
         </p>
         <Link href="/support" className="btn-soft btn-md mt-4 inline-block no-underline">
           고객센터

@@ -8,7 +8,16 @@ import { trackPlatformEvent } from "@/lib/platform-events-client";
 import { Icon } from "@/app/components/Icon";
 import { stashSignupHandoff } from "@/lib/onboarding/signup-handoff";
 import { useMoment } from "@/app/components/motion/MomentProvider";
+import { safeInternalPath } from "@/lib/safe-path";
 import type { SocialProvider } from "@/lib/auth/configured-social";
+
+/** [970 · A-14] 가입 뒤 목적지 — 온보딩(/welcome)을 거치되, 로그인 벽에서 넘어온
+    callbackUrl 이 있으면 `?next=` 로 실어 온보딩 마지막 CTA 가 그리로 보낸다(WelcomeClient).
+    내부 경로만(safeInternalPath), 홈이면 싣지 않는다. 마운트 후에만 읽는다(하이드레이션). */
+function welcomeHrefFor(callbackUrl: string | null): string {
+  const next = safeInternalPath(callbackUrl, "/");
+  return next === "/" ? "/welcome" : `/welcome?next=${encodeURIComponent(next)}`;
+}
 
 const SOCIAL_BUTTON: Record<SocialProvider, { label: string; className: string }> = {
   /* 카카오 브랜드 가이드 — 배경 #FEE500 · 라벨 #191919 고정 */
@@ -61,6 +70,20 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<"done" | "confirm" | null>(null);
   const [confirmHint, setConfirmHint] = useState<string | null>(null);
+  /* [970 · A-14] 가입 뒤 목적지(/welcome 또는 /welcome?next=…) — 서버 렌더는 /welcome */
+  const [welcomeHref, setWelcomeHref] = useState("/welcome");
+  /* 로그인으로 되돌아가는 링크(뒤로·이미 계정이 있나요)도 같은 callbackUrl 을 유지한다 */
+  const [loginHref, setLoginHref] = useState("/login");
+  useEffect(() => {
+    try {
+      const cb = new URLSearchParams(window.location.search).get("callbackUrl");
+      setWelcomeHref(welcomeHrefFor(cb));
+      const safe = safeInternalPath(cb, "/");
+      if (safe !== "/") setLoginHref(`/login?callbackUrl=${encodeURIComponent(safe)}`);
+    } catch {
+      /* 주소 파싱 실패 — 기본 /welcome · /login */
+    }
+  }, []);
 
   /* #44 가입 퍼널 계측 — /api/platform/event 로 fire-and-forget POST (실패해도 UI 무영향).
      step_1: 페이지 진입 · step_2: 목표 선택 · step_3: 기본정보/관심지역 첫 선택 ·
@@ -114,12 +137,13 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
     stashSignupHandoff({ regions: [], profile: {}, purpose: null });
     trackStep("signup_step_4", { method: provider });
     // 토스는 자체 리다이렉트 시작점 — 인가 후 /auth/toss/callback 이 세션을 만든다.
+    // [970 · A-14] 목적지는 welcomeHref(/welcome 또는 /welcome?next=…)
     if (provider === "toss") {
-      window.location.href = "/api/auth/toss/start?callbackUrl=%2Fwelcome";
+      window.location.href = `/api/auth/toss/start?callbackUrl=${encodeURIComponent(welcomeHref)}`;
       return;
     }
     try {
-      await signIn(provider, { callbackUrl: "/welcome" });
+      await signIn(provider, { callbackUrl: welcomeHref });
     } catch {
       setError("소셜 가입에 실패했습니다. 잠시 후 다시 시도해 주세요.");
       setSocialBusy(null);
@@ -213,15 +237,16 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
           email: normalizedEmail,
           password,
           redirect: false,
-          callbackUrl: "/welcome",
+          callbackUrl: welcomeHref,
         });
         signedIn = Boolean(res?.ok) && !res?.error;
       } catch {
         signedIn = false;
       }
       if (!signedIn) {
+        /* [970 · A-14] 로그인 화면을 거쳐도 목적지(welcomeHref)는 유지 */
         router.replace(
-          `/login?callbackUrl=%2Fwelcome&email=${encodeURIComponent(normalizedEmail)}&notice=signup_done`,
+          `/login?callbackUrl=${encodeURIComponent(welcomeHref)}&email=${encodeURIComponent(normalizedEmail)}&notice=signup_done`,
         );
         return;
       }
@@ -230,7 +255,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
         subtitle: "관심 지역에 맞춰 첫 화면을 준비할게요",
         kind: "celebrate",
       });
-      router.replace("/welcome");
+      router.replace(welcomeHref);
       router.refresh();
     } catch {
       setError("네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
@@ -308,7 +333,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
             </button>
           ) : null}
           <Link
-            href="/login?callbackUrl=/welcome"
+            href={`/login?callbackUrl=${encodeURIComponent(welcomeHref)}`}
             className="btn-primary btn-cta mt-1 w-full rounded-2xl p-[15px] text-center text-[15px]"
           >
             로그인하러 가기
@@ -339,7 +364,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
       style={{ paddingTop: "max(20px, env(safe-area-inset-top, 0px))" }}
     >
       <div className="flex items-center justify-between">
-        <Link href="/login" className="text-[15px] text-text-1" aria-label="뒤로">
+        <Link href={loginHref} className="text-[15px] text-text-1" aria-label="뒤로">
           ‹
         </Link>
         {/* 진행 막대 — 예전엔 w-1/2 하드코딩이라 페이지를 열자마자 50%,
@@ -468,9 +493,29 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
             onChange={(e) => setAgree(e.target.checked)}
             className="h-4 w-4 accent-[#1d4fd8]"
           />
+          {/* [970 · A-13] 동의 대상 문서를 그 자리에서 열 수 있게 — 링크 없는 동의는 형식뿐이다.
+              <label> 안의 <a> 는 HTML 활성화 규칙상 체크박스를 토글하지 않는다(대화형 자손).
+              새 탭으로 열어 작성 중인 폼을 잃지 않게 한다. */}
           <span>
-            <b className="text-ink">(필수)</b> 이용약관·개인정보처리방침에 동의하며 만 14세
-            이상입니다
+            <b className="text-ink">(필수)</b>{" "}
+            <Link
+              href="/legal/terms"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2"
+            >
+              이용약관
+            </Link>
+            ·
+            <Link
+              href="/legal/privacy"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2"
+            >
+              개인정보처리방침
+            </Link>
+            에 동의하며 만 14세 이상입니다
           </span>
         </label>
         <label className="flex items-center gap-2 py-1 text-xs text-text-2">
@@ -514,7 +559,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
         </button>
         <div className="text-center text-xs text-text-3">
           이미 계정이 있나요?{" "}
-          <Link href="/login" className="font-bold text-primary">
+          <Link href={loginHref} className="font-bold text-primary">
             로그인
           </Link>
         </div>

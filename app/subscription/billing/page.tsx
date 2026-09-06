@@ -23,7 +23,10 @@ export default function BillingEnrollPage() {
   return (
     <PageShell breadcrumb="구독 · 자동결제" title="자동결제 등록">
       <BillingEnrollClient />
-      <div className="mt-4"><ComplianceNotice variant="billing" /></div>
+      {/* [970 · A-36] 등록 카드(max-w-[520px])와 같은 폭 — 체크아웃 화면과 동일 */}
+      <div className="mx-auto mt-4 w-full max-w-[520px]">
+        <ComplianceNotice variant="billing" />
+      </div>
     </PageShell>
   );
 }

@@ -11,6 +11,7 @@ import { RegionPicker } from "@/app/components/RegionPicker";
 import { takeSignupHandoff } from "@/lib/onboarding/signup-handoff";
 import { PROFILE_OPTIONS } from "@/lib/onboarding/profile-options";
 import { HOME_CTA_NOTE, HOME_HERO_SUBLINE } from "@/lib/brand/home-copy";
+import { safeInternalPath } from "@/lib/safe-path";
 
 /** 위저드 화면 진행 기록용 id — 퍼널 관측 전용.
     진짜 온보딩 스텝(explore·inspection·share)은 서버가 실데이터로 판정하므로
@@ -75,6 +76,18 @@ export function WelcomeClient() {
   const [purpose, setPurpose] = useState<PurposeId | null>(null);
   const [persona, setPersona] = useState<PersonaId | null>(null);
   const [busy, setBusy] = useState(false);
+  /* [970 · A-14] 가입 전에 하던 일(구독·페이월 등)로 돌아갈 경로 — SignupClient 가
+     /welcome?next= 로 싣는다. 내부 경로만, 홈이면 없는 것으로 친다. 마운트 후에만 읽는다. */
+  const [next, setNext] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const raw = new URLSearchParams(window.location.search).get("next");
+      const safe = safeInternalPath(raw, "/");
+      setNext(safe === "/" ? null : safe);
+    } catch {
+      setNext(null);
+    }
+  }, []);
 
   /* 로그인 확인 겸 저장된 진행 상태 조회 — 401 이면 로그인으로 (소셜 포함, 로그인 후 복귀) */
   useEffect(() => {
@@ -83,7 +96,9 @@ export function WelcomeClient() {
       try {
         const res = await fetch("/api/me/onboarding", { cache: "no-store" });
         if (res.status === 401) {
-          router.replace("/login?callbackUrl=/welcome");
+          /* [970 · A-14] ?next= 까지 포함해 이 화면으로 되돌아온다 */
+          const here = safeInternalPath(window.location.pathname + window.location.search, "/welcome");
+          router.replace(`/login?callbackUrl=${encodeURIComponent(here)}`);
           return;
         }
       } catch {
@@ -181,6 +196,12 @@ export function WelcomeClient() {
       }),
     ]).catch(() => {});
 
+    /* [970 · A-14] 로그인 벽에서 가입으로 넘어온 사람은 하던 일(next)로 — 첫 노트 루프는
+       그 경로가 없을 때만. */
+    if (next) {
+      router.push(next);
+      return;
+    }
     // 종착지: 첫 임장노트(+ AI 의도) — NoteForm 이 from=welcome 이면 저장 후 지도로 이어간다.
     const firstRegion = regions[0];
     const qs = new URLSearchParams({ from: "welcome", intent: "ai" });
@@ -191,7 +212,7 @@ export function WelcomeClient() {
       /* ignore */
     }
     router.push(`/notes/new?${qs.toString()}`);
-  }, [busy, purpose, persona, recordStep, budgetType, budgetBandId, regions, profile, router]);
+  }, [busy, purpose, persona, recordStep, budgetType, budgetBandId, regions, profile, router, next]);
 
   if (!ready) {
     return (
@@ -217,11 +238,12 @@ export function WelcomeClient() {
           className="max-w-[160px]"
           label={`온보딩 ${step + 1} / ${STEP_IDS.length} 단계`}
         />
+        {/* [970 · A-14] 건너뛰기도 next 가 있으면 그리로 */}
         <Link
-          href={`${HOME_CTA_NOTE.href}?from=welcome&intent=ai`}
+          href={next ?? `${HOME_CTA_NOTE.href}?from=welcome&intent=ai`}
           className="text-[13px] text-text-3"
         >
-          건너뛰고 노트 쓰기
+          {next ? "건너뛰고 하던 화면으로" : "건너뛰고 노트 쓰기"}
         </Link>
       </div>
 
@@ -489,7 +511,10 @@ export function WelcomeClient() {
           </div>
 
           <div className="rise-in-2 rounded-2xl bg-bg px-4 py-3 text-[12px] leading-[1.6] text-text-2">
-            <span className="font-extrabold text-ink">다음은 첫 임장노트 → AI → 지도예요.</span>{" "}
+            {/* [970 · A-14] 돌아갈 곳이 있으면 "첫 노트" 예고 대신 그 사실을 말한다 */}
+            <span className="font-extrabold text-ink">
+              {next ? "완료하면 하던 화면으로 돌아가요." : "다음은 첫 임장노트 → AI → 지도예요."}
+            </span>{" "}
             {HOME_HERO_SUBLINE}
           </div>
 
@@ -500,7 +525,7 @@ export function WelcomeClient() {
             disabled={busy || !purpose}
             className="btn-primary btn-cta rise-in-3 rounded-2xl p-[15px] text-center text-[15px] disabled:opacity-60"
           >
-            {busy ? "저장 중…" : "완료하고 첫 임장노트 써보기"}
+            {busy ? "저장 중…" : next ? "완료하고 하던 화면으로" : "완료하고 첫 임장노트 써보기"}
           </button>
         </>
       )}

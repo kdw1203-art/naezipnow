@@ -20,7 +20,8 @@ export function generateStaticParams(): Array<{ id: string }> {
 }
 
 export const metadata: Metadata = {
-  title: "지역 아파트 시세 · 내집나우",
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+  title: "지역 아파트 시세 | 내집나우",
   robots: { index: false, follow: false },
 };
 

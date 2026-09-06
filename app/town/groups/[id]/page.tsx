@@ -7,6 +7,7 @@ import { PageShell } from "../../../components/PageShell";
 import { ShareButton } from "./ShareButton";
 import { LocationMap } from "../../LocationMap";
 import { Icon } from "@/app/components/Icon";
+import { formatKstLongDate } from "@/lib/format/kst";
 
 /* 시안 8o(모임 상세) 고도화 — 모임 정보 카드(일정·장소·정원·참여자) + 공유 +
    참여 상태별 CTA. "채팅방 입장"은 /town/groups/[id]/chat 로 분리(실채팅 유지). */
@@ -47,18 +48,11 @@ export async function generateMetadata({
   };
 }
 
+/* [970 · C-01] toLocaleString 에 timeZone 이 없어 서버(UTC)에서 9시간 이른 일시가 나갔다.
+   한국 시간으로 고정 — "2026년 9월 6일 (토) 14:30". */
 function formatSchedule(iso: string | null): string {
   if (!iso) return "일정 미정";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "일정 미정";
-  return d.toLocaleString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatKstLongDate(iso, { weekday: true, time: true }) || "일정 미정";
 }
 
 export default async function TownGroupDetailPage({

@@ -17,6 +17,7 @@ import { NewsAlertSubscribe } from "./NewsAlertSubscribe";
 import { ErrorState } from "@/app/components/ui";
 import { logger } from "@/lib/log";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
+import { buildNewsRegionChips } from "@/lib/town/news-regions";
 
 /* 뉴스·다이제스트(#6·#7) — 부동산 뉴스 그리드 상단에 주간 다이제스트 요약을 합쳤다.
    · 주간 다이제스트: getWeeklyDigest() 요약 카드(실패·빈 데이터 시 섹션 생략, fail-soft).
@@ -127,8 +128,10 @@ export default async function TownNewsPage() {
     newsFailed = true;
   }
 
-  /* 지역 필터 — 실데이터 기반(뉴스 city 상위 목록). 거르는 건 클라이언트. */
-  const regions = [...new Set(news.map((p) => p.city).filter(Boolean))].slice(0, 8);
+  /* 지역 필터 — 실데이터 기반(뉴스 city 값). 거르는 건 클라이언트.
+     [970 · C-23] 예전엔 등장순 8개라 "서울"·"강남구"·"성남시 분당구" 가 단위 섞인 채
+     기사 1건짜리가 앞에 섰다. 건수순 + 시·도로 접어 내린다(lib/town/news-regions). */
+  const regions = buildNewsRegionChips(news.map((p) => p.city));
 
   /* [#67] 동일 사건 클러스터링 — 같은 발표를 다룬 기사들을 대표 1건 + "관련 보도 N건"
      으로 접는다(렌더 계층 처리 — 수집 원본은 전부 보존, 각 기사 상세도 그대로).

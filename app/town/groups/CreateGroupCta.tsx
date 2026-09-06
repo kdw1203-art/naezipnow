@@ -4,9 +4,22 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal, ModalHeader } from "@/app/components/ui/Modal";
 import { useMoment } from "@/app/components/motion/MomentProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { hasSession } from "@/lib/client/has-session";
 
 /* "모임 만들기" — POST /api/groups(createMeeting) 실배선.
-   성공 시 새 모임 상세로 이동. 엔드포인트가 게스트도 허용하므로 별도 로그인 강제는 안 함. */
+   성공 시 새 모임 상세로 이동. 엔드포인트는 로그인 필수(401).
+   [970 · C-14] 예전엔 비로그인으로 7칸을 다 채운 뒤 401 → window.location 으로 로그인
+   페이지에 보내 입력이 통째로 사라졌다. 이제 (1) 여는 순간 세션이 없으면 소프트 가입
+   프롬프트를 띄우고, (2) 401 이 와도 모달·입력을 그대로 둔 채 같은 프롬프트를 띄운다. */
+
+/** 로그인 유도 문구 — 열 때·401 때 같은 말 */
+const SIGNUP_INTENT = {
+  action: "group_create",
+  title: "모임을 만들려면 로그인이 필요해요",
+  benefit: "로그인하면 모임이 내 계정에 남고, 참여자와 채팅방에서 일정을 나눌 수 있어요.",
+  callbackUrl: "/town/groups",
+} as const;
 
 const TYPES = ["임장 모임", "투자 스터디", "세미나/강의", "네트워킹", "청약 스터디"] as const;
 
@@ -24,9 +37,18 @@ function nowLocalMinute(): string {
   return d.toISOString().slice(0, 16);
 }
 
-export function CreateGroupCta() {
+export function CreateGroupCta({
+  label = "+ 모임 만들기",
+  className = "rounded-xl px-[18px] py-2.5 t-body",
+}: {
+  /** [970 · C-38] 빈 상태 카드 안에서는 다른 문구·크기로 같은 모달을 연다 */
+  label?: string;
+  /** 크기·모양 클래스(btn-primary 는 항상 붙는다) */
+  className?: string;
+} = {}) {
   const router = useRouter();
   const { showMoment } = useMoment();
+  const { promptSignup } = useSoftSignup();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [meetType, setMeetType] = useState<(typeof TYPES)[number]>("임장 모임");
@@ -82,10 +104,11 @@ export function CreateGroupCta() {
         group?: { id?: string };
       };
       if (res.status === 401) {
-        /* [2026-08-22] 로그인 없이 7칸을 다 채운 뒤에야 빨간 오류 한 줄이 나오던
-           경로 — 로그인으로 보내고, 돌아오면 이 목록이다(작성 내용 복구까지는
-           안 되지만 "왜 안 되는지 모른 채 끝"보다는 낫다). */
-        window.location.href = `/login?callbackUrl=${encodeURIComponent("/town/groups")}`;
+        /* [970 · C-14] 입력은 그대로 두고(모달도 안 닫는다) 소프트 가입 프롬프트만 —
+           닫으면 쓰던 자리로 돌아온다. */
+        setStatus("idle");
+        setError("로그인 후 만들 수 있어요. 작성한 내용은 그대로 남아 있어요.");
+        promptSignup(SIGNUP_INTENT);
         return;
       }
       if (!res.ok) {
@@ -112,10 +135,17 @@ export function CreateGroupCta() {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        className="btn-primary btn-cta rounded-xl px-[18px] py-2.5 t-body"
+        onClick={() => {
+          /* [970 · C-14] 여는 순간 세션을 본다 — 없으면 폼 대신 가입 프롬프트(판정 실패는
+             열어 준다: 서버 401 이 다시 잡는다) */
+          void hasSession().then((authed) => {
+            if (authed) setOpen(true);
+            else promptSignup(SIGNUP_INTENT);
+          });
+        }}
+        className={`btn-primary btn-cta ${className}`}
       >
-        + 모임 만들기
+        {label}
       </button>
 
       <Modal

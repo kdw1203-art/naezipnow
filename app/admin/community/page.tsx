@@ -5,7 +5,8 @@ import { SeedReplyForm } from "./SeedReplyForm";
 /* [#121·#123] 커뮤니티 운영 — 참여 지표 + 미답변 글 시드 답글 도구.
    0→1 구간의 계기판: 이번 주 글·댓글·채택률·미답변, 그리고 빈 스레드 처방. */
 
-export const metadata = { title: "커뮤니티 운영 · 내집나우 Admin" };
+/* [970 · C-25] 제목 접미 통일 — 관리자 화면은 `| 내집나우 관리자` */
+export const metadata = { title: "커뮤니티 운영 | 내집나우 관리자" };
 
 type Metric = { label: string; value: string; sub?: string };
 

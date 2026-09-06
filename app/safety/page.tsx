@@ -67,10 +67,17 @@ export default function SafetyPage() {
 
   return (
     <PageShell breadcrumb="전세·월세 모드 › 세입자 안전 분석" wide>
-      {/* 상단 모드 전환 + 대상 입력 */}
+      {/* [970 · A-35] h1 은 화면의 실제 제목("계약 전, 보증금을 지키는 6가지 확인")으로 — 예전엔
+          입력줄 옆 13px 라벨이 h1 이었고 그 문장은 아래 카드 제목으로 따로 있었다.
+          입력줄 라벨은 aria-label(입력)로 옮긴다. */}
+      <h1 className="rise-in mb-3 text-[21px] font-extrabold tracking-[-0.4px] text-ink">
+        계약 전, 보증금을 지키는 6가지 확인
+      </h1>
+      {/* 대상 입력 */}
       <div className="rise-in mb-4 flex flex-wrap items-center gap-3">
-        <h1 className="text-[13px] font-extrabold text-ink">전세·월세 보증금 안전 확인</h1>
+        <span className="text-[13px] font-extrabold text-ink">전세·월세 보증금 안전 확인</span>
         <input
+          aria-label="주소 또는 단지명"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
           onKeyDown={(e) => {
@@ -79,11 +86,13 @@ export default function SafetyPage() {
           placeholder="주소 또는 단지명을 입력하세요 (예: 관양동 ○○아파트)"
           className="min-w-[220px] flex-1 rounded-[10px] border border-line bg-surface px-3.5 py-2 text-[13px] text-ink outline-none placeholder:text-text-3 focus:border-primary"
         />
+        {/* [970 · A-35] disabled:opacity-50 제거 — btn-primary 가 이미 :disabled 를 토큰으로
+            처리해 두 번 흐려졌다 */}
         <button
           type="button"
           onClick={submit}
           disabled={!address.trim()}
-          className="btn-primary rounded-[10px] px-4 py-2 text-[13px] disabled:opacity-50"
+          className="btn-primary rounded-[10px] px-4 py-2 text-[13px]"
         >
           안전 진단
         </button>

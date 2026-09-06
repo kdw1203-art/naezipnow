@@ -8,15 +8,28 @@
  * 동의한 경우에만 GA4 로더(components/ga4-gtag-loader.tsx)가 싣는다.
  */
 import Link from "next/link";
-import type { CSSProperties } from "react";
+import { useEffect, type CSSProperties } from "react";
 import { usePathname } from "next/navigation";
 import { useCookieConsent } from "./use-cookie-consent";
-import { consentBannerBottom } from "@/lib/client/shell-gates";
+import { consentBannerBottom, consentBodyClasses } from "@/lib/client/shell-gates";
 
 export function CookieConsentBanner() {
   const { state, decide } = useCookieConsent();
   const pathname = usePathname() ?? "/";
-  if (state.status !== "undecided") return null;
+  const open = state.status === "undecided";
+
+  /* [970 · A-39 · A-20] 배너가 떠 있는 동안 body 에 표식을 남긴다 — globals.css 가
+     .nz-consent-open 으로 "맨 위로" FAB 를 숨기고(배너 밑에 깔려 눌리지 않았다),
+     .nz-consent-pad 로 md+ body 아래 여백을 줘 코너 카드가 화면 우하단 CTA 를 덮어도
+     스크롤로 빠져나가게 한다(/map 은 pad 없음 — 판정은 shell-gates consentBodyClasses). */
+  useEffect(() => {
+    if (!open) return;
+    const classes = consentBodyClasses(pathname);
+    document.body.classList.add(...classes);
+    return () => document.body.classList.remove(...classes);
+  }, [open, pathname]);
+
+  if (!open) return null;
 
   return (
     <div
@@ -29,6 +42,9 @@ export function CookieConsentBanner() {
          섰다 — 첫 방문자는 결정 전까지 탭에 손이 안 닿았다. 이제 탭바는 늘 있고
          배너가 탭바 위에 컴팩트하게 선다(bottom 은 CSS 변수로 — 인라인 값이 md+ 의
          코너 카드 위치를 덮지 않게 사용자 정의 속성으로 넘긴다). */
+      /* [970 · A-20] md+ 코너 카드가 /subscription 플랜 카드 CTA 를 덮었다. 중앙 하단으로
+         되돌리는 안은 위(2026-08-03)에서 이미 기각된 배치라, 자리는 두고 body.nz-consent-open
+         (위 효과) 에 md+ 아래 여백을 줘 스크롤로 CTA 가 배너 위로 올라오게 한다(globals.css). */
       className="fixed inset-x-0 z-[70] bottom-[var(--nz-consent-bottom)] px-3.5 md:inset-x-auto md:bottom-5 md:right-5 md:px-0"
       style={{ "--nz-consent-bottom": consentBannerBottom(pathname) } as CSSProperties}
       /* [966] 인쇄 제외 표식 — 고정 클래스가 없어 속성으로 잡는다(globals.css @media print) */
@@ -47,7 +63,8 @@ export function CookieConsentBanner() {
         <p className="text-[12px] leading-[1.5] text-text-1">
           내집나우는 서비스 운영에 필요한 필수 쿠키를 사용해요. 이용 통계 분석 쿠키는{" "}
           <b>동의하신 경우에만</b> 사용합니다.{" "}
-          <Link href="/legal/privacy" className="font-bold text-primary underline">
+          {/* [970 · A-19] 셸 링크 — 프리페치 없음 */}
+          <Link href="/legal/privacy" prefetch={false} className="font-bold text-primary underline">
             개인정보처리방침
           </Link>
         </p>

@@ -3,6 +3,7 @@
 import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ComplexPicker, type PickedComplex } from "@/app/analysis/ComplexPicker";
+import { hasSession } from "@/lib/client/has-session";
 import { SkBlock, SkLine } from "@/app/components/ui/Skeleton";
 import type { AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import { UNCERTAINTY, CONFIDENCE_LABEL, judgeConfidence } from "@/lib/ai/insight-blocks";
@@ -169,12 +170,21 @@ export function WorkbenchClient({
     { id: string; name: string; objective: { complexId?: string; complexName?: string; region?: string } }[]
   >([]);
   useEffect(() => {
-    fetch(`/api/ai/presets?tool=${tool}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        if (Array.isArray(j?.presets)) setPresets(j.presets.slice(0, 5));
-      })
-      .catch(() => {});
+    /* [970 · B-26] 게스트는 프리셋 API 를 부르지 않는다 — 401 이 콘솔에 매번 찍혔다.
+       hasSession 은 헤더가 이미 부른 /api/auth/session 공유 프라미스라 요청이 늘지 않는다. */
+    let cancelled = false;
+    void hasSession().then((signedIn) => {
+      if (cancelled || !signedIn) return;
+      fetch(`/api/ai/presets?tool=${tool}`, { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          if (!cancelled && Array.isArray(j?.presets)) setPresets(j.presets.slice(0, 5));
+        })
+        .catch(() => {});
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [tool]);
   const loadContext = useCallback(async (p: PickedComplex | null) => {
     if (!p) return;
@@ -315,6 +325,11 @@ export function WorkbenchClient({
   const [portfolio, setPortfolio] = useState<{ complexId: string; complexName: string }[] | null>(null);
   const loadPortfolio = useCallback(async () => {
     try {
+      /* [970 · B-26] 게스트면 401 을 맞으러 가지 않는다 — 결과는 같은 빈 목록 */
+      if (!(await hasSession())) {
+        setPortfolio([]);
+        return;
+      }
       const res = await fetch("/api/me/watchlist", { cache: "no-store" });
       if (res.status === 401) {
         setPortfolio([]);
@@ -488,7 +503,8 @@ export function WorkbenchClient({
             <span className="t-body font-extrabold text-ink">① 단지 선택</span>
             <span className="t-sub text-text-3">{useCase}</span>
           </div>
-          <ComplexPicker onSelect={onPick} />
+          {/* [970 · B-27] 위 "① 단지 선택" 이 라벨이다 — 피커 기본 라벨("① 단지 검색")이 겹쳐 보였다 */}
+          <ComplexPicker onSelect={onPick} label="" />
           {presets.length > 0 && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <span className="t-sub font-bold text-text-3">내 프리셋:</span>

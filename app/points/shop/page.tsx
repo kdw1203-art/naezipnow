@@ -7,11 +7,19 @@ import { ErrorState } from "@/app/components/ui/EmptyState";
 import { logger } from "@/lib/log";
 import { SPEND_ITEMS, POINTS_GRATUITOUS_NOTICE } from "@/lib/points/catalog";
 import { ShopClient } from "./ShopClient";
+import { buildPageMetadata } from "@/lib/seo/page-metadata";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "포인트 상점" };
+/* [970 · C-25] 접미 없던 제목을 buildPageMetadata 경유(`| 내집나우` 자동)로 + description.
+   비로그인에게도 열린 공개 페이지(robots allow · 사이트맵 수록)라 canonical 도 같이 붙는다. */
+export const metadata = buildPageMetadata({
+  title: "포인트 상점",
+  description:
+    "활동으로 쌓은 포인트를 매물 상단 노출·닉네임 꾸미기 같은 서비스 내 혜택으로 교환해요. 현금 전환·구매는 안 돼요.",
+  path: "/points/shop",
+});
 
 /* ── 비로그인 안내 (상품은 미리보기로 노출) ── */
 function GuestView() {

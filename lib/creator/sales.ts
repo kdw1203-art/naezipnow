@@ -2,6 +2,7 @@ import "server-only";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
 import { normEmailOrNull } from "@/lib/privacy/mask-email";
+import { REPORT_SELLER_FEE_RATE } from "@/lib/billing/marketplace-fees";
 
 /** 리포트 구매 집계 조회 상한(#32) */
 const REPORT_PURCHASES_LIMIT = 20_000;
@@ -20,8 +21,9 @@ const REPORT_PURCHASES_LIMIT = 20_000;
  *  않는다(무상성 소명·약관 제8조의2). 판매 보상 포인트는 무상 리워드와 같은
  *  규칙(현금 전환 불가·서비스 내 혜택 전용)을 따른다. */
 export const SETTLEMENT = {
-  /** 플랫폼 몫 (전문가 리포트 요율 7%) */
-  platformFeeRate: 0.07,
+  /** 플랫폼 몫 — [970 · A-09 · C-15] 숫자는 lib/billing/marketplace-fees.ts 단일
+      출처에서만 온다(여기 0.07 을 따로 적어 두어 /legal/fees 10% 와 갈라졌었다). */
+  platformFeeRate: REPORT_SELLER_FEE_RATE,
 } as const;
 
 export type CreatorReportSale = {

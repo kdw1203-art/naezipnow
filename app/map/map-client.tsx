@@ -706,6 +706,10 @@ export function MapClient({
      지도뿐이었다. 저사양 기기·지도 로드 실패 시 대안이 없고, 목록으로 훑고
      싶은 사용자도 있다. "list"면 지도 위에 전체 화면 목록을 덮는다. */
   const [mobileView, setMobileView] = useState<"map" | "list">("map");
+  /* [970 · B-37] 지도 SDK 폴백(로드 실패·키 없음) 상태 — 폴백 화면 위에 ± 줌 버튼이 남아
+     있었다(누르면 level 만 바뀌고 아무것도 안 움직인다). NaverMap 이 error 를 확정하는
+     순간 한 번 알려 준다(onFallbackChange). */
+  const [mapFallback, setMapFallback] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>("요약");
   const [center, setCenter] = useState(() => {
@@ -3794,6 +3798,7 @@ export function MapClient({
         onMarkerClick={handleMarkerClick}
         onIdle={handleMapIdle}
         fallback={gradientFallback}
+        onFallbackChange={setMapFallback}
         circle={
           radiusMode ? { lat: radiusOrigin.lat, lng: radiusOrigin.lng, radiusM } : null
         }
@@ -4436,11 +4441,14 @@ export function MapClient({
           )}
           {danjiLoadFailed && (
             <div className="mx-3 mb-2 rounded-[10px] border border-line bg-surface px-3.5 py-3">
+              {/* [970 · B-38] 실패한 건 지도 마커용 목록이다 — 바로 아래 인기 단지는 멀쩡히
+                  나오는데 "단지 목록을 못 불러왔다"고 하면 화면이 스스로를 부정한다 */}
               <div className="t-sub font-extrabold text-ink">
-                단지 목록을 지금 불러오지 못했어요
+                지도 마커용 단지 목록을 지금 불러오지 못했어요
               </div>
               <p className="mt-1 t-sub text-text-3">
-                이 지역에 단지가 0개인 게 아니라 조회 자체가 실패했습니다. 지도는 그대로 쓸 수
+                이 지역에 단지가 0개인 게 아니라 마커용 조회가 실패했습니다.{" "}
+                {popular.length > 0 ? "아래 인기 단지와 지도는" : "지도는"} 그대로 쓸 수
                 있어요 — 잠시 후 새로고침해 주세요.
               </p>
             </div>
@@ -4556,7 +4564,9 @@ export function MapClient({
       {mobileView === "list" && !selected && (
         <div
           className="absolute inset-x-0 bottom-0 z-30 flex flex-col bg-bg md:hidden"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 86px)" }}
+          /* [970 · B-19] 86px 은 상단 검색 카드 높이에 못 미쳐 목록 헤더("○○ 단지 N")가
+             검색창 아래 깔렸다(감사 실측) — 검색 카드 아래(134px)에서 시작한다. */
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 134px)" }}
         >
           <div className="flex items-baseline justify-between px-5 pb-2 pt-3">
             <div className="t-section text-ink">
@@ -5038,9 +5048,13 @@ export function MapClient({
         매물 등록
       </Link>
 
-      {/* ===== 우하단 줌 컨트롤 ===== */}
+      {/* ===== 우하단 줌 컨트롤 =====
+          [970 · B-37] 폴백(지도를 못 그림)에서는 숨기고, 모바일 목록 뷰가 지도를 덮고 있을
+          때도 숨긴다(md 이상은 목록이 사이드바라 지도가 보인다). */}
       <div
-        className="absolute right-5 z-30 flex flex-col gap-1.5"
+        className={`absolute right-5 z-30 flex-col gap-1.5 ${
+          mapFallback ? "hidden" : mobileView === "list" && !selected ? "hidden md:flex" : "flex"
+        }`}
         style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 134px)" }}
       >
         <button

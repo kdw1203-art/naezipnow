@@ -23,7 +23,8 @@ import { relativeTimeLabel } from "@/lib/format/relative-time";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "받은 문의 · 내집나우",
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+  title: "받은 문의 | 내집나우",
   robots: { index: false, follow: false },
 };
 

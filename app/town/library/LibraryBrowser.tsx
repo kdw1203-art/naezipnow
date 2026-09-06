@@ -30,6 +30,8 @@ export type NoteCardDto = {
   score: number; // 0~100
   cover: string | null;
   gradient: string; // 커버 없는 카드의 시드 그라디언트 (서버 계산)
+  /** [970 · C-11] 내집나우 Lab(데이터 분석) 노트 — "직접 방문" 대신 "Lab 데이터" 배지 */
+  lab?: boolean;
   visited: boolean;
   createdAt: number; // ms
 };
@@ -258,8 +260,14 @@ export function NotesBrowser({ notes }: { notes: NoteCardDto[] }) {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={n.cover} alt="" loading="lazy" className="h-full w-full object-cover" />
                 )}
-                <span className="absolute left-2 top-2 rounded-md bg-white/90 chip-pad t-caption font-extrabold text-success">
-                  {n.visited ? "✓ 직접 방문" : "임장노트"}
+                {/* [970 · C-11] 피드는 "Lab 데이터", 여기는 "✓ 직접 방문" 으로 같은 노트를 다르게
+                    불렀다 — 같은 라벨·같은 색 규칙(feed-client Cover). bg-white/90 → bg-surface/90(다크). */}
+                <span
+                  className={`absolute left-2 top-2 rounded-md bg-surface/90 chip-pad t-caption font-extrabold ${
+                    n.lab ? "text-ink" : n.visited ? "text-success" : "text-primary"
+                  }`}
+                >
+                  {n.lab ? "Lab 데이터" : n.visited ? "✓ 직접 방문" : "임장노트"}
                 </span>
               </div>
               <div className="flex flex-1 flex-col gap-1 p-3">

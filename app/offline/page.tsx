@@ -14,7 +14,8 @@ import { RetryButton } from "./RetryButton";
  * 문서이며, 캐시하는 것도 이 문서 하나뿐이다.
  */
 export const metadata: Metadata = {
-  title: "오프라인 — 내집나우",
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+  title: "오프라인 | 내집나우",
   description: "인터넷 연결이 끊겼습니다.",
   robots: { index: false, follow: false },
 };

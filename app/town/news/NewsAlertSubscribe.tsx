@@ -21,18 +21,21 @@ export function NewsAlertSubscribe() {
         <Icon name="bell" size={15} />
         키워드 알림
       </div>
+      {/* [970 · C-08] 모바일(390px)에서 라벨·입력·추천 칩 4개가 한 줄에 flex-1 로 끼어
+          입력칸이 30px 폭으로 찌그러졌다. 좁은 화면에선 입력과 칩 줄이 각각 제 줄을
+          갖고(basis-full), sm 부터 종전대로 한 줄. */}
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
         aria-label="알림 받을 키워드"
         placeholder="동네·단지·키워드 (예: 성동구, 재건축)"
         maxLength={40}
-        className="min-w-0 flex-1 rounded-full border border-line bg-surface px-3.5 py-1.5 t-body text-ink placeholder:text-text-3"
+        className="min-w-[160px] basis-full rounded-full border border-line bg-surface px-3.5 py-1.5 t-body text-ink placeholder:text-text-3 sm:flex-1 sm:basis-auto"
       />
       {trimmed ? (
         <KeywordAlertButton key={trimmed} scope="news" query={trimmed} />
       ) : (
-        <div className="flex items-center gap-1.5">
+        <div className="flex basis-full flex-wrap items-center gap-1.5 sm:basis-auto">
           {SUGGESTIONS.map((s) => (
             <button
               key={s}

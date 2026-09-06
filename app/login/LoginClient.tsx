@@ -242,8 +242,12 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
      구체 문구로 바꾼다. (useSearchParams 를 쓰면 Suspense 경계가 필요하다) */
   const generic = useMemo(() => genericContext(social), [social]);
   const [ctx, setCtx] = useState<LoginContext>(generic);
+  /* [970 · A-14] 가입 링크 — callbackUrl 이 홈이 아니면 그대로 싣는다(마운트 후, 같은 이유) */
+  const [signupHref, setSignupHref] = useState("/signup");
   useEffect(() => {
     setCtx(contextForCallback(resolveCallbackUrl(), generic));
+    const cb = resolveCallbackUrl();
+    if (cb !== "/") setSignupHref(`/signup?callbackUrl=${encodeURIComponent(cb)}`);
     const params = new URLSearchParams(window.location.search);
     if (params.get("verified") === "1") setVerifiedNotice(true);
     /* [965] 가입은 됐는데 자동 로그인이 안 된 경우(SignupClient) */
@@ -561,12 +565,24 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
 
         <div className="rise-in-5 text-center text-xs text-text-3">
           처음이신가요?{" "}
-          <Link href="/signup" className="font-bold text-primary">
+          {/* [970 · A-14] 가입 링크에 callbackUrl 을 넘긴다 — 구독·페이월에서 로그인 벽을 만나
+              가입으로 갈아탄 사람이 가입 뒤 홈(/welcome → 노트)으로 떨어져 하던 일을 잃었다.
+              SignupClient 가 이 값을 읽어 /welcome?next= 로 잇는다. */}
+          <Link href={signupHref} className="font-bold text-primary">
             회원가입 온보딩
           </Link>
         </div>
+        {/* [970 · A-13] 동의 문구에 약관·방침 실링크 — 동의 대상 문서를 열 수 없었다 */}
         <p className="text-center text-[12px] leading-[1.6] text-text-3">
-          시작하면 이용약관·개인정보처리방침에 동의하게 됩니다
+          시작하면{" "}
+          <Link href="/legal/terms" className="underline underline-offset-2">
+            이용약관
+          </Link>
+          ·
+          <Link href="/legal/privacy" className="underline underline-offset-2">
+            개인정보처리방침
+          </Link>
+          에 동의하게 됩니다
         </p>
       </div>
     </main>

@@ -12,6 +12,7 @@ import { useToast } from "@/app/components/toast/ToastProvider";
 import { PushSubscribe } from "@/components/PushSubscribe";
 import { DELETE_CONFIRM_WORD, DELETE_GRACE_DAYS } from "@/lib/account/deletion";
 import { useUnsavedGuard } from "@/lib/client/use-unsaved-guard";
+import { hasSession } from "@/lib/client/has-session";
 
 /* 설정 (item 14) — 진짜 설정만 유지, 네비게이션성 항목 제거.
    섹션: 계정 · 알림 · 개인정보. 저장되는 토글만 실배선(/api/me/notification-prefs),
@@ -326,7 +327,8 @@ function NotificationTab({ channels }: { channels: NotifyChannels }) {
           <div className="t-body font-extrabold text-ink">관심 지역 · 급매 알림 구독</div>
           <div className="t-caption text-text-3">구독한 지역·키워드 추가/삭제</div>
         </div>
-        <span className="text-on-dark-muted">›</span>
+        {/* [970 · C-24] 흰 카드 위 "›" 가 on-dark-muted(한지 72%)라 안 보였다 → text-text-3 */}
+        <span className="text-text-3">›</span>
       </Link>
 
       {phase === "loading" && (
@@ -599,7 +601,25 @@ function ThemeRow() {
 }
 
 /* ---------------- 계정 탭 ---------------- */
-function AccountTab() {
+function AccountTab({ guest }: { guest: boolean }) {
+  /* [970 · C-03] 이 화면은 정적(세션 없음)이라 비로그인에게도 비밀번호 변경·구독·로그아웃·
+     회원탈퇴가 그대로 보였다(알림 탭만 401 로 GuestCard). 게스트면 계정 항목 대신
+     GuestCard — 화면 테마·언어는 로그인과 무관하니 남긴다. */
+  if (guest) {
+    return (
+      <div className="flex flex-col gap-3">
+        <GuestCard />
+        <div className="card flex flex-col rounded-2xl px-4 py-1">
+          <div className="pb-1 pt-3 t-sub font-extrabold text-text-3">화면</div>
+          <div className="flex items-center justify-between border-b border-divider py-3">
+            <span className="t-body font-semibold text-text-1">언어</span>
+            <span className="t-sub font-bold text-text-3">한국어</span>
+          </div>
+          <ThemeRow />
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-3">
       {/* 계정 관리 */}
@@ -610,7 +630,8 @@ function AccountTab() {
           className="flex items-center justify-between border-b border-divider py-3 t-body font-semibold text-text-1 no-underline"
         >
           <span>비밀번호 변경</span>
-          <span className="text-on-dark-muted">›</span>
+          {/* [970 · C-24] 흰 카드 위 "›" 가 on-dark-muted(한지 72%)라 안 보였다 → text-text-3 */}
+          <span className="text-text-3">›</span>
         </Link>
         <div className="flex items-center justify-between border-b border-divider py-3">
           <span className="t-body font-semibold text-text-1">언어</span>
@@ -623,7 +644,8 @@ function AccountTab() {
           className="flex items-center justify-between py-3 t-body font-semibold text-text-1 no-underline"
         >
           <span>구독 · 결제 관리</span>
-          <span className="text-on-dark-muted">›</span>
+          {/* [970 · C-24] 흰 카드 위 "›" 가 on-dark-muted(한지 72%)라 안 보였다 → text-text-3 */}
+          <span className="text-text-3">›</span>
         </Link>
       </div>
 
@@ -795,6 +817,23 @@ function DeleteAccountSection() {
 
 export function SettingsClient({ channels }: { channels: NotifyChannels }) {
   const [tab, setTab] = useState<TabKey>("account");
+  /* [970 · C-03] 탭 공통 세션 판정 — 알림 탭은 401 로 알지만 계정 탭은 API 를 안 부른다.
+     헤더 아바타와 같은 1회 호출(hasSession). 판정 전(null)엔 로그인 상태로 그려 깜빡임을
+     줄이고, 게스트로 판명되면 계정 탭이 GuestCard 로 바뀐다. */
+  const [guest, setGuest] = useState<boolean | null>(null);
+  useEffect(() => {
+    let dead = false;
+    hasSession()
+      .then((authed) => {
+        if (!dead) setGuest(!authed);
+      })
+      .catch(() => {
+        if (!dead) setGuest(false);
+      });
+    return () => {
+      dead = true;
+    };
+  }, []);
   return (
     <PageShell title="설정" breadcrumb="마이 › 설정">
       <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4">
@@ -813,7 +852,7 @@ export function SettingsClient({ channels }: { channels: NotifyChannels }) {
           ))}
         </div>
         <div className="rise-in-1">
-          {tab === "account" && <AccountTab />}
+          {tab === "account" && <AccountTab guest={guest === true} />}
           {tab === "notification" && <NotificationTab channels={channels} />}
           {tab === "privacy" && <PrivacyTab />}
         </div>

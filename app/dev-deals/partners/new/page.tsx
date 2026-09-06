@@ -7,7 +7,8 @@ import { PartnerForm } from "./PartnerForm";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "협력업체 등록 · 내집나우",
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+  title: "협력업체 등록 | 내집나우",
   description:
     "시공사·설계사·신탁·PF 등 협력업체를 등록하고 조건에 맞는 개발물건 매칭을 받아 보세요.",
   robots: { index: false, follow: false },

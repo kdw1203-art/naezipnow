@@ -36,7 +36,10 @@ export function RankBars({
         const body = (
           <>
             <span className="t-caption w-5 shrink-0 text-right text-text-3">{i + 1}</span>
-            <span className="t-sub min-w-0 flex-1 truncate font-bold text-ink">{r.label}</span>
+            {/* [970 · B-30] 라벨이 먼저 폭을 가진다(basis 40%) — flex-1(basis 0) 이면 막대(34%)와
+                남은 폭을 나눠 모바일에서 단지 이름이 4글자에서 잘렸다. 막대 쪽 상한은
+                globals.css `.rank-row .rank-track`. */}
+            <span className="t-sub min-w-0 flex-[1_1_40%] truncate font-bold text-ink">{r.label}</span>
             <span className="rank-track">
               <span className="rank-fill" style={{ width: `${pct}%` }} />
             </span>

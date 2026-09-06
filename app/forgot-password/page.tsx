@@ -138,14 +138,16 @@ export default function ForgotPasswordPage() {
           </>
         )}
 
-        <div className="flex-1" />
-
-        <div className="rise-in-5 text-center text-xs text-text-3">
+        {/* [970 · A-41] 예전엔 flex-1 스페이서 **뒤**에 있어 폼과 링크 사이가 화면 높이만큼
+            비었다(min-h-dvh). 폼 바로 아래로 올린다 — 스페이서는 그 아래에 남겨 상단 정렬 유지. */}
+        <div className="rise-in-5 mt-2 text-center text-xs text-text-3">
           비밀번호가 기억났나요?{" "}
           <Link href="/login" className="font-bold text-primary">
             로그인
           </Link>
         </div>
+
+        <div className="flex-1" />
       </div>
     </main>
   );

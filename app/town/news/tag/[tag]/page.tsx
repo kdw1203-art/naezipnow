@@ -9,6 +9,7 @@ import type { Post } from "@/lib/types/post";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { logger } from "@/lib/log";
+import { formatKstShortDate } from "@/lib/format/kst";
 
 /* [#103] 뉴스 태그 허브 — /town/news/tag/[slug]
    자동 수집 뉴스(우리 요약 보유분 중심)를 주제별로 묶은 색인 표면.
@@ -127,10 +128,8 @@ export default async function NewsTagPage({
                   <span className="text-[13px] font-bold leading-[1.5] text-ink">{p.title}</span>
                   <span className="text-[12px] text-text-3">
                     {p.sourceName || "뉴스"} ·{" "}
-                    {new Date(displayIso(p)).toLocaleDateString("ko-KR", {
-                      month: "2-digit",
-                      day: "2-digit",
-                    })}
+                    {/* [970 · C-04] timeZone 없는 toLocaleDateString — 서버(UTC)에서 자정 전후 기사가 전날로 */}
+                    {formatKstShortDate(displayIso(p))}
                     {c.related.length > 0 && ` · 관련 보도 ${c.related.length}건`}
                   </span>
                 </Link>

@@ -1,11 +1,11 @@
 import Link from "next/link";
-import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { PageShell } from "@/app/components/PageShell";
 import { Icon } from "@/app/components/Icon";
 import { ErrorState } from "@/app/components/ui/EmptyState";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
+import { TownPageHead } from "@/app/town/TownPageHead";
 import { listQuestions } from "@/lib/qna/store";
 import { complexHrefKey, resolveComplexHrefs } from "@/lib/newui/complex-link";
 import { seoAlternates } from "@/lib/seo/alternates";
@@ -31,13 +31,11 @@ export const metadata: Metadata = {
   alternates: seoAlternates("/qna"),
 };
 
-/** 테마 구분: 단지 Q&A = 청록 (대화·질문). subtree 안에서 text-primary·
- *  bg-primary-soft·chip-active·btn-primary 가 청록으로 재테마됨. */
-const QNA_THEME = {
-  "--primary": "#0d9488",
-  "--primary-soft": "#e3f5f2",
-  "--primary-strong": "#0a7a70",
-} as CSSProperties;
+/* 테마 구분: 단지 Q&A = 청록 (대화·질문). subtree 안에서 text-primary·
+   bg-primary-soft·chip-active·btn-primary 가 청록으로 재테마됨.
+   [970 · C-18] 인라인 style(--primary-soft:#e3f5f2)은 다크에서도 연한 청록이 남아 칩·패널이
+   흰 얼룩으로 떴다 — globals.css `.qna-theme` / `.dark .qna-theme`(I1) 클래스로. */
+const QNA_THEME_CLASS = "qna-theme";
 
 
 /* 연동(2): 임장노트·단지 허브에서 "이 단지 Q&A" 로 올 때 쓰는 축.
@@ -67,8 +65,9 @@ export default async function QnaListPage() {
   const loaded = await listQuestions({ limit: 100 }).then(
     (items) => ({ ok: true as const, items }),
     (err: unknown) => {
+      /* [970 · C-09] 원인 원문은 로그로만 — 화면엔 DB 오류 문구를 내보내지 않는다 */
       logger.error("[qna] 질문 목록 조회 실패", err);
-      return { ok: false as const, cause: err instanceof Error ? err.message : String(err) };
+      return { ok: false as const };
     },
   );
   /* 키워드를 먼저 적용한다 — 그래야 탭·주제 옆 개수가 "지금 화면에 걸린 조건
@@ -93,18 +92,25 @@ export default async function QnaListPage() {
 
 
   return (
-    <PageShell breadcrumb="홈 › 동네이야기 › 단지 Q&A" title="단지 Q&A" wide>
+    /* [970 · C-28] 다른 동네이야기 카테고리(뉴스·모임·자료·공매·입주)와 같은 머리 —
+       브레드크럼 "동네이야기 › …" + 카테고리 줄 + TownPageHead(아이콘 칩·제목·한 줄).
+       PageShell title(맨 h1)은 이 패턴 밖이었다. */
+    <PageShell breadcrumb="동네이야기 › 단지 Q&A" wide>
       <TownCategoryNav stick />
+      <TownPageHead
+        href="/qna"
+        title="단지 Q&A"
+        sub="단지·동네 궁금증을 묻고 이웃·실거주자에게 답을 받아요"
+      />
 
-      <div style={QNA_THEME}>
+      <div className={QNA_THEME_CLASS}>
         {!loaded.ok ? (
           /* 조회 실패 — 필터 UI 없이 실패만 정확히 말한다. 질문 등록은 그대로 가능. */
           <div className="mt-4 flex flex-col gap-4">
             <AskForm />
             <ErrorState
               title="질문 목록을 지금 불러오지 못했어요"
-              desc="등록된 질문이 0개인 게 아니라 조회 자체가 실패했습니다. 잠시 후 새로고침해 주세요. 질문 등록은 위에서 그대로 하실 수 있어요."
-              cause={loaded.cause}
+              desc="등록된 질문이 0개인 게 아니라 조회가 실패했어요. 잠시 후 새로고침해 주세요. 질문 등록은 위에서 그대로 할 수 있어요."
             />
           </div>
         ) : (

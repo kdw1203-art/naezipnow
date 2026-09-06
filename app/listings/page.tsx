@@ -8,6 +8,7 @@ import { seoAlternates } from "@/lib/seo/alternates";
 import { ErrorState } from "@/app/components/ui/EmptyState";
 import { ListingsListClient } from "./ListingsListClient";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
+import { logger } from "@/lib/log";
 
 /* ============================================================
    실매물 목록 — /listings
@@ -23,7 +24,8 @@ import { ComplianceNotice } from "@/app/components/ComplianceNotice";
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: "실매물 — 집주인 직접·중개사 등록 매물 · 내집나우",
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+  title: "실매물 — 집주인 직접·중개사 등록 매물 | 내집나우",
   description:
     "집주인이 직접 등록하거나 제휴 중개사가 올린 매물을 검수 후 보여드려요. 실거래가와 비교하며 확인하세요.",
   // N7 — 필터·정렬 파라미터 조합이 별개 URL 로 색인되지 않도록 canonical 고정
@@ -36,11 +38,11 @@ export default async function ListingsPage() {
      사라지기 때문이다. "매물이 없어요"라고 말하지 않는 것이 핵심이고, 화면은
      남겨 둔 채 "지금 못 읽었다"만 정확히 알린다. */
   let items: Awaited<ReturnType<typeof listApprovedListings>> | null = null;
-  let loadError: string | null = null;
   try {
     items = await listApprovedListings({});
   } catch (e) {
-    loadError = e instanceof Error ? e.message : String(e);
+    /* [970 · C-09] 원인 원문(DB 오류)은 로그로만 — 화면엔 고정 문구 */
+    logger.error("[listings] 매물 목록 조회 실패", e);
   }
 
   const seoulGus = DISTRICTS["서울특별시"];
@@ -65,7 +67,6 @@ export default async function ListingsPage() {
           className="rise-in-1"
           title="매물 목록을 지금 불러올 수 없어요"
           desc="매물이 없는 게 아니라, 목록을 읽어 오지 못했어요. 잠시 후 새로고침해 주세요."
-          cause={loadError ?? undefined}
           action={{ href: "/listings/new", label: "매물 등록하기" }}
         />
       ) : (

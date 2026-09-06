@@ -57,7 +57,8 @@ export async function generateMetadata({
   const ref = code ? await lookupInviter(code) : null;
   const inviter = ref ? maskEmail(ref.referrerEmail) : "친구의 초대";
   const ogUrl = `/api/og/invite?by=${encodeURIComponent(inviter)}`;
-  const title = "친구가 초대했어요 · 가입하면 둘 다 300P — 내집나우";
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+  const title = "친구가 초대했어요 · 가입하면 둘 다 300P | 내집나우";
   const description =
     "초대 링크로 가입하면 초대한 친구와 나 모두 300P. 실거래가·시세·AI 임장 분석을 바로 이용하세요.";
   return {
@@ -152,11 +153,13 @@ export default async function InvitePage({
           </div>
         )}
 
+        {/* [970 · C-42] h1 안의 <br> — 제목이 한 문장으로 읽히지 않았다. 한 줄 제목 + 부제로 */}
         <h1 className="text-[21px] font-extrabold leading-[1.35] text-text-1">
           친구가 초대했어요
-          <br />
-          가입하면 <span className="text-primary">둘 다 300P</span>
         </h1>
+        <p className="mt-1 text-[19px] font-extrabold leading-[1.35] text-text-1">
+          가입하면 <span className="text-primary">둘 다 300P</span>
+        </p>
 
         <p className="mt-2 text-[13px] leading-[1.6] text-text-3">
           초대 링크로 가입을 완료하면 초대한 친구와 나 모두에게

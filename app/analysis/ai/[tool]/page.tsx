@@ -24,10 +24,11 @@ export async function generateMetadata({
   params: Promise<{ tool: string }>;
 }): Promise<Metadata> {
   const { tool } = await params;
-  if (!isAiAnalysisToolId(tool)) return { title: "AI 분석 도구" };
+  /* [970 · C-25] 접미 없던 제목에 `| 내집나우` */
+  if (!isAiAnalysisToolId(tool)) return { title: "AI 분석 도구 | 내집나우" };
   const id = TOOL_IDENTITIES[tool as AiAnalysisToolId];
   return {
-    title: `${id.title} — AI 분석 도구`,
+    title: `${id.title} — AI 분석 도구 | 내집나우`,
     description: `${id.tagline}. 국토교통부 실거래·전월세 신고·입주 예정·이웃 임장노트 실데이터로 계산하고, 모든 수치에 출처를 표기합니다.`,
     alternates: { canonical: `/analysis/ai/${tool}` },
   };

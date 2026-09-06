@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CreatorSalesSummary } from "@/lib/creator/sales";
+import { feePct, REPORT_SELLER_FEE_RATE } from "@/lib/billing/marketplace-fees";
 
 /* 내 콘텐츠 성과 + 유료 리포트 판매 — 탭 전환
    공개 노트·저장·판매 실적은 서버(page.tsx)에서 실데이터 주입 — 미집계 지표는 "—".
@@ -249,7 +250,8 @@ function MonetizationTab({
           </span>
         </div>
         <div className="mt-2 t-sub text-on-dark-muted">
-          리포트가 열람되면 플랫폼 몫 7%를 뺀 포인트가 적립돼요
+          {/* [970 · C-15] 요율은 marketplace-fees 단일 출처 — 정산 계산(sales.ts)과 같은 값 */}
+          리포트가 열람되면 플랫폼 몫 {feePct(REPORT_SELLER_FEE_RATE)}를 뺀 포인트가 적립돼요
           {sales.available && (
             <>
               {" "}

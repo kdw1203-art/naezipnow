@@ -33,9 +33,10 @@ export const metadata = buildPageMetadata({
 
 export const revalidate = 3600;
 
-/** [967 · 31] 원 → "8.45억"(1억 미만도 억), 빈값 "—" — lib/format/krw.ts "eok" 스타일 */
+/** [970 · B-31] 원 → "8.5억"(0.1 단위) — 같은 화면의 지역 카드가 "short"(28.8억)인데 여기만
+    "eok"(8.51억·3.58억)라 소수 자릿수가 섞였다. lib/format/krw.ts "short" 로 통일. */
 function eok(won: number): string {
-  return formatKrwWon(won, { style: "eok", below: "eok" });
+  return formatKrwWon(won, { style: "short" });
 }
 
 /** 원/평 → "3,500만/평" (없으면 "—") */

@@ -14,7 +14,8 @@ import {
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "중개 수수료 안내 · 개발물건 중개 · 내집나우",
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+  title: "중개 수수료 안내 — 개발물건 중개 | 내집나우",
   description:
     "개발물건 매칭 중개 수수료 안내 — 소개·문의는 무료, 성사 시에만 사업규모(사업비)에 따른 기준 수수료가 부과됩니다. 실제 수수료는 협의 가능합니다.",
   robots: { index: true, follow: true },

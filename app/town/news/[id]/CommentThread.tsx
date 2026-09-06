@@ -18,6 +18,9 @@ import { ReportButton } from "@/app/components/ReportButton";
  * (작성자·글쓴이·관리자만 — 서버가 다시 판정). 신고는 공용 ReportButton 에
  * postId + commentId 를 싣는다(/api/moderation/content-report 가 댓글 신고를 받는다). */
 
+/** [970 · C-34] 처음 펼치는 최상위 댓글 수 — 예전 서버 상한(8)과 같은 수 */
+const INITIAL_THREADS = 8;
+
 export type ThreadComment = {
   id: string;
   authorLabel: string;
@@ -46,6 +49,9 @@ export function CommentThread({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [busyDelete, setBusyDelete] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /* [970 · C-34] 접기 — 서버는 이제 댓글 전량을 내리고(예전 slice(0,8)), 처음엔 8개
+     스레드만 펼친다. 나머지는 "댓글 N개 더 보기"로 여기서 편다(API 변경 없음). */
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -142,6 +148,11 @@ export function CommentThread({
     (a, b) => Number(b.adopted === true) - Number(a.adopted === true),
   );
   const canDelete = (id: string) => isAuthor || ownIds.has(id);
+  /* [970 · C-34] 스레드(최상위 + 답글) 단위로 접는다 — 답글만 잘려 문맥이 끊기지 않게 */
+  const shown = expanded ? ordered : ordered.slice(0, INITIAL_THREADS);
+  const hiddenCount = expanded
+    ? 0
+    : ordered.slice(INITIAL_THREADS).reduce((n, c) => n + 1 + repliesOf(c.id).length, 0);
 
   if (comments.length === 0) {
     return (
@@ -158,7 +169,7 @@ export function CommentThread({
           {error}
         </p>
       )}
-      {ordered.map((c) => (
+      {shown.map((c) => (
         <div key={c.id} className="flex flex-col gap-2">
           <CommentRow
             postId={postId}
@@ -204,6 +215,15 @@ export function CommentThread({
           )}
         </div>
       ))}
+      {hiddenCount > 0 && (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="btn-soft tap self-center rounded-xl px-4 py-2 text-[13px] font-bold"
+        >
+          댓글 {hiddenCount}개 더 보기
+        </button>
+      )}
     </div>
   );
 }

@@ -2,7 +2,9 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { getSessionLite } from "@/lib/client/session-lite";
+import { loginReturnHref } from "@/lib/client/shell-gates";
 
 /* S13-13a 헤더 세션 영역 — /api/auth/session 지연 조회 (정적 셸 ISR 유지)
    로그인: 이니셜 원형 아바타 + 플랜 배지(✦, 시안 9m 4373행) + 드롭다운
@@ -48,6 +50,17 @@ export function HeaderAuth() {
   const menuId = useId();
   /* 트리거에서 ↓/↑ 로 열었을 때 첫/마지막 항목으로 포커스를 보낼 예약 */
   const focusOnOpenRef = useRef<"first" | "last" | null>(null);
+
+  /* [970 · A-15] "로그인" 은 지금 화면으로 돌아오게 callbackUrl 을 싣는다. 쿼리는
+     useSearchParams 대신 마운트 뒤 window 에서 읽는다 — 헤더는 정적(ISR) 페이지 전부에
+     실리므로 useSearchParams 를 쓰면 Suspense 경계 없이는 프리렌더가 깨진다. 첫 렌더
+     (서버·하이드레이션)는 경로만, 효과에서 쿼리를 더한다. */
+  const pathname = usePathname() ?? "/";
+  const [search, setSearch] = useState("");
+  useEffect(() => {
+    setSearch(window.location.search);
+  }, [pathname]);
+  const loginHref = loginReturnHref(pathname, search);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,14 +134,17 @@ export function HeaderAuth() {
        로그인과 같은 텍스트 링크로 내려 시선 경쟁을 없앤다. */
     return (
       <div className="flex items-center gap-3">
+        {/* [970 · A-19] 셸 링크는 프리페치 없음(사유는 Header.tsx) */}
         <Link
-          href="/login"
+          href={loginHref}
+          prefetch={false}
           className="whitespace-nowrap text-[13px] font-bold text-text-1 transition-colors hover:text-primary"
         >
           로그인
         </Link>
         <Link
           href="/signup"
+          prefetch={false}
           className="hidden whitespace-nowrap text-[13px] font-bold text-text-2 transition-colors hover:text-primary md:inline"
         >
           회원가입
@@ -175,6 +191,7 @@ export function HeaderAuth() {
       {planBadge ? (
         <Link
           href={user.role === "admin" ? "/admin" : "/subscription"}
+          prefetch={false}
           className="hidden rounded-full chip-pad text-[10px] font-extrabold text-ai-accent no-underline md:inline-block"
           style={{ background: "rgba(25,31,40,.94)" }}
         >
@@ -183,6 +200,7 @@ export function HeaderAuth() {
       ) : (
         <Link
           href="/subscription"
+          prefetch={false}
           title="플랜 비교·업그레이드"
           className="hidden rounded-full border border-line chip-pad text-[10px] font-extrabold text-text-3 no-underline transition-colors hover:border-primary hover:text-primary md:inline-block"
         >
@@ -192,11 +210,12 @@ export function HeaderAuth() {
 
       {open && (
         <div className="absolute right-0 top-full z-50 pt-2">
+          {/* [970 · A-01] 계정 메뉴도 GNB 드롭다운과 같은 인라인 흰 배경이었다(다크에서 안 보임)
+              — .popover-surface(surface 토큰 92%, 양 테마)로 통일. */}
           <div
             ref={menuRef}
             id={menuId}
-            className="glass-strong min-w-[168px] rounded-2xl p-1.5 [animation:riseIn_180ms_var(--ease-out)_backwards]"
-            style={{ background: "rgba(255,255,255,.94)" }}
+            className="glass-strong popover-surface min-w-[168px] rounded-2xl p-1.5 [animation:riseIn_180ms_var(--ease-out)_backwards]"
             role="menu"
             aria-label="내 계정"
           >
@@ -208,6 +227,7 @@ export function HeaderAuth() {
             {user.role === "admin" && (
               <Link
                 href="/admin"
+                prefetch={false}
                 role="menuitem"
                 onClick={() => setOpen(false)}
                 className="block rounded-[10px] px-3 py-2 text-[13px] font-extrabold text-primary transition-colors hover:bg-[rgba(29,79,216,.08)]"
@@ -219,6 +239,7 @@ export function HeaderAuth() {
               <Link
                 key={m.href}
                 href={m.href}
+                prefetch={false}
                 role="menuitem"
                 onClick={() => setOpen(false)}
                 className="block rounded-[10px] px-3 py-2 text-[13px] font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.08)] hover:text-primary"

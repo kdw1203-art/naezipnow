@@ -104,8 +104,10 @@ function Cover({ card }: { card: FeedCard }) {
           ? "✓ 직접 방문"
           : "임장노트"
       : "이야기";
+  /* [970 · C-06] Lab 배지 text-brand-navy — 다크에서 반투명 흰 칩(bg-surface/90) 위에
+     네이비가 그대로라 안 읽혔다. 잉크 토큰(다크에서 뒤집힘)으로. */
   const labelColor =
-    card.kind === "note" ? (card.lab ? "text-brand-navy" : "text-success") : "text-primary";
+    card.kind === "note" ? (card.lab ? "text-ink" : "text-success") : "text-primary";
   const hasPhoto = Boolean(card.cover);
   return (
     <div
@@ -533,10 +535,12 @@ export function TownFeed({
         {/* [B24] 추천의 **기준**을 적는다. 무엇이 위로 올라오는지 모르는 순위는
             "누가 밀어준 글"로 읽힌다 — 실제로는 위 recommendScore 가 전부다.
             좁은 화면에서 세그먼트 옆에 붙이면 잘리므로 제 줄을 준다. */}
+        {/* [970 · C-21] "올린 시각이 빠른 순서" 는 오래된 글부터라는 뜻이라 실제 정렬
+            (createdAt 내림차순 = 최근 글부터)과 반대로 읽혔다 */}
         <span className="t-sub text-text-3">
           {sort === "reco"
             ? "최신 글이 먼저, 노트 평점·저장수만큼 위로 올라와요"
-            : "올린 시각이 빠른 순서예요"}
+            : "최근에 올린 글부터 보여요"}
         </span>
       </div>
 
@@ -545,8 +549,8 @@ export function TownFeed({
         // 넘지만(#c62828, soft 위 4.83), 11px 안내문은 text-ink(14.24:1)가 확실히
         // 읽힌다 — 색은 "실패"라는 신호만 지고, 문장은 검정으로 읽는다.
         <div className="rise-in-2 mb-3 rounded-[10px] border border-line bg-danger-soft px-3.5 py-2.5 t-sub text-ink">
-          일부 글을 불러오지 못했어요 (조회 실패). 글이 없다는 뜻은 아니에요 — 잠시 후
-          새로고침해 주세요.
+          {/* [970 · C-20] 해요체 통일 */}
+          일부 글의 조회가 실패했어요. 글이 없다는 뜻은 아니에요 — 잠시 후 새로고침해 주세요.
         </div>
       )}
 
@@ -567,7 +571,7 @@ export function TownFeed({
           </div>
           <div className="t-sub text-text-3">
             {loadFailed
-              ? "데이터 조회가 실패했습니다. 잠시 후 다시 시도해 주세요."
+              ? "데이터 조회가 실패했어요. 잠시 후 새로고침해 주세요."
               : more
                 ? "더 보기로 이전 글을 이어서 볼 수 있어요"
                 : "첫 임장노트나 동네이야기를 남기면 가장 먼저 노출돼요"}
@@ -594,8 +598,11 @@ export function TownFeed({
 
       {/* [967 · 19] 더 보기 / 마지막 — 필터와 무관하게 전체 피드의 다음 장을 붙인다
           (유형·정렬·관심지역은 받은 카드 위에서 다시 계산된다). 빈 화면에서도
-          그려야 "첫 장엔 없지만 다음 장엔 있는" 노트를 찾아갈 수 있다. */}
-      {(more || allCards.length > 0) && (
+          그려야 "첫 장엔 없지만 다음 장엔 있는" 노트를 찾아갈 수 있다.
+          [970 · C-22] 단, 더 받을 것도 없고 이 조건에 보이는 것도 0이면 "마지막이에요 ·
+          24개를 다 봤어요" 가 "0개 표시 중" 바로 아래 붙어 모순처럼 읽힌다 — 푸터 생략.
+          보일 때는 "이 조건 N / 전체 M" 으로 무엇을 센 건지 밝힌다. */}
+      {(more || (allCards.length > 0 && visible.length > 0)) && (
         <div className="mt-2 flex flex-col items-center gap-2">
           {moreError && (
             <p role="alert" className="t-sub text-text-2">
@@ -614,7 +621,8 @@ export function TownFeed({
             </button>
           ) : (
             <p role="status" className="t-sub text-text-3">
-              마지막이에요 · {allCards.length.toLocaleString("ko-KR")}개를 다 봤어요
+              마지막이에요 · 이 조건 {visible.length.toLocaleString("ko-KR")} / 전체{" "}
+              {allCards.length.toLocaleString("ko-KR")}개
             </p>
           )}
         </div>

@@ -28,7 +28,8 @@ export function generateStaticParams() {
 }
 
 export const metadata: Metadata = {
-  title: "단지 실거래 시세 · 내집나우",
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+  title: "단지 실거래 시세 | 내집나우",
   robots: { index: false, follow: false },
 };
 

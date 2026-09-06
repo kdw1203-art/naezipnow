@@ -105,7 +105,8 @@ export default async function NotesMarketPage() {
                   <CoverImage
                     src={note.photos?.[0] ?? null}
                     alt=""
-                    imgClassName="absolute inset-0 h-full w-full object-cover"
+                    /* [970 · B-24] 세로(3:4) 사진은 가운데 크롭에서 건물이 잘렸다 — 위쪽 기준 */
+                    imgClassName="absolute inset-0 h-full w-full object-cover object-top"
                     fallback={
                       <div className="absolute inset-0 flex items-center justify-center bg-primary-soft t-body font-extrabold text-primary">
                         임장노트

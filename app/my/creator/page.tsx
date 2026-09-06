@@ -5,7 +5,9 @@ import { safeAuth } from "@/lib/safe-auth";
 import { listNotes } from "@/lib/inspection/store-db";
 import { isVerifiedExpert } from "@/lib/experts/is-verified";
 import { getServiceSupabase } from "@/lib/supabase/service";
-import { getCreatorSales, SETTLEMENT } from "@/lib/creator/sales";
+/* [970 · C-15] SETTLEMENT 는 여기서 쓰이지 않았다(미사용 import) — 요율 표기는
+   creator-client 가 marketplace-fees 단일 출처에서 직접 읽는다 */
+import { getCreatorSales } from "@/lib/creator/sales";
 
 /* 개인 크리에이터 대시보드 — 세션별 개인 데이터라 색인 대상이 아니다. */
 export const metadata = { robots: { index: false, follow: false } };

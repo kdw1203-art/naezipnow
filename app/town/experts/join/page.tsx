@@ -147,7 +147,7 @@ export default function ExpertJoinPage() {
       <section className="mb-6">
         <h2 className="mb-1 t-section text-ink">누가 신청할 수 있나</h2>
         <p className="mb-3 t-sub text-text-2">
-          자격이 있는 유형은 각 협회·기관의 공개 조회로 등록 상태를 확인합니다. 그 밖의 전문가는 증빙 서류 심사로 확인해요.
+          자격이 있는 유형은 각 협회·기관의 공개 조회로 등록 상태를 확인해요. 그 밖의 전문가는 증빙 서류 심사로 확인해요.
         </p>
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {verifiable.map((t) => (

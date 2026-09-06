@@ -64,8 +64,11 @@ export function OfflineBanner() {
         aria-hidden="true"
         className={`h-2 w-2 shrink-0 rounded-full ${phase === "offline" ? "bg-brand-red" : "bg-success"}`}
       />
+      {/* [970 · A-30] 좌우 76px 을 비운 알약(375px 폭에서 ~223px)에서 예전 문구(~290px)가
+          두 줄로 접혔다. 짧게(~212px), 해요체로 — 감사안 "연결되면 이어집니다"는 합니다체라
+          규칙에 맞춰 바꿨다. nowrap 은 안 건다: 360px 폭에서는 넘치느니 접히는 게 낫다. */}
       <span className="min-w-0">
-        {phase === "offline" ? "오프라인이에요 — 연결되면 자동으로 이어집니다" : "다시 연결됐어요"}
+        {phase === "offline" ? "오프라인 — 연결되면 이어져요" : "다시 연결됐어요"}
       </span>
     </div>
   );

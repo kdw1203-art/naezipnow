@@ -94,12 +94,13 @@ export function NoteDetailActions({
   return (
     <div className="relative flex flex-wrap items-center gap-2">
       {/* 나만의 카드 — AI가 기록으로 자동 구성한 카드를 색상·장 선택으로 꾸민다.
-          소유자는 '만들기', 공개 노트 열람자는 '카드 보기'. */}
+          [970 · B-15] 이름을 화면 이름("나만의 카드")으로 고정하고 보조 버튼으로 — 옆의
+          "카드 덱"(/deck)과 헷갈렸고, 상단 줄에 primary 가 둘("지도에서 비교"와)이었다. */}
       <Link
         href={`/notes/${noteId}/card`}
-        className="btn-primary px-3.5 py-2 t-body font-bold no-underline"
+        className="btn-soft px-3.5 py-2 t-body font-bold no-underline"
       >
-        {isOwner ? "🎨 나만의 카드 만들기" : "🎴 카드 보기"}
+        {isOwner ? "🎨 나만의 카드 만들기" : "🎨 나만의 카드"}
       </Link>
       {isOwner && (
         <Link

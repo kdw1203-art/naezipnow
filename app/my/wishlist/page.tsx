@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { PageShell } from "../../components/PageShell";
 import { EmptyState, ErrorState } from "@/app/components/ui/EmptyState";
 import { safeAuth } from "@/lib/safe-auth";
+import { logger } from "@/lib/log";
 import { listBookmarks } from "@/lib/bookmarks/store";
 import { formatKrwShort } from "@/lib/market/format";
 import {
@@ -22,7 +23,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "관심 매물 · 내집나우",
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+  title: "관심 매물 | 내집나우",
   robots: { index: false, follow: false },
 };
 
@@ -36,7 +38,7 @@ function priceLine(l: ListingDetail): string {
 
 type SavedListingsResult =
   | { ok: true; items: ListingDetail[]; failedCount: number }
-  | { ok: false; cause: string };
+  | { ok: false };
 
 /* 실패를 빈 배열로 누르면 "아직 저장한 매물이 없어요"가 된다 — 조회 실패와
    "없음"은 다른 사실이다. 목록 전체 실패는 ok:false 로, 개별 매물 해석 실패는
@@ -47,7 +49,9 @@ async function loadSavedListings(email: string): Promise<SavedListingsResult> {
   try {
     bms = await listBookmarks(email, "listing");
   } catch (e) {
-    return { ok: false, cause: e instanceof Error ? e.message : String(e) };
+    /* [970 · C-09] 원인 원문은 로그로만 — 화면엔 고정 문구 */
+    logger.error("[my/wishlist] 관심 매물 조회 실패", e);
+    return { ok: false };
   }
   const ids = Array.from(new Set(bms.map((b) => b.targetId))).slice(0, 100);
   let failedCount = 0;
@@ -87,8 +91,8 @@ export default async function WishlistPage() {
       {!loaded.ok ? (
         <ErrorState
           title="관심 매물을 지금 불러오지 못했어요"
-          desc="저장한 매물이 0개인 게 아니라 조회 자체가 실패했습니다. 잠시 후 새로고침해 주세요."
-          cause={loaded.cause}
+          /* [970 · C-20] 해요체 통일 */
+          desc="저장한 매물이 0개인 게 아니라 조회가 실패했어요. 잠시 후 새로고침해 주세요."
         />
       ) : items.length === 0 ? (
         /* [966] 빈 상태 정본화 */

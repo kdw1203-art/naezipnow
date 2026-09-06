@@ -1,7 +1,6 @@
 import { cache } from "react";
 import { AdZone } from "@/app/components/ads/AdZone";
 import Link from "next/link";
-import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { PageShell } from "@/app/components/PageShell";
 import { Icon } from "@/app/components/Icon";
@@ -24,12 +23,10 @@ export function generateStaticParams() {
   return [];
 }
 
-/** 목록(/qna)과 같은 청록 테마 — 카테고리를 오가도 색이 바뀌지 않게. */
-const QNA_THEME = {
-  "--primary": "#0d9488",
-  "--primary-soft": "#e3f5f2",
-  "--primary-strong": "#0a7a70",
-} as CSSProperties;
+/* 목록(/qna)과 같은 청록 테마 — 카테고리를 오가도 색이 바뀌지 않게.
+   [970 · C-18] 인라인 style 은 다크에서도 연한 청록(#e3f5f2)이 그대로 남아 흰 얼룩이 됐다 —
+   globals.css `.qna-theme` / `.dark .qna-theme` 토큰(I1)으로. */
+const QNA_THEME_CLASS = "qna-theme";
 
 /* 같은 요청 내에서 getQuestion(및 조회수 증가)이 한 번만 실행되도록 캐시
    → generateMetadata 와 페이지 렌더가 결과를 공유(중복 조회·중복 view +1 방지).
@@ -41,15 +38,16 @@ const QNA_THEME = {
  * 같은 방식이다. */
 type Loaded =
   | { ok: true; data: Awaited<ReturnType<typeof getQuestion>> }
-  | { ok: false; cause: string };
+  | { ok: false };
 
 const loadQuestion = cache(
   async (id: string): Promise<Loaded> =>
     getQuestion(id).then(
       (data) => ({ ok: true as const, data }),
       (err: unknown) => {
+        /* [970 · C-09] 원인 원문은 로그로만 — 화면엔 DB 오류 문구를 내보내지 않는다 */
         logger.error(`[qna] 질문 상세 조회 실패 (${id})`, err);
-        return { ok: false as const, cause: err instanceof Error ? err.message : String(err) };
+        return { ok: false as const };
       },
     ),
 );
@@ -115,13 +113,12 @@ export default async function QnaDetailPage({
      질문자에게 자기 글이 지워졌다고 알리는 셈이기 때문이다. */
   if (!loaded.ok) {
     return (
-      <PageShell breadcrumb="홈 › 동네이야기 › 단지 Q&A" title="단지 Q&A" wide>
+      <PageShell breadcrumb="동네이야기 › 단지 Q&A" title="단지 Q&A" wide>
         <TownCategoryNav stick />
-        <div style={QNA_THEME}>
+        <div className={QNA_THEME_CLASS}>
           <ErrorState
             title="질문을 지금 불러오지 못했어요"
-            desc="질문이 없는 게 아니라 조회 자체가 실패했습니다. 잠시 후 새로고침해 주세요."
-            cause={loaded.cause}
+            desc="질문이 없는 게 아니라 조회가 실패했어요. 잠시 후 새로고침해 주세요."
             action={{ href: "/qna", label: "목록으로 돌아가기" }}
           />
         </div>
@@ -131,9 +128,9 @@ export default async function QnaDetailPage({
 
   if (!loaded.data) {
     return (
-      <PageShell breadcrumb="홈 › 동네이야기 › 단지 Q&A" title="질문을 찾을 수 없어요" wide>
+      <PageShell breadcrumb="동네이야기 › 단지 Q&A" title="질문을 찾을 수 없어요" wide>
         <TownCategoryNav stick />
-        <div style={QNA_THEME} className="card rise-in flex flex-col items-start gap-3">
+        <div className={`${QNA_THEME_CLASS} card rise-in flex flex-col items-start gap-3`}>
           <p className="t-body text-text-2">
             요청하신 질문을 찾을 수 없어요. 이미 삭제되었거나 잘못된 주소일 수 있어요.
           </p>
@@ -334,9 +331,9 @@ export default async function QnaDetailPage({
   );
 
   return (
-    <PageShell breadcrumb="홈 › 동네이야기 › 단지 Q&A" title={question.title} wide>
+    <PageShell breadcrumb="동네이야기 › 단지 Q&A" title={question.title} wide>
       <TownCategoryNav stick />
-      <div style={QNA_THEME} className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className={`${QNA_THEME_CLASS} mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]`}>
         <div>{body}</div>
         {aside}
       </div>

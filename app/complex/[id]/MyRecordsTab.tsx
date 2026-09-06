@@ -134,7 +134,8 @@ export function MyRecordsTab({
           내 임장노트 {notes.length}건
           {watching === true && <span className="ml-1.5 font-medium">· 관심 단지</span>}
         </span>
-        <Link href="/notes" className="t-caption font-bold text-primary">
+        {/* [970 · B-40] "내 노트"는 /notes?tab=mine 이 맞다 — /notes 는 공개 피드다 */}
+        <Link href="/notes?tab=mine" className="t-caption font-bold text-primary">
           내 노트 전체 ›
         </Link>
       </div>

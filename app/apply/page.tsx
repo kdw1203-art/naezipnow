@@ -5,6 +5,7 @@ import { Icon } from "@/app/components/Icon";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { searchApplyhome } from "@/lib/applyhome/applyhome-search";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
+import { TownPageHead } from "@/app/town/TownPageHead";
 import { THEME_APPLY } from "@/lib/theme/presets";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { logger } from "@/lib/log";
@@ -100,9 +101,12 @@ export default async function ApplyPage() {
      광고 숨김은 plan={null} 경로의 AdFreeGate(클라이언트)가 처리. */
 
   return (
-    <PageShell breadcrumb="홈 › 동네이야기 › 청약 센터" title="청약 센터" wide>
+    /* [970 · C-28] 다른 동네이야기 카테고리와 같은 머리(브레드크럼 "동네이야기 › …" +
+       카테고리 줄 + TownPageHead). /qna 와 함께 통일. */
+    <PageShell breadcrumb="동네이야기 › 청약 센터" wide>
       {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
       <TownCategoryNav stick />
+      <TownPageHead href="/apply" title="청약 센터" sub="청약홈 공공데이터 — 경쟁률·특별공급·접수 일정" />
 
       <div style={THEME_APPLY}>
         {/* 상단 CTA — 예전의 정적 탭(전체·예정·접수 중·지난 청약)은 클릭해도 아무

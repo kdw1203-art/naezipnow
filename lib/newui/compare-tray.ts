@@ -4,6 +4,8 @@
  * 최대 5개 후보를 담아 /analysis/compare 에서 표시한다.
  */
 
+import { hasSession } from "@/lib/client/has-session";
+
 export type CompareTrayItem = {
   id: string;
   name: string;
@@ -154,6 +156,9 @@ export function removeCompareItemFromServer(id: string): void {
 export async function fetchServerCompareList(): Promise<CompareTrayItem[] | null> {
   if (typeof window === "undefined") return null;
   try {
+    /* [970 · B-26] 게스트는 401 을 맞으러 가지 않는다(콘솔 오류) — 세션 판정은 헤더가
+       이미 부른 /api/auth/session 공유 프라미스(lib/client/has-session)라 요청이 늘지 않는다. */
+    if (!(await hasSession())) return null;
     const res = await fetch("/api/me/watchlist");
     if (!res.ok) return null;
     const json = (await res.json().catch(() => null)) as { items?: unknown } | null;

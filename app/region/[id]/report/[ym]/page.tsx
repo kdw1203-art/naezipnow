@@ -58,7 +58,8 @@ export async function generateMetadata({
     };
   }
   const label = fmtYmLabel(ym);
-  const title = `${region.name} 아파트 시장 ${label} 리포트 — 거래량·평균가·신고 실거래`;
+  /* [970 · C-25] 접미 없던 제목에 `| 내집나우`(폴백 제목과 동일 접미) */
+  const title = `${region.name} 아파트 시장 ${label} 리포트 — 거래량·평균가·신고 실거래 | 내집나우`;
   const description = `${label} ${region.name} 아파트 매매 신고 건수, 평균·중앙값 매매가, 상위 실거래, 전월세 신고 건수를 국토교통부·한국부동산원 데이터로 정리한 월간 스냅샷.`;
   return {
     title,

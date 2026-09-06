@@ -13,15 +13,23 @@ function typeLabel(key: string): string {
   return PROJECT_TYPES.find((t) => t.key === key)?.label ?? key;
 }
 
-export async function NearbyRedevelopment({ sigungu }: { sigungu: string }) {
+export async function NearbyRedevelopment({
+  sigungu,
+  city = "",
+}: {
+  sigungu: string;
+  /** [970 · B-02] 시/도 — 같은 이름의 구가 여러 도시에 있어 함께 넘긴다(page.tsx v.city) */
+  city?: string | null;
+}) {
   const gu = sigungu.trim();
   if (!gu) return null;
+  const sido = (city ?? "").trim();
 
   /* 곁다리 섹션이라 실패해도 단지 페이지 전체를 죽이지는 않는다. 다만 조용히
      삼키지는 않는다 — 이 섹션이 계속 안 보이는데 로그가 없으면 "그 구에 정비사업이
      없다"와 "조회가 실패했다"를 아무도 구분할 수 없다. */
   /* [968 · 1] 공유 예산 3초 — 넘기면 이번 렌더만 접는다(아래 catch) */
-  const projects = await withSectionBudget(loadRedevelopment(gu)).catch(
+  const projects = await withSectionBudget(loadRedevelopment(gu, sido)).catch(
     (e: unknown) => {
       logSectionFailure(`[NearbyRedevelopment] ${gu} 정비사업(섹션을 접습니다)`, e);
       return [] as Awaited<ReturnType<typeof listProjects>>;

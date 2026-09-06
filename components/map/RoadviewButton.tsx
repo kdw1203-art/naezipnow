@@ -138,7 +138,8 @@ export function RoadviewButton({ lat, lng, label }: RoadviewButtonProps) {
         aria-expanded={open}
         title={label ? `${label} 거리뷰` : "거리뷰"}
         className={`chip inline-flex w-fit shrink-0 items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold transition-colors ${
-          open ? "bg-brand-navy text-surface" : "glass text-ink"
+          /* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
+          open ? "bg-brand-navy text-on-dark" : "glass text-ink"
         }`}
       >
         <Icon name="map" size={16} />

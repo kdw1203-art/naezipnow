@@ -37,13 +37,17 @@ export async function ComplexNotesNewsAi({
   region,
   hasPrice,
   tradeCount,
+  tradeMonths = 0,
 }: {
   complexId: string;
   name: string;
   region: string;
   /** 실거래 시세를 아는가 — AI 분석이 무엇을 재료로 쓸 수 있는지 정직하게 적는다 */
   hasPrice: boolean;
-  tradeCount: number;
+  /** [970 · B-16] 집계 기간 실거래 건수 합. null = 조회 실패(0건이라고 적지 않는다) */
+  tradeCount: number | null;
+  /** 집계 개월 수 — "N건 · 최근 M개월" 캡션용 */
+  tradeMonths?: number;
 }) {
   /* [968 · 1] 공유 예산(3초) — 넘기면 노트는 "못 읽음"(0건으로 그리지 않는다), 기사는 생략.
      두 로더는 내부에서 실패를 이미 삼키므로 여기서 거절되는 건 예산 초과뿐이다. */
@@ -124,7 +128,12 @@ export async function ComplexNotesNewsAi({
           <li className="flex items-center justify-between gap-2 border-b border-[rgba(16,28,54,.06)] pb-1.5">
             <span>국토교통부 실거래</span>
             <span className="font-bold text-ink">
-              {tradeCount > 0 ? `${tradeCount.toLocaleString("ko-KR")}건` : "없음"}
+              {/* [970 · B-16] 예전엔 개월 수가 "N건"으로 나갔다 — 건수 합 + 기간 */}
+              {tradeCount === null
+                ? "확인 실패"
+                : tradeCount > 0
+                  ? `${tradeCount.toLocaleString("ko-KR")}건${tradeMonths ? ` · 최근 ${tradeMonths}개월` : ""}`
+                  : "없음"}
             </span>
           </li>
           <li className="flex items-center justify-between gap-2 border-b border-[rgba(16,28,54,.06)] pb-1.5">

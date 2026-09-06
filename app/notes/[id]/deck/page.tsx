@@ -24,7 +24,8 @@ import { DeckViewer } from "./DeckViewer";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "임장노트 카드 — 내집나우",
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+  title: "임장노트 카드 | 내집나우",
   robots: { index: false, follow: false },
 };
 

@@ -12,6 +12,7 @@ import { TownPromptCard } from "./TownPromptCard";
 import { Icon } from "@/app/components/Icon";
 import { TownExpertBand } from "./TownExpertBand";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
+import { groupRegionsByCity } from "@/lib/town/region-groups";
 
 export const metadata = buildPageMetadata({
   title: "동네이야기",
@@ -28,7 +29,7 @@ export const metadata = buildPageMetadata({
 export const revalidate = 120;
 
 /* [#64] 동네 홈 바로가기 — 노트·글이 실제로 있는 지역 위주 8곳 (수동 선정).
-   전체 62곳은 각 동네 홈 하단의 "다른 동네" 칩으로 이동한다. */
+   [970 · C-17] 나머지 전체는 아래 "전체 지역" 인덱스(시·도별 접기)에서 닿는다. */
 const TOWN_HOME_SHORTCUTS = [
   { id: "gangnam", name: "강남구" },
   { id: "nowon", name: "노원구" },
@@ -53,6 +54,49 @@ function shortcutActivity(cards: FeedCard[], name: string): number {
     const r = (c.region ?? "").replace(/\s+/g, "");
     return r.length > 0 && parts.every((p) => r.includes(p));
   }).length;
+}
+
+/* [970 · C-17] 시·도별 동네 홈 인덱스(서버 조각 — 상태 없음, details 는 브라우저가 연다) */
+function TownIndex() {
+  const groups = groupRegionsByCity();
+  return (
+    <section id="town-index" className="mt-8 scroll-mt-24" aria-labelledby="town-index-title">
+      <div className="mb-2 flex items-baseline justify-between px-1">
+        <h2 id="town-index-title" className="t-section text-ink">
+          동네 홈 전체
+        </h2>
+        <span className="t-caption text-text-3">
+          {groups.reduce((n, g) => n + g.items.length, 0)}곳 · 시·도별
+        </span>
+      </div>
+      <div className="card flex flex-col divide-y divide-line rounded-2xl px-4">
+        {groups.map((g) => (
+          <details key={g.key} className="group py-2.5" open={g.city === "서울"}>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-1 t-body font-bold text-ink">
+              <span>
+                {g.city}
+                <span className="ml-1.5 t-caption font-semibold text-text-3">{g.items.length}곳</span>
+              </span>
+              <span className="shrink-0 text-text-3 transition-transform group-open:rotate-45" aria-hidden="true">
+                +
+              </span>
+            </summary>
+            <div className="flex flex-wrap gap-1.5 pb-1.5 pt-1">
+              {g.items.map((r) => (
+                <Link
+                  key={r.id}
+                  href={`/town/${r.id}`}
+                  className="chip border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline"
+                >
+                  {r.name}
+                </Link>
+              ))}
+            </div>
+          </details>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 export default async function TownPage() {
@@ -110,9 +154,12 @@ export default async function TownPage() {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-on-dark-faint pt-3">
-          <span className="t-sub text-on-dark-muted">
-            오늘 새 글 <b className="t-num text-on-dark"><CountUp value={todayCount} /></b>
-          </span>
+          {/* [970 · C-30] "오늘 새 글 0" 은 살아 있다는 신호가 아니라 비었다는 고백이다 — 0이면 숨긴다 */}
+          {todayCount > 0 && (
+            <span className="t-sub text-on-dark-muted">
+              오늘 새 글 <b className="t-num text-on-dark"><CountUp value={todayCount} /></b>
+            </span>
+          )}
           <span className="t-sub text-on-dark-muted">
             이번 주 <b className="t-num text-on-dark"><CountUp value={weekCount} /></b>
           </span>
@@ -138,7 +185,8 @@ export default async function TownPage() {
       <div className="mb-4 flex items-center gap-2" data-reveal="">
         <span className="shrink-0">
           <span className="t-sub font-bold text-text-3">우리 동네 홈</span>
-          <span className="ml-1 t-caption text-text-3">최근 글 기준</span>
+          {/* [970 · C-11] 칩 숫자는 이 피드의 노트+글을 센 값 — 무엇을 센 건지 그대로 적는다 */}
+          <span className="ml-1 t-caption text-text-3">최근 노트·글 기준</span>
         </span>
         <div className="rail-x -mx-1 px-1 py-0.5">
           {shortcuts.map((r, i) => (
@@ -155,12 +203,13 @@ export default async function TownPage() {
               )}
             </Link>
           ))}
-          <Link
-            href="/tx"
+          {/* [970 · C-17] "전체 지역" 은 실거래(/tx)가 아니라 아래 동네 홈 인덱스로 — 같은 화면 안 앵커 */}
+          <a
+            href="#town-index"
             className="chip tile border border-line bg-surface px-3 py-1.5 t-sub font-bold text-primary no-underline"
           >
             전체 지역 ›
-          </Link>
+          </a>
         </div>
       </div>
 
@@ -180,6 +229,12 @@ export default async function TownPage() {
         loadFailed={loadFailed}
         ad={<AdZone placement="community_feed" seed={0} plan={null} />}
       />
+
+      {/* [970 · C-17] 동네 홈 전체 인덱스 — 카탈로그 전량을 시·도별 <details> 로 접어 둔다.
+          예전엔 위 바로가기 8곳 + 각 동네 홈의 "다른 동네" 16곳만 UI 로 닿았고 나머지는
+          고아 페이지였다. 피드 아래에 두어 첫 화면(LCP)에는 끼어들지 않는다. 서울만 기본
+          펼침 — 노트·글이 가장 많은 곳이고, 전부 펼치면 100여 칩이 한 번에 쏟아진다. */}
+      <TownIndex />
 
       {/* 모바일 글쓰기 FAB — [961] 네이비 원 + 주홍 파문(2.6초마다 조용히 "지금 쓸 수 있다") */}
       <Link

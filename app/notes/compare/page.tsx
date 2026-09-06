@@ -301,7 +301,10 @@ export default async function NotesComparePage({
           <div className="mt-1 flex flex-wrap justify-center gap-2">
             {result.kind === "need_login" ? (
               <Link
-                href="/login?callbackUrl=/notes/compare"
+                /* [970 · B-14] noteId 를 callbackUrl 에 실어야 로그인 뒤 같은 비교로 돌아온다 */
+                href={`/login?callbackUrl=${encodeURIComponent(
+                  noteId ? `/notes/compare?noteId=${noteId}` : "/notes/compare",
+                )}`}
                 className="btn-primary rounded-xl px-4 py-2.5 t-body no-underline"
               >
                 로그인

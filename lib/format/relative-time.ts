@@ -61,22 +61,42 @@ function toMs(input: string | number | Date): number {
   return Date.parse(input);
 }
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/* [970] 절대 날짜는 항상 한국 시간(Asia/Seoul) 기준으로 적는다.
+   서버(Vercel)는 UTC 라 예전 `toLocaleDateString`/`getDate()` 는 한국 자정~09시 사이의
+   글을 하루 전 날짜로 찍었다(감사 C-01·C-04 와 같은 결함의 공용 포맷터 판). */
+const KST = "Asia/Seoul";
+function kstParts(d: Date): { y: string; m: string; day: string } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: KST,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return { y: get("year"), m: get("month"), day: get("day") };
+}
 
 function absoluteDate(t: number, input: string | number | Date, fallback: RelativeDateFallback): string {
   const d = new Date(t);
   switch (fallback) {
-    case "md-ko":
-      return d.toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" });
+    case "md-ko": {
+      const { m, day } = kstParts(d);
+      return `${m}. ${day}.`;
+    }
     case "md-utc":
       return d.toISOString().slice(5, 10).replace("-", ".");
     case "iso-date":
       return typeof input === "string" ? input.slice(0, 10) : d.toISOString().slice(0, 10);
-    case "md-long":
-      return d.toLocaleDateString("ko-KR", { month: "long", day: "numeric" });
+    case "md-long": {
+      const { m, day } = kstParts(d);
+      return `${Number(m)}월 ${Number(day)}일`;
+    }
     case "ymd":
-    default:
-      return `${d.getFullYear()}.${pad2(d.getMonth() + 1)}.${pad2(d.getDate())}`;
+    default: {
+      const { y, m, day } = kstParts(d);
+      return `${y}.${m}.${day}`;
+    }
   }
 }
 

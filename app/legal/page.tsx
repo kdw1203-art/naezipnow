@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getBusinessInfo } from "@/lib/brand/business-info";
+import { buildPageMetadata } from "@/lib/seo/page-metadata";
 
-export const metadata: Metadata = {
-  title: "법적 고지 | 내집나우",
+/* [970 · A-31] 하위 8개 정책 페이지는 전부 buildPageMetadata(path) 로 canonical 이 있는데
+   인덱스만 없었다 — 사이트맵에 있는 URL 이라 같은 경로로 canonical·OG 를 붙인다. */
+export const metadata: Metadata = buildPageMetadata({
+  title: "법적 고지",
   description: "이용약관, 개인정보처리방침, 위치/청소년 정책과 개인정보 열람 안내",
-};
+  path: "/legal",
+});
 
 const ITEMS = [
   {

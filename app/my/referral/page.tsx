@@ -17,7 +17,8 @@ import { ShareRow } from "./ShareRow";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "친구 추천 · 내집나우" };
+/* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+export const metadata = { title: "친구 추천 | 내집나우" };
 
 const FALLBACK_ORIGIN = "https://naezipnow.com";
 

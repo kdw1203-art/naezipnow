@@ -36,6 +36,11 @@ type CoverImageProps = {
    * 제안 17). 한 화면에 하나만 준다: 여러 장에 주면 우선순위가 의미를 잃는다.
    */
   priority?: boolean;
+  /**
+   * [970 · C-12] 원본까지 실패해 폴백으로 떨어진 순간 호출부에 알린다 — 감싼 상자·캡션을
+   * 함께 치우려는 화면(뉴스 상세 NewsHero)이 쓴다. 생략하면 종전과 같다.
+   */
+  onFailed?: () => void;
 };
 
 /* 허용 호스트 판정·srcSet 조립은 lib/images/srcset 으로 옮겼다([968 · 17]) —
@@ -49,6 +54,7 @@ export function CoverImage({
   scrim = false,
   sizes = "(max-width: 768px) 50vw, 33vw",
   priority = false,
+  onFailed,
 }: CoverImageProps) {
   /* ok → (최적화 실패 시) raw → (원본도 실패 시) fallback */
   const [state, setState] = useState<"ok" | "raw" | "failed">("ok");
@@ -70,7 +76,16 @@ export function CoverImage({
         loading={priority ? "eager" : "lazy"}
         {...(priority ? { fetchPriority: "high" as const } : {})}
         decoding="async"
-        onError={() => setState((s) => (s === "ok" && canOptimize ? "raw" : "failed"))}
+        onError={() => {
+          if (state === "ok" && canOptimize) {
+            setState("raw");
+            return;
+          }
+          /* [970 · C-12] 마지막 시도까지 죽었을 때만 알린다(최적화 → 원본 재시도 중엔 조용히).
+             failed 상태에선 <img> 자체가 없으므로(위 early return) 여기 오면 늘 첫 실패다. */
+          setState("failed");
+          onFailed?.();
+        }}
         className={imgClassName}
       />
       {scrim && (

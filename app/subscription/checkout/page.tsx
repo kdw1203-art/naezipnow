@@ -31,7 +31,9 @@ export default function CheckoutPage() {
           내려준다 — 빌링이 열린 뒤에도 이 화면만 "모든 이용권은 1회성 단건" 이라
           적혀 있어, 구독 안내와 결제 화면의 법적 고지가 서로 달랐다(심사역이 두
           화면을 나란히 보면 어느 쪽이 사실인지 알 수 없다). */}
-      <div className="mt-4">
+      {/* [970 · A-36] 위 주문 카드(CheckoutClient)는 max-w-[520px] 가운데 정렬인데 고지만
+          전폭이라 데스크톱에서 폭이 어긋났다 — 같은 폭으로 맞춘다(빌링 화면도 동일). */}
+      <div className="mx-auto mt-4 w-full max-w-[520px]">
         <ComplianceNotice variant="payment" recurringOpen={isTossBillingEnabled()} />
       </div>
     </PageShell>

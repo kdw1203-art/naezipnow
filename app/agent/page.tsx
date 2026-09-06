@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { PageShell } from "../components/PageShell";
+import { GuestGate } from "@/app/components/GuestGate";
 import { safeAuth } from "@/lib/safe-auth";
 import { listAgentModels } from "@/lib/agent/loop";
 import { AgentChat } from "./AgentChat";
@@ -42,15 +42,14 @@ export default async function AgentPage() {
           <AgentChat models={listAgentModels()} />
         </div>
       ) : (
-        <div className="rise-in-2 card flex flex-col items-center gap-3 rounded-[18px] px-6 py-12 text-center">
-          <div className="ai-chip flex h-11 w-11 items-center justify-center rounded-xl t-body">AI</div>
-          <div className="t-body font-extrabold text-ink">로그인하면 에이전트를 쓸 수 있어요</div>
-          <div className="max-w-sm t-sub leading-[1.6] text-text-3">
-            에이전트는 회원님의 임장노트를 읽어 답하기 때문에 로그인이 필요해요.
-          </div>
-          <Link href="/login?callbackUrl=/agent" className="btn-primary rounded-xl px-5 py-2.5 t-body no-underline">
-            로그인하고 시작하기
-          </Link>
+        /* [970 · C-40] 공용 GuestGate — 이 화면은 위에 h1 이 있으므로 카드 제목은 h2 */
+        <div className="rise-in-2">
+          <GuestGate
+            as="h2"
+            title="로그인하면 에이전트를 쓸 수 있어요"
+            desc="에이전트는 회원님의 임장노트를 읽어 답하기 때문에 로그인이 필요해요."
+            pathname="/agent"
+          />
         </div>
       )}
     </PageShell>

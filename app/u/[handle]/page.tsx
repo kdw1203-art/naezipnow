@@ -37,6 +37,8 @@ type PublicProfile = {
   handle: string | null;
   region: string | null;
   bio: string | null;
+  /** [970 · C-41] app_users.avatar_url — 마이에서 올린 프로필 사진(없으면 null) */
+  avatarUrl: string | null;
 };
 
 /** ilike 패턴 이스케이프 — %·_·\ 를 리터럴로 */
@@ -87,14 +89,24 @@ const findProfile = cache(async (input: string): Promise<ProfileLookup> => {
       row = byName.data?.[0] ?? null;
     }
     if (!row) return { ok: true, profile: null };
+    const email = String(row.email ?? "");
+    /* [970 · C-41] 아바타 — 마이(/my)가 쓰는 app_users.avatar_url 을 같은 이메일로 읽는다.
+       곁다리라 실패는 null(자리표시자)로 — 프로필 본문 렌더를 막지 않는다. */
+    let avatarUrl: string | null = null;
+    if (email) {
+      const av = await sb.from("app_users").select("avatar_url").eq("email", email).maybeSingle();
+      const url = (av.data?.avatar_url as string | null | undefined)?.trim();
+      if (!av.error && url && /^https?:\/\//.test(url)) avatarUrl = url;
+    }
     return {
       ok: true,
       profile: {
-        email: String(row.email ?? ""),
+        email,
         name: (row.full_name as string | null)?.trim() || q,
         handle: (row.handle as string | null)?.trim() || null,
         region: (row.region as string | null)?.trim() || null,
         bio: (row.bio as string | null)?.trim() || null,
+        avatarUrl,
       },
     };
   } catch (e) {
@@ -117,7 +129,11 @@ async function listAuthorPublicNotes(
   }
 }
 
-type GridNote = { id: string; title: string };
+type GridNote = { id: string; title: string; photo: string | null };
+
+/** [970 · C-41] 프로필 그리드에 싣는 노트 상한 — "전체 보기" 링크가 갈 곳(작성자별 목록)이
+    /notes 에 없어 링크를 지우는 대신, 여기서 더 많이 보여 준다. 그 이상은 +N 배지. */
+const GRID_CAP = 30;
 
 function resolveDisplayName(rawInput: string): string {
   return rawInput;
@@ -133,7 +149,8 @@ export async function generateMetadata({
   const { profile } = await findProfile(input);
   const name = profile?.name ?? resolveDisplayName(input);
   return {
-    title: `${name}님의 임장 프로필 — 내집나우`,
+    /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+    title: `${name}님의 임장 프로필 | 내집나우`,
     description: `${name}님이 직접 다녀온 공개 임장노트를 모아 봅니다 — 내집나우`,
     // P2-10 색인 정책: 공개 프로필은 당분간 색인하지 않음
     robots: { index: false, follow: false },
@@ -213,9 +230,11 @@ export default async function PublicProfilePage({
     );
   }
 
-  const grid: GridNote[] = authored.slice(0, 6).map((n) => ({
+  const grid: GridNote[] = authored.slice(0, GRID_CAP).map((n) => ({
     id: n.id,
     title: n.aptName?.trim() || n.title,
+    /* [970 · C-41] 노트 사진이 있으면 타일 배경으로 — 회색 그라디언트만 6칸이던 자리 */
+    photo: n.photos.find(Boolean) ?? null,
   }));
   const noteCount = authored.length;
   // 사실 우선: 지역·소개는 실데이터가 있을 때만 (허위 기본값 금지)
@@ -245,15 +264,37 @@ export default async function PublicProfilePage({
         <div className="rise-in-2 card rounded-t-none border-t-0 px-5 pb-5">
           {/* 아바타 + 이름 + 팔로우 */}
           <div className="-mt-6 flex items-end gap-3">
-            <span className="h-[56px] w-[56px] shrink-0 rounded-full border-[3px] border-bg bg-gradient-to-br from-line to-line-strong" />
+            {/* [970 · C-41] 아바타 — 올린 사진이 있으면 그것, 없으면 빈 회색 원 대신 이름 첫 글자
+                (피드의 데이터 카드처럼 "사진 아님"을 드러낸다) */}
+            {profile?.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.avatarUrl}
+                alt=""
+                width={56}
+                height={56}
+                loading="lazy"
+                decoding="async"
+                className="h-[56px] w-[56px] shrink-0 rounded-full border-[3px] border-bg object-cover"
+              />
+            ) : (
+              <span
+                aria-hidden="true"
+                className="flex h-[56px] w-[56px] shrink-0 items-center justify-center rounded-full border-[3px] border-bg bg-brand-navy text-[19px] font-extrabold text-on-dark"
+              >
+                {Array.from(displayName.trim())[0] ?? "?"}
+              </span>
+            )}
             <div className="min-w-0 flex-1 pb-1">
               <div className="flex flex-wrap items-center gap-[6px]">
-                <span className="text-[15px] font-extrabold text-ink">
+                <h1 className="text-[15px] font-extrabold text-ink">
                   {displayName}
-                </span>
+                </h1>
               </div>
+              {/* [970 · C-10] 표시 주소가 "naezipnow.com/@닉네임" 이었는데 /@… 라우트는 없어 404 —
+                  실제 경로(/u/{handle})로 적는다. */}
               <div className="mt-[2px] text-[12px] text-text-3">
-                naezipnow.com/@{handleLabel}
+                naezipnow.com/u/{handleLabel}
                 {region ? ` · ${region}` : ""}
               </div>
             </div>
@@ -261,8 +302,9 @@ export default async function PublicProfilePage({
             {profile ? (
               <FollowButton handle={profile.handle ?? profile.name} />
             ) : (
+              /* [970 · C-41] 로그인 뒤 이 프로필로 돌아오게 callbackUrl */
               <Link
-                href="/login"
+                href={`/login?callbackUrl=${encodeURIComponent(`/u/${encodeURIComponent(input)}`)}`}
                 className="mb-1 shrink-0 rounded-full bg-primary px-4 py-[7px] text-[12px] font-bold text-white"
               >
                 팔로우
@@ -300,13 +342,15 @@ export default async function PublicProfilePage({
 
         {/* 노트 그리드 — 프로필 매칭 시 해당 사용자의 공개 노트 실데이터 */}
         <div className="rise-in-5 mt-4">
+          {/* [970 · C-41] "전체 보기 ›" 는 이 사용자의 노트가 아니라 /notes 전체로 갔다 —
+              작성자별 목록 화면이 없으므로 링크를 지우고 그리드에 더 많이(GRID_CAP) 싣는다. */}
           <div className="mb-2 flex items-center justify-between">
-            <span className="flex items-center gap-[6px] text-[13px] font-extrabold text-ink">
+            <h2 className="flex items-center gap-[6px] text-[13px] font-extrabold text-ink">
               공개 노트
-            </span>
-            <Link href="/notes" className="text-[12px] font-bold text-primary">
-              전체 보기 ›
-            </Link>
+            </h2>
+            {noteCount > 0 && (
+              <span className="text-[12px] font-bold text-text-3">{noteCount}편</span>
+            )}
           </div>
           {grid.length === 0 && (
             <div className="card px-5 py-8 text-center text-[12px] text-text-3">
@@ -317,11 +361,12 @@ export default async function PublicProfilePage({
             {grid.map((g, i) => {
               const inner = (
                 <>
-                  <span className="absolute inset-x-0 bottom-0 truncate bg-brand-navy/70 px-2 py-1 text-[10px] font-bold text-surface">
+                  {/* [970 · B-06] 네이비 스크림 위 글자 text-surface → text-on-dark(다크에서 안 보였다) — 아래 +N 배지도 같다 */}
+                  <span className="absolute inset-x-0 bottom-0 truncate bg-brand-navy/70 px-2 py-1 text-[10px] font-bold text-on-dark">
                     {g.title}
                   </span>
                   {i === grid.length - 1 && noteCount > grid.length && (
-                    <span className="absolute right-[6px] top-[6px] rounded-[4px] bg-brand-navy/85 chip-pad-tight text-[10px] font-extrabold text-surface">
+                    <span className="absolute right-[6px] top-[6px] rounded-[4px] bg-brand-navy/85 chip-pad-tight text-[10px] font-extrabold text-on-dark">
                       +{noteCount - grid.length}
                     </span>
                   )}
@@ -331,6 +376,17 @@ export default async function PublicProfilePage({
                 "relative block aspect-square overflow-hidden rounded-[10px] bg-gradient-to-br from-line to-line-strong";
               return (
                 <Link key={g.id} href={`/notes/${g.id}`} className={cls}>
+                  {/* [970 · C-41] 노트 사진이 있으면 타일에 깐다(없으면 종전 그라디언트) */}
+                  {g.photo && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={g.photo}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  )}
                   {inner}
                 </Link>
               );

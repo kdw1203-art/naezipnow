@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { hasSession } from "@/lib/client/has-session";
 
 /**
  * 초대 리딤 트리거 (렌더링 없음).
@@ -39,6 +40,10 @@ export function ReferralRedeem() {
 
     void (async () => {
       try {
+        /* [970 · C-43] 비로그인이면 서버가 어차피 401 이다 — 요청을 보내지 않는다(콘솔의
+           빨간 401 줄이 초대 링크로 들어온 방문마다 찍혔다). 쿠키는 그대로 남겨 로그인 뒤
+           다음 마운트에서 리딤한다(세션 판정은 hasSession — 헤더와 같은 1회 호출). */
+        if (!(await hasSession())) return;
         const res = await fetch("/api/referral/redeem", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -75,6 +75,10 @@ function applyFilter(list: RedevelopmentProject[], f?: ProjectFilter): Redevelop
     const set = new Set(f.stages);
     out = out.filter((p) => set.has(p.stageKey));
   }
+  /* [970 · B-02] 시·도 — 시드 폴백에서도 DB 질의와 같은 경계를 지킨다 */
+  if (f?.sido) {
+    out = out.filter((p) => p.sido === f.sido);
+  }
   if (f?.sigungu) {
     out = out.filter((p) => p.sigungu === f.sigungu);
   }
@@ -106,6 +110,10 @@ async function fetchFromDb(f?: ProjectFilter): Promise<RedevelopmentProject[] | 
     let q = sb.from("redevelopment_projects").select(COLUMNS);
     if (f?.types && f.types.length) q = q.in("type_key", f.types);
     if (f?.stages && f.stages.length) q = q.in("stage_key", f.stages);
+    /* [970 · B-02] sido 컬럼(COLUMNS 에 이미 있음 — 인제스트는 "서울", 시드는 "서울"·"경기"·
+       "인천"처럼 짧은 시/도명)으로 좁힌다. 예전엔 sigungu="중구" 하나로 서울·인천·대구·
+       울산·부산·대전 중구가 한 지역 페이지에 함께 실렸다. */
+    if (f?.sido) q = q.eq("sido", f.sido);
     if (f?.sigungu) q = q.eq("sigungu", f.sigungu);
     if (f?.bbox) {
       q = q

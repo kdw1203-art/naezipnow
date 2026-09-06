@@ -11,7 +11,8 @@ import { isAiAnalysisToolId, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
    과거 스냅샷 열람은 공유 페이지가, 재실행은 현재 데이터가 담당). */
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "내 AI 분석 기록", robots: { index: false } };
+/* [970 · C-25] 접미 없던 제목에 `| 내집나우` */
+export const metadata = { title: "내 AI 분석 기록 | 내집나우", robots: { index: false } };
 
 export default async function MyAnalysesPage() {
   const session = await safeAuth();

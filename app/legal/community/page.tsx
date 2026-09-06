@@ -9,7 +9,8 @@ export const metadata = buildPageMetadata({
   path: "/legal/community",
 });
 
-const LAST_UPDATED = "2026-04-30";
+/* [970 · A-32] 다른 법적 문서(이용약관 등)와 같은 형식 — "시행일: YYYY년 M월 D일" */
+const EFFECTIVE_DATE = "2026년 4월 30일";
 
 export default function CommunityPolicyPage() {
   /* 2026-07-28: 여기 적혀 있던 report@nuguzip.com · support@nuguzip.com 은
@@ -25,7 +26,7 @@ export default function CommunityPolicyPage() {
       {/* 페이지 전환 모션 일관화 — globals.css riseIn(dur-md) 재사용 */}
       <article className="rise-in">
         <h1 className="text-2xl font-bold text-ink">커뮤니티 운영정책</h1>
-        <p className="mt-1 text-xs text-text-3">최종 업데이트: {LAST_UPDATED}</p>
+        <p className="mt-1 text-xs text-text-3">시행일: {EFFECTIVE_DATE}</p>
 
         <p className="mt-4 text-[13px] leading-relaxed text-text-1">
           우리동네이야기(이하 &quot;서비스&quot;)는 부동산 정보와 동네 이야기를 건강하게 나누는

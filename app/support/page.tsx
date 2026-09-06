@@ -2,7 +2,6 @@ import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { readBoardPosts } from "@/lib/newui/board-posts";
 import { SupportContactForm } from "./SupportContactForm";
-import { ExampleBadge } from "@/app/components/ExampleBadge";
 import { Icon } from "@/app/components/Icon";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import {
@@ -82,18 +81,21 @@ const FAQ_CATEGORY_ICON: Record<string, string> = {
   "계정·문의": "lock",
 };
 
-/* 더미 1개 원칙: 예시 티켓은 단 1건 — 우측 답변 상세와 동일 건 */
-const TICKETS = [
-  {
-    tag: "결제",
-    tagClass: "bg-warning-soft text-warning",
-    status: "답변 완료",
-    statusClass: "text-primary",
-    title: "플러스 연간 결제 영수증 재발급",
-    meta: "#T-4821 · 07.18 접수 · 07.18 답변",
-    active: true,
-  },
-] as const;
+/* [970 · A-18] 응답 시간 문구 단일 출처 — 예전엔 카드 두 곳이 "평균 응답 4시간",
+   폼 머리·접수 완료 화면·API 접수 알림은 "영업일 기준 24~72시간" 이라 같은 화면이
+   두 가지 약속을 했다. 실측 평균은 어디에도 없으므로 코드가 실제로 약속하는
+   값(app/api/support/route.ts 접수 알림 본문)으로 통일한다. */
+const RESPONSE_TIME = "영업일 기준 24~72시간 이내 답변";
+
+/* [970 · A-17] 예시 티켓·예시 답변 블록(TICKETS)을 없앴다. "문의를 남기면 내 문의 내역이
+   여기에 표시됩니다", "실제 문의도 같은 화면에서 이어서 주고받아요" 는 없는 기능의
+   약속이었다 — 문의 내역 화면도, 화면 안 답변 스레드도 없다. 실제 흐름(폼·메일 접수 →
+   이메일 답변, 로그인 시 알림함에 접수 확인)만 적는다. */
+const CONTACT_FLOW: { step: string; desc: string }[] = [
+  { step: "접수", desc: "아래 1:1 문의 폼 또는 메일로 보내 주세요. 로그인 상태면 알림함에 접수 확인이 남아요." },
+  { step: "답변", desc: `${RESPONSE_TIME} — 입력하신 이메일로 답변을 드려요.` },
+  { step: "추가 문의", desc: "받으신 답변 메일에 회신하면 같은 건으로 이어서 처리돼요." },
+];
 
 /** /support 요약 카드에 띄울 FAQ — 전체 답은 /support/faq 에 있다. */
 const SUPPORT_FAQ_PREVIEW_IDS = [
@@ -118,6 +120,9 @@ export default async function SupportPage() {
   );
   const faqLead = faqPreview[0];
   const faqRest = faqPreview.slice(1);
+  /* [970 · A-25] 공지 섹션이 안 그려지면 사이드 메뉴의 "#notices" 도 뺀다(빈 앵커 금지) */
+  const showNotices = notices.length > 0 || noticesFailed;
+  const sideMenu = SIDE_MENU.filter((m) => showNotices || m.href !== "#notices");
   return (
     <PageShell breadcrumb="고객지원" title="고객지원 허브" wide>
       {/* 예전엔 검색창 모양의 <div> 에 "⌕ 무엇을 도와드릴까요?" 만 적혀 있었다.
@@ -131,8 +136,10 @@ export default async function SupportPage() {
         <span className="text-xs font-extrabold text-primary">›</span>
       </Link>
 
-      {/* 모바일 FAQ 카테고리 (7g) — 실제 FAQ 분류로 /support/faq 섹션 앵커 이동 */}
-      <div className="rise-in-1 mb-4 grid grid-cols-2 gap-2 md:hidden">
+      {/* 모바일 FAQ 카테고리 (7g) — 실제 FAQ 분류로 /support/faq 섹션 앵커 이동
+          [970 · A-24] 분류가 5개라 2열 그리드의 마지막 칸이 고아였다 — 홀수 번째 마지막
+          카드는 두 칸을 차지한다(분류 수가 바뀌어도 규칙이 따라간다). */}
+      <div className="rise-in-1 mb-4 grid grid-cols-2 gap-2 md:hidden [&>*:last-child:nth-child(odd)]:col-span-2">
         {faqGroups.map((g) => (
           <Link
             key={g.category}
@@ -155,7 +162,7 @@ export default async function SupportPage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[280px_minmax(0,1fr)]">
         {/* 좌측 메뉴 (9n) */}
         <nav className="rise-in-1 card hidden h-fit flex-col rounded-[18px] py-2 md:flex">
-          {SIDE_MENU.map((m, i) =>
+          {sideMenu.map((m, i) =>
             m.href.startsWith("#") ? (
               <a
                 key={m.label}
@@ -185,7 +192,7 @@ export default async function SupportPage() {
           <div className="rise-in-2 grid gap-3 md:grid-cols-3">
             <div className="card flex flex-col gap-2 rounded-2xl p-5">
               <div className="text-[15px] font-extrabold text-ink">1:1 문의</div>
-              <div className="text-xs leading-[1.55] text-text-2">평일 10-18시 · 평균 응답 4시간</div>
+              <div className="text-xs leading-[1.55] text-text-2">평일 10-18시 · {RESPONSE_TIME}</div>
               <a href="#contact" className="btn-primary mt-1 rounded-[10px] p-[9px] text-center text-xs">
                 문의 남기기
               </a>
@@ -216,132 +223,79 @@ export default async function SupportPage() {
           <div id="contact" className="rise-in-3 card flex flex-col gap-3 scroll-mt-24 rounded-2xl px-5 py-[18px]">
             <div>
               <span className="text-[13px] font-extrabold text-ink">1:1 문의 남기기</span>
-              <span className="ml-2 text-[12px] text-text-3">영업일 기준 24~72시간 이내 답변</span>
+              <span className="ml-2 text-[12px] text-text-3">{RESPONSE_TIME}</span>
             </div>
             <SupportContactForm />
           </div>
 
-          {/* 공지사항 (9n) — board_posts 공지 카테고리 실데이터 (P2-2) */}
-          <div id="notices" className="rise-in-3 card flex flex-col gap-1 scroll-mt-24 rounded-2xl px-5 py-[18px]">
-            <div className="mb-1.5 flex items-baseline justify-between">
-              <span className="text-[13px] font-extrabold text-ink">공지사항</span>
-              <Link href="/town" className="text-[12px] font-bold text-primary">
-                전체 ›
-              </Link>
-            </div>
-            {notices.length === 0 ? (
-              noticesFailed ? (
+          {/* 공지사항 (9n) — board_posts 공지 카테고리 실데이터 (P2-2)
+              [970 · A-25] 0건이면 섹션을 숨긴다 — "등록된 공지사항이 아직 없습니다" 빈 카드에
+              "전체 ›"(→/town) 까지 붙어 있어, 없는 것을 보러 가라는 링크였다. 조회 실패는
+              숨기지 않는다(공지가 없다는 뜻이 아니므로). "전체 ›" 는 공지가 있을 때만. */}
+          {showNotices && (
+            <div id="notices" className="rise-in-3 card flex flex-col gap-1 scroll-mt-24 rounded-2xl px-5 py-[18px]">
+              <div className="mb-1.5 flex items-baseline justify-between">
+                <span className="text-[13px] font-extrabold text-ink">공지사항</span>
+                {notices.length > 0 && (
+                  <Link href="/town" className="text-[12px] font-bold text-primary">
+                    전체 ›
+                  </Link>
+                )}
+              </div>
+              {noticesFailed ? (
                 /* 색은 배경이 지고, 문장은 text-ink 로 읽는다 — 작은 본문에서 가장 확실하다. */
                 <div className="rounded-[10px] bg-danger-soft px-3 py-3 text-center text-xs leading-[1.6] text-ink">
                   공지사항을 불러오지 못했습니다 (조회 실패). 공지가 없다는 뜻은
                   아닙니다.
                 </div>
               ) : (
-                <div className="py-4 text-center text-xs text-text-3">
-                  등록된 공지사항이 아직 없습니다
-                </div>
-              )
-            ) : (
-              notices.map((n, i, arr) => (
-                <Link
-                  key={n.id}
-                  href={`/town/news/${n.id}`}
-                  className={`flex justify-between gap-3 py-2 text-xs ${
-                    i < arr.length - 1 ? "border-b border-divider" : ""
-                  }`}
-                >
-                  <span className="min-w-0 truncate font-semibold text-text-1">
-                    <span className="mr-1.5 rounded bg-primary-soft px-1.5 py-0.5 text-[10px] font-extrabold text-primary">
-                      공지
+                notices.map((n, i, arr) => (
+                  <Link
+                    key={n.id}
+                    href={`/town/news/${n.id}`}
+                    className={`flex justify-between gap-3 py-2 text-xs ${
+                      i < arr.length - 1 ? "border-b border-divider" : ""
+                    }`}
+                  >
+                    <span className="min-w-0 truncate font-semibold text-text-1">
+                      <span className="mr-1.5 rounded bg-primary-soft px-1.5 py-0.5 text-[10px] font-extrabold text-primary">
+                        공지
+                      </span>
+                      {n.title}
                     </span>
-                    {n.title}
-                  </span>
-                  <span className="shrink-0 text-text-3">{n.date}</span>
-                </Link>
-              ))
-            )}
-          </div>
-
-          {/* 내 문의 티켓 + 답변 상세 (10b) */}
-          <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[340px_minmax(0,1fr)]">
-            <div className="rise-in-3 flex flex-col gap-2.5">
-              <div className="flex items-center gap-1.5 text-[10px] text-text-3">
-                문의 내역 미리보기 <ExampleBadge />
-              </div>
-              {TICKETS.map((t) => (
-                <div
-                  key={t.title}
-                  className={`flex flex-col gap-[5px] rounded-[14px] bg-surface px-4 py-3.5 ${
-                    t.active ? "border-[1.5px] border-primary" : "border border-line"
-                  }`}
-                >
-                  <div className="flex justify-between">
-                    <span className={`rounded-md chip-pad text-[12px] font-extrabold ${t.tagClass}`}>
-                      {t.tag}
-                    </span>
-                    <span className={`text-[10px] font-bold ${t.statusClass}`}>{t.status}</span>
-                  </div>
-                  <div className="text-[13px] font-bold text-ink">{t.title}</div>
-                  <div className="text-[10px] text-text-3">{t.meta}</div>
-                </div>
-              ))}
-              {/* 더미 1개 원칙 — 샘플 티켓 1건만 유지 */}
-              <p className="px-1 text-[10px] leading-[1.6] text-text-3">
-                예시 티켓 1건이에요 — 문의를 남기면 내 문의 내역이 여기에
-                표시됩니다.
-              </p>
+                    <span className="shrink-0 text-text-3">{n.date}</span>
+                  </Link>
+                ))
+              )}
             </div>
+          )}
 
-            <div className="rise-in-4 card flex flex-col gap-3.5 rounded-[18px] p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="rounded-md bg-warning-soft chip-pad text-[12px] font-extrabold text-warning">
-                    결제
+          {/* [970 · A-17] 문의 처리 흐름 — 예시 티켓·예시 답변 대신 실제 절차만 */}
+          <div className="rise-in-3 card flex flex-col gap-3 rounded-[18px] px-5 py-[18px]">
+            <div className="text-[13px] font-extrabold text-ink">문의는 이렇게 처리돼요</div>
+            <ol className="grid grid-cols-1 gap-2 md:grid-cols-3">
+              {CONTACT_FLOW.map((f, i) => (
+                <li key={f.step} className="flex gap-2.5 rounded-[14px] bg-bg px-3.5 py-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[12px] font-extrabold text-white">
+                    {i + 1}
                   </span>
-                  <span className="ml-2 text-[15px] font-extrabold text-ink">
-                    플러스 연간 결제 영수증 재발급
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-[13px] font-bold text-ink">{f.step}</span>
+                    <span className="text-[12px] leading-[1.6] text-text-2">{f.desc}</span>
                   </span>
-                </div>
-                <span className="flex items-center gap-1.5 text-[12px] text-text-3">
-                  #T-4821 <ExampleBadge />
-                </span>
-              </div>
-              <div className="max-w-[420px] self-end rounded-[14px] rounded-br-[4px] bg-primary px-[15px] py-3 text-[13px] leading-[1.6] text-white">
-                연간 결제 영수증을 회사 제출용으로 재발급 받고 싶습니다. 사업자 정보 포함 가능한가요?
-              </div>
-              <div className="flex items-start gap-2.5">
-                <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[10px] bg-primary text-[10px] font-extrabold text-white">
-                  N
-                </div>
-                <div className="flex flex-col gap-1">
-                  <div className="text-[12px] text-text-3">
-                    내집나우 지원팀 · 07.18 14:02 (접수 후 1시간 38분)
-                  </div>
-                  <div className="max-w-[460px] rounded-[14px] rounded-tl-[4px] bg-bg px-[15px] py-3 text-[13px] leading-[1.65] text-text-1">
-                    가능합니다. 설정 › 결제 내역에서 &lsquo;영수증 › 사업자 정보 입력&rsquo; 후
-                    재발급하시면 됩니다. 방금 고객님 계정에 해당 메뉴를 활성화해 두었어요. 첨부한
-                    가이드 이미지를 참고해 주세요.{" "}
-                    <Icon name="📄" size={14} className="inline align-middle" />{" "}
-                    receipt-guide.png
-                  </div>
-                </div>
-              </div>
-              {/* 예전엔 "이 답변이 도움이 되었나요?" 아래에 알약 모양 <span> 두 개
-                  ("도움됐어요" · "추가 문의")가 있었다. 답변 평가를 받는 API 자체가
-                  없어서 "도움됐어요"는 눌러도 아무 데도 기록되지 않았고, 애초에
-                  onClick 이 없어 눌리지도 않았다. 평가는 지우고, 실제로 갈 곳이 있는
-                  "추가 문의"만 위 1:1 문의 폼으로 이어지는 진짜 링크로 남긴다. */}
-              <div className="flex items-center justify-between gap-2 border-t border-divider pt-3">
-                <span className="text-xs text-text-3">
-                  실제 문의도 같은 화면에서 이어서 주고받아요
-                </span>
-                <a
-                  href="#contact"
-                  className="shrink-0 rounded-full bg-primary-soft px-4 py-[7px] text-xs font-bold text-primary no-underline"
-                >
-                  추가 문의
-                </a>
-              </div>
+                </li>
+              ))}
+            </ol>
+            <div className="flex items-center justify-between gap-2 border-t border-divider pt-3">
+              <span className="text-xs text-text-3">
+                문의 내역을 화면에서 따로 보여 주는 기능은 아직 없어요 — 답변은 이메일로 드려요
+              </span>
+              <a
+                href="#contact"
+                className="shrink-0 rounded-full bg-primary-soft px-4 py-[7px] text-xs font-bold text-primary no-underline"
+              >
+                문의 남기기
+              </a>
             </div>
           </div>
 
@@ -383,7 +337,7 @@ export default async function SupportPage() {
           <div className="rise-in-5 ai-panel flex items-center justify-between rounded-2xl p-4">
             <div>
               <div className="text-[13px] font-extrabold text-white">해결이 안 되셨나요?</div>
-              <div className="mt-0.5 text-[12px] text-ai-muted">평일 10-18시 · 평균 응답 4시간</div>
+              <div className="mt-0.5 text-[12px] text-ai-muted">평일 10-18시 · {RESPONSE_TIME}</div>
             </div>
             <a href="#contact" className="btn-primary rounded-full px-4 py-[9px] text-xs">
               1:1 문의
@@ -442,8 +396,11 @@ export default async function SupportPage() {
               </Link>
             </div>
             {/* "이전 버전 보기"를 붙여 뒀지만 약관 개정 이력 페이지가 없다 —
-                링크처럼 읽히는 글자만 남아 있었다. 있는 사실(시행일)만 적는다. */}
-            <span className="text-[12px] text-text-3">시행 2026.07.15</span>
+                링크처럼 읽히는 글자만 남아 있었다.
+                [970 · A-12] 여기 적혀 있던 "시행 2026.07.15" 는 이용약관(v1.3 2026-09-06)·
+                개인정보처리방침(2026-06-24) 어느 쪽 시행일도 아니었다. 문서마다 시행일이
+                다르므로 각 문서 머리의 시행일로 안내한다. */}
+            <span className="text-[12px] text-text-3">시행일은 각 문서 상단에 표기</span>
           </div>
           {/* 2026-07-28: 이 줄은 사업자 정보를 손으로 적어 두고 있었고, 그중
               "통신판매업 제2026-안양동안-0000호" 는 **없는 번호**였다(0000).

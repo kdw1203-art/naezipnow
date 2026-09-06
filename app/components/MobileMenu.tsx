@@ -16,6 +16,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { PushSubscribe } from "@/components/PushSubscribe";
 import { Icon } from "./Icon";
 import { getSessionLite } from "@/lib/client/session-lite";
+import { loginReturnHref } from "@/lib/client/shell-gates";
 import { useScrollLock } from "@/lib/client/use-scroll-lock";
 import { isInstalled, trackPwa } from "@/lib/client/pwa-install";
 import {
@@ -120,6 +121,14 @@ export function MobileMenu() {
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  /* [970 · A-15] 하단 "로그인" 도 지금 화면으로 돌아오게 — 쿼리는 마운트 뒤 window 에서
+     (HeaderAuth 와 같은 사유: 정적 셸에서 useSearchParams 는 Suspense 경계가 필요하다). */
+  const [search, setSearch] = useState("");
+  useEffect(() => {
+    setSearch(window.location.search);
+  }, [pathname]);
+  const loginHref = loginReturnHref(pathname, search);
 
   /* [968 · 35] 배경 스크롤 잠금 — 예전 body.style.overflow="hidden" 은 iOS 사파리가
      무시해 시트 뒤 페이지가 그대로 스크롤됐다. 공용 훅(body fixed + 위치 복원)으로. */
@@ -352,7 +361,8 @@ export function MobileMenu() {
                             href={c.href}
                             className="truncate rounded-[10px] px-3 py-[8px] t-body font-semibold text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)] active:text-primary"
                           >
-                            {c.label}
+                            {/* [970 · A-26] 2열 칸에서 잘리던 긴 라벨은 shortLabel(nav-data) */}
+                            {c.shortLabel ?? c.label}
                           </Link>
                         ))}
                       </div>
@@ -436,7 +446,7 @@ export function MobileMenu() {
             <div className="flex flex-col gap-2 border-t border-line px-4 pt-3">
               <div className="flex gap-2">
                 {loggedIn === false && (
-                  <Link prefetch={false} href="/login" className="glass flex-1 rounded-xl py-2.5 text-center text-[13px] font-bold text-text-1">
+                  <Link prefetch={false} href={loginHref} className="glass flex-1 rounded-xl py-2.5 text-center text-[13px] font-bold text-text-1">
                     로그인
                   </Link>
                 )}

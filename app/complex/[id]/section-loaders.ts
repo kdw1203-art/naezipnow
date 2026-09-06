@@ -45,8 +45,10 @@ export const loadRentHistory = cache((region: string, name: string) =>
 
 export const loadComplexQuestions = cache((name: string) => listQuestionsForComplex(name, 5));
 
-export const loadRedevelopment = cache((sigungu: string) =>
-  listProjects({ sigungu, limit: 6 }),
+/* [970 · B-02] 시/도 + 자치구 — "중구"만으로는 서울·인천·대구·울산·부산·대전 중구가 섞였다.
+   city 가 비어 있으면(대표행에 시/도 없음) 예전처럼 자치구만으로 찾는다. */
+export const loadRedevelopment = cache((sigungu: string, city: string) =>
+  listProjects({ sigungu, sido: city || undefined, limit: 6 }),
 );
 
 export const loadAreaBands = cache((complexId: string) => getAreaBands(complexId));
@@ -54,12 +56,15 @@ export const loadAreaBands = cache((complexId: string) => getAreaBands(complexId
 export const loadRegionRelative = cache((complexId: string) => getRegionRelative(complexId));
 
 /* 입주물량은 지역 키 데이터 캐시(948) 위에 요청 내 dedupe 를 한 겹 더 얹는다. */
+/* [970 · B-02] 캐시 키에 시/도가 들어가므로 키 버전을 올린다(v1 은 자치구만으로 묶여 있었다) */
 const loadSupplyDataCached = unstable_cache(
-  (area: string) => getSupplyForAreaStrict(area, 24),
-  ["upcoming-supply-v1"],
+  (area: string, city: string) => getSupplyForAreaStrict(area, 24, undefined, city || null),
+  ["upcoming-supply-v2"],
   { revalidate: 21_600, tags: ["supply"] },
 );
-export const loadUpcomingSupply = cache((area: string) => loadSupplyDataCached(area));
+export const loadUpcomingSupply = cache((area: string, city: string) =>
+  loadSupplyDataCached(area, city),
+);
 
 export const loadAxisContext = cache((complexId: string, regionName: string) =>
   buildLiveToolContextCached(complexId, regionName || null),
@@ -246,12 +251,14 @@ export function prefetchComplexSections(args: {
   startSectionBudget();
   const region = sectionRegionLabel(args.city, args.district);
   const dong = args.district || args.city || "지역";
+  const city = (args.city ?? "").trim();
   swallow(loadRentHistory(region, args.name));
   swallow(loadComplexQuestions(args.name.trim()));
-  swallow(loadRedevelopment(dong.trim()));
+  /* [970 · B-02] 섹션 컴포넌트와 같은 (자치구, 시/도) 인자 — 달라지면 dedupe 가 깨진다 */
+  swallow(loadRedevelopment(dong.trim(), city));
   swallow(loadAreaBands(args.complexId));
   swallow(loadRegionRelative(args.complexId));
-  swallow(loadUpcomingSupply(dong.trim()));
+  swallow(loadUpcomingSupply(dong.trim(), city));
   /* [968 · 1] 임장노트·관련 기사 — 예전엔 ComplexNotesNewsAi 가 본문 뒤에 시작(세 번째 파도).
      인자 규칙은 그 컴포넌트가 부르는 것과 같아야 dedupe 된다(region = dong 하나). */
   swallow(loadHubInspectionNotes(args.complexId, args.name));

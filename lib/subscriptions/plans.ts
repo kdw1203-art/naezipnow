@@ -1,5 +1,11 @@
 import type { PlanTier } from "@/components/ui-kit";
 import { annualMonthlyEquivalent, monthlyPrice } from "@/lib/subscriptions/billing-periods";
+import { planLabel } from "@/lib/subscriptions/labels";
+import {
+  feePct,
+  REPORT_SELLER_FEE_RATE,
+  VERIFIED_EXPERT_FEE_RATE,
+} from "@/lib/billing/marketplace-fees";
 
 export type PlanFeature = {
   label: string;
@@ -78,7 +84,9 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
       "광고 없이 집중 탐색하고 싶은 사람",
     ],
     features: [
-      { label: "FREE 의 모든 혜택 포함", included: true },
+      /* [970 · A-08] "FREE"·"PRO" 는 카드에 없는 이름이다(카드는 무료·플러스·프로) —
+         planLabel 단일 출처로 "무료의 모든 혜택 포함". */
+      { label: `${planLabel("free")}의 모든 혜택 포함`, included: true },
       { label: "북마크 · 관심단지", included: true, note: "100개" },
       { label: "AI 임장노트 자동정리", included: true, note: "월 30회" },
       { label: "AI 노트 초안·예습 브리핑", included: true, note: "월 100회" },
@@ -86,7 +94,8 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
       { label: "비교 트레이", included: true, note: "10개" },
       { label: "CSV 다운로드", included: true, note: "월 10회" },
       { label: "전문가 1:1 텍스트 상담", included: true, note: "월 2회" },
-      { label: "리포트 판매", included: true, note: "수수료 7%" },
+      /* [970 · A-09 · C-15] 요율 숫자는 marketplace-fees 단일 출처에서 파생 */
+      { label: "리포트 판매", included: true, note: `수수료 ${feePct(REPORT_SELLER_FEE_RATE)}` },
       { label: "광고 제거", included: true },
       { label: "모임 개설 (Group Pass BASIC 포함)", included: true, note: "기본 1개" },
     ],
@@ -106,11 +115,16 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
       "데이터·AI를 무제한으로 쓰는 파워유저",
     ],
     features: [
-      { label: "PRO 의 모든 혜택 포함", included: true },
+      /* [970 · A-08] "플러스의 모든 혜택 포함" — planLabel 단일 출처 */
+      { label: `${planLabel("pro")}의 모든 혜택 포함`, included: true },
       { label: "북마크 · 관심단지 · AI · 분석 · CSV", included: true, note: "무제한" },
       { label: "전문가 1:1 텍스트 상담", included: true, note: "월 10회" },
       { label: "리포트 판매", included: true, note: "우선 노출" },
-      { label: "전문가 등록 · 수익 정산", included: true, note: "인증 전문가 수수료 6% 우대" },
+      {
+        label: "전문가 등록 · 수익 정산",
+        included: true,
+        note: `인증 전문가 수수료 ${feePct(VERIFIED_EXPERT_FEE_RATE)} 우대`,
+      },
       { label: "모임 개설 (Group Pass PRO 포함)", included: true, note: "동시 5개+" },
       { label: "검색·추천 우선 배치", included: true },
     ],
@@ -125,7 +139,7 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
     positioning: "법인 · 데이터 파트너",
     bestFor: ["중개법인·리서치 팀 B2B", "API·대량 PDF·전담 SLA"],
     features: [
-      { label: "EXPERT 전체 + 팀 관리자", included: true },
+      { label: `${planLabel("expert")} 전체 + 팀 관리자`, included: true },
       { label: "B2B API · 대량 PDF", included: true },
       { label: "전담 매니저 · 인보이스", included: true },
     ],

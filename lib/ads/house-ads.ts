@@ -57,8 +57,10 @@ export const HOUSE_ADS: HouseAd[] = [
   {
     id: "house_subscription",
     eyebrow: "플랜",
-    title: "AI 동네 분석이 월 3회로 부족하다면",
-    body: "무료 플랜은 AI 동네 분석 요약을 월 3회 만들 수 있어요. 플랜별로 무엇이 달라지는지 표로 비교해 보세요.",
+    /* [970 · B-29] /analysis 허브의 "단지 분석 월 2회"(AI 임장노트 자동정리)와 다른 한도라
+       어느 기능의 숫자인지 적는다 — 둘 다 PLAN_FEATURE_MATRIX(plans.ts)의 실제 값이다. */
+    title: "AI 동네 분석 요약이 월 3회로 부족하다면",
+    body: "무료 플랜은 AI 동네 분석 요약(채팅)을 월 3회, AI 임장노트 자동정리를 월 2회 만들 수 있어요. 플랜별로 무엇이 달라지는지 표로 비교해 보세요.",
     ctaLabel: "플랜 비교하기",
     href: "/subscription",
     showWhenSignedIn: true,

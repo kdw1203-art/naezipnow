@@ -4,6 +4,7 @@ import { nextChargeAtFrom, BILLING_CHARGE_LEAD_DAYS } from "@/lib/subscriptions/
 import { useEffect, useState } from "react";
 import { planLabel } from "@/lib/subscriptions/labels";
 import Link from "next/link";
+import { checkoutLoginCallback, previewAmount } from "@/lib/payments/checkout-preview";
 import { isTossTestEnv, loadTossSdk, tossBillingClientKey } from "../toss-rail";
 
 /* ============================================================
@@ -172,6 +173,11 @@ export function BillingEnrollClient() {
 
   const label = params?.tier ? (planLabel(params.tier)) : "";
   const billingLabel = params?.billing === "annual" ? "연간" : "월간";
+  /* [970 · A-21] 비로그인 요약 카드용 표시 금액 — 카드 변경(tier 없음)엔 그리지 않는다 */
+  const loginPreview =
+    phase.kind === "login" && params?.tier && !params.cardChange
+      ? previewAmount(params.tier, params.billing)
+      : null;
 
   return (
     <div className="mx-auto flex w-full max-w-[520px] flex-col gap-3">
@@ -195,19 +201,52 @@ export function BillingEnrollClient() {
       )}
 
       {phase.kind === "login" && (
-        <div className="card flex flex-col items-center gap-2.5 rounded-2xl px-4 py-8 text-center">
-          <p className="t-section text-ink">카드를 등록하려면 로그인이 필요해요</p>
+        <>
+          {/* [970 · A-21] 비로그인 — 예전엔 "로그인이 필요해요" 한 줄과 버튼뿐이라 무엇을
+              얼마에 등록하려는지, 마음이 바뀌면 어디로 가는지가 없었다. 체크아웃(CheckoutClient)
+              과 같은 규칙: 표시용 금액은 previewAmount(판매가 단일 출처, 클라이언트 안전)로
+              그리고 실제 청구액은 로그인 뒤 서버가 다시 계산한다. */}
+          {loginPreview !== null && (
+            <div className="card flex flex-col gap-2 rounded-2xl px-4 py-5">
+              <div className="flex items-center justify-between t-body">
+                <span className="text-text-3">플랜</span>
+                <span className="font-bold text-ink">
+                  {label} · {billingLabel} 자동결제
+                </span>
+              </div>
+              <div className="flex items-center justify-between t-body">
+                <span className="text-text-3">결제 금액</span>
+                <span className="font-extrabold text-ink">
+                  {loginPreview.toLocaleString("ko-KR")}원 / {billingLabel === "연간" ? "년" : "월"}
+                </span>
+              </div>
+              <p className="mt-1 t-sub text-text-3">
+                카드를 등록하면 첫 결제가 바로 진행되고, 이후 같은 금액이{" "}
+                {billingLabel === "연간" ? "매년" : "매달"} 자동으로 결제돼요. 해지는 언제든
+                구독 관리에서 할 수 있어요.
+              </p>
+            </div>
+          )}
+          <div className="card flex flex-col items-center gap-2.5 rounded-2xl px-4 py-8 text-center">
+            <p className="t-section text-ink">카드를 등록하려면 로그인이 필요해요</p>
+            <p className="t-sub text-text-3">로그인하면 이 화면으로 그대로 돌아와요</p>
+            <Link
+              href={checkoutLoginCallback(
+                typeof window !== "undefined" ? window.location.pathname : "/subscription/billing",
+                typeof window !== "undefined" ? window.location.search : "",
+              )}
+              className="btn-primary btn-sm no-underline"
+            >
+              로그인하기
+            </Link>
+          </div>
           <Link
-            href={`/login?callbackUrl=${encodeURIComponent(
-              typeof window !== "undefined"
-                ? window.location.pathname + window.location.search
-                : "/subscription",
-            )}`}
-            className="btn-primary btn-sm no-underline"
+            href="/subscription"
+            className="mt-1 text-center t-sub font-bold text-text-3 no-underline"
           >
-            로그인하기
+            ← 구독 안내로 돌아가기
           </Link>
-        </div>
+        </>
       )}
 
       {phase.kind === "unavailable" && (

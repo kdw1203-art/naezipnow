@@ -31,6 +31,8 @@ import { loadBillingHistory } from "@/lib/subscriptions/billing-history";
 import { getLiveSubscriptionByEmail, toPublic } from "@/lib/payments/billing-store";
 import type { ProfilePlanTier } from "@/lib/subscriptions/labels";
 import { AttendanceButton } from "./points/AttendanceButton";
+import { GuestGate } from "@/app/components/GuestGate";
+import { formatKstDate } from "@/lib/format/kst";
 
 /* 마이 허브 (item 10) — 프로필·포인트지갑 통합
    실데이터(서버): 프로필·포인트 잔액/내역·내 임장노트·관심 임장노트·관심 지역·전문가(중개사) 상태
@@ -39,7 +41,12 @@ import { AttendanceButton } from "./points/AttendanceButton";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "마이 · 내집나우" };
+/* [970 · C-25|C-26] 제목 접미 통일 `| 내집나우` + 비어 있던 description(화면의 실제 구성만 적는다) */
+export const metadata = {
+  title: "마이 | 내집나우",
+  description:
+    "내 프로필·포인트 지갑·임장노트·저장한 노트·알림 구독을 한곳에서 확인하고 관리해요.",
+};
 
 /* ── 표시 헬퍼 ── */
 function noteScore(n: InspectionNote): number {
@@ -78,13 +85,8 @@ async function loadPlanExpiresAt(email: string): Promise<string | null> {
   }
 }
 
-function fmtExpiry(iso: string): string {
-  const d = new Date(iso);
-  if (!Number.isFinite(d.getTime())) return "";
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}.${mm}.${dd}`;
-}
+/* [970 · C-01] 서버(UTC) getDate() → 한국 날짜로 고정 */
+const fmtExpiry = formatKstDate;
 
 /** 북마크 target_id 를 임장노트로 해석 (노트가 아니면 null → 자연 필터). 최대 10개만 조회.
     조회 실패를 빈 배열로 누르면 "저장한 노트가 없어요"가 된다 — ok:false 로
@@ -133,7 +135,7 @@ async function loadMyPurchasedReports(
   }
 }
 
-/* ── 비로그인 안내 ── */
+/* ── 비로그인 안내 — [970 · C-40] 공용 GuestGate(h1 포함) ── */
 function GuestView() {
   const menu = [
     { label: "포인트 상점", href: "/points/shop" },
@@ -142,19 +144,11 @@ function GuestView() {
     { label: "고객지원 · 공지", href: "/support" },
   ];
   return (
-    <div className="mx-auto flex max-w-[640px] flex-col gap-3">
-      <div className="rise-in ai-panel flex flex-col items-center gap-2 rounded-[18px] px-5 py-8 text-center">
-        <div className="h-11 w-11 rounded-full bg-[repeating-linear-gradient(45deg,#2a3242,#2a3242_5px,#333d4f_5px,#333d4f_10px)]" />
-        <div className="mt-1 t-section font-extrabold text-white">
-          로그인하고 내 활동을 한곳에서 관리하세요
-        </div>
-        <div className="t-sub leading-[1.6] text-ai-muted">
-          임장노트 · 포인트 · 관심 지역 · 구독이 마이 화면에 모여요
-        </div>
-        <Link href="/login?callbackUrl=/my" className="btn-primary mt-3 rounded-[10px] px-6 py-2.5 text-[15px]">
-          로그인하고 시작하기
-        </Link>
-      </div>
+    <GuestGate
+      title="로그인하고 내 활동을 한곳에서 관리하세요"
+      desc="임장노트 · 포인트 · 관심 지역 · 구독이 마이 화면에 모여요."
+      pathname="/my"
+    >
       <div className="rise-in-1 card flex flex-col rounded-[14px] px-4 py-0.5">
         {menu.map((m, i, arr) => (
           <Link
@@ -165,11 +159,12 @@ function GuestView() {
             }`}
           >
             <span>{m.label}</span>
-            <span className="text-on-dark-muted">›</span>
+            {/* [970 · C-24] 흰 카드 위 "›" 가 on-dark-muted(한지 72%)라 안 보였다 → text-text-3 */}
+            <span className="text-text-3">›</span>
           </Link>
         ))}
       </div>
-    </div>
+    </GuestGate>
   );
 }
 
@@ -929,7 +924,8 @@ export default async function MyPage() {
               }`}
             >
               <span>{m.label}</span>
-              <span className="text-on-dark-muted">›</span>
+              {/* [970 · C-24] 흰 카드 위 "›" 가 on-dark-muted(한지 72%)라 안 보였다 → text-text-3 */}
+              <span className="text-text-3">›</span>
             </Link>
           ))}
         </section>

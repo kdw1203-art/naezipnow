@@ -114,8 +114,9 @@ export default async function ComplexBrowsePage({
               key={r.id}
               href={`/complex/browse?district=${encodeURIComponent(regionDisplayName(r))}`}
               className={`rounded-full px-3 py-1.5 text-[12px] font-bold transition ${
+                /* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
                 active
-                  ? "bg-brand-navy text-surface"
+                  ? "bg-brand-navy text-on-dark"
                   : "card tile text-text-2"
               }`}
             >

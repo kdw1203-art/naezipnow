@@ -476,7 +476,8 @@ export function AuctionsClient({
                     <div className="flex items-center gap-3">
                       {c.dday && (
                         <span
-                          className={`rounded-md chip-pad text-[12px] font-extrabold text-white ${
+                          /* [970 · B-35] 좁은 카드에서 "D-17"이 두 줄로 꺾였다 — 줄바꿈·수축 금지 */
+                          className={`shrink-0 whitespace-nowrap rounded-md chip-pad text-[12px] font-extrabold text-white ${
                             c.dday.urgent ? "bg-danger" : "bg-primary"
                           }`}
                         >

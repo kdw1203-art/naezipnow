@@ -24,6 +24,7 @@ export function PriceTab({
   latestAvgManwon,
   complexName,
   priceChart,
+  region,
 }: {
   trades: HubTrade[];
   /** 가장 최근 달 평균 매매가(만원) — 계산기 프리필. 0 이면 링크를 만들지 않는다 */
@@ -31,6 +32,8 @@ export function PriceTab({
   complexName?: string;
   /** 서버가 그린 실거래 추이 차트(PriceTrendChart) — 2개월 미만이면 null */
   priceChart: ReactNode;
+  /** [970 · B-39] 이 단지의 지역("서울 중랑구") — /analysis/price?region= 프리필 */
+  region?: string;
 }) {
   /* [967 · 16] 시세 탭 면적대 필터·정렬 — 이미 받은 행 위에서만(추가 질의 없음).
      주소에는 싣지 않는다(탭까지만 URL 동기화). */
@@ -130,7 +133,12 @@ export function PriceTab({
           최근 달 평균 매매가(만원)를 그대로 넘긴다. 값이 없으면 링크를
           만들지 않는다(빈손으로 보내면 예시 숫자가 자기 단지인 척한다). */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <Link href="/analysis/price" className="btn-soft rounded-xl p-3 text-center t-body">
+        {/* [970 · B-39] 지역을 실어 보낸다 — 빈손이면 /analysis/price 가 첫 지역(강남구)으로 열렸다.
+            D62 매칭이 "서울 강남구" 꼴을 받는다. */}
+        <Link
+          href={region ? `/analysis/price?region=${encodeURIComponent(region)}` : "/analysis/price"}
+          className="btn-soft rounded-xl p-3 text-center t-body"
+        >
           AI 시세 분석 보기
         </Link>
         {latestAvgManwon > 0 && (

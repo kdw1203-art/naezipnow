@@ -197,7 +197,10 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
 
   return (
     <>
-      {/* ---------- 필터 (pushState — 서버 왕복 없음) ---------- */}
+      {/* ---------- 필터 (pushState — 서버 왕복 없음) ----------
+          [970 · C-13] 0명 목록 위에 자격·분야 칩 두 줄이 서 있었다 — 누를수록 0이 0으로
+          바뀔 뿐이다. 지역·정렬 줄과 같은 조건(items > 0)으로 통째로 접는다. */}
+      {items.length > 0 && (
       <div className="rise-in-1 mb-4 flex flex-col gap-2">
         {/* 자격 유형 */}
         <div className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="group" aria-label="자격 유형">
@@ -263,6 +266,7 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
           </div>
         )}
       </div>
+      )}
 
       {truncated && (
         <p className="mb-3 t-sub text-text-3">
@@ -283,7 +287,8 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
           </p>
           <p className="max-w-xs t-sub text-text-3">
             {!filtersActive
-              ? "베타 기간이라 공급이 적어요. 인증 심사가 끝나는 대로 여기에 올라옵니다. 그동안은 견적 요청을 남겨 두거나, 임장노트·단지 Q&A 로 판단을 이어가세요."
+              ? /* [970 · C-20] 해요체 통일 */
+                "베타 기간이라 공급이 적어요. 인증 심사가 끝나는 대로 여기에 올라와요. 그동안은 견적 요청을 남겨 두거나, 임장노트·단지 Q&A 로 판단을 이어가세요."
               : "다른 자격·분야·지역을 보거나, 견적 요청을 남겨 두면 인증 전문가가 먼저 제안을 보내요."}
           </p>
           <div className="mt-1 flex flex-wrap items-center justify-center gap-2">

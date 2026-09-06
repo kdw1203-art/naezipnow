@@ -130,8 +130,10 @@ function CompareTraySection() {
         </div>
       ) : (
         <div className="t-sub text-text-3">
-          아직 담은 후보가 없어요 — 단지 화면의 &quot;비교 담기&quot;로 최대{" "}
-          {COMPARE_TRAY_MAX}개까지 담을 수 있어요.
+          {/* [970 · B-45] 빈 상태 안내는 이 카드 한 장뿐 — 아래 비교표·시세 카드는 후보가 생기면 열린다 */}
+          아직 담은 후보가 없어요 — 위 검색이나 단지 화면의 &quot;비교 담기&quot;로 최대{" "}
+          {COMPARE_TRAY_MAX}개까지 담으면, 아래에 최근 6개월 실거래 비교표와 후보 지역 시세
+          스냅샷이 열려요.
         </div>
       )}
       {/* [AI-22] 트레이 → AI 비교 해석 — 같은 후보로 워크벤치 비교 도구를 연다 */}
@@ -267,16 +269,9 @@ function ComplexCompareTable() {
     [withData, maxAvg, maxPyeong, maxCount],
   );
 
-  if (!ids || ids.length === 0) {
-    return (
-      <div className="card flex flex-col gap-1.5 rounded-[14px] p-4">
-        <div className="t-section text-ink">단지별 실거래 비교표</div>
-        <div className="t-sub text-text-3">
-          위에서 단지를 담으면 최근 6개월 평균가·평당가·거래량을 나란히 비교해 드려요.
-        </div>
-      </div>
-    );
-  }
+  /* [970 · B-45] 후보 0개면 카드를 그리지 않는다 — 트레이 카드가 이미 "담으면 아래에
+     비교표·시세 스냅샷이 열려요"라고 안내한다(같은 빈 문구가 세 장 반복됐다). */
+  if (!ids || ids.length === 0) return null;
 
   return (
     <div className="card flex flex-col gap-3 rounded-[14px] p-4" data-reveal="">
@@ -431,6 +426,8 @@ function RegionMarketSummary() {
   const regions = [
     ...new Set((trayItems ?? []).map((t) => (t.region ?? "").trim()).filter(Boolean)),
   ];
+  /* [970 · B-45] 후보 지역이 없으면(트레이 비었거나 지역 없는 항목뿐) 카드를 접는다 */
+  if (regions.length === 0) return null;
 
   const generate = async () => {
     if (state.kind === "loading" || regions.length === 0) return;
@@ -500,12 +497,7 @@ function RegionMarketSummary() {
         )}
       </div>
 
-      {regions.length === 0 ? (
-        <div className="t-sub text-text-3">
-          아직 담은 후보가 없어요. 위에서 단지를 담으면 후보 지역의 국토교통부 실거래
-          기반 시세 스냅샷과 종합 코멘트를 만들어 드려요.
-        </div>
-      ) : state.kind === "idle" ? (
+      {state.kind === "idle" ? (
         <div className="t-sub text-text-3">
           담은 후보 {regions.length}개 지역의 시세 스냅샷을 준비했어요. &quot;요약
           생성&quot; 버튼을 누르면 지역 실시세와 종합 코멘트를 불러와요.

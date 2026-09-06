@@ -9,6 +9,7 @@ import {
   type TxRegionSummary,
 } from "@/lib/market/tx-bands";
 import { formatYmRange } from "@/lib/market/format";
+import { groupBySido } from "@/lib/market/sido-group";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { logger } from "@/lib/log";
@@ -204,37 +205,67 @@ export default async function TxIndexPage() {
           {/* 웹13 — 1440px 에서 3열이 성겨 보였다 → xl 4열. "거래 많은 순"
               정렬 근거를 미니바로 시각화 — 최대 지역 대비 비율이라 축이
               하나뿐이고, 수치는 이미 옆에 그대로 적혀 있다(막대는 보조). */}
+          {/* [970 · B-34] 214개 지역을 한 열로 늘어놓으면 모바일에서 14,000px 이었다 — 시/도별
+              <details> 로 접는다(첫 묶음만 펼침). 링크는 접혀 있어도 HTML 에 있어 크롤링·
+              색인에는 영향이 없고, 서버 컴포넌트라 JS 없이 동작한다. 묶음 순서는 거래 많은
+              시/도부터, 카탈로그로 시/도를 모르는 지역은 맨 끝 "그 밖의 지역". */}
           {(() => {
             const maxTx = regions.reduce((m, r) => Math.max(m, r.txCount), 0);
+            const groups = groupBySido(regions, (r) => r.name, (r) => r.txCount);
             return (
-              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {regions.map((r) => (
-                  <Link
-                    key={r.slug}
-                    prefetch={false}
-                    href={`/tx/${encodeURIComponent(r.slug)}`}
-                    className="tile flex flex-col gap-1.5 rounded-[10px] border border-border px-3 py-2.5 t-body"
-                  >
-                    <span className="flex items-baseline justify-between gap-3">
-                      <span className="font-bold text-ink">{r.name}</span>
-                      <span className="shrink-0 t-sub text-text-3">
-                        {r.txCount.toLocaleString("ko-KR")}건 · 구간{" "}
-                        {r.areaCells.length + r.priceCells.length}
-                      </span>
-                    </span>
-                    {maxTx > 0 && (
-                      <span
-                        aria-hidden
-                        className="block h-[3px] overflow-hidden rounded-full bg-bg"
-                      >
-                        <span
-                          className="block h-full rounded-full bg-primary/45"
-                          style={{ width: `${Math.max(3, Math.round((r.txCount / maxTx) * 100))}%` }}
-                        />
-                      </span>
-                    )}
-                  </Link>
-                ))}
+              <div className="mt-3 flex flex-col gap-2">
+                {groups.map((g, gi) => {
+                  const groupTx = g.items.reduce((sum, r) => sum + r.txCount, 0);
+                  return (
+                    <details
+                      key={g.sido}
+                      open={gi === 0}
+                      className="group rounded-[12px] border border-border bg-surface"
+                    >
+                      <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+                        <span className="t-body font-extrabold text-ink">
+                          {g.sido}{" "}
+                          <span className="t-sub font-medium text-text-3">{g.items.length}개 지역</span>
+                        </span>
+                        <span className="shrink-0 t-sub text-text-3">
+                          {groupTx.toLocaleString("ko-KR")}건{" "}
+                          <span aria-hidden className="ml-1 inline-block transition-transform group-open:rotate-180">
+                            ▾
+                          </span>
+                        </span>
+                      </summary>
+                      <div className="grid grid-cols-1 gap-2 px-3 pb-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        {g.items.map((r) => (
+                          <Link
+                            key={r.slug}
+                            prefetch={false}
+                            href={`/tx/${encodeURIComponent(r.slug)}`}
+                            className="tile flex flex-col gap-1.5 rounded-[10px] border border-border px-3 py-2.5 t-body"
+                          >
+                            <span className="flex items-baseline justify-between gap-3">
+                              <span className="font-bold text-ink">{r.name}</span>
+                              <span className="shrink-0 t-sub text-text-3">
+                                {r.txCount.toLocaleString("ko-KR")}건 · 구간{" "}
+                                {r.areaCells.length + r.priceCells.length}
+                              </span>
+                            </span>
+                            {maxTx > 0 && (
+                              <span
+                                aria-hidden
+                                className="block h-[3px] overflow-hidden rounded-full bg-bg"
+                              >
+                                <span
+                                  className="block h-full rounded-full bg-primary/45"
+                                  style={{ width: `${Math.max(3, Math.round((r.txCount / maxTx) * 100))}%` }}
+                                />
+                              </span>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                    </details>
+                  );
+                })}
               </div>
             );
           })()}

@@ -253,6 +253,9 @@ interface HubView {
   listingsLabel: string;
   infoRows: { label: string; value: string }[];
   trades: HubTrade[];
+  /** [970 · B-16] 집계 기간(trades 개월) 안의 실거래 **건수** 합 — 조회 실패면 null.
+      trades.length 는 개월 수라 "실거래 N건"에 쓰면 틀린다. */
+  dealCount: number | null;
   notes: HubNote[];
   /** 노트 조회가 실패했는지 — 빈 목록을 "없음"으로 단정하지 않기 위해 */
   notesFailed: boolean;
@@ -508,12 +511,13 @@ function toView(
         : hubListings.length > 0
           ? "등록된 실매물"
           : "등록 대기",
-      notes: postsFailed ? "노트 ?" : `노트 ${posts.length.toLocaleString("ko-KR")}`,
+      /* [970 · B-17] 이 KPI 는 동네이야기 글 수다 — 탭 라벨("이야기")과 맞춘다 */
+      notes: postsFailed ? "이야기 ?" : `이야기 ${posts.length.toLocaleString("ko-KR")}`,
       notesSub: postsFailed
         ? "조회 실패"
         : posts.length > 0
-          ? "단지 이야기 포함"
-          : "첫 노트를 남겨보세요",
+          ? "동네이야기 글"
+          : "첫 이야기를 남겨보세요",
       deals: txFailed ? "거래 ?" : dealSum > 0 ? `${dealSum}건` : "—",
       dealsSub: txFailed
         ? "조회 실패"
@@ -548,6 +552,7 @@ function toView(
         : "실매물 준비 중",
     infoRows,
     trades,
+    dealCount: txFailed ? null : dealSum,
     notes,
     notesFailed: postsFailed,
     notesWriteHref: `/town/write?complex=${encodeURIComponent(row.id)}&complexName=${encodeURIComponent(
@@ -931,7 +936,8 @@ export default async function ComplexHubPage({
           >
             {v.dong}
           </Link>
-          <span className="chip bg-brand-navy px-2.5 py-1 t-sub font-extrabold text-surface">
+          {/* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */}
+          <span className="chip bg-brand-navy px-2.5 py-1 t-sub font-extrabold text-on-dark">
             {v.name}
           </span>
         </div>
@@ -1150,6 +1156,8 @@ export default async function ComplexHubPage({
           altComplexId={v.id !== complexId ? v.id : undefined}
           complexName={v.name}
           noteHref={noteHref}
+          /* [970 · B-39] 시세 탭 → /analysis/price?region= 프리필(지역명 규칙은 축 요약과 같다) */
+          priceRegion={axisRegionName(v.city, v.dong) || undefined}
           listings={v.listings}
           /* [968 · 4] 차트는 여기(서버)서 한 번 그려 엘리먼트로 넘긴다 — 요약·시세 탭이
              같은 엘리먼트를 쓰고, 차트 코드·점 배열은 클라이언트 번들·props 에서 빠진다.
@@ -1272,8 +1280,9 @@ export default async function ComplexHubPage({
       <ComplexNearbyPoi lat={v.lat} lng={v.lng} name={v.name} />
 
       {/* D3 정비사업 · D4 입주물량 · D2 Q&A (면적대·지역대비는 상단으로 이동) */}
-      <NearbyRedevelopment sigungu={v.dong} />
-      <UpcomingSupply area={v.dong} />
+      {/* [970 · B-02] 시/도까지 넘긴다 — v.dong("중구")만으로는 다른 도시 자료가 섞였다 */}
+      <NearbyRedevelopment sigungu={v.dong} city={v.city} />
+      <UpcomingSupply area={v.dong} city={v.city} />
       <ComplexQna
         complexName={v.name}
         region={sectionRegionLabel(v.city, v.dong)}
@@ -1289,7 +1298,9 @@ export default async function ComplexHubPage({
         name={v.name}
         region={v.dong}
         hasPrice={v.priceSeries.length > 0}
-        tradeCount={v.trades.length}
+        /* [970 · B-16] 건수 합(dealSum) — 예전엔 trades.length(개월 수)를 "N건"으로 적었다 */
+        tradeCount={v.dealCount}
+        tradeMonths={v.trades.length}
       />
 
       {/* G5+G13 — 실데이터 Q&A + FAQPage 스키마. 시세가 "준비 중"이면 그 질문은 뺀다. */}

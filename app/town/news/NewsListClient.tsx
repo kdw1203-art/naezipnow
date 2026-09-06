@@ -15,15 +15,20 @@ import { useEffect, useMemo, useState } from "react";
    window.history.pushState 를 라우터와 동기화해 useSearchParams 가 따라온다.
    Link(?region=) 를 쓰면 같은 ISR payload 를 다시 받아오는 RSC 왕복이 생기고,
    실제 조작 경로를 로컬 프로브에서 재볼 수도 없다(실측으로 확인). */
-function pushParamUrl(key: "region" | "cat", value: string | null) {
+/* [970 · C-31] 여러 키를 한 번의 pushState 로 — "필터 초기화" 가 region·cat 을 따로
+   밀어 히스토리 항목이 2개 쌓였다(뒤로가기 두 번). */
+function pushParamUrl(patch: Partial<Record<"region" | "cat", string | null>>) {
   const url = new URL(window.location.href);
-  if (value) url.searchParams.set(key, value);
-  else url.searchParams.delete(key);
+  for (const [key, value] of Object.entries(patch)) {
+    if (value) url.searchParams.set(key, value);
+    else url.searchParams.delete(key);
+  }
   window.history.pushState(null, "", url);
 }
 import { Icon } from "@/app/components/Icon";
 import { CoverImage } from "@/app/components/CoverImage";
 import { seedGradient } from "../shared";
+import { findNewsRegionChip, type NewsRegionChip } from "@/lib/town/news-regions";
 
 export type NewsCardDto = {
   id: string;
@@ -126,7 +131,8 @@ export function NewsListClient({
   listCap,
 }: {
   cards: NewsCardDto[];
-  regions: string[];
+  /** [970 · C-23] 시·도 칩(건수순) + 그 안의 시·군·구 칩 — 서버가 계산한 트리 */
+  regions: NewsRegionChip[];
   hiddenCount: number;
   listCap: number;
 }) {
@@ -154,7 +160,7 @@ export function NewsListClient({
     const read = () => {
       const sp = new URLSearchParams(window.location.search);
       const raw = sp.get("region");
-      setActive(raw && regions.includes(raw) ? raw : null);
+      setActive(raw && findNewsRegionChip(regions, raw) ? raw : null);
       const cat = sp.get("cat");
       setActiveCat(cat && categories.includes(cat) ? cat : null);
     };
@@ -163,17 +169,21 @@ export function NewsListClient({
     return () => window.removeEventListener("popstate", read);
     // regions/categories 는 서버 데이터 파생 고정 배열이라 join 값으로만 비교한다
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [regions.join("|"), categories.join("|")]);
+  }, [regions.map((r) => r.label).join("|"), categories.join("|")]);
 
+  /* [970 · C-23] 활성 칩이 거르는 원본 city 값들 — 시·도 칩이면 그 안의 시·군·구까지 */
+  const activeHit = findNewsRegionChip(regions, active);
+  const activeValues = new Set(activeHit?.chip.values ?? []);
+  /* 두 번째 줄(시·군·구)을 펼 시·도 그룹 — 시·도 칩 자체 또는 그 하위 칩이 활성일 때 */
+  const activeGroup = activeHit ? (activeHit.parent ?? activeHit.chip) : null;
   const list = cards.filter(
-    (c) => (!active || c.city === active) && (!activeCat || c.category === activeCat),
+    (c) => (!active || activeValues.has(c.city.trim())) && (!activeCat || c.category === activeCat),
   );
   const featured = list[0];
   const rest = list.slice(1);
   const anyFilter = Boolean(active || activeCat);
   const clearAll = () => {
-    pushParamUrl("region", null);
-    pushParamUrl("cat", null);
+    pushParamUrl({ region: null, cat: null });
     setActive(null);
     setActiveCat(null);
   };
@@ -183,10 +193,10 @@ export function NewsListClient({
       {/* 지역 필터 칩 — 얕은 pushState 라 서버 왕복이 없다. 뒤로가기·딥링크는
           useSearchParams 동기화로 동작한다(프로브에서 5개 시나리오 실측). */}
       {regions.length > 0 && (
-        <div className="rise-in mb-2 flex flex-wrap gap-1.5 text-xs">
+        <div className="rise-in mb-2 flex flex-wrap gap-1.5 text-xs" role="group" aria-label="지역">
           <button
             type="button"
-            onClick={() => { pushParamUrl("region", null); setActive(null); }}
+            onClick={() => { pushParamUrl({ region: null }); setActive(null); }}
             aria-pressed={!active}
             className={`chip px-3.5 py-2 ${
               active ? "border border-line bg-surface text-text-2" : "chip-active"
@@ -194,19 +204,56 @@ export function NewsListClient({
           >
             전체
           </button>
-          {regions.map((r) => (
+          {/* [970 · C-23] 첫 줄은 시·도(건수순). 하위 칩이 활성이어도 그 시·도는 켜진 걸로 */}
+          {regions.map((r) => {
+            const on = activeGroup?.label === r.label;
+            return (
+              <button
+                key={r.label}
+                type="button"
+                onClick={() => { pushParamUrl({ region: r.label }); setActive(r.label); }}
+                aria-pressed={on}
+                className={`chip px-3.5 py-2 ${
+                  on ? "chip-active" : "border border-line bg-surface text-text-2"
+                }`}
+              >
+                {r.label}
+                <span className="ml-1 opacity-70">{r.count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {/* [970 · C-23] 두 번째 줄 — 활성 시·도 안의 시·군·구(건수순). 접혀 있다가 시·도를 고르면 편다 */}
+      {activeGroup && activeGroup.children.length > 0 && (
+        <div
+          className="rise-in mb-2 flex flex-wrap items-center gap-1.5 text-xs"
+          role="group"
+          aria-label={`${activeGroup.label} 안 지역`}
+        >
+          <span className="t-sub font-bold text-text-3">{activeGroup.label} 안</span>
+          <button
+            type="button"
+            onClick={() => { pushParamUrl({ region: activeGroup.label }); setActive(activeGroup.label); }}
+            aria-pressed={active === activeGroup.label}
+            className={`chip px-3 py-1.5 ${
+              active === activeGroup.label ? "chip-active" : "border border-line bg-surface text-text-2"
+            }`}
+          >
+            {activeGroup.label} 전체
+          </button>
+          {activeGroup.children.map((c) => (
             <button
-              key={r}
+              key={c.label}
               type="button"
-              onClick={() => { pushParamUrl("region", r); setActive(r); }}
-              aria-pressed={active === r}
-              className={`chip px-3.5 py-2 ${
-                active === r
-                  ? "chip-active"
-                  : "border border-line bg-surface text-text-2"
+              onClick={() => { pushParamUrl({ region: c.label }); setActive(c.label); }}
+              aria-pressed={active === c.label}
+              className={`chip px-3 py-1.5 ${
+                active === c.label ? "chip-active" : "border border-line bg-surface text-text-2"
               }`}
             >
-              {r}
+              {c.label}
+              <span className="ml-1 opacity-70">{c.count}</span>
             </button>
           ))}
         </div>
@@ -223,7 +270,7 @@ export function NewsListClient({
               type="button"
               onClick={() => {
                 const next = activeCat === k ? null : k;
-                pushParamUrl("cat", next);
+                pushParamUrl({ cat: next });
                 setActiveCat(next);
               }}
               aria-pressed={activeCat === k}

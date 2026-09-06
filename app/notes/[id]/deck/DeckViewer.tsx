@@ -18,16 +18,18 @@ import { scrollBehavior } from "@/lib/ui/scroll";
 import { CoverImage } from "@/app/components/CoverImage";
 import type { DeckPage, DeckTheme, NoteDeck } from "@/lib/inspection/note-deck";
 
-/** 카드 배경·글자색 프리셋. 대비는 globals.css 토큰 규칙(본문 4.5:1)을 따른다. */
+/** 카드 배경·글자색 프리셋. 대비는 globals.css 토큰 규칙(본문 4.5:1)을 따른다.
+ *  [970 · B-06] 네이비 카드의 기본 글자색 text-surface → text-on-dark — surface 는 다크에서
+ *  어두운 면색(#171b22)이 돼 네이비 위에서 사라졌다. on-dark 는 양 테마 고정 한지색. */
 const THEME: Record<DeckTheme, { card: string; eyebrow: string; title: string; body: string }> = {
   cover: {
-    card: "bg-brand-navy text-surface",
+    card: "bg-brand-navy text-on-dark",
     eyebrow: "text-white/70",
     title: "text-white",
     body: "text-white/85",
   },
   ink: {
-    card: "bg-brand-navy text-surface",
+    card: "bg-brand-navy text-on-dark",
     eyebrow: "text-white/70",
     title: "text-white",
     body: "text-white/85",
@@ -45,7 +47,7 @@ const THEME: Record<DeckTheme, { card: string; eyebrow: string; title: string; b
     body: "text-text-1",
   },
   photo: {
-    card: "bg-brand-navy text-surface",
+    card: "bg-brand-navy text-on-dark",
     eyebrow: "text-white/80",
     title: "text-white",
     body: "text-white/85",

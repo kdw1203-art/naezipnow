@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { safeAuth } from "@/lib/safe-auth";
 import { findBlockedWord } from "@/lib/community/moderation";
 import {
@@ -215,12 +216,19 @@ export async function POST(req: Request) {
 
   try {
     await prependPost(post);
-  } catch {
+  } catch (e) {
+    /* [970 · C-35] "Supabase 테이블·RLS·키를 확인해 주세요" 는 개발자에게 하는 말이었다 —
+       사용자 화면(write 페이지가 그대로 띄운다)에는 일반 문구, 원인은 로그로. */
+    logger.error("[community/posts] 게시글 저장 실패", e);
     return NextResponse.json(
-      { error: "게시글 저장에 실패했습니다. Supabase 테이블·RLS·키를 확인해 주세요." },
+      { error: "글을 저장하지 못했어요. 잠시 후 다시 시도해 주세요." },
       { status: 500 },
     );
   }
+  /* [970 · C-02] 피드(/town, ISR 120초)·상세(ISR 600초)를 즉시 재생성 — 방금 올린 글이
+     목록에 안 보이던 원인. 댓글·좋아요 API 가 이미 같은 방식으로 상세를 갱신한다. */
+  revalidatePath("/town");
+  revalidatePath(`/town/news/${post.id}`);
   if (session?.user?.email) {
     void recordFunnelEvent(req, {
       eventName: FUNNEL_EVENT.COMMUNITY_POST_CREATE,

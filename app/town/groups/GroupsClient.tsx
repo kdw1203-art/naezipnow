@@ -400,19 +400,28 @@ export function GroupsClient({
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
             <Icon name="search" size={22} />
           </div>
-          <p className="text-[13px] font-bold text-ink">조건에 맞는 모임이 아직 없어요</p>
-          <p className="max-w-xs text-xs leading-[1.6] text-text-3">
-            필터를 바꾸거나 직접 모임을 만들어 이웃을 모아보세요.
+          <p className="text-[13px] font-bold text-ink">
+            {filtersActive ? "조건에 맞는 모임이 아직 없어요" : "아직 등록된 모임이 없어요"}
           </p>
-          {filtersActive && (
-            <button
-              type="button"
-              onClick={() => apply({ region: "all", status: "all", sort: "soon", q: "" })}
-              className="btn-soft rounded-lg px-4 py-2 text-xs"
-            >
-              필터 초기화
-            </button>
-          )}
+          <p className="max-w-xs text-xs leading-[1.6] text-text-3">
+            {filtersActive
+              ? "필터를 바꾸거나 직접 모임을 만들어 이웃을 모아보세요."
+              : "첫 모임을 만들어 같이 다녀올 이웃을 모아보세요 — 만들면 채팅방이 함께 열려요."}
+          </p>
+          {/* [970 · C-38] "직접 모임을 만들어" 라고 적어 두고 만들기 버튼은 화면 맨 위(머리)에만
+              있었다 — 빈 상태 안에서 바로 열 수 있게 같은 모달을 단다. */}
+          <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+            {filtersActive && (
+              <button
+                type="button"
+                onClick={() => apply({ region: "all", status: "all", sort: "soon", q: "" })}
+                className="btn-soft rounded-lg px-4 py-2 text-xs"
+              >
+                필터 초기화
+              </button>
+            )}
+            <CreateGroupCta label="첫 모임 만들기" className="rounded-lg px-4 py-2 text-xs" />
+          </div>
         </div>
       ) : (
         <>

@@ -80,8 +80,11 @@ export function NotificationBell({ variant }: { variant: "desktop" | "mobile" })
   const size = variant === "desktop" ? 18 : 19;
 
   return (
+    /* [970 · A-19] 셸 링크는 프리페치 없음 — 벨은 두 벌(desktop·mobile) 마운트라 프리페치도
+       두 번 나갔다(사유·예외는 Header.tsx / TabBar.tsx). */
     <Link
       href="/notifications"
+      prefetch={false}
       aria-label={count > 0 ? `알림 ${count}건` : "알림"}
       className={cls}
     >

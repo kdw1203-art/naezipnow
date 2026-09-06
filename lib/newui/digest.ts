@@ -90,9 +90,10 @@ const MAJOR_REGIONS: Array<{ id: string; city: string }> = [
   { id: "incheon-bupyeong", city: "인천" },
 ];
 
-/** [967 · 31] 홈 카드와 같은 "eok" 얼굴 — 본체는 lib/format/krw.ts */
+/** [970 · B-31] 시장 요약 가격 — "short"(0.1억 단위, 1억 미만은 만원)로 통일.
+    예전 "eok"(8.51억)은 /analysis·지역 카드의 28.8억 과 자릿수가 달랐다. 본체는 lib/format/krw.ts */
 function formatEok(won: number): string {
-  return formatKrwWon(won, { style: "eok", below: "eok", empty: false });
+  return formatKrwWon(won, { style: "short" });
 }
 
 function deltaOf(changePct: number | undefined): { delta: string; tone: DigestDeltaTone } {

@@ -357,8 +357,9 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
             type="button"
             onClick={() => setSection(s.key)}
             className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] ${
+              /* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
               section === s.key
-                ? "bg-brand-navy font-bold text-surface"
+                ? "bg-brand-navy font-bold text-on-dark"
                 : "border border-line bg-surface font-semibold text-text-2"
             }`}
           >
@@ -526,8 +527,9 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                     type="button"
                     onClick={() => setYears(y)}
                     className={`rounded-full px-2.5 py-1 text-xs ${
+                      /* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
                       years === y
-                        ? "bg-brand-navy font-bold text-surface"
+                        ? "bg-brand-navy font-bold text-on-dark"
                         : "border border-line bg-surface text-text-2"
                     }`}
                   >

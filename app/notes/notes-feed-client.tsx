@@ -58,12 +58,14 @@ function shortLabel(n: FeedNote): string {
   return n.title.slice(0, 6);
 }
 
-/* ── 상단 스토리 줄 (최근 임장 · 인스타 스토리 느낌) ── */
+/* ── 상단 스토리 줄 (최근 임장 · 인스타 스토리 느낌) ──
+   [970 · B-04] 가장자리 붙이기는 PageShell 의 모바일 패딩(px-3.5)만큼만 — -mx-5 는
+   6px 을 더 빼서 가로 스크롤(넘침)을 만들었다. 아래 그리드도 같다. */
 function StoryRail({ notes }: { notes: FeedNote[] }) {
   const IG_RING =
     "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)";
   return (
-    <div className="-mx-5 overflow-x-auto px-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:rounded-2xl md:border md:border-line md:bg-surface md:px-4 md:py-3">
+    <div className="-mx-3.5 overflow-x-auto px-3.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:rounded-2xl md:border md:border-line md:bg-surface md:px-4 md:py-3">
       <div className="flex gap-3.5 pb-1 md:pb-0">
         {/* 내 스토리 = 노트 쓰기 */}
         <Link
@@ -311,6 +313,7 @@ export function NotesFeedClient({
   loggedIn = false,
   hasMore = false,
   pageSize = 30,
+  hasBestMonth = false,
 }: {
   notes: FeedNote[];
   /** 내 노트 뷰(?mine=1 · ?tab=mine) — 세션 사용자의 노트(비공개 포함) */
@@ -325,6 +328,8 @@ export function NotesFeedClient({
   hasMore?: boolean;
   /** [967 · 19] 다음 페이지 크기 — 서버 첫 페이지와 같은 값 */
   pageSize?: number;
+  /** [970 · B-25] /notes/best 에 뽑힌 달이 있는가 — 없으면(또는 못 읽었으면) 링크를 감춘다 */
+  hasBestMonth?: boolean;
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("최신");
@@ -423,17 +428,18 @@ export function NotesFeedClient({
           </p>
           {!mine && (
             <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 t-sub">
-              <Link href="/notes/best" className="font-bold text-primary underline">
-                이달의 공개 임장노트 — 선정 기준까지 공개 ›
-              </Link>
+              {/* [970 · B-25] 뽑힌 달이 하나라도 있을 때만 — 빈 화면으로 보내지 않는다 */}
+              {hasBestMonth && (
+                <Link href="/notes/best" className="font-bold text-primary underline">
+                  이달의 공개 임장노트 — 선정 기준까지 공개 ›
+                </Link>
+              )}
               {/* 임장 가이드(전략 §4-2) — 기록 허브에서 준비 허브로 잇는다 */}
               <Link href="/imjang" className="font-bold text-primary underline">
                 지역별 임장 가이드 — 답사 준비 ›
               </Link>
-              {/* [#143] 리포트 진열대 — 잠금 상태 선공개 */}
-              <Link href="/notes/market" className="font-bold text-primary underline">
-                리포트 진열대 — 판매 오픈 준비 중 ›
-              </Link>
+              {/* [970 · B-25] 리포트 진열대(/notes/market) 링크는 뺐다 — 판매 오픈 전 잠금
+                  화면이라 헤더에서 보낼 곳이 아니다(페이지 자체는 그대로). */}
             </p>
           )}
         </div>
@@ -542,7 +548,7 @@ export function NotesFeedClient({
           )
         ) : view === "grid" ? (
           // 모바일: 가장자리까지 붙는 촘촘한 3열(인스타 앱). 데스크탑: 넓은 4~5열 보드(둥근 카드·호버·여백)
-          <div className="-mx-5 grid grid-cols-3 gap-0.5 md:mx-0 md:grid-cols-4 md:gap-3.5 xl:grid-cols-5">
+          <div className="-mx-3.5 grid grid-cols-3 gap-0.5 md:mx-0 md:grid-cols-4 md:gap-3.5 xl:grid-cols-5">
             {/* [968 · 17] 첫 타일만 priority — 그리드·피드 중 한 뷰만 그려지므로 한 화면에 하나다 */}
             {visible.map((n, i) => (
               <GridTile key={n.id} n={n} priority={i === 0} />

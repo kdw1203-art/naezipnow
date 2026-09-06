@@ -16,10 +16,44 @@ import { PaymentSuccessMoment } from "./PaymentSuccessMoment";
 import { applyPlanForPayment, confirmTossOrder } from "@/lib/payments/confirm-toss-order";
 import { safeInternalPath } from "@/lib/safe-path";
 
-export const metadata: Metadata = {
-  title: "결제 완료 | 내집나우",
-  robots: { index: false, follow: false },
+/** 결제 결과 랜딩의 쿼리 파라미터(페이지 본문과 같은 모양) */
+type PaymentSuccessSearchParams = {
+  orderId?: string;
+  paymentKey?: string;
+  amount?: string;
+  provider?: string;
+  session_id?: string;
+  source?: string;
+  campaign?: string;
+  card?: string;
 };
+
+/* [970 · A-16] 실패 화면인데 <title> 이 "결제 완료" 로 고정돼 있었다(탭·히스토리·공유 미리보기가
+   거짓말). 본문의 `ok` 는 Stripe 세션 조회·토스 승인·원장 조회까지 거쳐 정해지므로 메타에서
+   그 호출을 반복하지 않는다(승인 호출은 부작용이 있다). 여기서는 본문이 **검증을 시도조차
+   못 하는** 파라미터 조합만 골라 "결제 확인 실패" 로 분기하는 파라미터 근사다 — 검증 정보가
+   있는데 실제 승인·조회가 실패한 경우는 제목이 "결제 완료" 로 남는다(본문 분기와 같은 순서). */
+function paramsLookVerifiable(sp: PaymentSuccessSearchParams): boolean {
+  if (sp.provider === "stripe") return Boolean(sp.session_id?.trim());
+  if (sp.provider === "toss-billing") return sp.card === "changed" || Boolean(sp.orderId);
+  if (sp.provider === "kakaopay") return Boolean(sp.orderId);
+  /* 본문은 Number(amount) 의 참/거짓으로 본다(0·NaN 은 승인 시도 없이 실패) */
+  if (sp.orderId && sp.paymentKey && sp.amount && Number(sp.amount)) return true;
+  /* orderId 만 있는 경우 — 프로덕션은 본문이 "검증 정보 누락" 실패, 개발은 목업 재확정 */
+  return Boolean(sp.orderId) && process.env.NODE_ENV !== "production";
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<PaymentSuccessSearchParams>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  return {
+    title: paramsLookVerifiable(sp) ? "결제 완료 | 내집나우" : "결제 확인 실패 | 내집나우",
+    robots: { index: false, follow: false },
+  };
+}
 
 export const dynamic = "force-dynamic";
 
@@ -318,9 +352,32 @@ export default async function PaymentSuccessPage({
         )}
 
         {/* [966] 페이월에 막혀 결제한 사람은 원래 하던 일로 — 주문 metadata 의 returnTo
-            (toss/create 가 내부 경로만 저장)를 1차 행동으로. 없으면 마이 페이지. */}
+            (toss/create 가 내부 경로만 저장)를 1차 행동으로. 없으면 마이 페이지.
+            [970 · A-16] 실패(!ok) 상태는 다음 행동이 "마이 페이지에서 플랜 확인" 이었다 —
+            확인 안 된 결제를 마이에서 볼 수 있을 리 없다. 1차 행동을 고객센터 결제·환불
+            문의(주문번호 프리필: SupportContactForm 이 ?category=payment&order= 를 읽는다)로,
+            2차를 구독 안내로 바꾼다. 제목(metadata)은 정적 블록이라 I5 몫 — 본문 h1 만 분기. */}
         <div className="mt-3 flex w-full flex-col gap-2.5">
-          {returnTo ? (
+          {!ok ? (
+            <>
+              <Link
+                href={`/support?category=payment${orderId ? `&order=${encodeURIComponent(orderId)}` : ""}`}
+                className="btn-primary rounded-[14px] p-[13px] text-center text-[13px] font-bold"
+              >
+                고객센터에 결제 확인 문의하기
+              </Link>
+              <Link
+                href="/subscription"
+                className="rounded-[14px] border border-line bg-surface p-[13px] text-center text-[13px] font-bold text-text-1"
+              >
+                구독 안내로 돌아가기
+              </Link>
+              <p className="text-[12px] leading-[1.6] text-text-3">
+                이 화면이 떴다면 이용권은 아직 켜지지 않았어요. 다시 결제하기 전에 문의를
+                먼저 남겨 주세요{orderId ? " — 주문번호가 문의에 함께 담겨요" : ""}.
+              </p>
+            </>
+          ) : returnTo ? (
             <>
               <Link href={returnTo} className="btn-primary rounded-[14px] p-[13px] text-center text-[13px] font-bold">
                 이어서 사용하기

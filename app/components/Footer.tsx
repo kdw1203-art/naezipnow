@@ -5,7 +5,8 @@ import { CookieSettingsLink } from "@/components/consent/cookie-settings-link";
 import { NO_PROFIT_GUARANTEE_TEXT } from "@/app/components/ComplianceNotice";
 
 /* P0-3 공통 푸터 — 사업자·통신판매업 고지(전자상거래법) + 약관 링크를 모든 페이지·모바일에 노출.
-   모바일에서는 하단 탭바와 겹치지 않게 pb-28 확보. */
+   모바일에서는 하단 탭바와 겹치지 않게 pb-28 확보.
+   [970 · A-29] 탭바 여유는 **여기 한 곳**만 — PageShell·홈 <main> 은 pb-6 로 내렸다. */
 
 const LEGAL_LINKS = [
   { label: "이용약관", href: "/legal/terms", bold: false },
@@ -38,7 +39,9 @@ export function Footer() {
       <div className="mx-auto flex max-w-[1240px] flex-col gap-2 t-sub text-text-3">
         {/* [962] 0행: 브랜드 잠금 + 슬로건 — 모든 페이지의 마지막 줄이 브랜드로 끝난다 */}
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3 border-b border-divider pb-4">
-          <Link href="/" aria-label="내집나우 홈" className="press njn-logo no-underline">
+          {/* [970 · A-19] 푸터 18개 링크는 뷰포트 프리페치를 끈다 — 페이지마다 RSC 프리페치
+              24건의 대부분이 푸터였다(사유·예외는 Header.tsx / TabBar.tsx). */}
+          <Link href="/" prefetch={false} aria-label="내집나우 홈" className="press njn-logo no-underline">
             <Logo size={19} />
           </Link>
           <span className="brand-slogan-band bg-transparent p-0">
@@ -98,6 +101,7 @@ export function Footer() {
             <Link
               key={l.href}
               href={l.href}
+              prefetch={false}
               className={
                 l.bold
                   ? "font-semibold text-text-2 underline-offset-2 hover:underline"

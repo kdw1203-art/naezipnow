@@ -31,11 +31,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const deal = await getDeal(id);
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` — 섹션 구분은 `—`, 브랜드 앞은 `|` 하나 */
   if (!deal) {
-    return { title: "개발물건을 찾을 수 없습니다 · 내집나우" };
+    return { title: "개발물건을 찾을 수 없습니다 | 내집나우" };
   }
   return {
-    title: `${deal.title} · 개발물건 중개 · 내집나우`,
+    title: `${deal.title} — 개발물건 중개 | 내집나우`,
     description:
       deal.summary ??
       `${deal.dealType} · ${deal.region ?? ""} · 사업규모 ${formatKrwEok(deal.totalCostKrw)}`,

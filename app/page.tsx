@@ -199,6 +199,15 @@ export default async function Home() {
   const regions = data.regions;
   const notes = data.notes;
   const news = data.news;
+  /* [970 · A-23] 동네이야기 행의 뉴스 폴백 — 다이제스트 티저와 같은 제목은 건너뛴다.
+     다 겹치면 제목 대신 건수만. 뉴스가 0건이면 null(호출부가 빈 상태 문구를 쓴다). */
+  const townNewsTeaser: string | null =
+    news.length === 0
+      ? null
+      : (() => {
+          const other = news.find((n) => n.title !== digestTeaser);
+          return other ? `뉴스 · ${other.title}` : `뉴스 ${news.length}건`;
+        })();
   /* [950] 공개 노트가 전부 Lab(데이터·AI 편집) 노트면 그 사실을 한 줄로 적는다 —
      "나 같은 사람의 노트"가 없다는 걸 숨기지 않는다(홈 비판 ⑥). 이웃 노트가 하나라도
      섞이면 캡션은 사라진다. */
@@ -357,7 +366,8 @@ export default async function Home() {
           Enter 를 눌러도 아무 데도 안 가는 상태였다(홈이 첫 Tab 대상이라 제일 잘 걸린다). */}
       <main
         id="main-content"
-        className="mx-auto w-full max-w-[1240px] flex-1 px-3.5 pb-32 pt-3.5 md:px-5 md:pb-16 md:pt-5"
+        /* [970 · A-29] pb-32 → pb-6 — PageShell 과 같은 값(탭바 여유는 Footer pb-28 한 곳) */
+        className="mx-auto w-full max-w-[1240px] flex-1 px-3.5 pb-6 pt-3.5 md:px-5 md:pb-16 md:pt-5"
       >
         {/* 이 문서의 유일한 H1. 시각 히어로는 뷰포트별로 두 벌이 다 그려지고
             로그인하면 둘 다 숨는다 — 그래서 제목을 히어로에 맡기면 h1 이
@@ -636,14 +646,15 @@ prefetch={false}
               <span className="flex items-center justify-between t-body font-semibold text-text-1">
                 동네이야기 <span className="text-primary">›</span>
               </span>
+              {/* [970 · A-23] 글이 없을 때의 뉴스 폴백이 바로 위 주간 다이제스트 티저(news[0])와
+                  같은 제목을 두 번 보여 줬다 — 다이제스트 티저와 다른 첫 기사를 고르고, 그것도
+                  없으면 "뉴스 N건" 으로. */}
               <span className="truncate t-sub text-text-3">
                 {failed.posts
                   ? "지금 불러오지 못했어요"
                   : posts.length > 0
                     ? posts[0].title
-                    : news.length > 0
-                      ? `뉴스 · ${news[0].title}`
-                      : "아직 올라온 글이 없어요 — 첫 글을 남겨 보세요"}
+                    : townNewsTeaser ?? "아직 올라온 글이 없어요 — 첫 글을 남겨 보세요"}
               </span>
             </Link>
             {/* [950] 수익모델이 홈에 없다는 지적(투자자 ④) — 무엇이 유료인지 한 줄로 잇는다.

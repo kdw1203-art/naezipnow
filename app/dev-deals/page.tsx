@@ -20,7 +20,8 @@ export function generateStaticParams() {
 }
 
 export const metadata: Metadata = {
-  title: "개발물건 중개 · 내집나우",
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+  title: "개발물건 중개 | 내집나우",
   description:
     "시행사·부동산사업자가 개발물건(정비사업·신축·부지)을 등록하면 시공사·설계사·신탁·PF 등 협력업체가 참여 문의를 보내는 B2B 디벨로퍼 매칭. 내집나우는 소개·중개(매칭)만 담당합니다.",
   robots: { index: true, follow: true },
@@ -98,12 +99,16 @@ export default async function DevDealsHubPage() {
       <div style={DEV_THEME}>
         {/* 헤더 · 역할 요약(면책 취지 포함) */}
         <div className="rise-in mb-4">
-          <h1 className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[19px] font-extrabold leading-[1.3] text-ink md:text-[21px]">
-            개발물건 중개
+          {/* [970 · C-42] h1 안에 배지 span 이 들어 있어 제목이 "개발물건 중개 B2B 디벨로퍼 매칭"
+              으로 읽혔다(스크린리더·검색 스니펫). 배지는 h1 밖 형제로. */}
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <h1 className="text-[19px] font-extrabold leading-[1.3] text-ink md:text-[21px]">
+              개발물건 중개
+            </h1>
             <span className="rounded-full bg-primary-soft px-2.5 py-1 text-[12px] font-bold text-primary">
               B2B 디벨로퍼 매칭
             </span>
-          </h1>
+          </div>
           <p className="mt-2 max-w-3xl text-[13px] leading-[1.7] text-text-2">
             시행사·개발을 원하는 부동산사업자가 <strong className="text-ink">개발물건</strong>
             (정비사업·신축·부지 등)을 등록하면,{" "}

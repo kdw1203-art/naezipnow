@@ -196,13 +196,27 @@ export async function getSupplyForArea(
   limit = 12,
   /** 곁다리 예산 신호 (항목 25) — 예산이 접히면 PostgREST 요청도 끊는다. */
   signal?: AbortSignal,
+  /** [970 · B-02] 상위 시/도("대구"·"서울") — 주면 그 시/도 행만(아래 Strict 설명) */
+  city?: string | null,
 ): Promise<SupplyItem[]> {
   try {
-    return await getSupplyForAreaStrict(areaName, limit, signal);
+    return await getSupplyForAreaStrict(areaName, limit, signal, city);
   } catch (e) {
     logger.error("[getSupplyForArea]", e);
     return [];
   }
+}
+
+/**
+ * [970 · B-02] 시/도 제한 필터(PostgREST or 구문). apartment_supply 는 `region`(청약홈
+ * SUBSCRPT_AREA_CODE_NM — "서울"·"대구" 같은 시/도)과 `address`(전체 주소) 두 컬럼을
+ * 가진다. 수동 적재분의 region 표기가 인제스트분과 같다는 보장이 코드에 없어 둘 중
+ * 하나만 맞아도 통과시킨다 — region 이 정확히 그 시/도이거나, 주소에 시/도명이 들어
+ * 있으면("대구광역시 중구 …"에 "대구"). 시/도명은 카탈로그 값이라 쉼표·괄호가 없다.
+ */
+function supplyCityFilter(city: string): string {
+  const c = city.trim().replace(/[,()]/g, "");
+  return `region.eq.${c},address.ilike.%${c}%`;
 }
 
 /**
@@ -214,6 +228,8 @@ export async function getSupplyForAreaStrict(
   areaName: string,
   limit = 12,
   signal?: AbortSignal,
+  /** [970 · B-02] 상위 시/도 — 없으면 예전처럼 자치구명만으로 찾는다(호출측 호환) */
+  city?: string | null,
 ): Promise<SupplyItem[]> {
   const name = areaName.trim();
   if (!name) return [];
@@ -225,6 +241,10 @@ export async function getSupplyForAreaStrict(
     .ilike("address", `%${name}%`)
     .order("move_in_ym", { ascending: true })
     .limit(limit);
+  /* [970 · B-02] "중구"만으로 찾으면 서울·인천·대구·울산·부산·대전 중구가 한 화면에
+     섞였다(대구 중구 페이지에 울산 입주물량). 시/도를 알면 그 시/도 행으로 좁힌다. */
+  const cityKey = city?.trim();
+  if (cityKey) q = q.or(supplyCityFilter(cityKey));
   if (signal) q = q.abortSignal(signal);
   const { data, error } = await q;
   if (error) throw new Error(`apartment_supply(${name}) 조회 실패: ${error.message}`);

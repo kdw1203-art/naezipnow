@@ -16,6 +16,7 @@ import type { RegionMarketSnapshot } from "@/lib/market/types";
 import { listPublicNoteCards } from "@/lib/inspection/store-db";
 import { settle, startDeadline } from "@/lib/data/section-budget";
 import { getSupplyForArea, type SupplyItem } from "@/lib/market/supply";
+import { catalogCityForRegionId } from "@/lib/market/sido-group";
 import type { PublicNoteCard } from "@/lib/inspection/store-db";
 import {
   findComplexTxRegionById,
@@ -249,10 +250,20 @@ export default async function RegionHubPage({
      예전의 ?complexes=30 방식은 searchParams 를 읽는 순간 페이지 전체가
      요청마다 서버 렌더가 되어 ISR 을 무력화했다(ExpandableComplexRows 주석). */
   const complexLimit = 30;
+  /* [970 · B-03] 상위 시/도는 카탈로그(REGION_CATALOG.city)에서 — 예전 폴백은
+     `incheon-` 접두가 아니면 전부 "서울"이라 대구 중구·부산 해운대구가 JSON-LD·
+     /supply 링크·브라우즈 링크에서 서울 소속으로 나갔다. */
+  const catalogCity = catalogCityForRegionId(id);
   const txRegion: ComplexTxRegion =
-    findComplexTxRegionById(id) ?? { id, name, city: id.startsWith("incheon-") ? "인천" : "서울" };
+    findComplexTxRegionById(id) ?? { id, name, city: catalogCity ?? "서울" };
   // 이 지역 자치구명 (예: "고양시 덕양구" → "덕양구") — 공급·정비사업 매칭 키
   const shortName = name.trim().split(/\s+/).pop() ?? name;
+  /* [970 · B-02] 공급·정비사업은 시/도 + 자치구 두 키로 좁힌다 — "중구"만으로는
+     서울·인천·대구·울산·부산·대전 중구가 한 페이지에 섞였다. */
+  const sido = txRegion.city;
+  /* 정비사업 sigungu 컬럼은 경기만 "성남시 수정구"처럼 시까지 적는다(seed·types 주석) —
+     경기는 카탈로그 이름 그대로, 광역시·특별시는 자치구명으로 맞춘다. */
+  const projectSigungu = sido === "경기" ? name.trim() : shortName;
 
   /* 곁다리 7개는 공유 마감시계 하나를 함께 본다. 하나가 늦어도 나머지가
      끝났으면 페이지는 8초 안에 그려진다.
@@ -287,12 +298,16 @@ export default async function RegionHubPage({
          사실로만 조립하는 곳이고, 시드는 수기 정리본이라 여기 섞으면 안 된다. */
       settle(
         `${shortName} 정비사업`,
-        listDbProjects({ sigungu: shortName, limit: 200, signal: budget.signal }),
+        listDbProjects({ sido, sigungu: projectSigungu, limit: 200, signal: budget.signal }),
         budget.expired,
       ),
       /* 웹16 — 목록은 6건만 보여주지만 연도별 미니 차트는 더 넓게 집계해야
          왜곡이 없다. 같은 단일 쿼리의 limit 만 24 로 올린다(추가 요청 없음). */
-      settle(`${shortName} 입주 예정 물량`, getSupplyForArea(shortName, 24, budget.signal), budget.expired),
+      settle(
+        `${sido} ${shortName} 입주 예정 물량`,
+        getSupplyForArea(shortName, 24, budget.signal, sido),
+        budget.expired,
+      ),
       /* A5 — 이 지역의 면적대·가격대 실거래 랜딩. 실제 존재하는 지역만 잡히고,
          없으면 null 이라 링크 섹션 자체가 렌더되지 않는다(죽은 링크를 만들지 않는다).
          여기서는 실패를 삼켜도 된다 — 이 페이지의 본문은 지역 시세 스냅샷이고 이건
@@ -921,12 +936,12 @@ export default async function RegionHubPage({
             />
           }
         />
-        {complexSummaries.length > 0 && (
+        {/* [970 · B-03] 브라우즈는 서울 25개 구만 다룬다(SEOUL_BROWSE_REGIONS) — 다른 시/도
+            지역에서 district=중구 로 보내면 강남구 폴백이 떴다. 서울일 때만 링크한다. */}
+        {complexSummaries.length > 0 && txRegion.city === "서울" && (
           <div className="mt-3 text-right">
             <Link
-              href={`/complex/browse?district=${encodeURIComponent(
-                txRegion.city === "서울" ? `서울 ${txRegion.name}` : txRegion.name,
-              )}`}
+              href={`/complex/browse?district=${encodeURIComponent(`서울 ${txRegion.name}`)}`}
               className="t-sub font-bold text-primary"
             >
               서울 전체 단지 브라우즈 →

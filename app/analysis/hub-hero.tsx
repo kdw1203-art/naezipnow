@@ -111,6 +111,19 @@ export function HubHero({
   toolCount: number;
 }) {
   const { picked, setPicked, query: q } = useHubPicked();
+  /* [970 · B-28] 좁은 화면 판정 — 서버·첫 렌더는 false(긴 placeholder)라 하이드레이션이 안 어긋난다 */
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const mql = window.matchMedia("(max-width: 480px)");
+    const sync = () => setNarrow(mql.matches);
+    sync();
+    if (typeof mql.addEventListener === "function") {
+      mql.addEventListener("change", sync);
+      return () => mql.removeEventListener("change", sync);
+    }
+    return undefined;
+  }, []);
   const regionHref = picked?.regionId
     ? `/analysis/timing?region=${encodeURIComponent(picked.regionId)}`
     : `/analysis/timing${q}`;
@@ -146,7 +159,8 @@ export function HubHero({
           onSelect={setPicked}
           showChip={false}
           label="① 단지 검색"
-          placeholder="단지명으로 검색 (예: 은마아파트)"
+          /* [970 · B-28] 좁은 화면(≤480px)에서는 예시까지 적으면 placeholder 가 잘렸다 */
+          placeholder={narrow ? "단지명 검색" : "단지명으로 검색 (예: 은마아파트)"}
         />
 
         {/* 절차는 화면당 한 번만(UI-10). 미측정 소요시간 약속은 뺐다(958). */}

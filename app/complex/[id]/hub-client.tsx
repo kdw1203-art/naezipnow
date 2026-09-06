@@ -246,7 +246,10 @@ export function WatchlistButton({
   );
 }
 
-const TABS = ["요약", "노트", "매물", "시세", "내 기록"] as const;
+/* [970 · B-17] "노트" 탭의 내용은 동네이야기(board_posts) 글이라 라벨을 "이야기"로 —
+   임장노트는 아래 ComplexNotesNewsAi 섹션이 따로 그린다. ?tab= id(notes)는 그대로
+   둔다(공유·북마크 호환). */
+const TABS = ["요약", "이야기", "매물", "시세", "내 기록"] as const;
 type Tab = (typeof TABS)[number];
 const DEFAULT_TAB: Tab = "요약";
 
@@ -254,7 +257,7 @@ const DEFAULT_TAB: Tab = "요약";
    퍼센트 인코딩된 한글이 실리지 않게). 모르는 값·없음 → 기본 탭. */
 const TAB_IDS: Record<Tab, string> = {
   요약: "summary",
-  노트: "notes",
+  이야기: "notes",
   매물: "listings",
   시세: "price",
   "내 기록": "mine",
@@ -300,6 +303,7 @@ export function ComplexHubTabs({
   complexName,
   noteHref,
   altComplexId,
+  priceRegion,
 }: {
   aiTitle: string;
   aiBody: string;
@@ -324,6 +328,8 @@ export function ComplexHubTabs({
   noteHref?: string;
   /** [967 · 15] 같은 단지의 다른 표기 id(대장 매칭 시 kapt.…) — 내 기록 조회에 함께 쓴다 */
   altComplexId?: string;
+  /** [970 · B-39] 시세 탭 "AI 시세 분석 보기"에 실을 지역("서울 중랑구") — 없으면 지역 없이 */
+  priceRegion?: string;
 }) {
   /* SSR·첫 하이드레이션은 언제나 기본 탭 — 프리렌더 HTML 과 정확히 일치해야 한다.
      주소의 ?tab= 은 마운트 뒤에 읽는다([967 · 14]). useSearchParams 를 쓰지 않는 이유:
@@ -389,8 +395,9 @@ export function ComplexHubTabs({
             aria-selected={tab === t}
             onClick={() => setTab(t)}
             className={`chip px-3.5 py-2 transition-colors ${
+              /* [970 · B-06] 네이비 탭 글자 text-surface → text-on-dark(다크에서 안 보였다) */
               tab === t
-                ? "bg-brand-navy font-bold! text-surface"
+                ? "bg-brand-navy font-bold! text-on-dark"
                 : "border border-line bg-surface text-text-2"
             }`}
           >
@@ -447,8 +454,8 @@ export function ComplexHubTabs({
         </div>
       )}
 
-      {/* ===== 노트 ===== */}
-      {tab === "노트" && (
+      {/* ===== 이야기 (동네이야기 글) ===== */}
+      {tab === "이야기" && (
         <div className="rise-in-3 flex flex-col gap-2.5" role="tabpanel">
           {notes.length === 0 && (
             <div className="card rounded-[14px] px-[15px] py-6 text-center t-body text-text-3">
@@ -461,7 +468,9 @@ export function ComplexHubTabs({
                   </div>
                 </>
               ) : (
-                "아직 이 단지에 공개된 임장노트가 없어요"
+                /* [970 · B-17] 이 목록은 동네이야기 글 — "임장노트가 없다"고 적으면 아래
+                   임장노트 섹션과 어긋난다 */
+                "아직 이 단지 이야기가 없어요"
               )}
             </div>
           )}
@@ -485,8 +494,9 @@ export function ComplexHubTabs({
               이 단지 이야기 쓰기
             </Link>
           )}
-          <Link href="/notes" className="btn-soft rounded-xl p-3 text-center t-body">
-            공개 노트 모두 보기
+          {/* [970 · B-17] 탭 내용(동네이야기)과 같은 곳으로 — 예전엔 /notes(임장노트)로 보냈다 */}
+          <Link href="/town" className="btn-soft rounded-xl p-3 text-center t-body">
+            동네이야기 모두 보기
           </Link>
         </div>
       )}
@@ -542,6 +552,7 @@ export function ComplexHubTabs({
             latestAvgManwon={latestAvgManwon}
             complexName={complexName}
             priceChart={priceChart}
+            region={priceRegion}
           />
         </div>
       )}

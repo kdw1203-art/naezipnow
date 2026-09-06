@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getMeeting } from "@/lib/meetings/store-db";
 import { safeAuth } from "@/lib/safe-auth";
 import { ChatRoom } from "../ChatRoom";
+import { formatKstMeetingTime } from "@/lib/format/kst";
 
 /* 시안 8p — 모임 그룹 채팅방 (+ 10c 메뉴)
    /api/groups/[id]/chat(입장·멱등) + /api/chat/rooms/[roomId]/messages 실배선 */
@@ -11,17 +12,10 @@ export const dynamic = "force-dynamic";
 /* 비공개 모임 채팅방 — 참여자만 접근하는 화면이라 색인 금지. */
 export const metadata = { robots: { index: false, follow: false } };
 
+/* [970 · C-01] timeZone 없는 toLocaleString — 서버(UTC)에서 9시간 이른 일시. 한국 시간 고정. */
 function formatSchedule(iso: string | null): string | null {
   if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleString("ko-KR", {
-    month: "numeric",
-    day: "numeric",
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatKstMeetingTime(iso) || null;
 }
 
 export default async function TownGroupChatPage({

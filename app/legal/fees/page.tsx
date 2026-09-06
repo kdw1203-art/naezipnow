@@ -9,8 +9,9 @@ import { getBusinessInfo } from "@/lib/brand/business-info";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "거래·수수료 안내",
+  /* [970 · A-10] 구 브랜드 "nuguzip" → 내집나우(본문·데이터 필드는 다른 에이전트가 고쳤고, 메타는 여기) */
   description:
-    "nuguzip 구매자·판매자·전문가 인증 수수료. 크몽 대비 예측 가능한 부동산 의사결정 거래 체계.",
+    "내집나우 구매자·판매자·전문가 인증 수수료. 크몽 대비 예측 가능한 부동산 의사결정 거래 체계.",
   path: "/legal/fees",
 });
 
@@ -20,8 +21,10 @@ export default function FeesPolicyPage() {
     // 페이지 전환 모션 일관화 — globals.css riseIn(dur-md) 재사용
     <main className="rise-in mx-auto w-full max-w-3xl">
       <h1 className="text-2xl font-bold text-ink">거래·수수료 안내</h1>
+      {/* [970 · A-10] 구 브랜드 "nuguzip" 표기 → 내집나우(본문 3곳 + 데이터 필드 ours).
+          metadata description 의 같은 표기는 I5 몫. */}
       <p className="mt-2 text-[13px] leading-relaxed text-text-2">
-        nuguzip은 부동산 의사결정 도구에 맞게 거래 조건을 공개합니다. VAT·PG 실비는 별도 안내가
+        내집나우는 부동산 의사결정 도구에 맞게 거래 조건을 공개합니다. VAT·PG 실비는 별도 안내가
         없는 한 결제 영수증 기준입니다. 멤버십 요금은{" "}
         <Link href="/subscription" className="font-semibold text-primary hover:underline">
           요금제
@@ -32,7 +35,8 @@ export default function FeesPolicyPage() {
       <section className="mt-8">
         <h2 className="text-[19px] font-bold text-ink">마켓플레이스 수수료</h2>
         <p className="mt-1 text-xs text-text-3">
-          크몽 공개 기준과 비교 — nuguzip 제안 요율 (2026년 6월 기준)
+          크몽 공개 기준과 비교 — 내집나우 요율. 리포트 판매 수수료는 정산 계산·요금제
+          비교표와 같은 값이에요.
         </p>
         <div className="mt-3 overflow-x-auto rounded-[14px] border border-line">
           <table className="w-full border-collapse text-xs">
@@ -45,7 +49,7 @@ export default function FeesPolicyPage() {
                   크몽 공개
                 </th>
                 <th className="border-b border-line px-3 py-2 font-semibold text-primary">
-                  nuguzip
+                  내집나우
                 </th>
               </tr>
             </thead>
@@ -55,7 +59,7 @@ export default function FeesPolicyPage() {
                   <td className="px-3 py-2 font-medium text-text-1">{row.label}</td>
                   <td className="px-3 py-2 text-text-2">{row.kmongPublic ?? "—"}</td>
                   <td className="px-3 py-2 font-semibold text-ink">
-                    {row.nuguzip}
+                    {row.ours}
                     {row.note ? (
                       <span className="mt-0.5 block font-normal text-text-3">
                         {row.note}

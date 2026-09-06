@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getNote } from "@/lib/inspection/store-db";
 import { safeAuth } from "@/lib/safe-auth";
 import { NoteForm, type NoteFormInitialNote } from "../../new/NoteForm";
@@ -9,7 +9,8 @@ import { NoteForm, type NoteFormInitialNote } from "../../new/NoteForm";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "임장노트 수정 — 내집나우",
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+  title: "임장노트 수정 | 내집나우",
   robots: { index: false, follow: false },
 };
 
@@ -25,9 +26,14 @@ export default async function NoteEditPage({
   /* 조회 실패를 notFound() 로 바꾸면 "삭제된 노트"라고 단정하는 셈이다.
      자기 글을 고치러 온 사람에게 그 화면을 보여주면 안 된다 — 던져서 5xx 가
      되게 두고, 사용자는 새로고침으로 되돌아올 수 있게 한다. */
+  /* [970 · B-13] 비로그인은 404 가 아니라 로그인으로 — 세션이 끊긴 채 "수정"을 누른
+     소유자에게 "없는 노트"라고 답하고 있었다. 비소유자만 존재를 숨긴다(404). */
+  if (!email) {
+    redirect(`/login?callbackUrl=${encodeURIComponent(`/notes/${id}/edit`)}`);
+  }
   const note = await getNote(id);
   if (!note) notFound();
-  if (!email || note.authorEmail.toLowerCase() !== email) notFound();
+  if (note.authorEmail.toLowerCase() !== email) notFound();
 
   const initial: NoteFormInitialNote = {
     id: note.id,

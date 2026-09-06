@@ -221,7 +221,8 @@ export function SupplyClient({
         {/* 월별 입주 물량 — apartment_supply 실집계(월·세대수) */}
         <div className="chart-card text-primary" data-reveal="">
           <div className="chart-head">
-            <span className="t-section text-ink">월별 입주 물량</span>
+            {/* [970 · B-44] 섹션 제목은 h2 — div/span 이라 문서 개요에 섹션이 없었다 */}
+            <h2 className="t-section text-ink">월별 입주 물량</h2>
             <span className="t-caption ml-auto text-text-3">{scope}· 세대수 기준</span>
           </div>
 
@@ -303,9 +304,9 @@ export function SupplyClient({
         {featured.length > 0 && (
           <>
             <div className="rise-in-2 flex items-baseline justify-between px-1">
-              <span className="text-xs font-extrabold text-primary">
+              <h2 className="text-xs font-extrabold text-primary">
                 이번 분기 입주 · {thisQuarter?.items.length ?? 0}곳
-              </span>
+              </h2>
               {thisQuarter && (
                 <span className="t-sub text-text-3">
                   {thisQuarter.label} · {thisQuarter.households.toLocaleString()}세대
@@ -360,9 +361,9 @@ export function SupplyClient({
         {/* 다가오는 입주 (예정) — 청약 센터 예정 카드 */}
         {upcomingShown.length > 0 && (
           <>
-            <div className="rise-in-3 px-1 pt-1.5 text-xs font-extrabold text-text-3">
+            <h2 className="rise-in-3 px-1 pt-1.5 text-xs font-extrabold text-text-3">
               다가오는 입주 (예정) · {upcomingItems.length.toLocaleString()}곳
-            </div>
+            </h2>
             {upcomingShown.map((s, i) => (
               <div
                 key={`next-${s.aptName ?? "미정"}-${i}`}
@@ -404,11 +405,11 @@ export function SupplyClient({
 
         {/* 지난·전체 입주 예정 단지 — 곳수는 전량 기준(조용한 200 상한 정정),
             표는 200행에서 시작하고 "더 보기"로 펼친다 (상한을 가리지 않는다). */}
-        <div className="rise-in-4 px-1 pt-1.5 text-xs font-extrabold text-text-3">
+        <h2 className="rise-in-4 px-1 pt-1.5 text-xs font-extrabold text-text-3">
           {list.length > 0
             ? `지난·전체 입주 예정 단지 · ${list.length.toLocaleString()}곳`
             : "지난·전체 입주 예정 단지"}
-        </div>
+        </h2>
         {list.length === 0 ? (
           <div className="rise-in-4 card rounded-2xl px-4 py-8 text-center t-body text-text-3">
             해당 지역 입주 예정 물량 데이터가 없어요.
@@ -505,9 +506,9 @@ export function SupplyClient({
             pushState 버튼이라 서버 왕복이 없고, 활성 지역을 다시 누르면 전국으로
             돌아온다 (예전엔 전국으로 돌아갈 컨트롤 자체가 없었다). */}
         <div className="rise-in-3 card flex flex-col gap-1 rounded-[18px] p-[18px]">
-          <div className="mb-1 t-body font-extrabold text-ink">
+          <h2 className="mb-1 t-body font-extrabold text-ink">
             지역별 입주 요약
-          </div>
+          </h2>
           {regions.length === 0 ? (
             <p className="t-caption text-text-3">
               표시할 지역 데이터가 없어요.

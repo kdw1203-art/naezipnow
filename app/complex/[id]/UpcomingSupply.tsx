@@ -19,12 +19,20 @@ function currentYm(): string {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export async function UpcomingSupply({ area }: { area: string }) {
+export async function UpcomingSupply({
+  area,
+  city = "",
+}: {
+  area: string;
+  /** [970 · B-02] 시/도 — "중구"만으로는 여섯 도시의 입주물량이 섞인다(page.tsx v.city) */
+  city?: string | null;
+}) {
   const name = area.trim();
   if (!name) return null;
+  const sido = (city ?? "").trim();
 
   // [968 · 1] 공유 예산 3초 — 넘기면 이번 렌더만 접는다
-  const items = await withSectionBudget(loadUpcomingSupply(name)).catch(() => []);
+  const items = await withSectionBudget(loadUpcomingSupply(name, sido)).catch(() => []);
   if (items.length === 0) return null;
 
   // 향후(현재월 이상) 우선, 부족하면 최근 물량으로 채움

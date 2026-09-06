@@ -41,6 +41,15 @@ import {
 import { resizeImageFiles } from "@/lib/client/image-resize";
 import { readExifTakenAt } from "@/lib/client/exif-datetime";
 import { useUnsavedGuard } from "@/lib/client/use-unsaved-guard";
+import {
+  CHECK_ITEMS,
+  checksFromSavedNote,
+  composeScoresFromChecks,
+  countCheckedItems,
+  isNoteLevel,
+  NOTE_LEVELS,
+  type NoteLevel,
+} from "@/lib/notes/note-scores";
 /* [OPT-27] 음성 녹음기는 새 노트에서만 쓰인다 — 폼 첫 로드 번들에서 분리 */
 import nextDynamic from "next/dynamic";
 const VoiceMemoRecorder = nextDynamic(
@@ -55,21 +64,14 @@ const VoiceMemoRecorder = nextDynamic(
    - #45 임시저장: localStorage 1초 디바운스 자동 저장 — 작성은 nz_note_draft,
      수정은 nz_note_draft:edit:<id> ([967 · 9·10] noteDraftKey) */
 
-const LEVELS = ["좋음", "보통", "아쉬움"] as const;
-type Level = (typeof LEVELS)[number];
+const LEVELS = NOTE_LEVELS;
+type Level = NoteLevel;
 
-/** 현장 감각 평가 — 5축(scores)로 매핑되는 항목 */
-const CHECK_DEFAULTS: Record<string, Level> = {
-  채광: "좋음",
-  소음: "보통",
-  주차: "아쉬움",
-  교통: "좋음",
-  경사: "보통",
-  보안: "보통",
-  학군: "보통",
-  관리: "보통",
-  호재: "보통",
-};
+/* [970 · B-10] 현장 체크 9항목 — 예전 CHECK_DEFAULTS(채광 좋음·주차 아쉬움…)는 지웠다.
+   기본값이 있으면 아무것도 고르지 않은 노트가 "평가된 채" 저장돼 상세·비교·AI 재료에
+   지어낸 점수가 흘렀다. 이제 고른 항목만 남고(빈 객체에서 시작), 축 점수 합성은
+   lib/notes/note-scores(미선택 축 = 0 = 미입력)가 맡는다. */
+const CHECK_KEYS: readonly string[] = CHECK_ITEMS;
 
 const VISIT_GROUPS: { label: string; options: string[] }[] = [
   { label: "유형", options: ["아파트", "빌라", "오피스텔"] },
@@ -157,7 +159,6 @@ const TODO_DEFAULTS: TodoItem[] = [
   { text: "단지 내 소음원(놀이터·도로) 체감", level: "보통" },
 ];
 
-const LEVEL_SCORE: Record<Level, number> = { 좋음: 5, 보통: 3, 아쉬움: 1 };
 
 const MAX_PHOTOS = 10;
 /* [967 · 6] 동시 업로드 수 — /api/upload 는 1분 10회 제한이라 3이면 10장이 한
@@ -262,7 +263,8 @@ type NoteDraft = {
   visit: Record<string, string>;
   tags: string[];
   doneTodos: string[];
-  satisfaction: number;
+  /** [970 · B-10] null = 미입력(기본). 예전 초안의 숫자는 그대로 읽는다 */
+  satisfaction: number | null;
   memo: string;
   /* 선택 필드(구버전 드래프트 호환) */
   loc?: NoteLocation;
@@ -290,7 +292,7 @@ function parseDraft(raw: string | null): NoteDraft | null {
     if (
       typeof o.savedAt !== "string" ||
       typeof o.memo !== "string" ||
-      typeof o.satisfaction !== "number" ||
+      (typeof o.satisfaction !== "number" && o.satisfaction !== null) ||
       !o.checks ||
       typeof o.checks !== "object" ||
       !o.visit ||
@@ -302,9 +304,7 @@ function parseDraft(raw: string | null): NoteDraft | null {
     }
     const checks: Record<string, Level> = {};
     for (const [k, val] of Object.entries(o.checks as Record<string, unknown>)) {
-      if (typeof val === "string" && (LEVELS as readonly string[]).includes(val)) {
-        checks[k] = val as Level;
-      }
+      if (isNoteLevel(val)) checks[k] = val;
     }
     const visit: Record<string, string> = {};
     for (const [k, val] of Object.entries(o.visit as Record<string, unknown>)) {
@@ -342,7 +342,7 @@ function parseDraft(raw: string | null): NoteDraft | null {
       visit,
       tags: o.tags,
       doneTodos: o.doneTodos,
-      satisfaction: o.satisfaction,
+      satisfaction: typeof o.satisfaction === "number" ? o.satisfaction : null,
       memo: o.memo,
       loc,
       photos: isStringArray(o.photos) ? o.photos : undefined,
@@ -367,7 +367,7 @@ type DraftComparable = {
   visit: Record<string, string>;
   tags: string[];
   doneTodos: string[];
-  satisfaction: number;
+  satisfaction: number | null;
   memo: string;
   loc?: NoteLocation;
   photos?: string[];
@@ -408,36 +408,10 @@ function clockLabel(iso: string): string | null {
 
 /* ===== 수정 모드 초기값 매핑 ===== */
 
-function levelFromScore(v: number): Level {
-  if (v >= 4) return "좋음";
-  if (v > 0 && v <= 2) return "아쉬움";
-  return "보통";
-}
-
-/* 저장 시 점수 매핑의 근사 역변환 — 세분 항목은 같은 축 점수로 복원 */
+/* [970 · B-10] 저장 노트 → 체크 복원 — fieldRatings 에 적힌 키만(기본값으로 채우지 않는다),
+   구버전은 축 점수 역변환(0 축은 비움). 본체는 lib/notes/note-scores. */
 function checksFromNote(n: NoteFormInitialNote): Record<string, Level> {
-  const fromMeta = n.metadata?.fieldRatings;
-  if (fromMeta && typeof fromMeta === "object") {
-    const out = { ...CHECK_DEFAULTS };
-    for (const [k, val] of Object.entries(fromMeta as Record<string, unknown>)) {
-      if (typeof val === "string" && (LEVELS as readonly string[]).includes(val)) {
-        out[k] = val as Level;
-      }
-    }
-    return out;
-  }
-  const facility = levelFromScore(n.scores.facility);
-  return {
-    채광: facility,
-    소음: facility,
-    주차: facility,
-    보안: facility,
-    관리: facility,
-    교통: levelFromScore(n.scores.transport),
-    경사: levelFromScore(n.scores.location),
-    학군: levelFromScore(n.scores.school),
-    호재: levelFromScore(n.scores.future),
-  };
+  return checksFromSavedNote(n.metadata?.fieldRatings, n.scores);
 }
 
 function groupCheckedFromNote(n: NoteFormInitialNote | null | undefined): Record<string, boolean> {
@@ -599,8 +573,9 @@ export function NoteForm({
     }
   }, [isEdit]);
 
+  /* [970 · B-10] 새 노트는 빈 객체 — 고른 항목만 담긴다 */
   const [checks, setChecks] = useState<Record<string, Level>>(() =>
-    initialNote ? checksFromNote(initialNote) : CHECK_DEFAULTS,
+    initialNote ? checksFromNote(initialNote) : {},
   );
   const [visit, setVisit] = useState<Record<string, string>>(() =>
     visitFromNote(initialNote),
@@ -760,9 +735,10 @@ export function NoteForm({
       ctrl.abort();
     };
   }, [loc.region, loc.aptName, visit]);
-  const [satisfaction, setSatisfaction] = useState(() => {
+  /* [970 · B-10] 기본 null(미입력) — 예전 7.5 기본값은 안 건드린 노트도 "만족 7.5"로 저장했다 */
+  const [satisfaction, setSatisfaction] = useState<number | null>(() => {
     const v = metaNumber(initialNote?.metadata, "satisfaction");
-    return v == null ? 7.5 : Math.max(0, Math.min(10, v));
+    return v == null ? null : Math.max(0, Math.min(10, v));
   });
   /* 메모·태그는 기본 빈 값 — 예시 문구는 placeholder 로만 노출.
      작성 모드에서 ?memo= 프리셋이 오면 초안으로 채운다. */
@@ -1074,7 +1050,7 @@ export function NoteForm({
 
   const restoreDraft = () => {
     if (!pendingDraft) return;
-    setChecks({ ...CHECK_DEFAULTS, ...pendingDraft.checks });
+    setChecks({ ...pendingDraft.checks });
     setVisit((prev) => ({ ...prev, ...pendingDraft.visit }));
     setTags(pendingDraft.tags);
     setTagDefs((prev) => {
@@ -1397,18 +1373,28 @@ export function NoteForm({
   }, []);
   const showSaveBar = !ctaInView;
 
+  /* [970 · B-11] 위치 카드 — 검증 오류 때 여기로 스크롤한다(오류 문구는 3,000px 아래
+     CTA 블록에만 있었고, 저장 바에서 누른 사람은 아무 변화도 못 봤다) */
+  const locationRef = useRef<HTMLDivElement>(null);
+
   const handleSave = async () => {
     if (saving || uploading) return;
     const aptName = loc.aptName.trim();
     const region = loc.region.trim();
     if (!aptName || !region) {
       setSaveError("단지·주소를 먼저 검색해 위치를 선택해 주세요.");
+      const reduce =
+        typeof window !== "undefined" &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      locationRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
       return;
     }
     setSaving(true);
     setNeedLogin(false);
     setSaveError(null);
-    const lv = (k: string): number => LEVEL_SCORE[checks[k] ?? "보통"];
+    /* [970 · B-10] 고른 항목만 축 점수로 — 미선택 축은 0(서버 규약 "미입력") */
+    const scores = composeScoresFromChecks(checks);
     const posTags = tagDefs.filter((t) => t.tone === "pos" && tags.includes(t.label));
     const negTags = tagDefs.filter((t) => t.tone === "neg" && tags.includes(t.label));
     const intent = intentFromVisitPurpose(visit["목적"]);
@@ -1437,15 +1423,7 @@ export function NoteForm({
         transportation: visit["시간대"] ?? null,
         weather: weather.trim() || null,
         summary: memo.trim() || null,
-        scores: {
-          location: Math.round((lv("경사") + lv("교통")) / 2),
-          school: lv("학군"),
-          transport: lv("교통"),
-          facility: Math.round(
-            (lv("채광") + lv("소음") + lv("주차") + lv("보안") + lv("관리")) / 5,
-          ),
-          future: lv("호재"),
-        },
+        scores,
         checklist: [...categoryChecklist, ...todoChecklist],
         sections: {
           memo: memo.trim() || undefined,
@@ -1464,7 +1442,8 @@ export function NoteForm({
           complexId: loc.complexId ?? undefined,
           lat: loc.lat ?? undefined,
           lng: loc.lng ?? undefined,
-          satisfaction,
+          /* [970 · B-10] 미입력이면 키를 아예 보내지 않는다(0 이나 7.5 로 지어내지 않는다) */
+          satisfaction: satisfaction ?? undefined,
           templateId: template?.id ?? undefined,
           propertyType: visit["유형"] || undefined,
           visitTimeSlot: visit["시간대"] || undefined,
@@ -1477,6 +1456,7 @@ export function NoteForm({
               : undefined,
           investorRole: investorRoleFromPurpose(visit["목적"]),
           weather: weather.trim() || undefined,
+          /* [970 · B-10] 고른 항목만 — 상세 4축이 이 키로 "미입력"을 구분한다 */
           fieldRatings: checks,
           /* [944] AI 초안 사용 흔적 — 점수 추정이 섞인 노트는 상세에서 라벨로
              구분할 근거가 된다. 라벨 없는 추정 점수는 지어낸 값과 같다. */
@@ -1607,12 +1587,101 @@ export function NoteForm({
     }
   };
 
+  /* [970 · B-12] 업로드 진행·실패 블록 — 상단 "사진 먼저 담기" 아래와 하단 사진 섹션
+     두 곳에 그린다. 예전엔 하단(3,200px 아래)에만 있어 상단 버튼으로 담은 사람은
+     진행도·실패를 보지 못했다. 라이브 영역(role=status)은 한 곳(하단)만 — 같은 변화를
+     두 번 읽어 주지 않는다. */
+  const renderUploadProgress = (live: boolean) =>
+    uploads.length > 0 ? (
+      <div className="flex flex-col gap-2 rounded-xl border border-line bg-bg/60 px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2">
+          {/* 라이브 영역은 요약 줄만 — 파일별 % 까지 읽어 주면 소음이 된다 */}
+          <span role={live ? "status" : undefined} className="t-sub font-bold text-text-1">
+            {uploadProgressText ?? uploadFailureText ?? "업로드 완료"}
+          </span>
+          {uploadFailed > 0 && !uploading && (
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={retryFailedUploads}
+                className="btn-soft min-h-[36px] rounded-lg px-3 t-sub font-bold"
+              >
+                다시 시도
+              </button>
+              <button
+                type="button"
+                onClick={() => dropUploads((u) => u.status !== "uploading")}
+                aria-label="실패한 사진 목록 닫기"
+                className="tap grid h-7 w-7 place-items-center rounded-full text-text-3"
+              >
+                <Icon name="x" size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+        <ul className="flex gap-2 overflow-x-auto" aria-label="업로드 중인 사진">
+          {uploads.map((u) => (
+            <li key={u.id} className="relative shrink-0" title={u.error ?? u.name}>
+              {u.preview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={u.preview}
+                  alt={u.name}
+                  className={`h-12 w-16 rounded-lg object-cover ${
+                    u.status === "failed" ? "opacity-50 grayscale" : ""
+                  }`}
+                />
+              ) : (
+                <span className="grid h-12 w-16 place-items-center rounded-lg bg-bg text-text-3">
+                  <Icon name="camera" size={16} />
+                </span>
+              )}
+              {u.status === "uploading" && (
+                <span className="absolute inset-0 grid place-items-center rounded-lg bg-brand-navy/45 t-caption font-bold text-on-dark">
+                  {typeof u.pct === "number" ? (
+                    `${u.pct}%`
+                  ) : (
+                    <span className="njn-ring" aria-hidden="true" />
+                  )}
+                </span>
+              )}
+              {u.status === "done" && (
+                <span className="absolute -right-1 -top-1 grid h-[18px] w-[18px] place-items-center rounded-full bg-success text-on-dark">
+                  <Icon name="check" size={11} />
+                </span>
+              )}
+              {u.status === "failed" && (
+                <span className="absolute inset-x-0 bottom-0 rounded-b-lg bg-danger px-1 text-center t-caption font-bold text-white">
+                  실패
+                </span>
+              )}
+              <span className="sr-only">
+                {u.name} —{" "}
+                {u.status === "uploading"
+                  ? "업로드 중"
+                  : u.status === "done"
+                    ? "완료"
+                    : `실패${u.error ? `: ${u.error}` : ""}`}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {uploadFailed > 0 && !uploading && (
+          <p className="t-caption text-text-3">
+            {uploads.find((u) => u.status === "failed")?.error ?? "사진 업로드에 실패했어요."}
+            {" "}성공한 사진은 그대로 남아 있어요.
+          </p>
+        )}
+      </div>
+    ) : null;
+
   /* 입력 진행도 — 예전엔 "2/3 단계"와 w-[66%] 하드코딩이었다. 이 폼은 단계가 없는
      단일 화면이고 1·3 단계로 갈 곳도 없었으며, 아무리 채워 넣어도 바가 움직이지 않았다.
-     이제 사용자가 실제로 넣은 것만 센다 — 현장 체크·만족도는 기본값이 미리 들어가 있어
-     '입력했다'고 말할 수 없으므로 세지 않는다(안 건드려도 채워진 것처럼 보이면 또 거짓말). */
+     이제 사용자가 실제로 넣은 것만 센다. [970 · B-10] 현장 체크·만족도는 기본값이 사라져
+     (빈 상태에서 시작) 이제 "고른 것"만 세므로 진행도에 넣어도 거짓이 아니다. */
   const progressItems = [
     { label: "위치", done: Boolean(loc.aptName.trim() && loc.region.trim()) },
+    { label: "현장 체크", done: countCheckedItems(checks) > 0 || satisfaction !== null },
     { label: "메모", done: memo.trim().length > 0 },
     { label: "태그", done: tags.length > 0 },
     {
@@ -1641,9 +1710,10 @@ export function NoteForm({
           ✕
         </Link>
         <div className="flex flex-col items-center">
-          <div className="t-section text-ink">
+          {/* [970 · B-22] 이 화면의 유일한 제목 — h1 이 없었다 */}
+          <h1 className="t-section text-ink">
             {isEdit ? "임장노트 수정" : "임장노트"}
-          </div>
+          </h1>
           <div className="t-caption text-text-3">
             {isEdit ? "내 기록 수정" : "현장 기록"} · {progressDone}/
             {progressItems.length} 항목 입력
@@ -1781,11 +1851,14 @@ export function NoteForm({
               >
                 <Icon name="📷" size={16} className="inline shrink-0 align-middle" />
                 <span className="truncate">
+                  {/* [970 · B-23] 퀵모드는 촬영 버튼이 앞에 와 폭이 좁다 — 짧은 라벨 */}
                   {uploading
                     ? "업로드 중…"
-                    : photos.length > 0
-                      ? `사진 먼저 담기 (${photos.length}/${MAX_PHOTOS})`
-                      : "사진 먼저 담기 — 현장이면 지금 찍어 두세요"}
+                    : quickMode
+                      ? `사진 담기${photos.length > 0 ? ` (${photos.length}/${MAX_PHOTOS})` : ""}`
+                      : photos.length > 0
+                        ? `사진 먼저 담기 (${photos.length}/${MAX_PHOTOS})`
+                        : "사진 먼저 담기 — 현장이면 지금 찍어 두세요"}
                 </span>
               </button>
             );
@@ -1809,14 +1882,29 @@ export function NoteForm({
             /* DOM 순서까지 바꾼다 — 시각 순서만 뒤집으면(flex-row-reverse) 스크린리더·
                Tab 순서는 여전히 담기가 먼저다. */
             return (
-              <div className="flex gap-2">
-                {quickMode ? [captureBtn, pickBtn] : [pickBtn, captureBtn]}
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  {quickMode ? [captureBtn, pickBtn] : [pickBtn, captureBtn]}
+                </div>
+                {/* [970 · B-12] 상단에서 담은 사진의 진행·실패를 바로 아래에서 본다 */}
+                {renderUploadProgress(false)}
               </div>
             );
           })()}
+        {/* [970 · B-12] 로그인 안내도 상단에 — 저장 바(B-11)에서 401 을 받은 사람은 폼 중간에 있다 */}
+        {needLogin && (
+          <div className="rounded-[14px] border border-[rgba(29,79,216,.2)] bg-[rgba(29,79,216,.08)] px-4 py-3 text-center t-body text-primary">
+            저장하려면 로그인이 필요해요 — 작성한 내용은 유지돼요.{" "}
+            <Link href={loginHref} className="font-extrabold underline underline-offset-2">
+              로그인하기 ›
+            </Link>
+          </div>
+        )}
 
-        {/* 위치 카드 — 단지·주소 검색으로 연결 */}
-        <NoteLocationSearch value={loc} onChange={setLoc} />
+        {/* 위치 카드 — 단지·주소 검색으로 연결. [970 · B-11] 검증 오류의 스크롤 목적지 */}
+        <div ref={locationRef} className="scroll-mt-24">
+          <NoteLocationSearch value={loc} onChange={setLoc} />
+        </div>
 
         {/* [#71] 방문 인증(선택) — 단지 좌표가 있을 때만. 원 좌표는 저장하지 않는다. */}
         {!isEdit && typeof loc.lat === "number" && typeof loc.lng === "number" && (
@@ -2037,23 +2125,33 @@ export function NoteForm({
           <div className="text-[13px] font-extrabold text-ink">
             현장 체크{" "}
             <span className="text-xs font-medium text-text-3">
-              좋음·보통·아쉬움으로 빠르게 기록
+              {/* [970 · B-10] 고른 항목만 점수가 된다는 걸 여기서 말한다 */}
+              고른 항목만 점수에 들어가요 · {countCheckedItems(checks)}/{CHECK_KEYS.length}
             </span>
           </div>
-          {Object.keys(CHECK_DEFAULTS).map((item) => (
+          {CHECK_KEYS.map((item) => (
             <div key={item} className="flex items-center gap-2.5">
               <span className="w-12 shrink-0 t-body font-semibold text-text-1">
                 {item}
               </span>
-              <div className="flex flex-1 gap-1.5">
+              <div className="flex flex-1 gap-1.5" role="group" aria-label={`${item} 평가`}>
                 {LEVELS.map((lv) => {
                   const active = checks[item] === lv;
                   return (
                     <button
                       key={lv}
                       type="button"
+                      aria-pressed={active}
+                      /* [970 · B-10] 같은 칸을 다시 누르면 선택 해제 — "미입력"으로 되돌릴 길 */
                       onClick={() =>
-                        setChecks((prev) => ({ ...prev, [item]: lv }))
+                        setChecks((prev) => {
+                          if (prev[item] === lv) {
+                            const next = { ...prev };
+                            delete next[item];
+                            return next;
+                          }
+                          return { ...prev, [item]: lv };
+                        })
                       }
                       className={`flex h-9 flex-1 items-center justify-center rounded-[10px] px-2 text-xs ${
                         active
@@ -2069,25 +2167,40 @@ export function NoteForm({
             </div>
           ))}
 
-          {/* 종합 만족도 */}
+          {/* 종합 만족도 — [970 · B-10] 기본 "미입력". 슬라이더를 움직이면 값이 생기고,
+              "지우기"로 다시 미입력으로 돌아간다(안 건드린 노트에 7.5 를 적지 않는다). */}
           <div className="mt-0.5 flex flex-col gap-1.5">
-            <div className="flex justify-between text-xs">
+            <div className="flex items-center justify-between text-xs">
               <span className="text-text-2">종합 만족도</span>
-              <span className="font-extrabold text-primary">
-                {satisfaction.toFixed(1)} / 10
+              <span className="flex items-center gap-2">
+                {satisfaction === null ? (
+                  <span className="font-bold text-text-3">미입력</span>
+                ) : (
+                  <>
+                    <span className="font-extrabold text-primary">{satisfaction.toFixed(1)} / 10</span>
+                    <button
+                      type="button"
+                      onClick={() => setSatisfaction(null)}
+                      className="tap rounded-md px-1.5 py-0.5 t-caption font-bold text-text-3"
+                    >
+                      지우기
+                    </button>
+                  </>
+                )}
               </span>
             </div>
             {/* 모바일10 — 히트 영역 확대: 슬라이더 입력 높이를 36px 로 (트랙은
-                그대로, 터치 판정 영역만 넓어진다). */}
+                그대로, 터치 판정 영역만 넓어진다). 미입력일 때는 가운데(5)에 흐리게 둔다 */}
             <input
               type="range"
               min={0}
               max={10}
               step={0.5}
-              value={satisfaction}
+              value={satisfaction ?? 5}
               onChange={(e) => setSatisfaction(Number(e.target.value))}
-              className="h-9 w-full cursor-pointer accent-[#1d4fd8]"
+              className={`h-9 w-full cursor-pointer accent-[#1d4fd8] ${satisfaction === null ? "opacity-50" : ""}`}
               aria-label="종합 만족도"
+              aria-valuetext={satisfaction === null ? "미입력" : `${satisfaction.toFixed(1)} / 10`}
             />
           </div>
         </div>
@@ -2520,89 +2633,9 @@ export function NoteForm({
             </ul>
           )}
 
-          {/* [967 · 1·6] 업로드 진행 줄 — 파일별 done/failed, XHR 진행률이 오면 % */}
-          {uploads.length > 0 && (
-            <div className="flex flex-col gap-2 rounded-xl border border-line bg-bg/60 px-3 py-2.5">
-              <div className="flex items-center justify-between gap-2">
-                {/* 라이브 영역은 요약 줄만 — 파일별 % 까지 읽어 주면 소음이 된다 */}
-                <span role="status" className="t-sub font-bold text-text-1">
-                  {uploadProgressText ?? uploadFailureText ?? "업로드 완료"}
-                </span>
-                {uploadFailed > 0 && !uploading && (
-                  <div className="flex shrink-0 items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={retryFailedUploads}
-                      className="btn-soft min-h-[36px] rounded-lg px-3 t-sub font-bold"
-                    >
-                      다시 시도
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => dropUploads((u) => u.status !== "uploading")}
-                      aria-label="실패한 사진 목록 닫기"
-                      className="tap grid h-7 w-7 place-items-center rounded-full text-text-3"
-                    >
-                      <Icon name="x" size={14} />
-                    </button>
-                  </div>
-                )}
-              </div>
-              <ul className="flex gap-2 overflow-x-auto" aria-label="업로드 중인 사진">
-                {uploads.map((u) => (
-                  <li key={u.id} className="relative shrink-0" title={u.error ?? u.name}>
-                    {u.preview ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={u.preview}
-                        alt={u.name}
-                        className={`h-12 w-16 rounded-lg object-cover ${
-                          u.status === "failed" ? "opacity-50 grayscale" : ""
-                        }`}
-                      />
-                    ) : (
-                      <span className="grid h-12 w-16 place-items-center rounded-lg bg-bg text-text-3">
-                        <Icon name="camera" size={16} />
-                      </span>
-                    )}
-                    {u.status === "uploading" && (
-                      <span className="absolute inset-0 grid place-items-center rounded-lg bg-brand-navy/45 t-caption font-bold text-on-dark">
-                        {typeof u.pct === "number" ? (
-                          `${u.pct}%`
-                        ) : (
-                          <span className="njn-ring" aria-hidden="true" />
-                        )}
-                      </span>
-                    )}
-                    {u.status === "done" && (
-                      <span className="absolute -right-1 -top-1 grid h-[18px] w-[18px] place-items-center rounded-full bg-success text-on-dark">
-                        <Icon name="check" size={11} />
-                      </span>
-                    )}
-                    {u.status === "failed" && (
-                      <span className="absolute inset-x-0 bottom-0 rounded-b-lg bg-danger px-1 text-center t-caption font-bold text-white">
-                        실패
-                      </span>
-                    )}
-                    <span className="sr-only">
-                      {u.name} —{" "}
-                      {u.status === "uploading"
-                        ? "업로드 중"
-                        : u.status === "done"
-                          ? "완료"
-                          : `실패${u.error ? `: ${u.error}` : ""}`}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {uploadFailed > 0 && !uploading && (
-                <p className="t-caption text-text-3">
-                  {uploads.find((u) => u.status === "failed")?.error ?? "사진 업로드에 실패했어요."}
-                  {" "}성공한 사진은 그대로 남아 있어요.
-                </p>
-              )}
-            </div>
-          )}
+          {/* [967 · 1·6] 업로드 진행 줄 — 파일별 done/failed, XHR 진행률이 오면 %
+              [970 · B-12] 본체는 renderUploadProgress — 상단 버튼 아래에도 같은 블록 */}
+          {renderUploadProgress(true)}
           {/* [968 · 32] 하단에도 촬영 버튼 — 수정 모드(상단 블록 없음)에서도 현장 촬영이 되게 */}
           <div className="flex gap-2">
             <button
@@ -2720,9 +2753,20 @@ export function NoteForm({
         >
           <div className="glass flex w-full max-w-[560px] items-center gap-3 rounded-2xl px-3.5 py-2.5 shadow-[0_12px_32px_rgba(16,28,54,.16)]">
             <div className="min-w-0 flex-1">
-              <div role="status" className="truncate t-caption text-text-3">
-                {autosaveStatus}
-              </div>
+              {/* [970 · B-11] 첫 줄에 검증·저장 오류를 우선 — 바에서 눌렀는데 아무 반응이 없었다 */}
+              {saveError ? (
+                <div role="alert" className="truncate t-caption font-bold text-danger">
+                  {saveError}
+                </div>
+              ) : needLogin ? (
+                <div role="status" className="truncate t-caption font-bold text-primary">
+                  저장하려면 로그인이 필요해요 — 작성한 내용은 유지돼요
+                </div>
+              ) : (
+                <div role="status" className="truncate t-caption text-text-3">
+                  {autosaveStatus}
+                </div>
+              )}
               <div className="truncate t-sub font-bold text-text-1">
                 {isPublic ? "공개 노트" : "비공개 노트"}
                 {uploading ? " · 사진 올리는 중" : ""}

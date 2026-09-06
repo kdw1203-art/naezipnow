@@ -67,8 +67,22 @@ export async function generateMetadata(): Promise<Metadata> {
   return loadError ? { ...base, robots: { index: false, follow: true } } : base;
 }
 
+/** [970 · B-32] 지금 진행 중인 달(KST, "YYYYMM") — 이 달의 리포트는 아직 집계가 쌓이는 중이다.
+    ISR 1시간이라 월이 바뀐 뒤 최대 1시간은 이전 달이 "집계 중"으로 남을 수 있다. */
+function currentKstYm(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(new Date());
+  const y = parts.find((p) => p.type === "year")?.value ?? "";
+  const m = parts.find((p) => p.type === "month")?.value ?? "";
+  return `${y}${m}`;
+}
+
 export default async function ReportsIndexPage() {
   const { months, seasons, loadError } = await loadReportsIndex();
+  const nowYm = currentKstYm();
 
   /* 항목 46d — 실재하는 월간 리포트 목록을 ItemList 로 기술. 값은 페이지가
      이미 렌더하는 실데이터에서만 오고, 조회 실패면 노드를 내보내지 않는다. */
@@ -160,6 +174,12 @@ export default async function ReportsIndexPage() {
                         >
                           <span className="text-[15px] font-extrabold text-ink">
                             {formatYmKo(m.ym)} 실거래 리포트
+                            {/* [970 · B-32] 이번 달은 아직 신고가 들어오는 중 — 완결처럼 보이지 않게 */}
+                            {m.ym === nowYm && (
+                              <span className="ml-1.5 rounded-md bg-primary-soft px-1.5 py-0.5 text-[12px] font-bold text-primary align-middle">
+                                집계 중
+                              </span>
+                            )}
                           </span>
                           <span className="text-[12px] font-semibold text-text-3">
                             {m.regionCount}개 지역 · {m.txCount.toLocaleString("ko-KR")}건 ›

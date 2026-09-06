@@ -137,18 +137,6 @@ function levelFromScore(score: number): AxisLevel {
   return "중";
 }
 
-function detectAxisLevel(
-  keywords: string[],
-  pros: string,
-  cons: string,
-  fallbackScore: number,
-): AxisLevel {
-  const hit = (text: string) => keywords.some((k) => text.includes(k));
-  if (hit(cons)) return "하";
-  if (hit(pros)) return "상";
-  return levelFromScore(fallbackScore);
-}
-
 function retryDefaultIntent(
   note: InspectionNote,
 ): "실거주" | "투자" | "전월세" {
@@ -210,25 +198,35 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
   if (cautionPoints.length === 0)
     cautionPoints.push("기록된 확정 약점이 아직 없어요");
 
-  // 20a ④ 4축: 텍스트 키워드 우선, 없으면 점수 축으로 근사
-  const axes: Axis[] = [
-    {
-      icon: "☀",
-      label: "채광",
-      level: detectAxisLevel(["채광", "햇빛", "일조", "남향"], pros, cons, s.facility),
-    },
-    {
-      icon: "🔊",
-      label: "소음",
-      level: detectAxisLevel(["소음", "시끄", "조용"], pros, cons, s.location),
-    },
-    {
-      icon: "🅿",
-      label: "주차",
-      level: detectAxisLevel(["주차", "이중주차"], pros, cons, s.facility),
-    },
-    { icon: "🚇", label: "교통", level: levelFromScore(s.transport) },
+  /* 20a ④ 4축: [970 · B-10] 폼이 고른 항목만 fieldRatings 에 남기므로 그 값을 먼저 쓰고,
+     없으면 텍스트 키워드, 그것도 없으면 축 점수 — 점수가 0(미입력)인 축은 "중"으로
+     지어내지 않고 **뺀다**. 예전엔 안 건드린 노트도 4축이 전부 "중"으로 나갔다. */
+  const rawRatings = ((n.metadata ?? {}) as Record<string, unknown>).fieldRatings;
+  const ratings =
+    rawRatings && typeof rawRatings === "object" ? (rawRatings as Record<string, unknown>) : null;
+  const ratedLevel = (key: string): AxisLevel | null => {
+    const v = ratings?.[key];
+    return v === "좋음" ? "상" : v === "보통" ? "중" : v === "아쉬움" ? "하" : null;
+  };
+  const axisOrNull = (
+    key: string,
+    keywords: string[],
+    fallbackScore: number,
+  ): AxisLevel | null => {
+    const rated = ratedLevel(key);
+    if (rated) return rated;
+    const hit = (text: string) => keywords.some((k) => text.includes(k));
+    if (hit(cons)) return "하";
+    if (hit(pros)) return "상";
+    return fallbackScore > 0 ? levelFromScore(fallbackScore) : null;
+  };
+  const axisCandidates: { icon: string; label: string; level: AxisLevel | null }[] = [
+    { icon: "☀", label: "채광", level: axisOrNull("채광", ["채광", "햇빛", "일조", "남향"], s.facility) },
+    { icon: "🔊", label: "소음", level: axisOrNull("소음", ["소음", "시끄", "조용"], s.location) },
+    { icon: "🅿", label: "주차", level: axisOrNull("주차", ["주차", "이중주차"], s.facility) },
+    { icon: "🚇", label: "교통", level: axisOrNull("교통", [], s.transport) },
   ];
+  const axes: Axis[] = axisCandidates.filter((a): a is Axis => a.level !== null);
 
   const doneCount = n.checklist.filter((c) => c.done).length;
   const meta: string[] = [`방문 ${n.visitDate}`];
@@ -342,7 +340,8 @@ export async function generateMetadata({
   if (!note || !note.isPublic) {
     // 비공개 노트·없는 노트·조회 실패는 색인 금지 (20b 색인 정책)
     return {
-      title: "임장노트 — 내집나우",
+      /* [970 · C-25] 제목 접미 통일 `| 내집나우`(아래 정상 경로와 같은 접미) */
+      title: "임장노트 | 내집나우",
       robots: { index: false, follow: false },
     };
   }
@@ -862,11 +861,12 @@ export default async function NoteDetailPage({
         />
         {/* 카드 덱 — 노트 원문과 저장된 AI 분석을 카드 레이아웃으로 다시 그린 화면.
             공개·비공개 모두 열리며, 열람 권한은 이 페이지와 같은 관문을 쓴다. */}
+        {/* [970 · B-15] "카드로 보기"는 /card(나만의 카드)와 헷갈렸다 — 화면 이름대로 "카드 덱" */}
         <Link
           href={`/notes/${id}/deck`}
           className="btn-soft px-3.5 py-2 t-body no-underline"
         >
-          카드로 보기
+          카드 덱
         </Link>
         {isOwner && !hasLlmAi && (
           <Link
@@ -901,8 +901,9 @@ export default async function NoteDetailPage({
                 <span
                   key={c}
                   className={
+                    /* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
                     i === v.chips.length - 1
-                      ? "rounded-full bg-brand-navy px-2.5 py-1 text-[12px] font-extrabold text-surface"
+                      ? "rounded-full bg-brand-navy px-2.5 py-1 text-[12px] font-extrabold text-on-dark"
                       : "rounded-full border border-line bg-surface px-2.5 py-1 text-[12px] font-bold text-text-2"
                   }
                 >
@@ -947,9 +948,15 @@ export default async function NoteDetailPage({
               <span className="text-text-3">{v.visitMeta}</span>
             </div>
 
-            {/* ④ 4축 항목 평가 — 채광·소음·주차·교통 상중하 */}
+            {/* ④ 4축 항목 평가 — 채광·소음·주차·교통 상중하. [970 · B-10] 미입력 축은 빠지고,
+                하나도 없으면 "미입력"이라고 적는다(보통으로 채우지 않는다) */}
             <div className="flex flex-col gap-1.5 rounded-[14px] border border-line bg-surface p-3.5">
-              <div className="t-sub font-extrabold text-text-3">항목 평가</div>
+              <div className="t-sub font-extrabold text-text-3">
+                항목 평가
+                {v.axes.length === 0 && (
+                  <span className="ml-1.5 font-medium">· 현장 체크를 아직 입력하지 않았어요</span>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4">
                 {v.axes.map((a) => (
                   <div
@@ -988,14 +995,9 @@ export default async function NoteDetailPage({
             </div>
 
             {/* ⑨ AI 작성부 구분 표시 — 저장된 aiAnalysis 우선, 없으면 규칙 기반 문구 + 배지 구분 */}
-            <AIPanel
-              title="AI 요약"
-              cta={
-                hasLlmAi
-                  ? { href: mapCompareHref, label: "지도에서 비교" }
-                  : undefined
-              }
-            >
+            {/* [970 · B-15] 패널 CTA "지도에서 비교"는 상단 액션·아래 다음 행동과 같은 링크라
+                뺐다(한 화면에 세 번) — 남은 두 곳: 상단 primary, 하단 퍼널 */}
+            <AIPanel title="AI 요약">
               <span
                 className={`mb-1.5 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-extrabold ${
                   v.aiBadge.startsWith("규칙")

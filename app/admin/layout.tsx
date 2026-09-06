@@ -7,7 +7,8 @@ import { AdminNav } from "./AdminNav";
 import { loadCriticalAlerts24h } from "@/lib/admin/health-alerts";
 
 export const metadata: Metadata = {
-  title: "관리자 콘솔 · 내집나우",
+  /* [970 · C-25] 제목 접미 통일 — 사이트 전체 `| 내집나우`(`·`·`—` 혼용 제거) */
+  title: "관리자 콘솔 | 내집나우",
   robots: { index: false, follow: false },
 };
 

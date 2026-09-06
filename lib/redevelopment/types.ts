@@ -150,6 +150,8 @@ export type RedevelopmentProject = {
 export type ProjectFilter = {
   types?: ProjectTypeKey[];
   stages?: StageKey[];
+  /** [970 · B-02] 시·도("서울"·"경기"·"대구") — sigungu 와 함께 줘야 "중구"가 여섯 도시에 걸치지 않는다 */
+  sido?: string;
   sigungu?: string;
   bbox?: { minLat: number; maxLat: number; minLng: number; maxLng: number };
   limit?: number;

@@ -39,7 +39,8 @@ import { formatKrwShort } from "@/lib/market/format";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "내 매물 · 내집나우",
+  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
+  title: "내 매물 | 내집나우",
   robots: { index: false, follow: false },
 };
 

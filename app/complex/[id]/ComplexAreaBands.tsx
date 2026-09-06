@@ -85,15 +85,16 @@ export async function ComplexAreaBands({
               <th className="px-3 py-2 text-right font-semibold sm:px-4 sm:py-2.5">건수</th>
             </tr>
           </thead>
+          {/* [970 · B-42] td 여백을 th 와 같은 램프(px-3 py-2 · sm:px-4 sm:py-2.5)로 — 열이 어긋났다 */}
           <tbody>
             {bands.data.map((b) => (
               <tr key={b.label} className="border-b border-line last:border-0">
                 <td className="px-3 py-2 font-bold text-ink sm:px-4 sm:py-2.5">{b.label}</td>
-                <td className="px-4 py-2.5 text-right">
+                <td className="px-3 py-2 text-right sm:px-4 sm:py-2.5">
                   <span className="font-extrabold text-primary">{manwon(b.latestManwon)}</span>{" "}
                   <span className="t-caption text-text-3">{ymLabel(b.latestYm)}</span>
                 </td>
-                <td className="px-4 py-2.5 text-right text-text-2">
+                <td className="px-3 py-2 text-right text-text-2 sm:px-4 sm:py-2.5">
                   {manwon(b.avgManwon)}
                   {/* 구간 안 분포 — 최저~최고가 같으면(거래 1건 등) 반복 표기 생략 */}
                   {b.minManwon !== b.maxManwon && (
@@ -102,7 +103,7 @@ export async function ComplexAreaBands({
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-2.5 text-right text-text-3">{b.count}</td>
+                <td className="px-3 py-2 text-right text-text-3 sm:px-4 sm:py-2.5">{b.count}</td>
               </tr>
             ))}
           </tbody>

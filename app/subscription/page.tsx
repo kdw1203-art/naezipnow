@@ -19,38 +19,54 @@ import { isKakaoPayConfigured } from "@/lib/payments/kakaopay";
 import { isTossPaymentsConfigured } from "@/lib/payments/toss-config";
 import { isTossBillingEnabled } from "@/lib/payments/toss-billing";
 import { BillingPanel } from "./BillingPanel";
-import { SETTLEMENT } from "@/lib/creator/sales";
+import { feePct, REPORT_SELLER_FEE_RATE } from "@/lib/billing/marketplace-fees";
 import { PLAN_FEATURE_MATRIX } from "@/lib/subscriptions/plans";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { faqJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
 import { DEFAULT_DESKTOP_ORIGIN } from "@/lib/platform-shell";
 
-/* 고도화 32 — 구독 FAQ. 사실만 적는다: 결제 개통 여부와 무관하게 참인 문장으로
-   쓰고(조건부 서술), 수치·규정은 약관·구현과 대조했다. 화면과 JSON-LD 가 같은
-   배열을 쓴다. */
-const SUBSCRIPTION_FAQ: FaqItem[] = [
-  {
-    q: "무료로 쓸 수 있는 기능은 무엇인가요?",
-    a: "임장노트 작성·저장, 지도 비교, 실거래 조회는 계속 무료입니다. 유료 플랜은 AI 분석의 깊이와 월 사용 한도를 넓혀 줍니다.",
-  },
-  {
-    q: "결제는 어떻게 하나요?",
-    a: "월간 또는 연간 이용권 방식입니다. 결제가 아직 열려 있지 않은 기간에는 '오픈 알림 받기'로 등록해 두면 열리는 즉시 알림을 드립니다. 포인트는 현금으로 구매(충전)할 수 없는 활동 적립 무상 리워드이며, 이용권 구매와는 무관합니다.",
-  },
-  {
-    q: "이용권은 자동으로 갱신되나요?",
-    a: "상품에 따라 다릅니다. 주간권은 1회성 단건 결제라 자동 갱신되지 않고, 만료 7일 전과 1일 전에 알림을 드립니다. 월간·연간 구독은 정기결제(자동 갱신)로, 카드 등록 시 갱신 주기·금액·해지 방법을 고지하고 동의를 받은 뒤에만 개시되며 언제든지 구독 관리에서 해지할 수 있습니다(해지 시 다음 결제일부터 청구되지 않음).",
-  },
-  {
-    q: "해지·환불은 어떻게 하나요?",
-    a: "결제 후 7일 이내에는 청약철회로 전액 환불됩니다(이용약관 제8조). 해지·환불 접수는 고객센터 1:1 문의로 받고 있습니다.",
-  },
-  {
-    q: "플랜 배지는 어디에 표시되나요?",
-    a: "커뮤니티 글·공개 노트·채팅 등 닉네임이 노출되는 모든 지점에 동일하게 표시되며, 설정에서 숨길 수 있습니다.",
-  },
-];
+/* 고도화 32 — 구독 FAQ. 사실만 적는다: 수치·규정은 약관·구현과 대조했다. 화면과
+   JSON-LD 가 같은 배열을 쓴다.
+
+   [970 · A-22] 결제 방식·해지 경로 문장이 세 갈래였다 — FAQ 는 "월간·연간 정기결제",
+   기간별 할인 부제는 "일시불", 하단은 "해지는 고객센터", ComplianceNotice 는 빌링
+   개방 전이면 "모든 이용권 단건" 이라 한 화면 안에서 서로 다른 말을 했다. 사실은
+   서버 판정(recurringOpen: 토스 빌링 개방 여부) 하나로 갈린다 — 개방 전엔 주간권·
+   월간·연간 전부 1회성 단건(자동 반복청구 없음, ComplianceNotice LOCKED 문구와
+   동일), 개방 후엔 주간권만 단건·월간·연간은 카드 등록형 자동결제(구독 관리에서
+   해지). FAQ·부제·하단 문구가 전부 같은 값을 보게 함수로 바꾼다. 만료 알림은
+   plan-expiry-sweep 크론이 하는 그대로(T-7 은 8일 이상 이용권만, T-1 은 전부). */
+function subscriptionFaq(recurringOpen: boolean): FaqItem[] {
+  return [
+    {
+      q: "무료로 쓸 수 있는 기능은 무엇인가요?",
+      a: "임장노트 작성·저장, 지도 비교, 실거래 조회는 계속 무료예요. 유료 플랜은 AI 분석의 깊이와 월 사용 한도를 넓혀 줘요.",
+    },
+    {
+      q: "결제는 어떻게 하나요?",
+      a: recurringOpen
+        ? `${WEEKLY_PASS.label}(${WEEKLY_PASS.days}일)은 카드 등록 없이 1회 결제하는 단건 상품이고, 월간·연간은 카드를 등록하면 첫 결제가 진행되는 자동결제(정기결제)예요. 결제는 토스페이먼츠 결제창에서 진행돼요. 포인트는 현금으로 구매(충전)할 수 없는 활동 적립 무상 리워드이며, 이용권 구매와는 무관해요.`
+        : `${WEEKLY_PASS.label}(${WEEKLY_PASS.days}일)·월간·연간 모두 1회성 단건 결제예요(자동 반복청구 없음). 결제가 아직 열려 있지 않은 상품은 '오픈 알림 받기'로 등록해 두면 열리는 즉시 알림을 드려요. 포인트는 현금으로 구매(충전)할 수 없는 활동 적립 무상 리워드이며, 이용권 구매와는 무관해요.`,
+    },
+    {
+      q: "이용권은 자동으로 갱신되나요?",
+      a: recurringOpen
+        ? `상품에 따라 달라요. ${WEEKLY_PASS.label}은 1회성 단건 결제라 자동 갱신되지 않고, 만료 하루 전에 알림을 드려요. 월간·연간 구독은 정기결제(자동 갱신)로, 카드 등록 시 갱신 주기·금액·해지 방법을 고지하고 동의를 받은 뒤에만 개시되며 언제든지 구독 관리에서 해지할 수 있어요(해지 시 다음 결제일부터 청구되지 않음).`
+        : `아니요. 지금은 ${WEEKLY_PASS.label}·월간·연간 모두 1회성 단건 결제라 자동 갱신되지 않아요. 기간이 끝나면 자동으로 무료 플랜으로 돌아가고 추가 청구가 없어요. 만료 전(월간·연간은 7일 전과 1일 전, ${WEEKLY_PASS.label}은 하루 전)에 알림을 드려요.`,
+    },
+    {
+      q: "해지·환불은 어떻게 하나요?",
+      a: recurringOpen
+        ? "결제 후 7일 이내에는 청약철회로 전액 환불돼요(이용약관 제8조). 월간·연간 자동결제 해지는 이 페이지의 구독 관리에서 바로 할 수 있고(해지해도 결제한 기간은 만료일까지 이용), 환불·중도 해지 일할 환불 접수는 고객센터 1:1 문의로 받고 있어요."
+        : "결제 후 7일 이내에는 청약철회로 전액 환불돼요(이용약관 제8조). 단건 이용권은 자동 갱신이 없어 따로 해지할 것이 없고, 환불·중도 해지 일할 환불 접수는 고객센터 1:1 문의로 받고 있어요.",
+    },
+    {
+      q: "플랜 배지는 어디에 표시되나요?",
+      a: "커뮤니티 글·공개 노트·채팅 등 닉네임이 노출되는 모든 지점에 동일하게 표시되며, 설정에서 숨길 수 있어요.",
+    },
+  ];
+}
 
 export const metadata = buildPageMetadata({
   title: "요금제",
@@ -78,7 +94,8 @@ function tierPricing(tier: "pro" | "expert"): TierPricing {
 
 const PLUS_MONTHLY = fmtWon(tierPricing("pro").monthly);
 const PRO_MONTHLY = fmtWon(tierPricing("expert").monthly);
-const FEE_PCT = `${Math.round(SETTLEMENT.platformFeeRate * 100)}%`;
+/* [970 · A-09 · C-15] 수수료는 marketplace-fees 단일 출처(/legal/fees·정산 계산과 같은 값) */
+const FEE_PCT = feePct(REPORT_SELLER_FEE_RATE);
 
 /* 웹25 — 비교표는 PLAN_FEATURE_MATRIX(access.ts FEATURE_RULES 와 동일화된 단일
    출처)에서 유도한다. 예전에는 이 파일에 손으로 적은 표가 따로 있었고, 코드
@@ -86,7 +103,7 @@ const FEE_PCT = `${Math.round(SETTLEMENT.platformFeeRate * 100)}%`;
    "노트 사진 노트당 50장"(실제 코드는 전 플랜 10장), "알림 지역 3곳·실시간",
    "시나리오 저장 10개", "다자 비교 5개"(실제 비교 트레이 한도는 2/10/무제한),
    "플러스 AI 무제한"(실제 월 30~50회). 기능 없는 약속은 버그다 — 코드가 실제로
-   집행하는 한도만 싣는다. 수수료도 SETTLEMENT.platformFeeRate 단일 출처다
+   집행하는 한도만 싣는다. 수수료도 REPORT_SELLER_FEE_RATE 단일 출처다
    (예전 20%/15% 표기는 실제 7%와 달라 허위 고지였다). */
 const FEATURE_ROWS: { label: string; free: string; plus: string; pro: string; proAccent?: boolean }[] = [
   { label: "임장노트 · 지도 · 실거래", free: "무제한", plus: "무제한", pro: "무제한" },
@@ -166,7 +183,18 @@ export default async function SubscriptionPage({
     recurringOpen ||
     (isBusinessDisclosureComplete(getBusinessInfo()) &&
       (getStripe() !== null || isKakaoPayConfigured()));
+  /* [970 · A-22] FAQ(화면 + JSON-LD)는 결제 방식 사실(recurringOpen)에 따라 갈린다 */
+  const faq = subscriptionFaq(recurringOpen);
   const initialBilling = sp.billing === "annual" ? ("annual" as const) : ("monthly" as const);
+  /* [970 · A-07] 로그인 복귀(PlanCheckoutButton) · 결제 실패 재시도(payment/fail)가 붙여
+     보내는 ?plan= 을 읽는다 — 예전엔 billing 만 복원해 고른 플랜을 다시 찾아야 했다.
+     billing=weekly 는 카드가 아니라 주간권 섹션이 목적지다(앵커 id: weekly-pass). */
+  const highlightPlan: "pro" | "expert" | "weekly" | null =
+    sp.billing === "weekly"
+      ? "weekly"
+      : sp.plan === "pro" || sp.plan === "expert"
+        ? sp.plan
+        : null;
   const session = await safeAuth();
   const email = session?.user?.email ?? null;
   /* 관리자 배지 — 운영 계정은 플랜 대신 "관리자"로 표기한다. */
@@ -317,13 +345,16 @@ export default async function SubscriptionPage({
 
       {/* 요금제 카드 3종 + 월간/연간 토글 (item 13) */}
       <section className="mx-auto mt-8 w-full">
+        {/* [970 · A-06] 비로그인은 currentPlan=null — 게스트에게 무료 카드를 "현재 이용 중"
+            으로 그리면 가입 입구("무료로 시작")가 사라진다. 로그인 상태만 현재 플랜을 넘긴다. */}
         <PlanCards
-          currentPlan={currentPlan}
+          currentPlan={email ? currentPlan : null}
           pro={tierPricing("pro")}
           expert={tierPricing("expert")}
           initialBilling={initialBilling}
           paymentsReady={paymentsReady}
           recurringReady={recurringReady}
+          highlightPlan={highlightPlan}
         />
         {/* [966] 결제 신뢰 스트립 — 결제 버튼 바로 아래에서 "무엇이 보장되는지" 를 세 줄로.
             전부 코드가 실제로 하는 일이다: 카드번호는 토스 결제창에서만 다뤄 우리 서버에
@@ -350,8 +381,17 @@ export default async function SubscriptionPage({
 
       {/* 플러스 주간권 — 1회성 단건 결제(자동갱신 없음). 운영자 확정 2026-08-12:
           토스 심사 회신 A-1(a) 의 단건 상품. 가격·기간은 WEEKLY_PASS 단일 출처. */}
-      <section className="rise-in-4 mx-auto mt-5 w-full max-w-[1080px]">
-        <div className="card flex flex-col items-center gap-4 rounded-3xl p-6 md:flex-row md:justify-between">
+      {/* [970 · A-07] id·scroll-mt — ?billing=weekly 로 돌아온 사람을 PlanCards 가 여기로
+          스크롤한다(헤더 62px 아래). 강조 링은 그때만 붙인다. */}
+      <section
+        id="weekly-pass"
+        className="rise-in-4 mx-auto mt-5 w-full max-w-[1080px] scroll-mt-24"
+      >
+        <div
+          className={`card flex flex-col items-center gap-4 rounded-3xl p-6 md:flex-row md:justify-between ${
+            highlightPlan === "weekly" ? "ring-2 ring-primary" : ""
+          }`}
+        >
           <div className="flex flex-col gap-1 text-center md:text-left">
             <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
               {/* [C38] 주간권이 위 세 플랜과 나란히 놓이면 "네 번째 요금제"로 읽힌다.
@@ -389,11 +429,12 @@ export default async function SubscriptionPage({
               </p>
             ) : currentPlan === "pro" ? (
               <div className="flex flex-col gap-1.5">
+                {/* [970 · A-04] 네이비 버튼 글자 text-surface → text-on-dark(다크에서 안 보였다) — 아래 두 버튼도 같다 */}
                 <PlanCheckoutButton
                   tier="pro"
                   billing="weekly"
                   label="주간권 7일 연장"
-                  className="w-full bg-brand-navy text-surface"
+                  className="w-full bg-brand-navy text-on-dark"
                 />
                 <p className="text-center t-caption text-text-3">
                   이용 중인 플러스 만료일 뒤로 7일이 이어 붙어요
@@ -404,10 +445,16 @@ export default async function SubscriptionPage({
                 tier="pro"
                 billing="weekly"
                 label="주간권 구매"
-                className="w-full bg-brand-navy text-surface"
+                className="w-full bg-brand-navy text-on-dark"
               />
             ) : (
-              <PreOrderCta tier="pro" billing="weekly" className="w-full bg-brand-navy text-surface" />
+              /* [970 · A-38] 게스트는 로그인 유도 — 세션 없는 등록은 알림을 보낼 수 없다 */
+              <PreOrderCta
+                tier="pro"
+                billing="weekly"
+                className="w-full bg-brand-navy text-on-dark"
+                guest={!email}
+              />
             )}
           </div>
         </div>
@@ -447,8 +494,9 @@ export default async function SubscriptionPage({
         <div className="md:hidden">
           <div className="mb-2 t-sub font-bold text-text-3">기능 비교</div>
           <div /* 헤더 아래에 붙여 둔다 — 아래로 내려가도 어느 칸이 어느 플랜인지 잃지 않는다.
-                 56px 은 TownCategoryNav 와 같은 실측 헤더 높이다. */
-            className="sticky top-[56px] z-10 grid grid-cols-3 gap-1.5 rounded-[10px] bg-surface py-1.5">
+                 [970 · A-34] 56px 은 옛 실측 — 지금 헤더는 62px 이라 플랜 이름 줄 6px 이
+                 헤더 밑으로 들어갔다. 62px 에 맞춘다. */
+            className="sticky top-[62px] z-10 grid grid-cols-3 gap-1.5 rounded-[10px] bg-surface py-1.5">
             <div className="text-center">
               <div className="t-sub font-extrabold text-ink">무료</div>
               <div className="t-sub text-text-3">0원</div>
@@ -563,16 +611,22 @@ export default async function SubscriptionPage({
         </div>
       </section>
 
-      {/* 기간별 할인 (9k) */}
-      <section className="rise-in-5 card mx-auto mt-4 w-full max-w-[1080px] overflow-x-auto rounded-2xl px-5 py-4">
-        <div className="min-w-[560px]">
-          <div className="mb-1.5 flex items-baseline justify-between">
+      {/* 기간별 할인 (9k)
+          [970 · A-05] 모바일에서 12개월 열·할인율이 화면 밖이었다 — 열이 셋(라벨+월간+12개월)
+          뿐이라 가로 스크롤이 필요 없다. 최소 폭은 md+ 에서만, 라벨 칸은 모바일 88px,
+          제목 줄은 flex-wrap 으로 부제가 아래로 내려가게. overflow-x-auto 도 md+ 만. */}
+      <section className="rise-in-5 card mx-auto mt-4 w-full max-w-[1080px] rounded-2xl px-5 py-4 md:overflow-x-auto">
+        <div className="md:min-w-[560px]">
+          <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
             <span className="t-section text-ink">기간별 할인 (월 환산가)</span>
+            {/* [970 · A-22] 결제 방식은 recurringOpen 사실 그대로 — 개방 전엔 전부 단건 */}
             <span className="t-sub text-text-3">
-              일시불 결제 · 중도 해지 시 잔여기간 일할 환불(고객센터 접수)
+              {recurringOpen
+                ? "월간·연간은 카드 등록형 자동결제 · 중도 해지 시 잔여기간 일할 환불(고객센터 접수)"
+                : "1회성 단건 결제(자동 갱신 없음) · 중도 해지 시 잔여기간 일할 환불(고객센터 접수)"}
             </span>
           </div>
-          <div className="grid grid-cols-[120px_repeat(2,1fr)] gap-2 border-b border-divider py-[7px] t-sub text-text-3">
+          <div className="grid grid-cols-[88px_repeat(2,1fr)] gap-2 border-b border-divider py-[7px] t-sub text-text-3 md:grid-cols-[120px_repeat(2,1fr)]">
             <span />
             {BILLING_PERIOD_PRICES.pro.map((p) => (
               <span key={p.months} className="text-center">
@@ -580,7 +634,7 @@ export default async function SubscriptionPage({
               </span>
             ))}
           </div>
-          <div className="grid grid-cols-[120px_repeat(2,1fr)] items-center gap-2 border-b border-divider py-2.5 t-sub">
+          <div className="grid grid-cols-[88px_repeat(2,1fr)] items-center gap-2 border-b border-divider py-2.5 t-sub md:grid-cols-[120px_repeat(2,1fr)]">
             <span className="font-extrabold text-primary">✦ 플러스</span>
             {BILLING_PERIOD_PRICES.pro.map((p) => (
               <span
@@ -598,7 +652,7 @@ export default async function SubscriptionPage({
               </span>
             ))}
           </div>
-          <div className="grid grid-cols-[120px_repeat(2,1fr)] items-center gap-2 py-2.5 t-sub">
+          <div className="grid grid-cols-[88px_repeat(2,1fr)] items-center gap-2 py-2.5 t-sub md:grid-cols-[120px_repeat(2,1fr)]">
             <span className="font-extrabold text-warning">✦ 프로</span>
             {BILLING_PERIOD_PRICES.expert.map((p) => (
               <span
@@ -664,7 +718,7 @@ export default async function SubscriptionPage({
       <section className="rise-in-4 card mx-auto mt-8 w-full max-w-[1080px] rounded-[18px] px-[22px] py-5">
         <h2 className="t-section text-ink">자주 묻는 질문</h2>
         <div className="mt-3 flex flex-col gap-3">
-          {SUBSCRIPTION_FAQ.map((f) => (
+          {faq.map((f) => (
             <div key={f.q} className="border-l-2 border-line pl-3">
               <div className="t-body font-bold text-text-1">{f.q}</div>
               <p className="mt-0.5 t-sub text-text-3">{f.a}</p>
@@ -674,7 +728,7 @@ export default async function SubscriptionPage({
       </section>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript(faqJsonLd(SUBSCRIPTION_FAQ)) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(faqJsonLd(faq)) }}
       />
 
       {/* [969] 하이드레이션 불일치 원인 수정 — 예전엔 아래 안내 <div>(안에 <p>)가 이 <p>
@@ -687,9 +741,13 @@ export default async function SubscriptionPage({
       </div>
       <p className="mx-auto mt-5 w-full max-w-[1080px] t-sub text-text-3">
         {/* "언제든 해지 가능"만 적어 두면 화면 어딘가에 해지 버튼이 있다는 뜻으로 읽힌다.
-            셀프서비스 해지는 아직 없으므로 실제 접수 경로를 함께 적는다(E1). */}
-        해지·환불은 고객센터 1:1 문의로 접수 · 결제 7일 이내 전액 환불 · 부가세 포함 · 커뮤니티
-        글·공개 노트·채팅 등 모든 닉네임 노출 지점에 동일 배지 적용
+            [970 · A-22] 빌링 개방 후엔 자동결제 해지 버튼이 구독 관리(BillingAutopayCard)에
+            실제로 있다 — 환불 접수만 고객센터. 개방 전엔 전부 단건이라 해지할 것이 없고
+            환불 접수만 남는다. 위 FAQ·ComplianceNotice 와 같은 recurringOpen 을 본다. */}
+        {recurringOpen
+          ? `${WEEKLY_PASS.label}은 단건, 월간·연간은 자동결제(해지는 구독 관리에서) · 환불 접수는 고객센터 1:1 문의 · 결제 7일 이내 전액 환불 · 부가세 포함 · `
+          : "모든 이용권은 1회성 단건 결제(자동 갱신 없음) · 환불 접수는 고객센터 1:1 문의 · 결제 7일 이내 전액 환불 · 부가세 포함 · "}
+        커뮤니티 글·공개 노트·채팅 등 모든 닉네임 노출 지점에 동일 배지 적용
       </p>
     </PageShell>
   );

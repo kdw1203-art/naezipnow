@@ -4,9 +4,13 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "./Icon";
 import { useTabBarCompact } from "@/lib/client/use-scroll-state";
+import { tabBarActive } from "@/lib/client/shell-gates";
+import { TOWN_CATEGORY_LINKS } from "@/lib/town/category-links";
 
 /** 균형 5슬롯(2-＋-2) — ＋가 정중앙에 오도록 재배치(2026-07-21 리디자인).
- *  홈·지도·기록(＋)·동네·마이. 통일 라인 아이콘 사용. */
+ *  홈·지도·기록(＋)·동네·마이. 통일 라인 아이콘 사용.
+ *  [970 · A-19] 셸에서 기본 프리페치를 남긴 곳은 이 5탭뿐 — 모바일에서 다음 이동 확률이
+ *  가장 높은 링크다. 헤더·푸터·메뉴·알림 링크는 전부 prefetch={false}. */
 const TABS = [
   { label: "홈", icon: "house", href: "/" },
   { label: "지도", icon: "map", href: "/map" },
@@ -16,6 +20,11 @@ const TABS = [
   { label: "마이", icon: "user", href: "/my" },
 ];
 
+/* [970 · C-29] "동네" 탭은 동네이야기 카테고리 경로(/apply·/auctions·/supply·/redevelopment·
+   /qna — lib/town/category-links, 서버·클라이언트 공용 모듈)에서도 켜진다. 예전엔 /town
+   접두만 봐서 카테고리 안으로 들어가면 어느 탭도 켜지지 않았다. */
+const TOWN_HREFS = TOWN_CATEGORY_LINKS.map((l) => l.href);
+
 /** 모바일 하단 플로팅 글래스 탭바 — 중앙 정렬·균형 5슬롯.
  *
  * 모바일 실측 4(2026-08-02): 중앙 기록(+) 원이 스크롤 중에도 본문 위에 떠
@@ -23,8 +32,7 @@ const TABS = [
  * 내리고 반투명하게 접고, 위로 스크롤(=이동 의도)하면 즉시 복원한다. */
 export function TabBar() {
   const pathname = usePathname();
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+  const isActive = (href: string) => tabBarActive(href, pathname, TOWN_HREFS);
 
   /* [968 · 12] 접기 판정은 공용 스크롤 상태(리스너 하나·rAF)에서 받는다 — 규칙(아래로
      8px 이상 + 160px 아래면 접고, 위로 8px 이상이면 즉시 펼침)은 lib/client/
@@ -59,15 +67,22 @@ export function TabBar() {
                 /* 52→44px, 돌출 -mt-6→-mt-3.5 — 바 위로 솟는 높이를 줄인다.
                    44px 는 터치 타깃 하한선.
                    [962] 파랑 그라데이션 → 브랜드 네이비 + 주홍 파문(FAB 와 같은 언어).
-                   "여기서 쓴다"는 신호가 앱 어디서나 같은 모양이다. */
-                className={`press njn-fab -mt-3.5 mb-[2px] flex h-[44px] w-[44px] items-center justify-center rounded-full leading-none transition-transform duration-300 ${
+                   "여기서 쓴다"는 신호가 앱 어디서나 같은 모양이다.
+                   [970 · B-01] `relative` 를 여기서 직접 단다 — .njn-fab 의 position:relative 는
+                   /notes·/town FAB 의 `fixed` 를 이기던 원인이라 CSS 에서 뺐다(파문 ::after 의
+                   기준 상자는 이 유틸이 만든다). */
+                className={`press njn-fab relative -mt-3.5 mb-[2px] flex h-[44px] w-[44px] items-center justify-center rounded-full leading-none transition-transform duration-300 ${
                   compact ? "scale-[.82]" : ""
                 }`}
                 data-glyph="plus"
               >
                 <Icon name={tab.icon} size={22} strokeWidth={2.2} />
               </span>
-              <span className="text-[12px] font-extrabold text-brand-navy">
+              {/* [970 · A-03] text-brand-navy → text-primary: --brand-navy 는 다크에서 뒤집히지
+                  않는 고정 네이비라 다크 글래스 위에서 "기록" 글자가 묻혔다. 토큰을 다크에서
+                  밝게 뒤집으면 네이비 카드 위 한지 글자가 전부 대비를 잃으므로 탭바 글자만
+                  테마 토큰(primary)으로 — 데스크탑 GNB·전체 메뉴의 활성색과도 같아진다. */}
+              <span className="text-[12px] font-extrabold text-primary">
                 {tab.label}
               </span>
             </Link>
@@ -80,7 +95,8 @@ export function TabBar() {
                  (예전 py-1 은 42px 로 44px 터치 하한 미달). 바는 4px 자라 56px —
                  globals.css --nz-tabbar-offset 도 64→68px 로 같이 올렸다. */
               className={`relative flex flex-col items-center gap-[2px] py-1.5 transition-colors ${
-                isActive(tab.href) ? "text-brand-navy" : "text-text-3"
+                /* [970 · A-03] 활성 탭도 text-primary(사유는 위 "기록" 라벨 주석) */
+                isActive(tab.href) ? "text-primary" : "text-text-3"
               }`}
             >
               {/* [962] 현재 탭 = 온점. 탭이 바뀌면 한 번 튄다(njn-pop) — 브랜드 색이 상태 언어가 된다 */}

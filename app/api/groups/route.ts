@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { revalidatePath } from "next/cache";
 import { safeAuth } from "@/lib/safe-auth";
 import { applyRateLimit, WRITE_RATE_LIMIT } from "@/lib/rate-limit";
 import { createMeeting, listMeetings } from "@/lib/meetings/store-db";
@@ -85,6 +86,9 @@ export async function POST(req: NextRequest) {
       isPublic,
       tags,
     });
+    /* [970 · C-02] 모임 목록(/town/groups, ISR 300초)을 즉시 재생성 — 만든 모임이 목록에
+       최대 5분 안 보이던 원인. */
+    revalidatePath("/town/groups");
     return NextResponse.json({ group }, { status: 201 });
   } catch (e) {
     return NextResponse.json(

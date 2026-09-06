@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
 import { REGION_CATALOG, findCatalogRegionById } from "@/lib/region/catalog";
+import { sameSidoFirst } from "@/lib/market/sido-group";
 import { recentReportSlugs } from "@/lib/region/monthly-report";
 import { seoAlternates } from "@/lib/seo/alternates";
 
@@ -26,7 +27,8 @@ export async function generateMetadata({
   if (!region) {
     return { title: "지역을 찾을 수 없습니다 | 내집나우", robots: { index: false, follow: false } };
   }
-  const title = `${region.name} 월간 아파트 시장 리포트 아카이브`;
+  /* [970 · C-25] 접미 없던 제목에 `| 내집나우`(폴백 제목과 동일 접미) */
+  const title = `${region.name} 월간 아파트 시장 리포트 아카이브 | 내집나우`;
   const description = `${region.name} 아파트 매매 거래량·평균가·상위 실거래를 월별로 고정한 스냅샷 아카이브. 매월 자동 축적됩니다.`;
   return { title, description, alternates: seoAlternates(`/region/${id}/report`) };
 }
@@ -81,7 +83,9 @@ export default async function RegionReportIndexPage({
       <section className="rise-in-3 mt-7">
         <h2 className="mb-2 px-1 t-body font-extrabold text-ink">다른 지역 월간 리포트</h2>
         <div className="flex flex-wrap gap-1.5">
-          {REGION_CATALOG.filter((r) => r.id !== id)
+          {/* [970 · B-33] 같은 시/도 지역을 먼저 — 예전엔 카탈로그 앞 16개(=서울 25구)만
+              나와 대구·부산 리포트에서도 "다른 지역"이 늘 서울이었다. */}
+          {sameSidoFirst(REGION_CATALOG, id)
             .slice(0, 16)
             .map((r) => (
               <Link

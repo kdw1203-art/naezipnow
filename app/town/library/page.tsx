@@ -3,6 +3,7 @@ import { PageShell } from "../../components/PageShell";
 import {
   listPublicNotes,
   inspectionAverageScore,
+  isLabNoteLabel,
   type InspectionNote,
 } from "@/lib/inspection/store-db";
 import { listReports, type UserReport } from "@/lib/reports/store-db";
@@ -12,7 +13,7 @@ import { TownCategoryNav } from "../TownCategoryNav";
 import { TownPageHead } from "../TownPageHead";
 import { ErrorState } from "../../components/ui/EmptyState";
 import type { Metadata } from "next";
-import { seoAlternates } from "@/lib/seo/alternates";
+import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import {
   NotesBrowser,
   ReportsBrowser,
@@ -20,13 +21,17 @@ import {
   type ReportCardDto,
 } from "./LibraryBrowser";
 
-/* 항목 46b — 루트 레이아웃 제목을 그대로 상속하던 페이지에 개별 메타데이터. */
-export const metadata: Metadata = {
-  title: "베스트 임장노트 라이브러리 | 내집나우",
+/* 항목 46b — 루트 레이아웃 제목을 그대로 상속하던 페이지에 개별 메타데이터.
+   [970 · C-26] 예전 메타("베스트 임장노트 라이브러리 · 평점·조회 기준 선별")는 이 화면에
+   없는 것을 약속했다 — 실제 화면은 TownPageHead "자료" + 리포트 선반 + 공개 임장노트
+   (listPublicNotes 최신순, 평점 선별 없음). 화면이 보여주는 것만 적는다.
+   canonical 은 buildPageMetadata(path) 로 — seoAlternates 직접 호출과 결과 동일. */
+export const metadata: Metadata = buildPageMetadata({
+  title: "자료 — 리포트와 공개 임장노트",
   description:
-    "평점·조회 기준으로 고른 공개 임장노트 모음. 실제 다녀온 사람들의 현장 기록에서 단지의 실체를 확인하세요.",
-  alternates: seoAlternates("/town/library"),
-};
+    "동네이야기 자료실. 리포트 선반과 이웃들이 직접 다녀와 공개한 임장노트를 한곳에서 열람해요.",
+  path: "/town/library",
+});
 
 /* 자료(#8) — 리포트 + 공개 임장노트 공유.
    깔끔한 라벨 섹션(리포트 · 공개 임장노트)으로 정리한 자료 허브.
@@ -114,9 +119,10 @@ export default async function TownLibraryPage() {
         ) : reports.length === 0 ? (
           <div className="card rise-in-1 rounded-2xl px-4 py-5">
             <p className="t-body font-bold text-ink">유료·단지 리포트는 아직 없어요</p>
+            {/* [970 · C-20] 해요체 통일 */}
             <p className="mt-1 t-sub text-text-2">
               지금은 아래 공개 임장노트만 열람할 수 있어요. 리포트가 올라오면 이
-              자리에 실제 목록이 채워집니다.
+              자리에 실제 목록이 채워져요.
             </p>
             <div className="mt-3 flex flex-wrap gap-4">
               <Link
@@ -214,7 +220,9 @@ export default async function TownLibraryPage() {
                 score: Math.round(inspectionAverageScore(n.scores) * 20),
                 cover: n.photos.find(Boolean) ?? null,
                 gradient: seedGradient(n.region || n.id),
-                visited: Boolean(n.visitDate),
+                /* [970 · C-11] Lab 노트는 방문 기록이 아니다 — 피드(lib/town/feed.ts)와 같은 판정 */
+                lab: isLabNoteLabel(n.authorLabel),
+                visited: Boolean(n.visitDate) && !isLabNoteLabel(n.authorLabel),
                 createdAt: Date.parse(n.createdAt) || 0,
               }),
             )}

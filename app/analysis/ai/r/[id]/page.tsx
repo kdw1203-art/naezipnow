@@ -50,7 +50,8 @@ export async function generateMetadata({
   if (!run || !isAiAnalysisToolId(run.tool)) return { robots: { index: false } };
   const identity = TOOL_IDENTITIES[run.tool as AiAnalysisToolId];
   return {
-    title: `${identity.title} 결과 공유`,
+    /* [970 · C-25] 접미 없던 제목에 `| 내집나우` */
+    title: `${identity.title} 결과 공유 | 내집나우`,
     description: run.structured_summary?.headline ?? identity.tagline,
     robots: { index: false, follow: false },
   };

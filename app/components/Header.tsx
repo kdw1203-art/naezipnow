@@ -42,7 +42,10 @@ export function Header() {
           scrolled ? "glass-strong header-scrolled h-12 md:h-14" : "glass h-12 md:h-14"
         }`}
       >
-        <Link href="/" aria-label="내집나우 홈" className="press njn-logo shrink-0">
+        {/* [970 · A-19] 셸 링크는 뷰포트 프리페치를 끈다 — 헤더·푸터·메뉴만으로 페이지마다
+            RSC 프리페치가 24건씩 나갔다. 다음 이동 확률이 가장 높은 모바일 탭바 5탭만
+            기본 프리페치를 남긴다(TabBar.tsx). */}
+        <Link href="/" prefetch={false} aria-label="내집나우 홈" className="press njn-logo shrink-0">
           <Logo />
         </Link>
 
@@ -65,6 +68,7 @@ export function Header() {
               >
                 <Link
                   href={item.href}
+                  prefetch={false}
                   aria-current={active ? "page" : undefined}
                   data-active={active ? "true" : undefined}
                   className={
@@ -77,14 +81,14 @@ export function Header() {
                 </Link>
                 {item.children && (
                   <div className="invisible absolute left-0 top-full z-50 pt-2 opacity-0 transition-all duration-[180ms] group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
-                    <div
-                      className="glass-strong dropdown-panel min-w-[168px] rounded-2xl p-1.5"
-                      style={{ background: "rgba(255,255,255,.9)" }}
-                    >
+                    {/* [970 · A-01] 인라인 흰 배경(rgba(255,255,255,.9))을 걷었다 — 다크에서 흰 판 위
+                        밝은 글자라 항목이 안 보였다. .popover-surface 는 surface 토큰 92%(양 테마). */}
+                    <div className="glass-strong dropdown-panel popover-surface min-w-[168px] rounded-2xl p-1.5">
                       {item.children.map((c) => (
                         <Link
                           key={c.href + c.label}
                           href={c.href}
+                          prefetch={false}
                           /* [963] whitespace-nowrap — "통합 지도 (탐색·실거래·매물)" 이
                              168px 패널 안에서 3줄로 접혀 메뉴가 세로로 길어졌다.
                              메뉴 항목은 접지 않고 패널이 가장 긴 라벨에 맞춰 넓어진다. */
@@ -112,6 +116,7 @@ export function Header() {
         {/* 화면당 primary CTA는 1개 — 노트 쓰기 (마이크로 인터랙션: 리프트 + 글로우) */}
         <Link
           href="/notes/new"
+          prefetch={false}
           className="btn-primary btn-cta press hidden px-4 py-[9px] text-[13px] transition-transform hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-glow)] md:block"
         >
           노트 쓰기
@@ -122,7 +127,7 @@ export function Header() {
 
         {/* 모바일 아이콘 + 전체 메뉴(☰) */}
         <div className="flex items-center gap-3 text-text-1 md:hidden">
-          <Link href="/search" aria-label="검색" className="press relative flex h-8 w-8 items-center justify-center after:absolute after:-inset-1.5 after:content-['']">
+          <Link href="/search" prefetch={false} aria-label="검색" className="press relative flex h-8 w-8 items-center justify-center after:absolute after:-inset-1.5 after:content-['']">
             <Icon name="search" size={19} />
           </Link>
           <NotificationBell variant="mobile" />
