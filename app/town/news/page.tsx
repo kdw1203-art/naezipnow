@@ -175,7 +175,7 @@ export default async function TownNewsPage() {
   const isMock = news.length === 0 && !newsFailed;
 
   return (
-    <PageShell breadcrumb="동네이야기 › 뉴스">
+    <PageShell breadcrumb="동네이야기 › 뉴스" wide>
       {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
       <TownCategoryNav stick />
       <TownPageHead

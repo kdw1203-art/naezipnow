@@ -35,7 +35,7 @@ export function Header() {
       style={{ paddingTop: "max(14px, env(safe-area-inset-top, 0px))" }}
     >
       <div
-        className={`header-shell mx-auto flex max-w-[1240px] items-center gap-3 rounded-2xl px-4 md:gap-6 md:px-5 ${
+        className={`header-shell mx-auto flex max-w-[1240px] items-center gap-2 rounded-2xl px-3.5 md:gap-6 md:px-5 ${
           /* 모바일3 — 본문 밀도를 줄인 뒤(2026-08-03 토큰 축소) 헤더가 상대적으로
              커 보였다. 모바일만 한 단계 축소: 56px→48px. 44px 는 터치 타깃 하한선이라
              그 밑으로는 내리지 않는다(스크롤 축소도 48×.96=46px 에서 멈춘다). md+ 원복. */
@@ -105,7 +105,23 @@ export function Header() {
           })}
         </nav>
 
-        <div className="flex-1" />
+        {/* [972] 모바일 헤더 가운데 — 예전엔 그냥 빈 칸(flex-1)이었다.
+            393px 실측: 로고 93px · 오른쪽 아이콘 묶음 120px 사이에 49px 이 아무것도
+            없이 떠 있었고, 검색은 19px 짜리 돋보기 하나로만 들어갈 수 있었다
+            (소유자 캡처의 상단 표시). 그 빈 칸을 검색 진입점으로 채운다 —
+            데스크탑 HeaderSearch 와 같은 재질(--glass-bg)·같은 자리다.
+            입력이 아니라 링크인 이유: sticky 헤더 안에서 키보드를 올리면 헤더가
+            뷰포트와 함께 튀고, 검색 페이지(/search)가 최근 검색·자동완성을 이미
+            다 갖고 있다. 오른쪽 묶음의 돋보기 아이콘은 이걸로 대체해 뺐다. */}
+        <Link
+          href="/search"
+          prefetch={false}
+          className="field-focus press flex h-9 min-w-0 flex-1 items-center gap-1.5 rounded-full bg-[var(--glass-bg)] px-3 t-sub text-text-3 no-underline md:hidden"
+        >
+          <Icon name="search" size={15} className="shrink-0" />
+          <span className="truncate">단지 검색</span>
+        </Link>
+        <div className="hidden flex-1 md:block" />
 
         {/* 데스크탑 검색 — P2-14 인라인 자동완성 (HeaderSearch) */}
         <HeaderSearch />
@@ -126,10 +142,9 @@ export function Header() {
         <HeaderAuth />
 
         {/* 모바일 아이콘 + 전체 메뉴(☰) */}
-        <div className="flex items-center gap-3 text-text-1 md:hidden">
-          <Link href="/search" prefetch={false} aria-label="검색" className="press relative flex h-8 w-8 items-center justify-center after:absolute after:-inset-1.5 after:content-['']">
-            <Icon name="search" size={19} />
-          </Link>
+        {/* [972] 돋보기 아이콘은 위 검색 필드로 옮겼다 — 같은 헤더에 검색 진입점을
+            둘 두면 좁은 폭만 더 먹는다. gap 도 12→8px(필드에 폭을 넘긴다). */}
+        <div className="flex shrink-0 items-center gap-2 text-text-1 md:hidden">
           <NotificationBell variant="mobile" />
           <MobileMenu />
         </div>

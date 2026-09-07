@@ -165,6 +165,15 @@ function toRpcRow(c: AptComplex, fallbackLawdCd: string): Record<string, unknown
 export interface AptIngestResult {
   /** RPC 가 실제로 insert/update 한 행 수 */
   upserted: number;
+  /**
+   * API 에서 읽어 저장 가능한 형태로 만든 행 수(단지코드 기준 중복 제거 후).
+   *
+   * [971] upserted 만으로는 "이미 최신이라 바꿀 게 없었다"와 "한 건도 못 읽었다"가
+   * 구별되지 않았다. 둘 다 0 이고, 크론은 둘 다 skipped 로 적었다. 그래서 대장이
+   * 다 채워진 뒤로 매일 "건너뜀" 만 쌓였고, 그 사이에 **읽기 자체가 0 인 시군구**
+   * (울산 중구·대전 중구·대전 서구 — 대장에 단 한 행도 없다)가 묻혔다.
+   */
+  fetched: number;
   /** API 가 보고한 해당 시군구 전체 단지 수 */
   totalCount: number;
   /** 실제로 읽은 페이지 수 */
@@ -187,6 +196,7 @@ export async function ingestAptMasterForSigungu(
   const numOfRows = opts?.numOfRows ?? NUM_OF_ROWS;
 
   let upserted = 0;
+  let fetched = 0;
   let totalCount = 0;
   let pages = 0;
   let failed = 0;
@@ -219,6 +229,7 @@ export async function ingestAptMasterForSigungu(
     }
 
     const rows = [...byKaptCode.values()];
+    fetched = rows.length;
     if (sb && rows.length > 0) {
       for (let i = 0; i < rows.length; i += UPSERT_BATCH) {
         const chunk = rows.slice(i, i + UPSERT_BATCH);
@@ -246,28 +257,39 @@ export async function ingestAptMasterForSigungu(
     logger.warn("[apt-ingest] ingest 실패", { sigunguCd, err });
   }
 
-  return { upserted, totalCount, pages, failed, ...(error ? { error } : {}) };
+  return { upserted, fetched, totalCount, pages, failed, ...(error ? { error } : {}) };
 }
 
 /**
  * 주어진 시군구 코드들을 순차(딜레이 없음) 처리하며 카운트 합산.
  * 슬라이스 크기로 호출량을 bound 해 rate limit 을 존중한다.
  */
-export async function ingestAptMasterBatch(
-  sigunguCds: string[],
-): Promise<{ sigungu: number; upserted: number; failed: number; errors: string[] }> {
+export async function ingestAptMasterBatch(sigunguCds: string[]): Promise<{
+  sigungu: number;
+  /** 읽어서 저장 가능한 형태로 만든 행 수 합 */
+  fetched: number;
+  upserted: number;
+  failed: number;
+  /** [971] 한 행도 못 읽은 시군구 코드 — 수집 구멍이 여기서 드러난다. */
+  empty: string[];
+  errors: string[];
+}> {
   let sigungu = 0;
+  let fetched = 0;
   let upserted = 0;
   let failed = 0;
+  const empty: string[] = [];
   const errors: string[] = [];
   for (const cd of sigunguCds) {
     const res = await ingestAptMasterForSigungu(cd);
+    fetched += res.fetched;
     upserted += res.upserted;
     failed += res.failed;
+    if (res.fetched === 0 && res.failed === 0) empty.push(cd);
     if (res.error && errors.length < 3) errors.push(`${cd}: ${res.error}`);
     sigungu += 1;
   }
-  return { sigungu, upserted, failed, errors };
+  return { sigungu, fetched, upserted, failed, empty, errors };
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -377,6 +399,22 @@ function toDetailPatch(d: AptComplexDetail): Record<string, unknown> {
   });
 }
 
+/**
+ * 같은 행이 이만큼 연속으로 상세를 못 받으면 성공이 0건이어도 커서를 넘긴다.
+ *
+ * [971] 왜 필요했나: 아래 "성공 0건이면 스탬프를 찍지 않는다" 규칙은 API 장애날
+ * 배치 전체를 miss 로 낙인찍지 않으려는 안전장치였는데, **상세가 영영 안 오는
+ * 행**에는 덫이 된다. 실제로 A10019968·A10019969·A10019970·A10019977 네 행이
+ * 남아 매 실행 이 넷만 뽑히고 → 전부 miss → 성공 0건 → 스탬프 없음 → 다음 실행도
+ * 같은 넷. 그 결과 백필이 몇 달째 "처리=4 병합=0 실패=4" 로 멈춰 있었고 매일
+ * error 로그가 하나씩 쌓였다(신선도 경보의 상수항).
+ *
+ * 3회로 잡은 이유: 크론은 하루 한 번 돈다. 공공 API 가 사흘 연속 죽어 있는 일은
+ * 드물고, 그런 날이 와도 잃는 건 그 행들이 miss 로 넘어가는 것뿐이다 —
+ * retryAptDetailMissBatch 가 miss 를 계속 다시 두드리므로 영구 손실이 아니다.
+ */
+const DETAIL_POISON_ATTEMPTS = 3;
+
 export interface AptDetailEnrichResult {
   /** 상세 조회를 시도한 행 수 */
   processed: number;
@@ -384,8 +422,14 @@ export interface AptDetailEnrichResult {
   enriched: number;
   /** 상세를 받지 못한 행 수(miss + RPC 실패) */
   failed: number;
+  /** 그중 **쓰기**가 실패한 수. miss(아직 없음)와 고장을 구분하려고 따로 센다. */
+  rpcFailed?: number;
+  /** 시도 상한에 걸려 miss 로 넘긴 행 수([971] 독성 행 탈출) */
+  stalled?: number;
   /** 배치를 아예 시작하지 못한 사유 */
   skipped?: "no-service" | "no-rows";
+  /** 어느 배치였나 — 신규 백필인지 miss 재시도인지 로그에서 구분하기 위해 */
+  mode?: "backfill" | "retry-miss";
   /** 첫 오류 메시지들(최대 3) — 크론 로그용 */
   errors: string[];
 }
@@ -396,36 +440,91 @@ export interface AptDetailEnrichResult {
  */
 export async function enrichAptDetailBatch(limit: number): Promise<AptDetailEnrichResult> {
   const sb = getServiceSupabase();
-  if (!sb) return { processed: 0, enriched: 0, failed: 0, skipped: "no-service", errors: [] };
+  if (!sb) {
+    return { processed: 0, enriched: 0, failed: 0, skipped: "no-service", mode: "backfill", errors: [] };
+  }
 
   // external_id(=kaptCode)는 k-apt-basic 네임스페이스에서 항상 채워져 있다
   // (마스터 ETL 의 toRpcRow 가 kaptCode 없는 행을 저장하지 않는다).
   const { data, error: selectError } = await sb
     .from("apartment_complexes")
-    .select("external_id, name, address, lawd_cd")
+    .select("external_id, name, address, lawd_cd, metadata")
     .eq("source_key", APT_MASTER_SOURCE_KEY)
     .is("metadata->detailFetchedAt", null)
     .order("external_id", { ascending: true })
     .limit(limit);
   if (selectError) {
-    return { processed: 0, enriched: 0, failed: limit, errors: [selectError.message] };
+    return { processed: 0, enriched: 0, failed: limit, mode: "backfill", errors: [selectError.message] };
   }
-  const rows =
-    (data as
-      | { external_id: string; name: string; address: string | null; lawd_cd: string | null }[]
-      | null) ?? [];
+  const rows = (data as AptDetailRow[] | null) ?? [];
   if (rows.length === 0) {
-    return { processed: 0, enriched: 0, failed: 0, skipped: "no-rows", errors: [] };
+    return { processed: 0, enriched: 0, failed: 0, skipped: "no-rows", mode: "backfill", errors: [] };
   }
 
+  return runDetailBatch(sb, rows, "backfill");
+}
+
+/**
+ * 상세를 못 받았던 단지(detailStatus='miss')를 다시 두드리는 배치.
+ *
+ * [971] 왜: 지금 1,158 행이 miss 로 남아 있는데 아무도 다시 안 본다. 원래 배치는
+ * detailFetchedAt 이 **없는** 행만 고르기 때문이다(스탬프가 커서니까 당연하다).
+ * 그런데 miss 의 상당수는 영구 결번이 아니라 그날 API 가 안 준 것이거나, 준공
+ * 직후라 아직 등록 전이던 단지다 — 시간이 지나면 채워진다.
+ *
+ * 커서는 detailFetchedAt 오름차순이다. 가장 오래 안 본 것부터 보고, 다시 miss 여도
+ * 스탬프를 새로 찍어 뒤로 보낸다. 그래서 이 배치는 1,158 행을 한 바퀴 도는
+ * 회전문이 되고, 어떤 행도 굶지 않는다.
+ */
+export async function retryAptDetailMissBatch(limit: number): Promise<AptDetailEnrichResult> {
+  const sb = getServiceSupabase();
+  if (!sb) {
+    return { processed: 0, enriched: 0, failed: 0, skipped: "no-service", mode: "retry-miss", errors: [] };
+  }
+
+  const { data, error: selectError } = await sb
+    .from("apartment_complexes")
+    .select("external_id, name, address, lawd_cd, metadata")
+    .eq("source_key", APT_MASTER_SOURCE_KEY)
+    .eq("metadata->>detailStatus", "miss")
+    .order("metadata->>detailFetchedAt", { ascending: true })
+    .limit(limit);
+  if (selectError) {
+    return { processed: 0, enriched: 0, failed: limit, mode: "retry-miss", errors: [selectError.message] };
+  }
+  const rows = (data as AptDetailRow[] | null) ?? [];
+  if (rows.length === 0) {
+    return { processed: 0, enriched: 0, failed: 0, skipped: "no-rows", mode: "retry-miss", errors: [] };
+  }
+
+  return runDetailBatch(sb, rows, "retry-miss");
+}
+
+/** 선택 쿼리가 돌려주는 행 모양 — 두 배치가 같은 모양을 쓴다. */
+interface AptDetailRow {
+  external_id: string;
+  name: string;
+  address: string | null;
+  lawd_cd: string | null;
+  metadata: Record<string, unknown> | null;
+}
+
+/**
+ * 고른 행들에 대해 상세를 받아 쓰는 공통 몸통.
+ *
+ * 두 배치(신규 백필 · miss 재시도)의 차이는 **행을 어떻게 고르는가**뿐이라
+ * 조회·병합·집계는 여기 한 곳에만 둔다.
+ */
+async function runDetailBatch(
+  sb: NonNullable<ReturnType<typeof getServiceSupabase>>,
+  rows: AptDetailRow[],
+  mode: "backfill" | "retry-miss",
+): Promise<AptDetailEnrichResult> {
   const fetchedAt = new Date().toISOString();
   const errors: string[] = [];
   // 병합 RPC 행 — name/address/lawd_cd 는 읽은 값을 그대로 되돌려 보낸다
   // (상세의 kaptName 으로 이름을 갈아치우면 이름 기반 신원(D7)이 흔들린다).
-  const toWriteRow = (
-    r: (typeof rows)[number],
-    metadata: Record<string, unknown>,
-  ): Record<string, unknown> => ({
+  const toWriteRow = (r: AptDetailRow, metadata: Record<string, unknown>): Record<string, unknown> => ({
     source_key: APT_MASTER_SOURCE_KEY,
     external_id: r.external_id,
     name: r.name,
@@ -434,54 +533,71 @@ export async function enrichAptDetailBatch(limit: number): Promise<AptDetailEnri
     metadata,
   });
 
-  const okRows: Record<string, unknown>[] = [];
-  const missRows: Record<string, unknown>[] = [];
+  /** 이 행이 지금까지 상세를 시도한 횟수(이번 회차 포함). */
+  const attemptsOf = (r: AptDetailRow): number => {
+    const raw = Number(r.metadata?.detailAttempts);
+    return (Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0) + 1;
+  };
+
   /* DETAIL_CONCURRENCY 만큼 동시에 부른다(위 상수 주석에 이유). 각 워커는 자기
      호출 사이에만 짧게 쉬므로, 전체 호출률은 순차일 때의 약 6배로 유지된다. */
   const outcomes = await mapWithConcurrency(rows, DETAIL_CONCURRENCY, async (r) => {
+    const attempts = attemptsOf(r);
     try {
       const { detail } = await fetchAptComplexDetail(r.external_id);
       await new Promise((res) => setTimeout(res, DETAIL_DELAY_MS));
       if (detail && detail.kaptCode) {
-        return {
-          kind: "ok" as const,
-          row: toWriteRow(r, {
-            ...toDetailPatch(detail),
-            detailStatus: "ok",
-            detailFetchedAt: fetchedAt,
-          }),
-        };
+        return { kind: "ok" as const, r, attempts, patch: toDetailPatch(detail) };
       }
-      return {
-        kind: "miss" as const,
-        row: toWriteRow(r, { detailStatus: "miss", detailFetchedAt: fetchedAt }),
-      };
+      return { kind: "miss" as const, r, attempts };
     } catch (err) {
       await new Promise((res) => setTimeout(res, DETAIL_DELAY_MS));
       return {
         kind: "miss" as const,
-        row: toWriteRow(r, { detailStatus: "miss", detailFetchedAt: fetchedAt }),
+        r,
+        attempts,
         error: err instanceof Error ? err.message : String(err),
       };
     }
   });
   for (const o of outcomes) {
-    if (o.kind === "ok") okRows.push(o.row);
-    else missRows.push(o.row);
     if ("error" in o && o.error && errors.length < 3) errors.push(o.error);
   }
 
-  // 성공이 0건이면 키 미설정 또는 API 장애다 — miss 스탬프를 찍지 않고 그대로
-  // 반환한다(다음 실행이 같은 행을 다시 시도). 성공이 있으면 miss 도 찍어
-  // 커서를 전진시킨다. miss 행은 metadata.detailStatus='miss' 로 남으므로
-  // 나중에 재시도 배치를 따로 돌릴 수 있다.
-  if (okRows.length === 0) {
-    return { processed: rows.length, enriched: 0, failed: missRows.length, errors };
-  }
+  const okOutcomes = outcomes.filter((o) => o.kind === "ok");
+  const missOutcomes = outcomes.filter((o) => o.kind === "miss");
 
-  let enriched = 0;
+  /* 성공이 0건이면 키 미설정 또는 API 장애일 수 있다 — 그날 배치를 통째로 miss 로
+     낙인찍지 않으려고 스탬프를 미룬다. 다만 시도 횟수는 반드시 적는다.
+     [971] 그 유예에 상한을 뒀다. 상한(DETAIL_POISON_ATTEMPTS)을 넘긴 행은 성공이
+     0건이어도 스탬프를 찍어 커서를 넘긴다 — 안 그러면 네 행이 백필 전체를
+     영원히 막는다(위 상수 주석의 실제 사고). 재시도 배치는 miss 도 계속 보므로
+     넘긴다고 버리는 게 아니다. */
+  const anyOk = okOutcomes.length > 0;
+  const stalled = anyOk ? 0 : missOutcomes.filter((o) => o.attempts >= DETAIL_POISON_ATTEMPTS).length;
+
+  const writeRows: Record<string, unknown>[] = [
+    ...okOutcomes.map((o) =>
+      toWriteRow(o.r, {
+        ...("patch" in o ? o.patch : {}),
+        detailStatus: "ok",
+        detailAttempts: o.attempts,
+        detailFetchedAt: fetchedAt,
+      }),
+    ),
+    ...missOutcomes.map((o) =>
+      anyOk || o.attempts >= DETAIL_POISON_ATTEMPTS
+        ? toWriteRow(o.r, {
+            detailStatus: "miss",
+            detailAttempts: o.attempts,
+            detailFetchedAt: fetchedAt,
+          })
+        : // 스탬프 없이 시도 횟수만 — 다음 실행이 이 행을 다시 고른다.
+          toWriteRow(o.r, { detailAttempts: o.attempts }),
+    ),
+  ];
+
   let failed = 0;
-  const writeRows = [...okRows, ...missRows];
   for (let i = 0; i < writeRows.length; i += UPSERT_BATCH) {
     const chunk = writeRows.slice(i, i + UPSERT_BATCH);
     const { error: rpcError } = await sb.rpc("upsert_apartment_complexes", { rows: chunk });
@@ -490,15 +606,23 @@ export async function enrichAptDetailBatch(limit: number): Promise<AptDetailEnri
       if (errors.length < 3) errors.push(rpcError.message);
       logger.warn("[apt-detail-enrich] upsert 실패", {
         rows: chunk.length,
+        mode,
         message: rpcError.message,
       });
     }
   }
   // 상세 병합 성공 = ok 행 중 RPC 까지 통과한 수. ok/miss 를 한 배열로 썼으므로
   // RPC 실패 청크에 섞인 ok 행은 enriched 에서 빼고 failed 로 센다.
-  const rpcFailedOk = Math.min(failed, okRows.length);
-  enriched = okRows.length - rpcFailedOk;
-  failed = missRows.length + rpcFailedOk;
+  const rpcFailedOk = Math.min(failed, okOutcomes.length);
+  const enriched = okOutcomes.length - rpcFailedOk;
 
-  return { processed: rows.length, enriched, failed, errors };
+  return {
+    processed: rows.length,
+    enriched,
+    failed: missOutcomes.length + rpcFailedOk,
+    rpcFailed: failed,
+    ...(stalled > 0 ? { stalled } : {}),
+    mode,
+    errors,
+  };
 }

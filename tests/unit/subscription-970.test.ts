@@ -16,6 +16,9 @@ import { planLabel } from "../../lib/subscriptions/labels";
 
 test("feePct — 소수 요율을 정수 퍼센트 표기로", () => {
   assert.equal(feePct(0.07), "7%");
+  assert.equal(feePct(0.1), "10%");
+  // [971] 확정 요율 — 화면 표기가 모두 이 값에서 파생된다
+  assert.equal(REPORT_SELLER_FEE_RATE, 0.1);
   assert.equal(feePct(0.06), "6%");
   assert.equal(feePct(0.1), "10%");
   assert.equal(feePct(0.029), "3%", "반올림");

@@ -10,6 +10,7 @@
  * D7 매칭이 성공한 단지는 아래 enrich 에서 좌표·건설사가 채워진다.
  */
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { getReadOnlySupabase } from "@/lib/newui/supabase-read";
 import { AREA_BANDS } from "@/lib/market/bands";
 import { APT_MASTER_SOURCE_KEY } from "@/lib/complex/apartment-master";
 import {
@@ -291,6 +292,8 @@ async function enrichFromApartmentComplex(
   name: string,
   /** 대표 실거래 주소("{시군구} {법정동} {지번}") — 동명·유사명 후보를 지번으로 가른다 */
   mtAddress?: string | null,
+  /** [973] 호출부 상한과 같은 시계. 상한이 끝나면 질의도 끊는다. */
+  signal?: AbortSignal,
 ): Promise<AptEnrich | null> {
   const sb = getServiceSupabase();
   if (!sb) return null;
@@ -305,6 +308,7 @@ async function enrichFromApartmentComplex(
     .ilike("name", `%${core}%`)
     .limit(25);
   if (district) q = q.ilike("address", `%${district}%`);
+  if (signal) q = q.abortSignal(signal);
   const { data, error } = await q;
   /* 대장 마스터는 부가정보(좌표·난방·도로명)라 없어도 허브는 실거래만으로 그린다.
      그래도 "못 읽음"과 "매칭 없음"은 다른 사실이라 실패는 던진다 — 조용히 null 이
@@ -386,7 +390,11 @@ async function enrichFromApartmentComplex(
  * address. 곁다리 조회는 바뀌지 않는 필드만 써야 한다 — 단지 이야기(getComplexPosts)는
  * row.id 를 쓰므로 enrich 뒤에 부른다.
  */
-export async function getComplexBaseById(id: string): Promise<ComplexRow | null> {
+export async function getComplexBaseById(
+  id: string,
+  /** [973] 호출부 상한과 **같은 시계**를 쓰는 취소 신호. 아래 클라이언트 주석 참고. */
+  signal?: AbortSignal,
+): Promise<ComplexRow | null> {
   const parsed = parseComplexId(id);
   if (!parsed) return null;
   if (parsed.kind === "kapt") {
@@ -395,10 +403,16 @@ export async function getComplexBaseById(id: string): Promise<ComplexRow | null>
     return getComplexByKaptCode(parsed.kaptCode);
   }
   const dec = parsed;
-  const sb = getServiceSupabase();
+  /* [973] 쓰기용 클라이언트(getServiceSupabase)에서 **읽기 전용**으로 바꾼다.
+     그쪽은 상한이 없다(쓰기에 상한을 걸면 안 되니 당연하다). 그래서 DB 가
+     포화되면 이 조회가 함수 상한까지 늘어졌고, PostgREST 가 503 을 돌려줘도
+     한 번에 실패했다. 읽기 클라이언트는 시도별 상한·총 예산·502/503/504
+     백오프 재시도를 이미 갖고 있다(lib/supabase/resilient-fetch.ts).
+     anon 폴백도 안전하다 — market_transactions 는 anon SELECT 가 열려 있다(실측). */
+  const sb = getReadOnlySupabase();
   if (!sb) return null;
   // 이 단지의 매매 실거래가 1건이라도 있으면 실재하는 단지로 간주 (대표 정보 도출)
-  const { data, error } = await sb
+  let q = sb
     .from("market_transactions")
     .select("address, build_year")
     .eq("complex_name", dec.name)
@@ -407,6 +421,11 @@ export async function getComplexBaseById(id: string): Promise<ComplexRow | null>
     .eq("is_cancelled", false)
     .order("build_year", { ascending: false, nullsFirst: false })
     .limit(1);
+  /* [973] 상한이 끝나면 **질의도 같이 끊는다.** 예전에는 호출부가 Promise.race 로
+     약속만 버렸고 HTTP 요청과 그 뒤의 Postgres 질의는 계속 살아 있었다 — 포화
+     상황에서 버려진 질의가 쌓여 포화를 더 키웠다(2026-09-07 사고). */
+  if (signal) q = q.abortSignal(signal);
+  const { data, error } = await q;
   /* 여기서 null 을 돌려주면 허브 페이지가 notFound() 를 부른다. 그 페이지는
      revalidate = 120 인 ISR 이라 "그런 단지는 없습니다" 404 가 2분간 얼어붙는다.
      실재하는 단지가 장애 몇 초 때문에 검색엔진에 없는 단지로 보이면 안 된다. */
@@ -416,19 +435,110 @@ export async function getComplexBaseById(id: string): Promise<ComplexRow | null>
   return toComplexRow(dec.region, dec.name, row);
 }
 
+/**
+ * 이름 매칭이 못 가른 단지를 **필지(동+번지)** 연결로 보강한다.
+ *
+ * [971] 위 enrichFromApartmentComplex 는 `name ILIKE %기본형%` 로 후보를 좁힌다.
+ * 그래서 이름이 서로 품지 않는 짝("공작" ↔ "공작부영2차" 는 되지만, 국토부
+ * "성호" ↔ K-apt "호원성호" 처럼 접두가 붙으면 ILIKE 는 되는데 반대로 접두가
+ * 다르면 안 된다)이나 후보가 갈려 보류된 단지는 스펙이 통째로 빈다.
+ *
+ * complex_master_link 는 같은 문제를 이름이 아니라 주소로 푼다 — 같은 필지에
+ * 선 아파트는 같은 아파트다. 그 결과가 complex_tx_stats 의 뒷 컬럼으로 나와
+ * 있으므로, 여기서는 (지역, 단지명) 한 줄만 읽으면 된다.
+ *
+ * 안전 규칙은 저쪽(매트뷰)에 이미 들어 있다: 세대수는 후보들의 값이 하나로
+ * 모일 때만, 나머지 스펙은 후보가 정확히 하나일 때만 채워진다. 그래서 여기서
+ * 따로 갈라 볼 것이 없다 — 비어 있으면 비어 있는 게 맞는 것이다.
+ * (2026-08-10 "공작아파트" 사고의 원칙: 스펙 없는 패널이 옆 단지 스펙이 붙은
+ *  패널보다 낫다.)
+ *
+ * 좌표는 여기서 오지 않는다 — 이 표에 좌표 컬럼이 없다. 지도 좌표는 계속
+ * complex_geocode(네이버 지오코딩 캐시)가 담당한다.
+ */
+async function enrichFromMasterLink(
+  region: string,
+  name: string,
+  signal?: AbortSignal,
+): Promise<AptEnrich | null> {
+  const sb = getServiceSupabase();
+  if (!sb) return null;
+  let q = sb
+    .from("complex_tx_stats")
+    .select(
+      "households, parking_count, building_count, heating, builder, approval_date, road_address",
+    )
+    .eq("region_name", region)
+    .eq("complex_name", name);
+  /* .abortSignal 은 필터 빌더에만 있다 — .maybeSingle() 뒤에는 못 붙인다. */
+  if (signal) q = q.abortSignal(signal);
+  const { data, error } = await q.maybeSingle();
+  if (error) throw dbError("complex_tx_stats (단지 스펙)", error);
+  if (!data) return null;
+  const m = data as {
+    households: number | null;
+    parking_count: number | null;
+    building_count: number | null;
+    heating: string | null;
+    builder: string | null;
+    approval_date: string | null;
+    road_address: string | null;
+  };
+  const approval = m.approval_date ?? "";
+  const buildYear = /^\d{8}$/.test(approval) ? Number(approval.slice(0, 4)) : null;
+  /* 한 칸도 못 채울 거면 null 이 낫다 — 호출부가 "매칭 없음"으로 계속하게 한다. */
+  const anything =
+    m.households != null ||
+    m.parking_count != null ||
+    m.building_count != null ||
+    m.heating != null ||
+    m.builder != null ||
+    m.road_address != null ||
+    buildYear != null;
+  if (!anything) return null;
+  return {
+    kaptCode: null,
+    buildYear,
+    heating: m.heating,
+    roadAddress: m.road_address,
+    builder: m.builder,
+    lat: null,
+    lng: null,
+    households: m.households,
+    buildingCount: m.building_count,
+    parkingCount: m.parking_count,
+  };
+}
+
 /** getComplexBaseById 결과에 대장 마스터 정보를 입힌다 (kapt 경로 결과는 그대로 통과). */
-export async function enrichComplexRow(base: ComplexRow): Promise<ComplexRow> {
+export async function enrichComplexRow(
+  base: ComplexRow,
+  /** [973] 상한이 끝나면 이 보강 질의들도 같이 끊는다(선택 정보라 끊어도 화면은 선다). */
+  signal?: AbortSignal,
+): Promise<ComplexRow> {
   if (parseComplexId(base.id)?.kind === "kapt") return base;
   const dec = decodeComplexId(base.canonical_id);
   if (!dec) return base;
   // D7 — 대장 마스터(apartment_complexes) 매칭 enrich (세대수·준공·난방·도로명·kapt).
   // 실패해도 허브는 실거래만으로 그린다. 다만 조용히 넘기지 않고 로그는 남긴다.
-  const apt = await enrichFromApartmentComplex(dec.region, dec.name, base.address).catch((e) => {
+  const apt = await enrichFromApartmentComplex(
+    dec.region,
+    dec.name,
+    base.address,
+    signal,
+  ).catch((e) => {
     logger.warn("[complex] 대장 마스터 enrich 실패 — 실거래만으로 계속", e);
     return null;
   });
-  if (!apt) return base;
-  return applyMasterEnrich(base, apt);
+  if (apt) return applyMasterEnrich(base, apt);
+  /* [971] 이름으로 못 가른 단지는 필지 연결로 한 번 더 본다. 여기까지 비면
+     실거래만으로 그린다 — 그건 "모른다"이지 장애가 아니다. */
+  const linked = await enrichFromMasterLink(dec.region, dec.name, signal).catch((e) => {
+    logger.warn("[complex] 필지 연결 enrich 실패 — 실거래만으로 계속", e);
+    return null;
+  });
+  if (!linked) return base;
+  return applyMasterEnrich(base, linked);
 }
 
 export async function getComplexById(id: string): Promise<ComplexRow | null> {

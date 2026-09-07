@@ -1,5 +1,11 @@
 import { cache } from "react";
 import { logger } from "@/lib/log";
+import {
+  createTimeoutBreaker,
+  recordSuccess,
+  recordTimeout,
+  shouldSkipRetry,
+} from "@/lib/db/timeout-breaker";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -160,25 +166,64 @@ const SIDE_QUERY_BUDGET_MS = 5_000;
  * TX_HISTORY_MONTHS 를 넘긴다 — getTransactionHistory 는 limit 과 무관하게
  * 이 단지의 실거래를 전부 읽어서 월별로 접은 뒤 마지막 limit개만 남긴다.
  */
-/* 10초 상한. 이 조회는 페이지의 1단(이게 끝나야 곁다리 8초 예산이 시작된다)
-   이라 여기 상한이 없으면 3단 직렬(row → 곁다리 → 신선도)의 최악이 함수
-   상한을 넘본다. 주의: 시간 초과는 **throw** 다 — null 로 바꾸면 notFound()
-   가 "조회 실패"를 "없는 단지(404)"로 위장한다. */
-const COMPLEX_ROW_TIMEOUT_MS = 10_000;
-/* 재시도 1회. 이 조회 자체는 빠르다 — 프로덕션 실행 계획 실측 15.8ms
-   (mt_trade_complex_geo_idx 인덱스 스캔, 22행). 그런데 2026-08-24~25 사이
-   181건(사용자 32명)이 10초를 넘겼다. 원인은 이 쿼리가 아니라 그 시각 DB 가
-   다른 것에 잡혀 있었던 것이고(전월세 집계 RPC 하나가 전체 DB 시간의 27.9% 를
-   먹고 있었다), 그런 포화는 몇 초면 지나간다.
-   그래서 한 번은 다시 물어본다 — 두 번째도 넘기면 그때는 진짜 장애다. */
+/* 대표행 조회 상한.
+   [973] 10초 → 4초. 이 조회는 평시 **15.8ms** 다(프로덕션 실행 계획 실측,
+   mt_trade_complex_geo_idx 인덱스 스캔 22행). 10초는 평시의 600배이고, 그만큼
+   기다린다고 답이 오지 않는다 — 그 시간 동안 붙잡는 건 함수 하나와 DB 연결
+   하나다. 2026-09-07 사고에서 그 붙잡음이 포화를 더 키웠다(아래 사고 메모).
+   4초는 "느린 날에도 성공할 수 있는 값"과 "포화를 키우지 않는 값" 사이다.
+   주의: 시간 초과는 **throw** 다 — null 로 바꾸면 notFound() 가 "조회 실패"를
+   "없는 단지(404)"로 위장하고, 그 404 가 ISR 로 6시간 얼어붙는다. */
+const COMPLEX_ROW_TIMEOUT_MS = 4_000;
+/** 2차 시도 상한 — 1차와 같게 둔다(짧게 잡을 이유가 없다. 아래 breaker 가 회수를 막는다). */
+const COMPLEX_ROW_RETRY_TIMEOUT_MS = 4_000;
+/* 재시도 1회. 이 조회 자체는 빠르므로 일시적 오류(PostgREST 503 등)에는 다시
+   물어보는 게 맞다. 2026-08-24~25 에 181건(사용자 32명)이 10초를 넘겼을 때도
+   원인은 이 쿼리가 아니라 그 시각 DB 포화였고, 그런 포화는 몇 초면 지나간다. */
 const COMPLEX_ROW_RETRY_DELAY_MS = 350;
 
-function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+/* ──────────────────────────────────────────────────────────────────────────
+   [973] 2026-09-07 사고 메모 — 이 블록이 왜 이렇게 생겼나
+
+   Vercel 경보: /complex/[id] 5xx 급증(오류율 43.1% · 실패 135건), 로그에
+   "단지 정보 조회 시간 초과 (6000ms)" 271건 · 서버 컴포넌트 렌더 오류 53건,
+   같은 창에서 Supabase 503 14건 + Timeout 4건.
+
+   원인은 이 페이지가 아니라 **DB 포화**였다(그 시각 분석용 대용량 질의 한 건이
+   29.5초를 먹었다 — pg_stat_statements 실측). 하지만 이 코드가 포화를 **키웠다**:
+     · Promise.race 상한은 약속만 버리고 질의를 취소하지 않았다 → 버려진 질의가
+       Postgres 안에 계속 살아 있었다.
+     · 그 위에 350ms 뒤 재시도가 하나를 더 얹었다 → 요청 하나가 살아 있는 질의 둘.
+     · 조회는 상한 없는 **쓰기용** 클라이언트를 쓰고 있어 503 재시도도 없었다.
+
+   그래서 세 가지를 바꿨다.
+     1. 읽기 전용 클라이언트로(시도별 상한·총 예산·503 백오프) — complex-store.ts
+     2. 상한이 끝나면 AbortSignal 로 **질의를 실제로 끊는다**
+     3. 시간 초과가 연달아 나면 재시도를 잠깐 끈다(lib/db/timeout-breaker.ts)
+   ────────────────────────────────────────────────────────────────────────── */
+const rowBreaker = createTimeoutBreaker();
+
+/** 시간 초과를 알아보는 표식 — 로그·차단기 판정이 문자열 비교에 기대지 않게. */
+class QueryTimeoutError extends Error {}
+
+/**
+ * 상한 + **취소**. 예전 구현은 Promise.race 만 했다(취소 없음).
+ * 넘긴 signal 을 조회에 실어 보내야 상한이 실제로 질의를 끊는다.
+ */
+function withTimeout<T>(
+  run: (signal: AbortSignal) => Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  const ac = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   return Promise.race([
-    p,
+    run(ac.signal),
     new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error(`${label} (${ms}ms)`)), ms);
+      timer = setTimeout(() => {
+        ac.abort();
+        reject(new QueryTimeoutError(`${label} (${ms}ms)`));
+      }, ms);
     }),
   ]).finally(() => clearTimeout(timer)) as Promise<T>;
 }
@@ -190,25 +235,75 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 const loadComplexBase = cache(async (id: string) => {
   const label = "단지 정보 조회 시간 초과";
   try {
-    return await withTimeout(getComplexBaseById(id), COMPLEX_ROW_TIMEOUT_MS, label);
+    const row = await withTimeout(
+      (signal) => getComplexBaseById(id, signal),
+      COMPLEX_ROW_TIMEOUT_MS,
+      label,
+    );
+    recordSuccess(rowBreaker);
+    return row;
   } catch (first) {
+    const timedOut = first instanceof QueryTimeoutError;
+    if (timedOut) recordTimeout(rowBreaker, Date.now());
+
+    /* [973] 포화 중에는 재시도가 약이 아니라 독이다 — 밀리고 있는 DB 에 같은
+       질의를 하나 더 얹는 일이다. 최근 창 안에서 시간 초과가 연달아 났으면
+       한 번만 물어보고 실패를 올려보낸다(화면은 error.tsx 가 한국어로 그린다).
+       성공 한 번이면 바로 원상복귀한다. */
+    if (timedOut && shouldSkipRetry(rowBreaker, Date.now())) {
+      logger.warn("[complex] 단지 조회 시간 초과 연속 — 재시도 생략(부하 경감)", {
+        id,
+        strikes: rowBreaker.strikes,
+      });
+      throw first;
+    }
+
     logger.warn("[complex] 단지 조회 1차 실패 — 1회 재시도", {
       id,
+      timedOut,
       message: first instanceof Error ? first.message : String(first),
     });
     await new Promise((r) => setTimeout(r, COMPLEX_ROW_RETRY_DELAY_MS));
-    /* 2차는 짧게 — 여기서도 막히면 페이지 전체 예산을 지키는 쪽이 낫다.
-       주의: 시간 초과는 여전히 **throw** 다. null 로 바꾸면 notFound() 가
+    /* 주의: 시간 초과는 여전히 **throw** 다. null 로 바꾸면 notFound() 가
        "조회 실패"를 "없는 단지(404)"로 위장하고, 그 404 가 ISR 로 얼어붙는다. */
-    return await withTimeout(getComplexBaseById(id), 6_000, label);
+    try {
+      const row = await withTimeout(
+        (signal) => getComplexBaseById(id, signal),
+        COMPLEX_ROW_RETRY_TIMEOUT_MS,
+        label,
+      );
+      recordSuccess(rowBreaker);
+      return row;
+    } catch (second) {
+      if (second instanceof QueryTimeoutError) recordTimeout(rowBreaker, Date.now());
+      throw second;
+    }
   }
 });
+/** 대장 보강 상한. [973] 예전엔 **상한이 없었다** — base 가 성공한 뒤 이 보강이
+ *  밀리면 함수 상한(300초)까지 붙잡힐 수 있었다. 보강은 세대수·난방 같은 곁다리라
+ *  없어도 화면이 선다(그 폴백은 원래부터 있다). 2.5초면 평시(수십 ms)의 100배다. */
+const COMPLEX_ENRICH_TIMEOUT_MS = 2_500;
+
 const loadComplexRow = cache(async (id: string) => {
   const base = await loadComplexBase(id);
   if (!base) return null;
   /* enrich 는 내부에서 실패를 삼키고(로그) base 를 그대로 돌려준다 — 예전
-     getComplexById 와 같은 계약. 시간 상한은 base 쪽에만 있었으므로 그대로 둔다. */
-  return enrichComplexRow(base);
+     getComplexById 와 같은 계약. [973] 여기에도 상한과 취소를 건다. 넘기면
+     **던지지 않고** base 를 그대로 쓴다 — 곁다리가 페이지를 죽이면 안 된다. */
+  try {
+    return await withTimeout(
+      (signal) => enrichComplexRow(base, signal),
+      COMPLEX_ENRICH_TIMEOUT_MS,
+      "단지 대장 보강 시간 초과",
+    );
+  } catch (e) {
+    logger.warn("[complex] 대장 보강 상한 초과 — 실거래만으로 계속", {
+      id,
+      message: e instanceof Error ? e.message : String(e),
+    });
+    return base;
+  }
 });
 /* [967 · 16] area_m2 를 함께 읽어 월별 행에 면적대 분할(bands)을 싣는 로더로 교체.
    월별 숫자는 getTransactionHistory 와 같은 규칙 — 메타데이터·본문이 같은 값을 본다. */

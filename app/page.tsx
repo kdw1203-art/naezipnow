@@ -400,7 +400,10 @@ export default async function Home() {
               있었지만 `.home-search-hero` 규칙은 CSS 에 존재하지 않는다 —
               접히는 일이 없었고, 그래서 항상 42dvh 를 먹고 있었다.
               지금은 내용 높이대로 서고 여백은 패딩으로만 준다. */}
-          <div className="flex flex-col gap-3 pb-3 pt-5">
+          {/* [972] pt-5 → pt-1.5. 헤더 아래 40px 이 아무것도 없이 비어 있었다
+              (소유자 캡처 상단 표시). 헤더에 검색 필드가 생겨 "검색이 어디 있나"를
+              이 여백이 대신 말해 줄 필요가 없어졌다 — 질문 문장을 그만큼 올린다. */}
+          <div className="flex flex-col gap-3 pb-3 pt-1.5">
             <p className="rise-in t-display text-center text-ink">
               어느 단지가 궁금하세요?
             </p>

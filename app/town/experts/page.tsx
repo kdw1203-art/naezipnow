@@ -12,6 +12,7 @@ import { BrandWatermark } from "@/app/components/BrandWatermark";
 import { JsonLd } from "@/app/components/JsonLd";
 import { faqJsonLd } from "@/lib/seo/jsonld";
 import { TownCategoryNav } from "../TownCategoryNav";
+import { TownPageHead } from "../TownPageHead";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
 
@@ -72,19 +73,36 @@ export default async function TownExpertsPage() {
   }));
 
   return (
-    <PageShell breadcrumb="동네이야기 › 전문가">
+    /* [972] 9칸 중 이 페이지만 머리가 달랐다 — 형제들은 카테고리 줄 아래 공통 머리
+       (아이콘 칩 + 제목 + 한 줄)인데 여기는 곧바로 네이비 히어로였고, 그래서 제목이
+       형제들(214px)보다 44px 아래(258px)에 있었다(Pixel 5 실측).
+       공통 머리를 앞에 세우고 네이비 카드는 **소개 블록**으로 내린다 — 담고 있던
+       내용(설명·보증 문구·커버리지·두 CTA)은 그대로 두고, h1 만 공통 머리로 옮겼다. */
+    <PageShell breadcrumb="동네이야기 › 전문가" wide>
       <JsonLd data={faqJsonLd(EXPERT_FAQ)} />
       <TownCategoryNav stick />
+      <TownPageHead
+        href="/town/experts"
+        title="전문가"
+        sub="자격을 확인한 전문가에게 글로 묻고, 답변은 상담함으로"
+        action={
+          <Link
+            href="/town/experts/join"
+            className="btn-ghost rounded-xl px-3.5 py-2 t-sub font-bold no-underline"
+          >
+            전문가로 참여
+          </Link>
+        }
+      />
 
-      {/* ---------- 히어로 (브랜드 네이비) ---------- */}
+      {/* ---------- 소개 (브랜드 네이비) ---------- */}
       <section className="rise-in brand-navy-card mb-5 overflow-hidden rounded-[18px] px-5 py-6 md:px-7 md:py-7">
         <BrandWatermark />
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="max-w-[560px]">
-            <div className="t-caption font-extrabold tracking-wider text-on-dark-muted">전문가 상담</div>
-            <h1 className="mt-1 t-title text-on-dark">
+            <p className="t-section text-on-dark">
               자격을 확인한 전문가에게, <span className="text-brand-red-dark">지금</span> 물어보기
-            </h1>
+            </p>
             <p className="mt-2 t-body text-on-dark-muted">
               공인중개사·세무사·감정평가사·대출상담사·건축사. 임장노트 링크를 붙여 글로 묻고, 답변은 상담함으로 받아요.
               고르기 어려우면 견적 요청 하나로 인증 전문가의 제안을 비교하세요.
@@ -101,13 +119,13 @@ export default async function TownExpertsPage() {
               </span>
             </div>
           </div>
+          {/* [972] "전문가로 참여" 는 공통 머리의 action 으로 올라갔다 — 같은 화면에
+              같은 링크가 둘이면 어느 쪽이 주인지 알 수 없다. 여기는 목록으로
+              내려가는 한 개만 남긴다. */}
           <div className="flex shrink-0 gap-2 md:flex-col md:items-end">
             <a href="#experts" className="btn-primary btn-cta rounded-xl px-5 py-2.5 t-body no-underline">
               전문가 보기
             </a>
-            <Link href="/town/experts/join" className="brand-photo-chip rounded-xl px-5 py-2.5 t-body font-bold no-underline">
-              전문가로 참여
-            </Link>
           </div>
         </div>
         {/* 커버리지 — 실측만. 0 이면 0.

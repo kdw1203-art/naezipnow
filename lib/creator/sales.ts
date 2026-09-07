@@ -22,7 +22,8 @@ const REPORT_PURCHASES_LIMIT = 20_000;
  *  규칙(현금 전환 불가·서비스 내 혜택 전용)을 따른다. */
 export const SETTLEMENT = {
   /** 플랫폼 몫 — [970 · A-09 · C-15] 숫자는 lib/billing/marketplace-fees.ts 단일
-      출처에서만 온다(여기 0.07 을 따로 적어 두어 /legal/fees 10% 와 갈라졌었다). */
+      출처에서만 온다(여기 0.07 을 따로 적어 두어 /legal/fees 10% 와 갈라졌었다.
+         [971] 소유자 확정 요율은 10% — marketplace-fees.ts 한 곳에서 바꾼다). */
   platformFeeRate: REPORT_SELLER_FEE_RATE,
 } as const;
 

@@ -65,7 +65,7 @@ export default async function TownLibraryPage() {
   }
 
   return (
-    <PageShell breadcrumb="동네이야기 › 자료">
+    <PageShell breadcrumb="동네이야기 › 자료" wide>
       {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
       <TownCategoryNav stick />
       {/* ---------- 페이지 헤더 ---------- */}

@@ -5,7 +5,11 @@ import { CookieSettingsLink } from "@/components/consent/cookie-settings-link";
 import { NO_PROFIT_GUARANTEE_TEXT } from "@/app/components/ComplianceNotice";
 
 /* P0-3 공통 푸터 — 사업자·통신판매업 고지(전자상거래법) + 약관 링크를 모든 페이지·모바일에 노출.
-   모바일에서는 하단 탭바와 겹치지 않게 pb-28 확보.
+   모바일에서는 하단 탭바와 겹치지 않게 여백 확보.
+   [972] pb-28(112px) → pb-[76px]. 실측(Pixel 5): 마지막 줄이 615px 에서 끝나고
+   탭바 윗단이 675px 이라, 112px 중 실제로 필요한 건 탭바가 덮는 52px + 여유뿐인데
+   60px 짜리 흰 띠가 페이지 끝마다 남았다(소유자 캡처 하단 표시).
+   76px = 탭바 오프셋(68px) + 8px — 덮이지도 않고 남지도 않는 최소값이다.
    [970 · A-29] 탭바 여유는 **여기 한 곳**만 — PageShell·홈 <main> 은 pb-6 로 내렸다. */
 
 const LEGAL_LINKS = [
@@ -35,7 +39,7 @@ export function Footer() {
   const biz = getBusinessInfo();
 
   return (
-    <footer className="mt-auto border-t border-line bg-surface px-5 pb-28 pt-6 md:pb-6">
+    <footer className="mt-auto border-t border-line bg-surface px-5 pb-[76px] pt-6 md:pb-6">
       <div className="mx-auto flex max-w-[1240px] flex-col gap-2 t-sub text-text-3">
         {/* [962] 0행: 브랜드 잠금 + 슬로건 — 모든 페이지의 마지막 줄이 브랜드로 끝난다 */}
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3 border-b border-divider pb-4">
@@ -120,7 +124,11 @@ export function Footer() {
             NO_PROFIT_GUARANTEE_TEXT 에 이미 있다 — 같은 화면에서 두 번 읽히던 중복을
             지운다(홈 비판 ⑩). 대신 화면에 세 이름(내집나우·우리동네이야기·naezipnow.com)이
             나란히 노출돼 생기던 혼란을 한 줄로 푼다(투자자 ⑧, 운영 필수 20). */}
-        <div>
+        {/* [972] 오른쪽 여백 — "맨 위로" FAB(44px, right:14px)이 뷰포트 우하단에 떠 있어
+            페이지 끝에서 이 마지막 줄의 오른쪽 글자를 덮었다(소유자 캡처 하단 표시).
+            FAB 는 fixed 라 스크롤로 피할 수 없으므로, 마지막 문단만 그 폭을 비워 둔다.
+            md+ 는 FAB 가 본문 밖에 있어 원래 폭. */}
+        <div className="pe-[68px] md:pe-0">
           실거래가는 국토교통부 공개 데이터 기준입니다. 내집나우는 {biz.legalName}(사업자)가
           운영하는 서비스 이름이고, {biz.domain} 은 현재 주소입니다.
         </div>

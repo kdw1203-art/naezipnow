@@ -1,6 +1,7 @@
 import "server-only";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { isNaverMapsRestConfigured, naverGeocode } from "@/lib/map/naver-maps-rest";
+import { buildGeocodeQueries } from "@/lib/map/geocode-query";
 import { logger } from "@/lib/log";
 
 /**
@@ -158,11 +159,9 @@ export async function geocodeAndCache(
   }
   if (!isNaverMapsRestConfigured()) return null;
 
-  const attempt = await geocodeWithFallback([
-    query ?? "",
-    `${region} ${name}`,
-    name,
-  ]);
+  const attempt = await geocodeWithFallback(
+    buildGeocodeQueries({ region, name, address: query }),
+  );
   if (attempt.kind === "error") {
     // 일시 오류를 notfound 로 굳히지 않는다 — 저장 없이 로그만
     logger.warn(`[geocode] ${region} ${name} 오류(캐시 저장 안 함): ${attempt.message}`);
@@ -182,6 +181,42 @@ export async function geocodeAndCache(
     { onConflict: "region_name,complex_name" },
   );
   return coord;
+}
+
+/**
+ * 배치 대상들의 도로명 주소를 한 번에 읽는다(K-apt 대장 → complex_tx_stats).
+ *
+ * [971] 네이버 지오코더는 주소 전용이고, 그중에서도 **도로명 주소**를 가장 잘
+ * 읽는다. 지금 못 찾는 177건의 상당수는 신축·택지라 실거래 지번이 "가-"·"BL-2"
+ * 같은 블록 번호여서 애초에 주소가 아니다 — 그런 단지도 대장에는 도로명이 있다.
+ * 조회가 실패하면 빈 맵을 돌려준다: 도로명은 "있으면 더 좋은" 후보일 뿐이라,
+ * 못 읽었다고 백필을 멈출 이유가 없다.
+ */
+async function loadRoadAddresses(
+  sb: NonNullable<ReturnType<typeof getServiceSupabase>>,
+  rows: { region_name: string; complex_name: string }[],
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (rows.length === 0) return out;
+  const { data, error } = await sb
+    .from("complex_tx_stats")
+    .select("region_name, complex_name, road_address")
+    .in("region_name", [...new Set(rows.map((r) => r.region_name))])
+    .in("complex_name", [...new Set(rows.map((r) => r.complex_name))])
+    .not("road_address", "is", null)
+    .limit(2000);
+  if (error) {
+    logger.warn(`[geocode] 도로명 주소 조회 실패(지번으로 진행): ${error.message}`);
+    return out;
+  }
+  const want = new Set(rows.map((r) => coordKey(r.region_name, r.complex_name)));
+  for (const r of (data as
+    | { region_name: string; complex_name: string; road_address: string | null }[]
+    | null) ?? []) {
+    const k = coordKey(r.region_name, r.complex_name);
+    if (want.has(k) && r.road_address) out.set(k, r.road_address);
+  }
+  return out;
 }
 
 /**
@@ -228,6 +263,8 @@ export async function backfillGeocode(
       | { region_name: string; complex_name: string; address: string | null; trade_count: number }[]
       | null) ?? [];
 
+  const roadByKey = await loadRoadAddresses(sb, rows);
+
   let ok = 0;
   let errors = 0;
   let processed = 0;
@@ -258,12 +295,18 @@ export async function backfillGeocode(
       break;
     }
     processed += 1;
-    // 주소형 쿼리 우선(네이버 지오코더는 주소 전용) → 지역+단지명 → 단지명 단독
-    const attempt = await geocodeWithFallback([
-      r.address ?? "",
-      `${r.region_name} ${r.complex_name}`,
-      r.complex_name,
-    ]);
+    /* 주소형 쿼리 우선(네이버 지오코더는 주소 전용). [971] 그 안에서도 도로명 →
+       시/도 보정 지번 → 원본 지번 순이다. 구체적인 주소일수록 다른 도시의 같은
+       이름 동네로 잘못 찍힐 여지가 줄어든다. 마지막 두 개(지역+단지명, 단지명)는
+       주소가 아예 없을 때를 위한 보루로 그대로 남긴다. */
+    const attempt = await geocodeWithFallback(
+      buildGeocodeQueries({
+        region: r.region_name,
+        name: r.complex_name,
+        address: r.address,
+        roadAddress: roadByKey.get(coordKey(r.region_name, r.complex_name)),
+      }),
+    );
     if (attempt.kind === "error") {
       // 오류는 notfound 로 저장하지 않는다 — 다음 배치가 다시 시도한다
       errors += 1;

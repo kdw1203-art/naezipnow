@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { authorizeCron } from "@/lib/cron/authorize";
 import { isDataGoKrEncodingConfigured } from "@/lib/public-data/data-go-kr-keys";
-import { enrichAptDetailBatch } from "@/lib/national-data/apartment-ingest";
+import {
+  enrichAptDetailBatch,
+  retryAptDetailMissBatch,
+} from "@/lib/national-data/apartment-ingest";
 import { ingestErrorMessage, logIngest } from "@/lib/market/store";
 import { withBudget, CRON_WORK_BUDGET_MS } from "@/lib/async/with-budget";
 
@@ -55,8 +58,17 @@ async function handle(req: Request) {
      실행되지 않아 "돌다가 잘렸다"는 사실이 어디에도 안 남는다. 270초에 접고
      기록을 남긴다 — 스탬프(metadata.detailFetchedAt) 자체가 커서라서 이미 병합된
      단지는 다음 실행에서 다시 뽑히지 않고, 못 한 단지만 그대로 남는다. */
+  /* [971] 신규 백필이 끝났으면(미보강 0건) 그대로 놀지 않고 miss 를 다시 두드린다.
+     상세를 못 받았던 1,158 단지는 지금까지 아무도 다시 안 봤다 — 스탬프가 커서라
+     "스탬프 없는 행" 만 고르는 조회에는 영원히 안 걸리기 때문이다. 그 중 상당수는
+     영구 결번이 아니라 그날 API 가 안 준 것이거나 준공 직후라 등록 전이던 단지다.
+     한 번의 실행에서 두 배치를 다 돌리지는 않는다 — 예산(270초)은 하나 몫이다. */
   const run = await withBudget(
-    Promise.resolve().then(() => enrichAptDetailBatch(limit)),
+    Promise.resolve().then(async () => {
+      const first = await enrichAptDetailBatch(limit);
+      if (first.skipped === "no-rows") return retryAptDetailMissBatch(limit);
+      return first;
+    }),
     CRON_WORK_BUDGET_MS,
   );
 
@@ -86,12 +98,23 @@ async function handle(req: Request) {
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 
-  const { processed, enriched, failed, skipped, errors } = run.value;
+  const { processed, enriched, failed, rpcFailed = 0, skipped, stalled, mode, errors } = run.value;
 
   /* 여기서부터는 집계가 끝났고 남은 일은 기록뿐이다. 기록(logIngest)이 실패해도
      보강 자체는 이미 성공했으므로 응답까지 500 으로 바꾸지 않는다. */
   try {
-    const status = failed > 0 ? "error" : enriched > 0 ? "ok" : "skipped";
+    /* [971] miss(상세가 아직 없음)와 고장을 나눈다. 예전엔 둘 다 failed 한 통에
+       담겨 status=error 였고, 그래서 재시도 배치가 정상적으로 "오늘은 새로 받은 게
+       없다"고 말한 날도 빨간 줄이 켜졌다. 매일 켜져 있는 빨간 줄 안에는 진짜 고장이
+       숨는다. 쓰기 실패(rpcFailed)만 error 로 본다. 다만 신규 백필에서 한 건도 못
+       받은 것은 키 미설정·API 장애 신호이므로 그건 계속 error 로 남긴다. */
+    const status =
+      rpcFailed > 0 || (mode !== "retry-miss" && processed > 0 && enriched === 0)
+        ? "error"
+        : enriched > 0
+          ? "ok"
+          : "skipped";
+    const label = mode === "retry-miss" ? "재시도" : "처리";
     await logIngest({
       source: "apt-detail",
       dataset: "공동주택 단지 상세 백필",
@@ -100,17 +123,23 @@ async function handle(req: Request) {
       status,
       message:
         skipped === "no-rows"
-          ? "미보강 단지 없음 — 백필 완료"
-          : `처리=${processed} 병합=${enriched} 실패=${failed}${
+          ? mode === "retry-miss"
+            ? "미보강·미수신 단지 없음 — 백필 완료"
+            : "미보강 단지 없음 — 백필 완료"
+          : `${label}=${processed} 병합=${enriched} 미수신=${failed}${
+              stalled ? ` 시도상한=${stalled}` : ""
+            }${
               errors.length > 0 ? ` · ${errors.map((e) => ingestErrorMessage(e)).join(" / ")}` : ""
             }`,
     });
 
     return NextResponse.json({
-      ok: failed === 0,
+      ok: rpcFailed === 0,
+      mode,
       processed,
       enriched,
       failed,
+      ...(stalled ? { stalled } : {}),
       ...(skipped ? { skipped } : {}),
       ...(errors.length > 0 ? { errors: errors.map((e) => ingestErrorMessage(e)) } : {}),
     });
@@ -119,9 +148,11 @@ async function handle(req: Request) {
        숨기지 않는다(어드민 신선도 화면에서 이 회차가 비어 보일 이유가 된다). */
     return NextResponse.json({
       ok: failed === 0,
+      mode,
       processed,
       enriched,
       failed,
+      ...(stalled ? { stalled } : {}),
       ...(skipped ? { skipped } : {}),
       logged: false,
       logError: ingestErrorMessage(err, "수집 로그 기록 실패"),

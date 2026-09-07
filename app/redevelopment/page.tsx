@@ -9,6 +9,7 @@ import type { RedevelopmentProject } from "@/lib/redevelopment/types";
 import { SEED_SOURCES } from "@/lib/redevelopment/seed";
 import { logger } from "@/lib/log";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
+import { TownPageHead } from "@/app/town/TownPageHead";
 import { RedevelopmentMap } from "./RedevelopmentMap";
 import { STAGE_GUIDES, REDEV_GLOSSARY } from "@/lib/redevelopment/stage-guide";
 
@@ -111,14 +112,22 @@ export default async function RedevelopmentPage() {
   const sigunguCounts = countBySigunguFrom(projects);
 
   return (
-    <PageShell breadcrumb="홈 › 동네이야기 › 정비사업 지도" title="정비사업 지도">
+    /* [972] 형제 8칸과 머리가 달랐다 — PageShell 의 title 을 쓰면 h1 이 **카테고리 줄
+       위**에 그려져, 이 페이지만 제목이 102px 에 있고 나머지는 214px 에 있었다
+       (Pixel 5 실측). 브레드크럼도 혼자 "홈 › …" 로 시작했다.
+       9칸 공통 머리(TownPageHead: 아이콘 칩 + 제목 + 한 줄)로 맞춘다. */
+    <PageShell breadcrumb="동네이야기 › 정비사업 지도" wide>
       {/* 카테고리 줄 고정 — 형제 카테고리 페이지(청약·입주·공매)와 동일 패턴 */}
       <TownCategoryNav stick />
+      <TownPageHead
+        href="/redevelopment"
+        title="정비사업 지도"
+        sub="재개발·재건축·소규모 정비사업 — 사업종류별 컬러 마커"
+      />
       <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-6">
         {/* ===== 정비사업 지도 히어로 ===== */}
         <section className="rise-in flex flex-col gap-3">
           <p className="t-body text-text-2">
-            재개발·재건축·소규모 정비사업을 사업종류별 컬러 마커로 한눈에 보고,
             사업종류·진행단계로 걸러 원하는 구역만 골라보세요. 마커·목록을 누르면 해당 구역으로
             지도가 이동해요.
           </p>

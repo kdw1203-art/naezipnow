@@ -44,6 +44,17 @@ export function ResumeDraftPopup() {
     setDraft(readNoteDraftSummary());
   }, []);
 
+  /* [972] 카드가 떠 있는 동안 본문 아래를 그 높이만큼 비운다.
+     이 카드는 탭바 위에 fixed 로 뜨는데, 홈의 마지막 요소가 하필 primary CTA
+     ("임장노트 쓰기")라 실측에서 카드가 그 버튼을 덮고 있었다(소유자 캡처).
+     여백 값과 "맨 위로" 자리는 globals.css 의 `body.nz-has-resume` 한 곳에 있다 —
+     복합 단지 액션 바(.nz-has-actionbar)와 같은 방식이다. */
+  useEffect(() => {
+    if (!draft) return;
+    document.body.classList.add("nz-has-resume");
+    return () => document.body.classList.remove("nz-has-resume");
+  }, [draft]);
+
   if (!draft) return null;
 
   const where = draft.aptName ?? draft.region;
