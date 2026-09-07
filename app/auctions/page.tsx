@@ -56,7 +56,7 @@ export default async function AuctionsPage() {
     return (
       <PageShell breadcrumb="동네이야기 › 공매 물건" wide>
         <TownCategoryNav stick />
-        <TownPageHead href="/auctions" title="공매 물건" sub="온비드 진행·예정 물건 — 감정가·최저입찰가·입찰일" />
+        <TownPageHead href="/auctions" />
         <div className="theme-auction">
           <ErrorState
             title="공매 물건을 지금 불러오지 못했어요"
@@ -71,7 +71,7 @@ export default async function AuctionsPage() {
   return (
     <PageShell breadcrumb="동네이야기 › 공매 물건" wide>
       <TownCategoryNav stick />
-      <TownPageHead href="/auctions" title="공매 물건" sub="온비드 진행·예정 물건 — 감정가·최저입찰가·입찰일" />
+      <TownPageHead href="/auctions" />
       <div className="theme-auction">
         <AuctionsClient
           initialItems={slimAuctionItems(loaded.items)}

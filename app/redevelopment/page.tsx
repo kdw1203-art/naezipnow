@@ -120,10 +120,7 @@ export default async function RedevelopmentPage() {
       {/* 카테고리 줄 고정 — 형제 카테고리 페이지(청약·입주·공매)와 동일 패턴 */}
       <TownCategoryNav stick />
       <TownPageHead
-        href="/redevelopment"
-        title="정비사업 지도"
-        sub="재개발·재건축·소규모 정비사업 — 사업종류별 컬러 마커"
-      />
+        href="/redevelopment" />
       <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-6">
         {/* ===== 정비사업 지도 히어로 ===== */}
         <section className="rise-in flex flex-col gap-3">

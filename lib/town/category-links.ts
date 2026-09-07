@@ -23,7 +23,27 @@ export type TownCategoryLink = {
   tone: string;
   /** 데이터가 사람 손에서 나오는 칸(전문가·모임·자료) — 비어 있을 수 있어 화면이 "모집 중"을 말한다 */
   humanSupplied?: boolean;
+  /**
+   * 하위 페이지 머리(TownPageHead)의 한 줄.
+   *
+   * [974] 여기로 올린 이유: 같은 문장이 **페이지 본문과 로딩 스켈레톤 두 곳에**
+   * 따로 적혀 있어서 서로 어긋났다. 실제로 /qna 는 로딩 중에는 "홈 › 동네이야기 ›
+   * 단지 Q&A" + 제목이 카테고리 줄 **위**에 뜨고(옛 패턴), 로딩이 끝나면 새 패턴으로
+   * 갈아끼워졌다 — 소유자가 캡처한 화면이 바로 그 로딩 상태다. /supply 는 한술 더
+   * 떠 로딩 중 브레드크럼이 "홈 › 시장 › 입주 예정 물량" 이었다(카테고리 이름조차
+   * 달랐다). /auctions 는 "공매·경매" 였다.
+   *
+   * 문장을 이 목록 한 곳에 두면 두 화면이 어긋날 자리가 없어진다.
+   * 문체 규칙은 app/town/TownPageHead.tsx 주석에 있다 — 명사형 "대상 — 출처·구성".
+   */
+  headSub: string;
 };
+
+/** 브레드크럼 한 줄 — 9칸 전부 "동네이야기 › {라벨}". 로딩 스켈레톤도 이걸 쓴다. */
+export function townBreadcrumb(href: string): string {
+  const l = TOWN_CATEGORY_LINKS.find((x) => x.href === href);
+  return l ? `동네이야기 › ${l.label}` : "동네이야기";
+}
 
 /* [959] 순서: **지금 실제로 내용이 있는 칸이 앞**. 2026-09-03 실측 — 뉴스 400+ ·
    청약(청약홈 공공데이터) · 공매 1,130건 · 입주 물량 675행 · 정비사업 지도 = 실데이터,
@@ -34,13 +54,13 @@ export type TownCategoryLink = {
 export const TOWN_CATEGORY_LINKS: TownCategoryLink[] = [
   /* 모바일 실측(2026-08-02): "뉴스·다이제스트"는 카드 폭(104px)에서 "뉴스·다이제…"
      로 잘렸다. 라벨은 짧게, 다이제스트는 부제로. */
-  { href: "/town/news", label: "뉴스", icon: "newspaper", desc: "요약·주간 다이제스트", tone: "bg-warning-soft text-warning" },
-  { href: "/apply", label: "청약 센터", icon: "ticket", desc: "분양·경쟁률", tone: "bg-success-soft text-success" },
-  { href: "/auctions", label: "공매 물건", icon: "hammer", desc: "온비드 공매", tone: "bg-success-soft text-success" },
-  { href: "/supply", label: "입주 물량", icon: "construction", desc: "공급 일정", tone: "bg-success-soft text-success" },
-  { href: "/redevelopment", label: "정비사업 지도", icon: "map", desc: "재개발·재건축", tone: "bg-success-soft text-success" },
-  { href: "/qna", label: "단지 Q&A", icon: "messages-square", desc: "묻고 답하기", tone: "bg-primary-soft text-primary" },
-  { href: "/town/experts", label: "전문가", icon: "graduation", desc: "상담·견적", tone: "bg-primary-soft text-primary", humanSupplied: true },
-  { href: "/town/groups", label: "임장 모임", icon: "compass", desc: "함께 임장", tone: "bg-primary-soft text-primary", humanSupplied: true },
-  { href: "/town/library", label: "자료", icon: "folder", desc: "리포트·노트", tone: "bg-warning-soft text-warning", humanSupplied: true },
+  { href: "/town/news", label: "뉴스", icon: "newspaper", desc: "요약·주간 다이제스트", tone: "bg-warning-soft text-warning", headSub: "매일 아침 모은 부동산 기사 요약 — 주간 다이제스트 포함" },
+  { href: "/apply", label: "청약 센터", icon: "ticket", desc: "분양·경쟁률", tone: "bg-success-soft text-success", headSub: "청약홈 공공데이터 — 경쟁률·특별공급·접수 일정" },
+  { href: "/auctions", label: "공매 물건", icon: "hammer", desc: "온비드 공매", tone: "bg-success-soft text-success", headSub: "온비드 진행·예정 물건 — 감정가·최저입찰가·입찰일" },
+  { href: "/supply", label: "입주 물량", icon: "construction", desc: "공급 일정", tone: "bg-success-soft text-success", headSub: "지역·시기별 아파트 입주 예정 — 청약홈 공고 기준" },
+  { href: "/redevelopment", label: "정비사업 지도", icon: "map", desc: "재개발·재건축", tone: "bg-success-soft text-success", headSub: "재개발·재건축·소규모 정비사업 — 사업종류별 컬러 마커" },
+  { href: "/qna", label: "단지 Q&A", icon: "messages-square", desc: "묻고 답하기", tone: "bg-primary-soft text-primary", headSub: "단지·동네 궁금증과 이웃·실거주자의 답 — 주제별 모아보기" },
+  { href: "/town/experts", label: "전문가", icon: "graduation", desc: "상담·견적", tone: "bg-primary-soft text-primary", humanSupplied: true, headSub: "자격을 확인한 전문가 상담 — 글 문의·견적 요청" },
+  { href: "/town/groups", label: "임장 모임", icon: "compass", desc: "함께 임장", tone: "bg-primary-soft text-primary", humanSupplied: true, headSub: "같은 단지를 함께 도는 이웃 모집 — 참여 확정 시 채팅방" },
+  { href: "/town/library", label: "자료", icon: "folder", desc: "리포트·노트", tone: "bg-warning-soft text-warning", humanSupplied: true, headSub: "리포트와 이웃들의 공개 임장노트 — 한곳에서 열람" },
 ];

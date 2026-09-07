@@ -89,8 +89,10 @@ export function TownCategoryNav({
               setPending(l.href);
             }}
             aria-current={pinned ? "page" : undefined}
-            aria-label={`${l.label} — ${l.desc}`}
-            title={`${l.label} — ${l.desc}`}
+            /* [974] "모집 중" 표식을 이름에 넣는다 — 예전에는 빨간 점의 뜻이
+               title 툴팁에만 있어 화면 낭독기·터치 기기에서는 아예 없는 정보였다. */
+            aria-label={`${l.label} — ${l.desc}${l.humanSupplied ? " (모집 중)" : ""}`}
+            title={`${l.label} — ${l.desc}${l.humanSupplied ? " · 참여자를 모집 중인 칸" : ""}`}
             /* 제안 모바일2(2026-08-03) — 카드 축소: 모바일 92×76px(기존 104×92).
                md+ 는 가로 균등 분배 유지. */
             /* [959] 램프 상향(sub 12·caption 10)에 맞춰 높이 +4px. 그림자는 토큰 3단 중 md. */
@@ -109,11 +111,15 @@ export function TownCategoryNav({
             >
               <Icon name={l.icon} size={pinned ? 16 : 17} />
             </span>
-            {/* [959] 사람이 채우는 칸(전문가·모임·자료)은 "모집" 점 — 비어 있어도 놀라지 않게 */}
-            {l.humanSupplied && !pinned ? (
+            {/* [959] 사람이 채우는 칸(전문가·모임·자료)은 "모집" 점 — 비어 있어도 놀라지 않게
+                [974] `&& !pinned` 를 뺐다. 활성 카드에서만 점을 숨기니 **보고 있는
+                페이지에 따라 빨간 점 개수가 3개였다 2개였다** 했다(소유자 캡처의
+                두 장이 정확히 그 차이다). 같은 줄이 페이지마다 달라 보이면 그건
+                상태 표시가 아니라 잡음이다. 파란 점(오른쪽 위)이 현재 위치를
+                따로 말하므로 둘은 겹치지 않는다. */}
+            {l.humanSupplied ? (
               <span
                 className="absolute left-2 top-2 h-1.5 w-1.5 rounded-full bg-brand-red"
-                title="참여자를 모집 중인 칸"
                 aria-hidden="true"
               />
             ) : null}

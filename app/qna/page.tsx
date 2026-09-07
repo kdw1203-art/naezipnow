@@ -98,10 +98,7 @@ export default async function QnaListPage() {
     <PageShell breadcrumb="동네이야기 › 단지 Q&A" wide>
       <TownCategoryNav stick />
       <TownPageHead
-        href="/qna"
-        title="단지 Q&A"
-        sub="단지·동네 궁금증을 묻고 이웃·실거주자에게 답을 받아요"
-      />
+        href="/qna" />
 
       <div className={QNA_THEME_CLASS}>
         {!loaded.ok ? (

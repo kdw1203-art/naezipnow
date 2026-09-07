@@ -106,7 +106,7 @@ export default async function ApplyPage() {
     <PageShell breadcrumb="동네이야기 › 청약 센터" wide>
       {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
       <TownCategoryNav stick />
-      <TownPageHead href="/apply" title="청약 센터" sub="청약홈 공공데이터 — 경쟁률·특별공급·접수 일정" />
+      <TownPageHead href="/apply" />
 
       <div style={THEME_APPLY}>
         {/* 상단 CTA — 예전의 정적 탭(전체·예정·접수 중·지난 청약)은 클릭해도 아무

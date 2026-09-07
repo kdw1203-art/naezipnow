@@ -1,12 +1,22 @@
 import { PageShell } from "../components/PageShell";
 import { Skeleton } from "@/components/Skeleton";
+import { TownCategoryNav } from "@/app/town/TownCategoryNav";
+import { TownPageHead } from "@/app/town/TownPageHead";
+import { townBreadcrumb } from "@/lib/town/category-links";
 
 /* 청약 센터 로딩 스켈레톤 — 4개 카테고리 페이지 중 유일하게 없었다(2026-08-22).
    초기 렌더가 청약홈 업스트림 조회를 기다리는, 형제 중 가장 느린 페이지인데
    그동안 빈 화면이 나갔다. 실제 레이아웃(탭·검색·지역 칩·표)을 그대로 흉내낸다. */
 export default function ApplyLoading() {
   return (
-    <PageShell breadcrumb="홈 › 동네이야기 › 청약 센터" title="청약 센터" wide>
+/* [974] 로딩 스켈레톤의 머리는 **본문과 같은 것**을 쓴다.
+   예전엔 여기만 옛 패턴(PageShell title = 제목이 카테고리 줄 위)이었고 브레드크럼
+   문구도 달라서, 로딩 중과 로딩 후가 서로 다른 화면처럼 보였다. 소유자가 캡처한
+   /qna 화면이 정확히 이 로딩 상태다("홈 › 동네이야기 › 단지 Q&A" + 카테고리 줄 위 제목).
+   제목·한 줄·브레드크럼 모두 lib/town/category-links.ts 한 곳에서 온다. */
+    <PageShell breadcrumb={townBreadcrumb("/apply")} wide>
+      <TownCategoryNav stick />
+      <TownPageHead href="/apply" />
       {/* 탭 + 검색 행 */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Skeleton className="h-9 w-20 rounded-full" />

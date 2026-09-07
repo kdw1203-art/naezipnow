@@ -216,6 +216,16 @@ export function QnaListClient({
 
   const activeTopic = f.topic ? QNA_TOPIC_BY_KEY[f.topic] : null;
 
+  /* [974] 질문이 **한 건도 없을 때** 필터 줄을 통째로 감춘다.
+     소유자 캡처(데스크탑 /qna): 상태 탭 "전체 0 · 답변 대기 0 · 답변 완료 0",
+     주제 칩 10개가 전부 "0", 그 아래 "0건" — 화면에 0 이 열네 번 찍혔다.
+     970 · C-13 에서 전문가 화면의 "0 · 0 · —" 세 칸을 지운 것과 같은 이유다:
+     **0 만 늘어선 필터는 지표가 아니라 빈 칸이고, 누를 이유도 없다.**
+     한 건이라도 생기면 그 순간부터 전부 원래대로 나온다.
+     f.q 는 검색어가 있는 상태 — 그때는 "찾지 못했다"는 사실을 필터와 함께 보여야
+     사용자가 검색어를 지울 수 있으므로 감추지 않는다. */
+  const hideFilters = rows.length === 0 && !f.q && !f.topic;
+
   const tabPill = (on: boolean) =>
     on
       ? "press rounded-full bg-primary px-4 py-2 text-[13px] font-bold"
@@ -228,6 +238,7 @@ export function QnaListClient({
   return (
     <>
       {/* ── 상태 탭 + 정렬 ───────────────────────────── */}
+      {!hideFilters && (
       <div className="rise-in mt-3 flex flex-wrap items-center gap-2">
         {STATUS_TABS.map((t) => {
           const on = t.key === f.status;
@@ -257,10 +268,12 @@ export function QnaListClient({
           ))}
         </div>
       </div>
+      )}
 
       {/* ── 검색(2026-08-22) — 키워드 필터(filterByKeyword)는 처음부터 있었는데
           입력창이 없어 ?q= 딥링크로만 닿을 수 있었다. 보이는 검색창을 단다 —
           제출 시 기존 set({ q }) 경로 그대로라 개수·빈 상태 문구도 같이 움직인다. */}
+      {!hideFilters && (
       <form
         className="rise-in-1 mt-2.5 flex items-center gap-1.5"
         onSubmit={(e) => {
@@ -281,8 +294,10 @@ export function QnaListClient({
           검색
         </button>
       </form>
+      )}
 
       {/* ── 세부 카테고리(주제) ──────────────────────── */}
+      {!hideFilters && (
       <div className="rise-in-1 mt-2.5 flex flex-wrap items-center gap-1.5">
         <button type="button" onClick={() => set({ topic: null })} className={chip(f.topic === null)}>
           전체 주제
@@ -300,6 +315,7 @@ export function QnaListClient({
           </button>
         ))}
       </div>
+      )}
 
       {/* 딥링크 키워드 — 무엇으로 좁혀졌는지 밝히고 해제 버튼을 준다 */}
       {f.q && (
@@ -313,12 +329,14 @@ export function QnaListClient({
         </div>
       )}
 
+      {!hideFilters && (
       <p className="rise-in-1 mt-2.5 t-sub text-text-3">
         {activeTopic ? `‘${activeTopic.label}’ 주제 ` : ""}
         <b className="text-text-1">{items.length}</b>건
         {f.q && <> — 최근 질문 100건 안에서 ‘{f.q}’ 를 찾은 결과예요.</>}
         {activeTopic && <> — 주제는 작성자가 붙인 태그와 제목·본문에서 추정해 좁힌 결과예요.</>}
       </p>
+      )}
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         {/* ── 본문 ───────────────────────────────── */}

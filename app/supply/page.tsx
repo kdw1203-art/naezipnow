@@ -60,7 +60,7 @@ export default async function SupplyPage() {
       {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
       <TownCategoryNav stick />
       {/* [959] sr-only 제목을 보이는 머리로 — 카드에서 본 아이콘·색이 페이지로 이어진다 */}
-      <TownPageHead href="/supply" title="아파트 입주 예정 물량" sub="지역·시기별 공급 일정 — 청약홈 공고 기준" />
+      <TownPageHead href="/supply" />
       <div style={SUPPLY_THEME}>
         {/* 상단 CTA — 예전의 정적 탭 4개(전체·이번 분기·예정·지난 입주)는 클릭해도
             아무 동작이 없는 장식이라 제거했다. "입주 물량 알림" 칩도 뺐다 —

@@ -1,10 +1,20 @@
 import { PageShell } from "../components/PageShell";
 import { Skeleton } from "@/components/Skeleton";
+import { TownCategoryNav } from "@/app/town/TownCategoryNav";
+import { TownPageHead } from "@/app/town/TownPageHead";
+import { townBreadcrumb } from "@/lib/town/category-links";
 
 /* 단지 Q&A 로딩 스켈레톤 (#41) — 검색·필터 + 질문 카드 목록 */
 export default function QnaLoading() {
   return (
-    <PageShell breadcrumb="홈 › 동네이야기 › 단지 Q&A" title="단지 Q&A">
+/* [974] 로딩 스켈레톤의 머리는 **본문과 같은 것**을 쓴다.
+   예전엔 여기만 옛 패턴(PageShell title = 제목이 카테고리 줄 위)이었고 브레드크럼
+   문구도 달라서, 로딩 중과 로딩 후가 서로 다른 화면처럼 보였다. 소유자가 캡처한
+   /qna 화면이 정확히 이 로딩 상태다("홈 › 동네이야기 › 단지 Q&A" + 카테고리 줄 위 제목).
+   제목·한 줄·브레드크럼 모두 lib/town/category-links.ts 한 곳에서 온다. */
+    <PageShell breadcrumb={townBreadcrumb("/qna")} wide>
+      <TownCategoryNav stick />
+      <TownPageHead href="/qna" />
       {/* 검색 + 정렬 필터 */}
       <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <Skeleton className="h-10 w-full rounded-xl md:max-w-[360px]" />

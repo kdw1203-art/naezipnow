@@ -120,7 +120,7 @@ export default async function TownGroupsPage() {
       <TownPageHead
         href="/town/groups"
         title="임장 모임"
-        sub="같은 단지를 함께 돌아볼 이웃을 찾아보세요 · 참여 확정 시 채팅방이 열려요"
+        sub="같은 단지를 함께 도는 이웃 모집 — 참여 확정 시 채팅방"
         action={<CreateGroupCta />}
       />
 

@@ -178,16 +178,10 @@ export default async function TownNewsPage() {
     <PageShell breadcrumb="동네이야기 › 뉴스" wide>
       {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
       <TownCategoryNav stick />
+      {/* [974] 머리 오른쪽 "자료·리포트 ›" 링크 제거 — 자세한 이유는
+          app/town/library/page.tsx 의 같은 자리 주석. */}
       <TownPageHead
-        href="/town/news"
-        title="뉴스"
-        sub="매일 아침 수집한 부동산 기사를 우리 요약과 함께 · 주간 다이제스트"
-        action={
-          <Link href="/town/library" className="t-sub font-bold text-primary no-underline">
-            자료·리포트 ›
-          </Link>
-        }
-      />
+        href="/town/news" />
 
       {/* 주간 다이제스트 요약 (#6) — 뉴스·다이제스트 통합. 실패·빈 데이터 시 생략(fail-soft) */}
       {digest && digestHasContent && (

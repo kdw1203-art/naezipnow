@@ -84,7 +84,7 @@ export default async function TownExpertsPage() {
       <TownPageHead
         href="/town/experts"
         title="전문가"
-        sub="자격을 확인한 전문가에게 글로 묻고, 답변은 상담함으로"
+        sub="자격을 확인한 전문가 상담 — 글 문의·견적 요청"
         action={
           <Link
             href="/town/experts/join"

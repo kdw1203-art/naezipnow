@@ -160,10 +160,6 @@ export default async function PricePage({
       : "대형"
     : null;
 
-  const coverage = `${ymLabel(target.firstYm)}~${ymLabel(target.latestYm)} 실거래 ${target.txCount.toLocaleString(
-    "ko-KR",
-  )}건 · ${target.complexCount.toLocaleString("ko-KR")}개 단지`;
-
   /* 첫 화면에 세울 숫자 — 값이 없으면 그 칸을 만들지 않는다. */
   const perValues = cells.map((c) => Math.round((c.avgPerPyeongKrw ?? 0) / 10_000));
   const heroKpis: HeroKpi[] = [
@@ -237,7 +233,11 @@ export default async function PricePage({
             ) : null
           }
           actions={<RegionSelect regions={selectRegions} current={target.slug} />}
-          source={`${target.name} · ${coverage} · 국토교통부 신고 매매가 기준`}
+          /* [974] 히어로 아래 한 줄에서 지역 이름과 "실거래 N건 · N개 단지" 를 뺐다.
+             한 화면에 "남양주시" 가 다섯 번(설명·선택기·이 줄·오른쪽 해설·아래 링크),
+             건수·단지수는 바로 위 KPI 칸에 이미 큰 글씨로 있었다. 이 줄이 할 일은
+             **무엇을 근거로 셌는지** 하나다. */
+          source={`${ymLabel(target.firstYm)}~${ymLabel(target.latestYm)} · 국토교통부 신고 매매가 기준`}
         />
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
