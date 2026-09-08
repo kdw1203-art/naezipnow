@@ -678,7 +678,7 @@ export default function NotificationsPage() {
               >
                 {t.label}
                 {mode === "live" && counts[t.key] > 0 && (
-                  <span className="ml-1 opacity-70">{counts[t.key]}</span>
+                  <span className="ml-1 font-normal">{counts[t.key]}</span>
                 )}
                 {/* 운영 탭에만 안 읽음 점 — 숫자 배지는 사용자 알림 몫이다 */}
                 {t.key === "운영" && mode === "live" && opsUnread > 0 && (

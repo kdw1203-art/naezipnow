@@ -34,6 +34,7 @@ import { getReadOnlySupabase } from "@/lib/newui/supabase-read";
 import { encodeComplexId } from "@/lib/complex/complex-store";
 import { krwPerPyeongToManwon } from "@/lib/map/price-tiers";
 import { logger } from "@/lib/log";
+import { POINT_MODE_MIN_ZOOM } from "@/lib/map/pick-zoom";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,8 +43,8 @@ export const dynamic = "force-dynamic";
 const MAX_CLUSTER_SOURCE_ROWS = 5000;
 /** 포인트 모드 최대 반환 개수 */
 const MAX_POINTS = 300;
-/** 이 네이버 줌 이상이면 개별 단지 포인트 반환 */
-const POINT_MODE_MIN_ZOOM = 14;
+/* 이 네이버 줌 이상이면 개별 단지 포인트 반환 — 값은 lib/map/pick-zoom 이 갖는다.
+   [975] 지도를 띄우는 화면들이 이 경계를 각자 짐작하다 어긋났다(그 파일 주석 참고). */
 
 const CACHE_HEADERS = {
   "Cache-Control": "public, s-maxage=300, stale-while-revalidate=120",

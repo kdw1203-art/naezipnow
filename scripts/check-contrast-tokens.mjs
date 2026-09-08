@@ -76,10 +76,21 @@ function contrast(fg, bg) {
  * `:root {` / `.dark {` 블록 안의 `--token: value;` 를 모은다.
  * 중괄호 깊이를 세서 블록 끝을 찾는다(안에 @media 등이 중첩돼도 안전하게).
  */
+/* 선택자를 **규칙 머리로만** 찾는다.
+   [975] 예전에는 indexOf(selector) 로 찾았는데, globals.css 주석에 있던
+   "라이트(:root)·다크(.dark) 양쪽에" 라는 문장이 먼저 걸려서 `.dark` 블록 대신
+   엉뚱한 블록을 읽었다. 그 바람에 "dark — 50조합 통과" 는 사실 **라이트 값을 두 번**
+   검사한 결과였다. 다크 토큰은 여태 게이트 밖에 있었다. */
+function findRuleStart(src, selector) {
+  const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(^|[}\\n])\\s*${esc}\\s*\\{`, "m");
+  const m = re.exec(src);
+  return m ? m.index + m[0].lastIndexOf("{") : -1;
+}
+
 function readBlock(src, selector) {
-  const at = src.indexOf(selector);
-  if (at < 0) throw new Error(`[check-contrast-tokens] ${selector} 블록을 찾지 못했습니다.`);
-  const open = src.indexOf("{", at);
+  const open = findRuleStart(src, selector);
+  if (open < 0) throw new Error(`[check-contrast-tokens] ${selector} 블록을 찾지 못했습니다.`);
   let depth = 0;
   let end = -1;
   for (let i = open; i < src.length; i += 1) {
@@ -118,6 +129,32 @@ const TEXT_BACKGROUNDS = [
   "primary-soft",
 ];
 
+/**
+ * 어두운 면(브랜드 네이비) 위 글자 — [975] 에 추가.
+ *
+ * 왜 따로 두는가: 위 조합들은 전부 **밝은 표면** 위를 본다. 그런데 이 서비스에서
+ * 실제로 대비가 무너진 자리는 네이비 히어로였다. 2026-09-08 실측(렌더 화면
+ * 픽셀 기준):
+ *   · --brand-red-on-dark 위 네이비 4.08  ("플랜 보기 ›" · 눈썹 글자)
+ *   · --on-dark 를 --on-dark-faint 패널 위에 3.53  (도구 머리 "넣는 것/계산/나오는 것")
+ * 둘 다 토큰 조합 자체의 문제라 화면에서 고치면 다음 화면에서 되살아난다.
+ * 네이비는 테마와 무관한 브랜드 상수라 라이트/다크 양쪽에서 같은 값으로 본다.
+ *
+ * --on-dark-faint(45%)는 **선·구분자용**이다. 패널 바탕으로 쓰면 네이비 위에서
+ * 중간 회색이 되므로 여기서 걸린다 — 패널은 --on-dark-panel 을 쓴다.
+ *
+ * 약속의 범위는 실제 쓰임에 맞춘다. 주홍(--brand-red-on-dark)은 네이비 면 위
+ * **강조 글자**로만 쓴다 — 패널 안에서는 쓰지 않으므로 약속에도 넣지 않는다
+ * (안 쓰는 조합까지 넣으면 오탐이 되고, 오탐이 섞이면 게이트는 무시당한다).
+ */
+const ON_NAVY_PAIRS = [
+  ["on-dark", "brand-navy"],
+  ["on-dark-muted", "brand-navy"],
+  ["brand-red-on-dark", "brand-navy"],
+  ["on-dark", "on-dark-panel"],
+  ["on-dark-muted", "on-dark-panel"],
+];
+
 /** [전경 토큰, 배경 토큰] — 디자인 시스템이 스스로 약속한 조합만. */
 function pairs() {
   const list = [];
@@ -134,7 +171,7 @@ function pairs() {
  * 흰 글씨가 2.4:1 까지 무너진다. 그래서 채움값은 테마 고정이고, 여기서는
  * (1) 흰 글씨가 AA 를 넘는가 (2) 배지 자체가 표면과 3:1 로 구분되는가 를 본다.
  */
-const FILLS = ["danger-fill", "success-fill"];
+const FILLS = ["danger-fill", "success-fill", "primary-fill"];
 const NON_TEXT_MIN = 3; // WCAG 1.4.11 비텍스트 최소
 
 function check(themeName, tokens) {
@@ -160,6 +197,22 @@ function check(themeName, tokens) {
     }
     const ratio = contrast(fg, bg);
     rows.push({ fgKey, bgKey, ratio, ok: ratio >= AA, fg, bg });
+  }
+  /* 네이비 위 조합 — 반투명 값은 네이비에 합성해서 실제로 보이는 색으로 잰다.
+     패널(--on-dark-panel)도 네이비 위에 얹힌 뒤의 색이 글자의 배경이 된다. */
+  const navy = resolve(tokens["brand-navy"], null);
+  if (navy) {
+    for (const [fgKey, bgKey] of ON_NAVY_PAIRS) {
+      const bgRaw = tokens[bgKey];
+      const fgRaw = tokens[fgKey];
+      if (bgRaw === undefined || fgRaw === undefined) continue;
+      const bg = resolve(bgRaw, navy);
+      if (!bg) continue;
+      const fg = resolve(fgRaw, bg);
+      if (!fg) continue;
+      const ratio = contrast(fg, bg);
+      rows.push({ fgKey, bgKey: `${bgKey}(네이비 위)`, ratio, ok: ratio >= AA, fg, bg });
+    }
   }
   for (const fillKey of FILLS) {
     const fill = resolve(tokens[fillKey], surface);
@@ -234,15 +287,81 @@ function scanDeadHex() {
   return hits;
 }
 
+/**
+ * 화면별 테마(--primary 계열만 갈아 끼우는 subtree) — [975] 에 추가.
+ *
+ * /supply(초록) · /dev-deals(앰버) · /auctions(보라) · /qna(청록) 은 그 화면 안에서만
+ * --primary/--primary-soft 를 바꾼다. 그런데 text-primary·bg-primary-soft·chip-active
+ * 같은 **공용 클래스**가 그 값을 그대로 쓰므로, 테마 색이 어두운 정도를 지키지 않으면
+ * 그 화면 전체가 한꺼번에 미달이 된다. 실제로 2026-09-08 에 /supply 한 화면에서만
+ * 미달 텍스트 243건이 나왔다(입주/분양 배지가 목록 전체에 붙는다).
+ *
+ * 여기 넣으려면 테마가 **CSS 클래스**여야 한다. 인라인 style 로 심으면 이 검사가
+ * 볼 수 없고 다크 값도 못 얹는다 — 그래서 [975] 에서 두 화면을 클래스로 옮겼다.
+ */
+const PAGE_THEMES = [
+  [".theme-auction", "/auctions"],
+  [".qna-theme", "/qna"],
+  [".theme-supply", "/supply"],
+  [".theme-dev-deals", "/dev-deals"],
+];
+/** 테마가 바꾸는 건 --primary 계열뿐이므로, 그 값이 얹히는 텍스트 조합만 본다. */
+const THEME_PAIRS = [
+  ["primary", "primary-soft"],
+  ["primary", "surface"],
+  ["primary", "bg"],
+];
+
+function checkPageTheme(themeName, base, overrides) {
+  const tokens = { ...base, ...overrides };
+  const surface = resolve(tokens.surface, null);
+  const rows = [];
+  for (const [fgKey, bgKey] of THEME_PAIRS) {
+    const bg = resolve(tokens[bgKey], surface);
+    const fg = resolve(tokens[fgKey], bg ?? surface);
+    if (!fg || !bg) continue;
+    const ratio = contrast(fg, bg);
+    rows.push({ fgKey, bgKey, ratio, ok: ratio >= AA, theme: themeName });
+  }
+  return rows;
+}
+
 /* ---------- 실행 ---------- */
 
 const src = fs.readFileSync(CSS, "utf8");
+const rootTokens = readBlock(src, ":root");
+const darkTokens = { ...rootTokens, ...readBlock(src, ".dark") };
 const themes = [
-  ["light", readBlock(src, ":root")],
-  ["dark", { ...readBlock(src, ":root"), ...readBlock(src, ".dark") }],
+  ["light", rootTokens],
+  ["dark", darkTokens],
 ];
 
 const failed = [];
+for (const [selector, route] of PAGE_THEMES) {
+  for (const [mode, base] of [
+    ["light", rootTokens],
+    ["dark", darkTokens],
+  ]) {
+    const sel = mode === "dark" ? `.dark ${selector}` : selector;
+    let overrides;
+    try {
+      overrides = readBlock(src, sel);
+    } catch {
+      /* 다크 오버라이드가 없으면 라이트 값이 그대로 쓰인다 — 그 자체가 문제라
+         (다크 표면 위 연한 판) 여기서 라이트 값으로 다크를 검사한다. */
+      overrides = readBlock(src, selector);
+    }
+    const rows = checkPageTheme(`${route} ${mode}`, base, overrides);
+    for (const r of rows) {
+      if (r.ok) continue;
+      failed.push(
+        `  ${r.theme}  --${r.fgKey} on --${r.bgKey}  ${r.ratio.toFixed(2)}:1 (최소 ${AA}:1)`,
+      );
+    }
+  }
+}
+console.log(`[check-contrast-tokens] 화면 테마 ${PAGE_THEMES.length}종 — 라이트·다크 검사`);
+
 for (const [name, tokens] of themes) {
   const rows = check(name, tokens);
   if (rows.length === 0) {

@@ -95,8 +95,11 @@ export function TabBar() {
                  (예전 py-1 은 42px 로 44px 터치 하한 미달). 바는 4px 자라 56px —
                  globals.css --nz-tabbar-offset 도 64→68px 로 같이 올렸다. */
               className={`relative flex flex-col items-center gap-[2px] py-1.5 transition-colors ${
-                /* [970 · A-03] 활성 탭도 text-primary(사유는 위 "기록" 라벨 주석) */
-                isActive(tab.href) ? "text-primary" : "text-text-3"
+                /* [970 · A-03] 활성 탭도 text-primary(사유는 위 "기록" 라벨 주석)
+                   [975] 비활성 text-3 → text-2: 탭바는 반투명 유리라 뒤 배경이
+                   비쳐 실제 바탕이 #d1d6dc 정도가 된다. 거기서 text-3 는 3.75:1
+                   이었다(axe 실측). 이 라벨은 모든 화면 아래에 늘 떠 있다. */
+                isActive(tab.href) ? "text-primary" : "text-text-2"
               }`}
             >
               {/* [962] 현재 탭 = 온점. 탭이 바뀌면 한 번 튄다(njn-pop) — 브랜드 색이 상태 언어가 된다 */}

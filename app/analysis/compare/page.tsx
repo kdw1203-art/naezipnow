@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PageShell } from "../../components/PageShell";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
-import { ComplexPicker } from "../ComplexPicker";
+import { ComplexPicker, type PickedComplex } from "../ComplexPicker";
+import { useMapPick } from "../use-map-pick";
 import {
   addToCompareTray,
   COMPARE_TRAY_MAX,
@@ -47,28 +48,36 @@ function WinBadge({ label }: { label: string }) {
 function ComparePickerSection() {
   const [note, setNote] = useState<string | null>(null);
 
+  /* [975] 담기는 검색·지도 두 길이 같은 함수로 모인다 — 지도에서 고른 단지도
+     똑같이 트레이에 담기고 같은 안내 문구가 뜬다. */
+  const add = useCallback((c: PickedComplex) => {
+    const r = addToCompareTray({
+      id: c.id,
+      name: c.name,
+      region: c.region || c.regionLabel || undefined,
+    });
+    setNote(
+      r.ok
+        ? `${c.name} 담았어요`
+        : r.reason === "full"
+          ? `최대 ${COMPARE_TRAY_MAX}개까지만 담을 수 있어요`
+          : "담기에 실패했어요",
+    );
+  }, []);
+  const { openMap, mapNode } = useMapPick(add, "후보 단지 비교");
+
   return (
     <div className="rise-in card flex flex-col gap-2 rounded-2xl px-[18px] py-4">
+      {mapNode}
       <div className="t-body font-extrabold text-ink">비교할 단지 담기</div>
       <ComplexPicker
         label="검색해서 최대 5개까지 담기"
         placeholder="단지명으로 검색 (예: 공작아파트)"
         clearOnSelect
         showChip={false}
-        onSelect={(c) => {
-          const r = addToCompareTray({
-            id: c.id,
-            name: c.name,
-            region: c.region || c.regionLabel || undefined,
-          });
-          setNote(
-            r.ok
-              ? `${c.name} 담았어요`
-              : r.reason === "full"
-                ? `최대 ${COMPARE_TRAY_MAX}개까지만 담을 수 있어요`
-                : "담기에 실패했어요",
-          );
-        }}
+        onSelect={add}
+        /* 이름을 모르는 후보는 지도에서 눌러 담는다 */
+        onMapClick={openMap}
       />
       {note && <div className="t-sub font-bold text-primary">{note}</div>}
     </div>

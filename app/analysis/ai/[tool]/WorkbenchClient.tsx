@@ -3,6 +3,9 @@
 import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ComplexPicker, type PickedComplex } from "@/app/analysis/ComplexPicker";
+/* [975] 지도 서랍은 **열 때만** 내려받는다 — 이 라우트의 First Load 예산이
+   461/480KB 라 지도(NaverMap 1,344줄)를 정적으로 얹으면 그 자리에서 깨진다. */
+import { useMapPick } from "@/app/analysis/use-map-pick";
 import { hasSession } from "@/lib/client/has-session";
 import { SkBlock, SkLine } from "@/app/components/ui/Skeleton";
 import type { AiAnalysisToolId } from "@/lib/ai/ai-tools";
@@ -321,6 +324,9 @@ export function WorkbenchClient({
     [isCompare, loadContext],
   );
 
+  /* [975] 지도에서 고르기 — 서랍은 열 때만 내려받고, 고른 값은 위 onPick 을 탄다. */
+  const { openMap, mapNode } = useMapPick(onPick, useCase);
+
   /* [AI-25] 포트폴리오 — 관심 단지 자동 로드 */
   const [portfolio, setPortfolio] = useState<{ complexId: string; complexName: string }[] | null>(null);
   const loadPortfolio = useCallback(async () => {
@@ -496,6 +502,9 @@ export function WorkbenchClient({
 
   return (
     <div className="flex flex-col gap-3">
+      {/* [975] 지도에서 고르기 — 고른 단지는 검색 경로와 같은 onPick 을 타므로
+          이후 흐름이 완전히 같다(대상 조립은 resolvePickedComplexById 한 곳). */}
+      {mapNode}
       {/* ── ① 대상 선택 ── */}
       {needsComplex && (
         <div className="card rounded-2xl p-4">
@@ -504,7 +513,14 @@ export function WorkbenchClient({
             <span className="t-sub text-text-3">{useCase}</span>
           </div>
           {/* [970 · B-27] 위 "① 단지 선택" 이 라벨이다 — 피커 기본 라벨("① 단지 검색")이 겹쳐 보였다 */}
-          <ComplexPicker onSelect={onPick} label="" />
+          {/* [975] 이름을 알아야만 시작할 수 있던 것을 지도로도 연다 — 피커 옆
+              단추가 /map 으로 나가는 대신 이 화면 위에 지도 서랍을 띄운다.
+              임장은 보통 "여기 뭐지?" 로 시작하지, 단지명으로 시작하지 않는다. */}
+          <ComplexPicker
+            onSelect={onPick}
+            label=""
+            onMapClick={openMap}
+          />
           {presets.length > 0 && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <span className="t-sub font-bold text-text-3">내 프리셋:</span>

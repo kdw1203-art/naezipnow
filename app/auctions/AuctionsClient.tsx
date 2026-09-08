@@ -336,7 +336,9 @@ export function AuctionsClient({
           <button
             type="button"
             onClick={() => set({ usage: null })}
-            style={!f.usage ? { color: "#fff" } : undefined}
+            /* [975] 예전엔 여기 style={{color:"#fff"}} 가 있었다. 962 에서 chip-active
+               배경이 잉크 채움 → 한지(#F6F1E7)로 바뀌었는데 이 인라인만 남아서
+               크림 위 흰 글자, 1.13:1 이 됐다. 색은 클래스가 정한다. */
             className={
               !f.usage
                 ? "chip-active px-3 py-1.5 text-xs"
@@ -451,8 +453,10 @@ export function AuctionsClient({
                       c.mark
                         ? "border border-line bg-primary-soft text-text-1"
                         : c.muted
-                          ? "bg-bg text-on-dark-muted"
-                          : "bg-bg text-text-3"
+                          /* [975] on-dark-* 는 어두운 면 위 글자용이다. 밝은 칸에
+                             얹혀서 1.05:1 이었다. 흐린 날은 색 단계로 낮춘다. */
+                          ? "bg-bg text-text-3"
+                          : "bg-bg text-text-2"
                     }`}
                   >
                     {c.day}
@@ -687,13 +691,13 @@ export function AuctionsClient({
                 </div>
                 <div className="mb-2 flex justify-between rounded-lg bg-[rgba(255,255,255,.07)] px-3 py-2 text-xs">
                   <span className="text-ai-muted">현재 목록 표시</span>
-                  <span className="font-extrabold text-[#a78bfa]">
+                  <span className="font-extrabold text-ai-accent">
                     {cards.length.toLocaleString()}건
                   </span>
                 </div>
                 {dist.length > 0 ? (
                   <>
-                    현재 목록에서 <b className="text-[#a78bfa]">{dist[0].label}</b>이(가){" "}
+                    현재 목록에서 <b className="text-ai-accent">{dist[0].label}</b>이(가){" "}
                     {dist[0].count}건으로 가장 많아요. 실입찰 전 공고 원문에서 권리·명도 조건을
                     반드시 확인하세요.
                   </>

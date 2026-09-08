@@ -84,11 +84,14 @@ function BannerCard({ banner }: { banner: Banner }) {
  * 상단에 브랜드 그라데이션 커버 밴드를 얹고(아이브로·안내칩은 그 위 흰 글자),
  * 본문은 아래에 둔다. 홈 피드(밝은 배경)에서도 자연스럽다.
  */
-/** 하우스 광고별 시각 테마 — 색·워터마크 아이콘. 등록 안 된 id 는 기본(브랜드 블루). */
+/** 하우스 광고별 시각 테마 — 색·워터마크 아이콘. 등록 안 된 id 는 기본(브랜드 블루).
+ *  [975] 커버 밴드 위 글자는 항상 흰색이다 — from/to 두 스톱 **모두** 흰 글씨
+ *  4.5:1 을 넘겨야 한다. 밴드는 justify-between 이라 오른쪽 칩이 to 색 위에 앉는다
+ *  (실측으로 걸린 게 정확히 그 자리였다: to #2fa3e0 위 2.82:1). */
 const HOUSE_AD_THEME: Record<string, { from: string; to: string; icon: ReactNode }> = {
   house_map_real_price: {
     from: "#1d4fd8",
-    to: "#2fa3e0",
+    to: "#186f9f", /* 구 #2fa3e0 — 흰 글씨 2.82:1 이었다. 지금 5.51:1 */
     icon: (
       // 지도 핀 클러스터 — 장식(숫자 없음). 실거래 금액은 지도에서 실데이터로 본다.
       <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import type { CSSProperties } from "react";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { AdZone } from "@/app/components/ads/AdZone";
@@ -34,14 +33,6 @@ export const metadata: Metadata = {
   alternates: seoAlternates("/supply"),
 };
 
-/** 테마 구분: 입주 물량 = 초록 (공급·신축). 하위 클래스(text-primary·bg-primary-soft·
- *  chip-active·btn-primary)가 이 subtree 안에서 초록으로 재테마됨. */
-const SUPPLY_THEME = {
-  "--primary": "#0e9f6e",
-  "--primary-soft": "#e7f6ef",
-  "--primary-strong": "#0b8058",
-} as CSSProperties;
-
 const SOURCE_URL = "https://www.data.go.kr";
 
 export default async function SupplyPage() {
@@ -61,7 +52,9 @@ export default async function SupplyPage() {
       <TownCategoryNav stick />
       {/* [959] sr-only 제목을 보이는 머리로 — 카드에서 본 아이콘·색이 페이지로 이어진다 */}
       <TownPageHead href="/supply" />
-      <div style={SUPPLY_THEME}>
+      {/* 테마 구분: 입주 물량 = 초록(공급·신축). 값은 globals.css .theme-supply —
+          인라인 style 이면 다크 값을 못 얹고 대비 게이트도 못 본다([975]). */}
+      <div className="theme-supply">
         {/* 상단 CTA — 예전의 정적 탭 4개(전체·이번 분기·예정·지난 입주)는 클릭해도
             아무 동작이 없는 장식이라 제거했다. "입주 물량 알림" 칩도 뺐다 —
             /notifications 는 알림함일 뿐 입주 알림을 켜는 설정이 없어서, 신청할 수

@@ -93,7 +93,10 @@
      홈 프리뷰 tokens.css 초안 그대로: 네이비/주홍/한지 + 다크 반전. */
   --brand-navy: #0B2545;
   --brand-red: #C8442B; /* '지금' 신호 — 라이트 배경용 */
-  --brand-red-on-dark: #E0563A; /* 어두운 배경(네이비·다크모드) 위 주홍 */
+  /* [975] #E0563A → #E96A4B: 네이비(--brand-navy) 위 대비가 4.08 로 AA(4.5) 미달이었다.
+     "플랜 보기 ›" · 히어로 눈썹 글자가 실제로 흐리게 보였다(실측). 채움으로 쓰이는
+     자리(온점·링·스위치 손잡이)는 글자가 없어 밝아져도 잃는 게 없다. 이제 4.86. */
+  --brand-red-on-dark: #E96A4B; /* 어두운 배경(네이비·다크모드) 위 주홍 */
   --brand-hanji: #F6F1E7; /* 브랜드 순간의 배경(슬로건 띠·빈 화면) */
   --brand-hanji-ink: #0B2545; /* 한지 위 글자 */
   --brand-symbol-ink: #0B2545; /* 로고 획 */
@@ -103,6 +106,12 @@
   --on-dark: #F6F1E7;
   --on-dark-muted: rgba(246, 241, 231, 0.72);
   --on-dark-faint: rgba(246, 241, 231, 0.45);
+  /* [975] 어두운 면 **위에 얹는 패널**의 바탕.
+     예전엔 이 자리에 --on-dark-faint(45%)를 썼는데, 네이비 위에서 #75818E 라는
+     중간 회색이 되어 그 위의 한지색 글자가 3.53:1 까지 떨어졌다(실측). 45% 는
+     원래 **선·구분자용** 값이지 패널 바탕이 아니다. 패널은 옅게만 띄운다 —
+     네이비와는 구별되되(1.39:1) 글자는 9.85:1 로 또렷하다. */
+  --on-dark-panel: rgba(246, 241, 231, 0.12);
   --brand-wordmark: #0B2545;
   --danger-border: rgba(198, 40, 40, 0.35);
 
@@ -115,6 +124,15 @@
      3.07·3.22 로 비텍스트 최소 3:1 을 넘는다. */
   --danger-fill: #c62828;
   --success-fill: #177a4a;
+  /* [975] 파랑 채움도 같은 이유로 고정값이 필요했다. 시나리오 막대가
+     `background: var(--primary)` 에 흰 글씨였는데, 다크에서 --primary 는
+     #5b8bff 로 뒤집히므로 같은 함정이다. (실제로 걸린 건 그 옆 막대가 쓰던
+     --ai-accent(#88aaff, 다크 패널용)로, 밝은 카드 위 흰 글씨가 2.27:1 이었다.)
+     값이 --primary(#1d4fd8)보다 한 단계 밝은 이유: 채움은 **글자(흰색)와 표면**
+     양쪽을 만족해야 한다. #1d4fd8 은 흰 글자는 좋지만(6.64) 다크 표면과 2.60 이라
+     막대 자체가 배경에 묻혔다. 지금 흰 글자 5.29 · 다크 표면 3.26 · 라이트 표면 5.29
+     — danger-fill(5.62/3.07)과 같은 자리다. */
+  --primary-fill: #2f62e2;
 
   /* 15b 인터랙션 상태 */
   --disabled-bg: #eef1f6;
@@ -281,6 +299,7 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-danger-fill: var(--danger-fill);
+  --color-primary-fill: var(--primary-fill);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-success-fill: var(--success-fill);
@@ -308,6 +327,7 @@
   --color-on-dark: var(--on-dark);
   --color-on-dark-muted: var(--on-dark-muted);
   --color-on-dark-faint: var(--on-dark-faint);
+  --color-on-dark-panel: var(--on-dark-panel);
   --color-warning-border: var(--warning-border);
   --color-danger-border: var(--danger-border);
   --color-success-border: var(--success-border);
@@ -643,6 +663,37 @@ body:has(textarea:focus-visible) .tabbar-autohide {
 }
 .btn-ghost:active {
   transform: scale(0.98);
+}
+
+/* [975] 비활성 버튼도 **읽히게** 한다.
+   ── 왜 ────────────────────────────────────────────────────────────────
+   소유자 지시: "글씨가 안 보이는 것들을 수정해줘". 실제 원인은 opacity 였다.
+   화면 곳곳이 `disabled:opacity-50` 을 쓰는데, opacity 는 배경만이 아니라
+   **글자까지 같이** 반투명하게 만든다. 파랑 채움 버튼(흰 글자)이 절반 투명해지면
+   흰 글자가 밝은 배경에 녹아 "③ 분석 실행" 이라는 다음 할 일 자체가 안 읽힌다.
+   분석 화면에서 이 버튼은 안내문이기도 하다 — 못 누르는 건 맞지만 **무엇을
+   누르게 될지는 보여야** 한다.
+
+   그래서 투명도 대신 **연한 채움 + 진한 글자**로 바꾼다. 대비는 확보하면서
+   "지금은 못 누른다"는 신호(연한 면·not-allowed 커서)는 그대로다.
+   opacity:1 로 유틸리티(`disabled:opacity-50`)를 덮는다 — 이 파일 규칙은
+   Tailwind 레이어 밖이라 레이어 안 유틸리티보다 뒤에 적용된다.
+   .is-busy/.is-done 은 자기 색을 갖고 있으므로 건드리지 않는다(위 [961] 규칙). */
+.btn-primary:disabled:not(.is-busy):not(.is-done):not(.is-error) {
+  background: color-mix(in srgb, var(--primary) 22%, var(--surface));
+  color: color-mix(in srgb, var(--primary) 72%, var(--ink));
+  opacity: 1;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.btn-outline:disabled,
+.btn-secondary:disabled,
+.btn-soft:disabled {
+  opacity: 1;
+  color: var(--text-3);
+  border-color: var(--border);
+  background: var(--bg);
+  cursor: not-allowed;
 }
 /* 15c 버튼 3사이즈 — 라운드는 높이 비례 (52→14 / 40→11 / 32→9) */
 .btn-lg {
@@ -4367,14 +4418,48 @@ body.nz-consent-open .back-to-top {
 }
 
 /* [970 · C-18] /qna 테마(청록) — 위와 같은 사유. 다크 --primary 는 표면 위 5.5:1,
-   --primary-soft(#0f2a27) 위 4.9:1. */
+   --primary-soft(#0f2a27) 위 4.9:1.
+   [975] 라이트 청록을 #0d9488 → #0a7168 로 내렸다. 예전 값은 자기 soft 위에서
+   3.32:1 이라 청록 배지(bg-primary-soft + text-primary)와 링크가 미달이었다.
+   지금 soft 위 5.21 · 표면 5.87 · 흰 글자 5.87. */
 .qna-theme {
-  --primary: #0d9488;
+  --primary: #0a7168;
   --primary-soft: #e3f5f2;
-  --primary-strong: #0a7a70;
+  --primary-strong: #065a52;
 }
 .dark .qna-theme {
   --primary: #1ca392;
   --primary-soft: #0f2a27;
   --primary-strong: #2dd4bf;
+}
+
+/* [975] /supply(초록)·/dev-deals(앰버) 테마 — 여태 page.tsx 인라인 style 이었다.
+   970 이 /auctions 에서 고친 것과 똑같은 문제를 두 곳이 그대로 갖고 있었다:
+     (1) 라이트 값만 심어서 다크 모드에서 연한 판(#e7f6ef·#fdf1df)이 형광처럼 떴고,
+     (2) 인라인이라 대비 게이트(scripts/check-contrast-tokens.mjs)가 볼 수 없었다.
+   클래스로 옮기면서 실측으로 색도 내렸다 —
+     초록 #0e9f6e → #0a7a55 : 자기 soft 위 3.04 → 4.79 (표면 5.35 · 흰 글자 5.35)
+     앰버 #d97706 → #a4570a : 자기 soft 위 2.86 → 4.78 (표면 5.32 · 흰 글자 5.32)
+   /supply 한 화면에서만 미달 텍스트가 243건이었다(입주/분양 배지가 목록 전체에 있다).
+   다크 값은 루트 다크 파랑(#5b8bff, 표면 위 5.41)과 같은 급으로 맞췄다. */
+.theme-supply {
+  --primary: #0a7a55;
+  --primary-soft: #e7f6ef;
+  --primary-strong: #086341;
+}
+.dark .theme-supply {
+  --primary: #22a36f;
+  --primary-soft: #0f2a22;
+  --primary-strong: #34d399;
+}
+
+.theme-dev-deals {
+  --primary: #a4570a;
+  --primary-soft: #fef3c7;
+  --primary-strong: #8a4708;
+}
+.dark .theme-dev-deals {
+  --primary: #c98a2a;
+  --primary-soft: #33260f;
+  --primary-strong: #e0a94a;
 }

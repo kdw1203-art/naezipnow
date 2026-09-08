@@ -171,7 +171,8 @@ export default async function TownPage() {
               가장 활발한 동네 <b className="text-brand-red-dark">{hottest.name} ›</b>
             </Link>
           )}
-          <span className="t-caption text-on-dark-faint">지금 이 피드에 실린 글 기준</span>
+          {/* [975] on-dark-faint(45%)는 선·구분자용이다 — 글자에 쓰면 네이비 위 3.86:1 */}
+          <span className="t-caption text-on-dark-muted">지금 이 피드에 실린 글 기준</span>
         </div>
       </section>
 

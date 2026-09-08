@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { TrendChart } from "@/app/components/viz/TrendChart";
 import { PageShell } from "../../components/PageShell";
 import { SimulationNotice } from "../../components/ExampleBadge";
-import { ComplexPicker } from "../ComplexPicker";
+import { ComplexPicker, type PickedComplex } from "../ComplexPicker";
+import { useMapPick } from "../use-map-pick";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
 import {
   SEOUL_DISTRICTS,
@@ -138,6 +139,14 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
   const [baseline, setBaseline] = useState<Baseline | null>(null);
   const [loadingBaseline, setLoadingBaseline] = useState(false);
 
+  /* [975] 단지 선택은 검색·지도 두 길이 같은 함수로 모인다 — 어느 쪽으로 골라도
+     기준가 프리필과 지역 전환이 똑같이 일어나야 한다. */
+  const onComplex = useCallback((c: PickedComplex) => {
+    setPickedName(c.name);
+    if (c.regionId) setRegionId(c.regionId);
+  }, []);
+  const { openMap, mapNode } = useMapPick(onComplex, "시장·대출 시나리오");
+
   // 딥링크 ?region=·?ltv=·?income=·?rate= 초기 반영 (?complexId=/?apt= 는 ComplexPicker가 처리)
   // ltv/income/rate 는 /calculator "이 조건으로 시나리오 보기"가 현재 조건을 넘겨주는 통로.
   useEffect(() => {
@@ -246,9 +255,13 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
     const newPrice = priceWon + priceDeltaWon;
     const ltvAfter = newPrice > 0 ? (loanWon / newPrice) * 100 : 0;
     const bars = [
-      { label: `기준 ${rate.toFixed(2)}%`, pay, color: "var(--primary)" },
-      { label: "+1.0%p", pay: payStress, color: "var(--danger)" },
-      { label: "-0.5%p", pay: monthlyPayment(loanWon, Math.max(0.5, rate - 0.5)), color: "var(--ai-accent)" },
+      /* [975] 막대 위에는 흰 글씨가 얹힌다 — 그래서 **채움 전용 토큰**만 쓴다.
+         본문용 --primary/--danger 는 다크에서 밝은 색으로 뒤집히고,
+         --ai-accent 는 애초에 어두운 패널용이라 밝은 카드 위 흰 글씨가
+         2.27:1 이었다(실측). 색의 뜻도 이제 맞다: 붉음=부담 증가, 초록=감소. */
+      { label: `기준 ${rate.toFixed(2)}%`, pay, color: "var(--primary-fill)" },
+      { label: "+1.0%p", pay: payStress, color: "var(--danger-fill)" },
+      { label: "-0.5%p", pay: monthlyPayment(loanWon, Math.max(0.5, rate - 0.5)), color: "var(--success-fill)" },
     ];
     const maxPay = Math.max(...bars.map((b) => b.pay));
 
@@ -312,6 +325,8 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
 
   return (
     <PageShell breadcrumb="AI 분석 › 시장·대출 시나리오">
+      {/* [975] 지도에서 단지 고르기 — 열기 전에는 내려받지 않는다 */}
+      {mapNode}
       <div className="mb-2 flex items-center justify-between">
         <h1 className="rise-in t-title text-ink">시장·대출 시나리오</h1>
         {/* [AI-27] 현재 조건 세트를 URL로 공유 — 커뮤니티 글감·상담 공유용 */}
@@ -337,10 +352,9 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
           {/* 단지 선택 → 그 단지 지역의 실시세로 기준가 프리필 */}
           <ComplexPicker
             label="단지로 기준가 채우기"
-            onSelect={(c) => {
-              setPickedName(c.name);
-              if (c.regionId) setRegionId(c.regionId);
-            }}
+            onSelect={onComplex}
+            /* [975] 이름을 몰라도 지도에서 눌러 고른다 */
+            onMapClick={openMap}
           />
 
           {/* 지역 실시세 프리필 */}

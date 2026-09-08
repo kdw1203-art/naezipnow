@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { resolveRegion } from "./region-map";
+import { Icon } from "@/app/components/Icon";
 import { useSettledSearchQuery } from "@/lib/search/settle";
 import { formatKrwManwon } from "@/lib/format/krw";
 
@@ -36,12 +36,32 @@ function manwonLabel(manwon: number | null | undefined): string | null {
   return formatKrwManwon(manwon, { style: "listing" });
 }
 
-function toPicked(
+/* ============================================================
+   [975] 지역 카탈로그를 첫 화면에서 뺀다.
+
+   resolveRegion 은 서울 25구 + 수도권 목록(lib/map/seoul-districts, 묶음 ≈14KB)을
+   통째로 끌고 온다. 그런데 이 함수가 필요한 순간은 **단지를 고른 뒤**다 —
+   검색어를 치기도 전에 받아 둘 이유가 없다. /analysis 는 First Load 예산
+   여유가 몇 KB뿐이라(scripts/check-bundle-budget.mjs) 이만한 상수 목록이
+   첫 묶음에 들어앉는 게 그대로 예산이 된다.
+
+   그렇다고 고르는 순간 내려받으면 칩이 늦게 뜬다. 그래서 **하이드레이션 직후
+   한가할 때 미리 받아 두고**(아래 useEffect), 고를 때는 이미 받아 둔 약속을
+   그대로 쓴다. 사용자가 체감하는 지연은 사실상 없다.
+   ============================================================ */
+let regionMapPromise: Promise<typeof import("./region-map")> | null = null;
+function loadRegionMap(): Promise<typeof import("./region-map")> {
+  if (!regionMapPromise) regionMapPromise = import("./region-map");
+  return regionMapPromise;
+}
+
+async function toPicked(
   id: string,
   name: string,
   region: string,
   priceLabel: string | null,
-): PickedComplex {
+): Promise<PickedComplex> {
+  const { resolveRegion } = await loadRegionMap();
   const ref = resolveRegion(region);
   return {
     id,
@@ -73,6 +93,25 @@ async function fetchDetail(
   }
 }
 
+/**
+ * [975] id 하나로 PickedComplex 를 만든다 — 지도에서 마커를 눌러 고르는 경로가
+ * 검색으로 고르는 경로와 **같은 값**을 내게 하려고 여기서 내보낸다.
+ * (검색 드롭다운과 지도가 각자 조립하면 지역 표기·시세 라벨이 갈린다.)
+ * 상세 조회가 실패하면 이름만 아는 상태로라도 돌려준다 — 지도에서 이미 이름은 봤다.
+ */
+export async function resolvePickedComplexById(
+  id: string,
+  fallbackName: string,
+): Promise<PickedComplex> {
+  const detail = await fetchDetail(id);
+  return await toPicked(
+    id,
+    detail?.name?.trim() || fallbackName,
+    detail?.region ?? "",
+    detail?.priceLabel ?? null,
+  );
+}
+
 export function ComplexPicker({
   onSelect,
   initialComplexId,
@@ -81,6 +120,8 @@ export function ComplexPicker({
   clearOnSelect = false,
   placeholder = "단지명으로 검색 (예: 공작아파트)",
   label = "단지 선택",
+  labelClassName = "text-text-3",
+  onMapClick,
 }: {
   onSelect: (c: PickedComplex) => void;
   /** ?complexId= 딥링크 값 (undefined면 URL에서 자동 인식) */
@@ -93,6 +134,19 @@ export function ComplexPicker({
   clearOnSelect?: boolean;
   placeholder?: string;
   label?: string;
+  /**
+   * [975] 라벨 글자색. 밝은 카드 위(기본)는 text-text-3 로 충분하지만,
+   * 네이비 히어로 위에 그대로 얹으면 2.8:1 까지 무너진다(시세·타이밍에서 실측).
+   * 어두운 면에 놓는 쪽이 text-on-dark-muted 를 넘겨 준다.
+   */
+  labelClassName?: string;
+  /**
+   * [975] 옆의 지도 단추가 하는 일.
+   *  · 함수 → 그 자리에서 지도 서랍을 연다(화면을 떠나지 않는다).
+   *  · null → 단추 자체를 그리지 않는다(이미 지도 안에 있을 때).
+   *  · 없음 → 예전대로 /map 으로 이동한다.
+   */
+  onMapClick?: (() => void) | null;
 }) {
   const [query, setQuery] = useState("");
   /* 대기 규칙은 lib/search/settle 한 군데에서만 정한다(예전엔 여기 250ms 를
@@ -114,13 +168,13 @@ export function ComplexPicker({
       setOpen(false);
       setItems([]);
       // 후보 데이터로 즉시 반영 후 상세로 보강
-      let picked = toPicked(s.id, s.name, s.region, null);
+      let picked = await toPicked(s.id, s.name, s.region, null);
       setSelected(picked);
       setQuery(clearOnSelect ? "" : s.name);
       onSelectRef.current(picked);
       const detail = await fetchDetail(s.id);
       if (detail) {
-        picked = toPicked(
+        picked = await toPicked(
           s.id,
           detail.name ?? s.name,
           detail.region || s.region,
@@ -186,7 +240,7 @@ export function ComplexPicker({
       void (async () => {
         const detail = await fetchDetail(id);
         if (detail && (detail.region || detail.name)) {
-          const picked = toPicked(
+          const picked = await toPicked(
             id,
             detail.name ?? apt ?? "단지",
             detail.region,
@@ -217,6 +271,12 @@ export function ComplexPicker({
     void runSuggest(settledQuery);
   }, [settledQuery, selected, runSuggest]);
 
+  /* [975] 지역 카탈로그 미리 받기 — 하이드레이션 뒤 한 번. 첫 묶음에서는 뺐지만
+     고르는 순간에는 이미 있어야 칩이 바로 뜬다(위 loadRegionMap 주석). */
+  useEffect(() => {
+    void loadRegionMap();
+  }, []);
+
   // 바깥 클릭 시 드롭다운 닫기
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -230,7 +290,9 @@ export function ComplexPicker({
     <div ref={boxRef} className="relative flex flex-col gap-1.5">
       {/* [970 · B-27] label="" 이면 줄 자체를 안 그린다 — 호출측이 이미 제목을 붙인 자리
           (워크벤치 "① 단지 선택")에서 라벨이 두 번 보였다. 접근성 이름은 아래 폴백. */}
-      {label && <span className="text-[12px] font-bold text-text-3">{label}</span>}
+      {label && (
+        <span className={`text-[12px] font-bold ${labelClassName}`}>{label}</span>
+      )}
       {/* 검색 입력 + 지도로 찾기 — 이름을 모르면 지도에서 눌러 고른다.
           지도(/map)는 단지 선택 시 '/analysis?complexId=' 로 되돌려보내고,
           이 선택기가 그 값을 읽어 자동 선택한다(맞물린 왕복). */}
@@ -246,13 +308,26 @@ export function ComplexPicker({
           aria-label={label || "단지 검색"}
           className="min-w-0 flex-1 rounded-[10px] border border-line bg-surface px-3 py-2 text-xs font-bold text-ink outline-none focus:border-primary"
         />
-        <Link
-          href="/map"
-          className="flex shrink-0 items-center gap-1 rounded-[10px] border border-line bg-surface px-2.5 text-[12px] font-bold text-primary no-underline hover:border-primary"
-          aria-label="지도에서 단지 찾기"
-        >
-          🗺 지도로 찾기
-        </Link>
+        {/* [975] 지도 단추 — 부르는 쪽이 서랍을 갖고 있으면 화면을 떠나지 않는다.
+            (예전엔 무조건 /map 으로 나갔다가 다시 ?complexId= 로 돌아와야 했다.) */}
+        {onMapClick === null ? null : onMapClick ? (
+          <button
+            type="button"
+            onClick={onMapClick}
+            className="press flex shrink-0 items-center gap-1 rounded-[10px] border border-line bg-surface px-2.5 text-[12px] font-bold text-primary hover:border-primary"
+            aria-label="지도에서 단지 찾기"
+          >
+            <Icon name="map" size={14} /> 지도로 찾기
+          </button>
+        ) : (
+          <Link
+            href="/map"
+            className="flex shrink-0 items-center gap-1 rounded-[10px] border border-line bg-surface px-2.5 text-[12px] font-bold text-primary no-underline hover:border-primary"
+            aria-label="지도에서 단지 찾기"
+          >
+            <Icon name="map" size={14} /> 지도로 찾기
+          </Link>
+        )}
       </div>
 
       {open && items.length > 0 && (

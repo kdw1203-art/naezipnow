@@ -218,7 +218,7 @@ export function NewsListClient({
                 }`}
               >
                 {r.label}
-                <span className="ml-1 opacity-70">{r.count}</span>
+                <span className="ml-1 font-normal">{r.count}</span>
               </button>
             );
           })}
@@ -253,7 +253,7 @@ export function NewsListClient({
               }`}
             >
               {c.label}
-              <span className="ml-1 opacity-70">{c.count}</span>
+              <span className="ml-1 font-normal">{c.count}</span>
             </button>
           ))}
         </div>

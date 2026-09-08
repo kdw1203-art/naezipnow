@@ -110,7 +110,7 @@ export function HubHero({
   quota: HubQuota;
   toolCount: number;
 }) {
-  const { picked, setPicked, query: q } = useHubPicked();
+  const { picked, setPicked, query: q, openMap } = useHubPicked();
   /* [970 · B-28] 좁은 화면 판정 — 서버·첫 렌더는 false(긴 placeholder)라 하이드레이션이 안 어긋난다 */
   const [narrow, setNarrow] = useState(false);
   useEffect(() => {
@@ -161,6 +161,9 @@ export function HubHero({
           label="① 단지 검색"
           /* [970 · B-28] 좁은 화면(≤480px)에서는 예시까지 적으면 placeholder 가 잘렸다 */
           placeholder={narrow ? "단지명 검색" : "단지명으로 검색 (예: 은마아파트)"}
+          /* [975] 이름을 몰라도 시작할 수 있게 — /map 으로 나갔다 돌아오는 대신
+             이 자리에서 지도를 연다. 임장은 보통 "여기 뭐지?"로 시작한다. */
+          onMapClick={() => openMap()}
         />
 
         {/* 절차는 화면당 한 번만(UI-10). 미측정 소요시간 약속은 뺐다(958). */}

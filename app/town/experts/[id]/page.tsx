@@ -216,7 +216,7 @@ export default async function ExpertDetailPage({
               <QuoteRequestLink className="brand-photo-chip flex-1 rounded-xl px-4 py-3 text-center t-body font-bold" />
             </div>
           ) : (
-            <p className="rounded-xl bg-on-dark-faint px-4 py-3 t-sub text-on-dark">
+            <p className="rounded-xl bg-on-dark-panel px-4 py-3 t-sub text-on-dark">
               인증 심사 중인 프로필이에요. 상담 신청·연락처는 인증 완료 후 열려요.
             </p>
           )}

@@ -83,7 +83,7 @@ export function PriceTab({
                     className={chipCls(band === c.slug)}
                   >
                     {c.label}
-                    <span className="ml-1 opacity-70">{c.dealCount}</span>
+                    <span className="ml-1 font-normal">{c.dealCount}</span>
                   </button>
                 ))}
               </div>

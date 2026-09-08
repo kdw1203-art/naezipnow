@@ -53,7 +53,10 @@ function ItemBody({ it }: { it: TickerItem }) {
   const macro = it.kind === "macro";
   return (
     <>
-      <span className={macro ? "text-white/45" : "text-white/70"}>{it.label}</span>
+      {/* [975] 예전엔 white/45 · white/70 이었다. white/45 는 네이비 위 4.21:1 로
+          AA 미달(axe 실측) — 그리고 952 규칙상 어두운 면 위 글자는 흰색이 아니라
+          한지 계열이다. 위계는 그대로(배경 지표가 더 옅다), 대비는 7.7 / 12.0. */}
+      <span className={macro ? "text-on-dark-muted" : "text-on-dark"}>{it.label}</span>
       <span
         className={`tabular-nums ${
           it.tone === "up"

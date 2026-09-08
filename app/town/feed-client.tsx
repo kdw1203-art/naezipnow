@@ -80,7 +80,9 @@ function GeneratedCover({ card }: { card: FeedCard }) {
           dark ? "bg-brand-red-dark/25" : "bg-brand-red/15"
         }`}
       />
-      <span className={`t-caption font-extrabold tracking-wider ${dark ? "text-on-dark-muted" : "opacity-70"}`}>
+      {/* [975] 밝은 면 쪽이 opacity-70 이었다 — 부모색을 통째로 흐려서 2.9~3.5:1 이 됐다.
+          흐리게 보이려면 색을 낮춰야지 투명도를 낮추면 안 된다(글자까지 사라진다). */}
+      <span className={`t-caption font-extrabold tracking-wider ${dark ? "text-on-dark-muted" : "text-text-3"}`}>
         {card.region}
       </span>
       <span className="clamp-2 t-section leading-snug">{big}</span>
@@ -483,7 +485,7 @@ export function TownFeed({
               onClick={() => setKind(k.id)}
             >
               {k.label}
-              <span className="t-num ml-1 opacity-70">{counts[k.id]}</span>
+              <span className="t-num ml-1 font-normal">{counts[k.id]}</span>
             </button>
           ))}
         </div>
@@ -499,7 +501,7 @@ export function TownFeed({
             }`}
           >
             내 관심지역
-            <span className="t-num ml-1 opacity-70">{mineCount}</span>
+            <span className="t-num ml-1 font-normal">{mineCount}</span>
           </button>
         )}
         {/* 관심지역이 있으면 그 동네로 바로 글쓰기 (B22) — 매번 지역부터

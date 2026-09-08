@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import type { CSSProperties } from "react";
 import { PageShell } from "../components/PageShell";
 import { listDeals } from "@/lib/dev-deals/store";
 import { type DevDeal } from "@/lib/dev-deals/types";
@@ -28,15 +27,6 @@ export const metadata: Metadata = {
   // N7 — 필터·정렬 파라미터 조합이 별개 URL 로 색인되지 않도록 canonical 고정
   alternates: seoAlternates("/dev-deals"),
 };
-
-/** 테마 구분: 개발물건 중개 = 앰버(디벨로퍼 매칭). 하위 클래스(text-primary·
- *  bg-primary-soft·chip-active·btn-primary·btn-outline)가 이 subtree 안에서
- *  앰버로 재테마된다. 강한 앰버 텍스트는 var(--primary-strong)로 직접 지정. */
-const DEV_THEME = {
-  "--primary": "#d97706",
-  "--primary-soft": "#fdf1df",
-  "--primary-strong": "#b45309",
-} as CSSProperties;
 
 const DISCLAIMER =
   "내집나우는 개발물건의 소개·정보 게시 플랫폼으로, 당사자 간 계약·자금 정산에 관여하지 않습니다. 게시 정보의 정확성은 등록자에게 있으며, 실제 거래·인허가·수수료 약정은 반드시 당사자 간 확인 및 전문가(법무·세무·공인중개사 등) 자문을 거치시기 바랍니다. 표기된 중개 수수료는 기준이며 사업 규모·조건에 따라 협의됩니다.";
@@ -96,7 +86,9 @@ export default async function DevDealsHubPage() {
 
   return (
     <PageShell breadcrumb="동네이야기 › 개발물건 중개" wide>
-      <div style={DEV_THEME}>
+      {/* 테마 구분: 개발물건 중개 = 앰버(디벨로퍼 매칭). 값은 globals.css
+          .theme-dev-deals — 인라인 style 이면 다크 값도, 대비 게이트도 없다([975]). */}
+      <div className="theme-dev-deals">
         {/* 헤더 · 역할 요약(면책 취지 포함) */}
         <div className="rise-in mb-4">
           {/* [970 · C-42] h1 안에 배지 span 이 들어 있어 제목이 "개발물건 중개 B2B 디벨로퍼 매칭"

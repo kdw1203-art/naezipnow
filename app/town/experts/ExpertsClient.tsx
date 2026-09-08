@@ -216,7 +216,7 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
               className={chipCls(filter.type === t.id)}
             >
               {t.label}
-              {(typeCounts.get(t.id) ?? 0) > 0 && <span className="ml-1 opacity-70">{typeCounts.get(t.id)}</span>}
+              {(typeCounts.get(t.id) ?? 0) > 0 && <span className="ml-1 font-normal">{typeCounts.get(t.id)}</span>}
             </button>
           ))}
         </div>

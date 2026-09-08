@@ -57,7 +57,9 @@ export default async function AiToolPage({
             </span>
             <div className="min-w-0 flex-1">
               <nav className="t-caption font-extrabold tracking-wider text-on-dark-muted">
-                <Link href="/analysis" className="no-underline hover:underline">
+                {/* [975] 네이비 위에서는 전역 링크 파랑(--primary)이 2.32:1 로 무너진다.
+                    빵부스러기는 색으로 링크임을 말하지 않는다 — 밑줄과 위치가 말한다. */}
+                <Link href="/analysis" className="text-on-dark no-underline hover:underline">
                   AI 분석
                 </Link>{" "}
                 › 단지 하나를 깊게
@@ -67,15 +69,15 @@ export default async function AiToolPage({
             </div>
           </div>
           <div className="grid grid-cols-1 gap-2 border-t border-on-dark-faint pt-4 sm:grid-cols-3">
-            <div className="rounded-xl bg-on-dark-faint px-3 py-2.5">
+            <div className="rounded-xl bg-on-dark-panel px-3 py-2.5">
               <div className="t-caption font-extrabold text-on-dark-muted">넣는 것</div>
               <div className="t-sub text-on-dark">단지 1곳{identity.useCase ? ` · ${identity.useCase}` : ""}</div>
             </div>
-            <div className="rounded-xl bg-on-dark-faint px-3 py-2.5">
+            <div className="rounded-xl bg-on-dark-panel px-3 py-2.5">
               <div className="t-caption font-extrabold text-on-dark-muted">계산</div>
               <div className="t-sub text-on-dark">실거래·전월세·공급·뉴스 실데이터 규칙 계산 · AI 서술은 선택</div>
             </div>
-            <div className="rounded-xl bg-on-dark-faint px-3 py-2.5">
+            <div className="rounded-xl bg-on-dark-panel px-3 py-2.5">
               <div className="t-caption font-extrabold text-on-dark-muted">나오는 것</div>
               <div className="t-sub text-on-dark">
                 {identity.metricLabel && identity.metricLabel !== "결과"
