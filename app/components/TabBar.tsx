@@ -82,7 +82,12 @@ export function TabBar() {
                   않는 고정 네이비라 다크 글래스 위에서 "기록" 글자가 묻혔다. 토큰을 다크에서
                   밝게 뒤집으면 네이비 카드 위 한지 글자가 전부 대비를 잃으므로 탭바 글자만
                   테마 토큰(primary)으로 — 데스크탑 GNB·전체 메뉴의 활성색과도 같아진다. */}
-              <span className="text-[12px] font-extrabold text-primary">
+              {/* [976] text-primary → text-primary-strong. 탭바는 유리라 뒤 배경이
+                  비치는데, 본문이 어두운 화면(/subscription 등)에서는 실제 바탕이
+                  #ced3da 까지 내려가 --primary 가 4.41:1 이었다(axe 실측). 같은 파랑
+                  계열의 진한 값(--primary-strong)이면 5.67:1 이고, 다크에서는 이
+                  토큰이 밝은 쪽(#86a9ff)으로 뒤집히므로 어두운 유리 위에서도 산다. */}
+              <span className="text-[12px] font-extrabold text-primary-strong">
                 {tab.label}
               </span>
             </Link>

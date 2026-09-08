@@ -2,6 +2,7 @@ import "server-only";
 import { after } from "next/server";
 import { listPublicNotes, type InspectionNote } from "@/lib/inspection/store-db";
 import { loadLastGood, saveLastGood } from "@/lib/cache/last-good";
+import { MemoryLastGoodStore } from "@/lib/cache/memory-last-good";
 import { logger } from "@/lib/log";
 
 /**
@@ -40,6 +41,27 @@ export type PublicNotesResult = {
 
 const MAX_STALE_HOURS = 24;
 
+/* ── [976] 폴백이 같은 DB 에 기대고 있었다 ─────────────────────────────────
+ *
+ * 967 에서 붙인 폴백은 public_data_cache(=같은 Postgres)에서 마지막 정상본을
+ * 읽는다. 그런데 이 폴백이 필요한 상황은 **DB 가 밀려서 본 조회가 죽었을 때**다.
+ * 그 순간에는 폴백 조회도 같은 풀에서 같은 대기를 하다 같이 죽는다. 그래서
+ * 967 이후에도 `analysis-public-preview-v1 … TimeoutError` 가 그대로 남았다
+ * (2026-09-08 실측: 최근 7일 477건 · 사용자 189명, 오늘 새 배포에서도 7건).
+ *
+ * 그래서 층을 하나 앞에 둔다 — **이 인스턴스가 직접 성공했던 마지막 값**을
+ * 메모리에 들고 있다가 먼저 낸다. DB 왕복이 0이라 포화 상태에서도 확실히 뜨고,
+ * 자기가 읽어 본 적 없는 값은 절대 내지 않는다(다른 사용자 데이터가 섞일 수
+ * 없다 — 애초에 모두에게 같은 공개 목록이다).
+ *
+ * 서버리스라 인스턴스가 식으면 사라진다. 그건 결함이 아니라 이 층의 성격이다 —
+ * 식은 인스턴스는 예전처럼 DB 정상본 → 실패 순서로 내려간다. 층은 셋이 된다:
+ *   ① 메모리 정상본(이 인스턴스, 24시간) → ② DB 정상본(24시간) → ③ 실패를 던짐
+ */
+const memoryLastGood = new MemoryLastGoodStore<InspectionNote[]>(
+  MAX_STALE_HOURS * 3_600_000,
+);
+
 function cacheKey(limit: number): string {
   return `public-notes:${limit}`;
 }
@@ -74,9 +96,23 @@ export async function listPublicNotesWithFallback(
   const key = cacheKey(limit);
   try {
     const notes = await load(limit);
+    /* 메모리 정상본은 이메일을 지운 사본으로 둔다 — DB 정상본과 같은 규칙이다
+       (위 stripAuthorEmail 주석). 폴백으로 나갈 때만 쓰는 값이므로 정상 경로의
+       반환값에는 영향이 없다. */
+    memoryLastGood.save(key, stripAuthorEmail(notes));
     persistInBackground(key, notes);
     return { notes, stale: false, fetchedAt: null };
   } catch (error) {
+    /* ① 이 인스턴스의 메모리 정상본 — DB 를 한 번도 더 건드리지 않는다 */
+    const mem = memoryLastGood.read(key);
+    if (mem) {
+      logger.warn(
+        `[public-notes] ${key} 조회 실패 → 메모리 정상본 ${mem.value.length}건으로 대체 (${mem.fetchedAt})`,
+        error instanceof Error ? error.message : error,
+      );
+      return { notes: mem.value, stale: true, fetchedAt: mem.fetchedAt };
+    }
+    /* ② DB 정상본 — 인스턴스가 식었을 때의 길 */
     const lkg = await loadLastGood<InspectionNote[]>(key, MAX_STALE_HOURS);
     if (lkg && Array.isArray(lkg.value)) {
       logger.warn(

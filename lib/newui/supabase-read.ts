@@ -26,6 +26,12 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getSupabasePublicKey, getSupabaseUrl } from "@/lib/supabase/env";
 import { isSupabaseConfigured } from "@/lib/supabase/flags";
 import { makeResilientFetch } from "@/lib/supabase/resilient-fetch";
+import {
+  BUILD_ATTEMPT_MS,
+  DEFAULT_ATTEMPT_MS,
+  DEFAULT_TOTAL_BUDGET_MS,
+  resolveTotalBudgetMs,
+} from "@/lib/supabase/read-budget";
 
 /**
  * 지금이 `next build` 의 prerender 단계인가.
@@ -37,8 +43,11 @@ const IS_BUILD_PHASE = process.env.NEXT_PHASE === "phase-production-build";
 function readTimeoutMs(): number {
   const raw = Number(process.env.SUPABASE_READ_TIMEOUT_MS);
   if (Number.isFinite(raw) && raw >= 1000 && raw <= 120_000) return raw;
-  /* 빌드 중에는 짧게 잡는다 — 아래 총 예산 주석 참고. */
-  return IS_BUILD_PHASE ? 8_000 : 25_000;
+  /* 빌드 중에는 짧게 잡는다 — 아래 총 예산 주석 참고.
+     [976] 런타임 25s → 10s: PostgREST 는 statement_timeout=8s 로 이미 잘리므로
+     한 시도에 25초를 주는 건 "연결을 25초 붙들겠다"는 뜻일 뿐이다(실측 근거는
+     아래 readTotalBudgetMs 주석). 8초 + 여유 2초면 정상 질의는 다 들어온다. */
+  return IS_BUILD_PHASE ? BUILD_ATTEMPT_MS : DEFAULT_ATTEMPT_MS;
 }
 
 /**
@@ -59,10 +68,27 @@ function readTimeoutMs(): number {
  */
 function readTotalBudgetMs(): number {
   const perAttempt = readTimeoutMs();
-  const base = IS_BUILD_PHASE ? 20_000 : 45_000;
-  /* 최소한 한 시도는 온전히 돌 수 있어야 한다 — SUPABASE_READ_TIMEOUT_MS 를
-     크게 준 경우 총 예산이 그보다 작으면 첫 시도가 잘려 버린다. */
-  return Math.max(base, perAttempt + 1_000);
+  /* [976] 런타임 45s → 20s.
+   *
+   * 위 부등식(직렬 조회 수 × 총 예산 < 페이지 예산)을 런타임에도 적용한다.
+   * 서버리스 함수 상한은 120초인데 45초면 **직렬 두 건**이 한계였다 — 대부분의
+   * 화면은 그보다 많이 읽는다. 실제로 /town 이 여기서 터졌다(아래 실측).
+   *
+   * ── 20초가 낭비가 아닌 이유 (2026-09-08 실측) ─────────────────────────────
+   * PostgREST 는 authenticator 세션의 statement_timeout=8s 로 이미 잘린다
+   * (pg_stat_statements 상 어느 질의도 max 7,9xx ms 를 못 넘는다). 즉 8초를
+   * 넘겨 기다리는 시간은 질의 시간이 아니라 **연결 풀 대기**다. 풀이 20초 넘게
+   * 안 비면 그 요청은 어차피 죽은 요청이고, 계속 붙들고 있는 것 자체가 풀을
+   * 더 마르게 한다. 빨리 실패하는 편이 전체 회복이 빠르다.
+   *
+   * 실패는 여전히 "조회 실패"로 화면에 뜬다 — 데이터 없음으로 위장하지 않는다.
+   * SUPABASE_READ_TOTAL_BUDGET_MS 로 조정할 수 있다(1s~120s).
+   */
+  return resolveTotalBudgetMs(
+    process.env.SUPABASE_READ_TOTAL_BUDGET_MS,
+    perAttempt,
+    DEFAULT_TOTAL_BUDGET_MS,
+  );
 }
 
 /**

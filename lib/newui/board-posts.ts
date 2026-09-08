@@ -158,6 +158,34 @@ type BoardQueryKind = "full" | "light";
  * `loadError` 같은 플래그로 받아서 **화면에** 실패를 적는다(던져서 배포를
  * 깨뜨리지 않는다). 예: app/redevelopment/page.tsx 의 ProjectsData 패턴.
  */
+/**
+ * [976] 세 단계 재시도 **전체**의 벽시계 예산(ms).
+ *
+ * ── 이 숫자가 없어서 /town 이 120초를 태웠다 (2026-09-08 실측) ───────────────
+ * 아래 조회는 실패하면 세 번 간다: 댓글 카운트 포함 → 카운트 없이 → anon.
+ * 그런데 상한은 **한 건마다** 걸려 있었다(런타임 총 예산 45초). 그래서
+ *     45s × 3 = 135s > Vercel 함수 상한 120s
+ * 다시 말해, DB 가 밀리는 순간 이 함수 하나가 페이지 예산을 통째로 넘겼다.
+ * 실제 로그: `Vercel Runtime Timeout Error: Task timed out after 120 seconds`
+ * 295건 · 79명, 경로의 대부분이 /town/* 였다.
+ * (같은 부류의 실수를 2026-08-01 감사가 한 층 위에서 이미 고쳤다 — "시도별
+ *  상한만 있고 총 상한이 없다". 여기서는 층이 하나 더 있었던 것뿐이다.)
+ *
+ * ── 왜 12초인가 ────────────────────────────────────────────────────────────
+ * 이 질의 자체는 한가할 때 **2ms** 다(EXPLAIN ANALYZE 실측, board_posts 897행 ·
+ * board_comments 0행, 인덱스 board_posts_board_type_idx 사용). 12초가 걸린다는
+ * 건 질의가 무거워서가 아니라 DB 연결을 못 잡고 있다는 뜻이고, 그때는 빨리
+ * 물러나는 편이 전체 회복에 낫다. 호출부(/town/[region])는 이미 실패를
+ * `postsFailed` 로 받아 화면에 정직하게 적는다 — 흰 화면 120초보다 낫다.
+ *
+ * BOARD_POSTS_READ_BUDGET_MS 로 조정할 수 있다(1s~60s).
+ */
+function boardReadBudgetMs(): number {
+  const raw = Number(process.env.BOARD_POSTS_READ_BUDGET_MS);
+  if (Number.isFinite(raw) && raw >= 1_000 && raw <= 60_000) return raw;
+  return 12_000;
+}
+
 async function fetchBoardPosts(limit: number, kind: BoardQueryKind): Promise<Post[]> {
   const sb = getReadOnlySupabase();
   /* 미구성은 "고장"이 아니라 "이 환경엔 DB 가 없음"이다 — 던지지 않는다.
@@ -165,36 +193,31 @@ async function fetchBoardPosts(limit: number, kind: BoardQueryKind): Promise<Pos
   if (!sb) return [];
   const plain = kind === "light" ? BOARD_SELECT_LIGHT : "*";
   const primary = kind === "light" ? BOARD_SELECT_LIGHT : BOARD_SELECT_WITH_COMMENTS;
-  let { data, error } = await sb
-    .from("board_posts")
-    .select(primary)
-    .eq("board_type", "community")
-    .eq("is_published", true)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  if (error && primary !== plain) {
-    logger.error("[readBoardPosts] with-comments query failed", error);
-    // board_comments 중첩 카운트가 권한 등으로 막히면 카운트 없이 재시도
-    ({ data, error } = await sb
+  /* 세 시도가 **함께** 쓰는 예산. resilient-fetch 는 넘겨받은 signal 이 이미
+     끊겼으면 자기 재시도(503 백오프)도 멈추므로, 이 하나로 전 구간이 잘린다. */
+  const budget = AbortSignal.timeout(boardReadBudgetMs());
+  const query = (client: typeof sb, select: string) =>
+    client!
       .from("board_posts")
-      .select(plain)
+      .select(select)
       .eq("board_type", "community")
       .eq("is_published", true)
       .order("created_at", { ascending: false })
-      .limit(limit));
+      .limit(limit)
+      .abortSignal(budget);
+
+  let { data, error } = await query(sb, primary);
+  if (error && primary !== plain && !budget.aborted) {
+    logger.error("[readBoardPosts] with-comments query failed", error);
+    // board_comments 중첩 카운트가 권한 등으로 막히면 카운트 없이 재시도
+    ({ data, error } = await query(sb, plain));
   }
-  if (error) {
+  if (error && !budget.aborted) {
     logger.error("[readBoardPosts] plain query failed", error);
     // Service Role 키 무효 등 클라이언트 자체 문제 대비 — anon으로 마지막 재시도
     const anon = getAnonReadOnlySupabase();
     if (anon && anon !== sb) {
-      ({ data, error } = await anon
-        .from("board_posts")
-        .select(plain)
-        .eq("board_type", "community")
-        .eq("is_published", true)
-        .order("created_at", { ascending: false })
-        .limit(limit));
+      ({ data, error } = await query(anon, plain));
       if (error) logger.error("[readBoardPosts] anon query failed", error);
     }
   }

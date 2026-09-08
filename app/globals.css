@@ -295,6 +295,9 @@
 @theme inline {
   --color-primary: var(--primary);
   --color-primary-soft: var(--primary-soft);
+  /* [976] text-primary-strong 이 유틸로 없어서 조용히 무시되고 있었다 —
+     클래스를 붙여도 색이 안 바뀌니 대비 수정이 먹지 않았다(탭바 "기록"). */
+  --color-primary-strong: var(--primary-strong);
   --color-ink: var(--ink);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
@@ -663,6 +666,53 @@ body:has(textarea:focus-visible) .tabbar-autohide {
 }
 .btn-ghost:active {
   transform: scale(0.98);
+}
+
+/* ============================================================
+   [976] 다크 모드에서 **흰 글자를 얹는 파랑 면**만 채움 토큰으로.
+
+   ── 무엇이 문제였나 (2026-09-08 axe 실측) ────────────────────────────────
+   `bg-primary` · `.btn-primary` · `.ai-chip` 은 배경으로 --primary 를 쓴다.
+   그런데 --primary 는 다크에서 **밝은 파랑(#5b8bff)** 으로 뒤집힌다 — 어두운 면
+   위 *글자* 로 읽히려면 그래야 하기 때문이다. 문제는 그 값을 **면**으로 쓰고 그
+   위에 흰 글자를 얹을 때다: 흰 글자 대비가 3.18~3.21:1 로 내려앉는다.
+   /auctions(보라) 15건 · /supply(초록) 8건 · /dev-deals(앰버) 3건 · 쿠키 동의
+   버튼은 모든 화면.
+
+   975 릴리스 노트 5장에 "앱 전체 버튼 색이 바뀌는 변경이라 지시 없이 하지
+   않는다"고 남겨 뒀던 항목이고, 이번에 소유자 지시("잔여분 진행")로 처리한다.
+
+   ── 왜 이 세 줄인가 ──────────────────────────────────────────────────────
+   마크업 57곳을 고치는 대신, **문제가 되는 조합만** 선택자로 집는다.
+     · `.bg-primary.text-white` — 파랑 면 + 흰 글자(정확히 실패하는 조합)
+     · `.btn-primary` — 클래스가 스스로 color:#fff 를 정한다
+     · `.ai-chip` — 같은 이유
+   장식용 `bg-primary`(4px 강조 바·점 등, 글자가 없다)는 건드리지 않는다 —
+   거기서는 밝은 파랑이 어두운 면 위에서 더 잘 보인다.
+
+   라이트 모드는 손대지 않는다. --primary(#1d4fd8) 위 흰 글자가 이미 6.64:1 이다.
+   ============================================================ */
+.dark .bg-primary.text-white,
+.dark .btn-primary,
+.dark .ai-chip {
+  background: var(--primary-fill);
+  color: #fff;
+}
+/* 진행·완료·실패는 자기 색을 갖는다([961]) — 위 규칙이 그걸 덮지 않게 되돌린다. */
+.dark .btn-primary.is-busy {
+  background: color-mix(in srgb, var(--primary-fill) 72%, #fff);
+}
+.dark .btn-primary.is-done {
+  background: var(--brand-navy);
+  color: var(--on-dark);
+}
+.dark .btn-primary.is-error {
+  background: var(--brand-red);
+}
+/* 비활성은 아래 [975] 규칙이 정한다 — 여기서 덮으면 다시 안 읽힌다. */
+.dark .btn-primary:disabled:not(.is-busy):not(.is-done):not(.is-error) {
+  background: color-mix(in srgb, var(--primary) 22%, var(--surface));
+  color: color-mix(in srgb, var(--primary) 72%, var(--ink));
 }
 
 /* [975] 비활성 버튼도 **읽히게** 한다.
@@ -4410,6 +4460,9 @@ body.nz-consent-open .back-to-top {
   --primary: #7c3aed;
   --primary-soft: #f1ebfe;
   --primary-strong: #6528d6;
+  /* [976] 흰 글자를 얹는 면 — 테마와 무관하게 고정한다(루트 --primary-fill 과 같은 이유).
+     흰 글자 5.70 · 다크 표면(#171b22) 대비 3.03 — 둘 다 통과하는 구간이다. */
+  --primary-fill: #7c3aed;
 }
 .dark .theme-auction {
   --primary: #9b7cf5;
@@ -4426,6 +4479,9 @@ body.nz-consent-open .back-to-top {
   --primary: #0a7168;
   --primary-soft: #e3f5f2;
   --primary-strong: #065a52;
+  /* [976] 채움은 --primary 보다 한 톤 밝다. #0a7168 은 흰 글자는 좋지만(5.87)
+     다크 표면과 2.94 라 배지가 배경에 묻혔다(비텍스트 최소 3). 지금 5.00 / 3.45. */
+  --primary-fill: #0c7d74;
 }
 .dark .qna-theme {
   --primary: #1ca392;
@@ -4446,6 +4502,8 @@ body.nz-consent-open .back-to-top {
   --primary: #0a7a55;
   --primary-soft: #e7f6ef;
   --primary-strong: #086341;
+  /* [976] 흰 글자 5.35 · 다크 표면 3.23 — 라이트 --primary 를 그대로 써도 통과한다. */
+  --primary-fill: #0a7a55;
 }
 .dark .theme-supply {
   --primary: #22a36f;
@@ -4457,6 +4515,8 @@ body.nz-consent-open .back-to-top {
   --primary: #a4570a;
   --primary-soft: #fef3c7;
   --primary-strong: #8a4708;
+  /* [976] 흰 글자 5.32 · 다크 표면 3.24. */
+  --primary-fill: #a4570a;
 }
 .dark .theme-dev-deals {
   --primary: #c98a2a;

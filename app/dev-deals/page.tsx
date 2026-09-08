@@ -117,7 +117,10 @@ export default async function DevDealsHubPage() {
           className="rise-in mb-4 flex items-start gap-2 rounded-xl bg-primary-soft px-4 py-3 text-[12px] leading-[1.6]"
           style={{ color: "var(--primary-strong)" }}
         >
-          <span className="mt-px shrink-0 rounded-full bg-white/70 chip-pad text-[10px] font-extrabold">
+          {/* [976] bg-white/70 은 라이트 모드를 전제한 값이다. 다크에서는 이 배너의
+              글자색(--primary-strong = 밝은 앰버)이 흰 칩 위에 얹혀 1.14:1 이었다.
+              표면 토큰을 쓰면 두 모드 모두 배너 글자색과 충분히 갈린다. */}
+          <span className="mt-px shrink-0 rounded-full bg-surface chip-pad text-[10px] font-extrabold">
             안내
           </span>
           <span>

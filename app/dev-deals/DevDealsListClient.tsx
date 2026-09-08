@@ -270,8 +270,10 @@ export function DevDealsListClient({
             </Link>
             <Link
               href="/dev-deals/new"
-              style={{ color: "#fff" }}
-              className="rounded-full bg-primary px-4 py-2 text-[12px] font-bold no-underline press"
+              /* [976] 인라인 color:#fff 였다. 색을 인라인으로 박으면 다크 모드 규칙
+                 (.dark .bg-primary.text-white → 채움 토큰)이 이 자리를 못 집어서
+                 앰버 위 흰 글자가 2.93:1 이었다(axe 실측). 색은 클래스로만 정한다. */
+              className="rounded-full bg-primary px-4 py-2 text-[12px] font-bold text-white no-underline press"
             >
               개발물건 등록
             </Link>

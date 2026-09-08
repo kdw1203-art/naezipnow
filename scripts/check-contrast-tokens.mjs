@@ -323,6 +323,24 @@ function checkPageTheme(themeName, base, overrides) {
     const ratio = contrast(fg, bg);
     rows.push({ fgKey, bgKey, ratio, ok: ratio >= AA, theme: themeName });
   }
+  /* [976] 채움(--primary-fill) — 흰 글자를 얹는 면이다. 두 가지를 본다:
+       (1) 흰 글자가 AA 를 넘는가  (2) 면이 표면과 3:1 로 구분되는가
+     테마가 --primary-fill 을 따로 두지 않으면 루트 값이 쓰이므로 그대로 검사한다.
+     라이트에서만 맞춰 두면 다크 표면(#171b22)에서 배지가 묻힌다 — 그게 /qna 에서
+     실제로 걸렸다(2.94). */
+  const fill = resolve(tokens["primary-fill"], surface);
+  if (fill && surface) {
+    const white = contrast([255, 255, 255], fill);
+    rows.push({
+      fgKey: "#fff", bgKey: "primary-fill", ratio: white,
+      ok: white >= AA, theme: themeName,
+    });
+    const vsSurface = contrast(fill, surface);
+    rows.push({
+      fgKey: "primary-fill", bgKey: "surface(비텍스트)", ratio: vsSurface,
+      ok: vsSurface >= NON_TEXT_MIN, min: NON_TEXT_MIN, theme: themeName,
+    });
+  }
   return rows;
 }
 
@@ -354,8 +372,10 @@ for (const [selector, route] of PAGE_THEMES) {
     const rows = checkPageTheme(`${route} ${mode}`, base, overrides);
     for (const r of rows) {
       if (r.ok) continue;
+      const label = (k) => (k.startsWith("#") || k.includes("(") ? k : `--${k}`);
       failed.push(
-        `  ${r.theme}  --${r.fgKey} on --${r.bgKey}  ${r.ratio.toFixed(2)}:1 (최소 ${AA}:1)`,
+        `  ${r.theme}  ${label(r.fgKey)} on ${label(r.bgKey)}  ` +
+          `${r.ratio.toFixed(2)}:1 (최소 ${r.min ?? AA}:1)`,
       );
     }
   }

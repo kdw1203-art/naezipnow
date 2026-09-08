@@ -3,6 +3,11 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseUrl } from "@/lib/supabase/env";
 import { isSupabaseConfigured } from "@/lib/supabase/flags";
 import { makeResilientFetch } from "@/lib/supabase/resilient-fetch";
+import {
+  DEFAULT_ATTEMPT_MS,
+  DEFAULT_TOTAL_BUDGET_MS,
+  resolveTotalBudgetMs,
+} from "@/lib/supabase/read-budget";
 
 let _admin: SupabaseClient | null | undefined;
 
@@ -10,7 +15,9 @@ let _admin: SupabaseClient | null | undefined;
 function serviceReadTimeoutMs(): number {
   const raw = Number(process.env.SUPABASE_SERVICE_READ_TIMEOUT_MS);
   if (Number.isFinite(raw) && raw >= 1000 && raw <= 120_000) return raw;
-  return 20_000;
+  /* [976] 20s → 10s — PostgREST 가 statement_timeout=8s 로 이미 자른다.
+     그 위의 시간은 연결 풀 대기이고, 오래 붙들수록 풀이 더 마른다. */
+  return DEFAULT_ATTEMPT_MS;
 }
 
 /**
@@ -29,9 +36,15 @@ function serviceReadTimeoutMs(): number {
  * 표시한다 — "데이터 없음"으로 위장하지 않는다.
  */
 function serviceReadTotalBudgetMs(): number {
-  const isBuild = process.env.NEXT_PHASE === "phase-production-build";
-  const base = isBuild ? 20_000 : 45_000;
-  return Math.max(base, serviceReadTimeoutMs() + 1_000);
+  /* [976] 런타임 45s → 20s — 근거는 lib/newui/supabase-read.ts 의 같은 함수 주석.
+     요약: 8초 넘는 대기는 질의 시간이 아니라 연결 풀 대기이고, 45초를 붙들고
+     있으면 풀이 더 마른다. 두 클라이언트가 서로 다른 예산을 쓰면 같은 화면 안에서
+     어떤 조회는 20초, 어떤 조회는 45초에 끊겨 진단이 어긋난다 — 값을 맞춘다. */
+  return resolveTotalBudgetMs(
+    process.env.SUPABASE_READ_TOTAL_BUDGET_MS,
+    serviceReadTimeoutMs(),
+    DEFAULT_TOTAL_BUDGET_MS,
+  );
 }
 
 /**

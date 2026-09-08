@@ -180,7 +180,11 @@ export function HeaderAuth() {
         aria-label="내 계정 메뉴"
         className="flex items-center"
       >
-        <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-gradient-to-br from-line to-line-strong text-[13px] font-extrabold text-primary">
+        {/* [976] 예전엔 from-line→to-line-strong 그라데이션이었다. 그 중간색(#ced3da)
+            위에서 --primary 가 4.41:1 로 AA 를 아슬하게 못 넘겼다(axe 실측). 이
+            동그라미는 모든 화면 헤더에 있다. primary-soft 는 대비 게이트가 이미
+            --primary 와 짝으로 보증하는 면이다(5.94:1). */}
+        <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-primary-soft text-[13px] font-extrabold text-primary">
           {initial}
         </span>
       </button>
