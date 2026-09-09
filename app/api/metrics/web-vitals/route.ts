@@ -18,7 +18,14 @@ type VitalsPayload = {
   /* [OPT-01] attribution — LCP 요소 선택자·리소스 URL, INP 대상 등 */
   element?: string;
   attrUrl?: string;
+  /* [979] 이 줄이 재는 단위 — "route"(화면 하나) | "doc"(문서=방문 하나).
+     둘 다 아니면 null 로 저장한다. NULL 은 2026-09-09 이전 옛 표본을 뜻하므로
+     아는 값을 흘리지 않는다(잘못 채우면 옛 표본과 섞인다). */
+  scope?: string;
 };
+
+/* [979] 리포터가 보내는 단위. 표에는 이 둘 또는 NULL(옛 표본)만 들어간다. */
+const VALID_SCOPES = new Set(["route", "doc"]);
 
 export async function POST(req: NextRequest): Promise<Response> {
   /* 무인증 텔레메트리 — 페이지뷰당 지표 6종 안팎이다. 도배만 막는다. */
@@ -56,6 +63,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     user_agent: (req.headers.get("user-agent") ?? "").slice(0, 256) || null,
     element: typeof body.element === "string" ? body.element.slice(0, 256) : null,
     attr_url: typeof body.attrUrl === "string" ? body.attrUrl.slice(0, 512) : null,
+    scope: typeof body.scope === "string" && VALID_SCOPES.has(body.scope) ? body.scope : null,
   });
   if (error) {
     // 초기 운영에서 테이블이 아직 없으면 수집만 생략하고 정상 응답

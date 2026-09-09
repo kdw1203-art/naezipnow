@@ -10,7 +10,7 @@ import { listReports, type UserReport } from "@/lib/reports/store-db";
 import { seedGradient, maskNoteAuthor } from "../shared";
 import { Icon } from "@/app/components/Icon";
 import { TownCategoryNav } from "../TownCategoryNav";
-import { TownPageHead } from "../TownPageHead";
+import { TownHero } from "../TownHero";
 import { ErrorState } from "../../components/ui/EmptyState";
 import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
@@ -66,15 +66,21 @@ export default async function TownLibraryPage() {
 
   return (
     <PageShell breadcrumb="동네이야기 › 자료" wide>
-      {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
-      <TownCategoryNav stick />
       {/* ---------- 페이지 헤더 ---------- */}
       {/* [974] 머리 오른쪽에 있던 "뉴스 ›" 링크를 뺐다. 그 자리는 **이 카테고리에서
           할 일**을 놓는 자리인데(전문가=참여, 모임=만들기), 여기만 옆 카테고리로
           보내는 링크였다 — 그 이동은 바로 위 카테고리 줄이 이미 한다. 9칸이 같은
           자리에서 다른 종류의 것을 말하고 있었다. */}
-      <TownPageHead
-        href="/town/library" />
+      <TownHero
+        href="/town/library"
+        stats={[
+          { label: "리포트", value: reports.length, unit: "건" },
+          { label: "공개 임장노트", value: notes.length, unit: "건" },
+        ]}
+        note="이 화면에 실린 것 기준"
+      />
+      {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
+      <TownCategoryNav stick />
 
       {/* ---------- 리포트 — reports 표 실조회 (가짜 카드 금지) ----------
            id 는 있지만 리포트 1건을 여는 페이지는 아직 없다(app/reports/[ym] 은

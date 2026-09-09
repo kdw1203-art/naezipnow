@@ -12,7 +12,7 @@ import { BrandWatermark } from "@/app/components/BrandWatermark";
 import { JsonLd } from "@/app/components/JsonLd";
 import { faqJsonLd } from "@/lib/seo/jsonld";
 import { TownCategoryNav } from "../TownCategoryNav";
-import { TownPageHead } from "../TownPageHead";
+import { TownHero } from "../TownHero";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
 
@@ -80,21 +80,17 @@ export default async function TownExpertsPage() {
        내용(설명·보증 문구·커버리지·두 CTA)은 그대로 두고, h1 만 공통 머리로 옮겼다. */
     <PageShell breadcrumb="동네이야기 › 전문가" wide>
       <JsonLd data={faqJsonLd(EXPERT_FAQ)} />
-      <TownCategoryNav stick />
-      <TownPageHead
+      {/* [978] 홈과 같은 네이비 히어로. 버튼은 카테고리 목록의 heroCta
+          ("전문가로 참여" → /town/experts/join)가 그대로 그린다. */}
+      <TownHero
         href="/town/experts"
-        title="전문가"
-        sub="자격을 확인한 전문가 상담 — 글 문의·견적 요청"
-        action={
-          <Link
-            href="/town/experts/join"
-            className="btn-ghost rounded-xl px-3.5 py-2 t-sub font-bold no-underline"
-          >
-            전문가로 참여
-          </Link>
-        }
+        stats={[
+          { label: "인증 전문가", value: verified.length, unit: "명" },
+          { label: "누적 상담 답변", value: answered, unit: "건" },
+        ]}
+        note="지금 등록된 전문가 기준"
       />
-
+      <TownCategoryNav stick />
       {/* ---------- 소개 (브랜드 네이비) ---------- */}
       <section className="rise-in brand-navy-card mb-5 overflow-hidden rounded-[18px] px-5 py-6 md:px-7 md:py-7">
         <BrandWatermark />
@@ -214,7 +210,11 @@ export default async function TownExpertsPage() {
               <li>· 답변 완료 상담의 의뢰자 후기가 프로필에 쌓입니다</li>
               <li>· 공인중개사: 매물 등록·관리 + 받은 문의(리드), 상호·등록번호 표시</li>
             </ul>
-            <p className="mt-3 t-caption text-brand-hanji-ink opacity-80">
+            {/* [978] opacity-80 을 뺐다. 이 문단 안에는 링크(/legal/expert)가 있는데,
+                부모 투명도가 링크 색(--primary)까지 흐려 한지 위 4.07:1 이었다(axe 실측).
+                투명도로 흐리게 만들면 글자까지 같이 사라진다 — 크기(t-caption)가
+                이미 위계를 말하고 있으므로 색은 그대로 둔다. */}
+            <p className="mt-3 t-caption text-brand-hanji-ink">
               인증 대상: {EXPERT_TYPES.filter((t) => t.id !== "other").map((t) => t.label).join("·")} 및 서류·인터뷰 심사를 거친 기타 전문가.
               법률 서비스는 정책상 유료 입점 불가. 절차·검증 기준은{" "}
               <Link href="/legal/expert" className="font-bold underline underline-offset-2">

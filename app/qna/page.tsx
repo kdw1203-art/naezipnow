@@ -5,7 +5,7 @@ import { Icon } from "@/app/components/Icon";
 import { ErrorState } from "@/app/components/ui/EmptyState";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
-import { TownPageHead } from "@/app/town/TownPageHead";
+import { TownHero } from "@/app/town/TownHero";
 import { listQuestions } from "@/lib/qna/store";
 import { complexHrefKey, resolveComplexHrefs } from "@/lib/newui/complex-link";
 import { seoAlternates } from "@/lib/seo/alternates";
@@ -96,9 +96,8 @@ export default async function QnaListPage() {
        브레드크럼 "동네이야기 › …" + 카테고리 줄 + TownPageHead(아이콘 칩·제목·한 줄).
        PageShell title(맨 h1)은 이 패턴 밖이었다. */
     <PageShell breadcrumb="동네이야기 › 단지 Q&A" wide>
+      <TownHero href="/qna" />
       <TownCategoryNav stick />
-      <TownPageHead
-        href="/qna" />
 
       <div className={QNA_THEME_CLASS}>
         {!loaded.ok ? (

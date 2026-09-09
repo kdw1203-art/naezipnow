@@ -4,7 +4,7 @@ import { PageShell } from "@/app/components/PageShell";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { getSupplyAll, getSupplyDataAsOf } from "@/lib/market/supply";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
-import { TownPageHead } from "@/app/town/TownPageHead";
+import { TownHero } from "@/app/town/TownHero";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { SupplyClient } from "./SupplyClient";
 
@@ -49,9 +49,9 @@ export default async function SupplyPage() {
   return (
     <PageShell breadcrumb="동네이야기 › 입주 물량" wide>
       {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
+      {/* [978] 홈과 같은 네이비 히어로 — 카테고리별로 제목·설명·색만 바뀐다 */}
+      <TownHero href="/supply" />
       <TownCategoryNav stick />
-      {/* [959] sr-only 제목을 보이는 머리로 — 카드에서 본 아이콘·색이 페이지로 이어진다 */}
-      <TownPageHead href="/supply" />
       {/* 테마 구분: 입주 물량 = 초록(공급·신축). 값은 globals.css .theme-supply —
           인라인 style 이면 다크 값을 못 얹고 대비 게이트도 못 본다([975]). */}
       <div className="theme-supply">

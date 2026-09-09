@@ -6,7 +6,7 @@ import { CreateGroupCta } from "./CreateGroupCta";
 import { GroupsClient, type GroupView } from "./GroupsClient";
 import { Icon } from "@/app/components/Icon";
 import { TownCategoryNav } from "../TownCategoryNav";
-import { TownPageHead } from "../TownPageHead";
+import { TownHero } from "../TownHero";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { formatKstMeetingTime } from "@/lib/format/kst";
 
@@ -115,14 +115,14 @@ export default async function TownGroupsPage() {
   return (
     <PageShell breadcrumb="동네이야기 › 임장 모임" wide>
       {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
-      <TownCategoryNav stick />
-      {/* ---------- 페이지 헤더 ---------- */}
-      <TownPageHead
+      {/* ---------- 페이지 헤더 ([978] 홈과 같은 네이비 히어로) ---------- */}
+      <TownHero
         href="/town/groups"
-        title="임장 모임"
-        sub="같은 단지를 함께 도는 이웃 모집 — 참여 확정 시 채팅방"
+        stats={[{ label: "모집 중인 모임", value: views.length, unit: "개" }]}
+        note="이 화면에 실린 모임 기준"
         action={<CreateGroupCta />}
       />
+      <TownCategoryNav stick />
 
       {loadFailed ? (
         <div className="rise-in-2 card flex flex-col items-center gap-3 rounded-[18px] px-6 py-12 text-center">

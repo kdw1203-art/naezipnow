@@ -37,6 +37,27 @@ export type TownCategoryLink = {
    * 문체 규칙은 app/town/TownPageHead.tsx 주석에 있다 — 명사형 "대상 — 출처·구성".
    */
   headSub: string;
+  /**
+   * [978] 하위 페이지 히어로의 제목 — [앞, 강조, 뒤] 세 토막.
+   *
+   * 동네이야기 홈이 "다녀온 사람의 기록이 **지금** 동네를 말합니다" 인 것과 같은
+   * 모양이다. 강조 한 단어만 주홍(--brand-red-on-dark)으로 뜬다. 문자열 안에
+   * 마크업을 넣어 파싱하지 않고 세 토막으로 받는 이유는, 파싱 규칙이 생기면
+   * 번역·수정할 때마다 그 규칙을 기억해야 하기 때문이다.
+   *
+   * 문체: 홈과 같은 **평서형 한 문장**. headSub(명사형 요약)와 역할이 다르다 —
+   * 제목은 "여기서 무엇을 할 수 있는가", headSub 은 "무엇을 보는 곳인가".
+   */
+  heroTitle: readonly [string, string, string];
+  /** [978] 히어로 아이콘 칩의 글자색 — 네이비 위 고정색(globals.css --on-navy-*). */
+  heroTone: string;
+  /**
+   * [978] 히어로 오른쪽 버튼. **이 카테고리에서 할 일 하나**만 둔다.
+   * 없으면 빈 배열 — 없는 버튼을 지어내지 않는다. 옆 카테고리로 보내는 링크도
+   * 넣지 않는다(그 이동은 바로 아래 카테고리 줄이 이미 한다 — TownPageHead 주석).
+   * 클라이언트 조각이 필요한 칸(모임 만들기)은 페이지가 action 으로 덮어쓴다.
+   */
+  heroCta: readonly { label: string; href: string; primary?: boolean }[];
 };
 
 /** 브레드크럼 한 줄 — 9칸 전부 "동네이야기 › {라벨}". 로딩 스켈레톤도 이걸 쓴다. */
@@ -54,13 +75,13 @@ export function townBreadcrumb(href: string): string {
 export const TOWN_CATEGORY_LINKS: TownCategoryLink[] = [
   /* 모바일 실측(2026-08-02): "뉴스·다이제스트"는 카드 폭(104px)에서 "뉴스·다이제…"
      로 잘렸다. 라벨은 짧게, 다이제스트는 부제로. */
-  { href: "/town/news", label: "뉴스", icon: "newspaper", desc: "요약·주간 다이제스트", tone: "bg-warning-soft text-warning", headSub: "매일 아침 모은 부동산 기사 요약 — 주간 다이제스트 포함" },
-  { href: "/apply", label: "청약 센터", icon: "ticket", desc: "분양·경쟁률", tone: "bg-success-soft text-success", headSub: "청약홈 공공데이터 — 경쟁률·특별공급·접수 일정" },
-  { href: "/auctions", label: "공매 물건", icon: "hammer", desc: "온비드 공매", tone: "bg-success-soft text-success", headSub: "온비드 진행·예정 물건 — 감정가·최저입찰가·입찰일" },
-  { href: "/supply", label: "입주 물량", icon: "construction", desc: "공급 일정", tone: "bg-success-soft text-success", headSub: "지역·시기별 아파트 입주 예정 — 청약홈 공고 기준" },
-  { href: "/redevelopment", label: "정비사업 지도", icon: "map", desc: "재개발·재건축", tone: "bg-success-soft text-success", headSub: "재개발·재건축·소규모 정비사업 — 사업종류별 컬러 마커" },
-  { href: "/qna", label: "단지 Q&A", icon: "messages-square", desc: "묻고 답하기", tone: "bg-primary-soft text-primary", headSub: "단지·동네 궁금증과 이웃·실거주자의 답 — 주제별 모아보기" },
-  { href: "/town/experts", label: "전문가", icon: "graduation", desc: "상담·견적", tone: "bg-primary-soft text-primary", humanSupplied: true, headSub: "자격을 확인한 전문가 상담 — 글 문의·견적 요청" },
-  { href: "/town/groups", label: "임장 모임", icon: "compass", desc: "함께 임장", tone: "bg-primary-soft text-primary", humanSupplied: true, headSub: "같은 단지를 함께 도는 이웃 모집 — 참여 확정 시 채팅방" },
-  { href: "/town/library", label: "자료", icon: "folder", desc: "리포트·노트", tone: "bg-warning-soft text-warning", humanSupplied: true, headSub: "리포트와 이웃들의 공개 임장노트 — 한곳에서 열람" },
+  { href: "/town/news", label: "뉴스", icon: "newspaper", desc: "요약·주간 다이제스트", tone: "bg-warning-soft text-warning", headSub: "매일 아침 모은 부동산 기사 요약 — 주간 다이제스트 포함", heroTitle: ["오늘 부동산은 ", "이렇게", " 움직였습니다"], heroTone: "text-on-navy-amber", heroCta: [{ label: "주간 다이제스트", href: "/digest" }] },
+  { href: "/apply", label: "청약 센터", icon: "ticket", desc: "분양·경쟁률", tone: "bg-success-soft text-success", headSub: "청약홈 공공데이터 — 경쟁률·특별공급·접수 일정", heroTitle: ["이번 달 청약, ", "경쟁률", "까지 보고 정합니다"], heroTone: "text-on-navy-green", heroCta: [{ label: "청약 캘린더", href: "/apply/calendar" }] },
+  { href: "/auctions", label: "공매 물건", icon: "hammer", desc: "온비드 공매", tone: "bg-success-soft text-success", headSub: "온비드 진행·예정 물건 — 감정가·최저입찰가·입찰일", heroTitle: ["감정가보다 싼 물건이 ", "지금", " 입찰 중입니다"], heroTone: "text-on-navy-green", heroCta: [] },
+  { href: "/supply", label: "입주 물량", icon: "construction", desc: "공급 일정", tone: "bg-success-soft text-success", headSub: "지역·시기별 아파트 입주 예정 — 청약홈 공고 기준", heroTitle: ["언제 어디에 ", "얼마나", " 들어오는지 봅니다"], heroTone: "text-on-navy-green", heroCta: [] },
+  { href: "/redevelopment", label: "정비사업 지도", icon: "map", desc: "재개발·재건축", tone: "bg-success-soft text-success", headSub: "재개발·재건축·소규모 정비사업 — 사업종류별 컬러 마커", heroTitle: ["우리 동네 재개발이 ", "어디까지", " 왔는지 봅니다"], heroTone: "text-on-navy-green", heroCta: [] },
+  { href: "/qna", label: "단지 Q&A", icon: "messages-square", desc: "묻고 답하기", tone: "bg-primary-soft text-primary", headSub: "단지·동네 궁금증과 이웃·실거주자의 답 — 주제별 모아보기", heroTitle: ["살아 본 사람만 아는 답이 ", "여기", " 있습니다"], heroTone: "text-on-navy-blue", heroCta: [] },
+  { href: "/town/experts", label: "전문가", icon: "graduation", desc: "상담·견적", tone: "bg-primary-soft text-primary", humanSupplied: true, headSub: "자격을 확인한 전문가 상담 — 글 문의·견적 요청", heroTitle: ["자격을 확인한 전문가에게 ", "직접", " 묻습니다"], heroTone: "text-on-navy-blue", heroCta: [{ label: "전문가로 참여", href: "/town/experts/join" }] },
+  { href: "/town/groups", label: "임장 모임", icon: "compass", desc: "함께 임장", tone: "bg-primary-soft text-primary", humanSupplied: true, headSub: "같은 단지를 함께 도는 이웃 모집 — 참여 확정 시 채팅방", heroTitle: ["같은 단지를 ", "함께", " 도는 이웃을 찾습니다"], heroTone: "text-on-navy-blue", heroCta: [] },
+  { href: "/town/library", label: "자료", icon: "folder", desc: "리포트·노트", tone: "bg-warning-soft text-warning", humanSupplied: true, headSub: "리포트와 이웃들의 공개 임장노트 — 한곳에서 열람", heroTitle: ["남이 다녀온 기록이 ", "내", " 임장을 줄입니다"], heroTone: "text-on-navy-amber", heroCta: [{ label: "임장노트 쓰기", href: "/notes/new" }] },
 ];

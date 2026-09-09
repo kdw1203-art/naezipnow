@@ -11,7 +11,7 @@ import { getWeeklyDigest, type WeeklyDigest } from "@/lib/newui/digest";
 import { clusterNews } from "@/lib/news/cluster";
 import { NEWS_TAGS } from "@/lib/news/tags";
 import { TownCategoryNav } from "../TownCategoryNav";
-import { TownPageHead } from "../TownPageHead";
+import { TownHero } from "../TownHero";
 import { NewsListClient } from "./NewsListClient";
 import { NewsAlertSubscribe } from "./NewsAlertSubscribe";
 import { ErrorState } from "@/app/components/ui";
@@ -127,6 +127,14 @@ export default async function TownNewsPage() {
     news = [];
     newsFailed = true;
   }
+  /* [978] 히어로 통계 — 이미 읽어 둔 news 배열만 센다(추가 조회 없음).
+     "오늘"은 화면과 같은 한국 시간 기준. 0이면 히어로가 그 칸을 통째로 뺀다. */
+  const todayKst = new Date(Date.now() + 9 * 3_600_000).toISOString().slice(0, 10);
+  const todayNewsCount = news.filter(
+    (p) => new Date(new Date(displayIso(p)).getTime() + 9 * 3_600_000)
+      .toISOString()
+      .slice(0, 10) === todayKst,
+  ).length;
 
   /* 지역 필터 — 실데이터 기반(뉴스 city 값). 거르는 건 클라이언트.
      [970 · C-23] 예전엔 등장순 8개라 "서울"·"강남구"·"성남시 분당구" 가 단위 섞인 채
@@ -176,12 +184,20 @@ export default async function TownNewsPage() {
 
   return (
     <PageShell breadcrumb="동네이야기 › 뉴스" wide>
+      {/* [974] 머리 오른쪽 "자료·리포트 ›" 링크 제거 — 자세한 이유는
+          app/town/library/page.tsx 의 같은 자리 주석.
+          [978] 홈과 같은 네이비 히어로. 숫자는 이미 메모리에 있는 목록을 셀 뿐
+          새 조회를 하지 않는다. */}
+      <TownHero
+        href="/town/news"
+        stats={[
+          { label: "오늘 기사", value: todayNewsCount },
+          { label: "이 화면", value: news.length, unit: "건" },
+        ]}
+        note="지금 이 화면에 실린 기사 기준"
+      />
       {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
       <TownCategoryNav stick />
-      {/* [974] 머리 오른쪽 "자료·리포트 ›" 링크 제거 — 자세한 이유는
-          app/town/library/page.tsx 의 같은 자리 주석. */}
-      <TownPageHead
-        href="/town/news" />
 
       {/* 주간 다이제스트 요약 (#6) — 뉴스·다이제스트 통합. 실패·빈 데이터 시 생략(fail-soft) */}
       {digest && digestHasContent && (

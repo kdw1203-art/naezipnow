@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { PageShell } from "@/app/components/PageShell";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
-import { TownPageHead } from "@/app/town/TownPageHead";
+import { TownHero } from "@/app/town/TownHero";
 import { getAuctions, getActiveAuctionCount } from "@/lib/onbid/store";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { ErrorState } from "@/app/components/ui/EmptyState";
@@ -55,8 +55,8 @@ export default async function AuctionsPage() {
   if (!loaded.ok) {
     return (
       <PageShell breadcrumb="동네이야기 › 공매 물건" wide>
+        <TownHero href="/auctions" />
         <TownCategoryNav stick />
-        <TownPageHead href="/auctions" />
         <div className="theme-auction">
           <ErrorState
             title="공매 물건을 지금 불러오지 못했어요"
@@ -70,8 +70,8 @@ export default async function AuctionsPage() {
 
   return (
     <PageShell breadcrumb="동네이야기 › 공매 물건" wide>
+      <TownHero href="/auctions" />
       <TownCategoryNav stick />
-      <TownPageHead href="/auctions" />
       <div className="theme-auction">
         <AuctionsClient
           initialItems={slimAuctionItems(loaded.items)}

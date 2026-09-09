@@ -5,7 +5,7 @@ import { Icon } from "@/app/components/Icon";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { searchApplyhome } from "@/lib/applyhome/applyhome-search";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
-import { TownPageHead } from "@/app/town/TownPageHead";
+import { TownHero } from "@/app/town/TownHero";
 import { THEME_APPLY } from "@/lib/theme/presets";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { logger } from "@/lib/log";
@@ -105,8 +105,8 @@ export default async function ApplyPage() {
        카테고리 줄 + TownPageHead). /qna 와 함께 통일. */
     <PageShell breadcrumb="동네이야기 › 청약 센터" wide>
       {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
+      <TownHero href="/apply" />
       <TownCategoryNav stick />
-      <TownPageHead href="/apply" />
 
       <div style={THEME_APPLY}>
         {/* 상단 CTA — 예전의 정적 탭(전체·예정·접수 중·지난 청약)은 클릭해도 아무

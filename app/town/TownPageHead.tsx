@@ -2,7 +2,12 @@ import type { ReactNode } from "react";
 import { Icon } from "@/app/components/Icon";
 import { TOWN_CATEGORY_LINKS } from "@/lib/town/category-links";
 
-/* [959] 동네이야기 하위 페이지 머리 — 한 모양.
+/* [978] **이 컴포넌트는 더 이상 9칸 머리가 아니다.**
+   동네이야기 하위 9칸은 이제 홈과 같은 네이비 히어로(app/town/TownHero.tsx)를 쓴다.
+   여기는 카테고리 목록에 없는 하위 상세 화면이 "아이콘 칩 + 제목 + 한 줄"이 필요할
+   때를 위해 남겨 둔다. 9칸 페이지에서 이걸 다시 쓰면 홈과 머리가 갈라진다.
+
+   [959] 동네이야기 하위 페이지 머리 — 한 모양.
    개편 전에는 다섯 가지가 섞여 있었다(히어로 띠 / 네이비 카드 / PageShell title /
    맨 h1 / sr-only h1). 카테고리 줄 아래에 **아이콘 칩 + 제목 + 한 줄 + 오른쪽 액션**
    한 줄로 통일한다. 아이콘·색은 카테고리 목록(단일 소스)에서 가져오므로 카드에서

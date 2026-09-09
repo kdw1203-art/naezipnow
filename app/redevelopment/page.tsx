@@ -9,7 +9,7 @@ import type { RedevelopmentProject } from "@/lib/redevelopment/types";
 import { SEED_SOURCES } from "@/lib/redevelopment/seed";
 import { logger } from "@/lib/log";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
-import { TownPageHead } from "@/app/town/TownPageHead";
+import { TownHero } from "@/app/town/TownHero";
 import { RedevelopmentMap } from "./RedevelopmentMap";
 import { STAGE_GUIDES, REDEV_GLOSSARY } from "@/lib/redevelopment/stage-guide";
 
@@ -118,9 +118,14 @@ export default async function RedevelopmentPage() {
        9칸 공통 머리(TownPageHead: 아이콘 칩 + 제목 + 한 줄)로 맞춘다. */
     <PageShell breadcrumb="동네이야기 › 정비사업 지도" wide>
       {/* 카테고리 줄 고정 — 형제 카테고리 페이지(청약·입주·공매)와 동일 패턴 */}
+      {/* [978] 통계는 이 화면이 이미 들고 있는 값만 쓴다 — 머리를 붙이면서 조회를
+          새로 얹지 않는다(976 에서 줄인 DB 왕복을 되돌리는 짓이다). */}
+      <TownHero
+        href="/redevelopment"
+        stats={[{ label: "지도에 실린 구역", value: projects.length, unit: "곳" }]}
+        note="지금 이 지도에 실린 구역 기준"
+      />
       <TownCategoryNav stick />
-      <TownPageHead
-        href="/redevelopment" />
       <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-6">
         {/* ===== 정비사업 지도 히어로 ===== */}
         <section className="rise-in flex flex-col gap-3">
