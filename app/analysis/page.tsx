@@ -18,6 +18,7 @@ import { Sparkline } from "./Sparkline";
 import { HubPickedProvider } from "./hub-context";
 import { HubHero } from "./hub-hero";
 import { WorkbenchGrid } from "./hub-tiers";
+import { workbenchCardData } from "./workbench-cards";
 import { HubNoteAnalysis } from "./hub-picker";
 import { CompareTrayCount, ToolLink } from "./tool-cards-client";
 import {
@@ -30,6 +31,7 @@ import {
   type HubTool,
   type TierId,
 } from "./tool-catalog";
+import { marketPersonaByHref, personaVars } from "@/lib/ai/tool-persona";
 
 /* ============================================================
    분석 허브 — 2026-08-25 리디자인 (UI-01 ~ UI-10)
@@ -133,17 +135,29 @@ function ToolCard({
 }) {
   const tier = TIERS[t.tier];
   const spark = teaser && teaser.series.length >= 2 ? teaser.series : null;
+  /* [980] 지역·시장 4종에도 성격을 준다. AI 도구와 **같은 개성 체계이되 다른 계열**이다
+     — 이쪽은 AI 가 판단하는 화면이 아니라 공표 통계를 그대로 늘어놓는 화면이라,
+     성격 라벨도 "실측·흐름·체온·순위" 처럼 재는 행위로 붙였다. 나머지 카드(체험·기록)는
+     페르소나가 없으므로 예전 계열색 그대로 — 없는 성격을 지어내지 않는다. */
+  const persona = marketPersonaByHref(t.href);
   return (
     <ToolLink
       href={t.href}
       title={t.title}
       withPicked={ACCEPTS_COMPLEX.has(t.href)}
-      className="tile card ai-glow flex flex-col gap-2 rounded-[14px] p-4 no-underline"
+      className={`tile card ai-glow flex flex-col gap-2 rounded-[14px] p-4 no-underline${
+        persona ? " tool-scope tool-rail" : ""
+      }`}
+      style={persona ? personaVars(persona) : undefined}
     >
       <div className="flex items-start gap-2">
         {/* [958] 결과물 모양을 그린 글리프 — 아이콘보다 "무엇이 나오는지"가 먼저 보인다 */}
         <span
-          className={`tile-ico flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] ${tier.iconClass}`}
+          className={
+            persona
+              ? "tool-soft-bg tool-ink tile-ico flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px]"
+              : `tile-ico flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] ${tier.iconClass}`
+          }
         >
           {HUB_GLYPH[t.href] ? (
             <ToolGlyph id={HUB_GLYPH[t.href]} size={34} />
@@ -152,13 +166,20 @@ function ToolCard({
           )}
         </span>
         {spark && (
-          <span className={`tile-spark ml-auto ${tier.sparkClass}`}>
+          <span className={`tile-spark ml-auto ${persona ? "tool-ink" : tier.sparkClass}`}>
             <Sparkline values={spark} width={72} height={24} />
           </span>
         )}
       </div>
-      <span className="t-section text-ink">{t.title}</span>
-      <span className="t-sub text-text-2">{t.desc}</span>
+      <span className="flex flex-wrap items-center gap-1.5">
+        <span className="t-section text-ink">{t.title}</span>
+        {persona && (
+          <span className="tool-soft-bg tool-ink rounded px-1.5 py-px t-caption font-extrabold">
+            {persona.character}
+          </span>
+        )}
+      </span>
+      <span className="t-sub text-text-2">{persona ? persona.premise : t.desc}</span>
       {teaser && (
         /* [963] .fit — 캡션이 화면이 아니라 **이 칸** 폭으로 판정되게. 2열 그리드의
            좁은 칸에서 캡션이 3줄로 접히던 것을 자간·줄바꿈 규칙이 흡수한다. */
@@ -169,7 +190,7 @@ function ToolCard({
         </span>
       )}
       {extra}
-      <span className="tile-go t-sub mt-auto pt-0.5 font-bold text-primary">
+      <span className={`tile-go t-sub mt-auto pt-0.5 font-bold ${persona ? "tool-ink" : "text-primary"}`}>
         열기 ›
       </span>
     </ToolLink>
@@ -194,6 +215,9 @@ export default async function AnalysisHubPage({
     /* [958] 히어로 커버리지 — 홈과 같은 6시간 캐시 실측값(0이면 0, 실패면 —) */
     loadHomeCoverage().catch(() => ({ txCount: null, complexCount: null, regionCount: null })),
   ]);
+  /* [980] 12칸 카드는 서버에서 조립한다 — 클라이언트가 tool-identity·tool-persona 를
+     직접 import 하면 번들 예산을 넘긴다(workbench-cards.ts 주석 참고). */
+  const workbenchCards = workbenchCardData();
   const aiLimit = FEATURE_RULES.ai_analysis.monthlyLimit ?? {};
   const quota = {
     free: aiLimit.basic ?? 0,
@@ -261,7 +285,7 @@ export default async function AnalysisHubPage({
             className="rise-in-1 flex scroll-mt-24 flex-col gap-3"
           >
             <TierHead id="complex" count={AI_TOOL_COUNT} />
-            <WorkbenchGrid />
+            <WorkbenchGrid core={workbenchCards.core} more={workbenchCards.more} />
           </section>
 
           {/* ── 계열 2 · 지역·시장 흐름 (UI-09 실측 티저 + 추세선) ── */}

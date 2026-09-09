@@ -3,14 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ToolGlyph, WORKBENCH_GLYPH } from "./ToolGlyph";
-import {
-  TIERS,
-  WORKBENCH_CORE,
-  WORKBENCH_MORE,
-  workbenchCard,
-} from "./tool-catalog";
-import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
+import { ToolGlyph } from "./ToolGlyph";
+import type { WorkbenchCardDto } from "./workbench-cards";
 import { useHubPicked } from "./hub-context";
 
 /* ============================================================
@@ -28,23 +22,21 @@ import { useHubPicked } from "./hub-context";
    가로채지 않고, 서랍 안에 "단지 없이 먼저 보기" 길도 남긴다.
    ============================================================ */
 
-export function WorkbenchGrid() {
+export function WorkbenchGrid({ core, more }: { core: WorkbenchCardDto[]; more: WorkbenchCardDto[] }) {
   const [expanded, setExpanded] = useState(false);
   const { picked, query, openMap } = useHubPicked();
   const router = useRouter();
-  const tier = TIERS.complex;
 
-  const ids = expanded ? [...WORKBENCH_CORE, ...WORKBENCH_MORE] : WORKBENCH_CORE;
+  /* [980] 카드 내용은 서버가 조립해 준다(app/analysis/workbench-cards.ts).
+     여기서 tool-identity·tool-persona 를 직접 import 하면 두 모듈이 통째로
+     브라우저 번들에 실려 /analysis 예산(490KB)을 넘긴다 — 실측 502KB. */
+  const cards = expanded ? [...core, ...more] : core;
 
   return (
     <div className="flex flex-col gap-2.5">
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        {ids.map((id) => {
-          const c = workbenchCard(id);
-          const idn = TOOL_IDENTITIES[id];
-          const result = idn.metricLabel && idn.metricLabel !== "결과"
-            ? `${idn.metricLabel}${idn.metricUnit ? `(${idn.metricUnit})` : ""}`
-            : null;
+        {cards.map((c) => {
+          const id = c.id;
           return (
             <Link
               key={id}
@@ -61,19 +53,29 @@ export function WorkbenchGrid() {
                     router.push(`${c.href}?complexId=${encodeURIComponent(p.id)}`),
                 });
               }}
-              className="tile card flex flex-col gap-1.5 rounded-[14px] p-3.5 no-underline"
+              className="tile card tool-scope tool-rail flex flex-col gap-1.5 rounded-[14px] p-3.5 no-underline"
+              style={c.vars}
+              data-tool={id}
             >
-              <span
-                className={`tile-ico flex h-12 w-12 items-center justify-center rounded-[10px] ${tier.iconClass}`}
-              >
-                <ToolGlyph id={WORKBENCH_GLYPH[id] ?? "radar"} size={34} />
+              {/* [980] 12칸이 전부 같은 파란 칩이었다 — tier.iconClass 하나를 공유했고,
+                  lib/ai/tool-identity.ts 도 12종 중 10종이 같은 액센트(#3182f6)였다.
+                  이제 칩 색·왼쪽 띠·성격 라벨이 도구마다 다르다. 색은 카드 래퍼에
+                  CSS 변수로 한 번만 꽂는다(personaVars). */}
+              <span className="tool-soft-bg tool-ink tile-ico flex h-12 w-12 items-center justify-center rounded-[10px]">
+                <ToolGlyph id={c.glyph} size={34} />
               </span>
-              <span className="t-section text-ink">{c.title}</span>
-              <span className="t-sub text-text-2">{c.desc}</span>
-              {result && (
+              <span className="flex flex-wrap items-center gap-1.5">
+                <span className="t-section text-ink">{c.title}</span>
+                <span className="tool-soft-bg tool-ink rounded px-1.5 py-px t-caption font-extrabold">
+                  {c.character}
+                </span>
+              </span>
+              {/* 설명은 기능 한 줄(tagline)이 아니라 **이 화면이 하는 일**로 바꿨다 */}
+              <span className="t-sub text-text-2">{c.premise}</span>
+              {c.result && (
                 <span className="t-caption mt-auto inline-flex items-center gap-1 text-text-3">
-                  <span className="h-1.5 w-1.5 rounded-full bg-brand-red" aria-hidden="true" />
-                  결과: {result}
+                  <span className="tool-ink h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+                  결과: {c.result}
                 </span>
               )}
             </Link>
@@ -88,7 +90,7 @@ export function WorkbenchGrid() {
           aria-expanded={expanded}
           className="chip t-sub inline-flex items-center gap-1.5 border border-line bg-surface px-3.5 py-2 font-bold text-text-2 transition-colors hover:text-primary"
         >
-          {expanded ? "자주 쓰는 4개만 보기" : `나머지 ${WORKBENCH_MORE.length}개 더 보기`}
+          {expanded ? "자주 쓰는 4개만 보기" : `나머지 ${more.length}개 더 보기`}
           <span className={expanded ? "rotate-180" : ""} aria-hidden="true">
             ▾
           </span>

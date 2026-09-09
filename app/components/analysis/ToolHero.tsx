@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Icon } from "@/app/components/Icon";
+import { TOOL_PERSONAS, type MarketToolId } from "@/lib/ai/tool-persona";
 
 export interface HeroKpi {
   /** 큰 숫자 */
@@ -52,6 +53,7 @@ export function ToolHero({
   actions,
   source,
   toneClass = "text-primary",
+  personaId,
 }: {
   eyebrow?: string;
   /** 선형 아이콘 이름 (Icon.tsx) */
@@ -66,7 +68,19 @@ export function ToolHero({
   source?: ReactNode;
   /** 계열 색 (차트의 currentColor 가 이걸 탄다) */
   toneClass?: string;
+  /**
+   * [981] 도구 성격 — 지역·시장 4종에도 AI 도구와 같은 개성 체계를 준다.
+   * 넘기면 제목 옆에 성격 라벨이 붙고, 아이콘 칩이 도구 색을 쓰고, "하는 일"
+   * 한 줄이 lead 위에 붙는다. 안 넘기면 예전 그대로 — 없는 성격을 지어내지 않는다.
+   *
+   * 주의: 이 히어로의 배경은 네이비다. 도구 액센트는 **흰 바탕/다크 표면** 기준으로
+   * 대비를 맞춘 값이라(tests/unit/tool-persona-980.test.ts) 네이비 위 본문 글자에
+   * 그대로 쓰면 안 된다. 그래서 액센트는 **밝은 칩 안쪽**에서만 쓰고, 네이비 위
+   * 글자는 on-dark 토큰 그대로 둔다.
+   */
+  personaId?: MarketToolId;
 }) {
+  const persona = personaId ? TOOL_PERSONAS[personaId] : null;
   return (
     <section className="hub-hero card-pad-lg flex flex-col gap-4" data-reveal="">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -79,13 +93,24 @@ export function ToolHero({
           <div className="flex items-center gap-2.5">
             {icon && (
               <span
-                className={`tile-ico flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary-soft ${toneClass}`}
+                className={
+                  persona
+                    ? "tool-soft-bg tool-ink tile-ico flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]"
+                    : `tile-ico flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary-soft ${toneClass}`
+                }
               >
                 <Icon name={icon} size={17} />
               </span>
             )}
             <h1 className="t-display text-balance text-on-dark">{title}</h1>
+            {persona && (
+              <span className="rounded-md bg-on-dark-panel px-2 py-px t-caption font-extrabold tracking-wider text-on-dark-muted">
+                {persona.character}
+              </span>
+            )}
           </div>
+          {/* 하는 일 한 줄이 먼저, 자료 설명(lead)이 그 뒤 — 들어온 사람이 읽는 순서다 */}
+          {persona && <p className="t-body max-w-[52ch] text-on-dark">{persona.premise}</p>}
           {lead && <p className="t-body max-w-[52ch] text-on-dark-muted">{lead}</p>}
         </div>
         {chart && (

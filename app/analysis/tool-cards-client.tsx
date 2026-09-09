@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { listCompareTray } from "@/lib/newui/compare-tray";
 import { useHubPicked } from "./hub-context";
@@ -37,12 +37,15 @@ export function ToolLink({
   href,
   title,
   className,
+  style,
   children,
   withPicked = false,
 }: {
   href: string;
   title: string;
   className?: string;
+  /** [980] 도구 성격 색을 CSS 변수로 꽂는 자리 — 안쪽 클래스는 변수만 읽는다 */
+  style?: CSSProperties;
   children: ReactNode;
   /** 히어로에서 고른 단지를 ?complexId= 로 실어 보낼 도구인지 (tool-catalog.ACCEPTS_COMPLEX) */
   withPicked?: boolean;
@@ -56,6 +59,7 @@ export function ToolLink({
     <Link
       href={target}
       className={className}
+      style={style}
       onClick={() => {
         try {
           window.localStorage.setItem(

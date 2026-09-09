@@ -5,6 +5,8 @@ import { PageShell } from "@/app/components/PageShell";
 import { ToolGlyph, WORKBENCH_GLYPH } from "../../ToolGlyph";
 import { AI_TOOL_IDS, isAiAnalysisToolId, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
+import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
+import { tuningFields } from "@/lib/ai/tool-tuning-fields";
 import { WorkbenchClient } from "./WorkbenchClient";
 
 /* [AI-31·32] 통합 AI 워크벤치 — 12종 도구의 단일 실행 표면.
@@ -43,16 +45,30 @@ export default async function AiToolPage({
   if (!isAiAnalysisToolId(tool)) notFound();
   const tid = tool as AiAnalysisToolId;
   const identity = TOOL_IDENTITIES[tid];
+  /* [980] 도구 성격 — 색·연출·말투를 여기 한 곳에서 꽂고, 안쪽은 전부 CSS 변수를 읽는다.
+     클래스마다 색을 적으면 도구가 16종이 되는 순간 반드시 어긋난다. */
+  const persona = TOOL_PERSONAS[tid];
 
   return (
     <PageShell breadcrumb={`AI 분석 › ${identity.title}`}>
-      <div className="mx-auto flex w-full max-w-[880px] flex-col gap-4">
+      <div
+        className="tool-scope mx-auto flex w-full max-w-[880px] flex-col gap-4"
+        style={personaVars(persona)}
+        data-tool={tid}
+      >
         {/* [958] 도구 머리 — 네이비 면 + 결과물 글리프 + "넣는 것 → 계산 → 나오는 것".
             예전엔 제목·한 줄 설명뿐이라 12개 도구가 무엇이 다른지, 결과가 AI 인지
             규칙인지 실행 전에는 알 수 없었다. 실행 전에 말한다. */}
         <section className="hub-hero rise-in flex flex-col gap-4 p-5 md:p-6">
           <div className="flex items-start gap-4">
-            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-brand-hanji text-brand-hanji-ink">
+            {/* [980] 글리프 칸에 도구 색 띠 — 네이비 위에서 **글자색은 건드리지 않는다**.
+                도구 액센트는 흰 바탕/다크 표면 기준으로 대비를 맞춘 값이라(페르소나
+                단위테스트), 네이비 위 본문에 그대로 쓰면 대비가 무너진다. 그래서
+                여기서는 장식(띠)에만 쓰고 글자는 on-dark 토큰 그대로 둔다. */}
+            <span
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-brand-hanji text-brand-hanji-ink"
+              style={{ boxShadow: `inset 0 0 0 3px ${persona.palette.accent}` }}
+            >
               <ToolGlyph id={WORKBENCH_GLYPH[tid] ?? "radar"} size={44} />
             </span>
             <div className="min-w-0 flex-1">
@@ -64,8 +80,16 @@ export default async function AiToolPage({
                 </Link>{" "}
                 › 단지 하나를 깊게
               </nav>
-              <h1 className="mt-1 t-title text-on-dark">{identity.title}</h1>
-              <p className="mt-1 t-body text-on-dark-muted">{identity.tagline}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <h1 className="t-title text-on-dark">{identity.title}</h1>
+                {/* 성격 한 낱말 — 12종이 제목만 다르고 나머지가 같아 보이던 것을 여기서 가른다 */}
+                <span className="rounded-md bg-on-dark-panel px-2 py-px t-caption font-extrabold tracking-wider text-on-dark-muted">
+                  {persona.character}
+                </span>
+              </div>
+              {/* premise = 이 화면이 하는 일을 도구의 말로. tagline(기능 설명)과 역할이 다르다 */}
+              <p className="mt-1 t-body text-on-dark">{persona.premise}</p>
+              <p className="mt-0.5 t-sub text-on-dark-muted">{identity.tagline}</p>
             </div>
           </div>
           <div className="grid grid-cols-1 gap-2 border-t border-on-dark-faint pt-4 sm:grid-cols-3">
@@ -88,7 +112,7 @@ export default async function AiToolPage({
           </div>
         </section>
 
-        <WorkbenchClient tool={tid} useCase={identity.useCase} tips={identity.tips} />
+        <WorkbenchClient tool={tid} useCase={identity.useCase} tips={identity.tips} persona={persona} fields={tuningFields(tid)} />
 
         {/* 면책 — check-ai-compliance.mjs 가 이 마커의 존재를 검사한다 */}
         <p

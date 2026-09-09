@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import { PageShell } from "@/app/components/PageShell";
 import { getAllRegionSnapshots } from "@/lib/market/store";
 import { formatKrwShort } from "@/lib/market/format";
@@ -283,11 +284,12 @@ export default async function GapScreenerPage() {
   }
 
   return (
-    <PageShell breadcrumb="AI 분석 › 전세가율·갭">
+    <PageShell breadcrumb="AI 분석 › 전세가율·갭" toolScope={personaVars(TOOL_PERSONAS["market:gap"])}>
       <ToolHero
         eyebrow="지역·시장 흐름"
         icon="landmark"
         title="전세가율·갭 스크리너"
+        personaId="market:gap"
         toneClass="text-success"
         lead="수도권 시군구를 전세가율 순으로 줄 세워, 갭이 작은 곳과 큰 곳을 한 화면에서 봅니다."
         kpis={kpis}

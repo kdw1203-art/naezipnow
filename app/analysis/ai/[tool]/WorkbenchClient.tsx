@@ -10,6 +10,10 @@ import { hasSession } from "@/lib/client/has-session";
 import { SkBlock, SkLine } from "@/app/components/ui/Skeleton";
 import type { AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import { UNCERTAINTY, CONFIDENCE_LABEL, judgeConfidence } from "@/lib/ai/insight-blocks";
+import { resultOrder, type ToolPersona, type ResultBlock } from "@/lib/ai/tool-persona";
+import { buildTuningInput, type TuningField } from "@/lib/ai/tool-tuning";
+import dynamic from "next/dynamic";
+import { outcomeBand } from "@/lib/ai/outcome-band";
 
 /* [AI-31~38·42~43·46] 통합 워크벤치 클라이언트 — 3스텝 실행 흐름.
    서버 판정(레이더·플래그·신호·각주·반대 시나리오)은 /api/ai/context 가 주고,
@@ -134,14 +138,29 @@ function renderBold(s: string) {
   );
 }
 
+/* [981] 보정 입력 폼은 **렌더될 때** 내려온다 — next/dynamic 은 import 시점이 아니라
+   마운트 시점에 받는다. 데이터 로드가 끝난 뒤에만 그려지므로 첫 화면 예산에서 빠진다. */
+const TuningFormLazy = dynamic(() => import("./TuningForm").then((m) => m.TuningForm), {
+  ssr: false,
+});
+
 export function WorkbenchClient({
   tool,
   useCase,
   tips,
+  persona,
+  fields,
 }: {
   tool: AiAnalysisToolId;
   useCase: string;
   tips: string[];
+  /* [981] 이 도구의 보정 입력 — 서버가 골라 내려준다(lib/ai/tool-tuning-fields.ts).
+     12종 목록을 여기서 import 하면 통째로 번들에 실려 예산을 넘긴다(483KB 실측). */
+  fields: readonly TuningField[];
+  /* [980] 도구 성격(색·연출·말투) — 서버가 골라 내려 준다. 여기서 TOOL_PERSONAS 를
+     직접 import 하면 16종 문자열이 통째로 브라우저 번들에 실린다. 이 라우트는
+     예산 480KB 에 476KB 로 붙어 있어서 그 여유가 없다. */
+  persona: ToolPersona;
 }) {
   const [picked, setPicked] = useState<PickedComplex | null>(null);
   /* [AI-22] 비교 도구는 최대 3단지 트레이 */
@@ -153,6 +172,10 @@ export function WorkbenchClient({
     | { phase: "error" }
   >({ phase: "idle" });
   const [budgetKrw, setBudgetKrw] = useState("");
+  /* [981] 도구별 보정 입력 — 엔진이 실제로 읽는 필드만 올린다(lib/ai/tool-tuning.ts).
+     예전에는 12종 전부에게 "가용 예산" 하나만 물었는데, 엔진은 도구마다 다른 입력을
+     이미 읽고 있었다. 특히 갭 도구는 매매가·전세가를 안 물어서 갭이 늘 0 이었다. */
+  const [tuning, setTuning] = useState<Record<string, string | boolean>>({});
   const [useLlm, setUseLlm] = useState(false);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<RunResult | null>(null);
@@ -329,6 +352,8 @@ export function WorkbenchClient({
 
   /* [AI-25] 포트폴리오 — 관심 단지 자동 로드 */
   const [portfolio, setPortfolio] = useState<{ complexId: string; complexName: string }[] | null>(null);
+
+
   const loadPortfolio = useCallback(async () => {
     try {
       /* [970 · B-26] 게스트면 401 을 맞으러 가지 않는다 — 결과는 같은 빈 목록 */
@@ -370,6 +395,22 @@ export function WorkbenchClient({
   const ctx = ready ? ctxState.ctx : null;
   const insight = ready ? ctxState.insight : null;
   const footnotes = ready ? ctxState.footnotes : [];
+
+  /* [980] 결과 구간 — 화면이 결과를 두고 쓸 말투를 정한다. 새 수치를 계산하지 않고
+     서버가 이미 준 판정(레이더·시그널·플래그)만 본다. 재료가 없으면 "thin" 이고,
+     thin 을 좋은 쪽으로 반올림하지 않는다(lib/ai/outcome-band.ts). */
+  const band = useMemo(
+    () =>
+      outcomeBand({
+        hasInsight: Boolean(insight),
+        radar: insight?.radar.map((r) => r.score) ?? [],
+        signals: insight?.signals.map((x) => x.state) ?? [],
+        flags: insight?.flags.map((f) => f.level) ?? [],
+        degraded: result?.degraded,
+        reasonCode: result?.reasonCode ?? null,
+      }),
+    [insight, result?.degraded, result?.reasonCode],
+  );
   const similar = ready ? ctxState.similar : [];
 
   const run = useCallback(async () => {
@@ -384,6 +425,9 @@ export function WorkbenchClient({
         complexName: picked?.name ?? null,
         region: picked?.region ?? ctx?.region?.name ?? null,
         budgetKrw: budgetKrw ? Number(budgetKrw.replace(/[^\d]/g, "")) * 10000 : null,
+        /* [981] 도구별 보정 입력 — 비운 칸은 키 자체가 빠진다(빈 문자열을 보내면
+           엔진의 Number(… ?? 0) 이 0 으로 읽어 "0 을 입력했다"가 된다). */
+        ...buildTuningInput(fields, tuning),
         _promptVersion: "v2",
         /* [AI-02] 실행 시점 컨텍스트 요약을 입력 스냅샷에 고정 — 재현 근거 */
         live: ctx
@@ -431,7 +475,7 @@ export function WorkbenchClient({
     } finally {
       setRunning(false);
     }
-  }, [running, needsComplex, picked, isPortfolio, portfolio, ctx, budgetKrw, isCompare, compareTray, tool, useLlm]);
+  }, [running, needsComplex, picked, isPortfolio, portfolio, ctx, budgetKrw, isCompare, compareTray, tool, useLlm, tuning, fields]);
 
   const sendFeedback = useCallback(
     async (rating: "up" | "down") => {
@@ -665,7 +709,22 @@ export function WorkbenchClient({
                 </div>
               )}
 
-              {/* 보정 입력 — 최소한만 */}
+              {/* [981] 보정 입력 — 도구마다 묻는 것이 다르다.
+                  올라온 칸은 전부 엔진이 실제로 읽는 필드다(단위테스트가 엔진 소스를
+                  읽어 대조한다). 전부 선택이고, 비우면 엔진 기본값으로 간다 —
+                  자리표시자가 그 기본값을 적어 둔다. */}
+              {/* [981] 보정 입력 — 도구마다 묻는 것이 다르다. 폼은 열릴 때만 내려받는다
+                  (이 라우트 예산 480KB 에 본체가 479KB — TuningForm.tsx 주석 참고). */}
+              {fields.length > 0 && (
+                <TuningFormLazy
+                  fields={fields}
+                  characterLabel={persona.character}
+                  value={tuning}
+                  onChange={setTuning}
+                />
+              )}
+
+              {/* 모든 도구가 같이 쓰는 두 가지 */}
               <div className="mt-3 flex flex-wrap items-end gap-3">
                 <label className="flex flex-col gap-1">
                   <span className="t-sub font-bold text-text-3">가용 예산(만원 · 선택)</span>
@@ -709,7 +768,7 @@ export function WorkbenchClient({
               : ""
           }`}
         >
-          {running ? "분석 중…" : "③ 분석 실행"}
+          {running ? `${persona.character} 중…` : "③ 분석 실행"}
         </button>
         <div className="run-steps" aria-live="polite">
           <span className="run-step" data-state={picked || (isPortfolio && portfolio?.length) ? "done" : "active"}>
@@ -737,36 +796,42 @@ export function WorkbenchClient({
         <div className="run-panel flex flex-col gap-3" aria-live="polite">
           <div className="flex items-center gap-2.5">
             <span className="njn-dot njn-dot--breathe" aria-hidden="true" />
-            <b className="t-body font-extrabold text-ink">지금 분석하는 중</b>
+            <b className="t-body font-extrabold text-ink">{persona.character} 중</b>
+            <span className="t-sub text-text-3">{persona.premise}</span>
           </div>
+          {/* [980] 도구마다 다른 몸짓 — 진행률이 아니다. 몇 %인지 모르면서 아는 척하지
+              않는다. 움직이는 것은 "지금 무엇을 하는 중"의 표시일 뿐이다. */}
+          <span className="run-sig" data-motion={persona.runMotion} aria-hidden="true">
+            <i />
+          </span>
           <div className="flex flex-col gap-2">
             {(
               [
                 ready && ctxState.phase === "ready"
                   ? {
                       on: true,
-                      label: `국토부 실거래 ${ctxState.ctx.complex?.price ? "대조 완료" : "표본 확인"}${
+                      label: `${persona.runStages[0]} — ${ctxState.ctx.complex?.price ? "대조 완료" : "표본 확인"}${
                         ctxState.ctx.region?.snapshot?.tradeCount != null
                           ? ` · 지역 ${ctxState.ctx.region.snapshot.tradeCount.toLocaleString("ko-KR")}건`
                           : ""
                       }`,
                     }
-                  : { on: false, label: "국토부 실거래 대조 중" },
+                  : { on: false, label: persona.runStages[0] },
                 ready && ctxState.phase === "ready"
                   ? {
                       on: true,
-                      label: `전월세 신고${ctxState.ctx.rent?.sample != null ? ` ${ctxState.ctx.rent.sample.toLocaleString("ko-KR")}건` : ""} · 입주 예정${
+                      label: `${persona.runStages[1]} — 전월세 신고${ctxState.ctx.rent?.sample != null ? ` ${ctxState.ctx.rent.sample.toLocaleString("ko-KR")}건` : ""} · 입주 예정${
                         ctxState.ctx.supply ? ` ${ctxState.ctx.supply.upcomingHouseholds.toLocaleString("ko-KR")}세대` : " 없음"
                       }`,
                     }
-                  : { on: false, label: "전월세·입주 예정 읽는 중" },
+                  : { on: false, label: persona.runStages[1] },
                 ready && ctxState.phase === "ready"
                   ? {
                       on: true,
-                      label: `임장노트 ${ctxState.ctx.notes?.count ?? 0}건 · 뉴스 ${ctxState.ctx.news?.items?.length ?? 0}건 읽음`,
+                      label: `${persona.runStages[2]} — 임장노트 ${ctxState.ctx.notes?.count ?? 0}건 · 뉴스 ${ctxState.ctx.news?.items?.length ?? 0}건 읽음`,
                     }
-                  : { on: false, label: "임장노트·뉴스 읽는 중" },
-                { on: false, label: "근거 정리 중 — 각주를 붙이는 중" },
+                  : { on: false, label: persona.runStages[2] },
+                { on: false, label: `${persona.runStages[3]}` },
               ] as { on: boolean; label: string }[]
             ).map((st) => (
               <div key={st.label} className="stp" data-on={st.on ? "true" : "false"}>
@@ -787,9 +852,12 @@ export function WorkbenchClient({
         </div>
       )}
 
-      {/* ── 결과 ── */}
+      {/* ── 결과 ──
+           [980] 등장 방식도 도구마다 다르다(reveal). 점수는 올라오고, 표는 좌→우로
+           펼쳐지고, 동선·궤적은 그려진다 — 결과의 성격을 몸짓이 먼저 말한다.
+           왼쪽 띠(tool-rail)는 "어느 도구의 결과인가"를 스크롤 중에도 붙잡아 둔다. */}
       {result && (
-        <div className="card flex flex-col gap-3 rounded-2xl p-4">
+        <div className={`card tool-rail flex flex-col gap-3 rounded-2xl p-4 rv-${persona.reveal}`}>
           {!result.ok ? (
             <div className="t-body font-bold text-danger">
               {result.error ?? "실행에 실패했어요."}
@@ -805,33 +873,51 @@ export function WorkbenchClient({
             </div>
           ) : (
             <>
-              {result.structuredSummary?.headline && (
-                <div className="t-section text-ink">
-                  {result.structuredSummary.headline}
-                </div>
-              )}
-
-              {/* 시그니처 위젯 — 도구별 구조화 판정 [규칙] */}
-              {insight && tool === "ai-diagnosis" && <RadarBlock radar={insight.radar} />}
-              {insight && (tool === "ai-timing" || tool === "ai-prediction") && <SignalBlock signals={insight.signals} />}
-              {tool === "ai-prediction" && (
-                <Link href="/analysis/accuracy" className="t-sub font-bold text-primary no-underline">
-                  이 예측 규칙의 과거 적중률 공개 페이지 › (±5% 기준 실측)
-                </Link>
-              )}
-              {insight && (tool === "ai-risk" || tool === "ai-gap" || tool === "contract-risk") && <FlagBlock flags={insight.flags} />}
-
-              {/* [AI-04] 반대 시나리오 */}
-              {insight && insight.counters.length > 0 && (
-                <div className="rounded-[10px] bg-bg px-3.5 py-3">
-                  <div className="t-sub font-extrabold text-text-2">이 판단이 틀리는 조건 [규칙]</div>
-                  {insight.counters.map((c, i) => (
-                    <div key={i} className="mt-1 t-sub text-text-2">· {c}</div>
-                  ))}
-                </div>
-              )}
-
-              <MdLite text={result.markdown} />
+              {/* [980] 결과에 따른 말투 — 같은 도구라도 결과가 나쁘면 붉게 말한다.
+                  문장은 도구별로 다르다(tool-persona 의 tone). 데이터가 모자란
+                  경우(thin)에는 "괜찮아 보입니다"라고 하지 않는다. */}
+              <p className="tone-line t-body font-bold" data-band={band}>
+                {persona.tone[band]}
+              </p>
+              {/* [980] 블록 순서를 아키타입이 정한다 — 계기판·점수형은 눈금이 먼저,
+                  표·목록형은 표가 먼저, 장부형은 위험 뒤에 곧바로 "틀리는 조건".
+                  예전에는 12종이 전부 같은 순서였다(제목→위젯→반대 시나리오→본문). */}
+              {resultOrder(persona.composition).map((block: ResultBlock) => {
+                if (block === "headline") {
+                  return result.structuredSummary?.headline ? (
+                    <div key="headline" className="t-section text-ink">
+                      {result.structuredSummary.headline}
+                    </div>
+                  ) : null;
+                }
+                if (block === "widget") {
+                  return (
+                    <div key="widget" className="flex flex-col gap-3">
+                      {/* 시그니처 위젯 — 도구별 구조화 판정 [규칙] */}
+                      {insight && tool === "ai-diagnosis" && <RadarBlock radar={insight.radar} />}
+                      {insight && (tool === "ai-timing" || tool === "ai-prediction") && <SignalBlock signals={insight.signals} />}
+                      {tool === "ai-prediction" && (
+                        <Link href="/analysis/accuracy" className="t-sub font-bold text-primary no-underline">
+                          이 예측 규칙의 과거 적중률 공개 페이지 › (±5% 기준 실측)
+                        </Link>
+                      )}
+                      {insight && (tool === "ai-risk" || tool === "ai-gap" || tool === "contract-risk") && <FlagBlock flags={insight.flags} />}
+                    </div>
+                  );
+                }
+                if (block === "counters") {
+                  /* [AI-04] 반대 시나리오 */
+                  return insight && insight.counters.length > 0 ? (
+                    <div key="counters" className="tool-rail rounded-[10px] bg-bg px-3.5 py-3">
+                      <div className="t-sub font-extrabold text-text-2">이 판단이 틀리는 조건 [규칙]</div>
+                      {insight.counters.map((c, i) => (
+                        <div key={i} className="mt-1 t-sub text-text-2">· {c}</div>
+                      ))}
+                    </div>
+                  ) : null;
+                }
+                return <MdLite key="body" text={result.markdown} />;
+              })}
 
               {result.degraded && result.reasonCode?.includes("KEY_MISSING") && (
                 <div className="rounded-[10px] bg-warning-soft px-3 py-2 t-sub font-bold text-warning">
@@ -884,8 +970,22 @@ export function WorkbenchClient({
                 </details>
               )}
 
-              {/* [AI-38] 다음 행동 3버튼 */}
+              {/* [AI-38] 다음 행동 — [980] 맨 앞은 **이 도구의** 다음 행동이다.
+                  예전에는 12종이 전부 같은 3버튼(지도·노트·관심)으로 끝나서, 도구를
+                  바꿔도 마지막에 도착하는 곳이 같았다. 진단은 약한 축을 리스크로,
+                  예측은 그 가격으로 수익률로, 동선은 노트로 — 도구가 끝나는 자리가
+                  다음 도구의 시작이 되게 한다(tool-persona 의 nextAction). */}
               <div className="flex flex-wrap gap-2">
+                <Link
+                  href={
+                    picked
+                      ? `${persona.nextAction.href}${persona.nextAction.href.includes("?") ? "&" : "?"}complexId=${encodeURIComponent(picked.id)}`
+                      : persona.nextAction.href
+                  }
+                  className="tool-fill press rounded-[10px] px-3.5 py-2 t-body font-bold no-underline"
+                >
+                  {persona.nextAction.label} ›
+                </Link>
                 <Link
                   href={picked ? `/map?complexId=${encodeURIComponent(picked.id)}` : "/map"}
                   className="rounded-[10px] border border-line-strong bg-bg px-3.5 py-2 t-body font-bold text-text-1 no-underline"

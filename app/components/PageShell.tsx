@@ -8,11 +8,18 @@ export function PageShell({
   title,
   breadcrumb,
   wide = false,
+  toolScope,
 }: {
   children: React.ReactNode;
   title?: string;
   breadcrumb?: string;
   wide?: boolean;
+  /**
+   * [981] 이 화면 전체가 한 도구의 것일 때 — 도구 색 변수를 <main> 에 한 번 꽂는다.
+   * 안쪽은 전부 그 변수를 읽으므로(globals.css `.tool-scope`), 페이지마다 색을
+   * 적을 필요가 없다. 값은 lib/ai/tool-persona.ts personaVars() 가 만든다.
+   */
+  toolScope?: React.CSSProperties;
 }) {
   return (
     <>
@@ -28,9 +35,10 @@ export function PageShell({
       <main
         id="main-content"
         data-autotrim=""
+        style={toolScope}
         className={`mx-auto w-full flex-1 px-3.5 pb-6 pt-3.5 md:px-5 md:pb-16 md:pt-5 ${
           wide ? "max-w-[1400px]" : "max-w-[1240px]"
-        }`}
+        }${toolScope ? " tool-scope" : ""}`}
       >
         {/* [970 · A-40] 브레드크럼은 랜드마크로 — 문자열 prop 렌더링은 그대로(API 변경 없음).
             @media print 의 `nav{display:none}` 에 같이 걸려 인쇄에서는 빠진다(크롬이니 맞다). */}

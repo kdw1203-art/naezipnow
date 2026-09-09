@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import Link from "next/link";
 import { cache } from "react";
 import { PageShell } from "../../components/PageShell";
@@ -179,7 +180,7 @@ export default async function TemperatureHubPage() {
   ];
 
   return (
-    <PageShell breadcrumb="홈 › AI 분석 › 시장 온도 주간 기록">
+    <PageShell breadcrumb="홈 › AI 분석 › 시장 온도 주간 기록" toolScope={personaVars(TOOL_PERSONAS["market:temperature"])}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
@@ -189,6 +190,7 @@ export default async function TemperatureHubPage() {
         eyebrow="지역·시장 흐름"
         icon="flame"
         title="지역별 시장 온도 주간 기록"
+        personaId="market:temperature"
         toneClass="text-warning"
         lead="매매가격지수 모멘텀과 실거래 거래량 추이를 0~100 눈금으로 합쳐 매주 기록합니다. 50이 중립이고, 매수·매도 권유가 아닙니다."
         kpis={heroKpis}

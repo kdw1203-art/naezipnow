@@ -1,4 +1,5 @@
 import { PageShell } from "../../components/PageShell";
+import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import {
   TEMPERATURE_REGIONS,
   computeRegionTemperature,
@@ -53,7 +54,7 @@ export default async function TimingPage() {
   }
 
   return (
-    <PageShell breadcrumb="AI 분석 › 시세·타이밍">
+    <PageShell breadcrumb="AI 분석 › 시세·타이밍" toolScope={personaVars(TOOL_PERSONAS["market:timing"])}>
       <TimingClient
         regions={REGION_OPTIONS.map((r) => ({ id: r.id, label: r.label }))}
         defaultRegionId={defaultRegion.id}

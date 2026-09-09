@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import { PageShell } from "../../components/PageShell";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
 import { ToolHero, type HeroKpi } from "@/app/components/analysis/ToolHero";
@@ -84,7 +85,7 @@ export default async function PricePage({
   const areaRegions = regions.filter((r) => r.areaCells.length > 0);
   if (areaRegions.length === 0) {
     return (
-      <PageShell breadcrumb="AI 분석 · 면적대별 시세">
+      <PageShell breadcrumb="AI 분석 · 면적대별 시세" toolScope={personaVars(TOOL_PERSONAS["market:price"])}>
         <EmptyState msg="아직 면적대별로 정리된 실거래가 없어요." />
       </PageShell>
     );
@@ -213,6 +214,7 @@ export default async function PricePage({
           eyebrow="지역·시장 흐름"
           icon="bar"
           title="면적대별 실거래 시세"
+          personaId="market:price"
           toneClass="text-success"
           lead={`${target.name}의 면적대별 평단가·중앙값·거래량을 국토교통부 신고 매매가로 정리했습니다.`}
           kpis={heroKpis}
