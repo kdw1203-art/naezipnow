@@ -183,6 +183,10 @@ function PostCard({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
           <div className="flex items-center gap-1 t-body font-bold text-ink">
             <span className="truncate">{n.author}</span>
             {n.isExample && <ExampleBadge />}
+            {/* [983] 공개 노트 27건 중 25건이 Lab 글인데 화면은 "직접 다녀온 사람이
+                남긴 기록"이라고만 말했다. 운영진 글에는 그렇다고 적는다 — 사실을
+                적는 쪽이 신뢰를 지키고, "내 글이 이 단지 첫 진짜 기록"이 된다. */}
+            {n.lab && <ExampleBadge label="운영진 예시" />}
           </div>
           <div className="truncate t-sub text-text-3">{n.title}</div>
         </div>

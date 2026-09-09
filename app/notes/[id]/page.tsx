@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { displayAuthorLabel, isLabAuthor } from "@/lib/notes/author-label";
 import { cache } from "react";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { notFound } from "next/navigation";
@@ -69,6 +70,8 @@ type NoteView = {
   directVisit: boolean; // 직접 방문 배지 (20a ①)
   fieldVerified: boolean; // [#71] 현장 인증 배지 (위치 확인 통과)
   visitMeta: string; // 방문일·작성자 (20a ②)
+  /** [983] 운영진(Lab)이 쓴 글인가 — 화면에 "운영진 예시"로 적는다 */
+  lab: boolean;
   axes: Axis[]; // 채광·소음·주차·교통 4축 (20a ④)
   body: string;
   photos: string[];
@@ -231,7 +234,8 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
   const doneCount = n.checklist.filter((c) => c.done).length;
   const meta: string[] = [`방문 ${n.visitDate}`];
   if (n.weather) meta.push(n.weather);
-  meta.push(n.authorLabel?.trim() || "내집나우 스카우트");
+  /* [983] Lab 표기 7종을 하나로 — 저장값은 그대로 둔다(lib/notes/author-label) */
+  meta.push(displayAuthorLabel(n.authorLabel) || "내집나우 스카우트");
 
   const chips = [n.region, displayTitle].filter(Boolean);
   const weakest = scoreEntries
@@ -266,6 +270,7 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
     /* [#71] 현장 인증 — 작성 시점 위치 확인(거리 버킷만 저장) 통과 여부 */
     fieldVerified: Boolean(n.metadata?.visitVerified),
     visitMeta: meta.join(" · "),
+    lab: isLabAuthor(n.authorLabel),
     axes,
     body:
       n.summary?.trim() ||
@@ -419,7 +424,7 @@ function articleJsonLd(note: InspectionNote): Record<string, unknown> {
     dateModified: note.updatedAt,
     author: {
       "@type": "Person",
-      name: note.authorLabel?.trim() || "내집나우 스카우트",
+      name: displayAuthorLabel(note.authorLabel) || "내집나우 스카우트",
     },
     publisher: {
       "@type": "Organization",
@@ -446,7 +451,7 @@ function noteJsonLd(
   view: NoteView,
 ): Record<string, unknown> {
   const apt = note.aptName?.trim() || undefined;
-  const author = note.authorLabel?.trim() || "내집나우 스카우트";
+  const author = displayAuthorLabel(note.authorLabel) || "내집나우 스카우트";
   const datePublished = note.createdAt || undefined;
   const score = view.totalScore;
 
@@ -946,6 +951,13 @@ export default async function NoteDetailPage({
                 </span>
               )}
               <span className="text-text-3">{v.visitMeta}</span>
+              {/* [983] 운영진 글에는 그렇다고 적는다 — 공개 노트 27건 중 25건이
+                  Lab 글인데 화면은 "직접 다녀온 사람의 기록"이라고만 말했다. */}
+              {v.lab && (
+                <span className="ml-1.5 inline-flex shrink-0 items-center rounded border border-line px-1 py-px text-[10px] font-semibold leading-[1.4] text-text-3">
+                  운영진 예시
+                </span>
+              )}
             </div>
 
             {/* ④ 4축 항목 평가 — 채광·소음·주차·교통 상중하. [970 · B-10] 미입력 축은 빠지고,

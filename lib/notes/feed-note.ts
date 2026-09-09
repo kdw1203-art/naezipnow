@@ -2,6 +2,7 @@ import {
   inspectionAverageScore,
   type InspectionNote,
 } from "@/lib/inspection/store-db";
+import { isLabAuthor, displayAuthorLabel } from "@/lib/notes/author-label";
 import { complexHrefKey, resolveComplexHrefs } from "@/lib/newui/complex-link";
 import { matchesInterest } from "@/lib/notes/region-match";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
@@ -38,6 +39,14 @@ export type FeedNote = {
   isExample?: boolean;
   /** [967 · 19] 커서 페이지네이션용 원본 생성 시각(ISO) — 마지막 카드의 값이 다음 커서 */
   createdAt?: string;
+  /**
+   * [983] 내집나우 Lab(운영진)이 쓴 노트인가.
+   *
+   * 실측(2026-09-09): 공개 노트 27건 중 **25건이 Lab 글**인데 화면은 "직접 다녀온
+   * 사람이 남긴 기록"이라고 말했다. 지금은 사실이 아니다. 예시라고 말하는 쪽이
+   * 신뢰를 지킨다 — 그리고 "내 글이 이 단지 첫 진짜 기록"이라는 이유가 생긴다.
+   */
+  lab?: boolean;
 };
 
 /** 노트 피드·댓글의 상대시각 — "방금 전 / N분 전 / N시간 전 / 어제 / N일 전(30일까지) / ISO 날짜부".
@@ -47,7 +56,9 @@ export function relativeTime(iso: string, now: number = Date.now()): string {
 }
 
 function maskAuthor(n: InspectionNote): string {
-  if (n.authorLabel && n.authorLabel.trim()) return n.authorLabel.trim();
+  /* [983] Lab 표기 7종을 화면에서 하나로 모은다 — 저장값은 건드리지 않는다
+     (lib/notes/author-label.ts 주석 참고). */
+  if (n.authorLabel && n.authorLabel.trim()) return displayAuthorLabel(n.authorLabel);
   const local = n.authorEmail.split("@")[0] ?? "이웃";
   const head = local.slice(0, 2) || "이웃";
   return `${head}** 이웃`;
@@ -83,6 +94,7 @@ export function toFeedNote(
   return {
     id: n.id,
     author: maskAuthor(n),
+    lab: isLabAuthor(n.authorLabel),
     meta: opts?.mine
       ? `${n.isPublic ? "공개" : "비공개"} · ${relativeTime(n.createdAt)} · ${n.region}`
       : `${relativeTime(n.createdAt)} · ${n.region}`,
