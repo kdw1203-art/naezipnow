@@ -39,9 +39,12 @@ import { getAllSido, getSigunguBySido } from "@/lib/national-data/region-codes";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
 import { APT_MASTER_SOURCE_KEY } from "@/lib/complex/apartment-master";
+import { orderSigunguByStaleness } from "@/lib/national-data/sigungu-rotation";
 
 const NUM_OF_ROWS = 100;
 const MAX_PAGES = 20;
+/** [982] 목록 호출 간 간격(ms) — 상세 경로(DETAIL_DELAY_MS)와 같은 이유다 */
+const LIST_DELAY_MS = 120;
 const UPSERT_BATCH = 200;
 
 /* apartment_complexes.source_key — 이 ETL 이 소유하는 네임스페이스.
@@ -209,10 +212,17 @@ export async function ingestAptMasterForSigungu(
     const byKaptCode = new Map<string, Record<string, unknown>>();
 
     for (let pageNo = 1; pageNo <= maxPages; pageNo++) {
+      /* [982] strict — HTTP 실패를 "빈 시군구"로 위장하지 않는다.
+         페이지 사이에 짧은 간격을 둔다: 예전에는 목록 호출에 지연이 0 이라
+         한 실행이 12시군구 × 최대 20페이지 = 240회를 연속으로 때렸다(상세 경로에는
+         이미 60ms 간격이 있었다). 슬라이스 전체가 한꺼번에 비는 실패 모양이
+         한도 초과와 정확히 일치한다. */
+      if (pageNo > 1) await new Promise((r) => setTimeout(r, LIST_DELAY_MS));
       const { complexes, totalCount: tc, mode } = await fetchAptComplexList({
         sigunguCd,
         pageNo,
         numOfRows,
+        strict: true,
       });
       pages = pageNo;
       totalCount = tc;
@@ -264,6 +274,43 @@ export async function ingestAptMasterForSigungu(
  * 주어진 시군구 코드들을 순차(딜레이 없음) 처리하며 카운트 합산.
  * 슬라이스 크기로 호출량을 bound 해 rate limit 을 존중한다.
  */
+/**
+ * 다음에 훑을 시군구 고르기 — **가장 오래 안 본 것부터**.
+ *
+ * [982] 예전에는 시계로 골랐다: `floor(now/12h) % ceil(total/12)`.
+ * 하루 한 번 같은 시각에 도는 크론에서는 이 값이 매일 **2씩** 올라가므로
+ * 짝수 슬라이스만 방문하고 홀수 11개(≈132개 시군구)는 **영원히 안 돈다**.
+ * 적재 로그가 그대로였다 — 09-06 slice=0, 09-07 slice=2, 09-08 slice=4, 09-09 slice=6.
+ *
+ * 그래서 순서를 데이터가 정하게 한다:
+ *   ① 대장에 **한 행도 없는** 시군구 (한 번도 못 받았거나 전부 실패) — 최우선
+ *   ② 그다음은 마지막 갱신이 오래된 순
+ * 커서 테이블이 없어도 되고(데이터 자체가 커서다), 빠진 지역이 저절로 앞으로 온다.
+ * 실패해서 안 채워진 시군구는 다음 실행에서 다시 1순위가 된다 — 자기 치유.
+ *
+ * 조회가 실패하면 null 을 돌려준다. 호출부는 그때만 예전 시계 방식으로 떨어진다
+ * — 조회 실패를 "빈 목록"으로 바꾸면 크론이 아무 일도 안 하고 성공처럼 보인다.
+ */
+export async function pickStalestSigungu(limit: number): Promise<string[] | null> {
+  const all = listAllSigunguCodes().map((c) => c.sigunguCd);
+  const sb = getServiceSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb
+    .from("apt_master_sigungu_freshness")
+    .select("lawd_cd,last_update");
+  if (error) {
+    logger.warn(`[apt-master] 신선도 조회 실패 — 시계 순환으로 떨어집니다: ${error.message}`);
+    return null;
+  }
+  const seen = new Map<string, number>();
+  for (const r of (data ?? []) as { lawd_cd: string; last_update: string | null }[]) {
+    const t = r.last_update ? Date.parse(r.last_update) : NaN;
+    seen.set(r.lawd_cd, Number.isFinite(t) ? t : 0);
+  }
+  return orderSigunguByStaleness(all, seen).slice(0, limit);
+}
+
+
 export async function ingestAptMasterBatch(sigunguCds: string[]): Promise<{
   sigungu: number;
   /** 읽어서 저장 가능한 형태로 만든 행 수 합 */
@@ -281,6 +328,8 @@ export async function ingestAptMasterBatch(sigunguCds: string[]): Promise<{
   const empty: string[] = [];
   const errors: string[] = [];
   for (const cd of sigunguCds) {
+    /* 시군구 사이에도 간격을 둔다 — 12곳을 쉬지 않고 때리면 뒤쪽이 통째로 막힌다 */
+    if (sigungu > 0) await new Promise((r) => setTimeout(r, LIST_DELAY_MS));
     const res = await ingestAptMasterForSigungu(cd);
     fetched += res.fetched;
     upserted += res.upserted;

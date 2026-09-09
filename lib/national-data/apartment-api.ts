@@ -25,6 +25,19 @@ async function fetchAptJson(
   operation: string,
   params: Record<string, string | number>,
   numOfRows = 30,
+  /**
+   * [982] 적재(크론)에서는 실패를 **삼키지 않는다**.
+   *
+   * 예전에는 HTTP 오류(429 한도 초과·5xx·403)를 조용히 `mode:"mock"` 빈 결과로
+   * 바꿨다. 그러면 적재 쪽에서 "이 시군구엔 단지가 없다"와 구별할 방법이 없고,
+   * 로그에는 `빈 시군구=41110,41111,…` 만 남는다 — 실제로 2026-09-08·09 의
+   * apt-master 실패 기록이 정확히 그 모양이었다(슬라이스 12곳 전부 "빈 시군구",
+   * 사유 없음). 슬라이스 전체가 한꺼번에 비는 것은 "데이터 없음"이 아니라
+   * 거의 언제나 한도 초과다.
+   *
+   * 읽기 UI 라우트는 예전 동작을 유지한다 — 화면은 조용히 비는 편이 낫다.
+   */
+  strict = false,
 ): Promise<{ items: Record<string, unknown>[]; totalCount: number; mode: "live" | "mock" }> {
   const key = serviceKey();
   if (!key) return { items: [], totalCount: 0, mode: "mock" };
@@ -41,9 +54,18 @@ async function fetchAptJson(
   let text: string;
   try {
     const res = await fetch(url.toString(), { next: { revalidate: 3600 } });
-    if (!res.ok) return { items: [], totalCount: 0, mode: "mock" };
+    if (!res.ok) {
+      if (strict) {
+        /* 429 는 한도 초과다 — 사유를 남겨야 "키를 더 받아야 한다"를 알 수 있다 */
+        throw new Error(
+          `data.go.kr ${service} HTTP ${res.status}${res.status === 429 ? " (호출 한도 초과)" : ""}`,
+        );
+      }
+      return { items: [], totalCount: 0, mode: "mock" };
+    }
     text = await res.text();
-  } catch {
+  } catch (e) {
+    if (strict) throw e instanceof Error ? e : new Error(String(e));
     // 네트워크 오류는 조용히 mock 폴백(읽기 UI 라우트 회귀 방지).
     return { items: [], totalCount: 0, mode: "mock" };
   }
@@ -143,6 +165,8 @@ export async function fetchAptComplexList(params: {
   bjdongCd?: string;
   pageNo?: number;
   numOfRows?: number;
+  /** [982] 적재 경로에서만 true — 실패를 빈 결과로 위장하지 않는다 */
+  strict?: boolean;
 }): Promise<{ complexes: AptComplex[]; totalCount: number; mode: "live" | "mock" }> {
   const sigunguCd = params.sigunguCd.length !== 5
     ? resolveSigunguCd(params.sigunguCd)
@@ -158,6 +182,7 @@ export async function fetchAptComplexList(params: {
     "getSigunguAptList3",
     query,
     params.numOfRows ?? 100,
+    params.strict === true,
   );
 
   return { complexes: items.map((r) => normalizeComplex(toStrRow(r))), totalCount, mode };

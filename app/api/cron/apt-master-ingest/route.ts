@@ -4,6 +4,7 @@ import { isDataGoKrEncodingConfigured } from "@/lib/public-data/data-go-kr-keys"
 import {
   listAllSigunguCodes,
   ingestAptMasterBatch,
+  pickStalestSigungu,
 } from "@/lib/national-data/apartment-ingest";
 import { logIngest } from "@/lib/market/store";
 
@@ -30,18 +31,35 @@ async function handle(req: Request) {
   const codes = listAllSigunguCodes().map((c) => c.sigunguCd);
   const total = codes.length;
 
-  // STATELESS 순환: 12시간 창(window)마다 다음 슬라이스로 이동.
   const SLICE = 12;
-  const idx =
-    Math.floor(Date.now() / (1000 * 60 * 60 * 12)) % Math.ceil(total / SLICE);
-  /* [971] 특정 시군구만 다시 훑는 문. 순환은 한 바퀴가 9.5일이라, 빠진 지역을
-     하나 발견해도 확인까지 그만큼 기다려야 했다. 목록에 있는 코드만 받는다. */
+  /* [971] 특정 시군구만 다시 훑는 문. 목록에 있는 코드만 받는다. */
   const forced = (url.searchParams.get("codes") ?? "")
     .split(",")
     .map((c) => c.trim())
     .filter((c) => codes.includes(c))
     .slice(0, SLICE);
-  const batch = forced.length > 0 ? forced : codes.slice(idx * SLICE, idx * SLICE + SLICE);
+
+  /* [982] 순서를 **데이터가** 정한다 — 가장 오래 안 본 시군구부터.
+     예전에는 시계로 골랐다(`floor(now/12h) % 22`). 하루 한 번 같은 시각에 도는
+     크론에서는 이 값이 매일 2씩 올라가 짝수 슬라이스만 방문하고, 홀수 11개
+     (≈132개 시군구)는 영원히 안 돌았다. 적재 로그가 그대로였다 —
+     09-06 slice=0 · 09-07 slice=2 · 09-08 slice=4 · 09-09 slice=6.
+     그 결과 2026-09-09 기준 대전 44일 · 광주 43일 · 인천 34일 · 경기 20일이 밀려 있었고,
+     전남은 대장에 아예 없었다.
+     신선도 조회가 실패하면(뷰 부재·DB 장애) 예전 시계 방식으로 떨어진다 —
+     조회 실패를 빈 목록으로 바꾸면 크론이 아무 일도 안 하고 성공처럼 보인다. */
+  let picked: string[] | null = null;
+  if (forced.length === 0) picked = await pickStalestSigungu(SLICE);
+  const idx =
+    Math.floor(Date.now() / (1000 * 60 * 60 * 12)) % Math.ceil(total / SLICE);
+  const batch =
+    forced.length > 0
+      ? forced
+      : picked && picked.length > 0
+        ? picked
+        : codes.slice(idx * SLICE, idx * SLICE + SLICE);
+  const order: "forced" | "stalest" | "clock" =
+    forced.length > 0 ? "forced" : picked && picked.length > 0 ? "stalest" : "clock";
 
   const configured = isDataGoKrEncodingConfigured();
   const { sigungu, fetched, upserted, failed, empty, errors } = await ingestAptMasterBatch(batch);
@@ -58,7 +76,12 @@ async function handle(req: Request) {
      따로 세서, 못 읽은 것(error)과 바꿀 게 없던 것(ok)을 나눈다. */
   const status =
     failed > 0 ? "error" : !configured ? "skipped" : fetched > 0 ? "ok" : "error";
-  const where = forced.length > 0 ? `지정=${forced.join(",")}` : `slice=${idx}/${Math.ceil(total / SLICE)}`;
+  const where =
+    order === "forced"
+      ? `지정=${forced.join(",")}`
+      : order === "stalest"
+        ? `오래된순=${batch.length}곳`
+        : `slice=${idx}/${Math.ceil(total / SLICE)}(신선도 조회 실패로 시계 순환)`;
   const slice = `${where} 시군구=${sigungu} 읽음=${fetched} 변경=${upserted}`;
   const emptyNote = empty.length > 0 ? ` · 빈 시군구=${empty.join(",")}` : "";
   await logIngest({
