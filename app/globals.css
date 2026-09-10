@@ -4329,6 +4329,71 @@ a.rank-row:hover {
   animation: riseIn var(--dur-md) var(--ease-out) backwards;
 }
 /* ============================================================
+   [987 · 26] 임장노트 시각 언어 — 세 목소리를 면으로 가른다
+
+   노트 화면에는 성격이 다른 세 가지 글이 섞여 있다:
+     ① 사람이 현장에서 적은 것 (메모)
+     ② 시스템이 계산한 것 (항목 평가·비교·수치)
+     ③ AI 가 서술한 것 (요약)
+   그런데 ③만 잉크 다크 패널(.ai-panel)이라는 제 면을 갖고 있었고, ①은 카드
+   안의 맨 <p> 였다. 화면이 "AI 는 특별하고 당신이 쓴 건 특별하지 않다"고 말하는
+   셈이다 — 이 제품에서 제일 귀한 건 ①인데.
+
+   ①에 종이 면을 준다. 한지 톤 + 줄괘선 + 왼쪽 여백선, 현장 노트의 모양이다.
+   장식이 아니라 **읽는 사람이 출처를 눈으로 가르게 하는 장치**다: 종이 위 글은
+   다녀온 사람이 쓴 것, 어두운 패널은 AI 가 쓴 것, 흰 카드는 계산한 것.
+
+   줄괘선은 line-height(1.7 × 13px ≈ 22px)에 맞춘다 — 어긋나면 글자가 줄 위에
+   떠 보여서 오히려 지저분해진다. 다크에서는 --brand-hanji 가 웜 다크로 뒤집혀
+   같은 구조가 유지된다(토큰이 이미 양 테마를 갖고 있다).
+   ============================================================ */
+.note-paper {
+  position: relative;
+  background-color: var(--brand-hanji);
+  color: var(--brand-hanji-ink);
+  border-radius: 14px;
+  padding: 18px 18px 18px 30px;
+  line-height: 22px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 21px,
+    color-mix(in srgb, var(--brand-hanji-ink) 12%, transparent) 21px,
+    color-mix(in srgb, var(--brand-hanji-ink) 12%, transparent) 22px
+  );
+  /* 첫 줄이 괘선 위에 앉도록 배경을 패딩만큼 내린다 */
+  background-position: 0 18px;
+  background-repeat: repeat;
+}
+/* 왼쪽 여백선 — 현장 노트의 그 선. 글자와 겹치지 않게 패딩 안쪽에 둔다 */
+.note-paper::before {
+  content: "";
+  position: absolute;
+  left: 18px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: color-mix(in srgb, var(--brand-red) 45%, transparent);
+}
+@media (max-width: 767px) {
+  .note-paper {
+    padding-left: 24px;
+  }
+  .note-paper::before {
+    left: 14px;
+  }
+}
+/* 인쇄에서는 괘선을 뺀다 — 잉크만 먹고 읽기는 나빠진다 */
+@media print {
+  .note-paper {
+    background-image: none;
+  }
+  .note-paper::before {
+    display: none;
+  }
+}
+
+/* ============================================================
    [984 · 13] 한 손 모드 — 작성 폼(/notes/new · /notes/[id]/edit) 전용
 
    현장에서는 한 손에 폰, 다른 손엔 우산·가방이다. 엄지가 닿는 범위는 화면

@@ -49,10 +49,26 @@ export async function POST(req: NextRequest) {
 
   const targetType = toText(body.targetType, 64) || "unknown";
   const targetId = toText(body.targetId, 80) || null;
-  const context =
+  const rawContext =
     body.context && typeof body.context === "object" && !Array.isArray(body.context)
       ? (body.context as Record<string, unknown>)
       : {};
+  /* [987 · 후기 수집] 사용자가 쓴 한 줄과 인용 동의는 **서버에서 다시 자른다**.
+     클라이언트가 300자로 자르지만 그건 편의일 뿐이고, 여기로 오는 값은 그대로
+     이벤트 metadata 에 실린다 — 길이를 믿으면 안 되는 자리다.
+     인용 동의는 boolean 만 받는다("true" 같은 문자열을 참으로 읽지 않는다).
+
+     주의: 이 문장은 아직 **어디에도 공개되지 않는다**. 나중에 소개 페이지에
+     인용하려면 quotable === true 인 것만 고르고, 그때 금칙어 검사를
+     통과시켜야 한다(lib/moderation) — 지금 통과시키지 않는 이유는 공개 표면이
+     없어서지, 필요 없어서가 아니다. */
+  const comment = toText(rawContext.comment, 300);
+  const context: Record<string, unknown> = {
+    ...rawContext,
+    ...(comment ? { comment } : { comment: undefined }),
+    quotable: rawContext.quotable === true,
+  };
+  if (!comment) delete context.comment;
 
   await recordFunnelEvent(req, {
     eventName: FUNNEL_EVENT.AI_FEEDBACK,

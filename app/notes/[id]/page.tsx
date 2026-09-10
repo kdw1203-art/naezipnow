@@ -970,6 +970,15 @@ export default async function NoteDetailPage({
                   <span className="ml-1.5 font-medium">· 현장 체크를 아직 입력하지 않았어요</span>
                 )}
               </div>
+              {/* [987 · 28] 이 상/중/하가 무엇인지 밝힌다. 숫자·등급처럼 보이면 측정값으로
+                  읽히는데, 실제로는 다녀온 사람의 인상이다. 확인할 수 있는 것(실거래·
+                  공표 통계)은 아래 "이 노트로 이어서"의 도구가 따로 답한다 — 둘을
+                  같은 화면에 같은 모양으로 두면 독자가 구별할 방법이 없다. */}
+              {v.axes.length > 0 && (
+                <p className="t-caption text-text-3">
+                  다녀온 사람이 그 자리에서 느낀 인상이에요 — 측정값이 아닙니다.
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4">
                 {v.axes.map((a) => (
                   <div
@@ -993,7 +1002,17 @@ export default async function NoteDetailPage({
                 내던 것도 없앴다 — 캐러셀은 장수에 상관없이 다 보여 준다. */}
             {v.photos.length > 0 && <NotePhotoCarousel photos={v.photos} />}
 
-            <p className="text-[13px] leading-[1.7] text-text-1">{v.body}</p>
+            {/* [987 · 26] 다녀온 사람이 쓴 글 — 종이 면 위에 둔다. 이 화면에서 제일
+                귀한 글인데 예전에는 카드 안의 맨 <p> 였다(AI 요약만 제 면을 갖고
+                있었다). 면이 곧 출처 표시다 — 사유는 globals.css .note-paper 주석. */}
+            {v.body.trim() && (
+              <div className="note-paper t-body">
+                <div className="mb-1.5 t-caption font-extrabold opacity-70">
+                  현장에서 적은 것
+                </div>
+                <p className="whitespace-pre-wrap">{v.body}</p>
+              </div>
+            )}
 
             {/* ⑤⑥ 좋았던 점 · 주의할 점 */}
             <div className="rounded-[14px] border border-line bg-surface p-3.5 text-xs leading-[1.7] text-text-1">

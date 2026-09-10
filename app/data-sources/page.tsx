@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { formatCount, loadHomeCoverage } from "@/lib/newui/home-coverage";
+import {
+  freshnessLabel,
+  isStale,
+  loadDataFreshness,
+} from "@/lib/newui/data-freshness";
 
 /* [945 · 실사용50 #33] 데이터 출처·갱신 주기·한계 — 한 장짜리 신뢰 문서.
    화면 곳곳의 각주("국토부 신고 기준" 등)를 한 페이지로 모은다.
@@ -9,7 +15,10 @@ import { seoAlternates } from "@/lib/seo/alternates";
    주기와 코드가 어긋나면 코드가 아니라 이 페이지를 고칠 일이 먼저인지 본다.
    계산 공식은 /methodology 가 원천이다(중복 서술 금지 — 링크로 넘긴다). */
 
-export const dynamic = "force-static";
+/* [987 · 신뢰 근거] force-static → 실수치를 읽어야 해서 서버 렌더로 바꾼다.
+   숫자 자체는 6시간 캐시(loadHomeCoverage·loadDataFreshness)라 매 요청마다
+   DB 를 두드리지 않는다. */
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "데이터 출처와 한계 | 내집나우",
@@ -123,7 +132,14 @@ const AI_POLICY: Array<{ label: string; rule: string }> = [
   },
 ];
 
-export default function DataSourcesPage() {
+export default async function DataSourcesPage() {
+  /* 실패하면 null 이고, 아래에서 그 줄을 통째로 뺀다 — 추정치로 채우지 않는다 */
+  const [coverage, freshness] = await Promise.all([
+    loadHomeCoverage(),
+    loadDataFreshness(),
+  ]);
+  const now = Date.now();
+
   return (
     <PageShell breadcrumb="데이터 출처">
       <div className="mx-auto w-full max-w-[760px]">
@@ -139,6 +155,94 @@ export default function DataSourcesPage() {
           </Link>
           을 보세요.
         </p>
+
+        {/* ── [987 · 신뢰 근거] 지금 실제로 가진 것 ──────────────────────────
+            이 페이지는 출처와 주기를 **글로** 적어 두었지만, 실제로 얼마나 있고
+            마지막에 언제 들어왔는지는 어디에도 없었다. 주기를 적어 두면 사람은
+            그 주기가 지켜지고 있다고 읽는다 — 982에서 단지 대장 적재가 13일간
+            실패하는 동안 화면에는 아무 표시도 없었다.
+
+            후기가 아직 한 건도 없는 서비스가 "왜 믿어야 하나"에 답하는 방법은
+            지어낸 추천사가 아니라 **가진 것을 그대로 보여 주는 것**이다.
+            전부 실카운트이고, 못 읽은 줄은 뺀다. 밀린 것은 밀렸다고 적는다. */}
+        <div className="rise-in-1 card mt-5 flex flex-col gap-4 rounded-[18px] p-5">
+          <div>
+            <h2 className="t-section text-ink">지금 실제로 가지고 있는 것</h2>
+            <p className="mt-1 t-sub text-text-3">
+              아래 수치는 이 페이지를 열 때 데이터베이스에서 직접 센 값입니다 —
+              소개용으로 적어 둔 숫자가 아닙니다.
+            </p>
+          </div>
+
+          {(coverage.txCount !== null ||
+            coverage.complexCount !== null ||
+            coverage.regionCount !== null) && (
+            <div className="grid grid-cols-3 gap-2">
+              {coverage.txCount !== null && (
+                <div className="flex flex-col gap-0.5 rounded-[12px] bg-bg px-3 py-2.5">
+                  <span className="t-num t-section text-ink">
+                    {formatCount(coverage.txCount)}
+                  </span>
+                  <span className="t-caption text-text-3">실거래 신고분(취소 제외)</span>
+                </div>
+              )}
+              {coverage.complexCount !== null && (
+                <div className="flex flex-col gap-0.5 rounded-[12px] bg-bg px-3 py-2.5">
+                  <span className="t-num t-section text-ink">
+                    {formatCount(coverage.complexCount)}
+                  </span>
+                  <span className="t-caption text-text-3">실거래 있는 단지</span>
+                </div>
+              )}
+              {coverage.regionCount !== null && (
+                <div className="flex flex-col gap-0.5 rounded-[12px] bg-bg px-3 py-2.5">
+                  <span className="t-num t-section text-ink">
+                    {formatCount(coverage.regionCount)}
+                  </span>
+                  <span className="t-caption text-text-3">실거래 있는 시군구</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {freshness && freshness.some((f) => f.lastOkAt) && (
+            <div className="flex flex-col gap-1.5">
+              <span className="t-sub font-extrabold text-text-3">마지막으로 들어온 때</span>
+              <ul className="flex flex-col gap-1">
+                {freshness.map((f) => {
+                  if (!f.lastOkAt) return null;
+                  const label = freshnessLabel(f.lastOkAt, now);
+                  if (!label) return null;
+                  const stale = isStale(f.lastOkAt, now);
+                  return (
+                    <li key={f.source} className="flex items-baseline justify-between gap-3 t-sub">
+                      <span className="min-w-0 text-text-2">{f.label}</span>
+                      <span
+                        className={`shrink-0 tabular-nums ${
+                          stale ? "font-bold text-warning" : "text-text-3"
+                        }`}
+                      >
+                        {label}
+                        {stale ? " · 밀림" : ""}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="t-caption text-text-3">
+                성공한 적재만 셉니다 — 실패한 시도를 &ldquo;갱신됨&rdquo;으로 적지 않습니다.
+                48시간이 넘으면 밀렸다고 표시합니다.
+              </p>
+            </div>
+          )}
+
+          {/* 못 읽었을 때 — 조용히 비우지 않는다. 숫자가 없는 것과 못 읽은 것은 다르다 */}
+          {coverage.txCount === null && !freshness && (
+            <p className="t-sub text-text-3">
+              지금은 수치를 불러오지 못했어요. 아래 원천·한계 설명은 그대로 유효합니다.
+            </p>
+          )}
+        </div>
 
         <div className="rise-in-2 mt-6 flex flex-col gap-3">
           {SOURCES.map((s) => (
