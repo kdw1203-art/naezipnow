@@ -263,15 +263,30 @@ function mergeDetailInfo(base: AptComplexDetail, r: Record<string, string>): Apt
  * @param kaptCode 단지코드 (fetchAptComplexList 결과의 kaptCode)
  * @param withDetail 상세정보(주차 등)까지 받을지 — 쿼터를 아끼려면 false (기본 true)
  */
+/**
+ * [잔여작업 · 2026-09-10] `strict` 를 붙였다.
+ *
+ * 982에서 목록 API(AptListService3)에만 strict 를 넣었더니, 크론 로그가
+ * `apt-master` 는 사유를 남기고(`HTTP 400`) `apt-detail` 은 `처리=4 병합=0
+ * 미수신=4` 로만 남았다. 실제로 두 서비스가 같은 날 같이 끊겼는데, 상세 쪽은
+ * 실패가 조용히 `mock` 빈 결과로 바뀌어 "이 단지는 상세가 없다"와 구별되지
+ * 않았다 — 로그만 보고는 무엇을 고쳐야 하는지 알 수 없다.
+ *
+ * 적재(크론)에서만 켠다. 읽기 UI 라우트는 예전 동작 그대로 — 화면은 조용히
+ * 비는 편이 낫다. 부가 상세(getAphusDtlInfoV4)는 실패가 원래 치명적이지 않아
+ * strict 를 걸지 않는다(기본정보만으로 진행한다는 기존 판단 유지).
+ */
 export async function fetchAptComplexDetail(
   kaptCode: string,
   withDetail = true,
+  opts?: { strict?: boolean },
 ): Promise<{ detail: AptComplexDetail | null; mode: "live" | "mock" }> {
   const { items, mode } = await fetchAptJson(
     "AptBasisInfoServiceV4",
     "getAphusBassInfoV4",
     { kaptCode },
     1,
+    opts?.strict === true,
   );
   if (items.length === 0) return { detail: null, mode };
   let detail = normalizeComplexDetail(toStrRow(items[0]));

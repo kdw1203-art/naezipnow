@@ -132,6 +132,10 @@ function selftest() {
     'className="hidden grid-cols-1 gap-4 md:grid lg:grid-cols-[minmax(0,1fr)_340px]"',
     'className="grid grid-cols-2 gap-2 md:grid-cols-[88px_minmax(0,1fr)]"',
     'className="flex gap-2"',
+    /* base 를 임의값으로 직접 적은 줄 — /subscription 플랜 비교표가 이 모양이다.
+       트랙이 명시돼 있으므로 "base 없음"이 아니다(2026-09-10 오탐 수정). */
+    'className="grid grid-cols-[88px_repeat(2,1fr)] gap-2 md:grid-cols-[120px_repeat(2,1fr)]"',
+    'className="grid grid-cols-[1fr_auto] gap-3 lg:grid-cols-[minmax(0,1fr)_320px]"',
   ];
   for (const c of B_CATCH)
     if (findMissingBaseGridViolations(c).length === 0) { bad++; console.log("B MUST_CATCH 놓침:", c); }
@@ -139,7 +143,7 @@ function selftest() {
     if (findMissingBaseGridViolations(c).length > 0) { bad++; console.log("B MUST_PASS 오탐:", c); }
   console.log(
     bad === 0
-      ? "✔ 자가검사 통과 — A: 결함 5종 잡고 7종 통과 · B: 결함 3종 잡고 4종 통과"
+      ? "✔ 자가검사 통과 — A: 결함 5종 잡고 7종 통과 · B: 결함 3종 잡고 6종 통과"
       : `✗ 자가검사 실패 ${bad}건`,
   );
   return bad === 0 ? 0 : 1;
@@ -151,12 +155,26 @@ function selftest() {
  * 자식(칩 레일·표)이 있으면 페이지 전체가 그 폭으로 밀린다 — /apply 뷰포트
  * 390 에서 scrollWidth 978(초과 588px), 데스크톱 1296 에서도 40px 넘쳤다.
  * Tailwind 의 base `grid-cols-1` 은 repeat(1, minmax(0,1fr)) 라 이걸 막는다.
- * 한 줄 안에서만 본다 — 여러 줄로 쪼갠 className 은 이 규칙이 못 본다(범위 명시). */
+ * 한 줄 안에서만 본다 — 여러 줄로 쪼갠 className 은 이 규칙이 못 본다(범위 명시).
+ *
+ * [잔여작업 · 2026-09-10] base 판정이 **숫자 유틸리티만** 인정하고 있었다
+ * (`grid-cols-\d`). 그래서 base 를 임의값으로 직접 적은 줄
+ *   `grid grid-cols-[88px_repeat(2,1fr)] md:grid-cols-[120px_repeat(2,1fr)]`
+ * 이 "base 없음"으로 잡혔다 — /subscription 플랜 비교표 3줄이 그 경우다.
+ * 이 규칙이 막으려는 것은 **트랙 정의가 아예 없어 암묵 단일 칼럼이 auto 로
+ * 잡히는 것**인데, 위 줄은 base 트랙을 세 개 명시하고 있다. 오탐이다.
+ * 브라우저로도 확인했다: 390px 에서 /subscription 가로 넘침 0(check:mobile).
+ *
+ * 임의값 base 도 base 로 인정한다. 그 안의 `1fr` 이 min-content 아래로 안 줄어드는
+ * 문제는 남지만, 그건 규칙 A 의 관할이고 A 는 3트랙 표 그리드를 **의도적으로**
+ * 범위 밖에 둔다("재고 나서 넓힌다"). 한쪽 규칙이 다른 쪽이 일부러 뺀 것을
+ * 뒷문으로 잡으면 두 규칙이 서로 다른 말을 하게 된다. */
 export function findMissingBaseGridViolations(source) {
   const out = [];
   source.split("\n").forEach((line, i) => {
     if (!/(?:sm|md|lg|xl|2xl):grid-cols-\[/.test(line)) return;
-    if (/(?<![:\w-])grid-cols-\d/.test(line)) return; // base 있음
+    if (/(?<![:\w-])grid-cols-\d/.test(line)) return; // base 있음(숫자 유틸리티)
+    if (/(?<![:\w-])grid-cols-\[/.test(line)) return; // base 있음(임의값 트랙)
     if (!/\bgrid[ "]/.test(line)) return; // display grid 없는 줄은 판정 불가 — 건너뜀
     out.push({ line: i + 1, match: line.trim().slice(0, 110) });
   });

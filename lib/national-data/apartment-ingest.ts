@@ -593,7 +593,11 @@ async function runDetailBatch(
   const outcomes = await mapWithConcurrency(rows, DETAIL_CONCURRENCY, async (r) => {
     const attempts = attemptsOf(r);
     try {
-      const { detail } = await fetchAptComplexDetail(r.external_id);
+      /* strict — 실패를 "상세 없음"으로 위장하지 않는다. 사유가 있어야
+         "키를 다시 받아야 한다"를 로그만 보고 알 수 있다(982와 같은 이유). */
+      const { detail } = await fetchAptComplexDetail(r.external_id, true, {
+        strict: true,
+      });
       await new Promise((res) => setTimeout(res, DETAIL_DELAY_MS));
       if (detail && detail.kaptCode) {
         return { kind: "ok" as const, r, attempts, patch: toDetailPatch(detail) };
