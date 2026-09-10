@@ -132,13 +132,15 @@ function HomeAiGateway({
         {exampleNoteId && (
           <Link
             href={`/notes/${exampleNoteId}`}
-            className="w-fit text-[12px] font-bold text-ai-accent no-underline"
+            /* [989] 실측 세로 19px — 카드 안에 단독으로 서는 링크. 위아래 6px 씩 줘
+               31px 로 만든다(줄 간격 4px 이라 위아래가 겹치지 않는다) */
+            className="w-fit py-1.5 text-[12px] font-bold text-ai-accent no-underline"
           >
             실제 정리된 공개 노트 보기 ›
           </Link>
         )}
         {/* [958] 홈에서 단지 분석 도구 12종으로 가는 길이 없었다 — 한 줄 링크 */}
-        <Link href="/analysis" className="w-fit text-[12px] font-bold text-ai-accent no-underline">
+        <Link href="/analysis" className="w-fit py-1.5 text-[12px] font-bold text-ai-accent no-underline">
           단지 분석 도구 12종 ›
         </Link>
       </div>

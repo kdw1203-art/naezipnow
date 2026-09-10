@@ -81,8 +81,9 @@ test("테마 10종 · 유효 id 판정", () => {
   }
 });
 
-test("프레임 13종 · 평균 점수 계산", () => {
-  assert.equal(CARD_FRAMES.length, 13);
+test("프레임 14종 · 평균 점수 계산", () => {
+  /* [988] 13 → 14: 노트 밖의 숫자(실거래·전세가율)를 얹는 "market" 장이 늘었다 */
+  assert.equal(CARD_FRAMES.length, 14);
   assert.equal(averageScore(richSource()), 75); // (80+90+70+60+75)/5
   assert.equal(averageScore(sparseSource()), null);
 });
@@ -96,6 +97,36 @@ test("available — 데이터 없으면 후보에서 빠진다(빈 장 금지)",
   assert.ok(!sparse.includes("checklist")); // 체크 없음
   assert.ok(sparse.includes("cover")); // 표지·마무리는 항상
   assert.ok(sparse.includes("cta"));
+  /* [988] 노트 밖 숫자를 못 읽었으면 그 장은 아예 빠진다 — 빈 숫자를 그리지 않는다.
+     공유되는 이미지라 특히 그렇다: 카드에 찍힌 숫자는 되돌릴 수 없다. */
+  assert.ok(!sparse.includes("market"));
+  assert.ok(!rich.includes("market")); // richSource 에도 market 은 null 이다
+});
+
+test("[988] 실거래 숫자를 넘기면 market 장이 생기고, 출처가 함께 실린다", () => {
+  const withMarket = {
+    ...richSource(),
+    market: {
+      rows: [
+        { label: "최근 실거래", value: "12억 5,000만", note: "2026.08 · 3건" },
+        { label: "전세가율", value: "58%", note: "시군구 공표" },
+      ],
+      source: "국토교통부 실거래가 · 한국부동산원",
+    },
+  };
+  const ids = availableFrames(withMarket).map((f) => f.id);
+  assert.ok(ids.includes("market"));
+  const built = CARD_FRAMES.find((f) => f.id === "market")!.build(withMarket);
+  assert.equal(built.kind, "market");
+  if (built.kind === "market") {
+    assert.equal(built.rows.length, 2);
+    assert.equal(built.source, "국토교통부 실거래가 · 한국부동산원");
+  }
+});
+
+test("[988] 숫자가 비어 있으면(rows 0건) market 장은 여전히 빠진다", () => {
+  const empty = { ...richSource(), market: { rows: [], source: "국토교통부" } };
+  assert.ok(!availableFrames(empty).map((f) => f.id).includes("market"));
 });
 
 test("자동 구성 — 표지 첫 장 + 최소 5장", () => {

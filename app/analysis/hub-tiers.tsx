@@ -61,12 +61,24 @@ export function WorkbenchGrid({ core, more }: { core: WorkbenchCardDto[]; more: 
                   lib/ai/tool-identity.ts 도 12종 중 10종이 같은 액센트(#3182f6)였다.
                   이제 칩 색·왼쪽 띠·성격 라벨이 도구마다 다르다. 색은 카드 래퍼에
                   CSS 변수로 한 번만 꽂는다(personaVars). */}
-              <span className="tool-soft-bg tool-ink tile-ico flex h-12 w-12 items-center justify-center rounded-[10px]">
-                <ToolGlyph id={c.glyph} size={34} />
+              {/* [989] 모바일에서는 성격 배지를 **아이콘 줄 오른쪽**으로 뺀다.
+                  390px 2열은 칸 폭이 171px 뿐이라 제목이 한 줄을 꽉 채우면 배지가
+                  통째로 다음 줄로 내려갔다. 그 28px 때문에 같은 행 옆 카드가 stretch 로
+                  늘어나고, 짧은 카드 안에 100px 짜리 빈 띠가 생겼다(실측 114px).
+                  아이콘 줄은 높이가 48px 로 고정이라 배지를 얹어도 칸 높이가 안 변한다 —
+                  제목 길이와 무관하게 네 칸의 높이가 같아진다. md+ 는 칸이 넓어 제목이
+                  한 줄에 들어가므로 예전처럼 제목 옆에 붙인다(둘 중 하나만 그려진다). */}
+              <span className="flex items-center gap-2">
+                <span className="tool-soft-bg tool-ink tile-ico flex h-12 w-12 items-center justify-center rounded-[10px]">
+                  <ToolGlyph id={c.glyph} size={34} />
+                </span>
+                <span className="tool-soft-bg tool-ink t-caption ms-auto whitespace-nowrap rounded px-1.5 py-px font-extrabold md:hidden">
+                  {c.character}
+                </span>
               </span>
-              <span className="flex flex-wrap items-center gap-1.5">
-                <span className="t-section text-ink">{c.title}</span>
-                <span className="tool-soft-bg tool-ink rounded px-1.5 py-px t-caption font-extrabold">
+              <span className="t-section text-ink">
+                {c.title}{" "}
+                <span className="tool-soft-bg tool-ink t-caption hidden whitespace-nowrap rounded px-1.5 py-px align-middle font-extrabold md:inline-block">
                   {c.character}
                 </span>
               </span>

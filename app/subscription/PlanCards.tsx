@@ -118,7 +118,8 @@ function FeatureList({ features, dark }: { features: PlanFeature[]; dark: boolea
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className={`py-2 text-left text-[13px] font-bold md:hidden ${
+          /* [989] 실측 36px — 모바일에서만 보이는 버튼인데 손가락 기준에 못 미쳤다 */
+          className={`min-h-[44px] py-2 text-left text-[13px] font-bold md:hidden ${
             dark ? "text-ai-muted" : "text-primary"
           }`}
         >

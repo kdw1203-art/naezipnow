@@ -434,12 +434,12 @@ export function NotesFeedClient({
             <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 t-sub">
               {/* [970 · B-25] 뽑힌 달이 하나라도 있을 때만 — 빈 화면으로 보내지 않는다 */}
               {hasBestMonth && (
-                <Link href="/notes/best" className="font-bold text-primary underline">
+                <Link href="/notes/best" className="tap-line font-bold text-primary underline">
                   이달의 공개 임장노트 — 선정 기준까지 공개 ›
                 </Link>
               )}
               {/* 임장 가이드(전략 §4-2) — 기록 허브에서 준비 허브로 잇는다 */}
-              <Link href="/imjang" className="font-bold text-primary underline">
+              <Link href="/imjang" className="tap-line font-bold text-primary underline">
                 지역별 임장 가이드 — 답사 준비 ›
               </Link>
               {/* [970 · B-25] 리포트 진열대(/notes/market) 링크는 뺐다 — 판매 오픈 전 잠금

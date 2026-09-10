@@ -75,7 +75,9 @@ function ItemBody({ it }: { it: TickerItem }) {
 }
 
 function Item({ it, linkable = true }: { it: TickerItem; linkable?: boolean }) {
-  const cls = `flex shrink-0 items-baseline gap-1.5 t-sub ${it.kind === "macro" ? "font-semibold" : "font-bold"}`;
+  /* [989] 실측 세로 18px — 티커 항목은 링크다. 위아래 4px 로 26px 을 만든다
+     (레일 높이는 항목 중 가장 큰 것이 정하므로 레일도 함께 8px 자란다) */
+  const cls = `flex shrink-0 items-baseline gap-1.5 py-1 t-sub ${it.kind === "macro" ? "font-semibold" : "font-bold"}`;
   /* 마퀴 복제 트랙(aria-hidden)의 링크는 포커스 함정이 된다 — 복제분은 스팬으로 */
   if (it.href && linkable) {
     return (

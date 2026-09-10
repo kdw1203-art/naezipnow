@@ -144,7 +144,11 @@ export function Header() {
         {/* 모바일 아이콘 + 전체 메뉴(☰) */}
         {/* [972] 돋보기 아이콘은 위 검색 필드로 옮겼다 — 같은 헤더에 검색 진입점을
             둘 두면 좁은 폭만 더 먹는다. gap 도 12→8px(필드에 폭을 넘긴다). */}
-        <div className="flex shrink-0 items-center gap-2 text-text-1 md:hidden">
+        {/* [989] gap 8→12px 로 되돌린다. 8px 이면 벨·메뉴의 44px 히트 영역이 4px 겹쳐
+            겹친 구간에서 나중에 그려진 ☰ 가 벨의 탭을 가져갔다(실측: 벨의 실효 폭 40px).
+            12px 이면 두 히트 영역이 정확히 맞닿고 겹치지 않는다 — 검색 필드는 4px 만
+            줄어든다(flex-1 이라 체감 없음). */}
+        <div className="flex shrink-0 items-center gap-3 text-text-1 md:hidden">
           <NotificationBell variant="mobile" />
           <MobileMenu />
         </div>

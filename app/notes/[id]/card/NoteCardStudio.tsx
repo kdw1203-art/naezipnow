@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { CardFrameView } from "./CardFrameView";
 import { CARD_THEMES, getCardTheme } from "@/lib/notes/card-themes";
 import { MIN_FRAMES, MAX_FRAMES } from "@/lib/notes/card-config";
+import { CARD_PRESETS, CARD_IMAGE_SIZE } from "@/lib/notes/card-presets";
 import type { FrameContent } from "@/lib/notes/card-frames";
 
 /**
@@ -71,6 +72,46 @@ export function NoteCardStudio({
     });
   }
 
+  /* [988] 이미지로 내려받기 — 스튜디오에 **내보내기가 아예 없었다**.
+     화면으로 보고 끝나면 카드를 만들 이유가 없다(실제 생성 0건).
+
+     서버에서 PNG 를 그리는 방법(next/og)도 있지만, 그러면 장 13종의 레이아웃을
+     satori 용으로 한 벌 더 구현해야 하고 두 구현이 반드시 어긋난다. 지금 보고 있는
+     DOM 을 그대로 굽는 쪽이 "미리보기 = 결과물" 을 보장한다.
+     라이브러리는 **누를 때** 받는다(동적 import) — 안 쓰는 사람의 첫 화면에 얹지 않는다. */
+  const shotRef = useRef<HTMLDivElement | null>(null);
+  const [shooting, setShooting] = useState(false);
+
+  const download = useCallback(async () => {
+    const el = shotRef.current;
+    if (!el || shooting) return;
+    setShooting(true);
+    setMsg(null);
+    try {
+      const { toBlob } = await import("html-to-image");
+      const blob = await toBlob(el, {
+        /* 미리보기는 320px 폭이다. 공유용은 1080px 이라야 카톡에서 안 뭉갠다. */
+        pixelRatio: CARD_IMAGE_SIZE.width / (el.offsetWidth || CARD_IMAGE_SIZE.width),
+        cacheBust: true,
+      });
+      if (!blob) throw new Error("이미지를 만들지 못했어요");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `임장노트-${activeFrame?.label ?? "카드"}-${active + 1}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      /* 브라우저가 저장을 시작한 뒤에 풀어 준다 — 바로 풀면 빈 파일이 떨어진다 */
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      setMsg("이미지를 내려받았어요");
+    } catch {
+      setMsg("이미지를 만들지 못했어요 — 잠시 후 다시 시도해 주세요");
+    } finally {
+      setShooting(false);
+    }
+  }, [shooting, active, activeFrame]);
+
   async function save() {
     setSaving(true);
     setSaved("idle");
@@ -107,7 +148,9 @@ export function NoteCardStudio({
       {/* 미리보기 캐러셀 */}
       <div className="mx-auto w-full max-w-[320px] shrink-0 md:mx-0">
         {activeFrame ? (
-          <CardFrameView content={activeFrame.content} theme={theme} index={active} total={frames.length} />
+          <div ref={shotRef}>
+            <CardFrameView content={activeFrame.content} theme={theme} index={active} total={frames.length} />
+          </div>
         ) : (
           <div className="aspect-[4/5] w-full rounded-[18px] bg-[rgba(0,0,0,.05)]" />
         )}
@@ -128,10 +171,65 @@ export function NoteCardStudio({
         <p className="mt-2 text-center t-sub text-text-3">
           {frames.length}장 · {activeFrame?.label ?? ""}
         </p>
+        <button
+          type="button"
+          onClick={download}
+          disabled={shooting || !activeFrame}
+          className="btn-primary press mt-2.5 w-full rounded-[10px] px-4 py-2.5 t-body font-bold disabled:opacity-60"
+        >
+          {shooting ? "이미지 만드는 중…" : "이 장 이미지로 저장"}
+        </button>
+        <p className="mt-1.5 text-center t-caption text-text-3">
+          {CARD_IMAGE_SIZE.width}×{CARD_IMAGE_SIZE.height} PNG · 카카오톡·인스타에서 안 잘리는 비율
+        </p>
       </div>
 
       {editable ? (
         <div className="flex min-w-0 flex-1 flex-col gap-4">
+          {/* [988] 완성본 3벌 — 소유자 지시("2~3가지 버전으로 제공하는 디자인 양식").
+              지금까지는 테마 10종 × 장 13종을 직접 조합하는 빌더뿐이었다. 조합이
+              130가지라 고르는 것 자체가 일이고, 실제로 만들어진 카드는 0건이었다.
+              고르면 끝나는 벌을 먼저 두고, 빌더는 아래에 그대로 남긴다. */}
+          <div>
+            <div className="mb-1 t-sub font-extrabold text-ink">완성된 카드 고르기</div>
+            <p className="mb-2 t-caption text-text-3">
+              누르면 색과 장 구성이 한 번에 잡혀요. 아래에서 계속 손볼 수 있어요.
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {CARD_PRESETS.map((p) => {
+                const usable = p.frameIds.filter((id) => byId.has(id));
+                const on = themeId === p.themeId && selected.join(",") === usable.join(",");
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      setThemeId(p.themeId);
+                      setSelected(usable);
+                      setActive(0);
+                      setMsg(
+                        usable.length < p.frameIds.length
+                          ? `${p.label} 적용 — 재료가 없는 장 ${p.frameIds.length - usable.length}개는 빠졌어요`
+                          : `${p.label} 적용`,
+                      );
+                    }}
+                    aria-pressed={on}
+                    className={`press flex flex-col gap-0.5 rounded-[12px] border px-3 py-2.5 text-left ${
+                      on ? "border-primary bg-primary-soft" : "border-line bg-surface"
+                    }`}
+                  >
+                    <span className="t-body font-extrabold text-ink">{p.label}</span>
+                    <span className="t-caption leading-[1.5] text-text-2">{p.premise}</span>
+                    <span className="t-caption text-text-3">
+                      {usable.length}장
+                      {p.withMarket ? " · 실거래 숫자 포함" : ""}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* 테마 10종 */}
           <div>
             <div className="mb-2 t-sub font-extrabold text-ink">카드 색상 테마</div>

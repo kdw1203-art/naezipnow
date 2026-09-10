@@ -14,15 +14,26 @@
  *   npm run build && npm start        (다른 창에서)
  *   npm run check:void
  *
- * 옵션(환경변수): VOID_BASE(기본 http://127.0.0.1:3000) · VOID_MAX(140)
- *                VOID_PAGES(쉼표 구분) · VOID_W/VOID_H(1412x900)
+ * 옵션: --mobile (390x844 · 90px · 모바일 8경로)
+ * 환경변수: VOID_BASE(기본 http://127.0.0.1:3000) · VOID_MAX(140)
+ *           VOID_PAGES(쉼표 구분) · VOID_W/VOID_H(1412x900)
  */
 
+/* [989] `--mobile` 프로파일 — 윈도우 PowerShell 에서는 `VOID_W=390 node ...` 가
+   먹지 않아 소유자가 모바일 폭으로 돌릴 방법이 없었다. 플래그 하나로 390x844 ·
+   임계 90px · 모바일에서 실제로 많이 보는 8경로를 한 번에 잡는다.
+   (환경변수를 직접 준 경우에는 그 값이 이긴다) */
+const MOBILE = process.argv.includes("--mobile");
 const BASE = process.env.VOID_BASE || "http://127.0.0.1:3000";
-const MAX_VOID = Number(process.env.VOID_MAX || 140);
-const W = Number(process.env.VOID_W || 1412);
-const H = Number(process.env.VOID_H || 900);
-const PAGES = (process.env.VOID_PAGES || "/,/map,/notes,/town,/analysis,/subscription")
+const MAX_VOID = Number(process.env.VOID_MAX || (MOBILE ? 90 : 140));
+const W = Number(process.env.VOID_W || (MOBILE ? 390 : 1412));
+const H = Number(process.env.VOID_H || (MOBILE ? 844 : 900));
+const PAGES = (
+  process.env.VOID_PAGES ||
+  (MOBILE
+    ? "/,/map,/notes,/town,/analysis,/subscription,/notes/new,/support"
+    : "/,/map,/notes,/town,/analysis,/subscription")
+)
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
@@ -45,7 +56,12 @@ function measure(maxVoid) {
     const r = el.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0) continue;
     const isLeafText = el.children.length === 0 && (el.textContent || "").trim().length > 0;
-    const isMedia = /^(IMG|SVG|CANVAS|IFRAME|VIDEO|INPUT|BUTTON|HR|TEXTAREA|SELECT)$/.test(el.tagName);
+    /* [989] tagName 은 HTML 요소만 대문자다 — 인라인 <svg> 는 소문자 "svg" 라
+       이 정규식에 걸리지 않았다. 아이콘·글리프·스파크라인이 전부 svg 인 화면에서는
+       그림이 있는 자리를 "빈칸"으로 세고 있었다(허위 경보). 대문자로 맞춰 본다. */
+    const isMedia = /^(IMG|SVG|CANVAS|IFRAME|VIDEO|INPUT|BUTTON|HR|TEXTAREA|SELECT)$/.test(
+      el.tagName.toUpperCase(),
+    );
     if (isLeafText || isMedia) mark(r.top + sy, r.height);
   }
   const voids = [];
@@ -78,7 +94,13 @@ async function main() {
   }
   /* --no-sandbox: CI·컨테이너에서 기동 실패를 막는다(로컬 개발 머신에선 무해) */
   const browser = await chromium.launch({ args: ["--no-sandbox"] });
-  const ctx = await browser.newContext({ viewport: { width: W, height: H }, locale: "ko-KR" });
+  /* 모바일 프로파일은 터치로 띄운다 — @media (pointer: coarse) 에만 걸린 여백·
+     히트영역 규칙이 데스크톱 컨텍스트에서는 적용되지 않아 실측과 달라진다. */
+  const ctx = await browser.newContext({
+    viewport: { width: W, height: H },
+    locale: "ko-KR",
+    ...(MOBILE ? { isMobile: true, hasTouch: true, deviceScaleFactor: 2 } : {}),
+  });
   const page = await ctx.newPage();
   let failed = 0;
 

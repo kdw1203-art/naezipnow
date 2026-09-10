@@ -1994,7 +1994,8 @@ export function NoteForm({
                   시간대: timeSlotFromClock(),
                 }));
               }}
-              className="shrink-0 t-sub font-bold text-primary"
+              /* [989] 실측 세로 18px — 칩 줄 옆에 붙는 텍스트 버튼이라 24px 로만 키운다 */
+              className="shrink-0 py-1 t-sub font-bold text-primary"
             >
               지금 시간대
             </button>
@@ -2013,7 +2014,7 @@ export function NoteForm({
                         if (g.label === "시간대") timeSlotTouchedRef.current = true;
                         setVisit((prev) => ({ ...prev, [g.label]: opt }));
                       }}
-                      className={`rounded-full px-3 py-1.5 text-xs ${
+                      className={`chip rounded-full px-3 py-1.5 text-xs ${
                         active
                           ? "border-[1.5px] border-primary bg-[rgba(29,79,216,.1)] font-bold text-primary"
                           : "border border-line bg-surface text-text-2"
@@ -2065,7 +2066,7 @@ export function NoteForm({
                       key={opt}
                       type="button"
                       onClick={() => setWeather(active ? "" : opt)}
-                      className={`rounded-full px-3 py-1.5 text-xs ${
+                      className={`chip rounded-full px-3 py-1.5 text-xs ${
                         active
                           ? "border-[1.5px] border-primary bg-[rgba(29,79,216,.1)] font-bold text-primary"
                           : "border border-line bg-surface text-text-2"
@@ -2153,7 +2154,8 @@ export function NoteForm({
                           return { ...prev, [item]: lv };
                         })
                       }
-                      className={`flex h-9 flex-1 items-center justify-center rounded-[10px] px-2 text-xs ${
+                      /* [989] h-9(36px) → 모바일에서만 44px. 만족도는 손가락으로 고르는 3분할 */
+                      className={`flex h-9 flex-1 items-center justify-center rounded-[10px] px-2 text-xs max-md:h-11 ${
                         active
                           ? "border-[1.5px] border-primary bg-[rgba(29,79,216,.1)] font-bold text-primary"
                           : "border border-line bg-surface font-semibold text-text-2"
@@ -2198,7 +2200,8 @@ export function NoteForm({
               step={0.5}
               value={satisfaction ?? 5}
               onChange={(e) => setSatisfaction(Number(e.target.value))}
-              className={`h-9 w-full cursor-pointer accent-[#1d4fd8] ${satisfaction === null ? "opacity-50" : ""}`}
+              /* [989] 슬라이더도 모바일에서 44px — 손잡이를 잡는 조작이라 세로가 좁으면 놓친다 */
+              className={`h-9 w-full cursor-pointer accent-[#1d4fd8] max-md:h-11 ${satisfaction === null ? "opacity-50" : ""}`}
               aria-label="종합 만족도"
               aria-valuetext={satisfaction === null ? "미입력" : `${satisfaction.toFixed(1)} / 10`}
             />
@@ -2330,7 +2333,7 @@ export function NoteForm({
                   key={t.label}
                   type="button"
                   onClick={() => toggleTag(t.label)}
-                  className={`rounded-full px-3 py-1.5 text-xs ${
+                  className={`chip rounded-full px-3 py-1.5 text-xs ${
                     active
                       ? t.tone === "neg"
                         ? "bg-danger-soft font-bold text-danger"
@@ -2347,7 +2350,7 @@ export function NoteForm({
               type="button"
               onClick={() => setTagInputOpen((v) => !v)}
               aria-expanded={tagInputOpen}
-              className="rounded-full bg-bg px-3 py-1.5 text-xs text-text-3"
+              className="chip rounded-full bg-bg px-3 py-1.5 text-xs text-text-3"
             >
               ＋ 직접 입력
             </button>

@@ -32,6 +32,19 @@ export type NoteCardSource = {
   cons: string[];
   tags: string[];
   hasLocation: boolean;
+  /**
+   * [988] 노트 **밖**에서 온 값 — 실거래·전세가율처럼 사용자가 현장에서 볼 수 없는 숫자.
+   * 소유자 지시("기타 관련 정보를 추가로 넣어서")의 재료다.
+   *
+   * 사실 우선: 못 읽었으면 `null` 이고, 그러면 market 장이 available 에서 자동으로
+   * 빠진다. 빈 숫자를 그린 카드는 그 카드가 곧 거짓말이 된다 — 공유되는 이미지라
+   * 특히 그렇다. 각 값에는 기준 시점(asOf)이 붙는다.
+   */
+  market: {
+    rows: { label: string; value: string; note?: string | null }[];
+    /** 출처 한 줄 — 카드에 그대로 찍힌다 */
+    source: string;
+  } | null;
 };
 
 export type FrameCategory = "표지" | "요약" | "점수" | "현장" | "판단" | "마무리";
@@ -45,6 +58,12 @@ export type FrameContent =
   | { kind: "list"; heading: string; items: string[]; tone: "pos" | "neg" }
   | { kind: "context"; rows: { label: string; value: string }[] }
   | { kind: "tags"; heading: string; tags: string[] }
+  | {
+      kind: "market";
+      heading: string;
+      rows: { label: string; value: string; note?: string | null }[];
+      source: string;
+    }
   | { kind: "cta"; heading: string; sub: string };
 
 export type CardFrame = {
@@ -194,6 +213,20 @@ export const CARD_FRAMES: readonly CardFrame[] = [
         ...(s.weather ? [{ label: "날씨", value: s.weather }] : []),
         ...(s.transportation ? [{ label: "이동", value: s.transportation }] : []),
       ],
+    }),
+  },
+  {
+    /* [988] 노트 밖의 숫자를 노트 옆에 나란히. 값이 없으면 이 장은 통째로 빠진다 —
+       "데이터로 보기" 프리셋이 이 장을 쓰는데, 못 읽은 날에는 다른 장만으로 카드가 된다. */
+    id: "market",
+    label: "실거래·시세",
+    category: "요약",
+    available: (s) => Boolean(s.market && s.market.rows.length > 0),
+    build: (s) => ({
+      kind: "market",
+      heading: "이 단지 숫자",
+      rows: s.market?.rows.slice(0, 4) ?? [],
+      source: s.market?.source ?? "",
     }),
   },
   {

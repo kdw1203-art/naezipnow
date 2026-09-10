@@ -27,7 +27,13 @@ function splitItems(s: string | null | undefined, max = 5): string[] {
     .slice(0, max);
 }
 
-export function toCardSource(note: InspectionNote): NoteCardSource {
+/**
+ * [988] 노트 밖의 숫자(실거래·전세가율 등)를 카드에 얹을 때 넘긴다.
+ * 넘기지 않거나 못 읽었으면 market 장이 자동으로 빠진다 — 지어내지 않는다.
+ */
+export type CardMarketFacts = NonNullable<NoteCardSource["market"]>;
+
+export function toCardSource(note: InspectionNote, market?: CardMarketFacts | null): NoteCardSource {
   const visitLabel = note.visitDate
     ? `${note.visitDate.slice(0, 7).replace("-", ".")} 방문`
     : null;
@@ -71,5 +77,7 @@ export function toCardSource(note: InspectionNote): NoteCardSource {
     cons,
     tags: [],
     hasLocation: Boolean(note.metadata?.lat && note.metadata?.lng),
+    /* [988] 없으면 null — market 장이 빠진다(빈 숫자를 그리지 않는다) */
+    market: market ?? null,
   };
 }

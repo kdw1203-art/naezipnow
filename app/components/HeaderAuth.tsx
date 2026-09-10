@@ -138,14 +138,17 @@ export function HeaderAuth() {
         <Link
           href={loginHref}
           prefetch={false}
-          className="whitespace-nowrap text-[13px] font-bold text-text-1 transition-colors hover:text-primary"
+          /* [989] 실측(390×844) 33×20 — 헤더의 주요 조작인데 손가락 기준에 한참 못 미쳤다.
+             글자 크기는 그대로 두고 좌우·상하 여백으로 44px 를 만든다(-mx 로 시각적
+             정렬은 유지). 옆 아이콘과 gap-3(12px) 이라 히트 영역이 겹치지 않는다. */
+          className="-mx-2 whitespace-nowrap px-2 py-3 text-[13px] font-bold text-text-1 transition-colors hover:text-primary"
         >
           로그인
         </Link>
         <Link
           href="/signup"
           prefetch={false}
-          className="hidden whitespace-nowrap text-[13px] font-bold text-text-2 transition-colors hover:text-primary md:inline"
+          className="hidden whitespace-nowrap py-3 text-[13px] font-bold text-text-2 transition-colors hover:text-primary md:inline"
         >
           회원가입
         </Link>

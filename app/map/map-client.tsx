@@ -5171,7 +5171,8 @@ export function MapClient({
           type="button"
           aria-expanded={mobileLegendOpen}
           onClick={() => setMobileLegendOpen((v) => !v)}
-          className="glass rounded-full px-3 py-1.5 t-sub font-bold text-text-1"
+          /* [989] 실측 54×32 — 지도 위에 떠 있는 조작이라 손가락으로 정확히 짚기 어렵다 */
+          className="glass min-h-[40px] rounded-full px-3 py-1.5 t-sub font-bold text-text-1"
         >
           범례 {mobileLegendOpen ? "▾" : "▸"}
         </button>

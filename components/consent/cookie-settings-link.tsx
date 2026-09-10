@@ -19,7 +19,9 @@ export function CookieSettingsLink() {
         }
         window.location.reload();
       }}
-      className="text-text-3 underline-offset-2 hover:underline"
+      /* [989] 약관 줄에 함께 서는 텍스트 링크다 — 44px 를 주면 위아래 약관 링크의
+         탭을 가져간다. WCAG 2.5.8 기준인 24px 을 세로 패딩으로 맞춘다. */
+      className="inline-block py-[3px] text-text-3 underline-offset-2 hover:underline"
     >
       쿠키 설정
     </button>

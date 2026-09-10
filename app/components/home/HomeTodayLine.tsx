@@ -256,7 +256,7 @@ export function HomeTodayLine({
         {!personalized && (
           <Link
             href="/my/settings#region"
-            className="ml-auto t-sub font-bold no-underline"
+            className="tap-line ml-auto t-sub font-bold no-underline"
             style={{ color: "var(--ai-accent)" }}
           >
             내 지역으로 바꾸기 ›
@@ -276,8 +276,12 @@ export function HomeTodayLine({
         {cur.text}
       </Link>
 
+      {/* [989] 점 자체가 버튼이라 히트가 8×8 이었다. 44px 히트를 얹어 봐야 점 사이가
+          6px 이라 셋이 통째로 겹쳐 한 점만 눌린다 — 넓히는 게 아니라 **버튼을 키운다**.
+          점(그림)은 안쪽 span 으로 내리고 버튼은 24px 정사각으로. 줄이 위아래로
+          8px 씩 자라는 만큼 -my-2 로 되돌려 배치는 그대로 둔다. */}
       {slides.length > 1 && (
-        <div role="tablist" aria-label="오늘의 한 줄 넘기기" className="mt-2.5 flex items-center gap-1.5">
+        <div role="tablist" aria-label="오늘의 한 줄 넘기기" className="-my-2 mt-0.5 flex items-center gap-1.5">
           {slides.map((s, n) => (
             <button
               key={s.key}
@@ -286,16 +290,20 @@ export function HomeTodayLine({
               aria-selected={n === i}
               aria-label={`${n + 1}번째 소식`}
               onClick={() => go(n)}
-              /* 비활성 점이 6px·연한 회색이라 흰 카드 위에서 거의 안 보였다 —
-                 지름을 키우고 대비를 올린다. 몇 개인지 세어질 만큼은 보여야 한다. */
-              className="tap-44 h-2 rounded-full transition-all duration-200 hover:opacity-80"
-              /* [946] 활성 점 = 브랜드 주홍(어두운 배경용 E0563A · 네이비 위 3.2:1) */
-              style={{
-                width: n === i ? 20 : 8,
-                background: n === i ? "var(--brand-red-on-dark)" : "#F6F1E7",
-                opacity: n === i ? 1 : 0.42,
-              }}
-            />
+              className="flex items-center justify-center p-2 transition-opacity duration-200 hover:opacity-80"
+            >
+              {/* 비활성 점이 6px·연한 회색이라 흰 카드 위에서 거의 안 보였다 —
+                  지름을 키우고 대비를 올린다. 몇 개인지 세어질 만큼은 보여야 한다.
+                  [946] 활성 점 = 브랜드 주홍(어두운 배경용 E0563A · 네이비 위 3.2:1) */}
+              <span
+                className="block h-2 rounded-full transition-all duration-200"
+                style={{
+                  width: n === i ? 20 : 8,
+                  background: n === i ? "var(--brand-red-on-dark)" : "#F6F1E7",
+                  opacity: n === i ? 1 : 0.42,
+                }}
+              />
+            </button>
           ))}
           <span className="ml-auto t-caption" style={{ color: "var(--on-dark-muted)" }}>
             {i + 1}/{slides.length}

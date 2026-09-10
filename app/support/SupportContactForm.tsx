@@ -193,7 +193,11 @@ export function SupportContactForm() {
         >
           {busy ? "접수 중…" : "문의 접수하기"}
         </button>
-        <a href="mailto:nuguzip@naver.com" className="text-xs font-semibold text-text-3 underline underline-offset-2">
+        <a
+          href="mailto:nuguzip@naver.com"
+          /* [989] 실측 16px — 제출 버튼 바로 아래 단독으로 서는 링크라 24px 로 키운다 */
+          className="inline-block py-1 text-xs font-semibold text-text-3 underline underline-offset-2"
+        >
           또는 메일로 문의: nuguzip@naver.com
         </a>
       </div>

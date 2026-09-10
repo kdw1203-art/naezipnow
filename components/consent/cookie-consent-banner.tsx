@@ -64,7 +64,13 @@ export function CookieConsentBanner() {
           내집나우는 서비스 운영에 필요한 필수 쿠키를 사용해요. 이용 통계 분석 쿠키는{" "}
           <b>동의하신 경우에만</b> 사용합니다.{" "}
           {/* [970 · A-19] 셸 링크 — 프리페치 없음 */}
-          <Link href="/legal/privacy" prefetch={false} className="font-bold text-primary underline">
+          {/* [989] 문단 속 단독 링크 — 인라인 세로 패딩은 줄 높이를 바꾸지 않으면서
+              히트만 24px 로 넓힌다(이 문단에 다른 링크가 없어 겹칠 상대가 없다) */}
+          <Link
+            href="/legal/privacy"
+            prefetch={false}
+            className="py-1 font-bold text-primary underline"
+          >
             개인정보처리방침
           </Link>
         </p>
@@ -72,14 +78,14 @@ export function CookieConsentBanner() {
           <button
             type="button"
             onClick={() => decide(false)}
-            className="min-h-[40px] flex-1 rounded-[10px] border border-line bg-surface px-3 py-2 text-[12px] font-bold text-text-1"
+            className="min-h-[44px] flex-1 rounded-[10px] border border-line bg-surface px-3 py-2 text-[12px] font-bold text-text-1"
           >
             필수만 허용
           </button>
           <button
             type="button"
             onClick={() => decide(true)}
-            className="btn-primary min-h-[40px] flex-1 rounded-[10px] px-3 py-2 text-[12px]"
+            className="btn-primary min-h-[44px] flex-1 rounded-[10px] px-3 py-2 text-[12px]"
           >
             모두 허용
           </button>

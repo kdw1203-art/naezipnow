@@ -45,7 +45,15 @@ export function Footer() {
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3 border-b border-divider pb-4">
           {/* [970 · A-19] 푸터 18개 링크는 뷰포트 프리페치를 끈다 — 페이지마다 RSC 프리페치
               24건의 대부분이 푸터였다(사유·예외는 Header.tsx / TabBar.tsx). */}
-          <Link href="/" prefetch={false} aria-label="내집나우 홈" className="press njn-logo no-underline">
+          {/* [989] 실측 86×23 — 세로가 손가락 기준의 절반이었다. 위아래 패딩으로 45px 을
+              만들고 같은 크기의 음수 마진으로 되돌린다(줄 높이는 그대로). 로고 폭
+              안쪽에서만 커지므로 오른쪽 슬로건 영역을 침범하지 않는다. */}
+          <Link
+            href="/"
+            prefetch={false}
+            aria-label="내집나우 홈"
+            className="press njn-logo -my-[11px] py-[11px] no-underline"
+          >
             <Logo size={19} />
           </Link>
           <span className="brand-slogan-band bg-transparent p-0">
@@ -74,7 +82,11 @@ export function Footer() {
           {biz.phone ? (
             <a
               href={`tel:${biz.phone.replace(/[^0-9+]/g, "")}`}
-              className="text-text-3 underline-offset-2 hover:underline"
+              /* [989] 문장 속 링크에는 tap-line(44px)을 쓰지 않는다 — 위아래 줄과 겹쳐
+                 서로의 탭을 훔친다. 이런 자리의 기준은 WCAG 2.5.8 의 24px 이다:
+                 inline-block + 세로 패딩으로 글자줄(14px)만 24px 로 키운다.
+                 같은 줄에 나란히 선 링크라 좌우로는 서로를 침범하지 않는다. */
+              className="inline-block py-[5px] text-text-3 underline-offset-2 hover:underline"
             >
               {biz.phone}
             </a>
@@ -84,7 +96,7 @@ export function Footer() {
           ·{" "}
           <a
             href={`mailto:${biz.supportEmail}`}
-            className="text-text-3 underline-offset-2 hover:underline"
+            className="inline-block py-[5px] text-text-3 underline-offset-2 hover:underline"
           >
             문의 {biz.supportEmail}
           </a>
@@ -100,7 +112,11 @@ export function Footer() {
         <div>{NO_PROFIT_GUARANTEE_TEXT}</div>
 
         {/* 2행: 약관·고객센터 링크 */}
-        <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+        {/* [989] 세로 간격 1.5 → 4 (모바일). 실측에서 이 줄의 링크들이 세로 히트 18px 였고,
+            44px 로 넓히면 위아래 줄끼리 겹쳐 엉뚱한 약관이 열린다.
+            이런 촘촘한 링크 줄의 기준은 44px 가 아니라 WCAG 2.5.8(24px + 간격)이다 —
+            넓히는 대신 띄운다: 링크 18px + 간격 16px = 세로 피치 34px. */}
+        <div className="flex flex-wrap gap-x-4 gap-y-4 md:gap-x-3 md:gap-y-1.5">
           {LEGAL_LINKS.map((l) => (
             <Link
               key={l.href}
@@ -108,8 +124,8 @@ export function Footer() {
               prefetch={false}
               className={
                 l.bold
-                  ? "font-semibold text-text-2 underline-offset-2 hover:underline"
-                  : "text-text-3 underline-offset-2 hover:underline"
+                  ? "tap-line font-semibold text-text-2 underline-offset-2 hover:underline"
+                  : "tap-line text-text-3 underline-offset-2 hover:underline"
               }
             >
               {l.label}

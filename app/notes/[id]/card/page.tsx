@@ -4,6 +4,7 @@ import { PageShell } from "@/app/components/PageShell";
 import { getNote } from "@/lib/inspection/store-db";
 import { safeAuth } from "@/lib/safe-auth";
 import { toCardSource } from "@/lib/notes/card-source";
+import { loadCardMarketFacts } from "@/lib/notes/card-market";
 import { availableFrames } from "@/lib/notes/card-frames";
 import { autoBuildConfig, normalizeConfig } from "@/lib/notes/card-config";
 import { NoteCardStudio, type AvailableFrame } from "./NoteCardStudio";
@@ -60,7 +61,10 @@ export default async function NoteCardPage({
     );
   }
 
-  const source = toCardSource(note);
+  /* [988] 노트 밖의 숫자(평단가·전세가율 등)를 함께 얹는다 — "데이터로 보기" 프리셋이 쓴다.
+     못 읽으면 null 이고, 그러면 그 장이 통째로 빠진다(빈 숫자를 그리지 않는다). */
+  const market = await loadCardMarketFacts(note.region);
+  const source = toCardSource(note, market);
   const available: AvailableFrame[] = availableFrames(source).map((f) => ({
     id: f.id,
     label: f.label,

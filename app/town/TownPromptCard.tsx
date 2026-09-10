@@ -18,7 +18,8 @@ export function TownPromptCard() {
         <span className="t-body font-bold text-ink">{prompt}</span>
         <Link
           href={`/town/prompt/${idx}`}
-          className="mt-0.5 w-fit t-sub font-bold text-text-3 underline-offset-2 hover:underline"
+          /* [989] 실측 세로 18px — 카드 안에 단독으로 서는 링크라 tap-line(32px)을 붙인다 */
+          className="tap-line mt-0.5 w-fit t-sub font-bold text-text-3 underline-offset-2 hover:underline"
         >
           이 질문의 답변 모아보기 ›
         </Link>

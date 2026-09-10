@@ -171,12 +171,17 @@ function ToolCard({
           </span>
         )}
       </div>
-      <span className="flex flex-wrap items-center gap-1.5">
-        <span className="t-section text-ink">{t.title}</span>
+      {/* [989] 배지는 제목 글줄 안으로 — 사유는 app/analysis/hub-tiers.tsx 주석 참고
+          (2열 좁은 칸에서 배지가 제 줄을 차지해 옆 카드에 빈 띠를 만들었다) */}
+      <span className="t-section text-ink">
+        {t.title}
         {persona && (
-          <span className="tool-soft-bg tool-ink rounded px-1.5 py-px t-caption font-extrabold">
-            {persona.character}
-          </span>
+          <>
+            {" "}
+            <span className="tool-soft-bg tool-ink t-caption inline-block whitespace-nowrap rounded px-1.5 py-px align-middle font-extrabold">
+              {persona.character}
+            </span>
+          </>
         )}
       </span>
       <span className="t-sub text-text-2">{persona ? persona.premise : t.desc}</span>

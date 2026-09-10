@@ -372,7 +372,7 @@ export default async function SupportPage() {
                   파일이 없다(내려줄 파일 자체가 없다). 실제 동작인 "메일로 요청"에 맞춘다. */}
               <a
                 href={`mailto:${supportEmail}?subject=${encodeURIComponent("[광고] 미디어킷 요청")}`}
-                className="text-xs font-bold text-primary"
+                className="inline-block py-1 text-xs font-bold text-primary"
               >
                 {supportEmail} · 메일로 미디어킷 요청
               </a>
@@ -381,17 +381,21 @@ export default async function SupportPage() {
 
           {/* 약관 푸터 (9n) */}
           <div className="rise-in-6 card flex flex-col justify-between gap-2 rounded-2xl px-6 py-[18px] md:flex-row md:items-center">
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-2">
-              <Link href="/legal/terms" className="font-bold text-text-1 hover:text-primary">
+            {/* [989] 세로 간격 gap-y-1(4px) → gap-y-3(12px). 실측에서 이 줄의 링크가
+                세로 16px 뿐이었다. 44px 히트를 얹으면 위아래 약관끼리 겹쳐 엉뚱한
+                문서가 열리므로, 이런 촘촘한 줄의 기준(WCAG 2.5.8)대로 링크는 24px 로
+                키우고(py) 줄 사이는 띄운다. */}
+            <div className="flex flex-wrap gap-x-4 gap-y-3 text-xs text-text-2 md:gap-y-1">
+              <Link href="/legal/terms" className="inline-block py-1 font-bold text-text-1 hover:text-primary">
                 이용약관
               </Link>
-              <Link href="/legal/privacy" className="font-bold text-text-1 hover:text-primary">
+              <Link href="/legal/privacy" className="inline-block py-1 font-bold text-text-1 hover:text-primary">
                 개인정보처리방침
               </Link>
-              <Link href="/legal/location" className="hover:text-primary">
+              <Link href="/legal/location" className="inline-block py-1 hover:text-primary">
                 위치기반서비스 약관
               </Link>
-              <Link href="/legal/youth" className="hover:text-primary">
+              <Link href="/legal/youth" className="inline-block py-1 hover:text-primary">
                 청소년보호정책
               </Link>
             </div>

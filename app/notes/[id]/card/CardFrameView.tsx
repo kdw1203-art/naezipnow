@@ -217,6 +217,46 @@ function FrameBody({ content, theme }: { content: FrameContent; theme: CardTheme
         </div>
       );
 
+    /* [988] 노트 밖의 숫자 — 실거래·전세가율처럼 현장에서 볼 수 없는 값.
+       출처를 카드 안에 함께 찍는다: 공유되는 이미지는 되돌릴 수 없어서,
+       숫자만 남고 근거가 빠지면 그때부터 그 카드가 곧 주장이 된다. */
+    case "market":
+      return (
+        <div className="flex flex-col gap-3">
+          <span className="t-body font-extrabold" style={{ color: theme.ink }}>
+            {content.heading}
+          </span>
+          <div className="flex flex-col gap-2">
+            {content.rows.map((r) => (
+              <div
+                key={r.label}
+                className="flex items-baseline justify-between gap-3 rounded-xl px-3.5 py-2.5"
+                style={{ background: theme.panel }}
+              >
+                <span className="t-sub font-bold" style={{ color: theme.sub }}>
+                  {r.label}
+                </span>
+                <span className="flex flex-col items-end">
+                  <span className="t-section t-num" style={{ color: theme.accent }}>
+                    {r.value}
+                  </span>
+                  {r.note ? (
+                    <span className="t-caption" style={{ color: theme.sub }}>
+                      {r.note}
+                    </span>
+                  ) : null}
+                </span>
+              </div>
+            ))}
+          </div>
+          {content.source ? (
+            <span className="t-caption" style={{ color: theme.sub }}>
+              출처 · {content.source}
+            </span>
+          ) : null}
+        </div>
+      );
+
     case "cta":
       return (
         <div className="flex flex-col items-center gap-2 text-center">
