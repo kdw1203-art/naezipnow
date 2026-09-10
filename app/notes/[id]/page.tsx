@@ -26,6 +26,7 @@ import { resolveComplexHref } from "@/lib/newui/complex-link";
 import { ErrorState } from "@/app/components/ui/EmptyState";
 import { NoteDetailActions } from "./note-actions";
 import { AiRetryButton } from "./ai-retry-button";
+import { NoteToolsRow } from "./NoteToolsRow";
 import { AiFeedbackButtons } from "@/app/components/AiFeedbackButtons";
 import DeepDivePanel from "./DeepDivePanel";
 import { Icon } from "@/app/components/Icon";
@@ -1295,6 +1296,17 @@ export default async function NoteDetailPage({
               )}
             </div>
           </div>
+
+          {/* [986 · 19] 노트에서 도구로 — 저장 직후 배너([AI-40])의 딥링크 하나가
+              12종 중 유일한 길이었고, 그 배너는 저장 직후에만 뜬다. 며칠 뒤 노트를
+              다시 열면 다음에 할 일이 사라졌다. 소유자에게 상시로 둔다. */}
+          {isOwner && (
+            <NoteToolsRow
+              aptName={realNote.aptName ?? ""}
+              region={realNote.region}
+              noteId={id}
+            />
+          )}
         </div>
 
         {/* ===== 우측: AI 분석 ===== */}

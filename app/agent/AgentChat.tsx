@@ -52,6 +52,21 @@ export function AgentChat({ models }: { models: AgentModelChoice[] }) {
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  /* [986 · 24] "이 노트에 묻기" — 노트 상세에서 ?q= 로 질문을 실어 보낸다.
+     **자동 전송하지 않는다.** 보내면 사용자가 누르지도 않은 질문에 시간당 한도가
+     깎이고, 문장을 고칠 기회도 없어진다. 입력칸에 채워 두고 보낼지는 사람이 정한다.
+     useSearchParams 대신 window 에서 읽는 이유는 이 페이지 밖(정적 셸)에서도 같은
+     패턴을 쓰기 때문이다(HeaderAuth·NoteForm 과 같은 방식). */
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get("q")?.trim();
+      if (!q) return;
+      setInput((prev) => (prev ? prev : q.slice(0, 500)));
+    } catch {
+      /* URL 파싱 실패 — 빈 입력칸 그대로 */
+    }
+  }, []);
+
   const send = async (text: string) => {
     const q = text.trim();
     if (!q || busy) return;
