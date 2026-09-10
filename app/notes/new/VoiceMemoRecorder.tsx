@@ -138,7 +138,8 @@ export function VoiceMemoRecorder({
           <button
             type="button"
             onClick={stop}
-            className="rounded-[10px] bg-danger px-3 py-1.5 t-sub font-bold text-white"
+            /* [984] 실측 32px — 현장에서 장갑 낀 손으로도 누르는 버튼이다(989 기준 40px) */
+            className="min-h-[40px] rounded-[10px] bg-danger px-3 py-1.5 t-sub font-bold text-white"
           >
             ■ 녹음 끝내기 {sec}s
           </button>
@@ -147,7 +148,7 @@ export function VoiceMemoRecorder({
             type="button"
             onClick={start}
             disabled={state === "uploading" || memos.length >= MAX_MEMOS}
-            className="rounded-[10px] border border-line-strong bg-bg px-3 py-1.5 t-sub font-bold text-text-1 disabled:opacity-50"
+            className="min-h-[40px] rounded-[10px] border border-line-strong bg-bg px-3 py-1.5 t-sub font-bold text-text-1 disabled:opacity-50"
           >
             {state === "uploading" ? "저장 중…" : "🎙 30초 녹음"}
           </button>

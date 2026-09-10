@@ -13,6 +13,19 @@ import { NoteLocationSearch, type NoteLocation } from "./NoteLocationSearch";
 import { AiDraftPanel } from "./AiDraftPanel";
 import type { NoteDraft as AiNoteDraft } from "@/lib/ai/note-draft-core";
 import { FieldCaptureConsentNotice } from "@/components/inspection/field-capture-consent";
+import {
+  CARRY_OVER_KEY,
+  NOTE_STEPS,
+  ONE_HAND_KEY,
+  carryOverAgeLabel,
+  readCarryOver,
+  readOneHand,
+  serializeCarryOver,
+  serializeOneHand,
+  stepDone,
+  type CarryOverComplex,
+  type NoteStep,
+} from "@/lib/notes/form-steps";
 import { useMoment } from "@/app/components/motion/MomentProvider";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
 import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
@@ -779,7 +792,74 @@ export function NoteForm({
      일치시킨다. 켜져 있으면 세부 평가 4개 섹션(현장 체크·체크리스트·태그·
      고려사항)을 접고, 사진·위치·메모·저장만 남긴다. 임시저장(1초 자동)이
      이미 있으므로 "나중에 채우기"는 초안 복구로 자연스럽게 이어진다. */
-  const [quickMode, setQuickMode] = useState(quickStart && !isEdit);
+  /* [984] 세터를 걷었다 — 이 값을 바꾸던 유일한 곳(퀵모드 배너의 "세부 항목
+     펼치기")이 단계 구조로 대체됐다. 남은 쓰임은 **사진 버튼 순서** 하나다:
+     ?quick=1 로 들어온 사람은 촬영이 먼저다. */
+  const [quickMode] = useState(quickStart && !isEdit);
+
+  /* ── [984 · 01] 3단계 ────────────────────────────────────────────────
+     예전엔 위치부터 공개 설정까지 **한 화면 3,000px** 이 이어졌다. 현장에서
+     스크롤 어디쯤인지 모른 채 채우다 보면, 무엇이 남았는지도 알 수 없다.
+     같은 입력을 세 덩어리로 나눈다 — 어디 / 무엇을 봤나 / 무엇을 남길까.
+     내용은 그대로 두고 보이는 범위만 나눈다(마운트는 유지 — 단계를 오가도
+     입력이 사라지지 않는다. hidden 클래스로 감출 뿐 언마운트하지 않는다).
+     수정 모드도 같은 구조다 — 화면이 두 갈래면 다음에 반드시 어긋난다. */
+  const [step, setStep] = useState<NoteStep>(1);
+  const stepTopRef = useRef<HTMLDivElement>(null);
+  const goStep = (n: NoteStep) => {
+    setStep(n);
+    /* 단계를 바꾸면 그 단계의 처음을 보여 준다 — 스크롤 위치가 남아 있으면
+       "아무 일도 안 일어난 것"처럼 보인다. */
+    const reduce =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    stepTopRef.current?.scrollIntoView({
+      behavior: reduce ? "auto" : "smooth",
+      block: "start",
+    });
+  };
+
+  /* ── [984 · 13] 한 손 모드 ───────────────────────────────────────────
+     현장에서는 한 손에 폰, 다른 손에 우산·가방·아이 손이다. 엄지가 닿는 곳은
+     화면 아래쪽뿐인데 단계 이동 탭은 맨 위에 있다. 켜면 단계 이동을 **화면
+     아래 고정 바**로 내리고 조작을 48px 로 키운다(989에서 정한 40px 보다 한
+     단계 위 — 한 손 엄지는 두 손보다 부정확하다). 기기에 기억한다. */
+  const [oneHand, setOneHand] = useState(false);
+  useEffect(() => {
+    try {
+      setOneHand(readOneHand(localStorage.getItem(ONE_HAND_KEY)));
+    } catch {
+      /* 저장소 접근 불가(사파리 프라이빗 등) — 기본값 그대로 */
+    }
+  }, []);
+  const toggleOneHand = () => {
+    setOneHand((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem(ONE_HAND_KEY, serializeOneHand(next));
+      } catch {
+        /* 저장 실패해도 이번 세션에는 적용된다 */
+      }
+      return next;
+    });
+  };
+
+  /* ── [984 · 05] 단지 이어받기 ────────────────────────────────────────
+     같은 날 같은 단지를 두 번 보거나 옆 단지를 이어 보는 일이 흔한데, 그때마다
+     단지명을 처음부터 다시 검색해야 했다. 직전에 저장한 단지를 **이 기기에**
+     남겨 두고 새 노트 첫 화면에서 한 번에 이어받는다(로그인 없이 쓰는 사람도
+     써야 하므로 서버가 아니라 localStorage). 14일이 지나면 제안하지 않는다. */
+  const [carryOver, setCarryOver] = useState<CarryOverComplex | null>(null);
+  const [carryOverUsed, setCarryOverUsed] = useState(false);
+  useEffect(() => {
+    if (isEdit) return;
+    try {
+      setCarryOver(readCarryOver(localStorage.getItem(CARRY_OVER_KEY), Date.now()));
+    } catch {
+      /* 저장소 접근 불가 — 제안만 안 뜬다 */
+    }
+  }, [isEdit]);
 
   /* [#71] 직접 방문 인증(선택) — 현재 위치와 단지 좌표의 거리로 확인.
      프라이버시 설계: 사용자의 원 좌표는 **어디에도 저장·전송하지 않는다**.
@@ -1383,6 +1463,10 @@ export function NoteForm({
     const region = loc.region.trim();
     if (!aptName || !region) {
       setSaveError("단지·주소를 먼저 검색해 위치를 선택해 주세요.");
+      /* [984 · 01] 위치 입력은 1단계에 있다. 2·3단계에서 저장을 누른 사람에게
+         스크롤만 하면 화면이 그대로다(그 칸이 hidden 이라 갈 곳이 없다) —
+         단계부터 옮긴다. */
+      setStep(1);
       const reduce =
         typeof window !== "undefined" &&
         typeof window.matchMedia === "function" &&
@@ -1503,6 +1587,24 @@ export function NoteForm({
          (남겨 두면 다음에 열 때 방금 저장한 내용을 "저장하지 않은 수정"이라 묻는다). */
       clearDraft();
       setDraftPending(false);
+      /* [984 · 05] 다음 노트가 이어받을 수 있게 이 단지를 기기에 남긴다.
+         저장이 **확정된 뒤에만** 남긴다 — 실패한 시도를 "지난번 그 단지"로
+         제안하면 있지도 않은 기록을 있었던 것처럼 말하게 된다. */
+      try {
+        const carry = serializeCarryOver(
+          {
+            aptName,
+            region,
+            complexId: loc.complexId ?? null,
+            lat: typeof loc.lat === "number" ? loc.lat : null,
+            lng: typeof loc.lng === "number" ? loc.lng : null,
+          },
+          Date.now(),
+        );
+        if (carry) localStorage.setItem(CARRY_OVER_KEY, carry);
+      } catch {
+        /* 저장소 접근 불가 — 이어받기 제안만 안 뜬다(저장 자체와 무관) */
+      }
       /* 저장이 확정된 지점에서 부른다. 바로 아래 AI 호출은 실패해도 저장은
          성공이므로, 그 결과를 기다렸다가 부르면 "저장됐다"는 사실이 AI 성패에
          따라 달라진다 — 사실과 연출을 묶으면 안 된다. */
@@ -1694,11 +1796,21 @@ export function NoteForm({
   ];
   const progressDone = progressItems.filter((i) => i.done).length;
   const progressPct = Math.round((progressDone / progressItems.length) * 100);
+  /* [984] 단계 완료 표시 — 위 progressItems 와 **같은 값**을 본다. 두 곳에서 따로
+     세면 한쪽만 고쳐져 진행 바와 탭이 다른 말을 하게 된다. */
+  const doneByStep = stepDone({
+    located: progressItems[0].done,
+    judged: progressItems[1].done || progressItems[3].done || progressItems[4].done,
+    wrote: progressItems[2].done || progressItems[5].done,
+  });
 
   return (
     /* [967 · 4] 저장 바가 떠 있는 동안 아래 여백을 더 준다 — 마지막 입력을 바가 덮지 않게 */
     <div
-      className={`mx-auto flex w-full max-w-[560px] flex-col px-5 ${showSaveBar ? "pb-28" : "pb-10"}`}
+      data-one-hand={oneHand ? "on" : undefined}
+      className={`note-form mx-auto flex w-full max-w-[560px] flex-col px-5 ${
+        showSaveBar ? "pb-28" : "pb-10"
+      } ${oneHand ? "pb-40" : ""}`}
     >
       {/* 상단 바 */}
       <div className="glass sticky top-3.5 z-40 mt-3.5 flex items-center justify-between rounded-2xl px-4 py-3">
@@ -1766,6 +1878,68 @@ export function NoteForm({
         />
       </div>
 
+      {/* ── [984 · 01] 단계 표시 ─────────────────────────────────────────
+          탭(role="tab")이 아니라 **단계**다 — 같은 내용을 다른 각도로 보는 게
+          아니라 순서가 있는 과정이라, aria-current="step" 이 맞는 표기다.
+          다만 순서를 강제하지는 않는다: 아무 단계나 눌러 갈 수 있다(현장에서
+          기억나는 것부터 적는 사람을 막을 이유가 없다). */}
+      {/* scroll-mt-24 — 위 상단 바가 sticky(top-3.5, 높이 ~72px)라, 단계를 옮길 때
+          이 줄의 top 으로 스크롤하면 탭이 그 바 밑으로 들어가 버린다(실측). */}
+      <nav aria-label="작성 단계" ref={stepTopRef} className="mt-3 scroll-mt-24">
+        <ol className="grid grid-cols-3 gap-1 rounded-[12px] bg-bg p-1">
+          {NOTE_STEPS.map((st) => {
+            const active = step === st.n;
+            return (
+              <li key={st.n} className="min-w-0">
+                <button
+                  type="button"
+                  onClick={() => goStep(st.n)}
+                  aria-current={active ? "step" : undefined}
+                  aria-label={`${st.n}단계 ${st.title}${doneByStep[st.n] ? " · 입력함" : ""}`}
+                  className={`note-step-btn flex min-h-[44px] w-full items-center justify-center gap-1 rounded-[9px] px-1 t-sub font-bold transition-colors ${
+                    active
+                      ? "bg-surface text-ink shadow-[0_1px_3px_rgba(16,28,54,.10)]"
+                      : "text-text-3"
+                  }`}
+                >
+                  <span className="truncate">
+                    {st.n}. {st.short}
+                  </span>
+                  {/* 완료 표시는 "다 됐다"가 아니라 "여기에 입력이 있다"는 뜻이다 —
+                      필수는 위치 하나뿐이라 나머지는 비워도 저장된다. */}
+                  {doneByStep[st.n] && (
+                    <span aria-hidden="true" className="text-primary">
+                      ✓
+                    </span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <span className="t-body font-extrabold text-ink">
+              {NOTE_STEPS[step - 1].title}
+            </span>{" "}
+            <span className="t-sub text-text-3">{NOTE_STEPS[step - 1].hint}</span>
+          </div>
+          <button
+            type="button"
+            onClick={toggleOneHand}
+            aria-pressed={oneHand}
+            title="단계 이동을 화면 아래로 내리고 조작을 크게 합니다"
+            className={`chip shrink-0 whitespace-nowrap border px-3 t-caption font-bold ${
+              oneHand
+                ? "border-primary bg-primary-soft text-primary"
+                : "border-line bg-surface text-text-3"
+            }`}
+          >
+            한 손 모드 {oneHand ? "켬" : "끔"}
+          </button>
+        </div>
+      </nav>
+
       <div className="mt-3.5 flex flex-col gap-3">
         {/* 모바일19 — 오프라인 안내. [967 · 10] 수정 모드도 임시저장이 돌아 같이 보인다 */}
         {offline && (
@@ -1831,6 +2005,8 @@ export function NoteForm({
           </div>
         )}
 
+        {/* [984] 1단계 — 어디를 봤나 */}
+        <div className={step === 1 ? "flex flex-col gap-3" : "hidden"}>
         {/* 모바일9 — 사진 첨부 1탭. 현장에서는 사진→메모 순서가 많은데 사진
             버튼이 폼 하단(메모 아래)에만 있었다. 상단에서 같은 input(fileRef)을
             연다 — 업로드 로직·한도 전부 기존 그대로. 촬영 사진은 하단 사진
@@ -1891,6 +2067,7 @@ export function NoteForm({
               </div>
             );
           })()}
+        </div>
         {/* [970 · B-12] 로그인 안내도 상단에 — 저장 바(B-11)에서 401 을 받은 사람은 폼 중간에 있다 */}
         {needLogin && (
           <div className="rounded-[14px] border border-[rgba(29,79,216,.2)] bg-[rgba(29,79,216,.08)] px-4 py-3 text-center t-body text-primary">
@@ -1898,6 +2075,50 @@ export function NoteForm({
             <Link href={loginHref} className="font-extrabold underline underline-offset-2">
               로그인하기 ›
             </Link>
+          </div>
+        )}
+
+        {/* [984] 1단계 — 어디를 봤나 */}
+        <div className={step === 1 ? "flex flex-col gap-3" : "hidden"}>
+        {/* [984 · 05] 단지 이어받기 — 직전에 저장한 단지가 있고, 아직 이 노트의
+            위치를 안 골랐을 때만. 언제 것인지 밝혀 준다("3일 전") — 모르는 값이
+            저절로 채워지면 도움이 아니라 불안이다. 한 번 쓰거나 닫으면 사라진다. */}
+        {!isEdit && carryOver && !carryOverUsed && !loc.aptName.trim() && (
+          <div className="rise-in flex items-center gap-2.5 rounded-[14px] border border-[rgba(29,79,216,.2)] bg-[rgba(29,79,216,.06)] px-4 py-3">
+            <Icon name="📍" size={18} className="shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="truncate t-body font-extrabold text-ink">
+                {carryOver.aptName}
+              </div>
+              <div className="truncate t-caption text-text-3">
+                {carryOverAgeLabel(carryOver.savedAt, Date.now())} 이 기기에서 쓴 노트 ·{" "}
+                {carryOver.region}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setLoc({
+                  aptName: carryOver.aptName,
+                  region: carryOver.region,
+                  complexId: carryOver.complexId,
+                  lat: carryOver.lat,
+                  lng: carryOver.lng,
+                });
+                setCarryOverUsed(true);
+              }}
+              className="chip shrink-0 border border-primary bg-primary-soft px-3 t-sub font-bold text-primary"
+            >
+              이어받기
+            </button>
+            <button
+              type="button"
+              onClick={() => setCarryOverUsed(true)}
+              aria-label="이어받기 제안 닫기"
+              className="tap-44 shrink-0 text-text-3"
+            >
+              ✕
+            </button>
           </div>
         )}
 
@@ -2100,27 +2321,17 @@ export function NoteForm({
             </div>
           </div>
         </div>
+        </div>
 
-        {/* [#68] 퀵모드 배너 — 접힌 세부 평가를 여는 단 하나의 통로 */}
-        {quickMode && (
-          <div className="rise-in-3 flex items-center justify-between gap-3 rounded-[14px] border border-[rgba(29,79,216,.2)] bg-[rgba(29,79,216,.06)] px-4 py-3">
-            <div className="min-w-0 text-xs leading-[1.6] text-text-1">
-              <b className="text-primary">현장 퀵모드</b> — 사진·위치·메모만 먼저
-              저장하세요. 점수·체크리스트는 나중에{" "}
-              <b>수정</b>으로 채워도 되고, 지금 펼쳐도 됩니다.
-            </div>
-            <button
-              type="button"
-              onClick={() => setQuickMode(false)}
-              className="shrink-0 rounded-[10px] border border-line-strong bg-surface px-3 py-2 t-sub font-bold text-text-1"
-            >
-              세부 항목 펼치기
-            </button>
-          </div>
-        )}
+        {/* [984] 2단계 — 무엇을 봤나 */}
+        <div className={step === 2 ? "flex flex-col gap-3" : "hidden"}>
+        {/* [984] 예전 [#68] 퀵모드 배너("세부 항목 펼치기")를 걷었다 — 접힌 섹션을
+            여는 통로였는데, 이제 그 섹션들이 **2단계 자체**라 열 것이 없다.
+            대신 이 단계가 건너뛰어도 되는 곳이라는 사실만 한 줄로 적는다. */}
+        <p className="t-sub text-text-3">
+          여기는 비워 둬도 저장됩니다 — 기억나는 것만 누르고 넘어가세요.
+        </p>
 
-        {!quickMode && (
-          <>
         {/* 현장 체크 — 세그먼트 평가 (9항목 → 5축 점수) */}
         <div className="rise-in-3 card flex flex-col gap-2.5 p-4">
           <div className="text-[13px] font-extrabold text-ink">
@@ -2509,9 +2720,10 @@ export function NoteForm({
           )}
         </div>
 
-          </>
-        )}
+        </div>
 
+        {/* [984] 3단계 — 무엇을 남길까 */}
+        <div className={step === 3 ? "flex flex-col gap-3" : "hidden"}>
         {/* 메모 + 사진 */}
         <div className="rise-in-6 card flex flex-col gap-2.5 p-4">
           <div className="text-[13px] font-extrabold text-ink">
@@ -2709,10 +2921,61 @@ export function NoteForm({
             </span>
           </label>
         )}
+        </div>
+      </div>
+
+
+      {/* ── [984 · 01/02] 단계 이동 ──────────────────────────────────────
+          1·2단계에서도 저장은 늘 열려 있다(필수는 위치 하나뿐) — 그래서
+          "여기까지만 저장"이 진짜 동작한다. 이게 30초 노트의 실체다:
+          별도 모드가 아니라, 1단계만 채우고 저장을 누르면 끝난다. */}
+      <div
+        data-above-savebar={oneHand && showSaveBar ? "yes" : undefined}
+        className={
+          oneHand
+            ? "note-step-nav fixed inset-x-0 z-30 flex justify-center px-3"
+            : "mt-4 flex justify-center"
+        }
+      >
+        <div
+          className={`flex w-full max-w-[560px] items-center gap-2 ${
+            oneHand
+              ? /* popover-surface — 유리만 쓰면 뒤 글자가 비쳐 두 겹으로 읽힌다
+                   (실측: 음성 메모 카드가 바 너머로 보였다). 드롭다운과 같은 면. */
+                "glass popover-surface rounded-2xl px-3 py-2.5 shadow-[0_12px_32px_rgba(16,28,54,.16)]"
+              : ""
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => goStep((step - 1) as NoteStep)}
+            disabled={step === 1}
+            className="note-step-btn btn-soft btn-md shrink-0 disabled:opacity-40"
+          >
+            ← 이전
+          </button>
+          <span className="min-w-0 flex-1 text-center t-caption text-text-3">
+            {step} / {NOTE_STEPS.length}
+          </span>
+          {step < NOTE_STEPS.length ? (
+            <button
+              type="button"
+              onClick={() => goStep((step + 1) as NoteStep)}
+              className="note-step-btn btn-primary btn-md shrink-0"
+            >
+              다음 →
+            </button>
+          ) : (
+            <span className="shrink-0 t-caption text-text-3">마지막 단계</span>
+          )}
+        </div>
       </div>
 
       {/* 하단 CTA — [967 · 4] 이 블록이 화면에 보이면 고정 저장 바는 숨는다 */}
-      <div ref={ctaRef} className="mt-4 flex flex-col gap-2">
+      <div
+        ref={ctaRef}
+        className={step === 3 ? "mt-4 flex flex-col gap-2" : "hidden"}
+      >
         {needLogin && (
           <div className="rounded-[14px] border border-[rgba(29,79,216,.2)] bg-[rgba(29,79,216,.08)] px-4 py-3 text-center t-body text-primary">
             저장하려면 로그인이 필요해요 — 작성한 내용은 유지돼요.{" "}
@@ -2784,7 +3047,10 @@ export function NoteForm({
               aria-live="off"
               className="btn-cta min-h-[44px] shrink-0 rounded-xl px-4 t-body"
             >
-              {isEdit ? "수정 완료" : "기록 완료"}
+              {/* [984 · 02] 1·2단계에서 누르면 **거기까지가 그대로 저장된다** —
+                  필수는 위치 하나뿐이라 정말로 그렇다. 버튼이 "기록 완료"라고만
+                  적혀 있으면 남은 칸을 다 채워야 하는 줄 알고 닫아 버린다. */}
+              {isEdit ? "수정 완료" : step < NOTE_STEPS.length ? "여기까지 저장" : "기록 완료"}
             </ActionButton>
           </div>
         </div>

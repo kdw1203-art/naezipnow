@@ -4318,6 +4318,35 @@ a.rank-row:hover {
   bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
   animation: riseIn var(--dur-md) var(--ease-out) backwards;
 }
+/* ============================================================
+   [984 · 13] 한 손 모드 — 작성 폼(/notes/new · /notes/[id]/edit) 전용
+
+   현장에서는 한 손에 폰, 다른 손엔 우산·가방이다. 엄지가 닿는 범위는 화면
+   아래쪽뿐인데 단계 이동은 화면 맨 위에 있다. 켜면 단계 이동을 **아래 고정
+   바**로 내리고 조작을 48px 로 키운다. 989에서 정한 터치 하한(칩 40px)보다
+   한 단계 위다 — 한 손 엄지는 두 손보다 부정확하다.
+
+   저장 바(.note-savebar)와 같은 자리를 다투지 않게, 단계 바는 저장 바 **위**
+   칸에 선다. 두 바의 높이는 여기 한 곳에서만 정한다.
+   ============================================================ */
+.note-step-nav {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+}
+/* 저장 바가 떠 있으면 단계 바는 그 위로 — 겹치면 둘 다 못 누른다 */
+.note-step-nav[data-above-savebar="yes"] {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px + 62px);
+}
+[data-one-hand="on"] .chip,
+[data-one-hand="on"] .btn-md,
+[data-one-hand="on"] .note-step-btn {
+  min-height: 48px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .note-step-nav {
+    animation: none;
+  }
+}
+
 /* [967 · 5] 사진 줄 — iOS 관성 스크롤 + 얇은 스크롤바(줄이 잘린 모양이 스크롤 힌트) */
 .note-photo-strip {
   -webkit-overflow-scrolling: touch;
