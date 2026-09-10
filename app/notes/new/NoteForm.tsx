@@ -10,7 +10,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
 import { NoteLocationSearch, type NoteLocation } from "./NoteLocationSearch";
-import { AiDraftPanel } from "./AiDraftPanel";
 import type { NoteDraft as AiNoteDraft } from "@/lib/ai/note-draft-core";
 import { FieldCaptureConsentNotice } from "@/components/inspection/field-capture-consent";
 import {
@@ -68,6 +67,20 @@ import nextDynamic from "next/dynamic";
 const VoiceMemoRecorder = nextDynamic(
   () => import("./VoiceMemoRecorder").then((m) => m.VoiceMemoRecorder),
   { ssr: false, loading: () => <div className="h-10 animate-pulse rounded-xl bg-surface" /> },
+);
+/* [985] AI 초안 패널도 분리 — "AI 초안 받기"를 누르기 전에는 필요 없다.
+   /notes/new 예산(470KB) 여유가 1~2KB 뿐이라, 조건부로만 쓰이는 화면은
+   초기 번들에 두지 않는다. */
+const AiDraftPanel = nextDynamic(
+  () => import("./AiDraftPanel").then((m) => m.AiDraftPanel),
+  { ssr: false, loading: () => <div className="h-24 animate-pulse rounded-xl bg-surface" /> },
+);
+/* [985 · 17] 현장 브리핑도 같은 이유로 분리 — 위치를 고른 뒤에만 필요하다.
+   직접 두면 /notes/new 초기 번들이 471KB 가 되어 예산(470KB)을 1KB 넘겼다(실측).
+   예산을 올리지 않는다. 위치를 안 고르면 이 코드는 내려오지도 않는다. */
+const FieldBriefCard = nextDynamic(
+  () => import("./FieldBriefCard").then((m) => m.FieldBriefCard),
+  { ssr: false },
 );
 
 /* 임장노트 작성/수정 공용 폼 (시안 6b·6r)
@@ -687,6 +700,11 @@ export function NoteForm({
     return "";
   });
   const [weatherHint, setWeatherHint] = useState<string | null>(null);
+  /* [985 · 17] 같은 응답에 시세·공기질·지역 체크 힌트·개발계획이 이미 들어 있다 —
+     예전에는 weatherHint 만 꺼내 쓰고 나머지를 버렸다(요청·캐시 비용은 그대로 내면서).
+     응답을 **그대로** 들고 있는다: 무엇을 보여줄지 고르는 일은 지연 로드되는
+     카드 쪽에서 한다(판정 모듈까지 초기 번들에 들어오지 않게). */
+  const [fieldContext, setFieldContext] = useState<unknown>(null);
   const [templateSuggestedIds, setTemplateSuggestedIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -720,6 +738,7 @@ export function NoteForm({
     const region = loc.region.trim();
     if (!region) {
       setWeatherHint(null);
+      setFieldContext(null);
       return;
     }
     const ctrl = new AbortController();
@@ -738,9 +757,12 @@ export function NoteForm({
           const hint =
             typeof j?.weatherHint === "string" ? j.weatherHint.trim() : "";
           setWeatherHint(hint || null);
+          /* [985 · 17] 나머지 필드도 쓴다. 판정은 lib/inspection/field-brief.ts —
+             무엇을 몇 줄까지 믿고 보여줄지가 판단이라 테스트를 붙여 뒀다. */
+          setFieldContext(j);
         })
         .catch(() => {
-          /* 조회 실패 — 날씨 제안만 숨김 */
+          /* 조회 실패 — 제안·브리핑만 숨김(작성은 그대로 진행된다) */
         });
     }, 450);
     return () => {
@@ -1337,6 +1359,130 @@ export function NoteForm({
     });
   };
 
+  /* ── [985 · 15] 오프라인 사진 ──────────────────────────────────────────
+     예전에는 오프라인 배너가 "사진 업로드는 연결 후에 해주세요"라고 말했다.
+     현장은 지하 주차장·엘리베이터·신도시라 신호가 없는 순간이 많은데, 사진은
+     바로 그때 찍는다. 나중에 다시 찍을 수 없는 것을 "연결 후에"로 미루면
+     기록 자체가 사라진다.
+
+     lib/inspection/offline-queue.ts (IndexedDB) 가 이미 저장소에 있었는데
+     **아무도 import 하지 않는 죽은 코드**였다(실측: 사용처 0). 새로 만들지 않고
+     그것을 연결한다. 업로드 자체는 기존 uploadOne 을 그대로 쓴다 — 경로가
+     둘이면 한쪽만 고쳐진다.
+
+     번들: IndexedDB 코드는 오프라인일 때만 필요하므로 동적 import 로 초기
+     번들 밖에 둔다(/notes/new 예산 여유가 1KB 뿐이다). */
+  const queueSessionId = isEdit && editId ? `note-${editId}` : "note-new";
+  const [queuedPhotos, setQueuedPhotos] = useState(0);
+  const [queueFlushing, setQueueFlushing] = useState(false);
+  /* 실측에서 잡힌 버그: 가드를 useState 로만 뒀더니 연결 복귀 이벤트가 두 번 올 때
+     (브라우저의 online + 앱 쪽 재시도) 두 호출이 **둘 다** 가드를 통과했다.
+     setState 는 비동기라 첫 호출이 아직 false 를 보고 있었다 — 같은 사진이 두 번
+     올라가 노트에 두 장이 붙었다(업로드 호출 2회 실측).
+     ref 는 동기라 두 번째 호출이 즉시 막힌다. 화면 표시는 state 가 계속 맡는다. */
+  const queueFlushingRef = useRef(false);
+  const offlineSeqRef = useRef(0);
+
+  const refreshQueuedCount = async () => {
+    try {
+      const { listPendingQueue } = await import("@/lib/inspection/offline-queue");
+      const pending = await listPendingQueue(queueSessionId);
+      setQueuedPhotos(pending.length);
+    } catch {
+      /* IndexedDB 미지원·접근 불가 — 큐 표시만 안 뜬다 */
+    }
+  };
+
+  /* 이전에 오프라인으로 담아 둔 사진이 있으면 화면에 알린다 — 조용히 들고 있으면
+     사용자는 사진이 사라진 줄 안다. */
+  useEffect(() => {
+    void refreshQueuedCount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queueSessionId]);
+
+  const enqueueOfflinePhotos = async (list: File[]) => {
+    try {
+      const { enqueueOfflineItem } = await import("@/lib/inspection/offline-queue");
+      for (const file of list) {
+        offlineSeqRef.current += 1;
+        await enqueueOfflineItem({
+          id: `oq-${Date.now()}-${offlineSeqRef.current}`,
+          sessionId: queueSessionId,
+          type: "photo",
+          blob: file,
+          payload: { name: file.name, mime: file.type },
+          createdAt: new Date().toISOString(),
+        });
+      }
+      await refreshQueuedCount();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  /** 연결이 돌아오면 큐를 비운다. 성공한 항목만 지운다 — 실패는 남겨 다시 시도한다. */
+  const flushQueuedPhotos = async () => {
+    if (queueFlushingRef.current) return;
+    queueFlushingRef.current = true;
+    setQueueFlushing(true);
+    try {
+      const { listPendingQueue, removeQueueItem, markQueueItem } = await import(
+        "@/lib/inspection/offline-queue"
+      );
+      const pending = await listPendingQueue(queueSessionId);
+      for (const q of pending) {
+        if (!(q.blob instanceof Blob)) {
+          /* 파일이 없는 항목은 되살릴 수 없다 — 큐에 영원히 남게 두지 않는다 */
+          await removeQueueItem(q.id);
+          continue;
+        }
+        const name =
+          typeof q.payload?.name === "string" && q.payload.name ? q.payload.name : "photo.jpg";
+        const mime = typeof q.payload?.mime === "string" ? q.payload.mime : q.blob.type;
+        uploadSeqRef.current += 1;
+        const item: UploadItem = {
+          id: `u${uploadSeqRef.current}`,
+          name,
+          status: "uploading",
+          file: new File([q.blob], name, { type: mime || "image/jpeg" }),
+          /* 미리보기 URL 은 만들지 않는다 — 이 항목은 복귀 직후 바로 올라가고,
+             revoke 를 놓치면 blob URL 이 새는 자리다(previewUrlsRef 는 이 경로를
+             거치지 않는다). */
+          preview: null,
+        };
+        setUploads((prev) => [...prev, item]);
+        const r = await uploadOne(item);
+        if (r.ok) {
+          setPhotos((prev) => mergeUploadedPhotos(prev, [r.url], MAX_PHOTOS));
+          patchUpload(item.id, { status: "done", pct: 100 });
+          await removeQueueItem(q.id);
+        } else {
+          if (r.status === 401) setNeedLogin(true);
+          patchUpload(item.id, { status: "failed", error: r.error, httpStatus: r.status });
+          await markQueueItem(q.id, { status: "pending", retryCount: q.retryCount + 1 });
+        }
+      }
+      await refreshQueuedCount();
+    } catch {
+      /* 전체 실패 — 큐는 그대로 남는다(다음 복귀·재시도에서 다시 본다) */
+    } finally {
+      queueFlushingRef.current = false;
+      setQueueFlushing(false);
+    }
+  };
+
+  /* 연결 복귀 이벤트에 붙인다. 오프라인 상태가 아니고 큐가 비어 있으면 아무 일도 없다. */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onOnline = () => {
+      void flushQueuedPhotos();
+    };
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queueSessionId]);
+
   const onPickFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const inFlight = uploads.filter((u) => u.status === "uploading").length;
@@ -1371,6 +1517,21 @@ export function NoteForm({
       list = await resizeImageFiles(picked);
     } catch {
       list = picked;
+    }
+    /* [985 · 15] 오프라인이면 올리지 않고 이 기기에 담아 둔다. 리사이즈까지 끝난
+       파일을 담으므로, 연결이 돌아오면 그대로 올라간다(다시 줄이지 않는다). */
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      const stored = await enqueueOfflinePhotos(list);
+      /* 성공은 saveError 로 말하지 않는다 — 실측에서 저장 바가 이 문장을 빨간
+         role="alert" 로 띄우고 버튼을 "다시 시도"로 바꿨다. 잘된 일을 실패처럼
+         알리는 셈이다. 담긴 사실은 위쪽 큐 안내("이 기기에 담아 둔 사진 N장")가
+         이미 말한다. 진짜 실패(담아 둘 수조차 없음)만 오류로 남긴다. */
+      if (!stored) {
+        setSaveError(
+          "오프라인이고 이 브라우저에 사진을 담아 둘 수 없어요 — 연결된 뒤에 다시 담아 주세요.",
+        );
+      }
+      return;
     }
     const items: UploadItem[] = list.map((file, i) => {
       uploadSeqRef.current += 1;
@@ -1948,13 +2109,41 @@ export function NoteForm({
             className="rise-in flex items-center gap-2.5 rounded-[14px] border border-warning-border bg-warning-soft px-4 py-3"
           >
             <Icon name="📴" size={16} className="shrink-0" />
+            {/* [985 · 15] "사진 업로드는 연결 후에 해주세요"는 이제 사실이 아니다 —
+                오프라인에서 담은 사진은 이 기기(IndexedDB)에 보관되고 연결이
+                돌아오면 자동으로 올라간다. 문구가 낡은 채로 남으면 사용자는
+                할 수 있는 일을 안 한다. */}
             <p className="text-xs leading-[1.6] text-warning">
-              <b>오프라인이에요.</b> 입력 내용은 이 기기에 자동으로 임시저장되고
-              있어요. 연결이 돌아오면 그대로 이어서 저장하면 됩니다 (사진 업로드는
-              연결 후에 해주세요).
+              <b>오프라인이에요.</b> 입력 내용과 담은 사진은 이 기기에 보관되고
+              있어요. 연결이 돌아오면 사진은 자동으로 올라가고, 저장을 한 번
+              눌러 주시면 그대로 이어서 제출됩니다.
             </p>
           </div>
         )}
+        {/* [985 · 15] 이 기기에 담아 둔 사진 — 조용히 들고 있으면 사라진 줄 안다.
+            자동 업로드는 연결 복귀 이벤트가 하지만, 그 이벤트를 못 받는 경우
+            (탭 복귀·기기 절전 등)가 있어 손으로 누를 길도 남긴다. */}
+        {queuedPhotos > 0 && (
+          <div
+            role="status"
+            className="flex items-center gap-2.5 rounded-[14px] border border-line bg-bg px-4 py-3"
+          >
+            <Icon name="📥" size={16} className="shrink-0" />
+            <p className="min-w-0 flex-1 t-sub leading-[1.6] text-text-1">
+              이 기기에 담아 둔 사진 <b>{queuedPhotos}장</b> — 연결되면 자동으로
+              올라가요.
+            </p>
+            <button
+              type="button"
+              onClick={() => void flushQueuedPhotos()}
+              disabled={queueFlushing}
+              className="chip shrink-0 border border-line-strong bg-surface px-3 t-sub font-bold text-text-1 disabled:opacity-50"
+            >
+              {queueFlushing ? "올리는 중" : "지금 올리기"}
+            </button>
+          </div>
+        )}
+
         {/* #45 임시저장 복구 배너 — [967 · 10] 수정 모드는 "저장하지 않은 수정" 문구 */}
         {pendingDraft && (
           <div
@@ -2126,6 +2315,17 @@ export function NoteForm({
         <div ref={locationRef} className="scroll-mt-24">
           <NoteLocationSearch value={loc} onChange={setLoc} />
         </div>
+
+        {/* ── [985 · 17] 현장 브리핑 ─────────────────────────────────────────
+            위치를 고르면 이미 나가던 조회(public-data-context)의 응답을 그대로
+            쓴다. 새 요청은 없다 — 예전에는 같은 응답에서 날씨만 꺼내 쓰고 시세·
+            공기질·지역 체크 힌트·개발계획을 버렸다.
+
+            왜 작성 화면에 두는가: 임장노트의 가장 약한 고리는 "비싸다/싸다"를
+            근거 없이 적는 것이다. 지금 이 지역의 실제 시세가 옆에 있으면 같은
+            문장이 판단이 된다. 값을 메모에 자동으로 넣지는 않는다 — 시스템이
+            쓴 문장이 사용자의 관찰처럼 보이면 안 된다. 읽을 것만 준다. */}
+        {fieldContext !== null && <FieldBriefCard context={fieldContext} />}
 
         {/* [#71] 방문 인증(선택) — 단지 좌표가 있을 때만. 원 좌표는 저장하지 않는다. */}
         {!isEdit && typeof loc.lat === "number" && typeof loc.lng === "number" && (
