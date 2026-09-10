@@ -67,6 +67,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  /* 첫 페인트용 기본값(defaultTheme=light)만 여기서 정한다. 켜져 있는 테마에
+     맞추는 일은 app/components/ThemeColorMeta.tsx 가 한다 —
+     prefers-color-scheme 미디어쿼리로 나누면 **틀린 답이 된다**(이 앱은
+     enableSystem={false} 라 OS 다크 + 앱 라이트가 정상 상태다). 사유는 그 파일 주석. */
   themeColor: "#f7f9fc",
   viewportFit: "cover", // 세이프에어리어(env safe-area-inset-*) 활성화
   /* [968 · 30] 안드로이드 크롬 108+ 는 기본이 resizes-visual — 가상 키보드가 뜨면
