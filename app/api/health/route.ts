@@ -14,6 +14,7 @@ import {
 import { getSupabaseUrl } from "@/lib/supabase/env";
 import { classifyIngestRun, type IngestOutcome } from "@/lib/market/ingest-outcome";
 /* [968 · T5] 토스 구성 진단 — 접두사 판정(boolean·enum)만, 키 값은 어디에도 싣지 않는다 */
+import { checkTossKeyPair } from "@/lib/payments/toss-keys";
 import { tossDiagnostics } from "@/lib/payments/toss-diagnostics";
 import { isTossBillingEnabled } from "@/lib/payments/toss-billing";
 import { DEFAULT_DESKTOP_ORIGIN } from "@/lib/platform-shell";
@@ -303,6 +304,16 @@ export async function GET(req: Request) {
           loginReady,
 
           toss: tossSecret && tossClient,
+
+          /* [990] 클라이언트·시크릿이 같은 세트인가 — **boolean 하나, 키 재료 없음.**
+             왜 공개 요약에 두나: gck(위젯)·ck(API 개별) 두 종류가 눈으로는 똑같이
+             생겼고, 어긋나면 결제창은 뜨는데 승인에서 깨진다. 그 상태는 PG 심사에
+             "결제창 연동이 안 된다"로 보인다 — 반려 원인을 토큰 없이도 1초에
+             가를 수 있어야 한다. 상세(clientKeyKind 등)는 그대로 토큰 뒤에 있다. */
+          tossKeyPairOk: checkTossKeyPair(
+            process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY,
+            process.env.TOSS_SECRET_KEY,
+          ).ok,
 
           molitNationwide: molitEncoding,
 

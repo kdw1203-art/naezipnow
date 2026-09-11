@@ -20,6 +20,10 @@ const LEGAL_LINKS = [
   { label: "법적 고지", href: "/legal", bold: false },
   { label: "고객센터", href: "/support", bold: false },
   { label: "구독 안내", href: "/subscription", bold: false },
+  /* [990] 취급 결제수단(신용/체크카드) 고지 — 전자상거래법 고지이자 카드사·PG
+     심사가 판매 페이지에서 확인하는 항목이다. 푸터에 두어 모든 페이지에서
+     한 번에 닿는다(2026-09 토스 도메인 심사 반려 사유: 결제수단 미확인). */
+  { label: "결제 수단", href: "/subscription/payment-methods", bold: false },
   /* S20 — 신뢰·데이터 페이지 내부 링크 (전 페이지 크롤 경로 확보) */
   { label: "소개", href: "/about", bold: false },
   { label: "데이터 방법론", href: "/methodology", bold: false },

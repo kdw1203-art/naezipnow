@@ -25,6 +25,7 @@ import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { faqJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
 import { DEFAULT_DESKTOP_ORIGIN } from "@/lib/platform-shell";
+import { PAYMENT_METHODS_PATH } from "@/lib/payments/payment-methods";
 
 /* 고도화 32 — 구독 FAQ. 사실만 적는다: 수치·규정은 약관·구현과 대조했다. 화면과
    JSON-LD 가 같은 배열을 쓴다.
@@ -377,6 +378,20 @@ export default async function SubscriptionPage({
             </li>
           ))}
         </ul>
+        {/* [990] 취급 결제수단 한 줄 — 신뢰 스트립은 "카드번호가 남지 않는다"를
+            말할 뿐, **무엇으로 결제하는지**를 한 번도 적지 않았다. 2026-09 토스
+            도메인 변경 심사 반려 사유가 정확히 그 자리다("결제수단 신용/체크카드가
+            확인되지 않습니다"). 목록 전체와 결제창 미리보기는 안내 페이지로 잇는다. */}
+        <p className="mx-auto mt-3 w-full max-w-[1080px] text-center t-sub text-text-3">
+          결제 수단: <span className="font-bold text-ink">신용카드 · 체크카드</span>{" "}
+          (토스페이먼츠) ·{" "}
+          <Link
+            href={PAYMENT_METHODS_PATH}
+            className="font-bold text-primary underline"
+          >
+            결제 수단 안내
+          </Link>
+        </p>
       </section>
 
       {/* 플러스 주간권 — 1회성 단건 결제(자동갱신 없음). 운영자 확정 2026-08-12:
@@ -465,7 +480,10 @@ export default async function SubscriptionPage({
         결제 7일 이내 청약철회(환불) 가능 ·{" "}
         <Link
           href="/legal/terms#refund"
-          className="font-bold text-primary underline underline-offset-2"
+          /* [990] 문장 속 링크의 기준은 WCAG 2.5.8(24px) — 44px 히트를 겹쳐 얹으면
+             윗줄·아랫줄의 탭을 가져간다(989 에서 되돌린 적 있음). inline-block +
+             세로 패딩으로 글자줄만 24px 로 키운다(푸터 대표전화와 같은 방식). */
+          className="inline-block py-[5px] font-bold text-primary underline underline-offset-2"
         >
           환불 규정 안내
         </Link>

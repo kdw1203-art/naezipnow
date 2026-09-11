@@ -127,6 +127,9 @@ const STATIC_ROUTES: Array<{ path: string; priority: number }> = [
   { path: "/points/shop", priority: 0.5 },
   // 발견 피드 — 탭바 2번 슬롯·비로그인 랜딩 (감사 P1-11)
   { path: "/subscription", priority: 0.5 },
+  /* [990] 결제 수단 고지 — 전자상거래법 고지이자 PG·카드사 심사가 찾는 문서다.
+     색인·크롤 경로가 없으면 "사이트에서 확인되지 않는다"는 판정이 되풀이된다. */
+  { path: "/subscription/payment-methods", priority: 0.4 },
   { path: "/support", priority: 0.4 },
   { path: "/support/faq", priority: 0.5 }, // N15 — 답이 본문에 실린 FAQ 허브
   { path: "/safety", priority: 0.4 },

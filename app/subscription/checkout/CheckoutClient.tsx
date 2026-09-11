@@ -15,6 +15,7 @@ import {
   previewAmount,
   previewBillingLabel,
 } from "@/lib/payments/checkout-preview";
+import { PAYMENT_METHODS_PATH } from "@/lib/payments/payment-methods";
 import {
   isTossTestEnv,
   isWidgetKey,
@@ -121,6 +122,8 @@ function CheckoutSummary({
 }) {
   /* 종료일은 렌더 시점 기준이다. 사용자가 이 화면을 오래 열어 두면 실제
      승인 시각과 하루 어긋날 수 있어 "결제 시각 기준"이라고 밝혀 둔다. */
+  /* 단건(주간권)인가 — 아래 문구·라벨이 전부 이 한 값으로 갈린다. */
+  const oneOff = billing === "weekly";
   const endsAt = new Date(accessEndsAtMs(billing, Date.now()));
   const endsLabel = endsAt.toLocaleDateString("ko-KR", {
     year: "numeric",
@@ -137,9 +140,13 @@ function CheckoutSummary({
         </span>
       </div>
       <div className="flex items-center justify-between t-body">
-        <span className="text-text-3">이용 기간</span>
+        <span className="text-text-3">{oneOff ? "이용 기간" : "결제 주기"}</span>
         <span className="font-bold text-ink">
-          {billingDurationLabel(billing)} · {endsLabel}까지
+          {/* 단건은 "언제까지 쓰는가", 정기는 "언제 또 청구되는가" 가 알고 싶은 값이다.
+              같은 날짜지만 뜻이 다르므로 라벨과 조사를 같이 바꾼다. */}
+          {oneOff
+            ? `${billingDurationLabel(billing)} · ${endsLabel}까지`
+            : `${billingDurationLabel(billing)}마다 · 다음 결제일 ${endsLabel}`}
         </span>
       </div>
       <div className="flex items-center justify-between border-t border-divider pt-2 t-body">
@@ -151,18 +158,40 @@ function CheckoutSummary({
         </span>
       </div>
       <div className="mt-1 flex flex-col gap-1 rounded-xl bg-bg px-3 py-2.5 t-sub text-text-2">
-        <span>
-          <span className="font-bold text-ink">자동 갱신되지 않는 1회 결제예요.</span>{" "}
-          기간이 끝나면 추가 청구 없이 무료 플랜으로 돌아갑니다.
-        </span>
-        <span>
-          계속 쓰실 생각이면{" "}
-          <Link href="/subscription" className="font-bold text-primary underline">
-            월간·연간 정기결제
-          </Link>
-          가 하루 기준으로 더 저렴해요 — 그건 카드 등록형이라 해지 전까지 자동
-          갱신됩니다.
-        </span>
+        {oneOff ? (
+          <>
+            <span>
+              <span className="font-bold text-ink">자동 갱신되지 않는 1회 결제예요.</span>{" "}
+              기간이 끝나면 추가 청구 없이 무료 플랜으로 돌아갑니다.
+            </span>
+            <span>
+              계속 쓰실 생각이면{" "}
+              <Link href="/subscription" className="font-bold text-primary underline">
+                월간·연간 정기결제
+              </Link>
+              가 하루 기준으로 더 저렴해요 — 그건 카드 등록형이라 해지 전까지 자동
+              갱신됩니다.
+            </span>
+          </>
+        ) : (
+          /* [990] 정기(월간·연간)도 이 화면에서 결제수단을 미리 볼 수 있게 되면서
+             요약 카드가 두 상품을 함께 맡게 됐다. 단건 문구를 그대로 쓰면
+             "자동 갱신되지 않는다"는 거짓말이 된다 — 주기로 갈라 사실만 적는다. */
+          <>
+            <span>
+              <span className="font-bold text-ink">카드를 등록하는 자동결제예요.</span>{" "}
+              해지하기 전까지 {billingDurationLabel(billing)}마다 같은 금액이 자동으로
+              청구됩니다.
+            </span>
+            <span>
+              해지는{" "}
+              <Link href="/subscription" className="font-bold text-primary underline">
+                구독 관리
+              </Link>
+              에서 언제든 할 수 있고, 해지하면 다음 결제일부터 청구되지 않아요.
+            </span>
+          </>
+        )}
         <span>
           결제 7일 이내 청약철회(환불) 가능 ·{" "}
           <Link href="/legal/terms#refund" className="font-bold text-primary underline">
@@ -245,6 +274,22 @@ function GuestNotice({ widget }: { widget: "shown" | "none" | "failed" }) {
         로그인하면 이 화면으로 돌아와 그대로 결제할 수 있어요. 주문번호는 로그인 뒤
         발급돼요.
       </p>
+      {widget === "shown" && (
+        /* [990] 아래 위젯이 곧 결제수단 목록이지만, 그건 iframe 안이라 페이지
+           본문에는 "무엇으로 결제하는가"가 한 글자도 없었다 — 토스 도메인 심사가
+           본 것도 그 상태다. 결제수단을 글로도 적고, 전체 목록은 안내 페이지로
+           잇는다(취급 수단은 서버 설정에서 파생 — lib/payments/payment-methods). */
+        <p className="t-sub text-text-2">
+          아래에서 <span className="font-bold text-ink">신용카드 · 체크카드</span>로
+          결제합니다 (토스페이먼츠 결제창) ·{" "}
+          <Link
+            href={PAYMENT_METHODS_PATH}
+            className="font-bold text-primary underline"
+          >
+            결제 수단 안내
+          </Link>
+        </p>
+      )}
       {widget === "none" && (
         /* ck(결제창형) 키는 주문번호가 있어야 결제창을 열 수 있다 — 주문은 로그인
            뒤 서버가 만들므로 게스트에게는 요약·안내·로그인 버튼까지만 보여 준다. */
@@ -274,13 +319,6 @@ export function CheckoutClient() {
     const p = parseParams();
     if (!p) {
       setPhase({ kind: "error", msg: "결제할 플랜 정보가 없어요. 구독 페이지에서 다시 시작해 주세요." });
-      return;
-    }
-    /* [토스 심사 보완 2026-08-24] 이 페이지(단건 결제창)는 주간권 전용이다.
-       정기(월간·연간)가 딥링크·북마크로 들어오면 빌링 카드 등록창으로 보낸다 —
-       버튼(PlanCheckoutButton)만 고치면 옛 링크로 재발한다. */
-    if (p.billing !== "weekly") {
-      window.location.replace(`/subscription/billing?tier=${p.tier}&billing=${p.billing}`);
       return;
     }
     setParams(p);
@@ -324,7 +362,14 @@ export function CheckoutClient() {
        않기 위해서다(pay() 는 phase.kind === "ready" 에서만 돈다). */
     async function startGuestPreview(q: NonNullable<ReturnType<typeof parseParams>>) {
       const amount = previewAmount(q.tier, q.billing);
-      const loginHref = checkoutLoginCallback(window.location.pathname, window.location.search);
+      /* [990] 로그인 뒤 돌아갈 곳은 상품 성격에 따라 다르다. 주간권(단건)은 이 화면에서
+         그대로 결제가 이어지지만, 정기(월간·연간)는 카드 등록창(/subscription/billing)이
+         본 화면이다 — 체크아웃으로 되돌리면 아래 로그인 분기가 다시 빌링으로 튕겨
+         한 번 더 깜빡인다. 쿼리(tier·billing·returnTo)는 그대로 넘긴다. */
+      const loginHref = checkoutLoginCallback(
+        q.billing === "weekly" ? window.location.pathname : "/subscription/billing",
+        window.location.search,
+      );
       if (amount === null) {
         setPhase({ kind: "error", msg: "결제할 수 있는 상품이 아니에요. 구독 페이지에서 다시 골라 주세요." });
         return;
@@ -358,10 +403,31 @@ export function CheckoutClient() {
         sessionEmail = null;
       }
       if (!sessionEmail) {
+        /* [990] 여기서 주기를 가리지 않는 이유 — 토스 도메인 변경 심사가
+           "홈페이지 내 결제수단 신용/체크카드가 확인되지 않습니다"로 반려됐다.
+           심사역은 계정 없이 가장 큰 버튼(월간 '플러스 시작하기')을 누르는데,
+           예전에는 그 경로가 로그인 벽에서 끝나 카드 결제창을 한 번도 보여 주지
+           못했다. 정기도 비로그인이면 같은 위젯으로 결제수단을 먼저 보여 주고,
+           실제 카드 등록은 로그인 뒤 /subscription/billing 이 맡는다.
+           서버 주문은 여전히 만들어지지 않는다(게스트 결제 경로 없음). */
         await startGuestPreview(p);
         return;
       }
       setEmail(sessionEmail);
+
+      /* [토스 심사 보완 2026-08-24] 정기(월간·연간)의 실제 결제는 카드 등록형이다 —
+         로그인한 사용자는 빌링 화면으로 보낸다. 단건 결제창으로 정기를 팔면
+         카드사 심사 기준 위반이자 상품 실체와 결제 UX 가 어긋난다.
+         [990] 이 분기가 세션 확인 **뒤로** 내려왔다. 위에 있을 때는 비로그인
+         방문자까지 빌링으로 튕겨 나가 결제수단을 볼 기회가 없었다. */
+      if (p.billing !== "weekly") {
+        window.location.replace(
+          `/subscription/billing?tier=${p.tier}&billing=${p.billing}${
+            p.returnTo ? `&returnTo=${encodeURIComponent(p.returnTo)}` : ""
+          }`,
+        );
+        return;
+      }
 
       // 2) 서버 주문 생성 (금액은 서버 계산 — 클라이언트 금액을 믿지 않는다)
       setPhase({ kind: "loading", msg: "주문 생성 중…" });
@@ -637,7 +703,10 @@ export function CheckoutClient() {
         {phase.kind !== "error" && (
           <Link
             href={params?.returnTo ?? "/subscription"}
-            className="mt-1 text-center t-sub font-bold text-text-3 no-underline"
+            /* [990] 되돌아가기 링크가 18px 높이라 손끝으로 잘 안 잡혔다. 아래에
+               아무것도 없는 단독 링크라 세로 패딩을 줘도 남의 탭을 훔치지 않는다
+               (WCAG 2.5.8 의 24px 기준을 넘긴다). */
+            className="mt-1 py-[6px] text-center t-sub font-bold text-text-3 no-underline"
           >
             {params?.returnTo ? "← 하던 화면으로 돌아가기" : "← 구독 안내로 돌아가기"}
           </Link>

@@ -179,9 +179,16 @@ const nextConfig: NextConfig = {
         value: "strict-origin-when-cross-origin",
       },
       {
+        /* [990] payment 를 통째로 끄고 있었다 — `payment=()` 는 문서와 **모든 하위
+           프레임**에서 Payment Request API 를 막는다. 결제위젯은 js.tosspayments.com
+           iframe 안에서 돌고, 카드사·간편결제 수단 일부가 이 API 를 탄다. 결제를
+           실제로 받는 사이트가 결제 권한을 0 으로 두면, 수단에 따라 조용히 열리지
+           않는 창이 생긴다(2026-09 토스 도메인 심사 반려 맥락에서 점검).
+           와일드카드는 Permissions-Policy 문법에 없으므로 오리진을 명시한다 —
+           CSP frame-src 에 이미 있는 두 곳뿐이고, 그 밖에는 여전히 차단된다. */
         key: "Permissions-Policy",
         value:
-          "camera=(), microphone=(), geolocation=(self), payment=(), usb=(), interest-cohort=()",
+          'camera=(), microphone=(), geolocation=(self), payment=(self "https://js.tosspayments.com" "https://payment-gateway.tosspayments.com"), usb=(), interest-cohort=()',
       },
       { key: "X-DNS-Prefetch-Control", value: "on" },
       /* 크로스오리진 격리. `same-origin` 이 아니라 `same-origin-allow-popups` 인 이유는

@@ -76,6 +76,22 @@ export function PlanCheckoutButton({
       authed = false;
     }
     if (!authed) {
+      /* [990] 정기(월간·연간)도 비로그인이면 **로그인 벽 대신 결제수단 화면**으로.
+         토스 도메인 변경 심사가 "홈페이지 내 결제수단 신용/체크카드가 확인되지
+         않습니다"로 반려된 직접 원인이 여기였다 — 심사역이 누르는 가장 큰 버튼
+         (추천 플랜의 월간 '플러스 시작하기')이 /login 으로 끝나, 사이트 어디서도
+         카드 결제창에 닿지 못했다. 체크아웃 화면이 비로그인에게 위젯을 그리고
+         ([968 · T1] · [990] 정기까지 확장) 거기서 로그인으로 잇는다.
+         조건: 토스 위젯 키가 있고, 정기 레일이 실제로 토스로 열려 있을 때만.
+         카카오페이·Stripe 로 팔리는 상태에서 토스 위젯을 미리 보여 주면 화면과
+         실제 결제수단이 어긋난다 — 그 경우는 기존 로그인 경로를 그대로 쓴다. */
+      if (tossClientKey() && isTossBillingOpenClient()) {
+        const rt = currentReturnTo();
+        const q = `tier=${tier}&billing=${billing}${rt ? `&returnTo=${encodeURIComponent(rt)}` : ""}`;
+        setConfirming(false);
+        window.location.href = `/subscription/checkout?${q}`;
+        return;
+      }
       /* [966] 고른 플랜·주기(그리고 페이월의 returnTo)를 로그인 뒤에도 잃지 않는다 —
          예전엔 /subscription 으로만 돌아와 처음부터 다시 골라야 했다. 서버 페이지가
          ?billing= 을 읽어 토글을 복원한다. */
