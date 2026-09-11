@@ -218,7 +218,21 @@ export default function RootLayout({
         {/* S16/G16 — Organization·WebSite JSON-LD (정적 값만, 데이터 페칭 없음) */}
         <SiteJsonLd />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        {/* [988a] default → black-translucent.
+            `default` 은 iOS 가 상태바 자리를 **불투명한 띠로 예약**한다 — 홈 화면에
+            추가해 연 앱에서도 화면 맨 위가 페이지가 아니라 시스템 띠였다.
+            `black-translucent` 면 웹뷰가 화면 전체를 차지하고 상태바가 그 위에 겹친다
+            (카메라 섬 자리까지 페이지가 올라간다).
+
+            이 모드의 시스템 글자는 **항상 흰색**이다. 그래서 그 자리에 어두운 면을
+            깔지 않으면 시각·배터리가 안 보인다 — globals.css 의
+            `@media (display-mode: standalone)` 이 세이프에어리어 높이만큼
+            브랜드 남색 띠를 그린다. manifest 도 이미 남색을 쓰고 있어(theme_color
+            #0B2545) 앱의 정체성과 어긋나지 않는다.
+
+            사파리(브라우저)에서는 이 메타가 무시된다 — 주소창·상태바는 사파리
+            소유라 웹 페이지가 그릴 수 없다. 그 경로는 IosInstallHint 가 안내한다. */}
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="내집나우" />
       </head>
       <body className="min-h-full flex flex-col">

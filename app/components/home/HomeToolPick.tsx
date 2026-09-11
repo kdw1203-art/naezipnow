@@ -101,7 +101,12 @@ export function HomeToolPick() {
         <h2 id="home-tool" className="t-sub font-extrabold text-text-3">
           오늘 써볼 도구
         </h2>
-        <Link href="/analysis" className="t-sub font-bold text-primary no-underline">
+        {/* [988a] 실측 세로 18px — 제목 줄 오른쪽에 단독으로 서는 링크라 tap-line(32px).
+            같은 줄에 다른 링크가 없어 겹칠 상대가 없다. */}
+        <Link
+          href="/analysis"
+          className="tap-line t-sub font-bold text-primary no-underline"
+        >
           분석 도구 전체 ›
         </Link>
       </div>
