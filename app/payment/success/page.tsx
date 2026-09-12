@@ -391,14 +391,20 @@ export default async function PaymentSuccessPage({
             </>
           ) : (
             <>
-              <Link href="/my" className="btn-primary rounded-[14px] p-[13px] text-center text-[13px] font-bold">
-                마이 페이지에서 플랜 확인
+              {/* [991] 결제 직후의 첫 행동은 "플랜 확인"이 아니라 **방금 산 것을 쓰는 것**이다.
+                  유료의 실체는 AI 분석 깊이·한도(구독 페이지 문구 그대로) — 이 단지 종합
+                  진단으로 바로 보낸다. 플랜 확인은 둘째 버튼. */}
+              <Link
+                href="/analysis/ai/ai-diagnosis"
+                className="btn-primary rounded-[14px] p-[13px] text-center text-[13px] font-bold"
+              >
+                바로 AI 분석 시작하기
               </Link>
               <Link
-                href="/subscription"
+                href="/my"
                 className="rounded-[14px] border border-line bg-surface p-[13px] text-center text-[13px] font-bold text-text-1"
               >
-                멤버십 안내
+                마이 페이지에서 플랜 확인
               </Link>
             </>
           )}

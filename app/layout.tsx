@@ -21,7 +21,6 @@ import { ReferralRedeem } from "@/components/ReferralRedeem";
 import { SiteJsonLd } from "./components/SiteJsonLd";
 import { CookieConsentBanner } from "@/components/consent/cookie-consent-banner";
 import { Ga4GtagLoader } from "@/components/ga4-gtag-loader";
-import { ViewportGroupTracker } from "./components/ViewportGroupTracker";
 import { MomentProvider } from "./components/motion/MomentProvider";
 import { NavigationProgress } from "./components/motion/NavigationProgress";
 import { PageTransition } from "./components/motion/PageTransition";
@@ -291,8 +290,11 @@ export default function RootLayout({
                       로드 자체가 없다). NEXT_PUBLIC_GA4_ID 미설정 시 GA4는 무동작. */}
                   <CookieConsentBanner />
                   <Ga4GtagLoader />
-                  {/* 반응형 QA — viewport_group_change 계측 (그룹 경계 통과 시에만) */}
-                  <ViewportGroupTracker />
+                  {/* [991] ViewportGroupTracker(viewport_group_change 계측) 삭제.
+                      30일 5,198건이 6명에게서 나왔다 — 세션당 수백 번. iOS 사파리는
+                      주소창이 접히고 펴질 때마다 resize 를 쏘고, 그때마다 핸들러가
+                      돌며 fetch 를 보냈다(홈 INP p75 1,296ms 의 한 조각). 기기 분포는
+                      web_vitals.user_agent 로 이미 알 수 있다. */}
                   {/* Vercel Web Analytics — 프로덕션(Vercel 배포)에서만 수집,
                       로컬에서는 아무것도 전송하지 않는다. */}
                   <Analytics />

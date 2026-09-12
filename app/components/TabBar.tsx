@@ -5,25 +5,30 @@ import Link from "next/link";
 import { Icon } from "./Icon";
 import { useTabBarCompact } from "@/lib/client/use-scroll-state";
 import { tabBarActive } from "@/lib/client/shell-gates";
-import { TOWN_CATEGORY_LINKS } from "@/lib/town/category-links";
 
 /** 균형 5슬롯(2-＋-2) — ＋가 정중앙에 오도록 재배치(2026-07-21 리디자인).
- *  홈·지도·기록(＋)·동네·마이. 통일 라인 아이콘 사용.
+ *  홈·지도·기록(＋)·분석·마이. 통일 라인 아이콘 사용.
+ *  [991] '동네' → '분석'. 30일 실측: /analysis 62회·평균 251초(가장 오래 읽는 화면)
+ *  vs /town 31회·7초(들어오자마자 나감). 탭바는 "다음에 갈 확률이 가장 높은 곳" 다섯이다 —
+ *  동네이야기는 헤더 메뉴(동네 › 뉴스·청약)와 푸터에서 닿는다.
  *  [970 · A-19] 셸에서 기본 프리페치를 남긴 곳은 이 5탭뿐 — 모바일에서 다음 이동 확률이
  *  가장 높은 링크다. 헤더·푸터·메뉴·알림 링크는 전부 prefetch={false}. */
-const TABS = [
+const TABS: Array<{
+  label: string;
+  icon: string;
+  href: string;
+  center?: boolean;
+  /** 이 탭을 함께 켜는 다른 경로 — 세그먼트 prefix */
+  extra?: readonly string[];
+}> = [
   { label: "홈", icon: "house", href: "/" },
   { label: "지도", icon: "map", href: "/map" },
   // 중앙 ＋는 핵심 전환 동선 '노트 쓰기'(/notes/new) 고정
   { label: "기록", icon: "plus", href: "/notes/new", center: true },
-  { label: "동네", icon: "messages-square", href: "/town" },
+  /* 계산기·에이전트는 분석 도구의 다른 얼굴이다 — 같은 탭이 켜져야 길을 잃지 않는다 */
+  { label: "분석", icon: "sparkles", href: "/analysis", extra: ["/calculator", "/agent"] },
   { label: "마이", icon: "user", href: "/my" },
 ];
-
-/* [970 · C-29] "동네" 탭은 동네이야기 카테고리 경로(/apply·/auctions·/supply·/redevelopment·
-   /qna — lib/town/category-links, 서버·클라이언트 공용 모듈)에서도 켜진다. 예전엔 /town
-   접두만 봐서 카테고리 안으로 들어가면 어느 탭도 켜지지 않았다. */
-const TOWN_HREFS = TOWN_CATEGORY_LINKS.map((l) => l.href);
 
 /** 모바일 하단 플로팅 글래스 탭바 — 중앙 정렬·균형 5슬롯.
  *
@@ -32,7 +37,7 @@ const TOWN_HREFS = TOWN_CATEGORY_LINKS.map((l) => l.href);
  * 내리고 반투명하게 접고, 위로 스크롤(=이동 의도)하면 즉시 복원한다. */
 export function TabBar() {
   const pathname = usePathname();
-  const isActive = (href: string) => tabBarActive(href, pathname, TOWN_HREFS);
+  const isActive = (tab: (typeof TABS)[number]) => tabBarActive(tab.href, pathname, tab.extra);
 
   /* [968 · 12] 접기 판정은 공용 스크롤 상태(리스너 하나·rAF)에서 받는다 — 규칙(아래로
      8px 이상 + 160px 아래면 접고, 위로 8px 이상이면 즉시 펼침)은 lib/client/
@@ -95,7 +100,7 @@ export function TabBar() {
             <Link
               key={tab.label}
               href={tab.href}
-              aria-current={isActive(tab.href) ? "page" : undefined}
+              aria-current={isActive(tab) ? "page" : undefined}
               /* [968 · 34] 탭 한 칸 = py 6 + 아이콘 20 + 간격 2 + 글자 12 + py 6 = 46px
                  (예전 py-1 은 42px 로 44px 터치 하한 미달). 바는 4px 자라 56px —
                  globals.css --nz-tabbar-offset 도 64→68px 로 같이 올렸다. */
@@ -104,25 +109,25 @@ export function TabBar() {
                    [975] 비활성 text-3 → text-2: 탭바는 반투명 유리라 뒤 배경이
                    비쳐 실제 바탕이 #d1d6dc 정도가 된다. 거기서 text-3 는 3.75:1
                    이었다(axe 실측). 이 라벨은 모든 화면 아래에 늘 떠 있다. */
-                isActive(tab.href) ? "text-primary" : "text-text-2"
+                isActive(tab) ? "text-primary" : "text-text-2"
               }`}
             >
               {/* [962] 현재 탭 = 온점. 탭이 바뀌면 한 번 튄다(njn-pop) — 브랜드 색이 상태 언어가 된다 */}
               <span
                 className={`absolute top-0 h-[5px] w-[5px] rounded-full bg-brand-red transition-opacity ${
-                  isActive(tab.href) ? "njn-pop-once opacity-100" : "opacity-0"
+                  isActive(tab) ? "njn-pop-once opacity-100" : "opacity-0"
                 }`}
               />
               <span
                 className={`flex leading-none transition-transform duration-200 ${
-                  isActive(tab.href) ? "scale-110" : ""
+                  isActive(tab) ? "scale-110" : ""
                 }`}
               >
                 <Icon name={tab.icon} size={20} />
               </span>
               <span
                 className={`text-[12px] leading-none ${
-                  isActive(tab.href) ? "font-bold" : "font-semibold"
+                  isActive(tab) ? "font-bold" : "font-semibold"
                 }`}
               >
                 {tab.label}

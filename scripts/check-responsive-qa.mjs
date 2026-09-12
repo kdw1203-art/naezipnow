@@ -410,20 +410,16 @@ if (iapNotice) {
 }
 
 // ── 추적 ─────────────────────────────────────────────────
-const [vpRel, vpSrc] = locate("export function buildViewportAnalyticsContext");
-if (vpSrc && vpSrc.includes("device_type") && vpSrc.includes("entry_route")) {
-  pass("추적", "viewport metadata", vpRel);
-} else if (vpSrc) {
-  warn("추적", "viewport metadata", `${vpRel} 에 device_type/entry_route 일부 누락`);
-} else {
-  todo("추적", "viewport metadata", "viewport 컨텍스트 모듈 없음");
-}
-
-/* withViewportMetadata() 는 있지만 그걸 붙여 실제로 이벤트를 쏘는 곳이 없다.
-   함수가 존재한다는 이유로 PASS 를 주면 "계측이 돌고 있다"는 잘못된 인상을 준다. */
-const emitter = findOne("viewport_group_change");
-if (emitter) pass("추적", "viewport_group_change 발신", emitter);
-else todo("추적", "viewport_group_change 발신", "발신부 미구현 — withViewportMetadata 헬퍼만 존재");
+/* [991] viewport_group_change 계측(ViewportGroupTracker + lib/analytics/viewport-context)
+   은 **의도적으로 삭제**됐다. 30일 5,198건이 6명에게서 나왔다 — iOS 사파리가 주소창
+   접힘마다 resize 를 쏘고 핸들러가 fetch 를 보내, 측정이 아니라 잡음이었고 홈 INP
+   (p75 1,296ms)의 한 조각이었다. 기기 분포는 web_vitals.user_agent 로 본다.
+   여기서 "발신부 미구현" 으로 보고하면 다시 만들라는 뜻으로 읽히므로, 삭제 사실을
+   PASS 로 적고 되살아나면 WARN 한다. */
+/* 발신부만 본다 — 관리자 트래픽 화면은 과거 행을 읽을 뿐이다 */
+const revived = findOne(/EVENT = "viewport_group_change"|eventName:\s*["']viewport_group_change/);
+if (revived) warn("추적", "viewport_group_change 발신", `${revived} — 991 에서 삭제한 계측이 되살아남`);
+else pass("추적", "viewport_group_change 발신", "삭제됨(991) · 기기 분포는 web_vitals.user_agent");
 
 // ── 출력 ─────────────────────────────────────────────────
 console.log("\n=== 반응형 QA 체크리스트 (자동) ===\n");

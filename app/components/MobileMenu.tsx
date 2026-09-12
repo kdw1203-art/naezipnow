@@ -41,43 +41,23 @@ const CAT_ICON: Record<string, string> = {
   임장노트: "notebook-pen",
   지도: "map",
   "AI 분석": "sparkles",
-  동네이야기: "messages-square",
+  동네: "messages-square",
 };
 
 type LinkItem = { label: string; href: string; icon: string };
 
-const SERVICE_LINKS: LinkItem[] = [
-  { label: "통합 검색", href: "/search", icon: "search" },
-  { label: "맞춤 추천", href: "/recommend", icon: "sparkles" },
-  { label: "노트 템플릿", href: "/notes/templates", icon: "notebook-pen" },
-  { label: "단지 Q&A", href: "/qna", icon: "messages-square" },
-  { label: "실매물 보기", href: "/listings", icon: "house" },
-  { label: "매물 등록", href: "/listings/new", icon: "square-plus" },
-  { label: "공매·경매", href: "/auctions", icon: "gavel" },
-  { label: "개발 물건 중개", href: "/dev-deals", icon: "construction" },
-  { label: "정비사업", href: "/redevelopment", icon: "building2" },
-  { label: "공공 데이터 현황", href: "/data/records", icon: "bar" },
-  { label: "포인트 상점", href: "/points/shop", icon: "gift" },
-  { label: "중개사 제휴", href: "/partners", icon: "users" },
-];
-
+/* [991] 전체 메뉴 43링크 → 12. 서비스 12개 묶음(추천·템플릿·Q&A·매물·개발물건·
+   정비사업·데이터 현황·상점·제휴)은 30일 동안 이 메뉴에서 열린 적이 없거나(체류 1~3초)
+   991 원칙 ② 에 따라 보관 대상이다. 계정은 마이·구독·설정 셋, 지원은 고객센터 하나 —
+   포인트·알림·매물은 마이 안에서, 법적 고지·가이드는 푸터에서 닿는다. */
 const ACCOUNT_LINKS: LinkItem[] = [
   { label: "마이페이지", href: "/my", icon: "user" },
-  { label: "저장 검색", href: "/my/saved-searches", icon: "search" },
-  { label: "관심 목록", href: "/my/wishlist", icon: "heart" },
-  { label: "포인트 지갑", href: "/my/points", icon: "wallet" },
-  { label: "친구 추천", href: "/my/referral", icon: "user-plus" },
-  { label: "내 매물", href: "/my/listings", icon: "building" },
-  { label: "알림", href: "/notifications", icon: "bell" },
   { label: "구독 관리", href: "/subscription", icon: "crown" },
   { label: "설정", href: "/my/settings", icon: "settings" },
 ];
 
 const SUPPORT_LINKS: LinkItem[] = [
   { label: "고객센터", href: "/support", icon: "life" },
-  { label: "규제·세금 안내", href: "/guides/regulations", icon: "landmark" },
-  { label: "계약 가이드", href: "/guides/contract", icon: "file-text" },
-  { label: "법적 고지", href: "/legal", icon: "scale" },
 ];
 
 export function MobileMenu() {
@@ -371,43 +351,13 @@ export function MobileMenu() {
                 ))}
               </nav>
 
-              {/* 서비스 */}
+              {/* [991] 내 계정 + 고객지원 — 한 묶음, 네 줄. 서비스 12개 묶음은 삭제(파일 위 주석). */}
               <div className="mt-5">
                 <div className="mb-1 px-1 text-[12px] font-bold uppercase tracking-wide text-text-3">
-                  서비스
+                  내 계정 · 지원
                 </div>
                 <div className="grid grid-cols-2 gap-x-1">
-                  {SERVICE_LINKS.map((l) => (
-                    <Link prefetch={false} key={l.href + l.label} href={l.href} className={rowClass(l.href)}>
-                      <Icon name={l.icon} size={17} />
-                      <span className="truncate">{l.label}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              {/* 내 계정 */}
-              <div className="mt-5">
-                <div className="mb-1 px-1 text-[12px] font-bold uppercase tracking-wide text-text-3">
-                  내 계정
-                </div>
-                <div className="grid grid-cols-2 gap-x-1">
-                  {ACCOUNT_LINKS.map((l) => (
-                    <Link prefetch={false} key={l.href + l.label} href={l.href} className={rowClass(l.href)}>
-                      <Icon name={l.icon} size={17} />
-                      <span className="truncate">{l.label}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              {/* 고객지원 */}
-              <div className="mt-5">
-                <div className="mb-1 px-1 text-[12px] font-bold uppercase tracking-wide text-text-3">
-                  고객지원
-                </div>
-                <div className="grid grid-cols-2 gap-x-1">
-                  {SUPPORT_LINKS.map((l) => (
+                  {[...ACCOUNT_LINKS, ...SUPPORT_LINKS].map((l) => (
                     <Link prefetch={false} key={l.href + l.label} href={l.href} className={rowClass(l.href)}>
                       <Icon name={l.icon} size={17} />
                       <span className="truncate">{l.label}</span>

@@ -75,6 +75,8 @@ function nextChargeLabel(billing: "monthly" | "annual"): string {
 
 export function BillingEnrollClient() {
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
+  /* [991] 카드 등록창 열기 실패 — ready 상태를 유지한 채 버튼 위에 이유를 적는다 */
+  const [authError, setAuthError] = useState<string | null>(null);
   const [params, setParams] = useState<EnrollParams | null>(null);
   const [customerKey, setCustomerKey] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
@@ -142,9 +144,33 @@ export function BillingEnrollClient() {
     })();
   }, []);
 
+  /* [991] 카드 등록창 계측 — 자동결제 등록 3건이 전부 pending(start 만 호출되고 register 는
+     한 번도 오지 않았다)인데, 창이 안 열린 건지·열렸다 닫힌 건지·SDK 가 거절한 건지를
+     서버는 알 길이 없었다. 누른 순간·SDK 오류 코드·사용자 취소를 남긴다(카드 정보 없음). */
+  const track = (eventName: string, metadata: Record<string, unknown> = {}) => {
+    try {
+      void fetch("/api/platform/event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventName,
+          source: "client",
+          campaign: "billing-enroll",
+          path: window.location.pathname,
+          metadata: { tier: params?.tier ?? null, billing: params?.billing ?? null, ...metadata },
+        }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch {
+      /* noop */
+    }
+  };
+
   async function openBillingAuth() {
     if (opening || phase.kind !== "ready" || !customerKey || !params) return;
     setOpening(true);
+    setAuthError(null);
+    track("billing_auth_open", { cardChange: Boolean(params.cardChange) });
     try {
       const TossPayments = await loadTossSdk();
       /* 자동결제 MID 의 클라이언트 키 — 일반결제 키로는 카드 등록이 안 된다 */
@@ -159,12 +185,16 @@ export function BillingEnrollClient() {
     } catch (e) {
       const code =
         e && typeof e === "object" && "code" in e ? String((e as { code: unknown }).code) : "";
-      if (code !== "USER_CANCEL" && code !== "PAY_PROCESS_CANCELED") {
+      const cancelled = code === "USER_CANCEL" || code === "PAY_PROCESS_CANCELED";
+      track(cancelled ? "billing_auth_cancel" : "billing_auth_fail", {
+        code: code.slice(0, 40),
+        message: (e instanceof Error ? e.message : "").slice(0, 120),
+      });
+      if (!cancelled) {
         const detail = [code, e instanceof Error ? e.message : ""].filter(Boolean).join(" · ").slice(0, 140);
-        setPhase({
-          kind: "error",
-          msg: `카드 등록창을 열지 못했어요${detail ? ` (${detail})` : ""}. 잠시 후 다시 시도해 주세요.`,
-        });
+        /* [991] 실패해도 ready 로 남긴다 — 버튼을 다시 누를 수 있어야 한다. 예전엔 error
+           phase 로 넘어가 "구독 페이지로 돌아가기"만 남았고, 재시도하려면 처음부터였다. */
+        setAuthError(`카드 등록창을 열지 못했어요${detail ? ` (${detail})` : ""}. 다시 눌러 주세요.`);
       }
     } finally {
       setOpening(false);
@@ -318,6 +348,11 @@ export function BillingEnrollClient() {
               )}
             </p>
           </div>
+          {authError && (
+            <p role="alert" className="rounded-xl bg-danger-soft px-3.5 py-2.5 t-sub font-bold text-danger">
+              {authError}
+            </p>
+          )}
           <button
             type="button"
             onClick={() => void openBillingAuth()}

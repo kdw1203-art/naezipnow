@@ -4,7 +4,6 @@ import {
   PAYMENT_STATUS_LABEL,
   PAYMENT_PLAN_LABEL,
 } from "@/lib/subscriptions/billing-history";
-import { CancelRequestButton } from "./CancelRequestButton";
 import { BillingAutopayCard } from "./BillingAutopayCard";
 import { isTossBillingEnabled } from "@/lib/payments/toss-billing";
 import { getLiveSubscriptionByEmail, toPublic } from "@/lib/payments/billing-store";
@@ -274,9 +273,11 @@ export async function BillingPanel({
             으로 전환할 수 있어요.
           </p>
         )}
-        {!autopay && currentPlan !== "free" && (
-          <CancelRequestButton currentPlan={currentPlan} expiresAtLabel={expiryLabel} />
-        )}
+        {/* [991] 단건 이용권의 "해지 요청" 버튼(CancelRequestButton → 고객센터 티켓)은 뺐다.
+            단건은 자동 반복청구가 없어 해지할 것이 없다 — 바로 위 문장이 이미 그렇게
+            말하고 있는데 그 아래 해지 버튼이 서 있으면 "그래도 뭔가 취소해야 하나" 로 읽힌다.
+            환불(청약철회)은 결제 내역의 환불·문의 링크가 맡는다. 자동결제 해지는
+            BillingAutopayCard 의 즉시 해지 버튼 그대로. */}
         <p className="t-sub text-text-3">
           상위 플랜으로 올리는 것은 위 요금제 카드에서 바로 결제하면 적용됩니다.
         </p>

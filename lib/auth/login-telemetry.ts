@@ -6,6 +6,10 @@ export type AuthLoginFailReason =
   | "invalid_input"
   | "rate_limited"
   | "bad_credentials"
+  /* [991] bad_credentials 를 셋으로 가른다 — 실패 8건이 전부 "잘못된 자격증명" 한 통에
+     들어 있어 무엇을 고쳐야 하는지 알 수 없었다 */
+  | "no_account"
+  | "social_only"
   | "email_not_confirmed"
   | "oauth_error"
   | "unknown";

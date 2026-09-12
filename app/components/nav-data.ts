@@ -14,46 +14,41 @@ export type NavItem = {
 };
 
 export const NAV: NavItem[] = [
+  /* [991] 18 → 8. 30일 실측(방문자 31·세션 82)에서 GNB 2단계 링크 중 열린 건
+     노트 쓰기·공개 노트·지도·분석 허브뿐이었다. 각 대분류에 "가장 먼저 누르는 것" 둘만
+     남기고, 나머지는 각 허브 화면 안에서 닿는다(회차 비교·시나리오·타이밍은 /analysis
+     허브 카드, 모임·전문가는 991 원칙 ② 에 따라 보관). */
   {
     label: "임장노트",
     href: "/notes",
     children: [
       { label: "노트 쓰기", href: "/notes/new" },
       { label: "공개 노트", href: "/notes" },
-      { label: "회차 비교", href: "/notes/compare" },
     ],
   },
   {
     label: "지도",
     href: "/map",
     children: [
-      /* [970 · A-26] 전체 메뉴 2열 칸(~150px)에서 "통합 지도 (탐색·실거래…" 로 잘렸다 */
       { label: "통합 지도 (탐색·실거래·매물)", shortLabel: "통합 지도", href: "/map" },
-      { label: "매물 등록", href: "/listings/new" },
+      { label: "단지 찾기", href: "/complex/browse" },
     ],
   },
   {
     label: "AI 분석",
     href: "/analysis",
     children: [
-      /* [958] 이름은 허브 카드(tool-catalog)와 글자까지 같게 — 세 곳이 다른 이름을 쓰면
-         "어떤 게 어느 기능인지"가 흐려진다 */
+      /* [958] 이름은 허브 카드(tool-catalog)와 글자까지 같게 */
       { label: "분석 허브", href: "/analysis" },
       { label: "이 단지 종합 진단", href: "/analysis/ai/ai-diagnosis" },
-      { label: "후보 단지 비교", href: "/analysis/compare" },
-      { label: "시세·타이밍 분석", href: "/analysis/timing" },
-      { label: "시장·대출 시나리오", href: "/analysis/scenario" },
     ],
   },
   {
-    label: "동네이야기",
+    label: "동네",
     href: "/town",
     children: [
-      // 콘텐츠·소식 + 사람·모임 (분양·물건·거래는 전체 메뉴/각 페이지에서 접근)
-      { label: "피드", href: "/town" },
       { label: "뉴스", href: "/town/news" },
-      { label: "임장 모임", href: "/town/groups" },
-      { label: "전문가", href: "/town/experts" },
+      { label: "청약", href: "/apply" },
     ],
   },
 ];

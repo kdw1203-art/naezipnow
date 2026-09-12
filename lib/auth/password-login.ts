@@ -20,6 +20,89 @@ import type { UserRole } from "@/lib/auth/types";
 export class EmailNotConfirmedError extends CredentialsSignin {
   code = "email_not_confirmed";
 }
+
+/**
+ * [991] 로그인 실패에 **이유**를 싣는다.
+ *
+ * 30일 실측: 로그인 성공 10 · 실패 8, 실패는 전부 "bad_credentials" 한 통이었다.
+ * 화면은 "이메일 또는 비밀번호가 올바르지 않습니다" 만 말했다 — 사용자가 다음에 할
+ * 일(비밀번호 찾기 / 소셜 버튼 누르기 / 가입하기)이 셋 중 무엇인지 알 길이 없었다.
+ *
+ * 비밀번호가 **틀린 뒤에만** 진단한다(성공 경로·속도 제한은 그대로). 계정 존재 여부가
+ * 드러나는 건 사실이지만, 가입 화면이 "이미 가입된 이메일" 을 이미 말하고 있어
+ * 새로 열리는 정보는 없다. 이메일별 시도 제한(12회/15분)이 그대로 걸린다.
+ */
+export type SocialOnlyProvider = "google" | "kakao" | "toss";
+
+export class SocialOnlyAccountError extends CredentialsSignin {
+  code: string;
+  constructor(provider: SocialOnlyProvider) {
+    super();
+    this.code = `social_only_${provider}`;
+  }
+}
+
+export class NoAccountError extends CredentialsSignin {
+  code = "no_account";
+}
+
+/** 비밀번호 로그인 대신 어느 버튼을 눌러야 하는지 — app_users 의 sentinel 해시가 말해 준다 */
+const SOCIAL_SENTINEL: Record<string, SocialOnlyProvider> = {
+  "kakao-oauth-no-password": "kakao",
+  "toss-login-no-password": "toss",
+};
+
+/**
+ * 실패 원인 진단 — 순서: app_users 행 → Supabase Auth 사용자.
+ *  · sentinel 해시(카카오·토스) → 그 소셜로만 로그인되는 계정
+ *  · Supabase Auth 사용자가 있고 providers 가 google 뿐 → Google 로만
+ *  · 어디에도 없음 → no_account
+ *  · 그 밖(비밀번호가 있는 계정) → null = 진짜 비밀번호 오류
+ * 조회 실패는 전부 null — 진단이 로그인 장애가 되면 안 된다.
+ */
+export async function diagnoseBadCredentials(
+  email: string,
+): Promise<SocialOnlyAccountError | NoAccountError | null> {
+  const sb = getServiceSupabase();
+  if (!sb) return null;
+  let rowExists = false;
+  try {
+    const { data } = await sb
+      .from("app_users")
+      .select("password_hash")
+      .eq("email", email)
+      .maybeSingle();
+    if (data) {
+      rowExists = true;
+      const hash = String((data as { password_hash?: string | null }).password_hash ?? "");
+      const social = SOCIAL_SENTINEL[hash];
+      if (social) return new SocialOnlyAccountError(social);
+      /* 자체 bcrypt 해시가 있는 계정 — 비밀번호가 틀린 것이다 */
+      if (hash && hash !== "supabase-auth-linked") return null;
+    }
+  } catch {
+    return null;
+  }
+  try {
+    const { findAuthUserByEmail } = await import("@/lib/auth/find-auth-user");
+    const authUser = await findAuthUserByEmail(email);
+    if (authUser) {
+      const meta = authUser.app_metadata as { providers?: unknown; provider?: unknown } | undefined;
+      const providers = Array.isArray(meta?.providers)
+        ? meta.providers.map(String)
+        : typeof meta?.provider === "string"
+          ? [meta.provider]
+          : [];
+      if (providers.length > 0 && !providers.includes("email") && providers.includes("google")) {
+        return new SocialOnlyAccountError("google");
+      }
+      return null; // 이메일 비밀번호 계정 — 비밀번호 오류
+    }
+    return rowExists ? null : new NoAccountError();
+  } catch {
+    return null;
+  }
+}
 import { getSupabasePublicKey, getSupabaseUrl } from "@/lib/supabase/env";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { rateLimit } from "@/lib/rate-limit";
@@ -177,11 +260,19 @@ export async function authorizeWithPassword(
       });
       return fromSb;
     }
+    /* [991] 틀린 뒤에만 왜 틀렸는지 본다 */
+    const diagnosed = await diagnoseBadCredentials(email);
     void recordAuthLoginOutcome({
       ok: false,
       provider: "password",
-      reason: "bad_credentials",
+      reason:
+        diagnosed instanceof NoAccountError
+          ? "no_account"
+          : diagnosed instanceof SocialOnlyAccountError
+            ? "social_only"
+            : "bad_credentials",
     });
+    if (diagnosed) throw diagnosed;
     return null;
   } catch (e) {
     if (e instanceof EmailNotConfirmedError) {
@@ -190,6 +281,11 @@ export async function authorizeWithPassword(
         provider: "password",
         reason: "email_not_confirmed",
       });
+      throw e;
+    }
+    if (e instanceof SocialOnlyAccountError || e instanceof NoAccountError) {
+      /* [991] 이유가 실린 실패 — 계측은 던지기 전에 이미 기록했다. Auth.js 가 code 를
+         signIn() 결과(res.code)로 클라이언트에 전달한다. */
       throw e;
     }
     void recordAuthLoginOutcome({

@@ -102,15 +102,20 @@ export function loginReturnHref(pathname: string, search = ""): string {
  * 속한 /apply·/auctions·/supply·/redevelopment·/qna 에서도 켜진다(예전엔 /town 만).
  * prefix 는 세그먼트 단위(/map 이 /mapping 을 켜지 않게). 홈은 정확 일치.
  */
+/**
+ * 탭 활성 판정. `extraPrefixes` 는 **이 탭**을 함께 켜는 추가 경로(세그먼트 prefix).
+ * [991] 예전엔 셋째 인자가 "동네 탭 전용 카테고리 목록"이었다 — 탭바에서 '동네'가
+ * '분석'으로 바뀌면서(30일 실측: /analysis 62회·251초 vs /town 31회·7초) 특정 탭에
+ * 묶인 규칙을 없앴다. 호출자가 탭마다 자기 목록을 넘긴다.
+ */
 export function tabBarActive(
   tabHref: string,
   pathname: string,
-  townHrefs: readonly string[] = [],
+  extraPrefixes: readonly string[] = [],
 ): boolean {
   if (tabHref === "/") return pathname === "/";
   if (underPrefix(pathname, tabHref)) return true;
-  if (tabHref === "/town") return townHrefs.some((h) => underPrefix(pathname, h));
-  return false;
+  return extraPrefixes.some((h) => underPrefix(pathname, h));
 }
 
 /**

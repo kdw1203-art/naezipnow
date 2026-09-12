@@ -2,7 +2,7 @@
 
 import { ActionButton } from "@/app/components/ui/ActionButton";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Logo } from "@/app/components/Logo";
 import { Icon } from "@/app/components/Icon";
@@ -10,6 +10,17 @@ import { Icon } from "@/app/components/Icon";
 /** 비밀번호 찾기 — 구 app/auth/forgot-password 포트 (기존 /api/auth/forgot-password 연결 유지) */
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
+  /* [991] 로그인 화면이 "비밀번호가 맞지 않아요 → 비밀번호 찾기 ›" 로 보낼 때 이메일을
+     ?email= 로 싣는다 — 방금 친 주소를 다시 치게 하지 않는다. 마운트 후에만 읽는다
+     (서버·첫 렌더 불일치 방지). */
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get("email");
+      if (q && q.includes("@")) setEmail(q);
+    } catch {
+      /* ignore */
+    }
+  }, []);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);

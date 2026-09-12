@@ -52,18 +52,16 @@ test("tabBarActive — 홈은 정확 일치, 나머지는 세그먼트 prefix", 
   assert.equal(tabBarActive("/my", "/my/points"), true);
 });
 
-test("tabBarActive — 동네 탭은 동네이야기 카테고리 경로 전부에서 켜진다", () => {
-  const hrefs = TOWN_CATEGORY_LINKS.map((l) => l.href);
-  assert.equal(tabBarActive("/town", "/town", hrefs), true);
-  assert.equal(tabBarActive("/town", "/town/news/abc", hrefs), true);
-  for (const h of hrefs) {
-    assert.equal(tabBarActive("/town", h, hrefs), true, h);
-    assert.equal(tabBarActive("/town", `${h}/detail`, hrefs), true, `${h}/detail`);
-  }
-  assert.equal(tabBarActive("/town", "/apply", hrefs), true, "app/town 밖의 카테고리(/apply)도");
-  assert.equal(tabBarActive("/town", "/applyx", hrefs), false);
-  assert.equal(tabBarActive("/town", "/qna", []), false, "목록이 없으면 /town 접두만");
-  assert.equal(tabBarActive("/my", "/qna", hrefs), false, "다른 탭에는 영향 없음");
+test("tabBarActive — [991] extraPrefixes 는 호출한 탭을 함께 켠다 (세그먼트 단위)", () => {
+  const extra = ["/calculator", "/agent"];
+  assert.equal(tabBarActive("/analysis", "/analysis", extra), true);
+  assert.equal(tabBarActive("/analysis", "/analysis/ai/ai-diagnosis", extra), true);
+  assert.equal(tabBarActive("/analysis", "/calculator", extra), true, "계산기도 분석 탭");
+  assert.equal(tabBarActive("/analysis", "/calculator/gap", extra), true);
+  assert.equal(tabBarActive("/analysis", "/agent", extra), true);
+  assert.equal(tabBarActive("/analysis", "/calculatorx", extra), false, "prefix 는 세그먼트 단위");
+  assert.equal(tabBarActive("/analysis", "/town", extra), false, "동네는 더 이상 탭이 아니다");
+  assert.equal(tabBarActive("/analysis", "/calculator", []), false, "목록이 없으면 자기 접두만");
 });
 
 test("backToTopLane — FAB 가 실제로 있는 /notes·/town 정확 일치만 lifted", () => {

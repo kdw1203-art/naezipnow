@@ -12,6 +12,7 @@ import { Icon } from "@/app/components/Icon";
 import { useMoment } from "@/app/components/motion/MomentProvider";
 
 import type { SocialProvider } from "@/lib/auth/configured-social";
+import { loginFailHint, type LoginFailHint } from "@/lib/auth/login-fail-hint";
 import { trackPlatformEvent } from "@/lib/platform-events-client";
 
 export type { SocialProvider };
@@ -234,6 +235,9 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
   const [signupDoneNotice, setSignupDoneNotice] = useState(false);
   /* [965] 미인증 계정 — 오류 문구 옆에 "인증 메일 다시 보내기" 를 붙인다 */
   const [needsConfirm, setNeedsConfirm] = useState(false);
+  /* [991] 실패 사유별 다음 행동 — 소셜 전용 계정이면 그 버튼을, 계정이 없으면 가입을,
+     비밀번호가 틀렸으면 찾기를 바로 잇는다. 30일 실패 8건이 전부 한 문구였다. */
+  const [failHint, setFailHint] = useState<LoginFailHint | null>(null);
   const [resendState, setResendState] = useState<"idle" | "busy" | "sent" | "failed">("idle");
   const [resendNote, setResendNote] = useState<string | null>(null);
 
@@ -340,6 +344,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
     e.preventDefault();
     setError(null);
     setNeedsConfirm(false);
+    setFailHint(null);
     setResendState("idle");
     setResendNote(null);
     if (!email.trim().includes("@")) {
@@ -359,14 +364,21 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
         callbackUrl: resolveCallbackUrl(),
       });
       if (res?.error) {
-        const detail = `${res.error} ${res.code ?? ""}`.toLowerCase();
-        if (detail.includes("email_not_confirmed")) {
+        const hint = loginFailHint(`${res.error} ${res.code ?? ""}`);
+        if (hint.kind === "email_not_confirmed") {
           setError(EMAIL_NOT_CONFIRMED_COPY);
           setNeedsConfirm(true);
+        } else if (hint.kind === "social") {
+          /* [991] 비밀번호가 없는 소셜 계정 — 버튼이 화면에 있으면 그리로, 없으면(env 미설정)
+             사실만 말한다. 존재하지 않는 버튼을 누르라고 하지 않는다. */
+          setError(`이 이메일은 ${SOCIAL_LABEL[hint.provider]} 계정으로 가입돼 있어요.`);
+          setFailHint(hint);
+        } else if (hint.kind === "no_account") {
+          setError("이 이메일로 가입된 계정이 없어요.");
+          setFailHint(hint);
         } else {
-          setError(
-            "이메일 또는 비밀번호가 올바르지 않습니다. 가입 직후라면 인증 메일도 확인해 주세요.",
-          );
+          setError("비밀번호가 맞지 않아요.");
+          setFailHint(hint);
         }
         return;
       }
@@ -439,6 +451,29 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
             className="rise-in rounded-[10px] bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger"
           >
             {error}
+            {failHint?.kind === "social" && (
+              <div className="mt-2 text-[12px] font-semibold text-text-2">
+                {social.includes(failHint.provider)
+                  ? `아래 "${SOCIAL_BUTTON[failHint.provider].label}" 버튼으로 로그인해 주세요.`
+                  : `${SOCIAL_LABEL[failHint.provider]} 로그인이 지금 이 화면에 없어요 — 고객센터로 알려 주시면 계정을 이어 드릴게요.`}
+              </div>
+            )}
+            {failHint?.kind === "no_account" && (
+              <Link
+                href={signupHref}
+                className="mt-2 inline-block rounded-[8px] border border-danger/40 bg-surface px-3 py-1.5 text-[12px] font-bold text-danger no-underline"
+              >
+                이 이메일로 가입하기 ›
+              </Link>
+            )}
+            {failHint?.kind === "bad_password" && (
+              <Link
+                href={`/forgot-password${email.includes("@") ? `?email=${encodeURIComponent(email.trim())}` : ""}`}
+                className="mt-2 inline-block rounded-[8px] border border-danger/40 bg-surface px-3 py-1.5 text-[12px] font-bold text-danger no-underline"
+              >
+                비밀번호 찾기 ›
+              </Link>
+            )}
             {needsConfirm && (
               <div className="mt-2 flex flex-col gap-1.5">
                 <button

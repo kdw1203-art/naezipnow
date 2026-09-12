@@ -486,12 +486,14 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
             {showPw ? "숨김" : "표시"}
           </button>
         </div>
-        <label className="flex items-center gap-2 py-1 text-xs text-text-2">
+        {/* [991] 동의 행 = 탭 대상. 체크박스 16px 만 목표였는데(989 게이트 지적) 행 전체를
+            40px 높이 + 좌우 10px 여백으로 키운다 — label 이 토글하므로 행 어디를 눌러도 된다. */}
+        <label className="-mx-2.5 flex min-h-[40px] items-center gap-3 rounded-lg px-2.5 py-1 text-xs text-text-2">
           <input
             type="checkbox"
             checked={agree}
             onChange={(e) => setAgree(e.target.checked)}
-            className="h-4 w-4 accent-[#1d4fd8]"
+            className="h-5 w-5 shrink-0 accent-[#1d4fd8]"
           />
           {/* [970 · A-13] 동의 대상 문서를 그 자리에서 열 수 있게 — 링크 없는 동의는 형식뿐이다.
               <label> 안의 <a> 는 HTML 활성화 규칙상 체크박스를 토글하지 않는다(대화형 자손).
@@ -518,23 +520,23 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
             에 동의하며 만 14세 이상입니다
           </span>
         </label>
-        <label className="flex items-center gap-2 py-1 text-xs text-text-2">
+        <label className="-mx-2.5 flex min-h-[40px] items-center gap-3 rounded-lg px-2.5 py-1 text-xs text-text-2">
           <input
             type="checkbox"
             checked={agreeMarketing}
             onChange={(e) => setAgreeMarketing(e.target.checked)}
-            className="h-4 w-4 accent-[#1d4fd8]"
+            className="h-5 w-5 shrink-0 accent-[#1d4fd8]"
           />
           <span>
             (선택) 혜택·소식 이메일 수신 — 언제든 설정에서 철회할 수 있어요
           </span>
         </label>
-        <label className="flex items-center gap-2 py-1 text-xs text-text-2">
+        <label className="-mx-2.5 flex min-h-[40px] items-center gap-3 rounded-lg px-2.5 py-1 text-xs text-text-2">
           <input
             type="checkbox"
             checked={agreeLocation}
             onChange={(e) => setAgreeLocation(e.target.checked)}
-            className="h-4 w-4 accent-[#1d4fd8]"
+            className="h-5 w-5 shrink-0 accent-[#1d4fd8]"
           />
           <span>
             (선택) 위치정보 이용(주변 단지·지도 편의) — 설정에서 언제든 철회
