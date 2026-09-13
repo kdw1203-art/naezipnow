@@ -230,6 +230,9 @@ jobs:
           call watchlist-new-tx "https://nuguzip.com/api/cron/watchlist-new-tx"
           # 저장 검색 신규 매치
           call saved-search "https://nuguzip.com/api/cron/saved-search-alerts"
+          # [994 · D4] 관심 지역 청약 — 새 공고·오늘 접수 시작·오늘 발표(applyhome_announcements 기준,
+          # supply-ingest 가 위 daily 잡에서 먼저 적재한다)
+          call applyhome-alerts "https://nuguzip.com/api/cron/applyhome-alerts"
           # [AI-29] 경제지표 임계 알림 — 기준금리 워치(등록자 대상, 1회 통지 후 재무장식)
           call economy-alerts "https://nuguzip.com/api/cron/economy-alerts"
           # 출석 리마인드 — 오늘 미출석 구독자에게만

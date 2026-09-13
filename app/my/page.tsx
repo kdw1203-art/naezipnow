@@ -643,7 +643,7 @@ export default async function MyPage() {
           <SectionHead title="포인트" href="/my/points" hrefLabel="전체 내역" />
           {/* [#119·#120] 미션 센터 진입 — 첫 행동 3계단 + 주간 미션 */}
           <Link
-            href="/my/missions"
+            href="/my/points?tab=missions"
             className="card tile flex items-center justify-between rounded-[14px] px-4 py-3.5 no-underline"
           >
             <span className="flex min-w-0 flex-col">
@@ -670,7 +670,7 @@ export default async function MyPage() {
           {/* 친구 초대 — 기능은 완성돼 있었는데 진입점이 모바일 메뉴뿐이었다
               (성장 회로 점검에서 발견). 포인트 맥락이 초대 보상의 자연스러운 자리다. */}
           <Link
-            href="/my/referral"
+            href="/my/points?tab=referral"
             className="card tile flex items-center justify-between rounded-[14px] px-4 py-3.5 no-underline"
           >
             <span className="flex min-w-0 flex-col">
@@ -699,7 +699,7 @@ export default async function MyPage() {
                 icon="wallet"
                 title="아직 포인트 내역이 없어요"
                 desc="활동하면 적립·사용 기록이 모여요"
-                action={{ label: "적립 미션 보기", href: "/my/missions" }}
+                action={{ label: "적립 미션 보기", href: "/my/points?tab=missions" }}
               />
             ) : (
               <div className="flex flex-col">

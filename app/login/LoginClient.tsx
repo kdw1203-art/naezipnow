@@ -203,13 +203,13 @@ const EMAIL_NOT_CONFIRMED_COPY =
   "이메일 인증이 아직 안 됐어요. 받은 인증 메일의 링크를 눌러 주세요.";
 
 /* 로그인 계정으로 실제로 할 수 있는 것만 적는다 — 각 항목은 코드에 로그인 벽이
-   실제로 걸려 있는 기능이다(노트 저장·관심단지·Q&A 작성·모임 참여). 없는 기능을
-   미끼로 적지 않는다. */
+   실제로 걸려 있는 기능이다(노트 저장·관심단지·분석 기록·관심 지역 알림). 없는 기능을
+   미끼로 적지 않는다. [994] Q&A·모임은 992 에서 보관돼 목록에서 뺐다. */
 const ACCOUNT_BENEFITS: { icon: string; label: string; desc: string }[] = [
   { icon: "📝", label: "임장노트 저장", desc: "현장에서 적은 체크·사진을 계정에 보관" },
   { icon: "⭐", label: "관심 단지", desc: "보던 단지를 모아두고 다시 찾기" },
-  { icon: "💬", label: "단지 Q&A", desc: "궁금한 단지에 질문하고 답변 남기기" },
-  { icon: "🧭", label: "임장 모임", desc: "같이 볼 사람들과 모임 참여" },
+  { icon: "🤖", label: "AI 분석 기록", desc: "진단·예측 결과를 기록으로 남겨 다시 보기" },
+  { icon: "🔔", label: "관심 지역 알림", desc: "청약 공고·접수·발표를 수신함으로" },
 ];
 
 /**
@@ -417,7 +417,8 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
           ✕
         </Link>
       </div>
-      <div className="mt-2 flex flex-1 flex-col gap-3.5">
+      {/* [994] 데스크톱은 카드가 위에 붙고 아래 250px 이 비었다 — lg 부터 세로 가운데(모바일은 그대로 위 정렬) */}
+      <div className="mt-2 flex flex-1 flex-col gap-3.5 lg:justify-center lg:pb-10">
         <div className="rise-in">
           <Logo size={34} />
         </div>

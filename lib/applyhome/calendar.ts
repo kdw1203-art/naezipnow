@@ -2,6 +2,8 @@ import "server-only";
 
 import { fetchAptDetailPage } from "@/lib/applyhome/adapters/apt-detail";
 import { isApplyhomeConfigured } from "@/lib/applyhome/odcloud-client";
+import { announcementFreshness, listAnnouncementsInWindow, type AnnouncementRow } from "@/lib/applyhome/store";
+import type { AptDetailRow } from "@/lib/applyhome/types";
 
 /* [개선 #17, 2026-08-22] 이번 주 청약 캘린더 데이터.
  *
@@ -35,9 +37,67 @@ export type ApplyCalendarDay = {
 };
 
 export type ApplyCalendarResult =
-  | { state: "ok"; days: ApplyCalendarDay[]; fetchedAt: string; totalInWindow: number }
+  | {
+      state: "ok";
+      days: ApplyCalendarDay[];
+      fetchedAt: string;
+      totalInWindow: number;
+      /** [994] "store" = 매일 적재된 저장소(기준일 = 마지막 적재) · "live" = 청약홈 즉시 조회 */
+      source: "store" | "live";
+    }
   | { state: "unconfigured" }
   | { state: "error"; cause: string };
+
+/* [994] 저장소 행 ↔ 상세 API 행을 같은 모양으로 — 캘린더·주간 아카이브가 하나의 매핑을 쓴다 */
+type CalendarSourceRow = {
+  houseName: string;
+  region: string;
+  houseKind: string | null;
+  start: string | null;
+  end: string | null;
+  announce: string | null;
+  winner: string | null;
+  url: string | null;
+};
+
+function fromDetail(r: AptDetailRow): CalendarSourceRow {
+  return {
+    houseName: r.HOUSE_NM ?? "단지명 미제공",
+    region: r.SUBSCRPT_AREA_CODE_NM ?? "지역 미제공",
+    houseKind: r.HOUSE_SECD_NM ?? null,
+    start: normDate(r.RCEPT_BGNDE),
+    end: normDate(r.RCEPT_ENDDE),
+    announce: normDate(r.RCRIT_PBLANC_DE),
+    winner: normDate(r.PRZWNER_PRESNATN_DE),
+    url: r.PBLANC_URL ?? null,
+  };
+}
+
+function fromStored(a: AnnouncementRow): CalendarSourceRow {
+  return {
+    houseName: a.house_nm,
+    region: a.region ?? "지역 미제공",
+    houseKind: a.house_secd_nm,
+    start: a.rcept_bgnde,
+    end: a.rcept_endde,
+    announce: a.rcrit_pblanc_de,
+    winner: a.przwner_de,
+    url: a.pblanc_url,
+  };
+}
+
+function toItem(r: CalendarSourceRow): ApplyCalendarItem {
+  return {
+    houseName: r.houseName,
+    region: r.region,
+    houseKind: r.houseKind,
+    receiptStart: r.start,
+    receiptEnd: r.end,
+    announceDate: r.announce,
+    winnerDate: r.winner,
+    portalUrl: r.url,
+  };
+}
 
 function normDate(raw?: string): string | null {
   if (!raw) return null;
@@ -47,21 +107,42 @@ function normDate(raw?: string): string | null {
 }
 
 export async function buildApplyCalendar(): Promise<ApplyCalendarResult> {
-  if (!isApplyhomeConfigured()) return { state: "unconfigured" };
-  try {
-    /* 최신 공고부터 두 페이지 — 상세 API 는 공고 등록순으로 최신이 앞에 온다
-       (실측: page 1 에 이번 주 접수 공고가 옴). */
-    const pages = await Promise.all([
-      fetchAptDetailPage({ page: 1, perPage: 100 }),
-      fetchAptDetailPage({ page: 2, perPage: 100 }),
-    ]);
-    const rows = pages.flatMap((p) => p.rows);
+  const today = new Date();
+  const kstNow = new Date(today.getTime() + 9 * 3600_000);
+  const todayStr = kstNow.toISOString().slice(0, 10);
+  const winStart = new Date(kstNow.getTime() - 7 * 86400_000).toISOString().slice(0, 10);
+  const winEnd = new Date(kstNow.getTime() + 35 * 86400_000).toISOString().slice(0, 10);
 
-    const today = new Date();
-    const kstNow = new Date(today.getTime() + 9 * 3600_000);
-    const todayStr = kstNow.toISOString().slice(0, 10);
-    const winStart = new Date(kstNow.getTime() - 7 * 86400_000).toISOString().slice(0, 10);
-    const winEnd = new Date(kstNow.getTime() + 35 * 86400_000).toISOString().slice(0, 10);
+  /* [994] 저장소 먼저 — 매일 적재된 공고가 있으면 청약홈을 부르지 않는다(장애 격리·기준일 표기).
+     저장소가 비었으면(첫 적재 전·서비스 키 없음) 예전처럼 라이브. */
+  let rows: CalendarSourceRow[] = [];
+  let source: "store" | "live" = "live";
+  let fetchedAt = new Date().toISOString();
+  try {
+    const stored = await listAnnouncementsInWindow(winStart, winEnd);
+    if (stored.length > 0) {
+      rows = stored.map(fromStored);
+      source = "store";
+      fetchedAt = (await announcementFreshness()).asOf ?? fetchedAt;
+    }
+  } catch {
+    rows = [];
+  }
+  if (rows.length === 0) {
+    if (!isApplyhomeConfigured()) return { state: "unconfigured" };
+    try {
+      /* 최신 공고부터 두 페이지 — 상세 API 는 공고 등록순으로 최신이 앞에 온다
+         (실측: page 1 에 이번 주 접수 공고가 옴). */
+      const pages = await Promise.all([
+        fetchAptDetailPage({ page: 1, perPage: 100 }),
+        fetchAptDetailPage({ page: 2, perPage: 100 }),
+      ]);
+      rows = pages.flatMap((p) => p.rows).map(fromDetail);
+    } catch (e) {
+      return { state: "error", cause: e instanceof Error ? e.message : String(e) };
+    }
+  }
+  try {
 
     const byDate = new Map<string, ApplyCalendarDay>();
     const dayOf = (date: string): ApplyCalendarDay => {
@@ -75,24 +156,14 @@ export async function buildApplyCalendar(): Promise<ApplyCalendarResult> {
 
     let totalInWindow = 0;
     for (const r of rows) {
-      const start = normDate(r.RCEPT_BGNDE);
-      const end = normDate(r.RCEPT_ENDDE);
+      const { start, end } = r;
       if (!start && !end) continue;
       const inWindow =
         (start && start >= winStart && start <= winEnd) ||
         (end && end >= winStart && end <= winEnd);
       if (!inWindow) continue;
       totalInWindow += 1;
-      const item: ApplyCalendarItem = {
-        houseName: r.HOUSE_NM ?? "단지명 미제공",
-        region: r.SUBSCRPT_AREA_CODE_NM ?? "지역 미제공",
-        houseKind: r.HOUSE_SECD_NM ?? null,
-        receiptStart: start,
-        receiptEnd: end,
-        announceDate: normDate(r.RCRIT_PBLANC_DE),
-        winnerDate: normDate(r.PRZWNER_PRESNATN_DE),
-        portalUrl: r.PBLANC_URL ?? null,
-      };
+      const item = toItem(r);
       if (start && start >= todayStr && start <= winEnd) dayOf(start).starts.push(item);
       if (end && end >= todayStr && end <= winEnd) dayOf(end).ends.push(item);
     }
@@ -101,7 +172,7 @@ export async function buildApplyCalendar(): Promise<ApplyCalendarResult> {
       .filter((d) => d.starts.length > 0 || d.ends.length > 0)
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    return { state: "ok", days, fetchedAt: new Date().toISOString(), totalInWindow };
+    return { state: "ok", days, fetchedAt, totalInWindow, source };
   } catch (e) {
     return { state: "error", cause: e instanceof Error ? e.message : String(e) };
   }
@@ -157,12 +228,25 @@ export type ApplyWeekResult =
 export async function buildApplyWeek(slugOrRange: string | ApplyWeekRange): Promise<ApplyWeekResult | null> {
   const range = typeof slugOrRange === "string" ? parseWeekSlug(slugOrRange) : slugOrRange;
   if (!range) return null;
-  if (!isApplyhomeConfigured()) return { state: "unconfigured" };
+  /* [994] 저장소 먼저(주 단위는 오래된 주도 저장소에 남아 있어 라이브보다 낫다) */
+  let rows: CalendarSourceRow[] = [];
   try {
-    const pages = await Promise.all(
-      [1, 2, 3, 4].map((page) => fetchAptDetailPage({ page, perPage: 100 })),
-    );
-    const rows = pages.flatMap((p) => p.rows);
+    rows = (await listAnnouncementsInWindow(range.start, range.end)).map(fromStored);
+  } catch {
+    rows = [];
+  }
+  if (rows.length === 0) {
+    if (!isApplyhomeConfigured()) return { state: "unconfigured" };
+    try {
+      const pages = await Promise.all(
+        [1, 2, 3, 4].map((page) => fetchAptDetailPage({ page, perPage: 100 })),
+      );
+      rows = pages.flatMap((p) => p.rows).map(fromDetail);
+    } catch (e) {
+      return { state: "error", cause: e instanceof Error ? e.message : String(e) };
+    }
+  }
+  try {
     const byDate = new Map<string, ApplyCalendarDay>();
     const dayOf = (date: string): ApplyCalendarDay => {
       let d = byDate.get(date);
@@ -174,23 +258,13 @@ export async function buildApplyWeek(slugOrRange: string | ApplyWeekRange): Prom
     };
     let totalInWeek = 0;
     for (const r of rows) {
-      const start = normDate(r.RCEPT_BGNDE);
-      const end = normDate(r.RCEPT_ENDDE);
+      const { start, end } = r;
       if (!start && !end) continue;
       const startIn = start !== null && start >= range.start && start <= range.end;
       const endIn = end !== null && end >= range.start && end <= range.end;
       if (!startIn && !endIn) continue;
       totalInWeek += 1;
-      const item: ApplyCalendarItem = {
-        houseName: r.HOUSE_NM ?? "단지명 미제공",
-        region: r.SUBSCRPT_AREA_CODE_NM ?? "지역 미제공",
-        houseKind: r.HOUSE_SECD_NM ?? null,
-        receiptStart: start,
-        receiptEnd: end,
-        announceDate: normDate(r.RCRIT_PBLANC_DE),
-        winnerDate: normDate(r.PRZWNER_PRESNATN_DE),
-        portalUrl: r.PBLANC_URL ?? null,
-      };
+      const item = toItem(r);
       if (startIn && start) dayOf(start).starts.push(item);
       if (endIn && end) dayOf(end).ends.push(item);
     }

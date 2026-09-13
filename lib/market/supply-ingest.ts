@@ -1,7 +1,9 @@
 import "server-only";
 
 import { fetchAptDetailPage } from "@/lib/applyhome/adapters/apt-detail";
-import { isApplyhomeConfigured } from "@/lib/applyhome/odcloud-client";
+import { isApplyhomeConfigured, fetchOdcloudApplyhome } from "@/lib/applyhome/odcloud-client";
+import { upsertAnnouncements, upsertCompetition } from "@/lib/applyhome/store";
+import type { AptCompetitionRow, AptDetailRow } from "@/lib/applyhome/types";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
 
@@ -48,6 +50,10 @@ export type SupplyIngestResult = {
   skippedExistingKey: number;
   pagesFetched: number;
   totalCount: number;
+  /** [994] 청약 공고 저장소(applyhome_announcements) 업서트 수 — 같은 상세 행을 함께 적재 */
+  announcementsUpserted: number;
+  /** [994] 경쟁률 저장소(applyhome_competition) 업서트 수 — 최신 3페이지 */
+  competitionUpserted: number;
 };
 
 function normName(name: string): string {
@@ -84,6 +90,8 @@ export async function ingestApplyhomeSupply(): Promise<SupplyIngestResult> {
     skippedExistingKey: 0,
     pagesFetched: 0,
     totalCount: 0,
+    announcementsUpserted: 0,
+    competitionUpserted: 0,
   };
   if (!isApplyhomeConfigured()) {
     return { configured: false, reason: "no-key", ...empty };
@@ -107,6 +115,9 @@ export async function ingestApplyhomeSupply(): Promise<SupplyIngestResult> {
   let pagesFetched = 0;
   let totalCount = 0;
   const bySourceId = new Map<string, SupplyUpsertRow>();
+  /* [994] 상세 행 전부(입주월 없음·과거분 포함)를 청약 공고 저장소에도 적재한다 — 캘린더·알림·
+     기준일의 재료. 여기서 모아 두고 아래에서 한 번에 업서트한다(추가 API 호출 0). */
+  const allDetails: AptDetailRow[] = [];
 
   for (const page of pages) {
     let rows;
@@ -121,6 +132,7 @@ export async function ingestApplyhomeSupply(): Promise<SupplyIngestResult> {
     }
     pagesFetched += 1;
     fetched += rows.length;
+    allDetails.push(...rows);
     for (const r of rows) {
       const ym = normMoveInYm(r.MVN_PREARNGE_YM);
       if (!ym || ym < MOVE_IN_FLOOR) {
@@ -251,6 +263,26 @@ export async function ingestApplyhomeSupply(): Promise<SupplyIngestResult> {
     upserted += batch.length;
   }
 
+  /* ── 5. [994] 청약 공고·경쟁률 저장 — 실패해도 입주물량 적재 성공은 유지(별도 로그) ── */
+  let announcementsUpserted = 0;
+  let competitionUpserted = 0;
+  try {
+    announcementsUpserted = (await upsertAnnouncements(allDetails)).upserted;
+  } catch (e) {
+    logger.error("[supply-ingest] 청약 공고 저장 실패", e);
+  }
+  try {
+    const compRows: AptCompetitionRow[] = [];
+    for (let page = 1; page <= 3; page += 1) {
+      const res = await fetchOdcloudApplyhome<AptCompetitionRow>("getAPTLttotPblancCmpet", { page, perPage: 100 });
+      compRows.push(...(res.data ?? []));
+      if ((res.data ?? []).length < 100) break;
+    }
+    competitionUpserted = await upsertCompetition(compRows);
+  } catch (e) {
+    logger.error("[supply-ingest] 청약 경쟁률 저장 실패", e);
+  }
+
   return {
     configured: true,
     fetched,
@@ -261,5 +293,7 @@ export async function ingestApplyhomeSupply(): Promise<SupplyIngestResult> {
     skippedExistingKey,
     pagesFetched,
     totalCount,
+    announcementsUpserted,
+    competitionUpserted,
   };
 }

@@ -1,9 +1,5 @@
-import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { PageShell } from "../../components/PageShell";
 import { EmptyState, ErrorState } from "@/app/components/ui/EmptyState";
-import { safeAuth } from "@/lib/safe-auth";
 import { logger } from "@/lib/log";
 import { listBookmarks } from "@/lib/bookmarks/store";
 import { formatKrwShort } from "@/lib/market/format";
@@ -19,14 +15,7 @@ import {
    bookmarks(target_type='listing') → 매물 데이터 조인. 숨김·삭제 매물은 자연 제외.
    ============================================================ */
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
-  title: "관심 매물 | 내집나우",
-  robots: { index: false, follow: false },
-};
 
 /* [967 · 31] 여기 있던 formatKrwShort 사본은 lib/market/format 의 공통 함수로 대체 — 출력 동일 */
 
@@ -70,21 +59,16 @@ async function loadSavedListings(email: string): Promise<SavedListingsResult> {
   return { ok: true, items, failedCount };
 }
 
-export default async function WishlistPage() {
-  const session = await safeAuth();
-  if (!session?.user?.email) {
-    redirect("/login?callbackUrl=/my/wishlist");
-  }
-
-  const loaded = await loadSavedListings(session.user.email);
+export async function WishlistSection({ email }: { email: string }) {
+  const loaded = await loadSavedListings(email);
   const items = loaded.ok ? loaded.items : [];
 
   return (
-    <PageShell breadcrumb="마이 › 관심 매물" title="관심 매물">
+    <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="t-body text-text-3">저장한 매물 {items.length}개</p>
-        <Link href="/complex/browse" className="t-body font-bold text-primary no-underline">
-          관심 단지 둘러보기 →
+        <Link href="/listings" className="t-body font-bold text-primary no-underline">
+          매물 둘러보기 →
         </Link>
       </div>
 
@@ -163,6 +147,6 @@ export default async function WishlistPage() {
           </div>
         </>
       )}
-    </PageShell>
+    </>
   );
 }

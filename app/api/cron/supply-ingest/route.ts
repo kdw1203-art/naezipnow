@@ -34,6 +34,17 @@ async function handle(req: Request) {
         result.reason ??
         `조회=${result.fetched} 업서트=${result.upserted} 이관=${result.migrated} 입주월없음/과거=${result.skippedNoMoveIn} 재공고제외=${result.skippedDupAnnouncement} 기존키제외=${result.skippedExistingKey} 페이지=${result.pagesFetched}`,
     });
+    /* [994] 청약 공고·경쟁률 저장은 별도 소스로 로그 — 신선도 표·/data-sources 가 따로 본다 */
+    if (result.configured) {
+      await logIngest({
+        source: "applyhome",
+        dataset: "청약홈 분양공고·경쟁률",
+        origin: "cron-fetch",
+        rows: result.announcementsUpserted + result.competitionUpserted,
+        status: result.announcementsUpserted > 0 ? "ok" : "error",
+        message: `공고 업서트=${result.announcementsUpserted} 경쟁률 업서트=${result.competitionUpserted} (상세 ${result.fetched}행 중)`,
+      });
+    }
     /* [OPT-10] 수집이 실제로 끝난 순간에만 캐시를 비운다 — 시간 추측 제거 */
     invalidateAfterIngest("supply");
     /* [#74] 좌표 점진 백필(일 25건) — 지도 레이어용. 실패해도 인제스트 성공은 유지. */

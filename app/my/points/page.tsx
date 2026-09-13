@@ -10,16 +10,46 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { AttendanceButton } from "./AttendanceButton";
 import { GuestGate } from "@/app/components/GuestGate";
 import { formatKstDate, isSameKstMonth } from "@/lib/format/kst";
+import { MissionsSection } from "./MissionsSection";
+import { ReferralSection } from "./ReferralSection";
+
+/* [994] /my 17 → 7 — 포인트 지갑 · 미션(옛 /my/missions) · 친구 초대(옛 /my/referral)를
+   한 화면의 탭으로. 옛 URL 은 redirect-map 이 ?tab= 으로 보낸다. */
+type PointsTab = "wallet" | "missions" | "referral";
+const POINT_TABS: { key: PointsTab; label: string }[] = [
+  { key: "wallet", label: "지갑" },
+  { key: "missions", label: "미션" },
+  { key: "referral", label: "친구 초대" },
+];
+function PointsTabs({ active }: { active: PointsTab }) {
+  return (
+    <nav aria-label="포인트 메뉴" className="mx-auto mb-4 flex w-full max-w-[640px] flex-wrap gap-1.5">
+      {POINT_TABS.map((t) => (
+        <Link
+          key={t.key}
+          href={t.key === "wallet" ? "/my/points" : `/my/points?tab=${t.key}`}
+          aria-current={t.key === active ? "page" : undefined}
+          className={`inline-flex min-h-[40px] items-center rounded-full border px-4 t-body font-bold no-underline ${
+            t.key === active ? "border-primary bg-primary text-white" : "border-line bg-surface text-text-1"
+          }`}
+        >
+          {t.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /* [970 · A-31|C-25|C-26] 접미 없던 제목에 `| 내집나우` + 비어 있던 description.
-   robots.txt 가 /points 를 disallow 하므로 noindex 는 따로 두지 않는다. */
+   [994] ?tab= 을 읽는 개인 화면 — robots.txt 의 /my disallow 에 더해 noindex 를 명시(N7). */
 export const metadata = {
-  title: "포인트 지갑 | 내집나우",
+  title: "포인트 | 내집나우",
   description:
-    "사용 가능한 포인트와 이번 달 적립·사용, 적립·소비 내역, 적립 방법을 확인해요. 포인트는 현금 전환이 안 되는 무상 리워드예요.",
+    "사용 가능한 포인트와 이번 달 적립·사용, 적립·소비 내역, 미션, 친구 초대를 한 화면에서 확인해요. 포인트는 현금 전환이 안 되는 무상 리워드예요.",
+  robots: { index: false, follow: false },
 };
 
 /* ── 표시 헬퍼 ── */
@@ -284,7 +314,11 @@ function WalletView({
   );
 }
 
-export default async function PointsWalletPage() {
+export default async function PointsWalletPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const session = await safeAuth();
   const email = session?.user?.email;
 
@@ -292,6 +326,19 @@ export default async function PointsWalletPage() {
     return (
       <PageShell breadcrumb="포인트 지갑">
         <GuestView />
+      </PageShell>
+    );
+  }
+
+  const { tab: rawTab } = await searchParams;
+  const tab: PointsTab = rawTab === "missions" || rawTab === "referral" ? rawTab : "wallet";
+  if (tab !== "wallet") {
+    return (
+      <PageShell title="포인트" breadcrumb={`마이 › 포인트 › ${tab === "missions" ? "미션" : "친구 초대"}`}>
+        <PointsTabs active={tab} />
+        <div className="mx-auto w-full max-w-[640px]">
+          {tab === "missions" ? <MissionsSection email={email} /> : <ReferralSection email={email} />}
+        </div>
       </PageShell>
     );
   }
@@ -329,7 +376,8 @@ export default async function PointsWalletPage() {
 
   return (
     /* [970 · A-33] 로그인 뷰 h1 — 지갑 히어로엔 제목 요소가 없다 */
-    <PageShell title="포인트 지갑" breadcrumb="포인트 지갑">
+    <PageShell title="포인트" breadcrumb="마이 › 포인트 › 지갑">
+      <PointsTabs active="wallet" />
       <WalletView
         balance={loaded.balance}
         history={loaded.history}

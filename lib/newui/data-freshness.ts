@@ -22,6 +22,7 @@ export const FRESHNESS_SOURCES = [
   { source: "molit", label: "아파트 실거래" },
   { source: "reb", label: "시세 지수(한국부동산원)" },
   { source: "supply", label: "공급·입주 물량" },
+  { source: "applyhome", label: "청약 공고·경쟁률" },
   { source: "onbid", label: "공매 물건(온비드)" },
   { source: "news", label: "부동산 뉴스" },
 ] as const;

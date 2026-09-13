@@ -285,7 +285,7 @@ export default async function RedevelopmentPage() {
         {/* ===== 관심 등록 CTA — 실제 존재하는 기능(저장 검색 알림)으로만 연결.
              "정비사업 소식 알림"은 아직 없는 기능이라 약속하지 않는다. */}
         <Link
-          href="/my/saved-searches"
+          href="/my/watchlist?tab=searches"
           className="rise-in-3 tile flex items-center justify-between rounded-2xl border border-line bg-surface px-5 py-4 no-underline"
         >
           <div>

@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { PageShell } from "@/app/components/PageShell";
 import { Icon } from "@/app/components/Icon";
-import { safeAuth } from "@/lib/safe-auth";
 import { getReferralStats, getReferralLeaderboard } from "@/lib/referral/store";
 import { CopyLink } from "./CopyLink";
 import { ShareRow } from "./ShareRow";
@@ -14,11 +12,7 @@ import { ShareRow } from "./ShareRow";
  * 데이터는 기존 getReferralStats(= GET /api/referral 와 동일 shape) 만 사용한다.
  */
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 
-/* [970 · C-25] 제목 접미 통일 `| 내집나우` */
-export const metadata = { title: "친구 추천 | 내집나우" };
 
 const FALLBACK_ORIGIN = "https://naezipnow.com";
 
@@ -35,30 +29,6 @@ async function currentOrigin(): Promise<string> {
   const proto = h.get("x-forwarded-proto") ?? "https";
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
   return host ? `${proto}://${host}` : FALLBACK_ORIGIN;
-}
-
-function GuestView() {
-  return (
-    <div className="mx-auto flex max-w-[520px] flex-col items-center gap-3">
-      <div className="card glass flex w-full flex-col items-center gap-2 rounded-[18px] px-5 py-8 text-center">
-        <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
-          <Icon name="gift" size={24} />
-        </div>
-        <div className="text-[15px] font-extrabold text-text-1">
-          친구를 초대하고 둘 다 300P 받으세요
-        </div>
-        <div className="text-xs leading-[1.6] text-text-3">
-          로그인하면 내 추천 코드와 초대 링크가 생겨요
-        </div>
-        <Link
-          href="/login?callbackUrl=/my/referral"
-          className="btn-primary press mt-3 rounded-[10px] px-6 py-2.5 text-[13px] no-underline"
-        >
-          로그인하고 시작하기
-        </Link>
-      </div>
-    </div>
-  );
 }
 
 /** 초대 여정 배지 스트립 — invitedCount 기준으로 달성 배지를 채운다. */
@@ -134,18 +104,8 @@ function MilestoneStrip({ invitedCount }: { invitedCount: number }) {
   );
 }
 
-export default async function ReferralPage() {
-  const session = await safeAuth();
-  const email = session?.user?.email ?? null;
-
-  if (!email) {
-    return (
-      <PageShell breadcrumb="마이 · 친구 추천">
-        <GuestView />
-      </PageShell>
-    );
-  }
-
+/* [994] /my/points?tab=referral 의 한 탭(옛 /my/referral). 로그인은 부모(points)가 보장한다. */
+export async function ReferralSection({ email }: { email: string }) {
   const [stats, origin, leaders] = await Promise.all([
     getReferralStats(email),
     currentOrigin(),
@@ -155,7 +115,7 @@ export default async function ReferralPage() {
   const link = code ? `${origin}/invite/${code}` : null;
 
   return (
-    <PageShell breadcrumb="마이 · 친구 추천">
+    <>
       <div className="mx-auto flex max-w-[560px] flex-col gap-4">
         {/* ── 히어로: 코드 + 링크 + 공유 ── */}
         <section className="card glass flex flex-col items-center gap-4 rounded-[22px] p-6 text-center">
@@ -320,6 +280,6 @@ export default async function ReferralPage() {
           적립된 포인트는 지갑에서 확인 ›
         </Link>
       </div>
-    </PageShell>
+    </>
   );
 }

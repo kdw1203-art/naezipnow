@@ -65,6 +65,14 @@ const SOURCES: SourceDef[] = [
     thresholdHours: 24 * 14, // 신규 분양공고는 주 단위로 나온다 — 2주 무소식이면 이상
   },
   {
+    key: "applyhome",
+    label: "청약 공고·경쟁률",
+    pipeline: "etl.yml → /api/cron/supply-ingest 가 함께 적재 (매일)",
+    table: "applyhome_announcements",
+    column: "updated_at",
+    thresholdHours: 48,
+  },
+  {
     key: "redevelopment",
     label: "정비사업",
     pipeline: "etl.yml → /api/cron/redevelopment-ingest (SEOUL_OPENAPI_KEY 필요)",

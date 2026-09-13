@@ -246,6 +246,18 @@ const REDIRECT_GROUPS: readonly RedirectGroup[] = [
       ["/analysis/cycle", "/analysis/timing"],
     ],
   },
+  {
+    /* [994] /my 17 → 7 — 관심(단지·매물·저장 검색)과 포인트(지갑·미션·초대)를 탭으로 합쳤다.
+       옛 URL 은 같은 화면의 탭으로 간다(북마크·알림 링크·수신함 action_url 이 살아 있다). */
+    reason: "[994] 마이 17→7 — 관심·포인트 하위 화면을 탭으로 병합",
+    since: "2026-09-13",
+    rules: [
+      ["/my/wishlist", "/my/watchlist?tab=listings"],
+      ["/my/saved-searches", "/my/watchlist?tab=searches"],
+      ["/my/missions", "/my/points?tab=missions"],
+      ["/my/referral", "/my/points?tab=referral"],
+    ],
+  },
 ];
 
 /* 규칙을 평탄화하면서 from 중복을 즉시 터뜨린다.

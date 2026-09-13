@@ -1,21 +1,10 @@
-import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { PageShell } from "@/app/components/PageShell";
-import { safeAuth } from "@/lib/safe-auth";
 import { buildMissionBoard, type MissionBoard } from "@/lib/missions/missions";
 import { logger } from "@/lib/log";
 
 /* [#119·#120] 미션 센터 — 시작 3미션 + 주간 미션.
    진행도는 실데이터 파생(lib/missions), 적립은 서버 재검증 청구(claim API).
    실측 0(글·구독·적립) 상태에 대한 처방: 첫 행동을 계단 3개로 쪼개고 보상을 명시. */
-
-export const metadata: Metadata = {
-  title: "미션 | 내집나우",
-  robots: { index: false, follow: false },
-};
-
-export const dynamic = "force-dynamic";
 
 import { MissionClaim } from "./MissionClaim";
 
@@ -28,20 +17,18 @@ function Bar({ progress, target }: { progress: number; target: number }) {
   );
 }
 
-export default async function MissionsPage() {
-  const session = await safeAuth();
-  if (!session?.user?.email) redirect("/login?callbackUrl=/my/missions");
-
+/* [994] /my/points?tab=missions 의 한 탭(옛 /my/missions). */
+export async function MissionsSection({ email }: { email: string }) {
   let board: MissionBoard | null = null;
   try {
-    board = await buildMissionBoard(session.user.email);
+    board = await buildMissionBoard(email);
   } catch (e) {
     logger.error("[missions] 보드 계산 실패", e);
   }
 
   return (
-    <PageShell breadcrumb="마이 › 미션">
-      <h1 className="rise-in t-title text-ink">미션</h1>
+    <>
+      <h2 className="rise-in t-section text-ink">미션</h2>
       <p className="rise-in-1 mt-1 t-body text-text-2">
         실제 활동으로 진행도가 자동 채워지고, 달성하면 포인트를 받아갈 수 있어요.
       </p>
@@ -167,6 +154,6 @@ export default async function MissionsPage() {
           </section>
         </>
       )}
-    </PageShell>
+    </>
   );
 }

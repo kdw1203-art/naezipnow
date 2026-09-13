@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ApplyDailyStrip } from "./ApplyDailyStrip";
 import { PageShell } from "@/app/components/PageShell";
 import { Icon } from "@/app/components/Icon";
 import { AdZone } from "@/app/components/ads/AdZone";
@@ -80,12 +81,7 @@ const CROSS_LINKS: { href: string; icon: string; label: string; desc: string }[]
     label: "정비사업 지도",
     desc: "재건축·재개발 진행 단계",
   },
-  {
-    href: "/qna",
-    icon: "messages-square",
-    label: "단지 Q&A",
-    desc: "이웃에게 직접 물어보기",
-  },
+  /* [994] "단지 Q&A"(/qna) 제거 — Q&A 는 보관(비노출, 992) */
 ];
 
 /* H1 — 이 자리에는 "AD / AdSense 320×64" 라고 적힌 점선 상자가 있었다.
@@ -142,12 +138,15 @@ export default async function ApplyPage() {
             href={APPLYHOME_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-bold text-primary underline"
+            className="inline-block py-[5px] font-bold text-primary underline"
           >
             청약홈(applyhome.co.kr)
           </a>
           에서 확인하세요. 당첨 가능성·안전마진 같은 <b>예측치는 이 화면에서 만들지 않습니다.</b>
         </div>
+
+        {/* [994 · D4] 오늘의 청약 — 매일 적재 저장소(기준일 표기). 검색보다 먼저, 사실이 먼저. */}
+        <ApplyDailyStrip />
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
           {/* 본문 — 청약홈 실데이터 검색 (경쟁률/특별공급 탭 + 지역·단지명 + 더보기) */}

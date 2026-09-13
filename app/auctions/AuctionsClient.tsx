@@ -370,7 +370,7 @@ export function AuctionsClient({
             온비드 바로가기 ↗
           </a>
           <Link
-            href="/my/saved-searches"
+            href="/my/watchlist?tab=searches"
             className="press rounded-full bg-primary-soft px-3.5 py-2 font-bold text-primary no-underline"
           >
             저장 검색으로 알림 받기
@@ -708,7 +708,7 @@ export function AuctionsClient({
                   </>
                 )}
                 <Link
-                  href="/my/saved-searches"
+                  href="/my/watchlist?tab=searches"
                   style={{ color: "#fff" }}
                   className="btn-primary mt-2.5 block rounded-[10px] p-[11px] text-center text-xs no-underline"
                 >

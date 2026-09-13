@@ -10,6 +10,8 @@ import { countRecentPublicNotesByComplex } from "@/lib/inspection/store-db";
 import { formatKrwShort } from "@/lib/market/format";
 import { logger } from "@/lib/log";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
+import { WishlistSection } from "./WishlistSection";
+import { SavedSearchesSection } from "./SavedSearchesSection";
 
 /* ============================================================
    웹17 — 관심 단지 대시보드 (/my/watchlist, 로그인 필수)
@@ -32,9 +34,36 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
-  title: "관심 단지 | 내집나우",
+  title: "관심 | 내집나우",
   robots: { index: false, follow: false },
 };
+
+/* [994] /my 17 → 7 — 관심 단지·관심 매물(옛 /my/wishlist)·저장 검색(옛 /my/saved-searches)을
+   한 화면의 탭으로. 옛 URL 은 redirect-map 이 ?tab= 으로 보낸다. */
+type WatchTab = "complex" | "listings" | "searches";
+const TABS: { key: WatchTab; label: string }[] = [
+  { key: "complex", label: "관심 단지" },
+  { key: "listings", label: "관심 매물" },
+  { key: "searches", label: "저장 검색" },
+];
+function WatchTabs({ active }: { active: WatchTab }) {
+  return (
+    <nav aria-label="관심 종류" className="mb-4 flex flex-wrap gap-1.5">
+      {TABS.map((t) => (
+        <Link
+          key={t.key}
+          href={t.key === "complex" ? "/my/watchlist" : `/my/watchlist?tab=${t.key}`}
+          aria-current={t.key === active ? "page" : undefined}
+          className={`inline-flex min-h-[40px] items-center rounded-full border px-4 t-body font-bold no-underline ${
+            t.key === active ? "border-primary bg-primary text-white" : "border-line bg-surface text-text-1"
+          }`}
+        >
+          {t.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
 
 const MAX_ROWS = 30;
 
@@ -55,12 +84,26 @@ function skipLabel(r: Extract<ComplexPriceResult, { ok: false }>["reason"]): str
   }
 }
 
-export default async function WatchlistDashboardPage() {
+export default async function WatchlistDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const session = await safeAuth();
   if (!session?.user?.email) {
     redirect("/login?callbackUrl=/my/watchlist");
   }
   const email = session.user.email;
+  const { tab: rawTab } = await searchParams;
+  const tab: WatchTab = rawTab === "listings" || rawTab === "searches" ? rawTab : "complex";
+  if (tab !== "complex") {
+    return (
+      <PageShell breadcrumb={`마이 › 관심 › ${tab === "listings" ? "관심 매물" : "저장 검색"}`} title="관심">
+        <WatchTabs active={tab} />
+        {tab === "listings" ? <WishlistSection email={email} /> : <SavedSearchesSection email={email} />}
+      </PageShell>
+    );
+  }
 
   let items: WatchlistItem[] = [];
   let listFailed = false;
@@ -90,16 +133,14 @@ export default async function WatchlistDashboardPage() {
   ]);
 
   return (
-    <PageShell breadcrumb="마이 › 관심 단지" title="관심 단지">
+    <PageShell breadcrumb="마이 › 관심 › 관심 단지" title="관심">
+      <WatchTabs active="complex" />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="t-body text-text-3">
           관심 단지 {items.length}곳
           {items.length >= MAX_ROWS && ` (최근 ${MAX_ROWS}곳 표시)`} · 시세 변동
           ±1% 이상이면 알림을 보내드려요
         </p>
-        <Link href="/my/wishlist" className="t-body font-bold text-primary no-underline">
-          관심 매물 보기 →
-        </Link>
       </div>
 
       {listFailed ? (

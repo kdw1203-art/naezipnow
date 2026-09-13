@@ -268,8 +268,8 @@ export function ApplySearchClient({ initial }: Props) {
 
   const tabPill = (on: boolean) =>
     on
-      ? "press rounded-full bg-primary px-4 py-2 text-[13px] font-bold text-white"
-      : "press glass rounded-full px-4 py-2 text-[13px] font-semibold text-text-2";
+      ? "press min-h-10 rounded-full bg-primary px-4 py-2 text-[13px] font-bold text-white"
+      : "press glass min-h-10 rounded-full px-4 py-2 text-[13px] font-semibold text-text-2";
 
   const regionPill = (on: boolean) =>
     on

@@ -42,7 +42,7 @@ export function KeywordAlertButton({
   async function subscribe() {
     if (phase === "busy" || phase === "done" || phase === "exists") return;
     setPhase("busy");
-    const manage = { label: "관리", href: "/my/saved-searches" } as const;
+    const manage = { label: "관리", href: "/my/watchlist?tab=searches" } as const;
     try {
       // 중복 확인 — 같은 scope+query 가 이미 있으면 새로 만들지 않는다.
       const listRes = await fetch("/api/saved-searches", { cache: "no-store" });
@@ -92,7 +92,7 @@ export function KeywordAlertButton({
       <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium text-text-2 ${className}`}>
         <Icon name="check" size={14} />
         {phase === "done" ? "알림 설정됨" : "이미 받고 있어요"} ·{" "}
-        <Link href="/my/saved-searches" className="underline underline-offset-2">
+        <Link href="/my/watchlist?tab=searches" className="underline underline-offset-2">
           관리
         </Link>
       </span>

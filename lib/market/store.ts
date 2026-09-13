@@ -201,7 +201,11 @@ export type IngestSource =
   /** 이메일 outbox 드레인(app/api/cron/notification-outbox-drain) — 위와 같은 이유 */
   | "notification-outbox"
   /** 토스 자동결제 갱신 크론(app/api/cron/billing-renewals) — 위와 같은 이유 */
-  | "billing-renewals";
+  | "billing-renewals"
+  /** [994] 청약 공고·경쟁률 저장(supply-ingest 가 함께 적재) — 캘린더·알림·기준일의 출처 */
+  | "applyhome"
+  /** [994] 청약 알림 스윕(app/api/cron/applyhome-alerts) */
+  | "applyhome-alerts";
 
 /**
  * F3(#147) — 크론이 던진 예외를 적재 로그에 남길 수 있는 한 줄짜리 사유로 만든다.

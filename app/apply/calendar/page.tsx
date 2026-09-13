@@ -99,8 +99,11 @@ export default async function ApplyCalendarPage() {
               </section>
             ))}
             <p className="text-center t-sub text-text-3">
-              최근 공고 200건 기준 · 30분마다 갱신 · 정확한 일정·자격은 청약홈 공고
-              원문을 확인하세요
+              {/* [994] 저장소(매일 적재)면 기준 시각을, 라이브면 그 사실을 적는다 */}
+              {cal.source === "store"
+                ? `기준 ${new Date(cal.fetchedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })} 적재 · 매일 자동 갱신`
+                : "청약홈 즉시 조회 기준"}
+              {" "}· 정확한 일정·자격은 청약홈 공고 원문을 확인하세요
             </p>
           </div>
         )}

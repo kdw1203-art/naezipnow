@@ -223,7 +223,20 @@ const SPECS: Spec[] = [
     insertCol: "created_at",
     asOfCol: "move_in_ym",
     expectedDays: 90,
-    note: "적재 경로가 로그를 남기지 않는다 — '마지막 수집' 빈칸은 실패가 아니라 미계측이다.",
+    /* [993] supply-ingest 는 로그를 남긴다(source=supply) — 예전 주석("로그 없음")은 낡았다 */
+    logSources: ["supply"],
+  },
+  {
+    key: "applyhome",
+    label: "청약 공고·경쟁률",
+    source: "청약홈(공공데이터포털)",
+    table: "applyhome_announcements",
+    writeCol: "updated_at",
+    insertCol: "first_seen_at",
+    asOfCol: "rcept_bgnde",
+    expectedDays: 2,
+    logSources: ["applyhome"],
+    note: "[994] supply-ingest 가 같은 상세 행을 함께 적재 — 캘린더·알림·기준일의 출처",
   },
   {
     key: "onbid",
