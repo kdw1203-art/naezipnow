@@ -110,7 +110,8 @@ function displayTime(p: Post): number {
   return Number.isFinite(t) ? t : 0;
 }
 
-function weekLabelOf(now: Date): string {
+/** "9월 2주차" — [995] 개인 다이제스트(lib/digest/personal.ts)도 같은 라벨을 쓴다 */
+export function weekLabelOf(now: Date): string {
   const month = now.getMonth() + 1;
   const week = Math.min(Math.ceil(now.getDate() / 7), 5);
   return `${month}월 ${week}주차`;

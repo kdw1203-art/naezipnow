@@ -50,8 +50,7 @@ import {
   uploadProgressLabel,
   visitDateFromTakenAt,
 } from "@/lib/notes/note-form-utils";
-import { resizeImageFiles } from "@/lib/client/image-resize";
-import { readExifTakenAt } from "@/lib/client/exif-datetime";
+/* [995] 리사이즈·EXIF 는 사진을 고른 순간에만 필요하다 — 동적 import 로 첫 로드(예산 470KB)에서 뺀다 */
 import { useUnsavedGuard } from "@/lib/client/use-unsaved-guard";
 import {
   CHECK_ITEMS,
@@ -62,6 +61,10 @@ import {
   NOTE_LEVELS,
   type NoteLevel,
 } from "@/lib/notes/note-scores";
+/* [995 · 3] 회차 프리필의 판단(무엇을 잇나)은 서버(page.tsx)가 순수 모듈로 끝내
+   결과만 넘긴다 — 여기서는 띠 하나만 그린다(초기 번들에 판단 코드를 넣지 않는다). */
+import type { RevisitPrefill } from "@/lib/inspection/revisit-prefill";
+import { previousCheckChips } from "@/lib/inspection/revisit-chips";
 /* [OPT-27] 음성 녹음기는 새 노트에서만 쓰인다 — 폼 첫 로드 번들에서 분리 */
 import nextDynamic from "next/dynamic";
 const VoiceMemoRecorder = nextDynamic(
@@ -440,17 +443,22 @@ function checksFromNote(n: NoteFormInitialNote): Record<string, Level> {
   return checksFromSavedNote(n.metadata?.fieldRatings, n.scores);
 }
 
-function groupCheckedFromNote(n: NoteFormInitialNote | null | undefined): Record<string, boolean> {
-  if (!n?.checklist?.length) return {};
+/** 완료된 체크리스트 **라벨** → 항목 id 맵. 수정 모드 복원과 [995 · 3] 회차 프리필이 같이 쓴다. */
+function groupCheckedFromLabels(labels: readonly string[]): Record<string, boolean> {
+  if (!labels.length) return {};
   const known = allKnownChecklistItems();
   const byLabel = new Map(known.map((it) => [it.label, it.id]));
   const out: Record<string, boolean> = {};
-  for (const c of n.checklist) {
-    if (!c.done) continue;
-    const id = byLabel.get(c.label);
+  for (const label of labels) {
+    const id = byLabel.get(label);
     if (id) out[id] = true;
   }
   return out;
+}
+
+function groupCheckedFromNote(n: NoteFormInitialNote | null | undefined): Record<string, boolean> {
+  if (!n?.checklist?.length) return {};
+  return groupCheckedFromLabels(n.checklist.filter((c) => c.done).map((c) => c.label));
 }
 
 function splitTagText(s?: string): string[] {
@@ -468,6 +476,15 @@ function tagDefsFromNote(n?: NoteFormInitialNote | null): TagDef[] {
   }
   for (const label of splitTagText(n.sections.cons)) {
     if (!defs.some((d) => d.label === label)) defs.push({ label, tone: "neg" });
+  }
+  return defs;
+}
+
+/* [995 · 3] 회차 프리필의 태그 — 후보에 없던 커스텀 태그는 지난 노트의 톤으로 추가 */
+function tagDefsFromRevisit(seed: RevisitPrefill): TagDef[] {
+  const defs = [...TAG_CANDIDATES];
+  for (const t of seed.tags) {
+    if (!defs.some((d) => d.label === t.label)) defs.push({ label: t.label, tone: t.tone });
   }
   return defs;
 }
@@ -509,6 +526,22 @@ function visitFromNote(n?: NoteFormInitialNote | null): Record<string, string> {
   return out;
 }
 
+/* [995 · 3] 회차 프리필의 방문 정보 — 유형·목적만 잇고 시간대는 지금 시각(재방문은
+   다른 시간대에 오는 일이다). 옵션에 없는 값은 버린다. */
+function visitFromRevisit(seed: RevisitPrefill): Record<string, string> {
+  const out = visitFromNote(null);
+  const pick = (label: string, v: string | null) => {
+    const g = VISIT_GROUPS.find((x) => x.label === label);
+    if (g && v && g.options.includes(v)) out[label] = v;
+  };
+  pick("유형", seed.visit.propertyType);
+  pick("목적", seed.visit.visitPurpose);
+  return out;
+}
+
+/* [995 · 5a] 1단계 도우미 — 세 카드(AI 초안·음성 메모·현장 브리핑)를 한 줄 탭으로 */
+type HelperTab = "ai" | "voice" | "brief";
+
 export function NoteForm({
   template,
   initialNote,
@@ -516,6 +549,7 @@ export function NoteForm({
   preferAi = false,
   fromWelcome = false,
   quickStart = false,
+  revisitOf = null,
 }: {
   template?: NoteFormTemplate | null;
   initialNote?: NoteFormInitialNote | null;
@@ -527,6 +561,9 @@ export function NoteForm({
   fromWelcome?: boolean;
   /** [#68] 현장 퀵모드(?quick=1) — 사진·위치·메모 먼저, 세부 평가는 접어 둔다 */
   quickStart?: boolean;
+  /** [995 · 3] 회차 프리필(?revisit={noteId}) — 작성 모드 그대로(initialNote 아님).
+      위치·태그·유형·목적·체크리스트를 잇고 사진·메모는 새로 적는다. */
+  revisitOf?: RevisitPrefill | null;
 }) {
   const router = useRouter();
   const { showMoment } = useMoment();
@@ -537,6 +574,11 @@ export function NoteForm({
   const editId = initialNote?.id ?? null;
   /* [967 · 9] 작성은 nz_note_draft, 수정은 노트별 키 */
   const draftKey = noteDraftKey(editId);
+  /* [995 · 3] 회차 프리필은 작성 모드에서만 — 수정 모드에 오면 무시한다.
+     revisitActive 는 "비우기"로 꺼진다: 그 뒤로는 저장 메타에 회차를 적지 않는다
+     (이어받은 게 없는데 2회차라고 적으면 비교 화면이 없는 관계를 그린다). */
+  const revisitSeed = !initialNote && revisitOf ? revisitOf : null;
+  const [revisitActive, setRevisitActive] = useState(Boolean(revisitSeed));
 
   /** welcome 루프면 지도로, 아니면 노트 상세로 */
   const afterSaveHref = (noteId: string, aiFlag: string, quota: boolean) => {
@@ -574,7 +616,16 @@ export function NoteForm({
           lat: metaNumber(initialNote.metadata, "lat"),
           lng: metaNumber(initialNote.metadata, "lng"),
         }
-      : { aptName: "", region: "", complexId: null, lat: null, lng: null },
+      : revisitSeed
+        ? /* [995 · 3] 같은 단지 — 검색을 다시 시키지 않는다 */
+          {
+            aptName: revisitSeed.aptName,
+            region: revisitSeed.region,
+            complexId: revisitSeed.complexId,
+            lat: revisitSeed.lat,
+            lng: revisitSeed.lng,
+          }
+        : { aptName: "", region: "", complexId: null, lat: null, lng: null },
   );
   useEffect(() => {
     if (isEdit) return;
@@ -604,7 +655,7 @@ export function NoteForm({
     initialNote ? checksFromNote(initialNote) : {},
   );
   const [visit, setVisit] = useState<Record<string, string>>(() =>
-    visitFromNote(initialNote),
+    revisitSeed ? visitFromRevisit(revisitSeed) : visitFromNote(initialNote),
   );
   /* [967 · 2] 방문일 — 예전엔 상태도 입력도 없이 저장 시 "오늘"(수정은 원래 값)로
      굳었다. 어제 다녀온 단지를 오늘 적으면 방문일이 틀렸고 고칠 길이 없었다.
@@ -617,13 +668,20 @@ export function NoteForm({
   const visitDateTouchedRef = useRef(Boolean(isEdit));
   const [visitDateFromPhoto, setVisitDateFromPhoto] = useState(false);
   const todayIso = localDateIso();
-  const [tagDefs, setTagDefs] = useState<TagDef[]>(() => tagDefsFromNote(initialNote));
+  const [tagDefs, setTagDefs] = useState<TagDef[]>(() =>
+    revisitSeed ? tagDefsFromRevisit(revisitSeed) : tagDefsFromNote(initialNote),
+  );
   const [tags, setTags] = useState<string[]>(() =>
     initialNote
       ? [...splitTagText(initialNote.sections.pros), ...splitTagText(initialNote.sections.cons)]
-      : [],
+      : revisitSeed
+        ? revisitSeed.tags.map((t) => t.label)
+        : [],
   );
   const [todoItems, setTodoItems] = useState<TodoItem[]>(() => {
+    /* [995 · 3] 지난 노트의 고려사항 목록 — "다음에 확인할 것"이라 재방문에서 가장 쓸모 있다.
+       완료 표시는 잇지 않는다(doneTodos 는 비어 시작) */
+    if (revisitSeed && revisitSeed.todos.length > 0) return revisitSeed.todos.map((t) => ({ ...t }));
     if (initialNote && initialNote.checklist.length > 0) {
       /* 카테고리 체크리스트 라벨은 그룹 UI로 복원 — 커스텀/기본 고려사항만 남긴다 */
       const knownLabels = new Set(allKnownChecklistItems().map((it) => it.label));
@@ -680,7 +738,7 @@ export function NoteForm({
       .map((c) => c.label);
   });
   const [groupChecked, setGroupChecked] = useState<Record<string, boolean>>(() =>
-    groupCheckedFromNote(initialNote),
+    revisitSeed ? groupCheckedFromLabels(revisitSeed.checklistDone) : groupCheckedFromNote(initialNote),
   );
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     location: true,
@@ -705,6 +763,38 @@ export function NoteForm({
      응답을 **그대로** 들고 있는다: 무엇을 보여줄지 고르는 일은 지연 로드되는
      카드 쪽에서 한다(판정 모듈까지 초기 번들에 들어오지 않게). */
   const [fieldContext, setFieldContext] = useState<unknown>(null);
+  /* ── [995 · 5a] 도우미 한 줄 탭 ─────────────────────────────────────────
+     예전엔 AI 초안·음성 메모·현장 브리핑이 1단계에 카드 3장으로 쌓여, 위치를 고른
+     뒤 방문 정보까지 한 화면 넘게 밀렸다. 이제 탭 한 줄이고 기본은 **닫힘** —
+     ?intent=ai 로 온 사람만 AI 초안이 열린 채 시작한다. 브리핑은 데이터가 와도
+     저절로 열지 않고 탭에 건수만 단다(시스템이 화면을 밀어내지 않는다).
+     지연 로드 컴포넌트는 탭을 연 순간에만 마운트된다(번들·요청 모두). */
+  const [helperTab, setHelperTab] = useState<HelperTab | null>(() =>
+    !isEdit && (preferAi || fromWelcome) ? "ai" : null,
+  );
+  /* 브리핑 건수 — 카드와 **같은 판정**(buildFieldBrief)을 쓰되 모듈은 지연 로드한다.
+     초기 번들에 판정 코드를 넣지 않으려는 [985 · 17] 결정을 그대로 지킨다. */
+  /* null = 아직 판정 전(모듈 로드 중) — 0 과 다르다: 0 은 "봤는데 실을 게 없다" */
+  const [briefCount, setBriefCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (fieldContext === null) {
+      setBriefCount(null);
+      return;
+    }
+    let alive = true;
+    import("@/lib/inspection/field-brief")
+      .then(({ buildFieldBrief }) => {
+        if (!alive) return;
+        const b = buildFieldBrief(fieldContext);
+        setBriefCount(b ? b.lines.length + b.checks.length + b.plans.length : 0);
+      })
+      .catch(() => {
+        /* 모듈 로드 실패 — 배지만 안 뜬다. 탭을 열면 카드가 다시 시도한다 */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [fieldContext]);
   const [templateSuggestedIds, setTemplateSuggestedIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -1205,6 +1295,33 @@ export function NoteForm({
       ? `${clockLabel(lastAutosaveAt) ?? ""} 임시저장됨`.trim()
       : "입력하면 이 기기에 자동 임시저장돼요";
 
+  /* [995 · 3] "비우기" — 이어받은 칸을 전부 초기값으로. 이미 새로 적은 메모·사진은
+     건드리지 않는다(이어받은 게 아니다). 이 뒤로는 회차 메타도 붙지 않는다. */
+  const clearRevisitSeed = () => {
+    setLoc({ aptName: "", region: "", complexId: null, lat: null, lng: null });
+    setTags([]);
+    setTagDefs([...TAG_CANDIDATES]);
+    setVisit(visitFromNote(null));
+    setGroupChecked({});
+    setDoneTodos([]);
+    setTodoItems(
+      template && template.sections.length > 0 ? todosFromTemplate(template) : TODO_DEFAULTS,
+    );
+    setRevisitActive(false);
+  };
+  /* 회차로 **묶어도 되는가** — 이어받은 뒤 위치를 다른 단지로 바꿨으면(검색·초안 복원)
+     더는 그 노트의 재방문이 아니다. 저장 메타(revisitOf·round)와 "지난 체크" 띠는
+     같은 단지일 때만 붙는다: 다른 단지의 지난 체크를 옆에 두면 비교가 아니라 오해다. */
+  const revisitLinked =
+    revisitActive &&
+    revisitSeed !== null &&
+    (revisitSeed.complexId
+      ? loc.complexId === revisitSeed.complexId
+      : loc.aptName.trim() === revisitSeed.aptName && loc.region.trim() === revisitSeed.region);
+  /* 2단계 "지난 체크" 띠 재료 — 9항목 표시 순서, 최대 6개 */
+  const previousChips =
+    revisitLinked && revisitSeed ? previousCheckChips(revisitSeed.previousChecks, CHECK_KEYS) : [];
+
   const toggleTag = (label: string) =>
     setTags((prev) =>
       prev.includes(label) ? prev.filter((t) => t !== label) : [...prev, label],
@@ -1500,7 +1617,9 @@ export function NoteForm({
     void (async () => {
       try {
         const times = (
-          await Promise.all(picked.map((f) => readExifTakenAt(f)))
+          await import("@/lib/client/exif-datetime").then(({ readExifTakenAt }) =>
+            Promise.all(picked.map((f) => readExifTakenAt(f))),
+          )
         ).filter((t): t is string => Boolean(t));
         if (times.length > 0) {
           times.sort();
@@ -1514,7 +1633,7 @@ export function NoteForm({
     try {
       /* 업로드 전 클라 리사이즈(#23) — 폰 원본(4000px·수 MB)을 긴 변 1600px 로
          줄여 올린다. 줄일 수 없으면 원본이 그대로 오므로 업로드는 막히지 않는다. */
-      list = await resizeImageFiles(picked);
+      list = await import("@/lib/client/image-resize").then(({ resizeImageFiles }) => resizeImageFiles(picked));
     } catch {
       list = picked;
     }
@@ -1687,6 +1806,10 @@ export function NoteForm({
           complexId: loc.complexId ?? undefined,
           lat: loc.lat ?? undefined,
           lng: loc.lng ?? undefined,
+          /* [995 · 3] 회차 — 이어받은 채로 저장할 때만. 비우기를 눌렀으면 보통 노트다.
+             round 는 이전 노트의 round(없으면 1)+1 — 회차 비교·"재방문 변화"의 재료. */
+          revisitOf: revisitLinked && revisitSeed ? revisitSeed.previousNoteId : undefined,
+          round: revisitLinked && revisitSeed ? revisitSeed.round : undefined,
           /* [970 · B-10] 미입력이면 키를 아예 보내지 않는다(0 이나 7.5 로 지어내지 않는다) */
           satisfaction: satisfaction ?? undefined,
           templateId: template?.id ?? undefined,
@@ -2196,6 +2319,45 @@ export function NoteForm({
 
         {/* [984] 1단계 — 어디를 봤나 */}
         <div className={step === 1 ? "flex flex-col gap-3" : "hidden"}>
+        {/* [995 · 3] 회차 배너 — 무엇을 이어받았고 무엇은 새로 적는지 먼저 말한다.
+            말없이 채워진 칸은 도움이 아니라 불안이다(984 · 05 와 같은 원칙). */}
+        {revisitActive && revisitSeed && (
+          <div
+            role="status"
+            className="rise-in flex flex-col gap-1.5 rounded-[14px] border border-[rgba(29,79,216,.2)] bg-[rgba(29,79,216,.06)] px-4 py-3"
+          >
+            <div className="flex items-start gap-2.5">
+              <Icon name="🔁" size={18} className="shrink-0 text-primary" />
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-extrabold text-ink">
+                  재방문 · {revisitSeed.previousVisitDate} 기록을 불러왔어요
+                </div>
+                <div className="t-caption text-text-3">
+                  위치·태그·체크는 그대로, 사진과 메모는 새로 적습니다 ·{" "}
+                  {revisitLinked
+                    ? `이번이 ${revisitSeed.round}회차`
+                    : "다른 단지를 골라 회차로는 묶지 않아요"}
+                </div>
+              </div>
+            </div>
+            {/* [989] 문장 옆 텍스트 조작 — 24px(py-[5px] + 12px 글자) */}
+            <div className="flex items-center gap-4 pl-7">
+              <Link
+                href={`/notes/${revisitSeed.previousNoteId}`}
+                className="py-[5px] t-sub font-bold text-primary"
+              >
+                이전 노트 보기 ›
+              </Link>
+              <button
+                type="button"
+                onClick={clearRevisitSeed}
+                className="py-[5px] t-sub font-bold text-text-3"
+              >
+                비우기
+              </button>
+            </div>
+          </div>
+        )}
         {/* 모바일9 — 사진 첨부 1탭. 현장에서는 사진→메모 순서가 많은데 사진
             버튼이 폼 하단(메모 아래)에만 있었다. 상단에서 같은 input(fileRef)을
             연다 — 업로드 로직·한도 전부 기존 그대로. 촬영 사진은 하단 사진
@@ -2316,17 +2478,6 @@ export function NoteForm({
           <NoteLocationSearch value={loc} onChange={setLoc} />
         </div>
 
-        {/* ── [985 · 17] 현장 브리핑 ─────────────────────────────────────────
-            위치를 고르면 이미 나가던 조회(public-data-context)의 응답을 그대로
-            쓴다. 새 요청은 없다 — 예전에는 같은 응답에서 날씨만 꺼내 쓰고 시세·
-            공기질·지역 체크 힌트·개발계획을 버렸다.
-
-            왜 작성 화면에 두는가: 임장노트의 가장 약한 고리는 "비싸다/싸다"를
-            근거 없이 적는 것이다. 지금 이 지역의 실제 시세가 옆에 있으면 같은
-            문장이 판단이 된다. 값을 메모에 자동으로 넣지는 않는다 — 시스템이
-            쓴 문장이 사용자의 관찰처럼 보이면 안 된다. 읽을 것만 준다. */}
-        {fieldContext !== null && <FieldBriefCard context={fieldContext} />}
-
         {/* [#71] 방문 인증(선택) — 단지 좌표가 있을 때만. 원 좌표는 저장하지 않는다. */}
         {!isEdit && typeof loc.lat === "number" && typeof loc.lng === "number" && (
           <div className="rise-in-2 flex flex-col gap-1.5 rounded-[14px] border border-line bg-surface px-4 py-3">
@@ -2376,31 +2527,121 @@ export function NoteForm({
           </div>
         )}
 
-        {/* [944] AI 초안으로 시작 — 위치 선택 직후, 본 입력 전에 제안한다.
-            수정 모드에선 숨김(이미 쓴 노트를 초안으로 덮을 이유가 없다). */}
-        {!isEdit && (
-          <AiDraftPanel
-            region={loc.region}
-            aptName={loc.aptName}
-            complexId={loc.complexId ?? null}
-            purpose={visit["목적"] || null}
-            emphasize={preferAi || fromWelcome}
-            onApply={applyAiDraft}
-          />
-        )}
-
-        {/* [#133] 음성 메모 — 현장의 세 번째 입력 수단 */}
-        {!isEdit && (
-          <VoiceMemoRecorder
-            memos={voiceMemos}
-            onChange={setVoiceMemos}
-            onTranscript={(text) =>
-              setMemo((prev) =>
-                prev.trim() ? `${prev.trimEnd()}\n\n🎙 ${text}` : `🎙 ${text}`,
-              )
-            }
-          />
-        )}
+        {/* ── [995 · 5a] 도우미 한 줄 탭 ──────────────────────────────────────
+            [944] AI 초안(작성 모드만 — 이미 쓴 노트를 초안으로 덮을 이유가 없다) ·
+            [#133] 음성 메모(작성 모드만) · [985 · 17] 현장 브리핑(작성·수정 모두).
+            브리핑은 위치를 고르면 이미 나가던 조회(public-data-context)의 응답을
+            그대로 쓴다 — 새 요청은 없다. 값을 메모에 자동으로 넣지는 않는다:
+            시스템이 쓴 문장이 사용자의 관찰처럼 보이면 안 된다. 읽을 것만 준다.
+            탭은 다시 누르면 닫힌다 — 기본이 닫힘이라 닫는 길도 같은 자리에 있다. */}
+        {(() => {
+          const helperTabs: Array<{ id: HelperTab; label: string; badge: string | null }> = [
+            ...(!isEdit
+              ? [
+                  {
+                    id: "ai" as const,
+                    label: "AI 초안",
+                    badge: aiDraftMeta ? "적용됨" : null,
+                  },
+                  {
+                    id: "voice" as const,
+                    label: "음성 메모",
+                    badge: voiceMemos.length > 0 ? String(voiceMemos.length) : null,
+                  },
+                ]
+              : []),
+            {
+              id: "brief" as const,
+              label: "현장 브리핑",
+              badge: briefCount != null && briefCount > 0 ? String(briefCount) : null,
+            },
+          ];
+          return (
+            <div className="flex flex-col gap-2">
+              {/* 라벨은 tablist 밖에 — 탭이 아닌 것을 탭 목록 안에 두면 보조기기가 개수를 틀린다 */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span id="note-helper-label" className="t-caption font-bold text-text-3">
+                  도우미
+                </span>
+              <div
+                role="tablist"
+                aria-labelledby="note-helper-label"
+                className="flex flex-wrap items-center gap-1.5"
+              >
+                {helperTabs.map((t) => {
+                  const selected = helperTab === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      role="tab"
+                      id={`note-helper-tab-${t.id}`}
+                      aria-selected={selected}
+                      aria-controls="note-helper-panel"
+                      onClick={() => setHelperTab(selected ? null : t.id)}
+                      className={`chip min-h-10 border px-3 t-sub font-bold ${
+                        selected
+                          ? "border-primary bg-primary-soft text-primary"
+                          : "border-line bg-surface text-text-2"
+                      }`}
+                    >
+                      {t.label}
+                      {t.badge && (
+                        <span className="ml-1 font-semibold text-text-3">· {t.badge}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              </div>
+              {helperTab && (
+                <div
+                  role="tabpanel"
+                  id="note-helper-panel"
+                  aria-labelledby={`note-helper-tab-${helperTab}`}
+                  className="rise-in"
+                >
+                  {helperTab === "ai" && !isEdit && (
+                    <AiDraftPanel
+                      region={loc.region}
+                      aptName={loc.aptName}
+                      complexId={loc.complexId ?? null}
+                      purpose={visit["목적"] || null}
+                      emphasize={preferAi || fromWelcome}
+                      onApply={applyAiDraft}
+                    />
+                  )}
+                  {helperTab === "voice" && !isEdit && (
+                    <VoiceMemoRecorder
+                      memos={voiceMemos}
+                      onChange={setVoiceMemos}
+                      onTranscript={(text) =>
+                        setMemo((prev) =>
+                          prev.trim() ? `${prev.trimEnd()}\n\n🎙 ${text}` : `🎙 ${text}`,
+                        )
+                      }
+                    />
+                  )}
+                  {helperTab === "brief" && fieldContext !== null && (
+                    <FieldBriefCard context={fieldContext} />
+                  )}
+                  {/* 카드가 비면 빈 상자 대신 이유를 적는다 — "조회했는데 없다"(briefCount 0)와
+                      "아직 안 골랐다/못 받았다"(fieldContext null)는 다른 사실이다.
+                      판정 전(briefCount null)에는 아무 말도 얹지 않는다. */}
+                  {helperTab === "brief" && (fieldContext === null || briefCount === 0) && (
+                    <p className="rounded-[14px] border border-line bg-surface px-4 py-3 t-sub text-text-3">
+                      {fieldContext === null
+                        ? loc.region.trim()
+                          ? "아직 이 지역의 브리핑이 없어요 — 위치를 고른 직후라면 잠시 뒤 다시 열어 보세요."
+                          : "위치를 고르면 이 지역의 시세·공기질·개발계획을 여기서 봐요."
+                        : "이 지역은 아직 실을 만한 시세·공기질·개발계획 데이터가 없어요."}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* 방문 정보 */}
         <div className="rise-in-2 card flex flex-col gap-2.5 p-4">
@@ -2541,6 +2782,27 @@ export function NoteForm({
               고른 항목만 점수에 들어가요 · {countCheckedItems(checks)}/{CHECK_KEYS.length}
             </span>
           </div>
+          {/* [995 · 3] 지난 체크 — 읽기만. 지난 값을 칸에 채워 두면 안 본 것을 본 것처럼
+              저장하게 되므로, 옆에 두고 이번 관찰과 견주게만 한다. 좋음 ✓ · 보통 – · 아쉬움 ✗ */}
+          {revisitLinked && revisitSeed && previousChips.length > 0 && (
+            <div
+              className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-bg px-2.5 py-1.5"
+              aria-label={`지난 체크 (${revisitSeed.previousVisitDate})`}
+            >
+              <span className="t-caption font-bold text-text-3">
+                지난 체크 · {revisitSeed.previousVisitDate}
+              </span>
+              {previousChips.map((c) => (
+                <span key={c.label} className="t-caption text-text-2">
+                  {c.label}{" "}
+                  <span aria-hidden="true" className={c.glyph === "✗" ? "text-danger" : c.glyph === "✓" ? "text-primary" : ""}>
+                    {c.glyph}
+                  </span>
+                  <span className="sr-only">{c.level}</span>
+                </span>
+              ))}
+            </div>
+          )}
           {CHECK_KEYS.map((item) => (
             <div key={item} className="flex items-center gap-2.5">
               <span className="w-12 shrink-0 t-body font-semibold text-text-1">

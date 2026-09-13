@@ -45,6 +45,11 @@ export type NoteCardSource = {
     /** 출처 한 줄 — 카드에 그대로 찍힌다 */
     source: string;
   } | null;
+  /**
+   * [995] 카드에 인쇄되는 짧은 링크 표기(`naezipnow.com/n/xxxxxxxx`). 마무리 장이 쓴다.
+   * 없으면 도메인만 — 이미지는 되돌릴 수 없으니 받은 사람이 노트로 돌아올 길을 찍는다.
+   */
+  shareLabel?: string | null;
 };
 
 export type FrameCategory = "표지" | "요약" | "점수" | "현장" | "판단" | "마무리";
@@ -77,6 +82,9 @@ export type CardFrame = {
 };
 
 /* ── 헬퍼 ─────────────────────────────────────────────────────────── */
+
+/** 카드 하단·마무리 장의 기본 표기 — 짧은 링크(shareLabel)가 없을 때만 */
+export const CARD_BRAND_DOMAIN = "naezipnow.com";
 
 /** 5축 평균 점수(있는 값만). 없으면 null. */
 export function averageScore(s: NoteCardSource): number | null {
@@ -251,10 +259,11 @@ export const CARD_FRAMES: readonly CardFrame[] = [
     label: "마무리",
     category: "마무리",
     available: () => true,
-    build: () => ({
+    /* [995] 도메인 대신 짧은 링크 — 받은 사람이 이 노트로 곧장 온다(utm 은 /n 이 붙인다) */
+    build: (s) => ({
       kind: "cta",
       heading: "시세는 누구나 봅니다, 현장은 가 본 사람만 압니다",
-      sub: "naezipnow.com",
+      sub: s.shareLabel?.trim() || CARD_BRAND_DOMAIN,
     }),
   },
 ] as const;

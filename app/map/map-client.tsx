@@ -345,6 +345,8 @@ interface MapClientProps {
   initialListingType?: string | null;
   /** [968 · 23] 서버가 읽은 NCP Client ID(공개 값) — NaverMap 의 sdk-config fetch 를 건너뛴다 */
   ncpKeyId?: string | null;
+  /** [995 · S6] 로그인 사용자는 "실거래 + 내 노트 핀" 이 기본 — 저장된 취향(nz_map_prefs)이 있으면 그쪽이 이긴다 */
+  initialMyNotes?: boolean;
 }
 
 /* ===== 서버 클러스터링 (/api/map/clusters) ===== */
@@ -685,6 +687,7 @@ export function MapClient({
   initialBudget = null,
   initialListingType = null,
   ncpKeyId = null,
+  initialMyNotes = false,
 }: MapClientProps) {
   /* 좌표 단독 공유 URL 은 name 이 "" 다 — 라벨은 기본값으로 폴백(|| 가 의도) */
   const focusedRegion = initialFocus?.name || null;
@@ -1093,11 +1096,15 @@ export function MapClient({
   const [supplyUncoordinated, setSupplyUncoordinated] = useState(0);
 
   /* ===== [#130] 내 노트 레이어 — 로그인 사용자의 임장 기록 (본인 전용) ===== */
-  const [showMyNotes, setShowMyNotes] = useState(false);
+  const [showMyNotes, setShowMyNotes] = useState(initialMyNotes);
   const [myNotes, setMyNotes] = useState<
     Array<{ id: string; lat: number; lng: number; title: string; visitDate: string | null; avgScore: number | null }>
   >([]);
   const [myNotesState, setMyNotesState] = useState<"idle" | "unauth" | "failed">("idle");
+  /* [995 · S6] 응답이 온 뒤에만 "0건" 을 말한다(불러오는 중에 "없어요" 가 번쩍이던 것) —
+     그리고 기본값으로 켜진 경우엔 0건 안내를 아예 내지 않는다. 손으로 켠 사람에게만 답한다. */
+  const [myNotesLoaded, setMyNotesLoaded] = useState(false);
+  const myNotesManualRef = useRef(false);
 
   /* ===== [#136] 월세 전환 레이어 — 지역별 월세 비중(신고 3개월) ===== */
   const [showRentShare, setShowRentShare] = useState(false);
@@ -2034,7 +2041,10 @@ export function MapClient({
           <button
             type="button"
             aria-pressed={showMyNotes}
-            onClick={() => setShowMyNotes((v) => !v)}
+            onClick={() => {
+              myNotesManualRef.current = true;
+              setShowMyNotes((v) => !v);
+            }}
             className={`chip whitespace-nowrap px-2.5 py-1.5 text-xs transition-colors ${
               showMyNotes
                 ? "bg-primary-soft font-bold text-primary"
@@ -2796,6 +2806,7 @@ export function MapClient({
       .then((json: { items?: typeof myNotes }) => {
         if (controller.signal.aborted) return;
         setMyNotes(Array.isArray(json.items) ? json.items : []);
+        setMyNotesLoaded(true);
       })
       .catch((e) => {
         if (controller.signal.aborted || (e as Error)?.name === "AbortError") return;
@@ -3664,11 +3675,11 @@ export function MapClient({
     });
   }
   /* [#130] 내 노트 — 로그인·실패·0건을 구분해 말한다 */
-  if (showMyNotes && myNotesState === "unauth") {
+  if (showMyNotes && myNotesState === "unauth" && myNotesManualRef.current) {
     mapNotices.push({ key: "mynotes-auth", text: "내 노트 레이어는 로그인 후 볼 수 있어요" });
   } else if (showMyNotes && myNotesState === "failed") {
     mapNotices.push({ key: "mynotes-failed", text: "내 노트를 불러오지 못했어요 — 잠시 후 다시 시도해 주세요" });
-  } else if (showMyNotes && myNotesState === "idle" && myNotes.length === 0) {
+  } else if (showMyNotes && myNotesState === "idle" && myNotesLoaded && myNotes.length === 0 && myNotesManualRef.current) {
     mapNotices.push({ key: "mynotes-empty", text: "좌표가 담긴 내 노트가 아직 없어요 — 작성 시 단지를 검색해 선택하면 지도에 찍혀요" });
   }
 

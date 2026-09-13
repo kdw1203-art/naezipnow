@@ -2,6 +2,13 @@
 
 import { Icon } from "@/app/components/Icon";
 import { useCopy } from "@/lib/ui/use-copy";
+import { trackPlatformEvent } from "@/lib/platform-events-client";
+
+/* [995] FUNNEL_EVENT.SHARE_LINK_COPY 는 정의만 있고 한 번도 보내진 적이 없었다 — 공유
+   버튼이 눌리는지 아무도 몰랐다. 여기서 보낸다(클라이언트라 리터럴 — lib/platform-funnel-events
+   는 서버 모듈을 끌어온다). 시트 성공은 card_share/webshare 로 같은 표에 남긴다. */
+const EV_SHARE_LINK_COPY = "share_link_copy";
+const EV_CARD_SHARE = "card_share";
 
 /* [개선 #32] 범용 공유 버튼 — Web Share API 우선, 미지원 시 클립보드 복사 폴백.
  * [966] 정본으로 승격 — 노트 상세·동네 뉴스·모임 상세가 각자 들고 있던 같은 로직을
@@ -48,13 +55,21 @@ export function ShareLinkButton({
     if (typeof navigator.share === "function") {
       try {
         await navigator.share({ title: shareTitle, text: text ?? shareTitle, url: shareUrl });
+        trackPlatformEvent({
+          eventName: EV_CARD_SHARE,
+          source: "share",
+          campaign: "funnel",
+          metadata: { channel: "webshare" },
+        });
         return;
       } catch (e) {
         /* 시트를 닫은 것은 취소 — 클립보드로 대체하지 않는다 */
         if (e instanceof DOMException && e.name === "AbortError") return;
       }
     }
-    await copy(shareUrl);
+    if (await copy(shareUrl)) {
+      trackPlatformEvent({ eventName: EV_SHARE_LINK_COPY, source: "share", campaign: "funnel" });
+    }
   };
 
   const showLabel = copied ? copiedLabel : label;

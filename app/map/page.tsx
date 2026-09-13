@@ -657,6 +657,15 @@ export default async function MapPage({
     typeParam === "sale" || typeParam === "jeonse" || typeParam === "monthly"
       ? typeParam
       : null;
+  /* [995 · S6] 로그인 여부 — 내 노트 핀 레이어의 기본값(로그인이면 켜서 시작).
+     세션 조회는 예산 프리필과 공유한다(왕복 1회). */
+  let viewerSignedIn = false;
+  try {
+    const session = await auth();
+    viewerSignedIn = Boolean(session?.user?.email);
+  } catch {
+    /* 세션 조회 실패 — 비로그인으로 간주(레이어는 손으로 켤 수 있다) */
+  }
   if (priceMinParam != null || priceMaxParam != null || urlBudgetType) {
     initialBudget = {
       type: urlBudgetType === "jeonse" ? "jeonse" : "sale",
@@ -664,7 +673,7 @@ export default async function MapPage({
       maxEok: priceMaxParam,
       label: null,
     };
-  } else {
+  } else if (viewerSignedIn) {
     try {
       const session = await auth();
       const email = session?.user?.email?.trim().toLowerCase() ?? null;
@@ -758,6 +767,7 @@ export default async function MapPage({
       <MapClient
         ncpKeyId={ncpKeyId}
         initialLevel={initialLevel}
+        initialMyNotes={viewerSignedIn}
       danji={dbLoaded.ok ? dbLoaded.value.items : []}
       regionLabel={dbLoaded.ok ? dbLoaded.value.region : "수도권"}
       regionMarkers={markersLoaded.ok ? markersLoaded.value : []}

@@ -1,7 +1,7 @@
 "use client";
 
 import type { CardTheme } from "@/lib/notes/card-themes";
-import type { FrameContent } from "@/lib/notes/card-frames";
+import { CARD_BRAND_DOMAIN, type FrameContent } from "@/lib/notes/card-frames";
 
 /**
  * 카드 한 장(프레임) HTML 렌더 — 테마 색을 인라인 스타일로 그린다(테마 hex 는
@@ -20,11 +20,14 @@ export function CardFrameView({
   theme,
   index,
   total,
+  footer = CARD_BRAND_DOMAIN,
 }: {
   content: FrameContent;
   theme: CardTheme;
   index?: number;
   total?: number;
+  /** [995] 하단 브랜드 라인 — 기본은 도메인, 스튜디오는 짧은 링크(`naezipnow.com/n/…`)를 넘긴다 */
+  footer?: string;
 }) {
   return (
     <div
@@ -47,10 +50,11 @@ export function CardFrameView({
         <FrameBody content={content} theme={theme} />
       </div>
 
-      {/* 마무리 장이 아니면 하단에 얇은 브랜드 라인 */}
+      {/* 마무리 장이 아니면 하단에 얇은 브랜드 라인 — [995] 짧은 링크가 매 장에 찍힌다
+          (한 장만 따로 공유돼도 돌아올 길이 남는다). 크기·자리는 그대로. */}
       {content.kind !== "cta" && (
         <div className="t-caption font-semibold" style={{ color: theme.sub }}>
-          naezipnow.com
+          {footer}
         </div>
       )}
     </div>

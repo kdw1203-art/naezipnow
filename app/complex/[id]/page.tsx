@@ -16,10 +16,23 @@ import {
   getTransactionHistoryWithBands,
   getComplexPosts,
   listComplexesInDistrict,
+  listComplexesInDong,
+  type AreaBandRow,
   type ComplexRow,
   type ComplexTransactionRow,
   type ComplexTransactionRowWithBands,
 } from "@/lib/complex/complex-store";
+/* [995] 읍면동 파싱·평형 요약·최근 12개월 건수 — 순수 함수(단위테스트 complex-seo-995) */
+import {
+  parseDong,
+  areaBandTitle,
+  topAreaBands,
+  bandPriceLabel,
+  ymShortLabel,
+  countDealsInWindow,
+  resolveRegionId,
+} from "@/lib/complex/dong";
+import { kstParts } from "@/lib/format/kst";
 /* [967 · 16] 억/만 표기·전월비·행 변환은 클라이언트 필터(면적대·정렬)와 같은
    구현을 써야 하므로 lib 로 옮겼다 — 이 파일 안의 사본을 지웠다. */
 import { formatManwon, pctDelta, deltaLabel, toHubTrades } from "@/lib/complex/hub-trades";
@@ -30,6 +43,8 @@ import {
   prefetchAxisSummary,
   sectionRegionLabel,
   axisRegionName,
+  loadAreaBands,
+  withSectionBudget,
 } from "./section-loaders";
 import {
   ComplexHubTabs,
@@ -62,7 +77,6 @@ import { ComplexRentSection } from "./ComplexRentSection";
 import { ComplexNearbyPoi } from "./ComplexNearbyPoi";
 import { ShareLinkButton } from "@/app/components/ShareLinkButton";
 import { Icon } from "@/app/components/Icon";
-import { regionIdForName } from "@/lib/region/catalog";
 import { EmbedSnippet } from "@/app/components/EmbedSnippet";
 import { ComplexNotesNewsAi } from "./ComplexNotesNewsAi";
 import { AiBriefingCard } from "./AiBriefingCard";
@@ -316,9 +330,14 @@ const TX_HISTORY_MONTHS = 24;
 interface HubView {
   id: string;
   name: string;
+  /** 시군구(row.district) — 이름은 dong 이지만 "송파구" 다. 지역 라벨·지도 링크가 전부 이 값을 쓴다. */
   dong: string;
   /** 시/도 — JSON-LD addressRegion 용 (dong 은 시군구라 addressLocality) */
   city: string;
+  /** [995] 읍면동("잠실동") — 대표행 address 에서 파싱. 못 뽑으면 null(지어내지 않는다). */
+  emd: string | null;
+  /** [995] "다른 단지" 블록 제목 — 동 단위로 찾았으면 "{읍면동} 다른 단지", 구로 물러섰으면 "{시군구} 다른 단지" */
+  nearbyLabel: string;
   /** 총 세대수 — 대장 마스터에 매칭됐을 때만 값이 있다 */
   households: number | null;
   metric: {
@@ -430,10 +449,12 @@ interface ComplexPostRow {
   view_count: number | null;
 }
 
-/* 내부 링크 그물(#34): 같은 동(district) 단지 조회 → 카드 데이터 */
-function toNearby(rows: ComplexRow[], selfId: string): HubView["nearby"] {
+/* 내부 링크 그물(#34): 같은 동(district) 단지 조회 → 카드 데이터.
+   [995] 자기 자신 제외는 canonical_id 로도 본다 — kapt 매칭 단지는 id 가 `kapt.…` 인데
+   목록 행은 name-id 라 id 비교만으로는 자기 단지가 "다른 단지"에 섞였다. */
+function toNearby(rows: ComplexRow[], selfId: string, selfCanonicalId?: string): HubView["nearby"] {
   return rows
-    .filter((c) => c.id !== selfId)
+    .filter((c) => c.id !== selfId && (!selfCanonicalId || c.canonical_id !== selfCanonicalId))
     .slice(0, 8)
     .map((c) => {
       const parts: string[] = [];
@@ -446,6 +467,31 @@ function toNearby(rows: ComplexRow[], selfId: string): HubView["nearby"] {
         meta: parts.length > 0 ? parts.join(" · ") : `${c.city} ${c.district}`.trim(),
       };
     });
+}
+
+/* [995] 같은 동 단지가 이보다 적으면(자기 제외) 구 단위로 물러선다 — 동 안에 거래
+   이력 단지가 한두 곳뿐이면 "다른 단지" 블록이 너무 비어 내부 링크 구실을 못 한다. */
+const NEARBY_DONG_MIN = 3;
+
+type NearbyScope = "dong" | "district";
+
+/**
+ * [995] "다른 단지" 후보 — 읍면동이 있으면 **동 단위를 먼저** 묻고, 자기 제외 3곳
+ * 미만일 때만 구 단위를 한 번 더 묻는다. 즉 평소엔 예전과 같은 왕복 1회, 동이
+ * 작을 때만 +1회. 둘 다 complex_tx_stats_base(단지 단위 매트뷰) 조회라 3~4ms 다.
+ */
+async function loadNearbyRows(
+  row: ComplexRow,
+  emd: string | null,
+  signal: AbortSignal,
+): Promise<{ rows: ComplexRow[]; scope: NearbyScope }> {
+  if (!row.district) return { rows: [], scope: "district" };
+  if (emd) {
+    const inDong = await listComplexesInDong(row.district, emd, 9, signal);
+    const others = inDong.filter((c) => c.canonical_id !== row.canonical_id).length;
+    if (others >= NEARBY_DONG_MIN) return { rows: inDong, scope: "dong" };
+  }
+  return { rows: await listComplexesInDistrict(row.district, 9, signal), scope: "district" };
 }
 
 /**
@@ -489,6 +535,8 @@ function toView(
   listingRows: PublicListing[] = [],
   /** 조회에 실패한 섹션 이름 — "없음"과 "못 읽음"을 다른 문장으로 그리기 위해 */
   loadFailures: string[] = [],
+  /** [995] 읍면동(파싱 결과)과 "다른 단지" 조회 범위 */
+  place: { emd: string | null; nearbyScope: NearbyScope } = { emd: null, nearbyScope: "district" },
 ): HubView {
   const txFailed = loadFailures.includes("실거래");
   const listingsFailed = loadFailures.includes("매물");
@@ -497,6 +545,9 @@ function toView(
   const prev = tx.length > 1 ? tx[tx.length - 2] : null;
   const { delta, tone } = deltaLabel(latest ? pctDelta(latest.avg_manwon, prev?.avg_manwon) : null);
   const dong = row.district || row.city || "지역";
+  /* [995] 동 단위로 찾았을 때만 동 이름을 제목에 쓴다 — 구 결과에 동 라벨을 붙이면 거짓말이다 */
+  const nearbyLabel =
+    place.nearbyScope === "dong" && place.emd ? `${place.emd} 다른 단지` : `${dong} 다른 단지`;
   // D8: 이 단지 실 매물(승인) 연결 — 없으면 빈 배열(클라이언트가 안내 문구 표시)
   const hubListings = listingRows.map(toHubListing);
   // 사실 우선: 실거래 데이터가 없으면 목업 대신 빈 배열(클라이언트가 안내 문구 표시)
@@ -574,6 +625,8 @@ function toView(
     name: row.name,
     dong,
     city: row.city,
+    emd: place.emd,
+    nearbyLabel,
     households: row.households,
     metric: {
       /* 실패와 없음을 절대 같은 문장으로 그리지 않는다.
@@ -692,6 +745,9 @@ async function loadView(id: string): Promise<HubView | null> {
     if (r) prefetchAxisSummary({ rowId: r.id, city: r.city, district: r.district });
   }).catch(() => undefined);
   const row: ComplexRow = base; // name·district·canonical_id·address 는 enrich 가 바꾸지 않는다
+  /* [995] 읍면동 — address 문자열에서만 얻을 수 있다(대표행에 컬럼이 없다). 메타데이터도
+     같은 함수로 같은 값을 만든다(순수 함수라 캐시가 필요 없다). */
+  const emd = parseDong(row.address);
 
   /* 곁다리가 **함께** 쓰는 예산 — [968 · 1] 실거래(히어로) 8초 · 나머지 넷 3초.
      예전에는 각 조회가 `.catch(() => [])` 로 실패를 빈 배열로 바꿔서
@@ -716,14 +772,18 @@ async function loadView(id: string): Promise<HubView | null> {
       rowP.then((r) => getComplexPosts((r ?? row).id, 12, budget.signal)),
       budget.expired,
     ),
-    // #34: 같은 동(district) 다른 단지 — 자기 자신 제외분 확보 위해 더 넓게
+    // #34: 같은 동 다른 단지 — 자기 자신 제외분 확보 위해 더 넓게.
+    // [995] 읍면동 먼저, 3곳 미만이면 구로 물러선다(loadNearbyRows).
     row.district
       ? settle(
-          `${row.district} 인근 단지`,
-          listComplexesInDistrict(row.district, 9, budget.signal),
+          `${row.district}${emd ? ` ${emd}` : ""} 인근 단지`,
+          loadNearbyRows(row, emd, budget.signal),
           budget.expired,
         )
-      : Promise.resolve({ ok: true as const, data: [] as ComplexRow[] }),
+      : Promise.resolve({
+          ok: true as const,
+          data: { rows: [] as ComplexRow[], scope: "district" as NearbyScope },
+        }),
     // 좌표 지연 지오코딩(캐시) — 거리뷰·JSON-LD geo 용. 실패 시 좌표 없이 진행.
     dec
       ? settle(
@@ -783,14 +843,16 @@ async function loadView(id: string): Promise<HubView | null> {
 
   const coord = coordR.ok ? coordR.data : null;
   const located: ComplexRow = coord ? { ...rowFinal, lat: coord.lat, lng: coord.lng } : rowFinal;
+  const nearbyRows = sameDongR.ok ? sameDongR.data.rows : [];
   return toView(
     located,
     txR.ok ? txR.data : [],
     postsR.ok ? postsR.data : [],
-    toNearby(sameDongR.ok ? sameDongR.data : [], located.id),
+    toNearby(nearbyRows, located.id, located.canonical_id),
     txDetailHref(located, txR.ok ? txR.data : []),
     listingsR.ok ? listingsR.data : [],
     loadFailures,
+    { emd, nearbyScope: sameDongR.ok ? sameDongR.data.scope : "district" },
   );
 }
 
@@ -827,6 +889,8 @@ export async function generateMetadata({
 
   const name = row.name;
   const region = `${row.city} ${row.district}`.trim() || "지역";
+  /* [995] 읍면동 — 본문(loadView)과 같은 순수 함수·같은 address 라 값이 같다 */
+  const emd = parseDong(row.address);
   let price = "시세 준비 중";
   let delta = "";
   /* .catch(() => []) 로 삼키던 자리다. 실패하면 price 가 "시세 준비 중"으로
@@ -836,13 +900,27 @@ export async function generateMetadata({
   /* 본문(line ~527)과 **반드시 같은 인자**여야 한다 — loadTxHistory 는 cache() 라
      인자가 다르면 렌더 안에서 두 번 조회하고, 메타데이터와 본문이 다른 값을 말한다.
      canonical_id 를 쓰는 이유는 본문 쪽 주석 참고. */
-  const tx: ComplexTransactionRow[] = await loadTxHistory(row.canonical_id, TX_HISTORY_MONTHS);
+  /* [995] 면적대는 본문이 base 시점에 띄우는 섹션 로더(loadAreaBands, React cache)를
+     같은 인자(순수 id)로 부른다 — 추가 질의 없이 같은 약속을 받는다. 3초 공유 예산을
+     넘기거나 실패하면 null 로 접고 설명에서 평형 숫자만 뺀다(실패 로그는 섹션
+     컴포넌트 ComplexAreaBands 가 한 번 남긴다 — 여기서 또 적지 않는다).
+     실거래(8초 예산)와 나란히 기다리므로 메타데이터 해석 시간은 늘지 않는다. */
+  const [tx, bands]: [ComplexTransactionRow[], AreaBandRow[] | null] = await Promise.all([
+    loadTxHistory(row.canonical_id, TX_HISTORY_MONTHS),
+    withSectionBudget(loadAreaBands(id)).then(
+      (d) => d,
+      () => null,
+    ),
+  ]);
   const latest = tx.length > 0 ? tx[tx.length - 1] : null;
   const prev = tx.length > 1 ? tx[tx.length - 2] : null;
+  /** "▲ 1.2%" — 보합·비교 불가면 "" (설명 문장·OG 카드가 각자 조립) */
+  let deltaPct = "";
   if (latest) {
     price = formatManwon(latest.avg_manwon);
     const d = deltaLabel(pctDelta(latest.avg_manwon, prev?.avg_manwon));
-    delta = d.tone === "flat" ? "" : `${d.delta} 전월비`;
+    deltaPct = d.tone === "flat" ? "" : d.delta;
+    delta = deltaPct ? `${deltaPct} 전월비` : "";
   }
 
   /* [945 · 실사용50 #24] 타이틀에 최신 실거래가·시점 — 검색결과에서
@@ -850,19 +928,40 @@ export async function generateMetadata({
      값은 위에서 이미 읽은 월별 집계의 최신월 평균(추가 조회 없음) — 시점을
      같이 적어 오래된 값이 현재가로 읽히지 않게 한다. 거래 없는 단지는
      수치 없는 기본 타이틀(없는 값을 타이틀에 지어내지 않는다). */
-  const ymLabel =
-    latest && /^\d{6}$/.test(latest.yyyymm)
-      ? `${latest.yyyymm.slice(2, 4)}.${Number(latest.yyyymm.slice(4))}월`
-      : null;
+  const ymLabel = ymShortLabel(latest?.yyyymm);
+  /* [995] 검색 의도 "단지명 시세/실거래/평형" — 제목에 읍면동·평형, 설명에 최근 12개월
+     건수·평형별 최근가·세대수·준공을 싣는다. 값이 없는 조각은 통째로 뺀다("undefined"·
+     빈 괄호 금지). 12개월 창은 오늘(KST) 기준 달력이다 — 거래가 있는 달만 행으로
+     오므로 "마지막 12행"이 아니라 달력으로 센다(countDealsInWindow). */
+  const now = kstParts(Date.now());
+  const nowYm = now ? `${now.year}${String(now.month).padStart(2, "0")}` : "";
+  const n12 = countDealsInWindow(tx, nowYm, 12);
+  const bandsText = areaBandTitle(bands, bandPriceLabel, 2);
+  const emdPrefix = emd ? `${emd} ` : "";
   const title = latest
-    ? `${name} 실거래가 ${price}${ymLabel ? ` (${ymLabel})` : ""} · 시세·임장노트 | 내집나우`
-    : `${name} 시세·매물·임장노트 | 내집나우`;
+    ? `${name} 실거래가 ${price}${ymLabel ? ` (${ymLabel})` : ""} · ${emdPrefix}시세·평형별 실거래 | 내집나우`
+    : `${name} ${emdPrefix}시세·매물·임장노트 | 내집나우`;
+  const placeLabel = `${region}${emd ? ` ${emd}` : ""}`;
+  const priceNote = [ymLabel ? `${ymLabel} 신고분` : null, deltaPct ? `전월비 ${deltaPct}` : null]
+    .filter(Boolean)
+    .join(", ");
   const description = latest
-    ? `${region} ${name} 최신 실거래 평균 ${price}${ymLabel ? ` (${ymLabel} 신고분)` : ""}${delta ? ` · ${delta}` : ""} — 실거래 추이, 매물, 이웃 임장노트, 안전 진단을 한 화면에서.`
-    : `${region} ${name} 단지 홈 — 실거래 시세, 매물, 이웃 임장노트, 안전 진단을 한 화면에서 확인하세요.`;
+    ? [
+        `${placeLabel} ${name} 최신 실거래 평균 ${price}${priceNote ? `(${priceNote})` : ""}`,
+        n12 > 0 ? `최근 12개월 ${n12}건` : null,
+        `평형별 ${bandsText || "실거래"}`,
+        row.households ? `${row.households.toLocaleString("ko-KR")}세대` : null,
+        row.build_year ? `${row.build_year}년 준공` : null,
+        "이웃 임장노트",
+      ]
+        .filter(Boolean)
+        .join(" · ") + "."
+    : `${placeLabel} ${name} 단지 홈 — 실거래 시세, 매물, 이웃 임장노트, 안전 진단을 한 화면에서 확인하세요.`;
   // 동적 OG 이미지 — 실데이터 값 URL 인코딩 (metadataBase 기준 절대화)
-  const ogQuery = new URLSearchParams({ name, price, region });
+  // [995] 지역 줄에 읍면동까지("서울 송파구 잠실동") — 카드 템플릿은 그대로다.
+  const ogQuery = new URLSearchParams({ name, price, region: placeLabel });
   if (delta) ogQuery.set("delta", delta);
+  const ogImageUrl = `/api/og/complex?${ogQuery.toString()}`;
 
   // G6: 단지 허브는 사이트맵 URL 의 대부분(2.5만 건)을 차지하는 롱테일 랜딩이다.
   // canonical 이 없으면 `?utm_...`·중복 진입 경로마다 별개 URL 로 색인돼 신호가 쪼개진다.
@@ -899,12 +998,20 @@ export async function generateMetadata({
       type: "website",
       images: [
         {
-          url: `/api/og/complex?${ogQuery.toString()}`,
+          url: ogImageUrl,
           width: 1200,
           height: 630,
           alt: `${name} 시세 카드`,
         },
       ],
+    },
+    /* [995] 트위터 카드 — OG 만 있으면 X 는 작은 summary 카드로 접는다. 큰 이미지 카드는
+       twitter:card 를 명시해야 나온다(다른 상세 페이지 /listings·/town/news 와 같은 모양). */
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImageUrl],
     },
   };
 }
@@ -927,6 +1034,22 @@ export default async function ComplexHubPage({
   // 사실 우선: 존재하지 않는 단지는 목업 대신 404
   if (!v) notFound();
 
+  /* [995] 첫 화면 "평형별 최근 실거래" 칩 — 본문이 base 시점에 띄운 면적대 로더(React
+     cache)를 같은 인자로 받는다. loadView 가 끝난 뒤라 대개 이미 결과가 와 있고, 아직이면
+     아래 ComplexAreaBands 가 기다릴 3초 예산 안에서 같이 기다린다(추가 질의·추가 대기 없음).
+     실패·초과면 칩 줄을 통째로 숨긴다 — 실패 문구는 표 섹션이 한 번만 적는다. */
+  const heroBands = topAreaBands(
+    await withSectionBudget(loadAreaBands(complexId)).then(
+      (d) => d,
+      () => null,
+    ),
+    3,
+  );
+  /* [995] 지역 허브 id·라벨("서울 송파구") — 브레드크럼 칩·JSON-LD 탐색경로·"시장 보기"
+     알약이 같은 값을 쓴다(resolveRegionId 주석 참고). */
+  const regionId = resolveRegionId(v.city, v.dong);
+  const regionLabel = axisRegionName(v.city, v.dong) || v.dong;
+
   /* JSON-LD — 이 페이지가 설명하는 실체는 "단지 하나"다.
      G6 이전엔 ApartmentComplex(@id 있음)와 별도의 Residence(@id 없음) 두 노드를
      같이 내보내 같은 건물이 서로 다른 두 엔티티로 읽혔다. 하나로 합치고,
@@ -942,9 +1065,11 @@ export default async function ComplexHubPage({
       id: complexId,
       name: v.name,
       address: complexAddress,
-      // dong = row.district(시군구) 이므로 addressLocality, 시/도는 city
+      // 시/도는 addressRegion. 읍면동(emd)이 있으면 그것이 addressLocality 이고,
+      // 없으면 예전처럼 dong(=row.district, 시군구)을 둔다 — [995]
       regionName: v.city,
       locality: v.dong,
+      dong: v.emd,
       lat: v.lat,
       lng: v.lng,
       households: v.households,
@@ -953,9 +1078,12 @@ export default async function ComplexHubPage({
     /* 예전엔 여기에 { name: v.dong } 이 끼어 있었다. 동 이름만 있고 갈 수 있는
        페이지가 없어 item(URL)이 빠졌고, 구글은 이걸 심각 오류로 보고 이 페이지의
        탐색경로를 통째로 무시했다(2026-07-27 Search Console). 링크 없는 라벨은
-       탐색경로의 단계가 아니다 — 지역 상세 페이지가 생기면 그때 URL과 함께 넣는다. */
+       탐색경로의 단계가 아니다.
+       [995] 지역 허브(/region/{id})가 풀리는 단지는 홈 → 지역 → 단지 세 단계 — 세
+       항목 모두 URL 이 있다. 안 풀리면 예전 두 단계 그대로(없는 URL 을 지어내지 않는다). */
     breadcrumbJsonLd([
       { name: "홈", url: "/" },
+      ...(regionId ? [{ name: regionLabel, url: `/region/${regionId}` }] : []),
       { name: v.name, url: `/complex/${encodeURIComponent(complexId)}` },
     ]),
   ];
@@ -1011,7 +1139,11 @@ export default async function ComplexHubPage({
           `backwards` 채움이라 애니메이션이 시작되기 전까지 LCP 후보(히어로 시세)가
           투명했다. 래퍼는 스타일 없는 블록이라 레이아웃·LCP 요소 순서에 영향이 없다. */}
       <div className="fold">
-        {/* 브레드크럼 칩 — ‹ 지도 · 동 · 단지명 */}
+        {/* 브레드크럼 칩 — ‹ 지도 · 시/도+시군구 · 읍면동 · 단지명
+            [995] 시군구 칩은 지역 허브(/region/{id})로 — JSON-LD 탐색경로와 같은 목적지.
+            허브 id 가 안 풀리는 지역만 예전처럼 지역 지도(?region=)로 간다. 읍면동 칩은
+            같은 동 단지 목록(#nearby-complexes)으로 — 동 단위 페이지는 없으므로 페이지
+            안 앵커가 정직한 목적지다(목록이 없으면 누를 수 없는 라벨로 둔다). */}
         <div className="rise-in flex flex-wrap gap-1.5">
           <Link
             href="/map"
@@ -1019,14 +1151,34 @@ export default async function ComplexHubPage({
           >
             ‹ 지도
           </Link>
-          {/* 동/구 칩 — 예전엔 옆의 "‹ 지도" Link 와 완전히 같은 생김새인데 href 가
-              없었다. 지역 지도로 실제로 이동하게 한다(?region= 지원 추가됨). */}
-          <Link
-            href={`/map?region=${encodeURIComponent(v.dong)}`}
-            className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2"
-          >
-            {v.dong}
-          </Link>
+          {regionId ? (
+            <Link
+              href={`/region/${regionId}`}
+              className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2"
+            >
+              {regionLabel}
+            </Link>
+          ) : (
+            <Link
+              href={`/map?region=${encodeURIComponent(v.dong)}`}
+              className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2"
+            >
+              {regionLabel}
+            </Link>
+          )}
+          {v.emd &&
+            (v.nearby.length > 0 ? (
+              <a
+                href="#nearby-complexes"
+                className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2 no-underline"
+              >
+                {v.emd}
+              </a>
+            ) : (
+              <span className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2">
+                {v.emd}
+              </span>
+            ))}
           {/* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */}
           <span className="chip bg-brand-navy px-2.5 py-1 t-sub font-extrabold text-on-dark">
             {v.name}
@@ -1072,6 +1224,31 @@ export default async function ComplexHubPage({
             )}
           </div>
 
+          {/* [995] 평형별 최근 실거래 — 검색 의도 "단지명 평형"의 답을 첫 화면에 둔다.
+              거래 많은 구간 3개, 값은 그 구간의 최근 실거래가와 그 계약월(면적대 표와 같은
+              재료). 누르면 아래 면적대별 표(#area-bands)로. 촘촘한 인라인 링크 기준(24px)
+              을 넘기도록 min-h-6 — `.chip` 은 붙이지 않는다(터치에서 40px 로 커져 히어로
+              밀도가 깨진다). 재료가 없으면 줄 자체를 그리지 않는다. */}
+          {heroBands.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-1">
+              <span className="mr-0.5 t-caption font-bold text-on-dark-muted">평형별 최근 실거래</span>
+              {heroBands.map((b) => {
+                const ym = ymShortLabel(b.latestYm);
+                return (
+                  <a
+                    key={b.label}
+                    href="#area-bands"
+                    className="brand-photo-chip inline-flex min-h-6 items-center gap-1 rounded-full px-2.5 py-[5px] t-sub font-bold no-underline tabular-nums"
+                  >
+                    <span>{b.label}</span>
+                    <span className="font-extrabold">{bandPriceLabel(b.latestManwon)}</span>
+                    {ym && <span className="font-medium opacity-80">· {ym}</span>}
+                  </a>
+                );
+              })}
+            </div>
+          )}
+
           {v.chips.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1">
               {v.chips.map((c) => (
@@ -1093,7 +1270,7 @@ export default async function ComplexHubPage({
         {/* [개선 #32] 행동 3종 — 보고 끝나는 화면에서 다음 행동이 있는 화면으로.
             ① 임장노트 쓰기(이 단지 프리필) ② 지역 허브(내부 연결) ③ 공유 */}
         {(() => {
-          const regionId = regionIdForName(v.city ?? "") ?? regionIdForName(v.dong ?? "");
+          /* [995] regionId 는 위(브레드크럼·JSON-LD 와 공용)에서 한 번 계산한다 */
           /* [968 · 34] 터치 기기에서만 최소 높이 44px(Tailwind v4 `pointer-coarse:` 변형 →
              @media (pointer: coarse)). `.chip` 의 보이지 않는 ::after 확장을 못 쓰는 이유:
              이 알약은 `tap-ripple` 이 이미 ::after 로 잉크 리플을 그리고 overflow:hidden 이라
@@ -1112,7 +1289,9 @@ export default async function ComplexHubPage({
               {regionId && (
                 <Link href={`/region/${regionId}`} className={pill}>
                   <Icon name="pin" size={14} />
-                  {v.city || v.dong} 시장 보기
+                  {/* [995] 링크 목적지(시군구 허브)와 같은 이름을 적는다 — 예전 "서울 시장 보기"는
+                      송파구 허브로 가면서 시/도 이름을 달고 있었다 */}
+                  {regionLabel} 시장 보기
                 </Link>
               )}
               <ShareLinkButton title={`${v.name} 시세·임장노트`} className={pill} />
@@ -1198,8 +1377,14 @@ export default async function ComplexHubPage({
           `.cv-auto{content-visibility:auto;contain-intrinsic-size:auto 420px}`). 모바일에서는
           스펙 시트 아래라 첫 화면 밖이다. 래퍼를 새로 두지 않고 기존 루트에 단다 —
           main 의 data-autotrim(`> :empty`)이 빈 블록을 접는 규칙을 그대로 타게. 아래
-          섹션 컴포넌트들도 각자의 <section> 루트에 같은 클래스를 단다. */}
-      <div className="cv-auto mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
+          섹션 컴포넌트들도 각자의 <section> 루트에 같은 클래스를 단다.
+          [995] id="area-bands" — 히어로의 평형 칩이 여기로 내려온다. 면적대 표가 이 그리드의
+          첫 칸이라 그리드에 단다(래퍼 div 를 끼우면 표가 없을 때 빈 칸이 autotrim 을 피해
+          여백만 남긴다). scroll-mt-24 는 다른 앵커 섹션과 같은 상단 바 여유. */}
+      <div
+        id="area-bands"
+        className="cv-auto mt-3 grid scroll-mt-24 grid-cols-1 gap-3 lg:grid-cols-2"
+      >
         <ComplexAreaBands complexId={complexId} compact />
         <RegionRelative complexId={complexId} compact />
       </div>
@@ -1302,9 +1487,8 @@ export default async function ComplexHubPage({
           </div>
           {v.nearby.length > 0 && (
             <div className="rise-in-2 card flex flex-col gap-1.5 rounded-[18px] px-4 py-3.5">
-              <div className="mb-0.5 t-body font-extrabold text-ink">
-                {v.dong} 다른 단지
-              </div>
+              {/* [995] 동 단위로 찾았으면 "{읍면동} 다른 단지", 구로 물러섰으면 "{시군구} 다른 단지" */}
+              <div className="mb-0.5 t-body font-extrabold text-ink">{v.nearbyLabel}</div>
               {v.nearby.slice(0, 5).map((n) => (
                 <Link
                   key={n.id}
@@ -1331,13 +1515,15 @@ export default async function ComplexHubPage({
 
       {/* 내부 링크 그물(#34) — 모바일·전체 그리드.
           [968 · 7] 탭 아래 섹션 전부 cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미루고
-          스크롤로 다가오면 그때 그린다(브라우저가 온디맨드로 렌더). 이 페이지에는
-          #id 앵커·scrollIntoView 대상 섹션이 없고(?tab= 은 탭 전환만), 하단 CTA
-          sentinel(#complex-actions-bottom)은 cv-auto 밖에 둔다. */}
+          스크롤로 다가오면 그때 그린다(브라우저가 온디맨드로 렌더). 하단 CTA
+          sentinel(#complex-actions-bottom)은 cv-auto 밖에 둔다.
+          [995] #area-bands·#nearby-complexes 앵커가 생겼다 — content-visibility:auto 는
+          fragment 이동 대상을 "사용자와 관련 있음"으로 보고 그 자리에서 렌더하므로
+          앵커 이동이 막히지 않는다(scroll-mt-24 는 상단 바 여유). */}
       {v.nearby.length > 0 && (
-        <section className="cv-auto rise-in-5 mt-6">
+        <section id="nearby-complexes" className="cv-auto rise-in-5 mt-6 scroll-mt-24">
           <h2 className="mb-2 px-1 t-section text-ink">
-            {v.dong} 다른 단지{" "}
+            {v.nearbyLabel}{" "}
             <span className="t-sub font-medium text-text-3">{v.nearby.length}곳</span>
           </h2>
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4">

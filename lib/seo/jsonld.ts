@@ -126,9 +126,14 @@ export function complexResidenceJsonLd(input: {
   id: string;
   name: string;
   address?: string | null;
+  /** 시/도 — addressRegion. 예: "서울" */
   regionName?: string | null;
-  /** 읍면동 — 예: "잠실동". 없으면 생략(추정하지 않는다). */
+  /** 시군구 — 예: "송파구". 호출부(/complex/[id])가 예전부터 넘기던 자리. */
   locality?: string | null;
+  /** [995] 읍면동 — 예: "잠실동". 있으면 이것이 addressLocality 가 되고 locality(시군구)는
+   *  streetAddress(전체 주소)에 이미 들어 있으므로 잃지 않는다. 없으면 locality 를 쓴다 —
+   *  주소를 추정해 채우지 않는다. 선택 필드라 기존 호출부는 그대로다. */
+  dong?: string | null;
   /** 지오코딩된 실좌표. 없으면 geo 자체를 넣지 않는다. */
   lat?: number | null;
   lng?: number | null;
@@ -149,7 +154,7 @@ export function complexResidenceJsonLd(input: {
     address: postalAddress({
       streetAddress: input.address,
       addressRegion: input.regionName,
-      addressLocality: input.locality,
+      addressLocality: input.dong?.trim() || input.locality,
     }),
     geo: geoCoordinates(input.lat, input.lng),
     numberOfAccommodationUnits:

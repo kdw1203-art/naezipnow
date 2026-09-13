@@ -175,6 +175,21 @@ export async function upsertPrefs(
     if (patch.smsPriceAlerts) payload.sms_consent_at = new Date().toISOString();
   }
 
+  /* [995] 첫 저장이 만드는 행에 코드 기본값을 심는다. 설정 화면은 토글 하나씩
+     PATCH 하므로, 다른 토글을 먼저 만진 사람의 행은 DB 기본값(push_weekly_digest
+     false — 마이그레이션 20260725092854)으로 생겼다. 화면은 켜짐으로 보여 줬는데
+     저장 뒤엔 꺼짐이 되고, 크론은 그 사람을 조용히 빼는 구조였다. 행이 아직
+     없을 때만(insert 경로) 기본값을 함께 넣고, 있는 행은 건드리지 않는다. */
+  if (patch.pushWeeklyDigest === undefined) {
+    const { data: existing, error: readErr } = await sb
+      .from("notification_preferences")
+      .select("user_email")
+      .eq("user_email", userEmail)
+      .maybeSingle();
+    if (readErr) throw new Error(`notification_preferences 조회 실패: ${readErr.message}`);
+    if (!existing) payload.push_weekly_digest = DEFAULT_PREFS.pushWeeklyDigest;
+  }
+
   const { data, error } = await sb
     .from("notification_preferences")
     .upsert(payload, { onConflict: "user_email" })

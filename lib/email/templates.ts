@@ -158,7 +158,9 @@ export function weeklyDigestEmail(params: {
   news: Array<{ title: string; sourceName: string | null }>;
   communityCount: number;
 }) {
-  const subject = `[내집나우] ${params.weekLabel} 주간 다이제스트`;
+  /* [995] 마케팅 동의(email_marketing)한 사람에게만 나가는 메일이 됐다 — 개인 요약과 같은
+     규칙으로 (광고) 표기(정보통신망법 광고성 정보 표기). */
+  const subject = `(광고) [내집나우] ${params.weekLabel} 주간 다이제스트`;
   const toneColor = (t: "up" | "down" | "flat") =>
     t === "up" ? "#c62828" : t === "down" ? "#1565c0" : "#8a94a6";
 

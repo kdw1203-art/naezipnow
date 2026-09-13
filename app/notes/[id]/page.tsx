@@ -930,12 +930,11 @@ export default async function NoteDetailPage({
             complexHref={complexHref}
             next={
               isOwner
-                ? {
-                    label: "시간대를 바꿔 재방문 기록하기",
-                    href: `/notes/new?${new URLSearchParams({
-                      ...(realNote.aptName?.trim() ? { apt: realNote.aptName.trim() } : {}),
-                      ...(realNote.region.trim() ? { region: realNote.region.trim() } : {}),
-                    }).toString()}`,
+                ? /* [995 · 3] apt·region 만 넘기던 것을 회차 프리필로 — 단지 id·좌표·태그·
+                     체크리스트를 잇고 round 를 +1 한다(app/notes/new?revisit=). */
+                  {
+                    label: "다시 왔을 때 — 이전 기록 불러와 쓰기",
+                    href: `/notes/new?revisit=${encodeURIComponent(realNote.id)}`,
                   }
                 : realNote.aptName?.trim()
                   ? {

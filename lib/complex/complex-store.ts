@@ -778,6 +778,37 @@ export async function listComplexesInDistrict(
   limit = 9,
   signal?: AbortSignal,
 ): Promise<ComplexRow[]> {
+  return listComplexesInStatsBase(district, null, limit, signal);
+}
+
+/**
+ * [995] 같은 **읍면동**의 다른 단지 — listComplexesInDistrict 와 같은 표·정렬에
+ * `address ILIKE '%{읍면동}%'` 한 줄만 더 건다(같은 구 행만 훑으므로 필터 비용은 무시할 만하다).
+ *
+ * 왜: 단지 페이지의 "다른 단지" 블록은 시군구 단위(구 전체 거래량 상위)였는데
+ * 라벨은 "{동} 다른 단지"처럼 읽혔다. 검색 의도("잠실동 아파트")에는 같은 동이
+ * 먼저다. 동 안에 거래 이력 단지가 적으면(3곳 미만) 호출부가 구 단위로 물러선다.
+ * 읍면동은 대표행 address 에서 잘라 낸 값(lib/complex/dong.ts parseDong)이라
+ * 한글·숫자만 들어온다 — 그래도 ILIKE 와일드카드는 여기서 한 번 더 걷어 낸다.
+ */
+export async function listComplexesInDong(
+  district: string,
+  dong: string,
+  limit = 9,
+  signal?: AbortSignal,
+): Promise<ComplexRow[]> {
+  const emd = (dong ?? "").replace(/[%_,()]/g, "").trim();
+  if (!emd) return [];
+  return listComplexesInStatsBase(district, emd, limit, signal);
+}
+
+/** 위 두 함수의 본체 — dong 이 있으면 address 포함 필터를 얹는다. 행 모양·정렬은 같다. */
+async function listComplexesInStatsBase(
+  district: string,
+  dong: string | null,
+  limit: number,
+  signal?: AbortSignal,
+): Promise<ComplexRow[]> {
   const sb = getServiceSupabase();
   if (!sb) return [];
   const dist = (district ?? "").trim();
@@ -793,15 +824,18 @@ export async function listComplexesInDistrict(
   let q = sb
     .from("complex_tx_stats_base")
     .select("complex_name, region_name, address, build_year")
-    .in("region_name", hit.slice(0, REGION_IN_MAX))
-    .order("tx_count", { ascending: false })
-    .limit(limit);
+    .in("region_name", hit.slice(0, REGION_IN_MAX));
+  /* [995] 읍면동 필터 — 부분 일치라 "잠실동" 이 "신잠실동" 에도 걸릴 수 있지만
+     region_name 으로 이미 같은 구 안이라 옆 단지 추천으로 틀리진 않는다. */
+  if (dong) q = q.ilike("address", `%${dong}%`);
+  q = q.order("tx_count", { ascending: false }).limit(limit);
   if (signal) q = q.abortSignal(signal);
 
   const { data, error } = await q;
-  /* 빈 배열은 "그 구에 거래 이력 있는 단지가 없다" 는 뜻이다. 못 읽은 것을
+  /* 빈 배열은 "그 구(동)에 거래 이력 있는 단지가 없다" 는 뜻이다. 못 읽은 것을
      그렇게 말하면 안 되므로 던진다 — 호출부가 접는다. */
-  if (error) throw dbError("complex_tx_stats_base (같은 구 단지)", error);
+  if (error)
+    throw dbError(dong ? "complex_tx_stats_base (같은 동 단지)" : "complex_tx_stats_base (같은 구 단지)", error);
 
   const rows =
     (data as

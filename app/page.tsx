@@ -121,9 +121,10 @@ function HomeAiGateway({
             실제 정리된 공개 노트 보기 ›
           </Link>
         )}
-        {/* [958] 홈에서 단지 분석 도구 12종으로 가는 길이 없었다 — 한 줄 링크 */}
+        {/* [958] 홈에서 분석 허브로 가는 길이 없었다 — 한 줄 링크.
+            [995] 993 에서 12 → 핵심 4종(+8 칩)이 됐는데 문구가 "12종" 으로 남아 있었다. */}
         <Link href="/analysis" className="w-fit py-1.5 text-[12px] font-bold text-ai-accent no-underline">
-          단지 분석 도구 12종 ›
+          AI 분석 도구 4종 ›
         </Link>
       </div>
       <div className="fit mt-2 border-t border-white/15 pt-2">

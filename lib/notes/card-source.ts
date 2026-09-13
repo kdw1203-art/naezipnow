@@ -38,9 +38,11 @@ export function toCardSource(note: InspectionNote, market?: CardMarketFacts | nu
     ? `${note.visitDate.slice(0, 7).replace("-", ".")} 방문`
     : null;
 
+  /* [995] 축 점수는 노트에 1~5 로 저장된다. 카드 틀(card-frames)은 0~100 을 기대해
+     "4 / 100" 으로 찍히고 있었다 — 상세·피드와 같은 ×20 규칙으로 맞춘다. */
   const scores = AXES.map(({ key, label }) => {
     const v = Number(note.scores?.[key] ?? 0);
-    return { label, value: v > 0 ? v : null }; // 0 = 미입력(사실 우선)
+    return { label, value: v > 0 ? Math.round(Math.min(5, v) * 20) : null }; // 0 = 미입력(사실 우선)
   });
 
   /* 체크리스트 — 노트마다 성격이 다르다. 어떤 노트는 done 플래그가 있는 yes/no

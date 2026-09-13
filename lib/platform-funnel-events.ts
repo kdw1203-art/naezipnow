@@ -19,6 +19,11 @@ export const FUNNEL_EVENT = {
   ONBOARDING_STEP_COMPLETE: "onboarding_step_complete",
   ONBOARDING_ALL_COMPLETE: "onboarding_all_complete",
   SHARE_LINK_COPY: "share_link_copy",
+  /** [995] 나만의 카드 — 공유(metadata.channel: files|kakao|copy|download|webshare) · PNG 저장.
+      클라이언트는 문자열 리터럴로 보낸다(이 파일은 서버 모듈을 끌어온다) — 값을 바꾸면
+      NoteCardStudio·ShareLinkButton 도 같이. */
+  CARD_SHARE: "card_share",
+  CARD_EXPORT: "card_export",
   AI_TOOL_RUN: "ai_tool_run",
   /** LLM 성패 정직 집계 — rule 폴백과 분리 */
   AI_LLM_COMPLETE: "ai_llm_complete",

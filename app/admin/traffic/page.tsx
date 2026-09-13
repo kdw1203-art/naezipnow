@@ -12,6 +12,7 @@ import {
   listTopRegionDemands,
   type RegionDemandRow,
 } from "@/lib/coverage/store-db";
+import { loadShareInflow, type ShareInflow } from "@/lib/admin/share-inflow";
 
 export const metadata: Metadata = {
   title: "트래픽 | 내집나우 관리자",
@@ -83,6 +84,9 @@ const EVENT_LABEL: Record<string, string> = {
   [FUNNEL_EVENT.HOME_AI_CTA_CLICK]: "홈 AI CTA 클릭",
   [FUNNEL_EVENT.HUB_TO_AI_ANALYSIS]: "단지→AI 분석 이동",
   [FUNNEL_EVENT.SHARE_LINK_COPY]: "공유 링크 복사",
+  /* [995] 나만의 카드 — 공유(시트·카카오·복사·내려받기) · PNG 저장 */
+  [FUNNEL_EVENT.CARD_SHARE]: "카드 공유",
+  [FUNNEL_EVENT.CARD_EXPORT]: "카드 이미지 저장",
   [FUNNEL_EVENT.EXPERT_CONSULT_SUBMIT]: "전문가 상담 신청",
   [FUNNEL_EVENT.CONTENT_REPORT_SUBMIT]: "콘텐츠 신고",
   [FUNNEL_EVENT.ONBOARDING_STEP_VIEW]: "온보딩 단계 조회",
@@ -123,6 +127,8 @@ async function loadAll(): Promise<{
   retention: RetentionRow | null;
   vitals7d: VitalStat[];
   vitalsWeekly: VitalsWeeklyRow[];
+  /* [995] 공유 유입 — null 이면 조회 실패(failed 에도 적힌다) */
+  shareInflow: ShareInflow | null;
   failed: string[];
 }> {
   const sb = getServiceSupabase();
@@ -139,6 +145,7 @@ async function loadAll(): Promise<{
       retention: null,
       vitals7d: [],
       vitalsWeekly: [],
+      shareInflow: null,
       failed: ["전체(DB 미설정)"],
     };
 
@@ -156,7 +163,7 @@ async function loadAll(): Promise<{
          이름이 남는다. 관리자 한 사람이 보는 화면에서 그 거래는 손해다.
      다시 볼 조건: page_view_events 가 커져 30일 창이 수십만 행이 되거나,
      이 페이지가 관리자 외에 노출될 때. */
-  const [summaryR, dailyR, routesR, usageR, refR, utmR, vpR, retR, vitals7d, vwR] =
+  const [summaryR, dailyR, routesR, usageR, refR, utmR, vpR, retR, vitals7d, vwR, shareInflow] =
     await Promise.all([
     sb.from("page_view_summary").select("*").maybeSingle(),
     sb.from("page_view_daily").select("*").order("day", { ascending: false }).limit(14),
@@ -173,6 +180,11 @@ async function loadAll(): Promise<{
       return [] as VitalStat[];
     }),
     sb.from("web_vitals_weekly").select("*").order("week_start", { ascending: true }),
+    /* [995] 공유 유입 — 실패는 null(0건으로 위장하지 않는다) */
+    loadShareInflow(sb, 30).catch((e: unknown) => {
+      logger.error("[admin/traffic] 공유 유입 조회 실패:", e);
+      return null;
+    }),
   ]);
 
   if (summaryR.error) {
@@ -187,6 +199,7 @@ async function loadAll(): Promise<{
   if (vpR.error) failed.push("기기 비율");
   if (retR.error) failed.push("재방문");
   if (vwR.error) failed.push("웹바이탈 주간");
+  if (!shareInflow) failed.push("공유 유입");
 
   return {
     summary: (summaryR.data as Summary | null) ?? null,
@@ -199,6 +212,7 @@ async function loadAll(): Promise<{
     retention: (retR.data as RetentionRow | null) ?? null,
     vitals7d,
     vitalsWeekly: (vwR.data as VitalsWeeklyRow[] | null) ?? [],
+    shareInflow,
     failed,
   };
 }
@@ -215,6 +229,7 @@ export default async function AdminTrafficPage() {
     retention,
     vitals7d,
     vitalsWeekly,
+    shareInflow,
     failed,
   } = await loadAll();
   /* #413 커버리지 수요 — 실패를 0건으로 위장하지 않는다 */
@@ -631,6 +646,68 @@ export default async function AdminTrafficPage() {
             </table>
           </div>
         )}
+
+        {/* [995] 공유 유입 — 카드에 인쇄된 /n 링크(card)·노트 공유 버튼(share)·카카오(kakao)로
+            들어온 세션이 그 뒤 단지를 열었는지·가입/로그인에 닿았는지. 같은 page_view_events
+            표본이라 UTM 표 바로 아래 둔다. 실패(null)는 상단 failed 줄에 적히고 여기선 조용히 접는다. */}
+        <h3 className="mt-5 text-[13px] font-extrabold text-ink">
+          공유 유입(30일){" "}
+          <span className="text-[12px] font-medium text-text-3">
+            utm_source = card · share · kakao 랜딩 세션의 다음 행동
+          </span>
+        </h3>
+        {!shareInflow ? (
+          <p className="mt-2 text-[12px] text-text-3">
+            공유 유입을 지금 불러오지 못했어요(0건이 아니라 조회 실패).
+          </p>
+        ) : shareInflow.rows.length === 0 ? (
+          <p className="mt-2 text-[12px] text-text-3">
+            아직 공유 유입이 없어요 — 카드에 인쇄된 /n/ 링크와 utm 이 잡히면 여기 쌓입니다.
+          </p>
+        ) : (
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full min-w-[460px] text-left text-[12px]">
+              <thead>
+                <tr className="border-b border-line text-[12px] text-text-3">
+                  <th className="py-2 pr-3 font-semibold">출처</th>
+                  <th className="py-2 pr-3 text-right font-semibold">랜딩</th>
+                  <th className="py-2 pr-3 text-right font-semibold">세션</th>
+                  <th className="py-2 pr-3 text-right font-semibold">단지 열람</th>
+                  <th className="py-2 text-right font-semibold">가입/로그인 진입</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shareInflow.rows.map((r) => (
+                  <tr key={r.source} className="border-b border-line last:border-0">
+                    <td className="py-2 pr-3 font-bold text-ink">{r.source}</td>
+                    <td className="t-num py-2 pr-3 text-right text-text-1">
+                      {r.landings.toLocaleString("ko-KR")}
+                    </td>
+                    <td className="t-num py-2 pr-3 text-right text-text-1">
+                      {r.sessions.toLocaleString("ko-KR")}
+                    </td>
+                    <td className="t-num py-2 pr-3 text-right text-text-2">
+                      {r.complexSessions.toLocaleString("ko-KR")}
+                    </td>
+                    <td className="t-num py-2 text-right text-text-2">
+                      {r.authSessions.toLocaleString("ko-KR")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {shareInflow.capped && (
+              <p className="mt-1.5 text-[12px] font-bold text-warning">
+                30일 창이 5,000행 상한에 닿았어요 — 이 숫자는 하한선입니다.
+              </p>
+            )}
+          </div>
+        )}
+        <p className="mt-2 text-[12px] text-text-3">
+          페이지뷰는 분석 동의 표본이다 — 동의하지 않은 방문의 공유 유입은 여기 없다. &ldquo;단지
+          열람&rdquo;·&ldquo;가입/로그인 진입&rdquo;은 랜딩 <b className="text-ink">뒤</b> 같은
+          세션의 뷰만 센다.
+        </p>
       </section>
 
       {/* 기능 사용 */}

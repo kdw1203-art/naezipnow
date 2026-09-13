@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import {
@@ -17,8 +17,52 @@ import { guToken, tierReachedAt } from "@/lib/gamification/region-levels";
 import { appendOnboardingStep } from "@/lib/onboarding/append-step";
 import { FUNNEL_EVENT, recordFunnelEvent } from "@/lib/platform-funnel-events";
 import { looksLikeEmail } from "@/lib/privacy/mask-email";
+import { addToWatchlist, isWatching } from "@/lib/watchlist/store-db";
+import { appendInboxNotification } from "@/lib/notifications/inbox";
+import { checkWatchlistAddQuota, resolveQuotaPlan } from "@/lib/subscriptions/usage-summary";
+import { withUserQuotaLock } from "@/lib/subscriptions/quota-lock";
+import { logger } from "@/lib/log";
 
 import { dbUnavailable } from "@/lib/api/db-unavailable";
+
+/* [995 · S5] 노트를 쓴 단지를 관심 단지로 자동 등록한다 — 새 노트(POST)에서만.
+   왜: 임장까지 다녀온 단지는 사용자가 가장 지켜보고 싶은 단지인데, 노트 저장과
+   관심 등록이 따로여서 새 실거래 알림(cron/watchlist-new-tx)이 그 단지를 몰랐다.
+   원칙: 노트 저장 응답을 절대 막지 않는다(fire-and-forget) · 이미 등록돼 있으면
+   아무것도 안 한다(알림도 없다) · 플랜 한도는 수동 등록과 **같은 판정**을 거친다 —
+   자동이라고 한도를 우회하면 유료 경계가 뚫린다 · 처음 넣었을 때만 인박스로 알리고
+   해제 방법(/my/watchlist)을 같이 적는다(말없이 목록이 늘면 불안이다). */
+async function autoWatchComplexForNote(input: {
+  email: string;
+  sessionPlan: string | null | undefined;
+  complexId: string;
+  aptName: string;
+}): Promise<void> {
+  const { email, sessionPlan, complexId, aptName } = input;
+  try {
+    const inserted = await withUserQuotaLock(`watchlist:${email}`, async () => {
+      if (await isWatching(email, complexId)) return false;
+      const plan = await resolveQuotaPlan(email, sessionPlan);
+      const quota = await checkWatchlistAddQuota(email, plan, false);
+      if (!quota.allowed) return false;
+      await addToWatchlist(email, complexId, aptName);
+      return true;
+    });
+    if (!inserted) return;
+    await appendInboxNotification({
+      userEmail: email,
+      title: "관심 단지로 등록했어요",
+      body: `임장노트를 쓴 ${aptName}를 관심 단지에 넣었어요. 새 실거래가 신고되면 알려드려요. 원치 않으면 관심에서 해제하세요.`,
+      actionUrl: "/my/watchlist",
+    });
+  } catch (e) {
+    /* 조회·등록 실패는 노트와 무관하다 — 흔적만 남긴다(조용히 삼키면 다음 고장을 못 본다) */
+    logger.warn("[notes/auto-watch] 관심 단지 자동 등록 실패", {
+      complexId,
+      err: e instanceof Error ? e.message : String(e),
+    });
+  }
+}
 
 /**
  * 공개 목록에 실을 작성자 표시명.
@@ -244,6 +288,28 @@ export async function POST(req: Request) {
         /* 사용 집계 실패가 노트 저장 응답을 막지 않는다 */
       }
     })();
+    /* [995 · S5] 단지 id 가 있는 노트만 — aptName 만 있는 노트는 어느 단지인지 확정할
+       수 없어 넣지 않는다(잘못 넣은 관심 단지는 잘못된 알림이 된다). PATCH 에는 없다. */
+    {
+      const meta = body.metadata as Record<string, unknown> | undefined;
+      const complexId = typeof meta?.complexId === "string" ? meta.complexId.trim() : "";
+      const aptName = String(body.aptName ?? "").trim();
+      if (complexId && aptName) {
+        /* 응답을 볼모로 잡지 않되 끝까지 돈다 — Vercel 은 응답 뒤 함수를 얼릴 수 있어 버려둔
+           Promise 는 안 끝날 수 있다. after() 가 waitUntil 로 완료를 보장(public-notes-cached 와 같은 패턴). */
+        const task = autoWatchComplexForNote({
+          email: session.user.email,
+          sessionPlan: session.user.plan,
+          complexId,
+          aptName,
+        });
+        try {
+          after(task);
+        } catch {
+          void task;
+        }
+      }
+    }
     void recordFunnelEvent(req, {
       eventName: FUNNEL_EVENT.INSPECTION_NOTE_CREATE,
       userEmail: session.user.email,
