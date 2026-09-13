@@ -153,12 +153,6 @@ export default function CreatorsPage() {
         <Link href="/my/creator" className="btn-primary press rounded-xl px-5 py-2.5 text-[13px]">
           크리에이터 센터에서 시작 ›
         </Link>
-        <Link
-          href="/town/library"
-          className="chip bg-surface px-4 py-2.5 text-[13px] font-bold text-text-2 shadow-sm"
-        >
-          자료실 둘러보기
-        </Link>
       </div>
       <p className="text-[12px] text-text-3">
         입점·제휴 문의: <span className="font-semibold">{supportEmail}</span>

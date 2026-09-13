@@ -218,7 +218,7 @@ export default function ExpertJoinPage() {
             </p>
           </div>
           <dl className="grid shrink-0 grid-cols-2 gap-x-6 gap-y-1.5 t-sub text-brand-hanji-ink md:min-w-[280px]">
-            {EXPERT_CERT_FEES.filter((f) => f.label !== "광고형 상단 노출").map((f) => (
+            {EXPERT_CERT_FEES.map((f) => (
               <div key={f.label} className="contents">
                 <dt className="opacity-80">{f.label}</dt>
                 <dd className="text-right font-extrabold t-num">{f.rate}</dd>

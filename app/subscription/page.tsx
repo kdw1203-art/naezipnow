@@ -14,18 +14,16 @@ import {
   getBusinessInfo,
   isBusinessDisclosureComplete,
 } from "@/lib/brand/business-info";
-import { getStripe } from "@/lib/billing/stripe";
-import { isKakaoPayConfigured } from "@/lib/payments/kakaopay";
 import { isTossPaymentsConfigured } from "@/lib/payments/toss-config";
 import { isTossBillingEnabled } from "@/lib/payments/toss-billing";
 import { BillingPanel } from "./BillingPanel";
-import { feePct, REPORT_SELLER_FEE_RATE } from "@/lib/billing/marketplace-fees";
 import { PLAN_FEATURE_MATRIX } from "@/lib/subscriptions/plans";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { faqJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
 import { DEFAULT_DESKTOP_ORIGIN } from "@/lib/platform-shell";
 import { PAYMENT_METHODS_PATH } from "@/lib/payments/payment-methods";
+import { isTierOnSale, SELLABLE_PAID_TIERS } from "@/lib/subscriptions/sell-config";
 
 /* 고도화 32 — 구독 FAQ. 사실만 적는다: 수치·규정은 약관·구현과 대조했다. 화면과
    JSON-LD 가 같은 배열을 쓴다.
@@ -96,7 +94,6 @@ function tierPricing(tier: "pro" | "expert"): TierPricing {
 const PLUS_MONTHLY = fmtWon(tierPricing("pro").monthly);
 const PRO_MONTHLY = fmtWon(tierPricing("expert").monthly);
 /* [970 · A-09 · C-15] 수수료는 marketplace-fees 단일 출처(/legal/fees·정산 계산과 같은 값) */
-const FEE_PCT = feePct(REPORT_SELLER_FEE_RATE);
 
 /* 웹25 — 비교표는 PLAN_FEATURE_MATRIX(access.ts FEATURE_RULES 와 동일화된 단일
    출처)에서 유도한다. 예전에는 이 파일에 손으로 적은 표가 따로 있었고, 코드
@@ -114,9 +111,33 @@ const FEATURE_ROWS: { label: string; free: string; plus: string; pro: string; pr
     plus: r.pro === "불가" ? "—" : r.pro,
     pro: r.expert === "불가" ? "—" : r.expert,
   })),
-  { label: "마켓 리포트 발행 (판매)", free: "—", plus: `가능 · 수수료 ${FEE_PCT}`, pro: `우선 노출 · 수수료 ${FEE_PCT}`, proAccent: true },
-  { label: "유료 상담 수신 · 동행 임장", free: "—", plus: "—", pro: "포함 (전문가 인증 필수)", proAccent: true },
+  /* [992] "마켓 리포트 발행"·"유료 상담 수신" 행 제거 — 자료실·전문가는 보관(비노출) */
 ];
+
+/* [992] 비교표 열은 판매 카탈로그(sell-config)에서 유도한다 — 프로(EXPERT)를 내리면 열도
+   같이 사라진다. 열 수에 따라 grid 클래스를 **리터럴로** 고른다(Tailwind 는 동적 클래스명을
+   못 본다). */
+type CompareCol = { key: "free" | "plus" | "pro"; name: string; price: string; tone: string; soft: boolean };
+const COMPARE_COLS: CompareCol[] = [
+  { key: "free", name: "무료", price: "0원", tone: "text-ink", soft: false },
+  { key: "plus", name: "✦ 플러스", price: `${PLUS_MONTHLY}/월`, tone: "text-primary", soft: true },
+  ...(isTierOnSale("expert")
+    ? [{ key: "pro" as const, name: "✦ 프로", price: `${PRO_MONTHLY}/월`, tone: "text-warning", soft: false }]
+    : []),
+];
+const COMPARE_GRID_NARROW = COMPARE_COLS.length === 3 ? "grid-cols-3" : "grid-cols-2";
+const COMPARE_GRID_WIDE =
+  COMPARE_COLS.length === 3 ? "grid-cols-[200px_repeat(3,1fr)]" : "grid-cols-[200px_repeat(2,1fr)]";
+function cellClass(col: CompareCol, r: (typeof FEATURE_ROWS)[number], narrow: boolean): string {
+  const v = r[col.key];
+  if (col.key === "free") return narrow ? (v === "—" ? "text-text-3" : "text-text-2") : `text-center ${v === "—" ? "text-text-3" : "text-text-2"}`;
+  if (col.key === "plus")
+    return narrow
+      ? `rounded-md bg-[rgba(29,79,216,.04)] py-0.5 ${v === "—" ? "text-text-3" : "font-bold text-primary"}`
+      : `bg-[rgba(29,79,216,.04)] py-1 text-center ${v === "—" ? "text-text-3" : "font-bold text-primary"}`;
+  const pro = v === "—" ? (narrow ? "text-text-3" : "font-normal text-text-3") : r.proAccent ? "font-bold text-warning" : "font-bold text-primary";
+  return narrow ? pro : `text-center ${pro}`;
+}
 
 /* 자체 맵이었다 — 같은 페이지 안에서 카드는 "프로 (전문가)", 비교표는 "프로" 였다.
    단일 출처(lib/subscriptions/labels)로 통일. */
@@ -159,7 +180,7 @@ export default async function SubscriptionPage({
   const sp = (await searchParams) ?? {};
   /* 항목 33 — 결제가 실제로 열릴 수 있는 상태인지 서버에서 판정한다.
      사업자 고지(주소·통신판매업 번호)가 비어 있으면 checkout 라우트들이 전부
-     503 을 내고, PSP(Stripe·카카오페이) 키가 없어도 마찬가지다. 그 상태에서
+     503 을 내고, 토스 키가 없어도 마찬가지다([992] 레일은 토스 하나). 그 상태에서
      결제 버튼을 그리는 건 눌러야만 알 수 있는 거짓 입구다 — 대신 "결제 준비
      중 + 오픈 알림 받기"로 구매 의사를 기록한다. */
   /* 결제 개통 판정 — 토스 포함(빠져 있어서 키를 넣어도 '오픈 알림'만 떴다).
@@ -171,19 +192,16 @@ export default async function SubscriptionPage({
   const tossTestMode =
     isTossPaymentsConfigured() &&
     (process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim() ?? "").startsWith("test_ck_");
+  /* [992] 레일은 토스 하나 — Stripe·카카오페이 판정을 뺐다(레일 6→1). */
   const paymentsReady =
-    (isBusinessDisclosureComplete(getBusinessInfo()) &&
-      (getStripe() !== null || isKakaoPayConfigured() || isTossPaymentsConfigured())) ||
+    (isBusinessDisclosureComplete(getBusinessInfo()) && isTossPaymentsConfigured()) ||
     tossTestMode;
   /* [965] 월간·연간을 실제로 팔 수 있는가. 토스 키만 있고 빌링(전자계약)이 개방되지
      않은 상태에서는 월간·연간이 어느 창으로도 못 가는데, 예전 판정(paymentsReady)은
      토스 키 하나로 true 가 되어 카드의 월간·연간 버튼이 눌러 보기 전엔 안 되는
-     버튼이었다. 빌링 개방 또는 단건 레일(카카오페이·카드) 중 하나는 있어야 한다. */
+     버튼이었다. [992] 레일이 토스 하나가 되면서 정기 판매 = 빌링 개방 여부 그 자체다. */
   const recurringOpen = isTossBillingEnabled();
-  const recurringReady =
-    recurringOpen ||
-    (isBusinessDisclosureComplete(getBusinessInfo()) &&
-      (getStripe() !== null || isKakaoPayConfigured()));
+  const recurringReady = recurringOpen;
   /* [970 · A-22] FAQ(화면 + JSON-LD)는 결제 방식 사실(recurringOpen)에 따라 갈린다 */
   const faq = subscriptionFaq(recurringOpen);
   const initialBilling = sp.billing === "annual" ? ("annual" as const) : ("monthly" as const);
@@ -228,7 +246,7 @@ export default async function SubscriptionPage({
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: "내집나우 멤버십 요금제",
-    itemListElement: (["pro", "expert"] as const).map((tier, i) => {
+    itemListElement: SELLABLE_PAID_TIERS.map((tier, i) => {
       const p = tierPricing(tier);
       return {
         "@type": "ListItem",
@@ -307,7 +325,7 @@ export default async function SubscriptionPage({
             <div className="flex flex-wrap items-baseline gap-2">
               <span className="t-section text-ink">이번 달 내 사용량</span>
               <span className="t-caption ml-auto text-text-3">
-                {planLabel(currentPlan)} 기준 · 매월 1일 초기화
+                {planLabel(currentPlan)} 기준 · {usage.some((u) => u.lifetime) ? "AI 분석은 누적, 나머지는 매월 1일 초기화" : "매월 1일 초기화"}
               </span>
             </div>
             <div className="kpi-row">
@@ -319,7 +337,7 @@ export default async function SubscriptionPage({
                 const tight = cap !== null && cap > 0 && u.used / cap >= 0.8;
                 return (
                   <div key={u.key} className="kpi">
-                    <span className="kpi-k">{u.label}</span>
+                    <span className="kpi-k">{u.lifetime ? `${u.label} (누적)` : u.label}</span>
                     <span className="kpi-v">
                       {u.used.toLocaleString("ko-KR")}
                       <span className="t-sub font-bold text-text-3">
@@ -387,7 +405,7 @@ export default async function SubscriptionPage({
           (토스페이먼츠) ·{" "}
           <Link
             href={PAYMENT_METHODS_PATH}
-            className="font-bold text-primary underline"
+            className="inline-block py-[5px] font-bold text-primary underline"
           >
             결제 수단 안내
           </Link>
@@ -500,132 +518,84 @@ export default async function SubscriptionPage({
         />
       )}
 
-      {/* 기능 비교표 (9k)
-          [C49] 예전엔 640px 고정 폭 표 하나뿐이라, 390px 화면에서는 라벨 칸
-          200px 이 절반을 먹고 나머지를 가로로 밀어야 했다 — 가격을 비교하려고
-          연 화면에서 세 플랜이 한 번에 안 보였고, 가로 스크롤이 된다는 힌트도
-          없었다. 데이터(FEATURE_ROWS)는 그대로 두고 좁은 화면용 배치를 따로 둔다:
-          기능 이름을 한 줄 위로 올리고 값 세 칸을 가로로 나란히 —
-          세 플랜이 한 화면에 들어오고 가로 스크롤이 사라진다. */}
+      {/* 기능 비교표 (9k · [C49] 좁은 화면 배치 · [992] 열은 COMPARE_COLS 에서 유도) */}
       <section className="rise-in-4 card mx-auto mt-8 w-full max-w-[1080px] rounded-[18px] px-[22px] py-5">
         {/* ── 좁은 화면(< md) ── */}
         <div className="md:hidden">
           <div className="mb-2 t-sub font-bold text-text-3">기능 비교</div>
-          <div /* 헤더 아래에 붙여 둔다 — 아래로 내려가도 어느 칸이 어느 플랜인지 잃지 않는다.
-                 [970 · A-34] 56px 은 옛 실측 — 지금 헤더는 62px 이라 플랜 이름 줄 6px 이
-                 헤더 밑으로 들어갔다. 62px 에 맞춘다. */
-            className="sticky top-[62px] z-10 grid grid-cols-3 gap-1.5 rounded-[10px] bg-surface py-1.5">
-            <div className="text-center">
-              <div className="t-sub font-extrabold text-ink">무료</div>
-              <div className="t-sub text-text-3">0원</div>
-            </div>
-            <div className="rounded-[8px] bg-[rgba(29,79,216,.06)] py-0.5 text-center">
-              <div className="t-sub font-extrabold text-primary">✦ 플러스</div>
-              <div className="t-sub text-text-3">{PLUS_MONTHLY}/월</div>
-            </div>
-            <div className="text-center">
-              <div className="t-sub font-extrabold text-warning">✦ 프로</div>
-              <div className="t-sub text-text-3">{PRO_MONTHLY}/월</div>
-            </div>
+          <div className={`sticky top-[62px] z-10 grid ${COMPARE_GRID_NARROW} gap-1.5 rounded-[10px] bg-surface py-1.5`}>
+            {COMPARE_COLS.map((c) => (
+              <div key={c.key} className={`text-center ${c.soft ? "rounded-[8px] bg-[rgba(29,79,216,.06)] py-0.5" : ""}`}>
+                <div className={`t-sub font-extrabold ${c.tone}`}>{c.name}</div>
+                <div className="t-sub text-text-3">{c.price}</div>
+              </div>
+            ))}
           </div>
           {FEATURE_ROWS.map((r) => (
             <div key={r.label} className="border-t border-divider py-2">
               <div className="mb-1 t-sub font-semibold text-text-2">{r.label}</div>
-              <div className="grid grid-cols-3 gap-1.5 text-center t-sub">
-                <span className={r.free === "—" ? "text-text-3" : "text-text-2"}>{r.free}</span>
-                <span
-                  className={`rounded-md bg-[rgba(29,79,216,.04)] py-0.5 ${
-                    r.plus === "—" ? "text-text-3" : "font-bold text-primary"
-                  }`}
-                >
-                  {r.plus}
-                </span>
-                <span
-                  className={
-                    r.pro === "—"
-                      ? "text-text-3"
-                      : r.proAccent
-                        ? "font-bold text-warning"
-                        : "font-bold text-primary"
-                  }
-                >
-                  {r.pro}
-                </span>
+              <div className={`grid ${COMPARE_GRID_NARROW} gap-1.5 text-center t-sub`}>
+                {COMPARE_COLS.map((c) => (
+                  <span key={c.key} className={cellClass(c, r, true)}>
+                    {r[c.key]}
+                  </span>
+                ))}
               </div>
             </div>
           ))}
           <div className="border-t border-divider py-2">
             <div className="mb-1 t-sub font-semibold text-text-2">프로필 인증배지</div>
-            <div className="grid grid-cols-3 items-center gap-1.5 text-center">
-              <span className="t-sub text-text-3">—</span>
-              <span className="rounded-md bg-[rgba(29,79,216,.04)] py-0.5">
-                <PlanBadge tier="plus" />
-              </span>
-              <span>
-                <PlanBadge tier="pro" />
-              </span>
+            <div className={`grid ${COMPARE_GRID_NARROW} items-center gap-1.5 text-center`}>
+              {COMPARE_COLS.map((c) => (
+                <span key={c.key} className={c.soft ? "rounded-md bg-[rgba(29,79,216,.04)] py-0.5" : ""}>
+                  {c.key === "free" ? <span className="t-sub text-text-3">—</span> : <PlanBadge tier={c.key} />}
+                </span>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* ── 넓은 화면(md+) — 종전 표 그대로 ── */}
+        {/* ── 넓은 화면(md+) ── */}
         <div className="hidden overflow-x-auto md:block">
-        <div className="min-w-[640px]">
-          <div className="grid grid-cols-[200px_repeat(3,1fr)] items-end gap-2 border-b border-divider pb-3 pt-1.5">
-            <span className="t-sub text-text-3">기능 비교</span>
-            <div className="text-center">
-              <div className="t-body font-extrabold text-ink">무료</div>
-              <div className="t-title text-ink">0원</div>
+          <div className={COMPARE_COLS.length === 3 ? "min-w-[640px]" : "min-w-[520px]"}>
+            <div className={`grid ${COMPARE_GRID_WIDE} items-end gap-2 border-b border-divider pb-3 pt-1.5`}>
+              <span className="t-sub text-text-3">기능 비교</span>
+              {COMPARE_COLS.map((c) => (
+                <div key={c.key} className={`text-center ${c.soft ? "rounded-[10px] bg-[rgba(29,79,216,.05)] py-1.5" : ""}`}>
+                  <div className={`t-body font-extrabold ${c.tone}`}>{c.name}</div>
+                  <div className="t-title text-ink">
+                    {c.key === "free" ? "0원" : (
+                      <>
+                        {c.key === "plus" ? PLUS_MONTHLY : PRO_MONTHLY}
+                        <span className="t-sub text-text-3">/월</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="rounded-[10px] bg-[rgba(29,79,216,.05)] py-1.5 text-center">
-              <div className="t-body font-extrabold text-primary">✦ 플러스</div>
-              <div className="t-title text-ink">
-                {PLUS_MONTHLY}<span className="t-sub text-text-3">/월</span>
+            {FEATURE_ROWS.map((r) => (
+              <div
+                key={r.label}
+                className={`grid ${COMPARE_GRID_WIDE} items-center gap-2 border-b border-divider py-2.5 t-sub`}
+              >
+                <span className="text-text-2">{r.label}</span>
+                {COMPARE_COLS.map((c) => (
+                  <span key={c.key} className={cellClass(c, r, false)}>
+                    {r[c.key]}
+                  </span>
+                ))}
               </div>
-            </div>
-            <div className="text-center">
-              <div className="t-body font-extrabold text-warning">✦ 프로</div>
-              <div className="t-title text-ink">
-                {PRO_MONTHLY}<span className="t-sub text-text-3">/월</span>
-              </div>
+            ))}
+            <div className={`grid ${COMPARE_GRID_WIDE} items-center gap-2 py-2.5 t-sub`}>
+              <span className="text-text-2">프로필 인증배지</span>
+              {COMPARE_COLS.map((c) => (
+                <span key={c.key} className={`text-center ${c.soft ? "bg-[rgba(29,79,216,.04)] py-1" : ""}`}>
+                  {c.key === "free" ? <span className="text-text-3">—</span> : <PlanBadge tier={c.key} />}
+                </span>
+              ))}
             </div>
           </div>
-          {FEATURE_ROWS.map((r) => (
-            <div
-              key={r.label}
-              className="grid grid-cols-[200px_repeat(3,1fr)] items-center gap-2 border-b border-divider py-2.5 t-sub"
-            >
-              <span className="text-text-2">{r.label}</span>
-              <span className={`text-center ${r.free === "—" ? "text-text-3" : "text-text-2"}`}>
-                {r.free}
-              </span>
-              <span
-                className={`bg-[rgba(29,79,216,.04)] py-1 text-center ${
-                  r.plus === "—" ? "text-text-3" : "font-bold text-primary"
-                }`}
-              >
-                {r.plus}
-              </span>
-              <span
-                className={`text-center font-bold ${
-                  r.pro === "—" ? "font-normal text-text-3" : r.proAccent ? "text-warning" : "text-primary"
-                }`}
-              >
-                {r.pro}
-              </span>
-            </div>
-          ))}
-          <div className="grid grid-cols-[200px_repeat(3,1fr)] items-center gap-2 py-2.5 t-sub">
-            <span className="text-text-2">프로필 인증배지</span>
-            <span className="text-center text-text-3">—</span>
-            <span className="bg-[rgba(29,79,216,.04)] py-1 text-center">
-              <PlanBadge tier="plus" />
-            </span>
-            <span className="text-center">
-              <PlanBadge tier="pro" />
-            </span>
-          </div>
-        </div>
         </div>
       </section>
 
@@ -670,6 +640,7 @@ export default async function SubscriptionPage({
               </span>
             ))}
           </div>
+          {isTierOnSale("expert") && (
           <div className="grid grid-cols-[88px_repeat(2,1fr)] items-center gap-2 py-2.5 t-sub md:grid-cols-[120px_repeat(2,1fr)]">
             <span className="font-extrabold text-warning">✦ 프로</span>
             {BILLING_PERIOD_PRICES.expert.map((p) => (
@@ -688,47 +659,12 @@ export default async function SubscriptionPage({
               </span>
             ))}
           </div>
+          )}
         </div>
       </section>
 
-      {/* 배지 노출 예시 (9k) — 카드 안의 닉네임·지역·점수는 배지 위치를 보여 주려고
-          꾸민 그림이다. 라벨에 "예시"가 없어서 실제 이웃의 글·노트로 읽힐 수 있었다.
-          제목마다 예시임을 적는다(내용 자체는 그대로 두되, 사실 주장이 되지 않게). */}
-      <section className="rise-in-6 mx-auto mt-4 grid w-full max-w-[1080px] gap-3.5 md:grid-cols-3">
-        <div className="card flex flex-col gap-2 rounded-2xl px-[18px] py-4">
-          <div className="t-sub font-extrabold text-text-3">배지 노출 예시 — 커뮤니티 글</div>
-          <div className="flex items-center gap-2">
-            <div className="h-[30px] w-[30px] rounded-full bg-[repeating-linear-gradient(45deg,#e2e8f2,#e2e8f2_5px,#eef2f8_5px,#eef2f8_10px)]" />
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="t-body font-extrabold text-ink">첫집준비중</span>
-                <PlanBadge tier="plus" />
-              </div>
-              <div className="t-sub text-text-3">관양동 · 2시간 전</div>
-            </div>
-          </div>
-          <div className="t-sub text-text-1">공작아파트 3번째 임장 다녀왔어요…</div>
-        </div>
-        <div className="card flex flex-col gap-2 rounded-2xl px-[18px] py-4">
-          <div className="t-sub font-extrabold text-text-3">배지 노출 예시 — 공개 노트</div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <span className="t-body font-extrabold text-ink">동편3 702동 노트</span>
-              <PlanBadge tier="pro" />
-            </div>
-            <span className="t-sub font-extrabold text-primary">82점</span>
-          </div>
-          <div className="t-sub text-text-3">프로(전문가) 노트는 검색·피드에서 상단 정렬</div>
-        </div>
-        <div className="card flex flex-col gap-2 rounded-2xl px-[18px] py-4">
-          <div className="t-sub font-extrabold text-text-3">배지 노출 예시 — 홈 헤더</div>
-          <div className="flex items-center gap-1.5">
-            <div className="h-[30px] w-[30px] rounded-full bg-[repeating-linear-gradient(45deg,#e2e8f2,#e2e8f2_5px,#eef2f8_5px,#eef2f8_10px)]" />
-            <PlanBadge tier="plus" />
-          </div>
-          <div className="t-sub text-text-3">프로필 아바타 옆 상시 표시 · 설정에서 숨김 가능</div>
-        </div>
-      </section>
+      {/* [992] "배지 노출 예시" 3장 삭제 — 꾸민 그림(가공 닉네임·점수)이었고, 유료 티어가
+          하나가 되면서 배지 비교 자체가 사라졌다. 배지는 비교표 마지막 줄에 있다. */}
 
       {/* 고도화 32 — 구독 FAQ. 결제 수단·환불·해지가 화면 곳곳에 흩어져 있던
           것을 한 자리에 모은다. 아래 JSON-LD 는 이 배열 그대로에서 생성한다

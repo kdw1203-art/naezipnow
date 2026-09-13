@@ -87,7 +87,7 @@ async function persistRunOr403(
   input: Parameters<typeof appendRun>[0],
 ): Promise<
   | { denied: NextResponse }
-  | { denied: null; runId: string | null; usage: { used: number; limit: number | null } }
+  | { denied: null; runId: string | null; usage: { used: number; limit: number | null; lifetime?: true } }
 > {
   const result = await appendAiRunWithinQuota(email, sessionPlan, input);
   if (!result.ok) {

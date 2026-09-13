@@ -1,19 +1,21 @@
-/* 스켈레톤 — 최종 레이아웃과 **같은 모양**으로 자리를 잡는다.
+/* [992] 스켈레톤 클래스는 `.skeleton` 하나다 — `.sk`(두 번째 시머·두 번째 키프레임)를 이쪽으로
+   합쳤다. 두 계열이 같은 화면에서 다른 리듬으로 깜빡이던 상태를 끝낸다.
+   스켈레톤 — 최종 레이아웃과 **같은 모양**으로 자리를 잡는다.
    빈 화면 → 통째 등장은 레이아웃 점프를 만들고, 그 점프가 "느리다"는 인상의
    대부분이다. 값이 아니라 자리를 먼저 그린다. */
 export function SkLine({ w = "100%", h = 12, className }: { w?: string | number; h?: number; className?: string }) {
-  return <span className={`sk block ${className ?? ""}`} style={{ width: w, height: h }} />;
+  return <span className={`skeleton block ${className ?? ""}`} style={{ width: w, height: h }} />;
 }
 
 export function SkBlock({ h = 120, className }: { h?: number; className?: string }) {
-  return <div className={`sk w-full ${className ?? ""}`} style={{ height: h }} />;
+  return <div className={`skeleton w-full ${className ?? ""}`} style={{ height: h }} />;
 }
 
 /** 카드 한 장 모양 — 아이콘 · 제목 · 두 줄 · 숫자 */
 export function SkCard({ className }: { className?: string }) {
   return (
     <div className={`card flex flex-col gap-2 rounded-[14px] p-4 ${className ?? ""}`}>
-      <span className="sk h-9 w-9 rounded-[10px]" />
+      <span className="skeleton h-9 w-9 rounded-[10px]" />
       <SkLine w="62%" h={14} />
       <SkLine w="90%" h={10} />
       <SkLine w="45%" h={18} className="mt-1" />

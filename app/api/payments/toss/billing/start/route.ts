@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isTierOnSale } from "@/lib/subscriptions/sell-config";
 import { safeAuth } from "@/lib/safe-auth";
 import { assertCheckoutAllowed } from "@/lib/payments/checkout-guard";
 import { getPlan } from "@/lib/subscriptions/plans";
@@ -71,6 +72,14 @@ export async function POST(req: NextRequest) {
   if (!tier || !billing) {
     return NextResponse.json(
       { error: "자동결제는 플러스·프로 플랜의 월간/연간 주기만 지원해요." },
+      { status: 400 },
+    );
+  }
+  /* [992] 판매 카탈로그 밖의 티어(프로)는 새 구독을 열지 않는다 — 화면에서 내린 상품이
+     옛 링크로 팔리면 안 된다. 카드 변경(mode=card)은 위에서 이미 갈라져 기존 구독을 따른다. */
+  if (!isTierOnSale(tier)) {
+    return NextResponse.json(
+      { error: "지금은 플러스 플랜만 판매하고 있어요." },
       { status: 400 },
     );
   }

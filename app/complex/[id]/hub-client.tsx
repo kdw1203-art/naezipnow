@@ -17,7 +17,7 @@ import { canOfferPush, pushResultMessage, subscribeToPush } from "@/lib/push/sub
    정적 import 는 첫 로드 JS 에 그대로 실리므로 next/dynamic 으로 뗀다. ssr:false 인
    이유: 첫 하이드레이션은 언제나 기본 탭이라 서버가 이 둘을 그릴 일이 없다(hub-client
    가 "use client" 라 ssr:false 도 허용된다 — MapClientLazy 주석 참고). */
-const tabFallback = <div className="sk h-[180px] w-full rounded-[14px]" aria-hidden />;
+const tabFallback = <div className="skeleton h-[180px] w-full rounded-[14px]" aria-hidden />;
 const MyRecordsTab = nextDynamic(
   () => import("./MyRecordsTab").then((m) => m.MyRecordsTab),
   { ssr: false, loading: () => tabFallback },

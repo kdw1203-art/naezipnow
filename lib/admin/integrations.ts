@@ -89,15 +89,6 @@ export function getPlatformIntegrationRows(): PlatformIntegrationRow[] {
       docsUrl: "https://authjs.dev/getting-started/deployment",
     },
     {
-      id: "stripe",
-      tier: "payments",
-      label: "Stripe (구독 청구)",
-      description: "PRO/EXPERT Stripe Checkout·Webhook",
-      ok: Boolean(process.env.STRIPE_SECRET_KEY?.trim()),
-      envKeys: "STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_*",
-      docsUrl: "https://stripe.com/docs",
-    },
-    {
       id: "toss",
       tier: "payments",
       label: "Toss Payments",
@@ -139,18 +130,6 @@ export function getPlatformIntegrationRows(): PlatformIntegrationRow[] {
       ok: isKakaoShareConfigured(),
       envKeys: "NEXT_PUBLIC_KAKAO_JS_KEY",
       docsUrl: "https://developers.kakao.com/docs/latest/ko/kakaotalk-share/js-link",
-    },
-    {
-      id: "kakaopay",
-      tier: "payments",
-      label: "카카오페이 (단건)",
-      description: "POST /api/payments/kakaopay/ready",
-      ok: Boolean(
-        process.env.KAKAOPAY_CID?.trim() &&
-          process.env.KAKAOPAY_SECRET_KEY?.trim(),
-      ),
-      envKeys: "KAKAOPAY_CID + KAKAOPAY_SECRET_KEY",
-      docsUrl: "https://developers.kakao.com/docs/latest/ko/kakaopay/common",
     },
     {
       id: "naver-map",

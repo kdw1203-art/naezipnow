@@ -233,7 +233,6 @@ export const GUIDES: Guide[] = [
     tools: [
       { label: "지도에서 코스 예습", href: "/map", why: "단지 위치·시세·경사·학교(레이어)로 동선 미리 그리기" },
       { label: "임장노트 쓰기", href: "/notes/new", why: "코스 마지막 10분, 그 자리에서 기록" },
-      { label: "임장 모임 찾기", href: "/town/groups", why: "같은 동네 보는 사람들과 함께 돌기" },
     ],
     faq: [
       {
@@ -537,7 +536,7 @@ export const GUIDES: Guide[] = [
     ],
     tools: [
       { label: "청약 캘린더", href: "/apply/calendar", why: "이번 주 접수·마감·발표 일정 모아보기" },
-      { label: "분양·개발 소식", href: "/dev-deals", why: "관심 지역 분양 정보" },
+      { label: "청약 소식", href: "/apply", why: "관심 지역 분양·경쟁률 정보" },
       { label: "입주 물량 가이드", href: "/guides/supply-impact", why: "당첨 후 입주장까지 미리 읽기" },
     ],
     faq: [

@@ -28,14 +28,21 @@ test("리포트 판매 수수료 — /legal/fees 표·전문가 인증 표가 �
   const report = MARKETPLACE_FEES.find((r) => r.id === "report_seller");
   assert.ok(report);
   assert.equal(report.ours, feePct(REPORT_SELLER_FEE_RATE));
-  /* 자료실 상품은 리포트 한 종류 — 전자책 행도 같은 요율 */
-  assert.equal(MARKETPLACE_FEES.find((r) => r.id === "ebook_seller")?.ours, feePct(REPORT_SELLER_FEE_RATE));
   const cert = EXPERT_CERT_FEES.find((f) => f.label === "전자책·리포트 판매 수수료");
   assert.ok(cert);
   assert.equal(cert.rate, feePct(REPORT_SELLER_FEE_RATE));
-  /* 인증 전문가 우대율도 두 표가 같은 값 */
-  assert.equal(MARKETPLACE_FEES.find((r) => r.id === "verified_expert")?.ours, feePct(VERIFIED_EXPERT_FEE_RATE));
   assert.equal(EXPERT_CERT_FEES.find((f) => f.label === "인증 전문가 매칭 수수료")?.rate, feePct(VERIFIED_EXPERT_FEE_RATE));
+});
+
+/* [992] 고지 표에는 코드가 실제로 정산하는 요율만 남는다 — 청구하지 않는 수수료가 되살아나면 실패 */
+test("수수료 표 — 청구하지 않는 행(구매자 수수료·상담 8%·현장 동행 등)이 없다 [992]", () => {
+  assert.deepEqual(
+    MARKETPLACE_FEES.map((r) => r.id),
+    ["report_seller"],
+  );
+  for (const f of EXPERT_CERT_FEES) {
+    assert.ok(!/재심사|모임 참가비|광고형|상담 매칭 수수료/.test(f.label), f.label);
+  }
 });
 
 test("수수료 표 — 구 브랜드 필드(nuguzip)가 없고 ours 만 있다 [A-10]", () => {
@@ -45,13 +52,15 @@ test("수수료 표 — 구 브랜드 필드(nuguzip)가 없고 ours 만 있다 
   }
 });
 
-test("플랜 카드 기능 목록 — 요율 표기가 단일 출처에서 파생된다 [C-15]", () => {
-  const pro = getPlan("pro");
-  const sale = pro.features.find((f) => f.label === "리포트 판매");
-  assert.equal(sale?.note, `수수료 ${feePct(REPORT_SELLER_FEE_RATE)}`);
-  const expert = getPlan("expert");
-  const settle = expert.features.find((f) => f.label === "전문가 등록 · 수익 정산");
-  assert.equal(settle?.note, `인증 전문가 수수료 ${feePct(VERIFIED_EXPERT_FEE_RATE)} 우대`);
+test("[992] 플랜 카드 기능 목록 — 보관된 영역(전문가·리포트 판매)의 혜택을 적지 않는다", () => {
+  for (const p of PLAN_DEFINITIONS) {
+    for (const f of p.features) {
+      assert.ok(!/리포트 판매|전문가 1:1|전문가 등록/.test(f.label), `${p.tier}: ${f.label}`);
+    }
+  }
+  /* AI 분석 도구(ai_analysis) 한도가 표에 있고 무료는 누적이다 */
+  assert.equal(getPlan("basic").features.find((f) => f.label === "AI 분석 도구")?.note, "누적 3회");
+  assert.equal(getPlan("pro").features.find((f) => f.label === "AI 분석 도구")?.note, "월 50회");
 });
 
 test("플랜 카드 '모든 혜택 포함' 문구 — 카드에 있는 이름(무료·플러스)만 쓴다 [A-08]", () => {

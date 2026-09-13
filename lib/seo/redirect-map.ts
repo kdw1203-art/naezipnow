@@ -74,11 +74,11 @@ const REDIRECT_GROUPS: readonly RedirectGroup[] = [
       ["/create-post", "/town/write"],
       ["/create-meeting", "/town/groups"],
       ["/inspection/create-meeting", "/town/groups"],
-      ["/create-meeting-market", "/town/market"],
-      ["/create-product", "/town/market"],
-      ["/market/product/101", "/town/market"],
-      ["/meeting-market", "/town/market"],
-      ["/content-market", "/town/market"],
+      ["/create-meeting-market", "/town"],
+      ["/create-product", "/town"],
+      ["/market/product/101", "/town"],
+      ["/meeting-market", "/town"],
+      ["/content-market", "/town"],
       ["/report", "/analysis"],
       ["/subscriptions", "/subscription"],
       ["/subscription-management", "/my"],
@@ -128,8 +128,8 @@ const REDIRECT_GROUPS: readonly RedirectGroup[] = [
       ["/community", "/town"],
       ["/community/create", "/town/write"],
       ["/community/write", "/town/write"],
-      ["/market", "/town/market"],
-      ["/market/create", "/town/market"],
+      ["/market", "/town"],
+      ["/market/create", "/town"],
       ["/groups/create", "/town/groups"],
     ],
   },
@@ -156,10 +156,6 @@ const REDIRECT_GROUPS: readonly RedirectGroup[] = [
     reason: "계산기 세부 페이지를 단일 /calculator 로 통합",
     since: "2026-07-20",
     rules: [
-      ["/calculator/acquisition", "/calculator"],
-      ["/calculator/rent-vs-buy", "/calculator"],
-      ["/calculator/tax", "/calculator"],
-      ["/calculator/investment", "/calculator"],
     ],
   },
   {
@@ -228,6 +224,26 @@ const REDIRECT_GROUPS: readonly RedirectGroup[] = [
       ["/meetup", "/town/groups"],
       ["/faq", "/support"],
       ["/partnership", "/support"],
+    ],
+  },
+  {
+    /* [992] 정보구조 1차 — 순수 리다이렉트 페이지(page.tsx 가 redirect() 한 줄)를 표로 옮기고
+       파일을 지웠다. 페이지 파일은 라우트 수에 잡히고, 빌드·타입·게이트 비용을 내며,
+       "화면이 158개" 라는 숫자를 부풀린다. 표는 미들웨어에서 한 번에 돈다.
+       /recommend(맞춤 추천)는 진입 1곳·30일 조회 0 — 통합 검색으로 보낸다.
+       /complex/tx·/town/market·/town/prompt 는 동적 라우트(/complex/[id]·/town/[region])
+       아래라 표에 넣으면 그 라우트를 가린다(게이트 규칙) — 그 셋은 페이지 파일로 남긴다.
+       구 계산기 경로(/calculator/tax 등)는 /calculator/[tool] 이 모르는 id 를 /calculator 로
+       보내므로 표에서 뺐다. */
+    reason: "992 정보구조 1차 — 리다이렉트 페이지 파일 제거 · 보관 영역 입구 정리",
+    since: "2026-09-13",
+    rules: [
+      ["/discover", "/town"],
+      ["/points", "/my/points"],
+      ["/seller", "/creators"],
+      ["/recommend", "/search"],
+      /* 사이클 전망(noIndex 학습용 도식)은 같은 주간 스냅숏을 읽는 시세·타이밍으로 */
+      ["/analysis/cycle", "/analysis/timing"],
     ],
   },
 ];

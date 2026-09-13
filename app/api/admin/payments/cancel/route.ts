@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdminApiRequest } from "@/lib/admin/api-auth";
 import { getPaymentByOrderId, markRefunded } from "@/lib/payments/store";
 import { cancelTossPayment } from "@/lib/payments/toss-cancel";
-import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan-from-stripe";
+import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan";
 import { logger } from "@/lib/log";
 import { notifyPaymentRefunded } from "@/lib/payments/notify-paid";
 

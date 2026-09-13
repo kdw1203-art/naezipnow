@@ -41,6 +41,7 @@ import { buildMarketRead } from "@/lib/region/market-read";
 import { getRegionRentSnapshot, type RegionRentSnapshot } from "@/lib/market/rent";
 import { getRegionTradeAreaBands, type RegionAreaBands } from "@/lib/market/area-bands-lite";
 import { KeywordAlertButton } from "@/app/components/KeywordAlertButton";
+import { EmbedSnippet } from "@/app/components/EmbedSnippet";
 import {
   breadcrumbJsonLd,
   regionPlaceJsonLd,
@@ -1170,22 +1171,13 @@ export default async function RegionHubPage({
 
       {/* [#88] 지역 시세 위젯 배포 진입점 — 중개사 블로그·홈페이지용. 위젯 안에
           출처 링크가 박혀 있으므로 퍼가기가 곧 백링크다(단지 위젯 N17 과 동일 원리). */}
-      <div className="rise-in-3 mb-4 flex flex-col gap-1 rounded-[14px] border border-line bg-surface p-4">
-        <span className="t-body font-extrabold text-ink">
-          {name} 시세를 블로그·홈페이지에 붙이기
-        </span>
-        <span className="t-sub text-text-2">
-          중개사무소 블로그·홈페이지에 iframe 한 줄로 {name} 평균 매매가·전세가율·지수
-          변동 카드를 실을 수 있습니다. 시세가 갱신되면 붙여넣은 위젯도 함께 갱신됩니다.
-          무료이며 출처 표기가 포함됩니다.
-        </span>
-        <Link
-          href={`/widget?region=${encodeURIComponent(id)}`}
-          className="mt-2 w-fit rounded-[10px] bg-primary px-4 py-2 t-sub font-bold text-white"
-        >
-          위젯 코드 만들기 ›
-        </Link>
-      </div>
+      <EmbedSnippet
+        kind="region"
+        id={id}
+        heading={`${name} 시세를 블로그·홈페이지에 붙이기`}
+        desc={`중개사무소 블로그·홈페이지에 iframe 한 줄로 ${name} 평균 매매가·전세가율·지수 변동 카드를 실을 수 있습니다. 시세가 갱신되면 붙여넣은 위젯도 함께 갱신됩니다.`}
+        className="rise-in-3 mb-4"
+      />
 
       {/* CTA */}
       <section className="rise-in-3 mb-4 flex flex-wrap gap-2">

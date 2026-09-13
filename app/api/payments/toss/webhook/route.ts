@@ -6,7 +6,7 @@ import {
   markRefunded,
   promotePaidAfterProviderConfirmation,
 } from "@/lib/payments/store";
-import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan-from-stripe";
+import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan";
 import type { AppPlan } from "@/lib/billing/plan";
 import { markDeletedByBillingKey } from "@/lib/payments/billing-store";
 import { appendInboxNotification } from "@/lib/notifications/inbox";

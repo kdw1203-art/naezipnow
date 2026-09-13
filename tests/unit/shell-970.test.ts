@@ -64,9 +64,9 @@ test("tabBarActive — [991] extraPrefixes 는 호출한 탭을 함께 켠다 (�
   assert.equal(tabBarActive("/analysis", "/calculator", []), false, "목록이 없으면 자기 접두만");
 });
 
-test("backToTopLane — FAB 가 실제로 있는 /notes·/town 정확 일치만 lifted", () => {
+test("backToTopLane — FAB 가 실제로 있는 /notes 정확 일치만 lifted ([992] /town FAB 제거)", () => {
   assert.equal(backToTopLane("/notes"), "lifted");
-  assert.equal(backToTopLane("/town"), "lifted");
+  assert.equal(backToTopLane("/town"), "default", "동네 화면의 글쓰기 FAB 는 992 에서 뺐다");
   assert.equal(backToTopLane("/notes/abc"), "default", "노트 상세엔 FAB 가 없다");
   assert.equal(backToTopLane("/town/news"), "default");
   assert.equal(backToTopLane("/"), "default");

@@ -487,6 +487,19 @@ export async function countRunsThisMonth(authorEmail: string): Promise<number> {
   return count ?? 0;
 }
 
+/** [992] 누적 AI 분석 실행 횟수 — 무료 플랜의 누적 한도(lifetimeLimit)용. */
+export async function countRunsTotal(authorEmail: string): Promise<number> {
+  const em = authorEmail.trim().toLowerCase();
+  const sb = getServiceSupabase();
+  if (!sb) return memRuns.filter((r) => r.authorEmail.toLowerCase() === em).length;
+  const { count, error } = await sb
+    .from("ai_analysis_runs")
+    .select("id", { count: "exact", head: true })
+    .eq("author_email", em);
+  if (error) throw presetQueryError("ai_analysis_runs (누적 실행 횟수)", error);
+  return count ?? 0;
+}
+
 /** 특정 구(district id)에 해당하는 내 AI 실행만 조회. */
 export async function listRunsByDistrict(
   authorEmail: string,

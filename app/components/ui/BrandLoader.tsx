@@ -50,16 +50,6 @@ export function OrbitLoader({
   );
 }
 
-export function WaveLoader({ className = "", label = "불러오는 중" }: { className?: string; label?: string }) {
-  return (
-    <span role="status" aria-label={label} className={`njn-wave ${className}`}>
-      <i aria-hidden="true" />
-      <i aria-hidden="true" />
-      <i aria-hidden="true" />
-    </span>
-  );
-}
-
 export function RingLoader({
   ink = false,
   large = false,
@@ -81,15 +71,6 @@ export function RingLoader({
   );
 }
 
-export function BarLoader({ className = "", label = "불러오는 중" }: { className?: string; label?: string }) {
-  return (
-    <span role="status" aria-label={label} className={`njn-bar ${className}`}>
-      <i aria-hidden="true" />
-    </span>
-  );
-}
-
-/** 부모에 position:relative 가 있어야 한다. */
 export function LoadingOverlay({ text = "불러오는 중", className = "" }: { text?: string; className?: string }) {
   return (
     <div className={`njn-overlay ${className}`} role="status">

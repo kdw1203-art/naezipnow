@@ -3,7 +3,7 @@
  * - 주소 단위 성범죄/사건 필드 렌더 금지 패턴
  * - SAFETY_UI_POLICY / aggregate 라벨 존재
  */
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, extname } from "node:path";
 
 const root = join(process.cwd(), "app");
@@ -62,12 +62,13 @@ for (const file of files) {
   }
 }
 
-const workspace = readFileSync(
-  join(process.cwd(), "lib/map/district-workspace-service.ts"),
-  "utf8",
-);
-if (/위험\s*\$\{/.test(workspace) && !/치안지수|집계/.test(workspace)) {
-  failures.push("district-workspace-service: safety chip still uses raw '위험' without aggregate label");
+/* [992] lib/map/district-workspace-service.ts(지구 워크스페이스 — 호출자 없던 API 의 서비스)는
+   전문가 영역 보관과 함께 삭제됐다. 되살아나면 "위험" 원문 칩 검사도 같이 되살릴 것. */
+if (existsSync(join(process.cwd(), "lib/map/district-workspace-service.ts"))) {
+  const workspace = readFileSync(join(process.cwd(), "lib/map/district-workspace-service.ts"), "utf8");
+  if (/위험\s*\$\{/.test(workspace) && !/치안지수|집계/.test(workspace)) {
+    failures.push("district-workspace-service: safety chip still uses raw '위험' without aggregate label");
+  }
 }
 
 if (failures.length) {

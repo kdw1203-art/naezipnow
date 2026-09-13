@@ -131,7 +131,8 @@ export function tabBarActive(
 export type BackToTopLane = "default" | "lifted" | "savebar";
 
 export function backToTopLane(pathname: string): BackToTopLane {
-  if (pathname === "/notes" || pathname === "/town") return "lifted";
+  /* [992] /town 의 글쓰기 FAB 는 제거됐다(입구 셋 → 하나) — lifted 는 /notes 만 */
+  if (pathname === "/notes") return "lifted";
   if (pathname === "/notes/new" || /^\/notes\/[^/]+\/edit$/.test(pathname)) return "savebar";
   return "default";
 }

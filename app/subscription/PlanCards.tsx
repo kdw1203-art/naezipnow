@@ -2,6 +2,7 @@
 import { tiltHandlers } from "@/app/components/motion/Magnetic";
 
 import { useEffect, useState } from "react";
+import { isTierOnSale } from "@/lib/subscriptions/sell-config";
 import { annualSavingKrw } from "@/lib/subscriptions/billing-periods";
 import { scrollIntoViewSafely } from "@/lib/ui/scroll";
 import Link from "next/link";
@@ -195,6 +196,14 @@ export function PlanCards({
   const canCheckout = paymentsReady && (recurringReady ?? true);
   const pricing: Record<"pro" | "expert", TierPricing> = { pro, expert };
   const isGuest = currentPlan === null;
+  /* [992] 판매 카탈로그에 없는 유료 카드는 그리지 않는다(sell-config). 이미 그 플랜인
+     사람에게는 "현재 이용 중" 으로 남긴다 — 자기 플랜이 화면에서 사라지면 안 된다. */
+  const cards = CARDS.filter(
+    (c) => c.checkoutTier === null || isTierOnSale(c.checkoutTier) || currentPlan === c.kind,
+  );
+  const shownPaid = cards.filter((c) => c.checkoutTier !== null).map((c) => pricing[c.checkoutTier as "pro" | "expert"]);
+  const maxAnnualPct = Math.max(0, ...shownPaid.map((t) => t.annualDiscountPct));
+  const gridCols = cards.length >= 3 ? "md:grid-cols-3" : "max-w-[760px] md:grid-cols-2";
 
   /* [970 · A-07] 마운트 후 한 번만 — 서버 렌더에는 스크롤이 없으므로 hydration 과
      무관하다. 주간권 섹션은 이 컴포넌트 밖(page.tsx)에 있어 id 로 찾는다.
@@ -222,13 +231,13 @@ export function PlanCards({
               billing === b ? "bg-brand-navy text-on-dark" : "text-text-3"
             }`}
           >
-            {b === "monthly" ? "월간" : `연간 최대 -${Math.round(Math.max(pro.annualDiscountPct, expert.annualDiscountPct))}%`}
+            {b === "monthly" ? "월간" : `연간 최대 -${Math.round(maxAnnualPct)}%`}
           </button>
         ))}
       </div>
 
-      <div className="grid w-full max-w-[1080px] gap-5 md:grid-cols-3">
-        {CARDS.map((p, i) => {
+      <div className={`grid w-full max-w-[1080px] gap-5 ${gridCols}`}>
+        {cards.map((p, i) => {
           const def = getPlan(p.defTier);
           /* [970 · A-06] 게스트(currentPlan=null)는 어느 카드도 현재 이용 중이 아니다 */
           const isCurrent = currentPlan === p.kind;

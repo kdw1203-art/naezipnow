@@ -1,5 +1,5 @@
 import { countBookmarks } from "@/lib/bookmarks/store";
-import { countRunsThisMonth, appendRun } from "@/lib/ai/presets-store";
+import { countRunsThisMonth, countRunsTotal, appendRun } from "@/lib/ai/presets-store";
 import { countConsultationsThisMonth } from "@/lib/expert-consultations/store-db";
 import { countWatchlist } from "@/lib/watchlist/store-db";
 import {
@@ -19,7 +19,14 @@ export type UsageItem = {
   label: string;
   used: number;
   limit: number | null;
+  /** [992] "누적" 한도면 true — 화면이 "이번 달" 대신 "무료 누적" 이라고 적는다 */
+  lifetime?: boolean;
 };
+
+/** [992] 이 플랜에 누적 한도가 걸려 있는가(무료 AI 분석 3회) */
+function lifetimeLimitFor(accessTier: AccessTier, feature: FeatureKey): number | null {
+  return FEATURE_RULES[feature].lifetimeLimit?.[accessTier] ?? null;
+}
 
 export function profilePlanToAccessTier(plan: string | null | undefined): AccessTier {
   return normalizeAccessPlan(plan);
@@ -55,8 +62,9 @@ export async function getUsageSummary(
 ): Promise<{ plan: ProfilePlanTier; accessTier: AccessTier; items: UsageItem[] }> {
   const accessTier = profilePlanToAccessTier(profilePlan);
 
+  const aiLifetime = lifetimeLimitFor(accessTier, "ai_analysis");
   const [aiUsed, bookmarkCount, watchlistCount, consultsThisMonth] = await Promise.all([
-    countRunsThisMonth(email),
+    aiLifetime != null ? countRunsTotal(email) : countRunsThisMonth(email),
     countBookmarks(email),
     countWatchlist(email),
     countConsultationsThisMonth(email),
@@ -67,7 +75,8 @@ export async function getUsageSummary(
       key: "ai_analysis",
       label: "AI 분석 실행",
       used: aiUsed,
-      limit: limitFor(accessTier, "ai_analysis"),
+      limit: aiLifetime ?? limitFor(accessTier, "ai_analysis"),
+      ...(aiLifetime != null ? { lifetime: true } : {}),
     },
     {
       key: "bookmark",
@@ -96,23 +105,39 @@ export async function checkAiAnalysisQuota(
   email: string,
   profilePlan: string | null | undefined,
 ): Promise<
-  | { allowed: true; used: number; limit: number | null }
-  | { allowed: false; used: number; limit: number; requiredTier: AccessTier; message: string }
+  | { allowed: true; used: number; limit: number | null; lifetime?: true }
+  | { allowed: false; used: number; limit: number; requiredTier: AccessTier; message: string; lifetime?: true }
 > {
   const accessTier = profilePlanToAccessTier(profilePlan);
   const access = checkAccess(accessTier, "ai_analysis");
-  const used = await countRunsThisMonth(email);
-
   if (!access.allowed) {
     return {
       allowed: false,
-      used,
+      used: 0,
       limit: 0,
       requiredTier: access.requiredTier,
       message: access.reason,
     };
   }
 
+  /* [992] 누적 한도(무료 3회)가 있으면 그것이 한도다 — 월이 바뀌어도 열리지 않는다 */
+  const lifetime = lifetimeLimitFor(accessTier, "ai_analysis");
+  if (lifetime != null) {
+    const used = await countRunsTotal(email);
+    if (used >= lifetime) {
+      return {
+        allowed: false,
+        used,
+        limit: lifetime,
+        requiredTier: "pro",
+        message: `무료 AI 분석 ${lifetime}회를 모두 사용했습니다.`,
+        lifetime: true,
+      };
+    }
+    return { allowed: true, used, limit: lifetime, lifetime: true };
+  }
+
+  const used = await countRunsThisMonth(email);
   const limit = access.limit;
   if (limit != null && used >= limit) {
     const requiredTier: AccessTier = accessTier === "basic" ? "pro" : "expert";
@@ -165,7 +190,7 @@ export async function appendAiRunWithinQuota(
   input: Parameters<typeof appendRun>[0],
 ): Promise<
   /* [AI-33·42] runId(공유 링크)·usage(쿼터 표면화)를 성공 응답에 실어 보낸다 */
-  | { ok: true; runId: string | null; usage: { used: number; limit: number | null } }
+  | { ok: true; runId: string | null; usage: { used: number; limit: number | null; lifetime?: true } }
   | { ok: false; body: QuotaDeniedPayload }
 > {
   return withUserQuotaLock(`ai:${email}`, async () => {
@@ -181,7 +206,7 @@ export async function appendAiRunWithinQuota(
     return {
       ok: true as const,
       runId: (run as { id?: string } | null)?.id ?? null,
-      usage: { used: quota.used + 1, limit: quota.limit },
+      usage: { used: quota.used + 1, limit: quota.limit, ...(quota.lifetime ? { lifetime: true as const } : {}) },
     };
   });
 }

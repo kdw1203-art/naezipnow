@@ -476,7 +476,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
               step={1000}
               value={price}
               onChange={(e) => setPrice(Number(e.target.value))}
-              className="w-full accent-[#1d4fd8]"
+              className="h-9 w-full cursor-pointer accent-primary max-md:h-11"
               aria-label="매매가"
             />
             <div className="flex items-center justify-between">
@@ -493,7 +493,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
               step={1}
               value={effectiveRatio}
               onChange={(e) => setLoanRatio(Number(e.target.value))}
-              className="w-full accent-[#1d4fd8]"
+              className="h-9 w-full cursor-pointer accent-primary max-md:h-11"
               aria-label="대출 비율"
             />
             <div className="flex items-center justify-between">
@@ -514,7 +514,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                 step={0.05}
                 value={assumedRate}
                 onChange={(e) => setAssumedRate(Number(e.target.value))}
-                className="w-full accent-[#1d4fd8]"
+                className="h-9 w-full cursor-pointer accent-primary max-md:h-11"
                 aria-label="가정 금리"
               />
             )}
@@ -601,7 +601,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
           {/* 계산기→시나리오 연결 (15h) — 현재 조건(대출비율·금리·소득)을 딥링크로 전달 */}
           <Link
             href={scenarioHref}
-            className="rise-in-5 block text-center text-[13px] font-bold text-primary"
+            className="rise-in-5 block py-[5px] text-center text-[13px] font-bold text-primary"
           >
             이 조건으로 시장·대출 시나리오 보기 ›
           </Link>

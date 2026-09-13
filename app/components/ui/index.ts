@@ -1,14 +1,13 @@
+/* [992] UI 킷 정리 — Card·CardSection·Badge·SectionHeader·SourceNote·ChipRow·WaveLoader·
+   BarLoader 는 사용처 0 이었다(실제 버튼은 globals.css .btn-* 542곳, 카드는 .card 668곳,
+   칩은 .chip* 480곳). 쓰이지 않는 추상을 index 에서 내보내면 "이걸 써야 하나" 하는 비용만
+   남는다. 남은 것: EmptyState/ErrorState(채택된 유일한 원시)와 그 안의 Button,
+   Chip(ScenarioClient 3곳), Modal, Segmented, Skeleton(Sk*). */
 export { Button } from "./Button";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./Button";
 
-export { Card, CardSection } from "./Card";
-export type { CardProps, CardSectionProps, CardPadding } from "./Card";
-
-export { Chip, ChipRow } from "./Chip";
-export type { ChipProps, ChipRowProps, ChipTone } from "./Chip";
-
-export { Badge } from "./Badge";
-export type { BadgeProps, BadgeTone } from "./Badge";
+export { Chip } from "./Chip";
+export type { ChipProps, ChipTone } from "./Chip";
 
 export { EmptyState, ErrorState } from "./EmptyState";
 export type {
@@ -18,14 +17,8 @@ export type {
   StateTone,
 } from "./EmptyState";
 
-export { SectionHeader } from "./SectionHeader";
-export type { SectionHeaderProps, SectionHeaderAction } from "./SectionHeader";
-
 export { Modal, ModalHeader } from "./Modal";
 export type { ModalProps } from "./Modal";
-
-export { SourceNote } from "./SourceNote";
-export type { SourceNoteProps, SourceNoteTone } from "./SourceNote";
 
 export { Segmented } from "./Segmented";
 

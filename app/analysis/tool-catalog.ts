@@ -178,14 +178,6 @@ export const HUB_TOOLS: readonly HubTool[] = [
     sim: true,
   },
   {
-    href: "/analysis/cycle",
-    title: "사이클 전망",
-    desc: "국면 순환을 도식으로 이해하는 학습용 화면",
-    icon: "repeat",
-    tier: "market",
-    sim: true,
-  },
-  {
     href: "/analysis/switch",
     title: "갈아타기 추천 지역",
     desc: "조건을 넣어 갈아타기 시나리오를 예시로 비교",

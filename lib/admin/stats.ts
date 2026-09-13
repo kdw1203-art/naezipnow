@@ -44,7 +44,8 @@ export type AdminKpi = {
   paymentsRevenue30dKrw: number;
   totalBookmarks: number;
   totalInboxNotifications: number;
-  stripeConfigured: boolean;
+  /** [992] 결제 연동 여부 — 토스 시크릿·클라이언트 키 기준(Stripe 제거) */
+  paymentsConfigured: boolean;
   supabaseConfigured: boolean;
   /**
    * public.ai_analysis_runs 최근 7일 건수. 테이블·권한 없으면 null.
@@ -235,7 +236,7 @@ export async function loadAdminKpi(): Promise<AdminKpi> {
     paymentsRevenue30dKrw: 0,
     totalBookmarks: 0,
     totalInboxNotifications: 0,
-    stripeConfigured: Boolean(process.env.STRIPE_SECRET_KEY?.trim()),
+    paymentsConfigured: Boolean(process.env.TOSS_SECRET_KEY?.trim() && process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim()),
     supabaseConfigured: Boolean(sb),
     aiAnalysisRuns7d: null,
     platformActivityEvents7d: null,
@@ -414,7 +415,7 @@ export async function loadAdminKpi(): Promise<AdminKpi> {
     }
   }
   base.planCounts = pc;
-  base.stripeConfigured = Boolean(process.env.STRIPE_SECRET_KEY?.trim());
+  base.paymentsConfigured = Boolean(process.env.TOSS_SECRET_KEY?.trim() && process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim());
 
   const [ai7, pe7] = await Promise.all([
     safeCountSinceTable(sb, "ai_analysis_runs", weekAgo),

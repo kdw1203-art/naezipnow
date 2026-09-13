@@ -7,7 +7,7 @@ import { logger } from "@/lib/log";
 import { auth } from "@/auth";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { loadBillingHistory } from "@/lib/subscriptions/billing-history";
-import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan-from-stripe";
+import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan";
 import type { AppPlan } from "@/lib/billing/plan";
 import { maskEmailPublic } from "@/lib/privacy/mask-email";
 

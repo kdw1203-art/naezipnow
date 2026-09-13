@@ -20,13 +20,14 @@ export function MobileActionBar({
   complexId,
   complexName,
   noteHref,
-  consultHref,
+  analysisHref,
   sentinelIds,
 }: {
   complexId: string;
   complexName: string;
   noteHref: string;
-  consultHref: string;
+  /** [992] 이 단지 AI 분석(분석 허브 + complexId) — 예전 전문가 상담 칸 */
+  analysisHref: string;
   /** 이 id 의 요소 중 하나라도 화면에 있으면 바를 숨긴다 */
   sentinelIds: readonly string[];
 }) {
@@ -96,9 +97,9 @@ export function MobileActionBar({
           <Icon name="notebook-pen" size={18} />
           노트 쓰기
         </Link>
-        <Link href={consultHref} className={item}>
-          <Icon name="handshake" size={18} />
-          전문가 상담
+        <Link href={analysisHref} className={item}>
+          <Icon name="sparkles" size={18} />
+          AI 분석
         </Link>
       </div>
     </div>

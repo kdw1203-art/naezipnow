@@ -70,10 +70,6 @@ function rolloutStatus(
 export function getKakaoRolloutPhases(): KakaoRolloutPhase[] {
   const oauth = isKakaoOAuthConfigured();
   const share = isKakaoShareConfigured();
-  const pay = Boolean(
-    process.env.KAKAOPAY_CID?.trim() &&
-      process.env.KAKAOPAY_SECRET_KEY?.trim(),
-  );
   const local = Boolean(
     process.env.KAKAO_REST_API_KEY?.trim() ||
       process.env.KAKAO_LOCAL_API_KEY?.trim(),
@@ -121,13 +117,6 @@ export function getKakaoRolloutPhases(): KakaoRolloutPhase[] {
       feature: "Kakao Local (주변 업체)",
       reason: "지도·임장 보조 — REST API 키",
       status: rolloutStatus(local),
-    },
-    {
-      step: 0,
-      id: "kakaopay",
-      feature: "카카오페이 단건",
-      reason: "국내 단건 결제",
-      status: rolloutStatus(pay),
     },
   ];
   phases.sort((a, b) => a.step - b.step || a.id.localeCompare(b.id));

@@ -63,7 +63,7 @@ import { ComplexNearbyPoi } from "./ComplexNearbyPoi";
 import { ShareLinkButton } from "@/app/components/ShareLinkButton";
 import { Icon } from "@/app/components/Icon";
 import { regionIdForName } from "@/lib/region/catalog";
-import { ComplexQna } from "./ComplexQna";
+import { EmbedSnippet } from "@/app/components/EmbedSnippet";
 import { ComplexNotesNewsAi } from "./ComplexNotesNewsAi";
 import { AiBriefingCard } from "./AiBriefingCard";
 import { SEOUL_BROWSE_REGIONS, buildComplexTxSlug } from "@/lib/market/complex-transactions";
@@ -973,13 +973,9 @@ export default async function ComplexHubPage({
     }
     return `/notes/new?${params.toString()}`;
   })();
-  /* [967 · 17] 상담 — 이 페이지에는 전문가 상담 링크가 없었다. 전문가 목록을
-     시/도 키("서울"·"경기")로 좁혀 보낸다(ExpertsClient 의 ?region= 은 지역
-     문자열의 첫 토큰으로 맞춘다). */
-  const consultHref = (() => {
-    const key = (v.city || v.dong || "").split(/[\s·]/)[0];
-    return key ? `/town/experts?region=${encodeURIComponent(key)}` : "/town/experts";
-  })();
+  /* [992 · A1] 하단 바 세 번째 칸: 전문가 상담(/town/experts, 보관) → 이 단지 AI 분석.
+     ComplexNotesNewsAi 의 analysisHref 와 같은 목적지(분석 허브가 complexId 를 받는다). */
+  const analysisHref = `/analysis?complexId=${encodeURIComponent(complexId)}`;
 
   const cta = (
     <div className="flex flex-col gap-2">
@@ -1374,16 +1370,12 @@ export default async function ComplexHubPage({
       {/* [#96] 도보권 학교·역 — 데이터 적재 후 자동 표시(미적재 시 미표시) */}
       <ComplexNearbyPoi lat={v.lat} lng={v.lng} name={v.name} />
 
-      {/* D3 정비사업 · D4 입주물량 · D2 Q&A (면적대·지역대비는 상단으로 이동) */}
+      {/* D3 정비사업 · D4 입주물량 (면적대·지역대비는 상단으로 이동) */}
       {/* [970 · B-02] 시/도까지 넘긴다 — v.dong("중구")만으로는 다른 도시 자료가 섞였다 */}
       <NearbyRedevelopment sigungu={v.dong} city={v.city} />
       <UpcomingSupply area={v.dong} city={v.city} />
-      <ComplexQna
-        complexName={v.name}
-        region={sectionRegionLabel(v.city, v.dong)}
-        /* 항목 18 — 노트 조회 실패면 null (0개라고 지어내지 않는다) */
-        noteCount={v.notesFailed ? null : v.notes.length}
-      />
+      {/* [992 · A1] 단지 Q&A(ComplexQna → /qna)는 보관(비노출) — 이 화면의 질문 입구는
+          임장노트·AI 분석(아래 ComplexNotesNewsAi)이 맡는다. */}
 
       {/* 이 단지 임장노트 · AI 분석 재료 · 관련 기사 —
           지도 팝업에서 "전체 화면으로 자세히 보기"로 넘어온 사람이 더 알고 싶은 것들.
@@ -1416,36 +1408,29 @@ export default async function ComplexHubPage({
         return <div className="cv-auto mt-6"><QaBlock title={`${v.name} Q&A`} items={faq} /></div>;
       })()}
 
-      {/* N17 — 위젯 배포 진입점. 위젯에는 출처 링크가 박혀 있으므로 퍼가기가 곧 백링크다. */}
-      <div className="cv-auto rise-in-5 mt-6 flex flex-col gap-1 rounded-[14px] border border-line bg-surface p-4">
-        <span className="t-body font-extrabold text-ink">
-          이 단지 시세를 블로그에 붙이기
-        </span>
-        <span className="t-sub text-text-2">
-          최근 실거래 시세 카드를 iframe 한 줄로 퍼갈 수 있습니다. 시세가 갱신되면 붙여넣은
-          위젯도 함께 갱신됩니다.
-        </span>
-        <Link
-          href={`/widget?complex=${encodeURIComponent(complexId)}`}
-          className="mt-2 w-fit rounded-[10px] bg-primary px-4 py-2 t-sub font-bold text-white"
-        >
-          위젯 코드 만들기 ›
-        </Link>
-      </div>
+      {/* N17 — 위젯 배포 진입점. 위젯에는 출처 링크가 박혀 있으므로 퍼가기가 곧 백링크다.
+          [992 · A1] 생성기(/widget)는 보관 — 코드를 여기서 바로 보여 준다. */}
+      <EmbedSnippet
+        kind="complex"
+        id={complexId}
+        heading="이 단지 시세를 블로그에 붙이기"
+        desc="최근 실거래 시세 카드를 iframe 한 줄로 퍼갈 수 있습니다. 시세가 갱신되면 붙여넣은 위젯도 함께 갱신됩니다."
+        className="cv-auto rise-in-5 mt-6"
+      />
 
       {/* 모바일 CTA 2개 (시안 하단) — id 는 하단 액션 바의 감시 대상([967 · 17]) */}
       <div id="complex-actions-bottom" className="rise-in-4 mt-4 lg:hidden">
         {cta}
       </div>
 
-      {/* [967 · 17] 모바일 하단 액션 바 — 관심 등록·노트 쓰기·상담. 위 두 CTA 블록이
+      {/* [967 · 17] 모바일 하단 액션 바 — 관심 등록·노트 쓰기·AI 분석. 위 두 CTA 블록이
           화면에 있으면 숨겨 같은 행동이 두 번 보이지 않게 한다. 사용자별 상태(관심
           여부)는 바 안의 WatchlistButton 이 마운트 뒤 읽는다 — ISR HTML 은 공용이다. */}
       <MobileActionBar
         complexId={v.id}
         complexName={v.name}
         noteHref={noteHref}
-        consultHref={consultHref}
+        analysisHref={analysisHref}
         sentinelIds={["complex-actions-top", "complex-actions-bottom"]}
       />
     </PageShell>

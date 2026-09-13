@@ -155,7 +155,7 @@ export function getBusinessInfo(): BusinessInfo {
 
 export function isBusinessDisclosureComplete(info: BusinessInfo): boolean {
   /* 유선번호를 여기 넣은 이유: 이 함수가 곧 유료 결제 개방 스위치다
-     (app/api/billing/checkout·boost 가 이 값으로 결제를 막는다). 토스 심사가
+     (app/api/payments/toss/create·billing/start 가 이 값으로 결제를 막는다). 토스 심사가
      유선번호를 필수로 요구하므로, 번호 없이 결제가 열리면 심사에서 반려된다.
      즉 "고지가 끝났는가"의 기준에 유선번호가 빠져 있으면 안 된다. */
   return Boolean(

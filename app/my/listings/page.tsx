@@ -114,12 +114,14 @@ export default async function MyListingsPage() {
             <div className="t-section text-ink">
               매물 등록은 공인중개사 인증 후 이용할 수 있어요
             </div>
+            {/* [992 · A1] 전문가 인증 신청(/town/experts)은 보관(비노출) — 신청 입구를
+                약속하지 않고, 인증 회원 전용이라는 사실과 문의처만 말한다. */}
             <p className="max-w-[420px] t-body text-text-3">
-              개업공인중개사 자격을 인증하면 매물 등록·검수·노출 관리 기능이 열려요.
-              인증 후에는 이 화면에서 내 매물 상태와 조회수를 확인할 수 있어요.
+              매물 등록·검수·노출 관리는 개업공인중개사 인증을 마친 회원에게만 열려 있어요.
+              인증 신청은 지금 받지 않아요 — 필요하시면 고객센터로 문의해 주세요.
             </p>
-            <Link href="/town/experts" className="btn-primary btn-md mt-1 no-underline">
-              전문가 인증 신청
+            <Link href="/support" className="btn-soft btn-md mt-1 no-underline">
+              고객센터 문의
             </Link>
             <Link href="/my" className="t-sub font-bold text-text-3 no-underline">
               마이로 돌아가기 ›

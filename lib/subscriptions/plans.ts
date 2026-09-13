@@ -1,11 +1,6 @@
-import type { PlanTier } from "@/components/ui-kit";
+import type { PlanTier } from "@/lib/subscriptions/access";
 import { annualMonthlyEquivalent, monthlyPrice } from "@/lib/subscriptions/billing-periods";
 import { planLabel } from "@/lib/subscriptions/labels";
-import {
-  feePct,
-  REPORT_SELLER_FEE_RATE,
-  VERIFIED_EXPERT_FEE_RATE,
-} from "@/lib/billing/marketplace-fees";
 
 export type PlanFeature = {
   label: string;
@@ -48,21 +43,20 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
     bestFor: [
       "동네·지도·커뮤니티를 둘러보는 입문자",
       "AI·임장 기능을 제한적으로 체험하고 싶은 사용자",
-      "전문가·유료 리포트 결제 전 플랫폼을 알아보는 방문자",
+      "유료 플랜 결제 전 플랫폼을 알아보는 방문자",
     ],
     features: [
       { label: "커뮤니티 열람 / 작성 / 댓글", included: true },
       { label: "지역 탐색 지도 · 동네 맥락", included: true },
       { label: "북마크 · 관심단지", included: "limited", note: "10개" },
+      /* [992] AI 분석 도구(12종·ai_analysis)는 무료 **누적** 3회 — 월이 바뀌어도 열리지 않는다 */
+      { label: "AI 분석 도구", included: "limited", note: "누적 3회" },
       { label: "AI 임장노트 자동정리", included: "limited", note: "월 2회" },
       { label: "AI 노트 초안·예습 브리핑", included: "limited", note: "월 10회" },
       { label: "동네 분석 요약", included: "limited", note: "월 3회" },
       { label: "비교 트레이", included: "limited", note: "2개" },
       { label: "CSV 다운로드", included: false },
-      { label: "전문가 1:1 텍스트 상담", included: false },
-      { label: "리포트 판매", included: false },
       { label: "광고 제거", included: false },
-      { label: "모임 개설", included: false },
     ],
   },
   {
@@ -88,16 +82,15 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
          planLabel 단일 출처로 "무료의 모든 혜택 포함". */
       { label: `${planLabel("free")}의 모든 혜택 포함`, included: true },
       { label: "북마크 · 관심단지", included: true, note: "100개" },
+      { label: "AI 분석 도구", included: true, note: "월 50회" },
       { label: "AI 임장노트 자동정리", included: true, note: "월 30회" },
       { label: "AI 노트 초안·예습 브리핑", included: true, note: "월 100회" },
       { label: "동네 분석 요약", included: true, note: "월 50회" },
       { label: "비교 트레이", included: true, note: "10개" },
       { label: "CSV 다운로드", included: true, note: "월 10회" },
-      { label: "전문가 1:1 텍스트 상담", included: true, note: "월 2회" },
-      /* [970 · A-09 · C-15] 요율 숫자는 marketplace-fees 단일 출처에서 파생 */
-      { label: "리포트 판매", included: true, note: `수수료 ${feePct(REPORT_SELLER_FEE_RATE)}` },
+      /* [992] 전문가 상담·리포트 판매 행 제거 — 전문가·자료실은 보관(비노출)이라 팔 수 없는
+         혜택을 적지 않는다(수수료 고지는 /legal/fees 가 계속 한다). */
       { label: "광고 제거", included: true },
-      { label: "모임 개설 (Group Pass BASIC 포함)", included: true, note: "기본 1개" },
     ],
   },
   {
@@ -110,23 +103,16 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
     publicVisible: true,
     positioning: "수익·운영 올인원",
     bestFor: [
-      "유료 리포트·상담·자료를 판매하는 공인중개사·컨설턴트",
-      "다수 모임·콘텐츠를 운영하는 크리에이터",
+      "여러 지역을 동시에 분석하는 공인중개사·컨설턴트",
+      "콘텐츠를 운영하는 크리에이터",
       "데이터·AI를 무제한으로 쓰는 파워유저",
     ],
     features: [
       /* [970 · A-08] "플러스의 모든 혜택 포함" — planLabel 단일 출처 */
       { label: `${planLabel("pro")}의 모든 혜택 포함`, included: true },
       { label: "북마크 · 관심단지 · AI · 분석 · CSV", included: true, note: "무제한" },
-      { label: "전문가 1:1 텍스트 상담", included: true, note: "월 10회" },
-      { label: "리포트 판매", included: true, note: "우선 노출" },
-      {
-        label: "전문가 등록 · 수익 정산",
-        included: true,
-        note: `인증 전문가 수수료 ${feePct(VERIFIED_EXPERT_FEE_RATE)} 우대`,
-      },
-      { label: "모임 개설 (Group Pass PRO 포함)", included: true, note: "동시 5개+" },
-      { label: "검색·추천 우선 배치", included: true },
+      /* [992] "전문가 등록 · 수익 정산"·"우선 배치" 행 제거 — 전문가는 보관(비노출), 프로 플랜은
+         판매 카탈로그(sell-config)에서 내려가 있다. */
     ],
   },
   {
@@ -166,6 +152,8 @@ export function annualSavings(plan: PlanDefinition): number {
 export { TIER_PACKAGES, type TierPackage } from "./tier-packages";
 
 /** 기능 비교표 (요금제 페이지) */
+/* [992] "모임 개설" 행 삭제 — 임장 모임은 보관(비노출) 상태(참여 0). 팔지 않는 혜택을 요금표에
+   적지 않는다. 게이팅(access.ts group_create)은 그대로라 되살릴 때 행만 다시 넣으면 된다. */
 export const PLAN_FEATURE_MATRIX: Array<{
   feature: string;
   free: string;
@@ -173,13 +161,11 @@ export const PLAN_FEATURE_MATRIX: Array<{
   expert: string;
 }> = [
   { feature: "북마크·관심단지", free: "10개", pro: "100개", expert: "무제한" },
+  { feature: "AI 분석 도구", free: "누적 3회", pro: "월 50회", expert: "무제한" },
   { feature: "AI 임장노트 자동정리", free: "월 2회", pro: "월 30회", expert: "무제한" },
   { feature: "AI 노트 초안·예습 브리핑", free: "월 10회", pro: "월 100회", expert: "무제한" },
   { feature: "동네 분석 요약", free: "월 3회", pro: "월 50회", expert: "무제한" },
   { feature: "비교 트레이", free: "2개", pro: "10개", expert: "무제한" },
   { feature: "CSV 다운로드", free: "불가", pro: "월 10회", expert: "무제한" },
-  { feature: "전문가 1:1 텍스트 상담", free: "불가", pro: "월 2회", expert: "월 10회" },
-  { feature: "리포트 판매", free: "불가", pro: "가능", expert: "우선 노출" },
   { feature: "광고 제거", free: "불가", pro: "가능", expert: "가능" },
-  { feature: "모임 개설", free: "불가", pro: "기본 1개", expert: "동시 5개+" },
 ];

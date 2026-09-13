@@ -8,8 +8,7 @@ import {
   toPublic,
   type PublicBillingSubscription,
 } from "@/lib/payments/billing-store";
-import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan-from-stripe";
-import { getStripe } from "@/lib/billing/stripe";
+import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan";
 import { normalizePlan } from "@/lib/billing/plan";
 import { safeAuth } from "@/lib/safe-auth";
 import { PaymentSuccessMoment } from "./PaymentSuccessMoment";
@@ -34,9 +33,7 @@ type PaymentSuccessSearchParams = {
    못 하는** 파라미터 조합만 골라 "결제 확인 실패" 로 분기하는 파라미터 근사다 — 검증 정보가
    있는데 실제 승인·조회가 실패한 경우는 제목이 "결제 완료" 로 남는다(본문 분기와 같은 순서). */
 function paramsLookVerifiable(sp: PaymentSuccessSearchParams): boolean {
-  if (sp.provider === "stripe") return Boolean(sp.session_id?.trim());
   if (sp.provider === "toss-billing") return sp.card === "changed" || Boolean(sp.orderId);
-  if (sp.provider === "kakaopay") return Boolean(sp.orderId);
   /* 본문은 Number(amount) 의 참/거짓으로 본다(0·NaN 은 승인 시도 없이 실패) */
   if (sp.orderId && sp.paymentKey && sp.amount && Number(sp.amount)) return true;
   /* orderId 만 있는 경우 — 프로덕션은 본문이 "검증 정보 누락" 실패, 개발은 목업 재확정 */
@@ -84,54 +81,9 @@ export default async function PaymentSuccessPage({
   let status: "ok" | "mock" | "error" = "error";
   let message = "결제 정보를 확인할 수 없습니다.";
 
-  if (sp.provider === "stripe") {
-    // Stripe Checkout 성공 리턴 (구 /billing/success) — session_id 로 백업 검증
-    const sessionId = sp.session_id?.trim();
-    message = "결제 세션을 확인할 수 없습니다. 마이 페이지에서 플랜을 확인해 주세요.";
-    if (sessionId) {
-      const stripe = getStripe();
-      if (stripe) {
-        try {
-          const checkout = await stripe.checkout.sessions.retrieve(sessionId);
-          if (checkout.payment_status === "paid" || checkout.status === "complete") {
-            /* 플랜은 **로그인된 본인 세션 이메일** 을 기준으로만 반영한다.
-               예전엔 checkout.metadata.email 을 먼저 신뢰해서, 남의 session_id 를
-               주소창에 넣고 열면 그 사람 플랜이 올라가는 그리핑이 가능했다.
-               결제 세션의 이메일과 로그인 세션 이메일이 다르면(또는 비로그인이면)
-               여기서는 반영하지 않고, 서명 검증된 웹훅이 권위 있게 처리하게 둔다. */
-            const auth = await safeAuth();
-            const sessionEmail = (auth?.user?.email ?? "").trim().toLowerCase();
-            const checkoutEmail = String(
-              checkout.metadata?.email ||
-                checkout.customer_details?.email ||
-                checkout.customer_email ||
-                "",
-            )
-              .trim()
-              .toLowerCase();
-            const plan = normalizePlan(checkout.metadata?.plan);
-            if (
-              sessionEmail &&
-              plan !== "free" &&
-              (!checkoutEmail || checkoutEmail === sessionEmail)
-            ) {
-              await applyPlanToUserByEmail(sessionEmail, plan);
-            }
-            status = "ok";
-            message = "구독 결제가 완료되었습니다. 잠시 후 마이 페이지에서 플랜을 확인해 주세요.";
-          } else {
-            status = "mock";
-            message = "결제 확인 중입니다. Webhook 반영까지 1~2분 걸릴 수 있습니다.";
-          }
-        } catch {
-          message = "결제 세션 조회에 실패했습니다. 마이 페이지에서 플랜을 확인해 주세요.";
-        }
-      } else {
-        status = "mock";
-        message = "Stripe 가 설정되지 않았습니다. 관리자에게 문의해 주세요.";
-      }
-    }
-  } else if (sp.provider === "toss-billing" && sp.card === "changed") {
+  /* [992] Stripe 분기(session_id 백업 검증) 삭제 — 레일 자체가 없다. 옛 /billing/success
+     링크로 provider=stripe 가 들어오면 아래 기본 분기의 "확인할 수 없습니다" 로 떨어진다. */
+  if (sp.provider === "toss-billing" && sp.card === "changed") {
     /* 카드 변경(재등록) — 결제 없이 빌링키·카드만 교체된 경우. 사실 확인은
        아래 자동결제 정보 카드가 서버 저장값(구독 행)으로 한다. */
     status = "ok";
@@ -147,10 +99,6 @@ export default async function PaymentSuccessPage({
     } else {
       message = "자동결제 등록 결과를 확인할 수 없어요. 구독 페이지에서 상태를 확인해 주세요.";
     }
-  } else if (sp.provider === "kakaopay" && orderId) {
-    // 카카오페이는 /api/payments/kakaopay/approve 에서 승인·기록을 마치고 리다이렉트됩니다.
-    status = "ok";
-    message = "결제가 완료되어 구독이 활성화됐습니다.";
   } else if (orderId && paymentKey && amount) {
     /* [965] 승인은 같은 프로세스의 함수로 — 예전엔 Host 헤더로 만든 주소에 HTTP 를
        다시 쏴서 (a) Host 조작 시 paymentKey 유출, (b) 서버 IP 하나로 모든 구매자가

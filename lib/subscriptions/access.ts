@@ -64,6 +64,14 @@ type FeatureRule = {
   minTier: PlanTier;
   /** 플랜별 월간 사용 횟수 한도 (null = 무제한) */
   monthlyLimit?: Partial<Record<PlanTier, number | null>>;
+  /**
+   * [992] 플랜별 **누적** 한도 — 월이 바뀌어도 초기화되지 않는다. 있으면 monthlyLimit 보다
+   * 우선한다(quota 판정은 checkAiAnalysisQuota 가 lifetime 을 먼저 본다).
+   * 무료 AI 분석을 "월 2회"에서 "누적 3회"로 바꾼 이유: 30일 실측에서 AI 실행 누적 24회 —
+   * 월 한도가 걸린 사람이 한 명도 없었고, 페이월은 아무도 못 보는 자리에 서 있었다.
+   * 첫 결제의 자연스러운 순간은 "세 번 써 보고 좋았을 때"다.
+   */
+  lifetimeLimit?: Partial<Record<PlanTier, number>>;
 };
 
 export const FEATURE_RULES: Record<FeatureKey, FeatureRule> = {
@@ -91,8 +99,9 @@ export const FEATURE_RULES: Record<FeatureKey, FeatureRule> = {
   },
   ai_analysis: {
     minTier: "basic",
-    /* Free = 월 2회 — plans.ts「AI 임장노트 자동정리」카피와 단일화 */
-    monthlyLimit: { basic: 2, pro: 50, expert: null, enterprise: null },
+    /* [992] Free = 누적 3회(lifetimeLimit) · 유료는 월 한도 */
+    monthlyLimit: { basic: null, pro: 50, expert: null, enterprise: null },
+    lifetimeLimit: { basic: 3 },
   },
   report_paid:          { minTier: "pro" },
   group_join_pass: { minTier: "pro" },

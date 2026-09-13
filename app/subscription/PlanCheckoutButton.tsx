@@ -42,197 +42,51 @@ export function PlanCheckoutButton({
    */
   const [confirming, setConfirming] = useState(false);
 
+  /* ============================================================
+     [992] 결제 레일은 토스 하나다 — 주간권은 단건 결제창, 월간·연간은 빌링(카드 등록).
+     예전 함수는 Stripe → 카카오페이 폴백 사다리(150줄)였다. 승인 0건인 채 실패 문구만
+     여섯 갈래였고, 주간권을 폴백시키면 월간이 청구되는 함정까지 있었다. 이제 갈래는 셋:
+       · 토스 키 없음 → "준비 중"
+       · 주간권 → /subscription/checkout (비로그인 미리보기 포함 · [968 T1/T2])
+       · 정기 → 빌링 개방이면 로그인은 /subscription/billing, 비로그인은 체크아웃 미리보기
+                ([991]) · 미개방이면 "주간권만 가능"
+     서버 주문은 여전히 로그인 필수 — 이 버튼은 결제를 완료시키지 않는다.
+     ============================================================ */
   async function startCheckout() {
     if (busy) return;
     setNotice(null);
 
-    /* [968 · T2] 주간권(단건)은 로그인 확인 **없이** 체크아웃으로 보낸다.
-       왜: 토스 도메인 변경 심사역은 계정 없이 사이트를 훑는데, 예전 순서
-       (세션 확인 → /login)로는 결제창을 한 번도 못 보고 "연동 안 됨" 판정을
-       받았다(2026-09-06 반려). 체크아웃 화면이 비로그인에게도 위젯을 미리 그리고
-       결제 시점에 로그인을 요구한다([968 · T1]) — 서버 주문은 여전히 로그인 필수라
-       게스트 주문은 만들어지지 않는다. 월간·연간(빌링)은 서버 발급 customerKey 가
-       있어야 카드 등록창이 열리므로 아래 로그인 우선 흐름을 그대로 탄다.
-       파라미터명은 CheckoutClient.parseParams 가 읽는 tier·billing·returnTo 그대로. */
-    if (billing === "weekly" && tossClientKey()) {
-      const rt = currentReturnTo();
-      const q = `tier=${tier}&billing=weekly${rt ? `&returnTo=${encodeURIComponent(rt)}` : ""}`;
+    if (!tossClientKey()) {
+      setNotice("결제가 아직 열리지 않았어요. 잠시 후 다시 시도해 주세요.");
+      return;
+    }
+    const rt = currentReturnTo();
+    const q = `tier=${tier}&billing=${billing}${rt ? `&returnTo=${encodeURIComponent(rt)}` : ""}`;
+
+    if (billing === "weekly") {
       setConfirming(false);
       window.location.href = `/subscription/checkout?${q}`;
       return;
     }
 
-    // 1) 로그인 확인 — 비로그인 시 로그인 페이지로 (callbackUrl 유지)
-    let authed = false;
-    let sessionEmail: string | null = null;
-    try {
-      const res = await fetch("/api/auth/session", { cache: "no-store" });
-      const j = (await res.json().catch(() => null)) as
-        | { user?: { email?: string | null } }
-        | null;
-      sessionEmail = j?.user?.email ?? null;
-      authed = Boolean(sessionEmail);
-    } catch {
-      authed = false;
-    }
-    if (!authed) {
-      /* [990] 정기(월간·연간)도 비로그인이면 **로그인 벽 대신 결제수단 화면**으로.
-         토스 도메인 변경 심사가 "홈페이지 내 결제수단 신용/체크카드가 확인되지
-         않습니다"로 반려된 직접 원인이 여기였다 — 심사역이 누르는 가장 큰 버튼
-         (추천 플랜의 월간 '플러스 시작하기')이 /login 으로 끝나, 사이트 어디서도
-         카드 결제창에 닿지 못했다. 체크아웃 화면이 비로그인에게 위젯을 그리고
-         ([968 · T1] · [990] 정기까지 확장) 거기서 로그인으로 잇는다.
-         조건: 토스 위젯 키가 있고, 정기 레일이 실제로 토스로 열려 있을 때만.
-         카카오페이·Stripe 로 팔리는 상태에서 토스 위젯을 미리 보여 주면 화면과
-         실제 결제수단이 어긋난다 — 그 경우는 기존 로그인 경로를 그대로 쓴다. */
-      if (tossClientKey() && isTossBillingOpenClient()) {
-        const rt = currentReturnTo();
-        const q = `tier=${tier}&billing=${billing}${rt ? `&returnTo=${encodeURIComponent(rt)}` : ""}`;
-        setConfirming(false);
-        window.location.href = `/subscription/checkout?${q}`;
-        return;
-      }
-      /* [966] 고른 플랜·주기(그리고 페이월의 returnTo)를 로그인 뒤에도 잃지 않는다 —
-         예전엔 /subscription 으로만 돌아와 처음부터 다시 골라야 했다. 서버 페이지가
-         ?billing= 을 읽어 토글을 복원한다. */
-      const back = new URLSearchParams({ plan: tier, billing });
-      const rt = currentReturnTo();
-      if (rt) back.set("returnTo", rt);
-      window.location.href = `/login?callbackUrl=${encodeURIComponent(`/subscription?${back}`)}`;
+    if (!isTossBillingOpenClient()) {
+      setNotice("월간·연간 결제는 준비 중이에요. 지금은 플러스 주간권(7일)으로 이용할 수 있어요.");
       return;
     }
 
-    // 2) 결제 생성 API 호출 → 결제창 URL로 이동 (확인은 버튼 자리에서 이미 받았다)
-    //    실패했을 때 "결제 준비 중입니다" 하나로 뭉개지 않는다 — Stripe 미설정(503)·
-    //    카카오페이 실패·네트워크 단절은 사용자가 취할 다음 행동이 서로 다르다.
     setConfirming(false);
     setBusy(true);
-
-    type Failure = { kind: "unavailable" | "error" | "network"; message?: string };
-
-    /* 카드(Stripe) 레일 — { url } 반환. 503 은 고지 미완·연간 미등록 등 서버 문구. */
-    const tryStripe = async (): Promise<Failure | null> => {
-      try {
-        const res = await fetch("/api/billing/checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ plan: tier, billing, source: "subscription", campaign: "newui" }),
-        });
-        const j = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
-        if (res.ok && j.url) {
-          window.location.href = j.url;
-          return null;
-        }
-        return res.status === 503
-          ? { kind: "unavailable", message: j.error }
-          : { kind: "error" };
-      } catch {
-        return { kind: "network" };
-      }
-    };
-
-    /* 카카오페이 레일 — 결제창 redirect URL 반환. */
-    const tryKakao = async (): Promise<Failure | null> => {
-      try {
-        const kp = await fetch("/api/payments/kakaopay/ready", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            tier,
-            billing,
-            source: "subscription",
-            campaign: "newui-kakaopay",
-          }),
-        });
-        const kj = (await kp.json().catch(() => ({}))) as {
-          nextRedirectPcUrl?: string | null;
-          nextRedirectMobileUrl?: string | null;
-          error?: string;
-        };
-        const isMobile =
-          typeof navigator !== "undefined" &&
-          /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
-        const payUrl =
-          (isMobile ? kj.nextRedirectMobileUrl : kj.nextRedirectPcUrl) ??
-          kj.nextRedirectPcUrl ??
-          kj.nextRedirectMobileUrl;
-        if (kp.ok && payUrl) {
-          window.location.href = payUrl;
-          return null;
-        }
-        return kp.status === 503 ? { kind: "unavailable" } : { kind: "error" };
-      } catch {
-        return { kind: "network" };
-      }
-    };
-
     try {
-      /* 토스 레일 — NEXT_PUBLIC_TOSS_CLIENT_KEY 가 설정돼 있으면 최우선.
-         [토스 심사 보완 2026-08-24] 상품 성격에 맞는 결제창으로 갈라 보낸다:
-         · 주간권(단건) → 단건 결제창(/subscription/checkout, requestPayment)
-         · 월간·연간(정기) → 빌링 전용 카드 등록창(/subscription/billing,
-           requestBillingAuth → 빌링키 발급 → 첫 승인 → 갱신 크론)
-         정기 상품을 단건 결제창으로 팔면 카드사 심사 기준 위반이자,
-         "자동 갱신"이라는 상품 실체와 결제 UX 가 어긋난다(사실 우선). */
-      /* [965] 빌링이 아직 개방되지 않았으면(전자계약 전) 월간·연간을 빌링창으로
-         보내지 않는다 — 그 화면은 "준비 중" 카드로 /subscription 에 돌려보내
-         사용자가 원을 돌았다. 그 경우 아래 단건 레일(카카오페이·카드)로 내려간다. */
-      /* [968 · T2] 주간권+토스 키는 위에서 이미 체크아웃으로 갔다 — 여기 오는 주간권은
-         토스 키가 없는 경우뿐이라 아래 "토스 카드 결제로만" 안내로 떨어진다. */
-      if (tossClientKey() && billing !== "weekly" && isTossBillingOpenClient()) {
-        const rt = currentReturnTo();
-        const q = `tier=${tier}&billing=${billing}${rt ? `&returnTo=${encodeURIComponent(rt)}` : ""}`;
-        window.location.href = `/subscription/billing?${q}`;
-        return;
+      let authed = false;
+      try {
+        const res = await fetch("/api/auth/session", { cache: "no-store" });
+        const j = (await res.json().catch(() => null)) as { user?: { email?: string | null } } | null;
+        authed = Boolean(j?.user?.email);
+      } catch {
+        authed = false;
       }
-
-      /* 주간권은 토스 단건 상품 — Stripe/카카오페이에는 없는 상품이라 폴백하면
-         조용히 월간(2,900원)이 청구된다. 토스 키가 없으면 여기서 멈춘다. */
-      if (billing === "weekly") {
-        setNotice("주간권은 토스 카드 결제로만 구매할 수 있어요. 잠시 후 다시 시도해 주세요.");
-        return;
-      }
-
-      /* 레일 순서(항목 32): 연간은 카카오페이 먼저. 연간 카드 상품
-         (STRIPE_PRICE_*_ANNUAL)이 등록되지 않은 동안 Stripe 는 연간 요청을
-         503 으로 거절하는데, 카카오페이는 연간 금액(약 20% 할인)을 정상
-         계산한다 — LTV 가 가장 높은 코호트가 동작하는 경로를 시도하기도 전에
-         거절 문구부터 보게 둘 이유가 없다. 월간은 기존대로 카드 먼저. */
-      const kakaoFirst = billing === "annual";
-      const first = kakaoFirst ? tryKakao : tryStripe;
-      const second = kakaoFirst ? tryStripe : tryKakao;
-
-      const firstFailure = await first();
-      if (firstFailure === null) return; // 결제창으로 이동함
-      const secondFailure = await second();
-      if (secondFailure === null) return;
-
-      const stripeFailure = kakaoFirst ? secondFailure : firstFailure;
-      const kakaoFailure = kakaoFirst ? firstFailure : secondFailure;
-
-      // 두 수단 모두 실패 — 원인별로 다른 안내
-      if (stripeFailure.kind === "network" && kakaoFailure.kind === "network") {
-        setNotice("네트워크 연결이 불안정해요. 연결을 확인한 뒤 다시 시도해 주세요.");
-      } else if (stripeFailure.kind === "unavailable" && kakaoFailure.kind === "unavailable") {
-        setNotice(
-          tossClientKey()
-            ? "월간·연간 결제는 준비 중이에요. 지금은 플러스 주간권(7일)으로 이용할 수 있어요."
-            : "지금은 카드·카카오페이 결제를 모두 사용할 수 없어요. 잠시 후 다시 시도하거나 고객센터로 문의해 주세요.",
-        );
-      } else if (kakaoFailure.kind === "network") {
-        setNotice("네트워크 연결이 불안정해요. 연결을 확인한 뒤 다시 시도해 주세요.");
-      } else if (stripeFailure.kind === "unavailable") {
-        // 카드 결제가 막힌 이유(연간 미등록 등)를 알려주고, 카카오페이 실패도 함께 안내
-        setNotice(
-          `${stripeFailure.message ?? "카드 결제가 아직 준비되지 않았어요."} 카카오페이 연결도 실패해 결제를 시작하지 못했어요.`,
-        );
-      } else if (kakaoFailure.kind === "unavailable") {
-        setNotice(
-          "카드 결제에 실패했고 카카오페이는 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.",
-        );
-      } else {
-        setNotice("결제 시작에 실패했어요. 잠시 후 다시 시도해 주세요. 반복되면 고객센터로 문의해 주세요.");
-      }
+      /* 비로그인은 결제수단을 먼저 본다([991]) — 로그인 벽이 아니라 결제창이 첫 화면이다 */
+      window.location.href = authed ? `/subscription/billing?${q}` : `/subscription/checkout?${q}`;
     } finally {
       setBusy(false);
     }

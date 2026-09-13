@@ -78,19 +78,3 @@ export function Chip({
   }
   return <span className={cls}>{children}</span>;
 }
-
-export type ChipRowProps = {
-  className?: string;
-  children: ReactNode;
-};
-
-/** Horizontal scroll container for chips (hidden scrollbar). */
-export function ChipRow({ className = "", children }: ChipRowProps) {
-  const cls = [
-    "flex gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-    className,
-  ]
-    .filter(Boolean)
-    .join(" ");
-  return <div className={cls}>{children}</div>;
-}

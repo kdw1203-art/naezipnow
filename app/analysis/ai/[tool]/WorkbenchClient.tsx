@@ -14,6 +14,7 @@ import { resultOrder, type ToolPersona, type ResultBlock } from "@/lib/ai/tool-p
 import { buildTuningInput, type TuningField } from "@/lib/ai/tool-tuning";
 import dynamic from "next/dynamic";
 import { outcomeBand } from "@/lib/ai/outcome-band";
+import { freeQuotaLabel, weeklyPassCheckoutHref } from "@/lib/payments/paywall-links";
 
 /* [AI-31~38·42~43·46] 통합 워크벤치 클라이언트 — 3스텝 실행 흐름.
    서버 판정(레이더·플래그·신호·각주·반대 시나리오)은 /api/ai/context 가 주고,
@@ -69,7 +70,7 @@ type RunResult = {
   markdown: string;
   structuredSummary?: { headline: string; bullets: string[] } | null;
   runId?: string | null;
-  usage?: { used: number; limit: number | null } | null;
+  usage?: { used: number; limit: number | null; lifetime?: true } | null;
   error?: string;
   code?: string;
 };
@@ -781,7 +782,7 @@ export function WorkbenchClient({
             <span className="run-dot" />분석 실행
           </span>
         </div>
-        <Link href="/my/analyses" className="t-sub ml-auto font-bold text-text-3 no-underline">
+        <Link href="/my/analyses" className="t-sub ml-auto inline-block py-[3px] font-bold text-text-3 no-underline">
           내 분석 기록 ›
         </Link>
       </div>
@@ -859,18 +860,40 @@ export function WorkbenchClient({
       {result && (
         <div className={`card tool-rail flex flex-col gap-3 rounded-2xl p-4 rv-${persona.reveal}`}>
           {!result.ok ? (
-            <div className="t-body font-bold text-danger">
-              {result.error ?? "실행에 실패했어요."}
-              {result.code === "QUOTA_EXCEEDED" && (
-                <span className="ml-2 font-bold text-text-2">
-                  이번 달 무료 횟수를 다 썼어요 —{" "}
-                  <Link href="/subscription" className="text-primary no-underline">PRO 안내 보기 ›</Link>
-                </span>
-              )}
-              {result.code === "LOGIN_REQUIRED" && (
-                <Link href="/login" className="ml-2 text-primary no-underline">로그인 ›</Link>
-              )}
-            </div>
+            result.code === "QUOTA_EXCEEDED" ? (
+              /* [992] 페이월은 여기다 — 방금 결과를 본 자리. 구독 설명 페이지로 보내지 않고
+                 주간권 결제창으로 바로, 결제 뒤 이 도구로 돌아온다(returnTo). */
+              <div className="flex flex-col gap-2.5">
+                <p className="t-section font-extrabold text-ink">
+                  {result.error ?? "무료 AI 분석을 모두 사용했어요."}
+                </p>
+                <p className="t-body text-text-2">
+                  플러스 주간권은 <b className="text-ink">1,100원으로 7일 동안</b> 이 도구 12종을
+                  한도 없이 쓸 수 있어요. 자동 갱신 없는 1회 결제예요.
+                </p>
+                <Link
+                  href={weeklyPassCheckoutHref(
+                    typeof window !== "undefined" ? window.location.pathname + window.location.search : null,
+                  )}
+                  className="btn-primary btn-cta rounded-[14px] p-[14px] text-center t-body font-bold no-underline"
+                >
+                  주간권 1,100원으로 계속하기
+                </Link>
+                <Link
+                  href="/subscription"
+                  className="inline-block self-center py-[5px] t-sub font-bold text-text-3 no-underline"
+                >
+                  월간 2,900원 · 다른 플랜 보기 ›
+                </Link>
+              </div>
+            ) : (
+              <div className="t-body font-bold text-danger">
+                {result.error ?? "실행에 실패했어요."}
+                {result.code === "LOGIN_REQUIRED" && (
+                  <Link href="/login" className="ml-2 text-primary no-underline">로그인 ›</Link>
+                )}
+              </div>
+            )
           ) : (
             <>
               {/* [980] 결과에 따른 말투 — 같은 도구라도 결과가 나쁘면 붉게 말한다.
@@ -928,9 +951,26 @@ export function WorkbenchClient({
               {/* [AI-42] 쿼터 표면화 */}
               {result.usage && (
                 <div className="t-sub text-text-3">
-                  이번 달 사용 {result.usage.used}
-                  {result.usage.limit != null ? ` / ${result.usage.limit}회` : "회 (무제한)"} ·{" "}
-                  <Link href="/subscription" className="font-bold text-primary no-underline">더 필요하면 PRO ›</Link>
+                  {freeQuotaLabel(result.usage.used, result.usage.limit, result.usage.lifetime)}
+                  {result.usage.limit != null && (
+                    <>
+                      {" "}·{" "}
+                      <Link
+                        href={
+                          result.usage.lifetime
+                            ? weeklyPassCheckoutHref(
+                                typeof window !== "undefined"
+                                  ? window.location.pathname + window.location.search
+                                  : null,
+                              )
+                            : "/subscription"
+                        }
+                        className="inline-block py-[5px] font-bold text-primary no-underline"
+                      >
+                        {result.usage.lifetime ? "주간권 1,100원으로 무제한 ›" : "더 필요하면 플러스 ›"}
+                      </Link>
+                    </>
+                  )}
                 </div>
               )}
 

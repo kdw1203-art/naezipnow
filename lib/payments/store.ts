@@ -1,7 +1,7 @@
 import { getServiceSupabase } from "@/lib/supabase/service";
-import type { PlanTier } from "@/components/ui-kit";
+import type { PlanTier } from "@/lib/subscriptions/access";
 import { normalizePlan } from "@/lib/billing/plan";
-import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan-from-stripe";
+import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan";
 import { logger } from "@/lib/log";
 
 export type PaymentStatus =

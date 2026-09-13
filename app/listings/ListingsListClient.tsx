@@ -221,9 +221,6 @@ export function ListingsListClient({
                 매물 등록하기
               </Link>
             )}
-            <Link href="/partners" className="btn-outline btn-md">
-              중개사 제휴 안내
-            </Link>
           </div>
         </div>
       ) : (

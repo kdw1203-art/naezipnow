@@ -281,6 +281,5 @@ export const HUB_GLYPH: Record<string, ToolGlyphId> = {
   "/analysis/compare": "table",
   "/analysis/scenario": "rate",
   "/analysis/portfolio": "donut",
-  "/analysis/cycle": "cycle",
   "/analysis/switch": "switch",
 };

@@ -144,10 +144,26 @@ if (exists("app/og-image/route.tsx") || exists("app/og-image/page.tsx")) {
   const sitemapSrc = read("lib/seo/build-sitemap.ts");
   const staticBlock = sitemapSrc.split("STATIC_ROUTES")[1]?.split("];")[0] ?? "";
   const paths = [...staticBlock.matchAll(/path:\s*"([^"]+)"/g)].map((m) => m[1]);
+  /* [992] 마지막 세그먼트가 동적 라우트([tool] 등)로 서빙되는 경우도 "있는 라우트"다 —
+     /calculator/gap 은 app/calculator/[tool]/page.tsx 가 generateStaticParams 로 만든다. */
+  const servedByDynamic = (seg) => {
+    const parts = seg.split("/");
+    if (parts.length < 2) return false;
+    const parentDir = path.join(ROOT, "app", ...parts.slice(0, -1));
+    if (!fs.existsSync(parentDir)) return false;
+    return fs
+      .readdirSync(parentDir)
+      .some((name) => /^\[[^\]]+\]$/.test(name) && exists(`app/${parts.slice(0, -1).join("/")}/${name}/page.tsx`));
+  };
   const missing = paths.filter((p) => {
     if (p === "/") return !exists("app/page.tsx");
     const seg = p.replace(/^\//, "");
-    return !exists(`app/${seg}/page.tsx`) && !exists(`app/${seg}/route.ts`) && !exists(`app/${seg}/route.tsx`);
+    return (
+      !exists(`app/${seg}/page.tsx`) &&
+      !exists(`app/${seg}/route.ts`) &&
+      !exists(`app/${seg}/route.tsx`) &&
+      !servedByDynamic(seg)
+    );
   });
   if (paths.length === 0) {
     warn("SEO", "Sitemap static routes parse");
@@ -198,15 +214,16 @@ if (biz.includes("isBusinessDisclosureComplete")) {
 }
 
 // ── 결제 ───────────────────────────────────────────────
-if (exists("app/api/billing/webhook/route.ts") && read("app/api/billing/webhook/route.ts").includes("checkout.session.completed")) {
-  pass("결제", "Stripe webhook handlers");
+/* [992] 결제 레일은 토스 하나다(단건 위젯 + 빌링). Stripe·카카오페이·토스페이(앱인토스)·
+   IAP 는 승인 0건인 채 각자 웹훅·환불·컴플라이언스 표면만 늘리고 있어 코드에서 뺐다.
+   되살아나면 WARN — 레일 추가는 "하지 않을 것" 목록(docs/proposal-991.md §7)이다. */
+if (exists("app/api/payments/toss/webhook/route.ts") && read("app/api/payments/toss/webhook/route.ts").includes("PAYMENT_STATUS_CHANGED")) {
+  pass("결제", "Toss webhook (PAYMENT_STATUS_CHANGED)");
 } else {
-  warn("결제", "Stripe webhook");
+  fail("결제", "Toss webhook");
 }
-if (exists("app/api/payments/kakaopay/ready/route.ts")) {
-  pass("결제", "KakaoPay ready route");
-} else {
-  warn("결제", "KakaoPay");
+for (const revived of ["app/api/billing/webhook/route.ts", "app/api/payments/kakaopay/ready/route.ts", "app/api/payments/tosspay/create/route.ts", "app/api/billing/iap/verify/route.ts"]) {
+  if (exists(revived)) warn("결제", `제거한 레일이 되살아남: ${revived}`);
 }
 
 // ── 전문가 ─────────────────────────────────────────────
@@ -274,7 +291,9 @@ if (read("app/layout.tsx").includes("#main-content")) {
   const missing = tossChain.filter(([p]) => !exists(p)).map(([, label]) => label);
   const csp = read("lib/security/content-security-policy.ts");
   if (!csp.includes("js.tosspayments.com")) missing.push("CSP(js.tosspayments.com)");
-  const confirm = read("app/api/payments/toss/confirm/route.ts");
+  /* [965] 승인 로직은 lib/payments/confirm-toss-order.ts 로 옮겨졌다(라우트는 껍데기) — 둘을 합쳐 본다 */
+  const confirm =
+    read("app/api/payments/toss/confirm/route.ts") + "\n" + read("lib/payments/confirm-toss-order.ts");
   if (!confirm.includes("Idempotency-Key")) missing.push("confirm 멱등키");
   if (!confirm.includes("existing.amount")) missing.push("confirm 금액 대조");
   if (missing.length === 0) {
@@ -375,9 +394,8 @@ runGate("UI", "본문+고정 사이드바 그리드의 minmax(0,1fr)", "check-si
     "--pad-card",
     "--pad-hero",
     "--radius-card",
-    /* 2026-08-04 3차 축소에서 간격 토큰도 압축 대상이 됐다 */
-    "--sp-card-gap",
-    "--sp-section",
+    /* [992] --sp-card-gap · --sp-section 은 참조 0건이라 globals.css 에서 삭제됐다(A4 GC) —
+       되살리면 여기에도 다시 넣어 md+ 원복 짝을 검사한다. */
   ];
   const grab = (src, token) => {
     const m = src.match(new RegExp(`${token}:\\s*([^;]+);`));
@@ -447,15 +465,40 @@ runGate("UI", "본문+고정 사이드바 그리드의 minmax(0,1fr)", "check-si
     const selRaw = r[1].trim().replace(/\s+/g, " ");
     const body = r[2];
     if (!selRaw || /^@/.test(selRaw)) continue;
-    if (!/(^|[\s;])animation(-name)?\s*:/.test(body)) continue;
     const isRm = inRm(r.index);
+    const hasAnimation = /(^|[\s;])animation(-name)?\s*:/.test(body);
+    /* [992] reduce 블록에서 display:none 으로 아예 감추는 것도 "다뤄진" 것이다(스플래시) */
+    const hidesInRm = isRm && /(^|[\s;])display\s*:\s*none/.test(body);
+    if (!hasAnimation && !hidesInRm) continue;
+    /* [992] `animation: none` 을 **선언하는** 규칙은 모션이 아니라 모션을 끄는 규칙이다 —
+       (.fold .rise-in 모바일 즉시 표시 등) 목록에 넣지 않는다. */
+    const turnsOff = hasAnimation && /(^|[\s;])animation\s*:\s*none/.test(body);
     for (const s of selRaw.split(",").map((x) => x.trim())) {
       if (!s || /^(from|to|\d+%)$/.test(s)) continue; // 키프레임 단계
       if (isRm) covered.add(s);
-      else if (!declared.has(s)) declared.set(s, true);
+      else if (!turnsOff && !declared.has(s)) declared.set(s, true);
     }
   }
-  const missing = [...declared.keys()].filter((s) => !covered.has(s) && !EXEMPT.has(s));
+  /* [992] 셀렉터 일반화 대응 — reduce 블록의 `.run-sig i` 는 `.run-sig[data-motion="tick"] i` 를,
+     `.moment-ripple` 은 `.moment-card[data-kind="celebrate"] .moment-ripple` 을 덮는다.
+     규칙: 덮는 쪽의 복합 셀렉터(공백 단위)가 순서대로 선언 쪽 복합 셀렉터 안에 부분 문자열로
+     들어가면 덮인 것으로 본다(마지막 복합은 반드시 마지막에 맞아야 한다). */
+  const compounds = (sel) => sel.split(/\s+(?:[>+~]\s+)?/).filter(Boolean);
+  const generalizes = (cov, dec) => {
+    const c = compounds(cov);
+    const d = compounds(dec);
+    if (c.length === 0 || c.length > d.length) return false;
+    if (!d[d.length - 1].includes(c[c.length - 1])) return false;
+    let di = 0;
+    for (let ci = 0; ci < c.length - 1; ci++) {
+      while (di < d.length - 1 && !d[di].includes(c[ci])) di++;
+      if (di >= d.length - 1) return false;
+      di++;
+    }
+    return true;
+  };
+  const isCovered = (s) => covered.has(s) || [...covered].some((c) => c !== s && generalizes(c, s));
+  const missing = [...declared.keys()].filter((s) => !isCovered(s) && !EXEMPT.has(s));
   if (rmRanges.length === 0) {
     fail("접근성", "모션 최소화 전수 존중", "prefers-reduced-motion 블록이 하나도 없습니다");
   } else if (missing.length === 0) {

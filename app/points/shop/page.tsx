@@ -61,20 +61,6 @@ function GuestView() {
           </div>
         ))}
       </div>
-      <Link
-        href="/town/library"
-        className="rise-in-2 flex items-center justify-between rounded-2xl bg-primary-soft px-4 py-[15px] no-underline"
-      >
-        <div>
-          <div className="text-[13px] font-extrabold text-primary">
-            자료실 유료 리포트도 포인트로 구매
-          </div>
-          <div className="mt-0.5 text-xs text-text-2">
-            이웃·전문가가 올린 유료 자료를 보유 포인트로 바로 열람해요
-          </div>
-        </div>
-        <span className="text-[15px] font-extrabold text-primary">›</span>
-      </Link>
       <p className="rise-in-3 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[12px] leading-[1.7] text-text-3">
         {POINTS_GRATUITOUS_NOTICE}
       </p>
@@ -123,22 +109,7 @@ export default async function PointsShopPage() {
   return (
     <PageShell breadcrumb="포인트 상점">
       <ShopClient initialBalance={loaded.balance} />
-      {/* 사용처 안내 — 상점 목록 밖에서도 포인트가 쓰이는 곳: 자료실 유료 리포트.
-          (구매 자체는 /town/library 상세의 리포트 결제 버튼에서 포인트로 처리된다) */}
-      <Link
-        href="/town/library"
-        className="mx-auto mt-4 flex w-full max-w-[720px] items-center justify-between rounded-2xl bg-primary-soft px-4 py-[15px] no-underline"
-      >
-        <div>
-          <div className="text-[13px] font-extrabold text-primary">
-            자료실 유료 리포트도 포인트로 구매
-          </div>
-          <div className="mt-0.5 text-xs text-text-2">
-            이웃·전문가가 올린 유료 자료를 보유 포인트로 바로 열람해요
-          </div>
-        </div>
-        <span className="text-[15px] font-extrabold text-primary">›</span>
-      </Link>
+      {/* [992 · A1] "자료실 유료 리포트도 포인트로 구매" 배너 제거 — 자료실(/town/library)은 보관(비노출) */}
       {/* 무상성 고지 — PG 심사·소비자 오인 방지 공용(단일 출처) */}
       <p className="mx-auto mt-4 w-full max-w-[720px] rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[12px] leading-[1.7] text-text-3">
         {POINTS_GRATUITOUS_NOTICE}

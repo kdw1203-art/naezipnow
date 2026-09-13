@@ -126,9 +126,6 @@ export default async function ImjangIndexPage() {
         <Link href="/notes/new" className="btn-primary press rounded-xl px-4 py-2.5 text-[13px] no-underline">
           임장노트 쓰기 ›
         </Link>
-        <Link href="/notes/templates" className="chip bg-surface px-3.5 py-2.5 text-[13px] font-bold text-text-2 shadow-sm no-underline">
-          노트 템플릿 보기
-        </Link>
         <Link href="/tx" className="chip bg-surface px-3.5 py-2.5 text-[13px] font-bold text-text-2 shadow-sm no-underline">
           지역별 실거래 구간
         </Link>

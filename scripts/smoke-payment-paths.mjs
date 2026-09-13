@@ -16,8 +16,8 @@ async function check(name, fn) {
   }
 }
 
-await check("POST /api/billing/checkout → 400/401/403/422", async () => {
-  const res = await fetch(`${BASE}/api/billing/checkout`, {
+await check("POST /api/payments/toss/create → 400/401/403/422", async () => {
+  const res = await fetch(`${BASE}/api/payments/toss/create`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),

@@ -1,4 +1,4 @@
-import type { PlanTier } from "@/components/ui-kit";
+import type { PlanTier } from "@/lib/subscriptions/access";
 import { getPlan, PLAN_DEFINITIONS, type PlanDefinition } from "@/lib/subscriptions/plans";
 import { formatKrwWon } from "@/lib/format/krw";
 

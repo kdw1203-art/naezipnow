@@ -23,7 +23,7 @@ import {
 import { cancelTossPayment } from "@/lib/payments/toss-cancel";
 import { BILLING_DURATION_DAYS } from "@/lib/subscriptions/billing-periods";
 import { notifyPaymentSettled } from "@/lib/payments/notify-paid";
-import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan-from-stripe";
+import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan";
 import type { AppPlan } from "@/lib/billing/plan";
 import { appendInboxNotification } from "@/lib/notifications/inbox";
 import { ingestErrorMessage, logIngest } from "@/lib/market/store";

@@ -100,15 +100,12 @@ export default async function CreatorDashboardPage() {
               크리에이터 대시보드는 조건 충족 후 열려요
             </div>
             <p className="max-w-[420px] t-body text-text-3">
-              공개 임장노트를 1건 이상 발행하거나 전문가 인증을 마치면 콘텐츠
-              성과·탑 임장러 현황을 볼 수 있어요.
+              공개 임장노트를 1건 이상 발행하면 콘텐츠 성과·탑 임장러 현황을 볼 수
+              있어요.
             </p>
             <div className="flex flex-col gap-2 md:flex-row">
               <Link href="/notes/new" className="btn-primary btn-md no-underline">
                 공개 노트 작성하기
-              </Link>
-              <Link href="/town/experts" className="btn-soft btn-md no-underline">
-                전문가 인증 신청
               </Link>
             </div>
             <Link href="/my" className="t-sub font-bold text-text-3 no-underline">

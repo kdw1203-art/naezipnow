@@ -65,28 +65,8 @@ export const HOUSE_ADS: HouseAd[] = [
     href: "/subscription",
     showWhenSignedIn: true,
   },
-  {
-    id: "house_expert",
-    placements: ["community_feed", "report_free_body"],
-    eyebrow: "전문가 상담",
-    title: "혼자 판단하기 어려운 계약이라면",
-    body: "자격을 확인한 공인중개사·세무사·대출상담사에게 글로 묻고, 답변은 상담함으로 받아요. 고르기 어려우면 견적 요청 하나로 제안을 비교하세요.",
-    ctaLabel: "전문가 찾아보기",
-    href: "/town/experts",
-    showWhenSignedIn: true,
-  },
-  /* [959] 전문가 모집 — 공급이 0인 칸은 홍보 없이는 채워지지 않는다. 문구는 join 페이지·
-     EXPERT_CERT_FEES(가입 심사비 무료)와 같은 사실만. app/town/experts/join/page.tsx 존재 확인. */
-  {
-    id: "house_expert_join",
-    placements: ["community_feed", "report_free_body"],
-    eyebrow: "전문가 모집",
-    title: "공인중개사·세무사·감정평가사·대출상담사·건축사이신가요?",
-    body: "협회 공개 조회로 자격을 확인하고 프로필을 열어 드려요. 가입 심사비 무료, 상담 답변과 견적 제안이 열립니다.",
-    ctaLabel: "참여 안내 보기",
-    href: "/town/experts/join",
-    showWhenSignedIn: true,
-  },
+  /* [992 · A1] house_expert · house_expert_join 배너 제거 — 전문가(/town/experts)는 보관(비노출).
+     community_feed · report_free_body 슬롯은 남은 배너(구독 안내 등)로 채워진다. */
 ];
 
 /**

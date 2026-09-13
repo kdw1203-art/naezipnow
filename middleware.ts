@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { applyPrivateSiteGate } from "@/lib/site-private-edge";
-import { DEFAULT_DESKTOP_ORIGIN, detectShellFromHost, normalizeHost } from "@/lib/platform-shell";
+import { DEFAULT_DESKTOP_ORIGIN, normalizeHost } from "@/lib/platform-shell";
+import { isArchivedPath } from "@/lib/seo/archived-routes";
 import { WOODONG_PATHNAME_HEADER } from "@/lib/seo/request-pathname";
 import { safeInternalPath } from "@/lib/safe-path";
 import { EXACT_REDIRECTS, legacyRedirectStatus, resolvePrefixRedirect } from "@/lib/seo/redirect-map";
@@ -355,7 +356,6 @@ export async function middleware(request: NextRequest) {
   }
 
   const sessionResponse = await updateSession(requestWithPathnameHeader(request));
-  const shell = detectShellFromHost(host);
   const path = request.nextUrl.pathname.replace(/\/$/, "") || "/";
 
   // 단일 도메인 운영: 과거 `/m/*` 모바일 도메인 경로 레거시는 동일 도메인 루트 경로로 정규화합니다.
@@ -421,7 +421,11 @@ export async function middleware(request: NextRequest) {
   }
 
   const gated = await applyPrivateSiteGate(request, sessionResponse);
-  gated.headers.set("x-woodong-shell", shell);
+  /* [992 · A1] 보관 영역은 색인에서 뺀다 — 라우트는 살아 있고 링크는 따라가되(follow),
+     검색에는 나오지 않는다. 목록은 lib/seo/archived-routes.ts 하나다. */
+  if (!isApi && isArchivedPath(path)) gated.headers.set("X-Robots-Tag", "noindex, follow");
+  /* [992] `x-woodong-shell` 응답 헤더 삭제 — 단일 도메인 전환 뒤 항상 "desktop" 이었고 읽는
+     곳이 0 이었다(모바일/데스크톱은 뷰포트 기준 반응형). 매 응답에 붙던 죽은 헤더. */
   if (isApi) applyMiniAppCors(gated.headers, origin);
   return applySecurityHeaders(gated, request);
 }

@@ -1,4 +1,4 @@
-import type { PlanTier } from "@/components/ui-kit";
+import type { PlanTier } from "@/lib/subscriptions/access";
 
 export type PdfBranding = {
   tier: PlanTier;

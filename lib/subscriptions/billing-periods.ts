@@ -1,4 +1,4 @@
-import type { PlanTier } from "@/components/ui-kit";
+import type { PlanTier } from "@/lib/subscriptions/access";
 
 export type BillingPeriodMonths = 1 | 3 | 6 | 12;
 

@@ -388,15 +388,7 @@ export function ListingForm() {
             </button>
           ))}
         </div>
-        {source === "agent" && (
-          <p className="mt-1.5 text-[12px] text-text-3">
-            중개사무소는{" "}
-            <Link href="/partners" className="font-bold text-primary underline">
-              제휴 신청
-            </Link>
-            을 함께 남겨 주시면 노출·프로필 혜택을 안내드려요.
-          </p>
-        )}
+        {/* [992 · A1] 중개사 제휴 신청(/partners) 안내 제거 — 제휴 페이지는 보관(비노출) */}
       </div>
 
       {/* 거래 유형 */}

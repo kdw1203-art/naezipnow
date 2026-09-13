@@ -7,7 +7,7 @@ import {
   promotePaidAfterProviderConfirmation,
   type PaymentRecord,
 } from "@/lib/payments/store";
-import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan-from-stripe";
+import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan";
 import { BILLING_DURATION_DAYS } from "@/lib/subscriptions/billing-periods";
 import type { AppPlan } from "@/lib/billing/plan";
 import { idempotencyKeyForOrder } from "@/lib/payments/idempotency";

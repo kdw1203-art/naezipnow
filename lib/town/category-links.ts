@@ -72,6 +72,8 @@ export function townBreadcrumb(href: string): string {
    "방문 실측 빈도순"으로 전문가가 1번이었는데, 1번이라서 많이 눌린 것과 내용이 있어
    눌린 것을 구분할 수 없었고 누르면 빈 화면이었다. Q&A·전문가는 그래도 두 번째 줄
    첫머리에 둔다 — 질문·상담은 비어 있어도 시작점이 되기 때문이다. */
+/* [992 · A1] Q&A·전문가·모임·자료 네 칸을 뺐다 — 보관(비노출) 영역(lib/seo/archived-routes.ts).
+   남은 다섯 칸은 전부 공공데이터·뉴스(사람이 채우지 않아도 비지 않는 칸)다. */
 export const TOWN_CATEGORY_LINKS: TownCategoryLink[] = [
   /* 모바일 실측(2026-08-02): "뉴스·다이제스트"는 카드 폭(104px)에서 "뉴스·다이제…"
      로 잘렸다. 라벨은 짧게, 다이제스트는 부제로. */
@@ -80,8 +82,4 @@ export const TOWN_CATEGORY_LINKS: TownCategoryLink[] = [
   { href: "/auctions", label: "공매 물건", icon: "hammer", desc: "온비드 공매", tone: "bg-success-soft text-success", headSub: "온비드 진행·예정 물건 — 감정가·최저입찰가·입찰일", heroTitle: ["감정가보다 싼 물건이 ", "지금", " 입찰 중입니다"], heroTone: "text-on-navy-green", heroCta: [] },
   { href: "/supply", label: "입주 물량", icon: "construction", desc: "공급 일정", tone: "bg-success-soft text-success", headSub: "지역·시기별 아파트 입주 예정 — 청약홈 공고 기준", heroTitle: ["언제 어디에 ", "얼마나", " 들어오는지 봅니다"], heroTone: "text-on-navy-green", heroCta: [] },
   { href: "/redevelopment", label: "정비사업 지도", icon: "map", desc: "재개발·재건축", tone: "bg-success-soft text-success", headSub: "재개발·재건축·소규모 정비사업 — 사업종류별 컬러 마커", heroTitle: ["우리 동네 재개발이 ", "어디까지", " 왔는지 봅니다"], heroTone: "text-on-navy-green", heroCta: [] },
-  { href: "/qna", label: "단지 Q&A", icon: "messages-square", desc: "묻고 답하기", tone: "bg-primary-soft text-primary", headSub: "단지·동네 궁금증과 이웃·실거주자의 답 — 주제별 모아보기", heroTitle: ["살아 본 사람만 아는 답이 ", "여기", " 있습니다"], heroTone: "text-on-navy-blue", heroCta: [] },
-  { href: "/town/experts", label: "전문가", icon: "graduation", desc: "상담·견적", tone: "bg-primary-soft text-primary", humanSupplied: true, headSub: "자격을 확인한 전문가 상담 — 글 문의·견적 요청", heroTitle: ["자격을 확인한 전문가에게 ", "직접", " 묻습니다"], heroTone: "text-on-navy-blue", heroCta: [{ label: "전문가로 참여", href: "/town/experts/join" }] },
-  { href: "/town/groups", label: "임장 모임", icon: "compass", desc: "함께 임장", tone: "bg-primary-soft text-primary", humanSupplied: true, headSub: "같은 단지를 함께 도는 이웃 모집 — 참여 확정 시 채팅방", heroTitle: ["같은 단지를 ", "함께", " 도는 이웃을 찾습니다"], heroTone: "text-on-navy-blue", heroCta: [] },
-  { href: "/town/library", label: "자료", icon: "folder", desc: "리포트·노트", tone: "bg-warning-soft text-warning", humanSupplied: true, headSub: "리포트와 이웃들의 공개 임장노트 — 한곳에서 열람", heroTitle: ["남이 다녀온 기록이 ", "내", " 임장을 줄입니다"], heroTone: "text-on-navy-amber", heroCta: [{ label: "임장노트 쓰기", href: "/notes/new" }] },
-];
+        ];

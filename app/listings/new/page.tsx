@@ -37,13 +37,14 @@ export default async function ListingNewPage() {
             <div className="text-[15px] font-extrabold text-ink">
               매물 등록은 공인중개사 인증 후 이용할 수 있어요
             </div>
+            {/* [992 · A1] 전문가 인증 신청(/town/experts)은 보관(비노출) — 문의처만 안내 */}
             <p className="max-w-[420px] text-[13px] leading-[1.7] text-text-3">
               허위·과장 매물을 막기 위해 매물 등록은 개업공인중개사 인증을 마친
-              사용자에게만 열려 있어요. 인증을 완료하면 이 화면에서 매물을 등록할 수
-              있어요.
+              회원에게만 열려 있어요. 인증 신청은 지금 받지 않아요 — 필요하시면
+              고객센터로 문의해 주세요.
             </p>
-            <Link href="/town/experts" className="btn-primary btn-md mt-1 no-underline">
-              전문가 인증 신청
+            <Link href="/support" className="btn-soft btn-md mt-1 no-underline">
+              고객센터 문의
             </Link>
             <Link href="/my" className="text-[12px] font-bold text-text-3 no-underline">
               마이로 돌아가기 ›

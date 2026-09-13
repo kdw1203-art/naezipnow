@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { seoAlternates } from "@/lib/seo/alternates";
-import { getStripe } from "@/lib/billing/stripe";
-import { isKakaoPayConfigured } from "@/lib/payments/kakaopay";
 import { isTossPaymentsConfigured } from "@/lib/payments/toss-config";
 import {
   hasCardRail,
@@ -41,11 +39,8 @@ export const metadata: Metadata = {
 };
 
 export default function PaymentMethodsPage() {
-  const flags: PaymentRailFlags = {
-    toss: isTossPaymentsConfigured(),
-    kakaoPay: isKakaoPayConfigured(),
-    stripe: getStripe() !== null,
-  };
+  /* [992] 레일은 토스 하나 — 목록도 그 사실에서 파생된다 */
+  const flags: PaymentRailFlags = { toss: isTossPaymentsConfigured() };
   const rails = paymentRails(flags);
   const cardOpen = hasCardRail(flags);
   const biz = getBusinessInfo();

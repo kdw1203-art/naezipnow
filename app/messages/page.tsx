@@ -13,7 +13,7 @@ import { buildPageMetadata } from "@/lib/seo/page-metadata";
    제목만 붙인다 — buildPageMetadata 의 noIndex 가 같은 값을 만든다. */
 export const metadata = buildPageMetadata({
   title: "쪽지함",
-  description: "1:1 쪽지 기능은 아직 준비 중입니다. 지금은 임장 모임 채팅에서 대화할 수 있어요.",
+  description: "1:1 쪽지 기능은 아직 준비 중입니다.",
   path: "/messages",
   noIndex: true,
 });
@@ -31,16 +31,18 @@ export default function MessagesPage() {
           <div className="text-[15px] font-extrabold text-ink">
             쪽지 기능 준비 중이에요
           </div>
+          {/* [992 · A1] 임장 모임 채팅(/town/groups)은 보관(비노출) — 안내 링크를 뺐다.
+              이 화면 자체도 보관 목록(lib/seo/archived-routes.ts)에 있다. */}
           <p className="text-[13px] leading-[1.7] text-text-2">
             1:1 쪽지는 아직 열리지 않았어요.
             <br />
-            지금은 임장 모임 채팅에서 이웃들과 대화할 수 있어요.
+            지금은 공개 임장노트의 댓글로 이웃과 이야기할 수 있어요.
           </p>
           <Link
-            href="/town/groups"
+            href="/notes"
             className="btn-primary mt-1 rounded-xl px-6 py-3 text-[13px] no-underline"
           >
-            임장 모임 채팅 이용하기
+            공개 임장노트 보기
           </Link>
           {/* 2026-07-27: "쪽지 오픈 알림 받기 ›" 였다. 눌러서 도착하는 /notifications 는
               지역·키워드 구독만 제공하고 기능 오픈 알림 구독 종류가 없어서, 약속대로

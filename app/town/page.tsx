@@ -8,9 +8,6 @@ import { loadTownFeed, TOWN_FEED_FIRST_PAGE } from "@/lib/town/feed";
 import { TownFeed, type FeedCard } from "./feed-client";
 import { AdZone } from "../components/ads/AdZone";
 import { TownCategoryNav } from "./TownCategoryNav";
-import { TownPromptCard } from "./TownPromptCard";
-import { Icon } from "@/app/components/Icon";
-import { TownExpertBand } from "./TownExpertBand";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { groupRegionsByCity } from "@/lib/town/region-groups";
 
@@ -214,11 +211,10 @@ export default async function TownPage() {
         </div>
       </div>
 
-      {/* [3차] 오늘의 동네 글감 — 유저 글 0의 원인(쓸 이유 없음)에 대한 직접 처방 */}
-      <TownPromptCard />
-
-      {/* [959] 전문가 모집·상담 띠 — 사람이 채우는 칸을 정직하게 "모집 중"으로 알린다 */}
-      <TownExpertBand />
+      {/* [992 · A1] 오늘의 글감(TownPromptCard)·전문가 띠(TownExpertBand) 제거 — 글감 스레드와
+          전문가는 보관(비노출) 영역이다(사람 글 0건·전문가 0명, lib/seo/archived-routes.ts).
+          동네 화면의 "쓰기" 입구는 히어로 버튼 하나만 남긴다 — 예전엔 히어로 글쓰기 · FAB ·
+          탭바 ＋ 세 개가 한 화면에 동시에 떠 있었다. */}
 
       {/* H3 광고 슬롯 — 서버에서 렌더해 피드 중간(8번째 카드 뒤)에 꽂는다.
           이 페이지도 revalidate=120 공유 캐시라 보는 사람의 플랜을 알 수 없어 plan={null}.
@@ -237,15 +233,6 @@ export default async function TownPage() {
           펼침 — 노트·글이 가장 많은 곳이고, 전부 펼치면 100여 칩이 한 번에 쏟아진다. */}
       <TownIndex />
 
-      {/* 모바일 글쓰기 FAB — [961] 네이비 원 + 주홍 파문(2.6초마다 조용히 "지금 쓸 수 있다") */}
-      <Link
-        href="/town/write"
-        aria-label="글쓰기"
-        className="njn-fab fixed right-[18px] z-40 flex h-[52px] w-[52px] items-center justify-center rounded-full no-underline md:hidden"
-        style={{ bottom: "calc(var(--nz-tabbar-offset) + 12px)" }}
-      >
-        <Icon name="notebook-pen" size={22} />
-      </Link>
     </PageShell>
   );
 }

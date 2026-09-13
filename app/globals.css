@@ -166,14 +166,9 @@
   --fs-sub: 12px; /* lh 1.5 · 보조 (957: 11→12) */
   --fs-caption: 10px; /* ls +1% · 캡션·각주·출처 (957: 9→10) */
 
-  /* 15a 간격 8pt 스케일 */
-  --sp-inline: 8px; /* 인라인 */
-  --sp-el: 12px; /* 요소 간 */
-  --sp-card-in: 16px; /* 카드 내부 */
-  --sp-screen: 20px; /* 화면 패딩 */
-  /* 2026-08-04 3차 축소 — 간격도 모바일만 한 단계(md+ 아래 원복). */
-  --sp-card-gap: 20px; /* 카드 사이 (md+: 24px) */
-  --sp-section: 28px; /* 섹션 사이 (md+: 32px) */
+  /* [992] 간격 토큰(--sp-*) 6개·z-index 토큰(--z-*) 6개는 삭제했다 — 정의만 있고 참조가
+     TSX·CSS 어디에도 0 이었다(간격은 Tailwind gap/px 유틸, z 는 z-* 유틸이 실제 언어).
+     쓰이지 않는 토큰은 "이걸 써야 하나" 하는 비용만 남긴다. */
   /* 카드 패딩 3종 (11~24px 혼재 정리) */
   /* 2026-08-03 모바일 2차 축소(소유자 요청: 디자인 요소를 ~90% 크기로,
      글자 크기는 유지). 패딩·둥근 모서리 같은 "요소"만 줄이고 --fs-* 는
@@ -217,14 +212,6 @@
   --radius-lg: 18px;
   --radius-xl: 24px;
   --radius-pill: 9999px;
-
-  /* #5 z-index 레이어 상수 — z-[55]/[60]/30/40 혼재 정리용 */
-  --z-base: 1;
-  --z-sticky: 20;
-  --z-header: 40;
-  --z-panel: 50;
-  --z-overlay: 60;
-  --z-toast: 80;
 
   /* 19e #50 전역 모션 토큰 — dur 4단 + 이징 2종으로만 구현 · 커스텀 값 금지 */
   --dur-xs: 120ms; /* 탭 피드백 · 닫힘 · 스켈레톤 크로스페이드 */
@@ -297,8 +284,6 @@
     --pad-card: 18px;
     --pad-hero: 22px;
     --radius-card: 16px;
-    --sp-card-gap: 24px;
-    --sp-section: 32px;
   }
 }
 
@@ -1072,6 +1057,11 @@ body:has(textarea:focus-visible) .tabbar-autohide {
   to {
     opacity: 0;
     transform: translateY(10px);
+  }
+}
+@keyframes toastFade {
+  to {
+    opacity: 0;
   }
 }
 .toast-dot {
@@ -2138,6 +2128,10 @@ body:has(textarea:focus-visible) .tabbar-autohide {
   .btn-primary.is-error {
     animation: none;
   }
+  /* [992] 토스트 퇴장은 투명도만 — 끄면 토스트가 화면에 남으므로 이동(translateY)만 뺀다 */
+  .toast[data-leaving="true"] {
+    animation-name: toastFade;
+  }
   /* 그림은 그려진 결과만 즉시 보여 준다 */
   .moment-seal {
     animation: none;
@@ -2746,27 +2740,8 @@ a.rank-row:hover {
 }
 
 /* ---------- 스켈레톤 ----------
-   지금은 로딩 중에 화면이 비어 있다가 통째로 튀어나온다(레이아웃 점프).
-   최종 레이아웃과 **같은 모양**으로 자리를 잡아 둔다. */
-.sk {
-  border-radius: var(--radius-sm);
-  background: linear-gradient(
-    90deg,
-    var(--divider) 0%,
-    var(--bg) 50%,
-    var(--divider) 100%
-  );
-  background-size: 200% 100%;
-  animation: skShimmer 1.4s linear infinite;
-}
-@keyframes skShimmer {
-  from {
-    background-position: 200% 0;
-  }
-  to {
-    background-position: -200% 0;
-  }
-}
+   [992] `.sk` 계열(두 번째 시머·skShimmer 키프레임)은 `.skeleton` 하나로 합쳤다(L1376 부근).
+   ui/Skeleton.tsx 의 SkLine·SkBlock·SkCard·SkTable 도 그 클래스를 쓴다. */
 
 /* ---------- 진행 스텝 (실행 중 상태) ---------- */
 .run-steps {
@@ -2847,10 +2822,6 @@ a.rank-row:hover {
   .rank-fill,
   .gauge-arc {
     animation: none;
-  }
-  .sk {
-    animation: none;
-    background: var(--divider);
   }
   .pulse-dot::after,
   .run-step[data-state="active"] .run-dot {

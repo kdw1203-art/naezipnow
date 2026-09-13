@@ -79,10 +79,10 @@ export function TrendChart({
         <circle cx={last.x} cy={last.y} r="3" fill="currentColor" />
       </g>
       {/* 최고·최저를 왼쪽 위/아래에 붙인다 — 축 눈금 대신 범위만 알려 준다 */}
-      <text x="4" y={padT + 10} fill="var(--text-3)" fontSize="10" fontWeight="700">
+      <text x="4" y={padT + 10} fill="var(--text-3)" fontSize="11" fontWeight="700">
         {fmt(g.max)}
       </text>
-      <text x="4" y={padT + plotH - 2} fill="var(--text-3)" fontSize="10" fontWeight="700">
+      <text x="4" y={padT + plotH - 2} fill="var(--text-3)" fontSize="11" fontWeight="700">
         {fmt(g.min)}
       </text>
       {tickIdx.map((i) => (
@@ -92,7 +92,7 @@ export function TrendChart({
           y={height - 5}
           textAnchor={i === 0 ? "start" : i === (labels?.length ?? 1) - 1 ? "end" : "middle"}
           fill="var(--text-3)"
-          fontSize="10"
+          fontSize="11"
         >
           {labels?.[i]}
         </text>

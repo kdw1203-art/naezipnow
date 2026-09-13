@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  EXPERT_CERT_FEES,
   MARKETPLACE_FEES,
 } from "@/lib/billing/marketplace-fees";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
@@ -35,8 +34,8 @@ export default function FeesPolicyPage() {
       <section className="mt-8">
         <h2 className="text-[19px] font-bold text-ink">마켓플레이스 수수료</h2>
         <p className="mt-1 text-xs text-text-3">
-          크몽 공개 기준과 비교 — 내집나우 요율. 리포트 판매 수수료는 정산 계산·요금제
-          비교표와 같은 값이에요.
+          내집나우가 실제로 정산에 적용하는 요율만 싣습니다. 리포트 판매 수수료는 정산
+          계산·요금제 비교표와 같은 값이에요.
         </p>
         <div className="mt-3 overflow-x-auto rounded-[14px] border border-line">
           <table className="w-full border-collapse text-xs">
@@ -73,17 +72,8 @@ export default function FeesPolicyPage() {
         </div>
       </section>
 
-      <section className="mt-10">
-        <h2 className="text-[19px] font-bold text-ink">전문가 인증·정산</h2>
-        <ul className="mt-3 space-y-2 rounded-[14px] border border-line bg-bg p-4 text-[13px]">
-          {EXPERT_CERT_FEES.map((row) => (
-            <li key={row.label} className="flex justify-between gap-4">
-              <span className="text-text-1">{row.label}</span>
-              <span className="shrink-0 font-semibold text-ink">{row.rate}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {/* [992] "전문가 인증·정산" 절 삭제 — 전문가 판매는 보관 상태라 청구하는 요율이 없다.
+          청구하지 않는 수수료를 고지에 남기면 그게 허위 고지다(marketplace-fees 주석). */}
 
       <p className="mt-8 text-xs leading-relaxed text-text-3">
         수수료는 사전 고지 후 변경될 수 있으며, 기존 거래에는 체결 시점 요율이 적용됩니다. 문의:{" "}

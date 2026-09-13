@@ -11,8 +11,8 @@ import {
   periodToDate,
 } from "@/lib/seo/sitemap-entries";
 import { complexCanonicalPathFromNames } from "@/lib/complex/complex-store";
+import { isArchivedPath } from "@/lib/seo/archived-routes";
 import { weekSlugFor } from "@/lib/applyhome/calendar";
-import { TOWN_PROMPTS } from "@/lib/town/prompts";
 import { REGION_CATALOG } from "@/lib/region/catalog";
 import { NEWS_TAGS } from "@/lib/news/tags";
 import { GUIDES } from "@/lib/guides/catalog";
@@ -66,7 +66,6 @@ const STATIC_ROUTES: Array<{ path: string; priority: number }> = [
   /* /notes/compare 는 개인 비교 화면(noindex) — 사이트맵에서 제외 (항목 46) */
   { path: "/map", priority: 0.9 },
   /* /search 는 noindex(쿼리 화면) — 사이트맵에서 제외 (항목 46a) */
-  { path: "/recommend", priority: 0.6 },
   { path: "/analysis", priority: 0.8 },
   { path: "/analysis/compare", priority: 0.6 },
   /* cycle/price/scenario/portfolio/switch 는 noIndex 데모·시뮬레이션 — 사이트맵에서 제외 */
@@ -217,7 +216,8 @@ async function section(
 /** 정적 라우트는 배포할 때 바뀐다 — 언제였는지 런타임에 알 방법이 없으므로
     lastModified 를 적지 않는다(추측한 날짜보다 없는 편이 정확하다). */
 export function loadStaticEntries(): MetadataRoute.Sitemap {
-  const entries: MetadataRoute.Sitemap = STATIC_ROUTES.map((r) => ({
+  /* [992 · A1] 보관 경로는 정적 목록에 남아 있어도 싣지 않는다 — 목록 한 곳(archived-routes) */
+  const entries: MetadataRoute.Sitemap = STATIC_ROUTES.filter((r) => !isArchivedPath(r.path)).map((r) => ({
     url: `${BASE_URL}${r.path}`,
     priority: r.priority,
   }));
@@ -230,10 +230,7 @@ export function loadStaticEntries(): MetadataRoute.Sitemap {
       priority: offset === 0 ? 0.6 : 0.4,
     });
   }
-  /* [#63] 글감 스레드 14개 — 고정 질문 페이지(순수 상수) */
-  for (let i = 0; i < TOWN_PROMPTS.length; i += 1) {
-    entries.push({ url: `${BASE_URL}/town/prompt/${i}`, priority: 0.5 });
-  }
+  /* [992 · A1] 글감 스레드(/town/prompt/<i>)는 보관 — 사이트맵에서 뺐다 */
   /* [#64] 동네 홈 62곳 — 카탈로그 상수(dynamicParams=false 라 전부 실존) */
   for (const r of REGION_CATALOG) {
     entries.push({ url: `${BASE_URL}/town/${r.id}`, priority: 0.6 });
@@ -471,42 +468,7 @@ export async function loadDigestEntries(): Promise<MetadataRoute.Sitemap> {
   });
 }
 
-/**
- * [개선 #3, 2026-08-22] 전문가 프로필 — 인증 전문가만.
- * 페이지의 색인 조건과 같은 선이다: /town/experts/[id] 는 isVerified 만
- * index 를 연다(미인증은 noindex — 심사 중 프로필을 검색에 실지 않는다).
- * 지금은 0건(실측)이라 optional 유형 — 첫 인증 전문가가 생기는 즉시 실린다.
- */
-export async function loadExpertEntries(): Promise<MetadataRoute.Sitemap> {
-  return section("전문가 프로필", async () => {
-    const { listExpertsAll } = await import("@/lib/experts/store-db");
-    const res = await listExpertsAll();
-    if (!res.ok) throw new Error("expert_profiles 조회 실패");
-    return res.items
-      .filter((e) => e.isVerified)
-      .map((e) => ({
-        url: `${BASE_URL}/town/experts/${e.id}`,
-        priority: 0.5,
-        ...(e.updatedAt ? { lastModified: new Date(e.updatedAt) } : {}),
-      }));
-  });
-}
-
-/**
- * [개선 #3, 2026-08-22] 단지 Q&A 상세 — 색인 열린 페이지(robots index true 실측)인데
- * 사이트맵에 없던 공백. 최신 100건(스토어 상한) — 질문·답변이 쌓이면 상한을 올린다.
- * 지금은 0건(실측)이라 optional 유형이다.
- */
-export async function loadQnaEntries(): Promise<MetadataRoute.Sitemap> {
-  return section("단지 Q&A", async () => {
-    const { listQuestions } = await import("@/lib/qna/store");
-    const questions = await listQuestions({ limit: 100 });
-    return questions.map((q) => ({
-      url: `${BASE_URL}/qna/${q.id}`,
-      priority: 0.5,
-    }));
-  });
-}
+/* [992 · A1] loadExpertEntries·loadQnaEntries 삭제 — 전문가·Q&A 는 보관(비노출). */
 
 /** S11 — 월간 실거래 리포트 (데이터 있는 달만 — 빈 리포트 URL 을 넣지 않는다) */
 export async function loadReportEntries(): Promise<MetadataRoute.Sitemap> {

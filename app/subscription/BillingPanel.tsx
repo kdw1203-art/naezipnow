@@ -24,7 +24,7 @@ import { billingLabel } from "@/lib/subscriptions/labels";
  *     경로(고객센터 1:1 문의 · "결제·환불" 카테고리)로 연결한다.
  *
  * **갱신일(만료일)을 표시하지 않는 이유**: 저장되는 곳이 없다.
- * `lib/billing/apply-plan-from-stripe.ts` 의 `applyPlanToUserByEmail()` 은
+ * `lib/billing/apply-plan.ts` 의 `applyPlanToUserByEmail()` 은
  * `profiles.plan` 만 갱신하고 만료 시각을 쓰지 않으며, `membership_expires_at`
  * 류의 컬럼은 레포 전체에 0건이다. 근거 없는 날짜를 "다음 결제일"이라고 적으면
  * 그건 화면이 아니라 허위 고지가 된다. 결제 시 선택한 기간은 아래 내역의

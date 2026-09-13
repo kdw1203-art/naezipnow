@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { INLINE_CONFIRM_MS } from "@/lib/ui/feedback-timing";
+import { embedSnippet, EMBED_SITE as SITE } from "@/lib/embed/snippet";
 
 /* ============================================================
    N17 — 시세 위젯 코드 생성기 (클라이언트).
@@ -15,7 +16,6 @@ import { INLINE_CONFIRM_MS } from "@/lib/ui/feedback-timing";
    고장난 것처럼 보인다. 사용자가 실제 단지를 넣기 전까지는 빈 상태를 둔다.
    ============================================================ */
 
-const SITE = "https://naezipnow.com";
 
 export type WidgetTarget =
   | { kind: "complex"; id: string }
@@ -55,10 +55,9 @@ export function parseComplexId(input: string): string | null {
   return t && t.kind === "complex" ? t.id : null;
 }
 
+/* [992] 스니펫 형식의 단일 출처는 lib/embed/snippet.ts — 단지·지역 상세의 EmbedSnippet 과 같은 문자열 */
 function snippetFor(target: WidgetTarget, height: number): string {
-  const src = `${SITE}/embed/${target.kind}/${encodeURIComponent(target.id)}`;
-  const title = target.kind === "region" ? "내집나우 지역 시세 위젯" : "내집나우 실거래 시세 위젯";
-  return `<iframe src="${src}" width="100%" height="${height}" style="border:0;max-width:400px" loading="lazy" title="${title}"></iframe>`;
+  return embedSnippet(target.kind, target.id, height);
 }
 
 export function WidgetBuilder() {

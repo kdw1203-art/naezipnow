@@ -417,7 +417,7 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
               value={ltvPct}
               onChange={(e) => setLtvPct(Number(e.target.value))}
               aria-label="대출 비율 (%)"
-              className="w-full accent-primary"
+              className="h-9 w-full cursor-pointer accent-primary max-md:h-11"
             />
             <label className="flex items-center justify-between gap-2 t-body">
               <span className="text-text-2">연 소득</span>
@@ -455,7 +455,7 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
               value={Math.min(9, Math.max(2, baseRate))}
               onChange={(e) => setBaseRate(Number(e.target.value))}
               aria-label="기준 금리 (연 %) 슬라이더"
-              className="w-full accent-primary"
+              className="h-9 w-full cursor-pointer accent-primary max-md:h-11"
             />
             <label className="flex items-center justify-between gap-2 t-body">
               <span className="text-text-2">직접 입력</span>

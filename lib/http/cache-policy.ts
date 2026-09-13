@@ -134,7 +134,6 @@ export const PUBLIC_CACHE_RULES: readonly PublicCacheRule[] = [
      있으면 check-cache-policy 가 실패한다. 캐시할 응답 자체가 없다. */
   /* /notes 는 ?mine=1(내 노트, 비공개 포함)로 세션별 응답이 갈리는 동적 라우트가 되어
      공개 캐시 목록에서 제외 — 사용자별 응답이 CDN 공유 캐시에 섞이면 안 된다. */
-  { path: "/discover", ...FEED_DOC },
   { path: "/digest", ...FEED_DOC },
   /* A5 실거래 구간 인덱스 — 전 사용자 동일한 공개 집계(로그인 여부와 무관).
      라우트 자체가 revalidate 3600 이라 눈금을 맞춘다. */
@@ -156,14 +155,12 @@ export const PUBLIC_CACHE_RULES: readonly PublicCacheRule[] = [
   { path: "/developers", ...STATIC_DOC },
   { path: "/reports", ...STATIC_DOC },
   { path: "/about", ...STATIC_DOC },
-  { path: "/seller", ...STATIC_DOC },
   { path: "/partners", ...STATIC_DOC },
   { path: "/support", ...STATIC_DOC },
   { path: "/support/faq", ...STATIC_DOC },
   { path: "/guides/contract", ...STATIC_DOC },
   { path: "/guides/regulations", ...STATIC_DOC },
   { path: "/analysis/compare", ...STATIC_DOC },
-  { path: "/analysis/cycle", ...STATIC_DOC },
   { path: "/analysis/portfolio", ...STATIC_DOC },
   /* /analysis/price 는 이제 지역 선택(?region=)을 읽는 **동적 라우트**라 prerender
      되지 않는다 — 공개 캐시 허용 목록에서 뺀다(사용자별 값은 없지만 정적이 아니므로

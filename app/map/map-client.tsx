@@ -4499,12 +4499,12 @@ export function MapClient({
               <div className="flex flex-col gap-2 px-1 py-1">
                 {[0, 1, 2, 3, 4].map((k) => (
                   <div key={k} className="card flex items-center gap-3 rounded-[14px] px-4 py-3">
-                    <span className="sk h-4 w-4 rounded" />
+                    <span className="skeleton h-4 w-4 rounded" />
                     <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                      <span className="sk h-3.5 w-[70%] rounded" />
-                      <span className="sk h-2.5 w-[45%] rounded" />
+                      <span className="skeleton h-3.5 w-[70%] rounded" />
+                      <span className="skeleton h-2.5 w-[45%] rounded" />
                     </span>
-                    <span className="sk h-7 w-12 rounded" />
+                    <span className="skeleton h-7 w-12 rounded" />
                   </div>
                 ))}
               </div>

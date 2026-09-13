@@ -14,7 +14,10 @@
  * ── 왜 prefers-color-scheme 미디어쿼리로 안 했나 ──────────────────────────
  * `themeColor: [{ media: "(prefers-color-scheme: dark)", color: ... }]` 로
  * 적는 게 흔한 방법이지만, 여기서는 **틀린 답이 된다.** ThemeProvider 가
- * `enableSystem={false}` 라 이 앱의 테마는 OS 설정을 따라가지 않는다. OS 는
+ * [992 주석 교정] ThemeProvider 는 [966] 부터 `enableSystem` 이 **켜져** 있다 — 다만
+ * defaultTheme 이 light 라 설정에서 "시스템" 을 고른 사람만 OS 를 따른다. 그러니 여전히
+ * "OS 다크 + 앱 라이트" 가 정상 상태로 존재하고, 아래 결론(미디어쿼리 대신 실제
+ * <html class> 를 본다)은 그대로 맞다. OS 는
  * 다크인데 앱은 라이트인 경우(기본값!)와 그 반대가 둘 다 정상 상태이고,
  * 미디어쿼리는 그 두 경우에 정확히 반대 색을 칠한다. 지금보다 나빠진다.
  *

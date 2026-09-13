@@ -92,10 +92,12 @@ const DEFAULT_NEXT: Record<AiAnalysisToolId, NextActionTarget> = {
     href: "/analysis",
     emoji: "🧮",
   },
+  /* [992 · A1] 전문가 찾기(/town/experts)는 보관(비노출) — 계약 위험 점검 다음 행동은
+     그 조항을 노트에 남기는 것. */
   "contract-risk": {
-    label: "전문가에게 한 번 물어보기",
-    href: "/town/experts",
-    emoji: "🎓",
+    label: "점검 결과를 임장노트에 남기기",
+    href: "/notes/new",
+    emoji: "📝",
   },
 };
 

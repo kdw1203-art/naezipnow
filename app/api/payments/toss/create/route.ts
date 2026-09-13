@@ -3,7 +3,7 @@ import { safeAuth } from "@/lib/safe-auth";
 import { safeInternalPath } from "@/lib/safe-path";
 import { assertCheckoutAllowed } from "@/lib/payments/checkout-guard";
 import { createPayment, findRecentRequestedPayment } from "@/lib/payments/store";
-import type { PlanTier } from "@/components/ui-kit";
+import type { PlanTier } from "@/lib/subscriptions/access";
 import { getPlan } from "@/lib/subscriptions/plans";
 import { WEEKLY_PASS } from "@/lib/subscriptions/billing-periods";
 import { applyRateLimit, AUTH_RATE_LIMIT } from "@/lib/rate-limit";

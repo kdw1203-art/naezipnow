@@ -267,13 +267,7 @@ export default async function ImjangRegionPage({
         >
           면적대·가격대 실거래 자세히
         </Link>
-        <Link href="/notes/templates" className="chip bg-surface px-3.5 py-2.5 text-[13px] font-bold text-text-2 shadow-sm no-underline">
-          노트 템플릿
-        </Link>
-        {/* 크루 회로(전략 §5) — 혼자 갈 것 없다, 모임으로 잇는다 */}
-        <Link href="/town/groups" className="chip bg-surface px-3.5 py-2.5 text-[13px] font-bold text-text-2 shadow-sm no-underline">
-          함께 갈 사람 찾기
-        </Link>
+        {/* [992 · A1] 노트 템플릿(/notes/templates)·모임(/town/groups) 칩 제거 — 둘 다 보관(비노출) */}
       </section>
       <p className="text-[12px] leading-[1.6] text-text-3">
         실거래 수치는 국토교통부 신고 기준(해제분 제외)이며 매물 호가가 아닙니다.

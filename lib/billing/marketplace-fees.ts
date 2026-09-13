@@ -34,58 +34,28 @@ export type FeeRow = {
   note?: string;
 };
 
-/** 구매자 결제·판매자 정산 */
+/** 구매자 결제·판매자 정산
+ *  [992] 여섯 줄 → 한 줄. 구매자 결제 수수료 2.9%·전자책·상담 8%·인증 우대·현장 동행
+ *  5%+PG 는 코드 어디에서도 청구·정산하지 않는 숫자였다(승인 0건 상태에서 남아 있던
+ *  요율표). 고지 페이지에 청구하지 않는 수수료를 적어 두면 그게 곧 허위 고지다.
+ *  실제로 코드가 떼는 것은 리포트 판매 정산(lib/creator/sales.ts)의 10% 하나다. */
 export const MARKETPLACE_FEES: FeeRow[] = [
-  {
-    id: "buyer_checkout",
-    label: "구매자 결제 수수료",
-    kmongPublic: "4.5% (VAT 포함)",
-    ours: "2.9%",
-  },
   {
     id: "report_seller",
     label: "디지털 리포트 판매자 수수료",
     kmongPublic: "카테고리별 상이",
     ours: feePct(REPORT_SELLER_FEE_RATE),
-  },
-  {
-    /* 자료실(/reports)에서 파는 것은 리포트 한 종류다 — 별도 전자책 상품·요율은
-       코드에 없으므로 같은 요율을 쓴다(따로 적어 두면 다시 갈라진다). */
-    id: "ebook_seller",
-    label: "전자책·자료 판매자 수수료",
-    kmongPublic: "카테고리별 상이",
-    ours: feePct(REPORT_SELLER_FEE_RATE),
-  },
-  {
-    id: "consult_seller",
-    label: "전문가 상담 수수료",
-    kmongPublic: "카테고리별 상이",
-    ours: "8%",
-  },
-  {
-    id: "verified_expert",
-    label: "인증 전문가 우대",
-    kmongPublic: "공개 페이지마다 다름",
-    ours: feePct(VERIFIED_EXPERT_FEE_RATE),
-    note: "리포트·상담·자료 판매 공통 우대율",
-  },
-  {
-    id: "offline_escort",
-    label: "오프라인 현장 동행 성사",
-    kmongPublic: "별도 협의형",
-    ours: "5% + PG 실비",
+    note: "정산 계산·요금제 비교표와 같은 값",
   },
 ];
 
-/** 전문가 인증·매칭 */
+/** 전문가 인증·매칭 — [992] 전문가 판매는 보관(비노출) 상태. 재개 전까지 청구하지 않으므로
+ *  /legal/fees 에는 싣지 않는다. 전문가 모집 화면(/town/experts/join·FAQ)이 "재개 시 요율"
+ *  로만 인용한다. */
 export const EXPERT_CERT_FEES = [
   { label: "전문가 가입 심사비", rate: "무료" },
-  { label: "서류 재심사", rate: "5,000원" },
-  { label: "상담 매칭 수수료", rate: "8%" },
   { label: "인증 전문가 매칭 수수료", rate: feePct(VERIFIED_EXPERT_FEE_RATE) },
   { label: "전자책·리포트 판매 수수료", rate: feePct(REPORT_SELLER_FEE_RATE) },
-  { label: "모임 참가비 정산 수수료", rate: "3%" },
-  { label: "광고형 상단 노출", rate: "월 정액 상품 별도" },
 ] as const;
 
 /** 경쟁 서비스 포지셔닝 (사업·요금 페이지용) */

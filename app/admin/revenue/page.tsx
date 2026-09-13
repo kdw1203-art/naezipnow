@@ -186,7 +186,7 @@ export default async function AdminRevenuePage() {
           <span className="text-xs font-medium text-[#9aa6b8]">실집계 · 운영·재무</span>
         </div>
         <span className="rounded-[10px] bg-[rgba(255,255,255,.07)] px-3.5 py-[7px] text-xs font-semibold text-[#c9d2e0]">
-          {kpi.stripeConfigured ? "결제 연동됨" : "결제 미연동"}
+          {kpi.paymentsConfigured ? "결제 연동됨(토스)" : "결제 미연동"}
         </span>
       </div>
 

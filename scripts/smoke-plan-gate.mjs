@@ -39,8 +39,8 @@ await check("GET /api/subscriptions → auth or ok envelope", async () => {
   }
 });
 
-await check("billing checkout route exists (401/405/400 ok)", async () => {
-  const res = await fetch(`${BASE}/api/billing/checkout`, {
+await check("toss create route exists (401/405/400 ok)", async () => {
+  const res = await fetch(`${BASE}/api/payments/toss/create`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),

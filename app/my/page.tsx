@@ -140,7 +140,6 @@ function GuestView() {
   const menu = [
     { label: "포인트 상점", href: "/points/shop" },
     { label: "구독 · 멤버십", href: "/subscription" },
-    { label: "전문가 찾기 · 등록", href: "/town/experts" },
     { label: "고객지원 · 공지", href: "/support" },
   ];
   return (
@@ -608,10 +607,12 @@ export default async function MyPage() {
           )}
         </section>
 
-        {/* ── 구매한 리포트 (재열람) ── */}
+        {/* ── 구매한 리포트 (재열람) ──
+            [992] 자료실(/town/library)은 보관(비노출)이라 "자료실 ›" 진입은 뺀다.
+            이미 산 리포트는 "언제든 다시 열람" 약속대로 개별 링크는 그대로 둔다. */}
         {(!purchasedLoaded.ok || purchasedLoaded.items.length > 0) && (
           <section className="flex flex-col gap-2.5">
-            <SectionHead title="구매한 리포트" href="/town/library" hrefLabel="자료실" />
+            <SectionHead title="구매한 리포트" />
             {!purchasedLoaded.ok ? (
               <div className="card flex flex-col items-center gap-1.5 rounded-[14px] px-4 py-6 text-center">
                 <div className="t-body font-bold text-ink">구매 내역을 지금 불러오지 못했어요</div>
@@ -734,10 +735,13 @@ export default async function MyPage() {
           </div>
         </section>
 
-        {/* ── 내 매물 (중개사 인증 게이트 — item 11) ── */}
-        <section className="flex flex-col gap-2.5">
-          <SectionHead title="내 매물" />
-          {expert.isBroker ? (
+        {/* ── 내 매물 — [992] 인증 중개사에게만.
+            전문가(인증 신청 포함)·문의함(/my/leads)은 보관(비노출)이라, 인증이 없는
+            회원에게 "인증 신청" 카드를 보여 줄 수 없다 → 그 경우 섹션 자체를 그리지 않는다.
+            전문가 상담 섹션(상담함·전문가 찾기·전문가 참여)은 같은 이유로 뺐다. */}
+        {expert.isBroker && (
+          <section className="flex flex-col gap-2.5">
+            <SectionHead title="내 매물" />
             <div className="card flex flex-col gap-3 rounded-2xl p-5 md:flex-row md:items-center md:justify-between">
               <div>
                 <div className="t-body font-extrabold text-ink">공인중개사 인증 완료</div>
@@ -746,9 +750,6 @@ export default async function MyPage() {
                 </div>
               </div>
               <div className="flex shrink-0 flex-wrap gap-2">
-                <Link href="/my/leads" className="btn-soft btn-md no-underline">
-                  받은 문의
-                </Link>
                 <Link href="/my/listings" className="btn-soft btn-md no-underline">
                   내 매물 관리
                 </Link>
@@ -757,67 +758,8 @@ export default async function MyPage() {
                 </Link>
               </div>
             </div>
-          ) : (
-            <div className="card flex flex-col items-center gap-2 rounded-2xl px-4 py-7 text-center">
-              <div className="t-title">
-                <Icon name="🏢" size={22} />
-              </div>
-              <div className="t-body font-extrabold text-ink">
-                매물 등록은 공인중개사 인증 후 이용할 수 있어요
-              </div>
-              <div className="t-sub text-text-3">
-                개업공인중개사 자격을 인증하면 매물 등록·관리 기능이 열려요
-              </div>
-              <Link href="/town/experts" className="btn-primary btn-md mt-1 no-underline">
-                전문가 인증 신청
-              </Link>
-            </div>
-          )}
-        </section>
-
-        {/* ── 전문가 상담 (모든 회원: 상담함 · 인증 전문가: 콘솔) ── */}
-        <section className="flex flex-col gap-2.5">
-          <SectionHead title="전문가 상담" href="/my/consultations" hrefLabel="상담함" />
-          {expert.isVerified ? (
-            <div className="card flex flex-col gap-3 rounded-2xl p-5 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="t-body font-extrabold text-ink">전문가 인증 완료</div>
-                <div className="mt-0.5 t-sub text-text-3">
-                  받은 상담에 답변하고, 견적 요청에 제안을 보내고, 소개·전문분야·연락처를 직접 관리할 수 있어요
-                </div>
-              </div>
-              <div className="flex shrink-0 flex-wrap gap-2">
-                <Link href="/my/expert-profile" className="btn-soft btn-md no-underline">
-                  프로필 수정
-                </Link>
-                <Link href="/my/consultations#received" className="btn-primary btn-md no-underline">
-                  받은 상담
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <div className="card flex flex-col gap-3 rounded-2xl p-5 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="t-body font-extrabold text-ink">보낸 상담 · 견적 요청은 상담함에서</div>
-                <div className="mt-0.5 t-sub text-text-3">
-                  전문가 답변과 견적 제안이 도착하면 알림과 함께 상담함에 모여요. 답변 뒤에는 후기를 남길 수 있어요.
-                  {" "}
-                  <Link href="/town/experts/join" className="font-bold text-primary">
-                    자격이 있으시면 전문가로 참여 ›
-                  </Link>
-                </div>
-              </div>
-              <div className="flex shrink-0 flex-wrap gap-2">
-                <Link href="/town/experts" className="btn-soft btn-md no-underline">
-                  전문가 찾기
-                </Link>
-                <Link href="/my/consultations" className="btn-primary btn-md no-underline">
-                  상담함
-                </Link>
-              </div>
-            </div>
-          )}
-        </section>
+          </section>
+        )}
 
         {/* ── 구독 상태 ── */}
         <section className="flex flex-col gap-2.5">
@@ -869,7 +811,9 @@ export default async function MyPage() {
               return (
                 <div className="card flex flex-col gap-2 rounded-2xl p-4">
                   <div className="flex items-center justify-between">
-                    <span className="t-sub font-bold text-ink">이번 달 AI 분석</span>
+                    <span className="t-sub font-bold text-ink">
+                      {aiUsage.lifetime ? "무료 AI 분석 (누적)" : "이번 달 AI 분석"}
+                    </span>
                     <span className="t-sub tabular-nums text-text-2">
                       {unlimited ? (
                         <b className="text-primary">무제한</b>
@@ -893,8 +837,12 @@ export default async function MyPage() {
                     {unlimited
                       ? "유료 플랜은 AI 비교 리포트가 무제한이에요."
                       : atLimit
-                        ? "이번 달 무료 한도를 다 썼어요. 플러스로 올리면 무제한으로 분석할 수 있어요."
-                        : `이번 달 무료로 ${remaining}회 더 분석할 수 있어요.`}
+                        ? aiUsage.lifetime
+                          ? "무료 3회를 다 썼어요. 주간권(1,100원·7일)이나 플러스로 계속할 수 있어요."
+                          : "이번 달 무료 한도를 다 썼어요. 플러스로 올리면 무제한으로 분석할 수 있어요."
+                        : aiUsage.lifetime
+                          ? `무료로 ${remaining}회 더 분석할 수 있어요 (월 초기화 없음).`
+                          : `이번 달 무료로 ${remaining}회 더 분석할 수 있어요.`}
                   </div>
                 </div>
               );
@@ -913,7 +861,6 @@ export default async function MyPage() {
               : []),
             { label: "설정", href: "/my/settings" },
             { label: "크리에이터 대시보드", href: "/my/creator" },
-            { label: "자산 등록 · 대출 상환", href: "/my/assets" },
             { label: "고객지원 · 공지", href: "/support" },
           ].map((m, i, arr) => (
             <Link

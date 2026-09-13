@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
    기존 링크(홈·임장노트 상세·푸시 알림)를 깨지 않으려고 남겨 둔 것이다.
 
    ── 목적지를 /town/library 에서 /town/groups 로 바꾼 이유 ──────────────────
-   `lib/navigation/categories.ts` 의 "모임" 카테고리(groups·전문가·자료실)가
+   (옛) 데스크탑 헤더의 "모임" 카테고리(groups·전문가·자료실)가
    대표 진입 경로로 이 URL 을 쓴다. 데스크탑 헤더와 푸터의 "모임" 링크가 그것이다.
    그런데 여기서 `/town/library` 로 보내면, /town/library 는 **동네이야기**
    카테고리에 속한 경로라(같은 파일의 match 배열) 다음이 벌어졌다:
@@ -31,17 +31,8 @@ export const metadata = {
   robots: { index: false, follow: true },
 };
 
-export default async function TownMarketRedirect({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = await searchParams;
-  const qs = new URLSearchParams();
-  for (const [key, value] of Object.entries(sp)) {
-    if (typeof value === "string") qs.set(key, value);
-    else if (Array.isArray(value)) for (const v of value) qs.append(key, v);
-  }
-  const query = qs.toString();
-  redirect(query ? `/town/groups?${query}` : "/town/groups");
+export default function TownMarketRedirect() {
+  /* [992] 모임(/town/groups)은 보관(비노출) — 동네 피드로 보낸다. 옛 쿼리는 버린다.
+     (동적 라우트 /town/[region] 아래라 redirect-map 에 못 넣고 페이지로 남긴다.) */
+  redirect("/town");
 }

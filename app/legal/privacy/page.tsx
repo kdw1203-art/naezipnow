@@ -8,7 +8,10 @@ export const metadata = buildPageMetadata({
   path: "/legal/privacy",
 });
 
-const UPDATED = "2026년 6월 24일";
+/* [992] 수탁·국외이전 표에서 Stripe, Inc. 행을 뺐다 — 결제 레일이 토스페이먼츠 하나로
+   정리되어(승인 0건인 채 남아 있던 Stripe 코드 삭제) 더 이상 처리 위탁이 없다.
+   범위 **축소**는 30일 사전 고지 대상이 아니지만 시행일은 사실대로 올린다. */
+const UPDATED = "2026년 9월 13일";
 
 const Section = ({
   num,
@@ -163,12 +166,6 @@ export default function PrivacyPage() {
                 "결제 완료 후 5년(전자상거래법)",
               ],
               [
-                "Stripe, Inc.",
-                "해외카드·대체 결제 처리(선택)",
-                "결제 관련 최소 정보",
-                "결제 완료 후 5년(전자상거래법)",
-              ],
-              [
                 "수사기관 등",
                 "법령에 따른 수사·조사 협조",
                 "수사기관 요청 항목",
@@ -201,11 +198,6 @@ export default function PrivacyPage() {
                 "OpenAI, L.L.C. / Anthropic PBC",
                 "AI 임장노트·분석·챗봇(텍스트·음성·이미지 처리)",
                 "처리 목적 달성 또는 회원 탈퇴·삭제 요청 시 파기",
-              ],
-              [
-                "Stripe, Inc.",
-                "해외카드·대체 결제 처리(선택)",
-                "전자상거래법에 따른 보존 기간",
               ],
               ["토스페이먼츠(주)", "결제·정산 처리", "전자상거래법에 따른 보존 기간"],
             ]}

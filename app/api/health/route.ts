@@ -393,8 +393,6 @@ export async function GET(req: Request) {
 
   const resend = check(process.env.RESEND_API_KEY);
 
-  const stripe = check(process.env.STRIPE_SECRET_KEY);
-
   const vapid = check(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) && check(process.env.VAPID_PRIVATE_KEY);
 
   const naverMap = check(process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID);
@@ -446,7 +444,8 @@ export async function GET(req: Request) {
 
     email: { resend },
 
-    payment: { stripe, toss: tossSecret, tossClient },
+    /* [992] 레일은 토스 하나 — stripe 필드 삭제 */
+    payment: { toss: tossSecret, tossClient },
 
     /* [968 · T5] 도메인 변경 심사 대응 — "키 종류·빌링 개방·웹훅 검증"을 콘솔을
        열지 않고 확인한다. 토큰 게이트 안(상세 모드)에만 있고, 값은 startsWith 판정
