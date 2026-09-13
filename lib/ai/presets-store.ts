@@ -43,6 +43,8 @@ export type AiRunStructuredSummary = {
   bullets: string[];
   score: number | null;
   tags: string[];
+  /** [993] 판단 카드 원본 — 공유 화면·기록이 같은 카드를 다시 그린다(lib/ai/verdict.ts) */
+  verdict?: import("@/lib/ai/verdict").Verdict | null;
 };
 
 const memPresets: AiAnalysisPreset[] = [];

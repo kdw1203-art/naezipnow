@@ -145,7 +145,7 @@ function GridTile({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
       {/* 점수 배지 (인스타 조회수/캐러셀 인디케이터 위치) */}
       {/* [962] 검정 반투명 → 네이비(어두운 면 = 네이비) + 한지 글자 */}
       <span className="absolute right-1.5 top-1.5 rounded-md bg-brand-navy/80 chip-pad-tight t-caption font-extrabold text-on-dark backdrop-blur-sm md:right-2.5 md:top-2.5 md:t-sub">
-        체크 {n.score}
+        {n.score > 0 ? `기록 ${n.score}점` : "점수 없음"}
       </span>
       {n.isExample && (
         <span className="absolute left-1.5 top-1.5 rounded bg-black/45 px-1.5 py-0.5 t-caption font-bold text-white backdrop-blur-sm">
@@ -197,7 +197,7 @@ function PostCard({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
               : "bg-[rgba(127,140,158,.12)] text-text-3"
           }`}
         >
-          체크 {n.score}
+          {n.score > 0 ? `기록 ${n.score}점` : "점수 없음"}
         </span>
       </div>
       <Link
@@ -225,7 +225,7 @@ function PostCard({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
                 {n.title}
               </span>
               <span className="mt-1 rounded-full bg-white/22 px-3.5 py-1 t-sub font-extrabold backdrop-blur-sm">
-                자가 체크 요약 {n.score}
+                {n.score > 0 ? `기록 점수 ${n.score}` : "점수 없음"}
               </span>
             </div>
           }

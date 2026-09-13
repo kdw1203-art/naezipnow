@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
+import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
+import type { Verdict } from "@/lib/ai/verdict";
+import { VerdictCard } from "../../[tool]/VerdictCard";
 import { isAiAnalysisToolId, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
 
 /* [AI-33] 분석 결과 공유 페이지 — 링크만 알면 로그인 없이 열람.
@@ -34,7 +37,7 @@ async function loadRun(id: string) {
     id: string;
     tool: string;
     markdown: string;
-    structured_summary: { headline?: string; bullets?: string[] } | null;
+    structured_summary: { headline?: string; bullets?: string[]; verdict?: Verdict | null } | null;
     created_at: string;
     complex_id: string | null;
   } | null) ?? null;
@@ -76,16 +79,24 @@ export default async function SharedRunPage({
             내집나우 AI 분석 결과 공유 · {at} 실행 스냅샷
           </div>
           <h1 className="mt-1 text-[21px] font-extrabold text-ink">{identity.title}</h1>
-          {run.structured_summary?.headline && (
+          {!run.structured_summary?.verdict && run.structured_summary?.headline && (
             <p className="mt-1 text-[13px] font-bold leading-[1.6] text-text-1">
               {run.structured_summary.headline}
             </p>
           )}
         </div>
 
-        <div className="card whitespace-pre-wrap rounded-2xl p-4 text-[13px] leading-[1.75] text-text-1">
-          {run.markdown}
-        </div>
+        {/* [993] 실행 시점의 판단 카드 — 공유받은 사람도 결과값을 먼저 본다 */}
+        {run.structured_summary?.verdict && (
+          <div className="card tool-scope tool-rail rounded-2xl p-4" style={personaVars(TOOL_PERSONAS[run.tool as AiAnalysisToolId])}>
+            <VerdictCard verdict={run.structured_summary.verdict} />
+          </div>
+        )}
+
+        <details className="card rounded-2xl p-4" open={!run.structured_summary?.verdict}>
+          <summary className="cursor-pointer text-[13px] font-extrabold text-text-2">해석 본문</summary>
+          <div className="mt-2 whitespace-pre-wrap text-[13px] leading-[1.75] text-text-1">{run.markdown}</div>
+        </details>
 
         <div className="rounded-[10px] bg-bg px-4 py-3 text-[12px] leading-[1.7] text-text-3">
           이 화면은 실행 시점의 데이터 스냅샷입니다 — 지금 데이터와 다를 수 있어요.

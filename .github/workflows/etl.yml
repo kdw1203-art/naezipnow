@@ -11,7 +11,7 @@
 #      best-effort 지연·스킵이 있고 Vercel 크론은 9일 연속 정시였다. 매일 수집은
 #      더 신뢰성 있는 쪽에 둔다. (인증: Vercel 이 CRON_SECRET 을 Bearer 로 붙인다)
 #    · GitHub(이 파일): molit **직전월 보강**(신고 지연 재수집 — Vercel 쪽에 없는
-#      역할), kosis·ecos·onbid·court-auction·redevelopment·apt-master·supply·
+#      역할), kosis·ecos·onbid·redevelopment·supply·
 #      주간 글·poi·temperature·indexnow·freshness + alerts 잡 전부.
 #    새 크론 라우트는 두 파일 중 **한 곳에만** 등록한다. 여기서 뺀 6종의 실패는
 #    이 워크플로의 FAILED 대신 신선도 감시(freshness-watch·pipeline_health)가 잡는다.
@@ -84,18 +84,13 @@ jobs:
           echo "== onbid (soft) =="
           curl -sS --max-time 120 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/onbid-sync" | head -c 500 || true
           echo
-          # court-auction: 법원경매 — 소스 미구현/키 없으면 skipped (소프트)
-          echo "== court-auction (soft) =="
-          curl -sS --max-time 120 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/court-auction-sync" | head -c 500 || true
-          echo
+          # [993] court-auction 호출 제거 — lib/court-auction/sync.ts 가 아직 스텁(fetch 없음)이라
+          # 매일 "skipped" 만 남기고 신선도 표는 시드 표본 때문에 건강해 보였다. 소스가 구현되면 다시 넣는다.
           # redevelopment: 서울 정비사업 — 키 없으면 mock/no-op (소프트)
           echo "== redevelopment (soft) =="
           curl -sS --max-time 120 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/redevelopment-ingest" | head -c 500 || true
           echo
-          # apt-master: 전국 공동주택 단지 마스터 — 시군구 슬라이스 회전 (소프트)
-          echo "== apt-master (soft) =="
-          curl -sS --max-time 290 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/apt-master-ingest" | head -c 500 || true
-          echo
+          # [993] apt-master 는 vercel.json(04·12·20 UTC) 한 곳에만 둔다 — 이 파일 상단 규칙("한 곳에만")대로.
           # [OPT-33] apt-detail(limit=100)·complex-crawl·geocode(limit=200)·molit 당월분은
           # Vercel 크론(01:30·01:10·01:20·00:40 UTC)으로 일원화 — 여기서 제거.
           # 튜닝 파라미터(limit)는 vercel.json 경로 쿼리스트링으로 그대로 이관했다.

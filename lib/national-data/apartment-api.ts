@@ -1,7 +1,7 @@
 /**
  * 국토교통부 공동주택 정보 API 클라이언트
- * - 공동주택 단지 목록제공 서비스  (AptListService3)   ← 2024 개편: JSON, sigunguCode
- * - 공동주택 기본 정보제공 서비스  (AptBasisInfoServiceV4) ← 개편: JSON, getAphusBassInfoV4
+ * - 공동주택 단지 목록제공 서비스  (AptListService4)   ← 2026-08 개편(V3 폐기): JSON, sigunguCode
+ * - 공동주택 기본 정보제공 서비스  (AptBasisInfoServiceV5) ← 2026-08 개편(V4 폐기): getAphusBassInfoV5
  *
  * 2026-07 확인: 구버전(AptListService2/AptBasisInfoService2, XML)은 폐기됐다.
  * 폐기 엔드포인트는 빈 응답을 돌려줘 "상세 없음"으로 조용히 실패했고(실측 실패=200/200),
@@ -14,6 +14,24 @@ import { encodingKeyForUrl } from "@/lib/public-data/data-go-kr-keys";
 import { resolveSigunguCd } from "@/lib/national-data/region-codes";
 
 const APT_BASE = "https://apis.data.go.kr/1613000";
+
+/* ============================================================
+   [993] 서비스 버전 — 공공데이터포털이 2026-08-07 개편으로 `AptListService3`·
+   `AptBasisInfoServiceV4` 를 **폐기**했다(2026-09-13 확인: HTTP 400
+   "해당 오픈API 서비스가 없거나 폐기됨"). 후속 `AptListService4`·`AptBasisInfoServiceV5`
+   는 살아 있다(키 없이 호출하면 "등록되지 않은 서비스키" — 서비스 자체는 존재).
+   apt-master·apt-detail 크론이 09-08 부터 전부 실패한 원인이 이것이다.
+
+   다음 개편 때 코드를 다시 고치지 않도록 버전 문자열을 한곳에 두고 env 로도 덮을 수
+   있게 한다(APT_LIST_API_VERSION=5 · APT_INFO_API_VERSION=6 처럼 숫자만).
+   ============================================================ */
+const LIST_VERSION = String(process.env.APT_LIST_API_VERSION ?? "4").replace(/\D/g, "") || "4";
+const INFO_VERSION = String(process.env.APT_INFO_API_VERSION ?? "5").replace(/\D/g, "") || "5";
+export const APT_LIST_SERVICE = `AptListService${LIST_VERSION}`;
+export const APT_LIST_OP_SIGUNGU = `getSigunguAptList${LIST_VERSION}`;
+export const APT_INFO_SERVICE = `AptBasisInfoServiceV${INFO_VERSION}`;
+export const APT_INFO_OP_BASIS = `getAphusBassInfoV${INFO_VERSION}`;
+export const APT_INFO_OP_DETAIL = `getAphusDtlInfoV${INFO_VERSION}`;
 
 function serviceKey(): string | null {
   return encodingKeyForUrl();
@@ -106,8 +124,24 @@ async function fetchAptJson(
   const nested = (body.items as { item?: unknown } | undefined)?.item;
   const node = body.item ?? nested ?? body.items ?? [];
   const items = (Array.isArray(node) ? node : node ? [node] : []) as Record<string, unknown>[];
-  const totalCount = typeof body.totalCount === "number" ? body.totalCount : items.length;
+  const totalCount =
+    typeof body.totalCount === "number"
+      ? body.totalCount
+      : Number(body.totalCount) || items.length;
+  /* [993] 진단 — 서버가 "총 N건" 이라는데 우리가 한 건도 못 꺼냈으면 응답 모양이 바뀐 것이다.
+     그때 조용히 빈 결과를 돌려주면 다음 개편도 로그에 "빈 시군구" 로만 남는다. 적재(strict)
+     에서는 본문 키를 담아 던져 로그 한 줄로 무엇이 바뀌었는지 보이게 한다. */
+  if (strict && items.length === 0 && totalCount > 0) {
+    const keys = Object.keys(resp).join(",") + " / body:" + Object.keys(body).join(",");
+    throw new Error(`data.go.kr ${service} 응답 모양 변경 의심 — totalCount=${totalCount} 인데 item 0건 (keys: ${keys})`);
+  }
   return { items, totalCount, mode: items.length > 0 ? "live" : "mock" };
+}
+
+/** [993] 정규화 뒤 필수 키(kaptCode)가 비면 원본 키 이름을 알려 준다 — 필드명 개편 진단용 */
+export function describeRowKeys(r: Record<string, unknown> | undefined): string {
+  if (!r) return "(빈 행)";
+  return Object.keys(r).slice(0, 24).join(",");
 }
 
 /** JSON 값(문자/숫자 혼재)을 문자열로 정규화 */
@@ -142,7 +176,7 @@ function normalizeComplex(r: Record<string, string>): AptComplex {
   return {
     kaptCode: r.kaptCode ?? "",
     kaptName: r.kaptName ?? "",
-    // V3 목록은 sigunguCd 를 직접 주지 않는다 — bjdCode(법정동코드) 앞 5자리로 대체.
+    // V3·V4 목록은 sigunguCd 를 직접 주지 않는다 — bjdCode(법정동코드) 앞 5자리로 대체.
     sigunguCd: r.sigunguCd || (r.bjdCode ? r.bjdCode.slice(0, 5) : ""),
     bjdongCd: r.bjdCode || r.bjdongCd || undefined,
     as1: r.as1 || undefined,
@@ -172,20 +206,27 @@ export async function fetchAptComplexList(params: {
     ? resolveSigunguCd(params.sigunguCd)
     : params.sigunguCd;
 
-  // V3: 파라미터는 sigunguCode(5자리). bjdongCd 는 법정동 단위 조회 시 사용.
+  // V3·V4: 파라미터는 sigunguCode(5자리) — V4 도 같은 이름을 쓴다(다르면 strict 진단이 키 이름을 남긴다). bjdongCd 는 법정동 단위 조회 시 사용.
   const query: Record<string, string | number> = { sigunguCode: sigunguCd };
   if (params.bjdongCd) query.bjdongCode = params.bjdongCd;
   if (params.pageNo && params.pageNo > 1) query.pageNo = params.pageNo;
 
   const { items, totalCount, mode } = await fetchAptJson(
-    "AptListService3",
-    "getSigunguAptList3",
+    APT_LIST_SERVICE,
+    APT_LIST_OP_SIGUNGU,
     query,
     params.numOfRows ?? 100,
     params.strict === true,
   );
 
-  return { complexes: items.map((r) => normalizeComplex(toStrRow(r))), totalCount, mode };
+  const complexes = items.map((r) => normalizeComplex(toStrRow(r)));
+  /* [993] 행은 왔는데 단지코드가 전부 비면 필드명이 바뀐 것 — 적재에서는 키 이름과 함께 던진다 */
+  if (params.strict === true && complexes.length > 0 && complexes.every((c) => !c.kaptCode)) {
+    throw new Error(
+      `data.go.kr ${APT_LIST_SERVICE} 필드명 변경 의심 — kaptCode 없음 (keys: ${describeRowKeys(items[0])})`,
+    );
+  }
+  return { complexes, totalCount, mode };
 }
 
 // ── 단지 기본정보 ─────────────────────────────────────────────────────
@@ -282,8 +323,8 @@ export async function fetchAptComplexDetail(
   opts?: { strict?: boolean },
 ): Promise<{ detail: AptComplexDetail | null; mode: "live" | "mock" }> {
   const { items, mode } = await fetchAptJson(
-    "AptBasisInfoServiceV4",
-    "getAphusBassInfoV4",
+    APT_INFO_SERVICE,
+    APT_INFO_OP_BASIS,
     { kaptCode },
     1,
     opts?.strict === true,
@@ -294,8 +335,8 @@ export async function fetchAptComplexDetail(
   if (withDetail) {
     try {
       const dtl = await fetchAptJson(
-        "AptBasisInfoServiceV4",
-        "getAphusDtlInfoV4",
+        APT_INFO_SERVICE,
+        APT_INFO_OP_DETAIL,
         { kaptCode },
         1,
       );

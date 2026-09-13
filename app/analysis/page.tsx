@@ -13,6 +13,7 @@ import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { loadHubTeasers, type HubTeaser } from "./hub-teasers";
 import { loadHomeCoverage } from "@/lib/newui/home-coverage";
 import { FEATURE_RULES } from "@/lib/subscriptions/access";
+import { isTierOnSale } from "@/lib/subscriptions/sell-config";
 import { ToolGlyph, HUB_GLYPH } from "./ToolGlyph";
 import { Sparkline } from "./Sparkline";
 import { HubPickedProvider } from "./hub-context";
@@ -224,10 +225,14 @@ export default async function AnalysisHubPage({
      직접 import 하면 번들 예산을 넘긴다(workbench-cards.ts 주석 참고). */
   const workbenchCards = workbenchCardData();
   const aiLimit = FEATURE_RULES.ai_analysis.monthlyLimit ?? {};
+  /* [993] 무료는 992 부터 누적 3회(lifetimeLimit) — 월 한도(null)를 0회로 적고 있었다 */
+  const freeLifetime = FEATURE_RULES.ai_analysis.lifetimeLimit?.basic ?? null;
   const quota = {
-    free: aiLimit.basic ?? 0,
+    free: freeLifetime ?? aiLimit.basic ?? 0,
+    freeLifetime: freeLifetime != null,
     plus: aiLimit.pro ?? 0,
     pro: aiLimit.expert === undefined ? null : aiLimit.expert,
+    proOnSale: isTierOnSale("expert"),
   };
 
   // 로그인 시 실데이터(내 노트 수)로 시작 섹션 구성 — 허위 수치 없음

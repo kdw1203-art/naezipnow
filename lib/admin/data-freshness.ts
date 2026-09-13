@@ -234,16 +234,9 @@ const SPECS: Spec[] = [
     expectedDays: 3,
     logSources: ["onbid"],
   },
-  {
-    key: "court",
-    label: "경매 물건",
-    source: "법원경매",
-    table: "court_auctions",
-    writeCol: "updated_at",
-    expectedDays: 3,
-    hasSample: true,
-    logSources: ["court-auction"],
-  },
+  /* [993] 법원경매 행 제거 — lib/court-auction/sync.ts 는 아직 fetch 가 없는 스텁이다(TODO).
+     시드 표본 1행이 "3일 주기 정상" 으로 읽혀 표가 거짓말을 했다. 소스가 구현되고 크론에
+     다시 붙을 때 이 행도 같이 돌아온다(expectedDays 는 그때 정한다). */
   {
     key: "redevelopment",
     label: "정비사업 현황",

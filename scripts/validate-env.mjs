@@ -53,6 +53,25 @@ const optionalProductionWarnings = [
   "VWORLD_API_KEY",
 ];
 
+/**
+ * [993] 매일 사실 파이프라인 키 — 비어 있으면 해당 크론이 "skipped" 200 으로 조용히 끝나
+ * 정상 무동작과 구별되지 않는다(45일간 KOSIS·정비사업·POI 가 그렇게 비었다). 빌드 로그에
+ * **이름**으로 남겨 무엇이 꺼져 있는지 보이게 한다. 값은 절대 출력하지 않는다.
+ * 짝(둘 다 필요)은 배열로 적는다.
+ */
+const pipelineKeys = [
+  ["REB_OPENAPI_KEY", "부동산원 지수(reb-ingest)"],
+  ["KOSIS_API_KEY", "인구·미분양(kosis-ingest)"],
+  ["ECOS_API_KEY", "한국은행 기준금리(ecos-sync)"],
+  ["ONBID_SERVICE_KEY", "공매(onbid-sync)"],
+  ["DATA_GO_KR_SERVICE_KEY", "청약홈·입주물량(supply-ingest)"],
+  [["DATA_GO_KR_ENCODING_KEY", "MOLIT_SERVICE_KEY"], "국토부 실거래·단지(apis.data.go.kr)"],
+  [["SEOUL_OPENAPI_KEY", "SEOUL_OPENAPI_SERVICE"], "서울 정비사업(redevelopment-ingest)"],
+  [["POI_SCHOOLS_API_PATH", "POI_STATIONS_API_PATH"], "학교·역(poi-ingest)"],
+  ["NAVER_MAP_CLIENT_SECRET", "단지 좌표(geocode-complexes)"],
+  ["RESEND_API_KEY", "경보 메일(alert-email)"],
+];
+
 const businessDisclosureKeys = [
   "NEXT_PUBLIC_COMPANY_REPRESENTATIVE",
   "NEXT_PUBLIC_COMPANY_REGISTRATION_NUMBER",
@@ -88,6 +107,17 @@ if (isProduction && missingOptional.length > 0) {
   console.warn(
     `[env-check] recommended for production: ${missingOptional.join(", ")}`,
   );
+}
+
+if (isProduction) {
+  const off = pipelineKeys
+    .filter(([k]) => (Array.isArray(k) ? k.some(isMissing) : isMissing(k)))
+    .map(([k, what]) => `${Array.isArray(k) ? k.join("+") : k} (${what})`);
+  if (off.length > 0) {
+    console.warn(`[env-check] daily pipelines OFF for lack of keys — ${off.length}: ${off.join(" · ")}`);
+  } else {
+    console.info("[env-check] daily pipeline keys: all present");
+  }
 }
 
 const missingBusiness = businessDisclosureKeys.filter(isMissing);

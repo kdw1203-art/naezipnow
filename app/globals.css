@@ -4990,6 +4990,28 @@ body.nz-consent-open .back-to-top {
   color: var(--text-2);
 }
 
+/* [993] 판단 카드 — 구간 배지·대표 수치 면. 색은 도구 색이 아니라 **판정 색**(tone-line 과 동일). */
+.verdict-band[data-band="strong"] {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.verdict-band[data-band="mixed"] {
+  background: var(--tool-soft, var(--primary-soft));
+  color: var(--tool-accent, var(--primary));
+}
+.verdict-band[data-band="weak"] {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.verdict-band[data-band="thin"] {
+  background: var(--bg);
+  color: var(--text-2);
+}
+.verdict-metric {
+  background: var(--tool-soft, var(--primary-soft));
+  border: 1px solid color-mix(in srgb, var(--tool-accent, var(--primary)) 28%, transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .run-sig i {
     animation: none !important;

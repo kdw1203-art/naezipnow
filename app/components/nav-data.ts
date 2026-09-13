@@ -40,7 +40,12 @@ export const NAV: NavItem[] = [
     children: [
       /* [958] 이름은 허브 카드(tool-catalog)와 글자까지 같게 */
       { label: "분석 허브", href: "/analysis" },
+      /* [993] 핵심 4종(lib/ai/ai-tools CORE_AI_TOOL_IDS)을 GNB 에서 바로 — 12종 중 1종만 있어
+         데스크톱에서 도구를 발견할 길이 허브 카드 4장뿐이었다. 이름은 tool-identity 와 같게. */
       { label: "이 단지 종합 진단", href: "/analysis/ai/ai-diagnosis" },
+      { label: "이 단지 시세 예측", href: "/analysis/ai/ai-prediction" },
+      { label: "이 단지 매수 타이밍", href: "/analysis/ai/ai-timing" },
+      { label: "이 단지 임장 동선", href: "/analysis/ai/ai-inspection" },
     ],
   },
   {

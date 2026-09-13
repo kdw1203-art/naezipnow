@@ -38,6 +38,8 @@ import { listComplexesInDistrict } from "@/lib/complex/complex-store";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { NoteMiniMap } from "./NoteMiniMap";
+import { NoteVerdictCard } from "./NoteVerdictCard";
+import { resolveComplexPrice } from "@/lib/market/complex-price";
 import { noteCoordsFromMetadata } from "@/lib/notes/note-coords";
 import { NoteComments, type NoteCommentView } from "./NoteComments";
 import { listNoteCommentsForViewer, type NoteComment } from "@/lib/inspection/note-comments";
@@ -87,6 +89,8 @@ type NoteView = {
   totalScore: number | null;
   scoreBars: ScoreBar[];
   scoredAxisCount: number;
+  /** [993] 판단 카드용 — 입력된 축 중 가장 낮은 것(없으면 null) */
+  weakestAxis: { label: string; score: number } | null;
   checklistDone: number;
   checklistTotal: number;
   sourceLabel: string; // 출처 각주 (20a ⑦)
@@ -310,6 +314,7 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
       : `${n.region} ${displayTitle} 방문 기록 — 축 점수가 없어 종합 점수는 표시하지 않아요. 체크·메모를 보강하면 판단 근거가 쌓입니다.`,
     totalScore: total,
     scoredAxisCount,
+    weakestAxis: weakest ? { label: weakest[0], score: weakest[1] } : null,
     // 값이 기록되지 않은 축(0점)은 막대에서 생략 — 없는 기록을 있는 것처럼 그리지 않는다
     scoreBars: scoreEntries
       .filter(([, v]) => v > 0)
@@ -695,6 +700,25 @@ export default async function NoteDetailPage({
   }
   const mapCompareHref = `/map?${mapCompareParams.toString()}`;
 
+  /* [993] 판단 카드의 "대표 실거래가 + 기준월" — 단지가 실거래와 매칭될 때만. 실패는 칸을 비운다. */
+  const verdictPrice = complexIdFromHref
+    ? await resolveComplexPrice(complexIdFromHref)
+        .then((r) => (r.ok ? { priceKrw: r.price.priceKrw, bandLabel: r.price.bandLabel, latestYm: r.price.latestYm } : null))
+        .catch((): null => null)
+    : null;
+  /* [993] LLM 결론(inspectionReport.verdict·recommendedAction)은 저장만 되고 상세가 안 그렸다 */
+  const storedReport = (realNote.metadata?.inspectionReport ?? null) as
+    | { verdict?: unknown; recommendedAction?: unknown }
+    | null;
+  const reportVerdict =
+    typeof storedReport?.verdict === "string" && storedReport.verdict.trim().length > 0
+      ? storedReport.verdict.trim()
+      : null;
+  const reportAction =
+    typeof storedReport?.recommendedAction === "string" && storedReport.recommendedAction.trim().length > 0
+      ? storedReport.recommendedAction.trim()
+      : null;
+
   /* [945 · 실사용50 #18] 저장 직후 "다음 행동" — 같은 구에서 거래가 활발한
      비교 후보 단지 3곳. 실거래 이력 있는 단지만 나오는 매트뷰 기반이라
      빈 추천을 지어내지 않는다. 실패는 조용히 접는다(저장 화면이 우선). */
@@ -865,15 +889,7 @@ export default async function NoteDetailPage({
           isOwner={isOwner}
           initialIsPublic={realNote.isPublic}
         />
-        {/* 카드 덱 — 노트 원문과 저장된 AI 분석을 카드 레이아웃으로 다시 그린 화면.
-            공개·비공개 모두 열리며, 열람 권한은 이 페이지와 같은 관문을 쓴다. */}
-        {/* [970 · B-15] "카드로 보기"는 /card(나만의 카드)와 헷갈렸다 — 화면 이름대로 "카드 덱" */}
-        <Link
-          href={`/notes/${id}/deck`}
-          className="btn-soft px-3.5 py-2 t-body no-underline"
-        >
-          카드 덱
-        </Link>
+        {/* [993] "카드 덱"(/notes/[id]/deck) 버튼 제거 — 노트 출력 3종 중 card 만 남기고 보관(992) */}
         {isOwner && !hasLlmAi && (
           <Link
             href={`/analysis?noteId=${encodeURIComponent(id)}`}
@@ -899,6 +915,36 @@ export default async function NoteDetailPage({
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
         {/* ===== 좌측: 노트 본문 (20a 표준 구조) ===== */}
         <div className="flex min-w-0 flex-col gap-4">
+          {/* [993] 판단 카드 — 이 노트가 말하려는 것 한 장. 모바일에서도 맨 위. */}
+          <NoteVerdictCard
+            verdict={reportVerdict ?? v.aiSummary}
+            sourceBadge={reportVerdict ? (hasLlmAi ? "AI 생성" : v.aiBadge) : "규칙 기반 요약"}
+            recommendedAction={reportAction}
+            totalScore={v.totalScore}
+            scoredAxisCount={v.scoredAxisCount}
+            weakestAxis={v.weakestAxis}
+            visitDate={realNote.visitDate}
+            checklistDone={v.checklistDone}
+            checklistTotal={v.checklistTotal}
+            price={verdictPrice}
+            complexHref={complexHref}
+            next={
+              isOwner
+                ? {
+                    label: "시간대를 바꿔 재방문 기록하기",
+                    href: `/notes/new?${new URLSearchParams({
+                      ...(realNote.aptName?.trim() ? { apt: realNote.aptName.trim() } : {}),
+                      ...(realNote.region.trim() ? { region: realNote.region.trim() } : {}),
+                    }).toString()}`,
+                  }
+                : realNote.aptName?.trim()
+                  ? {
+                      label: `${realNote.aptName.trim()} 실데이터로 AI 진단`,
+                      href: `/analysis/ai/ai-diagnosis?apt=${encodeURIComponent(realNote.aptName.trim())}&region=${encodeURIComponent(realNote.region)}`,
+                    }
+                  : { label: "지도에서 이 지역 보기", href: mapCompareHref }
+            }
+          />
           {/* 노트 카드 — 20a 표준 11항목 */}
           <div className="rise-in card flex flex-col gap-3.5 rounded-[18px] p-6">
             {/* ① 지역·단지 칩 */}
@@ -1244,65 +1290,8 @@ export default async function NoteDetailPage({
             </div>
           </div>
 
-          {/* 좋았던 점 · 주의할 점 상세 (10f) */}
-          <div className="rise-in-2 card flex flex-col gap-2.5 rounded-[18px] p-6">
-            <div className="t-section text-ink">
-              좋았던 점 · 주의할 점{" "}
-              <span className="t-sub font-medium text-text-3">
-                {v.evidenceNote}
-              </span>
-            </div>
-            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
-              <div className="flex flex-col gap-1.5 rounded-xl bg-success-soft px-4 py-3">
-                <div className="text-xs font-extrabold text-success">좋았던 점</div>
-                <div className="text-xs leading-[1.6] text-text-1">
-                  {v.goodPoints.map((s, i) => (
-                    <span key={s}>
-                      {i > 0 && <br />}· {s}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="flex flex-col gap-1.5 rounded-xl bg-danger-soft px-4 py-3">
-                <div className="text-xs font-extrabold text-danger">주의할 점</div>
-                <div className="text-xs leading-[1.6] text-text-1">
-                  {v.cautionPoints.map((s, i) => (
-                    <span key={s}>
-                      {i > 0 && <br />}· {s}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-            {/* 다음 단계 제안 — 예전엔 같은 카드의 진짜 링크들과 똑같이 primary·굵게·꺾쇠(›)로
-                꾸며 놓고 실제로는 href 도 onClick 도 없는 <span> 이었다. 눌러도 아무 일이
-                일어나지 않는 가짜 액션이라, 실제로 데려갈 곳(재방문 기록 작성, 단지·지역
-                프리필)이 있는 링크로 바꾼다. 프리필할 단지명이 없으면 꺾쇠와 primary 색을
-                떼고 그냥 조언 문장으로 읽히게 둔다. */}
-            <div className="flex items-center justify-between gap-3 rounded-xl bg-bg px-3.5 py-3">
-              <span className="shrink-0 text-xs text-text-2">다음 단계 제안</span>
-              {realNote.aptName?.trim() || realNote.region.trim() ? (
-                <Link
-                  href={`/notes/new?${new URLSearchParams({
-                    ...(realNote.aptName?.trim()
-                      ? { apt: realNote.aptName.trim() }
-                      : {}),
-                    ...(realNote.region.trim()
-                      ? { region: realNote.region.trim() }
-                      : {}),
-                  }).toString()}`}
-                  className="text-right text-xs font-extrabold text-primary"
-                >
-                  시간대를 바꿔 재방문 기록하기 ›
-                </Link>
-              ) : (
-                <span className="text-right text-xs text-text-2">
-                  관심 단지라면 시간대를 바꿔 다시 방문해 보세요
-                </span>
-              )}
-            </div>
-          </div>
-
+          {/* [993] "좋았던 점 · 주의할 점 상세" 카드 삭제 — 위 ⑤⑥ 과 같은 내용을 두 번 그렸다.
+              "다음 단계 제안"(재방문 기록) 링크는 맨 위 판단 카드의 다음 행동으로 옮겼다. */}
           {/* [986 · 19] 노트에서 도구로 — 저장 직후 배너([AI-40])의 딥링크 하나가
               12종 중 유일한 길이었고, 그 배너는 저장 직후에만 뜬다. 며칠 뒤 노트를
               다시 열면 다음에 할 일이 사라졌다. 소유자에게 상시로 둔다. */}
@@ -1317,35 +1306,7 @@ export default async function NoteDetailPage({
 
         {/* ===== 우측: AI 분석 ===== */}
         <aside className="flex flex-col gap-4">
-          {/* AI 판단 근거 정리 (6c) */}
-          <div className="rise-in-1">
-            <AIPanel title="판단 근거 정리">
-              <p className="t-body">{v.aiSummary}</p>
-              <div className="mt-3 flex flex-col gap-2">
-                <div className="flex items-center justify-between rounded-[10px] bg-[rgba(255,255,255,.07)] px-3 py-2.5">
-                  <span className="text-xs">기록 종합 점수</span>
-                  <span className="text-[13px] font-extrabold text-white">
-                    {v.totalScore != null ? `${v.totalScore} / 100` : "미입력"}
-                  </span>
-                </div>
-                {/* 실기록 기반 수치만 노출 (허위 수치 금지) */}
-                <div className="flex items-center justify-between rounded-[10px] bg-[rgba(255,255,255,.07)] px-3 py-2.5">
-                  <span className="text-xs">체크 항목 완료</span>
-                  <span className="text-[13px] font-extrabold text-white">
-                    {v.checklistDone}/{v.checklistTotal}
-                  </span>
-                </div>
-              </div>
-              <Link
-                href="/analysis/compare"
-                className="btn-primary mt-3 block rounded-xl p-3 text-center text-[13px] text-white"
-                style={{ boxShadow: "0 8px 20px rgba(29,79,216,.4)" }}
-              >
-                대안 단지와 나란히 비교
-              </Link>
-            </AIPanel>
-          </div>
-
+          {/* [993] "판단 근거 정리" 패널 삭제 — 결론·점수·체크는 맨 위 판단 카드로 갔다(모바일에서 맨 끝에 오던 문제). */}
           {/* 기록 축 점수 — 입력된 축만 평균. 미입력이면 링을 그리지 않는다 */}
           <div className="rise-in-2 card flex flex-col items-center gap-3 rounded-[18px] p-6">
             {v.totalScore != null ? (
@@ -1503,14 +1464,7 @@ export default async function NoteDetailPage({
             ...(complexHref
               ? [{ label: "단지 허브 보기", href: complexHref }]
               : []),
-            ...(realNote.aptName?.trim()
-              ? [
-                  {
-                    label: "이 단지 Q&A",
-                    href: `/qna?q=${encodeURIComponent(realNote.aptName.trim())}`,
-                  },
-                ]
-              : []),
+            /* [993] "이 단지 Q&A"(/qna) 제거 — Q&A 는 보관(비노출, 992) */
           ]}
         />
       </div>

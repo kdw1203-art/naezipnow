@@ -2619,8 +2619,22 @@ export function NoteForm({
           </div>
         </div>
 
+        {/* [993] 2단계의 나머지 — 체크리스트(34)·태그(16)·고려사항(5)은 "같은 질문의 다른 형식"
+            이라 기본 화면에서 접는다. 필수는 위치 하나이고, 현장 체크 9칸 + 만족도만으로도
+            5축 점수·판단 카드가 만들어진다(lib/notes/note-scores). 열면 예전 그대로다. */}
+        <details
+          className="rise-in-3 card p-4"
+          open={
+            checklistGroups.some((g) => g.items.some((it) => groupChecked[it.id])) ||
+            tags.length > 0
+          }
+        >
+          <summary className="cursor-pointer t-body font-extrabold text-ink">
+            더 자세히 적기 <span className="t-sub font-medium text-text-3">(선택 · 체크리스트 · 태그 · 고려사항)</span>
+          </summary>
+          <div className="mt-3 flex flex-col gap-3">
         {/* 카테고리별 현장 체크리스트 (입지·단지·내부·학군·생활·호재) */}
-        <div className="rise-in-3 card flex flex-col gap-2 p-4">
+        <div className="flex flex-col gap-2">
           <div className="t-body font-extrabold text-ink">
             체크리스트{" "}
             <span className="t-sub font-medium text-text-3">
@@ -2729,7 +2743,7 @@ export function NoteForm({
         </div>
 
         {/* 눈에 띈 점 태그 */}
-        <div className="rise-in-4 card flex flex-col gap-2.5 p-4">
+        <div className="flex flex-col gap-2.5 border-t border-line pt-3">
           <div className="t-body font-extrabold text-ink">
             눈에 띈 점{" "}
             <span className="t-sub font-medium text-text-3">
@@ -2817,7 +2831,7 @@ export function NoteForm({
         </div>
 
         {/* 고려사항 — 추가 확인 항목 (중요/보통) */}
-        <div className="rise-in-5 card flex flex-col gap-2.5 p-4">
+        <div className="flex flex-col gap-2.5 border-t border-line pt-3">
           <div className="t-body font-extrabold text-ink">
             고려사항{" "}
             <span className="t-sub font-medium text-text-3">
@@ -2919,6 +2933,8 @@ export function NoteForm({
             </button>
           )}
         </div>
+          </div>
+        </details>
 
         </div>
 

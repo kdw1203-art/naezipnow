@@ -43,7 +43,8 @@ export type HubCoverage = {
 };
 
 /** 월 한도 — lib/subscriptions/access.ts FEATURE_RULES.ai_analysis 와 같은 숫자(서버에서 넘겨 받는다) */
-export type HubQuota = { free: number; plus: number; pro: number | null };
+/* [993] 무료는 누적(lifetime) 한도, 유료는 월 한도 — 라벨이 다르다. pro(프로 플랜)는 판매 중일 때만(sell-config). */
+export type HubQuota = { free: number; freeLifetime: boolean; plus: number; pro: number | null; proOnSale: boolean };
 
 /** 계열 3개로 바로 가는 내비 — 이 페이지의 뼈대가 질문 3개라는 걸 상단에서 알린다. */
 function TierNav() {
@@ -254,17 +255,19 @@ export function HubHero({
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 t-caption text-on-dark-muted">
           <span className="inline-flex items-center gap-1">
-            <Icon name="lock" size={12} className="text-on-dark" /> 단지 분석 월 한도
+            <Icon name="lock" size={12} className="text-on-dark" /> 단지 분석 한도
           </span>
           <span>
-            무료 <b className="text-on-dark">{quota.free}회</b>
+            무료 <b className="text-on-dark">{quota.freeLifetime ? `누적 ${quota.free}회` : `월 ${quota.free}회`}</b>
           </span>
           <span>
-            플러스 <b className="text-on-dark">{quota.plus}회</b>
+            플러스 <b className="text-on-dark">월 {quota.plus}회</b>
           </span>
-          <span>
-            프로 <b className="text-on-dark">{quota.pro === null ? "무제한" : `${quota.pro}회`}</b>
-          </span>
+          {quota.proOnSale && (
+            <span>
+              프로 <b className="text-on-dark">{quota.pro === null ? "무제한" : `월 ${quota.pro}회`}</b>
+            </span>
+          )}
           <Link href="/subscription" className="font-bold text-brand-red-dark no-underline">
             플랜 보기 ›
           </Link>

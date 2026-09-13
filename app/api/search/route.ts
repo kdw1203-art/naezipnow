@@ -89,8 +89,10 @@ export async function GET(req: Request) {
      리포트(reports 테이블) 상세 화면이 생기면 그 경로로 url 을 만들어
      이 블록을 되살릴 것 — listReports 는 그대로 있다. */
 
+  /* [993] 모임·전문가는 보관(비노출, 992) — 통합 검색(all)에 섞지 않는다. type 을 명시해
+     부르는 옛 호출만 그대로 답한다(라우트·데이터는 살아 있다). */
   // 모임
-  if (type === "all" || type === "meeting") {
+  if (type === "meeting") {
     await fromSource("meeting", async () => {
       const meetings = await listMeetings();
       for (const m of meetings) {
@@ -114,7 +116,7 @@ export async function GET(req: Request) {
   }
 
   // 전문가
-  if (type === "all" || type === "expert") {
+  if (type === "expert") {
     await fromSource("expert", async () => {
       const experts = await listExperts();
       for (const e of experts) {

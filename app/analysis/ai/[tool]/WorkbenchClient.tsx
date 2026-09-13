@@ -15,6 +15,8 @@ import { buildTuningInput, type TuningField } from "@/lib/ai/tool-tuning";
 import dynamic from "next/dynamic";
 import { outcomeBand } from "@/lib/ai/outcome-band";
 import { freeQuotaLabel, weeklyPassCheckoutHref } from "@/lib/payments/paywall-links";
+import type { Verdict } from "@/lib/ai/verdict";
+import { VerdictCard } from "./VerdictCard";
 
 /* [AI-31~38·42~43·46] 통합 워크벤치 클라이언트 — 3스텝 실행 흐름.
    서버 판정(레이더·플래그·신호·각주·반대 시나리오)은 /api/ai/context 가 주고,
@@ -69,6 +71,8 @@ type RunResult = {
   reasonCode: string | null;
   markdown: string;
   structuredSummary?: { headline: string; bullets: string[] } | null;
+  /** [993] 판단 카드 — 실행 입력(보정값)까지 반영한 서버 조립 결과 */
+  verdict?: Verdict | null;
   runId?: string | null;
   usage?: { used: number; limit: number | null; lifetime?: true } | null;
   error?: string;
@@ -87,12 +91,6 @@ const SIGNAL_LABEL: Record<string, string> = {
   red: "주의",
   na: "데이터 없음",
 };
-
-function won(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n) || n <= 0) return "—";
-  if (n >= 1e8) return `${(Math.round((n / 1e8) * 10) / 10).toLocaleString("ko-KR")}억`;
-  return `${Math.round(n / 1e4).toLocaleString("ko-KR")}만`;
-}
 
 /** 결과 마크다운 경량 렌더 (##·-·**·> 만) — 외부 md 라이브러리 없이 */
 function MdLite({ text }: { text: string }) {
@@ -151,10 +149,14 @@ export function WorkbenchClient({
   tips,
   persona,
   fields,
+  llmAvailable = false,
 }: {
   tool: AiAnalysisToolId;
   useCase: string;
   tips: string[];
+  /* [993] 서버에 외부 모델 키가 있을 때만 "AI 서술" 토글을 보인다 — 없는데 켜 두면
+     결과마다 "키가 없어 규칙 계산입니다" 경고만 늘어난다(90일 실행 6건 전부 규칙). */
+  llmAvailable?: boolean;
   /* [981] 이 도구의 보정 입력 — 서버가 골라 내려준다(lib/ai/tool-tuning-fields.ts).
      12종 목록을 여기서 import 하면 통째로 번들에 실려 예산을 넘긴다(483KB 실측). */
   fields: readonly TuningField[];
@@ -169,10 +171,11 @@ export function WorkbenchClient({
   const [ctxState, setCtxState] = useState<
     | { phase: "idle" }
     | { phase: "loading" }
-    | { phase: "ready"; ctx: Ctx; footnotes: Footnote[]; insight: Insight; similar: { id: string; name: string; txCount: number }[] }
+    | { phase: "ready"; ctx: Ctx; footnotes: Footnote[]; insight: Insight; similar: { id: string; name: string; txCount: number }[]; verdict: Verdict | null }
     | { phase: "error" }
   >({ phase: "idle" });
-  const [budgetKrw, setBudgetKrw] = useState("");
+  /* [993] 모바일: 결과가 나오면 입력 카드를 한 줄로 접는다 — 결과까지 2~3화면 스크롤이 문제였다 */
+  const [inputsOpen, setInputsOpen] = useState(true);
   /* [981] 도구별 보정 입력 — 엔진이 실제로 읽는 필드만 올린다(lib/ai/tool-tuning.ts).
      예전에는 12종 전부에게 "가용 예산" 하나만 물었는데, 엔진은 도구마다 다른 입력을
      이미 읽고 있었다. 특히 갭 도구는 매매가·전세가를 안 물어서 갭이 늘 0 이었다. */
@@ -218,16 +221,16 @@ export function WorkbenchClient({
     setCtxState({ phase: "loading" });
     try {
       const res = await fetch(
-        `/api/ai/context?complexId=${encodeURIComponent(p.id)}`,
+        `/api/ai/context?complexId=${encodeURIComponent(p.id)}&tool=${encodeURIComponent(tool)}`,
         { cache: "no-store" },
       );
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error("context");
-      setCtxState({ phase: "ready", ctx: json.context, footnotes: json.footnotes, insight: json.insight, similar: Array.isArray(json.similar) ? json.similar : [] });
+      setCtxState({ phase: "ready", ctx: json.context, footnotes: json.footnotes, insight: json.insight, similar: Array.isArray(json.similar) ? json.similar : [], verdict: json.verdict ?? null });
     } catch {
       setCtxState({ phase: "error" });
     }
-  }, []);
+  }, [tool]);
 
   const applyPreset = useCallback(
     (p: { objective: { complexId?: string; complexName?: string; region?: string } }) => {
@@ -269,12 +272,12 @@ export function WorkbenchClient({
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/ai/context?complexId=${encodeURIComponent(id)}`, { cache: "no-store" });
+        const res = await fetch(`/api/ai/context?complexId=${encodeURIComponent(id)}&tool=${encodeURIComponent(tool)}`, { cache: "no-store" });
         const json = await res.json();
         const cx = json?.context?.complex as { id: string; name: string; region: string } | null;
         if (cx && !cancelled) {
           setPicked({ id: cx.id, name: cx.name, region: cx.region, regionId: null, regionLabel: cx.region } as PickedComplex);
-          setCtxState({ phase: "ready", ctx: json.context, footnotes: json.footnotes, insight: json.insight, similar: Array.isArray(json.similar) ? json.similar : [] });
+          setCtxState({ phase: "ready", ctx: json.context, footnotes: json.footnotes, insight: json.insight, similar: Array.isArray(json.similar) ? json.similar : [], verdict: json.verdict ?? null });
         }
       } catch {
         /* 딥링크 실패는 조용히 — 사용자는 평소처럼 검색으로 고른다 */
@@ -298,14 +301,14 @@ export function WorkbenchClient({
       const resolved: PickedComplex[] = [];
       for (const id of list) {
         try {
-          const res = await fetch(`/api/ai/context?complexId=${encodeURIComponent(id)}`, { cache: "no-store" });
+          const res = await fetch(`/api/ai/context?complexId=${encodeURIComponent(id)}&tool=${encodeURIComponent(tool)}`, { cache: "no-store" });
           const json = await res.json();
           const cx = json?.context?.complex as { id: string; name: string; region: string } | null;
           if (cx) {
             resolved.push({ id: cx.id, name: cx.name, region: cx.region, regionId: null, regionLabel: cx.region } as PickedComplex);
             if (resolved.length === 1 && !cancelled) {
               setPicked(resolved[0]);
-              setCtxState({ phase: "ready", ctx: json.context, footnotes: json.footnotes, insight: json.insight, similar: Array.isArray(json.similar) ? json.similar : [] });
+              setCtxState({ phase: "ready", ctx: json.context, footnotes: json.footnotes, insight: json.insight, similar: Array.isArray(json.similar) ? json.similar : [], verdict: json.verdict ?? null });
             }
           }
         } catch {
@@ -324,16 +327,16 @@ export function WorkbenchClient({
   useEffect(() => {
     if (isEconomy) {
       setCtxState({ phase: "loading" });
-      fetch("/api/ai/context?region=강남구", { cache: "no-store" })
+      fetch(`/api/ai/context?region=강남구&tool=${encodeURIComponent(tool)}`, { cache: "no-store" })
         .then((r) => r.json())
         .then((json) =>
           json?.ok
-            ? setCtxState({ phase: "ready", ctx: json.context, footnotes: json.footnotes, insight: json.insight, similar: [] })
+            ? setCtxState({ phase: "ready", ctx: json.context, footnotes: json.footnotes, insight: json.insight, similar: [], verdict: json.verdict ?? null })
             : setCtxState({ phase: "error" }),
         )
         .catch(() => setCtxState({ phase: "error" }));
     }
-  }, [isEconomy]);
+  }, [isEconomy, tool]);
 
   const onPick = useCallback(
     (c: PickedComplex) => {
@@ -425,7 +428,8 @@ export function WorkbenchClient({
         complexId: picked?.id ?? null,
         complexName: picked?.name ?? null,
         region: picked?.region ?? ctx?.region?.name ?? null,
-        budgetKrw: budgetKrw ? Number(budgetKrw.replace(/[^\d]/g, "")) * 10000 : null,
+        /* [993] 판단 카드(임장 동선)가 "함께 볼 단지" 수를 적는 데 쓴다 */
+        similarCount: similar.length,
         /* [981] 도구별 보정 입력 — 비운 칸은 키 자체가 빠진다(빈 문자열을 보내면
            엔진의 Number(… ?? 0) 이 0 으로 읽어 "0 을 입력했다"가 된다). */
         ...buildTuningInput(fields, tuning),
@@ -462,6 +466,13 @@ export function WorkbenchClient({
           setResult({ ...json, ok: false });
         } else {
           setResult(json);
+          /* [993] 결과 먼저 — 좁은 화면에서는 입력을 접고 결과로 내려간다 */
+          if (typeof window !== "undefined" && window.innerWidth < 1024) {
+            setInputsOpen(false);
+            window.setTimeout(() => {
+              document.getElementById("ai-result")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }, 60);
+          }
         }
       });
     } catch {
@@ -476,7 +487,7 @@ export function WorkbenchClient({
     } finally {
       setRunning(false);
     }
-  }, [running, needsComplex, picked, isPortfolio, portfolio, ctx, budgetKrw, isCompare, compareTray, tool, useLlm, tuning, fields]);
+  }, [running, needsComplex, picked, isPortfolio, portfolio, ctx, isCompare, compareTray, tool, useLlm, tuning, fields, similar]);
 
   const sendFeedback = useCallback(
     async (rating: "up" | "down") => {
@@ -545,11 +556,32 @@ export function WorkbenchClient({
     ? `/notes/new?apt=${encodeURIComponent(picked.name)}&region=${encodeURIComponent(picked.region)}`
     : "/notes/new";
 
+  const ctxVerdict = ready ? ctxState.verdict : null;
+  /* [993] 화면에 그릴 판단 카드 — 실행 결과(보정 입력 반영)가 있으면 그것, 아니면 데이터 로드 시점 것 */
+  const shownVerdict = result?.ok ? (result.verdict ?? ctxVerdict) : ctxVerdict;
+
   return (
-    <div className="flex flex-col gap-3">
+    <>
       {/* [975] 지도에서 고르기 — 고른 단지는 검색 경로와 같은 onPick 을 타므로
           이후 흐름이 완전히 같다(대상 조립은 resolvePickedComplexById 한 곳). */}
       {mapNode}
+      {/* [993] 데스크톱은 입력 좌(380px)·결과 우 — 계산기·시나리오 화면과 같은 배치.
+          모바일은 한 열이되 결과가 나오면 입력을 한 줄로 접는다(inputsOpen). */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start lg:gap-4">
+      <div className="flex flex-col gap-3">
+      {!inputsOpen && (
+        <button
+          type="button"
+          onClick={() => setInputsOpen(true)}
+          className="card flex min-h-[44px] items-center justify-between rounded-2xl px-4 py-2.5 text-left lg:hidden"
+        >
+          <span className="truncate t-body font-extrabold text-ink">
+            {picked ? `${picked.name} · ${picked.region}` : isEconomy ? "거시 지표 기준" : "입력"}
+          </span>
+          <span className="shrink-0 pl-2 t-sub font-bold text-primary">입력 수정 ›</span>
+        </button>
+      )}
+      <div className={inputsOpen ? "flex flex-col gap-3" : "hidden lg:flex lg:flex-col lg:gap-3"}>
       {/* ── ① 대상 선택 ── */}
       {needsComplex && (
         <div className="card rounded-2xl p-4">
@@ -621,20 +653,28 @@ export function WorkbenchClient({
             전세 안전 셀프체크 열기 ›
           </Link>
           <div className="mt-1 t-sub text-text-3">
-            단지를 선택하면 아래에서 해당 지역의 전세가율·월세 비중 같은 계약 관련 실측도 함께 봅니다.
+            단지를 고르면 판단 카드가 그 지역의 전세가율·월세 비중 같은 계약 관련 실측으로 위험도를 계산합니다.
           </div>
+          {/* [993] 두 번째 단지 피커 제거 — 같은 화면에 피커가 둘이었다 */}
           <div className="mt-2">
-            <ComplexPicker onSelect={onPick} />
+            <ComplexPicker onSelect={onPick} label="" onMapClick={openMap} />
           </div>
         </div>
       )}
 
-      {/* ── ② 자동 로드 데이터 ── */}
-      {ctxState.phase !== "idle" && (
+      {/* ── ② 참고·보정 입력 ── [993] 담을 것이 없으면(보정 칸 0 · 뉴스·노트·유사 단지 없음 ·
+          AI 토글 없음) 카드 자체를 그리지 않는다 — 빈 카드가 결과를 아래로 밀었다. */}
+      {ctxState.phase !== "idle" &&
+        (ctxState.phase !== "ready" ||
+          fields.length > 0 ||
+          llmAvailable ||
+          similar.length > 0 ||
+          Boolean(ctx?.news?.items?.length) ||
+          Boolean(ctx?.notes)) && (
         <div className="card rounded-2xl p-4">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <span className="t-body font-extrabold text-ink">② 자동 로드 데이터</span>
-            <span className="t-sub text-text-3">수치마다 출처·시점을 아래 각주로 표기</span>
+            <span className="t-body font-extrabold text-ink">② 참고 · 보정 입력</span>
+            <span className="t-sub text-text-3">실데이터 수치는 판단 카드에 기준일과 함께</span>
           </div>
 
           {ctxState.phase === "loading" && (
@@ -648,15 +688,9 @@ export function WorkbenchClient({
 
           {ready && ctx && (
             <>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <Stat label="대표 실거래가" value={ctx.complex?.price ? won(ctx.complex.price.priceKrw) : "—"} sub={ctx.complex?.price ? `${ctx.complex.price.bandLabel} · ${ctx.complex.price.latestYm}` : "표본 없음"} />
-                <Stat label="지역 월간 변동" value={ctx.region?.snapshot?.saleChangeMonthly != null ? `${ctx.region.snapshot.saleChangeMonthly}%` : "—"} sub={ctx.region?.snapshot ? `거래 ${ctx.region.snapshot.tradeCount ?? "—"}건/월` : "스냅샷 없음"} />
-                <Stat label="월세 비중(신고)" value={ctx.rent?.wolseSharePct != null ? `${ctx.rent.wolseSharePct}%` : "—"} sub={ctx.rent ? `표본 ${ctx.rent.sample ?? "—"}건` : "표본 없음"} />
-                <Stat label="입주 예정" value={ctx.supply ? `${ctx.supply.upcomingHouseholds.toLocaleString("ko-KR")}세대` : "0"} sub={ctx.supply ? `${ctx.supply.upcomingComplexes}개 단지` : "예정 없음"} />
-              </div>
-
+              {/* [993] 숫자 4칸은 판단 카드(오른쪽/아래)가 기준일과 함께 보여 준다 — 여기서 뺐다 */}
               {(ctx.news?.items?.length || ctx.notes) && (
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 sm:grid-cols-2">
                   {ctx.news?.items?.length ? (
                     <div className="rounded-[10px] bg-bg px-3 py-2.5">
                       <div className="t-sub font-bold text-text-3">최근 사건(자동수집 뉴스)</div>
@@ -725,23 +759,14 @@ export function WorkbenchClient({
                 />
               )}
 
-              {/* 모든 도구가 같이 쓰는 두 가지 */}
-              <div className="mt-3 flex flex-wrap items-end gap-3">
-                <label className="flex flex-col gap-1">
-                  <span className="t-sub font-bold text-text-3">가용 예산(만원 · 선택)</span>
-                  <input
-                    value={budgetKrw}
-                    onChange={(e) => setBudgetKrw(e.target.value)}
-                    inputMode="numeric"
-                    placeholder="예: 30000"
-                    className="w-[140px] rounded-[10px] border border-line bg-surface px-3 py-2 t-body font-semibold text-ink outline-none focus:border-primary"
-                  />
-                </label>
-                <label className="flex items-center gap-1.5 pb-2 t-sub font-bold text-text-2">
-                  <input type="checkbox" checked={useLlm} onChange={(e) => setUseLlm(e.target.checked)} />
+              {/* [993] "가용 예산" 칸 제거 — 엔진 12종 어느 것도 budgetKrw 를 읽지 않았다(전수 grep).
+                  AI 서술 토글은 서버에 외부 모델 키가 있을 때만 보인다. */}
+              {llmAvailable && (
+                <label className="mt-3 flex min-h-[40px] items-center gap-2 t-sub font-bold text-text-2">
+                  <input type="checkbox" className="h-5 w-5" checked={useLlm} onChange={(e) => setUseLlm(e.target.checked)} />
                   AI 서술 추가(외부 모델 · 로그인 필요)
                 </label>
-              </div>
+              )}
             </>
           )}
         </div>
@@ -752,6 +777,7 @@ export function WorkbenchClient({
         <EconomyWatchPanel currentRate={ctx.macro.baseRatePct} />
       )}
 
+      </div>
       {/* ── ③ 실행 ──
           예전엔 버튼 하나에 "분석 중…" 글자만 바뀌었다. 무엇이 얼마나 남았는지
           모르는 대기는 실제보다 길게 느껴진다(이 화면 평균 체류 1.0초 실측 —
@@ -786,6 +812,23 @@ export function WorkbenchClient({
           내 분석 기록 ›
         </Link>
       </div>
+      </div>
+
+      {/* ── 결과 열 ── */}
+      <div id="ai-result" className="flex scroll-mt-20 flex-col gap-3">
+      {/* [993] 실행 전 미리보기 — 데이터가 로드되면 판단 카드가 먼저 선다. 결과값은 실행
+          버튼이 아니라 데이터가 만든다. 실행은 본문 해석·다음 행동을 덧붙인다. */}
+      {!result && !running && ready && ctxVerdict && (
+        <div className="card tool-rail flex flex-col gap-3 rounded-2xl p-4">
+          <VerdictCard verdict={ctxVerdict} />
+          <p className="t-sub text-text-3">③ 분석 실행을 누르면 해석 본문과 다음 행동이 붙어요.</p>
+        </div>
+      )}
+      {!result && !running && !ready && (
+        <div className="card hidden rounded-2xl p-5 t-body text-text-3 lg:block">
+          단지를 고르면 결과값(구간 · 대표 수치 · 핵심 숫자 · 근거)이 여기에 먼저 보여요.
+        </div>
+      )}
 
       {/* 실행 중에는 결과 자리를 미리 잡아 둔다 — 결과가 통째로 튀어나오면
           화면이 점프하고, 그 점프가 "느리다"는 인상의 대부분이다. */}
@@ -896,18 +939,22 @@ export function WorkbenchClient({
             )
           ) : (
             <>
-              {/* [980] 결과에 따른 말투 — 같은 도구라도 결과가 나쁘면 붉게 말한다.
-                  문장은 도구별로 다르다(tool-persona 의 tone). 데이터가 모자란
-                  경우(thin)에는 "괜찮아 보입니다"라고 하지 않는다. */}
-              <p className="tone-line t-body font-bold" data-band={band}>
-                {persona.tone[band]}
-              </p>
+              {/* [993] 판단 카드가 먼저 — 구간·결론·대표 수치·핵심 숫자(기준일)·근거 칩.
+                  말투 한 줄(persona.tone)은 카드 안 보조 문장이 됐다. */}
+              {shownVerdict ? (
+                <VerdictCard verdict={shownVerdict} toneLine={persona.tone[shownVerdict.band]} />
+              ) : (
+                <p className="tone-line t-body font-bold" data-band={band}>
+                  {persona.tone[band]}
+                </p>
+              )}
               {/* [980] 블록 순서를 아키타입이 정한다 — 계기판·점수형은 눈금이 먼저,
                   표·목록형은 표가 먼저, 장부형은 위험 뒤에 곧바로 "틀리는 조건".
                   예전에는 12종이 전부 같은 순서였다(제목→위젯→반대 시나리오→본문). */}
               {resultOrder(persona.composition).map((block: ResultBlock) => {
                 if (block === "headline") {
-                  return result.structuredSummary?.headline ? (
+                  /* [993] 결론은 판단 카드가 말한다 — 카드가 없을 때만 예전 헤드라인 */
+                  return !shownVerdict && result.structuredSummary?.headline ? (
                     <div key="headline" className="t-section text-ink">
                       {result.structuredSummary.headline}
                     </div>
@@ -929,8 +976,8 @@ export function WorkbenchClient({
                   );
                 }
                 if (block === "counters") {
-                  /* [AI-04] 반대 시나리오 */
-                  return insight && insight.counters.length > 0 ? (
+                  /* [AI-04] 반대 시나리오 — [993] 판단 카드가 접힘으로 담는다(중복 방지) */
+                  return !shownVerdict && insight && insight.counters.length > 0 ? (
                     <div key="counters" className="tool-rail rounded-[10px] bg-bg px-3.5 py-3">
                       <div className="t-sub font-extrabold text-text-2">이 판단이 틀리는 조건 [규칙]</div>
                       {insight.counters.map((c, i) => (
@@ -939,7 +986,18 @@ export function WorkbenchClient({
                     </div>
                   ) : null;
                 }
-                return <MdLite key="body" text={result.markdown} />;
+                /* [993] 본문(자유 마크다운)은 접는다 — 결과값은 위 카드가 이미 말했다.
+                   외부 AI 서술이 붙은 경우엔 펼쳐 둔다(그 서술이 이 실행의 값이므로). */
+                return (
+                  <details key="body" className="rounded-[10px] bg-bg px-3.5 py-2.5" open={result.source !== "internal" && result.source !== "stub"}>
+                    <summary className="cursor-pointer t-sub font-extrabold text-text-2">
+                      {result.source === "internal" || result.source === "stub" ? "규칙 해석 본문 보기" : "AI 서술 본문"}
+                    </summary>
+                    <div className="mt-2">
+                      <MdLite text={result.markdown} />
+                    </div>
+                  </details>
+                );
               })}
 
               {result.degraded && result.reasonCode?.includes("KEY_MISSING") && (
@@ -1135,17 +1193,9 @@ export function WorkbenchClient({
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="rounded-[10px] bg-bg px-3 py-2.5">
-      <div className="t-caption font-bold text-text-3">{label}</div>
-      <div className="t-section tabular-nums text-ink">{value}</div>
-      {sub && <div className="t-caption text-text-3">{sub}</div>}
-    </div>
+      </div>
+      </div>
+    </>
   );
 }
 

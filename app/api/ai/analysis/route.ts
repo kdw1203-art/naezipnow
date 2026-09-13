@@ -21,6 +21,8 @@ import { logger } from "@/lib/log";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { FUNNEL_EVENT, recordFunnelEvent } from "@/lib/platform-funnel-events";
 import { buildNumberWhitelist, guardLlmNumbers } from "@/lib/ai/insight-blocks";
+import { buildLiveToolContextCached, contextFootnotes } from "@/lib/ai/live-context";
+import { buildVerdict, verdictToSummary, type Verdict } from "@/lib/ai/verdict";
 import { AI_PROMPT_VERSION } from "@/lib/ai/system-prompt";
 
 import { dbUnavailable } from "@/lib/api/db-unavailable";
@@ -49,9 +51,47 @@ function normalizeInputValue(v: unknown): unknown {
   return v;
 }
 
+/* [993] 판단 카드 — 실데이터 컨텍스트에서 조립한다(실패해도 실행은 막지 않는다).
+   headline·score 는 이제 여기서 온다: 예전엔 본문 첫 90자를 자르고, score 는 입력에서만
+   읽어 **항상 null** 이었다. */
+async function buildVerdictSafe(
+  tool: AiAnalysisToolId,
+  input: Record<string, unknown>,
+  degraded: boolean,
+  reasonCode: string | null,
+): Promise<Verdict | null> {
+  try {
+    const complexId = typeof input.complexId === "string" ? input.complexId : null;
+    const region = typeof input.region === "string" ? input.region : null;
+    if (!complexId && !region) return null;
+    const ctx = await buildLiveToolContextCached(complexId, region);
+    const compare = Array.isArray(input.compare) ? input.compare.length : null;
+    return buildVerdict({
+      tool,
+      ctx,
+      footnotes: contextFootnotes(ctx),
+      input: {
+        maeMan: typeof input.maeMan === "number" ? input.maeMan : null,
+        jeonMan: typeof input.jeonMan === "number" ? input.jeonMan : null,
+        jeonseMan: typeof input.jeonseMan === "number" ? input.jeonseMan : null,
+        marketRatioPct: typeof input.marketRatioPct === "number" ? input.marketRatioPct : null,
+        horizonMonths: typeof input.horizonMonths === "number" ? input.horizonMonths : null,
+        compareCount: compare,
+        similarCount: typeof input.similarCount === "number" ? input.similarCount : null,
+      },
+      degraded,
+      reasonCode,
+    });
+  } catch (e) {
+    logger.warn("[ai/analysis] 판단 카드 조립 실패 — 본문만 반환", e);
+    return null;
+  }
+}
+
 function buildStructuredSummary(
   markdown: string,
   input: Record<string, unknown>,
+  verdict?: Verdict | null,
 ): AiRunStructuredSummary {
   const plain = markdown
     .replace(/```[\s\S]*?```/g, " ")
@@ -73,6 +113,16 @@ function buildStructuredSummary(
   const tags = Object.keys(input)
     .filter((k) => /region|complex|goal|risk|txType/i.test(k))
     .slice(0, 6);
+  if (verdict) {
+    const v = verdictToSummary(verdict);
+    return {
+      headline: v.headline,
+      bullets: v.bullets.length ? v.bullets : bullets.length ? bullets : [v.headline],
+      score: v.score != null ? Math.max(0, Math.min(100, Math.round(v.score))) : null,
+      tags,
+      verdict,
+    };
+  }
   return {
     headline,
     bullets: bullets.length ? bullets : [headline],
@@ -194,7 +244,8 @@ export async function POST(req: Request) {
     }
     const requested = typeof body.modelId === "string" ? body.modelId.trim() : "";
     const modelId = requested || "internal";
-    const structuredSummary = buildStructuredSummary(markdown, input);
+    const verdict = await buildVerdictSafe(tid, input, false, null);
+    const structuredSummary = buildStructuredSummary(markdown, input, verdict);
     let runId: string | null = null;
     let usage: { used: number; limit: number | null } | null = null;
     if (email) {
@@ -230,6 +281,7 @@ export async function POST(req: Request) {
       reasonCode: null,
       model: "internal",
       structuredSummary,
+      verdict,
       evidence_refs,
       markdown,
       runId,
@@ -247,7 +299,8 @@ export async function POST(req: Request) {
       ...input,
       _notice: "모델 설정이 없어 규칙 기반 안내를 반환했습니다.",
     });
-    const structuredSummary = buildStructuredSummary(markdown, input);
+    const verdict = await buildVerdictSafe(tid, input, true, "MODEL_OPTION_NOT_FOUND");
+    const structuredSummary = buildStructuredSummary(markdown, input, verdict);
     let runId: string | null = null;
     let usage: { used: number; limit: number | null } | null = null;
     if (email) {
@@ -283,6 +336,7 @@ export async function POST(req: Request) {
       model: "stub",
       evidence_refs,
       structuredSummary,
+      verdict,
       markdown,
       runId,
       usage,
@@ -357,7 +411,16 @@ export async function POST(req: Request) {
     }
   }
 
-  const structuredSummary = buildStructuredSummary(markdown, input);
+  const llmReasonCode =
+    source === "stub"
+      ? !hasOpenAI && option.vendor === "openai"
+        ? "OPENAI_KEY_MISSING"
+        : !hasAnthropic && option.vendor === "anthropic"
+          ? "ANTHROPIC_KEY_MISSING"
+          : "LLM_PROVIDER_ERROR"
+      : null;
+  const verdict = await buildVerdictSafe(tid, input, source === "stub", llmReasonCode);
+  const structuredSummary = buildStructuredSummary(markdown, input, verdict);
   let runId: string | null = null;
   let usage: { used: number; limit: number | null } | null = null;
   if (email) {
@@ -396,16 +459,10 @@ export async function POST(req: Request) {
     ok: true,
     source,
     degraded: source === "stub",
-    reasonCode:
-      source === "stub"
-        ? !hasOpenAI && option.vendor === "openai"
-          ? "OPENAI_KEY_MISSING"
-          : !hasAnthropic && option.vendor === "anthropic"
-            ? "ANTHROPIC_KEY_MISSING"
-            : "LLM_PROVIDER_ERROR"
-        : null,
+    reasonCode: llmReasonCode,
     model: apiModel,
     structuredSummary,
+    verdict,
     evidence_refs,
     markdown,
     runId,

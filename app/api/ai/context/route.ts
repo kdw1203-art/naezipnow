@@ -11,6 +11,8 @@ import {
 } from "@/lib/ai/insight-blocks";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { decodeComplexId, encodeComplexId } from "@/lib/complex/complex-store";
+import { isAiAnalysisToolId, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
+import { buildVerdict } from "@/lib/ai/verdict";
 
 /* [AI-16] 유사 단지 자동 후보 — 같은 지역에서 최근 3개월 거래가 활발한 단지 4곳.
    "무엇과 비교할지"부터 막히는 진입 마찰을 줄인다. 실패는 빈 배열(치명 아님). */
@@ -63,6 +65,9 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const complexId = url.searchParams.get("complexId");
   const regionName = url.searchParams.get("region");
+  /* [993] 판단 카드는 도구마다 대표 수치가 다르다 — 없으면 종합 진단 기준으로 조립 */
+  const toolParam = url.searchParams.get("tool");
+  const tool: AiAnalysisToolId = toolParam && isAiAnalysisToolId(toolParam) ? toolParam : "ai-diagnosis";
   if (!complexId && !regionName) {
     return NextResponse.json(
       { error: "complexId 또는 region 이 필요합니다." },
@@ -76,11 +81,15 @@ export async function GET(req: NextRequest) {
   ]);
   const footnotes = contextFootnotes(ctx);
   const now = new Date();
+  /* [993] 판단 카드 — 실데이터·규칙 판정만 조립(lib/ai/verdict.ts). 실행 전에도 보인다:
+     결과값(대표 수치·핵심 숫자 3·근거 칩)은 실행 버튼이 아니라 데이터가 만든다. */
+  const verdict = buildVerdict({ tool, ctx, footnotes, input: { similarCount: similar.length }, now });
 
   return NextResponse.json(
     {
       ok: true,
       context: ctx,
+      verdict,
       footnotes: footnotes.map((f) => ({
         ...f,
         ageDays: axisAgeDays(f.asOf, now),

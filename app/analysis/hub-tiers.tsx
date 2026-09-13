@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ToolGlyph } from "./ToolGlyph";
@@ -23,14 +22,15 @@ import { useHubPicked } from "./hub-context";
    ============================================================ */
 
 export function WorkbenchGrid({ core, more }: { core: WorkbenchCardDto[]; more: WorkbenchCardDto[] }) {
-  const [expanded, setExpanded] = useState(false);
   const { picked, query, openMap } = useHubPicked();
   const router = useRouter();
 
   /* [980] 카드 내용은 서버가 조립해 준다(app/analysis/workbench-cards.ts).
      여기서 tool-identity·tool-persona 를 직접 import 하면 두 모듈이 통째로
      브라우저 번들에 실려 /analysis 예산(490KB)을 넘긴다 — 실측 502KB. */
-  const cards = expanded ? [...core, ...more] : core;
+  /* [993] 12 → 4 핵심: 카드는 4장만. 나머지 8종은 접지 않고 **칩 한 줄로 늘 보이게** —
+     접힌 8종은 존재 자체를 몰랐다(90일 실행 6건이 전부 핵심 3종). */
+  const cards = core;
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -95,18 +95,28 @@ export function WorkbenchGrid({ core, more }: { core: WorkbenchCardDto[]; more: 
         })}
       </div>
 
+      {more.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5" aria-label="그 밖의 도구">
+          <span className="t-sub font-bold text-text-3">그 밖의 도구 {more.length}:</span>
+          {more.map((c) => (
+            <Link
+              key={c.id}
+              href={`${c.href}${query}`}
+              className="chip tool-scope inline-flex min-h-[36px] items-center gap-1.5 border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-1 no-underline"
+              style={c.vars}
+              data-tool={c.id}
+              title={c.premise}
+            >
+              <span className="tool-ink inline-flex" aria-hidden="true">
+                <ToolGlyph id={c.glyph} size={16} />
+              </span>
+              {c.title}
+            </Link>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-          className="chip t-sub inline-flex items-center gap-1.5 border border-line bg-surface px-3.5 py-2 font-bold text-text-2 transition-colors hover:text-primary"
-        >
-          {expanded ? "자주 쓰는 4개만 보기" : `나머지 ${more.length}개 더 보기`}
-          <span className={expanded ? "rotate-180" : ""} aria-hidden="true">
-            ▾
-          </span>
-        </button>
         {picked ? (
           <span className="t-sub text-text-3">
             <span className="font-bold text-primary">{picked.name}</span> 기준으로 열려요

@@ -7,6 +7,7 @@ import { AI_TOOL_IDS, isAiAnalysisToolId, type AiAnalysisToolId } from "@/lib/ai
 import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import { tuningFields } from "@/lib/ai/tool-tuning-fields";
+import { isAnthropicConfigured, isOpenAiConfigured } from "@/lib/ai/env-keys";
 import { WorkbenchClient } from "./WorkbenchClient";
 
 /* [AI-31·32] 통합 AI 워크벤치 — 12종 도구의 단일 실행 표면.
@@ -52,7 +53,8 @@ export default async function AiToolPage({
   return (
     <PageShell breadcrumb={`AI 분석 › ${identity.title}`}>
       <div
-        className="tool-scope mx-auto flex w-full max-w-[880px] flex-col gap-4"
+        /* [993] 880 → 1240: 데스크톱은 입력 좌·결과 우 2열이라 폭이 필요하다(계산기·시나리오와 동일) */
+        className="tool-scope mx-auto flex w-full max-w-[1240px] flex-col gap-4"
         style={personaVars(persona)}
         data-tool={tid}
       >
@@ -92,14 +94,16 @@ export default async function AiToolPage({
               <p className="mt-0.5 t-sub text-on-dark-muted">{identity.tagline}</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-2 border-t border-on-dark-faint pt-4 sm:grid-cols-3">
+          {/* [993] 모바일에서는 세 칸을 접는다 — 390px 에서 머리만 한 화면(실측 470px)을 먹어
+              결과가 두 화면 아래로 밀렸다. 같은 정보는 판단 카드·본문이 다시 말한다. */}
+          <div className="hidden grid-cols-1 gap-2 border-t border-on-dark-faint pt-4 sm:grid sm:grid-cols-3">
             <div className="rounded-xl bg-on-dark-panel px-3 py-2.5">
               <div className="t-caption font-extrabold text-on-dark-muted">넣는 것</div>
               <div className="t-sub text-on-dark">단지 1곳{identity.useCase ? ` · ${identity.useCase}` : ""}</div>
             </div>
             <div className="rounded-xl bg-on-dark-panel px-3 py-2.5">
               <div className="t-caption font-extrabold text-on-dark-muted">계산</div>
-              <div className="t-sub text-on-dark">실거래·전월세·공급·뉴스 실데이터 규칙 계산 · AI 서술은 선택</div>
+              <div className="t-sub text-on-dark">실거래·전월세·공급·뉴스 실데이터 규칙 계산 · 판단 카드(구간·대표 수치·근거)</div>
             </div>
             <div className="rounded-xl bg-on-dark-panel px-3 py-2.5">
               <div className="t-caption font-extrabold text-on-dark-muted">나오는 것</div>
@@ -112,7 +116,14 @@ export default async function AiToolPage({
           </div>
         </section>
 
-        <WorkbenchClient tool={tid} useCase={identity.useCase} tips={identity.tips} persona={persona} fields={tuningFields(tid)} />
+        <WorkbenchClient
+          tool={tid}
+          useCase={identity.useCase}
+          tips={identity.tips}
+          persona={persona}
+          fields={tuningFields(tid)}
+          llmAvailable={isOpenAiConfigured() || isAnthropicConfigured()}
+        />
 
         {/* 면책 — check-ai-compliance.mjs 가 이 마커의 존재를 검사한다 */}
         <p
