@@ -1,10 +1,9 @@
 "use client";
 
 import { Switch } from "@/app/components/ui/Switch";
-import { Segmented } from "@/app/components/ui/Segmented";
 import { useTheme } from "next-themes";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { PageShell } from "@/app/components/PageShell";
@@ -13,10 +12,14 @@ import { PushSubscribe } from "@/components/PushSubscribe";
 import { DELETE_CONFIRM_WORD, DELETE_GRACE_DAYS } from "@/lib/account/deletion";
 import { useUnsavedGuard } from "@/lib/client/use-unsaved-guard";
 import { hasSession } from "@/lib/client/has-session";
+import { ProfileEditSheet } from "../ProfileEditSheet";
+import type { ProfileInitial } from "../profile-fields";
+import { shouldShowSaveToast } from "./save-toast";
 
-/* 설정 (item 14) — 진짜 설정만 유지, 네비게이션성 항목 제거.
-   섹션: 계정 · 알림 · 개인정보. 저장되는 토글만 실배선(/api/me/notification-prefs),
-   저장 API 없는 항목은 지어내지 않고 링크·정직한 안내로 대체. */
+/* 설정 — 진짜 설정만 유지, 네비게이션성 항목 제거.
+   섹션: 계정(프로필·비밀번호·테마·구독·데이터 내보내기·로그아웃·탈퇴) · 알림 · 개인정보.
+   저장되는 토글만 실배선(/api/me/notification-prefs · /api/me/consents), 저장 API 없는 항목은
+   지어내지 않고 링크·정직한 안내로 대체. [1000] 데이터 내보내기는 /api/me/export 로 실제 동작. */
 
 /**
  * 이 서버가 실제로 **보낼 수 있는 채널**. 서버 컴포넌트(page.tsx)가 env 를 보고 넘긴다.
@@ -242,11 +245,14 @@ function SmsAlertCard({
   );
 }
 
-/* 공통: notification-prefs 훅 (GET + 낙관적 PATCH + 롤백) */
+/* 공통: notification-prefs 훅 (GET + 낙관적 PATCH + 롤백 + 저장 토스트) */
 function usePrefs() {
+  const { showToast } = useToast();
   const [prefs, setPrefs] = useState<Prefs | null>(null);
   const [phase, setPhase] = useState<"loading" | "ready" | "guest" | "error">("loading");
   const [saveError, setSaveError] = useState<string | null>(null);
+  /* [1000] 저장 성공 토스트 — 연타하면 1.5초 안에는 한 번만(save-toast.ts) */
+  const lastToastAt = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -269,10 +275,12 @@ function usePrefs() {
     };
   }, []);
 
-  const toggle = useCallback(
-    async (key: PrefKey) => {
+  /* 값을 지정해 저장 — 개인정보 탭의 마케팅 토글이 동의 API 와 **같은 목표값**을 쓰기 위해
+     (toggle 은 현재값의 반대라, 두 저장소가 어긋나 있으면 서로 반대로 뒤집힌다). */
+  const setPref = useCallback(
+    async (key: PrefKey, next: boolean) => {
       if (!prefs) return;
-      const next = !prefs[key];
+      const prev = prefs[key];
       setPrefs({ ...prefs, [key]: next });
       setSaveError(null);
       try {
@@ -284,15 +292,28 @@ function usePrefs() {
         if (!res.ok) throw new Error();
         const data = (await res.json()) as { prefs?: Prefs };
         if (data.prefs) setPrefs(data.prefs);
+        const now = Date.now();
+        if (shouldShowSaveToast(lastToastAt.current, now)) {
+          lastToastAt.current = now;
+          showToast("저장했어요");
+        }
       } catch {
-        setPrefs((p) => (p ? { ...p, [key]: !next } : p));
+        setPrefs((p) => (p ? { ...p, [key]: prev } : p));
         setSaveError("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
       }
     },
-    [prefs],
+    [prefs, showToast],
   );
 
-  return { prefs, phase, saveError, toggle };
+  const toggle = useCallback(
+    (key: PrefKey) => {
+      if (!prefs) return Promise.resolve();
+      return setPref(key, !prefs[key]);
+    },
+    [prefs, setPref],
+  );
+
+  return { prefs, phase, saveError, toggle, setPref };
 }
 
 function GuestCard() {
@@ -467,8 +488,12 @@ function usePrivacyConsents() {
 }
 
 function PrivacyTab() {
-  const { prefs, phase, saveError, toggle } = usePrefs();
+  const { prefs, phase, saveError, setPref } = usePrefs();
   const consents = usePrivacyConsents();
+  /* [1000] 표시는 동의 기록(consents.marketing) **하나만** 본다. 예전엔 `emailMarketing ||
+     consents.marketing` 이라 한쪽만 켜져 있어도 켜진 것으로 그렸고, 끄려고 누르면 한쪽은
+     꺼지고 다른 쪽은 켜지는 식으로 어긋났다. 저장은 여전히 둘 다(발송 스위치 + 동의 기록). */
+  const marketingOn = consents.marketing;
 
   return (
     <div className="flex flex-col gap-3">
@@ -489,10 +514,10 @@ function PrivacyTab() {
             <button
               type="button"
               role="switch"
-              aria-checked={prefs.emailMarketing || consents.marketing}
+              aria-checked={marketingOn}
               onClick={() => {
-                const next = !(prefs.emailMarketing || consents.marketing);
-                void toggle("emailMarketing");
+                const next = !marketingOn;
+                void setPref("emailMarketing", next);
                 void consents.patch({ marketing: next });
               }}
               className="flex w-full items-center justify-between border-b border-divider py-[13px] text-left"
@@ -505,7 +530,7 @@ function PrivacyTab() {
                   새 기능 · 이벤트 · 할인 안내 (선택 · 언제든 해제)
                 </span>
               </span>
-              <Toggle on={prefs.emailMarketing || consents.marketing} />
+              <Toggle on={marketingOn} />
             </button>
             <button
               type="button"
@@ -540,10 +565,7 @@ function PrivacyTab() {
           지우지만, 본문 글자나 사진 속 인물·차량번호를 자동으로 가려 주지는 않아요. 공개로 올리기 전에
           직접 확인해 주세요.
         </p>
-        <Link
-          href="/notes"
-          className="btn-soft mt-1 rounded-[10px] p-2.5 text-center text-xs no-underline"
-        >
+        <Link href="/notes?mine=1" className="btn-soft btn-md mt-1 w-full no-underline">
           내 노트에서 공개 설정하기
         </Link>
       </div>
@@ -553,11 +575,17 @@ function PrivacyTab() {
         <p className="text-xs leading-[1.6] text-text-2">
           열람·정정·삭제 요청은 개인정보 처리방침의 절차를 따라요.
         </p>
-        <div className="flex gap-3 text-xs">
-          <Link href="/legal/privacy" className="font-bold text-primary no-underline">
+        <div className="flex flex-wrap gap-3 t-sub">
+          <Link
+            href="/legal/privacy"
+            className="inline-block py-[5px] font-bold text-primary no-underline"
+          >
             개인정보처리방침 ›
           </Link>
-          <Link href="/legal/privacy-request" className="font-bold text-primary no-underline">
+          <Link
+            href="/legal/privacy-request"
+            className="inline-block py-[5px] font-bold text-primary no-underline"
+          >
             열람·삭제 요청 ›
           </Link>
         </div>
@@ -587,14 +615,89 @@ function ThemeRow() {
     <div className="flex items-center justify-between gap-3 border-b border-divider py-3">
       <span className="t-body font-semibold text-text-1">화면 테마</span>
       {mounted ? (
-        <Segmented<ThemeChoice>
-          options={THEME_OPTIONS}
-          value={current}
-          onChange={(v) => setTheme(v)}
-          ariaLabel="화면 테마"
-        />
+        /* [1000] 유리 알약(.lg-capsule) — 선택 항목은 aria-pressed 로 흰 알약이 뜬다 */
+        <div className="lg-capsule" role="group" aria-label="화면 테마">
+          {THEME_OPTIONS.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              aria-pressed={current === o.value}
+              onClick={() => setTheme(o.value)}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
       ) : (
         <span className="h-8" aria-hidden="true" />
+      )}
+    </div>
+  );
+}
+
+/* [1000] 프로필 — 이름·관심 지역. 이 화면은 정적(세션 없음)이라 값을 클라이언트에서 읽고,
+   편집은 /my 히어로와 같은 ProfileEditSheet 로 한다(저장 뒤 onSaved 로 즉시 반영). */
+function ProfileRows() {
+  const [profile, setProfile] = useState<ProfileInitial | null>(null);
+  const [phase, setPhase] = useState<"loading" | "ready" | "guest" | "error">("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/me/profile", { cache: "no-store" });
+        if (cancelled) return;
+        if (res.status === 401) return setPhase("guest");
+        if (!res.ok) return setPhase("error");
+        const data = (await res.json()) as {
+          profile?: { name?: string | null; primaryRegion?: string | null };
+        };
+        if (!data.profile) return setPhase("error");
+        setProfile({
+          name: data.profile.name ?? null,
+          primaryRegion: data.profile.primaryRegion ?? null,
+        });
+        setPhase("ready");
+      } catch {
+        if (!cancelled) setPhase("error");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (phase === "guest") return null;
+
+  return (
+    <div className="card flex flex-col rounded-2xl px-4 py-1">
+      <div className="flex items-center justify-between gap-2 pb-1 pt-2">
+        <span className="t-sub font-extrabold text-text-3">프로필</span>
+        {phase === "ready" && profile && (
+          <ProfileEditSheet variant="button" initial={profile} onSaved={setProfile} />
+        )}
+      </div>
+      {phase === "loading" ? (
+        <div className="py-4 text-center t-sub text-text-3">프로필을 불러오는 중…</div>
+      ) : phase === "error" || !profile ? (
+        <div className="py-4 text-center t-sub text-text-3">
+          프로필을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between gap-3 border-b border-divider py-3">
+            <span className="t-body font-semibold text-text-1">이름 · 닉네임</span>
+            <span className="min-w-0 truncate t-body text-text-2">
+              {profile.name?.trim() || "설정 안 함"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3 py-3">
+            <span className="t-body font-semibold text-text-1">관심 지역</span>
+            <span className="min-w-0 truncate t-body text-text-2">
+              {profile.primaryRegion?.trim() || "설정 안 함"}
+            </span>
+          </div>
+        </>
       )}
     </div>
   );
@@ -604,17 +707,13 @@ function ThemeRow() {
 function AccountTab({ guest }: { guest: boolean }) {
   /* [970 · C-03] 이 화면은 정적(세션 없음)이라 비로그인에게도 비밀번호 변경·구독·로그아웃·
      회원탈퇴가 그대로 보였다(알림 탭만 401 로 GuestCard). 게스트면 계정 항목 대신
-     GuestCard — 화면 테마·언어는 로그인과 무관하니 남긴다. */
+     GuestCard — 화면 테마는 로그인과 무관하니 남긴다. */
   if (guest) {
     return (
       <div className="flex flex-col gap-3">
         <GuestCard />
         <div className="card flex flex-col rounded-2xl px-4 py-1">
           <div className="pb-1 pt-3 t-sub font-extrabold text-text-3">화면</div>
-          <div className="flex items-center justify-between border-b border-divider py-3">
-            <span className="t-body font-semibold text-text-1">언어</span>
-            <span className="t-sub font-bold text-text-3">한국어</span>
-          </div>
           <ThemeRow />
         </div>
       </div>
@@ -622,6 +721,8 @@ function AccountTab({ guest }: { guest: boolean }) {
   }
   return (
     <div className="flex flex-col gap-3">
+      <ProfileRows />
+
       {/* 계정 관리 */}
       <div className="card flex flex-col rounded-2xl px-4 py-1">
         <div className="pb-1 pt-3 t-sub font-extrabold text-text-3">계정</div>
@@ -630,35 +731,35 @@ function AccountTab({ guest }: { guest: boolean }) {
           className="flex items-center justify-between border-b border-divider py-3 t-body font-semibold text-text-1 no-underline"
         >
           <span>비밀번호 변경</span>
-          {/* [970 · C-24] 흰 카드 위 "›" 가 on-dark-muted(한지 72%)라 안 보였다 → text-text-3 */}
           <span className="text-text-3">›</span>
         </Link>
-        <div className="flex items-center justify-between border-b border-divider py-3">
-          <span className="t-body font-semibold text-text-1">언어</span>
-          <span className="t-sub font-bold text-text-3">한국어</span>
-        </div>
-        {/* [966] 화면 테마 */}
         <ThemeRow />
+        {/* [1000] 구독 관리는 /my/subscription(현재 플랜·자동결제·해지·결제 내역) */}
         <Link
-          href="/subscription"
+          href="/my/subscription"
           className="flex items-center justify-between py-3 t-body font-semibold text-text-1 no-underline"
         >
           <span>구독 · 결제 관리</span>
-          {/* [970 · C-24] 흰 카드 위 "›" 가 on-dark-muted(한지 72%)라 안 보였다 → text-text-3 */}
           <span className="text-text-3">›</span>
         </Link>
       </div>
 
-      {/* 데이터 내보내기 — 미구현: 정직하게 준비 중 표기 */}
-      <div className="card flex flex-col gap-1.5 rounded-2xl p-4">
-        <div className="flex items-center justify-between">
-          <span className="t-body font-extrabold text-ink">내 데이터 내보내기</span>
-          <span className="t-sub font-bold text-text-3">준비 중</span>
-        </div>
-        <p className="t-sub text-text-2">
-          임장노트 전체(PDF·ZIP)와 비교 데이터를 내려받는 기능을 준비하고 있어요. 그 전에는
-          고객센터로 요청하면 도와드려요.
+      {/* [1000] 데이터 내보내기 — GET /api/me/export (JSON). 내려받기는 브라우저가 처리한다. */}
+      <div className="card flex flex-col gap-2 rounded-2xl p-4">
+        <span className="t-body font-extrabold text-ink">내 데이터 내보내기</span>
+        <p className="t-sub leading-[1.6] text-text-2">
+          프로필 · 임장노트(제목·지역·단지·판단) · 관심 단지·저장 목록 · 알림 구독 · 포인트 내역(최근
+          500건) · 결제 내역 · 알림 설정을 JSON 파일 하나로 내려받아요. 카드 정보 같은 결제 비밀값은
+          들어가지 않고, 사진·본문 원문은 각 노트에서 따로 저장할 수 있어요.
         </p>
+        <a
+          href="/api/me/export"
+          download
+          className="btn-outline btn-md self-start no-underline"
+        >
+          JSON으로 내려받기
+        </a>
+        <p className="t-caption text-text-3">10분에 3회까지 요청할 수 있어요.</p>
       </div>
 
       {/* 로그아웃 · 회원탈퇴 */}
@@ -666,7 +767,7 @@ function AccountTab({ guest }: { guest: boolean }) {
         <Link
           href="/logout"
           prefetch={false}
-          className="btn-soft rounded-[10px] p-2.5 text-center text-xs font-bold no-underline"
+          className="btn-soft btn-md w-full no-underline"
         >
           로그아웃
         </Link>
@@ -837,15 +938,14 @@ export function SettingsClient({ channels }: { channels: NotifyChannels }) {
   return (
     <PageShell title="설정" breadcrumb="마이 › 설정">
       <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4">
-        <div className="rise-in flex gap-1.5">
+        {/* [1000] 탭은 유리 알약(.lg-capsule) — 같은 화면의 상태라 링크가 아니라 버튼(aria-pressed) */}
+        <div className="rise-in lg-capsule self-start" role="group" aria-label="설정 구분">
           {TABS.map((t) => (
             <button
               key={t.key}
               type="button"
+              aria-pressed={tab === t.key}
               onClick={() => setTab(t.key)}
-              className={`chip px-3.5 py-2 text-[13px] ${
-                tab === t.key ? "chip-active" : "border border-line bg-surface text-text-2"
-              }`}
             >
               {t.label}
             </button>

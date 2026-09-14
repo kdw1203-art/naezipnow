@@ -7,11 +7,13 @@ import { logger } from "@/lib/log";
 import { auth } from "@/auth";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { loadBillingHistory } from "@/lib/subscriptions/billing-history";
+import { loadMeProfile } from "@/lib/me/profile";
 import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan";
 import type { AppPlan } from "@/lib/billing/plan";
 import { maskEmailPublic } from "@/lib/privacy/mask-email";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await auth();
@@ -21,8 +23,13 @@ export async function GET() {
 
   const email = session.user.email.trim().toLowerCase();
 
-  // 현재 플랜 조회
-  const plan = (session.user as { plan?: string }).plan ?? "free";
+  /* [1000] 현재 플랜은 DB(app_users.plan)가 정본 — 세션 JWT 의 plan 은 결제·만료 스윕
+     직후 한 요청 동안 예전 값일 수 있다(갱신 주기 차이). 결제 직후 "아직 무료" 로 보이던
+     구멍. DB 를 못 읽으면 세션 값으로 폴백(loadMeProfile 이 그렇게 한다). */
+  const profile = await loadMeProfile(email, {
+    plan: (session.user as { plan?: string }).plan,
+  });
+  const plan = profile.plan ?? "free";
 
   /* 결제 내역은 `lib/subscriptions/billing-history` 단일 출처를 쓴다(E1).
      `/subscription` 화면이 같은 함수를 호출하므로, 여기서 따로 질의하면

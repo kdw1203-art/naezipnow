@@ -9,6 +9,8 @@ import {
 import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan";
 import type { AppPlan } from "@/lib/billing/plan";
 import { markDeletedByBillingKey } from "@/lib/payments/billing-store";
+import { recordSubscriptionEvent } from "@/lib/payments/subscription-events";
+import { BILLING_DURATION_DAYS } from "@/lib/subscriptions/billing-periods";
 import { appendInboxNotification } from "@/lib/notifications/inbox";
 import { logger } from "@/lib/log";
 import { notifyPaymentSettled } from "@/lib/payments/notify-paid";
@@ -70,8 +72,9 @@ async function applyPlanIfNeeded(
 ): Promise<void> {
   if (!userEmail || tier === "basic") return;
   const plan: AppPlan = tier;
+  /* [1000] 기간 숫자는 단일 출처(BILLING_DURATION_DAYS) — 여기만 365/7/30 을 따로 적고 있었다 */
   await applyPlanToUserByEmail(userEmail, plan, {
-    durationDays: billing === "annual" ? 365 : billing === "weekly" ? 7 : 30,
+    durationDays: BILLING_DURATION_DAYS[billing] ?? BILLING_DURATION_DAYS.monthly,
   });
 }
 
@@ -122,11 +125,20 @@ export async function POST(req: NextRequest) {
           logger.warn("[toss-webhook] BILLING_DELETED — 자동결제 중단", {
             subscription: sub.id,
           });
+          await recordSubscriptionEvent({
+            subscriptionId: sub.id,
+            userEmail: sub.userEmail,
+            event: "deleted",
+            detail: { via: "webhook" },
+          });
+          /* 해지 직후 오는 삭제 웹훅(우리가 지운 키)은 이미 canceled 라 markDeleted 가 null —
+             여기 도달한 것은 토스 쪽에서 먼저 지워진 살아 있던 구독이다 → 재등록 안내. */
           await appendInboxNotification({
             userEmail: sub.userEmail,
             title: "자동결제 카드 등록이 해제됐어요",
             body: "등록된 카드가 삭제되어 자동결제가 멈췄어요. 계속 이용하려면 카드를 다시 등록해 주세요.",
-            actionUrl: "/subscription/billing",
+            actionUrl: "/my/subscription",
+            channel: "user",
           }).catch(() => {});
         }
       } catch (e) {

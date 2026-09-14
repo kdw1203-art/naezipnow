@@ -4,14 +4,28 @@ import { appendInboxNotification } from "@/lib/notifications/inbox";
 import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { sendEmail } from "@/lib/email/send";
 import { supportInquiryEmail } from "@/lib/email/templates";
-import { DEFAULT_ADMIN_EMAIL } from "@/lib/brand/business-info";
+import { DEFAULT_ADMIN_EMAIL, getBusinessInfo } from "@/lib/brand/business-info";
+import { createSupportTicket } from "@/lib/support/tickets";
+import {
+  firstTicketError,
+  formatTicketNo,
+  validateTicketInput,
+} from "@/lib/support/ticket-labels";
+import { RESPONSE_TIME } from "@/lib/support/constants";
 
-const CATEGORIES = ["일반 문의", "결제·환불", "버그 신고", "개인정보", "악성 콘텐츠 신고", "기타"] as const;
-type Category = (typeof CATEGORIES)[number];
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-/** 문의 알림 수신 주소 */
-const SUPPORT_NOTIFY_EMAIL = "nuguzip@naver.com";
-
+/**
+ * POST /api/support — 1:1 문의 접수.
+ *
+ * [1000] 접수가 **행**이 된다(support_tickets). 순서:
+ *   1) 티켓 insert (실패해도 멈추지 않는다 — 문의를 잃는 쪽이 더 나쁘다)
+ *   2) 관리자 인박스 알림(+ 접수번호) → /admin/support
+ *   3) 운영 메일(제목에 접수번호)
+ *   4) 로그인 사용자면 접수 확인 알림 → /my/support
+ * 응답 { ok, ticketId, ticketNo } — insert 실패 시 ticketId:null(메일·알림은 나갔다).
+ */
 export async function POST(req: NextRequest) {
   // IP당 10분에 5회 (인스턴스별 best-effort)
   const rl = rateLimit(`support:${getClientIp(req)}`, { limit: 5, windowMs: 10 * 60_000 });
@@ -28,53 +42,60 @@ export async function POST(req: NextRequest) {
 
   if (!body) return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
 
-  const category = String(body.category ?? "").trim() as Category;
-  const subject = String(body.subject ?? "").trim();
-  const message = String(body.message ?? "").trim();
-  const fromEmail = session?.user?.email ?? String(body.email ?? "").trim();
+  const sessionEmail = session?.user?.email?.trim().toLowerCase() || null;
+  /* 로그인 세션 이메일이 있으면 그것이 답변 주소다(폼 값보다 우선 — 남의 주소로 접수 방지). */
+  const checked = validateTicketInput({
+    category: body.category,
+    subject: body.subject,
+    message: body.message,
+    email: sessionEmail ?? body.email,
+  });
+  if (!checked.ok) {
+    return NextResponse.json({ error: firstTicketError(checked.errors) }, { status: 400 });
+  }
+  const { category, subject, message, email: fromEmail } = checked.value;
 
-  if (!CATEGORIES.includes(category)) {
-    return NextResponse.json({ error: "유효하지 않은 카테고리입니다." }, { status: 400 });
-  }
-  if (subject.length < 2 || subject.length > 200) {
-    return NextResponse.json({ error: "제목은 2~200자 사이여야 합니다." }, { status: 400 });
-  }
-  if (message.length < 10 || message.length > 3000) {
-    return NextResponse.json({ error: "내용은 10~3000자 사이여야 합니다." }, { status: 400 });
-  }
-  if (!fromEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromEmail)) {
-    return NextResponse.json({ error: "유효한 이메일을 입력해 주세요." }, { status: 400 });
-  }
+  /* 1) 티켓 — 실패는 null. 아래 알림·메일은 그대로 나간다. */
+  const ticket = await createSupportTicket({
+    userEmail: sessionEmail,
+    contactEmail: fromEmail,
+    category,
+    subject,
+    message,
+    /* IP·UA 는 저장하지 않는다 — 개인정보처리방침에 없는 수집을 만들지 않는다 */
+    metadata: { source: "support-form", loggedIn: Boolean(sessionEmail) },
+  });
+  const ticketNo = ticket ? formatTicketNo(ticket.id) : null;
+  const noTag = ticketNo ? ` #${ticketNo}` : "";
 
-  /* 관리자 계정에 인박스 알림으로 전달 (Supabase 미연결 시에도 메모리 저장).
-     기본값이 admin@nuguzip.com 이었는데 그 계정은 존재하지 않는다 — ADMIN_EMAIL
-     을 안 넣으면 문의가 아무도 안 보는 인박스로 들어가 조용히 사라졌다.
-     읽는 쪽(lib/newui/admin-metrics.ts)도 같은 기본값을 각자 적고 있어서,
-     한쪽만 고치면 쓰는 곳과 읽는 곳이 어긋난다. 상수 한 곳에서 가져온다. */
+  /* 2) 관리자 인박스 — ADMIN_EMAIL 미설정 시 DEFAULT_ADMIN_EMAIL(읽는 쪽과 같은 상수) */
   const adminEmail = process.env.ADMIN_EMAIL ?? DEFAULT_ADMIN_EMAIL;
   await appendInboxNotification({
     userEmail: adminEmail,
-    title: `[문의:${category}] ${subject}`,
-    body: `보낸이: ${fromEmail}\n\n${message}`,
+    title: `[문의:${category}]${noTag} ${subject}`,
+    body: `보낸이: ${fromEmail}${ticket ? `\n접수번호: ${ticketNo}` : "\n(티켓 저장 실패 — 메일 원문으로 처리)"}\n\n${message}`,
     actionUrl: `/admin/support`,
   }).catch(() => {/* ignore send failure */});
 
-  // 운영팀 이메일 알림 — 프로바이더(RESEND_API_KEY) 미설정 시 조용히 건너뜀
+  /* 3) 운영 메일 — 수신 주소는 business-info 단일 출처(예전엔 여기 하드코딩). 프로바이더 미설정 시 건너뜀 */
+  const notifyEmail = getBusinessInfo().supportEmail || DEFAULT_ADMIN_EMAIL;
+  const mail = supportInquiryEmail({ category, subject, message, fromEmail });
   await sendEmail({
-    to: SUPPORT_NOTIFY_EMAIL,
+    to: notifyEmail,
     replyTo: fromEmail,
-    ...supportInquiryEmail({ category, subject, message, fromEmail }),
+    ...mail,
+    subject: ticketNo ? `${mail.subject} (${ticketNo})` : mail.subject,
   }).catch(() => {/* 발송 실패해도 접수는 성공 처리 */});
 
-  // 사용자에게 접수 확인 알림
-  if (session?.user?.email) {
+  /* 4) 사용자 접수 확인 — 내 문의 내역으로 */
+  if (sessionEmail) {
     await appendInboxNotification({
-      userEmail: session.user.email,
-      title: "문의가 접수되었습니다",
-      body: `[${category}] ${subject} — 영업일 기준 24~72시간 이내 답변 드립니다.`,
-      actionUrl: `/notifications`,
+      userEmail: sessionEmail,
+      title: ticketNo ? `문의가 접수되었습니다 (${ticketNo})` : "문의가 접수되었습니다",
+      body: `[${category}] ${subject} — ${RESPONSE_TIME}.`,
+      actionUrl: `/my/support`,
     }).catch(() => {});
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, ticketId: ticket?.id ?? null, ticketNo });
 }

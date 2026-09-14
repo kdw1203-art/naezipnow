@@ -45,6 +45,8 @@ export default async function PaymentFailPage({
     checkout?: string;
     plan?: string;
     billing?: string;
+    /** [1000] 빌링 카드 변경 흐름에서 실패했으면 "card" — 재시도도 카드 변경으로 */
+    mode?: string;
   }>;
 }) {
   const sp = await searchParams;
@@ -89,16 +91,25 @@ export default async function PaymentFailPage({
   /* [966] "다시 시도" 는 결제창 바로 앞으로 — 예전엔 /subscription 까지만 돌아가 카드
      선택·토글·2단계 확인을 다시 밟았다. 주간권은 단건 체크아웃, 정기는 카드 등록창.
      플랜을 모르면 예전처럼 구독 안내로. */
+  const category = categorize(sp);
+  /* [1000] 자동결제 레일: 카드 문제(다른 카드로 등록)·일반 재시도 모두 카드 등록창 바로 앞으로.
+     카드 변경 흐름(mode=card — 살아 있는 구독의 카드만 교체)에서 실패했으면 재시도도 카드 변경으로 —
+     새 구독 등록으로 보내면 첫 결제가 한 번 더 나간다. 화이트리스트 값만 통과(safeToken 과 같은 원칙). */
+  const billingRetryQuery = new URLSearchParams();
+  if (retryPlan) billingRetryQuery.set("tier", retryPlan);
+  if (retryBilling === "monthly" || retryBilling === "annual") billingRetryQuery.set("billing", retryBilling);
+  if (sp.mode === "card") billingRetryQuery.set("mode", "card");
+  const isBillingRail = sp.provider === "toss-billing";
   const retryHref =
     retryPlan && retryBilling === "weekly"
       ? `/subscription/checkout?tier=${retryPlan}&billing=weekly`
-      : retryPlan && (retryBilling === "monthly" || retryBilling === "annual") && sp.provider === "toss-billing"
-        ? `/subscription/billing?tier=${retryPlan}&billing=${retryBilling}`
+      : isBillingRail && (retryPlan || sp.mode === "card")
+        ? `/subscription/billing?${billingRetryQuery}`
         : retryQuery.size > 0
           ? `/subscription?${retryQuery}`
           : "/subscription";
-
-  const category = categorize(sp);
+  /* 카드 문제(한도·거절·정보 오류·빌링키)의 "다른 카드로" 도 같은 곳 — 빌링 레일은 카드 등록창이
+     그 자리이고, 단건 결제창은 창 안에서 카드를 고른다. */
   const orderIdShown = safeToken(sp.orderId, 64);
   const codeShown = safeToken(sp.code);
 
@@ -143,11 +154,20 @@ export default async function PaymentFailPage({
             {CATEGORY_ACTION[category].label}
           </Link>
           <Link
-            href="/support"
+            href="/support?category=payment"
             className="rounded-[14px] border border-line bg-surface p-[13px] text-center text-[15px] font-bold text-text-1"
           >
             문의하기
           </Link>
+          {/* [1000] 자동결제 실패 — 등록된 구독·카드 상태를 확인할 곳 */}
+          {isBillingRail && (
+            <Link
+              href="/my/subscription"
+              className="inline-block py-[5px] text-center t-sub font-bold text-text-3 no-underline"
+            >
+              구독 관리에서 상태 확인하기
+            </Link>
+          )}
         </div>
       </section>
     </PageShell>

@@ -38,10 +38,11 @@ async function sendPreExpiryReminders(
 ): Promise<number> {
   let reminded = 0;
   try {
-    /* 자동결제(토스 빌링) 이용자는 제외 — 만료 전에 카드로 자동 갱신되므로
-       "만료돼요, 연장하세요" 알림은 그 사람에게 거짓 안내다(갱신이 실패하면
-       billing-renewals 크론이 별도의 실패 알림을 보낸다). */
-    const autopayEmails = await listLiveBillingEmails().catch(() => new Set<string>());
+    /* 자동결제(토스 빌링) **active** 이용자만 제외 — 만료 전에 카드로 자동 갱신되므로
+       "만료돼요, 연장하세요" 알림은 그 사람에게 거짓 안내다.
+       [1000] suspended(결제 실패로 멈춤)는 제외하지 않는다 — 갱신이 안 되니 정말로 만료된다.
+       예전엔 suspended 도 빼서, 실패 알림 한 번 뒤 아무 말 없이 무료로 떨어졌다. */
+    const autopayEmails = await listLiveBillingEmails(["active"]).catch(() => new Set<string>());
     const now = Date.now();
     const day = 24 * 60 * 60 * 1000;
     const windows = [

@@ -73,7 +73,8 @@ export async function notifyPaymentSettled(
       userEmail: email,
       title: opts.kind === "renewal" ? "자동결제가 갱신됐어요" : "결제가 완료됐어요",
       body: `${plan} ${period} · ${paid.amount.toLocaleString("ko-KR")}원${endsLabel ? ` · ${endsLabel}까지 이용` : ""}`,
-      actionUrl: "/my",
+      /* [1000] 결제 내역·영수증이 사는 화면으로 */
+      actionUrl: "/my/subscription",
       channel: "user",
     });
 
@@ -119,7 +120,7 @@ export async function notifyPaymentRefunded(
       userEmail: email,
       title: opts.partial ? "부분 환불이 처리됐어요" : "환불이 처리됐어요",
       body: `${plan} ${period} · ${opts.refundedKrw.toLocaleString("ko-KR")}원 — 결제 수단으로 3~7영업일 안에 돌아가요.${opts.partial ? "" : " 이용권은 무료 플랜으로 돌아갑니다."}`,
-      actionUrl: "/subscription#billing",
+      actionUrl: "/my/subscription",
       channel: "user",
     });
     if (isEmailConfigured()) {

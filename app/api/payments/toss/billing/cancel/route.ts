@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { safeAuth } from "@/lib/safe-auth";
 import { deleteBillingKey } from "@/lib/payments/toss-billing";
 import { cancelSubscription, getLiveSubscriptionByEmail } from "@/lib/payments/billing-store";
+import { recordSubscriptionEvent } from "@/lib/payments/subscription-events";
+import { parseCancelBody } from "@/lib/payments/cancel-reasons";
 import { applyRateLimit, AUTH_RATE_LIMIT } from "@/lib/rate-limit";
 import { logger } from "@/lib/log";
 
@@ -17,6 +19,10 @@ export const runtime = "nodejs";
  * 빌링키 삭제(DELETE /v1/billing/{billingKey})까지 하는 이유: 해지한 사용자의
  * 카드 대체값을 우리 쪽에 계속 청구 가능 상태로 남겨 둘 이유가 없다. 삭제 API
  * 실패는 해지를 막지 않는다 — 로컬 상태가 canceled 면 크론이 청구하지 않는다.
+ *
+ * [1000] 본문 `{ reason?, note? }` 은 선택이다(예전 버튼은 본문 없이 POST 했다 — 그대로
+ * 통한다). 사유는 코드 5종만, 의견은 500자까지. 형식이 틀리면 400 — 해지를 막으려는
+ * 게 아니라 잘못 보낸 요청을 조용히 해지로 처리하지 않기 위해서다.
  */
 export async function POST(req: NextRequest) {
   const limited = await applyRateLimit(req, AUTH_RATE_LIMIT);
@@ -28,15 +34,44 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }
 
+  /* 본문이 없거나 JSON 이 아니면 사유 없음으로 — 하위 호환 */
+  const raw = await req.text().catch(() => "");
+  let parsedBody: unknown = null;
+  if (raw.trim()) {
+    try {
+      parsedBody = JSON.parse(raw);
+    } catch {
+      return NextResponse.json({ error: "해지 요청 형식이 올바르지 않아요." }, { status: 400 });
+    }
+  }
+  const body = parseCancelBody(parsedBody);
+  if (!body.ok) return NextResponse.json({ error: body.error }, { status: 400 });
+
   try {
     const live = await getLiveSubscriptionByEmail(userEmail);
     if (!live) {
       return NextResponse.json({ error: "해지할 자동결제가 없어요." }, { status: 404 });
     }
-    const canceled = await cancelSubscription({ userEmail });
+    const canceled = await cancelSubscription({
+      userEmail,
+      reason: body.reason,
+      note: body.note,
+    });
     if (!canceled) {
       return NextResponse.json({ error: "해지 처리에 실패했어요. 다시 시도해 주세요." }, { status: 500 });
     }
+    await recordSubscriptionEvent({
+      subscriptionId: live.id,
+      userEmail,
+      event: "canceled",
+      detail: {
+        reason: body.reason,
+        hasNote: Boolean(body.note),
+        plan: live.plan,
+        billing: live.billing,
+        wasStatus: live.status,
+      },
+    });
     if (live.billingKey) {
       const del = await deleteBillingKey(live.billingKey);
       if (!del.ok) {

@@ -52,12 +52,14 @@ type LinkItem = { label: string; href: string; icon: string };
    포인트·알림·매물은 마이 안에서, 법적 고지·가이드는 푸터에서 닿는다. */
 const ACCOUNT_LINKS: LinkItem[] = [
   { label: "마이페이지", href: "/my", icon: "user" },
-  { label: "구독 관리", href: "/subscription", icon: "crown" },
+  /* [1000] 구독 "관리"는 /my/subscription(내 플랜·결제 내역·해지) — /subscription 은 파는 화면 */
+  { label: "구독 관리", href: "/my/subscription", icon: "crown" },
   { label: "설정", href: "/my/settings", icon: "settings" },
 ];
 
 const SUPPORT_LINKS: LinkItem[] = [
   { label: "고객센터", href: "/support", icon: "life" },
+  { label: "내 문의", href: "/my/support", icon: "mail" },
 ];
 
 export function MobileMenu() {

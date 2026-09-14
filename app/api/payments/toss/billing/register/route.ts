@@ -3,6 +3,7 @@ import { planLabel } from "@/lib/subscriptions/labels";
 import { safeAuth } from "@/lib/safe-auth";
 import {
   chargeBillingKey,
+  chargeReceiptInfo,
   deleteBillingKey,
   deterministicIdempotencyKey,
   isTossBillingEnabled,
@@ -13,7 +14,9 @@ import {
   attachBillingKey,
   getByCustomerKey,
   replaceSubscriptionCard,
+  type BillingSubscription,
 } from "@/lib/payments/billing-store";
+import { recordSubscriptionEvent } from "@/lib/payments/subscription-events";
 import {
   createPayment,
   markFailed,
@@ -50,9 +53,21 @@ export const dynamic = "force-dynamic";
 
 /* 상품명은 결제 내역·영수증에 그대로 남는다 — 단일 출처를 쓴다. */
 
-function fail(origin: string, code: string): NextResponse {
+/* [1000] 실패 화면에 어느 레일·플랜·주기였는지 실어 보낸다 — "다른 카드로 등록" 이
+   카드 등록창 바로 앞(/subscription/billing?tier&billing[&mode=card])으로 가게. */
+function fail(
+  origin: string,
+  code: string,
+  ctx?: { sub?: Pick<BillingSubscription, "plan" | "billing"> | null; cardChange?: boolean },
+): NextResponse {
   const u = new URL("/payment/fail", origin);
   u.searchParams.set("code", code);
+  u.searchParams.set("provider", "toss-billing");
+  if (ctx?.sub) {
+    u.searchParams.set("plan", ctx.sub.plan);
+    u.searchParams.set("billing", ctx.sub.billing);
+  }
+  if (ctx?.cardChange) u.searchParams.set("mode", "card");
   return NextResponse.redirect(u, 303);
 }
 
@@ -84,7 +99,7 @@ export async function GET(req: NextRequest) {
      next_charge_at 을 지금으로 당겨 다음 크론이 새 카드로 즉시 재청구한다. */
   if (req.nextUrl.searchParams.get("mode") === "card") {
     if (sub.status !== "active" && sub.status !== "suspended") {
-      return fail(origin, "NOT_CONFIGURED");
+      return fail(origin, "NOT_CONFIGURED", { sub, cardChange: true });
     }
     const issued = await issueBillingKey(authKey, customerKey);
     if (!issued.ok) {
@@ -92,20 +107,36 @@ export async function GET(req: NextRequest) {
         code: issued.code,
         status: issued.status,
       });
-      return fail(origin, issued.code ?? "PROVIDER_ERROR");
+      return fail(origin, issued.code ?? "PROVIDER_ERROR", { sub, cardChange: true });
     }
     const oldKey = sub.billingKey;
+    const wasSuspended = sub.status === "suspended";
     const replaced = await replaceSubscriptionCard({
       id: sub.id,
       billingKey: issued.data.billingKey,
       cardCompany: issued.data.cardCompany,
       cardNumberMasked: issued.data.cardNumberMasked,
-      reactivate: sub.status === "suspended",
+      reactivate: wasSuspended,
     });
-    if (!replaced) return fail(origin, "PROVIDER_ERROR");
+    if (!replaced) return fail(origin, "PROVIDER_ERROR", { sub, cardChange: true });
     if (oldKey && oldKey !== issued.data.billingKey) {
       // 옛 카드 대체값을 청구 가능 상태로 남기지 않는다 — 실패해도 교체는 유효
       await deleteBillingKey(oldKey).catch(() => {});
+    }
+    /* [1000] 이력 — 카드 정보는 카드사·마스킹 번호까지만(빌링키 절대 금지) */
+    await recordSubscriptionEvent({
+      subscriptionId: sub.id,
+      userEmail,
+      event: "card_changed",
+      detail: { cardCompany: issued.data.cardCompany, cardNumberMasked: issued.data.cardNumberMasked },
+    });
+    if (wasSuspended) {
+      await recordSubscriptionEvent({
+        subscriptionId: sub.id,
+        userEmail,
+        event: "reactivated",
+        detail: { via: "card_change" },
+      });
     }
     const u = new URL("/payment/success", origin);
     u.searchParams.set("provider", "toss-billing");
@@ -120,7 +151,7 @@ export async function GET(req: NextRequest) {
     if (sub.lastOrderId) u.searchParams.set("orderId", sub.lastOrderId);
     return NextResponse.redirect(u, 303);
   }
-  if (sub.status !== "pending") return fail(origin, "NOT_CONFIGURED");
+  if (sub.status !== "pending") return fail(origin, "NOT_CONFIGURED", { sub });
 
   // 1) 빌링키 발급 (이미 발급돼 있으면 재사용 — authKey 만료 새로고침 대비)
   let billingKey = sub.billingKey;
@@ -131,7 +162,7 @@ export async function GET(req: NextRequest) {
         code: issued.code,
         status: issued.status,
       });
-      return fail(origin, issued.code ?? "PROVIDER_ERROR");
+      return fail(origin, issued.code ?? "PROVIDER_ERROR", { sub });
     }
     const saved = await attachBillingKey({
       id: sub.id,
@@ -139,8 +170,19 @@ export async function GET(req: NextRequest) {
       cardCompany: issued.data.cardCompany,
       cardNumberMasked: issued.data.cardNumberMasked,
     });
-    if (!saved) return fail(origin, "PROVIDER_ERROR");
+    if (!saved) return fail(origin, "PROVIDER_ERROR", { sub });
     billingKey = issued.data.billingKey;
+    await recordSubscriptionEvent({
+      subscriptionId: sub.id,
+      userEmail,
+      event: "enrolled",
+      detail: {
+        plan: sub.plan,
+        billing: sub.billing,
+        cardCompany: issued.data.cardCompany,
+        cardNumberMasked: issued.data.cardNumberMasked,
+      },
+    });
   }
 
   // 2) 첫 주기 결제 — 단건 결제와 같은 원장(payments)에 기록한다
@@ -158,7 +200,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (e) {
     logger.error("[toss-billing] 첫 결제 주문 기록 실패", e);
-    return fail(origin, "PROVIDER_ERROR");
+    return fail(origin, "PROVIDER_ERROR", { sub });
   }
 
   const charged = await chargeBillingKey({
@@ -173,8 +215,10 @@ export async function GET(req: NextRequest) {
   if (!charged.ok) {
     await markFailed(orderId);
     logger.warn("[toss-billing] 첫 결제 승인 실패", { code: charged.code, status: charged.status });
-    return fail(origin, charged.code ?? "PROVIDER_ERROR");
+    return fail(origin, charged.code ?? "PROVIDER_ERROR", { sub });
   }
+  /* [1000] 승인 응답의 영수증·결제수단 — 결제 내역 "영수증 보기" 가 자동결제에도 뜨게 */
+  const receipt = chargeReceiptInfo(charged.data);
 
   // 금액 재검증 — 승인 응답의 totalAmount 가 우리가 청구한 금액과 달라선 안 된다
   if (charged.data.totalAmount != null && Number(charged.data.totalAmount) !== sub.amount) {
@@ -198,22 +242,29 @@ export async function GET(req: NextRequest) {
         orderId,
         code: cancelled.code,
       });
-      await markPaid({ orderId, providerPaymentKey: charged.data.paymentKey, method: "카드(자동결제)" });
+      await markPaid({
+        orderId,
+        providerPaymentKey: charged.data.paymentKey,
+        method: receipt.method,
+        receiptUrl: receipt.receiptUrl ?? undefined,
+      });
     }
-    return fail(origin, "AMOUNT_MISMATCH");
+    return fail(origin, "AMOUNT_MISMATCH", { sub });
   }
 
   const paidRow =
     (await markPaid({
       orderId,
       providerPaymentKey: charged.data.paymentKey,
-      method: "카드(자동결제)",
+      method: receipt.method,
+      receiptUrl: receipt.receiptUrl ?? undefined,
     })) ??
     /* requested 가 아니었다(동시 요청 등) — 결제사 승인이 사실이므로 어떤 상태에서든 paid 로 */
     (await promotePaidAfterProviderConfirmation({
       orderId,
       providerPaymentKey: charged.data.paymentKey ?? "",
-      method: "카드(자동결제)",
+      method: receipt.method,
+      receiptUrl: receipt.receiptUrl ?? undefined,
       reason: "빌링 첫 결제 승인 — requested 가 아니던 주문",
     }));
   const cycle = sub.billing === "annual" ? "annual" : "monthly";
@@ -231,6 +282,13 @@ export async function GET(req: NextRequest) {
   if (!activated) {
     // 결제는 성공했으므로 실패로 돌리지 않는다 — 로그만 남기고 성공 화면으로
     logger.error("[toss-billing] 활성화 전이 실패(결제는 성공)", { orderId });
+  } else {
+    await recordSubscriptionEvent({
+      subscriptionId: sub.id,
+      userEmail,
+      event: "activated",
+      detail: { orderId, amount: sub.amount, plan: sub.plan, billing: sub.billing, nextChargeAt },
+    });
   }
   /* [966] 결제 직후 확인 — 알림함 + 영수증 메일(다음 결제 예정일 포함) */
   if (paidRow) await notifyPaymentSettled(paidRow, { kind: "billing_first", nextChargeAt });

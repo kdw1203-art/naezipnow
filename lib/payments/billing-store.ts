@@ -34,6 +34,11 @@ export type BillingSubscription = {
   lastError: string | null;
   createdAt: string;
   canceledAt: string | null;
+  /** [1000] 해지 사유 코드·의견 — lib/payments/cancel-reasons */
+  cancelReason: string | null;
+  cancelNote: string | null;
+  /** [1000] 청구 사전 통지를 보낸 회차의 next_charge_at */
+  noticeSentFor: string | null;
 };
 
 /** 화면·API 응답용 — 비밀값(billingKey·customerKey) 없음 */
@@ -47,6 +52,8 @@ export type PublicBillingSubscription = Pick<
   | "cardNumberMasked"
   | "nextChargeAt"
   | "canceledAt"
+  | "lastError"
+  | "failCount"
 >;
 
 export function toPublic(sub: BillingSubscription): PublicBillingSubscription {
@@ -59,6 +66,9 @@ export function toPublic(sub: BillingSubscription): PublicBillingSubscription {
     cardNumberMasked: sub.cardNumberMasked,
     nextChargeAt: sub.nextChargeAt,
     canceledAt: sub.canceledAt,
+    /* [1000] 구독 관리 화면이 "왜 멈췄는지" 를 말할 수 있게 — 실패 코드 문자열만(카드 정보 없음) */
+    lastError: sub.lastError,
+    failCount: sub.failCount,
   };
 }
 
@@ -80,6 +90,9 @@ function mapRow(r: Record<string, unknown>): BillingSubscription {
     lastError: (r.last_error as string | null) ?? null,
     createdAt: String(r.created_at ?? ""),
     canceledAt: (r.canceled_at as string | null) ?? null,
+    cancelReason: (r.cancel_reason as string | null) ?? null,
+    cancelNote: (r.cancel_note as string | null) ?? null,
+    noticeSentFor: (r.notice_sent_for as string | null) ?? null,
   };
 }
 
@@ -198,6 +211,10 @@ export async function replaceSubscriptionCard(input: {
   if (input.reactivate) {
     patch.status = "active";
     patch.next_charge_at = new Date().toISOString();
+    /* [1000] 새 카드로 다시 시작 — 실패 횟수·마지막 오류를 비운다. 남겨 두면 다음 실패가
+       "첫 실패"로 안 잡혀 알림이 침묵하고, 3회 한도도 이전 실패를 이어 세게 된다. */
+    patch.fail_count = 0;
+    patch.last_error = null;
   }
   const { data, error } = await sb()
     .from("billing_subscriptions")
@@ -290,17 +307,88 @@ export async function recordRenewalFailure(input: {
     .eq("status", "active");
 }
 
-/** 사용자 해지 — 청구만 멈춘다. 이미 결제한 기간은 plan_expires_at 까지 유지. */
+/** 사용자 해지 — 청구만 멈춘다. 이미 결제한 기간은 plan_expires_at 까지 유지.
+ *  [1000] 사유·의견은 선택 — 없으면 null 로 남긴다(해지를 사유 입력으로 막지 않는다). */
 export async function cancelSubscription(input: {
   userEmail: string;
+  reason?: string | null;
+  note?: string | null;
 }): Promise<BillingSubscription | null> {
   const now = new Date().toISOString();
   const { data, error } = await sb()
     .from("billing_subscriptions")
-    .update({ status: "canceled", canceled_at: now, updated_at: now })
+    .update({
+      status: "canceled",
+      canceled_at: now,
+      updated_at: now,
+      cancel_reason: input.reason ?? null,
+      cancel_note: input.note ? input.note.slice(0, 500) : null,
+    })
     .eq("user_email", input.userEmail)
     .in("status", ["active", "suspended"])
     .select()
+    .maybeSingle();
+  if (error || !data) return null;
+  return mapRow(data);
+}
+
+/**
+ * [1000] 청구 사전 통지 표식 — 같은 회차(next_charge_at)에 두 번 보내지 않게.
+ * 조건부 UPDATE: 그 사이 갱신돼 next_charge_at 이 바뀌었으면 아무것도 안 바꾼다(null).
+ */
+export async function markNoticeSent(input: {
+  id: string;
+  nextChargeAt: string;
+}): Promise<BillingSubscription | null> {
+  const { data, error } = await sb()
+    .from("billing_subscriptions")
+    .update({ notice_sent_for: input.nextChargeAt, updated_at: new Date().toISOString() })
+    .eq("id", input.id)
+    .eq("status", "active")
+    .eq("next_charge_at", input.nextChargeAt)
+    /* 선점: 이미 이 회차 표식이 있으면 0행 — pg_cron·Vercel 이 같은 분에 돌아도 한쪽만 보낸다.
+       (neq 만 쓰면 NULL 행이 빠지므로 is.null 을 같이 건다) */
+    .or(`notice_sent_for.is.null,notice_sent_for.neq.${input.nextChargeAt}`)
+    .select()
+    .maybeSingle();
+  if (error || !data) return null;
+  return mapRow(data);
+}
+
+/**
+ * [1000] 사전 통지 후보 — 청구가 아직 안 지났고 withinDays 안에 오는 active 구독.
+ * "이미 이 회차에 통지했는지" 는 행마다 값이 달라 DB 에서 못 거른다 — 호출부가
+ * needsUpcomingNotice(순수 함수)로 거른다.
+ */
+export async function listUpcomingChargeSubscriptions(input: {
+  withinDays: number;
+  limit: number;
+}): Promise<BillingSubscription[]> {
+  const now = Date.now();
+  const { data, error } = await sb()
+    .from("billing_subscriptions")
+    .select("*")
+    .eq("status", "active")
+    .not("billing_key", "is", null)
+    .gt("next_charge_at", new Date(now).toISOString())
+    .lte("next_charge_at", new Date(now + input.withinDays * 86_400_000).toISOString())
+    .order("next_charge_at", { ascending: true })
+    .limit(input.limit);
+  if (error) throw new Error(`사전 통지 대상 조회 실패: ${error.message}`);
+  return (data ?? []).map(mapRow);
+}
+
+/** [1000] 가장 최근 구독 1건(상태 무관) — 해지·삭제 뒤 "다시 시작" 안내용. */
+export async function getLatestSubscriptionByEmail(
+  userEmail: string,
+): Promise<BillingSubscription | null> {
+  const { data, error } = await sb()
+    .from("billing_subscriptions")
+    .select("*")
+    .eq("user_email", userEmail)
+    .in("status", ["active", "suspended", "canceled", "deleted"])
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
   if (error || !data) return null;
   return mapRow(data);
@@ -339,12 +427,18 @@ export async function listDueSubscriptions(limit: number): Promise<BillingSubscr
   return (data ?? []).map(mapRow);
 }
 
-/** 자동결제 구독이 살아 있는 이메일 집합 — 만료 사전 알림에서 제외할 대상 */
-export async function listLiveBillingEmails(): Promise<Set<string>> {
+/**
+ * 자동결제가 **실제로 갱신될** 이메일 집합 — 만료 사전 알림에서 제외할 대상.
+ * [1000] 기본은 active 만: suspended(결제 실패 정지)는 만료 전에 갱신되지 않으므로
+ * "곧 만료돼요" 알림이 그 사람에게는 참이다(예전엔 suspended 도 빼서 아무 말 없이 무료로 떨어졌다).
+ */
+export async function listLiveBillingEmails(
+  statuses: BillingSubStatus[] = ["active"],
+): Promise<Set<string>> {
   const { data, error } = await sb()
     .from("billing_subscriptions")
     .select("user_email")
-    .in("status", ["active", "suspended"]);
+    .in("status", statuses);
   if (error) return new Set();
   return new Set((data ?? []).map((r) => String(r.user_email).trim().toLowerCase()));
 }

@@ -21,7 +21,7 @@ export const ARCHIVED_PREFIXES: readonly string[] = [
   "/listings/compare",
   "/notes/market",
   "/notes/templates",
-  "/my/assets",
+  /* [1000] /my/assets 는 보관이 아니라 삭제 — 예시 숫자만 그리던 목업 화면이었다 */
   "/my/expert-profile",
   "/my/consultations",
   "/my/leads",

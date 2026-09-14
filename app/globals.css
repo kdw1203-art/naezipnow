@@ -190,6 +190,17 @@
   --glass-blur: blur(22px) saturate(1.6);
   --glass-blur-strong: blur(26px) saturate(1.7);
   --glass-border: rgba(255, 255, 255, 0.78);
+  /* [1000 · 리퀴드 글래스] 유리의 "두께" — 위쪽 가장자리의 밝은 굴절선(inset)과 표면을 비스듬히 지나는
+     반사 그라데이션. blur 와 달리 GPU 비용이 거의 없어 모바일에도 켠다. 다크는 .dark 에서 약하게. */
+  --glass-edge: rgba(255, 255, 255, 0.85);
+  --glass-edge-bottom: rgba(255, 255, 255, 0.35);
+  --glass-sheen: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.42) 0%,
+    rgba(255, 255, 255, 0.08) 38%,
+    rgba(255, 255, 255, 0) 62%,
+    rgba(255, 255, 255, 0.14) 100%
+  );
 
   /* 15b 그림자 3단 (8종 → 3종)
      플랫 = 보더만(본문 카드) / sm = 호버·드롭다운 / lg = 모달·플로팅
@@ -575,25 +586,116 @@ body:has(textarea:focus-visible) .tabbar-autohide {
 
 /* ---------- 글래스 서피스 (헤더·탭바·플로팅 전용) ---------- */
 .glass {
-  background: var(--glass-bg);
+  background: var(--glass-sheen), var(--glass-bg);
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-glass);
+  /* [1000] 굴절선: 위 1px 밝게 · 아래 1px 은은하게 — 유리판의 두께가 읽힌다 */
+  box-shadow:
+    var(--shadow-glass),
+    inset 0 1px 0 var(--glass-edge),
+    inset 0 -1px 0 var(--glass-edge-bottom);
 }
 .glass-strong {
-  background: var(--glass-bg-strong);
+  background: var(--glass-sheen), var(--glass-bg-strong);
   -webkit-backdrop-filter: var(--glass-blur-strong);
   backdrop-filter: var(--glass-blur-strong);
   border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: var(--shadow-float);
+  box-shadow:
+    var(--shadow-float),
+    inset 0 1px 0 var(--glass-edge),
+    inset 0 -1px 0 var(--glass-edge-bottom);
 }
 /* backdrop-filter 미지원 폴백 */
 @supports not (backdrop-filter: blur(1px)) {
   .glass,
-  .glass-strong {
+  .glass-strong,
+  .lg-glass,
+  .lg-capsule {
     background: rgba(255, 255, 255, 0.92);
   }
+}
+
+/* ---------- [1000] 리퀴드 글래스 확장 — 본문 안 유리 표면 ----------
+   .glass/.glass-strong 은 크롬(헤더·탭바·플로팅) 전용이었다. 본문 안에서도 같은 언어를 쓰되
+   글자 대비를 지키는 세 가지:
+   .lg-glass    — 카드 크기 유리판(히어로·요약 카드). 표면 92% 위에 얇은 유리(blur 는 크롬의 절반).
+   .lg-capsule  — 알약 모양 유리 컨테이너(세그먼트·탭·칩 줄). 선택 항목은 흰 알약이 떠 있다.
+   .lg-pill     — 유리 위에 놓는 작은 알약 배지/버튼.
+   글자는 항상 --ink/--text-* 토큰(대비 게이트는 surface 기준으로 잰다 — 유리 알파 90% 이상 유지). */
+.lg-glass {
+  background: var(--glass-sheen), color-mix(in srgb, var(--surface) 90%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  backdrop-filter: blur(14px) saturate(1.3);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 1px 0 var(--glass-edge),
+    inset 0 -1px 0 var(--glass-edge-bottom);
+}
+.lg-capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  max-width: 100%;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-sheen), var(--glass-bg);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge),
+    0 2px 10px rgba(16, 28, 54, 0.06);
+}
+.lg-capsule > a,
+.lg-capsule > button {
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-pill);
+  padding: 6px 13px;
+  font-size: var(--fs-sub);
+  font-weight: 700;
+  color: var(--text-2);
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--dur-sm) var(--ease-out),
+    color var(--dur-sm) var(--ease-out),
+    box-shadow var(--dur-sm) var(--ease-out);
+}
+.lg-capsule > a:hover,
+.lg-capsule > button:hover {
+  color: var(--primary);
+}
+.lg-capsule > a[aria-current="page"],
+.lg-capsule > button[aria-pressed="true"],
+.lg-capsule > button[aria-selected="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow:
+    0 2px 8px rgba(16, 28, 54, 0.12),
+    inset 0 1px 0 var(--glass-edge);
+}
+.lg-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-sheen), var(--glass-bg-strong);
+  box-shadow: inset 0 1px 0 var(--glass-edge);
+  padding: 4px 10px;
+  font-size: var(--fs-sub);
+  font-weight: 700;
+  color: var(--text-1);
+}
+/* 유리 위의 얇은 구분선 — 카드 안 섹션 경계 */
+.lg-hairline {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-strong) 18%, var(--border-strong) 82%, transparent);
 }
 
 /* ---------- AI 패널 (항상 잉크 다크) ---------- */
@@ -1574,11 +1676,17 @@ body:has(textarea:focus-visible) .tabbar-autohide {
     transform var(--dur-sm) var(--ease-out),
     box-shadow var(--dur-sm) var(--ease-out),
     background-color var(--dur-sm) var(--ease-out),
-    border-color var(--dur-sm) var(--ease-out);
+    border-color var(--dur-sm) var(--ease-out),
+    border-radius var(--dur-sm) var(--ease-out);
 }
 .header-scrolled {
-  box-shadow: var(--shadow-md);
+  box-shadow:
+    var(--shadow-md),
+    inset 0 1px 0 var(--glass-edge),
+    inset 0 -1px 0 var(--glass-edge-bottom);
   transform: scale(0.96);
+  /* [1000 · 리퀴드 글래스] 스크롤하면 유리판이 캡슐로 — 떠 있는 컨트롤 언어 */
+  border-radius: 26px;
 }
 @media (prefers-reduced-motion: reduce) {
   .header-shell {
@@ -1675,6 +1783,15 @@ body:has(textarea:focus-visible) .tabbar-autohide {
   --glass-bg: rgba(23, 27, 34, 0.55);
   --glass-bg-strong: rgba(23, 27, 34, 0.72);
   --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-edge: rgba(255, 255, 255, 0.14);
+  --glass-edge-bottom: rgba(255, 255, 255, 0.04);
+  --glass-sheen: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.09) 0%,
+    rgba(255, 255, 255, 0.02) 38%,
+    rgba(255, 255, 255, 0) 62%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
 
   --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.5);
@@ -2998,6 +3115,8 @@ a.rank-row:hover {
   button.chip-active,
   .map-chip,
   .seg > button,
+  .lg-capsule > a,
+  .lg-capsule > button,
   .map-seg > button {
     min-height: 40px;
     /* 한 글자 칩("동" 34px)은 가로도 모자란다 — 정사각에 가깝게 맞춘다 */
@@ -4325,7 +4444,10 @@ a.rank-row:hover {
     font-size: 10px; /* 램프 caption */
   }
   .card,
-  .glass {
+  .glass,
+  .glass-strong,
+  .lg-glass,
+  .lg-capsule {
     box-shadow: none !important;
     background: #fff !important;
     border: 1px solid #ddd;
@@ -4567,7 +4689,9 @@ a.rank-row:hover {
    불투명 surface 토큰(양 테마)으로, 블롭은 아예 그리지 않는다. 미지원 폴백(@supports not,
    위 500번대)과 같은 뜻이되 다크에서도 맞는 토큰을 쓴다. */
 html[data-lowend] .glass,
-html[data-lowend] .glass-strong {
+html[data-lowend] .glass-strong,
+html[data-lowend] .lg-glass,
+html[data-lowend] .lg-capsule {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   background: var(--surface);

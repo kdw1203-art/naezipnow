@@ -112,6 +112,16 @@ export function TabBar() {
                 isActive(tab) ? "text-primary" : "text-text-2"
               }`}
             >
+              {/* [1000 · 리퀴드 글래스] 현재 탭 뒤에 떠 있는 연한 유리 알약 — 온점(아래)과 함께
+                  "여기"를 면으로도 말한다. 색은 primary 10% 라 유리 뒤 배경이 어두워도 살아 있다. */}
+              <span
+                aria-hidden="true"
+                className={`absolute inset-x-0.5 bottom-0.5 top-1 -z-10 rounded-[14px] transition-opacity duration-200 ${
+                  isActive(tab)
+                    ? "opacity-100 bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] [box-shadow:inset_0_1px_0_var(--glass-edge)]"
+                    : "opacity-0"
+                }`}
+              />
               {/* [962] 현재 탭 = 온점. 탭이 바뀌면 한 번 튄다(njn-pop) — 브랜드 색이 상태 언어가 된다 */}
               <span
                 className={`absolute top-0 h-[5px] w-[5px] rounded-full bg-brand-red transition-opacity ${

@@ -186,6 +186,23 @@ export async function issueBillingKey(
  * orderId 는 매 결제 새로 발급할 것. idempotencyKey 는 같은 주기 재시도에
  * 같은 값을 넘겨 이중 청구를 막는다.
  */
+/**
+ * [1000] 승인 응답(Payment 객체)에서 화면·원장이 쓰는 부분만. receipt.url 은 매출전표,
+ * card.company/number 는 카드사·마스킹 번호, approvedAt 은 승인 시각(코어 API 문서).
+ * 파싱은 lib/payments/charge-receipt(순수)가 한다 — 여기서는 타입만 넓힌다.
+ */
+export type TossBillingCharge = {
+  paymentKey?: string;
+  status?: string;
+  totalAmount?: number;
+  method?: string;
+  approvedAt?: string;
+  receipt?: { url?: string } | null;
+  card?: { company?: string; number?: string } | null;
+};
+
+export { chargeReceiptInfo } from "@/lib/payments/charge-receipt";
+
 export async function chargeBillingKey(input: {
   billingKey: string;
   customerKey: string;
@@ -194,7 +211,7 @@ export async function chargeBillingKey(input: {
   orderName: string;
   customerEmail?: string;
   idempotencyKey?: string;
-}): Promise<TossBillingResult<{ paymentKey?: string; status?: string; totalAmount?: number }>> {
+}): Promise<TossBillingResult<TossBillingCharge>> {
   return post(
     `/v1/billing/${encodeURIComponent(input.billingKey)}`,
     {

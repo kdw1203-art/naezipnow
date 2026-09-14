@@ -21,7 +21,7 @@ export const runtime = "nodejs";
  * 심사에 고지한 상품이라 자동결제 대상이 아니다 — weekly 요청은 400.
  */
 
-type Body = { tier?: string; billing?: string; mode?: string };
+type Body = { tier?: string; billing?: string; mode?: string; consent?: unknown };
 
 export async function POST(req: NextRequest) {
   const limited = await applyRateLimit(req, AUTH_RATE_LIMIT);
@@ -65,6 +65,17 @@ export async function POST(req: NextRequest) {
       plan: live.plan,
       billing: live.billing,
     });
+  }
+
+  /* [1000] 정기결제 조건 동의 — 새 구독(첫 결제가 나가는 길)에만 요구한다. 카드 변경은
+     이미 동의한 구독의 결제수단만 바꾸는 것이라 위에서 갈라졌다. 서버에 저장하지는
+     않는다(약관 동의 기록은 결제 원장·이벤트가 아니라 화면 게이트의 몫) — 다만 동의
+     없이 오는 요청은 화면을 우회한 것이므로 받지 않는다. */
+  if (body.consent !== true) {
+    return NextResponse.json(
+      { error: "정기결제 조건을 확인하고 동의해야 카드 등록을 시작할 수 있어요." },
+      { status: 400 },
+    );
   }
 
   const tier = body.tier === "pro" || body.tier === "expert" ? body.tier : null;

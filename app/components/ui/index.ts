@@ -22,4 +22,8 @@ export type { ModalProps } from "./Modal";
 
 export { Segmented } from "./Segmented";
 
+/* [1000] 섹션 머리(제목 + 부제 + 오른쪽 링크) — /my 로컬 구현을 공용으로 올렸다 */
+export { SectionHead } from "./SectionHead";
+export type { SectionHeadProps } from "./SectionHead";
+
 export { SkLine, SkBlock, SkCard, SkTable } from "./Skeleton";

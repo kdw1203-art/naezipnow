@@ -73,7 +73,9 @@ export async function loadBillingHistory(
     )
     .eq("user_email", email)
     .order("requested_at", { ascending: false })
-    .limit(Math.max(1, Math.min(50, limit)));
+    /* [1000] 상한 50 → 200. 구독 관리 화면(/my/subscription)이 100건을 요청하는데 50에서
+       조용히 잘려 "더 보기" 가 있어도 그 뒤가 없었다. */
+    .limit(Math.max(1, Math.min(200, limit)));
 
   if (error) return { ok: false, payments: [] };
 

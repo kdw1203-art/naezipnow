@@ -370,7 +370,7 @@ export function paymentReceiptEmail(params: {
     ${
       params.receiptUrl
         ? `<a href="${escapeHtml(params.receiptUrl)}" style="display:inline-block;background:${NAVY};color:#ffffff;font-size:14px;font-weight:700;padding:11px 22px;border-radius:8px;text-decoration:none;">매출전표(영수증) 보기</a>`
-        : `<a href="https://naezipnow.com/subscription#billing" style="display:inline-block;background:${NAVY};color:#ffffff;font-size:14px;font-weight:700;padding:11px 22px;border-radius:8px;text-decoration:none;">결제 내역 보기</a>`
+        : `<a href="https://naezipnow.com/my/subscription" style="display:inline-block;background:${NAVY};color:#ffffff;font-size:14px;font-weight:700;padding:11px 22px;border-radius:8px;text-decoration:none;">결제 내역 보기</a>`
     }
     <p style="margin:16px 0 0;font-size:12px;line-height:1.7;color:#8a94a6;">
       결제 후 7일 이내 청약철회(전액 환불)가 가능해요 —
@@ -423,4 +423,131 @@ export function paymentRefundEmail(params: {
     `주문번호: ${params.orderId}`,
   ].join("\n");
   return { subject: `[내집나우] 환불 처리 안내 — ${amount}`, html, text };
+}
+
+/* ── [1000] 자동결제 운영 메일 2종 ─────────────────────────────────────────
+   둘 다 거래 확인성(마케팅 아님 — (광고) 표기 없음). 링크는 실재하는 화면만:
+   /my/subscription(구독 관리) · /subscription/billing?mode=card(카드 변경). */
+
+function fmtKstDate(d: Date): string {
+  return d.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "Asia/Seoul",
+  });
+}
+
+function periodWord(billing: string): string {
+  return billing === "annual" ? "연간" : billing === "monthly" ? "월간" : billing;
+}
+
+/**
+ * 갱신 결제 실패 안내 — 첫 실패와 일시중단 시점에만(크론이 throttle).
+ * 카드 정보는 싣지 않는다. 오류는 코드 문자열 그대로(지어낸 원인 없음).
+ */
+export function paymentRenewalFailedEmail(params: {
+  /** 화면 표기 플랜명(planLabel 결과) */
+  plan: string;
+  billing: "monthly" | "annual" | string;
+  amount: number;
+  /** 결제사 오류 코드·메시지 원문(예: "NOT_ENOUGH_BALANCE: 잔액이 부족합니다") */
+  error: string;
+  /** 다음 자동 재시도 예정(없으면 일시중단 — 카드 재등록 필요) */
+  retryAt?: Date | null;
+  manageUrl: string;
+}) {
+  const amount = `${params.amount.toLocaleString("ko-KR")}원`;
+  const suspended = !params.retryAt;
+  const cardUrl = "https://naezipnow.com/subscription/billing?mode=card";
+  const html = emailLayout(`
+    <h1 style="margin:0 0 6px;font-size:19px;color:${NAVY};">자동결제가 되지 않았어요</h1>
+    <p style="margin:0 0 14px;font-size:14px;line-height:1.7;color:#4a5568;">
+      ${escapeHtml(params.plan)} ${escapeHtml(periodWord(params.billing))} 자동결제 ${amount}이 등록된 카드로 승인되지 않았어요.
+      ${
+        suspended
+          ? "자동결제를 잠시 멈췄어요 — 새 카드를 등록하면 바로 다시 결제되고 이어서 이용할 수 있어요."
+          : `${escapeHtml(fmtKstDate(params.retryAt as Date))}쯤 같은 카드로 한 번 더 시도해요. 그 전에 카드를 바꾸면 새 카드로 결제돼요.`
+      }
+    </p>
+    <p style="margin:0 0 16px;padding:10px 12px;background-color:#f7f9fd;border-radius:8px;font-size:12px;line-height:1.6;color:#4a5568;font-family:monospace;">
+      ${escapeHtml(params.error.slice(0, 200))}
+    </p>
+    <a href="${escapeHtml(cardUrl)}" style="display:inline-block;background:${NAVY};color:#ffffff;font-size:14px;font-weight:700;padding:11px 22px;border-radius:8px;text-decoration:none;">${suspended ? "카드 다시 등록하기" : "카드 변경하기"}</a>
+    <p style="margin:16px 0 0;font-size:12px;line-height:1.7;color:#8a94a6;">
+      이미 결제한 기간은 만료일까지 그대로 이용돼요. 해지·내역은
+      <a href="${escapeHtml(params.manageUrl)}" style="color:#8a94a6;">구독 관리</a>,
+      문의는 <a href="https://naezipnow.com/support?category=payment" style="color:#8a94a6;">고객센터</a>
+    </p>
+  `);
+  const text = [
+    "자동결제가 되지 않았어요",
+    `${params.plan} · ${periodWord(params.billing)} 자동결제 ${amount}`,
+    suspended
+      ? "자동결제를 잠시 멈췄어요. 새 카드를 등록하면 바로 다시 결제돼요."
+      : `${fmtKstDate(params.retryAt as Date)}쯤 같은 카드로 다시 시도해요.`,
+    `오류: ${params.error.slice(0, 200)}`,
+    `카드 변경: ${cardUrl}`,
+    `구독 관리: ${params.manageUrl}`,
+  ].join("\n");
+  return {
+    subject: `[내집나우] 자동결제 실패 — ${params.plan} ${periodWord(params.billing)} ${amount}`,
+    html,
+    text,
+  };
+}
+
+/**
+ * 청구 사전 통지 — 다음 결제 3일 전, 회차당 1통(billing_subscriptions.notice_sent_for).
+ * 정기결제 사전 고지(전자상거래법 시행령 취지): 언제·얼마·어느 카드·해지 방법을 적는다.
+ */
+export function paymentUpcomingChargeEmail(params: {
+  plan: string;
+  billing: "monthly" | "annual" | string;
+  amount: number;
+  chargeAt: Date;
+  /** "신한 ****1234" 처럼 마스킹된 카드 표기(없으면 null) */
+  cardMasked?: string | null;
+  manageUrl: string;
+}) {
+  const amount = `${params.amount.toLocaleString("ko-KR")}원`;
+  const when = fmtKstDate(params.chargeAt);
+  const row = (k: string, v: string) => `
+    <tr>
+      <td style="padding:7px 0;font-size:13px;color:#8a94a6;white-space:nowrap;vertical-align:top;">${k}</td>
+      <td style="padding:7px 0 7px 14px;font-size:13px;font-weight:700;color:#191f28;text-align:right;">${v}</td>
+    </tr>`;
+  const html = emailLayout(`
+    <h1 style="margin:0 0 6px;font-size:19px;color:${NAVY};">${escapeHtml(when)}에 자동결제될 예정이에요</h1>
+    <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#4a5568;">
+      ${escapeHtml(params.plan)} ${escapeHtml(periodWord(params.billing))} 자동결제 회차가 다가와 미리 알려드려요.
+      계속 이용하시면 따로 할 일은 없어요.
+    </p>
+    <table style="width:100%;border-collapse:collapse;border-top:1px solid #e5e9f2;border-bottom:1px solid #e5e9f2;margin:0 0 16px;">
+      ${row("상품", `${escapeHtml(params.plan)} · ${escapeHtml(periodWord(params.billing))} 자동결제`)}
+      ${row("결제 예정일", escapeHtml(when))}
+      ${row("결제 금액", `${amount} <span style="font-weight:400;color:#8a94a6;">(VAT 포함)</span>`)}
+      ${params.cardMasked ? row("결제 카드", escapeHtml(params.cardMasked)) : ""}
+    </table>
+    <a href="${escapeHtml(params.manageUrl)}" style="display:inline-block;background:${NAVY};color:#ffffff;font-size:14px;font-weight:700;padding:11px 22px;border-radius:8px;text-decoration:none;">구독 관리 열기</a>
+    <p style="margin:16px 0 0;font-size:12px;line-height:1.7;color:#8a94a6;">
+      결제 전에 해지하면 청구되지 않고, 이미 결제한 기간은 만료일까지 그대로 이용돼요 —
+      해지·카드 변경은 <a href="${escapeHtml(params.manageUrl)}" style="color:#8a94a6;">구독 관리</a>에서 언제든.
+      <a href="https://naezipnow.com/legal/terms#refund" style="color:#8a94a6;">환불 규정</a>
+    </p>
+  `);
+  const text = [
+    `${when}에 자동결제될 예정이에요`,
+    `${params.plan} · ${periodWord(params.billing)} 자동결제`,
+    `결제 예정일: ${when}`,
+    `결제 금액: ${amount} (VAT 포함)`,
+    ...(params.cardMasked ? [`결제 카드: ${params.cardMasked}`] : []),
+    `해지·카드 변경: ${params.manageUrl}`,
+    "환불 규정: https://naezipnow.com/legal/terms#refund",
+  ].join("\n");
+  return {
+    subject: `[내집나우] ${when} 자동결제 예정 — ${params.plan} ${amount}`,
+    html,
+    text,
+  };
 }

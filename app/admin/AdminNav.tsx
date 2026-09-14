@@ -26,6 +26,7 @@ const NAV_GROUPS: Array<{ title: string; items: NavItem[]; defaultOpen: boolean 
       { href: "/admin/freshness", label: "데이터 신선도" },
       { href: "/admin/moderation", label: "신고 · 모더레이션" },
       { href: "/admin/ops", label: "운영 · 공지" },
+      { href: "/admin/support", label: "고객 문의" },
     ],
   },
   {

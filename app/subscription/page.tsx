@@ -173,7 +173,7 @@ async function loadPlanExpiresAt(email: string): Promise<string | null> {
 export default async function SubscriptionPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ plan?: string; billing?: string; history?: string }>;
+  searchParams?: Promise<{ plan?: string; billing?: string }>;
 }) {
   // 결제 실패 페이지의 "다시 시도하기"가 plan/billing 쿼리를 들고 돌아온다 —
   // 고른 주기를 다시 고르게 하지 않도록 토글 초기값으로 반영한다.
@@ -513,7 +513,6 @@ export default async function SubscriptionPage({
         <BillingPanel
           email={email}
           currentPlan={currentPlan}
-          historyLimit={Number(sp.history) || 10}
           planExpiresAt={planExpiresAt}
         />
       )}
