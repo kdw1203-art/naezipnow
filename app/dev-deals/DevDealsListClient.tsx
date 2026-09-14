@@ -305,7 +305,8 @@ export function DevDealsListClient({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_300px] lg:grid-cols-[minmax(0,1fr)_340px]">
+      {/* [998 · A5] md 300px 단계를 뺐다 — 태블릿은 1열, 2열은 lg 부터. */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="rise-in-2 flex flex-col gap-4">
           {/* 보조 필터: 협력분야 · 지역 */}
           <div className="flex flex-col gap-2.5">

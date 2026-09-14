@@ -530,20 +530,8 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
  */
 export type ResultBlock = "headline" | "widget" | "body" | "counters";
 
-export function resultOrder(composition: CompositionArchetype): readonly ResultBlock[] {
-  switch (composition) {
-    case "matrix":
-    case "atlas":
-    case "console":
-    case "workbook":
-      return ["headline", "body", "widget", "counters"];
-    case "ledger":
-      return ["headline", "widget", "counters", "body"];
-    default:
-      /* gauge · dossier · calculator · allocation · trajectory · route */
-      return ["headline", "widget", "body", "counters"];
-  }
-}
+/* [998] 본체는 lib/ai/result-order.ts — 클라이언트가 이 모듈(페르소나 본문 28KB)을 끌고 오지 않게 분리. */
+export { resultOrder } from "@/lib/ai/result-order";
 
 /** 잘못된 id 대응 — 화면이 죽는 것보다 기본 성격으로 뜨는 편이 낫다. */
 export function getToolPersona(id: string): ToolPersona {

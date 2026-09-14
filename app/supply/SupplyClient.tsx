@@ -201,7 +201,7 @@ export function SupplyClient({
   const tableHiddenCount = list.length - tableRows.length;
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
       {/* ── 본문 ── */}
       <div className="flex flex-col gap-3">
         {truncated && (

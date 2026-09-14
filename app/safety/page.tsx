@@ -98,7 +98,7 @@ export default function SafetyPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-3.5">
           {/* 진단 상태 — 결과를 지어내지 않는다 */}
           {submitted ? (

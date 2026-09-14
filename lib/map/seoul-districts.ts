@@ -8,12 +8,19 @@
  *   남양주시 7.1M vs 3.7M (약 2배), 남양주 momPct +0.3 vs 실제 -2.92 (부호까지 반대).
  * 하드코딩된 62개 지역 중 61개는 `market_region_price` 에 동일한 region_id 로
  * 실데이터(per_m2_sale / sale_change / trade_count)가 이미 적재돼 있다. 유일한
- * 예외는 `hwaseong-dongtan` — 동탄은 신도시라 REB 가 시군구로 집계하지 않는다.
+ * 예외는 `hwaseong-dongtan` — 당시 동탄은 신도시라 REB 가 시군구로 집계하지 않았다
+ * (2026년 동탄구 신설로 행정구가 됐다 — [998] 아래 화성 항목 참고).
  *
  * 따라서 이 파일이 단언하는 사실은 좌표와 이름뿐이다: id / name / lat / lng / city.
  * 시세·변동률·거래량은 `lib/map/region-market.ts`(loadRegionMarketMarkers) 또는
  * `lib/market/store.ts`(getAllRegionSnapshots / getRegionSnapshot)로 실데이터를
  * 조인해서 얻는다. 없으면 "모름"으로 두고, 절대 기본값으로 채우지 않는다.
+ *
+ * [998] 2026-07-01 행정구역 개편(출처: 국토교통부 전국 법정동 2026-06-30, 코드 표는
+ * lib/national-data/region-codes.ts [996]). 폐지된 구의 항목은 **지우지 않는다** —
+ * 옛 REB 통계가 그 id 로 적재돼 있고 /region/<id> 링크가 색인돼 있다. `retired` 로
+ * 표시하고 `successors` 로 후속 구 페이지를 가리킨다. 신설 구는 REB 가 아직 집계를
+ * 내지 않았다(8월분 9월 중순 예정) — 통계는 없으면 없다고 두고, 실거래(국토부)만 붙는다.
  */
 export interface SeoulDistrictInfo {
   id: string;
@@ -28,6 +35,13 @@ export interface SeoulDistrictInfo {
   tradeCount30d?: number;
   /** 시/도 표기 (미지정 시 서울로 간주) */
   city?: string;
+  /** [998] 행정구역 개편으로 폐지된 날(YYYY-MM-DD). 페이지·id 는 남긴다(옛 통계·색인 보존). */
+  retired?: string;
+  /** [998] 폐지 뒤 이 구역이 나뉘어 들어간 후속 카탈로그 id(들) — 화면 안내 링크용 */
+  successors?: readonly string[];
+  /** [998] 통계·실거래 원천이 쓰는 다른 표기 — 이름 매칭의 **정확 일치** 후보로만 쓴다
+   *  (부분 일치 확장 아님). 예: 부동산원이 통합시 이름을 쓰면 "전남광주 광산구". */
+  aliases?: readonly string[];
 }
 
 /** @deprecated RegionMarker 호환 alias */
@@ -87,8 +101,15 @@ export const METRO_EXPLORE_DISTRICTS: SeoulDistrictInfo[] = [
   { id: "uijeongbu", name: "의정부시", lat: 37.738, lng: 127.034, city: "경기" },
   { id: "ansan-danwon", name: "안산시 단원구", lat: 37.321, lng: 126.831, city: "경기" },
   { id: "ansan-sangnok", name: "안산시 상록구", lat: 37.296, lng: 126.848, city: "경기" },
-  // 동탄은 신도시(행정 시군구 아님) — REB 집계 대상이 아니라 시세 조인이 되지 않는다.
-  { id: "hwaseong-dongtan", name: "화성시 동탄", lat: 37.2, lng: 127.075, city: "경기" },
+  /* [998] 화성시 4개 구 신설(2026, 법정동 2026-06-30: 41591 만세구 · 41593 효행구 · 41595 병점구 ·
+     41597 동탄구). 동탄은 예전에 "신도시(행정 시군구 아님)" 로 시세 조인이 안 되던 항목이었다 —
+     id 는 그대로 두고(링크·색인 보존) 이름만 행정구명으로 맞춘다. 실거래 region_name 은
+     "화성 동탄구"(molitRegionLabel). 좌표는 구 중심 근사(구청 소재지 미확정) — 마커 초기 위치용.
+     동탄구를 앞에 두는 이유: 부분 일치("화성"·"화성시")가 예전처럼 동탄을 먼저 잡게 한다. */
+  { id: "hwaseong-dongtan", name: "화성시 동탄구", lat: 37.201, lng: 127.098, city: "경기", aliases: ["화성 동탄구"] },
+  { id: "hwaseong-manse", name: "화성시 만세구", lat: 37.2, lng: 126.83, city: "경기", aliases: ["화성 만세구"] },
+  { id: "hwaseong-hyohaeng", name: "화성시 효행구", lat: 37.218, lng: 126.95, city: "경기", aliases: ["화성 효행구"] },
+  { id: "hwaseong-byeongjeom", name: "화성시 병점구", lat: 37.205, lng: 127.035, city: "경기", aliases: ["화성 병점구"] },
   { id: "gwacheon", name: "과천시", lat: 37.429, lng: 126.9877, city: "경기" },
   { id: "uiwang", name: "의왕시", lat: 37.3446, lng: 126.9683, city: "경기" },
   { id: "gunpo", name: "군포시", lat: 37.3617, lng: 126.9352, city: "경기" },
@@ -99,10 +120,68 @@ export const METRO_EXPLORE_DISTRICTS: SeoulDistrictInfo[] = [
   { id: "incheon-yeonsu", name: "연수구", lat: 37.4106, lng: 126.6788, city: "인천" },
   { id: "incheon-namdong", name: "남동구", lat: 37.447, lng: 126.731, city: "인천" },
   { id: "incheon-bupyeong", name: "부평구", lat: 37.507, lng: 126.722, city: "인천" },
-  { id: "incheon-seo", name: "서구", lat: 37.545, lng: 126.676, city: "인천" },
+  /* [998] 2026-07-01 인천형 행정체제 개편 — 서구(28260)·중구(28110)·동구(28140) 폐지.
+     서구 → 서해구(28275)·검단구(28290), 중구·동구 → 제물포구(28125, 내륙)·영종구(28155, 영종도).
+     폐지 구 항목은 남긴다(옛 REB 통계가 이 id 로 적재됨 · /region 링크 색인됨) — retired 표시만.
+     동구는 원래 카탈로그에 없었다(추가하지 않는다 — 옛 통계도 없고 새 페이지도 아니다). */
+  {
+    id: "incheon-seo",
+    name: "서구",
+    lat: 37.545,
+    lng: 126.676,
+    city: "인천",
+    aliases: ["인천 서구", "인천광역시 서구"],
+    retired: "2026-07-01",
+    successors: ["incheon-seohae", "incheon-geomdan"],
+  },
   { id: "incheon-michuhol", name: "미추홀구", lat: 37.4636, lng: 126.6505, city: "인천" },
   { id: "incheon-gyeyang", name: "계양구", lat: 37.537, lng: 126.738, city: "인천" },
-  { id: "incheon-jung", name: "인천 중구", lat: 37.474, lng: 126.621, city: "인천" },
+  {
+    id: "incheon-jung",
+    name: "인천 중구",
+    lat: 37.474,
+    lng: 126.621,
+    city: "인천",
+    aliases: ["인천광역시 중구"],
+    retired: "2026-07-01",
+    successors: ["incheon-jemulpo", "incheon-yeongjong"],
+  },
+  /* [998] 신설 4개 구. 좌표는 근사치다 — 제물포구는 옛 동구·중구 내륙 중심, 서해구는 옛 서구 중심을
+     그대로, 영종구·검단구는 섬·신도시 중심(구청 소재지 미확정). 지도 마커 초기 위치 용도일 뿐이다.
+     REB(R-ONE) 는 아직 이 구 이름으로 집계를 내지 않았다 — "인천>검단구" 로 오면 이름으로 붙고,
+     "인천광역시 검단구" 표기는 aliases 로 붙는다. 실거래 region_name 은 "인천 검단구"(molitRegionLabel). */
+  {
+    id: "incheon-jemulpo",
+    name: "제물포구",
+    lat: 37.474,
+    lng: 126.643,
+    city: "인천",
+    aliases: ["인천 제물포구", "인천광역시 제물포구"],
+  },
+  {
+    id: "incheon-yeongjong",
+    name: "영종구",
+    lat: 37.494,
+    lng: 126.536,
+    city: "인천",
+    aliases: ["인천 영종구", "인천광역시 영종구"],
+  },
+  {
+    id: "incheon-seohae",
+    name: "서해구",
+    lat: 37.545,
+    lng: 126.677,
+    city: "인천",
+    aliases: ["인천 서해구", "인천광역시 서해구"],
+  },
+  {
+    id: "incheon-geomdan",
+    name: "검단구",
+    lat: 37.596,
+    lng: 126.669,
+    city: "인천",
+    aliases: ["인천 검단구", "인천광역시 검단구"],
+  },
 ];
 
 /* ── [945 · 실사용50 #4] 5대 광역시 시군구 — 전국 확장 1차 ──
@@ -144,15 +223,23 @@ export const METRO_CITY_DISTRICTS: SeoulDistrictInfo[] = [
   { id: "daejeon-yuseong", name: "유성구", lat: 36.3624, lng: 127.3565, city: "대전" },
   { id: "daejeon-daedeok", name: "대덕구", lat: 36.3466, lng: 127.4155, city: "대전" },
   // ── 광주 (5) ──
-  { id: "gwangju-dong", name: "광주 동구", lat: 35.1460, lng: 126.9230, city: "광주" },
-  { id: "gwangju-seo", name: "광주 서구", lat: 35.1520, lng: 126.8895, city: "광주" },
-  { id: "gwangju-nam", name: "광주 남구", lat: 35.1328, lng: 126.9026, city: "광주" },
-  { id: "gwangju-buk", name: "광주 북구", lat: 35.1741, lng: 126.9120, city: "광주" },
-  { id: "gwangju-gwangsan", name: "광산구", lat: 35.1394, lng: 126.7936, city: "광주" },
+  /* [998] 2026-07-01 광주광역시+전라남도 → 전남광주통합특별시(시도코드 12). id·name·city("광주")는 그대로다 —
+     사람은 여전히 "광주 광산구"라 부르고 실거래 region_name 도 그 표기다(sidoShortLabel [996]). 부동산원이
+     통합시 이름("전남광주>광산구" · "전남광주통합특별시>광산구")으로 바꿔 내면 aliases 로 붙는다(어느 쪽이
+     될지는 8월분 공표 전까지 모른다 — 둘 다 둔다). */
+  { id: "gwangju-dong", name: "광주 동구", lat: 35.1460, lng: 126.9230, city: "광주", aliases: ["전남광주 동구", "전남광주통합특별시 동구"] },
+  { id: "gwangju-seo", name: "광주 서구", lat: 35.1520, lng: 126.8895, city: "광주", aliases: ["전남광주 서구", "전남광주통합특별시 서구"] },
+  { id: "gwangju-nam", name: "광주 남구", lat: 35.1328, lng: 126.9026, city: "광주", aliases: ["전남광주 남구", "전남광주통합특별시 남구"] },
+  { id: "gwangju-buk", name: "광주 북구", lat: 35.1741, lng: 126.9120, city: "광주", aliases: ["전남광주 북구", "전남광주통합특별시 북구"] },
+  { id: "gwangju-gwangsan", name: "광산구", lat: 35.1394, lng: 126.7936, city: "광주", aliases: ["광주 광산구", "전남광주 광산구", "전남광주통합특별시 광산구"] },
   // ── 울산 (5) ──
   { id: "ulsan-jung", name: "울산 중구", lat: 35.5694, lng: 129.3328, city: "울산" },
   { id: "ulsan-nam", name: "울산 남구", lat: 35.5437, lng: 129.3301, city: "울산" },
   { id: "ulsan-dong", name: "울산 동구", lat: 35.5052, lng: 129.4166, city: "울산" },
   { id: "ulsan-buk", name: "울산 북구", lat: 35.5827, lng: 129.3613, city: "울산" },
   { id: "ulsan-ulju", name: "울주군", lat: 35.5622, lng: 129.1243, city: "울산" },
+  // ── 세종 (1) ──
+  /* [998] 세종은 구가 없어 시 하나가 곧 시군구다(36110). 실거래 region_name "세종시"(molitRegionLabel —
+     [996] 에서 수집이 켜졌다). REB 는 "세종>세종" 꼴로 낼 수 있어 aliases 에 둔다. 좌표는 시청 부근 근사. */
+  { id: "sejong", name: "세종시", lat: 36.48, lng: 127.289, city: "세종", aliases: ["세종", "세종특별자치시", "세종 세종시"] },
 ];

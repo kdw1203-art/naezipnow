@@ -453,7 +453,8 @@ export default async function TownNewsDetailPage({
           자세한 경위는 PostInteractions.tsx 주석 참고. */}
       <PostActions postId={post.id} title={title} saveCount={saveCount} />
 
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_360px]">
+      {/* [998 · A5] md → lg: 태블릿(768~1023)은 1열, 2열은 lg 부터. 사이드바 폭은 340 하나. */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-4">
           {/* ---------- 기사 본문 ---------- */}
           <article className="rise-in card flex flex-col gap-4 rounded-[18px] p-7">

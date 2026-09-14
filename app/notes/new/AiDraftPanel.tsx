@@ -148,7 +148,7 @@ export function AiDraftPanel({
           이번 달 AI 초안 {usage?.limit ?? ""}회를 모두 썼어요.{" "}
           {usage?.plan === "free" ? (
             <>
-              <Link href="/subscription" className="font-bold text-primary underline">
+              <Link href="/subscription" className="inline-block py-[5px] font-bold text-primary underline">
                 플러스
               </Link>
               에서는 월 100회까지 쓸 수 있어요.

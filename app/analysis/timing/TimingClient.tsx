@@ -291,7 +291,7 @@ export function TimingClient({
           </button>
         </div>
       ) : (
-        <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
           {/* ── 지수 추세 ── */}
           <div className="chart-card text-success lg:col-span-1" data-reveal="">
             <div className="chart-head">

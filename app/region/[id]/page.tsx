@@ -17,6 +17,7 @@ import { listPublicNoteCards } from "@/lib/inspection/store-db";
 import { settle, startDeadline } from "@/lib/data/section-budget";
 import { getSupplyForArea, type SupplyItem } from "@/lib/market/supply";
 import { catalogCityForRegionId } from "@/lib/market/sido-group";
+import { findCatalogRegionById, findCatalogSuccessors } from "@/lib/region/catalog";
 import type { PublicNoteCard } from "@/lib/inspection/store-db";
 import {
   findComplexTxRegionById,
@@ -192,7 +193,17 @@ export async function generateMetadata({
      빠진다. 던지면 5xx 가 되고 크롤러는 다시 온다. */
   const snapshot = await getRegionSnapshot(id);
   if (!snapshot) {
-    return { title: "지역 시세 | 내집나우", robots: { index: false, follow: false } };
+    /* [998] 부동산원 스냅샷이 없어도 카탈로그에 있는 지역(2026-07 신설 구 등)은 페이지가 있다 —
+       실거래 섹션으로 그린다. 다만 색인은 사이트맵과 같은 규칙(스냅샷 있는 지역만)으로 둔다:
+       통계가 아직 없는 페이지를 색인에 넣어 얇은 페이지를 늘리지 않는다. REB 행이 오면 자동으로 풀린다. */
+    const entry = findCatalogRegionById(id);
+    if (!entry) return { title: "지역 시세 | 내집나우", robots: { index: false, follow: false } };
+    return {
+      title: `${entry.name} 아파트 실거래 | 내집나우`,
+      description: `${entry.name} 아파트 최근 실거래·월별 거래량·단지별 현황(국토교통부 신고 기준). 한국부동산원 지역 통계는 아직 공표 전입니다.`,
+      robots: { index: false, follow: true },
+      alternates: seoAlternates(`/region/${id}`),
+    };
   }
   const name = snapshot.regionName;
   const price =
@@ -242,11 +253,17 @@ export default async function RegionHubPage({
   const { id } = await params;
 
   /* 이 페이지의 뼈대. 실패하면 던진다 → 5xx.
-     null 은 이제 "이 지역은 목록에 없다"만 뜻한다 → 404 가 맞다. */
+     [998] null 은 "부동산원 통계가 없다"이지 "지역이 없다"가 아니다 — 2026-07 신설 구(검단구·
+     동탄구 …)는 카탈로그에 있지만 REB 가 아직 집계를 내지 않았다. 카탈로그에도 없을 때만 404.
+     통계가 없는 자리는 지어내지 않고 "아직 없어요"로 적고, 실거래(국토부) 섹션은 그대로 그린다. */
   const snapshot: RegionMarketSnapshot | null = await getRegionSnapshot(id);
-  if (!snapshot) notFound();
+  const catalogEntry = findCatalogRegionById(id) ?? null;
+  if (!snapshot && !catalogEntry) notFound();
 
-  const name = snapshot.regionName;
+  const name = snapshot?.regionName ?? catalogEntry?.name ?? id;
+  /* [998] 폐지 구(인천 서구·중구)의 후속 구 — 있으면 머리에 한 줄 안내 + 링크 */
+  const successors = findCatalogSuccessors(id);
+  const retiredAt = catalogEntry?.retired ?? null;
   /* 단지별 현황 — 30개를 한 번에 받아 클라이언트 토글로 12↔30 을 오간다.
      예전의 ?complexes=30 방식은 searchParams 를 읽는 순간 페이지 전체가
      요청마다 서버 렌더가 되어 ISR 을 무력화했다(ExpandableComplexRows 주석). */
@@ -370,9 +387,9 @@ export default async function RegionHubPage({
   // N11 — 이 지역의 시장 온도 기록이 있으면 교차 링크
   const tempRegion = findTemperatureRegion(id);
 
-  const delta = deltaView(snapshot.saleChangeMonthly);
+  const delta = deltaView(snapshot?.saleChangeMonthly);
   const jeonseRatio =
-    snapshot.jeonseRatio !== undefined && Number.isFinite(snapshot.jeonseRatio)
+    snapshot?.jeonseRatio !== undefined && Number.isFinite(snapshot.jeonseRatio)
       ? `${snapshot.jeonseRatio.toFixed(1)}%`
       : "—";
 
@@ -392,8 +409,8 @@ export default async function RegionHubPage({
   const volumeTotal = volume.reduce((acc, v) => acc + v.count, 0);
 
   const kpiCards: Array<{ label: string; value: string; sub?: string; subClass?: string }> = [
-    { label: "평균 매매가", value: formatKrwShort(snapshot.avgSale) },
-    { label: "중위 매매가", value: formatKrwShort(snapshot.medianSale) },
+    { label: "평균 매매가", value: formatKrwShort(snapshot?.avgSale) },
+    { label: "중위 매매가", value: formatKrwShort(snapshot?.medianSale) },
     { label: "전월 대비", value: delta.label, subClass: delta.className },
     { label: "전세가율", value: jeonseRatio },
   ];
@@ -402,23 +419,26 @@ export default async function RegionHubPage({
      여기에 들어가는 문장은 전부 위에서 실제로 읽어 온 값에서 만든다.
      값이 없으면 그 문장을 아예 넣지 않는다(빈칸을 "—" 로 채우지 않는다). */
   const priceClauses: string[] = [];
-  if (snapshot.avgSale !== undefined && snapshot.avgSale > 0) {
+  if (snapshot && snapshot.avgSale !== undefined && snapshot.avgSale > 0) {
     priceClauses.push(`평균 매매가 ${formatKrwShort(snapshot.avgSale)}`);
   }
-  if (snapshot.medianSale !== undefined && snapshot.medianSale > 0) {
+  if (snapshot && snapshot.medianSale !== undefined && snapshot.medianSale > 0) {
     priceClauses.push(`중위 매매가 ${formatKrwShort(snapshot.medianSale)}`);
   }
   if (jeonseRatio !== "—") priceClauses.push(`전세가율 ${jeonseRatio}`);
 
   const leadSentences: string[] = [];
   leadSentences.push(
-    priceClauses.length > 0
-      ? `${name}의 ${formatYm(snapshot.period)} 아파트 시세는 ${priceClauses.join(
-          " · ",
-        )}입니다(출처 ${sourceLabel(snapshot.source)}).`
-      : `${name}의 ${formatYm(snapshot.period)} 기준 아파트 시세 지표는 아직 수집된 항목이 없습니다.`,
+    !snapshot
+      ? /* [998] 통계가 없는 사실만 적는다 — 이유(개편 뒤 미공표·집계 단위 불일치)는 지역마다 달라 단정하지 않는다 */
+        `${name}의 한국부동산원(R-ONE) 지역 시세 통계는 아직 없습니다. 이 구 단위 집계가 공표되면 그때 붙습니다. 아래 실거래·거래량은 국토교통부 신고 자료입니다.`
+      : priceClauses.length > 0
+        ? `${name}의 ${formatYm(snapshot.period)} 아파트 시세는 ${priceClauses.join(
+            " · ",
+          )}입니다(출처 ${sourceLabel(snapshot.source)}).`
+        : `${name}의 ${formatYm(snapshot.period)} 기준 아파트 시세 지표는 아직 수집된 항목이 없습니다.`,
   );
-  if (snapshot.saleChangeMonthly !== undefined && Number.isFinite(snapshot.saleChangeMonthly)) {
+  if (snapshot && snapshot.saleChangeMonthly !== undefined && Number.isFinite(snapshot.saleChangeMonthly)) {
     const chg = snapshot.saleChangeMonthly;
     leadSentences.push(
       chg === 0
@@ -463,17 +483,18 @@ export default async function RegionHubPage({
     volume: volume.map((v) => ({ month: v.month, count: v.count })),
     supply: supply.map((si) => ({ households: si.households })),
     supplyCapped: supply.length >= 24,
-    jeonseRatio: snapshot.jeonseRatio,
+    jeonseRatio: snapshot?.jeonseRatio,
     avgSaleLabel:
-      snapshot.avgSale !== undefined && snapshot.avgSale > 0
+      snapshot && snapshot.avgSale !== undefined && snapshot.avgSale > 0
         ? formatKrwShort(snapshot.avgSale)
         : null,
-    periodLabel: formatYm(snapshot.period),
+    /* [998] periodLabel 은 avgSaleLabel 이 있을 때만 문장에 쓰인다 — 스냅샷 없으면 둘 다 비어 문장이 안 만들어진다 */
+    periodLabel: snapshot ? formatYm(snapshot.period) : "",
   });
 
   /* ---------- Q&A — 이 페이지에 실제로 보이는 숫자로만 ---------- */
   const faq: FaqItem[] = [];
-  if (priceClauses.length > 0) {
+  if (snapshot && priceClauses.length > 0) {
     faq.push({
       q: `${name} 아파트 시세는 얼마인가요?`,
       a: `${formatYm(snapshot.period)} 기준 ${name} 아파트는 ${priceClauses.join(
@@ -515,9 +536,12 @@ export default async function RegionHubPage({
   }
   faq.push({
     q: "이 페이지의 숫자는 어디서 오나요?",
-    a: `시세 지표는 ${sourceLabel(
-      snapshot.source,
-    )} 공표 통계, 실거래와 거래량은 국토교통부 실거래가 공개시스템, 입주 예정 물량과 정비사업은 공공기관 공개 자료입니다. 매물 호가나 중개사 제공 가격은 쓰지 않으며, 값이 없는 항목은 추정치로 채우지 않고 비워 둡니다.`,
+    a: `${
+      snapshot
+        ? `시세 지표는 ${sourceLabel(snapshot.source)} 공표 통계, `
+        : /* [998] 없는 통계를 출처로 말하지 않는다 */
+          `시세 지표(한국부동산원 지역 통계)는 이 지역 단위로 아직 공표되지 않아 비어 있고, `
+    }실거래와 거래량은 국토교통부 실거래가 공개시스템, 입주 예정 물량과 정비사업은 공공기관 공개 자료입니다. 매물 호가나 중개사 제공 가격은 쓰지 않으며, 값이 없는 항목은 추정치로 채우지 않고 비워 둡니다.`,
   });
 
   // JSON-LD(BreadcrumbList + Place) — 실데이터 스냅샷, 존재 필드만
@@ -537,7 +561,7 @@ export default async function RegionHubPage({
       id,
       name,
       description:
-        snapshot.avgSale !== undefined
+        snapshot && snapshot.avgSale !== undefined
           ? `${name} 아파트 평균 매매가 ${formatKrwShort(snapshot.avgSale)} (${formatYm(
               snapshot.period,
             )} 기준)`
@@ -557,8 +581,25 @@ export default async function RegionHubPage({
         dangerouslySetInnerHTML={{ __html: jsonLdScript(regionJsonLd) }}
       />
       <p className="rise-in mb-1 t-sub text-text-3">
-        {formatYm(snapshot.period)} 기준 · 출처 {sourceLabel(snapshot.source)}
+        {snapshot
+          ? `${formatYm(snapshot.period)} 기준 · 출처 ${sourceLabel(snapshot.source)}`
+          : "한국부동산원 지역 통계 없음 · 실거래는 국토교통부 신고 기준"}
       </p>
+      {/* [998] 폐지된 구 — 옛 통계는 그대로 두고, 지금의 구 페이지로 이어 준다 */}
+      {retiredAt && successors.length > 0 && (
+        <p className="rise-in mb-3 t-sub text-text-2">
+          {retiredAt.slice(0, 7).replace("-", ".")} 행정구역 개편으로{" "}
+          {successors.map((s, i) => (
+            <span key={s.id}>
+              {i > 0 && "·"}
+              <Link href={`/region/${s.id}`} className="font-bold text-primary underline">
+                {s.name}
+              </Link>
+            </span>
+          ))}
+          {successors.length > 1 ? "로 나뉘었어요" : "가 됐어요"}. 이 페이지는 개편 전 통계입니다.
+        </p>
+      )}
       {/* G12 — 이 문단만 떼어 인용해도 뜻이 통해야 한다 */}
       <p className="rise-in mb-5 t-body text-text-1">{lead}</p>
 
@@ -572,21 +613,31 @@ export default async function RegionHubPage({
         </Link>
       </div>
 
-      {/* 현재가 KPI 4카드 */}
-      <section className="rise-in-1 mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-        {kpiCards.map((k) => (
-          <div key={k.label} className="card p-4">
-            <div className="t-sub text-text-3">{k.label}</div>
-            <div
-              className={`mt-1 text-[19px] font-extrabold ${
-                k.subClass ?? "text-ink"
-              }`}
-            >
-              {k.value}
+      {/* 현재가 KPI 4카드 — [998] 스냅샷이 없으면 "—" 네 칸 대신 그 사실을 한 칸으로 적는다 */}
+      {snapshot ? (
+        <section className="rise-in-1 mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {kpiCards.map((k) => (
+            <div key={k.label} className="card p-4">
+              <div className="t-sub text-text-3">{k.label}</div>
+              <div
+                className={`mt-1 text-[19px] font-extrabold ${
+                  k.subClass ?? "text-ink"
+                }`}
+              >
+                {k.value}
+              </div>
             </div>
-          </div>
-        ))}
-      </section>
+          ))}
+        </section>
+      ) : (
+        <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
+          <div className="t-sub text-text-3">평균 매매가 · 중위 매매가 · 전월 대비 · 전세가율</div>
+          <p className="mt-1 t-body font-bold text-ink">부동산원 통계는 아직 없어요</p>
+          <p className="mt-1 t-sub text-text-3">
+            한국부동산원이 이 구 단위 월간 통계를 공표하면 여기에 붙습니다. 그전까지는 추정치로 채우지 않습니다.
+          </p>
+        </section>
+      )}
 
       {/* [개선 #7] 시장 흐름 읽기 — 위 표·차트의 숫자를 지역마다 다른 문장으로.
           전 문장이 이 페이지가 이미 읽은 실데이터의 산술 서술이다(전망·권유 없음,
@@ -1170,14 +1221,17 @@ export default async function RegionHubPage({
       <QaBlock title={`${name} 자주 묻는 질문`} items={faq} />
 
       {/* [#88] 지역 시세 위젯 배포 진입점 — 중개사 블로그·홈페이지용. 위젯 안에
-          출처 링크가 박혀 있으므로 퍼가기가 곧 백링크다(단지 위젯 N17 과 동일 원리). */}
-      <EmbedSnippet
-        kind="region"
-        id={id}
-        heading={`${name} 시세를 블로그·홈페이지에 붙이기`}
-        desc={`중개사무소 블로그·홈페이지에 iframe 한 줄로 ${name} 평균 매매가·전세가율·지수 변동 카드를 실을 수 있습니다. 시세가 갱신되면 붙여넣은 위젯도 함께 갱신됩니다.`}
-        className="rise-in-3 mb-4"
-      />
+          출처 링크가 박혀 있으므로 퍼가기가 곧 백링크다(단지 위젯 N17 과 동일 원리).
+          [998] 위젯 내용이 스냅샷(평균가·전세가율)이라 스냅샷 없는 지역에는 권하지 않는다(빈 카드가 나간다). */}
+      {snapshot && (
+        <EmbedSnippet
+          kind="region"
+          id={id}
+          heading={`${name} 시세를 블로그·홈페이지에 붙이기`}
+          desc={`중개사무소 블로그·홈페이지에 iframe 한 줄로 ${name} 평균 매매가·전세가율·지수 변동 카드를 실을 수 있습니다. 시세가 갱신되면 붙여넣은 위젯도 함께 갱신됩니다.`}
+          className="rise-in-3 mb-4"
+        />
+      )}
 
       {/* CTA */}
       <section className="rise-in-3 mb-4 flex flex-wrap gap-2">

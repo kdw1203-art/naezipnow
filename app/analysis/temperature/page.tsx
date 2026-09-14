@@ -262,7 +262,7 @@ export default async function TemperatureHubPage() {
             주간 기록은 매일 도는 수집 작업이 그 주의 값을 갱신하며 만들어집니다. 첫 기록이
             생기면 이곳에 나타납니다.
             <br />
-            <Link href="/analysis/timing" className="font-bold text-primary underline">
+            <Link href="/analysis/timing" className="inline-block py-[5px] font-bold text-primary underline">
               지금 이 순간의 시장 온도 보기
             </Link>
           </p>
@@ -354,11 +354,11 @@ export default async function TemperatureHubPage() {
 
       <p className="mb-8 text-[12px] leading-[1.7] text-text-3">
         지금 이 순간의 온도와 지수·거래량 원본 그래프는{" "}
-        <Link href="/analysis/timing" className="font-bold text-primary underline">
+        <Link href="/analysis/timing" className="inline-block py-[5px] font-bold text-primary underline">
           시세·타이밍 분석
         </Link>
         , 계산에 쓴 자료의 출처와 갱신 주기는{" "}
-        <Link href="/methodology" className="font-bold text-primary underline">
+        <Link href="/methodology" className="inline-block py-[5px] font-bold text-primary underline">
           데이터 방법론
         </Link>
         에서 확인하실 수 있습니다.
@@ -369,7 +369,8 @@ export default async function TemperatureHubPage() {
           사실은 안다 — 이 화면의 주인공은 이번 주 가장 뜨거운 지역이다.
           받는 쪽이 어떤 지역 표기든 읽게 됐으므로(lib/regions/param.ts),
           그 지역을 그대로 실어 보낸다. hottest 가 없으면(빈 주간) 종전대로 빈손. */}
-      <div className="mb-8">
+      {/* [998] mb-8 제거 — 본문 pb-16 + 푸터 pt-6 과 겹쳐 데스크톱에서 147px 빈 띠(빈 공간 게이트) */}
+      <div>
         <AnalysisCrossLinks
           current="temperature"
           regionLabel={hottest?.current.regionLabel ?? null}

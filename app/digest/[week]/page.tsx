@@ -250,10 +250,10 @@ export default async function DigestWeekPage({
         <QaBlock items={faq} />
 
         <p className="mb-8 mt-5 flex flex-wrap gap-4 t-sub text-text-3">
-          <Link href="/digest/archive" className="font-bold text-primary underline">
+          <Link href="/digest/archive" className="inline-block py-[5px] font-bold text-primary underline">
             다른 주 보기
           </Link>
-          <Link href="/digest" className="font-bold text-primary underline">
+          <Link href="/digest" className="inline-block py-[5px] font-bold text-primary underline">
             이번 주 다이제스트
           </Link>
         </p>

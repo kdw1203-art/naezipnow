@@ -167,7 +167,7 @@ export function RegionPulseCards({ regions }: { regions: HomeRegionCard[] }) {
   if (regions.length === 0) return null;
 
   return (
-    <div ref={wrapRef} className="rise-in-2 grid grid-cols-2 gap-3 xl:grid-cols-4">
+    <div ref={wrapRef} className="rise-in-2 grid grid-cols-2 gap-3">
       {regions.map((r) => (
         <Link
           key={r.id}

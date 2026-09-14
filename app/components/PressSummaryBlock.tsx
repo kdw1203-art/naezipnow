@@ -48,14 +48,14 @@ export function PressSummaryBlock({
         <dd className="text-text-1">내집나우(naezipnow.com), 국토교통부 실거래 신고 기반 자체 집계</dd>
         <dt className="font-bold text-text-2">집계 방법</dt>
         <dd className="text-text-1">
-          <a href="/methodology" className="font-bold text-primary underline">
+          <a href="/methodology" className="inline-block py-[5px] font-bold text-primary underline">
             naezipnow.com/methodology
           </a>{" "}
           에 공개 (해제 신고분 제외 · 면적 미가중 단순 평균)
         </dd>
         <dt className="font-bold text-text-2">데이터 문의</dt>
         <dd className="text-text-1">
-          <a href={`mailto:${info.supportEmail}`} className="font-bold text-primary underline">
+          <a href={`mailto:${info.supportEmail}`} className="inline-block py-[5px] font-bold text-primary underline">
             {info.supportEmail}
           </a>{" "}
           · 원자료 확인·추가 집계 요청을 받습니다

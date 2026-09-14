@@ -119,7 +119,8 @@ export default async function TownGroupDetailPage({
 
   return (
     <PageShell breadcrumb="동네이야기 › 임장 모임">
-      <div className="mx-auto grid max-w-[900px] grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_320px]">
+      {/* [998 · A5] md → lg: 태블릿은 1열, 2열은 lg 부터. 사이드바 폭은 340 하나. */}
+      <div className="mx-auto grid max-w-[900px] grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         {/* ---------- 모임 정보 카드 ---------- */}
         <div className="flex flex-col gap-4">
           <div className="rise-in card flex flex-col gap-3 rounded-[18px] p-6">

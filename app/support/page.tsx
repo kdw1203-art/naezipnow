@@ -139,7 +139,7 @@ export default async function SupportPage() {
       {/* 모바일 FAQ 카테고리 (7g) — 실제 FAQ 분류로 /support/faq 섹션 앵커 이동
           [970 · A-24] 분류가 5개라 2열 그리드의 마지막 칸이 고아였다 — 홀수 번째 마지막
           카드는 두 칸을 차지한다(분류 수가 바뀌어도 규칙이 따라간다). */}
-      <div className="rise-in-1 mb-4 grid grid-cols-2 gap-2 md:hidden [&>*:last-child:nth-child(odd)]:col-span-2">
+      <div className="rise-in-1 mb-4 grid grid-cols-2 gap-2 lg:hidden [&>*:last-child:nth-child(odd)]:col-span-2">
         {faqGroups.map((g) => (
           <Link
             key={g.category}
@@ -159,9 +159,10 @@ export default async function SupportPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[280px_minmax(0,1fr)]">
+      {/* [998 · A5] md → lg: 태블릿은 위 카테고리 타일 + 1열, 좌측 메뉴는 lg 부터(둘은 짝). */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
         {/* 좌측 메뉴 (9n) */}
-        <nav className="rise-in-1 card hidden h-fit flex-col rounded-[18px] py-2 md:flex">
+        <nav className="rise-in-1 card hidden h-fit flex-col rounded-[18px] py-2 lg:flex">
           {sideMenu.map((m, i) =>
             m.href.startsWith("#") ? (
               <a

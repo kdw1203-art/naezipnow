@@ -1635,6 +1635,19 @@ body:has(textarea:focus-visible) .tabbar-autohide {
   }
 }
 
+/* [998 · A5] 데스크톱 좌측 내비 — 셸(<main class="nz-shell">)은 내비(.nz-sidenav)가
+   실제로 그려진 경우에만 lg+ 에서 220px | 본문 2열이 된다. 내비는 경로에 따라
+   null 을 돌려주므로(카드 스튜디오 등) 클래스로 고정하면 빈 220px 칸이 남는다.
+   :has() 는 탭바 자동 숨김(body:has(input:focus-visible))이 이미 쓰는 선택자다.
+   미지원 브라우저는 1열에 내비가 위로 올라오는 정도로 무너지지 않는다. */
+@media (min-width: 1024px) {
+  .nz-shell:has(> .nz-sidenav) {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    column-gap: 24px;
+  }
+}
+
 /* ============================================================
    #16 다크 모드 — 토큰 오버라이드 (next-themes class="dark")
    토큰 기반 컴포넌트(.glass/.card/bg-surface/text-text-*)는 자동 반영.
@@ -2453,6 +2466,8 @@ html[data-drag-scrolling] * {
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  /* [998] 카드 안 텍스트 링크의 히트 24px — 글자 줄만큼(18px)이라 모바일 게이트에 걸렸다 */
+  min-height: 24px;
   transition: transform var(--dur-sm) var(--ease-out);
 }
 /* 스파크라인은 평소 옅게 두고 호버에서 또렷해진다 — 카드 12장이 동시에

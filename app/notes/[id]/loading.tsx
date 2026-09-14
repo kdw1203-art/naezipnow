@@ -9,7 +9,7 @@ export default function NoteDetailLoading() {
   return (
     <PageShell breadcrumb="임장노트">
       <LoadingHint className="mb-3" />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Skeleton className="h-7 w-2/3 rounded-lg" />

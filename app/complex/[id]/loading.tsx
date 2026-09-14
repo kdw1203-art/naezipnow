@@ -96,7 +96,7 @@ export default function ComplexDetailLoading() {
       </div>
 
       {/* 본문 — 탭 칩 5개 + 요약 카드(AI 요약·차트 자리) */}
-      <div className="mt-4 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="mt-4 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-1.5">
             {[56, 56, 56, 56, 72].map((w, i) => (

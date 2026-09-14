@@ -277,13 +277,13 @@ export default async function BestNotesMonthPage({
         <QaBlock items={faq} />
 
         <p className="mb-8 mt-5 flex flex-wrap gap-4 t-sub text-text-3">
-          <Link href="/notes/best" className="font-bold text-primary underline">
+          <Link href="/notes/best" className="inline-block py-[5px] font-bold text-primary underline">
             다른 달 보기
           </Link>
-          <Link href="/notes" className="font-bold text-primary underline">
+          <Link href="/notes" className="inline-block py-[5px] font-bold text-primary underline">
             공개 임장노트 전체 보기
           </Link>
-          <Link href="/notes/new" className="font-bold text-primary underline">
+          <Link href="/notes/new" className="inline-block py-[5px] font-bold text-primary underline">
             내 임장노트 쓰기
           </Link>
         </p>

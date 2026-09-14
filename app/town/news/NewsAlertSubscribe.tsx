@@ -41,7 +41,7 @@ export function NewsAlertSubscribe() {
               key={s}
               type="button"
               onClick={() => setQ(s)}
-              className="rounded-full border border-line bg-surface px-2.5 py-1 t-sub font-semibold text-text-2 tap-ripple"
+              className="min-h-10 rounded-full border border-line bg-surface px-3 py-1 t-sub font-semibold text-text-2 tap-ripple"
             >
               {s}
             </button>

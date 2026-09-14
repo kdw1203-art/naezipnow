@@ -369,8 +369,8 @@ export function NewsListClient({
       {!anyFilter && hiddenCount > 0 && (
         <p className="mt-3 text-center t-sub text-text-3">
           최신 {listCap}건을 보여드리고 있어요 — 이전 뉴스 {hiddenCount}건은{" "}
-          <Link href="/digest" className="font-bold text-primary">주간 다이제스트</Link>와{" "}
-          <Link href="/search" className="font-bold text-primary">검색</Link>으로 찾을 수 있어요.
+          <Link href="/digest" className="inline-block py-[5px] font-bold text-primary">주간 다이제스트</Link>와{" "}
+          <Link href="/search" className="inline-block px-1 py-[5px] font-bold text-primary">검색</Link>으로 찾을 수 있어요.
         </p>
       )}
 

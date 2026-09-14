@@ -14,7 +14,7 @@ export function CitationBlock({ sentence }: { sentence: string }) {
       </blockquote>
       <p className="mt-2 text-[12px] leading-[1.6] text-text-3">
         출처 표기와 기준월을 함께 인용해 주세요 · 집계 방식은{" "}
-        <a href="/methodology" className="font-bold text-primary underline">
+        <a href="/methodology" className="inline-block py-[5px] font-bold text-primary underline">
           데이터 방법론
         </a>
         에 공개돼 있습니다 · 국토교통부 실거래 신고 기반, 참고용 정보입니다

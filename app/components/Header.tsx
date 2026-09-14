@@ -79,8 +79,11 @@ export function Header() {
                 >
                   {item.label}
                 </Link>
+                {/* [998 · A5] lg+ 는 좌측 내비(DesktopSideNav)가 하위 링크를 맡는다 — 드롭다운은
+                    md(768~1023) 태블릿에만 남긴다(거기엔 내비가 없다). lg:hidden 은 hover/
+                    focus-within 의 visible 보다 뒤에 오는 display:none 이라 확실히 이긴다. */}
                 {item.children && (
-                  <div className="invisible absolute left-0 top-full z-50 pt-2 opacity-0 transition-all duration-[180ms] group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                  <div className="invisible absolute left-0 top-full z-50 pt-2 opacity-0 transition-all duration-[180ms] group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 lg:hidden">
                     {/* [970 · A-01] 인라인 흰 배경(rgba(255,255,255,.9))을 걷었다 — 다크에서 흰 판 위
                         밝은 글자라 항목이 안 보였다. .popover-surface 는 surface 토큰 92%(양 테마). */}
                     <div className="glass-strong dropdown-panel popover-surface min-w-[168px] rounded-2xl p-1.5">

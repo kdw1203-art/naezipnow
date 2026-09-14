@@ -1,5 +1,6 @@
 /** market_* 테이블 읽기/쓰기 (서버 전용). Supabase 미설정 시 안전하게 빈 값 반환. */
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { marketRegionNameCandidates } from "@/lib/market/region-name-candidates";
 import { logger } from "@/lib/log";
 import type {
   MarketSeriesRow,
@@ -524,15 +525,10 @@ export interface RegionTransactionRow {
  * market_region_price.region_name 표기("강남구"·"고양시 덕양구")를 잇는 후보 목록.
  */
 export function transactionNameCandidates(regionId: string, regionName: string): string[] {
-  const name = regionName.trim();
-  const out = new Set<string>([name]);
-  if (name.includes(" ")) {
-    // "고양시 덕양구" → "고양 덕양구", "수원시 영통구" → "수원 영통구"
-    out.add(name.replace("시 ", " "));
-  } else if (name.endsWith("구")) {
-    out.add(regionId.startsWith("incheon-") ? `인천 ${name}` : `서울 ${name}`);
-  }
-  return [...out];
+  /* [998] 같은 규칙을 두 곳에 두지 않는다 — region-name-candidates 가 id 접두(busan-·gwangju-·
+     incheon-…)로 시/도를 붙인다. 예전 이 함수는 인천 외 단일 토큰 구를 전부 "서울 X구"로 붙여
+     /region/gwangju-gwangsan 이 "광주 광산구" 실거래를 못 찾았다. */
+  return marketRegionNameCandidates(regionId, regionName);
 }
 
 /**

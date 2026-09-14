@@ -933,7 +933,7 @@ export default async function NoteDetailPage({
           근거·점수 축)가 통째로 컨테이너 밖으로 나가 있었다 — 실측: 뷰포트 1296
           에서 문서 scrollWidth 1690, 왼쪽 칼럼 1222px, aside 오른쪽 끝 1690.
           minmax(0,1fr) + min-w-0 로 고치면 왼쪽 780 / aside 848~1248 로 붙는다. */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         {/* ===== 좌측: 노트 본문 (20a 표준 구조) ===== */}
         <div className="flex min-w-0 flex-col gap-4">
           {/* [993] 판단 카드 — 이 노트가 말하려는 것 한 장. 모바일에서도 맨 위. */}

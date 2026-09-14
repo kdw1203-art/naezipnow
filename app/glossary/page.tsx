@@ -71,7 +71,7 @@ export default function GlossaryPage() {
           용어 풀이는 일반적인 이해를 돕기 위한 것으로, 대출 한도·세율·규제 지역 지정 등
           제도 관련 수치는 시점에 따라 달라집니다. 그래서 정의에 특정 수치를 적어 두지
           않았습니다. 시세 집계 방식은{" "}
-          <Link href="/methodology" className="font-bold text-primary">
+          <Link href="/methodology" className="inline-block py-[5px] font-bold text-primary">
             데이터 방법론
           </Link>
           을 참고하세요.

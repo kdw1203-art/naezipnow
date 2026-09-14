@@ -147,7 +147,7 @@ export default async function BestNotesIndexPage() {
         <FieldVerifiedLeaderboard />
 
         <p className="mb-8 mt-5 t-sub text-text-3">
-          <Link href="/notes" className="font-bold text-primary underline">
+          <Link href="/notes" className="inline-block py-[5px] font-bold text-primary underline">
             공개 임장노트 전체 보기
           </Link>
         </p>

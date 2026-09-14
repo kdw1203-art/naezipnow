@@ -242,7 +242,7 @@ export default async function PricePage({
           source={`${ymLabel(target.firstYm)}~${ymLabel(target.latestYm)} · 국토교통부 신고 매매가 기준`}
         />
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
           {/* 좌: 면적대 표 + 평단가 곡선 */}
           <div className="flex flex-col gap-4">
             <div className="card overflow-hidden rounded-[14px]" data-reveal="">

@@ -36,6 +36,21 @@ const CATALOG_BY_KEY = new Map(
 
 const CATALOG_BY_ID = new Map(REGION_CATALOG.map((info) => [info.id, info]));
 
+/** [998] 항목 자체의 별칭(SeoulDistrictInfo.aliases) → 항목. 정식 이름 키와 겹치면 정식 이름이 이긴다. */
+const CATALOG_BY_ALIAS_KEY = new Map<string, SeoulDistrictInfo>(
+  REGION_CATALOG.flatMap((info) =>
+    (info.aliases ?? [])
+      .map((a) => normalizeRegionKey(a))
+      .filter((k) => k && !CATALOG_BY_KEY.has(k))
+      .map((k) => [k, info] as const),
+  ),
+);
+
+/** [998] 이 항목을 뜻하는 정규화 키 전부(정식 이름 + aliases) — "정확 일치" 판정용. */
+export function catalogNameKeys(info: SeoulDistrictInfo): Set<string> {
+  return new Set([info.name, ...(info.aliases ?? [])].map((n) => normalizeRegionKey(n)).filter(Boolean));
+}
+
 /** [#54] 통용 지명·신도시 별칭 → 카탈로그 id.
  *  뉴스 region 값의 미매핑 상위 실측(2026-08-23)에서 확실한 것만 넣는다 —
  *  틀린 연결은 미연결보다 나쁘다. 모호한 지명(위례·광교 등 복수 행정구 걸침)은
@@ -47,20 +62,25 @@ const REGION_ALIASES: Record<string, string> = {
   목동: "yangcheon",
   마곡: "gangseo",
   송도: "incheon-yeonsu",
-  청라: "incheon-seo",
+  /* [998] 2026-07 인천 서구 분구 — 청라·가정·석남은 서해구, 검단은 검단구, 영종도는 영종구 */
+  청라: "incheon-seohae",
+  검단: "incheon-geomdan",
+  검단신도시: "incheon-geomdan",
+  영종: "incheon-yeongjong",
+  영종도: "incheon-yeongjong",
   미사: "hanam",
   별내: "namyangju",
   다산: "namyangju",
   광교: "suwon-yeongtong",
 };
 
-/** 구/시명으로 카탈로그 항목 조회 (정확 → 별칭 → 부분 일치). */
+/** 구/시명으로 카탈로그 항목 조회 (정확 → 항목 별칭 → 통용 지명 → 부분 일치). */
 export function findCatalogRegionByName(
   query: string,
 ): SeoulDistrictInfo | undefined {
   const key = normalizeRegionKey(query.trim());
   if (!key) return undefined;
-  const exact = CATALOG_BY_KEY.get(key);
+  const exact = CATALOG_BY_KEY.get(key) ?? CATALOG_BY_ALIAS_KEY.get(key);
   if (exact) return exact;
   const aliasId = REGION_ALIASES[key];
   if (aliasId) return CATALOG_BY_ID.get(aliasId);
@@ -75,6 +95,15 @@ export function findCatalogRegionById(
   id: string,
 ): SeoulDistrictInfo | undefined {
   return CATALOG_BY_ID.get(id);
+}
+
+/** [998] 폐지 지역의 후속 항목들(카탈로그에 실제로 있는 것만, 선언 순서). 폐지 지역이 아니면 빈 배열. */
+export function findCatalogSuccessors(id: string): SeoulDistrictInfo[] {
+  const info = CATALOG_BY_ID.get(id);
+  if (!info?.retired) return [];
+  return (info.successors ?? [])
+    .map((sid) => CATALOG_BY_ID.get(sid))
+    .filter((s): s is SeoulDistrictInfo => s !== undefined);
 }
 
 /** 구/시명 → 정식 지역 id. 매칭 실패 시 null. */

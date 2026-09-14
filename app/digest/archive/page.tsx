@@ -65,7 +65,7 @@ export default async function DigestArchivePage() {
       <div className="mx-auto max-w-[760px]">
         <h1 className="rise-in t-title text-ink">주간 다이제스트 아카이브</h1>
         <p className="rise-in-1 mt-2 t-body text-text-2">
-          <Link href="/digest" className="font-bold text-primary underline">
+          <Link href="/digest" className="inline-block py-[5px] font-bold text-primary underline">
             이번 주 다이제스트
           </Link>
           는 오늘로부터 최근 7일이라 매일 내용이 바뀝니다. 여기 있는 주소는{" "}
@@ -112,7 +112,7 @@ export default async function DigestArchivePage() {
         )}
 
         <p className="mb-8 mt-5 t-sub text-text-3">
-          <Link href="/digest" className="font-bold text-primary underline">
+          <Link href="/digest" className="inline-block py-[5px] font-bold text-primary underline">
             이번 주 다이제스트 보기
           </Link>
         </p>

@@ -55,7 +55,7 @@ export function Bars({
           y={height - 3}
           textAnchor={i === 0 ? "start" : i === (labels?.length ?? 1) - 1 ? "end" : "middle"}
           fill="var(--text-3)"
-          fontSize="10"
+          fontSize="11"
         >
           {labels?.[i]}
         </text>

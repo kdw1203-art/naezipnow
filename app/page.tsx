@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Header } from "./components/Header";
+import { DesktopSideNav } from "./components/DesktopSideNav";
 import { TabBar } from "./components/TabBar";
 import { AIPanel } from "./components/AIPanel";
 import { ResumeDraftPopup } from "./components/home/ResumeDraftPopup";
@@ -212,158 +213,163 @@ export default async function Home() {
       <Header />
 
       {/* id 는 layout.tsx 의 "본문 바로가기" 스킵 링크 목적지다. */}
+      {/* [998 · A5] PageShell 과 같은 셸 — lg+ 좌측 내비 220px | 본문(.nz-shell, globals.css).
+          홈 안쪽 트리는 그대로고 min-w-0 래퍼 하나만 감쌌다. */}
       <main
         id="main-content"
-        className="mx-auto w-full max-w-[1240px] flex-1 px-3.5 pb-6 pt-3.5 md:px-5 md:pb-16 md:pt-5"
+        className="nz-shell mx-auto w-full max-w-[1240px] flex-1 px-3.5 pb-6 pt-3.5 md:px-5 md:pb-16 md:pt-5"
       >
-        {/* 이 문서의 유일한 H1. 히어로 제목은 <p> 다. */}
-        <h1 className="sr-only">{HOME_PAGE_H1}</h1>
+        <DesktopSideNav />
+        <div className="min-w-0">
+          {/* 이 문서의 유일한 H1. 히어로 제목은 <p> 다. */}
+          <h1 className="sr-only">{HOME_PAGE_H1}</h1>
 
-        {/* [968 · 39] 클로즈 베타 안내 — 본문 위 한 줄. 서버 HTML 에는 없다(null). */}
-        <BetaNoticeModal />
-        {/* 작성 중 노트 복귀 — 우하단 팝업(소유자 지시 2026-08-16) */}
-        <ResumeDraftPopup />
+          {/* [968 · 39] 클로즈 베타 안내 — 본문 위 한 줄. 서버 HTML 에는 없다(null). */}
+          <BetaNoticeModal />
+          {/* 작성 중 노트 복귀 — 우하단 팝업(소유자 지시 2026-08-16) */}
+          <ResumeDraftPopup />
 
-        {/* ① 검색 — 질문 한 줄 + 대형 검색 + 실기록 칩. 전폭. */}
-        <div className="flex flex-col gap-3 pb-3 pt-1.5 md:py-5">
-          <p className="t-display text-center text-ink">어느 단지가 궁금하세요?</p>
-          <p className="-mt-1 text-center t-sub text-text-2">{HOME_HERO_SUBLINE_SHORT}</p>
-          <HomeHeroSearch
-            regionChips={heroRegionChips}
-            coverage={
-              <HomeCoverageLine coverage={coverage} publicNotes={data.publicNotesTotal} />
-            }
-          />
-        </div>
+          {/* ① 검색 — 질문 한 줄 + 대형 검색 + 실기록 칩. 전폭. */}
+          <div className="flex flex-col gap-3 pb-3 pt-1.5 md:py-5">
+            <p className="t-display text-center text-ink">어느 단지가 궁금하세요?</p>
+            <p className="-mt-1 text-center t-sub text-text-2">{HOME_HERO_SUBLINE_SHORT}</p>
+            <HomeHeroSearch
+              regionChips={heroRegionChips}
+              coverage={
+                <HomeCoverageLine coverage={coverage} publicNotes={data.publicNotesTotal} />
+              }
+            />
+          </div>
 
-        {/* ② 오늘의 시장 — 한 문장. 넷을 동시에 말하면 무엇이 중요한지 사라진다. */}
-        <div className="mb-3 md:mb-4">
-          <HomeTodayLine
-            region={kpiRegion}
-            temp={kpiTemp}
-            saleIndex={saleIndexSeoul}
-            baseRate={baseRate}
-            loanRate={loanRate}
-            publicNotes={data.publicNotesTotal}
-          />
-        </div>
+          {/* ② 오늘의 시장 — 한 문장. 넷을 동시에 말하면 무엇이 중요한지 사라진다. */}
+          <div className="mb-3 md:mb-4">
+            <HomeTodayLine
+              region={kpiRegion}
+              temp={kpiTemp}
+              saleIndex={saleIndexSeoul}
+              baseRate={baseRate}
+              loanRate={loanRate}
+              publicNotes={data.publicNotesTotal}
+            />
+          </div>
 
-        {/* 본문 | 사이드바 — 모바일은 사이드바(내 관심·AI 입구)가 먼저 온다.
-            DOM 순서가 곧 모바일 순서고, lg 에서는 order 로 오른쪽에 붙인다.
-            두 벌을 그리지 않고 한 벌을 재배치하는 것이 이 파일의 전부다. */}
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4">
-          <aside
-            data-autotrim=""
-            className="flex flex-col gap-3 lg:order-2 lg:sticky lg:top-[76px] lg:self-start"
-          >
-            {/* ⑥ 내 관심 — 로그인만, 클라이언트 섬. 서버 HTML(공유 캐시)에는 없다. */}
-            <HomeMyRail />
-            {/* ④ AI 입구 — 예시 두 칸으로 결과의 모양을 먼저 보인다 */}
-            <HomeAiGateway briefing={data.briefing} exampleNoteId={notes[0]?.id ?? null} />
-            {/* 배너/하우스 광고 — 없으면 아무것도 그리지 않는다. plan={null}: 공유 캐시라
-                보는 사람의 플랜을 모른다(광고 제거는 AdFreeGate 가 클라이언트에서). */}
-            <AdZone placement="home_feed" seed={0} plan={null} className="hidden lg:block" />
-            <AdSenseUnit />
-          </aside>
+          {/* 본문 | 사이드바 — 모바일은 사이드바(내 관심·AI 입구)가 먼저 온다.
+              DOM 순서가 곧 모바일 순서고, lg 에서는 order 로 오른쪽에 붙인다.
+              두 벌을 그리지 않고 한 벌을 재배치하는 것이 이 파일의 전부다. */}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4">
+            <aside
+              data-autotrim=""
+              className="flex flex-col gap-3 lg:order-2 lg:sticky lg:top-[76px] lg:self-start"
+            >
+              {/* ⑥ 내 관심 — 로그인만, 클라이언트 섬. 서버 HTML(공유 캐시)에는 없다. */}
+              <HomeMyRail />
+              {/* ④ AI 입구 — 예시 두 칸으로 결과의 모양을 먼저 보인다 */}
+              <HomeAiGateway briefing={data.briefing} exampleNoteId={notes[0]?.id ?? null} />
+              {/* 배너/하우스 광고 — 없으면 아무것도 그리지 않는다. plan={null}: 공유 캐시라
+                  보는 사람의 플랜을 모른다(광고 제거는 AdFreeGate 가 클라이언트에서). */}
+              <AdZone placement="home_feed" seed={0} plan={null} className="hidden lg:block" />
+              <AdSenseUnit />
+            </aside>
 
-          <div data-autotrim="" className="flex flex-col gap-3 lg:order-1 lg:gap-4">
-            {/* ③ 공개 임장노트 — 증거. 누가 쓴 노트인지(Lab/이웃)를 숨기지 않는다. */}
-            <section className="card flex flex-col gap-2 rounded-2xl px-4 py-4">
-              <div className="flex items-center justify-between">
-                <h2 className="t-section text-ink">공개 임장노트</h2>
-                <Link
-                  href="/notes"
-                  className="inline-block py-[5px] text-[12px] text-text-3 transition-colors hover:text-primary"
-                >
-                  더보기
-                </Link>
-              </div>
-              {notes.length === 0 ? (
-                failed.notes ? (
-                  <p className="t-sub text-text-3">목록을 지금 불러오지 못했어요.</p>
-                ) : (
-                  <EmptyState
-                    icon="notebook-pen"
-                    title="아직 공개된 임장노트가 없어요"
-                    desc="첫 노트를 남기면 여기에 소개됩니다."
-                    action={{ label: "첫 공개 노트 남기기", href: "/notes/new" }}
-                  />
-                )
-              ) : (
-                notes.slice(0, 3).map((n, i, arr) => (
+            <div data-autotrim="" className="flex flex-col gap-3 lg:order-1 lg:gap-4">
+              {/* ③ 공개 임장노트 — 증거. 누가 쓴 노트인지(Lab/이웃)를 숨기지 않는다. */}
+              <section className="card flex flex-col gap-2 rounded-2xl px-4 py-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="t-section text-ink">공개 임장노트</h2>
                   <Link
-                    key={n.id}
-                    href={`/notes/${n.id}`}
-                    className={`-mx-1.5 flex items-center justify-between gap-3 rounded-lg px-1.5 py-[7px] t-body no-underline transition-colors hover:bg-[rgba(29,79,216,.05)] ${
-                      i < arr.length - 1 ? "border-b border-divider" : ""
-                    }`}
+                    href="/notes"
+                    className="inline-block py-[5px] text-[12px] text-text-3 transition-colors hover:text-primary"
                   >
-                    <span className="flex min-w-0 items-center gap-1.5">
-                      <span
-                        className={`shrink-0 rounded px-1 py-px t-caption font-extrabold ${
-                          n.kind === "lab"
-                            ? "bg-[rgba(0,0,0,.05)] text-text-3"
-                            : "bg-primary-soft text-primary"
-                        }`}
-                      >
-                        {n.kind === "lab" ? "Lab 데이터" : "이웃"}
-                      </span>
-                      <span className="truncate font-semibold text-text-1">{n.title}</span>
-                    </span>
-                    <span
-                      title="현장 체크 5개 항목 평균 × 20 (100점 만점)"
-                      className={`shrink-0 rounded-md px-1.5 py-0.5 t-caption font-extrabold ${
-                        n.hot ? "bg-primary-soft text-primary" : "bg-[rgba(0,0,0,.045)] text-text-3"
+                    더보기
+                  </Link>
+                </div>
+                {notes.length === 0 ? (
+                  failed.notes ? (
+                    <p className="t-sub text-text-3">목록을 지금 불러오지 못했어요.</p>
+                  ) : (
+                    <EmptyState
+                      icon="notebook-pen"
+                      title="아직 공개된 임장노트가 없어요"
+                      desc="첫 노트를 남기면 여기에 소개됩니다."
+                      action={{ label: "첫 공개 노트 남기기", href: "/notes/new" }}
+                    />
+                  )
+                ) : (
+                  notes.slice(0, 3).map((n, i, arr) => (
+                    <Link
+                      key={n.id}
+                      href={`/notes/${n.id}`}
+                      className={`-mx-1.5 flex items-center justify-between gap-3 rounded-lg px-1.5 py-[7px] t-body no-underline transition-colors hover:bg-[rgba(29,79,216,.05)] ${
+                        i < arr.length - 1 ? "border-b border-divider" : ""
                       }`}
                     >
-                      {n.score}
-                    </span>
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span
+                          className={`shrink-0 rounded px-1 py-px t-caption font-extrabold ${
+                            n.kind === "lab"
+                              ? "bg-[rgba(0,0,0,.05)] text-text-3"
+                              : "bg-primary-soft text-primary"
+                          }`}
+                        >
+                          {n.kind === "lab" ? "Lab 데이터" : "이웃"}
+                        </span>
+                        <span className="truncate font-semibold text-text-1">{n.title}</span>
+                      </span>
+                      <span
+                        title="현장 체크 5개 항목 평균 × 20 (100점 만점)"
+                        className={`shrink-0 rounded-md px-1.5 py-0.5 t-caption font-extrabold ${
+                          n.hot ? "bg-primary-soft text-primary" : "bg-[rgba(0,0,0,.045)] text-text-3"
+                        }`}
+                      >
+                        {n.score}
+                      </span>
+                    </Link>
+                  ))
+                )}
+                {allLabNotes && <p className="m-0 t-caption text-text-3">{LAB_NOTES_CAPTION}</p>}
+              </section>
+
+              {/* ⑤ 지역 시세 — 4장(모바일 2열·xl 4열). 스파크라인·딥링크는 카드 안. */}
+              <section className="flex flex-col gap-3">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h2 className="t-section text-ink">지역 시세</h2>
+                  <Link
+                    href="/map"
+                    className="inline-block py-[5px] t-sub font-bold text-primary no-underline"
+                  >
+                    지도에서 전체 보기 ›
                   </Link>
-                ))
-              )}
-              {allLabNotes && <p className="m-0 t-caption text-text-3">{LAB_NOTES_CAPTION}</p>}
-            </section>
-
-            {/* ⑤ 지역 시세 — 4장(모바일 2열·xl 4열). 스파크라인·딥링크는 카드 안. */}
-            <section className="flex flex-col gap-3">
-              <div className="flex items-baseline justify-between gap-2">
-                <h2 className="t-section text-ink">지역 시세</h2>
-                <Link
-                  href="/map"
-                  className="inline-block py-[5px] t-sub font-bold text-primary no-underline"
-                >
-                  지도에서 전체 보기 ›
-                </Link>
-              </div>
-              {regions.length === 0 ? (
-                failed.regions ? (
-                  <ErrorState
-                    title="지역 시세를 지금 불러오지 못했어요"
-                    desc="데이터가 없는 게 아니라 조회가 실패했어요. 잠시 후 다시 열어 주세요."
-                    action={{ label: "지도에서 찾아보기", href: "/map" }}
-                  />
+                </div>
+                {regions.length === 0 ? (
+                  failed.regions ? (
+                    <ErrorState
+                      title="지역 시세를 지금 불러오지 못했어요"
+                      desc="데이터가 없는 게 아니라 조회가 실패했어요. 잠시 후 다시 열어 주세요."
+                      action={{ label: "지도에서 찾아보기", href: "/map" }}
+                    />
+                  ) : (
+                    <EmptyState
+                      icon="map"
+                      title="지역 시세를 아직 불러오지 못했어요"
+                      desc="실거래 스냅샷이 준비되면 여기에 표시됩니다."
+                      action={{ label: "지도에서 찾아보기", href: "/map" }}
+                    />
+                  )
                 ) : (
-                  <EmptyState
-                    icon="map"
-                    title="지역 시세를 아직 불러오지 못했어요"
-                    desc="실거래 스냅샷이 준비되면 여기에 표시됩니다."
-                    action={{ label: "지도에서 찾아보기", href: "/map" }}
-                  />
-                )
-              ) : (
-                <RegionPulseCards regions={regions.slice(0, 4)} />
-              )}
-            </section>
+                  <RegionPulseCards regions={regions.slice(0, 4)} />
+                )}
+              </section>
 
-            {/* 주 행동 — 기록 → AI → 지도 흐름을 이 버튼 하나가 시작한다 */}
-            <Link
-              href={HOME_CTA_NOTE.href}
-              className="btn-primary glow press rounded-xl p-3 text-center text-[15px]"
-            >
-              {HOME_CTA_NOTE.label}
-            </Link>
+              {/* 주 행동 — 기록 → AI → 지도 흐름을 이 버튼 하나가 시작한다 */}
+              <Link
+                href={HOME_CTA_NOTE.href}
+                className="btn-primary glow press rounded-xl p-3 text-center text-[15px]"
+              >
+                {HOME_CTA_NOTE.label}
+              </Link>
 
-            <AdZone placement="home_feed" seed={1} plan={null} className="lg:hidden" />
+              <AdZone placement="home_feed" seed={1} plan={null} className="lg:hidden" />
+            </div>
           </div>
         </div>
       </main>

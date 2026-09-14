@@ -130,9 +130,16 @@ export function HomeMiniMap({
      옵저버 하나와 콜백은 아꼈다). */
   const [near, setNear] = useState(false);
   const rootElRef = useRef<HTMLDivElement | null>(null);
+  /* [998] 데스크톱(pointer: fine)은 첫 화면 안에 이 카드가 들어와 타일(842×358)이 LCP 후보가 된다 —
+     RUM 실측 홈 LCP 의 큰 표본이 전부 이 타일(1.0~2.8s)이었다. 데스크톱은 사용자가 카드에 손을
+     대기(hover·클릭) 전에는 SDK 를 싣지 않고, 아래 정적 미리보기(지역·시세 칩 = 같은 실데이터)로
+     답한다. 모바일은 카드가 접힘 아래라 예전대로(보이면 + 한가할 때). */
+  const desktopPointer = () =>
+    typeof window !== "undefined" && window.matchMedia("(pointer: fine)").matches;
   useEffect(() => {
     const el = rootElRef.current;
     if (!el || !active) return;
+    if (desktopPointer()) return; // 데스크톱은 상호작용 때만(onPointerEnter/onClick)
     let cancelIdle: (() => void) | null = null;
     const mountWhenIdle = () => {
       cancelIdle = whenIdle(() => setNear(true));
@@ -314,6 +321,9 @@ export function HomeMiniMap({
   return (
     <div
       ref={rootElRef}
+      onPointerEnter={() => {
+        if (!near && desktopPointer()) setNear(true);
+      }}
       className={`bento hover-rise relative [box-shadow:var(--shadow-sm)] ${
         fallbackActive ? "h-[112px] md:h-[200px]" : className
       }`}
@@ -345,11 +355,29 @@ export function HomeMiniMap({
           />
         ) : (
           /* [968 · 10] 정적 자리 — 같은 높이의 그라데이션. "지도 열기" 링크는 아래 하단 바가
-             near 와 무관하게 늘 그려져 있어, SDK 없이도 /map 으로 갈 수 있다. */
-          <div
-            aria-hidden
-            className="h-full w-full bg-gradient-to-br from-primary-soft to-line-strong"
-          />
+             near 와 무관하게 늘 그려져 있어, SDK 없이도 /map 으로 갈 수 있다.
+             [998] 빈 그라데이션 대신 **같은 실데이터**(지역 · 평균 시세 · 전월비)를 칩으로 그린다 —
+             SDK 전에도 답이 있고, 데스크톱 LCP 는 타일이 아니라 이 글자가 된다. */
+          <div className="h-full w-full bg-gradient-to-br from-primary-soft to-line-strong">
+            {shownRegions.length > 0 && (
+              <ul className="flex flex-wrap content-start gap-1.5 px-3.5 pb-16 pt-14" aria-label="지역별 평균 시세">
+                {shownRegions.slice(0, 6).map((r) => (
+                  <li
+                    key={r.id}
+                    className="glass inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 t-sub font-semibold text-text-1"
+                  >
+                    <span>{r.name}</span>
+                    <span className="font-extrabold text-ink">{r.price}</span>
+                    {r.delta && r.delta !== "—" && (
+                      <span className={r.tone === "up" ? "delta-up" : r.tone === "down" ? "delta-down" : "text-text-3"}>
+                        {r.delta}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </div>
 

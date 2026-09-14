@@ -10,14 +10,21 @@
  * 없는 지역(청주·천안 등)은 "그 밖의 지역"으로 정직하게 묶는다.
  */
 import {
+  catalogNameKeys,
   findCatalogRegionById,
   findCatalogRegionByName,
   normalizeRegionKey,
 } from "@/lib/region/catalog";
 
 /** 광역 시/도 접두 — market_transactions.region_name 은 "서울 종로구"·"부산 해운대구" 꼴이다
- *  (lib/market/molit-transactions.ts molitRegionLabel). 세종은 구가 없어 단독 표기. */
+ *  (lib/market/molit-transactions.ts molitRegionLabel). 세종은 구가 없어 단독 표기.
+ *  [998] 2026-07 통합 뒤에도 전남광주통합특별시의 구는 "광주 광산구" 로 적재된다(sidoShortLabel) —
+ *  "광주" 를 그대로 둔다. */
 const METRO_SIDO = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종"] as const;
+
+/** [998] 도 접두 — 실거래 표기는 시·군만("목포시")이지만 legal_regions.display_name 은 "전남 목포시" 꼴이라
+ *  둘 다 들어올 수 있다. 접두를 떼고 카탈로그를 본다(카탈로그에 그 시·군이 없으면 예전처럼 null). */
+const DO_SIDO = ["경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"] as const;
 
 export const OTHER_SIDO_LABEL = "그 밖의 지역";
 
@@ -44,12 +51,16 @@ export function sidoOfRegionName(name: string): string | null {
   if (metro) return metro;
   /* 카탈로그는 **정확 일치**만 인정한다 — findCatalogRegionByName 의 부분 일치를 그대로
      쓰면 "포항 남구"가 "부산 남구"로 붙는다(모르는 것은 모른다고 둔다). 실거래 표기
-     "수원 영통구"는 카탈로그의 "수원시 영통구"이므로 첫 토큰에 "시"를 붙인 후보도 본다. */
+     "수원 영통구"는 카탈로그의 "수원시 영통구"이므로 첫 토큰에 "시"를 붙인 후보도 본다.
+     [998] "화성 동탄구" 도 같은 규칙으로 "화성시 동탄구" 에 붙는다. 정확 일치 판정에는 항목의
+     aliases 도 포함한다(catalogNameKeys) — 원천 표기("인천광역시 검단구")가 별칭으로 등록돼 있다. */
   const rest = trimmed.split(/\s+/).slice(1).join(" ");
-  const candidates = rest && !first.endsWith("시") ? [trimmed, `${first}시 ${rest}`] : [trimmed];
+  const candidates: string[] = [trimmed];
+  if (rest && !first.endsWith("시")) candidates.push(`${first}시 ${rest}`);
+  if (rest && (DO_SIDO as readonly string[]).includes(first)) candidates.push(rest);
   for (const cand of candidates) {
     const hit = findCatalogRegionByName(cand);
-    if (hit && normalizeRegionKey(hit.name) === normalizeRegionKey(cand)) return hit.city ?? "서울";
+    if (hit && catalogNameKeys(hit).has(normalizeRegionKey(cand))) return hit.city ?? "서울";
   }
   return null;
 }

@@ -425,7 +425,7 @@ export function AuctionsClient({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex flex-col gap-3">
             {/* a) 입찰 캘린더 */}
             <div className="rise-in-1 card flex flex-col gap-2.5 rounded-2xl px-5 py-4">

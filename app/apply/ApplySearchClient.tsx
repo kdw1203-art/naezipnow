@@ -526,7 +526,7 @@ export function ApplySearchClient({ initial }: Props) {
                                   href={item.portalUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="font-bold text-primary underline"
+                                  className="inline-block py-[5px] font-bold text-primary underline"
                                 >
                                   청약홈 공고 원문 보기 ↗
                                 </a>
