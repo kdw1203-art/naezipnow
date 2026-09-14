@@ -23,7 +23,8 @@ import { formatKrwWon } from "@/lib/format/krw";
 
 const REGION_OPTIONS = [
   ...SEOUL_DISTRICTS.map((d) => ({ id: d.id, label: `서울 ${d.name}` })),
-  ...METRO_EXPLORE_DISTRICTS.map((d) => ({
+  /* [999] 폐지 구(인천 서구·중구, 2026-07)는 선택지에서 뺀다 — 후속 구가 있다 */
+  ...METRO_EXPLORE_DISTRICTS.filter((d) => !d.retired).map((d) => ({
     id: d.id,
     label: `${d.city ?? "서울"} ${d.name}`,
   })),

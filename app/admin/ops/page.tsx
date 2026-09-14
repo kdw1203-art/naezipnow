@@ -5,6 +5,7 @@ import { loadAdminKpi } from "@/lib/admin/stats";
 import { listBanners, type Banner } from "@/lib/admin/banners";
 import { loadRecentErrors } from "@/lib/admin/error-log";
 import { loadRecentHealthAlerts } from "@/lib/admin/health-alerts";
+import { formatKstDateTime } from "@/lib/format/kst";
 import { listAuditLog, type AuditRow } from "@/lib/admin/audit";
 import {
   STAFF_ROLE_LABEL,
@@ -109,7 +110,10 @@ export default async function AdminOpsPage() {
        "화면 없는 로더 = 없는 기능"(웹18 판단과 동일)이라 여기서 처음 배선한다. */
     listAuditLog(15).catch(() => [] as AuditRow[]),
   ]);
-  const criticalAlerts = alerts.filter((a) => a.severity === "critical");
+  /* [999] critical 종 수는 "지금 울리는 것"만 — 해소된 경보는 판에 남되 수에 안 들어간다 */
+  const criticalAlerts = alerts.filter((a) => a.severity === "critical" && a.active);
+  const activeAlerts = alerts.filter((a) => a.active);
+  const resolvedAlerts = alerts.filter((a) => !a.active);
   const hasFunnel = funnel.length > 0 && funnel.some((s) => s.count > 0);
 
   // 운영 지표 — 실집계(loadAdminKpi). 조작 KPI(DAU/리텐션 등) 대신 실 수치만.
@@ -150,33 +154,55 @@ export default async function AdminOpsPage() {
         <div className="rise-in-1 flex flex-col gap-2.5 rounded-[20px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-5">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[13px] font-extrabold text-white">운영 경보 (7일)</span>
-            {criticalAlerts.length > 0 && (
+            {criticalAlerts.length > 0 ? (
               <span className="rounded-md bg-[rgba(255,107,107,.16)] px-2 py-0.5 text-[12px] font-extrabold text-ai-danger">
-                critical {criticalAlerts.length}종
+                critical {criticalAlerts.length}종 진행 중
+              </span>
+            ) : (
+              <span className="rounded-md bg-[rgba(76,175,130,.16)] px-2 py-0.5 text-[12px] font-extrabold text-[#4caf82]">
+                진행 중 critical 없음
               </span>
             )}
+            <span className="text-[12px] text-ai-muted">
+              진행 중 {activeAlerts.length} · 해소 {resolvedAlerts.length}
+            </span>
             <span className="ml-auto text-[12px] text-ai-muted">
-              ops.health_alert_log · 같은 검사끼리 접어서 표시
+              ops.health_alert_log · 같은 검사끼리 접음 · 마지막 발생이 검사 주기 안이면 진행 중
             </span>
           </div>
           <div className="flex flex-col">
             {alerts.map((a) => (
               <div
                 key={`${a.checkName}-${a.severity}`}
-                className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-[rgba(255,255,255,.06)] py-2 last:border-0"
+                className={`flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-[rgba(255,255,255,.06)] py-2 last:border-0 ${
+                  a.active ? "" : "opacity-55"
+                }`}
               >
                 <span
                   className={`rounded px-1.5 py-px text-[10px] font-extrabold ${
-                    a.severity === "critical"
-                      ? "bg-[rgba(255,107,107,.16)] text-ai-danger"
-                      : "bg-[rgba(224,169,46,.16)] text-[#e0a92e]"
+                    !a.active
+                      ? "bg-[rgba(255,255,255,.08)] text-[#9aa6b8]"
+                      : a.severity === "critical"
+                        ? "bg-[rgba(255,107,107,.16)] text-ai-danger"
+                        : "bg-[rgba(224,169,46,.16)] text-[#e0a92e]"
                   }`}
                 >
                   {a.severity}
                 </span>
                 <span className="text-[13px] font-bold text-white">{a.checkName}</span>
+                {/* [999] 진행 중 / 해소 — 마지막 발생 시각(KST)과 함께 */}
+                {a.active ? (
+                  <span className="rounded px-1.5 py-px text-[10px] font-extrabold bg-[rgba(255,107,107,.12)] text-[#ffb4a8]">
+                    진행 중
+                  </span>
+                ) : (
+                  <span className="rounded px-1.5 py-px text-[10px] font-extrabold bg-[rgba(76,175,130,.14)] text-[#4caf82]">
+                    해소 · {a.sinceLastHours >= 48 ? `${Math.round(a.sinceLastHours / 24)}일 전` : `${Math.round(a.sinceLastHours)}h 전`}
+                  </span>
+                )}
                 <span className="text-[12px] text-ai-muted">{a.count}회</span>
-                {a.ageHours != null && (
+                <span className="text-[12px] text-ai-muted">마지막 {formatKstDateTime(a.checkedAt)}</span>
+                {a.ageHours != null && a.ageHours > 0 && (
                   <span className="text-[12px] text-ai-muted">지연 {Math.round(a.ageHours)}h</span>
                 )}
                 {a.detail && (

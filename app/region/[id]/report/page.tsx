@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
-import { REGION_CATALOG, findCatalogRegionById } from "@/lib/region/catalog";
+import { ACTIVE_REGION_CATALOG, findCatalogRegionById } from "@/lib/region/catalog";
 import { sameSidoFirst } from "@/lib/market/sido-group";
 import { recentReportSlugs } from "@/lib/region/monthly-report";
 import { seoAlternates } from "@/lib/seo/alternates";
@@ -73,7 +73,7 @@ export default async function RegionReportIndexPage({
       <div className="rise-in-2 mt-6">
         <Link
           href={`/region/${id}`}
-          className="chip border border-line bg-surface px-3.5 py-2 t-body font-bold text-primary"
+          className="chip inline-flex min-h-10 items-center border border-line bg-surface px-3.5 py-2 t-body font-bold text-primary"
         >
           ← {region.name} 지역 홈 (최신 시황)
         </Link>
@@ -85,7 +85,7 @@ export default async function RegionReportIndexPage({
         <div className="flex flex-wrap gap-1.5">
           {/* [970 · B-33] 같은 시/도 지역을 먼저 — 예전엔 카탈로그 앞 16개(=서울 25구)만
               나와 대구·부산 리포트에서도 "다른 지역"이 늘 서울이었다. */}
-          {sameSidoFirst(REGION_CATALOG, id)
+          {sameSidoFirst(ACTIVE_REGION_CATALOG, id)
             .slice(0, 16)
             .map((r) => (
               <Link

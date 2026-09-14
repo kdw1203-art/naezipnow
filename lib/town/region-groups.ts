@@ -52,6 +52,8 @@ export function groupRegionsByCity(
   const byCity = new Map<string, RegionGroup>();
   for (const r of catalog) {
     if (exclude && r.id === exclude) continue;
+    /* [999] 폐지 지역(2026-07 개편)은 목록에 안 보인다 — 후속 구가 같은 묶음에 있다. 페이지 자체는 남는다. */
+    if (r.retired) continue;
     const city = (r.city ?? "").trim() || DEFAULT_CITY;
     let g = byCity.get(city);
     if (!g) {

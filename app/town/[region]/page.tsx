@@ -141,7 +141,7 @@ export default async function TownRegionHomePage({
       <div className="rise-in mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="t-sub font-bold text-text-3">
-            <Link href="/town" className="hover:underline">
+            <Link href="/town" className="inline-block py-[5px] hover:underline">
               동네이야기
             </Link>{" "}
             › 동네 홈
@@ -197,7 +197,7 @@ export default async function TownRegionHomePage({
         <section className="rise-in-1">
           <div className="mb-2 flex items-baseline justify-between px-1">
             <h2 className="t-section text-ink">이웃 글</h2>
-            <Link href="/town" className="t-sub font-bold text-primary">
+            <Link href="/town" className="inline-block py-[5px] t-sub font-bold text-primary">
               전체 피드 ›
             </Link>
           </div>
@@ -251,7 +251,7 @@ export default async function TownRegionHomePage({
         <section className="rise-in-2">
           <div className="mb-2 flex items-baseline justify-between px-1">
             <h2 className="t-section text-ink">{region.name} 뉴스</h2>
-            <Link href="/town/news" className="t-sub font-bold text-primary">
+            <Link href="/town/news" className="inline-block py-[5px] t-sub font-bold text-primary">
               전체 뉴스 ›
             </Link>
           </div>
@@ -295,7 +295,7 @@ export default async function TownRegionHomePage({
               <span className="t-sub font-medium text-text-3">{notes.length}편</span>
             )}
           </h2>
-          <Link href="/notes" className="t-sub font-bold text-primary">
+          <Link href="/notes" className="inline-block py-[5px] t-sub font-bold text-primary">
             임장노트 홈 ›
           </Link>
         </div>
@@ -353,7 +353,7 @@ export default async function TownRegionHomePage({
           </h2>
           <Link
             href={`/map?region=${encodeURIComponent(region.name)}`}
-            className="t-sub font-bold text-primary"
+            className="inline-block py-[5px] t-sub font-bold text-primary"
           >
             지도에서 {region.name} 보기 ›
           </Link>

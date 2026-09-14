@@ -29,7 +29,8 @@ export default async function AdminLayout({
   }
   /* [G001 2026-08-31] critical 경보는 어느 관리자 화면에서든 먼저 보인다.
      billing-renewals 가 4일 넘게 critical 이었는데, 신선도 서브 페이지에
-     들어가야만 보였다 — 대시보드에 살면서도 장애를 모를 수 있었다. */
+     들어가야만 보였다 — 대시보드에 살면서도 장애를 모를 수 있었다.
+     [999] 지금 울리는 것만 센다 — 그친 경보는 운영 콘솔 판에 "해소"로 남는다. */
   const criticals = await loadCriticalAlerts24h().catch(() => []);
   return (
     <div className="flex min-h-screen flex-col bg-[#12161f] md:flex-row">
@@ -64,7 +65,7 @@ export default async function AdminLayout({
             href="/admin/ops"
             className="block rounded-xl border border-[#7a2a2a] bg-[#2a1616] px-4 py-3 text-[13px] leading-relaxed !text-[#ffb4a8] no-underline hover:bg-[#331a1a]"
           >
-            <b>🔴 심각 경보 {criticals.length}건 (24시간)</b> —{" "}
+            <b>🔴 심각 경보 {criticals.length}건 진행 중</b> —{" "}
             {criticals
               .slice(0, 3)
               .map((c) => c.checkName)

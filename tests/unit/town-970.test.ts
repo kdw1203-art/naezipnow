@@ -59,10 +59,14 @@ test("isSameKstMonth — 한국 달력 기준 (UTC 로는 8월인 9월 1일 00:3
 });
 
 /* [970 · C-17] 동네 홈 인덱스 — 카탈로그 전량이 시·도 그룹으로 빠짐없이 들어간다 */
-test("groupRegionsByCity — 전량 포함 · 서울 먼저 · 자기 자신 제외", () => {
+test("groupRegionsByCity — 전량 포함(폐지 제외) · 서울 먼저 · 자기 자신 제외", () => {
   const groups = groupRegionsByCity();
   const total = groups.reduce((n, g) => n + g.items.length, 0);
-  assert.equal(total, REGION_CATALOG.length, "카탈로그 전량이 그룹에 들어간다");
+  /* [999] 폐지 지역(2026-07 개편, retired)은 목록에서 빠진다 — 나머지는 빠짐없이 */
+  const active = REGION_CATALOG.filter((r) => !r.retired);
+  assert.ok(active.length < REGION_CATALOG.length, "카탈로그에 폐지 항목이 있다(인천 서구·중구)");
+  assert.equal(total, active.length, "폐지를 뺀 전량이 그룹에 들어간다");
+  for (const g of groups) assert.ok(!g.items.some((r) => r.id === "incheon-seo" || r.id === "incheon-jung"));
   assert.equal(groups[0].city, "서울");
   assert.equal(groups[0].key, "seoul");
   assert.equal(groups[0].items.length, 25, "서울 25구");
@@ -72,7 +76,7 @@ test("groupRegionsByCity — 전량 포함 · 서울 먼저 · 자기 자신 제
   assert.equal(new Set(groups.map((g) => g.key)).size, groups.length);
 
   const without = groupRegionsByCity(REGION_CATALOG, "gangnam");
-  assert.equal(without.reduce((n, g) => n + g.items.length, 0), REGION_CATALOG.length - 1);
+  assert.equal(without.reduce((n, g) => n + g.items.length, 0), active.length - 1);
   assert.ok(!without[0].items.some((r) => r.id === "gangnam"));
 });
 

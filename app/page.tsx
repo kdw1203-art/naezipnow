@@ -213,13 +213,12 @@ export default async function Home() {
       <Header />
 
       {/* id 는 layout.tsx 의 "본문 바로가기" 스킵 링크 목적지다. */}
-      {/* [998 · A5] PageShell 과 같은 셸 — lg+ 좌측 내비 220px | 본문(.nz-shell, globals.css).
-          홈 안쪽 트리는 그대로고 min-w-0 래퍼 하나만 감쌌다. */}
+      {/* [999] 좌측 내비는 가장자리 hover 오버레이 — 본문은 1열(PageShell 과 같은 규칙). */}
+      <DesktopSideNav />
       <main
         id="main-content"
-        className="nz-shell mx-auto w-full max-w-[1240px] flex-1 px-3.5 pb-6 pt-3.5 md:px-5 md:pb-16 md:pt-5"
+        className="mx-auto w-full max-w-[1240px] flex-1 px-3.5 pb-6 pt-3.5 md:px-5 md:pb-16 md:pt-5"
       >
-        <DesktopSideNav />
         <div className="min-w-0">
           {/* 이 문서의 유일한 H1. 히어로 제목은 <p> 다. */}
           <h1 className="sr-only">{HOME_PAGE_H1}</h1>

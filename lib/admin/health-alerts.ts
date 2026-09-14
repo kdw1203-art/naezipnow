@@ -13,19 +13,18 @@ import { logger } from "@/lib/log";
  *
  * 메일 발송(RESEND)은 키가 아직 없어 닫혀 있다. 그 전까지는 최소한
  * 관리자 화면에서 보이게 한다.
+ *
+ * [999 · 2026-09-14] 로그에는 "울린 것"만 쌓이고 "그친 것"은 안 쌓인다. 그래서 7일 판은
+ * 09-08 에 고친 matview 경보, 09-13 에 회복한 apt-master 경보를 오늘도 critical 로
+ * 보여 줬다(소유자 화면: critical 7종 중 진행 중은 2종). 검사마다 마지막 발생 시각과
+ * 그 검사의 발생 주기(로그 간격에서 도출)를 보고 **진행 중 / 해소** 를 가른다 —
+ * 시간 단위 검사는 마지막 발생이 3시간 안이면 진행 중, 일 단위 검사는 27시간.
  */
 
-export interface HealthAlertRow {
-  checkName: string;
-  severity: "critical" | "warn" | string;
-  detail: string | null;
-  ageHours: number | null;
-  checkedAt: string;
-  /** 같은 check_name 이 이 기간에 몇 번 울렸는지 */
-  count: number;
-}
+export type { HealthAlertRow } from "./health-alerts-fold";
+import { foldHealthAlerts, type HealthAlertRow } from "./health-alerts-fold";
 
-/** 최근 N일 경보를 check_name 기준으로 접어, 심각도·빈도 순으로 돌려준다. */
+/** 최근 N일 경보를 check_name 기준으로 접어, 진행 중 → 심각도 → 최근 순으로 돌려준다. */
 export async function loadRecentHealthAlerts(days = 7, limit = 12): Promise<HealthAlertRow[]> {
   const sb = getServiceSupabase();
   if (!sb) return [];
@@ -47,34 +46,15 @@ export async function loadRecentHealthAlerts(days = 7, limit = 12): Promise<Heal
     logger.error("[admin] 경보 로그 조회 실패", error);
     return [];
   }
-  const folded = new Map<string, HealthAlertRow>();
-  for (const r of (data ?? []) as Array<Record<string, unknown>>) {
-    const key = `${String(r.check_name ?? "")}|${String(r.severity ?? "")}`;
-    const prev = folded.get(key);
-    if (prev) {
-      prev.count += 1;
-      continue;
-    }
-    folded.set(key, {
-      checkName: String(r.check_name ?? ""),
-      severity: String(r.severity ?? "warn"),
-      detail: r.detail == null ? null : String(r.detail),
-      ageHours: r.age_hours == null ? null : Number(r.age_hours),
-      checkedAt: String(r.checked_at ?? ""),
-      count: 1,
-    });
-  }
-  const rank = (s: string) => (s === "critical" ? 0 : s === "warn" ? 1 : 2);
-  return [...folded.values()]
-    .sort((a, b) => rank(a.severity) - rank(b.severity) || b.count - a.count)
-    .slice(0, limit);
+  return foldHealthAlerts((data ?? []) as Array<Record<string, unknown>>, new Date(), limit);
 }
 
-/** [G001] 최근 24시간 critical 경보 — 관리자 전 페이지 상단 배너용.
+/** [G001] 지금 울리고 있는 critical 경보 — 관리자 전 페이지 상단 배너용.
  *
  * billing-renewals 가 4일 넘게 critical 인데 freshness 서브 페이지에 들어가야
- * 보였다. 심각 경보는 관리자 어느 화면에 있어도 먼저 보여야 한다. */
+ * 보였다. 심각 경보는 관리자 어느 화면에 있어도 먼저 보여야 한다.
+ * [999] 24시간 안에 울렸더라도 이미 그친 것은 배너에 올리지 않는다(판에는 "해소"로 남는다). */
 export async function loadCriticalAlerts24h(): Promise<HealthAlertRow[]> {
   const alerts = await loadRecentHealthAlerts(1, 12);
-  return alerts.filter((a) => a.severity === "critical");
+  return alerts.filter((a) => a.severity === "critical" && a.active);
 }

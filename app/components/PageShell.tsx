@@ -33,18 +33,16 @@ export function PageShell({
           (액션 바·저장 바·맨 위로)는 푸터 높이(≥200px)와 body.nz-has-actionbar 여백이
           받는다 — 본문 마지막 요소가 바에 가려지는 경우는 없다. 홈(app/page.tsx)의 직접
           그린 <main> 도 같은 값. */}
-      {/* [998 · A5] lg+ 는 좌측 내비 220px | 본문. 2열은 globals.css 의
-          `.nz-shell:has(> .nz-sidenav)` 가 켠다 — 내비가 경로에 따라 null 이면
-          (카드 스튜디오 등) 빈 220px 칸 없이 1열 그대로. data-autotrim 은 본문 칸으로
-          내려간다(직계 자식만 접는 규칙이라 래퍼에 있어야 페이지 블록을 본다). */}
+      {/* [999] 좌측 내비는 왼쪽 가장자리 hover 로 나오는 오버레이(DesktopSideNav) — 본문 폭을 차지하지
+          않으므로 <main> 은 1열이다(998 의 2열 그리드 제거, 소유자 지시). */}
+      <DesktopSideNav />
       <main
         id="main-content"
         style={toolScope}
-        className={`nz-shell mx-auto w-full flex-1 px-3.5 pb-6 pt-3.5 md:px-5 md:pb-16 md:pt-5 ${
+        className={`mx-auto w-full flex-1 px-3.5 pb-6 pt-3.5 md:px-5 md:pb-16 md:pt-5 ${
           wide ? "max-w-[1400px]" : "max-w-[1240px]"
         }${toolScope ? " tool-scope" : ""}`}
       >
-        <DesktopSideNav />
         <div data-autotrim="" className="min-w-0">
           {/* [970 · A-40] 브레드크럼은 랜드마크로 — 문자열 prop 렌더링은 그대로(API 변경 없음).
               @media print 의 `nav{display:none}` 에 같이 걸려 인쇄에서는 빠진다(크롬이니 맞다). */}

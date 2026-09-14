@@ -19,6 +19,9 @@ export const REGION_CATALOG: SeoulDistrictInfo[] = [
   ...METRO_CITY_DISTRICTS,
 ];
 
+/** [999] 목록·내비에 보일 항목 — 폐지(`retired`) 지역은 뺀다. 조회(id·이름)는 REGION_CATALOG 그대로. */
+export const ACTIVE_REGION_CATALOG: SeoulDistrictInfo[] = REGION_CATALOG.filter((r) => !r.retired);
+
 /**
  * 지역명 정규화 키 — 공백·행정구역 접미사 제거 + 소문자화.
  * 검색 매칭·구 비교·카탈로그 조회의 단일 기준. (특별시/광역시/특별자치시/특별자치도)

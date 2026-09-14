@@ -322,6 +322,8 @@ type NoteDraft = {
   openGroups?: Record<string, boolean>;
   /** [967 · 2] 방문일(YYYY-MM-DD) — 사진 촬영일로 채운 값도 여기 남는다 */
   visitDate?: string;
+  /** [999] 3단계 판단(살까·보류·패스·다시 보기)과 근거 — 새로고침 전에 고른 것을 잃지 않게 */
+  decision?: { choice: DecisionChoice; reasons: string[] };
 };
 
 function isStringArray(v: unknown): v is string[] {
@@ -398,6 +400,12 @@ function parseDraft(raw: string | null): NoteDraft | null {
         typeof o.visitDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(o.visitDate)
           ? o.visitDate
           : undefined,
+      decision: (() => {
+        const d = o.decision as { choice?: unknown; reasons?: unknown } | null | undefined;
+        if (!d || typeof d !== "object") return undefined;
+        if (d.choice !== "buy" && d.choice !== "hold" && d.choice !== "pass" && d.choice !== "revisit") return undefined;
+        return { choice: d.choice, reasons: isStringArray(d.reasons) ? d.reasons.slice(0, 3) : [] };
+      })(),
     };
   } catch {
     return null;
@@ -1205,6 +1213,7 @@ export function NoteForm({
     weather,
     openGroups,
     visitDate,
+    decision: decisionChoice ? { choice: decisionChoice, reasons: decisionReasons ?? [] } : undefined,
   });
 
   const writeDraft = () => {
@@ -1314,6 +1323,11 @@ export function NoteForm({
       setVisitDate(pendingDraft.visitDate);
       visitDateTouchedRef.current = true;
       setVisitDateFromPhoto(false);
+    }
+    /* [999] 판단·근거 복원 — 제안이 아니라 사용자가 고른 값만 초안에 있다 */
+    if (pendingDraft.decision) {
+      setDecisionChoice(pendingDraft.decision.choice);
+      setDecisionReasons(pendingDraft.decision.reasons);
     }
     setPendingDraft(null);
   };
