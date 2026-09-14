@@ -30,6 +30,8 @@ type Personal = {
     delta: string;
     tone: KpiRegion["tone"];
     meta: string;
+    /** [1002] 기준월 — 마지막 집계 폴백 카드는 한두 달 전일 수 있어 "지난달보다"로 못 쓴다 */
+    periodLabel?: string | null;
   } | null;
 };
 
@@ -97,6 +99,7 @@ export function HomeTodayLine({
         tone: mine!.regionMarket!.tone,
         tradeLabel: mine!.regionMarket!.meta.match(/([\d,]+건)/)?.[1] ?? null,
         href: `/map?region=${encodeURIComponent(mine!.regionMarket!.name)}`,
+        periodLabel: mine!.regionMarket!.periodLabel ?? null,
       }
     : region;
 

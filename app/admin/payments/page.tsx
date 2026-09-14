@@ -1,7 +1,7 @@
 import { billingLabel } from "@/lib/subscriptions/labels";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { listPayments, type PaymentRecord } from "@/lib/payments/store";
+import { getPaymentByOrderIdStrict, listPayments, type PaymentRecord } from "@/lib/payments/store";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
 import { checkTossKeyPair, isBillingCapableClientKey } from "@/lib/payments/toss-keys";
@@ -68,7 +68,21 @@ function maskEmail(email: string | null): string {
   return `${id.slice(0, 2)}***@${domain}`;
 }
 
-export default async function AdminPaymentsPage() {
+/* [1002] 고객 문의(결제·환불)에서 넘어온 주문번호 — 최근 20건 밖이어도 그 주문 하나는 찾아 준다 */
+function pickOrderParam(sp: Record<string, string | string[] | undefined>): string | null {
+  const raw = Array.isArray(sp.order) ? sp.order[0] : sp.order;
+  if (!raw) return null;
+  const v = raw.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64);
+  return v.length >= 6 ? v : null;
+}
+
+export default async function AdminPaymentsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = (await searchParams) ?? {};
+  const orderParam = pickOrderParam(sp);
   /* 2026-08-26: 예전엔 클라이언트 키를 "test_ck_/live_ck_" 로만 봤다. 그래서
      주문서형·결제창형 연동 키(live_gck_…)를 넣으면 **설정돼 있는데도 미설정**으로
      떴다. 이제 종류(gck/ck)와 환경(test/live)을 함께 보고, 짝이 맞는지까지 본다. */
@@ -101,6 +115,22 @@ export default async function AdminPaymentsPage() {
     paymentsFailed = true;
     logger.error("[admin/payments] 결제 기록 조회 실패:", e);
   }
+  /* [1002] ?order= 로 지목된 주문 — 목록에 없으면 따로 찾아 맨 위에 올린다(환불 버튼 포함).
+     못 찾은 것과 조회 실패를 구분한다. */
+  let focused: PaymentRecord | null = null;
+  let focusedFailed = false;
+  if (orderParam) {
+    focused = payments.find((p) => p.orderId === orderParam) ?? null;
+    if (!focused) {
+      try {
+        focused = await getPaymentByOrderIdStrict(orderParam);
+      } catch (e) {
+        focusedFailed = true;
+        logger.error("[admin/payments] 지목 주문 조회 실패:", e);
+      }
+    }
+  }
+  const tableRows = focused ? [focused, ...payments.filter((p) => p.orderId !== focused!.orderId)] : payments;
 
   /* 웹26 — 사전등록 → 결제 전환. 사전등록(plan_preorder_interest) 이메일 중
      paid 결제 이메일과 겹치는 수를 센다. 조회 실패는 실패라고 표기(0 위장 금지). */
@@ -354,12 +384,22 @@ export default async function AdminPaymentsPage() {
           최근 결제 기록{" "}
           <span className="text-[12px] font-medium text-text-3">최근 20건 · 전 제공사</span>
         </h2>
+        {orderParam ? (
+          <p className="mt-2 rounded-[10px] bg-bg px-3 py-2 text-[12px] text-text-2">
+            문의에서 넘어온 주문번호 <span className="font-mono text-ink">{orderParam}</span> —{" "}
+            {focused
+              ? "아래 첫 줄에 올렸어요. 청약철회(7일)·일할 환불은 그 줄의 환불 버튼으로 처리합니다."
+              : focusedFailed || paymentsFailed
+                ? "지금 조회하지 못했어요(없는 게 아니라 조회 실패). 새로고침해 주세요."
+                : "장부에서 찾지 못했어요. 주문번호 오타이거나 결제가 생성되지 않은 건입니다."}
+          </p>
+        ) : null}
         {paymentsFailed ? (
           <p className="mt-3 text-[13px] text-text-3">
             결제 기록을 지금 불러오지 못했어요 — 기록이 없는 게 아니라 조회가
             실패했습니다. 새로고침해 주세요.
           </p>
-        ) : payments.length === 0 ? (
+        ) : tableRows.length === 0 ? (
           <p className="mt-3 text-[13px] text-text-3">
             아직 결제 기록이 없어요. 테스트 결제를 진행하면 여기에 남습니다.
           </p>
@@ -378,8 +418,11 @@ export default async function AdminPaymentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {payments.map((p) => (
-                  <tr key={p.id} className="border-b border-line last:border-0">
+                {tableRows.map((p) => (
+                  <tr
+                    key={p.id}
+                    className={`border-b border-line last:border-0${focused && p.orderId === focused.orderId ? " bg-primary-soft/40" : ""}`}
+                  >
                     <td className="py-2 pr-3 text-text-3">{fmtWhen(p.paidAt ?? p.requestedAt)}</td>
                     <td className="max-w-[180px] truncate py-2 pr-3 font-mono text-[12px] text-text-2">
                       {p.orderId}

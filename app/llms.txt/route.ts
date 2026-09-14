@@ -1,4 +1,5 @@
 import { loadCoverage, type Coverage } from "@/lib/stats/coverage";
+import { ACTIVE_REGION_CATALOG } from "@/lib/region/catalog";
 
 /* ============================================================
    항목 44 — llms.txt 를 정적 파일에서 라우트로 전환.
@@ -19,6 +20,11 @@ import { loadCoverage, type Coverage } from "@/lib/stats/coverage";
 export const revalidate = 3600;
 
 /* 커버리지 로더는 /about 실적 숫자와 공유한다(고도화 50) — lib/stats/coverage */
+
+/* [1002] /town 동네 수는 카탈로그(ACTIVE_REGION_CATALOG)에서 센다 — 손으로 적은
+   "62개"가 카탈로그 확장(5대 광역시) 뒤에도 남아 있었다. 카탈로그는 정적 모듈이라
+   비용 0 이고, /town 목록이 그리는 집합과 정확히 같다. */
+const townCount = ACTIVE_REGION_CATALOG.length;
 
 function doc(c: Coverage): string {
   const regionLine = c.regions
@@ -61,7 +67,7 @@ ${regionLine}
 ${complexLine}
 - 시장 온도 지역별 시계열: https://naezipnow.com/analysis/temperature/{지역} — 예: https://naezipnow.com/analysis/temperature/gangnam
 - 월간 지역 시장 스냅샷 아카이브 (#79, 월 고정 수치): https://naezipnow.com/region/{지역id}/report/{yyyy-mm} — 예: https://naezipnow.com/region/gangnam/report/2026-07
-- 동네 홈 (지역 글·뉴스·시세 요약, 62개): https://naezipnow.com/town/{지역id} — 예: https://naezipnow.com/town/gangnam
+- 동네 홈 (지역 글·뉴스·시세 요약, ${townCount}개): https://naezipnow.com/town/{지역id} — 예: https://naezipnow.com/town/gangnam
 - 전세가율·갭·월세 환산 랭킹: https://naezipnow.com/analysis/gap
 - 주제별 부동산 뉴스 허브 (요약·동일 사건 묶음): https://naezipnow.com/town/news/tag/{주제} — 예: https://naezipnow.com/town/news/tag/jaegeonchug
 - 주간 청약 접수·마감 아카이브: https://naezipnow.com/apply/calendar/{yyyy-wNN}

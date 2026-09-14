@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { listTicketsForAdmin } from "@/lib/support/tickets";
+import { orderIdFromTicket } from "@/lib/support/ticket-labels";
 import {
   formatTicketNo,
   isTicketStatus,
@@ -24,6 +25,7 @@ export const metadata: Metadata = {
   title: "고객 문의 | 내집나우 관리자",
   robots: { index: false, follow: false },
 };
+
 
 const darkCard =
   "flex flex-col gap-3 rounded-[20px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-5";
@@ -131,6 +133,17 @@ export default async function AdminSupportPage({
                 <p className="whitespace-pre-wrap rounded-[10px] bg-[rgba(255,255,255,.05)] px-3.5 py-3 t-body leading-[1.7] text-[#e6ebf3]">
                   {t.message}
                 </p>
+                {(() => {
+                  const orderId = orderIdFromTicket(t.category, t.message);
+                  return orderId ? (
+                    <Link
+                      href={`/admin/payments?order=${encodeURIComponent(orderId)}`}
+                      className="inline-flex min-h-10 items-center self-start rounded-[10px] border border-[rgba(255,255,255,.14)] px-3 t-sub font-bold !text-ai-accent"
+                    >
+                      결제 관리에서 주문 {orderId} 보기 · 환불 처리 →
+                    </Link>
+                  ) : null;
+                })()}
                 {t.adminReply && (
                   <div className="rounded-[10px] border-l-[3px] border-ai-accent bg-[rgba(126,162,255,.08)] px-3.5 py-3">
                     <div className="mb-1 t-caption font-extrabold uppercase tracking-wide text-ai-accent">

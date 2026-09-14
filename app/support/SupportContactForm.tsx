@@ -64,6 +64,8 @@ export function SupportContactForm({ supportEmail }: { supportEmail: string }) {
         bug: "버그 신고",
         privacy: "개인정보",
         report: "악성 콘텐츠 신고",
+        /* [1002] 계정 문의(비밀번호 재설정 메일 미수신 등) — 별도 카테고리는 두지 않는다 */
+        account: "일반 문의",
       };
       const picked = cat ? (isTicketCategory(cat) ? cat : map[cat]) : undefined;
       if (picked) setCategory(picked);
@@ -81,6 +83,22 @@ export function SupportContactForm({ supportEmail }: { supportEmail: string }) {
             "",
             "요청 내용: (예: 결제 후 7일 이내 청약철회 / 중도 해지 일할 환불 / 영수증 발급)",
           ].join("\n"),
+        );
+      }
+      /* [1002] /forgot-password 가 보내는 딥링크 — 메일이 안 왔을 때 무엇을 적어야 하는지 미리 채운다.
+         이메일은 주소창에 싣지 않는다(개인정보) — 아래 이메일 칸에 직접 적는다. */
+      if (sp.get("topic") === "password-reset") {
+        setSubject((v) => v || "비밀번호 재설정 메일이 오지 않아요");
+        setMessage(
+          (v) =>
+            v ||
+            [
+              "가입한 이메일: (아래 이메일 칸과 같은 주소)",
+              "요청한 시각: ",
+              "스팸함 확인: 했음 / 안 했음",
+              "",
+              "확인 뒤 재설정 링크를 다시 보내 주세요.",
+            ].join("\n"),
         );
       }
     } catch {

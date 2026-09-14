@@ -4,6 +4,7 @@
  * 구 코드베이스의 서버 함수를 그대로 사용한다:
  * - `loadHomeData()`            → 동네이야기 게시글·모임·리포트·통계 (lib/landing/data)
  * - `getAllRegionSnapshots()`   → 지역 시세 카드 (market_region_price, lib/market/store)
+ * - `market_region_monthly`     → [1002] 지역 시세 카드 **폴백**(스냅샷 실패·0건 시 마지막 월 집계)
  * - `market_price_indices`      → 매매가격지수(REB 서울, 직접 select — 읽기 전용)
  * - `getRegionSeries()`         → 매매가격지수 폴백 (market_region_series, lib/market/store)
  * - `market_region_monthly`     → AI 시장 브리핑 (최근 월 등락 집계, 1시간 캐시)
@@ -30,9 +31,16 @@ import { getMortgageRates } from "@/lib/finance/mortgage-rates";
 import { SEOUL_DISTRICTS } from "@/lib/map/seoul-districts";
 import { isLabNoteLabel } from "@/lib/inspection/store-db";
 import { readRelatedTownPosts } from "@/lib/newui/board-posts";
-import { DELTA_UNKNOWN } from "@/lib/newui/delta-label";
 import { logger } from "@/lib/log";
-import { formatKrwWon } from "@/lib/format/krw";
+import {
+  CARD_REGIONS,
+  CARD_REGION_MONTHLY_NAMES,
+  deltaOf,
+  formatEok,
+  periodLabelOf,
+  regionCardsFromMonthly,
+  type MonthlyRow,
+} from "@/lib/newui/home-region-fallback";
 
 export type DeltaTone = "up" | "down" | "flat";
 
@@ -52,6 +60,12 @@ export interface HomeRegionCard {
   href: string;
   /** KB 주간 매매가격지수 최근 시계열(오름차순, 실데이터). 없으면 빈 배열 — 그리지 않는다. */
   spark: number[];
+  /**
+   * [1002] true 면 실시간 스냅샷이 아니라 `market_region_monthly` 의 **마지막 온전한 월
+   * 집계**로 만든 카드다(lib/newui/home-region-fallback). 값은 실측이지만 시점이 오래됐으니
+   * 화면은 "마지막 집계" 라고 적는다. 없으면(undefined) 스냅샷 카드.
+   */
+  stale?: boolean;
 }
 
 export interface HomeNoteItem {
@@ -132,6 +146,12 @@ export interface NewHomeData {
    */
   activityToday: number | null;
   regions: HomeRegionCard[];
+  /**
+   * [1002] regions 가 스냅샷이 아니라 마지막 월 집계 폴백일 때 true. 이때
+   * `failed.regions` 는 false 다 — 데이터는 진짜고 시점만 오래됐다. 폴백까지
+   * 실패하면 regionsStale=false · failed.regions=true 로 예전 그대로 실패를 말한다.
+   */
+  regionsStale: boolean;
   notes: HomeNoteItem[];
   posts: HomePostItem[];
   /** [950] 커뮤니티 글(posts)이 0건일 때 대신 보여 줄 자동수집 뉴스 3건 — 빈 방 대신 읽을거리 */
@@ -162,6 +182,7 @@ export const EMPTY_NEW_HOME_DATA: NewHomeData = {
   briefing: null,
   activityToday: null,
   regions: [],
+  regionsStale: false,
   notes: [],
   posts: [],
   news: [],
@@ -178,19 +199,9 @@ export const EMPTY_NEW_HOME_DATA: NewHomeData = {
   },
 };
 
-/** 홈 시세 카드로 보여줄 지역 (내부 region id — seoul-districts 기준) */
-const CARD_REGIONS: Array<{ id: string; name: string; city: string }> = [
-  { id: "gangnam", name: "강남구", city: "서울" },
-  { id: "mapo", name: "마포구", city: "서울" },
-  { id: "songpa", name: "송파구", city: "서울" },
-  { id: "namyangju", name: "남양주", city: "경기" },
-];
-
-/** 원 단위 평균 매매가 → "32.5억" 형식
- *  [967 · 31] 본체는 lib/format/krw.ts "eok" 스타일(AI 코멘트 formatEokWon 과 같은 얼굴) */
-function formatEok(won: number): string {
-  return formatKrwWon(won, { style: "eok", below: "eok", empty: false });
-}
+/* [1002] CARD_REGIONS · formatEok · deltaOf · periodLabelOf 는 lib/newui/home-region-fallback
+   (순수 모듈)로 옮겼다 — 스냅샷 카드와 월 집계 폴백 카드가 **같은 규칙**으로 만들어져야
+   하고, 테스트가 server-only 없이 부를 수 있어야 해서다. 아래 두 export 는 그 래퍼다. */
 
 /* 캡처 개선(2026-08-04) — 관심지역 행별 시세 칩이 이 포맷터를 재사용한다.
    포맷 규칙을 /api/home/personal 에 복사하면 홈 카드와 다른 숫자 얼굴이 된다. */
@@ -202,19 +213,6 @@ export function deltaOfChangePct(changePct: number | undefined): {
   tone: DeltaTone;
 } {
   return deltaOf(changePct);
-}
-
-function deltaOf(changePct: number | undefined): { delta: string; tone: DeltaTone } {
-  if (typeof changePct !== "number" || !Number.isFinite(changePct)) {
-    /* 예전엔 "— 0.0%" 였다. 변동률을 못 구한 지역과 정말로 보합인 지역이
-       화면에서 **완전히 같은 모양**(회색 0.0%)이라, 모른다는 사실이 "변동
-       없음"이라는 없는 사실로 바뀌어 있었다. 지도 말풍선도 이 문자열에서
-       숫자를 뽑아 momPct=0 으로 썼다. 모르면 모른다고 적는다. */
-    return { delta: DELTA_UNKNOWN, tone: "flat" };
-  }
-  const arrow = changePct > 0 ? "▲" : changePct < 0 ? "▼" : "—";
-  const tone: DeltaTone = changePct > 0.1 ? "up" : changePct < -0.1 ? "down" : "flat";
-  return { delta: `${arrow} ${Math.abs(changePct).toFixed(1)}%`, tone };
 }
 
 /** 0~5 평균 점수 → 100점 만점 라벨 */
@@ -474,12 +472,6 @@ async function countPublicNotesTotal(): Promise<number | null> {
 /* ---------- 지역 시세 카드 (스냅샷 → 카드) ---------- */
 
 /** 스냅샷 맵에서 홈 지역 시세 카드를 만든다. DB 접근 없음(순수 변환). */
-/** "202607" → "7월" — 스냅샷 기준월 표시용. 형식이 다르면 null(없는 시점을 지어내지 않는다). */
-function periodLabelOf(period: string | null | undefined): string | null {
-  if (!period || !/^\d{6}$/.test(period)) return null;
-  return `${Number(period.slice(4, 6))}월`;
-}
-
 function buildRegionCards(
   snapshots: Map<string, RegionMarketSnapshot>,
 ): HomeRegionCard[] {
@@ -527,6 +519,59 @@ async function attachRegionSparks(regions: HomeRegionCard[]): Promise<void> {
   );
 }
 
+/* ---------- [1002] 지역 시세 카드 폴백 (market_region_monthly, 마지막 온전한 달) ---------- */
+
+/**
+ * 스냅샷(market_region_price)이 실패하거나 0건일 때의 폴백. 신고 실거래 월 집계에서
+ * 카드 지역 4곳의 **거래 10건 이상인 가장 최근 달**로 카드를 만든다(순수 변환은
+ * lib/newui/home-region-fallback). 실패·0건은 빈 배열 — 호출부가 예전 실패 경로를 탄다.
+ *
+ * 왜 40행인가: 지역 4곳 × 최근 10개월. 당월이 부분 집계(예: 202609 거래 4건)라
+ * 건너뛰어도 그 앞 달이 넉넉히 들어온다. 같은 표를 읽는 computeBriefing 과 달리
+ * 여기서는 region_name 을 정확히 4개로 좁힌다.
+ */
+async function loadRegionCardsFallback(): Promise<HomeRegionCard[]> {
+  const sb = getReadOnlySupabase();
+  if (!sb) return [];
+  const names = CARD_REGIONS.map((t) => CARD_REGION_MONTHLY_NAMES[t.id]).filter(Boolean);
+  if (names.length === 0) return [];
+  const { data, error } = await sb
+    .from("market_region_monthly")
+    .select("region_name, month, transaction_count, avg_deal_amount_krw, trend_delta_pct")
+    .eq("deal_type", "trade")
+    .eq("property_type", "apartment")
+    .in("region_name", names)
+    .order("month", { ascending: false })
+    .limit(40);
+  if (error) throw error;
+  if (!Array.isArray(data)) return [];
+  return regionCardsFromMonthly(data as MonthlyRow[], CARD_REGIONS);
+}
+
+/**
+ * 스냅샷 실패 뒤에 부른다. 폴백 카드가 1장 이상이면 그 카드를(경고 로그와 함께),
+ * 폴백도 실패·0건이면 빈 배열을 돌려준다 — 그때는 호출부가 "조회 실패"를 그대로 말한다.
+ * 폴백의 예외는 여기서 삼킨다: 스냅샷도 죽고 월 집계도 죽은 상황에서 홈 전체가
+ * 죽을 이유는 없다.
+ */
+async function regionCardsAfterSnapshotFailure(where: string): Promise<HomeRegionCard[]> {
+  try {
+    const cards = await loadRegionCardsFallback();
+    if (cards.length > 0) {
+      logger.warn(
+        `[${where}] 지역 스냅샷 실패 → market_region_monthly 마지막 월 집계로 폴백`,
+        { cards: cards.length, months: cards.map((c) => c.periodLabel) },
+      );
+    } else {
+      logger.warn(`[${where}] 지역 스냅샷 실패 · 월 집계 폴백도 0건 — 실패로 표시`);
+    }
+    return cards;
+  } catch (err) {
+    logger.warn(`[${where}] 지역 스냅샷 실패 · 월 집계 폴백 조회도 실패 — 실패로 표시`, err);
+    return [];
+  }
+}
+
 /**
  * 최적화 27 — **지역 시세 카드만** 필요한 소비자를 위한 최소 로더.
  *
@@ -542,17 +587,21 @@ async function attachRegionSparks(regions: HomeRegionCard[]): Promise<void> {
  *
  * 실패와 "카드 0장"을 구분해야 해서 `null` 을 실패로 쓴다 — 빈 배열로 뭉개면
  * 호출부가 조회 실패를 "해당 지역 없음"으로 오인한다.
+ *
+ * [1002] 스냅샷이 실패·0건이면 월 집계 폴백(카드에 `stale: true`)을 먼저 시도하고,
+ * 그것마저 없을 때만 null 이다 — 홈(loadNewHomeDataInternal)과 같은 판정.
  */
 export async function loadHomeRegionCards(): Promise<HomeRegionCard[] | null> {
   try {
     const snapshots = await getAllRegionSnapshots();
-    /* 0건은 준비 중이 아니라 조회 이상이다 — loadNewHomeDataInternal 과 동일 판정 */
-    if (snapshots.size === 0) return null;
-    return buildRegionCards(snapshots);
+    if (snapshots.size > 0) return buildRegionCards(snapshots);
+    /* 0건은 준비 중이 아니라 조회 이상이다 — loadNewHomeDataInternal 과 동일 판정.
+       아래 폴백으로 떨어진다. */
   } catch (err) {
     logger.error("[loadHomeRegionCards] 지역 스냅샷 조회 실패", err);
-    return null;
   }
+  const fallback = await regionCardsAfterSnapshotFailure("loadHomeRegionCards");
+  return fallback.length > 0 ? fallback : null;
 }
 
 async function loadNewHomeDataInternal(): Promise<NewHomeData> {
@@ -608,7 +657,19 @@ async function loadNewHomeDataInternal(): Promise<NewHomeData> {
      ("준비되면 표시됩니다")로 나가 실패가 준비 중으로 위장됐다(2026-08-04
      소유자 캡처). 실패로 분류해 "지금 불러오지 못했어요"로 말한다. */
   if (!regionsFailed && snapshots.size === 0) regionsFailed = true;
-  const regions = buildRegionCards(snapshots);
+  let regions = buildRegionCards(snapshots);
+  /* [1002] 스냅샷 실패 → 월 집계 폴백. 카드가 1장이라도 나오면 그건 실패가 아니라
+     "오래된 실측"이다(regionsStale). 폴백도 비면 예전처럼 실패로 말한다. */
+  let regionsStale = false;
+  if (regionsFailed) {
+    const fallback = await regionCardsAfterSnapshotFailure("loadNewHomeData");
+    if (fallback.length > 0) {
+      regions = fallback;
+      regionsStale = true;
+      regionsFailed = false;
+    }
+  }
+  /* 스파크라인은 폴백 카드에도 붙인다(별도 표 market_region_series — 살아 있을 수 있다) */
   await attachRegionSparks(regions);
 
   // ── 공개 임장노트 (inspection_notes) ──
@@ -685,6 +746,7 @@ async function loadNewHomeDataInternal(): Promise<NewHomeData> {
     briefing,
     activityToday,
     regions,
+    regionsStale,
     notes,
     posts,
     news,

@@ -10,6 +10,7 @@ import { AdZone } from "./components/ads/AdZone";
 import { AdSenseUnit } from "./components/ads/AdSenseUnit";
 import { Footer } from "./components/Footer";
 import { HomeHeroSearch } from "./components/home/HomeHeroSearch";
+import { HomeBudgetChips } from "./components/home/HomeBudgetChips";
 import { HomeMyRail } from "./components/home/HomeMyRail";
 import type { KpiRegion, KpiTemp } from "./components/home/HomeKpiRow";
 import { HomeTodayLine } from "./components/home/HomeTodayLine";
@@ -147,6 +148,16 @@ function HomeAiGateway({
           </div>
         )}
       </div>
+      {/* [1002] 비로그인도 /analysis/ai/ai-diagnosis 에서 단지를 고르면 실데이터 컨텍스트
+          (/api/ai/context 는 게스트 허용)를 그대로 본다 — 로그인은 실행 버튼에서만 묻는다.
+          "가입해야 뭐가 나오는지 알 수 있다"는 입구를 하나 연다. 패널이 잉크 다크라
+          링크색은 옆 두 링크와 같은 ai-accent. 세로 13px×1.6+10 ≈ 31px(문장 속 링크 24px 규칙). */}
+      <Link
+        href="/analysis/ai/ai-diagnosis"
+        className="mt-1 inline-block w-fit py-[5px] text-[13px] font-bold text-ai-accent no-underline"
+      >
+        로그인 없이 단지 데이터 진단 미리보기 →
+      </Link>
     </AIPanel>
   );
 }
@@ -238,6 +249,10 @@ export default async function Home() {
                 <HomeCoverageLine coverage={coverage} publicNotes={data.publicNotesTotal} />
               }
             />
+            {/* [1002] 조건 탐색 입구 — 단지 이름을 모르는 방문자는 검색창에 칠 게 없다.
+                예산 한 줄로 지도 필터(?priceMax=억)에 바로 들어간다. 지역은 첫 시세 카드와
+                같은 곳(실데이터), 카드가 없으면 지역 없이 예산만. 서버 렌더·클라이언트 JS 없음. */}
+            <HomeBudgetChips regionName={regions[0]?.name ?? null} />
           </div>
 
           {/* ② 오늘의 시장 — 한 문장. 넷을 동시에 말하면 무엇이 중요한지 사라진다. */}
@@ -355,7 +370,17 @@ export default async function Home() {
                     />
                   )
                 ) : (
-                  <RegionPulseCards regions={regions.slice(0, 4)} />
+                  <>
+                    <RegionPulseCards regions={regions.slice(0, 4)} />
+                    {/* [1002] 스냅샷 실패 → 월 집계 폴백 카드. 값은 실측이지만 시점이
+                        오래됐다는 사실을 카드 아래 한 줄로 적는다(카드 meta 의 "마지막 집계"
+                        와 같은 말). 실패를 "준비 중"으로도, 오래된 값을 "지금"으로도 위장하지 않는다. */}
+                    {data.regionsStale && (
+                      <p className="m-0 t-caption text-text-3">
+                        실시간 집계를 지금 불러오지 못해 마지막 월 집계를 보여드려요.
+                      </p>
+                    )}
+                  </>
                 )}
               </section>
 

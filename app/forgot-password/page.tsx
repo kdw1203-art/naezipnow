@@ -88,6 +88,17 @@ export default function ForgotPasswordPage() {
               <li>새 비밀번호(8자 이상)를 입력해 변경을 완료하세요.</li>
               <li>완료 후 로그인 페이지에서 다시 접속하세요.</li>
             </ol>
+            {/* [1002] 10분이 지나도 안 오면 — 기다리게 두지 않고 다음 길을 준다 */}
+            <p className="text-xs leading-[1.6] text-text-3">
+              10분이 지나도 오지 않으면{" "}
+              <Link
+                href="/support?category=account&topic=password-reset"
+                className="inline-block py-[5px] font-bold text-primary underline underline-offset-2"
+              >
+                고객센터에 계정 문의
+              </Link>
+              를 남겨 주세요.
+            </p>
             <Link
               href="/login"
               className="btn-primary mt-2 rounded-[10px] p-3 text-center text-[13px] font-bold"

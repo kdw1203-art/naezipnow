@@ -116,6 +116,10 @@ export async function POST(req: NextRequest) {
     logger.error("[forgot-password]", error.message);
   }
 
-  // 이메일 존재 여부를 노출하지 않기 위해 항상 성공 응답 반환
+  /* 이메일 존재 여부를 노출하지 않기 위해 항상 성공 응답 반환.
+     [1002] 응답에 "어느 경로로 보냈는지"를 싣지 않는다 — Resend 경로는 app_users 에 있는
+     주소만 보내고 없으면 여기로 떨어지므로, 경로를 알려 주면 그게 곧 계정 존재 여부다
+     (GoTrue 의 60초 재요청 오류도 등록된 주소에만 난다). 안 오는 메일에 대한 다음 길은
+     화면이 항상 같은 문장으로 안내한다("10분이 지나도 오지 않으면 고객센터"). */
   return NextResponse.json({ ok: true });
 }

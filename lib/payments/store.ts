@@ -341,6 +341,15 @@ export async function getPaymentByOrderId(
   return mapRow(data);
 }
 
+/** [1002] 관리자 조회용 — 조회 오류는 던진다(없음 null 과 구분). getPaymentByOrderId 는 오류를 null 로 삼킨다. */
+export async function getPaymentByOrderIdStrict(orderId: string): Promise<PaymentRecord | null> {
+  const sb = getServiceSupabase();
+  if (!sb) return memory.find((x) => x.orderId === orderId) ?? null;
+  const { data, error } = await sb.from("payments").select("*").eq("order_id", orderId).maybeSingle();
+  if (error) throw new Error(`payments 조회 실패: ${error.message}`);
+  return data ? mapRow(data) : null;
+}
+
 export async function getPaidPaymentByProviderKey(
   providerPaymentKey: string,
 ): Promise<PaymentRecord | null> {

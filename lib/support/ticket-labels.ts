@@ -119,3 +119,11 @@ export function validateTicketInput(input: TicketInput): TicketInputResult {
 export function firstTicketError(errors: TicketInputErrors): string {
   return errors.category ?? errors.subject ?? errors.message ?? errors.email ?? "입력을 확인해 주세요.";
 }
+
+/* [1002] 결제·환불 문의 본문의 "주문번호: …" 를 읽어 결제 관리(환불 버튼)로 바로 잇는다.
+   본문은 사용자가 쓴 것이라 표시·링크 인자로만 쓴다(영숫자·-_ 만, 6~64자). */
+export function orderIdFromTicket(category: string, message: string | null | undefined): string | null {
+  if (category !== "결제·환불") return null;
+  const m = /주문번호\s*[:：]\s*([A-Za-z0-9_-]{6,64})(?![A-Za-z0-9_-])/.exec(message ?? "");
+  return m ? m[1] : null;
+}

@@ -5,6 +5,7 @@ import { buildApplyCalendar } from "@/lib/applyhome/calendar";
 import { getWeeklyPriceHighs, type WeeklyHigh } from "@/lib/market/weekly-highs";
 import { formatKrwShort } from "@/lib/market/format";
 import { logger } from "@/lib/log";
+import { promoWeekTag, withUtm } from "@/lib/content/promo-pure";
 
 /* ============================================================
    [#58] 네이버 블로그용 주간 시황 팩 — 붙여넣기 완성본 자동 생성.
@@ -39,6 +40,16 @@ function weekLabel(now = new Date()): string {
   // 월 내 주차 (1일이 속한 주 = 1주차, 단순 달력 규칙)
   const week = Math.ceil((kst.getUTCDate() + new Date(Date.UTC(y, m - 1, 1)).getUTCDay()) / 7);
   return `${y}년 ${m}월 ${week}주차`;
+}
+
+/* [1002] 밖으로 나가는 링크에는 utm 을 붙인다 — 어느 주 블로그 글에서 왔는지
+   /admin/traffic · /admin/promo 의 UTM 표에서 셀 수 있게. 본문 문구는 그대로다. */
+function blogLink(path: string): string {
+  return withUtm(`https://naezipnow.com${path}`, {
+    source: "naver",
+    medium: "blog",
+    campaign: `weekly-${promoWeekTag()}`,
+  });
 }
 
 export async function buildBlogPack(): Promise<BlogPack> {
@@ -81,7 +92,7 @@ export async function buildBlogPack(): Promise<BlogPack> {
             ...lines,
             "",
             `전체 ${movers.length}개 지역 랭킹과 전세가율은 내집나우 갭 스크리너에서 볼 수 있어요.`,
-            `→ https://naezipnow.com/analysis/gap`,
+            `→ ${blogLink("/analysis/gap")}`,
           ].join("\n"),
         );
         sections.push("지역별 지수 흐름");
@@ -138,7 +149,7 @@ export async function buildBlogPack(): Promise<BlogPack> {
             ...lines,
             ends.length > 6 ? `외 ${ends.length - 6}건` : "",
             "",
-            "전체 일정 → https://naezipnow.com/apply/calendar",
+            `전체 일정 → ${blogLink("/apply/calendar")}`,
           ]
             .filter(Boolean)
             .join("\n"),
@@ -157,7 +168,7 @@ export async function buildBlogPack(): Promise<BlogPack> {
   const outro = [
     "─────────────────",
     "데이터 출처: 한국부동산원·KB(지수), 국토교통부 실거래가(신고가), 청약홈(청약 일정)",
-    "매일 갱신되는 지도·시세·임장노트는 내집나우에서 → https://naezipnow.com",
+    `매일 갱신되는 지도·시세·임장노트는 내집나우에서 → ${blogLink("/")}`,
     "이 정리는 산술 사실의 요약이며 투자 판단과 책임은 각자에게 있습니다.",
   ].join("\n");
 

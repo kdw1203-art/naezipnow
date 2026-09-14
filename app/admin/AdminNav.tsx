@@ -50,6 +50,7 @@ const NAV_GROUPS: Array<{ title: string; items: NavItem[]; defaultOpen: boolean 
       { href: "/admin/market", label: "마켓 · 정산" },
       { href: "/admin/social", label: "소셜 · 쇼츠" },
       { href: "/admin/blog-pack", label: "블로그 팩" },
+      { href: "/admin/promo", label: "홍보 킷" },
       { href: "/admin/community", label: "커뮤니티 운영" },
       { href: "/admin/ai", label: "AI 도구" },
     ],

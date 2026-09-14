@@ -1085,7 +1085,10 @@ export async function getTransactionHistory(
     .eq("region_name", dec.region)
     .eq("transaction_type", "trade")
     .eq("is_cancelled", false)
-    .gt("deal_amount_krw", 0);
+    .gt("deal_amount_krw", 0)
+    /* [1002] PostgREST 기본 상한(1,000행)에 걸리는 대단지는 잘린다 — 최신 계약월부터 받아
+       잘려도 "최근 limit 개월"이 온전하게 남게 한다(잘리지 않는 단지는 결과 동일). */
+    .order("contract_ym", { ascending: false });
   /* 이 값은 시세 화면의 근거다. 빈 배열은 "신고된 거래가 없다"는 강한 주장이고,
      price-analysis 는 그때 실거래 대신 추정 경로로 넘어간다 — 못 읽었을 뿐인데
      추정치가 실거래인 척 자리를 채우면 안 된다. */
@@ -1147,7 +1150,8 @@ export async function getTransactionHistoryWithBands(
     .eq("region_name", dec.region)
     .eq("transaction_type", "trade")
     .eq("is_cancelled", false)
-    .gt("deal_amount_krw", 0);
+    .gt("deal_amount_krw", 0)
+    .order("contract_ym", { ascending: false }); /* [1002] 위 함수와 같은 이유 */
   /* 빈 배열은 "신고된 거래가 없다"는 강한 주장 — 조회 실패를 그렇게 위장하지 않는다 */
   if (error) throw dbError(`market_transactions (실거래 이력·면적대 ${dec.name})`, error);
   const rows =

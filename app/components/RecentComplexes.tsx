@@ -4,12 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { getSessionLite } from "@/lib/client/session-lite";
+import { dedupeRecents } from "@/lib/recent-complexes/dedupe";
 
 /* ============================================================
    최근 본 단지 (호갱노노 벤치마크 — 재방문 동선 단축)
    localStorage nz_recent_complexes · 최대 8개 · 최신순
    - RecentComplexRecorder: /complex/[id] 방문 시 기록 (렌더 없음)
    - RecentComplexChips: /search 등에서 칩 행 노출 (기록 있을 때만)
+   [1002] 중복 제거는 id 만이 아니라 지역+이름으로도 한다(lib/recent-complexes/dedupe).
+   같은 단지가 옛 이름 id·새 kapt id 로 두 번 기록돼 "공작아파트"가 두 칸 떴었다.
+   읽기(readRecents)·기록(Recorder)·서버 병합 세 곳이 같은 함수를 쓴다.
    ============================================================ */
 
 const KEY = "nz_recent_complexes";
@@ -29,16 +33,19 @@ function readRecents(): RecentComplex[] {
     if (!raw) return [];
     const arr: unknown = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
-    return arr
-      .filter(
+    /* [1002] 이미 저장된 중복(옛 id·새 id 한 쌍)도 읽는 자리에서 접는다 — 다시 방문하기
+       전까지 두 칸으로 남아 있지 않게. */
+    return dedupeRecents(
+      arr.filter(
         (v): v is RecentComplex =>
           !!v &&
           typeof v === "object" &&
           typeof (v as RecentComplex).id === "string" &&
           typeof (v as RecentComplex).name === "string" &&
           typeof (v as RecentComplex).at === "number",
-      )
-      .slice(0, MAX);
+      ),
+      MAX,
+    );
   } catch {
     return []; // 파싱 실패·프라이빗 모드 — 조용히 무시
   }
@@ -64,10 +71,11 @@ export function RecentComplexRecorder({
 }) {
   useEffect(() => {
     if (!id || id.startsWith("mock")) return;
-    const next: RecentComplex[] = [
-      { id, name, region, at: Date.now() },
-      ...readRecents().filter((r) => r.id !== id),
-    ];
+    /* 새 기록이 가장 최근(at)이라 같은 id 든 같은 지역+이름이든 이 한 건만 남는다 */
+    const next: RecentComplex[] = dedupeRecents(
+      [{ id, name, region, at: Date.now() }, ...readRecents()],
+      MAX,
+    );
     writeRecents(next);
     // B8 — 로그인 사용자면 서버에도 기록(크로스디바이스). 비로그인은 API가 no-op.
     void fetch("/api/me/recent-complexes", {
@@ -135,18 +143,13 @@ export function useRecentComplexes(
     if (!enabled) return;
     const local = readRecents();
     setItems(local);
-    // B8 — 로그인 사용자는 서버 기록과 병합(크로스디바이스). 최신순·id 중복 제거.
+    // B8 — 로그인 사용자는 서버 기록과 병합(크로스디바이스). 최신순·id/지역+이름 중복 제거.
     let cancelled = false;
     fetchServerRecents()
       .then((j: { items?: RecentComplex[] } | null) => {
         if (cancelled) return;
         if (!j || !Array.isArray(j.items) || j.items.length === 0) return;
-        const merged = new Map<string, RecentComplex>();
-        for (const r of [...j.items, ...local]) {
-          const prev = merged.get(r.id);
-          if (!prev || (r.at ?? 0) > (prev.at ?? 0)) merged.set(r.id, r);
-        }
-        const list = [...merged.values()].sort((a, b) => (b.at ?? 0) - (a.at ?? 0)).slice(0, MAX);
+        const list = dedupeRecents([...j.items, ...local], MAX);
         setItems(list);
         writeRecents(list);
       })
