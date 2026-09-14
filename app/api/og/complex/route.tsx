@@ -1,5 +1,5 @@
 /**
- * GET /api/og/complex?name=&price=&delta=&region=
+ * GET /api/og/complex?name=&price=&delta=&region=&bands=
  * 단지 허브 공유용 동적 OG 카드 (1200×630, next/og ImageResponse).
  * - 리퀴드 글래스 무드: #f7f9fc 배경 + 좌상단 파란 radial 블롭
  * - 좌: 내집나우 로고 텍스트 + 단지명 + 지역 / 우: 가격 + 전월비 delta
@@ -30,6 +30,12 @@ export async function GET(req: NextRequest) {
   const price = q(req, "price", "4.9억");
   const delta = q(req, "delta", "");
   const region = q(req, "region", "안양 동안구 관양동");
+  /* [997] 평형별 최근가 칩 — `bands=60~85㎡ 33.5억|~59㎡ 16.1억`(최대 3개, 각 24자). 없으면 그리지 않는다. */
+  const bands = (req.nextUrl.searchParams.get("bands") ?? "")
+    .split("|")
+    .map((b) => b.trim().slice(0, 24))
+    .filter(Boolean)
+    .slice(0, 3);
 
   return new ImageResponse(
     (
@@ -150,6 +156,27 @@ export async function GET(req: NextRequest) {
             >
               {region}
             </div>
+            {bands.length > 0 && (
+              <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
+                {bands.map((b) => (
+                  <div
+                    key={b}
+                    style={{
+                      display: "flex",
+                      padding: "8px 14px",
+                      borderRadius: "999px",
+                      background: "rgba(29,79,216,0.08)",
+                      border: "1px solid rgba(29,79,216,0.16)",
+                      color: "#1d4fd8",
+                      fontSize: "22px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {b}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* 우측: 가격 카드 (글래스 카드) */}

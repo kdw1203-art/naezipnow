@@ -62,6 +62,8 @@ async function handle(req: Request) {
         slice: num("slice"),
         sliceSize: num("size"),
         codes: codes?.length ? codes : undefined,
+        /* [997] ?gaps=1 — 그 달에 0행인 시군구만(행정구역 개편 뒤 빈 구·월 메우기, GH ETL 이 매일 호출) */
+        gapsFirst: url.searchParams.get("gaps") === "1",
       }),
     ),
     CRON_WORK_BUDGET_MS,

@@ -115,6 +115,7 @@
     "@types/web-push": "^3.6.4",
     "eslint": "^9.39.4",
     "eslint-config-next": "^15.5.15",
+    "jsqr": "^1.4.0",
     "pg": "^8.20.0",
     "tailwindcss": "^4",
     "typescript": "^5.7.0",

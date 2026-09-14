@@ -50,6 +50,11 @@ export type NoteCardSource = {
    * 없으면 도메인만 — 이미지는 되돌릴 수 없으니 받은 사람이 노트로 돌아올 길을 찍는다.
    */
   shareLabel?: string | null;
+  /**
+   * [997] QR 에 담는 절대 주소(`https://naezipnow.com/n/xxxxxxxx`). 마무리 장이 QR 로 그린다 —
+   * 인쇄된 글자는 쳐야 하지만 QR 은 카메라만 대면 된다. 비공개 노트는 null(QR 없음).
+   */
+  shareUrl?: string | null;
 };
 
 export type FrameCategory = "표지" | "요약" | "점수" | "현장" | "판단" | "마무리";
@@ -69,7 +74,8 @@ export type FrameContent =
       rows: { label: string; value: string; note?: string | null }[];
       source: string;
     }
-  | { kind: "cta"; heading: string; sub: string };
+  /** [997] qrUrl — 있으면 마무리 장 우하단에 QR(공개 노트만) */
+  | { kind: "cta"; heading: string; sub: string; qrUrl?: string | null };
 
 export type CardFrame = {
   id: string;
@@ -259,11 +265,13 @@ export const CARD_FRAMES: readonly CardFrame[] = [
     label: "마무리",
     category: "마무리",
     available: () => true,
-    /* [995] 도메인 대신 짧은 링크 — 받은 사람이 이 노트로 곧장 온다(utm 은 /n 이 붙인다) */
+    /* [995] 도메인 대신 짧은 링크 — 받은 사람이 이 노트로 곧장 온다(utm 은 /n 이 붙인다)
+       [997] 같은 주소를 QR 로도 — 이미지 속 글자는 못 누르지만 QR 은 카메라로 바로 열린다 */
     build: (s) => ({
       kind: "cta",
       heading: "시세는 누구나 봅니다, 현장은 가 본 사람만 압니다",
       sub: s.shareLabel?.trim() || CARD_BRAND_DOMAIN,
+      qrUrl: s.shareUrl?.trim() || null,
     }),
   },
 ] as const;

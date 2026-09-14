@@ -1,7 +1,10 @@
 "use client";
 
+import { useMemo } from "react";
 import type { CardTheme } from "@/lib/notes/card-themes";
 import { CARD_BRAND_DOMAIN, type FrameContent } from "@/lib/notes/card-frames";
+import { encodeQr } from "@/lib/qr/encode";
+import { qrSvgProps } from "@/lib/qr/svg";
 
 /**
  * 카드 한 장(프레임) HTML 렌더 — 테마 색을 인라인 스타일로 그린다(테마 hex 는
@@ -14,6 +17,11 @@ const TONE_DOT: Record<"good" | "mid" | "bad", string> = {
   mid: "#eab308",
   bad: "#ef4444",
 };
+
+/* [997] 마무리 장 QR 한 변(px) — 미리보기 320px 기준. 내보내기는 1080px 로 균일 확대되므로
+   54 × 3.375 ≈ 182px, 모듈(v3 29칸 + 여백 3칸) 하나가 5px 남짓 — 카톡에서 받은 PNG 를
+   다른 폰으로 찍어도 읽힌다. 항상 흰 바탕·짙은 모듈(테마 무관) — 판독기는 대비만 본다. */
+const QR_PX = 54;
 
 export function CardFrameView({
   content,
@@ -51,12 +59,48 @@ export function CardFrameView({
       </div>
 
       {/* 마무리 장이 아니면 하단에 얇은 브랜드 라인 — [995] 짧은 링크가 매 장에 찍힌다
-          (한 장만 따로 공유돼도 돌아올 길이 남는다). 크기·자리는 그대로. */}
-      {content.kind !== "cta" && (
+          (한 장만 따로 공유돼도 돌아올 길이 남는다). 크기·자리는 그대로.
+          [997] 마무리 장은 그 자리에 QR(공개 노트만) — 글자 링크 바로 아래, 우하단. */}
+      {content.kind === "cta" ? (
+        content.qrUrl ? <CtaQr url={content.qrUrl} theme={theme} /> : null
+      ) : (
         <div className="t-caption font-semibold" style={{ color: theme.sub }}>
           {footer}
         </div>
       )}
+    </div>
+  );
+}
+
+/* [997] 마무리 장 우하단 QR — 인라인 <svg>(path 하나)라 html-to-image 가 그대로 굽는다.
+   왼쪽 캡션은 "찍으면 열린다"만 — 주소 글자는 바로 위 알약(content.sub)에 이미 있다. */
+function CtaQr({ url, theme }: { url: string; theme: CardTheme }) {
+  const qr = useMemo(() => {
+    try {
+      return qrSvgProps(encodeQr(url).modules, { quietZone: 3 });
+    } catch {
+      return null; // 짧은 링크(≈32자)는 v3 — 넘칠 일이 없지만 카드가 죽지는 않게
+    }
+  }, [url]);
+  if (!qr) return null;
+  return (
+    <div className="flex items-end justify-between gap-3">
+      <div className="flex flex-col t-caption font-semibold leading-snug" style={{ color: theme.sub }}>
+        <span>카메라로 QR을 찍으면</span>
+        <span>이 노트로 바로 열려요</span>
+      </div>
+      <svg
+        role="img"
+        aria-label={`QR — ${url}`}
+        viewBox={qr.viewBox}
+        width={QR_PX}
+        height={QR_PX}
+        shapeRendering="crispEdges"
+        className="shrink-0 rounded-[6px]"
+      >
+        <rect width="100%" height="100%" fill={qr.bg} />
+        <path d={qr.path} fill={qr.fg} />
+      </svg>
     </div>
   );
 }

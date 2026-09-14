@@ -122,6 +122,8 @@ export default async function NoteCardPage({
   const source: NoteCardSource = {
     ...toCardSource(note, market),
     shareLabel: note.isPublic ? shareLabel : null,
+    /* [997] 마무리 장 QR — 같은 짧은 링크의 절대 주소. 비공개는 QR 도 없다. */
+    shareUrl: note.isPublic ? shareUrl : null,
   };
   const available: AvailableFrame[] = availableFrames(source).map((f) => ({
     id: f.id,

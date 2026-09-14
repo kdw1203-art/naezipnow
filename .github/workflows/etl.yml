@@ -101,6 +101,15 @@ jobs:
           echo "== molit prev-month top-up (soft) =="
           curl -sS --max-time 290 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/molit-transactions-ingest?yyyymm=$PREV_YM&size=24" | head -c 500 || true
           echo
+          # [997] 빈 (시군구, 계약월) 메우기 — 2026-07 행정구역 개편(996)으로 코드가 바뀐 광주·전남·인천 신설구·화성·세종은
+          # 당월 회전(8일 주기)만으로는 지난 달들이 영영 비어 있다. 최근 1~6개월 각각에 대해 "0행인 시군구"만 16곳씩
+          # 채운다(빈 곳이 없으면 즉시 끝나 비용 0). 전량은 며칠에 걸쳐 저절로 닫힌다.
+          for K in 1 2 3 4 5 6; do
+            YM=$(date -u -d "$(date -u +%Y-%m-01) -$K month" +%Y%m)
+            echo "== molit gap fill $YM (soft) =="
+            curl -sS --max-time 290 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/molit-transactions-ingest?yyyymm=$YM&gaps=1&size=16" | head -c 300 || true
+            echo
+          done
           # [개선 #21] 입주물량 — 청약홈 분양공고의 입주예정월을 매일 업서트.
           # 수동 업로드(2026-02) 이후 갱신 경로가 없어 한 달째 정지했던 소스의 자동화.
           call supply "https://nuguzip.com/api/cron/supply-ingest"

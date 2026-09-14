@@ -961,6 +961,8 @@ export async function generateMetadata({
   // [995] 지역 줄에 읍면동까지("서울 송파구 잠실동") — 카드 템플릿은 그대로다.
   const ogQuery = new URLSearchParams({ name, price, region: placeLabel });
   if (delta) ogQuery.set("delta", delta);
+  /* [997] 평형별 최근가 칩(설명과 같은 2개) — 공유 카드에서도 검색 의도("평형")에 답한다 */
+  if (bandsText) ogQuery.set("bands", bandsText.split(" · ").slice(0, 3).join("|"));
   const ogImageUrl = `/api/og/complex?${ogQuery.toString()}`;
 
   // G6: 단지 허브는 사이트맵 URL 의 대부분(2.5만 건)을 차지하는 롱테일 랜딩이다.

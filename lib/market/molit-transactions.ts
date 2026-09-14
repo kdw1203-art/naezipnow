@@ -14,6 +14,7 @@
  */
 import { createHash } from "node:crypto";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchMolitDeals, type MolitDeal, type MolitRtmsType } from "@/lib/national-data/molit-api";
 import { getSigunguInfo, listLeafSigungu, type SigunguInfo } from "@/lib/national-data/region-codes";
 import { logIngest } from "@/lib/market/store";
@@ -158,6 +159,30 @@ const MOLIT_PARENT_ONLY_CODES = new Set([
 export function listMolitSigungu(): SigunguInfo[] {
   /* [996] 상위 코드 판정은 표에서 파생(listLeafSigungu) — 아래 상수는 근거 기록 + 이중 안전장치 */
   return listLeafSigungu().filter((i) => !MOLIT_PARENT_ONLY_CODES.has(i.sigunguCd));
+}
+
+/**
+ * [997] 계약월 yyyymm 에 적재 행이 0인 시군구(코드 오름차순, limit 개). 조회 실패는 "빈 곳"으로 세지 않는다 —
+ * 못 읽은 코드는 건너뛴다(빈 곳으로 잘못 세면 이미 채운 달을 다시 받는다).
+ */
+export async function findCoverageGaps(
+  sb: SupabaseClient,
+  yyyymm: string,
+  candidates: SigunguInfo[],
+  limit: number,
+): Promise<SigunguInfo[]> {
+  const out: SigunguInfo[] = [];
+  for (const info of candidates) {
+    if (out.length >= limit) break;
+    const { count, error } = await sb
+      .from("market_transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("region_code", info.sigunguCd)
+      .eq("contract_ym", yyyymm);
+    if (error) continue;
+    if ((count ?? 0) === 0) out.push(info);
+  }
+  return out;
 }
 
 function pricePerPyeong(amountKrw: number | null, areaM2: number | null): number | null {
@@ -339,12 +364,16 @@ export function autoTargetMonth(now = new Date()): string {
  * @param opts.sliceSize  1회 실행에서 처리할 시군구 수(기본 16)
  * @param opts.slice      슬라이스 인덱스(기본: 12시간 창 기준 자동 회전)
  * @param opts.codes      특정 시군구 코드만 처리(수동 실행용)
+ * @param opts.gapsFirst  [997] 그 달에 **0행인 시군구**만 골라 처리(sliceSize 개까지). 행정구역 개편(996)처럼
+ *                        코드가 바뀌어 한 번도 못 채운 구·월을 슬라이스 회전(8일 주기·당월 한정)에 맡기지 않고
+ *                        GH ETL 이 매일 지난 달들에 대해 메운다. 빈 곳이 없으면 아무것도 하지 않는다.
  */
 export async function ingestMolitTransactions(opts: {
   yyyymm?: string;
   sliceSize?: number;
   slice?: number;
   codes?: string[];
+  gapsFirst?: boolean;
   now?: Date;
 } = {}): Promise<MolitIngestResult> {
   const now = opts.now ?? new Date();
@@ -385,6 +414,11 @@ export async function ingestMolitTransactions(opts: {
       .map((c) => getSigunguInfo(c.trim()))
       .filter((i): i is SigunguInfo => Boolean(i))
       .slice(0, 60);
+  } else if (opts.gapsFirst) {
+    /* [997] 빈 (시군구, 계약월) 먼저 — (region_code, contract_ym) 인덱스로 HEAD 카운트만 돈다(코드당 1왕복,
+       전국 ~260개 ≈ 수 초). 빈 곳이 없으면 targets 가 비어 루프가 바로 끝난다(= 로그 "시도=0"). */
+    targets = await findCoverageGaps(sb, yyyymm, all, sliceSize);
+    sliceIdx = -1;
   } else {
     const windows = Math.max(1, Math.ceil(all.length / sliceSize));
     sliceIdx = opts.slice ?? Math.floor(now.getTime() / (1000 * 60 * 60 * 12)) % windows;
