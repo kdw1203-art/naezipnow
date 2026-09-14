@@ -1,4 +1,5 @@
 import type { InspectionNote } from "@/lib/inspection/store-db";
+import { decisionFromMetadata, decisionLabel } from "@/lib/inspection/decision";
 
 /* [#72] 재방문 변화 리포트 — 같은 단지 2회차 이상일 때, 직전 회차와 이번 회차의
  * 차이를 자동 요약한다("소음 보통→아쉬움, 만족도 6→8"). 순수 함수 — 조회 없음,
@@ -6,6 +7,11 @@ import type { InspectionNote } from "@/lib/inspection/store-db";
  *
  * 원칙: 실제로 **바뀐 항목만** 문장으로 만든다. 없는 값(미입력)은 비교 자체를
  * 만들지 않는다 — "미입력→보통"은 변화가 아니라 기록 습관의 차이다.
+ *
+ * [996 · 4] 판단(metadata.decision)도 비교한다 — "지난 방문 보류 → 이번 살까"는 이
+ * 카드가 답해야 할 첫 질문이다. 회차(metadata.round)가 있으면 "2회차"로 적는다.
+ * 어느 노트와 견주나는 호출부가 정한다: metadata.revisitOf 가 가리키는 **그 노트**가
+ * 우선이고(995 프리필이 적은 관계), 없으면 같은 단지 묶음의 직전 것.
  */
 
 export type RevisitDelta = {
@@ -17,7 +23,24 @@ export type RevisitDelta = {
   changes: string[];
   /** 두 회차 모두 기록된 비교 가능 항목 수 (0이면 리포트 자체를 만들지 않는 것이 옳다) */
   comparable: number;
+  /** [996 · 4] 판단 변화 한 줄 — 양쪽 다 판단이 있고 서로 다를 때만 */
+  decisionLine: string | null;
+  /** [996 · 4] 이번 노트의 회차(metadata.round, 정수 ≥2) — 없으면 toIdx+1 */
+  round: number;
 };
+
+/** metadata.round — 정수 1 이상만 믿는다(revisit-prefill.previousRoundOf 와 같은 규칙) */
+function roundOf(n: InspectionNote): number | null {
+  const v = (n.metadata as Record<string, unknown> | undefined)?.round;
+  const num = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+  return Number.isInteger(num) && num >= 1 ? num : null;
+}
+
+/** [996 · 4] 이 노트가 이어받았다고 적은 이전 노트 id(metadata.revisitOf) — 없으면 null */
+export function revisitOfId(n: InspectionNote): string | null {
+  const v = (n.metadata as Record<string, unknown> | undefined)?.revisitOf;
+  return typeof v === "string" && v.trim() ? v.trim() : null;
+}
 
 const SCORE_LABELS: Array<{ key: keyof NonNullable<InspectionNote["scores"]>; label: string }> = [
   { key: "location", label: "입지" },
@@ -91,6 +114,18 @@ export function buildRevisitDelta(
     if (pDone !== cDone) changes.push(`체크 완료 ${pDone}→${cDone}개`);
   }
 
+  /* [996 · 4] 판단 — 양쪽 다 골랐을 때만 비교 항목이다. 한쪽만 있으면 "변화"가 아니라
+     기록 습관의 차이(위 원칙과 같다). */
+  const pd = decisionFromMetadata(prev.metadata);
+  const cd = decisionFromMetadata(curr.metadata);
+  let decisionLine: string | null = null;
+  if (pd && cd) {
+    comparable += 1;
+    if (pd.choice !== cd.choice) {
+      decisionLine = `지난 방문 ${decisionLabel(pd.choice)} → 이번 ${decisionLabel(cd.choice)}`;
+    }
+  }
+
   if (comparable === 0) return null;
   return {
     fromLabel: `${fromIdx + 1}차`,
@@ -98,5 +133,11 @@ export function buildRevisitDelta(
     prevVisitDate: prev.visitDate,
     changes,
     comparable,
+    decisionLine,
+    /* 프리필 사슬이 적은 회차(≥2)를 우선 — 같은 단지 묶음 순번은 그 사슬을 모른다 */
+    round: (() => {
+      const r = roundOf(curr);
+      return r != null && r >= 2 ? r : toIdx + 1;
+    })(),
   };
 }

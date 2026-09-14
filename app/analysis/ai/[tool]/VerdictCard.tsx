@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { Verdict } from "@/lib/ai/verdict";
 import { CONFIDENCE_LABEL } from "@/lib/ai/insight-blocks";
 
@@ -24,12 +25,15 @@ export function VerdictCard({
   verdict,
   toneLine,
   compact = false,
+  extraChips,
 }: {
   verdict: Verdict;
   /** 도구 말투 한 줄(persona.tone[band]) — 결론 아래 보조 문장 */
   toneLine?: string | null;
   /** 실행 전 미리보기(입력 카드 안) — 배지·결론·대표 수치만 */
   compact?: boolean;
+  /** [996] 근거 칩 줄 끝에 붙는 칩(내 임장노트) — 개인 데이터라 카드 밖에서 따로 받아 넘긴다 */
+  extraChips?: ReactNode;
 }) {
   const m = verdict.metric;
   const metricAsOf = ymLabel(m?.asOf ?? null);
@@ -83,7 +87,7 @@ export function VerdictCard({
         )}
       </div>
 
-      {!compact && verdict.evidence.length > 0 && (
+      {!compact && (verdict.evidence.length > 0 || extraChips) && (
         <div className="flex flex-wrap gap-1.5" aria-label="근거">
           {verdict.evidence.map((e) => (
             <span
@@ -106,6 +110,7 @@ export function VerdictCard({
               )}
             </span>
           ))}
+          {extraChips}
         </div>
       )}
 

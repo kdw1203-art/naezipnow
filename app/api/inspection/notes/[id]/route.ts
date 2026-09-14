@@ -7,6 +7,7 @@ import { invalidateNoteCache } from "@/lib/inspection/note-cache";
 import { awardPoints } from "@/lib/points/ledger";
 import { dbUnavailable } from "@/lib/api/db-unavailable";
 import { looksLikeEmail } from "@/lib/privacy/mask-email";
+import { parseDecision } from "@/lib/inspection/decision";
 
 /* getNote/updateNote 는 조회에 실패하면 던진다(예전엔 null 을 돌려줬다).
    null 을 그대로 받아 404 "없음"을 내보내면, 저장돼 있는 노트를 지워졌다고
@@ -74,6 +75,13 @@ export async function PATCH(
       ...(exists.metadata ?? {}),
       ...(body.metadata as Record<string, unknown>),
     };
+    /* [996 · 4] 판단(metadata.decision)은 POST 와 같은 검증 — 모양이 아니면 키를 버린다 */
+    const meta = body.metadata as Record<string, unknown>;
+    if ("decision" in meta) {
+      const parsed = parseDecision(meta.decision);
+      if (parsed) meta.decision = parsed;
+      else delete meta.decision;
+    }
   }
   /* [#131] 수정 이력 1단계 — 저장 직전 본문 1벌을 metadata.lastRevision 에 보관.
      내용 필드가 실제로 바뀔 때만(메타데이터-only 패치로 이력이 덮이지 않게). */

@@ -35,7 +35,7 @@ import {
   fetchAptComplexList,
 } from "@/lib/national-data/apartment-api";
 import type { AptComplex, AptComplexDetail } from "@/lib/national-data/apartment-api";
-import { getAllSido, getSigunguBySido } from "@/lib/national-data/region-codes";
+import { listLeafSigungu } from "@/lib/national-data/region-codes";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
 import { APT_MASTER_SOURCE_KEY } from "@/lib/complex/apartment-master";
@@ -63,11 +63,9 @@ export function listAllSigunguCodes(): {
   sido: string;
   sigungu: string;
 }[] {
-  return getAllSido()
-    .flatMap(getSigunguBySido)
-    .filter((i) => i.sigungu !== i.sido && !i.sigunguCd.endsWith("000"))
-    .map((i) => ({ sigunguCd: i.sigunguCd, sido: i.sido, sigungu: i.sigungu }))
-    .sort((a, b) => a.sigunguCd.localeCompare(b.sigunguCd));
+  /* [996] 상위 시 코드(수원·성남·화성 …)는 K-apt 가 빈 목록을 돌려준다 — 목록에서 뺀다(listLeafSigungu).
+     첫 V4 실행(09-13 20:00) 실측: 12곳 중 7곳 "빈 시군구" = 상위 코드 2 + 폐지 코드 5(인천 동구·광주 4구). */
+  return listLeafSigungu().map((i) => ({ sigunguCd: i.sigunguCd, sido: i.sido, sigungu: i.sigungu }));
 }
 
 /** 공백만 있는 값은 없는 값으로 본다(빈 문자열로 좋은 값을 덮지 않기 위해). */

@@ -8,6 +8,8 @@ import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import type { Verdict } from "@/lib/ai/verdict";
 import { VerdictCard } from "../../[tool]/VerdictCard";
 import { isAiAnalysisToolId, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
+import { verdictNextActions } from "@/lib/ai/next-action-routing";
+import { decodeNameIdSafe } from "@/lib/seo/complex-slug";
 
 /* [AI-33] 분석 결과 공유 페이지 — 링크만 알면 로그인 없이 열람.
    실행 시점 스냅샷(마크다운·요약)을 그대로 보여준다(AI-02 재현성) —
@@ -70,6 +72,22 @@ export default async function SharedRunPage({
   if (!run || !isAiAnalysisToolId(run.tool)) notFound();
   const identity = TOOL_IDENTITIES[run.tool as AiAnalysisToolId];
   const at = new Date(run.created_at).toLocaleString("ko-KR");
+  /* [996] 공유받은 사람도 같은 두 행동 — 판단을 노트로, 근거는 단지 홈으로. 실행이 단지를
+     저장했을 때만(complex_id). 단지명·지역은 순수 id 에서 푼다(kapt.* 는 못 풀어 id 만 넘긴다).
+     메모 날짜는 판단이 계산된 시각(computedAt) — 스냅샷이므로 오늘 날짜를 적지 않는다. */
+  const verdict = run.structured_summary?.verdict ?? null;
+  const dec = run.complex_id ? decodeNameIdSafe(run.complex_id) : null;
+  const next =
+    run.complex_id && verdict
+      ? verdictNextActions({
+          tool: run.tool as AiAnalysisToolId,
+          verdict,
+          complexId: run.complex_id,
+          complexName: dec?.name ?? null,
+          region: dec?.region ?? null,
+          noteHandoff: true,
+        })
+      : null;
 
   return (
     <PageShell breadcrumb={`${identity.title} 공유`}>
@@ -87,9 +105,21 @@ export default async function SharedRunPage({
         </div>
 
         {/* [993] 실행 시점의 판단 카드 — 공유받은 사람도 결과값을 먼저 본다 */}
-        {run.structured_summary?.verdict && (
-          <div className="card tool-scope tool-rail rounded-2xl p-4" style={personaVars(TOOL_PERSONAS[run.tool as AiAnalysisToolId])}>
-            <VerdictCard verdict={run.structured_summary.verdict} />
+        {verdict && (
+          <div className="card tool-scope tool-rail flex flex-col gap-3 rounded-2xl p-4" style={personaVars(TOOL_PERSONAS[run.tool as AiAnalysisToolId])}>
+            <VerdictCard verdict={verdict} />
+            {next && (
+              <div className="flex flex-wrap gap-2" aria-label="다음 행동">
+                <Link href={next.primary.href} className="tool-fill press btn-md no-underline" title={next.primary.hint}>
+                  {next.primary.label} ›
+                </Link>
+                {next.secondary && (
+                  <Link href={next.secondary.href} className="btn-secondary btn-md no-underline">
+                    {next.secondary.label}
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         )}
 

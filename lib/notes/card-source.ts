@@ -1,6 +1,7 @@
 import "server-only";
 import type { InspectionNote } from "@/lib/inspection/store-db";
 import type { NoteCardSource } from "@/lib/notes/card-frames";
+import { decisionFromMetadata, decisionLabel } from "@/lib/inspection/decision";
 
 /**
  * InspectionNote(DB 모델) → NoteCardSource(카드 프레임 입력) 어댑터. **한 곳에서만.**
@@ -60,13 +61,20 @@ export function toCardSource(note: InspectionNote, market?: CardMarketFacts | nu
   const pros = splitItems(note.sections?.pros);
   const cons = splitItems(note.sections?.cons);
 
+  /* [996 · 4] 작성자가 고른 판단(metadata.decision)이 있으면 그것이 "내 판정" 장이다 —
+     "살까 — 근거1 · 근거2". 없으면 예전대로 메모. (inspection_notes.verdict 컬럼은 앱이
+     읽지도 쓰지도 않는다 — 여기서도 보지 않는다.) */
+  const decision = decisionFromMetadata(note.metadata);
+  const decisionVerdict = decision
+    ? [decisionLabel(decision.choice), decision.reasons.join(" · ")].filter(Boolean).join(" — ")
+    : null;
+
   return {
     title: note.title || "임장 기록",
     aptName: note.aptName ?? null,
     region: note.region ?? null,
     visitLabel,
-    // 별도 verdict 컬럼은 모델에 없다 — 메모(sections.memo)가 있으면 판정 장으로.
-    verdict: (note.sections?.memo ?? "").trim() || null,
+    verdict: decisionVerdict ?? ((note.sections?.memo ?? "").trim() || null),
     intent: note.metadata?.intent ?? null,
     budgetLabel: null,
     summary: (note.summary ?? "").trim() || null,

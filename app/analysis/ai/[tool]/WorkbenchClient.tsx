@@ -8,7 +8,7 @@ import { ComplexPicker, type PickedComplex } from "@/app/analysis/ComplexPicker"
 import { useMapPick } from "@/app/analysis/use-map-pick";
 import { hasSession } from "@/lib/client/has-session";
 import { SkBlock, SkLine } from "@/app/components/ui/Skeleton";
-import type { AiAnalysisToolId } from "@/lib/ai/ai-tools";
+import { isCoreAiAnalysisToolId, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import { UNCERTAINTY, CONFIDENCE_LABEL, judgeConfidence } from "@/lib/ai/insight-blocks";
 import { resultOrder, type ToolPersona, type ResultBlock } from "@/lib/ai/tool-persona";
 import { buildTuningInput, type TuningField } from "@/lib/ai/tool-tuning";
@@ -142,6 +142,15 @@ function renderBold(s: string) {
 const TuningFormLazy = dynamic(() => import("./TuningForm").then((m) => m.TuningForm), {
   ssr: false,
 });
+/* [996] 판단 곁의 세 조각(다음 행동 두 개 · 네 가지 눈 보드 · 내 임장노트 칩)은 한 청크로
+   따로 받는다 — 이 라우트 예산 480KB 에 477KB 라 페이지 번들에는 선언만 남긴다.
+   판단 카드 자체가 클라이언트 fetch 뒤에 서므로 ssr:false 로 잃는 화면이 없다. */
+const VerdictNextLazy = dynamic(() => import("./VerdictBoard").then((m) => m.VerdictNextActions), {
+  ssr: false,
+  loading: () => <div className="min-h-10" />,
+});
+const VerdictBoardLazy = dynamic(() => import("./VerdictBoard").then((m) => m.VerdictBoard), { ssr: false });
+const MyNotesChipLazy = dynamic(() => import("./VerdictBoard").then((m) => m.MyNotesChip), { ssr: false });
 
 export function WorkbenchClient({
   tool,
@@ -559,6 +568,9 @@ export function WorkbenchClient({
   const ctxVerdict = ready ? ctxState.verdict : null;
   /* [993] 화면에 그릴 판단 카드 — 실행 결과(보정 입력 반영)가 있으면 그것, 아니면 데이터 로드 시점 것 */
   const shownVerdict = result?.ok ? (result.verdict ?? ctxVerdict) : ctxVerdict;
+  /* [996] 핵심 4종은 판단 바로 아래 "다음 행동 두 개"(노트 이관 · 단지 홈) — 실행 전후 같은 자리 */
+  const coreTool = isCoreAiAnalysisToolId(tool);
+  const myNotesChip = picked ? <MyNotesChipLazy complexId={picked.id} /> : undefined;
 
   return (
     <>
@@ -782,7 +794,7 @@ export function WorkbenchClient({
           예전엔 버튼 하나에 "분석 중…" 글자만 바뀌었다. 무엇이 얼마나 남았는지
           모르는 대기는 실제보다 길게 느껴진다(이 화면 평균 체류 1.0초 실측 —
           열자마자 나간다). 진행 단계를 눈에 보이게 만든다. */}
-      <div className="run-bar flex flex-wrap items-center gap-2">
+      <div className="run-bar flex flex-wrap items-center gap-1.5">
         <button
           type="button"
           onClick={run}
@@ -808,7 +820,9 @@ export function WorkbenchClient({
             <span className="run-dot" />분석 실행
           </span>
         </div>
-        <Link href="/my/analyses" className="t-sub ml-auto inline-block py-[3px] font-bold text-text-3 no-underline">
+        {/* [996] 모바일에선 실행 줄이 sticky 라 두 줄로 접히면 100px 을 먹는다 — 기록 링크는 sm 부터만
+            (모바일은 하단 탭 '마이 → 기록'으로 닿는다). */}
+        <Link href="/my/analyses" className="t-sub ml-auto hidden py-[3px] font-bold text-text-3 no-underline sm:inline-block">
           내 분석 기록 ›
         </Link>
       </div>
@@ -820,7 +834,10 @@ export function WorkbenchClient({
           버튼이 아니라 데이터가 만든다. 실행은 본문 해석·다음 행동을 덧붙인다. */}
       {!result && !running && ready && ctxVerdict && (
         <div className="card tool-rail flex flex-col gap-3 rounded-2xl p-4">
-          <VerdictCard verdict={ctxVerdict} />
+          <VerdictCard verdict={ctxVerdict} extraChips={myNotesChip} />
+          {coreTool && (
+            <VerdictNextLazy tool={tool} verdict={ctxVerdict} complexId={picked?.id ?? null} complexName={picked?.name} region={picked?.region} />
+          )}
           <p className="t-sub text-text-3">③ 분석 실행을 누르면 해석 본문과 다음 행동이 붙어요.</p>
         </div>
       )}
@@ -942,11 +959,14 @@ export function WorkbenchClient({
               {/* [993] 판단 카드가 먼저 — 구간·결론·대표 수치·핵심 숫자(기준일)·근거 칩.
                   말투 한 줄(persona.tone)은 카드 안 보조 문장이 됐다. */}
               {shownVerdict ? (
-                <VerdictCard verdict={shownVerdict} toneLine={persona.tone[shownVerdict.band]} />
+                <VerdictCard verdict={shownVerdict} toneLine={persona.tone[shownVerdict.band]} extraChips={myNotesChip} />
               ) : (
                 <p className="tone-line t-body font-bold" data-band={band}>
                   {persona.tone[band]}
                 </p>
+              )}
+              {coreTool && (
+                <VerdictNextLazy tool={tool} verdict={shownVerdict} complexId={picked?.id ?? null} complexName={picked?.name} region={picked?.region} />
               )}
               {/* [980] 블록 순서를 아키타입이 정한다 — 계기판·점수형은 눈금이 먼저,
                   표·목록형은 표가 먼저, 장부형은 위험 뒤에 곧바로 "틀리는 조건".
@@ -1090,12 +1110,15 @@ export function WorkbenchClient({
                 >
                   지도에서 보기
                 </Link>
-                <Link
-                  href={noteHref}
-                  className="rounded-[10px] border border-line-strong bg-bg px-3.5 py-2 t-body font-bold text-text-1 no-underline"
-                >
-                  이 단지 임장노트 쓰기
-                </Link>
+                {/* [996] 핵심 4종은 판단 카드 아래 "이 판단으로 임장노트 쓰기"(메모 초안 포함)가 대신한다 */}
+                {!coreTool && (
+                  <Link
+                    href={noteHref}
+                    className="rounded-[10px] border border-line-strong bg-bg px-3.5 py-2 t-body font-bold text-text-1 no-underline"
+                  >
+                    이 단지 임장노트 쓰기
+                  </Link>
+                )}
                 <button
                   type="button"
                   onClick={addWatch}
@@ -1183,6 +1206,16 @@ export function WorkbenchClient({
             </>
           )}
         </div>
+      )}
+
+      {/* [996] 같은 단지, 네 가지 눈 — 단지가 정해지면 카드 아래 늘 같은 자리. 실행 중에도
+          내리지 않는다(자리가 고정돼야 useRef 캐시가 살고 화면이 점프하지 않는다).
+          비교·포트폴리오는 대상이 여럿이라 한 단지 보드를 세우지 않는다. */}
+      {picked && !isCompare && !isPortfolio && (
+        /* 자기 칸은 데이터 로드 시점 판단(ctxVerdict) — 실행 결과(result)는 단지를 바꿔도
+           남아 있어 옛 단지의 판단이 새 단지 보드에 섞일 수 있다. 보드 4종은 보정 입력을
+           읽지 않으므로(lib/ai/verdict.ts toolMetric) 두 값이 같다. */
+        <VerdictBoardLazy tool={tool} complexId={picked.id} complexName={picked.name} region={picked.region} verdict={ready ? ctxVerdict : null} />
       )}
 
       {/* 도움말 */}

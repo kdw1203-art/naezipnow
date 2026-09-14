@@ -51,9 +51,13 @@ export const NAV: NavItem[] = [
   {
     label: "동네",
     href: "/town",
+    /* [996] 소유자 지시 — 하위 메뉴에 뉴스·청약만 보여 동네이야기(허브)·정비사업이 안 보였다.
+       넷을 나란히: 뉴스 · 동네이야기 · 청약 · 정비사업. */
     children: [
       { label: "뉴스", href: "/town/news" },
+      { label: "동네이야기", href: "/town" },
       { label: "청약", href: "/apply" },
+      { label: "정비사업", href: "/redevelopment" },
     ],
   },
 ];

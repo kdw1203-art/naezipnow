@@ -15,7 +15,7 @@
 import { createHash } from "node:crypto";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { fetchMolitDeals, type MolitDeal, type MolitRtmsType } from "@/lib/national-data/molit-api";
-import { getSigunguInfo, getAllSido, getSigunguBySido, type SigunguInfo } from "@/lib/national-data/region-codes";
+import { getSigunguInfo, listLeafSigungu, type SigunguInfo } from "@/lib/national-data/region-codes";
 import { logIngest } from "@/lib/market/store";
 import type { RefreshAggregatesResult } from "@/lib/market/refresh-aggregates";
 import { logger } from "@/lib/log";
@@ -110,6 +110,10 @@ export function resolveTargetTypes(): TargetType[] {
 export function molitRegionLabel(info: SigunguInfo): string {
   const sigungu = info.sigungu.trim();
   if (sigungu.includes(" ")) return sigungu.replace(/시\s/, " ");
+  /* [996] 전남광주통합특별시(12) — 구는 "광주 동구", 시·군은 "목포시"(다른 도와 같은 규칙) */
+  if (info.sido === "전남광주통합특별시") {
+    return sigungu.endsWith("구") ? `광주 ${sigungu}` : sigungu;
+  }
   if (/(특별시|광역시)$/.test(info.sido)) {
     return `${info.sido.replace(/(특별시|광역시)$/, "")} ${sigungu}`;
   }
@@ -147,19 +151,13 @@ const MOLIT_PARENT_ONLY_CODES = new Set([
   "47110", // 경북 포항시
   "48120", // 경남 창원시
   "52110", // 전북 전주시
+  "41590", // 경기 화성시 — [996] 2026년 만세·효행·병점·동탄구 신설 뒤 상위 코드가 됐다(4월부터 0행 실측)
 ]);
 
 /** 전국 시군구 코드(자치구 단위) — 앞자리 코드순 */
 export function listMolitSigungu(): SigunguInfo[] {
-  return getAllSido()
-    .flatMap(getSigunguBySido)
-    .filter(
-      (i) =>
-        i.sigungu !== i.sido &&
-        !i.sigunguCd.endsWith("000") &&
-        !MOLIT_PARENT_ONLY_CODES.has(i.sigunguCd),
-    )
-    .sort((a, b) => a.sigunguCd.localeCompare(b.sigunguCd));
+  /* [996] 상위 코드 판정은 표에서 파생(listLeafSigungu) — 아래 상수는 근거 기록 + 이중 안전장치 */
+  return listLeafSigungu().filter((i) => !MOLIT_PARENT_ONLY_CODES.has(i.sigunguCd));
 }
 
 function pricePerPyeong(amountKrw: number | null, areaM2: number | null): number | null {

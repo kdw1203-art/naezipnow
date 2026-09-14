@@ -51,6 +51,8 @@ import {
 } from "@/lib/inspection/note-cache";
 import { relativeTime } from "@/lib/notes/feed-note";
 import { isAdmin } from "@/lib/auth/is-admin";
+import { decisionFromMetadata } from "@/lib/inspection/decision";
+import { buildRevisitDelta, revisitOfId, type RevisitDelta } from "@/lib/inspection/revisit";
 
 /* 시안 6c(노트 상세 + AI) + 10f(AI 노트 분석) + 20a(공개 임장노트 표준 11항목) + 20b(SEO)
    실데이터: inspection_notes → getNote(id) — 공개 노트만 index, 비공개·목업은 noindex */
@@ -641,7 +643,24 @@ export default async function NoteDetailPage({
 
   let visits: Visit[] | undefined;
   /* [#72] 재방문 변화 — 이 노트 직전 회차와의 점수·메모 변화 자동 요약 */
-  let revisitDelta: import("@/lib/inspection/revisit").RevisitDelta | null = null;
+  let revisitDelta: RevisitDelta | null = null;
+  /* [996 · 4] 이 노트가 "이어받았다"고 적은 노트(metadata.revisitOf — 995 프리필)가 있으면
+     같은 단지 묶음의 순번이 아니라 **그 노트**와 견준다. 순번은 단지 id 로 묶은 것이라
+     같은 단지를 다른 이름으로 적은 노트·중간에 지운 노트가 있으면 엉뚱한 것과 비교한다.
+     열람 규칙은 회차 묶음과 같다: 같은 작성자의 노트만, 비소유자는 공개 노트만. */
+  const revisitOf = revisitOfId(realNote);
+  if (revisitOf && revisitOf !== realNote.id) {
+    const prevLoaded = await loadNote(revisitOf);
+    if (
+      prevLoaded.kind === "ok" &&
+      prevLoaded.note.authorEmail.toLowerCase() === realNote.authorEmail.toLowerCase() &&
+      (isOwner || prevLoaded.note.isPublic)
+    ) {
+      const prevRound = Number((prevLoaded.note.metadata as Record<string, unknown> | undefined)?.round);
+      const fromIdx = Number.isInteger(prevRound) && prevRound >= 1 ? prevRound - 1 : 0;
+      revisitDelta = buildRevisitDelta(prevLoaded.note, realNote, fromIdx, fromIdx + 1);
+    }
+  }
   if (groupedR.ok) {
     try {
       const grouped = groupedR.rows;
@@ -657,10 +676,10 @@ export default async function NoteDetailPage({
           latest: x.id === realNote.id,
         };
       });
-      /* [#72] 이 노트가 2회차 이상이면 직전 회차와의 변화 요약을 만든다 */
+      /* [#72] 이 노트가 2회차 이상이면 직전 회차와의 변화 요약을 만든다 —
+         [996 · 4] revisitOf 로 이미 만들었으면 그것이 우선이다 */
       const currIdx = visible.findIndex((x) => x.id === realNote.id);
-      if (currIdx > 0) {
-        const { buildRevisitDelta } = await import("@/lib/inspection/revisit");
+      if (currIdx > 0 && !revisitDelta) {
         revisitDelta = buildRevisitDelta(
           visible[currIdx - 1],
           visible[currIdx],
@@ -672,6 +691,8 @@ export default async function NoteDetailPage({
       visits = undefined;
     }
   }
+  /* [996 · 4] 작성자의 판단 — 판단 카드 헤드라인. 깨진 값은 null(없는 것으로 그린다) */
+  const noteDecision = decisionFromMetadata(realNote.metadata);
 
   const v = toView(realNote, visits);
   const hasLlmAi = v.aiBadge === "AI 생성";
@@ -928,6 +949,9 @@ export default async function NoteDetailPage({
             checklistTotal={v.checklistTotal}
             price={verdictPrice}
             complexHref={complexHref}
+            /* [996 · 4] 내 판단이 있으면 헤드라인, 없으면 소유자에게 "판단 남기기"(수정 3단계) */
+            decision={noteDecision}
+            decisionEditHref={isOwner && !noteDecision ? `/notes/${realNote.id}/edit#decision` : null}
             next={
               isOwner
                 ? /* [995 · 3] apt·region 만 넘기던 것을 회차 프리필로 — 단지 id·좌표·태그·
@@ -1217,11 +1241,19 @@ export default async function NoteDetailPage({
             <div className="rise-in-1 card flex flex-col gap-2 rounded-[18px] p-6">
               <div className="text-[15px] font-extrabold text-ink">
                 재방문 변화{" "}
+                {/* [996 · 4] 회차 — 프리필 사슬(metadata.round)이 적은 값 */}
+                <span className="rounded-md bg-primary-soft px-1.5 py-0.5 t-caption font-extrabold text-primary">
+                  {revisitDelta.round}회차
+                </span>{" "}
                 <span className="t-sub font-medium text-text-3">
                   {revisitDelta.fromLabel}({revisitDelta.prevVisitDate}) →{" "}
                   {revisitDelta.toLabel}
                 </span>
               </div>
+              {/* [996 · 4] 판단이 바뀌었으면 그것이 첫 줄 — 항목 변화보다 먼저 답할 질문이다 */}
+              {revisitDelta.decisionLine && (
+                <p className="t-body font-bold text-ink">{revisitDelta.decisionLine}</p>
+              )}
               {revisitDelta.changes.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {revisitDelta.changes.map((c) => (
@@ -1233,7 +1265,7 @@ export default async function NoteDetailPage({
                     </span>
                   ))}
                 </div>
-              ) : (
+              ) : revisitDelta.decisionLine ? null : (
                 <p className="t-body text-text-2">
                   비교 가능한 {revisitDelta.comparable}개 항목의 평가가 직전 회차와
                   같아요 — 인상이 유지되고 있다는 것도 기록입니다.

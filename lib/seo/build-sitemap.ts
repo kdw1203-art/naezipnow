@@ -121,8 +121,7 @@ const STATIC_ROUTES: Array<{ path: string; priority: number }> = [
   { path: "/dev-deals", priority: 0.7 },
   { path: "/dev-deals/partners", priority: 0.5 },
   { path: "/dev-deals/fees", priority: 0.4 },
-  // 매물 등록·포인트
-  { path: "/listings/new", priority: 0.6 },
+  // 포인트 — [996] /listings/new 는 noindex 작성 폼이라 제출하지 않는다(seo.asset 경보 "제출된 URL 이 noindex")
   { path: "/points/shop", priority: 0.5 },
   // 발견 피드 — 탭바 2번 슬롯·비로그인 랜딩 (감사 P1-11)
   { path: "/subscription", priority: 0.5 },

@@ -6,6 +6,7 @@ import { isLabAuthor, displayAuthorLabel } from "@/lib/notes/author-label";
 import { complexHrefKey, resolveComplexHrefs } from "@/lib/newui/complex-link";
 import { matchesInterest } from "@/lib/notes/region-match";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
+import { decisionFromMetadata, decisionLabel, type DecisionChoice } from "@/lib/inspection/decision";
 
 /* [967 · 19] 공개 임장노트 피드 카드 빌더 — 서버 전용.
  *
@@ -47,7 +48,18 @@ export type FeedNote = {
    * 신뢰를 지킨다 — 그리고 "내 글이 이 단지 첫 진짜 기록"이라는 이유가 생긴다.
    */
   lab?: boolean;
+  /** [996 · 4] 작성자의 판단(metadata.decision) — 목록 배지. 없으면 undefined */
+  decision?: { choice: DecisionChoice; label: string };
+  /** [996 · 4] 회차(metadata.round ≥2) — "2회차" 배지. 1회차·없음은 undefined */
+  round?: number;
 };
+
+/** metadata.round — 정수 2 이상만 배지가 된다(1회차는 배지가 아니라 기본값이다) */
+function roundBadgeOf(n: InspectionNote): number | undefined {
+  const v = (n.metadata as Record<string, unknown> | undefined)?.round;
+  const num = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+  return Number.isInteger(num) && num >= 2 ? num : undefined;
+}
 
 /** 노트 피드·댓글의 상대시각 — "방금 전 / N분 전 / N시간 전 / 어제 / N일 전(30일까지) / ISO 날짜부".
  *  [967 · 32] 본체는 lib/format/relative-time.ts. 서버에서 부르므로 now 를 요청당 한 번 잡아 넘길 수 있다 */
@@ -91,6 +103,9 @@ export function toFeedNote(
     "현장 기록이 등록된 임장노트입니다.";
   const excerpt =
     excerptSrc.length > 60 ? `“${excerptSrc.slice(0, 60)}…”` : `“${excerptSrc}”`;
+  /* [996 · 4] 판단·회차 배지 재료 — 깨진 값은 배지 없음 */
+  const decision = decisionFromMetadata(n.metadata);
+  const round = roundBadgeOf(n);
   return {
     id: n.id,
     author: maskAuthor(n),
@@ -119,6 +134,8 @@ export function toFeedNote(
     // 실 단지 id를 찾은 경우에만 /complex/[id] 연결, 못 찾으면 링크 숨김 (mock-1로 보내지 않음)
     complexHref: complexHref ?? undefined,
     createdAt: n.createdAt,
+    ...(decision ? { decision: { choice: decision.choice, label: decisionLabel(decision.choice) } } : {}),
+    ...(round != null ? { round } : {}),
   };
 }
 

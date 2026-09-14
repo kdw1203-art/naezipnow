@@ -65,6 +65,8 @@ import {
    결과만 넘긴다 — 여기서는 띠 하나만 그린다(초기 번들에 판단 코드를 넣지 않는다). */
 import type { RevisitPrefill } from "@/lib/inspection/revisit-prefill";
 import { previousCheckChips } from "@/lib/inspection/revisit-chips";
+/* [996 · 4] 판단(살까·보류·패스·다시 보기) — 타입만. 제안 규칙은 DecisionStep(지연 로드)이 부른다 */
+import type { DecisionChoice } from "@/lib/inspection/decision";
 /* [OPT-27] 음성 녹음기는 새 노트에서만 쓰인다 — 폼 첫 로드 번들에서 분리 */
 import nextDynamic from "next/dynamic";
 const VoiceMemoRecorder = nextDynamic(
@@ -84,6 +86,18 @@ const AiDraftPanel = nextDynamic(
 const FieldBriefCard = nextDynamic(
   () => import("./FieldBriefCard").then((m) => m.FieldBriefCard),
   { ssr: false },
+);
+/* [996 · 4] 2단계 "더 자세히 적기"(체크리스트 34·태그 16·고려사항)와 3단계 판단 카드도
+   분리 — 첫 로드 469KB 로 예산(470KB)에 1KB 남은 상태에서 판단 카드를 얹으려면
+   그만큼을 어디선가 빼야 한다. 둘 다 그 단계에 들어갔을 때만 내려받고, 상태는
+   여기(NoteForm)가 든다 — 단계를 오가며 언마운트돼도 입력은 남는다. */
+const NoteDetailFields = nextDynamic(
+  () => import("./NoteDetailFields").then((m) => m.NoteDetailFields),
+  { ssr: false, loading: () => <div className="card p-4 t-sub text-text-3">불러오는 중…</div> },
+);
+const DecisionStep = nextDynamic(
+  () => import("./DecisionStep").then((m) => m.DecisionStep),
+  { ssr: false, loading: () => <div className="card p-4 t-sub text-text-3">불러오는 중…</div> },
 );
 
 /* 임장노트 작성/수정 공용 폼 (시안 6b·6r)
@@ -156,7 +170,8 @@ function normalizeLoose(s: string): string {
 }
 
 type TagTone = "pos" | "neg";
-type TagDef = { label: string; tone: TagTone };
+/* [996 · 4] 타입은 NoteDetailFields(지연 로드)가 type-only 로 되가져간다 — 런타임 의존 없음 */
+export type TagDef = { label: string; tone: TagTone };
 
 /* 자주 쓰는 태그 후보 — 기본은 아무것도 선택하지 않는다(남의 기록처럼 보이지 않게) */
 const TAG_CANDIDATES: TagDef[] = [
@@ -178,7 +193,7 @@ const TAG_CANDIDATES: TagDef[] = [
   { label: "냄새·환기", tone: "neg" },
 ];
 
-type TodoItem = { text: string; level: "중요" | "보통" };
+export type TodoItem = { text: string; level: "중요" | "보통" };
 
 const TODO_DEFAULTS: TodoItem[] = [
   { text: "겨울철 저층 채광 재확인", level: "중요" },
@@ -918,6 +933,35 @@ export function NoteForm({
      수정 모드도 같은 구조다 — 화면이 두 갈래면 다음에 반드시 어긋난다. */
   const [step, setStep] = useState<NoteStep>(1);
   const stepTopRef = useRef<HTMLDivElement>(null);
+  /* [996 · 4] 상세의 "판단 남기기 ›"(/notes/[id]/edit#decision)로 온 사람은 3단계부터 —
+     판단 카드는 3단계 맨 위라 단계만 옮기면 보인다(해시 스크롤은 지연 로드 전이라 못 잡는다). */
+  useEffect(() => {
+    if (!isEdit) return;
+    try {
+      if (window.location.hash === "#decision") setStep(3);
+    } catch {
+      /* 접근 불가 — 1단계 그대로 */
+    }
+  }, [isEdit]);
+
+  /* ── [996 · 4] 판단 — 살까 · 보류 · 패스 · 다시 보기 ────────────────────
+     규칙 제안은 DecisionStep(3단계, 지연 로드)이 만들고 사용자가 고른다. 고른 값만
+     metadata.decision 으로 나간다(안 고르면 키 자체가 없다 — 제안을 판단으로
+     저장하지 않는다). reasons 가 null 이면 "제안 그대로"라는 뜻이라 저장할 게 없다;
+     칩을 고르는 순간 DecisionStep 이 제안 문장을 확정해 넘긴다.
+     수정 모드는 저장값을 되읽는다 — 모양 검증의 본체는 lib/inspection/decision
+     (parseDecision · API 가 쓴다)이고 여기는 되읽기 최소 가드만 둔다(번들). */
+  const [decisionChoice, setDecisionChoice] = useState<DecisionChoice | null>(() => {
+    const d = initialNote?.metadata?.decision as { choice?: unknown } | null | undefined;
+    const c = d?.choice;
+    return c === "buy" || c === "hold" || c === "pass" || c === "revisit" ? c : null;
+  });
+  const [decisionReasons, setDecisionReasons] = useState<string[] | null>(() => {
+    const d = initialNote?.metadata?.decision as { reasons?: unknown } | null | undefined;
+    return Array.isArray(d?.reasons)
+      ? d.reasons.filter((x): x is string => typeof x === "string")
+      : null;
+  });
   const goStep = (n: NoteStep) => {
     setStep(n);
     /* 단계를 바꾸면 그 단계의 처음을 보여 준다 — 스크롤 위치가 남아 있으면
@@ -1836,6 +1880,18 @@ export function NoteForm({
             checked: categoryChecklist.length,
             groups: groups.length,
           },
+          /* [996 · 4] 내 판단 — 고른 경우에만. 빈 근거 줄은 뺀다(≤3줄 · ≤60자는 API 도 다시 본다).
+             decidedAt 은 저장 시각 — 상세·재방문 비교가 "언제 그렇게 봤나"를 읽는다. */
+          decision: decisionChoice
+            ? {
+                choice: decisionChoice,
+                reasons: (decisionReasons ?? [])
+                  .map((r) => r.replace(/\s+/g, " ").trim())
+                  .filter(Boolean)
+                  .slice(0, 3),
+                decidedAt: new Date().toISOString(),
+              }
+            : undefined,
         },
         isPublic,
       };
@@ -2077,6 +2133,8 @@ export function NoteForm({
         doneTodos.length > 0,
     },
     { label: "사진", done: photos.length > 0 },
+    /* [996 · 4] 고른 판단만 센다 — 제안은 입력이 아니다 */
+    { label: "판단", done: decisionChoice !== null },
   ];
   const progressDone = progressItems.filter((i) => i.done).length;
   const progressPct = Math.round((progressDone / progressItems.length) * 100);
@@ -2085,8 +2143,14 @@ export function NoteForm({
   const doneByStep = stepDone({
     located: progressItems[0].done,
     judged: progressItems[1].done || progressItems[3].done || progressItems[4].done,
-    wrote: progressItems[2].done || progressItems[5].done,
+    wrote: progressItems[2].done || progressItems[5].done || progressItems[6].done,
   });
+  /* [996 · 4] 판단 제안의 체크리스트 재료 — 저장 페이로드(categoryChecklist + todo)와 같은 셈 */
+  const checklistDoneCount =
+    checklistGroups.reduce((n, g) => n + g.items.filter((it) => groupChecked[it.id]).length, 0) +
+    doneTodos.length;
+  const checklistTotal =
+    checklistGroups.reduce((n, g) => n + g.items.length, 0) + todoItems.length;
 
   return (
     /* [967 · 4] 저장 바가 떠 있는 동안 아래 여백을 더 준다 — 마지막 입력을 바가 덮지 않게 */
@@ -2883,325 +2947,60 @@ export function NoteForm({
 
         {/* [993] 2단계의 나머지 — 체크리스트(34)·태그(16)·고려사항(5)은 "같은 질문의 다른 형식"
             이라 기본 화면에서 접는다. 필수는 위치 하나이고, 현장 체크 9칸 + 만족도만으로도
-            5축 점수·판단 카드가 만들어진다(lib/notes/note-scores). 열면 예전 그대로다. */}
-        <details
-          className="rise-in-3 card p-4"
-          open={
-            checklistGroups.some((g) => g.items.some((it) => groupChecked[it.id])) ||
-            tags.length > 0
-          }
-        >
-          <summary className="cursor-pointer t-body font-extrabold text-ink">
-            더 자세히 적기 <span className="t-sub font-medium text-text-3">(선택 · 체크리스트 · 태그 · 고려사항)</span>
-          </summary>
-          <div className="mt-3 flex flex-col gap-3">
-        {/* 카테고리별 현장 체크리스트 (입지·단지·내부·학군·생활·호재) */}
-        <div className="flex flex-col gap-2">
-          <div className="t-body font-extrabold text-ink">
-            체크리스트{" "}
-            <span className="t-sub font-medium text-text-3">
-              목적({visit["목적"] || "실거주"})에 맞춰 항목이 바뀝니다 ·{" "}
-              {checklistGroups.reduce(
-                (n, g) => n + g.items.filter((it) => groupChecked[it.id]).length,
-                0,
-              )}
-              개 체크
-              {templateSuggestedIds.size > 0
-                ? ` · 템플릿 추천 ${templateSuggestedIds.size}`
-                : ""}
-            </span>
-          </div>
-          {memoHints.length > 0 && (
-            <div className="flex flex-col gap-1.5 rounded-xl border border-primary/20 bg-primary-soft/40 px-3 py-2.5">
-              <div className="t-sub font-bold text-primary">
-                메모에서 찾은 점검 제안
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {memoHints.map((h) => (
-                  <button
-                    key={h.id}
-                    type="button"
-                    onClick={() => {
-                      setGroupChecked((prev) => ({ ...prev, [h.id]: true }));
-                      setMemoHints((prev) => prev.filter((x) => x.id !== h.id));
-                      const group = checklistGroups.find((g) =>
-                        g.items.some((it) => it.id === h.id),
-                      );
-                      if (group) {
-                        setOpenGroups((prev) => ({ ...prev, [group.id]: true }));
-                      }
-                    }}
-                    className="rounded-full border border-primary/30 bg-surface px-2.5 py-1 t-sub font-bold text-primary"
-                  >
-                    ＋ {h.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {checklistGroups.map((g) => {
-            const open = openGroups[g.id] ?? false;
-            const doneCount = g.items.filter((it) => groupChecked[it.id]).length;
-            return (
-              <div key={g.id} className="rounded-xl border border-line bg-bg/60">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setOpenGroups((prev) => ({ ...prev, [g.id]: !open }))
-                  }
-                  className="flex w-full items-center justify-between px-3 py-2.5 text-left"
-                >
-                  <span className="t-body font-bold text-ink">{g.title}</span>
-                  <span className="t-sub font-semibold text-text-3">
-                    {doneCount}/{g.items.length} {open ? "▴" : "▾"}
-                  </span>
-                </button>
-                {open && (
-                  <div className="flex flex-col gap-1 border-t border-line px-2 py-2">
-                    {g.items.map((it) => {
-                      const checked = Boolean(groupChecked[it.id]);
-                      const suggested = templateSuggestedIds.has(it.id);
-                      return (
-                        <button
-                          key={it.id}
-                          type="button"
-                          onClick={() =>
-                            setGroupChecked((prev) => ({
-                              ...prev,
-                              [it.id]: !prev[it.id],
-                            }))
-                          }
-                          className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-left hover:bg-surface"
-                        >
-                          <span
-                            className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md text-[12px] ${
-                              checked
-                                ? "bg-primary text-white"
-                                : "border-[1.5px] border-line-strong bg-surface"
-                            }`}
-                          >
-                            {checked ? "✓" : ""}
-                          </span>
-                          <span
-                            className={`flex-1 text-[13px] ${
-                              checked ? "font-semibold text-ink" : "text-text-1"
-                            }`}
-                          >
-                            {it.label}
-                            {suggested && !checked && (
-                              <span className="ml-1.5 t-caption font-bold text-primary">
-                                템플릿 추천
-                              </span>
-                            )}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* 눈에 띈 점 태그 */}
-        <div className="flex flex-col gap-2.5 border-t border-line pt-3">
-          <div className="t-body font-extrabold text-ink">
-            눈에 띈 점{" "}
-            <span className="t-sub font-medium text-text-3">
-              탭해서 태그 추가 (예: 초품아 · 이중주차)
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {tagDefs.map((t) => {
-              const active = tags.includes(t.label);
-              return (
-                <button
-                  key={t.label}
-                  type="button"
-                  onClick={() => toggleTag(t.label)}
-                  className={`chip rounded-full px-3 py-1.5 text-xs ${
-                    active
-                      ? t.tone === "neg"
-                        ? "bg-danger-soft font-bold text-danger"
-                        : "bg-[rgba(29,79,216,.1)] font-bold text-primary"
-                      : "border border-line bg-surface text-text-2"
-                  }`}
-                >
-                  {active ? "✓ " : ""}
-                  {t.label}
-                </button>
-              );
-            })}
-            <button
-              type="button"
-              onClick={() => setTagInputOpen((v) => !v)}
-              aria-expanded={tagInputOpen}
-              className="chip rounded-full bg-bg px-3 py-1.5 text-xs text-text-3"
-            >
-              ＋ 직접 입력
-            </button>
-          </div>
-          {/* [967 · 7] 인라인 태그 입력 — Enter 추가 · Esc 닫기 */}
-          {tagInputOpen && (
-            <div className="flex items-center gap-2">
-              <input
-                id="note-tag-input"
-                type="text"
-                autoFocus
-                value={tagInput}
-                maxLength={TAG_MAX}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.nativeEvent.isComposing) return; // 한글 조합 중 Enter 는 무시
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    submitCustomTag();
-                  } else if (e.key === "Escape") {
-                    e.preventDefault();
-                    setTagInput("");
-                    setTagInputOpen(false);
-                  }
-                }}
-                placeholder="예: 조용한 단지"
-                aria-label="추가할 태그"
-                /* [968 · 29] Enter = 추가 — 자판에도 "완료" 로 보인다 */
-                enterKeyHint="done"
-                className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 text-[13px] text-text-1 outline-none placeholder:text-text-3 focus:border-primary"
-              />
-              <button
-                type="button"
-                onClick={submitCustomTag}
-                disabled={!tagInput.trim()}
-                className="btn-soft min-h-[40px] shrink-0 rounded-lg px-3 t-sub font-bold disabled:opacity-60"
-              >
-                추가
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTagInput("");
-                  setTagInputOpen(false);
-                }}
-                aria-label="태그 입력 닫기"
-                className="tap grid h-7 w-7 shrink-0 place-items-center rounded-full text-text-3"
-              >
-                <Icon name="x" size={14} />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* 고려사항 — 추가 확인 항목 (중요/보통) */}
-        <div className="flex flex-col gap-2.5 border-t border-line pt-3">
-          <div className="t-body font-extrabold text-ink">
-            고려사항{" "}
-            <span className="t-sub font-medium text-text-3">
-              결정 전 꼭 확인할 것 · 중요도 표시
-            </span>
-          </div>
-          {todoItems.map((todo) => {
-            const done = doneTodos.includes(todo.text);
-            return (
-              <button
-                key={todo.text}
-                type="button"
-                onClick={() => toggleTodo(todo.text)}
-                className="flex items-center gap-2.5 rounded-xl bg-bg px-3 py-[11px] text-left"
-              >
-                <span
-                  className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md text-[12px] ${
-                    done
-                      ? "bg-primary text-white"
-                      : "border-[1.5px] border-line-strong bg-surface"
-                  }`}
-                >
-                  {done ? "✓" : ""}
-                </span>
-                <span
-                  className={`flex-1 text-[13px] ${
-                    done ? "text-text-3 line-through" : "text-text-1"
-                  }`}
-                >
-                  {todo.text}
-                </span>
-                <span
-                  className={`rounded-full chip-pad text-[10px] font-bold ${
-                    todo.level === "중요"
-                      ? "bg-danger-soft text-danger"
-                      : "bg-bg text-text-2"
-                  }`}
-                >
-                  {todo.level}
-                </span>
-              </button>
-            );
-          })}
-          {/* [967 · 7] 인라인 고려사항 입력 — Enter 추가 · Esc 닫기 */}
-          {todoInputOpen ? (
-            <div className="flex items-center gap-2">
-              <input
-                id="note-todo-input"
-                type="text"
-                autoFocus
-                value={todoInput}
-                maxLength={TODO_MAX}
-                onChange={(e) => setTodoInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.nativeEvent.isComposing) return;
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    submitTodo();
-                  } else if (e.key === "Escape") {
-                    e.preventDefault();
-                    setTodoInput("");
-                    setTodoInputOpen(false);
-                  }
-                }}
-                placeholder="예: 저녁 시간대 주차 상황 확인"
-                aria-label="추가할 고려사항"
-                /* [968 · 29] Enter = 추가 — 자판에도 "완료" 로 보인다 */
-                enterKeyHint="done"
-                className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 text-[13px] text-text-1 outline-none placeholder:text-text-3 focus:border-primary"
-              />
-              <button
-                type="button"
-                onClick={submitTodo}
-                disabled={!todoInput.trim()}
-                className="btn-soft min-h-[40px] shrink-0 rounded-lg px-3 t-sub font-bold disabled:opacity-60"
-              >
-                추가
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTodoInput("");
-                  setTodoInputOpen(false);
-                }}
-                aria-label="고려사항 입력 닫기"
-                className="tap grid h-7 w-7 shrink-0 place-items-center rounded-full text-text-3"
-              >
-                <Icon name="x" size={14} />
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setTodoInputOpen(true)}
-              aria-expanded={false}
-              className="flex items-center gap-2 rounded-xl border-[1.5px] border-dashed border-line-strong px-3 py-[11px] t-body text-text-3"
-            >
-              ＋ 고려사항 추가
-            </button>
-          )}
-        </div>
-          </div>
-        </details>
+            5축 점수·판단 카드가 만들어진다(lib/notes/note-scores). 열면 예전 그대로다.
+            [996 · 4] 본체는 NoteDetailFields(지연 로드) — 2단계에 있을 때만 내려받고 그린다.
+            마크업·open 기본 규칙은 그대로다; 상태는 전부 여기 것이라 단계를 오가도 남는다. */}
+        {step === 2 && (
+          <NoteDetailFields
+            checklistGroups={checklistGroups}
+            groupChecked={groupChecked}
+            setGroupChecked={setGroupChecked}
+            openGroups={openGroups}
+            setOpenGroups={setOpenGroups}
+            templateSuggestedIds={templateSuggestedIds}
+            memoHints={memoHints}
+            setMemoHints={setMemoHints}
+            visitPurpose={visit["목적"]}
+            tags={tags}
+            tagDefs={tagDefs}
+            toggleTag={toggleTag}
+            tagInput={tagInput}
+            setTagInput={setTagInput}
+            tagInputOpen={tagInputOpen}
+            setTagInputOpen={setTagInputOpen}
+            submitCustomTag={submitCustomTag}
+            tagMax={TAG_MAX}
+            todoItems={todoItems}
+            doneTodos={doneTodos}
+            toggleTodo={toggleTodo}
+            todoInput={todoInput}
+            setTodoInput={setTodoInput}
+            todoInputOpen={todoInputOpen}
+            setTodoInputOpen={setTodoInputOpen}
+            submitTodo={submitTodo}
+            todoMax={TODO_MAX}
+          />
+        )}
 
         </div>
 
         {/* [984] 3단계 — 무엇을 남길까 */}
         <div className={step === 3 ? "flex flex-col gap-3" : "hidden"}>
+        {/* [996 · 4] 판단 — 3단계 맨 위. 규칙이 제안하고 내가 고른다(DecisionStep, 지연 로드).
+            #decision — 상세의 "판단 남기기 ›" 가 여기로 온다. */}
+        <div id="decision" className="scroll-mt-24">
+          {step === 3 && (
+            <DecisionStep
+              checks={checks}
+              checklistDoneCount={checklistDoneCount}
+              checklistTotal={checklistTotal}
+              choice={decisionChoice}
+              reasons={decisionReasons}
+              onChoice={setDecisionChoice}
+              onReasons={setDecisionReasons}
+            />
+          )}
+        </div>
         {/* 메모 + 사진 */}
         <div className="rise-in-6 card flex flex-col gap-2.5 p-4">
           <div className="text-[13px] font-extrabold text-ink">

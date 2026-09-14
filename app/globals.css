@@ -2868,12 +2868,19 @@ a.rank-row:hover {
     position: sticky;
     bottom: calc(var(--nz-tabbar-offset, 64px) + 8px);
     z-index: 20;
-    padding: 8px 10px;
+    /* [996] 버튼(52px)+단계 칩 줄이 두 줄로 접혀 104px 을 먹었다 — 실행 버튼은 모바일에서 40px,
+       세로 여백도 줄여 한 상자를 90px 아래로(빈 공간 게이트 기준 = 실제로 엄지 아래 가려지는 높이). */
+    padding: 6px 10px;
     border-radius: var(--radius-md);
     border: 1px solid var(--border);
     background: var(--glass-bg-strong, var(--surface));
     backdrop-filter: blur(10px);
     box-shadow: var(--shadow-sm);
+  }
+  .run-bar > .btn-lg {
+    height: 44px;
+    padding: 0 18px;
+    font-size: 13px;
   }
 }
 

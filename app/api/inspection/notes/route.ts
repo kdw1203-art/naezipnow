@@ -22,8 +22,23 @@ import { appendInboxNotification } from "@/lib/notifications/inbox";
 import { checkWatchlistAddQuota, resolveQuotaPlan } from "@/lib/subscriptions/usage-summary";
 import { withUserQuotaLock } from "@/lib/subscriptions/quota-lock";
 import { logger } from "@/lib/log";
+import { parseDecision } from "@/lib/inspection/decision";
 
 import { dbUnavailable } from "@/lib/api/db-unavailable";
+
+/* [996 · 4] metadata.decision(살까·보류·패스·다시 보기 + 근거 ≤3줄) — 모양이 아니면 키를
+   버린다. jsonb 라 무엇이든 들어가는데, 상세 판단 카드·목록 배지가 이 키를 그대로 읽는다:
+   깨진 값을 저장하면 화면이 깨진 값을 사실처럼 그린다. 정상 값은 정리본(공백·상한)으로 바꾼다. */
+function sanitizeDecisionMeta(meta: unknown): Record<string, unknown> | undefined {
+  if (!meta || typeof meta !== "object") return undefined;
+  const out = { ...(meta as Record<string, unknown>) };
+  if ("decision" in out) {
+    const parsed = parseDecision(out.decision);
+    if (parsed) out.decision = parsed;
+    else delete out.decision;
+  }
+  return out;
+}
 
 /* [995 · S5] 노트를 쓴 단지를 관심 단지로 자동 등록한다 — 새 노트(POST)에서만.
    왜: 임장까지 다녀온 단지는 사용자가 가장 지켜보고 싶은 단지인데, 노트 저장과
@@ -237,10 +252,7 @@ export async function POST(req: Request) {
         body.aiAnalysis && typeof body.aiAnalysis === "object"
           ? (body.aiAnalysis as Record<string, unknown>)
           : undefined,
-      metadata:
-        body.metadata && typeof body.metadata === "object"
-          ? (body.metadata as Record<string, unknown>)
-          : undefined,
+      metadata: sanitizeDecisionMeta(body.metadata),
     });
     const isPublic = Boolean(body.isPublic);
     // 공개 노트로 생성되면 공개 피드를 즉시 갱신(ISR 대기 없이 바로 반영)

@@ -39,6 +39,40 @@ function noteHref(n: FeedNote): string {
   return n.isExample ? "/notes/new" : `/notes/${n.id}`;
 }
 
+/* [996 · 4] 판단·회차 배지 — 상세 판단 카드와 같은 색 규칙(살까 success · 보류 primary ·
+   패스 danger · 다시 보기 회색). 탭 대상이 아니라 글자만이다(11px 이상). */
+const DECISION_BADGE_CLASS: Record<NonNullable<FeedNote["decision"]>["choice"], string> = {
+  buy: "bg-success-soft text-success",
+  hold: "bg-primary-soft text-primary",
+  pass: "bg-danger-soft text-danger",
+  revisit: "bg-bg text-text-2",
+};
+function NoteBadges({ n, onDark = false }: { n: FeedNote; onDark?: boolean }) {
+  if (!n.decision && n.round == null) return null;
+  return (
+    <>
+      {n.decision && (
+        <span
+          className={`inline-flex shrink-0 items-center rounded px-1.5 py-px t-caption font-extrabold ${
+            onDark ? "bg-white/22 text-white backdrop-blur-sm" : DECISION_BADGE_CLASS[n.decision.choice]
+          }`}
+        >
+          {n.decision.label}
+        </span>
+      )}
+      {n.round != null && (
+        <span
+          className={`inline-flex shrink-0 items-center rounded px-1.5 py-px t-caption font-bold ${
+            onDark ? "bg-white/22 text-white backdrop-blur-sm" : "border border-line text-text-3"
+          }`}
+        >
+          {n.round}회차
+        </span>
+      )}
+    </>
+  );
+}
+
 /** 시드 문자열 → 결정적 그라디언트(사진 없는 노트 커버/아바타용) */
 function seedGradient(seed: string): string {
   let h = 0;
@@ -162,6 +196,12 @@ function GridTile({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
             {n.region}
           </p>
         )}
+        {/* [996 · 4] 판단·회차 — 타일 안 글자 배지(링크 전체가 이미 탭 대상) */}
+        {(n.decision || n.round != null) && (
+          <p className="mt-1 flex flex-wrap gap-1">
+            <NoteBadges n={n} onDark />
+          </p>
+        )}
       </div>
     </Link>
   );
@@ -188,7 +228,11 @@ function PostCard({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
                 적는 쪽이 신뢰를 지키고, "내 글이 이 단지 첫 진짜 기록"이 된다. */}
             {n.lab && <ExampleBadge label="운영진 예시" />}
           </div>
-          <div className="truncate t-sub text-text-3">{n.title}</div>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate t-sub text-text-3">{n.title}</span>
+            {/* [996 · 4] 판단·회차 배지 — 제목 옆 글자만 */}
+            <NoteBadges n={n} />
+          </div>
         </div>
         <span
           className={`ml-auto shrink-0 rounded-full px-2.5 py-1 text-[12px] font-extrabold ${
