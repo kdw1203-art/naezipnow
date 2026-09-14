@@ -13,6 +13,8 @@ import type { AppPlan } from "@/lib/billing/plan";
 import { idempotencyKeyForOrder } from "@/lib/payments/idempotency";
 import { logger } from "@/lib/log";
 import { notifyPaymentSettled } from "@/lib/payments/notify-paid";
+import { readGuestMeta } from "@/lib/payments/guest-order";
+import { getServiceSupabase } from "@/lib/supabase/service";
 
 /**
  * 토스페이먼츠 단건 결제 승인(confirm) — 라우트(/api/payments/toss/confirm)와
@@ -93,7 +95,10 @@ export async function confirmTossOrder(input: ConfirmTossOrderInput): Promise<Co
   if (!existing) return { status: 404, body: { error: "결제 요청을 찾을 수 없습니다." } };
 
   const currentEmail = input.currentEmail?.trim().toLowerCase() || null;
-  if (existing.userEmail && currentEmail && existing.userEmail.toLowerCase() !== currentEmail) {
+  /* [1001] 비회원 주문은 소유자 대조를 걸지 않는다 — 결제한 사람이 지금 로그인해 있든 아니든 승인은 유효하고,
+     이용권은 주문 이메일(또는 지금 로그인한 계정)에 붙는다(applyPlanForPayment). */
+  const guestMeta = readGuestMeta(existing.metadata);
+  if (!guestMeta && existing.userEmail && currentEmail && existing.userEmail.toLowerCase() !== currentEmail) {
     return { status: 403, body: { error: "본인 결제만 승인할 수 있습니다." } };
   }
   if (existing.status === "paid") {
@@ -112,7 +117,7 @@ export async function confirmTossOrder(input: ConfirmTossOrderInput): Promise<Co
     }
     const paid = await markPaid({ orderId, providerPaymentKey: "MOCK-PAYMENT-KEY", method: "mock-card" });
     if (!paid) return { status: 409, body: { error: "승인 대기 상태가 아닌 주문입니다." } };
-    await applyPlanForPayment(paid);
+    await applyPlanForPayment(paid, { claimEmail: currentEmail });
     return { status: 200, body: { ok: true, mock: true, payment: paid } };
   }
 
@@ -175,7 +180,7 @@ export async function confirmTossOrder(input: ConfirmTossOrderInput): Promise<Co
     if (!res.ok) {
       const recovered = await queryPaymentDone(secret, orderId);
       if (recovered) {
-        const paid = await settlePaid(orderId, recovered, "confirm 실패 뒤 주문 조회 DONE");
+        const paid = await settlePaid(orderId, recovered, "confirm 실패 뒤 주문 조회 DONE", currentEmail);
         if (!paid) return unsettled(orderId);
         return { status: 200, body: { ok: true, payment: paid, recovered: true } };
       }
@@ -212,7 +217,7 @@ export async function confirmTossOrder(input: ConfirmTossOrderInput): Promise<Co
        먼저 주문을 조회해 DONE 이면 완료로, 아니면 그때 failed 로 적는다. */
     const recovered = await queryPaymentDone(secret, orderId);
     if (recovered) {
-      const paid = await settlePaid(orderId, recovered, "confirm 예외 뒤 주문 조회 DONE");
+      const paid = await settlePaid(orderId, recovered, "confirm 예외 뒤 주문 조회 DONE", currentEmail);
       if (!paid) return unsettled(orderId);
       return { status: 200, body: { ok: true, payment: paid, recovered: true } };
     }
@@ -241,6 +246,7 @@ async function settlePaid(
   orderId: string,
   done: { paymentKey: string; method?: string; receiptUrl?: string },
   reason: string,
+  claimEmail: string | null = null,
 ): Promise<PaymentRecord | null> {
   let paid = await markPaid({
     orderId,
@@ -257,7 +263,7 @@ async function settlePaid(
       reason,
     });
   }
-  if (paid) await applyPlanForPayment(paid);
+  if (paid) await applyPlanForPayment(paid, { claimEmail });
   return paid;
 }
 
@@ -290,8 +296,13 @@ export async function queryPaymentDone(
   }
 }
 
-/** 결제 행의 플랜·주기대로 이용권을 켠다 — 주문 소유자 기준(세션이 아니라) */
-export async function applyPlanForPayment(paid: PaymentRecord): Promise<void> {
+/** 결제 행의 플랜·주기대로 이용권을 켠다 — 주문 소유자 기준(세션이 아니라).
+ *  [1001] 비회원 주문: **결제자가 그 이메일 계정으로 로그인해 있을 때만** 즉시 켠다. 그 밖에는 claimPending 으로
+ *  남기고, 주인이 그 이메일로 가입/로그인할 때 lib/payments/guest-claim 이 켠다(남의 계정에 붙는 것을 막는다). */
+export async function applyPlanForPayment(
+  paid: PaymentRecord,
+  opts: { claimEmail?: string | null } = {},
+): Promise<void> {
   const userEmail = paid.userEmail?.trim().toLowerCase();
   if (!userEmail) {
     logger.error("[payments:toss] 결제 행에 소유자 이메일이 없어 플랜을 반영하지 못함", { orderId: paid.orderId });
@@ -300,9 +311,31 @@ export async function applyPlanForPayment(paid: PaymentRecord): Promise<void> {
   /* tier === "basic" 은 단품 — 멤버십 등급을 바꾸지 않는다 */
   if (paid.plan === "basic") return;
   const appPlan: AppPlan = paid.plan;
-  await applyPlanToUserByEmail(userEmail, appPlan, {
-    durationDays: BILLING_DURATION_DAYS[paid.billing],
-  });
+  const durationDays = BILLING_DURATION_DAYS[paid.billing];
+  const guest = readGuestMeta(paid.metadata);
+  const claimEmail = opts.claimEmail?.trim().toLowerCase() || null;
+  let settledFor = paid;
+  let applied = false;
+  if (!guest) {
+    applied = await applyPlanToUserByEmail(userEmail, appPlan, { durationDays });
+  } else {
+    /* [1001 · 보안] 비회원 주문은 **결제한 사람이 그 계정으로 로그인해 있을 때만** 즉시 켠다.
+       이메일만 적으면 남의 계정에 붙는 셈이라, 1,100원으로 상위 플랜 사용자를 7일짜리 주간권으로
+       강등시키거나(다른 플랜이면 applyPlan 이 기간을 now+7d 로 덮는다) 환불로 이용권을 끊을 수 있었다.
+       계정이 있든 없든 로그인 확인 전에는 claimPending 으로 두고, 주인이 로그인할 때 붙인다(guest-claim). */
+    if (claimEmail && claimEmail === userEmail) {
+      applied = await applyPlanToUserByEmail(userEmail, appPlan, { durationDays });
+      if (applied) {
+        const sb = getServiceSupabase();
+        await sb
+          ?.from("payments")
+          .update({ metadata: { ...(paid.metadata ?? {}), claimPending: false, claimedAt: new Date().toISOString() } })
+          .eq("order_id", paid.orderId)
+          .eq("metadata->>claimPending", "true");
+        settledFor = { ...paid, metadata: { ...(paid.metadata ?? {}), claimPending: false } };
+      }
+    }
+  }
   /* [966] 결제 직후 확인 — 알림함 + 영수증 메일(주문당 1회, 목업 제외) */
-  await notifyPaymentSettled(paid, { kind: "one_off" });
+  await notifyPaymentSettled(settledFor, { kind: "one_off", guestPending: Boolean(guest) && !applied });
 }

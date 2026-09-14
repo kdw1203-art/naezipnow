@@ -20,7 +20,12 @@ import { logger } from "@/lib/log";
  */
 export async function notifyPaymentSettled(
   paid: PaymentRecord,
-  opts: { kind?: "one_off" | "billing_first" | "renewal"; nextChargeAt?: string | null } = {},
+  opts: {
+    kind?: "one_off" | "billing_first" | "renewal";
+    nextChargeAt?: string | null;
+    /** [1001] 비회원 결제 — 계정이 아직 없어 이용권이 대기 중 */
+    guestPending?: boolean;
+  } = {},
 ): Promise<void> {
   try {
     if (!paid.userEmail) return;
@@ -72,7 +77,9 @@ export async function notifyPaymentSettled(
     await appendInboxNotification({
       userEmail: email,
       title: opts.kind === "renewal" ? "자동결제가 갱신됐어요" : "결제가 완료됐어요",
-      body: `${plan} ${period} · ${paid.amount.toLocaleString("ko-KR")}원${endsLabel ? ` · ${endsLabel}까지 이용` : ""}`,
+      body: opts.guestPending
+        ? `${plan} ${period} · ${paid.amount.toLocaleString("ko-KR")}원 · 이 이메일로 가입/로그인하면 이용권이 연결돼요`
+        : `${plan} ${period} · ${paid.amount.toLocaleString("ko-KR")}원${endsLabel ? ` · ${endsLabel}까지 이용` : ""}`,
       /* [1000] 결제 내역·영수증이 사는 화면으로 */
       actionUrl: "/my/subscription",
       channel: "user",
@@ -91,6 +98,7 @@ export async function notifyPaymentSettled(
           endsAt,
           receiptUrl: paid.receiptUrl ?? fresh.receiptUrl ?? null,
           nextChargeAt: opts.nextChargeAt ? new Date(opts.nextChargeAt) : null,
+          guestPending: opts.guestPending === true,
         }),
       });
       if (!result.sent) {

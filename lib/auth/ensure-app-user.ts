@@ -1,5 +1,6 @@
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
+import { claimGuestPayments } from "@/lib/payments/guest-claim";
 
 /**
  * Supabase Auth / OAuth 로만 생긴 계정에 app_users 행이 없으면 최소 행을 만든다.
@@ -26,7 +27,11 @@ export async function ensureAppUserRow(input: {
       logger.warn("[ensure-app-user] read", readErr.message);
       return;
     }
-    if (existing?.id) return;
+    if (existing?.id) {
+      /* [1001] 이미 있는 계정으로 로그인 — 비회원으로 결제한 이용권이 대기 중이면 여기서 붙인다 */
+      await claimGuestPayments(email).catch(() => 0);
+      return;
+    }
 
     const name =
       input.name?.trim() || email.split("@")[0] || "회원";
@@ -53,8 +58,11 @@ export async function ensureAppUserRow(input: {
       });
       if (fallback.error) {
         logger.warn("[ensure-app-user] insert", fallback.error.message);
+        return;
       }
     }
+    /* [1001] 새 계정 — 이 이메일로 비회원 결제한 이용권이 있으면 가입 즉시 연결된다 */
+    await claimGuestPayments(email).catch(() => 0);
   } catch (e) {
     logger.warn(
       "[ensure-app-user]",

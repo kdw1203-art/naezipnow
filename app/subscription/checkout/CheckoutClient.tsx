@@ -5,6 +5,7 @@ import { planLabel } from "@/lib/subscriptions/labels";
 import {
   accessEndsAtMs,
   billingDurationLabel,
+  WEEKLY_PASS,
   type PaymentBilling,
 } from "@/lib/subscriptions/billing-periods";
 import Link from "next/link";
@@ -16,6 +17,7 @@ import {
   previewBillingLabel,
 } from "@/lib/payments/checkout-preview";
 import { PAYMENT_METHODS_PATH } from "@/lib/payments/payment-methods";
+import { isGuestCheckoutAllowed, normalizeGuestEmail } from "@/lib/payments/guest-order";
 import {
   isTossTestEnv,
   isWidgetKey,
@@ -68,6 +70,8 @@ type Phase =
       amount: number;
       widget: "shown" | "none" | "failed";
       loginHref: string;
+      /* [1001] 주간권(단건)은 계정 없이도 결제할 수 있다 — 이메일만 받고 카드 결제창을 연다 */
+      guestPay: boolean;
     }
   | { kind: "error"; msg: string };
 
@@ -266,13 +270,16 @@ function WidgetSkeletonOverlay({ msg }: { msg: string }) {
 
 /* [968 · T1] 비로그인 안내 — 위젯 위, 요약 카드 바로 아래. 무엇이 필요한지와
    로그인 뒤 어디로 돌아오는지를 한 카드에서 말한다. */
-function GuestNotice({ widget }: { widget: "shown" | "none" | "failed" }) {
+function GuestNotice({ widget, guestPay }: { widget: "shown" | "none" | "failed"; guestPay: boolean }) {
   return (
     <div role="status" className="card flex flex-col gap-1 rounded-2xl px-4 py-3.5">
-      <p className="t-body font-bold text-ink">결제하려면 로그인이 필요해요</p>
+      <p className="t-body font-bold text-ink">
+        {guestPay ? "로그인 없이 결제할 수 있어요" : "결제하려면 로그인이 필요해요"}
+      </p>
       <p className="t-sub text-text-2">
-        로그인하면 이 화면으로 돌아와 그대로 결제할 수 있어요. 주문번호는 로그인 뒤
-        발급돼요.
+        {guestPay
+          ? "아래에 영수증 받을 이메일만 적으면 주문번호가 발급되고 바로 카드 결제창이 열려요."
+          : "로그인하면 이 화면으로 돌아와 그대로 결제할 수 있어요. 주문번호는 로그인 뒤 발급돼요."}
       </p>
       {widget === "shown" && (
         /* [990] 아래 위젯이 곧 결제수단 목록이지만, 그건 iframe 안이라 페이지
@@ -291,9 +298,14 @@ function GuestNotice({ widget }: { widget: "shown" | "none" | "failed" }) {
         </p>
       )}
       {widget === "none" && (
-        /* ck(결제창형) 키는 주문번호가 있어야 결제창을 열 수 있다 — 주문은 로그인
-           뒤 서버가 만들므로 게스트에게는 요약·안내·로그인 버튼까지만 보여 준다. */
-        <p className="t-sub text-text-3">카드 결제창은 로그인해서 주문이 만들어진 뒤 열려요.</p>
+        /* ck(결제창형) 키는 주문번호가 있어야 결제창을 열 수 있다 — [1001] 주간권은 아래 이메일을 적으면
+           주문이 만들어지고 버튼으로 카드 결제창이 열린다. 정기는 로그인 뒤 카드 등록 화면. */
+        <p className="t-sub text-text-3">
+          결제 수단: <span className="font-bold text-ink">신용카드 · 체크카드</span> (토스페이먼츠 결제창) ·{" "}
+          <Link href={PAYMENT_METHODS_PATH} className="font-bold text-primary underline">
+            결제 수단 안내
+          </Link>
+        </p>
       )}
       {widget === "failed" && (
         <p role="alert" className="t-sub font-bold text-danger">
@@ -311,6 +323,12 @@ export function CheckoutClient() {
   const [paying, setPaying] = useState(false);
   const widgetsRef = useRef<TossWidgets | null>(null);
   const startedRef = useRef(false);
+  /* [1001] 비회원 결제 — 입력한 이메일, 검증 오류, 미리 만들어 둔 주문(버튼 탭 안에서 결제창이 열리게) */
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestErr, setGuestErr] = useState<string | null>(null);
+  const guestOrderRef = useRef<{ email: string; orderId: string; amount: number } | null>(null);
+  /* 같은 이메일로 동시에 두 번 만들지 않는다(blur → click 이 겹치면 create 를 두 번 부르고 속도 제한을 먹는다) */
+  const guestOrderInFlight = useRef<Promise<{ email: string; orderId: string; amount: number } | null> | null>(null);
 
   useEffect(() => {
     if (startedRef.current) return; // StrictMode 이중 실행 방지
@@ -374,19 +392,25 @@ export function CheckoutClient() {
         setPhase({ kind: "error", msg: "결제할 수 있는 상품이 아니에요. 구독 페이지에서 다시 골라 주세요." });
         return;
       }
+      /* [1001] 주간권(단건)은 비회원 결제 가능 — 이메일을 받고 서버 주문을 만든 뒤 실제 카드 결제창을 연다.
+         토스 심사자가 계정 없이도 "결제수단 신용/체크카드"를 결제창에서 확인할 수 있어야 한다(2026-09-12 반려). */
+      const guestPay = isGuestCheckoutAllowed(q.billing);
       if (!isWidgetKey()) {
-        /* ck(결제창형) 키: payment().requestPayment 는 orderId 가 필수라 주문 없이는
-           결제창을 열 수 없다 — 요약·안내·로그인 버튼만 보여 준다. */
-        setPhase({ kind: "preview", amount, widget: "none", loginHref });
+        /* ck(결제창형) 키: payment().requestPayment 는 orderId 가 필수 — 주간권은 이메일 입력 뒤 주문을 만들어
+           연다(guestPay). 정기는 로그인 뒤 카드 등록 화면이 맡는다. */
+        setPhase({ kind: "preview", amount, widget: "none", loginHref, guestPay });
+        void loadTossSdk().catch(() => {});
         return;
       }
       setPhase({ kind: "loading", msg: "결제 수단 불러오는 중…" });
       try {
-        await renderWidgets(amount);
-        setPhase({ kind: "preview", amount, widget: "shown", loginHref });
+        const w = await renderWidgets(amount);
+        /* 게스트도 위젯을 들고 있는다 — 주문이 만들어진 뒤에만 requestPayment 를 부른다(guestPay) */
+        if (guestPay) widgetsRef.current = w;
+        setPhase({ kind: "preview", amount, widget: "shown", loginHref, guestPay });
       } catch {
         /* 실패를 숨기지 않는다 — 안내 카드가 "불러오지 못했어요"를 말한다. */
-        setPhase({ kind: "preview", amount, widget: "failed", loginHref });
+        setPhase({ kind: "preview", amount, widget: "failed", loginHref, guestPay });
       }
     }
 
@@ -572,6 +596,97 @@ export function CheckoutClient() {
     }
   }
 
+  /* [1001] 비회원 주문 — 이메일이 유효해지는 순간(입력 blur) 미리 만들어 두면 버튼 탭 시점에는 결제창만
+     열면 된다(iOS 사파리 제스처 맥락 보존 — payWindow 의 SDK 프리로드와 같은 이유). */
+  async function ensureGuestOrder(): Promise<{ email: string; orderId: string; amount: number } | null> {
+    if (!params) return null;
+    const em = normalizeGuestEmail(guestEmail);
+    if (!em) {
+      setGuestErr("영수증을 받을 이메일 주소를 정확히 적어 주세요.");
+      return null;
+    }
+    setGuestErr(null);
+    if (guestOrderRef.current && guestOrderRef.current.email === em) return guestOrderRef.current;
+    if (guestOrderInFlight.current) return guestOrderInFlight.current;
+    const run = createGuestOrder(em, params);
+    guestOrderInFlight.current = run;
+    try {
+      return await run;
+    } finally {
+      guestOrderInFlight.current = null;
+    }
+  }
+
+  async function createGuestOrder(
+    em: string,
+    params: NonNullable<ReturnType<typeof parseParams>>,
+  ): Promise<{ email: string; orderId: string; amount: number } | null> {
+    try {
+      const res = await fetch("/api/payments/toss/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tier: params.tier,
+          billing: params.billing,
+          source: "subscription",
+          campaign: "guest-checkout",
+          guestEmail: em,
+          ...(params.returnTo ? { returnTo: params.returnTo } : {}),
+        }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { orderId?: string; amount?: number; error?: string };
+      if (!res.ok || !j.orderId || !Number.isFinite(j.amount)) {
+        setGuestErr(j.error ?? "주문을 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
+        return null;
+      }
+      guestOrderRef.current = { email: em, orderId: j.orderId, amount: Number(j.amount) };
+      return guestOrderRef.current;
+    } catch {
+      setGuestErr("네트워크 오류로 주문을 만들지 못했어요.");
+      return null;
+    }
+  }
+
+  async function guestPay() {
+    if (paying || phase.kind !== "preview" || !phase.guestPay || !params) return;
+    setPaying(true);
+    try {
+      const order = await ensureGuestOrder();
+      if (!order) return;
+      const origin = window.location.origin;
+      const orderName = `내집나우 ${planLabel(params.tier)} 주간권 (7일 · 단건)`;
+      const common = {
+        orderId: order.orderId,
+        orderName,
+        successUrl: `${origin}/payment/success`,
+        failUrl: `${origin}/payment/fail`,
+        customerEmail: order.email,
+      };
+      if (isWidgetKey() && widgetsRef.current) {
+        await widgetsRef.current.requestPayment(common);
+      } else {
+        const TossPayments = await loadTossSdk();
+        const payment = TossPayments(tossClientKey() as string).payment({
+          customerKey: TossPayments.ANONYMOUS,
+        });
+        await payment.requestPayment({
+          method: "CARD",
+          amount: { currency: "KRW", value: order.amount },
+          ...common,
+        });
+      }
+    } catch (e) {
+      const code =
+        e && typeof e === "object" && "code" in e ? String((e as { code: unknown }).code) : "";
+      if (code !== "USER_CANCEL" && code !== "PAY_PROCESS_CANCELED") {
+        const detail = [code, e instanceof Error ? e.message : ""].filter(Boolean).join(" · ").slice(0, 140);
+        setGuestErr(`결제창을 열지 못했어요${detail ? ` (${detail})` : ""}. 잠시 후 다시 시도해 주세요.`);
+      }
+    } finally {
+      setPaying(false);
+    }
+  }
+
   const label = params ? (planLabel(params.tier)) : "";
   const billingLabel = params ? previewBillingLabel(params.billing) : "";
 
@@ -631,11 +746,11 @@ export function CheckoutClient() {
               billingLabel={billingLabel}
               amount={phase.amount}
               /* [968 · T1] 게스트는 주문이 없다 — 있는 척하지 않는다 */
-              orderId={phase.kind === "preview" ? "로그인 후 발급" : phase.orderId}
+              orderId={phase.kind === "preview" ? (phase.guestPay ? "이메일 입력 후 발급" : "로그인 후 발급") : phase.orderId}
             />
           )}
         {phase.kind === "loading" && widgetExpected && <CheckoutSummarySkeleton />}
-        {phase.kind === "preview" && <GuestNotice widget={phase.widget} />}
+        {phase.kind === "preview" && <GuestNotice widget={phase.widget} guestPay={phase.guestPay} />}
         <div className={`relative overflow-hidden rounded-2xl ${widgetReserved ? "min-h-[420px]" : ""}`}>
           <div id="toss-payment-methods" className={widgetReserved ? "min-h-[420px]" : ""} />
           {showWidgetSkeleton && phase.kind === "loading" && (
@@ -647,8 +762,57 @@ export function CheckoutClient() {
           className={`overflow-hidden rounded-2xl ${widgetReserved ? "min-h-[88px]" : ""}`}
         />
 
-        {/* [968 · T1] 게스트의 1차 행동 — 로그인 뒤 이 화면(쿼리 포함)으로 복귀 */}
-        {phase.kind === "preview" && (
+        {/* [1001] 주간권(단건)은 비회원 결제 — 이메일 → 카드 결제창. 로그인은 둘째 길. */}
+        {phase.kind === "preview" && phase.guestPay && phase.widget !== "failed" && (
+          <div className="card flex flex-col gap-2.5 rounded-2xl px-4 py-4">
+            <p className="t-body font-bold text-ink">계정 없이 바로 결제하기</p>
+            <p className="t-sub text-text-2">
+              영수증은 아래 이메일로 보내 드리고, 같은 이메일로 가입하거나 로그인하면 이용권이 자동으로
+              연결돼요. 결제는 <span className="font-bold text-ink">신용카드 · 체크카드</span>(토스페이먼츠
+              결제창)로 진행됩니다.
+            </p>
+            <label className="flex flex-col gap-1">
+              <span className="t-sub font-bold text-text-2">이메일</span>
+              <input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={guestEmail}
+                onChange={(e) => {
+                  setGuestEmail(e.target.value);
+                  if (guestErr) setGuestErr(null);
+                }}
+                onBlur={() => {
+                  if (normalizeGuestEmail(guestEmail)) void ensureGuestOrder();
+                }}
+                placeholder="you@example.com"
+                aria-invalid={guestErr ? true : undefined}
+                className="h-11 rounded-xl border border-line bg-surface px-3 t-body text-ink outline-none focus:border-primary"
+              />
+            </label>
+            {guestErr && (
+              <p role="alert" className="t-sub font-bold text-danger">
+                {guestErr}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => void guestPay()}
+              disabled={paying}
+              className="btn-primary btn-cta rounded-[14px] p-[14px] text-center t-body font-bold disabled:opacity-60"
+            >
+              {paying ? "결제창 여는 중…" : `${phase.amount.toLocaleString("ko-KR")}원 카드로 결제하기`}
+            </button>
+            <Link
+              href={phase.loginHref}
+              className="inline-block py-[5px] text-center t-sub font-bold text-primary no-underline"
+            >
+              계정이 있어요 — 로그인하고 결제하기
+            </Link>
+          </div>
+        )}
+        {/* [968 · T1] 정기(월간·연간)의 게스트 1차 행동 — 로그인 뒤 카드 등록 화면으로 */}
+        {phase.kind === "preview" && (!phase.guestPay || phase.widget === "failed") && (
           <>
             <Link
               href={phase.loginHref}
@@ -659,6 +823,13 @@ export function CheckoutClient() {
             <p className="text-center t-sub text-text-3">
               {phase.amount.toLocaleString("ko-KR")}원 · 로그인하면 같은 화면에서 결제가 이어져요.
             </p>
+            {/* [1001] 정기결제는 계정(해지·카드 변경)이 필요하다. 계정 없이 카드 결제를 해 보려면 단건 주간권으로. */}
+            <Link
+              href={`/subscription/checkout?tier=pro&billing=weekly${params?.returnTo ? `&returnTo=${encodeURIComponent(params.returnTo)}` : ""}`}
+              className="inline-block py-[5px] text-center t-sub font-bold text-primary no-underline"
+            >
+              계정 없이 결제하려면 → {planLabel(WEEKLY_PASS.tier)} 주간권({WEEKLY_PASS.days}일 · {WEEKLY_PASS.totalKrw.toLocaleString("ko-KR")}원 단건)
+            </Link>
           </>
         )}
 

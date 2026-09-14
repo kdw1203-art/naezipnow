@@ -6,14 +6,11 @@ import {
   markRefunded,
   promotePaidAfterProviderConfirmation,
 } from "@/lib/payments/store";
-import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan";
-import type { AppPlan } from "@/lib/billing/plan";
 import { markDeletedByBillingKey } from "@/lib/payments/billing-store";
 import { recordSubscriptionEvent } from "@/lib/payments/subscription-events";
-import { BILLING_DURATION_DAYS } from "@/lib/subscriptions/billing-periods";
 import { appendInboxNotification } from "@/lib/notifications/inbox";
 import { logger } from "@/lib/log";
-import { notifyPaymentSettled } from "@/lib/payments/notify-paid";
+import { applyPlanForPayment } from "@/lib/payments/confirm-toss-order";
 
 export const runtime = "nodejs";
 
@@ -65,18 +62,6 @@ async function fetchPaymentFromToss(paymentKey: string): Promise<TossPaymentObje
   }
 }
 
-async function applyPlanIfNeeded(
-  userEmail: string | null,
-  tier: "basic" | "pro" | "expert" | "enterprise",
-  billing: "weekly" | "monthly" | "annual",
-): Promise<void> {
-  if (!userEmail || tier === "basic") return;
-  const plan: AppPlan = tier;
-  /* [1000] 기간 숫자는 단일 출처(BILLING_DURATION_DAYS) — 여기만 365/7/30 을 따로 적고 있었다 */
-  await applyPlanToUserByEmail(userEmail, plan, {
-    durationDays: BILLING_DURATION_DAYS[billing] ?? BILLING_DURATION_DAYS.monthly,
-  });
-}
 
 export async function POST(req: NextRequest) {
   /* 어떤 경우에도 재시도 폭주를 만들지 않도록, 본문 파싱 실패도 200 으로 받는다
@@ -206,8 +191,8 @@ export async function POST(req: NextRequest) {
             reason: `웹훅 DONE — 원장 상태 ${order.status}`,
           }));
         if (paid) {
-          await applyPlanIfNeeded(paid.userEmail, paid.plan, paid.billing);
-          await notifyPaymentSettled(paid, { kind: "one_off" });
+          /* [1001] 비회원 주문도 같은 경로 — 계정이 없으면 claimPending 으로 남기고 안내 메일을 보낸다 */
+          await applyPlanForPayment(paid);
         } else {
           logger.error("[toss-webhook] DONE 인데 원장을 paid 로 만들지 못함 — 사람 확인", {
             orderId: payloadOrderId,

@@ -5,6 +5,7 @@ import { Icon } from "@/app/components/Icon";
 import { EmptyState } from "@/app/components/ui/EmptyState";
 import { SectionHead } from "@/app/components/ui/SectionHead";
 import { safeAuth } from "@/lib/safe-auth";
+import { claimGuestPayments } from "@/lib/payments/guest-claim";
 import { loadMeProfile } from "@/lib/me/profile";
 import { getExpertStatus } from "@/lib/experts/is-verified";
 import { getBalance } from "@/lib/points/ledger";
@@ -197,6 +198,8 @@ export default async function MyPage() {
   }
 
   const email = session.user.email;
+  /* [1001] 비회원으로 결제한 주간권이 이 이메일에 대기 중이면 여기서 연결한다(선점 UPDATE, 중복 적용 없음) */
+  await claimGuestPayments(email).catch(() => 0);
   /* 포인트 잔액은 이 화면의 곁가지라 실패해도 /my 전체를 죽이지 않는다.
      다만 0 으로 눌러 버리면 "0 P" 라는 거짓 안내가 되므로, 실패 여부를 따로 들고 가서
      그 자리에만 다른 문구를 쓴다. 내역(원장 행)은 /my/points 가 그린다. */

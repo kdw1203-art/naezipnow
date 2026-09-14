@@ -14,6 +14,8 @@ import { safeAuth } from "@/lib/safe-auth";
 import { PaymentSuccessMoment } from "./PaymentSuccessMoment";
 import { applyPlanForPayment, confirmTossOrder } from "@/lib/payments/confirm-toss-order";
 import { safeInternalPath } from "@/lib/safe-path";
+import { readGuestMeta } from "@/lib/payments/guest-order";
+import { claimGuestPayments } from "@/lib/payments/guest-claim";
 
 /** 결제 결과 랜딩의 쿼리 파라미터(페이지 본문과 같은 모양) */
 type PaymentSuccessSearchParams = {
@@ -36,8 +38,9 @@ function paramsLookVerifiable(sp: PaymentSuccessSearchParams): boolean {
   if (sp.provider === "toss-billing") return sp.card === "changed" || Boolean(sp.orderId);
   /* 본문은 Number(amount) 의 참/거짓으로 본다(0·NaN 은 승인 시도 없이 실패) */
   if (sp.orderId && sp.paymentKey && sp.amount && Number(sp.amount)) return true;
-  /* orderId 만 있는 경우 — 프로덕션은 본문이 "검증 정보 누락" 실패, 개발은 목업 재확정 */
-  return Boolean(sp.orderId) && process.env.NODE_ENV !== "production";
+  /* [1001] orderId 만 있는 경우 — 본인 주문이면 본문이 "결제 완료된 주문"을 보여 준다(가입/로그인 뒤 복귀).
+     제목은 서버 조회 없이 정하는 자리라 실패로 단정하지 않는다(본문이 최종 사실). 개발은 목업 재확정. */
+  return Boolean(sp.orderId);
 }
 
 export async function generateMetadata({
@@ -59,6 +62,15 @@ export const dynamic = "force-dynamic";
  * Stripe(provider=stripe&session_id — 구 /billing/success 흡수, 미들웨어가 1홉 리다이렉트).
  * Stripe 는 Webhook 과 병행해 session_id 로 플랜을 idempotent 하게 반영합니다.
  */
+/** [1001] 이 주문이 지금 로그인한 사람의 것이고 이미 결제 완료인가 — orderId 만으로 남의 주문을 열지 못하게 */
+async function ownPaidOrder(orderId: string): Promise<boolean> {
+  const rec = await getPaymentByOrderId(orderId).catch(() => null);
+  if (rec?.status !== "paid") return false;
+  const session = await safeAuth();
+  const email = session?.user?.email?.trim().toLowerCase() ?? null;
+  return Boolean(email && rec.userEmail && email === rec.userEmail.trim().toLowerCase());
+}
+
 export default async function PaymentSuccessPage({
   searchParams,
 }: {
@@ -123,6 +135,12 @@ export default async function PaymentSuccessPage({
     } catch (e) {
       message = e instanceof Error ? e.message : message;
     }
+  } else if (orderId && (await ownPaidOrder(orderId))) {
+    /* [1001] 이미 승인된 주문을 다시 연 경우(비회원 결제 → 가입/로그인 뒤 복귀) — 원장이 사실이다.
+       단 **본인 주문일 때만**: orderId 는 비밀이 아니라(문의 프리필·스크린샷으로 새어 나간다) 아무나 열면
+       남의 영수증·이메일을 보게 된다. paymentKey 가 있는 정상 복귀 경로는 위 분기가 이미 처리한다. */
+    status = "ok";
+    message = "결제가 완료된 주문이에요.";
   } else if (orderId) {
     // 클라이언트 측에서 paymentKey 없이 redirect 한 경우(=목업 재확정)
     if (process.env.NODE_ENV === "production") {
@@ -161,6 +179,25 @@ export default async function PaymentSuccessPage({
   if (ok && orderId) {
     record = await getPaymentByOrderId(orderId).catch(() => null);
   }
+  /* [1001] 비회원 결제 — 계정이 아직 없어 이용권이 대기 중이면 가입/로그인 안내를, 로그인해 돌아왔으면
+     그 자리에서 연결한다(claimGuestPayments 는 선점 UPDATE 라 여러 번 불려도 한 번만 적용). */
+  const guestMeta = record ? readGuestMeta(record.metadata) : null;
+  let guestPending = Boolean(guestMeta?.claimPending);
+  let guestBuyerEmail: string | null = null;
+  if (guestPending) {
+    const session = await safeAuth();
+    const sessionEmail = session?.user?.email?.trim().toLowerCase() ?? null;
+    if (sessionEmail && record?.userEmail && sessionEmail === record.userEmail.toLowerCase()) {
+      const n = await claimGuestPayments(sessionEmail).catch(() => 0);
+      if (n > 0) guestPending = false;
+    }
+    /* 이메일은 방금 결제한 본인(세션 없음, paymentKey 로 승인해 이 화면에 온 경우)에게만 보여 준다 */
+    if (guestPending && !sessionEmail && paymentKey) guestBuyerEmail = record?.userEmail ?? null;
+  }
+  const selfHref = `/payment/success?${new URLSearchParams({
+    ...(orderId ? { orderId } : {}),
+    ...(sp.provider ? { provider: String(sp.provider) } : {}),
+  }).toString()}`;
   const returnTo =
     ok && typeof record?.metadata?.returnTo === "string"
       ? safeInternalPath(record.metadata.returnTo, "")
@@ -324,6 +361,26 @@ export default async function PaymentSuccessPage({
                 이 화면이 떴다면 이용권은 아직 켜지지 않았어요. 다시 결제하기 전에 문의를
                 먼저 남겨 주세요{orderId ? " — 주문번호가 문의에 함께 담겨요" : ""}.
               </p>
+            </>
+          ) : guestPending ? (
+            <>
+              {/* [1001] 비회원 결제 — 이용권은 결제 이메일로 발급됐고, 같은 이메일로 가입/로그인하면 자동 연결 */}
+              <p className="text-[13px] leading-[1.6] text-text-2">
+                이용권은 결제할 때 적은 이메일{guestBuyerEmail ? ` (${guestBuyerEmail})` : ""}로 발급됐어요.
+                같은 이메일로 가입하거나 로그인하면 바로 연결돼요.
+              </p>
+              <Link
+                href={`/signup?callbackUrl=${encodeURIComponent(selfHref)}`}
+                className="btn-primary rounded-[14px] p-[13px] text-center text-[13px] font-bold"
+              >
+                가입하고 이용권 연결하기
+              </Link>
+              <Link
+                href={`/login?callbackUrl=${encodeURIComponent(selfHref)}`}
+                className="rounded-[14px] border border-line bg-surface p-[13px] text-center text-[13px] font-bold text-text-1"
+              >
+                이미 계정이 있어요 — 로그인
+              </Link>
             </>
           ) : returnTo ? (
             <>

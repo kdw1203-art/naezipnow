@@ -336,6 +336,8 @@ export function paymentReceiptEmail(params: {
   receiptUrl?: string | null;
   /** 자동결제면 다음 청구 예정일 */
   nextChargeAt?: Date | null;
+  /** [1001] 비회원 결제인데 이 이메일의 계정이 아직 없음 — 가입/로그인하면 이용권이 붙는다는 안내 */
+  guestPending?: boolean;
 }) {
   const fmtDate = (d: Date) =>
     d.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Seoul" });
@@ -357,7 +359,11 @@ export function paymentReceiptEmail(params: {
   const html = emailLayout(`
     <h1 style="margin:0 0 6px;font-size:19px;color:${NAVY};">결제가 완료됐어요</h1>
     <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#4a5568;">
-      ${escapeHtml(params.planLabel)} ${escapeHtml(params.periodLabel)} 이용권이 바로 적용됐습니다.
+      ${
+        params.guestPending
+          ? `${escapeHtml(params.planLabel)} ${escapeHtml(params.periodLabel)} 이용권을 결제했어요. <b>이 이메일로 가입하거나 로그인하면</b> 이용권이 자동으로 연결됩니다 — <a href="https://naezipnow.com/signup?callbackUrl=${encodeURIComponent(`/payment/success?orderId=${params.orderId}`)}" style="color:#1d4fd8;font-weight:700;">가입하고 연결하기</a>`
+          : `${escapeHtml(params.planLabel)} ${escapeHtml(params.periodLabel)} 이용권이 바로 적용됐습니다.`
+      }
     </p>
     <table style="width:100%;border-collapse:collapse;border-top:1px solid #e5e9f2;border-bottom:1px solid #e5e9f2;margin:0 0 16px;">
       ${row("상품", `${escapeHtml(params.planLabel)} · ${escapeHtml(params.periodLabel)}`)}
@@ -380,6 +386,11 @@ export function paymentReceiptEmail(params: {
   `);
   const text = [
     "결제가 완료됐어요",
+    ...(params.guestPending
+      ? [
+          `이 이메일로 가입/로그인하면 이용권이 자동으로 연결됩니다: https://naezipnow.com/signup?callbackUrl=${encodeURIComponent(`/payment/success?orderId=${params.orderId}`)}`,
+        ]
+      : []),
     `${params.planLabel} · ${params.periodLabel}`,
     `결제 금액: ${amount} (VAT 포함)`,
     `결제 일시: ${fmtDateTime(params.paidAt)}`,

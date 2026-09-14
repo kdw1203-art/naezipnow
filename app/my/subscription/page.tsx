@@ -4,6 +4,7 @@ import { PageShell } from "@/app/components/PageShell";
 import { GuestGate } from "@/app/components/GuestGate";
 import { Icon } from "@/app/components/Icon";
 import { safeAuth } from "@/lib/safe-auth";
+import { claimGuestPayments } from "@/lib/payments/guest-claim";
 import { loadMeProfile } from "@/lib/me/profile";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { isTossBillingEnabled } from "@/lib/payments/toss-billing";
@@ -128,6 +129,8 @@ export default async function MySubscriptionPage() {
   }
 
   const email = session.user.email.trim().toLowerCase();
+  /* [1001] 비회원 결제 이용권 연결(대기 중인 것이 있을 때만 실제로 쓴다) */
+  await claimGuestPayments(email).catch(() => 0);
   const billingOpen = isTossBillingEnabled();
 
   const [profile, planExpiresAt, liveSub, latestSub, history, events] = await Promise.all([

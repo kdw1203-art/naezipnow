@@ -7,6 +7,7 @@ import type { PlanTier } from "@/lib/subscriptions/access";
 import { getPlan } from "@/lib/subscriptions/plans";
 import { WEEKLY_PASS } from "@/lib/subscriptions/billing-periods";
 import { applyRateLimit, AUTH_RATE_LIMIT } from "@/lib/rate-limit";
+import { isGuestCheckoutAllowed, normalizeGuestEmail } from "@/lib/payments/guest-order";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,8 @@ type Body = {
   reportId?: string;
   /** [966] 결제 완료 뒤 돌아갈 내부 경로(선택) */
   returnTo?: string;
+  /** [1001] 비회원 결제 — 영수증·이용권 연결용 이메일(주간권만 허용) */
+  guestEmail?: string;
 };
 
 /** report_purchases 검증에서 쓰는 결속 값이라 형식(uuid)을 여기서 확정해 둔다. */
@@ -59,10 +62,25 @@ export async function POST(req: NextRequest) {
   const returnTo = body.returnTo ? safeInternalPath(String(body.returnTo).slice(0, 200), "") : "";
 
   const session = await safeAuth();
-  const userEmail = session?.user?.email ?? null;
+  const sessionEmail = session?.user?.email ?? null;
+  /* [1001] 비회원 결제 — 주간권(단건)만. 토스 심사자를 포함해 계정 없이도 카드 결제창까지 닿는다.
+     이메일은 영수증 발송·이용권 연결(같은 이메일로 가입/로그인 시)에 쓴다. 리포트 결제는 계정 전용. */
+  const guestEmail =
+    !sessionEmail && isGuestCheckoutAllowed(billing) && !reportId ? normalizeGuestEmail(body.guestEmail) : null;
+  if (!sessionEmail && reportId) {
+    return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  }
+  if (!sessionEmail && body.guestEmail !== undefined && !guestEmail && isGuestCheckoutAllowed(billing)) {
+    return NextResponse.json(
+      { error: "영수증을 받을 이메일 주소를 정확히 적어 주세요.", code: "GUEST_EMAIL_INVALID" },
+      { status: 400 },
+    );
+  }
+  const userEmail = sessionEmail ?? guestEmail;
   if (!userEmail) {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }
+  const isGuest = !sessionEmail;
   /* [965] 전자상거래법 고지 게이트 — 모든 유료 레일에 같은 문(lib/payments/checkout-guard) */
   const blocked = assertCheckoutAllowed("payments:toss:create");
   if (blocked) return blocked;
@@ -116,6 +134,7 @@ export async function POST(req: NextRequest) {
       amount: recent.amount,
       status: recent.status,
       reused: true,
+      guest: isGuest,
     });
   }
 
@@ -133,6 +152,8 @@ export async function POST(req: NextRequest) {
         campaign,
         ...(reportId ? { reportId } : {}),
         ...(returnTo && returnTo !== "/" ? { returnTo } : {}),
+        /* [1001] 비회원 표식 — 승인 시 app_users 가 없으면 claimPending 으로 남고, 가입/로그인 때 연결 */
+        ...(isGuest ? { guest: true, claimPending: true } : {}),
       },
     });
     return NextResponse.json({
@@ -140,6 +161,7 @@ export async function POST(req: NextRequest) {
       amount: rec.amount,
       status: rec.status,
       reused: false,
+      guest: isGuest,
     });
   } catch (e) {
     return NextResponse.json(
