@@ -4,13 +4,17 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "./Icon";
 import { useTabBarCompact } from "@/lib/client/use-scroll-state";
-import { tabBarActive } from "@/lib/client/shell-gates";
+import { tabBarActive, TOWN_TAB_EXTRA_PREFIXES } from "@/lib/client/shell-gates";
 
 /** 균형 5슬롯(2-＋-2) — ＋가 정중앙에 오도록 재배치(2026-07-21 리디자인).
- *  홈·지도·기록(＋)·분석·마이. 통일 라인 아이콘 사용.
- *  [991] '동네' → '분석'. 30일 실측: /analysis 62회·평균 251초(가장 오래 읽는 화면)
- *  vs /town 31회·7초(들어오자마자 나감). 탭바는 "다음에 갈 확률이 가장 높은 곳" 다섯이다 —
- *  동네이야기는 헤더 메뉴(동네 › 뉴스·청약)와 푸터에서 닿는다.
+ *  홈·지도·기록(＋)·동네·마이. 통일 라인 아이콘 사용.
+ *  [1003] 넷째 자리를 '분석' → '동네'로 되돌린다(소유자 지시 2026-09-17: "메뉴에서
+ *  동네이야기가 있었는데 사라졌어"). [991] 이 자리를 분석에 준 근거는 30일 실측
+ *  (/analysis 62회·251초 vs /town 31회·7초)이었는데, 60일로 늘려 다시 재면
+ *  /town* 104뷰·24세션 vs /analysis* 111뷰·22세션 으로 사실상 동률이다 — 한 자리를
+ *  분석이 독점할 근거가 없어졌다. 분석은 사라지지 않는다: 헤더 GNB(AI 분석 + 핵심
+ *  4종)·좌측 내비·모바일 전체 메뉴·홈 AI 패널에 그대로 있다. 거꾸로 동네이야기는
+ *  모바일에서 ☰ 를 열어야만 닿는 유일한 대분류였다.
  *  [970 · A-19] 셸에서 기본 프리페치를 남긴 곳은 이 5탭뿐 — 모바일에서 다음 이동 확률이
  *  가장 높은 링크다. 헤더·푸터·메뉴·알림 링크는 전부 prefetch={false}. */
 const TABS: Array<{
@@ -25,8 +29,10 @@ const TABS: Array<{
   { label: "지도", icon: "map", href: "/map" },
   // 중앙 ＋는 핵심 전환 동선 '노트 쓰기'(/notes/new) 고정
   { label: "기록", icon: "plus", href: "/notes/new", center: true },
-  /* 계산기·에이전트는 분석 도구의 다른 얼굴이다 — 같은 탭이 켜져야 길을 잃지 않는다 */
-  { label: "분석", icon: "sparkles", href: "/analysis", extra: ["/calculator", "/agent"] },
+  /* [1003] 동네이야기 카테고리 다섯 칸 중 넷은 라우트가 app/town 밖이다
+     (/apply·/auctions·/supply·/redevelopment — lib/town/category-links). 거기서도
+     같은 탭이 켜져야 길을 잃지 않는다. /town/news 는 /town prefix 가 덮는다. */
+  { label: "동네", icon: "messages-square", href: "/town", extra: TOWN_TAB_EXTRA_PREFIXES },
   { label: "마이", icon: "user", href: "/my" },
 ];
 

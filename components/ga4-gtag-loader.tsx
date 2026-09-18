@@ -15,6 +15,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useCookieConsent } from "./consent/use-cookie-consent";
+import { safePageLocation } from "@/lib/analytics/safe-page-location";
 import {
   googleAdsId,
   purchaseConversionLabel,
@@ -98,7 +99,7 @@ export function Ga4GtagLoader() {
     if (!enabled || !window.gtag || !pathname) return;
     window.gtag("event", "page_view", {
       page_path: pathname,
-      page_location: window.location.href,
+      page_location: safePageLocation(window.location.href),
     });
   }, [enabled, pathname]);
 

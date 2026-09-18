@@ -36,12 +36,13 @@ const SWIPE_CLOSE_PX = 60;
  *  오버레이는 createPortal로 document.body에 렌더 — 헤더 글래스의 backdrop-filter가
  *  position:fixed 컨테이닝 블록이 되어 시트 높이가 헤더로 클램프되던 문제를 회피. */
 
-/** 4 대분류 라벨 → 라인 아이콘 이름 */
+/** 5 대분류 라벨 → 라인 아이콘 이름 ([1003] 요금제 추가 — 사유는 nav-data.ts) */
 const CAT_ICON: Record<string, string> = {
   임장노트: "notebook-pen",
   지도: "map",
   "AI 분석": "sparkles",
   동네: "messages-square",
+  요금제: "credit-card",
 };
 
 type LinkItem = { label: string; href: string; icon: string };
@@ -318,7 +319,7 @@ export function MobileMenu() {
                 지역·단지·매물 검색
               </Link>
 
-              {/* 4 대분류 + 하위 메뉴 */}
+              {/* 5 대분류 + 하위 메뉴 ([1003] 요금제 포함 — NAV 를 그대로 읽는다) */}
               <nav className="flex flex-col gap-3.5">
                 {NAV.map((item) => (
                   <div key={item.label}>

@@ -41,3 +41,25 @@ export function readGuestMeta(metadata: Record<string, unknown> | null | undefin
     ...(typeof metadata.claimedAt === "string" ? { claimedAt: metadata.claimedAt } : {}),
   };
 }
+
+/**
+ * [1003] 이메일 칸을 어떻게 읽을 것인가 — 클라이언트·서버가 같은 규칙을 본다.
+ *
+ * 1001 은 비회원에게 이메일을 **요구**했다. 토스 심사자는 그 칸 앞에서 멈췄다
+ * (2026-09-16 실측: /subscription 13.5초 뒤 이탈, 체크아웃 미도달 · 주문 0건).
+ * 심사가 확인하려는 것은 "신용/체크카드 결제창이 열리는가" 하나뿐인데, 그 앞에
+ * 타이핑을 세워 둘 이유가 없다. 그래서 빈칸은 통과시키고(주문 user_email = null),
+ * 적었는데 모양이 틀린 것만 막는다. 이용권은 결제 뒤 이메일을 알려 주는 순간 켠다
+ * (lib/payments/guest-claim.ts attachGuestOrderEmail — paymentKey 를 아는 사람만).
+ */
+export type GuestEmailInput =
+  | { email: string | null; error: null }
+  | { email: null; error: "invalid" };
+
+export function readGuestEmailInput(raw: unknown): GuestEmailInput {
+  if (raw === undefined || raw === null) return { email: null, error: null };
+  if (typeof raw !== "string") return { email: null, error: "invalid" };
+  if (raw.trim() === "") return { email: null, error: null };
+  const email = normalizeGuestEmail(raw);
+  return email ? { email, error: null } : { email: null, error: "invalid" };
+}

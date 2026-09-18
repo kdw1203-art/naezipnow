@@ -55,11 +55,39 @@ jobs:
             echo "CRON_SECRET 미설정 — 모든 크론 호출이 401 이 되므로 실행하지 않음" | tee etl-failed.txt
             exit 1
           fi
+          # 실패 판정이 jq 에 걸려 있다(아래 body_state). ubuntu-latest 에는 기본
+          # 탑재지만, 없으면 모든 호출이 "JSON 아님"으로 몰려 전 구간 오탐이 된다 —
+          # 그럴 땐 도구 문제라고 한 문장으로 말하고 끝낸다(CRON_SECRET 과 같은 태도).
+          if ! command -v jq >/dev/null 2>&1; then
+            echo "jq 없음 — 응답 판정이 불가능하므로 실행하지 않음" | tee etl-failed.txt
+            exit 1
+          fi
           FAILED=""
           # 실패 판정은 HTTP 상태 코드가 1차다. 예전엔 본문에서 "error" 문자열을
           # 찾았는데, `"errors":0` 같은 무해한 필드에 오탐하고, 정작 "error" 단어가
           # 없는 5xx HTML 에러 페이지는 놓쳤다. 본문 검사는 라우트가 200 으로
           # 소프트 실패를 알리는 두 형태('"ok":false'·'"error":' 키)만 남긴다.
+          #
+          # [1003] 2026-09-17 — 그 문자열 검색이 **중첩된** "error" 까지 물었다.
+          # supply-ingest 는 ok:true 로 성공했는데 하위 결과에 지오코딩 한 줄
+          # ("geocode":{"error":"…"})이 섞여 있었고, 그 한 줄 때문에
+          # `failed: supply(200)` — 적재는 다 됐는데 매일 ETL 전체가 빨간불이 되고
+          # etl-failure 이슈가 쌓였다. 하위 결과의 소프트 실패는 소프트 실패로 둔다.
+          # 그래서 grep 을 버리고 jq 로 **최상위 키만** 본다(본문 구조를 아는 도구로
+          # 구조를 묻는다): 최상위 .ok 가 false 이거나, 최상위 .error 가 null 이
+          # 아닐 때만 실패다. 중첩된 .geocode.error 는 걸리지 않는다.
+          # 본문이 JSON 이 아니면(jq 파싱 실패) 그것도 실패로 센다 — 우리 크론
+          # 라우트는 언제나 JSON 으로 답하므로, 200 인데 파싱이 안 되는 본문은
+          # 프록시 HTML·리다이렉트 안내처럼 라우트에 닿지 못했다는 뜻이다.
+          # body_state 종료코드: 0 = 최상위 실패 / 1 = 정상 / 2 = JSON 아님
+          body_state() {
+            RC=0
+            printf '%s' "$1" | jq -e 'type == "object" and (.ok == false or (has("error") and .error != null))' >/dev/null 2>&1 || RC=$?
+            # jq -e 종료코드: 0 = 조건 참, 1 = 거짓(정상), 그 밖(2·4·5) = 파싱 실패
+            [ "$RC" -eq 0 ] && return 0
+            [ "$RC" -eq 1 ] && return 1
+            return 2
+          }
           call() {
             NAME="$1"; URL="$2"
             echo "== $NAME =="
@@ -67,7 +95,9 @@ jobs:
             CODE=${RES##*$'\n'}
             BODY=${RES%$'\n'*}
             echo "$BODY" | head -c 1000; echo " [HTTP $CODE]"
-            if [ "$CODE" != "200" ] || echo "$BODY" | grep -q '"ok":false\|"error":'; then
+            STATE=0
+            body_state "$BODY" || STATE=$?
+            if [ "$CODE" != "200" ] || [ "$STATE" -ne 1 ]; then
               FAILED="$FAILED $NAME($CODE)"
             fi
           }

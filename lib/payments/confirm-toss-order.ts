@@ -305,7 +305,14 @@ export async function applyPlanForPayment(
 ): Promise<void> {
   const userEmail = paid.userEmail?.trim().toLowerCase();
   if (!userEmail) {
-    logger.error("[payments:toss] 결제 행에 소유자 이메일이 없어 플랜을 반영하지 못함", { orderId: paid.orderId });
+    /* [1003] 이메일 없이 결제한 비회원(주간권)은 여기서 이메일이 없는 것이 **정상**이다 —
+       주소는 결제 뒤 성공 화면에서 받는다(POST /api/payments/guest-claim). 설계된 상태를
+       매번 error 로 찍으면 진짜 오류가 그 틈에 묻힌다. 회원 주문에서 이메일이 없으면 그건 오류다. */
+    if (readGuestMeta(paid.metadata)) {
+      logger.warn("[payments:toss] 비회원 주문 — 이메일 대기(결제 뒤 연결)", { orderId: paid.orderId });
+    } else {
+      logger.error("[payments:toss] 결제 행에 소유자 이메일이 없어 플랜을 반영하지 못함", { orderId: paid.orderId });
+    }
     return;
   }
   /* tier === "basic" 은 단품 — 멤버십 등급을 바꾸지 않는다 */

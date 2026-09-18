@@ -58,6 +58,41 @@ export default function PaymentMethodsPage() {
           서버에는 저장되지 않습니다.
         </p>
 
+        {/* [1003] 결론을 맨 위로 — 이 페이지에 오는 사람(심사역·구매자)이 확인하려는 것은
+            딱 두 가지다: "신용/체크카드를 쓸 수 있는가", "결제창을 지금 볼 수 있는가".
+            예전에는 둘 다 스크롤 두 화면 아래(취급 결제수단 → 결제창 직접 확인)에 있었다.
+            2026-09-16 심사 세션은 /subscription 에 13.5초 머문 뒤 결제창에 닿지 못했다.
+            카드사 이름·무이자·혜택은 적지 않는다 — 토스페이먼츠 일반결제(카드)로 실제
+            결제되는 범위만 적고, 확인되지 않은 것은 쓰지 않는다. */}
+        <div className="rise-in-2 card mt-5 flex flex-col gap-3 rounded-2xl px-5 py-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-md bg-primary-soft chip-pad t-caption font-extrabold text-primary">
+              {cardOpen ? "지금 결제 가능" : "준비 중"}
+            </span>
+            <span className="t-section font-extrabold text-ink">
+              신용카드 · 체크카드로 결제할 수 있습니다
+            </span>
+          </div>
+          <p className="t-body leading-[1.75] text-text-2">
+            국내 신용카드·체크카드를 토스페이먼츠 결제창(일반결제)에서 직접 입력해
+            결제합니다. 카드 정보는 토스페이먼츠가 처리하며 내집나우 서버에 저장되지
+            않습니다.
+          </p>
+          {cardOpen && (
+            <Link
+              href={REVIEW_CHECKOUT_PATH}
+              className="btn-primary btn-md inline-flex self-start no-underline"
+            >
+              지금 카드 결제창 열어보기 →
+            </Link>
+          )}
+          <p className="t-sub leading-[1.7] text-text-3">
+            {cardOpen
+              ? `로그인 없이 열립니다 · ${WEEKLY_PASS.label}(${WEEKLY_PASS.totalKrw.toLocaleString("ko-KR")}원) 주문서이며 결제 버튼을 누르기 전까지 어떤 금액도 청구되지 않습니다.`
+              : "결제수단이 열리면 이 자리에서 실제 결제창을 바로 열 수 있습니다."}
+          </p>
+        </div>
+
         {/* ── 1. 취급 결제수단 ─────────────────────────────── */}
         <h2 className="mt-7 t-section font-extrabold text-ink">취급 결제수단</h2>
         {rails.length === 0 ? (

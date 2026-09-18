@@ -8,14 +8,13 @@ import {
   toPublic,
   type PublicBillingSubscription,
 } from "@/lib/payments/billing-store";
-import { applyPlanToUserByEmail } from "@/lib/billing/apply-plan";
-import { normalizePlan } from "@/lib/billing/plan";
 import { safeAuth } from "@/lib/safe-auth";
 import { PaymentSuccessMoment } from "./PaymentSuccessMoment";
 import { applyPlanForPayment, confirmTossOrder } from "@/lib/payments/confirm-toss-order";
 import { safeInternalPath } from "@/lib/safe-path";
 import { readGuestMeta } from "@/lib/payments/guest-order";
 import { claimGuestPayments } from "@/lib/payments/guest-claim";
+import { GuestClaimForm } from "./GuestClaimForm";
 
 /** 결제 결과 랜딩의 쿼리 파라미터(페이지 본문과 같은 모양) */
 type PaymentSuccessSearchParams = {
@@ -362,6 +361,14 @@ export default async function PaymentSuccessPage({
                 먼저 남겨 주세요{orderId ? " — 주문번호가 문의에 함께 담겨요" : ""}.
               </p>
             </>
+          ) : guestPending && !record?.userEmail && orderId && paymentKey ? (
+            /* [1003] 이메일 없이 결제한 비회원 — 결제는 끝났고, 이용권을 받을 주소를 여기서 받는다.
+               paymentKey 가 있는 화면(결제창을 통과한 본인)에서만 이 폼이 뜬다. */
+            <GuestClaimForm
+              orderId={orderId}
+              paymentKey={paymentKey}
+              signupHref={`/signup?callbackUrl=${encodeURIComponent(selfHref)}`}
+            />
           ) : guestPending ? (
             <>
               {/* [1001] 비회원 결제 — 이용권은 결제 이메일로 발급됐고, 같은 이메일로 가입/로그인하면 자동 연결 */}

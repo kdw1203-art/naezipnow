@@ -7,7 +7,7 @@ import type { PlanTier } from "@/lib/subscriptions/access";
 import { getPlan } from "@/lib/subscriptions/plans";
 import { WEEKLY_PASS } from "@/lib/subscriptions/billing-periods";
 import { applyRateLimit, AUTH_RATE_LIMIT } from "@/lib/rate-limit";
-import { isGuestCheckoutAllowed, normalizeGuestEmail } from "@/lib/payments/guest-order";
+import { isGuestCheckoutAllowed, readGuestEmailInput } from "@/lib/payments/guest-order";
 
 export const runtime = "nodejs";
 
@@ -64,22 +64,26 @@ export async function POST(req: NextRequest) {
   const session = await safeAuth();
   const sessionEmail = session?.user?.email ?? null;
   /* [1001] 비회원 결제 — 주간권(단건)만. 토스 심사자를 포함해 계정 없이도 카드 결제창까지 닿는다.
-     이메일은 영수증 발송·이용권 연결(같은 이메일로 가입/로그인 시)에 쓴다. 리포트 결제는 계정 전용. */
-  const guestEmail =
-    !sessionEmail && isGuestCheckoutAllowed(billing) && !reportId ? normalizeGuestEmail(body.guestEmail) : null;
-  if (!sessionEmail && reportId) {
+     리포트 결제는 계정 전용.
+     [1003] 이메일은 **선택**이다. 1001 은 이메일을 요구했고, 심사자는 그 칸 앞에서 멈췄다
+     (2026-09-16 실측: /subscription 13.5초 → 이탈, 체크아웃 페이지뷰 0 · 주문 0건).
+     빈칸이면 user_email = null 인 주문을 만들고, 결제 뒤 이메일을 알려 주는 순간 이용권을 켠다
+     (POST /api/payments/guest-claim — paymentKey 를 아는 사람만). 적었는데 모양이 틀린 것만 막는다. */
+  const guestAllowed = !sessionEmail && isGuestCheckoutAllowed(billing) && !reportId;
+  const guestInput = guestAllowed
+    ? readGuestEmailInput(body.guestEmail)
+    : ({ email: null, error: null } as const);
+  if (!sessionEmail && !guestAllowed) {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }
-  if (!sessionEmail && body.guestEmail !== undefined && !guestEmail && isGuestCheckoutAllowed(billing)) {
+  if (guestInput.error) {
     return NextResponse.json(
       { error: "영수증을 받을 이메일 주소를 정확히 적어 주세요.", code: "GUEST_EMAIL_INVALID" },
       { status: 400 },
     );
   }
+  const guestEmail = guestInput.email;
   const userEmail = sessionEmail ?? guestEmail;
-  if (!userEmail) {
-    return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
-  }
   const isGuest = !sessionEmail;
   /* [965] 전자상거래법 고지 게이트 — 모든 유료 레일에 같은 문(lib/payments/checkout-guard) */
   const blocked = assertCheckoutAllowed("payments:toss:create");
@@ -120,14 +124,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "결제 가능한 플랜이 아닙니다." }, { status: 400 });
   }
 
-  const recent = await findRecentRequestedPayment({
-    userEmail,
-    plan: tier,
-    billing,
-    amount,
-    withinMinutes: 15,
-    reportId,
-  });
+  /* [1003] 이메일 없는 비회원 주문은 재사용하지 않는다 — user_email 이 null 인 주문은
+     "같은 사람의 것"이라는 근거가 없다. 다른 방문자의 주문을 물려주면 승인이 남의 주문에 붙는다. */
+  const recent =
+    isGuest && !guestEmail
+      ? null
+      : await findRecentRequestedPayment({
+          userEmail,
+          plan: tier,
+          billing,
+          amount,
+          withinMinutes: 15,
+          reportId,
+        });
   if (recent) {
     return NextResponse.json({
       orderId: recent.orderId,

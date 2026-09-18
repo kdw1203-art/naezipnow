@@ -19,11 +19,16 @@ const LEGAL_LINKS = [
   { label: "청소년보호", href: "/legal/youth", bold: false },
   { label: "법적 고지", href: "/legal", bold: false },
   { label: "고객센터", href: "/support", bold: false },
-  { label: "구독 안내", href: "/subscription", bold: false },
+  /* [1003] "구독 안내" → "요금제·결제 수단". 심사 세션(2026-09-16)은 푸터의 이
+     한 줄로만 요금제에 닿을 수 있었는데, "구독 안내"는 결제가 가능한 화면이라는
+     신호가 아니다. 목적지(요금제 + 카드 결제)를 라벨에 적는다. */
+  { label: "요금제·결제 수단", href: "/subscription", bold: false },
   /* [990] 취급 결제수단(신용/체크카드) 고지 — 전자상거래법 고지이자 카드사·PG
      심사가 판매 페이지에서 확인하는 항목이다. 푸터에 두어 모든 페이지에서
-     한 번에 닿는다(2026-09 토스 도메인 심사 반려 사유: 결제수단 미확인). */
-  { label: "결제 수단", href: "/subscription/payment-methods", bold: false },
+     한 번에 닿는다(2026-09 토스 도메인 심사 반려 사유: 결제수단 미확인).
+     [1003] 위 줄과 라벨이 겹치지 않게 "결제 수단" → "카드 결제 수단 안내" —
+     둘은 목적지가 다르다(판매 화면 / 고지 한 장). */
+  { label: "카드 결제 수단 안내", href: "/subscription/payment-methods", bold: false },
   /* S20 — 신뢰·데이터 페이지 내부 링크 (전 페이지 크롤 경로 확보) */
   { label: "소개", href: "/about", bold: false },
   { label: "데이터 방법론", href: "/methodology", bold: false },

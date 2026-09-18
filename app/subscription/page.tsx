@@ -8,7 +8,6 @@ import { getUsageSummary, type UsageItem } from "@/lib/subscriptions/usage-summa
 import { loadMeProfile } from "@/lib/me/profile";
 import { BILLING_PERIOD_PRICES, periodPrice, WEEKLY_PASS } from "@/lib/subscriptions/billing-periods";
 import { PlanCards, type TierPricing } from "./PlanCards";
-import { PlanCheckoutButton } from "./PlanCheckoutButton";
 import { PreOrderCta } from "./PreOrderCta";
 import {
   getBusinessInfo,
@@ -22,8 +21,9 @@ import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { faqJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
 import { DEFAULT_DESKTOP_ORIGIN } from "@/lib/platform-shell";
-import { PAYMENT_METHODS_PATH } from "@/lib/payments/payment-methods";
+import { PAYMENT_METHODS_PATH, REVIEW_CHECKOUT_PATH } from "@/lib/payments/payment-methods";
 import { isTierOnSale, SELLABLE_PAID_TIERS } from "@/lib/subscriptions/sell-config";
+import { safeInternalPath } from "@/lib/safe-path";
 
 /* 고도화 32 — 구독 FAQ. 사실만 적는다: 수치·규정은 약관·구현과 대조했다. 화면과
    JSON-LD 가 같은 배열을 쓴다.
@@ -173,7 +173,7 @@ async function loadPlanExpiresAt(email: string): Promise<string | null> {
 export default async function SubscriptionPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ plan?: string; billing?: string }>;
+  searchParams?: Promise<{ plan?: string; billing?: string; returnTo?: string }>;
 }) {
   // 결제 실패 페이지의 "다시 시도하기"가 plan/billing 쿼리를 들고 돌아온다 —
   // 고른 주기를 다시 고르게 하지 않도록 토글 초기값으로 반영한다.
@@ -214,6 +214,18 @@ export default async function SubscriptionPage({
       : sp.plan === "pro" || sp.plan === "expert"
         ? sp.plan
         : null;
+  /* [1003] 주간권 결제창 **직행** 링크.
+     2026-09-16 13:57 KST 심사 세션 실측: `/` → `/subscription`(13.5초 체류) → `/` 이탈,
+     `/subscription/checkout` 페이지뷰 0건. 1순위 버튼(PlanCheckoutButton)이 누르면
+     "…결제창으로 이동합니다 / 취소 / 계속" 2단계로 바뀌는 구조라, 한 번 누르고 아무 일도
+     안 일어난 것처럼 보였을 가능성이 크다. 주간권만은 <Link> 한 번으로 체크아웃(=결제창을
+     여는 화면)에 닿게 한다. 경로는 REVIEW_CHECKOUT_PATH 단일 출처(심사 메모에 적어 낸 URL).
+     페이월이 붙여 보낸 ?returnTo= 는 그대로 이어 붙인다(safeInternalPath — 내부 경로만). */
+  const returnTo = sp.returnTo ? safeInternalPath(sp.returnTo, "") : "";
+  const weeklyCheckoutHref =
+    returnTo && returnTo !== "/"
+      ? `${REVIEW_CHECKOUT_PATH}&returnTo=${encodeURIComponent(returnTo)}`
+      : REVIEW_CHECKOUT_PATH;
   const session = await safeAuth();
   const email = session?.user?.email ?? null;
   /* 관리자 배지 — 운영 계정은 플랜 대신 "관리자"로 표기한다. */
@@ -362,63 +374,20 @@ export default async function SubscriptionPage({
         </section>
       )}
 
-      {/* 요금제 카드 3종 + 월간/연간 토글 (item 13) */}
-      <section className="mx-auto mt-8 w-full">
-        {/* [970 · A-06] 비로그인은 currentPlan=null — 게스트에게 무료 카드를 "현재 이용 중"
-            으로 그리면 가입 입구("무료로 시작")가 사라진다. 로그인 상태만 현재 플랜을 넘긴다. */}
-        <PlanCards
-          currentPlan={email ? currentPlan : null}
-          pro={tierPricing("pro")}
-          expert={tierPricing("expert")}
-          initialBilling={initialBilling}
-          paymentsReady={paymentsReady}
-          recurringReady={recurringReady}
-          highlightPlan={highlightPlan}
-        />
-        {/* [966] 결제 신뢰 스트립 — 결제 버튼 바로 아래에서 "무엇이 보장되는지" 를 세 줄로.
-            전부 코드가 실제로 하는 일이다: 카드번호는 토스 결제창에서만 다뤄 우리 서버에
-            남지 않고, 결제 즉시 이용권이 적용되며 영수증 메일·알림이 나가고(965·966),
-            7일 이내 청약철회는 약관 제8조. */}
-        <ul className="mx-auto mt-4 grid w-full max-w-[1080px] grid-cols-1 gap-2 sm:grid-cols-3">
-          {[
-            { icon: "lock", title: "카드번호는 남지 않아요", desc: "결제는 토스페이먼츠 결제창에서 — 내집나우 서버에는 카드번호가 저장되지 않아요" },
-            { icon: "receipt", title: "즉시 적용 · 영수증 메일", desc: "결제가 끝나면 바로 이용권이 켜지고, 알림함과 이메일로 영수증을 보내드려요" },
-            { icon: "shield", title: "7일 이내 청약철회", desc: "결제 후 7일 이내 전액 환불, 이후 중도 해지는 잔여기간 일할 환불 (약관 제8조)" },
-          ].map((t) => (
-            <li key={t.title} className="flex items-start gap-2.5 rounded-xl border border-line bg-surface px-3.5 py-3">
-              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-hanji text-brand-hanji-ink">
-                <Icon name={t.icon} size={14} />
-              </span>
-              <span className="flex flex-col gap-0.5">
-                <span className="t-sub font-extrabold text-ink">{t.title}</span>
-                <span className="t-caption leading-[1.5] text-text-3">{t.desc}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-        {/* [990] 취급 결제수단 한 줄 — 신뢰 스트립은 "카드번호가 남지 않는다"를
-            말할 뿐, **무엇으로 결제하는지**를 한 번도 적지 않았다. 2026-09 토스
-            도메인 변경 심사 반려 사유가 정확히 그 자리다("결제수단 신용/체크카드가
-            확인되지 않습니다"). 목록 전체와 결제창 미리보기는 안내 페이지로 잇는다. */}
-        <p className="mx-auto mt-3 w-full max-w-[1080px] text-center t-sub text-text-3">
-          결제 수단: <span className="font-bold text-ink">신용카드 · 체크카드</span>{" "}
-          (토스페이먼츠) ·{" "}
-          <Link
-            href={PAYMENT_METHODS_PATH}
-            className="inline-block py-[5px] font-bold text-primary underline"
-          >
-            결제 수단 안내
-          </Link>
-        </p>
-      </section>
-
       {/* 플러스 주간권 — 1회성 단건 결제(자동갱신 없음). 운영자 확정 2026-08-12:
-          토스 심사 회신 A-1(a) 의 단건 상품. 가격·기간은 WEEKLY_PASS 단일 출처. */}
+          토스 심사 회신 A-1(a) 의 단건 상품. 가격·기간은 WEEKLY_PASS 단일 출처.
+
+          [1003] 요금제 카드 **위**로 올렸다. 예전에는 카드 3종 → 신뢰 스트립 →
+          결제수단 한 줄을 지나야 이 블록이 나왔다. 2026-09-16 13:57 KST 토스 심사
+          세션은 이 화면에 13.5초 머물고 `/subscription/checkout` 에 한 번도 오지
+          못한 채 홈으로 돌아갔다(page_view_events 실측). 지금 이 사이트에서 카드로
+          곧장 살 수 있는 유일한 상품이 주간권이므로 첫 화면 안에 둔다 — 심사가
+          찾는 것("신용/체크카드 결제창")이 스크롤 없이 보여야 한다. */}
       {/* [970 · A-07] id·scroll-mt — ?billing=weekly 로 돌아온 사람을 PlanCards 가 여기로
           스크롤한다(헤더 62px 아래). 강조 링은 그때만 붙인다. */}
       <section
         id="weekly-pass"
-        className="rise-in-4 mx-auto mt-5 w-full max-w-[1080px] scroll-mt-24"
+        className="rise-in-2 mx-auto mt-6 w-full max-w-[1080px] scroll-mt-24"
       >
         <div
           className={`card flex flex-col items-center gap-4 rounded-3xl p-6 md:flex-row md:justify-between ${
@@ -451,35 +420,54 @@ export default async function SubscriptionPage({
               {Math.round(tierPricing("pro").monthly / 30).toLocaleString("ko-KR")}원/일)이 더
               저렴합니다.
             </p>
+            {/* [1003] 취급 결제수단 — 990 에서 만든 문장을 요금제 카드 아래에서 여기로
+                옮겼다. "무엇으로 결제하는가"는 결제 버튼 옆에서 읽혀야 하고, 2026-09
+                토스 반려 사유가 정확히 그 자리다("결제수단 신용/체크카드가 확인되지
+                않습니다"). 같은 사실이 두 곳에서 읽히지 않도록 아래 신뢰 스트립의
+                "카드번호는 남지 않아요" 줄은 뺐다 — 결제수단의 단일 출처는 이 줄이다. */}
+            <p className="mt-1 t-sub text-text-3">
+              <span className="font-bold text-ink">신용카드 · 체크카드</span> 결제
+              (토스페이먼츠 결제창) · 카드번호는 내집나우 서버에 저장되지 않습니다 ·{" "}
+              <Link
+                href={PAYMENT_METHODS_PATH}
+                /* 문장 속 링크의 기준은 WCAG 2.5.8(24px) — inline-block + 세로 패딩으로
+                   글자줄만 키운다(44px 히트를 겹치면 위아래 줄의 탭을 훔친다). */
+                className="inline-block py-[5px] font-bold text-primary underline"
+              >
+                결제 수단 안내
+              </Link>
+            </p>
           </div>
           {/* [966] 상태별로 정직하게: 결제 미개통이면 사전 등록(예전엔 버튼이 통째로
               사라져 설명만 남는 죽은 카드였다), 이미 프로(expert)면 사지 못하게 —
               사면 applyPlan 이 "다른 플랜" 으로 보고 7일짜리 플러스로 **강등**된다. */}
-          <div className="w-full shrink-0 md:w-[200px]">
+          <div className="w-full shrink-0 md:w-[236px]">
             {currentPlan === "expert" ? (
               <p className="rounded-[14px] bg-bg p-[13px] text-center t-sub font-bold text-text-2">
                 프로 이용 중이라 주간권이 필요 없어요 — 플러스 기능은 이미 전부 열려 있습니다.
               </p>
-            ) : currentPlan === "pro" ? (
+            ) : paymentsReady ? (
+              /* [1003] 2단계 확인을 걷어 낸 **직행 링크**. 예전에는 여기가
+                 PlanCheckoutButton 이라 한 번 누르면 버튼이 "주간권(7일 단건) 결제창으로
+                 이동합니다 / 취소 / 계속" 으로 바뀌었다 — 누른 사람 입장에서는 아무 일도
+                 일어나지 않은 것처럼 보이고, 실제로 심사 세션의 이동 페이지뷰가 0건이다.
+                 이제 한 번 눌러 체크아웃 화면에 닿고, 그 화면이 토스 결제창을 연다.
+                 월간·연간(PlanCards)의 버튼은 그대로 둔다 — 그쪽은 카드 등록형 자동결제라
+                 한 번 더 확인받을 이유가 있다.
+                 [970 · A-04] 네이비 위 글자는 text-on-dark(다크에서 안 보였다). */
               <div className="flex flex-col gap-1.5">
-                {/* [970 · A-04] 네이비 버튼 글자 text-surface → text-on-dark(다크에서 안 보였다) — 아래 두 버튼도 같다 */}
-                <PlanCheckoutButton
-                  tier="pro"
-                  billing="weekly"
-                  label="주간권 7일 연장"
-                  className="w-full bg-brand-navy text-on-dark"
-                />
+                <Link
+                  href={weeklyCheckoutHref}
+                  className="press block w-full rounded-[14px] bg-brand-navy p-[13px] text-center text-[13px] font-bold text-on-dark no-underline"
+                >
+                  {`카드로 ${WEEKLY_PASS.totalKrw.toLocaleString("ko-KR")}원 결제하기 (${WEEKLY_PASS.days}일 이용권)`}
+                </Link>
                 <p className="text-center t-caption text-text-3">
-                  이용 중인 플러스 만료일 뒤로 7일이 이어 붙어요
+                  {currentPlan === "pro"
+                    ? "이용 중인 플러스 만료일 뒤로 7일이 이어 붙어요"
+                    : "누르면 신용·체크카드 결제창이 열려요 · 결제 버튼을 누르기 전까지 청구되지 않습니다"}
                 </p>
               </div>
-            ) : paymentsReady ? (
-              <PlanCheckoutButton
-                tier="pro"
-                billing="weekly"
-                label="주간권 구매"
-                className="w-full bg-brand-navy text-on-dark"
-              />
             ) : (
               /* [970 · A-38] 게스트는 로그인 유도 — 세션 없는 등록은 알림을 보낼 수 없다 */
               <PreOrderCta
@@ -493,8 +481,10 @@ export default async function SubscriptionPage({
         </div>
       </section>
 
-      {/* P2-8: 환불 규정 직링크 — 약관 제8조(청약철회) 앵커 */}
-      <p className="rise-in-4 mx-auto mt-4 w-full max-w-[1080px] text-center t-sub text-text-3">
+      {/* P2-8: 환불 규정 직링크 — 약관 제8조(청약철회) 앵커.
+          [1003] 주간권 블록과 함께 위로 올라왔다 — 상품·금액·환불 규정이 한 화면에
+          붙어 있어야 한다(전자상거래법 고지이자 심사가 한 번에 확인하는 묶음). */}
+      <p className="rise-in-2 mx-auto mt-3 w-full max-w-[1080px] text-center t-sub text-text-3">
         결제 7일 이내 청약철회(환불) 가능 ·{" "}
         <Link
           href="/legal/terms#refund"
@@ -507,6 +497,45 @@ export default async function SubscriptionPage({
         </Link>
       </p>
 
+      {/* 요금제 카드 3종 + 월간/연간 토글 (item 13) */}
+      <section className="mx-auto mt-8 w-full">
+        {/* [970 · A-06] 비로그인은 currentPlan=null — 게스트에게 무료 카드를 "현재 이용 중"
+            으로 그리면 가입 입구("무료로 시작")가 사라진다. 로그인 상태만 현재 플랜을 넘긴다. */}
+        <PlanCards
+          currentPlan={email ? currentPlan : null}
+          pro={tierPricing("pro")}
+          expert={tierPricing("expert")}
+          initialBilling={initialBilling}
+          paymentsReady={paymentsReady}
+          recurringReady={recurringReady}
+          highlightPlan={highlightPlan}
+        />
+        {/* [966] 결제 신뢰 스트립 — 카드 아래에서 "무엇이 보장되는지" 를 짧게.
+            전부 코드가 실제로 하는 일이다: 결제 즉시 이용권이 적용되며 영수증 메일·
+            알림이 나가고(965·966), 7일 이내 청약철회는 약관 제8조. */}
+        {/* [1003] "카드번호는 남지 않아요" 줄을 뺐다 — 같은 사실(수단 + 미저장)이 위
+            주간권 블록의 결제수단 한 줄에 모였다. 한 화면에서 두 번 읽히면 어느 쪽이
+            최신인지 알 수 없어지고, 실제로 990 에서 만든 결제수단 문장이 이 카드와
+            내용이 겹친 채 서로 다른 곳에 떨어져 있었다. 단일 출처는 결제 블록이다. */}
+        <ul className="mx-auto mt-4 grid w-full max-w-[1080px] grid-cols-1 gap-2 sm:grid-cols-2">
+          {[
+            { icon: "receipt", title: "즉시 적용 · 영수증 메일", desc: "결제가 끝나면 바로 이용권이 켜지고, 알림함과 이메일로 영수증을 보내드려요" },
+            { icon: "shield", title: "7일 이내 청약철회", desc: "결제 후 7일 이내 전액 환불, 이후 중도 해지는 잔여기간 일할 환불 (약관 제8조)" },
+          ].map((t) => (
+            <li key={t.title} className="flex items-start gap-2.5 rounded-xl border border-line bg-surface px-3.5 py-3">
+              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-hanji text-brand-hanji-ink">
+                <Icon name={t.icon} size={14} />
+              </span>
+              <span className="flex flex-col gap-0.5">
+                <span className="t-sub font-extrabold text-ink">{t.title}</span>
+                <span className="t-caption leading-[1.5] text-text-3">{t.desc}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        {/* [1003] 취급 결제수단 한 줄은 위 주간권(결제) 블록으로 올렸다 — 결제수단은
+            결제 버튼 옆에서 읽혀야 하고, 심사가 찾는 것도 그 자리다. */}
+      </section>
       {/* E1 — 구독 관리·결제 내역. `/my` 가 "구독 페이지에서 관리해요"라고 보내던 목적지.
           로그인하지 않았으면 보여 줄 사실이 없으므로 아예 렌더하지 않는다. */}
       {email && (

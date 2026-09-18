@@ -1,6 +1,7 @@
-/** 9m GNB — 4 대분류 공유 데이터 (데스크탑 GNB · 모바일 전체 메뉴 공용)
+/** 9m GNB — 5 대분류 공유 데이터 (데스크탑 GNB · 모바일 전체 메뉴 · 좌측 내비 공용)
  *  대통합 IA(2026-07): 지도는 탐색·실거래·실매물·등록 통합(/map 단일),
- *  대출·비용 계산기는 임장노트로, 입주물량·공매·청약은 동네이야기로 편입. */
+ *  대출·비용 계산기는 임장노트로, 입주물량·공매·청약은 동네이야기로 편입.
+ *  [1003] 다섯째로 "요금제" 추가 — 사유는 아래 그 항목 주석. */
 export type NavItem = {
   label: string;
   href: string;
@@ -58,6 +59,27 @@ export const NAV: NavItem[] = [
       { label: "동네이야기", href: "/town" },
       { label: "청약", href: "/apply" },
       { label: "정비사업", href: "/redevelopment" },
+    ],
+  },
+  /* [1003] 요금제 — GNB 에 결제 진입로가 **하나도 없었다**(푸터 한 줄이 전부).
+     2026-09-16 13:57 KST 토스 심사 세션 실측: `/` → `/subscription`(13.5초) → `/` 이탈.
+     요금제 화면까지는 왔는데 카드 결제창으로 가는 길을 못 찾았다(`/subscription/checkout`
+     페이지뷰 0건). 심사가 찾는 것은 "신용/체크카드 결제창"이므로 대분류에서 한 번,
+     드롭다운에서 결제창까지 한 번에 닿게 한다 — 세 번째 항목이 결제창 직행이다.
+     경로는 lib/payments/payment-methods 의 REVIEW_CHECKOUT_PATH·PAYMENT_METHODS_PATH 와
+     같은 값이다(nav-data 는 순수 데이터 모듈이라 import 하지 않고 tests/unit/nav-1003
+     이 두 값의 일치를 검사한다). */
+  {
+    label: "요금제",
+    href: "/subscription",
+    children: [
+      { label: "요금제·이용권", href: "/subscription" },
+      { label: "결제 수단 안내", href: "/subscription/payment-methods" },
+      {
+        label: "주간권 카드 결제",
+        shortLabel: "주간권 결제",
+        href: "/subscription/checkout?tier=pro&billing=weekly",
+      },
     ],
   },
 ];

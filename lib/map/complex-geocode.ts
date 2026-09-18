@@ -2,6 +2,13 @@ import "server-only";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { isNaverMapsRestConfigured, naverGeocode } from "@/lib/map/naver-maps-rest";
 import { buildGeocodeQueries } from "@/lib/map/geocode-query";
+import {
+  chunk,
+  pgErrorText,
+  regionsByName,
+  NAME_IN_CHUNK,
+  REGION_IN_MAX,
+} from "@/lib/map/geocode-chunk";
 import { logger } from "@/lib/log";
 
 /**
@@ -15,33 +22,48 @@ export function coordKey(region: string, name: string): string {
   return JSON.stringify([region, name]);
 }
 
-/** 캐시에서 좌표 배치 조회 (status ok 만). 반환: coordKey → Coord */
+/**
+ * 캐시에서 좌표 배치 조회 (status ok 만). 반환: coordKey → Coord
+ *
+ * [1003] 단지명은 NAME_IN_CHUNK 개씩 끊어 부른다. 예전엔 받은 이름을 통째로
+ * `.in()` 에 실었는데, 이 함수를 부르는 /api/map/supply-markers 는 1,500행까지
+ * 넘긴다 — 한글 이름 1,500개면 URL 이 200KB 가 넘어 프록시가 요청을 자르고,
+ * 라우트는 503("좌표 캐시 조회에 실패했어요")만 돌려줬다. 자세한 계산은
+ * lib/map/geocode-chunk.ts 주석. 결과를 조각마다 합치므로 동작은 이전과 같다.
+ */
 export async function getCachedCoordMap(
   pairs: { region: string; name: string }[],
 ): Promise<Map<string, Coord>> {
   const out = new Map<string, Coord>();
   const sb = getServiceSupabase();
   if (!sb || pairs.length === 0) return out;
-  const regions = [...new Set(pairs.map((p) => p.region))];
-  const names = [...new Set(pairs.map((p) => p.name))];
-  const { data, error } = await sb
-    .from("complex_geocode")
-    .select("region_name, complex_name, lat, lng, status")
-    .in("region_name", regions)
-    .in("complex_name", names)
-    .eq("status", "ok");
-  /* 빈 Map 을 돌려주면 부르는 쪽에는 "좌표가 캐시된 단지가 하나도 없다"로 보인다 —
-     지도에서 마커가 통째로 사라지는 모습이다. 못 읽었으면 못 읽었다고 던진다. */
-  if (error) {
-    throw new Error(`complex_geocode 조회 실패: ${error.message ?? "알 수 없는 오류"}`);
-  }
+  const byName = regionsByName(pairs);
   const want = new Set(pairs.map((p) => coordKey(p.region, p.name)));
-  for (const r of (data as
-    | { region_name: string; complex_name: string; lat: number | null; lng: number | null }[]
-    | null) ?? []) {
-    const k = coordKey(r.region_name, r.complex_name);
-    if (want.has(k) && r.lat != null && r.lng != null) {
-      out.set(k, { lat: Number(r.lat), lng: Number(r.lng) });
+
+  for (const namePart of chunk([...byName.keys()], NAME_IN_CHUNK)) {
+    const regionPart = [...new Set(namePart.flatMap((n) => byName.get(n) ?? []))];
+    let q = sb
+      .from("complex_geocode")
+      .select("region_name, complex_name, lat, lng, status")
+      .in("complex_name", namePart)
+      .eq("status", "ok");
+    /* 지역은 이 조각에 실린 이름들의 것만 싣는다 — PK(region_name, complex_name)
+       인덱스를 계속 타기 위해서다. 그래도 너무 많으면 빼는데 결과는 같다:
+       아래 want 필터가 (지역, 단지명) 짝을 다시 맞추기 때문이다. */
+    if (regionPart.length <= REGION_IN_MAX) q = q.in("region_name", regionPart);
+    const { data, error } = await q;
+    /* 빈 Map 을 돌려주면 부르는 쪽에는 "좌표가 캐시된 단지가 하나도 없다"로 보인다 —
+       지도에서 마커가 통째로 사라지는 모습이다. 못 읽었으면 못 읽었다고 던진다. */
+    if (error) {
+      throw new Error(`complex_geocode 조회 실패: ${pgErrorText(error, namePart.length)}`);
+    }
+    for (const r of (data as
+      | { region_name: string; complex_name: string; lat: number | null; lng: number | null }[]
+      | null) ?? []) {
+      const k = coordKey(r.region_name, r.complex_name);
+      if (want.has(k) && r.lat != null && r.lng != null) {
+        out.set(k, { lat: Number(r.lat), lng: Number(r.lng) });
+      }
     }
   }
   return out;
@@ -148,7 +170,7 @@ export async function geocodeAndCache(
      못 읽었을 때는 쓰지 않는다 — 다음 요청이 다시 시도하면 된다. */
   if (cachedError) {
     logger.warn(
-      `[geocode] ${region} ${name} 캐시 조회 실패(재지오코딩 안 함): ${cachedError.message}`,
+      `[geocode] ${region} ${name} 캐시 조회 실패(재지오코딩 안 함): ${pgErrorText(cachedError)}`,
     );
     return null;
   }
@@ -191,6 +213,10 @@ export async function geocodeAndCache(
  * 같은 블록 번호여서 애초에 주소가 아니다 — 그런 단지도 대장에는 도로명이 있다.
  * 조회가 실패하면 빈 맵을 돌려준다: 도로명은 "있으면 더 좋은" 후보일 뿐이라,
  * 못 읽었다고 백필을 멈출 이유가 없다.
+ *
+ * [1003] 여기도 단지명을 끊어 부른다. 한 라운드는 150~200단지라 예전 방식이면
+ * URL 이 30KB 안팎 — 프록시가 자르면 "지번으로 진행" 경고만 남고 도로명은 영영
+ * 붙지 않았다(조용히 나쁜 쪽으로만 흐르는 실패였다).
  */
 async function loadRoadAddresses(
   sb: NonNullable<ReturnType<typeof getServiceSupabase>>,
@@ -198,23 +224,33 @@ async function loadRoadAddresses(
 ): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   if (rows.length === 0) return out;
-  const { data, error } = await sb
-    .from("complex_tx_stats")
-    .select("region_name, complex_name, road_address")
-    .in("region_name", [...new Set(rows.map((r) => r.region_name))])
-    .in("complex_name", [...new Set(rows.map((r) => r.complex_name))])
-    .not("road_address", "is", null)
-    .limit(2000);
-  if (error) {
-    logger.warn(`[geocode] 도로명 주소 조회 실패(지번으로 진행): ${error.message}`);
-    return out;
-  }
+  const byName = regionsByName(
+    rows.map((r) => ({ region: r.region_name, name: r.complex_name })),
+  );
   const want = new Set(rows.map((r) => coordKey(r.region_name, r.complex_name)));
-  for (const r of (data as
-    | { region_name: string; complex_name: string; road_address: string | null }[]
-    | null) ?? []) {
-    const k = coordKey(r.region_name, r.complex_name);
-    if (want.has(k) && r.road_address) out.set(k, r.road_address);
+  for (const namePart of chunk([...byName.keys()], NAME_IN_CHUNK)) {
+    const regionPart = [...new Set(namePart.flatMap((n) => byName.get(n) ?? []))];
+    let q = sb
+      .from("complex_tx_stats")
+      .select("region_name, complex_name, road_address")
+      .in("complex_name", namePart)
+      .not("road_address", "is", null)
+      .limit(2000);
+    if (regionPart.length <= REGION_IN_MAX) q = q.in("region_name", regionPart);
+    const { data, error } = await q;
+    if (error) {
+      // 여기까지 모은 것만 들고 돌아간다 — 실패해도 백필은 지번으로 계속한다.
+      logger.warn(
+        `[geocode] 도로명 주소 조회 실패(지번으로 진행): ${pgErrorText(error, namePart.length)}`,
+      );
+      return out;
+    }
+    for (const r of (data as
+      | { region_name: string; complex_name: string; road_address: string | null }[]
+      | null) ?? []) {
+      const k = coordKey(r.region_name, r.complex_name);
+      if (want.has(k) && r.road_address) out.set(k, r.road_address);
+    }
   }
   return out;
 }
@@ -254,9 +290,7 @@ export async function backfillGeocode(
     p_limit: limit,
   });
   if (rpcError) {
-    throw new Error(
-      `complexes_needing_geocode 조회 실패: ${rpcError.message ?? "알 수 없는 오류"}`,
-    );
+    throw new Error(`complexes_needing_geocode 조회 실패: ${pgErrorText(rpcError)}`);
   }
   const rows =
     (data as
@@ -284,8 +318,8 @@ export async function backfillGeocode(
       // 저장 실패는 조용히 넘기지 않는다 — 예전엔 upsert 오류를 아무도 안 봐서
       // "지오코딩은 성공했는데 좌표가 안 늘어나는" 현상의 원인이 안 보였다.
       errors += batch.length;
-      errorSample ??= `저장 실패: ${error.message}`;
-      logger.warn(`[geocode] upsert ${batch.length}건 실패: ${error.message}`);
+      errorSample ??= `저장 실패: ${pgErrorText(error, batch.length)}`;
+      logger.warn(`[geocode] upsert ${batch.length}건 실패: ${pgErrorText(error)}`);
     }
   };
 

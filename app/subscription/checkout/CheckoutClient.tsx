@@ -17,7 +17,7 @@ import {
   previewBillingLabel,
 } from "@/lib/payments/checkout-preview";
 import { PAYMENT_METHODS_PATH } from "@/lib/payments/payment-methods";
-import { isGuestCheckoutAllowed, normalizeGuestEmail } from "@/lib/payments/guest-order";
+import { isGuestCheckoutAllowed, normalizeGuestEmail, readGuestEmailInput } from "@/lib/payments/guest-order";
 import {
   isTossTestEnv,
   isWidgetKey,
@@ -278,7 +278,7 @@ function GuestNotice({ widget, guestPay }: { widget: "shown" | "none" | "failed"
       </p>
       <p className="t-sub text-text-2">
         {guestPay
-          ? "아래에 영수증 받을 이메일만 적으면 주문번호가 발급되고 바로 카드 결제창이 열려요."
+          ? "아래 결제 버튼을 누르면 주문번호가 발급되고 바로 신용/체크카드 결제창이 열려요. 가입도, 이메일 입력도 필요 없어요."
           : "로그인하면 이 화면으로 돌아와 그대로 결제할 수 있어요. 주문번호는 로그인 뒤 발급돼요."}
       </p>
       {widget === "shown" && (
@@ -298,8 +298,8 @@ function GuestNotice({ widget, guestPay }: { widget: "shown" | "none" | "failed"
         </p>
       )}
       {widget === "none" && (
-        /* ck(결제창형) 키는 주문번호가 있어야 결제창을 열 수 있다 — [1001] 주간권은 아래 이메일을 적으면
-           주문이 만들어지고 버튼으로 카드 결제창이 열린다. 정기는 로그인 뒤 카드 등록 화면. */
+        /* ck(결제창형) 키는 주문번호가 있어야 결제창을 열 수 있다 — [1003] 주간권은 아래 결제 버튼을 누르는
+           순간 주문이 만들어지고 카드 결제창이 열린다(이메일은 선택). 정기는 로그인 뒤 카드 등록 화면. */
         <p className="t-sub text-text-3">
           결제 수단: <span className="font-bold text-ink">신용카드 · 체크카드</span> (토스페이먼츠 결제창) ·{" "}
           <Link href={PAYMENT_METHODS_PATH} className="font-bold text-primary underline">
@@ -309,7 +309,9 @@ function GuestNotice({ widget, guestPay }: { widget: "shown" | "none" | "failed"
       )}
       {widget === "failed" && (
         <p role="alert" className="t-sub font-bold text-danger">
-          결제 수단 화면을 불러오지 못했어요. 로그인한 뒤 다시 시도해 주세요.
+          {guestPay
+            ? "결제수단 목록을 불러오지 못했어요. 아래 버튼으로 카드 결제창을 바로 열 수 있어요."
+            : "결제 수단 화면을 불러오지 못했어요. 로그인한 뒤 다시 시도해 주세요."}
         </p>
       )}
     </div>
@@ -326,9 +328,9 @@ export function CheckoutClient() {
   /* [1001] 비회원 결제 — 입력한 이메일, 검증 오류, 미리 만들어 둔 주문(버튼 탭 안에서 결제창이 열리게) */
   const [guestEmail, setGuestEmail] = useState("");
   const [guestErr, setGuestErr] = useState<string | null>(null);
-  const guestOrderRef = useRef<{ email: string; orderId: string; amount: number } | null>(null);
+  const guestOrderRef = useRef<{ email: string | null; orderId: string; amount: number } | null>(null);
   /* 같은 이메일로 동시에 두 번 만들지 않는다(blur → click 이 겹치면 create 를 두 번 부르고 속도 제한을 먹는다) */
-  const guestOrderInFlight = useRef<Promise<{ email: string; orderId: string; amount: number } | null> | null>(null);
+  const guestOrderInFlight = useRef<Promise<{ email: string | null; orderId: string; amount: number } | null> | null>(null);
 
   useEffect(() => {
     if (startedRef.current) return; // StrictMode 이중 실행 방지
@@ -598,13 +600,16 @@ export function CheckoutClient() {
 
   /* [1001] 비회원 주문 — 이메일이 유효해지는 순간(입력 blur) 미리 만들어 두면 버튼 탭 시점에는 결제창만
      열면 된다(iOS 사파리 제스처 맥락 보존 — payWindow 의 SDK 프리로드와 같은 이유). */
-  async function ensureGuestOrder(): Promise<{ email: string; orderId: string; amount: number } | null> {
+  async function ensureGuestOrder(): Promise<{ email: string | null; orderId: string; amount: number } | null> {
     if (!params) return null;
-    const em = normalizeGuestEmail(guestEmail);
-    if (!em) {
-      setGuestErr("영수증을 받을 이메일 주소를 정확히 적어 주세요.");
+    /* [1003] 이메일은 선택 — 빈칸이면 그대로 결제창을 연다(이용권은 결제 뒤 이 자리에서 연결).
+       적었는데 모양이 틀린 것만 막는다. 규칙은 서버(create 라우트)와 같은 함수를 본다. */
+    const read = readGuestEmailInput(guestEmail);
+    if (read.error) {
+      setGuestErr("영수증을 받을 이메일 주소를 정확히 적어 주세요. (비워 두고 결제해도 돼요)");
       return null;
     }
+    const em = read.email;
     setGuestErr(null);
     if (guestOrderRef.current && guestOrderRef.current.email === em) return guestOrderRef.current;
     if (guestOrderInFlight.current) return guestOrderInFlight.current;
@@ -618,9 +623,9 @@ export function CheckoutClient() {
   }
 
   async function createGuestOrder(
-    em: string,
+    em: string | null,
     params: NonNullable<ReturnType<typeof parseParams>>,
-  ): Promise<{ email: string; orderId: string; amount: number } | null> {
+  ): Promise<{ email: string | null; orderId: string; amount: number } | null> {
     try {
       const res = await fetch("/api/payments/toss/create", {
         method: "POST",
@@ -630,7 +635,7 @@ export function CheckoutClient() {
           billing: params.billing,
           source: "subscription",
           campaign: "guest-checkout",
-          guestEmail: em,
+          ...(em ? { guestEmail: em } : {}),
           ...(params.returnTo ? { returnTo: params.returnTo } : {}),
         }),
       });
@@ -660,7 +665,8 @@ export function CheckoutClient() {
         orderName,
         successUrl: `${origin}/payment/success`,
         failUrl: `${origin}/payment/fail`,
-        customerEmail: order.email,
+        /* 이메일을 안 적었으면 보내지 않는다 — 빈 문자열을 실어 보내면 결제창이 거절한다 */
+        ...(order.email ? { customerEmail: order.email } : {}),
       };
       if (isWidgetKey() && widgetsRef.current) {
         await widgetsRef.current.requestPayment(common);
@@ -746,7 +752,7 @@ export function CheckoutClient() {
               billingLabel={billingLabel}
               amount={phase.amount}
               /* [968 · T1] 게스트는 주문이 없다 — 있는 척하지 않는다 */
-              orderId={phase.kind === "preview" ? (phase.guestPay ? "이메일 입력 후 발급" : "로그인 후 발급") : phase.orderId}
+              orderId={phase.kind === "preview" ? (phase.guestPay ? "결제 버튼을 누를 때 발급" : "로그인 후 발급") : phase.orderId}
             />
           )}
         {phase.kind === "loading" && widgetExpected && <CheckoutSummarySkeleton />}
@@ -763,16 +769,32 @@ export function CheckoutClient() {
         />
 
         {/* [1001] 주간권(단건)은 비회원 결제 — 이메일 → 카드 결제창. 로그인은 둘째 길. */}
-        {phase.kind === "preview" && phase.guestPay && phase.widget !== "failed" && (
+        {/* [1003] 위젯 렌더가 실패해도 주간권 결제 카드는 남긴다 — 결제창형(ck) 경로는 위젯 없이
+            주문번호만으로 열리고, 실패한 화면에 로그인 버튼만 남기면 심사자가 다시 벽을 만난다. */}
+        {phase.kind === "preview" && phase.guestPay && (
           <div className="card flex flex-col gap-2.5 rounded-2xl px-4 py-4">
             <p className="t-body font-bold text-ink">계정 없이 바로 결제하기</p>
             <p className="t-sub text-text-2">
-              영수증은 아래 이메일로 보내 드리고, 같은 이메일로 가입하거나 로그인하면 이용권이 자동으로
-              연결돼요. 결제는 <span className="font-bold text-ink">신용카드 · 체크카드</span>(토스페이먼츠
-              결제창)로 진행됩니다.
+              <span className="font-bold text-ink">신용카드 · 체크카드</span>(토스페이먼츠 결제창)로
+              결제합니다. 카드번호는 결제창에서만 입력하고 내집나우 서버에는 남지 않아요.
             </p>
+            <button
+              type="button"
+              onClick={() => void guestPay()}
+              disabled={paying}
+              className="btn-primary btn-cta rounded-[14px] p-[14px] text-center t-body font-bold disabled:opacity-60"
+            >
+              {paying ? "결제창 여는 중…" : `${phase.amount.toLocaleString("ko-KR")}원 카드로 결제하기`}
+            </button>
+            {guestErr && (
+              <p role="alert" className="t-sub font-bold text-danger">
+                {guestErr}
+              </p>
+            )}
+            {/* [1003] 이메일은 선택 — 적으면 영수증이 바로 가고, 비워 두면 결제 뒤 화면에서 받는다.
+                (1001 은 여기서 이메일을 요구했고 토스 심사자는 이 칸 앞에서 멈췄다) */}
             <label className="flex flex-col gap-1">
-              <span className="t-sub font-bold text-text-2">이메일</span>
+              <span className="t-sub font-bold text-text-2">영수증 받을 이메일 (선택)</span>
               <input
                 type="email"
                 inputMode="email"
@@ -785,24 +807,15 @@ export function CheckoutClient() {
                 onBlur={() => {
                   if (normalizeGuestEmail(guestEmail)) void ensureGuestOrder();
                 }}
-                placeholder="you@example.com"
+                placeholder="you@example.com (비워도 됩니다)"
                 aria-invalid={guestErr ? true : undefined}
                 className="h-11 rounded-xl border border-line bg-surface px-3 t-body text-ink outline-none focus:border-primary"
               />
             </label>
-            {guestErr && (
-              <p role="alert" className="t-sub font-bold text-danger">
-                {guestErr}
-              </p>
-            )}
-            <button
-              type="button"
-              onClick={() => void guestPay()}
-              disabled={paying}
-              className="btn-primary btn-cta rounded-[14px] p-[14px] text-center t-body font-bold disabled:opacity-60"
-            >
-              {paying ? "결제창 여는 중…" : `${phase.amount.toLocaleString("ko-KR")}원 카드로 결제하기`}
-            </button>
+            <p className="t-sub text-text-3">
+              이메일을 적으면 영수증이 바로 가고, 같은 이메일로 가입·로그인하면 이용권이 자동으로
+              연결돼요. 비워 두고 결제하면 결제가 끝난 화면에서 받을 주소를 여쭤봐요.
+            </p>
             <Link
               href={phase.loginHref}
               className="inline-block py-[5px] text-center t-sub font-bold text-primary no-underline"
@@ -812,7 +825,7 @@ export function CheckoutClient() {
           </div>
         )}
         {/* [968 · T1] 정기(월간·연간)의 게스트 1차 행동 — 로그인 뒤 카드 등록 화면으로 */}
-        {phase.kind === "preview" && (!phase.guestPay || phase.widget === "failed") && (
+        {phase.kind === "preview" && !phase.guestPay && (
           <>
             <Link
               href={phase.loginHref}

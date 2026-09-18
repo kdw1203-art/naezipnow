@@ -98,15 +98,33 @@ export function loginReturnHref(pathname: string, search = ""): string {
 }
 
 /**
+ * [1003] 탭바 "동네" 탭을 함께 켜는, `/town` **밖**의 경로 — 세그먼트 prefix.
+ *
+ * 동네이야기 카테고리 다섯 칸 중 넷(`/apply`·`/auctions`·`/supply`·`/redevelopment`)은
+ * 라우트가 `app/town/` 밖에 있다(lib/town/category-links.ts 의 주의 주석). `/town/news`
+ * 는 `/town` prefix 가 이미 덮는다. 목록을 여기 둔 이유: 탭바는 루트 셸(PageShell)의
+ * 클라이언트 컴포넌트라 모든 라우트의 공용 청크에 들어간다 — 카테고리 카탈로그
+ * (아이콘·설명·히어로 문구까지 든 배열)를 통째로 끌고 들어가지 않기 위해 prefix 만
+ * 복제하고, 원본과 어긋나지 않는지는 tests/unit/nav-1003.test.ts 가 검사한다.
+ */
+export const TOWN_TAB_EXTRA_PREFIXES: readonly string[] = [
+  "/apply",
+  "/auctions",
+  "/supply",
+  "/redevelopment",
+];
+
+/**
  * [970 · C-29] 탭바 활성 판정 — "동네" 탭은 동네이야기 카테고리(lib/town/category-links)에
- * 속한 /apply·/auctions·/supply·/redevelopment·/qna 에서도 켜진다(예전엔 /town 만).
+ * 속한 /apply·/auctions·/supply·/redevelopment 에서도 켜진다(예전엔 /town 만).
  * prefix 는 세그먼트 단위(/map 이 /mapping 을 켜지 않게). 홈은 정확 일치.
  */
 /**
  * 탭 활성 판정. `extraPrefixes` 는 **이 탭**을 함께 켜는 추가 경로(세그먼트 prefix).
  * [991] 예전엔 셋째 인자가 "동네 탭 전용 카테고리 목록"이었다 — 탭바에서 '동네'가
- * '분석'으로 바뀌면서(30일 실측: /analysis 62회·251초 vs /town 31회·7초) 특정 탭에
- * 묶인 규칙을 없앴다. 호출자가 탭마다 자기 목록을 넘긴다.
+ * '분석'으로 바뀌면서 특정 탭에 묶인 규칙을 없앴다. 호출자가 탭마다 자기 목록을 넘긴다.
+ * [1003] '동네' 탭이 돌아왔지만 이 일반화는 그대로 둔다 — 동네 탭은 위
+ * TOWN_TAB_EXTRA_PREFIXES 를 넘기고, 다른 탭(마이·지도)도 같은 규칙을 쓴다.
  */
 export function tabBarActive(
   tabHref: string,

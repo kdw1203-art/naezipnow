@@ -18,12 +18,17 @@ import { Icon } from "./Icon";
 
 type Group = NavItem & { icon: string };
 
-/** 4 대분류 라벨 → 라인 아이콘 이름(MobileMenu 와 같은 표) */
+/** 5 대분류 라벨 → 라인 아이콘 이름(MobileMenu 와 같은 표)
+ *  [1003] 요금제 타일이 NAV 의 다섯째로 들어온다 — GROUPS 는 NAV 를 그대로 펼치므로
+ *  타일은 자동으로 생기고, 자리는 "동네" 다음·"마이" 앞이다(계정 묶음 바로 위라
+ *  결제→구독 관리로 눈이 이어진다). 묶음이 6 → 7 이 되지만 패널은 세로 스크롤
+ *  (max-h calc(100dvh-100px) · overflow-y-auto)이라 잘리지 않는다. */
 const CAT_ICON: Record<string, string> = {
   임장노트: "notebook-pen",
   지도: "map",
   "AI 분석": "sparkles",
   동네: "messages-square",
+  요금제: "credit-card",
 };
 
 const GROUPS: Group[] = [

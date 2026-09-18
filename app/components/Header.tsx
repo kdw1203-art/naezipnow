@@ -35,7 +35,13 @@ export function Header() {
       style={{ paddingTop: "max(14px, env(safe-area-inset-top, 0px))" }}
     >
       <div
-        className={`header-shell mx-auto flex max-w-[1240px] items-center gap-2 rounded-2xl px-3.5 md:gap-6 md:px-5 ${
+        /* [1003] 가로 예산 — NAV 가 4 → 5 대분류(요금제 추가)가 되면서 한 줄이 그만큼
+           길어졌다. 라벨을 줄이면 대분류 이름이 표면마다 달라지므로(모바일 전체 메뉴·
+           좌측 내비가 같은 NAV 를 읽는다) **간격만** 좁힌다: 묶음 사이 md 10px ·
+           lg 16px · xl 부터 원래 24px. 실측 기준은 "어느 폭에서도 4칸 시절보다 넓어지지
+           않을 것" 이다 — lg(1024px)에서 검색 필드(232px)까지 들어오는 구간이 가장 빠듯해
+           거기서 8px 을 돌려받는다. 아래 메뉴 항목 패딩도 같은 계단을 쓴다. */
+        className={`header-shell mx-auto flex max-w-[1240px] items-center gap-2 rounded-2xl px-3.5 md:gap-2.5 md:px-5 lg:gap-4 xl:gap-6 ${
           /* 모바일3 — 본문 밀도를 줄인 뒤(2026-08-03 토큰 축소) 헤더가 상대적으로
              커 보였다. 모바일만 한 단계 축소: 56px→48px. 44px 는 터치 타깃 하한선이라
              그 밑으로는 내리지 않는다(스크롤 축소도 48×.96=46px 에서 멈춘다). md+ 원복. */
@@ -50,7 +56,7 @@ export function Header() {
         </Link>
 
         {/* 데스크탑 메뉴 — 9m 호버 드롭다운 + 언더라인 인디케이터 */}
-        <nav className="hidden gap-0.5 t-body font-semibold text-text-1 md:flex">
+        <nav className="hidden shrink-0 gap-0.5 t-body font-semibold text-text-1 md:flex">
           {NAV.map((item) => {
             const active = isActive(item.href);
             return (
@@ -71,10 +77,13 @@ export function Header() {
                   prefetch={false}
                   aria-current={active ? "page" : undefined}
                   data-active={active ? "true" : undefined}
+                  /* [1003] 좌우 패딩 14→10px(xl 부터 14px 로 복귀) — 위 gap 축소와 같은
+                     사유다. 글자 크기·라벨은 그대로 두고, whitespace-nowrap 으로 좁아질
+                     때 라벨이 두 줄로 접히지 않게 한다(접히면 헤더 높이가 흔들린다). */
                   className={
                     active
-                      ? "nav-underline block rounded-[10px] bg-primary-soft px-3.5 py-[7px] text-primary transition-colors"
-                      : "nav-underline block rounded-[10px] px-3.5 py-[7px] text-text-1 transition-colors hover:bg-[rgba(29,79,216,.07)] hover:text-primary"
+                      ? "nav-underline block whitespace-nowrap rounded-[10px] bg-primary-soft px-2.5 py-[7px] text-primary transition-colors xl:px-3.5"
+                      : "nav-underline block whitespace-nowrap rounded-[10px] px-2.5 py-[7px] text-text-1 transition-colors hover:bg-[rgba(29,79,216,.07)] hover:text-primary xl:px-3.5"
                   }
                 >
                   {item.label}
