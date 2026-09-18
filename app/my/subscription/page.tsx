@@ -271,8 +271,10 @@ export default async function MySubscriptionPage() {
             <div className="flex flex-col gap-1">
               <p className="t-body font-bold text-ink">무료 플랜을 이용 중이에요</p>
               <p className="t-sub text-text-2">
-                {planLabel("pro")}로 올리면 AI 비교 리포트가 무제한이에요. 결제한 적이 있다면 아래 결제 내역에서
-                확인할 수 있어요.
+                {/* [1004 · 리뷰] "AI 비교 리포트 무제한"은 집행되지 않는 약속이었다(플러스도 AI 분석은 월 50회).
+                    요금표(PLAN_FEATURE_MATRIX)가 실제로 집행하는 숫자로 바꾼다. */}
+                {planLabel("pro")}로 올리면 AI 분석이 월 50회, AI 임장노트 자동정리가 월 30회로 늘어나요.
+                결제한 적이 있다면 아래 결제 내역에서 확인할 수 있어요.
               </p>
             </div>
           )}
@@ -285,6 +287,28 @@ export default async function MySubscriptionPage() {
             ))}
           </nav>
         </section>
+
+        {/* [1004] 프로 전용 혜택의 **입구**. 요금표는 "CSV 내보내기 — 프로 가능"이라고 적는데
+            실제 라우트(/api/inspection/export, requirePlan("pdf_export") = 프로)로 가는 버튼이
+            화면 어디에도 없었다. 적어 놓고 누를 데가 없으면 그것도 지키지 않은 약속이다. */}
+        {plan === "expert" && (
+          <section aria-labelledby="export-title" className="rise-in-1 card flex flex-col gap-2 rounded-2xl p-5">
+            <h2 id="export-title" className="t-section text-ink">
+              임장 기록 CSV 내보내기
+            </h2>
+            <p className="t-sub leading-[1.6] text-text-2">
+              {planLabel("expert")} 이용 중에는 임장 세션 기록(최근 100건)을 CSV 파일로 내려받을 수 있어요.
+              엑셀·구글 시트에서 바로 열립니다.
+            </p>
+            <a
+              href="/api/inspection/export?format=csv"
+              download
+              className="btn-outline btn-md self-start no-underline"
+            >
+              CSV로 내려받기
+            </a>
+          </section>
+        )}
 
         {/* ── (b) 자동결제 관리 ── */}
         <section id="manage" aria-labelledby="manage-title" className="rise-in-1 card flex flex-col gap-3 rounded-2xl p-5 scroll-mt-24">

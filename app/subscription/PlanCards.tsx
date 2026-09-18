@@ -6,7 +6,7 @@ import { isTierOnSale } from "@/lib/subscriptions/sell-config";
 import { annualSavingKrw } from "@/lib/subscriptions/billing-periods";
 import { scrollIntoViewSafely } from "@/lib/ui/scroll";
 import Link from "next/link";
-import { PlanCheckoutButton, type CheckoutTier } from "./PlanCheckoutButton";
+import { planCheckoutHref, type CheckoutTier } from "@/lib/subscriptions/checkout-href";
 import { PreOrderCta } from "./PreOrderCta";
 import { getPlan, type PlanFeature } from "@/lib/subscriptions/plans";
 
@@ -88,7 +88,8 @@ const CARDS: PlanCard[] = [
     dark: false,
     badge: null,
     checkoutTier: "expert",
-    cta: "전문가로 시작",
+    /* [1004] "전문가로 시작" 은 전문가 등록(공급 0)을 가리켰다 — 파는 상품 이름 그대로 */
+    cta: "프로 시작하기",
     ctaClass: "border-[1.5px] border-ink bg-surface text-ink",
   },
 ];
@@ -173,6 +174,7 @@ export function PlanCards({
   paymentsReady = true,
   recurringReady,
   highlightPlan = null,
+  returnTo = null,
 }: {
   /** [970 · A-06] null = 비로그인. 게스트는 어떤 카드도 "현재 이용 중" 이 아니고,
       무료 카드 CTA 가 가입 입구("무료로 시작" → /signup)가 된다. */
@@ -191,6 +193,8 @@ export function PlanCards({
   /** [970 · A-07] 로그인 복귀·결제 실패 재시도로 돌아온 사람이 골랐던 플랜 —
       해당 카드(주간권이면 주간권 섹션)에 링을 두르고 그리로 스크롤한다. */
   highlightPlan?: HighlightPlan;
+  /** [1004] 페이월이 붙여 보낸 복귀 경로 — 서버가 읽어 넘긴다(클릭 시점에 주소창을 다시 읽지 않는다) */
+  returnTo?: string | null;
 }) {
   const [billing, setBilling] = useState<Billing>(initialBilling);
   const canCheckout = paymentsReady && (recurringReady ?? true);
@@ -342,12 +346,20 @@ export function PlanCards({
               ) : p.checkoutTier ? (
                 <>
                   {canCheckout ? (
-                    <PlanCheckoutButton
-                      tier={p.checkoutTier}
-                      billing={billing}
-                      label={p.cta}
-                      className={p.ctaClass}
-                    />
+                    /* [1004] 2단계 확인 버튼 → 링크 직행. 확인은 체크아웃 화면(주문 요약·동의·
+                       결제 버튼)이 이미 한다 — 카드에서 한 번 더 묻는 동안 "눌렀는데 아무 일도
+                       없다"로 보였다(토스 심사 세션이 멈춘 자리). 목적지 규칙은 checkout-href 단일 출처. */
+                    <Link
+                      href={planCheckoutHref({
+                        tier: p.checkoutTier,
+                        billing,
+                        authed: !isGuest,
+                        returnTo,
+                      })}
+                      className={`rounded-[14px] p-[13px] text-center text-[15px] font-bold no-underline ${p.ctaClass}`}
+                    >
+                      {p.cta}
+                    </Link>
                   ) : (
                     <PreOrderCta
                       tier={p.checkoutTier}

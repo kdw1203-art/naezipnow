@@ -6,6 +6,7 @@
  */
 
 import { monthlyPrice } from "@/lib/subscriptions/billing-periods";
+import { planLabel } from "@/lib/subscriptions/labels";
 
 export type PlanTier = "basic" | "pro" | "expert" | "enterprise";
 
@@ -178,7 +179,9 @@ export function checkAccess(
     return {
       allowed: false,
       requiredTier: rule.minTier,
-      reason: `이 기능은 ${rule.minTier.toUpperCase()} 이상 플랜에서 이용 가능합니다.`,
+      /* [1004 · 리뷰] 내부 티어명(FREE·PRO·EXPERT)을 사용자에게 보이지 않는다 — 화면에 있는 상품명은
+         무료·플러스·프로다. planLabel 단일 출처(labels.ts 는 잎 모듈이라 순환 참조가 없다). */
+      reason: `이 기능은 ${planLabel(rule.minTier)} 이상 플랜에서 이용 가능합니다.`,
     };
   }
 
@@ -195,10 +198,10 @@ export function upgradeMessage(requiredTier: PlanTier): string {
       구독 페이지의 6,900원은 실제 청구액과 달랐다. 숫자는 한 곳에만 둔다.) */
   const won = (n: number) => `${n.toLocaleString("ko-KR")}원`;
   const tierLabel: Record<PlanTier, string> = {
-    basic: "FREE",
-    pro: `PRO (월 ${won(monthlyPrice("pro"))})`,
-    expert: `EXPERT (월 ${won(monthlyPrice("expert"))})`,
-    enterprise: "ENTERPRISE (B2B 문의)",
+    basic: planLabel("free"),
+    pro: `${planLabel("pro")} (월 ${won(monthlyPrice("pro"))})`,
+    expert: `${planLabel("expert")} (월 ${won(monthlyPrice("expert"))})`,
+    enterprise: `${planLabel("enterprise")} (B2B 문의)`,
   };
   return `이 기능을 이용하려면 ${tierLabel[requiredTier]} 이상으로 업그레이드가 필요합니다.`;
 }

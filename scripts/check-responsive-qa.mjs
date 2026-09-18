@@ -392,7 +392,9 @@ if (mapListToggle) pass("지도", "모바일 목록 fallback", mapListToggle);
 else todo("지도", "모바일 목록 fallback", "지도↔목록 전환 UI 없음 — 저사양/지도 실패 시 대안 부재");
 
 // ── 결제 ─────────────────────────────────────────────────
-const [ckRel, ckSrc] = locate("export function PlanCheckoutButton");
+/* [1004] 플랜 카드의 결제 시작은 버튼이 아니라 링크가 됐다(2단계 확인 제거).
+   앵커를 목적지 규칙의 단일 출처로 옮긴다 — 컴포넌트 이름이 아니라 "결제로 가는 길"을 본다. */
+const [ckRel, ckSrc] = locate("export function planCheckoutHref");
 if (ckSrc) pass("결제", "웹 checkout CTA", ckRel);
 else todo("결제", "웹 checkout CTA", "결제 시작 버튼을 못 찾음");
 

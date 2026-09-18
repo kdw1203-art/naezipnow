@@ -27,6 +27,47 @@ export type PlanDefinition = {
   features: PlanFeature[];
 };
 
+/** 기능 비교표 (요금제 페이지) */
+/* [992] "모임 개설" 행 삭제 — 임장 모임은 보관(비노출) 상태(참여 0). 팔지 않는 혜택을 요금표에
+   적지 않는다. 게이팅(access.ts group_create)은 그대로라 되살릴 때 행만 다시 넣으면 된다. */
+export const PLAN_FEATURE_MATRIX: Array<{
+  feature: string;
+  free: string;
+  pro: string;
+  expert: string;
+}> = [
+  { feature: "북마크·관심단지", free: "10개", pro: "100개", expert: "무제한" },
+  { feature: "AI 분석 도구", free: "누적 3회", pro: "월 50회", expert: "무제한" },
+  { feature: "AI 임장노트 자동정리", free: "월 2회", pro: "월 30회", expert: "무제한" },
+  { feature: "AI 노트 초안·예습 브리핑", free: "월 10회", pro: "월 100회", expert: "무제한" },
+  /* [1004 · 리뷰] 집행값에 맞춘다 — 광고하는 한도는 코드가 실제로 막는 한도여야 한다.
+     · "동네 분석 요약"(ai_chat): /api/ai/chat 에는 플랜 게이트가 없고 전 플랜 시간당 10회
+       레이트리밋뿐이다. 무료 월 3회는 아무도 만나지 않는 벽이었고 프로 "무제한"은 무료와 같았다.
+     · "비교 트레이": lib/newui/compare-tray.ts COMPARE_TRAY_MAX = 5 로 전 플랜 동일(서버 집계도 5).
+     둘 다 플랜별 집행이 생기면 행을 되살린다([992] 가 "모임 개설" 행에 한 것과 같은 판단).
+     · CSV 다운로드: 실제 게이트는 /api/inspection/export 의 requirePlan("pdf_export") = 프로 전용이고
+       월 횟수 카운터는 없다. "플러스 월 10회"는 눌러도 402 가 나던 문구라 사실대로 고친다. */
+  { feature: "CSV 내보내기(임장 기록)", free: "불가", pro: "불가", expert: "가능" },
+  { feature: "광고 제거", free: "불가", pro: "가능", expert: "가능" },
+];
+
+/** [1004] 한 표에서 세 카드의 기능 줄을 만든다 — 카드마다 손으로 적던 목록을 없앤다.
+ *
+ *  왜: 카드 셋이 서로 다른 항목·다른 순서로 적혀 있었다(무료 10줄·플러스 9줄·프로 5줄).
+ *  요금표는 "무엇을 더 주는가"를 나란히 놓고 읽는 화면인데, 줄이 어긋나면 눈이 비교를
+ *  못 하고 프로 카드는 아래가 텅 비었다. 값의 출처는 어차피 아래 비교표와 같은 표다 —
+ *  그 표에서 직접 만들면 표와 카드가 영원히 같은 말을 한다(예전엔 손으로 적어 어긋났다). */
+function featuresFromMatrix(col: "free" | "pro" | "expert"): PlanFeature[] {
+  return PLAN_FEATURE_MATRIX.map((row) => {
+    const v = row[col];
+    if (v === "불가") return { label: row.feature, included: false as const };
+    if (v === "가능") return { label: row.feature, included: true as const };
+    /* "무제한" 은 제한이 아니라 혜택이다 — 잠금·부분 제공이 아니라 ✓ + 배지로 읽히게 */
+    if (v === "무제한") return { label: row.feature, included: true as const, note: v };
+    return { label: row.feature, included: "limited" as const, note: v };
+  });
+}
+
 /**
  * FREE · PRO · EXPERT 3단계 (2026 재설계).
  * 내부 tier: basic=FREE, pro=PRO, expert=EXPERT, enterprise=B2B(비공개).
@@ -48,15 +89,9 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
     features: [
       { label: "커뮤니티 열람 / 작성 / 댓글", included: true },
       { label: "지역 탐색 지도 · 동네 맥락", included: true },
-      { label: "북마크 · 관심단지", included: "limited", note: "10개" },
-      /* [992] AI 분석 도구(12종·ai_analysis)는 무료 **누적** 3회 — 월이 바뀌어도 열리지 않는다 */
-      { label: "AI 분석 도구", included: "limited", note: "누적 3회" },
-      { label: "AI 임장노트 자동정리", included: "limited", note: "월 2회" },
-      { label: "AI 노트 초안·예습 브리핑", included: "limited", note: "월 10회" },
-      { label: "동네 분석 요약", included: "limited", note: "월 3회" },
-      { label: "비교 트레이", included: "limited", note: "2개" },
-      { label: "CSV 다운로드", included: false },
-      { label: "광고 제거", included: false },
+      /* [992] AI 분석 도구(12종·ai_analysis)는 무료 **누적** 3회 — 월이 바뀌어도 열리지 않는다.
+         [1004] 한도 줄은 비교표와 같은 표에서 만든다(featuresFromMatrix). */
+      ...featuresFromMatrix("free"),
     ],
   },
   {
@@ -81,38 +116,36 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
       /* [970 · A-08] "FREE"·"PRO" 는 카드에 없는 이름이다(카드는 무료·플러스·프로) —
          planLabel 단일 출처로 "무료의 모든 혜택 포함". */
       { label: `${planLabel("free")}의 모든 혜택 포함`, included: true },
-      { label: "북마크 · 관심단지", included: true, note: "100개" },
-      { label: "AI 분석 도구", included: true, note: "월 50회" },
-      { label: "AI 임장노트 자동정리", included: true, note: "월 30회" },
-      { label: "AI 노트 초안·예습 브리핑", included: true, note: "월 100회" },
-      { label: "동네 분석 요약", included: true, note: "월 50회" },
-      { label: "비교 트레이", included: true, note: "10개" },
-      { label: "CSV 다운로드", included: true, note: "월 10회" },
       /* [992] 전문가 상담·리포트 판매 행 제거 — 전문가·자료실은 보관(비노출)이라 팔 수 없는
-         혜택을 적지 않는다(수수료 고지는 /legal/fees 가 계속 한다). */
-      { label: "광고 제거", included: true },
+         혜택을 적지 않는다(수수료 고지는 /legal/fees 가 계속 한다).
+         [1004] 한도 줄은 비교표와 같은 표에서(featuresFromMatrix) — 세 카드가 같은 순서로 읽힌다. */
+      ...featuresFromMatrix("pro"),
     ],
   },
   {
     tier: "expert",
     name: "EXPERT",
-    tagline: "전문가 · 파워유저 · 콘텐츠 판매자",
+    /* [1004] 파는 것과 주는 것을 같게 — 예전 문구("콘텐츠 판매자"·"수익·운영 올인원")는
+       전문가 등록·리포트 판매·상담을 가리켰는데 셋 다 공급이 0이라 992 에서 혜택 줄을 지웠다.
+       남은 것이자 코드가 실제로 집행하는 것은 **한도 없음**이다(access.ts 에서 expert = null). */
+    tagline: "한도 없이 쓰는 파워유저",
     priceMonthly: monthlyPrice("expert"), // 판매가 단일 출처: billing-periods.ts (18,900원)
     priceAnnualMonthly: annualMonthlyEquivalent("expert"),
     accentClass: "border-violet-500",
     publicVisible: true,
-    positioning: "수익·운영 올인원",
+    positioning: "한도 없는 분석",
     bestFor: [
-      "여러 지역을 동시에 분석하는 공인중개사·컨설턴트",
-      "콘텐츠를 운영하는 크리에이터",
-      "데이터·AI를 무제한으로 쓰는 파워유저",
+      `한 달에 ${planLabel("pro")} 한도(AI 분석 50회)를 넘기는 사용자`,
+      "여러 지역·여러 단지를 한꺼번에 비교하는 사용자",
+      "실거래·분석 결과를 CSV 로 따로 정리하는 사용자",
     ],
     features: [
       /* [970 · A-08] "플러스의 모든 혜택 포함" — planLabel 단일 출처 */
       { label: `${planLabel("pro")}의 모든 혜택 포함`, included: true },
-      { label: "북마크 · 관심단지 · AI · 분석 · CSV", included: true, note: "무제한" },
-      /* [992] "전문가 등록 · 수익 정산"·"우선 배치" 행 제거 — 전문가는 보관(비노출), 프로 플랜은
-         판매 카탈로그(sell-config)에서 내려가 있다. */
+      /* [992] "전문가 등록 · 수익 정산"·"우선 배치" 행 제거 — 전문가 마켓은 보관(비노출)이다.
+         [1004] 남은 것이자 코드가 실제로 집행하는 것은 한도 없음 — 값은 비교표와 같은 표에서
+         읽는다(access.ts FEATURE_RULES 에서 expert 는 전부 null = 무제한). */
+      ...featuresFromMatrix("expert"),
     ],
   },
   {
@@ -151,21 +184,3 @@ export function annualSavings(plan: PlanDefinition): number {
 
 export { TIER_PACKAGES, type TierPackage } from "./tier-packages";
 
-/** 기능 비교표 (요금제 페이지) */
-/* [992] "모임 개설" 행 삭제 — 임장 모임은 보관(비노출) 상태(참여 0). 팔지 않는 혜택을 요금표에
-   적지 않는다. 게이팅(access.ts group_create)은 그대로라 되살릴 때 행만 다시 넣으면 된다. */
-export const PLAN_FEATURE_MATRIX: Array<{
-  feature: string;
-  free: string;
-  pro: string;
-  expert: string;
-}> = [
-  { feature: "북마크·관심단지", free: "10개", pro: "100개", expert: "무제한" },
-  { feature: "AI 분석 도구", free: "누적 3회", pro: "월 50회", expert: "무제한" },
-  { feature: "AI 임장노트 자동정리", free: "월 2회", pro: "월 30회", expert: "무제한" },
-  { feature: "AI 노트 초안·예습 브리핑", free: "월 10회", pro: "월 100회", expert: "무제한" },
-  { feature: "동네 분석 요약", free: "월 3회", pro: "월 50회", expert: "무제한" },
-  { feature: "비교 트레이", free: "2개", pro: "10개", expert: "무제한" },
-  { feature: "CSV 다운로드", free: "불가", pro: "월 10회", expert: "무제한" },
-  { feature: "광고 제거", free: "불가", pro: "가능", expert: "가능" },
-];

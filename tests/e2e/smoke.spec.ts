@@ -144,12 +144,15 @@ test("16. /subscription renders plan CTAs (결제 개통 여부에 맞는 상태
   await expect(
     page.getByRole("heading", { level: 1, name: /기록은 무료, 판단은 더 깊게/ }),
   ).toBeVisible();
-  const checkout = page.getByRole("button", { name: "플러스 시작하기" });
+  /* [1004] 카드 CTA 는 버튼이 아니라 링크다(2단계 확인 제거 — checkout-href 직행).
+     role 을 link 로 고치지 않으면 CI(토스 env 없음)에서는 preorder 분기로 빠져 늘 초록이고,
+     결제가 열린 환경에서만 거짓 빨강이 난다 — 즉 아무것도 지키지 못한다. */
+  const checkout = page.getByRole("link", { name: "플러스 시작하기" });
   const preorder = page.getByRole("button", { name: "오픈 알림 받기" });
   await expect(checkout.or(preorder).first()).toBeVisible();
   if ((await checkout.count()) > 0) {
-    // 결제 개통 상태 — 두 유료 티어 버튼이 모두 있어야 한다
-    await expect(page.getByRole("button", { name: "전문가로 시작" })).toBeVisible();
+    // 결제 개통 상태 — 두 유료 티어(플러스·프로) 링크가 모두 있어야 한다
+    await expect(page.getByRole("link", { name: "프로 시작하기" })).toBeVisible();
   } else {
     // 미개통 상태 — 사전 등록 버튼(PRO·EXPERT 카드 각 1개) + 사실 고지 문구
     expect(await preorder.count()).toBeGreaterThanOrEqual(1);
@@ -157,9 +160,9 @@ test("16. /subscription renders plan CTAs (결제 개통 여부에 맞는 상태
   }
 });
 
-test("17. clicking a plan button while logged out leads to /login", async ({ page }) => {
+test("17. 비로그인으로 플랜 CTA 를 누르면 체크아웃 화면으로 간다", async ({ page }) => {
   await page.goto("/subscription");
-  const checkout = page.getByRole("button", { name: "플러스 시작하기" });
+  const checkout = page.getByRole("link", { name: "플러스 시작하기" });
   if ((await checkout.count()) === 0) {
     /* 결제 미개통 상태 — 결제 버튼 자체가 없으므로 로그인 리다이렉트 흐름이
        존재하지 않는다. 대신 사전 등록 버튼이 눌리는지(죽은 컨트롤 아님)만
@@ -170,11 +173,10 @@ test("17. clicking a plan button while logged out leads to /login", async ({ pag
     return;
   }
   await checkout.click();
-  // 8908947: window.confirm 대신 버튼 자리에서 확인받는 2단계 — "계속"을 눌러야 진행된다.
-  await page.getByRole("button", { name: "계속" }).click();
-  // PlanCheckoutButton: 비로그인 → /login?callbackUrl=/subscription 이동
-  await page.waitForURL(/\/login/);
-  expect(page.url()).toContain("/login");
+  /* [1004] 한 번 누르면 체크아웃 화면이다(예전엔 "계속" 2단계 + /login 리다이렉트였다).
+     비로그인 정기 결제는 그 화면에서 결제수단을 먼저 보여 주고 로그인으로 잇는다 — 벽이 아니라 경유지다. */
+  await page.waitForURL(/\/subscription\/checkout\?tier=pro/);
+  expect(page.url()).toContain("billing=");
 });
 
 // ---------- 인증 ----------

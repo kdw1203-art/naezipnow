@@ -16,7 +16,7 @@ import {
 import { isTossPaymentsConfigured } from "@/lib/payments/toss-config";
 import { isTossBillingEnabled } from "@/lib/payments/toss-billing";
 import { BillingPanel } from "./BillingPanel";
-import { PLAN_FEATURE_MATRIX } from "@/lib/subscriptions/plans";
+import { getPlan, PLAN_FEATURE_MATRIX } from "@/lib/subscriptions/plans";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { faqJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
@@ -254,6 +254,11 @@ export default async function SubscriptionPage({
   const availability = paymentsReady
     ? "https://schema.org/InStock"
     : "https://schema.org/PreOrder";
+  /* [1004 · 리뷰] 정기(월간·연간)는 빌링 레일이 열려 있어야 살 수 있다 — 단건 주간권과 조건이 다르다.
+     결제 키는 있는데 빌링이 미개방이면 화면 CTA 는 "오픈 알림"인데 스키마만 InStock 이라 거짓이 됐다. */
+  const recurringAvailability = paymentsReady && recurringReady
+    ? "https://schema.org/InStock"
+    : "https://schema.org/PreOrder";
   const plansJsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -265,17 +270,16 @@ export default async function SubscriptionPage({
         position: i + 1,
         item: {
           "@type": "Product",
-          name: tier === "pro" ? "내집나우 PRO 멤버십" : "내집나우 EXPERT 멤버십",
-          description:
-            tier === "pro"
-              ? "AI 임장노트 정리·분석 확장, 광고 제거 등 개인 이용자용 멤버십"
-              : "전문가 등록·상담 기능을 포함한 전문가용 멤버십",
+          /* [1004 · 리뷰] 고객이 사는 상품명·설명과 같은 말을 쓴다 — 내부 티어명(PRO·EXPERT)도,
+             992 에서 화면에서 지운 전문가 마켓 문구도 스키마에만 남겨 두지 않는다(플랜 정의 단일 출처). */
+          name: `내집나우 ${planLabel(tier)} 멤버십`,
+          description: `${getPlan(tier).tagline} · ${getPlan(tier).positioning}`,
           offers: [
             {
               "@type": "Offer",
               price: p.monthly,
               priceCurrency: "KRW",
-              availability,
+              availability: recurringAvailability,
               url: `${DEFAULT_DESKTOP_ORIGIN}/subscription`,
             },
             /* 주간권(단건) — 플러스 전용. 가격은 billing-periods 단일 출처. */
@@ -296,7 +300,7 @@ export default async function SubscriptionPage({
                     "@type": "Offer",
                     price: p.annualTotal,
                     priceCurrency: "KRW",
-                    availability,
+                    availability: recurringAvailability,
                     url: `${DEFAULT_DESKTOP_ORIGIN}/subscription?billing=annual`,
                   },
                 ]
@@ -447,14 +451,10 @@ export default async function SubscriptionPage({
                 프로 이용 중이라 주간권이 필요 없어요 — 플러스 기능은 이미 전부 열려 있습니다.
               </p>
             ) : paymentsReady ? (
-              /* [1003] 2단계 확인을 걷어 낸 **직행 링크**. 예전에는 여기가
-                 PlanCheckoutButton 이라 한 번 누르면 버튼이 "주간권(7일 단건) 결제창으로
-                 이동합니다 / 취소 / 계속" 으로 바뀌었다 — 누른 사람 입장에서는 아무 일도
-                 일어나지 않은 것처럼 보이고, 실제로 심사 세션의 이동 페이지뷰가 0건이다.
-                 이제 한 번 눌러 체크아웃 화면에 닿고, 그 화면이 토스 결제창을 연다.
-                 월간·연간(PlanCards)의 버튼은 그대로 둔다 — 그쪽은 카드 등록형 자동결제라
-                 한 번 더 확인받을 이유가 있다.
-                 [970 · A-04] 네이비 위 글자는 text-on-dark(다크에서 안 보였다). */
+              /* [1003] 주간권 버튼은 링크 직행이다(2단계 확인 제거 — 토스 심사 세션이 멈춘 자리).
+                 [1004] 월간·연간(PlanCards)의 버튼도 같은 이유로 링크가 됐다 — 확인은 체크아웃·
+                 카드 등록 화면이 이미 한 번 더 한다(주문 요약·동의 체크). 목적지 규칙은
+                 lib/subscriptions/checkout-href.ts 단일 출처. */
               <div className="flex flex-col gap-1.5">
                 <Link
                   href={weeklyCheckoutHref}
@@ -509,6 +509,7 @@ export default async function SubscriptionPage({
           paymentsReady={paymentsReady}
           recurringReady={recurringReady}
           highlightPlan={highlightPlan}
+          returnTo={returnTo || null}
         />
         {/* [966] 결제 신뢰 스트립 — 카드 아래에서 "무엇이 보장되는지" 를 짧게.
             전부 코드가 실제로 하는 일이다: 결제 즉시 이용권이 적용되며 영수증 메일·

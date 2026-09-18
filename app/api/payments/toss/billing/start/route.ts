@@ -86,12 +86,30 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-  /* [992] 판매 카탈로그 밖의 티어(프로)는 새 구독을 열지 않는다 — 화면에서 내린 상품이
+  /* [992] 판매 카탈로그 밖의 티어는 새 구독을 열지 않는다 — 화면에서 내린 상품이
      옛 링크로 팔리면 안 된다. 카드 변경(mode=card)은 위에서 이미 갈라져 기존 구독을 따른다. */
   if (!isTierOnSale(tier)) {
     return NextResponse.json(
-      { error: "지금은 플러스 플랜만 판매하고 있어요." },
+      { error: "지금 판매하지 않는 플랜이에요. 요금제 화면에서 다시 골라 주세요." },
       { status: 400 },
+    );
+  }
+
+  /* [1004 · 리뷰 HIGH] 이미 살아 있는 자동결제가 있는데 **다른 플랜**으로 새 구독을 열지 않는다.
+     열어 주면 이런 일이 벌어진다: 연간 플러스(잔여 300일) 사용자가 프로를 누르면 18,900원이
+     즉시 승인되고, applyPlanToUserByEmail 이 "다른 플랜"으로 보아 plan_expires_at 을
+     오늘+30일로 덮어쓴다 — 잔여 300일이 환불도 일할 계산도 없이 사라지고, 옛 구독 행은
+     조용히 canceled 로 접힌다. 유료 카드가 하나였을 때는 이 클릭 자체가 없었다(992).
+     변경은 해지 뒤에 — 주간권 블록이 이미 같은 이유로 막고 있다(app/subscription/page.tsx). */
+  const live = await getLiveSubscriptionByEmail(userEmail);
+  if (live && (live.plan !== tier || live.billing !== billing)) {
+    return NextResponse.json(
+      {
+        error:
+          "이미 이용 중인 자동결제가 있어요. 구독 관리에서 지금 구독을 해지한 뒤 새 플랜을 시작해 주세요 — 지금 바꾸면 남은 기간이 사라집니다.",
+        code: "LIVE_SUBSCRIPTION_EXISTS",
+      },
+      { status: 409 },
     );
   }
 

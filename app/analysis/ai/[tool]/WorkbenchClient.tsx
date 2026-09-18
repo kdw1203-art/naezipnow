@@ -929,8 +929,10 @@ export function WorkbenchClient({
                   {result.error ?? "무료 AI 분석을 모두 사용했어요."}
                 </p>
                 <p className="t-body text-text-2">
+                  {/* [1004 · 리뷰] "한도 없이"는 사실이 아니다 — 주간권은 plan=pro 라 AI 분석 월 50회가
+                      그대로 걸린다(access.ts ai_analysis). 요금표와 같은 숫자를 적는다. */}
                   플러스 주간권은 <b className="text-ink">1,100원으로 7일 동안</b> 이 도구 12종을
-                  한도 없이 쓸 수 있어요. 자동 갱신 없는 1회 결제예요.
+                  월 50회까지 쓸 수 있어요. 자동 갱신 없는 1회 결제예요.
                 </p>
                 <Link
                   href={weeklyPassCheckoutHref(
