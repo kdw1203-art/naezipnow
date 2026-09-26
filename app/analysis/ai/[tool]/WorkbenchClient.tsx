@@ -699,13 +699,8 @@ export function WorkbenchClient({
           {showRun && (
             <section className="card flex flex-col gap-2.5 rounded-2xl p-4" aria-label={hasCalc ? "다시 계산" : "AI 해설 받기"}>
               <h2 className="t-body font-extrabold text-ink">{hasCalc ? "③ 내 조건으로 다시 계산" : "③ AI 해설 받기"}</h2>
-              {/* [1008 · 리뷰 A-3] 누르면 실제로 하는 일만 말한다 — 입력을 결과가 쓰는 도구만 "다시 계산" */}
-              <p className="t-sub text-text-2">
-                {hasCalc
-                  ? "숫자·그래프는 단지를 고르면 바로 나와요. ② 에 넣은 값으로 결과를 다시 계산해요."
-                  : "숫자·그래프는 위에 이미 있어요. AI 해설은 외부 AI 모델이 위 숫자를 문장으로 풀어 줘요(로그인 필요)."}
-                {signedIn ? " 결과는 내 분석 기록에 저장돼요." : hasCalc ? " 로그인하면 결과가 내 분석 기록에 저장돼요." : ""}
-              </p>
+              {/* [1011] 설명 문단을 걷었다(소유자 지시) — 무엇을 하는 버튼인지는 제목과 버튼 글자가
+                  이미 말한다. 로그인이 필요하다는 사실은 눌러 봐야 아는 대신 버튼 글자로 미리 말한다. */}
               {hasCalc && llmAvailable && (
                 <label className="flex min-h-[40px] items-center gap-2 t-sub font-bold text-text-1">
                   <input type="checkbox" className="h-5 w-5" checked={useLlm} onChange={(e) => setUseLlm(e.target.checked)} />
@@ -728,7 +723,13 @@ export function WorkbenchClient({
                 }
                 className={`btn-lg w-full ${runState === "idle" && ready ? "glow" : ""}`}
               >
-                {hasCalc ? (aiMode ? "다시 계산 · AI 해설 받기" : "내 조건으로 다시 계산") : "AI 해설 받기"}
+                {hasCalc
+                  ? aiMode
+                    ? "다시 계산 · AI 해설 받기"
+                    : "내 조건으로 다시 계산"
+                  : signedIn
+                    ? "AI 해설 받기"
+                    : "로그인하고 AI 해설 받기"}
               </ActionButton>
               {signedIn && (
                 <Link href="/my/analyses" className="inline-flex min-h-[24px] items-center self-start t-sub font-bold text-text-3 no-underline">
@@ -758,15 +759,19 @@ function FirstVisitGuide({
   quickPicks: readonly QuickPick[];
   onQuickPick: (q: QuickPick) => void;
 }) {
+  /* [1011] 2번 칸("자료는 자동으로 — 국토부 실거래·전월세 신고·입주 예정·한국부동산원 통계를
+     불러와요")을 걷었다(소유자 지시). 자료를 어디서 어떻게 모으는지는 만드는 쪽의 사정이고,
+     사람이 할 일은 ① 단지를 고르는 것뿐이다. 출처는 결과 화면의 "데이터 출처"가 밝힌다
+     (check:ai-compliance 가 그 표기를 강제한다). 2 → 3 칸 구성이 되며 sm:grid-cols-3 는
+     grid-cols-2 로 바꾼다 — 세 칸 자리에 둘만 서면 마지막 칸이 붕 뜬다. */
   const steps = [
     { t: "단지 고르기", d: "이름으로 검색하거나 지도에서 눌러요." },
-    { t: "자료는 자동으로", d: "국토부 실거래·전월세 신고·입주 예정·한국부동산원 통계를 불러와요." },
     { t: "숫자·그래프로 결과", d: resultKind },
   ];
   return (
     <section className="card flex flex-col gap-4 rounded-2xl p-4 md:p-5" aria-label="이렇게 써요">
       <h2 className="t-section font-extrabold text-ink">이렇게 써요</h2>
-      <ol className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <ol className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {steps.map((s, i) => (
           <li key={s.t} className="flex gap-2.5 rounded-[12px] bg-bg px-3 py-3 sm:flex-col sm:gap-1.5">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary t-sub font-extrabold text-white">{i + 1}</span>

@@ -107,8 +107,10 @@ export default async function ReportsIndexPage() {
       <div className="mx-auto max-w-[760px]">
         <h1 className="rise-in text-[24px] font-extrabold text-ink">월간 아파트 실거래 리포트</h1>
         <p className="rise-in-1 mt-2 text-[13px] leading-[1.7] text-text-2">
-          국토교통부 실거래 신고 집계에서 매월 자동으로 만들어지는 리포트입니다.
-          사람이 쓰는 시황 글이 아니라 데이터 요약이며, 모든 수치는{" "}
+          {/* [1011] "매월 자동으로 만들어지는" 파이프라인 설명을 걷었다(소유자 지시).
+              "사람이 쓰는 시황 글이 아니다"는 남긴다 — 글의 성격을 오해하지 않게 하는 정직성 문구다. */}
+          국토교통부 실거래 신고를 달마다 모은 리포트입니다. 사람이 쓰는 시황 글이
+          아니라 데이터 요약이며, 모든 수치는{" "}
           <Link href="/methodology" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
             공개된 방법론
           </Link>

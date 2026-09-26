@@ -78,8 +78,10 @@ export default async function DataRecordsPage() {
             );
           })}
         </div>
+        {/* [1011] "‘연동 대기’ 자료는 CODEF(codef.io) 자격 증명 설정 후 자동 적재됩니다" 를 걷었다
+            (소유자 지시) — 어떤 중계사와 어떤 자격 증명으로 자료를 끌어오는지는 쓰는 사람이 알 필요가
+            없다. 칸마다 붙은 "연동 대기" 배지가 아직 못 보여 준다는 사실을 이미 말한다. */}
         <p className="mt-3 text-[12px] leading-[1.6] text-text-3">
-          &ldquo;연동 대기&rdquo; 자료는 CODEF(codef.io) 자격 증명 설정 후 자동 적재됩니다.
           실거래·시세 지도는 이미 국토부·KB 공개 데이터로 운영 중입니다.
         </p>
       </section>

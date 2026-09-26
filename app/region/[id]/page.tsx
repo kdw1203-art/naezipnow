@@ -141,8 +141,11 @@ export async function generateStaticParams(): Promise<Array<{ id: string }>> {
 function LoadFailed({ what }: { what: string }) {
   return (
     <p className="py-6 text-center t-body text-text-3">
+      {/* [1011] "— 이 화면은 최대 1시간 저장되므로" 를 걷었다(소유자 지시) — 캐시가 얼마나 남는지는
+          내부 사정이다. "새로고침해 주세요"라고 쓰지 않는 이유(위 주석)는 그대로 지킨다: 여기서도
+          새로고침이 아니라 "잠시 뒤에 다시 방문"이라고 적는다. */}
       {what}을 지금 불러오지 못했습니다. 데이터가 없다는 뜻이 아니라 조회에 실패했다는
-      뜻입니다 — 이 화면은 최대 1시간 저장되므로, 잠시 뒤에 다시 방문해 주세요.
+      뜻입니다. 잠시 뒤에 다시 방문해 주세요.
     </p>
   );
 }

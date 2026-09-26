@@ -133,6 +133,17 @@ export function VerdictBoard({
                 <span className="t-sub text-text-3">지금은 불러오지 못했어요</span>
               </div>
             );
+          /* [1011] 칸 한 장이 말하는 것을 하나로 줄인다(소유자 지시 — "직관적이지 않다").
+             예전 구성은 ① 판정 배지 ② 결론 문장(truncate) ③ 대표 수치 셋이었는데,
+             - 결론 문장이 `truncate` 라 "거래 활발은 좋고 …" 처럼 **문장 가운데가 잘려** 읽히지 않았다.
+             - 배지("보통")와 수치("위험 수준 보통")가 같은 말을 두 번 했다.
+             이제는 **대표 수치 한 개**를 칸의 주인공으로 두고(무엇을 잰 값인지 이름을 위에),
+             수치가 없거나 그 값이 배지와 같은 말이면 그때만 결론 문장을 두 줄까지 보여 준다.
+             문장 전체는 칸을 눌러 그 도구로 가면 읽을 수 있다(머리 오른쪽에 그렇게 적혀 있다). */
+          const metric = x.item.metric;
+          /* "위험 수준 = 보통" 처럼 배지와 같은 말을 반복하는 수치는 주인공이 될 수 없다 */
+          const metricEchoesBand = metric != null && `${metric.value}`.trim() === x.item.bandLabel.trim();
+          const showMetric = metric != null && !metricEchoesBand;
           const body = (
             <>
               <span className="flex items-center justify-between gap-1">
@@ -141,15 +152,17 @@ export function VerdictBoard({
                   {x.item.bandLabel}
                 </span>
               </span>
-              <span className="truncate t-sub font-bold text-ink">{x.item.headline}</span>
-              {x.item.metric && (
-                <span className="truncate t-caption tabular-nums text-text-2">
-                  {x.item.metric.label}{" "}
-                  <b className="text-ink">
-                    {x.item.metric.value}
-                    {x.item.metric.unit ?? ""}
-                  </b>
-                </span>
+              {showMetric ? (
+                <>
+                  <span className="truncate t-caption text-text-3">{metric.label}</span>
+                  <span className="t-section t-fit font-extrabold tabular-nums leading-tight text-ink">
+                    {metric.value}
+                    {metric.unit ?? ""}
+                  </span>
+                </>
+              ) : (
+                /* 잘라내지 않는다 — 두 줄까지 자연스럽게 흐르고, 넘치면 줄 끝에서 접힌다 */
+                <span className="line-clamp-2 t-sub font-bold leading-snug text-ink">{x.item.headline}</span>
               )}
             </>
           );
@@ -162,6 +175,8 @@ export function VerdictBoard({
               style={{ borderColor: "var(--tool-accent)" }}
             >
               {body}
+              {/* [1011] 테두리 색만으로는 이 칸이 왜 다른지 알 수 없었다 — 한 마디로 말한다 */}
+              <span className="t-caption font-bold text-text-3">지금 보는 도구</span>
             </div>
           ) : (
             <Link

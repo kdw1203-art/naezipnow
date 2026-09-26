@@ -41,10 +41,12 @@ export async function ApplyDailyStrip() {
 
   if (!ok && comp.length === 0) return null;
 
+  /* [1011] "적재"·"저장소 첫 적재 전" 을 걷었다(소유자 지시) — 우리가 자료를 어디에 어떻게 쌓는지는
+     쓰는 사람이 알 필요가 없다. 신뢰도를 좌우하는 기준 시점과 갱신 주기는 그대로 남긴다. */
   const basis = ok
     ? ok.source === "store"
-      ? `기준 ${kstDate(ok.fetchedAt) ?? "—"} 적재 · 매일 자동 갱신`
-      : "청약홈 즉시 조회(저장소 첫 적재 전)"
+      ? `기준 ${kstDate(ok.fetchedAt) ?? "—"} · 매일 자동 갱신`
+      : "청약홈 즉시 조회"
     : null;
 
   return (
@@ -84,7 +86,8 @@ export async function ApplyDailyStrip() {
           <span className="t-caption text-text-3">1순위 · 해당지역 우선</span>
         </div>
         {comp.length === 0 ? (
-          <p className="t-sub text-text-3">저장된 경쟁률이 아직 없어요 — 첫 적재 뒤 표시돼요.</p>
+          /* [1011] "첫 적재 뒤 표시돼요" 를 걷었다(소유자 지시) — 적재는 내부 말이다 */
+          <p className="t-sub text-text-3">경쟁률이 아직 없어요 — 준비되면 여기에 표시돼요.</p>
         ) : (
           <ul className="flex flex-col gap-1">
             {comp.map((c) => (

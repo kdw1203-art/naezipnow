@@ -53,10 +53,13 @@ export default async function ApplyCalendarPage() {
         </div>
 
         {cal.state === "unconfigured" ? (
+          /* [1011] "공공데이터 연동이 설정되지 않았어요 / 연동이 켜지면 … 자동으로 채워집니다" 를
+             걷었다(소유자 지시) — 연동 상태는 운영 쪽 말이다. 아직 못 보여 준다는 사실과 지금 어디서
+             보면 되는지(아래 청약홈 링크)만 남긴다. */
           <EmptyState
             icon="lock"
-            title="청약홈 공공데이터 연동이 설정되지 않았어요"
-            desc="연동이 켜지면 접수 일정이 자동으로 채워집니다."
+            title="접수 일정을 아직 보여드릴 수 없어요"
+            desc="준비되면 이 자리에 접수 일정이 채워져요."
             action={{ href: "https://www.applyhome.co.kr", label: "청약홈에서 직접 보기 ↗" }}
           />
         ) : cal.state === "error" ? (

@@ -33,7 +33,7 @@ export async function ComplexAxisSummary({
   return (
     <section aria-label="이 단지 결과 요약" className="mt-4 rounded-2xl border border-line bg-surface p-4">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-[13px] font-bold text-ink">이 단지 결과 요약 — 공공데이터 자동 계산 · AI 분석과 같은 근거</h2>
+        <h2 className="text-[13px] font-bold text-ink">이 단지 결과 요약 — 공공데이터 자동 계산</h2>
         <Link
           href={`/analysis/ai/ai-diagnosis?complexId=${encodeURIComponent(complexId)}`}
           className="inline-block shrink-0 py-[5px] text-xs font-semibold text-primary"

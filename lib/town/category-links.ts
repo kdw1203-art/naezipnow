@@ -82,6 +82,12 @@ export function townBreadcrumb(href: string): string {
 /* [992 · A1] Q&A·전문가·모임·자료 네 칸을 뺐다 — 보관(비노출) 영역(lib/seo/archived-routes.ts).
    남은 다섯 칸은 전부 공공데이터·뉴스(사람이 채우지 않아도 비지 않는 칸)다. */
 export const TOWN_CATEGORY_LINKS: TownCategoryLink[] = [
+  /* [1011] 동네이야기(허브) 자신을 첫 칸으로 넣는다(소유자 지시 — "동네이야기가 하단 카드에 없어").
+     예전에는 허브만 빠져 있어서 ① GNB 드롭다운(동네이야기·뉴스룸·청약·정비사업)과 카드 줄의
+     구성이 서로 달랐고 ② 뉴스룸·청약 같은 하위 화면에서 이 줄만 보고는 허브로 돌아갈 칸이
+     없었다(빵부스러기를 찾아야 했다). 지금 보고 있는 화면의 칸은 링크가 아니라 고정 표식으로
+     그려지므로(TownCategoryNav 의 aria-current), /town 에서 자기 자신을 누르는 일은 없다. */
+  { href: "/town", label: "동네이야기", icon: "messages-square", desc: "이웃 글 · 공개 노트", tone: "bg-primary-soft text-primary", headSub: "다녀온 사람의 기록과 이웃 글 — 지역별 최신순", heroTitle: ["다녀온 사람의 기록이 ", "지금", " 동네를 말합니다"], heroTone: "text-on-navy-amber", heroCta: [] },
   /* 모바일 실측(2026-08-02): "뉴스·다이제스트"는 카드 폭(104px)에서 "뉴스·다이제…"
      로 잘렸다. 라벨은 짧게, 다이제스트는 부제로. */
   /* [1006] 뉴스 칸은 뉴스룸(/town/news)으로 가는 **입구**다 — entry: "newsroom". 히어로 문장은

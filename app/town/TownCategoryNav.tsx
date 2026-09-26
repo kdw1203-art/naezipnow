@@ -37,9 +37,13 @@ export function TownCategoryNav({
   const [pending, setPending] = useState<string | null>(null);
   const railRef = useRef<HTMLDivElement | null>(null);
 
-  // 현재 경로와 일치하는 카테고리(있으면 고정 표시). /town(피드)은 제외.
+  /* 현재 경로와 일치하는 카테고리(있으면 고정 표시).
+     [1011] 허브(/town)도 칸이 됐다 — 다만 `startsWith` 로 보면 /town/news 까지 허브로 잡히므로
+     허브만 **정확히 일치**할 때만 활성으로 친다. 목록 순서상 허브가 첫 칸이라, 하위 화면에서는
+     허브가 먼저 검사되고(불일치) 그다음 제 칸이 잡힌다. */
   const activeHref =
-    items.find((i) => i.href !== "/town" && pathname.startsWith(i.href))?.href ?? null;
+    items.find((i) => (i.href === "/town" ? pathname === "/town" : pathname.startsWith(i.href)))?.href ??
+    null;
 
   /* [970 · B-20] 모바일에서 활성 카드가 레일 오른쪽 밖에 있었다(/supply·/auctions·
      /redevelopment 는 4~5번째 카드라 첫 화면 폭 밖). 마운트·경로 변경 때 활성 카드를

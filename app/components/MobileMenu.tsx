@@ -36,10 +36,8 @@ const SWIPE_CLOSE_PX = 60;
  *  오버레이는 createPortal로 document.body에 렌더 — 헤더 글래스의 backdrop-filter가
  *  position:fixed 컨테이닝 블록이 되어 시트 높이가 헤더로 클램프되던 문제를 회피. */
 
-/** 대분류 라벨 → 라인 아이콘 이름 ([1003] 요금제 · [1008 · J] 내 집 마련 추가 — 사유는 nav-data.ts) */
+/** 대분류 라벨 → 라인 아이콘 이름 ([1003] 요금제 · [1011] "내 집 마련"은 임장노트 하위로 내려가 표에서 빠졌다 — 사유는 nav-data.ts) */
 const CAT_ICON: Record<string, string> = {
-  /* [1008 · J] 여정의 끝이 "열쇠 받기"라 열쇠 — nav-data.ts 의 맨 앞 묶음 */
-  "내 집 마련": "key",
   임장노트: "notebook-pen",
   지도: "map",
   "AI 분석": "sparkles",

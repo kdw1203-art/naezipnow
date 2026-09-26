@@ -404,8 +404,11 @@ export function ApplySearchClient({ initial }: Props) {
             /* [970 · C-44] env 변수명(DATA_GO_KR_SERVICE_KEY)이 사용자 화면에 나갔다 — 일반 문구로 */
             <EmptyState
               icon="lock"
-              title="청약홈 연동 준비 중이에요"
-              desc="아직 청약홈 공공데이터가 연결되지 않아 실데이터를 부를 수 없어요. 지어낸 수치로 표를 채우지는 않아요."
+              /* [1011] "청약홈 연동 준비 중" · "공공데이터가 연결되지 않아" 를 걷었다(소유자 지시) —
+                 970·C-44 에서 env 변수명을 걷어낸 것과 같은 줄기로, 연동 상태는 운영 쪽 말이다.
+                 지어내지 않는다는 약속(정직성)은 그대로 남긴다. */
+              title="청약 공고를 아직 보여드릴 수 없어요"
+              desc="실제 공고 자료를 아직 불러오지 못해요. 지어낸 수치로 표를 채우지는 않아요."
               action={{ href: "https://www.applyhome.co.kr", label: "청약홈에서 직접 보기 ↗" }}
             />
           ) : filteredMode && !state.detailAvailable ? (
@@ -415,7 +418,9 @@ export function ApplySearchClient({ initial }: Props) {
             <EmptyState
               icon="lock"
               title="지역·단지명 필터를 지금 사용할 수 없어요"
-              desc="분양정보(상세) API 연동이 준비되지 않아 필터 검색이 불가합니다. 공고가 없다는 뜻이 아니에요 — ‘전체’로 돌아가면 전국 공고를 볼 수 있어요."
+              /* [1011] "분양정보(상세) API 연동이 준비되지 않아" 를 걷었다(소유자 지시) — 970·C-44 에서
+                 env 변수명을 걷어낸 것과 같은 줄기다. 남길 사실은 "지금은 못 쓴다"와 "0건이 아니다" 둘. */
+              desc="지역·단지명으로 걸러 보는 기능이 아직 준비 중이에요. 공고가 없다는 뜻이 아니에요 — ‘전체’로 돌아가면 전국 공고를 볼 수 있어요."
               action={{ href: "/apply", label: "전체 공고 보기" }}
             />
           ) : (

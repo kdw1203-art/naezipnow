@@ -352,12 +352,9 @@ export default async function PricePage({
             </div>
 
             <div className="card tile flex flex-col gap-2 rounded-[14px] p-4" data-reveal="">
-              <div className="t-section text-ink">이 데이터로 할 수 있는 것</div>
-              <div className="t-sub text-text-3">
-                관심 평형의 평단가·중앙값을 지역 분위와 함께 확인하고, 임장 전 목표
-                면적대의 시세대를 잡아보세요. 개별 단지 시세·추이는 단지 상세에서 더
-                자세히 볼 수 있어요.
-              </div>
+              {/* [1011] "이 데이터로 할 수 있는 것" 사용법 해설을 걷었다(소유자 지시) —
+                  표를 보면 알 수 있는 것을 다시 풀어 쓴 문단이었다. 아래 링크는 남긴다. */}
+              <div className="t-section text-ink">이 지역 실거래 더 보기</div>
               <Link
                 href={`/tx/${encodeURIComponent(target.slug)}`}
                 className="tile-go t-sub font-bold text-primary no-underline"

@@ -32,21 +32,6 @@ const RESULT_KIND: Record<AiAnalysisToolId, string> = {
   "contract-risk": "전세가율로 본 위험도와 계약 전에 확인할 것·특약 문장",
 };
 
-/** [1008 · 리뷰 A-3] "넣는 것" — 도구마다 실제로 결과를 바꾸는 입력만 적는다 */
-const INPUT_KIND: Record<AiAnalysisToolId, string> = {
-  "ai-diagnosis": "단지 이름 하나",
-  "ai-prediction": "단지 이름 · 기준 가격·기간은 선택",
-  "ai-timing": "단지 이름 하나",
-  "ai-inspection": "단지 이름 하나",
-  "ai-risk": "단지 이름 하나",
-  "ai-compare": "비교할 단지 2~3곳",
-  "my-checklist": "단지 이름 하나",
-  "ai-portfolio": "내 관심 단지(로그인)",
-  "ai-simulator": "단지 이름 · 대출 비율·금리(기간은 선택)",
-  "ai-gap": "단지 이름 · 매매가·전세가는 선택",
-  "ai-economy": "없음 — 기준금리·지역 지표를 자동으로",
-  "contract-risk": "이 집 전세가율·보증금 · 등기부·보증보험 확인 여부",
-};
 
 /* [1010] 1h → 1일. 실측(2026-09-20~22) 하루 1,512 렌더 — 도구 12개짜리 라우트가
    그만큼 돌았다는 건 크롤러 방문마다 다시 그렸다는 뜻이다. 서버 렌더에 들어가는
@@ -100,9 +85,10 @@ export default async function AiToolPage({
         style={personaVars(persona)}
         data-tool={tid}
       >
-        {/* [958] 도구 머리 — 네이비 면 + 결과물 글리프 + "넣는 것 → 계산 → 나오는 것".
-            예전엔 제목·한 줄 설명뿐이라 12개 도구가 무엇이 다른지, 결과가 AI 인지
-            규칙인지 실행 전에는 알 수 없었다. 실행 전에 말한다. */}
+        {/* [958→1011] 도구 머리 — 네이비 면 + 결과물 글리프 + 제목 + 이 화면이 하는 일 한 줄.
+            [1011] "넣는 것 · 자동으로 불러오는 것 · 보여 주는 것" 3칸을 걷었다(소유자 지시).
+            이 서비스가 어떻게 만들어지는지는 쓰는 사람이 알 필요가 없는 층의 이야기다 —
+            무엇을 해 주는 화면인지는 제목과 바로 아래 한 줄이 이미 말한다. */}
         <section className="hub-hero rise-in flex flex-col gap-4 p-5 md:p-6">
           <div className="flex items-start gap-4">
             {/* [980] 글리프 칸에 도구 색 띠 — 네이비 위 글자색은 on-dark 토큰 그대로(대비) */}
@@ -128,22 +114,6 @@ export default async function AiToolPage({
               </div>
               {/* [1008 · W] 이 화면이 하는 일 한 줄(쉬운 말) — 기능 설명(tagline)과 두 줄로 겹치던 것을 하나로 */}
               <p className="mt-1 t-body text-on-dark">{persona.premise}</p>
-            </div>
-          </div>
-          {/* [1008 · W] "넣는 것·계산·나오는 것" → 쉬운 말. "규칙 계산 · 판단 카드(구간·대표 수치·근거)" 는
-              처음 온 사람이 알아듣지 못했다(소유자). 모바일에서는 접는다([993] 머리만 한 화면을 먹던 것). */}
-          <div className="hidden grid-cols-1 gap-2 border-t border-on-dark-faint pt-4 sm:grid sm:grid-cols-3">
-            <div className="rounded-xl bg-on-dark-panel px-3 py-2.5">
-              <div className="t-caption font-extrabold text-on-dark-muted">넣는 것</div>
-              <div className="t-sub text-on-dark">{INPUT_KIND[tid]}</div>
-            </div>
-            <div className="rounded-xl bg-on-dark-panel px-3 py-2.5">
-              <div className="t-caption font-extrabold text-on-dark-muted">자동으로 불러오는 것</div>
-              <div className="t-sub text-on-dark">국토부 실거래·전월세 신고 · 입주 예정 · 한국부동산원 지역 통계</div>
-            </div>
-            <div className="rounded-xl bg-on-dark-panel px-3 py-2.5">
-              <div className="t-caption font-extrabold text-on-dark-muted">보여 주는 것</div>
-              <div className="t-sub text-on-dark">{RESULT_KIND[tid]}</div>
             </div>
           </div>
         </section>

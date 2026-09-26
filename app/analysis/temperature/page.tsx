@@ -207,7 +207,9 @@ export default async function TemperatureHubPage() {
         title="지역별 시장 온도 주간 기록"
         personaId="market:temperature"
         toneClass="text-warning"
-        lead="매매가격지수 모멘텀과 실거래 거래량 추이를 0~100 눈금으로 합쳐 매주 기록합니다. 50이 중립이고, 매수·매도 권유가 아닙니다."
+        /* [1011] 계산 방식("매매가격지수 모멘텀과 거래량 추이를 합쳐")을 걷었다(소유자 지시) —
+           눈금을 읽는 법(50이 중립)과 면책은 남긴다. 방법론은 /methodology 가 맡는다. */
+        lead="동네마다 지금 시장이 얼마나 달아올랐는지 0~100 눈금으로 매주 기록합니다. 50이 중립이고, 매수·매도 권유가 아닙니다."
         kpis={heroKpis}
         chart={
           hottest ? (

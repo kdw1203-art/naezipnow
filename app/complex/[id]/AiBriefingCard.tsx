@@ -81,9 +81,11 @@ export function AiBriefingCard({
     <section className="card flex flex-col gap-2 rounded-2xl p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
+          {/* [1011] 재료 나열(실거래·시세·공급 데이터)을 걷었다(소유자 지시) — 쓰는 사람에게 필요한 것은
+                무엇으로 만드는지가 아니라 이 버튼이 무엇을 해 주는지다. */}
           <h2 className="t-body font-extrabold text-ink">✨ AI 예습 브리핑</h2>
           <p className="mt-0.5 t-caption text-text-3">
-            방문 전에 이 단지의 실거래·시세·공급 데이터를 한 장으로 예습하세요.
+            방문 전에 이 단지를 한 장으로 예습하세요.
           </p>
         </div>
         {state !== "done" && (

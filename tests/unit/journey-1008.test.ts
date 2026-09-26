@@ -463,17 +463,26 @@ test("홈 입구 — 문 넷, 실재 화면으로", () => {
   assert.doesNotMatch(read("app/components/home/HomeStartDoors.tsx"), /"use client"/);
 });
 
-test("내비 — 맨 앞 '내 집 마련' → /journey, 하위에 일정표·게임 · 푸터 링크", () => {
-  assert.equal(NAV[0].label, "내 집 마련");
-  assert.equal(NAV[0].href, "/journey");
+/* [1011] "내 집 마련"을 임장노트 하위로 내렸다(소유자 지시). 대분류는 다시 5개.
+   주소(/journey · /journey/contract · /quiz)는 그대로라 색인·공유 링크는 손대지 않았다 —
+   이 테스트가 그 계약(주소는 그대로, 자리만 이동)을 잠근다. */
+test("내비 — '내 집 마련' 세 줄이 임장노트 하위에, 주소는 그대로 · 푸터 링크", () => {
+  assert.equal(NAV.length, 5);
+  assert.equal(NAV[0].label, "임장노트");
+  assert.equal(NAV[0].href, "/notes");
   const kids = (NAV[0].children ?? []).map((c) => c.href);
-  assert.deepEqual(kids, ["/journey", "/journey/contract", "/quiz"]);
-  assert.equal(NAV.length, 6);
+  assert.deepEqual(kids, ["/notes/new", "/notes", "/journey", "/journey/contract", "/quiz"]);
+  /* 대분류 어디에도 "내 집 마련"이 남아 있지 않다 */
+  assert.equal(
+    NAV.some((n) => n.label === "내 집 마련"),
+    false,
+  );
   const footer = read("app/components/Footer.tsx");
   assert.match(footer, /href: "\/journey"/);
   assert.match(footer, /href: "\/journey\/contract"/);
+  /* 아이콘 표는 대분류 라벨로 키를 잡는다 — 대분류가 아니게 됐으니 항목도 사라져야 한다 */
   for (const f of ["app/components/DesktopSideNav.tsx", "app/components/MobileMenu.tsx"]) {
-    assert.match(read(f), /"내 집 마련": "key"/, f);
+    assert.doesNotMatch(read(f), /"내 집 마련": "key"/, f);
   }
 });
 

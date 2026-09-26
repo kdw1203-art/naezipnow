@@ -31,27 +31,17 @@ import {
 type NoteRow = HubInspectionNoteRow;
 type NewsRow = HubNewsRow;
 
+/* [1011] priceTrend · tradeCount · tradeMonths · tradeRange 네 prop 을 뺐다 —
+   "AI 가 읽는 재료" 목록을 걷으면서 쓰는 곳이 사라졌다. 같은 수치는 이 화면 위쪽
+   KPI 칸(거래 건수·계약월 범위)과 실거래가 추이 그래프가 이미 보여 준다. */
 export async function ComplexNotesNewsAi({
   complexId,
   name,
   region,
-  priceTrend,
-  tradeCount,
-  tradeMonths = 0,
-  tradeRange,
 }: {
   complexId: string;
   name: string;
   region: string;
-  /** [1009 · C 리뷰] 이 화면의 실거래가 추이 그래프 — "있음"(그래프가 섰다) · "거래 적음"(거래는 있지만 3건 이상인 달이
-      둘이 안 돼 그리지 않았다) · "없음" · "확인 실패". 예전 hasPrice 는 월별 행만 있어도 "있음"이라 그래프가 없는 단지에서도 있다고 했다 */
-  priceTrend: "있음" | "거래 적음" | "없음" | "확인 실패";
-  /** [970 · B-16] 집계 기간 실거래 건수 합. null = 조회 실패(0건이라고 적지 않는다) */
-  tradeCount: number | null;
-  /** 집계 개월 수 — "N건 · 최근 M개월" 캡션용 */
-  tradeMonths?: number;
-  /** [1009 · C] 센 계약월 범위("26.01~26.08") — tradeMonths 는 "거래가 있는 달 수"라 "최근 N개월"로 읽히면 틀린다 */
-  tradeRange?: string | null;
 }) {
   /* [968 · 1] 공유 예산(3초) — 넘기면 노트는 "못 읽음"(0건으로 그리지 않는다), 기사는 생략.
      두 로더는 내부에서 실패를 이미 삼키므로 여기서 거절되는 건 예산 초과뿐이다. */
@@ -122,40 +112,11 @@ export async function ComplexNotesNewsAi({
       {/* ── AI 분석 ──────────────────────────────────────────────────────── */}
       <div className="card rounded-2xl p-5">
         <h2 className="t-section text-ink">AI 분석</h2>
-        {/* 여기에 분석 결과를 미리 적어 두지 않는다. 재료가 무엇인지만 밝힌다 —
-            읽는 사람이 "이 분석이 무엇을 근거로 하는가"를 먼저 알아야 한다. */}
-        <p className="mt-3 t-sub text-text-3">
-          이 단지에 대해 AI가 읽는 재료는 아래와 같습니다. 분석은 요청하실 때 그
-          시점의 데이터로 만들어집니다.
-        </p>
-        <ul className="mt-3 flex flex-col gap-1.5 t-sub text-text-2">
-          <li className="flex items-center justify-between gap-2 border-b border-[rgba(16,28,54,.06)] pb-1.5">
-            <span>국토교통부 실거래</span>
-            <span className="font-bold text-ink tabular-nums">
-              {/* [970 · B-16] 예전엔 개월 수가 "N건"으로 나갔다 — 건수 합 + 기간 */}
-              {tradeCount === null
-                ? "확인 실패"
-                : tradeCount > 0
-                  ? `${tradeCount.toLocaleString("ko-KR")}건${tradeRange ? ` · ${tradeRange}` : tradeMonths ? ` · 거래 있는 ${tradeMonths}개월` : ""}`
-                  : "없음"}
-            </span>
-          </li>
-          <li className="flex items-center justify-between gap-2 border-b border-[rgba(16,28,54,.06)] pb-1.5">
-            {/* [1009 · C] 실거래만 있는 곳 — "시세" 대신 "실거래가" */}
-            <span>단지 실거래가 추이</span>
-            <span className="font-bold text-ink">{tradeCount === null ? "확인 실패" : priceTrend}</span>
-          </li>
-          <li className="flex items-center justify-between gap-2 border-b border-[rgba(16,28,54,.06)] pb-1.5">
-            <span>이웃 임장노트</span>
-            <span className="font-bold text-ink">
-              {notesFailed ? "확인 실패" : `${notes.length}건`}
-            </span>
-          </li>
-          <li className="flex items-center justify-between gap-2">
-            <span>지역 뉴스</span>
-            <span className="font-bold text-ink">{news.length}건</span>
-          </li>
-        </ul>
+        {/* [1011] "AI 가 읽는 재료는 아래와 같습니다" 문단과 그 아래 소스 목록(실거래 N건 ·
+            추이 · 이웃 노트 N건 · 지역 뉴스 N건)을 걷었다(소유자 지시 — 같은 종류를 AI 도구
+            화면에서도 걷었다). 무엇을 재료로 삼는지는 만드는 쪽의 사정이고, 쓰는 사람에게는
+            "이 단지를 분석해 준다"는 사실과 버튼 하나면 충분하다. 결과 화면에는 출처 표기가
+            그대로 붙는다(check:ai-compliance 가 강제한다). */}
         <Link
           href={analysisHref}
           className="btn-primary btn-cta mt-3 block rounded-xl p-2.5 text-center t-sub font-extrabold text-white"

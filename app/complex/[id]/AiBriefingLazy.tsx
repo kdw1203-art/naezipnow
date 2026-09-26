@@ -18,7 +18,7 @@ function BriefingShell({ busy, onStart }: { busy: boolean; onStart?: () => void 
         <div className="min-w-0">
           <h2 className="t-body font-extrabold text-ink">✨ AI 예습 브리핑</h2>
           <p className="mt-0.5 t-caption text-text-3">
-            방문 전에 이 단지의 실거래·시세·공급 데이터를 한 장으로 예습하세요.
+            방문 전에 이 단지를 한 장으로 예습하세요.
           </p>
         </div>
         <button

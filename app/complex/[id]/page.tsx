@@ -1912,21 +1912,6 @@ export default async function ComplexHubPage({
         complexId={complexId}
         name={v.name}
         region={v.dong}
-        /* [1009 · C 리뷰] "있음"은 이 화면에 추이 그래프가 섰을 때만 — 예전엔 월별 행이 있으면 그래프가 없어도 "있음" */
-        priceTrend={
-          series
-            ? "있음"
-            : txFailed || deals === null || dealsKnown === null
-              ? "확인 실패"
-              : dealsKnown.length > 0
-                ? "거래 적음"
-                : "없음"
-        }
-        /* [970 · B-16] 건수 합(dealSum) — 예전엔 trades.length(개월 수)를 "N건"으로 적었다 */
-        tradeCount={v.dealCount}
-        tradeMonths={v.trades.length}
-        /* [1009 · C] "최근 N개월"(N = 거래 있는 달 수) 대신 실제 계약월 범위 — KPI "거래" 칸과 같은 값 */
-        tradeRange={v.dealCount ? v.metric.dealsSub : null}
       />
 
       {/* G5+G13 — 실데이터 Q&A + FAQPage 스키마. 시세가 "준비 중"이면 그 질문은 뺀다. */}
