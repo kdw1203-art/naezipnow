@@ -28,10 +28,11 @@ import { LastToolChip } from "./tool-cards-client";
      · 커버리지(실거래·단지·지역 수)는 홈과 같은 6시간 캐시 실측값 — 0이면 0.
    ============================================================ */
 
+/* [1008 · W] 쉬운 말 — "규칙 계산 → 원하면 AI 서술" 은 처음 온 사람이 알아듣지 못했다(소유자) */
 const STEPS: readonly { n: number; label: string }[] = [
-  { n: 1, label: "단지 검색" },
-  { n: 2, label: "실거래·전월세·공급·뉴스 자동 결합" },
-  { n: 3, label: "규칙 계산 → 원하면 AI 서술" },
+  { n: 1, label: "단지 고르기" },
+  { n: 2, label: "실거래·전월세·입주 예정 자료 자동으로" },
+  { n: 3, label: "숫자·그래프로 결과 → 원하면 AI 해설" },
 ];
 
 const TIER_ORDER: readonly TierId[] = ["complex", "market", "record"];
@@ -141,9 +142,9 @@ export function HubHero({
             단지 하나를 넣으면, 판단 근거가 <span className="text-brand-red-dark">지금</span> 모입니다
           </h1>
           <p className="t-body max-w-[52ch] text-on-dark-muted">
-            단지명 하나를 넣으면 국토교통부 실거래·전월세 신고·입주 예정·뉴스를 그 단지 기준으로
-            모아 규칙 계산합니다. 원하면 AI 서술을 얹어 문장으로 읽고, 모든 수치에는 출처 각주가
-            붙어요.
+            단지 이름 하나를 넣으면 국토교통부 실거래·전월세 신고·입주 예정·지역 통계를 그 단지 기준으로
+            모아 숫자와 그래프로 보여 줘요. 원하면 AI 해설을 덧붙이고, 모든 숫자에는 출처와 기준
+            시점이 붙어요.
           </p>
         </div>
         <div className="flex flex-col items-start gap-2 md:items-end">
@@ -186,8 +187,9 @@ export function HubHero({
             {picked.regionLabel && (
               <span className="t-sub font-bold text-text-2">{picked.regionLabel}</span>
             )}
+            {/* [1009 · A] 이 값은 최근 거래 달의 **월평균**(평형 섞임)이다 — "평균"이라고 적는다(표기 표준) */}
             {picked.priceLabel && (
-              <span className="t-sub t-num text-primary">최근 {picked.priceLabel}</span>
+              <span className="t-sub t-num text-text-2">최근 월평균 {picked.priceLabel}</span>
             )}
             <span className="t-caption ml-auto rounded border border-line px-1.5 py-px font-bold text-text-3">
               실데이터 기준
@@ -201,7 +203,7 @@ export function HubHero({
                 <Link
                   key={id}
                   href={`${c.href}${q}`}
-                  className="tile card flex items-center gap-2 rounded-[10px] px-2.5 py-2 no-underline"
+                  className="tile card flex min-h-[40px] items-center gap-2 rounded-[10px] px-2.5 py-2 no-underline"
                 >
                   <span className="tile-ico flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-primary-soft text-primary">
                     <ToolGlyph id={WORKBENCH_GLYPH[id] ?? "radar"} size={22} />

@@ -14,52 +14,21 @@ import {
   type BoardSummary,
   type BoardToolId,
 } from "@/lib/ai/verdict-board";
-import { verdictNextActions } from "@/lib/ai/next-action-routing";
 import { hasSession } from "@/lib/client/has-session";
+import { useHumanGate } from "@/lib/client/human-gate";
 import { SkBlock } from "@/app/components/ui/Skeleton";
 
 /* ============================================================
-   [996] 판단 카드 곁의 세 조각 — 전부 이 파일에 두고 next/dynamic(ssr:false)으로
-   받는다. 워크벤치 라우트 예산(480KB)에 본체가 477KB 라 페이지 번들에는 dynamic
-   선언 세 줄만 남긴다. 판단 카드 자체가 클라이언트 fetch 뒤에 서므로 SSR 손실이 없다.
+   [996] 결과 곁의 조각 — 전부 이 파일에 두고 next/dynamic(ssr:false)으로 받는다(워크벤치 예산 480KB).
 
-   ① VerdictNextActions — 판단 아래 "다음 행동 두 개", 항상 같은 자리.
-   ② VerdictBoard       — 같은 단지, 네 가지 눈(진단·예측·타이밍·리스크) 미니 카드.
-   ③ MyNotesChip        — 근거 칩 "내 임장노트 n건" (로그인 사용자만, private API).
-   값은 전부 서버가 만든 판단 카드에서 옮긴다 — 여기서 계산하는 수치는 없다.
+   ② VerdictBoard — [1008 · W] "다른 도구로 본 이 단지"(예전 이름 "같은 단지, 네 가지 눈" — 내부 말이었다).
+                    진단·예측·타이밍·리스크 점검의 결론을 미니 카드로. 각 칸은 그 도구로 가는 링크.
+   ③ MyNotesChip  — 데이터 출처 옆 "내 임장노트 n건" (로그인 사용자만, private API).
+   값은 전부 서버가 만든 결과 요약에서 옮긴다 — 여기서 계산하는 수치는 없다.
+   (① 다음 행동 두 개는 [1008] 결과 화면의 "다음 할 일 3개"(ResultView)로 합쳤다.)
    ============================================================ */
 
-/* ── ① 다음 행동 두 개 ─────────────────────────────────────────────────── */
-
-export function VerdictNextActions({
-  tool,
-  verdict,
-  complexId,
-  complexName,
-  region,
-}: {
-  tool: AiAnalysisToolId;
-  verdict: Verdict | null;
-  complexId: string | null;
-  complexName?: string | null;
-  region?: string | null;
-}) {
-  const a = verdictNextActions({ tool, verdict, complexId, complexName, region });
-  return (
-    <div className="flex flex-wrap gap-2" aria-label="다음 행동">
-      <Link href={a.primary.href} className="tool-fill press btn-md no-underline" title={a.primary.hint}>
-        {a.primary.label} ›
-      </Link>
-      {a.secondary && (
-        <Link href={a.secondary.href} className="btn-secondary btn-md no-underline">
-          {a.secondary.label}
-        </Link>
-      )}
-    </div>
-  );
-}
-
-/* ── ② 같은 단지, 네 가지 눈 ────────────────────────────────────────────── */
+/* ── ② 다른 도구로 본 이 단지 ─────────────────────────────────────────────── */
 
 type Tile = { status: "loading" } | { status: "ok"; item: BoardSummary } | { status: "fail" };
 
@@ -83,8 +52,15 @@ export function VerdictBoard({
 }) {
   const cacheRef = useRef(new Map<string, { at: number; item: BoardSummary }>());
   const [tiles, setTiles] = useState<Partial<Record<BoardToolId, Tile>>>({});
+  /* [1007 · V2a-4] 보드는 판단 카드 **아래**에 있다 — 마운트 즉시 도구 3종을 부르지 않고, 봇이 아닌
+     사람이 이 섹션을 뷰포트에 들이거나 첫 상호작용을 한 뒤에 부른다(lib/client/human-gate).
+     실측 /api/ai/context 1,215회/일의 대부분이 크롤러가 칸 링크(?complexId=)를 따라다니며
+     단지마다 여기서 3회 + 워크벤치 딥링크 1회를 일으킨 것이다. 그 전까지는 스켈레톤이다. */
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const armed = useHumanGate(sectionRef);
 
   useEffect(() => {
+    if (!armed) return;
     const ac = new AbortController();
     const next: Partial<Record<BoardToolId, Tile>> = {};
     const missing: BoardToolId[] = [];
@@ -118,7 +94,7 @@ export function VerdictBoard({
         });
     }
     return () => ac.abort();
-  }, [complexId, region, tool, complexName]);
+  }, [armed, complexId, region, tool, complexName]);
 
   const own: Tile | null = isBoardToolId(tool)
     ? verdict
@@ -134,12 +110,12 @@ export function VerdictBoard({
   const consensus = boardConsensus(resolved);
 
   return (
-    <section className="card flex flex-col gap-2 rounded-2xl p-4" aria-label="같은 단지, 네 가지 눈">
+    <section ref={sectionRef} className="card flex flex-col gap-2 rounded-2xl p-4" aria-label="다른 도구로 본 이 단지">
       <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-        <span className="t-body font-extrabold text-ink">같은 단지, 네 가지 눈</span>
-        <span className="t-caption text-text-3">구간만 세어 요약 · 각 칸은 그 도구로</span>
+        <h2 className="t-section font-extrabold text-ink">다른 도구로 본 이 단지</h2>
+        <span className="t-caption text-text-3">칸을 누르면 그 도구로 이어서 봐요</span>
       </div>
-      {/* 합의 한 줄 — 둘 이상 도착했을 때만. 한 눈으로 "합의"를 말하지 않는다. */}
+      {/* 합의 한 줄 — 둘 이상 도착했을 때만. 한 도구로 "합의"를 말하지 않는다. */}
       {consensus && (
         <p className="t-sub font-bold text-text-2" aria-live="polite">
           {consensus.line}
@@ -154,7 +130,7 @@ export function VerdictBoard({
             return (
               <div key={t} className="flex min-h-10 flex-col justify-center rounded-[12px] border border-dashed border-line px-3 py-2.5">
                 <span className="t-caption font-extrabold text-text-3">{BOARD_TOOL_LABEL[t]}</span>
-                <span className="t-sub text-text-3">지금은 못 받았어요</span>
+                <span className="t-sub text-text-3">지금은 불러오지 못했어요</span>
               </div>
             );
           const body = (
@@ -251,11 +227,10 @@ export function MyNotesChip({ complexId }: { complexId: string }) {
   if (!my) return null;
   /* 다른 근거 칩과 같은 꼴 — 칩은 span, 링크는 안쪽 24px 인라인("원본" 과 동일 규격) */
   return (
-    <span
-      className="inline-flex min-h-[28px] items-center gap-1 rounded-full border border-line bg-surface px-2.5 py-0.5 t-caption text-text-2"
-      title="내가 이 단지에 남긴 임장노트(비공개 포함)"
-    >
+    /* [1009 · A] title= 말풍선(마우스를 올려야만 보임)을 걷고 "비공개 포함"을 글자로 — 휴대폰에서도 읽힌다 */
+    <span className="inline-flex min-h-[28px] items-center gap-1 rounded-full border border-line bg-surface px-2.5 py-0.5 t-caption text-text-2">
       <b className="font-extrabold text-text-1">내 임장노트</b>
+      <span className="text-text-3">(비공개 포함)</span>
       <span>
         {my.count}건{my.score != null ? ` · ${my.count > 1 ? "평균" : "기록"} ${my.score}점` : ""}
       </span>

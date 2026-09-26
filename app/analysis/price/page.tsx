@@ -18,6 +18,9 @@ import { complexHrefFromNames } from "@/lib/seo/complex-slug";
 import { pickRegionByAnyName } from "@/lib/regions/param";
 import { findCatalogRegionById } from "@/lib/region/catalog";
 import { formatKrwWon } from "@/lib/format/krw";
+import { formatEokMan } from "@/lib/format/eok-man";
+import { Explain } from "@/app/components/explain/Explain";
+import { BandTable, PYEONG_HOW, manPerPyeong } from "./BandTable";
 
 /* 면적대별 **실거래** 시세 분석 — 예전엔 이 경로가 손으로 적은 "적정가 산정 예시"
    (수치 전부 하드코딩)였다. 이제 tx_band_landing/complex 뷰(국토교통부 실거래)
@@ -32,18 +35,17 @@ export const metadata = buildPageMetadata({
   noIndex: true,
 });
 
-export const revalidate = 3600;
+/* [1010] 1h → 1일. 이 화면의 원천은 하루 1회 적재되는 국토부 실거래·집계이고,
+   적재 직후 lib/cache/invalidate.ts SOURCE_MAP.molit(+reb)이 이 경로를 이미 비운다 —
+   시간 TTL 은 안전망일 뿐이다. 실측(2026-09-20~22) 이 축의 분석 화면은 하루 수천 회
+   렌더되는데 사람 방문은 7일 합계 ~120건이고, 크롤러 재방문 간격은 ≈2.2일이라
+   1시간 눈금은 방문마다 재렌더를 뜻했다. */
+export const revalidate = 86_400;
 
 /** [970 · B-31] 원 → "8.5억"(0.1 단위) — 같은 화면의 지역 카드가 "short"(28.8억)인데 여기만
     "eok"(8.51억·3.58억)라 소수 자릿수가 섞였다. lib/format/krw.ts "short" 로 통일. */
 function eok(won: number): string {
   return formatKrwWon(won, { style: "short" });
-}
-
-/** 원/평 → "3,500만/평" (없으면 "—") */
-function manPerPyeong(won: number | null): string {
-  if (!won || won <= 0) return "—";
-  return `${Math.round(won / 10_000).toLocaleString("ko-KR")}만/평`;
 }
 
 /** "202607" → "2026.07" */
@@ -130,7 +132,6 @@ export default async function PricePage({
   }
 
   const cells = target.areaCells; // 면적 순서(좁은 → 넓은)로 이미 정렬됨
-  const maxPer = Math.max(...cells.map((c) => c.avgPerPyeongKrw ?? 0), 1);
 
   // 가장 거래 많은 면적대 → 대표 단지
   const busiest = [...cells].sort((a, b) => b.txCount - a.txCount)[0] ?? null;
@@ -181,7 +182,8 @@ export default async function PricePage({
     heroKpis.push({
       label: "평단가 최고 면적대",
       value: manPerPyeong(hiBand.avgPerPyeongKrw),
-      note: `${hiBand.bandLabel}${premiumKind ? ` · ${premiumKind} 프리미엄` : ""}`,
+      note: `${hiBand.bandLabel} 평균${premiumKind ? ` · ${premiumKind} 프리미엄` : ""}`,
+      aside: <Explain term="pyeongdanga" how={PYEONG_HOW} size={12} />,
     });
   }
   if (premiumRatio && loBand && hiBand && loBand.bandSlug !== hiBand.bandSlug) {
@@ -245,68 +247,13 @@ export default async function PricePage({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
           {/* 좌: 면적대 표 + 평단가 곡선 */}
           <div className="flex flex-col gap-4">
-            <div className="card overflow-hidden rounded-[14px]" data-reveal="">
-              <div className="t-section border-b border-line px-5 py-3.5 text-ink">
-                면적대별 평단가 · 중앙값 · 거래량
-              </div>
-              <div className="overflow-x-auto">
-                <table className="t-body w-full min-w-[520px]">
-                  <thead>
-                    <tr className="t-sub border-b border-line text-left text-text-3">
-                      <th className="px-5 py-2 font-semibold">면적대</th>
-                      <th className="px-2 py-2 text-right font-semibold">거래</th>
-                      <th className="px-2 py-2 text-right font-semibold">중앙값</th>
-                      <th className="px-2 py-2 text-right font-semibold">평단가</th>
-                      <th className="px-5 py-2 text-right font-semibold">지역 분위</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cells.map((c) => {
-                      const top = c.avgPerPyeongKrw
-                        ? topPercentOf(c.bandSlug, c.avgPerPyeongKrw)
-                        : null;
-                      const isHi = hiBand?.bandSlug === c.bandSlug;
-                      return (
-                        <tr
-                          key={c.bandSlug}
-                          className="row-hl border-b border-divider last:border-0"
-                        >
-                          <td className="px-5 py-2.5">
-                            <span className="font-bold text-ink">{c.bandLabel}</span>
-                            {isHi && premiumKind && (
-                              <span className="t-caption ml-1.5 rounded bg-primary-soft px-1.5 py-px font-extrabold text-primary">
-                                평단가 최고
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-2 py-2.5 text-right tabular-nums text-text-2">
-                            {c.txCount.toLocaleString("ko-KR")}
-                          </td>
-                          <td className="px-2 py-2.5 text-right tabular-nums font-semibold text-ink">
-                            {eok(c.medianKrw)}
-                          </td>
-                          <td
-                            className="cell-bar px-2 py-2.5 text-right font-extrabold tabular-nums text-success"
-                            style={{
-                              ["--w" as string]: `${Math.round(((c.avgPerPyeongKrw ?? 0) / maxPer) * 100)}%`,
-                            }}
-                          >
-                            {manPerPyeong(c.avgPerPyeongKrw)}
-                          </td>
-                          <td className="t-sub px-5 py-2.5 text-right text-text-2">
-                            {top !== null ? `상위 ${top}%` : "—"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              <div className="t-caption px-5 py-2.5 text-text-3">
-                평단가 = 전용면적 평(3.3㎡)당 평균 매매가. 지역 분위는 내집나우에 수록된
-                지역들 중 같은 면적대 평단가 순위예요(표본 8곳 이상일 때만 표시).
-              </div>
-            </div>
+            <BandTable
+              cells={cells}
+              hiBandSlug={premiumKind ? (hiBand?.bandSlug ?? null) : null}
+              topByBand={Object.fromEntries(
+                cells.map((c) => [c.bandSlug, c.avgPerPyeongKrw ? topPercentOf(c.bandSlug, c.avgPerPyeongKrw) : null]),
+              )}
+            />
 
             {/* 평단가 곡선 — 예전엔 div 높이 %에 색을 #1d4fd8/#a9bde8 로 박아
                 그렸다(다크에서 토큰을 안 타고, 값 라벨이 막대마다 겹쳤다). */}

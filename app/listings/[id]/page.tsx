@@ -6,6 +6,7 @@ import { ReportButton } from "../../components/ReportButton";
 import { RefreshButton } from "./RefreshButton";
 import { InquiryForm } from "./InquiryForm";
 import { ListingSaveButton } from "@/components/ListingSaveButton";
+import { Explain } from "@/app/components/explain/Explain";
 import { NaverMap } from "@/components/map/NaverMapLazy";
 import { safeAuth } from "@/lib/safe-auth";
 import { isBookmarked } from "@/lib/bookmarks/store";
@@ -29,6 +30,7 @@ import { realEstateListingJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { JsonLd } from "@/app/components/JsonLd";
 import { RoadviewButton } from "@/components/map/RoadviewButton";
 import { formatKrwShort } from "@/lib/market/format";
+import { krwText, listingPriceLine, marketCompare } from "../price-text";
 
 /** undefined 값을 가진 키를 제거한다(JSON-LD 직렬화 전 정리용). */
 function pruneUndefined<T extends Record<string, unknown>>(obj: T): T {
@@ -94,28 +96,14 @@ export async function generateMetadata({
   };
 }
 
-/* [967 · 31] 여기 있던 formatKrwShort 사본은 lib/market/format 의 공통 함수로 대체 — 출력 동일 */
-
+/* [1009 · T] 호가 한 건은 정밀 표기("매매 12억 4,500만") — ../price-text 한 곳. 중위가(요약값)만 짧은 표기로 "중위가"라고 적는다. */
 function priceLine(l: ListingDetail): string {
-  if (l.listingType === "sale") return `매매 ${formatKrwShort(l.priceKrw)}`;
-  if (l.listingType === "jeonse") return `전세 ${formatKrwShort(l.depositKrw)}`;
-  return `월세 ${formatKrwShort(l.depositKrw)} / ${formatKrwShort(l.monthlyKrw)}`;
+  return listingPriceLine(l);
 }
 
 /** "202606" → "2026.06" */
 function formatYm(ym: string): string {
   return ym.length === 6 ? `${ym.slice(0, 4)}.${ym.slice(4)}` : ym;
-}
-
-/** 시세 대비 배지 — 저렴(파랑)·비쌈(빨강)·시세 수준(회색) */
-function priceCompareBadge(deltaPct: number): { label: string; className: string } {
-  if (deltaPct <= -3) {
-    return { label: `시세 대비 저렴 ${deltaPct}%`, className: "bg-primary-soft text-primary" };
-  }
-  if (deltaPct >= 3) {
-    return { label: `시세 대비 +${deltaPct}%`, className: "bg-danger-soft text-danger" };
-  }
-  return { label: "시세 수준", className: "bg-bg text-text-2" };
 }
 
 function txCompareHref(l: ListingDetail): string | null {
@@ -195,7 +183,9 @@ export default async function ListingDetailPage({
         areaM2: listing.areaM2,
       }).catch(() => [])
     : [];
-  const compareBadge = priceCompare ? priceCompareBadge(priceCompare.deltaPct) : null;
+  /* [1009 · T] 호가 ↔ 최근 실거래 중위가 — 등락 토큰 배지(▲ 빨강 · ▼ 파랑 · ±3% 안 "실거래 수준")와 결론 한 줄.
+     예전 배지는 primary(테마색)·danger(오류색)로 칠했고 "시세 대비"라고 불렀다(비교 기준은 실거래 중위가). */
+  const compareBadge = priceCompare ? marketCompare(priceCompare.deltaPct) : null;
 
   // JSON-LD (RealEstateListing) — 실데이터 매물, 존재 필드만
   const listingJsonLd = realEstateListingJsonLd({
@@ -330,14 +320,10 @@ export default async function ListingDetailPage({
               {listing.complexName}
             </h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              <span className="text-[21px] font-extrabold text-primary">
-                {priceLine(listing)}
-              </span>
+              <span className="t-num text-[21px] text-ink">{priceLine(listing)}</span>
               {compareBadge && (
-                <span
-                  className={`rounded-[7px] chip-pad text-[12px] font-extrabold ${compareBadge.className}`}
-                >
-                  {compareBadge.label}
+                <span className={compareBadge.badgeClass}>
+                  {compareBadge.dir === "flat" ? compareBadge.label : `실거래 대비 ${compareBadge.label}`}
                 </span>
               )}
             </div>
@@ -398,27 +384,34 @@ export default async function ListingDetailPage({
             </div>
           )}
 
-          {/* 시세 비교 — 같은 단지·면적대 최근 실거래 + 시세 대비 배지 (데이터 있을 때만) */}
+          {/* 실거래 비교 — 같은 단지·면적대 최근 실거래 중위가 대비(데이터 있을 때만).
+              [1009 · T] 결론 한 줄(문장) → 근거(중위가·표본·최근 거래) → 다음 행동. 거래 한 건은 정밀 표기, 중위가는 요약값. */}
           {priceCompare && compareBadge ? (
             <section className="card card-pad-sm flex flex-col gap-3">
               <div className="flex items-baseline justify-between gap-2">
-                <h2 className="text-[15px] font-extrabold text-ink">
-                  시세 비교{" "}
-                  <span className="text-[12px] font-medium text-text-3">
-                    같은 단지·면적대 · 국토부 실거래가
-                  </span>
+                <h2 className="flex items-center gap-0.5 text-[15px] font-extrabold text-ink">
+                  실거래 비교
+                  <Explain
+                    title="실거래 대비"
+                    body="이 매물의 호가(부르는 값)를 같은 단지·비슷한 면적 아파트의 최근 실거래 가격과 견준 값이에요."
+                    how={[
+                      "기준 = 같은 단지 국토부 실거래(매매) 가운데 이 매물 면적 ±10%(최소 ±3㎡) 거래의 최근 12개월 최신 12건 중위가",
+                      "그 면적대 거래가 없으면 단지 전체로, 12개월 안에 없으면 가장 최근 거래로 봐요.",
+                      "차이(%) = (호가 − 중위가) ÷ 중위가 × 100, 정수로 반올림",
+                      "±3% 안은 ‘실거래 수준’으로 적어요.",
+                    ]}
+                    source="국토교통부 실거래가 공개시스템"
+                    size={12}
+                  />
                 </h2>
-                <span
-                  className={`shrink-0 rounded-[7px] chip-pad text-[12px] font-extrabold ${compareBadge.className}`}
-                >
-                  {compareBadge.label}
-                </span>
+                <span className={`shrink-0 ${compareBadge.badgeClass}`}>{compareBadge.label}</span>
               </div>
+              <p className="text-[15px] font-bold text-ink">{compareBadge.sentence}</p>
               <p className="text-[13px] leading-[1.6] text-text-2">
                 최근 실거래 중위가{" "}
-                <b className="text-ink">{formatKrwShort(priceCompare.medianKrw)}</b> · 표본{" "}
+                <b className="t-num font-bold text-ink">{formatKrwShort(priceCompare.medianKrw)}</b> · 표본{" "}
                 {priceCompare.sampleCount}건
-                {listing.areaM2 !== null ? ` · 전용 ${listing.areaM2}㎡ 기준` : ""}
+                {listing.areaM2 !== null ? ` · 전용 ${listing.areaM2}㎡ 안팎` : ""}
               </p>
               {comparableTx.length > 0 && (
                 <ul className="flex flex-col">
@@ -427,22 +420,21 @@ export default async function ListingDetailPage({
                       key={i}
                       className="flex items-center justify-between gap-3 border-b border-line py-2 last:border-0"
                     >
-                      <span className="text-[12px] text-text-3">
+                      <span className="t-num text-[12px] text-text-3">
                         {formatYm(t.contractYm)}
                         {t.contractDay ? `.${String(t.contractDay).padStart(2, "0")}` : ""}
                         {t.areaM2 !== null ? ` · ${t.areaM2.toFixed(1)}㎡` : ""}
                         {t.floor !== null ? ` · ${t.floor}층` : ""}
                       </span>
-                      <span className="text-[13px] font-bold text-ink">
-                        {formatKrwShort(t.dealAmountKrw)}
-                      </span>
+                      <span className="t-num text-[13px] font-bold text-ink">{krwText(t.dealAmountKrw)}</span>
                     </li>
                   ))}
                 </ul>
               )}
+              <p className="text-[12px] text-text-3">국토교통부 실거래가 · 같은 단지·면적대 최근 거래 기준 · 호가는 등록자가 적은 값</p>
               <Link
                 href={txHref ?? "/complex/browse"}
-                className="w-fit text-[13px] font-bold text-primary"
+                className="inline-flex min-h-[24px] w-fit items-center text-[13px] font-bold text-primary"
               >
                 이 단지 실거래 전체 →
               </Link>
@@ -451,7 +443,7 @@ export default async function ListingDetailPage({
             <Link
               /* [970 · B-18] /complex/tx 인덱스는 리다이렉트만 있다 — 목적지로 바로 보낸다 */
               href={txHref ?? "/complex/browse"}
-              className="w-fit text-[13px] font-bold text-primary underline"
+              className="inline-flex min-h-[24px] w-fit items-center text-[13px] font-bold text-primary underline"
             >
               실거래가 비교 →
             </Link>

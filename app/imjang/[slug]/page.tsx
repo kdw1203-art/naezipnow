@@ -29,7 +29,14 @@ import { QaBlock } from "@/app/components/QaBlock";
 
 /* [B001 1단계] 1h → 24h. 이 페이지의 원천(국토부 실거래)은 하루 1번 적재라
    더 자주 재렌더할 이유가 없다 — 26k 페이지 크롤 재렌더가 DB 를 밀던 문제의 반쪽. */
-export const revalidate = 86400;
+/* [1010] 24h → 7일. 이 화면의 원천은 둘이고 둘 다 쓰기 지점이 비운다:
+     · 실거래(지역 요약·단지 우선순위) — 적재 크론이 바뀐 지역만
+       (app/api/cron/molit-transactions-ingest → invalidateImjangForTxRegions)
+     · 이 지역의 공개 임장노트 — 노트 생성·공개 전환·수정·삭제가
+       invalidatePublicNoteRoutes([지역]) 로 이 경로를 비운다(화면과 **같은 판정**을
+       거꾸로 돌린 규칙: lib/town/changed-town-paths.ts imjangPathsForNoteRegion).
+   사람이 쓴 노트가 7일 동안 안 보이면 안 되므로, 신선도는 TTL 이 아니라 그 비움이 맡는다. */
+export const revalidate = 604_800;
 /* 빈 배열 = ISR 분류용 (app/tx/[region]/page.tsx 의 같은 자리 주석 참고 —
    이 export 가 없으면 요청마다 서버 렌더 + no-store 로 돌아 함수 호출이 샌다). */
 export function generateStaticParams(): { slug: string }[] {

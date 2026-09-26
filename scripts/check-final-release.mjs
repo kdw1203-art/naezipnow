@@ -89,7 +89,9 @@ if (read("auth.ts").includes('TEST_ACCOUNT_ENABLED?.trim() === "1"')) {
   warn("보안", "Test account gate");
 }
 
-if (read("app/api/upload/route.ts").includes("applyRateLimit")) {
+/* [1005] 업로드 한도는 계정 키(requestRateLimit + keyFn) 로 바뀌었다 — 함수 이름이 아니라
+   "한도 호출이 있는가"를 본다 */
+if (/\b(applyRateLimit|requestRateLimit|keyRateLimit)\(/.test(read("app/api/upload/route.ts"))) {
   pass("보안", "Upload rate limit");
 } else {
   fail("보안", "Upload rate limit");

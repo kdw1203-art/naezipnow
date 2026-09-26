@@ -16,7 +16,11 @@ import { formatKstShortDate } from "@/lib/format/kst";
    dynamicParams=false: 큐레이션 태그 20개만 존재(빈 허브·soft404 방지).
    같은 사건 접기(#67)를 그대로 적용해 목록이 중복으로 붓지 않는다. */
 
-export const revalidate = 1800;
+/* [1010] 30분 → 1일. 큐레이션 태그 20장뿐인데 30분 눈금은 크롤 1회당 오리진 1회와 같았다
+   (크롤러 재방문 ≈2.2일). 원천은 하루 1회 뉴스 적재이고, 적재 직후에는
+   invalidateNewsHubs() 가 이 라우트를 통째로(page) 비운다 — /api/cron/news-revalidate 와
+   뉴스 성격의 글을 싣는 크론 3곳(weekly-market-post · region-intro-posts · price-record-watch). */
+export const revalidate = 86_400;
 export const dynamicParams = false;
 
 export function generateStaticParams(): Array<{ tag: string }> {
@@ -67,14 +71,14 @@ export default async function NewsTagPage({
   ).slice(0, 40);
 
   return (
-    <PageShell breadcrumb={`뉴스 › ${tag.label}`}>
+    <PageShell breadcrumb={`뉴스룸 › ${tag.label}`}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLdScript([
             breadcrumbJsonLd([
               { name: "홈", url: "/" },
-              { name: "뉴스", url: "/town/news" },
+              { name: "뉴스룸", url: "/town/news" },
               { name: tag.label, url: `/town/news/tag/${slug}` },
             ]),
           ]),
@@ -116,24 +120,26 @@ export default async function NewsTagPage({
           최근 수집분에 {tag.label} 보도가 없어요. 수집은 매일 이어지니 다시 들러 주세요.
         </div>
       ) : (
-        <div className="mt-4 flex flex-col gap-2">
+        /* [1006] 뉴스룸과 같은 행 재질(.news-row) — 분류 태그 · 출처 · 날짜 · 제목 */
+        <div className="news-list mt-4">
           {clusters.map((c) => {
             const p = byId.get(c.primary.id)!;
             return (
-              <div key={p.id} className="card overflow-hidden rounded-2xl">
-                <Link
-                  href={`/town/news/${p.id}`}
-                  className="flex flex-col gap-1 px-4 py-3.5 transition-colors hover:bg-bg"
-                >
-                  <span className="text-[13px] font-bold leading-[1.5] text-ink">{p.title}</span>
-                  <span className="text-[12px] text-text-3">
-                    {p.sourceName || "뉴스"} ·{" "}
+              <article key={p.id} className="news-row">
+                <div className="flex min-w-0 flex-col gap-1">
+                  <div className="news-row__meta">
+                    {p.category && <span className="news-tag">{p.category}</span>}
+                    <span className="news-source">{p.sourceName || "뉴스"}</span>
                     {/* [970 · C-04] timeZone 없는 toLocaleDateString — 서버(UTC)에서 자정 전후 기사가 전날로 */}
-                    {formatKstShortDate(displayIso(p))}
-                    {c.related.length > 0 && ` · 관련 보도 ${c.related.length}건`}
-                  </span>
-                </Link>
-              </div>
+                    <time dateTime={displayIso(p)}>{formatKstShortDate(displayIso(p))}</time>
+                    {c.related.length > 0 && <span>· 관련 보도 {c.related.length}건</span>}
+                  </div>
+                  <Link href={`/town/news/${p.id}`} className="news-row__title no-underline">
+                    <span className="line-clamp-2">{p.title}</span>
+                  </Link>
+                </div>
+                <span aria-hidden="true" />
+              </article>
             );
           })}
         </div>

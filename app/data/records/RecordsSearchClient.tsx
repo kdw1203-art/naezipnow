@@ -6,6 +6,7 @@ import Link from "next/link";
 // 카탈로그(lib/codef/endpoints — server-only 아님)에서 같은 규칙으로 만든다.
 import type { PublicRecord } from "@/lib/market/public-records";
 import { CODEF_PRODUCTS } from "@/lib/codef/endpoints";
+import { formatEokMan } from "@/lib/format/eok-man";
 
 /** lib/market/public-records.ts datasetLabel 과 동일 규칙 (CODEF_PRODUCTS 파생) */
 const DATASET_LABEL = new Map(CODEF_PRODUCTS.map((p) => [p.dataset, p.label] as const));
@@ -23,11 +24,11 @@ function datasetLabel(dataset: string): string {
  * 조회 실패는 "자료 없음"과 구별해 그린다.
  */
 
+/* [1009 · T] 지역 포맷터("8.45억" — 10억 미만만 소수 둘째 자리) → 사이트 표준 정밀 표기("8억 4,500만", lib/format/eok-man).
+   공개 자료 한 건의 하한·상한이라 줄이지 않는다. */
 function fmtKrw(won: number | null): string {
   if (!won || won <= 0) return "—";
-  const eok = won / 100_000_000;
-  if (eok >= 1) return `${eok >= 10 ? eok.toFixed(1) : eok.toFixed(2)}억`;
-  return `${Math.round(won / 10_000).toLocaleString()}만`;
+  return formatEokMan(won / 10_000);
 }
 
 function readQuery(): string {
@@ -159,7 +160,7 @@ export function RecordsSearchClient() {
                   {r.complexName ?? ""} {r.recordDate ?? r.period ?? ""}
                 </div>
               </div>
-              <div className="shrink-0 text-right text-[13px] font-extrabold text-ink">
+              <div className="t-num shrink-0 text-right text-[13px] text-ink">
                 {r.priceLowKrw || r.priceHighKrw
                   ? `${fmtKrw(r.priceLowKrw)} ~ ${fmtKrw(r.priceHighKrw)}`
                   : r.depositKrw

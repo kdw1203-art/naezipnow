@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getSessionLite } from "@/lib/client/session-lite";
+import { matchesInterest } from "@/lib/notes/region-match";
 import { PageShell } from "../components/PageShell";
 import { ExampleBadge } from "../components/ExampleBadge";
 import { EmptyState } from "@/app/components/ui/EmptyState";
@@ -11,6 +13,15 @@ import { CoverImage } from "@/app/components/CoverImage";
 import { Icon } from "@/app/components/Icon";
 import { useScrollRestore, useScrollRestoreKey } from "@/lib/client/use-scroll-restore";
 import type { FeedNote, TagTone } from "@/lib/notes/feed-note";
+import { LIST_AI_STATE_LABEL, type ListAiState } from "@/lib/notes/ai-status";
+import {
+  DEFAULT_MINE_FILTERS,
+  applyMineFilters,
+  hasActiveMineFilter,
+  mineFilterOptions,
+  type MineFilters,
+} from "@/lib/notes/mine-filters";
+import { MineFilterBar } from "./mine-filter-bar";
 
 /* 공개 임장노트 — 인스타그램형(스토리 줄 + 3열 그리드 ⇄ 피드 전환) */
 
@@ -47,8 +58,17 @@ const DECISION_BADGE_CLASS: Record<NonNullable<FeedNote["decision"]>["choice"], 
   pass: "bg-danger-soft text-danger",
   revisit: "bg-bg text-text-2",
 };
+/* [1006] 내 노트 카드의 AI 정리 상태 — 저장된 것만으로 판정한 네 가지(lib/notes/ai-status
+   listAiState). 정리됨은 성공색, 규칙 요약은 회색, 수정 뒤 정리 전은 경고색, 없음은 테두리만.
+   타일(어두운 면) 위에서는 흰 반투명 한 가지 — 색으로 구분할 바탕이 없다. */
+const AI_BADGE_CLASS: Record<ListAiState, string> = {
+  ready: "bg-success-soft text-success",
+  rule: "bg-bg text-text-2",
+  stale: "bg-warning-soft text-warning",
+  none: "border border-line text-text-3",
+};
 function NoteBadges({ n, onDark = false }: { n: FeedNote; onDark?: boolean }) {
-  if (!n.decision && n.round == null) return null;
+  if (!n.decision && n.round == null && !n.aiStatus) return null;
   return (
     <>
       {n.decision && (
@@ -67,6 +87,15 @@ function NoteBadges({ n, onDark = false }: { n: FeedNote; onDark?: boolean }) {
           }`}
         >
           {n.round}회차
+        </span>
+      )}
+      {n.aiStatus && (
+        <span
+          className={`inline-flex shrink-0 items-center rounded px-1.5 py-px t-caption font-bold ${
+            onDark ? "bg-white/22 text-white backdrop-blur-sm" : AI_BADGE_CLASS[n.aiStatus]
+          }`}
+        >
+          {LIST_AI_STATE_LABEL[n.aiStatus]}
         </span>
       )}
     </>
@@ -104,7 +133,7 @@ function StoryRail({ notes }: { notes: FeedNote[] }) {
         {/* 내 스토리 = 노트 쓰기 */}
         <Link
           href="/notes/new"
-          className="flex w-[64px] shrink-0 flex-col items-center gap-1.5"
+          className="press flex w-[64px] shrink-0 flex-col items-center gap-1.5"
         >
           <span className="flex h-[62px] w-[62px] items-center justify-center rounded-full border-2 border-dashed border-line-strong text-primary">
             <Icon name="plus" size={22} />
@@ -117,7 +146,7 @@ function StoryRail({ notes }: { notes: FeedNote[] }) {
           <Link
             key={n.id}
             href={noteHref(n)}
-            className="flex w-[64px] shrink-0 flex-col items-center gap-1.5"
+            className="press flex w-[64px] shrink-0 flex-col items-center gap-1.5"
           >
             <span
               className="h-[62px] w-[62px] rounded-full p-[2.5px]"
@@ -159,7 +188,8 @@ function GridTile({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
     <Link
       href={noteHref(n)}
       aria-label={n.isExample ? "예시 — 임장노트 쓰기" : `${n.title} 노트 보기`}
-      className="group relative block aspect-[3/4] overflow-hidden bg-bg md:rounded-2xl md:shadow-[0_1px_2px_rgba(16,28,54,.05),0_8px_20px_rgba(16,28,54,.06)] md:transition-transform md:duration-200 md:hover:-translate-y-1"
+      /* [1009 · T] press — 누르는 순간 살짝 눌린다(터치 기기의 피드백 · 들림 호버는 md 이상 마우스만) */
+      className="press group relative block aspect-[3/4] overflow-hidden bg-bg md:rounded-2xl md:shadow-[0_1px_2px_rgba(16,28,54,.05),0_8px_20px_rgba(16,28,54,.06)] md:transition-transform md:duration-200 md:hover:-translate-y-1"
     >
       <CoverImage
         src={n.coverUrl}
@@ -196,8 +226,8 @@ function GridTile({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
             {n.region}
           </p>
         )}
-        {/* [996 · 4] 판단·회차 — 타일 안 글자 배지(링크 전체가 이미 탭 대상) */}
-        {(n.decision || n.round != null) && (
+        {/* [996 · 4] 판단·회차 — 타일 안 글자 배지(링크 전체가 이미 탭 대상). [1006] 내 노트는 AI 상태도 */}
+        {(n.decision || n.round != null || n.aiStatus) && (
           <p className="mt-1 flex flex-wrap gap-1">
             <NoteBadges n={n} onDark />
           </p>
@@ -228,7 +258,7 @@ function PostCard({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
                 적는 쪽이 신뢰를 지키고, "내 글이 이 단지 첫 진짜 기록"이 된다. */}
             {n.lab && <ExampleBadge label="운영진 예시" />}
           </div>
-          <div className="flex min-w-0 items-center gap-1.5">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
             <span className="truncate t-sub text-text-3">{n.title}</span>
             {/* [996 · 4] 판단·회차 배지 — 제목 옆 글자만 */}
             <NoteBadges n={n} />
@@ -247,7 +277,7 @@ function PostCard({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
       <Link
         href={detailHref}
         aria-label={`${n.title} 노트 보기`}
-        className="relative block aspect-square bg-bg"
+        className="press relative block aspect-square bg-bg"
       >
         <CoverImage
           src={n.coverUrl}
@@ -328,7 +358,7 @@ function GridGlyph({ active }: { active: boolean }) {
             width="4"
             height="4"
             rx="1"
-            fill={active ? "currentColor" : "#c3cad6"}
+            fill={active ? "currentColor" : "var(--border-strong)"}
           />
         )),
       )}
@@ -346,31 +376,44 @@ function FeedGlyph({ active }: { active: boolean }) {
           width="18"
           height="6"
           rx="1.5"
-          fill={active ? "currentColor" : "#c3cad6"}
+          fill={active ? "currentColor" : "var(--border-strong)"}
         />
       ))}
     </svg>
   );
 }
 
+/** [1007] URL 의 내 노트 탭 판정 — ?tab=mine(세그먼트) 또는 ?mine=1(/my 진입로) */
+function wantsMineTab(search: string): boolean {
+  try {
+    const sp = new URLSearchParams(search);
+    return sp.get("tab") === "mine" || sp.get("mine") === "1";
+  } catch {
+    return false;
+  }
+}
+
 export function NotesFeedClient({
-  notes,
-  mine = false,
+  notes: publicNotes,
+  mine: mineProp,
   loadError = null,
-  showInterestFilter = false,
-  loggedIn = false,
+  showInterestFilter: showInterestFilterProp,
+  loggedIn: loggedInProp,
   hasMore = false,
   pageSize = 30,
   hasBestMonth = false,
 }: {
+  /** 서버가 그린 공개 첫 페이지(모두에게 같은 값 — ISR HTML) */
   notes: FeedNote[];
-  /** 내 노트 뷰(?mine=1 · ?tab=mine) — 세션 사용자의 노트(비공개 포함) */
+  /** 내 노트 뷰(?mine=1 · ?tab=mine). [1007] 생략하면 마운트 뒤 URL·세션으로 판정한다 */
   mine?: boolean;
   /** 조회 자체가 실패했을 때의 사유. "노트가 없다" 와 반드시 구분해 표시한다. */
   loadError?: string | null;
-  /** 지역 알림 구독이 1건 이상일 때만 true. false 면 "내 관심 지역" 칩을 아예 감춘다 */
+  /** 지역 알림 구독이 1건 이상일 때만 true. false 면 "내 관심 지역" 칩을 아예 감춘다.
+      [1007] 생략하면 세션 판정 뒤 /api/me/alerts 로 읽는다 */
   showInterestFilter?: boolean;
-  /** [967 · 20] 로그인 상태 — 세그먼트(공개/내 노트)는 로그인했을 때만 그린다 */
+  /** [967 · 20] 로그인 상태 — 세그먼트(공개/내 노트)는 로그인했을 때만 그린다.
+      [1007] 생략하면 세션 프로브(헤더와 공유, 요청 0 추가)로 판정한다 */
   loggedIn?: boolean;
   /** [967 · 19] 첫 페이지가 꽉 찼는지(더 볼 것이 있을 가능성). 공개 뷰에서만 의미 있다 */
   hasMore?: boolean;
@@ -382,13 +425,109 @@ export function NotesFeedClient({
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("최신");
   const [view, setView] = useState<ViewMode>("grid");
+
+  /* ── [1007] 보는 사람·탭 — 서버(ISR)는 비로그인 공개 피드만 그린다. 마운트 뒤:
+       ① 세션 프로브(공유 프라미스) → 로그인이면 세그먼트를 그리고 /api/me/alerts 로 관심 지역을 읽어
+          공개 카드의 interested 를 다시 판정한다(lib/notes/region-match — 서버 빌더와 같은 규칙).
+       ② URL 이 내 노트 탭이면(?tab=mine · ?mine=1): 비로그인은 예전 서버 redirect 와 같은 목적지
+          (/login?callbackUrl=/notes?tab=mine)로, 로그인은 /api/inspection/notes/mine 으로 받는다.
+       세그먼트 전환은 history.replaceState 로 URL 만 바꾼다 — useSearchParams 는 정적 셸에서
+       Suspense 없이는 프리렌더 HTML 에서 피드가 사라진다(/town/news 실측). */
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(loggedInProp ?? null);
+  const [interestRegions, setInterestRegions] = useState<string[] | null>(null);
+  const [tab, setTab] = useState<NotesTab | null>(mineProp === undefined ? null : mineProp ? "mine" : "public");
+  const [mineState, setMineState] = useState<{
+    status: "idle" | "loading" | "ok" | "error";
+    notes: FeedNote[];
+    error: string | null;
+  }>({ status: "idle", notes: [], error: null });
+
+  const loadMine = async () => {
+    setMineState((prev) => ({ ...prev, status: "loading", error: null }));
+    try {
+      const res = await fetch("/api/inspection/notes/mine", { cache: "no-store" });
+      if (res.status === 401) {
+        router.replace(`/login?callbackUrl=${encodeURIComponent("/notes?tab=mine")}`);
+        return;
+      }
+      const data = (await res.json().catch(() => null)) as {
+        items?: FeedNote[];
+        interestRegions?: string[];
+        error?: string;
+      } | null;
+      if (!res.ok || !Array.isArray(data?.items)) {
+        /* 빈 배열로 삼키면 "아직 쓴 노트가 없어요"가 뜬다 — 내가 쓴 기록이 사라진 것처럼
+           보이는 화면이다. 공개 피드와 같은 방식으로 실패를 적는다. */
+        setMineState({ status: "error", notes: [], error: data?.error ?? `HTTP ${res.status}` });
+        return;
+      }
+      if (Array.isArray(data.interestRegions)) setInterestRegions(data.interestRegions);
+      setMineState({ status: "ok", notes: data.items, error: null });
+    } catch (e) {
+      setMineState({ status: "error", notes: [], error: e instanceof Error ? e.message : String(e) });
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const wantMine = mineProp ?? wantsMineTab(window.location.search);
+    void getSessionLite().then(async (s) => {
+      if (cancelled) return;
+      const authed = loggedInProp ?? Boolean(s?.user?.email);
+      setLoggedIn(authed);
+      if (!authed) {
+        if (wantMine) {
+          router.replace(`/login?callbackUrl=${encodeURIComponent("/notes?tab=mine")}`);
+          return;
+        }
+        setTab("public");
+        return;
+      }
+      setTab(wantMine ? "mine" : "public");
+      if (wantMine) void loadMine();
+      if (showInterestFilterProp === undefined) {
+        try {
+          const r = await fetch("/api/me/alerts", { cache: "no-store" });
+          const j = r.ok
+            ? ((await r.json().catch(() => null)) as { items?: { type: string; value: string }[] } | null)
+            : null;
+          if (cancelled) return;
+          /* 구독 조회 실패 — 칩을 숨겨 "관심 지역에 노트가 없다"고 단정하지 않는다 */
+          setInterestRegions(
+            Array.isArray(j?.items)
+              ? j.items.filter((x) => x.type === "region").map((x) => x.value)
+              : [],
+          );
+        } catch {
+          if (!cancelled) setInterestRegions([]);
+        }
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const mine = tab === "mine";
+  const showInterestFilter =
+    showInterestFilterProp ?? (interestRegions !== null && interestRegions.length > 0);
+  /* 공개 카드의 관심 지역 표식 — 서버는 사용자별 값을 모른다(ISR). 로그인 사용자의 구독 지역으로 다시 판정 */
+  const notes = useMemo<FeedNote[]>(() => {
+    if (mine) return mineState.notes;
+    if (!interestRegions || interestRegions.length === 0) return publicNotes;
+    return publicNotes.map((n) => ({ ...n, interested: matchesInterest(n.region, interestRegions) }));
+  }, [mine, mineState.notes, publicNotes, interestRegions]);
+  const activeLoadError = mine ? mineState.error : loadError;
+
   /* [967 · 19] "더 보기" 로 이어 붙인 카드 — 서버 첫 페이지(props) 뒤에 붙는다.
      필터·정렬은 합친 목록에 건다(붙인 카드도 관심 지역·점수순을 똑같이 따른다). */
   const [extra, setExtra] = useState<FeedNote[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState<string | null>(null);
   const [reachedEnd, setReachedEnd] = useState(!hasMore);
-  const allNotes = extra.length > 0 ? [...notes, ...extra] : notes;
+  /* [1006] useMemo — 아래 mineFilterOptions 의 의존성이라 렌더마다 새 배열이면 매번 다시 센다 */
+  const allNotes = useMemo(() => (extra.length > 0 ? [...notes, ...extra] : notes), [notes, extra]);
   const exampleOnly = allNotes.length > 0 && allNotes.every((n) => n.isExample);
   /* [966] 상세 → 뒤로가기 스크롤 복원. 노트는 서버가 내려준 props 라 첫 렌더에 이미
      그려져 있다(ready) — 타일은 3:4 고정 비율이라 사진이 늦게 와도 높이가 안 변한다. */
@@ -399,19 +538,38 @@ export function NotesFeedClient({
   const filters = FILTERS.filter((f) => f !== "내 관심 지역" || showInterestFilter);
   const activeFilter = filters.includes(filter) ? filter : "최신";
 
-  const visible =
-    activeFilter === "점수순"
+  /* [1006] 내 노트 뷰 — 정렬·판단·지역·기간(방문일) 필터. 규칙은 lib/notes/mine-filters(순수),
+     칩은 실제로 있는 값만. 공개 피드는 종전 칩(최신·점수순·관심 지역) 그대로 — 남의 노트에
+     판단·AI 상태 필터를 거는 건 다른 화면의 일이다. */
+  const [mineFilters, setMineFilters] = useState<MineFilters>(DEFAULT_MINE_FILTERS);
+  const mineOptions = useMemo(() => (mine ? mineFilterOptions(allNotes) : null), [mine, allNotes]);
+  const mineActive = mine && hasActiveMineFilter(mineFilters);
+
+  const visible = mine
+    ? applyMineFilters(allNotes, mineFilters)
+    : activeFilter === "점수순"
       ? [...allNotes].sort((a, b) => b.score - a.score)
       : activeFilter === "내 관심 지역"
         ? allNotes.filter((n) => n.interested)
         : allNotes;
 
-  /* [967 · 20] 세그먼트 → URL(?tab=mine). 내 노트는 서버가 세션으로 읽는 목록이라
-     클라이언트가 필터로 흉내 낼 수 없다 — replace 로 서버 렌더를 다시 받는다.
-     scroll:false — 세그먼트는 같은 화면의 상태 전환이지 페이지 이동이 아니다. */
+  /* [967 · 20] 세그먼트 → URL(?tab=mine). [1007] 내 노트는 /api/inspection/notes/mine 으로 받고,
+     URL 은 history.replaceState 로만 바꾼다(페이지는 ISR — 서버 렌더를 다시 받을 것이 없다).
+     예전의 key 리마운트가 하던 일(필터·더 보기 누적 초기화)은 여기서 직접 한다. */
   const switchTab = (next: NotesTab) => {
     if ((next === "mine") === mine) return;
-    router.replace(next === "mine" ? "/notes?tab=mine" : "/notes", { scroll: false });
+    try {
+      window.history.replaceState(window.history.state, "", next === "mine" ? "/notes?tab=mine" : "/notes");
+    } catch {
+      /* 주소 갱신 실패는 화면 전환을 막지 않는다 */
+    }
+    setFilter("최신");
+    setMineFilters(DEFAULT_MINE_FILTERS);
+    setExtra([]);
+    setMoreError(null);
+    setReachedEnd(!hasMore);
+    setTab(next);
+    if (next === "mine" && mineState.status !== "ok") void loadMine();
   };
 
   /* [967 · 19] 다음 페이지 — 마지막 카드의 createdAt 을 커서로 넘긴다. 응답이 페이지
@@ -452,7 +610,9 @@ export function NotesFeedClient({
 
   return (
     <PageShell>
-      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4 md:gap-5">
+      {/* [1005] 안쪽 폭 1240 — 홈·PageShell 과 같은 컨테이너(예전 1120 은 이 화면만 좁았다).
+          카드·타일의 최대 폭은 그대로다(PostCard 468 · 타일 열 수). */}
+      <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-4 md:gap-5">
         {/* 헤더 */}
         <div className="px-1">
           {/* [967 · 20] 공개/내 노트 세그먼트 — 로그인했을 때만. 예전엔 내 노트로 가는
@@ -469,7 +629,7 @@ export function NotesFeedClient({
           <h1 className="t-title text-ink md:t-title">
             {mine ? "내 임장노트" : "공개 임장노트"}
           </h1>
-          <p className="mt-1.5 text-[13px] text-text-2">
+          <p className="mt-1.5 t-body text-text-2">
             {mine
               ? "내가 남긴 임장 기록 — 비공개 노트도 여기서만 보여요"
               : "이웃들의 실제 임장 기록 — 실회원 기록만 노출돼요"}
@@ -493,7 +653,7 @@ export function NotesFeedClient({
         </div>
 
         {/* 조회 실패 — 이 경우 "노트가 없다" 고 읽히면 안 되므로 빈 상태와 분리한다 */}
-        {loadError && (
+        {activeLoadError && (
           <div className="rounded-[10px] border border-line bg-surface px-3.5 py-3 t-sub text-text-2">
             {mine ? "내 임장노트를" : "공개 임장노트를"}{" "}
             <strong className="text-ink">불러오지 못했습니다</strong>. 노트가 없다는 뜻이 아니라
@@ -504,8 +664,13 @@ export function NotesFeedClient({
         {/* 스토리 줄 */}
         {visible.length > 0 && <StoryRail notes={visible} />}
 
-        {/* 필터 칩 + 뷰 전환 */}
+        {/* 필터 칩 + 뷰 전환. [1006] 내 노트가 0건이면 필터·뷰 전환을 그리지 않는다 — 고를 것이 없다 */}
+        {(!mine || allNotes.length > 0) && (
         <div className="flex items-center justify-between gap-2 px-1">
+          {mine ? (
+            /* [1006] 내 노트 — 필터는 아래 전용 줄(MineFilterBar). 여기엔 뷰 전환만 */
+            <span className="t-caption text-text-3">보기 방식</span>
+          ) : (
           <div className="-mx-1 flex gap-2 overflow-x-auto px-1 t-body [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {filters.map((f) => (
               <button
@@ -522,6 +687,7 @@ export function NotesFeedClient({
               </button>
             ))}
           </div>
+          )}
           <div className="flex shrink-0 items-center gap-1">
             <button
               type="button"
@@ -547,6 +713,19 @@ export function NotesFeedClient({
             </button>
           </div>
         </div>
+        )}
+
+        {/* [1006] 내 노트 필터 줄 — 정렬 · 판단 · 지역 · 기간(방문일) */}
+        {mine && mineOptions && allNotes.length > 0 && (
+          <MineFilterBar
+            value={mineFilters}
+            options={mineOptions}
+            total={allNotes.length}
+            shown={visible.length}
+            onChange={setMineFilters}
+            onReset={() => setMineFilters(DEFAULT_MINE_FILTERS)}
+          />
+        )}
 
         {/* 예시 안내 */}
         {exampleOnly && (
@@ -559,11 +738,33 @@ export function NotesFeedClient({
           </div>
         )}
 
-        {/* 본문: 그리드 / 피드 / 빈 상태 */}
-        {visible.length === 0 ? (
+        {/* 본문: 그리드 / 피드 / 빈 상태. [1007] 내 노트는 받는 중이면 빈 상태 대신 안내 — "없어요"를 먼저 말하지 않는다 */}
+        {mine && (mineState.status === "idle" || mineState.status === "loading") ? (
+          <p role="status" aria-busy="true" className="py-8 text-center t-sub text-text-3">
+            내 임장노트를 불러오는 중…
+          </p>
+        ) : visible.length === 0 ? (
           /* 빈 상태를 한 문장으로 뭉뚱그리면 "노트가 없다"와 "필터가 걸러 냈다"가
              섞인다. 노트는 있는데 필터 결과만 0건인 경우를 따로 적는다. */
           allNotes.length > 0 ? (
+            mineActive ? (
+              /* [1006] 내 노트 — 필터가 걸러 낸 0건. 다음 행동은 "쓰기"가 아니라 "필터 지우기"다 */
+              <div className="flex flex-col items-center gap-2">
+                <EmptyState
+                  icon="file-text"
+                  title="이 조건에 맞는 내 노트가 없어요"
+                  desc={`내 노트 ${allNotes.length}건 중 판단·지역·기간 조건에 맞는 건 없었어요.`}
+                  className="w-full"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMineFilters(DEFAULT_MINE_FILTERS)}
+                  className="btn-soft px-5 py-2.5 t-body font-bold"
+                >
+                  필터 지우기
+                </button>
+              </div>
+            ) : (
             <EmptyState
               icon="file-text"
               title={
@@ -578,6 +779,7 @@ export function NotesFeedClient({
               }
               action={{ label: "임장노트 쓰기", href: "/notes/new" }}
             />
+            )
           ) : (
             <EmptyState
               icon="file-text"
@@ -613,7 +815,7 @@ export function NotesFeedClient({
         {/* [967 · 19] 더 보기 — 공개 뷰에서만(내 노트는 listNotes 가 200건까지 한 번에 준다).
             첫 페이지가 꽉 찼을 때만 버튼을 그리고, 짧은 응답이 오면 "마지막이에요" 로 닫는다.
             버튼은 목록 아래 제자리라 스크롤 위치가 그대로 유지된다(위로 튀지 않는다). */}
-        {!mine && !loadError && hasMore && allNotes.length > 0 && (
+        {!mine && !activeLoadError && hasMore && allNotes.length > 0 && (
           <div className="flex flex-col items-center gap-2 py-1">
             {reachedEnd ? (
               <p role="status" className="t-sub text-text-3">
@@ -638,18 +840,20 @@ export function NotesFeedClient({
           </div>
         )}
 
-        {/* 모바일 전용 노트 쓰기 CTA — [#68] 현장 퀵 기록 나란히 */}
+        {/* 모바일 전용 노트 쓰기 CTA — [#68] 현장 퀵 기록 나란히.
+            [1005] 퀵 기록은 이제 진짜 한 화면 플로우(/notes/new?quick=1). 두 버튼 모두 램프
+            글자(t-section/t-body)·높이 52px 로 맞추고, 손으로 적은 브랜드 블루 그림자는
+            .btn-cta(--shadow-cta 토큰)로 바꿨다 — 다크·테마 변형에서도 맞는다. */}
         <div className="rise-in-2 mx-auto flex w-full max-w-[468px] gap-2 md:hidden">
           <Link
             href="/notes/new"
-            className="btn-primary flex-1 rounded-2xl p-[15px] text-center text-[15px]"
-            style={{ boxShadow: "0 10px 26px rgba(29,79,216,.35)" }}
+            className="btn-primary btn-cta flex min-h-[52px] flex-1 items-center justify-center rounded-2xl px-4 py-3 text-center t-section no-underline"
           >
             노트 쓰기
           </Link>
           <Link
             href="/notes/new?quick=1"
-            className="flex-1 rounded-2xl border-[1.5px] border-dashed border-line-strong bg-surface p-[15px] text-center t-body font-bold text-text-1"
+            className="flex min-h-[52px] flex-1 items-center justify-center rounded-2xl border-[1.5px] border-dashed border-line-strong bg-surface px-4 py-3 text-center t-body font-bold text-text-1 no-underline"
           >
             📷 현장 퀵 기록
           </Link>

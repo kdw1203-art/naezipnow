@@ -13,7 +13,10 @@ import { ComplianceNotice } from "@/app/components/ComplianceNotice";
    키를 복구했고 실측으로 확인했다(목록 정상 + anon GRANT 는 여전히 닫힘).
    같은 부류 재발은 /api/health 의 privilegedRead 체크가 이제 degraded 로 잡는다
    — 실패가 또 캐시되더라도 5분 안에 헬스가 울린다. */
-export const revalidate = 300;
+/* [1010] 300 → 21,600(6시간). 목록을 바꾸는 쓰기는 물건 등록 하나뿐이고
+   (app/api/dev-deals/deal/route.ts POST) 그 자리에서 /dev-deals 를 즉시 비운다.
+   조회 실패를 캐시에 눌러앉히는 문제는 위 주석대로 health.privilegedRead 가 감시한다. */
+export const revalidate = 21_600;
 export function generateStaticParams() {
   return [];
 }

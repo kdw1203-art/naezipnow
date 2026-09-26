@@ -1,6 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Segmented } from "@/app/components/ui/Segmented";
+import { Explain } from "@/app/components/explain/Explain";
+import {
+  BROKERAGE_BASIS,
+  LEASE_HOUSE_BRACKETS,
+  SALE_HOUSE_BRACKETS,
+  bracketLine,
+  brokerageFeeCap,
+  leaseAmountWon,
+  type BrokerageDeal,
+  type BrokerageProperty,
+} from "@/lib/finance/brokerage";
+import { nb, wonText } from "@/lib/finance/money";
+import { TweenMoney } from "./TweenMoney";
 
 /* [개선 #6, 2026-08-22] 중개보수(중개수수료) 계산기.
  *
@@ -11,50 +25,30 @@ import { useMemo, useState } from "react";
  *   보증금 + 월세×70 으로 다시 계산한다(시행규칙 산정 방식 그대로).
  * - 부가가치세(10%)는 별도다.
  * 이 사실들은 화면에 그대로 고지한다 — 계산기가 확정 금액처럼 말하면 안 된다.
+ *
+ * [1009 · T] 요율표를 lib/finance/brokerage.ts 로 옮겼다(대출 계산기의 필요 현금도 같은 표를 쓴다). 옮기면서 **한도액 오류**를
+ * 고쳤다: 예전 표의 `25_0000_0`·`80_0000_0`·`20_0000_0`·`30_0000_0` 은 숫자 구분자 때문에 250만·800만·200만·300만원
+ * (법정 25만·80만·20만·30만원의 10배)이라 한도가 한 번도 걸리지 않았다 — 1억 8천만원 매매는 "최대 900,000원 ·
+ * 0.5% (한도 8,000,000원)"으로 나왔다(법정 상한 800,000원). 이제 한도가 걸리고, 그 사실을 문장으로 말한다.
+ * 결과는 결론 한 줄 + 굴러가는 큰 숫자(원 단위 "336만원"), 유형 전환은 공용 Segmented.
  */
 
-type DealType = "sale" | "lease";
-type PropertyType = "house" | "officetel" | "other";
-
-/** [하한(원), 상한요율, 한도액(원)|null] — 구간은 하한 이상 다음 하한 미만 */
-const SALE_HOUSE: Array<[number, number, number | null]> = [
-  [0, 0.006, 25_0000_0],
-  [5000_0000, 0.005, 80_0000_0],
-  [2_0000_0000, 0.004, null],
-  [9_0000_0000, 0.005, null],
-  [12_0000_0000, 0.006, null],
-  [15_0000_0000, 0.007, null],
-];
-const LEASE_HOUSE: Array<[number, number, number | null]> = [
-  [0, 0.005, 20_0000_0],
-  [5000_0000, 0.004, 30_0000_0],
-  [1_0000_0000, 0.003, null],
-  [6_0000_0000, 0.004, null],
-  [12_0000_0000, 0.005, null],
-  [15_0000_0000, 0.006, null],
-];
-
-function bracketFor(table: Array<[number, number, number | null]>, amount: number) {
-  let hit = table[0];
-  for (const row of table) if (amount >= row[0]) hit = row;
-  return hit;
-}
-
-function krw(n: number): string {
-  return `${Math.round(n).toLocaleString("ko-KR")}원`;
-}
+const DEALS = [
+  { value: "sale", label: "매매·교환" },
+  { value: "lease", label: "임대차 (전세·월세)" },
+] as const;
+const PROPS = [
+  { value: "house", label: "주택" },
+  { value: "officetel", label: "오피스텔 (85㎡ 이하)" },
+  { value: "other", label: "토지·상가 등" },
+] as const;
 
 const inputCls =
   "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[13px] text-ink placeholder:text-text-3";
-/* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
-const chip = (on: boolean) =>
-  `press rounded-full px-3.5 py-2 text-[13px] ${
-    on ? "bg-brand-navy font-bold text-on-dark" : "border border-line bg-surface font-semibold text-text-2"
-  }`;
 
 export function BrokerageFeeCalc() {
-  const [deal, setDeal] = useState<DealType>("sale");
-  const [prop, setProp] = useState<PropertyType>("house");
+  const [deal, setDeal] = useState<BrokerageDeal>("sale");
+  const [prop, setProp] = useState<BrokerageProperty>("house");
   const [priceMan, setPriceMan] = useState("80000"); // 매매가 (만원)
   const [depositMan, setDepositMan] = useState("30000"); // 보증금 (만원)
   const [monthlyMan, setMonthlyMan] = useState("0"); // 월세 (만원)
@@ -67,52 +61,19 @@ export function BrokerageFeeCalc() {
       amount = toWon(priceMan);
       amountNote = "거래금액 = 매매가";
     } else {
-      const dep = toWon(depositMan);
-      const mon = toWon(monthlyMan);
-      amount = dep + mon * 100;
-      amountNote = "거래금액 = 보증금 + 월세×100";
-      if (amount < 5000_0000 && mon > 0) {
-        amount = dep + mon * 70;
-        amountNote = "거래금액 = 보증금 + 월세×70 (환산액 5천만원 미만 규정)";
-      }
+      const lease = leaseAmountWon(toWon(depositMan), toWon(monthlyMan));
+      amount = lease.amountWon;
+      amountNote = lease.note;
     }
-    if (amount <= 0) return null;
-
-    if (prop === "other") {
-      // 주택 외(토지·상가): 0.9% 이내 협의
-      return {
-        amount,
-        amountNote,
-        rateLabel: "0.9% 이내 협의",
-        fee: amount * 0.009,
-        feeLabel: `최대 ${krw(amount * 0.009)}`,
-        capped: false,
-      };
-    }
-    if (prop === "officetel") {
-      // 전용 85㎡ 이하·주거설비 갖춘 오피스텔: 매매 0.5% / 임대차 0.4% (한도 없음)
-      const r = deal === "sale" ? 0.005 : 0.004;
-      return {
-        amount,
-        amountNote,
-        rateLabel: `${(r * 100).toFixed(1)}%`,
-        fee: amount * r,
-        feeLabel: `최대 ${krw(amount * r)}`,
-        capped: false,
-      };
-    }
-    const [, rate, cap] = bracketFor(deal === "sale" ? SALE_HOUSE : LEASE_HOUSE, amount);
-    const raw = amount * rate;
-    const fee = cap != null ? Math.min(raw, cap) : raw;
-    return {
-      amount,
-      amountNote,
-      rateLabel: `${(rate * 100).toFixed(1)}%${cap != null ? ` (한도 ${krw(cap)})` : ""}`,
-      fee,
-      feeLabel: `최대 ${krw(fee)}`,
-      capped: cap != null && raw > cap,
-    };
+    const fee = brokerageFeeCap({ amountWon: amount, deal, property: prop });
+    return fee ? { ...fee, amountNote } : null;
   }, [deal, prop, priceMan, depositMan, monthlyMan]);
+
+  /* 결론 한 줄 — 실제 계산값으로만(금액이 없으면 문장도 없다) */
+  const dealWord = deal === "sale" ? "매매" : "임대차";
+  const conclusion = result
+    ? `거래금액 ${nb(wonText(result.amountWon))} ${dealWord}의 중개보수는 최대 ${nb(wonText(result.feeWon))}이에요`
+    : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -122,29 +83,8 @@ export function BrokerageFeeCalc() {
           <span className="text-[12px] font-medium text-text-3">법정 상한요율 기준</span>
         </div>
 
-        <div className="flex gap-2">
-          <button type="button" onClick={() => setDeal("sale")} className={chip(deal === "sale")}>
-            매매·교환
-          </button>
-          <button type="button" onClick={() => setDeal("lease")} className={chip(deal === "lease")}>
-            임대차 (전세·월세)
-          </button>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setProp("house")} className={chip(prop === "house")}>
-            주택
-          </button>
-          <button
-            type="button"
-            onClick={() => setProp("officetel")}
-            className={chip(prop === "officetel")}
-          >
-            오피스텔 (85㎡ 이하)
-          </button>
-          <button type="button" onClick={() => setProp("other")} className={chip(prop === "other")}>
-            토지·상가 등
-          </button>
-        </div>
+        <Segmented options={DEALS} value={deal} onChange={setDeal} ariaLabel="거래 유형" className="self-start" />
+        <Segmented options={PROPS} value={prop} onChange={setProp} ariaLabel="매물 종류" className="max-w-full self-start overflow-x-auto" />
 
         {deal === "sale" ? (
           <label className="flex flex-col gap-1">
@@ -186,17 +126,40 @@ export function BrokerageFeeCalc() {
         )}
 
         {result && (
-          <div className="rounded-2xl bg-bg p-4">
-            <div className="text-[12px] text-text-3">{result.amountNote}</div>
-            <div className="mt-0.5 text-[12px] text-text-2">
-              거래금액 <b className="text-ink">{krw(result.amount)}</b> · 적용 상한요율{" "}
-              <b className="text-ink">{result.rateLabel}</b>
+          <div className="flex flex-col gap-1.5 rounded-2xl bg-bg p-4">
+            {conclusion && <p className="t-body break-words font-bold text-ink">{conclusion}</p>}
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span className="flex items-center gap-0.5 t-sub text-text-3">
+                법정 상한
+                <Explain
+                  title="중개보수(법정 상한)"
+                  body={[
+                    "중개사무소에 내는 보수의 법정 최고액이에요. 실제 보수는 이 금액 안에서 중개사와 협의해 정해요.",
+                    "부가가치세 10%는 따로예요. 시·도 조례로 일부 다를 수 있어요.",
+                  ]}
+                  how={[
+                    "상한 = 거래금액 × 상한요율 — 구간 한도액이 있으면 그 금액까지",
+                    `주택 매매: ${bracketLine(SALE_HOUSE_BRACKETS)}`,
+                    `주택 임대차: ${bracketLine(LEASE_HOUSE_BRACKETS)}`,
+                    "임대차 거래금액 = 보증금 + 월세 × 100 (5천만원 미만이면 월세 × 70)",
+                  ]}
+                  source={BROKERAGE_BASIS}
+                  size={12}
+                />
+              </span>
+              <TweenMoney value={result.feeWon} unit="원" className="t-title text-primary" />
             </div>
-            <div className="mt-2 text-[21px] font-extrabold text-primary">{result.feeLabel}</div>
-            <div className="mt-1 text-[12px] leading-[1.7] text-text-3">
-              법정 <b>상한</b>이며 확정 보수가 아니에요 — 실제 보수는 이 금액 이내에서
-              중개사와 협의해 정합니다{result.capped ? " (구간 한도액이 적용된 금액)" : ""}.
-              부가가치세 10%는 별도입니다.
+            <div className="text-[12px] text-text-3">{result.amountNote}</div>
+            <div className="text-[12px] text-text-2">
+              거래금액 <b className="t-num font-bold text-ink">{wonText(result.amountWon)}</b> · 적용 상한요율{" "}
+              <b className="font-bold text-ink">{result.rateLabel}</b>
+            </div>
+            <div className="text-[12px] leading-[1.7] text-text-3">
+              {result.capped
+                ? `요율대로면 ${wonText(result.amountWon * result.rate)}이지만 구간 한도액이 적용돼 ${wonText(result.feeWon)}까지예요. `
+                : ""}
+              법정 <b>상한</b>이며 확정 보수가 아니에요 — 실제 보수는 이 금액 이내에서 중개사와 협의해 정합니다.
+              부가가치세 10%는 별도입니다. 일반 정보이며 법률·세무 자문이 아니에요.
             </div>
           </div>
         )}
@@ -214,7 +177,7 @@ export function BrokerageFeeCalc() {
                 <th className="py-1.5 font-semibold">임대차</th>
               </tr>
             </thead>
-            <tbody className="text-text-1">
+            <tbody className="text-text-1 tabular-nums">
               <tr className="border-b border-divider"><td className="py-1.5 pr-2">5천만원 미만</td><td className="pr-2">0.6% · 한도 25만</td><td>0.5% · 한도 20만</td></tr>
               <tr className="border-b border-divider"><td className="py-1.5 pr-2">5천만 ~ 1억</td><td className="pr-2">0.5% · 한도 80만</td><td>0.4% · 한도 30만</td></tr>
               <tr className="border-b border-divider"><td className="py-1.5 pr-2">1억 ~ 2억</td><td className="pr-2">0.5% · 한도 80만</td><td>0.3%</td></tr>

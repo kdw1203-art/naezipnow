@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { newsHref, storyHref } from "@/lib/town/post-href";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
 import { QaBlock } from "@/app/components/QaBlock";
+import { Explain } from "@/app/components/explain/Explain";
 import {
   getDigestWeek,
   weekSlugToMs,
@@ -29,7 +31,9 @@ import { seoAlternates } from "@/lib/seo/alternates";
    확정 신고하는 꼴이다.
    ============================================================ */
 
-export const revalidate = 3600;
+/* [1010] 크롤러 재방문(≈2.2일)보다 짧은 TTL 은 크롤 1회 = 재렌더 1회다. 이 화면을 바꾸는
+   적재(SOURCE_MAP)가 이제 경로를 직접 비우므로 시간 TTL 은 안전망으로만 둔다. */
+export const revalidate = 86_400;
 /* 빈 배열 = "빌드 때 미리 만들 경로는 없다". 이 export 가 있어야 Next 가 이
    라우트를 ISR 로 분류한다 — 없으면 `revalidate` 를 적어 둬도 요청마다 서버
    렌더로 돌면서 Next 가 `private, no-cache, no-store` 를 실어 보내고, CDN 은
@@ -151,7 +155,7 @@ export default async function DigestWeekPage({
               {data.news.map((item) => (
                 <li key={item.id} className="card rounded-[14px] px-4 py-3">
                   <Link
-                    href={`/town/news/${item.id}`}
+                    href={newsHref(item.id)}
                     className="t-body font-bold text-ink no-underline hover:underline"
                   >
                     {item.title}
@@ -183,8 +187,9 @@ export default async function DigestWeekPage({
             <ul className="mt-3 flex list-none flex-col gap-2 p-0">
               {data.community.map((item) => (
                 <li key={item.id} className="card rounded-[14px] px-4 py-3">
+                  {/* [1007 · P2] 이웃 글(is_automated ≠ true)은 이야기 상세로 */}
                   <Link
-                    href={`/town/news/${item.id}`}
+                    href={storyHref(item.id)}
                     className="t-body font-bold text-ink no-underline hover:underline"
                   >
                     {item.title}
@@ -208,7 +213,19 @@ export default async function DigestWeekPage({
 
         {/* 시장 온도 — 그 주 스냅샷이 있을 때만 */}
         <section className="rise-in-4 mt-8">
-          <h2 className="t-section text-ink">그 주 시장 온도</h2>
+          <div className="flex items-center gap-0.5">
+            <h2 className="t-section text-ink">그 주 시장 온도</h2>
+            {/* [1009 · H] 온도 숫자의 뜻 — /methodology "시장 온도" 와 같은 말로 */}
+            <Explain
+              term="sijang-ondo"
+              how={[
+                "50점을 중립으로 ① 매매가격지수 모멘텀(최근 3구간 평균 변동률 — 월간 지수면 월 ±1%, 주간 지수면 주 ±0.3% 를 ±25점)과 ② 거래량 추이(이번 달을 뺀 최근 최대 3개월 합을 그 직전 같은 개월 수의 합과 비교, ±50% 변화를 ±25점)를 더하고 5~95점 안으로 잘라요.",
+                "이번 달을 뺀 거래량 월이 4개 미만이면 지수 모멘텀만 반영해요.",
+                "매수·매도 추천이 아니라 시장 상태를 요약한 숫자예요.",
+              ]}
+              source="내집나우 주간 산출 · 한국부동산원 지수 · 국토교통부 실거래 신고"
+            />
+          </div>
           {data.temperature.length > 0 ? (
             <div className="mt-3 overflow-x-auto">
               <table className="w-full min-w-[420px] border-collapse t-body">
@@ -230,8 +247,9 @@ export default async function DigestWeekPage({
                           {t.regionLabel}
                         </Link>
                       </td>
-                      <td className="py-2 pr-2 text-right font-bold tabular-nums text-primary">
+                      <td className="py-2 pr-2 text-right font-bold tabular-nums text-ink">
                         {Math.round(t.score)}
+                        <span className="ml-0.5 t-caption font-medium text-text-3">/100</span>
                       </td>
                       <td className="py-2 text-text-2">{t.headline}</td>
                     </tr>

@@ -17,7 +17,11 @@ import { relativeTimeLabel } from "@/lib/format/relative-time";
 /* 비용 실측(2026-08-10): force-dynamic 이라 크롤 1회 = 함수 호출 1회였다.
    렌더에 auth·cookies·쿼리 파라미터·쓰기 부작용 0건(check-cache-policy 감시).
    유일한 변이(답변 등록 API)가 revalidatePath 로 즉시 재생성한다. */
-export const revalidate = 600;
+/* [1010] 600초 → 7일. 이 화면의 유일한 변이는 답변 등록이고, 그 API 가 이미
+   revalidatePath(`/qna/{id}`) 를 부른다(질문 자체는 등록 뒤 수정·삭제 경로가 없다).
+   ※ 지금까지는 세그먼트 값이 아니라 단지 링크 해석 캐시(complex-href-v2, 6시간)가 실제 TTL 을
+     정하고 있었다 — 그 캐시도 7일 + "market" 태그(실거래 적재가 비움)로 바꿨다. */
+export const revalidate = 604_800;
 // 동적 세그먼트는 이게 없으면 "요청마다 서버 렌더"로 분류된다
 export function generateStaticParams() {
   return [];

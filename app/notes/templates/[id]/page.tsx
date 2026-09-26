@@ -8,7 +8,9 @@ import { getTemplate } from "@/lib/note-templates/store";
    돌았다(x-vercel-cache: MISS, cache-control: private,no-store 실측). 이 화면의
    서버 렌더에는 사용자별 상태가 없다(auth·cookies 0건 — check-cache-policy 가
    회귀를 막는다). ISR 로 전환: 템플릿 본문은 코드 배포로만 바뀐다. */
-export const revalidate = 3600;
+/* [1010] 3600초 → 1일. 목록과 같은 쓰기 지점이 이 상세 경로도 같이 비운다
+   (invalidateNoteTemplateRoutes(id) — 목록 + `/notes/templates/{id}`). */
+export const revalidate = 86_400;
 // 동적 세그먼트는 이게 없으면 "요청마다 서버 렌더"로 분류된다(2026-08 complex/[id] 실측)
 export function generateStaticParams() {
   return [];

@@ -15,11 +15,18 @@ import { hasSession } from "@/lib/client/has-session";
 import { ProfileEditSheet } from "../ProfileEditSheet";
 import type { ProfileInitial } from "../profile-fields";
 import { shouldShowSaveToast } from "./save-toast";
+import { formatKstDate } from "@/lib/format/kst";
+import { RecordPrefsTab } from "./RecordPrefsTab";
+import { AccountFactsCards } from "./AccountFacts";
+import { trackNewsletterOptIn } from "@/lib/analytics/events";
 
 /* 설정 — 진짜 설정만 유지, 네비게이션성 항목 제거.
-   섹션: 계정(프로필·비밀번호·테마·구독·데이터 내보내기·로그아웃·탈퇴) · 알림 · 개인정보.
-   저장되는 토글만 실배선(/api/me/notification-prefs · /api/me/consents), 저장 API 없는 항목은
-   지어내지 않고 링크·정직한 안내로 대체. [1000] 데이터 내보내기는 /api/me/export 로 실제 동작. */
+   섹션: 계정(프로필·비밀번호·테마·구독·연결된 로그인·가입일·데이터 내보내기·로그아웃·탈퇴) ·
+   표시·기록([1006] 면적 단위·노트 기본 공개·퀵 기록·투자자 역할 — RecordPrefsTab) ·
+   알림 · 개인정보.
+   저장되는 토글만 실배선(/api/me/notification-prefs · /api/me/consents · /api/me/preferences),
+   저장 API 없는 항목은 지어내지 않고 링크·정직한 안내로 대체. [1000] 데이터 내보내기는
+   /api/me/export 로 실제 동작. */
 
 /**
  * 이 서버가 실제로 **보낼 수 있는 채널**. 서버 컴포넌트(page.tsx)가 env 를 보고 넘긴다.
@@ -40,10 +47,12 @@ export type NotifyChannels = {
   sms: boolean;
 };
 
-type TabKey = "account" | "notification" | "privacy";
+type TabKey = "account" | "record" | "notification" | "privacy";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "account", label: "계정" },
+  /* [1006] 표시·기록 기본값 — 계정 탭에 얹으면 계정 탭이 화면 두 장을 넘어가서 따로 뗐다 */
+  { key: "record", label: "표시·기록" },
   { key: "notification", label: "알림" },
   { key: "privacy", label: "개인정보" },
 ];
@@ -276,9 +285,12 @@ function usePrefs() {
   }, []);
 
   /* 값을 지정해 저장 — 개인정보 탭의 마케팅 토글이 동의 API 와 **같은 목표값**을 쓰기 위해
-     (toggle 은 현재값의 반대라, 두 저장소가 어긋나 있으면 서로 반대로 뒤집힌다). */
+     (toggle 은 현재값의 반대라, 두 저장소가 어긋나 있으면 서로 반대로 뒤집힌다).
+     [1009 · T] label 을 주면 결과를 그 이름으로 말한다 — "‘댓글 · 답글’ 알림을 껐어요"(끌 때는 "되돌리기"). 예전엔 무엇을
+     바꿨든 "저장했어요" 한 가지였고, 실수로 끈 알림을 되살리려면 목록에서 다시 찾아야 했다. 이름 없는 저장은 예전처럼
+     "저장했어요"를 1.5초 간격으로만(save-toast). */
   const setPref = useCallback(
-    async (key: PrefKey, next: boolean) => {
+    async (key: PrefKey, next: boolean, label?: string) => {
       if (!prefs) return;
       const prev = prefs[key];
       setPrefs({ ...prefs, [key]: next });
@@ -292,6 +304,17 @@ function usePrefs() {
         if (!res.ok) throw new Error();
         const data = (await res.json()) as { prefs?: Prefs };
         if (data.prefs) setPrefs(data.prefs);
+        if (label) {
+          /* "쓰다 만 기록 알림"처럼 이름이 이미 "알림"으로 끝나면 "알림"을 두 번 붙이지 않는다 */
+          const name = label.endsWith("알림") ? `‘${label}’을` : `‘${label}’ 알림을`;
+          if (next) showToast(`${name} 켰어요`);
+          else
+            showToast(`${name} 껐어요`, {
+              label: "되돌리기",
+              onClick: () => void setPrefRef.current?.(key, true, label),
+            });
+          return;
+        }
         const now = Date.now();
         if (shouldShowSaveToast(lastToastAt.current, now)) {
           lastToastAt.current = now;
@@ -299,16 +322,19 @@ function usePrefs() {
         }
       } catch {
         setPrefs((p) => (p ? { ...p, [key]: prev } : p));
-        setSaveError("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setSaveError("저장하지 못했어요 — 잠시 후 다시 눌러 주세요.");
       }
     },
     [prefs, showToast],
   );
+  /* 되돌리기는 토스트가 뜬 뒤(다음 렌더)에 눌린다 — 그때의 최신 prefs 로 저장하도록 ref 로 부른다 */
+  const setPrefRef = useRef<typeof setPref | null>(null);
+  setPrefRef.current = setPref;
 
   const toggle = useCallback(
-    (key: PrefKey) => {
+    (key: PrefKey, label?: string) => {
       if (!prefs) return Promise.resolve();
-      return setPref(key, !prefs[key]);
+      return setPref(key, !prefs[key], label);
     },
     [prefs, setPref],
   );
@@ -386,7 +412,7 @@ function NotificationTab({ channels }: { channels: NotifyChannels }) {
                   type="button"
                   role="switch"
                   aria-checked={prefs[row.key]}
-                  onClick={() => void toggle(row.key)}
+                  onClick={() => void toggle(row.key, row.label)}
                   className={`flex w-full items-center justify-between py-[11px] text-left ${
                     i < group.rows.length - 1 ? "border-b border-divider" : ""
                   }`}
@@ -433,6 +459,8 @@ function usePrivacyConsents() {
   const [phase, setPhase] = useState<"guest" | "loading" | "ready" | "error">("loading");
   const [marketing, setMarketing] = useState(false);
   const [location, setLocation] = useState(false);
+  /* [1006] 동의 기록의 마지막 갱신 시각(user_consents.updated_at) — 계정 탭과 같은 사실을 여기서도 */
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -449,11 +477,12 @@ function usePrivacyConsents() {
           return;
         }
         const data = (await res.json()) as {
-          consents?: { marketing?: boolean; location?: boolean };
+          consents?: { marketing?: boolean; location?: boolean; updatedAt?: string | null };
         };
         if (!cancelled) {
           setMarketing(Boolean(data.consents?.marketing));
           setLocation(Boolean(data.consents?.location));
+          setUpdatedAt(data.consents?.updatedAt ?? null);
           setPhase("ready");
         }
       } catch {
@@ -478,13 +507,14 @@ function usePrivacyConsents() {
       return;
     }
     const data = (await res.json()) as {
-      consents?: { marketing?: boolean; location?: boolean };
+      consents?: { marketing?: boolean; location?: boolean; updatedAt?: string | null };
     };
     if (typeof data.consents?.marketing === "boolean") setMarketing(data.consents.marketing);
     if (typeof data.consents?.location === "boolean") setLocation(data.consents.location);
+    if (data.consents?.updatedAt !== undefined) setUpdatedAt(data.consents.updatedAt ?? null);
   }
 
-  return { phase, marketing, location, saveError, patch };
+  return { phase, marketing, location, updatedAt, saveError, patch };
 }
 
 function PrivacyTab() {
@@ -519,6 +549,8 @@ function PrivacyTab() {
                 const next = !marketingOn;
                 void setPref("emailMarketing", next);
                 void consents.patch({ marketing: next });
+                /* [1007 · P2] GA4 newsletter_opt_in — 켤 때만(동의 게이트 뒤에서만 전송, 실패 무시) */
+                if (next) trackNewsletterOptIn("settings");
               }}
               className="flex w-full items-center justify-between border-b border-divider py-[13px] text-left"
             >
@@ -549,6 +581,12 @@ function PrivacyTab() {
               </span>
               <Toggle on={consents.location} />
             </button>
+            <div className="py-2 t-caption text-text-3">
+              변경 즉시 저장돼요
+              {consents.updatedAt
+                ? ` · 마지막 갱신 ${formatKstDate(consents.updatedAt)}`
+                : " · 아직 바꾼 기록이 없어요"}
+            </div>
           </>
         )}
       </div>
@@ -704,7 +742,7 @@ function ProfileRows() {
 }
 
 /* ---------------- 계정 탭 ---------------- */
-function AccountTab({ guest }: { guest: boolean }) {
+function AccountTab({ guest, onGoPrivacy }: { guest: boolean; onGoPrivacy: () => void }) {
   /* [970 · C-03] 이 화면은 정적(세션 없음)이라 비로그인에게도 비밀번호 변경·구독·로그아웃·
      회원탈퇴가 그대로 보였다(알림 탭만 401 로 GuestCard). 게스트면 계정 항목 대신
      GuestCard — 화면 테마는 로그인과 무관하니 남긴다. */
@@ -744,12 +782,16 @@ function AccountTab({ guest }: { guest: boolean }) {
         </Link>
       </div>
 
+      {/* [1006] 연결된 로그인 수단 · 가입일 · 동의 갱신일 — GET /api/me/account 의 사실만 */}
+      <AccountFactsCards onGoPrivacy={onGoPrivacy} />
+
       {/* [1000] 데이터 내보내기 — GET /api/me/export (JSON). 내려받기는 브라우저가 처리한다. */}
       <div className="card flex flex-col gap-2 rounded-2xl p-4">
         <span className="t-body font-extrabold text-ink">내 데이터 내보내기</span>
         <p className="t-sub leading-[1.6] text-text-2">
           프로필 · 임장노트(제목·지역·단지·판단) · 관심 단지·저장 목록 · 알림 구독 · 포인트 내역(최근
-          500건) · 결제 내역 · 알림 설정을 JSON 파일 하나로 내려받아요. 카드 정보 같은 결제 비밀값은
+          500건) · 결제 내역 · 알림 설정 · 표시·기록 설정 · 내 집 마련 여정(계약·잔금 일정 포함)을 JSON 파일
+          하나로 내려받아요. 카드 정보 같은 결제 비밀값은
           들어가지 않고, 사진·본문 원문은 각 노트에서 따로 저장할 수 있어요.
         </p>
         <a
@@ -840,10 +882,11 @@ function DeleteAccountSection() {
   if (!open) {
     return (
       <div className="flex flex-col items-center gap-1">
+        {/* [1006] 글자만 있는 버튼 — 문장 속 링크 규칙(24px 히트)을 맞춘다 */}
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="t-sub font-bold text-danger underline-offset-2 hover:underline"
+          className="inline-flex min-h-[24px] items-center px-2 t-sub font-bold text-danger underline-offset-2 hover:underline"
         >
           회원탈퇴
         </button>
@@ -952,7 +995,15 @@ export function SettingsClient({ channels }: { channels: NotifyChannels }) {
           ))}
         </div>
         <div className="rise-in-1">
-          {tab === "account" && <AccountTab guest={guest === true} />}
+          {tab === "account" && (
+            <AccountTab guest={guest === true} onGoPrivacy={() => setTab("privacy")} />
+          )}
+          {tab === "record" &&
+            (guest === true ? (
+              <GuestCard />
+            ) : (
+              <RecordPrefsTab onGoNotification={() => setTab("notification")} />
+            ))}
           {tab === "notification" && <NotificationTab channels={channels} />}
           {tab === "privacy" && <PrivacyTab />}
         </div>

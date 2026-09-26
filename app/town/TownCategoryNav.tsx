@@ -99,7 +99,8 @@ export function TownCategoryNav({
             className={`press relative flex w-[96px] shrink-0 flex-col items-center justify-center rounded-2xl border px-2 text-center no-underline transition-all duration-300 ease-out md:w-auto md:min-w-0 md:flex-1 md:basis-0 ${
               pinned
                 ? "h-[68px] border-primary bg-primary-soft shadow-[var(--shadow-md)] md:h-[76px]"
-                : "card tile h-[80px] border-transparent md:h-[96px]"
+                : /* [1006] 뉴스룸 입구는 한지 면 — 나머지 흰 카드와 재질이 다르다(lib/town/category-links entry) */
+                  `card tile h-[80px] border-transparent md:h-[96px] ${l.entry === "newsroom" ? "news-entry-card" : ""}`
             }`}
           >
             {/* 아이콘 칩 — 9칸이 전부 같은 잉크색이라 목록이 평평했다.

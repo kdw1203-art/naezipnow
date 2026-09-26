@@ -19,6 +19,8 @@
  */
 import { formatKrwWon } from "@/lib/format/krw";
 import { DELTA_UNKNOWN } from "@/lib/newui/delta-label";
+import { reportingClosed } from "@/lib/newui/reporting-window";
+import { indexMoMByRegion, type IndexRow } from "@/lib/newui/home-briefing";
 import type { DeltaTone, HomeRegionCard } from "@/lib/newui/home-data";
 
 /** 홈 시세 카드로 보여줄 지역 (내부 region id — seoul-districts 기준) */
@@ -102,7 +104,16 @@ export const FALLBACK_MIN_TRADES = 10;
 export function regionCardsFromMonthly(
   rows: MonthlyRow[],
   targets: readonly CardRegionTarget[],
-  opts: { minTrades?: number } = {},
+  opts: {
+    minTrades?: number;
+    /**
+     * [1009 · H] 주면 **신고 기한(말일 + 30일)이 지난 달**만 쓴다(lib/newui/reporting-window).
+     * 왜: 10건 문턱만으로는 신고가 반쯤 들어온 달이 뽑혔다 — 2026-09-22 운영에서 강남구 카드가 8월(80건, 7월 189건의
+     * 절반도 안 되는 신고 중인 달) 평균으로 "▼ 6.9%"를 띄웠다. 홈(home-data)은 렌더 시각을 넘긴다.
+     * 안 주면 예전 규칙 그대로(테스트·다른 호출 호환).
+     */
+    now?: Date;
+  } = {},
 ): HomeRegionCard[] {
   const minTrades = opts.minTrades ?? FALLBACK_MIN_TRADES;
   const cards: HomeRegionCard[] = [];
@@ -115,6 +126,7 @@ export function regionCardsFromMonthly(
       if (r.region_name !== monthlyName) continue;
       const month = typeof r.month === "string" ? r.month : "";
       if (!/^\d{6}$/.test(month)) continue;
+      if (opts.now && !reportingClosed(month, opts.now)) continue;
       const count = numOrUndefined(r.transaction_count);
       if (count === undefined || count < minTrades) continue;
       const won = numOrUndefined(r.avg_deal_amount_krw);
@@ -137,7 +149,129 @@ export function regionCardsFromMonthly(
       href: `/map?region=${encodeURIComponent(target.name)}`,
       spark: [],
       stale: true,
+      /* [1009 · H] 표기 표준용 원값 — 변동률(trend_delta_pct)은 평균 거래가가 아니라 신고 실거래 **평당가 평균**의
+         전월비다(운영 DB 함수 refresh_market_region_monthly — 두 달 모두 10건 이상일 때만 값). 화면은 "평당가 전월 대비"로 적는다 */
+      city: target.city,
+      trades: Math.round(best.count),
+      tradesYm: best.month,
+      tradesSource: "molit",
+      changePct: best.delta ?? null,
+      changeBasis: "avg",
+      changeYm: best.month,
     });
   }
   return cards;
+}
+
+/**
+ * [1009 · H] 스냅샷 카드가 빠진 지역을 월 집계 카드로 채운다 — 대상 순서 유지, 스냅샷이 있으면 스냅샷이 이긴다.
+ *
+ * 왜(2026-09-22 운영 실측): market_region_price 의 서울 3구(강남·마포·송파) 부동산원 행은 period '' · 평균가 null 로
+ * 비어 있다. 스냅샷 조회는 **성공**(남양주 1행은 값이 있다)이라 [1002] 폴백(실패·0건일 때만)이 돌지 않았고,
+ * 홈 "지역 시세"에는 카드가 **1장**(남양주)만 나갔다. 빈 칸은 같은 표의 월 집계(stale 카드 — "8월 집계" 표기)로 채운다.
+ * 월 집계에도 없는 지역은 그대로 빠진다(빈 카드를 만들지 않는다).
+ */
+export function fillMissingRegionCards(
+  primary: readonly HomeRegionCard[],
+  fallback: readonly HomeRegionCard[],
+  targets: readonly CardRegionTarget[],
+): HomeRegionCard[] {
+  const out: HomeRegionCard[] = [];
+  for (const t of targets) {
+    const hit = primary.find((c) => c.id === t.id) ?? fallback.find((c) => c.id === t.id);
+    if (hit) out.push(hit);
+  }
+  return out;
+}
+
+/* ───────────── [1009 · H 리뷰] 카드 곁값(시계열) — 스파크라인 · 거래 건수의 제 달 · 등락 기준 통일 ───────────── */
+
+/** 카드 지역의 시계열 곁값 — market_region_series 세 갈래를 읽어 여기서 모양을 맞춘다(홈 데이터 캐시 한 벌) */
+export type CardSeries = {
+  /** 주간 매매가격지수(오래된 것 → 최신) — 스파크라인 */
+  sparks: Record<string, number[]>;
+  /** 한국부동산원 월간 거래량 — 지역마다 가장 최근 달 */
+  trades: Record<string, { ym: string; count: number }>;
+  /** 한국부동산원 월간 매매가격지수 행(카드 지역 + 서울 구) — 카드 등락과 브리핑이 같은 행을 쓴다 */
+  index: IndexRow[];
+};
+
+type SeriesRow = { region_id: string | null; period: string | null; value: number | string | null };
+
+function ymOfPeriod(period: string | null): string | null {
+  const ym = String(period ?? "").replace(/[^0-9]/g, "").slice(0, 6);
+  return /^\d{6}$/.test(ym) ? ym : null;
+}
+
+/** 조회 행 → CardSeries(순수). 입력 순서에 기대지 않는다 — 기간으로 다시 정렬한다 */
+export function cardSeriesFromRows(
+  rows: { weekly: readonly SeriesRow[] | null; trades: readonly SeriesRow[] | null; index: readonly SeriesRow[] | null },
+  sparkLength = 16,
+): CardSeries {
+  const weeklyBy = new Map<string, Array<{ p: string; v: number }>>();
+  for (const r of rows.weekly ?? []) {
+    const id = r.region_id ? String(r.region_id) : "";
+    const v = Number(r.value);
+    const p = String(r.period ?? "");
+    if (!id || !p || !Number.isFinite(v)) continue;
+    const list = weeklyBy.get(id) ?? [];
+    list.push({ p, v });
+    weeklyBy.set(id, list);
+  }
+  const sparks: Record<string, number[]> = {};
+  for (const [id, list] of weeklyBy) {
+    sparks[id] = list
+      .sort((a, b) => a.p.localeCompare(b.p))
+      .slice(-sparkLength)
+      .map((x) => x.v);
+  }
+  const trades: Record<string, { ym: string; count: number }> = {};
+  for (const r of rows.trades ?? []) {
+    const id = r.region_id ? String(r.region_id) : "";
+    const ym = ymOfPeriod(r.period);
+    const count = Number(r.value);
+    if (!id || !ym || !Number.isFinite(count) || count <= 0) continue;
+    const cur = trades[id];
+    if (!cur || cur.ym < ym) trades[id] = { ym, count: Math.round(count) };
+  }
+  return { sparks, trades, index: [...(rows.index ?? [])] };
+}
+
+/**
+ * 카드에 시계열 곁값을 붙인다(순수 · 새 배열).
+ *  · 스파크라인 — 주간 매매가격지수(있을 때만 갈아 끼운다).
+ *  · 월 집계(국토부) 카드(stale) — 가격은 그 달 실거래 평균 그대로, **등락은 부동산원 월간 지수 전월비**로.
+ *    왜(리뷰): 서울 카드가 국토부 평당가 전월비(강남 ▲2.4%·마포 ▼1.4%·송파 ▲5.7%)를 띄우는 옆에서 브리핑은 부동산원 지수로
+ *    "서울 25개 구 중 25곳 상승, 평균 ▲1.3%", 지역 화면은 "시세 지수 0.6% 올랐어요"라고 했다 — [950] "한 화면 한 기준"을
+ *    되돌린 것이다. 지수 전월비를 못 구하면 원래의 평당가 전월비(기준 "평당가 전월 대비")를 그대로 둔다.
+ *  · 스냅샷 카드 — 스냅샷 trade_count 는 기준월과 다른 달 값이라 쓰지 않고, 부동산원 월간 거래량의 제 달·출처로.
+ *    스냅샷에 월간 변동률이 없으면 같은 지수의 전월비로 채운다.
+ */
+export function applyCardSeries(cards: readonly HomeRegionCard[], s: CardSeries): HomeRegionCard[] {
+  const moms = indexMoMByRegion(s.index);
+  return cards.map((c) => {
+    const next: HomeRegionCard = { ...c };
+    const spark = s.sparks[c.id];
+    if (Array.isArray(spark) && spark.length > 0) next.spark = spark;
+    const mom = moms.get(c.id);
+    const useIndex = () => {
+      if (!mom) return;
+      const { delta, tone } = deltaOf(mom.pct);
+      next.delta = delta;
+      next.tone = tone;
+      next.changePct = mom.pct;
+      next.changeBasis = "index";
+      next.changeYm = mom.ym;
+    };
+    if (c.stale) {
+      useIndex();
+    } else {
+      const t = s.trades[c.id];
+      next.trades = t ? t.count : null;
+      next.tradesYm = t ? t.ym : null;
+      next.tradesSource = t ? "reb" : undefined;
+      if (next.changePct === null || next.changePct === undefined) useIndex();
+    }
+    return next;
+  });
 }

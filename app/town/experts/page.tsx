@@ -21,7 +21,11 @@ import { ComplianceNotice } from "@/app/components/ComplianceNotice";
    → FAQ(JSON-LD 동일 배열) → 고지. 실데이터 0건이면 0건이라고 말한다(목업 폴백 없음). */
 
 /* ── ISR (사용량 절감 11차, 2026-08-10) ── 필터는 클라이언트(location.search). */
-export const revalidate = 300;
+/* [1010] 300초 → 1일. 카드에 실리는 값(인증·후기·평점·완료 상담·응답률)이 바뀌는 지점은
+   전부 비운다 — 승인/수정(admin/experts · experts/[id] PATCH), 생성(experts POST),
+   삭제(experts/[id] DELETE), 후기(experts/[id]/reviews), 상담 답변·마감(experts/[id]/consult).
+   실측 expert_profiles 0행이라 지금은 빈 목록이지만, 5분 눈금은 크롤 1회당 오리진 1회였다. */
+export const revalidate = 86_400;
 
 export const metadata = buildPageMetadata({
   title: "전문가 상담 — 공인중개사·세무사·감정평가사·대출상담사",

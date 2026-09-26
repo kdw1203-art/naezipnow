@@ -12,7 +12,10 @@ import { seoAlternates } from "@/lib/seo/alternates";
    실측(2026-08-11): public_property_records 0행(CODEF 자격 증명 대기) —
    현황은 전부 "연동 대기"가 사실이고, 통계 로더는 실패 시 base(0건)를
    돌려주지만 그 표시는 "연동 대기"라 거짓 주장이 되지는 않는다. */
-export const revalidate = 600;
+/* [1010] 600 → 86,400(1일). 화면의 통계는 국토부 실거래 적재로만 바뀌고, 적재 직후
+   SOURCE_MAP.molit 이 "/data/records" 를 비운다. ?complex= 검색은 /api/public-records
+   (검색어별 CDN 600초)라 이 TTL 과 무관하다. */
+export const revalidate = 86_400;
 
 export const metadata: Metadata = {
   title: "공공 부동산 자료 현황 | 내집나우",

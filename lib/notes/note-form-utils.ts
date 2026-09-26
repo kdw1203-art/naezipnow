@@ -85,6 +85,29 @@ export async function runWithConcurrency<T, R>(
   return results;
 }
 
+/* ===== [1005 · A1] 위치 직접 입력 ===== */
+
+/** 지역·단지명 최소 글자 — 한 글자("강")는 어디인지 말해 주지 않는다 */
+export const MANUAL_LOCATION_MIN = 2;
+export const MANUAL_LOCATION_MAX = 60;
+
+export type ManualLocationResult =
+  | { ok: true; region: string; aptName: string }
+  | { ok: false; field: "region" | "aptName"; error: string };
+
+/** 검색 결과가 없을 때의 직접 입력 — 둘 다 2자 이상, 공백 정리. 좌표·단지 id 는 없다. */
+export function validateManualLocation(regionRaw: string, aptRaw: string): ManualLocationResult {
+  const region = regionRaw.replace(/\s+/g, " ").trim().slice(0, MANUAL_LOCATION_MAX);
+  const aptName = aptRaw.replace(/\s+/g, " ").trim().slice(0, MANUAL_LOCATION_MAX);
+  if (region.length < MANUAL_LOCATION_MIN) {
+    return { ok: false, field: "region", error: "지역을 시·군·구까지 적어 주세요 (예: 서울 강남구)." };
+  }
+  if (aptName.length < MANUAL_LOCATION_MIN) {
+    return { ok: false, field: "aptName", error: "단지명을 두 글자 이상 적어 주세요." };
+  }
+  return { ok: true, region, aptName };
+}
+
 /* ===== [967 · 2] 방문일 ===== */
 
 /** 로컬 달력 기준 YYYY-MM-DD. toISOString().slice(0,10) 은 UTC 라 한국 저녁

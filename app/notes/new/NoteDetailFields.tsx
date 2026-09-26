@@ -220,7 +220,7 @@ export function NoteDetailFields({
                     active
                       ? t.tone === "neg"
                         ? "bg-danger-soft font-bold text-danger"
-                        : "bg-[rgba(29,79,216,.1)] font-bold text-primary"
+                        : "bg-primary-soft font-bold text-primary"
                       : "border border-line bg-surface text-text-2"
                   }`}
                 >

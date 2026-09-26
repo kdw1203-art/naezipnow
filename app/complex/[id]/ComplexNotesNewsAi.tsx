@@ -35,19 +35,23 @@ export async function ComplexNotesNewsAi({
   complexId,
   name,
   region,
-  hasPrice,
+  priceTrend,
   tradeCount,
   tradeMonths = 0,
+  tradeRange,
 }: {
   complexId: string;
   name: string;
   region: string;
-  /** 실거래 시세를 아는가 — AI 분석이 무엇을 재료로 쓸 수 있는지 정직하게 적는다 */
-  hasPrice: boolean;
+  /** [1009 · C 리뷰] 이 화면의 실거래가 추이 그래프 — "있음"(그래프가 섰다) · "거래 적음"(거래는 있지만 3건 이상인 달이
+      둘이 안 돼 그리지 않았다) · "없음" · "확인 실패". 예전 hasPrice 는 월별 행만 있어도 "있음"이라 그래프가 없는 단지에서도 있다고 했다 */
+  priceTrend: "있음" | "거래 적음" | "없음" | "확인 실패";
   /** [970 · B-16] 집계 기간 실거래 건수 합. null = 조회 실패(0건이라고 적지 않는다) */
   tradeCount: number | null;
   /** 집계 개월 수 — "N건 · 최근 M개월" 캡션용 */
   tradeMonths?: number;
+  /** [1009 · C] 센 계약월 범위("26.01~26.08") — tradeMonths 는 "거래가 있는 달 수"라 "최근 N개월"로 읽히면 틀린다 */
+  tradeRange?: string | null;
 }) {
   /* [968 · 1] 공유 예산(3초) — 넘기면 노트는 "못 읽음"(0건으로 그리지 않는다), 기사는 생략.
      두 로더는 내부에서 실패를 이미 삼키므로 여기서 거절되는 건 예산 초과뿐이다. */
@@ -127,18 +131,19 @@ export async function ComplexNotesNewsAi({
         <ul className="mt-3 flex flex-col gap-1.5 t-sub text-text-2">
           <li className="flex items-center justify-between gap-2 border-b border-[rgba(16,28,54,.06)] pb-1.5">
             <span>국토교통부 실거래</span>
-            <span className="font-bold text-ink">
+            <span className="font-bold text-ink tabular-nums">
               {/* [970 · B-16] 예전엔 개월 수가 "N건"으로 나갔다 — 건수 합 + 기간 */}
               {tradeCount === null
                 ? "확인 실패"
                 : tradeCount > 0
-                  ? `${tradeCount.toLocaleString("ko-KR")}건${tradeMonths ? ` · 최근 ${tradeMonths}개월` : ""}`
+                  ? `${tradeCount.toLocaleString("ko-KR")}건${tradeRange ? ` · ${tradeRange}` : tradeMonths ? ` · 거래 있는 ${tradeMonths}개월` : ""}`
                   : "없음"}
             </span>
           </li>
           <li className="flex items-center justify-between gap-2 border-b border-[rgba(16,28,54,.06)] pb-1.5">
-            <span>단지 시세 추이</span>
-            <span className="font-bold text-ink">{hasPrice ? "있음" : "준비 중"}</span>
+            {/* [1009 · C] 실거래만 있는 곳 — "시세" 대신 "실거래가" */}
+            <span>단지 실거래가 추이</span>
+            <span className="font-bold text-ink">{tradeCount === null ? "확인 실패" : priceTrend}</span>
           </li>
           <li className="flex items-center justify-between gap-2 border-b border-[rgba(16,28,54,.06)] pb-1.5">
             <span>이웃 임장노트</span>

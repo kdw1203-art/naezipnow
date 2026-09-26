@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
@@ -10,6 +11,8 @@ import { useSettledSearchQuery } from "@/lib/search/settle";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { useShellActive, type Shell } from "@/lib/client/viewport-shell";
 import { useReducedData } from "@/lib/client/network-hints";
+import { complexItem, flattenUnified, type FlatItem, type UnifiedJson } from "@/app/search/unified-suggest";
+import { QUERY_TOO_LONG, SEARCH_QUERY_MAX, badRequestNotice } from "@/lib/search/complex-preview";
 
 /* 홈 리디자인(#408) 시안 B — 화면 정중앙 대형 검색.
  *
@@ -27,35 +30,16 @@ import { useReducedData } from "@/lib/client/network-hints";
  * 호버/탭 시점에만 받는다.
  */
 
-type Kind = "complex" | "listing" | "note" | "news";
-
-interface UnifiedResults {
-  complexes: { id: string; name: string; region: string }[];
-  listings: { id: string; title: string; price: string }[];
-  notes: { id: string; title: string }[];
-  news: { id: string; title: string; source: string }[];
-}
-
-interface FlatItem {
-  key: string;
-  label: string;
-  title: string;
-  meta: string;
-  href: string;
-}
-
-const PER_GROUP = 3;
-
-function flatten(r: UnifiedResults): FlatItem[] {
-  const out: FlatItem[] = [];
-  const push = (kind: Kind, label: string, id: string, title: string, meta: string, base: string) =>
-    out.push({ key: `${kind}-${id}`, label, title, meta, href: `${base}/${encodeURIComponent(id)}` });
-  r.complexes.slice(0, PER_GROUP).forEach((c) => push("complex", "단지", c.id, c.name, c.region, "/complex"));
-  r.listings.slice(0, PER_GROUP).forEach((l) => push("listing", "매물", l.id, l.title, l.price, "/listings"));
-  r.notes.slice(0, PER_GROUP).forEach((n) => push("note", "노트", n.id, n.title, "", "/notes"));
-  r.news.slice(0, PER_GROUP).forEach((n) => push("news", "뉴스", n.id, n.title, n.source, "/town/news"));
-  return out;
-}
+/* [1008 · S] 응답 → 목록 한 줄 변환은 헤더 검색과 같은 모듈(app/search/unified-suggest).
+   드롭다운은 app/search/UnifiedSuggestPanel(next/dynamic — 친 뒤에만 필요, 홈 첫 묶음 462/495KB 를 늘리지
+   않게). 입력창 포커스 때 미리 받는다. 키보드 ↑↓ Enter Esc(콤보박스) · 단지 줄 검색어 강조·읍면동·세대수·
+   6개월 거래 · 0건이면 띄어 쓰는 요령·지도에서 찾기·비슷한 이름 + 전체 검색·수요 남기기. */
+const loadPanel = () => import("@/app/search/UnifiedSuggestPanel");
+const Panel = dynamic(loadPanel, { ssr: false });
+const LIST_ID = "hero-suggest";
+const optionId = (i: number) => `hero-opt-${i}`;
+/** 홈 패널에 그리는 줄 수 — 키보드 순환도 이 수만큼(리뷰 B: ↓가 그리지 않은 8번째 줄로 가 Enter 로 안 보이던 곳에 갔다) */
+const HERO_MAX = 7;
 
 /** [950] 지역 칩은 서버(홈)가 실데이터 지역 카드에서 넘긴다 — 티커·카드와 같은 지역.
  *  예전 고정 폴백(동안구·만안구·의왕시·과천시)은 초기 커버리지의 흔적이라 서비스가
@@ -107,6 +91,13 @@ export function HomeHeroSearch({
     return () => window.clearInterval(t);
   }, [active, q, focused]);
   const [items, setItems] = useState<FlatItem[]>([]);
+  const [similar, setSimilar] = useState<FlatItem[]>([]);
+  /** 결과를 받아 온 검색어 — 강조·결과 없음 문구는 이것으로(아직 굳지 않은 입력이 아니라) */
+  const [searched, setSearched] = useState("");
+  const [failed, setFailed] = useState(false);
+  /** [1008 · 리뷰 B] 장애도 결과 없음도 아닌 안내(검색어 80자 초과) */
+  const [notice, setNotice] = useState<string | null>(null);
+  const [activeIdx, setActiveIdx] = useState(-1);
   const [open, setOpen] = useState(false);
   const [recents, setRecents] = useState<string[]>([]);
   /* [968 · 8] 최근 본 단지(로컬 + 서버 병합)도 보이는 벌만 읽는다 */
@@ -126,21 +117,47 @@ export function HomeHeroSearch({
     const query = settledQuery.trim();
     if (query.length < 2) {
       setItems([]);
+      setSimilar([]);
+      setSearched("");
+      setNotice(null);
       return;
     }
     abortRef.current?.abort();
+    /* [1008 · 리뷰 B] 80자 넘는 입력은 보내지 않는다 — 서버 400 을 예전엔 장애로 적었다 */
+    if (query.length > SEARCH_QUERY_MAX) {
+      setItems([]);
+      setSimilar([]);
+      setFailed(false);
+      setNotice(QUERY_TOO_LONG);
+      setSearched(query);
+      setOpen(true);
+      return;
+    }
     const ac = new AbortController();
     abortRef.current = ac;
     fetch(`/api/search/unified?q=${encodeURIComponent(query)}`, { signal: ac.signal })
-      .then((res) => (res.ok ? (res.json() as Promise<UnifiedResults>) : null))
-      .then((r) => {
-        if (!r || ac.signal.aborted) return;
-        setItems(flatten(r));
+      .then(async (res) => {
+        if (res.ok) return { r: (await res.json()) as UnifiedJson, n: null };
+        return { r: null, n: await badRequestNotice(res) };
+      })
+      .then(({ r, n }) => {
+        if (ac.signal.aborted) return;
+        setItems(r ? flattenUnified(r) : []);
+        setSimilar((r?.suggestions ?? []).map(complexItem));
+        setFailed(!n && (!r || (r.failed?.length ?? 0) > 0));
+        setNotice(n);
+        setSearched(query);
         setOpen(true);
       })
       .catch(() => {});
     return () => ac.abort();
   }, [settledQuery]);
+
+  /* 목록이 바뀌면 가리키던 자리는 의미를 잃는다 */
+  useEffect(() => setActiveIdx(-1), [items, similar, open]);
+  /* 그리는 줄 = 키보드가 도는 줄(한 목록을 두 곳이 쓴다) */
+  const shown = items.slice(0, HERO_MAX);
+  const options = notice ? [] : shown.length ? shown : similar;
 
   /* 바깥 클릭 → 닫기. [968 · 8] 문서 리스너도 보이는 벌 하나만 단다. */
   useEffect(() => {
@@ -164,6 +181,32 @@ export function HomeHeroSearch({
   function onPickSuggestion() {
     setOpen(false);
     setQ("");
+  }
+
+  /* [1008 · S] 콤보박스 키보드 — ↑↓ 순환 · Enter 는 활성 항목(없으면 폼 제출 = 전체 검색) · Esc 목록만 닫기.
+     한글 조합 중 방향키·Enter 는 IME 몫이라 가로채지 않는다. */
+  const showPanel = open && q.trim().length >= 2 && !!searched;
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.nativeEvent.isComposing) return;
+    const n = showPanel ? options.length : 0;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!showPanel) {
+        if (searched) setOpen(true);
+        return;
+      }
+      if (n) setActiveIdx((i) => (e.key === "ArrowDown" ? (i + 1) % n : i <= 0 ? n - 1 : i - 1));
+    } else if (e.key === "Enter" && activeIdx >= 0 && options[activeIdx]) {
+      e.preventDefault();
+      const it = options[activeIdx];
+      onPickSuggestion();
+      router.push(it.href);
+    } else if (e.key === "Escape") {
+      if (open) {
+        e.preventDefault();
+        setOpen(false);
+      } else e.currentTarget.blur();
+    }
   }
 
   const hasHistory = recents.length > 0 || recentComplexes.length > 0;
@@ -194,12 +237,16 @@ export function HomeHeroSearch({
             {...compositionProps}
             onFocus={() => {
               setFocused(true);
-              if (q.trim() && items.length > 0) setOpen(true);
+              void loadPanel();
+              if (q.trim() && searched) setOpen(true);
             }}
             onBlur={() => setFocused(false)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") setOpen(false);
-            }}
+            onKeyDown={onKeyDown}
+            role="combobox"
+            aria-expanded={showPanel}
+            aria-controls={LIST_ID}
+            aria-activedescendant={showPanel && activeIdx >= 0 ? optionId(activeIdx) : undefined}
+            aria-autocomplete="list"
             placeholder={PLACEHOLDERS[phIdx]}
             aria-label="통합 검색"
             autoComplete="off"
@@ -213,55 +260,30 @@ export function HomeHeroSearch({
           </button>
         </form>
 
-        {/* 제안 0건 — 커버리지 수요 루프(#413)로 연결: 홈이 제1 검색 표면이라
-            여기서 끊기면 수요가 기록되지 않는다. /search 무결과 화면에 수집
-            카드가 있으니 그리로 잇는다. */}
-        {open && q.trim().length >= 2 && items.length === 0 && (
-          <div className="absolute inset-x-0 top-[calc(100%+8px)] z-40">
-            <div className="overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-[0_18px_48px_rgba(16,28,54,.16)]">
-              <button
-                type="button"
-                onClick={submit}
-                className="flex w-full items-center justify-between gap-2 rounded-[10px] px-3 py-2.5 text-left transition-colors hover:bg-[rgba(29,79,216,.07)]"
-              >
-                <span className="min-w-0 truncate text-[13px] text-text-2">
-                  ‘{q.trim()}’ 제안이 없어요 — 아직 안 열린 지역일 수 있어요
-                </span>
-                <span className="shrink-0 t-body font-extrabold text-primary">
-                  전체 검색·수요 남기기 ›
-                </span>
-              </button>
-            </div>
-          </div>
+        {/* 제안 드롭다운 — [968 · 9] 항목은 Link (프리페치·가벼운 탭 핸들러).
+            0건이면 커버리지 수요 루프(#413)로 잇는 단추("전체 검색·수요 남기기")를 그대로 둔다 — 홈이 제1
+            검색 표면이라 여기서 끊기면 수요가 기록되지 않는다. [1008 · S] 그 위에 띄어 쓰는 요령·지도에서
+            찾기·비슷한 이름을 먼저 보여 준다(결과 없음 82% 의 대부분이 표기 차이였다). */}
+        {showPanel && (
+          <Panel
+            variant="hero"
+            listId={LIST_ID}
+            optionId={optionId}
+            query={searched}
+            items={shown}
+            similar={similar}
+            active={activeIdx}
+            failed={failed}
+            notice={notice}
+            onHover={setActiveIdx}
+            onPick={onPickSuggestion}
+            onSubmit={submit}
+            submitLabel={
+              items.length ? `‘${q.trim()}’ 전체 검색 ›` : `‘${q.trim()}’ 전체 검색·수요 남기기 ›`
+            }
+            prefetch={chipPrefetch}
+          />
         )}
-
-        {/* 제안 드롭다운 — [968 · 9] 항목은 Link (프리페치·가벼운 탭 핸들러) */}
-        {open && q.trim().length >= 2 && items.length > 0 && (
-          <div className="absolute inset-x-0 top-[calc(100%+8px)] z-40">
-            <div className="overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-[0_18px_48px_rgba(16,28,54,.16)] [animation:riseIn_160ms_var(--ease-out)_backwards]">
-              {items.slice(0, 7).map((it) => (
-                <Link
-                  key={it.key}
-                  href={it.href}
-                  prefetch={chipPrefetch}
-                  onClick={onPickSuggestion}
-                  className="flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2 text-left no-underline transition-colors hover:bg-[rgba(29,79,216,.07)]"
-                >
-                  <span className="shrink-0 rounded-md bg-bg px-1.5 py-0.5 t-caption font-extrabold text-text-2">
-                    {it.label}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate t-body font-semibold text-text-1">
-                    {it.title}
-                  </span>
-                  {it.meta && (
-                    <span className="shrink-0 text-[12px] text-text-3">{it.meta}</span>
-                  )}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
       </div>
 
       {/* 칩 — 최근 검색·최근 본 단지 (실기록), 없으면 커버 지역 바로가기.

@@ -9,6 +9,7 @@
  * 단, apt-detail-enrich 크론이 대장 마스터 metadata 에 좌표를 백필하므로,
  * D7 매칭이 성공한 단지는 아래 enrich 에서 좌표·건설사가 채워진다.
  */
+import { cache } from "react";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { getReadOnlySupabase } from "@/lib/newui/supabase-read";
 import { AREA_BANDS } from "@/lib/market/bands";
@@ -19,9 +20,21 @@ import {
   pickBestMaster,
 } from "@/lib/complex/master-match";
 import { logger } from "@/lib/log";
+/* [1008 · S] 단지 이름 검색 규칙(순수 함수) — searchComplexes·suggestComplexes 가 쓴다 */
+import {
+  complexNameKey,
+  matchComplex,
+  normalizeComplexQueryText,
+  parseComplexQuery,
+  rankComplexes,
+  tokenizeComplexQuery,
+  trigramSimilarity,
+} from "@/lib/search/complex-match";
+import { expandComplexAlias } from "@/lib/search/normalize-query";
 import { decoratedParam } from "@/lib/seo/complex-slug";
 /* [967 · 16] 월별 접기(면적대 분할 포함) — getTransactionHistoryWithBands 가 쓴다 */
 import { foldTradesByMonth, type TxMonthBandSlice } from "@/lib/complex/tx-month-fold";
+import { latestTradeRow, type HubDeal } from "@/lib/complex/hub-price";
 
 /**
  * 조회 실패는 던진다 — "없음"으로 답하지 않는다.
@@ -183,7 +196,9 @@ function decodeComplexIdForQuery(
   where: string,
 ): { region: string; name: string } | null {
   if (id.startsWith(KAPT_COMPLEX_ID_PREFIX)) {
-    logger.warn(
+    /* [1007] kapt 형태 URL 로 열린 단지마다 렌더당 2~3줄(면적대·지역 대비·이력) — where 별 1분 1건 */
+    logger.warnSampled(
+      `complex-kapt-id:${where}`,
       `[complex] ${where}: kapt id(${id})로는 조회할 수 없습니다 — 빈 결과는 "거래 없음"이 아니라 "잘못된 키"입니다. ComplexRow.canonical_id 를 넘기세요.`,
     );
     return null;
@@ -328,7 +343,10 @@ async function enrichFromApartmentComplex(
   const picked = pickBestMaster(rows, name, parseMtAddress(mtAddress));
   if (!picked.best) {
     if (picked.reason === "ambiguous") {
-      logger.warn(
+      /* [1007] 같은 단지가 크롤될 때마다(하루 8,907 렌더) 반복되는 안내 — 1분 1건 + 생략 건수.
+         어떤 단지가 보류됐는지는 첫 줄과 다음 창의 첫 줄에 남는다(전수 목록은 어드민 SEO 화면이 따로 센다). */
+      logger.warnSampled(
+        "complex-master-ambiguous",
         `[complex] 대장 매칭 보류(${picked.reason}) — 후보 ${rows.length}개를 지번·이름으로 못 갈랐다: ${region} ${name}`,
       );
     }
@@ -527,14 +545,15 @@ export async function enrichComplexRow(
     base.address,
     signal,
   ).catch((e) => {
-    logger.warn("[complex] 대장 마스터 enrich 실패 — 실거래만으로 계속", e);
+    /* [1007] DB 포화 순간엔 렌더마다 나온다 — 1분 1건(첫 건은 그대로) */
+    logger.warnSampled("complex-enrich-master", "[complex] 대장 마스터 enrich 실패 — 실거래만으로 계속", e);
     return null;
   });
   if (apt) return applyMasterEnrich(base, apt);
   /* [971] 이름으로 못 가른 단지는 필지 연결로 한 번 더 본다. 여기까지 비면
      실거래만으로 그린다 — 그건 "모른다"이지 장애가 아니다. */
   const linked = await enrichFromMasterLink(dec.region, dec.name, signal).catch((e) => {
-    logger.warn("[complex] 필지 연결 enrich 실패 — 실거래만으로 계속", e);
+    logger.warnSampled("complex-enrich-link", "[complex] 필지 연결 enrich 실패 — 실거래만으로 계속", e);
     return null;
   });
   if (!linked) return base;
@@ -674,83 +693,247 @@ async function loadRegionNames(
 /** `.in()` 이 URL 길이를 위협하지 않는 상한. 실제 구 이름은 1~3개만 맞는다. */
 const REGION_IN_MAX = 60;
 
+/* ------------------------------------------------------------------
+   [1008 · S] 단지 이름 검색 — searchComplexes · suggestComplexes
+
+   실측(2026-09-21): /search 검색 11건 중 9건(82%)이 "결과 없음". 이 함수가 통합 검색의 단지 그룹이었고
+   market_transactions 에 complex_name ILIKE '%원문%' 한 줄이라 "E편한세상 사천"(DB: e편한세상사천스카이마리나)·
+   "한가람삼성"(한가람(삼성))·"힐스테이트 광교"(힐스테이트광교) 가 전부 0건이었다. 노트 근거·링크 해석·
+   에이전트 도구도 같은 함수를 쓴다.
+
+   이제:
+     1) search_complexes_preview(v2 순위 — 정규화·토큰·동네+단지명·오타)를 먼저 부른다. 서비스 롤.
+        · 오타 추정(비슷한 이름) 행은 버린다 — 노트 근거(pickComplex)는 "질의가 이름을 품으면" 고르는
+          느슨한 규칙이라, "사천 스카이" 에 스카이@인천 같은 오타 후보가 섞이면 엉뚱한 단지의 실거래가
+          노트 근거로 붙는다. 사람에게 보이는 자동완성은 따로 "비슷한 이름" 으로 보여 준다(lib/search/complex-search).
+        · district 가 오면 RPC 결과를 그 구로 거른다. 비면(이름이 흔해 전국 20위 밖) 2) 로.
+     2) 물러서는 길: 단지 단위 집계표(complex_tx_stats_base, 36,724행)에서 좁은 조건(공백→% · 글자 사이 % ·
+        지역+이름 토큰 짝, 100행)과 넓은 조건(토큰 하나씩, 300행)을 나란히 물어 후보를 모으고 같은 규칙
+        (lib/search/complex-match)으로 줄 세운다. RPC 가 실패했거나, 자동완성·통합 검색에서 RPC 가
+        '비슷한 이름' 만 줬을 때(아직 v1 이거나 오타)도 이 길을 탄다.
+        예전의 market_transactions(75만 행) 최근 800행 대신 단지 한 줄씩이라 "800행 안 출현 수" 가 아니라
+        최근 6개월 거래로 정렬된다.
+   ------------------------------------------------------------------ */
+
+/** RPC 가 돌려주는 행 중 이 함수가 쓰는 열 */
+type SearchPreviewRow = {
+  region_name: string;
+  complex_name: string;
+  address: string | null;
+  build_year: number | null;
+  households: number | null;
+  recent_trade_count: number | null;
+  trade_count: number | null;
+  lat: number | null;
+  lng: number | null;
+};
+
+type StatsBaseRow = {
+  region_name: string;
+  complex_name: string;
+  address: string | null;
+  build_year: number | null;
+  trade_count: number | null;
+  recent_trade_count: number | null;
+};
+
+/** PostgREST or() 안에 넣을 값 — 한글·영숫자·공백만 남긴다(쉼표·괄호·와일드카드는 구문이다) */
+function orSafe(s: string): string {
+  return s.replace(/[^0-9A-Za-z가-힣 ]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/** 한글만이면 LIKE(순차 스캔 ≈8배 빠름 — 2026-09-21 실측), 로마자가 섞이면 ILIKE */
+function likeOp(pattern: string): "like" | "ilike" {
+  return /[A-Za-z]/.test(pattern) ? "ilike" : "like";
+}
+
+/** 2) 물러서는 길의 후보 조건 — 둘로 나눠 따로 묻는다.
+ *  specific: 공백→% · 글자 사이 %(괄호·띄어쓰기 차이, 3~12자) · "지역 토큰 + 이름 토큰" 짝
+ *            ("동탄 롯데캐슬" → 지역에 동탄 · 이름에 롯데캐슬). 목표를 곧바로 집는 좁은 조건.
+ *  broad:    토큰 하나씩(순서가 뒤바뀐 입력 · 주소의 동 이름 + 단지명).
+ *  왜 나눴나(2026-09-21 운영 읽기 실측): 한 번에 물으면 브랜드 토큰이 합집합을 키워 최근 거래순 300행
+ *  컷에 거래 적은 목표가 밀릴 수 있다 — "힐스테이트 광교" 403행(목표 58위) · "동탄 롯데캐슬" 358행(74위) ·
+ *  "사천 스카이" 323행(47위) · "E편한세상 사천" 275행(164위). 좁은 조건을 따로 물으면 인기와 무관하게 잡힌다. */
+function statsBaseOrFilters(term: string): { specific: string | null; broad: string | null } {
+  const safe = orSafe(term);
+  if (!safe) return { specific: null, broad: null };
+  const specific = new Set<string>();
+  const spaced = `%${safe.replace(/ /g, "%")}%`;
+  specific.add(`complex_name.${likeOp(spaced)}.${spaced}`);
+  const key = safe.replace(/ /g, "");
+  if (key.length >= 3 && key.length <= 12) {
+    const interleaved = `%${[...key].join("%")}%`;
+    specific.add(`complex_name.${likeOp(interleaved)}.${interleaved}`);
+  }
+  const toks = tokenizeComplexQuery(safe)
+    .filter((t) => t.length >= 2 && !/^[0-9]+$/.test(t))
+    .slice(0, 3);
+  for (const r of toks) {
+    for (const n of toks) {
+      if (r !== n) specific.add(`and(region_name.${likeOp(r)}.%${r}%,complex_name.${likeOp(n)}.%${n}%)`);
+    }
+  }
+  const broad = toks.map((t) => `complex_name.${likeOp(t)}.%${t}%`).filter((p) => !specific.has(p));
+  return {
+    specific: [...specific].slice(0, 8).join(","),
+    broad: broad.length > 0 ? broad.join(",") : null,
+  };
+}
+
 export async function searchComplexes(
   query: string,
   district?: string,
   limit = 20,
   /** 곁다리 예산 신호 (항목 25) — 예산이 접히면 PostgREST 요청도 끊는다. */
   signal?: AbortSignal,
+  /** [1008 · S] 부르는 쪽(자동완성·통합 검색)이 이미 RPC 를 불렀을 때 — 실패했거나 '비슷한 이름' 만 받았다.
+   *  같은 질의를 한 번 더 기다리지 않고 집계표 경로만 본다. */
+  opts?: { skipRpc?: boolean },
 ): Promise<ComplexRow[]> {
   const sb = getServiceSupabase();
   if (!sb) return [];
+  const term = expandComplexAlias(query ?? "");
+  const dist = (district ?? "").trim();
+  if (!term) return searchComplexesByDistrictOnly(sb, dist, limit, signal);
+
+  /* district → region_name 해석표(앞% ILIKE 대신 .in — loadRegionNames 주석의 실측) */
+  let regionHits: string[] | null = null;
+  if (dist) {
+    const names = await loadRegionNames(sb);
+    if (names !== null) {
+      const needle = dist.toLowerCase();
+      regionHits = names.filter((n) => n.toLowerCase().includes(needle));
+      /* 해석표에 없는 지역명은 사실 0건이다(예전과 같은 판단). */
+      if (regionHits.length === 0) return [];
+    }
+  }
+  const inDistrict = (region: string) =>
+    !dist || (regionHits ? regionHits.includes(region) : region.toLowerCase().includes(dist.toLowerCase()));
+
+  if (!opts?.skipRpc) {
+    let rpc = sb.rpc("search_complexes_preview", { p_q: term, p_limit: 20 });
+    if (signal) rpc = rpc.abortSignal(signal);
+    const { data, error } = await rpc;
+    if (!error) {
+      const pq = parseComplexQuery(term);
+      const rows = ((data as SearchPreviewRow[] | null) ?? []).filter((r) => {
+        if (!r.complex_name || !r.region_name || !inDistrict(r.region_name)) return false;
+        const m = matchComplex(pq, { name: r.complex_name, region: r.region_name, address: r.address });
+        return !!m && m.tier < 7;
+      });
+      if (rows.length > 0) {
+        return rows.slice(0, limit).map((r) => {
+          const row = toComplexRow(r.region_name, r.complex_name, r);
+          if (r.households != null) row.households = Number(r.households);
+          if (r.lat != null && r.lng != null) {
+            row.lat = Number(r.lat);
+            row.lng = Number(r.lng);
+          }
+          return row;
+        });
+      }
+      /* 0건이어도 아래로 간다 — 구로 거른 뒤 비었거나(전국 20위 밖), RPC 가 v1(직전 정의)이라
+         괄호·띄어쓰기 차이를 못 잡은 경우를 물러서는 길이 한 번 더 본다. */
+    } else if (signal?.aborted) {
+      throw dbError("search_complexes_preview (단지 검색)", error);
+    } else {
+      logger.warn("[complex] search_complexes_preview 실패 — 집계표 경로로 물러섭니다", {
+        message: error.message,
+      });
+    }
+  }
+
+  /* 후보 조건은 시·도 낱말을 정리한 글자로("경남 사천 e편한세상" → "사천 e편한세상") — 순위(rankComplexes)는
+     원문을 받아 같은 정리를 하고, 도를 버렸으면 광역·특별시 구를 뺀다(lib/search/complex-match). */
+  const { specific, broad } = statsBaseOrFilters(normalizeComplexQueryText(term).text);
+  if (!specific) return [];
+  const fetchRows = (or: string, lim: number) => {
+    let q = sb
+      .from("complex_tx_stats_base")
+      .select("region_name, complex_name, address, build_year, trade_count, recent_trade_count")
+      .or(or);
+    if (dist) {
+      q = regionHits
+        ? q.in("region_name", regionHits.slice(0, REGION_IN_MAX))
+        : q.ilike("region_name", `%${dist}%`);
+    }
+    if (signal) q = q.abortSignal(signal);
+    return q.order("recent_trade_count", { ascending: false }).limit(lim);
+  };
+  const [narrow, wide] = await Promise.all([fetchRows(specific, 100), broad ? fetchRows(broad, 300) : null]);
+  /* 빈 배열은 "그런 단지는 없다"는 뜻이다. 못 읽었을 때 그렇게 답하면 사용자는
+     검색어를 의심하며 같은 검색을 반복하고, 링크 해석(complex-link)은 실재하는
+     단지의 허브 링크를 숨긴다. 부르는 쪽이 "지금 검색이 안 된다"를 말하게 한다. */
+  const error = narrow.error ?? wide?.error ?? null;
+  if (error) throw dbError("complex_tx_stats_base (단지 검색)", error);
+  const seen = new Set<string>();
+  const rows = [
+    ...((narrow.data as StatsBaseRow[] | null) ?? []),
+    ...((wide?.data as StatsBaseRow[] | null | undefined) ?? []),
+  ].filter((r) => {
+    if (!r.complex_name || !r.region_name) return false;
+    const k = `${r.region_name}\u0001${r.complex_name}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  return rankComplexes(
+    term,
+    rows.map((r) => ({
+      ...r,
+      name: r.complex_name,
+      region: r.region_name,
+      recentTradeCount: r.recent_trade_count,
+      tradeCount: r.trade_count,
+    })),
+  )
+    .filter((r) => r.match.tier < 7)
+    .slice(0, limit)
+    .map((r) => toComplexRow(r.region_name, r.complex_name, r));
+}
+
+/** 검색어 없이 구만 준 호출 — 예전 동작 그대로(market_transactions 최근 거래 순). 지금 부르는 곳은 없다. */
+async function searchComplexesByDistrictOnly(
+  sb: NonNullable<ReturnType<typeof getServiceSupabase>>,
+  dist: string,
+  limit: number,
+  signal?: AbortSignal,
+): Promise<ComplexRow[]> {
   let q = sb
     .from("market_transactions")
     .select("complex_name, region_name, address, build_year")
     .eq("transaction_type", "trade")
     .eq("is_cancelled", false)
     .not("complex_name", "is", null);
-
-  const term = (query ?? "").trim();
-  if (term) q = q.ilike("complex_name", `%${term}%`);
-  const dist = (district ?? "").trim();
   if (dist) {
     const names = await loadRegionNames(sb);
     if (names === null) {
-      // 해석표를 못 받았을 때만 예전 방식으로 물러선다(느리지만 결과는 같다).
       q = q.ilike("region_name", `%${dist}%`);
     } else {
       const needle = dist.toLowerCase();
       const hit = names.filter((n) => n.toLowerCase().includes(needle));
-      /* hit 가 비면 그건 실패가 아니라 사실이다 — 해석표에 없는 지역명은
-         ILIKE 로 훑어도 0건이다. 그러니 굳이 18초를 태우지 않는다. */
       if (hit.length === 0) return [];
       if (hit.length > REGION_IN_MAX) q = q.ilike("region_name", `%${dist}%`);
       else q = q.in("region_name", hit);
     }
   }
-
-  // 넉넉히 가져와 (region_name, complex_name) 기준 중복 제거
-  // (ilike 는 complex_name trigram GIN 인덱스를 탄다)
   if (signal) q = q.abortSignal(signal);
   const { data, error } = await q.order("contract_ym", { ascending: false }).limit(800);
-  /* 빈 배열은 "그런 단지는 없다"는 뜻이다. 못 읽었을 때 그렇게 답하면 사용자는
-     검색어를 의심하며 같은 검색을 반복하고, 링크 해석(complex-link)은 실재하는
-     단지의 허브 링크를 숨긴다. 부르는 쪽이 "지금 검색이 안 된다"를 말하게 한다. */
   if (error) throw dbError("market_transactions (단지 검색)", error);
   const rows =
     (data as
-      | {
-          complex_name: string;
-          region_name: string;
-          address: string | null;
-          build_year: number | null;
-        }[]
+      | { complex_name: string; region_name: string; address: string | null; build_year: number | null }[]
       | null) ?? [];
-
-  // 랭킹: 정확일치 > 접두 > 포함 — 같은 등급 안에서는 최근 거래량(조회분 내 출현 건수) 많은 순.
-  // "래미안" 검색 시 우연히 최근 거래된 "OO래미안2차"가 "래미안"보다 위로 오는 문제를 막는다.
-  const normTerm = term.replace(/\s+/g, "").toLowerCase();
-  const seen = new Map<string, { row: ComplexRow; tier: number; txCount: number }>();
+  const seen = new Map<string, { row: ComplexRow; txCount: number }>();
   for (const r of rows) {
     if (!r.complex_name || !r.region_name) continue;
     const key = `${r.region_name}${SEP}${r.complex_name}`;
     const cur = seen.get(key);
-    if (cur) {
-      cur.txCount += 1; // 최근 800건 내 출현 횟수 = 거래량 가중치
-      continue;
-    }
-    const normName = r.complex_name.replace(/\s+/g, "").toLowerCase();
-    const tier = !normTerm
-      ? 2
-      : normName === normTerm
-        ? 0
-        : normName.startsWith(normTerm)
-          ? 1
-          : 2;
-    seen.set(key, { row: toComplexRow(r.region_name, r.complex_name, r), tier, txCount: 1 });
+    if (cur) cur.txCount += 1;
+    else seen.set(key, { row: toComplexRow(r.region_name, r.complex_name, r), txCount: 1 });
   }
   return [...seen.values()]
-    .sort((a, b) => a.tier - b.tier || b.txCount - a.txCount)
+    .sort((a, b) => b.txCount - a.txCount)
     .slice(0, limit)
     .map((e) => e.row);
 }
@@ -859,59 +1042,47 @@ async function listComplexesInStatsBase(
 }
 
 /**
- * A8 — 검색 무결과 대안 제안. 정확 매칭이 실패했을 때, 질의를 토큰으로 쪼개
- * complex_name/region_name 어느 한 쪽이라도 포함하는 실거래 단지를 폭넓게 추천한다.
- * (searchComplexes 는 전체 질의 contains 라 "래미안 강남" 같은 조합은 못 잡음 → 토큰 OR 로 보완)
+ * A8 — 검색 무결과 대안 제안("비슷한 이름"). 정확한 결과가 하나도 없을 때만 부른다.
+ *
+ * [1008 · S] 토큰 기준으로 다시 짰다. 예전엔 market_transactions 에서 토큰 OR 로 최근 400행을 받아
+ * "최근 거래 순서" 그대로 6개를 냈다 — 질의와 얼마나 닮았는지는 보지 않았다. 이제 단지 단위 집계표에서
+ *   · 토큰(띄어쓰기·숫자 앞에서 끊고 '아파트'·'N단지' 꼬리를 뗀 것)이 이름에 들어간 단지,
+ *   · 한 덩어리 4자 이상이면 앞 2자("중리현대" → "중리")가 이름에 들어간 단지
+ * 를 모아 "토큰이 몇 개 맞았나 → 트라이그램 유사도 → 최근 6개월 거래" 로 줄 세운다.
+ * 실측(2026-09-21): "중리현대" 는 실거래 신고가 없는 단지(K-apt 대장에만 창원 마산회원구)다 —
+ * 예전 제안은 0건이었고, 이제 같은 내서읍의 "중리백로"·"중리근로복지"·"중리2차서광" 이 먼저 뜬다.
+ * 이건 "혹시 이 단지?" 라는 제안이지 검색 결과가 아니다 — 화면도 그렇게 적는다.
  */
 export async function suggestComplexes(query: string, limit = 6): Promise<ComplexRow[]> {
   const sb = getServiceSupabase();
-  const raw = (query ?? "").trim();
+  const raw = orSafe(normalizeComplexQueryText(expandComplexAlias(query ?? "")).text);
   if (!sb || !raw) return [];
-  // 토큰 정제(한글·영숫자만, 2자 이상, 최대 3개) — PostgREST or 필터 안전.
-  const tokens = [
-    ...new Set(
-      raw
-        .split(/\s+/)
-        .map((t) => t.replace(/[^0-9A-Za-z가-힣]/g, ""))
-        .filter((t) => t.length >= 2),
-    ),
-  ].slice(0, 3);
-  if (tokens.length === 0) return [];
+  const tokens = tokenizeComplexQuery(raw).filter((t) => t.length >= 2 && !/^[0-9]+$/.test(t));
+  const needles = new Set<string>(tokens.slice(0, 3));
+  for (const t of tokens.slice(0, 3)) if (t.length >= 4) needles.add(t.slice(0, 2));
+  if (needles.size === 0) return [];
 
-  const ors = tokens
-    .flatMap((t) => [`complex_name.ilike.%${t}%`, `region_name.ilike.%${t}%`])
-    .join(",");
+  const ors = [...needles].map((t) => `complex_name.${likeOp(t)}.%${t}%`).join(",");
   const { data, error } = await sb
-    .from("market_transactions")
-    .select("complex_name, region_name, address, build_year")
-    .eq("transaction_type", "trade")
-    .eq("is_cancelled", false)
-    .not("complex_name", "is", null)
+    .from("complex_tx_stats_base")
+    .select("region_name, complex_name, address, build_year, trade_count, recent_trade_count")
     .or(ors)
-    .order("contract_ym", { ascending: false })
-    .limit(400);
+    .order("recent_trade_count", { ascending: false })
+    .limit(300);
   /* 이 함수는 "결과가 하나도 없을 때" 부르는 대안 제안이다. 여기서 또 빈 배열을
      돌려주면 화면은 "제안할 만한 단지도 없다"까지 단정하게 된다. */
-  if (error) throw dbError("market_transactions (대안 제안)", error);
+  if (error) throw dbError("complex_tx_stats_base (대안 제안)", error);
 
-  const rows =
-    (data as
-      | {
-          complex_name: string;
-          region_name: string;
-          address: string | null;
-          build_year: number | null;
-        }[]
-      | null) ?? [];
-  const seen = new Map<string, ComplexRow>();
-  for (const r of rows) {
-    if (!r.complex_name || !r.region_name) continue;
-    const key = `${r.region_name}${SEP}${r.complex_name}`;
-    if (seen.has(key)) continue;
-    seen.set(key, toComplexRow(r.region_name, r.complex_name, r));
-    if (seen.size >= limit) break;
-  }
-  return [...seen.values()];
+  const rows = ((data as StatsBaseRow[] | null) ?? []).filter((r) => r.complex_name && r.region_name);
+  const scored = rows.map((r) => {
+    const nn = complexNameKey(r.complex_name);
+    const hay = `${nn} ${r.region_name} ${r.address ?? ""}`.toLowerCase();
+    let hits = 0;
+    for (const t of needles) if (hay.includes(t)) hits++;
+    return { r, hits, sim: trigramSimilarity(r.complex_name, raw), recent: r.recent_trade_count ?? 0 };
+  });
+  scored.sort((a, b) => b.hits - a.hits || b.sim - a.sim || b.recent - a.recent);
+  return scored.slice(0, limit).map(({ r }) => toComplexRow(r.region_name, r.complex_name, r));
 }
 
 // ── 지역 대비 상대 위치 (D6) ──────────────────────────────────────────
@@ -952,19 +1123,12 @@ export async function getRegionRelative(complexId: string): Promise<RegionRelati
   const districtPerM2 = reg?.per_m2_sale != null ? Number(reg.per_m2_sale) : 0;
   if (!Number.isFinite(districtPerM2) || districtPerM2 <= 0) return null;
 
-  const { data: tx, error: txError } = await sb
-    .from("market_transactions")
-    .select("deal_amount_krw, area_m2")
-    .eq("complex_name", dec.name)
-    .eq("region_name", dec.region)
-    .eq("transaction_type", "trade")
-    .eq("is_cancelled", false)
-    .gt("deal_amount_krw", 0)
-    .not("area_m2", "is", null)
-    .order("contract_ym", { ascending: false })
-    .limit(60);
-  if (txError) throw dbError("market_transactions (지역 대비)", txError);
-  const rows = (tx as { deal_amount_krw: number; area_m2: number }[] | null) ?? [];
+  /* [1007] 예전엔 여기서 같은 단지의 실거래를 **세 번째로** 읽었다(deal_amount_krw, area_m2
+     최신 60건). 렌더당 한 번 읽은 공용 행(loadTradeRowsShared)에서 같은 조건(금액>0 ·
+     면적 있음 · 최신순 60건)으로 자른다 — 결과는 같은 집합이고 왕복만 준다. */
+  const rows = (await loadTradeRowsShared(dec.region, dec.name))
+    .filter((r) => r.area_m2 != null && Number(r.deal_amount_krw) > 0)
+    .slice(0, 60) as { deal_amount_krw: number; area_m2: number }[];
   const perM2s = rows
     .map((r) => Number(r.deal_amount_krw) / Number(r.area_m2))
     .filter((v) => Number.isFinite(v) && v > 0);
@@ -1008,25 +1172,12 @@ export interface AreaBandRow {
 export async function getAreaBands(complexId: string): Promise<AreaBandRow[]> {
   const dec = decodeComplexIdForQuery(complexId, "getAreaBands");
   if (!dec) return [];
-  const sb = getServiceSupabase();
-  if (!sb) return [];
-  const { data, error } = await sb
-    .from("market_transactions")
-    .select("area_m2, deal_amount_krw, contract_ym")
-    .eq("complex_name", dec.name)
-    .eq("region_name", dec.region)
-    .eq("transaction_type", "trade")
-    .eq("is_cancelled", false)
-    .gt("deal_amount_krw", 0)
-    .not("area_m2", "is", null)
-    .order("contract_ym", { ascending: false })
-    .limit(400);
-  /* 빈 배열이면 "면적대별 시세" 섹션이 통째로 안 그려진다 — 실거래가 없는 단지라는
-     뜻이다. 못 읽은 것을 그렇게 그리면 안 된다. */
-  if (error) throw dbError("market_transactions (면적대별)", error);
-  const rows =
-    (data as { area_m2: number | null; deal_amount_krw: number; contract_ym: string }[] | null) ??
-    [];
+  /* [1007] 렌더당 한 번 읽은 공용 행에서 같은 조건(금액>0 · 면적 있음 · 최신순 400건)으로
+     자른다 — 예전엔 이 함수가 단지 실거래를 따로(두 번째로) 읽었다. 조회 실패는 공용
+     로더가 그대로 던진다(빈 배열 = "실거래 없음"이라는 강한 주장이므로 위장하지 않는다). */
+  const rows = (await loadTradeRowsShared(dec.region, dec.name))
+    .filter((r) => r.area_m2 != null && Number(r.deal_amount_krw) > 0)
+    .slice(0, 400);
   if (rows.length === 0) return [];
 
   const out: AreaBandRow[] = [];
@@ -1035,7 +1186,10 @@ export async function getAreaBands(complexId: string): Promise<AreaBandRow[]> {
       (r) => r.area_m2 != null && r.area_m2 >= band.min && r.area_m2 < band.max,
     );
     if (inBand.length === 0) continue;
-    const latest = inBand[0]; // 최신순 정렬됨
+    /* [1009 · C 리뷰] 공용 행은 계약월로만 정렬돼 같은 달 안 순서가 DB 반환 순서였다 — inBand[0] 이 그 달 아무 한 건이었다
+       (리뷰 실측: 헬리오시티 60~85㎡ 칩 "28억 9,000만 · 26.8월"은 8/1 계약, 실제 최신은 8/15 29억 — 목록 첫 줄).
+       계약월 → 계약일 → 금액 → 면적 순(hub-price compareLatest, 한 건 목록과 같은 순서)으로 가장 최근 한 건을 고른다. */
+    const latest = latestTradeRow(inBand) ?? inBand[0];
     let sumKrw = 0;
     let minKrw = Number.POSITIVE_INFINITY;
     let maxKrw = 0;
@@ -1059,6 +1213,52 @@ export async function getAreaBands(complexId: string): Promise<AreaBandRow[]> {
   }
   return out;
 }
+
+// ── [1007] 단지 매매 실거래 공용 행 — 렌더당 1회 ─────────────────────────
+/**
+ * 왜: 단지 허브 한 번을 그리는 동안 같은 단지의 매매 실거래를 **세 번** 읽고 있었다 —
+ * 월별 이력(getTransactionHistoryWithBands, 전 행) · 면적대(getAreaBands, 최신 400) ·
+ * 지역 대비(getRegionRelative, 최신 60). 세 질의는 같은 표·같은 필터(매매·해제 제외·
+ * 금액>0)·같은 정렬(계약월 내림차순)이고 뒤의 둘은 앞의 부분집합이다. 실측: 단지별
+ * market_transactions 조회가 pg_stat_statements 상위(mean 122ms × 152k) 이고 허브는
+ * 하루 8,907회 콜드 렌더된다(ISR 미스) → 렌더당 2회 × 8,907 ≈ 17,800 질의/일이 통째로
+ * 중복이었다.
+ *
+ * React cache() 라 **요청 안에서만** 나눈다(TTL 캐시 아님 — 신선도를 내주지 않는다).
+ * 키는 (region, name) — page.tsx 가 이력엔 canonical_id 를, 면적대·지역 대비엔 URL id 를
+ * 넘겨도 둘 다 같은 (region, name) 으로 풀리므로 합쳐진다. 라우트 핸들러(/api/complex/
+ * [id]/detail)에서는 cache() 가 메모하지 않을 수 있는데 그때는 예전과 같은 횟수다.
+ *
+ * 조회 실패는 던진다(dbError) — 부르는 세 함수의 계약(빈 배열은 "거래 없음"이라는 강한
+ * 주장이므로 실패를 그렇게 위장하지 않는다)을 그대로 지킨다. PostgREST 기본 상한(1,000행)
+ * 은 [1002] 와 같이 최신 계약월부터 받아 "최근 N개월"이 온전하게 남게 한다.
+ */
+type TradeRowLite = {
+  contract_ym: string;
+  deal_amount_krw: number;
+  area_m2: number | null;
+  /* [1009 · C] 한 건 단위 목록(계약일·층) — 아래 getComplexDeals 만 읽는다. 기존 세 함수의 출력은 그대로다 */
+  contract_day?: number | null;
+  floor?: number | null;
+};
+
+const loadTradeRowsShared = cache(async (region: string, name: string): Promise<TradeRowLite[]> => {
+  const sb = getServiceSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from("market_transactions")
+    /* [1009 · C] contract_day·floor 두 열 추가 — 둘 다 부분 인덱스 mt_trade_complex_cov2_idx 의 INCLUDE 에 있어
+       Index Only Scan 이 그대로다(운영 EXPLAIN 확인). 허브의 대표가·최근 실거래 목록이 **추가 질의 없이** 이 행을 쓴다 */
+    .select("contract_ym, deal_amount_krw, area_m2, contract_day, floor")
+    .eq("complex_name", name)
+    .eq("region_name", region)
+    .eq("transaction_type", "trade")
+    .eq("is_cancelled", false)
+    .gt("deal_amount_krw", 0)
+    .order("contract_ym", { ascending: false });
+  if (error) throw dbError(`market_transactions (단지 실거래 ${name})`, error);
+  return (data as TradeRowLite[] | null) ?? [];
+});
 
 // ── 실거래가 (market_transactions 월별 집계) ──────────────────────────
 
@@ -1141,24 +1341,45 @@ export async function getTransactionHistoryWithBands(
 ): Promise<ComplexTransactionRowWithBands[]> {
   const dec = decodeComplexIdForQuery(complexId, "getTransactionHistoryWithBands");
   if (!dec) return [];
-  const sb = getServiceSupabase();
-  if (!sb) return [];
-  const { data, error } = await sb
-    .from("market_transactions")
-    .select("contract_ym, deal_amount_krw, area_m2")
-    .eq("complex_name", dec.name)
-    .eq("region_name", dec.region)
-    .eq("transaction_type", "trade")
-    .eq("is_cancelled", false)
-    .gt("deal_amount_krw", 0)
-    .order("contract_ym", { ascending: false }); /* [1002] 위 함수와 같은 이유 */
-  /* 빈 배열은 "신고된 거래가 없다"는 강한 주장 — 조회 실패를 그렇게 위장하지 않는다 */
-  if (error) throw dbError(`market_transactions (실거래 이력·면적대 ${dec.name})`, error);
-  const rows =
-    (data as { contract_ym: string; deal_amount_krw: number; area_m2: number | null }[] | null) ??
-    [];
+  /* [1007] 공용 행(렌더당 1회) — 조건·정렬은 예전 이 함수의 질의와 같다 */
+  const rows = await loadTradeRowsShared(dec.region, dec.name);
   return foldTradesByMonth(rows, complexId, limit);
 }
+
+/**
+ * [1009 · C] 단지 매매 실거래 **한 건 단위**(계약월·일·금액·전용면적·층) — 허브 첫 화면 대표 실거래가(AI 분석과 같은
+ * 규칙, lib/complex/hub-price)·평형별 추이·"최근 실거래" 목록의 재료.
+ *
+ * 렌더당 한 번 읽는 공용 행(loadTradeRowsShared)을 그대로 쓴다 — 허브는 이미 월별 이력·면적대·지역 대비로 같은 행을
+ * 읽고 있어 **추가 질의가 없다**. 조건도 같다(매매 · 해제 신고 제외 · 금액>0, 최신 계약월부터). 조회 실패는 던진다
+ * (빈 배열은 "거래 없음"이라는 강한 주장이다 — 위장하지 않는다). kapt id 는 조회 키가 아니다(canonical_id 를 넘긴다).
+ */
+export async function getComplexDeals(complexId: string): Promise<HubDeal[]> {
+  const dec = decodeComplexIdForQuery(complexId, "getComplexDeals");
+  if (!dec) return [];
+  const rows = await loadTradeRowsShared(dec.region, dec.name);
+  const out: HubDeal[] = [];
+  for (const r of rows) {
+    const ym = String(r.contract_ym ?? "");
+    const krw = Number(r.deal_amount_krw);
+    if (!/^\d{6}$/.test(ym) || !Number.isFinite(krw) || krw <= 0) continue;
+    const area = r.area_m2 == null ? null : Number(r.area_m2);
+    const day = r.contract_day == null ? null : Number(r.contract_day);
+    const floor = r.floor == null ? null : Number(r.floor);
+    out.push({
+      ym,
+      day: day != null && Number.isFinite(day) && day >= 1 && day <= 31 ? day : null,
+      man: Math.round(krw / 10_000),
+      area: area != null && Number.isFinite(area) && area > 0 ? area : null,
+      /* 지하층(음수)은 그대로 둔다 — 0 만 "모름" */
+      floor: floor != null && Number.isFinite(floor) && floor !== 0 ? floor : null,
+    });
+  }
+  return out;
+}
+
+/** 공용 행이 PostgREST 기본 상한(1,000행)에 닿았는가 — 닿았으면 가장 이른 달은 일부만 읽혔을 수 있다 */
+export const COMPLEX_DEALS_ROW_CAP = 1_000;
 
 export async function upsertTransactions(_rows: ComplexTransactionRow[]): Promise<void> {
   // 실거래 적재는 market_transactions ETL(molit-transactions-ingest)이 담당 — 여기선 no-op

@@ -4,6 +4,7 @@ import { PageShell } from "../components/PageShell";
 import { listApprovedListings } from "@/lib/listings/store-db";
 import { DISTRICTS } from "@/lib/regions";
 import { ListingCompareTray } from "@/components/ListingCompareTray";
+import { LISTING_COMPARE_ENTRY_OPEN } from "./compare-entry";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { ErrorState } from "@/app/components/ui/EmptyState";
 import { ListingsListClient } from "./ListingsListClient";
@@ -21,7 +22,12 @@ import { logger } from "@/lib/log";
    받고 ListingsListClient(클라이언트)에서 exact 일치로 거른다(서버 .eq 와 동의미).
    매물 등록·승인 반영은 최대 5분 늦는다(재검증 주기). 부스트 배지는 클라이언트
    에서 현재 시각으로 계산해 캐시와 무관하게 정확하다. */
-export const revalidate = 300;
+/* [1010] 300 → 1,800(30분). 승인 목록을 바꾸는 쓰기(관리자 승인·반려·숨김·소유확인 ·
+   소유자 수정·삭제 · 거래완료 · 끌어올리기)가 이제 전부 invalidateListingsIndex() 로
+   /listings 를 즉시 비운다(lib/listings/invalidate-listings.ts). 사람이 쓴 것이 바로 보여야
+   하는 화면이라 다른 목록만큼 길게 올리지 않는다 — 무효화가 빠진 경로가 혹시 있어도
+   30분이면 받아 낸다. 등록(POST)은 status="pending" 이라 이 목록을 바꾸지 않는다. */
+export const revalidate = 1_800;
 
 export const metadata: Metadata = {
   /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
@@ -75,8 +81,9 @@ export default async function ListingsPage() {
         <ListingsListClient items={items} seoulGus={seoulGus} />
       )}
 
-      {/* 매물 비교함 — 담긴 매물이 있을 때만 하단 고정 노출 */}
-      <ListingCompareTray />
+      {/* 매물 비교함 — 담긴 매물이 있을 때만 하단 고정 노출.
+          [1009 · T 리뷰 MED-10] "비교하기"가 보관 경로(/listings/compare)로 가서, 소유자 결정 전까지 렌더하지 않는다(./compare-entry). */}
+      {LISTING_COMPARE_ENTRY_OPEN && <ListingCompareTray />}
 
       {/* 법적 고지 */}
       <div className="mt-8 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[12px] leading-[1.7] text-text-3">

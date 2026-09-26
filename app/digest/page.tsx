@@ -2,9 +2,12 @@ import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { HouseMark } from "@/app/components/Logo";
 import { ErrorState } from "@/app/components/ui";
-import { getWeeklyDigest, type DigestDeltaTone, type WeeklyDigest } from "@/lib/newui/digest";
+import { getWeeklyDigest, type WeeklyDigest } from "@/lib/newui/digest";
+import { Delta } from "@/app/components/num/Delta";
+import { Explain } from "@/app/components/explain/Explain";
 import { logger } from "@/lib/log";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
+import { newsHref, storyHref } from "@/lib/town/post-href";
 
 export const metadata = buildPageMetadata({
   title: "주간 다이제스트",
@@ -19,13 +22,9 @@ export const metadata = buildPageMetadata({
    커뮤니티(이웃 글). 빈 데이터는 빈 상태 문구로 폴백 (가짜 숫자 없음).
    ============================================================ */
 
-export const revalidate = 3600;
-
-function deltaClass(tone: DigestDeltaTone): string {
-  if (tone === "up") return "delta-up";
-  if (tone === "down") return "delta-down";
-  return "delta-flat";
-}
+/* [1010] 크롤러 재방문(≈2.2일)보다 짧은 TTL 은 크롤 1회 = 재렌더 1회다. 이 화면을 바꾸는
+   적재(SOURCE_MAP)가 이제 경로를 직접 비우므로 시간 TTL 은 안전망으로만 둔다. */
+export const revalidate = 86_400;
 
 function shortDate(iso: string): string {
   const d = new Date(iso);
@@ -138,8 +137,9 @@ export default async function DigestPage() {
         <div className="rise-in-2 card flex flex-col gap-2 rounded-2xl px-4 py-3.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-extrabold text-ink">뉴스 하이라이트</span>
-            <Link href="/town/news" className="t-sub font-extrabold text-primary">
-              전체 ›
+            {/* [1007 · P2] 목적지 이름 그대로 + 24px 히트(인라인 링크 규칙) */}
+            <Link href="/town/news" className="inline-flex min-h-[24px] items-center t-sub font-extrabold text-primary">
+              뉴스룸 전체 ›
             </Link>
           </div>
           {news.length === 0 &&
@@ -153,7 +153,7 @@ export default async function DigestPage() {
               </div>
             ))}
           {news.map((n) => (
-            <Link key={n.id} href={`/town/news/${n.id}`} className="group">
+            <Link key={n.id} href={newsHref(n.id)} className="group press -mx-1 block rounded-lg px-1 py-0.5 no-underline">
               <div className="t-sub font-bold text-ink group-hover:text-primary">
                 {n.title}
               </div>
@@ -168,10 +168,25 @@ export default async function DigestPage() {
 
         {/* 시장 요약 (market_region_price, 전월 대비) */}
         <div className="rise-in-3 card flex flex-col gap-[7px] rounded-2xl px-4 py-3.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-extrabold text-ink">시장 요약</span>
+          {/* [1009 · H] 등락이 무엇의 변화인지 적는다 — 스냅샷 sale_change 는 부동산원 **매매가격지수** 전월비다
+              (평균가 변화가 아니다). 예전 머리 "평균 매매가 · 전월 대비"는 평균가가 그만큼 움직인 것처럼 읽혔다. */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-0.5 text-xs font-extrabold text-ink">
+              시장 요약
+              <Explain
+                title="시장 요약"
+                body="주요 지역의 한국부동산원 월간 통계예요."
+                how={[
+                  "가격 = 한국부동산원이 공표한 지역 아파트 평균 매매가격(없으면 중위가격)이에요.",
+                  "등락 = 같은 통계의 매매가격지수 전월 대비 변동률이에요. 평균가 자체의 변화가 아니에요.",
+                  "월간 변동률이 없는 지역은 주간 변동률(전주 대비)로 대신하고, 그 줄에 “전주 대비”라고 적어요.",
+                  "값이 비어 있는 지역은 싣지 않아요.",
+                ]}
+                source={`한국부동산원 R-ONE${market[0]?.periodLabel ? ` · ${market[0].periodLabel} 기준` : ""}`}
+              />
+            </span>
             <span className="t-caption text-text-3">
-              평균 매매가 · 전월 대비
+              평균 매매가 · 지수 전월 대비
               {market[0]?.periodLabel ? ` · ${market[0].periodLabel} 기준` : ""}
             </span>
           </div>
@@ -191,9 +206,14 @@ export default async function DigestPage() {
                 <b className="font-bold text-ink">{m.name}</b>
                 <span className="ml-1 text-text-3">{m.city}</span>
               </span>
-              <span className="text-text-1">
-                {m.price}{" "}
-                <span className={`${deltaClass(m.tone)} text-[12px]`}>{m.delta}</span>
+              <span className="flex items-baseline gap-1.5 tabular-nums text-text-1">
+                {m.price}
+                <Delta
+                  pct={m.changePct}
+                  srContext={m.changeBasis === "weekly" ? "매매지수 전주보다" : "매매지수 전월보다"}
+                  className="text-[12px]"
+                />
+                {m.changeBasis === "weekly" ? <span className="t-caption text-text-3">전주 대비</span> : null}
               </span>
             </div>
           ))}
@@ -203,7 +223,7 @@ export default async function DigestPage() {
         <div className="rise-in-4 card flex flex-col gap-2 rounded-2xl px-4 py-3.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-extrabold text-ink">커뮤니티</span>
-            <Link href="/town" className="t-sub font-extrabold text-primary">
+            <Link href="/town" className="inline-flex min-h-[24px] items-center t-sub font-extrabold text-primary">
               동네이야기 ›
             </Link>
           </div>
@@ -220,11 +240,12 @@ export default async function DigestPage() {
               <div className="t-sub text-text-2">
                 이번 주 새 이웃 글 <b className="text-ink">{community.count}건</b>
               </div>
+              {/* [1007 · P2] 이웃 글(비자동)은 이야기 상세로 — 예전엔 뉴스 상세를 거쳐 리다이렉트됐다 */}
               {community.titles.map((t) => (
                 <Link
                   key={t.id}
-                  href={`/town/news/${t.id}`}
-                  className="t-sub font-bold text-ink hover:text-primary"
+                  href={storyHref(t.id)}
+                  className="press inline-flex min-h-[24px] items-center t-sub font-bold text-ink hover:text-primary"
                 >
                   {t.title}
                 </Link>

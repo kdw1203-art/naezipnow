@@ -29,6 +29,7 @@ export const EXPORT_SOURCES = [
   "points",
   "payments",
   "notificationPrefs",
+  "preferences",
 ] as const;
 export type ExportSourceName = (typeof EXPORT_SOURCES)[number];
 
@@ -105,6 +106,15 @@ export type PaymentLike = {
 
 export type PrefsLike = Record<string, unknown> & { userEmail?: string };
 
+/**
+ * [1008 · J] user_preferences 한 행의 내 것 — 표시·기록 기본값(ui_prefs)과 내 집 마련 여정(journey_state).
+ * route.ts 가 정규화된 값(lib/prefs/ui-prefs · lib/journey/state)으로 넘긴다. 저장한 적 없는 칸은 null.
+ */
+export type PreferencesLike = {
+  uiPrefs: (Record<string, unknown> & { updatedAt?: string | null }) | null;
+  journey: Record<string, unknown> | null;
+};
+
 export type ExportInput = {
   email: string;
   generatedAt: string;
@@ -116,6 +126,8 @@ export type ExportInput = {
   points: SourceResult<LedgerLike[]>;
   payments: SourceResult<PaymentLike[]>;
   notificationPrefs: SourceResult<PrefsLike>;
+  /** [1008 · J] 없으면(옛 호출) 내보내지 않는다 — route.ts 는 늘 넘긴다 */
+  preferences?: SourceResult<PreferencesLike>;
 };
 
 /* ── 출력 ── */
@@ -166,6 +178,11 @@ export type ExportPayload = {
   }[];
   payments: PaymentLike[];
   notificationPrefs: Record<string, unknown> | null;
+  /**
+   * [1008 · J] user_preferences — 설정 › 표시·기록 기본값(displayDefaults)과 내 집 마련 여정(journey: 단계 체크 시각,
+   * 계약·잔금 일정표의 날짜·매매가·체크). 저장한 적 없는 칸은 null.
+   */
+  preferences: { displayDefaults: Record<string, unknown> | null; journey: Record<string, unknown> | null } | null;
   /** 조회에 실패한 원천 — 이 목록에 있는 항목은 "없음"이 아니라 "못 읽음" */
   errors: { source: ExportSourceName; message: string }[];
 };
@@ -191,6 +208,7 @@ export function buildExportPayload(input: ExportInput): ExportPayload {
   const points = take("points", input.points) ?? [];
   const payments = take("payments", input.payments) ?? [];
   const prefs = take("notificationPrefs", input.notificationPrefs);
+  const userPrefs = input.preferences ? take("preferences", input.preferences) : null;
 
   return {
     format: "naezipnow-export",
@@ -265,6 +283,13 @@ export function buildExportPayload(input: ExportInput): ExportPayload {
     })),
     notificationPrefs: prefs
       ? Object.fromEntries(Object.entries(prefs).filter(([k]) => !PREF_INTERNAL_KEYS.has(k)))
+      : null,
+    preferences: userPrefs
+      ? {
+          /* 기본값(저장 시각 없음)은 "설정한 적 없음" — 기본값을 내 설정인 것처럼 내보내지 않는다 */
+          displayDefaults: userPrefs.uiPrefs && userPrefs.uiPrefs.updatedAt ? { ...userPrefs.uiPrefs } : null,
+          journey: userPrefs.journey ? { ...userPrefs.journey } : null,
+        }
       : null,
     errors,
   };

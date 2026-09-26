@@ -217,7 +217,9 @@ export async function reviewOwnerVerification(input: {
   decision: "approve" | "reject";
   adminNote?: string;
   reviewerEmail: string;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+  /* [1010] listingId 를 돌려준다 — 승인이 단지 허브(7일 ISR)의 매물 카드에
+     "소유확인" 배지를 세우므로, 호출부가 그 단지 화면을 비울 수 있어야 한다. */
+}): Promise<{ ok: true; listingId: string | null } | { ok: false; error: string }> {
   const sb = getServiceSupabase();
   if (!sb) return { ok: false, error: "저장소가 준비되지 않았어요." };
 
@@ -301,7 +303,7 @@ export async function reviewOwnerVerification(input: {
     }
   }
 
-  return { ok: true };
+  return { ok: true, listingId };
 }
 
 /**

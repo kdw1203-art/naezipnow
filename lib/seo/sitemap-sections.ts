@@ -10,6 +10,7 @@ import {
   loadGlossaryEntries,
   loadImjangEntries,
   loadNewsEntries,
+  loadStoryEntries,
   loadNoteEntries,
   loadPairEntries,
   loadRegionEntries,
@@ -24,8 +25,25 @@ import {
   sitemapSectionPath,
   type SitemapSectionSlug,
 } from "@/lib/seo/sitemap-slugs";
-import { CRAWLER_ENDPOINT_CACHE_CONTROL } from "@/lib/http/cache-policy";
 import { withBudget } from "@/lib/async/with-budget";
+
+/**
+ * [1007] 자식 사이트맵 CDN 캐시 — 6시간 + 하루 SWR.
+ *
+ * 실측(2026-09-20 운영): /sitemap-complexes.xml 은 URL 29,353개 · **7,663,410 바이트**(비압축,
+ * br 압축 후 약 1.9MB)이고 생성에 4.3초가 든다. 예전 값(lib/http/cache-policy.ts
+ * CRAWLER_ENDPOINT_CACHE_CONTROL = 1시간)이면 크롤러가 한 시간에 한 번만 와도 하루 24번
+ * 다시 만들고 24 × 7.7MB ≈ 184MB 를 오리진에서 내보낸다(Fast Origin Transfer). 원천 데이터는
+ * 하루 1회(molit 크론 00:40 UTC) 바뀌므로 6시간이면 하루 4번으로 준다(−83%). SWR 하루는
+ * 만료 뒤 첫 크롤러가 옛 본을 받고 뒤에서 갱신되게 한다(503 대신).
+ *
+ * 왜 여기 상수인가: cache-policy.ts 는 V1 소유 파일이라 값을 못 바꾼다(보고로 맞춤). 미들웨어
+ * matcher 가 `sitemap*.xml` 을 제외하므로 이 라우트가 실은 헤더가 그대로 CDN 에 닿는다
+ * (middleware.ts 의 크롤러 분기는 이 경로에 돌지 않는다 — 1006 까지의 실측과 같다).
+ * 인덱스(/sitemap.xml)는 1KB 남짓이라 예전 1시간 값을 그대로 둔다.
+ */
+export const SITEMAP_SECTION_CACHE_CONTROL =
+  "public, max-age=0, s-maxage=21600, stale-while-revalidate=86400";
 
 /**
  * N4 — 사이트맵 인덱스 분할.
@@ -87,8 +105,31 @@ type SitemapSection = {
   hub: string;
 };
 
+/**
+ * [1008 · J] 이번 판에 생긴 공개 페이지 — 정적 목록(lib/seo/build-sitemap.ts STATIC_ROUTES)은 이 판의 다른 담당
+ * 파일이라 "정적 페이지" 유형에 여기서 덧붙인다(같은 주소가 이미 있으면 싣지 않는다 — 중복 URL 방지).
+ * /quiz 는 같은 판 Q 가 만드는 실거래가 게임이다.
+ */
+export const EXTRA_PAGE_ROUTES: ReadonlyArray<{ path: string; priority: number }> = [
+  { path: "/journey", priority: 0.7 },
+  { path: "/journey/contract", priority: 0.6 },
+  { path: "/quiz", priority: 0.5 },
+];
+
+function loadPagesEntries(): MetadataRoute.Sitemap {
+  const entries = loadStaticEntries();
+  const seen = new Set(entries.map((e) => e.url));
+  for (const r of EXTRA_PAGE_ROUTES) {
+    const url = `${DEFAULT_DESKTOP_ORIGIN}${r.path}`;
+    if (seen.has(url)) continue;
+    seen.add(url);
+    entries.push({ url, priority: r.priority });
+  }
+  return entries;
+}
+
 export const SITEMAP_SECTIONS: readonly SitemapSection[] = [
-  { slug: "pages", label: "정적 페이지", required: true, load: loadStaticEntries, hub: "/" },
+  { slug: "pages", label: "정적 페이지", required: true, load: loadPagesEntries, hub: "/" },
   { slug: "complexes", label: "단지", required: true, load: loadComplexEntries, hub: "/map" },
   { slug: "regions", label: "지역 허브", required: true, load: loadRegionEntries, hub: "/map" },
   { slug: "tx", label: "실거래 구간", required: true, load: loadBandEntries, hub: "/tx" },
@@ -117,6 +158,9 @@ export const SITEMAP_SECTIONS: readonly SitemapSection[] = [
      되는 현실적인 경로는 "기사가 전부 사라졌다"가 아니라 "조회가 실패했다" 또는
      "요약 파이프라인이 멈췄다"뿐이다. 둘 다 조용히 넘어가면 안 되는 상태다. */
   { slug: "news", label: "뉴스 요약", required: true, load: loadNewsEntries, hub: "/town/news" },
+  /* [1006] 이야기(이웃 글) — 사람 글은 지금 0건이 사실(2026-09-20 실측 posts 0행). required 로
+     두면 503 이 "지금은 못 준다"는 거짓이 된다. 글이 생기면 자동으로 실린다. */
+  { slug: "story", label: "이웃 이야기", required: false, load: loadStoryEntries, hub: "/town" },
   /* [992 · A1] 전문가·Q&A 섹션 삭제 — 보관(비노출) 영역(lib/seo/archived-routes.ts).
      X-Robots-Tag noindex 와 사이트맵 제외를 같은 목록에서 맞춘다. */
 ];
@@ -275,7 +319,9 @@ export function sitemapSectionRoute(slug: SitemapSectionSlug) {
          오류)" 로 보인다 — 서치어드바이저 사이트맵 제출이 실패한 이유가 이것이다.
          같은 실패라도 503 + Retry-After 는 "나중에 다시 오라"는 말이 되고,
          무응답은 아무 말도 아니다. 늦게라도 정확한 답보다 제때 뜨는 답이 낫다. */
-      logger.error(
+      /* [1007] 503 은 캐시되지 않아 크롤러 요청마다 이 줄이 반복된다 — 유형별 1분 1건 */
+      logger.errorSampled(
+        `sitemap-timeout:${slug}`,
         `[sitemap] ${sitemapSectionPath(slug)} — ${section.label} 생성이 ` +
           `${SECTION_LOAD_BUDGET_MS}ms 안에 끝나지 않았습니다(503 응답).`,
       );
@@ -290,7 +336,8 @@ export function sitemapSectionRoute(slug: SitemapSectionSlug) {
          전부 없어졌다"고 적극적으로 거짓말하는 셈이다. 못 준다고 말한다.
          (required 여부와 무관하다 — 실패는 어느 유형에서든 실패다.) */
       const err = loaded.error;
-      logger.error(
+      logger.errorSampled(
+        `sitemap-error:${slug}`,
         `[sitemap] ${sitemapSectionPath(slug)} — ${section.label} 조회에 실패했습니다(503 응답). ` +
           `${err instanceof Error ? err.message : String(err)}`,
       );
@@ -309,7 +356,8 @@ export function sitemapSectionRoute(slug: SitemapSectionSlug) {
     /* 예외 없이 0개인데 그러면 안 되는 유형 = 조용한 실패다(로더가 부분 결과를
        정상처럼 돌려주는 경로가 남아 있을 수 있다). 이때도 200 대신 503 을 낸다. */
     if (section.required && entries.length === 0) {
-      logger.error(
+      logger.errorSampled(
+        `sitemap-empty:${slug}`,
         `[sitemap] ${sitemapSectionPath(slug)} — ${section.label} 조회 결과가 0개입니다(503 응답).`,
       );
       return new Response("Sitemap temporarily unavailable", {
@@ -321,7 +369,7 @@ export function sitemapSectionRoute(slug: SitemapSectionSlug) {
     return new Response(serializeSitemap(entries), {
       headers: {
         "Content-Type": "application/xml; charset=utf-8",
-        "Cache-Control": CRAWLER_ENDPOINT_CACHE_CONTROL,
+        "Cache-Control": SITEMAP_SECTION_CACHE_CONTROL,
         "X-Robots-Tag": "noindex",
       },
     });

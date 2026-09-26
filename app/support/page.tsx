@@ -14,6 +14,7 @@ import { RESPONSE_TIME, SUPPORT_HOURS } from "@/lib/support/constants";
 import { logger } from "@/lib/log";
 import { getBusinessInfo } from "@/lib/brand/business-info";
 import { formatKstShortDate } from "@/lib/format/kst";
+import { postHref } from "@/lib/town/post-href";
 
 /* P2-2: 사이드메뉴 실링크 · 문의 폼(/api/support) 연동 · 공지 board_posts(공지 카테고리) 실연동
    [1000] 리퀴드 글래스 재구성 — 유리 히어로(제목·응답 시간·FAQ 검색) → 분류 타일 → 1:1 문의 →
@@ -40,7 +41,8 @@ const SIDE_MENU: { label: string; href: string }[] = [
   { label: "개인정보처리방침", href: "/legal/privacy" },
 ];
 
-type NoticeItem = { id: string; title: string; date: string };
+/* [1007 · P2] href 는 로더가 postHref 로 정한다 — 공지(비자동 board_posts)는 이야기 상세, 기사는 뉴스 상세 */
+type NoticeItem = { id: string; title: string; date: string; href: string };
 
 type NoticesData = {
   notices: NoticeItem[];
@@ -62,7 +64,7 @@ async function loadNotices(): Promise<NoticesData> {
       notices: posts
         .filter((p) => p.category.trim() === "공지")
         .slice(0, 3)
-        .map((p) => ({ id: p.id, title: p.title, date: formatKstShortDate(p.createdAt) })),
+        .map((p) => ({ id: p.id, title: p.title, date: formatKstShortDate(p.createdAt), href: postHref(p) })),
       failed: false,
     };
   } catch (e) {
@@ -245,9 +247,11 @@ export default async function SupportPage() {
             <section id="notices" aria-labelledby="notices-title" className="rise-in-3 card flex flex-col gap-1 scroll-mt-24 rounded-2xl px-5 py-[18px]">
               <div className="mb-1.5 flex items-baseline justify-between">
                 <h2 id="notices-title" className="t-section text-ink">공지사항</h2>
+                {/* [1007 · P2] 공지는 사람이 쓴 글(비자동 board_posts)이라 1006 부터 뉴스룸(/town/news,
+                    자동수집만)에는 나오지 않는다 — "전체" 는 동네이야기 피드로 간다. */}
                 {notices.length > 0 && (
-                  <Link href="/town/news" className="inline-block py-[5px] t-sub font-bold text-primary no-underline">
-                    전체 ›
+                  <Link href="/town" className="inline-block py-[5px] t-sub font-bold text-primary no-underline">
+                    동네이야기에서 전체 ›
                   </Link>
                 )}
               </div>
@@ -261,7 +265,7 @@ export default async function SupportPage() {
                 notices.map((n, i, arr) => (
                   <Link
                     key={n.id}
-                    href={`/town/news/${n.id}`}
+                    href={n.href}
                     className={`flex min-h-10 items-center justify-between gap-3 py-2 t-sub no-underline ${
                       i < arr.length - 1 ? "border-b border-divider" : ""
                     }`}

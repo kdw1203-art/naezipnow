@@ -7,7 +7,10 @@ import { TemplateBrowser } from "./TemplateBrowser";
    돌았다(x-vercel-cache: MISS, cache-control: private,no-store 실측). 이 화면의
    서버 렌더에는 사용자별 상태가 없다(auth·cookies 0건 — check-cache-policy 가
    회귀를 막는다). ISR 로 전환: 템플릿 목록은 코드 배포로만 바뀐다. */
-export const revalidate = 3600;
+/* [1010] 3600초 → 1일. 바뀌는 지점은 둘뿐이고 둘 다 비운다 — 템플릿 등록
+   (POST /api/notes/templates)과 "N회 사용"(use_count) 증가(노트 저장 시
+   app/api/inspection/notes/route.ts → invalidateNoteTemplateRoutes). */
+export const revalidate = 86_400;
 
 export const metadata: Metadata = {
   title: "임장 노트 템플릿 | 내집나우",

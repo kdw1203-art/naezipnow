@@ -11,7 +11,12 @@ import { seoAlternates } from "@/lib/seo/alternates";
    최근 완결 월 목록으로 월 페이지에 링크한다. 목록 자체는 데이터 조회가 없어
    가볍고, 각 월 페이지가 데이터 없으면 404 로 정직하게 말한다. */
 
-export const revalidate = 86400;
+/* [1010] 24h → 7일. 이 인덱스는 recentReportSlugs(12) — 달력에서 계산하는 코드 상수라
+   데이터 조회가 없다. 실제로 바뀌는 순간은 두 가지뿐이고 둘 다 비움이 있다:
+     · 달이 바뀔 때 → 목록에 새 달이 붙는다. 매일 도는 크론이
+       lib/region/invalidate-market.ts regionReportPaths() 로 이 경로를 함께 비운다.
+     · 그 지역 실거래가 바뀔 때 → 같은 호출이 최근 완결 월과 함께 비운다. */
+export const revalidate = 604_800;
 
 export async function generateStaticParams(): Promise<Array<{ id: string }>> {
   return [];

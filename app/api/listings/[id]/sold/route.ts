@@ -8,6 +8,8 @@ import { safeAuth } from "@/lib/safe-auth";
 import { awardPoints } from "@/lib/points/ledger";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { dbUnavailable } from "@/lib/api/db-unavailable";
+import { invalidateComplexByNames } from "@/lib/complex/complex-invalidate";
+import { invalidateListingsIndex } from "@/lib/listings/invalidate-listings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,7 +40,9 @@ export async function POST(
 
   const { data, error: readError } = await sb
     .from("listings")
-    .select("author_email, status")
+    /* [1010] region_name·complex_name 을 같이 읽는다 — 거래완료로 허브(7일 ISR)의 매물
+       목록에서 빠지므로 그 단지 화면을 비워야 한다(왕복은 그대로 1회). */
+    .select("author_email, status, region_name, complex_name")
     .eq("id", listingId)
     .maybeSingle();
   /* 조회 실패를 아래 404 로 흘려보내면 멀쩡히 있는 자기 매물에 대고
@@ -66,6 +70,14 @@ export async function POST(
       { status: 500 },
     );
   }
+
+  /* [1010] 승인 매물이 목록에서 빠진다 — 단지 허브의 "매물 N"·카드를 즉시 비운다 */
+  invalidateComplexByNames(
+    row.region_name != null ? String(row.region_name) : null,
+    row.complex_name != null ? String(row.complex_name) : null,
+  );
+  /* [1010] 승인 목록(/listings, ISR 30분)에서도 빠진다 — 같이 비운다 */
+  invalidateListingsIndex();
 
   // 거래완료 신고 적립 — refId=listingId 로 중복 지급 방지.
   const award = await awardPoints(ownerEmail, "listing_sold", listingId);

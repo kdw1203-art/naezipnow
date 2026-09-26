@@ -8,6 +8,9 @@
  * 브라우저 전용(localStorage) — useEffect/핸들러 안에서만 부를 것.
  */
 
+import { isNoteLevel, type NoteLevel } from "@/lib/notes/note-scores";
+import type { DecisionChoice } from "@/lib/inspection/decision";
+
 export const NOTE_DRAFT_KEY = "nz_note_draft";
 
 /* [967 · 9] 작성/수정 임시저장 키 분리.
@@ -54,6 +57,198 @@ export function stableStringify(value: unknown): string {
     return v;
   };
   return JSON.stringify(walk(value));
+}
+
+/* ===== [1005 · A3] 초안 스키마·파싱·비교 — NoteForm 에서 내려온 순수 부분 =====
+   왜 여기로: 1초 자동 저장 effect 가 buildDraft 와 **다른** 객체를 손으로 만들어
+   판단(decision)이 빠졌고, 고려사항(todoItems)은 스키마에 아예 없었다 — 새로고침
+   한 번에 3단계 판단과 직접 적은 고려사항이 사라졌다. 파싱·비교를 여기 두면
+   node:test 가 왕복(build → parse)을 검증한다. 동작은 NoteForm 의 것과 같다. */
+
+export type NoteDraftLocation = {
+  aptName: string;
+  region: string;
+  complexId: string | null;
+  lat: number | null;
+  lng: number | null;
+};
+
+export type NoteDraftTodo = { text: string; level: "중요" | "보통" };
+
+export type NoteDraftDecision = { choice: DecisionChoice; reasons: string[] };
+
+export type NoteDraft = {
+  v: 1;
+  savedAt: string;
+  checks: Record<string, NoteLevel>;
+  visit: Record<string, string>;
+  tags: string[];
+  doneTodos: string[];
+  /** [970 · B-10] null = 미입력(기본). 예전 초안의 숫자는 그대로 읽는다 */
+  satisfaction: number | null;
+  memo: string;
+  /* 선택 필드(구버전 드래프트 호환) */
+  loc?: NoteDraftLocation;
+  photos?: string[];
+  isPublic?: boolean;
+  /** 카테고리 체크리스트 항목 id → 체크 여부 */
+  groupChecked?: Record<string, boolean>;
+  weather?: string;
+  /** 모바일8 — 체크리스트 섹션 접기 상태(그룹 id → 열림) */
+  openGroups?: Record<string, boolean>;
+  /** [967 · 2] 방문일(YYYY-MM-DD) — 사진 촬영일로 채운 값도 여기 남는다 */
+  visitDate?: string;
+  /** [999] 3단계 판단(살까·보류·패스·다시 보기)과 근거 */
+  decision?: NoteDraftDecision;
+  /** [1005 · A3] 고려사항 목록(직접 추가한 것 포함) — 없으면 폼 기본값 유지 */
+  todoItems?: NoteDraftTodo[];
+};
+
+export function isStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every((x) => typeof x === "string");
+}
+
+const DECISION_CHOICES: readonly string[] = ["buy", "hold", "pass", "revisit"];
+
+function parseDecision(v: unknown): NoteDraftDecision | undefined {
+  const d = v as { choice?: unknown; reasons?: unknown } | null | undefined;
+  if (!d || typeof d !== "object") return undefined;
+  if (typeof d.choice !== "string" || !DECISION_CHOICES.includes(d.choice)) return undefined;
+  return {
+    choice: d.choice as DecisionChoice,
+    reasons: isStringArray(d.reasons) ? d.reasons.slice(0, 3) : [],
+  };
+}
+
+function parseTodoItems(v: unknown): NoteDraftTodo[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const out: NoteDraftTodo[] = [];
+  const seen = new Set<string>();
+  for (const it of v) {
+    if (!it || typeof it !== "object") continue;
+    const o = it as Record<string, unknown>;
+    const text = typeof o.text === "string" ? o.text.trim() : "";
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    out.push({ text, level: o.level === "중요" ? "중요" : "보통" });
+    if (out.length >= 60) break;
+  }
+  return out;
+}
+
+function boolMap(v: unknown): Record<string, boolean> {
+  const out: Record<string, boolean> = {};
+  if (v && typeof v === "object") {
+    for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+      if (typeof val === "boolean") out[k] = val;
+    }
+  }
+  return out;
+}
+
+/** localStorage 문자열 → 초안. 형식이 어긋나면 null(복원 배너를 띄우지 않는다). */
+export function parseDraft(raw: string | null): NoteDraft | null {
+  if (!raw) return null;
+  try {
+    const o = JSON.parse(raw) as Record<string, unknown> | null;
+    if (!o || typeof o !== "object" || o.v !== 1) return null;
+    if (
+      typeof o.savedAt !== "string" ||
+      typeof o.memo !== "string" ||
+      (typeof o.satisfaction !== "number" && o.satisfaction !== null) ||
+      !o.checks ||
+      typeof o.checks !== "object" ||
+      !o.visit ||
+      typeof o.visit !== "object" ||
+      !isStringArray(o.tags) ||
+      !isStringArray(o.doneTodos)
+    ) {
+      return null;
+    }
+    const checks: Record<string, NoteLevel> = {};
+    for (const [k, val] of Object.entries(o.checks as Record<string, unknown>)) {
+      if (isNoteLevel(val)) checks[k] = val;
+    }
+    const visit: Record<string, string> = {};
+    for (const [k, val] of Object.entries(o.visit as Record<string, unknown>)) {
+      if (typeof val === "string") visit[k] = val;
+    }
+    let loc: NoteDraftLocation | undefined;
+    if (o.loc && typeof o.loc === "object") {
+      const l = o.loc as Record<string, unknown>;
+      if (typeof l.aptName === "string" && typeof l.region === "string") {
+        loc = {
+          aptName: l.aptName,
+          region: l.region,
+          complexId: typeof l.complexId === "string" ? l.complexId : null,
+          lat: typeof l.lat === "number" ? l.lat : null,
+          lng: typeof l.lng === "number" ? l.lng : null,
+        };
+      }
+    }
+    const groupChecked = boolMap(o.groupChecked);
+    const openGroups = boolMap(o.openGroups);
+    return {
+      v: 1,
+      savedAt: o.savedAt,
+      checks,
+      visit,
+      tags: o.tags,
+      doneTodos: o.doneTodos,
+      satisfaction: typeof o.satisfaction === "number" ? o.satisfaction : null,
+      memo: o.memo,
+      loc,
+      photos: isStringArray(o.photos) ? o.photos : undefined,
+      isPublic: typeof o.isPublic === "boolean" ? o.isPublic : undefined,
+      groupChecked: Object.keys(groupChecked).length ? groupChecked : undefined,
+      weather: typeof o.weather === "string" ? o.weather : undefined,
+      openGroups: Object.keys(openGroups).length ? openGroups : undefined,
+      visitDate:
+        typeof o.visitDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(o.visitDate)
+          ? o.visitDate
+          : undefined,
+      decision: parseDecision(o.decision),
+      todoItems: parseTodoItems(o.todoItems),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/* [967 · 10] 초안 ↔ 폼 상태 "내용이 같은가" 비교용 정규형. 저장 시각·접기 상태
+   같은 표시용 필드는 뺀다 — 그것만 달라진 초안을 복원하라고 묻는 건 소음이다.
+   [1005 · A3] 판단·고려사항도 내용이다 — 그것만 바뀐 초안도 복원 대상. */
+export type DraftComparable = Omit<NoteDraft, "v" | "savedAt" | "openGroups">;
+
+export function draftComparable(d: DraftComparable): string {
+  return stableStringify({
+    checks: d.checks,
+    visit: d.visit,
+    tags: d.tags,
+    doneTodos: d.doneTodos,
+    satisfaction: d.satisfaction,
+    memo: d.memo,
+    loc: d.loc ?? null,
+    photos: d.photos ?? [],
+    isPublic: d.isPublic ?? false,
+    /* 끄면 false 로 남는 키가 있어 "켜진 것"만 센다 — 켰다 끈 항목은 안 바뀐 것 */
+    groupChecked: Object.entries(d.groupChecked ?? {})
+      .filter(([, on]) => on)
+      .map(([k]) => k)
+      .sort(),
+    weather: d.weather ?? "",
+    visitDate: d.visitDate ?? "",
+    decision: d.decision ?? null,
+    todoItems: d.todoItems ?? [],
+  });
+}
+
+/** [967 · 4] "HH:MM" — 저장 바·복구 배너의 시각 표기 */
+export function clockLabel(iso: string): string | null {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return null;
+  const d = new Date(t);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 export interface NoteDraftSummary {

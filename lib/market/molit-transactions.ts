@@ -20,6 +20,15 @@ import { getSigunguInfo, listLeafSigungu, type SigunguInfo } from "@/lib/nationa
 import { logIngest } from "@/lib/market/store";
 import type { RefreshAggregatesResult } from "@/lib/market/refresh-aggregates";
 import { logger } from "@/lib/log";
+/* [1010] "이번 적재가 실제로 바꾼 단지" 수집기 — 순수 모듈(단위 테스트가 규칙을 고정한다) */
+import {
+  createTouchedComplexSink,
+  TOUCHED_COMPLEX_CAP,
+} from "@/lib/market/touched-complexes";
+
+/* 호출부(크론·테스트)가 한 곳만 알면 되게 다시 내보낸다 */
+export { createTouchedComplexSink, TOUCHED_COMPLEX_CAP };
+export type { TouchedComplexSink } from "@/lib/market/touched-complexes";
 
 /** 1평 = 3.305785㎡ */
 const M2_PER_PYEONG = 3.305785;
@@ -316,6 +325,20 @@ export interface MolitIngestResult {
    */
   aborted: boolean;
   regions: { code: string; name: string; rows: number; status: "inserted" | "covered" | "empty" | "error" }[];
+  /**
+   * [1010] 이번 실행이 **실제로 upsert 한 행들**의 (region_name, complex_name) 집합.
+   *
+   * 왜 필요한가: 단지 허브(/complex/[id])의 ISR TTL 을 6시간 → 7일로 넓히는 대신,
+   * 적재가 끝난 순간 **바뀐 단지만** 비운다(크론 라우트가 encodeComplexId 로 id 를 만들어
+   * invalidateComplexIds 에 넘긴다). 안 바뀐 단지는 크롤러가 몇 번을 와도 CDN HIT 이다 —
+   * 실측(2026-09-20~22): /complex/[id] 하루 11,523 렌더 vs 사람 방문 30일 27회.
+   *
+   * 상한(TOUCHED_COMPLEX_CAP)을 넘으면 잘라내고 touchedTruncated=true 를 세운다 —
+   * 메모리와 크론 응답을 이 목록이 좌우하면 안 된다. 잘린 몫은 7일 TTL 이 받는다.
+   */
+  touchedComplexes: { region: string; name: string }[];
+  /** 상한에 걸려 잘라낸 단지가 있는가 */
+  touchedTruncated: boolean;
   reason?: string;
   /**
    * 적재 후 실거래 집계 MV 재계산 결과.
@@ -400,6 +423,8 @@ export async function ingestMolitTransactions(opts: {
     errors: 0,
     aborted: false,
     regions: [],
+    touchedComplexes: [],
+    touchedTruncated: false,
   };
 
   const sb = getServiceSupabase();
@@ -432,6 +457,11 @@ export async function ingestMolitTransactions(opts: {
      Vercel 런타임 로그는 보존 기간이 짧아 이미 사라진 뒤였다. 로그는 "몇 개 실패"가
      아니라 "왜 실패"까지 남아야 다음 사람이 같은 삽질을 반복하지 않는다. */
   let firstError: string | null = null;
+
+  /* [1010] 실제로 upsert 된 행에서만 모은다 — 건너뛴 구(covered)·빈 응답·오류는 담지 않는다.
+     상한을 넘으면 더 담지 않고 표식만 세운다(createTouchedComplexSink) — 여기서 자라는 것은
+     메모리와 크론 응답 크기다. */
+  const touched = createTouchedComplexSink();
 
   /* 연속 DB 오류 차단기 ───────────────────────────────────────────────────
      2026-07-26, 무료 플랜 DB 가 디스크 I/O 로 막혀 PostgREST 가 사실상 모든
@@ -547,6 +577,8 @@ const RECENT_MONTHS = 3;
       }
       consecutiveDbErrors = 0;
       result.inserted += payload.length;
+      /* [1010] upsert 가 성공한 뒤에만 센다 — 실패한 구의 단지를 비우면 "바뀌었다"는 거짓말이다. */
+      for (const r of payload) touched.note(regionName, String(r.complex_name ?? ""));
       result.regions.push({ code: info.sigunguCd, name: regionName, rows: payload.length, status: "inserted" });
     } catch (e) {
       result.errors += 1;
@@ -562,6 +594,10 @@ const RECENT_MONTHS = 3;
 
   result.aborted = aborted;
   result.ok = result.errors === 0;
+  /* [1010] 크론 라우트가 이 집합만 비운다(invalidateComplexIds). 순서는 적재 순서 그대로 —
+     무효화 상한에 걸려 잘려도 "먼저 적재된 시군구부터" 라는 뜻이 유지된다. */
+  result.touchedComplexes = touched.list();
+  result.touchedTruncated = touched.truncated();
   if (aborted) {
     /* "슬라이스를 다 봤다" 와 구분되게 이유를 남긴다 — 남은 시군구는 미확인이다. */
     result.reason =

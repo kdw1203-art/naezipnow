@@ -17,7 +17,12 @@ import { getAllRegionSnapshots } from "@/lib/market/store";
 import { buildApplyCalendar } from "@/lib/applyhome/calendar";
 
 export const runtime = "nodejs";
-export const revalidate = 3600; // 1시간 — 공유된 이미지가 하루 안에 여러 번 최신화
+/* [1010] 1시간 → 6시간. 다른 OG 카드와 달리 이 카드는 **고정 URL** 이고 서버가 데이터를 직접
+   읽는다 — 같은 URL 의 그림이 매일 바뀌는 것이 존재 이유다. 그래서 하루(86,400)로 올리지 않는다:
+   카드에 "오늘/이번 주 접수 마감 N건"(청약홈)이 들어 있어 하루 눈금이면 날짜 경계를 넘긴 카드가
+   어제 기준을 말한다. 6시간이면 호출은 1/6 로 줄면서 그 줄이 반나절 이상 낡지 않는다.
+   `immutable` 금지 — 붙이면 한 번 공유된 카드가 영영 안 바뀐다(lib/og/cache.ts 주석). */
+export const revalidate = 21_600;
 
 type CardRow = { icon: string; label: string; value: string; tone: string };
 
@@ -218,6 +223,16 @@ export async function GET() {
         </div>
       </div>
     ),
-    { width: OG_SIZE.width, height: OG_SIZE.height, ...ogFonts() },
+    {
+      width: OG_SIZE.width,
+      height: OG_SIZE.height,
+      ...ogFonts(),
+      /* [1007] 고정 URL 카드 — 위 revalidate 의 의도를 CDN 헤더로 확실히 한다.
+         [1010] 1시간 → 6시간 + 하루 SWR. 캐시 키는 경로뿐(쿼리를 읽지 않는다)이라 CDN 사본은
+         전 세계에 한 벌이고, 이 눈금이 곧 오리진 호출 수다(하루 최대 4회). */
+      headers: {
+        "Cache-Control": "public, max-age=0, s-maxage=21600, stale-while-revalidate=86400",
+      },
+    },
   );
 }

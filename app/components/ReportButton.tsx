@@ -3,9 +3,15 @@
 /**
  * 신고 연결 (#81) — 작은 "신고" 텍스트 버튼 → 사유 선택 → POST /api/moderation/content-report
  * (구 코드 components/report-post-form.tsx 패턴 이식, 새 디자인 토큰 적용)
+ *
+ * [1009 · T] 결과 반응 — 사유를 고르면 그 칸에 도는 링(busy), 접수되면 토스트 "신고를 접수했어요" + 자리 글자
+ * "신고했어요"(체크가 한 번 튄다). 실패는 원인+해결. 사유 칩이 10px 글자·높이 20px 이라 손가락으로 누르기 어려웠다
+ * (실측 390px: 칩 높이 20px) → 12px 글자 · 높이 32px, "신고"·"취소"는 글 속 단추 기준 24px.
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Icon } from "@/app/components/Icon";
+import { useToast } from "@/app/components/toast/ToastProvider";
 
 const CATEGORIES = [
   { id: "spam", label: "스팸" },
@@ -13,6 +19,8 @@ const CATEGORIES = [
   { id: "fraud", label: "허위 정보" },
   { id: "other", label: "기타" },
 ] as const;
+
+type CategoryId = (typeof CATEGORIES)[number]["id"];
 
 export function ReportButton({
   postId,
@@ -24,12 +32,14 @@ export function ReportButton({
   className?: string;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [busyId, setBusyId] = useState<CategoryId | null>(null);
   const [state, setState] = useState<"idle" | "done" | "error">("idle");
 
   async function submit(category: (typeof CATEGORIES)[number]) {
-    setBusy(true);
+    if (busyId) return;
+    setBusyId(category.id);
     setState("idle");
     try {
       const res = await fetch("/api/moderation/content-report", {
@@ -52,17 +62,19 @@ export function ReportButton({
       }
       setState("done");
       setOpen(false);
+      showToast("신고를 접수했어요 — 운영팀이 확인해요");
     } catch {
       setState("error");
     } finally {
-      setBusy(false);
+      setBusyId(null);
     }
   }
 
   if (state === "done") {
     return (
-      <span className={`text-[12px] font-bold text-success ${className ?? ""}`}>
-        접수됨
+      <span className={`inline-flex min-h-[24px] items-center gap-1 text-[12px] font-bold text-success ${className ?? ""}`}>
+        <Icon name="check" size={13} strokeWidth={2.6} className="njn-pop-once" />
+        신고했어요
       </span>
     );
   }
@@ -72,7 +84,7 @@ export function ReportButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={`text-[12px] text-text-3 underline decoration-line underline-offset-2 transition-colors hover:text-danger ${className ?? ""}`}
+        className={`inline-flex min-h-[24px] items-center text-[12px] text-text-3 underline decoration-line underline-offset-2 transition-colors hover:text-danger ${className ?? ""}`}
       >
         신고
       </button>
@@ -80,34 +92,35 @@ export function ReportButton({
   }
 
   return (
-    <span
-      className={`inline-flex flex-wrap items-center gap-1 ${className ?? ""}`}
-    >
-      <span className="text-[10px] text-text-3">신고 사유:</span>
+    <span className={`inline-flex flex-wrap items-center gap-1.5 ${className ?? ""}`}>
+      <span className="text-[12px] text-text-3">신고 사유:</span>
       {CATEGORIES.map((c) => (
         <button
           key={c.id}
           type="button"
-          disabled={busy}
+          disabled={busyId !== null}
+          aria-busy={busyId === c.id || undefined}
           onClick={() => void submit(c)}
-          className="chip border border-line bg-surface px-2 py-0.5 text-[10px] font-bold text-text-2 transition-colors hover:border-danger hover:text-danger disabled:opacity-40"
+          className="chip press inline-flex min-h-[32px] items-center gap-1 border border-line bg-surface px-2.5 text-[12px] font-bold text-text-2 transition-colors hover:border-danger hover:text-danger disabled:opacity-60"
         >
+          {busyId === c.id && <span className="njn-ring njn-ring--ink" aria-hidden="true" />}
           {c.label}
         </button>
       ))}
       <button
         type="button"
+        disabled={busyId !== null}
         onClick={() => {
           setOpen(false);
           setState("idle");
         }}
-        className="text-[10px] text-text-3"
+        className="inline-flex min-h-[24px] items-center px-1 text-[12px] text-text-3"
       >
         취소
       </button>
       {state === "error" && (
-        <span className="text-[10px] font-bold text-danger">
-          접수 실패 — 잠시 후 다시 시도해 주세요
+        <span role="alert" className="text-[12px] font-bold text-danger">
+          접수하지 못했어요 — 잠시 후 다시 눌러 주세요
         </span>
       )}
     </span>

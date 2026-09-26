@@ -1,38 +1,25 @@
-import type { ReactNode } from "react";
 import { AdZone } from "@/app/components/ads/AdZone";
 import Link from "next/link";
 import { PageShell } from "../components/PageShell";
 import { Icon } from "@/app/components/Icon";
-import { safeAuth } from "@/lib/safe-auth";
-import {
-  listNotes,
-  type InspectionNote,
-} from "@/lib/inspection/store-db";
+import type { InspectionNote } from "@/lib/inspection/store-db";
 import { listPublicNotesWithFallback } from "@/lib/inspection/public-notes-cached";
+import { listPublicNotes } from "@/lib/inspection/store-db";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { loadHubTeasers, type HubTeaser } from "./hub-teasers";
 import { loadHomeCoverage } from "@/lib/newui/home-coverage";
 import { FEATURE_RULES } from "@/lib/subscriptions/access";
 import { isTierOnSale } from "@/lib/subscriptions/sell-config";
-import { ToolGlyph, HUB_GLYPH } from "./ToolGlyph";
-import { Sparkline } from "./Sparkline";
 import { HubPickedProvider } from "./hub-context";
 import { HubHero } from "./hub-hero";
 import { WorkbenchGrid } from "./hub-tiers";
 import { workbenchCardData } from "./workbench-cards";
 import { HubNoteAnalysis } from "./hub-picker";
-import { CompareTrayCount, ToolLink } from "./tool-cards-client";
-import {
-  ACCEPTS_COMPLEX,
-  AI_TOOL_COUNT,
-  MARKET_LIVE,
-  RECORD_LIVE,
-  SIM_TOOLS,
-  TIERS,
-  type HubTool,
-  type TierId,
-} from "./tool-catalog";
-import { marketPersonaByHref, personaVars } from "@/lib/ai/tool-persona";
+import { HubMyNoteTeaser, HubRecordStart } from "./hub-record-start";
+import { CompareTrayCount } from "./tool-cards-client";
+import { ToolCard } from "./hub-tool-card";
+import { AI_TOOL_COUNT, MARKET_LIVE, RECORD_LIVE, SIM_TOOLS, TIERS, type TierId } from "./tool-catalog";
+
 
 /* ============================================================
    분석 허브 — 2026-08-25 리디자인 (UI-01 ~ UI-10)
@@ -124,102 +111,33 @@ function TierHead({ id, count }: { id: TierId; count: number }) {
   );
 }
 
-/** 도구 카드 한 장 — 아이콘(계열색) · 제목 · 설명 · 실측 티저 + 추세선 · 열기 */
-function ToolCard({
-  t,
-  teaser,
-  extra,
-}: {
-  t: HubTool;
-  teaser?: HubTeaser | null;
-  extra?: ReactNode;
-}) {
-  const tier = TIERS[t.tier];
-  const spark = teaser && teaser.series.length >= 2 ? teaser.series : null;
-  /* [980] 지역·시장 4종에도 성격을 준다. AI 도구와 **같은 개성 체계이되 다른 계열**이다
-     — 이쪽은 AI 가 판단하는 화면이 아니라 공표 통계를 그대로 늘어놓는 화면이라,
-     성격 라벨도 "실측·흐름·체온·순위" 처럼 재는 행위로 붙였다. 나머지 카드(체험·기록)는
-     페르소나가 없으므로 예전 계열색 그대로 — 없는 성격을 지어내지 않는다. */
-  const persona = marketPersonaByHref(t.href);
-  return (
-    <ToolLink
-      href={t.href}
-      title={t.title}
-      withPicked={ACCEPTS_COMPLEX.has(t.href)}
-      className={`tile card ai-glow flex flex-col gap-2 rounded-[14px] p-4 no-underline${
-        persona ? " tool-scope tool-rail" : ""
-      }`}
-      style={persona ? personaVars(persona) : undefined}
-    >
-      <div className="flex items-start gap-2">
-        {/* [958] 결과물 모양을 그린 글리프 — 아이콘보다 "무엇이 나오는지"가 먼저 보인다 */}
-        <span
-          className={
-            persona
-              ? "tool-soft-bg tool-ink tile-ico flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px]"
-              : `tile-ico flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] ${tier.iconClass}`
-          }
-        >
-          {HUB_GLYPH[t.href] ? (
-            <ToolGlyph id={HUB_GLYPH[t.href]} size={34} />
-          ) : (
-            <Icon name={t.icon} size={17} />
-          )}
-        </span>
-        {spark && (
-          <span className={`tile-spark ml-auto ${persona ? "tool-ink" : tier.sparkClass}`}>
-            <Sparkline values={spark} width={72} height={24} />
-          </span>
-        )}
-      </div>
-      {/* [989] 배지는 제목 글줄 안으로 — 사유는 app/analysis/hub-tiers.tsx 주석 참고
-          (2열 좁은 칸에서 배지가 제 줄을 차지해 옆 카드에 빈 띠를 만들었다) */}
-      <span className="t-section text-ink">
-        {t.title}
-        {persona && (
-          <>
-            {" "}
-            <span className="tool-soft-bg tool-ink t-caption inline-block whitespace-nowrap rounded px-1.5 py-px align-middle font-extrabold">
-              {persona.character}
-            </span>
-          </>
-        )}
-      </span>
-      <span className="t-sub text-text-2">{persona ? persona.premise : t.desc}</span>
-      {teaser && (
-        /* [963] .fit — 캡션이 화면이 아니라 **이 칸** 폭으로 판정되게. 2열 그리드의
-           좁은 칸에서 캡션이 3줄로 접히던 것을 자간·줄바꿈 규칙이 흡수한다. */
-        <span className="fit flex flex-col gap-0.5 rounded-[10px] bg-bg px-2.5 py-1.5">
-          <span className="t-num t-section t-fit text-ink">{teaser.value}</span>
-          {/* [958] 티저는 강남구 고정 표본 — 지역을 캡션이 아니라 값 옆에서 말한다 */}
-          <span className="t-caption t-fit text-text-3">{teaser.caption}</span>
-        </span>
-      )}
-      {extra}
-      <span className={`tile-go t-sub mt-auto pt-0.5 font-bold ${persona ? "tool-ink" : "text-primary"}`}>
-        열기 ›
-      </span>
-    </ToolLink>
-  );
-}
+/* [1007] ISR 1시간 — 예전엔 `safeAuth()`(내 노트 수·로그인 분기)와 `searchParams`(noteId·
+   complexId·apt 프리필) 때문에 force-dynamic 이었고, 24h 실측 함수 호출 1,828회 중 사람
+   방문은 한 자릿수였다(7일 페이지뷰 ~120건 전체). 크롤러 요청마다 함수·세션·DB 조회가
+   돌았고, 티저 캐시가 비는 시간대엔 [analysis-hub-price-teaser] 에러 로그까지 요청마다 찍혔다.
+   세션이 갈랐던 세 조각은 클라이언트(hub-viewer · hub-record-start · hub-picker)가 판정하고,
+   ?complexId/?apt 는 ComplexPicker 가 원래부터 마운트 뒤 URL 에서 읽는다(props 가 undefined 일 때).
+   서버 렌더에는 사용자별 값이 한 조각도 없다 — CDN 한 벌을 모두에게 줘도 새는 것이 없다. */
+/* [1010] 1h → 1일. 이 화면의 원천은 하루 1회 적재되는 국토부 실거래·집계이고,
+   적재 직후 lib/cache/invalidate.ts SOURCE_MAP.molit(+reb)이 이 경로를 이미 비운다 —
+   시간 TTL 은 안전망일 뿐이다. 실측(2026-09-20~22) 이 축의 분석 화면은 하루 수천 회
+   렌더되는데 사람 방문은 7일 합계 ~120건이고, 크롤러 재방문 간격은 ≈2.2일이라
+   1시간 눈금은 방문마다 재렌더를 뜻했다. */
+export const revalidate = 86_400;
 
-export const dynamic = "force-dynamic";
-
-export default async function AnalysisHubPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ noteId?: string; complexId?: string; apt?: string }>;
-}) {
-  const { noteId, complexId, apt } = await searchParams;
-
+export default async function AnalysisHubPage() {
   /* 카드별 실측 티저 + 12구간 추세선. 실패/없음이면 해당 키가 아예 없고,
      카드에서는 그 줄이 빠질 뿐이다(가짜 수치·"—" 채움 없음). */
-  /* [949] 티저(1시간 데이터 캐시)와 세션 확인은 독립이라 나란히 받는다. */
-  const [teasers, session, coverage] = await Promise.all([
+  const [teasers, coverage, publicRows] = await Promise.all([
     loadHubTeasers().catch(() => ({})),
-    safeAuth(),
     /* [958] 히어로 커버리지 — 홈과 같은 6시간 캐시 실측값(0이면 0, 실패면 —) */
     loadHomeCoverage().catch(() => ({ txCount: null, complexCount: null, regionCount: null })),
+    /* 게스트 미리보기 — 공개 노트의 실제 AI 요약. [949] 모두에게 같은 값이라 페이지 캐시(ISR)에
+       실린다. [967 · 29a] DB 가 밀리는 시간대의 TimeoutError 는 마지막 정상본으로 받는다.
+       실패는 null(빈 안내 카드) — 샘플로 채우지 않는다. */
+    listPublicNotesWithFallback(24, (n) => listPublicNotes(n, { withAi: true }))
+      .then((r) => r.notes)
+      .catch(() => [] as InspectionNote[]),
   ]);
   /* [980] 12칸 카드는 서버에서 조립한다 — 클라이언트가 tool-identity·tool-persona 를
      직접 import 하면 번들 예산을 넘긴다(workbench-cards.ts 주석 참고). */
@@ -235,46 +153,7 @@ export default async function AnalysisHubPage({
     proOnSale: isTierOnSale("expert"),
   };
 
-  // 로그인 시 실데이터(내 노트 수)로 시작 섹션 구성 — 허위 수치 없음
-  const email = session?.user?.email ?? null;
-  let myNoteCount: number | null = null;
-  if (email) {
-    try {
-      myNoteCount = (await listNotes(email)).length;
-    } catch {
-      myNoteCount = null; // 집계 실패 시 수치 미표기 (가짜 숫자 금지)
-    }
-  }
-
-  // 게스트: 공개 노트의 실제 AI 요약을 우선 — 없으면 empty + CTA
-  let publicPreview: ReturnType<typeof pickPublicAiPreview> = null;
-  if (!email) {
-    try {
-      /* [949] 게스트 미리보기는 모두에게 같은 값 — 60초 데이터 캐시(/notes 공개
-         피드와 같은 판단). 이 허브는 하루 500회 넘게 열리는 동적 페이지라 방문마다
-         공개 노트 24건을 다시 읽고 있었다. */
-      const { unstable_cache } = await import("next/cache");
-      /* [967 · 29a] DB 가 밀리는 시간대의 TimeoutError(6시간 ~20회)를 마지막 정상본으로
-         받는다 — 미리보기는 모두에게 같은 값이라 하루 안의 사본이면 충분하다. */
-      const { notes: rows } = await unstable_cache(
-        () => listPublicNotesWithFallback(24),
-        ["analysis-public-preview-v1"],
-        { revalidate: 60 },
-      )();
-      publicPreview = pickPublicAiPreview(rows);
-    } catch {
-      publicPreview = null;
-    }
-  }
-
-  const noteTeaser: HubTeaser | null =
-    myNoteCount !== null && myNoteCount > 0
-      ? {
-          value: `${myNoteCount}건`,
-          caption: "분석을 기다리는 내 임장노트",
-          series: [],
-        }
-      : null;
+  const publicPreview = pickPublicAiPreview(publicRows);
 
   return (
     <PageShell>
@@ -282,8 +161,6 @@ export default async function AnalysisHubPage({
         <div className="flex flex-col gap-6">
           {/* ── 히어로: 검색이 화면의 첫 요소 (UI-05·10) ── */}
           <HubHero
-            initialComplexId={complexId ?? null}
-            initialApt={apt ?? null}
             coverage={coverage}
             quota={quota}
             toolCount={AI_TOOL_COUNT + MARKET_LIVE.length + RECORD_LIVE.length}
@@ -326,91 +203,71 @@ export default async function AnalysisHubPage({
           >
             <TierHead id="record" count={RECORD_LIVE.length} />
 
-            {/* 시작 지점: 로그인=내 노트 실카운트 / 게스트=공개 노트 실 요약 */}
-            {email ? (
-              <div className="card tile flex flex-col gap-3 rounded-[14px] p-4 md:flex-row md:items-center md:justify-between">
-                <div className="flex flex-col gap-1">
-                  <span className="t-section text-ink">
-                    {myNoteCount !== null
-                      ? myNoteCount > 0
-                        ? `내 노트 ${myNoteCount}건이 분석을 기다려요`
-                        : "아직 작성한 임장노트가 없어요"
-                      : "내 노트로 바로 분석할 수 있어요"}
-                  </span>
-                  <span className="t-sub text-text-3">
-                    {myNoteCount === 0
-                      ? "첫 임장노트를 남기면 AI 분석이 열려요"
-                      : "기록을 점수화하고 강점·약점·체크 제안을 정리해 드려요"}
-                  </span>
-                </div>
-                {myNoteCount === 0 ? (
-                  <Link href="/notes/new" className="btn-primary btn-md shrink-0">
-                    첫 노트 쓰기
-                  </Link>
+            {/* 시작 지점: 로그인=내 노트 실카운트 / 게스트=공개 노트 실 요약.
+                [1007] 로그인 카드는 HubRecordStart(클라이언트)가 세션 판정 뒤 바꿔 끼운다 —
+                게스트 카드는 여기 서버 JSX 그대로(ISR HTML 에 실리고 클라이언트 번들엔 안 들어간다). */}
+            <HubRecordStart
+              guest={
+                publicPreview ? (
+                  <div className="card flex flex-col gap-2.5 rounded-[14px] p-4">
+                    <span className="t-section text-ink">공개 노트 AI 정리 미리보기</span>
+                    <div className="ai-panel flex flex-col gap-1.5 rounded-[10px] p-3.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="t-caption inline-flex items-center rounded border border-line px-1.5 py-px font-semibold text-ai-muted">
+                          {publicPreview.badge}
+                        </span>
+                        <span className="t-sub font-extrabold text-ai-text">
+                          {publicPreview.title}
+                        </span>
+                      </div>
+                      <p className="t-sub text-ai-text">
+                        {publicPreview.teaser}
+                        {publicPreview.teaser.length >= 160 ? "…" : ""}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                      <span className="t-sub text-text-3">
+                        실제 공개 임장노트의 정리 결과예요. 로그인하면 내 노트도 같은
+                        방식으로 정리해요
+                      </span>
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        <Link
+                          href={`/notes/${publicPreview.id}`}
+                          className="btn-primary btn-md no-underline"
+                        >
+                          전체 AI 요약 보기
+                        </Link>
+                        <Link href="/notes/new" className="btn-soft btn-md no-underline">
+                          내 노트 쓰기
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
-                  <a href="#ai-note-analysis" className="btn-primary btn-md shrink-0">
-                    내 노트로 분석 시작
-                  </a>
-                )}
-              </div>
-            ) : publicPreview ? (
-              <div className="card flex flex-col gap-2.5 rounded-[14px] p-4">
-                <span className="t-section text-ink">공개 노트 AI 정리 미리보기</span>
-                <div className="ai-panel flex flex-col gap-1.5 rounded-[10px] p-3.5">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="t-caption inline-flex items-center rounded border border-line px-1.5 py-px font-semibold text-ai-muted">
-                      {publicPreview.badge}
+                  <div className="card flex flex-col gap-2.5 rounded-[14px] p-4">
+                    {/* 공개 AI 미리보기 0건 — 샘플 리포트로 채우지 않는다 */}
+                    <span className="t-section text-ink">
+                      아직 공개된 AI 정리가 없어요
                     </span>
-                    <span className="t-sub font-extrabold text-ai-text">
-                      {publicPreview.title}
-                    </span>
+                    <p className="t-body text-text-2">
+                      샘플 리포트로 채우지 않아요. 임장노트를 남기면 같은 방식으로
+                      장단점·시세 맥락을 정리해 드려요.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Link href="/notes/new" className="btn-primary btn-md no-underline">
+                        임장노트 쓰고 AI 받기
+                      </Link>
+                      <Link href="/notes" className="btn-soft btn-md no-underline">
+                        공개 노트 보기
+                      </Link>
+                      <Link href="/login" className="btn-soft btn-md no-underline">
+                        로그인
+                      </Link>
+                    </div>
                   </div>
-                  <p className="t-sub text-ai-text">
-                    {publicPreview.teaser}
-                    {publicPreview.teaser.length >= 160 ? "…" : ""}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                  <span className="t-sub text-text-3">
-                    실제 공개 임장노트의 정리 결과예요. 로그인하면 내 노트도 같은
-                    방식으로 정리해요
-                  </span>
-                  <div className="flex shrink-0 flex-wrap gap-2">
-                    <Link
-                      href={`/notes/${publicPreview.id}`}
-                      className="btn-primary btn-md no-underline"
-                    >
-                      전체 AI 요약 보기
-                    </Link>
-                    <Link href="/notes/new" className="btn-soft btn-md no-underline">
-                      내 노트 쓰기
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="card flex flex-col gap-2.5 rounded-[14px] p-4">
-                {/* 공개 AI 미리보기 0건 — 샘플 리포트로 채우지 않는다 */}
-                <span className="t-section text-ink">
-                  아직 공개된 AI 정리가 없어요
-                </span>
-                <p className="t-body text-text-2">
-                  샘플 리포트로 채우지 않아요. 임장노트를 남기면 같은 방식으로
-                  장단점·시세 맥락을 정리해 드려요.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Link href="/notes/new" className="btn-primary btn-md no-underline">
-                    임장노트 쓰고 AI 받기
-                  </Link>
-                  <Link href="/notes" className="btn-soft btn-md no-underline">
-                    공개 노트 보기
-                  </Link>
-                  <Link href="/login" className="btn-soft btn-md no-underline">
-                    로그인
-                  </Link>
-                </div>
-              </div>
-            )}
+                )
+              }
+            />
 
             {/* 도구 2장 + 노트 AI 실행 카드를 한 그리드에 둔다. 따로 두면
                 데스크톱에서 도구 카드가 화면 절반씩 늘어나 텅 비어 보였다. */}
@@ -419,18 +276,19 @@ export default async function AnalysisHubPage({
                 <ToolCard
                   key={t.href}
                   t={t}
-                  teaser={t.teaser === "notes" ? noteTeaser : null}
+                  teaser={null}
                   extra={
-                    t.teaser === "compare" ? <CompareTrayCount /> : undefined
+                    /* [1007] 내 노트 수 티저는 클라이언트가 세션 판정 뒤 붙인다(HubMyNoteTeaser) */
+                    t.teaser === "notes" ? (
+                      <HubMyNoteTeaser />
+                    ) : t.teaser === "compare" ? (
+                      <CompareTrayCount />
+                    ) : undefined
                   }
                 />
               ))}
-              {/* 히어로에서 고른 단지를 컨텍스트로 받는다 */}
-              <HubNoteAnalysis
-                noteId={noteId ?? null}
-                loggedIn={Boolean(email)}
-                className="col-span-2"
-              />
+              {/* 히어로에서 고른 단지를 컨텍스트로 받는다 — ?noteId=·로그인 여부는 카드가 스스로 읽는다 */}
+              <HubNoteAnalysis className="col-span-2" />
             </div>
           </section>
 

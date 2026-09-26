@@ -15,7 +15,7 @@ import {
 import type { RegionMarketSnapshot } from "@/lib/market/types";
 import { listPublicNoteCards } from "@/lib/inspection/store-db";
 import { settle, startDeadline } from "@/lib/data/section-budget";
-import { getSupplyForArea, type SupplyItem } from "@/lib/market/supply";
+import { getSupplyForAreaStrict, type SupplyItem } from "@/lib/market/supply";
 import { catalogCityForRegionId } from "@/lib/market/sido-group";
 import { findCatalogRegionById, findCatalogSuccessors } from "@/lib/region/catalog";
 import type { PublicNoteCard } from "@/lib/inspection/store-db";
@@ -26,7 +26,16 @@ import {
   type ComplexTxRegion,
 } from "@/lib/market/complex-transactions";
 import { ExpandableComplexRows } from "./ExpandableComplexRows";
-import { ComplexSummaryTable } from "../../components/ComplexSummaryTable";
+/* [1009 · H] 머리(결론·큰 숫자)·추세 카드·단지 목록 — 이 폴더의 새 조각(표는 /complex/browse 가 계속 쓴다) */
+import { RegionHero } from "./RegionHero";
+import { MarketFreshnessLine } from "@/app/components/MarketFreshnessLine";
+import { RegionTrendCard } from "./RegionTrendCard";
+import { buildRegionTrendDatasets } from "./region-trends";
+import { RegionComplexList } from "./RegionComplexList";
+import { buildRegionOverview, countsToTrend, shiftYm, splitByReporting, toYm, ymMonth } from "./region-overview";
+import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
+import { Explain } from "@/app/components/explain/Explain";
+import { formatEokMan } from "@/lib/format/eok-man";
 import { findTxRegionForMarketRegion, type TxRegionSummary } from "@/lib/market/tx-bands";
 import { BAND_KIND_LABEL } from "@/lib/market/bands";
 import { listDbProjects } from "@/lib/redevelopment/store";
@@ -47,11 +56,22 @@ import {
   breadcrumbJsonLd,
   regionPlaceJsonLd,
   jsonLdScript,
+  webPageJsonLd,
+  datasetJsonLd,
+  regionEntityId,
   type FaqItem,
 } from "@/lib/seo/jsonld";
+/* [1006 · E] speakable 셀렉터·temporalCoverage·dateModified 변환 — 순수 함수 */
+import {
+  AI_SUMMARY_SELECTOR,
+  freshnessLabelToIsoDate,
+  ymRangeToTemporalCoverage,
+} from "@/lib/seo/citable-summary";
+import { getMarketFreshnessDateLabel } from "@/lib/newui/freshness";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { regionTitle } from "@/lib/seo/title-experiment";
 import { formatKrwShort } from "@/lib/market/format";
+import { noteMatchesRegion } from "@/lib/region/changed-region-paths";
 
 /* ============================================================
    N9 — 지역 종합 가이드 (/region/[id])
@@ -81,7 +101,21 @@ import { formatKrwShort } from "@/lib/market/format";
    ============================================================ */
 
 /* [B001 1단계] 1h → 6h — 근거는 app/complex/[id]/page.tsx 의 revalidate 주석. */
-export const revalidate = 21600;
+/* [1010] 6h → 7일. 실측(2026-09-20~22): 이 라우트 하루 렌더 870회, 사람 방문은 그 몇십
+   분의 일이고 크롤러 재방문 간격은 ≈2.2일이다. TTL 이 6시간이면 크롤러가 올 때마다 거의
+   100% 재렌더가 돌았다(ISR Write + Fluid CPU + HTML 전송이 같이 든다).
+   TTL 을 재방문 간격보다 길게 두는 대신, 이 화면을 바꾸는 쓰기 지점에서 즉시 비운다 —
+   신선도 손해는 0 이다(1010 브리프 원칙 1).
+     · 실거래·구간·단지·월별 거래량 → lib/region/invalidate-market.ts
+       invalidateChangedMarketRegions() (reb-ingest 크론 00:50 UTC / 집계 갱신 직후)
+     · 부동산원 시세 스냅샷(머리 큰 숫자) → 같은 파일 invalidateRebChangedRegions()
+       (적재 전후 지문 비교 — 공표가 없는 날은 아무것도 비우지 않는다)
+     · 공개 임장노트 → app/api/inspection/notes/route.ts · [id]/route.ts
+       (사람이 쓴 것은 즉시 보인다 — 브리프 원칙 3)
+     · 입주 예정 물량 → app/api/cron/supply-ingest/route.ts (새 공고가 들어온 날에만)
+   아직 비우지 않는 곳: 정비사업 적재(redevelopment-ingest). 그 섹션은 DB 확정분만 싣고
+   갱신이 월 단위라 7일 TTL 안에 들어온다 — 보고서에 적어 통합자가 판단한다. */
+export const revalidate = 604_800;
 
 /* 빈 generateStaticParams — 빌드 때는 아무 지역도 미리 만들지 않고, 첫 요청이
    ISR 로 채운다. ?complexes=30(searchParams)을 클라이언트 토글로 옮겼으므로
@@ -140,45 +174,40 @@ function formatYm(ym: string): string {
   return ym.length === 6 ? `${ym.slice(0, 4)}.${ym.slice(4)}` : ym;
 }
 
-/** "2025-08-01" → "25.08" */
-function shortPeriod(period: string): string {
-  return period.length >= 7 ? `${period.slice(2, 4)}.${period.slice(5, 7)}` : period;
-}
-
-/** "202606" → "26.06" */
-function shortYm(ym: string): string {
-  return ym.length === 6 ? `${ym.slice(2, 4)}.${ym.slice(4)}` : ym;
-}
-
 function sourceLabel(source: RegionMarketSnapshot["source"]): string {
   if (source === "reb") return "한국부동산원(R-ONE)";
   if (source === "kb") return "KB부동산";
   return "자체 수집";
 }
 
-function deltaView(changePct: number | undefined): {
-  label: string;
-  className: string;
-} {
-  if (changePct === undefined || !Number.isFinite(changePct)) {
-    return { label: "—", className: "delta-flat" };
-  }
-  const abs = Math.abs(changePct).toFixed(2);
-  // 시세 관례: 상승 red(delta-up) / 하락 blue(delta-down)
-  if (changePct > 0) return { label: `▲ ${abs}%`, className: "delta-up" };
-  if (changePct < 0) return { label: `▼ ${abs}%`, className: "delta-down" };
-  return { label: "0.00%", className: "delta-flat" };
+/** [1009 · H] 스냅샷에 값이 하나라도 있는가 — 서울 구는 부동산원 행이 period '' · 값 null 로 비어 있다(운영 실측) */
+function snapshotHasValues(s: RegionMarketSnapshot | null): s is RegionMarketSnapshot {
+  if (!s || !/^\d{6}$/.test(s.period)) return false;
+  return [s.avgSale, s.medianSale, s.jeonseRatio, s.saleChangeMonthly].some(
+    (v) => typeof v === "number" && Number.isFinite(v),
+  );
 }
 
-/** 공개 임장노트 지역 텍스트 매칭 — "고양시 덕양구" ↔ "고양 덕양구 행신동" 등 */
-function noteMatchesRegion(noteRegion: string, regionName: string): boolean {
-  const target = noteRegion.replace(/\s+/g, "");
-  if (!target) return false;
-  const full = regionName.replace(/\s+/g, "");
-  if (target.includes(full) || full.includes(target)) return true;
-  const lastToken = regionName.trim().split(/\s+/).pop() ?? "";
-  return lastToken.length >= 2 && target.includes(lastToken);
+/** [1009 · H] 한국 날짜의 yyyymm — 입주 예정 하한(이 달부터) */
+/** [1009 · H 리뷰] 입주월 표기 — "202703" → "2027.03", 달이 00·13 등이면 "2027 · 월 미정", 연도도 없으면 "미정" */
+function moveInLabel(ym: string): string {
+  const y = ym.slice(0, 4);
+  const m = Number(ym.slice(4, 6));
+  if (!/^\d{4}$/.test(y)) return "미정";
+  if (/^\d{6}$/.test(ym) && m >= 1 && m <= 12) return `${y}.${ym.slice(4, 6)}`;
+  return `${y} · 월 미정`;
 }
+
+function kstYm(now: Date): string {
+  const k = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return `${k.getUTCFullYear()}${String(k.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/* [1010] 공개 임장노트 지역 텍스트 매칭("고양시 덕양구" ↔ "고양 덕양구 행신동")은
+   lib/region/changed-region-paths.ts 로 옮겼다. 판정 자체는 한 글자도 바뀌지 않았다.
+   왜 옮겼나: 이 페이지의 TTL 이 7일이 되면서, 노트를 공개하는 쓰기 API 가 "어느 지역
+   페이지가 바뀌는가" 를 **같은 판정으로** 알아야 하기 때문이다(그쪽이 다른 규칙을 쓰면
+   안 비워지는 페이지가 생긴다). import 는 파일 머리에 있다. */
 
 /* ---------- 메타데이터 ---------- */
 
@@ -206,12 +235,15 @@ export async function generateMetadata({
     };
   }
   const name = snapshot.regionName;
+  /* [1009 · H] 서울 구 스냅샷은 period '' · 값 null 이다(운영 실측) — 예전 설명은 "시세 준비 중 ( 기준)"처럼
+     빈 괄호가 나갔다. 값이 없으면 평균가·기준월 구절을 빼고 화면에 실제로 있는 것(지수·실거래 추이)을 적는다. */
+  const period = /^\d{6}$/.test(snapshot.period) ? formatYm(snapshot.period) : null;
   const price =
-    snapshot.avgSale !== undefined ? `평균 매매가 ${formatKrwShort(snapshot.avgSale)}` : "시세 준비 중";
+    snapshot.avgSale !== undefined ? `평균 매매가 ${formatKrwShort(snapshot.avgSale)}` : "매매가격지수·실거래 추이";
   /* [#102] title CTR 실험 — id 해시로 A/B 결정적 배정(요청 간 불변). 배정표는
      /admin/seo, 판정 기준은 lib/seo/title-experiment.ts 주석. */
   const { title } = regionTitle(id, name);
-  const description = `${name} 아파트 ${price} (${formatYm(snapshot.period)} 기준) — 시세 추이, 최근 실거래, 월별 거래량, 입주 예정 물량, 정비사업, 이웃 임장노트를 한 화면에서 확인하세요.`;
+  const description = `${name} 아파트 ${price}${period ? ` (${period} 기준)` : ""} — 시세 추이, 최근 실거래, 월별 거래량, 입주 예정 물량, 정비사업, 이웃 임장노트를 한 화면에서 확인하세요.`;
   const alternates = seoAlternates(`/region/${id}`);
   return {
     title,
@@ -231,7 +263,7 @@ export async function generateMetadata({
         {
           url: `/api/og?${new URLSearchParams({
             title: `${name} 아파트 시세`,
-            sub: `${price} · ${formatYm(snapshot.period)} 기준`,
+            sub: period ? `${price} · ${period} 기준` : price,
             badge: "지역 시세",
           }).toString()}`,
           width: 1200,
@@ -274,6 +306,9 @@ export default async function RegionHubPage({
   const catalogCity = catalogCityForRegionId(id);
   const txRegion: ComplexTxRegion =
     findComplexTxRegionById(id) ?? { id, name, city: catalogCity ?? "서울" };
+  /* [1009 · H] 지도 딥링크 이름 — "서울 강남구"·"경기 수원시 영통구". 구 이름만("중구")이면 /api/regions/search 가
+     서울 중구로 푼다(로컬 실측). 시/도를 붙이면 legal_regions 1순위가 맞는다. */
+  const mapRegion = txRegion.city && txRegion.city !== name ? `${txRegion.city} ${name}` : name;
   // 이 지역 자치구명 (예: "고양시 덕양구" → "덕양구") — 공급·정비사업 매칭 키
   const shortName = name.trim().split(/\s+/).pop() ?? name;
   /* [970 · B-02] 공급·정비사업은 시/도 + 자치구 두 키로 좁힌다 — "중구"만으로는
@@ -293,12 +328,27 @@ export default async function RegionHubPage({
      다만 이 값은 sideResults 에 넣지 않는다 — 아래 중단 판단은 "화면이 비었나"를
      세는 것이고, 이건 실패해도 내부 링크 하나가 빠질 뿐이라 성격이 다르다. */
   const budget = startDeadline();
-  const [seriesR, transactionsR, complexR, notesR, volumeR, projectsR, supplyR, txBandRegion, rentSnap, areaBands] =
+  const [
+    seriesR,
+    transactionsR,
+    complexR,
+    notesR,
+    volumeR,
+    projectsR,
+    supplyR,
+    txBandRegion,
+    rentSnap,
+    areaBands,
+    freshness,
+    jeonseSeries,
+  ] =
     await Promise.all([
-      /* 항목 25: budget.signal 로 예산 초과 시 PostgREST 요청 자체를 끊는다. */
+      /* 항목 25: budget.signal 로 예산 초과 시 PostgREST 요청 자체를 끊는다.
+         [1009 · H] 12 → 24칸 — 추세 카드가 데이터 길이만큼 그린다(지금 운영 13~14개월). 1년 전 대비(결론 둘째 줄)는
+         13칸이 있어야 계산된다 — 12칸이면 11개월 변화를 "1년"이라 부르게 된다. */
       settle(
         `${id} 매매가격지수`,
-        getRegionSeries(id, "sale_index", "monthly", 12, budget.signal),
+        getRegionSeries(id, "sale_index", "monthly", 24, budget.signal),
         budget.expired,
       ),
       settle(`${id} 최근 실거래`, listRegionTransactions(id, name, 5, budget.signal), budget.expired),
@@ -323,7 +373,10 @@ export default async function RegionHubPage({
          왜곡이 없다. 같은 단일 쿼리의 limit 만 24 로 올린다(추가 요청 없음). */
       settle(
         `${sido} ${shortName} 입주 예정 물량`,
-        getSupplyForArea(shortName, 24, budget.signal, sido),
+        /* [1009 · H] 이 달(KST) 이후 입주분만 — 예전엔 하한 없이 오래된 24행부터 읽어, "입주 예정"에 이미 입주한 단지
+           (강남구 2026.03 등)가 섞이고 제목은 "2026~2027"로 고정돼 있었다(1008 리뷰 A-2 와 같은 함정).
+           Strict 는 실패를 던진다 — settle 이 "조회 실패"로 세고 섹션은 빠진다(예전 래퍼는 실패를 [] 로 삼켜 "없음"과 같았다). */
+        getSupplyForAreaStrict(shortName, 24, budget.signal, sido, kstYm(new Date())),
         budget.expired,
       ),
       /* A5 — 이 지역의 면적대·가격대 실거래 랜딩. 실제 존재하는 지역만 잡히고,
@@ -349,6 +402,18 @@ export default async function RegionHubPage({
         logger.error(`[/region/${id}] 평형대별 시세 조회 실패 — 섹션 생략:`, e instanceof Error ? e.message : String(e));
         return null;
       }),
+      /* [1006 · E] 실거래 마지막 적재 성공일(market_ingest_log) — JSON-LD dateModified 재료.
+         1시간 인메모리 캐시라 왕복이 거의 없고, 실패는 내부에서 null 로 접힌다(던지지 않는다).
+         단지 허브(/complex/[id])와 같은 로더·같은 캡션 규칙. sideResults(중단 판정)엔 넣지 않는다. */
+      getMarketFreshnessDateLabel(),
+      /* [1009 · H] 부동산원 월간 전세가율 — 서울 구는 스냅샷 전세가율이 비어 있어(운영 실측) 숫자 칸·추세 카드가 이 시계열을 쓴다.
+         전월세 스냅샷과 같은 보너스 성격: 실패하면 그 칸·탭이 빠질 뿐이라 sideResults(중단 판정)에 넣지 않는다. */
+      getRegionSeries(id, "jeonse_ratio", "monthly", 24, budget.signal).catch(
+        (e: unknown): Array<{ period: string; value: number }> => {
+          logger.error(`[/region/${id}] 전세가율 시계열 조회 실패 — 칸 생략:`, e instanceof Error ? e.message : String(e));
+          return [];
+        },
+      ),
     ]);
   budget.done();
 
@@ -387,33 +452,48 @@ export default async function RegionHubPage({
   // N11 — 이 지역의 시장 온도 기록이 있으면 교차 링크
   const tempRegion = findTemperatureRegion(id);
 
-  const delta = deltaView(snapshot?.saleChangeMonthly);
-  const jeonseRatio =
-    snapshot?.jeonseRatio !== undefined && Number.isFinite(snapshot.jeonseRatio)
-      ? `${snapshot.jeonseRatio.toFixed(1)}%`
-      : "—";
+  /* [1009 · H] 머리(결론 한 줄·큰 숫자) — 스냅샷·부동산원 월간 시계열·국토부 월 집계를 모아서(region-overview.ts).
+     ISR(6시간) 렌더 시각으로 "신고가 끝난 달"을 가른다 — 기한(계약 후 30일)이 지난 달만 확정치로 쓴다. */
+  const renderedAt = new Date();
+  const statSnapshot = snapshotHasValues(snapshot) ? snapshot : null;
+  const overview = buildRegionOverview({
+    name,
+    snapshot: statSnapshot,
+    indexSeries: series,
+    jeonseSeries,
+    volume,
+    now: renderedAt,
+  });
+  const { closed: volumeClosed, open: volumeOpen } = splitByReporting(volume, renderedAt);
+  const jeonseRatio = overview.jeonse ? `${overview.jeonse.value.toFixed(1)}%` : "—";
 
-  // 스파크라인(막대) 정규화 — 차트 라이브러리 없이 CSS 바
-  const values = series.map((s) => s.value);
-  const min = values.length > 0 ? Math.min(...values) : 0;
-  const max = values.length > 0 ? Math.max(...values) : 0;
-  const range = max - min;
-  const barHeight = (v: number): number =>
-    range > 0 ? 24 + Math.round(((v - min) / range) * 76) : 60;
-
-  // 거래량 막대 정규화 (0 을 바닥으로 — 건수는 절대량이 의미 있다)
-  const volMax = volume.length > 0 ? Math.max(...volume.map((v) => v.count)) : 0;
-  const volBarHeight = (n: number): number =>
-    volMax > 0 ? Math.max(4, Math.round((n / volMax) * 84)) : 4;
-  const latestVolume = volume.length > 0 ? volume[volume.length - 1] : null;
+  /* 첫 문단·Q&A 의 "최근 달"은 신고가 끝난 달 — 예전엔 신고 중인 달(예: 8월 80건)을 그대로 적어
+     "거래가 반 토막"처럼 읽혔다. 끝난 달이 하나도 없으면 있는 마지막 달을 쓴다(문장에 신고 지연을 적는다). */
+  const latestVolume =
+    volumeClosed.length > 0 ? volumeClosed[volumeClosed.length - 1] : volume.length > 0 ? volume[volume.length - 1] : null;
   const volumeTotal = volume.reduce((acc, v) => acc + v.count, 0);
 
-  const kpiCards: Array<{ label: string; value: string; sub?: string; subClass?: string }> = [
-    { label: "평균 매매가", value: formatKrwShort(snapshot?.avgSale) },
-    { label: "중위 매매가", value: formatKrwShort(snapshot?.medianSale) },
-    { label: "전월 대비", value: delta.label, subClass: delta.className },
-    { label: "전세가율", value: jeonseRatio },
-  ];
+  /* [1009 · H] 입주 예정 제목의 연도 범위 — 고정 "2026~2027" 대신 받은 데이터에서 */
+  const supplyYears = [...new Set(supply.map((si) => si.moveInYm.slice(0, 4)).filter((y) => /^\d{4}$/.test(y)))].sort();
+  const supplyYearsLabel =
+    supplyYears.length === 0
+      ? null
+      : supplyYears.length === 1
+        ? `${supplyYears[0]}년`
+        : `${supplyYears[0]}~${supplyYears[supplyYears.length - 1]}년`;
+
+  /* 전월세 월별 신고 — 같은 규칙(신고가 끝난 달만 선으로) */
+  const rentTrend = rentSnap ? countsToTrend("volume", "전월세", rentSnap.monthly, renderedAt) : null;
+  const rentOpen = rentSnap ? splitByReporting(rentSnap.monthly, renderedAt).open : [];
+
+  /* 추세 카드 — 지표 셋(있는 것만, region-trends.ts). 하네스와 같은 함수 */
+  const trendDatasets = buildRegionTrendDatasets({
+    name,
+    indexSeries: series,
+    jeonseSeries,
+    volume,
+    now: renderedAt,
+  });
 
   /* ---------- G12 — 발췌해도 완결되는 첫 문단 ----------
      여기에 들어가는 문장은 전부 위에서 실제로 읽어 온 값에서 만든다.
@@ -425,32 +505,49 @@ export default async function RegionHubPage({
   if (snapshot && snapshot.medianSale !== undefined && snapshot.medianSale > 0) {
     priceClauses.push(`중위 매매가 ${formatKrwShort(snapshot.medianSale)}`);
   }
-  if (jeonseRatio !== "—") priceClauses.push(`전세가율 ${jeonseRatio}`);
+  /* 스냅샷 문장에는 스냅샷의 전세가율만 — 같은 기준월끼리 묶는다(시계열 값은 아래 지수 문장이 쓴다) */
+  if (statSnapshot?.jeonseRatio !== undefined && Number.isFinite(statSnapshot.jeonseRatio)) {
+    priceClauses.push(`전세가율 ${statSnapshot.jeonseRatio.toFixed(1)}%`);
+  }
 
   const leadSentences: string[] = [];
+  /* [1009 · H] 스냅샷 값이 비어도(서울 구) 부동산원 월간 지수가 있으면 그걸로 첫 문장을 쓴다 — 예전엔
+     "강남구의  기준 아파트 시세 지표는 아직 수집된 항목이 없습니다"(빈 기간)였다. */
+  const idxNow = overview.index;
   leadSentences.push(
-    !snapshot
-      ? /* [998] 통계가 없는 사실만 적는다 — 이유(개편 뒤 미공표·집계 단위 불일치)는 지역마다 달라 단정하지 않는다 */
-        `${name}의 한국부동산원(R-ONE) 지역 시세 통계는 아직 없습니다. 이 구 단위 집계가 공표되면 그때 붙습니다. 아래 실거래·거래량은 국토교통부 신고 자료입니다.`
-      : priceClauses.length > 0
-        ? `${name}의 ${formatYm(snapshot.period)} 아파트 시세는 ${priceClauses.join(
-            " · ",
-          )}입니다(출처 ${sourceLabel(snapshot.source)}).`
-        : `${name}의 ${formatYm(snapshot.period)} 기준 아파트 시세 지표는 아직 수집된 항목이 없습니다.`,
+    statSnapshot && priceClauses.length > 0
+      ? `${name}의 ${formatYm(statSnapshot.period)} 아파트 시세는 ${priceClauses.join(
+          " · ",
+        )}입니다(출처 ${sourceLabel(statSnapshot.source)}).`
+      : idxNow
+        ? `${name}의 ${formatYm(idxNow.ym)} 아파트 매매가격지수는 ${idxNow.value.toFixed(1)}${
+            jeonseRatio !== "—" ? `, 전세가율은 ${jeonseRatio}` : ""
+          }입니다(출처 한국부동산원 R-ONE 월간 통계).`
+        : !overview.hasReb
+          ? /* [998] 통계가 없는 사실만 적는다 — 이유(개편 뒤 미공표·집계 단위 불일치)는 지역마다 달라 단정하지 않는다 */
+            `${name}의 한국부동산원(R-ONE) 지역 시세 통계는 아직 없습니다. 이 구 단위 집계가 공표되면 그때 붙습니다. 아래 실거래·거래량은 국토교통부 신고 자료입니다.`
+          : `${name}의 한국부동산원 지역 시세 지표는 아직 수집된 항목이 없습니다.`,
   );
-  if (snapshot && snapshot.saleChangeMonthly !== undefined && Number.isFinite(snapshot.saleChangeMonthly)) {
-    const chg = snapshot.saleChangeMonthly;
+  const monthlyChange =
+    statSnapshot && statSnapshot.saleChangeMonthly !== undefined && Number.isFinite(statSnapshot.saleChangeMonthly)
+      ? statSnapshot.saleChangeMonthly
+      : idxNow?.momPct ?? null;
+  if (monthlyChange !== null) {
     leadSentences.push(
-      chg === 0
-        ? "전월 대비로는 보합입니다."
-        : `전월 대비로는 ${Math.abs(chg).toFixed(2)}% ${chg > 0 ? "올랐습니다" : "내렸습니다"}.`,
+      Math.abs(monthlyChange) < 0.05
+        ? "매매가격지수는 전월 대비 보합입니다."
+        : `매매가격지수는 전월 대비 ${Math.abs(monthlyChange).toFixed(2)}% ${monthlyChange > 0 ? "올랐습니다" : "내렸습니다"}.`,
     );
   }
   if (latestVolume !== null) {
+    const openTail =
+      volumeOpen.length > 0
+        ? `(${volumeOpen.map((v) => formatYm(v.month)).join("·")}분은 신고 기한 안이라 집계 중)`
+        : "";
     leadSentences.push(
       `국토교통부에 신고된 아파트 매매는 ${formatYm(latestVolume.month)}에 ${latestVolume.count.toLocaleString(
         "ko-KR",
-      )}건이며, 최근 ${volume.length}개월 합계는 ${volumeTotal.toLocaleString("ko-KR")}건입니다.`,
+      )}건${openTail}이며, 최근 ${volume.length}개월 합계는 ${volumeTotal.toLocaleString("ko-KR")}건입니다.`,
     );
   }
   if (projectsShown.length > 0) {
@@ -477,29 +574,40 @@ export default async function RegionHubPage({
   const lead = leadSentences.join(" ");
 
   /* [개선 #7] 시장 흐름 읽기 — 추가 조회 없이 위에서 읽은 값의 산술 서술 */
+  /* [1009 · H] 입력을 정확히: 지수는 마지막 13칸(= 12개월 변화 — 문장이 "12개월 동안"이라고 말한다), 거래량은
+     신고가 끝난 달만(신고 중인 달로 "전월 대비 58% 줄었습니다"를 쓰지 않게), 전세가율은 시계열 값(서울 구 스냅샷은 비어 있다). */
+  /* [1009 · H 리뷰] market-read 문단은 "N개월 동안"이 아니라 **"12개월 동안"으로 고정**해 말한다(lib/region/market-read.ts) —
+     지수가 12칸뿐인 지역(종로)은 11개월 변화를 "12개월 동안"이라고 적었다. 마지막 달과 정확히 12개월 전 달이 둘 다
+     있을 때만 그 13칸을 넘기고, 아니면 지수 문단을 빼고 그린다(지수는 위 머리·추세 카드에 그대로 있다). */
+  const readSeries = (() => {
+    const tail = series.slice(-13);
+    const lastYm = tail.length > 0 ? toYm(tail[tail.length - 1].period) : null;
+    const firstYm = tail.length > 0 ? toYm(tail[0].period) : null;
+    return lastYm && firstYm && shiftYm(lastYm, 12) === firstYm ? tail : [];
+  })();
   const marketRead = buildMarketRead({
     name,
-    series,
-    volume: volume.map((v) => ({ month: v.month, count: v.count })),
+    series: readSeries,
+    volume: volumeClosed.map((v) => ({ month: v.month, count: v.count })),
     supply: supply.map((si) => ({ households: si.households })),
     supplyCapped: supply.length >= 24,
-    jeonseRatio: snapshot?.jeonseRatio,
+    jeonseRatio: overview.jeonse?.value,
     avgSaleLabel:
-      snapshot && snapshot.avgSale !== undefined && snapshot.avgSale > 0
-        ? formatKrwShort(snapshot.avgSale)
+      statSnapshot && statSnapshot.avgSale !== undefined && statSnapshot.avgSale > 0
+        ? formatKrwShort(statSnapshot.avgSale)
         : null,
     /* [998] periodLabel 은 avgSaleLabel 이 있을 때만 문장에 쓰인다 — 스냅샷 없으면 둘 다 비어 문장이 안 만들어진다 */
-    periodLabel: snapshot ? formatYm(snapshot.period) : "",
+    periodLabel: statSnapshot ? formatYm(statSnapshot.period) : "",
   });
 
   /* ---------- Q&A — 이 페이지에 실제로 보이는 숫자로만 ---------- */
   const faq: FaqItem[] = [];
-  if (snapshot && priceClauses.length > 0) {
+  if (statSnapshot && priceClauses.length > 0) {
     faq.push({
       q: `${name} 아파트 시세는 얼마인가요?`,
-      a: `${formatYm(snapshot.period)} 기준 ${name} 아파트는 ${priceClauses.join(
+      a: `${formatYm(statSnapshot.period)} 기준 ${name} 아파트는 ${priceClauses.join(
         " · ",
-      )}입니다. ${sourceLabel(snapshot.source)}가 공표한 지역 통계이며, 개별 단지·평형에 따라 실제 거래가는 크게 다릅니다.`,
+      )}입니다. ${sourceLabel(statSnapshot.source)}가 공표한 지역 통계이며, 개별 단지·평형에 따라 실제 거래가는 크게 다릅니다.`,
     });
   }
   if (latestVolume !== null) {
@@ -568,6 +676,41 @@ export default async function RegionHubPage({
           : null,
       parentRegion: txRegion.city && txRegion.city !== name ? txRegion.city : null,
     }),
+    /* [1006 · E] WebPage + speakable — 아래 G12 첫 문단(<section data-ai-summary>)을 가리킨다.
+       dateModified 는 실거래 마지막 적재 성공일(렌더 시각 아님) — 캡션이 없으면 넣지 않는다. */
+    webPageJsonLd({
+      path: `/region/${id}`,
+      name: `${name} 아파트 시세·실거래·정비사업`,
+      description: lead,
+      dateModified: freshnessLabelToIsoDate(freshness),
+      speakableSelectors: [AI_SUMMARY_SELECTOR],
+      mainEntityId: regionEntityId(id),
+    }),
+    /* [1006 · E] Dataset — 이 페이지가 실제로 그리는 월별 거래량·평균가 시계열(market_region_monthly).
+       같은 집계를 공개 API(/api/public/v1/regions/monthly)가 JSON 으로 준다(N20). 시계열이
+       비어 있거나 조회 실패면 노드를 만들지 않는다 — 없는 데이터셋을 기술하지 않는다. */
+    ...(volumeR.ok && volume.length > 0
+      ? [
+          datasetJsonLd({
+            path: `/region/${id}`,
+            name: `${name} 아파트 매매 월별 거래량·평균가`,
+            description:
+              `${name} 아파트 매매 실거래의 월별 신고 건수와 평균가 ${volume.length}개월` +
+              `(${formatYm(volume[0].month)}~${formatYm(volume[volume.length - 1].month)}). ` +
+              "국토교통부 실거래가 공개시스템 신고분 기준, 해제 신고 제외. 최근 두 달은 신고 지연으로 잠정치.",
+            keywords: [name, "아파트", "실거래가", "거래량", "월별"],
+            temporalCoverage: ymRangeToTemporalCoverage(volume[0].month, volume[volume.length - 1].month),
+            dateModified: freshnessLabelToIsoDate(freshness),
+            variableMeasured: ["아파트 매매 신고 건수", "아파트 매매 평균가(원)"],
+            spatialCoverage: txRegion.city && txRegion.city !== name ? `${txRegion.city} ${name}` : name,
+            /* region 파라미터는 region_name 부분 일치(lib/api/public-aggregates.ts ilike) —
+               "중구"처럼 여러 시/도에 있는 이름은 카탈로그 전체 이름(name)으로 좁힌다. */
+            distributionUrl: `https://naezipnow.com/api/public/v1/regions/monthly?region=${encodeURIComponent(
+              name,
+            )}`,
+          }),
+        ]
+      : []),
   ];
 
   return (
@@ -580,11 +723,7 @@ export default async function RegionHubPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(regionJsonLd) }}
       />
-      <p className="rise-in mb-1 t-sub text-text-3">
-        {snapshot
-          ? `${formatYm(snapshot.period)} 기준 · 출처 ${sourceLabel(snapshot.source)}`
-          : "한국부동산원 지역 통계 없음 · 실거래는 국토교통부 신고 기준"}
-      </p>
+      {/* [1009 · H] 예전 머리 줄("{기준월} 기준 · 출처 …")은 서울 구에서 기준월이 빈칸이었다 — 출처·기준일은 아래 머리 카드가 적는다 */}
       {/* [998] 폐지된 구 — 옛 통계는 그대로 두고, 지금의 구 페이지로 이어 준다 */}
       {retiredAt && successors.length > 0 && (
         <p className="rise-in mb-3 t-sub text-text-2">
@@ -592,7 +731,7 @@ export default async function RegionHubPage({
           {successors.map((s, i) => (
             <span key={s.id}>
               {i > 0 && "·"}
-              <Link href={`/region/${s.id}`} className="font-bold text-primary underline">
+              <Link href={`/region/${s.id}`} className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
                 {s.name}
               </Link>
             </span>
@@ -600,42 +739,63 @@ export default async function RegionHubPage({
           {successors.length > 1 ? "로 나뉘었어요" : "가 됐어요"}. 이 페이지는 개편 전 통계입니다.
         </p>
       )}
-      {/* G12 — 이 문단만 떼어 인용해도 뜻이 통해야 한다 */}
-      <p className="rise-in mb-5 t-body text-text-1">{lead}</p>
+      {/* [1009 · H] 결론 한 줄 → 큰 숫자 넷(칸마다 비교 기준·ⓘ) → 출처 → 지도·월간 리포트·동네 홈.
+          예전 "현재가 KPI 4카드"(서울 구에선 — 네 칸)와 [#64] 동네 홈 칩을 이 카드 하나로 합쳤다. */}
+      <RegionHero
+        id={id}
+        name={name}
+        mapRegion={mapRegion}
+        overview={overview}
+        freshnessLine={<MarketFreshnessLine label={freshness} className="mt-0.5" />}
+      />
 
-      {/* [#64] 동네 홈 상호 링크 — 숫자(여기) ↔ 생활(동네 홈) */}
-      <div className="rise-in mb-5 -mt-2">
-        <Link
-          href={`/town/${id}`}
-          className="chip border border-line bg-surface px-3.5 py-2 t-body font-bold text-primary"
-        >
-          {name} 동네 홈 — 이웃 글·뉴스·임장노트 ›
-        </Link>
-      </div>
+      {/* G12 — 이 문단만 떼어 인용해도 뜻이 통해야 한다.
+          [1006 · E] data-ai-summary — 위 WebPage JSON-LD 의 speakable.cssSelector 가 이 블록을
+          가리킨다(문단은 그대로, 껍데기만 section 으로). 새 요약 블록을 따로 만들지 않는다.
+          [1009 · H] 결론·숫자는 위 카드가 먼저 말한다 — 이 문단은 그 아래 한 단계 옅게(요약 전문). */}
+      <section data-ai-summary="" id="ai-summary" aria-label={`${name} 시세 요약`} className="rise-in mb-5">
+        <p className="t-sub text-text-2">{lead}</p>
+      </section>
 
-      {/* 현재가 KPI 4카드 — [998] 스냅샷이 없으면 "—" 네 칸 대신 그 사실을 한 칸으로 적는다 */}
-      {snapshot ? (
-        <section className="rise-in-1 mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-          {kpiCards.map((k) => (
-            <div key={k.label} className="card p-4">
-              <div className="t-sub text-text-3">{k.label}</div>
-              <div
-                className={`mt-1 text-[19px] font-extrabold ${
-                  k.subClass ?? "text-ink"
-                }`}
-              >
-                {k.value}
-              </div>
-            </div>
-          ))}
-        </section>
+      {/* [1009 · H] 시세 흐름 — 지수·전세가율·거래량을 한 카드에서 탭으로 바꿔 보고, 누르고 끌어 그 달 값을 읽는다.
+          예전 두 CSS 막대(칸마다 title= — 휴대폰에선 값이 안 보였다)를 대신한다. 셋 다 없으면 예전처럼 사실을 적는다. */}
+      {trendDatasets.length > 0 ? (
+        <RegionTrendCard
+          heading={`${name} 시세 흐름`}
+          datasets={trendDatasets}
+          after={
+            tempRegion ? (
+              <p className="mt-3 flex items-center gap-0.5 t-sub text-text-3">
+                <Link
+                  href={`/analysis/temperature/${encodeURIComponent(id)}`}
+                  className="inline-flex min-h-[24px] items-center font-bold text-primary underline"
+                >
+                  {name} 시장 온도 주간 기록 보기 →
+                </Link>
+                {/* [1009 · H] 시장 온도의 뜻 — /methodology "시장 온도" 와 같은 말로 */}
+                <Explain
+                  term="sijang-ondo"
+                  how={[
+                    "50점을 중립으로 ① 매매가격지수 모멘텀(최근 3구간 평균 변동률 — 월간 지수면 월 ±1%, 주간 지수면 주 ±0.3% 를 ±25점)과 ② 거래량 추이(이번 달을 뺀 최근 최대 3개월 합을 그 직전 같은 개월 수의 합과 비교, ±50% 변화를 ±25점)를 더하고 5~95점 안으로 잘라요.",
+                    "이번 달을 뺀 거래량 월이 4개 미만이면 지수 모멘텀만 반영해요.",
+                    "매수·매도 추천이 아니라 시장 상태를 요약한 숫자예요.",
+                  ]}
+                  source="내집나우 주간 산출 · 한국부동산원 지수 · 국토교통부 실거래 신고"
+                />
+              </p>
+            ) : null
+          }
+        />
       ) : (
-        <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
-          <div className="t-sub text-text-3">평균 매매가 · 중위 매매가 · 전월 대비 · 전세가율</div>
-          <p className="mt-1 t-body font-bold text-ink">부동산원 통계는 아직 없어요</p>
-          <p className="mt-1 t-sub text-text-3">
-            한국부동산원이 이 구 단위 월간 통계를 공표하면 여기에 붙습니다. 그전까지는 추정치로 채우지 않습니다.
-          </p>
+        <section className="card mb-6 p-[var(--pad-card)]">
+          <h2 className="t-section text-ink">{name} 시세 흐름</h2>
+          {!seriesR.ok || !volumeR.ok ? (
+            <LoadFailed what="시세 흐름" />
+          ) : (
+            <p className="py-6 text-center t-body text-text-3">
+              이 지역의 매매가격지수·월별 거래량이 아직 두 달 치 이상 모이지 않았어요.
+            </p>
+          )}
         </section>
       )}
 
@@ -663,7 +823,7 @@ export default async function RegionHubPage({
           <div className="mt-3">
             <Link
               href={`/region/${id}/report`}
-              className="t-body font-bold text-primary"
+              className="inline-flex min-h-[24px] items-center t-body font-bold text-primary"
             >
               월간 리포트 아카이브 — 지난달까지의 월별 스냅샷 ›
             </Link>
@@ -671,61 +831,90 @@ export default async function RegionHubPage({
         </section>
       )}
 
-      {/* 최근 시세 추이 — 매매가격지수 월간 12개월, CSS 바 스파크라인 */}
+      {/* 최근 실거래 5건 — [1009 · H] 한 건의 가격은 정밀 표기("12억 4,500만", 네이버 부동산 관례) */}
       <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
         <h2 className="t-section text-ink">
-          최근 시세 추이{" "}
+          최근 실거래{" "}
           <span className="t-sub font-medium text-text-3">
-            매매가격지수 · 월간
+            아파트 매매 · 국토부 실거래가
           </span>
         </h2>
-        {!seriesR.ok ? (
-          <LoadFailed what="시세 추이" />
-        ) : series.length === 0 ? (
+        {!transactionsR.ok ? (
+          <LoadFailed what="최근 실거래" />
+        ) : transactions.length === 0 ? (
           <p className="py-6 text-center t-body text-text-3">
-            이 지역의 매매가격지수 시계열이 아직 수집되지 않았습니다.
+            이 지역에서 수집된 아파트 매매 실거래가 아직 없습니다.
           </p>
         ) : (
-          <>
-            <div className="mt-4 flex h-[110px] items-end gap-[6px]">
-              {series.map((s, i) => (
-                <div
-                  key={s.period}
-                  className="flex min-w-0 flex-1 flex-col items-center gap-1"
-                  title={`${s.period} · ${s.value.toFixed(1)}`}
-                >
-                  <div
-                    className="w-full rounded-t-[4px]"
-                    style={{
-                      height: `${barHeight(s.value)}px`,
-                      background:
-                        i === series.length - 1
-                          ? "var(--primary)"
-                          : "var(--primary-soft)",
-                      border:
-                        i === series.length - 1
-                          ? "none"
-                          : "1px solid var(--border)",
-                    }}
-                  />
+          <ul className="mt-2">
+            {transactions.map((t, i) => (
+              <li
+                key={`${t.complexName}-${t.contractYm}-${i}`}
+                className={`flex items-center justify-between gap-3 py-3 ${
+                  i < transactions.length - 1 ? "border-b border-border" : ""
+                }`}
+              >
+                <div className="min-w-0">
+                  <div className="t-body font-bold text-ink break-words">
+                    {t.complexName}
+                  </div>
+                  <div className="mt-0.5 t-sub tabular-nums text-text-3">
+                    {formatYm(t.contractYm)}
+                    {t.contractDay ? `.${String(t.contractDay).padStart(2, "0")}` : ""}
+                    {t.areaM2 !== null ? ` · ${t.areaM2.toFixed(1)}㎡` : ""}
+                    {t.floor !== null ? ` · ${t.floor}층` : ""}
+                  </div>
                 </div>
-              ))}
-            </div>
-            <div className="mt-1 flex justify-between t-caption text-text-3">
-              <span>{shortPeriod(series[0].period)}</span>
-              <span>{shortPeriod(series[series.length - 1].period)}</span>
-            </div>
-          </>
+                <div className="shrink-0 t-section t-num text-ink">
+                  {formatEokMan(t.dealAmountKrw / 10_000)}
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
-        {tempRegion && (
-          <p className="mt-3 t-sub text-text-3">
+      </section>
+
+      {/* 단지별 현황 — market_transactions 그룹 요약. [1009 · H] 표(가로 스크롤) → 누르는 목록 행(RegionComplexList) */}
+      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="t-section text-ink">
+            단지별 현황{" "}
+            <span className="t-sub font-medium text-text-3">
+              국토부 실거래가 기반 · 매물 호가 아님
+            </span>
+          </h2>
+        </div>
+        {complexSummaries.length > 0 && complexR.ok && (
+          <p className="m-0 mt-1 t-caption text-text-3">최근 거래순 · 오른쪽 가격은 가장 최근 신고 1건이에요</p>
+        )}
+        <ExpandableComplexRows
+          canExpand={complexSummaries.length > 12}
+          collapsed={
+            <RegionComplexList
+              summaries={complexSummaries.slice(0, 12)}
+              regionId={id}
+              failed={!complexR.ok}
+            />
+          }
+          expanded={
+            <RegionComplexList
+              summaries={complexSummaries}
+              regionId={id}
+              failed={!complexR.ok}
+            />
+          }
+        />
+        {/* [970 · B-03] 브라우즈는 서울 25개 구만 다룬다(SEOUL_BROWSE_REGIONS) — 다른 시/도
+            지역에서 district=중구 로 보내면 강남구 폴백이 떴다. 서울일 때만 링크한다. */}
+        {complexSummaries.length > 0 && txRegion.city === "서울" && (
+          <div className="mt-3 text-right">
             <Link
-              href={`/analysis/temperature/${encodeURIComponent(id)}`}
-              className="font-bold text-primary underline"
+              href={`/complex/browse?district=${encodeURIComponent(`서울 ${txRegion.name}`)}`}
+              className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary"
             >
-              {name} 시장 온도 주간 기록 보기 →
+              서울 전체 단지 브라우즈 →
             </Link>
-          </p>
+          </div>
         )}
       </section>
 
@@ -778,41 +967,30 @@ export default async function RegionHubPage({
               <div className="t-caption text-text-3">전월세 신고 중 월세 계약</div>
             </div>
           </div>
-          {rentSnap.monthly.length >= 4 && (
-            <>
-              <div className="mt-4 flex h-[64px] items-end gap-[6px]">
-                {rentSnap.monthly.map((m, i) => {
-                  const max = Math.max(...rentSnap.monthly.map((x) => x.count));
-                  const h = max > 0 ? Math.max(4, Math.round((m.count / max) * 60)) : 4;
-                  return (
-                    <div
-                      key={m.month}
-                      className="flex min-w-0 flex-1 flex-col items-center"
-                      title={`${formatYm(m.month)} · ${m.count.toLocaleString("ko-KR")}건`}
-                    >
-                      <div
-                        className="w-full rounded-t-[4px]"
-                        style={{
-                          height: `${h}px`,
-                          background:
-                            i >= rentSnap.monthly.length - 2 ? "var(--primary-soft)" : "var(--primary)",
-                          border: i >= rentSnap.monthly.length - 2 ? "1px dashed var(--border)" : "none",
-                        }}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-1 flex justify-between t-caption text-text-3">
-                <span>{shortYm(rentSnap.monthly[0].month)}</span>
-                <span>{shortYm(rentSnap.monthly[rentSnap.monthly.length - 1].month)}</span>
-              </div>
-            </>
+          {/* [1009 · H] 월별 신고 건수 — 막대(칸마다 title=, 휴대폰에선 값이 안 보였다) → 훑는 추세선.
+              신고 기한(30일)이 지나지 않은 달은 선에서 빼고 아래 줄에 따로 적는다(예전엔 "마지막 두 칸 점선"). */}
+          {rentTrend && rentTrend.values.length >= 3 && (
+            <ScrubLineLazy
+              className="mt-4"
+              values={rentTrend.values}
+              labels={rentTrend.labels}
+              fullLabels={rentTrend.fullLabels}
+              format="int"
+              suffix="건"
+              tone="primary"
+              height={150}
+              title="월별 전월세 신고"
+              caption="신고가 끝난 달"
+              ariaLabel={`${name} 아파트 전월세 월별 신고 건수`}
+            />
           )}
           <p className="mt-3 t-sub text-text-3">
-            국토교통부 전월세 신고 기준. 최근 두 달(점선)은 신고 지연으로 실제보다 적게
-            잡힐 수 있고, 신고분에는 갱신·신규 계약이 섞여 있어 체감 시세와 다를 수
-            있습니다. 중앙값은 지역 전체 기준이라 단지별 편차가 큽니다.
+            국토교통부 전월세 신고 기준.
+            {rentOpen.length > 0
+              ? ` ${rentOpen.map((m) => `${ymMonth(m.month)} ${m.count.toLocaleString("ko-KR")}건`).join("·")}은 신고 기한(계약 후 30일) 안이라 더 늘어요 — 그래프에서 뺐어요.`
+              : ""}{" "}
+            신고분에는 갱신·신규 계약이 섞여 있어 체감 시세와 다를 수 있습니다. 중앙값은 지역 전체
+            기준이라 단지별 편차가 큽니다.
           </p>
         </section>
       )}
@@ -862,156 +1040,28 @@ export default async function RegionHubPage({
         </section>
       )}
 
-      {/* 월별 거래량 — market_region_monthly (국토부 실거래 집계) */}
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">
-          월별 거래량{" "}
-          <span className="t-sub font-medium text-text-3">
-            아파트 매매 신고 건수
-          </span>
-        </h2>
-        {!volumeR.ok ? (
-          <LoadFailed what="월별 거래량" />
-        ) : volume.length === 0 ? (
-          <p className="py-6 text-center t-body text-text-3">
-            이 지역의 월별 거래량 집계가 아직 없습니다.
-          </p>
-        ) : (
-          <>
-            <div className="mt-4 flex h-[96px] items-end gap-[6px]">
-              {volume.map((v, i) => (
-                <div
-                  key={v.month}
-                  className="flex min-w-0 flex-1 flex-col items-center gap-1"
-                  title={`${formatYm(v.month)} · ${v.count.toLocaleString("ko-KR")}건`}
-                >
-                  <div
-                    className="w-full rounded-t-[4px]"
-                    style={{
-                      height: `${volBarHeight(v.count)}px`,
-                      background:
-                        i >= volume.length - 2 ? "var(--primary-soft)" : "var(--primary)",
-                      border:
-                        i >= volume.length - 2 ? "1px dashed var(--border)" : "none",
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="mt-1 flex justify-between t-caption text-text-3">
-              <span>{shortYm(volume[0].month)}</span>
-              <span>{shortYm(volume[volume.length - 1].month)}</span>
-            </div>
-            <p className="mt-3 t-sub text-text-2">
-              최근 {volume.length}개월 합계 {volumeTotal.toLocaleString("ko-KR")}건
-              {latestVolume
-                ? ` · ${formatYm(latestVolume.month)} ${latestVolume.count.toLocaleString("ko-KR")}건`
-                : ""}
-            </p>
-            {/* 신고 지연은 반드시 화면에 적는다 — 적지 않으면 마지막 두 칸을
-                "거래 급감" 으로 오해하게 된다. 그래서 그 두 칸은 점선으로 그린다. */}
-            <p className="mt-1 t-sub text-text-3">
-              실거래 신고 기한은 계약일로부터 30일입니다. 점선으로 표시한 최근 두 달은
-              아직 신고가 들어오는 중이라 실제보다 적게 잡혀 있습니다.
-            </p>
-          </>
-        )}
-      </section>
-
-      {/* 최근 실거래 5건 */}
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">
-          최근 실거래{" "}
-          <span className="t-sub font-medium text-text-3">
-            아파트 매매 · 국토부 실거래가
-          </span>
-        </h2>
-        {!transactionsR.ok ? (
-          <LoadFailed what="최근 실거래" />
-        ) : transactions.length === 0 ? (
-          <p className="py-6 text-center t-body text-text-3">
-            이 지역에서 수집된 아파트 매매 실거래가 아직 없습니다.
-          </p>
-        ) : (
-          <ul className="mt-2">
-            {transactions.map((t, i) => (
-              <li
-                key={`${t.complexName}-${t.contractYm}-${i}`}
-                className={`flex items-center justify-between gap-3 py-3 ${
-                  i < transactions.length - 1 ? "border-b border-border" : ""
-                }`}
-              >
-                <div className="min-w-0">
-                  <div className="truncate t-body font-bold text-ink">
-                    {t.complexName}
-                  </div>
-                  <div className="mt-0.5 t-sub text-text-3">
-                    {formatYm(t.contractYm)}
-                    {t.contractDay ? `.${String(t.contractDay).padStart(2, "0")}` : ""}
-                    {t.areaM2 !== null ? ` · ${t.areaM2.toFixed(1)}㎡` : ""}
-                    {t.floor !== null ? ` · ${t.floor}층` : ""}
-                  </div>
-                </div>
-                <div className="shrink-0 t-section text-ink">
-                  {formatKrwShort(t.dealAmountKrw)}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* 단지별 현황 — market_transactions 그룹 요약 */}
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="t-section text-ink">
-            단지별 현황{" "}
-            <span className="t-sub font-medium text-text-3">
-              국토부 실거래가 기반 · 매물 호가 아님
-            </span>
-          </h2>
-        </div>
-        <ExpandableComplexRows
-          canExpand={complexSummaries.length > 12}
-          collapsed={
-            <ComplexSummaryTable
-              summaries={complexSummaries.slice(0, 12)}
-              regionId={id}
-              failed={!complexR.ok}
-            />
-          }
-          expanded={
-            <ComplexSummaryTable
-              summaries={complexSummaries}
-              regionId={id}
-              failed={!complexR.ok}
-            />
-          }
-        />
-        {/* [970 · B-03] 브라우즈는 서울 25개 구만 다룬다(SEOUL_BROWSE_REGIONS) — 다른 시/도
-            지역에서 district=중구 로 보내면 강남구 폴백이 떴다. 서울일 때만 링크한다. */}
-        {complexSummaries.length > 0 && txRegion.city === "서울" && (
-          <div className="mt-3 text-right">
-            <Link
-              href={`/complex/browse?district=${encodeURIComponent(`서울 ${txRegion.name}`)}`}
-              className="t-sub font-bold text-primary"
-            >
-              서울 전체 단지 브라우즈 →
-            </Link>
-          </div>
-        )}
-      </section>
-
       {/* 이 지역 입주 예정 물량 — 조회 실패는 섹션 자체를 렌더하지 않는다
           (없다고 말하지 않기 위해서다) */}
       {supply.length > 0 && (
         <section className="rise-in-3 card mb-6 p-[var(--pad-card)]">
-          <h2 className="t-section text-ink">
-            {name} 입주 예정 물량{" "}
-            <span className="t-sub font-medium text-text-3">
-              공급 · 2026~2027
-            </span>
-          </h2>
+          <div className="flex items-center gap-0.5">
+            <h2 className="t-section text-ink">
+              {name} 입주 예정 물량{" "}
+              <span className="t-sub font-medium text-text-3">
+                {supplyYearsLabel ? `${supplyYearsLabel} 입주` : "입주 예정"}
+              </span>
+            </h2>
+            <Explain
+              term="ipju-mulryang"
+              how={[
+                "주소에 이 지역이 들어간 단지를 이번 달 이후 입주월 순으로 최대 24곳 읽어요 — 목록은 앞의 6곳, 연도 합계는 24곳 전부예요.",
+                "연도 막대는 세대수가 공개된 단지만 더했어요 — 세대수 미상은 뺀 건수를 따로 적어요.",
+                "입주월의 달이 비었거나 잘못 적힌 단지는 “월 미정”으로 적어요. 같은 단지가 두 입주월로 올라 있으면 연도 합계에 두 번 들어갈 수 있어요(원자료 그대로).",
+                "사업 진행에 따라 입주 일정은 바뀔 수 있어요.",
+              ]}
+              source="청약홈 분양공고(매일 자동) · 공공데이터 입주예정물량(2026년 2월 수동)"
+            />
+          </div>
           {/* 웹16 — 연도별 세대 합 미니 막대. 세대수가 실려 있는 조회분만
               집계하고(미상 제외 건수 병기), 연도가 2개 이상일 때만 그린다
               (막대 1개는 비교가 아니라 장식이다). */}
@@ -1076,9 +1126,8 @@ export default async function RegionHubPage({
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className="t-body font-extrabold text-ink">
-                    {s.moveInYm.slice(0, 4)}.{s.moveInYm.slice(4, 6)}
-                  </div>
+                  {/* [1009 · H 리뷰] 달이 00·13 같은 행(운영 /region/mapo "2027.00")은 "월 미정" — /supply 의 validYm 과 같은 규칙 */}
+                  <div className="t-body font-extrabold tabular-nums text-ink">{moveInLabel(s.moveInYm)}</div>
                   <div className="t-sub text-text-3">
                     {s.households ? `${s.households.toLocaleString()}세대` : "—"}
                   </div>
@@ -1088,7 +1137,7 @@ export default async function RegionHubPage({
           </ul>
           <Link
             href={`/supply?region=${encodeURIComponent(txRegion.city)}`}
-            className="mt-3 inline-block t-sub font-bold text-primary"
+            className="mt-3 inline-flex min-h-[24px] items-center t-sub font-bold text-primary"
           >
             {txRegion.city} 전체 입주 물량 ›
           </Link>
@@ -1130,7 +1179,7 @@ export default async function RegionHubPage({
           </p>
           <Link
             href="/redevelopment"
-            className="mt-2 inline-block t-sub font-bold text-primary"
+            className="mt-2 inline-flex min-h-[24px] items-center t-sub font-bold text-primary"
           >
             정비사업 지도에서 보기 ›
           </Link>
@@ -1209,7 +1258,7 @@ export default async function RegionHubPage({
           <p className="mt-3 t-sub text-text-3">
             <Link
               href={`/tx/${encodeURIComponent(txBandRegion.slug)}`}
-              className="font-bold text-primary underline"
+              className="inline-flex min-h-[24px] items-center font-bold text-primary underline"
             >
               {txBandRegion.name} 구간 전체 보기 →
             </Link>

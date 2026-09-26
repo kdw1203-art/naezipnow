@@ -87,9 +87,10 @@ test("레이더: 입주 3,000세대 = 공급 여유 0", () => {
   );
   assert.equal(r.find((a) => a.key === "supply")!.score, 0);
 });
-test("레이더: 노트 평균 7.5점 = 정성 75", () => {
+/* [1008] 노트 점수는 5점 만점(inspection_notes.score_* 0~5) — 예전 테스트는 10점 만점(7.5 → 75)을 가정했다 */
+test("레이더: 노트 평균 3.75점(5점 만점) = 이웃 평가 75", () => {
   const r = diagnosisRadar(
-    ctx({ notes: { count: 5, avgScore: 7.5, latest: null, ...meta } }),
+    ctx({ notes: { count: 5, avgScore: 3.75, latest: null, ...meta } }),
   );
   assert.equal(r.find((a) => a.key === "field")!.score, 75);
 });

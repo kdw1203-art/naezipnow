@@ -1,13 +1,26 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import nextDynamic from "next/dynamic";
 import { Icon } from "@/app/components/Icon";
 import { useSettledSearchQuery } from "@/lib/search/settle";
+/* [1005 · A1] 직접 입력 칸은 검색이 비었을 때만 보인다 — /notes/new 첫 로드(예산 470KB,
+   실측 469KB)에 넣지 않고 그때 내려받는다. 높이를 미리 잡아 두어 열릴 때 뛰지 않게. */
+const NoteLocationManual = nextDynamic(
+  () => import("./NoteLocationManual").then((m) => m.NoteLocationManual),
+  { ssr: false, loading: () => <div className="mt-2 h-[186px] animate-pulse rounded-xl bg-surface" /> },
+);
 
 /**
  * 임장노트 위치 검색 — 단지명·주소로 검색해 노트에 위치를 연결한다.
  * /api/search/suggest 재사용: 내부 단지(suggestions) + 장소검색 폴백(places).
  * 선택 시 상위로 {aptName, region, complexId?, lat?, lng?} 전달.
+ *
+ * [1005 · A1] 직접 입력 — 위치는 노트의 **유일한 필수값**인데, 검색에 없는
+ * 단지(신축·소규모 빌라·검색 API 장애)는 적을 길이 없었다. 안내문은 "직접
+ * 입력해도 돼요"라고 했지만 그 경로가 실제로는 없었다. 이제 결과 0건·검색
+ * 실패에서 자동으로, 그 밖에는 "직접 입력" 링크로 지역·단지명 두 칸을 연다.
+ * 검색이 우선이고 직접 입력은 보조다(좌표·단지 id 는 없다 — 브리핑·인증은 안 붙는다).
  */
 
 export type NoteLocation = {
@@ -33,6 +46,14 @@ export function NoteLocationSearch({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(false);
+  /* 검색 자체가 실패했는가(네트워크·5xx) — "결과 없음"과 다른 사실이라 따로 말한다 */
+  const [failed, setFailed] = useState(false);
+  /* [1005 · A1] 직접 입력 칸 — 열림은 **걸쇠**(latch)다: 결과 0건이 되는 순간 열리고,
+     입력이 이어져 pending/loading 이 오가도 닫히지 않는다(깜빡임 방지). 검색 결과를
+     고르거나 드롭다운을 닫으면 풀린다. 입력값은 여기(부모)가 든다. */
+  const [manual, setManual] = useState(false);
+  const [mRegion, setMRegion] = useState("");
+  const [mApt, setMApt] = useState("");
   const boxRef = useRef<HTMLDivElement>(null);
   /* 대기 규칙은 lib/search/settle 한 군데에서만 정한다. */
   const { query: settled, compositionProps } = useSettledSearchQuery(q);
@@ -62,14 +83,22 @@ export function NoteLocationSearch({
     }
     const controller = new AbortController();
     setLoading(true);
+    setFailed(false);
     fetch(`/api/search/suggest?q=${encodeURIComponent(term)}`, { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : { suggestions: [], places: [] }))
+      .then((r) => {
+        if (!r.ok) throw new Error(`suggest ${r.status}`);
+        return r.json();
+      })
       .then((json: { suggestions?: Suggestion[]; places?: Place[] }) => {
         setSuggestions(Array.isArray(json.suggestions) ? json.suggestions.slice(0, 8) : []);
         setPlaces(Array.isArray(json.places) ? json.places.slice(0, 5) : []);
       })
       .catch(() => {
-        /* abort/오류 무시 */
+        /* abort 는 다음 검색이 이어받는다. 진짜 실패는 화면에 적고 직접 입력을 연다 */
+        if (controller.signal.aborted) return;
+        setSuggestions([]);
+        setPlaces([]);
+        setFailed(true);
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -80,6 +109,7 @@ export function NoteLocationSearch({
   const pickComplex = (s: Suggestion) => {
     // 즉시 반영(반응성) 후, 주소 on-demand 지오코딩으로 좌표 보강(노트에 위치 저장)
     onChange({ aptName: s.name, region: s.region, complexId: s.id, lat: null, lng: null });
+    setManual(false);
     setOpen(false);
     setQ("");
     const addr = (s.address || `${s.region} ${s.name}`).trim();
@@ -100,6 +130,29 @@ export function NoteLocationSearch({
     // 주소에서 시군구까지를 지역으로 사용
     const region = p.address.split(" ").slice(0, 2).join(" ") || p.address;
     onChange({ aptName: p.name, region, complexId: null, lat: p.lat, lng: p.lng });
+    setManual(false);
+    setOpen(false);
+    setQ("");
+  };
+
+  const searched = q.trim().length >= 2 && !loading && !pending;
+  const noResults = searched && suggestions.length === 0 && places.length === 0;
+
+  /* 검색어를 단지명 칸에 미리 넣어 준다(다시 치지 않게). 비어 있을 때만 — 적던 것을 덮지 않는다 */
+  const openManual = () => {
+    setManual(true);
+    const term = q.trim();
+    if (!mApt && term.length >= 2) setMApt(term.slice(0, 60));
+    if (!mRegion && value.region) setMRegion(value.region);
+  };
+  /* 결과 0건·검색 실패 → 묻지 않고 연다. noResults 가 true 가 되는 순간에만(걸쇠) */
+  useEffect(() => {
+    if (noResults) openManual();
+    // openManual 은 현재 입력값을 읽는 클로저 — 트리거는 noResults 하나뿐이어야 한다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noResults]);
+  const commitManual = (loc: NoteLocation) => {
+    onChange(loc);
     setOpen(false);
     setQ("");
   };
@@ -150,9 +203,11 @@ export function NoteLocationSearch({
               <div className="px-2 py-3 t-sub text-text-3">검색 중…</div>
             ) : q.trim().length < 2 ? (
               <div className="px-2 py-3 t-sub text-text-3">두 글자 이상 입력해 주세요.</div>
-            ) : suggestions.length === 0 && places.length === 0 ? (
-              <div className="px-2 py-3 t-sub text-text-3">
-                검색 결과가 없어요. 단지명·지역을 직접 입력해도 돼요.
+            ) : noResults ? (
+              <div role="status" className="px-2 py-3 t-sub text-text-3">
+                {failed
+                  ? "검색이 잠시 안 돼요 — 아래에 직접 적어 주세요."
+                  : "검색 결과가 없어요 — 아래에 단지명·지역을 직접 적어 주세요."}
               </div>
             ) : (
               <>
@@ -205,6 +260,28 @@ export function NoteLocationSearch({
               </>
             )}
           </div>
+
+          {/* [1005 · A1] 직접 입력 — 검색 아래 보조 경로. 링크는 늘 있고, 결과 0건이면 저절로 열린다 */}
+          {manual ? (
+            <NoteLocationManual
+              region={mRegion}
+              apt={mApt}
+              onRegion={setMRegion}
+              onApt={setMApt}
+              onCommit={commitManual}
+            />
+          ) : (
+            <div className="mt-1 flex justify-end">
+              <button
+                type="button"
+                onClick={openManual}
+                aria-expanded={false}
+                className="inline-block py-[5px] t-sub font-bold text-primary"
+              >
+                검색에 없어요 — 직접 입력 ›
+              </button>
+            </div>
+          )}
         </div>
       ) : null}
     </div>

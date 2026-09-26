@@ -14,6 +14,7 @@ import {
   type ConsultType,
 } from "@/lib/expert-consultations/store-db";
 import { getExpert, refreshExpertResponseStats } from "@/lib/experts/store-db";
+import { invalidateExpertRoutes } from "@/lib/town/invalidate-town";
 import { appendInboxNotification } from "@/lib/notifications/inbox";
 import { checkExpertConsultQuota, resolveQuotaPlan } from "@/lib/subscriptions/usage-summary";
 import { withUserQuotaLock } from "@/lib/subscriptions/quota-lock";
@@ -200,6 +201,8 @@ export async function PATCH(
     const ok = await closeConsultation(consultationId);
     if (!ok) return NextResponse.json({ error: "마감 실패" }, { status: 500 });
     void refreshExpertResponseStats(expertId).catch(() => {});
+    /* [1010 · 동네축] 마감도 응답률 계산을 바꾼다 — 답변과 같은 이유로 비운다 */
+    invalidateExpertRoutes(expertId);
     return NextResponse.json({ ok: true });
   }
 
@@ -232,5 +235,9 @@ export async function PATCH(
   /* [953] 응답률·상담 완료 수를 프로필 컬럼에 반영 — 목록 정렬("응답 빠른 순")과
      카드 지표가 실측값을 쓴다. 실패해도 답변 자체는 이미 저장됐다. */
   void refreshExpertResponseStats(expertId).catch(() => {});
+  /* [1010 · 동네축] 답변 완료 수(consultations)·응답률은 목록 카드와 상세 지표에 그대로 실린다
+     — 목록·상세 ISR 을 300초에서 1일로 늘렸으므로 여기서 비우지 않으면 지표가 하루 굳는다.
+     "완료 상담 N건" 은 사실 주장이라 낡은 값을 그대로 둘 수 없다. */
+  invalidateExpertRoutes(expertId);
   return NextResponse.json({ ok: true, consultation: result });
 }

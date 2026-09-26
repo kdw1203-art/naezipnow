@@ -20,7 +20,12 @@ import { logger } from "@/lib/log";
    지수·월별 거래량 원천이라 10분(600초)이면 충분히 신선하고, 하위 로더가
    실패를 null/[] 로 삼키는 기존 설계(스냅샷 크론과 공유)라 실패 화면이
    생기더라도 이 주기 이상 눌러앉지 않는다. */
-export const revalidate = 600;
+/* [1010] 600초 → 1일. 위 판단("10분이면 충분히 신선")의 근거는 원천의 갱신 주기였는데,
+   실제 비용을 정한 건 크롤러였다 — 10분 눈금은 크롤러 방문마다 100% 재렌더를 뜻한다.
+   원천(지수·월별 거래량)은 하루 1회 갱신이고, 이 경로는 SOURCE_MAP 목록에 없어서
+   lib/region/invalidate-market.ts invalidateMarketAnalysisRoutes() 가 하루 1회 비운다.
+   지역 전환은 원래부터 /api/timing(지역별 CDN 1800초)이라 이 TTL 과 무관하다. */
+export const revalidate = 86_400;
 
 /* N7 — ?region=·?complexId=·?apt= 조합마다 별개 URL 로 색인되지 않도록 canonical 을
    파라미터 없는 경로로 고정한다. 지역별 랜딩은 /region/[id] 가 따로 맡는다. */
@@ -60,6 +65,7 @@ export default async function TimingPage() {
         defaultRegionId={defaultRegion.id}
         initialData={{ trend, volume, temp }}
         builtYyyymm={currentYyyymm()}
+        builtAt={Date.now()}
       />
 
       {/* 15h-44 분석→행동 카드는 TimingClient 안의 AnalysisCrossLinks 로 이동

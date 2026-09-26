@@ -147,5 +147,8 @@ async function loadRegionMarketMarkersDurable(): Promise<RegionMarketMarker[]> {
 export const loadRegionMarketMarkers = unstable_cache(
   loadRegionMarketMarkersDurable,
   ["map-region-market-markers-v1"],
-  { revalidate: 600, tags: ["map-region-markers"] },
+  /* [1010] 600초 → 7일. 이 값이 /map 의 실질 TTL 이었다(라우트 revalidate 의 뚜껑).
+     대신 "market" 태그를 더해 실거래 적재(하루 1회)가 비우게 한다 — 태그 무효화는 재렌더를
+     강제하지 않으므로, 다음 렌더 때 최신값을 읽는 효과만 있다. */
+  { revalidate: 604_800, tags: ["map-region-markers", "market"] },
 );

@@ -37,7 +37,7 @@ const MapPickDrawer = dynamic(
 );
 
 export interface HubMapRequest {
-  /** 무엇을 위해 고르는지 — 서랍 제목에 그대로 나온다("이 단지 종합 진단") */
+  /** 무엇을 위해 고르는지 — 서랍 제목에 그대로 나온다("종합 진단") */
   purpose?: string;
   /** 고른 뒤 할 일(보통 그 도구로 이동). 없으면 선택만 반영하고 닫는다. */
   onPicked?: (c: PickedComplex) => void;

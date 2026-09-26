@@ -15,22 +15,58 @@ import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { trackPlatformEvent } from "@/lib/platform-events-client";
 import { useScrollRestore } from "@/lib/client/use-scroll-restore";
 import { formatKrwManwon } from "@/lib/format/krw";
+import { newsHref, storyHref } from "@/lib/town/post-href";
+import { relativeTimeLabel } from "@/lib/format/relative-time";
+import { FuzzyBadge, Hl, complexMetaLine } from "./complex-hit";
+import {
+  NO_MATCH_EXAMPLE,
+  NO_MATCH_HINT,
+  QUERY_TOO_LONG,
+  SEARCH_QUERY_MAX,
+  badRequestNotice,
+  noMatchTitle,
+  type ComplexPreview,
+} from "@/lib/search/complex-preview";
 
 /* ============================================================
-   통합 검색 경험 — 단지·매물·임장노트·뉴스 통합 결과
+   통합 검색 경험 — 단지·매물·임장노트·이야기·뉴스 통합 결과
    /api/search/unified?q= (대기 규칙은 lib/search/settle) · 그룹별 섹션 + 더 보기
-   각 항목 → 상세(/complex·/listings·/notes·/town/news)
+   각 항목 → 상세(/complex·/listings·/notes·/town/story·/town/news)
    최근 검색 5개 localStorage · 빈/로딩 상태 처리
+
+   [1007 · P2] 이야기(이웃 글)와 뉴스(자동수집 기사)를 **다른 재질**로 그린다 —
+   1006 규칙(globals.css .story-* / .news-*)의 축약형: 이야기는 작성자 머리글자·동네 배지가
+   있는 흰 카드, 뉴스는 출처·시각이 앞에 오는 구분선 행. 예전엔 board_posts 를 한 종류
+   ("뉴스")로 그리고 전부 /town/news/ 로 보냈다. 결과 위 필터 줄에 "이야기"·"뉴스"가 따로 선다.
    ============================================================ */
 
-interface UnifiedResults {
-  complexes: { id: string; name: string; region: string }[];
-  listings: { id: string; title: string; price: string }[];
-  notes: { id: string; title: string }[];
-  news: { id: string; title: string; source: string }[];
+interface UnifiedStory {
+  id: string;
+  title: string;
+  author: string;
+  region: string;
+  createdAt: string | null;
+  commentCount: number | null;
+}
+interface UnifiedNews {
+  id: string;
+  title: string;
+  source: string;
+  publishedAt: string | null;
 }
 
-const EMPTY: UnifiedResults = { complexes: [], listings: [], notes: [], news: [] };
+interface UnifiedResults {
+  /** [1008 · S] 미리보기 값(읍면동·세대수·6개월 거래·비슷한 이름)은 선택 — 옛 응답엔 없다 */
+  complexes: ComplexPreview[];
+  listings: { id: string; title: string; price: string }[];
+  notes: { id: string; title: string }[];
+  stories: UnifiedStory[];
+  news: UnifiedNews[];
+}
+
+const EMPTY: UnifiedResults = { complexes: [], listings: [], notes: [], stories: [], news: [] };
+/** 전 그룹 실패 시 클라이언트가 적는 이름 — API 의 failed 라벨과 같은 말 */
+const ALL_GROUP_LABELS = ["단지", "매물", "임장노트", "이야기", "뉴스"];
 
 /** 측정된 인기가 아님 — 전국 주요 권역 추천 검색어 (가짜 KPI 금지) */
 const SUGGESTED_REGIONS = ["강남구", "분당", "마포구", "해운대구"] as const;
@@ -66,8 +102,10 @@ function hrefFor(key: SectionKey, id: string): string {
       return `/listings/${enc}`;
     case "notes":
       return `/notes/${enc}`;
+    case "stories":
+      return storyHref(id);
     case "news":
-      return `/town/news/${enc}`;
+      return newsHref(id);
   }
 }
 
@@ -75,6 +113,12 @@ interface Row {
   id: string;
   title: string;
   meta?: string;
+  /** [1008 · S] 단지 행 — 검색어 강조(괄호·띄어쓰기 건너뜀) · 읍면동·세대수·6개월 거래 · 비슷한 이름 */
+  complex?: ComplexPreview;
+  /** [1007] 이야기 행 — 작성자·동네·댓글(뉴스 행과 다른 재질로 그린다) */
+  story?: UnifiedStory;
+  /** [1007] 뉴스 행 — 출처·발행시각 */
+  news?: UnifiedNews;
 }
 interface Group {
   key: SectionKey;
@@ -91,6 +135,8 @@ export function SearchClient() {
      따로 들고 있는다 — 예전엔 조회가 실패해도 빈 결과가 되어 검색어를 의심하게
      만들었다. failed 가 비어 있지 않으면 아래 빈 결과 문구를 쓰지 않는다. */
   const [failed, setFailed] = useState<string[]>([]);
+  /* [1008 · 리뷰 B] 장애도 결과 없음도 아닌 안내 — 80자 넘는 검색어(서버 400). 예전엔 전 그룹 실패로 적었다. */
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
   /* [937 검색] 빈 화면의 "많이 찾는 단지" — 추측이 아니라 실측(최근 6개월
@@ -149,12 +195,21 @@ export function SearchClient() {
       setResults(EMPTY);
       setSuggestions([]);
       setFailed([]);
+      setNotice(null);
       setLoading(false);
       abortRef.current?.abort();
       return;
     }
-    setLoading(true);
     abortRef.current?.abort();
+    if (query.trim().length > SEARCH_QUERY_MAX) {
+      setResults(EMPTY);
+      setSuggestions([]);
+      setFailed([]);
+      setNotice(QUERY_TOO_LONG);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     const ac = new AbortController();
     abortRef.current = ac;
     void (async () => {
@@ -162,7 +217,19 @@ export function SearchClient() {
         const res = await fetch(`/api/search/unified?q=${encodeURIComponent(query)}`, {
           signal: ac.signal,
         });
-        if (!res.ok) throw new Error("unified failed");
+        if (!res.ok) {
+          const n = await badRequestNotice(res);
+          if (n) {
+            if (ac.signal.aborted) return;
+            setResults(EMPTY);
+            setSuggestions([]);
+            setFailed([]);
+            setNotice(n);
+            return;
+          }
+          throw new Error("unified failed");
+        }
+        setNotice(null);
         const json = (await res.json()) as Partial<UnifiedResults> & {
           suggestions?: UnifiedResults["complexes"];
           failed?: string[];
@@ -171,31 +238,37 @@ export function SearchClient() {
           complexes: json.complexes ?? [],
           listings: json.listings ?? [],
           notes: json.notes ?? [],
+          stories: json.stories ?? [],
           news: json.news ?? [],
         });
         setSuggestions(Array.isArray(json.suggestions) ? json.suggestions : []);
         setFailed(Array.isArray(json.failed) ? json.failed : []);
         /* [937 검색] 무결과 실측 — 커버리지 카드는 버튼을 눌러야 남지만,
-           "찾았는데 없었다"는 사실 자체가 확장 우선순위 데이터다. */
-        const n =
-          (json.complexes?.length ?? 0) +
+           "찾았는데 없었다"는 사실 자체가 확장 우선순위 데이터다.
+           [1008 · 리뷰 B] 단지가 '비슷한 이름'(오타 추정)뿐이면 그것도 무결과로 센다 — metadata.fuzzyOnly=true 로
+           따로 적는다(예전엔 결과 있음으로 세어 "결과 없음 82%" 개선 수치가 부풀 수 있었다). */
+        const others =
           (json.listings?.length ?? 0) +
           (json.notes?.length ?? 0) +
+          (json.stories?.length ?? 0) +
           (json.news?.length ?? 0);
-        if (n === 0 && (!json.failed || json.failed.length === 0)) {
+        const complexesAll = json.complexes?.length ?? 0;
+        const complexesSure = (json.complexes ?? []).filter((c) => !c.fuzzy).length;
+        if (complexesSure + others === 0 && (!json.failed || json.failed.length === 0)) {
           trackPlatformEvent({
             eventName: "search_no_result",
             source: "client",
             campaign: "funnel",
-            metadata: { query: query.slice(0, 80) },
+            metadata: { query: query.slice(0, 80), fuzzyOnly: complexesAll > 0 },
           });
         }
       } catch {
         if (!ac.signal.aborted) {
           setResults(EMPTY);
           setSuggestions([]);
+          setNotice(null);
           /* 503(전 그룹 실패)·네트워크 오류 — 결과가 없는 게 아니라 못 물어본 것이다. */
-          setFailed(["단지", "매물", "임장노트", "뉴스"]);
+          setFailed(ALL_GROUP_LABELS);
         }
       } finally {
         if (!ac.signal.aborted) setLoading(false);
@@ -244,6 +317,7 @@ export function SearchClient() {
     results.complexes.length +
     results.listings.length +
     results.notes.length +
+    results.stories.length +
     results.news.length;
 
   /* [966] 결과 → 상세 → 뒤로가기 스크롤 복원. 키는 URL 과 같은 꼴(/search?q=)로 직접
@@ -259,7 +333,7 @@ export function SearchClient() {
       key: "complexes",
       label: "단지",
       more: "/complex/browse",
-      rows: results.complexes.map((c) => ({ id: c.id, title: c.name, meta: c.region })),
+      rows: results.complexes.map((c) => ({ id: c.id, title: c.name, complex: c })),
     },
     {
       key: "listings",
@@ -274,22 +348,35 @@ export function SearchClient() {
       rows: results.notes.map((n) => ({ id: n.id, title: n.title })),
     },
     {
+      key: "stories",
+      label: "이야기",
+      more: "/town",
+      rows: results.stories.map((p) => ({ id: p.id, title: p.title, story: p })),
+    },
+    {
       key: "news",
       label: "뉴스",
       more: "/town/news",
-      rows: results.news.map((n) => ({ id: n.id, title: n.title, meta: n.source })),
+      rows: results.news.map((n) => ({ id: n.id, title: n.title, meta: n.source, news: n })),
     },
   ];
+  /* [1007] 결과 필터 — "전체" 또는 그룹 하나. 결과가 있는 그룹만 탭으로 선다(빈 탭 금지).
+     검색어가 바뀌면 전체로 돌아간다 — 다른 검색어의 결과를 이전 필터로 가리지 않는다. */
+  const [filter, setFilter] = useState<SectionKey | "all">("all");
+  useEffect(() => setFilter("all"), [settledQuery]);
+  const presentGroups = groups.filter((g) => g.rows.length > 0);
+  const visibleGroups =
+    filter === "all" ? presentGroups : presentGroups.filter((g) => g.key === filter);
 
   /* [941] 키보드 내비게이션 — ↑↓ 로 결과를 훑고 Enter 로 연다(표준 콤보박스
      관행). 포커스는 입력창에 남는다 — 계속 타이핑해 검색을 좁힐 수 있게. */
   const flatRows = useMemo(
     () =>
-      groups.flatMap((g) =>
+      visibleGroups.flatMap((g) =>
         g.rows.map((r) => ({ key: `${g.key}:${r.id}`, group: g.key, href: hrefFor(g.key, r.id) })),
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [results],
+    [results, filter],
   );
   const [activeIdx, setActiveIdx] = useState(-1);
   useEffect(() => setActiveIdx(-1), [results]);
@@ -355,9 +442,10 @@ export function SearchClient() {
             }
           }}
           role="combobox"
+          aria-controls="search-results"
           aria-expanded={flatRows.length > 0}
           aria-activedescendant={activeIdx >= 0 ? `search-opt-${activeIdx}` : undefined}
-          placeholder="단지·매물·임장노트·뉴스 통합 검색"
+          placeholder="단지·매물·임장노트·이야기·뉴스 통합 검색"
           aria-label="통합 검색"
           autoComplete="off"
           /* [968 · 29] <form> 밖의 입력이라 iOS 자판에 "검색" 키가 없었다 — 힌트로 붙인다 */
@@ -383,9 +471,11 @@ export function SearchClient() {
         <Link
           href={`/map?q=${encodeURIComponent(q.trim())}`}
           onClick={() => saveRecent(q)}
-          className="btn-soft rise-in inline-flex w-fit items-center gap-1.5 rounded-xl px-3.5 py-2 t-body font-bold text-primary"
+          className="btn-soft rise-in inline-flex w-fit max-w-full items-center gap-1.5 rounded-xl px-3.5 py-2 t-body font-bold text-primary"
         >
-          <Icon name="🗺" size={16} /> ‘{q.trim()}’ 지도에서 보기 ›
+          <Icon name="🗺" size={16} className="shrink-0" />
+          {/* 띄어쓰기 없는 긴 검색어(최대 80자)도 390px 안에서 접힌다 — body 의 keep-all 이 낱말 안에서 끊지 않았다 */}
+          <span className="min-w-0 break-all">‘{q.trim()}’ 지도에서 보기 ›</span>
         </Link>
       )}
 
@@ -497,8 +587,15 @@ export function SearchClient() {
         <div className="mt-6 text-center text-[13px] text-text-3">검색 중…</div>
       )}
 
+      {/* [1008 · 리뷰 B] 검색어가 너무 길다 — 장애도 결과 없음도 아니다 */}
+      {hasQuery && !busy && notice && (
+        <div role="status" className="mt-8 text-center t-section text-ink">
+          {notice}
+        </div>
+      )}
+
       {/* 조회 실패 — "없음"이 아니라 "못 불러왔음"으로 적는다 */}
-      {hasQuery && !busy && failed.length > 0 && (
+      {hasQuery && !busy && !notice && failed.length > 0 && (
         <div className="mt-8 flex flex-col items-center gap-2 text-center">
           <div className="t-section text-ink">
             지금은 {failed.join("·")} 검색이 되지 않아요
@@ -510,14 +607,15 @@ export function SearchClient() {
       )}
 
       {/* 빈 결과 + A8 대안 단지 제안 */}
-      {hasQuery && !busy && failed.length === 0 && total === 0 && (
+      {hasQuery && !busy && !notice && failed.length === 0 && total === 0 && (
         <div className="mt-8 flex flex-col items-center gap-2 text-center">
-          <div className="t-section text-ink">
-            ‘{q.trim()}’ 검색 결과가 없어요
+          {/* [1008 · S] 결과 없음 — 사실 한 줄 + 다음 할 일(띄어 쓰는 요령). 예전 문구("검색 결과가 없어요")는
+              무엇을 바꿔 쳐야 하는지 말해 주지 않았다 — 결과 없음 82% 의 대부분이 띄어쓰기·괄호 차이였다. */}
+          <div className="break-words t-section text-ink">{noMatchTitle(q.trim())}</div>
+          <div className="break-words t-sub text-text-3">
+            {NO_MATCH_HINT} · {NO_MATCH_EXAMPLE}
           </div>
-          <div className="t-sub text-text-3">
-            단지명·지역·매물·임장노트·뉴스를 검색할 수 있어요.
-          </div>
+          <div className="t-caption text-text-3">매물·임장노트·이웃 이야기·뉴스에서도 찾지 못했어요.</div>
 
           {/* 항목 13 — 막다른 화면 금지: 결과가 없어도 다음 행동은 있어야 한다.
               지도는 텍스트 매칭이 아니라 위치 탐색이라 같은 검색어로도 찾아질 수
@@ -528,7 +626,7 @@ export function SearchClient() {
               onClick={() => saveRecent(q)}
               className="chip border border-line bg-bg px-3.5 py-2 t-sub font-bold text-primary"
             >
-              🗺 지도에서 찾아보기
+              🗺 지도에서 찾기
             </Link>
             <Link
               href="/complex/browse"
@@ -547,7 +645,8 @@ export function SearchClient() {
           {suggestions.length > 0 && (
             <div className="mt-5 w-full max-w-[520px] text-left">
               <div className="mb-2 px-1 t-body font-extrabold text-ink">
-                혹시 이 단지를 찾으셨나요?
+                혹시 이 단지를 찾으셨나요?{" "}
+                <span className="t-caption font-semibold text-text-3">이름이 비슷한 단지</span>
               </div>
               <div className="flex flex-col gap-2">
                 {suggestions.map((c) => (
@@ -561,7 +660,7 @@ export function SearchClient() {
                         {c.name}
                       </div>
                       {c.region && (
-                        <div className="truncate t-sub text-text-3">{c.region}</div>
+                        <div className="truncate t-sub text-text-3">{complexMetaLine(c)}</div>
                       )}
                     </div>
                     <span className="shrink-0 t-body text-on-dark-muted">›</span>
@@ -580,9 +679,29 @@ export function SearchClient() {
 
       {/* 그룹별 결과 섹션 */}
       {hasQuery && total > 0 && (
-        <div className="mt-1 flex flex-col gap-4">
-          {groups
-            .filter((g) => g.rows.length > 0)
+        <div id="search-results" className="mt-1 flex flex-col gap-4">
+          {/* [1007] 필터 줄 — 전체 + 결과가 있는 그룹(이야기·뉴스가 따로 선다). 40px 터치. */}
+          {presentGroups.length > 1 && (
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="결과 종류">
+              {[{ key: "all" as const, label: "전체", count: total }, ...presentGroups.map((g) => ({ key: g.key, label: g.label, count: g.rows.length }))].map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  aria-pressed={filter === t.key}
+                  onClick={() => setFilter(t.key)}
+                  className={`chip inline-flex min-h-10 items-center gap-1 rounded-full border px-3.5 py-2 t-sub font-bold ${
+                    filter === t.key
+                      ? "border-primary bg-primary-soft text-primary"
+                      : "border-line bg-surface text-text-2"
+                  }`}
+                >
+                  {t.label}
+                  <span className="t-caption font-semibold text-text-3">{t.count}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {visibleGroups
             .map((g) => (
               <section key={g.key} className="rise-in card rounded-2xl p-[18px]">
                 <header className="mb-1 flex items-center justify-between">
@@ -604,39 +723,130 @@ export function SearchClient() {
                     </Link>
                   </div>
                 </header>
-                <div className="flex flex-col">
-                  {g.rows.map((r, i) => (
-                    <Link
-                      key={r.id}
-                      id={`search-opt-${flatIndexOf.get(`${g.key}:${r.id}`) ?? ""}`}
-                      href={hrefFor(g.key, r.id)}
-                      onClick={() => {
-                        saveRecent(q);
-                        /* [937 검색] 그룹별 클릭 실측 — 어떤 결과 묶음이 실제로
-                           쓰이는지 없이는 검색 개선의 다음 순서를 정할 수 없다. */
-                        trackPlatformEvent({
-                          eventName: "search_result_click",
-                          source: "client",
-                          campaign: "funnel",
-                          metadata: { group: g.key, query: q.trim().slice(0, 80) },
-                        });
-                      }}
-                      className={`flex items-center justify-between gap-3 rounded-lg py-2.5 transition-colors hover:text-primary ${
-                        i < g.rows.length - 1 ? "border-b border-divider" : ""
-                      } ${
-                        flatIndexOf.get(`${g.key}:${r.id}`) === activeIdx
-                          ? "-mx-1.5 bg-primary-soft px-1.5"
-                          : ""
-                      }`}
-                    >
-                      <span className="min-w-0 truncate t-body font-bold text-ink">
-                        {highlightMatch(r.title, settledQuery)}
-                      </span>
-                      {r.meta && (
-                        <span className="shrink-0 t-sub text-text-3">{r.meta}</span>
-                      )}
-                    </Link>
-                  ))}
+                <div className={g.key === "news" ? "news-list" : g.key === "stories" ? "mt-1 flex flex-col gap-2" : "flex flex-col"}>
+                  {g.rows.map((r, i) => {
+                    const optId = `search-opt-${flatIndexOf.get(`${g.key}:${r.id}`) ?? ""}`;
+                    const active = flatIndexOf.get(`${g.key}:${r.id}`) === activeIdx;
+                    const onClick = () => {
+                      saveRecent(q);
+                      /* [937 검색] 그룹별 클릭 실측 — 어떤 결과 묶음이 실제로
+                         쓰이는지 없이는 검색 개선의 다음 순서를 정할 수 없다. */
+                      trackPlatformEvent({
+                        eventName: "search_result_click",
+                        source: "client",
+                        campaign: "funnel",
+                        metadata: { group: g.key, query: q.trim().slice(0, 80) },
+                      });
+                    };
+                    if (r.story) {
+                      /* [1007] 이야기 — .story-card 축약: 머리글자 · 작성자 · 동네 배지 · 제목 · 댓글 */
+                      const author = r.story.author.trim() || "이웃";
+                      return (
+                        <Link
+                          key={r.id}
+                          id={optId}
+                          href={hrefFor(g.key, r.id)}
+                          onClick={onClick}
+                          className={`story-card tile flex min-h-10 flex-col gap-1.5 px-3 py-2.5 no-underline ${
+                            active ? "border-primary" : ""
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="story-avatar" aria-hidden="true">
+                              {author.slice(0, 1)}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate t-sub font-extrabold text-ink">{author}</span>
+                            <span className="story-kind t-caption">이야기</span>
+                          </span>
+                          <span className="line-clamp-2 t-body font-extrabold leading-snug text-ink">
+                            {highlightMatch(r.title, settledQuery)}
+                          </span>
+                          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 t-sub text-text-3">
+                            {r.story.region && (
+                              <span className="rounded-md bg-primary-soft px-1.5 py-px t-caption font-extrabold text-primary">
+                                {r.story.region}
+                              </span>
+                            )}
+                            {r.story.createdAt && (
+                              <time dateTime={r.story.createdAt}>{relativeTimeLabel(r.story.createdAt)}</time>
+                            )}
+                            {typeof r.story.commentCount === "number" && (
+                              <span className="inline-flex items-center gap-1">
+                                <Icon name="messages-square" size={12} />
+                                댓글 {r.story.commentCount}
+                              </span>
+                            )}
+                          </span>
+                        </Link>
+                      );
+                    }
+                    if (r.complex) {
+                      /* [1008 · S] 단지 — 이름(검색어 강조: 괄호·띄어쓰기 건너뜀) + [비슷한 이름] ·
+                         둘째 줄 시군구 읍면동 · 세대수 · 6개월 거래(같은 이름 단지 가르기) */
+                      return (
+                        <Link
+                          key={r.id}
+                          id={optId}
+                          href={hrefFor(g.key, r.id)}
+                          onClick={onClick}
+                          className={`flex min-h-10 flex-col gap-0.5 rounded-lg py-2.5 transition-colors hover:text-primary ${
+                            i < g.rows.length - 1 ? "border-b border-divider" : ""
+                          } ${active ? "-mx-1.5 bg-primary-soft px-1.5" : ""}`}
+                        >
+                          <span className="flex min-w-0 items-center gap-1.5">
+                            <span className="min-w-0 truncate t-body font-bold text-ink">
+                              <Hl text={r.title} q={settledQuery} />
+                            </span>
+                            {r.complex.fuzzy && <FuzzyBadge />}
+                          </span>
+                          <span className="truncate t-sub text-text-3">{complexMetaLine(r.complex)}</span>
+                        </Link>
+                      );
+                    }
+                    if (r.news) {
+                      /* [1007] 뉴스 — .news-row 축약: 출처 · 시각 → 제목. 카드가 아니라 구분선 행 */
+                      return (
+                        <Link
+                          key={r.id}
+                          id={optId}
+                          href={hrefFor(g.key, r.id)}
+                          onClick={onClick}
+                          className={`news-row min-h-10 no-underline ${active ? "-mx-1.5 bg-primary-soft px-1.5" : ""}`}
+                        >
+                          <span className="flex min-w-0 flex-col gap-0.5">
+                            <span className="news-row__meta">
+                              <span className="news-source">{r.news.source}</span>
+                              {r.news.publishedAt && (
+                                <time dateTime={r.news.publishedAt}>{relativeTimeLabel(r.news.publishedAt)}</time>
+                              )}
+                            </span>
+                            <span className="news-row__title line-clamp-2">
+                              {highlightMatch(r.title, settledQuery)}
+                            </span>
+                          </span>
+                          <span aria-hidden="true" />
+                        </Link>
+                      );
+                    }
+                    return (
+                      <Link
+                        key={r.id}
+                        id={optId}
+                        href={hrefFor(g.key, r.id)}
+                        onClick={onClick}
+                        className={`flex items-center justify-between gap-3 rounded-lg py-2.5 transition-colors hover:text-primary ${
+                          i < g.rows.length - 1 ? "border-b border-divider" : ""
+                        } ${active ? "-mx-1.5 bg-primary-soft px-1.5" : ""}`}
+                      >
+                        <span className="min-w-0 truncate t-body font-bold text-ink">
+                          {highlightMatch(r.title, settledQuery)}
+                        </span>
+                        {r.meta && (
+                          <span className="shrink-0 t-sub text-text-3">{r.meta}</span>
+                        )}
+                      </Link>
+                    );
+                  })}
                 </div>
               </section>
             ))}

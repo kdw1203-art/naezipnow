@@ -19,6 +19,7 @@ import { getCreatorSales } from "@/lib/creator/sales";
 import { createReport } from "@/lib/reports/store-db";
 import { getNote } from "@/lib/inspection/store-db";
 import { applyRateLimit, WRITE_RATE_LIMIT, READ_RATE_LIMIT } from "@/lib/rate-limit";
+import { invalidatePathList } from "@/lib/cache/invalidate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -131,6 +132,9 @@ export async function POST(req: NextRequest) {
          쓰는 값을 저장소가 알아서 가려 주길 기대하는 건 근거가 약하다. */
       authorLabel: session?.user?.name?.trim() || undefined,
     });
+    /* [1010 · 동네축] 자료실(/town/library)이 리포트 선반을 서버에서 그린다 —
+       그 라우트 TTL 을 600초에서 1일로 늘렸으므로, 새 리포트가 하루 동안 안 보이지 않게 비운다. */
+    invalidatePathList(["/town/library"], { label: "report" });
     return NextResponse.json({ ok: true, report }, { status: 201 });
   } catch (e) {
     return NextResponse.json(

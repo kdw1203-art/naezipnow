@@ -17,6 +17,7 @@ import {
   resolveEmailByHandle,
 } from "@/lib/follows/store-db";
 import { applyRateLimit, WRITE_RATE_LIMIT, READ_RATE_LIMIT } from "@/lib/rate-limit";
+import { scheduleProfileInvalidation } from "@/lib/town/invalidate-town";
 import { dbUnavailable } from "@/lib/api/db-unavailable";
 
 export const runtime = "nodejs";
@@ -104,6 +105,9 @@ export async function POST(req: NextRequest) {
 
   try {
     await followUser(session.user.email, followedEmail);
+    /* [1010 · 동네축] 공개 프로필(/u/{handle}, TTL 900초 → 1일)이 팔로워 수를 서버에서 그린다 —
+       늘린 TTL 만큼 숫자가 굳지 않게 그 사람 프로필만 비운다. 실패는 헬퍼가 삼킨다. */
+    scheduleProfileInvalidation(followedEmail);
     return NextResponse.json({ ok: true });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "팔로우 실패";
@@ -137,5 +141,7 @@ export async function DELETE(req: NextRequest) {
   }
 
   await unfollowUser(session.user.email, followedEmail);
+  /* [1010 · 동네축] 팔로우와 같은 이유 — 줄어든 팔로워 수도 즉시 보여야 한다 */
+  scheduleProfileInvalidation(followedEmail);
   return NextResponse.json({ ok: true });
 }

@@ -43,7 +43,13 @@ import { formatKrwShort } from "@/lib/market/format";
 
 /* [B001 1단계] 1h → 24h. 이 페이지의 원천(국토부 실거래)은 하루 1번 적재라
    더 자주 재렌더할 이유가 없다 — 26k 페이지 크롤 재렌더가 DB 를 밀던 문제의 반쪽. */
-export const revalidate = 86400;
+/* [1010] 24h → 7일. 크롤러 재방문이 ≈2.2일이라 24시간 TTL 은 "올 때마다 재렌더"와 같았다.
+   이 화면에는 사람이 실시간으로 쓰는 것이 하나도 없다 — 화이트리스트(complex_pair_mv)와
+   표의 숫자가 전부 국토부 실거래에서 나온다. 그래서 실거래 적재 크론이 끝날 때
+   `revalidatePath("/complex/compare/[slug]", "page")` 로 이 라우트를 통째로 비운다
+   (app/api/cron/molit-transactions-ingest). 조합은 운영 실측 669장뿐이라 라우트 단위
+   무효화가 단지별로 고르는 것보다 싸다 — 고르려면 MV 를 한 번 더 읽어야 한다. */
+export const revalidate = 604_800;
 /* 빈 배열 = "빌드 때 미리 만들 경로는 없다". 이 export 가 있어야 Next 가 이
    라우트를 ISR 로 분류한다 — 없으면 `revalidate` 를 적어 둬도 요청마다 서버
    렌더로 돌면서 Next 가 `private, no-cache, no-store` 를 실어 보내고, CDN 은

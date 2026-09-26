@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { authorizeCron } from "@/lib/cron/authorize";
 import { isCodefConfigured } from "@/lib/codef/client";
 import { syncKbPriceQuote } from "@/lib/codef/sync";
+import { invalidateComplexByNames } from "@/lib/complex/complex-invalidate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,11 +36,16 @@ export async function GET(req: Request) {
   const complexName = url.searchParams.get("complex")?.trim();
   const serial = url.searchParams.get("serial")?.trim();
   if (complexName && serial) {
+    const regionName = url.searchParams.get("region")?.trim() || undefined;
     const result = await syncKbPriceQuote({
       complexName,
-      regionName: url.searchParams.get("region")?.trim() || undefined,
+      regionName,
       query: { complexNo: serial, searchGbn: "0" },
     });
+    /* [1010] KB 시세 행은 /complex/tx/[slug] 의 "KB 시세" 섹션에 서버 렌더로 실린다.
+       그 라우트 TTL 이 7일이 됐으므로 적재 직후 그 단지 화면을 비운다(지역을 넘겼을 때만 —
+       단지 id 는 (지역, 단지명)으로만 만들 수 있고, 모르면 찍지 않는다). */
+    if (result.ok && regionName) invalidateComplexByNames(regionName, complexName);
     return NextResponse.json(result);
   }
 

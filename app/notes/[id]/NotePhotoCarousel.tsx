@@ -16,6 +16,7 @@
 */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import nextDynamic from "next/dynamic";
 import { useScrollLock } from "@/lib/client/use-scroll-lock";
 import { horizontalSwipeDelta } from "@/lib/client/swipe-gesture";
 import { buildImageSrcSet, canOptimizeImage } from "@/lib/images/srcset";
@@ -32,6 +33,13 @@ type Props = {
 const STAGE_SIZES = "(max-width: 1023px) 100vw, 760px";
 const THUMB_SIZES = "74px";
 const ZOOM_SIZES = "(max-width: 1100px) 100vw, 1100px";
+
+/* [1006] 크게 보기 팝업은 별도 파일(NotePhotoLightbox) — 누르기 전엔 내려오지 않는다.
+   포커스 트랩·Esc·←→·포커스 복귀는 그쪽이 맡는다. */
+const NotePhotoLightbox = nextDynamic(
+  () => import("./NotePhotoLightbox").then((m) => m.NotePhotoLightbox),
+  { ssr: false },
+);
 
 export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
   const total = photos.length;
@@ -66,19 +74,8 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
     el?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [idx]);
 
-  // 전체화면일 때만 문서 전역 키를 잡는다. 평소엔 무대에 포커스가 있을 때만.
-  useEffect(() => {
-    if (!zoom) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setZoom(false);
-      else if (e.key === "ArrowLeft") go(-1);
-      else if (e.key === "ArrowRight") go(1);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [zoom, go]);
+  /* [1006] 전체화면의 문서 전역 키(Esc·←→)는 NotePhotoLightbox 가 떠 있는 동안 그쪽이 잡는다.
+     평소엔 무대에 포커스가 있을 때만(stageKey). */
 
   /* 변환 srcset 을 쓰는 장인지 — 허용 호스트이고 아직 변환이 실패하지 않았을 때 */
   const isOptimized = useCallback(
@@ -307,107 +304,23 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
       )}
 
       {/* ── 크게 보기 팝업 ─────────────────────────────────────────
-          [951] 예전엔 화면 전체를 검게 덮고 <img max-h-full> 을 넣었는데, 부모가
-          flex-1 이면서 min-height:auto 라 이미지 원본 높이만큼 늘어나 세로가 긴
-          차트 이미지는 위아래가 잘린 채 나갔다(소유자 캡처: "너무 크게 나와").
-          이제 가운데 팝업 카드 안에 넣고, 이미지 최대 높이를 뷰포트 기준(dvh)으로
-          못 박아 **한 화면에 전부** 들어오게 한다. 배경 클릭·Esc 로 닫힌다. */}
+          [951] 가운데 팝업 카드 + 이미지 최대 높이를 뷰포트(dvh)로 못 박아 한 화면에 전부.
+          [1006] 본체는 NotePhotoLightbox(지연 로드) — 포커스 트랩·Esc·←→·포커스 복귀 포함. */}
       {zoom && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${label} 크게 보기`}
-          /* [968 · 27] 팝업 위에서는 body 가 잠겨 scrollY 가 늘 0 — 당겨서 새로고침이
-             72px 끌기만으로 화면을 통째로 다시 띄우지 않게 막는다. */
-          data-ptr-ignore=""
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 p-3 sm:p-6"
-          onClick={() => setZoom(false)}
-        >
-          <div
-            className="brand-photo-frame flex max-h-[calc(100dvh-24px)] w-full max-w-[1100px] min-w-0 flex-col overflow-hidden rounded-2xl shadow-[0_24px_64px_rgba(11,37,69,.55)] sm:max-h-[calc(100dvh-48px)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex shrink-0 items-center justify-between px-4 py-2.5 text-[var(--brand-hanji)]">
-              <span className="t-body font-extrabold">
-                <span className="njn-dot mr-2 inline-block h-[8px] w-[8px] align-middle" aria-hidden="true" />
-                {label} {idx + 1} / {total}
-              </span>
-              <button
-                type="button"
-                onClick={() => setZoom(false)}
-                className="brand-photo-chip rounded-full px-3 py-1.5 t-sub font-extrabold transition"
-              >
-                닫기 (Esc)
-              </button>
-            </div>
-            <div className="relative flex min-h-0 flex-1 items-center justify-center px-2 pb-3">
-              {isFailed ? (
-                <span className="t-body text-[var(--brand-hanji)]">
-                  사진을 불러오지 못했어요
-                </span>
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={`${src}-${rawOnly[idx] ? "raw" : "opt"}`}
-                  {...imgSrcProps(idx, ZOOM_SIZES)}
-                  alt={`${label} ${idx + 1} / ${total}`}
-                  decoding="async"
-                  onError={() => onImgError(idx)}
-                  /* 높이 상한을 뷰포트로 직접 잰다 — 부모 max-h 만으로는 이미지가
-                     min-height:auto 를 타고 원본 크기로 커진다(위 주석). */
-                  className="max-h-[calc(100dvh-96px)] max-w-full rounded-lg object-contain sm:max-h-[calc(100dvh-120px)]"
-                />
-              )}
-              {total > 1 && (
-                <>
-                  <button
-                    type="button"
-                    aria-label="이전 사진"
-                    onClick={() => go(-1)}
-                    className="brand-photo-chip absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full t-title transition"
-                  >
-                    ‹
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="다음 사진"
-                    onClick={() => go(1)}
-                    className="brand-photo-chip absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full t-title transition"
-                  >
-                    ›
-                  </button>
-                </>
-              )}
-            </div>
-            {/* 팝업 안 썸네일 — 닫지 않고 다음 장으로 건너뛴다 */}
-            {total > 1 && (
-              <div className="flex shrink-0 gap-1.5 overflow-x-auto px-3 pb-3">
-                {photos.map((p, i) => (
-                  <button
-                    key={`z-${i}`}
-                    type="button"
-                    aria-label={`${i + 1}번째 사진 보기`}
-                    aria-current={i === idx ? "true" : undefined}
-                    onClick={() => setIdx(i)}
-                    className={`h-[40px] w-[58px] shrink-0 overflow-hidden rounded-md border-2 bg-[rgba(246,241,231,.06)] ${
-                      i === idx ? "border-[var(--brand-red-on-dark)]" : "border-transparent opacity-70 hover:opacity-100"
-                    }`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      key={rawOnly[i] ? "raw" : "opt"}
-                      {...imgSrcProps(i, THUMB_SIZES)}
-                      alt=""
-                      loading="lazy"
-                      onError={() => onImgError(i)}
-                      className="h-full w-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <NotePhotoLightbox
+          label={label}
+          idx={idx}
+          total={total}
+          failed={Boolean(isFailed)}
+          thumbFailed={(i) => Boolean(failed[i])}
+          imgProps={imgSrcProps(idx, ZOOM_SIZES)}
+          thumbProps={(i) => imgSrcProps(i, THUMB_SIZES)}
+          onImgError={onImgError}
+          onPrev={() => go(-1)}
+          onNext={() => go(1)}
+          onSelect={setIdx}
+          onClose={() => setZoom(false)}
+        />
       )}
     </div>
   );

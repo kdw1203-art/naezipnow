@@ -7,6 +7,7 @@
  * - 쿼리 값은 60자 절단 후 JSX 텍스트로만 렌더 (XSS 안전)
  */
 import { ImageResponse } from "next/og";
+import { OG_STATIC_CACHE_CONTROL } from "@/lib/og/cache";
 import { NextRequest } from "next/server";
 import { OG_SIZE } from "@/lib/og/theme";
 import { OG_FONT_FAMILY, ogFonts } from "@/lib/og/font";
@@ -245,6 +246,24 @@ export async function GET(req: NextRequest) {
         </div>
       </div>
     ),
-    { width: OG_SIZE.width, height: OG_SIZE.height, ...ogFonts() },
+    {
+      width: OG_SIZE.width,
+      height: OG_SIZE.height,
+      ...ogFonts(),
+      /* [1007] CDN 캐시 — 하루 1,008회 함수 호출(24h 실측)인데 응답에 Cache-Control 이 없어
+         미들웨어가 no-store 를 붙였고 같은 카드가 봇마다 다시 그려졌다. URL 에 단지명·가격·
+         지역·평형 칩이 전부 들어 있어 값이 바뀌면 URL 도 바뀐다 → 하루 캐시 + 7일 SWR 은
+         app/api/og/route.tsx 와 같은 값. next/og 는 ImageResponse 두 번째 인자 headers 로 싣는다. */
+      headers: {
+              /* [1010] 캐시 키는 **경로 + 쿼리스트링 전체**다(Vercel CDN 기본). 이 라우트의 그림은
+         쿼리 값만으로 결정되므로 URL 이 곧 내용이고, 값이 바뀌면 메타데이터가 만드는 URL 도
+         같이 바뀐다 → 같은 URL 이 다른 그림을 낼 일이 없다. 그래서 하루(86,400) 대신 7일 +
+         `immutable`(브라우저가 신선한 동안 재검증조차 하지 않는다)로 올린다.
+         `export const revalidate` 는 쓰지 않는다 — searchParams 를 읽는 동적 라우트 핸들러에서는
+         효력이 없고(Next 15: GET 핸들러 기본 비캐시), CDN 이 실제로 보는 것은 이 헤더뿐이다
+         (app/api/og/complex-trend/route.tsx [1007] 주석의 같은 실측). */
+      "Cache-Control": OG_STATIC_CACHE_CONTROL,
+      },
+    },
   );
 }

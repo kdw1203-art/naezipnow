@@ -11,25 +11,26 @@ import { AdSenseUnit } from "./components/ads/AdSenseUnit";
 import { Footer } from "./components/Footer";
 import { HomeHeroSearch } from "./components/home/HomeHeroSearch";
 import { HomeBudgetChips } from "./components/home/HomeBudgetChips";
+import { HomeStartDoors } from "./components/home/HomeStartDoors";
 import { HomeMyRail } from "./components/home/HomeMyRail";
 import type { KpiRegion, KpiTemp } from "./components/home/HomeKpiRow";
 import { HomeTodayLine } from "./components/home/HomeTodayLine";
 import { RegionPulseCards } from "./components/home/RegionPulseCards";
+import { HomeTownBlock } from "./components/home/HomeTownBlock";
 import { loadLatestTemperatures } from "./components/MarketTempWidget";
 import { loadNewHomeData } from "@/lib/newui/home-data";
 import { loadHomeCoverage } from "@/lib/newui/home-coverage";
 import { HomeCoverageLine } from "./components/home/HomeCoverageLine";
+import { Explain } from "./components/explain/Explain";
 import { getBaseRate } from "@/lib/market/base-rate";
 import type { Metadata } from "next";
 import type { HomeBriefing } from "@/lib/newui/home-data";
 import {
   HOME_AI_BRIEFING_LABEL,
-  HOME_AI_EXAMPLE_INPUT,
-  HOME_AI_EXAMPLE_OUTPUT,
+  HOME_AI_EXAMPLE_LINE,
   HOME_AI_GATEWAY_LEAD,
   HOME_AI_GATEWAY_TITLE,
   HOME_CTA_AI,
-  HOME_CTA_NOTE,
   HOME_HERO_SUBLINE_SHORT,
   HOME_PAGE_H1,
 } from "@/lib/brand/home-copy";
@@ -50,10 +51,17 @@ import { seoAlternates } from "@/lib/seo/alternates";
      측정이 아니라 잡음).
 
    지금: 서버 트리 하나. 모바일은 1열, lg 부터 본문 | 340px 사이드바.
-   비로그인 첫 화면 = ① 검색 ② 오늘의 시장 한 문장 ③ 공개 임장노트 ④ AI 입구
-   ⑤ 지역 시세. 로그인이면 ⑥ 내 관심(클라이언트 섬)이 끼어든다. 출석·미션·레벨은
-   /my 가 맡는다(같은 카드가 거기 이미 있다).
+   비로그인 첫 화면 = ① 검색(+ [1008] "어디서부터 시작할까요?" 문 넷) ② 오늘의 시장 한 문장 ③ 공개 임장노트
+   ④ AI 입구 ⑤ 지역 시세 ⑦ 동네이야기·뉴스룸(1007 — 1006 재질 규칙으로, 서버 조각). 로그인이면
+   ⑥ 내 관심(클라이언트 섬)이 끼어든다. 출석·미션·레벨은 /my 가 맡는다(같은 카드가 거기 이미 있다).
    첫 화면에는 rise-in·data-reveal 을 쓰지 않는다 — 첫 화면은 정적이어야 한다.
+
+   [1008 · J] 문 넷을 ① 블록 **안**에 넣고(최상위 블록 수 그대로), 넣은 높이만큼 덜었다 — AI 입구의 예시 두 칸을
+   한 줄로, 링크 세 줄을 한 줄로("로그인 없이 단지 진단"은 문 ②가 같은 곳으로 간다), 본문 끝의 중복 CTA
+   "임장노트 쓰기"(헤더 "노트 쓰기"·모바일 탭바 "기록"과 같은 목적지)를 뺐다. 실측(개발 서버·비로그인·베타 안내 닫음):
+   390px — 검색 묶음 327 → 473px(+146) · AI 입구 483 → 340px(−143) · 끝 CTA(−59) → <main> 2,185 → 2,128px(−57).
+   1280px — 검색 묶음 266 → 360px(+94) · AI 입구 477 → 334px(−143, 사이드바) · 끝 CTA(−63) → 본문 열이 더 긴 열이
+   되어 <main> 1,143 → 1,171px(+28). 최상위 블록 수 3 그대로, 본문 열 조각 5 → 4.
    ============================================================ */
 
 // 스케일 지침 #21: 비로그인 홈은 정적 캐시 (5분 재검증) — 접속마다 재계산 금지
@@ -85,49 +93,27 @@ function HomeAiGateway({
       cta={{ href: HOME_CTA_AI.href, label: HOME_CTA_AI.label }}
     >
       <p className="m-0 t-body t-fit">{HOME_AI_GATEWAY_LEAD}</p>
-      {/* [963] 예시 두 칸 — 판정 기준을 **화면 폭에서 칸 폭으로** 바꿨다(.fit).
-          예전엔 `sm:grid-cols-[1fr_auto_1fr]` 라 화면이 640px 만 넘으면 3열이 됐는데,
-          데스크톱 사이드바는 340px 이라 한 칸에 한글 4~5자만 들어갔다 — 메모 한 줄이
-          4줄로 접히며 카드가 세로로 늘어난 원인(소유자 캡처 2026-09-04).
-          이제 이 칸이 420px 이상일 때만 좌우로 놓고, 좁으면 위아래로 쌓는다.
-          글자는 .t-fit 이 램프 안에서 한 단 내려 준다. */}
-      <div className="fit mt-2">
-        <div className="fit-pair">
-          <div className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-2">
-            <div className="t-caption t-fit font-extrabold text-ai-muted">예시 · 현장 메모</div>
-            <div className="mt-0.5 t-body t-fit leading-[1.5] text-white/85">
-              {HOME_AI_EXAMPLE_INPUT}
-            </div>
-          </div>
-          <div className="fit-pair-arrow text-center text-ai-accent" aria-hidden="true">
-            →
-          </div>
-          <div className="rounded-lg border border-ai-accent/40 bg-white/5 px-2.5 py-2">
-            <div className="t-caption t-fit font-extrabold text-ai-muted">예시 · AI 정리</div>
-            <ul className="mt-0.5 m-0 list-none p-0 t-body t-fit leading-[1.5] text-white/85">
-              {HOME_AI_EXAMPLE_OUTPUT.map((line) => (
-                <li key={line}>· {line}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
+      {/* [1008 · J] 예시 두 칸(입력 → AI 정리, [963]) → 한 줄. 두 칸은 모바일에서 세로 150px 을 차지했다 —
+          검색 아래 "어디서부터 시작할까요?" 문 넷을 넣은 만큼 여기서 덜어 첫 화면 높이를 지킨다.
+          형태(메모 → 리스크·장점·다음에 볼 것)는 이 한 줄이 그대로 말한다(수치 창작 없음). */}
+      <p className="fit m-0 mt-1 rounded-lg border border-white/15 bg-white/5 px-2.5 py-2 t-sub t-fit leading-[1.55] text-white/85">
+        {HOME_AI_EXAMPLE_LINE}
+      </p>
+      {/* 링크 세 줄 → 한 줄. [958] 분석 허브로 가는 길 · 실제 공개 노트 예시. "로그인 없이 단지 데이터 진단
+          미리보기"([1002])는 검색 아래 문 ② "후보가 있어요 → 단지 종합 진단"이 같은 화면으로 간다(중복 제거).
+          [989] 카드 안에 단독으로 서는 링크 — 위아래 6px 로 31px. */}
       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+        <Link href="/analysis" className="w-fit py-1.5 text-[12px] font-bold text-ai-accent no-underline">
+          AI 분석 도구 4종 ›
+        </Link>
         {exampleNoteId && (
           <Link
             href={`/notes/${exampleNoteId}`}
-            /* [989] 실측 세로 19px — 카드 안에 단독으로 서는 링크. 위아래 6px 씩 줘
-               31px 로 만든다(줄 간격 4px 이라 위아래가 겹치지 않는다) */
             className="w-fit py-1.5 text-[12px] font-bold text-ai-accent no-underline"
           >
             실제 정리된 공개 노트 보기 ›
           </Link>
         )}
-        {/* [958] 홈에서 분석 허브로 가는 길이 없었다 — 한 줄 링크.
-            [995] 993 에서 12 → 핵심 4종(+8 칩)이 됐는데 문구가 "12종" 으로 남아 있었다. */}
-        <Link href="/analysis" className="w-fit py-1.5 text-[12px] font-bold text-ai-accent no-underline">
-          AI 분석 도구 4종 ›
-        </Link>
       </div>
       <div className="fit mt-2 border-t border-white/15 pt-2">
         <div className="mb-1 t-caption font-extrabold text-ai-muted">
@@ -148,16 +134,6 @@ function HomeAiGateway({
           </div>
         )}
       </div>
-      {/* [1002] 비로그인도 /analysis/ai/ai-diagnosis 에서 단지를 고르면 실데이터 컨텍스트
-          (/api/ai/context 는 게스트 허용)를 그대로 본다 — 로그인은 실행 버튼에서만 묻는다.
-          "가입해야 뭐가 나오는지 알 수 있다"는 입구를 하나 연다. 패널이 잉크 다크라
-          링크색은 옆 두 링크와 같은 ai-accent. 세로 13px×1.6+10 ≈ 31px(문장 속 링크 24px 규칙). */}
-      <Link
-        href="/analysis/ai/ai-diagnosis"
-        className="mt-1 inline-block w-fit py-[5px] text-[13px] font-bold text-ai-accent no-underline"
-      >
-        로그인 없이 단지 데이터 진단 미리보기 →
-      </Link>
     </AIPanel>
   );
 }
@@ -177,6 +153,8 @@ export default async function Home() {
   const regions = data.regions;
   const notes = data.notes;
   const failed = data.failed;
+  /* [1007] 상대 시각 라벨의 기준 — 렌더당 한 번(ISR 300s 동안 굳는다 — 분 단위라 무방) */
+  const renderedAt = Date.now();
   /* [950] 공개 노트가 전부 Lab(데이터·AI 편집) 노트면 그 사실을 한 줄로 적는다 */
   const allLabNotes = notes.length > 0 && notes.every((n) => n.kind === "lab");
   /* [950] 검색 아래 지역 칩 — 시세 카드와 같은 지역(실데이터). 지역 카드가 비면 칩도 없다. */
@@ -213,9 +191,19 @@ export default async function Home() {
         price: regions[0].price,
         delta: regions[0].delta,
         tone: regions[0].tone,
-        tradeLabel: regions[0].meta.match(/([\d,]+건)/)?.[1] ?? null,
+        /* [1009 · H 리뷰] 건수는 trades(제 달·원천이 함께 있다)만 — meta 의 "N건"은 달을 모른다 */
+        tradeLabel:
+          typeof regions[0].trades === "number" ? `${regions[0].trades.toLocaleString("ko-KR")}건` : null,
         href: `/map?region=${encodeURIComponent(regions[0].name)}`,
         periodLabel: regions[0].periodLabel,
+        /* [1009 · H] 문장이 변동의 기준(지수/평균가)과 "변동 미상"을 가를 수 있게 원값을 넘긴다 */
+        changePct: regions[0].changePct ?? null,
+        changeBasis: regions[0].changeBasis,
+        /* [1009 · H 리뷰] 등락의 달 · 거래 건수의 제 달과 원천 · 가격 원천(월 집계 카드 = 국토부 실거래 평균) */
+        changeYm: regions[0].changeYm ?? null,
+        tradesYm: regions[0].tradesYm ?? null,
+        tradesSource: regions[0].tradesSource,
+        priceKind: regions[0].stale ? "molit" : "reb",
       }
     : null;
 
@@ -253,6 +241,8 @@ export default async function Home() {
                 예산 한 줄로 지도 필터(?priceMax=억)에 바로 들어간다. 지역은 첫 시세 카드와
                 같은 곳(실데이터), 카드가 없으면 지역 없이 예산만. 서버 렌더·클라이언트 JS 없음. */}
             <HomeBudgetChips regionName={regions[0]?.name ?? null} />
+            {/* [1008 · J] 상황으로 고르는 입구 — 구경·후보·계약·처음. 서버 렌더·JS 없음(HomeStartDoors 주석). */}
+            <HomeStartDoors />
           </div>
 
           {/* ② 오늘의 시장 — 한 문장. 넷을 동시에 말하면 무엇이 중요한지 사라진다. */}
@@ -288,14 +278,35 @@ export default async function Home() {
             <div data-autotrim="" className="flex flex-col gap-3 lg:order-1 lg:gap-4">
               {/* ③ 공개 임장노트 — 증거. 누가 쓴 노트인지(Lab/이웃)를 숨기지 않는다. */}
               <section className="card flex flex-col gap-2 rounded-2xl px-4 py-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <h2 className="t-section text-ink">공개 임장노트</h2>
-                  <Link
-                    href="/notes"
-                    className="inline-block py-[5px] text-[12px] text-text-3 transition-colors hover:text-primary"
-                  >
-                    더보기
-                  </Link>
+                  <span className="flex items-center gap-2">
+                    {/* [1009 · H] 점수 배지의 뜻 — 예전 `title="현장 체크 5개 항목 평균 × 20"`(마우스를 올려야만 보여
+                        휴대폰에선 없던 설명)을 누르면 열리는 ⓘ 시트로. 배지는 링크 행 안이라 ⓘ 는 머리에 한 번만 둔다
+                        (링크 안 버튼 = 중첩 인터랙티브). 계산은 lib/newui/home-data.ts noteScoreOf ·
+                        lib/inspection/store-db.ts inspectionAverageScore 그대로. */}
+                    {notes.length > 0 && (
+                      <span className="inline-flex items-center t-caption text-text-3">
+                        임장 점수
+                        <Explain
+                          title="임장 점수"
+                          body="노트 작성자가 매긴 항목 점수를 100점 만점으로 바꾼 숫자예요. 같은 단지라도 쓴 사람·시점마다 달라요."
+                          how={[
+                            "입지·학군·교통·시설·미래가치 5개 항목(항목마다 5점 만점) 중 점수를 매긴 항목만 평균해요.",
+                            "그 평균 × 20 을 반올림해 100점 만점으로 적어요.",
+                            "75점 이상은 파란 배지로 표시해요.",
+                          ]}
+                          source="공개 임장노트 · 작성자 입력"
+                        />
+                      </span>
+                    )}
+                    <Link
+                      href="/notes"
+                      className="inline-block py-[5px] text-[12px] text-text-3 transition-colors hover:text-primary"
+                    >
+                      더보기
+                    </Link>
+                  </span>
                 </div>
                 {notes.length === 0 ? (
                   failed.notes ? (
@@ -313,7 +324,7 @@ export default async function Home() {
                     <Link
                       key={n.id}
                       href={`/notes/${n.id}`}
-                      className={`-mx-1.5 flex items-center justify-between gap-3 rounded-lg px-1.5 py-[7px] t-body no-underline transition-colors hover:bg-[rgba(29,79,216,.05)] ${
+                      className={`press -mx-1.5 flex items-center justify-between gap-3 rounded-lg px-1.5 py-[7px] t-body no-underline transition-colors hover:bg-bg ${
                         i < arr.length - 1 ? "border-b border-divider" : ""
                       }`}
                     >
@@ -330,11 +341,11 @@ export default async function Home() {
                         <span className="truncate font-semibold text-text-1">{n.title}</span>
                       </span>
                       <span
-                        title="현장 체크 5개 항목 평균 × 20 (100점 만점)"
-                        className={`shrink-0 rounded-md px-1.5 py-0.5 t-caption font-extrabold ${
-                          n.hot ? "bg-primary-soft text-primary" : "bg-[rgba(0,0,0,.045)] text-text-3"
+                        className={`shrink-0 rounded-md px-1.5 py-0.5 t-caption font-extrabold tabular-nums ${
+                          n.hot ? "bg-primary-soft text-primary" : "bg-bg text-text-3"
                         }`}
                       >
+                        <span className="sr-only">임장 점수 </span>
                         {n.score}
                       </span>
                     </Link>
@@ -343,10 +354,12 @@ export default async function Home() {
                 {allLabNotes && <p className="m-0 t-caption text-text-3">{LAB_NOTES_CAPTION}</p>}
               </section>
 
-              {/* ⑤ 지역 시세 — 4장(모바일 2열·xl 4열). 스파크라인·딥링크는 카드 안. */}
+              {/* ⑤ 지역 동향 — 4장(모바일 2열·xl 4열). 스파크라인·딥링크는 카드 안.
+                  [1009 · H 리뷰] 제목 "지역 시세" → "지역 동향": 카드 4장 중 서울 3장의 가격은 국토부 신고 실거래 평균이라
+                  "시세" 낱말 규칙(실거래만 있는 곳에 '시세' 금지)에 걸린다. 등락은 한국부동산원 지수(시세 지수) — 카드가 적는다. */}
               <section className="flex flex-col gap-3">
                 <div className="flex items-baseline justify-between gap-2">
-                  <h2 className="t-section text-ink">지역 시세</h2>
+                  <h2 className="t-section text-ink">지역 동향</h2>
                   <Link
                     href="/map"
                     className="inline-block py-[5px] t-sub font-bold text-primary no-underline"
@@ -357,14 +370,14 @@ export default async function Home() {
                 {regions.length === 0 ? (
                   failed.regions ? (
                     <ErrorState
-                      title="지역 시세를 지금 불러오지 못했어요"
+                      title="지역 동향을 지금 불러오지 못했어요"
                       desc="데이터가 없는 게 아니라 조회가 실패했어요. 잠시 후 다시 열어 주세요."
                       action={{ label: "지도에서 찾아보기", href: "/map" }}
                     />
                   ) : (
                     <EmptyState
                       icon="map"
-                      title="지역 시세를 아직 불러오지 못했어요"
+                      title="지역 동향을 아직 불러오지 못했어요"
                       desc="실거래 스냅샷이 준비되면 여기에 표시됩니다."
                       action={{ label: "지도에서 찾아보기", href: "/map" }}
                     />
@@ -384,13 +397,15 @@ export default async function Home() {
                 )}
               </section>
 
-              {/* 주 행동 — 기록 → AI → 지도 흐름을 이 버튼 하나가 시작한다 */}
-              <Link
-                href={HOME_CTA_NOTE.href}
-                className="btn-primary glow press rounded-xl p-3 text-center text-[15px]"
-              >
-                {HOME_CTA_NOTE.label}
-              </Link>
+              {/* ⑦ [1007 · P2] 동네이야기(사람의 기록) · 뉴스룸(자동수집) — 1006 의 .story-* / .news-*
+                  재질 규칙을 홈에서도 쓴다. 두 칸은 같은 조회(readRelatedTownPosts, 5분 캐시)에서
+                  isStoryPost 로 갈라 만든 것이라 추가 왕복이 없고, 클라이언트 JS 도 없다.
+                  0건은 0건으로(가짜 카드 없음), 실패는 실패로 말한다. */}
+              <HomeTownBlock stories={data.stories} news={data.news} failed={failed.town} now={renderedAt} />
+
+              {/* [1008 · J] 본문 끝 "임장노트 쓰기" 버튼은 뺐다 — 헤더 "노트 쓰기"(데스크톱 상시)·탭바 "기록"(모바일
+                  상시)·AI 입구 "노트로 AI 정리 시작"과 같은 목적지라 네 번째 같은 말이었다. 검색 아래 문 넷을 넣은 만큼
+                  홈을 덜어 낸 자리다(파일 머리 [991]·[1008] 주석). */}
 
               <AdZone placement="home_feed" seed={1} plan={null} className="lg:hidden" />
             </div>

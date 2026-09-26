@@ -17,12 +17,14 @@
  */
 import "server-only";
 import { unstable_cache } from "next/cache";
+import { WEEKLY_DIGEST_TAG } from "@/lib/town/cache-tags";
 import { readBoardPosts, readTownPosts } from "@/lib/newui/board-posts";
 import { getMarketFreshnessDateLabel } from "@/lib/newui/freshness";
 import { getAllRegionSnapshots } from "@/lib/market/store";
 import { logger } from "@/lib/log";
 import type { Post } from "@/lib/types/post";
 import { formatKrwWon } from "@/lib/format/krw";
+import { DELTA_UNKNOWN } from "@/lib/newui/delta-label";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const NEWS_LIMIT = 8;
@@ -48,6 +50,10 @@ export interface DigestMarketItem {
   /** "▲ 0.6%" 형식 전월 대비 등락 */
   delta: string;
   tone: DigestDeltaTone;
+  /** [1009 · H] 변동률 원값(%) — 모르면 null. 화면(/digest)은 이 값으로 <Delta> 를 그린다 */
+  changePct: number | null;
+  /** [1009 · H] changePct 의 기준 — 부동산원 지수 월간(전월 대비) · 월간 값이 없어 주간(전주 대비)으로 대신한 경우 · 모름 */
+  changeBasis: "monthly" | "weekly" | null;
   /** "2026.05" — market_region_price.period(yyyymm) */
   periodLabel: string | null;
 }
@@ -98,7 +104,10 @@ function formatEok(won: number): string {
 
 function deltaOf(changePct: number | undefined): { delta: string; tone: DigestDeltaTone } {
   if (typeof changePct !== "number" || !Number.isFinite(changePct)) {
-    return { delta: "— 0.0%", tone: "flat" };
+    /* [1009 · H] 예전엔 "— 0.0%" — 모르는 변동을 "보합 0.0%"로 적었다(웹·주간 메일 둘 다). 홈 카드(lib/newui/
+       home-region-fallback deltaOf)와 같은 낱말로 모른다고 적는다. 사용처: /digest 화면 · 주간 메일(cron/weekly-digest) ·
+       /api/digest JSON — 셋 다 이 문자열을 그대로 보여 줄 뿐 숫자로 되읽지 않는다(확인함). */
+    return { delta: DELTA_UNKNOWN, tone: "flat" };
   }
   const arrow = changePct > 0 ? "▲" : changePct < 0 ? "▼" : "—";
   const tone: DigestDeltaTone = changePct > 0.1 ? "up" : changePct < -0.1 ? "down" : "flat";
@@ -142,7 +151,11 @@ async function computeMarket(): Promise<DigestMarketItem[]> {
     if (!snap) continue;
     const priceWon = snap.avgSale ?? snap.medianSale;
     if (typeof priceWon !== "number" || priceWon <= 0) continue;
-    const { delta, tone } = deltaOf(snap.saleChangeMonthly ?? snap.saleChangeWeekly);
+    const change = snap.saleChangeMonthly ?? snap.saleChangeWeekly;
+    /* 월간이 비면 주간 변동률로 대신한다(예전부터) — 화면이 "전월 대비"라고 잘못 적지 않게 기준을 함께 싣는다 */
+    const changeBasis: DigestMarketItem["changeBasis"] =
+      snap.saleChangeMonthly != null ? "monthly" : snap.saleChangeWeekly != null ? "weekly" : null;
+    const { delta, tone } = deltaOf(change);
     const period = /^\d{6}$/.test(snap.period)
       ? `${snap.period.slice(0, 4)}.${snap.period.slice(4, 6)}`
       : null;
@@ -153,6 +166,8 @@ async function computeMarket(): Promise<DigestMarketItem[]> {
       price: formatEok(priceWon),
       delta,
       tone,
+      changePct: typeof change === "number" && Number.isFinite(change) ? change : null,
+      changeBasis: typeof change === "number" && Number.isFinite(change) ? changeBasis : null,
       periodLabel: period,
     });
   }
@@ -214,12 +229,23 @@ async function computeWeeklyDigest(): Promise<WeeklyDigest> {
   };
 }
 
-const loadWeeklyDigestCached = unstable_cache(computeWeeklyDigest, ["newui-weekly-digest"], {
-  revalidate: 3600,
+/* [1009 · H 리뷰] 키 -v2 — 값의 모양이 바뀌었다(changePct·changeBasis 새 필드, 모르는 변동 "변동 미상"). 옛 키면 배포 뒤 최대
+   1시간 옛 모양(새 필드 없음)이 나와 화면이 등락을 "변동 미상"으로만 그린다. */
+/* [1010] 1시간 → 1일 + 태그(weekly-digest).
+   왜: 이 캐시가 /town/news 라우트의 실제 TTL 을 정하고 있었다 — 그 페이지의
+   `export const revalidate = 21_600` 에도 불구하고 .next/prerender-manifest.json 의
+   /town/news 는 3600 이었다(Next 는 세그먼트 revalidate 와 데이터 캐시 revalidate 중
+   작은 값을 쓴다). 라우트 TTL 만 올리면 아무 일도 일어나지 않는다.
+   신선도는 시간이 아니라 태그가 맡는다: 뉴스 적재 재검증 크론(하루 3슬롯)·뉴스 성격의 글
+   크론 3곳·이웃 글 작성/수정/삭제가 invalidateTownDataCaches() 로 비운다. 남는 항목(지역
+   시세 요약)은 **주간** 요약이라 하루 지연이 화면에서 구분되지 않는다. */
+const loadWeeklyDigestCached = unstable_cache(computeWeeklyDigest, ["newui-weekly-digest-v2"], {
+  revalidate: 86_400,
+  tags: [WEEKLY_DIGEST_TAG],
 });
 
 /**
- * 최근 7일 주간 다이제스트 (1h 캐시).
+ * 최근 7일 주간 다이제스트 ([1010] 1일 캐시 + weekly-digest 태그).
  *
  * **던질 수 있다** — 세 섹션이 전부 조회 실패한 경우다. 호출부는 그걸 잡아서
  * "조회 실패"로 표시해야 하며, "데이터 없음"이나 "준비 중"으로 바꿔 말하면 안 된다.

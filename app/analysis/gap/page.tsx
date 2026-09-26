@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import { PageShell } from "@/app/components/PageShell";
 import { getAllRegionSnapshots } from "@/lib/market/store";
-import { formatKrwShort } from "@/lib/market/format";
 import {
   getRegionRentYieldMap,
   rentYieldPct,
@@ -15,7 +13,10 @@ import { ToolHero, type HeroKpi } from "@/app/components/analysis/ToolHero";
 import { Bars } from "@/app/components/viz/Bars";
 import { RankBars } from "@/app/components/viz/RankBars";
 import { faqJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
-import { monthsBehind } from "@/lib/newui/as-of-label";
+import { Explain } from "@/app/components/explain/Explain";
+import { RankTable, type Row } from "./RankTable";
+
+
 
 /* [3차 · AI 분석 확충] 전세가율·갭 스크리너.
  *
@@ -33,144 +34,12 @@ export const metadata = buildPageMetadata({
   og: { badge: "AI 분석", sub: "전세가율 랭킹 · 추정 갭 — 공표 통계 기반" },
 });
 
-export const revalidate = 3600;
-
-type Row = {
-  regionId: string;
-  name: string;
-  ratio: number;
-  avgSale?: number;
-  gap?: number;
-  period: string;
-  source: string;
-  /** 월간 매매지수 변동(%) — 스냅샷의 sale_change (없으면 undefined) */
-  saleChange?: number;
-  /** [#94 잔여] 월세 환산 수익률(연 %) — 표본 30건 미만·분모 0 이하면 undefined */
-  rentYield?: number;
-  /** [AI-28] 실측 갭 = 평균 매매가 − 전세 신고 중앙값(최근 3개월, 표본 30건+) */
-  measuredGap?: number;
-  jeonseSample?: number;
-  group: "서울" | "경기" | "인천";
-};
-
-/* 표 안 셀 배경 막대 — 값의 크기를 배경 길이로 먼저 보인다.
-   숫자 7열짜리 표는 눈이 한 열씩 훑어야 순위가 잡힌다. */
-function ratioBarStyle(ratio: number, max: number): React.CSSProperties {
-  const w = max > 0 ? Math.min(100, Math.round((ratio / max) * 100)) : 0;
-  return { ["--w" as string]: `${w}%` };
-}
-
-function fmtPeriod(period: string): string {
-  const d = period.replace(/[^0-9]/g, "");
-  if (d.length < 6) return period;
-  return `${d.slice(0, 4)}.${d.slice(4, 6)}`;
-}
-
-/** 공표 지연을 사람 말로 — "적재가 멈춘 것"과 "원래 늦게 나오는 것"을 가른다. */
-function periodNote(period: string): string | null {
-  const n = monthsBehind(period);
-  if (n === null) return null;
-  if (n <= 1) return "최신";
-  if (n === 2) return "공표 주기상 최신";
-  return `${n}개월 지연`;
-}
-
-function RankTable({
-  rows,
-  tone,
-  maxRatio,
-  yieldFailed = false,
-}: {
-  rows: Row[];
-  tone: "high" | "low";
-  maxRatio: number;
-  /** 월세 수익률 조회가 실패했는가 — 표본 없음("—")과 구분해 적는다 */
-  yieldFailed?: boolean;
-}) {
-  return (
-    <div className="card overflow-x-auto rounded-[14px] px-4 py-2">
-      <table className="t-body w-full min-w-[600px]">
-        <thead>
-          <tr className="t-sub border-b border-line text-left text-text-3">
-            <th className="py-2 pr-3 font-semibold">지역</th>
-            <th className="py-2 pr-3 text-right font-semibold">전세가율</th>
-            <th className="py-2 pr-3 text-right font-semibold">평균 매매가</th>
-            <th className="py-2 pr-3 text-right font-semibold">갭(실측 우선)</th>
-            <th className="py-2 pr-3 text-right font-semibold">월세 환산</th>
-            <th className="py-2 pr-3 text-right font-semibold">매매지수 변동</th>
-            <th className="py-2 text-right font-semibold">기준</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.regionId} className="row-hl border-b border-divider last:border-0">
-              <td className="py-2.5 pr-3">
-                <Link
-                  href={`/region/${r.regionId}`}
-                  className="font-bold text-ink underline-offset-2 hover:underline"
-                >
-                  {r.name}
-                </Link>
-              </td>
-              <td
-                className={`cell-bar py-2.5 pr-3 text-right font-extrabold tabular-nums ${
-                  tone === "high" ? "text-primary" : "text-text-2"
-                }`}
-                style={ratioBarStyle(r.ratio, maxRatio)}
-              >
-                {r.ratio.toFixed(1)}%
-              </td>
-              <td className="py-2.5 pr-3 text-right tabular-nums text-text-1">
-                {r.avgSale && r.avgSale > 0 ? formatKrwShort(r.avgSale) : "—"}
-              </td>
-              <td className="py-2.5 pr-3 text-right font-bold tabular-nums text-ink">
-                {r.measuredGap !== undefined ? (
-                  <>
-                    {formatKrwShort(r.measuredGap)}
-                    <span className="t-caption ml-1 rounded bg-success-soft px-1 py-px font-extrabold text-success">실측</span>
-                  </>
-                ) : r.gap !== undefined ? (
-                  <>
-                    {formatKrwShort(r.gap)}
-                    <span className="t-caption ml-1 rounded bg-bg px-1 py-px font-extrabold text-text-3">추정</span>
-                  </>
-                ) : (
-                  "—"
-                )}
-              </td>
-              <td className="py-2.5 pr-3 text-right tabular-nums text-text-1">
-                {r.rentYield !== undefined ? (
-                  `${r.rentYield.toFixed(1)}%`
-                ) : yieldFailed ? (
-                  <span className="t-caption font-bold text-warning">조회 실패</span>
-                ) : (
-                  "—"
-                )}
-              </td>
-              <td className="py-2.5 pr-3 text-right tabular-nums">
-                {r.saleChange === undefined ? (
-                  <span className="text-text-3">—</span>
-                ) : Math.abs(r.saleChange) < 0.005 ? (
-                  <span className="text-text-3">보합</span>
-                ) : r.saleChange > 0 ? (
-                  <span className="font-bold text-danger">▲ {r.saleChange.toFixed(2)}%</span>
-                ) : (
-                  <span className="font-bold text-primary">▼ {Math.abs(r.saleChange).toFixed(2)}%</span>
-                )}
-              </td>
-              <td className="t-sub py-2.5 text-right text-text-3">
-                {fmtPeriod(r.period)} · {r.source.toUpperCase()}
-                {periodNote(r.period) && (
-                  <span className="t-caption ml-1 block text-text-3">{periodNote(r.period)}</span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+/* [1010] 1h → 1일. 이 화면의 원천은 하루 1회 적재되는 국토부 실거래·집계이고,
+   적재 직후 lib/cache/invalidate.ts SOURCE_MAP.molit(+reb)이 이 경로를 이미 비운다 —
+   시간 TTL 은 안전망일 뿐이다. 실측(2026-09-20~22) 이 축의 분석 화면은 하루 수천 회
+   렌더되는데 사람 방문은 7일 합계 ~120건이고, 크롤러 재방문 간격은 ≈2.2일이라
+   1시간 눈금은 방문마다 재렌더를 뜻했다. */
+export const revalidate = 86_400;
 
 export default async function GapScreenerPage() {
   let rows: Row[] = [];
@@ -262,7 +131,12 @@ export default async function GapScreenerPage() {
   if (rows.length > 0) {
     kpis.push({ label: "집계 지역", value: `${rows.length}곳`, note: "서울·경기·인천" });
     if (median !== null) {
-      kpis.push({ label: "전세가율 중앙값", value: `${median.toFixed(1)}%`, note: "절반이 이 값보다 높다" });
+      kpis.push({
+        label: "전세가율 중앙값",
+        value: `${median.toFixed(1)}%`,
+        note: "절반이 이 값보다 높다",
+        aside: <Explain term="jeonse-garyul" how="공표 지역 통계(한국부동산원·KB)의 매매가 대비 전세가 비율 — 집계 지역을 줄 세운 가운데 값이에요." size={12} />,
+      });
     }
     kpis.push({
       label: "가장 높은 곳",
@@ -393,7 +267,7 @@ export default async function GapScreenerPage() {
               <a
                 key={g}
                 href={`#sido-${g}`}
-                className="chip t-sub border border-line bg-surface px-3.5 py-1.5 font-bold text-primary no-underline transition-colors hover:bg-primary-soft"
+                className="chip press t-sub border border-line bg-surface px-3.5 py-1.5 font-bold text-primary no-underline transition-colors hover:bg-primary-soft"
               >
                 {g} 전체 ({rows.filter((r) => r.group === g).length})
               </a>

@@ -1,5 +1,7 @@
 /**
  * [996] 종합 판단 보드 — "같은 단지, 네 가지 눈".
+ * [1008 · W] 화면 이름은 "다른 도구로 본 이 단지" — "눈·구간·갈림" 은 내부 말이었다(소유자 캡처:
+ * "4개 눈 모두 '갈림' 구간"). 합의 문장도 "네 도구 모두 '보통'" 처럼 쉬운 말로 쓴다.
  *
  * 왜: 도구 12종이 각자 판단 카드를 내지만, 사용자는 한 단지를 두고 "진단은 좋다는데
  * 리스크는?" 을 도구를 바꿔 가며 네 번 실행해야 알 수 있었다. 이 모듈은 네 도구의
@@ -24,7 +26,7 @@ export const BOARD_TOOL_LABEL: Record<BoardToolId, string> = {
   "ai-diagnosis": "종합 진단",
   "ai-prediction": "시세 예측",
   "ai-timing": "매수 타이밍",
-  "ai-risk": "리스크",
+  "ai-risk": "리스크 점검",
 };
 
 export function isBoardToolId(v: string): v is BoardToolId {
@@ -73,11 +75,11 @@ export type BoardItem = {
 };
 
 /**
- * 합의 한 줄 — 구간만 센다.
- *   전부 같음   → "4개 눈 모두 '좋음' 구간"
- *   과반        → "4개 눈 중 3개가 '좋음' 구간 · 리스크만 '주의'"
- *   과반 없음   → "4개 눈이 갈려요 — 종합 진단·시세 예측 '좋음' · 매수 타이밍·리스크 '주의'"
- * 2개 미만이면 null(한 눈으로 "합의"를 말하지 않는다). agree = 가장 많은 구간의 개수.
+ * 합의 한 줄 — 구간(좋음·보통·주의·자료 부족)만 센다.
+ *   전부 같음   → "4개 도구 모두 '좋음'"
+ *   과반        → "4개 도구 중 3개가 '좋음' · 리스크 점검만 '주의'"
+ *   과반 없음   → "도구마다 달라요 — 종합 진단·시세 예측 '좋음' · 매수 타이밍·리스크 점검 '주의'"
+ * 2개 미만이면 null(한 도구로 "합의"를 말하지 않는다). agree = 가장 많은 구간의 개수.
  */
 export function boardConsensus(items: readonly BoardItem[]): { line: string; agree: number; total: number } | null {
   const total = items.length;
@@ -96,16 +98,16 @@ export function boardConsensus(items: readonly BoardItem[]): { line: string; agr
   const names = (tools: BoardToolId[]) => tools.map((t) => BOARD_TOOL_LABEL[t]).join("·");
 
   if (ranked.length === 1) {
-    return { line: `${total}개 눈 모두 '${top.bandLabel}' 구간`, agree, total };
+    return { line: `${total}개 도구 모두 '${top.bandLabel}'`, agree, total };
   }
   const majority = agree * 2 > total;
   if (!majority) {
     const parts = ranked.map((g) => `${names(g.tools)} '${g.bandLabel}'`).join(" · ");
-    return { line: `${total}개 눈이 갈려요 — ${parts}`, agree, total };
+    return { line: `도구마다 달라요 — ${parts}`, agree, total };
   }
   const rest = ranked
     .slice(1)
     .map((g) => (g.tools.length === 1 ? `${names(g.tools)}만 '${g.bandLabel}'` : `${names(g.tools)}는 '${g.bandLabel}'`))
     .join(" · ");
-  return { line: `${total}개 눈 중 ${agree}개가 '${top.bandLabel}' 구간 · ${rest}`, agree, total };
+  return { line: `${total}개 도구 중 ${agree}개가 '${top.bandLabel}' · ${rest}`, agree, total };
 }

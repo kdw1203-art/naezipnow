@@ -52,6 +52,8 @@ export type RevisitPrefill = {
   previousChecks: Record<string, NoteLevel>;
   previousScores: NoteScores;
   previousVisitDate: string;
+  /** [1006] "3개월 전" — 지난 방문일과 오늘의 거리(달력 기준). 못 읽으면 null */
+  previousAgoLabel: string | null;
   previousNoteId: string;
   /** 이전 노트의 회차(없으면 1) 와 이번 회차 */
   previousRound: number;
@@ -80,6 +82,31 @@ function splitTagText(s?: string): string[] {
     .split("·")
     .map((t) => t.trim())
     .filter(Boolean);
+}
+
+/**
+ * [1006] 지난 방문일 → "오늘 · 어제 · N일 전 · N개월 전 · N년 전". 재방문 배너가 "언제 기록과
+ * 비교하는지"를 날짜만 적으면 현장에서 셈을 해야 한다. 둘 다 YYYY-MM-DD(달력 날짜)라
+ * UTC 자정으로 읽어 시간대에 흔들리지 않게 한다. 미래 날짜·깨진 값은 null(문구를 뺀다).
+ */
+export function visitAgoLabel(prevIso: string, todayIso: string): string | null {
+  const re = /^\d{4}-\d{2}-\d{2}/;
+  if (!re.test(prevIso) || !re.test(todayIso)) return null;
+  const a = Date.parse(`${prevIso.slice(0, 10)}T00:00:00Z`);
+  const b = Date.parse(`${todayIso.slice(0, 10)}T00:00:00Z`);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || a > b) return null;
+  const days = Math.round((b - a) / 86_400_000);
+  if (days === 0) return "오늘";
+  if (days === 1) return "어제";
+  if (days < 30) return `${days}일 전`;
+  /* 달 수는 달력으로 센다(30일 나누기가 아니라) — 1월 31일 → 3월 1일은 1개월 전 */
+  const pa = new Date(a);
+  const pb = new Date(b);
+  let months = (pb.getUTCFullYear() - pa.getUTCFullYear()) * 12 + (pb.getUTCMonth() - pa.getUTCMonth());
+  if (pb.getUTCDate() < pa.getUTCDate()) months -= 1;
+  if (months < 1) return `${days}일 전`;
+  if (months < 12) return `${months}개월 전`;
+  return `${Math.floor(months / 12)}년 전`;
 }
 
 /** 이전 노트의 회차 — 정수 1 이상만 믿는다. 없거나 깨졌으면 1회차였던 것으로 본다. */
@@ -147,6 +174,7 @@ export function buildRevisitPrefill(prev: RevisitSourceNote, todayIso: string): 
     previousChecks: checksFromSavedNote(meta?.fieldRatings, prev.scores),
     previousScores: { ...prev.scores },
     previousVisitDate: prev.visitDate.slice(0, 10),
+    previousAgoLabel: visitAgoLabel(prev.visitDate, todayIso),
     previousNoteId: prev.id,
     previousRound,
     round: previousRound + 1,

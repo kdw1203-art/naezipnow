@@ -5,6 +5,7 @@
  * 차트 없이 단지명 카드로 폴백(없는 추세를 그리지 않는다).
  */
 import { ImageResponse } from "next/og";
+import { OG_DYNAMIC_CACHE_CONTROL } from "@/lib/og/cache";
 import { NextRequest } from "next/server";
 import { OG_SIZE } from "@/lib/og/theme";
 import { OG_FONT_FAMILY, ogFonts } from "@/lib/og/font";
@@ -12,7 +13,10 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { formatKrwWon } from "@/lib/format/krw";
 
 export const runtime = "nodejs";
-export const revalidate = 21600; // 6h — 하루 1회 데이터에 충분
+/* [1010] 6h → 1일. 재료는 국토부 실거래(market_transactions)라 적재가 하루 1회이고,
+   이 그림은 공유 미리보기다 — 하루 눈금이면 충분하다. (revalidate 자체는 아래 주석대로
+   이 라우트에서 효력이 없지만, 의도를 코드에 남기고 헤더와 눈금을 맞춰 둔다.) */
+export const revalidate = 86_400;
 
 type Pt = { ym: string; avg: number };
 
@@ -141,6 +145,20 @@ export async function GET(req: NextRequest) {
         </div>
       </div>
     ),
-    { width: OG_SIZE.width, height: OG_SIZE.height, ...ogFonts() },
+    {
+      width: OG_SIZE.width,
+      height: OG_SIZE.height,
+      ...ogFonts(),
+      /* [1007] `export const revalidate` 는 searchParams 를 읽는 동적 라우트 핸들러에선 효력이
+         없다(Next 15: GET 핸들러는 기본 비캐시). CDN 이 실제로 보는 헤더를 직접 싣는다 —
+         데이터가 하루 1회 바뀌므로 6시간 + 하루 SWR.
+         [1010] 6시간 → 하루 + 7일 SWR. `immutable` 은 붙이지 않는다 — 쿼리(region·name)는 같은데
+         실거래가 더 쌓이면 **같은 URL 의 그림이 달라진다**(내용 주소가 아니다). 캐시 키는 경로 +
+         쿼리스트링 전체라 단지마다 URL 이 다르고, 적재 크론은 CDN 사본을 비우지 못하므로
+         (revalidatePath 는 ISR 페이지용) 신선도는 이 눈금이 맡는다 — 그래서 7일이 아니라 하루다. */
+      headers: {
+        "Cache-Control": OG_DYNAMIC_CACHE_CONTROL,
+      },
+    },
   );
 }

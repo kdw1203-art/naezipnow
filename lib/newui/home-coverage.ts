@@ -65,8 +65,13 @@ async function loadCoverageUncached(): Promise<HomeCoverage> {
   };
 }
 
+  /* [1010] TTL 은 라우트 revalidate 의 뚜껑이다 — Next 는 세그먼트 값과 이 값 중 작은 쪽을 쓴다.
+     실측으로 확인됨(.next/prerender-manifest.json): /town/news 는 revalidate 21600 인데 매니페스트가
+     3600 이었다(= 그 페이지가 읽는 데이터 캐시 값). 그래서 이 값이 낮으면 라우트 TTL 을 올려도
+     아무 효과가 없다. 태그로 비워지는 캐시는 TTL 을 길게 잡아도 신선도 손해가 없다 —
+     태그 무효화는 "다음 렌더에서 다시 읽어라"일 뿐 재렌더를 강제하지 않기 때문이다. */
 const loadCoverageCached = unstable_cache(loadCoverageUncached, ["home-coverage-v1"], {
-  revalidate: 21_600,
+  revalidate: 604_800,
   tags: ["market"],
 });
 

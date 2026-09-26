@@ -203,7 +203,7 @@ function WalletView({
         <div>
           <div className="text-xs text-ai-muted">사용 가능한 포인트</div>
           <div className="mt-1 flex items-end gap-1">
-            <span className="t-title leading-none text-white">
+            <span className="t-title t-num leading-none text-ai-text">
               {balance.toLocaleString("ko-KR")}
             </span>
             <span className="mb-1 text-[19px] font-extrabold text-ai-accent">P</span>
@@ -212,13 +212,13 @@ function WalletView({
         <div className="flex gap-2">
           <div className="flex-1 rounded-xl bg-[rgba(255,255,255,.07)] p-3 text-center">
             <div className="t-sub text-ai-muted">이번 달 적립</div>
-            <div className="mt-0.5 text-[15px] font-extrabold text-ai-accent">
+            <div className="t-num mt-0.5 text-[15px] text-ai-accent">
               +{monthEarned.toLocaleString("ko-KR")}P
             </div>
           </div>
           <div className="flex-1 rounded-xl bg-[rgba(255,255,255,.07)] p-3 text-center">
             <div className="t-sub text-ai-muted">이번 달 사용</div>
-            <div className="mt-0.5 text-[15px] font-extrabold text-white">
+            <div className="t-num mt-0.5 text-[15px] text-ai-text">
               −{monthSpent.toLocaleString("ko-KR")}P
             </div>
           </div>
@@ -290,15 +290,16 @@ function WalletView({
                     </div>
                   </div>
                   <div className="shrink-0 pl-3 text-right">
+                    {/* [1009 · T] 포인트 적립·사용 — 줄마다 자릿수가 세로로 맞게 tabular-nums(t-num) */}
                     <div
-                      className={`text-[13px] font-extrabold ${
+                      className={`t-num text-[13px] ${
                         earn ? "text-primary" : "text-text-3"
                       }`}
                     >
                       {earn ? "+" : "−"}
                       {fmtP(r.delta)}
                     </div>
-                    <div className="t-sub text-text-3">
+                    <div className="t-sub tabular-nums text-text-3">
                       잔액 {r.balance.toLocaleString("ko-KR")}P
                     </div>
                   </div>

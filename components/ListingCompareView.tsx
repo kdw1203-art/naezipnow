@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
+import { useToast } from "@/app/components/toast/ToastProvider";
+import { listingPriceLine, marketCompare } from "@/app/listings/price-text";
+import { restoreListingAt } from "@/app/listings/compare-restore";
 import {
   subscribe,
   getSnapshot,
@@ -27,21 +30,9 @@ const SOURCE_LABEL: Record<CompareListing["source"], string> = {
   agent: "중개사",
 };
 
-/** 원(KRW) → "28.6억" / "9,800만" */
-function formatKrwShort(krw: number | null | undefined): string {
-  if (krw === null || krw === undefined || !Number.isFinite(krw) || krw <= 0) return "—";
-  if (krw >= 1e8) {
-    const eok = krw / 1e8;
-    return `${(eok >= 100 ? Math.round(eok) : Math.round(eok * 10) / 10).toLocaleString("ko-KR")}억`;
-  }
-  return `${Math.round(krw / 1e4).toLocaleString("ko-KR")}만`;
-}
-
-function priceLine(l: CompareListing): string {
-  if (l.listingType === "sale") return `매매 ${formatKrwShort(l.priceKrw)}`;
-  if (l.listingType === "jeonse") return `전세 ${formatKrwShort(l.depositKrw)}`;
-  return `월세 ${formatKrwShort(l.depositKrw)} / ${formatKrwShort(l.monthlyKrw)}`;
-}
+/* [1009 · T] 호가는 정밀 표기("매매 12억 4,500만") — app/listings/price-text 한 곳(목록·상세·비교함과 같은 말).
+   예전 "28.6억"은 비교 표에서 28억 6,000만과 28억 5,500만을 같은 숫자로 보여 "최저가" 배지의 근거가 화면에서 안 보였다. */
+const priceLine = listingPriceLine;
 
 /** 유형별 대표 비교가(정렬/최저가 강조용). 없으면 null. */
 function primaryPriceKrw(l: CompareListing): number | null {
@@ -82,6 +73,7 @@ export function ListingCompareView({
   serverItems: MarketAwareCompareListing[];
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const storeItems = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   // URL(ids)을 초기 표시 순서로. 없으면 스토어에 담긴 순서.
@@ -100,7 +92,7 @@ export function ListingCompareView({
       seen.add(id);
       const s = serverMap.get(id);
       const c = storeMap.get(id);
-      // 세션 스토어 데이터 우선(사용자가 실제 담은 것), 시세대비는 서버값 사용.
+      // 세션 스토어 데이터 우선(사용자가 실제 담은 것), 실거래 대비는 서버값 사용.
       const base = c ?? s;
       if (!base) continue;
       out.push({ ...base, marketDeltaPct: s?.marketDeltaPct ?? null });
@@ -108,12 +100,35 @@ export function ListingCompareView({
     return out;
   }, [order, storeItems, serverItems]);
 
-  function handleRemove(id: string) {
-    removeFromStore(id);
-    const next = order.filter((x) => x !== id);
+  function applyOrder(next: string[]) {
     setOrder(next);
     const q = next.join(",");
     router.replace(q ? `/listings/compare?ids=${q}` : "/listings/compare");
+  }
+
+  /* [1009 · T] 빼기 — 확인 없이 바로, 토스트에 "되돌리기"(같은 자리로 다시 넣는다) */
+  function handleRemove(id: string) {
+    const row = rows.find((r) => r.id === id);
+    const at = order.indexOf(id);
+    /* [1009 · T 리뷰] 저장소(비교함 트레이 순서)도 원래 자리로 — 예전엔 표만 제자리이고 저장소에는 맨 뒤에 붙었다 */
+    const storeAt = storeItems.findIndex((i) => i.id === id);
+    removeFromStore(id);
+    applyOrder(order.filter((x) => x !== id));
+    if (!row) return;
+    showToast("비교에서 뺐어요", {
+      label: "되돌리기",
+      onClick: () => {
+        restoreListingAt(row, storeAt < 0 ? storeItems.length : storeAt);
+        setOrder((cur) => {
+          if (cur.includes(id)) return cur;
+          const next = [...cur];
+          next.splice(at < 0 ? next.length : Math.min(at, next.length), 0, id);
+          const q = next.join(",");
+          router.replace(`/listings/compare?ids=${q}`);
+          return next;
+        });
+      },
+    });
   }
 
   if (rows.length === 0) {
@@ -123,7 +138,7 @@ export function ListingCompareView({
         <div className="text-[15px] font-extrabold text-ink">비교함이 비어 있어요</div>
         <p className="max-w-[420px] text-[13px] leading-[1.7] text-text-3">
           매물 목록에서 <b className="text-ink">비교 담기</b>로 2~3개를 담으면 가격·면적·
-          시세대비를 나란히 비교할 수 있어요.
+          실거래 대비를 나란히 비교할 수 있어요.
         </p>
         <Link href="/listings" className="btn-primary btn-md">
           매물 목록으로
@@ -177,7 +192,7 @@ export function ListingCompareView({
                         type="button"
                         onClick={() => handleRemove(r.id)}
                         aria-label={`${r.complexName} 비교에서 빼기`}
-                        className="shrink-0 text-text-3 hover:text-danger"
+                        className="-m-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-text-3 hover:text-danger"
                       >
                         <Icon name="x" size={15} strokeWidth={2.2} />
                       </button>
@@ -199,7 +214,7 @@ export function ListingCompareView({
               ))}
             </tr>
           </thead>
-          <tbody className="text-[13px]">
+          <tbody className="text-[13px] tabular-nums">
             <Section label="가격">
               {rows.map((r) => {
                 const p = primaryPriceKrw(r);
@@ -207,9 +222,7 @@ export function ListingCompareView({
                 return (
                   <Cell key={r.id}>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[15px] font-extrabold text-primary">
-                        {priceLine(r)}
-                      </span>
+                      <span className="t-num text-[15px] text-ink">{priceLine(r)}</span>
                       {isMin && (
                         <span className="rounded-md bg-primary-soft chip-pad-tight text-[10px] font-extrabold text-primary">
                           최저가
@@ -244,29 +257,23 @@ export function ListingCompareView({
               ))}
             </Section>
 
-            <Section label="방향">
-              {rows.map((r) => (
-                <Cell key={r.id}>
-                  {/* 등록 데이터에 방향 정보가 없어 미표기 */}
-                  <Dash />
-                </Cell>
-              ))}
-            </Section>
+            {/* [1009 · T] "방향" 줄 삭제 — 등록 데이터에 방향이 없어 모든 칸이 늘 "—"였다(값이 없는 줄은 비교가 아니다) */}
 
-            <Section label="시세대비">
-              {rows.map((r) => (
-                <Cell key={r.id}>
-                  {r.marketDeltaPct === null ? (
-                    <span className="text-text-3">정보 없음</span>
-                  ) : r.marketDeltaPct <= -3 ? (
-                    <span className="delta-down">시세 대비 {r.marketDeltaPct}%</span>
-                  ) : r.marketDeltaPct >= 3 ? (
-                    <span className="delta-up">시세 대비 +{r.marketDeltaPct}%</span>
-                  ) : (
-                    <span className="delta-flat">시세 수준</span>
-                  )}
-                </Cell>
-              ))}
+            {/* [1009 · T] "시세대비" → "실거래 대비"(기준은 같은 단지·면적대 국토부 실거래 중위가 — 시세 추정이 아니다) ·
+                등락 토큰(▲ 빨강 · ▼ 파랑 · ±3% 안 "실거래 수준") · 부호만 있던 "-5%" 에 화살표 */}
+            <Section label="실거래 대비">
+              {rows.map((r) => {
+                const mc = marketCompare(r.marketDeltaPct);
+                return (
+                  <Cell key={r.id}>
+                    {mc === null ? (
+                      <span className="text-text-3">정보 없음</span>
+                    ) : (
+                      <span className={`t-num font-bold ${mc.textClass}`}>{mc.label}</span>
+                    )}
+                  </Cell>
+                );
+              })}
             </Section>
 
             <Section label="등록일 / 신선도">
@@ -321,9 +328,8 @@ export function ListingCompareView({
       </div>
 
       <p className="text-[12px] leading-[1.7] text-text-3">
-        시세대비는 같은 단지·면적대의 국토부 실거래(매매) 중위가 대비 호가 변동률이며,
-        데이터가 있는 매매 매물에 한해 표시돼요. 방향 등 일부 항목은 등록 정보에 없으면
-        표시되지 않습니다.
+        실거래 대비는 같은 단지·면적대의 국토부 실거래(매매) 최근 중위가보다 호가가 몇 % 높은지·낮은지이며(±3% 안은
+        &lsquo;실거래 수준&rsquo;), 실거래가 있는 매매 매물에만 표시돼요.
       </p>
     </div>
   );

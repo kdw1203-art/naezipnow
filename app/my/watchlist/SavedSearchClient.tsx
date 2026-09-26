@@ -114,6 +114,7 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
       showToast("검색을 삭제했어요", {
         label: "되돌리기",
         onClick: () => {
+          /* [1009 · H] 되돌리기 실패도 말한다 — 예전엔 결과를 보지 않아 실패해도 조용히 사라졌다 */
           void fetch("/api/saved-searches", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -123,7 +124,17 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
               scope: item.scope,
               filters: item.filters ?? {},
             }),
-          }).then(() => refresh());
+          })
+            .then(async (r) => {
+              if (!r.ok) {
+                const d = (await r.json().catch(() => ({}))) as { error?: string };
+                showToast(d.error ? `되돌리지 못했어요 — ${d.error}` : "되돌리지 못했어요 — 위에서 다시 저장해 주세요");
+                return;
+              }
+              showToast("검색을 되돌렸어요");
+              await refresh();
+            })
+            .catch(() => showToast("되돌리지 못했어요 — 연결을 확인하고 다시 저장해 주세요"));
         },
       });
     } catch (err) {
@@ -218,7 +229,8 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
           {items.map((item, i) => (
             <li
               key={item.id}
-              className={`card tile ${riseClass(i)} flex flex-col gap-2.5`}
+              /* [1009 · H] 카드 자체는 누를 수 없다(안의 버튼만) — 눌림(.tile)을 주지 않는다 */
+              className={`card ${riseClass(i)} flex flex-col gap-2.5`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex min-w-0 flex-col gap-1.5">

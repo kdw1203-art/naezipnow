@@ -375,6 +375,15 @@ export async function sendMessageByPolicy(
     messageType: input.messageType ?? "text",
     attachments: input.attachments ?? [],
   });
+  /* [1010 · 동네축] 모임 목록(/town/groups)의 "24시간 메시지 N개" 배지는 서버 렌더 시각에
+     실측한 값이다(app/town/groups/page.tsx countRecentGroupMessages). 그 라우트 TTL 을
+     300초에서 1일로 늘렸으므로, 비우지 않으면 하루 전 창(窓)에서 센 값을 "최근 24시간"이라고
+     말하게 된다 — 숫자는 사실 주장이라 낡은 채로 둘 수 없다. 모임 방일 때만 비운다
+     (전문가 상담·1:1 방은 그 화면에 실리지 않는다). 실패는 헬퍼가 삼킨다. */
+  if (room.roomType === "group") {
+    const { invalidateGroupRoutes } = await import("@/lib/town/invalidate-town");
+    invalidateGroupRoutes();
+  }
   const members = await listChatRoomMembers(input.roomId, actor.email);
   const sender = toEmail(actor.email);
   const recipients = members

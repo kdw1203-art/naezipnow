@@ -16,7 +16,9 @@ import { seoAlternates } from "@/lib/seo/alternates";
  * 400건 — 오래된 주는 공고가 그 창을 벗어나 비어 보일 수 있어, 그 사실을
  * 화면에 명기한다(없는 데이터를 있는 척하지 않는다). */
 
-export const revalidate = 3600;
+/* [1010] 크롤러 재방문(≈2.2일)보다 짧은 TTL 은 크롤 1회 = 재렌더 1회다. 이 화면을 바꾸는
+   적재(SOURCE_MAP)가 이제 경로를 직접 비우므로 시간 TTL 은 안전망으로만 둔다. */
+export const revalidate = 86_400;
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 

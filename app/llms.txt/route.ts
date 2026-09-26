@@ -81,6 +81,8 @@ ${complexLine}
 - 서비스 FAQ: https://naezipnow.com/support/faq
 - 시세 위젯 배포 안내: https://naezipnow.com/widget
 - 계약 가이드 (단계별 체크리스트·특약): https://naezipnow.com/guides/contract
+- 내 집 마련 여정 (시장 감 잡기부터 계약·잔금·입주까지 6단계, 단계별 할 일과 연결 화면): https://naezipnow.com/journey
+- 계약·잔금 일정표 (계약일·잔금일 기준 거래신고 30일·취득세 신고와 소유권이전등기 신청 60일·전입신고 14일 기한 계산, 근거 법령 표기, 일반 정보): https://naezipnow.com/journey/contract
 - 부동산 규제·의무 개념 안내: https://naezipnow.com/guides/regulations
 - 공개 집계 API(인증 불필요, JSON): https://naezipnow.com/developers
   - 목차: https://naezipnow.com/api/public/v1

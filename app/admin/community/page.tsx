@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { SeedReplyForm } from "./SeedReplyForm";
+import { storyHref } from "@/lib/town/post-href";
 
 /* [#121·#123] 커뮤니티 운영 — 참여 지표 + 미답변 글 시드 답글 도구.
    0→1 구간의 계기판: 이번 주 글·댓글·채택률·미답변, 그리고 빈 스레드 처방. */
@@ -131,7 +132,8 @@ export default async function AdminCommunityPage() {
                   <li key={p.id} className="flex flex-col gap-2 border-b border-[rgba(255,255,255,.06)] pb-4 last:border-0 last:pb-0">
                     <div className="flex items-baseline justify-between gap-3">
                       <Link
-                        href={`/town/news/${p.id}`}
+                        /* [1007 · P2] posts 표 = 사람 글 — 이야기 상세로 바로(뉴스 상세의 리다이렉트 한 홉 제거) */
+                        href={storyHref(p.id)}
                         className="min-w-0 truncate text-[13px] font-bold text-[#e7ecf5] hover:underline"
                       >
                         {p.title}

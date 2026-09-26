@@ -37,7 +37,11 @@ export const metadata: Metadata = buildPageMetadata({
    깔끔한 라벨 섹션(리포트 · 공개 임장노트)으로 정리한 자료 허브.
    주간 다이제스트는 뉴스로 이동(제거). 공개 임장노트(listPublicNotes)를 열람 카드로 노출. */
 
-export const revalidate = 600;
+/* [1010] 600초 → 1일. 이 화면의 원천은 공개 임장노트와 리포트 두 가지인데, 둘 다 쓰기 지점이
+   비운다 — 공개 노트는 invalidatePublicNoteRoutes()(생성·공개 전환·수정·삭제,
+   app/api/inspection/notes/**), 리포트는 POST /api/reports · /api/creator/reports.
+   10분 눈금은 사람 트래픽과 무관하게 하루 144회까지 재렌더를 만들었다. */
+export const revalidate = 86_400;
 
 export default async function TownLibraryPage() {
   /* 조회 실패를 빈 배열로 삼키면 아래 "공개된 임장노트가 아직 없어요" 가 뜬다 —

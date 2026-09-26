@@ -1,14 +1,26 @@
 import "server-only";
 import { getRegionRentYieldRows } from "@/lib/market/rent-yield";
 
+import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { decodeComplexId } from "@/lib/complex/complex-store";
-import { resolveComplexPrice } from "@/lib/market/complex-price";
+import { loadComplexTrades, type ComplexTrades } from "@/lib/ai/complex-trades";
+import { buildComplexTradeSeries, nowYm, resolveUnitPrice } from "@/lib/ai/result-series";
 import { getRegionSnapshot, getRegionDemographics } from "@/lib/market/store";
-import { getSupplyForArea } from "@/lib/market/supply";
+import { getSupplyForAreaStrict } from "@/lib/market/supply";
 import { regionIdForName } from "@/lib/region/catalog";
-import { inspectionAverageScore, type InspectionScores } from "@/lib/inspection/store-db";
+import {
+  complexNewsToken,
+  isComplexNews,
+  isRegionNews,
+  regionNewsTokens,
+  regionParts,
+  safeIlikeToken,
+  supplyQueryFor,
+} from "@/lib/ai/region-parts";
+import { buildRegionTrend, patchSnapshot, type RegionTrend, type SeriesPoint } from "@/lib/ai/region-trend";
+import { summarizeNeighborNotes, type NoteRowLite } from "@/lib/ai/neighbor-notes";
 import { logger } from "@/lib/log";
 
 /* [AI-09~17] 라이브 도구 컨텍스트 — AI 워크벤치의 실데이터 백본.
@@ -36,13 +48,29 @@ export interface AxisMeta {
 
 export interface LiveToolContext {
   generatedAt: string;
+  /** [1008 · 리뷰 A-9] 이번에 조회가 **실패한** 축 라벨("실거래가"·"지역 가격 흐름") — "자료 없음"과 구분한다 */
+  unavailable?: string[];
   complex: {
     id: string;
     name: string;
     region: string;
     price:
-      | ({ priceKrw: number; bandLabel: string; latestYm: string } & AxisMeta)
+      | ({
+          priceKrw: number;
+          /** 화면 라벨 — [1008] 평형 기준이면 "전용 37㎡", 면적대 기준이면 "60~85㎡" */
+          bandLabel: string;
+          latestYm: string;
+          /** [1008] 그 평형이 속한 면적대(또는 면적대 자체) 슬러그 */
+          bandSlug?: string;
+          /** [1008] 평형 키(전용 ㎡ 정수) — 결과 그래프가 같은 평형의 월평균을 그린다. 면적대 기준이면 null */
+          unitM2?: number | null;
+          /** [1008] unit = 가장 많이 거래된 평형 하나 · band = 평형으로 3건을 못 채워 면적대 */
+          basis?: "unit" | "band";
+        } & AxisMeta)
       | null;
+    /** [1008 · 리뷰 A-4] 이 단지 최근 6개월(달력, 기준 달 포함) 매매 건수 — 대표가와 같은 행에서 센다.
+        워크벤치·단지 허브가 같은 값을 쓴다(허브 "결과 요약"의 이 칸이 늘 "자료 없음"이던 것). */
+    recent6?: { count: number; fromYm: string; toYm: string; span: number } | null;
   } | null;
   region: {
     id: string | null;
@@ -54,8 +82,14 @@ export interface LiveToolContext {
           saleChangeMonthly: number | null;
           tradeCount: number | null;
           period: string;
+          /** [1008] 빈 칸을 같은 출처(REB) 월간 시계열로 채웠는가 */
+          patched?: boolean;
+          /** [1008 · 리뷰 A-20] 칸마다 기준 달 — 채운 칸은 그 시계열의 달이라 period 와 다를 수 있다 */
+          fieldAsOf?: { change: string | null; jeonse: string | null; trade: string | null };
         } & AxisMeta)
       | null;
+    /** [1008] 한국부동산원 월간 매매지수 흐름(1년 변화·한 달 변화) — 없으면 null */
+    trend?: RegionTrend | null;
     demographics:
       | ({
           population: number | null;
@@ -79,6 +113,10 @@ export interface LiveToolContext {
         upcomingHouseholds: number;
         upcomingComplexes: number;
         items: { aptName: string | null; moveInYm: string; households: number | null }[];
+        /** [1008] 찾은 지역(구·시 이름) · 가장 이른/늦은 입주 월 */
+        area?: string | null;
+        firstYm?: string | null;
+        lastYm?: string | null;
       } & AxisMeta)
     | null;
   news:
@@ -127,12 +165,21 @@ async function loadRent(regionName: string): Promise<LiveToolContext["rent"]> {
     wolseSharePct: total > 0 ? Math.round((wolse / total) * 100) : null,
     medianMonthlyKrw: NUM(row.wolse_median_monthly_krw),
     months: 3,
-    source: "국토교통부 전월세 신고(최근 3개월)",
-    asOf: new Date().toISOString().slice(0, 10),
+    /* [1008 · 리뷰 A-27] 기준은 조회일이 아니라 계약 달 창(요약 RPC: 이번 달 포함 최근 3개월 계약) */
+    source: "국토교통부 전월세 신고(최근 3개월 계약)",
+    asOf: nowYm(new Date()),
     sample: total,
     href: "/map?layer=rent-share",
   };
 }
+
+/* [1008 · W] 뉴스 적합성 — 캡처(공작아파트·안양 동안구)에 "서울 아파트값 84주 연속 상승…"·"삼성전자 5억
+   사내대출…" 이 붙었다. 원인: 지역 뉴스를 `ai_summary ilike '%안양 동안구%'` 로 찾았고, 그 두 기사는 요약
+   400~500자 뒤 지역 목록에 "안양 동안구" 가 한 번 나올 뿐이었다(실측 position 478·272). 이제
+   · 지역 뉴스 = **제목**에 그 지역 낱말(동안구·평촌·안양 …)이 있는 기사
+   · 단지 뉴스 = 제목 또는 요약 앞 160자에 단지명 — 두 글자 이름(은마·공작)이면 지역 낱말도 함께
+   맞는 게 없으면 null 이고 화면은 그 칸을 숨긴다. 규칙은 lib/ai/region-parts.ts(단위테스트). */
+const NEWS_CANDIDATES = 12;
 
 async function loadNews(
   regionName: string,
@@ -142,29 +189,56 @@ async function loadNews(
   const fallbackToRegion = opts.fallbackToRegion ?? true;
   const sb = getServiceSupabase();
   if (!sb) return null;
-  /* 단지명 우선, 없으면 지역명 — 제목·요약 매칭(자동수집 글만) */
-  const needle = (complexName ?? regionName).replace(/%/g, "");
-  const { data, error } = await sb
-    .from("board_posts")
-    .select("id,title,created_at")
-    .eq("is_automated", true)
-    .or(`title.ilike.%${needle}%,ai_summary.ilike.%${needle}%`)
-    .order("created_at", { ascending: false })
-    .limit(3);
-  if (error || !Array.isArray(data) || data.length === 0) {
-    // 단지 매칭 실패 → 지역으로 폴백 (948: 단지 캐시 채우기에서는 끈다)
-    if (complexName && fallbackToRegion) return loadNews(regionName, null);
-    return null;
+  const regionTokens = regionNewsTokens(regionName);
+  let picked: Array<{ id: string; title: string; created_at: string }> = [];
+
+  if (complexName) {
+    const token = complexNewsToken(complexName);
+    const safe = token ? safeIlikeToken(token) : "";
+    if (safe.length >= 2) {
+      const { data, error } = await sb
+        .from("board_posts")
+        .select("id,title,ai_summary,created_at")
+        .eq("is_automated", true)
+        .or(`title.ilike.%${safe}%,ai_summary.ilike.%${safe}%`)
+        .order("created_at", { ascending: false })
+        .limit(NEWS_CANDIDATES);
+      if (error) throw new Error(`board_posts(단지 뉴스 ${safe}) 조회 실패: ${error.message}`);
+      const district = regionParts(regionName)?.district ?? null;
+      const hints = district ? [...regionTokens, district] : regionTokens;
+      picked = ((data ?? []) as Array<{ id: string; title: string; ai_summary: string | null; created_at: string }>)
+        .filter((r) => isComplexNews({ title: String(r.title ?? ""), summary: r.ai_summary }, safe, hints))
+        .slice(0, 3);
+    }
+    if (picked.length === 0) {
+      // 단지 매칭 실패 → 지역으로 폴백 (948: 단지 캐시 채우기에서는 끈다)
+      return fallbackToRegion ? loadNews(regionName, null) : null;
+    }
+  } else {
+    const tokens = regionTokens.map(safeIlikeToken).filter((t) => t.length >= 2);
+    if (tokens.length === 0) return null;
+    const { data, error } = await sb
+      .from("board_posts")
+      .select("id,title,created_at")
+      .eq("is_automated", true)
+      .or(tokens.map((t) => `title.ilike.%${t}%`).join(","))
+      .order("created_at", { ascending: false })
+      .limit(NEWS_CANDIDATES);
+    if (error) throw new Error(`board_posts(지역 뉴스 ${regionName}) 조회 실패: ${error.message}`);
+    picked = ((data ?? []) as Array<{ id: string; title: string; created_at: string }>)
+      .filter((r) => isRegionNews({ title: String(r.title ?? ""), summary: null }, tokens))
+      .slice(0, 3);
   }
+  if (picked.length === 0) return null;
   return {
-    items: (data as Array<{ id: string; title: string; created_at: string }>).map((r) => ({
+    items: picked.map((r) => ({
       id: String(r.id),
       title: String(r.title),
       at: String(r.created_at),
     })),
-    source: "내집나우 자동수집 뉴스(우리 요약)",
-    asOf: String((data[0] as { created_at?: string }).created_at ?? "").slice(0, 10) || null,
-    sample: data.length,
+    source: complexName ? "내집나우가 모은 부동산 뉴스(이 단지)" : "내집나우가 모은 부동산 뉴스(이 지역)",
+    asOf: String(picked[0].created_at ?? "").slice(0, 10) || null,
+    sample: picked.length,
     href: "/town/news",
   };
 }
@@ -177,34 +251,39 @@ async function loadNotes(
   const fallbackToRegion = opts.fallbackToRegion ?? true;
   const sb = getServiceSupabase();
   if (!sb) return null;
+  /* [1008 · W] 예전엔 `scores` 열을 골랐는데 inspection_notes 에 그런 열이 없다(점수는 score_location…
+     score_future 다섯 열) — PostgREST 42703 오류로 이 축이 **늘 null** 이었다(운영 DB 열 목록 실측).
+     [1008 · 리뷰 A-1] 공개 노트 30건이 전부 운영진(Lab) 예시 글이라 author_label 로 거른다 —
+     사람 글만 "이웃 임장노트·이웃 평가"다(lib/ai/neighbor-notes.ts). 거르고 남을 몫까지 넉넉히 읽는다. */
   let q = sb
     .from("inspection_notes")
-    .select("id,title,scores,created_at")
+    .select("id,title,author_label,score_location,score_school,score_transport,score_facility,score_future,created_at")
     .eq("is_public", true)
     .order("created_at", { ascending: false })
-    .limit(20);
-  q = complexName ? q.eq("apt_name", complexName) : q.eq("region", regionName);
+    .limit(40);
+  if (complexName) q = q.eq("apt_name", complexName);
+  else {
+    /* [1008 · W] 노트의 region 은 "서울 성북구 장위동"·"경기 수원시 권선구" 처럼 적힌다 — 실거래 지역명
+       ("서울 성북구"·"수원 권선구")과 같지 않아 정확 일치로는 거의 안 걸렸다. 구·시 낱말로 건다. */
+    const p = regionParts(regionName);
+    if (!p) return null;
+    if (p.city) {
+      q = q.ilike("region", `%${safeIlikeToken(p.district)}%`).ilike("region", `%${safeIlikeToken(p.city)}%`);
+    } else {
+      const stem = p.district.replace(/(특별자치시|시|군)$/, "");
+      q = q.ilike("region", `%${safeIlikeToken(stem.length >= 2 ? stem : p.district)}%`);
+    }
+  }
   const { data, error } = await q;
-  if (error || !Array.isArray(data)) return null;
-  if (data.length === 0) {
+  if (error) throw new Error(`inspection_notes(${complexName ?? regionName}) 조회 실패: ${error.message}`);
+  if (!Array.isArray(data)) return null;
+  const summary = summarizeNeighborNotes(data as NoteRowLite[], complexName ? "complex" : "region");
+  if (!summary) {
+    /* 사람 글이 없으면(0건이거나 전부 Lab) 지역으로 물러선다 — 지역도 없으면 축 없음 */
     if (complexName && fallbackToRegion) return loadNotes(regionName, null);
     return null;
   }
-  const scores = (data as Array<{ scores: InspectionScores | null }>)
-    .map((r) => (r.scores ? inspectionAverageScore(r.scores) : 0))
-    .filter((s) => s > 0);
-  const first = data[0] as { id: string; title: string; created_at: string };
-  return {
-    count: data.length,
-    avgScore: scores.length
-      ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
-      : null,
-    latest: { id: String(first.id), title: String(first.title) },
-    source: complexName ? "이웃 공개 임장노트(이 단지)" : "이웃 공개 임장노트(이 지역)",
-    asOf: String(first.created_at).slice(0, 10),
-    sample: scores.length,
-    href: "/notes",
-  };
+  return summary;
 }
 
 async function loadMacro(): Promise<LiveToolContext["macro"]> {
@@ -231,10 +310,16 @@ async function loadMacro(): Promise<LiveToolContext["macro"]> {
 async function loadPoi(regionName: string): Promise<LiveToolContext["poi"]> {
   const sb = getServiceSupabase();
   if (!sb) return null;
-  const { count, error } = await sb
+  /* [1008 · W] 입주물량과 같은 함정 — 통째 이름("서울 강남구")은 주소("서울특별시 강남구 …")에 안 걸린다.
+     구 이름 + 시 이름으로 나눠 건다(지금은 0행 표 — 적재되는 날 바로 맞게). */
+  const q = supplyQueryFor(regionName);
+  if (!q) return null;
+  let query = sb
     .from("poi_schools")
     .select("*", { count: "exact", head: true })
-    .ilike("address", `%${regionName}%`);
+    .ilike("address", `%${safeIlikeToken(q.area)}%`);
+  if (q.city) query = query.ilike("address", `%${safeIlikeToken(q.city)}%`);
+  const { count, error } = await query;
   if (error || typeof count !== "number" || count === 0) return null;
   return {
     schoolCount: count,
@@ -262,47 +347,118 @@ type RegionAxes = {
   snapshot: Awaited<ReturnType<typeof getRegionSnapshot>>;
   demographics: Awaited<ReturnType<typeof getRegionDemographics>>;
   rent: LiveToolContext["rent"];
-  supply: Awaited<ReturnType<typeof getSupplyForArea>>;
+  supply: Awaited<ReturnType<typeof getSupplyForAreaStrict>>;
+  /** [1008] 입주물량을 찾은 지역 이름(구·시) */
+  supplyArea?: string | null;
+  /** [1008] 한국부동산원 월간 지수 흐름 */
+  trend?: RegionTrend | null;
   news: LiveToolContext["news"];
   notes: LiveToolContext["notes"];
   macro: LiveToolContext["macro"];
   poi: LiveToolContext["poi"];
+  /** [1008 · 리뷰 A-9] 조회가 **실패한** 축 — "없음"과 구분해 화면이 "지금 불러오지 못했어요"라고 말한다 */
+  failed?: string[];
 };
 
+/**
+ * [1008 · 리뷰 A-9] 조회 실패를 데이터 캐시에 굳히지 않는 장치 — unstable_cache 는 **던지면 저장하지 않는다.**
+ * 핵심 축(매매 행·지역 흐름)이 실패하면 조립한 부분값을 실어 던지고, 캐시 바깥(unwrapPartial)에서 그 부분값으로
+ * 이번 요청만 그린다. 예전엔 실패가 null 로 6시간 저장돼 화면이 그동안 "거래 없음"이라고 말했다.
+ */
+class PartialAxesError<T> extends Error {
+  constructor(
+    message: string,
+    readonly partial: T,
+  ) {
+    super(message);
+    this.name = "PartialAxesError";
+  }
+}
+function unwrapPartial<T>(e: unknown): T {
+  if (e && typeof e === "object" && "partial" in e && (e as { name?: string }).name === "PartialAxesError") {
+    return (e as PartialAxesError<T>).partial;
+  }
+  throw e;
+}
+
+/* [1008 · W] 지역 가격 흐름 — REB 월간 매매지수·전세가율·거래량을 **한 번의 질의**로(인덱스
+   idx_mrs_region: region_id, property_type, metric, period_type, period). 15개월치 ≈ 40행.
+   지역 축 캐시(지역명 키 6시간) 안에서만 부른다 — 단지마다 다시 읽지 않는다. */
+async function loadRegionTrend(regionId: string): Promise<RegionTrend | null> {
+  const sb = getServiceSupabase();
+  if (!sb) return null;
+  const since = new Date();
+  since.setUTCMonth(since.getUTCMonth() - 16);
+  const sinceDay = `${since.getUTCFullYear()}-${String(since.getUTCMonth() + 1).padStart(2, "0")}-01`;
+  const { data, error } = await sb
+    .from("market_region_series")
+    .select("metric,period,value")
+    .eq("region_id", regionId)
+    .eq("property_type", "apt")
+    .eq("source", "reb")
+    .eq("period_type", "monthly")
+    .in("metric", ["sale_index", "jeonse_ratio", "trade_count"])
+    .gte("period", sinceDay)
+    .order("period", { ascending: true })
+    .limit(80);
+  if (error) throw new Error(`market_region_series(${regionId} 월간 흐름) 조회 실패: ${error.message}`);
+  const rows = (data ?? []) as Array<{ metric: string; period: string; value: number | string }>;
+  const pick = (metric: string): SeriesPoint[] =>
+    rows.filter((r) => r.metric === metric).map((r) => ({ period: String(r.period), value: Number(r.value) }));
+  return buildRegionTrend({
+    saleIndex: pick("sale_index"),
+    jeonseRatio: pick("jeonse_ratio"),
+    tradeCount: pick("trade_count"),
+  });
+}
+
 type ComplexAxes = {
-  price: Awaited<ReturnType<typeof resolveComplexPrice>> | null;
+  /** [1008 · W] 매매 실거래 행 — 대표가(평형)와 결과 그래프가 같은 행을 쓴다(lib/ai/result-series.ts) */
+  trades: ComplexTrades | null;
   news: LiveToolContext["news"];
   notes: LiveToolContext["notes"];
+  /** [1008 · 리뷰 A-9] 조회가 실패한 축 */
+  failed?: string[];
 };
 
 const settledVal = <T,>(r: PromiseSettledResult<T>, label: string): T | null => {
   if (r.status === "fulfilled") return r.value;
-  logger.warn(`[live-context] ${label} 축 조회 실패`, r.reason);
+  /* [1007] 축 하나가 막히면 렌더마다 같은 줄 — 축(label)별 1분 1건 + 생략 건수 */
+  logger.warnSampled(`live-axis:${label}`, `[live-context] ${label} 축 조회 실패`, r.reason);
   return null;
 };
 
 async function loadRegionAxes(regionName: string): Promise<RegionAxes> {
   const regionId = regionName ? regionIdForName(regionName) : null;
-  const [snapR, demoR, rentR, supplyR, newsR, notesR, macroR, poiR] =
+  /* [1008 · W] 입주물량은 시/도·구로 쪼개 찾는다 — 통째 이름("서울 강남구")으로는 주소
+     ("서울특별시 강남구 …")에 한 건도 안 걸렸다(전국 0건 실측). 규칙은 lib/ai/region-parts.ts. */
+  const supplyQ = regionName ? supplyQueryFor(regionName) : null;
+  const [snapR, demoR, rentR, supplyR, newsR, notesR, macroR, poiR, trendR] =
     await Promise.allSettled([
       regionId ? getRegionSnapshot(regionId) : Promise.resolve(null),
       regionId ? getRegionDemographics(regionId) : Promise.resolve(null),
       regionName ? loadRent(regionName) : Promise.resolve(null),
-      regionName ? getSupplyForArea(regionName, 24) : Promise.resolve([]),
+      /* [1008 · 리뷰 A-2] 이번 달(한국 시간) 이후 입주분만 넉넉히 — 하한 없이 오름차순 24행이면 지난 입주분이
+         자리를 차지해 앞으로 입주가 과소 집계됐다(양주 23,474 → 10,797세대) */
+      supplyQ ? getSupplyForAreaStrict(supplyQ.area, 200, undefined, supplyQ.city, nowYm(new Date())) : Promise.resolve([]),
       regionName ? loadNews(regionName, null) : Promise.resolve(null),
       regionName ? loadNotes(regionName, null) : Promise.resolve(null),
       loadMacro(),
       regionName ? loadPoi(regionName) : Promise.resolve(null),
+      regionId ? loadRegionTrend(regionId) : Promise.resolve(null),
     ]);
   const axes: RegionAxes = {
     snapshot: settledVal(snapR, "지역 시세"),
     demographics: settledVal(demoR, "인구·미분양"),
     rent: settledVal(rentR, "전월세"),
     supply: settledVal(supplyR, "입주 물량") ?? [],
+    supplyArea: supplyQ ? regionName : null,
+    trend: settledVal(trendR, "지역 흐름"),
     news: settledVal(newsR, "지역 뉴스"),
     notes: settledVal(notesR, "지역 노트"),
     macro: settledVal(macroR, "거시"),
     poi: settledVal(poiR, "학교"),
+    ...(trendR.status === "rejected" ? { failed: ["지역 가격 흐름"] } : {}),
   };
   /* 축이 **하나도** 없으면 던진다 — 로더들은 실패를 null 로 삼키므로, 전부 null 은
      "이 지역엔 정말 아무 것도 없다"가 아니라 DB 가 잡혀 있던 순간일 가능성이
@@ -310,8 +466,10 @@ async function loadRegionAxes(regionName: string): Promise<RegionAxes> {
      6시간 동안 굳지 않는다 — 부르는 쪽(ComplexAxisSummary 등)은 catch 로 접는다. */
   const blank =
     !axes.snapshot && !axes.demographics && !axes.rent && axes.supply.length === 0 &&
-    !axes.news && !axes.notes && !axes.macro && !axes.poi;
+    !axes.news && !axes.notes && !axes.macro && !axes.poi && !axes.trend;
   if (blank) throw new Error(`[live-context] ${regionName} 지역 축 전부 없음 — 캐시하지 않음`);
+  /* [1008 · 리뷰 A-9] 지역 흐름 조회 실패는 캐시에 굳히지 않는다 — 부분값은 이번 요청만 */
+  if (axes.failed?.length) throw new PartialAxesError(`[live-context] ${regionName} 지역 흐름 조회 실패 — 캐시하지 않음`, axes);
   return axes;
 }
 
@@ -323,29 +481,58 @@ async function loadComplexAxes(
   regionName: string,
   complexName: string,
 ): Promise<ComplexAxes> {
-  const [priceR, newsR, notesR] = await Promise.allSettled([
-    resolveComplexPrice(complexId),
+  const [tradesR, newsR, notesR] = await Promise.allSettled([
+    loadComplexTrades(regionName, complexName),
     loadNews(regionName, complexName, { fallbackToRegion: false }),
     loadNotes(regionName, complexName, { fallbackToRegion: false }),
   ]);
-  return {
-    price: settledVal(priceR, "실거래가"),
+  const axes: ComplexAxes = {
+    trades: settledVal(tradesR, "실거래가"),
     news: settledVal(newsR, "단지 뉴스"),
     notes: settledVal(notesR, "단지 노트"),
+    ...(tradesR.status === "rejected" ? { failed: ["실거래가"] } : {}),
   };
+  /* [1008 · 리뷰 A-9] 매매 행 조회 실패는 캐시에 굳히지 않는다(6시간 "거래 없음"이 되던 것) */
+  if (axes.failed?.length) throw new PartialAxesError(`[live-context] ${complexName} 매매 조회 실패 — 캐시하지 않음`, axes);
+  return axes;
 }
 
 /* 지역 키 캐시 — 전국 218개 지역명 × 6시간. market·supply·economy 태그는 수집
    크론이 끝나는 즉시 비운다(lib/cache/invalidate.ts). */
-const loadRegionAxesCached = unstable_cache(loadRegionAxes, ["live-region-axes-v1"], {
-  revalidate: 21_600,
+/* [1008] v2 — 모양이 바뀌었다(trend·supplyArea) · 입주물량·뉴스 규칙 수정: 옛 빈 값이 6시간 남지 않게 키를 올린다 */
+/* [1008 · 리뷰 A] v3 — 입주 예정 하한(이번 달 이후)·Lab 노트 제외·실패 비저장: 옛 값이 6시간 남지 않게 */
+  /* [1010] TTL 은 라우트 revalidate 의 뚜껑이다 — Next 는 세그먼트 값과 이 값 중 작은 쪽을 쓴다.
+     실측으로 확인됨(.next/prerender-manifest.json): /town/news 는 revalidate 21600 인데 매니페스트가
+     3600 이었다(= 그 페이지가 읽는 데이터 캐시 값). 그래서 이 값이 낮으면 라우트 TTL 을 올려도
+     아무 효과가 없다. 태그로 비워지는 캐시는 TTL 을 길게 잡아도 신선도 손해가 없다 —
+     태그 무효화는 "다음 렌더에서 다시 읽어라"일 뿐 재렌더를 강제하지 않기 때문이다. */
+const loadRegionAxesCached = unstable_cache(loadRegionAxes, ["live-region-axes-v3"], {
+  revalidate: 604_800,
   tags: ["market", "supply", "news", "economy"],
 });
 
-const loadComplexAxesCached = unstable_cache(loadComplexAxes, ["live-complex-axes-v1"], {
-  revalidate: 21_600,
+/* 단지 키 캐시 — AI 워크벤치(/api/ai/context·/api/ai/analysis)가 같은 단지를 몇 분 안에
+   여러 번 묻는 자리에서만 값이 있다(선택 → 실행 → 재실행). 단지 허브 렌더는 이 캐시를
+   쓰지 않는다 — buildLiveToolContextCached 의 complexDurable 주석 참고 [1007]. */
+/* [1008] v2 — 단지 뉴스 적합성 규칙 수정(옛 결과가 6시간 남지 않게)
+   [1008 · W] v3 — 대표가 대신 매매 행(최대 600행, 평형 단위 계산 재료)을 담는다: 모양이 바뀌었다 */
+/* [1008 · 리뷰 A] v4 — Lab 노트 제외·매매 조회 실패 비저장·같은 날 거래 정렬 확정 */
+const loadComplexAxesCached = unstable_cache(loadComplexAxes, ["live-complex-axes-v4"], {
+  revalidate: 604_800,
   tags: ["market", "news"],
 });
+
+/* [1007] 요청 안 중복만 막는 판 — 같은 렌더에서 prefetch 와 섹션이 같은 인자로 두 번 불러도
+   조회는 한 번. TTL 저장이 없으니 ISR Writes 도 없다. */
+const loadComplexAxesPerRequest = cache(loadComplexAxes);
+
+/* [1008 · W] 지역 시세 출처 라벨 — 스냅샷 행의 출처(reb·kb·crawl)대로 말한다 */
+function snapshotSourceLabel(source: string | null | undefined, patched: boolean): string {
+  if (patched) return "한국부동산원 월간 아파트 지수";
+  if (source === "reb") return "한국부동산원 지역 시세";
+  if (source === "kb") return "KB 지역 시세";
+  return "지역 시세 통계";
+}
 
 function assembleContext(params: {
   complexId: string | null;
@@ -356,59 +543,113 @@ function assembleContext(params: {
 }): LiveToolContext {
   const { complexId, decoded, regionName, regionAxes, complexAxes } = params;
   const regionId = regionName ? regionIdForName(regionName) : null;
-  const price = complexAxes?.price ?? null;
-  const snap = regionAxes?.snapshot ?? null;
+  /* [1008 · W] 최근 실거래가 = 가장 많이 거래된 평형의 최근 6건 평균(평형으로 못 채우면 면적대) */
+  const price = resolveUnitPrice(complexAxes?.trades?.rows);
+  const rawSnap = regionAxes?.snapshot ?? null;
+  const trend = regionAxes?.trend ?? null;
+  /* [1008 · W] 빈 칸만 같은 출처(REB) 월간 시계열로 채우고 반올림한다(서울 25개 구 스냅샷이
+     period='' · 값 null 이라 은마·헬리오시티가 "가격 흐름 자료 없음" 이던 것). lib/ai/region-trend.ts */
+  const snapBase = rawSnap
+    ? {
+        avgSale: rawSnap.avgSale ?? null,
+        jeonseRatio: rawSnap.jeonseRatio ?? null,
+        saleChangeMonthly: rawSnap.saleChangeMonthly ?? null,
+        tradeCount: rawSnap.tradeCount ?? null,
+        period: rawSnap.period ?? "",
+      }
+    : null;
+  const snap = patchSnapshot(snapBase, trend) as
+    | (NonNullable<typeof snapBase> & { patched?: boolean })
+    | null;
+  const snapHasValue =
+    snap != null && (snap.avgSale != null || snap.jeonseRatio != null || snap.saleChangeMonthly != null || snap.tradeCount != null);
   const demo = regionAxes?.demographics ?? null;
   const supplyItems = regionAxes?.supply ?? [];
 
-  const upcoming = supplyItems.filter((s) => s.moveInYm >= new Date().toISOString().slice(0, 7).replace("-", ""));
+  /* [1008 · 리뷰 A-25] "앞으로 입주"의 이번 달은 한국 시간 기준(UTC 로 자르면 매달 1일 0~9시에 한 달 어긋난다) */
+  const thisYm = nowYm(new Date());
+  const upcoming = supplyItems.filter((s) => s.moveInYm >= thisYm);
+  const upcomingYms = upcoming.map((i) => i.moveInYm).filter(Boolean).sort();
+  /* [1008 · 리뷰 A-4] 최근 6개월 거래 — 대표가와 같은 행·같은 평형 규칙(시계열 계산의 부산물) */
+  const trades = complexAxes?.trades ?? null;
+  const recent6 =
+    trades && price
+      ? (buildComplexTradeSeries(trades.rows, {
+          unitM2: price.unitM2,
+          bandSlug: price.bandSlug,
+          now: new Date(),
+          capped: trades.capped,
+        })?.recent6 ?? null)
+      : trades
+        ? (buildComplexTradeSeries(trades.rows, { now: new Date(), capped: trades.capped })?.recent6 ?? null)
+        : null;
+  const unavailable = [...(complexAxes?.failed ?? []), ...(regionAxes?.failed ?? [])];
+  const period = (v: string | null | undefined) => (v && v.trim() ? v : null);
+  const fieldAsOf = snap
+    ? {
+        change: rawSnap?.saleChangeMonthly != null ? period(rawSnap.period) : trend?.momPct != null ? trend.asOf : null,
+        jeonse: rawSnap?.jeonseRatio != null ? period(rawSnap.period) : trend?.jeonseRatio != null ? trend.jeonseAsOf : null,
+        trade: rawSnap?.tradeCount != null ? period(rawSnap.period) : trend?.tradeCount != null ? trend.tradeAsOf : null,
+      }
+    : null;
 
   return {
     generatedAt: new Date().toISOString(),
+    ...(unavailable.length ? { unavailable } : {}),
     complex:
       decoded && complexId
         ? {
             id: complexId,
             name: decoded.name,
             region: decoded.region,
-            price:
-              price && "ok" in price && price.ok
-                ? {
-                    priceKrw: price.price.priceKrw,
-                    bandLabel: price.price.bandLabel,
-                    latestYm: price.price.latestYm,
-                    source: "국토교통부 실거래(신고) · 대표 면적대 최근 거래 평균",
-                    asOf: price.price.latestYm,
-                    sample: price.price.sampleSize,
-                    href: `/complex/${encodeURIComponent(complexId)}`,
-                  }
-                : null,
+            price: price
+              ? {
+                  priceKrw: price.priceKrw,
+                  bandLabel: price.label,
+                  bandSlug: price.bandSlug,
+                  unitM2: price.unitM2,
+                  basis: price.basis,
+                  latestYm: price.latestYm,
+                  source:
+                    price.basis === "unit"
+                      ? "국토교통부 실거래 신고 · 가장 많이 거래된 평형의 최근 거래 평균"
+                      : "국토교통부 실거래 신고 · 가장 많이 거래된 면적대의 최근 거래 평균",
+                  asOf: price.latestYm,
+                  sample: price.sampleSize,
+                  href: `/complex/${encodeURIComponent(complexId)}`,
+                }
+              : null,
+            recent6,
           }
         : null,
     region: regionName
       ? {
           id: regionId,
           name: regionName,
-          snapshot: snap
-            ? {
-                avgSale: snap.avgSale ?? null,
-                jeonseRatio: snap.jeonseRatio ?? null,
-                saleChangeMonthly: snap.saleChangeMonthly ?? null,
-                tradeCount: snap.tradeCount ?? null,
-                period: snap.period,
-                source: "지역 시세 스냅샷(공표 통계 집계)",
-                asOf: snap.period,
-                sample: snap.tradeCount ?? null,
-                href: regionId ? `/region/${regionId}` : null,
-              }
-            : null,
+          snapshot:
+            snap && snapHasValue
+              ? {
+                  avgSale: snap.avgSale ?? null,
+                  jeonseRatio: snap.jeonseRatio ?? null,
+                  saleChangeMonthly: snap.saleChangeMonthly ?? null,
+                  tradeCount: snap.tradeCount ?? null,
+                  period: snap.period,
+                  ...(snap.patched ? { patched: true } : {}),
+                  ...(fieldAsOf ? { fieldAsOf } : {}),
+                  source: snapshotSourceLabel(rawSnap?.source, Boolean(snap.patched) && !rawSnap?.period),
+                  asOf: snap.period || null,
+                  sample: snap.tradeCount ?? null,
+                  href: regionId ? `/region/${regionId}` : null,
+                }
+              : null,
+          trend,
           demographics: demo
             ? {
                 population: demo.population ?? null,
                 households: demo.households ?? null,
                 unsoldUnits: demo.unsoldUnits ?? null,
                 period: demo.period,
-                source: "KOSIS 인구·세대·미분양",
+                source: "통계청 KOSIS 인구·미분양",
                 asOf: demo.period,
                 sample: null,
                 href: regionId ? `/region/${regionId}` : null,
@@ -427,7 +668,10 @@ function assembleContext(params: {
               moveInYm: i.moveInYm,
               households: i.households,
             })),
-            source: "청약홈 분양공고 입주예정월(자동 수집)",
+            area: regionAxes?.supplyArea ?? regionName ?? null,
+            firstYm: upcomingYms[0] ?? null,
+            lastYm: upcomingYms[upcomingYms.length - 1] ?? null,
+            source: "청약홈 분양 공고의 입주 예정 월",
             asOf: new Date().toISOString().slice(0, 10),
             sample: upcoming.length,
             href: "/apply/calendar",
@@ -464,12 +708,16 @@ export async function buildLiveToolContext(params: {
        돌려준다 — 이 예외는 오직 캐시에 빈 값을 남기지 않기 위한 것이다. */
     regionName
       ? loadRegionAxes(regionName).catch((e): RegionAxes | null => {
-          logger.warn("[live-context] 지역 축 조립 실패", e);
-          return null;
+          try {
+            return unwrapPartial<RegionAxes>(e);
+          } catch {
+            logger.warn("[live-context] 지역 축 조립 실패", e);
+            return null;
+          }
         })
       : Promise.resolve(null),
     complexId && decoded
-      ? loadComplexAxes(complexId, regionName, decoded.name)
+      ? loadComplexAxes(complexId, regionName, decoded.name).catch((e) => unwrapPartial<ComplexAxes>(e))
       : Promise.resolve(null),
   ]);
   return assembleContext({ complexId, decoded, regionName, regionAxes, complexAxes });
@@ -498,15 +746,25 @@ export function contextFootnotes(ctx: LiveToolContext): Footnote[] {
       href: m.href ?? null,
     });
   };
+  /* [1008 · W] 라벨을 쉬운 말로 — "근거 각주"는 이제 화면에서 "데이터 출처"다(내부 용어 정리) */
   push("실거래가", ctx.complex?.price);
-  push("지역 시세·거래량", ctx.region?.snapshot);
-  push("전월세 실측", ctx.rent);
-  push("입주 예정 물량", ctx.supply);
-  push("최근 사건(뉴스)", ctx.news);
+  push("지역 시세", ctx.region?.snapshot);
+  const trend = ctx.region?.trend ?? null;
+  if (trend?.asOf && trend.index.length >= 2) {
+    push("지역 가격 흐름", {
+      source: "한국부동산원 월간 아파트 매매지수",
+      asOf: trend.asOf,
+      sample: null,
+      href: ctx.region?.id ? `/region/${ctx.region.id}` : null,
+    });
+  }
+  push("전월세 신고", ctx.rent);
+  push("입주 예정", ctx.supply);
+  push("관련 뉴스", ctx.news);
   push("이웃 임장노트", ctx.notes);
   push("인구·미분양", ctx.region?.demographics);
   push("기준금리", ctx.macro);
-  push("학교(표준데이터)", ctx.poi);
+  push("학교", ctx.poi);
   return rows.map((r, i) => ({ n: i + 1, ...r }));
 }
 
@@ -533,20 +791,53 @@ export function axisAgeDays(asOf: string | null, now = new Date()): number | nul
 export async function buildLiveToolContextCached(
   complexId: string | null,
   regionName: string | null,
+  opts?: {
+    /**
+     * [1007] 단지 축을 데이터 캐시(6시간, 단지 id 키)에 저장할지. 기본 true(워크벤치 API).
+     * 단지 허브 렌더(app/complex/[id]/section-loaders.ts)는 false — 그 페이지는 ISR 6시간이라
+     * 다시 렌더되는 순간엔 이 캐시도 같이 만료돼 있어(같은 TTL) 항목이 **쓰이기만 하고
+     * 읽히지 않았다**: 하루 8,907 렌더 = 8,907 ISR Write, 읽기 0. 요청 안 중복만 막는다.
+     */
+    complexDurable?: boolean;
+  },
 ): Promise<LiveToolContext> {
+  const parts = await loadCachedParts(complexId, regionName, opts?.complexDurable ?? true);
+  return assembleContext(parts);
+}
+
+async function loadCachedParts(complexId: string | null, regionName: string | null, complexDurable: boolean) {
   const target = resolveTarget({ complexId, regionName });
+  const loadComplex = complexDurable ? loadComplexAxesCached : loadComplexAxesPerRequest;
   const [regionAxes, complexAxes] = await Promise.all([
     /* 지역 축 전부 없음(DB 포화 순간)은 캐시에 남지 않고 여기서 null 로 접힌다 —
        화면은 예전처럼 축 없는 컨텍스트를 받는다(부르는 쪽은 바뀌지 않는다). */
     target.regionName
       ? loadRegionAxesCached(target.regionName).catch((e): RegionAxes | null => {
-          logger.warn("[live-context] 지역 축 캐시 조립 실패", e);
-          return null;
+          /* [1008 · 리뷰 A-9] 흐름 조회만 실패한 부분값 — 캐시엔 없고 이번 요청만 그린다 */
+          try {
+            return unwrapPartial<RegionAxes>(e);
+          } catch {
+            logger.warnSampled("live-region-axes", "[live-context] 지역 축 캐시 조립 실패", e);
+            return null;
+          }
         })
       : Promise.resolve(null),
     target.complexId && target.decoded
-      ? loadComplexAxesCached(target.complexId, target.regionName, target.decoded.name)
+      ? loadComplex(target.complexId, target.regionName, target.decoded.name).catch((e) => unwrapPartial<ComplexAxes>(e))
       : Promise.resolve(null),
   ]);
-  return assembleContext({ ...target, regionAxes, complexAxes });
+  return { ...target, regionAxes, complexAxes };
+}
+
+/**
+ * [1008 · W] 워크벤치 API 용 — 컨텍스트와 **같은 캐시 항목의** 매매 행을 함께 돌려준다.
+ * 결과 그래프(/api/ai/context?series=1)와 "최근 6개월 거래" 칸(/api/ai/analysis)이 대표가와 같은 행에서
+ * 나온다 — 조회를 더 하지 않는다(단지 축 캐시 live-complex-axes-v3 하나).
+ */
+export async function buildLiveToolContextWithTrades(
+  complexId: string | null,
+  regionName: string | null,
+): Promise<{ ctx: LiveToolContext; trades: ComplexTrades | null }> {
+  const parts = await loadCachedParts(complexId, regionName, true);
+  return { ctx: assembleContext(parts), trades: parts.complexAxes?.trades ?? null };
 }

@@ -1,6 +1,12 @@
 /** market_* 테이블 읽기/쓰기 (서버 전용). Supabase 미설정 시 안전하게 빈 값 반환. */
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { marketRegionNameCandidates } from "@/lib/market/region-name-candidates";
+import {
+  pickBestSnapshotMap,
+  pickBestSnapshotRow,
+  snapshotFromRow,
+  type RegionPriceDbRow,
+} from "@/lib/market/region-snapshot-pick";
 import { logger } from "@/lib/log";
 import type {
   MarketSeriesRow,
@@ -317,7 +323,7 @@ export async function hasMarketData(): Promise<boolean> {
  */
 const SNAPSHOT_HARD_LIMIT = 2000;
 
-/** 모든 지역의 최신 스냅샷 맵 (REB 우선, 없으면 KB). 1h 캐시. */
+/** 모든 지역의 최신 스냅샷 맵 (값 있는 행 우선 → REB > KB > crawl). 1h 캐시. */
 export async function getAllRegionSnapshots(): Promise<Map<string, RegionMarketSnapshot>> {
   if (snapshotCache && Date.now() - snapshotCache.at < SNAPSHOT_TTL_MS) return snapshotCache.map;
   const map = new Map<string, RegionMarketSnapshot>();
@@ -358,28 +364,10 @@ export async function getAllRegionSnapshots(): Promise<Map<string, RegionMarketS
         "지역이 잘렸을 수 있어 이번 결과를 캐시하지 않습니다. 적재 중복 여부를 확인하세요.",
     );
   }
-  // REB 우선: 같은 region_id 에 대해 reb 가 kb 를 덮어쓴다.
-  const priority: Record<string, number> = { reb: 2, kb: 1, crawl: 0 };
-  for (const row of data) {
-    const id = String(row.region_id);
-    const existing = map.get(id);
-    const src = String(row.source);
-    if (existing && (priority[existing.source] ?? 0) >= (priority[src] ?? 0)) continue;
-    map.set(id, {
-      regionId: id,
-      regionName: String(row.region_name),
-      source: src as MarketSource,
-      period: String(row.period),
-      perM2Sale: row.per_m2_sale ?? undefined,
-      avgSale: row.avg_sale ?? undefined,
-      medianSale: row.median_sale ?? undefined,
-      jeonseRatio: row.jeonse_ratio ?? undefined,
-      saleChangeMonthly: row.sale_change ?? undefined,
-      tradeCount: row.trade_count ?? undefined,
-      buySuperiority: row.buy_superiority ?? undefined,
-      jeonseSupply: row.jeonse_supply ?? undefined,
-    });
-  }
+  /* [1007] 같은 region_id 에 출처가 여럿이면 **값이 있는 행**(per_m2_sale 또는 avg_sale)이
+     먼저고, 같으면 출처 순(reb > kb > crawl). 예전엔 출처 순만 봐서 빈 reb 행이 멀쩡한
+     kb 행을 가렸다(서울 25개 구 실측 — region-snapshot-pick.ts 헤더). */
+  for (const [id, snap] of pickBestSnapshotMap(data as RegionPriceDbRow[])) map.set(id, snap);
   if (!maybeTruncated) snapshotCache = { at: Date.now(), map };
   return map;
 }
@@ -403,30 +391,9 @@ export async function getRegionSnapshot(regionId: string): Promise<RegionMarketS
     .eq("region_id", regionId)
     .limit(10);
   if (error || !data) throwQueryFailure("market_region_price", error);
-  const priority: Record<string, number> = { reb: 2, kb: 1, crawl: 0 };
-  let best: RegionMarketSnapshot | null = null;
-  let bestPriority = -1;
-  for (const row of data) {
-    const src = String(row.source);
-    const p = priority[src] ?? 0;
-    if (p <= bestPriority) continue;
-    bestPriority = p;
-    best = {
-      regionId: String(row.region_id),
-      regionName: String(row.region_name),
-      source: src as MarketSource,
-      period: String(row.period),
-      perM2Sale: row.per_m2_sale ?? undefined,
-      avgSale: row.avg_sale ?? undefined,
-      medianSale: row.median_sale ?? undefined,
-      jeonseRatio: row.jeonse_ratio ?? undefined,
-      saleChangeMonthly: row.sale_change ?? undefined,
-      tradeCount: row.trade_count ?? undefined,
-      buySuperiority: row.buy_superiority ?? undefined,
-      jeonseSupply: row.jeonse_supply ?? undefined,
-    };
-  }
-  return best;
+  /* [1007] 값 있는 행 우선 → 출처 순 (getAllRegionSnapshots 와 같은 규칙, 같은 모듈) */
+  const best = pickBestSnapshotRow(data as RegionPriceDbRow[]);
+  return best ? snapshotFromRow(best) : null;
 }
 
 /** KOSIS 보조지표(인구·세대·미분양·보급률) 최신값 맵. 1h 캐시. */

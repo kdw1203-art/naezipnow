@@ -8,7 +8,10 @@ import { seoAlternates } from "@/lib/seo/alternates";
 /* ============================================================
    항목 F30 — 계약 전 체크리스트 & 표준계약·특약 가이드 (정보성 콘텐츠)
    단계별 확인사항 / 표준계약서 핵심 조항 / 자주 쓰는 특약 예시 /
-   등기부·건축물대장 확인 포인트. 실제 계약은 공인중개사·법무사 검토 권고.
+   등기부·건축물대장 확인 포인트. 실제 계약은 중개사무소 확인·설명과 관련 기관 확인 권고.
+   [1008 · J] 이 글은 30일 조회 0 — "내 계약일 기준 언제까지"를 말하지 못한다. 맨 위에 계산하는 도구
+   (/journey/contract 계약·잔금 일정표)로 가는 입구 한 줄을 둔다. 또 법률 서비스(법무사·변호사) 추천 금지
+   원칙(토스 입점 심사 · scripts/check-toss-review-freeze.mjs)에 맞춰 화면 문구에서 "법무사 검토" 권고를 뺐다.
    ============================================================ */
 
 const PATH = "/guides/contract";
@@ -197,7 +200,7 @@ export default function ContractGuidePage() {
   const howTo = howToJsonLd({
     name: "부동산 계약 단계별 확인사항 — 가계약부터 입주까지",
     description:
-      "가계약·본계약·중도금·잔금·입주 다섯 단계에서 각각 확인할 사항을 정리한 절차 안내입니다. 실제 계약은 공인중개사·법무사 검토를 권합니다.",
+      "가계약·본계약·중도금·잔금·입주 다섯 단계에서 각각 확인할 사항을 정리한 절차 안내입니다. 실제 계약 내용은 중개사무소와 관련 기관에 확인하세요.",
     path: PATH,
     steps: STAGES.map((s) => ({ name: s.name, text: s.desc })),
   });
@@ -222,9 +225,30 @@ export default function ContractGuidePage() {
           <p className="text-[13px] leading-[1.7] text-primary">
             아래 내용은 계약을 준비할 때 살펴볼 <b>일반적인 확인 포인트</b>예요.
             실제 계약서 작성과 특약 문구는 개별 사안에 따라 달라지므로, 서명 전
-            반드시 <b>공인중개사·법무사</b>의 검토를 받으세요.
+            <b>중개사무소의 확인·설명</b>을 꼼꼼히 듣고 필요한 내용은 관련 기관에 확인하세요.
           </p>
         </div>
+
+        {/* [1008 · J] 계산하는 도구로 가는 입구 한 줄 — 계약일·잔금일을 넣으면 날짜가 붙은 할 일 목록이 된다 */}
+        <Link
+          href="/journey/contract"
+          className="tile flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-3 no-underline"
+        >
+          <span className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary-soft text-primary">
+              <Icon name="calendar" size={18} />
+            </span>
+            <span className="min-w-0">
+              <span className="block t-body font-extrabold text-ink">내 계약일로 일정표 만들기</span>
+              <span className="block t-sub text-text-2">
+                계약일·잔금일을 넣으면 거래신고·취득세·등기·전입신고 기한까지 날짜순으로 정리해요
+              </span>
+            </span>
+          </span>
+          <span aria-hidden="true" className="tile-go shrink-0 t-body font-bold text-primary">
+            ›
+          </span>
+        </Link>
 
         {/* 1. 계약 단계별 확인사항 */}
         <StepDiagram />
@@ -344,7 +368,7 @@ export default function ContractGuidePage() {
         {/* 공통 면책 */}
         <p className="px-1 pb-2 text-[12px] leading-[1.7] text-text-3">
           본 안내는 일반 정보이며 법률·세무 자문이 아닙니다. 실제 거래·신고·세금은
-          공인중개사·법무사·세무사 등 전문가와 관련 기관 확인이 필요합니다.
+          중개사무소·세무 전문가와 관련 기관 확인이 필요합니다.
         </p>
       </div>
     </PageShell>

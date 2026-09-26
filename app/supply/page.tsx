@@ -17,10 +17,13 @@ import { SupplyClient } from "./SupplyClient";
       location.search 로 처리 — SSR 은 전국 전량을 그대로 그린다
    ③ 세션(getAdViewer)은 제거 — 세션을 읽는 순간 dynamic 으로 굴러떨어진다.
       광고는 plan={null} 서버 조각 + AdFreeGate 클라이언트 게이트(complex/[id] 선례)
-   수동 적재 데이터(자동 갱신 없음)라 600초면 충분히 신선하다.
+   [1009 · H 리뷰] 청약홈 분양공고 자동 적재(매일 06:00 UTC, lib/market/supply-ingest.ts)가 하루 한 번이라 600초면 충분히 신선하다.
    실패는 캐시에 눌러앉히지 않도록 ok 판별로 구별해 그린다 (dev-deals 교훈 —
    단, 실패 화면도 revalidate 주기로는 캐시되므로 600초를 넘기지 않는다). */
-export const revalidate = 600;
+/* [1010] 600 → 86,400(1일). 재료는 수동 적재 데이터(자동 갱신 없음)이고, 적재 크론
+   (app/api/cron/supply-ingest)이 끝나면 SOURCE_MAP.supply 가 "/supply" 를 즉시 비운다.
+   바뀌지 않는 날에는 크롤러가 몇 번을 와도 CDN HIT 이면 된다. */
+export const revalidate = 86_400;
 
 export const metadata: Metadata = {
   title: "아파트 입주 예정 물량 | 내집나우",
@@ -42,7 +45,8 @@ export default async function SupplyPage() {
   ]);
 
   // 갱신 기준 표기 — 하드코딩 대신 DB(apartment_supply) 최신 적재 시점(created_at).
-  // 자동 갱신 경로가 없는 수동 적재 데이터라는 사실을 함께 표기한다.
+  // [1009 · H 리뷰] 두 원천(청약홈 분양공고 매일 자동 · 2026-02 수동 업로드분)을 함께 적는다 — 예전 "자동 갱신 없음"은
+  // 자동 경로(#21)가 생기기 전 문구였다(운영 실측: 1,338행 중 983행이 청약홈 자동 적재, 마지막 적재 2026-09-20).
   const asOfLabel =
     dataAsOf && dataAsOf.length >= 7 ? `${dataAsOf.slice(0, 4)}.${dataAsOf.slice(5, 7)}` : null;
 
@@ -84,17 +88,17 @@ export default async function SupplyPage() {
         </div>
 
         {/* 정직 안내 배너 (초록 틴트) — 화면의 모든 수치가 실데이터가 된 뒤로는
-            "예시 구성" 이라고 적을 것이 없다. 남은 사실(수동 적재·자동 갱신 없음)만 적는다. */}
+            "예시 구성" 이라고 적을 것이 없다. 남은 사실(월 단위 · 두 원천 · 일정 변경 가능)만 적는다. */}
         <div
           className="rise-in mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-primary-soft px-4 py-3 t-sub"
           style={{ color: "var(--primary-strong)" }}
         >
           <span>
-            입주는 <b>월 단위</b>로 공개되는 자료라 일자는 알 수 없어요. 공개
-            입주예정물량 자료를 수동으로 적재한 데이터
-            {asOfLabel ? `(최근 적재 ${asOfLabel})` : ""}로 자동 갱신되지
-            않으며, 사업 진행·일정 변경에 따라 실제와 다를 수 있어요. 아래
-            “지난·전체 입주 예정 단지” 표는{" "}
+            입주는 <b>월 단위</b>로 공개되는 자료라 일자는 알 수 없어요. 청약홈
+            분양공고의 입주예정월(매일 자동 적재)과 공공데이터 입주예정물량(2026년 2월
+            수동 적재분)을 합친 자료예요{asOfLabel ? `(최근 적재 ${asOfLabel})` : ""}. 사업
+            진행·일정 변경에 따라 실제와 다를 수 있어요. 아래 “지난·전체 입주 예정
+            단지” 표는{" "}
             <a
               href={SOURCE_URL}
               target="_blank"

@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { getSessionLite } from "@/lib/client/session-lite";
+import { readAuthedHint } from "@/lib/auth/authed-hint";
 import { dedupeRecents } from "@/lib/recent-complexes/dedupe";
+import { useToast } from "@/app/components/toast/ToastProvider";
 
 /* ============================================================
    최근 본 단지 (호갱노노 벤치마크 — 재방문 동선 단축)
@@ -78,6 +80,9 @@ export function RecentComplexRecorder({
     );
     writeRecents(next);
     // B8 — 로그인 사용자면 서버에도 기록(크로스디바이스). 비로그인은 API가 no-op.
+    /* [1007 · V2a-2] 힌트 쿠키(nz_authed)가 없으면 아예 보내지 않는다 — 실측 /api/me/recent-complexes
+       203회/일의 대부분이 단지 페이지(8,907회/일, 거의 크롤러)마다 나가던 이 no-op POST 였다. */
+    if (!readAuthedHint()) return;
     void fetch("/api/me/recent-complexes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -93,6 +98,14 @@ export function RecentComplexRecorder({
    안의 짧은 공유 캐시로 접는다(getSessionLite 와 같은 방식). 실패는 캐시하지 않는다.
    삭제(remove)는 캐시를 비워 다음 마운트가 서버를 다시 본다. */
 const SERVER_RECENTS_TTL_MS = 30_000;
+
+/* [1009 · T 리뷰] 지운 칸의 서버 DELETE 는 되돌리기 창(토스트 5초 + 사라지는 0.2초)이 지난 뒤에 보낸다 — 창 안에서 되돌리면
+   서버는 건드리지 않아 원래 방문 시각(viewed_at)이 그대로 남는다. 예전엔 지우자마자 DELETE, 되돌리면 POST 였는데
+   POST 는 viewed_at 을 "지금"으로 기록해(API 가 시각을 받지 않는다) 다음 병합 때 순서가 바뀌었고, POST 가 DELETE 보다
+   먼저 닿으면 지워진 채로 남았다. 페이지를 떠나면(pagehide·언마운트) 미뤄 둔 DELETE 를 keepalive 로 바로 보낸다.
+   이 페이지 수명 동안 지운 id 는 서버 병합에서도 빼 둔다(DELETE 가 닿기 전 GET 이 되살리지 않게). */
+const UNDO_WINDOW_MS = 5_500;
+const removedIds = new Set<string>();
 let serverRecentsCache: { at: number; promise: Promise<{ items?: RecentComplex[] } | null> } | null = null;
 function fetchServerRecents(): Promise<{ items?: RecentComplex[] } | null> {
   if (serverRecentsCache && Date.now() - serverRecentsCache.at < SERVER_RECENTS_TTL_MS) {
@@ -135,6 +148,8 @@ export function useRecentComplexes(
   /** 서버 병합 응답 전인지 — 빈 목록과 "아직 못 불러옴"을 구분하기 위함 */
   loading: boolean;
   remove: (id: string) => void;
+  /** [1009 · T] 방금 지운 칸을 되살린다(토스트 "되돌리기") — 원래 자리(시각)로 */
+  restore: (item: RecentComplex) => void;
 } {
   const [items, setItems] = useState<RecentComplex[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,7 +164,8 @@ export function useRecentComplexes(
       .then((j: { items?: RecentComplex[] } | null) => {
         if (cancelled) return;
         if (!j || !Array.isArray(j.items) || j.items.length === 0) return;
-        const list = dedupeRecents([...j.items, ...local], MAX);
+        const server = j.items.filter((r) => !removedIds.has(r.id));
+        const list = dedupeRecents([...server, ...local], MAX);
         setItems(list);
         writeRecents(list);
       })
@@ -162,22 +178,75 @@ export function useRecentComplexes(
     };
   }, [enabled]);
 
-  const remove = (id: string) => {
-    serverRecentsCache = null; // [967 · 27] 지운 항목이 캐시에서 되살아나지 않게
-    setItems((prev) => {
-      const next = prev.filter((r) => r.id !== id);
-      writeRecents(next);
-      return next;
-    });
-    // B8 — 서버에서도 제거(로그인 시). 비로그인은 no-op.
-    void fetch("/api/me/recent-complexes", {
+  /* 미뤄 둔 서버 DELETE(id → 타이머)와 보낸 DELETE(id → 응답 약속) — 되돌리기가 순서를 지키게 */
+  const pendingDeletes = useRef(new Map<string, number>());
+  const sentDeletes = useRef(new Map<string, Promise<unknown>>());
+  const sendDelete = useCallback((id: string) => {
+    const t = pendingDeletes.current.get(id);
+    if (t !== undefined) window.clearTimeout(t);
+    pendingDeletes.current.delete(id);
+    const req = fetch("/api/me/recent-complexes", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
+      keepalive: true,
     }).catch(() => {});
+    sentDeletes.current.set(id, req);
+  }, []);
+  useEffect(() => {
+    const flush = () => {
+      for (const id of [...pendingDeletes.current.keys()]) sendDelete(id);
+    };
+    window.addEventListener("pagehide", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      flush();
+    };
+  }, [sendDelete]);
+
+  const remove = (id: string) => {
+    serverRecentsCache = null; // [967 · 27] 지운 항목이 캐시에서 되살아나지 않게
+    removedIds.add(id);
+    /* 상태 갱신 함수 밖에서 쓴다 — 토스트의 되돌리기는 이 컴포넌트가 사라진 뒤(다른 화면)에도 눌릴 수 있다 */
+    const next = readRecents().filter((r) => r.id !== id);
+    writeRecents(next);
+    setItems(next);
+    // B8 — 서버에서도 제거(로그인 시). [1007] 힌트 없으면 보내지 않는다. 되돌리기 창이 지난 뒤에 보낸다(위 주석).
+    if (!readAuthedHint()) return;
+    const prev = pendingDeletes.current.get(id);
+    if (prev !== undefined) window.clearTimeout(prev);
+    pendingDeletes.current.set(
+      id,
+      window.setTimeout(() => sendDelete(id), UNDO_WINDOW_MS),
+    );
   };
 
-  return { items, loading, remove };
+  const restore = (item: RecentComplex) => {
+    serverRecentsCache = null;
+    removedIds.delete(item.id);
+    const next = dedupeRecents([...readRecents(), item].sort((a, b) => b.at - a.at), MAX);
+    writeRecents(next);
+    setItems(next);
+    if (!readAuthedHint()) return;
+    const t = pendingDeletes.current.get(item.id);
+    if (t !== undefined) {
+      /* 창 안에서 되돌림 — 서버는 아직 그대로라 보낼 것이 없다(원래 viewed_at 유지) */
+      window.clearTimeout(t);
+      pendingDeletes.current.delete(item.id);
+      return;
+    }
+    /* 창이 지난 뒤(이미 DELETE 를 보냄) — 그 응답을 기다린 뒤 POST. 서버 viewed_at 은 지금으로 잡힌다(API 한계) */
+    const wait = sentDeletes.current.get(item.id) ?? Promise.resolve();
+    void wait.then(() =>
+      fetch("/api/me/recent-complexes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id, name: item.name, region: item.region }),
+      }).catch(() => {}),
+    );
+  };
+
+  return { items, loading, remove, restore };
 }
 
 /** 최근 본 단지 칩 행 — 기록이 있을 때만 렌더 */
@@ -190,7 +259,8 @@ export function RecentComplexChips({
       홈 "내 관심" 레일이 자식이 모두 비면 레일째 숨기기 위해. */
   onResolved?: (hasContent: boolean) => void;
 }) {
-  const { items, loading, remove } = useRecentComplexes();
+  const { items, loading, remove, restore } = useRecentComplexes();
+  const { showToast } = useToast();
   const onResolvedRef = useRef(onResolved);
   onResolvedRef.current = onResolved;
   useEffect(() => {
@@ -214,16 +284,20 @@ export function RecentComplexChips({
           >
             <Link
               href={complexHrefFromId(r.id)}
-              className="font-semibold text-text-1"
+              className="press font-semibold text-text-1"
             >
               {r.name}
               {r.region ? <span className="ml-1 text-text-3">{r.region}</span> : null}
             </Link>
+            {/* [1009 · T] 지우면 토스트 "되돌리기" — 확인 없이 지우는 대신 되살릴 길을 준다. ✕ 는 글 속 단추 기준 24px */}
             <button
               type="button"
-              onClick={() => remove(r.id)}
+              onClick={() => {
+                remove(r.id);
+                showToast("최근 본 단지에서 지웠어요", { label: "되돌리기", onClick: () => restore(r) });
+              }}
               aria-label={`최근 본 단지 ${r.name} 삭제`}
-              className="text-text-3"
+              className="-my-1 -mr-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-text-3"
             >
               ✕
             </button>

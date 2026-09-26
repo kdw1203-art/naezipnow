@@ -1,13 +1,9 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  loadBillingHistory,
-  PAYMENT_STATUS_LABEL,
-  PAYMENT_PLAN_LABEL,
-} from "@/lib/subscriptions/billing-history";
 import { BillingAutopayCard } from "./BillingAutopayCard";
-import { isTossBillingEnabled } from "@/lib/payments/toss-billing";
-import { getLiveSubscriptionByEmail, toPublic } from "@/lib/payments/billing-store";
-import { billingLabel } from "@/lib/subscriptions/labels";
+import { useSubscriptionViewer } from "./viewer";
 
 /**
  * 구독 요약 · 최근 결제 (요금제 화면 하단)
@@ -20,13 +16,45 @@ import { billingLabel } from "@/lib/subscriptions/labels";
  * 전체 결제 내역·영수증·구독 이력·규정이 거기 있다. 여기는 파는 화면 아래의 요약이라
  * 최근 3건과 자동결제 상태만 보여 주고 나머지는 구독 관리로 보낸다.
  *
- * 사실 정정(예전 헤더 주석): "갱신일(만료일)을 표시하지 않는 이유 — 저장되는 곳이 없다" 는
- * 옛 사실이다. 지금은 `app_users.plan_expires_at` 이 단건 이용권의 만료를,
- * `billing_subscriptions.next_charge_at` 이 자동결제의 다음 청구일을 저장한다. 둘 다 여기서 보여 준다.
+ * [1007] 클라이언트 컴포넌트로 — 페이지(/subscription)가 ISR 로 굳으면서 로그인한 사람에게만
+ * 보이던 이 패널은 세션 판정 뒤 GET /api/subscriptions/summary 로 받는다(예전 서버 컴포넌트가
+ * 읽던 것과 같은 함수·같은 필드, 라벨은 서버가 붙인다). 비로그인이면 아무것도 그리지 않는다
+ * (보여 줄 사실이 없다 — 예전과 같다). 조회 실패는 "내역 없음"과 반드시 구분한다.
  */
 
+type Payment = {
+  id: string;
+  orderId: string | null;
+  plan: string | null;
+  planLabel: string;
+  billingLabel: string;
+  amount: number | null;
+  status: string | null;
+  statusLabel: string | null;
+  receiptUrl: string | null;
+  at: string | null;
+};
+
+type Summary = {
+  plan: "free" | "pro" | "expert";
+  planLabel: string;
+  planExpiresAt: string | null;
+  ok: boolean;
+  payments: Payment[];
+  hasMore: boolean;
+  autopay: {
+    plan: string;
+    billing: string;
+    amount: number;
+    status: string;
+    cardCompany: string | null;
+    cardNumberMasked: string | null;
+    nextChargeAt: string | null;
+  } | null;
+  billingOpen: boolean;
+};
+
 const cell = "t-sub text-text-2";
-const RECENT = 3;
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -47,34 +75,61 @@ function fmtWon(n: number | null): string {
   return `${n.toLocaleString("ko-KR")}원`;
 }
 
-/* [966] 주기 표기는 lib/subscriptions/labels.billingLabel 단일 출처 */
-const fmtBilling = billingLabel;
+const STATUS_TONE: Record<string, string> = {
+  paid: "bg-primary-soft text-primary",
+  done: "bg-primary-soft text-primary",
+  requested: "bg-bg text-text-2",
+  failed: "bg-danger-soft text-danger",
+  cancelled: "bg-bg text-text-3",
+  canceled: "bg-bg text-text-3",
+  refunded: "bg-warning-soft text-warning",
+};
 
-export async function BillingPanel({
-  email,
-  currentPlan,
-  planExpiresAt = null,
-}: {
-  email: string;
-  currentPlan: "free" | "pro" | "expert";
-  /** [966] app_users.plan_expires_at — 단건 이용권의 만료(남은 일수 표기) */
-  planExpiresAt?: string | null;
-}) {
-  /* 최근 3건 + "더 있음" 판정용 1건 */
-  const { ok, payments: fetched } = await loadBillingHistory(email, RECENT + 1);
-  const payments = fetched.slice(0, RECENT);
-  const hasMore = fetched.length > RECENT;
-
-  /* 자동결제(토스 빌링) 구독 — 있으면 상태·다음 결제일을 보여 준다. next_charge_at 은
-     billing_subscriptions 에 실제로 저장되는 값이다. 빌링 미개방(전자계약 전) 상태에서는
-     조회 자체가 빈손이라 아무것도 안 그린다. */
-  const liveAutopay = await getLiveSubscriptionByEmail(email.trim().toLowerCase()).catch(
-    () => null,
+function StatusChip({ status, label }: { status: string | null; label: string | null }) {
+  if (!status) return <span className="text-text-3">—</span>;
+  const tone = STATUS_TONE[status] ?? "bg-bg text-text-2";
+  return (
+    <span className={`inline-block rounded-md px-1.5 py-px t-caption font-bold ${tone}`}>
+      {label ?? status}
+    </span>
   );
-  const autopay = liveAutopay ? toPublic(liveAutopay) : null;
-  const billingOpen = isTossBillingEnabled();
+}
 
-  const expiry = planExpiresAt ? new Date(planExpiresAt) : null;
+function supportHref(p: { orderId: string | null; amount: number | null; plan: string | null }): string {
+  const q = new URLSearchParams({ category: "payment" });
+  if (p.orderId) q.set("order", p.orderId);
+  if (p.amount != null) q.set("amount", String(p.amount));
+  if (p.plan) q.set("plan", p.plan);
+  return `/support?${q}`;
+}
+
+export function BillingPanel() {
+  const viewer = useSubscriptionViewer();
+  const [data, setData] = useState<Summary | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (viewer.status !== "authed") return;
+    let cancelled = false;
+    void fetch("/api/subscriptions/summary", { cache: "no-store" })
+      .then(async (r) => (r.ok ? ((await r.json().catch(() => null)) as Summary | null) : null))
+      .catch(() => null)
+      .then((j) => {
+        if (cancelled) return;
+        if (j && Array.isArray(j.payments)) setData(j);
+        else setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [viewer.status]);
+
+  if (viewer.status !== "authed") return null;
+
+  const currentPlan = data?.plan ?? viewer.plan;
+  const planLabelText = data?.planLabel ?? null;
+  const autopay = data?.autopay ?? null;
+  const expiry = data?.planExpiresAt ? new Date(data.planExpiresAt) : null;
   const expiryValid = expiry !== null && Number.isFinite(expiry.getTime());
   const daysLeft = expiryValid
     ? Math.max(0, Math.ceil((expiry!.getTime() - Date.now()) / 86_400_000))
@@ -82,24 +137,18 @@ export async function BillingPanel({
   const expiryLabel = expiryValid
     ? expiry!.toLocaleDateString("ko-KR", { month: "long", day: "numeric", timeZone: "Asia/Seoul" })
     : null;
-
-  const supportHref = (p: { orderId: string | null; amount: number | null; plan: string | null }) => {
-    const q = new URLSearchParams({ category: "payment" });
-    if (p.orderId) q.set("order", p.orderId);
-    if (p.amount != null) q.set("amount", String(p.amount));
-    if (p.plan) q.set("plan", p.plan);
-    return `/support?${q}`;
-  };
+  const payments = data?.payments ?? [];
 
   return (
     <section
       id="billing"
       className="rise-in-3 card mx-auto mt-8 w-full max-w-[1080px] scroll-mt-24 rounded-[18px] px-[22px] py-5"
+      aria-busy={!data && !failed}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="t-section text-ink">내 구독 · 최근 결제</h2>
         <span className="t-sub text-text-3">
-          현재 플랜 · {PAYMENT_PLAN_LABEL[currentPlan] ?? currentPlan}
+          {planLabelText ? `현재 플랜 · ${planLabelText}` : "현재 플랜 확인 중"}
           {currentPlan !== "free" && expiryLabel && !autopay
             ? ` · ${expiryLabel}까지${daysLeft !== null ? ` (${daysLeft}일 남음)` : ""}`
             : ""}
@@ -123,7 +172,11 @@ export async function BillingPanel({
       )}
 
       <div className="mt-3">
-        {!ok ? (
+        {!data && !failed ? (
+          <div className="rounded-xl bg-bg px-4 py-6 text-center t-sub text-text-3">
+            결제 내역을 불러오는 중…
+          </div>
+        ) : failed || !data?.ok ? (
           /* 조회 실패를 "내역 없음"으로 보여 주면, 결제한 사람이 자기 기록이
              사라졌다고 오해한다. 두 상태는 반드시 구분한다. */
           <div className="rounded-xl bg-warning-soft px-4 py-5 t-sub text-text-2">
@@ -145,12 +198,12 @@ export async function BillingPanel({
               >
                 <span className="flex min-w-0 flex-col">
                   <span className="t-body font-bold text-ink">
-                    {p.plan ? (PAYMENT_PLAN_LABEL[p.plan] ?? p.plan) : "—"} · {fmtBilling(p.billing)}
+                    {p.planLabel} · {p.billingLabel}
                   </span>
-                  <span className={cell}>{fmtDate(p.paidAt ?? p.requestedAt)}</span>
+                  <span className={cell}>{fmtDate(p.at)}</span>
                 </span>
                 <span className="flex items-center gap-2">
-                  <StatusChip status={p.status} />
+                  <StatusChip status={p.status} label={p.statusLabel} />
                   <span className="t-body font-extrabold text-ink t-num">{fmtWon(p.amount)}</span>
                   {p.receiptUrl ? (
                     <a
@@ -184,7 +237,7 @@ export async function BillingPanel({
         <span className="flex min-w-0 flex-col">
           <span className="t-body font-extrabold text-ink">전체 결제 내역 · 구독 관리</span>
           <span className="t-sub text-text-2">
-            {hasMore ? "이전 결제 더 보기 · " : ""}영수증 · 해지 · 카드 변경 · 구독 이력
+            {data?.hasMore ? "이전 결제 더 보기 · " : ""}영수증 · 해지 · 카드 변경 · 구독 이력
           </span>
         </span>
         <span className="shrink-0 t-body font-extrabold text-primary">→</span>
@@ -225,7 +278,7 @@ export async function BillingPanel({
             .
           </p>
         )}
-        {billingOpen && !autopay && currentPlan !== "free" && (
+        {data?.billingOpen && !autopay && currentPlan !== "free" && (
           <p className="t-sub text-text-2">
             매번 결제하기 번거롭다면{" "}
             <Link
@@ -242,25 +295,5 @@ export async function BillingPanel({
         </p>
       </div>
     </section>
-  );
-}
-
-const STATUS_TONE: Record<string, string> = {
-  paid: "bg-primary-soft text-primary",
-  done: "bg-primary-soft text-primary",
-  requested: "bg-bg text-text-2",
-  failed: "bg-danger-soft text-danger",
-  cancelled: "bg-bg text-text-3",
-  canceled: "bg-bg text-text-3",
-  refunded: "bg-warning-soft text-warning",
-};
-
-function StatusChip({ status }: { status: string | null }) {
-  if (!status) return <span className="text-text-3">—</span>;
-  const tone = STATUS_TONE[status] ?? "bg-bg text-text-2";
-  return (
-    <span className={`inline-block rounded-md px-1.5 py-px t-caption font-bold ${tone}`}>
-      {PAYMENT_STATUS_LABEL[status] ?? status}
-    </span>
   );
 }

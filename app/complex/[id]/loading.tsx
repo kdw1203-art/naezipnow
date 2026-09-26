@@ -35,26 +35,28 @@ export default function ComplexDetailLoading() {
         <Skeleton className="h-[26px] w-28 rounded-full" />
       </div>
 
-      {/* 네이비 히어로 — 단지명·지역·팔로우·최근 실거래 평균·스펙 칩 */}
+      {/* 네이비 히어로 — 단지명·지역·관심·최근 실거래가(대표가)·한 줄 문장·면적대 칩
+          [1009 · C] 대표가 블록이 "눈썹 · 큰 금액(t-display) · 결론 한 줄" 세 줄이 되어 32px 늘었다(하네스 실측 390px:
+          214~282px, 칩 줄 수에 따라) — 교체 순간 아래 블록이 덜 밀리게 중간값에 맞춘다. */}
       <div
         aria-hidden
-        className="brand-navy-card mt-3 h-[168px] rounded-[18px] px-4 py-4 sm:px-5 md:h-[176px]"
+        className="brand-navy-card mt-3 h-[232px] rounded-[18px] px-4 py-4 sm:px-5 md:h-[216px]"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <DarkBar className="h-[26px] w-2/3 max-w-[260px]" />
             <DarkBar className="mt-1.5 h-[18px] w-24" />
           </div>
-          <DarkBar className="h-[26px] w-[92px] rounded-full" />
+          <DarkBar className="h-10 w-[92px] rounded-full" />
         </div>
         <div className="mt-3">
-          <DarkBar className="h-[15px] w-[88px]" />
-          <DarkBar className="mt-1 h-[22px] w-40" />
+          <DarkBar className="h-[15px] w-40" />
+          <DarkBar className="mt-1.5 h-[26px] w-48" />
+          <DarkBar className="mt-2 h-[14px] w-60 max-w-full" />
         </div>
         <div className="mt-3 flex gap-1">
-          <DarkBar className="h-[26px] w-[88px] rounded-full" />
-          <DarkBar className="h-[26px] w-16 rounded-full" />
-          <DarkBar className="h-[26px] w-14 rounded-full" />
+          <DarkBar className="h-[26px] w-[120px] rounded-full" />
+          <DarkBar className="h-[26px] w-[120px] rounded-full" />
         </div>
       </div>
 
@@ -76,22 +78,23 @@ export default function ComplexDetailLoading() {
         ))}
       </div>
 
-      {/* 스펙 시트 — 제목 줄 + 항목 8줄(모바일 1열·sm 2열·lg 3열) */}
-      <div className="card mt-3 rounded-2xl px-4 py-3">
-        <div className="mb-1 flex items-baseline justify-between">
+      {/* [1009 · C] 단지 정보 격자 — 제목 줄 + 칸 6개(모바일 2열·sm 3열·lg 6열) + 주소 */}
+      <div className="card mt-3 rounded-2xl px-4 py-3.5">
+        <div className="flex items-baseline justify-between">
           <Skeleton className="h-[18px] w-20 rounded" />
-          <Skeleton className="h-[12px] w-10 rounded" />
+          <Skeleton className="h-[12px] w-12 rounded" />
         </div>
-        <div className="grid grid-cols-1 gap-x-5 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex h-[31px] items-center justify-between gap-3 border-b border-divider last:border-b-0"
-            >
-              <Skeleton className="h-[12px] w-12 rounded" />
-              <Skeleton className="h-[12px] w-28 rounded" />
+        <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-3 lg:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex flex-col gap-1">
+              <Skeleton className="h-[10px] w-10 rounded" />
+              <Skeleton className="h-[18px] w-20 rounded" />
             </div>
           ))}
+        </div>
+        <div className="mt-3 border-t border-divider pt-2.5">
+          <Skeleton className="h-[10px] w-8 rounded" />
+          <Skeleton className="mt-1 h-[16px] w-56 max-w-full rounded" />
         </div>
       </div>
 
@@ -109,10 +112,16 @@ export default function ComplexDetailLoading() {
             <Skeleton className="mt-2 h-3.5 w-5/6 rounded" />
             <Skeleton className="mt-2 h-3.5 w-2/3 rounded" />
           </div>
-          <div className="card h-[212px] rounded-[14px] px-[15px] py-3.5">
-            <Skeleton className="h-[12px] w-32 rounded" />
-            <Skeleton className="mt-2 h-[26px] w-24 rounded" />
-            <Skeleton className="mt-3 h-[132px] w-full rounded-lg" />
+          {/* [1009 · C] 실거래가 추이 — 제목 · 평형 칩 · 머리(월평균 큰 숫자) · 176px 그래프(PriceTrendLazy 와 같은 372px) */}
+          <div className="card h-[372px] rounded-[14px] px-[15px] py-3.5">
+            <Skeleton className="h-[16px] w-28 rounded" />
+            <div className="mt-2.5 flex gap-1.5">
+              <Skeleton className="h-[30px] w-20 rounded-full" />
+              <Skeleton className="h-[30px] w-20 rounded-full" />
+            </div>
+            <Skeleton className="mt-3 h-[12px] w-32 rounded" />
+            <Skeleton className="mt-1.5 h-[24px] w-40 rounded" />
+            <Skeleton className="mt-3 h-[176px] w-full rounded-lg" />
           </div>
         </div>
         {/* 데스크탑 우측 — 한눈에 보기 카드 */}

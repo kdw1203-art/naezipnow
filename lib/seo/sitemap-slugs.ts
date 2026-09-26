@@ -33,6 +33,9 @@ export const SITEMAP_SECTION_SLUGS = [
      싣는 기준은 상세 페이지의 색인 조건과 같다 — build-sitemap.ts 의
      loadNewsEntries() 주석 참고. */
   "news",
+  /* [1006] 이웃 글(이야기) 상세 /town/story/[id] — 뉴스와 라우트를 갈랐다(사람 글 전용).
+     지금은 0건이 사실이라 optional. 글이 생기는 즉시 실린다. */
+  "story",
 ] as const;
 
 export type SitemapSectionSlug = (typeof SITEMAP_SECTION_SLUGS)[number];

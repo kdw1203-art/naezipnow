@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { invalidateHomeData, invalidateTownFeed, invalidateRegionCodes } from "@/lib/cache/invalidate";
+import { catalogIdsForNoteRegion } from "@/lib/region/changed-region-paths";
+import {
+  scheduleProfileInvalidation,
+  invalidatePublicNoteRoutes,
+} from "@/lib/town/invalidate-town";
+import { invalidateComplexById } from "@/lib/complex/complex-invalidate";
 import { auth } from "@/auth";
 import { appendOnboardingStep } from "@/lib/onboarding/append-step";
 import { deleteNote, getNote, updateNote } from "@/lib/inspection/store-db";
@@ -12,6 +19,14 @@ import { parseDecision } from "@/lib/inspection/decision";
 /* getNote/updateNote 는 조회에 실패하면 던진다(예전엔 null 을 돌려줬다).
    null 을 그대로 받아 404 "없음"을 내보내면, 저장돼 있는 노트를 지워졌다고
    답하는 셈이다. 실패는 503 + Retry-After 로만 말한다. */
+/* [1010] 노트 메타의 단지 id — 단지 허브(7일 ISR) 무효화 키. 없으면 null(이름만 있는 옛 노트는
+   허브가 apt_name 이름 매칭으로 줍지만, 그 매칭으로는 어느 단지인지 여기서 단정할 수 없다). */
+function noteComplexId(meta: unknown): string | null {
+  if (!meta || typeof meta !== "object") return null;
+  const v = (meta as Record<string, unknown>).complexId;
+  return typeof v === "string" && v.trim() ? v.trim() : null;
+}
+
 async function loadNote(id: string) {
   try {
     return { ok: true as const, note: await getNote(id) };
@@ -127,8 +142,36 @@ export async function PATCH(
   // 공개 여부가 바뀌면 공개 피드를 즉시 갱신(ISR 대기 없이 바로 반영)
   if (exists.isPublic !== updated.isPublic) {
     revalidatePath("/notes");
-    revalidatePath("/");
+    invalidateHomeData(); // [1007] 홈 스냅샷 태그 + "/" — 생성 API 와 같은 규칙
+    invalidateTownFeed(); // [1007] 동네 피드·동네 홈 62곳(공개 노트 카드)
     revalidatePath(`/notes/${id}`);
+    /* [1010] 지역 허브(/region/[id], TTL 7일)의 "이 지역 공개 임장노트" — 공개↔비공개가
+       바뀌면 그 목록에서 들고 나므로 양쪽 지역 표기를 모두 비운다(수정으로 지역이 바뀌었을 수 있다). */
+    invalidateRegionCodes([
+      ...catalogIdsForNoteRegion(exists.region),
+      ...catalogIdsForNoteRegion(updated.region),
+    ]);
+  } else if (updated.isPublic) {
+    /* [1007] 공개 노트의 제목·판단이 바뀌면 피드 카드도 바뀐다 — 6시간 TTL 을 기다리지 않는다 */
+    invalidateTownFeed();
+    /* [1010] 지역 허브 카드에도 제목·요약이 실린다(TTL 7일) */
+    invalidateRegionCodes([
+      ...catalogIdsForNoteRegion(exists.region),
+      ...catalogIdsForNoteRegion(updated.region),
+    ]);
+  }
+  /* [1010] 단지 허브(7일 ISR)의 공개 임장노트 카드·개수 — 공개↔비공개 전환, 공개 노트의
+     제목·방문일 수정이 모두 그 화면을 바꾼다. 수정으로 단지가 바뀌었을 수 있어 양쪽을 비운다.
+     (비공개 노트끼리의 수정은 허브에 안 실리므로 건너뛴다.) */
+  if (exists.isPublic || updated.isPublic) {
+    invalidateComplexById(noteComplexId(exists.metadata));
+    invalidateComplexById(noteComplexId(updated.metadata));
+    /* [1010 · 동네축] 공개 노트 목록 화면(/notes/best · /notes/market · /town/library)과
+       지역 임장 가이드(/imjang/{slug}). 수정으로 지역이 바뀌었을 수 있어 **전후 지역을 모두**
+       넘긴다 — 옛 지역 가이드에서도 그 노트가 빠져야 한다. */
+    invalidatePublicNoteRoutes([exists.region, updated.region]);
+    /* [1010 · 동네축] 공개 프로필(/u/{handle}) 그리드 — 제목·공개 여부가 그 화면을 바꾼다 */
+    scheduleProfileInvalidation(exists.authorEmail);
   }
   return NextResponse.json({ note: updated });
 }
@@ -153,5 +196,19 @@ export async function DELETE(
   /* [969 · 20] 지운 노트의 행·댓글·관련 노트 풀 캐시를 비운다 — 안 비우면 공개 링크가
      5분간 살아 있는 것처럼 열린다(존재하지 않는 기록을 사실처럼 보이는 것) */
   invalidateNoteCache(id, "delete");
+  if (exists.isPublic) {
+    /* [1007] 공개였던 노트를 지우면 피드·동네 홈·홈 총계에서도 바로 빠져야 한다(6시간 TTL) */
+    revalidatePath("/notes");
+    invalidateTownFeed();
+    invalidateHomeData();
+    /* [1010] 지역 허브(TTL 7일)에서도 지워진 노트 카드가 바로 빠져야 한다 */
+    invalidateRegionCodes(catalogIdsForNoteRegion(exists.region));
+    /* [1010] 단지 허브(7일 ISR)의 임장노트 카드·개수에서도 바로 빠져야 한다 */
+    invalidateComplexById(noteComplexId(exists.metadata));
+    /* [1010 · 동네축] 공개 노트 목록 화면·지역 임장 가이드·공개 프로필에서도 바로 빠져야 한다 —
+       지운 노트가 하루~7일 동안 목록에 남으면 "지워지지 않았다" 로 읽힌다. */
+    invalidatePublicNoteRoutes([exists.region]);
+    scheduleProfileInvalidation(exists.authorEmail);
+  }
   return NextResponse.json({ ok: true });
 }

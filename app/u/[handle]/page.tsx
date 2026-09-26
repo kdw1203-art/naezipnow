@@ -25,7 +25,14 @@ import { ErrorState } from "../../components/ui/EmptyState";
    돌았다(x-vercel-cache: MISS, cache-control: private,no-store 실측). 이 화면의
    서버 렌더에는 사용자별 상태가 없다(auth·cookies 0건 — check-cache-policy 가
    회귀를 막는다). ISR 로 전환: 공개 프로필 — 사용자별 상태 없음(check-cache-policy 가 감시). 팔로워 수는 최대 15분 지연. */
-export const revalidate = 900;
+/* [1010] 900초 → 1일. 이 화면이 서버에서 그리는 값 셋이 전부 쓰기 지점으로 묶였다:
+     · 공개 노트 그리드 — app/api/inspection/notes/**(생성·공개 전환·수정·삭제)
+     · 팔로워 수 — POST·DELETE /api/me/follows
+     · 프로필 사진 — PATCH /api/me/profile(app_users.avatar_url)
+   셋 다 invalidateProfileForEmail(email) 로 `/u/{handle}`·`/u/{닉네임}` 을 비운다.
+   남은 자리(profiles.handle·full_name·bio·region)는 이 저장소에 쓰기 경로가 없다 —
+   생기면 같은 헬퍼를 붙일 자리다(보고서에 기록). */
+export const revalidate = 86_400;
 // 동적 세그먼트는 이게 없으면 "요청마다 서버 렌더"로 분류된다(2026-08 complex/[id] 실측)
 export function generateStaticParams() {
   return [];

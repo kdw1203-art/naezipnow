@@ -30,6 +30,17 @@ function pct(a: number, b: number): number {
   return ((a - b) / b) * 100;
 }
 
+/** "2025-07-01"·"202507" 두 기간 사이 달 수(b − a). 읽을 수 없으면 null */
+function monthsBetween(a: string, b: string): number | null {
+  const p = (v: string) => {
+    const m = /^(\d{4})-?(\d{2})/.exec(v);
+    return m ? Number(m[1]) * 12 + Number(m[2]) : null;
+  };
+  const x = p(a);
+  const y = p(b);
+  return x === null || y === null ? null : y - x;
+}
+
 export function buildMarketRead(input: {
   name: string;
   series: SeriesPoint[];
@@ -62,8 +73,10 @@ export function buildMarketRead(input: {
             : "등락이 섞인 흐름"
         : null;
     const dirWord = Math.abs(chg) < 0.05 ? "보합" : chg > 0 ? "상승" : "하락";
+    /* [1009 · 리뷰 RC] "12개월 동안"을 고정으로 적었는데 12칸 지역(종로)은 11개월 변화였다 — 실제 달 수로 */
+    const span = monthsBetween(first.period, last.period);
     const sentences = [
-      `${name} 아파트 매매가격지수는 ${ym(first.period)} 이후 12개월 동안 ${
+      `${name} 아파트 매매가격지수는 ${ym(first.period)} 이후 ${span !== null ? `${span}개월` : "이 기간"} 동안 ${
         dirWord === "보합" ? "사실상 보합" : `${Math.abs(chg).toFixed(1)}% ${dirWord}`
       }했습니다(한국부동산원 지수 기준).`,
     ];

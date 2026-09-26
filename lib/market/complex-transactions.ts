@@ -5,7 +5,7 @@
  */
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
-import { SEOUL_DISTRICTS, METRO_EXPLORE_DISTRICTS } from "@/lib/map/seoul-districts";
+import { SEOUL_DISTRICTS, METRO_EXPLORE_DISTRICTS, METRO_CITY_DISTRICTS } from "@/lib/map/seoul-districts";
 import { AREA_BANDS } from "@/lib/market/bands";
 import { APT_MASTER_SOURCE_KEY } from "@/lib/complex/apartment-master";
 
@@ -22,6 +22,9 @@ export interface ComplexTxRegion {
 const ALL_REGIONS: ComplexTxRegion[] = [
   ...SEOUL_DISTRICTS.map((d) => ({ id: d.id, name: d.name, city: d.city ?? "서울" })),
   ...METRO_EXPLORE_DISTRICTS.map((d) => ({ id: d.id, name: d.name, city: d.city ?? "서울" })),
+  /* [1007] 세종(구 없는 시)도 pair 비교 대상 — complex_pair_mv allowlist 에 "세종시"를 더한 것과 짝.
+     이 목록에 없으면 toPair() 가 버려 MV 에 있어도 페이지가 안 뜬다. */
+  ...METRO_CITY_DISTRICTS.filter((d) => d.id === "sejong").map((d) => ({ id: d.id, name: d.name, city: d.city ?? "세종" })),
 ];
 
 export function findComplexTxRegionById(regionId: string): ComplexTxRegion | null {

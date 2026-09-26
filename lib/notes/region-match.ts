@@ -141,3 +141,15 @@ export function rankRelatedNotes<T extends { id: string; region: string }>(
   scored.sort((x, y) => y.score - x.score || x.order - y.order);
   return scored.slice(0, Math.max(0, cap)).map((s) => s.n);
 }
+
+/**
+ * [1006] 내 노트 목록의 지역 칩 라벨 — 시·구까지만("안양시 동안구" · "서울 송파구"). 동은 너무
+ * 잘게 나뉘어 칩이 노트 수만큼 생긴다. 구조를 못 읽는 표기("판교")는 원문 그대로.
+ */
+export function regionGroupOf(region: string | null | undefined): string {
+  const raw = String(region ?? "").trim();
+  if (!raw) return "";
+  const { si, gu } = parseRegionParts(raw);
+  const label = [si, gu].filter(Boolean).join(" ");
+  return label || raw;
+}

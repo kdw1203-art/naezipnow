@@ -1,4 +1,5 @@
 import "server-only";
+import { postHref } from "@/lib/town/post-href";
 import { cache } from "react";
 import { getComplexRentHistoryByNames } from "@/lib/market/complex-rent";
 import { listQuestionsForComplex } from "@/lib/qna/store";
@@ -57,17 +58,33 @@ export const loadRegionRelative = cache((complexId: string) => getRegionRelative
 
 /* 입주물량은 지역 키 데이터 캐시(948) 위에 요청 내 dedupe 를 한 겹 더 얹는다. */
 /* [970 · B-02] 캐시 키에 시/도가 들어가므로 키 버전을 올린다(v1 은 자치구만으로 묶여 있었다) */
+/* [1010] 6시간 → 7일. 판단 근거(왜 이 캐시는 TTL 을 올릴 가치가 있는가):
+   ① 키가 (시군구, 시도) 라 **요청마다 달라지지 않는다** — 한 자치구의 단지 수백~수천 곳이
+      같은 항목 하나를 공유한다(전국 ≈250키). 즉 미스(= ISR Write) 1회에 히트가 수백 번이다.
+   ② 내용을 바꾸는 지점이 태그로 이미 이어져 있다 — 입주물량 적재 크론이
+      invalidateAfterIngest("supply") 로 "supply" 태그를 비운다(app/api/cron/supply-ingest).
+      그러니 TTL 은 신선도 장치가 아니라 안전망이고, 6시간은 "하루 1회도 안 바뀌는 자료"에
+      비해 너무 촘촘했다(키당 하루 4회 재생성 × 250키 = 하루 1,000건의 읽히지도 않는 쓰기).
+   ③ 반대로 키가 단지별이라 재사용이 없는 캐시는 TTL 을 올려도 소용이 없다 — 그래서
+      단지 축(live-complex-axes)은 [1007] 에 데이터 캐시에서 아예 뺐다(아래 loadAxisContext). */
 const loadSupplyDataCached = unstable_cache(
   (area: string, city: string) => getSupplyForAreaStrict(area, 24, undefined, city || null),
   ["upcoming-supply-v2"],
-  { revalidate: 21_600, tags: ["supply"] },
+  { revalidate: 604_800, tags: ["supply"] },
 );
 export const loadUpcomingSupply = cache((area: string, city: string) =>
   loadSupplyDataCached(area, city),
 );
 
+/* [1007] 단지 축(live-complex-axes-v1)은 여기서 **데이터 캐시에 쓰지 않는다**(complexDurable:false).
+   이 페이지는 ISR 6시간이고 그 캐시도 6시간이라, 페이지가 다시 렌더되는 순간엔 축 캐시도
+   같이 만료돼 있다 — 즉 허브 렌더에서 그 항목은 늘 미스였고, 하루 8,907 렌더가 읽히지 않는
+   항목 8,907개를 쓰고 있었다(ISR Writes). 지역 축(218개 키)은 단지들이 공유하므로 유지.
+   [1010] 이 판단은 그대로 둔다 — 키가 단지별인 캐시는 TTL 을 올려도 재사용이 생기지 않는다.
+   지역 축(lib/ai/live-context.ts live-region-axes, 6시간·market/supply/news/economy 태그)은
+   지역 화면과 함께 쓰는 키라 이번 판에서 손대지 않았다(보고서에 남김 — 지역 축 담당과 겹친다). */
 export const loadAxisContext = cache((complexId: string, regionName: string) =>
-  buildLiveToolContextCached(complexId, regionName || null),
+  buildLiveToolContextCached(complexId, regionName || null, { complexDurable: false }),
 );
 
 /* ── [968 · 1] 곁다리 섹션 공유 예산 3초 ─────────────────────────────────────
@@ -110,11 +127,13 @@ export function withSectionBudget<T>(work: Promise<T>): Promise<T> {
  * lib/data/section-budget.ts settle() 과 같은 구분(error 목록에 잡음을 섞지 않는다).
  */
 export function logSectionFailure(what: string, e: unknown): void {
+  /* [1007] DB 가 느린 몇 분 동안 렌더마다 섹션 수만큼 나오던 줄 — 섹션(what)별 1분 1건.
+     첫 건은 그대로, 접힌 건수는 다음 줄에 붙는다(lib/log/sample.ts). */
   if (e instanceof SectionBudgetExpiredError) {
-    logger.warn(`[section] ${what} 예산 초과로 접음: ${e.message}`);
+    logger.warnSampled(`section-budget:${what}`, `[section] ${what} 예산 초과로 접음: ${e.message}`);
     return;
   }
-  logger.error(`[complex] ${what} 조회 실패`, e);
+  logger.errorSampled(`section-fail:${what}`, `[complex] ${what} 조회 실패`, e);
 }
 
 /* ── [968 · 1] 임장노트·관련 기사 로더 — ComplexNotesNewsAi 에서 옮겨 옴 ────────
@@ -179,7 +198,7 @@ async function readInspectionNotes(
       failed: false,
     };
   } catch (err) {
-    logger.error("[complex] 임장노트 조회 실패", err);
+    logger.errorSampled("complex-notes", "[complex] 임장노트 조회 실패", err);
     return { notes: [], failed: true };
   }
 }
@@ -218,12 +237,13 @@ async function readRelatedNews(name: string, region: string): Promise<HubNewsRow
     return scored.map(({ p }) => ({
       id: String(p.id),
       title: String(p.title ?? ""),
-      href: `/town/news/${encodeURIComponent(String(p.id))}`,
+      /* [1007] 사람 글은 /town/story/, 뉴스는 /town/news/ — 판정 한 곳(lib/town/post-href) */
+      href: postHref(p),
       source: p.sourceName ? String(p.sourceName) : null,
       when: p.createdAt ? String(p.createdAt).slice(0, 10) : null,
     }));
   } catch (err) {
-    logger.error("[complex] 관련 기사 조회 실패", err);
+    logger.errorSampled("complex-news", "[complex] 관련 기사 조회 실패", err);
     return [];
   }
 }

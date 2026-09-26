@@ -18,12 +18,15 @@ import { Icon } from "./Icon";
 
 type Group = NavItem & { icon: string };
 
-/** 5 대분류 라벨 → 라인 아이콘 이름(MobileMenu 와 같은 표)
+/** 대분류 라벨 → 라인 아이콘 이름(MobileMenu 와 같은 표) — [1008 · J] 6 대분류(맨 앞 "내 집 마련", 묶음 8개 —
+ *  패널은 아래 세로 스크롤이라 잘리지 않는다)
  *  [1003] 요금제 타일이 NAV 의 다섯째로 들어온다 — GROUPS 는 NAV 를 그대로 펼치므로
  *  타일은 자동으로 생기고, 자리는 "동네" 다음·"마이" 앞이다(계정 묶음 바로 위라
  *  결제→구독 관리로 눈이 이어진다). 묶음이 6 → 7 이 되지만 패널은 세로 스크롤
  *  (max-h calc(100dvh-100px) · overflow-y-auto)이라 잘리지 않는다. */
 const CAT_ICON: Record<string, string> = {
+  /* [1008 · J] 여정의 끝이 "열쇠 받기"라 열쇠 — nav-data.ts 의 맨 앞 묶음 */
+  "내 집 마련": "key",
   임장노트: "notebook-pen",
   지도: "map",
   "AI 분석": "sparkles",

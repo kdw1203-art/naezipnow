@@ -25,7 +25,8 @@ export function ShareLinkButton({
   text,
   url,
   label = "공유",
-  copiedLabel = "복사됨 ✓",
+  /* [1009 · T] 문구 통일 — "복사됨 ✓" → "복사했어요"(체크는 아이콘이 한 번 튀며 말한다) */
+  copiedLabel = "복사했어요",
   copiedMessage = "링크를 복사했어요",
   className = "",
   variant = "chip",
@@ -82,7 +83,12 @@ export function ShareLinkButton({
       aria-label={variant === "icon" ? showLabel : undefined}
       title={variant === "icon" ? label : undefined}
     >
-      {variant !== "text" && <Icon name="share" size={14} />}
+      {variant !== "text" &&
+        (copied ? (
+          <Icon key="done" name="check" size={14} strokeWidth={2.4} className="njn-pop-once" />
+        ) : (
+          <Icon key="share" name="share" size={14} />
+        ))}
       {variant !== "icon" && showLabel}
     </button>
   );

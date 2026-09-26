@@ -21,7 +21,10 @@ import { relativeTimeLabel } from "@/lib/format/relative-time";
    revalidatePath 가 즉시 목록을 재생성한다(캐시 때문에 방금 쓴 질문이 안 보이면
    안 된다). 시각 라벨·복잡한 개수 계산은 서버 판과 동일 코드를 클라이언트에서
    같은 순서로 돈다. */
-export const revalidate = 300;
+/* [1010] 300초 → 1일. 목록이 바뀌는 지점은 질문 등록(POST /api/qna)과 답변 등록
+   (POST /api/qna/[id]/answers) 둘뿐이고, 둘 다 이미 revalidatePath("/qna") 를 부른다
+   (답변 수·"답변 완료" 배지가 목록에 실리기 때문). 5분 눈금은 크롤 1회당 오리진 1회였다. */
+export const revalidate = 86_400;
 
 export const metadata: Metadata = {
   title: "단지 Q&A | 내집나우",

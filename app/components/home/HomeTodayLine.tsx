@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getHomePersonal } from "@/lib/client/home-personal";
 import { useShellActive, type Shell } from "@/lib/client/viewport-shell";
 import type { KpiRegion, KpiTemp } from "./HomeKpiRow";
+import { todayRegionSentence, todayTradeSentence } from "./today-line";
 
 /* ============================================================
    오늘의 한 줄 — 배너형 회전. (A03·A15 + 소유자 지시 2026-08-26)
@@ -32,6 +33,15 @@ type Personal = {
     meta: string;
     /** [1002] 기준월 — 마지막 집계 폴백 카드는 한두 달 전일 수 있어 "지난달보다"로 못 쓴다 */
     periodLabel?: string | null;
+    /** [1009 · H] 변동률 원값·기준(HomeRegionCard 새 필드 — 옛 응답엔 없다) */
+    changePct?: number | null;
+    changeBasis?: "index" | "avg";
+    /* [1009 · H 리뷰] 거래 건수의 제 달·원천 · 등락의 달 · 가격 원천(월 집계 카드면 stale) — 옛 응답엔 없다 */
+    trades?: number | null;
+    tradesYm?: string | null;
+    tradesSource?: "reb" | "molit";
+    changeYm?: string | null;
+    stale?: boolean;
   } | null;
 };
 
@@ -42,16 +52,7 @@ const ROTATE_MS = 9000; // [950] 6→9초: 한 문장을 읽기 전에 넘어간
    문장이 바뀌면 "내가 누른 게 뭐였지"가 된다. 3초면 방금 읽던 문장을 마저 읽는다. */
 const RESUME_GRACE_MS = 3000;
 
-function regionSentence(r: KpiRegion): string {
-  const d = r.delta.replace(/[▲▼]/g, "").trim();
-  /* [950] 기준월을 문장에 적는다 — "지난달보다"만 있으면 9월에 읽는 사람은 8월 대비로
-     오해한다(스냅샷은 7월 지수). 숫자의 시점은 숫자의 일부다. */
-  const when = r.periodLabel ? `${r.periodLabel} ` : "";
-  const vs = r.periodLabel ? "전월보다" : "지난달보다";
-  if (r.tone === "up") return `${r.name} ${when}아파트 평균이 ${r.price}, ${vs} ${d} 올랐어요.`;
-  if (r.tone === "down") return `${r.name} ${when}아파트 평균이 ${r.price}, ${vs} ${d} 내렸어요.`;
-  return `${r.name} ${when}아파트 평균은 ${r.price}, 전월과 비슷해요.`;
-}
+/* [1009 · H] 지역 문장은 today-line.ts(순수 함수) — 변동 미상을 "비슷해요"로 말하던 것·지수/평균 기준 혼동을 고쳤다 */
 
 export function HomeTodayLine({
   region,
@@ -97,25 +98,39 @@ export function HomeTodayLine({
         price: mine!.regionMarket!.price,
         delta: mine!.regionMarket!.delta,
         tone: mine!.regionMarket!.tone,
-        tradeLabel: mine!.regionMarket!.meta.match(/([\d,]+건)/)?.[1] ?? null,
+        /* 새 응답은 trades(제 달·원천과 함께)만 쓴다 — 옛 응답(필드 없음)만 meta 의 "N건"을 "최근"으로 읽는다 */
+        tradeLabel:
+          typeof mine!.regionMarket!.trades === "number"
+            ? `${mine!.regionMarket!.trades.toLocaleString("ko-KR")}건`
+            : "trades" in mine!.regionMarket!
+              ? null
+              : (mine!.regionMarket!.meta.match(/([\d,]+건)/)?.[1] ?? null),
         href: `/map?region=${encodeURIComponent(mine!.regionMarket!.name)}`,
         periodLabel: mine!.regionMarket!.periodLabel ?? null,
+        changePct: mine!.regionMarket!.changePct,
+        changeBasis: mine!.regionMarket!.changeBasis,
+        changeYm: mine!.regionMarket!.changeYm ?? null,
+        tradesYm: mine!.regionMarket!.tradesYm ?? null,
+        tradesSource: mine!.regionMarket!.tradesSource,
+        priceKind: mine!.regionMarket!.stale ? "molit" : "reb",
       }
     : region;
 
   const slides = useMemo<Slide[]>(() => {
     const out: Slide[] = [];
-    if (shown) out.push({ key: "region", text: regionSentence(shown), href: shown.href });
+    if (shown) out.push({ key: "region", text: todayRegionSentence(shown), href: shown.href });
     if (temp)
       out.push({
         key: "temp",
         text: `이번 주 시장 온도는 ${temp.score}점이에요. ${temp.headline}`,
         href: "/analysis/temperature",
       });
-    if (shown?.tradeLabel)
+    /* [1009 · H 리뷰] 건수의 실제 달·원천으로만(today-line.ts) — 카드 기준월을 붙이면 다른 달 건수를 그 달 것처럼 말한다 */
+    const tradeText = shown ? todayTradeSentence(shown) : null;
+    if (tradeText)
       out.push({
         key: "trade",
-        text: `${shown.name}에서 최근 ${shown.tradeLabel}이 신고됐어요.`,
+        text: tradeText,
         href: "/analysis/price",
       });
     if (saleIndex && saleIndex !== "—")
@@ -208,7 +223,7 @@ export function HomeTodayLine({
       aria-labelledby="home-today"
       aria-roledescription="배너"
       /* [946 리브랜딩 · 홈 프리뷰 ③] 흰 카드 → 딥 네이비 + 심볼 워터마크.
-         글자는 한지색 — #F6F1E7 on #0B2545 ≈ 14:1. */
+         글자는 한지색(--on-dark) — 네이비(--brand-navy) 위 ≈ 14:1. */
       className="brand-navy-card overflow-hidden rounded-2xl px-[18px] py-4"
       onMouseEnter={hold}
       onMouseLeave={release}
@@ -223,9 +238,10 @@ export function HomeTodayLine({
         if (e.key === "ArrowLeft") go(i - 1);
       }}
     >
-      {/* 심볼 워터마크 — 처마+온점 한지색, 장식(aria-hidden) */}
+      {/* 심볼 워터마크 — 처마+온점 한지색, 장식(aria-hidden).
+          [1009 · H] 색은 토큰으로 — 예전 raw hex 두 곳(한지색)을 currentColor + text-on-dark(같은 값의 토큰)로. */}
       <svg
-        className="brand-wm"
+        className="brand-wm text-on-dark"
         width="150"
         height="140"
         viewBox="0 0 120 120"
@@ -234,11 +250,11 @@ export function HomeTodayLine({
         <path
           d="M14 46 C 38 64, 82 64, 106 46"
           fill="none"
-          stroke="#F6F1E7"
+          stroke="currentColor"
           strokeWidth="7"
           strokeLinecap="round"
         />
-        <circle cx="60" cy="86" r="8.5" fill="#F6F1E7" />
+        <circle cx="60" cy="86" r="8.5" fill="currentColor" />
       </svg>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <h2 id="home-today" className="t-sub font-extrabold" style={{ color: "var(--on-dark-muted)" }}>
@@ -247,12 +263,9 @@ export function HomeTodayLine({
         {/* 근거 배지 — 이 지역이 어디서 왔는지 밝힌다. 없으면 사용자는
             자기 지역이라고 오해하거나 "왜 강남?" 에서 멈춘다. */}
         <span
-          className="rounded-md px-1.5 py-px t-caption font-extrabold"
-          style={
-            personalized
-              ? { background: "rgba(246,241,231,.16)", color: "#F6F1E7" }
-              : { background: "rgba(246,241,231,.1)", color: "#9FB2CC" }
-          }
+          className={`rounded-md bg-on-dark-panel px-1.5 py-px t-caption font-extrabold ${
+            personalized ? "text-on-dark" : "text-on-dark-muted"
+          }`}
         >
           {personalized ? "내 관심지역" : "대표 지역"}
         </span>
@@ -302,7 +315,7 @@ export function HomeTodayLine({
                 className="block h-2 rounded-full transition-all duration-200"
                 style={{
                   width: n === i ? 20 : 8,
-                  background: n === i ? "var(--brand-red-on-dark)" : "#F6F1E7",
+                  background: n === i ? "var(--brand-red-on-dark)" : "var(--on-dark)",
                   opacity: n === i ? 1 : 0.42,
                 }}
               />

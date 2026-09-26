@@ -29,7 +29,14 @@
  */
 
 
-export type TuningField =
+/**
+ * [1008 · 리뷰 A-3] calc — 결과 숫자(공공데이터 자동 계산)가 이 값을 **실제로 쓴다**.
+ * 없으면 AI 해설(외부 모델)에만 들어가는 값이라, 화면은 "AI 해설도 받기"를 켰을 때만 보인다
+ * (예전엔 기본 실행에서 바꿔도 숫자가 그대로인데 "내 조건 반영"이라고 붙었다 — 죽은 입력).
+ */
+export type TuningField = TuningFieldBase & { calc?: boolean };
+
+type TuningFieldBase =
   | {
       kind: "number";
       key: string;

@@ -17,6 +17,11 @@ import {
 } from "@/lib/market/temperature";
 import { breadcrumbJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
+import { Explain } from "@/app/components/explain/Explain";
+import { TEMPERATURE_EXPLAIN } from "../../temperature-explain";
+import { weekSlots } from "../week-slots";
+import { ScoreDiff } from "../score-diff";
 
 /* ============================================================
    N11 — 지역별 시장 온도 주간 기록 · /analysis/temperature/[region]
@@ -37,7 +42,11 @@ import { seoAlternates } from "@/lib/seo/alternates";
    크롤러에게 광고하지는 않는다.
    ============================================================ */
 
-export const revalidate = 3600;
+/* [1010] 1h → 1일. 동적 세그먼트라 SOURCE_MAP(고정 경로)이 닿지 못하던 자리다 —
+   시장 온도 스냅샷 크론이 성공한 직후 라우트 전체를 비우도록 배선했다
+   (app/api/cron/market-temperature-snapshot/route.ts → invalidateTemperatureRegions).
+   주 1회 갱신되는 값이라 1일 TTL 은 안전망으로 충분하다. */
+export const revalidate = 86_400;
 /* 빈 배열 = "빌드 때 미리 만들 경로는 없다". 이 export 가 있어야 Next 가 이
    라우트를 ISR 로 분류한다 — 없으면 `revalidate` 를 적어 둬도 요청마다 서버
    렌더로 돌면서 Next 가 `private, no-cache, no-store` 를 실어 보내고, CDN 은
@@ -205,6 +214,7 @@ export default async function TemperatureRegionPage({
       : formatWeekLabel(latest.weekStart);
   const flow = streakSentence(history);
   const recent = [...history].slice(-12).reverse();
+  const slots = weekSlots(history);
 
   /* Dataset — 이 페이지가 실제로 보여 주는 주간 시계열을 데이터셋으로 기술한다.
      원출처(한국부동산원 지수·국토교통부 실거래)를 명시해 AI 가 우리 가공값을
@@ -287,18 +297,25 @@ export default async function TemperatureRegionPage({
 
       {/* 최신 주 요약 */}
       <section className="rise-in card mb-6 p-[var(--pad-card)]">
+        {/* [1009 · A] 결론(큰 숫자) → 지난주 대비 등락 → 한 줄 설명. 40px 임의 크기 → 램프(t-display) */}
         <div className="flex flex-wrap items-center gap-4">
-          <div className="text-[40px] font-extrabold leading-none text-ink">{latest.score}</div>
+          <div className="flex items-baseline gap-0.5">
+            <span className="t-display t-num font-extrabold text-ink">{latest.score}</span>
+            <span className="t-body font-bold text-text-3">/100</span>
+          </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[13px] font-extrabold text-ink">{latest.headline}</div>
+            <div className="inline-flex items-center gap-0.5 text-[13px] font-extrabold text-ink">
+              {latest.headline}
+              <Explain {...TEMPERATURE_EXPLAIN} title="시장 온도" />
+            </div>
             <div className="mt-0.5 text-[12px] text-text-3">
               {formatWeekKorean(latest.weekStart)}이 속한 주
               {diff !== null && (
                 <>
                   {" · "}
                   지난주 대비{" "}
-                  <strong className={diff > 0 ? "text-danger" : diff < 0 ? "text-primary" : undefined}>
-                    {diff === 0 ? "±0" : `${diff > 0 ? "+" : ""}${diff}`}점
+                  <strong className="font-extrabold">
+                    <ScoreDiff d={diff} sr="지난주보다" />
                   </strong>
                 </>
               )}
@@ -321,26 +338,24 @@ export default async function TemperatureRegionPage({
             최고 {maxScore} · 평균 {avgScore} · 최저 {minScore}
           </span>
         </h2>
-        <div className="mt-3 flex h-[120px] items-end gap-[3px] border-b border-line pb-px">
-          {history.map((h) => {
-            const isLast = h.weekStart === latest.weekStart;
-            return (
-              <div
-                key={h.weekStart}
-                title={`${formatWeekLabel(h.weekStart)} · ${h.score}점 · ${h.headline}`}
-                className="min-w-0 flex-1 rounded-t-[3px]"
-                style={{
-                  height: `${12 + Math.round((h.score / 100) * 100)}px`,
-                  background: isLast ? "var(--primary)" : "var(--primary-soft)",
-                }}
-              />
-            );
-          })}
-        </div>
-        <div className="mt-1 flex justify-between text-[10px] text-text-3">
-          <span>{formatWeekLabel(firstWeek)}</span>
-          <span>중립선 50점</span>
-          <span>{formatWeekLabel(latest.weekStart)}</span>
+        {/* [1009 · A] 막대마다 title= 말풍선(마우스를 올려야만 보임)이던 주간 추이 → 누르고 끌면 그 주 점수가 나오는
+            추세선(ScrubLine). 휴대폰에서는 막대 값을 읽을 길이 없었다. 선 색 = 기간 등락(상승 빨강·하락 파랑). */}
+        <div className="mt-3">
+          <ScrubLineLazy
+            values={slots.map((w) => w.row?.score ?? null)}
+            labels={slots.map((w) => formatWeekLabel(w.weekStart))}
+            fullLabels={slots.map((w) => `${formatWeekKorean(w.weekStart)} 주${w.row ? ` · ${w.row.headline}` : " · 기록 없음"}`)}
+            format="int"
+            suffix="점"
+            tone="auto"
+            height={150}
+            ariaLabel={`${region.label} 시장 온도 주간 추이`}
+            /* [1009 · A · 리뷰] 세로축을 0~100 으로 고정하고 중립 50 에 기준선 — 예전엔 데이터 범위로 늘어나
+               (안양 만안 64~75 가 바닥~꼭대기) "0~100 눈금 · 50이 중립" 각주와 그림이 달랐다 */
+            yDomain={[0, 100]}
+            refLine={{ value: 50, label: "중립 50" }}
+            footnote="세로축 0~100점 · 가로 점선 = 중립 50 · 그 주에 마지막으로 관측한 값 · 기록이 빠진 주는 점선으로 건너뜀"
+          />
         </div>
         {history.length < 4 && (
           <p className="mt-3 text-[12px] leading-[1.7] text-text-3">
@@ -356,7 +371,7 @@ export default async function TemperatureRegionPage({
           주별 기록{" "}
           <span className="text-[12px] font-medium text-text-3">최근 {recent.length}주</span>
         </h2>
-        <div className="mt-3 overflow-x-auto">
+        <div className="relative mt-3 overflow-x-auto">
           <table className="w-full min-w-[460px] text-left text-[13px]">
             <thead>
               <tr className="border-b border-border text-[12px] text-text-3">
@@ -374,16 +389,11 @@ export default async function TemperatureRegionPage({
                 return (
                   <tr key={h.weekStart} className="border-b border-border last:border-b-0">
                     <td className="py-2.5 text-text-2">{formatWeekLabel(h.weekStart)}</td>
-                    <td className="py-2.5 text-right">
+                    <td className="py-2.5 text-right tabular-nums">
                       <span className="font-extrabold text-ink">{h.score}</span>
                       {d !== null && (
-                        <span
-                          className="ml-1 text-[12px]"
-                          style={{
-                            color: d > 0 ? "var(--danger)" : d < 0 ? "var(--primary)" : "var(--text-3)",
-                          }}
-                        >
-                          {d === 0 ? "±0" : `${d > 0 ? "+" : ""}${d}`}
+                        <span className="ml-1 text-[12px]">
+                          <ScoreDiff d={d} unit="" sr="전주보다" />
                         </span>
                       )}
                     </td>

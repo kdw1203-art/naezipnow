@@ -10,7 +10,9 @@ import { CoverImage } from "@/app/components/CoverImage";
    가격은 표시하지 않는다: 가격은 오픈 후 판매자(작성자)가 등록할 때 정해진다.
    기준(#70): 사진 5장+ · 본문 2,000자+ (방문 인증은 우대 배지). */
 
-export const revalidate = 3600;
+/* [1010] 3600초 → 1일. 진열 대상은 공개 노트(사진 5장+·본문 2,000자+)뿐이고, 공개 노트가
+   바뀌는 지점이 invalidatePublicNoteRoutes() 로 이 경로를 비운다. */
+export const revalidate = 86_400;
 
 export const metadata: Metadata = {
   title: "임장 리포트 진열대 — 판매 오픈 준비 중 | 내집나우",

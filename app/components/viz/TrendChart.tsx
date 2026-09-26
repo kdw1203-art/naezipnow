@@ -8,6 +8,12 @@ import { lineGeometry, smoothPath } from "@/lib/viz/geometry";
  *
  * 서버 컴포넌트 · 순수 SVG(클라이언트 JS 0). 선은 currentColor 라 부모가 계열
  * 색을 정한다. 격자·축 라벨은 토큰 색(--divider·--text-3)을 직접 쓴다.
+ *
+ * [1009] 글자·끝점을 SVG 밖(HTML)으로 뺐다. 뷰박스(600폭)를 컨테이너에 늘리는
+ * preserveAspectRatio="none" 때문에 390px 화면에서 축 글자가 가로 58% 로 찌그러지고
+ * 끝점 원이 세로로 긴 타원이 됐다(실측). 선·면·격자는 늘어나도 괜찮으니 SVG 에 두고
+ * (선 굵기는 non-scaling-stroke), 모양이 망가지면 안 되는 글자와 점만 % 위치의 HTML 로 얹는다.
+ * 손가락으로 값을 읽어야 하는 자리(월별 가격 등)는 viz/ScrubLine 을 쓴다.
  */
 export function TrendChart({
   values,
@@ -46,57 +52,70 @@ export function TrendChart({
         (v, i, a) => a.indexOf(v) === i,
       )
     : [];
+  const pct = (x: number) => `${(x / W) * 100}%`;
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${height}`}
-      className={className}
-      role="img"
-      aria-label={ariaLabel ?? `추세 차트 — 최저 ${fmt(g.min)}, 최고 ${fmt(g.max)}, 현재 ${fmt(g.last)}`}
-      preserveAspectRatio="none"
-      style={{ width: "100%", height }}
-    >
-      {/* 격자 — 값을 읽을 수 있게 하는 최소한. 선을 세면 눈금이 된다 */}
-      <g stroke="var(--divider)" strokeWidth="1" vectorEffect="non-scaling-stroke">
-        {Array.from({ length: bands + 1 }, (_, i) => {
-          const y = padT + (plotH / bands) * i;
-          return <line key={i} x1="0" y1={y} x2={W} y2={y} />;
-        })}
-      </g>
-      <g transform={`translate(0 ${padT})`}>
-        <path d={`${d} L${W} ${plotH} L0 ${plotH} Z`} fill="currentColor" fillOpacity="0.1" />
-        <path
-          d={d}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-        {/* 끝점 — "지금 값"의 위치. 링을 하나 더 둘러 배경 위에서도 보이게 한다 */}
-        <circle cx={last.x} cy={last.y} r="5" fill="var(--surface)" />
-        <circle cx={last.x} cy={last.y} r="3" fill="currentColor" />
-      </g>
+    <div className={`relative w-full ${className ?? ""}`} style={{ height }}>
+      <svg
+        viewBox={`0 0 ${W} ${height}`}
+        role="img"
+        aria-label={ariaLabel ?? `추세 차트 — 최저 ${fmt(g.min)}, 최고 ${fmt(g.max)}, 현재 ${fmt(g.last)}`}
+        preserveAspectRatio="none"
+        className="absolute inset-0 block"
+        style={{ width: "100%", height }}
+      >
+        {/* 격자 — 값을 읽을 수 있게 하는 최소한. 선을 세면 눈금이 된다 */}
+        <g stroke="var(--divider)" strokeWidth="1" vectorEffect="non-scaling-stroke">
+          {Array.from({ length: bands + 1 }, (_, i) => {
+            const y = padT + (plotH / bands) * i;
+            return <line key={i} x1="0" y1={y} x2={W} y2={y} vectorEffect="non-scaling-stroke" />;
+          })}
+        </g>
+        <g transform={`translate(0 ${padT})`}>
+          <path d={`${d} L${W} ${plotH} L0 ${plotH} Z`} fill="currentColor" fillOpacity="0.1" />
+          <path
+            d={d}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        </g>
+      </svg>
+      {/* 끝점 — "지금 값"의 위치. HTML 이라 늘어나도 원이다 */}
+      <span
+        aria-hidden="true"
+        className="trend-end"
+        style={{ left: pct(last.x), top: padT + last.y }}
+      />
       {/* 최고·최저를 왼쪽 위/아래에 붙인다 — 축 눈금 대신 범위만 알려 준다 */}
-      <text x="4" y={padT + 10} fill="var(--text-3)" fontSize="11" fontWeight="700">
+      <span aria-hidden="true" className="trend-lab font-bold" style={{ left: 4, top: padT }}>
         {fmt(g.max)}
-      </text>
-      <text x="4" y={padT + plotH - 2} fill="var(--text-3)" fontSize="11" fontWeight="700">
+      </span>
+      <span aria-hidden="true" className="trend-lab font-bold" style={{ left: 4, top: padT + plotH - 16 }}>
         {fmt(g.min)}
-      </text>
-      {tickIdx.map((i) => (
-        <text
-          key={i}
-          x={i === 0 ? 4 : i === (labels?.length ?? 1) - 1 ? W - 4 : W / 2}
-          y={height - 5}
-          textAnchor={i === 0 ? "start" : i === (labels?.length ?? 1) - 1 ? "end" : "middle"}
-          fill="var(--text-3)"
-          fontSize="11"
-        >
-          {labels?.[i]}
-        </text>
-      ))}
-    </svg>
+      </span>
+      {tickIdx.map((i) => {
+        const lastTick = i === (labels?.length ?? 1) - 1;
+        return (
+          <span
+            key={i}
+            aria-hidden="true"
+            className="trend-lab"
+            style={
+              i === 0
+                ? { left: 4, bottom: 2 }
+                : lastTick
+                  ? { right: 4, bottom: 2 }
+                  : { left: "50%", bottom: 2, transform: "translateX(-50%)" }
+            }
+          >
+            {labels?.[i]}
+          </span>
+        );
+      })}
+    </div>
   );
 }

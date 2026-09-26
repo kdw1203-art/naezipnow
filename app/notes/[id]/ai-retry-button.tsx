@@ -85,6 +85,7 @@ export function AiRetryButton({
 
   return (
     <div className="mt-2 flex flex-col gap-2">
+      {/* [1005] 역할 알약·실행 버튼 모두 탭 목표 40px — 예전 26px 알약은 엄지로 옆 것이 눌렸다 */}
       <div className="flex flex-wrap gap-1.5">
         {ROLE_OPTIONS.map((o) => {
           const active = role === o.role;
@@ -94,7 +95,8 @@ export function AiRetryButton({
               type="button"
               disabled={busy}
               onClick={() => setRole(o.role)}
-              className={`rounded-full px-2.5 py-1 text-[12px] font-bold disabled:opacity-60 ${
+              aria-pressed={active}
+              className={`inline-flex min-h-[40px] items-center rounded-full px-3 py-1 t-sub font-bold disabled:opacity-60 ${
                 active
                   ? "bg-white/20 text-ai-accent"
                   : "bg-white/5 text-white/70"
@@ -109,7 +111,8 @@ export function AiRetryButton({
         type="button"
         onClick={run}
         disabled={busy}
-        className="press inline-flex w-fit items-center rounded-lg bg-white/10 px-3 py-2 t-sub font-extrabold text-ai-accent disabled:opacity-60"
+        aria-busy={busy}
+        className="press inline-flex min-h-[40px] w-fit items-center rounded-lg bg-white/10 px-3 py-2 t-sub font-extrabold text-ai-accent disabled:opacity-60"
       >
         {busy ? "AI 정리 중…" : "AI 다시 정리하기"}
       </button>

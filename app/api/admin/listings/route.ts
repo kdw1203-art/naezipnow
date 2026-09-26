@@ -16,9 +16,43 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { appendInboxNotification } from "@/lib/notifications/inbox";
 import { notifyNewListingSubscribers } from "@/lib/notifications/region-alerts";
 import { logger } from "@/lib/log";
+import { invalidateComplexByNames } from "@/lib/complex/complex-invalidate";
+import { invalidateListingsIndex } from "@/lib/listings/invalidate-listings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/**
+ * [1010] 매물 검수 결과가 단지 허브(/complex/[id], 7일 ISR)를 바꾼다.
+ *
+ * 허브는 승인·미숨김 매물만 그린다(lib/listings/store-db.ts listApprovedListings —
+ * status=approved · is_hidden=false · deleted_at null). 그래서 승인·반려·숨김·해제·
+ * 소유확인이 모두 그 단지의 "매물 N" KPI 와 매물 카드(소유확인 배지 포함)를 바꾼다.
+ * 조회는 한 번(id → region_name, complex_name)이고, 실패하면 비우지 않는다 —
+ * 모르는 단지를 찍어서 비우지 않는다. 7일 TTL 이 안전망이다.
+ *
+ * ※ 허브의 매물 조회 조건은 complex_name 하나뿐이라, 같은 이름의 단지가 다른 지역에도
+ *   있으면 그쪽 허브는 이 무효화로 갱신되지 않는다(등록 지역 것만 비운다).
+ */
+/* [1010] 이 쓰기들은 승인 목록(/listings, ISR 30분)도 바꾼다 — 숨김·소유확인 배지·승인/반려가
+   전부 그 목록의 서버 HTML 에 실린다. 허브를 비우는 같은 자리에서 함께 비운다. */
+async function invalidateListingComplexHub(id: string): Promise<void> {
+  invalidateListingsIndex();
+  try {
+    const sb = getServiceSupabase();
+    if (!sb) return;
+    const { data, error } = await sb
+      .from("listings")
+      .select("region_name, complex_name")
+      .eq("id", id)
+      .maybeSingle();
+    if (error || !data) return;
+    const row = data as { region_name?: string | null; complex_name?: string | null };
+    invalidateComplexByNames(row.region_name ?? null, row.complex_name ?? null);
+  } catch (e) {
+    logger.warn("[admin/listings] 단지 허브 재검증 실패(무시)", e);
+  }
+}
 
 export async function PATCH(req: NextRequest) {
   if (!(await isAdminApiRequest())) {
@@ -93,6 +127,7 @@ export async function PATCH(req: NextRequest) {
     } catch {
       // 알림 실패가 숨김 처리 결과를 되돌리지는 않는다.
     }
+    await invalidateListingComplexHub(id); // [1010] 허브의 "매물 N"·매물 카드
     return NextResponse.json({ ok: true, hidden });
   }
 
@@ -162,6 +197,7 @@ export async function PATCH(req: NextRequest) {
         // 알림 발송 실패는 소유확인 결과에 영향 주지 않는다.
       }
     }
+    await invalidateListingComplexHub(id); // [1010] 허브 매물 카드의 "소유확인" 배지
     return NextResponse.json({ ok: true });
   }
 
@@ -295,5 +331,8 @@ export async function PATCH(req: NextRequest) {
     // 알림 발송 실패는 검수 결과에 영향 주지 않는다.
   }
 
+  /* [1010] 승인이면 허브 매물 목록에 들고, 반려면(검수중이던 건) 목록이 그대로다 —
+     둘 다 "매물 N"이 바뀔 수 있으므로 한 번에 비운다. */
+  await invalidateListingComplexHub(id);
   return NextResponse.json({ ok: true });
 }

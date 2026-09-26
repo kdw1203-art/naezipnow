@@ -40,8 +40,12 @@ export function Header() {
            좌측 내비가 같은 NAV 를 읽는다) **간격만** 좁힌다: 묶음 사이 md 10px ·
            lg 16px · xl 부터 원래 24px. 실측 기준은 "어느 폭에서도 4칸 시절보다 넓어지지
            않을 것" 이다 — lg(1024px)에서 검색 필드(232px)까지 들어오는 구간이 가장 빠듯해
-           거기서 8px 을 돌려받는다. 아래 메뉴 항목 패딩도 같은 계단을 쓴다. */
-        className={`header-shell mx-auto flex max-w-[1240px] items-center gap-2 rounded-2xl px-3.5 md:gap-2.5 md:px-5 lg:gap-4 xl:gap-6 ${
+           거기서 8px 을 돌려받는다. 아래 메뉴 항목 패딩도 같은 계단을 쓴다.
+           [1008 · J] NAV 5 → 6(맨 앞 "내 집 마련", 69px). 실측(Playwright, 비로그인 — 로그인 아바타보다 "로그인·
+           회원가입"이 16px 넓어 가장 빠듯하다): 1024px 에서 16px 이 모자라 알림 벨(36→29px)·노트 쓰기(78→69px)가
+           눌려 찌그러졌다. lg 묶음 간격만 16 → 12px(칸 6개 × 4px = 24px 회수) — 1024px 에 8px 이 남고,
+           768·900px(검색 필드 없음)과 xl(24px) 은 그대로다. 라벨·글자 크기는 건드리지 않는다. */
+        className={`header-shell mx-auto flex max-w-[1240px] items-center gap-2 rounded-2xl px-3.5 md:gap-2.5 md:px-5 lg:gap-3 xl:gap-6 ${
           /* 모바일3 — 본문 밀도를 줄인 뒤(2026-08-03 토큰 축소) 헤더가 상대적으로
              커 보였다. 모바일만 한 단계 축소: 56px→48px. 44px 는 터치 타깃 하한선이라
              그 밑으로는 내리지 않는다(스크롤 축소도 48×.96=46px 에서 멈춘다). md+ 원복. */

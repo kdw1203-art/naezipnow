@@ -14,7 +14,9 @@ import { ComplianceNotice } from "@/app/components/ComplianceNotice";
    dev_partners 는 anon SELECT 가 없어 service-role 의존이다 — 그 부류의 실패는
    health.privilegedRead 가 감시하고, 이 페이지는 실패를 빈 상태("아직 없어요")로
    캐시하지 않도록 ok 판별로 구별해 그린다(dev-deals 본판과 같은 교훈). */
-export const revalidate = 300;
+/* [1010] 300 → 21,600(6시간). 목록을 바꾸는 쓰기는 업체 등록 하나뿐이고
+   (app/api/dev-deals/partner/route.ts POST) 그 자리에서 이 경로를 즉시 비운다. */
+export const revalidate = 21_600;
 
 export const metadata: Metadata = {
   /* [970 · C-25] 제목 접미 통일 `| 내집나우` */

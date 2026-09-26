@@ -4,13 +4,13 @@ import {
   computeAiSummary,
   getNote,
   updateNote,
-  type InspectionNote,
   type InspectionNoteMetadata,
   type InspectionScores,
   type InspectionSections,
 } from "@/lib/inspection/store-db";
 import { detectShellFromUserAgent } from "@/lib/platform-shell";
-import { appendRun, objectiveHash } from "@/lib/ai/presets-store";
+import { appendRun } from "@/lib/ai/presets-store";
+import { noteContentHash } from "@/lib/notes/content-hash";
 import {
   checkAiAnalysisQuota,
   quotaDeniedJson,
@@ -38,11 +38,7 @@ import {
 } from "@/lib/ai/market-insight";
 import { collectNoteGrounding } from "@/lib/inspection/note-grounding";
 import { FUNNEL_EVENT, recordFunnelEvent } from "@/lib/platform-funnel-events";
-import {
-  DEEP_DIVE_VERSION,
-  buildNoteDeepDive,
-  filledAxisCount,
-} from "@/lib/inspection/deep-dive";
+import { buildNoteDeepDive, filledAxisCount } from "@/lib/inspection/deep-dive";
 import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { invalidateNoteCache } from "@/lib/inspection/note-cache";
 
@@ -56,27 +52,8 @@ type InspectionAiCacheMeta = InspectionNoteMetadata & {
   deepDive?: Record<string, unknown> | null;
 };
 
-/**
- * 노트 내용 기반 해시 — 내용이 그대로면 재분석 대신 기존 결과를 반환한다.
- *
- * `deepDiveVersion` 을 같이 섞는다. 노트 내용이 안 바뀌어도 심화 분석의 축
- * 구성이 바뀌면 예전 캐시는 지금 화면이 기대하는 모양이 아니다. 버전을 빼면
- * 사용자는 "심화 분석이 안 나온다"를 보게 되고, 그건 실패를 미보유처럼
- * 보여 주는 것과 같다.
- */
-function noteContentHash(note: InspectionNote, intent: InspectionAiIntent): string {
-  return objectiveHash({
-    intent,
-    deepDiveVersion: DEEP_DIVE_VERSION,
-    title: note.title,
-    region: note.region,
-    visitDate: (note as { visitDate?: unknown }).visitDate ?? null,
-    scores: note.scores,
-    sections: note.sections,
-    checklist: note.checklist,
-    photos: note.photos,
-  });
-}
+/* [1005 · M3] noteContentHash 는 lib/notes/content-hash.ts 로 올렸다 — 상세 화면이 같은 규칙으로
+   "저장된 분석이 지금 내용의 것인가"를 판정한다(수정 저장 뒤 옛 요약이 새 것처럼 보이던 문제). */
 
 /**
  * 심화 분석을 프롬프트에 넣을 만큼만 줄인다. 해석에 필요한 것은 축 id·상태·

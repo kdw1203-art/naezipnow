@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "../../components/toast/ToastProvider";
@@ -46,14 +46,14 @@ export function NoteDetailActions({
         return;
       }
       if (!res.ok) {
-        showToast("삭제에 실패했어요. 잠시 후 다시 시도해 주세요");
+        showToast("삭제하지 못했어요 — 다시 눌러 주세요");
         return;
       }
       showToast("노트를 삭제했어요");
       router.push("/notes");
       router.refresh();
     } catch {
-      showToast("네트워크 오류가 발생했어요");
+      showToast("연결이 끊겼어요 — 다시 눌러 주세요");
     } finally {
       setDeleting(false);
     }
@@ -61,35 +61,49 @@ export function NoteDetailActions({
 
   /* 상대 경로 — ShareLinkButton 이 누를 때 현재 origin 으로 푼다(SSR 에서 window 불필요) */
   const shareUrl = `/notes/${encodeURIComponent(noteId)}?utm_source=share&utm_medium=note`;
-  const shareClass = "btn-soft px-3.5 py-2 t-body";
+  /* [1009 · T] 터치 화면에선 btn-soft 가 높이 44px(globals (pointer: coarse))인데 <a>(카드·수정)는 글자가 위에 붙어
+     옆 <button>(가운데)과 7px 어긋났다(실측 390px) → 모두 inline-flex 가운데 정렬. */
+  const shareClass = "btn-soft inline-flex items-center px-3.5 py-2 t-body";
 
-  const toggleVisibility = async () => {
-    if (busy) return;
+  /* [1009 · T] 공개 ↔ 비공개 — 결과 토스트에 "되돌리기"(같은 PATCH 를 반대로). 예전엔 전환하면 되돌릴 길이 버튼을 다시
+     찾아 누르는 것뿐이었고, 실패 문구는 원인을 말하지 않았다. 연타는 ref 로 막는다(토스트의 되돌리기는 다른 렌더에서 온다). */
+  const busyRef = useRef(false);
+  const setVisibility = async (nextPublic: boolean, undo = false) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     try {
       const res = await fetch(`/api/inspection/notes/${noteId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isPublic: !isPublic }),
+        body: JSON.stringify({ isPublic: nextPublic }),
       });
       if (res.status === 401) {
         router.push("/login");
         return;
       }
       if (!res.ok) {
-        showToast("전환에 실패했어요. 잠시 후 다시 시도해 주세요");
+        showToast("전환하지 못했어요 — 다시 눌러 주세요");
         return;
       }
-      const next = !isPublic;
-      setIsPublic(next);
-      showToast(next ? "공개 노트로 전환했어요" : "비공개로 전환했어요");
+      setIsPublic(nextPublic);
+      if (undo) {
+        showToast(nextPublic ? "다시 공개했어요" : "다시 비공개로 돌렸어요");
+      } else {
+        showToast(nextPublic ? "공개 노트로 전환했어요" : "비공개로 전환했어요", {
+          label: "되돌리기",
+          onClick: () => void setVisibility(!nextPublic, true),
+        });
+      }
       router.refresh();
     } catch {
-      showToast("네트워크 오류가 발생했어요");
+      showToast("연결이 끊겼어요 — 다시 눌러 주세요");
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };
+  const toggleVisibility = () => void setVisibility(!isPublic);
 
   return (
     <div className="relative flex flex-wrap items-center gap-2">
@@ -98,14 +112,14 @@ export function NoteDetailActions({
           "카드 덱"(/deck)과 헷갈렸고, 상단 줄에 primary 가 둘("지도에서 비교"와)이었다. */}
       <Link
         href={`/notes/${noteId}/card`}
-        className="btn-soft px-3.5 py-2 t-body font-bold no-underline"
+        className="btn-soft inline-flex items-center px-3.5 py-2 t-body font-bold no-underline"
       >
         {isOwner ? "🎨 나만의 카드 만들기" : "🎨 나만의 카드"}
       </Link>
       {isOwner && (
         <Link
           href={`/notes/${noteId}/edit`}
-          className="btn-soft px-3.5 py-2 t-body no-underline"
+          className="btn-soft inline-flex items-center px-3.5 py-2 t-body no-underline"
         >
           수정
         </Link>
@@ -115,26 +129,23 @@ export function NoteDetailActions({
           type="button"
           onClick={toggleVisibility}
           disabled={busy}
-          className="btn-soft px-3.5 py-2 t-body disabled:opacity-60"
+          className="btn-soft inline-flex items-center px-3.5 py-2 t-body disabled:opacity-60"
         >
           {busy ? "전환 중…" : isPublic ? "비공개로 전환" : "공개로 전환"}
         </button>
       )}
       {isPublic ? (
-        <ShareLinkButton
-          url={shareUrl}
-          label="공유 링크"
-          copiedLabel="복사됨 ✓"
-          copiedMessage="링크가 복사됐어요 — 붙여넣기만 하면 공유 완료"
-          variant="text"
-          className={shareClass}
-        />
+        <ShareLinkButton url={shareUrl} label="공유 링크" variant="text" className={shareClass} />
       ) : (
-        /* 비공개 — 시트·복사 대신 공개 전환 안내만(받아도 못 여는 링크는 만들지 않는다) */
+        /* 비공개 — 시트·복사 대신 공개 전환 안내만(받아도 못 여는 링크는 만들지 않는다).
+           [1009 · T] 토스트는 한 줄(390px 에서 잘리던 34자 문장 → 짧게) + 소유자에겐 바로 "공개로 전환" */
         <button
           type="button"
           onClick={() =>
-            showToast("비공개 노트는 링크를 받아도 볼 수 없어요 — 먼저 공개로 전환해 주세요")
+            showToast(
+              "비공개 노트는 링크로 볼 수 없어요",
+              isOwner ? { label: "공개로 전환", onClick: () => void setVisibility(true) } : undefined,
+            )
           }
           className={shareClass}
         >
@@ -146,7 +157,7 @@ export function NoteDetailActions({
         <button
           type="button"
           onClick={() => setConfirmDelete(true)}
-          className="btn-soft px-3.5 py-2 t-body text-danger"
+          className="btn-soft inline-flex items-center px-3.5 py-2 t-body text-danger"
         >
           삭제
         </button>

@@ -41,6 +41,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ToastState | null>(null);
   const timers = useRef<number[]>([]);
   const idRef = useRef(0);
+  /* [1009 · T] 지금 떠 있는 토스트 — 같은 문구가 연달아 오는지 렌더를 기다리지 않고 보려고(같은 틱의 두 호출도 잡는다) */
+  const current = useRef<ToastState | null>(null);
 
   const clearTimers = useCallback(() => {
     for (const t of timers.current) window.clearTimeout(t);
@@ -49,28 +51,45 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => clearTimers, [clearTimers]);
 
+  const put = useCallback((next: ToastState | null) => {
+    current.current = next;
+    setToast(next);
+  }, []);
+
   const dismiss = useCallback(() => {
     clearTimers();
-    setToast((prev) => (prev ? { ...prev, leaving: true } : prev));
-    timers.current.push(window.setTimeout(() => setToast(null), LEAVE_MS));
-  }, [clearTimers]);
+    const cur = current.current;
+    if (cur) put({ ...cur, leaving: true });
+    timers.current.push(window.setTimeout(() => put(null), LEAVE_MS));
+  }, [clearTimers, put]);
 
   const showToast = useCallback(
     (message: string, action?: ToastAction) => {
       const msg = message?.trim();
       if (!msg) return;
       clearTimers();
-      idRef.current += 1;
-      setToast({ id: idRef.current, message: msg, action, leaving: false });
+      const cur = current.current;
+      /* [1009 · T] 같은 문구를 연달아(설정 토글·담기 연타) — 새로 튀어 오르지 않고 **머무는 시간만** 늘린다.
+         예전엔 매번 새 id 로 다시 그려져 같은 토스트가 깜빡였다. 액션(되돌리기)은 가장 최근 것으로 갈아 끼운다 —
+         되돌리기는 마지막 동작을 되돌려야 한다. 스펙(동시 1개 · 3초/5초 · 탭바 위)은 그대로. */
+      const same =
+        cur !== null && !cur.leaving && cur.message === msg && (cur.action?.label ?? null) === (action?.label ?? null);
+      if (same && cur) {
+        put({ ...cur, action });
+      } else {
+        idRef.current += 1;
+        put({ id: idRef.current, message: msg, action, leaving: false });
+      }
       const hold = action ? HOLD_WITH_ACTION_MS : HOLD_MS;
       timers.current.push(
         window.setTimeout(() => {
-          setToast((prev) => (prev ? { ...prev, leaving: true } : prev));
+          const now = current.current;
+          if (now) put({ ...now, leaving: true });
         }, hold),
       );
-      timers.current.push(window.setTimeout(() => setToast(null), hold + LEAVE_MS));
+      timers.current.push(window.setTimeout(() => put(null), hold + LEAVE_MS));
     },
-    [clearTimers],
+    [clearTimers, put],
   );
 
   return (
@@ -90,7 +109,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             className="toast pointer-events-auto flex max-w-[calc(100vw-32px)] items-center gap-2.5 px-4 py-3 t-body font-semibold"
           >
             <span className="toast-dot" aria-hidden="true" />
-            <span className="min-w-0 truncate">{toast.message}</span>
+            {/* [1009 · T] 글자색을 여기서 준다 — globals 의 .toast 는 color: var(--brand-hanji) 인데 다크에선 그 토큰이
+                '배경용' #262119 로 바뀌어, 네이비(#0B2545) 위 글자가 사실상 안 보였다(대비 1.04:1 → 13.7:1). --on-dark 는
+                두 테마 모두 #F6F1E7 이라 라이트 모드 모습은 그대로다. */}
+            <span className="min-w-0 truncate text-on-dark">{toast.message}</span>
             {toast.action &&
               (toast.action.href ? (
                 <Link
@@ -103,8 +125,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 <button
                   type="button"
                   onClick={() => {
-                    toast.action?.onClick?.();
+                    /* [1009 · T] 먼저 닫고 동작한다 — 되돌리기가 결과 토스트("되돌렸어요")를 띄우면 그 새 토스트가
+                       뒤따르는 dismiss() 에 바로 닫히던 순서를 뒤집었다 */
+                    const act = toast.action;
                     dismiss();
+                    act?.onClick?.();
                   }}
                   className="toast-action shrink-0 whitespace-nowrap"
                 >

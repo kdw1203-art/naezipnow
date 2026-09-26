@@ -15,10 +15,18 @@
  * MOLIT 인증키 미설정 시 적재 0건으로 정상 반환(가짜 데이터 생성 없음).
  */
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { authorizeCron } from "@/lib/cron/authorize";
-import { ingestMolitTransactions } from "@/lib/market/molit-transactions";
+import { ingestMolitTransactions, type MolitIngestResult } from "@/lib/market/molit-transactions";
 import { ingestErrorMessage, logIngest } from "@/lib/market/store";
-import { invalidateAfterIngest } from "@/lib/cache/invalidate";
+import { invalidateAfterIngest, invalidateComplexIds, invalidatePathList } from "@/lib/cache/invalidate";
+import { invalidateImjangForTxRegions } from "@/lib/town/invalidate-town";
+import { complexCacheIdsFromNames } from "@/lib/complex/complex-invalidate";
+import {
+  buildComplexTxSlug,
+  findComplexTxRegionByTransactionName,
+} from "@/lib/market/complex-transactions";
+import { logger } from "@/lib/log";
 import { withBudget, CRON_WORK_BUDGET_MS } from "@/lib/async/with-budget";
 
 export const runtime = "nodejs";
@@ -108,7 +116,80 @@ async function handle(req: Request) {
     );
   }
 
-  return NextResponse.json({ ...run.value, finishedAt: new Date().toISOString() });
+  /* [1010] 적재가 실제로 끝난 순간에만 캐시를 비운다.
+     예전에는 이 호출이 **시간 초과 경로에만** 있었다 — 0행을 적재하고 죽은 실행은 비우고,
+     정상 적재한 실행은 안 비우는 반대 모양이었다. molit SOURCE_MAP(/ · /analysis* · /tx ·
+     /map · /data/records · /reports + "market" 태그)이 성공 경로에서 한 번도 돌지 않았다는 뜻이다.
+     TTL 을 7일로 넓히면서 이 무효화가 신선도의 유일한 장치가 되므로 성공 경로에도 붙인다.
+     단, **적재된 행이 있을 때만** 부른다 — 0행이면 집계가 달라질 수 없고(같은 판단이
+     ingestMolitTransactions 의 aggregates 주석에 있다), 괜히 비우면 크롤러가 올 때
+     재렌더만 만든다. 이번 판의 목적이 바로 그 재렌더를 없애는 것이다. */
+  let touchedStats: { revalidated: number } = { revalidated: 0 };
+  if (run.value.inserted > 0) {
+    invalidateAfterIngest("molit");
+    touchedStats = invalidateTouchedComplexes(run.value);
+  }
+
+  /* 응답에는 **개수만** 싣는다 — touchedComplexes 는 최대 2,000개라 그대로 실으면
+     크론 응답이 수십 KB 커진다(브리프: 응답 크기를 키우지 않는다). */
+  const { touchedComplexes, ...payload } = run.value;
+  return NextResponse.json({
+    ...payload,
+    touched: touchedComplexes.length,
+    touchedRevalidated: touchedStats.revalidated,
+    finishedAt: new Date().toISOString(),
+  });
+}
+
+/**
+ * [1010] 이번 적재가 실제로 바꾼 단지 화면만 비운다.
+ *
+ * 비우는 것:
+ *  · `/complex/{정규 슬러그}.{id}` · `/embed/complex/{id}` — invalidateComplexIds
+ *    (두 라우트가 서로 다른 id 표기로 캐시돼 있다 — lib/complex/complex-cache-paths.ts 주석)
+ *  · `/complex/tx/{단지명--지역id}` — 같은 실거래 행만으로 그려지는 화면.
+ *    내부 지역 목록(서울 25구 + 광역 탐색 구 + 세종)으로 되짚을 수 없는 표기는 건너뛴다.
+ *  · `/complex/compare` 와 `/complex/compare/[slug]` — 조합 화이트리스트(complex_pair_mv)와
+ *    표의 숫자가 모두 이 실거래에서 나온다. 조합은 **어느 단지가 낀 조합인지** 를 알려면
+ *    MV 를 한 번 더 읽어야 해서(운영 실측 669행), 대신 라우트 단위로 한 번에 비운다 —
+ *    호출 2회로 끝나고, 조합 페이지는 669장이라 재렌더 비용이 롱테일과 비교가 안 된다.
+ *
+ * 재검증 실패가 적재 결과를 되돌리면 안 된다 — 헬퍼가 이미 예외를 삼키지만 호출도 감싼다.
+ */
+function invalidateTouchedComplexes(result: MolitIngestResult): { revalidated: number } {
+  try {
+    const ids: string[] = [];
+    const txPaths: string[] = [];
+    for (const c of result.touchedComplexes) {
+      ids.push(...complexCacheIdsFromNames(c.region, c.name));
+      const region = findComplexTxRegionByTransactionName(c.region);
+      if (region) txPaths.push(`/complex/tx/${buildComplexTxSlug(c.name, region.id)}`);
+    }
+    /* 상한을 명시한다. 기본값(800)은 단지 4경로 × 200곳까지라 한 슬라이스를 덮지 못하고,
+       상한 없이 수천 건을 밀어 넣으면 요청 끝 플러시가 크론 응답을 잡아먹는다(헬퍼 주석).
+       2,000 = 단지 500곳 × 4경로 — 슬라이스 하나(시군구 16곳)의 상당 부분을 덮으면서
+       revalidatePath 호출 수가 네 자리 초반에 머문다. 남는 몫은 7일 TTL 이 받는다. */
+    const stats = invalidateComplexIds(ids, { budget: 2_000 });
+    invalidatePathList(txPaths, { budget: 1_000, label: "complex-tx" });
+    /* [1010 · 동네축] 지역 임장 가이드(/imjang/{slug})와 그 인덱스(/imjang)도 이 실거래만으로
+       그려진다(lib/imjang/guide.ts) — SOURCE_MAP.molit 에는 없던 자리다. 이 두 화면의 TTL 을
+       하루 → 7일로 늘리는 대신, 이번 슬라이스가 건드린 지역만 비운다. 슬러그 규칙은
+       /tx/{slug} 와 같은 한 줄(regionToSlug)이라 지역 표기를 그대로 넘긴다. */
+    invalidateImjangForTxRegions(result.touchedComplexes.map((c) => c.region));
+    revalidatePath("/complex/compare");
+    revalidatePath("/complex/compare/[slug]", "page");
+    if (stats.truncated || result.touchedTruncated) {
+      logger.warn(
+        "[molit-tx] 단지 무효화 일부 생략 — 남은 단지는 TTL(7일)로 처리",
+        `touched=${result.touchedComplexes.length}${result.touchedTruncated ? "(상한)" : ""}`,
+        `paths=${stats.revalidated}/${stats.requested}`,
+      );
+    }
+    return stats;
+  } catch (e) {
+    logger.warn("[molit-tx] 단지 재검증 실패(무시) — 적재 결과는 그대로", e);
+    return { revalidated: 0 };
+  }
 }
 
 export async function GET(req: Request) {

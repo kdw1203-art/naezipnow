@@ -150,15 +150,18 @@ test("모르는 id 는 화면을 죽이지 않고 기본 성격으로 떨어진�
   assert.equal(getToolPersona("ai-gap").id, "ai-gap");
 });
 
-test("CSS 변수 네 개가 나온다 — 색은 래퍼 한 곳에서만 준다", () => {
+test("CSS 변수 다섯 개가 나온다 — 색은 래퍼 한 곳에서만 준다([1008] 채움 전용 --tool-fill 추가)", () => {
   const v = personaVars(TOOL_PERSONAS["ai-timing"]);
   assert.deepEqual(Object.keys(v).sort(), [
     "--tool-accent",
     "--tool-accent-dark",
+    "--tool-fill",
     "--tool-soft",
     "--tool-soft-dark",
   ]);
   assert.equal(v["--tool-accent"], "#C2410C");
+  /* 채움은 다크에서도 라이트 액센트 — 흰 글자 대비를 지킨다 */
+  assert.equal(v["--tool-fill"], v["--tool-accent"]);
 });
 
 test("결과 블록 순서가 아키타입마다 다르다 — 12종이 전부 같은 순서였던 것을 가른다", () => {

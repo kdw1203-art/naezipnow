@@ -25,6 +25,7 @@
  *    행이 없을 때만 null 이다.
  */
 import { getReadOnlySupabase } from "@/lib/newui/supabase-read";
+import { summarizeReportMonths, type MonthRow } from "@/lib/reports/month-summary";
 
 export type ReportMonthSummary = {
   /** yyyymm */
@@ -40,7 +41,8 @@ export type ReportRegionRow = {
   txCount: number;
   avgKrw: number | null;
   perPyeongKrw: number | null;
-  /** 전월 대비 평균가 변동률(%) — 집계 테이블의 trend_delta_pct */
+  /** 평당가 평균(거래 건별 단순 평균)의 전월 대비 변동률(%) · 두 달 모두 10건 이상일 때만 — 집계 테이블의
+   *  trend_delta_pct(운영 DB 함수 refresh_market_region_monthly). 평균 거래가의 변동률이 아니다 */
   deltaPct: number | null;
 };
 
@@ -89,33 +91,34 @@ export async function listReportMonths(): Promise<ReportMonthSummary[]> {
         "NEXT_PUBLIC_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_ANON_KEY 도 설정되지 않았습니다.",
     );
   }
-  const { data, error } = await sb
-    .from("market_region_monthly")
-    .select("month, transaction_count, updated_at")
-    .eq("deal_type", "trade")
-    .eq("property_type", "apartment")
-    .limit(5000);
-  if (error) {
-    throw new Error(
-      `market_region_monthly 조회 실패 (월 목록) — ${error.message}` +
-        `${error.code ? ` [${error.code}]` : ""}` +
-        `${error.hint ? ` · 힌트: ${error.hint}` : ""}`,
-    );
+  /* [1009 · 리뷰 H] **끝까지 나눠 읽는다.** 예전엔 `.limit(5000)` 한 번이었는데 PostgREST 응답 상한이 1,000행이라
+     2,023행(9개월 × 약 250곳) 중 1,000행만 받았다 — 정렬도 없어 어느 달이 잘리는지 매번 달랐다. /reports 목록은
+     "2026년 3월 102개 지역 · 21,576건"(실제 252곳 47,517건)이라 적었고, 같은 함수를 쓰는 RSS·사이트맵·llms-full·
+     IndexNow 도 같은 숫자를 봤다. (month, region_code) 는 이 조건에서 유일해 쪽을 나눠도 겹치거나 빠지지 않는다. */
+  const PAGE = 1000;
+  const MAX_ROWS = 18_000; // 달 60개 × 지역 300곳
+  const rows: MonthRow[] = [];
+  for (let from = 0; from < MAX_ROWS; from += PAGE) {
+    const { data, error } = await sb
+      .from("market_region_monthly")
+      .select("month, transaction_count, updated_at")
+      .eq("deal_type", "trade")
+      .eq("property_type", "apartment")
+      .order("month", { ascending: false })
+      .order("region_code", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) {
+      throw new Error(
+        `market_region_monthly 조회 실패 (월 목록 ${from}~) — ${error.message}` +
+          `${error.code ? ` [${error.code}]` : ""}` +
+          `${error.hint ? ` · 힌트: ${error.hint}` : ""}`,
+      );
+    }
+    const page = (data ?? []) as MonthRow[];
+    rows.push(...page);
+    if (page.length < PAGE) break;
   }
-  if (!data) return [];
-  const byYm = new Map<string, ReportMonthSummary>();
-  for (const r of data) {
-    const ym = String(r.month ?? "");
-    if (!isValidYm(ym)) continue;
-    const cur = byYm.get(ym) ?? { ym, regionCount: 0, txCount: 0, updatedAt: null };
-    cur.regionCount += 1;
-    cur.txCount += Number(r.transaction_count ?? 0);
-    // 그 달 행들 중 가장 나중 갱신 시각 — 없으면 null 로 둔다(날짜를 지어내지 않는다).
-    const u = r.updated_at ? String(r.updated_at) : null;
-    if (u && (!cur.updatedAt || u > cur.updatedAt)) cur.updatedAt = u;
-    byYm.set(ym, cur);
-  }
-  return [...byYm.values()].sort((a, b) => b.ym.localeCompare(a.ym));
+  return summarizeReportMonths(rows);
 }
 
 /** 특정 월 리포트. 데이터 없으면 null (없는 달의 리포트를 만들지 않는다). */

@@ -8,11 +8,17 @@ import type { RegionMonthlyVolumeRow } from "@/lib/market/store";
 import { Icon } from "@/app/components/Icon";
 import { ToolHero, type HeroKpi } from "@/app/components/analysis/ToolHero";
 import { TrendChart } from "@/app/components/viz/TrendChart";
+import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
 import { Bars } from "@/app/components/viz/Bars";
 import { Gauge } from "@/app/components/viz/Gauge";
 import { Spark } from "@/app/components/viz/Spark";
 import { CountUp } from "@/app/components/motion/CountUp";
 import { SkBlock } from "@/app/components/ui/Skeleton";
+import { Explain } from "@/app/components/explain/Explain";
+import { Delta } from "@/app/components/num/Delta";
+import { DELTA_ARROW, DELTA_CLASS, DELTA_WORD, deltaDir } from "@/lib/format/delta";
+import { TEMPERATURE_EXPLAIN } from "../temperature-explain";
+import { monthWord, reportingDeadlineLabel, volumeCompare } from "./volume-window";
 import { TimingRegionSelect } from "./region-select";
 import { TimingComplexPicker } from "./complex-picker";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
@@ -43,6 +49,27 @@ function periodLabel(period: string): string {
   return m ? `${m[1].slice(2)}.${m[2]}` : period;
 }
 
+/** "2025-07-01" → "2025년 7월"(월간) · "2025년 7월 1일 주"(주간) — 훑는 동안 머리에 적는 긴 라벨 */
+function periodLong(period: string, weekly: boolean): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(period);
+  if (!m) return period;
+  return weekly ? `${m[1]}년 ${Number(m[2])}월 ${Number(m[3])}일 주` : `${m[1]}년 ${Number(m[2])}월`;
+}
+
+/** [1009 · A] 등락 KPI — ▲ 빨강·▼ 파랑·보합(±0.05% 미만), 숫자는 처음 볼 때 굴러 올라간다(CountUp).
+    예전엔 "+0.12%"(부호만, 색 없음)라 오름·내림이 한눈에 안 갈렸다. */
+function DeltaCount({ pct, decimals }: { pct: number; decimals: number }) {
+  const dir = deltaDir(pct);
+  if (!dir || dir === "flat") return <span className="delta-flat">보합</span>;
+  return (
+    <span className={DELTA_CLASS[dir]}>
+      <span aria-hidden="true">{DELTA_ARROW[dir]} </span>
+      <span className="sr-only">{DELTA_WORD[dir]} </span>
+      <CountUp value={Math.abs(pct)} decimals={decimals} suffix="%" />
+    </span>
+  );
+}
+
 /** 이번 달 yyyymm — 서버 값으로 하이드레이션 후 마운트에서 재계산(월 경계 대비) */
 function clientYyyymm(): string {
   const d = new Date();
@@ -70,16 +97,20 @@ export function TimingClient({
   defaultRegionId,
   initialData,
   builtYyyymm,
+  builtAt,
 }: {
   regions: RegionOption[];
   defaultRegionId: string;
   initialData: TimingData;
   builtYyyymm: string;
+  /** [1009 · A · 리뷰] 서버가 그린 시각(ms) — 신고 기한 판정의 첫 기준(서버·첫 렌더가 같은 값), 마운트 뒤 지금 시각으로 */
+  builtAt: number;
 }) {
   const [regionId, setRegionId] = useState(defaultRegionId);
   const [data, setData] = useState<TimingData>(initialData);
   const [status, setStatus] = useState<"ok" | "loading" | "error">("ok");
   const [nowYm, setNowYm] = useState(builtYyyymm);
+  const [nowAt, setNowAt] = useState(builtAt);
   /* 딥링크 ?complexId=/?apt= — SSR 은 없이 그리고, 마운트 후 읽어 피커를
      리마운트한다(initial* 는 마운트 시점에만 반영되므로 key 로 강제). */
   const [deep, setDeep] = useState<{ c: string | null; a: string | null }>({ c: null, a: null });
@@ -113,6 +144,7 @@ export function TimingClient({
 
   useEffect(() => {
     setNowYm(clientYyyymm());
+    setNowAt(Date.now());
     const usp = new URLSearchParams(window.location.search);
     setDeep({ c: usp.get("complexId"), a: usp.get("apt") });
     const initial = readRegionFromLocation(defaultRegionId, regions);
@@ -164,53 +196,64 @@ export function TimingClient({
      계열 토큰을 타게 한다. */
   const idxValues = trend?.points.map((p) => p.value) ?? [];
   const idxLabels = trend?.points.map((p) => periodLabel(p.period)) ?? [];
+  const weekly = trend?.periodType === "weekly";
+  const idxFull = trend?.points.map((p) => periodLong(p.period, weekly)) ?? [];
+  /* 기간 탭은 자료가 충분할 때만 — 월간은 13점(1년)뿐이라 탭이 없고, 주간(최대 27주)은 12주/전체 */
+  const idxRanges =
+    weekly && idxValues.length > 20
+      ? [
+          { key: "12w", label: "12주", last: 12 },
+          { key: "all", label: "전체", last: 0 },
+        ]
+      : undefined;
+  const maxVol = volume.reduce<{ month: string; count: number } | null>(
+    (m, v) => (m === null || v.count > m.count ? { month: v.month, count: v.count } : m),
+    null,
+  );
   const volValues = volume.map((v) => v.count);
   const volLabels = volume.map((v) => `${v.month.slice(2, 4)}.${v.month.slice(4)}`);
-  const lastVol = volume.length ? volume[volume.length - 1] : null;
-  const prevVol = volume.length > 1 ? volume[volume.length - 2] : null;
-  const volDeltaPct =
-    lastVol && prevVol && prevVol.count > 0
-      ? Math.round(((lastVol.count - prevVol.count) / prevVol.count) * 1000) / 10
-      : null;
+  /* [1009 · A · 리뷰] 등락은 신고가 끝난 달끼리만 — 신고 기한(말일 + 30일) 안의 달은 숫자만, "집계 중" */
+  const vc = volumeCompare(volume, new Date(nowAt));
+  const lastVol = vc.latest;
+  const latestOpen = Boolean(lastVol && vc.open.some((o) => o.month === lastVol.month));
+  const openWords = vc.open.map((o) => monthWord(o.month)).join("·");
+  const openUntil = vc.open.length > 0 ? reportingDeadlineLabel(vc.open[vc.open.length - 1].month) : null;
 
   /* 첫 화면이 "제목 → 빈 카드"였다. 이 도구가 내는 숫자를 먼저 세운다.
      값이 없으면 그 칸은 **아예 만들지 않는다**(빈 칸을 "—"로 채우지 않는다). */
   const kpis: HeroKpi[] = [];
   if (trend) {
     kpis.push({
-      label: trend.periodType === "weekly" ? "최근 주 변동" : "최근 월 변동",
-      value: (
-        <CountUp
-          value={trend.latestChangePct}
-          decimals={2}
-          prefix={trend.latestChangePct > 0 ? "+" : ""}
-          suffix="%"
-        />
-      ),
-      note: `${trend.points.length}구간 지수 기준`,
+      label: weekly ? "지난주 대비" : "지난달 대비",
+      value: <DeltaCount pct={trend.latestChangePct} decimals={2} />,
+      note: `매매가격지수 · ${trend.points.length}구간 기준`,
     });
     kpis.push({
       label: "기간 누적",
-      value: (
-        <CountUp
-          value={trend.cumulativePct}
-          decimals={1}
-          prefix={trend.cumulativePct > 0 ? "+" : ""}
-          suffix="%"
-        />
-      ),
-      note: `${idxLabels[0] ?? ""} → ${idxLabels[idxLabels.length - 1] ?? ""}`,
+      value: <DeltaCount pct={trend.cumulativePct} decimals={1} />,
+      note: `${idxLabels[0] ?? ""} 대비 ${idxLabels[idxLabels.length - 1] ?? ""}`,
     });
   }
   if (temp) {
-    kpis.push({ label: "시장 온도", value: `${temp.score}/100`, note: temp.headline });
-  }
-  if (lastVol) {
     kpis.push({
-      label: "최근 월 거래량",
+      label: "시장 온도",
+      value: `${temp.score}/100`,
+      note: temp.headline,
+      aside: <Explain {...TEMPERATURE_EXPLAIN} size={12} />,
+    });
+  }
+  if (vc.closedLast) {
+    kpis.push({
+      label: `${monthWord(vc.closedLast.month)} 거래량`,
+      value: <CountUp value={vc.closedLast.count} suffix="건" />,
+      delta: vc.closedDeltaPct === null || !vc.closedPrev ? null : { pct: vc.closedDeltaPct, label: monthWord(vc.closedPrev.month) },
+      note: openUntil ? `${openWords}은 집계 중 — ${openUntil}까지 신고가 들어와요` : "신고 기한이 지난 달끼리 비교",
+    });
+  } else if (lastVol) {
+    kpis.push({
+      label: `${monthWord(lastVol.month)} 거래량`,
       value: <CountUp value={lastVol.count} suffix="건" />,
-      delta: volDeltaPct === null ? null : { pct: volDeltaPct, label: "전월" },
-      note: "신고 지연으로 최근 2개월은 과소 집계",
+      note: openUntil ? `집계 중 — ${openUntil}까지 신고가 들어와요` : "",
     });
   }
 
@@ -307,11 +350,23 @@ export function TimingClient({
               <SkBlock h={168} />
             ) : trend ? (
               <>
-                <TrendChart
+                {/* [1009 · A] 누르고 끌면(마우스는 올리기만 해도) 그 달 지수와 "기간 시작 대비" 등락 — 토스증권 관례.
+                    늘어나던 TrendChart 는 그 시점 값을 읽을 길이 없었다. 색은 기간 등락(상승 빨강·하락 파랑). */}
+                <ScrubLineLazy
+                  key={selected.id}
                   values={idxValues}
                   labels={idxLabels}
+                  fullLabels={idxFull}
+                  format="num1"
+                  suffix="pt"
+                  tone="auto"
                   height={168}
+                  title="매매가격지수"
+                  caption={weekly ? "주간" : "월간"}
+                  ranges={idxRanges}
+                  defaultRange={idxRanges ? "all" : undefined}
                   ariaLabel={`${selected.label} 매매가격지수 추세`}
+                  footnote={`한국부동산원 ${weekly ? "주간" : "월간"} 아파트 매매가격지수 · 기준 시점 = 100`}
                 />
                 <p className="t-sub text-text-1">{trend.detail}</p>
               </>
@@ -328,7 +383,11 @@ export function TimingClient({
           {/* ── 시장 온도 ── */}
           <div className="ai-panel flex flex-col gap-3 rounded-[14px] p-4" data-reveal="">
             <div className="flex items-center justify-between gap-2">
-              <span className="t-section text-ai-text">시장 온도</span>
+              <span className="inline-flex items-center gap-0.5 t-section text-ai-text">
+                시장 온도
+                {/* 어두운 판 위 — 버튼 글자색을 판 토큰으로(기본 text-3 은 네이비 위에서 흐리다) */}
+                <Explain {...TEMPERATURE_EXPLAIN} className="text-ai-muted!" />
+              </span>
               <span className="t-caption rounded border border-line px-1.5 py-px font-bold text-ai-muted">
                 규칙 기반 · 실데이터 입력
               </span>
@@ -341,7 +400,7 @@ export function TimingClient({
                   <Gauge
                     value={temp.score}
                     label={String(temp.score)}
-                    caption="50이 중립"
+                    caption="100점 중 · 50이 중립"
                     size={116}
                     className="shrink-0 text-ai-accent"
                   />
@@ -372,13 +431,13 @@ export function TimingClient({
                 <div className="mt-auto flex flex-wrap gap-2 pt-1">
                   <Link
                     href="/methodology#temperature"
-                    className="t-sub font-bold text-ai-accent no-underline"
+                    className="inline-flex min-h-[24px] items-center t-sub font-bold text-ai-accent no-underline"
                   >
                     계산 공식 ›
                   </Link>
                   <Link
                     href={`/analysis/temperature/${selected.id}`}
-                    className="t-sub font-bold text-ai-accent no-underline"
+                    className="inline-flex min-h-[24px] items-center t-sub font-bold text-ai-accent no-underline"
                   >
                     주간 기록 ›
                   </Link>
@@ -397,7 +456,8 @@ export function TimingClient({
               <span className="t-section text-ink">{selected.label} 월별 매매 거래량</span>
               {lastVol && (
                 <span className="t-num t-sub text-primary">
-                  최근 {lastVol.count.toLocaleString("ko-KR")}건
+                  {/* [1009 · A · 리뷰] "최근 80건"은 신고 중인 달인지 말하지 않았다 */}
+                  {monthWord(lastVol.month)} {lastVol.count.toLocaleString("ko-KR")}건{latestOpen ? " · 집계 중" : ""}
                 </span>
               )}
               <span className="t-caption ml-auto rounded border border-line px-1.5 py-px font-bold text-text-3">
@@ -408,6 +468,35 @@ export function TimingClient({
               <SkBlock h={140} />
             ) : volume.length > 0 ? (
               <>
+                {/* [1009 · A] 막대만으로는 "그 달 몇 건"을 못 읽었다 — 최근 달·지난달 대비·가장 많았던 달을 숫자로 */}
+                {lastVol && (
+                  <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 t-sub text-text-2">
+                    {latestOpen && (
+                      <span>
+                        {volLabels[volLabels.length - 1]} <b className="t-num text-ink">{lastVol.count.toLocaleString("ko-KR")}건</b>{" "}
+                        <span className="t-caption text-text-3">집계 중({reportingDeadlineLabel(lastVol.month)}까지 신고)</span>
+                      </span>
+                    )}
+                    {vc.closedLast && (
+                      <span className="inline-flex flex-wrap items-baseline gap-x-1">
+                        <span>
+                          {monthWord(vc.closedLast.month)} <b className="t-num text-ink">{vc.closedLast.count.toLocaleString("ko-KR")}건</b>
+                        </span>
+                        {vc.closedDeltaPct !== null && vc.closedPrev && (
+                          <>
+                            <Delta pct={vc.closedDeltaPct} srContext={`${monthWord(vc.closedPrev.month)}보다`} />
+                            <span className="t-caption text-text-3">{monthWord(vc.closedPrev.month)} 대비 · 신고 마감된 달끼리</span>
+                          </>
+                        )}
+                      </span>
+                    )}
+                    {maxVol && (
+                      <span className="t-caption text-text-3">
+                        가장 많았던 달 {`${maxVol.month.slice(2, 4)}.${maxVol.month.slice(4)}`} {maxVol.count.toLocaleString("ko-KR")}건
+                      </span>
+                    )}
+                  </p>
+                )}
                 <Bars
                   values={volValues}
                   labels={volLabels}
@@ -416,8 +505,10 @@ export function TimingClient({
                   ariaLabel={`${selected.label} 월별 매매 거래량`}
                 />
                 <p className="t-caption text-text-3">
-                  이번 달과 직전 월은 신고 지연(계약 후 30일 이내 신고)으로 실제보다 적게
-                  보일 수 있어요. 가장 진한 막대가 이 구간의 최다 거래월입니다.
+                  {openUntil
+                    ? `${openWords}은 아직 신고 기한 전(계약 후 30일 안에 신고 · ${openUntil}까지)이라 실제보다 적게 보여요 — 등락은 신고가 끝난 달끼리만 비교해요. `
+                    : "모든 달이 신고 기한(계약 후 30일)을 지난 값이에요. "}
+                  가장 진한 막대가 이 구간의 최다 거래월입니다.
                   {nowYm && volume.some((v) => v.month >= nowYm) ? " (마지막 칸이 진행 중인 달)" : ""}
                 </p>
               </>
@@ -440,7 +531,12 @@ export function TimingClient({
               {selected.label}의 실거래 등록·시세 변동이 생기면 알려 드려요.
             </p>
             {trend && (
-              <span className="mt-1 text-success">
+              /* [1009 · A] 추세선 색 = 기간 등락(상승 빨강·하락 파랑·보합 회색) — 예전엔 늘 초록(도구 색) */
+              <span
+                className={`mt-1 ${
+                  deltaDir(trend.cumulativePct) === "up" ? "text-up" : deltaDir(trend.cumulativePct) === "down" ? "text-down" : "text-text-3"
+                }`}
+              >
                 <Spark values={idxValues} width={140} height={26} smooth />
               </span>
             )}

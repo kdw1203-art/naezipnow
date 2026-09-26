@@ -18,7 +18,11 @@ import { logger } from "@/lib/log";
 const RETRY_AFTER_SECONDS = 30;
 
 export function dbUnavailable(where: string, err: unknown, message?: string): NextResponse {
-  logger.error(`[db-unavailable] ${where}`, err);
+  /* [1007] DB 가 밀리는 몇 분 동안 이 줄이 **요청마다** 찍혔다(24h error 1,338 건의 주요
+     반복 문장). 위치(where)별 1분 1건으로 접는다 — 첫 건은 그대로 나가고, 접힌 건수는
+     다음 줄에 "(… n회 생략)" 으로 남는다(lib/log/sample.ts). 오류를 숨기는 게 아니라
+     같은 사실의 300번째 반복을 줄이는 것이다. */
+  logger.errorSampled(`db-unavailable:${where}`, `[db-unavailable] ${where}`, err);
   return NextResponse.json(
     { error: message ?? "지금은 처리할 수 없습니다. 잠시 후 다시 시도해 주세요." },
     { status: 503, headers: { "Retry-After": String(RETRY_AFTER_SECONDS) } },

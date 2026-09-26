@@ -99,7 +99,17 @@ export async function DELETE(req: NextRequest) {
   if (!session?.user?.email) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   const complexId = req.nextUrl.searchParams.get("complexId");
   if (!complexId) return NextResponse.json({ error: "complexId 가 필요합니다." }, { status: 400 });
-  await removeFromWatchlist(session.user.email, complexId);
+  /* [1009] 삭제 실패가 이제 던져진다(store-db 가 오류를 확인) — 원인을 말하는 503 으로 감싼다(다른 핸들러와 같은 방식).
+     감싸지 않으면 일반 500 HTML 이 나가 화면이 "알 수 없는 오류"로만 안내했다. */
+  try {
+    await removeFromWatchlist(session.user.email, complexId);
+  } catch (err) {
+    return dbUnavailable(
+      `관심 단지 삭제 실패 (complex=${complexId})`,
+      err,
+      "지금은 관심 단지에서 뺄 수 없어요. 잠시 후 다시 시도해 주세요.",
+    );
+  }
   void recordFunnelEvent(req, {
     eventName: FUNNEL_EVENT.WATCHLIST_REMOVE,
     userEmail: session.user.email,

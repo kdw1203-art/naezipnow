@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { invalidateTownFeed } from "@/lib/cache/invalidate";
+import { invalidateComplexById } from "@/lib/complex/complex-invalidate";
 import { safeAuth } from "@/lib/safe-auth";
 import { togglePostLike } from "@/lib/posts-store";
 import { lookupPost, postLookupErrorResponse } from "@/lib/community/post-lookup";
@@ -49,7 +51,11 @@ export async function POST(
     );
   }
 
-  revalidatePath(`/town/news/${postId}`); // ISR(600s) 상세의 좋아요 수 즉시 재생성
+  revalidatePath(`/town/story/${postId}`); // ISR 이야기 상세의 공감 수 즉시 재생성 [1006]
+  revalidatePath(`/town/news/${postId}`);
+  invalidateTownFeed(); // [1007] 피드 카드·동네 홈에도 공감 수가 실린다(ISR 600초·6시간)
+  /* [1010] 단지 허브(7일 ISR)의 이야기 카드는 "공감 N · 댓글 N"을 서버 렌더로 싣는다 */
+  invalidateComplexById(found.post.complexId);
 
   return NextResponse.json(result);
 }

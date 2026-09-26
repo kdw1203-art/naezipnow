@@ -56,7 +56,8 @@ export type RegionMonthlyRow = {
   transactionCount: number;
   avgDealAmountKrw: number | null;
   avgPricePerPyeongKrw: number | null;
-  /** 전월 대비 평균 거래가 변동률(%) */
+  /** 평당가 평균(거래 건별 단순 평균)의 전월 대비 변동률(%) · 두 달 모두 10건 이상일 때만 — 운영 DB 함수
+   *  refresh_market_region_monthly 의 trend_delta_pct(평균 거래가의 변동률이 아니다) */
   trendDeltaPct: number | null;
   /** 이 행이 마지막으로 갱신된 시각(ISO) */
   updatedAt: string | null;

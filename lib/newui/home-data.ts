@@ -31,16 +31,24 @@ import { getMortgageRates } from "@/lib/finance/mortgage-rates";
 import { SEOUL_DISTRICTS } from "@/lib/map/seoul-districts";
 import { isLabNoteLabel } from "@/lib/inspection/store-db";
 import { readRelatedTownPosts } from "@/lib/newui/board-posts";
+import { listHiddenPostIds } from "@/lib/moderation/reports-store";
+import { postAttachments } from "@/lib/community/attachments";
+import { isStoryPost } from "@/lib/town/post-href";
 import { logger } from "@/lib/log";
 import {
   CARD_REGIONS,
   CARD_REGION_MONTHLY_NAMES,
   deltaOf,
+  fillMissingRegionCards,
   formatEok,
   periodLabelOf,
   regionCardsFromMonthly,
+  applyCardSeries,
+  cardSeriesFromRows,
+  type CardSeries,
   type MonthlyRow,
 } from "@/lib/newui/home-region-fallback";
+import { briefingFromDeltas, briefingFromIndexRows } from "@/lib/newui/home-briefing";
 
 export type DeltaTone = "up" | "down" | "flat";
 
@@ -66,6 +74,30 @@ export interface HomeRegionCard {
    * 화면은 "마지막 집계" 라고 적는다. 없으면(undefined) 스냅샷 카드.
    */
   stale?: boolean;
+  /* ── [1009 · H] 표기 표준용 새 필드(기존 문자열 필드는 그대로 — /api/home/personal 등 소비자 호환) ── */
+  /** 시/도 — "서울" · "경기" */
+  city?: string;
+  /** 거래 건수 — 없으면 null. **어느 달·어느 원천인지는 tradesYm·tradesSource** (카드 기준월과 다를 수 있다) */
+  trades?: number | null;
+  /**
+   * [1009 · H 리뷰] trades 의 실제 달(yyyymm). 스냅샷 trade_count 는 스냅샷 기준월(지수 달, 예 202608)이 아니라
+   * 부동산원 월간 거래량 시계열의 **최신 달(예 202607)** 값이었다 — 남양주 "8월 거래 2,646건"은 7월 값. 그래서 스냅샷
+   * 값을 쓰지 않고 시계열(market_region_series trade_count)에서 제 달과 함께 싣는다. 모르면 null(화면은 "최근").
+   */
+  tradesYm?: string | null;
+  /** trades 원천 — "reb": 한국부동산원 월간 거래량 · "molit": 국토부 신고 월 집계(계약월 기준) */
+  tradesSource?: "reb" | "molit";
+  /** changePct 가 가리키는 달(yyyymm) — 카드 기준월(periodLabel)과 다르면 화면이 그 달을 적는다 */
+  changeYm?: string | null;
+  /** 전월 대비 변동률(%) 원값 — `delta` 문자열의 근거. 모르면 null(화면은 "변동 미상") */
+  changePct?: number | null;
+  /**
+   * 변동률이 무엇의 변화인가 — "index": 부동산원 매매가격지수 전월비(스냅샷 sale_change),
+   * "avg": 국토부 신고 실거래 **평당가 평균** 전월비(월 집계 trend_delta_pct — 운영 DB 함수 refresh_market_region_monthly,
+   * 두 달 모두 10건 이상일 때만 값, 거래 구성 변화 포함). 카드의 큰 숫자(평균 거래가)의 변화가 아니다.
+   * 같은 "▲ 1.2%"라도 뜻이 달라 화면이 기준을 적는다(표기 표준: 비교 기준 명시).
+   */
+  changeBasis?: "index" | "avg";
 }
 
 export interface HomeNoteItem {
@@ -85,6 +117,24 @@ export interface HomeNewsItem {
   source: string | null;
   /** YYYY.MM.DD */
   when: string | null;
+  /** [1007] 표시 시각(ISO) — source_published_at 없으면 created_at. <time dateTime> 용 */
+  publishedAt: string | null;
+}
+
+/**
+ * [1007 · P2] 홈 "동네이야기" 블록의 이웃 글 한 장 — 1006 이야기 카드(.story-*)의 축약.
+ * 뉴스(HomeNewsItem)와 **같은 배열**(readRelatedTownPosts, 5분 데이터 캐시)에서 isStoryPost 로
+ * 갈라 만든다 — 추가 조회 없음. link_only·숨김(신고 누적) 글은 뺀다(/town 피드와 같은 규칙).
+ */
+export interface HomeStoryItem {
+  id: string;
+  title: string;
+  author: string;
+  /** "서울 송파구" — 없으면 null */
+  region: string | null;
+  createdAt: string;
+  comments: number;
+  photos: number;
 }
 
 export interface HomePostItem {
@@ -154,7 +204,9 @@ export interface NewHomeData {
   regionsStale: boolean;
   notes: HomeNoteItem[];
   posts: HomePostItem[];
-  /** [950] 커뮤니티 글(posts)이 0건일 때 대신 보여 줄 자동수집 뉴스 3건 — 빈 방 대신 읽을거리 */
+  /** [1007] 최신 이웃 글 3건(사람의 기록) — 홈 동네이야기 블록. 0건이면 빈 상태(가짜 카드 없음) */
+  stories: HomeStoryItem[];
+  /** [950] 자동수집 뉴스 3건 — [1007] 홈 "오늘의 뉴스" 스트립(이야기와 다른 재질) */
   news: HomeNewsItem[];
   meetings: HomeMeetingItem[];
   reports: HomeReportItem[];
@@ -168,6 +220,8 @@ export interface NewHomeData {
     regions: boolean;
     notes: boolean;
     posts: boolean;
+    /** [1007] 이야기·뉴스는 같은 조회(readRelatedTownPosts)라 실패도 하나다 */
+    town: boolean;
     meetings: boolean;
     reports: boolean;
   };
@@ -185,6 +239,7 @@ export const EMPTY_NEW_HOME_DATA: NewHomeData = {
   regionsStale: false,
   notes: [],
   posts: [],
+  stories: [],
   news: [],
   meetings: [],
   reports: [],
@@ -194,6 +249,7 @@ export const EMPTY_NEW_HOME_DATA: NewHomeData = {
     regions: true,
     notes: true,
     posts: true,
+    town: true,
     meetings: true,
     reports: true,
   },
@@ -360,23 +416,68 @@ function briefingFromSnapshots(
     deltas.push(v);
     if (!period && snap?.period) period = String(snap.period);
   }
-  const n = deltas.length;
-  if (n < 5 || !period) return null; // 서울 구 5곳 미만이면 "서울" 을 대표한다고 말하지 않는다
-  const falling = deltas.filter((d) => d < -0.1).length;
-  const rising = deltas.filter((d) => d > 0.1).length;
-  const avg = deltas.reduce((a, b) => a + b, 0) / n;
-  const arrow = avg > 0.05 ? "▲" : avg < -0.05 ? "▼" : "—";
-  const lead =
-    rising >= falling
-      ? `서울 ${n}개 구 중 ${rising}곳 상승`
-      : `서울 ${n}개 구 중 ${falling}곳 하락`;
-  const avgLabel = arrow === "—" ? "평균 보합" : `평균 ${arrow}${Math.abs(avg).toFixed(1)}%`;
-  const ym = /^\d{6}$/.test(period) ? `${period.slice(0, 4)}.${period.slice(4, 6)}` : period;
-  return {
-    text: `${lead}, ${avgLabel}`,
-    asOfLabel: `기준 ${ym}`,
-    basis: "한국부동산원 매매가격지수 전월비 · 위 지역 평균과 같은 기준",
-  };
+  /* 서울 구 5곳 미만이면 "서울" 을 대표한다고 말하지 않는다 — 문장 규칙은 lib/newui/home-briefing.ts 한 곳 */
+  return briefingFromDeltas(deltas, period ?? "");
+}
+
+/**
+ * [1009 · H 리뷰] 홈 카드 곁값 — market_region_series 세 갈래를 **한 캐시(1시간)**로 읽는다.
+ *  ① 주간 매매가격지수(카드 4곳) — 스파크라인. 예전 attachRegionSparks 는 캐시 없이 카드마다 1회씩(ISR 재생성마다 최대 4회) 읽었다.
+ *  ② 부동산원 월간 거래량(카드 4곳) — 거래 건수를 **제 달**과 함께(스냅샷 trade_count 는 기준월과 다른 달 값이었다).
+ *  ③ 부동산원 월간 매매가격지수(서울 25개 구 + 카드 지역, 최근 3개월) — 브리핑과 월 집계 카드의 등락이 같은 행을 쓴다.
+ * 모양 맞추기는 순수 함수(lib/newui/home-region-fallback cardSeriesFromRows · applyCardSeries). 실패는 던져 캐시에 남기지 않는다.
+ */
+const loadCardSeriesCached = unstable_cache(
+  async (): Promise<CardSeries | null> => {
+    const sb = getReadOnlySupabase();
+    if (!sb) return null;
+    const cardIds = CARD_REGIONS.map((t) => t.id);
+    const indexIds = [...new Set([...SEOUL_DISTRICTS.map((d) => d.id), ...cardIds])];
+    const read = (metric: string, periodType: string, ids: string[], limit: number) =>
+      sb
+        .from("market_region_series")
+        .select("region_id, period, value")
+        .eq("property_type", "apt")
+        .eq("metric", metric)
+        .eq("period_type", periodType)
+        .in("region_id", ids)
+        .order("period", { ascending: false })
+        .limit(limit);
+    const [weekly, trades, index] = await Promise.all([
+      read("sale_index", "weekly", cardIds, cardIds.length * 20),
+      read("trade_count", "monthly", cardIds, cardIds.length * 3),
+      read("sale_index", "monthly", indexIds, indexIds.length * 3),
+    ]);
+    if (weekly.error) throw new Error(`market_region_series(주간 지수) 조회 실패: ${weekly.error.message}`);
+    if (trades.error) throw new Error(`market_region_series(월간 거래량) 조회 실패: ${trades.error.message}`);
+    if (index.error) throw new Error(`market_region_series(월간 지수) 조회 실패: ${index.error.message}`);
+    return cardSeriesFromRows({ weekly: weekly.data, trades: trades.data, index: index.data }, 16);
+  },
+  ["home-card-series-v1"],
+  { revalidate: 3600 },
+);
+
+async function loadCardSeries(where: string): Promise<CardSeries | null> {
+  try {
+    return await loadCardSeriesCached();
+  } catch (err) {
+    logger.warn(`[${where}] 카드 시계열(스파크라인·거래량·지수) 조회 실패 — 곁값 없이`, err);
+    return null;
+  }
+}
+
+const SEOUL_DISTRICT_IDS = new Set(SEOUL_DISTRICTS.map((d) => d.id));
+
+/**
+ * [1009 · H] 브리핑 폴백 — 스냅샷의 서울 구 행이 비어(운영 실측: 25개 구 전부 sale_change null) 스냅샷 브리핑이 늘 null 이었다.
+ * 같은 원천(부동산원 월간 매매가격지수)의 서울 구 행으로 구마다 전월비를 구한다(위 카드 곁값 캐시의 ③).
+ */
+function briefingFromCardSeries(series: CardSeries | null): HomeBriefing | null {
+  if (!series) return null;
+  return briefingFromIndexRows(
+    series.index.filter((r) => r.region_id && SEOUL_DISTRICT_IDS.has(String(r.region_id))),
+    { basis: "한국부동산원 월간 매매가격지수 · 구별 전월비의 단순 평균(지역 카드 등락과 같은 기준)" },
+  );
 }
 
 const loadBriefingCached = unstable_cache(
@@ -481,42 +582,32 @@ function buildRegionCards(
     if (!snap) continue;
     const priceWon = snap.avgSale ?? snap.medianSale;
     if (typeof priceWon !== "number" || priceWon <= 0) continue;
-    const { delta, tone } = deltaOf(snap.saleChangeMonthly ?? snap.saleChangeWeekly);
-    const trade =
-      typeof snap.tradeCount === "number" && snap.tradeCount > 0
-        ? ` · ${Math.round(snap.tradeCount).toLocaleString("ko-KR")}건`
-        : "";
+    /* [1009 · H 리뷰] 등락은 **월간** 지수 전월비만 — 예전엔 월간이 비면 주간(전주 대비)을 "전월 대비"로 적었다.
+       월간이 비면 곁값 캐시의 같은 지수 전월비로 채운다(applyCardSeries). 거래 건수는 스냅샷 trade_count 를 쓰지 않는다 —
+       기준월(지수 달, 예 202608)이 아니라 부동산원 거래량 시계열 최신 달(202607) 값이었다(남양주 "8월 2,646건"은 7월 값). */
+    const change = snap.saleChangeMonthly;
+    const changePct = typeof change === "number" && Number.isFinite(change) ? change : null;
+    const { delta, tone } = deltaOf(changePct ?? undefined);
     const periodLabel = periodLabelOf(snap.period);
     regions.push({
       id: target.id,
       name: target.name,
-      meta: `${target.city}${trade}${periodLabel ? ` (${periodLabel})` : ""}`,
+      meta: `${target.city}${periodLabel ? ` (${periodLabel})` : ""}`,
       periodLabel,
       price: formatEok(priceWon),
       delta,
       tone,
       href: `/map?region=${encodeURIComponent(target.name)}`,
       spark: [],
+      city: target.city,
+      trades: null,
+      tradesYm: null,
+      changePct,
+      changeBasis: "index",
+      changeYm: changePct !== null && /^\d{6}$/.test(String(snap.period)) ? String(snap.period) : null,
     });
   }
   return regions;
-}
-
-/**
- * 지역 카드에 KB 주간 매매가격지수 스파크라인을 붙인다(실데이터, 최근 16주).
- * 조회 실패는 빈 배열로 두고 카드 본문은 그대로 산다 — 스파크라인은 곁가지다.
- */
-async function attachRegionSparks(regions: HomeRegionCard[]): Promise<void> {
-  await Promise.all(
-    regions.map(async (r) => {
-      try {
-        const rows = await getRegionSeries(r.id, "sale_index", "weekly", 16);
-        r.spark = rows.map((x) => x.value).filter((v) => Number.isFinite(v));
-      } catch {
-        r.spark = [];
-      }
-    }),
-  );
 }
 
 /* ---------- [1002] 지역 시세 카드 폴백 (market_region_monthly, 마지막 온전한 달) ---------- */
@@ -545,7 +636,35 @@ async function loadRegionCardsFallback(): Promise<HomeRegionCard[]> {
     .limit(40);
   if (error) throw error;
   if (!Array.isArray(data)) return [];
-  return regionCardsFromMonthly(data as MonthlyRow[], CARD_REGIONS);
+  /* [1009 · H] 신고 기한이 지난 달만 — 신고 중인 달의 반쪽 평균을 카드에 올리지 않는다 */
+  return regionCardsFromMonthly(data as MonthlyRow[], CARD_REGIONS, { now: new Date() });
+}
+
+/**
+ * [1009 · H] 스냅샷이 **일부 지역만** 값이 있을 때(운영: 서울 3구 부동산원 행이 비어 있다) 빈 칸을 월 집계 카드로 채운다.
+ * 월 집계는 하루 한 번 바뀌는 표라 1시간 데이터 캐시(홈 ISR 5분·로그인 홈 /api/home/personal 이 같은 값을 쓴다).
+ * 실패는 던져서 캐시에 남기지 않고, 여기서 삼켜 스냅샷 카드만 그대로 둔다(예전과 같은 화면).
+ */
+/* [1010] 1시간 → 1일 + market 태그. 이 캐시가 /analysis 의 실질 TTL 이었다(fetch·데이터 캐시
+   중 가장 작은 값이 라우트 revalidate 의 뚜껑이 된다). 실거래 적재가 market 태그를 비운다. */
+const loadRegionCardsFallbackCached = unstable_cache(loadRegionCardsFallback, ["home-region-fill-v2"], {
+  revalidate: 86_400,
+  tags: ["market"],
+});
+
+async function fillFromMonthly(cards: HomeRegionCard[], where: string): Promise<HomeRegionCard[]> {
+  if (cards.length >= CARD_REGIONS.length) return cards;
+  try {
+    const fallback = await loadRegionCardsFallbackCached();
+    const merged = fillMissingRegionCards(cards, fallback, CARD_REGIONS);
+    if (merged.length > cards.length) {
+      logger.warn(`[${where}] 스냅샷 값이 빈 지역 ${merged.length - cards.length}곳을 월 집계로 채움`);
+    }
+    return merged;
+  } catch (err) {
+    logger.warn(`[${where}] 빈 지역 월 집계 채우기 실패 — 스냅샷 카드만`, err);
+    return cards;
+  }
 }
 
 /**
@@ -592,22 +711,30 @@ async function regionCardsAfterSnapshotFailure(where: string): Promise<HomeRegio
  * 그것마저 없을 때만 null 이다 — 홈(loadNewHomeDataInternal)과 같은 판정.
  */
 export async function loadHomeRegionCards(): Promise<HomeRegionCard[] | null> {
+  /* [1009 · H 리뷰] 홈과 같은 곁값(거래 건수의 제 달 · 등락 기준 통일)을 붙인다 — 로그인 홈의 "오늘의 한 줄"이 이 카드를 쓴다 */
+  const withSeries = async (cards: HomeRegionCard[]) => {
+    const series = await loadCardSeries("loadHomeRegionCards");
+    return series ? applyCardSeries(cards, series) : cards;
+  };
   try {
     const snapshots = await getAllRegionSnapshots();
-    if (snapshots.size > 0) return buildRegionCards(snapshots);
+    if (snapshots.size > 0) {
+      return withSeries(await fillFromMonthly(buildRegionCards(snapshots), "loadHomeRegionCards"));
+    }
     /* 0건은 준비 중이 아니라 조회 이상이다 — loadNewHomeDataInternal 과 동일 판정.
        아래 폴백으로 떨어진다. */
   } catch (err) {
     logger.error("[loadHomeRegionCards] 지역 스냅샷 조회 실패", err);
   }
   const fallback = await regionCardsAfterSnapshotFailure("loadHomeRegionCards");
-  return fallback.length > 0 ? fallback : null;
+  return fallback.length > 0 ? withSeries(fallback) : null;
 }
 
 async function loadNewHomeDataInternal(): Promise<NewHomeData> {
   /* 실패를 삼키되 "삼켰다는 사실"은 남긴다. 아래 failed 로 화면까지 전달된다. */
   let regionsFailed = false;
   let notesFailed = false;
+  let townFailed = false;
   const [
     home,
     snapshots,
@@ -644,6 +771,7 @@ async function loadNewHomeDataInternal(): Promise<NewHomeData> {
       /* [950] 자동수집 뉴스 — 커뮤니티 글이 비어 있을 때의 대체 읽을거리(5분 데이터 캐시) */
       readRelatedTownPosts().catch((err): Awaited<ReturnType<typeof readRelatedTownPosts>> => {
         logger.error("[loadNewHomeData] 뉴스 목록 조회 실패", err);
+        townFailed = true;
         return [];
       }),
       loadActivityToday().catch((): number | null => null),
@@ -668,9 +796,14 @@ async function loadNewHomeDataInternal(): Promise<NewHomeData> {
       regionsStale = true;
       regionsFailed = false;
     }
+  } else {
+    /* [1009 · H] 스냅샷은 성공했지만 값이 빈 지역(서울 3구) — 카드가 1장만 나가던 것을 월 집계로 채운다 */
+    regions = await fillFromMonthly(regions, "loadNewHomeData");
   }
-  /* 스파크라인은 폴백 카드에도 붙인다(별도 표 market_region_series — 살아 있을 수 있다) */
-  await attachRegionSparks(regions);
+  /* 곁값(스파크라인 · 거래 건수의 제 달 · 월 집계 카드 등락을 부동산원 지수로)은 폴백 카드에도 붙인다
+     (별도 표 market_region_series — 살아 있을 수 있다). 1시간 캐시 한 벌 */
+  const cardSeries = await loadCardSeries("loadNewHomeData");
+  if (cardSeries) regions = applyCardSeries(regions, cardSeries);
 
   // ── 공개 임장노트 (inspection_notes) ──
   /* [950] 사람(이웃) 노트를 Lab 데이터 노트보다 앞에 둔다 — 최신순은 유지하되
@@ -688,16 +821,44 @@ async function loadNewHomeDataInternal(): Promise<NewHomeData> {
     })
     .sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "user" ? -1 : 1))
     .slice(0, 3);
-  /* [950] 브리핑은 지역 카드와 같은 스냅샷에서 센다 — 한 화면 한 기준 */
-  const briefing = briefingFromSnapshots(snapshots);
+  /* [950] 브리핑은 지역 카드와 같은 스냅샷에서 센다 — 한 화면 한 기준.
+     [1009 · H] 스냅샷이 비어 못 세면 같은 부동산원 지수의 월간 시계열로(위 카드 곁값 캐시 · briefingFromCardSeries) */
+  const briefing = briefingFromSnapshots(snapshots) ?? briefingFromCardSeries(cardSeries);
   const news: HomeNewsItem[] = newsPosts
-    .filter((p) => p.isAutomated === true) // 뉴스만 — 사람 글은 posts 가 이미 맡는다
+    .filter((p) => !isStoryPost(p)) // 뉴스만 — 사람 글은 아래 stories 가 맡는다(같은 판정의 반대)
+    .slice(0, 3)
+    .map((p) => {
+      const iso = p.sourcePublishedAt || p.createdAt || null;
+      return {
+        id: String(p.id),
+        title: String(p.title ?? ""),
+        source: p.sourceName ? String(p.sourceName) : null,
+        when: iso ? String(iso).slice(0, 10).replace(/-/g, ".") : null,
+        publishedAt: iso ? String(iso) : null,
+      };
+    });
+  /* [1007] 이웃 글 — 같은 배열에서 사람 글만(readRelatedTownPosts 는 posts 스토어를 병합한다).
+     link_only 제외, 숨김(신고 누적)은 posts.visibility='hidden' 을 따로 물어야 안다(rowToPost 가
+     그 값을 undefined 로 접는다 — lib/town/story.ts listStoryPosts 와 같은 절차). 후보가 0건이면
+     그 질의도 없다 — 지금 운영(사람 글 0건)에서는 추가 왕복이 없다. */
+  const storyCandidates = newsPosts
+    .filter((p) => isStoryPost(p) && p.visibility !== "link_only")
+    .slice(0, 6);
+  const hiddenIds =
+    storyCandidates.length > 0
+      ? await listHiddenPostIds(storyCandidates.map((p) => p.id)).catch(() => new Set<string>())
+      : new Set<string>();
+  const stories: HomeStoryItem[] = storyCandidates
+    .filter((p) => !hiddenIds.has(p.id))
     .slice(0, 3)
     .map((p) => ({
       id: String(p.id),
       title: String(p.title ?? ""),
-      source: p.sourceName ? String(p.sourceName) : null,
-      when: p.createdAt ? String(p.createdAt).slice(0, 10).replace(/-/g, ".") : null,
+      author: (p.authorLabel || "이웃").trim() || "이웃",
+      region: [p.city, p.district].filter(Boolean).join(" ").trim() || null,
+      createdAt: String(p.createdAt),
+      comments: Math.max(0, Number(p.commentCount) || 0),
+      photos: postAttachments(p).length,
     }));
   /* notesToday 는 위 Promise.all 의 countPublicNotesToday() 결과다 — 목록(3건)과
      같은 조회에서 세지 않는다. 목록은 10건만 받아오므로 오늘 11건째부터는
@@ -749,6 +910,7 @@ async function loadNewHomeDataInternal(): Promise<NewHomeData> {
     regionsStale,
     notes,
     posts,
+    stories,
     news,
     meetings,
     reports,
@@ -756,6 +918,7 @@ async function loadNewHomeDataInternal(): Promise<NewHomeData> {
       regions: regionsFailed,
       notes: notesFailed,
       posts: home.failedSources.includes("posts"),
+      town: townFailed,
       meetings: home.failedSources.includes("meetings"),
       reports: home.failedSources.includes("reports"),
     },

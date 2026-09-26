@@ -20,6 +20,9 @@ import {
   LOAD_FAILED_LINE,
   loadWithinPrerenderBudget,
 } from "@/lib/data/prerender-budget";
+import { Explain } from "@/app/components/explain/Explain";
+import { TEMPERATURE_EXPLAIN } from "../temperature-explain";
+import { TempRegionCard } from "./TempRegionCard";
 
 /* ============================================================
    N11 — 시장 온도 주간 기록 허브 (/analysis/temperature)
@@ -52,7 +55,10 @@ import {
    그래서 조회에 20초 상한을 씌우고, 넘기면 위 2)번 화면으로 접는다.
    ============================================================ */
 
-export const revalidate = 3600;
+/* [1010] 1h → 1일. 주간 스냅샷 화면이라 1시간 눈금은 원천보다 168배 촘촘했다.
+   적재 직후 비움이 둘 있다: SOURCE_MAP.molit 의 "/analysis/temperature" 와,
+   스냅샷 크론(app/api/cron/market-temperature-snapshot)의 invalidateTemperatureRegions(). */
+export const revalidate = 86_400;
 
 const PATH = "/analysis/temperature";
 
@@ -73,23 +79,6 @@ const loadHub = cache(async (): Promise<HubData> => {
     ? { weekStart: run.data.weekStart, rows: run.data.rows, loadFailed: false }
     : { weekStart: null, rows: [], loadFailed: true };
 });
-
-/* 점수 밴드 색 — 예전엔 #dc2626·#ea580c·#0284c7·#2563eb 를 인라인 style 로
-   박아 두었다. 다크에서 토큰을 안 타 그대로 튀었고, 대비 게이트가 보증하는
-   조합 밖이었다. 토큰 클래스로 바꾼다(위→아래 = 뜨거움→식음). */
-function scoreToneClass(score: number): string {
-  if (score >= 65) return "bg-danger-soft text-danger";
-  if (score >= 55) return "bg-warning-soft text-warning";
-  if (score >= 45) return "bg-bg text-text-2";
-  return "bg-primary-soft text-primary";
-}
-
-/** 지난주 대비 배지 색 — 오름은 뜨거워짐(위험색), 내림은 식음(파랑). */
-function diffToneClass(diff: number): string {
-  if (diff > 0) return "delta-up-b";
-  if (diff < 0) return "delta-down-b";
-  return "delta-flat-b";
-}
 
 export async function generateMetadata(): Promise<Metadata> {
   const { weekStart, rows, loadFailed } = await loadHub();
@@ -141,7 +130,12 @@ export default async function TemperatureHubPage() {
   if (rows.length > 0) {
     heroKpis.push({ label: "기록 지역", value: `${rows.length}곳`, note: weekLabel ? `${weekLabel} 주 기준` : undefined });
     if (avgScore !== null) {
-      heroKpis.push({ label: "평균 온도", value: `${avgScore}`, note: "50이 중립" });
+      heroKpis.push({
+        label: "평균 온도",
+        value: `${avgScore}`,
+        note: "100점 중 · 50이 중립",
+        aside: <Explain {...TEMPERATURE_EXPLAIN} size={12} />,
+      });
     }
     if (hottest) {
       heroKpis.push({ label: "가장 뜨거운 곳", value: `${hottest.current.score}`, note: `${hottest.current.regionLabel} · ${hottest.current.headline}` });
@@ -150,7 +144,28 @@ export default async function TemperatureHubPage() {
       heroKpis.push({ label: "가장 차가운 곳", value: `${coldest.current.score}`, note: `${coldest.current.regionLabel} · ${coldest.current.headline}` });
     }
     if (compared > 0) {
-      heroKpis.push({ label: "지난주 대비", value: `▲${rising} · ▼${falling}`, note: `비교 가능한 ${compared}곳 기준` });
+      /* [1009 · A] 화살표만 있고 색이 없던 것 → ▲ 빨강(오른 곳) · ▼ 파랑(내린 곳) */
+      heroKpis.push({
+        label: "지난주 대비",
+        value: (
+          <span className="inline-flex items-baseline gap-1.5">
+            <span className="delta-up">
+              <span aria-hidden="true">▲</span>
+              <span className="sr-only">오른 곳</span>
+              {rising}
+            </span>
+            <span aria-hidden="true" className="text-text-3">
+              ·
+            </span>
+            <span className="delta-down">
+              <span aria-hidden="true">▼</span>
+              <span className="sr-only">내린 곳</span>
+              {falling}
+            </span>
+          </span>
+        ),
+        note: `비교 가능한 ${compared}곳 중 오른 곳 · 내린 곳`,
+      });
     }
   }
 
@@ -270,50 +285,26 @@ export default async function TemperatureHubPage() {
       ) : (
         <section className="card mb-6 p-[var(--pad-card)]" data-reveal="">
           <h2 className="t-title flex items-baseline justify-between gap-3 text-ink">
-            {weekLabel} 주 기준
+            <span className="inline-flex items-center gap-0.5">
+              {weekLabel} 주 기준
+              <Explain {...TEMPERATURE_EXPLAIN} />
+            </span>
             <span className="t-sub shrink-0 text-text-3">
               온도 높은 순 · {rows.length}개 지역
             </span>
           </h2>
           <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {rows.map(({ current, previous }) => {
-              const diff = previous ? current.score - previous.score : null;
-              return (
-                <Link
-                  key={current.regionId}
-                  href={`${PATH}/${current.regionId}`}
-                  className="tile card flex items-center gap-3 rounded-[10px] px-3 py-2.5 no-underline"
-                >
-                  <span
-                    className={`tile-ico t-num flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[10px] text-[15px] ${scoreToneClass(current.score)}`}
-                  >
-                    {current.score}
-                  </span>
-                  <span className="flex min-w-0 flex-1 flex-col gap-1">
-                    <span className="t-sub truncate font-bold text-ink">
-                      {current.regionLabel}
-                    </span>
-                    <span className="t-caption truncate text-text-3">{current.headline}</span>
-                    {/* 눈금 위 위치 — 숫자만으로는 "62가 높은 편인가"를 못 읽는다.
-                        가운데 눈금이 중립(50)이다. */}
-                    <span className="rank-track" aria-hidden="true">
-                      <span
-                        className={`rank-fill ${current.score >= 55 ? "text-warning" : "text-primary"}`}
-                        style={{ width: `${Math.min(100, Math.max(3, current.score))}%` }}
-                      />
-                    </span>
-                  </span>
-                  {diff !== null && (
-                    <span className={`delta shrink-0 ${diffToneClass(diff)}`}>
-                      {diff === 0 ? "±0" : `${diff > 0 ? "▲" : "▼"}${Math.abs(diff)}`}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
+            {rows.map(({ current, previous }) => (
+              <TempRegionCard
+                key={current.regionId}
+                current={current}
+                previous={previous}
+                href={`${PATH}/${current.regionId}`}
+              />
+            ))}
           </div>
           <p className="t-sub mt-3 text-text-3">
-            오른쪽 숫자는 지난주 기록과의 점수 차이입니다. &ldquo;—&rdquo;는 그 지역의 직전 주
+            오른쪽 배지는 지난주 기록과의 점수 차이입니다(▲ 오름 · ▼ 내림 · 보합). 배지가 없으면 그 지역의 직전 주
             기록이 없다는 뜻입니다(기록이 시작된 첫 주이거나 그 주에 계산 근거가 없었던
             경우).
           </p>

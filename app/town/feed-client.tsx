@@ -17,7 +17,10 @@ import {
 
 /* 동네이야기 통합 피드 — 오늘의집/인스타그램형 사진 우선 카드 그리드(매소너리).
    공개 임장노트(사진 우선) + 커뮤니티 글을 한 피드로 섞어 보여준다.
-   서버에서 카드 배열을 만들어 내려주고, 여기선 필터 탭만 클라이언트로 처리. */
+   서버에서 카드 배열을 만들어 내려주고, 여기선 필터 탭만 클라이언트로 처리.
+   [1006] 이 피드는 **사람의 기록**만 싣는다(kind: note | post). 자동수집 뉴스는 여기
+   들어오지 않는다 — 뉴스는 /town/news(뉴스룸)이고, /town 은 "오늘의 뉴스" 스트립으로
+   그쪽을 가리킬 뿐이다. */
 
 export type FeedCard = {
   id: string;
@@ -42,6 +45,10 @@ export type FeedCard = {
   lab?: boolean;
   /** 사진 없는 커버에 크게 적을 이름(단지명 등) */
   aptName?: string | null;
+  /** [1006] 이야기(이웃 글) 카드 — 실측 댓글 수. 노트 카드에는 없다. */
+  comments?: number;
+  /** [1006] 이야기 카드 — 첨부 사진 장수(커버 외 몇 장이 더 있는지 알리는 용도). */
+  photos?: number;
 };
 
 /* [B19] 유형(무엇을 보나)과 정렬(어떤 순서로 보나)은 서로 다른 축인데
@@ -161,7 +168,91 @@ function Cover({ card }: { card: FeedCard }) {
   );
 }
 
+/* [1006] 이야기(이웃 글) 카드 — 노트 카드와 **다른 재질**.
+   노트는 사진·데이터가 먼저 오는 커버 카드지만, 이야기는 **사람이 먼저** 온다: 작성자
+   머리글자·이름 → 제목 → 동네 배지 → 댓글·사진 수. 사진이 없으면 커버를 지어내지 않고
+   (그라디언트·단지명 커버는 노트의 것) 글 카드로 선다. 규칙은 globals.css .story-card. */
+function StoryCardView({ card, delay }: { card: FeedCard; delay: number }) {
+  const author = card.author.trim() || "이웃";
+  const initial = author.slice(0, 1);
+  const isNew = Date.now() - card.createdAt < 24 * 3600_000;
+  const comments = Math.max(0, card.comments ?? 0);
+  const photos = Math.max(0, card.photos ?? 0);
+  return (
+    <div className={`mb-3 break-inside-avoid rise-in-${Math.min(delay, 6)}`}>
+      <Link href={card.href} className="story-card tile group block overflow-hidden no-underline">
+        {card.cover && (
+          <div className="relative w-full overflow-hidden" style={{ height: seedCoverHeight(card.id) }}>
+            <CoverImage
+              src={card.cover}
+              alt={`${card.title} 사진`}
+              imgClassName="absolute inset-0 h-full w-full object-cover"
+            />
+            <span className="cover-scrim" aria-hidden="true" />
+            {photos > 1 && (
+              <span className="absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 rounded-md bg-surface/90 chip-pad t-caption font-extrabold text-ink">
+                <Icon name="camera" size={11} />
+                {photos}
+              </span>
+            )}
+          </div>
+        )}
+        <div className="flex flex-col gap-2 px-3 pb-3 pt-3">
+          <div className="flex items-center gap-2">
+            <span className="story-avatar" aria-hidden="true">
+              {initial}
+            </span>
+            <span className="min-w-0 flex-1 truncate t-sub font-extrabold text-ink">{author}</span>
+            <span className="story-kind t-caption">이야기</span>
+            {isNew && <span className="badge-new t-caption">NEW</span>}
+          </div>
+          <div className="line-clamp-3 t-body font-extrabold leading-snug text-ink">
+            {card.boosted && (
+              <span className="mr-1.5 inline-block align-middle rounded-md bg-primary-soft px-1.5 py-0.5 t-caption font-extrabold text-primary">
+                추천글
+              </span>
+            )}
+            {card.title}
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            {card.region && (
+              <span className="rounded-md bg-primary-soft px-1.5 py-px t-caption font-extrabold text-primary">
+                {card.region}
+              </span>
+            )}
+            {card.tags.slice(0, 2).map((t) => (
+              <span key={t} className="rounded-full bg-bg chip-pad t-caption font-semibold text-text-2">
+                #{t}
+              </span>
+            ))}
+          </div>
+          {/* 댓글 수는 0 이어도 적는다 — 이야기는 대화이고, "댓글 0" 은 첫 답을 부르는 사실이다 */}
+          <div className="flex items-center gap-3 t-sub text-text-3">
+            <span className="inline-flex items-center gap-1">
+              <Icon name="messages-square" size={12} />
+              댓글 {comments}
+            </span>
+            {photos > 0 && (
+              <span className="inline-flex items-center gap-1">
+                <Icon name="camera" size={12} />
+                사진 {photos}
+              </span>
+            )}
+            {typeof card.saves === "number" && card.saves > 0 && (
+              <span className="inline-flex items-center gap-1">
+                <Icon name="bookmark" size={12} />
+                {card.saves}
+              </span>
+            )}
+          </div>
+        </div>
+      </Link>
+    </div>
+  );
+}
+
 function FeedCardView({ card, delay }: { card: FeedCard; delay: number }) {
+  if (card.kind === "post") return <StoryCardView card={card} delay={delay} />;
   return (
     <div className={`mb-3 break-inside-avoid rise-in-${Math.min(delay, 6)}`}>
       <Link
@@ -455,6 +546,13 @@ export function TownFeed({
     }),
     [allCards],
   );
+  /* [1006] "임장노트 30" 안에는 사람이 다녀온 노트와 Lab 데이터 카드가 섞여 있다 —
+     둘을 같은 수로 부르면 "사람 30명이 다녀왔다"로 읽힌다. 탭 아래 한 줄로 가른다. */
+  const noteSplit = useMemo(() => {
+    const notes = allCards.filter((c) => c.kind === "note");
+    const lab = notes.filter((c) => c.lab).length;
+    return { human: notes.length - lab, lab };
+  }, [allCards]);
 
   const mineCount = useMemo(
     () => (myRegions && myRegions.length > 0 ? allCards.filter(matchesMine).length : 0),
@@ -544,6 +642,12 @@ export function TownFeed({
             ? "최신 글이 먼저, 노트 평점·저장수만큼 위로 올라와요"
             : "최근에 올린 글부터 보여요"}
         </span>
+        {/* [1006] 노트 탭의 구성 — 사람 노트와 데이터 카드를 정직하게 가른다 */}
+        {kind !== "post" && counts.note > 0 && noteSplit.lab > 0 && (
+          <span className="t-sub text-text-3">
+            임장노트 {counts.note} = 사람 노트 {noteSplit.human} · Lab 데이터 카드 {noteSplit.lab}
+          </span>
+        )}
       </div>
 
       {loadFailed && (
@@ -565,21 +669,26 @@ export function TownFeed({
           <div className="t-section text-ink">
             {loadFailed
               ? "글을 불러오지 못했어요"
-              : more
-                ? "지금까지 받은 글에는 이 조건이 없어요"
-                : onlyMine
-                  ? "내 관심지역 글이 아직 없어요 — 첫 글을 남겨 보세요"
-                  : "이 조건의 글이 아직 없어요 — 첫 글을 남겨 보세요"}
+              : kind === "post" && !onlyMine && !more
+                ? /* [1006] 이야기 탭 0건 — 지금 운영 실측(사람 글 0건)이 그대로 보이는 자리다. 지어내지 않는다 */
+                  "아직 이웃 글이 없어요 — 첫 이야기를 남겨 보세요"
+                : more
+                  ? "지금까지 받은 글에는 이 조건이 없어요"
+                  : onlyMine
+                    ? "내 관심지역 글이 아직 없어요 — 첫 글을 남겨 보세요"
+                    : "이 조건의 글이 아직 없어요 — 첫 글을 남겨 보세요"}
           </div>
           <div className="t-sub text-text-3">
             {loadFailed
               ? "데이터 조회가 실패했어요. 잠시 후 새로고침해 주세요."
               : more
                 ? "더 보기로 이전 글을 이어서 볼 수 있어요"
-                : "첫 임장노트나 동네이야기를 남기면 가장 먼저 노출돼요"}
+                : kind === "post"
+                  ? "다녀온 동네의 인상·질문·사진을 남기면 이 피드에 바로 보여요"
+                  : "첫 임장노트나 동네이야기를 남기면 가장 먼저 노출돼요"}
           </div>
           <Link href="/town/write" className="btn-primary btn-md mt-2">
-            글쓰기
+            {kind === "post" ? "첫 이야기 쓰기" : "글쓰기"}
           </Link>
         </div>
       ) : (

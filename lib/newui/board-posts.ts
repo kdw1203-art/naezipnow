@@ -13,6 +13,8 @@
 import "server-only";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
+import { TOWN_POSTS_TAG } from "@/lib/town/cache-tags";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   getAnonReadOnlySupabase,
   getReadOnlySupabase,
@@ -22,16 +24,6 @@ import type { Post, PostAutomationMeta } from "@/lib/types/post";
 import { logger } from "@/lib/log";
 
 const BOARD_POSTS_LIMIT = 300;
-
-type BoardCommentsCount = Array<{ count: number }> | null | undefined;
-
-function commentCountOf(row: Record<string, unknown>): number {
-  const nested = row.board_comments as BoardCommentsCount;
-  if (Array.isArray(nested) && typeof nested[0]?.count === "number") {
-    return nested[0].count;
-  }
-  return 0;
-}
 
 function boardRowToPost(row: Record<string, unknown>): Post {
   const isAutomated = row.is_automated === true;
@@ -50,7 +42,8 @@ function boardRowToPost(row: Record<string, unknown>): Post {
     createdAt,
     updatedAt: String(row.updated_at ?? createdAt),
     likeCount: 0,
-    commentCount: commentCountOf(row),
+    /* [1007] 댓글 수는 행에 실리지 않는다 — attachCommentCounts / getBoardPost 가 이웃 글에만 붙인다 */
+    commentCount: 0,
     viewCount: 0,
     comments: [],
     sourceUrl: row.source_url ? String(row.source_url) : undefined,
@@ -69,7 +62,55 @@ function boardRowToPost(row: Record<string, unknown>): Post {
   };
 }
 
-const BOARD_SELECT_WITH_COMMENTS = "*, board_comments(count)";
+/* [1007] 예전 `"*, board_comments(count)"` 는 쓰지 않는다.
+ * 실측(2026-09-20, pg_stat_statements 누적): 이 중첩 count 가 붙은 board_posts 조회가
+ * 평균 229ms × 21k 회였다 — board_comments 는 **0행**인데도. PostgREST 는 중첩 집계를
+ * 행마다 LATERAL 서브쿼리로 풀어 300행 × 집계가 되고, anon 3초 statement_timeout 을
+ * 때리던 원인이기도 했다(BOARD_SELECT_LIGHT 주석). 댓글 수는 아래 attachCommentCounts 가
+ * 별도 경량 질의로 붙인다 — 그것도 댓글 수를 실제로 그리는 **이웃 글(비자동수집)** 에만. */
+const BOARD_SELECT_PLAIN = "*";
+
+/** 댓글 수 조회를 한 번에 묶는 post_id 개수 — URL 길이(uuid 36자 × n) 상한 안쪽 */
+const COMMENT_COUNT_CHUNK = 100;
+
+/**
+ * [1007] 댓글 수 — 뉴스룸 행·관련글·다이제스트는 댓글 수를 그리지 않고, 그리는 곳은
+ * 이웃 글 카드(/town·/town/[region]·/town/story)뿐이다. 그래서 자동수집 글은 0 으로 두고
+ * (조회 없음), 이웃 글 id 만 모아 `board_comments.post_id` 를 읽어 센다. 실측 board_posts
+ * 1,019행 전부 자동수집이라 오늘은 이 질의가 **한 번도 나가지 않는다**; 이웃 글이 생기면
+ * 그 글 수만큼만 나간다. 실패는 삼키고 0 으로 둔다 — 목록 자체를 볼모로 잡지 않는다
+ * (댓글 수는 장식이지 목록의 존재 조건이 아니다).
+ */
+async function attachCommentCounts(
+  sb: SupabaseClient,
+  posts: Post[],
+  budget: AbortSignal,
+): Promise<void> {
+  const storyIds = posts.filter((p) => !p.isAutomated).map((p) => p.id);
+  if (storyIds.length === 0 || budget.aborted) return;
+  const counts = new Map<string, number>();
+  for (let i = 0; i < storyIds.length; i += COMMENT_COUNT_CHUNK) {
+    if (budget.aborted) return;
+    const ids = storyIds.slice(i, i + COMMENT_COUNT_CHUNK);
+    const { data, error } = await sb
+      .from("board_comments")
+      .select("post_id")
+      .in("post_id", ids)
+      .abortSignal(budget);
+    if (error) {
+      logger.warn("[readBoardPosts] 댓글 수 조회 실패 — 0 으로 표시", error.message);
+      return;
+    }
+    for (const row of (data ?? []) as Array<{ post_id: unknown }>) {
+      const id = String(row.post_id ?? "");
+      if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+  }
+  for (const p of posts) {
+    const n = counts.get(p.id);
+    if (n !== undefined) p.commentCount = n;
+  }
+}
 
 /* ---------- 뉴스 품질 게이트 (#24) ----------
  * 자동 수집 뉴스의 저품질 항목을 노출 전에 걸러낸다:
@@ -159,10 +200,11 @@ type BoardQueryKind = "full" | "light";
  * 깨뜨리지 않는다). 예: app/redevelopment/page.tsx 의 ProjectsData 패턴.
  */
 /**
- * [976] 세 단계 재시도 **전체**의 벽시계 예산(ms).
+ * [976] 재시도 **전체**의 벽시계 예산(ms).
  *
  * ── 이 숫자가 없어서 /town 이 120초를 태웠다 (2026-09-08 실측) ───────────────
- * 아래 조회는 실패하면 세 번 간다: 댓글 카운트 포함 → 카운트 없이 → anon.
+ * 아래 조회는 실패하면 여러 번 간다(당시: 댓글 카운트 포함 → 카운트 없이 → anon.
+ * [1007] 이후: count 없는 조회 → anon, 그리고 이웃 글 댓글 수 질의).
  * 그런데 상한은 **한 건마다** 걸려 있었다(런타임 총 예산 45초). 그래서
  *     45s × 3 = 135s > Vercel 함수 상한 120s
  * 다시 말해, DB 가 밀리는 순간 이 함수 하나가 페이지 예산을 통째로 넘겼다.
@@ -191,12 +233,14 @@ async function fetchBoardPosts(limit: number, kind: BoardQueryKind): Promise<Pos
   /* 미구성은 "고장"이 아니라 "이 환경엔 DB 가 없음"이다 — 던지지 않는다.
      (getBoardPost 도 같은 자리에서 null 을 준다.) */
   if (!sb) return [];
-  const plain = kind === "light" ? BOARD_SELECT_LIGHT : "*";
-  const primary = kind === "light" ? BOARD_SELECT_LIGHT : BOARD_SELECT_WITH_COMMENTS;
-  /* 세 시도가 **함께** 쓰는 예산. resilient-fetch 는 넘겨받은 signal 이 이미
-     끊겼으면 자기 재시도(503 백오프)도 멈추므로, 이 하나로 전 구간이 잘린다. */
+  const select = kind === "light" ? BOARD_SELECT_LIGHT : BOARD_SELECT_PLAIN;
+  /* 모든 시도가 **함께** 쓰는 예산(12초, 위 boardReadBudgetMs). resilient-fetch 는 넘겨받은
+     signal 이 이미 끊겼으면 자기 재시도(503 백오프)도 멈추므로, 이 하나로 전 구간이 잘린다.
+     [1007] 시도는 ① 서비스 롤 → ② anon 두 단계다. 예전의 "중첩 count → count 없이 → anon"
+     세 단계에서 첫 단계(중첩 count)가 통째로 사라진 것이라, 예산·물러나는 조건은 그대로고
+     첫 시도부터 count 없는 질의가 나간다. 같은 예산 안에 댓글 수 질의까지 들어간다. */
   const budget = AbortSignal.timeout(boardReadBudgetMs());
-  const query = (client: typeof sb, select: string) =>
+  const query = (client: typeof sb) =>
     client!
       .from("board_posts")
       .select(select)
@@ -206,18 +250,15 @@ async function fetchBoardPosts(limit: number, kind: BoardQueryKind): Promise<Pos
       .limit(limit)
       .abortSignal(budget);
 
-  let { data, error } = await query(sb, primary);
-  if (error && primary !== plain && !budget.aborted) {
-    logger.error("[readBoardPosts] with-comments query failed", error);
-    // board_comments 중첩 카운트가 권한 등으로 막히면 카운트 없이 재시도
-    ({ data, error } = await query(sb, plain));
-  }
+  let client = sb;
+  let { data, error } = await query(sb);
   if (error && !budget.aborted) {
     logger.error("[readBoardPosts] plain query failed", error);
     // Service Role 키 무효 등 클라이언트 자체 문제 대비 — anon으로 마지막 재시도
     const anon = getAnonReadOnlySupabase();
     if (anon && anon !== sb) {
-      ({ data, error } = await query(anon, plain));
+      client = anon;
+      ({ data, error } = await query(anon));
       if (error) logger.error("[readBoardPosts] anon query failed", error);
     }
   }
@@ -232,9 +273,12 @@ async function fetchBoardPosts(limit: number, kind: BoardQueryKind): Promise<Pos
   /* select() 인자가 리터럴이 아니라 변수라서 supabase-js 의 타입 수준 파서가
      행 모양을 못 풀고 GenericStringError 로 떨어진다. 런타임 모양은 그대로
      행 객체이므로 unknown 을 한 번 거쳐 넘긴다. */
-  return applyNewsQualityGate(
+  const posts = applyNewsQualityGate(
     data.map((r) => boardRowToPost(r as unknown as Record<string, unknown>)),
   );
+  /* 댓글 수는 full 조회에서만(light 는 관련글·홈 스트립 — 댓글 수를 그리지 않는다) */
+  if (kind === "full") await attachCommentCounts(client, posts, budget);
+  return posts;
 }
 
 /**
@@ -289,21 +333,14 @@ export async function getBoardPost(id: string): Promise<Post | null> {
   }
   const sb = getReadOnlySupabase();
   if (!sb) return null;
-  let { data, error } = await sb
+  /* [1007] 여기도 첫 시도부터 중첩 count 없이 읽는다(위 BOARD_SELECT_PLAIN 주석). 예전의
+     "count 포함 → 실패하면 count 없이" 재시도는 첫 단계가 사라져 한 번의 조회가 됐다. */
+  const { data, error } = await sb
     .from("board_posts")
-    .select(BOARD_SELECT_WITH_COMMENTS)
+    .select(BOARD_SELECT_PLAIN)
     .eq("id", id)
     .eq("is_published", true)
     .maybeSingle();
-  if (error) {
-    logger.error("[getBoardPost] with-comments query failed", error);
-    ({ data, error } = await sb
-      .from("board_posts")
-      .select("*")
-      .eq("id", id)
-      .eq("is_published", true)
-      .maybeSingle());
-  }
   if (error) {
     logger.error("[getBoardPost] plain query failed", error);
     throw new Error(
@@ -311,7 +348,18 @@ export async function getBoardPost(id: string): Promise<Post | null> {
     );
   }
   if (!data) return null;
-  return boardRowToPost(data as Record<string, unknown>);
+  const post = boardRowToPost(data as Record<string, unknown>);
+  /* 댓글 수를 그리는 상세는 이웃 글(/town/story/[id])뿐 — 뉴스 상세는 세지 않는다.
+     head:true 라 행은 안 받고 count 만 온다. 실패는 0 으로(장식이지 존재 조건이 아니다). */
+  if (!post.isAutomated) {
+    const { count, error: countError } = await sb
+      .from("board_comments")
+      .select("id", { count: "exact", head: true })
+      .eq("post_id", post.id);
+    if (countError) logger.warn("[getBoardPost] 댓글 수 조회 실패 — 0 으로 표시", countError.message);
+    else if (typeof count === "number") post.commentCount = count;
+  }
+  return post;
 }
 
 function displayTime(p: Post): number {
@@ -347,11 +395,29 @@ export const readTownPosts = cache((): Promise<Post[]> => mergeTownPosts(readBoa
    10.5ms)로 렌더마다 다시 읽히고 있었다 — 단지 허브 관련기사 카드가 크롤러
    렌더 3,500회마다 한 번씩 부른 것이다. 5분 데이터 캐시로 묶는다. 원천은
    하루 1회 뉴스 적재라 5분 지연은 화면에서 구분되지 않는다(관련글 카드는
-   제목·출처·시각만 그린다). 실패는 던져서 캐시에 남지 않는다. */
+   제목·출처·시각만 그린다). 실패는 던져서 캐시에 남지 않는다.
+   [1007] 5분 → 15분. 단지 페이지 크롤 8,907회/일(24h 실측)이 이 캐시를 하루 288회
+   재생성하게 했다 — 원천이 하루 1회 적재라 15분이면 96회로 줄고 화면은 같다.
+   ※ 뉴스 적재 무효화(lib/cache/invalidate.ts "news")는 경로만 비우고 태그 "news" 는 일부러 안 비운다
+   (그 태그가 지역 축 캐시에도 붙어 있어 적재마다 통째로 다시 채우게 된다) — 이 목록은 15분 TTL 로만 돈다. */
+/* [1010] 15분 → 7일 + 제 이름의 태그(town-posts).
+   왜: unstable_cache 의 revalidate 는 그 캐시를 읽는 **라우트의 revalidate 를 끌어내린다**
+   (Next 는 둘 중 작은 값을 쓴다). 이 목록을 읽는 자리는 /town/news/[id](하루 985 렌더)와
+   단지 허브 /complex/[id](하루 11,523 렌더)인데, 그 둘의 라우트 TTL 을 6시간·7일로 늘려 놓고도
+   이 캐시가 15분이면 실제 TTL 은 15분이 된다 — 늘린 값이 아무 일도 하지 않는다.
+   빌드 산출물로 같은 현상을 확인했다: app/town/news/page.tsx 는 revalidate 21_600 인데
+   .next/prerender-manifest.json 의 /town/news 는 3600(= 그 페이지가 읽는 주간 다이제스트 캐시 값)이었다.
+   그래서 값을 **7일**로 맞춘다 — 두 라우트의 revalidate(각각 7일)와 같은 눈금이라 이 캐시가
+   더 이상 라우트 TTL 을 대신 정하지 않는다. 신선도는 시간이 아니라 태그가 맡는다:
+   뉴스 적재 재검증 크론(vercel.json 하루 3슬롯)·뉴스 성격의 글 크론 3곳·이웃 글
+   작성/수정/삭제가 invalidateTownDataCaches() 로 town-posts 를 비운다 — 즉 실제 갱신 주기는
+   7일이 아니라 "적재·글쓰기가 일어난 순간"이고, 7일은 그 비움을 전부 놓쳤을 때의 안전망이다.
+   태그 "news" 는 그대로 둔다(아무도 비우지 않지만, 지역 축 캐시와 함께 비우고 싶은 날을 위한 표식).
+   이 목록이 그리는 것은 제목·출처·시각뿐이라, 안전망까지 내려가도 화면이 틀린 말을 하지 않는다. */
 const readRelatedTownPostsCached = unstable_cache(
   (): Promise<Post[]> => mergeTownPosts(readLightBoardPosts()),
   ["related-town-posts-v1"],
-  { revalidate: 300, tags: ["news"] },
+  { revalidate: 604_800, tags: ["news", TOWN_POSTS_TAG] },
 );
 
 export const readRelatedTownPosts = cache((): Promise<Post[]> => readRelatedTownPostsCached());

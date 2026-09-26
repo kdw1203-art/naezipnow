@@ -28,6 +28,11 @@ async function handle(req: Request) {
   if (!authorized) {
     return NextResponse.json({ error: "권한이 필요합니다." }, { status: 403 });
   }
+  /* [1007] 메일 채널이 없으면 조회조차 하지 않는다 — RESEND 미설정인 채 매시간 RPC 두 번을
+     치고 "못 보냈다"고만 적던 24회/일의 헛수고. 사실은 그대로 응답에 남긴다. */
+  if (!isEmailConfigured()) {
+    return NextResponse.json({ ok: true, sent: false, reason: "email-not-configured" });
+  }
   const sb = getServiceSupabase();
   if (!sb) {
     return NextResponse.json({ ok: false, reason: "no-db" }, { status: 500 });

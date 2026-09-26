@@ -77,7 +77,25 @@ const REGION_ALIASES: Record<string, string> = {
   광교: "suwon-yeongtong",
 };
 
-/** 구/시명으로 카탈로그 항목 조회 (정확 → 항목 별칭 → 통용 지명 → 부분 일치). */
+/**
+ * [1008] 국토부 실거래의 region_name 은 "안양 동안구"·"수원 영통구"처럼 **시(市) 없이** 적는다.
+ * 카탈로그(=REB 지역 시세의 region_name)는 "안양시 동안구". 둘은 정확 일치도 부분 일치도
+ * 안 돼서, 경기 21개 시·구(분당·수지·기흥·영통·일산·평촌…) 단지의 AI 분석·판단 카드가
+ * "가격 흐름·거래 열기 데이터 없음"으로 나왔다(소유자 캡처 2026-09-21, 공작아파트·안양 동안구 —
+ * REB 에는 202608 안양시 동안구 행이 값과 함께 있었다).
+ * 두 낱말이고 앞 낱말이 시·군·구·도로 끝나지 않으며 뒤 낱말이 구·군이면, 앞 낱말에 "시"를
+ * 붙인 이름으로 **정확 일치만** 한 번 더 본다(부분 일치로 넓히지 않는다 — 틀린 연결은
+ * 미연결보다 나쁘다).
+ */
+export function citySuffixedRegionKey(query: string): string | null {
+  const parts = query.trim().split(/\s+/);
+  if (parts.length !== 2) return null;
+  const [a, b] = parts;
+  if (!a || !b || /[시군구도]$/.test(a) || !/[구군]$/.test(b)) return null;
+  return normalizeRegionKey(`${a}시 ${b}`);
+}
+
+/** 구/시명으로 카탈로그 항목 조회 (정확 → 항목 별칭 → 통용 지명 → 시 접미 보정 → 부분 일치). */
 export function findCatalogRegionByName(
   query: string,
 ): SeoulDistrictInfo | undefined {
@@ -87,6 +105,11 @@ export function findCatalogRegionByName(
   if (exact) return exact;
   const aliasId = REGION_ALIASES[key];
   if (aliasId) return CATALOG_BY_ID.get(aliasId);
+  const cityKey = citySuffixedRegionKey(query);
+  if (cityKey) {
+    const hit = CATALOG_BY_KEY.get(cityKey) ?? CATALOG_BY_ALIAS_KEY.get(cityKey);
+    if (hit) return hit;
+  }
   return REGION_CATALOG.find((info) => {
     const k = normalizeRegionKey(info.name);
     return k.includes(key) || key.includes(k);

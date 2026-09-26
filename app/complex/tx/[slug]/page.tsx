@@ -28,7 +28,14 @@ import { formatKrwShort } from "@/lib/market/format";
 
 /* [B001 1단계] 1h → 24h. 이 페이지의 원천(국토부 실거래)은 하루 1번 적재라
    더 자주 재렌더할 이유가 없다 — 26k 페이지 크롤 재렌더가 DB 를 밀던 문제의 반쪽. */
-export const revalidate = 86400;
+/* [1010] 24h → 7일. 위 진단("원천은 하루 1번 적재")이 맞는데도 24시간이 남아 있던 이유는
+   시간이 유일한 안전망이었기 때문이다. 크롤러 재방문이 ≈2.2일이라 24시간 TTL 은 사실상
+   "올 때마다 재렌더"였다. 이제 적재 크론이 **그 실행이 실제로 적재한 단지의**
+   `/complex/tx/{slug}` 만 비운다(app/api/cron/molit-transactions-ingest →
+   buildComplexTxSlug + invalidatePathList). 그러니 시간은 안전망으로만 남긴다.
+   이 화면의 나머지(거주민 후기)는 클라이언트가 /api/complex-reviews 로 직접 받으므로
+   ISR HTML 에 실리지 않는다 — 후기 작성이 캐시에 갇히지 않는다. */
+export const revalidate = 604_800;
 /* 빈 배열 = "빌드 때 미리 만들 경로는 없다". 이 export 가 있어야 Next 가 이
    라우트를 ISR 로 분류한다 — 없으면 `revalidate` 를 적어 둬도 요청마다 서버
    렌더로 돌면서 Next 가 `private, no-cache, no-store` 를 실어 보내고, CDN 은

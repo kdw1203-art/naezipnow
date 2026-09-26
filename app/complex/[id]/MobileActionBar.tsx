@@ -21,6 +21,7 @@ export function MobileActionBar({
   complexName,
   noteHref,
   analysisHref,
+  askingHref,
   sentinelIds,
 }: {
   complexId: string;
@@ -28,6 +29,8 @@ export function MobileActionBar({
   noteHref: string;
   /** [992] 이 단지 AI 분석(분석 허브 + complexId) — 예전 전문가 상담 칸 */
   analysisHref: string;
+  /** [1008 · Q] 호가 점검 섹션 앵커(#asking-check) — 실거래가 없는 단지는 없음(칸을 만들지 않는다) */
+  askingHref?: string;
   /** 이 id 의 요소 중 하나라도 화면에 있으면 바를 숨긴다 */
   sentinelIds: readonly string[];
 }) {
@@ -81,8 +84,9 @@ export function MobileActionBar({
 
   if (ctaInView || modalOpen) return null;
 
+  /* [1009 · C] 눌림 피드백(.press — scale .985, 모션 최소화면 꺼짐) — 누를 수 있는 칸마다 */
   const item =
-    "flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1.5 t-caption font-bold text-text-1 no-underline";
+    "press flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1.5 t-caption font-bold text-text-1 no-underline";
 
   return (
     <div
@@ -91,12 +95,23 @@ export function MobileActionBar({
       aria-label="단지 빠른 행동"
       className="complex-actionbar fixed inset-x-0 z-30 flex justify-center px-3 md:hidden"
     >
-      <div className="glass grid w-full max-w-[560px] grid-cols-3 gap-1 rounded-2xl p-1.5 shadow-[0_12px_32px_rgba(16,28,54,.16)]">
+      <div
+        className={`glass grid w-full max-w-[560px] gap-1 rounded-2xl p-1.5 shadow-[0_12px_32px_rgba(16,28,54,.16)] ${
+          askingHref ? "grid-cols-4" : "grid-cols-3"
+        }`}
+      >
         <WatchlistButton complexId={complexId} complexName={complexName} variant="bar" />
         <Link href={noteHref} className={item}>
           <Icon name="notebook-pen" size={18} />
           노트 쓰기
         </Link>
+        {/* [1008 · Q] 긴 페이지 중간에서도 결정 도구 하나 — 섹션으로 스크롤하며 펼친다(해시 링크, JS 없음) */}
+        {askingHref && (
+          <a href={askingHref} className={item}>
+            <Icon name="scale" size={18} />
+            호가 점검
+          </a>
+        )}
         <Link href={analysisHref} className={item}>
           <Icon name="sparkles" size={18} />
           AI 분석

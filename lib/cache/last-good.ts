@@ -19,6 +19,12 @@ import { logger } from "@/lib/log";
  */
 
 const SOURCE = "last-good";
+/* [1007] public_data_cache.expires_at 은 NOT NULL — null 을 보내던 저장이 **매번 실패**했다
+   (운영 로그 2026-09-20: "[last-good] public-notes:24 저장 실패 null value in column expires_at").
+   public-notes 만이 아니라 지역 마커·지도 공유 단지·lighthouse 정상본 저장이 전부 막혀 콜드
+   인스턴스의 폴백이 항상 비어 있었다. 읽기(loadLastGood)는 maxAgeHours 로 스스로 자르므로
+   여기 TTL 은 상한(48h)만 둔다. */
+const LAST_GOOD_TTL_MS = 48 * 3_600_000;
 
 export async function saveLastGood(cacheKey: string, value: unknown): Promise<void> {
   try {
@@ -30,7 +36,7 @@ export async function saveLastGood(cacheKey: string, value: unknown): Promise<vo
         cache_key: cacheKey,
         payload: value as never,
         fetched_at: new Date().toISOString(),
-        expires_at: null,
+        expires_at: new Date(Date.now() + LAST_GOOD_TTL_MS).toISOString(),
       },
       { onConflict: "cache_key" },
     );

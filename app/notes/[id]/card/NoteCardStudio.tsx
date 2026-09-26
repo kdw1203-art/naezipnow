@@ -68,7 +68,8 @@ export function NoteCardStudio({
 }) {
   const byId = useMemo(() => new Map(available.map((f) => [f.id, f])), [available]);
   const { showToast } = useToast();
-  const { copy, copied } = useCopy("링크를 복사했어요 — 붙여넣기만 하면 공유 완료");
+  /* [1009 · T] 복사 토스트 문구 통일 — "링크를 복사했어요"(사이트 공통 · 390px 한 줄) */
+  const { copy, copied } = useCopy("링크를 복사했어요");
   const [themeId, setThemeId] = useState(initialThemeId);
   // 표지는 항상 첫 장 고정. 선택 순서 = 장 순서.
   const [selected, setSelected] = useState<string[]>(() => {
@@ -168,7 +169,7 @@ export function NoteCardStudio({
       track(EV_CARD_EXPORT, {});
       showToast("이미지를 내려받았어요");
     } catch {
-      showToast("이미지를 만들지 못했어요 — 잠시 후 다시 시도해 주세요");
+      showToast("이미지를 만들지 못했어요 — 다시 눌러 주세요");
     } finally {
       setShooting(false);
     }
@@ -205,9 +206,9 @@ export function NoteCardStudio({
       }
       saveBlob(blob);
       track(EV_CARD_SHARE, { channel: "download" satisfies ShareChannel });
-      showToast("이미지를 내려받았어요 — 카카오톡·인스타에 올려 보세요");
+      showToast("이미지를 내려받았어요");
     } catch {
-      showToast("이미지를 만들지 못했어요 — 잠시 후 다시 시도해 주세요");
+      showToast("이미지를 만들지 못했어요 — 다시 눌러 주세요");
     } finally {
       setShooting(false);
     }
@@ -221,7 +222,7 @@ export function NoteCardStudio({
   const shareKakao = useCallback(async () => {
     const kakao = await loadKakaoSdk();
     if (!kakao?.Share?.sendDefault) {
-      showToast("카카오톡을 열지 못했어요 — 링크를 복사해 보내 주세요");
+      showToast("카카오톡을 열지 못했어요 — 링크 복사로 보내 주세요");
       return;
     }
     try {
@@ -236,7 +237,7 @@ export function NoteCardStudio({
       );
       track(EV_CARD_SHARE, { channel: "kakao" satisfies ShareChannel });
     } catch {
-      showToast("카카오톡을 열지 못했어요 — 링크를 복사해 보내 주세요");
+      showToast("카카오톡을 열지 못했어요 — 링크 복사로 보내 주세요");
     }
   }, [showToast, shareTitle, shareText, shareUrl, kakaoImageUrl, track]);
 
@@ -418,9 +419,8 @@ export function NoteCardStudio({
                   key={t.id}
                   type="button"
                   onClick={() => setThemeId(t.id)}
-                  aria-label={t.label}
-                  title={t.label}
-                  className={`flex h-9 items-center gap-1.5 rounded-full border px-2.5 text-[12px] font-bold transition-all ${
+                  aria-pressed={themeId === t.id}
+                  className={`press flex h-9 items-center gap-1.5 rounded-full border px-2.5 text-[12px] font-bold transition-all ${
                     themeId === t.id ? "border-primary ring-2 ring-primary/30" : "border-line"
                   }`}
                 >

@@ -20,7 +20,11 @@ import { ComplianceNotice } from "@/app/components/ComplianceNotice";
    · source=court: AuctionsClient 안의 클라이언트 분기.
    D-day·진행/마감·캘린더는 클라이언트가 조회 시각으로 계산 — 요청 시각 기준
    이던 예전보다 오히려 신선하다(SSR 은 builtAtMs 로 하이드레이션 일치). */
-export const revalidate = 600;
+/* [1010] 600 → 21,600(6시간). 위 구조대로 기본 목록 200건이 서버 HTML 에 전부 실리므로
+   TTL 이 곧 신선도였다. 이제 온비드 적재 크론이 **물건이 실제로 들어왔을 때만**
+   /auctions 를 비운다(app/api/cron/onbid-sync/route.ts) — 시간은 안전망으로만 남는다.
+   D-day·진행/마감은 원래도 클라이언트가 조회 시각으로 계산하므로 TTL 과 무관하다. */
+export const revalidate = 21_600;
 
 export const metadata: Metadata = {
   title: "수도권 공매 물건 (온비드) | 내집나우",

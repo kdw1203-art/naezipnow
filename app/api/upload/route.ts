@@ -2,9 +2,19 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { safeAuth } from "@/lib/safe-auth";
 import { uploadFile, recordUpload, UPLOAD_MAX_BYTES, ALLOWED_MIME_TYPES } from "@/lib/storage/upload";
-import { applyRateLimit, WRITE_RATE_LIMIT } from "@/lib/rate-limit";
+import { getClientIp, requestRateLimit, WRITE_RATE_LIMIT } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
+
+/* [1005 · A4] 업로드 한도 — 1분 30회, **계정(이메일)** 기준.
+   예전엔 IP 기준 1분 10회였는데 작성 화면은 사진 10장을 허용한다. 10장을 고르면 예산이
+   그 자리에서 다 소진돼, 한 장만 실패해도 재시도가 곧바로 429 였다(같은 공유기 뒤의 두
+   사람이면 더 빨리). 30회면 10장 + 재시도 두 바퀴다. 키를 계정으로 잡는 이유: 업로드는
+   로그인 필수라 정체가 분명하고, 카페·회사망처럼 IP 를 나눠 쓰는 사용자들이 서로의 예산을
+   깎지 않는다. 비로그인 요청은 한도 전에 401 로 끝나 카운터를 안 건드린다. */
+const UPLOAD_RATE_MAX = 30;
+const UPLOAD_RATE_WINDOW_MS = 60_000;
+const UPLOAD_RATE_MESSAGE = "사진 업로드가 잠시 많아요 — 1분 뒤 다시 시도해 주세요";
 
 /**
  * POST /api/upload
@@ -12,13 +22,31 @@ export const runtime = "nodejs";
  * Returns: { url, path, size, mime }
  */
 export async function POST(req: NextRequest) {
-  // 속도 제한: 1분에 10회
-  const limited = await applyRateLimit(req, { max: 10, windowMs: 60_000 });
-  if (limited) return limited;
-
   const session = await safeAuth();
   if (!session?.user?.email) {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  }
+
+  const identity = session.user.email.trim().toLowerCase() || getClientIp(req);
+  const rate = await requestRateLimit(req, {
+    max: UPLOAD_RATE_MAX,
+    windowMs: UPLOAD_RATE_WINDOW_MS,
+    keyFn: () => `rl:upload:${identity}`,
+  });
+  if (!rate.ok) {
+    const retryAfterSec = Math.max(1, Math.ceil((rate.resetAt - Date.now()) / 1000));
+    return NextResponse.json(
+      { error: UPLOAD_RATE_MESSAGE, retryAfterSec },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(retryAfterSec),
+          "X-RateLimit-Limit": String(UPLOAD_RATE_MAX),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": String(Math.ceil(rate.resetAt / 1000)),
+        },
+      },
+    );
   }
 
   let formData: FormData;

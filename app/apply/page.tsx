@@ -21,7 +21,10 @@ const APPLYHOME_URL = "https://www.applyhome.co.kr";
    돌았다(x-vercel-cache: MISS, cache-control: private,no-store 실측). 이 화면의
    서버 렌더에는 사용자별 상태가 없다(auth·cookies 0건 — check-cache-policy 가
    회귀를 막는다). ISR 로 전환: 청약홈 공공데이터는 하루 단위 갱신 — 요청마다 SSR 할 이유가 없다. */
-export const revalidate = 1800;
+/* [1010] 1,800 → 86,400(1일). 재료는 청약홈 공고이고, 적재 크론
+   (app/api/cron/supply-ingest)이 끝나면 SOURCE_MAP.supply 가 "/apply" 를 즉시 비운다.
+   ※ /apply/calendar 는 아직 그 목록에 없어 TTL 을 올리지 않았다(보고서 참고). */
+export const revalidate = 86_400;
 
 export const metadata: Metadata = {
   title: "청약 센터 — 청약홈 경쟁률·특별공급 | 내집나우",

@@ -1,10 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
 import { useSettledSearchQuery } from "@/lib/search/settle";
 import { formatKrwManwon } from "@/lib/format/krw";
+import type { PickerOption } from "@/app/search/ComplexPickerList";
+import { isBotBrowser } from "@/lib/client/is-bot-ua";
+import { QUERY_TOO_LONG, SEARCH_QUERY_MAX, badRequestNotice } from "@/lib/search/complex-preview";
 
 /* ============================================================
    단지 선택기 (분석 도구 공용) — 검색 → 서제스트 드롭다운 → 단지 선택.
@@ -13,7 +17,16 @@ import { formatKrwManwon } from "@/lib/format/krw";
    - 딥링크: props(initialComplexId/initialApt)가 없으면 현재 URL의
      ?complexId= / ?apt= 를 읽어 초기 선택 (지도/검색 → 분석 seamless)
    - onSelect 로 부모에 선택 단지(id·name·region·regionId) 전달
+   - [1008 · S] 키보드 ↑↓ Enter Esc(콤보박스) · 검색어 강조 · 읍면동/세대수/6개월 거래로 같은 이름 가르기 ·
+     결과 없음 문구 + 지도에서 찾기 + 비슷한 이름. 드롭다운은 입력 뒤에만 필요해 next/dynamic 으로
+     따로 싣는다(app/search/ComplexPickerList — /analysis/ai/[tool] 첫 묶음 472/480KB 를 늘리지 않게).
    ============================================================ */
+
+/** 드롭다운·선택 칩 — 친 뒤(또는 고른 뒤)에만 필요하다. 하이드레이션 뒤 한가할 때 미리 받아 둔다
+ *  (아래 useEffect — 지역 카탈로그와 같은 방식). 칩이 늦게 뜨지 않게. */
+const loadList = () => import("@/app/search/ComplexPickerList");
+const ComplexPickerList = dynamic(loadList, { ssr: false });
+const PickedChip = dynamic(() => loadList().then((m) => m.PickedChip), { ssr: false });
 
 export type PickedComplex = {
   id: string;
@@ -28,7 +41,7 @@ export type PickedComplex = {
   priceLabel: string | null;
 };
 
-type Suggestion = { id: string; name: string; region: string; dong: string };
+type Suggestion = PickerOption;
 
 /** [967 · 31] 만원 → "12억"/"8.0억"/"8,200만", 없으면 null — lib/format/krw.ts "listing" 스타일 */
 function manwonLabel(manwon: number | null | undefined): string | null {
@@ -153,20 +166,53 @@ export function ComplexPicker({
      따로 적어 뒀다). 한글 조합 중에는 더 오래 기다린다 — 조합 중간 상태
      ("ㄹ","라","래","램"…)로 단지 서제스트를 부르는 건 헛수고다. */
   const { query: settledQuery, compositionProps } = useSettledSearchQuery(query);
-  const [items, setItems] = useState<Suggestion[]>([]);
+  /* [1008 · S] 마지막 응답 한 덩어리 — 물어본 검색어(q)·결과·0건일 때만 오는 "비슷한 이름"·조회 실패.
+     따로 두면 "결과는 새 검색어, 강조는 옛 검색어" 처럼 어긋난 조합이 한 번씩 그려진다. */
+  const [res, setRes] = useState<{
+    q: string;
+    items: Suggestion[];
+    similar: Suggestion[];
+    failed: boolean;
+    /** [1008 · 리뷰 B] 장애도 없음도 아닌 안내(검색어 80자 초과) */
+    notice?: string | null;
+  } | null>(null);
+  const [active, setActive] = useState(-1);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<PickedComplex | null>(null);
+  const listId = useId();
+  const items = res?.items ?? [];
+  const options = items.length ? items : res?.similar ?? [];
 
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  /** 지금 입력(굳기 전) — 굳은 값이 이미 지난 값이면 그걸로 검색하지 않는다(아래 굳은 뒤 검색) */
+  const queryRef = useRef(query);
+  queryRef.current = query;
   const boxRef = useRef<HTMLDivElement | null>(null);
   const initRef = useRef(false);
+  /* [1008 · 리뷰 B] 요청 순번 — 굳기 전 Enter(자동 선택)와 굳은 뒤 검색이 겹치면 늦게 온 옛 응답이 새 결과를
+     덮거나, 이미 고른 뒤에 목록을 다시 열었다. 새 요청·선택마다 순번을 올리고 이전 요청은 끊는다. */
+  const reqRef = useRef<{ seq: number; ac: AbortController | null; q: string; auto: boolean }>({
+    seq: 0,
+    ac: null,
+    q: "",
+    auto: false,
+  });
+  const cancelPending = useCallback(() => {
+    reqRef.current.seq += 1;
+    reqRef.current.ac?.abort();
+    reqRef.current.ac = null;
+    reqRef.current.q = "";
+    reqRef.current.auto = false;
+    setLoading(false);
+  }, []);
 
   const choose = useCallback(
     async (s: { id: string; name: string; region: string }) => {
+      cancelPending();
       setOpen(false);
-      setItems([]);
+      setRes(null);
       // 후보 데이터로 즉시 반영 후 상세로 보강
       let picked = await toPicked(s.id, s.name, s.region, null);
       setSelected(picked);
@@ -184,46 +230,112 @@ export function ComplexPicker({
         onSelectRef.current(picked);
       }
     },
-    [clearOnSelect],
+    [clearOnSelect, cancelPending],
   );
 
   const runSuggest = useCallback(
     async (q: string, autoselect = false) => {
       const term = q.trim();
+      cancelPending();
+      const seq = reqRef.current.seq;
       if (!term) {
-        setItems([]);
+        setRes(null);
         setOpen(false);
         return;
       }
+      reqRef.current.q = term;
+      reqRef.current.auto = autoselect;
+      /* [1008 · 리뷰 B] 80자 넘는 입력은 보내지 않는다 — 서버 400 을 예전엔 "검색이 되지 않아요"(장애)로 적었다 */
+      if (term.length > SEARCH_QUERY_MAX) {
+        setRes({ q: term, items: [], similar: [], failed: false, notice: QUERY_TOO_LONG });
+        setActive(-1);
+        setOpen(true);
+        return;
+      }
+      const ac = new AbortController();
+      reqRef.current.ac = ac;
       setLoading(true);
       try {
-        const res = await fetch(`/api/search/suggest?q=${encodeURIComponent(term)}`);
-        const data = (await res.json()) as { suggestions?: Suggestion[] };
+        const r = await fetch(`/api/search/suggest?q=${encodeURIComponent(term)}`, { signal: ac.signal });
+        const notice = await badRequestNotice(r);
+        const data: { suggestions?: Suggestion[]; similar?: Suggestion[]; failed?: boolean } = notice
+          ? {}
+          : await r.json();
+        if (seq !== reqRef.current.seq) return; // 더 새 요청(또는 선택)이 있었다
         const list = Array.isArray(data.suggestions) ? data.suggestions : [];
         if (autoselect) {
-          const exact =
-            list.find((s) => s.name === term) ?? (list.length === 1 ? list[0] : null);
+          /* [1008 · 리뷰 B] '비슷한 이름'(오타 추정)은 조용히 고르지 않는다 — "광교 호수공원" 이 호수공원(대림1)@안산
+             한 건(비슷한 이름)을 딥링크 초기 선택으로 골랐다. 확실한 일치 중에서만: 이름이 같은 것, 아니면 하나뿐일 때. */
+          const sure = list.filter((s) => !s.fuzzy);
+          const exact = sure.find((s) => s.name === term) ?? (sure.length === 1 ? sure[0] : null);
           if (exact) {
             await choose(exact);
             return;
           }
         }
-        setItems(list);
-        setOpen(list.length > 0);
+        const failed = !notice && (!r.ok || !!data.failed);
+        /* 실패는 같은 검색어로 다시 물어볼 수 있게 — 아래 '같은 검색어 중복 요청 막기' 에서 빼 둔다 */
+        if (failed) reqRef.current.q = "";
+        setRes({ q: term, items: list, similar: data.similar ?? [], failed, notice });
+        setActive(-1);
+        /* [1008 · S] 0건도 연다 — "없어요" 와 다음 할 일(띄어 쓰는 요령·지도·비슷한 이름)을 보여 준다 */
+        setOpen(true);
       } catch {
-        setItems([]);
-        setOpen(false);
+        if (seq !== reqRef.current.seq) return; // 끊긴 요청(abort)·더 새 요청
+        reqRef.current.q = "";
+        setRes({ q: term, items: [], similar: [], failed: true });
+        setOpen(true);
       } finally {
-        setLoading(false);
+        if (seq === reqRef.current.seq) {
+          reqRef.current.ac = null;
+          reqRef.current.auto = false;
+          setLoading(false);
+        }
       }
     },
-    [choose],
+    [choose, cancelPending],
   );
+
+  /* [1008 · S] 콤보박스 키보드 — ↑↓ 순환 · Enter 활성 항목(없으면 첫 결과) · Esc 목록만 닫기(한 번 더면 입력을 떠남).
+     한글 조합 중 방향키·Enter 는 IME 몫이라 가로채지 않는다. 아직 굳지 않은 입력에서 Enter 면
+     옛 결과를 고르지 않고 지금 입력으로 바로 찾는다(정확히 한 곳이면 바로 선택). */
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.nativeEvent.isComposing) return;
+    const n = options.length;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!open) {
+        if (res) setOpen(true);
+        return;
+      }
+      if (n) setActive((i) => (e.key === "ArrowDown" ? (i + 1) % n : i <= 0 ? n - 1 : i - 1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (selected && query === selected.name) return; // 방금 고른 이름 그대로 — 다시 고르지 않는다
+      if (query.trim() !== res?.q) {
+        void runSuggest(query, true);
+        return;
+      }
+      /* 가리킨 줄이 없으면 첫 결과 — 단 '비슷한 이름'(오타 추정)은 Enter 한 번으로 고르지 않는다(↓로 가리켜 고른다) */
+      const pick = active >= 0 ? options[active] : items[0] && !items[0].fuzzy ? items[0] : null;
+      if (open && pick) void choose(pick);
+    } else if (e.key === "Escape") {
+      if (open) {
+        e.preventDefault();
+        setOpen(false);
+        setActive(-1);
+      } else e.currentTarget.blur();
+    }
+  };
 
   // 딥링크 초기값 (?complexId= / ?apt=)
   useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
+    /* [1008] 크롤러는 딥링크 초기 선택을 하지 않는다 — 단지 허브·결과 보드의 링크(?complexId=)를 따라온 봇이
+       마운트마다 /api/complex/[id]/detail(1007 실측 614회/일, 대부분 봇)·자동완성을 일으켰다. 워크벤치 쪽
+       조회는 1007 human-gate 로 막혀 있고, 이 초기 선택만 남아 있었다(1008 · W 보고). */
+    if (isBotBrowser()) return;
     let cid = initialComplexId ?? null;
     let apt = initialApt ?? null;
     if (
@@ -263,18 +375,27 @@ export function ComplexPicker({
   // 입력이 굳은 뒤 검색 (대기 규칙: lib/search/settle)
   useEffect(() => {
     if (!settledQuery) {
-      setItems([]);
+      /* 입력을 비웠으면 진행 중인 검색은 버린다 — 단 딥링크 자동 선택(?apt=)은 마운트 직후 이 자리(빈 입력)를
+         지나가므로 끊지 않는다(끊으면 자동 선택이 사라지고 같은 검색을 한 번 더 보냈다 — 리뷰 B 재현). */
+      if (!reqRef.current.auto) cancelPending();
+      setRes(null);
       setOpen(false);
       return;
     }
     if (selected && settledQuery === selected.name) return; // 방금 선택한 값은 재검색 안 함
+    /* [1008 · 리뷰 B] 굳은 값이 지금 입력보다 뒤처졌으면(굳기 전 Enter 로 이미 골랐거나 더 쳤다) 검색하지 않는다 —
+       예전엔 고른 순간(selected 변경) 이 효과가 옛 굳은 값("공작")으로 다시 돌아 목록을 도로 열었다(재현). */
+    if (settledQuery.trim() !== queryRef.current.trim()) return;
+    /* 굳기 전 Enter 가 같은 검색어로 이미 물어봤다(진행 중이거나 끝났다) — 같은 요청을 한 번 더 보내지 않는다 */
+    if (settledQuery.trim() === reqRef.current.q) return;
     void runSuggest(settledQuery);
-  }, [settledQuery, selected, runSuggest]);
+  }, [settledQuery, selected, runSuggest, cancelPending]);
 
   /* [975] 지역 카탈로그 미리 받기 — 하이드레이션 뒤 한 번. 첫 묶음에서는 뺐지만
      고르는 순간에는 이미 있어야 칩이 바로 뜬다(위 loadRegionMap 주석). */
   useEffect(() => {
     void loadRegionMap();
+    void loadList();
   }, []);
 
   // 바깥 클릭 시 드롭다운 닫기
@@ -302,8 +423,17 @@ export function ComplexPicker({
           onChange={(e) => setQuery(e.target.value)}
           {...compositionProps}
           onFocus={() => {
-            if (items.length) setOpen(true);
+            void loadList();
+            if (res && !selected) setOpen(true);
           }}
+          onKeyDown={onKeyDown}
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-activedescendant={open && active >= 0 ? `${listId}-${active}` : undefined}
+          aria-autocomplete="list"
+          autoComplete="off"
+          enterKeyHint="search"
           placeholder={placeholder}
           aria-label={label || "단지 검색"}
           className="min-w-0 flex-1 rounded-[10px] border border-line bg-surface px-3 py-2 text-xs font-bold text-ink outline-none focus:border-primary"
@@ -330,38 +460,25 @@ export function ComplexPicker({
         )}
       </div>
 
-      {open && items.length > 0 && (
-        <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-y-auto rounded-[10px] border border-line bg-surface shadow-[0_14px_36px_rgba(16,28,54,.16)]">
-          {items.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => void choose(s)}
-              className="flex w-full flex-col items-start gap-0.5 border-b border-divider px-3 py-2 text-left last:border-b-0 hover:bg-primary-soft"
-            >
-              <span className="text-xs font-extrabold text-ink">{s.name}</span>
-              <span className="text-[10px] text-text-3">{s.region || s.dong}</span>
-            </button>
-          ))}
-        </div>
+      {open && res && (
+        <ComplexPickerList
+          listId={listId}
+          query={res.q}
+          items={res.items}
+          similar={res.similar}
+          active={active}
+          failed={res.failed}
+          notice={res.notice}
+          onHover={setActive}
+          onPick={(s) => void choose(s)}
+          onMap={onMapClick ?? undefined}
+          mapHref={onMapClick === undefined ? `/map?q=${encodeURIComponent(res.q)}` : undefined}
+        />
       )}
 
       {loading && <span className="text-[10px] text-text-3">검색 중…</span>}
 
-      {showChip && selected && (
-        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 rounded-[10px] bg-primary-soft px-3 py-2">
-          <span className="text-xs font-extrabold text-primary">{selected.name}</span>
-          {selected.regionLabel && (
-            <span className="text-[10px] font-bold text-text-2">{selected.regionLabel}</span>
-          )}
-          {selected.priceLabel && (
-            <span className="text-[10px] font-bold text-text-2">· 최근 {selected.priceLabel}</span>
-          )}
-          <span className="ml-auto rounded border border-line px-1 py-px text-[10px] font-bold text-text-3">
-            실데이터 기준
-          </span>
-        </div>
-      )}
+      {showChip && selected && <PickedChip picked={selected} />}
     </div>
   );
 }

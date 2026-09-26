@@ -1,220 +1,156 @@
 "use client";
 
-import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { ComplexPicker, type PickedComplex } from "@/app/analysis/ComplexPicker";
 /* [975] 지도 서랍은 **열 때만** 내려받는다 — 이 라우트의 First Load 예산이
    461/480KB 라 지도(NaverMap 1,344줄)를 정적으로 얹으면 그 자리에서 깨진다. */
 import { useMapPick } from "@/app/analysis/use-map-pick";
 import { hasSession } from "@/lib/client/has-session";
+import { useHumanGate } from "@/lib/client/human-gate";
+import { isBotBrowser } from "@/lib/client/is-bot-ua";
 import { SkBlock, SkLine } from "@/app/components/ui/Skeleton";
+import { ActionButton, type ActionState } from "@/app/components/ui/ActionButton";
+import { useToast } from "@/app/components/toast/ToastProvider";
 import { isCoreAiAnalysisToolId, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
-import { UNCERTAINTY, CONFIDENCE_LABEL, judgeConfidence } from "@/lib/ai/insight-blocks";
-import type { ToolPersona, ResultBlock } from "@/lib/ai/tool-persona";
-import { resultOrder } from "@/lib/ai/result-order";
+import type { ToolPersona } from "@/lib/ai/tool-persona";
 import { buildTuningInput, type TuningField } from "@/lib/ai/tool-tuning";
-import dynamic from "next/dynamic";
-import { outcomeBand } from "@/lib/ai/outcome-band";
-import { freeQuotaLabel, weeklyPassCheckoutHref } from "@/lib/payments/paywall-links";
-import type { Verdict } from "@/lib/ai/verdict";
-import { VerdictCard } from "./VerdictCard";
+import { applyPriceAutofill, EMPTY_AUTOFILL, priceManString, type AutofillState } from "@/lib/ai/tuning-autofill";
+import { formatKrwWon } from "@/lib/format/krw";
+import type { PortfolioItem, ReadyState, RunResult, Similar } from "./workbench-types";
 
-/* [AI-31~38·42~43·46] 통합 워크벤치 클라이언트 — 3스텝 실행 흐름.
-   서버 판정(레이더·플래그·신호·각주·반대 시나리오)은 /api/ai/context 가 주고,
-   여기는 그리기와 흐름만 한다. 수치를 클라이언트에서 재계산하지 않는다. */
+/* ============================================================
+   [AI-31~38·42~43·46] 통합 워크벤치 클라이언트 — 입력과 흐름만 한다.
+   서버 판정(결과 요약·그래프 재료·신호·체크리스트·출처)은 /api/ai/context 가 주고, 결과 그림은
+   ResultView(next/dynamic 청크)가 그린다. 수치를 여기서 계산하지 않는다.
 
-type Ctx = {
-  complex: {
-    id: string;
-    name: string;
-    region: string;
-    price: { priceKrw: number; bandLabel: string; latestYm: string; sample?: number | null } | null;
-  } | null;
-  region: {
-    name: string;
-    snapshot: {
-      avgSale: number | null;
-      jeonseRatio: number | null;
-      saleChangeMonthly: number | null;
-      tradeCount: number | null;
-      period: string;
-    } | null;
-    demographics: { unsoldUnits: number | null; period: string } | null;
-  } | null;
-  rent: { wolseSharePct: number | null; medianMonthlyKrw: number | null; sample?: number | null } | null;
-  supply: { upcomingHouseholds: number; upcomingComplexes: number } | null;
-  news: { items: { id: string; title: string; at: string }[] } | null;
-  notes: { count: number; avgScore: number | null; latest: { id: string; title: string } | null } | null;
-  macro: { baseRatePct: number | null } | null;
-};
+   [1008 · W] 소유자: "화면에서 보여주는 말들이 정리가 안 되어 있고, 무슨 말인지 모르겠고, 직관적이지
+   않고, 데이터가 숫자나 그래프로 보이지 않아 처음 보는 사람이 뭘 봐야 하는지 모르겠다".
+   · 순서: ① 단지 고르기 → (결과가 바로 선다) → ② 내 조건(선택, 기본 접힘) → ③ 분석 실행(내 조건 반영
+     + 원하면 AI 해설). 모바일은 ① 다음에 결과가 오고 ②③ 은 그 아래 — 결과까지 스크롤이 없다.
+   · 단지를 안 골랐으면 "이렇게 써요" 3단계 + 거래 많은 단지 빠른 선택(서버가 준 실데이터만).
+   · 기준 가격은 단지를 고르면 최근 실거래가로 자동으로 채운다(lib/ai/tuning-autofill.ts).
+   · 봇은 컨텍스트를 부르지 않는다(1007 V2a-4) — 피커의 딥링크 자동 선택도 여기서 막는다.
+   ============================================================ */
 
-type Footnote = {
-  n: number;
-  label: string;
-  source: string;
-  asOf: string | null;
-  sample: number | null;
-  href: string | null;
-  ageDays: number | null;
-};
+/* [981] 보정 입력 폼은 **렌더될 때** 내려온다 — 데이터가 준비된 뒤 ② 를 펼칠 때만 마운트. */
+const TuningFormLazy = dynamic(() => import("./TuningForm").then((m) => m.TuningForm), { ssr: false });
+/* [1008] 결과 화면 전체(요약·그래프·다음 할 일·자세히)는 한 청크 — 본체 예산(480KB) 밖 */
+const ResultViewLazy = dynamic(() => import("./ResultView").then((m) => m.ResultView), {
+  ssr: false,
+  loading: () => <ResultSkeleton />,
+});
+/* [996] "다른 도구로 본 이 단지" 보드 — 결과 아래, 사람이 볼 때만 도구 3종을 부른다(VerdictBoard.tsx) */
+const VerdictBoardLazy = dynamic(() => import("./VerdictBoard").then((m) => m.VerdictBoard), { ssr: false });
+/* [1008 · 리뷰 A-3] 내 자산 구성 진단 — 관심 단지를 불러왔을 때만 */
+const PortfolioMixLazy = dynamic(() => import("./PortfolioMix").then((m) => m.PortfolioMix), { ssr: false });
 
-type Insight = {
-  radar: { key: string; label: string; score: number | null; basis: string }[];
-  flags: { key: string; level: "warn" | "info"; title: string; detail: string }[];
-  signals: { key: string; label: string; state: "green" | "yellow" | "red" | "na"; basis: string }[];
-  counters: string[];
-};
-
-type RunResult = {
-  ok: boolean;
-  source: string;
-  degraded: boolean;
-  reasonCode: string | null;
-  markdown: string;
-  structuredSummary?: { headline: string; bullets: string[] } | null;
-  /** [993] 판단 카드 — 실행 입력(보정값)까지 반영한 서버 조립 결과 */
-  verdict?: Verdict | null;
-  runId?: string | null;
-  usage?: { used: number; limit: number | null; lifetime?: true } | null;
-  error?: string;
-  code?: string;
-};
-
-const SIGNAL_COLOR: Record<string, string> = {
-  green: "bg-success text-surface",
-  yellow: "bg-warning text-surface",
-  red: "bg-danger text-surface",
-  na: "bg-bg text-text-3",
-};
-const SIGNAL_LABEL: Record<string, string> = {
-  green: "우호",
-  yellow: "중립",
-  red: "주의",
-  na: "데이터 없음",
-};
-
-/** 결과 마크다운 경량 렌더 (##·-·**·> 만) — 외부 md 라이브러리 없이 */
-function MdLite({ text }: { text: string }) {
-  const lines = text.split("\n");
+function ResultSkeleton() {
   return (
-    <div className="flex flex-col gap-1 t-body text-text-1">
-      {lines.map((ln, i) => {
-        const t = ln.trim();
-        if (!t) return <div key={i} className="h-1" />;
-        if (t.startsWith("## "))
-          return (
-            <div key={i} className="mt-2 t-section text-ink">
-              {t.slice(3)}
-            </div>
-          );
-        if (t.startsWith("> "))
-          return (
-            <div key={i} className="rounded-[10px] bg-warning-soft px-3 py-2 t-sub font-bold text-warning">
-              {t.slice(2)}
-            </div>
-          );
-        if (t.startsWith("- ") || t.startsWith("* "))
-          return (
-            <div key={i} className="pl-3">
-              · {renderBold(t.slice(2))}
-            </div>
-          );
-        if (t === "---") return <hr key={i} className="my-1 border-line" />;
-        return <div key={i}>{renderBold(t)}</div>;
-      })}
+    <div className="card flex flex-col gap-3 rounded-2xl p-4" aria-busy="true">
+      <SkLine w="40%" h={14} />
+      <SkLine w="85%" h={18} />
+      <SkBlock h={84} />
+      <SkBlock h={180} />
     </div>
   );
 }
-function renderBold(s: string) {
-  const parts = s.split(/\*\*(.+?)\*\*/g);
-  return parts.map((p, i) =>
-    i % 2 === 1 ? (
-      <b key={i} className="font-bold text-ink">
-        {p}
-      </b>
-    ) : (
-      <span key={i}>{p}</span>
-    ),
-  );
-}
 
-/* [981] 보정 입력 폼은 **렌더될 때** 내려온다 — next/dynamic 은 import 시점이 아니라
-   마운트 시점에 받는다. 데이터 로드가 끝난 뒤에만 그려지므로 첫 화면 예산에서 빠진다. */
-const TuningFormLazy = dynamic(() => import("./TuningForm").then((m) => m.TuningForm), {
-  ssr: false,
-});
-/* [996] 판단 곁의 세 조각(다음 행동 두 개 · 네 가지 눈 보드 · 내 임장노트 칩)은 한 청크로
-   따로 받는다 — 이 라우트 예산 480KB 에 477KB 라 페이지 번들에는 선언만 남긴다.
-   판단 카드 자체가 클라이언트 fetch 뒤에 서므로 ssr:false 로 잃는 화면이 없다. */
-const VerdictNextLazy = dynamic(() => import("./VerdictBoard").then((m) => m.VerdictNextActions), {
-  ssr: false,
-  loading: () => <div className="min-h-10" />,
-});
-const VerdictBoardLazy = dynamic(() => import("./VerdictBoard").then((m) => m.VerdictBoard), { ssr: false });
-const MyNotesChipLazy = dynamic(() => import("./VerdictBoard").then((m) => m.MyNotesChip), { ssr: false });
+export type QuickPick = { id: string; name: string; region: string; recentTrades: number };
+
+type CtxState = { phase: "idle" } | { phase: "loading"; key: string } | ReadyState | { phase: "error"; key: string };
+
+/** 단지 없이 도는 도구(경제 모니터)의 컨텍스트 키 */
+const ECONOMY_KEY = "region:강남구";
 
 export function WorkbenchClient({
   tool,
-  useCase,
+  title,
   tips,
   persona,
   fields,
   llmAvailable = false,
+  quickPicks = [],
+  resultKind,
 }: {
   tool: AiAnalysisToolId;
-  useCase: string;
+  /** 도구 이름 — 지도 서랍 제목("시세 예측")에 쓴다 */
+  title: string;
   tips: string[];
-  /* [993] 서버에 외부 모델 키가 있을 때만 "AI 서술" 토글을 보인다 — 없는데 켜 두면
-     결과마다 "키가 없어 규칙 계산입니다" 경고만 늘어난다(90일 실행 6건 전부 규칙). */
+  /* [993] 서버에 외부 모델 키가 있을 때만 "AI 해설" 선택을 보인다 */
   llmAvailable?: boolean;
-  /* [981] 이 도구의 보정 입력 — 서버가 골라 내려준다(lib/ai/tool-tuning-fields.ts).
-     12종 목록을 여기서 import 하면 통째로 번들에 실려 예산을 넘긴다(483KB 실측). */
+  /* [981] 이 도구의 보정 입력 — 서버가 골라 내려준다(lib/ai/tool-tuning-fields.ts) */
   fields: readonly TuningField[];
-  /* [980] 도구 성격(색·연출·말투) — 서버가 골라 내려 준다. 여기서 TOOL_PERSONAS 를
-     직접 import 하면 16종 문자열이 통째로 브라우저 번들에 실린다. 이 라우트는
-     예산 480KB 에 476KB 로 붙어 있어서 그 여유가 없다. */
+  /* [980] 도구 성격(색·말투) — 서버가 골라 내려 준다(16종 문자열을 번들에 싣지 않게) */
   persona: ToolPersona;
+  /** [1008] 첫 방문 빠른 선택 — 서버(ISR)가 실데이터로 고른 거래 많은 단지. 없으면 줄을 그리지 않는다 */
+  quickPicks?: readonly QuickPick[];
+  /** [1008] 이 도구가 보여 주는 결과 한 줄(첫 방문 안내 3단계의 마지막) */
+  resultKind: string;
 }) {
   const [picked, setPicked] = useState<PickedComplex | null>(null);
+  const pickedRef = useRef(picked);
+  pickedRef.current = picked;
   /* [AI-22] 비교 도구는 최대 3단지 트레이 */
   const [compareTray, setCompareTray] = useState<PickedComplex[]>([]);
-  const [ctxState, setCtxState] = useState<
-    | { phase: "idle" }
-    | { phase: "loading" }
-    | { phase: "ready"; ctx: Ctx; footnotes: Footnote[]; insight: Insight; similar: { id: string; name: string; txCount: number }[]; verdict: Verdict | null }
-    | { phase: "error" }
-  >({ phase: "idle" });
-  /* [993] 모바일: 결과가 나오면 입력 카드를 한 줄로 접는다 — 결과까지 2~3화면 스크롤이 문제였다 */
-  const [inputsOpen, setInputsOpen] = useState(true);
-  /* [981] 도구별 보정 입력 — 엔진이 실제로 읽는 필드만 올린다(lib/ai/tool-tuning.ts).
-     예전에는 12종 전부에게 "가용 예산" 하나만 물었는데, 엔진은 도구마다 다른 입력을
-     이미 읽고 있었다. 특히 갭 도구는 매매가·전세가를 안 물어서 갭이 늘 0 이었다. */
+  const compareCountRef = useRef(0);
+  compareCountRef.current = compareTray.length;
+  const compareTrayRef = useRef(compareTray);
+  compareTrayRef.current = compareTray;
+  const [ctxState, setCtxState] = useState<CtxState>({ phase: "idle" });
   const [tuning, setTuning] = useState<Record<string, string | boolean>>({});
+  const tuningRef = useRef(tuning);
+  tuningRef.current = tuning;
+  const autofillRef = useRef<AutofillState>(EMPTY_AUTOFILL);
+  /* [1008 · 리뷰 A-3] 입력이 곧 결과인 도구(수익률 계산·계약 점검·갭)는 ② 를 펼쳐 둔다 */
+  const [condOpen, setCondOpen] = useState(tool === "ai-simulator" || tool === "contract-risk" || tool === "ai-gap");
   const [useLlm, setUseLlm] = useState(false);
   const [running, setRunning] = useState(false);
+  const [runningLlm, setRunningLlm] = useState(false);
   const [result, setResult] = useState<RunResult | null>(null);
-  const [feedback, setFeedback] = useState<"idle" | "up" | "down" | "sent">("idle");
-  const [feedbackNote, setFeedbackNote] = useState("");
-  const [watchState, setWatchState] = useState<"idle" | "busy" | "done" | "fail">("idle");
-  const [shareCopied, setShareCopied] = useState(false);
-  const [presetMsg, setPresetMsg] = useState<string | null>(null);
+  /* [1009 · A] ③ 버튼의 결과 반응 — 진행(링) → 완료(체크) / 실패(흔들림) 뒤 원래 문구로(ActionButton).
+     예전엔 "계산하는 중…" 문구만 바뀌고 끝나서, 데스크톱(결과가 오른쪽에 그대로 있는 화면)에서는 다시 계산이
+     됐는지 알 길이 없었다. */
+  const [runFlash, setRunFlash] = useState<"done" | "error" | null>(null);
+  /* 실패 원인 코드 — 결과(전환으로 늦게 그려짐)와 별개로 버튼 문구가 바로 쓴다 */
+  const [runErrCode, setRunErrCode] = useState<string | null>(null);
+  const flashTimer = useRef<number | null>(null);
+  const { showToast } = useToast();
+  /* [1009 · A · 리뷰] 토스트는 루트 레이아웃에 있어 화면을 떠나도 남는다 — 떠난 뒤 누른 "되돌리기"가 조용히
+     아무것도 안 하지 않게, 이 화면이 살아 있는지 본다 */
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (flashTimer.current !== null) window.clearTimeout(flashTimer.current);
+    };
+  }, []);
+  const flash = useCallback((k: "done" | "error") => {
+    setRunFlash(k);
+    if (flashTimer.current !== null) window.clearTimeout(flashTimer.current);
+    flashTimer.current = window.setTimeout(() => setRunFlash(null), 1600);
+  }, []);
+  const [signedIn, setSignedIn] = useState(false);
 
   const isCompare = tool === "ai-compare";
   const isPortfolio = tool === "ai-portfolio";
   const isEconomy = tool === "ai-economy";
   const isContract = tool === "contract-risk";
   const needsComplex = !isEconomy && !isContract;
+  const coreTool = isCoreAiAnalysisToolId(tool);
 
-  /* [AI-35] 프리셋 불러오기 — 저장해 둔 대상 원클릭 복원 (4주 실측 대상) */
+  /* [AI-35] 프리셋 — 저장해 둔 단지 원클릭 복원. 게스트는 부르지 않는다(hasSession 은 힌트 쿠키 관문) */
   const [presets, setPresets] = useState<
     { id: string; name: string; objective: { complexId?: string; complexName?: string; region?: string } }[]
   >([]);
   useEffect(() => {
-    /* [970 · B-26] 게스트는 프리셋 API 를 부르지 않는다 — 401 이 콘솔에 매번 찍혔다.
-       hasSession 은 헤더가 이미 부른 /api/auth/session 공유 프라미스라 요청이 늘지 않는다. */
     let cancelled = false;
-    void hasSession().then((signedIn) => {
-      if (cancelled || !signedIn) return;
+    void hasSession().then((ok) => {
+      if (cancelled) return;
+      setSignedIn(ok);
+      if (!ok) return;
       fetch(`/api/ai/presets?tool=${tool}`, { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : null))
         .then((j) => {
@@ -226,47 +162,150 @@ export function WorkbenchClient({
       cancelled = true;
     };
   }, [tool]);
-  const loadContext = useCallback(async (p: PickedComplex | null) => {
-    if (!p) return;
-    setCtxState({ phase: "loading" });
-    try {
-      const res = await fetch(
-        `/api/ai/context?complexId=${encodeURIComponent(p.id)}&tool=${encodeURIComponent(tool)}`,
-        { cache: "no-store" },
-      );
-      const json = await res.json();
-      if (!res.ok || !json.ok) throw new Error("context");
-      setCtxState({ phase: "ready", ctx: json.context, footnotes: json.footnotes, insight: json.insight, similar: Array.isArray(json.similar) ? json.similar : [], verdict: json.verdict ?? null });
-    } catch {
-      setCtxState({ phase: "error" });
-    }
-  }, [tool]);
+
+  /* [1008 · 리뷰 A-3] 결과 숫자가 실제로 쓰는 칸(calc)과 AI 해설에만 들어가는 칸을 나눈다 — 기본 실행에서
+     바꿔도 숫자가 그대로인 칸을 "내 조건"이라며 보이지 않게(죽은 입력) */
+  const calcFields = fields.filter((f) => f.calc);
+  const aiFields = fields.filter((f) => !f.calc);
+  const hasCalc = calcFields.length > 0;
+  /* 계산 도구는 "AI 해설도 받기"를 켰을 때만 AI 칸을 보이고, 계산이 없는 도구는 실행 자체가 AI 해설이다 */
+  const aiMode = llmAvailable && (hasCalc ? useLlm : true);
+  const visibleFields = hasCalc ? [...calcFields, ...(aiMode ? aiFields : [])] : aiMode ? aiFields : [];
+  const fieldKeys = fields.map((f) => f.key);
+  const fieldKeysRef = useRef(fieldKeys);
+  fieldKeysRef.current = fieldKeys;
+
+  /* 단지 컨텍스트 — 같은 단지를 두 번 부르지 않는다(피커는 고른 순간과 상세를 받은 뒤 두 번 onSelect 한다).
+     봇은 부르지 않는다: 피커가 ?complexId= 딥링크를 스스로 읽어 onSelect 를 부르므로 여기서 막아야
+     1007 의 게이트(useHumanGate)가 새지 않는다. */
+  const loadingKeyRef = useRef<string | null>(null);
+  /* 같은 단지를 force 로 다시 받을 때 늦게 온 옛 응답이 새 응답을 덮지 않게 — 마지막 요청만 반영 */
+  const loadSeqRef = useRef(0);
+  const loadContext = useCallback(
+    async (id: string, opts: { compareCount?: number; force?: boolean } = {}) => {
+      if (isBotBrowser()) return;
+      /* force — 같은 단지라도 다시 받는다(비교 묶음에서 단지를 빼 "N곳" 이 바뀐 때) */
+      if (!opts.force && loadingKeyRef.current === id) return;
+      loadingKeyRef.current = id;
+      const seq = ++loadSeqRef.current;
+      setCtxState({ phase: "loading", key: id });
+      try {
+        const res = await fetch(
+          `/api/ai/context?complexId=${encodeURIComponent(id)}&tool=${encodeURIComponent(tool)}&series=1${
+            tool === "ai-compare" ? `&compare=${opts.compareCount ?? compareCountRef.current}` : ""
+          }`,
+          { cache: "no-store" },
+        );
+        const json = await res.json();
+        if (loadingKeyRef.current !== id || seq !== loadSeqRef.current) return;
+        if (!res.ok || !json.ok) throw new Error("context");
+        const cx = json.context?.complex as { id: string; name: string; region: string } | null;
+        if (cx) {
+          /* 같은 단지면 피커가 준 표기(regionLabel)는 두되, 지역 이름이 비었으면 서버 값으로 채운다
+             (관심 단지 목록에서 고른 단지는 지역 자리에 단지 id 문자열이 들어가던 것 — 리뷰 A-22) */
+          setPicked((prev) =>
+            prev && prev.id === id
+              ? prev.region
+                ? prev
+                : ({ ...prev, region: cx.region, regionLabel: prev.regionLabel || cx.region } as PickedComplex)
+              : ({ id: cx.id, name: cx.name, region: cx.region, regionId: null, regionLabel: cx.region, priceLabel: null } as PickedComplex),
+          );
+        }
+        /* [1008] 기준 가격 자동 채움 — 비었거나 우리가 채운 값이면 새 값, 사용자가 고친 값은 그대로 */
+        const af = applyPriceAutofill({
+          tuning: tuningRef.current,
+          prev: autofillRef.current,
+          complexId: id,
+          fieldKeys: fieldKeysRef.current,
+          suggestion: priceManString(json.context?.complex?.price?.priceKrw),
+        });
+        autofillRef.current = af.state;
+        if (af.changed) setTuning(af.tuning);
+        setCtxState({
+          phase: "ready",
+          key: id,
+          ctx: json.context,
+          footnotes: json.footnotes ?? [],
+          insight: json.insight,
+          similar: Array.isArray(json.similar) ? json.similar : [],
+          verdict: json.verdict ?? null,
+          series: json.series ?? null,
+        });
+      } catch {
+        if (loadingKeyRef.current === id && seq === loadSeqRef.current) {
+          loadingKeyRef.current = null;
+          setCtxState({ phase: "error", key: id });
+        }
+      }
+    },
+    [tool],
+  );
+
+  const onPick = useCallback(
+    (c: PickedComplex) => {
+      /* 비교 도구 — 담은 수를 결론 문장("N곳을 나란히")에 바로 쓰게 새 수를 함께 넘긴다(상태 갱신은 다음 렌더) */
+      let compareCount: number | undefined;
+      if (isCompare) {
+        const prev = compareTrayRef.current;
+        const next = prev.some((x) => x.id === c.id) || prev.length >= 3 ? prev : [...prev, c];
+        compareCount = next.length;
+        setCompareTray(next);
+      }
+      /* 다른 단지로 바꾸면 옛 실행 결과를 내린다(옛 단지 결론이 새 단지 화면에 섞이지 않게) */
+      if (pickedRef.current?.id !== c.id) setResult(null);
+      setPicked(c);
+      void loadContext(c.id, { compareCount });
+    },
+    [isCompare, loadContext],
+  );
 
   const applyPreset = useCallback(
     (p: { objective: { complexId?: string; complexName?: string; region?: string } }) => {
       const o = p.objective;
       if (!o.complexId || !o.complexName) return;
-      const c: PickedComplex = {
+      onPick({
         id: o.complexId,
         name: o.complexName,
-        region: o.region ?? o.complexId.split(".")[0] ?? "",
+        region: o.region ?? "",
         regionId: null,
         regionLabel: o.region ?? null,
-      } as PickedComplex;
-      setPicked(c);
-      void loadContext(c);
+        priceLabel: null,
+      } as PickedComplex);
     },
-    [loadContext],
+    [onPick],
   );
 
-
-  /* [OPT-48] 단일 단지 딥링크 — ?complexId=… 또는 ?apt=…&region=… (노트 배너 AI-40,
-     단지 허브 요약의 "AI 진단으로" 링크가 쓴다). Wave 9 배너가 파라미터만 넘기고
-     받는 쪽이 없던 결합부를 여기서 닫는다. base64url 인코딩은 서버의
-     encodeComplexId(region + \x01 + name)와 반드시 같은 규칙. */
+  /* [1007 · V2a-4] 딥링크(?complexId= · ?apt=&region=)와 비교 트레이(?ids=)·경제 모니터는 사람일 때만.
+     [OPT-48] base64url 인코딩은 서버의 encodeComplexId(region + \x01 + name)와 같은 규칙. */
+  const humanReady = useHumanGate();
   useEffect(() => {
-    if (isCompare) return;
+    if (!humanReady) return;
     const sp = new URLSearchParams(window.location.search);
+    if (isCompare) {
+      const ids = (sp.get("ids") ?? "").split(",").map((v) => v.trim()).filter(Boolean).slice(0, 3);
+      if (ids.length === 0) return;
+      let cancelled = false;
+      (async () => {
+        const resolved: PickedComplex[] = [];
+        for (const id of ids) {
+          try {
+            const res = await fetch(`/api/ai/context?complexId=${encodeURIComponent(id)}&tool=${encodeURIComponent(tool)}`, { cache: "no-store" });
+            const json = await res.json();
+            const cx = json?.context?.complex as { id: string; name: string; region: string } | null;
+            if (cx) resolved.push({ id: cx.id, name: cx.name, region: cx.region, regionId: null, regionLabel: cx.region, priceLabel: null } as PickedComplex);
+          } catch {
+            /* 하나 실패해도 나머지는 이어 받는다 */
+          }
+        }
+        if (cancelled || resolved.length === 0) return;
+        setCompareTray(resolved);
+        setPicked(resolved[0]);
+        void loadContext(resolved[0].id, { compareCount: resolved.length });
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }
     let id = sp.get("complexId");
     if (!id) {
       const apt = sp.get("apt")?.trim();
@@ -278,99 +317,40 @@ export function WorkbenchClient({
         id = btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
       }
     }
-    if (!id) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`/api/ai/context?complexId=${encodeURIComponent(id)}&tool=${encodeURIComponent(tool)}`, { cache: "no-store" });
-        const json = await res.json();
-        const cx = json?.context?.complex as { id: string; name: string; region: string } | null;
-        if (cx && !cancelled) {
-          setPicked({ id: cx.id, name: cx.name, region: cx.region, regionId: null, regionLabel: cx.region } as PickedComplex);
-          setCtxState({ phase: "ready", ctx: json.context, footnotes: json.footnotes, insight: json.insight, similar: Array.isArray(json.similar) ? json.similar : [], verdict: json.verdict ?? null });
-        }
-      } catch {
-        /* 딥링크 실패는 조용히 — 사용자는 평소처럼 검색으로 고른다 */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    if (id) void loadContext(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCompare]);
+  }, [humanReady, isCompare]);
 
-  /* [AI-22] /analysis/compare 트레이 딥링크(?ids=a,b,c) — 같은 후보로 이어 받는다 */
+  /* [AI-16] 경제 모니터는 지역 없이도 거시 축만으로 */
   useEffect(() => {
-    if (!isCompare) return;
-    const ids = new URLSearchParams(window.location.search).get("ids");
-    if (!ids) return;
-    const list = ids.split(",").map((v) => v.trim()).filter(Boolean).slice(0, 3);
-    if (list.length === 0) return;
-    let cancelled = false;
-    (async () => {
-      const resolved: PickedComplex[] = [];
-      for (const id of list) {
-        try {
-          const res = await fetch(`/api/ai/context?complexId=${encodeURIComponent(id)}&tool=${encodeURIComponent(tool)}`, { cache: "no-store" });
-          const json = await res.json();
-          const cx = json?.context?.complex as { id: string; name: string; region: string } | null;
-          if (cx) {
-            resolved.push({ id: cx.id, name: cx.name, region: cx.region, regionId: null, regionLabel: cx.region } as PickedComplex);
-            if (resolved.length === 1 && !cancelled) {
-              setPicked(resolved[0]);
-              setCtxState({ phase: "ready", ctx: json.context, footnotes: json.footnotes, insight: json.insight, similar: Array.isArray(json.similar) ? json.similar : [], verdict: json.verdict ?? null });
-            }
-          }
-        } catch {
-          /* 하나 실패해도 나머지는 이어 받는다 */
-        }
-      }
-      if (!cancelled && resolved.length > 0) setCompareTray(resolved);
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCompare]);
-
-  /* [AI-16 예비] 경제 모니터는 지역 없이도 거시 축만으로 실행 */
-  useEffect(() => {
-    if (isEconomy) {
-      setCtxState({ phase: "loading" });
-      fetch(`/api/ai/context?region=강남구&tool=${encodeURIComponent(tool)}`, { cache: "no-store" })
-        .then((r) => r.json())
-        .then((json) =>
-          json?.ok
-            ? setCtxState({ phase: "ready", ctx: json.context, footnotes: json.footnotes, insight: json.insight, similar: [], verdict: json.verdict ?? null })
-            : setCtxState({ phase: "error" }),
-        )
-        .catch(() => setCtxState({ phase: "error" }));
-    }
-  }, [isEconomy, tool]);
-
-  const onPick = useCallback(
-    (c: PickedComplex) => {
-      if (isCompare) {
-        setCompareTray((prev) =>
-          prev.some((x) => x.id === c.id) || prev.length >= 3 ? prev : [...prev, c],
-        );
-      }
-      setPicked(c);
-      void loadContext(c);
-    },
-    [isCompare, loadContext],
-  );
+    if (!isEconomy || !humanReady || isBotBrowser()) return;
+    setCtxState({ phase: "loading", key: ECONOMY_KEY });
+    fetch(`/api/ai/context?region=강남구&tool=${encodeURIComponent(tool)}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((json) =>
+        json?.ok
+          ? setCtxState({
+              phase: "ready",
+              key: ECONOMY_KEY,
+              ctx: json.context,
+              footnotes: json.footnotes ?? [],
+              insight: json.insight,
+              similar: [],
+              verdict: json.verdict ?? null,
+              series: null,
+            })
+          : setCtxState({ phase: "error", key: ECONOMY_KEY }),
+      )
+      .catch(() => setCtxState({ phase: "error", key: ECONOMY_KEY }));
+  }, [isEconomy, tool, humanReady]);
 
   /* [975] 지도에서 고르기 — 서랍은 열 때만 내려받고, 고른 값은 위 onPick 을 탄다. */
-  const { openMap, mapNode } = useMapPick(onPick, useCase);
+  const { openMap, mapNode } = useMapPick(onPick, title);
 
   /* [AI-25] 포트폴리오 — 관심 단지 자동 로드 */
-  const [portfolio, setPortfolio] = useState<{ complexId: string; complexName: string }[] | null>(null);
-
-
+  const [portfolio, setPortfolio] = useState<PortfolioItem[] | null>(null);
   const loadPortfolio = useCallback(async () => {
     try {
-      /* [970 · B-26] 게스트면 401 을 맞으러 가지 않는다 — 결과는 같은 빈 목록 */
       if (!(await hasSession())) {
         setPortfolio([]);
         return;
@@ -381,68 +361,62 @@ export function WorkbenchClient({
         return;
       }
       const json = await res.json();
-      const items = Array.isArray(json.items) ? json.items : [];
+      const items = (Array.isArray(json.items) ? json.items : []) as {
+        complexId: string;
+        complexName: string;
+        lastPriceKrw?: number | null;
+        lastPriceBand?: string | null;
+      }[];
+      /* [1008 · 리뷰 A-3·22] 목록 전체의 쏠림(지역·가격대)은 결과 칸의 "관심 단지 구성" 카드가 센다.
+         예전엔 첫 단지를 골라 그 단지 결과만 보였고, 지역 자리에 단지 id 문자열이 들어갔다. */
       setPortfolio(
-        items.map((i: { complexId: string; complexName: string }) => ({
+        items.map((i) => ({
           complexId: i.complexId,
           complexName: i.complexName,
+          lastPriceKrw: typeof i.lastPriceKrw === "number" ? i.lastPriceKrw : null,
+          lastPriceBand: i.lastPriceBand ?? null,
         })),
       );
-      if (items[0]) {
-        const first = items[0] as { complexId: string; complexName: string };
-        const region = first.complexId.split(".")[0] ?? "";
-        void loadContext({
-          id: first.complexId,
-          name: first.complexName,
-          region,
-          regionId: null,
-          regionLabel: region,
-        } as PickedComplex);
-      }
     } catch {
       setPortfolio([]);
     }
-  }, [loadContext]);
+  }, []);
 
-  const ready = ctxState.phase === "ready";
-  const ctxLoading = ctxState.phase === "loading";
-  const ctx = ready ? ctxState.ctx : null;
-  const insight = ready ? ctxState.insight : null;
-  const footnotes = ready ? ctxState.footnotes : [];
-
-  /* [980] 결과 구간 — 화면이 결과를 두고 쓸 말투를 정한다. 새 수치를 계산하지 않고
-     서버가 이미 준 판정(레이더·시그널·플래그)만 본다. 재료가 없으면 "thin" 이고,
-     thin 을 좋은 쪽으로 반올림하지 않는다(lib/ai/outcome-band.ts). */
-  const band = useMemo(
-    () =>
-      outcomeBand({
-        hasInsight: Boolean(insight),
-        radar: insight?.radar.map((r) => r.score) ?? [],
-        signals: insight?.signals.map((x) => x.state) ?? [],
-        flags: insight?.flags.map((f) => f.level) ?? [],
-        degraded: result?.degraded,
-        reasonCode: result?.reasonCode ?? null,
-      }),
-    [insight, result?.degraded, result?.reasonCode],
-  );
-  const similar = ready ? ctxState.similar : [];
+  const ready = ctxState.phase === "ready" ? ctxState : null;
+  const ctx = ready?.ctx ?? null;
+  const activeKey = ready?.key ?? null;
+  const shownResult = result && result.forKey === activeKey ? result : null;
+  const shownVerdict = shownResult?.ok && shownResult.verdict ? shownResult.verdict : (ready?.verdict ?? null);
 
   const run = useCallback(async () => {
-    if (running) return;
-    if (needsComplex && !picked && !(isPortfolio && portfolio?.length)) return;
+    if (running || !ready) return;
+    /* 계산이 없는 도구는 실행이 곧 AI 해설 요청이다 */
+    const askLlm = aiMode;
+    const forKey = ready.key;
+    /* [1008 · 리뷰 A-15] 우리가 자동으로 채운 뒤 사용자가 안 건드린 값은 보내지 않는다 — 서버가 같은 최근
+       실거래가를 쓰고, 결과도 "내가 넣은 기준 가격"이 아니라 "최근 실거래가"에서 출발했다고 말한다 */
+    const auto = autofillRef.current.values;
+    const effective: Record<string, string | boolean> = {};
+    for (const [k, v] of Object.entries(tuning)) if (!(typeof v === "string" && auto[k] != null && auto[k] === v)) effective[k] = v;
+    const calcInput = buildTuningInput(calcFields, effective);
+    const appliedCalc = Object.keys(calcInput).length > 0;
+    if (askLlm && !(await hasSession())) {
+      /* 로그인이 필요한 요청을 보내 401 을 맞지 않는다 — 결과 자리에서 로그인 안내 */
+      setResult({ ok: false, source: "client", degraded: false, reasonCode: null, markdown: "", code: "LOGIN_REQUIRED", forKey, at: Date.now(), askedLlm: true });
+      return;
+    }
     setRunning(true);
-    setResult(null);
-    setFeedback("idle");
+    setRunningLlm(askLlm);
     try {
       const input: Record<string, unknown> = {
         complexId: picked?.id ?? null,
         complexName: picked?.name ?? null,
         region: picked?.region ?? ctx?.region?.name ?? null,
         /* [993] 판단 카드(임장 동선)가 "함께 볼 단지" 수를 적는 데 쓴다 */
-        similarCount: similar.length,
-        /* [981] 도구별 보정 입력 — 비운 칸은 키 자체가 빠진다(빈 문자열을 보내면
-           엔진의 Number(… ?? 0) 이 0 으로 읽어 "0 을 입력했다"가 된다). */
-        ...buildTuningInput(fields, tuning),
+        similarCount: ready.similar.length,
+        /* [981] 도구별 보정 입력 — 비운 칸은 키 자체가 빠진다. AI 칸은 AI 해설을 부를 때만 */
+        ...(askLlm ? buildTuningInput(aiFields, effective) : {}),
+        ...calcInput,
         _promptVersion: "v2",
         /* [AI-02] 실행 시점 컨텍스트 요약을 입력 스냅샷에 고정 — 재현 근거 */
         live: ctx
@@ -459,846 +433,380 @@ export function WorkbenchClient({
               noteAvgScore: ctx.notes?.avgScore ?? null,
             }
           : null,
-        compare: isCompare
-          ? compareTray.map((c) => ({ id: c.id, name: c.name, region: c.region }))
-          : undefined,
+        compare: isCompare ? compareTray.map((c) => ({ id: c.id, name: c.name, region: c.region })) : undefined,
         portfolio: isPortfolio && portfolio ? portfolio : undefined,
       };
       const res = await fetch("/api/ai/analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tool, input, skipExternalLlm: !useLlm }),
+        body: JSON.stringify({ tool, input, skipExternalLlm: !askLlm }),
       });
-      const json = (await res.json()) as RunResult;
-      /* [OPT-50] 결과 마크다운 렌더는 무거운 갱신 — 전환으로 미뤄 입력 반응성(INP)을 지킨다 */
+      /* [1009 · A · 리뷰] JSON 이 아닌 응답(5xx·504 게이트웨이 페이지)을 "인터넷 연결 확인"으로 말하던 것 — 연결은
+         됐고 서버가 못 답한 것이다. 상태 코드로 원인을 적는다(진짜 연결 실패만 아래 catch 로 간다). */
+      const parsed = (await res.json().catch(() => null)) as RunResult | null;
+      const json: RunResult =
+        parsed ??
+        ({
+          ok: false,
+          source: "error",
+          degraded: true,
+          reasonCode: res.status === 504 ? "TIMEOUT" : "SERVER",
+          markdown: "",
+          error:
+            res.status === 504
+              ? "계산이 너무 오래 걸려 멈췄어요 — 잠시 뒤 다시 눌러 주세요."
+              : res.status === 429
+                ? "너무 자주 눌렀어요 — 1분쯤 뒤에 다시 눌러 주세요."
+                : `서버가 답하지 못했어요(${res.status}) — 잠시 뒤 다시 눌러 주세요.`,
+        } as RunResult);
+      const ok = res.ok && json.ok !== false;
+      /* [OPT-50] 결과 렌더는 무거운 갱신 — 전환으로 미뤄 입력 반응성(INP)을 지킨다 */
       startTransition(() => {
-        if (!res.ok) {
-          setResult({ ...json, ok: false });
-        } else {
-          setResult(json);
-          /* [993] 결과 먼저 — 좁은 화면에서는 입력을 접고 결과로 내려간다 */
-          if (typeof window !== "undefined" && window.innerWidth < 1024) {
-            setInputsOpen(false);
-            window.setTimeout(() => {
-              document.getElementById("ai-result")?.scrollIntoView({ behavior: "smooth", block: "start" });
-            }, 60);
-          }
-        }
+        setResult({ ...json, ok, forKey, at: Date.now(), askedLlm: askLlm, appliedCalc });
       });
+      setRunErrCode(ok ? null : (json.code ?? null));
+      flash(ok ? "done" : "error");
+      window.setTimeout(() => {
+        const target = document.getElementById(askLlm ? "ai-narrative" : "ai-result");
+        if (target && (askLlm || window.innerWidth < 1024)) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 120);
     } catch {
-      setResult({
-        ok: false,
-        source: "error",
-        degraded: true,
-        reasonCode: "NETWORK",
-        markdown: "",
-        error: "실행에 실패했어요 — 잠시 후 다시 시도해 주세요.",
-      });
+      setResult({ ok: false, source: "error", degraded: true, reasonCode: "NETWORK", markdown: "", error: "실행하지 못했어요 — 인터넷 연결을 확인하고 다시 눌러 주세요.", forKey, at: Date.now(), askedLlm: askLlm });
+      setRunErrCode(null);
+      flash("error");
     } finally {
       setRunning(false);
     }
-  }, [running, needsComplex, picked, isPortfolio, portfolio, ctx, isCompare, compareTray, tool, useLlm, tuning, fields, similar]);
+  }, [running, ready, aiMode, picked, ctx, calcFields, aiFields, tuning, isCompare, compareTray, isPortfolio, portfolio, tool, flash]);
+  const runState: ActionState = running ? "busy" : (runFlash ?? "idle");
 
-  const sendFeedback = useCallback(
-    async (rating: "up" | "down") => {
-      setFeedback(rating);
-      try {
-        await fetch("/api/ai/feedback", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            rating,
-            targetType: "workbench",
-            targetId: result?.runId ?? tool,
-            context: { tool, note: feedbackNote.slice(0, 200) },
-          }),
-        });
-        setFeedback("sent");
-      } catch {
-        setFeedback("sent");
-      }
-    },
-    [result?.runId, tool, feedbackNote],
-  );
-
-  const addWatch = useCallback(async () => {
-    if (!picked || watchState === "busy" || watchState === "done") return;
-    /* [OPT-49] 낙관적 반영 — 누르는 즉시 "등록됨"으로 그리고, 실패하면 되돌린다.
-       "등록 중…"을 기다리게 하는 대신 실패(주로 비로그인)만 예외로 다룬다. */
-    setWatchState("done");
-    try {
-      const res = await fetch("/api/me/watchlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ complexId: picked.id, complexName: picked.name }),
-      });
-      if (!res.ok) setWatchState("fail");
-    } catch {
-      setWatchState("fail");
+  const priceKrw = ctx?.complex?.price?.priceKrw ?? null;
+  /* [1008 · 리뷰 A-3] ③ 은 누르면 실제로 달라지는 게 있을 때만 — 결과가 쓰는 입력(calc)이 있거나 AI 해설을 받을 수 있을 때 */
+  const showRun = Boolean(ready) && (hasCalc || llmAvailable);
+  const retry = () => {
+    const key = ctxState.phase === "error" ? ctxState.key : null;
+    if (key && key !== ECONOMY_KEY) {
+      loadingKeyRef.current = null;
+      void loadContext(key);
     }
-  }, [picked, watchState]);
-
-  const savePreset = useCallback(async () => {
-    if (!picked) return;
-    setPresetMsg(null);
-    try {
-      const res = await fetch("/api/ai/presets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tool,
-          name: `${picked.name} · ${new Date().toISOString().slice(5, 10)}`,
-          objective: { complexId: picked.id, complexName: picked.name, region: picked.region },
-        }),
-      });
-      setPresetMsg(res.ok ? "프리셋으로 저장했어요 — 다음엔 한 번에 불러옵니다." : "저장 실패(로그인 필요)");
-    } catch {
-      setPresetMsg("저장 실패 — 잠시 후 다시");
-    }
-  }, [picked, tool]);
-
-  const shareUrl = useMemo(
-    () => (result?.runId ? `/analysis/ai/r/${result.runId}` : null),
-    [result?.runId],
-  );
-
-  const noteHref = picked
-    ? `/notes/new?apt=${encodeURIComponent(picked.name)}&region=${encodeURIComponent(picked.region)}`
-    : "/notes/new";
-
-  const ctxVerdict = ready ? ctxState.verdict : null;
-  /* [993] 화면에 그릴 판단 카드 — 실행 결과(보정 입력 반영)가 있으면 그것, 아니면 데이터 로드 시점 것 */
-  const shownVerdict = result?.ok ? (result.verdict ?? ctxVerdict) : ctxVerdict;
-  /* [996] 핵심 4종은 판단 바로 아래 "다음 행동 두 개"(노트 이관 · 단지 홈) — 실행 전후 같은 자리 */
-  const coreTool = isCoreAiAnalysisToolId(tool);
-  const myNotesChip = picked ? <MyNotesChipLazy complexId={picked.id} /> : undefined;
+  };
 
   return (
     <>
-      {/* [975] 지도에서 고르기 — 고른 단지는 검색 경로와 같은 onPick 을 타므로
-          이후 흐름이 완전히 같다(대상 조립은 resolvePickedComplexById 한 곳). */}
       {mapNode}
-      {/* [993] 데스크톱은 입력 좌(380px)·결과 우 — 계산기·시나리오 화면과 같은 배치.
-          모바일은 한 열이되 결과가 나오면 입력을 한 줄로 접는다(inputsOpen). */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start lg:gap-4">
-      <div className="flex flex-col gap-3">
-      {!inputsOpen && (
-        <button
-          type="button"
-          onClick={() => setInputsOpen(true)}
-          className="card flex min-h-[44px] items-center justify-between rounded-2xl px-4 py-2.5 text-left lg:hidden"
-        >
-          <span className="truncate t-body font-extrabold text-ink">
-            {picked ? `${picked.name} · ${picked.region}` : isEconomy ? "거시 지표 기준" : "입력"}
-          </span>
-          <span className="shrink-0 pl-2 t-sub font-bold text-primary">입력 수정 ›</span>
-        </button>
-      )}
-      <div className={inputsOpen ? "flex flex-col gap-3" : "hidden lg:flex lg:flex-col lg:gap-3"}>
-      {/* ── ① 대상 선택 ── */}
-      {needsComplex && (
-        <div className="card rounded-2xl p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="t-body font-extrabold text-ink">① 단지 선택</span>
-            <span className="t-sub text-text-3">{useCase}</span>
-          </div>
-          {/* [970 · B-27] 위 "① 단지 선택" 이 라벨이다 — 피커 기본 라벨("① 단지 검색")이 겹쳐 보였다 */}
-          {/* [975] 이름을 알아야만 시작할 수 있던 것을 지도로도 연다 — 피커 옆
-              단추가 /map 으로 나가는 대신 이 화면 위에 지도 서랍을 띄운다.
-              임장은 보통 "여기 뭐지?" 로 시작하지, 단지명으로 시작하지 않는다. */}
-          <ComplexPicker
-            onSelect={onPick}
-            label=""
-            onMapClick={openMap}
-          />
-          {presets.length > 0 && (
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <span className="t-sub font-bold text-text-3">내 프리셋:</span>
-              {presets.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => applyPreset(p)}
-                  className="chip border border-line bg-bg px-2.5 py-1 t-sub font-bold text-text-1"
-                >
-                  {p.name}
-                </button>
-              ))}
-            </div>
-          )}
-          {isCompare && compareTray.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {compareTray.map((c) => (
-                <span key={c.id} className="chip border border-line bg-bg px-2.5 py-1 t-sub font-bold text-text-1">
-                  {c.name}
-                  <button
-                    type="button"
-                    className="ml-1 text-text-3"
-                    aria-label={`${c.name} 제외`}
-                    onClick={() => setCompareTray((p) => p.filter((x) => x.id !== c.id))}
-                  >
-                    ✕
-                  </button>
-                </span>
-              ))}
-              <span className="t-sub text-text-3">최대 3곳 — 검색으로 추가</span>
-            </div>
-          )}
-          {isPortfolio && (
-            <div className="mt-2">
-              <button type="button" onClick={loadPortfolio} className="rounded-[10px] border border-line-strong bg-bg px-3 py-1.5 t-sub font-bold text-text-1">
-                내 관심 단지 불러오기
-              </button>
-              {portfolio && (
-                <span className="ml-2 t-sub text-text-3">
-                  {portfolio.length > 0 ? `${portfolio.length}곳 로드됨` : "관심 단지가 없어요(로그인·등록 필요)"}
-                </span>
+      {/* [993] 데스크톱: 입력 좌(380px)·결과 우. [1008] 모바일 순서 ① → 결과 → ②③ (결과까지 스크롤 없음) */}
+      {/* 행 2개(auto · 1fr) — 결과 열이 두 행을 차지해도 ① 행이 늘어나 ①·② 사이가 벌어지지 않게 */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[380px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-4">
+        {/* ── ① 단지 고르기 ── */}
+        <div className="flex flex-col gap-3 lg:col-start-1 lg:row-start-1">
+          {(needsComplex || isContract) && (
+            <section className="card flex flex-col gap-2.5 rounded-2xl p-4" aria-label="단지 고르기">
+              <h2 className="t-body font-extrabold text-ink">① 단지 고르기</h2>
+              {isContract && (
+                <p className="t-sub text-text-2">
+                  단지를 고르면 그 지역 평균 전세가율을 참고값으로 보여 줘요. ② 에 이 집 전세가율·보증금과 확인 여부를
+                  넣으면 이 계약 기준으로 다시 계산해요. 계약서 항목은{" "}
+                  <Link href="/safety" className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline">
+                    전세 안전 셀프체크 ›
+                  </Link>
+                </p>
               )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {isContract && (
-        <div className="card rounded-2xl p-4 t-body text-text-2">
-          계약 리스크 점검은 전세 안전 셀프체크와 같은 문항 세트로 봅니다 —{" "}
-          <Link href="/safety" className="font-bold text-primary no-underline">
-            전세 안전 셀프체크 열기 ›
-          </Link>
-          <div className="mt-1 t-sub text-text-3">
-            단지를 고르면 판단 카드가 그 지역의 전세가율·월세 비중 같은 계약 관련 실측으로 위험도를 계산합니다.
-          </div>
-          {/* [993] 두 번째 단지 피커 제거 — 같은 화면에 피커가 둘이었다 */}
-          <div className="mt-2">
-            <ComplexPicker onSelect={onPick} label="" onMapClick={openMap} />
-          </div>
-        </div>
-      )}
-
-      {/* ── ② 참고·보정 입력 ── [993] 담을 것이 없으면(보정 칸 0 · 뉴스·노트·유사 단지 없음 ·
-          AI 토글 없음) 카드 자체를 그리지 않는다 — 빈 카드가 결과를 아래로 밀었다. */}
-      {ctxState.phase !== "idle" &&
-        (ctxState.phase !== "ready" ||
-          fields.length > 0 ||
-          llmAvailable ||
-          similar.length > 0 ||
-          Boolean(ctx?.news?.items?.length) ||
-          Boolean(ctx?.notes)) && (
-        <div className="card rounded-2xl p-4">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <span className="t-body font-extrabold text-ink">② 참고 · 보정 입력</span>
-            <span className="t-sub text-text-3">실데이터 수치는 판단 카드에 기준일과 함께</span>
-          </div>
-
-          {ctxState.phase === "loading" && (
-            <div className="py-4 text-center t-body font-bold text-text-3">실데이터 불러오는 중…</div>
-          )}
-          {ctxState.phase === "error" && (
-            <div className="py-3 text-center t-body font-bold text-warning">
-              데이터를 불러오지 못했어요 — 없는 것과 다릅니다. 잠시 후 다시 시도해 주세요.
-            </div>
-          )}
-
-          {ready && ctx && (
-            <>
-              {/* [993] 숫자 4칸은 판단 카드(오른쪽/아래)가 기준일과 함께 보여 준다 — 여기서 뺐다 */}
-              {(ctx.news?.items?.length || ctx.notes) && (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {ctx.news?.items?.length ? (
-                    <div className="rounded-[10px] bg-bg px-3 py-2.5">
-                      <div className="t-sub font-bold text-text-3">최근 사건(자동수집 뉴스)</div>
-                      {ctx.news.items.slice(0, 2).map((n) => (
-                        <Link key={n.id} href={`/town/news/${n.id}`} className="mt-0.5 block truncate t-sub font-bold text-text-1 no-underline">
-                          · {n.title}
-                        </Link>
-                      ))}
-                    </div>
-                  ) : null}
-                  {ctx.notes ? (
-                    <div className="rounded-[10px] bg-bg px-3 py-2.5">
-                      <div className="t-sub font-bold text-text-3">이웃 임장노트</div>
-                      <div className="mt-0.5 t-sub font-bold text-text-1">
-                        {ctx.notes.count}건 · 평균 {ctx.notes.avgScore ?? "—"}점
-                        {ctx.notes.latest && (
-                          <Link href={`/notes/${ctx.notes.latest.id}`} className="ml-1 font-bold text-primary no-underline">
-                            최신 보기 ›
-                          </Link>
-                        )}
-                      </div>
-                    </div>
-                  ) : null}
+              {/* [970 · B-27] 위 제목이 라벨이다 · [975] 지도 서랍 · [1008] 고른 단지는 아래 카드가 말한다(피커 칩은 끈다 —
+                  동선·빠른 선택으로 단지가 바뀌어도 칩이 옛 단지를 가리키던 어긋남) */}
+              {/* [1008 · 리뷰 B-1] 딥링크(?complexId=·?apt=&region=)는 워크벤치가 스스로 푼다 — 피커가 URL 을 다시 읽으면
+                  `?apt=은마&region=대구 북구` 가 이름 검색으로 강남 은마에 덮였다. 초기값을 null 로 막는다 */}
+              <ComplexPicker
+                onSelect={onPick}
+                label=""
+                onMapClick={openMap}
+                showChip={false}
+                clearOnSelect
+                initialComplexId={null}
+                initialApt={null}
+                placeholder="단지 이름 (예: 공작아파트)"
+              />
+              {picked && (
+                <div className="flex flex-col gap-0.5 rounded-[12px] bg-primary-soft px-3 py-2.5">
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <b className="break-words t-body font-extrabold text-ink">{picked.name}</b>
+                    <span className="t-sub font-bold text-text-2">{picked.regionLabel || picked.region}</span>
+                  </div>
+                  <span className="t-sub text-text-2">
+                    {ctxState.phase === "loading"
+                      ? "실거래·전월세·입주 예정·지역 통계를 불러오는 중…"
+                      : priceKrw
+                        ? /* [1008 · 리뷰 A-14] 무엇의 평균인지 적는다 — 관심단지·알림은 면적대 기준이라 값이 다를 수 있다 */
+                          `최근 실거래 ${formatKrwWon(priceKrw, { style: "short" })} · ${ctx?.complex?.price?.bandLabel ?? ""} 최근 ${ctx?.complex?.price?.sample ?? ""}건 평균`
+                        : ready
+                          ? ctx?.unavailable?.includes("실거래가")
+                            ? "실거래가를 지금 불러오지 못했어요"
+                            : "최근 매매 실거래가 적어 대표 가격이 없어요"
+                          : ""}
+                  </span>
                 </div>
               )}
-
-              {/* [AI-16] 유사 단지 자동 후보 — 비교 트레이에 원클릭 추가/전환 */}
-              {similar.length > 0 && (
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <span className="t-sub font-bold text-text-3">
-                    이 지역 거래 활발 단지:
-                  </span>
-                  {similar.map((sc) => (
-                    <button
-                      key={sc.id}
-                      type="button"
-                      onClick={() =>
-                        onPick({
-                          id: sc.id,
-                          name: sc.name,
-                          region: picked?.region ?? sc.id.split(".")[0] ?? "",
-                          regionId: null,
-                          regionLabel: picked?.region ?? null,
-                        } as PickedComplex)
-                      }
-                      className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-1"
-                    >
-                      {sc.name} <span className="text-text-3">({sc.txCount}건)</span>
+              {presets.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="t-sub font-bold text-text-3">즐겨 쓰는 단지</span>
+                  {presets.map((p) => (
+                    <button key={p.id} type="button" onClick={() => applyPreset(p)} className="chip press min-h-[40px] border border-line bg-bg px-2.5 t-sub font-bold text-text-1">
+                      {p.name}
                     </button>
                   ))}
                 </div>
               )}
-
-              {/* [981] 보정 입력 — 도구마다 묻는 것이 다르다.
-                  올라온 칸은 전부 엔진이 실제로 읽는 필드다(단위테스트가 엔진 소스를
-                  읽어 대조한다). 전부 선택이고, 비우면 엔진 기본값으로 간다 —
-                  자리표시자가 그 기본값을 적어 둔다. */}
-              {/* [981] 보정 입력 — 도구마다 묻는 것이 다르다. 폼은 열릴 때만 내려받는다
-                  (이 라우트 예산 480KB 에 본체가 479KB — TuningForm.tsx 주석 참고). */}
-              {fields.length > 0 && (
-                <TuningFormLazy
-                  fields={fields}
-                  characterLabel={persona.character}
-                  value={tuning}
-                  onChange={setTuning}
-                />
+              {isCompare && compareTray.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {compareTray.map((c) => (
+                    <span key={c.id} className="chip inline-flex min-h-[40px] items-center border border-line bg-bg pl-2.5 t-sub font-bold text-text-1">
+                      {c.name}
+                      <button
+                        type="button"
+                        className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center text-text-3"
+                        aria-label={`${c.name} 빼기`}
+                        onClick={() => {
+                          /* [1008 · 리뷰 A-3] 빼면 결론("N곳을 나란히")·AI 해설이 옛 묶음 것으로 남지 않게 —
+                             옛 실행 결과를 내리고 새 수로 결과 요약을 다시 받는다(담을 때와 같은 규칙) */
+                          const next = compareTrayRef.current.filter((x) => x.id !== c.id);
+                          setCompareTray(next);
+                          setResult(null);
+                          const cur = pickedRef.current;
+                          if (cur) void loadContext(cur.id, { compareCount: next.length, force: true });
+                          /* [1009 · A] 빼기는 되돌릴 수 있게(확인 창 대신 토스트의 "되돌리기") */
+                          showToast(`${c.name}을(를) 비교에서 뺐어요`, {
+                            label: "되돌리기",
+                            onClick: () => {
+                              /* [1009 · A · 리뷰] 되돌리지 못하는 경우를 조용히 넘기지 않는다(예전: 3곳이 차 있으면 무반응) */
+                              if (!mountedRef.current) {
+                                showToast("비교 화면을 떠나 되돌리지 못했어요");
+                                return;
+                              }
+                              const now = compareTrayRef.current;
+                              if (now.some((x) => x.id === c.id)) {
+                                showToast(`${c.name}은(는) 이미 비교에 있어요`);
+                                return;
+                              }
+                              if (now.length >= 3) {
+                                showToast("되돌리지 못했어요 · 비교는 최대 3곳이에요");
+                                return;
+                              }
+                              const back = [...now, c];
+                              setCompareTray(back);
+                              setResult(null);
+                              const p = pickedRef.current;
+                              if (p) void loadContext(p.id, { compareCount: back.length, force: true });
+                            },
+                          });
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                  <span className="t-caption text-text-3">최대 3곳 — 검색으로 더 담기</span>
+                </div>
               )}
+              {isPortfolio && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" onClick={() => void loadPortfolio()} className="btn-secondary btn-md px-3 t-sub">
+                    내 관심 단지 불러오기
+                  </button>
+                  {portfolio && (
+                    <span className="t-sub text-text-3">
+                      {portfolio.length > 0 ? `${portfolio.length}곳 불러옴` : "관심 단지가 없어요(로그인·담기 필요)"}
+                    </span>
+                  )}
+                </div>
+              )}
+            </section>
+          )}
+        </div>
 
-              {/* [993] "가용 예산" 칸 제거 — 엔진 12종 어느 것도 budgetKrw 를 읽지 않았다(전수 grep).
-                  AI 서술 토글은 서버에 외부 모델 키가 있을 때만 보인다. */}
-              {llmAvailable && (
-                <label className="mt-3 flex min-h-[40px] items-center gap-2 t-sub font-bold text-text-2">
+        {/* ── 결과 ── */}
+        <div id="ai-result" className="flex scroll-mt-20 flex-col gap-3 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          {ctxState.phase === "idle" && needsComplex && !(isPortfolio && portfolio && portfolio.length > 0) && (
+            <FirstVisitGuide resultKind={resultKind} tips={tips} quickPicks={quickPicks} onQuickPick={(q) => onPick({ id: q.id, name: q.name, region: q.region, regionId: null, regionLabel: q.region, priceLabel: null } as PickedComplex)} />
+          )}
+          {ctxState.phase === "idle" && isContract && (
+            <div className="card rounded-2xl p-4 t-body text-text-2">단지를 고르면 전세 계약 위험도가 여기에 바로 나와요.</div>
+          )}
+          {ctxState.phase === "loading" && <ResultSkeleton />}
+          {ctxState.phase === "error" && (
+            <div className="card flex flex-col items-start gap-2 rounded-2xl p-4" role="status">
+              <p className="t-body font-bold text-warning">자료를 불러오지 못했어요 — 자료가 없는 것과는 달라요.</p>
+              {ctxState.key !== ECONOMY_KEY && (
+                <button type="button" onClick={retry} className="btn-secondary btn-md px-4 t-sub">
+                  다시 불러오기
+                </button>
+              )}
+            </div>
+          )}
+          {isPortfolio && portfolio && portfolio.length > 0 && (
+            <PortfolioMixLazy items={portfolio} pickedId={picked?.id ?? null} onPick={(it) => onPick({ id: it.complexId, name: it.complexName, region: "", regionId: null, regionLabel: null, priceLabel: null } as PickedComplex)} />
+          )}
+          {ready && ctx && (
+            <ResultViewLazy
+              tool={tool}
+              coreTool={coreTool}
+              picked={picked ? { id: picked.id, name: picked.name, region: picked.region } : null}
+              ctx={ctx}
+              verdict={shownVerdict}
+              insight={ready.insight}
+              footnotes={ready.footnotes}
+              series={ready.series}
+              similar={ready.similar}
+              result={shownResult}
+              compareTray={isCompare ? compareTray.map((c) => ({ id: c.id, name: c.name, region: c.region })) : null}
+              running={running}
+              askedLlm={runningLlm}
+              character={persona.character}
+              fallbackAction={persona.nextAction}
+              onPickSimilar={(s: Similar) =>
+                onPick({ id: s.id, name: s.name, region: picked?.region ?? "", regionId: null, regionLabel: picked?.regionLabel ?? picked?.region ?? null, priceLabel: null } as PickedComplex)
+              }
+            />
+          )}
+          {/* [996] 다른 도구로 본 이 단지 — 비교·포트폴리오는 대상이 여럿이라 세우지 않는다 */}
+          {picked && ready && !isCompare && !isPortfolio && (
+            /* [1008 · 리뷰 A-19] 보드의 이 도구 칸은 화면 위와 같은 결과(실행했으면 실행 결과)로 */
+            <VerdictBoardLazy tool={tool} complexId={picked.id} complexName={picked.name} region={picked.region} verdict={shownVerdict} />
+          )}
+        </div>
+
+        {/* ── ② 내 조건 · ③ 분석 실행 ── */}
+        <div className="flex flex-col gap-3 lg:col-start-1 lg:row-start-2">
+          {ready && visibleFields.length > 0 && (
+            <section className="card rounded-2xl" aria-label="내 조건">
+              <button
+                type="button"
+                onClick={() => setCondOpen((v) => !v)}
+                aria-expanded={condOpen}
+                className="flex min-h-[48px] w-full items-center justify-between gap-2 px-4 py-2.5 text-left"
+              >
+                <span className="t-body font-extrabold text-ink">
+                  {hasCalc ? "② 내 조건" : "② AI 해설에 넣을 조건"} <span className="t-sub font-bold text-text-3">(선택)</span>
+                </span>
+                <span className="t-sub font-bold text-primary">{condOpen ? "접기" : "펼치기"}</span>
+              </button>
+              {condOpen && (
+                <div className="border-t border-line px-4 pb-4">
+                  <TuningFormLazy fields={visibleFields} value={tuning} onChange={setTuning} autoValues={autofillRef.current.values} />
+                </div>
+              )}
+            </section>
+          )}
+
+          {showRun && (
+            <section className="card flex flex-col gap-2.5 rounded-2xl p-4" aria-label={hasCalc ? "다시 계산" : "AI 해설 받기"}>
+              <h2 className="t-body font-extrabold text-ink">{hasCalc ? "③ 내 조건으로 다시 계산" : "③ AI 해설 받기"}</h2>
+              {/* [1008 · 리뷰 A-3] 누르면 실제로 하는 일만 말한다 — 입력을 결과가 쓰는 도구만 "다시 계산" */}
+              <p className="t-sub text-text-2">
+                {hasCalc
+                  ? "숫자·그래프는 단지를 고르면 바로 나와요. ② 에 넣은 값으로 결과를 다시 계산해요."
+                  : "숫자·그래프는 위에 이미 있어요. AI 해설은 외부 AI 모델이 위 숫자를 문장으로 풀어 줘요(로그인 필요)."}
+                {signedIn ? " 결과는 내 분석 기록에 저장돼요." : hasCalc ? " 로그인하면 결과가 내 분석 기록에 저장돼요." : ""}
+              </p>
+              {hasCalc && llmAvailable && (
+                <label className="flex min-h-[40px] items-center gap-2 t-sub font-bold text-text-1">
                   <input type="checkbox" className="h-5 w-5" checked={useLlm} onChange={(e) => setUseLlm(e.target.checked)} />
-                  AI 서술 추가(외부 모델 · 로그인 필요)
+                  AI 해설도 받기 <span className="font-medium text-text-3">(로그인 필요 · 외부 AI 모델)</span>
                 </label>
               )}
-            </>
-          )}
-        </div>
-      )}
-
-      {/* [AI-29] 경제 모니터 — 임계 알림 등록 */}
-      {isEconomy && ready && ctx?.macro?.baseRatePct != null && (
-        <EconomyWatchPanel currentRate={ctx.macro.baseRatePct} />
-      )}
-
-      </div>
-      {/* ── ③ 실행 ──
-          예전엔 버튼 하나에 "분석 중…" 글자만 바뀌었다. 무엇이 얼마나 남았는지
-          모르는 대기는 실제보다 길게 느껴진다(이 화면 평균 체류 1.0초 실측 —
-          열자마자 나간다). 진행 단계를 눈에 보이게 만든다. */}
-      <div className="run-bar flex flex-wrap items-center gap-1.5">
-        <button
-          type="button"
-          onClick={run}
-          disabled={running || (needsComplex && !picked && !(isPortfolio && portfolio?.length))}
-          className={`btn-primary btn-lg disabled:opacity-50 ${
-            /* [945-G] 실행 가능해진 순간에만 글로우 — "지금 누르면 된다"의 신호.
-               비활성 글로우는 거짓말이라 켜지 않는다. */
-            !running && (!needsComplex || picked || (isPortfolio && Boolean(portfolio?.length)))
-              ? "glow"
-              : ""
-          }`}
-        >
-          {running ? `${persona.character} 중…` : "③ 분석 실행"}
-        </button>
-        <div className="run-steps" aria-live="polite">
-          <span className="run-step" data-state={picked || (isPortfolio && portfolio?.length) ? "done" : "active"}>
-            <span className="run-dot" />단지 선택
-          </span>
-          <span className="run-step" data-state={ready ? "done" : ctxLoading ? "active" : undefined}>
-            <span className="run-dot" />데이터 로드
-          </span>
-          <span className="run-step" data-state={result ? "done" : running ? "active" : undefined}>
-            <span className="run-dot" />분석 실행
-          </span>
-        </div>
-        {/* [996] 모바일에선 실행 줄이 sticky 라 두 줄로 접히면 100px 을 먹는다 — 기록 링크는 sm 부터만
-            (모바일은 하단 탭 '마이 → 기록'으로 닿는다). */}
-        <Link href="/my/analyses" className="t-sub ml-auto hidden py-[3px] font-bold text-text-3 no-underline sm:inline-block">
-          내 분석 기록 ›
-        </Link>
-      </div>
-      </div>
-
-      {/* ── 결과 열 ── */}
-      <div id="ai-result" className="flex scroll-mt-20 flex-col gap-3">
-      {/* [993] 실행 전 미리보기 — 데이터가 로드되면 판단 카드가 먼저 선다. 결과값은 실행
-          버튼이 아니라 데이터가 만든다. 실행은 본문 해석·다음 행동을 덧붙인다. */}
-      {!result && !running && ready && ctxVerdict && (
-        <div className="card tool-rail flex flex-col gap-3 rounded-2xl p-4">
-          <VerdictCard verdict={ctxVerdict} extraChips={myNotesChip} />
-          {coreTool && (
-            <VerdictNextLazy tool={tool} verdict={ctxVerdict} complexId={picked?.id ?? null} complexName={picked?.name} region={picked?.region} />
-          )}
-          <p className="t-sub text-text-3">③ 분석 실행을 누르면 해석 본문과 다음 행동이 붙어요.</p>
-        </div>
-      )}
-      {!result && !running && !ready && (
-        <div className="card hidden rounded-2xl p-5 t-body text-text-3 lg:block">
-          단지를 고르면 결과값(구간 · 대표 수치 · 핵심 숫자 · 근거)이 여기에 먼저 보여요.
-        </div>
-      )}
-
-      {/* 실행 중에는 결과 자리를 미리 잡아 둔다 — 결과가 통째로 튀어나오면
-          화면이 점프하고, 그 점프가 "느리다"는 인상의 대부분이다. */}
-      {running && !result && (
-        /* [961] 진행률 바 대신 '무엇을 보고 있는지'(모션 시스템 05). 이미 읽은 데이터는
-           실측(표본 수)과 함께 체크, 마지막 "근거 정리"만 온점이 숨쉰다. 가짜 진행률·
-           가짜 시간 약속은 쓰지 않는다 — 브랜드 원칙("사실·근거를 구분해 보여준다")을
-           로딩 화면에서부터 지킨다. */
-        <div className="run-panel flex flex-col gap-3" aria-live="polite">
-          <div className="flex items-center gap-2.5">
-            <span className="njn-dot njn-dot--breathe" aria-hidden="true" />
-            <b className="t-body font-extrabold text-ink">{persona.character} 중</b>
-            <span className="t-sub text-text-3">{persona.premise}</span>
-          </div>
-          {/* [980] 도구마다 다른 몸짓 — 진행률이 아니다. 몇 %인지 모르면서 아는 척하지
-              않는다. 움직이는 것은 "지금 무엇을 하는 중"의 표시일 뿐이다. */}
-          <span className="run-sig" data-motion={persona.runMotion} aria-hidden="true">
-            <i />
-          </span>
-          <div className="flex flex-col gap-2">
-            {(
-              [
-                ready && ctxState.phase === "ready"
-                  ? {
-                      on: true,
-                      label: `${persona.runStages[0]} — ${ctxState.ctx.complex?.price ? "대조 완료" : "표본 확인"}${
-                        ctxState.ctx.region?.snapshot?.tradeCount != null
-                          ? ` · 지역 ${ctxState.ctx.region.snapshot.tradeCount.toLocaleString("ko-KR")}건`
-                          : ""
-                      }`,
-                    }
-                  : { on: false, label: persona.runStages[0] },
-                ready && ctxState.phase === "ready"
-                  ? {
-                      on: true,
-                      label: `${persona.runStages[1]} — 전월세 신고${ctxState.ctx.rent?.sample != null ? ` ${ctxState.ctx.rent.sample.toLocaleString("ko-KR")}건` : ""} · 입주 예정${
-                        ctxState.ctx.supply ? ` ${ctxState.ctx.supply.upcomingHouseholds.toLocaleString("ko-KR")}세대` : " 없음"
-                      }`,
-                    }
-                  : { on: false, label: persona.runStages[1] },
-                ready && ctxState.phase === "ready"
-                  ? {
-                      on: true,
-                      label: `${persona.runStages[2]} — 임장노트 ${ctxState.ctx.notes?.count ?? 0}건 · 뉴스 ${ctxState.ctx.news?.items?.length ?? 0}건 읽음`,
-                    }
-                  : { on: false, label: persona.runStages[2] },
-                { on: false, label: `${persona.runStages[3]}` },
-              ] as { on: boolean; label: string }[]
-            ).map((st) => (
-              <div key={st.label} className="stp" data-on={st.on ? "true" : "false"}>
-                <span className="box" aria-hidden="true">
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#F6F1E7" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 12l6 6L20 6" />
-                  </svg>
-                </span>
-                {st.label}
-              </div>
-            ))}
-          </div>
-          <span className="njn-bar w-full" aria-hidden="true">
-            <i />
-          </span>
-          <SkLine w="70%" h={16} />
-          <SkBlock h={92} />
-        </div>
-      )}
-
-      {/* ── 결과 ──
-           [980] 등장 방식도 도구마다 다르다(reveal). 점수는 올라오고, 표는 좌→우로
-           펼쳐지고, 동선·궤적은 그려진다 — 결과의 성격을 몸짓이 먼저 말한다.
-           왼쪽 띠(tool-rail)는 "어느 도구의 결과인가"를 스크롤 중에도 붙잡아 둔다. */}
-      {result && (
-        <div className={`card tool-rail flex flex-col gap-3 rounded-2xl p-4 rv-${persona.reveal}`}>
-          {!result.ok ? (
-            result.code === "QUOTA_EXCEEDED" ? (
-              /* [992] 페이월은 여기다 — 방금 결과를 본 자리. 구독 설명 페이지로 보내지 않고
-                 주간권 결제창으로 바로, 결제 뒤 이 도구로 돌아온다(returnTo). */
-              <div className="flex flex-col gap-2.5">
-                <p className="t-section font-extrabold text-ink">
-                  {result.error ?? "무료 AI 분석을 모두 사용했어요."}
-                </p>
-                <p className="t-body text-text-2">
-                  {/* [1004 · 리뷰] "한도 없이"는 사실이 아니다 — 주간권은 plan=pro 라 AI 분석 월 50회가
-                      그대로 걸린다(access.ts ai_analysis). 요금표와 같은 숫자를 적는다. */}
-                  플러스 주간권은 <b className="text-ink">1,100원으로 7일 동안</b> 이 도구 12종을
-                  월 50회까지 쓸 수 있어요. 자동 갱신 없는 1회 결제예요.
-                </p>
-                <Link
-                  href={weeklyPassCheckoutHref(
-                    typeof window !== "undefined" ? window.location.pathname + window.location.search : null,
-                  )}
-                  className="btn-primary btn-cta rounded-[14px] p-[14px] text-center t-body font-bold no-underline"
-                >
-                  주간권 1,100원으로 계속하기
-                </Link>
-                <Link
-                  href="/subscription"
-                  className="inline-block self-center py-[5px] t-sub font-bold text-text-3 no-underline"
-                >
-                  월간 2,900원 · 다른 플랜 보기 ›
-                </Link>
-              </div>
-            ) : (
-              <div className="t-body font-bold text-danger">
-                {result.error ?? "실행에 실패했어요."}
-                {result.code === "LOGIN_REQUIRED" && (
-                  <Link href="/login" className="ml-2 text-primary no-underline">로그인 ›</Link>
-                )}
-              </div>
-            )
-          ) : (
-            <>
-              {/* [993] 판단 카드가 먼저 — 구간·결론·대표 수치·핵심 숫자(기준일)·근거 칩.
-                  말투 한 줄(persona.tone)은 카드 안 보조 문장이 됐다. */}
-              {shownVerdict ? (
-                <VerdictCard verdict={shownVerdict} toneLine={persona.tone[shownVerdict.band]} extraChips={myNotesChip} />
-              ) : (
-                <p className="tone-line t-body font-bold" data-band={band}>
-                  {persona.tone[band]}
-                </p>
-              )}
-              {coreTool && (
-                <VerdictNextLazy tool={tool} verdict={shownVerdict} complexId={picked?.id ?? null} complexName={picked?.name} region={picked?.region} />
-              )}
-              {/* [980] 블록 순서를 아키타입이 정한다 — 계기판·점수형은 눈금이 먼저,
-                  표·목록형은 표가 먼저, 장부형은 위험 뒤에 곧바로 "틀리는 조건".
-                  예전에는 12종이 전부 같은 순서였다(제목→위젯→반대 시나리오→본문). */}
-              {resultOrder(persona.composition).map((block: ResultBlock) => {
-                if (block === "headline") {
-                  /* [993] 결론은 판단 카드가 말한다 — 카드가 없을 때만 예전 헤드라인 */
-                  return !shownVerdict && result.structuredSummary?.headline ? (
-                    <div key="headline" className="t-section text-ink">
-                      {result.structuredSummary.headline}
-                    </div>
-                  ) : null;
+              <ActionButton
+                state={runState}
+                onClick={() => void run()}
+                disabled={!ready}
+                busyLabel={runningLlm ? "AI 해설 쓰는 중" : "계산하는 중"}
+                doneLabel={runningLlm || aiMode ? "결과를 새로 받았어요" : "다시 계산했어요"}
+                errorLabel={
+                  /* [1009 · A · 리뷰] 다시 눌러도 안 되는 실패(무료 해설 소진·로그인 필요)에 "다시 눌러 주세요"를 띄우지 않는다 */
+                  runErrCode === "QUOTA_EXCEEDED"
+                    ? "무료 해설을 다 썼어요"
+                    : runErrCode === "LOGIN_REQUIRED"
+                      ? "로그인이 필요해요"
+                      : "다시 눌러 주세요"
                 }
-                if (block === "widget") {
-                  return (
-                    <div key="widget" className="flex flex-col gap-3">
-                      {/* 시그니처 위젯 — 도구별 구조화 판정 [규칙] */}
-                      {insight && tool === "ai-diagnosis" && <RadarBlock radar={insight.radar} />}
-                      {insight && (tool === "ai-timing" || tool === "ai-prediction") && <SignalBlock signals={insight.signals} />}
-                      {tool === "ai-prediction" && (
-                        <Link href="/analysis/accuracy" className="t-sub font-bold text-primary no-underline">
-                          이 예측 규칙의 과거 적중률 공개 페이지 › (±5% 기준 실측)
-                        </Link>
-                      )}
-                      {insight && (tool === "ai-risk" || tool === "ai-gap" || tool === "contract-risk") && <FlagBlock flags={insight.flags} />}
-                    </div>
-                  );
-                }
-                if (block === "counters") {
-                  /* [AI-04] 반대 시나리오 — [993] 판단 카드가 접힘으로 담는다(중복 방지) */
-                  return !shownVerdict && insight && insight.counters.length > 0 ? (
-                    <div key="counters" className="tool-rail rounded-[10px] bg-bg px-3.5 py-3">
-                      <div className="t-sub font-extrabold text-text-2">이 판단이 틀리는 조건 [규칙]</div>
-                      {insight.counters.map((c, i) => (
-                        <div key={i} className="mt-1 t-sub text-text-2">· {c}</div>
-                      ))}
-                    </div>
-                  ) : null;
-                }
-                /* [993] 본문(자유 마크다운)은 접는다 — 결과값은 위 카드가 이미 말했다.
-                   외부 AI 서술이 붙은 경우엔 펼쳐 둔다(그 서술이 이 실행의 값이므로). */
-                return (
-                  <details key="body" className="rounded-[10px] bg-bg px-3.5 py-2.5" open={result.source !== "internal" && result.source !== "stub"}>
-                    <summary className="cursor-pointer t-sub font-extrabold text-text-2">
-                      {result.source === "internal" || result.source === "stub" ? "규칙 해석 본문 보기" : "AI 서술 본문"}
-                    </summary>
-                    <div className="mt-2">
-                      <MdLite text={result.markdown} />
-                    </div>
-                  </details>
-                );
-              })}
-
-              {result.degraded && result.reasonCode?.includes("KEY_MISSING") && (
-                <div className="rounded-[10px] bg-warning-soft px-3 py-2 t-sub font-bold text-warning">
-                  외부 AI 서술은 서버 키가 등록되면 켜집니다(오너 설정 대기) — 위 결과는 규칙 계산입니다.
-                </div>
-              )}
-
-              {/* [AI-42] 쿼터 표면화 */}
-              {result.usage && (
-                <div className="t-sub text-text-3">
-                  {freeQuotaLabel(result.usage.used, result.usage.limit, result.usage.lifetime)}
-                  {result.usage.limit != null && (
-                    <>
-                      {" "}·{" "}
-                      <Link
-                        href={
-                          result.usage.lifetime
-                            ? weeklyPassCheckoutHref(
-                                typeof window !== "undefined"
-                                  ? window.location.pathname + window.location.search
-                                  : null,
-                              )
-                            : "/subscription"
-                        }
-                        className="inline-block py-[5px] font-bold text-primary no-underline"
-                      >
-                        {result.usage.lifetime ? "주간권 1,100원으로 무제한 ›" : "더 필요하면 플러스 ›"}
-                      </Link>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* [AI-01·17] 근거 각주 */}
-              {footnotes.length > 0 && (
-                <details className="rounded-[10px] bg-bg px-3.5 py-2.5">
-                  <summary className="cursor-pointer t-sub font-extrabold text-text-2">
-                    근거 각주 {footnotes.length}건 — 출처·기준 시점·표본 (표본 {UNCERTAINTY.thinSample}건 미만·{UNCERTAINTY.staleDays}일 초과는 주의 표기)
-                  </summary>
-                  <div className="mt-2 flex flex-col gap-1">
-                    {footnotes.map((f) => (
-                      <div key={f.n} className="flex flex-wrap items-baseline gap-x-2 t-sub text-text-2">
-                        <span className="font-mono font-bold text-primary">[{f.n}]</span>
-                        <span className="font-bold text-ink">{f.label}</span>
-                        <span>{f.source}</span>
-                        {f.asOf && (
-                          <span className="text-text-3">
-                            {f.asOf}
-                            {f.ageDays != null && f.ageDays > 0 ? ` (${f.ageDays}일 전)` : ""}
-                          </span>
-                        )}
-                        {f.sample != null && <span className="text-text-3">표본 {f.sample}건</span>}
-                        {(() => {
-                          const c = judgeConfidence(f.sample, f.ageDays);
-                          return c !== "ok" ? (
-                            <span className="rounded bg-warning-soft px-1.5 py-px t-caption font-extrabold text-warning">
-                              {CONFIDENCE_LABEL[c]}
-                            </span>
-                          ) : null;
-                        })()}
-                        {f.href && (
-                          <Link href={f.href} className="font-bold text-primary no-underline">원본 ›</Link>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              )}
-
-              {/* [AI-38] 다음 행동 — [980] 맨 앞은 **이 도구의** 다음 행동이다.
-                  예전에는 12종이 전부 같은 3버튼(지도·노트·관심)으로 끝나서, 도구를
-                  바꿔도 마지막에 도착하는 곳이 같았다. 진단은 약한 축을 리스크로,
-                  예측은 그 가격으로 수익률로, 동선은 노트로 — 도구가 끝나는 자리가
-                  다음 도구의 시작이 되게 한다(tool-persona 의 nextAction). */}
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  href={
-                    picked
-                      ? `${persona.nextAction.href}${persona.nextAction.href.includes("?") ? "&" : "?"}complexId=${encodeURIComponent(picked.id)}`
-                      : persona.nextAction.href
-                  }
-                  className="tool-fill press rounded-[10px] px-3.5 py-2 t-body font-bold no-underline"
-                >
-                  {persona.nextAction.label} ›
-                </Link>
-                <Link
-                  href={picked ? `/map?complexId=${encodeURIComponent(picked.id)}` : "/map"}
-                  className="rounded-[10px] border border-line-strong bg-bg px-3.5 py-2 t-body font-bold text-text-1 no-underline"
-                >
-                  지도에서 보기
-                </Link>
-                {/* [996] 핵심 4종은 판단 카드 아래 "이 판단으로 임장노트 쓰기"(메모 초안 포함)가 대신한다 */}
-                {!coreTool && (
-                  <Link
-                    href={noteHref}
-                    className="rounded-[10px] border border-line-strong bg-bg px-3.5 py-2 t-body font-bold text-text-1 no-underline"
-                  >
-                    이 단지 임장노트 쓰기
-                  </Link>
-                )}
-                <button
-                  type="button"
-                  onClick={addWatch}
-                  disabled={!picked || watchState === "busy" || watchState === "done"}
-                  className="rounded-[10px] border border-line-strong bg-bg px-3.5 py-2 t-body font-bold text-text-1 disabled:opacity-60"
-                >
-                  {watchState === "done" ? "관심 단지 등록됨 ✓" : watchState === "busy" ? "등록 중…" : watchState === "fail" ? "등록 실패(로그인 필요)" : "관심 단지 + 가격 알림"}
-                </button>
-              </div>
-
-              {/* [AI-24] 체크리스트 → 노트 저장 */}
-              {tool === "my-checklist" && (
-                <Link
-                  href={`${noteHref}${noteHref.includes("?") ? "&" : "?"}fromChecklist=1`}
-                  onClick={() => {
-                    /* [AI-24] 결과의 목록 항목을 노트 고려사항으로 이관 */
-                    try {
-                      const items = result.markdown
-                        .split("\n")
-                        .map((l) => l.trim())
-                        .filter((l) => l.startsWith("- ") || l.startsWith("* "))
-                        .map((l) => l.slice(2).replace(/\*\*/g, "").trim())
-                        .filter((l) => l.length >= 4 && l.length <= 60)
-                        .slice(0, 10);
-                      if (items.length) {
-                        window.localStorage.setItem(
-                          "nz_ai_checklist",
-                          JSON.stringify({ at: Date.now(), items }),
-                        );
-                      }
-                    } catch {
-                      /* 저장 실패해도 이동은 그대로 */
-                    }
-                  }}
-                  className="self-start rounded-[10px] bg-primary px-3.5 py-2 t-body font-bold text-white no-underline"
-                >
-                  이 체크리스트로 노트 시작 ›
+                className={`btn-lg w-full ${runState === "idle" && ready ? "glow" : ""}`}
+              >
+                {hasCalc ? (aiMode ? "다시 계산 · AI 해설 받기" : "내 조건으로 다시 계산") : "AI 해설 받기"}
+              </ActionButton>
+              {signedIn && (
+                <Link href="/my/analyses" className="inline-flex min-h-[24px] items-center self-start t-sub font-bold text-text-3 no-underline">
+                  내 분석 기록 ›
                 </Link>
               )}
-
-              {/* [AI-33] 공유 · [AI-35] 프리셋 */}
-              <div className="flex flex-wrap items-center gap-2 border-t border-line pt-2.5">
-                {shareUrl && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      try {
-                        void navigator.clipboard.writeText(`${location.origin}${shareUrl}`);
-                        setShareCopied(true);
-                      } catch {
-                        setShareCopied(false);
-                      }
-                    }}
-                    className="rounded-[10px] bg-bg px-3 py-1.5 t-sub font-bold text-text-1"
-                  >
-                    {shareCopied ? "링크 복사됨 ✓" : "결과 링크 복사"}
-                  </button>
-                )}
-                {picked && (
-                  <button type="button" onClick={savePreset} className="rounded-[10px] bg-bg px-3 py-1.5 t-sub font-bold text-text-1">
-                    프리셋 저장
-                  </button>
-                )}
-                {presetMsg && <span className="t-sub text-text-3">{presetMsg}</span>}
-
-                {/* [AI-46] 피드백 */}
-                <span className="ml-auto flex items-center gap-1.5 t-sub text-text-3">
-                  {feedback === "sent" ? (
-                    "피드백 감사합니다"
-                  ) : (
-                    <>
-                      도움됐나요?
-                      <button type="button" aria-label="도움됨" onClick={() => void sendFeedback("up")} className="rounded bg-bg px-2 py-1 font-bold">👍</button>
-                      <button type="button" aria-label="아쉬움" onClick={() => void sendFeedback("down")} className="rounded bg-bg px-2 py-1 font-bold">👎</button>
-                      <input
-                        value={feedbackNote}
-                        onChange={(e) => setFeedbackNote(e.target.value)}
-                        placeholder="한 줄 이유(선택)"
-                        className="w-[130px] rounded border border-line bg-surface px-2 py-1 t-sub"
-                      />
-                    </>
-                  )}
-                </span>
-              </div>
-            </>
+            </section>
           )}
-        </div>
-      )}
 
-      {/* [996] 같은 단지, 네 가지 눈 — 단지가 정해지면 카드 아래 늘 같은 자리. 실행 중에도
-          내리지 않는다(자리가 고정돼야 useRef 캐시가 살고 화면이 점프하지 않는다).
-          비교·포트폴리오는 대상이 여럿이라 한 단지 보드를 세우지 않는다. */}
-      {picked && !isCompare && !isPortfolio && (
-        /* 자기 칸은 데이터 로드 시점 판단(ctxVerdict) — 실행 결과(result)는 단지를 바꿔도
-           남아 있어 옛 단지의 판단이 새 단지 보드에 섞일 수 있다. 보드 4종은 보정 입력을
-           읽지 않으므로(lib/ai/verdict.ts toolMetric) 두 값이 같다. */
-        <VerdictBoardLazy tool={tool} complexId={picked.id} complexName={picked.name} region={picked.region} verdict={ready ? ctxVerdict : null} />
-      )}
-
-      {/* 도움말 */}
-      {!result && tips.length > 0 && (
-        <div className="rounded-[10px] bg-bg px-4 py-3 t-sub text-text-3">
-          {tips.map((t, i) => (
-            <div key={i}>· {t}</div>
-          ))}
+          {/* [AI-29] 경제 모니터 — 기준금리 알림 */}
+          {isEconomy && ready && ctx?.macro?.baseRatePct != null && <EconomyWatchPanel currentRate={ctx.macro.baseRatePct} />}
         </div>
-      )}
-      </div>
       </div>
     </>
   );
 }
 
-/* [AI-19] 진단 레이더 — 축별 막대(모바일 가독 우선) + 근거 */
-function RadarBlock({ radar }: { radar: Insight["radar"] }) {
+/* ── [1008] 첫 방문 안내 — 단지를 고르기 전 오른쪽(모바일은 검색 아래) ─────────────── */
+function FirstVisitGuide({
+  resultKind,
+  tips,
+  quickPicks,
+  onQuickPick,
+}: {
+  resultKind: string;
+  tips: readonly string[];
+  quickPicks: readonly QuickPick[];
+  onQuickPick: (q: QuickPick) => void;
+}) {
+  const steps = [
+    { t: "단지 고르기", d: "이름으로 검색하거나 지도에서 눌러요." },
+    { t: "자료는 자동으로", d: "국토부 실거래·전월세 신고·입주 예정·한국부동산원 통계를 불러와요." },
+    { t: "숫자·그래프로 결과", d: resultKind },
+  ];
   return (
-    <div className="rounded-[10px] bg-bg px-3.5 py-3">
-      <div className="t-sub font-extrabold text-text-2">진단 5축 [규칙 · 실데이터]</div>
-      <div className="mt-2 flex flex-col gap-1.5">
-        {radar.map((a) => (
-          <div key={a.key} className="flex items-center gap-2">
-            <span className="w-[72px] shrink-0 t-sub font-bold text-text-1">{a.label}</span>
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-line">
-              {a.score != null && (
-                <div className="h-full rounded-full bg-primary" style={{ width: `${a.score}%` }} />
-              )}
-            </div>
-            <span className="w-[110px] shrink-0 text-right t-caption tabular-nums text-text-3">
-              {a.score != null ? `${a.score} · ` : "데이터 없음 · "}
-              {a.basis.length > 14 ? `${a.basis.slice(0, 14)}…` : a.basis}
+    <section className="card flex flex-col gap-4 rounded-2xl p-4 md:p-5" aria-label="이렇게 써요">
+      <h2 className="t-section font-extrabold text-ink">이렇게 써요</h2>
+      <ol className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {steps.map((s, i) => (
+          <li key={s.t} className="flex gap-2.5 rounded-[12px] bg-bg px-3 py-3 sm:flex-col sm:gap-1.5">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary t-sub font-extrabold text-white">{i + 1}</span>
+            <span className="flex flex-col gap-0.5">
+              <b className="t-body font-extrabold text-ink">{s.t}</b>
+              <span className="t-sub text-text-2">{s.d}</span>
             </span>
-          </div>
+          </li>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function SignalBlock({ signals }: { signals: Insight["signals"] }) {
-  return (
-    <div className="grid gap-2 sm:grid-cols-3">
-      {signals.map((s) => (
-        <div key={s.key} className="rounded-[10px] bg-bg px-3 py-2.5">
-          <div className="flex items-center justify-between">
-            <span className="t-sub font-bold text-text-2">{s.label}</span>
-            <span className={`rounded-full px-2 py-0.5 t-caption font-extrabold ${SIGNAL_COLOR[s.state]}`}>
-              {SIGNAL_LABEL[s.state]}
-            </span>
+      </ol>
+      {quickPicks.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <span className="t-sub font-extrabold text-text-1">처음이라면 — 최근 거래가 많은 단지로 둘러보기</span>
+          <div className="flex flex-wrap gap-1.5">
+            {quickPicks.map((q) => (
+              <button
+                key={q.id}
+                type="button"
+                onClick={() => onQuickPick(q)}
+                className="chip press flex min-h-[40px] flex-col items-start border border-line bg-surface px-3 py-1.5 text-left"
+              >
+                <span className="t-sub font-extrabold text-ink">{q.name}</span>
+                <span className="t-caption text-text-3">
+                  {q.region} · 최근 6개월 {q.recentTrades.toLocaleString("ko-KR")}건
+                </span>
+              </button>
+            ))}
           </div>
-          <div className="mt-1 t-sub text-text-3">{s.basis}</div>
         </div>
-      ))}
-    </div>
-  );
-}
-
-function FlagBlock({ flags }: { flags: Insight["flags"] }) {
-  if (flags.length === 0)
-    return (
-      <div className="rounded-[10px] bg-success-soft px-3.5 py-2.5 t-sub font-bold text-success">
-        실측 조건 기준 점등된 리스크 플래그가 없습니다 — 표본·시점은 각주를 확인하세요.
-      </div>
-    );
-  return (
-    <div className="flex flex-col gap-1.5">
-      {flags.map((f) => (
-        <div
-          key={f.key}
-          className={`rounded-[10px] px-3.5 py-2.5 ${f.level === "warn" ? "bg-warning-soft" : "bg-bg"}`}
-        >
-          <div className={`t-sub font-extrabold ${f.level === "warn" ? "text-warning" : "text-text-1"}`}>
-            ⚑ {f.title}
-          </div>
-          <div className="mt-0.5 t-sub text-text-2">{f.detail}</div>
-        </div>
-      ))}
-    </div>
+      )}
+      {tips.length > 0 && (
+        <ul className="flex flex-col gap-0.5 border-t border-line pt-3">
+          {tips.map((t) => (
+            <li key={t} className="t-sub text-text-3">
+              · {t}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -1308,9 +816,17 @@ function EconomyWatchPanel({ currentRate }: { currentRate: number }) {
   const [direction, setDirection] = useState<"above" | "below">("above");
   const [state, setState] = useState<"idle" | "busy" | "done" | "fail" | "login">("idle");
   const [note, setNote] = useState("");
+  const { showToast } = useToast();
 
   const submit = async () => {
     if (state === "busy") return;
+    /* [1009 · A · 리뷰] 원인별 문구 — 숫자가 틀렸을 때만 "숫자를 확인", 서버 오류·너무 잦은 요청은 그대로 말한다 */
+    const t = Number(threshold);
+    if (!Number.isFinite(t) || t <= 0 || t > 20) {
+      setState("fail");
+      setNote("0보다 크고 20 이하인 %로 넣어 주세요(예: 3.25).");
+      return;
+    }
     setState("busy");
     try {
       const res = await fetch("/api/me/economy-watch", {
@@ -1323,26 +839,42 @@ function EconomyWatchPanel({ currentRate }: { currentRate: number }) {
       else if (res.ok && json.ok) {
         setState("done");
         setNote(json.note ?? "");
+        /* [1009 · A] 결과는 토스트로 — 무엇을 걸었는지 한 문장 */
+        /* 토스트는 한 줄(알림함 버튼과 함께) — 조건은 아래 안내 글(note)에 문장으로 남는다 */
+        showToast(`알림 걸었어요 · ${threshold}% ${direction === "above" ? "이상" : "이하"}이면`, {
+          label: "알림함",
+          href: "/notifications",
+        });
       } else {
         setState("fail");
-        setNote(json.error ?? "");
+        setNote(
+          res.status === 400
+            ? (json.error ?? "알림을 걸지 못했어요 — 숫자(예: 3.25)를 확인하고 다시 눌러 주세요.")
+            : res.status === 429
+              ? "너무 자주 눌렀어요 — 1분쯤 뒤에 다시 눌러 주세요."
+              : json.error
+                ? `알림을 걸지 못했어요 — ${json.error}`
+                : `알림을 걸지 못했어요 — 서버가 답하지 못했어요(${res.status}). 잠시 뒤 다시 눌러 주세요.`,
+        );
       }
     } catch {
       setState("fail");
+      setNote("알림을 걸지 못했어요 — 인터넷 연결을 확인하고 다시 눌러 주세요.");
     }
   };
 
   return (
-    <div className="card rounded-2xl p-4">
+    <div id="economy-watch" className="card scroll-mt-20 rounded-2xl p-4">
       <div className="t-body font-extrabold text-ink">
         기준금리 알림 걸기{" "}
-        <span className="t-sub font-medium text-text-3">현재 {currentRate}% · 조건 도달 시 알림함으로 1회</span>
+        <span className="t-sub font-medium text-text-3">지금 {currentRate}% · 조건이 되면 알림함으로 한 번</span>
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <select
           value={direction}
           onChange={(e) => setDirection(e.target.value as "above" | "below")}
-          className="rounded-[10px] border border-line bg-surface px-2.5 py-2 t-body font-bold text-ink"
+          aria-label="알림 조건"
+          className="min-h-[40px] rounded-[10px] border border-line bg-surface px-2.5 t-body font-bold text-ink"
         >
           <option value="above">이상으로 오르면</option>
           <option value="below">이하로 내리면</option>
@@ -1351,21 +883,22 @@ function EconomyWatchPanel({ currentRate }: { currentRate: number }) {
           value={threshold}
           onChange={(e) => setThreshold(e.target.value)}
           inputMode="decimal"
-          className="w-[90px] rounded-[10px] border border-line bg-surface px-3 py-2 t-body font-bold text-ink"
+          aria-label="기준금리(%)"
+          className="min-h-[40px] w-[90px] rounded-[10px] border border-line bg-surface px-3 t-body font-bold text-ink"
         />
         <span className="t-sub font-bold text-text-2">%</span>
-        <button
-          type="button"
+        <ActionButton
+          state={state === "busy" ? "busy" : state === "done" ? "done" : state === "fail" ? "error" : "idle"}
           onClick={() => void submit()}
-          disabled={state === "busy" || state === "done"}
-          className="rounded-[10px] bg-primary px-3.5 py-2 t-body font-bold text-white disabled:opacity-60"
+          busyLabel="등록하는 중"
+          doneLabel="알림 걸었어요"
+          errorLabel="다시 등록"
+          className="btn-md"
         >
-          {state === "done" ? "등록됨 ✓" : state === "busy" ? "등록 중…" : "알림 등록"}
-        </button>
+          알림 등록
+        </ActionButton>
       </div>
-      {state === "login" && (
-        <p className="mt-1.5 t-sub font-bold text-warning">로그인하면 알림을 걸 수 있어요.</p>
-      )}
+      {state === "login" && <p className="mt-1.5 t-sub font-bold text-warning">로그인하면 알림을 걸 수 있어요.</p>}
       {note && <p className="mt-1.5 t-sub text-text-3">{note}</p>}
     </div>
   );

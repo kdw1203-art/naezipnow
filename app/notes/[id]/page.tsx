@@ -26,11 +26,24 @@ import { resolveComplexHref } from "@/lib/newui/complex-link";
 import { ErrorState } from "@/app/components/ui/EmptyState";
 import { NoteDetailActions } from "./note-actions";
 import { AiRetryButton } from "./ai-retry-button";
+import { AiPendingCard } from "./AiPendingCard";
+import {
+  aiStateOf,
+  analysisModeOf,
+  hasAiAnalysis,
+  isQuotaFallback,
+  noteAiIntent,
+  readAiQuery,
+} from "@/lib/notes/ai-status";
+import { areaBandLabels } from "@/lib/notes/area-band-label";
+import { noteContentHash, storedContentHash } from "@/lib/notes/content-hash";
 import { NoteToolsRow } from "./NoteToolsRow";
 import { AiFeedbackButtons } from "@/app/components/AiFeedbackButtons";
 import DeepDivePanel from "./DeepDivePanel";
 import { Icon } from "@/app/components/Icon";
+import { Explain } from "@/app/components/explain/Explain";
 import { JsonLd } from "@/app/components/JsonLd";
+import { publisherRef } from "@/lib/seo/jsonld";
 import { NoteSoftWall } from "./NoteSoftWall";
 import { RelatedNotes } from "./RelatedNotes";
 import { CompareTrayButton } from "@/app/components/CompareTrayButton";
@@ -65,7 +78,8 @@ const BASE_URL = "https://naezipnow.com";
 
 type AxisLevel = "상" | "중" | "하";
 type Axis = { icon: string; label: string; level: AxisLevel };
-type Visit = { label: string; summary: string; latest: boolean };
+/* [1006] id — 같은 단지의 다른 회차로 가는 링크(예전엔 글자만 있고 갈 길이 없었다) */
+type Visit = { id: string; label: string; summary: string; latest: boolean };
 type ScoreBar = { label: string; value: number; bad: boolean };
 
 type NoteView = {
@@ -147,13 +161,9 @@ function levelFromScore(score: number): AxisLevel {
   return "중";
 }
 
-function retryDefaultIntent(
-  note: InspectionNote,
-): "실거주" | "투자" | "전월세" {
-  const m = (note.metadata ?? {}) as Record<string, unknown>;
-  const p = m.visitPurpose ?? m.intent;
-  if (p === "투자" || p === "전월세" || p === "실거주") return p;
-  return "실거주";
+/* [1006] 본체는 lib/notes/ai-status.noteAiIntent — 목록 배지·내용 해시가 같은 규칙을 본다 */
+function retryDefaultIntent(note: InspectionNote): "실거주" | "투자" | "전월세" {
+  return noteAiIntent(note.metadata);
 }
 
 function splitLines(text?: string | null): string[] {
@@ -289,6 +299,7 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
         ? visitsOverride
         : [
             {
+              id: n.id,
               label: `1차 · ${n.visitDate}`,
               summary: scored
                 ? `평점 ${avg.toFixed(1)}/5 · 체크 ${doneCount}/${n.checklist.length}`
@@ -434,11 +445,9 @@ function articleJsonLd(note: InspectionNote): Record<string, unknown> {
       "@type": "Person",
       name: displayAuthorLabel(note.authorLabel) || "내집나우 스카우트",
     },
-    publisher: {
-      "@type": "Organization",
-      name: "내집나우",
-      url: BASE_URL,
-    },
+    /* [1007 · P2] 전역 Organization 노드 참조(@id) — 페이지마다 다른 발행 주체 노드가 생기지 않게
+       (WebPage·Dataset·뉴스 NewsArticle 과 같은 모양, lib/seo/jsonld.ts publisherRef) */
+    publisher: publisherRef(),
     mainEntityOfPage: {
       "@type": "WebPage",
       "@id": `${BASE_URL}/notes/${note.id}`,
@@ -500,15 +509,9 @@ export default async function NoteDetailPage({
 }) {
   const { id } = await params;
   const { ai: aiStatusRaw, quota: quotaRaw } = await searchParams;
-  /* NoteForm 이 저장 리다이렉트에 quota=1 을 실어 보낸다 — AI 월간 한도에
-     걸린 채 저장된 경우다. 예전엔 이 값을 버려서, 가치가 전달된 바로 그
-     화면(정리된 노트)에서 업그레이드 안내가 나갈 기회가 사라졌다(항목 38).
-     /map 의 WelcomeHandoff 는 같은 값을 이미 읽고 있다. */
-  const quotaHit = quotaRaw === "1";
-  const aiStatus =
-    aiStatusRaw === "ok" || aiStatusRaw === "rule" || aiStatusRaw === "fail"
-      ? aiStatusRaw
-      : undefined;
+  /* [1005 · A4] `?ai=` 는 작성 화면이 남기는 단계 표시다 — pending(방금 요청) · ok · rule · fail.
+     화이트리스트 밖은 null(일반 열람). 실제 상태는 아래에서 저장된 분석과 합쳐 판정한다. */
+  const aiQuery = readAiQuery(aiStatusRaw);
 
   // 뷰어 세션 — 소유자면 비공개 노트도 열람 + 공개/비공개 토글 제공
   /* [949] 세션과 노트 본문은 서로 독립이라 나란히 받는다 — 예전엔 세션(Auth 쿠키
@@ -559,7 +562,31 @@ export default async function NoteDetailPage({
       ? realNote.metadata.complexId.trim()
       : "";
   const visitApt = realNote.aptName?.trim() ?? "";
-  const wantsNearby = isOwner && Boolean(aiStatus) && Boolean(realNote.region.trim());
+  /* [1005 · A4] AI 정리 상태 — 저장된 분석이 있으면 그것이 진실(ready/rule), 없으면 쿼리가
+     말하는 단계(pending → 폴링 카드 · fail → 실패). 저장 직후(postSave)는 소유자가 `?ai=` 를
+     달고 온 경우이되 pending 은 아직 아니다 — 결과가 오기 전엔 "다음 행동"을 재촉하지 않는다. */
+  /* [1005 · M3] 수정 저장 — PATCH 는 옛 aiAnalysis 를 남기고 새 정리는 아직 도는 중이다. 저장된
+     분석이 **지금 내용의 것인지**를 AI 라우트와 같은 해시(lib/notes/content-hash)로 대조한다.
+     다르면(stale) 있는 분석을 무시하고 pending — 옛 요약을 "반영됐어요"로 내보내지 않는다.
+     intent 는 작성 화면이 라우트에 보낸 값과 같은 규칙(방문 목적 → 실거주 기본)이다. */
+  const hasAnalysis = hasAiAnalysis(realNote.aiAnalysis);
+  const expectedHash = noteContentHash(realNote, retryDefaultIntent(realNote));
+  const stale =
+    aiQuery === "pending" && hasAnalysis && storedContentHash(realNote) !== expectedHash;
+  const aiState = aiStateOf({
+    query: aiQuery,
+    hasAnalysis,
+    analysisMode: analysisModeOf(realNote.aiAnalysis),
+    stale,
+  });
+  const postSave = isOwner && aiQuery !== null && aiState !== "pending";
+  const wantsNearby = postSave && Boolean(realNote.region.trim());
+  /* NoteForm 이 예전엔 저장 리다이렉트에 quota=1 을 실어 보냈다 — AI 월간 한도에 걸린 채
+     저장된 경우다. 그 값을 버리면 가치가 전달된 바로 그 화면(정리된 노트)에서 업그레이드
+     안내가 나갈 기회가 사라진다(항목 38). [1005 · M7] 작성 화면은 이제 AI 응답을 기다리지
+     않아 quota=1 을 보낼 수 없다 — 대신 라우트가 한도 폴백에 적는 engine 표기(`rule-based-v1
+     (quota)`)를 저장 직후 화면에서 읽는다. 쿼리는 호환용으로 남긴다(/map WelcomeHandoff 동일). */
+  const quotaHit = quotaRaw === "1" || (postSave && isQuotaFallback(realNote.aiAnalysis));
   /* [967 · 12] 댓글은 공개 노트(또는 소유자 본인)에만 — 이 페이지는 force-dynamic 이라
      요청마다 렌더되므로 다른 요청별 조회(구매 확인·회차 목록)와 같은 방식으로 서버에서
      함께 읽는다. 공개 캐시가 없으니 뷰어별 "내 댓글" 판정을 서버에서 해도 새지 않는다.
@@ -671,6 +698,7 @@ export default async function NoteDetailPage({
         const avg = inspectionAverageScore(x.scores);
         const checks = `${x.checklist.filter((c) => c.done).length}/${x.checklist.length}`;
         return {
+          id: x.id,
           label: `${i + 1}차 · ${x.visitDate}`,
           summary: scored ? `평점 ${avg.toFixed(1)}/5 · 체크 ${checks}` : `점수 미입력 · 체크 ${checks}`,
           latest: x.id === realNote.id,
@@ -724,7 +752,17 @@ export default async function NoteDetailPage({
   /* [993] 판단 카드의 "대표 실거래가 + 기준월" — 단지가 실거래와 매칭될 때만. 실패는 칸을 비운다. */
   const verdictPrice = complexIdFromHref
     ? await resolveComplexPrice(complexIdFromHref)
-        .then((r) => (r.ok ? { priceKrw: r.price.priceKrw, bandLabel: r.price.bandLabel, latestYm: r.price.latestYm } : null))
+        .then((r) =>
+          r.ok
+            ? {
+                priceKrw: r.price.priceKrw,
+                bandLabel: r.price.bandLabel,
+                /* [1006] 평 표기도 같이 — 설정(면적 단위)이 평인 사람은 클라이언트 섬이 이걸 고른다 */
+                bandLabelPyeong: areaBandLabels(r.price.bandSlug, r.price.bandLabel).pyeong,
+                latestYm: r.price.latestYm,
+              }
+            : null,
+        )
         .catch((): null => null)
     : null;
   /* [993] LLM 결론(inspectionReport.verdict·recommendedAction)은 저장만 되고 상세가 안 그렸다 */
@@ -757,6 +795,113 @@ export default async function NoteDetailPage({
           .join(" · "),
       }));
   }
+
+  /* [1005 · A4] 저장 직후 "다음 행동" 한 장 — 판단 카드(히어로) 바로 아래. 예전엔 위에 배너
+     여섯 장이 쌓였다(LLM/규칙/실패 안내 · AI 진단 딥링크 · 근처 후보 · 한도). 첫 줄은 AI 결과가
+     어떻게 됐는지(반영·규칙만·미반영)를 사실대로, 그 아래는 행동 셋뿐인 유리 알약 줄:
+     지도 비교(루프) · AI 진단(단지가 있을 때, [AI-40] 가장 뜨거운 순간의 제안) · 카드 공유([D008]
+     지금 있는 유일한 무료 홍보 채널). 단지가 없으면 AI 진단 자리에 회차 기록. 재시도 버튼은
+     아래 AI 요약 패널에 있으므로 여기서 또 만들지 않는다. */
+  const aptForTools = realNote.aptName?.trim() ?? "";
+  const nextActionHeadline =
+    aiState === "ready"
+      ? "AI 정리가 반영됐어요 — 이어서 해 볼 것"
+      : aiState === "rule"
+        ? "노트는 저장됐고 규칙 기반 요약만 있어요 — AI 정리는 아래 요약에서 다시 시도할 수 있어요"
+        : "노트는 저장됐어요. AI 정리는 반영되지 않았어요 — 아래 요약에서 다시 시도할 수 있어요";
+  const nextActionLinks: Array<{ label: string; href: string }> = [
+    { label: "지도에서 비교", href: mapCompareHref },
+    aptForTools
+      ? {
+          label: "AI 진단",
+          href: `/analysis/ai/ai-diagnosis?apt=${encodeURIComponent(aptForTools)}&region=${encodeURIComponent(realNote.region)}`,
+        }
+      : { label: "회차 기록", href: `/notes/new?revisit=${encodeURIComponent(realNote.id)}` },
+    { label: "카드로 공유", href: `/notes/${realNote.id}/card` },
+  ];
+  const nextActionCard = postSave ? (
+    <section aria-label="다음 행동" className="lg-glass rise-in flex flex-col gap-2.5 p-4">
+      <p className={`t-body font-extrabold ${aiState === "ready" ? "text-ink" : "text-text-2"}`}>
+        {nextActionHeadline}
+      </p>
+      {/* 유리 알약 줄 — 셋이 390px 안에 들어가지만(≈280px) 긴 단지명 폰트 확대에 대비해 가로 스크롤 */}
+      <nav
+        aria-label="다음 행동 바로가기"
+        className="lg-capsule max-w-full self-start overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {nextActionLinks.map((a) => (
+          <Link key={a.href} href={a.href} className="flex min-h-[40px] items-center">
+            {a.label}
+          </Link>
+        ))}
+      </nav>
+      {aptForTools && (
+        <p className="t-caption text-text-3">
+          AI 진단은 {aptForTools} 실데이터로 1분 · 첫 실행이면 +100P
+        </p>
+      )}
+    </section>
+  ) : null;
+
+  /* [945 #18] 저장 직후 다음 임장 후보 ①비교 후보 ②비교 담기 ③다음 임장 — 루프가 "저장"에서
+     끝나지 않게 한다. [1005] 본문 아래(도구 줄 다음, 댓글 앞)로 내렸다 — 방금 쓴 노트보다
+     먼저 읽을 것이 아니다. 후보가 없으면 통째로 접는다. */
+  const nearbyCard =
+    postSave && nearbyCandidates.length > 0 ? (
+      <section
+        aria-label="근처 비교 후보"
+        className="rise-in-1 card flex flex-col gap-2 rounded-[18px] p-5"
+      >
+        <div className="t-section text-ink">다음 임장, 근처 비교 후보로 이어가 볼까요?</div>
+        <p className="t-caption text-text-3">
+          {realNote.region} 최근 거래 많은 단지 — 담아서 표로 비교할 수 있어요.
+        </p>
+        <div className="mt-1 flex flex-col gap-1.5">
+          {nearbyCandidates.map((c) => (
+            <div
+              key={c.id}
+              className="flex items-center justify-between gap-2 rounded-xl bg-bg px-3 py-2"
+            >
+              <Link
+                href={complexHrefFromId(c.id)}
+                className="inline-block min-w-0 flex-1 py-[5px] no-underline"
+              >
+                <span className="t-body font-bold text-ink">{c.name}</span>
+                {c.sub && <span className="ml-1.5 t-caption text-text-3">{c.sub}</span>}
+              </Link>
+              <CompareTrayButton complexId={c.id} name={c.name} region={realNote.region} />
+              <Link
+                href={`/notes/new?apt=${encodeURIComponent(c.name)}&region=${encodeURIComponent(realNote.region)}`}
+                className="btn-soft btn-sm shrink-0 no-underline"
+              >
+                다음 임장 노트
+              </Link>
+            </div>
+          ))}
+        </div>
+      </section>
+    ) : null;
+
+  /* [1005 · A4] AI 요약 패널 — pending 이면 이 자리에 폴링 카드가 서고, 이 패널은 "나중에 볼게요"
+     뒤의 폴백이 된다(규칙 기반 요약 + 재시도). 결과가 오면 폴링 카드가 ?ai=ok 로 다시 렌더한다. */
+  const aiSummaryPanel = (
+    <AIPanel title="AI 요약">
+      <span
+        className={`mb-1.5 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-extrabold ${
+          v.aiBadge.startsWith("규칙")
+            ? "border border-amber-400/50 bg-amber-500/15 text-amber-100"
+            : "border border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
+        }`}
+      >
+        {v.aiBadge}
+        {v.aiBadge.startsWith("규칙") ? " · LLM 아님" : " · LLM"}
+      </span>
+      <p className="t-body">{v.aiInline}</p>
+      {isOwner && !hasLlmAi && (
+        <AiRetryButton noteId={id} defaultIntent={retryDefaultIntent(realNote)} />
+      )}
+    </AIPanel>
+  );
 
   return (
     <PageShell breadcrumb={v.breadcrumb}>
@@ -795,113 +940,10 @@ export default async function NoteDetailPage({
           </Link>
         </div>
       )}
-      {/* 저장 직후 루프 안내 — LLM / 규칙 폴백 / 실패를 구분 */}
-      {isOwner && aiStatus === "ok" && hasLlmAi && (
-        <div className="rise-in mb-3 rounded-2xl border border-primary/20 bg-primary-soft px-4 py-3 t-body text-text-1">
-          AI 정리가 반영됐어요.{" "}
-          <Link href={mapCompareHref} className="font-extrabold text-primary">
-            지도에서 이 단지와 비교 ›
-          </Link>
-          {/* 항목 22 — 완료 직후 두 번째 행동: 같은 단지 시세 (단지 매칭 시에만) */}
-          {complexHref && (
-            <>
-              {" · "}
-              <Link href={complexHref} className="font-extrabold text-primary">
-                이 단지 시세 보기 ›
-              </Link>
-            </>
-          )}
-          {/* [D008] 세 번째 행동: 공유 카드. 사용자가 카드를 카톡에 올리는 순간이
-              지금 있는 유일한 무료 홍보 채널이다 — 저장 직후가 가장 눌리는 때. */}
-          {" · "}
-          <Link href={`/notes/${realNote.id}/card`} className="font-extrabold text-primary">
-            카드로 공유하기 ›
-          </Link>
-        </div>
-      )}
-      {isOwner && (aiStatus === "rule" || (aiStatus === "ok" && !hasLlmAi)) && (
-        <div className="rise-in mb-3 rounded-2xl border border-line bg-bg px-4 py-3 t-body text-text-2">
-          노트는 저장됐고 규칙 기반 요약만 있어요 — AI 정리는 아래에서 다시 시도할 수
-          있어요.{" "}
-          {/* 항목 22 — AI 성패와 무관하게 저장 완료 후 다음 행동은 있어야 한다 */}
-          <Link href={mapCompareHref} className="font-bold text-primary">
-            지도에서 비교 ›
-          </Link>
-          {complexHref && (
-            <>
-              {" · "}
-              <Link href={complexHref} className="font-bold text-primary">
-                단지 시세 ›
-              </Link>
-            </>
-          )}
-        </div>
-      )}
-      {/* [AI-40] 저장 직후 — 이 단지 AI 진단 원클릭(컨텍스트 이관). 가장 뜨거운 순간의 제안 */}
-      {isOwner && aiStatus && realNote.aptName && (
-        <div className="rise-in mb-3 rounded-2xl border border-line bg-surface px-4 py-3 t-body text-text-1">
-          방금 다녀온 단지, 실데이터로도 확인해 볼까요?{" "}
-          <Link
-            href={`/analysis/ai/ai-diagnosis?apt=${encodeURIComponent(realNote.aptName)}&region=${encodeURIComponent(realNote.region)}`}
-            className="font-extrabold text-primary"
-          >
-            {realNote.aptName} AI 진단 1분 ›
-          </Link>
-          <span className="ml-1 t-sub text-text-3">첫 실행이면 +100P</span>
-        </div>
-      )}
-      {/* [945 #18] 저장 직후 다음 행동 ①비교 후보 ②비교 담기 ③다음 임장 —
-          루프가 "저장"에서 끝나지 않게 한다. 후보가 없으면 통째로 접는다. */}
-      {isOwner && aiStatus && nearbyCandidates.length > 0 && (
-        <div className="rise-in mb-3 rounded-2xl border border-line bg-surface px-4 py-3">
-          <div className="t-body font-extrabold text-ink">
-            다음 임장, 근처 비교 후보로 이어가 볼까요?
-          </div>
-          <p className="mt-0.5 t-caption text-text-3">
-            {realNote.region} 최근 거래 많은 단지 — 담아서 표로 비교할 수 있어요.
-          </p>
-          <div className="mt-2 flex flex-col gap-1.5">
-            {nearbyCandidates.map((c) => (
-              <div
-                key={c.id}
-                className="flex items-center justify-between gap-2 rounded-xl bg-bg px-3 py-2"
-              >
-                <Link
-                  href={complexHrefFromId(c.id)}
-                  className="min-w-0 flex-1 no-underline"
-                >
-                  <span className="t-body font-bold text-ink">{c.name}</span>
-                  {c.sub && <span className="ml-1.5 t-caption text-text-3">{c.sub}</span>}
-                </Link>
-                <CompareTrayButton complexId={c.id} name={c.name} region={realNote.region} />
-                <Link
-                  href={`/notes/new?apt=${encodeURIComponent(c.name)}&region=${encodeURIComponent(realNote.region)}`}
-                  className="shrink-0 rounded-[10px] border border-line px-2.5 py-1.5 t-caption font-bold text-text-1 no-underline"
-                >
-                  다음 임장 노트
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {isOwner && aiStatus === "fail" && (
-        <div className="rise-in mb-3 rounded-2xl border border-line bg-bg px-4 py-3 t-body text-text-2">
-          노트는 저장됐어요. AI 정리는 반영되지 않았어요 — 아래에서 다시 시도할 수
-          있어요.{" "}
-          <Link href={mapCompareHref} className="font-bold text-primary">
-            지도에서 비교 ›
-          </Link>
-          {complexHref && (
-            <>
-              {" · "}
-              <Link href={complexHref} className="font-bold text-primary">
-                단지 시세 ›
-              </Link>
-            </>
-          )}
-        </div>
-      )}
+      {/* [1005 · A4] 저장 직후 배너 6개(루프 안내 3종 · AI 진단 딥링크 · 근처 비교 후보 · 실패)를
+          여기서 쌓지 않는다 — 390px 에서 방금 쓴 노트가 한 화면 아래로 밀렸다. 루프 안내와
+          딥링크는 판단 카드 바로 아래 "다음 행동" 한 장(nextActionCard)으로 합쳤고, 근처 비교
+          후보는 본문 아래(nearbyCard)로 내렸다. 소프트월·구매 안내·한도 안내는 게이트라 그대로. */}
 
       {/* 상단 액션 — 공유(클립보드)·공개 토글(소유자) 실동작 */}
       <div className="rise-in mb-4 flex flex-wrap items-center justify-end gap-2">
@@ -968,6 +1010,8 @@ export default async function NoteDetailPage({
                   : { label: "지도에서 이 지역 보기", href: mapCompareHref }
             }
           />
+          {/* [1005 · A4] 저장 직후에만 — 히어로 다음, 본문 앞. pending 동안은 안 그린다. */}
+          {nextActionCard}
           {/* 노트 카드 — 20a 표준 11항목 */}
           <div className="rise-in card flex flex-col gap-3.5 rounded-[18px] p-6">
             {/* ① 지역·단지 칩 */}
@@ -1011,13 +1055,26 @@ export default async function NoteDetailPage({
                   📷 {realNote.metadata.photoTakenAt.slice(5, 16).replace("T", " ")} 촬영
                 </span>
               )}
-              {/* [#71] 현장 인증 — 작성 시점에 단지 반경 2km 위치 확인을 통과한 노트 */}
+              {/* [#71] 현장 인증 — 작성 시점에 단지 반경 2km 위치 확인을 통과한 노트.
+                  [1009 · T] 설명이 title= 말풍선이라 휴대폰에서는 보이지 않았다 → 옆 ⓘ 시트(누르면 규칙·저장 범위).
+                  how 는 app/notes/new/VisitVerifyCard.tsx 의 실제 판정(거리 ≤ 2,000m · 50m 버킷 · 좌표 비저장)과 같은 말.
+                  [1009 · T 리뷰] 판정은 작성자 브라우저에서 하고 서버는 받은 metadata.visitVerified 를 검증 없이 저장한다(위조 가능 — 기존).
+                  그래서 "근처에 있었다"고 단정하지 않고 "기기 위치로 브라우저가 판정한 표시"라고 사실대로 적는다. */}
               {v.fieldVerified && (
-                <span
-                  className="rounded-md bg-primary-soft chip-pad t-sub font-extrabold text-primary"
-                  title="작성 시점에 단지 반경 2km 이내 위치 확인을 통과했습니다 (거리 구간만 기록, 좌표 비저장)"
-                >
-                  📍 현장 인증
+                <span className="inline-flex items-center gap-0.5">
+                  <span className="rounded-md bg-primary-soft chip-pad t-sub font-extrabold text-primary">
+                    📍 현장 인증
+                  </span>
+                  <Explain
+                    title="현장 인증"
+                    body="노트를 쓸 때 작성자 기기의 위치로 브라우저가 단지 근처라고 판정한 표시예요. 서버가 위치를 다시 확인하지는 않고, 적힌 내용이 사실인지 보증하는 표시도 아니에요."
+                    how={[
+                      "노트를 쓸 때 ‘현재 위치로 인증하기’를 누르면 그 기기의 현재 위치와 단지 좌표 사이 거리를 브라우저 안에서 계산해요.",
+                      "거리가 2km 안이면 인증 표시가 붙어요.",
+                      "위치 좌표는 저장하지 않아요 — 50m 단위로 뭉갠 거리와 확인한 시각만 남겨요.",
+                    ]}
+                    size={12}
+                  />
                 </span>
               )}
               <span className="text-text-3">{v.visitMeta}</span>
@@ -1098,26 +1155,33 @@ export default async function NoteDetailPage({
             {/* ⑨ AI 작성부 구분 표시 — 저장된 aiAnalysis 우선, 없으면 규칙 기반 문구 + 배지 구분 */}
             {/* [970 · B-15] 패널 CTA "지도에서 비교"는 상단 액션·아래 다음 행동과 같은 링크라
                 뺐다(한 화면에 세 번) — 남은 두 곳: 상단 primary, 하단 퍼널 */}
-            <AIPanel title="AI 요약">
-              <span
-                className={`mb-1.5 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-extrabold ${
-                  v.aiBadge.startsWith("규칙")
-                    ? "border border-amber-400/50 bg-amber-500/15 text-amber-100"
-                    : "border border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
-                }`}
-              >
-                {v.aiBadge}
-                {v.aiBadge.startsWith("규칙") ? " · LLM 아님" : " · LLM"}
-              </span>
-              <p className="t-body">{v.aiInline}</p>
-              {isOwner && !hasLlmAi && (
-                <AiRetryButton
-                  noteId={id}
-                  defaultIntent={retryDefaultIntent(realNote)}
-                />
-              )}
-            </AIPanel>
-            {isOwner && (
+            {/* [1005 · A4] ?ai=pending + 분석 없음 → 폴링 카드(결과가 오면 ?ai=ok 로 재렌더).
+                그 외엔 평소 패널. 결과를 지어내지 않는다 — 90초 뒤엔 "늦어지고 있어요"다.
+                [M3] 수정 저장(옛 분석이 남아 있음)만 해시 일치를 기다린다 — 신규는 종전대로 존재만. */}
+            {aiState === "pending" ? (
+              <AiPendingCard
+                noteId={id}
+                canRetry={isOwner}
+                defaultIntent={retryDefaultIntent(realNote)}
+                expectedHash={stale ? expectedHash : null}
+                fallback={
+                  stale ? (
+                    /* "나중에 볼게요" 뒤에도 옛 요약이 새 것으로 읽히지 않게 — 무엇의 요약인지 적는다 */
+                    <div className="flex flex-col gap-1.5">
+                      <p className="t-caption text-text-3">
+                        아래는 수정 전 내용 기준 AI 정리예요 — 새 정리는 이 노트를 다시 열면 반영돼요.
+                      </p>
+                      {aiSummaryPanel}
+                    </div>
+                  ) : (
+                    aiSummaryPanel
+                  )
+                }
+              />
+            ) : (
+              aiSummaryPanel
+            )}
+            {isOwner && aiState !== "pending" && (
               <div className="mt-2">
                 <AiFeedbackButtons
                   targetType="note_ai"
@@ -1156,11 +1220,12 @@ export default async function NoteDetailPage({
               {/* 예전엔 "OO 시세"가 `/town/market` 으로 갔다. 그 경로는 모임
                   리다이렉트 경유지라 시세와 아무 상관이 없었고, 어느 지역인지도
                   전해지지 않았다. 지도가 ?region= 을 받게 됐으니 그리로 보낸다. */}
+              {/* [1009 · T] "시세" → "실거래가" — 지도가 보여 주는 것은 국토부 실거래(시세 추정이 아니다) */}
               <Link
                 href={`/map?region=${encodeURIComponent(v.regionLabel)}`}
                 className="font-bold text-primary"
               >
-                {v.regionLabel} 시세
+                {v.regionLabel} 실거래가
               </Link>
               {/* 단지 링크 — 실 단지 id를 찾은 경우에만 (mock-1로 보내지 않음) */}
               {complexHref && (
@@ -1282,42 +1347,50 @@ export default async function NoteDetailPage({
           <div className="rise-in-1 card flex flex-col gap-3 rounded-[18px] p-6">
             <div className="flex items-center justify-between">
               <div className="text-[15px] font-extrabold text-ink">방문 기록 비교</div>
+              {/* [1009 · T] "인쇄·PDF ›"(/notes/[id]/print) 링크 제거 — 992 에서 노트 출력 3종 중 card 만 남기고 print·deck 을
+                  보관(lib/seo/archived-routes ARCHIVED_PATTERNS)했는데, 993 이 deck 버튼만 빼고 이 입구가 남아 있었다. */}
               <Link
                 href={`/notes/compare?noteId=${encodeURIComponent(id)}`}
-                className="text-xs font-bold text-primary"
+                className="inline-flex min-h-[24px] items-center text-xs font-bold text-primary"
               >
                 회차 전체 비교 ›
               </Link>
-              {/* [#127] 인쇄·PDF — 공개/본인 노트 공통 */}
-              <Link
-                href={`/notes/${id}/print`}
-                className="ml-2 text-xs font-bold text-primary"
-              >
-                인쇄·PDF ›
-              </Link>
             </div>
             <div className="flex flex-col">
-              {v.visits.map((visit, i) => (
-                <div
-                  key={visit.label}
-                  className={`flex justify-between py-2.5 text-[13px] ${
-                    i < v.visits.length - 1 ? "border-b border-divider" : ""
-                  }`}
-                >
-                  <span
-                    className={visit.latest ? "font-bold text-primary" : "text-text-2"}
-                  >
+              {/* [1006] 다른 회차는 링크 — 예전엔 글자만 있어 "이전 기록"으로 갈 길이 없었다.
+                  현재 노트 줄은 링크가 아니다(자기 자신). 줄 높이 ≥40px(py-2.5 + 20px 줄). */}
+              {v.visits.map((visit, i) => {
+                const rowClass = `flex min-h-[40px] items-center justify-between py-2.5 text-[13px] ${
+                  i < v.visits.length - 1 ? "border-b border-divider" : ""
+                }`;
+                const label = (
+                  <span className={visit.latest ? "font-bold text-primary" : "text-text-2"}>
                     {visit.label}
+                    {!visit.latest && <span aria-hidden="true"> ›</span>}
                   </span>
-                  <span
-                    className={`font-bold ${
-                      visit.latest ? "text-primary" : "text-text-1"
-                    }`}
-                  >
+                );
+                const summary = (
+                  <span className={`font-bold ${visit.latest ? "text-primary" : "text-text-1"}`}>
                     {visit.summary}
                   </span>
-                </div>
-              ))}
+                );
+                return visit.latest ? (
+                  <div key={visit.id} className={rowClass} aria-current="true">
+                    {label}
+                    {summary}
+                  </div>
+                ) : (
+                  <Link
+                    key={visit.id}
+                    href={`/notes/${visit.id}`}
+                    className={`${rowClass} press no-underline`}
+                    aria-label={`${visit.label} 노트 보기`}
+                  >
+                    {label}
+                    {summary}
+                  </Link>
+                );
+              })}
             </div>
           </div>
 
@@ -1333,6 +1406,8 @@ export default async function NoteDetailPage({
               noteId={id}
             />
           )}
+          {/* [1005 · A4] 근처 비교 후보 — 본문·도구 다음, 댓글 앞(저장 직후 소유자만) */}
+          {nearbyCard}
         </div>
 
         {/* ===== 우측: AI 분석 ===== */}
@@ -1344,7 +1419,8 @@ export default async function NoteDetailPage({
               <div
                 className="relative h-[110px] w-[110px] rounded-full"
                 style={{
-                  background: `conic-gradient(#1d4fd8 0% ${v.totalScore}%, rgba(29,79,216,.12) ${v.totalScore}% 100%)`,
+                  /* [1005] 링 색은 토큰 — 손으로 적은 브랜드 블루 hex 는 다크·테마 변형에서 그대로 남았다 */
+                  background: `conic-gradient(var(--primary) 0% ${v.totalScore}%, var(--primary-soft) ${v.totalScore}% 100%)`,
                 }}
               >
                 <div className="absolute inset-[9px] flex flex-col items-center justify-center rounded-full bg-surface">
@@ -1509,7 +1585,7 @@ export default async function NoteDetailPage({
       {/* [961] 광고 공간 — 글 끝. 본문을 다 읽은 뒤의 자연스러운 쉼에만 둔다 */}
       <AdZone placement="article_end" seed={0} plan={null} className="mt-6" />
       {!viewerEmail && complexHref && (
-        <div className="mt-4 rounded-2xl bg-[rgba(29,79,216,.05)] p-5 text-center">
+        <div className="mt-4 rounded-2xl border border-primary/20 bg-primary-soft p-5 text-center">
           <div className="t-section text-ink">이 단지가 궁금하신가요?</div>
           <p className="mx-auto mt-1 max-w-[440px] t-body text-text-3">
             로그인하면 {realNote.aptName?.trim() || "이 단지"}를 관심 단지로 저장하고, 실거래·시세

@@ -5,9 +5,10 @@ import {
   upsertRegionPrices,
   logIngest,
 } from "@/lib/market/store";
-import type { MarketSeriesRow, MarketRegionPriceRow } from "@/lib/market/types";
+import type { MarketSeriesRow } from "@/lib/market/types";
 import { REB_STATS } from "./stat-codes";
 import { fetchRebStat, isRebConfigured, SIDO_SEOUL_ID } from "./client";
+import { buildRegionPriceRows, type MonthlyPoint, type PriceAccEntry } from "./price-rows";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 const PRICE_SCALE = 1000; // R-ONE 가격 단위: 천원 → 원
@@ -31,12 +32,9 @@ export async function ingestReb(
   const allSeries: MarketSeriesRow[] = [];
   const byStat: Record<string, number> = {};
   // 가격 스냅샷: regionId -> { 최신월, 필드 }
-  const priceAcc = new Map<
-    string,
-    { regionName: string; period: string; perM2Sale?: number; avgSale?: number; medianSale?: number; avgJeonse?: number }
-  >();
+  const priceAcc = new Map<string, PriceAccEntry>();
   // 월간 지표 최신/직전 계산용: `${regionId}|${metric}` -> [{period(yyyymm), value}]
-  const monthlyByKey = new Map<string, Array<{ period: string; value: number }>>();
+  const monthlyByKey = new Map<string, MonthlyPoint[]>();
   /* [938] 서울 광역 월간 지수(아파트 매매·전세) — market_price_indices 전용.
      `${index_type}|${yyyymm}` -> value. 구 단위 표·시계열에는 절대 섞지 않는다. */
   const seoulCitywide = new Map<string, number>();
@@ -101,52 +99,19 @@ export async function ingestReb(
 
   const seriesRows = await upsertSeries(allSeries);
 
-  // ── 가격 스냅샷 행 구성 ──
-  const latestMonthly = (regionId: string, metric: string): number | undefined => {
-    const arr = monthlyByKey.get(`${regionId}|${metric}`);
-    if (!arr || arr.length === 0) return undefined;
-    arr.sort((a, b) => a.period.localeCompare(b.period));
-    return arr[arr.length - 1]?.value;
-  };
-  const monthlyChange = (regionId: string): number | undefined => {
-    const arr = monthlyByKey.get(`${regionId}|sale_index`);
-    if (!arr || arr.length < 2) return undefined;
-    arr.sort((a, b) => a.period.localeCompare(b.period));
-    const cur = arr[arr.length - 1].value;
-    const prev = arr[arr.length - 2].value;
-    if (!prev) return undefined;
-    return Math.round(((cur - prev) / prev) * 10000) / 100;
-  };
-
-  const regionIds = new Set<string>([...priceAcc.keys()]);
-  for (const key of monthlyByKey.keys()) regionIds.add(key.split("|")[0]);
-
-  const priceRows: MarketRegionPriceRow[] = [];
-  for (const regionId of regionIds) {
-    const price = priceAcc.get(regionId);
-    const period =
-      price?.period ??
-      (monthlyByKey.get(`${regionId}|sale_index`)?.slice(-1)[0]?.period ?? "");
-    const regionName =
-      price?.regionName ??
-      allSeries.find((s) => s.regionId === regionId)?.regionName ??
-      regionId;
-    priceRows.push({
-      source: "reb",
-      regionId,
-      regionName,
-      propertyType: "apt",
-      period,
-      perM2Sale: price?.perM2Sale,
-      avgSale: price?.avgSale,
-      medianSale: price?.medianSale,
-      avgJeonse: price?.avgJeonse,
-      jeonseRatio: latestMonthly(regionId, "jeonse_ratio"),
-      saleChange: monthlyChange(regionId),
-      tradeCount: latestMonthly(regionId, "trade_count"),
-      buySuperiority: latestMonthly(regionId, "buy_superiority"),
-      jeonseSupply: latestMonthly(regionId, "jeonse_supply"),
-    });
+  /* ── 가격 스냅샷 행 구성 (순수 규칙은 ./price-rows) ──
+     [1007] 값이 하나도 없는 지역(가격·지수 없음 + period 빈 문자열)은 upsert 하지 않는다.
+     실측(2026-09-20): 서울 25개 구가 지역 매핑 불일치로 가격 표에서 빠진 채 거래현황
+     표에만 붙어, 빈 행이 매일 정상 행을 덮어썼다(market_region_price period='' ·
+     per_m2_sale=null). 빈 행은 버리고 개수만 로그에 남긴다 — 다음에 표 하나가 또
+     어긋나도 "덮어쓰기" 가 아니라 "적재 누락" 으로만 드러난다. */
+  const regionNames = new Map<string, string>();
+  for (const s of allSeries) if (!regionNames.has(s.regionId)) regionNames.set(s.regionId, s.regionName);
+  const { rows: priceRows, skipped } = buildRegionPriceRows({ priceAcc, monthlyByKey, regionNames });
+  if (skipped.length > 0) {
+    logger.warn(
+      `[reb.ingest] 가격·지수 값이 없는 지역 ${skipped.length}곳은 스냅샷을 덮지 않음: ${skipped.slice(0, 30).join(",")}${skipped.length > 30 ? "…" : ""}`,
+    );
   }
 
   const priceCount = await upsertRegionPrices(priceRows);

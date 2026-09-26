@@ -77,17 +77,18 @@ export function HomeWatchlistBrief({
     >
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-[13px] font-bold text-ink">{brief.title}</h2>
+        {/* [1009 · H] "워치리스트"(내부 용어) → 화면 이름 그대로 "관심 단지". 24px 히트(글 속 링크 규칙) */}
         <Link
           href={brief.href ?? "/my/watchlist"}
-          className="shrink-0 text-xs font-semibold text-primary"
+          className="inline-flex min-h-[24px] shrink-0 items-center text-xs font-semibold text-primary"
         >
-          {brief.linkLabel ?? "워치리스트 ›"}
+          {brief.linkLabel ?? "관심 단지 ›"}
         </Link>
       </div>
       <p className="mt-1 text-[13px] text-text-2">{brief.body}</p>
       <p className="mt-1 text-[12px] text-text-3">
         {brief.complexCount > 0
-          ? `관심 단지 ${brief.complexCount}곳 · 최근 7일 신규 신고 ${brief.tradeCount}건 · 국토부 실거래 기준`
+          ? `관심 단지 ${brief.complexCount.toLocaleString("ko-KR")}곳 · 최근 7일 신규 신고 ${brief.tradeCount.toLocaleString("ko-KR")}건 · 국토부 실거래 기준`
           : "관심지역 요약 · 국토부 실거래·공표 지수 기준"}
       </p>
     </section>

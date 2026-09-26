@@ -22,6 +22,9 @@ import {
   type MapChromeState,
 } from "@/lib/map/chrome-state";
 import { NaverMap, type MapIdleInfo, type MapMarkerData } from "@/components/map/NaverMap";
+/* [1009 · C] 호버 말풍선 등락 표기 — 사이트 공통 규칙(상승 ▲ 빨강 · 하락 ▼ 파랑 · 보합) */
+import { DELTA_CLASS, deltaDir, deltaText } from "@/lib/format/delta";
+import { stepLevel, syncCenterState, syncLevelState } from "@/lib/map/viewport-sync";
 import {
   MapSearchBox,
   type MapSearchSelectAddress,
@@ -1445,6 +1448,11 @@ export function MapClient({
 
   /* 반경 원의 실제 중심 — 찍은 지점이 있으면 그것, 없으면 지도 중심. */
   const radiusOrigin = radiusCenter ?? center;
+  /* [1008 · M] 이제 center state 가 idle 마다 실제 지도 중심으로 갱신된다. 반경 보기가 꺼져 있을 때까지
+     마커 목록 계산이 그 값에 걸려 있으면 지도를 끌 때마다 마커 배열(최대 300)을 다시 만들므로,
+     반경 보기가 켜졌을 때만 의존하게 한다(켜져 있고 중심을 안 찍었으면 "화면 중앙 기준" 안내 그대로). */
+  const radiusFilterLat = radiusMode ? radiusOrigin.lat : null;
+  const radiusFilterLng = radiusMode ? radiusOrigin.lng : null;
 
   /* ===== 필터 패널 가로 위치 =====
      필터 패널은 좌측 상단에 고정돼 있었다. 그런데 같은 자리에 단지 정보(380px)·
@@ -1888,7 +1896,12 @@ export function MapClient({
           />
           {/* 세대수 — 예전엔 "데이터 준비 중" 비활성이었다. 국토부 상세(V4)
               백필이 돌면서 값이 들어오기 시작해 이제 실제로 동작한다.
-              아직 값이 없는 단지가 많다는 사실은 슬라이더 아래에 그대로 적힌다. */}
+              아직 값이 없는 단지가 많다는 사실은 슬라이더 아래에 그대로 적힌다.
+              [1006 · B] 왜 비는지도 적는다 — 세대수는 K-apt 대장(complex_master_link)이
+              연결된 단지만 안다(2026-09-20 실측 전국 53%). 나머지는 대부분 비의무관리
+              (소규모)라 대장 자체가 없다 — 곧 채워질 값이 아니다. 비율은 손으로 적지 않고
+              facets(화면 안 값 있는 단지 수/전체)에서 그때그때 계산한다 — 적어 둔 숫자는
+              갱신되지 않으면 거짓이 된다. */}
           <HistogramRangeSlider
             label="세대수 규모"
             lo={facets.households.lo ?? 0}
@@ -1900,6 +1913,11 @@ export function MapClient({
             available={facets.households.n}
             total={facets.total}
             step={10}
+            note={
+              facets.total > 0 && facets.households.n < facets.total
+                ? `화면 안 단지의 ${Math.round((facets.households.n / facets.total) * 100)}%만 세대수를 알아요 — K-apt 대장에 연결된 단지만 값이 있고, 의무관리 대상이 아닌 소규모 단지는 대장이 없어 비어 있어요.`
+                : "세대수는 K-apt 대장에 연결된 단지만 알아요 — 의무관리 대상이 아닌 소규모 단지는 대장이 없어 비어 있어요."
+            }
           />
         </>
       ) : (
@@ -2608,6 +2626,13 @@ export function MapClient({
     (info: MapIdleInfo) => {
       /* [968 · 24] 지도가 멈췄다 — 접혀 있었다면 1.2초 뒤 크롬 복원 타이머 */
       dispatchChrome("idle");
+      /* [1008 · M] 지도의 실제 중심·축척을 state 로 — 끌기·핀치·휠로 옮긴 자리가 기준이 된다.
+         예전엔 state 가 마지막 "프로그램 이동" 값에 머물러 ＋/－ 를 누르면 그 자리로 되돌아갔고
+         (소유자 제보), 핀치 12 → － 가 9 로 세 칸 튀었다. 같은 단지를 다시 골라도 state 가 같은
+         값이라 지도가 안 움직이는 일도 이걸로 막힌다. 값이 같으면 이전 값을 그대로 돌려줘
+         (syncCenterState·syncLevelState) 아래 setViewBounds 가 만드는 렌더 외에 늘지 않는다. */
+      setCenter((prev) => syncCenterState(prev, info.center));
+      setLevel((prev) => syncLevelState(prev, info.zoom));
       const bounds = info.bounds;
       if (!bounds) return;
       lastBoundsRef.current = bounds;
@@ -3055,26 +3080,33 @@ export function MapClient({
     if (regionMarkers.length === 0) return [];
     return regionMarkers.map((r) => {
       const price = manwonLabel(r.avgManwon) ?? "—";
-      const up = (r.changePct ?? 0) >= 0;
+      /* [1009 · C 리뷰] 등락 표기 표준 — 예전엔 raw hex(#e11900·#1565d8), 0 을 "▲0.00%"(빨강)로(리뷰 실측: 계양구·과천시
+         sale_change=0), 소수 둘째 자리, 기준 없음이었다. 한국부동산원 월간 매매가격 변동률이라 "전월 대비"를 붙인다. */
+      const chgDir = deltaDir(r.changePct);
       const chgHtml =
-        r.changePct != null
-          ? `<span style="color:${up ? "#e11900" : "#1565d8"};font-weight:700">${up ? "▲" : "▼"}${Math.abs(r.changePct).toFixed(2)}%</span>`
+        r.changePct != null && chgDir
+          ? `<span style="color:${chgDir === "up" ? "var(--up)" : chgDir === "down" ? "var(--down)" : "var(--text-3)"};font-weight:700">${deltaText(r.changePct, { compact: true })}</span> <span style="font-size:11px;color:var(--text-3)">전월 대비 · 한국부동산원</span>`
           : "";
       /* [지도확장 2026-08-31] 주간 시장 온도 — /analysis/temperature 에만 있던
          지표를 지역 마커에 함께. 색은 온도계 관례(높음=붉음, 낮음=푸름, 50 중립).
          기준 주를 함께 적는다 — 시점 없는 숫자는 지어낸 값과 같다. */
       const t = r.tempScore;
       const tempColor = t == null ? "#888" : t >= 65 ? "#e11900" : t >= 50 ? "#e07f00" : t >= 35 ? "#1565d8" : "#0d47a1";
+      /* [1009 · C 리뷰] 정보창 글자색만 토큰으로(값·계산은 그대로). 네이버 정보창 바탕은 테마를 타지 않는 흰색이라, 다크에서
+         제목(var(--ink) — 밝은 색)이 흰 바탕에 묻혀 안 보였고, 토큰 등락색(다크에서 밝아진다)도 흰 바탕 위 대비가 모자랐다.
+         허브 마커 정보창(NaverMap buildInfoHtml)처럼 내용에 토큰 바탕(--surface)을 깔고 회색 raw hex(#333·#555·#888·#aaa)를
+         토큰으로 바꿨다. 온도 숫자 색은 정보창 안에서만 토큰(높음 --up · 중간 --warning · 낮음 --down) — 말풍선 색(tempColor)은 그대로. */
+      const tempTok = t == null ? "var(--text-3)" : t >= 65 ? "var(--up)" : t >= 50 ? "var(--warning)" : "var(--down)";
       const tempHtml =
         t != null
-          ? `<p style="font-size:11px;margin:2px 0 0;color:#555">시장 온도 <b style="color:${tempColor}">${Math.round(t)}</b><span style="color:#aaa">/100${r.tempWeek ? ` · ${r.tempWeek.slice(5).replace("-", ".")}주` : ""}</span></p>`
+          ? `<p style="font-size:11px;margin:2px 0 0;color:var(--text-2)">시장 온도 <b style="color:${tempTok}">${Math.round(t)}</b><span style="color:var(--text-3)">/100${r.tempWeek ? ` · ${r.tempWeek.slice(5).replace("-", ".")}주` : ""}</span></p>`
           : "";
-      const infoHtml = `<div style="min-width:150px;font-family:sans-serif">
+      const infoHtml = `<div style="padding:10px 14px;min-width:150px;font-family:sans-serif;background:var(--surface);color:var(--ink)">
         <p style="font-weight:800;font-size:13px;margin:0;color:var(--ink)">${r.name}</p>
-        <p style="font-size:12px;margin:3px 0 0;color:#333">평균 매매 <b>${price}</b> ${chgHtml}</p>
+        <p style="font-size:12px;margin:3px 0 0;color:var(--text-2)">평균 매매 <b style="color:var(--ink)">${price}</b> ${chgHtml}</p>
         ${tempHtml}
-        <p style="font-size:11px;color:#888;margin:2px 0 0">거래 ${r.tradeCount.toLocaleString("ko-KR")}건${r.jeonseRatio != null ? ` · 전세가율 ${Math.round(r.jeonseRatio)}%` : ""}</p>
-        <p style="font-size:10px;color:#aaa;margin:2px 0 0">${r.period.slice(0, 4)}.${r.period.slice(4, 6)} · 한국부동산원 · 온도는 자체 산출</p>
+        <p style="font-size:11px;color:var(--text-3);margin:2px 0 0">거래 ${r.tradeCount.toLocaleString("ko-KR")}건${r.jeonseRatio != null ? ` · 전세가율 ${Math.round(r.jeonseRatio)}%` : ""}</p>
+        <p style="font-size:10px;color:var(--text-3);margin:2px 0 0">${r.period.slice(0, 4)}.${r.period.slice(4, 6)} · 한국부동산원 · 온도는 자체 산출</p>
       </div>`;
       /* [940] 지표 전환 — 버블 숫자를 평균가/㎡당/전세가율/온도로 바꿔 띄운다.
          인포윈도우는 항상 전체 지표를 담고 있으므로 그대로 둔다. 값이 없는 구는
@@ -3253,11 +3285,12 @@ export function MapClient({
       }
     }
     // C3 반경 필터 — 찍은 중심(없으면 지도 중심)에서 radiusM 내 단지 마커만 표시
-    const shownBase = radiusMode
-      ? base.filter(
-          (m) => haversineM(radiusOrigin.lat, radiusOrigin.lng, m.lat, m.lng) <= radiusM,
-        )
-      : base;
+    const shownBase =
+      radiusFilterLat !== null && radiusFilterLng !== null
+        ? base.filter(
+            (m) => haversineM(radiusFilterLat, radiusFilterLng, m.lat, m.lng) <= radiusM,
+          )
+        : base;
     return withSearch([
       ...regionLayer,
       ...shownBase,
@@ -3292,10 +3325,9 @@ export function MapClient({
     regionMarketMarkers,
     zoom,
     txType,
-    radiusMode,
     radiusM,
-    radiusOrigin.lat,
-    radiusOrigin.lng,
+    radiusFilterLat,
+    radiusFilterLng,
   ]);
 
   /* ===== item5 — 빈 지도 안내. 조회 실패("일시적 오류")와 빈 결과를 구분한다. ===== */
@@ -3431,10 +3463,13 @@ export function MapClient({
         });
         const j = r.ok
           ? ((await r.json()) as {
-              suggestions?: { id: string; name: string; region: string }[];
+              suggestions?: { id: string; name: string; region: string; fuzzy?: boolean }[];
             })
           : null;
-        const first = j?.suggestions?.[0];
+        /* [1008] '비슷한 이름'(fuzzy — 오타 추정, /api/search/suggest v2) 은 자동으로 고르지 않는다 —
+           "벽절골롯데" 로 들어왔는데 다른 단지로 지도가 날아가면 사용자는 그게 찾던 단지인 줄 안다.
+           이름·토큰으로 확실히 맞은 첫 후보만 고르고, 없으면 주소 지오코딩으로 물러선다. */
+        const first = j?.suggestions?.find((x) => !x.fuzzy);
         if (first) {
           handleSearchSelectComplex({ id: first.id, name: first.name, region: first.region });
           return;
@@ -3849,18 +3884,21 @@ export function MapClient({
           }}
         >
           <div className="truncate t-body font-extrabold text-ink">{hoverMarker.label}</div>
-          <div className="mt-1.5 flex items-baseline gap-1.5">
-            <span className="t-section text-primary">
-              {hoverMarker.priceLabel ?? "시세 준비 중"}
+          {/* [1009 · C] 등락 표기 표준 — 상승 ▲ 빨강 · 하락 ▼ 파랑 · ±0.05% 미만 "보합"(lib/format/delta, 토큰 --up/--down).
+              예전엔 하락을 text-primary 로 칠해 테마를 탔고(/map 은 파랑이라 티가 안 났을 뿐), 소수 둘째 자리("▲0.52%")와
+              기준 없는 %였다. 비교 기준을 붙인다 — 지역 마커는 한국부동산원 월간 변동률("전월 대비"), 단지 마커는 거래가 있던
+              바로 앞 달 평균과의 비교(app/map/page.tsx pctDelta — 달이 비면 더 앞 달)라 "직전 거래월 대비".
+              "시세 준비 중" → 실거래만 있는 곳이라 "최근 실거래 없음". */}
+          <div className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5">
+            <span className="t-section text-primary tabular-nums">
+              {hoverMarker.priceLabel ?? "최근 실거래 없음"}
             </span>
             {hoverMarker.momPct !== undefined && Number.isFinite(hoverMarker.momPct) && (
-              <span
-                className={`text-[12px] font-extrabold ${
-                  hoverMarker.momPct >= 0 ? "text-danger" : "text-primary"
-                }`}
-              >
-                {hoverMarker.momPct >= 0 ? "▲" : "▼"}
-                {Math.abs(hoverMarker.momPct).toFixed(2)}%
+              <span className={`t-sub font-extrabold tabular-nums ${DELTA_CLASS[deltaDir(hoverMarker.momPct) ?? "flat"]}`}>
+                {deltaText(hoverMarker.momPct)}
+                <span className="ml-1 t-caption font-medium text-text-3">
+                  {hoverMarker.id.startsWith("region:") ? "전월 대비" : "직전 거래월 대비"}
+                </span>
               </span>
             )}
           </div>
@@ -5061,7 +5099,9 @@ export function MapClient({
 
       {/* ===== 우하단 줌 컨트롤 =====
           [970 · B-37] 폴백(지도를 못 그림)에서는 숨기고, 모바일 목록 뷰가 지도를 덮고 있을
-          때도 숨긴다(md 이상은 목록이 사이드바라 지도가 보인다). */}
+          때도 숨긴다(md 이상은 목록이 사이드바라 지도가 보인다).
+          [1008 · M] level 은 idle 마다 실제 줌으로 맞춰지므로 한 칸은 "지금 보이는 축척"에서 한 칸이다.
+          범위는 SDK 줌 범위(6~21)와 같게 — 예전 1~14 자르기는 핀치로 끝까지 간 뒤 반대로 튀었다. */}
       <div
         className={`absolute right-5 z-30 flex-col gap-1.5 ${
           mapFallback ? "hidden" : mobileView === "list" && !selected ? "hidden md:flex" : "flex"
@@ -5071,7 +5111,7 @@ export function MapClient({
         <button
           type="button"
           aria-label="확대"
-          onClick={() => setLevel((v) => Math.max(1, v - 1))}
+          onClick={() => setLevel((v) => stepLevel(v, -1))}
           className="glass flex h-[34px] w-[34px] items-center justify-center rounded-[10px] t-body text-text-1"
         >
           ＋
@@ -5079,7 +5119,7 @@ export function MapClient({
         <button
           type="button"
           aria-label="축소"
-          onClick={() => setLevel((v) => Math.min(14, v + 1))}
+          onClick={() => setLevel((v) => stepLevel(v, 1))}
           className="glass flex h-[34px] w-[34px] items-center justify-center rounded-[10px] t-body text-text-1"
         >
           －

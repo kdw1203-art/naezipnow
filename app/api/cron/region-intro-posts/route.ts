@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { authorizeCron } from "@/lib/cron/authorize";
 import { publishRegionIntroPosts } from "@/lib/content/region-intro-post";
 import { ingestErrorMessage, logIngest } from "@/lib/market/store";
+import { invalidateAfterIngest } from "@/lib/cache/invalidate";
+import { invalidateNewsHubs } from "@/lib/town/invalidate-town";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +31,10 @@ export async function GET(req: Request) {
       status: "ok",
       message: `발행 ${r.posted} · 기존 ${r.skippedExisting} · 데이터없음 ${r.skippedNoData} · 실패 ${r.failed}`,
     });
+    /* [1007] 실제로 발행된 글이 있을 때만 뉴스룸·동네 피드·동네 홈(6시간 ISR)을 비운다 */
+    if (r.posted > 0) invalidateAfterIngest("news");
+    /* [1010] 지역 소개 글이 실리면 뉴스 주제 허브 20곳과 동네 데이터 캐시도 바뀐다 */
+    if (r.posted > 0) invalidateNewsHubs();
     return NextResponse.json({ ok: true, ...r });
   } catch (err) {
     const message = ingestErrorMessage(err, "동네 브리핑 발행 실패");

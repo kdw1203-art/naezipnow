@@ -6,7 +6,11 @@ import ScenarioClient, { type RateContext } from "./ScenarioClient";
    둘 다 24h 캐시(public_data_cache) 위라 조회 비용이 작고, 실패하면 null 로 떨어져
    화면은 참고 블록만 감춘다(사실 우선 — 지어낸 금리를 기본값으로 쓰지 않는다).
    메타데이터·noIndex 는 layout.tsx 가 담당한다. */
-export const revalidate = 3600;
+/* [1010] 1h → 1일. 원천(한국은행 기준금리·금감원 주담대)은 그 자체가 24h 캐시
+   (public_data_cache) 위라 1시간 눈금이 잴 수 있는 변화가 애초에 없었다.
+   이 경로는 SOURCE_MAP.molit 목록에 없어서 비움이 없던 자리라,
+   lib/region/invalidate-market.ts invalidateMarketAnalysisRoutes() 가 하루 1회 비운다. */
+export const revalidate = 86_400;
 
 /** "3.62~5.13%" | "3.62%" | "-" → 대표값(범위면 중간값). 숫자가 없으면 null. */
 function parseRange(s: string): number | null {

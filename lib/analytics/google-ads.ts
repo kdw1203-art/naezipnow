@@ -30,6 +30,18 @@ export function signupConversionLabel(): string | null {
   return process.env.NEXT_PUBLIC_GOOGLE_ADS_SIGNUP_LABEL?.trim() || null;
 }
 
+/**
+ * [1006 · E] 리드 전환 라벨(선택) — 광고 랜딩(/lp/imjang)의 단일 CTA 클릭.
+ * GA4 표준 이벤트 generate_lead 가 1차 경로이고(콘솔에서 "GA4 전환 가져오기"),
+ * 이 라벨은 AW 직접 전환을 **추가로** 쓰고 싶을 때만 설정한다. 없으면 무동작.
+ */
+export function leadConversionLabel(): string | null {
+  return process.env.NEXT_PUBLIC_GOOGLE_ADS_LEAD_LABEL?.trim() || null;
+}
+
+/** 광고 랜딩 CTA 의 generate_lead 이벤트 파라미터 — 리드 출처는 랜딩 경로로 고정 */
+export const LP_IMJANG_LEAD_SOURCE = "lp_imjang";
+
 type Gtag = (...args: unknown[]) => void;
 
 /** AW 직접 전환 전송 — 라벨이 없으면 조용히 건너뛴다(GA4 이벤트가 1차 경로). */

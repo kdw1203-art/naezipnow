@@ -14,6 +14,7 @@
 import { NextResponse } from "next/server";
 import { authorizeCron } from "@/lib/cron/authorize";
 import { runTemperatureSnapshot } from "@/lib/market/temperature-archive";
+import { invalidateTemperatureRegions } from "@/lib/region/invalidate-market";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +27,13 @@ async function handle(req: Request) {
   }
 
   const result = await runTemperatureSnapshot();
+
+  /* [1010] 온도 화면의 쓰기 지점이 여기다 — /analysis/temperature/[region] 의 TTL 을
+     1시간에서 1일로 늘렸으므로(크롤러 재방문 ≈2.2일 대비 1시간은 방문마다 재렌더였다),
+     스냅샷이 실제로 갱신된 순간에 비운다. 지역 상세는 동적 세그먼트라 라우트 전체
+     비움을 쓴다 — 62곳이라 셀 단위로 고르는 것보다 이쪽이 싸다.
+     upsert 가 실패했으면(result.ok=false) 화면도 안 바뀌었으니 비우지 않는다. */
+  if (result.ok) invalidateTemperatureRegions();
 
   /* 일부 지역이 "지수 시계열 없음"으로 건너뛰는 건 실패가 아니다(근거가 없는
      것이지 조회가 깨진 게 아니다). 반대로 upsert 실패나 계산 중 예외는 500 으로

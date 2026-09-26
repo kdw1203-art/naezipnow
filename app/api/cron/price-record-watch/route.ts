@@ -8,6 +8,8 @@ import { NextResponse } from "next/server";
 import { authorizeCron } from "@/lib/cron/authorize";
 import { runPriceRecordWatch } from "@/lib/market/price-record-watch";
 import { ingestErrorMessage, logIngest } from "@/lib/market/store";
+import { invalidateAfterIngest } from "@/lib/cache/invalidate";
+import { invalidateNewsHubs } from "@/lib/town/invalidate-town";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +31,10 @@ async function handle(req: Request) {
       message:
         result.reason ?? `탐지=${result.detected} 발행=${result.posted ? "1건" : "0건"}`,
     });
+    /* [1007] 신고가 소식이 실제로 실렸을 때만 뉴스룸·동네 피드·동네 홈(6시간 ISR)을 비운다 */
+    if (result.posted) invalidateAfterIngest("news");
+    /* [1010] 신고가 알림 글이 실리면 뉴스 주제 허브 20곳과 동네 데이터 캐시도 바뀐다 */
+    if (result.posted) invalidateNewsHubs();
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     const message = ingestErrorMessage(err, "신고가 탐지 실패");

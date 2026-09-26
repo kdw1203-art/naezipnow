@@ -38,7 +38,10 @@ import { logger } from "@/lib/log";
 
 /* [B001 1단계] 1h → 24h. 이 페이지의 원천(국토부 실거래)은 하루 1번 적재라
    더 자주 재렌더할 이유가 없다 — 26k 페이지 크롤 재렌더가 DB 를 밀던 문제의 반쪽. */
-export const revalidate = 86400;
+/* [1010] 24h → 7일. 원천(국토부 실거래)은 하루 1회 적재이고, 적재 직후
+   lib/cache/invalidate.ts SOURCE_MAP.molit 이 "/tx" 를 이미 비운다 — 시간 TTL 은
+   안전망일 뿐이다. 하루 눈금으로 두면 적재가 없는 날에도 크롤러 방문마다 다시 그린다. */
+export const revalidate = 604_800;
 
 const PATH = "/tx";
 
@@ -274,16 +277,19 @@ export default async function TxIndexPage() {
 
       <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
         <h2 className="t-section text-ink">이 숫자를 읽는 법</h2>
-        <ul className="mt-2 space-y-1.5 t-body text-text-2">
+        {/* [1005] 문장 속 용어 링크를 24px 히트로 세우면 그 줄만 높아진다 — 목록 줄 간격을
+            24px 로 맞춰 링크 있는 줄과 없는 줄이 같은 높이로 선다(.t-body 는 레이어 밖이라
+            leading-* 유틸리티가 지지 않도록 인라인으로) */}
+        <ul className="mt-2 space-y-1.5 t-body text-text-2" style={{ lineHeight: "24px" }}>
           {/* 항목 14 — 용어 첫 등장에 용어사전 링크(전 페이지 도배가 아니라
               읽는 법 안내에서 한 번씩만). */}
           <li>
             ·{" "}
-            <Link href="/glossary/silgeoraega" className="font-bold text-ink underline decoration-line underline-offset-2">
+            <Link href="/glossary/silgeoraega" className="inline-flex min-h-[24px] min-w-[24px] items-center justify-center font-bold text-ink underline decoration-line underline-offset-2">
               실거래 신고가
             </Link>
             입니다. 매물{" "}
-            <Link href="/glossary/hoga" className="font-bold text-ink underline decoration-line underline-offset-2">
+            <Link href="/glossary/hoga" className="inline-flex min-h-[24px] min-w-[24px] items-center justify-center font-bold text-ink underline decoration-line underline-offset-2">
               호가
             </Link>
             ·중개사 제시가가 아니며, 계약 후 신고까지 시차가 있어 최근 달은 건수가 더 늘어날 수
@@ -291,11 +297,11 @@ export default async function TxIndexPage() {
           </li>
           <li>
             · 면적은{" "}
-            <Link href="/glossary/jeonyongmyeonjeok" className="font-bold text-ink underline decoration-line underline-offset-2">
+            <Link href="/glossary/jeonyongmyeonjeok" className="inline-flex min-h-[24px] min-w-[24px] items-center justify-center font-bold text-ink underline decoration-line underline-offset-2">
               전용면적
             </Link>{" "}
             기준입니다.{" "}
-            <Link href="/glossary/gonggeupmyeonjeok" className="font-bold text-ink underline decoration-line underline-offset-2">
+            <Link href="/glossary/gonggeupmyeonjeok" className="inline-flex min-h-[24px] min-w-[24px] items-center justify-center font-bold text-ink underline decoration-line underline-offset-2">
               분양면적(공급면적)
             </Link>
             으로 부르는 평수와 다릅니다.
@@ -322,23 +328,23 @@ export default async function TxIndexPage() {
       {/* 애드센스 데스크탑 유닛 — 본문(읽는 법) 아래 빈공간. 모바일 미노출. */}
       <AdSenseUnit className="mb-6" />
 
-      <p className="mb-8 t-sub text-text-3">
+      <p className="mb-8 t-sub text-text-3" style={{ lineHeight: "24px" }}>
         단지 단위로 보려면{" "}
-        <Link href="/complex/browse" className="font-bold text-primary underline">
+        <Link href="/complex/browse" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
           단지 실거래 브라우즈
         </Link>
         , 같은 동 단지끼리 나란히 보려면{" "}
-        <Link href="/complex/compare" className="font-bold text-primary underline">
+        <Link href="/complex/compare" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
           단지 vs 단지 비교
         </Link>
         , 지역 시세 흐름은{" "}
         {/* /analysis/price 는 robots Disallow(데모 수치) — 색인 허브에서
             차단 경로로 링크하지 않는다(항목 46c). timing 은 색인 허용이다. */}
-        <Link href="/analysis/timing" className="font-bold text-primary underline">
+        <Link href="/analysis/timing" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
           타이밍 분석
         </Link>
         에서 확인하세요. 데이터를 봤다면 다음은 현장 —{" "}
-        <Link href="/imjang" className="font-bold text-primary underline">
+        <Link href="/imjang" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
           임장 가이드
         </Link>
         로 답사를 준비하세요.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { readAuthedHint } from "@/lib/auth/authed-hint";
 
 /**
  * A1 — 첫 방문 코치마크 투어.
@@ -95,9 +96,12 @@ export function CoachmarkTour({
 
     // 서버에 이미 본 기록이 있으면 띄우지 않는다 (다른 기기에서 본 경우)
     (async () => {
+      /* [1007 · V2a-2] 로그인 힌트(nz_authed)가 없으면 서버에 묻지 않는다 — 비회원은 어차피 401 이라
+         localStorage 기준으로만 판단하던 경로와 같다. /map 을 훑는 봇(911회/일)의 GET 이 사라진다. */
+      const signedIn = readAuthedHint();
       try {
-        const res = await fetch("/api/me/tours", { cache: "no-store" });
-        if (res.ok) {
+        const res = signedIn ? await fetch("/api/me/tours", { cache: "no-store" }) : null;
+        if (res?.ok) {
           const data = (await res.json()) as { seen?: string[] };
           if (Array.isArray(data.seen) && data.seen.includes(tourId)) {
             writeLocalSeen(tourId);
@@ -167,11 +171,14 @@ export function CoachmarkTour({
       finishedRef.current = true;
       setActive(false);
       writeLocalSeen(tourId);
-      void fetch("/api/me/tours", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tour: tourId }),
-      }).catch(() => {});
+      /* [1007] 비회원의 본 기록은 localStorage 뿐 — 서버(401)에 보내지 않는다 */
+      if (readAuthedHint()) {
+        void fetch("/api/me/tours", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tour: tourId }),
+        }).catch(() => {});
+      }
       void fetch("/api/platform/event", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

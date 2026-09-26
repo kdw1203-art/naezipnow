@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { safeAuth } from "@/lib/safe-auth";
 import { getMeeting } from "@/lib/meetings/store-db";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { invalidateGroupRoutes } from "@/lib/town/invalidate-town";
 
 export const runtime = "nodejs";
 
@@ -157,6 +158,10 @@ export async function POST(
     return NextResponse.json({ error: friendlyDbError(error) }, { status: 500 });
   }
 
+  /* [1010 · 동네축] 모임 목록(/town/groups)이 정원·남은 자리를 서버에서 그린다 —
+     그 라우트 TTL 을 300초에서 1일로 늘렸으므로, 신청으로 자리가 줄면 즉시 비운다.
+     "남은 자리 N" 은 사실 주장이라 하루 낡은 값을 그대로 둘 수 없다. */
+  invalidateGroupRoutes();
   return NextResponse.json({ member: mapRow(data as Record<string, unknown>) }, { status: 201 });
 }
 
@@ -218,5 +223,7 @@ export async function PATCH(
     console.error("[groups/join] PATCH error:", error.message);
     return NextResponse.json({ error: friendlyDbError(error) }, { status: 500 });
   }
+  /* [1010 · 동네축] 승인·거절·취소도 정원 표시를 바꾼다 — 신청과 같은 이유로 비운다 */
+  invalidateGroupRoutes();
   return NextResponse.json({ member: mapRow(data as Record<string, unknown>) });
 }

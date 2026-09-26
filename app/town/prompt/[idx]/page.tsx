@@ -6,6 +6,7 @@ import { EmptyState } from "@/app/components/ui/EmptyState";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
 import { Icon } from "@/app/components/Icon";
 import { listPostsByTag } from "@/lib/posts-store";
+import { postHref } from "@/lib/town/post-href";
 import {
   TOWN_PROMPTS,
   parsePromptIndex,
@@ -19,7 +20,10 @@ import { relativeTimeLabel } from "@/lib/format/relative-time";
  * 같은 질문이 14일 주기로 돌아오며 답변이 이 페이지에 계속 쌓인다 —
  * 질문 자체가 검색 표면이 되는 에버그린 Q&A 페이지. */
 
-export const revalidate = 300;
+/* [1010] 300초 → 1일. 14장짜리 에버그린 스레드인데 5분 눈금이라 크롤 1회 = 재렌더 1회였다.
+   이 화면이 바뀌는 지점은 "그 글감 태그가 붙은 이웃 글"뿐이고, 글 작성·수정·삭제·댓글이
+   invalidatePromptThreads(글.tags) 로 **그 한 장만** 비운다(14장을 통째로 비우지 않는다). */
+export const revalidate = 86_400;
 /* 유효 인덱스는 0~13뿐 — 그 밖은 라우팅 계층에서 바로 404 (soft-404 방지) */
 export const dynamicParams = false;
 
@@ -103,7 +107,8 @@ export default async function PromptThreadPage({
             {posts.map((p, pi) => (
               <Link
                 key={p.id}
-                href={`/town/news/${p.id}`}
+                /* [1007 · P2] 글감 답변은 사람 글 — 이야기 상세로 바로(뉴스 상세 리다이렉트 제거) */
+                href={postHref(p)}
                 className={`rise-in-${Math.min(pi + 1, 6)} card block rounded-2xl p-4 no-underline tap-ripple`}
               >
                 <div className="flex items-center gap-2 text-[12px] text-text-3">

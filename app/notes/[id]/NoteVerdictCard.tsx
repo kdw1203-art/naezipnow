@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatKrwWon } from "@/lib/format/krw";
 import { formatYm } from "@/lib/market/format";
 import { decisionBand, decisionLabel, type NoteDecision } from "@/lib/inspection/decision";
+import { AreaBandText } from "./AreaBandText";
 
 /* ============================================================
    [993] 임장노트 판단 카드 — 상세 첫 화면.
@@ -16,6 +17,10 @@ import { decisionBand, decisionLabel, type NoteDecision } from "@/lib/inspection
    "내 판단 · 살까" + 근거 ≤3줄. 규칙/LLM 요약은 그 아래 보조 줄로 내려간다(같은
    문장이면 뺀다). 띠 색은 판단으로(살까 strong · 보류 mixed · 패스 weak · 다시 보기 thin).
    없으면 소유자에게만 "판단 남기기 ›"(수정 화면 3단계)를 한 줄로 둔다.
+
+   [1005] 이 카드가 화면의 **히어로**다 — 독자가 처음 보는 것이므로 본문 카드(.card)와
+   같은 면이 아니라 유리판(.lg-glass, globals.css [1000])으로 띄운다. 본문 섹션은 .card,
+   AI 요약은 AIPanel 그대로 — 세 면이 서로 다른 출처(판단·기록·AI)를 말한다.
    ============================================================ */
 
 export type NoteVerdictProps = {
@@ -30,8 +35,9 @@ export type NoteVerdictProps = {
   visitDate: string;
   checklistDone: number;
   checklistTotal: number;
-  /** 단지가 실거래와 매칭될 때만 — 없으면 칸을 그리지 않는다 */
-  price: { priceKrw: number; bandLabel: string; latestYm: string } | null;
+  /** 단지가 실거래와 매칭될 때만 — 없으면 칸을 그리지 않는다.
+      [1006] bandLabelPyeong — 같은 구간의 평 표기. 설정(면적 단위)이 평이면 클라이언트 섬이 이걸 고른다 */
+  price: { priceKrw: number; bandLabel: string; bandLabelPyeong?: string; latestYm: string } | null;
   complexHref: string | null;
   /** 다음 행동 1개 */
   next: { label: string; href: string };
@@ -61,7 +67,7 @@ export function NoteVerdictCard(p: NoteVerdictProps) {
   const summaryDuplicate =
     decision != null && decision.reasons.join(" · ").trim() === p.verdict.trim();
   return (
-    <section className="card rise-in flex flex-col gap-3 rounded-[18px] p-5" aria-label="이 노트의 판단">
+    <section className="lg-glass rise-in flex flex-col gap-3 p-5" aria-label="이 노트의 판단">
       <div className="flex flex-wrap items-center gap-2">
         <span className="verdict-band rounded-md px-2 py-0.5 t-caption font-extrabold tracking-wider" data-band={tone}>
           {decision ? decisionLabel(decision.choice) : scoreText}
@@ -134,16 +140,32 @@ export function NoteVerdictCard(p: NoteVerdictProps) {
             {p.weakestAxis ? `약한 축 ${p.weakestAxis.label} ${p.weakestAxis.score}/5` : "축 점수 없음"}
           </div>
         </div>
-        {p.price ? (
-          <Link href={p.complexHref ?? "#"} className="rounded-[12px] bg-bg px-3 py-2.5 no-underline">
+        {/* [1008 · 리뷰 A-14] 대표가 규칙이 화면마다 다르다(AI 분석: 가장 많이 거래된 평형 최근 6건 · 여기: 면적대
+            최근 최대 6건, lib/market/complex-price) — 규칙은 두고 "무엇의 평균인지"를 적어 구분한다 */}
+        {p.price && p.complexHref ? (
+          /* [1005] 단지 링크가 있을 때만 링크다 — 예전 `href={complexHref ?? "#"}` 는 갈 곳 없는
+             링크를 만들 수 있었다(실제로는 price 가 complexHref 에 종속이라 안 나왔지만, 규칙대로). */
+          <Link href={p.complexHref} className="rounded-[12px] bg-bg px-3 py-2.5 no-underline">
             <div className="t-caption font-bold text-text-3">대표 실거래가</div>
             <div className="mt-0.5 t-body font-extrabold tabular-nums text-ink">
               {formatKrwWon(p.price.priceKrw, { style: "short" })}
             </div>
             <div className="t-caption text-text-3">
-              {p.price.bandLabel} · 기준 {formatYm(p.price.latestYm)} · 국토부
+              <AreaBandText m2={p.price.bandLabel} pyeong={p.price.bandLabelPyeong ?? p.price.bandLabel} /> 최근 최대 6건 평균 · 기준{" "}
+              {formatYm(p.price.latestYm)} · 국토부
             </div>
           </Link>
+        ) : p.price ? (
+          <div className="rounded-[12px] bg-bg px-3 py-2.5">
+            <div className="t-caption font-bold text-text-3">대표 실거래가</div>
+            <div className="mt-0.5 t-body font-extrabold tabular-nums text-ink">
+              {formatKrwWon(p.price.priceKrw, { style: "short" })}
+            </div>
+            <div className="t-caption text-text-3">
+              <AreaBandText m2={p.price.bandLabel} pyeong={p.price.bandLabelPyeong ?? p.price.bandLabel} /> 최근 최대 6건 평균 · 기준{" "}
+              {formatYm(p.price.latestYm)} · 국토부
+            </div>
+          </div>
         ) : (
           <div className="rounded-[12px] bg-bg px-3 py-2.5">
             <div className="t-caption font-bold text-text-3">대표 실거래가</div>

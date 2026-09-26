@@ -27,6 +27,8 @@
  * 이제 중첩까지 따라 들어간다(예전엔 한 겹만 봐서 `{ a: { token } }` 이 샜다).
  */
 
+import { sampleWithTable, type SampleEntry } from "@/lib/log/sample";
+
 const isProd = process.env.NODE_ENV === "production";
 
 const SENSITIVE = /(token|secret|password|passwd|api[-_]?key|authorization|cookie|credential)/i;
@@ -71,6 +73,19 @@ function sanitize(args: unknown[]): unknown[] {
   return args.map((a) => mask(a));
 }
 
+/* [1007] 반복 로그 샘플링 표 — 프로세스당 하나. 판정 규칙은 lib/log/sample.ts(순수).
+   첫 발생은 반드시 찍고, 같은 키의 나머지는 1분에 1건으로 접되 생략 건수를 문장에 단다.
+   실측: 24h error 1,338 · warn 1,517 의 대부분이 같은 문장 반복(db-unavailable·대장 매칭
+   보류·축 조회 실패). Observability Events 는 건수 과금이라 소음이 곧 비용이다. */
+const sampleTable = new Map<string, SampleEntry>();
+
+/** 첫 인자가 문자열이면 접미를 그 문장 끝에, 아니면 별도 인자로 붙인다 */
+function withSuffix(args: unknown[], suffix: string): unknown[] {
+  if (!suffix) return args;
+  if (typeof args[0] === "string") return [args[0] + suffix, ...args.slice(1)];
+  return [...args, suffix.trim()];
+}
+
 export const logger = {
   debug(...args: unknown[]) {
     if (!isProd) console.debug(...sanitize(args));
@@ -83,6 +98,19 @@ export const logger = {
   },
   error(...args: unknown[]) {
     console.error(...sanitize(args));
+  },
+  /**
+   * [1007] 같은 키의 error 를 프로세스당 1분 1건으로 접는다(첫 발생은 항상 찍힘).
+   * 요청마다 나올 수 있는 렌더·API 경로의 실패 로그에만 쓴다 — 크론·1회성 오류는 logger.error.
+   */
+  errorSampled(key: string, ...args: unknown[]) {
+    const { emit, suffix } = sampleWithTable(sampleTable, `e:${key}`, Date.now());
+    if (emit) console.error(...sanitize(withSuffix(args, suffix)));
+  },
+  /** [1007] warn 판 — 규칙은 errorSampled 와 같다 */
+  warnSampled(key: string, ...args: unknown[]) {
+    const { emit, suffix } = sampleWithTable(sampleTable, `w:${key}`, Date.now());
+    if (emit) console.warn(...sanitize(withSuffix(args, suffix)));
   },
 };
 

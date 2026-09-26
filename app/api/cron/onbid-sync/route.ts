@@ -3,6 +3,7 @@ import { authorizeCron } from "@/lib/cron/authorize";
 import { isOnbidConfigured } from "@/lib/onbid/client";
 import { syncOnbidSeoul } from "@/lib/onbid/sync";
 import { ingestErrorMessage, logIngest } from "@/lib/market/store";
+import { invalidatePathList } from "@/lib/cache/invalidate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -98,6 +99,15 @@ export async function GET(req: Request) {
       status: anyOk ? "ok" : allSkipped ? "skipped" : "error",
       message: parts.join(" · "),
     });
+    /* [1010] /auctions 는 ISR 이고 기본 목록 200건을 **서버 HTML 에 전부** 싣는다
+       (app/auctions/page.tsx — 필터만 /api/auctions 를 부른다). 그 신선도를 지금까지
+       600초 TTL 이 혼자 맡고 있었고, 그래서 크롤러가 올 때마다 재렌더가 돌았다.
+       TTL 을 6시간으로 올리는 대신 **물건이 실제로 들어온 적재 직후**에만 비운다.
+       0건 적재(변화 없음)·skipped 에서는 비우지 않는다 — 안 바뀐 HTML 을 다시 굽는 것은
+       ISR Write 와 Fast Origin Transfer 를 그냥 태우는 일이다. */
+    if (anyOk && inserted > 0) {
+      invalidatePathList(["/auctions"], { label: "onbid" });
+    }
     return NextResponse.json(result);
   } catch (err) {
     const message = ingestErrorMessage(err, "온비드 동기화 실패");

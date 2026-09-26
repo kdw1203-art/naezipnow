@@ -6,6 +6,8 @@
 import { NextResponse } from "next/server";
 import { safeAuth } from "@/lib/safe-auth";
 import { getListingById, boostListing } from "@/lib/listings/store-db";
+import { invalidateComplexByNames } from "@/lib/complex/complex-invalidate";
+import { invalidateListingsIndex } from "@/lib/listings/invalidate-listings";
 import { getSpendItem } from "@/lib/points/catalog";
 import { getBalance, spendPoints } from "@/lib/points/ledger";
 import { logger } from "@/lib/log";
@@ -80,6 +82,12 @@ export async function POST(
       { status: 503 },
     );
   }
+
+  /* [1010] 단지 허브(7일 ISR)의 매물 카드는 부스트 배지와 정렬(부스트 우선)을 서버에서 그린다 —
+     방금 산 부스트가 일주일 뒤에야 보이면 안 된다. 만료는 시각 기준이라 TTL 이 받는다. */
+  invalidateComplexByNames(listing.regionName, listing.complexName);
+  /* [1010] /listings 의 정렬(부스트 우선)·배지도 서버 HTML 이다 — 같이 비운다 */
+  invalidateListingsIndex();
 
   const spend = await spendPoints(email, item.cost, "listing_boost", listingId);
   /* 차감이 실패했는데 `balance - item.cost` 를 내려보내면 일어나지 않은 차감을

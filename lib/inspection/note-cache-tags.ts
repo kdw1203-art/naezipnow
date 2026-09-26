@@ -19,8 +19,14 @@
  *
  * 비공개 노트는 어느 태그로도 캐시에 실리지 않는다(note-cache.ts 의 두 겹 가드). */
 
-/** 공개 노트 행·공개 회차 목록·관련 노트 풀의 revalidate(초) */
-export const NOTE_CACHE_REVALIDATE_SEC = 300;
+/** 공개 노트 행·공개 회차 목록·관련 노트 풀의 revalidate(초)
+ *  [1010] 300 → 86_400(1일). 지금 이 값이 붙는 항목은 관련 노트 풀 하나뿐이고(1007 이후),
+ *  그 풀은 공개 노트가 바뀌는 **모든** 지점에서 public-notes 태그로 비워진다
+ *  (invalidateNoteCache: 생성·수정·공개 전환·삭제·신고 숨김·탈퇴 비공개·세션 동기화).
+ *  실측(2026-09-20~22): 공개 노트 34편에 /notes/[id] 열람은 하루 200회 미만이라, 300초
+ *  TTL 은 방문마다 만료돼 있어 쓰기(ISR Write)만 만들고 읽히지 않았다. 신선도는 시간이
+ *  아니라 태그가 맡는다 — 태그 비움을 놓쳐도 하루면 스스로 돈다. */
+export const NOTE_CACHE_REVALIDATE_SEC = 86_400;
 /** 댓글 목록의 revalidate(초) — 새 댓글이 태그 비움을 놓쳐도 1분이면 보인다 */
 export const NOTE_COMMENTS_CACHE_REVALIDATE_SEC = 60;
 /** 공개 노트 목록 성격의 캐시(관련 노트 풀·공개 회차)에 함께 붙이는 태그 */

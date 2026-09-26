@@ -4,6 +4,7 @@ import { ErrorState } from "@/app/components/ui";
 import { Icon } from "@/app/components/Icon";
 import { readBoardPosts } from "@/lib/newui/board-posts";
 import type { Post } from "@/lib/types/post";
+import { postHref } from "@/lib/town/post-href";
 import { listProjects, countBySigunguFrom } from "@/lib/redevelopment/store";
 import type { RedevelopmentProject } from "@/lib/redevelopment/types";
 import { SEED_SOURCES } from "@/lib/redevelopment/seed";
@@ -24,7 +25,9 @@ import { STAGE_GUIDES, REDEV_GLOSSARY } from "@/lib/redevelopment/stage-guide";
    마커·목록·면책에 함께 표기해 최신 고시와 다를 수 있음을 고지한다.
    ============================================================ */
 
-export const revalidate = 3600;
+/* [1010] 크롤러 재방문(≈2.2일)보다 짧은 TTL 은 크롤 1회 = 재렌더 1회다. 이 화면을 바꾸는
+   적재(SOURCE_MAP)가 이제 경로를 직접 비우므로 시간 TTL 은 안전망으로만 둔다. */
+export const revalidate = 86_400;
 
 export const metadata = {
   title: "정비사업 지도 | 내집나우",
@@ -174,7 +177,7 @@ export default async function RedevelopmentPage() {
                     {s.longLabel}
                   </span>
                   {i < STAGE_GUIDES.length - 1 && (
-                    <span className="shrink-0 text-text-3" aria-hidden="true">
+                    <span className="shrink-0 t-sub text-text-3" aria-hidden="true">
                       ›
                     </span>
                   )}
@@ -306,8 +309,8 @@ export default async function RedevelopmentPage() {
         <section className="rise-in-4 card flex flex-col gap-2.5 rounded-2xl px-5 py-4">
           <div className="flex items-center justify-between">
             <h2 className="text-[13px] font-extrabold text-ink">정비사업 뉴스</h2>
-            <Link href="/town/news" className="t-sub font-extrabold text-primary">
-              전체 뉴스 ›
+            <Link href="/town/news" className="inline-flex min-h-[24px] items-center t-sub font-extrabold text-primary">
+              뉴스룸 전체 ›
             </Link>
           </div>
           {news.length === 0 &&
@@ -322,7 +325,7 @@ export default async function RedevelopmentPage() {
               </div>
             ))}
           {news.map((n) => (
-            <Link key={n.id} href={`/town/news/${n.id}`} className="group no-underline">
+            <Link key={n.id} href={postHref(n)} className="group no-underline">
               <div className="t-sub font-bold text-ink group-hover:text-primary">
                 {n.title}
               </div>

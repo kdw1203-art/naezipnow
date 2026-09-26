@@ -8,6 +8,7 @@ import {
   listExperts,
 } from "@/lib/experts/store-db";
 import { sanitizeExpertForPublic } from "@/lib/experts/access";
+import { invalidateExpertRoutes } from "@/lib/town/invalidate-town";
 
 export async function GET() {
   const items = (await listExperts()).map(sanitizeExpertForPublic);
@@ -78,6 +79,9 @@ export async function POST(req: Request) {
       body: "검수 후 전문가 목록에 공개됩니다. 프로필은 언제든 수정할 수 있습니다.",
       actionUrl: `/town/experts`,
     });
+    /* [1010 · 동네축] 목록·상세는 ISR(300초 → 1일)이다 — 늘린 TTL 만큼 새 프로필이 목록에
+       안 나타나면 안 된다(관리자가 만든 뒤 바로 확인하는 자리다). */
+    invalidateExpertRoutes(expert.id);
     return NextResponse.json({ expert: sanitizeExpertForPublic(expert) });
   } catch (e) {
     return NextResponse.json(

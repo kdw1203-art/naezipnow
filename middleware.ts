@@ -20,6 +20,45 @@ import {
   isCrawlerEndpoint,
   publicDocumentCacheControl,
 } from "@/lib/http/cache-policy";
+import {
+  AUTHED_HINT_COOKIE,
+  AUTHED_HINT_MAX_AGE_SEC,
+  AUTHED_HINT_VALUE,
+  decideAuthedHint,
+  hasSessionCookieName,
+} from "@/lib/auth/authed-hint";
+import { loginRedirectHref, needsLoginAtEdge } from "@/lib/auth/edge-login-guard";
+import { isBotUserAgent } from "@/lib/client/is-bot-ua";
+
+/* [1007 · V2a-1] 로그인 힌트 쿠키(nz_authed) — 세션 쿠키 **유무**가 힌트와 다를 때만 Set-Cookie.
+   같으면 아무것도 하지 않는다: 미들웨어가 쿠키를 심으면 그 응답은 아래 applySecurityHeaders 에서
+   carriesUserState → no-store 가 되어 CDN 공유 캐시를 잃는다. 그래서 전이 순간(로그인 직후 첫 문서,
+   로그아웃 직후 첫 문서)에만 붙는다. 판정·이름·수명은 lib/auth/authed-hint.ts 한 곳이다.
+   반드시 applySecurityHeaders **앞**에서 불러야 한다(그쪽이 response.cookies 로 캐시 가능 여부를 잰다). */
+function applyAuthedHint(request: NextRequest, response: NextResponse): void {
+  const hasSession = hasSessionCookieName(request.cookies.getAll().map((c) => c.name));
+  const hasHint = request.cookies.get(AUTHED_HINT_COOKIE)?.value === AUTHED_HINT_VALUE;
+  const decision = decideAuthedHint({ hasSession, hasHint });
+  if (decision === null) return;
+  const isDev = process.env.NODE_ENV === "development";
+  if (decision === "set") {
+    response.cookies.set(AUTHED_HINT_COOKIE, AUTHED_HINT_VALUE, {
+      path: "/",
+      sameSite: "lax",
+      secure: !isDev,
+      httpOnly: false, // 클라이언트가 읽어야 하는 힌트다 — 비밀이 아니다("쿠키가 있다" 는 사실뿐)
+      maxAge: AUTHED_HINT_MAX_AGE_SEC,
+    });
+    return;
+  }
+  response.cookies.set(AUTHED_HINT_COOKIE, "", {
+    path: "/",
+    sameSite: "lax",
+    secure: !isDev,
+    httpOnly: false,
+    maxAge: 0,
+  });
+}
 
 function applySecurityHeaders(response: NextResponse, request?: NextRequest) {
   const isDev = process.env.NODE_ENV === "development";
@@ -229,6 +268,21 @@ export async function middleware(request: NextRequest) {
     });
   }
 
+  /* [1007 · V2a-6] /embed/* 는 외부 블로그·카페의 <iframe> 용이다 — noindex(app/embed/layout.tsx) 인데
+     실측 1,723회/일 함수가 돌았다(ISR 3600s 인데도 롱테일 단지 id 마다 콜드 렌더). 크롤러(UA 표식·
+     검색엔진 포함 — robots.txt 도 /embed 를 막는다)에게는 엣지에서 403. 사람의 iframe 요청은 브라우저
+     UA 라 걸리지 않는다. 판정은 lib/client/is-bot-ua(리포터·web-vitals 라우트와 같은 규칙). */
+  if (request.nextUrl.pathname.startsWith("/embed/") && isBotUserAgent(request.headers.get("user-agent"))) {
+    return new NextResponse("embed widgets are for browsers — see /robots.txt", {
+      status: 403,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex, nofollow",
+      },
+    });
+  }
+
   /* [939 · I004] 관리자 API 속도 제한 — 25개 라우트의 유일한 관문(이 미들웨어)에서
      IP당 분 120회로 막는다. 관리자 화면의 정상 사용은 분당 수십 회를 넘지 않고,
      403 반복 탐침·스크레이핑이 이 문턱에 걸린다. 엣지 격리 인스턴스별 메모리라
@@ -321,19 +375,19 @@ export async function middleware(request: NextRequest) {
      스트리밍 이전(미들웨어)이라 상태코드가 확실히 308 로 나간다 — 페이지 단
      redirect 는 loading 경계 뒤라 200 으로 굳는 문제가 있었다(soft-404 실측과
      같은 기제). 어떤 예외도 사이트 전체를 못 세우게 통째로 감싼다. */
-  /* [949 · 계측] /notes/new 는 robots 로 막았는데도 하루 1,900회 함수가 돈다 —
-     역시 UA 표본(20%)을 남겨 정체를 본다. */
-  if (request.nextUrl.pathname === "/notes/new" && Math.random() < 0.2) {
-    const ua = (request.headers.get("user-agent") ?? "").slice(0, 160);
-    console.info(`[ua-sample] notes-new ua="${ua}"`);
-  }
+  /* [949 · 계측 → 1007 종료] /notes/new UA 표본(20%)은 뗐다. 답이 나왔다(2026-09-20 로그): 표식 없는
+     데스크톱 크롬 UA(Chrome/144~150, X11·Win·Mac)의 헤드리스 크롤과 meta-webindexer — 사람이 아니다.
+     하루 ~360건의 로그 이벤트(Observability Events 과금)를 더 낼 이유가 없다. 대응은 이 판의
+     클라이언트 봇 판정·힌트 쿠키(비콘·세션 조회 차단)로 했다. */
   if (request.nextUrl.pathname.startsWith("/complex/")) {
     /* [949 · 계측] 단지 허브는 하루 6천 회 넘게 함수가 도는데(ISR 미스, 1.5초에 1개
        꼴로 롱테일을 훑는 크롤러) 런타임 로그에는 UA 가 남지 않아 **누가** 훑는지
-       알 수 없었다. 5% 표본으로 UA 앞 160자만 엣지 로그에 남긴다 — 사람 방문은
+       알 수 없었다. UA 앞 160자만 엣지 로그에 남긴다 — 사람 방문은
        web_vitals 로 이미 보이므로 이 표본은 사실상 봇 구성표다. 가치 없는 봇이면
-       robots/차단으로, 검색엔진이면 크롤 예산 조정으로 대응한다(개인정보 아님). */
-    if (Math.random() < 0.05) {
+       robots/차단으로, 검색엔진이면 크롤 예산 조정으로 대응한다(개인정보 아님).
+       [1007] 5% → 1%: 구성은 이미 안다(PerplexityBot·Amazonbot·OAI-SearchBot·Googlebot·
+       meta-webindexer·KeenableBot·표식 없는 크롬). 하루 ~445 → ~90 이벤트로 줄이되 추세는 남긴다. */
+    if (Math.random() < 0.01) {
       const ua = (request.headers.get("user-agent") ?? "").slice(0, 160);
       console.info(`[ua-sample] complex ua="${ua}"`);
     }
@@ -420,6 +474,26 @@ export async function middleware(request: NextRequest) {
     return applySecurityHeaders(redirect, request);
   }
 
+  /* [1007 · V2a-7] 로그인 전용 화면(/my/analyses·/admin 등 — 목록·기준은 lib/auth/edge-login-guard.ts)은
+     세션 쿠키가 **없으면** 여기서 /login 으로 302. 실측 /my/analyses 367회/일이 함수를 띄워
+     safeAuth() → redirect 로 끝나고 있었다. 서버 가드는 그대로(쿠키가 있으나 무효인 경우 담당).
+     302 인 이유: 로그인하면 같은 URL 이 열린다 — 영구 이전이 아니다. */
+  if (
+    !isApi &&
+    needsLoginAtEdge(path) &&
+    !hasSessionCookieName(request.cookies.getAll().map((c) => c.name))
+  ) {
+    const redirect = NextResponse.redirect(
+      new URL(loginRedirectHref(path, request.nextUrl.search), request.url),
+      302,
+    );
+    /* 쿠키에 따라 갈리는 응답 — 어떤 공유 캐시에도 남기지 않는다(문서가 아닌 Accept 로 와도) */
+    redirect.headers.set("Cache-Control", "no-store");
+    copyCookies(sessionResponse, redirect);
+    applyAuthedHint(request, redirect);
+    return applySecurityHeaders(redirect, request);
+  }
+
   const gated = await applyPrivateSiteGate(request, sessionResponse);
   /* [992 · A1] 보관 영역은 색인에서 뺀다 — 라우트는 살아 있고 링크는 따라가되(follow),
      검색에는 나오지 않는다. 목록은 lib/seo/archived-routes.ts 하나다. */
@@ -427,6 +501,9 @@ export async function middleware(request: NextRequest) {
   /* [992] `x-woodong-shell` 응답 헤더 삭제 — 단일 도메인 전환 뒤 항상 "desktop" 이었고 읽는
      곳이 0 이었다(모바일/데스크톱은 뷰포트 기준 반응형). 매 응답에 붙던 죽은 헤더. */
   if (isApi) applyMiniAppCors(gated.headers, origin);
+  /* [1007 · V2a-1] 힌트 쿠키 전이 — 문서·RSC 응답에만(API 응답은 매처에서 대부분 빠졌고, 남은 것도
+     브라우저 문서가 아니다). applySecurityHeaders 앞이어야 no-store 판정이 맞는다. */
+  if (!isApi) applyAuthedHint(request, gated);
   return applySecurityHeaders(gated, request);
 }
 
@@ -436,10 +513,39 @@ export const config = {
      * Supabase 세션 갱신 + 레거시 리다이렉트 + 보안 헤더
      * [OPT-14] 정적 자산 제외 목록 확장 — sw.js·manifest·icons·fonts·robots·
      * sitemap·feed·.well-known 은 미들웨어(110KB)를 지날 이유가 없다.
-     * /api 는 유지 — 보안 헤더·캐시 헤더 로직이 API 응답에도 걸려 있다.
      * [967 · 30b·30c] security.txt·app-ads.txt(public/ 정적 파일)도 같은 이유로 제외 —
      * 미들웨어를 지나면 문서로 오인돼 no-store 가 덮여 next.config 의 하루 캐시가 죽는다.
+     *
+     * [1007 · V2a-9] `/api/` 를 첫 매처에서 뺐다 — 미들웨어 호출 48,920회/일 중 API 몫(~10,000)이
+     * 대부분 봇의 비콘·세션 조회였다. 미들웨어가 /api 에 하던 일은 아래 세 매처가 **조건부로** 이어받는다
+     * (매처 조건은 엣지 라우팅 단계에서 평가되므로 안 맞는 요청은 함수가 뜨지 않는다):
+     *   ① /api/admin/* — IP 당 분 120회 속도 제한(adminApiRateLimit)은 이 미들웨어가 유일한 관문.
+     *   ② Origin 헤더가 있는 /api/* — 앱인토스 미니앱 CORS(applyMiniAppCors·preflight). CORS 헤더는
+     *      Origin 이 실린 요청에만 의미가 있고 preflight(OPTIONS)는 항상 Origin 을 싣는다 → 손실 0.
+     *      (사이트 자체의 same-origin POST 도 Origin 을 실으므로 여기 걸린다 — 봇의 GET 이 빠지는 게 핵심.)
+     *   ③ 차단 크롤러 UA(lib/security/blocked-crawlers.ts BLOCKED_CRAWLERS 와 같은 12개 이름 — 매처는
+     *      정적 문자열이어야 해서 여기 한 번 더 적는다; tests/unit/probes-1007.test.ts 가 동기화를 검사)
+     *      의 /api/* — 엣지 403 유지.
+     * 빠진 것과 그 근거: 보안 헤더(nosniff 등)는 next.config.ts headers() 의 `/api/:path*` 묶음(V2b)이
+     * 그대로 싣는다. "라우트가 안 실었을 때만 no-store" 는 실질 손실이 없다 — 헤더 없는 API 응답은
+     * Vercel 기본값(`public, max-age=0, must-revalidate`)이라 CDN 도 브라우저도 저장하지 않는다
+     * (next.config.ts 의 같은 주석). Supabase 세션 갱신·vercel.app 호스트 정규화·`?_wd=` 제거·
+     * PRIVATE_SITE 게이트는 API GET 에 필요 없다(각각 문서 요청이 담당·헤드리스 호출 무관·문서 URL 전용·
+     * 운영은 PRIVATE_SITE 미사용 — 켤 때는 이 매처를 다시 볼 것).
      */
-    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|robots\\.txt|security\\.txt|app-ads\\.txt|sitemap[^/]*\\.xml|feed\\.xml|icons/|fonts/|\\.well-known/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
+    "/((?!api/|_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|robots\\.txt|security\\.txt|app-ads\\.txt|sitemap[^/]*\\.xml|feed\\.xml|icons/|fonts/|\\.well-known/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
+    "/api/admin/:path*",
+    { source: "/api/:path*", has: [{ type: "header", key: "origin" }] },
+    {
+      source: "/api/:path*",
+      has: [
+        {
+          type: "header",
+          key: "user-agent",
+          value:
+            ".*(?:AhrefsBot|SemrushBot|MJ12bot|DotBot|BLEXBot|DataForSeoBot|serpstatbot|Barkrowler|ZoominfoBot|PetalBot|Bytespider|ImagesiftBot).*",
+        },
+      ],
+    },
   ],
 };

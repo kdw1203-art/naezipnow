@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Icon } from "@/app/components/Icon";
 import { TOOL_PERSONAS, type MarketToolId } from "@/lib/ai/tool-persona";
+import { DELTA_ARROW, DELTA_BADGE_CLASS, DELTA_CLASS, DELTA_WORD, absPctText, deltaDir } from "@/lib/format/delta";
 
 export interface HeroKpi {
   /** 큰 숫자 */
@@ -9,16 +10,27 @@ export interface HeroKpi {
   label: string;
   /** 기준·출처 한 줄 (없으면 생략) */
   note?: string;
-  /** 전기 대비 — 값이 있을 때만 배지가 붙는다 */
+  /** 전기 대비 — 값이 있을 때만 배지가 붙는다. label 은 비교 기준("지난달") — "지난달 대비"로 적힌다 */
   delta?: { pct: number; label?: string } | null;
+  /** [1009 · A] 이름 옆 ⓘ(<Explain>) — 부르는 쪽이 넣는다 */
+  aside?: ReactNode;
 }
 
+/* [1009 · A] 등락 배지 — 표준 규칙(lib/format/delta): ±0.05% 미만은 "보합", 비교 기준을 "…대비"로 적는다.
+   예전엔 0 을 "– 0%"로, 기준을 "▼ 35.5% 전월"처럼 숫자 뒤에 붙였다. */
 function DeltaBadge({ pct, label }: { pct: number; label?: string }) {
-  const tone = pct > 0 ? "delta-up-b" : pct < 0 ? "delta-down-b" : "delta-flat-b";
-  const sign = pct > 0 ? "▲" : pct < 0 ? "▼" : "–";
+  const dir = deltaDir(pct) ?? "flat";
   return (
-    <span className={`delta ${tone}`}>
-      {sign} {Math.abs(pct).toLocaleString("ko-KR")}%{label ? ` ${label}` : ""}
+    <span className={`delta ${DELTA_CLASS[dir]} ${DELTA_BADGE_CLASS[dir]}`}>
+      {label ? `${label} 대비 ` : ""}
+      {dir === "flat" ? (
+        "보합"
+      ) : (
+        <>
+          <span aria-hidden="true">{DELTA_ARROW[dir]}</span>
+          <span className="sr-only">{DELTA_WORD[dir]}</span> {absPctText(pct)}
+        </>
+      )}
     </span>
   );
 }
@@ -122,7 +134,10 @@ export function ToolHero({
         <div className="kpi-row">
           {kpis.map((k) => (
             <div key={k.label} className="kpi">
-              <span className="kpi-k">{k.label}</span>
+              <span className="kpi-k inline-flex items-center gap-0.5">
+                {k.label}
+                {k.aside}
+              </span>
               <span className="kpi-v flex flex-wrap items-baseline gap-1.5">
                 {k.value}
                 {k.delta && <DeltaBadge pct={k.delta.pct} label={k.delta.label} />}

@@ -8,7 +8,9 @@ import { loadCoverage } from "@/lib/stats/coverage";
 
 /* 고도화 50 — 실적 숫자는 llms.txt 와 같은 로더에서 온다(1시간 재검증).
    손으로 적은 숫자는 낡는다 — 로더가 실패하면 숫자 문장을 통째로 생략한다. */
-export const revalidate = 3600;
+/* [1010] 3,600 → 86,400(1일). 조회가 하나도 없는 고정 문서다 — 내용은 배포로만 바뀌고
+   배포는 캐시를 통째로 새로 만든다. 시간 눈금이 짧을 이유가 없다. */
+export const revalidate = 86_400;
 
 export const metadata = buildPageMetadata({
   title: "내집나우 소개 — 운영 원칙",

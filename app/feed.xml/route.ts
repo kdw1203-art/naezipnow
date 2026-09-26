@@ -77,7 +77,7 @@ async function collectItems(): Promise<Collected> {
       items.push({
         title: `${label} 아파트 실거래 리포트 — ${m.regionCount}개 지역 ${m.txCount.toLocaleString("ko-KR")}건`,
         link: `${BASE_URL}/reports/${m.ym}`,
-        description: `${label} 내집나우 집계 지역 ${m.regionCount}곳의 아파트 매매 실거래 ${m.txCount.toLocaleString("ko-KR")}건. 지역별 거래량·평균가·전월 대비 변동을 국토교통부 실거래 신고 기준으로 정리했습니다.`,
+        description: `${label} 내집나우 집계 지역 ${m.regionCount}곳의 아파트 매매 실거래 ${m.txCount.toLocaleString("ko-KR")}건. 지역별 거래량·평균가와 평당가 전월 대비 변동을 국토교통부 실거래 신고 기준으로 정리했습니다.`,
         date: m.updatedAt,
         category: "월간 리포트",
       });

@@ -124,7 +124,10 @@ export async function removeFromWatchlist(userEmail: string, complexId: string):
     if (idx >= 0) inMemory.splice(idx, 1);
     return;
   }
-  await sb.from("user_watchlist").delete().eq("user_email", userEmail).eq("complex_id", complexId);
+  /* [1009 · H 리뷰] 오류를 확인한다 — 예전엔 결과를 버려 DB 가 실패해도 조용히 끝났고, API 는 200 을 돌려줬다.
+     그래서 관심 단지 화면의 "실패하면 행을 되돌려 놓는다"가 실제로는 한 번도 돌 수 없었다. 던지면 API 가 5xx 로 답한다. */
+  const { error } = await sb.from("user_watchlist").delete().eq("user_email", userEmail).eq("complex_id", complexId);
+  if (error) throw new Error(`user_watchlist 삭제 실패: ${error.message}`);
 }
 
 export async function isWatching(userEmail: string, complexId: string): Promise<boolean> {

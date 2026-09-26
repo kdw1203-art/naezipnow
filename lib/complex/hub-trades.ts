@@ -118,6 +118,27 @@ export function toHubTrades(tx: readonly TxMonthLike[]): HubTrade[] {
   return items;
 }
 
+/**
+ * [1009 · C 리뷰] 표 줄마다 등락의 **기준 달** — toHubTrades(전체: 바로 앞 줄)·viewTrades(면적대: 그 면적대가 있던 앞 줄)와
+ * 같은 짝·같은 계산(pctDelta)으로 다시 센다. 기존 두 함수의 출력(테스트가 잠금)은 그대로 두고, 화면은 이 값으로
+ * "전월 대비"(앞 줄이 정확히 전달) / "26.02 대비"(가운데 달이 빔)를 가른다 — lib/complex/month-delta.
+ */
+export function tradeDeltaBases(
+  trades: readonly HubTrade[],
+  band: string,
+): Map<string, { pct: number | null; baseYm: string | null }> {
+  const chrono = [...trades].sort((a, b) => a.ym.localeCompare(b.ym));
+  const out = new Map<string, { pct: number | null; baseYm: string | null }>();
+  let prev: { ym: string; avg: number } | null = null;
+  for (const t of chrono) {
+    const avg = band === ALL_BANDS ? t.avgManwon : t.bands.find((b) => b.slug === band)?.avgManwon;
+    if (avg == null) continue;
+    out.set(t.ym, { pct: prev ? pctDelta(avg, prev.avg) : null, baseYm: prev ? prev.ym : null });
+    prev = { ym: t.ym, avg };
+  }
+  return out;
+}
+
 /* ===== 클라이언트 필터·정렬 ===== */
 
 export type TradeSort = "latest" | "price-desc" | "price-asc";

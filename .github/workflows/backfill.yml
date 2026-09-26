@@ -31,6 +31,13 @@ on:
         default: "5"
         required: true
 
+# [1010 · 도메인 사고 방지] 크론 호출 주소는 여기 한 줄로만 바꾼다.
+# 2026-09-25: 구 도메인(nuguzip.com)이 프로젝트에서 빠지자 이 파일의 호출이 전부
+# 404 가 됐다(응답을 `|| true` 로 흘려 보내 조용히 죽는 구조였다). 주소를 상수로
+# 올려 두 번 다시 파일 전체를 훑지 않게 한다.
+env:
+  SITE: https://naezipnow.com
+
 permissions:
   contents: read
 
@@ -39,6 +46,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 300
     steps:
+      - name: Preflight — 호출 주소가 살아 있는지 먼저 본다
+        # [1010] 2026-09-25 사고: 구 도메인이 프로젝트에서 빠져 모든 크론 호출이
+        # 404 가 됐는데, 소프트 호출은 `|| true` 로 삼켜져 워크플로는 초록색이었다.
+        # 주소가 앱을 서빙하지 않으면 여기서 한 문장으로 죽는다.
+        run: |
+          CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 20 "${SITE}/api/health" || echo 000)
+          if [ "$CODE" != "200" ]; then
+            echo "크론 호출 주소가 앱을 서빙하지 않습니다: ${SITE}/api/health → HTTP $CODE" | tee etl-failed.txt
+            echo "Vercel 프로젝트에 이 도메인이 붙어 있는지 확인하세요(Settings → Domains)."
+            exit 1
+          fi
+          echo "preflight ok: ${SITE} (HTTP 200)"
       - name: Run backfill
         env:
           CRS: ${{ secrets.CRON_SECRET }}
@@ -59,14 +78,14 @@ jobs:
           # 1) 지오코딩 몰아치기 — 주소 우선 다단 쿼리, 회당 500단지.
           #    대상이 소진되면 라우트가 빠르게 0건으로 돌아오므로 라운드 낭비가 작다.
           for i in $(seq 1 ${{ github.event.inputs.geocode_rounds }}); do
-            hit "geocode round $i" "https://nuguzip.com/api/cron/geocode-complexes?limit=200"
+            hit "geocode round $i" "${SITE}/api/cron/geocode-complexes?limit=200"
             sleep 5
           done
 
           # 2) 단지 상세 몰아치기 — 회당 200단지 + 라운드 간 휴식.
           #    2026-07-29: 600×연속 호출이 Postgres statement timeout 을 유발했다.
           for i in $(seq 1 ${{ github.event.inputs.detail_rounds }}); do
-            hit "apt-detail round $i" "https://nuguzip.com/api/cron/apt-detail-enrich?limit=200"
+            hit "apt-detail round $i" "${SITE}/api/cron/apt-detail-enrich?limit=200"
             sleep 8
           done
 
@@ -75,9 +94,9 @@ jobs:
           for m in $(seq 1 ${{ github.event.inputs.months }}); do
             YM=$(date -u -d "-$m month" +%Y%m)
             for s in 0 1 2 3 4; do
-              hit "molit $YM slice $s" "https://nuguzip.com/api/cron/molit-transactions-ingest?yyyymm=$YM&slice=$s&size=60"
+              hit "molit $YM slice $s" "${SITE}/api/cron/molit-transactions-ingest?yyyymm=$YM&slice=$s&size=60"
             done
           done
 
           # 4) 집계 MV 재계산 — 적재가 끝난 뒤 한 번.
-          hit "market-agg refresh" "https://nuguzip.com/api/cron/market-aggregates-refresh"
+          hit "market-agg refresh" "${SITE}/api/cron/market-aggregates-refresh"

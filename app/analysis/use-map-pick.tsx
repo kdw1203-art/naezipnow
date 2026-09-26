@@ -28,7 +28,7 @@ const MapPickDrawer = dynamic(
 
 export function useMapPick(
   onPick: (c: PickedComplex) => void,
-  /** 서랍 제목에 들어갈 목적("이 단지 종합 진단" 등) */
+  /** 서랍 제목에 들어갈 목적("종합 진단" 등) */
   purpose?: string,
 ): { openMap: () => void; mapNode: ReactNode } {
   const [open, setOpen] = useState(false);

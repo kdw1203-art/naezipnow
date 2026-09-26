@@ -54,33 +54,37 @@ function normalizeInputValue(v: unknown): unknown {
 /* [993] 판단 카드 — 실데이터 컨텍스트에서 조립한다(실패해도 실행은 막지 않는다).
    headline·score 는 이제 여기서 온다: 예전엔 본문 첫 90자를 자르고, score 는 입력에서만
    읽어 **항상 null** 이었다. */
-async function buildVerdictSafe(
-  tool: AiAnalysisToolId,
-  input: Record<string, unknown>,
-  degraded: boolean,
-  reasonCode: string | null,
-): Promise<Verdict | null> {
+async function buildVerdictSafe(tool: AiAnalysisToolId, input: Record<string, unknown>): Promise<Verdict | null> {
   try {
     const complexId = typeof input.complexId === "string" ? input.complexId : null;
     const region = typeof input.region === "string" ? input.region : null;
     if (!complexId && !region) return null;
+    /* [1008 · 리뷰 A-4] "최근 6개월 거래"는 컨텍스트(ctx.complex.recent6)에 실린다 — 미리보기·허브와 같은 값 */
     const ctx = await buildLiveToolContextCached(complexId, region);
     const compare = Array.isArray(input.compare) ? input.compare.length : null;
+    const n = (v: unknown) => (typeof v === "number" ? v : null);
     return buildVerdict({
       tool,
       ctx,
       footnotes: contextFootnotes(ctx),
       input: {
-        maeMan: typeof input.maeMan === "number" ? input.maeMan : null,
-        jeonMan: typeof input.jeonMan === "number" ? input.jeonMan : null,
-        jeonseMan: typeof input.jeonseMan === "number" ? input.jeonseMan : null,
-        marketRatioPct: typeof input.marketRatioPct === "number" ? input.marketRatioPct : null,
-        horizonMonths: typeof input.horizonMonths === "number" ? input.horizonMonths : null,
+        maeMan: n(input.maeMan),
+        jeonMan: n(input.jeonMan),
+        jeonseMan: n(input.jeonseMan),
+        marketRatioPct: n(input.marketRatioPct),
+        horizonMonths: n(input.horizonMonths),
         compareCount: compare,
-        similarCount: typeof input.similarCount === "number" ? input.similarCount : null,
+        similarCount: n(input.similarCount),
+        /* [1008] 시세 예측 시나리오·대출 계산의 출발점 — "기준 가격" 칸(사용자가 넣었을 때만 온다) */
+        basePriceMan: n(input.currentPriceMan),
+        /* [1008 · 리뷰 A-3] 계약 점검 토글 · 대출 계산 — 결과 카드가 이 값을 쓴다 */
+        hasRegistrationCheck: input.hasRegistrationCheck === true,
+        hasInsurance: input.hasInsurance === true,
+        ltvPct: n(input.ltvPct),
+        mortgageRatePct: n(input.mortgageRatePct),
+        loanTermYears: n(input.loanTermYears),
+        holdingYears: n(input.holdingYears),
       },
-      degraded,
-      reasonCode,
     });
   } catch (e) {
     logger.warn("[ai/analysis] 판단 카드 조립 실패 — 본문만 반환", e);
@@ -244,28 +248,32 @@ export async function POST(req: Request) {
     }
     const requested = typeof body.modelId === "string" ? body.modelId.trim() : "";
     const modelId = requested || "internal";
-    const verdict = await buildVerdictSafe(tid, input, false, null);
+    const verdict = await buildVerdictSafe(tid, input);
     const structuredSummary = buildStructuredSummary(markdown, input, verdict);
     let runId: string | null = null;
-    let usage: { used: number; limit: number | null } | null = null;
+    /* [1008 · 리뷰 A-11] AI 해설 없는 실행(공공데이터 다시 계산)은 무료 한도를 쓰지 않는다 — 기록만 남긴다.
+       한도는 외부 AI 모델 실행만 센다(lib/ai/presets-store countRuns* · EXTERNAL_RUN_SOURCES). */
+    const usage: { used: number; limit: number | null } | null = null;
     if (email) {
-      const persisted = await persistRunOr403(email, sessionPlan, {
-        authorEmail: email,
-        presetId: presetId || null,
-        tool: tid,
-        inputSnapshot: input,
-        publicContextSnapshot: publicContext
-          ? (publicContext as unknown as Record<string, unknown>)
-          : null,
-        modelId,
-        source: "internal",
-        platform: shell,
-        structuredSummary,
-        markdown,
-      });
-      if (persisted.denied) return persisted.denied;
-      runId = persisted.runId;
-      usage = persisted.usage;
+      try {
+        const run = await appendRun({
+          authorEmail: email,
+          presetId: presetId || null,
+          tool: tid,
+          inputSnapshot: input,
+          publicContextSnapshot: publicContext
+            ? (publicContext as unknown as Record<string, unknown>)
+            : null,
+          modelId,
+          source: "internal",
+          platform: shell,
+          structuredSummary,
+          markdown,
+        });
+        runId = (run as { id?: string } | null)?.id ?? null;
+      } catch (e) {
+        logger.warn("[ai/analysis] 자체 계산 실행 기록 실패 — 결과는 그대로 돌려준다", e);
+      }
     }
     /* [AI-45] 서버 계측 통일 — 실행·완료를 도구 축으로 기록 */
     await recordFunnelEvent(req, {
@@ -299,7 +307,7 @@ export async function POST(req: Request) {
       ...input,
       _notice: "모델 설정이 없어 규칙 기반 안내를 반환했습니다.",
     });
-    const verdict = await buildVerdictSafe(tid, input, true, "MODEL_OPTION_NOT_FOUND");
+    const verdict = await buildVerdictSafe(tid, input);
     const structuredSummary = buildStructuredSummary(markdown, input, verdict);
     let runId: string | null = null;
     let usage: { used: number; limit: number | null } | null = null;
@@ -407,7 +415,8 @@ export async function POST(req: Request) {
       const guardNote = guard.ok
         ? ""
         : `\n> ⚠️ [수치 검증] 아래 서술에서 입력·공공데이터에 없는 숫자 ${guard.violations.length}개가 발견됐습니다(${guard.violations.slice(0, 4).join(", ")}${guard.violations.length > 4 ? " 외" : ""}). 해당 수치는 근거가 확인되지 않았으니 판단에 쓰지 마세요.\n`;
-      markdown = `## [AI 서술] 외부 모델 해석\n${guardNote}\n${result.text}\n\n---\n_위 서술은 외부 LLM(${result.apiModel})이 작성한 해석이며, 수치의 원천은 함께 표시된 [규칙] 계산·근거 각주입니다._`;
+      /* [1008 · 리뷰 A-18] 꼬리 문장에 내부 말("[규칙] 계산·근거 각주")·밑줄 기울임 문자를 쓰지 않는다 */
+      markdown = `## [AI 서술] 외부 모델 해석\n${guardNote}\n${result.text}\n\n---\n위 문장은 외부 AI 모델(${result.apiModel})이 쓴 해석이에요. 숫자의 출처는 화면의 결과 요약과 데이터 출처(공공데이터 자동 계산)예요.`;
     }
   }
 
@@ -419,7 +428,7 @@ export async function POST(req: Request) {
           ? "ANTHROPIC_KEY_MISSING"
           : "LLM_PROVIDER_ERROR"
       : null;
-  const verdict = await buildVerdictSafe(tid, input, source === "stub", llmReasonCode);
+  const verdict = await buildVerdictSafe(tid, input);
   const structuredSummary = buildStructuredSummary(markdown, input, verdict);
   let runId: string | null = null;
   let usage: { used: number; limit: number | null } | null = null;

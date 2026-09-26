@@ -58,6 +58,10 @@ const HTML_LIMITED_BOTS =
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  /* [1006] 로컬 검증 전용 — 운영 빌드(.next)를 남겨 둔 채 같은 저장소에서 개발 서버를
+     띄우려면 산출물 디렉터리를 갈라야 한다(`next dev` 는 .next 를 비운다 — 검증 서버가
+     죽던 원인). 배포(Vercel)·CI 는 이 변수를 두지 않으므로 기본 ".next" 그대로다. */
+  distDir: process.env.NZ_DIST_DIR?.trim() || ".next",
   // 위 주석 참고 — AI 검색 크롤러에 <head> 메타데이터를 보장한다.
   htmlLimitedBots: HTML_LIMITED_BOTS,
   /**
@@ -143,6 +147,9 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    /* [1007] 점검: 이미 86400 이상(7일)이라 그대로. formats 2종·deviceSizes 6단·imageSizes 8단도
+       기본값 범위라 변환 조합이 과하지 않다(이미지 변환은 비용 목록 상위에 없다). `logging.fetches`
+       같은 개발 로그 옵션은 켜져 있지 않다(운영 로그 소음 없음). */
     minimumCacheTTL: 60 * 60 * 24 * 7, // 7일 — 외부 이미지 재요청 비용 절감
     /* SVG 는 최적화기가 그대로 흘려보내는 포맷이고 <script> 를 품을 수 있다.
        기본값이 이미 false 지만, 나중에 누가 켤 때 이 주석을 먼저 읽게 명시해 둔다.
@@ -288,8 +295,29 @@ const nextConfig: NextConfig = {
     /* [#88] /embed/* 만 CSP 를 임베드용으로 교체. 캐치올(/:path*)이 embed 를
        포함하면 CSP 헤더가 두 벌 나가고 브라우저는 **교집합**을 강제해
        frame-ancestors 'self' 가 이긴다 — 그래서 캐치올에서 embed 를 제외한다. */
+    /* [1007] /api/* 는 캐치올에서 빼고 **CSP 없는** 같은 보안 헤더 묶음을 따로 건다.
+       미들웨어(applySecurityHeaders)도 API 에는 CSP 를 붙이지 않는다("API·정적자산에는
+       불필요하고 노이즈") — 그런데 이 파일의 캐치올이 API 응답마다 2.5KB 짜리 CSP 를 실어
+       보내고 있었다(하루 API 함수 호출 ≈13,000회 → 약 32MB/일의 헤더 바이트). API 응답은
+       전부 JSON·이미지·텍스트라(text/html 0건 — app/api 전수 확인) CSP 가 지킬 문서가 없다.
+       나머지(nosniff·Referrer-Policy·Permissions-Policy·COOP·CORP·OAC·HSTS)는 그대로다.
+
+       미들웨어가 /api 에 하던 일과의 대조(V2a 가 matcher 에서 /api 를 뺄 때의 근거):
+         · X-Content-Type-Options: nosniff  → 여기서 동일하게 실린다(아래 apiHeaders).
+         · Cache-Control: no-store (라우트가 안 실었을 때만) → 여기서 **싣지 않는다**. next.config
+           헤더는 Vercel 에서 라우트 응답 헤더를 덮으므로(G5 사고: 캐치올 no-store 가 ISR
+           s-maxage 를 덮었다) 블랭킷 no-store 는 /api/og·/api/complex/[id]/detail 등 47곳의
+           s-maxage 를 죽인다. 라우트가 헤더를 안 실은 API 는 Vercel 기본값
+           (`public, max-age=0, must-revalidate`)이라 CDN·브라우저 어느 쪽도 저장하지 않는다 —
+           no-store 와 실질 같다.
+         · Pragma/Expires 삭제 → 어느 라우트도 싣지 않아 무의미.
+         · 그 밖의 /api 미들웨어 분기(차단 크롤러 403 · /api/admin 분당 120회 · 미니앱 CORS ·
+           vercel.app→정식 도메인 308 · Supabase 세션 갱신 · 비공개 사이트 게이트)는 헤더가 아니라
+           V2a 가 라우트/라우트 그룹으로 옮길지 판단할 몫이다. */
+    const apiHeaders = base.filter((h) => h.key !== "Content-Security-Policy");
     return [
-      { source: "/((?!embed/).*)", headers: [...base, ...hsts] },
+      { source: "/((?!embed/|api/).*)", headers: [...base, ...hsts] },
+      { source: "/api/:path*", headers: [...apiHeaders, ...hsts] },
       {
         source: "/embed/:path*",
         headers: [

@@ -102,6 +102,14 @@ export default async function AdminPerfPage() {
     <main className="space-y-6 p-4 md:p-6">
       <header>
         <h1 className="text-[19px] font-bold text-ink">성능 매트릭스 — 최근 7일 p75</h1>
+        {/* [1010] 2026-09-25 이후 수집분은 **세션 단위 표본 추출**이다(리포터가 세션마다 한 번
+            주사위를 굴린다 — lib/metrics/vitals-sample.ts, 비율 VITALS_SAMPLE_RATE).
+            · 아래 "표본 N건"과 각 행의 표본 수는 **추출된 표본의 개수**다. 실제 방문 수를 알려면
+              N / VITALS_SAMPLE_RATE 로 되돌려야 한다(현재 비율이면 ×5).
+            · p75 는 보정하지 않는다 — 세션 단위 무작위 추출이라 분포는 그대로다. 지표마다 버렸다면
+              한 방문의 LCP 만 남고 CLS·INP 가 빠져 분포가 깨졌겠지만, 그렇게 하지 않는다.
+            · 그래서 "표본 3건 미만 경로는 접는다"는 문턱은 이제 실제로는 방문 ~15회에 해당한다.
+              문턱을 손대려면 비율과 함께 손댈 것. */}
         <p className="mt-1 text-xs text-text-3">
           표본 {usable.length.toLocaleString()}건 · 기준 초과 셀은 강조 · LCP 범인은 attribution 수집분부터 채워집니다
         </p>

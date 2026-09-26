@@ -19,11 +19,22 @@
  *
  * 경로 조작은 손으로 하지 않고 node:path 에 맡긴다(구분자를 아는 유일한 코드다).
  */
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = process.cwd();
+
+/* [1007] 후보는 **파일**이어야 한다. 예전엔 existsSync 만 봐서 `@/lib/log` 가 lib/log.ts 대신
+   같은 이름의 **디렉터리**(lib/log/ — sample.ts 가 생기며 처음 등장)에 걸려 ESM 이
+   "Directory import is not supported" 로 죽었다. TypeScript 와 같은 순서(파일 → 확장자 → index)다. */
+function isFile(p) {
+  try {
+    return statSync(p).isFile();
+  } catch {
+    return false;
+  }
+}
 
 function firstExisting(baseNoExt) {
   for (const cand of [
@@ -32,7 +43,7 @@ function firstExisting(baseNoExt) {
     `${baseNoExt}.tsx`,
     path.join(baseNoExt, "index.ts"),
   ]) {
-    if (existsSync(cand)) return cand;
+    if (existsSync(cand) && isFile(cand)) return cand;
   }
   return null;
 }

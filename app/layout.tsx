@@ -159,7 +159,10 @@ export default function RootLayout({
             첫 페인트 뒤에 와도 되는 자원이다. /fonts/ 는 next.config 가 immutable
             1년 캐시를 주고 서비스워커가 cache-first 로 든다([968 · 43]). */}
         <link rel="preload" as="style" href={PRETENDARD_CSS} />
-        <link id="pretendard-font" rel="stylesheet" href={PRETENDARD_CSS} media="print" />
+        {/* [1009] suppressHydrationWarning — 아래 인라인 스크립트가 하이드레이션 **전에** media 를 all 로
+            바꾸는 것이 이 패턴의 목적이라 서버(print)·브라우저(all) 값이 다른 게 정상이다. 경고가 모든
+            화면의 개발 오버레이에 "1 Issue" 로 떠 진짜 하이드레이션 오류를 가렸다(1009 실측). */}
+        <link id="pretendard-font" rel="stylesheet" href={PRETENDARD_CSS} media="print" suppressHydrationWarning />
         <script
           dangerouslySetInnerHTML={{
             __html:

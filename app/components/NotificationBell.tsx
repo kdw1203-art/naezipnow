@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
 import { NOTIFICATIONS_READ_EVENT, readNotificationsReadDetail } from "@/lib/notifications/read-event";
 import { useShellActive } from "@/lib/client/viewport-shell";
+import { readAuthedHint } from "@/lib/auth/authed-hint";
 
 /** 탭 복귀 재조회 최소 간격 — 탭을 오갈 때마다 서버를 두드리지 않는다 */
 const REFETCH_MIN_INTERVAL_MS = 30_000;
@@ -23,6 +24,11 @@ export function NotificationBell({ variant }: { variant: "desktop" | "mobile" })
   const active = useShellActive(variant);
 
   const refetch = useCallback((force: boolean) => {
+    /* [1007 · V2a-2] 로그인 힌트 쿠키(nz_authed)가 없으면 부르지 않는다 — 비회원·봇에게 서버는
+       어차피 0/401 이다. 실측 /api/notifications/unread-count 982회/일, 사람 페이지뷰 ~17. 힌트는
+       미들웨어가 세션 쿠키 유무로 심으므로 로그인 직후 리다이렉트된 첫 화면부터 조회한다.
+       탭 복귀·포커스 재조회도 같은 관문을 지난다(로그아웃 뒤 다른 탭이 두드리지 않게). */
+    if (!readAuthedHint()) return;
     const now = Date.now();
     if (!force && now - lastFetchAtRef.current < REFETCH_MIN_INTERVAL_MS) return;
     lastFetchAtRef.current = now;

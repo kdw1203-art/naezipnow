@@ -163,16 +163,26 @@ export async function getSupplyAll(): Promise<SupplyAllResult> {
   const sb = getReadOnlySupabase();
   if (!sb) return { ok: false, items: [], truncated: false };
   try {
-    const { data, error } = await sb
-      .from("apartment_supply")
-      .select("move_in_ym, region, biz_type, address, apt_name, households")
-      .order("move_in_ym", { ascending: true })
-      .limit(SUPPLY_FETCH_CAP);
-    if (error || !Array.isArray(data)) {
-      logger.error("[getSupplyAll]", error ?? "invalid data");
-      return { ok: false, items: [], truncated: false };
+    /* [1009 · 리뷰 H] **나눠 읽는다.** PostgREST 응답 상한이 1,000행이라 `.limit(4000)` 한 번은 1,338행 중
+       1,000행만 받았고, truncated 판정(items ≥ 4000)도 거짓이라 /supply 가 "단지 1,000곳"을 사실처럼 보였다.
+       정렬 키(move_in_ym)만으로는 쪽 경계에서 같은 달 행이 겹치거나 빠질 수 있어 id 로 한 번 더 고정한다. */
+    const PAGE = 1000;
+    const data: Record<string, unknown>[] = [];
+    for (let from = 0; from < SUPPLY_FETCH_CAP; from += PAGE) {
+      const { data: page, error } = await sb
+        .from("apartment_supply")
+        .select("move_in_ym, region, biz_type, address, apt_name, households")
+        .order("move_in_ym", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, Math.min(from + PAGE, SUPPLY_FETCH_CAP) - 1);
+      if (error || !Array.isArray(page)) {
+        logger.error("[getSupplyAll]", error ?? "invalid data");
+        return { ok: false, items: [], truncated: false };
+      }
+      data.push(...(page as Record<string, unknown>[]));
+      if (page.length < PAGE) break;
     }
-    const items = (data as Record<string, unknown>[]).map((r) => ({
+    const items = data.map((r) => ({
       moveInYm: String(r.move_in_ym ?? ""),
       region: String(r.region ?? ""),
       bizType: r.biz_type ? String(r.biz_type) : null,
@@ -230,6 +240,12 @@ export async function getSupplyForAreaStrict(
   signal?: AbortSignal,
   /** [970 · B-02] 상위 시/도 — 없으면 예전처럼 자치구명만으로 찾는다(호출측 호환) */
   city?: string | null,
+  /**
+   * [1008 · 리뷰 A-2] 이 달(yyyymm) 이후 입주분만 — 주면 `move_in_ym >= fromYm`.
+   * 오름차순 + limit 에 하한이 없으면 **가장 오래된** 행부터 limit 개를 읽어, 부르는 쪽이 미래분만
+   * 거르면 과소 집계가 된다(양주: 실제 23,474세대 → AI 화면 10,797). 기존 호출(단지 허브 등)은 안 준다.
+   */
+  fromYm?: string | null,
 ): Promise<SupplyItem[]> {
   const name = areaName.trim();
   if (!name) return [];
@@ -238,9 +254,9 @@ export async function getSupplyForAreaStrict(
   let q = sb
     .from("apartment_supply")
     .select("move_in_ym, region, biz_type, address, apt_name, households")
-    .ilike("address", `%${name}%`)
-    .order("move_in_ym", { ascending: true })
-    .limit(limit);
+    .ilike("address", `%${name}%`);
+  if (fromYm && /^\d{6}$/.test(fromYm)) q = q.gte("move_in_ym", fromYm);
+  q = q.order("move_in_ym", { ascending: true }).limit(limit);
   /* [970 · B-02] "중구"만으로 찾으면 서울·인천·대구·울산·부산·대전 중구가 한 화면에
      섞였다(대구 중구 페이지에 울산 입주물량). 시/도를 알면 그 시/도 행으로 좁힌다. */
   const cityKey = city?.trim();

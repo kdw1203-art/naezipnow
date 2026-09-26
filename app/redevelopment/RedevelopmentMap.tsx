@@ -401,7 +401,7 @@ export function RedevelopmentMap({
               role="tab"
               aria-selected={active}
               onClick={() => setView(v.key)}
-              className={`press flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-bold ${
+              className={`press flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-bold ${
                 active ? "bg-primary text-white" : "text-text-2"
               }`}
               style={active ? { color: "#fff" } : undefined}

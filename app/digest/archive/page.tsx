@@ -32,7 +32,9 @@ import {
    막아서는 안 된다. 그래서 20초에 접고, 못 읽었으면 못 읽었다고 적는다.
    ============================================================ */
 
-export const revalidate = 3600;
+/* [1010] 크롤러 재방문(≈2.2일)보다 짧은 TTL 은 크롤 1회 = 재렌더 1회다. 이 화면을 바꾸는
+   적재(SOURCE_MAP)가 이제 경로를 직접 비우므로 시간 TTL 은 안전망으로만 둔다. */
+export const revalidate = 86_400;
 
 /** loadFailed: 조회가 실패했거나 상한 안에 끝나지 않았다. "실을 주가 없다"와 다른 사건이다. */
 type IndexData = { weeks: DigestWeekSummary[]; loadFailed: boolean };

@@ -10,6 +10,9 @@ import { listAlertSubscriptions } from "@/lib/alerts/subscriptions";
 import { getHistory } from "@/lib/points/ledger";
 import { loadBillingHistory } from "@/lib/subscriptions/billing-history";
 import { getPrefs } from "@/lib/notification-prefs/store-db";
+import { getUiPrefs } from "@/lib/me/preferences-store";
+import { getJourneyState } from "@/lib/journey/store";
+import { isJourneyEmpty } from "@/lib/journey/state";
 import {
   EXPORT_LEDGER_LIMIT,
   EXPORT_PAYMENTS_LIMIT,
@@ -26,6 +29,9 @@ import {
  *   본문의 `errors` 에 이름이 남는다 — 빈 배열로 위장하지 않는다.
  * - 본인 행만. 서비스 클라이언트로 읽되 모든 조회가 세션 이메일로 제한되고, shape.ts 가
  *   이메일이 다른 행을 한 번 더 거른다. 빌링키·고객키 같은 비밀값은 입력 타입에 없다.
+ * - [1008 · J] user_preferences 의 표시·기록 기본값(ui_prefs)·내 집 마련 여정(journey_state)도 싣는다 —
+ *   둘 다 조회 실패를 던지는 저장소라(preferences-store getUiPrefs · journey/store getJourneyState) "못 읽음"이
+ *   errors 에 남는다.
  */
 
 export const runtime = "nodejs";
@@ -42,7 +48,7 @@ export async function GET() {
   const rl = rateLimit(`me-export:${key}`, { limit: 3, windowMs: 10 * 60_000 });
   if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
 
-  const [profile, notes, bookmarks, watchlist, alerts, points, payments, prefs] =
+  const [profile, notes, bookmarks, watchlist, alerts, points, payments, prefs, userPrefs] =
     await Promise.allSettled([
       loadMeProfile(email, {
         name: session.user.name,
@@ -59,6 +65,10 @@ export async function GET() {
         return h.payments;
       }),
       getPrefs(email),
+      Promise.all([getUiPrefs(email), getJourneyState(email)]).then(([uiPrefs, journey]) => ({
+        uiPrefs,
+        journey: isJourneyEmpty(journey) ? null : journey,
+      })),
     ]);
 
   const payload = buildExportPayload({
@@ -72,6 +82,7 @@ export async function GET() {
     points: settledToSource(points),
     payments: settledToSource(payments),
     notificationPrefs: settledToSource(prefs),
+    preferences: settledToSource(userPrefs),
   });
 
   if (payload.errors.length > 0) {

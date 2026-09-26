@@ -1,57 +1,40 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { pushRecentSearch, readRecentSearches } from "@/lib/search/recent-searches";
 import { useSettledSearchQuery } from "@/lib/search/settle";
 import { useShellActive } from "@/lib/client/viewport-shell";
+import { complexItem, flattenUnified, type FlatItem, type UnifiedJson } from "@/app/search/unified-suggest";
+import { QUERY_TOO_LONG, SEARCH_QUERY_MAX, badRequestNotice } from "@/lib/search/complex-preview";
 
 /* P2-14: 데스크탑 GNB 검색 — input + 통합 자동완성.
    /api/search/unified?q= (대기 규칙은 lib/search/settle) · 단지·매물·노트·뉴스 그룹 제안.
    항목 클릭 → 각 상세 · Enter → /search?q=… · Esc 닫기. 스타일은 기존 글래스 인풋 유지.
    [966] 콤보박스 패턴(/search 와 동일) — ↑↓ 순환·Enter 로 활성 항목 열기·Esc 는 목록만
    닫고 포커스는 남긴다(한 번 더 누르면 인풋을 떠난다). 포커스는 늘 인풋에 있고
-   활성 항목은 aria-activedescendant 로만 가리킨다 — 계속 타이핑해 좁힐 수 있게. */
+   활성 항목은 aria-activedescendant 로만 가리킨다 — 계속 타이핑해 좁힐 수 있게.
+   [1008 · S] 드롭다운(최근 검색·제안·결과 없음)은 app/search/UnifiedSuggestPanel 로 옮겨 next/dynamic 으로
+   싣는다 — 이 파일은 전 페이지 첫 묶음에 실리고 /complex/[id] 는 479/480KB 다. 입력창 포커스 때 미리 받는다.
+   단지 줄은 검색어 강조·읍면동·세대수·6개월 거래, 0건이면 띄어 쓰는 요령·지도에서 찾기·비슷한 이름. */
 
 const LISTBOX_ID = "hs-listbox";
 const optionId = (i: number) => `hs-opt-${i}`;
-
-interface UnifiedResults {
-  complexes: { id: string; name: string; region: string }[];
-  listings: { id: string; title: string; price: string }[];
-  notes: { id: string; title: string }[];
-  news: { id: string; title: string; source: string }[];
-}
-
-type Kind = "complex" | "listing" | "note" | "news";
-
-interface FlatItem {
-  key: string;
-  label: string;
-  title: string;
-  meta: string;
-  href: string;
-}
-
-const PER_GROUP = 3;
-
-function flatten(r: UnifiedResults): FlatItem[] {
-  const out: FlatItem[] = [];
-  const push = (kind: Kind, label: string, id: string, title: string, meta: string, base: string) =>
-    out.push({ key: `${kind}-${id}`, label, title, meta, href: `${base}/${encodeURIComponent(id)}` });
-  r.complexes.slice(0, PER_GROUP).forEach((c) => push("complex", "단지", c.id, c.name, c.region, "/complex"));
-  r.listings.slice(0, PER_GROUP).forEach((l) => push("listing", "매물", l.id, l.title, l.price, "/listings"));
-  r.notes.slice(0, PER_GROUP).forEach((n) => push("note", "노트", n.id, n.title, "", "/notes"));
-  r.news.slice(0, PER_GROUP).forEach((n) => push("news", "뉴스", n.id, n.title, n.source, "/town/news"));
-  return out;
-}
+const loadPanel = () => import("@/app/search/UnifiedSuggestPanel");
+const Panel = dynamic(loadPanel, { ssr: false });
 
 export function HeaderSearch() {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [items, setItems] = useState<FlatItem[]>([]);
+  /* [1008 · S] 전 그룹 0건일 때 오는 "비슷한 이름" 단지 · 결과를 받아 온 검색어(강조·없음 문구) */
+  const [similar, setSimilar] = useState<FlatItem[]>([]);
+  const [searched, setSearched] = useState("");
   /** 조회에 실패한 그룹 — 비어 있지 않으면 "결과 없음" 문구를 쓰지 않는다. */
-  const [failed, setFailed] = useState<string[]>([]);
+  const [failed, setFailed] = useState(false);
+  /** [1008 · 리뷰 B] 장애도 결과 없음도 아닌 안내(검색어 80자 초과) */
+  const [notice, setNotice] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   /* 항목 12 — 빈 입력 포커스 시 보여줄 최근 검색어 (/search 와 같은 저장소) */
   const [recents, setRecents] = useState<string[]>([]);
@@ -69,12 +52,13 @@ export function HeaderSearch() {
 
   const hasQuery = q.trim().length > 0;
   const showRecents = open && !hasQuery && recents.length > 0;
-  const showResults = open && hasQuery;
-  /* 한 번에 한 목록만 보이므로 옵션 수도 하나 — 최근 검색어 또는 제안 */
-  const optionCount = showRecents ? recents.length : showResults ? items.length : 0;
+  const showResults = open && hasQuery && !!searched;
+  /* 한 번에 한 목록만 보이므로 옵션도 하나 — 최근 검색어 · 제안 · (0건이면) 비슷한 이름 */
+  const options: FlatItem[] = notice ? [] : items.length ? items : similar;
+  const optionCount = showRecents ? recents.length : showResults ? options.length : 0;
 
   /* 목록이 바뀌면 가리키던 자리는 의미를 잃는다 */
-  useEffect(() => setActive(-1), [items, recents, open, hasQuery]);
+  useEffect(() => setActive(-1), [items, similar, recents, open, hasQuery]);
 
   /* 항목 12 — `/` 단축키로 검색 진입. 입력 중(폼 요소·contentEditable)에는
      끼어들지 않는다. 헤더 인풋이 화면에 없는 뷰포트(lg 미만)에서는 /search 로. */
@@ -112,11 +96,27 @@ export function HeaderSearch() {
     const query = settledQuery;
     if (!query) {
       setItems([]);
-      setFailed([]);
+      setSimilar([]);
+      setSearched("");
+      setFailed(false);
+      setNotice(null);
       setOpen(false);
       return;
     }
     abortRef.current?.abort();
+    /* [1008 · 리뷰 B] 80자 넘는 입력은 보내지 않는다 — 서버가 400 을 내고, 예전 화면은 그걸 장애로 적었다 */
+    const showNotice = (n: string) => {
+      setItems([]);
+      setSimilar([]);
+      setFailed(false);
+      setNotice(n);
+      setSearched(query);
+      setOpen(true);
+    };
+    if (query.trim().length > SEARCH_QUERY_MAX) {
+      showNotice(QUERY_TOO_LONG);
+      return;
+    }
     const ac = new AbortController();
     abortRef.current = ac;
     void (async () => {
@@ -124,24 +124,27 @@ export function HeaderSearch() {
         const res = await fetch(`/api/search/unified?q=${encodeURIComponent(query)}`, {
           signal: ac.signal,
         });
-        if (!res.ok) throw new Error("unified failed");
-        const json = (await res.json()) as Partial<UnifiedResults> & { failed?: string[] };
-        const flat = flatten({
-          complexes: json.complexes ?? [],
-          listings: json.listings ?? [],
-          notes: json.notes ?? [],
-          news: json.news ?? [],
-        });
-        setItems(flat);
-        /* 조회가 실패한 그룹이 있으면 "일치하는 결과가 없어요"를 쓰지 않는다.
-           드롭다운은 짧아야 하니 문장 하나로만 사실을 바꿔 적는다. */
-        setFailed(Array.isArray(json.failed) ? json.failed : []);
+        if (!res.ok) {
+          const n = await badRequestNotice(res);
+          if (n && !ac.signal.aborted) return showNotice(n);
+          throw new Error("unified failed");
+        }
+        const json = (await res.json()) as UnifiedJson;
+        setItems(flattenUnified(json));
+        setSimilar((json.suggestions ?? []).map(complexItem));
+        /* 조회가 실패한 그룹이 있으면 "일치하는 결과가 없어요"를 쓰지 않는다. */
+        setFailed(Array.isArray(json.failed) && json.failed.length > 0);
+        setNotice(null);
+        setSearched(query);
         setOpen(true);
       } catch {
         if (!ac.signal.aborted) {
           setItems([]);
-          setFailed(["단지", "매물", "임장노트", "뉴스"]);
-          setOpen(false);
+          setSimilar([]);
+          setFailed(true);
+          setNotice(null);
+          setSearched(query);
+          setOpen(true);
         }
       }
     })();
@@ -178,16 +181,17 @@ export function HeaderSearch() {
     router.push(`/search?q=${encodeURIComponent(k)}`);
   }
 
-  function pick(it: FlatItem) {
+  /** 제안 클릭(링크가 이동한다) — 패널을 닫고 입력을 비운다 */
+  function picked() {
     setOpen(false);
     setQ("");
-    router.push(it.href);
   }
 
   /** 포커스·↓ 로 목록을 연다 — 검색어가 있으면 제안, 비어 있으면 최근 검색어 */
   function openForCurrent() {
+    void loadPanel();
     if (hasQuery) {
-      if (items.length > 0) setOpen(true);
+      if (searched) setOpen(true);
       return;
     }
     // 항목 12 — 빈 입력이면 최근 검색어를 보여준다 (없으면 열지 않음)
@@ -205,9 +209,10 @@ export function HeaderSearch() {
       pickRecent(k);
       return true;
     }
-    const it = items[active];
+    const it = options[active];
     if (!it) return false;
-    pick(it);
+    picked();
+    router.push(it.href);
     return true;
   }
 
@@ -257,11 +262,6 @@ export function HeaderSearch() {
     }
   }
 
-  const optionClass = (i: number) =>
-    `flex w-full items-center gap-2 rounded-[10px] px-3 py-2 text-left transition-colors hover:bg-[rgba(29,79,216,.08)] ${
-      active === i ? "bg-primary-soft" : ""
-    }`;
-
   return (
     <div ref={boxRef} className="relative hidden lg:block">
       {/* 폭 실측(2026-08-16 캡처): w-[200px]에서 입력부 가용폭이 ~125px 인데
@@ -278,7 +278,7 @@ export function HeaderSearch() {
           onFocus={openForCurrent}
           onKeyDown={onInputKeyDown}
           role="combobox"
-          aria-expanded={optionCount > 0}
+          aria-expanded={showRecents || showResults}
           aria-controls={LISTBOX_ID}
           aria-activedescendant={active >= 0 ? optionId(active) : undefined}
           aria-autocomplete="list"
@@ -296,92 +296,25 @@ export function HeaderSearch() {
         </kbd>
       </div>
 
-      {/* 항목 12 — 빈 입력 포커스: 최근 검색어 드롭다운
-          [966] 옵션은 tabIndex=-1 — 포커스는 인풋에 두고 activedescendant 로 가리킨다.
-          마우스 올림도 같은 활성 상태를 쓴다(강조가 두 갈래로 갈리지 않게). */}
-      {/* [970 · A-02] 두 드롭다운의 인라인 흰 배경을 걷었다 — 다크에서 흰 판 위 밝은 글자.
-          .popover-surface 는 surface 토큰 92%(양 테마, globals.css). */}
-      {showRecents && (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-[300px]">
-          <div className="glass-strong popover-surface overflow-hidden rounded-2xl p-1.5 [animation:riseIn_180ms_var(--ease-out)_backwards]">
-            <div id="hs-recents-label" className="px-3 pb-1 pt-1.5 text-[10px] font-extrabold text-text-3">
-              최근 검색
-            </div>
-            <div role="listbox" id={LISTBOX_ID} aria-labelledby="hs-recents-label">
-              {recents.map((k, i) => (
-                <button
-                  key={k}
-                  type="button"
-                  role="option"
-                  id={optionId(i)}
-                  aria-selected={active === i}
-                  tabIndex={-1}
-                  onMouseEnter={() => setActive(i)}
-                  onClick={() => pickRecent(k)}
-                  className={optionClass(i)}
-                >
-                  <span aria-hidden className="shrink-0 text-[12px] text-text-3">
-                    ⌕
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-text-1">
-                    {k}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showResults && (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-[300px]">
-          <div className="glass-strong popover-surface overflow-hidden rounded-2xl p-1.5 [animation:riseIn_180ms_var(--ease-out)_backwards]">
-            {items.length > 0 ? (
-              <div role="listbox" id={LISTBOX_ID} aria-label="검색 제안">
-                {items.map((it, i) => (
-                  <button
-                    key={it.key}
-                    type="button"
-                    role="option"
-                    id={optionId(i)}
-                    aria-selected={active === i}
-                    tabIndex={-1}
-                    onMouseEnter={() => setActive(i)}
-                    onClick={() => pick(it)}
-                    className={optionClass(i)}
-                  >
-                    <span className="shrink-0 rounded bg-primary-soft px-1.5 py-px text-[10px] font-extrabold text-primary">
-                      {it.label}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-text-1">
-                      {it.title}
-                    </span>
-                    {it.meta && (
-                      <span className="max-w-[84px] shrink-0 truncate text-[12px] text-text-3">
-                        {it.meta}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            ) : failed.length > 0 ? (
-              <div className="px-3 py-3 text-center text-[12px] text-text-3">
-                지금은 검색이 되지 않아요 (결과 없음이 아니에요)
-              </div>
-            ) : (
-              <div className="px-3 py-3 text-center text-[12px] text-text-3">
-                일치하는 결과가 없어요
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={submit}
-              className="mt-0.5 flex w-full items-center rounded-[10px] border-t border-divider px-3 py-2 text-left text-[12px] font-bold text-primary transition-colors hover:bg-[rgba(29,79,216,.08)]"
-            >
-              “{q.trim()}” 통합 검색 ›
-            </button>
-          </div>
-        </div>
+      {/* [970 · A-02] 드롭다운 배경은 .popover-surface(surface 토큰 92%, 양 테마) — 패널 파일 참고 */}
+      {(showRecents || showResults) && (
+        <Panel
+          variant="header"
+          listId={LISTBOX_ID}
+          optionId={optionId}
+          query={searched}
+          recents={showRecents ? recents : undefined}
+          items={items}
+          similar={similar}
+          active={active}
+          failed={failed}
+          notice={notice}
+          onHover={setActive}
+          onPick={picked}
+          onPickRecent={pickRecent}
+          onSubmit={submit}
+          submitLabel={`“${q.trim()}” 통합 검색 ›`}
+        />
       )}
     </div>
   );

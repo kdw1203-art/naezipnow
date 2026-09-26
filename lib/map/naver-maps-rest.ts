@@ -268,7 +268,11 @@ export async function naverGeocode(
   params.set("count", String(Math.min(10, Math.max(1, limit))));
 
   const { url, headers } = buildRequest(GEOCODE_PATH, params);
-  const res = await fetch(url, { headers, next: { revalidate: 3600 } });
+  /* [1010] 1시간 → 7일. 주소↔좌표는 바뀌지 않는다(도로명 개편은 연 단위).
+     이 값이 낮으면 **이 fetch 를 실행하는 라우트의 revalidate 까지 같이 끌어내린다** —
+     Next 는 세그먼트 값과 fetch revalidate 중 작은 쪽을 쓰기 때문이다. 실제로 이 3600 이
+     /complex/[id] 의 7일 TTL 을 1시간으로 누르고 있었다(하루 11,523 렌더의 진짜 원인 중 하나). */
+  const res = await fetch(url, { headers, next: { revalidate: 604_800 } });
   if (!res.ok) {
     const mode = isSignatureMode() ? "iam-signature" : "api-key";
     throw new Error(`Geocoding failed (${res.status}, auth=${mode})`);
@@ -314,7 +318,11 @@ export async function naverReverseGeocode(
   params.set("orders", "roadaddr,addr");
 
   const { url, headers } = buildRequest(REVERSE_GEOCODE_PATH, params);
-  const res = await fetch(url, { headers, next: { revalidate: 3600 } });
+  /* [1010] 1시간 → 7일. 주소↔좌표는 바뀌지 않는다(도로명 개편은 연 단위).
+     이 값이 낮으면 **이 fetch 를 실행하는 라우트의 revalidate 까지 같이 끌어내린다** —
+     Next 는 세그먼트 값과 fetch revalidate 중 작은 쪽을 쓰기 때문이다. 실제로 이 3600 이
+     /complex/[id] 의 7일 TTL 을 1시간으로 누르고 있었다(하루 11,523 렌더의 진짜 원인 중 하나). */
+  const res = await fetch(url, { headers, next: { revalidate: 604_800 } });
   if (!res.ok) {
     throw new Error(`Reverse geocoding failed (${res.status})`);
   }

@@ -4,6 +4,7 @@ import { trySendViaResend } from "@/lib/notifications/resend-send";
 import { pushInboxNotification } from "@/lib/notifications/inbox";
 import { emailLayout } from "@/lib/email/templates";
 import { SITE_URL } from "@/lib/news-seo";
+import { postHref } from "@/lib/town/post-href";
 
 /**
  * 글 작성자에게 댓글 알림 (notifyComments + notifyEmail).
@@ -30,11 +31,14 @@ export async function notifyPostAuthorOfNewComment(input: {
   /* [B23] 알림이 **그 글로** 가야 한다.
      예전에는 메일도 인앱 알림도 목적지가 `/town` 이었다 — 댓글 알림을 받고
      피드로 떨어지면 자기 글을 눈으로 찾아야 한다(글이 밀렸으면 못 찾는다).
-     글 상세는 /town/news/[id] 다. 댓글 자리까지 앵커로 데려간다.
+     댓글 자리까지 앵커로 데려간다.
      base 도 AUTH_URL 미설정 시 http://localhost:3000 이 메일에 그대로 박혔다 —
-     운영 도메인 상수를 최종 폴백으로 둔다. */
+     운영 도메인 상수를 최종 폴백으로 둔다.
+     [1007 · P2] 글 상세는 사람 글이면 /town/story/[id], 기사면 /town/news/[id] 다
+     (lib/town/post-href). 댓글이 달리는 글은 사실상 전부 사람 글이라 예전 주소는
+     메일마다 리다이렉트 한 홉을 더 타고 있었다. */
   const base = process.env.AUTH_URL?.trim() || SITE_URL;
-  const postPath = `/town/news/${post.id}`;
+  const postPath = postHref(post);
   const postUrl = `${base}${postPath}#comments`;
   /* 고도화 49 — 알림 메일도 표준 레이아웃(브랜드 헤더 + 수신거부·사업자 푸터) */
   const html = emailLayout(`

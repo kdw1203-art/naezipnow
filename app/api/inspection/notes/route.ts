@@ -1,5 +1,13 @@
 import { NextResponse, after } from "next/server";
 import { revalidatePath } from "next/cache";
+import { invalidateHomeData, invalidateTownFeed, invalidateRegionCodes } from "@/lib/cache/invalidate";
+import { invalidateComplexById } from "@/lib/complex/complex-invalidate";
+import { catalogIdsForNoteRegion } from "@/lib/region/changed-region-paths";
+import {
+  invalidateNoteTemplateRoutes,
+  scheduleProfileInvalidation,
+  invalidatePublicNoteRoutes,
+} from "@/lib/town/invalidate-town";
 import { auth } from "@/auth";
 import {
   countNotesByRegionToken,
@@ -29,6 +37,14 @@ import { dbUnavailable } from "@/lib/api/db-unavailable";
 /* [996 · 4] metadata.decision(살까·보류·패스·다시 보기 + 근거 ≤3줄) — 모양이 아니면 키를
    버린다. jsonb 라 무엇이든 들어가는데, 상세 판단 카드·목록 배지가 이 키를 그대로 읽는다:
    깨진 값을 저장하면 화면이 깨진 값을 사실처럼 그린다. 정상 값은 정리본(공백·상한)으로 바꾼다. */
+/* [1010] 노트 메타의 단지 id — 단지 허브(7일 ISR) 무효화 키. 없으면 null(이름만 있는 옛 노트는
+   허브가 apt_name 이름 매칭으로 줍지만, 그 매칭으로는 어느 단지인지 여기서 단정할 수 없다). */
+function noteComplexId(meta: unknown): string | null {
+  if (!meta || typeof meta !== "object") return null;
+  const v = (meta as Record<string, unknown>).complexId;
+  return typeof v === "string" && v.trim() ? v.trim() : null;
+}
+
 function sanitizeDecisionMeta(meta: unknown): Record<string, unknown> | undefined {
   if (!meta || typeof meta !== "object") return undefined;
   const out = { ...(meta as Record<string, unknown>) };
@@ -258,9 +274,30 @@ export async function POST(req: Request) {
     // 공개 노트로 생성되면 공개 피드를 즉시 갱신(ISR 대기 없이 바로 반영)
     if (isPublic) {
       revalidatePath("/notes");
-      revalidatePath("/");
+      /* [1007] 홈(/) ISR 만 비우면 홈 데이터 스냅샷(home-data-v1, 600초)의 노트 총계는 그대로였다 —
+         태그까지 비운다. 동네 피드(/town, 600초)·동네 홈(/town/[region], 6시간)에도 공개 노트가
+         실리므로 함께 비운다(예전엔 120초·600초 TTL 이 대신했다). */
+      invalidateHomeData();
+      invalidateTownFeed();
+      /* [1010] 지역 허브(/region/[id])에도 "이 지역 공개 임장노트" 가 실린다. 그 라우트의
+         TTL 을 6시간 → 7일로 늘렸으므로, 사람이 쓴 것이 즉시 보이려면(1010 브리프 원칙 3)
+         여기서 비워야 한다. 어느 지역 페이지에 실리는지는 화면과 **같은 판정**
+         (noteMatchesRegion)으로 고른다 — 다른 규칙을 쓰면 안 비워지는 페이지가 생긴다. */
+      invalidateRegionCodes(catalogIdsForNoteRegion(region));
       /* [969 · 20] 다른 노트 상세의 "관련 노트" 풀(public-notes)에 새 공개 노트가 바로 들어가게 */
       invalidateNoteCache(note.id, "content");
+      /* [1010] 단지 허브(7일 ISR)는 이 단지의 공개 임장노트 최신 6건과 개수를 서버에서 그린다
+         (app/complex/[id]/section-loaders.ts loadHubInspectionNotes — metadata.complexId 가 정규 키).
+         비우지 않으면 방금 공개한 노트가 최대 7일 동안 안 보인다. */
+      invalidateComplexById(noteComplexId(body.metadata));
+      /* [1010 · 동네축] 공개 노트가 실리는 나머지 화면 — /notes(위에서 이미 비웠지만 목록에
+         함께 두어 빠뜨림을 막는다) · /notes/best · /notes/market · /town/library ·
+         지역 임장 가이드(/imjang/{slug}). 이 라우트들의 TTL 을 하루~7일로 늘렸기 때문에,
+         비우지 않으면 방금 공개한 노트가 그만큼 안 보인다(브리프 원칙 3). */
+      invalidatePublicNoteRoutes([region]);
+      /* [1010 · 동네축] 공개 프로필(/u/{handle}, TTL 1일)의 공개 노트 그리드. 주소를 찾는
+         조회가 한 번 들어 응답을 잡지 않도록 fire-and-forget(실패는 헬퍼가 삼킨다). */
+      scheduleProfileInvalidation(session.user.email);
       // 공개 상태로 최초 생성 시에도 100P 적립.
       // refId=note.id 멱등 — 이후 PATCH(비공개→공개)에서 같은 refId 로 중복 지급되지 않음.
       await awardPoints(session.user.email, "note_public", note.id);
@@ -293,6 +330,9 @@ export async function POST(req: Request) {
         const tpl = await getTemplate(tplId);
         if (!tpl || tpl.isOfficial) return;
         await incrementUseCount(tplId);
+        /* [1010 · 동네축] 템플릿 목록 카드에 "N회 사용"(use_count)이 실린다 — /notes/templates
+           TTL 을 1시간 → 1일로 늘렸으므로 올린 수가 그대로 굳지 않게 여기서 비운다. */
+        invalidateNoteTemplateRoutes(tplId);
         if (tpl.authorEmail && tpl.authorEmail !== session.user!.email) {
           await awardPoints(tpl.authorEmail, "template_used", `${tplId}:${note.id}`);
         }

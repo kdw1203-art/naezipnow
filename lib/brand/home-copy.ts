@@ -58,16 +58,32 @@ export const HOME_HERO_SUBLINE_SHORT =
   "시세는 누구나 봅니다. 현장은 가 본 사람만 압니다 — 실거래 옆에 현장 기록을 남기는 임장노트";
 
 export const HOME_AI_GATEWAY_TITLE = "임장노트 AI 정리";
-/** [950] 예시를 두 칸(입력→정리)으로 보여 준다 — 수치 창작 없음, 형식 안내 */
+/** [950] 예시로 결과의 형태를 보여 준다 — 수치 창작 없음, 형식 안내([1008] 두 칸 → 한 줄 HOME_AI_EXAMPLE_LINE) */
 export const HOME_AI_GATEWAY_LEAD =
   "현장에서 적은 짧은 메모를 저장하면 AI(또는 규칙 초안)가 장단점·리스크·확인 항목으로 정리합니다. 로그인은 저장할 때만.";
-export const HOME_AI_EXAMPLE_INPUT = "“복도 결로 흔적, 밤 주차 빡빡, 초등학교 도보 7분”";
-export const HOME_AI_EXAMPLE_OUTPUT = [
-  "리스크 2건: 결로(관리 상태 확인) · 야간 주차난",
-  "장점 1건: 초등학교 도보권",
-  "다음 방문 때 확인: 세대당 주차대수 · 결로 부위 사진",
-] as const;
 /* 예시는 지표가 아니라 형태를 보여 준다(수치 창작 아님) — "AI"라는 단어만으로는
-   무엇이 좋아지는지 전달되지 않는다는 홈 비판 대응. */
+   무엇이 좋아지는지 전달되지 않는다는 홈 비판 대응.
+   [1008 · J] 홈에서는 두 칸(입력 → 정리, 옛 HOME_AI_EXAMPLE_INPUT/OUTPUT) 대신 이 한 줄로 줄였다 — 검색 아래
+   "어디서부터 시작할까요?" 입구를 넣은 만큼 AI 패널을 덜어 첫 화면 높이를 지킨다(app/page.tsx 주석).
+   두 칸 상수는 쓰는 곳이 없어져 지웠다([958] 원칙 — 죽은 카피는 표류한다). */
+/* [1008 · J 리뷰 C] 입력에 장점 거리(초등학교 도보 7분)가 없는데 "장점 1건"이라고 적혀 있었다 — 옛 두 칸 예시의
+   입력(HOME_AI_EXAMPLE_INPUT)을 그대로 되살렸다. 결과(리스크 2건: 결로·야간 주차 / 장점 1건: 초등학교 도보권)가
+   입력에서 그대로 나온다. 줄 높이는 그대로(1280·768·390·360 실측 — 글이 늘어도 줄 수가 같다). */
+export const HOME_AI_EXAMPLE_LINE =
+  "예: “복도 결로 흔적, 밤 주차 빡빡, 초등학교 도보 7분” → 리스크 2건 · 장점 1건 · 다음 방문 때 확인할 것";
 /* [958] HOME_AI_GATEWAY_BODY 는 아무도 import 하지 않아 지웠다(죽은 카피는 표류한다) */
 export const HOME_AI_BRIEFING_LABEL = "오늘의 시장 브리핑 (참고)";
+
+/**
+ * [1008 · J] 홈 검색 바로 아래 "어디서부터 시작할까요?" — 문 네 개.
+ * 목적지로 고르는 입구다(기능 이름이 아니라 "지금 내 상황"). 경로는 전부 실재하는 화면이고, /quiz 는
+ * 같은 판에 Q 가 만든 "실거래가 게임"(app/quiz)이다.
+ * 서버 렌더·클라이언트 JS 없음(app/components/home/HomeStartDoors.tsx).
+ */
+export const HOME_START_DOORS_TITLE = "어디서부터 시작할까요?";
+export const HOME_START_DOORS = [
+  { title: "구경하러 왔어요", sub: "실거래가 게임", href: "/quiz", icon: "compass" },
+  { title: "후보가 있어요", sub: "단지 종합 진단", href: "/analysis/ai/ai-diagnosis", icon: "target" },
+  { title: "계약을 앞두고 있어요", sub: "계약·잔금 일정표", href: "/journey/contract", icon: "key" },
+  { title: "처음부터 차근차근", sub: "내 집 마련 여정 6단계", href: "/journey", icon: "footprints" },
+] as const;

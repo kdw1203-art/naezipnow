@@ -3,27 +3,30 @@ import { MapClientLazy as MapClient } from "./MapClientLazy";
 import type { DanjiItem, TradeItem } from "./map-client";
 import {
   encodeComplexId,
-  getComplexById,
   type ComplexTransactionRow,
 } from "@/lib/complex/complex-store";
 import { loadRegionMarketMarkers } from "@/lib/map/region-market";
 import { pctDelta, deltaLabel } from "@/lib/map/trade-stats";
 import { getServiceSupabase } from "@/lib/supabase/service";
-import { getReadOnlySupabase } from "@/lib/newui/supabase-read";
-import { auth } from "@/auth";
 import { logger } from "@/lib/log";
 import { withBudget } from "@/lib/async/with-budget";
 import { seoAlternates } from "@/lib/seo/alternates";
-import { getNote } from "@/lib/inspection/store-db";
-import { resolveComplexHref } from "@/lib/newui/complex-link";
-import { getOnboardingPersonalization } from "@/lib/onboarding/personalization";
 import { saveLastGood, loadLastGood } from "@/lib/cache/last-good";
 import { formatKrwManwon } from "@/lib/format/krw";
 import { resolveNaverMapClientId } from "@/lib/map/naver-maps-sdk";
 
-/* auth·searchParams 때문에 요청마다 렌더. 지역 시세 마커는
-   lib/map/region-market.ts 의 unstable_cache(10분)로 DB 부하를 줄인다. */
-export const dynamic = "force-dynamic";
+/* [1007] ISR 10분 — 예전엔 `auth()`(내 노트 수·예산 프리필·내 노트 레이어 기본값)와
+   `searchParams`(region·complexId·noteId·apt·lat·lng·z·type·price…) 때문에 force-dynamic 이었고,
+   24h 실측 함수 호출 911회 중 사람 방문은 한 자릿수였다(7일 페이지뷰 ~120건 전체). 크롤러
+   요청마다 함수·세션·지역 RPC 가 돌았다. 이 페이지는 이제 **공유분**(좌표·시세·세대수·지역
+   마커 — 모두에게 같은 값, 아래 loadSharedDanji 10분 캐시와 같은 눈금)만 그리고, 세션·주소에
+   달린 초기값은 MapClientLazy(클라이언트)가 마운트 뒤 만들어 MapClient 에 예전과 같은 props 로
+   넘긴다(판정 규칙: lib/map/entry-params). 서버 렌더에 사용자별 값은 한 조각도 없다. */
+/* [1010] 600 → 21,600(6시간). 이 화면의 서버 HTML 을 바꾸는 것은 국토부 실거래 적재뿐이고,
+   적재 크론이 끝나면 SOURCE_MAP.molit 이 "/map" 을 즉시 비운다(lib/cache/invalidate.ts).
+   실측(2026-09-20~22): /map 하루 911회 함수 호출 · 사람 방문은 그 극히 일부 — 10분 눈금은
+   크롤 1회당 재렌더 1회와 사실상 같았다. 신선도는 이제 TTL 이 아니라 적재가 맡는다. */
+export const revalidate = 21_600;
 
 /* `?region=` 같은 필터가 붙어도 색인되는 주소는 `/map` 하나여야 한다.
    필터 조합마다 별도 URL 이 색인되면 같은 화면이 수십 개로 쪼개진다. */
@@ -34,10 +37,9 @@ export const metadata = {
   alternates: seoAlternates("/map"),
 };
 
-/** 만원 단위 → "8.4억" / "8,200만" 라벨 — [967 · 31] lib/format/krw.ts "eok1"(단지 허브와 같은 얼굴) */
-function formatManwon(manwon: number): string {
-  return formatKrwManwon(manwon, { style: "eok1" });
-}
+/** 만원 단위 → "8.4억" / "8,200만" 라벨 — [967 · 31] lib/format/krw.ts "eok1"(단지 허브와 같은 얼굴).
+ *  [1009 · C] 지도 말풍선·목록의 값은 그 달 거래 **평균**이라 짧은 표기가 표준이다(한 건 값이면 formatEokMan). */
+const formatManwon = (manwon: number): string => formatKrwManwon(manwon, { style: "eok1" });
 
 function toTrades(tx: ComplexTransactionRow[]): TradeItem[] {
   // 과거→최신 순 입력 — 최신 3건을 최신순으로
@@ -90,7 +92,8 @@ function toDanjiItem(
     name: complexName,
     note: myNoteCount > 0 ? `노트 ${myNoteCount}건` : null,
     meta: metaParts.length > 0 ? metaParts.join(" · ") : "정보 준비 중",
-    price: latest ? formatManwon(latest.avg_manwon) : "시세 준비 중",
+    /* [1009 · C] "시세 준비 중" → "실거래 없음" — 실거래만 있는 화면에 "시세"라는 말을 쓰지 않는다(표기 표준) */
+    price: latest ? formatManwon(latest.avg_manwon) : "실거래 없음",
     delta,
     deltaTone: tone,
     size: "면적 통합",
@@ -211,7 +214,7 @@ async function fetchTxBatch(
   /* 이 조회 하나가 목록 전체의 시세를 담당한다. 실패를 빈 맵으로 흘려보내면
      30개 단지가 **모두** "시세 준비 중" 으로 그려진다 — 실거래가 멀쩡히 쌓여
      있는 단지들에 대고 "아직 데이터가 없다"고 단정하는 셈이다.
-     loadDanjiFromDb 는 이미 실패를 던지도록 되어 있고(위 주석), MapPage 는
+     loadSharedDanjiUncached 는 이미 실패를 던지도록 되어 있고(위 주석), MapPage 는
      dbRun.state === "error" 를 따로 안내한다. 여기서도 못 읽었으면 던진다. */
   if (error) {
     throw new Error(
@@ -284,41 +287,6 @@ function aggregateComplex(
       avgAreaM2: areaN > 0 ? Math.round((areaSum / areaN) * 10) / 10 : null,
     },
   };
-}
-
-/** 단지명 정규화 — 내 노트 apt_name 매칭 기준(공백·후행 "아파트" 제거) */
-function normalizeName(s: string): string {
-  return s.replace(/\s+/g, "").replace(/아파트$/, "");
-}
-
-/**
- * 세션 사용자의 임장노트 수를 단지명(정규화) 기준으로 집계 (item10).
- * 목록·범례의 "임장한 단지" 표시가 실제 내 노트 유무를 반영하게 한다.
- * 실패·비로그인 시 빈 맵 — note 는 null 로 남는다.
- */
-async function fetchMyNoteCounts(): Promise<Map<string, number>> {
-  const out = new Map<string, number>();
-  try {
-    const session = await auth();
-    const email = session?.user?.email;
-    if (!email) return out;
-    const sb = getServiceSupabase();
-    if (!sb) return out;
-    const { data } = await sb
-      .from("inspection_notes")
-      .select("apt_name")
-      .eq("author_email", email)
-      .not("apt_name", "is", null)
-      .limit(300);
-    for (const r of (data as { apt_name: string | null }[] | null) ?? []) {
-      const key = normalizeName(r.apt_name ?? "");
-      if (!key) continue;
-      out.set(key, (out.get(key) ?? 0) + 1);
-    }
-  } catch {
-    // 세션/조회 실패 — 노트 표시 없이 진행
-  }
-  return out;
 }
 
 /**
@@ -403,8 +371,8 @@ async function loadSharedDanjiLive(): Promise<{ items: DanjiItem[]; region: stri
 
   /* myNoteCount 는 여기서 항상 0 — 이 함수는 **모든 방문자가 공유하는** 캐시에
      들어가므로 사용자별 데이터를 한 조각도 섞으면 안 된다(A 의 노트 수가 B 의
-     화면에 캐시로 새는 사고). 내 노트 표시는 아래 loadDanjiFromDb 가 요청마다
-     따로 읽어 덧입힌다. */
+     화면에 캐시로 새는 사고). 내 노트 표시는 [1007] 부터 MapClientLazy 가 브라우저에서
+     그 사람 것만 덧입힌다(lib/map/entry-params.overlayMyNoteCounts). */
   const items = geo.map((g) => {
     const id = encodeComplexId(g.region_name, g.complex_name);
     const rows = txByComplex.get(pairKey(g.region_name, g.complex_name)) ?? [];
@@ -438,261 +406,24 @@ async function loadSharedDanjiLive(): Promise<{ items: DanjiItem[]; region: stri
 }
 
 /**
- * 공유분(좌표·시세·세대수) 10분 캐시. 이 페이지는 auth·searchParams 때문에
+ * 공유분(좌표·시세·세대수) 10분 캐시. 예전엔 이 페이지가 auth·searchParams 때문에
  * force-dynamic 이라 요청마다 위 3개 배치 조회를 다시 쳤다 — 내용은 모든
- * 방문자에게 동일한데도. 실패는 캐시되지 않고 그대로 던져진다(withBudget 이 받아
+ * 방문자에게 동일한데도. [1007] 페이지 자체가 ISR(600)이 되어 이 캐시는 재생성 렌더
+ * 사이의 두 번째 방어선이다. 실패는 캐시되지 않고 그대로 던져진다(withBudget 이 받아
  * danjiLoadFailed 로 정직하게 그린다) — 빈 결과를 실패 대신 얼리는 일은 없다.
  */
+/* [1010] 600초 → 7일 + "market" 태그. 위 region-market 과 같은 이유다(라우트 TTL 의 뚜껑). */
 const loadSharedDanji = unstable_cache(loadSharedDanjiUncached, ["map-shared-danji-v1"], {
-  revalidate: 600,
-  tags: ["map-danji"],
+  revalidate: 604_800,
+  tags: ["map-danji", "market"],
 });
 
-async function loadDanjiFromDb(): Promise<{ items: DanjiItem[]; region: string }> {
-  /* 공유분(캐시)과 개인분(요청마다)을 분리해 나란히 읽는다. 개인분(내 노트 수)은
-     세션 사용자 것만 읽어 이름 기준으로 덧입힌다 — 캐시에는 절대 넣지 않는다. */
-  const [shared, myNotes] = await Promise.all([loadSharedDanji(), fetchMyNoteCounts()]);
-  if (myNotes.size === 0) return shared;
-  return {
-    region: shared.region,
-    items: shared.items.map((it) => {
-      const n = myNotes.get(normalizeName(it.name)) ?? 0;
-      return n > 0 ? { ...it, note: `노트 ${n}건` } : it;
-    }),
-  };
-}
+/* [1007] 개인분(내 노트 수·예산·내 노트 레이어)은 서버에서 읽지 않는다 — MapClientLazy 가
+   세션 프로브 뒤 브라우저 안에서 그 사람 것만 덧입힌다(lib/map/entry-params.overlayMyNoteCounts).
+   `?region=` 좌표 해석(search_regions RPC)도 같은 RPC 를 쓰는 /api/regions/search(CDN 24h)로 옮겼다 —
+   legal_regions 252행 중 183행이 좌표가 없어 못 푸는 경우가 남는 사실(2026-08-06 실측)은 그대로다. */
 
-/**
- * `?region=` 을 legal_regions 좌표로 푼다.
- *
- * 왜 필요한가: 홈·개인화 화면의 "관심지역" 칩은 지역마다 다르게 생겼는데,
- * MapPage 가 인자를 하나도 받지 않아서 어느 칩을 눌러도 같은 수도권 지도가
- * 떴다(PersonalHome.tsx 의 "/map 은 아직 ?region= 쿼리 미지원" 주석이 그 흔적).
- * 눌러도 아무 일도 안 일어난 것처럼 보이던 이유다.
- *
- * search_regions RPC 를 쓰는 이유는 칩에 적힌 문자열이 정규화돼 있지 않기
- * 때문이다("서울 마포구"·"마포구"·"성남 분당구"·"경기 성남시 분당구"가 다 온다).
- * 못 찾으면 null 을 돌려주고 지도는 기본 화면으로 뜬다 — 엉뚱한 좌표로 옮기는
- * 것보다 낫다.
- *
- * 2026-08-06: 이름 쪽은 RPC 를 고쳐서 정리됐다(마이그레이션
- * 20260806141330_search_regions_official_name_match). enabled 252개를 정식
- * 행정명으로 전건 조회했을 때 예전엔 맞음 217 · 0건 22 · **다른 지역 13** 이었고
- * 지금은 252/252 다. 그런데 **이 함수가 null 을 돌려주는 일은 아직 남아 있다** —
- * 아래 `row.lat == null` 분기 때문이다. 252행 중 183행이 좌표가 없다.
- * 즉 실패의 원인이 "못 찾음"에서 "찾았는데 좌표가 없음"으로 바뀐 것뿐이다.
- */
-async function resolveRegionFocus(
-  regionName: string | null,
-): Promise<{ name: string; lat: number; lng: number } | null> {
-  const q = regionName?.trim();
-  if (!q) return null;
-  /* 서비스 롤이 아니라 읽기 전용 클라이언트를 쓴다. 시군구 좌표는 공개 정보고,
-     search_regions 에 anon 실행 권한이 있다. 서비스 롤만 보면 그 키가 없는
-     환경(로컬·프리뷰)에서 ?region= 이 조용히 무시된다. */
-  const sb = getReadOnlySupabase();
-  if (!sb) return null;
-  try {
-    const { data, error } = await sb.rpc("search_regions", { p_q: q, p_limit: 1 });
-    if (error) {
-      logger.warn("[map] ?region= 좌표 해석 실패", { message: error.message, q });
-      return null;
-    }
-    const row = (data as { display_name: string; lat: number | null; lng: number | null }[] | null)?.[0];
-    if (!row || row.lat == null || row.lng == null) return null;
-    return { name: row.display_name, lat: Number(row.lat), lng: Number(row.lng) };
-  } catch (e) {
-    logger.warn("[map] ?region= 좌표 해석 예외", e);
-    return null;
-  }
-}
-
-function firstParam(
-  v: string | string[] | undefined,
-): string | null {
-  if (Array.isArray(v)) return v[0] ?? null;
-  return typeof v === "string" && v.trim() ? v.trim() : null;
-}
-
-/* `?lat=&lng=` — `?region=` 이 안 풀릴 때의 폴백 좌표.
- *
- *  넣은 이유는 실측이다. 처음 쟀을 때는 이름이 틀리게 풀리는 게 문제였다 —
- *  `경기 부천시`→경기 이천시, `경기 안양시 동안구`→경기 안성시, `경기 성남시
- *  분당구`·`경기 수원시 영통구`는 0건. 그건 2026-08-06 에 RPC 쪽에서 고쳤고,
- *  정식 행정명으로 부르면 이제 252개 지역이 전부 자기 자신으로 풀린다.
- *
- *  **그래도 이 폴백은 남는다. 이유가 바뀌었을 뿐 없어지지 않았다.**
- *  legal_regions 의 enabled 252행 중 183행(73%)이 lat/lng 가 null 이다.
- *  이름 조회가 고쳐지면서 실제로 지도가 옮겨가게 된 지역은 망가져 있던 35곳 중
- *  **19곳**뿐이고(성남 분당구·수원 4구·용인 3구·화성시·과천시 등), 나머지 16곳은
- *  이제 "찾긴 찾는데 좌표가 없어서" 기본 지도로 떨어진다. `인천 연수구`·
- *  `인천 남동구`·`부천 원미구`가 그 경우다.
- *
- *  부르는 쪽(홈 미니지도)은 이미 그 좌표를 알고 있다 — 같은 표로 마커를 찍는
- *  중이다. 아는 값을 텍스트로 바꿔 퍼지 검색에 되묻는 대신 그대로 받는다.
- *  이름 해석이 성공하면 그쪽이 이긴다(정규화된 display_name 을 쓴다).
- *
- *  범위를 한반도로 제한하는 건 주소로 들어오는 값이라서다. 이 값은 화면
- *  중심일 뿐이지만, 숫자가 아니거나 지구 반대편이면 조용히 무시하는 편이
- *  빈 바다를 띄우는 것보다 낫다. */
-function parseCoordFocus(
-  latRaw: string | null,
-  lngRaw: string | null,
-): { lat: number; lng: number } | null {
-  if (latRaw == null || lngRaw == null) return null;
-  const lat = Number(latRaw);
-  const lng = Number(lngRaw);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  if (lat < 33 || lat > 39 || lng < 124 || lng > 132) return null;
-  return { lat, lng };
-}
-
-function parseEokParam(raw: string | null): number | null {
-  if (raw == null || raw === "") return null;
-  const n = Number(raw);
-  if (!Number.isFinite(n) || n < 0 || n > 200) return null;
-  return n;
-}
-
-export default async function MapPage({
-  searchParams,
-}: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = (await searchParams) ?? {};
-  const regionParam = firstParam(sp.region);
-  /* ?district= 는 property-actions 가 만들어 보내는데 여태 아무도 안 읽어서
-     조용히 무시됐다(죽은 링크 경로). ?q= 도 지역명이면 서버에서 바로 포커스 —
-     예전엔 클라이언트가 마운트 후 suggest→geocode 두 번을 돌아야 했다.
-     지역명이 아닌 q(단지명 등)는 해석이 실패하고, 그 경우 기존 클라이언트
-     경로가 그대로 이어받는다(동작 손실 없음). */
-  const districtParam = firstParam(sp.district);
-  const qParam = firstParam(sp.q);
-  const complexIdParam = firstParam(sp.complexId);
-  const noteIdParam = firstParam(sp.noteId);
-  const aptParam = firstParam(sp.apt);
-  const typeParam = firstParam(sp.type);
-  const priceMinParam = parseEokParam(firstParam(sp.priceMin));
-  const priceMaxParam = parseEokParam(firstParam(sp.priceMax));
-  const coordFocusParam = parseCoordFocus(firstParam(sp.lat), firstParam(sp.lng));
-  /* ?z= — 지도 상태 공유용 줌 레벨. 클라이언트가 idle 마다 URL 에 lat/lng/z 를
-     써 두므로(공유·뒤로가기), 열 때 같은 배율로 복원한다. 범위 밖은 무시. */
-  const zRaw = Number(firstParam(sp.z));
-  const initialLevel = Number.isFinite(zRaw) && zRaw >= 6 && zRaw <= 19 ? Math.round(zRaw) : null;
-
-  /* 노트→지도 핸드오프: complexId 우선, 없으면 noteId/apt 로 단지 해석 */
-  let initialComplexFocus: {
-    id: string;
-    name: string;
-    noteId?: string | null;
-    lat?: number | null;
-    lng?: number | null;
-  } | null = null;
-  let regionFromNote: string | null = null;
-  if (complexIdParam) {
-    try {
-      const row = await getComplexById(complexIdParam);
-      if (row) {
-        initialComplexFocus = {
-          id: row.id,
-          name: row.name,
-          noteId: noteIdParam,
-          lat: row.lat,
-          lng: row.lng,
-        };
-      }
-    } catch (e) {
-      logger.warn("[map] ?complexId= 해석 실패", e);
-    }
-  }
-  if (!initialComplexFocus && noteIdParam) {
-    try {
-      const note = await getNote(noteIdParam);
-      if (note) {
-        regionFromNote = note.region?.trim() || null;
-        const href = await resolveComplexHref(note.aptName, note.region);
-        if (href?.startsWith("/complex/")) {
-          const cid = href.slice("/complex/".length);
-          const row = await getComplexById(cid);
-          initialComplexFocus = {
-            id: cid,
-            name: row?.name ?? note.aptName?.trim() ?? cid,
-            noteId: noteIdParam,
-            lat: row?.lat ?? null,
-            lng: row?.lng ?? null,
-          };
-        }
-      }
-    } catch (e) {
-      logger.warn("[map] ?noteId= 해석 실패", e);
-    }
-  }
-  if (!initialComplexFocus && aptParam) {
-    try {
-      const href = await resolveComplexHref(aptParam, regionParam);
-      if (href?.startsWith("/complex/")) {
-        const cid = href.slice("/complex/".length);
-        const row = await getComplexById(cid);
-        initialComplexFocus = {
-          id: cid,
-          name: row?.name ?? aptParam,
-          noteId: noteIdParam,
-          lat: row?.lat ?? null,
-          lng: row?.lng ?? null,
-        };
-      }
-    } catch (e) {
-      logger.warn("[map] ?apt= 해석 실패", e);
-    }
-  }
-
-  /* 웰컴 예산 — URL에 가격이 없으면 로그인 사용자 preferences 로 프리필 */
-  let initialBudget: {
-    type: "sale" | "jeonse";
-    minEok: number | null;
-    maxEok: number | null;
-    label: string | null;
-  } | null = null;
-  const urlBudgetType =
-    typeParam === "sale" || typeParam === "jeonse" || typeParam === "monthly"
-      ? typeParam
-      : null;
-  /* [995 · S6] 로그인 여부 — 내 노트 핀 레이어의 기본값(로그인이면 켜서 시작).
-     세션 조회는 예산 프리필과 공유한다(왕복 1회). */
-  let viewerSignedIn = false;
-  try {
-    const session = await auth();
-    viewerSignedIn = Boolean(session?.user?.email);
-  } catch {
-    /* 세션 조회 실패 — 비로그인으로 간주(레이어는 손으로 켤 수 있다) */
-  }
-  if (priceMinParam != null || priceMaxParam != null || urlBudgetType) {
-    initialBudget = {
-      type: urlBudgetType === "jeonse" ? "jeonse" : "sale",
-      minEok: priceMinParam,
-      maxEok: priceMaxParam,
-      label: null,
-    };
-  } else if (viewerSignedIn) {
-    try {
-      const session = await auth();
-      const email = session?.user?.email?.trim().toLowerCase() ?? null;
-      if (email) {
-        const perso = await getOnboardingPersonalization(email);
-        if (perso?.budget) {
-          initialBudget = {
-            type: perso.budget.type === "jeonse" ? "jeonse" : "sale",
-            minEok: perso.budget.min,
-            maxEok: perso.budget.max,
-            label: perso.budget.label,
-          };
-        }
-      }
-    } catch (e) {
-      logger.warn("[map] preferences 예산 프리필 실패", e);
-    }
-  }
-
+export default async function MapPage() {
   /* 사실 우선: 허위 단지(공작아파트 등)를 채우지 않는다. 다만 "조회 실패" 와
      "빈 결과" 는 갈라서 내려보낸다 — 예전에는 둘 다 빈 목록이라 화면이
      "이 지역 단지 목록을 준비 중이에요" 라고 잘못 안내했다. */
@@ -700,29 +431,16 @@ export default async function MapPage({
      `Vercel Runtime Timeout Error` 로 죽은 기록이 있다. 그러면 화면이 아예 안 뜬다 —
      아래 danjiLoadFailed 안내조차 못 보여 준다. 45초에 접으면 적어도 "지금은 못
      불러왔다"는 화면은 뜬다. 늦게라도 정확한 답보다 제때 뜨는 답이 낫다. */
-  const regionForFocus = regionParam || regionFromNote || districtParam || qParam;
-  const [dbRun, markersRun, resolvedFocus] = await Promise.all([
+  const [dbRun, markersRun] = await Promise.all([
     withBudget(
-      Promise.resolve().then(() => loadDanjiFromDb()),
+      Promise.resolve().then(() => loadSharedDanji()),
       MAP_SECTION_BUDGET_MS,
     ),
     withBudget(
       Promise.resolve().then(() => loadRegionMarketMarkers()),
       MAP_SECTION_BUDGET_MS,
     ),
-    resolveRegionFocus(regionForFocus ?? null),
   ]);
-
-  /* 이름 해석이 이긴다(정규화된 display_name). 못 풀렸을 때만 넘겨받은 좌표를
-     쓴다 — 이때 라벨은 부르는 쪽이 화면에 적어 둔 이름을 그대로 쓴다.
-     좌표도 이름도 없으면 종전대로 null(기본 지도). */
-  /* 좌표 단독(?lat&lng 만) 진입도 허용한다 — idle 이 써 둔 공유 URL 은 지역명이
-     없다. 이름이 없으면 빈 문자열로 넘기고, 클라이언트가 기본 라벨로 처리한다. */
-  const focus =
-    resolvedFocus ??
-    (coordFocusParam
-      ? { name: regionForFocus ?? "", lat: coordFocusParam.lat, lng: coordFocusParam.lng }
-      : null);
 
   if (dbRun.state === "timeout") {
     logger.error(`[map] 단지 목록 조회가 ${MAP_SECTION_BUDGET_MS}ms 안에 끝나지 않았습니다`);
@@ -743,10 +461,10 @@ export default async function MapPage({
       : { ok: false as const };
 
   /* [968 · 23] 지도 SDK Client ID 를 서버에서 내려준다. /api/map/sdk-config 가 주는
-     값과 같은 함수(resolveNaverMapClientId)라 결과도 같다 — 이 페이지는 force-dynamic
-     이라 런타임 env 실값을 읽는다. 공개 값(maps.js URL 에 노출, NCP 도메인 등록으로
-     보호)이므로 HTML 에 실려도 새는 게 없다. 브라우저는 "청크 → sdk-config fetch →
-     maps.js → 타일" 에서 fetch 한 왕복을 통째로 건너뛴다. */
+     값과 같은 함수(resolveNaverMapClientId)라 결과도 같다 — env 는 배포 단위로 굳으므로
+     ISR 렌더에서 읽어도 요청마다 읽던 것과 같은 값이다. 공개 값(maps.js URL 에 노출, NCP
+     도메인 등록으로 보호)이므로 HTML 에 실려도 새는 게 없다. 브라우저는 "청크 → sdk-config
+     fetch → maps.js → 타일" 에서 fetch 한 왕복을 통째로 건너뛴다. */
   const ncpKeyId = resolveNaverMapClientId();
 
   return (
@@ -766,23 +484,12 @@ export default async function MapPage({
       <h1 className="sr-only">지도에서 실거래가 비교</h1>
       <MapClient
         ncpKeyId={ncpKeyId}
-        initialLevel={initialLevel}
-        initialMyNotes={viewerSignedIn}
-      danji={dbLoaded.ok ? dbLoaded.value.items : []}
-      regionLabel={dbLoaded.ok ? dbLoaded.value.region : "수도권"}
-      regionMarkers={markersLoaded.ok ? markersLoaded.value : []}
-      danjiLoadFailed={!dbLoaded.ok}
-      regionMarkersLoadFailed={!markersLoaded.ok}
-      initialFocus={focus}
-      initialComplexFocus={initialComplexFocus}
-      initialBudget={initialBudget}
-      initialListingType={
-        urlBudgetType ??
-        (priceMinParam != null || priceMaxParam != null
-          ? initialBudget?.type ?? null
-          : null)
-      }
-    />
+        danji={dbLoaded.ok ? dbLoaded.value.items : []}
+        regionLabel={dbLoaded.ok ? dbLoaded.value.region : "수도권"}
+        regionMarkers={markersLoaded.ok ? markersLoaded.value : []}
+        danjiLoadFailed={!dbLoaded.ok}
+        regionMarkersLoadFailed={!markersLoaded.ok}
+      />
     </>
   );
 }

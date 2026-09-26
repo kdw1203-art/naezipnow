@@ -33,6 +33,13 @@ on:
     - cron: "0 6 * * *"
   workflow_dispatch:
 
+# [1010 · 도메인 사고 방지] 크론 호출 주소는 여기 한 줄로만 바꾼다.
+# 2026-09-25: 구 도메인(nuguzip.com)이 프로젝트에서 빠지자 이 파일의 호출이 전부
+# 404 가 됐다(응답을 `|| true` 로 흘려 보내 조용히 죽는 구조였다). 주소를 상수로
+# 올려 두 번 다시 파일 전체를 훑지 않게 한다.
+env:
+  SITE: https://naezipnow.com
+
 permissions:
   contents: read
   issues: write
@@ -44,6 +51,18 @@ jobs:
     # 멈췄을 때 러너를 6시간 붙잡는다(deploy.yml 이 35분으로 줄인 것과 같은 이유).
     timeout-minutes: 120
     steps:
+      - name: Preflight — 호출 주소가 살아 있는지 먼저 본다
+        # [1010] 2026-09-25 사고: 구 도메인이 프로젝트에서 빠져 모든 크론 호출이
+        # 404 가 됐는데, 소프트 호출은 `|| true` 로 삼켜져 워크플로는 초록색이었다.
+        # 주소가 앱을 서빙하지 않으면 여기서 한 문장으로 죽는다.
+        run: |
+          CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 20 "${SITE}/api/health" || echo 000)
+          if [ "$CODE" != "200" ]; then
+            echo "크론 호출 주소가 앱을 서빙하지 않습니다: ${SITE}/api/health → HTTP $CODE" | tee etl-failed.txt
+            echo "Vercel 프로젝트에 이 도메인이 붙어 있는지 확인하세요(Settings → Domains)."
+            exit 1
+          fi
+          echo "preflight ok: ${SITE} (HTTP 200)"
       - name: Run daily ingests
         env:
           CRS: ${{ secrets.CRON_SECRET }}
@@ -104,21 +123,21 @@ jobs:
           # [OPT-33] reb·kb 는 Vercel 크론(00:50·01:00 UTC)으로 일원화 — 여기서 제거.
           # kosis: KOSIS 키 활성화 전까지 skipped 응답 — 실패로 집계하지 않음(소프트)
           echo "== kosis (soft) =="
-          curl -sS --max-time 290 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/kosis-ingest" | head -c 500 || true
+          curl -sS --max-time 290 -H "x-cron-secret: $CRS" "${SITE}/api/cron/kosis-ingest" | head -c 500 || true
           echo
           # ecos: ECOS 키 활성화 전까지 skipped 응답 — 소프트
           echo "== ecos (soft) =="
-          curl -sS --max-time 60 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/ecos-sync" | head -c 500 || true
+          curl -sS --max-time 60 -H "x-cron-secret: $CRS" "${SITE}/api/cron/ecos-sync" | head -c 500 || true
           echo
           # onbid: 서울 공매 물건 — 키 없으면 skipped (소프트)
           echo "== onbid (soft) =="
-          curl -sS --max-time 120 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/onbid-sync" | head -c 500 || true
+          curl -sS --max-time 120 -H "x-cron-secret: $CRS" "${SITE}/api/cron/onbid-sync" | head -c 500 || true
           echo
           # [993] court-auction 호출 제거 — lib/court-auction/sync.ts 가 아직 스텁(fetch 없음)이라
           # 매일 "skipped" 만 남기고 신선도 표는 시드 표본 때문에 건강해 보였다. 소스가 구현되면 다시 넣는다.
           # redevelopment: 서울 정비사업 — 키 없으면 mock/no-op (소프트)
           echo "== redevelopment (soft) =="
-          curl -sS --max-time 120 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/redevelopment-ingest" | head -c 500 || true
+          curl -sS --max-time 120 -H "x-cron-secret: $CRS" "${SITE}/api/cron/redevelopment-ingest" | head -c 500 || true
           echo
           # [993] apt-master 는 vercel.json(04·12·20 UTC) 한 곳에만 둔다 — 이 파일 상단 규칙("한 곳에만")대로.
           # [OPT-33] apt-detail(limit=100)·complex-crawl·geocode(limit=200)·molit 당월분은
@@ -129,7 +148,7 @@ jobs:
           # (당월 회전 수집은 Vercel 몫이고, 이 보강 호출은 여기에만 있는 고유 역할이라 남긴다)
           PREV_YM=$(date -u -d "$(date -u +%Y-%m-01) -1 day" +%Y%m)
           echo "== molit prev-month top-up (soft) =="
-          curl -sS --max-time 290 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/molit-transactions-ingest?yyyymm=$PREV_YM&size=24" | head -c 500 || true
+          curl -sS --max-time 290 -H "x-cron-secret: $CRS" "${SITE}/api/cron/molit-transactions-ingest?yyyymm=$PREV_YM&size=24" | head -c 500 || true
           echo
           # [997] 빈 (시군구, 계약월) 메우기 — 2026-07 행정구역 개편(996)으로 코드가 바뀐 광주·전남·인천 신설구·화성·세종은
           # 당월 회전(8일 주기)만으로는 지난 달들이 영영 비어 있다. 최근 1~6개월 각각에 대해 "0행인 시군구"만 16곳씩
@@ -137,29 +156,29 @@ jobs:
           for K in 1 2 3 4 5 6; do
             YM=$(date -u -d "$(date -u +%Y-%m-01) -$K month" +%Y%m)
             echo "== molit gap fill $YM (soft) =="
-            curl -sS --max-time 290 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/molit-transactions-ingest?yyyymm=$YM&gaps=1&size=16" | head -c 300 || true
+            curl -sS --max-time 290 -H "x-cron-secret: $CRS" "${SITE}/api/cron/molit-transactions-ingest?yyyymm=$YM&gaps=1&size=16" | head -c 300 || true
             echo
           done
           # [개선 #21] 입주물량 — 청약홈 분양공고의 입주예정월을 매일 업서트.
           # 수동 업로드(2026-02) 이후 갱신 경로가 없어 한 달째 정지했던 소스의 자동화.
-          call supply "https://nuguzip.com/api/cron/supply-ingest"
+          call supply "${SITE}/api/cron/supply-ingest"
           # [#111] 주간 시황 글 — 월요일에만 발행(글 중복은 external_key 가 막지만 호출도 아낀다)
           if [ "$(date -u +%u)" = "1" ]; then
             echo "== weekly-market-post (Mon, soft) =="
-            curl -sS --max-time 120 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/weekly-market-post" | head -c 400 || true
+            curl -sS --max-time 120 -H "x-cron-secret: $CRS" "${SITE}/api/cron/weekly-market-post" | head -c 400 || true
             echo
           fi
           # [#81] 신고가 자동 소식 — molit 당일 유입분 탐지(위 molit 호출 뒤여야 함, 소프트)
           echo "== price-record (soft) =="
-          curl -sS --max-time 120 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/price-record-watch" | head -c 400 || true
+          curl -sS --max-time 120 -H "x-cron-secret: $CRS" "${SITE}/api/cron/price-record-watch" | head -c 400 || true
           echo
           # [#96] 학교·도시철도역 표준데이터 — 월 1회면 충분(매월 1일만, 수동 실행 시 항상).
           # env 경로(POI_*_API_PATH) 미등록이면 라우트가 skipped 로 답한다 — 실패 아님.
           if [ "$(date -u +%d)" = "01" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "== region-intro-posts (monthly-idempotent, soft) =="
-            curl -sS --max-time 290 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/region-intro-posts" | head -c 300 || true
+            curl -sS --max-time 290 -H "x-cron-secret: $CRS" "${SITE}/api/cron/region-intro-posts" | head -c 300 || true
             echo "== poi-ingest (schools+stations, soft) =="
-            curl -sS --max-time 290 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/poi-ingest" | head -c 500 || true
+            curl -sS --max-time 290 -H "x-cron-secret: $CRS" "${SITE}/api/cron/poi-ingest" | head -c 500 || true
             echo
           fi
           # 집계 MV 재계산 HTTP 호출은 삭제했다 (2026-08-10).
@@ -174,15 +193,15 @@ jobs:
           # 읽는다. 이제 집계는 pg_cron(09:00·19:00 UTC)이 갱신하므로, 06:00 UTC
           # 인 이 호출은 전일 19:00 집계를 읽는다 — 주 단위 스냅샷이라 하루
           # 지연은 허용 오차다(키가 그 주의 월요일이라 매일 덮어써진다).
-          call temperature "https://nuguzip.com/api/cron/market-temperature-snapshot"
+          call temperature "${SITE}/api/cron/market-temperature-snapshot"
           echo
           # N1 — IndexNow. 집계가 갱신된 **뒤에** 알린다(먼저 부르면 크롤러가
           # 옛 수치를 가져간다). 실패해도 ETL 을 죽이지 않는다 — 색인 힌트일 뿐이다.
-          curl -sS --max-time 60 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/indexnow-submit" | head -c 500 || true
+          curl -sS --max-time 60 -H "x-cron-secret: $CRS" "${SITE}/api/cron/indexnow-submit" | head -c 500 || true
           echo
           # [개선 #44] 신선도 감시 — 모든 적재가 끝난 뒤 재서, 임계를 넘긴 소스를
           # 오류 로그로 승격한다(입주물량 한 달 정지 사각지대의 재발 방지).
-          curl -sS --max-time 60 -H "x-cron-secret: $CRS" "https://nuguzip.com/api/cron/freshness-watch" | head -c 500 || true
+          curl -sS --max-time 60 -H "x-cron-secret: $CRS" "${SITE}/api/cron/freshness-watch" | head -c 500 || true
           echo
           if [ -n "$FAILED" ]; then
             echo "failed:$FAILED" | tee etl-failed.txt
@@ -241,6 +260,18 @@ jobs:
     # 알림 러너 ~12개 × 최대 290초 = 이론상 58분. etl 잡과 같은 이유의 상한.
     timeout-minutes: 90
     steps:
+      - name: Preflight — 호출 주소가 살아 있는지 먼저 본다
+        # [1010] 2026-09-25 사고: 구 도메인이 프로젝트에서 빠져 모든 크론 호출이
+        # 404 가 됐는데, 소프트 호출은 `|| true` 로 삼켜져 워크플로는 초록색이었다.
+        # 주소가 앱을 서빙하지 않으면 여기서 한 문장으로 죽는다.
+        run: |
+          CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 20 "${SITE}/api/health" || echo 000)
+          if [ "$CODE" != "200" ]; then
+            echo "크론 호출 주소가 앱을 서빙하지 않습니다: ${SITE}/api/health → HTTP $CODE" | tee etl-failed.txt
+            echo "Vercel 프로젝트에 이 도메인이 붙어 있는지 확인하세요(Settings → Domains)."
+            exit 1
+          fi
+          echo "preflight ok: ${SITE} (HTTP 200)"
       - name: Run alert runners
         env:
           CRS: ${{ secrets.CRON_SECRET }}
@@ -257,39 +288,39 @@ jobs:
             echo
           }
           # 구독 만료 스윕 — 일회성 결제 plan_expires_at 지난 사용자를 무료 플랜으로 강등
-          call plan-expiry "https://nuguzip.com/api/cron/plan-expiry-sweep"
+          call plan-expiry "${SITE}/api/cron/plan-expiry-sweep"
           # 이메일 outbox 드레인 — 발송 실패로 쌓인 pending 을 재시도(Resend 미설정이면 스킵)
-          call outbox-drain "https://nuguzip.com/api/cron/notification-outbox-drain"
+          call outbox-drain "${SITE}/api/cron/notification-outbox-drain"
           # 포인트 만료 스윕 — expires_at 지난 미소진 적립분을 만료 차감(reason=expire)으로
           # 집행하고, 만료 7일 전 잔여분에는 인앱 예고 알림을 보낸다
-          call points-expiry "https://nuguzip.com/api/cron/points-expiry-sweep"
+          call points-expiry "${SITE}/api/cron/points-expiry-sweep"
           # 관심 단지 가격 변동 — 대표 면적대 최근 6건 평균 기준(lib/market/complex-price.ts).
-          call price-alerts "https://nuguzip.com/api/cron/price-alerts"
+          call price-alerts "${SITE}/api/cron/price-alerts"
           # [945 #20] 관심 단지 새 실거래 신고 — 적재 시각 고수위선 기준, 사용자당 1건 묶음
-          call watchlist-new-tx "https://nuguzip.com/api/cron/watchlist-new-tx"
+          call watchlist-new-tx "${SITE}/api/cron/watchlist-new-tx"
           # 저장 검색 신규 매치
-          call saved-search "https://nuguzip.com/api/cron/saved-search-alerts"
+          call saved-search "${SITE}/api/cron/saved-search-alerts"
           # [994 · D4] 관심 지역 청약 — 새 공고·오늘 접수 시작·오늘 발표(applyhome_announcements 기준,
           # supply-ingest 가 위 daily 잡에서 먼저 적재한다)
-          call applyhome-alerts "https://nuguzip.com/api/cron/applyhome-alerts"
+          call applyhome-alerts "${SITE}/api/cron/applyhome-alerts"
           # [AI-29] 경제지표 임계 알림 — 기준금리 워치(등록자 대상, 1회 통지 후 재무장식)
-          call economy-alerts "https://nuguzip.com/api/cron/economy-alerts"
+          call economy-alerts "${SITE}/api/cron/economy-alerts"
           # 출석 리마인드 — 오늘 미출석 구독자에게만
-          call attendance "https://nuguzip.com/api/cron/attendance-reminders"
+          call attendance "${SITE}/api/cron/attendance-reminders"
           # 내 매물 신선도 — 21일 끌어올리기 안내 / 60일 마감 제안.
           # 매일 돌아도 매물당 stale_notice_stage 가 올라갈 때만 나가므로 최대 2번이다.
           # 자동 마감은 하지 않는다 — 제안만 하고 status 는 소유자가 바꾼다.
-          call listing-stale "https://nuguzip.com/api/cron/listing-stale-reminders"
+          call listing-stale "${SITE}/api/cron/listing-stale-reminders"
           # 이탈 리마인드는 화요일만(사람당 쿨다운 30일이라 매일 돌릴 이유가 없다)
           if [ "$(date -u +%u)" = "2" ]; then
-            call reengage "https://nuguzip.com/api/cron/reengage-reminders"
+            call reengage "${SITE}/api/cron/reengage-reminders"
           else
             echo "== reengage skipped (화요일 아님: $(date -u +%A)) =="
           fi
           # 주간 다이제스트는 월요일만. 옵트인(push_weekly_digest=true)한 사람에게만 나가고,
           # 그 주에 실제로 모인 내용이 없으면 라우트가 skipped:"empty" 로 아무것도 안 보낸다.
           if [ "$(date -u +%u)" = "1" ]; then
-            call weekly-digest "https://nuguzip.com/api/cron/weekly-digest"
+            call weekly-digest "${SITE}/api/cron/weekly-digest"
           else
             echo "== weekly-digest skipped (월요일 아님: $(date -u +%A)) =="
           fi
@@ -299,9 +330,9 @@ jobs:
           # 로 아무것도 기록하지 않는다 — 키 미설정과 "재 봤는데 없었다"는 다른 사실이다.
           if [ "$(date -u +%u)" = "1" ]; then
             # N5 실사용자 성능(CrUX origin, 기기 3종)
-            call crux-sync "https://nuguzip.com/api/cron/crux-sync"
+            call crux-sync "${SITE}/api/cron/crux-sync"
             # N25 색인률 표본 측정(서치콘솔 URL 검사 API)
-            call gsc-index "https://nuguzip.com/api/cron/gsc-index-sync"
+            call gsc-index "${SITE}/api/cron/gsc-index-sync"
           else
             echo "== crux-sync / gsc-index skipped (월요일 아님: $(date -u +%A)) =="
           fi

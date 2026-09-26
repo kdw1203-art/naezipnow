@@ -9,7 +9,9 @@ import { seoAlternates } from "@/lib/seo/alternates";
    "이번주 청약"은 매주 스스로 새로워지는 검색 수요다. 청약홈 실데이터의
    접수기간을 날짜로 묶어 보여준다 — 경쟁률·특공 표는 /apply 가 맡는다. */
 
-export const revalidate = 1800;
+/* [1010] 크롤러 재방문(≈2.2일)보다 짧은 TTL 은 크롤 1회 = 재렌더 1회다. 이 화면을 바꾸는
+   적재(SOURCE_MAP)가 이제 경로를 직접 비우므로 시간 TTL 은 안전망으로만 둔다. */
+export const revalidate = 21_600;
 
 export const metadata: Metadata = {
   title: "이번 주 청약 캘린더 — 접수 시작·마감 일정 | 내집나우",

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { invalidateTownFeed } from "@/lib/cache/invalidate";
 import { safeAuth } from "@/lib/safe-auth";
 import { adoptComment, getPost } from "@/lib/posts-store";
 import { awardPoints } from "@/lib/points/ledger";
@@ -103,6 +104,8 @@ export async function POST(
     }
   }
 
+  revalidatePath(`/town/story/${id}`); // [1006] 이야기 상세
   revalidatePath(`/town/news/${id}`);
+  invalidateTownFeed(); // [1007] 채택 표시가 피드 카드에도 실릴 수 있다 — 같은 규칙
   return NextResponse.json({ ok: true, pointsAwarded });
 }

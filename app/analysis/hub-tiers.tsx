@@ -102,10 +102,9 @@ export function WorkbenchGrid({ core, more }: { core: WorkbenchCardDto[]; more: 
             <Link
               key={c.id}
               href={`${c.href}${query}`}
-              className="chip tool-scope inline-flex min-h-[36px] items-center gap-1.5 border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-1 no-underline"
+              className="chip press tool-scope inline-flex min-h-[36px] items-center gap-1.5 border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-1 no-underline"
               style={c.vars}
               data-tool={c.id}
-              title={c.premise}
             >
               <span className="tool-ink inline-flex" aria-hidden="true">
                 <ToolGlyph id={c.glyph} size={16} />

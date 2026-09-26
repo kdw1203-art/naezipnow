@@ -73,14 +73,14 @@ export function NoteComments({
       }
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(data?.error ?? "삭제에 실패했어요. 잠시 후 다시 시도해 주세요");
+        setError(data?.error ?? "삭제하지 못했어요 — 잠시 후 다시 눌러 주세요");
         return;
       }
       setConfirmId(null);
       showToast("댓글을 삭제했어요");
       router.refresh();
     } catch {
-      setError("네트워크 오류가 발생했어요");
+      setError("인터넷 연결을 확인하고 다시 눌러 주세요");
     } finally {
       setBusyId(null);
     }
@@ -196,7 +196,7 @@ function CommentRow({
         {!c.deleted && (
           <div className="flex flex-wrap items-center gap-3">
             {onReply && (
-              <button type="button" onClick={onReply} className="t-sub font-bold text-text-3">
+              <button type="button" onClick={onReply} className="inline-flex min-h-[24px] min-w-[24px] items-center justify-center t-sub font-bold text-text-3">
                 {replying ? "답글 닫기" : "답글"}
               </button>
             )}
@@ -204,7 +204,7 @@ function CommentRow({
               <button
                 type="button"
                 onClick={onAskDelete}
-                className="t-sub font-bold text-text-3 hover:text-danger"
+                className="inline-flex min-h-[24px] min-w-[24px] items-center justify-center t-sub font-bold text-text-3 hover:text-danger"
               >
                 삭제
               </button>
@@ -220,7 +220,7 @@ function CommentRow({
                   type="button"
                   onClick={onConfirmDelete}
                   disabled={busy}
-                  className="rounded-md bg-danger px-2 py-0.5 t-sub font-bold text-on-dark disabled:opacity-60"
+                  className="inline-flex min-h-[24px] items-center rounded-md bg-danger px-2 t-sub font-bold text-on-dark disabled:opacity-60"
                 >
                   {busy ? "삭제 중…" : "삭제"}
                 </button>
@@ -228,7 +228,7 @@ function CommentRow({
                   type="button"
                   onClick={onCancelDelete}
                   disabled={busy}
-                  className="t-sub font-bold text-text-2"
+                  className="inline-flex min-h-[24px] min-w-[24px] items-center justify-center t-sub font-bold text-text-2"
                 >
                   취소
                 </button>
@@ -256,6 +256,7 @@ function NoteCommentForm({
 }) {
   const router = useRouter();
   const { promptSignup } = useSoftSignup();
+  const { showToast } = useToast();
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -292,14 +293,16 @@ function NoteCommentForm({
       }
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(data?.error ?? "댓글 등록에 실패했어요. 잠시 후 다시 시도해 주세요");
+        setError(data?.error ?? "댓글을 남기지 못했어요 — 잠시 후 다시 눌러 주세요");
         return;
       }
       setBody("");
       onDone?.();
+      /* [1009 · T] 결과 토스트 — 목록은 서버에서 다시 받아 조금 늦게 바뀐다(router.refresh). 그 사이에도 됐다는 걸 말한다 */
+      showToast(parentId ? "답글을 남겼어요" : "댓글을 남겼어요");
       router.refresh();
     } catch {
-      setError("네트워크 오류가 발생했어요. 잠시 후 다시 시도해 주세요");
+      setError("인터넷 연결을 확인하고 다시 눌러 주세요");
     } finally {
       setBusy(false);
     }
@@ -320,10 +323,12 @@ function NoteCommentForm({
           placeholder={parentId ? "답글 남기기…" : "이 노트에 댓글 남기기…"}
           className="min-w-0 flex-1 resize-none bg-transparent py-[6px] text-[13px] leading-[1.5] text-ink outline-none placeholder:text-text-3"
         />
+        {/* [1009 · T] 실측 390px: "등록" 20×22px(주요 조작인데 24px 미만) → 40×40 히트. 글자는 아래·오른쪽 정렬로
+            입력칸 마지막 줄 높이(6px 띄움)에 그대로 둔다. 답글·삭제(20×24)는 가로 24px 로. */}
         <button
           type="submit"
           disabled={busy || (loggedIn && body.trim().length === 0)}
-          className="shrink-0 pb-1 t-sub font-bold text-primary disabled:opacity-40"
+          className="inline-flex min-h-[40px] min-w-[40px] shrink-0 items-end justify-end pb-[6px] t-sub font-bold text-primary disabled:opacity-40"
         >
           {busy ? "등록 중…" : "등록"}
         </button>

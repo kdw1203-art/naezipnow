@@ -10,11 +10,22 @@
  *
  * 판정(무엇을 몇 줄까지 믿고 보여줄지)은 여기서 하지 않고 순수 모듈이 한다 —
  * 그 쪽에 단위 테스트가 붙어 있다.
+ *
+ * [1006] 면적 단위 — 설정(nz_area_unit 쿠키, lib/prefs/area-unit)이 평이면 "㎡당 매매"를
+ * "평당 매매"로 적는다. 쿠키는 클라이언트에서만 읽는다(마운트 뒤) — 이 카드는 ssr:false
+ * 지연 로드라 첫 렌더가 곧 클라이언트라 깜빡임이 없다.
  */
+import { useEffect, useState } from "react";
 import { briefFetchedLabel, buildFieldBrief } from "@/lib/inspection/field-brief";
+import { readAreaUnitCookie } from "@/lib/prefs/area-unit";
+import type { AreaUnit } from "@/lib/prefs/ui-prefs";
 
 export function FieldBriefCard({ context }: { context: unknown }) {
-  const brief = buildFieldBrief(context);
+  const [areaUnit, setAreaUnit] = useState<AreaUnit>("m2");
+  useEffect(() => {
+    setAreaUnit(readAreaUnitCookie());
+  }, []);
+  const brief = buildFieldBrief(context, { areaUnit });
   /* 아무것도 없으면 아무것도 그리지 않는다 — 빈 카드는 "조회했는데 없다"를
      "볼 게 없다"로 보이게 한다. */
   if (!brief) return null;

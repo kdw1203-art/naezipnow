@@ -18,7 +18,11 @@ import { logger } from "@/lib/log";
 
 /* [B001 1단계] 1h → 24h. 이 페이지의 원천(국토부 실거래)은 하루 1번 적재라
    더 자주 재렌더할 이유가 없다 — 26k 페이지 크롤 재렌더가 DB 를 밀던 문제의 반쪽. */
-export const revalidate = 86400;
+/* [1010] 24h → 7일. 크롤러 재방문이 ≈2.2일이라 하루 눈금은 방문마다 재렌더와 거의 같았다.
+   이 화면의 원천은 국토부 실거래뿐이고(거래 많은 순 상위 48곳), 적재 크론이 이번 슬라이스에서
+   건드린 지역이 있으면 이 인덱스를 즉시 비운다 —
+   app/api/cron/molit-transactions-ingest → invalidateImjangForTxRegions(). */
+export const revalidate = 604_800;
 
 const PATH = "/imjang";
 

@@ -58,6 +58,13 @@ export type TownCategoryLink = {
    * 클라이언트 조각이 필요한 칸(모임 만들기)은 페이지가 action 으로 덮어쓴다.
    */
   heroCta: readonly { label: string; href: string; primary?: boolean }[];
+  /**
+   * [1006] 이 칸이 **다른 재질**(뉴스룸)로 가는 입구인가. 카테고리 카드가 이 값을 보고
+   * 한지 면·네이비 아이콘(globals.css .news-entry-card)으로 그린다 — 나머지 넷(공공데이터)과
+   * 같은 흰 카드로 서 있으면 "뉴스도 동네이야기의 한 칸"으로 읽힌다. 뉴스룸은 히어로도
+   * 목록도 다른 화면이므로 입구부터 다르게 보여야 한다.
+   */
+  entry?: "newsroom";
 };
 
 /** 브레드크럼 한 줄 — 9칸 전부 "동네이야기 › {라벨}". 로딩 스켈레톤도 이걸 쓴다. */
@@ -77,7 +84,11 @@ export function townBreadcrumb(href: string): string {
 export const TOWN_CATEGORY_LINKS: TownCategoryLink[] = [
   /* 모바일 실측(2026-08-02): "뉴스·다이제스트"는 카드 폭(104px)에서 "뉴스·다이제…"
      로 잘렸다. 라벨은 짧게, 다이제스트는 부제로. */
-  { href: "/town/news", label: "뉴스", icon: "newspaper", desc: "요약·주간 다이제스트", tone: "bg-warning-soft text-warning", headSub: "매일 아침 모은 부동산 기사 요약 — 주간 다이제스트 포함", heroTitle: ["오늘 부동산은 ", "이렇게", " 움직였습니다"], heroTone: "text-on-navy-amber", heroCta: [{ label: "주간 다이제스트", href: "/digest" }] },
+  /* [1006] 뉴스 칸은 뉴스룸(/town/news)으로 가는 **입구**다 — entry: "newsroom". 히어로 문장은
+     뉴스룸 마스트헤드가 같은 것을 쓴다(app/town/news/page.tsx). */
+  /* [1007 · P2] 라벨 "뉴스" → "뉴스룸": 카드·GNB·하위 화면("뉴스룸 전체 ›")이 같은 이름으로
+     같은 곳(/town/news)을 가리킨다. 이야기와 다른 재질의 **장소** 이름이라 "뉴스"보다 분명하다. */
+  { href: "/town/news", label: "뉴스룸", icon: "newspaper", desc: "기사 요약 · 자동 수집", tone: "bg-warning-soft text-warning", headSub: "매일 아침 모은 부동산 기사 요약 — 주간 다이제스트 포함", heroTitle: ["오늘 부동산은 ", "이렇게", " 움직였습니다"], heroTone: "text-on-navy-amber", heroCta: [{ label: "주간 다이제스트", href: "/digest" }], entry: "newsroom" },
   { href: "/apply", label: "청약 센터", icon: "ticket", desc: "분양·경쟁률", tone: "bg-success-soft text-success", headSub: "청약홈 공공데이터 — 경쟁률·특별공급·접수 일정", heroTitle: ["이번 달 청약, ", "경쟁률", "까지 보고 정합니다"], heroTone: "text-on-navy-green", heroCta: [{ label: "청약 캘린더", href: "/apply/calendar" }] },
   { href: "/auctions", label: "공매 물건", icon: "hammer", desc: "온비드 공매", tone: "bg-success-soft text-success", headSub: "온비드 진행·예정 물건 — 감정가·최저입찰가·입찰일", heroTitle: ["감정가보다 싼 물건이 ", "지금", " 입찰 중입니다"], heroTone: "text-on-navy-green", heroCta: [] },
   { href: "/supply", label: "입주 물량", icon: "construction", desc: "공급 일정", tone: "bg-success-soft text-success", headSub: "지역·시기별 아파트 입주 예정 — 청약홈 공고 기준", heroTitle: ["언제 어디에 ", "얼마나", " 들어오는지 봅니다"], heroTone: "text-on-navy-green", heroCta: [] },

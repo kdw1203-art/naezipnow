@@ -19,6 +19,11 @@ import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { logger } from "@/lib/log";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
 import { cityOfRegion, groupRegionsByCity } from "@/lib/town/region-groups";
+import { buildNewsRows } from "@/lib/town/news-list";
+import { isStoryPost } from "@/lib/town/story";
+import { postAttachments } from "@/lib/community/attachments";
+import { Icon } from "@/app/components/Icon";
+import { TownNewsStrip } from "../TownNewsStrip";
 
 /* ============================================================
    [#64] 동네 홈 — /town/{regionId}
@@ -27,11 +32,21 @@ import { cityOfRegion, groupRegionsByCity } from "@/lib/town/region-groups";
    한 화면에 모으고, 시장 데이터 페이지(/region/[id])와 상호 링크한다.
 
    구분: /region/[id] = 시장 데이터(숫자), /town/[id] = 동네 생활(글·뉴스).
+   [1006] 사람 기록(이웃 글 · 임장노트)과 "이 동네 뉴스"는 **시각적으로 다른 블록**이다 —
+   이웃 글은 작성자 머리글자가 앞에 오는 이야기 카드(.story-*), 뉴스는 한지 면 스트립
+   (.news-strip, 출처·시각)으로 뉴스룸을 가리킨다. 이웃 글 상세는 /town/story/[id].
    generateStaticParams + dynamicParams=false — 카탈로그 62곳만 존재한다
    (임의 문자열은 빌드 매니페스트 밖이라 미들웨어 전에 정적 404 — soft-404 없음).
    ============================================================ */
 
-export const revalidate = 600;
+/* [1007] 600초 → 6시간. 62개 동네 홈(HTML ~185KB)이 하루 198회 크롤되며 10분마다 다시
+   구워졌다. 이웃 글·공개 노트·뉴스 적재 지점이 invalidateTownFeed/invalidateAfterIngest("news")
+   로 62곳을 한 번에 비우므로(revalidatePath("/town/[region]","page")) 시간 TTL 은 안전망이다. */
+/* [1010] 6시간 → 7일. 하루 198회 크롤 · 크롤러 재방문 ≈2.2일이라 6시간 눈금은 방문마다
+   재렌더와 같았다(62곳 × HTML ~185KB). 내용을 바꾸는 지점은 전부 라우트 단위로 62곳을 한 번에
+   비운다 — invalidateTownFeed()(이웃 글·댓글·공감·채택·공개 노트 저장/전환/삭제)와
+   invalidateAfterIngest("news")(뉴스 적재·주간 글·지역 소개 글). 시간 TTL 은 안전망이다. */
+export const revalidate = 604_800;
 export const dynamicParams = false;
 
 export function generateStaticParams(): Array<{ region: string }> {
@@ -103,15 +118,12 @@ export default async function TownRegionHomePage({
 
   const allPosts: Post[] = postsR.status === "fulfilled" ? postsR.value : [];
   const regionPosts = allPosts.filter((p) => postMatchesRegion(p, nameKey));
-  const communityPosts = regionPosts.filter((p) => !p.isAutomated).slice(0, 8);
-  const newsPosts = regionPosts
-    .filter((p) => p.isAutomated)
-    .sort(
-      (a, b) =>
-        Date.parse(b.sourcePublishedAt || b.createdAt) -
-        Date.parse(a.sourcePublishedAt || a.createdAt),
-    )
-    .slice(0, 6);
+  /* 이웃 글 = 사람이 쓴 글(자동수집 제외) · link_only 는 목록에 싣지 않는다 */
+  const communityPosts = regionPosts
+    .filter((p) => isStoryPost(p) && p.visibility !== "link_only")
+    .slice(0, 8);
+  /* [1006] 이 동네 뉴스 — 뉴스룸과 같은 조립기(같은 사건 접기·요약·출처)로 행을 만든다 */
+  const newsRows = buildNewsRows(regionPosts.filter((p) => p.isAutomated)).slice(0, 6);
   const notes: PublicNoteCard[] =
     notesR.status === "fulfilled"
       ? notesR.value.filter((n) => noteMatchesRegion(n, nameKey)).slice(0, 6)
@@ -156,7 +168,7 @@ export default async function TownRegionHomePage({
             href={`/town/write?region=${encodeURIComponent(region.name)}`}
             className="btn-primary btn-cta px-4 py-[9px] t-body"
           >
-            이 동네 글쓰기
+            이 동네 이야기 쓰기
           </Link>
         </div>
       </div>
@@ -193,12 +205,14 @@ export default async function TownRegionHomePage({
       )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* 이웃 글 */}
-        <section className="rise-in-1">
+        {/* 이웃 글 — 사람의 기록. 이야기 카드 규칙(.story-*): 작성자가 먼저, 그다음 제목·댓글·사진 */}
+        <section className="rise-in-1" aria-labelledby="region-stories-title">
           <div className="mb-2 flex items-baseline justify-between px-1">
-            <h2 className="t-section text-ink">이웃 글</h2>
-            <Link href="/town" className="inline-block py-[5px] t-sub font-bold text-primary">
-              전체 피드 ›
+            <h2 id="region-stories-title" className="t-section text-ink">
+              이웃 글 <span className="story-kind ml-1 t-caption align-middle">사람의 기록</span>
+            </h2>
+            <Link href="/town?kind=post" className="inline-block py-[5px] t-sub font-bold text-primary">
+              이야기 피드 ›
             </Link>
           </div>
           {postsFailed ? (
@@ -206,82 +220,88 @@ export default async function TownRegionHomePage({
               글을 지금 불러오지 못했어요. 잠시 후 다시 열어봐 주세요.
             </div>
           ) : communityPosts.length === 0 ? (
-            <div className="card flex flex-col items-start gap-2 rounded-2xl px-5 py-6">
-              {/* [970 · C-20] 해요체 통일 */}
+            <div className="story-card flex flex-col items-start gap-2 px-5 py-6">
+              {/* [970 · C-20] 해요체 통일 · [1006] 0건은 0건이라고 — 지어낸 글 없음 */}
               <p className="t-body text-text-2">
-                아직 {region.name} 이웃 글이 없어요. 이 동네에 다녀오셨다면 첫 이야기를
-                남겨 주세요 — 글을 쓰면 포인트가 적립돼요.
+                아직 {region.name} 이웃 글이 없어요 — 이 동네에 다녀오셨다면 첫 이야기를
+                남겨 보세요. 글을 쓰면 포인트가 적립돼요.
               </p>
               <Link
                 href={`/town/write?region=${encodeURIComponent(region.name)}`}
                 className="btn-soft rounded-[10px] px-3.5 py-2 t-sub font-bold"
               >
-                첫 글 쓰기 ›
+                첫 이야기 쓰기 ›
               </Link>
             </div>
           ) : (
-            <div className="card overflow-hidden rounded-2xl">
+            <div className="story-card overflow-hidden">
               <ul className="flex flex-col">
-                {communityPosts.map((p) => (
-                  <li key={p.id} className="border-b border-line last:border-0">
-                    <Link
-                      href={`/town/news/${p.id}`}
-                      className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-bg"
-                    >
-                      <div className="min-w-0">
-                        <div className="truncate t-body font-bold text-ink">
-                          {p.title}
+                {communityPosts.map((p) => {
+                  const author = p.authorLabel?.trim() || "이웃";
+                  const photoCount = postAttachments(p).length;
+                  return (
+                    <li key={p.id} className="border-b border-line last:border-0">
+                      <Link
+                        href={`/town/story/${p.id}`}
+                        className="flex items-center gap-3 px-4 py-3 no-underline transition-colors hover:bg-bg"
+                      >
+                        <span className="story-avatar" aria-hidden="true">
+                          {author.slice(0, 1)}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate t-body font-bold text-ink">{p.title}</div>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 t-sub text-text-3">
+                            <span className="font-bold text-text-2">{author}</span>
+                            <span>{relTime(p.createdAt)}</span>
+                            <span className="inline-flex items-center gap-1">
+                              <Icon name="messages-square" size={11} />
+                              댓글 {p.commentCount}
+                            </span>
+                            {photoCount > 0 && (
+                              <span className="inline-flex items-center gap-1">
+                                <Icon name="camera" size={11} />
+                                사진 {photoCount}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="mt-0.5 flex items-center gap-2 t-sub text-text-3">
-                          <span>{p.authorLabel || "이웃"}</span>
-                          <span>{relTime(p.createdAt)}</span>
-                          {p.commentCount > 0 && <span>댓글 {p.commentCount}</span>}
-                        </div>
-                      </div>
-                      <span className="shrink-0 t-body font-bold text-text-3">›</span>
-                    </Link>
-                  </li>
-                ))}
+                        <span className="shrink-0 t-body font-bold text-text-3">›</span>
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
         </section>
 
-        {/* 동네 뉴스 */}
-        <section className="rise-in-2">
+        {/* 이 동네 뉴스 — 다른 재질(뉴스룸 스트립). 출처·시각이 앞에 서고 뉴스룸으로 보낸다 */}
+        <section className="rise-in-2" aria-labelledby="region-news-title">
           <div className="mb-2 flex items-baseline justify-between px-1">
-            <h2 className="t-section text-ink">{region.name} 뉴스</h2>
-            <Link href="/town/news" className="inline-block py-[5px] t-sub font-bold text-primary">
-              전체 뉴스 ›
+            <h2 id="region-news-title" className="t-section text-ink">
+              {region.name} 뉴스 <span className="news-tag ml-1 align-middle">뉴스룸</span>
+            </h2>
+            <Link
+              href={`/town/news?region=${encodeURIComponent(region.name)}`}
+              className="inline-block py-[5px] t-sub font-bold text-primary"
+            >
+              뉴스룸 ›
             </Link>
           </div>
-          {newsPosts.length === 0 ? (
-            <div className="card rounded-2xl px-5 py-6 t-body text-text-2">
-              최근 수집된 {region.name} 뉴스가 없어요. 매일 아침 자동 수집되며, 위의
+          {newsRows.length === 0 ? (
+            <div className="news-strip px-5 py-6 t-body text-text-2">
+              최근 수집된 {region.name} 기사가 없어요. 매일 아침 자동 수집되며, 위의
               &lsquo;{region.name} 새 소식&rsquo; 알림을 켜 두면 새 기사가 잡히는 대로
               알림함으로 알려드려요.
             </div>
           ) : (
-            <div className="card overflow-hidden rounded-2xl">
-              <ul className="flex flex-col">
-                {newsPosts.map((p) => (
-                  <li key={p.id} className="border-b border-line last:border-0">
-                    <Link
-                      href={`/town/news/${p.id}`}
-                      className="flex flex-col gap-0.5 px-4 py-3 transition-colors hover:bg-bg"
-                    >
-                      <span className="line-clamp-2 t-body font-bold text-ink">
-                        {p.title}
-                      </span>
-                      <span className="t-sub text-text-3">
-                        {p.sourceName || "뉴스"} ·{" "}
-                        {relTime(p.sourcePublishedAt || p.createdAt)}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <TownNewsStrip
+              rows={newsRows}
+              title={`${region.name} 뉴스`}
+              href={`/town/news?region=${encodeURIComponent(region.name)}`}
+              max={6}
+              showHeader={false}
+            />
           )}
         </section>
       </div>

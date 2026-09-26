@@ -1,11 +1,13 @@
 "use client";
 
+import { formatKrwManwon } from "@/lib/format/krw";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { NaverMap } from "@/components/map/NaverMapLazy";
 import type { MapIdleInfo, MapMarkerData } from "@/components/map/NaverMap";
 import { Icon } from "@/app/components/Icon";
 import { PICK_DEFAULT_LEVEL } from "@/lib/map/pick-zoom";
+import { syncCenterState, syncLevelState } from "@/lib/map/viewport-sync";
 import {
   ComplexPicker,
   resolvePickedComplexById,
@@ -73,7 +75,7 @@ export function MapPickDrawer({
   open,
   onClose,
   onPick,
-  /** 서랍 제목 — 어떤 도구를 위해 고르는지 알려 준다("이 단지 종합 진단" 등) */
+  /** 서랍 제목 — 어떤 도구를 위해 고르는지 알려 준다("종합 진단" 등) */
   purpose,
   /** 이미 고른 단지가 있으면 그 좌표로 시작(없으면 서울시청) */
   initialCenter,
@@ -163,8 +165,9 @@ export function MapPickDrawer({
           lat: p.lat,
           lng: p.lng,
           label: p.name,
+          /* [1009 · A] 지도 말풍선은 짧은 표기(표준) — 1억 이상 평당가가 "12,017만/평"(억 미전환)으로 찍혔다 */
           priceLabel: p.pyeongManwon
-            ? `${p.pyeongManwon.toLocaleString("ko-KR")}만/평`
+            ? `${formatKrwManwon(p.pyeongManwon, { style: "eok1" })}/평`
             : undefined,
         }))
       : view.clusters.map((c) => ({
@@ -239,6 +242,12 @@ export function MapPickDrawer({
             label=""
             /* 이미 지도 안이다 — 피커 옆 "지도로 찾기" 단추는 그리지 않는다 */
             onMapClick={null}
+            /* [1008 · M] 딥링크를 다시 읽지 않는다. 초기값이 undefined 면 피커는 URL 의 ?complexId=/?apt= 로
+               자동 선택하는데, 서랍 안에서 그러면 onPick + onClose 가 돌아 **서랍이 열리자마자 스스로 닫히고**
+               화면의 선택을 딥링크 단지로 덮어썼다(리뷰 B 재현: ?complexId=abc123 화면에서 '지도로 찾기' →
+               5초 안에 닫힘, 워크벤치·시나리오·비교·타이밍·허브 6/6). 딥링크는 화면 본체의 피커가 이미 처리했다. */
+            initialComplexId={null}
+            initialApt={null}
             onSelect={(c) => {
               if (!c) return;
               onPick(c);
@@ -264,7 +273,12 @@ export function MapPickDrawer({
             onMarkerClick={handleMarker}
             onFallbackChange={setMapDown}
             onIdle={(info) => {
-              setLevel(Math.max(1, Math.round(21 - info.zoom)));
+              /* [1008 · M] 실제 중심·축척을 state 로(같은 값이면 그대로 — 리렌더 없음).
+                 예전엔 축척만 담아서, 끌어서 옮긴 뒤 지도 ＋/－ 를 누르면 level 이 바뀌는 순간
+                 NaverMap 이 처음 자리(center state)로 되돌렸다(소유자 캡처). 중심도 담아 두면
+                 같은 묶음을 다시 눌렀을 때(state 가 같은 값) 지도가 안 움직이는 일도 없다. */
+              setCenter((prev) => syncCenterState(prev, info.center));
+              setLevel((prev) => syncLevelState(prev, info.zoom));
               void loadViewport(info);
             }}
             className="h-full w-full"

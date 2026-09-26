@@ -5,6 +5,7 @@ import { Bars } from "@/app/components/viz/Bars";
 // server-only 체인이 있는 모듈이라 값 import 는 불가 — 타입은 컴파일에서 소거되므로 안전.
 import type { SupplyItem } from "@/lib/market/supply";
 import { AIPanel } from "@/app/components/AIPanel";
+import { Explain } from "@/app/components/explain/Explain";
 
 /**
  * /supply 클라이언트 셸 (사용량 절감 9차 — ISR 전환의 클라이언트 절반).
@@ -35,13 +36,23 @@ type Group = {
   households: number;
 };
 
+/** [1009 · H] 입주월이 실제 달(01~12)인가 — 적재분에 "202700"(월 00)이 섞여 있어 화면에 "2027.00"·
+    "2027년 0분기 입주 예정"이 나왔다(로컬 실측: 2곳 331세대). 형식만 보던 /^\d{6}$/ 검사를 달 범위까지 본다. */
+function validYm(ym: string): boolean {
+  if (!/^\d{6}$/.test(ym)) return false;
+  const m = Number(ym.slice(4, 6));
+  return m >= 1 && m <= 12;
+}
+
 function fmtYm(ym: string): string {
-  if (!/^\d{6}$/.test(ym)) return ym;
+  if (/^\d{6}$/.test(ym) && !validYm(ym)) return `${ym.slice(0, 4)}년 월 미정`;
+  if (!ym) return "월 미정";
+  if (!validYm(ym)) return ym;
   return `${ym.slice(0, 4)}.${ym.slice(4, 6)}`;
 }
 
 function monthLabel(ym: string): string {
-  if (!/^\d{6}$/.test(ym)) return "미정";
+  if (!validYm(ym)) return "미정";
   return `${Number(ym.slice(4, 6))}월`;
 }
 
@@ -71,7 +82,7 @@ function deriveRegions(
 function deriveMonthly(items: SupplyItem[]): MonthBucket[] {
   const map = new Map<string, { count: number; households: number }>();
   for (const s of items) {
-    if (!/^\d{6}$/.test(s.moveInYm)) continue;
+    if (!validYm(s.moveInYm)) continue;
     const e = map.get(s.moveInYm) ?? { count: 0, households: 0 };
     e.count += 1;
     e.households += Number(s.households ?? 0) || 0;
@@ -88,7 +99,7 @@ function groupByQuarter(list: SupplyItem[]): Group[] {
   const map = new Map<string, Group>();
   for (const s of list) {
     const ym = s.moveInYm;
-    const valid = /^\d{6}$/.test(ym);
+    const valid = validYm(ym);
     const year = valid ? ym.slice(0, 4) : "";
     const mo = valid ? Number(ym.slice(4, 6)) : 0;
     const q = mo >= 1 && mo <= 12 ? Math.ceil(mo / 3) : 0;
@@ -195,6 +206,9 @@ export function SupplyClient({
   const upcomingMore = Math.max(0, upcomingItems.length - upcomingShown.length);
 
   const monthlyShown = monthly.slice(-24);
+  /* [1009 · H] 입주월이 없거나 달이 잘못 적힌 단지 — 월별 합계에서 빠진다는 사실을 적는다(숨기지 않는다) */
+  const noMonth = filtered.filter((s) => !validYm(s.moveInYm));
+  const noMonthHouseholds = noMonth.reduce((a, s) => a + (Number(s.households ?? 0) || 0), 0);
   const monthlyMax = monthlyShown.reduce((m, b) => Math.max(m, b.households), 0);
 
   const tableRows = tableExpanded ? list : list.slice(0, TABLE_INITIAL_ROWS);
@@ -222,7 +236,24 @@ export function SupplyClient({
         <div className="chart-card text-primary" data-reveal="">
           <div className="chart-head">
             {/* [970 · B-44] 섹션 제목은 h2 — div/span 이라 문서 개요에 섹션이 없었다 */}
-            <h2 className="t-section text-ink">월별 입주 물량</h2>
+            <span className="flex items-center gap-0.5">
+              <h2 className="t-section text-ink">월별 입주 물량</h2>
+              {/* [1009 · H] 입주 물량의 뜻과 이 화면의 집계 — 아래 월별 합계·KPI 계산 그대로.
+                  [1009 · H 리뷰] 출처를 사실대로: apartment_supply 1,338행 중 983행(73%)은 청약홈 분양공고 입주예정월을 매일
+                  자동 적재한 것(lib/market/supply-ingest.ts · 마지막 적재 2026-09-20), 나머지 355행이 2026년 2월 수동 업로드분이다.
+                  예전 문구 "공공데이터 입주예정물량 · 수동 적재"·"자동 갱신 없음"은 자동 경로가 생기기 전 이야기였다. */}
+              <Explain
+                term="ipju-mulryang"
+                how={[
+                  "청약홈 분양공고의 입주예정월(매일 자동 적재)과 공공데이터 입주예정물량(2026년 2월 수동 적재분)의 단지별 세대수를 입주월로 묶어 더했어요(입주월 순 마지막 24개월까지 표시).",
+                  "입주는 월 단위로만 공개돼 날짜는 알 수 없어요. 세대수가 비어 있는 단지는 0으로 더해져요.",
+                  "지역을 고르면 그 시·도 단지만 더해요.",
+                ]}
+                source={`청약홈 분양공고(공공데이터포털 API · 매일 자동) · 공공데이터 입주예정물량(2026년 2월 수동)${
+                  asOfLabel ? ` · 최근 적재 ${asOfLabel}` : ""
+                }`}
+              />
+            </span>
             <span className="t-caption ml-auto text-text-3">{scope}· 세대수 기준</span>
           </div>
 
@@ -272,21 +303,21 @@ export function SupplyClient({
                 return (
                   <div
                     key={b.ym}
-                    className="row-hl grid grid-cols-[52px_1fr_92px] items-center gap-2 t-sub"
+                    className="row-hl grid grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-2 t-sub"
                   >
                     <span
                       className={`shrink-0 ${isPeak ? "font-extrabold text-primary" : "text-text-3"}`}
                     >
                       {fmtYm(b.ym)}
                     </span>
-                    <span className={`rank-track ${isPeak ? "text-primary" : "text-primary"}`}>
+                    <span className="rank-track text-primary">
                       <span
                         className="rank-fill"
                         style={{ width: `${pct}%`, opacity: isPeak ? 1 : 0.45 }}
                       />
                     </span>
-                    <span className="shrink-0 text-right text-text-2">
-                      {b.households.toLocaleString()}세대
+                    <span className="shrink-0 whitespace-nowrap text-right tabular-nums text-text-2">
+                      {b.households.toLocaleString("ko-KR")}세대
                       <span className="ml-1 text-text-3">· {b.count}곳</span>
                     </span>
                   </div>
@@ -297,6 +328,12 @@ export function SupplyClient({
             <div className="rounded-[10px] border border-line bg-surface px-4 py-8 text-center t-body text-text-3">
               표시할 월별 입주 물량 데이터가 없어요.
             </div>
+          )}
+          {noMonth.length > 0 && (
+            <p className="m-0 t-caption text-text-3">
+              입주월이 비었거나 달이 잘못 적힌 {noMonth.length.toLocaleString("ko-KR")}곳(
+              {noMonthHouseholds.toLocaleString("ko-KR")}세대)은 월별 합계에서 뺐어요 — 아래 표에는 “월 미정”으로 있어요.
+            </p>
           )}
         </div>
 
@@ -439,8 +476,8 @@ export function SupplyClient({
                   <span className="text-center font-bold text-text-1">
                     {fmtYm(item.moveInYm)}
                   </span>
-                  <span className="text-center font-bold text-text-1">
-                    {item.households ? item.households.toLocaleString() : "—"}
+                  <span className="text-center font-bold tabular-nums text-text-1">
+                    {item.households ? item.households.toLocaleString("ko-KR") : "—"}
                   </span>
                   <span className="text-center font-extrabold text-primary">
                     {item.bizType ?? "—"}
@@ -452,15 +489,16 @@ export function SupplyClient({
                   <button
                     type="button"
                     onClick={() => setTableExpanded(true)}
-                    className="press w-full rounded-lg border border-line bg-surface py-2 text-xs font-bold text-text-1"
+                    className="press inline-flex min-h-[40px] w-full items-center justify-center rounded-lg border border-line bg-surface py-2 text-xs font-bold text-text-1"
                   >
-                    나머지 {tableHiddenCount.toLocaleString()}곳 더 보기
+                    {/* 글을 span 으로 — 40px 버튼 높이를 12px 글자 줄 수로 읽어 "3줄"로 오판하던 narrow-text 검사가 글 상자만 잰다 */}
+                    <span>나머지 {tableHiddenCount.toLocaleString()}곳 더 보기</span>
                   </button>
                 </div>
               )}
               <div className="pb-2 pt-1 t-caption text-text-3">
-                출처 공공데이터(data.go.kr) 입주예정물량 · 수동 적재 데이터
-                {asOfLabel ? ` (최근 적재 ${asOfLabel})` : ""} · 자동 갱신 없음
+                출처 청약홈 분양공고(매일 자동 적재) · 공공데이터 입주예정물량(2026년 2월 수동 적재)
+                {asOfLabel ? ` · 최근 적재 ${asOfLabel}` : ""}
               </div>
             </div>
           </div>
@@ -523,7 +561,7 @@ export function SupplyClient({
                     type="button"
                     onClick={() => selectRegion(on ? null : r.region)}
                     aria-pressed={on}
-                    className={`press flex w-full items-center justify-between rounded-lg px-1.5 py-[7px] text-left text-xs ${
+                    className={`press flex min-h-[40px] w-full items-center justify-between rounded-lg px-1.5 py-[7px] text-left text-xs ${
                       on ? "bg-primary-soft" : ""
                     }`}
                   >
@@ -533,8 +571,8 @@ export function SupplyClient({
                       </span>
                       {r.region}
                     </span>
-                    <span className="text-text-2">
-                      {r.households.toLocaleString()}세대 · {r.count}곳
+                    <span className="tabular-nums text-text-2">
+                      {r.households.toLocaleString("ko-KR")}세대 · {r.count}곳
                     </span>
                   </button>
                 );
@@ -544,7 +582,7 @@ export function SupplyClient({
                   type="button"
                   onClick={() => setRegionsOpen((v) => !v)}
                   aria-expanded={regionsOpen}
-                  className="press mt-0.5 rounded-lg bg-bg py-1.5 text-center t-sub font-bold text-primary"
+                  className="press mt-0.5 min-h-[40px] rounded-lg bg-bg py-1.5 text-center t-sub font-bold text-primary"
                 >
                   {regionsOpen ? "상위 5개만 보기" : `지역 전체 보기 (${regions.length}곳)`}
                 </button>
@@ -553,7 +591,7 @@ export function SupplyClient({
                 <button
                   type="button"
                   onClick={() => selectRegion(null)}
-                  className="press mt-1 rounded-lg border border-line bg-surface py-1.5 t-sub font-bold text-text-1"
+                  className="press mt-1 min-h-[40px] rounded-lg border border-line bg-surface py-1.5 t-sub font-bold text-text-1"
                 >
                   전국 전체 보기
                 </button>

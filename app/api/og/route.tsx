@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { OG_STATIC_CACHE_CONTROL } from "@/lib/og/cache";
 import type { NextRequest } from "next/server";
 
 /* [개선 #4, 2026-08-22] 공유 미리보기(OG) 이미지 동적 생성.
@@ -143,7 +144,14 @@ export async function GET(req: NextRequest) {
         ? [{ name: "NotoKR", data: font, style: "normal" as const, weight: 800 as const }]
         : undefined,
       headers: {
-        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
+              /* [1010] 캐시 키는 **경로 + 쿼리스트링 전체**다(Vercel CDN 기본). 이 라우트의 그림은
+         쿼리 값만으로 결정되므로 URL 이 곧 내용이고, 값이 바뀌면 메타데이터가 만드는 URL 도
+         같이 바뀐다 → 같은 URL 이 다른 그림을 낼 일이 없다. 그래서 하루(86,400) 대신 7일 +
+         `immutable`(브라우저가 신선한 동안 재검증조차 하지 않는다)로 올린다.
+         `export const revalidate` 는 쓰지 않는다 — searchParams 를 읽는 동적 라우트 핸들러에서는
+         효력이 없고(Next 15: GET 핸들러 기본 비캐시), CDN 이 실제로 보는 것은 이 헤더뿐이다
+         (app/api/og/complex-trend/route.tsx [1007] 주석의 같은 실측). */
+      "Cache-Control": OG_STATIC_CACHE_CONTROL,
       },
     },
   );

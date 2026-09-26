@@ -38,7 +38,10 @@ import { cache } from "react";
    그래서 조회를 20초에 접고, 못 읽었으면 못 읽었다고 적은 채로 페이지를 낸다.
    ============================================================ */
 
-export const revalidate = 1800;
+/* [1010] 1800초 → 1일. 선정 결과는 공개 노트 전량 집계라 공개 노트가 바뀔 때만 바뀐다 —
+   그 지점(생성·공개 전환·수정·삭제)이 invalidatePublicNoteRoutes() 로 이 경로를 비운다.
+   30분 눈금은 크롤 1회당 오리진 1회였고, 이 페이지는 공개 노트 전량(≤500행) 집계라 렌더가 비싸다. */
+export const revalidate = 86_400;
 
 /** loadFailed: 조회가 실패했거나 상한 안에 끝나지 않았다. "노트가 없다"와 다른 사건이다. */
 type IndexData = { months: BestNotesMonth[]; loadFailed: boolean };

@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { decodeComplexId } from "@/lib/complex/complex-store";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { applyRateLimit, READ_RATE_LIMIT } from "@/lib/rate-limit";
+import { logger } from "@/lib/log";
 
 export const runtime = "nodejs";
 
@@ -31,6 +32,9 @@ export type ComplexCompareItem = {
   name: string;
   region: string;
   hasData: boolean;
+  /** [1008 · Q] 이 단지의 실거래 조회가 실패했다 — hasData=false 와 함께 온다. "최근 12개월 거래 없음"과
+   *  같은 모양으로 보내면 화면이 실패를 "거래 없음"으로 말한다(리뷰 C: 비교표·내 기준 순위). */
+  failed?: boolean;
   /** 최근 6개월 */
   avg6mKrw: number | null;
   avgPyeong6mKrw: number | null;
@@ -101,7 +105,12 @@ export async function POST(req: NextRequest) {
         .order("contract_day", { ascending: false, nullsFirst: false })
         .limit(300);
       const rows = (data as TxRow[] | null) ?? [];
-      if (error || rows.length === 0) return empty;
+      /* [1008 · Q] 못 읽은 것과 없는 것은 다른 사실 — 실패는 표식을 달아 보낸다 */
+      if (error) {
+        logger.errorSampled("complex-compare", `[complex-compare] 실거래 조회 실패(${dec.region} ${dec.name})`, error);
+        return { ...empty, failed: true };
+      }
+      if (rows.length === 0) return empty;
 
       const recent6 = rows.filter((r) => r.contract_ym >= from6m);
       const avg = (xs: number[]) =>

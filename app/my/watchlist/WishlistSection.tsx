@@ -2,7 +2,7 @@ import Link from "next/link";
 import { EmptyState, ErrorState } from "@/app/components/ui/EmptyState";
 import { logger } from "@/lib/log";
 import { listBookmarks } from "@/lib/bookmarks/store";
-import { formatKrwShort } from "@/lib/market/format";
+import { formatEokMan } from "@/lib/format/eok-man";
 import {
   getListingById,
   LISTING_TYPE_LABEL,
@@ -17,12 +17,16 @@ import {
 
 
 
-/* [967 · 31] 여기 있던 formatKrwShort 사본은 lib/market/format 의 공통 함수로 대체 — 출력 동일 */
+/* [1009 · H] 매물 한 건의 호가 = 정밀 표기(표기 표준 · 네이버 부동산 관례) — "12억 4,500만".
+   예전 짧은 표기("12.5억")는 12억 4,500만과 12억 5,000만을 같은 얼굴로 보여 줬다. 값은 원 단위 → 만원으로. */
+function won(krw: number | null | undefined): string {
+  return krw == null ? "—" : formatEokMan(krw / 10_000);
+}
 
 function priceLine(l: ListingDetail): string {
-  if (l.listingType === "sale") return `매매 ${formatKrwShort(l.priceKrw)}`;
-  if (l.listingType === "jeonse") return `전세 ${formatKrwShort(l.depositKrw)}`;
-  return `월세 ${formatKrwShort(l.depositKrw)} / ${formatKrwShort(l.monthlyKrw)}`;
+  if (l.listingType === "sale") return `매매 ${won(l.priceKrw)}`;
+  if (l.listingType === "jeonse") return `전세 ${won(l.depositKrw)}`;
+  return `월세 ${won(l.depositKrw)} / ${won(l.monthlyKrw)}`;
 }
 
 type SavedListingsResult =
@@ -125,7 +129,7 @@ export async function WishlistSection({ email }: { email: string }) {
                 >
                   {l.complexName}
                 </Link>
-                <div className="t-section text-primary">{priceLine(l)}</div>
+                <div className="t-section t-num text-ink">{priceLine(l)}</div>
                 <div className="t-sub text-text-3">
                   {[
                     l.regionName,

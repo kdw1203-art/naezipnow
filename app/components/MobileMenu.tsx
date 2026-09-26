@@ -36,8 +36,10 @@ const SWIPE_CLOSE_PX = 60;
  *  오버레이는 createPortal로 document.body에 렌더 — 헤더 글래스의 backdrop-filter가
  *  position:fixed 컨테이닝 블록이 되어 시트 높이가 헤더로 클램프되던 문제를 회피. */
 
-/** 5 대분류 라벨 → 라인 아이콘 이름 ([1003] 요금제 추가 — 사유는 nav-data.ts) */
+/** 대분류 라벨 → 라인 아이콘 이름 ([1003] 요금제 · [1008 · J] 내 집 마련 추가 — 사유는 nav-data.ts) */
 const CAT_ICON: Record<string, string> = {
+  /* [1008 · J] 여정의 끝이 "열쇠 받기"라 열쇠 — nav-data.ts 의 맨 앞 묶음 */
+  "내 집 마련": "key",
   임장노트: "notebook-pen",
   지도: "map",
   "AI 분석": "sparkles",
@@ -71,6 +73,11 @@ export function MobileMenu() {
      조회로 상태를 반영한다(판정 전 null 동안은 중립 렌더 — 틀린 버튼을
      먼저 보여주지 않는다). */
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
+  /* [1007 · V2a-3] 시트는 한 번만 마운트해 두지만(아래 2026-08-18 결정), 그 안의 PushSubscribe 는
+     **처음 열릴 때** 마운트한다. 예전엔 페이지마다 닫힌 시트 안에서 마운트되어 서비스워커 조회까지
+     돌았다(공개키 GET 943회/일은 PushSubscribe 쪽에서 없앴다). 한 번 열리면 계속 마운트해 둔다 —
+     열고 닫을 때마다 다시 만들지 않는다. */
+  const [everOpened, setEverOpened] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
   /* [966] ☰ → 시트를 aria-controls 로 잇는다(포털이라 DOM 상 떨어져 있어도 id 로 연결) */
   const sheetId = useId();
@@ -83,6 +90,7 @@ export function MobileMenu() {
   const openMenu = () => {
     openedAtRef.current = Date.now();
     setOpen(true);
+    setEverOpened(true);
   };
   const closeFromBackdrop = () => {
     if (Date.now() - openedAtRef.current < 350) return;
@@ -319,7 +327,7 @@ export function MobileMenu() {
                 지역·단지·매물 검색
               </Link>
 
-              {/* 5 대분류 + 하위 메뉴 ([1003] 요금제 포함 — NAV 를 그대로 읽는다) */}
+              {/* 6 대분류 + 하위 메뉴 ([1003] 요금제 · [1008] 내 집 마련 포함 — NAV 를 그대로 읽는다) */}
               <nav className="flex flex-col gap-3.5">
                 {NAV.map((item) => (
                   <div key={item.label}>
@@ -376,7 +384,8 @@ export function MobileMenu() {
                 </div>
                 <div className="grid grid-cols-2 items-center gap-x-1">
                   <ThemeToggle />
-                  <PushSubscribe />
+                  {/* [1007 · V2a-3] 처음 열릴 때부터 마운트 — 닫힌 시트에서 서비스워커를 두드리지 않는다 */}
+                  {everOpened && <PushSubscribe />}
                   {/* [968 · 47] 홈 화면에 추가 — 설치 배너(3일째 방문 조건)를 기다리지 않고
                       사용자가 직접 누르는 진입점. 설치 앱에서는 숨긴다. */}
                   {showInstallItem && (

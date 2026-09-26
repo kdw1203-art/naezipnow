@@ -10,6 +10,9 @@ import {
   type RegionMonthlyReport,
 } from "@/lib/region/monthly-report";
 import { formatKrwShort } from "@/lib/market/format";
+import { formatEokMan } from "@/lib/format/eok-man";
+import { Delta } from "@/app/components/num/Delta";
+import { reportingClosed, reportingDeadlineLabel } from "@/lib/newui/reporting-window";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { logger } from "@/lib/log";
@@ -25,7 +28,13 @@ import { logger } from "@/lib/log";
    - 데이터가 전무한 월·지역 조합은 notFound (+ noindex 메타) — 껍데기 색인 방지.
    ============================================================ */
 
-export const revalidate = 86400; // 완결 월 스냅샷 — 신고 지연 반영을 위해 하루 1회면 충분
+/* 완결 월 스냅샷 — 신고 지연 반영을 위해 하루 1회면 충분(원래 86400).
+   [1010] 24h → 7일. "하루 1회면 충분" 은 시간이 아니라 **적재**를 재는 말이었다.
+   신고 지연으로 값이 바뀌는 달은 최근 3개월뿐이고, 그 지역에 새 실거래가 들어오면
+   lib/region/invalidate-market.ts 가 /region/{id}/report/{yyyy-mm} 를 바로 비운다.
+   2년 전 달은 더 이상 바뀌지 않는데 24시간마다 다시 그리고 있었다 — 62지역 × 12개월이
+   전부 그랬다. TTL 은 이제 안전망이고, 재생성은 적재가 정한다. */
+export const revalidate = 604_800;
 
 export async function generateStaticParams(): Promise<
   Array<{ id: string; ym: string }>
@@ -89,8 +98,13 @@ export default async function RegionMonthlyReportPage({
   if (!report) notFound(); // 데이터가 전무한 월 — 껍데기를 만들지 않는다
 
   const label = fmtYmLabel(ym);
+  /* [1009 · H] 신고 기한(말일 + 30일) 안의 달은 전월과 비교하지 않는다. 왜(리뷰 실측): parseReportMonth 가 "지난달"까지
+     열어 두어(서버 UTC 기준) /region/gangnam/report/2026-08 이 신고 중인 8월(80건)을 7월(189건)과 견줘
+     "▼ 57.7% 전월 대비"·"58% 줄었습니다"라고 적었다. 신고가 끝난 뒤 다시 그리면(하루 1회 재생성) 비교가 붙는다. */
+  const open = !reportingClosed(ym, new Date());
+  const deadline = reportingDeadlineLabel(ym);
   const volDelta =
-    report.tradeCount !== null && report.prevTradeCount !== null && report.prevTradeCount > 0
+    !open && report.tradeCount !== null && report.prevTradeCount !== null && report.prevTradeCount > 0
       ? pct(report.tradeCount, report.prevTradeCount)
       : null;
   const idxDelta =
@@ -98,15 +112,15 @@ export default async function RegionMonthlyReportPage({
       ? pct(report.index.value, report.index.prev)
       : null;
 
-  const facts: Array<{ label: string; value: string; sub?: string }> = [];
+  /* [1009 · H] 칸의 등락은 <Delta>(▲ 빨강 · ▼ 파랑 · 보합) + 비교 기준 — 예전엔 "전월 대비 12% 증가"·"전월 +0.12%"처럼
+     칸마다 표기가 달랐다(부호·화살표·소수 자리). 문단 문장은 그대로 둔다. */
+  const facts: Array<{ label: string; value: string; sub?: string; delta?: number | null }> = [];
   if (report.tradeCount !== null) {
     facts.push({
       label: "매매 신고",
       value: `${report.tradeCount.toLocaleString("ko-KR")}건`,
-      sub:
-        volDelta === null
-          ? undefined
-          : `전월 대비 ${Math.abs(volDelta) < 1 ? "비슷" : `${Math.abs(volDelta).toFixed(0)}% ${volDelta > 0 ? "증가" : "감소"}`}`,
+      delta: volDelta,
+      sub: open ? `신고 중${deadline ? ` · ${deadline}까지` : ""}` : undefined,
     });
   }
   if (report.avgDealKrw !== null) {
@@ -128,10 +142,8 @@ export default async function RegionMonthlyReportPage({
     facts.push({
       label: "매매가격지수",
       value: report.index.value.toFixed(1),
-      sub:
-        idxDelta === null
-          ? "한국부동산원"
-          : `전월 ${idxDelta > 0 ? "+" : ""}${idxDelta.toFixed(2)}%`,
+      sub: idxDelta === null ? "한국부동산원" : undefined,
+      delta: idxDelta,
     });
   }
 
@@ -139,7 +151,11 @@ export default async function RegionMonthlyReportPage({
   const paragraphs: string[] = [];
   if (report.tradeCount !== null) {
     const s: string[] = [
-      `${label} ${region.name} 아파트 매매 신고는 ${report.tradeCount.toLocaleString("ko-KR")}건입니다.`,
+      open
+        ? `${label} ${region.name} 아파트 매매 신고는 지금까지 ${report.tradeCount.toLocaleString("ko-KR")}건입니다. 신고 기한(계약 후 30일${
+            deadline ? ` · ${deadline}` : ""
+          })이 지나지 않아 더 늘어날 수 있어 전월과 비교하지 않았습니다.`
+        : `${label} ${region.name} 아파트 매매 신고는 ${report.tradeCount.toLocaleString("ko-KR")}건입니다.`,
     ];
     if (volDelta !== null) {
       s.push(
@@ -201,7 +217,14 @@ export default async function RegionMonthlyReportPage({
               <div className="mt-0.5 truncate t-section text-ink tabular-nums">
                 {f.value}
               </div>
-              {f.sub && <div className="mt-0.5 truncate t-caption text-text-3">{f.sub}</div>}
+              {f.delta !== undefined && f.delta !== null ? (
+                <div className="mt-0.5 flex flex-wrap items-baseline justify-center gap-x-1 t-caption">
+                  <Delta pct={f.delta} srContext="전월보다" />
+                  <span className="text-text-3">전월 대비</span>
+                </div>
+              ) : f.sub ? (
+                <div className="mt-0.5 truncate t-caption text-text-3">{f.sub}</div>
+              ) : null}
             </div>
           ))}
         </div>
@@ -244,7 +267,8 @@ export default async function RegionMonthlyReportPage({
                       {d.areaM2 !== null ? `${Math.round(d.areaM2)}㎡` : "—"}
                     </td>
                     <td className="py-2.5 pr-3 text-right font-extrabold tabular-nums text-ink">
-                      {formatKrwShort(d.priceKrw)}
+                      {/* [1009 · H] 한 건의 신고가 = 정밀 표기("12억 4,500만") */}
+                      {formatEokMan(d.priceKrw / 10_000)}
                     </td>
                     <td className="py-2.5 text-right t-sub tabular-nums text-text-3">
                       {d.contractDay !== null ? `${Number(ym.slice(4, 6))}.${d.contractDay}` : "—"}

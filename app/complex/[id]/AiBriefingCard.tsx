@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { NoteDraft } from "@/lib/ai/note-draft-core";
 
@@ -14,19 +14,31 @@ export function AiBriefingCard({
   region,
   aptName,
   noteHref,
+  autoRun = false,
 }: {
   complexId: string;
   region: string;
   aptName: string;
   noteHref: string;
+  /** [1008 · Q] AiBriefingLazy 가 "브리핑 받기"를 누른 뒤 이 청크를 받아 띄운다 — 마운트 즉시 한 번 실행 */
+  autoRun?: boolean;
 }) {
-  const [state, setState] = useState<"idle" | "busy" | "done" | "quota" | "error">("idle");
+  const [state, setState] = useState<"idle" | "busy" | "done" | "quota" | "error">(autoRun ? "busy" : "idle");
   const [draft, setDraft] = useState<NoteDraft | null>(null);
   const [usage, setUsage] = useState<{ used: number; limit: number | null; plan: string } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  async function run() {
-    if (state === "busy") return;
+  /* 개발 모드의 효과 두 번 실행에도 요청은 한 번 — 인스턴스와 함께 사는 ref 로 막는다 */
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!autoRun || autoStarted.current) return;
+    autoStarted.current = true;
+    void run(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function run(force = false) {
+    if (state === "busy" && !force) return;
     setState("busy");
     setErrorMsg(null);
     try {

@@ -4,6 +4,7 @@ import { canManageExpertProfile, sanitizeExpertForPublic } from "@/lib/experts/a
 import { deleteExpert, getExpert, updateExpert } from "@/lib/experts/store-db";
 import { sanitizeExpertProfilePatch } from "@/lib/experts/profile-input";
 import { revalidatePath } from "next/cache";
+import { invalidateExpertRoutes } from "@/lib/town/invalidate-town";
 
 export async function GET(
   _req: Request,
@@ -58,5 +59,8 @@ export async function DELETE(
     return NextResponse.json({ error: "삭제 권한이 없습니다." }, { status: 403 });
   }
   await deleteExpert(id);
+  /* [1010 · 동네축] 예전엔 삭제만 하고 비우지 않았다 — 목록 ISR(300초)이 지워진 전문가를
+     그대로 들고 있었다. TTL 이 1일이 되면서 그 자리는 하루짜리 유령 카드가 된다. */
+  invalidateExpertRoutes(id);
   return NextResponse.json({ ok: true });
 }

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { revalidateTag, unstable_cache } from "next/cache";
 import {
   getNote,
@@ -11,11 +12,7 @@ import {
 import { listNoteComments, type NoteComment } from "@/lib/inspection/note-comments";
 import {
   NOTE_CACHE_REVALIDATE_SEC,
-  NOTE_COMMENTS_CACHE_REVALIDATE_SEC,
   PUBLIC_NOTES_LIST_TAG,
-  noteCacheTags,
-  noteCommentsCacheTags,
-  noteVisitsCacheTags,
   tagsToRevalidate,
   type NoteMutation,
 } from "@/lib/inspection/note-cache-tags";
@@ -44,7 +41,17 @@ import { logger } from "@/lib/log";
  * 저장하면 다음 방문부터 실조회로 내려가 스스로 고쳐진다.
  *
  * ── 태그 ────────────────────────────────────────────────────────────────────
- * lib/inspection/note-cache-tags.ts 한 곳. 비우는 쪽은 invalidateNoteCache(). */
+ * lib/inspection/note-cache-tags.ts 한 곳. 비우는 쪽은 invalidateNoteCache().
+ *
+ * ── [1007] 노트 id 별 항목은 데이터 캐시에서 뺐다 ───────────────────────────
+ * 실측: 공개 노트 34편, /notes/[id] 열람은 하루 200회 미만(24h 상위 24 라우트 밖)이고
+ * 그 대부분이 크롤러의 1회성 방문이다. 5분(댓글 1분) TTL 의 id 별 항목(행·회차·댓글)은
+ * 방문마다 만료돼 있어 **쓰기 3건 · 읽기 0건**이 반복됐다 — ISR Writes 만 들고 DB 왕복은
+ * 그대로였다. 그래서 (1)~(3) 은 React cache() 로 바꿔 **같은 렌더 안**(generateMetadata +
+ * 본문)의 중복만 막고, 노트 수와 무관한 공용 한 벌인 (4) 관련 노트 풀만 unstable_cache 로
+ * 남긴다. 함수 이름·계약(공개 아니면 null·실패는 던짐·비공개 본문 미노출)은 그대로다.
+ * invalidateNoteCache() 의 태그 계약도 그대로 — note:<id> 류 태그는 이제 붙는 항목이 없어
+ * 비워도 no-op 이고, public-notes 태그가 (4) 를 비운다. */
 
 function assertPublic(note: Pick<InspectionNote, "id" | "isPublic">, where: string): void {
   if (!note.isPublic) {
@@ -58,68 +65,60 @@ function assertPublic(note: Pick<InspectionNote, "id" | "isPublic">, where: stri
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * 공개 노트 행 — 데이터 캐시(5분, note:<id>).
+ * 공개 노트 행 — [1007] 요청 안 중복 제거(React cache). 예전엔 데이터 캐시(5분, note:<id>).
  * 공개가 아니거나 없으면 null. 호출자는 null 을 "비공개거나 없음" 으로만 읽고 실조회로
- * 내려간다(소유자·구매 열람 판정은 그 뒤). 조회 실패는 던진다(캐시에 실리지 않는다).
+ * 내려간다(소유자·구매 열람 판정은 그 뒤). 조회 실패는 던진다.
  */
+const loadPublicNoteRow = cache(async (noteId: string): Promise<InspectionNote | null> => {
+  const note = await getNote(noteId);
+  /* 두 번째 가드 — 비공개 행은 본문 대신 null 로 바꿔 돌려준다 */
+  return note && note.isPublic ? note : null;
+});
+
 export async function getPublicNoteCached(id: string): Promise<InspectionNote | null> {
   if (!UUID_RE.test(id)) return null;
-  const load = unstable_cache(
-    async (noteId: string): Promise<InspectionNote | null> => {
-      const note = await getNote(noteId);
-      /* 두 번째 가드 — 비공개 행은 본문 대신 null 만 저장된다 */
-      return note && note.isPublic ? note : null;
-    },
-    ["note-public-row-v1"],
-    { revalidate: NOTE_CACHE_REVALIDATE_SEC, tags: noteCacheTags(id) },
-  );
-  const note = await load(id);
-  /* 저장본이 어떤 경로로든 비공개 행이면 쓰지 않는다(방어) */
+  const note = await loadPublicNoteRow(id);
+  /* 어떤 경로로든 비공개 행이면 쓰지 않는다(방어) */
   return note && note.isPublic ? note : null;
 }
 
 /**
- * 같은 작성자·같은 단지의 **공개** 회차 목록 — 데이터 캐시(5분, note:<id> + public-notes).
- * 비소유자 뷰어용이다(소유자는 비공개 회차도 봐야 하므로 실조회). 공개 노트에서만 부른다.
- * 방문일 오름차순(store-db 정렬 그대로). 조회 실패는 던진다.
+ * 같은 작성자·같은 단지의 **공개** 회차 목록 — [1007] 요청 안 중복 제거(React cache).
+ * 예전엔 데이터 캐시(5분, note:<id> + public-notes). 비소유자 뷰어용이다(소유자는 비공개
+ * 회차도 봐야 하므로 실조회). 공개 노트에서만 부른다. 방문일 오름차순(store-db 정렬 그대로).
+ * 조회 실패는 던진다.
  */
+const loadPublicVisitGroup = cache(
+  async (authorEmail: string, complexId: string, apt: string): Promise<InspectionNote[]> => {
+    const rows = complexId
+      ? await listNotesByAuthorForComplex(authorEmail, complexId)
+      : await listNotesByAuthorForApt(authorEmail, apt);
+    /* 비공개 회차는 돌려주지 않는다 — 화면도 비소유자에겐 공개 회차만 그린다 */
+    return rows.filter((r) => r.isPublic);
+  },
+);
+
 export async function listPublicVisitGroupCached(note: InspectionNote): Promise<InspectionNote[]> {
   assertPublic(note, "listPublicVisitGroupCached");
   const complexId =
     typeof note.metadata?.complexId === "string" ? note.metadata.complexId.trim() : "";
   const apt = note.aptName?.trim() ?? "";
   if (!complexId && !apt) return [];
-  const authorEmail = note.authorEmail;
-  /* 키는 noteId 하나 — 작성자·단지는 노트 행이 정하고, 행이 바뀌면 note:<id> 태그로 비워진다.
-     이메일을 인자로 넘기지 않는 것은 캐시 키 문자열에 싣지 않기 위해서다. */
-  const load = unstable_cache(
-    async (_noteId: string): Promise<InspectionNote[]> => {
-      const rows = complexId
-        ? await listNotesByAuthorForComplex(authorEmail, complexId)
-        : await listNotesByAuthorForApt(authorEmail, apt);
-      /* 비공개 회차는 저장하지 않는다 — 화면도 비소유자에겐 공개 회차만 그린다 */
-      return rows.filter((r) => r.isPublic);
-    },
-    ["note-public-visits-v1"],
-    { revalidate: NOTE_CACHE_REVALIDATE_SEC, tags: noteVisitsCacheTags(note.id) },
-  );
-  return load(note.id);
+  /* React cache() 키는 메모리 안 인자 비교라 이메일이 어디에도 직렬화되지 않는다 */
+  return loadPublicVisitGroup(note.authorEmail, complexId, apt);
 }
 
 /**
- * 공개 노트의 댓글 목록 — 데이터 캐시(60초, note:<id> + note-comments:<id>).
- * 비로그인 뷰어용이다. 로그인 뷰어는 "내 댓글" 판정에 author_email 이 필요한데 그 값은
- * 공개 응답 모양(NoteComment)에 설계상 없으므로 실조회(listNoteCommentsForViewer)로 간다.
- * 공개 노트에서만 부른다. 조회 실패는 던진다.
+ * 공개 노트의 댓글 목록 — [1007] 요청 안 중복 제거(React cache). 예전엔 데이터 캐시(60초,
+ * note:<id> + note-comments:<id>). 비로그인 뷰어용이다. 로그인 뷰어는 "내 댓글" 판정에
+ * author_email 이 필요한데 그 값은 공개 응답 모양(NoteComment)에 설계상 없으므로
+ * 실조회(listNoteCommentsForViewer)로 간다. 공개 노트에서만 부른다. 조회 실패는 던진다.
  */
+const loadPublicNoteComments = cache((noteId: string): Promise<NoteComment[]> => listNoteComments(noteId));
+
 export async function listPublicNoteCommentsCached(note: InspectionNote): Promise<NoteComment[]> {
   assertPublic(note, "listPublicNoteCommentsCached");
-  const load = unstable_cache(
-    (noteId: string): Promise<NoteComment[]> => listNoteComments(noteId),
-    ["note-public-comments-v1"],
-    { revalidate: NOTE_COMMENTS_CACHE_REVALIDATE_SEC, tags: noteCommentsCacheTags(note.id) },
-  );
-  return load(note.id);
+  return loadPublicNoteComments(note.id);
 }
 
 /**
@@ -138,7 +137,8 @@ export const listRelatedNotePoolCached: () => Promise<PublicNoteCard[]> = unstab
 /**
  * 노트가 바뀐 직후 부른다 — 변경 종류에 맞는 태그를 비운다(note-cache-tags.ts).
  * 요청 밖(크론·잡 러너)에서는 revalidateTag 가 던지므로 삼키고 경고만 남긴다 —
- * 그 경우 5분(댓글 1분) 시간 만료가 안전망이다.
+ * 그 경우 5분 시간 만료가 안전망이다. [1007] 이후 실제로 항목이 붙어 있는 태그는
+ * public-notes(관련 노트 풀)뿐이지만, 호출부 계약을 바꾸지 않으려 태그 목록은 그대로 비운다.
  */
 export function invalidateNoteCache(id: string, mutation: NoteMutation): void {
   const noteId = String(id ?? "").trim();

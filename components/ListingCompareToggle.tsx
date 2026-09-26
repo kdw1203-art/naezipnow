@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Icon } from "@/app/components/Icon";
 import {
   subscribe,
@@ -34,6 +34,9 @@ export function ListingCompareToggle({
     () => 0,
   );
   const full = !active && total >= MAX_COMPARE;
+  /* [1009 · T] 담을 때 체크가 한 번 튄다(키를 바꿔 매번 재생). 가득 찼다는 설명은 title= 말풍선(휴대폰에선 안 보임)
+     대신 버튼 글자로 — "3개까지 담겨요". 결과(담김·빠짐)는 바닥 비교함이 바로 보여 준다(토스트는 비교함을 가린다). */
+  const [pop, setPop] = useState(0);
 
   return (
     <button
@@ -43,23 +46,26 @@ export function ListingCompareToggle({
         e.preventDefault();
         e.stopPropagation();
         if (full) return;
-        toggle(item);
+        if (toggle(item)) setPop((n) => n + 1);
       }}
       aria-pressed={active}
       aria-disabled={full}
-      title={
-        full ? `비교함은 최대 ${MAX_COMPARE}개까지 담을 수 있어요` : "비교함에 담기"
-      }
-      className={`inline-flex shrink-0 items-center gap-1 rounded-[8px] border px-2.5 py-[5px] text-[12px] font-bold transition-colors ${
+      className={`press inline-flex min-h-[40px] shrink-0 items-center gap-1 rounded-[8px] border px-2.5 py-[5px] text-[12px] font-bold transition-colors ${
         active
-          ? "border-[rgba(29,79,216,.35)] bg-primary-soft text-primary"
+          ? "border-primary/35 bg-primary-soft text-primary"
           : full
-            ? "cursor-not-allowed border-line bg-[rgba(0,0,0,.03)] text-text-3"
-            : "border-line bg-surface text-text-2 hover:border-[rgba(29,79,216,.35)] hover:text-primary"
+            ? "cursor-not-allowed border-line bg-bg text-text-3"
+            : "border-line bg-surface text-text-2 hover:border-primary/35 hover:text-primary"
       } ${className}`}
     >
-      <Icon name={active ? "check" : "scale"} size={13} strokeWidth={2} />
-      {active ? "비교중" : "비교 담기"}
+      <Icon
+        key={active ? `on${pop}` : "off"}
+        name={active ? "check" : "scale"}
+        size={13}
+        strokeWidth={2}
+        className={active && pop ? "njn-pop-once" : ""}
+      />
+      {active ? "비교중" : full ? `${MAX_COMPARE}개까지 담겨요` : "비교 담기"}
     </button>
   );
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageShell } from "../components/PageShell";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { DEFAULT_LIMIT, MAX_LIMIT, PUBLIC_API_LICENSE } from "@/lib/api/public-aggregates";
-import { jsonLdScript } from "@/lib/seo/jsonld";
+import { jsonLdScript, publisherRef } from "@/lib/seo/jsonld";
 
 export const metadata = buildPageMetadata({
   title: "공개 집계 API — 내집나우 실거래 집계를 JSON 으로",
@@ -44,7 +44,7 @@ const ENDPOINTS: Endpoint[] = [
   {
     path: "/api/public/v1/regions/monthly",
     title: "지역×월 집계",
-    desc: "시군구 단위 월간 집계입니다. 거래 건수, 평균 거래가, 평당가, 전월 대비 변동률을 포함합니다.",
+    desc: "시군구 단위 월간 집계입니다. 거래 건수, 평균 거래가, 평당가, 평당가의 전월 대비 변동률을 포함합니다.",
     params: [
       { name: "month", desc: `yyyymm 6자리. 생략하면 전체 월을 최신순으로 반환합니다.` },
       { name: "region", desc: "지역명 부분 일치. 예: region=강남" },
@@ -63,7 +63,7 @@ const FIELDS: { name: string; desc: string }[] = [
   { name: "transactionCount", desc: "해당 월 신고된 매매 건수 (해제 신고분 제외)" },
   { name: "avgDealAmountKrw", desc: "평균 거래금액(원). 면적·층 가중 없는 단순 평균" },
   { name: "avgPricePerPyeongKrw", desc: "평당 평균가(원)" },
-  { name: "trendDeltaPct", desc: "전월 대비 평균 거래가 변동률(%)" },
+  { name: "trendDeltaPct", desc: "평당가 평균(거래 건별 단순 평균)의 전월 대비 변동률(%) · 두 달 모두 10건 이상일 때만(아니면 null)" },
   { name: "updatedAt", desc: "이 행이 마지막으로 갱신된 시각(ISO 8601)" },
   {
     name: "provisional",
@@ -114,7 +114,8 @@ function jsonLd() {
           "국토교통부 실거래 신고 자료로 만든 아파트 매매 월간 지역 집계를 인증 없이 제공하는 JSON API",
         documentation: "https://naezipnow.com/developers",
         url: BASE,
-        provider: { "@type": "Organization", name: "내집나우", url: "https://naezipnow.com" },
+        /* [1007 · P2] 전역 Organization 참조 — 인라인 노드를 두 번 만들지 않는다(publisherRef 와 같은 @id) */
+        provider: publisherRef(),
         termsOfService: "https://naezipnow.com/legal/terms",
       },
       {

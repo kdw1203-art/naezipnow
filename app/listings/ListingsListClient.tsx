@@ -25,7 +25,8 @@ const LISTING_SOURCE_LABEL: Record<string, string> = {
 };
 import { ListingCompareToggle } from "@/components/ListingCompareToggle";
 import type { CompareListing } from "@/components/listing-compare-store";
-import { formatKrwShort } from "@/lib/market/format";
+import { listingPriceLine } from "./price-text";
+import { LISTING_COMPARE_ENTRY_OPEN } from "./compare-entry";
 
 const TYPE_FILTERS = [
   { key: "", label: "전체" },
@@ -35,13 +36,9 @@ const TYPE_FILTERS = [
 ];
 const TYPE_KEYS = ["sale", "jeonse", "monthly"];
 
-/* [967 · 31] 여기 있던 formatKrwShort 사본은 lib/market/format 의 공통 함수로 대체 — 출력 동일 */
-
-function priceLine(l: PublicListing): string {
-  if (l.listingType === "sale") return `매매 ${formatKrwShort(l.priceKrw)}`;
-  if (l.listingType === "jeonse") return `전세 ${formatKrwShort(l.depositKrw)}`;
-  return `월세 ${formatKrwShort(l.depositKrw)} / ${formatKrwShort(l.monthlyKrw)}`;
-}
+/* [1009 · T] 호가는 한 건의 가격이라 정밀 표기("매매 12억 4,500만") — ./price-text 한 곳(목록·상세·비교함·비교 표 공통).
+   예전 formatKrwShort("28.6억")는 28억 6,000만과 28억 5,500만을 같은 숫자로 보여 줬다. */
+const priceLine = listingPriceLine;
 
 /** 부스트 활성 — 클라이언트에서 계산하므로 ISR 주기와 무관하게 현재 시각 기준 */
 function isBoostActive(boostUntil: string | null): boolean {
@@ -145,7 +142,7 @@ export function ListingsListClient({
             type="button"
             onClick={() => set({ type: f.key })}
             aria-pressed={filter.type === f.key}
-            className={`chip px-3.5 py-2 ${
+            className={`chip press px-3.5 py-2 ${
               filter.type === f.key ? "chip-active" : "bg-[var(--glass-bg)] text-text-2"
             }`}
           >
@@ -160,7 +157,7 @@ export function ListingsListClient({
           type="button"
           onClick={() => set({ gu: "" })}
           aria-pressed={!filter.gu}
-          className={`chip shrink-0 px-3 py-1.5 ${
+          className={`chip press shrink-0 px-3 py-1.5 ${
             !filter.gu ? "chip-active" : "bg-[var(--glass-bg)] text-text-2"
           }`}
         >
@@ -172,7 +169,7 @@ export function ListingsListClient({
             type="button"
             onClick={() => set({ gu: g })}
             aria-pressed={filter.gu === g}
-            className={`chip shrink-0 px-3 py-1.5 ${
+            className={`chip press shrink-0 px-3 py-1.5 ${
               filter.gu === g ? "chip-active" : "bg-[var(--glass-bg)] text-text-2"
             }`}
           >
@@ -273,7 +270,7 @@ export function ListingsListClient({
                 <div className="text-[15px] font-extrabold leading-[1.4] text-ink">
                   {l.complexName}
                 </div>
-                <div className="text-[15px] font-extrabold text-primary">
+                <div className="t-num text-[15px] text-ink">
                   {priceLine(l)}
                 </div>
                 <div className="text-[12px] text-text-3">
@@ -292,7 +289,9 @@ export function ListingsListClient({
                 )}
                 <div className="mt-auto flex items-center justify-between gap-2 pt-1">
                   <span className="text-[12px] font-bold text-primary">상세 보기 →</span>
-                  <ListingCompareToggle item={toCompareListing(l)} />
+                  {/* [1009 · T 리뷰 MED-10] 비교 담기는 보관 경로(/listings/compare)의 입구라 소유자 결정 전까지 끈다(./compare-entry).
+                      꺼 두면 카드 링크(<a>) 안에 단추가 들어 있던 중첩 조작도 없어진다. */}
+                  {LISTING_COMPARE_ENTRY_OPEN && <ListingCompareToggle item={toCompareListing(l)} />}
                 </div>
               </Link>
             );

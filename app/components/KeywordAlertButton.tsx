@@ -6,7 +6,10 @@ import { Icon } from "@/app/components/Icon";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import type { SavedSearchScope } from "@/lib/saved-search/types";
 
-/* [개선 #13] 지역·키워드 알림 원탭 구독 버튼.
+/* [1009 · T] 결과 반응 — 누르는 동안 버튼 안에 도는 링(busy), 설정되면 체크가 한 번 튄다(njn-pop-once).
+   실패 문구는 원인+해결을 한 줄로(토스트는 390px 에서 23자 안쪽). 해제는 여전히 관리 화면에서 한다(토글이 아니다).
+
+   [개선 #13] 지역·키워드 알림 원탭 구독 버튼.
  *
  * 저장 검색(saved_searches)은 스토어·매처·크론·관리 화면까지 다 있는데 실제
  * 구독이 0건이었다 — 만들 수 있는 곳이 /my/saved-searches 뿐이라 아무도 못
@@ -79,18 +82,18 @@ export function KeywordAlertButton({
         showToast(`‘${q}’ 새 소식 알림을 설정했어요`, manage);
       } else {
         setPhase("error");
-        showToast("알림을 설정하지 못했어요. 다시 시도해 주세요");
+        showToast("알림을 설정하지 못했어요 — 다시 눌러 주세요");
       }
     } catch {
       setPhase("error");
-      showToast("알림을 설정하지 못했어요. 다시 시도해 주세요");
+      showToast("연결이 끊겼어요 — 다시 눌러 주세요");
     }
   }
 
   if (phase === "done" || phase === "exists") {
     return (
       <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium text-text-2 ${className}`}>
-        <Icon name="check" size={14} />
+        <Icon name="check" size={14} className={phase === "done" ? "njn-pop-once text-success" : ""} />
         {phase === "done" ? "알림 설정됨" : "이미 받고 있어요"} ·{" "}
         <Link href="/my/watchlist?tab=searches" className="underline underline-offset-2">
           관리
@@ -103,7 +106,7 @@ export function KeywordAlertButton({
     return (
       <Link
         href="/login"
-        className={`inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[12px] font-semibold text-ink tap-ripple ${className}`}
+        className={`press inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[12px] font-semibold text-ink tap-ripple ${className}`}
       >
         <Icon name="bell" size={14} />
         로그인하고 알림 받기
@@ -116,9 +119,10 @@ export function KeywordAlertButton({
       type="button"
       onClick={subscribe}
       disabled={phase === "busy"}
-      className={`inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[12px] font-semibold text-ink transition-opacity tap-ripple disabled:opacity-60 ${className}`}
+      aria-busy={phase === "busy" || undefined}
+      className={`press inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[12px] font-semibold text-ink tap-ripple ${className}`}
     >
-      <Icon name="bell" size={14} />
+      {phase === "busy" ? <span className="njn-ring njn-ring--ink" aria-hidden="true" /> : <Icon name="bell" size={14} />}
       {phase === "busy" ? "설정 중…" : phase === "error" ? "다시 시도" : `‘${q}’ 새 소식 알림`}
     </button>
   );

@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { isAdminApiRequest } from "@/lib/admin/api-auth";
 import { safeAuth } from "@/lib/safe-auth";
 import { appendComment, getPost } from "@/lib/posts-store";
+import { invalidateComplexById } from "@/lib/complex/complex-invalidate";
 
 /* [#121] 시드 답글 — 빈 스레드가 첫 방문자를 돌려세우지 않도록, 관리자만
    공식 라벨("내집나우")로 빠른 답글을 단다. 일반 댓글 경로(포인트 적립·알림)와
@@ -33,6 +34,9 @@ export async function POST(req: Request) {
     createdAt: new Date().toISOString(),
   });
   if (!updated) return NextResponse.json({ error: "저장 실패" }, { status: 500 });
+  revalidatePath(`/town/story/${postId}`); // [1007 · P2] 시드 답글은 posts(사람 글) — 이야기 상세 ISR 도 갱신
   revalidatePath(`/town/news/${postId}`);
+  /* [1010] 단지에 매인 글이면 허브(7일 ISR)의 이야기 카드 "댓글 N"도 같이 */
+  invalidateComplexById(updated.complexId);
   return NextResponse.json({ ok: true, comments: updated.commentCount });
 }

@@ -2,6 +2,8 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { pushInboxNotification } from "@/lib/notifications/inbox";
 import { invalidateNoteCache } from "@/lib/inspection/note-cache";
 import { logger } from "@/lib/log";
+import { revalidatePath } from "next/cache";
+import { invalidateTownFeed, invalidateHomeData } from "@/lib/cache/invalidate";
 
 export type ReportStatus = "open" | "reviewed" | "dismissed";
 
@@ -164,6 +166,17 @@ export async function hideReportedContent(
         .from("posts")
         .update({ visibility: "hidden", updated_at: new Date().toISOString() })
         .eq("id", targetId);
+      /* [1007 · 리뷰 M2] 숨긴 글이 6시간 ISR 상세·피드·동네 홈·홈에 남지 않게 */
+      if (!error) {
+        try {
+          revalidatePath(`/town/story/${targetId}`);
+          revalidatePath(`/town/news/${targetId}`);
+        } catch {
+          /* 요청 밖(크론)에서는 던질 수 있다 — TTL 이 안전망 */
+        }
+        invalidateTownFeed();
+        invalidateHomeData();
+      }
       return !error;
     }
     const { data: listing } = await sb

@@ -3,6 +3,7 @@ import { readPosts } from "@/lib/posts-store";
 import { listMeetings } from "@/lib/meetings/store-db";
 import { listExperts } from "@/lib/experts/store-db";
 import { logger } from "@/lib/log";
+import { postHref } from "@/lib/town/post-href";
 
 export const runtime = "nodejs";
 
@@ -71,7 +72,9 @@ export async function GET(req: Request) {
             type: "post",
             title: p.title,
             excerpt: excerptAroundQuery(p.body ?? "", q),
-            url: `/community/${p.id}`,
+            /* [1007 · P2] 예전 `/community/${id}` 는 미들웨어가 /town?post= (피드) 로 보내
+               글 자체가 열리지 않았다 — 사람 글은 /town/story/, 기사는 /town/news/ 로 */
+            url: postHref(p),
             tags: p.tags ?? [],
             createdAt: p.createdAt ?? new Date().toISOString(),
           });

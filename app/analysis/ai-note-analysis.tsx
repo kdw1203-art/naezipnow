@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
 import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { fetchMyNotesShared } from "./hub-viewer";
 
 /* ============================================================
    임장노트 AI 분석 카드 — 내 노트 선택 → POST /api/inspection/ai (noteId)
@@ -79,12 +80,9 @@ export function AiNoteAnalysisCard({
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetch("/api/inspection/notes");
-        const data = (await res.json().catch(() => null)) as {
-          items?: NoteOption[];
-        } | null;
+        /* [1007] 허브의 시작 카드·티저와 **같은 공유 프라미스** — 한 페이지에 /api/inspection/notes 1회 */
+        const items = (await fetchMyNotesShared()) ?? [];
         if (cancelled) return;
-        const items = Array.isArray(data?.items) ? data.items : [];
         setNotes(
           items.map((n) => ({
             id: n.id,
@@ -285,20 +283,16 @@ export function AiNoteAnalysisCard({
       {state.kind === "done" ? (
         <div className="ai-panel flex flex-col gap-2 rounded-[14px] p-3.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="t-sub font-extrabold text-white">
+            <span className="t-sub font-extrabold text-on-dark">
               {state.result.headline}
             </span>
+            {/* [1009 · A] 팔레트 색(emerald·amber) → 판 토큰, title= 말풍선(마우스를 올려야만 보임) 제거 —
+                규칙 요약일 때의 설명은 바로 아래 줄에 글자로 있다. 이 판의 날것 rgba 4곳·text-white 2곳도
+                on-dark 토큰으로, "다시 시도"(높이 약 20px)는 40px 로 */}
             <span
-              className={`shrink-0 rounded px-1.5 py-0.5 t-caption font-extrabold ${
-                state.result.mode === "llm"
-                  ? "border border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
-                  : "border border-amber-400/50 bg-amber-500/15 text-amber-100"
+              className={`shrink-0 rounded border border-on-dark-faint bg-on-dark-panel px-1.5 py-0.5 t-caption font-extrabold ${
+                state.result.mode === "llm" ? "text-ai-success" : "text-ai-muted"
               }`}
-              title={
-                state.result.mode === "llm"
-                  ? "AI 모델이 노트 내용과 지역 실시세를 바탕으로 생성한 결과예요."
-                  : "AI 모델 응답을 받지 못해 점수·기록 기반 규칙으로 요약했어요. 다시 시도하면 AI 생성 결과를 받을 수 있어요."
-              }
             >
               {state.result.mode === "llm" ? "AI 생성 · LLM" : "규칙 기반 요약 · LLM 아님"}
             </span>
@@ -310,21 +304,21 @@ export function AiNoteAnalysisCard({
             </div>
           )}
           {state.result.mode === "rule" && (
-            <div className="flex flex-wrap items-center gap-2 rounded-lg bg-[rgba(255,255,255,.07)] px-2.5 py-1.5">
+            <div className="flex flex-wrap items-center gap-2 rounded-lg bg-on-dark-panel px-2.5 py-1.5">
               <span className="flex-1 t-caption leading-[1.5] text-ai-muted">
                 AI 모델이 일시적으로 응답하지 않아 규칙 기반으로 요약했어요.
               </span>
               <button
                 type="button"
                 onClick={() => run(true)}
-                className="shrink-0 rounded border border-[rgba(255,255,255,.25)] px-2 py-0.5 t-caption font-bold text-ai-accent"
+                className="press inline-flex min-h-10 shrink-0 items-center rounded-lg border border-on-dark-faint px-3 t-caption font-bold text-ai-accent"
               >
                 다시 시도
               </button>
             </div>
           )}
           {state.result.marketSummary && (
-            <div className="rounded-lg bg-[rgba(255,255,255,.07)] px-2.5 py-1.5 t-caption font-bold text-ai-accent">
+            <div className="rounded-lg bg-on-dark-panel px-2.5 py-1.5 t-caption font-bold text-ai-accent">
               실시세 {state.result.marketSummary}
             </div>
           )}
@@ -340,7 +334,7 @@ export function AiNoteAnalysisCard({
           )}
           {state.result.risks.length > 0 && (
             <div>
-              <div className="t-caption font-extrabold text-[#ffb0b0]">약점·리스크</div>
+              <div className="t-caption font-extrabold text-ai-danger">약점·리스크</div>
               {state.result.risks.map((b) => (
                 <div key={b} className="text-[12px] leading-[1.55] text-ai-text">
                   · {b}
@@ -359,8 +353,8 @@ export function AiNoteAnalysisCard({
             </div>
           )}
           {state.result.verdict && (
-            <div className="border-t border-[rgba(255,255,255,.12)] pt-1.5 text-[12px] leading-[1.55] text-ai-text">
-              <b className="text-white">총평</b> — {state.result.verdict}
+            <div className="border-t border-on-dark-panel pt-1.5 text-[12px] leading-[1.55] text-ai-text">
+              <b className="text-on-dark">총평</b> — {state.result.verdict}
             </div>
           )}
           <div className="text-[10px] leading-[1.5] text-ai-muted">

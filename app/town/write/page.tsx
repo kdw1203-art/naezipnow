@@ -99,7 +99,7 @@ export default function TownWritePage() {
   return (
     <Suspense
       fallback={
-        <PageShell breadcrumb="동네이야기 › 글쓰기">
+        <PageShell breadcrumb="동네이야기 › 이야기 쓰기">
           <div className="mx-auto w-full max-w-[640px] px-1 py-10 t-body text-text-3">
             글쓰기 화면을 준비하고 있어요…
           </div>
@@ -368,7 +368,8 @@ function TownWriteForm() {
         complexId
           ? `/complex/${encodeURIComponent(complexId)}`
           : newId
-            ? `/town/news/${encodeURIComponent(newId)}`
+            ? /* [1006] 이야기 상세는 /town/story — 뉴스 주소가 아니다 */
+              `/town/story/${encodeURIComponent(newId)}`
             : "/town",
       );
       router.refresh();
@@ -380,12 +381,16 @@ function TownWriteForm() {
   };
 
   return (
-    <PageShell breadcrumb="동네이야기 › 글쓰기">
+    <PageShell breadcrumb="동네이야기 › 이야기 쓰기">
       <div className="mx-auto flex w-full max-w-[640px] flex-col gap-4">
         <div className="rise-in px-1">
-          <h1 className="t-title text-ink">글쓰기</h1>
+          {/* [1006] 여기서 쓰는 건 **이야기**(사람의 기록)다 — 뉴스룸의 기사와 다른 재질.
+              올라가면 동네이야기 피드의 "이야기" 탭과 /town/story/[id] 에 보인다. */}
+          <h1 className="t-title text-ink">
+            이야기 쓰기 <span className="story-kind ml-1 t-caption align-middle">사람의 기록</span>
+          </h1>
           <p className="mt-1 t-body text-text-2">
-            우리 동네 이야기·질문을 이웃과 나눠보세요
+            다녀온 동네의 인상·질문·사진을 이웃과 나눠 보세요 — 동네이야기 피드에 바로 보여요
           </p>
         </div>
 

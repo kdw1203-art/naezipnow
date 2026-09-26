@@ -63,11 +63,11 @@ export async function getUsageSummary(
   const accessTier = profilePlanToAccessTier(profilePlan);
 
   const aiLifetime = lifetimeLimitFor(accessTier, "ai_analysis");
-  const [aiUsed, bookmarkCount, watchlistCount, consultsThisMonth] = await Promise.all([
-    aiLifetime != null ? countRunsTotal(email) : countRunsThisMonth(email),
+  const [aiUsed, bookmarkCount, watchlistCount] = await Promise.all([
+    /* [1008 · 리뷰 A-11] 한도는 외부 AI 모델 실행만 센다(자체 계산 실행은 기록만) — 한도 검사와 같은 셈 */
+    aiLifetime != null ? countRunsTotal(email, { externalOnly: true }) : countRunsThisMonth(email, { externalOnly: true }),
     countBookmarks(email),
     countWatchlist(email),
-    countConsultationsThisMonth(email),
   ]);
 
   const items: UsageItem[] = [
@@ -90,12 +90,10 @@ export async function getUsageSummary(
       used: watchlistCount,
       limit: limitFor(accessTier, "interest_complex"),
     },
-    {
-      key: "expert_consult",
-      label: "전문가 상담",
-      used: consultsThisMonth,
-      limit: limitFor(accessTier, "expert_consult"),
-    },
+    /* [1005] "전문가 상담" 미터 제거 — 전문가 마켓은 [992] 부터 보관(비노출)이고 공급이 0이다.
+       요금제·마이 화면의 사용량 칸에 "0 / 무제한"으로 남아 있으면 없는 기능을 파는 셈이다.
+       checkExpertConsultQuota(아래)는 API 게이트가 아직 부르므로 그대로 둔다 — 화면에서만 빼고,
+       요금제 화면이 열릴 때마다 상담 건수를 세던 쿼리도 같이 뺐다. 되살릴 때 이 항목만 다시 넣으면 된다. */
   ];
 
   return { plan: profilePlan, accessTier, items };
@@ -123,7 +121,7 @@ export async function checkAiAnalysisQuota(
   /* [992] 누적 한도(무료 3회)가 있으면 그것이 한도다 — 월이 바뀌어도 열리지 않는다 */
   const lifetime = lifetimeLimitFor(accessTier, "ai_analysis");
   if (lifetime != null) {
-    const used = await countRunsTotal(email);
+    const used = await countRunsTotal(email, { externalOnly: true });
     if (used >= lifetime) {
       return {
         allowed: false,
@@ -137,7 +135,7 @@ export async function checkAiAnalysisQuota(
     return { allowed: true, used, limit: lifetime, lifetime: true };
   }
 
-  const used = await countRunsThisMonth(email);
+  const used = await countRunsThisMonth(email, { externalOnly: true });
   const limit = access.limit;
   if (limit != null && used >= limit) {
     const requiredTier: AccessTier = accessTier === "basic" ? "pro" : "expert";

@@ -99,7 +99,7 @@ export function DecisionStep({
               }}
               className={`relative flex min-h-[44px] flex-col items-center justify-center rounded-[10px] px-1 text-xs ${
                 active
-                  ? "border-[1.5px] border-primary bg-[rgba(29,79,216,.1)] font-bold text-primary"
+                  ? "border-[1.5px] border-primary bg-primary-soft font-bold text-primary"
                   : suggested
                     ? "border-[1.5px] border-dashed border-primary bg-surface font-bold text-text-1"
                     : "border border-line bg-surface font-semibold text-text-2"

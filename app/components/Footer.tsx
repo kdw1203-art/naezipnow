@@ -37,6 +37,9 @@ const LEGAL_LINKS = [
   { label: "용어사전", href: "/glossary", bold: false },
   /* [945 #25] 가이드 허브 — 검색 유입 콘텐츠의 내부 크롤 경로 */
   { label: "실전 가이드", href: "/guides", bold: false },
+  /* [1008 · J] 내 집 마련 여정·계약·잔금 일정표 — 모든 페이지에서 닿는 크롤·도달 경로(GNB 맨 앞 묶음과 같은 목적지) */
+  { label: "내 집 마련 여정", href: "/journey", bold: false },
+  { label: "계약·잔금 일정표", href: "/journey/contract", bold: false },
   { label: "월간 리포트", href: "/reports", bold: false },
   /* N20 — 공개 집계 API 문서. 링크가 없으면 크롤러도 사람도 도달하지 못한다. */
   { label: "공개 API", href: "/developers", bold: false },

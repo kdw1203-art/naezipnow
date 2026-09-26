@@ -22,7 +22,8 @@ export const metadata = buildPageMetadata({
   /* 화면의 제목(PageShell title="설정")과 같은 말을 쓴다 — 탭에 적힌 이름과
      화면에 적힌 이름이 다르면 그것도 결국 틀린 안내다. */
   title: "설정",
-  description: "프로필·화면 테마·알림 수신·개인정보 동의를 설정하고 내 데이터를 내려받습니다.",
+  description:
+    "프로필·화면 테마·면적 단위와 임장노트 기본값·알림 수신·개인정보 동의를 설정하고 내 데이터를 내려받습니다.",
   path: "/my/settings",
   noIndex: true,
 });

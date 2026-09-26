@@ -1,6 +1,7 @@
 /**
  * R-ONE CLS_FULLNM / KB 지역명 → 내부 지역(id/name/city) 매핑.
- * R-ONE CLS_FULLNM 예: "서울>강남구", "경기>경부1권>안양시>만안구", "인천>연수구", "전북>전주시"
+ * R-ONE CLS_FULLNM 예: "서울>강남지역>동남권>강남구"(동향조사 표) · "서울>강남구"(거래현황 표) ·
+ * "경기>경부1권>안양시>만안구", "인천>연수구", "전북>전주시"
  *
  * [998] 2026-07 행정구역 개편 뒤 R-ONE 이 어떤 표기를 낼지는 아직 모른다(8월분 9월 중순 공표).
  * 그래서 옛 표기("광주>광산구"·"인천>서구")와 있을 법한 새 표기("전남광주>광산구"·
@@ -32,6 +33,25 @@ const INTERNAL_REGIONS: InternalRegion[] = [
 
 function stripSpaces(s: string): string {
   return s.replace(/\s+/g, "");
+}
+
+/**
+ * [1007] 시도와 시군구 사이에 끼는 **권역 묶음** 세그먼트인가.
+ *
+ * 왜 "지역" 도 보는가(실측 2026-09-20, R-ONE 분류코드 조회 selectOpenApiItmCd):
+ * 주택가격동향조사 표(월간 매매·전세지수 A_2024_00045/00050, 평균·중위·㎡당 가격
+ * 00060/00061/00062/00064, 전세가율 00072, 주간 지수 T2441…)의 서울 25개 구는
+ *     "서울>강북지역>도심권>종로구" · "서울>강남지역>동남권>강남구"
+ * 처럼 4단이다. 예전 규칙은 "…권" 만 걷어내서 candidate 가 "강북지역 종로구" 가
+ * 됐고, [998] 이 부분 일치를 정확 일치로 좁힌 뒤로는 어떤 규칙에도 안 붙어
+ * **서울 구 전부가 버려졌다**. 반면 거래현황 표(00549)는 "서울>종로구" 2단이라
+ * 붙는다 → 서울 구는 거래건수만 있고 가격·지수가 없는 빈 스냅샷으로 매일
+ * 덮어써졌다(market_region_price 서울 25행 period='' · per_m2_sale=null).
+ * 경기·인천·광역시는 "경기>서해안권>화성시>동탄구"·"부산>중부산권>중구" 처럼
+ * 묶음이 전부 "…권" 이라 영향이 없었다(비서울 82행 정상).
+ */
+function isRegionGroupSegment(s: string): boolean {
+  return s.endsWith("권") || s.endsWith("지역");
 }
 
 /** [998] 별칭 비교 키 — 공백과 시도 접미(광역시·특별시·통합특별시·특별자치시/도)를 뗀다.
@@ -92,7 +112,7 @@ export function matchRegionFromClsFullNm(clsFullNm: string | null | undefined): 
 
   const cities = sidoCandidates(segments[0]);
   // 권역(예: 경부1권) 세그먼트 제거 후 시/구 조합
-  const meaningful = segments.slice(1).filter((s) => !s.endsWith("권"));
+  const meaningful = segments.slice(1).filter((s) => !isRegionGroupSegment(s));
   if (meaningful.length === 0) return null;
   const candidate = meaningful.join(" ");
   const candidateTight = stripSpaces(candidate);

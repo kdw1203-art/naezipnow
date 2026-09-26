@@ -163,7 +163,7 @@ async function loadHomeDataInternal(): Promise<HomeData> {
   const banners = settled[4]!.status === "fulfilled" ? settled[4]!.value : [];
 
   /* 다섯 개가 전부 실패했으면 DB 가 통째로 안 되는 상황이다. 이걸 값으로
-     돌려주면 unstable_cache 가 90초 동안 그 스냅샷을 붙들어서, DB 가 살아난
+     돌려주면 unstable_cache 가 600초 동안 그 스냅샷을 붙들어서, DB 가 살아난
      뒤에도 홈은 계속 고장난 상태로 보인다. 던지면 캐시에 남지 않고 다음
      요청이 다시 시도한다(거부는 캐시되지 않는다). */
   if (failedSources.length === SOURCE_ORDER.length) {
@@ -365,8 +365,14 @@ async function loadHomeDataInternal(): Promise<HomeData> {
   };
 }
 
+/* [1007] 90초 → 600초. 이 스냅샷은 8개 조회(목록 5 + count 3)를 한 번에 돌리고 결과가 크다
+   (이웃 글·전문가·리포트·모임·배너) — 90초마다 다시 채우면 홈 ISR(300초)보다 자주 쓰였다
+   (ISR Writes 최대 960회/일, 한 번에 여러 8KB 단위). 즉시성은 태그로 잇는다: 이웃 글 작성
+   (app/api/community/posts)·공개 노트 생성/공개 전환/삭제(app/api/inspection/notes)가
+   invalidateHomeData() 로 "home-data" 태그를 비운다. 전문가·리포트·모임·배너 변경은 각각
+   하루 몇 건이라 10분 지연을 받아들인다(어드민 배너 API 는 V2b 소유가 아니라 보고로 남김). */
 const loadHomeDataCached = unstable_cache(loadHomeDataInternal, ["home-data-v1"], {
-  revalidate: 90,
+  revalidate: 600,
   tags: ["home-data"],
 });
 

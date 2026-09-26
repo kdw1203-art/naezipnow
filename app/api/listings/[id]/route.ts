@@ -9,9 +9,12 @@ import { safeAuth } from "@/lib/safe-auth";
 import {
   updateListing,
   deleteListing,
+  getListingById,
   isListingType,
   type ListingEditPatch,
 } from "@/lib/listings/store-db";
+import { invalidateComplexByNames } from "@/lib/complex/complex-invalidate";
+import { invalidateListingsIndex } from "@/lib/listings/invalidate-listings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,6 +33,23 @@ function errorStatus(msg: string | undefined): number {
   if (msg.includes("찾을 수 없")) return 404;
   if (msg.includes("마감") || msg.includes("삭제")) return 409;
   return 400;
+}
+
+/**
+ * [1010] 단지 허브(/complex/[id], 7일 ISR)의 매물 카드·"매물 N" 을 비운다.
+ *
+ * 허브는 승인·미숨김 매물만 서버 렌더로 그리므로, 수정(가격·유형·면적)·삭제가 그 화면을
+ * 바꾼다. 조회는 id 한 건(getListingById)뿐이고, 삭제는 소프트 삭제(deleted_at)라
+ * **지우기 전에** 읽어야 한다. 못 읽으면 비우지 않는다 — 모르는 단지를 찍지 않는다.
+ */
+async function invalidateListingComplexHub(listingId: string): Promise<void> {
+  try {
+    const row = await getListingById(listingId);
+    if (!row) return;
+    invalidateComplexByNames(row.regionName ?? null, row.complexName ?? null);
+  } catch {
+    /* 재검증 실패가 수정·삭제 결과를 되돌리면 안 된다 — 7일 TTL 이 안전망 */
+  }
 }
 
 export async function PATCH(
@@ -88,6 +108,9 @@ export async function PATCH(
   if (!res.ok) {
     return NextResponse.json({ error: res.error }, { status: errorStatus(res.error) });
   }
+  await invalidateListingComplexHub(listingId);
+  /* [1010] 승인 매물 목록(/listings, ISR 30분)도 이 쓰기로 바뀐다 — 같이 비운다 */
+  invalidateListingsIndex();
   return NextResponse.json({ ok: true, status: res.status });
 }
 
@@ -106,9 +129,14 @@ export async function DELETE(
     return NextResponse.json({ error: "매물 ID가 필요합니다." }, { status: 400 });
   }
 
+  /* 소프트 삭제 뒤에는 getListingById 가 null 이므로 **먼저** 단지를 알아 둔다. */
+  const before = await getListingById(listingId).catch(() => null);
   const res = await deleteListing(listingId, email);
   if (!res.ok) {
     return NextResponse.json({ error: res.error }, { status: errorStatus(res.error) });
   }
+  if (before) invalidateComplexByNames(before.regionName ?? null, before.complexName ?? null);
+  /* [1010] 승인 매물 목록(/listings, ISR 30분)도 이 쓰기로 바뀐다 — 같이 비운다 */
+  invalidateListingsIndex();
   return NextResponse.json({ ok: true });
 }

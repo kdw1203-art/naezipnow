@@ -2,13 +2,9 @@ import Link from "next/link";
 import { planLabel } from "@/lib/subscriptions/labels";
 import { PageShell } from "@/app/components/PageShell";
 import { Icon } from "@/app/components/Icon";
-import { safeAuth } from "@/lib/safe-auth";
-import { getServiceSupabase } from "@/lib/supabase/service";
-import { getUsageSummary, type UsageItem } from "@/lib/subscriptions/usage-summary";
-import { loadMeProfile } from "@/lib/me/profile";
 import { BILLING_PERIOD_PRICES, periodPrice, WEEKLY_PASS } from "@/lib/subscriptions/billing-periods";
 import { PlanCards, type TierPricing } from "./PlanCards";
-import { PreOrderCta } from "./PreOrderCta";
+import { CurrentPlanBadge, UsageCard, WeeklyPassCta, WeeklyPassFrame } from "./ViewerCards";
 import {
   getBusinessInfo,
   isBusinessDisclosureComplete,
@@ -23,7 +19,6 @@ import { ComplianceNotice } from "@/app/components/ComplianceNotice";
 import { DEFAULT_DESKTOP_ORIGIN } from "@/lib/platform-shell";
 import { PAYMENT_METHODS_PATH, REVIEW_CHECKOUT_PATH } from "@/lib/payments/payment-methods";
 import { isTierOnSale, SELLABLE_PAID_TIERS } from "@/lib/subscriptions/sell-config";
-import { safeInternalPath } from "@/lib/safe-path";
 
 /* 고도화 32 — 구독 FAQ. 사실만 적는다: 수치·규정은 약관·구현과 대조했다. 화면과
    JSON-LD 가 같은 배열을 쓴다.
@@ -75,7 +70,16 @@ export const metadata = buildPageMetadata({
 });
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+/* [1007] ISR 1시간 — 예전엔 `searchParams`(plan·billing·returnTo)와 `safeAuth()`+loadMeProfile+
+   getUsageSummary+결제 내역을 서버에서 읽어 force-dynamic 이었고, 24h 실측 함수 호출 200회 중
+   사람 방문은 한 자릿수였다. 이 HTML 은 **비회원이 보는 화면 그대로**다(토스 심사가 보는 화면 —
+   세 카드·주간권 결제 버튼·결제수단 문장·FAQ·JSON-LD 전부 서버 렌더). 로그인한 사람에게만
+   달라지는 조각(현재 플랜 배지·사용량·주간권 버튼 문구·카드 CTA 목적지·구독 패널)은
+   ViewerCards·PlanCards·BillingPanel(클라이언트)이 세션 판정 뒤 바꾼다. 결제 개통 판정
+   (paymentsReady·recurringOpen)은 env 로 배포 단위에 굳는 값이라 ISR 에 실려도 같다. */
+/* [1010] 3,600 → 86,400(1일). 비회원 기준 요금 카드·FAQ·JSON-LD 만 있는 고정 문서이고
+   (로그인 조각은 클라이언트) 값은 코드 상수다 — 배포로만 바뀐다. 실측 하루 200회 함수 호출. */
+export const revalidate = 86_400;
 
 /* 가격 단일 출처: lib/subscriptions/billing-periods.ts — 화면에 금액을 하드코딩하지 않는다 */
 const fmtWon = (n: number) => `${n.toLocaleString("ko-KR")}원`;
@@ -154,30 +158,9 @@ function PlanBadge({ tier }: { tier: "plus" | "pro" }) {
   );
 }
 
-/** [966] 단건 이용권 만료 — 구독 관리 헤더·해지 문구에 "언제까지" 를 적기 위해 */
-async function loadPlanExpiresAt(email: string): Promise<string | null> {
-  const sb = getServiceSupabase();
-  if (!sb) return null;
-  try {
-    const { data } = await sb
-      .from("app_users")
-      .select("plan_expires_at")
-      .eq("email", email.trim().toLowerCase())
-      .maybeSingle();
-    return data?.plan_expires_at ? String(data.plan_expires_at) : null;
-  } catch {
-    return null;
-  }
-}
+/* [966] 단건 이용권 만료(plan_expires_at)는 [1007] 부터 /api/subscriptions/summary 가 읽는다 */
 
-export default async function SubscriptionPage({
-  searchParams,
-}: {
-  searchParams?: Promise<{ plan?: string; billing?: string; returnTo?: string }>;
-}) {
-  // 결제 실패 페이지의 "다시 시도하기"가 plan/billing 쿼리를 들고 돌아온다 —
-  // 고른 주기를 다시 고르게 하지 않도록 토글 초기값으로 반영한다.
-  const sp = (await searchParams) ?? {};
+export default async function SubscriptionPage() {
   /* 항목 33 — 결제가 실제로 열릴 수 있는 상태인지 서버에서 판정한다.
      사업자 고지(주소·통신판매업 번호)가 비어 있으면 checkout 라우트들이 전부
      503 을 내고, 토스 키가 없어도 마찬가지다([992] 레일은 토스 하나). 그 상태에서
@@ -204,49 +187,8 @@ export default async function SubscriptionPage({
   const recurringReady = recurringOpen;
   /* [970 · A-22] FAQ(화면 + JSON-LD)는 결제 방식 사실(recurringOpen)에 따라 갈린다 */
   const faq = subscriptionFaq(recurringOpen);
-  const initialBilling = sp.billing === "annual" ? ("annual" as const) : ("monthly" as const);
-  /* [970 · A-07] 로그인 복귀(PlanCheckoutButton) · 결제 실패 재시도(payment/fail)가 붙여
-     보내는 ?plan= 을 읽는다 — 예전엔 billing 만 복원해 고른 플랜을 다시 찾아야 했다.
-     billing=weekly 는 카드가 아니라 주간권 섹션이 목적지다(앵커 id: weekly-pass). */
-  const highlightPlan: "pro" | "expert" | "weekly" | null =
-    sp.billing === "weekly"
-      ? "weekly"
-      : sp.plan === "pro" || sp.plan === "expert"
-        ? sp.plan
-        : null;
-  /* [1003] 주간권 결제창 **직행** 링크.
-     2026-09-16 13:57 KST 심사 세션 실측: `/` → `/subscription`(13.5초 체류) → `/` 이탈,
-     `/subscription/checkout` 페이지뷰 0건. 1순위 버튼(PlanCheckoutButton)이 누르면
-     "…결제창으로 이동합니다 / 취소 / 계속" 2단계로 바뀌는 구조라, 한 번 누르고 아무 일도
-     안 일어난 것처럼 보였을 가능성이 크다. 주간권만은 <Link> 한 번으로 체크아웃(=결제창을
-     여는 화면)에 닿게 한다. 경로는 REVIEW_CHECKOUT_PATH 단일 출처(심사 메모에 적어 낸 URL).
-     페이월이 붙여 보낸 ?returnTo= 는 그대로 이어 붙인다(safeInternalPath — 내부 경로만). */
-  const returnTo = sp.returnTo ? safeInternalPath(sp.returnTo, "") : "";
-  const weeklyCheckoutHref =
-    returnTo && returnTo !== "/"
-      ? `${REVIEW_CHECKOUT_PATH}&returnTo=${encodeURIComponent(returnTo)}`
-      : REVIEW_CHECKOUT_PATH;
-  const session = await safeAuth();
-  const email = session?.user?.email ?? null;
-  /* 관리자 배지 — 운영 계정은 플랜 대신 "관리자"로 표기한다. */
-  const isAdminViewer = (session?.user as { role?: string } | undefined)?.role === "admin";
-  let currentPlan: "free" | "pro" | "expert" = "free";
-  let usage: UsageItem[] = [];
-  let planExpiresAt: string | null = null;
-  if (email) {
-    const profile = await loadMeProfile(email, {
-      name: session?.user?.name,
-      plan: (session?.user as { plan?: string } | undefined)?.plan,
-      role: (session?.user as { role?: string } | undefined)?.role,
-    });
-    currentPlan = profile.plan;
-    planExpiresAt = await loadPlanExpiresAt(email);
-    /* 지금 얼마나 썼는지 — 한도는 카드에 적혀 있는데 내가 얼마 썼는지는 어디에도
-       없었다. 살지 말지를 정하는 숫자가 그것인데. 실패해도 페이지는 그대로 산다. */
-    usage = await getUsageSummary(email, profile.plan)
-      .then((u) => u.items)
-      .catch(() => []);
-  }
+  /* [970 · A-07] ?plan=·?billing=·?returnTo= 는 [1007] 부터 PlanCards·WeeklyPassCta·WeeklyPassFrame 이
+     마운트 뒤 읽는다(lib/subscriptions/page-params) — 판정 규칙은 예전 그대로다. */
 
   /* 항목 46d — 요금제를 Product/Offer 로 기술. 가격은 billing-periods 단일
      출처에서만 오고, availability 는 결제 개통 여부 사실을 그대로 싣는다
@@ -325,58 +267,14 @@ export default async function SubscriptionPage({
         <p className="t-body text-text-2">
           임장노트와 지도는 영원히 무료. AI 분석의 깊이를 선택하세요.
         </p>
-        {email && (
-          <span className="mt-1 rounded-full bg-primary-soft px-3 py-1 t-sub font-bold text-primary">
-            현재 플랜 · {isAdminViewer ? "관리자 (모든 기능 무제한)" : planLabel(currentPlan)}
-          </span>
-        )}
+        {/* [1007] 로그인한 사람에게만 — 세션 판정 뒤 클라이언트가 붙인다 */}
+        <CurrentPlanBadge />
       </section>
 
-      {/* 이번 달 사용량 — 로그인한 사람에게만, 값이 있을 때만.
+      {/* 이번 달 사용량 — 로그인한 사람에게만, 값이 있을 때만(/api/me/usage, ViewerCards.UsageCard).
           "월 30회"가 카드에 적혀 있어도 내가 12회를 썼는지 29회를 썼는지 모르면
           그 숫자는 판단에 쓸 수 없다. */}
-      {email && usage.length > 0 && (
-        <section className="mt-5" data-reveal="">
-          <div className="card flex flex-col gap-3 rounded-[14px] p-4">
-            <div className="flex flex-wrap items-baseline gap-2">
-              <span className="t-section text-ink">이번 달 내 사용량</span>
-              <span className="t-caption ml-auto text-text-3">
-                {planLabel(currentPlan)} 기준 · {usage.some((u) => u.lifetime) ? "AI 분석은 누적, 나머지는 매월 1일 초기화" : "매월 1일 초기화"}
-              </span>
-            </div>
-            <div className="kpi-row">
-              {usage.map((u) => {
-                const cap = u.limit;
-                const unlimited = cap === null;
-                const pct =
-                  cap === null || cap <= 0 ? 0 : Math.min(100, Math.round((u.used / cap) * 100));
-                const tight = cap !== null && cap > 0 && u.used / cap >= 0.8;
-                return (
-                  <div key={u.key} className="kpi">
-                    <span className="kpi-k">{u.lifetime ? `${u.label} (누적)` : u.label}</span>
-                    <span className="kpi-v">
-                      {u.used.toLocaleString("ko-KR")}
-                      <span className="t-sub font-bold text-text-3">
-                        {cap === null ? " / 무제한" : ` / ${cap.toLocaleString("ko-KR")}`}
-                      </span>
-                    </span>
-                    {!unlimited && (
-                      <span className={`rank-track mt-1 ${tight ? "text-warning" : "text-primary"}`}>
-                        <span className="rank-fill" style={{ width: `${Math.max(3, pct)}%` }} />
-                      </span>
-                    )}
-                    {tight && (
-                      <span className="kpi-d text-warning">
-                        한도의 {pct}% 사용 — 곧 막혀요
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      )}
+      <UsageCard />
 
       {/* 플러스 주간권 — 1회성 단건 결제(자동갱신 없음). 운영자 확정 2026-08-12:
           토스 심사 회신 A-1(a) 의 단건 상품. 가격·기간은 WEEKLY_PASS 단일 출처.
@@ -393,11 +291,7 @@ export default async function SubscriptionPage({
         id="weekly-pass"
         className="rise-in-2 mx-auto mt-6 w-full max-w-[1080px] scroll-mt-24"
       >
-        <div
-          className={`card flex flex-col items-center gap-4 rounded-3xl p-6 md:flex-row md:justify-between ${
-            highlightPlan === "weekly" ? "ring-2 ring-primary" : ""
-          }`}
-        >
+        <WeeklyPassFrame className="card flex flex-col items-center gap-4 rounded-3xl p-6 md:flex-row md:justify-between">
           <div className="flex flex-col gap-1 text-center md:text-left">
             <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
               {/* [C38] 주간권이 위 세 플랜과 나란히 놓이면 "네 번째 요금제"로 읽힌다.
@@ -446,39 +340,20 @@ export default async function SubscriptionPage({
               사라져 설명만 남는 죽은 카드였다), 이미 프로(expert)면 사지 못하게 —
               사면 applyPlan 이 "다른 플랜" 으로 보고 7일짜리 플러스로 **강등**된다. */}
           <div className="w-full shrink-0 md:w-[236px]">
-            {currentPlan === "expert" ? (
-              <p className="rounded-[14px] bg-bg p-[13px] text-center t-sub font-bold text-text-2">
-                프로 이용 중이라 주간권이 필요 없어요 — 플러스 기능은 이미 전부 열려 있습니다.
-              </p>
-            ) : paymentsReady ? (
-              /* [1003] 주간권 버튼은 링크 직행이다(2단계 확인 제거 — 토스 심사 세션이 멈춘 자리).
-                 [1004] 월간·연간(PlanCards)의 버튼도 같은 이유로 링크가 됐다 — 확인은 체크아웃·
-                 카드 등록 화면이 이미 한 번 더 한다(주문 요약·동의 체크). 목적지 규칙은
-                 lib/subscriptions/checkout-href.ts 단일 출처. */
-              <div className="flex flex-col gap-1.5">
-                <Link
-                  href={weeklyCheckoutHref}
-                  className="press block w-full rounded-[14px] bg-brand-navy p-[13px] text-center text-[13px] font-bold text-on-dark no-underline"
-                >
-                  {`카드로 ${WEEKLY_PASS.totalKrw.toLocaleString("ko-KR")}원 결제하기 (${WEEKLY_PASS.days}일 이용권)`}
-                </Link>
-                <p className="text-center t-caption text-text-3">
-                  {currentPlan === "pro"
-                    ? "이용 중인 플러스 만료일 뒤로 7일이 이어 붙어요"
-                    : "누르면 신용·체크카드 결제창이 열려요 · 결제 버튼을 누르기 전까지 청구되지 않습니다"}
-                </p>
-              </div>
-            ) : (
-              /* [970 · A-38] 게스트는 로그인 유도 — 세션 없는 등록은 알림을 보낼 수 없다 */
-              <PreOrderCta
-                tier="pro"
-                billing="weekly"
-                className="w-full bg-brand-navy text-on-dark"
-                guest={!email}
-              />
-            )}
+            {/* [1003] 주간권 버튼은 링크 직행이다(2단계 확인 제거 — 토스 심사 세션이 멈춘 자리).
+               [1004] 월간·연간(PlanCards)의 버튼도 같은 이유로 링크가 됐다 — 확인은 체크아웃·
+               카드 등록 화면이 이미 한 번 더 한다(주문 요약·동의 체크). 목적지 규칙은
+               lib/subscriptions/checkout-href.ts 단일 출처.
+               [1007] 비회원 화면(결제 링크)이 HTML 에 실린다. 프로 이용 중 문구·플러스 연장 문구·
+               게스트 사전 등록 판정은 WeeklyPassCta 가 세션으로 바꾼다. */}
+            <WeeklyPassCta
+              paymentsReady={paymentsReady}
+              checkoutBase={REVIEW_CHECKOUT_PATH}
+              weeklyTotalKrw={WEEKLY_PASS.totalKrw}
+              weeklyDays={WEEKLY_PASS.days}
+            />
           </div>
-        </div>
+        </WeeklyPassFrame>
       </section>
 
       {/* P2-8: 환불 규정 직링크 — 약관 제8조(청약철회) 앵커.
@@ -500,16 +375,13 @@ export default async function SubscriptionPage({
       {/* 요금제 카드 3종 + 월간/연간 토글 (item 13) */}
       <section className="mx-auto mt-8 w-full">
         {/* [970 · A-06] 비로그인은 currentPlan=null — 게스트에게 무료 카드를 "현재 이용 중"
-            으로 그리면 가입 입구("무료로 시작")가 사라진다. 로그인 상태만 현재 플랜을 넘긴다. */}
+            으로 그리면 가입 입구("무료로 시작")가 사라진다. [1007] 현재 플랜·?billing·?plan·
+            ?returnTo 는 PlanCards 가 마운트 뒤 스스로 판정한다(props 생략 = 클라이언트 판정). */}
         <PlanCards
-          currentPlan={email ? currentPlan : null}
           pro={tierPricing("pro")}
           expert={tierPricing("expert")}
-          initialBilling={initialBilling}
           paymentsReady={paymentsReady}
           recurringReady={recurringReady}
-          highlightPlan={highlightPlan}
-          returnTo={returnTo || null}
         />
         {/* [966] 결제 신뢰 스트립 — 카드 아래에서 "무엇이 보장되는지" 를 짧게.
             전부 코드가 실제로 하는 일이다: 결제 즉시 이용권이 적용되며 영수증 메일·
@@ -539,13 +411,8 @@ export default async function SubscriptionPage({
       </section>
       {/* E1 — 구독 관리·결제 내역. `/my` 가 "구독 페이지에서 관리해요"라고 보내던 목적지.
           로그인하지 않았으면 보여 줄 사실이 없으므로 아예 렌더하지 않는다. */}
-      {email && (
-        <BillingPanel
-          email={email}
-          currentPlan={currentPlan}
-          planExpiresAt={planExpiresAt}
-        />
-      )}
+      {/* [1007] 로그인한 사람에게만 — BillingPanel(클라이언트)이 세션 판정 뒤 /api/subscriptions/summary 로 그린다 */}
+      <BillingPanel />
 
       {/* 기능 비교표 (9k · [C49] 좁은 화면 배치 · [992] 열은 COMPARE_COLS 에서 유도) */}
       <section className="rise-in-4 card mx-auto mt-8 w-full max-w-[1080px] rounded-[18px] px-[22px] py-5">

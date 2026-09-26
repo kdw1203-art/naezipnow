@@ -1,22 +1,29 @@
 "use client";
 
-/* 뉴스 목록 + 지역 필터 (2026-08-10 ISR 전환)
+/* 뉴스룸 목록 + 필터 (2026-08-10 ISR 전환 · [1006] 행 목록으로 재구성)
    서버가 ?region= 을 읽으면 라우트 전체가 동적이 되어 크롤 1회 = 함수 호출
    1회가 된다(비용 실측). 목록 데이터는 어차피 전량을 받아 메모리에서 거르던
    것이라, 거르는 자리만 클라이언트로 옮기면 서버 렌더는 지역과 무관해진다.
-   딥링크(?region=서울)는 useSearchParams 로 계속 동작한다 — 페이지는 캐시
-   한 벌, 필터는 브라우저에서. 카드 데이터는 서버가 미리 평탄화(DTO)해서
-   automation_meta 같은 원본을 클라이언트에 싣지 않는다. */
+   딥링크(?region=서울&cat=경제)는 마운트 후 location.search 로 적용된다.
+
+   [1006] 사진 격자 카드 → **행(row) 목록**. 뉴스는 사람이 쓴 이야기가 아니라
+   수집한 기사다: 출처 · 발행시각 · 분류 태그 · 제목 · 요약 한 줄 · 원문 ↗ 이 한 행에
+   선다. 썸네일은 실제 이미지가 있을 때만 작게 — 예전엔 이미지 없는 기사에도
+   <img> 상자(그라디언트+아이콘)를 그려 목록 절반이 빈 상자였다. 첫 장은 서버가
+   40행을 HTML 에 싣고, 나머지는 "더 보기"가 /api/town/news 로 이어 붙인다.
+   행 DTO 는 서버(lib/town/news-list)가 평탄화해 원본 메타를 싣지 않는다. */
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Icon } from "@/app/components/Icon";
+import { CoverImage } from "@/app/components/CoverImage";
+import { findNewsRegionChip, type NewsRegionChip } from "@/lib/town/news-regions";
+import { NEWS_LIST_PAGE, type NewsCategoryTab, type NewsRow } from "@/lib/town/news-row";
 
 /* 칩 전환은 서버 왕복 없는 얕은 URL 갱신으로 한다. Next 14.1+ 는
-   window.history.pushState 를 라우터와 동기화해 useSearchParams 가 따라온다.
-   Link(?region=) 를 쓰면 같은 ISR payload 를 다시 받아오는 RSC 왕복이 생기고,
-   실제 조작 경로를 로컬 프로브에서 재볼 수도 없다(실측으로 확인). */
-/* [970 · C-31] 여러 키를 한 번의 pushState 로 — "필터 초기화" 가 region·cat 을 따로
-   밀어 히스토리 항목이 2개 쌓였다(뒤로가기 두 번). */
+   window.history.pushState 를 라우터와 동기화한다. Link(?region=) 를 쓰면 같은 ISR
+   payload 를 다시 받아오는 RSC 왕복이 생긴다(실측).
+   [970 · C-31] 여러 키를 한 번의 pushState 로 — 히스토리 항목이 둘 쌓이지 않게. */
 function pushParamUrl(patch: Partial<Record<"region" | "cat", string | null>>) {
   const url = new URL(window.location.href);
   for (const [key, value] of Object.entries(patch)) {
@@ -25,45 +32,23 @@ function pushParamUrl(patch: Partial<Record<"region" | "cat", string | null>>) {
   }
   window.history.pushState(null, "", url);
 }
-import { Icon } from "@/app/components/Icon";
-import { CoverImage } from "@/app/components/CoverImage";
-import { seedGradient } from "../shared";
-import { findNewsRegionChip, type NewsRegionChip } from "@/lib/town/news-regions";
 
-export type NewsCardDto = {
-  id: string;
-  title: string;
-  /** 대표 카드에서만 쓰는 요약 (그리드 카드는 null) */
-  body: string | null;
-  category: string;
-  city: string;
-  source: string;
-  /** 서버에서 계산한 상대 시각 라벨 — ISR 주기(10분)만큼 낡을 수 있다 */
-  timeLabel: string;
-  host: string | null;
-  image: string | null;
-  favicon: string | null;
-  /** [#67] 같은 사건을 다룬 다른 매체 보도 — 카드 안에 접힌 목록 (최대 4건) */
-  related?: Array<{ id: string; title: string; source: string; timeLabel: string }>;
-};
-
-/* [#67] 관련 보도 접힘 목록 — 카드 하단의 <details>. 링크 카드(<Link>) 안에
-   중첩할 수 없어(중첩 앵커), 이 블록을 쓰는 카드는 겉을 div 로 바꾸고 본문만
-   Link 로 감싼다. */
-function RelatedFold({ related }: { related: NonNullable<NewsCardDto["related"]> }) {
+/* [#67] 관련 보도 접힘 목록 — 행 아래 <details>. */
+function RelatedFold({ related }: { related: NewsRow["related"] }) {
   if (related.length === 0) return null;
   return (
-    <details className="border-t border-divider px-3 py-2">
-      <summary className="cursor-pointer list-none t-sub font-bold text-primary">
+    <details className="mt-1">
+      <summary className="inline-flex min-h-[24px] cursor-pointer list-none items-center t-sub font-bold text-primary">
         관련 보도 {related.length}건 ▾
       </summary>
-      <ul className="mt-1.5 flex flex-col gap-1.5">
+      <ul className="mt-1 flex flex-col gap-1 border-l-2 border-line pl-3">
         {related.map((r) => (
           <li key={r.id}>
-            <Link href={`/town/news/${r.id}`} className="flex flex-col gap-px">
-              <span className="line-clamp-2 t-sub font-bold text-ink">
-                {r.title}
-              </span>
+            <Link
+              href={`/town/news/${r.id}`}
+              className="inline-flex min-h-[24px] flex-col justify-center gap-px no-underline"
+            >
+              <span className="line-clamp-2 t-sub font-bold text-ink">{r.title}</span>
               <span className="t-caption text-text-3">
                 {r.source} · {r.timeLabel}
               </span>
@@ -75,112 +60,140 @@ function RelatedFold({ related }: { related: NonNullable<NewsCardDto["related"]>
   );
 }
 
-function badgeStyle(category: string): string {
-  const c = category ?? "";
-  if (["개발", "재건축", "재개발", "분양"].some((k) => c.includes(k)))
-    return "bg-warning-soft text-warning";
-  if (["정책", "뉴스"].some((k) => c.includes(k))) return "bg-primary-soft text-primary";
-  return "bg-bg text-text-2";
-}
-
-function Thumb({ card, tall = false }: { card: NewsCardDto; tall?: boolean }) {
+/* 뉴스 행 — 규칙은 globals.css .news-row. 제목·요약은 상세(/town/news/[id]) 로,
+   ↗ 는 원문(새 탭 · nofollow) 으로. 두 링크가 한 행에 있어도 중첩 앵커가 아니다. */
+function NewsRowView({ row, lead = false }: { row: NewsRow; lead?: boolean }) {
+  /* 원문 매체의 og:image 가 죽었으면(핫링크 차단·삭제) 썸네일 칸을 **통째로** 뺀다 —
+     빈 회색 상자가 남으면 "이미지 없는 기사에 <img> 를 그리지 말 것" 규칙을 어기는 셈이다. */
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const thumb = Boolean(row.image) && !thumbFailed;
   return (
-    <div
-      className={`relative w-full overflow-hidden ${tall ? "h-[200px]" : "h-[128px]"}`}
+    <article
+      className={`news-row ${thumb ? "news-row--thumb" : ""} ${lead ? "news-row--lead" : ""}`}
     >
-      <CoverImage
-        src={card.image}
-        imgClassName="absolute inset-0 h-full w-full object-cover"
-        scrim
-        fallback={
-          <span
-            className="absolute inset-0 flex items-center justify-center text-white/70"
-            style={{ background: seedGradient(card.source || card.city || card.id) }}
-          >
-            <Icon name="file-text" size={tall ? 34 : 26} />
-          </span>
-        }
-      />
-      <span
-        className={`absolute left-2 top-2 rounded-md chip-pad text-[10px] font-extrabold ${badgeStyle(card.category)}`}
-      >
-        {card.category || "뉴스"}
-      </span>
-      {card.favicon && (
-        <span className="absolute bottom-2 left-2 flex h-8 w-8 items-center justify-center rounded-lg bg-white/90 shadow-sm">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={card.favicon}
+      {thumb && (
+        <Link href={`/town/news/${row.id}`} className="news-row__thumb block" tabIndex={-1} aria-hidden="true">
+          <CoverImage
+            src={row.image}
             alt=""
-            width={20}
-            height={20}
-            loading="lazy"
-            decoding="async"
-            className="h-5 w-5 rounded"
+            imgClassName="absolute inset-0 h-full w-full object-cover"
+            sizes="88px"
+            onFailed={() => setThumbFailed(true)}
           />
-        </span>
+        </Link>
       )}
-    </div>
+      <div className="flex min-w-0 flex-col gap-1">
+        <div className="news-row__meta">
+          {row.category && <span className="news-tag">{row.category}</span>}
+          {row.source && <span className="news-source">{row.source}</span>}
+          <time dateTime={row.publishedAt}>{row.timeLabel}</time>
+          {row.city && <span>· {row.city}</span>}
+        </div>
+        <Link href={`/town/news/${row.id}`} className="news-row__title no-underline">
+          <span className={lead ? "line-clamp-3" : "line-clamp-2"}>{row.title}</span>
+        </Link>
+        {row.summary && (
+          <p className={`news-row__summary ${lead ? "line-clamp-2" : "line-clamp-1"}`}>{row.summary}</p>
+        )}
+        {row.related.length > 0 && <RelatedFold related={row.related} />}
+      </div>
+      {row.sourceUrl ? (
+        <a
+          href={row.sourceUrl}
+          target="_blank"
+          rel="noopener nofollow"
+          className="news-ext"
+          aria-label={`원문 보기${row.host ? ` — ${row.host}` : ""}`}
+          title={row.host ? `원문 · ${row.host}` : "원문 보기"}
+        >
+          <Icon name="link" size={15} />
+        </a>
+      ) : (
+        <span aria-hidden="true" />
+      )}
+    </article>
   );
 }
 
 export function NewsListClient({
-  cards,
+  rows,
+  categories,
   regions,
-  hiddenCount,
-  listCap,
+  total,
+  hasMore: initialHasMore,
 }: {
-  cards: NewsCardDto[];
+  /** 첫 장 행(서버가 HTML 에 실은 것) */
+  rows: NewsRow[];
+  /** 분류 탭 — 서버가 **전체 목록**(첫 장이 아니라)에서 센 값 */
+  categories: NewsCategoryTab[];
   /** [970 · C-23] 시·도 칩(건수순) + 그 안의 시·군·구 칩 — 서버가 계산한 트리 */
   regions: NewsRegionChip[];
-  hiddenCount: number;
-  listCap: number;
+  /** 전체 행 수(같은 사건 접은 뒤) */
+  total: number;
+  /** 첫 장 너머가 있는가 */
+  hasMore: boolean;
 }) {
-  /* [2026-08-10 정정] 처음엔 useSearchParams 로 읽었다. 그런데 프리렌더 시점엔
-     쿼리를 알 수 없어 Suspense 폴백이 HTML 에 박히고, 배포 HTML 실측에서 뉴스
-     카드가 0건이었다 — JS 를 안 돌리는 크롤러에게 목록이 통째로 사라진다.
-     그래서 SSR 은 항상 전체 목록을 그리고(HTML 에 60건 전부), 필터는 마운트
-     후 location.search 에서 읽어 적용한다. 딥링크는 하이드레이션 직후 걸린다. */
+  /* [2026-08-10 정정] useSearchParams 는 프리렌더에서 Suspense 폴백을 HTML 에 박아
+     크롤러에게 목록이 사라졌다. SSR 은 항상 전체 첫 장을 그리고, 필터는 마운트 후
+     location.search 에서 읽어 적용한다. */
   const [active, setActive] = useState<string | null>(null);
-  /* 분류 필터(2026-08-22) — 카드가 이미 들고 있던 category 를 거를 수 있게 한다.
-     배지로 색만 칠하고 거르지는 못하던 값이었다. 지역과 같은 얕은 URL 방식(?cat=). */
   const [activeCat, setActiveCat] = useState<string | null>(null);
-  const categories = useMemo(() => {
-    const freq = new Map<string, number>();
-    for (const c of cards) {
-      const k = c.category?.trim();
-      if (k) freq.set(k, (freq.get(k) ?? 0) + 1);
-    }
-    return Array.from(freq.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([k]) => k);
-  }, [cards]);
+  const categoryLabels = useMemo(() => categories.map((c) => c.label), [categories]);
   useEffect(() => {
     const read = () => {
       const sp = new URLSearchParams(window.location.search);
       const raw = sp.get("region");
       setActive(raw && findNewsRegionChip(regions, raw) ? raw : null);
       const cat = sp.get("cat");
-      setActiveCat(cat && categories.includes(cat) ? cat : null);
+      setActiveCat(cat && categoryLabels.includes(cat) ? cat : null);
     };
     read();
     window.addEventListener("popstate", read);
     return () => window.removeEventListener("popstate", read);
     // regions/categories 는 서버 데이터 파생 고정 배열이라 join 값으로만 비교한다
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [regions.map((r) => r.label).join("|"), categories.join("|")]);
+  }, [regions.map((r) => r.label).join("|"), categoryLabels.join("|")]);
+
+  /* [1006] "더 보기" — /api/town/news?offset= 로 다음 장을 이어 붙인다 */
+  const [extra, setExtra] = useState<NewsRow[]>([]);
+  const [more, setMore] = useState(initialHasMore);
+  const [moreLoading, setMoreLoading] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
+  const allRows = useMemo(() => {
+    if (extra.length === 0) return rows;
+    const seen = new Set(rows.map((r) => r.id));
+    return [...rows, ...extra.filter((r) => !seen.has(r.id))];
+  }, [rows, extra]);
+  const loadMore = useCallback(async () => {
+    if (moreLoading) return;
+    setMoreLoading(true);
+    setMoreError(null);
+    try {
+      const r = await fetch(`/api/town/news?offset=${allRows.length}&limit=${NEWS_LIST_PAGE}`, {
+        cache: "no-store",
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = (await r.json()) as { items?: NewsRow[]; hasMore?: boolean };
+      const items = Array.isArray(j.items) ? j.items : [];
+      setExtra((prev) => {
+        const have = new Set([...rows, ...prev].map((x) => x.id));
+        return [...prev, ...items.filter((x) => !have.has(x.id))];
+      });
+      setMore(Boolean(j.hasMore));
+    } catch {
+      setMoreError("더 불러오지 못했어요. 잠시 후 다시 눌러 주세요.");
+    } finally {
+      setMoreLoading(false);
+    }
+  }, [allRows.length, moreLoading, rows]);
 
   /* [970 · C-23] 활성 칩이 거르는 원본 city 값들 — 시·도 칩이면 그 안의 시·군·구까지 */
   const activeHit = findNewsRegionChip(regions, active);
   const activeValues = new Set(activeHit?.chip.values ?? []);
-  /* 두 번째 줄(시·군·구)을 펼 시·도 그룹 — 시·도 칩 자체 또는 그 하위 칩이 활성일 때 */
   const activeGroup = activeHit ? (activeHit.parent ?? activeHit.chip) : null;
-  const list = cards.filter(
-    (c) => (!active || activeValues.has(c.city.trim())) && (!activeCat || c.category === activeCat),
+  const list = allRows.filter(
+    (c) => (!active || activeValues.has(c.city)) && (!activeCat || c.category === activeCat),
   );
-  const featured = list[0];
-  const rest = list.slice(1);
   const anyFilter = Boolean(active || activeCat);
   const clearAll = () => {
     pushParamUrl({ region: null, cat: null });
@@ -190,21 +203,46 @@ export function NewsListClient({
 
   return (
     <>
-      {/* 지역 필터 칩 — 얕은 pushState 라 서버 왕복이 없다. 뒤로가기·딥링크는
-          useSearchParams 동기화로 동작한다(프로브에서 5개 시나리오 실측). */}
+      {/* 분류 탭 — 신문 섹션 탭(밑줄). 카테고리 값은 수집분의 실제 분류(부동산·경제·
+          신탁·정비사업·사회·정보/소식…)를 서버가 전체 목록에서 센 것이다. */}
+      {categories.length > 1 && (
+        <div className="news-tabs rise-in mb-2" role="group" aria-label="분류">
+          <button type="button" aria-pressed={!activeCat} onClick={() => { pushParamUrl({ cat: null }); setActiveCat(null); }}>
+            전체
+            <span className="t-num">{total}</span>
+          </button>
+          {categories.map((c) => (
+            <button
+              key={c.label}
+              type="button"
+              aria-pressed={activeCat === c.label}
+              onClick={() => {
+                const next = activeCat === c.label ? null : c.label;
+                pushParamUrl({ cat: next });
+                setActiveCat(next);
+              }}
+            >
+              {c.label}
+              <span className="t-num">{c.count}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 지역 칩 — 얕은 pushState 라 서버 왕복이 없다. 첫 줄은 시·도(건수순) */}
       {regions.length > 0 && (
-        <div className="rise-in mb-2 flex flex-wrap gap-1.5 text-xs" role="group" aria-label="지역">
+        <div className="rise-in mb-2 flex flex-wrap items-center gap-1.5" role="group" aria-label="지역">
+          <span className="t-caption font-extrabold tracking-wider text-text-3">지역</span>
           <button
             type="button"
             onClick={() => { pushParamUrl({ region: null }); setActive(null); }}
             aria-pressed={!active}
-            className={`chip px-3.5 py-2 ${
+            className={`chip px-3 py-1.5 t-sub ${
               active ? "border border-line bg-surface text-text-2" : "chip-active"
             }`}
           >
             전체
           </button>
-          {/* [970 · C-23] 첫 줄은 시·도(건수순). 하위 칩이 활성이어도 그 시·도는 켜진 걸로 */}
           {regions.map((r) => {
             const on = activeGroup?.label === r.label;
             return (
@@ -213,7 +251,7 @@ export function NewsListClient({
                 type="button"
                 onClick={() => { pushParamUrl({ region: r.label }); setActive(r.label); }}
                 aria-pressed={on}
-                className={`chip px-3.5 py-2 ${
+                className={`chip px-3 py-1.5 t-sub ${
                   on ? "chip-active" : "border border-line bg-surface text-text-2"
                 }`}
               >
@@ -222,12 +260,19 @@ export function NewsListClient({
               </button>
             );
           })}
+          <Link
+            href="/search"
+            className="press chip ml-auto inline-flex items-center gap-1 border border-line bg-surface px-3 py-1.5 t-sub text-text-2 no-underline"
+          >
+            <Icon name="search" size={13} />
+            뉴스 검색
+          </Link>
         </div>
       )}
-      {/* [970 · C-23] 두 번째 줄 — 활성 시·도 안의 시·군·구(건수순). 접혀 있다가 시·도를 고르면 편다 */}
+      {/* [970 · C-23] 두 번째 줄 — 활성 시·도 안의 시·군·구(건수순) */}
       {activeGroup && activeGroup.children.length > 0 && (
         <div
-          className="rise-in mb-2 flex flex-wrap items-center gap-1.5 text-xs"
+          className="rise-in mb-2 flex flex-wrap items-center gap-1.5"
           role="group"
           aria-label={`${activeGroup.label} 안 지역`}
         >
@@ -236,7 +281,7 @@ export function NewsListClient({
             type="button"
             onClick={() => { pushParamUrl({ region: activeGroup.label }); setActive(activeGroup.label); }}
             aria-pressed={active === activeGroup.label}
-            className={`chip px-3 py-1.5 ${
+            className={`chip px-3 py-1.5 t-sub ${
               active === activeGroup.label ? "chip-active" : "border border-line bg-surface text-text-2"
             }`}
           >
@@ -248,7 +293,7 @@ export function NewsListClient({
               type="button"
               onClick={() => { pushParamUrl({ region: c.label }); setActive(c.label); }}
               aria-pressed={active === c.label}
-              className={`chip px-3 py-1.5 ${
+              className={`chip px-3 py-1.5 t-sub ${
                 active === c.label ? "chip-active" : "border border-line bg-surface text-text-2"
               }`}
             >
@@ -259,137 +304,87 @@ export function NewsListClient({
         </div>
       )}
 
-      {/* 분류 칩 + 검색 진입 — 배지로만 보이던 category 를 실제 필터로 연다.
-          검색은 이미 뉴스를 포함하는 통합검색(/search)으로 잇는다. */}
-      {categories.length > 1 && (
-        <div className="rise-in mb-4 flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="t-sub font-bold text-text-3">분류</span>
-          {categories.map((k) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => {
-                const next = activeCat === k ? null : k;
-                pushParamUrl({ cat: next });
-                setActiveCat(next);
-              }}
-              aria-pressed={activeCat === k}
-              className={`chip px-3 py-1.5 ${
-                activeCat === k ? "chip-active" : "border border-line bg-surface text-text-2"
-              }`}
-            >
-              {k}
-            </button>
-          ))}
-          <Link
-            href="/search"
-            className="press chip ml-auto inline-flex items-center gap-1 border border-line bg-surface px-3 py-1.5 text-text-2 no-underline"
-          >
-            <Icon name="search" size={13} />
-            뉴스 검색
-          </Link>
-        </div>
-      )}
+      {/* 무엇을 세고 있는지 — 필터가 걸리면 "받은 것 중 이 조건" 으로 모수를 밝힌다 */}
+      <p className="mb-1 t-sub text-text-3" role="status">
+        {/* 여기서 세는 건 **행**(같은 사건을 접은 뒤)이다 — 마스트헤드의 "최근 수집분 n건"(기사 수)과
+            다른 수이므로 단위도 다르게 부른다 */}
+        {anyFilter
+          ? `지금까지 받은 ${allRows.length.toLocaleString("ko-KR")}행 중 이 조건 ${list.length.toLocaleString("ko-KR")}행`
+          : `${allRows.length.toLocaleString("ko-KR")} / ${total.toLocaleString("ko-KR")}행 · 같은 사건은 한 행으로 접었어요`}
+      </p>
 
-      {/* 대표 뉴스 — [#67] 관련 보도가 있으면 카드 하단에 접힘 목록 */}
-      {featured && (
-        <div className="rise-in card tile mb-5 overflow-hidden rounded-[18px]">
-          <Link href={`/town/news/${featured.id}`} className="block">
-            <Thumb card={featured} tall />
-            <div className="flex flex-col gap-2 p-5">
-              <h2 className="t-section text-ink">
-                {featured.title}
-              </h2>
-              {featured.body && (
-                <p className="line-clamp-2 text-[13px] leading-[1.6] text-text-2">
-                  {featured.body}
-                </p>
-              )}
-              <div className="flex items-center gap-2 text-xs text-text-3">
-                <span className="font-semibold text-text-2">{featured.source}</span>
-                <span>· {featured.timeLabel}</span>
-                {featured.host && <span className="text-text-3">· {featured.host}</span>}
-              </div>
-            </div>
-          </Link>
-          {featured.related && featured.related.length > 0 && (
-            <RelatedFold related={featured.related} />
-          )}
-        </div>
-      )}
-
-      {/* 뉴스에서 자주 다뤄지는 두 표면으로의 상설 진입 */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Link
-          href="/redevelopment"
-          className="press chip inline-flex items-center gap-1 border border-line bg-surface px-3 py-1.5 text-xs text-text-2 no-underline"
-        >
-          <Icon name="building2" size={13} />
-          정비사업 지도에서 확인
-        </Link>
-        <Link
-          href="/supply"
-          className="press chip inline-flex items-center gap-1 border border-line bg-surface px-3 py-1.5 text-xs text-text-2 no-underline"
-        >
-          <Icon name="calendar" size={13} />
-          입주 예정 물량 보기
-        </Link>
-      </div>
-
-      {/* 뉴스 그리드 — [#67] 관련 보도는 카드 하단 접힘 (대표 1건 + N건) */}
-      {rest.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-          {rest.map((c, i) => (
-            <div
-              key={c.id}
-              className={`card tile rise-in-${Math.min(i + 1, 6)} flex flex-col overflow-hidden rounded-2xl`}
-            >
-              <Link href={`/town/news/${c.id}`} className="flex flex-1 flex-col">
-                <Thumb card={c} />
-                <div className="flex flex-1 flex-col gap-1.5 p-3">
-                  <div className="line-clamp-3 t-body font-bold text-ink">
-                    {c.title}
-                  </div>
-                  <div className="mt-auto flex items-center gap-1 t-sub text-text-3">
-                    <span className="min-w-0 truncate font-semibold text-text-2">
-                      {c.source}
-                    </span>
-                    <span className="shrink-0">· {c.timeLabel}</span>
-                  </div>
-                </div>
-              </Link>
-              {c.related && c.related.length > 0 && <RelatedFold related={c.related} />}
-            </div>
+      {/* 행 목록 — 첫 행은 톱기사(제목 크게 · 요약 두 줄) */}
+      {list.length > 0 && (
+        <div className="news-list rise-in">
+          {list.map((row, i) => (
+            <NewsRowView key={row.id} row={row} lead={i === 0} />
           ))}
         </div>
-      )}
-
-      {/* 표시 상한 안내 — 자른 사실을 숨기지 않는다 (전체 탭에서만 의미 있는 수).
-          "검색으로 찾을 수 있어요"라면서 검색으로 가는 길이 없었다 — 링크를 건다. */}
-      {!anyFilter && hiddenCount > 0 && (
-        <p className="mt-3 text-center t-sub text-text-3">
-          최신 {listCap}건을 보여드리고 있어요 — 이전 뉴스 {hiddenCount}건은{" "}
-          <Link href="/digest" className="inline-block py-[5px] font-bold text-primary">주간 다이제스트</Link>와{" "}
-          <Link href="/search" className="inline-block px-1 py-[5px] font-bold text-primary">검색</Link>으로 찾을 수 있어요.
-        </p>
       )}
 
       {/* 필터 결과 0건 — 빈 상태 (지역·분류 어느 쪽이든) */}
       {list.length === 0 && anyFilter && (
         <div className="card flex flex-col items-center gap-2 rounded-[18px] px-6 py-10 text-center">
           <div className="t-title">
-            <Icon name="🗞" size={26} />
+            <Icon name="newspaper" size={26} />
           </div>
-          <div className="text-[13px] font-bold text-text-1">
-            {[active, activeCat].filter(Boolean).join(" · ")} 관련 뉴스가 아직 없어요
+          <div className="t-body font-bold text-text-1">
+            {[active, activeCat].filter(Boolean).join(" · ")} 관련 기사가{" "}
+            {more ? "지금까지 받은 목록엔 없어요" : "아직 없어요"}
           </div>
-          <button
-            type="button"
-            onClick={clearAll}
-            className="btn-primary mt-1 rounded-[10px] px-4 py-2 text-xs"
-          >
-            전체 뉴스 보기
-          </button>
+          <div className="flex flex-wrap justify-center gap-2">
+            {more && (
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={moreLoading}
+                className="btn-soft mt-1 rounded-[10px] px-4 py-2 t-sub font-bold disabled:opacity-60"
+              >
+                {moreLoading ? "불러오는 중…" : "이전 기사 더 받기"}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={clearAll}
+              className="btn-primary mt-1 rounded-[10px] px-4 py-2 t-sub"
+            >
+              전체 기사 보기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* [1006] 더 보기 / 마지막 — 필터와 무관하게 전체 목록의 다음 장을 붙인다 */}
+      {(more || list.length > 0) && (
+        <div className="mt-3 flex flex-col items-center gap-2">
+          {moreError && (
+            <p role="alert" className="t-sub text-text-2">
+              {moreError}
+            </p>
+          )}
+          {more ? (
+            <button
+              type="button"
+              onClick={loadMore}
+              disabled={moreLoading}
+              aria-busy={moreLoading}
+              className="btn-soft tap rounded-xl px-5 py-2.5 t-body font-bold disabled:opacity-60"
+            >
+              {moreLoading ? "불러오는 중…" : "이전 기사 더 보기"}
+            </button>
+          ) : (
+            <p role="status" className="t-sub text-text-3">
+              접힌 {total.toLocaleString("ko-KR")}행을 다 봤어요 · 더 오래된 기사는{" "}
+              <Link href="/digest" className="inline-flex min-h-[24px] items-center font-bold text-primary">
+                주간 다이제스트
+              </Link>
+              와{" "}
+              <Link href="/search" className="inline-flex min-h-[24px] items-center font-bold text-primary">
+                검색
+              </Link>
+              에서
+            </p>
+          )}
         </div>
       )}
     </>

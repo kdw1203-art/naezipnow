@@ -52,7 +52,10 @@ import { cache } from "react";
 
 /* [B001 1단계] 1h → 24h. 이 페이지의 원천(국토부 실거래)은 하루 1번 적재라
    더 자주 재렌더할 이유가 없다 — 26k 페이지 크롤 재렌더가 DB 를 밀던 문제의 반쪽. */
-export const revalidate = 86400;
+/* [1010] 24h → 7일. 목록의 내용(조합 화이트리스트)은 실거래 적재·집계에서만 바뀌고,
+   그 크론이 끝나면 `revalidatePath("/complex/compare")` 로 즉시 비운다
+   (app/api/cron/molit-transactions-ingest). 시간은 안전망으로만 남긴다. */
+export const revalidate = 604_800;
 
 const PATH = "/complex/compare";
 
@@ -218,7 +221,7 @@ export default async function ComplexComparePage() {
           {groups.map((group) => (
             <section key={group.regionId} className="card p-[var(--pad-card)]">
               <h2 className="flex items-baseline justify-between gap-3 t-section text-ink">
-                <Link href={`/region/${group.regionId}`} className="hover:underline">
+                <Link href={`/region/${group.regionId}`} className="inline-flex min-h-[24px] items-center hover:underline">
                   {group.label}
                 </Link>
                 <span className="shrink-0 t-sub font-medium text-text-3">
@@ -232,7 +235,9 @@ export default async function ComplexComparePage() {
                     href={complexPairPath(pair)}
                     className="tile rounded-[10px] border border-border px-3 py-2.5"
                   >
-                    <span className="block t-body font-bold text-ink">
+                    {/* [1005] body 는 keep-all — 띄어쓰기 없는 긴 단지명(예: 17자)은 못 꺾여
+                        390px 에서 화면을 35px 밀어냈다. 넘칠 때만 꺾는다(overflow-wrap). */}
+                    <span className="block break-words t-body font-bold text-ink">
                       {pair.complexA}
                       <span className="mx-1 t-sub font-medium text-text-3">vs</span>
                       {pair.complexB}

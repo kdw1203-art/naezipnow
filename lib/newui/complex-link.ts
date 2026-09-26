@@ -12,6 +12,7 @@ import {
   searchComplexes,
   type ComplexRow,
 } from "@/lib/complex/complex-store";
+import { complexNameKey } from "@/lib/search/complex-match";
 
 function hrefForRow(r: ComplexRow): string {
   /* kapt 가 있으면 동명 충돌을 피한 안정 id 를 쓴다. 없으면 기존 name id. */
@@ -21,8 +22,10 @@ function hrefForRow(r: ComplexRow): string {
   return `/complex/${r.id}`;
 }
 
+/* [1008 · S] 이름 비교 키 — 공백만 빼던 것을 검색과 같은 정규화 키(소문자·한글/영숫자만)로.
+   노트에 적힌 "한가람삼성" 이 실거래 표기 "한가람(삼성)" 과 괄호 하나 차이로 링크를 잃었다. */
 function normalize(s: string): string {
-  return s.replace(/\s+/g, "");
+  return complexNameKey(s);
 }
 
 /** "관양동·평촌", "안양시 동안구" 등 지역 문자열 → 매칭용 토큰 (2자 이상) */
@@ -113,7 +116,8 @@ async function resolveComplexHrefUncached(
   const nq = normalize(query);
   const nameMatches = rows.filter((r) => {
     const rn = normalize(r.name);
-    return rn.includes(nq) || nq.includes(rn);
+    /* 기호뿐인 이름은 정규화 키가 빈 문자열 — "".includes 는 늘 참이라 빼고 본다 */
+    return !!rn && (rn.includes(nq) || nq.includes(rn));
   });
   if (nameMatches.length === 0) return null;
 
@@ -138,11 +142,30 @@ async function resolveComplexHrefUncached(
    /notes·/qna·/notes/[id]·/map 은 동적 렌더라 요청마다 목록 전체(최대 50건)를
    다시 풀었고, 결과는 실거래 단지명에서만 나와 하루 안에 바뀌지 않는다.
    키는 (이름, 지역) 문자열 — 요청·사용자와 무관하게 같은 값이다.
-   market 태그: 실거래 적재(molit) 뒤 invalidateAfterIngest 가 비운다. */
+   market 태그: 실거래 적재(molit) 뒤 invalidateAfterIngest 가 비운다.
+
+   [1007] 데이터 캐시로 **남긴다**(단지 축·노트 id 캐시는 이번에 React cache 로 바꿨다).
+   판단 근거: 이 키는 단지 id 가 아니라 (단지명, 지역) 이라 여러 화면·여러 요청이 같은 키를
+   때린다 — /notes 는 공개 노트 34편의 단지명(≈34키)을 하루 398회 동적 렌더마다 풀고, /map
+   (911회)·/notes/[id]·/my/follows 도 같은 키를 쓴다. 즉 미스(쓰기)는 키당 6시간에 1번, 히트는
+   하루 수백 번이다 — "쓰기만 하고 안 읽히는" 항목이 아니다. 뉴스 상세(/town/news/[id], 985회)의
+   태그 키(기사당 ≤8)는 재사용이 덜하지만 공통 태그("재건축"·구 이름)는 기사 사이에 겹치고,
+   뉴스 상세가 6시간 ISR 로 바뀌어 재렌더 자체가 줄었다. 이걸 요청 캐시로 바꾸면 ILIKE 42ms
+   질의가 렌더마다 최대 9번 돌아(하루 ≈ +4,000 질의) DB 쪽 손해가 ISR Write 절감(항목 1개 =
+   수십 바이트, 하루 ≈4,000건 ≈ $0.02)보다 크다. */
+/* [1008 · S] 키 v2 — 검색 규칙이 바뀌어(괄호·띄어쓰기·동네+단지명) 예전에 "못 찾음"으로 6시간 굳은
+   값("한가람삼성" 등)을 배포 즉시 다시 풀게 한다. 키 수가 작아(공개 노트 단지명 ≈34) 재계산 부담은 작다. */
+/* [1010] 6시간 → 7일. 태그("market")는 그대로다 — 실거래 적재(molit) 직후
+   invalidateAfterIngest("market" 태그)가 비우므로 신선도는 시간이 아니라 적재가 맡는다.
+   왜 올리나: unstable_cache 의 revalidate 는 이 캐시를 읽는 **라우트의 revalidate 를
+   끌어내린다**(Next 는 둘 중 작은 값). 이 해석을 읽는 /qna/[id]·/town/news/[id] 의 라우트
+   TTL 을 7일로 늘려도, 여기가 6시간이면 실제 TTL 은 6시간이 된다 — 늘린 값이 아무 일도
+   하지 않는다. 같은 현상을 빌드 산출물로 확인했다(lib/town/cache-tags.ts 주석).
+   원천(실거래 단지명)은 하루 1회 적재라 7일 TTL 이 값의 신선도를 떨어뜨리지 않는다. */
 const resolveComplexHrefCached = unstable_cache(
   async (query: string, region: string) => resolveComplexHrefUncached(query, region),
-  ["complex-href-v1"],
-  { revalidate: 21_600, tags: ["market"] },
+  ["complex-href-v2"],
+  { revalidate: 604_800, tags: ["market"] },
 );
 
 export const resolveComplexHref = cache(

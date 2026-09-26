@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import nextDynamic from "next/dynamic";
-import { AIPanel } from "../../components/AIPanel";
 import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { Icon } from "@/app/components/Icon";
 import type { HubTrade } from "@/lib/complex/hub-trades";
+import type { DealTuple } from "@/lib/complex/hub-price";
 import { TradeRow } from "./TradeRow";
+import type { MonthDeltaView } from "@/lib/complex/month-delta";
+import { DealListLazy as DealList } from "./DealListLazy";
 import { primeWatching, readWatching } from "./watchlist-status";
 import { canOfferPush, pushResultMessage, subscribeToPush } from "@/lib/push/subscribe-client";
 
@@ -68,8 +70,14 @@ type WatchlistDetail = { complexId: string; watching: boolean };
    <button> 이었다. 파란 글씨로 눌러 보라고 말해 놓고 아무 일도 안 했다.
    지도 패널(ComplexInfoPanel)은 같은 기능을 /api/me/watchlist 로 이미
    제대로 쓰고 있었다 — 같은 API 를 붙인다.
-   그쪽 토글은 Toast·SoftSignup 프로바이더에 묶여 있어 그대로 못 옮기므로,
-   여기서는 버튼 안에서 상태를 그대로 말하는 자립형으로 만든다. */
+
+   [1009 · C] 액션 반응(토스 관례) — 예전엔 켜도 꺼도 버튼 글자만 바뀌었고(히어로는 10px 한 줄 문구, 하단 바는 토스트),
+   실수로 뺀 관심 단지를 되돌릴 길이 없었다. 이제
+     · 켤 때: 하트가 한 번 튄다(njn-pop-once — 키를 바꿔 다시 재생, 모션 최소화면 꺼짐) + 토스트,
+     · 끌 때: 토스트 "관심 단지에서 뺐어요" + **되돌리기**(onClick 이 실제 API 로 다시 담는다 — 확인 모달 대신),
+     · 요청 중: 글자 "저장 중…" + aria-busy, 두 번 눌러도 한 번만 나간다(busyRef),
+     · 실패: 원인 + 할 일을 토스트로("…담지 못했어요 — 잠시 후 다시 눌러 주세요").
+   히어로·하단 바 두 인스턴스는 [967 · 17] window 이벤트로 같은 상태를 말한다(되돌리기도 같은 길). */
 export function WatchlistButton({
   complexId,
   complexName,
@@ -80,8 +88,7 @@ export function WatchlistButton({
   complexName: string;
   /** [962] 네이비 히어로 위에서는 한지 글자 */
   tone?: "light" | "dark";
-  /** [967 · 17] "bar" = 모바일 하단 액션 바의 아이콘+라벨 칸. 결과는 토스트로 말한다
-   *  (칸이 좁아 인라인 문구가 들어갈 자리가 없다). */
+  /** [967 · 17] "bar" = 모바일 하단 액션 바의 아이콘+라벨 칸. */
   variant?: "default" | "bar";
 }) {
   const { promptSignup } = useSoftSignup();
@@ -89,10 +96,9 @@ export function WatchlistButton({
   const { showToast } = useToast();
   const [watching, setWatching] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
-  /* 모바일24 — 실패만 빨간 글씨로 말하고 성공은 침묵했다. 저장이 무엇을 의미하는지
-     (시세 변동 알림 — price-alerts 크론이 ±1% 변동 시 실제로 보낸다) 성공 시에도
-     한 줄로 말한다. tone 으로 색만 가른다. */
-  const [message, setMessage] = useState<{ text: string; tone: "error" | "ok" } | null>(null);
+  /* 켤 때마다 1씩 — 하트를 감싼 span 의 key 라 바뀌면 애니메이션이 처음부터 다시 붙는다 */
+  const [pop, setPop] = useState(0);
+  const busyRef = useRef(false);
 
   /* [968 · 3] 세션이 비면 요청 없이 false, 있으면 단지별 공유 프라미스(30초) —
      히어로 버튼과 하단 바가 같은 왕복 하나를 나눠 받고, 하단 바가 스크롤마다
@@ -117,24 +123,20 @@ export function WatchlistButton({
     return () => window.removeEventListener(WATCHLIST_EVENT, onChange);
   }, [complexId]);
 
-  function say(text: string, kind: "error" | "ok") {
-    if (variant === "bar") showToast(text);
-    else setMessage({ text, tone: kind });
-  }
-
-  async function toggle() {
-    if (busy) return;
+  /** 서버를 target 상태로 맞춘다 — 버튼과 토스트의 "되돌리기"가 같은 길을 탄다 */
+  async function apply(target: boolean, opts: { undo?: boolean } = {}) {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
-    setMessage(null);
     try {
-      const res = watching
-        ? await fetch(`/api/me/watchlist?complexId=${encodeURIComponent(complexId)}`, {
-            method: "DELETE",
-          })
-        : await fetch("/api/me/watchlist", {
+      const res = target
+        ? await fetch("/api/me/watchlist", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ complexId, complexName }),
+          })
+        : await fetch(`/api/me/watchlist?complexId=${encodeURIComponent(complexId)}`, {
+            method: "DELETE",
           });
       if (res.status === 401) {
         promptSignup({
@@ -150,106 +152,114 @@ export function WatchlistButton({
         code?: string;
       };
       if (handleUpgradeResponse(res.status, j)) {
-        say(j.error ?? "관심 단지 한도에 도달했어요", "error");
+        showToast(j.error ?? "관심 단지 한도에 도달했어요 — 다른 단지를 빼면 담을 수 있어요");
         return;
       }
       if (!res.ok) {
-        say(j.error ?? "저장하지 못했어요", "error");
+        showToast(
+          j.error ??
+            (target
+              ? "관심 단지에 담지 못했어요 — 잠시 후 다시 눌러 주세요"
+              : "관심 단지에서 빼지 못했어요 — 잠시 후 다시 눌러 주세요"),
+        );
         return;
       }
-      const next = !watching;
-      if (next) {
-        /* [968 · 46] 관심 등록의 뜻이 "시세 변동 알림"인데 그 자리에서 푸시를 권하지
-           않았다(옵트인은 전체 메뉴 안에만). 아직 묻지 않은(default) 브라우저에만 토스트
-           액션으로 권한다 — 권한 프롬프트는 액션 탭 핸들러 안(사용자 제스처)에서만 열리고,
-           자동으로 묻는 일은 없다. 이미 허용·차단했거나 미지원이면 예전 문구 그대로. */
-        if (canOfferPush()) {
-          if (variant !== "bar") setMessage({ text: "저장했어요 · 시세 변동 시 알림을 받아요", tone: "ok" });
-          showToast("저장했어요 · 시세 변동을 푸시로도 받을 수 있어요", {
-            label: "푸시로 받기",
-            onClick: () => {
-              void subscribeToPush().then((r) => {
-                const m = pushResultMessage(r);
-                if (m) showToast(m);
-              });
-            },
-          });
-        } else {
-          say("저장했어요 · 시세 변동 시 알림을 받아요", "ok");
-        }
-      } else if (variant === "bar") showToast("관심 단지에서 뺐어요");
-      setWatching(next);
-      primeWatching(complexId, next);
+      setWatching(target);
+      primeWatching(complexId, target);
       window.dispatchEvent(
-        new CustomEvent<WatchlistDetail>(WATCHLIST_EVENT, { detail: { complexId, watching: next } }),
+        new CustomEvent<WatchlistDetail>(WATCHLIST_EVENT, { detail: { complexId, watching: target } }),
       );
+      if (!target) {
+        showToast("관심 단지에서 뺐어요", {
+          label: "되돌리기",
+          onClick: () => {
+            void apply(true, { undo: true });
+          },
+        });
+        return;
+      }
+      setPop((n) => n + 1);
+      if (opts.undo) {
+        showToast("다시 관심 단지에 담았어요");
+      } else if (canOfferPush()) {
+        /* [968 · 46] 관심 등록의 뜻이 "시세 변동 알림"인데 그 자리에서 푸시를 권하지 않았다. 아직 묻지 않은
+           (default) 브라우저에만 토스트 액션으로 권한다 — 권한 프롬프트는 액션 탭(사용자 제스처)에서만 열린다. */
+        showToast("관심 단지에 담았어요 · 실거래가 변동을 푸시로도 받을 수 있어요", {
+          label: "푸시로 받기",
+          onClick: () => {
+            void subscribeToPush().then((r) => {
+              const m = pushResultMessage(r);
+              if (m) showToast(m);
+            });
+          },
+        });
+      } else {
+        showToast("관심 단지에 담았어요 · 실거래가 변동을 알려 드려요");
+      }
     } catch {
-      say("네트워크 오류가 발생했어요", "error");
+      showToast("네트워크 오류로 저장하지 못했어요 — 연결을 확인하고 다시 눌러 주세요");
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }
+
+  const heart = (size: number) => (
+    <span key={pop} className={`inline-flex ${pop > 0 ? "njn-pop-once" : ""}`} aria-hidden="true">
+      <Icon name="heart" size={size} className={watching ? "fill-current" : ""} />
+    </span>
+  );
+  const label = busy ? "저장 중…" : watching ? "관심 단지" : "관심 등록";
 
   if (variant === "bar") {
     return (
       <button
         type="button"
-        onClick={toggle}
+        onClick={() => void apply(!watching)}
         disabled={busy}
         aria-pressed={watching === true}
+        aria-busy={busy}
         aria-label={watching ? "관심 단지에서 빼기" : "관심 단지로 저장"}
-        className={`flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1.5 t-caption font-bold disabled:opacity-50 ${
+        className={`press flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1.5 t-caption font-bold disabled:opacity-60 ${
           watching ? "text-brand-red" : "text-text-1"
         }`}
       >
-        <Icon name="heart" size={18} />
-        {busy ? "저장 중…" : watching ? "관심 단지" : "관심 등록"}
+        {heart(18)}
+        {label}
       </button>
     );
   }
 
   return (
-    <span className="flex flex-col items-end">
-      <button
-        type="button"
-        onClick={toggle}
-        disabled={busy}
-        aria-pressed={watching === true}
-        className={`text-xs font-bold disabled:opacity-50 ${
-          tone === "dark"
-            ? watching
-              ? "brand-photo-chip rounded-full px-2.5 py-1"
-              : "rounded-full bg-brand-hanji px-2.5 py-1 text-brand-hanji-ink"
-            : watching
-              ? "text-ink"
-              : "text-primary"
-        }`}
-      >
-        {busy ? "저장 중…" : watching ? "✓ 관심 단지" : "+ 단지 팔로우"}
-      </button>
-      {message && (
-        <span
-          className={`mt-0.5 text-[10px] ${
-            message.tone === "ok"
-              ? tone === "dark"
-                ? "text-on-dark-muted"
-                : "text-text-3"
-              : tone === "dark"
-                ? "text-brand-red-dark"
-                : "text-danger"
-          }`}
-        >
-          {message.text}
-        </span>
-      )}
-    </span>
+    <button
+      type="button"
+      onClick={() => void apply(!watching)}
+      disabled={busy}
+      aria-pressed={watching === true}
+      aria-busy={busy}
+      aria-label={watching ? "관심 단지에서 빼기" : "관심 단지로 저장"}
+      className={`press inline-flex min-h-10 shrink-0 items-center gap-1 rounded-full px-3 text-xs font-bold disabled:opacity-60 ${
+        tone === "dark"
+          ? watching
+            ? "brand-photo-chip"
+            : "bg-brand-hanji text-brand-hanji-ink"
+          : watching
+            ? "border border-line bg-surface text-ink"
+            : "border border-primary/30 bg-primary-soft text-primary"
+      }`}
+    >
+      {heart(14)}
+      {label}
+    </button>
   );
 }
 
 /* [970 · B-17] "노트" 탭의 내용은 동네이야기(board_posts) 글이라 라벨을 "이야기"로 —
    임장노트는 아래 ComplexNotesNewsAi 섹션이 따로 그린다. ?tab= id(notes)는 그대로
    둔다(공유·북마크 호환). */
-const TABS = ["요약", "이야기", "매물", "시세", "내 기록"] as const;
+/* [1009 · C] "시세" → "실거래" — 이 탭의 숫자는 전부 국토부 실거래 신고분이다(단지 단위 시세 원천 없음, 표기 표준).
+   주소 id(price)는 그대로라 공유·북마크(?tab=price)는 계속 이 탭을 연다. */
+const TABS = ["요약", "이야기", "매물", "실거래", "내 기록"] as const;
 type Tab = (typeof TABS)[number];
 const DEFAULT_TAB: Tab = "요약";
 
@@ -259,7 +269,7 @@ const TAB_IDS: Record<Tab, string> = {
   요약: "summary",
   이야기: "notes",
   매물: "listings",
-  시세: "price",
+  실거래: "price",
   "내 기록": "mine",
 };
 
@@ -304,6 +314,10 @@ export function ComplexHubTabs({
   noteHref,
   altComplexId,
   priceRegion,
+  loanRegion,
+  deals = [],
+  dealsFailed = false,
+  tradeDeltas,
 }: {
   aiTitle: string;
   aiBody: string;
@@ -330,6 +344,14 @@ export function ComplexHubTabs({
   altComplexId?: string;
   /** [970 · B-39] 시세 탭 "AI 시세 분석 보기"에 실을 지역("서울 중랑구") — 없으면 지역 없이 */
   priceRegion?: string;
+  /** [1008] 계산기 지역(regulated·capital·other) — 서버가 lib/finance/loan-rules 로 정한 값. 없으면 사용자가 고른다 */
+  loanRegion?: string;
+  /** [1009 · C] 최근 실거래 한 건 단위(최신순, 최대 60) — [계약월, 일, 만원, 전용㎡, 층] */
+  deals?: readonly DealTuple[];
+  /** [1009 · C] 실거래 조회 실패 — "없음"과 다른 문장으로 */
+  dealsFailed?: boolean;
+  /** [1009 · C 리뷰] 월별 줄(전체)의 등락 기준 — 서버가 month-delta 로 센 값(요약 탭 미리보기 줄). 라우트 번들에 계산 코드를 싣지 않는다 */
+  tradeDeltas?: Record<string, MonthDeltaView>;
 }) {
   /* SSR·첫 하이드레이션은 언제나 기본 탭 — 프리렌더 HTML 과 정확히 일치해야 한다.
      주소의 ?tab= 은 마운트 뒤에 읽는다([967 · 14]). useSearchParams 를 쓰지 않는 이유:
@@ -368,9 +390,10 @@ export function ComplexHubTabs({
     <button
       type="button"
       onClick={() => setTab("내 기록")}
-      className="card tile flex w-full items-center justify-between rounded-[14px] px-[15px] py-3.5 text-left"
+      /* [1009 · C 리뷰] 문장과 "열기 ›"가 390px 에서 붙어 보였다("봐요열기 ›") — 간격. 누를 수 있는 카드라 눌림(press) */
+      className="card tile press flex w-full items-center justify-between gap-3 rounded-[14px] px-[15px] py-3.5 text-left"
     >
-      <span className="t-body text-text-1">
+      <span className="min-w-0 t-body text-text-1">
         <b className="text-ink">내 기록</b> — 이 단지에 남긴 임장노트를 회차별로 모아 봐요
       </span>
       <span className="shrink-0 text-xs font-extrabold text-primary">열기 ›</span>
@@ -409,27 +432,70 @@ export function ComplexHubTabs({
       {/* ===== 요약 ===== */}
       {tab === "요약" && (
         <div className="rise-in-3 flex flex-col gap-3" role="tabpanel">
-          <AIPanel title={aiTitle}>{aiBody}</AIPanel>
+          {/* [1009 · C] 예전엔 "AI" 표식이 붙은 패널(AIPanel)이었는데 AI 가 쓴 글이 아니라 공공데이터를 규칙으로 이은
+              문장이다 — AI 분석 결과 요약과 같은 이름("공공데이터 자동 계산")으로 적는다. */}
+          <div className="card flex flex-col gap-1.5 rounded-[14px] px-[15px] py-3.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="t-body font-extrabold text-ink">{aiTitle}</span>
+              <span className="shrink-0 t-caption text-text-3">공공데이터 자동 계산</span>
+            </div>
+            <p className="break-words t-body leading-[1.6] text-text-1">{aiBody}</p>
+          </div>
           {priceChart}
           {myRecordCard}
-          {trades.length > 0 ? (
+          {deals.length > 0 ? (
+            /* [1009 · C] 월별 평균 줄(8.4억 · N건 · 최저~최고) → 한 건 단위(계약일 · 전용 · 층 · 거래가, 네이버 관례).
+               "전체 보기"는 실거래 탭(면적대 필터·월별 평균 표)으로 — 예전엔 누를 수 없는 글자("시세 탭에서 전체")였다. */
+            <div className="card flex flex-col gap-2 rounded-[14px] px-3.5 py-3">
+              <div className="flex items-center justify-between gap-2 px-0.5">
+                <span className="t-sub font-bold text-text-2">
+                  최근 실거래 <span className="tabular-nums">{Math.min(deals.length, 8)}건</span>
+                </span>
+                {/* [1009 · C 리뷰] 문장 속 링크가 아니라 혼자 서 있는 조작 — 40px(주요 조작). 줄 높이는 -my 로 그대로 */}
+                <button
+                  type="button"
+                  onClick={() => setTab("실거래")}
+                  className="press -my-2 inline-flex min-h-10 items-center px-1 t-sub font-bold text-primary"
+                >
+                  전체 보기 ›
+                </button>
+              </div>
+              <DealList deals={deals.slice(0, 8)} />
+              <p className="px-0.5 t-caption text-text-3">국토교통부 실거래가 · 해제 신고 제외 · 한 건 금액 그대로</p>
+            </div>
+          ) : trades.length > 0 ? (
             <div className="card flex flex-col rounded-[14px] px-3.5 py-2">
               <div className="flex items-baseline justify-between px-0.5 py-1.5">
-                <span className="t-sub font-bold text-text-2">
-                  최근 실거래 · {Math.min(trades.length, 18)}개월
+                {/* [1009 · C 리뷰] 줄 수("N개월")는 거래 있는 달 수라 기간처럼 읽혔다 — 무엇의 평균인지(면적 혼합)와 등락 기준만 적는다.
+                    기준은 앞 줄 — 모든 앞 줄이 전달이면 "전월 대비", 아니면 "앞 거래 달 대비"(빈 달 다음 줄엔 기준 달이 붙는다) */}
+                <span className="min-w-0 t-sub font-bold text-text-2">
+                  월평균 · 면적 혼합 ·{" "}
+                  {trades
+                    .slice(0, 18)
+                    .every((t) => !tradeDeltas?.[t.ym]?.basis || tradeDeltas?.[t.ym]?.adjacent)
+                    ? "전월 대비"
+                    : "앞 거래 달 대비"}
                 </span>
-                <span className="t-caption text-text-3">시세 탭에서 전체</span>
+                <button
+                  type="button"
+                  onClick={() => setTab("실거래")}
+                  className="press -my-2 inline-flex min-h-10 items-center px-1 t-caption font-bold text-primary"
+                >
+                  실거래 탭에서 전체 ›
+                </button>
               </div>
               <div className="overflow-hidden rounded-xl bg-bg">
                 {/* [967 · 18] key = yyyymm — 월별 집계라 목록 안에서 유일하다 */}
                 {trades.slice(0, 18).map((t, i) => (
-                  <TradeRow key={t.ym} t={t} divider={i > 0 ? "top" : "none"} />
+                  <TradeRow key={t.ym} t={t} dv={tradeDeltas?.[t.ym]} divider={i > 0 ? "top" : "none"} />
                 ))}
               </div>
             </div>
           ) : (
             <div className="card rounded-[14px] px-[15px] py-6 text-center t-body text-text-3">
-              아직 수집된 국토교통부 실거래가 없어요
+              {dealsFailed
+                ? "실거래를 지금 불러오지 못했어요 — 거래가 없다는 뜻이 아니에요"
+                : "아직 수집된 국토교통부 실거래가 없어요"}
             </div>
           )}
           {notes.length > 0 && (
@@ -477,7 +543,8 @@ export function ComplexHubTabs({
           {notes.map((n) => (
             <div
               key={n.id}
-              className="card tile flex flex-col gap-0.5 rounded-[14px] px-3.5 py-3"
+              /* [1009 · C] 누를 수 없는 카드라 .tile(호버 들림·눌림)을 뺐다 — 눌리는 척하면 죽은 컨트롤처럼 읽힌다 */
+              className="card flex flex-col gap-0.5 rounded-[14px] px-3.5 py-3"
             >
               <div className="t-body font-bold text-ink">{n.title}</div>
               <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
@@ -513,7 +580,7 @@ export function ComplexHubTabs({
           {listings.map((l) => (
             <div
               key={l.id}
-              className={`card tile flex flex-col gap-1.5 rounded-2xl px-[15px] py-3.5 ${
+              className={`card flex flex-col gap-1.5 rounded-2xl px-[15px] py-3.5 ${
                 l.urgent ? "border-[1.5px] border-primary" : ""
               }`}
             >
@@ -545,14 +612,16 @@ export function ComplexHubTabs({
       )}
 
       {/* ===== 시세 ===== [968 · 4] 본문은 PriceTab.tsx(동적 청크) — 필터·정렬·전체 표 */}
-      {tab === "시세" && (
+      {tab === "실거래" && (
         <div className="rise-in-3 flex flex-col gap-2.5" role="tabpanel">
           <PriceTab
             trades={trades}
+            deals={deals}
             latestAvgManwon={latestAvgManwon}
             complexName={complexName}
             priceChart={priceChart}
             region={priceRegion}
+            loanRegion={loanRegion}
           />
         </div>
       )}

@@ -296,6 +296,164 @@ export function howToJsonLd(input: {
   });
 }
 
+/* ---------- [1006 · E] 발행 주체 참조 · WebPage(speakable) · Dataset · DataCatalog ---------- */
+
+/** 전역 Organization 노드의 @id (app/components/SiteJsonLd.tsx 가 낸다) */
+export const ORGANIZATION_ID = `${BASE_URL}/#organization`;
+/** 전역 WebSite 노드의 @id */
+export const WEBSITE_ID = `${BASE_URL}/#website`;
+
+/**
+ * Article.publisher · Dataset.creator 자리에 넣는 참조.
+ * 이름·URL 을 다시 적지 않고 전역 노드를 가리킨다 — 같은 주체가 페이지마다
+ * 다른 노드로 읽히지 않게(G16). 이미 /reports·/digest·/notes/best 가 이 모양이다.
+ */
+export function publisherRef(): { "@id": string } {
+  return { "@id": ORGANIZATION_ID };
+}
+
+/** 지역 허브 Place 노드의 @id — regionPlaceJsonLd 와 같은 규칙 */
+export function regionEntityId(id: string): string {
+  return `${BASE_URL}/region/${id}`;
+}
+
+/** 단지 허브 ApartmentComplex 노드의 @id — complexResidenceJsonLd 와 같은 규칙 */
+export function complexEntityId(id: string): string {
+  return `${BASE_URL}/complex/${encodeURIComponent(id)}`;
+}
+
+/**
+ * WebPage + speakable. schema.org 는 speakable 을 WebPage·Article 에만 둔다(Place·
+ * ApartmentComplex 에는 없다) — 그래서 지역·단지 허브는 엔티티 노드 옆에 WebPage
+ * 노드를 하나 더 내고 mainEntity 로 엔티티를 가리킨다.
+ *
+ * cssSelector 는 **페이지에 실제로 있는 셀렉터만** 넘긴다(기본값은 인용 요약 블록
+ * `[data-ai-summary]`). 없는 셀렉터를 적으면 스키마가 빈 곳을 가리키는 거짓이 된다.
+ * dateModified 는 집계가 실제로 갱신된 날(ISO)이어야 한다 — 렌더 시각을 넣지 않는다.
+ */
+export function webPageJsonLd(input: {
+  path: string;
+  name: string;
+  description?: string | null;
+  /** ISO 날짜("2026-09-19") 또는 ISO 일시 */
+  dateModified?: string | null;
+  /** 기본 ["[data-ai-summary]"] */
+  speakableSelectors?: string[];
+  /** 이 페이지의 주 엔티티 @id (regionEntityId·complexEntityId) */
+  mainEntityId?: string | null;
+}): Record<string, unknown> {
+  const url = absoluteUrl(input.path);
+  const selectors = (input.speakableSelectors ?? ["[data-ai-summary]"]).filter(
+    (s) => typeof s === "string" && s.trim() !== "",
+  );
+  return compact({
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${url}#webpage`,
+    url,
+    name: input.name,
+    description: input.description?.trim() || undefined,
+    inLanguage: "ko-KR",
+    isPartOf: { "@id": WEBSITE_ID },
+    publisher: publisherRef(),
+    dateModified: input.dateModified?.trim() || undefined,
+    mainEntity: input.mainEntityId ? { "@id": input.mainEntityId } : undefined,
+    speakable:
+      selectors.length > 0
+        ? { "@type": "SpeakableSpecification", cssSelector: selectors }
+        : undefined,
+  });
+}
+
+/** 국토교통부 실거래가 공개시스템 — Dataset.isBasedOn 기본값 (/tx·/analysis/temperature 와 동일) */
+export const MOLIT_RT_URL = "https://rt.molit.go.kr";
+
+/**
+ * Dataset — 페이지가 **실제로 보여 주는** 집계만 기술한다(S18/G15).
+ * 값이 없는 필드는 넣지 않는다(temporalCoverage·dateModified 를 지어내지 않는다).
+ * distributionUrl 은 같은 집계를 기계가 받아갈 수 있는 실재 URL 만(공개 API).
+ */
+export function datasetJsonLd(input: {
+  path: string;
+  name: string;
+  description: string;
+  keywords?: string[];
+  /** "2025-09/2026-08" — ymRangeToTemporalCoverage 로 만든다 */
+  temporalCoverage?: string | null;
+  dateModified?: string | null;
+  variableMeasured?: string | string[] | null;
+  /** 원출처 — 기본 국토교통부 실거래 */
+  isBasedOn?: string | string[];
+  /** 공개 API 등 실재하는 배포 URL(JSON) */
+  distributionUrl?: string | null;
+  /** 지역명("서울 송파구") — 있을 때만 */
+  spatialCoverage?: string | null;
+}): Record<string, unknown> {
+  const url = absoluteUrl(input.path);
+  return compact({
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    "@id": `${url}#dataset`,
+    name: input.name,
+    description: input.description,
+    url,
+    inLanguage: "ko-KR",
+    creator: publisherRef(),
+    isBasedOn: input.isBasedOn ?? MOLIT_RT_URL,
+    license: `${BASE_URL}/methodology`,
+    keywords: input.keywords,
+    temporalCoverage: input.temporalCoverage?.trim() || undefined,
+    dateModified: input.dateModified?.trim() || undefined,
+    variableMeasured: input.variableMeasured ?? undefined,
+    spatialCoverage: input.spatialCoverage?.trim() || undefined,
+    distribution: input.distributionUrl
+      ? [
+          {
+            "@type": "DataDownload",
+            contentUrl: input.distributionUrl,
+            encodingFormat: "application/json",
+          },
+        ]
+      : undefined,
+  });
+}
+
+/**
+ * DataCatalog — 공개 집계 API 문서(/developers)처럼 여러 Dataset 을 묶어 내놓는
+ * 페이지용. dataset 배열이 비면 만들지 않는다(null) — 빈 카탈로그를 내보내지 않는다.
+ */
+export function dataCatalogJsonLd(input: {
+  path: string;
+  name: string;
+  description: string;
+  datasets: Array<{ path: string; name: string; description: string }>;
+}): Record<string, unknown> | null {
+  if (input.datasets.length === 0) return null;
+  const url = absoluteUrl(input.path);
+  return compact({
+    "@context": "https://schema.org",
+    "@type": "DataCatalog",
+    "@id": `${url}#catalog`,
+    name: input.name,
+    description: input.description,
+    url,
+    inLanguage: "ko-KR",
+    provider: publisherRef(),
+    dataset: input.datasets.map((d) =>
+      compact({
+        "@type": "Dataset",
+        "@id": `${absoluteUrl(d.path)}#dataset`,
+        name: d.name,
+        description: d.description,
+        url: absoluteUrl(d.path),
+        creator: publisherRef(),
+        isBasedOn: MOLIT_RT_URL,
+        license: `${BASE_URL}/methodology`,
+      }),
+    ),
+  });
+}
+
 /** JSON-LD 객체 → 안전한 <script> 문자열 (XSS 차단: < 이스케이프) */
 export function jsonLdScript(data: unknown): string {
   return JSON.stringify(data).replace(/</g, "\\u003c");

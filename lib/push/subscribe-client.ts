@@ -4,7 +4,9 @@
    pushManager.subscribe → POST /api/push/subscribe)는 components/PushSubscribe.tsx
    (전체 메뉴의 "알림 켜기") 안에만 있었다. 관심 등록 성공 토스트의 "푸시로 받기"
    (hub-client.tsx WatchlistButton)가 같은 절차를 써야 하므로 여기로 꺼냈다.
-   두 진입점이 같은 API·같은 키 출처(GET /api/push/subscribe 의 publicKey)를 쓴다.
+   두 진입점이 같은 API·같은 키 출처를 쓴다 — [1007] 키는 빌드 인라인
+   NEXT_PUBLIC_VAPID_PUBLIC_KEY(envVapidPublicKey)가 먼저고, GET /api/push/subscribe 는 그게
+   없는 빌드에서의 폴백이다.
 
    규칙: 권한 프롬프트(Notification.requestPermission)는 **사용자 제스처 안에서**
    호출돼야 한다(Safari 는 활성화 창 밖의 호출을 조용히 거부한다). 그래서
@@ -78,7 +80,22 @@ export function canOfferPush(): boolean {
   return isPushSupported() && Notification.permission === "default";
 }
 
-/** GET /api/push/subscribe → 서버가 활성이고 공개키가 있을 때만 그 키. 아니면 null. */
+/**
+ * [1007 · V2a-3] 빌드에 인라인된 VAPID 공개키 — 요청 없이 안다.
+ *
+ * 서버의 GET /api/push/subscribe 가 "활성" 이라고 답하는 조건은 정확히
+ * `NEXT_PUBLIC_VAPID_PUBLIC_KEY` 가 있느냐 하나다(lib/push/vapid.ts getVapidPublicKey). 그 변수는
+ * NEXT_PUBLIC_ 이라 클라이언트 번들에 그대로 들어오므로, 마운트 때 GET 으로 물을 이유가 없었다 —
+ * 실측 943회/일이 전부 전체 메뉴·설정 화면의 PushSubscribe 마운트(대부분 봇)였다.
+ * 비어 있으면 null(= 서버도 비활성 → 버튼을 그리지 않는다, 예전과 같은 판정).
+ */
+export function envVapidPublicKey(): string | null {
+  const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
+  return key ? key : null;
+}
+
+/** GET /api/push/subscribe → 서버가 활성이고 공개키가 있을 때만 그 키. 아니면 null.
+ *  [1007] 인라인 키가 없는 빌드(env 미설정)에서만 쓰인다 — subscribeToPush 의 권한 요청 **뒤** 폴백. */
 export async function fetchVapidPublicKey(
   fetchImpl: PushEnv["fetchImpl"] = (i, init) => fetch(i, init),
 ): Promise<string | null> {
@@ -106,8 +123,9 @@ function browserEnv(): PushEnv {
 /**
  * 푸시 구독 한 번 — 사용자 탭 핸들러 안에서 부른다.
  *
- * @param opts.publicKey 이미 받아 둔 VAPID 공개키(PushSubscribe 는 마운트 때 받아 둔다).
- *                       없으면 권한 요청 **뒤에** GET /api/push/subscribe 로 받는다.
+ * @param opts.publicKey VAPID 공개키. 호출자가 주지 않으면 빌드 인라인 값(envVapidPublicKey)을 쓰고,
+ *                       그것도 없으면 권한 요청 **뒤에** GET /api/push/subscribe 로 받는다.
+ *                       [1007] PushSubscribe 는 더 이상 마운트 때 GET 으로 받아 두지 않는다.
  * @param opts.env       테스트용 주입. 기본은 실제 브라우저.
  */
 export async function subscribeToPush(opts: {
@@ -125,7 +143,8 @@ export async function subscribeToPush(opts: {
     if (permission === "denied") return "denied";
     if (permission !== "granted") return "dismissed";
 
-    const publicKey = opts.publicKey ?? (await fetchVapidPublicKey(env.fetchImpl));
+    const publicKey =
+      opts.publicKey ?? envVapidPublicKey() ?? (await fetchVapidPublicKey(env.fetchImpl));
     if (!publicKey) return "error";
 
     const reg = await env.swReady();

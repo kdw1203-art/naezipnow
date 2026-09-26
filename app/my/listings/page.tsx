@@ -21,7 +21,7 @@ import {
   type ListingStaleStage,
 } from "@/lib/listings/store-db";
 import { getOwnerInquiryStats } from "@/lib/listings/inquiries";
-import { formatKrwShort } from "@/lib/market/format";
+import { listingPriceLine } from "@/app/listings/price-text";
 
 /* ============================================================
    내 매물 — /my/listings (로그인 필수)
@@ -51,12 +51,9 @@ const STATUS_META: Record<ListingStatus, { label: string; cls: string }> = {
   closed: { label: "마감", cls: "bg-[rgba(0,0,0,.06)] text-text-3" },
 };
 
-/* [967 · 31] 여기 있던 formatKrwShort 사본은 lib/market/format 의 공통 함수로 대체 — 출력 동일 */
-
+/* [1009 · T] 내 매물 호가도 정밀 표기("매매 12억 4,500만") — 목록·상세와 같은 app/listings/price-text */
 function priceLine(l: ListingDetail): string {
-  if (l.listingType === "sale") return `매매 ${formatKrwShort(l.priceKrw)}`;
-  if (l.listingType === "jeonse") return `전세 ${formatKrwShort(l.depositKrw)}`;
-  return `월세 ${formatKrwShort(l.depositKrw)} / ${formatKrwShort(l.monthlyKrw)}`;
+  return listingPriceLine(l);
 }
 
 /** 신선도 기준시각(refreshed_at, 없으면 created_at) 이후 경과일 */

@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { TrendChart } from "@/app/components/viz/TrendChart";
+import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
+import { TweenNumber } from "@/app/components/motion/TweenNumber";
+import { burdenLabel } from "@/lib/finance/calc-summary";
+import { Segmented } from "@/app/components/ui/Segmented";
+import { Explain } from "@/app/components/explain/Explain";
+import { Delta } from "@/app/components/num/Delta";
+import { DELTA_ARROW, DELTA_CLASS, DELTA_WORD, deltaDir, pctChange } from "@/lib/format/delta";
+import { formatEokMan } from "@/lib/format/eok-man";
 import { PageShell } from "../../components/PageShell";
 import { SimulationNotice } from "../../components/ExampleBadge";
 import { ComplexPicker, type PickedComplex } from "../ComplexPicker";
@@ -13,13 +20,24 @@ import {
 } from "@/lib/map/seoul-districts";
 import { pickRegionByAnyName } from "@/lib/regions/param";
 import { useCopy } from "@/lib/ui/use-copy";
-import { formatKrwWon } from "@/lib/format/krw";
 
 /* ============================================================
    시장·대출 시나리오 — 기준 시세를 지역 실데이터(스냅샷 평균가)로 프리필.
    지역 미선택/데이터 미보유 시 기존 예시 수치로 동작 (graceful).
    계산은 전부 클라이언트 (30년 원리금균등 상환 기준).
+
+   [1009 · A] 토스 계산기 관례로 다듬었다(2026-09-22 실측).
+    · 결과 숫자 9곳이 슬라이더를 움직이면 **순간 교체** — 무엇이 얼마나 바뀌었는지 눈이 못 따라갔다 → TweenNumber
+      (이전 값 → 새 값 320ms, 모션 최소화면 즉시).
+    · 색 뜻이 뒤섞였다 — "금리 +1%p 시" 금액을 오류색(text-danger), 시세 상승 자산을 테마색(text-primary), 소득 대비
+      "적정"을 테마색으로. 이제 변동은 ▲ 빨강·▼ 파랑(등락 관례 + 비교 기준), 부담 판정은 상태색(적정 초록·주의 주황·위험 빨강).
+    · 금액 표기: 계산 결과는 "3억 3,600만원"(표준 — 짧은 "3.36억"은 계산 결과를 뭉갠다). 억 미전환 없음.
+    · 금리 스트레스 곡선은 누르고 끌면 그 금리의 월 상환액(ScrubLine — 늘어나던 TrendChart 대신).
+    · 소득 대비(DSR 성격)·대출 비율(LTV) 옆 ⓘ — 이 화면 계산과 같은 말로.
    ============================================================ */
+
+/** 소득 대비 부담 "위험" 경계(40%) — burdenLabel(계산기)과 같은 값. 곡선의 "넘는 첫 금리"가 쓴다 */
+const BURDEN_LIMIT = 0.4;
 
 const REGION_OPTIONS = [
   ...SEOUL_DISTRICTS.map((d) => ({ id: d.id, label: `서울 ${d.name}` })),
@@ -83,14 +101,11 @@ function monthlyPayment(principalWon: number, annualRatePct: number): number {
   return (principalWon * r * pow) / (pow - 1);
 }
 
-function manwon(won: number): string {
-  return `${Math.round(won / 10_000).toLocaleString("ko-KR")}만`;
+/** [1009 · A] 원 → "312만원" · "1억 2,000만원" — 계산 결과 표준(formatEokMan). 0 이하는 "0원" */
+function wonText(won: number): string {
+  return won > 0 ? formatEokMan(won / 10_000, { unit: "만원" }) : "0원";
 }
 
-/** [967 · 31] 원 → "8.45억" — lib/format/krw.ts "eok" 스타일(방어 없음, 기존 그대로) */
-function eok(won: number): string {
-  return formatKrwWon(won, { style: "eok", below: "eok", empty: false });
-}
 
 /** "202607" | "20260701" → "2026.07". 형식이 다르면 원문 그대로. */
 function fmtCycle(cycle: string): string {
@@ -98,6 +113,8 @@ function fmtCycle(cycle: string): string {
   return m ? `${m[1]}.${m[2]}` : cycle;
 }
 
+/* [1009 · A] 날것 rgba(bg-[rgba(29,79,216,.1)]) → 토큰(bg-primary-soft), 선택 상태를 스크린리더에도(aria-pressed),
+   눌림(press). 시세 칩의 ▲▼ 는 등락색으로 — 화살표만 있고 색이 없었다. */
 function Chip({
   label,
   active,
@@ -109,16 +126,29 @@ function Chip({
   onClick: () => void;
   className?: string;
 }) {
+  const m = /^([▲▼])\s?(.*)$/.exec(label);
   return (
     <button
+      type="button"
+      aria-pressed={active}
       onClick={onClick}
-      className={`rounded-[10px] px-3 py-2 text-xs ${
+      className={`press min-h-[40px] rounded-[10px] px-3 py-2 text-xs ${
         active
-          ? "border-[1.5px] border-primary bg-[rgba(29,79,216,.1)] font-bold text-primary"
+          ? "border-[1.5px] border-primary bg-primary-soft font-bold text-primary"
           : "border border-line bg-surface text-text-2"
       } ${className}`}
     >
-      {label}
+      {m ? (
+        <>
+          <span aria-hidden="true" className={m[1] === "▲" ? "delta-up" : "delta-down"}>
+            {m[1]}
+          </span>{" "}
+          <span className="sr-only">{m[1] === "▲" ? "상승" : "하락"} </span>
+          {m[2]}
+        </>
+      ) : (
+        label
+      )}
     </button>
   );
 }
@@ -289,9 +319,9 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
       const rr = Math.max(0.5, rate + d);
       curve.push({ rate: Math.round(rr * 100) / 100, pay: monthlyPayment(loanWon, rr) });
     }
-    /* 소득 대비 40%(통상 부담 한계)를 넘는 첫 금리 — 없으면 null */
+    /* 소득 대비 40%(통상 부담 한계 — 계산기와 같은 "위험" 경계)를 넘는 첫 금리 — 없으면 null */
     const breachRate =
-      curve.find((c) => (c.pay * 12) / incomeWon >= 0.4)?.rate ?? null;
+      curve.find((c) => (c.pay * 12) / incomeWon > BURDEN_LIMIT)?.rate ?? null;
 
     return {
       rate, pay, payStress, dsr, dsrStress, priceDeltaWon, ltvAfter, bars, maxPay,
@@ -300,12 +330,13 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
     };
   }, [loanWon, priceWon, rateOffset, pricePct, incomeWon, baseRate, period]);
 
-  const dsrTone = (v: number) =>
-    v < 0.3
-      ? { label: "적정", cls: "text-primary" }
-      : v < 0.35
-        ? { label: "주의", cls: "text-danger" }
-        : { label: "위험", cls: "text-danger" };
+  /* [1009 · A] 부담 판정은 상태색 — 예전엔 "적정"이 테마색(text-primary), 주의·위험이 같은 빨강이라 구분이 안 됐다.
+     [리뷰] 경계는 대출 계산기와 하나로(lib/finance/calc-summary burdenLabel: 30% 이하 적정 · 40% 이하 주의 · 그 위 위험) —
+     예전엔 35% 부터 "위험"이라면서 같은 화면 곡선·문장은 "40% 통상 부담 한계"라고 했다. */
+  const dsrTone = (v: number) => {
+    const label = burdenLabel(v * 100) ?? "위험";
+    return { label, cls: label === "적정" ? "text-success" : label === "주의" ? "text-warning" : "text-danger" };
+  };
 
   const aiComment = useMemo(() => {
     const stress = dsrTone(calc.dsrStress);
@@ -313,10 +344,10 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
       ? `${baseline.regionName} 평균 매매가 ${baseline.avgSaleLabel}(${baseline.period} 기준) 실데이터와 입력하신 조건(연 소득 ${incomeManwon.toLocaleString("ko-KR")}만원 · 대출 ${ltvPct}%)으로 계산했습니다.`
       : `예시 시세(8.4억)와 입력하신 조건(연 소득 ${incomeManwon.toLocaleString("ko-KR")}만원 · 대출 ${ltvPct}%) 기준입니다. 지역을 선택하면 실제 평균가로 다시 계산해요.`;
     const body =
-      calc.dsrStress < 0.35
-        ? `금리 1%p 상승 시에도 월 ${manwon(calc.payStress)}(소득 대비 ${(calc.dsrStress * 100).toFixed(0)}%)로 ${stress.label} 범위입니다.`
-        : `금리 1%p 상승 시 월 ${manwon(calc.payStress)}(소득 대비 ${(calc.dsrStress * 100).toFixed(0)}%)로 부담이 커집니다. 대출 비율을 낮추거나 예산을 재조정하세요.`;
-    const hold = ` ${calc.holdYears}년 보유 시 누적 이자는 약 ${manwon(calc.holdInterest)}원, 잔여 원금은 ${eok(calc.holdBalance)}입니다.`;
+      stress.label !== "위험"
+        ? `금리 1%p 상승 시에도 월 ${wonText(calc.payStress)}(소득 대비 ${(calc.dsrStress * 100).toFixed(0)}%)로 ${stress.label} 범위입니다.`
+        : `금리 1%p 상승 시 월 ${wonText(calc.payStress)}(소득 대비 ${(calc.dsrStress * 100).toFixed(0)}%)로 부담이 커집니다. 대출 비율을 낮추거나 예산을 재조정하세요.`;
+    const hold = ` ${calc.holdYears}년 보유 시 누적 이자는 약 ${wonText(calc.holdInterest)}, 잔여 원금은 ${wonText(calc.holdBalance)}입니다.`;
     const tail =
       pricePct < 0
         ? ` 시세 ${pricePct}% 시나리오에서 LTV는 ${calc.ltvAfter.toFixed(0)}%로 ${calc.ltvAfter < 60 ? "안전권" : "주의 구간"}입니다.`
@@ -334,7 +365,7 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
         <button
           type="button"
           onClick={copyShareLink}
-          className="rise-in rounded-[10px] border border-line-strong bg-surface px-3 py-1.5 t-sub font-bold text-text-1"
+          className="press rise-in min-h-[40px] rounded-[10px] border border-line-strong bg-surface px-3 py-1.5 t-sub font-bold text-text-1"
         >
           {shareCopied ? "링크 복사됨 ✓" : "이 조건 공유"}
         </button>
@@ -407,8 +438,19 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
             )}
             {/* 대출 비율 — 예전 슬라이더는 40%에 고정된 그림이었다. 실제 입력으로 교체. */}
             <div className="flex justify-between t-body">
-              <span className="text-text-2">대출 비율</span>
-              <span className="font-extrabold text-ink">{ltvPct}%</span>
+              <span className="inline-flex items-center gap-0.5 text-text-2">
+                대출 비율
+                <Explain
+                  term="ltv"
+                  how={[
+                    "대출액 = 기준 시세 × 대출 비율 · 필요 현금 = 기준 시세 − 대출액",
+                    "실제 한도는 지역(규제지역 여부)·보유 주택 수·가격대에 따라 달라요 — 계산기에서 내 조건으로 확인하세요.",
+                  ]}
+                />
+              </span>
+              <span className="font-extrabold tabular-nums text-ink">
+                <TweenNumber value={ltvPct} format="int" suffix="%" />
+              </span>
             </div>
             <input
               type="range"
@@ -518,9 +560,9 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
               </div>
             )}
 
-            <div className="flex justify-between t-body">
+            <div className="flex justify-between gap-2 t-body">
               <span className="text-text-2">필요 현금 (시세−대출)</span>
-              <span className="font-extrabold text-ink">{eok(cashWon)}</span>
+              <TweenNumber value={cashWon / 10_000} format="eokmanwon" className="text-right font-extrabold text-ink" />
             </div>
           </div>
 
@@ -548,17 +590,14 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
               ))}
             </div>
             <div className="mt-1 t-body font-extrabold text-ink">보유 기간</div>
-            <div className="flex gap-1.5">
-              {PERIOD_CHIPS.map((c) => (
-                <Chip
-                  key={c}
-                  label={c}
-                  active={period === c}
-                  onClick={() => setPeriod(c)}
-                  className="flex-1 text-center"
-                />
-              ))}
-            </div>
+            {/* [1009 · A] 세 가지 중 하나 — 같은 화면 상태 전환이라 공용 Segmented(선택 표시가 미끄러진다) */}
+            <Segmented
+              options={PERIOD_CHIPS.map((c) => ({ value: c, label: c }))}
+              value={period}
+              onChange={setPeriod}
+              ariaLabel="보유 기간"
+              className="self-start"
+            />
           </div>
 
           <div className="rounded-[14px] bg-bg p-3 text-center text-xs font-semibold text-text-3">
@@ -580,17 +619,28 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
                   </span>
                 )}
               </div>
-              <div className="mt-1 t-title text-ink">
-                {manwon(calc.pay)}원
-              </div>
-              <div className={`mt-0.5 t-sub font-bold ${dsrTone(calc.dsr).cls}`}>
+              <TweenNumber value={calc.pay / 10_000} format="eokmanwon" className="mt-1 block t-title text-ink" />
+              <div className={`mt-0.5 inline-flex flex-wrap items-center gap-0.5 t-sub font-bold ${dsrTone(calc.dsr).cls}`}>
                 소득 대비 {(calc.dsr * 100).toFixed(0)}% · {dsrTone(calc.dsr).label}
+                <Explain
+                  term="dsr"
+                  title="소득 대비 상환 부담"
+                  body="이 화면의 '소득 대비'는 이 대출 하나만 넣은 값이라 실제 DSR(모든 대출 합산)보다 낮게 나와요."
+                  how={[
+                    "소득 대비 = 이 대출의 1년 원리금(월 상환액 × 12) ÷ 연 소득",
+                    "30% 이하 적정 · 40% 이하 주의 · 40% 넘으면 위험(대출 계산기와 같은 참고 기준)",
+                    "30년 원리금균등 상환, 금리는 위에서 고른 값 그대로",
+                  ]}
+                />
               </div>
             </div>
             <div className="card rounded-2xl p-[18px]">
-              <div className="text-xs text-text-3">금리 +1.0%p 시</div>
-              <div className="mt-1 t-title text-danger">
-                {manwon(calc.payStress)}원
+              <div className="text-xs text-text-3">금리 +1.0%p 시 월 원리금</div>
+              <TweenNumber value={calc.payStress / 10_000} format="eokmanwon" className="mt-1 block t-title text-ink" />
+              {/* [1009 · A] 오류색(text-danger)으로 칠하던 금액 → "지금 대비 ▲ 얼마" 로 무엇이 늘었는지 말한다 */}
+              <div className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 t-sub">
+                <Delta pct={pctChange(calc.payStress, calc.pay)} diffManwon={(calc.payStress - calc.pay) / 10_000} srContext="지금보다" />
+                <span className="t-caption text-text-3">지금 대비</span>
               </div>
               <div className={`mt-0.5 t-sub font-bold ${dsrTone(calc.dsrStress).cls}`}>
                 소득 대비 {(calc.dsrStress * 100).toFixed(0)}% · {dsrTone(calc.dsrStress).label}
@@ -598,17 +648,20 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
             </div>
             <div className="card rounded-2xl p-[18px]">
               <div className="text-xs text-text-3">
-                시세 {pricePct === 0 ? "보합" : `${pricePct > 0 ? "+" : ""}${pricePct}%`} 시 자산
+                시세 {pricePct === 0 ? "보합" : `${pricePct > 0 ? "+" : ""}${pricePct}%`} 시 자산 변화
               </div>
-              <div
-                className={`mt-1 t-title ${
-                  calc.priceDeltaWon < 0 ? "text-ink" : "text-primary"
-                }`}
-              >
-                {calc.priceDeltaWon === 0
-                  ? "±0원"
-                  : `${calc.priceDeltaWon > 0 ? "+" : "-"}${manwon(Math.abs(calc.priceDeltaWon))}`}
-              </div>
+              {(() => {
+                /* 등락 관례 — 오르면 빨강 ▲, 내리면 파랑 ▼(예전엔 오름을 테마색, 내림을 무색으로 칠했다) */
+                const dir = deltaDir(pricePct);
+                if (!dir || dir === "flat") return <div className="mt-1 t-title delta-flat">보합 · 0원</div>;
+                return (
+                  <div className={`mt-1 t-title ${DELTA_CLASS[dir]}`}>
+                    <span aria-hidden="true">{DELTA_ARROW[dir]} </span>
+                    <span className="sr-only">{DELTA_WORD[dir]} </span>
+                    <TweenNumber value={Math.abs(calc.priceDeltaWon) / 10_000} format="eokmanwon" />
+                  </div>
+                );
+              })()}
               <div className="mt-0.5 t-sub text-text-3">
                 LTV {calc.ltvAfter.toFixed(0)}%로 {pricePct < 0 ? "상승" : "변동"} ·{" "}
                 {calc.ltvAfter < 60 ? "안전권" : "주의"}
@@ -616,22 +669,27 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
             </div>
           </div>
 
-          {/* 금리 스트레스 곡선 — 슬라이더에 실시간 반응하는 그림 */}
+          {/* 금리 스트레스 곡선 — 슬라이더에 실시간 반응하는 그림.
+              [1009 · A] 누르고 끌면(마우스는 올리기만 해도) 그 금리의 월 상환액이 말풍선에 — 늘어나던 TrendChart 는
+              390px 에서 축 글자가 찌그러졌고 값을 읽을 길이 없었다. */}
           <div className="chart-card text-primary" data-reveal="">
             <div className="chart-head">
               <span className="t-section text-ink">금리 스트레스 곡선</span>
               <span className="t-sub t-num text-primary">
-                지금 {calc.rate.toFixed(2)}% · 월 {manwon(calc.pay)}원
+                지금 {calc.rate.toFixed(2)}% · 월 <TweenNumber value={calc.pay / 10_000} format="eokmanwon" />
               </span>
               <span className="t-caption ml-auto text-text-3">
                 −1.0%p ~ +3.0%p · 0.25%p 간격
               </span>
             </div>
-            <TrendChart
-              values={calc.curve.map((c) => c.pay / 10_000)}
-              labels={calc.curve.map((c) => `${c.rate.toFixed(1)}%`)}
+            <ScrubLineLazy
+              values={calc.curve.map((c) => Math.round(c.pay / 10_000))}
+              labels={calc.curve.map((c) => `${c.rate.toFixed(2)}%`)}
+              fullLabels={calc.curve.map((c) => `금리 ${c.rate.toFixed(2)}%`)}
+              format="int"
+              suffix="만원"
               height={150}
-              valueSuffix="만"
+              tone="primary"
               ariaLabel="금리별 월 상환액 곡선"
             />
             <p className="t-sub text-text-2">
@@ -641,12 +699,12 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
                 </>
               ) : (
                 <>
-                  금리가 <b className="text-danger">{calc.breachRate.toFixed(2)}%</b> 를
+                  금리가 <b className="text-ink">{calc.breachRate.toFixed(2)}%</b> 를
                   넘어서면 소득 대비 40%(통상 부담 한계)를 지나갑니다. 지금은{" "}
                   {calc.rate.toFixed(2)}% 입니다.
                 </>
               )}{" "}
-              세로축은 월 상환액(만원), 가로축은 연 금리입니다.
+              세로축은 월 상환액, 가로축은 연 금리예요 — 곡선을 누른 채 좌우로 움직이면 그 금리의 월 상환액이 나와요.
             </p>
           </div>
 
@@ -658,13 +716,13 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
                   <span className="w-[90px] shrink-0 text-xs text-text-2">{b.label}</span>
                   <div className="relative h-[22px] flex-1 rounded-md bg-bg">
                     <div
-                      className="absolute left-0 flex h-[22px] items-center justify-end rounded-md pr-2 t-sub font-bold text-white"
+                      className="absolute left-0 flex h-[22px] items-center justify-end rounded-md pr-2 t-sub font-bold text-white transition-[width] duration-200 ease-out motion-reduce:transition-none"
                       style={{
                         width: `${Math.max(18, Math.round((b.pay / calc.maxPay) * 92))}%`,
                         background: b.color,
                       }}
                     >
-                      {manwon(b.pay)}
+                      {wonText(b.pay)}
                     </div>
                   </div>
                 </div>
@@ -682,17 +740,18 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
               </span>
             </div>
             <div className="grid grid-cols-3 gap-3 text-center">
+              {/* [1009 · A] 입력이 바뀌면 이전 값에서 굴러간다 · 계산 결과는 "1억 2,000만원" 표준 표기 */}
               <div className="rounded-[10px] bg-bg px-2 py-3">
                 <div className="t-sub text-text-3">갚은 원금</div>
-                <div className="mt-1 t-section text-ink">{eok(calc.holdPrincipal)}</div>
+                <TweenNumber value={calc.holdPrincipal / 10_000} format="eokmanwon" className="mt-1 block t-section break-words text-ink" />
               </div>
               <div className="rounded-[10px] bg-bg px-2 py-3">
                 <div className="t-sub text-text-3">낸 이자 (누적)</div>
-                <div className="mt-1 t-section text-danger">{eok(calc.holdInterest)}</div>
+                <TweenNumber value={calc.holdInterest / 10_000} format="eokmanwon" className="mt-1 block t-section break-words text-ink" />
               </div>
               <div className="rounded-[10px] bg-bg px-2 py-3">
                 <div className="t-sub text-text-3">잔여 원금</div>
-                <div className="mt-1 t-section text-ink">{eok(calc.holdBalance)}</div>
+                <TweenNumber value={calc.holdBalance / 10_000} format="eokmanwon" className="mt-1 block t-section break-words text-ink" />
               </div>
             </div>
           </div>
@@ -701,7 +760,7 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
             <div className="flex items-start gap-3">
               <span className="ai-chip h-[22px] w-[22px] shrink-0 rounded-[7px] t-sub">AI</span>
               <div className="flex-1 t-body text-ai-text">{aiComment}</div>
-              <span className="shrink-0 rounded border border-[rgba(255,255,255,.25)] px-1.5 py-px t-caption font-bold text-ai-muted">
+              <span className="shrink-0 rounded border border-on-dark-faint px-1.5 py-px t-caption font-bold text-ai-muted">
                 규칙 기반 요약
               </span>
             </div>

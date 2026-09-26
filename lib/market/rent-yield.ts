@@ -76,7 +76,13 @@ const loadRentYieldRows = cache(
       return (data ?? []) as Array<Record<string, unknown>>;
     },
     ["region-rent-yield-v1"],
-    { revalidate: 21_600 },
+    /* [1010] 6시간 → 1일 + market 태그. 키가 고정이라 모든 요청이 한 벌을 공유하고
+       (인자 없음 — RPC 한 번으로 전국 지역 맵을 만든다), 원천인 ops.rent_yield_cache 는
+       pg_cron 'rent-yield-cache-refresh' 가 **하루 1회**(19:50 UTC) 채운다. 즉 6시간
+       눈금은 원천보다 4배 촘촘해서, 같은 답을 받으려고 하루 세 번 더 왕복하고 그만큼
+       데이터 캐시를 다시 썼다. 태그를 붙여 실거래·부동산원 적재 직후 즉시 비워지게
+       한다(lib/cache/invalidate.ts revalidateTag("market")) — TTL 은 안전망이다. */
+    { revalidate: 86_400, tags: ["market"] },
   ),
 );
 

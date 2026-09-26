@@ -96,76 +96,110 @@ const FEED_DOC = { sMaxAge: 60, swr: 600 };
 export const PUBLIC_CACHE_RULES: readonly PublicCacheRule[] = [
   // 콘텐츠 피드
   { path: "/", ...FEED_DOC },
-  { path: "/town", ...FEED_DOC },
-  { path: "/town/library", ...FEED_DOC },
+  /* [1007] /town 은 ISR 600 + 글·노트 저장 시 revalidatePath(즉시성은 TTL 이 아니라 무효화가 맡는다) */
+  { path: "/town", sMaxAge: 86_400, swr: 86400 },
+  { path: "/town/library", sMaxAge: 86_400, swr: 86400 },
   /* 2026-08-10 ISR 전환 — 지역 필터는 NewsListClient(클라이언트) */
-  { path: "/town/news", sMaxAge: 600, swr: 86400 },
+  /* [1007] 뉴스룸 6h — 적재·발행 시 /api/cron/news-revalidate 와 크론이 revalidatePath 한다 */
+  { path: "/town/news", sMaxAge: 86_400, swr: 86400 },
   /* 2026-08-10 ISR — 필터는 DevDealsListClient. 서비스롤 의존: 실패는 health.privilegedRead 가 감시 */
-  { path: "/dev-deals", sMaxAge: 300, swr: 86400 },
+  { path: "/dev-deals", sMaxAge: 21_600, swr: 86400 },
   /* 2026-08-10 ISR — type/gu/complex 필터는 ListingsListClient(클라이언트) */
-  { path: "/listings", sMaxAge: 300, swr: 86400 },
+  { path: "/listings", sMaxAge: 1_800, swr: 86400 },
   /* 2026-08-10 ISR — status/sort/topic/q 필터는 QnaListClient(클라이언트), 등록 API 가 revalidatePath */
-  { path: "/qna", sMaxAge: 300, swr: 86400 },
+  { path: "/qna", sMaxAge: 86_400, swr: 86400 },
   /* 2026-08-10 ISR — usage/gu 필터는 /api/auctions(CDN 캐시) fetch, court 는 클라 분기 */
-  { path: "/auctions", sMaxAge: 600, swr: 86400 },
+  { path: "/auctions", sMaxAge: 21_600, swr: 86400 },
   /* 2026-08-10 ISR — 전량 675행이 페치 상한 안 → region 필터는 SupplyClient(클라이언트).
      수동 적재 데이터(자동 갱신 없음)라 600초면 충분히 신선하다 */
-  { path: "/supply", sMaxAge: 600, swr: 86400 },
+  { path: "/supply", sMaxAge: 86_400, swr: 86400 },
   /* 2026-08-10 ISR — type 필터는 PartnersClient(클라이언트). 실등록 0행이라
      빈 상태가 정상이고, 조회 실패는 ok 판별로 구별해 그린다(서비스롤 의존 —
      실패는 health.privilegedRead 가 감시) */
-  { path: "/dev-deals/partners", sMaxAge: 300, swr: 86400 },
+  { path: "/dev-deals/partners", sMaxAge: 21_600, swr: 86400 },
   /* 2026-08-10 ISR — sub/region/sort 필터는 ExpertsClient(클라이언트). 원래도
      전량(상한 200) 메모리 필터였고 실측 0행. 클라이언트에는 슬림 DTO 만
      (ownerEmail·userId 는 공개 캐시 금지) */
-  { path: "/town/experts", sMaxAge: 300, swr: 86400 },
+  { path: "/town/experts", sMaxAge: 86_400, swr: 86400 },
   /* 2026-08-10 ISR — region/status/sort 필터는 GroupsClient(클라이언트).
      statusKey(시각 파생)는 builtAtMs 로 하이드레이션 후 재계산. 실측 0행 */
-  { path: "/town/groups", sMaxAge: 300, swr: 86400 },
+  { path: "/town/groups", sMaxAge: 86_400, swr: 86400 },
   /* 2026-08-11 ISR — 기본 지역만 프리렌더, 62개 지역 전환은 /api/timing
      (CDN 1800초) fetch. auctions 삼분할 선례 */
-  { path: "/analysis/timing", sMaxAge: 600, swr: 86400 },
+  /* [1010] 600 → 86400 — 라우트 revalidate 와 같은 눈금. 지역 전환은 /api/timing(CDN 1800초). */
+  { path: "/analysis/timing", sMaxAge: 86400, swr: 86400 },
   /* 2026-08-11 ISR — 통계만 페이지에, ?complex= 자유 텍스트 검색은
      /api/public-records(검색어별 CDN 600초). 실측 0행(CODEF 대기) */
-  { path: "/data/records", sMaxAge: 600, swr: 86400 },
+  { path: "/data/records", sMaxAge: 86_400, swr: 86400 },
   /* `/town/market` 은 공개 캐시 목록에서 뺐다(2026-07-27). 화면이 아니라
      `/town/groups` 로 넘기는 리다이렉트 스텁이고, searchParams 를 읽어 쿼리를
      그대로 넘기느라 동적 라우트다 — prerender 산출물이 없어 이 목록에 남아
      있으면 check-cache-policy 가 실패한다. 캐시할 응답 자체가 없다. */
-  /* /notes 는 ?mine=1(내 노트, 비공개 포함)로 세션별 응답이 갈리는 동적 라우트가 되어
-     공개 캐시 목록에서 제외 — 사용자별 응답이 CDN 공유 캐시에 섞이면 안 된다. */
-  { path: "/digest", ...FEED_DOC },
+  /* ── [1007] 봇 함수 호출 상위 6종의 정적/ISR 전환 ──────────────────────────
+     24h 실측: /analysis 1,828 · /notes/new 1,790 · /map 911 · /login 796 · /notes 398 ·
+     /subscription 200 회 함수 호출인데 사람 페이지뷰는 7일 합계 ~120건 — 전부 `safeAuth()`+
+     `searchParams` 를 서버에서 읽어 force-dynamic 이었다. 세션·주소에 달린 조각은 각 화면의
+     클라이언트가 마운트 뒤 판정하고(각 page.tsx 주석), 서버 HTML 은 모두에게 같다.
+     tests/unit/static-pages-1007.test.ts 가 여섯 page.tsx 에 auth·cookies·searchParams 서버
+     읽기가 다시 생기지 않는지 잠근다. sMaxAge 는 각 라우트의 revalidate 와 같은 눈금.
+     /login 은 이 목록에 올리지 않는다 — check-cache-policy.mjs 의 PRIVATE_PREFIXES(개인 화면으로
+     읽히는 경로)가 막는 자리다. 정적(force-static)이라 함수 호출은 어차피 0 이고, 미들웨어의
+     no-store 는 CDN 사본만 막는다. */
+  { path: "/notes/new", ...STATIC_DOC },
+  /* [1010] 라우트 revalidate 와 눈금을 맞춘다(3600 → 86400). 적재 직후
+     SOURCE_MAP.molit 이 "/analysis" 를 비우므로 s-maxage 를 늘려도 낡지 않는다. */
+  { path: "/analysis", sMaxAge: 86400, swr: 86400 },
+  { path: "/map", sMaxAge: 21_600, swr: 86400 },
+  /* /notes — 공개 첫 페이지만 서버 렌더(ISR 300). ?tab=mine(내 노트, 비공개 포함)은
+     NotesFeedClient 가 /api/inspection/notes/mine 으로 받는다 — 서버 HTML 에 사용자별 값 없음. */
+  { path: "/notes", sMaxAge: 86_400, swr: 86400 },
+  /* /subscription — 비회원 기준 카드·FAQ·JSON-LD(토스 심사가 보는 화면). 로그인 조각은 클라이언트 */
+  { path: "/subscription", sMaxAge: 86_400, swr: 86400 },
+  { path: "/digest", sMaxAge: 86_400, swr: 86400 },
   /* A5 실거래 구간 인덱스 — 전 사용자 동일한 공개 집계(로그인 여부와 무관).
      라우트 자체가 revalidate 3600 이라 눈금을 맞춘다. */
-  { path: "/tx", sMaxAge: 3600, swr: 86400 },
-  /* N10 단지 비교 허브 — 같은 성격의 공개 집계. 라우트 revalidate 와 눈금을 맞춘다. */
-  { path: "/complex/compare", sMaxAge: 3600, swr: 86400 },
+  /* [1010] 3600 → 604800 — 라우트 revalidate 와 같은 눈금. 적재 직후 SOURCE_MAP.molit 이 "/tx" 를 비운다. */
+  { path: "/tx", sMaxAge: 604800, swr: 86400 },
+  /* N10 단지 비교 허브 — 같은 성격의 공개 집계. 라우트 revalidate 와 눈금을 맞춘다.
+     [1010] 라우트 revalidate 가 7일이 되면서 같이 올린다 — 내용이 바뀌는 지점(실거래 적재)에서
+     revalidatePath("/complex/compare") 가 돌기 때문에 시간은 안전망일 뿐이다. */
+  { path: "/complex/compare", sMaxAge: 604_800, swr: 604_800 },
   /* N11 시장 온도 주간 기록 허브 — 크론이 하루 두 번 갱신하므로 같은 눈금(1시간)이면
      충분하다. 지역별 상세는 동적 라우트라 여기 대상이 아니다(프리렌더 매니페스트에
      없으면 check-cache-policy 가 실패한다). */
-  { path: "/analysis/temperature", sMaxAge: 3600, swr: 86400 },
+  /* [1010] 3600 → 86400 — 주간 스냅샷이고, 온도 크론이 성공 직후 이 경로를 비운다. */
+  { path: "/analysis/temperature", sMaxAge: 86400, swr: 86400 },
 
   // 도구·안내 — 빌드 시 고정
-  { path: "/calculator", ...STATIC_DOC },
+  { path: "/calculator", sMaxAge: 86_400, swr: 86400 },
   { path: "/widget", ...STATIC_DOC },
-  { path: "/redevelopment", ...STATIC_DOC },
+  { path: "/redevelopment", sMaxAge: 86_400, swr: 86400 },
   { path: "/safety", ...STATIC_DOC },
   { path: "/methodology", ...STATIC_DOC },
   { path: "/glossary", ...STATIC_DOC },
   { path: "/developers", ...STATIC_DOC },
-  { path: "/reports", ...STATIC_DOC },
-  { path: "/about", ...STATIC_DOC },
+  /* [1010] 월 목록은 월 경계에서만 늘어난다 — STATIC_DOC(3600) 대신 라우트 revalidate 와 같은 1일. */
+  { path: "/reports", sMaxAge: 86400, swr: 86400 },
+  { path: "/about", sMaxAge: 86_400, swr: 86400 },
   { path: "/partners", ...STATIC_DOC },
   { path: "/support", ...STATIC_DOC },
   { path: "/support/faq", ...STATIC_DOC },
   { path: "/guides/contract", ...STATIC_DOC },
   { path: "/guides/regulations", ...STATIC_DOC },
+  /* [1008 · J] 내 집 마련 여정 · 계약·잔금 일정표 — force-static(서버는 세션·쿠키·searchParams 를 읽지 않는다,
+     tests/unit/journey-1008.test.ts 가 잠근다). 진행 체크·날짜는 브라우저/로그인 API(/api/me/journey)에서만 붙는다. */
+  { path: "/journey", ...STATIC_DOC },
+  { path: "/journey/contract", ...STATIC_DOC },
+  /* [1008 · Q] 실거래가 게임 — 같은 판에 Q 가 만든다(app/quiz/page.tsx revalidate 21600, 쿠키·세션·쿼리 서버 읽기
+     없음). 눈금은 그 revalidate 와 같다. 정적/ISR 이 깨지면 check-cache-policy 가 prerender 대조에서 막는다. */
+  { path: "/quiz", sMaxAge: 21600, swr: 86400 },
   { path: "/analysis/compare", ...STATIC_DOC },
   { path: "/analysis/portfolio", ...STATIC_DOC },
   /* /analysis/price 는 이제 지역 선택(?region=)을 읽는 **동적 라우트**라 prerender
      되지 않는다 — 공개 캐시 허용 목록에서 뺀다(사용자별 값은 없지만 정적이 아니므로
      이 목록의 계약을 어긴다). 실거래 집계는 tx-bands 모듈 캐시(10분)로 이미 싸다. */
-  { path: "/analysis/scenario", ...STATIC_DOC },
+  /* [1010] 라우트 revalidate 86400 과 눈금을 맞춘다(STATIC_DOC 은 3600). */
+  { path: "/analysis/scenario", sMaxAge: 86400, swr: 86400 },
   { path: "/analysis/switch", ...STATIC_DOC },
 
   // 약관·고지 — 가장 오래 캐시해도 되는 문서
@@ -203,39 +237,54 @@ export const PUBLIC_CACHE_PATTERN_RULES: readonly PublicCachePatternRule[] = [
      이 화면에는 임장노트·Q&A·매물처럼 사람이 실시간으로 쓰는 것도 같이 있다.
      하루를 통째로 묵히면 방금 달린 답이 하루 동안 안 보인다. 1시간이면 그
      손해는 감당할 만하면서, 크롤러가 같은 주소를 하루에 몇 번씩 긁어도 오리진
-     호출은 시간당 한 번으로 접힌다. */
-  { route: "/complex/[id]", test: /^\/complex\/[^/]+$/, sMaxAge: 3600, swr: 86400 },
-  /* 아래는 전부 라우트 revalidate 3600 과 눈금을 맞춘다. */
+     호출은 시간당 한 번으로 접힌다.
+
+     [1010] 1시간 → 7일. 위 문단의 전제("임장노트·Q&A·매물은 시간이 신선도를 맡는다")를
+     바꿨다. 실측(2026-09-20~22): 이 라우트 하루 11,523 렌더 · 사람 방문 30일 27회 ·
+     크롤러 재방문 ≈2.2일 — 1시간 눈금은 크롤 1회당 오리진 1회와 사실상 같았다.
+     이제 내용을 바꾸는 쓰기(이야기 글·댓글·공감 · 공개 임장노트 · 매물 승인/수정/삭제 ·
+     실거래 적재)가 그 단지만 즉시 비운다. 자세한 목록은 app/complex/[id]/page.tsx 의
+     revalidate 주석. s-maxage 와 라우트 revalidate 를 같은 값으로 맞춘다. */
+  { route: "/complex/[id]", test: /^\/complex\/[^/]+$/, sMaxAge: 604_800, swr: 604_800 },
+  /* [1010] 아래 둘은 라우트 revalidate 604_800(7일)과 눈금을 맞춘다 — 둘 다 국토부 실거래만으로
+     그려지고, 적재 크론이 끝나면 각각 경로·라우트 단위로 비운다. */
   {
     route: "/complex/compare/[slug]",
     test: /^\/complex\/compare\/[^/]+$/,
-    sMaxAge: 3600,
-    swr: 86400,
+    sMaxAge: 604_800,
+    swr: 604_800,
   },
-  { route: "/complex/tx/[slug]", test: /^\/complex\/tx\/[^/]+$/, sMaxAge: 3600, swr: 86400 },
-  { route: "/region/[id]", test: /^\/region\/[^/]+$/, sMaxAge: 3600, swr: 86400 },
-  { route: "/tx/[region]", test: /^\/tx\/[^/]+$/, sMaxAge: 3600, swr: 86400 },
+  { route: "/complex/tx/[slug]", test: /^\/complex\/tx\/[^/]+$/, sMaxAge: 604_800, swr: 604_800 },
+  /* ── [1010] 지역·실거래·리포트 축: s-maxage 를 라우트 revalidate 와 같은 눈금으로 ──────
+     s-maxage 는 "같은 주소 하나에 오리진 렌더를 얼마나 자주 치를 것인가" 를 재는 눈금이다
+     (/complex/[id] 주석 참고). 라우트 TTL 만 7일로 늘리고 여기를 1시간에 두면, CDN 이
+     시간마다 오리진으로 재검증을 보내 Fast Origin Transfer·함수 호출이 그대로 남는다.
+     신선도는 TTL 이 아니라 적재 직후의 경로 비움이 책임진다
+     (lib/region/invalidate-market.ts · SOURCE_MAP.molit). */
+  { route: "/region/[id]", test: /^\/region\/[^/]+$/, sMaxAge: 604800, swr: 86400 },
+  { route: "/tx/[region]", test: /^\/tx\/[^/]+$/, sMaxAge: 604800, swr: 86400 },
   {
     route: "/tx/[region]/[kind]/[band]",
     test: /^\/tx\/[^/]+\/[^/]+\/[^/]+$/,
-    sMaxAge: 3600,
+    sMaxAge: 604800,
     swr: 86400,
   },
-  { route: "/reports/[ym]", test: /^\/reports\/[^/]+$/, sMaxAge: 3600, swr: 86400 },
+  /* [1010] 완결 월 스냅샷 — 값이 움직이는 최근 3개월만 하루 1회 비운다 */
+  { route: "/reports/[ym]", test: /^\/reports\/[^/]+$/, sMaxAge: 604800, swr: 86400 },
   {
     route: "/reports/season/[slug]",
     test: /^\/reports\/season\/[^/]+$/,
-    sMaxAge: 3600,
+    sMaxAge: 86400,
     swr: 86400,
   },
   {
     route: "/analysis/temperature/[region]",
     test: /^\/analysis\/temperature\/[^/]+$/,
-    sMaxAge: 3600,
+    sMaxAge: 86400,
     swr: 86400,
   },
-  { route: "/digest/archive", test: /^\/digest\/archive$/, sMaxAge: 3600, swr: 86400 },
-  { route: "/digest/[week]", test: /^\/digest\/[^/]+$/, sMaxAge: 3600, swr: 86400 },
+  { route: "/digest/archive", test: /^\/digest\/archive$/, sMaxAge: 86_400, swr: 86400 },
+  { route: "/digest/[week]", test: /^\/digest\/[^/]+$/, sMaxAge: 86_400, swr: 86400 },
   /* 용어 개별 페이지는 코드 상수라 조회조차 없다 — 가장 오래 캐시해도 되는 축. */
   { route: "/glossary/[term]", test: /^\/glossary\/[^/]+$/, sMaxAge: 3600, swr: 86400 },
   /* ── 2026-08-10 비용 실측 확장 ──────────────────────────────────────────
@@ -245,25 +294,38 @@ export const PUBLIC_CACHE_PATTERN_RULES: readonly PublicCachePatternRule[] = [
      댓글·좋아요가 서버 렌더에 실리는 /town/news/[id] 는 해당 쓰기 API 가
      revalidatePath 로 즉시 재생성한다 — 캐시 때문에 방금 쓴 글이 사라져
      보이면 안 된다. sMaxAge 는 revalidate 와 같은 값. */
-  { route: "/apply", test: /^\/apply$/, sMaxAge: 1800, swr: 86400 },
+  { route: "/apply", test: /^\/apply$/, sMaxAge: 86_400, swr: 86400 },
   { route: "/dev-deals/fees", test: /^\/dev-deals\/fees$/, sMaxAge: 3600, swr: 86400 },
-  { route: "/notes/templates", test: /^\/notes\/templates$/, sMaxAge: 3600, swr: 86400 },
+  { route: "/notes/templates", test: /^\/notes\/templates$/, sMaxAge: 86_400, swr: 86400 },
   {
     route: "/notes/templates/[id]",
     test: /^\/notes\/templates\/[^/]+$/,
-    sMaxAge: 3600,
+    sMaxAge: 86_400,
     swr: 86400,
   },
-  { route: "/u/[handle]", test: /^\/u\/[^/]+$/, sMaxAge: 900, swr: 86400 },
+  { route: "/u/[handle]", test: /^\/u\/[^/]+$/, sMaxAge: 86_400, swr: 86400 },
+  /* [1010] 1시간 → 7일. 임베드 카드에는 사람이 쓰는 것이 없다(실거래 + 준공·세대수).
+     실거래 적재 크론이 이번에 적재한 단지의 `/embed/complex/{id}` 를 직접 비운다. */
   {
     route: "/embed/complex/[id]",
     test: /^\/embed\/complex\/[^/]+$/,
-    sMaxAge: 3600,
+    sMaxAge: 604_800,
+    swr: 604_800,
+  },
+  /* [1007] 뉴스 상세 985회/일 중 대부분이 크롤러 재방문 — 6h(내용은 적재 시 무효화) */
+  { route: "/town/news/[id]", test: /^\/town\/news\/[^/]+$/, sMaxAge: 604_800, swr: 86400 },
+  /* [1006] 이야기(이웃 글) 상세 — 뉴스에서 갈라진 라우트. 댓글·공감 API 가 /town/story/[id] 도
+     revalidatePath 하므로 뉴스 상세와 같은 값으로 CDN 캐시를 탄다(app/town/story/[id]/page.tsx revalidate 600). */
+  { route: "/town/story/[id]", test: /^\/town\/story\/[^/]+$/, sMaxAge: 604_800, swr: 86400 },
+  /* [1007] 동네 홈(198회/일) — dynamicParams=false·auth 없음. 하위 고정 라우트는 제외 */
+  {
+    route: "/town/[region]",
+    test: /^\/town\/(?!news$|write$|market$|prompt$|library$|groups$|experts$|story$)[a-z0-9-]+$/,
+    sMaxAge: 604_800,
     swr: 86400,
   },
-  { route: "/town/news/[id]", test: /^\/town\/news\/[^/]+$/, sMaxAge: 600, swr: 86400 },
   /* 2차(같은 날): 답변 등록 API 에 revalidatePath 배선 후 전환 */
-  { route: "/qna/[id]", test: /^\/qna\/[^/]+$/, sMaxAge: 600, swr: 86400 },
+  { route: "/qna/[id]", test: /^\/qna\/[^/]+$/, sMaxAge: 604_800, swr: 86400 },
   /* 2차(같은 날): 렌더 중 조회수 쓰기를 ViewPing 클라이언트 핑으로 옮긴 후 전환 */
   {
     route: "/dev-deals/[id]",
@@ -307,9 +369,10 @@ export function isCrawlerEndpoint(pathname: string): boolean {
   return CRAWLER_ENDPOINTS.has(pathname);
 }
 
-/** 크롤러 엔드포인트 캐시 — 사이트맵 원본 데이터가 하루 단위로 바뀌므로 1시간이면 충분 */
+/** 크롤러 엔드포인트 캐시 — 사이트맵 원본 데이터가 하루 단위로 바뀐다. [1007] 단지 사이트맵은
+    7.66MB·생성 4.3s 라 1h → 6h(sitemap-sections 의 SITEMAP_SECTION_CACHE_CONTROL 과 같은 값) */
 export const CRAWLER_ENDPOINT_CACHE_CONTROL =
-  "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400";
+  "public, max-age=0, s-maxage=21600, stale-while-revalidate=86400";
 
 /**
  * 이 경로의 문서 응답에 붙일 Cache-Control. 목록에 없으면 null(= 기존대로 no-store).

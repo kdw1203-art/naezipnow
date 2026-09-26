@@ -21,6 +21,17 @@ export interface KpiRegion {
   href: string;
   /** [950] 기준월(예: "7월") — 문장이 "지난달보다"라고만 하면 어느 달인지 알 수 없다 */
   periodLabel?: string | null;
+  /** [1009 · H] 전월 대비 변동률 원값(%) — 없으면 delta 문자열로 판단(옛 응답 호환) */
+  changePct?: number | null;
+  /** [1009 · H] 변동률이 무엇의 변화인가 — index: 부동산원 매매가격지수 · avg: 신고 실거래 평당가 평균(월 집계 trend_delta_pct) */
+  changeBasis?: "index" | "avg";
+  /** [1009 · H 리뷰] 등락이 가리키는 달(yyyymm) — 가격의 달(periodLabel)과 다르면 문장이 그 달을 적는다 */
+  changeYm?: string | null;
+  /** [1009 · H 리뷰] 거래 건수(tradeLabel)의 실제 달(yyyymm)과 원천 — 카드 기준월과 다를 수 있다. 모르면 "최근" */
+  tradesYm?: string | null;
+  tradesSource?: "reb" | "molit";
+  /** [1009 · H 리뷰] 가격 원천 — molit: 국토부 신고 실거래 평균(월 집계) · reb: 한국부동산원 평균 매매가 */
+  priceKind?: "reb" | "molit";
 }
 
 export interface KpiTemp {

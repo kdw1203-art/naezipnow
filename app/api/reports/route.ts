@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { createReport, listReports, toPublicReport } from "@/lib/reports/store-db";
 import { applyRateLimit, WRITE_RATE_LIMIT } from "@/lib/rate-limit";
+import { invalidatePathList } from "@/lib/cache/invalidate";
 
 export async function GET() {
   /* listReports 가 실패를 던지게 바뀌었다. 여기서 다시 빈 배열로 접으면
@@ -61,6 +62,9 @@ export async function POST(req: NextRequest) {
          safePublicAuthorLabel(email, email) 도 "kdw***" 이다. */
       authorLabel: session.user.name?.trim() || undefined,
     });
+    /* [1010 · 동네축] 자료실(/town/library)이 리포트 선반을 서버에서 그린다 —
+       그 라우트 TTL 을 600초에서 1일로 늘렸으므로, 새 리포트가 하루 동안 안 보이지 않게 비운다. */
+    invalidatePathList(["/town/library"], { label: "report" });
     return NextResponse.json({ report: toPublicReport(report) });
   } catch (e) {
     return NextResponse.json(

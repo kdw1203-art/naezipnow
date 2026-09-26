@@ -9,6 +9,7 @@ import { safeAuth } from "@/lib/safe-auth";
 import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { createDeal } from "@/lib/dev-deals/write";
 import { isDealType, isPartnerField, maskContact } from "@/lib/dev-deals/types";
+import { invalidatePathList } from "@/lib/cache/invalidate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -122,5 +123,9 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
+  /* [1010] /dev-deals 는 ISR 이고 listDeals() 전량을 서버 HTML 에 싣는다(필터는
+     DevDealsListClient). 등록이 곧 목록 변화이므로 여기서 비운다 — 그래야 TTL 을
+     6시간으로 올려도 방금 올린 물건이 바로 보인다. */
+  invalidatePathList(["/dev-deals"], { label: "dev-deal" });
   return NextResponse.json({ ok: true, id: result.id }, { status: 201 });
 }

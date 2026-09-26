@@ -15,14 +15,14 @@ import type { Verdict } from "../../lib/ai/verdict.ts";
 const item = (tool: BoardItem["tool"], band: BoardItem["band"]): BoardItem => ({
   tool,
   band,
-  bandLabel: { strong: "좋음", mixed: "갈림", weak: "주의", thin: "판단 보류" }[band],
+  bandLabel: { strong: "좋음", mixed: "보통", weak: "주의", thin: "자료 부족" }[band],
 });
 
 const verdict: Verdict = {
   tool: "ai-diagnosis",
   band: "strong",
   bandLabel: "좋음",
-  headline: "은마: 5축이 고르게 좋아요 — 가장 강한 축은 거래(82점).",
+  headline: "은마: 5개 항목이 고르게 좋아요 — 특히 거래 활발(82점).",
   metric: { label: "투자 점수", value: "71", unit: "점", note: "5/5축 측정 평균", asOf: "202608" },
   numbers: [
     { key: "price", label: "대표 실거래가 (84㎡)", value: "24.5억", asOf: "202608", source: "국토부", confidence: "ok" },
@@ -35,7 +35,7 @@ const verdict: Verdict = {
   computedAt: "2026-09-13T15:30:00.000Z",
 };
 
-test("보드는 네 눈 — 허브 핵심 4종에서 동선 대신 리스크", () => {
+test("보드는 네 도구 — 허브 핵심 4종에서 동선 대신 리스크 점검", () => {
   assert.deepEqual([...BOARD_TOOLS], ["ai-diagnosis", "ai-prediction", "ai-timing", "ai-risk"]);
   for (const t of BOARD_TOOLS) assert.ok(BOARD_TOOL_LABEL[t].length >= 2);
 });
@@ -50,7 +50,7 @@ test("summarizeForBoard — 구간·결론·대표 수치를 그대로 옮기고
 });
 
 test("summarizeForBoard — stripName 은 '{단지명}: ' 머리만 뗀다", () => {
-  assert.equal(summarizeForBoard(verdict, { stripName: "은마" }).headline, "5축이 고르게 좋아요 — 가장 강한 축은 거래(82점).");
+  assert.equal(summarizeForBoard(verdict, { stripName: "은마" }).headline, "5개 항목이 고르게 좋아요 — 특히 거래 활발(82점).");
   assert.equal(summarizeForBoard(verdict, { stripName: "래미안" }).headline, verdict.headline);
 });
 
@@ -61,31 +61,31 @@ test("boardConsensus — 2개 미만이면 null(한 눈으로 합의를 말하�
 
 test("boardConsensus — 전부 같으면 '모두'", () => {
   const c = boardConsensus([item("ai-diagnosis", "strong"), item("ai-prediction", "strong"), item("ai-timing", "strong"), item("ai-risk", "strong")]);
-  assert.deepEqual(c, { line: "4개 눈 모두 '좋음' 구간", agree: 4, total: 4 });
+  assert.deepEqual(c, { line: "4개 도구 모두 '좋음'", agree: 4, total: 4 });
 });
 
 test("boardConsensus — 과반이면 '중 n개' + 나머지를 '만' 으로", () => {
   const c = boardConsensus([item("ai-diagnosis", "strong"), item("ai-prediction", "strong"), item("ai-timing", "strong"), item("ai-risk", "weak")]);
-  assert.deepEqual(c, { line: "4개 눈 중 3개가 '좋음' 구간 · 리스크만 '주의'", agree: 3, total: 4 });
+  assert.deepEqual(c, { line: "4개 도구 중 3개가 '좋음' · 리스크 점검만 '주의'", agree: 3, total: 4 });
 });
 
-test("boardConsensus — 2:2 는 과반이 아니다 → '갈려요' 와 양쪽 도구 이름", () => {
+test("boardConsensus — 2:2 는 과반이 아니다 → '도구마다 달라요' 와 양쪽 도구 이름", () => {
   const c = boardConsensus([item("ai-diagnosis", "strong"), item("ai-prediction", "strong"), item("ai-timing", "weak"), item("ai-risk", "weak")]);
-  assert.equal(c?.line, "4개 눈이 갈려요 — 종합 진단·시세 예측 '좋음' · 매수 타이밍·리스크 '주의'");
+  assert.equal(c?.line, "도구마다 달라요 — 종합 진단·시세 예측 '좋음' · 매수 타이밍·리스크 점검 '주의'");
   assert.equal(c?.agree, 2);
   assert.equal(c?.total, 4);
 });
 
-test("boardConsensus — 셋만 도착해도 센다(총수는 도착한 수) · 보류도 한 구간이다", () => {
+test("boardConsensus — 셋만 도착해도 센다(총수는 도착한 수) · 자료 부족도 한 구간이다", () => {
   const c = boardConsensus([item("ai-diagnosis", "mixed"), item("ai-timing", "mixed"), item("ai-risk", "thin")]);
-  assert.deepEqual(c, { line: "3개 눈 중 2개가 '갈림' 구간 · 리스크만 '판단 보류'", agree: 2, total: 3 });
+  assert.deepEqual(c, { line: "3개 도구 중 2개가 '보통' · 리스크 점검만 '자료 부족'", agree: 2, total: 3 });
 });
 
 test("verdictNoteMemo — 'AI {도구} {한국 날짜}: 결론' + 핵심 숫자 ≤3 을 '라벨 값(기준일)' 줄로", () => {
   const memo = verdictNoteMemo({ tool: "ai-diagnosis", verdict });
   const lines = memo.split("\n");
   /* computedAt 15:30Z 는 한국 시간으로 14일 00:30 — 서버(UTC)에서도 한국 날짜를 적는다 */
-  assert.equal(lines[0], "AI 종합 진단 2026.09.14: 은마: 5축이 고르게 좋아요 — 가장 강한 축은 거래(82점).");
+  assert.equal(lines[0], "AI 종합 진단 2026.09.14: 은마: 5개 항목이 고르게 좋아요 — 특히 거래 활발(82점).");
   assert.equal(lines.length, 4);
   assert.equal(lines[1], "대표 실거래가 (84㎡) 24.5억(2026.08)");
   assert.equal(lines[3], "지역 월 거래 312건(2026.08)");

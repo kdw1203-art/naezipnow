@@ -26,8 +26,12 @@ test("noteTag / noteCommentsTag — 사양 문자열 그대로, 공백은 접는
   assert.notEqual(noteTag(ID), noteCommentsTag(ID), "행 태그와 댓글 태그는 다르다");
 });
 
-test("revalidate 값 — 노트 300초 · 댓글 60초(요청 사양)", () => {
-  assert.equal(NOTE_CACHE_REVALIDATE_SEC, 300);
+/* [1010] 노트 캐시 300 → 86_400. 이 값이 붙는 항목은 관련 노트 풀 하나뿐이고(1007 이후),
+   그 풀은 공개 노트가 바뀌는 모든 지점에서 public-notes 태그로 비워진다 —
+   시간이 아니라 태그가 신선도를 맡는다(lib/inspection/note-cache-tags.ts 주석).
+   댓글 값(60초)은 붙는 항목이 없어 그대로 둔다. */
+test("revalidate 값 — 노트 1일(태그가 신선도를 맡는다) · 댓글 60초", () => {
+  assert.equal(NOTE_CACHE_REVALIDATE_SEC, 86_400);
   assert.equal(NOTE_COMMENTS_CACHE_REVALIDATE_SEC, 60);
 });
 

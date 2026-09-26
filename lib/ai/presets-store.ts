@@ -465,8 +465,22 @@ function presetQueryError(where: string, err: { message?: string }): Error {
   return new Error(`${where} 조회 실패: ${err.message ?? "알 수 없는 오류"}`);
 }
 
+/**
+ * [1008 · 리뷰 A-11] AI 분석 한도가 세는 실행 — 외부 AI 모델이 해설을 쓴 실행만.
+ * 공공데이터 자동 계산만 다시 한 실행(source "internal")·모델 실패로 규칙 안내만 돌려준 실행("stub")은
+ * 기록은 남기되 한도에서 뺀다. 예전엔 무료 회원이 AI 해설 없이 "분석 실행"만 눌러도 무료 3회를 썼다.
+ * (라우트의 월 예산 가드 countLlmRunsThisMonth 와 같은 목록)
+ */
+export const EXTERNAL_RUN_SOURCES = ["openai", "anthropic"] as const;
+const isExternalRun = (source: string | null | undefined) =>
+  (EXTERNAL_RUN_SOURCES as readonly string[]).includes(String(source ?? ""));
+
 /** 이번 달 AI 분석 실행 횟수 (멤버십 한도용). */
-export async function countRunsThisMonth(authorEmail: string): Promise<number> {
+export async function countRunsThisMonth(
+  authorEmail: string,
+  /** [1008 · 리뷰 A-11] true 면 외부 AI 모델 실행만 센다(한도 계산용) — 기본은 전부(활동 요약) */
+  opts: { externalOnly?: boolean } = {},
+): Promise<number> {
   const em = authorEmail.trim().toLowerCase();
   const start = new Date();
   start.setDate(1);
@@ -475,14 +489,16 @@ export async function countRunsThisMonth(authorEmail: string): Promise<number> {
   const sb = getServiceSupabase();
   if (!sb) {
     return memRuns.filter(
-      (r) => r.authorEmail.toLowerCase() === em && r.createdAt >= since,
+      (r) => r.authorEmail.toLowerCase() === em && r.createdAt >= since && (!opts.externalOnly || isExternalRun(r.source)),
     ).length;
   }
-  const { count, error } = await sb
+  let q = sb
     .from("ai_analysis_runs")
     .select("id", { count: "exact", head: true })
     .eq("author_email", em)
     .gte("created_at", since);
+  if (opts.externalOnly) q = q.in("source", [...EXTERNAL_RUN_SOURCES]);
+  const { count, error } = await q;
   /* 0 을 돌려주면 "이번 달 한 번도 안 썼다"가 되어 한도가 통째로 풀린다.
      못 센 것을 0 이라고 하지 않는다 — 부르는 쪽이 실패를 보고 판단하게 한다. */
   if (error) throw presetQueryError("ai_analysis_runs (이번 달 실행 횟수)", error);
@@ -490,14 +506,19 @@ export async function countRunsThisMonth(authorEmail: string): Promise<number> {
 }
 
 /** [992] 누적 AI 분석 실행 횟수 — 무료 플랜의 누적 한도(lifetimeLimit)용. */
-export async function countRunsTotal(authorEmail: string): Promise<number> {
+export async function countRunsTotal(
+  authorEmail: string,
+  /** [1008 · 리뷰 A-11] true 면 외부 AI 모델 실행만 센다(무료 누적 한도용) — 기본은 전부(마이 활동 요약) */
+  opts: { externalOnly?: boolean } = {},
+): Promise<number> {
   const em = authorEmail.trim().toLowerCase();
   const sb = getServiceSupabase();
-  if (!sb) return memRuns.filter((r) => r.authorEmail.toLowerCase() === em).length;
-  const { count, error } = await sb
-    .from("ai_analysis_runs")
-    .select("id", { count: "exact", head: true })
-    .eq("author_email", em);
+  if (!sb) {
+    return memRuns.filter((r) => r.authorEmail.toLowerCase() === em && (!opts.externalOnly || isExternalRun(r.source))).length;
+  }
+  let q = sb.from("ai_analysis_runs").select("id", { count: "exact", head: true }).eq("author_email", em);
+  if (opts.externalOnly) q = q.in("source", [...EXTERNAL_RUN_SOURCES]);
+  const { count, error } = await q;
   if (error) throw presetQueryError("ai_analysis_runs (누적 실행 횟수)", error);
   return count ?? 0;
 }

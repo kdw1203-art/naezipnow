@@ -22,6 +22,8 @@ export function AiDraftPanel({
   purpose,
   disabled,
   emphasize = false,
+  guest = false,
+  onLoginNeeded,
   onApply,
 }: {
   region: string;
@@ -33,6 +35,10 @@ export function AiDraftPanel({
   disabled?: boolean;
   /** [945 #12] /welcome·AI 의도 진입 — 관심지역 브리핑 패널을 시각적으로 앞세운다 */
   emphasize?: boolean;
+  /** [1005 · A2] 비회원 — /api/ai/note-draft 는 401 이라 버튼이 로그인 안내로 바뀐다 */
+  guest?: boolean;
+  /** 로그인이 필요할 때(비회원 버튼·401) 부른다 — 소프트 가입 프롬프트 */
+  onLoginNeeded?: () => void;
   onApply: (draft: NoteDraft) => void;
 }) {
   const [state, setState] = useState<"idle" | "busy" | "applied" | "quota" | "error">("idle");
@@ -44,6 +50,11 @@ export function AiDraftPanel({
 
   async function run() {
     if (state === "busy" || !ready) return;
+    /* 비회원은 요청을 보내지 않는다 — 401 을 조용히 받는 대신 로그인으로 잇는다 */
+    if (guest) {
+      onLoginNeeded?.();
+      return;
+    }
     setState("busy");
     setErrorMsg(null);
     try {
@@ -60,6 +71,7 @@ export function AiDraftPanel({
       if (res.status === 401) {
         setErrorMsg("초안 생성은 로그인 후 이용할 수 있어요.");
         setState("error");
+        onLoginNeeded?.();
         return;
       }
       const json = (await res.json().catch(() => ({}))) as {
@@ -96,7 +108,7 @@ export function AiDraftPanel({
       className={`rounded-2xl border p-[13px] ${
         emphasize
           ? "border-primary/45 bg-primary-soft/60 ring-2 ring-primary/20"
-          : "border-[rgba(29,79,216,.25)] bg-primary-soft/40"
+          : "border-primary/25 bg-primary-soft/40"
       }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -115,9 +127,9 @@ export function AiDraftPanel({
             type="button"
             onClick={() => void run()}
             disabled={!ready || state === "busy"}
-            className="btn-primary rounded-xl px-3.5 py-2 t-sub font-bold disabled:opacity-50"
+            className="btn-primary min-h-10 rounded-xl px-3.5 py-2 t-sub font-bold disabled:opacity-50"
           >
-            {state === "busy" ? "초안 만드는 중…" : "AI 초안 받기"}
+            {state === "busy" ? "초안 만드는 중…" : guest ? "로그인하고 AI 초안 받기" : "AI 초안 받기"}
           </button>
         )}
       </div>

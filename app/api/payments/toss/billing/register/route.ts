@@ -296,5 +296,11 @@ export async function GET(req: NextRequest) {
   const u = new URL("/payment/success", origin);
   u.searchParams.set("provider", "toss-billing");
   u.searchParams.set("orderId", orderId);
+  /* [1006] 광고 전환 집계용 표시 값 — GA4 purchase 의 value 는 이 쿼리로만 채워진다
+     (components/ga4-gtag-loader.tsx). 서버 분기(toss-billing)는 이 값을 읽지 않고 원장으로
+     사실을 확인하므로 주소창을 고쳐도 돈은 움직이지 않는다. 첫 결제가 있었을 때만 싣는다. */
+  if (paidRow && Number.isFinite(sub.amount) && sub.amount > 0) {
+    u.searchParams.set("amount", String(sub.amount));
+  }
   return NextResponse.redirect(u, 303);
 }

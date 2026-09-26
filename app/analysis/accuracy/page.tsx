@@ -2,12 +2,18 @@ import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { runPredictionBacktest, BACKTEST } from "@/lib/ai/backtest";
+import { formatEokMan } from "@/lib/format/eok-man";
 
 /* [AI-20] 예측 적중률 공개 — 점 예측 대신 구간, 그리고 성적표 공개.
    "예측이 얼마나 맞았는지 스스로 공개하는 서비스"가 이 페이지의 존재 이유다.
    좋게 보이도록 지역·기간을 고르지 않는다 — 표본 조건(월 30건+)만 걸고 전부 계산. */
 
-export const revalidate = 3600;
+/* [1010] 1h → 1일. 이 화면의 원천은 하루 1회 적재되는 국토부 실거래·집계이고,
+   적재 직후 lib/cache/invalidate.ts SOURCE_MAP.molit(+reb)이 이 경로를 이미 비운다 —
+   시간 TTL 은 안전망일 뿐이다. 실측(2026-09-20~22) 이 축의 분석 화면은 하루 수천 회
+   렌더되는데 사람 방문은 7일 합계 ~120건이고, 크롤러 재방문 간격은 ≈2.2일이라
+   1시간 눈금은 방문마다 재렌더를 뜻했다. */
+export const revalidate = 86_400;
 
 export const metadata = buildPageMetadata({
   title: "시세 예측 적중률 — 우리 성적표 공개",
@@ -25,7 +31,7 @@ export default async function AccuracyPage() {
         <div className="rise-in">
           <h1 className="t-title text-ink">시세 예측, 얼마나 맞았나</h1>
           <p className="mt-1.5 max-w-[62ch] t-body text-text-2">
-            ‘이 단지 시세 예측’이 쓰는 것과 같은 규칙(직전 3개월 모멘텀 외삽)으로 과거{" "}
+            ‘시세 예측’이 쓰는 것과 같은 규칙(직전 3개월 모멘텀 외삽)으로 과거{" "}
             {BACKTEST.lookbackMonths}개월을 되짚어, 예측이 실제 평당가의 ±
             {BACKTEST.hitBandPct}% 안에 들어온 비율을 공개합니다. 월 거래{" "}
             {BACKTEST.minMonthlyTx}건 이상인 지역·월만 계산하며, 잘 나온 구간을
@@ -85,11 +91,12 @@ export default async function AccuracyPage() {
                         <td className="px-4 py-2 tabular-nums text-text-2">
                           {c.month.slice(0, 4)}.{c.month.slice(4)}
                         </td>
+                        {/* [1009 · A] 평당가 1억 이상이 "12,017만"(억 미전환)으로 찍혔다 — 표기 표준(formatEokMan) */}
                         <td className="px-4 py-2 text-right tabular-nums text-text-2">
-                          {Math.round(c.predictedPerPyeong / 10000).toLocaleString("ko-KR")}만
+                          {formatEokMan(c.predictedPerPyeong / 10000)}
                         </td>
                         <td className="px-4 py-2 text-right tabular-nums text-text-2">
-                          {Math.round(c.actualPerPyeong / 10000).toLocaleString("ko-KR")}만
+                          {formatEokMan(c.actualPerPyeong / 10000)}
                         </td>
                         <td className={`px-4 py-2 text-right tabular-nums font-bold ${Math.abs(c.errorPct) <= BACKTEST.hitBandPct ? "text-success" : "text-danger"}`}>
                           {c.errorPct > 0 ? "+" : ""}
@@ -120,7 +127,7 @@ export default async function AccuracyPage() {
           이 성적표는 조회 시점의 실거래 집계로 재계산됩니다. 과거 적중률은 미래
           수익을 보장하지 않으며, 예측 도구도 이 한계를 화면에 함께 표시합니다.{" "}
           <Link href="/analysis/ai/ai-prediction" className="font-bold text-primary no-underline">
-            이 단지 시세 예측 실행 ›
+            시세 예측 실행 ›
           </Link>
         </div>
       </div>

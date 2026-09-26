@@ -35,7 +35,7 @@ export function BusinessDisclosureBlock({ className = "", showHours = true }: Pr
         {info.phone ? (
           <a
             href={`tel:${info.phone.replace(/[^0-9+]/g, "")}`}
-            className="text-text-2 underline-offset-2 hover:underline"
+            className="inline-flex min-h-[24px] items-center text-text-2 underline-offset-2 hover:underline"
           >
             {info.phone}
           </a>

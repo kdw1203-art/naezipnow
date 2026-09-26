@@ -785,7 +785,7 @@ export function AuctionsClient({
                 href="https://www.onbid.co.kr"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-0.5 t-sub font-bold text-primary no-underline"
+                className="mt-0.5 inline-flex min-h-[24px] items-center self-start t-sub font-bold text-primary no-underline"
               >
                 온비드 바로가기 ↗
               </a>

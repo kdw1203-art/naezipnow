@@ -4,9 +4,11 @@ import {
 } from "@/lib/inspection/store-db";
 import { isLabAuthor, displayAuthorLabel } from "@/lib/notes/author-label";
 import { complexHrefKey, resolveComplexHrefs } from "@/lib/newui/complex-link";
-import { matchesInterest } from "@/lib/notes/region-match";
+import { matchesInterest, regionGroupOf } from "@/lib/notes/region-match";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
 import { decisionFromMetadata, decisionLabel, type DecisionChoice } from "@/lib/inspection/decision";
+import { listAiState, noteAiIntent, type ListAiState } from "@/lib/notes/ai-status";
+import { noteContentHash, storedContentHash } from "@/lib/notes/content-hash";
 
 /* [967 · 19] 공개 임장노트 피드 카드 빌더 — 서버 전용.
  *
@@ -52,6 +54,16 @@ export type FeedNote = {
   decision?: { choice: DecisionChoice; label: string };
   /** [996 · 4] 회차(metadata.round ≥2) — "2회차" 배지. 1회차·없음은 undefined */
   round?: number;
+  /**
+   * [1006] 내 노트 뷰(mine)에서만 채운다 — 목록 필터·정렬·배지 재료. 공개 피드는 남의
+   * 노트라 AI 정리 상태를 말할 이유가 없고(지어내지도 않는다) 필터도 다르다.
+   *  · aiStatus:  저장된 정리로만 판정(lib/notes/ai-status listAiState — 대기는 없다)
+   *  · visitDate: 방문일(YYYY-MM-DD) — "방문일순" 정렬·기간 필터
+   *  · regionGroup: 시·구 단위 지역 라벨("안양시 동안구") — 지역 칩. 못 나누면 region 그대로
+   */
+  aiStatus?: ListAiState;
+  visitDate?: string;
+  regionGroup?: string;
 };
 
 /** metadata.round — 정수 2 이상만 배지가 된다(1회차는 배지가 아니라 기본값이다) */
@@ -136,6 +148,18 @@ export function toFeedNote(
     createdAt: n.createdAt,
     ...(decision ? { decision: { choice: decision.choice, label: decisionLabel(decision.choice) } } : {}),
     ...(round != null ? { round } : {}),
+    /* [1006] 내 노트 뷰 — 필터·정렬·AI 배지 재료. 해시는 상세·AI 라우트와 같은 규칙(content-hash) */
+    ...(opts?.mine
+      ? {
+          aiStatus: listAiState({
+            analysis: n.aiAnalysis,
+            storedHash: storedContentHash(n),
+            currentHash: noteContentHash(n, noteAiIntent(n.metadata)),
+          }),
+          visitDate: n.visitDate.slice(0, 10),
+          regionGroup: regionGroupOf(n.region),
+        }
+      : {}),
   };
 }
 

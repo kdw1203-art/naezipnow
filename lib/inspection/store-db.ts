@@ -293,7 +293,7 @@ export async function countNotesByRegionToken(
  *      않는다. 서비스 롤보다 적게 보일 수 있다는 뜻이고, 이는 "권한대로 보인
  *      것" 이지 실패가 아니다.
  */
-export async function listPublicNotes(limit = 50): Promise<InspectionNote[]> {
+export async function listPublicNotes(limit = 50, opts?: { withAi?: boolean }): Promise<InspectionNote[]> {
   const sb = getReadOnlySupabase();
   if (!sb) {
     throw new Error(
@@ -327,11 +327,32 @@ export async function listPublicNotes(limit = 50): Promise<InspectionNote[]> {
        (문자열을 이어 붙이면 data 가 GenericStringError[] 로 떨어진다).
      ※ `*` 를 버린 김에 mapRow 가 실제로 읽는 23개만 남겼다. 나머지 32개는
        읽어 와서 버리던 컬럼이다(body_md·check_items·risk_notes·… 실측 아래
-       마이그레이션 헤더 참고). */
+       마이그레이션 헤더 참고).
+
+     ── [1007] ai_analysis 를 공개 목록에서 뺀다 ────────────────────────────
+     실측(2026-09-20): `listPublicNotes(24)` 가 TimeoutError — 표는 34행뿐이라 질의
+     비용이 아니라 연결 풀 대기다(lib/supabase/read-budget.ts 의 8초 statement_timeout
+     안에 어떤 질의도 끝난다). 그래도 응답이 무거우면 풀을 그만큼 오래 붙든다.
+     jsonb 다섯 중 ai_analysis 는 LLM 정리 본문(가장 큰 컬럼)인데, 공개 목록을 읽는
+     소비처 12곳(동네 서재·피드·베스트·프로필·사이트맵·RSS·IndexNow·팔로우 피드·
+     노트 마켓·지역 노트·API 커서 페이지) 중 aiAnalysis 를 읽는 곳이 **한 곳도 없다**
+     (버릇처럼 실어 온 것). 나머지 넷(checklist·sections·photos·metadata)은 카드가
+     실제로 그린다(사진 커버·한 줄·현장 인증·판단). 정렬·필터는 이미 최소
+     (is_public = true · created_at desc · limit) — 부분 인덱스 초안은
+     supabase/migrations/20260920100000_1007_inspection_notes_public_created_idx.sql.
+     ※ `/api/inspection/notes?all=1` 응답의 aiAnalysis 가 null 이 된다(저장소 안 소비처 0).
+     ※ [1007 · 리뷰 H1] 예외 하나 — /analysis 허브의 "공개 노트 AI 정리 미리보기"(pickPublicAiPreview)는
+       aiAnalysis 를 **읽는다**. 그 한 소비처만 `withAi: true` 로 부른다(select 가지 두 개 추가 —
+       `.select()` 인자는 리터럴이어야 하므로 삼항을 늘렸다). */
   const table = sb.from("inspection_notes");
+  const withAi = opts?.withAi === true;
   const q = readOnlyClientHasServiceRole()
-    ? table.select("id,author_email,author_label,title,region,apt_name,visit_date,weather,transportation,summary,score_location,score_school,score_transport,score_facility,score_future,checklist,sections,photos,ai_analysis,metadata,is_public,created_at,updated_at")
-    : table.select("id,author_label,title,region,apt_name,visit_date,weather,transportation,summary,score_location,score_school,score_transport,score_facility,score_future,checklist,sections,photos,ai_analysis,metadata,is_public,created_at,updated_at");
+    ? withAi
+      ? table.select("id,author_email,author_label,title,region,apt_name,visit_date,weather,transportation,summary,score_location,score_school,score_transport,score_facility,score_future,checklist,sections,photos,metadata,ai_analysis,is_public,created_at,updated_at")
+      : table.select("id,author_email,author_label,title,region,apt_name,visit_date,weather,transportation,summary,score_location,score_school,score_transport,score_facility,score_future,checklist,sections,photos,metadata,is_public,created_at,updated_at")
+    : withAi
+      ? table.select("id,author_label,title,region,apt_name,visit_date,weather,transportation,summary,score_location,score_school,score_transport,score_facility,score_future,checklist,sections,photos,metadata,ai_analysis,is_public,created_at,updated_at")
+      : table.select("id,author_label,title,region,apt_name,visit_date,weather,transportation,summary,score_location,score_school,score_transport,score_facility,score_future,checklist,sections,photos,metadata,is_public,created_at,updated_at");
   const { data, error } = await q
     .eq("is_public", true)
     .order("created_at", { ascending: false })
@@ -371,10 +392,11 @@ export async function listPublicNotesPage(opts: {
     );
   }
   const table = sb.from("inspection_notes");
-  /* listPublicNotes 와 같은 이유로 두 가지 모두 한 줄 리터럴이어야 한다 */
+  /* listPublicNotes 와 같은 이유로 두 가지 모두 한 줄 리터럴이어야 한다.
+     [1007] ai_analysis 는 공개 목록에서 읽지 않는다(listPublicNotes 주석). */
   const q = readOnlyClientHasServiceRole()
-    ? table.select("id,author_email,author_label,title,region,apt_name,visit_date,weather,transportation,summary,score_location,score_school,score_transport,score_facility,score_future,checklist,sections,photos,ai_analysis,metadata,is_public,created_at,updated_at")
-    : table.select("id,author_label,title,region,apt_name,visit_date,weather,transportation,summary,score_location,score_school,score_transport,score_facility,score_future,checklist,sections,photos,ai_analysis,metadata,is_public,created_at,updated_at");
+    ? table.select("id,author_email,author_label,title,region,apt_name,visit_date,weather,transportation,summary,score_location,score_school,score_transport,score_facility,score_future,checklist,sections,photos,metadata,is_public,created_at,updated_at")
+    : table.select("id,author_label,title,region,apt_name,visit_date,weather,transportation,summary,score_location,score_school,score_transport,score_facility,score_future,checklist,sections,photos,metadata,is_public,created_at,updated_at");
   let filtered = q.eq("is_public", true);
   const before = opts.before?.trim();
   if (before && Number.isFinite(Date.parse(before))) {

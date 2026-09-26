@@ -18,6 +18,13 @@ on:
     - cron: "0 21 * * 1" # 월요일 21:00 UTC = 화요일 06:00 KST
   workflow_dispatch: {}
 
+# [1010 · 도메인 사고 방지] 크론 호출 주소는 여기 한 줄로만 바꾼다.
+# 2026-09-25: 구 도메인(nuguzip.com)이 프로젝트에서 빠지자 이 파일의 호출이 전부
+# 404 가 됐다(응답을 `|| true` 로 흘려 보내 조용히 죽는 구조였다). 주소를 상수로
+# 올려 두 번 다시 파일 전체를 훑지 않게 한다.
+env:
+  SITE: https://naezipnow.com
+
 permissions:
   contents: read
 
@@ -81,5 +88,5 @@ jobs:
             curl -sS --max-time 60 -X POST \
               -H "x-cron-secret: $CRS" -H "Content-Type: application/json" \
               --data @lh-scores.json \
-              "https://nuguzip.com/api/cron/lighthouse-report" | head -c 400 || true
+              "${SITE}/api/cron/lighthouse-report" | head -c 400 || true
           fi

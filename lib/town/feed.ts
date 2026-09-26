@@ -24,7 +24,8 @@ import {
 import { readTownPosts } from "@/lib/newui/board-posts";
 import { listHiddenPostIds } from "@/lib/moderation/reports-store";
 import { postAttachments } from "@/lib/community/attachments";
-import { maskNoteAuthor } from "@/app/town/shared";
+import { maskNoteAuthor } from "@/lib/town/shared";
+import { isStoryPost } from "@/lib/town/story";
 import type { FeedCard } from "@/app/town/feed-client";
 import type { Post } from "@/lib/types/post";
 import { logger } from "@/lib/log";
@@ -68,14 +69,17 @@ export function noteToCard(n: InspectionNote): FeedCard {
 
 export function postToCard(p: Post): FeedCard {
   const region = p.city && p.district ? `${p.city} ${p.district}` : p.city || "전국";
+  const photos = postAttachments(p);
   return {
     id: p.id,
-    href: `/town/news/${p.id}`,
+    /* [1006] 이웃 글의 상세는 /town/story/[id] — 예전엔 뉴스와 같은 /town/news/[id] 로
+       열려서 "사람 글"과 "기사"가 같은 화면·같은 주소를 썼다. 두 재질을 주소에서부터 가른다. */
+    href: `/town/story/${p.id}`,
     kind: "post",
     /* [B31] 첨부 사진의 첫 장이 커버다. 예전엔 무조건 null 이라 사진 우선
        격자에서 이야기 글만 늘 그라디언트 상자였다 — 저장은 되는데 읽는 코드가
        한 줄도 없던 값이다(lib/community/attachments.ts 주석 참고). */
-    cover: postAttachments(p)[0] ?? null,
+    cover: photos[0] ?? null,
     title: p.title,
     author: p.authorLabel || "이웃",
     region,
@@ -87,6 +91,10 @@ export function postToCard(p: Post): FeedCard {
     isExample: false,
     /* 포인트 추천글 부스트 — 만료(과거)면 자연 소멸이라 false */
     boosted: Boolean(p.boostUntil && Date.parse(p.boostUntil) > Date.now()),
+    /* [1006] 이야기 카드의 주인공은 사람·대화다 — 댓글 수와 사진 장수를 실측대로 싣는다
+       (0 이면 카드가 그 칸을 그리지 않는다). */
+    comments: Math.max(0, Number(p.commentCount) || 0),
+    photos: photos.length,
   };
 }
 
@@ -115,7 +123,9 @@ async function loadPostCards(): Promise<PostSlice> {
     return { cards: [], failed: true };
   }
   // 신고 누적/처리로 숨김된 글(posts.visibility="hidden")은 피드에서 제외(#7)
-  const communityPosts = posts.filter((p) => !p.isAutomated);
+  // [1006] 사람 글 판정은 isStoryPost(상세·동네 홈과 같은 규칙). "링크로만 공개"(link_only)한
+  // 글은 동네 홈·사이트맵과 같이 목록에 싣지 않는다 — 작성자가 고른 공개 범위다.
+  const communityPosts = posts.filter((p) => isStoryPost(p) && p.visibility !== "link_only");
   const hiddenIds = await listHiddenPostIds(communityPosts.map((p) => p.id)).catch(
     () => new Set<string>(),
   );

@@ -24,7 +24,12 @@ import { formatKstMeetingTime } from "@/lib/format/kst";
    statusKey 는 시각 파생값이라 빌드 시각(builtAtMs)으로 하이드레이션을 맞춘 뒤
    클라이언트가 재계산한다 — "일정 지난 모임에 참여하기"는 거짓 안내다.
    24h 채팅 배지는 재생성 시각 실측값(최대 5분 낡음 — 배지 성격상 허용). */
-export const revalidate = 300;
+/* [1010] 300초 → 1일. 이 화면이 사실로 주장하는 값은 셋이고 전부 쓰기 지점이 비운다:
+     · 모임 목록·정원 — POST /api/groups, POST·PATCH /api/groups/[id]/join
+     · "24시간 메시지 N개" 배지 — 모임 방에 메시지가 들어갈 때(lib/chat/service.ts sendMessageByPolicy)
+   숫자는 사실 주장이라 시간에 맡길 수 없다 — 그래서 TTL 이 아니라 비움이 신선도를 맡는다.
+   (실측 meetings 0행이라 지금은 빈 목록이지만, 규칙은 0행이 아닐 때를 위해 둔다.) */
+export const revalidate = 86_400;
 
 /* N7 — ?region=·?status=·?sort= 는 같은 목록을 자르는 값이라 조합마다 색인되면
    안 된다. canonical 을 파라미터 없는 경로로 고정한다. */

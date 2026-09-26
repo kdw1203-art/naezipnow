@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getSessionLite } from "@/lib/client/session-lite";
+import { readAuthedHint } from "@/lib/auth/authed-hint";
 import { loginReturnHref } from "@/lib/client/shell-gates";
 
 /* S13-13a 헤더 세션 영역 — /api/auth/session 지연 조회 (정적 셸 ISR 유지)
@@ -65,6 +66,8 @@ export function HeaderAuth() {
   useEffect(() => {
     let cancelled = false;
     // 최적화 26 — 공유 세션 조회(페이지당 1회)로 수렴
+    /* [1007 · V2a-2] 로그인 힌트 쿠키(nz_authed)가 없으면 getSessionLite 가 요청 없이 null 을
+       준다 — 비회원·봇(하루 1,299회 중 사람 ~17회)에게 /api/auth/session 이 더는 나가지 않는다. */
     getSessionLite().then((s) => {
       if (cancelled) return;
       if (s?.user?.email) setState({ status: "user", user: s.user });
@@ -74,6 +77,26 @@ export function HeaderAuth() {
       cancelled = true;
     };
   }, []);
+
+  /* [1007 · V2a-2] 화면을 옮길 때 힌트와 표시가 어긋나 있으면 바로잡는다 — 요청은 힌트가 새로
+     생겼을 때만 한 번(배포 직후 이미 로그인돼 있던 브라우저가 소프트 내비게이션으로 힌트를 받는
+     경우), 힌트가 사라졌으면(다른 탭에서 로그아웃) 요청 없이 게스트로. */
+  useEffect(() => {
+    const hinted = readAuthedHint();
+    if (state.status === "guest" && hinted) {
+      let cancelled = false;
+      getSessionLite().then((s) => {
+        if (!cancelled && s?.user?.email) setState({ status: "user", user: s.user });
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+    if (state.status === "user" && !hinted) setState({ status: "guest" });
+    return undefined;
+    // 경로가 바뀔 때만 다시 본다 — state 를 의존성에 넣으면 조회 결과가 다시 조회를 부른다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   // 바깥 클릭으로 드롭다운 닫기
   useEffect(() => {

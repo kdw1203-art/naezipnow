@@ -9,6 +9,8 @@ import { NextResponse } from "next/server";
 import { safeAuth } from "@/lib/safe-auth";
 import { isAdminApiRequest } from "@/lib/admin/api-auth";
 import { reviewOwnerVerification } from "@/lib/listings/owner-verification";
+import { getListingById } from "@/lib/listings/store-db";
+import { invalidateComplexByNames } from "@/lib/complex/complex-invalidate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,5 +47,11 @@ export async function PATCH(req: Request) {
     reviewerEmail,
   });
   if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
+  /* [1010] 승인되면 단지 허브(7일 ISR)의 매물 카드에 "소유확인" 배지가 붙는다 —
+     그 화면을 즉시 비운다. 못 읽으면 비우지 않는다(모르는 단지를 찍지 않는다). */
+  if (res.listingId) {
+    const listing = await getListingById(res.listingId).catch(() => null);
+    if (listing) invalidateComplexByNames(listing.regionName, listing.complexName);
+  }
   return NextResponse.json({ ok: true });
 }

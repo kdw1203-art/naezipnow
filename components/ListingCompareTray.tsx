@@ -1,34 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Icon } from "@/app/components/Icon";
+import { useToast } from "@/app/components/toast/ToastProvider";
+import { listingPriceLine } from "@/app/listings/price-text";
+import { restoreListingAt } from "@/app/listings/compare-restore";
 import {
   subscribe,
   getSnapshot,
   getServerSnapshot,
   remove,
   clear,
+  add,
   MIN_COMPARE,
   MAX_COMPARE,
   type CompareListing,
 } from "./listing-compare-store";
 
-/** 원(KRW) → "28.6억" / "9,800만" (목록/상세와 동일 규칙) */
-function formatKrwShort(krw: number | null | undefined): string {
-  if (krw === null || krw === undefined || !Number.isFinite(krw) || krw <= 0) return "—";
-  if (krw >= 1e8) {
-    const eok = krw / 1e8;
-    return `${(eok >= 100 ? Math.round(eok) : Math.round(eok * 10) / 10).toLocaleString("ko-KR")}억`;
-  }
-  return `${Math.round(krw / 1e4).toLocaleString("ko-KR")}만`;
-}
-
-function priceLine(l: CompareListing): string {
-  if (l.listingType === "sale") return `매매 ${formatKrwShort(l.priceKrw)}`;
-  if (l.listingType === "jeonse") return `전세 ${formatKrwShort(l.depositKrw)}`;
-  return `월세 ${formatKrwShort(l.depositKrw)} / ${formatKrwShort(l.monthlyKrw)}`;
-}
+/* [1009 · T] 호가는 정밀 표기("매매 12억 4,500만") — app/listings/price-text 한 곳(목록·상세·비교 표와 같은 말) */
+const priceLine = listingPriceLine;
 
 /**
  * 화면 하단 고정 비교함 트레이 — 담긴 매물이 1개 이상일 때만 노출.
@@ -36,6 +27,32 @@ function priceLine(l: CompareListing): string {
  */
 export function ListingCompareTray() {
   const items = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const { showToast } = useToast();
+  /* [1009 · T] 빼기·비우기는 확인 없이 바로 — 대신 "되돌리기"(같은 저장소에 다시 담는다).
+     한 칸 빼기는 **트레이 안에서** 되돌리기를 준다: 트레이(바닥 76px)가 남아 있는 동안 토스트(탭바 위 88px)를 띄우면
+     트레이의 "비교하기" 줄을 5초 동안 가린다. 전체 비우기는 트레이가 사라지므로 토스트로. */
+  /* [1009 · T 리뷰] 되돌리면 **원래 자리**로(예전엔 맨 뒤에 붙었다) — 뺀 자리(index)를 같이 기억한다 */
+  const [lastRemoved, setLastRemoved] = useState<{ item: CompareListing; index: number } | null>(null);
+  useEffect(() => {
+    if (!lastRemoved) return;
+    const t = window.setTimeout(() => setLastRemoved(null), 5000);
+    return () => window.clearTimeout(t);
+  }, [lastRemoved]);
+  const removeOne = (it: CompareListing) => {
+    const index = items.findIndex((x) => x.id === it.id);
+    remove(it.id);
+    /* 마지막 한 칸이면 트레이가 사라진다 — 그때만 토스트로 */
+    if (items.length <= 1) showToast("비교함에서 뺐어요", { label: "되돌리기", onClick: () => void restoreListingAt(it, 0) });
+    else setLastRemoved({ item: it, index });
+  };
+  const clearAll = () => {
+    const before = [...items];
+    clear();
+    showToast(`비교함을 비웠어요 (${before.length}개)`, {
+      label: "되돌리기",
+      onClick: () => before.forEach((it) => add(it)),
+    });
+  };
 
   if (items.length === 0) return null;
 
@@ -48,15 +65,15 @@ export function ListingCompareTray() {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 text-[13px] font-extrabold text-ink">
             <Icon name="scale" size={16} strokeWidth={2} />
-            비교함 <span className="text-primary">({items.length})</span>
+            비교함 <span className="t-num text-primary">({items.length})</span>
             <span className="text-[12px] font-medium text-text-3">
               / 최대 {MAX_COMPARE}
             </span>
           </div>
           <button
             type="button"
-            onClick={() => clear()}
-            className="text-[12px] font-bold text-text-3 hover:text-danger"
+            onClick={clearAll}
+            className="inline-flex min-h-[24px] items-center text-[12px] font-bold text-text-3 hover:text-danger"
           >
             전체 비우기
           </button>
@@ -66,15 +83,15 @@ export function ListingCompareTray() {
           {items.map((it) => (
             <span
               key={it.id}
-              className="inline-flex items-center gap-1.5 rounded-[10px] border border-line bg-surface px-2.5 py-1.5 text-[12px]"
+              className="inline-flex items-center gap-1.5 rounded-[10px] border border-line bg-surface py-1 pl-2.5 pr-1 text-[12px]"
             >
               <span className="font-bold text-ink">{it.complexName}</span>
-              <span className="text-text-3">{priceLine(it)}</span>
+              <span className="t-num font-medium text-text-2">{priceLine(it)}</span>
               <button
                 type="button"
-                onClick={() => remove(it.id)}
+                onClick={() => removeOne(it)}
                 aria-label={`${it.complexName} 비교함에서 빼기`}
-                className="text-text-3 hover:text-danger"
+                className="inline-flex h-6 w-6 items-center justify-center rounded-full text-text-3 hover:text-danger"
               >
                 <Icon name="x" size={13} strokeWidth={2.2} />
               </button>
@@ -83,11 +100,27 @@ export function ListingCompareTray() {
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[12px] text-text-3">
-            {canCompare
-              ? "나란히 비교해 보세요"
-              : `${MIN_COMPARE}개 이상 담으면 비교할 수 있어요`}
-          </span>
+          {lastRemoved ? (
+            <span className="flex min-w-0 items-center gap-1.5 text-[12px] text-text-2" role="status">
+              <span className="truncate">‘{lastRemoved.item.complexName}’ 뺐어요</span>
+              <button
+                type="button"
+                onClick={() => {
+                  restoreListingAt(lastRemoved.item, lastRemoved.index);
+                  setLastRemoved(null);
+                }}
+                className="inline-flex min-h-[24px] shrink-0 items-center font-bold text-primary"
+              >
+                되돌리기
+              </button>
+            </span>
+          ) : (
+            <span className="text-[12px] text-text-3">
+              {canCompare
+                ? "나란히 비교해 보세요"
+                : `${MIN_COMPARE}개 이상 담으면 비교할 수 있어요`}
+            </span>
+          )}
           {canCompare ? (
             <Link href={href} className="btn-primary btn-sm">
               비교하기 ({items.length})

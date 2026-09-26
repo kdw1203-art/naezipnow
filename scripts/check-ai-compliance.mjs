@@ -27,10 +27,17 @@ const RULES = [
     must: ["수익 보장", "AI_PROMPT_VERSION"],
     why: "프롬프트의 수익보장 금지 조항 + 버전 체계(AI-49)",
   },
+  /* [1008 · W] 결과 화면이 ResultView 로 옮겨 갔고, 소유자 지시로 내부 용어를 걷었다 —
+     "근거 각주" → "데이터 출처", "[규칙]" → 결과 요약의 "공공데이터 자동 계산". AI 문장은 계속 "[AI 서술]". */
   {
-    file: "app/analysis/ai/[tool]/WorkbenchClient.tsx",
-    must: ["[규칙]", "근거 각주"],
-    why: "출처 라벨(AI-05)·각주(AI-01) 표면",
+    file: "app/analysis/ai/[tool]/ResultView.tsx",
+    must: ["[AI 서술]", "데이터 출처"],
+    why: "출처 라벨(AI-05 — AI 문장 표시)·데이터 출처(AI-01, 옛 '근거 각주') 표면",
+  },
+  {
+    file: "app/analysis/ai/[tool]/VerdictCard.tsx",
+    must: ["공공데이터 자동 계산"],
+    why: "결과가 자동 계산임을 결과 요약이 말한다(AI-05, 옛 '[규칙]' 라벨)",
   },
 ];
 

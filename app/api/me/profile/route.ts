@@ -4,6 +4,7 @@ import { safeAuth } from "@/lib/safe-auth";
 import { appendOnboardingStep } from "@/lib/onboarding/append-step";
 import { loadMeProfile, normalizePersona } from "@/lib/me/profile";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { scheduleProfileInvalidation } from "@/lib/town/invalidate-town";
 
 export const runtime = "nodejs";
 
@@ -118,6 +119,14 @@ export async function PATCH(req: Request) {
 
   if (regionSaved) {
     void appendOnboardingStep(email, "explore");
+  }
+
+  /* [1010 · 동네축] 공개 프로필(/u/{handle}) 은 이 표(app_users.avatar_url)에서 프로필 사진을
+     읽어 서버에서 그린다. 그 라우트 TTL 을 900초 → 1일로 늘렸으므로, 사진을 바꾼 사람이
+     하루 동안 옛 사진을 보지 않게 여기서 비운다(이름·소개는 profiles 표라 이 API 가 바꾸지
+     않는다 — 그쪽 쓰기 지점이 생기면 같은 헬퍼를 붙일 자리다). */
+  if (updates.avatar_url !== undefined) {
+    scheduleProfileInvalidation(email);
   }
 
   const profile = await loadMeProfile(email, {

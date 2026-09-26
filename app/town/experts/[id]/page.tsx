@@ -23,7 +23,10 @@ import { formatKstDate } from "@/lib/format/kst";
    → 요금 → 후기(expert_reviews) → 검증 정보 → 같은 자격의 다른 전문가.
    연락처는 목록 DTO 와 같은 원칙: 본인이 프로필 수정에서 채운 값만, 인증 전문가만. */
 
-export const revalidate = 300;
+/* [1010] 300초 → 1일. 목록(/town/experts)과 같은 쓰기 지점이 이 상세 경로도 같이 비운다
+   (invalidateExpertRoutes(id) — 목록 + `/town/experts/{id}`). 지표는 실측값이라 낡은 채로
+   두지 않고, 시간이 아니라 그 비움이 신선도를 맡는다. */
+export const revalidate = 86_400;
 export function generateStaticParams() {
   return [];
 }

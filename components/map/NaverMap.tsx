@@ -10,8 +10,6 @@ import {
 import {
   NAVER_MAP_AUTH_FAILURE_MESSAGE,
   NAVER_MAP_CLIENT_ID,
-  NAVER_MAP_MAX_ZOOM,
-  NAVER_MAP_MIN_ZOOM,
   applyNaverMapControlPositions,
   buildNaverMapInitOptions,
   getNaverMapsWindow,
@@ -22,8 +20,15 @@ import {
   type NaverMapInstance,
   type NaverMarker,
 } from "@/lib/map/naver-maps-sdk";
+import {
+  planViewportSync,
+  type IdleViewport,
+  type ViewportSnapshot,
+} from "@/lib/map/viewport-sync";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/app/components/Icon";
+/* [1009 · C] 마커 말풍선 등락 — 사이트 공통 규칙(상승 ▲ 빨강 · 하락 ▼ 파랑 · ±0.05% 미만 보합) */
+import { deltaDir, deltaText } from "@/lib/format/delta";
 
 export interface MapMarkerData {
   id: string;
@@ -322,6 +327,10 @@ export function NaverMap({
   }>({ bounds: null, width: 0, height: 0 });
   const declutterRef = useRef(declutter);
   declutterRef.current = declutter;
+  /* [1008 · M] 중심·축척 적용 기록 — 지난번에 처리한 props 와, 지도가 마지막 idle 로 알린 실제 값.
+     둘을 알아야 "props 가 정말 바뀌었나" 와 "부모가 지도 값을 되돌려 준 메아리인가" 를 가른다. */
+  const appliedViewRef = useRef<ViewportSnapshot | null>(null);
+  const lastIdleViewRef = useRef<IdleViewport | null>(null);
 
   useEffect(() => {
     if (!NAVER_MAP_CLIENT_ID) {
@@ -450,15 +459,32 @@ export function NaverMap({
     return () => ro.disconnect();
   }, [loaded]);
 
+  /* [1008 · M] 중심과 축척을 따로 적용한다(규칙: lib/map/viewport-sync — 단위검증).
+     예전에는 이 effect 가 level 만 바뀌어도 setCenter(center prop) 을 다시 불렀다. 부모는 사용자가
+     끌어서 옮긴 중심을 모르므로 center prop 은 처음 자리였고, 확대·축소하는 순간 지도가 그리로
+     되돌아갔다(소유자 제보 · 가짜 SDK 재현: /map ＋ 뒤 중심 37.5165,127.048 → 37.5665,126.978).
+     이제 center prop 이 실제로 바뀌었고 지도 값의 메아리가 아닐 때만 옮기고, level 만 바뀌면
+     지금 중심 그대로 setZoom 만 한다. "다른 곳으로 가기"(center 변경)에는 level 도 함께 맞춘다. */
   useEffect(() => {
     if (!loaded || !mapRef.current) return;
     const maps = getNaverMapsWindow().naver?.maps;
     if (!maps) return;
-
-    mapRef.current.setCenter(new maps.LatLng(center.lat, center.lng));
-    mapRef.current.setZoom(
-      Math.min(NAVER_MAP_MAX_ZOOM, Math.max(NAVER_MAP_MIN_ZOOM, mapLevelToNaverZoom(level))),
-    );
+    const map = mapRef.current;
+    const next: ViewportSnapshot = { center: { lat: center.lat, lng: center.lng }, level };
+    const c = map.getCenter?.();
+    const z = map.getZoom?.();
+    const plan = planViewportSync({
+      next,
+      prev: appliedViewRef.current,
+      actual: {
+        center: c ? { lat: c.lat(), lng: c.lng() } : null,
+        zoom: typeof z === "number" && Number.isFinite(z) ? z : null,
+      },
+      lastIdle: lastIdleViewRef.current,
+    });
+    appliedViewRef.current = next;
+    if (plan.setCenter) map.setCenter(new maps.LatLng(center.lat, center.lng));
+    if (plan.setZoom !== null) map.setZoom(plan.setZoom);
   }, [loaded, center.lat, center.lng, level]);
 
   useEffect(() => {
@@ -508,6 +534,12 @@ export function NaverMap({
       const b = map.getBounds?.();
       const sw = b?.getSW?.();
       const ne = b?.getNE?.();
+
+      /* [1008 · M] 지도가 스스로 알린 실제 값 — 부모가 이 값을 state 로 되돌려 주면(메아리)
+         위 중심·축척 effect 가 다시 적용하지 않는다(idle → state → effect 되먹임 차단). */
+      if (c && Number.isFinite(zoom) && zoom > 0) {
+        lastIdleViewRef.current = { center: { lat: c.lat(), lng: c.lng() }, zoom };
+      }
 
       /* 겹침 정리용 화면 상태. 값이 실제로 달라졌을 때만 setState 한다 —
          idle 이 같은 값으로 여러 번 와도 리렌더가 늘지 않게. */
@@ -1146,11 +1178,13 @@ function buildMarkerHtml(label: string, color: string): string {
   const name = label.trim();
   if (!name) {
     // 이름조차 없으면 예전처럼 작은 점 하나. 지어낼 이름이 없다.
-    return `<div style="width:10px;height:10px;border-radius:9999px;background:${color};box-shadow:0 1px 4px rgba(0,0,0,.25);border:2px solid #fff"></div>`;
+    return `<div style="width:10px;height:10px;border-radius:9999px;background:${color};box-shadow:0 1px 4px rgba(0,0,0,.25);border:2px solid var(--surface)"></div>`;
   }
   const shown =
     name.length > NO_PRICE_LABEL_MAX ? `${name.slice(0, NO_PRICE_LABEL_MAX)}…` : name;
-  return `<div style="transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:4px;white-space:nowrap;border-radius:9999px;background:rgba(255,255,255,.95);color:#3f4b5b;font:600 11px sans-serif;padding:4px 9px;box-shadow:0 1px 5px rgba(16,28,54,.18);border:1px solid rgba(16,28,54,.12)"><span style="width:5px;height:5px;border-radius:9999px;background:${color};flex:none"></span>${escapeHtml(shown)}</div>`;
+  /* [1009 · C] 바탕·글자·테두리 raw 색(흰 바탕 rgba(255,255,255,.95)·#3f4b5b) → 토큰. 옆의 시세 말풍선은 이미 var(--surface)라
+     다크 모드에서 이 이름 알약만 흰색으로 떠 있었다. 크기(패딩·글자·테두리 1px)는 그대로 — 겹침 계산과 짝이 맞는다. */
+  return `<div style="transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:4px;white-space:nowrap;border-radius:9999px;background:var(--surface);color:var(--text-2);font:600 11px sans-serif;padding:4px 9px;box-shadow:0 1px 5px rgba(16,28,54,.18);border:1px solid var(--border)"><span style="width:5px;height:5px;border-radius:9999px;background:${color};flex:none"></span>${escapeHtml(shown)}</div>`;
 }
 
 /**
@@ -1186,31 +1220,46 @@ function formatEokLabel(won: number): string {
   return `${Math.round(won / 10_000).toLocaleString("ko-KR")}만`;
 }
 
+/** [1009 · C] 말풍선 등락 글자 — "▲3.2%" · "▼1.1%" · "보합"(소수 첫째 자리, lib/format/delta). 상자 크기 거울(priceMarkerBox)도 같은 글자를 잰다 */
+function markerPctText(pct: number): string {
+  return deltaText(pct, { compact: true });
+}
+
+/** [1009 · C] 등락 색 — 토큰(--up/--down, 다크에서 자기 값으로 바뀐다). 예전 raw hex #e11900·#1565d8 는 다크에서도 그대로였다 */
+function markerPctColor(pct: number): string {
+  const dir = deltaDir(pct);
+  return dir === "up" ? "var(--up)" : dir === "down" ? "var(--down)" : "var(--text-3)";
+}
+
 /**
  * 호갱노노 스타일 시세 말풍선 마커.
  * 좌표 위에 평균가 + 전월대비 등락률(부동산 관례: 상승=빨강, 하락=파랑)을 표시한다.
+ *
+ * [1009 · C] 표기 표준 — 등락은 소수 첫째 자리·±0.05% 미만 "보합"(예전 "▲0.52%"·"▲0.00%"), 말풍선 바탕·글자·테두리·
+ * 선택색은 토큰(var(--surface)·--ink·--border-strong·--primary)으로 — 예전 raw hex(#fff·#191f28·#d1d6db·#3182f6·#eef5ff)는
+ * 다크 모드에서도 흰 말풍선이었다. 가격 구간 색(tierColor, lib/map/price-tiers)은 데이터 팔레트라 그대로 둔다.
  */
 function buildPriceMarkerHtml(data: MapMarkerData): string {
   const won = data.avgPriceWon ?? (data.avgPricePerM2 ?? 0) * 84;
   const price = data.priceLabel ?? formatEokLabel(won);
   const pct = data.momPct;
   const hasPct = pct !== undefined && Number.isFinite(pct);
-  const up = (pct ?? 0) >= 0;
-  const pctColor = up ? "#e11900" : "#1565d8";
-  const arrow = up ? "▲" : "▼";
   const pctHtml = hasPct
-    ? `<span style="font-size:11px;font-weight:700;color:${pctColor}">${arrow}${Math.abs(pct as number).toFixed(2)}%</span>`
+    ? `<span style="font-size:11px;font-weight:700;color:${markerPctColor(pct as number)}">${markerPctText(pct as number)}</span>`
     : "";
   const tier = data.tierColor;
   const selected = data.selected;
-  const borderColor = selected ? "#3182f6" : (tier ?? "#d1d6db");
+  const borderColor = selected ? "var(--primary)" : (tier ?? "var(--border-strong)");
   const borderWidth = selected ? 2 : tier ? 1.5 : 1;
-  const priceColor = tier ?? "#191f28";
-  const bg = selected ? "#eef5ff" : "#fff";
+  /* [1009 · C] 구간 색 글자는 구간 색과 --ink 를 반씩 섞는다(테두리는 구간 색 그대로 — 범례와 짝). 바탕이 토큰(다크에서 어두운
+     --surface)이 되자 진한 구간 색 글자가 묻혔다(실측 대비: #bd0026·#1d4fd8 2.6:1, #177a4a 3.2:1). 섞으면 다크 최저 5.2:1,
+     라이트에서도 예전 흰 바탕 위 노랑 #fed976 글자 1.4:1 → 3.6:1 로 오른다(나머지 구간은 4.5:1 이상). */
+  const priceColor = tier ? `color-mix(in srgb, ${tier} 55%, var(--ink))` : "var(--ink)";
+  const bg = selected ? "var(--primary-soft)" : "var(--surface)";
   const star = data.favorite
-    ? `<span style="font-size:11px;color:#f59e0b;margin-left:1px">★</span>`
+    ? `<span style="font-size:11px;color:var(--warning);margin-left:1px">★</span>`
     : "";
-  const tip = selected ? "#3182f6" : "#fff";
+  const tip = selected ? "var(--primary)" : "var(--surface)";
   /*
    * 단지 줌에서는 이름을 값과 함께 적는다.
    *
@@ -1223,9 +1272,9 @@ function buildPriceMarkerHtml(data: MapMarkerData): string {
   const rawName = data.label?.trim() ?? "";
   const nameHtml =
     data.showName && rawName
-      ? `<span style="font-size:11px;font-weight:700;color:#5b6675;max-width:96px;overflow:hidden;text-overflow:ellipsis">${escapeHtml(
+      ? `<span style="font-size:11px;font-weight:700;color:var(--text-2);max-width:96px;overflow:hidden;text-overflow:ellipsis">${escapeHtml(
           rawName.length > 8 ? `${rawName.slice(0, 8)}…` : rawName,
-        )}</span><span style="width:1px;height:10px;background:rgba(16,28,54,.16)"></span>`
+        )}</span><span style="width:1px;height:10px;background:var(--border-strong)"></span>`
       : "";
   return `
   <div style="display:inline-block;transform:translate(-50%,-100%);white-space:nowrap;font-family:sans-serif">
@@ -1244,8 +1293,9 @@ function buildPriceMarkerHtml(data: MapMarkerData): string {
  * 바깥에 투명 여백을 둬 손가락 표적을 24px 로 잡는다(점 자체는 12px).
  */
 function buildCollapsedDotHtml(data: MapMarkerData): string {
-  const ring = data.selected ? "#3182f6" : (data.tierColor ?? "#8b95a1");
-  const fill = data.favorite ? "#f59e0b" : "#fff";
+  /* [1009 · C] raw hex → 토큰(선택 --primary · 기본 --text-3 · 즐겨찾기 --warning · 바탕 --surface) */
+  const ring = data.selected ? "var(--primary)" : (data.tierColor ?? "var(--text-3)");
+  const fill = data.favorite ? "var(--warning)" : "var(--surface)";
   return `<div style="transform:translate(-50%,-50%);padding:6px;cursor:pointer"><div style="width:12px;height:12px;border-radius:9999px;background:${fill};border:2.5px solid ${ring};box-shadow:0 1px 4px rgba(16,28,54,.28)"></div></div>`;
 }
 
@@ -1266,9 +1316,7 @@ function priceMarkerBox(data: MapMarkerData): { width: number; height: number } 
     parts.unshift(Math.min(96, textWidth(shown, "700 11px sans-serif", 7)));
   }
   if (data.momPct !== undefined && Number.isFinite(data.momPct)) {
-    parts.push(
-      textWidth(`▲${Math.abs(data.momPct).toFixed(2)}%`, "700 11px sans-serif", 6.5),
-    );
+    parts.push(textWidth(markerPctText(data.momPct), "700 11px sans-serif", 6.5));
   }
   if (data.favorite) parts.push(textWidth("★", "700 11px sans-serif", 7) + 1);
 
@@ -1317,6 +1365,12 @@ function namePillBox(label: string): { width: number; height: number } {
   };
 }
 
+/* [1009 · C] 기본 인포윈도우(infoHtml 을 주지 않은 지도 — 동네 위치·노트 위치·분석 서랍) —
+   · "전문가" 링크(/experts → 보관된 /town/experts)와 구 "커뮤니티"(/community → /town 리다이렉트) 링크를 걷었다
+     (보관 영역 재유입 금지 · 맥락 없는 이동).
+   · 가격이 없는 마커(동네 글 위치 등)에 "시세 미제공"을 적지 않는다 — 있는 값만.
+   · 등락은 공통 규칙("▲ 3.2%"·보합) + 기준("전월 대비"), 색·글자는 토큰(내용 상자가 자기 바탕을 가져 다크에서도 읽힌다).
+   · 단지 이름은 이스케이프한다(예전엔 그대로 끼워 넣었다). */
 function buildInfoHtml(data: MapMarkerData): string {
   const won = data.avgPriceWon ?? (data.avgPricePerM2 ?? 0) * 84;
   const price =
@@ -1325,20 +1379,20 @@ function buildInfoHtml(data: MapMarkerData): string {
       ? formatEokLabel(won)
       : data.avgPricePerM2
         ? `${(data.avgPricePerM2 / 10_000).toFixed(0)}만원/m²`
-        : "시세 미제공");
-  const trend =
-    data.momPct !== undefined
-      ? `<span style="color:${data.momPct >= 0 ? "#e11900" : "#1565d8"}">${data.momPct >= 0 ? "▲" : "▼"} ${Math.abs(data.momPct)}%</span>`
+        : null);
+  const hasPct = data.momPct !== undefined && Number.isFinite(data.momPct);
+  const trend = hasPct
+    ? `<span style="color:${markerPctColor(data.momPct as number)};font-weight:700">${deltaText(data.momPct as number)}</span> <span style="color:var(--text-3);font-size:11px">전월 대비</span>`
+    : "";
+  const priceLine =
+    price || trend
+      ? `<p style="font-size:12px;color:var(--text-2);margin:0">${price ? escapeHtml(price) : ""} ${trend}</p>`
       : "";
   return `
-    <div style="padding:10px 14px;min-width:160px;font-family:sans-serif">
-      <p style="font-weight:700;font-size:13px;margin:0 0 4px">${data.label}</p>
-      <p style="font-size:12px;color:#555;margin:0">${price} ${trend}</p>
-      ${data.tradeCount30d !== undefined ? `<p style="font-size:11px;color:#888;margin:4px 0 0">30일 거래 ${data.tradeCount30d}건</p>` : ""}
-      <div style="margin-top:8px;display:flex;gap:6px">
-        <a href="/community?q=${encodeURIComponent(data.label)}" style="font-size:11px;color:#3182f6">커뮤니티</a>
-        <a href="/experts?q=${encodeURIComponent(data.label)}" style="font-size:11px;color:#3182f6">전문가</a>
-      </div>
+    <div style="padding:10px 14px;min-width:160px;font-family:sans-serif;background:var(--surface);color:var(--ink)">
+      <p style="font-weight:700;font-size:13px;margin:0 0 4px">${escapeHtml(data.label)}</p>
+      ${priceLine}
+      ${data.tradeCount30d !== undefined ? `<p style="font-size:11px;color:var(--text-3);margin:4px 0 0">30일 거래 ${data.tradeCount30d}건</p>` : ""}
     </div>
   `;
 }

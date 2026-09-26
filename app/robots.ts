@@ -26,6 +26,8 @@ const BASE_URL = DEFAULT_DESKTOP_ORIGIN; /* [947] 도메인 단일 소스 */
 
 /** 단일 출처: lib/security/blocked-crawlers.ts (미들웨어 403 목록과 같은 표) */
 import { BLOCKED_CRAWLERS } from "@/lib/security/blocked-crawlers";
+/** AI 검색·사용자 대리 봇 표 — lib/seo/ai-crawlers.ts (robots 와 문서·테스트가 같은 표를 본다) */
+import { AI_SEARCH_CRAWLERS } from "@/lib/seo/ai-crawlers";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -56,6 +58,9 @@ export default function robots(): MetadataRoute.Robots {
           // bot-only waste paths (31.8% of RUM, no index value)
           "/notes/new",
           "/widget",
+          /* [1007 · V2a-6] 외부 iframe 용 위젯 — 페이지 자체가 noindex(app/embed/layout.tsx)인데
+             크롤러가 단지마다 훑어 하루 1,723회 함수가 돌았다. 색인 가치 0. 미들웨어는 크롤러 UA 에 403. */
+          "/embed",
         ],
       },
       /* [#57, 2026-08-23 소유자 승인] AI 크롤러 개방 — llms.txt 로 "읽어가라"고
@@ -70,13 +75,17 @@ export default function robots(): MetadataRoute.Robots {
          유입이 없다. 검색엔진(Google·Naver·Bing·Daum)과 AI 검색 봇은 위 규칙대로 연다.
          robots 를 무시하는 것(Bytespider 등)은 middleware.ts 가 엣지에서 403 으로 막는다. */
       ...BLOCKED_CRAWLERS.map((userAgent) => ({ userAgent, disallow: "/" })),
-      ...["GPTBot", "OAI-SearchBot", "ClaudeBot", "CCBot", "PerplexityBot", "Google-Extended"].map(
-        (userAgent) => ({
-          userAgent,
-          allow: ["/", "/api/og/"],
-          disallow: ["/admin", "/my", "/messages", "/notifications", "/points", "/invite", "/welcome", "/payment", "/api"],
-        }),
-      ),
+      /* [1006 · E] AI 검색·사용자 대리 봇 명시 그룹 — 표는 lib/seo/ai-crawlers.ts.
+         예전 6종(GPTBot·OAI-SearchBot·ClaudeBot·CCBot·PerplexityBot·Google-Extended)에
+         ChatGPT-User·Claude-SearchBot·Claude-User·Perplexity-User·Amazonbot 를 더했다 —
+         답변 시점에 페이지를 직접 읽는 봇들이라 그룹이 없으면 `*` 규칙(더 넓은 차단)을 탔다.
+         학습 전용 토큰(Applebot-Extended 등)은 넣지 않는다 — 위 meta-externalagent 판단과 같다. */
+      ...AI_SEARCH_CRAWLERS.map((userAgent) => ({
+        userAgent,
+        allow: ["/", "/api/og/"],
+        /* [1007] /embed 는 `*` 와 같은 이유로 여기서도 막는다(noindex iframe 위젯) */
+        disallow: ["/admin", "/my", "/messages", "/notifications", "/points", "/invite", "/welcome", "/payment", "/api", "/embed"],
+      })),
     ],
     /* N4 — 인덱스 + 자식 전부를 적는다.
        인덱스 하나만 적어도 규격상 충분하지만, 실제로는 사이트맵 인덱스 처리가

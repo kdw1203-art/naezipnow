@@ -3,12 +3,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "../components/PageShell";
 import { AdSenseUnit } from "@/app/components/ads/AdSenseUnit";
-import { listReportMonths, formatYmKo, type ReportMonthSummary } from "@/lib/reports/monthly";
+import { formatYmKo, listReportMonths, type ReportMonthSummary } from "@/lib/reports/monthly";
+/* [1009 · 리뷰 H] 목록 로더(listReportMonths)가 1,000행에서 잘리던 것은 lib 에서 고쳤다 — 끝까지 나눠 읽는다 */
 import { listSeasonAvailability, type SeasonAvailability } from "@/lib/reports/seasonal";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { logger } from "@/lib/log";
+import { reportingClosed } from "@/lib/newui/reporting-window";
 
-export const revalidate = 3600;
+/* [1010] 1h → 1일. 목록(데이터가 있는 달 + 관측된 계절)은 월 경계에서만 늘어난다.
+   적재 직후 SOURCE_MAP.molit 이 "/reports" 를 이미 비우므로 TTL 은 안전망이다. */
+export const revalidate = 86_400;
 
 /* ============================================================
    S11/G7 — 월간 리포트 목록. 데이터가 있는 달만 나열한다(빈 달 페이지 양산 금지).
@@ -67,22 +71,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return loadError ? { ...base, robots: { index: false, follow: true } } : base;
 }
 
-/** [970 · B-32] 지금 진행 중인 달(KST, "YYYYMM") — 이 달의 리포트는 아직 집계가 쌓이는 중이다.
-    ISR 1시간이라 월이 바뀐 뒤 최대 1시간은 이전 달이 "집계 중"으로 남을 수 있다. */
-function currentKstYm(): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-  }).formatToParts(new Date());
-  const y = parts.find((p) => p.type === "year")?.value ?? "";
-  const m = parts.find((p) => p.type === "month")?.value ?? "";
-  return `${y}${m}`;
-}
-
 export default async function ReportsIndexPage() {
   const { months, seasons, loadError } = await loadReportsIndex();
-  const nowYm = currentKstYm();
+  /* [970 · B-32 → 1009 · H] "아직 신고가 들어오는 달" 표시 — 예전엔 이번 달에만 "집계 중"을 달아, 신고 기한(말일 + 30일)이
+     남은 지난달(2026-09-22 기준 8월분, 9/30 까지 신고)은 완결된 달처럼 보였다. 날짜로 가른다(lib/newui/reporting-window).
+     ISR 1시간이라 기한이 지난 뒤 최대 1시간은 "신고 중"이 남을 수 있다(보수적인 쪽). */
+  const now = new Date();
 
   /* 항목 46d — 실재하는 월간 리포트 목록을 ItemList 로 기술. 값은 페이지가
      이미 렌더하는 실데이터에서만 오고, 조회 실패면 노드를 내보내지 않는다. */
@@ -115,7 +109,7 @@ export default async function ReportsIndexPage() {
         <p className="rise-in-1 mt-2 text-[13px] leading-[1.7] text-text-2">
           국토교통부 실거래 신고 집계에서 매월 자동으로 만들어지는 리포트입니다.
           사람이 쓰는 시황 글이 아니라 데이터 요약이며, 모든 수치는{" "}
-          <Link href="/methodology" className="font-bold text-primary underline">
+          <Link href="/methodology" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
             공개된 방법론
           </Link>
           을 따릅니다.
@@ -174,14 +168,14 @@ export default async function ReportsIndexPage() {
                         >
                           <span className="text-[15px] font-extrabold text-ink">
                             {formatYmKo(m.ym)} 실거래 리포트
-                            {/* [970 · B-32] 이번 달은 아직 신고가 들어오는 중 — 완결처럼 보이지 않게 */}
-                            {m.ym === nowYm && (
-                              <span className="ml-1.5 rounded-md bg-primary-soft px-1.5 py-0.5 text-[12px] font-bold text-primary align-middle">
-                                집계 중
+                            {/* 신고 기한이 안 지난 달 — 완결처럼 보이지 않게 */}
+                            {!reportingClosed(m.ym, now) && (
+                              <span className="ml-1.5 inline-block whitespace-nowrap rounded-md bg-primary-soft px-1.5 py-0.5 text-[12px] font-bold text-primary align-middle">
+                                신고 중
                               </span>
                             )}
                           </span>
-                          <span className="text-[12px] font-semibold text-text-3">
+                          <span className="shrink-0 pl-2 text-[12px] font-semibold tabular-nums text-text-3">
                             {m.regionCount}개 지역 · {m.txCount.toLocaleString("ko-KR")}건 ›
                           </span>
                         </Link>

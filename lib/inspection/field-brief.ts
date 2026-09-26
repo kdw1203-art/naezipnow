@@ -39,6 +39,11 @@ function cleanText(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
+/** [1006] 표시 단위 — 설정(면적 단위)이 평이면 ㎡당 매매가를 평당으로 환산해 적는다 */
+export type FieldBriefOptions = { areaUnit?: "m2" | "pyeong" };
+/** 1평 = 3.3058㎡ — lib/prefs/area-unit.ts 와 같은 상수(그 모듈은 document 를 만지므로 여기서 다시 적는다) */
+const PYEONG_M2 = 3.3058;
+
 /**
  * API 응답 → 화면에 그릴 것. 아무것도 없으면 **null** 이다 —
  * 빈 카드를 그려서 "조회했는데 아무것도 없다"를 "볼 게 없다"로 보이게 하지 않는다.
@@ -46,8 +51,9 @@ function cleanText(v: unknown): string {
  * 날씨(weatherHint)는 일부러 뺀다. 방문 정보 칸에 이미 "제안 · …(탭하여 적용)"
  * 버튼으로 나와 있어서, 여기 또 적으면 같은 말이 한 화면에 두 번 읽힌다.
  */
-export function buildFieldBrief(raw: unknown): FieldBrief | null {
+export function buildFieldBrief(raw: unknown, opts: FieldBriefOptions = {}): FieldBrief | null {
   if (!raw || typeof raw !== "object") return null;
+  const pyeong = opts.areaUnit === "pyeong";
   const o = raw as Record<string, unknown>;
 
   const lines: FieldBriefLine[] = [];
@@ -62,7 +68,12 @@ export function buildFieldBrief(raw: unknown): FieldBrief | null {
     const m = o.market as Record<string, unknown>;
     const parts: string[] = [];
     if (typeof m.perM2Sale === "number" && Number.isFinite(m.perM2Sale)) {
-      parts.push(`㎡당 매매 ${Math.round(m.perM2Sale).toLocaleString("ko-KR")}만원`);
+      /* [1006] 평 단위 설정이면 평당(㎡당 × 3.3058) — 값은 같은 실거래, 단위만 다르다 */
+      parts.push(
+        pyeong
+          ? `평당 매매 ${Math.round(m.perM2Sale * PYEONG_M2).toLocaleString("ko-KR")}만원`
+          : `㎡당 매매 ${Math.round(m.perM2Sale).toLocaleString("ko-KR")}만원`,
+      );
     }
     if (typeof m.jeonseRatio === "number" && Number.isFinite(m.jeonseRatio)) {
       parts.push(`전세가율 ${m.jeonseRatio.toFixed(1)}%`);

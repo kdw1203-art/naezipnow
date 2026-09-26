@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
-import { searchComplexes } from "@/lib/complex/complex-store";
-import { normalizeSearchQuery } from "@/lib/search/normalize-query";
+import { parseDong } from "@/lib/complex/dong";
+import { searchComplexes, suggestComplexes, type ComplexRow } from "@/lib/complex/complex-store";
+import { expandComplexAlias } from "@/lib/search/normalize-query";
+import { searchComplexPreviews, type ComplexSearchHit } from "@/lib/search/complex-search";
 import { isPlaceSearchConfigured, searchPlaces } from "@/lib/search/place-search";
-import { getReadOnlySupabase } from "@/lib/newui/supabase-read";
 import { logger } from "@/lib/log";
 
-/* 검색 자동완성(#48) — 단지명 프리픽스 서제스트.
-   실거래(market_transactions) 기반 searchComplexes 상위 8건 {id,name,region,dong} 반환.
-   내부 결과가 부족(<3)하고 외부 장소검색 키가 설정돼 있으면 Kakao/Naver
-   키워드 장소검색을 폴백으로 붙여 places[] 로 함께 반환한다(env-gated no-op).
+/* 검색 자동완성(#48) — 단지명 서제스트.
+   search_complexes_preview RPC(v2 — 정규화·토큰·동네+단지명·오타, lib/search/complex-search) 상위 8건.
+   RPC 가 실패했거나 확실한 일치 없이 '비슷한 이름' 만 줬으면 searchComplexes(단지 단위 집계표 + 같은
+   순위 규칙)가 한 번 더 본다.
+   내부 결과가 부족(<3)하고 외부 장소검색 키가 설정돼 있으면 Naver 키워드 장소검색을 폴백으로 붙여
+   places[] 로 함께 반환한다(env-gated no-op).
+   [1008 · S] 결과가 0건이면 similar[](토큰 기준 "비슷한 이름" 제안)를 붙인다 — 단지 선택기·지도 검색이
+   "없어요" 로 끝나지 않게. 제안은 결과가 아니다(suggestions 에 섞지 않는다 — 지도 ?q= 자동 선택이
+   첫 결과를 고르는데, 제안을 고르면 엉뚱한 단지로 이동한다).
    CDN 캐시 s-maxage=3600 (인기 프리픽스 재활용). */
 
 export const runtime = "nodejs";
@@ -17,7 +23,10 @@ export interface SuggestItem {
   id: string;
   name: string;
   region: string;
+  /** 옛 필드 — 시군구의 뒷부분("동안구"). 새 화면은 area(읍면동)를 쓴다. */
   dong: string;
+  /** [1008 · S] 대표 지번의 읍면동("관양동") — 같은 이름 단지 가르기용. 모르면 null */
+  area?: string | null;
   /** 선택 시 지도 이동용 지오코딩 대상 주소(도로명 우선). 좌표는 클라이언트가 on-demand 지오코딩. */
   address: string;
   /* ── 미리보기 값 (2026-07-27 추가) ─────────────────────────────────────
@@ -35,6 +44,8 @@ export interface SuggestItem {
   /** 좌표를 이미 알면 실어 보낸다 — 클릭 시 지오코딩 왕복을 건너뛴다 */
   lat?: number | null;
   lng?: number | null;
+  /** [1008 · S] 이름·토큰으로 맞은 게 아니라 이름이 비슷한 후보(오타 추정) */
+  fuzzy?: boolean;
 }
 
 /** 외부(지도) 장소검색 폴백 항목 — 클릭 시 지도 이동에 필요한 좌표 포함. */
@@ -46,98 +57,107 @@ export interface PlaceItem {
 }
 
 const PLACES_CAP = 6;
+const LIMIT = 8;
 
-type PreviewRow = {
-  complex_id: string;
-  region_name: string;
-  complex_name: string;
-  address: string | null;
-  trade_count: number | null;
-  recent_trade_count: number | null;
-  avg_price_manwon: number | null;
-  avg_area_m2: number | null;
-  build_year: number | null;
-  households: number | null;
-  lat: number | null;
-  lng: number | null;
-};
+function districtOf(region: string): string {
+  const [city, ...rest] = region.split(" ");
+  return rest.join(" ") || city || "";
+}
 
-/**
- * search_complexes_preview RPC 호출 → SuggestItem[].
- *
- * RPC 가 없거나(구 DB) 실패하면 빈 배열을 돌려주고, 부르는 쪽이 기존
- * searchComplexes 경로로 물러선다. 여기서 throw 하면 폴백까지 막힌다.
- */
-async function suggestViaRpc(q: string): Promise<SuggestItem[]> {
-  const sb = getReadOnlySupabase();
-  if (!sb) return [];
-  const { data, error } = await sb.rpc("search_complexes_preview", { p_q: q, p_limit: 8 });
-  if (error) {
-    logger.warn("[search/suggest] search_complexes_preview 실패 — 기존 경로로 폴백", {
-      message: error.message,
-    });
-    return [];
-  }
-  return ((data as PreviewRow[] | null) ?? []).map((r) => {
-    const [city, ...rest] = (r.region_name ?? "").split(" ");
-    const district = rest.join(" ");
-    return {
-      id: r.complex_id,
-      name: r.complex_name,
-      region: (r.region_name ?? "").trim(),
-      dong: district || city || "",
-      address: r.address || `${r.region_name} ${r.complex_name}`.trim(),
-      avgPriceManwon: r.avg_price_manwon == null ? null : Number(r.avg_price_manwon),
-      recentTradeCount: r.recent_trade_count == null ? null : Number(r.recent_trade_count),
-      buildYear: r.build_year == null ? null : Number(r.build_year),
-      households: r.households == null ? null : Number(r.households),
-      lat: r.lat == null ? null : Number(r.lat),
-      lng: r.lng == null ? null : Number(r.lng),
-    };
-  });
+function hitToItem(h: ComplexSearchHit): SuggestItem {
+  return {
+    id: h.id,
+    name: h.name,
+    region: h.region,
+    dong: districtOf(h.region),
+    area: h.area ?? null,
+    address: h.address || `${h.region} ${h.name}`.trim(),
+    avgPriceManwon: h.avgPriceManwon ?? null,
+    recentTradeCount: h.recentTradeCount ?? null,
+    buildYear: h.buildYear ?? null,
+    households: h.households ?? null,
+    lat: h.lat,
+    lng: h.lng,
+    fuzzy: h.fuzzy === true,
+  };
+}
+
+function rowToItem(c: ComplexRow): SuggestItem {
+  const region = `${c.city} ${c.district}`.trim();
+  return {
+    id: c.id,
+    name: c.name,
+    region: c.city === c.district ? c.city : region,
+    dong: c.district || c.city || "",
+    area: parseDong(c.address),
+    address: c.road_address || c.address || `${region} ${c.name}`.trim(),
+    buildYear: c.build_year,
+    households: c.households,
+    lat: c.lat,
+    lng: c.lng,
+  };
 }
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  /* [#76] 통용 약칭·"아파트" 꼬리 정규화 — 지도 검색도 통합검색과 같은 흡수력을 갖는다.
-     (오타 내성 자체는 아래 search_complexes_preview 트라이그램이 이미 담당) */
-  const q = normalizeSearchQuery(searchParams.get("q")?.trim() ?? "");
+  /* [1008 · S] 약칭만 펼치고 '아파트' 꼬리는 떼지 않는다 — 순위가 원문 일치("공작아파트")를 먼저 본 뒤
+     꼬리 뗀 형("공작")을 다룬다(lib/search/normalize-query expandComplexAlias 주석). */
+  const q = expandComplexAlias(searchParams.get("q") ?? "");
 
   if (!q) {
     return NextResponse.json(
-      { suggestions: [] as SuggestItem[], places: [] as PlaceItem[], query: q },
+      { suggestions: [] as SuggestItem[], places: [] as PlaceItem[], similar: [] as SuggestItem[], query: q },
       { headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" } },
+    );
+  }
+  /* 80자 넘는 입력은 검색이 아니라 붙여넣기다(통합 검색과 같은 상한) — RPC 에 긴 정규식을 만들게 하지 않는다 */
+  if (q.length > 80) {
+    return NextResponse.json(
+      { suggestions: [], places: [], similar: [], query: q, error: "검색어는 80자까지예요" },
+      { status: 400 },
     );
   }
 
   let suggestions: SuggestItem[] = [];
+  let similar: SuggestItem[] = [];
   /* 자동완성이 빈 채로 내려가는 것 자체는 견딜 만하지만, 그 응답이
      s-maxage=3600 으로 CDN 에 얹히면 한 번의 조회 실패가 그 프리픽스의
      "검색 결과 없음"을 한 시간 동안 굳혀버린다. 실패한 응답은 캐시하지 않는다. */
   let lookupFailed = false;
+  let partial = false;
   try {
-    /* search_complexes_preview RPC 를 먼저 쓴다.
-       - 오타 내성: 예전 ilike '%q%' 는 "레미안"으로 "래미안"을 못 찾았다.
-         트라이그램 유사도를 함께 봐서 표기 흔들림을 흡수한다.
-       - 정렬 근거: 앞글자 일치 > 이름 유사도 > 최근 거래 활발도.
-         예전엔 정렬이 없어 거래 1건짜리 단지가 위에 오기도 했다.
-       - 미리보기 값(가격·거래·준공·세대수·좌표)을 함께 준다.
-       RPC 가 없는 환경(구 DB)에서는 기존 경로로 물러선다. */
-    suggestions = await suggestViaRpc(q);
+    const hits = await searchComplexPreviews(q, LIMIT);
+    /* [1008 · 리뷰 B] RPC 를 못 물어봤으면(null) 아래 집계표 경로의 답은 오타 추정이 빠진 불완전한 답이다 —
+       비어 있어도·차 있어도 CDN 에 한 시간 얹지 않는다(예전엔 실패 + 집계표 0건이 "없어요" 로 굳었다). */
+    if (hits === null) partial = true;
+    if (hits && hits.some((h) => !h.fuzzy)) {
+      /* 확실한 일치(이름·토큰)가 하나라도 있으면 RPC 순위(TS 규칙으로 다시 세운 것)를 그대로 쓴다. */
+      suggestions = hits.map(hitToItem);
+    } else {
+      /* RPC 실패(null)·0건·'비슷한 이름' 뿐 — 집계표 경로(같은 순위 규칙, 확실한 일치만)가 한 번 더 본다.
+         RPC 가 아직 v1(직전 정의)이면 v1 이 상위 8건 안에 목표를 못 올린 "목동 7단지"·"E편한세상 사천"·
+         "그린타운우성"·"사천 스카이" 를 여기서 잡는다(2026-09-21 v1 응답 실측: 넷 다 8건 전부 비슷한 이름).
+         거기서도 없으면 RPC 의 비슷한 이름 후보를 그대로 둔다(화면이 '비슷한 이름' 배지로 가른다 —
+         "벽절골롯데"→벽적골롯데 같은 오타가 이 길로 온다). RPC 는 다시 부르지 않는다(skipRpc). */
+      let rows: ComplexRow[] = [];
+      try {
+        rows = await searchComplexes(q, undefined, LIMIT, undefined, { skipRpc: true });
+      } catch (e) {
+        if (!hits || hits.length === 0) throw e;
+        /* 비슷한 이름 후보는 있다 — 보여 주되, 물러서는 길을 못 본 불완전한 답이라 캐시하지 않는다 */
+        partial = true;
+        logger.warn(`[search/suggest] 집계표 경로 실패 — 비슷한 이름 후보만 보냅니다 (q=${q})`, e);
+      }
+      suggestions = rows.length > 0 ? rows.slice(0, LIMIT).map(rowToItem) : (hits ?? []).map(hitToItem);
+    }
     if (suggestions.length === 0) {
-      const rows = await searchComplexes(q, undefined, 8);
-      suggestions = rows.slice(0, 8).map((c) => ({
-        id: c.id,
-        name: c.name,
-        region: `${c.city} ${c.district}`.trim(),
-        dong: c.district || c.city || "",
-        address: c.road_address || c.address || `${c.city} ${c.district} ${c.name}`.trim(),
-      }));
+      similar = (await suggestComplexes(q, 5)).map(rowToItem);
     }
   } catch (e) {
     // env 미설정·조회 실패 시 빈 목록 (클라이언트는 드롭다운 미표시)
     lookupFailed = true;
     suggestions = [];
+    similar = [];
     logger.warn(`[search/suggest] 단지 자동완성 조회 실패 (q=${q})`, e);
   }
 
@@ -161,10 +181,10 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json(
-    { suggestions, places, query: q, failed: lookupFailed },
+    { suggestions, places, similar, query: q, failed: lookupFailed },
     {
       headers: {
-        "Cache-Control": lookupFailed
+        "Cache-Control": lookupFailed || partial
           ? "no-store"
           : "public, s-maxage=3600, stale-while-revalidate=86400",
       },

@@ -11,6 +11,7 @@ import { ingestApplyhomeSupply } from "@/lib/market/supply-ingest";
 import { backfillSupplyGeocode } from "@/lib/market/supply-geocode";
 import { ingestErrorMessage, logIngest } from "@/lib/market/store";
 import { invalidateAfterIngest } from "@/lib/cache/invalidate";
+import { invalidateAllRegionPages } from "@/lib/region/invalidate-market";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,6 +48,15 @@ async function handle(req: Request) {
     }
     /* [OPT-10] 수집이 실제로 끝난 순간에만 캐시를 비운다 — 시간 추측 제거 */
     invalidateAfterIngest("supply");
+    /* [1010] 지역 페이지(/region/[id])의 "입주 예정 물량" 섹션도 이 적재로 바뀐다.
+       그 라우트의 TTL 을 6시간 → 7일로 늘렸으므로(1010 브리프 원칙 1) 여기 비움이
+       없으면 새 입주물량이 최대 7일 안 보인다.
+       **새 행이 실제로 들어온 날에만** 부른다: 이 적재는 매일 돌지만 청약홈 분양공고는
+       하루 0~몇 건이고, upsert 결과(upserted+migrated)가 0 이면 화면은 그대로다.
+       어느 지역인지는 SupplyIngestResult 가 알려주지 않아 카탈로그 전량을 비운다 —
+       드물게(공고가 있는 날에만) 도는 비용이라 감당할 만하다. */
+    const supplyChanged = result.upserted + result.migrated > 0;
+    if (supplyChanged) invalidateAllRegionPages();
     /* [#74] 좌표 점진 백필(일 25건) — 지도 레이어용. 실패해도 인제스트 성공은 유지. */
     let geocode: Awaited<ReturnType<typeof backfillSupplyGeocode>> | { error: string } | null =
       null;

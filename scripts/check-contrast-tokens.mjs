@@ -114,7 +114,9 @@ function readBlock(src, selector) {
 
 /* ---------- 검사 조합 ---------- */
 
-const TONES = ["danger", "success", "warning", "primary"];
+/* [1009] 등락색(up/down)도 같은 약속 — 표면·배경·자기 soft 위에서 본문 4.5:1.
+   가격 숫자는 화면에서 가장 많이 읽히는 글자라 "색만 예쁘고 안 읽히는" 값이 들어오면 안 된다. */
+const TONES = ["danger", "success", "warning", "primary", "up", "down"];
 const RAMP = ["ink", "text-1", "text-2", "text-3"];
 /** 본문이 얹힐 수 있는 배경 — 상태 카드 안에 캡션을 쓰는 건 자연스러운 일이라
     상태 soft 3종도 약속 대상에 넣는다. 2026-07-27 에 넣고 재 보니 --text-3 만

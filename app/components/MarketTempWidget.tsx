@@ -51,7 +51,10 @@ export const loadLatestTemperatures = cache(
       return res;
     },
     ["home-market-temp-latest-v1"],
-    { revalidate: 3600 },
+    /* [1010] 1시간 → 1일 + "market" 태그. 이 값이 /analysis 의 실질 TTL 이었다.
+       온도 아카이브는 주 1회 갱신이라 하루 눈금으로도 화면이 늦지 않고, 태그가 있어
+       실거래 적재(하루 1회)가 비운다. */
+    { revalidate: 86_400, tags: ["market"] },
   ),
 );
 
@@ -60,7 +63,7 @@ const loadRegionHistory = cache(
   unstable_cache(
     (regionId: string) => listRegionTemperatureHistory(regionId, 4),
     ["home-market-temp-history-v1"],
-    { revalidate: 3600 },
+    { revalidate: 86_400, tags: ["market"] },
   ),
 );
 

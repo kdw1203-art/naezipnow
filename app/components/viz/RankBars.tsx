@@ -12,7 +12,9 @@ export interface RankRow {
 
 /* 가로 랭킹 막대 — "표 대신" 쓰는 순위 시각화.
    전세가율·거래량 랭킹처럼 20~30행짜리 표는 숫자를 다 읽어야 순서가 보인다.
-   막대는 그 순서를 길이로 먼저 보여 준다. */
+   막대는 그 순서를 길이로 먼저 보여 준다.
+   [1009 · A] 누를 수 있는 행(링크)에만 눌림(press) — 호버 배경은 마우스 기기에서만(기존 a.rank-row:hover).
+   값 칸은 표처럼 세로로 줄 서게 tabular-nums, 좁은 칸에서도 잘리지 않게 w-16 → min-w. */
 export function RankBars({
   rows,
   suffix = "",
@@ -43,7 +45,7 @@ export function RankBars({
             <span className="rank-track">
               <span className="rank-fill" style={{ width: `${pct}%` }} />
             </span>
-            <span className="t-num t-sub w-16 shrink-0 text-right text-ink">
+            <span className="t-num t-sub min-w-16 shrink-0 text-right tabular-nums text-ink">
               {(Math.round(r.value * 10) / 10).toLocaleString("ko-KR")}
               {suffix}
             </span>
@@ -52,7 +54,7 @@ export function RankBars({
         return (
           <li key={r.key}>
             {r.href ? (
-              <Link href={r.href} className="rank-row no-underline">
+              <Link href={r.href} className="rank-row press no-underline">
                 {body}
               </Link>
             ) : (

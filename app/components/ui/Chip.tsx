@@ -58,13 +58,10 @@ export function Chip({
     .join(" ");
 
   if (href) {
-    // filled chip as a link — guarantee white text (never rely on text-white for <a>).
+    /* [1009 · T] 예전엔 선택된 링크 칩에 인라인 `color: #fff` 를 강제했다 — .chip-active 는 [962] 부터 한지 면(밝은 크림)
+       + 남색 글자라 흰 글자가 면에 묻혔다(대비 약 1.1:1). 글자색은 .chip-active 가 정한다(토큰 · 다크 대응). */
     return (
-      <Link
-        href={href}
-        className={cls}
-        style={active ? { color: "#fff" } : undefined}
-      >
+      <Link href={href} className={cls} aria-current={active ? "true" : undefined}>
         {children}
       </Link>
     );

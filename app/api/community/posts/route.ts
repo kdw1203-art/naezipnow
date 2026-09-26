@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { invalidateHomeData, invalidateTownFeed } from "@/lib/cache/invalidate";
+import { invalidateComplexById } from "@/lib/complex/complex-invalidate";
+import { invalidatePromptThreads, invalidateTownDataCaches } from "@/lib/town/invalidate-town";
 import { safeAuth } from "@/lib/safe-auth";
 import { findBlockedWord } from "@/lib/community/moderation";
 import {
@@ -227,8 +230,27 @@ export async function POST(req: Request) {
   }
   /* [970 · C-02] 피드(/town, ISR 120초)·상세(ISR 600초)를 즉시 재생성 — 방금 올린 글이
      목록에 안 보이던 원인. 댓글·좋아요 API 가 이미 같은 방식으로 상세를 갱신한다. */
-  revalidatePath("/town");
+  /* [1007] /town 은 이제 600초·동네 홈 62곳은 6시간 ISR 이라 시간만으로는 새 글이 안 보인다 —
+     피드와 동네 홈을 한 번에 비운다(revalidatePath("/town") 포함). 홈의 "동네이야기 인기글"
+     스냅샷(home-data-v1, 600초)도 같이 비운다. */
+  invalidateTownFeed();
+  invalidateHomeData();
+  /* [1006] 이야기 상세는 /town/story/[id] — 옛 주소(/town/news/[id])는 거기로 308 이지만
+     ISR 캐시가 남아 있을 수 있어 둘 다 갱신한다. */
+  revalidatePath(`/town/story/${post.id}`);
   revalidatePath(`/town/news/${post.id}`);
+  /* [1010] 단지에 매인 글이면 그 단지 허브(/complex/{id})의 "단지 이야기" 카드와 KPI
+     ("이야기 N")가 바로 바뀐다. 허브 TTL 이 7일이 됐으므로 여기서 비우지 않으면 방금 쓴
+     글이 최대 7일 안 보인다 — 원칙: 사람이 쓴 글은 쓰는 즉시 보여야 한다. */
+  invalidateComplexById(post.complexId);
+  /* [1010 · 동네축] 글감 스레드(/town/prompt/{idx}, TTL 300초 → 1일)는 이 글의 태그
+     (글감#N)로만 찾을 수 있다 — 14장을 통째로 비우지 않고 그 한 장만 비운다. */
+  invalidatePromptThreads(tags);
+  /* [1010 · 동네축] 이웃 글은 동네 글 병합 목록(related-town-posts-v1)과 주간 다이제스트의
+     "이웃 글 N건"에도 들어간다. 그 데이터 캐시 TTL 을 15분·1시간에서 1일로 올렸으므로
+     (그 TTL 이 /town/news·/town/news/[id]·/complex/{id} 라우트 TTL 을 대신 정하고 있었다 —
+     lib/town/cache-tags.ts 실측) 태그로 같이 비운다. */
+  invalidateTownDataCaches();
   if (session?.user?.email) {
     void recordFunnelEvent(req, {
       eventName: FUNNEL_EVENT.COMMUNITY_POST_CREATE,

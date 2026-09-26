@@ -53,7 +53,7 @@ export function AnalysisCrossLinks({
         {note && (
           <Link
             href={note.href}
-            className="chip bg-primary px-3.5 py-1.5 text-[12px] font-bold text-white no-underline"
+            className="chip press bg-primary px-3.5 py-1.5 text-[12px] font-bold text-white no-underline"
           >
             {note.label} ›
           </Link>
@@ -68,7 +68,7 @@ export function AnalysisCrossLinks({
             <Link
               key={d.id}
               href={href}
-              className="chip bg-bg px-3 py-1.5 text-[12px] font-bold text-text-2 no-underline transition-colors hover:text-primary"
+              className="chip press bg-bg px-3 py-1.5 text-[12px] font-bold text-text-2 no-underline transition-colors hover:text-primary"
             >
               {d.label} ›
             </Link>

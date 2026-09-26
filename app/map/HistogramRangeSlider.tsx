@@ -36,6 +36,8 @@ export interface HistogramRangeSliderProps {
   total?: number;
   /** 눈금 간격 (정수 축이면 1) */
   step?: number;
+  /** [1006] 이 축의 값이 **왜** 비는지 한 줄(예: 세대수는 K-apt 대장 연결 단지만) — 화면 안 개수와 별개인 사실 */
+  note?: string;
 }
 
 /** 값 → 0..1 위치 */
@@ -55,6 +57,7 @@ export function HistogramRangeSlider({
   available,
   total,
   step = 1,
+  note,
 }: HistogramRangeSliderProps) {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [dragging, setDragging] = useState<"min" | "max" | null>(null);
@@ -139,6 +142,7 @@ export function HistogramRangeSlider({
         <div className="t-sub text-text-3">
           이 지역에는 아직 값이 있는 단지가 없어요
         </div>
+        {note ? <div className="t-caption text-text-3">{note}</div> : null}
       </div>
     );
   }
@@ -215,6 +219,7 @@ export function HistogramRangeSlider({
           {total.toLocaleString("ko-KR")}개 · 값이 없는 단지는 이 조건으로 걸러지지 않아요
         </div>
       )}
+      {note ? <div className="t-caption text-text-3">{note}</div> : null}
     </div>
   );
 }

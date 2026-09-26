@@ -557,6 +557,32 @@ export async function loadNewsEntries(): Promise<MetadataRoute.Sitemap> {
   });
 }
 
+/**
+ * [1006] 이야기(이웃 글) 상세 — /town/story/[id]. posts 테이블의 사람 글 중 공개(public)
+ * 만 싣는다(link_only 는 색인도 막는다 — app/town/story/[id]/page.tsx robots).
+ *
+ * 지금은 사람 글 0건이라 이 로더는 빈 배열을 돌려준다(0개 = 사실). 인덱스 배선
+ * (lib/seo/sitemap-slugs.ts "story" · sitemap-sections.ts 등록 · app/sitemap-story.xml/route.ts)
+ * 은 required: false 로 붙이면 되고, 그때까지는 /town(허브)이 STATIC_ROUTES 에 있어
+ * 글이 생기면 피드 링크로 크롤된다. 실패는 section() 이 던진다.
+ */
+export async function loadStoryEntries(): Promise<MetadataRoute.Sitemap> {
+  return section("이웃 글", async () => {
+    const { listStoryPosts } = await import("@/lib/town/story");
+    const posts = await listStoryPosts(500);
+    return posts
+      .filter((p) => p.visibility !== "link_only")
+      .map((p) => {
+        const at = new Date(p.updatedAt || p.createdAt);
+        return {
+          url: `${BASE_URL}/town/story/${p.id}`,
+          ...(Number.isNaN(at.getTime()) ? {} : { lastModified: at }),
+          priority: 0.6,
+        };
+      });
+  });
+}
+
 /** N14 — 용어 개별 페이지. 코드 상수에서 나오므로 DB 조회도, 실패 경로도 없다.
     lastModified 는 적지 않는다 — 정적 라우트와 같은 이유로, 배포 시각을 런타임에
     알 수 없으니 추측한 날짜를 적느니 생략하는 편이 정확하다. */

@@ -1,5 +1,4 @@
 "use client";
-import { tiltHandlers } from "@/app/components/motion/Magnetic";
 
 import { useEffect, useState } from "react";
 import { isTierOnSale } from "@/lib/subscriptions/sell-config";
@@ -9,6 +8,8 @@ import Link from "next/link";
 import { planCheckoutHref, type CheckoutTier } from "@/lib/subscriptions/checkout-href";
 import { PreOrderCta } from "./PreOrderCta";
 import { getPlan, type PlanFeature } from "@/lib/subscriptions/plans";
+import { parseSubscriptionParams } from "@/lib/subscriptions/page-params";
+import { useSubscriptionViewer } from "./viewer";
 
 /* 구독 플랜 카드 3종 + 월간/연간 토글 (item 13, 클라이언트 상호작용)
    가격은 서버(page.tsx)에서 billing-periods 단일 출처로 주입 — 하드코딩 없음.
@@ -170,18 +171,20 @@ export function PlanCards({
   currentPlan,
   pro,
   expert,
-  initialBilling = "monthly",
+  initialBilling,
   paymentsReady = true,
   recurringReady,
-  highlightPlan = null,
-  returnTo = null,
+  highlightPlan,
+  returnTo,
 }: {
   /** [970 · A-06] null = 비로그인. 게스트는 어떤 카드도 "현재 이용 중" 이 아니고,
-      무료 카드 CTA 가 가입 입구("무료로 시작" → /signup)가 된다. */
-  currentPlan: PlanKind | null;
+      무료 카드 CTA 가 가입 입구("무료로 시작" → /signup)가 된다.
+      [1007] **undefined** 면 클라이언트가 세션으로 판정한다(useSubscriptionViewer) — 페이지가
+      ISR 이라 서버는 모른다. 프로브 전·비로그인은 null 과 같은 화면(게스트). */
+  currentPlan?: PlanKind | null;
   pro: TierPricing;
   expert: TierPricing;
-  /** 결제 실패 후 재시도 등 — 서버가 쿼리로 넘긴 초기 결제 주기 */
+  /** 결제 실패 후 재시도 등 — 초기 결제 주기. [1007] 없으면 마운트 뒤 ?billing= 에서 읽는다 */
   initialBilling?: Billing;
   /** 서버 판정(항목 33): 사업자 고지 완료 + PSP 설정 여부. false 면 결제
       버튼 대신 사전 등록(오픈 알림)을 그린다 — 눌러 보기 전엔 알 수 없는
@@ -191,19 +194,44 @@ export function PlanCards({
       단건). false 면 월간·연간 CTA 는 사전 등록으로 그린다 — 주간권은 별도 섹션. */
   recurringReady?: boolean;
   /** [970 · A-07] 로그인 복귀·결제 실패 재시도로 돌아온 사람이 골랐던 플랜 —
-      해당 카드(주간권이면 주간권 섹션)에 링을 두르고 그리로 스크롤한다. */
+      해당 카드(주간권이면 주간권 섹션)에 링을 두르고 그리로 스크롤한다.
+      [1007] 없으면 마운트 뒤 ?plan=·?billing=weekly 에서 읽는다 */
   highlightPlan?: HighlightPlan;
-  /** [1004] 페이월이 붙여 보낸 복귀 경로 — 서버가 읽어 넘긴다(클릭 시점에 주소창을 다시 읽지 않는다) */
+  /** [1004] 페이월이 붙여 보낸 복귀 경로. [1007] 없으면 마운트 뒤 ?returnTo= 에서 읽는다
+      (클릭 시점이 아니라 마운트 때 한 번 — 예전 서버 판정과 같은 시점 의미) */
   returnTo?: string | null;
 }) {
-  const [billing, setBilling] = useState<Billing>(initialBilling);
+  const [billing, setBilling] = useState<Billing>(initialBilling ?? "monthly");
+  /* [1007] URL 파라미터(billing·plan·returnTo) — 서버가 안 넘겼으면 마운트 뒤 한 번 읽는다.
+     useSearchParams 를 안 쓰는 이유: 정적/ISR 셸에서 Suspense 없이는 프리렌더 HTML 에서
+     이 카드들이 빠진다(/town/news 실측·저장소 규칙) — 토스 심사가 보는 화면이 곧 이 HTML 이다. */
+  const [urlParams, setUrlParams] = useState<ReturnType<typeof parseSubscriptionParams> | null>(null);
+  useEffect(() => {
+    if (initialBilling !== undefined && highlightPlan !== undefined && returnTo !== undefined) return;
+    try {
+      const p = parseSubscriptionParams(window.location.search);
+      setUrlParams(p);
+      if (initialBilling === undefined && p.billing === "annual") setBilling("annual");
+    } catch {
+      /* URL 파싱 실패 — 기본값(월간·강조 없음·복귀 없음) */
+    }
+  }, [initialBilling, highlightPlan, returnTo]);
+  const effectiveHighlight: HighlightPlan =
+    highlightPlan !== undefined ? highlightPlan : (urlParams?.highlightPlan ?? null);
+  const effectiveReturnTo: string | null =
+    returnTo !== undefined ? returnTo : (urlParams?.returnTo || null);
+  /* [1007] 로그인 여부·현재 플랜 — 서버가 안 넘겼으면 세션 프로브(공유 프라미스, 요청 0 추가).
+     비로그인 기준으로 그린 HTML 위에서 CTA 목적지(체크아웃 ↔ 빌링)·"현재 이용 중" 링만 바뀐다. */
+  const viewer = useSubscriptionViewer();
+  const resolvedPlan: PlanKind | null =
+    currentPlan !== undefined ? currentPlan : viewer.status === "authed" ? viewer.plan : null;
   const canCheckout = paymentsReady && (recurringReady ?? true);
   const pricing: Record<"pro" | "expert", TierPricing> = { pro, expert };
-  const isGuest = currentPlan === null;
+  const isGuest = resolvedPlan === null;
   /* [992] 판매 카탈로그에 없는 유료 카드는 그리지 않는다(sell-config). 이미 그 플랜인
      사람에게는 "현재 이용 중" 으로 남긴다 — 자기 플랜이 화면에서 사라지면 안 된다. */
   const cards = CARDS.filter(
-    (c) => c.checkoutTier === null || isTierOnSale(c.checkoutTier) || currentPlan === c.kind,
+    (c) => c.checkoutTier === null || isTierOnSale(c.checkoutTier) || resolvedPlan === c.kind,
   );
   const shownPaid = cards.filter((c) => c.checkoutTier !== null).map((c) => pricing[c.checkoutTier as "pro" | "expert"]);
   const maxAnnualPct = Math.max(0, ...shownPaid.map((t) => t.annualDiscountPct));
@@ -213,13 +241,13 @@ export function PlanCards({
      무관하다. 주간권 섹션은 이 컴포넌트 밖(page.tsx)에 있어 id 로 찾는다.
      scrollIntoViewSafely 가 감속 모션 설정을 존중한다(smooth → auto). */
   useEffect(() => {
-    const id = highlightAnchorId(highlightPlan);
+    const id = highlightAnchorId(effectiveHighlight);
     if (!id) return;
     const t = window.setTimeout(() => {
       scrollIntoViewSafely(document.getElementById(id), { block: "start" });
     }, 60);
     return () => window.clearTimeout(t);
-  }, [highlightPlan]);
+  }, [effectiveHighlight]);
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -244,9 +272,9 @@ export function PlanCards({
         {cards.map((p, i) => {
           const def = getPlan(p.defTier);
           /* [970 · A-06] 게스트(currentPlan=null)는 어느 카드도 현재 이용 중이 아니다 */
-          const isCurrent = currentPlan === p.kind;
+          const isCurrent = resolvedPlan === p.kind;
           /* [970 · A-07] 돌아온 사람이 골랐던 카드 — 현재 이용 중 링과 같은 스타일 */
-          const isHighlighted = !isCurrent && p.checkoutTier !== null && highlightPlan === p.checkoutTier;
+          const isHighlighted = !isCurrent && p.checkoutTier !== null && effectiveHighlight === p.checkoutTier;
           const tierPrice = p.checkoutTier ? pricing[p.checkoutTier] : null;
           const monthlyShown =
             tierPrice == null
@@ -260,12 +288,14 @@ export function PlanCards({
               key={p.kind}
               /* [970 · A-07] 앵커 id + scroll-mt(헤더 62px 아래) — 강조 스크롤의 목적지 */
               id={p.checkoutTier ? `plan-card-${p.checkoutTier}` : undefined}
-              /* [961] 프리미엄 카드 = 브랜드 네이비 + 3D 기울임(데스크톱, 최대 ±9°).
-                 예전 잉크색(rgba(25,31,40))은 "어두운 면 = 네이비" 규칙 위반이었다. */
-              {...(p.dark ? tiltHandlers(9) : {})}
-              className={`rise-in-${Math.min(i + 1, 6)} relative flex scroll-mt-24 flex-col gap-4 rounded-3xl p-7 ${
+              /* [961] 프리미엄 카드 = 브랜드 네이비(어두운 면 = 네이비 규칙).
+                 [1005] 3D 기울임(±18°·확대) 제거 — 소유자: "마우스를 올리면 너무 과도하게 움직인다".
+                 세 카드가 같은 hover(살짝 뜸 + 그림자, .tile 규칙·정교한 포인터에서만·감속 모션 존중)를
+                 쓴다. 플러스만 다른 동작을 하면 "왜 이 카드만 흔들리지"가 되고, 요금표는 비교 화면이라
+                 카드끼리 같은 물리 법칙을 따라야 읽힌다. */
+              className={`rise-in-${Math.min(i + 1, 6)} plan-card relative flex scroll-mt-24 flex-col gap-4 rounded-3xl p-7 ${
                 p.dark
-                  ? "njn-tilt bg-brand-navy shadow-[0_24px_60px_rgba(16,28,54,.28)] md:-translate-y-2"
+                  ? "bg-brand-navy shadow-[0_24px_60px_rgba(16,28,54,.28)] md:-translate-y-2"
                   : "card"
               } ${isCurrent || isHighlighted ? "ring-2 ring-primary" : ""}`}
             >
@@ -354,7 +384,7 @@ export function PlanCards({
                         tier: p.checkoutTier,
                         billing,
                         authed: !isGuest,
-                        returnTo,
+                        returnTo: effectiveReturnTo,
                       })}
                       className={`rounded-[14px] p-[13px] text-center text-[15px] font-bold no-underline ${p.ctaClass}`}
                     >

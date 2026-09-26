@@ -25,7 +25,7 @@ function ctxFixture(over: Partial<LiveToolContext> = {}): LiveToolContext {
     rent: { wolseSharePct: 41, jeonseCount: 300, wolseCount: 210, medianMonthlyKrw: 1_500_000, months: 3, source: "전월세 신고", asOf: "2026-09-13", sample: 510 },
     supply: { upcomingHouseholds: 1200, upcomingComplexes: 2, items: [], source: "청약홈", asOf: "2026-09-12" },
     news: null,
-    notes: { count: 4, avgScore: 7.5, latest: null, source: "이웃 임장노트", asOf: "2026-09-01", sample: 4 },
+    notes: { count: 4, avgScore: 3.75, latest: null, source: "이웃 임장노트", asOf: "2026-09-01", sample: 4 },
     macro: { baseRatePct: 2.5, source: "ECOS", asOf: "2026-09-10" },
     poi: null,
     ...over,
@@ -53,22 +53,56 @@ test("[993] 종합 진단 — 대표 수치는 측정된 레이더 축 평균, �
   assert.equal(v.evidence[1].href, "/region/x");
 });
 
-test("[993] 시세 예측 — 공개 백테스트 규칙(월간 변동 3개월 외삽)과 같은 수식", () => {
+test("[1008 · 리뷰 A-8] 시세 예측 — '3개월 뒤 예상' 칸은 없다(적중률을 공개한 규칙과 다른 식이었다)", () => {
   const v = buildVerdict({ tool: "ai-prediction", ctx: ctxFixture(), footnotes: [], now: NOW });
-  assert.ok(v.metric);
-  /* 24억 × 1.012^3 ≈ 24.87억 → short 표기 "24.9억" */
-  assert.equal(v.metric?.value, "24.9억");
-  assert.equal(v.metric?.asOf, "202607");
-  assert.ok(v.headline.includes("+1.2%"));
+  assert.equal(v.tiles?.find((t) => t.key === "forecast3m"), undefined);
+  assert.deepEqual(v.tiles?.map((t) => t.key), ["price", "regionYoy", "trades6m", "supply"]);
 });
 
-test("[993] 재료가 없으면 수치를 만들지 않는다 — 구간은 판단 보류", () => {
+test("[1008] 시세 예측 — 대표 수치는 낙관·기본·비관 시나리오(가정 계산), 기간 입력을 따른다", () => {
+  const v = buildVerdict({ tool: "ai-prediction", ctx: ctxFixture(), footnotes: [], now: NOW });
+  /* 지역 1년 흐름이 없으면 한 달 +1.2%×12 = 14.4% → 기본 = 절반(7.2) 을 연 4% 로 자름 → 24억 × 1.04 = 24.96억 */
+  assert.equal(v.metric?.label, "1년 뒤 기본 시나리오");
+  assert.equal(v.metric?.value, "25억");
+  assert.ok(v.scenario);
+  assert.deepEqual(v.scenario?.annual, { opt: 7, base: 4, pess: 1 });
+  assert.equal(v.scenario?.path.length, 2);
+  const three = buildVerdict({ tool: "ai-prediction", ctx: ctxFixture(), footnotes: [], input: { horizonMonths: 36 }, now: NOW });
+  assert.equal(three.scenario?.years, 3);
+  assert.equal(three.metric?.label, "3년 뒤 기본 시나리오");
+  /* 사용자가 넣은 기준 가격이 출발점 */
+  const mine = buildVerdict({ tool: "ai-prediction", ctx: ctxFixture(), footnotes: [], input: { basePriceMan: 200000 }, now: NOW });
+  assert.equal(mine.scenario?.startKrw, 2_000_000_000);
+  assert.equal(mine.scenario?.startKind, "input");
+  assert.ok(v.headline.includes("1년 뒤 기본"));
+  /* [1008] 알약 = 시나리오 방향(기본 +4% · 비관 +1% → 셋 다 오름 · 좋음) — 타이밍 신호로 정하지 않는다 */
+  assert.equal(v.band, "strong");
+  assert.equal(v.bandReason, "세 시나리오 모두 오름세(기본 연 +4%)");
+  const withMom = (m: number) => {
+    const base = ctxFixture();
+    return ctxFixture({ region: { ...base.region!, snapshot: { ...base.region!.snapshot!, saleChangeMonthly: m } } });
+  };
+  /* 한 달 +0.2% → 연 2.4% 의 절반 = 기본 +1.2% · 비관 −1.8% → 방향이 갈림(보통) */
+  const flat = buildVerdict({ tool: "ai-prediction", ctx: withMom(0.2), footnotes: [], now: NOW });
+  assert.equal(flat.band, "mixed");
+  assert.equal(flat.bandReason, "시나리오마다 방향이 달라요(기본 연 +1.2%)");
+  /* 한 달 −0.5% → 기본 −3% → 주의 */
+  const down = buildVerdict({ tool: "ai-prediction", ctx: withMom(-0.5), footnotes: [], now: NOW });
+  assert.equal(down.band, "weak");
+  assert.equal(down.bandReason, "기본 시나리오도 내림세(연 −3%)");
+});
+
+test("[993] 재료가 없으면 수치를 만들지 않는다 — 구간은 자료 부족(thin)", () => {
   const empty = ctxFixture({ complex: null, region: null, rent: null, supply: null, notes: null, macro: null });
   const v = buildVerdict({ tool: "ai-diagnosis", ctx: empty, footnotes: [], now: NOW });
   assert.equal(v.metric, null);
   assert.equal(v.numbers.length, 0);
   assert.equal(v.band, "thin");
+  assert.equal(v.bandLabel, "자료 부족");
   assert.equal(verdictToSummary(v).score, null);
+  /* [1008] 타일 4칸은 그대로 서고 값만 비운다("—" · 자료 없음) — 빈칸을 다른 숫자로 메우지 않는다 */
+  assert.equal(v.tiles?.length, 4);
+  assert.ok(v.tiles?.every((t) => t.value === null));
 });
 
 test("[993] 갭 — 입력값이 있으면 입력으로, 없으면 지역 전세가율 추정임을 라벨에 적는다", () => {
@@ -86,16 +120,36 @@ test("[993] 계약 위험도 — 전세가율 90 이상 위험 · 80 이상 주�
   assert.equal(danger.metric?.value, "위험");
   const caution = buildVerdict({ tool: "contract-risk", ctx: ctxFixture(), footnotes: [], input: { marketRatioPct: 85 }, now: NOW });
   assert.equal(caution.metric?.value, "주의");
-  const safe = buildVerdict({ tool: "contract-risk", ctx: ctxFixture(), footnotes: [], now: NOW });
+  const safe = buildVerdict({ tool: "contract-risk", ctx: ctxFixture(), footnotes: [], input: { marketRatioPct: 70 }, now: NOW });
   assert.equal(safe.metric?.value, "안전");
-  assert.ok(safe.metric?.note.includes("지역 신고 통계"));
+  assert.equal(safe.band, "strong");
+  /* [1008 · 리뷰 A-7] 입력 없이 지역 평균만이면 "안전·좋음"이 아니라 지역 평균 참고값(보통) — 출처는 지역 시세 출처 그대로 */
+  const regional = buildVerdict({ tool: "contract-risk", ctx: ctxFixture(), footnotes: [], now: NOW });
+  assert.equal(regional.metric?.label, "지역 평균 전세가율");
+  assert.equal(regional.metric?.value, "52");
+  assert.equal(regional.band, "mixed");
+  assert.ok(regional.metric?.note?.startsWith("지역 시세 스냅샷"));
+  assert.doesNotMatch(regional.metric?.note ?? "", /신고 통계/);
+  /* [1008 · 리뷰 A-3] 입력으로 만든 사실 목록 — 등기부·보증보험을 확인하지 않았으면 할 일로 */
+  assert.equal(regional.contract?.ratioSource, "region");
+  assert.equal(regional.contract?.issues.filter((i) => i.tone === "todo").length, 2);
+  const checked = buildVerdict({
+    tool: "contract-risk",
+    ctx: ctxFixture(),
+    footnotes: [],
+    input: { marketRatioPct: 85, jeonseMan: 50000, hasRegistrationCheck: true, hasInsurance: true },
+    now: NOW,
+  });
+  assert.deepEqual(checked.contract?.issues.map((i) => i.tone), ["warning"]);
+  assert.equal(checked.contract?.saleEstimateMan, Math.round(50000 / 0.85));
+  assert.equal(checked.contract?.clauses.length, 4);
 });
 
 test("[993] 요약 변환 — 대표 수치가 숫자일 때만 score, 핵심 숫자는 bullets 로", () => {
   const v = buildVerdict({ tool: "ai-diagnosis", ctx: ctxFixture(), footnotes: [], now: NOW });
   const s = verdictToSummary(v);
   assert.equal(typeof s.score, "number");
-  assert.ok(s.bullets[0].includes("대표 실거래가"));
+  assert.ok(s.bullets[0].includes("최근 실거래가"));
   const t = buildVerdict({ tool: "ai-timing", ctx: ctxFixture(), footnotes: [], now: NOW });
   assert.equal(verdictToSummary(t).score, null);
 });

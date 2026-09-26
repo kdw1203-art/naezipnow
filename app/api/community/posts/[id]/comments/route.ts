@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { invalidateTownFeed } from "@/lib/cache/invalidate";
+import { invalidateComplexById } from "@/lib/complex/complex-invalidate";
+import { invalidatePromptThreads } from "@/lib/town/invalidate-town";
 import { safeAuth } from "@/lib/safe-auth";
 import { isAdmin } from "@/lib/auth/is-admin";
 import { notifyPostAuthorOfNewComment } from "@/lib/notifications/comment-notify";
@@ -91,9 +94,16 @@ export async function POST(
     });
   }
 
-  // /town/news/[id] 는 ISR(600s)이다. 재생성 없이는 방금 단 댓글이 최대 10분간
+  // 이야기 상세(/town/story/[id])는 ISR(600s)이다. 재생성 없이는 방금 단 댓글이 최대 10분간
   // 안 보여 "기능이 조용히 죽은" 것처럼 읽힌다 — 쓰기 성공 시 즉시 재생성.
+  // [1006] 옛 주소(/town/news/[id])도 같이 — 그쪽은 이제 이야기면 story 로 308 이다.
+  revalidatePath(`/town/story/${id}`);
   revalidatePath(`/town/news/${id}`);
+  invalidateTownFeed(); // [1007] 피드 카드의 댓글 수(ISR 600초·동네 홈 6시간)
+  /* [1010] 단지 허브(7일 ISR)의 이야기 카드에 "댓글 N"이 서버 렌더로 실린다 */
+  invalidateComplexById(post.complexId);
+  /* [1010 · 동네축] 글감 스레드(/town/prompt/{idx}, TTL 1일)의 카드에도 "댓글 N"이 실린다 */
+  invalidatePromptThreads(post.tags ?? []);
 
   /* [3차] 참여 적립 — 글당 1회(refId), 일 3회 상한은 원장 규칙이 방어한다.
      적립 실패(상한·중복 포함)는 댓글 성공을 바꾸지 않는다(fail-soft). */
@@ -151,7 +161,11 @@ export async function DELETE(
     metadata: { postId, commentId, action: "soft_delete" },
   });
 
-  revalidatePath(`/town/news/${postId}`); // 댓글 등록과 같은 이유 (ISR 캐시 즉시 재생성)
+  revalidatePath(`/town/story/${postId}`); // 댓글 등록과 같은 이유 (ISR 캐시 즉시 재생성)
+  revalidatePath(`/town/news/${postId}`);
+  invalidateTownFeed(); // [1007]
+  invalidateComplexById(post.complexId); // [1010] 단지 허브의 "댓글 N"(7일 ISR)
+  invalidatePromptThreads(post.tags ?? []); // [1010 · 동네축] 글감 스레드 카드의 "댓글 N"
 
   return NextResponse.json({ post });
 }

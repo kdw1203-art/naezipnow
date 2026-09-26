@@ -8,6 +8,7 @@ import { safeAuth } from "@/lib/safe-auth";
 import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { createPartner } from "@/lib/dev-deals/write";
 import { isPartnerType, isPartnerField, maskContact } from "@/lib/dev-deals/types";
+import { invalidatePathList } from "@/lib/cache/invalidate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -96,5 +97,8 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
+  /* [1010] /dev-deals/partners 는 ISR 이고 listPartnersAll() 전량을 서버 HTML 에 싣는다
+     (필터는 PartnersClient). 등록이 곧 목록 변화 — TTL(6시간)을 올리는 대신 여기서 비운다. */
+  invalidatePathList(["/dev-deals/partners"], { label: "dev-partner" });
   return NextResponse.json({ ok: true, id: result.id }, { status: 201 });
 }
