@@ -64,9 +64,15 @@ test("[v4] 머리 — TownHero 는 흰 머리(네이비·워터마크·아이콘
   }
 });
 
-test("[v4] 뉴스룸 — 기사 행은 제목 한 줄 + 메타 한 줄, 썸네일·요약·배지 없음, 필터·더 보기는 그대로", () => {
+test("[v4 → 1013] 뉴스룸 — 기사 행은 72px 썸네일 + 제목 + 메타 한 줄, 요약·배지 없음, 필터·더 보기는 그대로", () => {
   const list = code("app/town/news/NewsListClient.tsx");
-  assert.doesNotMatch(list, /CoverImage|line-clamp|news-row__summary|news-tag|RelatedFold/);
+  /* [1013] 주인님 "뉴스는 이미지 파일이 있어야" — 썸네일은 모든 행 같은 칸(NewsThumb)으로 돌아왔다. 요약·배지는 여전히 없다. */
+  assert.doesNotMatch(list, /line-clamp|news-row__summary|news-tag|RelatedFold/);
+  assert.match(list, /<NewsThumb src=\{row\.image\} source=\{row\.source\} priority=\{first\} \/>/, "모든 행 썸네일 칸");
+  const thumb = code("app/town/news/NewsThumb.tsx");
+  assert.match(thumb, /h-\[72px\] w-\[72px\] shrink-0/, "행 높이가 같게 고정 칸");
+  assert.match(thumb, /fallback=\{fallback\}/, "사진이 깨지면 같은 칸에 매체 이름");
+  assert.doesNotMatch(thumb, /_next\/image|referrerPolicy/, "매체 사진은 복사·변환하지 않고, 매체의 핫링크 차단도 우회하지 않는다");
   /* [v4.1 · 리퀴드 목록] 묶음 톤(data-tone)은 붙어도 된다 — 행 구조는 그대로 */
   assert.match(list, /<ul (?:data-tone="[a-z]+" )?className="mt-1 divide-y divide-line">/);
   assert.match(list, /rail-x/, "지역 칩은 한 줄 가로 스크롤");

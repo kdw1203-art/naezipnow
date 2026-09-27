@@ -10,6 +10,8 @@ import { seoAlternates } from "@/lib/seo/alternates";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { logger } from "@/lib/log";
 import { formatKstShortDate } from "@/lib/format/kst";
+import { newsImageUrl } from "@/lib/town/shared";
+import { NewsThumb } from "../../NewsThumb";
 /* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* [#103] 뉴스 태그 허브 — /town/news/tag/[slug]
@@ -113,7 +115,7 @@ export default async function NewsTagPage({
         ) : (
           /* [v4] 뉴스룸 목록과 같은 행 — 제목 한 줄 + 매체 · 날짜 · 분류 · 관련 n 한 줄 */
           <ul data-tone="hanji" className="divide-y divide-line">
-            {clusters.map((c) => {
+            {clusters.map((c, i) => {
               const p = byId.get(c.primary.id)!;
               const tail = [
                 /* [970 · C-04] timeZone 없는 toLocaleDateString — 서버(UTC)에서 자정 전후 기사가 전날로 */
@@ -125,11 +127,15 @@ export default async function NewsTagPage({
                 .join(" · ");
               return (
                 <li key={p.id}>
-                  <Link href={`/town/news/${p.id}`} className="flex min-w-0 flex-col gap-0.5 py-3 no-underline">
-                    <span className="truncate t-body font-bold text-ink">{p.title}</span>
-                    <span className="flex min-w-0 items-baseline t-sub text-text-3">
-                      <span className="min-w-0 truncate font-bold text-text-2">{p.sourceName || "뉴스"}</span>
-                      <span className="shrink-0 whitespace-pre"> · {tail}</span>
+                  {/* [1013] 뉴스룸 목록과 같은 72px 썸네일 칸(사진 없으면 매체 이름) */}
+                  <Link href={`/town/news/${p.id}`} className="flex min-w-0 items-center gap-3 py-3 no-underline">
+                    <NewsThumb src={newsImageUrl(p)} source={p.sourceName || "뉴스"} priority={i === 0} />
+                    <span className="flex min-w-0 flex-1 flex-col gap-1">
+                      <span className="clamp-2 t-body font-bold text-ink">{p.title}</span>
+                      <span className="flex min-w-0 items-baseline t-sub text-text-3">
+                        <span className="min-w-0 truncate font-bold text-text-2">{p.sourceName || "뉴스"}</span>
+                        <span className="shrink-0 whitespace-pre"> · {tail}</span>
+                      </span>
                     </span>
                   </Link>
                 </li>

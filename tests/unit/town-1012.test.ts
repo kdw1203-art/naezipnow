@@ -328,7 +328,8 @@ test("[1012 · R2 → v4] 뉴스 행 — 매체명은 말줄임 칸, 시각은 �
   const list = stripComments(read("app/town/news/NewsListClient.tsx"));
   assert.match(list, /<span className="min-w-0 truncate font-bold text-text-2">\{row\.source\}<\/span>/);
   assert.match(list, /<span className="shrink-0 whitespace-pre">/);
-  assert.match(list, /<span className="truncate t-body font-bold text-ink">\{row\.title\}<\/span>/, "제목 한 줄");
+  /* [1013] 썸네일 72px 칸 옆 제목은 데스크톱 두 줄(clamp-2) — 폰은 전역 한 줄 규칙(html[data-mscale])이 한 줄로 */
+  assert.match(list, /<span className="clamp-2 t-body font-bold text-ink">\{row\.title\}<\/span>/, "제목");
   const feed = stripComments(read("app/town/feed-client.tsx"));
   assert.doesNotMatch(feed, /최신 글이 먼저, 노트 평점·저장수만큼 위로 올라와요/);
   assert.match(feed, /평점·저장 있는 \$\{boostedByScore\.toLocaleString\("ko-KR"\)\}장은 그만큼 위로/);

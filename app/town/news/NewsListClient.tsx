@@ -13,13 +13,15 @@
    분류 배지(.news-tag) · "관련 보도 n건 ▾" 접힘을 뺐다. 요약·관련 보도는 기사 상세(/town/news/[id])가
    그대로 보여 준다 — 목록 행의 메타 줄은 "관련 n" 만 센다. 원문 ↗(40px)은 행 오른쪽에 그대로.
    지역 칩 두 줄(시·도 / 시·군·구)은 한 줄 가로 스크롤 필터 칩으로, "지역"·"○○ 안" 설명 라벨과
-   "n / m행 · 같은 사건은 한 행으로 접었어요" 상태 문장, 마지막 장 안내 문장은 뺐다. */
+   "n / m행 · 같은 사건은 한 행으로 접었어요" 상태 문장, 마지막 장 안내 문장은 뺐다.
+   [1013] 썸네일은 다시 넣었다 — 이번엔 **모든 행에 같은 72px 칸**(사진 없으면 매체 이름)이라 행 높이가 같다. */
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@/app/components/Icon";
 import { findNewsRegionChip, type NewsRegionChip } from "@/lib/town/news-regions";
 import { NEWS_LIST_PAGE, type NewsCategoryTab, type NewsRow } from "@/lib/town/news-row";
+import { NewsThumb } from "./NewsThumb";
 /* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 칩 전환은 서버 왕복 없는 얕은 URL 갱신으로 한다. Next 14.1+ 는
@@ -41,21 +43,26 @@ function chipClass(active: boolean): string {
 }
 
 /* [v4] 기사 행 — 왼쪽(제목 한 줄 + 매체 · 시각 · 지역 · 분류 한 줄)은 상세로, 오른쪽 ↗(40px)은 원문(새 탭 · nofollow).
-   두 링크가 형제라 중첩 앵커가 아니다. 메타 줄 왼쪽(매체)은 말줄임, 시각은 줄지 않는다. */
-function NewsRowView({ row }: { row: NewsRow }) {
+   두 링크가 형제라 중첩 앵커가 아니다. 메타 줄 왼쪽(매체)은 말줄임, 시각은 줄지 않는다.
+   [1013] 주인님 "뉴스는 이미지 파일이 있어야" — 행 맨 왼쪽에 72px 정사각 썸네일(NewsThumb, 동네이야기 피드와 같은 칸).
+   사진이 없거나 깨지면 같은 칸에 매체 이름이라 행 높이는 늘 같다. 제목은 데스크톱 두 줄(폰은 한 줄 규칙). */
+function NewsRowView({ row, first }: { row: NewsRow; first: boolean }) {
   const tail = [row.city, row.category, row.related.length > 0 ? `관련 ${row.related.length}` : null]
     .filter(Boolean)
     .join(" · ");
   return (
     <li className="flex items-center gap-2">
-      <Link href={`/town/news/${row.id}`} className="flex min-w-0 flex-1 flex-col gap-0.5 py-3 no-underline">
-        <span className="truncate t-body font-bold text-ink">{row.title}</span>
-        <span className="flex min-w-0 items-baseline t-sub text-text-3">
-          {row.source && <span className="min-w-0 truncate font-bold text-text-2">{row.source}</span>}
-          <span className="shrink-0 whitespace-pre">
-            {row.source ? " · " : ""}
-            <time dateTime={row.publishedAt}>{row.timeLabel}</time>
-            {tail ? ` · ${tail}` : ""}
+      <Link href={`/town/news/${row.id}`} className="flex min-w-0 flex-1 items-center gap-3 py-3 no-underline">
+        <NewsThumb src={row.image} source={row.source} priority={first} />
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="clamp-2 t-body font-bold text-ink">{row.title}</span>
+          <span className="flex min-w-0 items-baseline t-sub text-text-3">
+            {row.source && <span className="min-w-0 truncate font-bold text-text-2">{row.source}</span>}
+            <span className="shrink-0 whitespace-pre">
+              {row.source ? " · " : ""}
+              <time dateTime={row.publishedAt}>{row.timeLabel}</time>
+              {tail ? ` · ${tail}` : ""}
+            </span>
           </span>
         </span>
       </Link>
@@ -257,8 +264,8 @@ export function NewsListClient({
       {/* [v4] 행 목록 — 같은 높이의 1px 구분선 행 */}
       {list.length > 0 && (
         <ul data-tone="hanji" className="mt-1 divide-y divide-line">
-          {list.map((row) => (
-            <NewsRowView key={row.id} row={row} />
+          {list.map((row, i) => (
+            <NewsRowView key={row.id} row={row} first={i === 0} />
           ))}
         </ul>
       )}

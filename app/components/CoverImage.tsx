@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { buildImageSrcSet, canOptimizeImage } from "@/lib/images/srcset";
 
@@ -60,6 +60,28 @@ export function CoverImage({
   const [state, setState] = useState<"ok" | "raw" | "failed">("ok");
   const canOptimize = canOptimizeImage(src);
   const show = Boolean(src) && state !== "failed";
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  const handleError = () => {
+    if (state === "ok" && canOptimize) {
+      setState("raw");
+      return;
+    }
+    /* [970 · C-12] 마지막 시도까지 죽었을 때만 알린다(최적화 → 원본 재시도 중엔 조용히).
+       failed 상태에선 <img> 자체가 없으므로(위 early return) 여기 오면 늘 첫 실패다. */
+    setState("failed");
+    onFailed?.();
+  };
+
+  /* [1013] 하이드레이션 전에 이미 실패한 사진 — 서버가 그린 <img>(특히 priority=eager 인 첫 칸)는 스크립트가 붙기 전에
+     깨질 수 있고, 그 error 이벤트는 React 가 받지 못해 브라우저 "깨진 그림" 아이콘이 그대로 남았다(뉴스 첫 행 실측).
+     붙는 순간 한 번 확인해 같은 실패 경로로 보낸다. */
+  useEffect(() => {
+    const el = imgRef.current;
+    if (el && el.complete && el.naturalWidth === 0 && el.naturalHeight === 0) handleError();
+    // 마운트 때 한 번만 — 이후 실패는 onError 가 받는다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!show) return <>{fallback}</>;
 
@@ -76,16 +98,8 @@ export function CoverImage({
         loading={priority ? "eager" : "lazy"}
         {...(priority ? { fetchPriority: "high" as const } : {})}
         decoding="async"
-        onError={() => {
-          if (state === "ok" && canOptimize) {
-            setState("raw");
-            return;
-          }
-          /* [970 · C-12] 마지막 시도까지 죽었을 때만 알린다(최적화 → 원본 재시도 중엔 조용히).
-             failed 상태에선 <img> 자체가 없으므로(위 early return) 여기 오면 늘 첫 실패다. */
-          setState("failed");
-          onFailed?.();
-        }}
+        ref={imgRef}
+        onError={handleError}
         className={imgClassName}
       />
       {scrim && (
