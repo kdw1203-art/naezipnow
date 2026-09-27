@@ -130,7 +130,7 @@ export function DesktopSideNav() {
       <div
         aria-hidden="true"
         onPointerEnter={show}
-        className="fixed bottom-0 left-0 top-[56px] z-40 w-[14px]"
+        className="fixed bottom-0 left-0 top-[70px] z-40 w-[14px]"
       />
       {/* 손잡이 — 키보드·발견성. 왼쪽 중간의 얇은 알약. focus 또는 click 으로 연다. */}
       <button
@@ -154,10 +154,8 @@ export function DesktopSideNav() {
         aria-hidden={!open}
         onPointerEnter={show}
         onPointerLeave={hideSoon}
-        /* 헤더(56)+12 = 68px 아래에서 시작([1012] 헤더가 평면이 되며 위 14px 띄움이 사라졌다). 미지원 시 그냥
-           왼쪽에 붙어 있는 정적 패널. [1012 · 규칙 1·2] 유리(.glass-strong·popover-surface 92%) → 불투명 surface +
-           1px 선 + 12px(큰 패널) + --shadow-lg(플로팅 패널은 허용 자리). */
-        className={`fixed left-3 top-[68px] z-40 flex max-h-[calc(100dvh-88px)] w-[248px] flex-col gap-1.5 overflow-y-auto rounded-3xl border border-line bg-surface p-1.5 [box-shadow:var(--shadow-lg)] transition-[transform,opacity] duration-[180ms] ease-out motion-reduce:transition-none ${
+        /* 헤더(14+56)+12 = 82px 아래에서 시작. 미지원 시 그냥 왼쪽에 붙어 있는 정적 패널. */
+        className={`glass-strong popover-surface fixed left-3 top-[82px] z-40 flex max-h-[calc(100dvh-100px)] w-[248px] flex-col gap-1.5 overflow-y-auto rounded-3xl border border-line p-1.5 [box-shadow:var(--shadow-md)] transition-[transform,opacity] duration-[180ms] ease-out motion-reduce:transition-none ${
           open ? "translate-x-0 opacity-100" : "pointer-events-none -translate-x-[110%] opacity-0"
         }`}
       >
@@ -167,8 +165,10 @@ export function DesktopSideNav() {
             <section
               key={g.href}
               aria-label={g.label}
-              className={`rounded-lg border p-1 transition-colors ${
-                isCurrentGroup ? "border-line-strong bg-primary-soft" : "border-line bg-surface"
+              className={`rounded-2xl border p-1 transition-colors ${
+                isCurrentGroup
+                  ? "border-[rgba(29,79,216,.28)] bg-[color-mix(in_srgb,var(--primary-soft)_70%,transparent)]"
+                  : "border-line bg-[color-mix(in_srgb,var(--surface)_62%,transparent)]"
               } ${g.label === "마이" ? "mt-1.5 [border-top-width:2px]" : ""}`}
             >
               {/* 묶음 머리 — 아이콘 배지 + 굵은 라벨. 허브로 가는 링크. */}
@@ -185,7 +185,7 @@ export function DesktopSideNav() {
                   aria-hidden="true"
                   className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${
                     isCurrentGroup
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-white [box-shadow:var(--shadow-cta)]"
                       : "bg-surface text-text-2 [box-shadow:inset_0_0_0_1px_var(--border)]"
                   }`}
                 >
@@ -209,7 +209,7 @@ export function DesktopSideNav() {
                       aria-current={cur(c.href)}
                       className={`block rounded-lg px-2 py-[5px] t-body font-semibold no-underline ${
                         active
-                          ? "bg-surface text-primary [box-shadow:inset_0_0_0_1px_var(--border)]"
+                          ? "bg-surface text-primary [box-shadow:var(--shadow-sm)]"
                           : "text-text-2 hover:bg-[rgba(29,79,216,.07)] hover:text-primary"
                       }`}
                     >

@@ -1,5 +1,4 @@
 "use client";
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 3곳을 font-bold(700)로 바꿨다. */
 
 import { useEffect, useRef } from "react";
 import { Icon } from "@/app/components/Icon";
@@ -97,7 +96,7 @@ export function NoteFinishStep(p: {
             type="button"
             onClick={p.onPick}
             disabled={p.uploading || p.photos.length >= p.maxPhotos}
-            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border-[1.5px] border-dashed border-line-strong p-[11px] t-body font-bold text-text-2 disabled:opacity-60"
+            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border-[1.5px] border-dashed border-line-strong p-[11px] text-center t-body font-bold text-text-2 disabled:opacity-60"
           >
             <Icon name="📷" size={16} className="inline shrink-0 align-middle" />
             {p.uploading ? "업로드 중…" : `사진 추가 (${p.photos.length}/${p.maxPhotos})`}
@@ -126,15 +125,14 @@ export function NoteFinishStep(p: {
       >
         <div className="min-w-0">
           <div className="t-body font-bold text-ink">공개 노트로 저장</div>
-          {/* [v4 · 규칙 3] 설명 문장 → 사실 한 줄(포인트는 lib/points/catalog note_public 100P) */}
           <div className="mt-0.5 t-sub text-text-3">
             {p.isPublic
               ? p.visibilityFromPrefs
-                ? "공개 피드 노출 · 설정 기본값 · 최초 공개 +100P"
-                : "공개 피드 노출 · 최초 공개 +100P"
+                ? "공개 피드에 노출돼요 · 설정에서 정한 기본값 · 노트당 최초 공개 시 100P 적립"
+                : "공개 피드에 노출돼요 · 노트당 최초 공개 시 100P 적립"
               : p.visibilityFromPrefs
-                ? "끄면 나만 보기 · 설정 기본값"
-                : "끄면 나만 보기 · 기본값"}
+                ? "꺼져 있으면 나만 볼 수 있어요 · 설정에서 정한 기본값"
+                : "꺼져 있으면 나만 볼 수 있어요 (기본값)"}
           </div>
         </div>
         <Switch on={p.isPublic} />

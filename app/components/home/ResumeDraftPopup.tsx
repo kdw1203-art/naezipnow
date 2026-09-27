@@ -1,9 +1,8 @@
 "use client";
-/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
-/* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Icon } from "@/app/components/Icon";
 import {
   readNoteDraftSummary,
   type NoteDraftSummary,
@@ -72,15 +71,17 @@ export function ResumeDraftPopup() {
 
   return (
     <div className="fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom,0px))] z-40 md:inset-x-auto md:bottom-6 md:right-6 md:w-[320px]">
-      {/* [v4 · 규칙 7·3] 앞의 아이콘 타일(파란 네모 + 공책 아이콘)을 뺐다 — 아이콘은 조작(닫기)에만.
-          보조 줄의 문장형 폴백("임시저장된 노트가 있어요")은 명사형으로. */}
-      <div className="card flex items-center gap-3 rounded-lg border-line-strong p-3.5 [box-shadow:var(--shadow-md)] [animation:riseIn_240ms_var(--ease-out)_backwards]">
+      <div className="card flex items-center gap-3 rounded-2xl border-primary/25 p-3.5 shadow-[0_16px_44px_rgba(16,28,54,.18)] [animation:riseIn_240ms_var(--ease-out)_backwards]">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary">
+          <Icon name="notebook-pen" size={17} />
+        </span>
         <Link href="/notes/new" className="min-w-0 flex-1 no-underline">
-          <span className="block truncate text-[13px] font-bold leading-tight text-ink">
+          <span className="block text-[13px] font-bold leading-tight text-ink">
             작성 중인 노트 이어서 쓰기
           </span>
           <span className="mt-0.5 block truncate text-[12px] text-text-3">
-            {[where, ago ? `${ago} 저장됨` : null].filter(Boolean).join(" · ") || "임시저장된 노트"}
+            {[where, ago ? `${ago} 저장됨` : null].filter(Boolean).join(" · ") ||
+              "임시저장된 노트가 있어요"}
           </span>
         </Link>
         <button

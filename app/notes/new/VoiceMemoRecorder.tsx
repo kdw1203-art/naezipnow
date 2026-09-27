@@ -1,5 +1,4 @@
 "use client";
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 1곳을 font-bold(700)로 바꿨다. */
 
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/app/components/Icon";
@@ -143,17 +142,16 @@ export function VoiceMemoRecorder({
             /* [984] 실측 32px — 현장에서 장갑 낀 손으로도 누르는 버튼이다(989 기준 40px) */
             className="min-h-[40px] rounded-lg bg-danger px-3 py-1.5 t-sub font-bold text-white"
           >
-            녹음 끝내기 {sec}s
+            ■ 녹음 끝내기 {sec}s
           </button>
         ) : (
           <button
             type="button"
             onClick={start}
             disabled={state === "uploading" || memos.length >= MAX_MEMOS}
-            className="inline-flex min-h-[40px] items-center gap-1 rounded-lg border border-line-strong bg-bg px-3 py-1.5 t-sub font-bold text-text-1 disabled:opacity-50"
+            className="min-h-[40px] rounded-lg border border-line-strong bg-bg px-3 py-1.5 t-sub font-bold text-text-1 disabled:opacity-50"
           >
-            {/* [1012] 규칙 4 — 🎙 이모지 → 마이크 선 아이콘 */}
-            {state === "uploading" ? "저장 중…" : <><Icon name="mic" size={16} />30초 녹음</>}
+            {state === "uploading" ? "저장 중…" : (<><Icon name="mic" size={14} className="mr-1 inline align-[-2px]" />30초 녹음</>)}
           </button>
         )}
       </div>
@@ -189,27 +187,29 @@ export function VoiceMemoRecorder({
               </div>
               {txState[u] === "error" && (
                 <p className="t-caption font-semibold text-warning">
-                  전사 실패 — 잠시 후 다시
+                  전사에 실패했어요 — 잠시 후 다시 눌러 주세요.
                 </p>
               )}
               {txState[u] === "unavailable" && (
-                <p className="t-caption text-text-3">전사 미지원</p>
+                <p className="t-caption text-text-3">지금은 전사를 지원하지 않아요.</p>
               )}
             </div>
           ))}
         </div>
       )}
       {state === "denied" && (
-        <p className="t-sub font-bold text-text-3">마이크 권한 거부 — 녹음 건너뜀</p>
+        <p className="t-sub font-bold text-text-3">마이크 권한이 거부돼 녹음을 건너뛰어요.</p>
       )}
       {state === "unsupported" && (
-        <p className="t-sub font-bold text-text-3">이 브라우저는 녹음 미지원</p>
+        <p className="t-sub font-bold text-text-3">이 브라우저는 녹음을 지원하지 않아요.</p>
       )}
       {state === "error" && (
-        <p className="t-sub font-bold text-warning">저장 실패 — 다시 시도</p>
+        <p className="t-sub font-bold text-warning">저장에 실패했어요 — 다시 시도해 주세요.</p>
       )}
-      {/* [v4 · 규칙 3] 권유 문장 삭제 — 공개 범위 사실만 한 줄 */}
-      <p className="t-caption text-text-3">노트에 첨부 · 공개 노트는 누구나 재생</p>
+      <p className="t-caption text-text-3">
+        말로 남긴 첫인상은 나중에 글로 옮길 때 가장 좋은 재료가 됩니다. 녹음은 노트에
+        첨부되며, 공개 노트에서는 다른 사람도 들을 수 있어요.
+      </p>
     </div>
   );
 }

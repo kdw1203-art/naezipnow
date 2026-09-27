@@ -145,12 +145,12 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
   }
 
   return (
-    /* [v4 · 규칙 5·7·8·10] 폼 머리 아이콘 · 버튼 아이콘 · 가운데 빈 카드(아이콘 원) · 카드 목록 → 글자 제목 · 한 줄 빈 상태 ·
-       1px 선 행(왼쪽 이름 + 범위·검색어 한 줄 / 오른쪽 알림·삭제). 조작 버튼(알림·삭제)의 아이콘은 조작이라 남긴다 */
-    <div className="flex w-full flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4">
       {/* 생성 폼 */}
-      <form onSubmit={handleCreate} className="card rise-in flex flex-col gap-3 rounded-lg p-4">
-        <h2 className="t-section text-ink">새 검색 저장</h2>
+      <form onSubmit={handleCreate} className="card rise-in flex flex-col gap-3">
+        <div className="flex items-center gap-1.5 t-section text-ink">
+          <Icon name="plus" size={16} />새 검색 저장
+        </div>
 
         <label className="flex flex-col gap-1">
           <span className="t-sub font-semibold text-text-2">검색 이름</span>
@@ -196,8 +196,9 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
         <button
           type="submit"
           disabled={creating}
-          className="btn-primary btn-md press self-start disabled:opacity-60"
+          className="btn-primary press inline-flex items-center justify-center gap-1.5 disabled:opacity-60"
         >
+          <Icon name="check" size={16} />
           {creating ? "저장 중…" : "검색 저장"}
         </button>
       </form>
@@ -214,26 +215,45 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
 
       {/* 목록 */}
       {items.length === 0 ? (
-        /* [1012] 규칙 6 — 누가·어디서 */
-        <p className="rise-in border-y border-line py-3 t-sub text-text-3">
-          저장한 검색 조건 없음 · 위 폼에서 이름·범위·검색어 저장
-        </p>
+        <div className="card rise-in flex flex-col items-center gap-2 py-8 text-center">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-soft text-primary">
+            <Icon name="search" size={20} />
+          </span>
+          <p className="t-body font-bold text-ink">아직 저장한 검색이 없어요.</p>
+          <p className="t-sub text-text-3">
+            위에서 관심 조건을 저장하면 여기에 모아 볼 수 있어요.
+          </p>
+        </div>
       ) : (
-        <ul data-tone="hanji" className="flex flex-col divide-y divide-line border-y border-line">
+        <ul className="flex flex-col gap-3">
           {items.map((item, i) => (
             <li
               key={item.id}
-              /* [1009 · H] 행 자체는 누를 수 없다(안의 버튼만) — 눌림(.tile)을 주지 않는다 */
-              className={`${riseClass(i)} flex min-h-14 flex-wrap items-center justify-between gap-x-3 gap-y-2 py-3`}
+              /* [1009 · H] 카드 자체는 누를 수 없다(안의 버튼만) — 눌림(.tile)을 주지 않는다 */
+              className={`card ${riseClass(i)} flex flex-col gap-2.5`}
             >
-              <span className="min-w-0 flex-1">
-                <span className="block truncate t-body font-bold text-ink">{item.label}</span>
-                <span className="mt-0.5 block truncate t-sub text-text-3">
-                  {SCOPE_LABELS[item.scope]} · {item.query ? item.query : "검색어 없음"}
-                </span>
-              </span>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="truncate t-section text-ink">
+                      {item.label}
+                    </span>
+                    <span className="rounded-full bg-primary-soft chip-pad t-sub font-semibold text-primary">
+                      {SCOPE_LABELS[item.scope]}
+                    </span>
+                  </div>
+                  {item.query ? (
+                    <p className="flex items-center gap-1 t-sub text-text-2">
+                      <Icon name="search" size={13} />
+                      <span className="truncate">{item.query}</span>
+                    </p>
+                  ) : (
+                    <p className="t-sub text-text-3">검색어 없음</p>
+                  )}
+                </div>
+              </div>
 
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex items-center justify-between gap-2 border-t border-line pt-2.5">
                 <button
                   type="button"
                   onClick={() => handleToggle(item)}
@@ -251,7 +271,7 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
                   type="button"
                   onClick={() => handleDelete(item)}
                   disabled={busyId === item.id}
-                  className="press inline-flex min-h-10 items-center gap-1 rounded-full px-2.5 t-sub font-semibold text-text-3 disabled:opacity-60"
+                  className="press inline-flex items-center gap-1 rounded-full px-2.5 py-1 t-sub font-semibold text-text-3 disabled:opacity-60"
                   aria-label={`${item.label} 삭제`}
                 >
                   <Icon name="x" size={14} />

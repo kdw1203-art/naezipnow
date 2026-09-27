@@ -1,5 +1,4 @@
 "use client";
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 10곳을 font-bold(700)로 바꿨다. */
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
@@ -267,12 +266,11 @@ function phaseAmount(phase: ContractPhase, split: PaymentSplit | null): { label:
   return null;
 }
 
-/** 요약 줄의 큰 D-day 색 — 오늘·7일 안은 경고색, 지난 법정 기한은 위험색.
-    [v4 · 규칙 4] 요약은 네이비 면이 아니라 흰 카드 — 글자색도 라이트 토큰으로 */
+/** 요약 줄의 큰 D-day 색(네이비 면 위) — 오늘·7일 안은 호박색, 지난 법정 기한은 주홍 */
 const BIG_DDAY_TONE: Record<string, string> = {
-  today: "text-warning",
-  soon: "text-warning",
-  overdue: "text-danger",
+  today: "text-on-navy-amber",
+  soon: "text-on-navy-amber",
+  overdue: "text-brand-red-dark",
 };
 
 export function ContractPlanner() {
@@ -401,7 +399,7 @@ export function ContractPlanner() {
           <MoneyField
             id="jr-price"
             label="매매가"
-            hint="선택" /* [v4 · 규칙 3] 설명 문장 → 한 단어 */
+            hint="선택 — 잔금·취득세·대출 계산에 써요"
             value={plan.priceManwon}
             disabled={!ready}
             onCommit={(v) => setAmount("priceManwon", v)}
@@ -454,8 +452,7 @@ export function ContractPlanner() {
           )}
           {split && split.balanceManwon !== null && <PaymentBar split={split} />}
           {split && split.depositManwon === null && (
-            /* [v4 · 규칙 3] 안내 문장 → 식 한 줄 */
-            <p className="m-0 t-caption text-text-3">잔금 = 매매가 − 계약금 − 중도금 · 계약금을 넣으면 계산</p>
+            <p className="m-0 t-caption text-text-3">계약금을 넣으면 잔금(매매가 − 계약금 − 중도금)을 계산해 잔금일 칸에 적어요.</p>
           )}
         </div>
 
@@ -494,42 +491,47 @@ export function ContractPlanner() {
             </button>
           )}
         </div>
-        {/* [v4 · 규칙 3] 캘린더 안내 두 문장 → 사실 한 줄 */}
-        <p className="jr-noprint m-0 mt-2 t-caption text-text-3">
-          {canCalendar
-            ? ".ics — 기한마다 알림 붙은 일정"
-            : anyDated
-              ? "남은 기한 없음 · 지난 날·체크한 일은 캘린더에서 제외"
-              : "계약일·잔금일을 넣으면 캘린더 저장"}
-        </p>
+        {!canCalendar && (
+          <p className="jr-noprint m-0 mt-2 t-caption text-text-3">
+            {anyDated
+              ? "남은 기한이 없어요 — 지난 날이나 모두 체크한 일은 캘린더에 넣지 않아요."
+              : "계약일이나 잔금일을 넣으면 기한마다 알림이 붙은 캘린더 일정으로 내려받을 수 있어요."}
+          </p>
+        )}
+        {canCalendar && (
+          <p className="jr-noprint m-0 mt-2 t-caption text-text-3">
+            내려받은 .ics 파일을 열면 휴대폰·PC 캘린더에 기한마다 알림이 붙은 일정이 들어가요.
+          </p>
+        )}
       </section>
 
-      {/* ── 요약 — 다음 할 일 · 남은 날(크게) · 진행 막대.
-          [v4 · 규칙 4] 네이비 면(.jr-summary — globals.css 가 네이비를 칠한다)을 떼고 흰 카드 + 글자 위계. 흰 면이라 인쇄 보정도 필요 없다 ── */}
+      {/* ── 요약 — 다음 할 일 · 남은 날(크게) · 진행 막대 ── */}
       {hasDates && (
-        <section className="card flex flex-col gap-3 rounded-lg p-4" aria-label="다음 할 일">
+        <section className="jr-summary flex flex-col gap-3 rounded-2xl p-4" aria-label="다음 할 일">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="t-caption font-bold text-text-3">다음 할 일</span>
+              <span className="t-caption font-bold tracking-wider text-on-dark-muted">다음 할 일</span>
               {next && next.due ? (
                 <>
-                  <span className="t-section break-words text-ink">{next.meta.title}</span>
-                  <span className="t-sub text-text-3">
+                  <span className="t-section break-words text-on-dark">{next.meta.title}</span>
+                  <span className="t-sub text-on-dark-muted">
                     {formatKoreanDay(next.due)}
                     {(next.meta.legal || next.meta.suggested) && ` · ${next.meta.dueText}`}
                   </span>
                 </>
               ) : (
-                <span className="t-section text-ink">{noNextText}</span>
+                <span className="t-section text-on-dark">{noNextText}</span>
               )}
               {/* 다가오는 기한이 있어도 지난 법정 기한을 체크하지 않았으면 함께 말한다 — 요약만 보고 넘어가지 않게 */}
               {next && overdue > 0 && (
-                <span className="t-caption font-bold text-danger">지난 법정 기한 미체크 {overdue}개</span>
+                <span className="t-caption font-bold text-on-dark-muted">
+                  지난 법정 기한에 체크하지 않은 일 {overdue}개 — 아래 목록에서 확인하세요
+                </span>
               )}
             </div>
             {/* [1009 · T] D-day 를 크게 — 요약에서 가장 먼저 읽혀야 하는 숫자(예전엔 제목 옆 작은 알약이었다) */}
             {next && next.daysLeft !== null && nextState && (
-              <span className={`t-display t-num shrink-0 leading-none ${BIG_DDAY_TONE[nextState] ?? "text-ink"}`}>
+              <span className={`t-display t-num shrink-0 leading-none ${BIG_DDAY_TONE[nextState] ?? "text-on-dark"}`}>
                 {/* [1009 · T 리뷰] 역할 없는 span 의 aria-label 은 스크린리더가 읽지 않는다 — 보이는 "D-5"는 숨기고 말로 읽힌다 */}
                 <span aria-hidden="true">{ddayText(next, nextState)}</span>
                 <span className="sr-only">{ddaySpeech(next, nextState)}</span>
@@ -537,14 +539,10 @@ export function ContractPlanner() {
             )}
           </div>
           <div className="flex items-center gap-3">
-            {/* [v4] 네이비 위 막대(jr-bar) → 흰 바탕 막대(회색 길 + 성공색) */}
-            <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-line" aria-hidden="true">
-              <i
-                className="absolute inset-0 origin-left bg-success motion-safe:transition-transform motion-safe:duration-500"
-                style={{ transform: `scaleX(${totalItems ? doneItems / totalItems : 0})` }}
-              />
+            <div className="jr-bar flex-1" aria-hidden="true">
+              <i style={{ transform: `scaleX(${totalItems ? doneItems / totalItems : 0})` }} />
             </div>
-            <span className="t-sub t-num shrink-0 font-bold text-ink">
+            <span className="t-sub t-num shrink-0 font-bold text-on-dark">
               체크 {doneItems}/{totalItems}
             </span>
           </div>
@@ -585,8 +583,7 @@ export function ContractPlanner() {
                   </span>
                 )}
               </div>
-              {/* [v4.1 · 리퀴드 목록] 체크 목록도 유리판 한 장(lq-panel · 기한 = sand) — 판 안쪽 위아래 여백 py-2 */}
-              <ul data-tone="sand" className="lq-panel m-0 mt-3 flex list-none flex-col gap-2 p-0 py-2">
+              <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0">
                 {g.items.map(({ item, checked }) => (
                   <li key={item.id} className="jr-item" data-checked={checked ? "true" : "false"}>
                     <button
@@ -653,16 +650,12 @@ export function ContractPlanner() {
         })}
       </ol>
 
-      {/* ── 고지 — [v4 · 규칙 3] 면책 한 줄은 늘 보이게, 기준·근거 문단은 맨 끝 접힘 하나로(아이콘 타일 없음) ── */}
-      <aside className="flex flex-col gap-1 border-t border-line pt-3" aria-label="안내">
-        <p className="m-0 t-sub font-bold text-text-2">일반 정보이며 법률·세무 자문이 아닙니다.</p>
-        <details className="group">
-          <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-2 t-sub font-bold text-text-2 [&::-webkit-details-marker]:hidden">
-            기한 계산 기준·근거
-            <span aria-hidden="true" className="text-text-3 transition-transform group-open:rotate-90">
-              ›
-            </span>
-          </summary>
+      {/* ── 고지 ── */}
+      <aside className="flex flex-col gap-1.5 rounded-2xl border border-line bg-bg p-4" aria-label="안내">
+        <p className="m-0 flex items-start gap-1.5 t-sub font-bold text-text-1">
+          <Icon name="shield" size={15} className="mt-0.5 shrink-0 text-text-3" />
+          일반 정보이며 법률·세무 자문이 아닙니다.
+        </p>
         <p className="m-0 t-caption leading-[1.7] text-text-3">
           법정 기한은 {LAW_CHECKED_ON}에 국가법령정보센터(law.go.kr) 원문으로 확인했어요. 기한 날짜는 기준일 다음 날부터
           셌고(민법 제157조), {REST_DAY_RULE}. 공휴일은 {HOLIDAY_YEARS.join("·")}년 월력요항(우주항공청)과 공휴일 법령으로
@@ -684,7 +677,6 @@ export function ContractPlanner() {
             </a>
           ))}
         </p>
-        </details>
       </aside>
     </div>
   );

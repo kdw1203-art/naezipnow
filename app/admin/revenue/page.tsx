@@ -181,7 +181,7 @@ export default async function AdminRevenuePage() {
     <>
       {/* 헤더 */}
       <div className="rise-in flex flex-wrap items-center justify-between gap-3">
-        <div className="text-[19px] font-extrabold text-white">
+        <div className="text-[19px] font-bold text-white">
           수익 대시보드{" "}
           <span className="text-xs font-medium text-[#9aa6b8]">실집계 · 운영·재무</span>
         </div>
@@ -195,7 +195,7 @@ export default async function AdminRevenuePage() {
         {kpis.map((k) => (
           <div key={k.label} className={`${darkCard} p-4`}>
             <div className="text-[12px] text-[#9aa6b8]">{k.label}</div>
-            <div className="mt-1 text-[19px] font-extrabold tabular-nums text-white">
+            <div className="mt-1 text-[19px] font-bold tabular-nums text-white">
               {k.value}
             </div>
             {k.sub && <div className="mt-0.5 text-[12px] text-[#9aa6b8]">{k.sub}</div>}
@@ -205,7 +205,7 @@ export default async function AdminRevenuePage() {
 
       {/* 구독 플랜 분해 (실 카운트) */}
       <div className="rise-in-2 mt-4 flex flex-col gap-2">
-        <div className="text-[15px] font-extrabold text-white">구독 플랜 분해</div>
+        <div className="text-[15px] font-bold text-white">구독 플랜 분해</div>
         {/* [939 · G012] overflow-hidden 은 모바일에서 넘친 열을 잘라 버린다 —
             표는 제 폭을 지키고 카드 안에서 가로 스크롤로 다 보이게 한다. */}
         <div className={`${darkCard} overflow-x-auto`}>
@@ -240,7 +240,7 @@ export default async function AdminRevenuePage() {
       {expiryLog && (
         <div className="rise-in-2 mt-4 rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-4">
           <div className="flex items-center justify-between">
-            <div className="text-[13px] font-extrabold text-white">최근 플랜 만료 스윕</div>
+            <div className="text-[13px] font-bold text-white">최근 플랜 만료 스윕</div>
             <Link href="/admin/data" className="text-[12px] font-bold text-ai-accent no-underline">
               전체 실행 기록 →
             </Link>
@@ -256,7 +256,7 @@ export default async function AdminRevenuePage() {
       {/* [#145] 애드센스 신청 게이트 — docs/adsense-timing-decision.md 의 두 조건 추적 */}
       <div className="rise-in-2 mt-4 rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="text-[13px] font-extrabold text-white">
+          <div className="text-[13px] font-bold text-white">
             애드센스 신청 게이트{" "}
             <span className="text-[12px] font-medium text-[#9aa6b8]">
               둘 다 충족되는 첫 주에 신청
@@ -278,7 +278,7 @@ export default async function AdminRevenuePage() {
                 조건 1 · 일 {ADSENSE_SESSION_DAILY}세션 × {ADSENSE_SESSION_DAYS}일 연속
               </span>
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                   adsense.dailyEvents && adsense.daysOver100 >= ADSENSE_SESSION_DAYS
                     ? "bg-[rgba(74,222,128,.15)] text-ai-success"
                     : "bg-[rgba(255,255,255,.08)] text-[#c9d2e0]"
@@ -291,7 +291,7 @@ export default async function AdminRevenuePage() {
                     : "미충족"}
               </span>
             </div>
-            <div className="mt-1.5 text-[19px] font-extrabold tabular-nums text-white">
+            <div className="mt-1.5 text-[19px] font-bold tabular-nums text-white">
               {adsense.eventDailyAvg != null
                 ? `일평균 ${adsense.eventDailyAvg.toLocaleString("ko-KR")}건`
                 : "—"}
@@ -310,7 +310,7 @@ export default async function AdminRevenuePage() {
                 조건 2 · 색인 등록 {ADSENSE_INDEXED_PAGES.toLocaleString("ko-KR")}p 이상
               </span>
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                   adsense.indexed != null && adsense.indexed >= ADSENSE_INDEXED_PAGES
                     ? "bg-[rgba(74,222,128,.15)] text-ai-success"
                     : "bg-[rgba(255,255,255,.08)] text-[#c9d2e0]"
@@ -325,7 +325,7 @@ export default async function AdminRevenuePage() {
                       : "미충족"}
               </span>
             </div>
-            <div className="mt-1.5 text-[19px] font-extrabold tabular-nums text-white">
+            <div className="mt-1.5 text-[19px] font-bold tabular-nums text-white">
               {adsense.indexed != null
                 ? `${adsense.indexed.toLocaleString("ko-KR")}p 색인`
                 : "—"}
@@ -350,7 +350,7 @@ export default async function AdminRevenuePage() {
 
       {/* [#140] 데이터 투자 게이트 — 경매 유료 API 재판정 (docs/court-auction-source-research.md) */}
       <div className="rise-in-2 mt-4 rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-4">
-        <div className="text-[13px] font-extrabold text-white">
+        <div className="text-[13px] font-bold text-white">
           데이터 투자 게이트 · 경매 유료 API{" "}
           <span className="text-[12px] font-medium text-[#9aa6b8]">
             충족 시 하이픈 TR슬림(월 10만원) 재검토
@@ -358,7 +358,7 @@ export default async function AdminRevenuePage() {
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span
-            className={`rounded-full px-2.5 py-1 text-[12px] font-extrabold ${
+            className={`rounded-full px-2.5 py-1 text-[12px] font-bold ${
               kpiReady && paid >= 10
                 ? "bg-[rgba(74,222,128,.15)] text-ai-success"
                 : "bg-[rgba(255,255,255,.08)] text-[#c9d2e0]"
@@ -366,7 +366,7 @@ export default async function AdminRevenuePage() {
           >
             G1 유료 구독 {kpiReady ? paid.toLocaleString("ko-KR") : "—"}/10건
           </span>
-          <span className="rounded-full bg-[rgba(255,255,255,.08)] px-2.5 py-1 text-[12px] font-extrabold text-[#c9d2e0]">
+          <span className="rounded-full bg-[rgba(255,255,255,.08)] px-2.5 py-1 text-[12px] font-bold text-[#c9d2e0]">
             G2 월 3,000세션 — Vercel 실측 확인
           </span>
         </div>
@@ -379,7 +379,7 @@ export default async function AdminRevenuePage() {
 
       {/* 정직한 준비 중 — 실 데이터 소스 없는 항목 */}
       <div className="rise-in-2 mt-4 rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-4">
-        <div className="text-[13px] font-extrabold text-white">
+        <div className="text-[13px] font-bold text-white">
           결제 실패 · 환불 분쟁 큐{" "}
           <span className="text-[12px] font-medium text-[#9aa6b8]">준비 중</span>
         </div>

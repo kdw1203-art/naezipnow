@@ -55,7 +55,7 @@ export default function GlobalError({
             textAlign: "center",
           }}
         >
-          <div style={{ fontSize: 17, fontWeight: 800, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.5 }}>
             페이지를 열 수 없어요
           </div>
           {/* global-error 는 루트 레이아웃을 대체하므로 globals.css 도 토큰도 없다.

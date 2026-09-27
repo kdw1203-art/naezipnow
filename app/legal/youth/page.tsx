@@ -2,8 +2,6 @@ import Link from "next/link";
 import { getBusinessInfo } from "@/lib/brand/business-info";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 
-/* [v4 · 규칙 1·5·10] 레이아웃·글자만 정리(문구는 그대로): 가운데 한 줄 760px · 본문 카드 면 제거 · 제목 t-title(800 → 700) ·
-   섹션 제목 t-section 한 단계로 통일 · 섹션 카드 → 위 1px 선. 법적 문구는 한 글자도 바꾸지 않았다. */
 export const metadata = buildPageMetadata({
   title: "청소년 보호정책",
   description: "청소년 유해정보 차단 및 신고 처리 기준 안내",
@@ -13,9 +11,9 @@ export const metadata = buildPageMetadata({
 export default function YouthPolicyPage() {
   const info = getBusinessInfo();
   return (
-    <main className="mx-auto w-full max-w-[760px]">
-      <article className="rise-in">
-        <h1 className="t-title text-ink">청소년 보호정책</h1>
+    <main className="mx-auto w-full max-w-3xl">
+      <article className="card rise-in p-6">
+        <h1 className="text-2xl font-bold text-ink">청소년 보호정책</h1>
         <p className="mt-2 text-xs text-text-3">시행일: 2026년 4월 23일</p>
 
         <p className="mt-4 rounded-lg border border-line bg-bg p-3 text-[13px] text-text-1">
@@ -27,7 +25,7 @@ export default function YouthPolicyPage() {
         </p>
 
         <section className="mt-6 space-y-2 text-[13px] leading-7 text-text-1">
-          <h2 className="t-section text-ink">1. 기본 원칙</h2>
+          <h2 className="text-[15px] font-semibold text-ink">1. 기본 원칙</h2>
           <p>
             회사는 청소년이 유해정보로부터 안전하게 서비스를 이용할 수 있도록 관련 법령을 준수하고
             모니터링 및 신고 처리 절차를 운영합니다.
@@ -35,7 +33,7 @@ export default function YouthPolicyPage() {
         </section>
 
         <section className="mt-6 space-y-2 text-[13px] leading-7 text-text-1">
-          <h2 className="t-section text-ink">2. 유해정보 관리 조치</h2>
+          <h2 className="text-[15px] font-semibold text-ink">2. 유해정보 관리 조치</h2>
           <ul className="ml-4 list-disc space-y-1">
             <li>음란, 폭력, 범죄 조장, 불법 광고 콘텐츠 탐지 및 차단</li>
             <li>신고 접수 시 우선 심사 후 임시 블라인드 처리</li>
@@ -44,7 +42,7 @@ export default function YouthPolicyPage() {
         </section>
 
         <section className="mt-6 space-y-2 text-[13px] leading-7 text-text-1">
-          <h2 className="t-section text-ink">3. 신고 및 처리</h2>
+          <h2 className="text-[15px] font-semibold text-ink">3. 신고 및 처리</h2>
           <p>
             청소년 유해 게시물은 고객지원 채널로 신고할 수 있으며, 접수 후 영업일 기준 최대 3일 내
             1차 검토 결과를 회신합니다.

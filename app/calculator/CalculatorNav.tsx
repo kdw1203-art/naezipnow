@@ -14,19 +14,18 @@ export const CALCULATORS = [
   { href: "/calculator/rental-yield", label: "임대수익률 계산기" },
 ] as const;
 
-/* [v4] 알약 칩 줄 → **밑줄 탭**(승인 시안 부품 — 단지 탭·동네 하위 화면 줄과 같은 모양). 활성 = 남색 2px 밑줄 */
 export function CalculatorNav({ current }: { current: string }) {
   return (
     <nav
       aria-label="계산기 목록"
-      className="-mx-3.5 mb-4 flex gap-5 overflow-x-auto border-b border-line px-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0"
+      className="mb-4 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {CALCULATORS.map((c) =>
         c.href === current ? (
           <span
             key={c.href}
             aria-current="page"
-            className="shrink-0 border-b-2 border-brand-hanji-ink pb-2.5 pt-3 t-body font-bold text-ink"
+            className="chip-active shrink-0 rounded-full px-3.5 py-2 text-[12px] font-bold"
           >
             {c.label}
           </span>
@@ -34,7 +33,7 @@ export function CalculatorNav({ current }: { current: string }) {
           <Link
             key={c.href}
             href={c.href}
-            className="shrink-0 border-b-2 border-transparent pb-2.5 pt-3 t-body font-bold text-text-3 no-underline"
+            className="chip press shrink-0 border border-line bg-surface px-3.5 py-2 text-[12px] font-semibold text-text-2 no-underline"
           >
             {c.label}
           </Link>

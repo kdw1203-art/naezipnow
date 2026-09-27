@@ -1,5 +1,5 @@
 "use client";
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 2곳을 font-bold(700)로 바꿨다. */
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-bold/black 2곳을 font-bold(700)로 바꿨다. */
 
 /* I2 — 내 매물 수정/거래완료/삭제 (소유자 본인).
    수정: 인라인 폼(거래유형·가격[만원]·면적·층·설명·연락처) → PATCH /api/listings/[id].

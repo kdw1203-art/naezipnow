@@ -9,7 +9,7 @@ import { safeAuth } from "@/lib/safe-auth";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { logger } from "@/lib/log";
 import { BuyReportButton } from "./BuyReportButton";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-bold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 리포트 상세·구매 — 자료실이 일부러 링크를 걸지 않던 "상세·구매 화면"이 이것이다.
    전달물 = 연결된 임장노트(source_note_id): 구매 기록이 있으면 그 노트를 열람한다.

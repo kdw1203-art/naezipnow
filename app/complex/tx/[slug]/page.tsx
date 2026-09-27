@@ -1,4 +1,3 @@
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -169,205 +168,258 @@ export default async function ComplexTxPage({
   const maxMonthlyCount = Math.max(1, ...monthly.map((m) => m.count));
   const count12m = monthly.reduce((s, m) => s + m.count, 0);
 
-  /* [v4 · 규칙 1] 머리 사실 한 줄 — 지역 · 준공 · 최근 12개월 거래(숫자·장소만) */
-  const headFact = [
-    regionLabel,
-    ...(buildYear ? [`${buildYear}년 준공`] : []),
-    `최근 12개월 ${count12m}건`,
-    "호가 아님",
-  ].join(" · ");
-  /* 주인공 아래 한 줄 — 최근 거래의 계약일 · 면적 · 층(있는 값만) */
-  const latestMeta = [
-    `${formatYmd(latest.contractYm, latest.contractDay)} 계약`,
-    ...(latest.areaM2 !== null ? [`${latest.areaM2.toFixed(1)}㎡`] : []),
-    ...(latest.floor !== null ? [`${latest.floor}층`] : []),
-  ].join(" · ");
-  const LINK = "tap-line font-bold text-primary no-underline";
+  const overviewRows: Array<{ label: string; value: string }> = [
+    { label: "지역", value: regionLabel },
+    ...(address ? [{ label: "주소", value: address }] : []),
+    ...(buildYear ? [{ label: "건축년도", value: `${buildYear}년` }] : []),
+    { label: "최근 12개월 거래", value: `${count12m}건` },
+    {
+      label: "최근 실거래",
+      value: `${formatKrwShort(latest.dealAmountKrw)} (${formatYmd(latest.contractYm, latest.contractDay)})`,
+    },
+  ];
 
   return (
-    <PageShell breadcrumb={`홈 › 단지 실거래 › ${regionLabel} › ${complexName}`}>
-      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 주인공(최근 실거래 t-display) + 채움 파랑 1개(임장노트 쓰기) →
-          면적대별 행 → 월별 거래 막대 → 거래 이력 행 → 후기 → KB 시세 행 → 링크 한 줄 → 맨 끝 접힘 "데이터 출처".
-          지운 것: 소개 문단(→ 사실 줄), 단지 개요 카드(지역·건축년도·거래 수·최근가 = 머리와 같은 사실 → 주소만 접힘으로),
-          표 두 개(가로 스크롤 420px → 구분선 행), 섹션마다의 출처 문장(→ 접힘 하나), 카드 타일 CTA 3개(→ 링크 한 줄). */}
-      <div className="mx-auto flex max-w-[760px] flex-col gap-8">
-        <div className="flex flex-col gap-4">
-          <header className="flex flex-col gap-0.5">
-            <h1 className="rise-in t-title text-ink">{complexName} 실거래가</h1>
-            <p className="t-sub text-text-3">{headFact}</p>
-          </header>
-          <section aria-label="최근 실거래" className="flex flex-col gap-0.5">
-            <p className="m-0 t-caption text-text-3">최근 실거래</p>
-            <p className="m-0 t-display t-num text-ink">{formatKrwShort(latest.dealAmountKrw)}</p>
-            <p className="m-0 t-sub text-text-3">{latestMeta}</p>
-          </section>
-          <div className="flex flex-col gap-2">
-            {/* [1012 · 규칙 5] 동사 + 구체 대상. [v4 · 규칙 2] 채움 파랑은 이 화면에 이것 하나 */}
-            <Link href="/notes/new" className="btn-primary flex min-h-12 items-center justify-center rounded-lg px-4 t-body no-underline">
-              {complexName} 임장노트 쓰기
-            </Link>
-            {/* 실매물 연결 — 집주인 직접·중개사 등록 (검수 통과분만) */}
-            <Link href={`/listings?complex=${encodeURIComponent(complexName)}`} className={`${LINK} t-sub w-fit`}>
-              이 단지 매물 보기 ›
-            </Link>
-          </div>
+    <PageShell
+      breadcrumb={`홈 › 단지 실거래 › ${regionLabel} › ${complexName}`}
+      title={`${complexName} 실거래가`}
+    >
+      <p className="rise-in mb-5 t-body text-text-2">
+        국토교통부 실거래가 기반 · 매물 호가 아님 · 최근 거래{" "}
+        <strong className="text-ink">{formatKrwShort(latest.dealAmountKrw)}</strong> (
+        {formatYmd(latest.contractYm, latest.contractDay)})
+      </p>
+
+      {/* 실매물 연결 — 집주인 직접·중개사 등록 (검수 통과분만) */}
+      <p className="rise-in mb-5 -mt-3 t-body">
+        <Link
+          href={`/listings?complex=${encodeURIComponent(complexName)}`}
+          className="font-bold text-primary underline"
+        >
+          이 단지 매물 보기 →
+        </Link>
+      </p>
+
+      {/* 단지 개요 */}
+      <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
+        <h2 className="t-section text-ink">단지 개요</h2>
+        <div className="mt-2">
+          {overviewRows.map((r) => (
+            <div
+              key={r.label}
+              className="flex items-baseline justify-between gap-3 border-b border-border py-2 t-body last:border-b-0"
+            >
+              <span className="shrink-0 text-text-3">{r.label}</span>
+              <span className="text-right font-bold text-ink">{r.value}</span>
+            </div>
+          ))}
         </div>
-
-        {/* 면적대별 — [1012 · 규칙 7] "시세" → "실거래". [v4 · 규칙 5] 표 → 구분선 행(오른쪽 최근가) */}
-        {bands.length > 0 && (
-          <section className="flex flex-col gap-2">
-            <div className="flex items-baseline justify-between gap-3">
-              <h2 className="flex items-baseline gap-1.5 t-section text-ink">
-                면적대별 실거래 <span className="t-num text-text-3">{bands.length}</span>
-              </h2>
-              <span className="t-caption text-text-3">최근가</span>
-            </div>
-            <ul data-tone="blue" className="card flex flex-col divide-y divide-line rounded-lg px-4">
-              {bands.map((b) => (
-                <li key={b.label} className="flex min-h-14 items-center justify-between gap-3 py-3">
-                  <span className="min-w-0 flex-1">
-                    <span className="block t-body font-bold text-ink">{b.label}</span>
-                    <span className="mt-0.5 block truncate t-sub tabular-nums text-text-3">
-                      {b.count}건 · 평균 {formatKrwShort(b.avgAmountKrw)} · 최근 {shortYm(b.latestYm)}
-                    </span>
-                  </span>
-                  <span className="shrink-0 t-body t-num text-ink">{formatKrwShort(b.latestAmountKrw)}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
+        {aptMatch && (
+          <p className="mt-2 t-sub text-text-3">
+            단지 정보: 공동주택 단지 데이터({aptMatch.name}) 병합
+          </p>
         )}
+      </section>
 
-        {/* 12개월 월별 거래량·평균가 미니 차트 — 차트는 그대로(같은 높이 막대) */}
-        <section className="flex flex-col gap-2">
-          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
-            월별 거래 <span className="t-sub font-medium text-text-3">최근 12개월 · 거래량·평균가</span>
+      {/* 면적대별 요약 */}
+      {bands.length > 0 && (
+        <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
+          <h2 className="t-section text-ink">
+            면적대별 시세{" "}
+            <span className="t-sub font-medium text-text-3">
+              최근 {transactions.length}건 기준
+            </span>
           </h2>
-          {count12m === 0 ? (
-            <p className="card rounded-lg px-4 py-6 text-center t-body text-text-3">최근 12개월 거래 없음 · 과거 거래는 아래 이력</p>
-          ) : (
-            <div className="card rounded-lg px-4 py-3">
-              <div className="flex h-[110px] items-end gap-[6px]">
-                {monthly.map((m) => (
-                  <div
-                    key={m.ym}
-                    className="flex min-w-0 flex-1 flex-col items-center gap-1"
-                    title={`${formatYm(m.ym)} · ${m.count}건${
-                      m.avgAmountKrw !== null ? ` · 평균 ${formatKrwShort(m.avgAmountKrw)}` : ""
-                    }`}
-                  >
-                    <span className="t-caption font-bold text-text-3">
-                      {m.avgAmountKrw !== null ? formatKrwShort(m.avgAmountKrw) : ""}
-                    </span>
-                    <div
-                      className="w-full rounded-t-sm"
-                      style={{
-                        height: `${m.count > 0 ? 12 + Math.round((m.count / maxMonthlyCount) * 84) : 3}px`,
-                        background: m.count > 0 ? "var(--primary)" : "var(--border)",
-                        opacity: m.count > 0 ? 0.55 + 0.45 * (m.count / maxMonthlyCount) : 1,
-                      }}
-                    />
-                  </div>
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[420px] text-left t-body">
+              <thead>
+                <tr className="border-b border-border t-sub text-text-3">
+                  <th className="py-2 font-medium">전용면적</th>
+                  <th className="py-2 font-medium">거래</th>
+                  <th className="py-2 text-right font-medium">최근가</th>
+                  <th className="py-2 text-right font-medium">평균가</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bands.map((b) => (
+                  <tr key={b.label} className="border-b border-border last:border-b-0">
+                    <td className="py-2.5 font-bold text-ink">{b.label}</td>
+                    <td className="py-2.5 text-text-2">{b.count}건</td>
+                    <td className="py-2.5 text-right font-bold text-ink">
+                      {formatKrwShort(b.latestAmountKrw)}
+                      <span className="ml-1 t-sub font-medium text-text-3">
+                        {shortYm(b.latestYm)}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-right text-text-2">
+                      {formatKrwShort(b.avgAmountKrw)}
+                    </td>
+                  </tr>
                 ))}
-              </div>
-              <div className="mt-1 flex justify-between t-caption text-text-3">
-                <span>{shortYm(monthly[0].ym)}</span>
-                <span>{shortYm(monthly[monthly.length - 1].ym)}</span>
-              </div>
-            </div>
-          )}
+              </tbody>
+            </table>
+          </div>
         </section>
+      )}
 
-        {/* 거래 이력 — [v4 · 규칙 5] 표 → 구분선 행(왼쪽 계약일 + 면적·층 / 오른쪽 거래금액) */}
-        <section className="flex flex-col gap-2">
-          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
-            거래 이력 <span className="t-num text-text-3">{transactions.length}</span>
-          </h2>
-          <ul data-tone="mint" className="card flex flex-col divide-y divide-line rounded-lg px-4">
-            {transactions.map((t, i) => (
-              <li
-                key={`${t.contractYm}-${t.contractDay ?? 0}-${t.areaM2 ?? 0}-${i}`}
-                className="flex min-h-12 items-center justify-between gap-3 py-2.5"
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="block t-body font-bold tabular-nums text-ink">{formatYmd(t.contractYm, t.contractDay)}</span>
-                  <span className="block truncate t-sub tabular-nums text-text-3">
-                    {t.areaM2 !== null ? `${t.areaM2.toFixed(1)}㎡` : "면적 —"} · {t.floor !== null ? `${t.floor}층` : "층 —"}
+      {/* 12개월 월별 거래량·평균가 미니 차트 */}
+      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
+        <h2 className="t-section text-ink">
+          월별 거래{" "}
+          <span className="t-sub font-medium text-text-3">최근 12개월 · 거래량·평균가</span>
+        </h2>
+        {count12m === 0 ? (
+          <p className="py-6 text-center t-body text-text-3">
+            최근 12개월 거래가 없습니다. 아래 전체 이력에서 과거 거래를 확인하세요.
+          </p>
+        ) : (
+          <>
+            <div className="mt-4 flex h-[110px] items-end gap-[6px]">
+              {monthly.map((m) => (
+                <div
+                  key={m.ym}
+                  className="flex min-w-0 flex-1 flex-col items-center gap-1"
+                  title={`${formatYm(m.ym)} · ${m.count}건${
+                    m.avgAmountKrw !== null ? ` · 평균 ${formatKrwShort(m.avgAmountKrw)}` : ""
+                  }`}
+                >
+                  <span className="t-caption font-bold text-text-3">
+                    {m.avgAmountKrw !== null ? formatKrwShort(m.avgAmountKrw) : ""}
                   </span>
-                </span>
-                <span className="shrink-0 t-body t-num text-ink">{formatKrwShort(t.dealAmountKrw)}</span>
+                  <div
+                    className="w-full rounded-t-sm"
+                    style={{
+                      height: `${m.count > 0 ? 12 + Math.round((m.count / maxMonthlyCount) * 84) : 3}px`,
+                      background: m.count > 0 ? "var(--primary)" : "var(--border)",
+                      opacity: m.count > 0 ? 0.55 + 0.45 * (m.count / maxMonthlyCount) : 1,
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="mt-1 flex justify-between t-caption text-text-3">
+              <span>{shortYm(monthly[0].ym)}</span>
+              <span>{shortYm(monthly[monthly.length - 1].ym)}</span>
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* 최근 거래 30건 표 */}
+      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
+        <h2 className="t-section text-ink">
+          거래 이력{" "}
+          <span className="t-sub font-medium text-text-3">
+            최근 {transactions.length}건 · 국토부 실거래가
+          </span>
+        </h2>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full min-w-[420px] text-left t-body">
+            <thead>
+              <tr className="border-b border-border t-sub text-text-3">
+                <th className="py-2 font-medium">계약일</th>
+                <th className="py-2 font-medium">전용면적</th>
+                <th className="py-2 font-medium">층</th>
+                <th className="py-2 text-right font-medium">거래금액</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.map((t, i) => (
+                <tr
+                  key={`${t.contractYm}-${t.contractDay ?? 0}-${t.areaM2 ?? 0}-${i}`}
+                  className="border-b border-border last:border-b-0"
+                >
+                  <td className="py-2.5 text-text-2">
+                    {formatYmd(t.contractYm, t.contractDay)}
+                  </td>
+                  <td className="py-2.5 text-text-2">
+                    {t.areaM2 !== null ? `${t.areaM2.toFixed(1)}㎡` : "—"}
+                  </td>
+                  <td className="py-2.5 text-text-2">
+                    {t.floor !== null ? `${t.floor}층` : "—"}
+                  </td>
+                  <td className="py-2.5 text-right font-bold text-ink">
+                    {formatKrwShort(t.dealAmountKrw)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-2 t-sub text-text-3">
+          국토교통부 실거래가 공개시스템 신고 자료 기반이며, 실제 매물 호가와 다를 수 있습니다.
+        </p>
+      </section>
+
+      {/* 거주민 후기 — 단지명+지역 기준 키 (apartment_complexes 매칭 시 그 id 공유) */}
+      <section className="rise-in-3 mb-6">
+        <ComplexReviews
+          complexId={aptMatch?.id ? `apt:${aptMatch.id}` : `tx:${region.id}:${complexName}`}
+          complexName={complexName}
+        />
+      </section>
+
+      {/* KB 시세정보 (CODEF 연동 시 노출) */}
+      {quoteRecords.length > 0 && (
+        <section className="rise-in-3 card mb-6 p-[var(--pad-card)]">
+          <h2 className="t-section text-ink">
+            KB 시세{" "}
+            <span className="t-sub font-medium text-text-3">
+              면적별 매매 상·하한 평균가 · 만원 아님(원 환산 표기)
+            </span>
+          </h2>
+          <ul className="mt-2">
+            {quoteRecords.slice(0, 8).map((r) => (
+              <li
+                key={r.id}
+                className="flex items-center justify-between gap-3 border-b border-border py-3 last:border-0"
+              >
+                <div className="min-w-0">
+                  <div className="t-body font-bold text-ink">
+                    {r.areaM2 ? `${r.areaM2}㎡` : "면적 미상"}
+                  </div>
+                  <div className="mt-0.5 t-sub text-text-3">
+                    {r.recordDate ?? r.period ?? ""} 기준
+                  </div>
+                </div>
+                <div className="shrink-0 text-right t-body font-bold text-ink">
+                  {r.priceLowKrw ? formatKrwShort(r.priceLowKrw) : "—"}
+                  {" ~ "}
+                  {r.priceHighKrw ? formatKrwShort(r.priceHighKrw) : "—"}
+                </div>
               </li>
             ))}
           </ul>
+          <p className="mt-2 t-sub text-text-3">
+            출처: KB부동산 시세(공개 자료) · 참고용, 실거래·계약 조건에 따라 다를 수 있습니다.
+          </p>
         </section>
+      )}
 
-        {/* 거주민 후기 — 단지명+지역 기준 키 (apartment_complexes 매칭 시 그 id 공유) */}
-        <section>
-          <ComplexReviews
-            complexId={aptMatch?.id ? `apt:${aptMatch.id}` : `tx:${region.id}:${complexName}`}
-            complexName={complexName}
-          />
-        </section>
-
-        {/* KB 시세정보 (CODEF 연동 시 노출) — 실제 시세 자료라 "시세" 표기 유지 */}
-        {quoteRecords.length > 0 && (
-          <section className="flex flex-col gap-2">
-            <h2 className="flex items-baseline gap-1.5 t-section text-ink">
-              KB 시세 <span className="t-sub font-medium text-text-3">면적별 매매 상·하한 평균가</span>
-            </h2>
-            <ul data-tone="blue" className="card flex flex-col divide-y divide-line rounded-lg px-4">
-              {quoteRecords.slice(0, 8).map((r) => (
-                <li key={r.id} className="flex min-h-14 items-center justify-between gap-3 py-3">
-                  <span className="min-w-0">
-                    <span className="block t-body font-bold text-ink">{r.areaM2 ? `${r.areaM2}㎡` : "면적 미상"}</span>
-                    <span className="mt-0.5 block truncate t-sub text-text-3">{r.recordDate ?? r.period ?? ""} 기준</span>
-                  </span>
-                  <span className="shrink-0 text-right t-body t-num text-ink">
-                    {r.priceLowKrw ? formatKrwShort(r.priceLowKrw) : "—"}
-                    {" ~ "}
-                    {r.priceHighKrw ? formatKrwShort(r.priceHighKrw) : "—"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {/* [1012 · 규칙 5] 동사 + 구체 대상(구 이름) · 지도는 이 구로 여는 딥링크. [v4] 카드 타일 3개 → 링크 한 줄 */}
-        <p className="t-sub text-text-3">
-          <Link href={`/region/${region.id}`} className={LINK}>
-            {region.name} 시세 허브 보기
-          </Link>
-          {" · "}
-          <Link href={`/map?region=${encodeURIComponent(regionLabel)}`} className={LINK}>
-            {region.name} 지도에서 보기
-          </Link>
-          {" · "}
-          <Link href={`/complex/browse?district=${encodeURIComponent(regionLabel)}`} className={LINK}>
-            {region.name} 다른 단지 보기
-          </Link>
-        </p>
-
-        {/* [v4 · 규칙 3] 맨 끝 접힘 하나 — 주소 · 단지 자료 병합 · 출처(섹션마다 있던 출처 문장을 한곳에) */}
-        <details className="group border-t border-line pt-1">
-          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
-            데이터 출처
-            <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
-              ›
-            </span>
-          </summary>
-          <ul className="flex list-none flex-col gap-0.5 p-0 pb-3">
-            {address && <li className="t-caption text-text-3">주소 {address}</li>}
-            {aptMatch && <li className="t-caption text-text-3">단지 정보: 공동주택 단지 데이터({aptMatch.name}) 병합</li>}
-            <li className="t-caption text-text-3">
-              국토교통부 실거래가 공개시스템 신고 자료 · 최근 {transactions.length}건 · 해제 신고 제외 · 매물 호가와 다를 수 있음
-            </li>
-            {quoteRecords.length > 0 && (
-              <li className="t-caption text-text-3">KB부동산 시세(공개 자료) · 원 환산 표기 · 참고용, 실거래·계약 조건에 따라 다를 수 있음</li>
-            )}
-          </ul>
-        </details>
-      </div>
+      {/* CTA */}
+      <section className="rise-in-3 mb-4 flex flex-wrap gap-2">
+        <Link
+          href="/notes/new"
+          className="rounded-xl bg-primary px-5 py-3 t-body font-bold text-white shadow-[var(--shadow-cta)]"
+        >
+          이 단지 임장노트 쓰기
+        </Link>
+        <Link
+          href={`/region/${region.id}`}
+          className="card tile px-5 py-3 t-body font-bold text-ink"
+        >
+          {region.name} 지역 허브
+        </Link>
+        <Link href="/map" className="card tile px-5 py-3 t-body font-bold text-ink">
+          지도에서 보기
+        </Link>
+        <Link
+          href={`/complex/browse?district=${encodeURIComponent(regionLabel)}`}
+          className="card tile px-5 py-3 t-body font-bold text-ink"
+        >
+          {region.name} 다른 단지
+        </Link>
+      </section>
     </PageShell>
   );
 }

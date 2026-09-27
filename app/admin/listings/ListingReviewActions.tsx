@@ -42,7 +42,7 @@ export function ListingReviewActions({ id }: { id: string }) {
   if (result) {
     return (
       <div
-        className={`text-[12px] font-extrabold ${
+        className={`text-[12px] font-bold ${
           result === "approved" ? "text-ai-success" : "text-ai-danger"
         }`}
       >
@@ -57,7 +57,7 @@ export function ListingReviewActions({ id }: { id: string }) {
         type="button"
         onClick={() => act("approve")}
         disabled={busy}
-        className="rounded-lg bg-ai-success px-3.5 py-1.5 text-[12px] font-extrabold text-[#0c2a17] disabled:opacity-50"
+        className="rounded-lg bg-ai-success px-3.5 py-1.5 text-[12px] font-bold text-[#0c2a17] disabled:opacity-50"
       >
         승인
       </button>
@@ -72,7 +72,7 @@ export function ListingReviewActions({ id }: { id: string }) {
         type="button"
         onClick={() => act("reject")}
         disabled={busy}
-        className="rounded-lg bg-danger-fill px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-50"
+        className="rounded-lg bg-danger-fill px-3.5 py-1.5 text-[12px] font-bold text-white disabled:opacity-50"
       >
         반려
       </button>

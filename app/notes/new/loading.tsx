@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/Skeleton";
    [1005 · B6] 984 이후의 **실제 모양**으로 다시 그린다 — 예전 스켈레톤은 단계 이전의
    한 화면 3,000px 배치(현장 체크·체크리스트·고려사항이 줄줄이)라 첫 페인트와
    실제 1단계가 달라 레이아웃이 뛰었다. 지금 첫 화면은:
-   상단 바(≈60) → 3단계 밑줄 탭(45) + 단계 제목 줄(≈28) → 안내 한 줄(18) →
+   상단 바(≈60) → 단계 진행 바(4) → 3단계 탭(52) + 단계 제목 줄(≈28) → 안내(43) →
    사진 버튼 2개(44) → 위치 카드(58) → 도우미 칩 줄(40) → 방문 정보 카드(≈236)
    → CTA 블록(고지 + 버튼 ≈ 96). 높이는 실제 카드 기준(모바일 타입 램프)으로 고정한다.
    서버 컴포넌트 — 클라이언트 JS 를 싣지 않는다. 스켈레톤은 "불러오는 중" 만 말한다. */
@@ -20,9 +20,9 @@ export default function NoteNewLoading() {
         className="glass sticky top-3.5 z-40 mt-3.5 flex h-[60px] items-center justify-between rounded-2xl px-4"
       >
         <Skeleton className="h-4 w-4 rounded" />
-        <div className="flex flex-1 flex-col items-start gap-1.5 pl-3">
+        <div className="flex flex-col items-center gap-1.5">
           <Skeleton className="h-[19px] w-20 rounded" />
-          <Skeleton className="h-3 w-24 rounded" />
+          <Skeleton className="h-3 w-28 rounded" />
         </div>
         <div className="flex flex-col items-end gap-1">
           <Skeleton className="h-4 w-12 rounded" />
@@ -30,20 +30,15 @@ export default function NoteNewLoading() {
         </div>
       </div>
 
-      {/* [v4] 단계 진행 바는 폼에서 걷었다(같은 단계 사실을 상단 캡션·밑줄 탭이 말한다) */}
+      {/* 단계 진행 바 */}
+      <div aria-hidden className="mt-2.5 h-1 rounded-sm bg-bg" />
+
       {/* 3단계 탭 + 단계 제목 줄 */}
       <div aria-hidden className="mt-3">
-        {/* [v4] 밑줄 탭 — 글자 3칸 + 선택 칸 아래 2px 선 */}
-        <div className="grid h-[45px] grid-cols-3 border-b border-line">
-          <div className="flex items-center justify-center border-b-2 border-brand-hanji-ink">
-            <Skeleton className="h-3.5 w-12 rounded" />
-          </div>
-          <div className="flex items-center justify-center">
-            <Skeleton className="h-3.5 w-12 rounded" />
-          </div>
-          <div className="flex items-center justify-center">
-            <Skeleton className="h-3.5 w-12 rounded" />
-          </div>
+        <div className="grid h-[52px] grid-cols-3 gap-1 rounded-lg bg-bg p-1">
+          <Skeleton className="h-11 rounded-lg" />
+          <div className="h-11" />
+          <div className="h-11" />
         </div>
         <div className="mt-2 flex h-7 items-center justify-between gap-2">
           <Skeleton className="h-4 w-44 rounded" />
@@ -54,8 +49,8 @@ export default function NoteNewLoading() {
       <LoadingHint className="mt-3" />
 
       <div className="mt-3.5 flex flex-col gap-3">
-        {/* 로그인 없이 작성 안내 — [v4] 한 줄 */}
-        <Skeleton className="h-[18px] w-4/5 rounded" />
+        {/* 로그인 없이 작성 안내 */}
+        <Skeleton className="h-[43px] w-full rounded-lg" />
 
         {/* 사진 먼저 담기 · 촬영 */}
         <div aria-hidden className="flex gap-2">
@@ -99,7 +94,7 @@ export default function NoteNewLoading() {
           <Skeleton className="h-10 flex-1 rounded-xl" />
           <Skeleton className="h-10 flex-1 rounded-xl" />
         </div>
-        <Skeleton className="h-3 w-52 rounded" />
+        <Skeleton className="mx-auto h-3 w-52 rounded" />
       </div>
     </div>
   );

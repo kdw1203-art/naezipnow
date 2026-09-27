@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
-import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 import {
   listBestNoteMonths,
   formatYmKo,
@@ -72,88 +71,89 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function BestNotesIndexPage() {
   const { months, loadFailed } = await load();
 
-  /* [v4 · 한 화면 한 가지] 머리(제목 + 사실 한 줄) → 주인공(달 목록, 구분선 행) → 현장 인증 순위(행) →
-     맨 끝 "선정 기준" 접힘 하나. 지운 것: 소개 문단("운영자가 마음에 드는 노트를 고르는 방식이 아니라…") ·
-     선정 기준 카드(→ 맨 끝 접힘) · 달 카드(→ 행) · 가운데 정렬 빈/실패 카드(→ 한 줄) */
-  const headFact = loadFailed
-    ? `계산식 ${MAX_SCORE}점`
-    : [months.length > 0 ? `선정 ${months.length}개월` : "", `계산식 ${MAX_SCORE}점 · 사람이 고르지 않음`]
-        .filter(Boolean)
-        .join(" · ");
-
   return (
     <PageShell breadcrumb="이달의 공개 임장노트">
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
-        <header className="flex flex-col gap-0.5">
-          <h1 className="t-title text-ink">이달의 공개 임장노트</h1>
-          <p className="t-sub text-text-3">{headFact}</p>
-        </header>
+      <div className="mx-auto max-w-[760px]">
+        <h1 className="rise-in t-title text-ink">이달의 공개 임장노트</h1>
+        <p className="rise-in-1 mt-2 t-body text-text-2">
+          공개에 동의한 임장노트 중 <strong className="text-ink">기록이 충실한 노트</strong>를
+          매달 정리합니다. 운영자가 마음에 드는 노트를 고르는 방식이 아니라, 아래 계산식으로
+          점수를 매겨 상위를 싣습니다.
+        </p>
+
+        {/* 선정 기준 — 문서 N13 의 "선정 기준 공개" */}
+        <section className="rise-in-2 card mt-6 p-[var(--pad-card)]">
+          <h2 className="t-section text-ink">선정 기준 (총 {MAX_SCORE}점)</h2>
+          <div className="mt-3 flex flex-col gap-3">
+            {SCORE_AXES.map((a) => (
+              <div key={a.key} className="border-b border-border pb-3 last:border-b-0 last:pb-0">
+                <p className="t-body font-bold text-ink">
+                  {a.label} <span className="text-primary">{a.max}점</span>
+                </p>
+                <p className="mt-0.5 t-sub text-text-3">{a.how}</p>
+              </div>
+            ))}
+          </div>
+          <ul className="mt-4 flex list-disc flex-col gap-1.5 pl-5 t-sub text-text-3">
+            <li>
+              {MIN_SCORE}점 미만은 후보로 세지 않고, 자격 노트가 {MIN_NOTES_PER_MONTH}편 미만인
+              달은 아예 만들지 않습니다. 두 편짜리 선정은 선정이 아니기 때문입니다.
+            </li>
+            <li>
+              한 달에 최대 {MAX_NOTES_PER_MONTH}편, 같은 작성자는 최대 {MAX_PER_AUTHOR}편까지만
+              싣습니다.
+            </li>
+            <li>
+              이 점수는 <strong className="text-ink">기록의 충실도</strong>만 잽니다. 그 단지가
+              좋은 단지인지, 값이 적절한지와는 무관합니다. 노트에 적힌 입지·학군 점수가 높다고
+              가산점을 주지 않습니다 — 그러면 후하게 쓸수록 뽑히게 되기 때문입니다.
+            </li>
+          </ul>
+        </section>
 
         {loadFailed ? (
-          /* 조회 실패와 "없음"을 가른다 — 못 읽은 것을 없다고 단정하지 않는다 */
-          <p className="t-body text-text-2">
-            <strong className="text-ink">{LOAD_FAILED_LINE}</strong> · 노트가 없다는 뜻 아님
-          </p>
+          <div className="mt-6 card rounded-2xl px-5 py-8 text-center t-body text-text-3">
+            <strong className="text-ink">{LOAD_FAILED_LINE}</strong>
+            <br />
+            공개 임장노트가 없다는 뜻이 아니라, 조회가 제때 끝나지 않았거나 실패했다는
+            뜻입니다.
+          </div>
         ) : months.length > 0 ? (
-          <ul data-tone="hanji" className="divide-y divide-line border-y border-line">
+          <div className="mt-6 flex flex-col gap-3">
             {months.map((m) => (
-              <SummaryRow
+              <Link
                 key={m.ym}
-                label={`${formatYmKo(m.ym)} 이달의 임장노트`}
-                sub={`후보 ${m.qualifiedCount}편`}
-                value={`${m.picks.length}편`}
                 href={`/notes/best/${m.ym}`}
-              />
+                className="card tile flex items-center justify-between rounded-2xl px-5 py-4 no-underline"
+              >
+                <span className="t-section text-ink">
+                  {formatYmKo(m.ym)} 이달의 임장노트
+                </span>
+                <span className="t-sub font-semibold text-text-3">
+                  {m.picks.length}편 수록 · 후보 {m.qualifiedCount}편 ›
+                </span>
+              </Link>
             ))}
-          </ul>
+          </div>
         ) : (
-          <p className="t-body text-text-2">
-            기준을 채운 달 없음 · {MIN_SCORE}점 이상 {MIN_NOTES_PER_MONTH}편이 모이면 자동 생성 ·{" "}
-            {/* [1012] 규칙 5 — 동사 + 대상 */}
-            <Link href="/notes/new" className="tap-line font-bold text-primary no-underline">
-              이달의 첫 후보 노트 쓰기 ›
+          <div className="mt-6 card rounded-2xl px-5 py-8 text-center t-body text-text-3">
+            아직 기준을 채운 달이 없습니다. 한 달에 {MIN_SCORE}점 이상 노트가{" "}
+            {MIN_NOTES_PER_MONTH}편 모이면 자동으로 만들어집니다.
+            <br />
+            <Link href="/notes/new" className="mt-2 inline-block font-bold text-primary underline">
+              임장노트 쓰기
             </Link>
-          </p>
+          </div>
         )}
 
         {/* [#124] 이달의 현장 인증 리더보드 — 위치 확인(#71) 통과 노트의 월간 랭킹 */}
         <FieldVerifiedLeaderboard />
 
-        {/* 선정 기준 — 문서 N13 의 "선정 기준 공개". [v4 · 규칙 3] 맨 끝 접힘 하나(HTML 에는 늘 있다) */}
-        <div className="flex flex-col gap-2">
-          <Link href="/notes" className="tap-line w-fit t-sub font-bold text-primary no-underline">
-            공개 임장노트 목록 보기 ›
+        <p className="mb-8 mt-5 t-sub text-text-3">
+          <Link href="/notes" className="inline-block py-[5px] font-bold text-primary underline">
+            공개 임장노트 전체 보기
           </Link>
-          <details className="group border-t border-line pt-1">
-            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
-              선정 기준 {MAX_SCORE}점
-              <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
-                ›
-              </span>
-            </summary>
-            <div className="flex flex-col gap-3 pb-3">
-              <dl data-tone="blue" className="divide-y divide-line">
-                {SCORE_AXES.map((a) => (
-                  <div key={a.key} className="flex items-baseline gap-3 py-2">
-                    <dt className="w-24 shrink-0 t-sub font-bold text-text-2">
-                      {a.label} <span className="t-num text-ink">{a.max}</span>
-                    </dt>
-                    <dd className="min-w-0 t-sub text-text-3">{a.how}</dd>
-                  </div>
-                ))}
-              </dl>
-              <ul className="flex list-none flex-col gap-0.5 p-0 t-caption text-text-3">
-                <li>
-                  {MIN_SCORE}점 미만은 후보 아님 · 자격 노트 {MIN_NOTES_PER_MONTH}편 미만인 달은 만들지 않음
-                </li>
-                <li>
-                  한 달 최대 {MAX_NOTES_PER_MONTH}편 · 같은 작성자 최대 {MAX_PER_AUTHOR}편
-                </li>
-                <li>기록 충실도만 측정 · 단지의 좋고 나쁨·값과 무관 · 노트 속 입지·학군 점수 가산 없음</li>
-              </ul>
-            </div>
-          </details>
-        </div>
+        </p>
       </div>
     </PageShell>
   );
@@ -192,24 +192,31 @@ async function FieldVerifiedLeaderboard() {
     return null;
   }
   if (rows.length === 0) return null;
-  /* [1012] 규칙 4·9 — 🥇🥈🥉 이모지 → "1위 2위 3위" 글자. [v4 · 규칙 5·6] 한지 배지 · 카드 → 구분선 행(순위는 이름 앞 글자) */
   return (
-    <section aria-labelledby="field-verified-h" className="flex flex-col gap-1">
-      <h2 id="field-verified-h" className="t-section text-ink">
-        이달의 현장 인증 <span className="t-sub font-medium text-text-3">단지 반경 2km 위치 확인 통과</span>
+    <section className="mt-8">
+      <h2 className="t-section text-ink">
+        이달의 현장 인증{" "}
+        <span className="t-sub font-medium text-text-3">
+          단지 반경 2km 위치 확인을 통과한 기록
+        </span>
       </h2>
-      <ul data-tone="mint" className="divide-y divide-line border-y border-line">
+      <div className="card mt-2 rounded-2xl px-4 py-2">
         {rows.map((r, i) => (
-          <li key={r.label} className="flex min-h-12 items-center justify-between gap-3 py-2.5">
-            <span className="min-w-0 truncate t-body font-bold text-ink">
-              <span className="mr-2 t-num text-text-3">{i + 1}위</span>
+          <div
+            key={r.label}
+            className="flex items-center justify-between border-b border-divider py-2.5 t-body last:border-0"
+          >
+            <span className="font-bold text-ink">
+              <span className="mr-2">{i + 1}위</span>
               {r.label}
             </span>
-            <span className="shrink-0 t-body t-num text-ink">{r.count}편</span>
-          </li>
+            <span className="font-bold text-primary tabular-nums">{r.count}편</span>
+          </div>
         ))}
-      </ul>
-      <p className="t-caption text-text-3">매월 1일 초기화 · 인증은 작성 시 선택 · 위치 좌표 비저장</p>
+      </div>
+      <p className="t-caption mt-1.5 text-text-3">
+        매월 1일 리셋 · 인증은 작성 시 선택이며 위치 좌표는 저장되지 않습니다.
+      </p>
     </section>
   );
 }

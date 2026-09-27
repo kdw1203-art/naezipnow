@@ -3,8 +3,6 @@ import { Icon } from "@/app/components/Icon";
 import { getBusinessInfo } from "@/lib/brand/business-info";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 
-/* [v4 · 규칙 1·5·10] 레이아웃·글자만 정리(문구는 그대로): 가운데 한 줄 760px · 본문 카드 면 제거 · 제목 t-title(800 → 700) ·
-   섹션 제목 t-section 한 단계로 통일 · 섹션 카드 → 위 1px 선. 법적 문구는 한 글자도 바꾸지 않았다. */
 export const metadata = buildPageMetadata({
   title: "커뮤니티 운영정책",
   description: "내집나우 커뮤니티 이용 규칙, 금지 행위, 신고·제재 절차를 안내합니다.",
@@ -24,10 +22,10 @@ export default function CommunityPolicyPage() {
      따로 적으면 바꿀 때 또 어딘가가 남는다. */
   const { supportEmail } = getBusinessInfo();
   return (
-    <main className="mx-auto w-full max-w-[760px]">
+    <main className="mx-auto w-full max-w-3xl">
       {/* 페이지 전환 모션 일관화 — globals.css riseIn(dur-md) 재사용 */}
       <article className="rise-in">
-        <h1 className="t-title text-ink">커뮤니티 운영정책</h1>
+        <h1 className="text-2xl font-bold text-ink">커뮤니티 운영정책</h1>
         <p className="mt-1 text-xs text-text-3">시행일: {EFFECTIVE_DATE}</p>
 
         <p className="mt-4 text-[13px] leading-relaxed text-text-1">
@@ -37,8 +35,8 @@ export default function CommunityPolicyPage() {
         </p>
 
         {/* 1. 기본 원칙 */}
-        <section className="mt-6 border-t border-line pt-5">
-          <h2 className="t-section text-ink">1. 기본 원칙</h2>
+        <section className="card mt-6 p-5">
+          <h2 className="text-[15px] font-bold text-ink">1. 기본 원칙</h2>
           <ul className="mt-3 space-y-1.5 text-[13px] leading-relaxed text-text-1">
             <li><Icon name="✅" size={16} className="inline align-middle" /> 서로 존중하고 배려하는 언어를 사용합니다.</li>
             <li><Icon name="✅" size={16} className="inline align-middle" /> 부동산 실무 정보는 출처를 명시하고 정확하게 공유합니다.</li>
@@ -49,7 +47,7 @@ export default function CommunityPolicyPage() {
 
         {/* 2. 금지 행위 */}
         <section className="mt-4 rounded-2xl border border-danger/20 bg-danger-soft p-5">
-          <h2 className="t-section text-ink">2. 금지 행위</h2>
+          <h2 className="text-[15px] font-bold text-ink">2. 금지 행위</h2>
           <p className="mt-1 text-xs text-text-3">
             아래 행위는 경고·일시 정지·영구 탈퇴 조치를 받을 수 있습니다.
           </p>
@@ -88,14 +86,14 @@ export default function CommunityPolicyPage() {
         </section>
 
         {/* 3. 신고 및 처리 절차 */}
-        <section className="mt-4 border-t border-line pt-5">
-          <h2 className="t-section text-ink">3. 신고 및 처리 절차</h2>
+        <section className="card mt-4 p-5">
+          <h2 className="text-[15px] font-bold text-ink">3. 신고 및 처리 절차</h2>
           <ol className="mt-3 list-decimal space-y-2 pl-5 text-[13px] leading-relaxed text-text-1">
             <li>
               <strong>신고:</strong> 게시물 우측 메뉴의 &quot;신고&quot; 버튼 또는{" "}
               <a
                 href={`mailto:${supportEmail}`}
-                className="tap-line font-medium text-primary hover:underline"
+                className="font-medium text-primary hover:underline"
               >
                 {supportEmail}
               </a>
@@ -112,7 +110,7 @@ export default function CommunityPolicyPage() {
               <strong>이의 신청:</strong> 조치에 이의가 있는 경우{" "}
               <a
                 href={`mailto:${supportEmail}`}
-                className="tap-line font-medium text-primary hover:underline"
+                className="font-medium text-primary hover:underline"
               >
                 {supportEmail}
               </a>
@@ -122,8 +120,8 @@ export default function CommunityPolicyPage() {
         </section>
 
         {/* 4. 게시물 관리 */}
-        <section className="mt-4 border-t border-line pt-5">
-          <h2 className="t-section text-ink">4. 게시물 및 댓글 관리</h2>
+        <section className="card mt-4 p-5">
+          <h2 className="text-[15px] font-bold text-ink">4. 게시물 및 댓글 관리</h2>
           <ul className="mt-3 space-y-1.5 text-[13px] leading-relaxed text-text-1">
             <li>운영자는 정책 위반 게시물을 사전 통보 없이 삭제할 수 있습니다.</li>
             <li>
@@ -139,7 +137,7 @@ export default function CommunityPolicyPage() {
 
         {/* 5. 전문가 인증 가이드 */}
         <section className="mt-4 rounded-2xl border border-primary/20 bg-primary-soft p-5">
-          <h2 className="t-section text-ink">5. 전문가 인증 가이드</h2>
+          <h2 className="text-[15px] font-bold text-ink">5. 전문가 인증 가이드</h2>
           <ul className="mt-3 space-y-1.5 text-[13px] leading-relaxed text-text-1">
             <li>전문가 인증 신청은 마이페이지 → 전문가 등록에서 가능합니다.</li>
             <li>인증된 전문가는 ✓ 배지가 부여되며, 유료 상담 서비스를 제공할 수 있습니다.</li>
@@ -150,7 +148,7 @@ export default function CommunityPolicyPage() {
 
         {/* 6. 정책 변경 안내 */}
         <section className="mt-4 rounded-2xl border border-line bg-bg p-5">
-          <h2 className="t-section text-ink">6. 정책 변경 안내</h2>
+          <h2 className="text-[15px] font-bold text-ink">6. 정책 변경 안내</h2>
           <p className="mt-2 text-[13px] leading-relaxed text-text-1">
             본 정책은 서비스 운영 필요에 따라 변경될 수 있습니다. 중요한 변경 사항은
             서비스 내 공지 또는 가입 이메일을 통해 최소 7일 전에 공지합니다.

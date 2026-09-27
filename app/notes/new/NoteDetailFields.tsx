@@ -1,5 +1,4 @@
 "use client";
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 4곳을 font-bold(700)로 바꿨다. */
 
 import type { Dispatch, SetStateAction } from "react";
 import { Icon } from "@/app/components/Icon";
@@ -97,8 +96,7 @@ export function NoteDetailFields({
           <div className="t-body font-bold text-ink">
             체크리스트{" "}
             <span className="t-sub font-medium text-text-3">
-              {/* [v4 · 규칙 3] 문장 → 명사형 */}
-              {visitPurpose || "실거주"} 기준 ·{" "}
+              목적({visitPurpose || "실거주"})에 맞춰 항목이 바뀝니다 ·{" "}
               {checklistGroups.reduce(
                 (n, g) => n + g.items.filter((it) => groupChecked[it.id]).length,
                 0,
@@ -207,7 +205,7 @@ export function NoteDetailFields({
           <div className="t-body font-bold text-ink">
             눈에 띈 점{" "}
             <span className="t-sub font-medium text-text-3">
-              예: 초품아 · 이중주차
+              탭해서 태그 추가 (예: 초품아 · 이중주차)
             </span>
           </div>
           <div className="flex flex-wrap gap-1.5">

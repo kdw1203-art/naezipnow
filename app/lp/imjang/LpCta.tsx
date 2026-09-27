@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Icon } from "@/app/components/Icon";
 import { withUtm } from "@/lib/analytics/utm";
 import {
   LP_IMJANG_LEAD_SOURCE,
@@ -20,8 +21,7 @@ import {
 
 const TARGET = "/notes/new";
 
-/* [1012 · 규칙 9] 화면당 채움 파랑 1개 — 두 번째 CTA 는 variant="outline"(같은 목적지·같은 라벨·같은 계측) */
-export function LpCta({ label, variant = "primary" }: { label: string; variant?: "primary" | "outline" }) {
+export function LpCta({ label }: { label: string }) {
   const [href, setHref] = useState(TARGET);
   useEffect(() => {
     try {
@@ -46,10 +46,10 @@ export function LpCta({ label, variant = "primary" }: { label: string; variant?:
     <Link
       href={href}
       onClick={onClick}
-      className={`${variant === "outline" ? "btn-outline" : "btn-primary btn-cta"} inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg px-6 py-3 text-center t-body sm:w-auto`}
+      className="btn-primary btn-cta inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg px-6 py-3 text-center t-body sm:w-auto"
       data-lp-cta=""
     >
-      {/* [v4 · 규칙 7] 버튼 앞 장식 아이콘(노트) 삭제 — 아이콘은 조작 버튼(검색·관심·공유·닫기)에만 */}
+      <Icon name="notebook-pen" size={16} />
       {label}
     </Link>
   );

@@ -1,5 +1,4 @@
 "use client";
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 2곳을 font-bold(700)로 바꿨다. */
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -94,18 +93,14 @@ export function NoteComments({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* [v4 · 규칙 5] 섹션 제목 = t-section(다른 섹션과 같은 위계) */}
-      <h2 className="t-section text-ink">
-        댓글 <span className="t-num text-text-3">{visibleCount}</span>
-      </h2>
+      <div className="t-body font-bold text-ink">댓글 {visibleCount}</div>
       {error && (
         <p role="alert" className="t-sub font-bold text-danger">
           {error}
         </p>
       )}
       {topLevel.length === 0 ? (
-        /* [1012] 규칙 6 — 어디에 · 누가. [v4 · 규칙 8] 빈 상태는 한 줄 명사형 */
-        <p className="t-sub text-text-3">댓글 없음 · 첫 댓글은 작성자에게 알림</p>
+        <p className="py-1 t-body text-text-3">첫 댓글을 남겨 보세요</p>
       ) : (
         topLevel.map((c) => (
           <div key={c.id} className="flex flex-col gap-2">
@@ -185,7 +180,6 @@ function CommentRow({
 }) {
   return (
     <div className="flex gap-2.5">
-      {/* [1012] 규칙 3·10 — 아바타 자리표시자 그라데이션 → 회색 단면(--divider) */}
       <div className="h-8 w-8 shrink-0 rounded-full bg-divider" aria-hidden="true" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-1.5">
@@ -336,7 +330,7 @@ function NoteCommentForm({
           disabled={busy || (loggedIn && body.trim().length === 0)}
           className="inline-flex min-h-[40px] min-w-[40px] shrink-0 items-end justify-end pb-[6px] t-sub font-bold text-primary disabled:opacity-40"
         >
-          {busy ? "등록 중…" : parentId ? "답글 남기기" : "댓글 남기기"}
+          {busy ? "등록 중…" : "등록"}
         </button>
       </div>
       <div className="flex items-center justify-between px-1">

@@ -15,7 +15,7 @@ import {
 } from "@/lib/town/prompts";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-bold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* [#63] 글감 스레드 — 질문 하나 = 고정 URL 하나(/town/prompt/0~13).
  * 같은 질문이 14일 주기로 돌아오며 답변이 이 페이지에 계속 쌓인다 —

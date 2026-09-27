@@ -211,7 +211,7 @@ export default async function AdminPaymentsPage({
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-[19px] font-extrabold text-ink">결제 연동 (토스페이먼츠)</h1>
+        <h1 className="text-[19px] font-bold text-ink">결제 연동 (토스페이먼츠)</h1>
         <p className="mt-1 text-[13px] text-text-2">
           상호 우리동네이야기 · 전자결제 계약 <b className="text-ink">완료</b>(2026-08-26)
           · 일반결제 MID <b className="text-ink">nuguzibowg</b> · 자동결제 MID{" "}
@@ -222,7 +222,7 @@ export default async function AdminPaymentsPage({
 
       {/* 1) 키 상태 */}
       <section className="card rounded-2xl p-5">
-        <h2 className="text-[15px] font-extrabold text-ink">키 상태 (이 배포 기준)</h2>
+        <h2 className="text-[15px] font-bold text-ink">키 상태 (이 배포 기준)</h2>
         <div className="mt-3 flex flex-col gap-2">
           {rows.map((r) => (
             <div key={r.label} className="flex items-center justify-between gap-3 text-[13px]">
@@ -231,7 +231,7 @@ export default async function AdminPaymentsPage({
                 <div className="text-[12px] text-text-3">{r.note}</div>
               </div>
               <span
-                className={`shrink-0 rounded-lg px-2.5 py-1 text-[12px] font-extrabold ${ENV_LABEL[r.env].cls}`}
+                className={`shrink-0 rounded-lg px-2.5 py-1 text-[12px] font-bold ${ENV_LABEL[r.env].cls}`}
               >
                 {ENV_LABEL[r.env].text}
               </span>
@@ -254,7 +254,7 @@ export default async function AdminPaymentsPage({
 
       {/* 2) 사람 절차 체크리스트 */}
       <section className="card rounded-2xl p-5">
-        <h2 className="text-[15px] font-extrabold text-ink">
+        <h2 className="text-[15px] font-bold text-ink">
           연동 체크리스트{" "}
           <span className="text-[12px] font-medium text-text-3">
             코드 밖에서 해야 하는 일 — 완료 여부는 이 시스템이 감지할 수 없어
@@ -346,7 +346,7 @@ export default async function AdminPaymentsPage({
           "열렸다"고 선언할 시점(라이브 전환)은 운영자가 안다. 멱등 — 발송된
           사람은 다시 보내지 않는다. */}
       <section className="card rounded-2xl p-5">
-        <h2 className="text-[15px] font-extrabold text-ink">사전등록 오픈 알림</h2>
+        <h2 className="text-[15px] font-bold text-ink">사전등록 오픈 알림</h2>
         <p className="mt-1.5 text-[12px] leading-[1.7] text-text-2">
           결제 미개통 기간에 &ldquo;오픈 알림 받기&rdquo;로 등록한 사용자에게 받은편지함
           알림을 1회 발송합니다. <b className="text-ink">라이브 키 전환 후</b> 누르는 것을
@@ -380,7 +380,7 @@ export default async function AdminPaymentsPage({
 
       {/* 3) 최근 결제 기록 — 실데이터 */}
       <section className="card rounded-2xl p-5">
-        <h2 className="text-[15px] font-extrabold text-ink">
+        <h2 className="text-[15px] font-bold text-ink">
           최근 결제 기록{" "}
           <span className="text-[12px] font-medium text-text-3">최근 20건 · 전 제공사</span>
         </h2>
@@ -437,7 +437,7 @@ export default async function AdminPaymentsPage({
                     <td className="py-2 pr-3 text-right t-num text-ink">
                       {p.amount.toLocaleString("ko-KR")}원
                     </td>
-                    <td className={`py-2 pr-3 font-extrabold ${STATUS_LABEL[p.status].cls}`}>
+                    <td className={`py-2 pr-3 font-bold ${STATUS_LABEL[p.status].cls}`}>
                       {STATUS_LABEL[p.status].text}
                     </td>
                     <td className="py-2 text-right">

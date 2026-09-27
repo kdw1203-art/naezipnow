@@ -3,8 +3,8 @@ import Link from "next/link";
 import { newsHref, storyHref } from "@/lib/town/post-href";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
+import { QaBlock } from "@/app/components/QaBlock";
 import { Explain } from "@/app/components/explain/Explain";
-import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 import {
   getDigestWeek,
   weekSlugToMs,
@@ -12,7 +12,7 @@ import {
   ARCHIVE_WEEKS,
   MIN_ITEMS,
 } from "@/lib/digest/archive";
-import { breadcrumbJsonLd, faqJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
+import { breadcrumbJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
 
 /* ============================================================
@@ -133,87 +133,88 @@ export default async function DigestWeekPage({
   ]);
 
   return (
-    /* [v4] "한 화면 한 가지" — 가운데 한 줄(760px): 제목 한 줄 + 사실 한 줄(기간 · 뉴스 · 이웃 글 건수) → 그 주 뉴스(행) →
-       그 주 이웃 글(행) → 시장 온도(행) → 다른 주 링크 한 줄 → 맨 끝 "이 페이지에 대해" 접힘(첫 문단 · FAQ).
-       지운 것: 브레드크럼 문자열 · 항목마다의 카드 · 온도 표(→ 행) · 긴 빈 상태 문장(→ 한 줄).
-       G12 첫 문단(leadSentence — 발췌해도 완결되는 요약)과 G5·G13 FAQ(FAQPage JSON-LD 와 같은 배열)는 지우지 않고
-       접힘 안으로 옮겼다(승인 시안 ComplexDataSources 의 인용 요약·FAQ 와 같은 처리 — 접혀도 HTML 에 있다). */
-    <PageShell>
+    <PageShell breadcrumb={`주간 다이제스트 › ${data.ordinalLabel}`}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript([articleJsonLd, crumbs]) }}
       />
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
-        <header>
-          <h1 className="t-title text-ink">{data.ordinalLabel} 부동산 주간 다이제스트</h1>
-          <p className="mt-0.5 t-sub text-text-3">
-            {data.rangeLabel} · 뉴스 {data.newsCount}건 · 이웃 글 {data.communityCount}건
-          </p>
-        </header>
+      <div className="mx-auto max-w-[860px]">
+        <h1 className="rise-in t-title text-ink">
+          {data.ordinalLabel} 부동산 주간 다이제스트
+        </h1>
+        <p className="rise-in-1 mt-1 t-sub font-semibold text-text-3">{data.rangeLabel}</p>
+        <p className="rise-in-1 mt-2 t-body text-text-1">{leadSentence}</p>
 
-        {/* 뉴스 — [v4] 항목 카드 → 1px 선 행(제목 한 줄 + 날짜 · 매체 · 지역 한 줄) */}
-        <section aria-labelledby="week-news-title" className="flex flex-col gap-1">
-          <h2 id="week-news-title" className="t-section text-ink">
-            그 주 뉴스 <span className="t-sub font-medium text-text-3">{data.newsCount}건</span>
+        {/* 뉴스 */}
+        <section className="rise-in-2 mt-6">
+          <h2 className="t-section text-ink">
+            그 주 뉴스 <span className="text-text-3">{data.newsCount}건</span>
           </h2>
           {data.news.length > 0 ? (
-            <ul className="divide-y divide-line">
+            <ul className="mt-3 flex list-none flex-col gap-2 p-0">
               {data.news.map((item) => (
-                <li key={item.id}>
-                  <Link href={newsHref(item.id)} className="flex min-w-0 flex-col gap-0.5 py-3 no-underline">
-                    <span className="truncate t-body font-bold text-ink">{item.title}</span>
-                    <span className="truncate t-sub text-text-3">
-                      {[shortDate(item.at), item.sourceName, item.region].filter(Boolean).join(" · ")}
-                    </span>
+                <li key={item.id} className="card rounded-lg px-4 py-3">
+                  <Link
+                    href={newsHref(item.id)}
+                    className="t-body font-bold text-ink no-underline hover:underline"
+                  >
+                    {item.title}
                   </Link>
+                  <p className="mt-1 t-sub text-text-3">
+                    {[shortDate(item.at), item.sourceName, item.region]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="py-3 t-sub text-text-3">그 주 수집 뉴스 없음</p>
+            <p className="mt-3 t-body text-text-3">그 주에 수집된 뉴스가 없습니다.</p>
           )}
           {data.newsCount > data.news.length && (
-            <p className="t-caption text-text-3">
-              {data.newsCount}건 중 {data.news.length}건 표시
+            <p className="mt-2 t-sub text-text-3">
+              그 주 뉴스 {data.newsCount}건 중 {data.news.length}건만 표시했습니다.
             </p>
           )}
         </section>
 
-        {/* 이웃 글 — [v4] 항목 카드 → 1px 선 행 */}
-        <section aria-labelledby="week-community-title" className="flex flex-col gap-1">
-          <h2 id="week-community-title" className="t-section text-ink">
-            그 주 이웃 글 <span className="t-sub font-medium text-text-3">{data.communityCount}건</span>
+        {/* 이웃 글 */}
+        <section className="rise-in-3 mt-8">
+          <h2 className="t-section text-ink">
+            그 주 이웃 글 <span className="text-text-3">{data.communityCount}건</span>
           </h2>
           {data.community.length > 0 ? (
-            <ul className="divide-y divide-line">
+            <ul className="mt-3 flex list-none flex-col gap-2 p-0">
               {data.community.map((item) => (
-                <li key={item.id}>
+                <li key={item.id} className="card rounded-lg px-4 py-3">
                   {/* [1007 · P2] 이웃 글(is_automated ≠ true)은 이야기 상세로 */}
-                  <Link href={storyHref(item.id)} className="flex min-w-0 flex-col gap-0.5 py-3 no-underline">
-                    <span className="truncate t-body font-bold text-ink">{item.title}</span>
-                    <span className="truncate t-sub text-text-3">
-                      {[shortDate(item.at), item.region].filter(Boolean).join(" · ")}
-                    </span>
+                  <Link
+                    href={storyHref(item.id)}
+                    className="t-body font-bold text-ink no-underline hover:underline"
+                  >
+                    {item.title}
                   </Link>
+                  <p className="mt-1 t-sub text-text-3">
+                    {[shortDate(item.at), item.region].filter(Boolean).join(" · ")}
+                  </p>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="py-3 t-sub text-text-3">그 주 이웃 글 없음</p>
+            <p className="mt-3 t-body text-text-3">그 주에 올라온 이웃 글이 없습니다.</p>
           )}
           {data.communityCount > data.community.length && (
-            <p className="t-caption text-text-3">
-              {data.communityCount}건 중 {data.community.length}건 표시
+            <p className="mt-2 t-sub text-text-3">
+              그 주 이웃 글 {data.communityCount}건 중 {data.community.length}건만
+              표시했습니다.
             </p>
           )}
         </section>
 
-        {/* 시장 온도 — 그 주 스냅샷이 있을 때만. [v4] 3열 표 → 1px 선 행: 지역(굵게) + 한 줄 요약 / 온도 */}
-        <section aria-labelledby="week-temp-title" className="flex flex-col gap-1">
+        {/* 시장 온도 — 그 주 스냅샷이 있을 때만 */}
+        <section className="rise-in-4 mt-8">
           <div className="flex items-center gap-0.5">
-            <h2 id="week-temp-title" className="t-section text-ink">
-              그 주 시장 온도
-            </h2>
+            <h2 className="t-section text-ink">그 주 시장 온도</h2>
             {/* [1009 · H] 온도 숫자의 뜻 — /methodology "시장 온도" 와 같은 말로 */}
             <Explain
               term="sijang-ondo"
@@ -226,64 +227,54 @@ export default async function DigestWeekPage({
             />
           </div>
           {data.temperature.length > 0 ? (
-            <ul className="divide-y divide-line">
-              {data.temperature.map((t) => (
-                <SummaryRow
-                  key={t.regionId}
-                  label={t.regionLabel}
-                  sub={t.headline}
-                  value={
-                    <>
-                      {Math.round(t.score)}
-                      <span className="ml-0.5 t-caption font-medium text-text-3">/100</span>
-                    </>
-                  }
-                  href={`/analysis/temperature/${encodeURIComponent(t.regionId)}`}
-                />
-              ))}
-            </ul>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[420px] border-collapse t-body">
+                <thead>
+                  <tr className="border-b border-border text-left text-text-3">
+                    <th className="py-2 pr-2 t-sub font-bold">지역</th>
+                    <th className="py-2 pr-2 text-right t-sub font-bold">온도</th>
+                    <th className="py-2 t-sub font-bold">한 줄 요약</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.temperature.map((t) => (
+                    <tr key={t.regionId} className="border-b border-border last:border-b-0">
+                      <td className="py-2 pr-2 font-bold text-ink">
+                        <Link
+                          href={`/analysis/temperature/${encodeURIComponent(t.regionId)}`}
+                          className="no-underline hover:underline"
+                        >
+                          {t.regionLabel}
+                        </Link>
+                      </td>
+                      <td className="py-2 pr-2 text-right font-bold tabular-nums text-ink">
+                        {Math.round(t.score)}
+                        <span className="ml-0.5 t-caption font-medium text-text-3">/100</span>
+                      </td>
+                      <td className="py-2 text-text-2">{t.headline}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
-            /* 다른 주 값으로 대신 채우지 않는다 — 그 주의 숫자가 아니기 때문이다. [v4] 한 줄 */
-            <p className="py-3 t-sub text-text-3">그 주 시장 온도 기록 없음</p>
+            <p className="mt-3 t-body text-text-3">
+              그 주에 기록된 시장 온도 스냅샷이 없습니다. 다른 주 값으로 대신 채우지 않습니다 —
+              그 주의 숫자가 아니기 때문입니다.
+            </p>
           )}
         </section>
 
-        <div className="flex flex-col gap-3">
-          <nav aria-label="다른 주" className="t-sub text-text-3">
-            <Link href="/digest/archive" className="tap-line font-bold text-primary no-underline">
-              다른 주 보기 ›
-            </Link>
-            {" · "}
-            <Link href="/digest" className="tap-line font-bold text-primary no-underline">
-              이번 주 다이제스트 ›
-            </Link>
-          </nav>
+        <QaBlock items={faq} />
 
-          {/* G12 첫 문단 + G5·G13 FAQ — 접혀도 HTML 에 있다(FAQPage JSON-LD 와 보이는 내용이 같은 배열) */}
-          <details className="group border-t border-line pt-1">
-            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
-              이 페이지에 대해
-              <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
-                ›
-              </span>
-            </summary>
-            <div className="flex flex-col gap-4 pb-3 pt-1">
-              <p className="t-sub text-text-2">{leadSentence}</p>
-              <div>
-                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(faqJsonLd(faq)) }} />
-                <h3 className="t-sub font-bold text-text-2">자주 묻는 질문</h3>
-                <dl className="mt-1 flex flex-col gap-2">
-                  {faq.map((it) => (
-                    <div key={it.q}>
-                      <dt className="t-sub font-bold text-ink">{it.q}</dt>
-                      <dd className="mt-0.5 t-sub text-text-2">{it.a}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-            </div>
-          </details>
-        </div>
+        <p className="mb-8 mt-5 flex flex-wrap gap-4 t-sub text-text-3">
+          <Link href="/digest/archive" className="inline-block py-[5px] font-bold text-primary underline">
+            다른 주 보기
+          </Link>
+          <Link href="/digest" className="inline-block py-[5px] font-bold text-primary underline">
+            이번 주 다이제스트
+          </Link>
+        </p>
       </div>
     </PageShell>
   );

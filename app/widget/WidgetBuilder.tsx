@@ -97,7 +97,7 @@ export function WidgetBuilder() {
       <div className="card rounded-2xl p-5">
         <label
           htmlFor="widget-complex-input"
-          className="block text-[13px] font-extrabold text-ink"
+          className="block text-[13px] font-bold text-ink"
         >
           1. 단지 또는 지역 주소 붙여넣기
         </label>
@@ -123,7 +123,7 @@ export function WidgetBuilder() {
         )}
 
         <div className="mt-4 flex items-center gap-2">
-          <span className="text-[13px] font-extrabold text-ink">2. 높이</span>
+          <span className="text-[13px] font-bold text-ink">2. 높이</span>
           <div className="flex gap-1.5">
             {[220, 260, 300].map((h) => (
               <button
@@ -146,12 +146,12 @@ export function WidgetBuilder() {
 
       <div className="card rounded-2xl p-5">
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-[13px] font-extrabold text-ink">3. 코드 복사</span>
+          <span className="text-[13px] font-bold text-ink">3. 코드 복사</span>
           <button
             type="button"
             onClick={copy}
             disabled={!code}
-            className={`rounded-lg px-3 py-1.5 text-[12px] font-bold ${
+            className={`min-h-10 rounded-lg px-3 py-1.5 text-[12px] font-bold ${
               code ? "bg-primary text-white" : "bg-bg text-text-3"
             }`}
           >
@@ -168,7 +168,7 @@ export function WidgetBuilder() {
       </div>
 
       <div className="card rounded-2xl p-5">
-        <span className="text-[13px] font-extrabold text-ink">미리보기</span>
+        <span className="text-[13px] font-bold text-ink">미리보기</span>
         {target ? (
           <iframe
             key={`${target.kind}-${target.id}-${height}`}

@@ -92,10 +92,10 @@ function ExpertRow({ item }: { item: QueueItem }) {
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="rounded bg-primary-soft px-1.5 py-px text-[10px] font-extrabold text-primary">
+            <span className="rounded bg-primary-soft px-1.5 py-px text-[10px] font-bold text-primary">
               전문가
             </span>
-            <span className="truncate text-xs font-extrabold text-ink">{item.label}</span>
+            <span className="truncate text-xs font-bold text-ink">{item.label}</span>
           </div>
           <div className="mt-0.5 truncate text-[10px] text-text-3">
             {item.sub}
@@ -109,7 +109,7 @@ function ExpertRow({ item }: { item: QueueItem }) {
                 type="button"
                 onClick={() => setEvOpen((v) => !v)}
                 aria-expanded={evOpen}
-                className="rounded-lg bg-[rgba(29,79,216,.1)] px-2 py-1 text-[10px] font-extrabold text-primary"
+                className="rounded-lg bg-[rgba(29,79,216,.1)] px-2 py-1 text-[10px] font-bold text-primary"
               >
                 {evOpen ? "자료 닫기" : "심사 자료"}
               </button>
@@ -117,14 +117,14 @@ function ExpertRow({ item }: { item: QueueItem }) {
             <button
               type="button"
               onClick={() => setPhase("approve")}
-              className="rounded-lg bg-success-fill px-2 py-1 text-[10px] font-extrabold text-white"
+              className="rounded-lg bg-success-fill px-2 py-1 text-[10px] font-bold text-white"
             >
               승인
             </button>
             <button
               type="button"
               onClick={() => setPhase("reject")}
-              className="rounded-lg bg-danger-soft px-2 py-1 text-[10px] font-extrabold text-danger"
+              className="rounded-lg bg-danger-soft px-2 py-1 text-[10px] font-bold text-danger"
             >
               반려
             </button>
@@ -141,7 +141,7 @@ function ExpertRow({ item }: { item: QueueItem }) {
                 <span
                   key={`${f.ruleId}-${i}`}
                   title={f.message}
-                  className={`rounded px-1.5 py-px text-[10px] font-extrabold ${SEVERITY_CLS[f.severity] ?? SEVERITY_CLS.warn}`}
+                  className={`rounded px-1.5 py-px text-[10px] font-bold ${SEVERITY_CLS[f.severity] ?? SEVERITY_CLS.warn}`}
                 >
                   ⚑ {f.ruleId} · {f.severity}
                 </span>
@@ -172,7 +172,7 @@ function ExpertRow({ item }: { item: QueueItem }) {
                     href={u}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-lg bg-primary-soft px-2 py-0.5 text-[10px] font-extrabold text-primary no-underline"
+                    className="rounded-lg bg-primary-soft px-2 py-0.5 text-[10px] font-bold text-primary no-underline"
                   >
                     증빙 {i + 1} ↗
                   </a>
@@ -182,7 +182,7 @@ function ExpertRow({ item }: { item: QueueItem }) {
                   href={ev.sourceVerificationUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-lg border border-line px-2 py-0.5 text-[10px] font-extrabold text-text-2 no-underline"
+                  className="rounded-lg border border-line px-2 py-0.5 text-[10px] font-bold text-text-2 no-underline"
                 >
                   공적 조회처 ↗
                 </a>
@@ -200,7 +200,7 @@ function ExpertRow({ item }: { item: QueueItem }) {
           <button
             type="button"
             onClick={() => void submit("approve")}
-            className="rounded-lg bg-success-fill px-2.5 py-1 text-[10px] font-extrabold text-white"
+            className="rounded-lg bg-success-fill px-2.5 py-1 text-[10px] font-bold text-white"
           >
             승인 확정
           </button>
@@ -226,7 +226,7 @@ function ExpertRow({ item }: { item: QueueItem }) {
             type="button"
             disabled={!reason.trim()}
             onClick={() => void submit("reject")}
-            className="rounded-lg bg-danger-fill px-2.5 py-1 text-[10px] font-extrabold text-white disabled:opacity-40"
+            className="rounded-lg bg-danger-fill px-2.5 py-1 text-[10px] font-bold text-white disabled:opacity-40"
           >
             반려 확정
           </button>
@@ -270,10 +270,10 @@ export function VerificationQueue({ queue }: { queue: QueueItem[] }) {
           >
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="rounded bg-[#fdf3e7] px-1.5 py-px text-[10px] font-extrabold text-warning">
+                <span className="rounded bg-[#fdf3e7] px-1.5 py-px text-[10px] font-bold text-warning">
                   소유확인
                 </span>
-                <span className="truncate text-xs font-extrabold text-ink">{q.label}</span>
+                <span className="truncate text-xs font-bold text-ink">{q.label}</span>
               </div>
               <div className="mt-0.5 truncate text-[10px] text-text-3">
                 {q.sub}
@@ -282,7 +282,7 @@ export function VerificationQueue({ queue }: { queue: QueueItem[] }) {
             </div>
             <Link
               href="/admin/listings"
-              className="flex-shrink-0 rounded-lg bg-primary chip-pad text-[10px] font-extrabold text-white no-underline"
+              className="flex-shrink-0 rounded-lg bg-primary chip-pad text-[10px] font-bold text-white no-underline"
             >
               증빙 심사 ›
             </Link>

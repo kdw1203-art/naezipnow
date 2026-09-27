@@ -154,10 +154,10 @@ export default async function InvitePage({
         )}
 
         {/* [970 · C-42] h1 안의 <br> — 제목이 한 문장으로 읽히지 않았다. 한 줄 제목 + 부제로 */}
-        <h1 className="text-[21px] font-extrabold leading-[1.35] text-text-1">
+        <h1 className="text-[21px] font-bold leading-[1.35] text-text-1">
           친구가 초대했어요
         </h1>
-        <p className="mt-1 text-[19px] font-extrabold leading-[1.35] text-text-1">
+        <p className="mt-1 text-[19px] font-bold leading-[1.35] text-text-1">
           가입하면 <span className="text-primary">둘 다 300P</span>
         </p>
 

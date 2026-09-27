@@ -1,8 +1,7 @@
 import { PageShell } from "@/app/components/PageShell";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { breadcrumbJsonLd, howToJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
-import { JOURNEY_STAGES, journeyCountLabels } from "@/lib/journey/stages";
-import { loadJourneyCounts } from "@/lib/journey/counts";
+import { journeyHowToSteps } from "@/lib/journey/stages";
 import { JourneyBoard } from "./JourneyBoard";
 
 /* ============================================================
@@ -19,9 +18,6 @@ import { JourneyBoard } from "./JourneyBoard";
    ============================================================ */
 
 export const dynamic = "force-static";
-/* [1012 · R2] 카드 오른쪽 숫자(오늘 문제 수·시군구 수·임장 가이드 지역 수·최신 신고월)는 실데이터라
-   하루 눈금으로 다시 읽는다(ISR). 개인화는 여전히 읽지 않는다 — 모두에게 같은 HTML. */
-export const revalidate = 86_400;
 
 const PATH = "/journey";
 const TITLE = "내 집 마련 여정 — 시장 감부터 계약·잔금까지 6단계";
@@ -35,19 +31,12 @@ export const metadata = buildPageMetadata({
   og: { badge: "내 집 마련", sub: "6단계 · 단계마다 할 일과 바로 쓸 화면" },
 });
 
-export default async function JourneyPage() {
-  /* [1012 · R2] 리뷰 A −3·−1 — 카드에 실데이터 숫자·출처. 실패한 값은 null → 그 카드는 숫자 없음. */
-  const labels = journeyCountLabels(await loadJourneyCounts(Date.now()));
+export default function JourneyPage() {
   const howTo = howToJsonLd({
     name: "내 집 마련 여섯 단계 — 시장 감 잡기부터 계약·잔금·입주까지",
     description: DESCRIPTION,
     path: PATH,
-    /* [v4 · 규칙 3] 화면에서 단계 설명 문장(why)을 뺐으므로 HowTo 도 화면에 보이는 글(단계 제목 · 할 일 이름)만.
-       lib/journey/stages journeyHowToSteps() 는 why 를 싣는다 — 구조화 데이터는 보이는 내용과 같아야 한다. */
-    steps: JOURNEY_STAGES.map((s) => ({
-      name: `${s.n}단계 · ${s.title}`,
-      text: `할 일: ${s.tasks.map((t) => t.label).join(", ")}${s.budgetChips ? ", 예산 안의 단지 지도" : ""}.`,
-    })),
+    steps: journeyHowToSteps(),
   });
   const crumbs = breadcrumbJsonLd([
     { name: "홈", url: "/" },
@@ -56,7 +45,7 @@ export default async function JourneyPage() {
   return (
     <PageShell>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript([crumbs, howTo]) }} />
-      <JourneyBoard counts={labels.tasks} stageNotes={labels.stages} />
+      <JourneyBoard />
     </PageShell>
   );
 }

@@ -70,7 +70,7 @@ export function ReplyForm({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-lg bg-[rgba(126,162,255,.15)] px-3.5 py-[9px] t-sub font-extrabold text-ai-accent"
+          className="rounded-lg bg-[rgba(126,162,255,.15)] px-3.5 py-[9px] t-sub font-bold text-ai-accent"
         >
           {existingReply ? "답변 수정 · 다시 보내기" : "답변 쓰기"}
         </button>
@@ -116,7 +116,7 @@ export function ReplyForm({
           <button
             type="submit"
             disabled={busy}
-            className="rounded-lg bg-primary px-4 py-[9px] t-sub font-extrabold text-white disabled:cursor-not-allowed"
+            className="rounded-lg bg-primary px-4 py-[9px] t-sub font-bold text-white disabled:cursor-not-allowed"
           >
             {busy ? "보내는 중…" : "답변 보내기"}
           </button>

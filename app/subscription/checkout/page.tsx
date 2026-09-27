@@ -24,10 +24,7 @@ export const dynamic = "force-dynamic";
  */
 export default function CheckoutPage() {
   return (
-    <PageShell>
-      {/* [v4 · 규칙 1·12] 제목을 주문 카드와 같은 520px 가운데 줄 맨 위로 — PageShell 제목·브레드크럼("구독 · 결제",
-          글자뿐)은 1240 컨테이너 왼쪽 끝이라 데스크톱에서 본문 줄과 어긋났다 */}
-      <h1 className="mx-auto mb-3 w-full max-w-[520px] t-title text-ink">결제하기</h1>
+    <PageShell breadcrumb="구독 · 결제" title="결제하기">
       <CheckoutClient />
       {/* 수익 문구 미기재 방침 + 제공기간·환불 요약 — 결제 직전 화면에도 고지.
           [968 · T3] recurringOpen 을 /subscription(page.tsx) 과 같은 서버 판정으로

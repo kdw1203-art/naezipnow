@@ -1,6 +1,6 @@
-/* [1012 · 규칙 1] 본문 카드 반경 12 → 8px(카드 눈금) */
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Icon } from "@/app/components/Icon";
 
 /**
  * [970 · C-40] 비로그인 안내 카드 — 한 벌.
@@ -33,24 +33,31 @@ export function GuestGate({
 }) {
   const cb = encodeURIComponent(pathname || "/");
   return (
-    /* [v4 · 규칙 7·10] 가운데 정렬 + 자물쇠 아이콘 원 → 왼쪽 정렬 머리(제목 한 줄 + 사실 한 줄) + 버튼 줄.
-       채움 파랑은 "로그인" 하나, 가입은 외곽선 */
-    <div className={`mx-auto flex w-full max-w-[760px] flex-col gap-3 ${className}`.trim()}>
-      <section aria-labelledby="guest-gate-title" className="rise-in flex flex-col gap-2 py-2">
-        <Heading id="guest-gate-title" className="t-title text-ink">
+    <div className={`mx-auto flex w-full max-w-[560px] flex-col gap-3 ${className}`.trim()}>
+      <section
+        aria-labelledby="guest-gate-title"
+        className="rise-in card flex flex-col items-center gap-2.5 rounded-3xl px-5 py-9 text-center"
+      >
+        <span
+          aria-hidden="true"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-soft text-primary"
+        >
+          <Icon name="lock" size={20} />
+        </span>
+        <Heading id="guest-gate-title" className="t-section text-ink">
           {title}
         </Heading>
-        <p className="t-sub text-text-3">{desc}</p>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
+        <p className="max-w-[380px] t-body leading-[1.6] text-text-3">{desc}</p>
+        <div className="mt-1.5 flex flex-wrap items-center justify-center gap-2">
           <Link
             href={`/login?callbackUrl=${cb}`}
-            className="btn-primary min-h-10 rounded-lg px-5 py-2.5 t-body no-underline"
+            className="btn-primary rounded-xl px-5 py-2.5 t-body no-underline"
           >
             로그인
           </Link>
           <Link
             href={`/signup?callbackUrl=${cb}`}
-            className="btn-outline min-h-10 rounded-lg px-5 py-2.5 t-body no-underline"
+            className="btn-soft rounded-xl px-5 py-2.5 t-body font-bold no-underline"
           >
             회원가입
           </Link>

@@ -1,5 +1,3 @@
-/* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 2곳) · 손으로 적은 카드 그림자 3곳 제거(카드는 1px 선만). */
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 7곳을 font-bold(700)로 바꿨다. */
 import Link from "next/link";
 import { planLabel } from "@/lib/subscriptions/labels";
 import type { Metadata } from "next";
@@ -232,36 +230,41 @@ export default async function PaymentSuccessPage({
     : [];
 
   return (
-    /* [v4 · 한 화면 한 가지] 가운데 정렬 결과 화면 → 왼쪽 제목 한 줄 + 사실 줄 → 결제 내역(1px 선 행) → 행동(채움 파랑 1개).
-       지운 것: 64px 상태 원(✓/!) · 가운데 정렬 · 영수증 카드의 점선 머리 · 글자뿐인 브레드크럼. 결과 순간 연출
-       (PaymentSuccessMoment)과 결제 사실(금액·수단·일시·주문번호·영수증·자동결제 정보)은 그대로. */
-    <PageShell>
+    <PageShell breadcrumb="구독 · 결제 결과">
       <PaymentSuccessMoment status={status} />
-      <section className="rise-in mx-auto flex w-full max-w-[520px] flex-col gap-4 pt-4">
-        <header className="flex flex-col gap-1">
-          <p className={`t-sub font-bold ${ok ? "text-primary" : "text-danger"}`}>{ok ? "결제 완료" : "결제 확인 실패"}</p>
-          <h1 className="t-title text-ink">{ok ? "결제가 완료되었습니다" : "결제 확인에 실패했습니다"}</h1>
-          <p className="t-body text-text-2">{message}</p>
-        </header>
+      <section className="rise-in mx-auto flex w-full max-w-[480px] flex-col items-center gap-3 pt-10 text-center">
+        {/* 체크 배지 — 이모지 대신 브랜드 색 원형. 실패면 경고색. */}
+        <span
+          aria-hidden
+          className={`flex h-16 w-16 items-center justify-center rounded-full text-[28px] text-white shadow-[0_10px_28px_rgba(16,28,54,.18)] ${
+            ok ? "bg-primary" : "bg-danger"
+          }`}
+        >
+          {ok ? "✓" : "!"}
+        </span>
+        <h1 className="text-[21px] font-bold tracking-[-0.4px] text-ink">
+          {ok ? "결제가 완료되었습니다" : "결제 확인에 실패했습니다"}
+        </h1>
+        <p className="text-[13px] leading-[1.6] text-text-2">{message}</p>
 
         {/* 영수증 카드 — 무엇을 얼마에 샀는지 이 화면에서 확인된다.
             예전에는 "완료되었습니다" 한 줄과 주문번호뿐이라, 방금 얼마가
             나갔는지 보려면 카드사 알림을 열어야 했다. */}
         {receiptRows.length > 0 && (
-          <section aria-labelledby="receipt-h" className="flex w-full flex-col">
-            <h2 id="receipt-h" className="t-section text-ink">
-              결제 내역
-            </h2>
-            <dl className="divide-y divide-line border-y border-line">
+          <div className="mt-2 w-full overflow-hidden rounded-3xl border border-line bg-surface text-left shadow-[0_8px_24px_rgba(16,28,54,.06)]">
+            <div className="border-b border-dashed border-line px-5 py-3.5">
+              <div className="text-[12px] font-bold text-text-3">결제 내역</div>
+            </div>
+            <dl className="flex flex-col gap-2.5 px-5 py-4">
               {receiptRows.map((r) => (
-                <div key={r.label} className="flex items-baseline justify-between gap-3 py-2.5">
+                <div key={r.label} className="flex items-baseline justify-between gap-3">
                   <dt className="text-[12px] text-text-3">{r.label}</dt>
-                  <dd className="text-right text-[13px] font-bold text-ink">{r.value}</dd>
+                  <dd className="text-[13px] font-bold text-ink">{r.value}</dd>
                 </div>
               ))}
               {orderId && (
-                <div className="flex items-baseline justify-between gap-3 py-2.5">
-                  <dt className="shrink-0 text-[12px] text-text-3">주문번호</dt>
+                <div className="flex items-baseline justify-between gap-3 border-t border-divider pt-2.5">
+                  <dt className="text-[12px] text-text-3">주문번호</dt>
                   <dd className="break-all text-right text-[12px] text-text-3">{orderId}</dd>
                 </div>
               )}
@@ -271,12 +274,12 @@ export default async function PaymentSuccessPage({
                 href={record.receiptUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-h-10 items-center self-start text-[12px] font-bold text-primary"
+                className="block border-t border-line bg-bg px-5 py-3 text-center text-[12px] font-bold text-primary"
               >
                 매출전표(영수증) 보기 ›
               </a>
             )}
-          </section>
+          </div>
         )}
         {receiptRows.length === 0 && orderId && (
           <p className="text-xs text-text-3">주문번호 {orderId}</p>
@@ -284,11 +287,11 @@ export default async function PaymentSuccessPage({
 
         {/* 자동결제 정보 — 등록 완료·카드 변경 화면의 핵심 확인값 */}
         {billingSub && (
-          <section aria-labelledby="autopay-h" className="flex w-full flex-col">
-            <h2 id="autopay-h" className="t-section text-ink">
-              자동결제 정보
-            </h2>
-            <dl className="divide-y divide-line border-y border-line [&>div]:py-2.5">
+          <div className="w-full overflow-hidden rounded-3xl border border-line bg-surface text-left shadow-[0_8px_24px_rgba(16,28,54,.06)]">
+            <div className="border-b border-dashed border-line px-5 py-3.5">
+              <div className="text-[12px] font-bold text-text-3">자동결제 정보</div>
+            </div>
+            <dl className="flex flex-col gap-2.5 px-5 py-4">
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="text-[12px] text-text-3">적용 플랜</dt>
                 <dd className="text-[13px] font-bold text-ink">
@@ -311,7 +314,7 @@ export default async function PaymentSuccessPage({
                   {billingSub.billing === "annual" ? "년" : "월"}
                 </dd>
               </div>
-              <div className="flex items-baseline justify-between gap-3">
+              <div className="flex items-baseline justify-between gap-3 border-t border-divider pt-2.5">
                 <dt className="text-[12px] text-text-3">다음 결제일</dt>
                 <dd className="text-[13px] font-bold text-ink">
                   {billingSub.nextChargeAt
@@ -325,10 +328,11 @@ export default async function PaymentSuccessPage({
                 </dd>
               </div>
             </dl>
-            <p className="pt-2 text-[12px] leading-[1.6] text-text-3">
-              해지·카드 변경은 구독 관리에서 언제든 · 해지하면 다음 결제일에 청구 없음
+            <p className="border-t border-line bg-bg px-5 py-3 text-[12px] leading-[1.6] text-text-3">
+              해지·카드 변경은 구독 페이지의 구독 관리에서 언제든 가능해요 — 해지하면 다음
+              결제일에 청구되지 않아요.
             </p>
-          </section>
+          </div>
         )}
 
         {/* [966] 페이월에 막혀 결제한 사람은 원래 하던 일로 — 주문 metadata 의 returnTo
@@ -337,7 +341,7 @@ export default async function PaymentSuccessPage({
             확인 안 된 결제를 마이에서 볼 수 있을 리 없다. 1차 행동을 고객센터 결제·환불
             문의(주문번호 프리필: SupportContactForm 이 ?category=payment&order= 를 읽는다)로,
             2차를 구독 안내로 바꾼다. 제목(metadata)은 정적 블록이라 I5 몫 — 본문 h1 만 분기. */}
-        <div className="flex w-full flex-col gap-2.5">
+        <div className="mt-3 flex w-full flex-col gap-2.5">
           {!ok ? (
             <>
               <Link
@@ -387,9 +391,8 @@ export default async function PaymentSuccessPage({
             </>
           ) : returnTo ? (
             <>
-              {/* [1012] 규칙 5 — 동사 + 대상 */}
               <Link href={returnTo} className="btn-primary rounded-lg p-[13px] text-center text-[13px] font-bold">
-                보던 화면으로 돌아가기
+                이어서 사용하기
               </Link>
               <Link
                 href="/my"
@@ -413,7 +416,7 @@ export default async function PaymentSuccessPage({
                 href="/my"
                 className="rounded-lg border border-line bg-surface p-[13px] text-center text-[13px] font-bold text-text-1"
               >
-                마이 페이지에서 플랜 보기
+                마이 페이지에서 플랜 확인
               </Link>
             </>
           )}

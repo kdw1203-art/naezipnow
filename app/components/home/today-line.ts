@@ -11,32 +11,7 @@
  */
 import { absPctText, deltaDir, deltaVerb } from "@/lib/format/delta";
 import { DELTA_UNKNOWN } from "@/lib/newui/delta-label";
-import type { HomeRegionCard } from "@/lib/newui/home-data";
 import type { KpiRegion } from "./HomeKpiRow";
-
-/* [v4 · 규칙 3] 회전 배너("오늘의 한 줄")는 걷혔다 — 화면은 명사형 행(지역 이름 / 가격 · 등락)으로 줄였고, 이 파일의
-   문장은 그 행의 **접근성 이름**(aria-label)이 된다. 행이 줄여 쓴 기준(평균의 종류·등락의 달·지수/평당가)을 화면 읽기
-   사용자에게는 온전한 한 문장으로 준다 — 같은 규칙을 두 번 쓰지 않도록 문장 규칙은 그대로 여기 한 곳. */
-
-/** 지역 카드(HomeRegionCard) → 문장 재료(KpiRegion). 서버 행과 로그인 관심지역 행이 같이 쓴다. */
-export function kpiRegionOf(r: HomeRegionCard): KpiRegion {
-  return {
-    name: r.name,
-    price: r.price,
-    delta: r.delta,
-    tone: r.tone,
-    /* 건수는 trades(제 달·원천이 함께 있다)만 — meta 의 "N건"은 달을 모른다([1009 · H 리뷰]) */
-    tradeLabel: typeof r.trades === "number" && r.trades > 0 ? `${r.trades.toLocaleString("ko-KR")}건` : null,
-    href: r.href,
-    periodLabel: r.periodLabel,
-    changePct: r.changePct ?? null,
-    changeBasis: r.changeBasis,
-    changeYm: r.changeYm ?? null,
-    tradesYm: r.tradesYm ?? null,
-    tradesSource: r.tradesSource,
-    priceKind: r.stale ? "molit" : "reb",
-  };
-}
 
 /** 옛 응답(changePct 없음)의 "▲ 1.2%" 문자열 → 부호 있는 숫자. 모르면 null */
 function pctFromDelta(delta: string): number | null {

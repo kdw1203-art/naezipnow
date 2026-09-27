@@ -1,38 +1,14 @@
-import { buildApplyCalendar, type ApplyCalendarResult } from "@/lib/applyhome/calendar";
+import Link from "next/link";
+import { buildApplyCalendar } from "@/lib/applyhome/calendar";
 import { listRecentCompetition } from "@/lib/applyhome/store";
-import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* ============================================================
    [994 · D4] 오늘의 청약 — 매일 적재된 저장소에서 서버가 그린다.
 
-   앞으로 7일 접수 시작·마감(캘린더 요약)과 최근 갱신된 경쟁률(1순위·해당지역 우선).
+   왼쪽: 앞으로 7일 접수 시작·마감(캘린더 요약). 오른쪽: 최근 갱신된 경쟁률(1순위·해당지역 우선).
    기준일은 마지막 적재 시각이다(저장소 출처일 때). 저장소가 비어 라이브로 온 경우 그 사실을 적는다.
    숫자는 전부 청약홈 공공데이터 원문이고, 예측치는 만들지 않는다.
-
-   [v4] "한 화면 한 가지" — 카드 두 장(2열) → 1px 선 행 목록 섹션. 조회는 페이지가 한 번 하고(loadApplyDaily)
-   같은 값으로 머리 사실 줄("7일 안 접수 시작 n · 마감 n", applyWeek)과 이 목록을 그린다 — 조회를 늘리지 않는다.
-   · "날짜별 캘린더 보기 ›" 링크는 뺐다 — 머리 오른쪽 "청약 캘린더 보기"와 같은 곳(같은 행동은 한 번).
-   · 날짜+접수/마감 배지 → 행 오른쪽 값 글자(의미색). 시작·마감 수는 머리 사실 줄이 말한다(같은 사실은 한 번).
-   · "최근 발표 경쟁률"은 바로 아래 청약홈 경쟁률 표가 첫 화면에 결과를 그릴 때는 싣지 않는다(같은 사실 —
-     showCompetition). 표가 못 그리는 날(청약홈 조회 실패·미설정)에는 저장소의 최근 경쟁률이 이 자리에 남는다.
    ============================================================ */
-
-type RecentCompetition = Awaited<ReturnType<typeof listRecentCompetition>>;
-
-export type ApplyDaily = {
-  cal: ApplyCalendarResult | null;
-  comp: RecentCompetition;
-};
-
-/** 페이지가 한 번 부른다 — 실패는 각각 null/[] 로 접는다(예전 스트립 안의 catch 와 같다) */
-export async function loadApplyDaily(): Promise<ApplyDaily> {
-  const [cal, comp] = await Promise.all([
-    buildApplyCalendar().catch(() => null),
-    listRecentCompetition(6).catch(() => [] as RecentCompetition),
-  ]);
-  return { cal, comp };
-}
 
 function kstDate(iso: string | null): string | null {
   if (!iso) return null;
@@ -47,33 +23,21 @@ function mmdd(date: string | null): string {
   return date.slice(5).replace("-", ".");
 }
 
-/** 앞으로 7일(KST) 접수 시작·마감 — 수와 앞 4건. 머리 사실 줄과 목록이 같은 값을 쓴다 */
-export function applyWeek(cal: ApplyCalendarResult | null, nowMs: number = Date.now()) {
+export async function ApplyDailyStrip() {
+  const [cal, comp] = await Promise.all([
+    buildApplyCalendar().catch(() => null),
+    listRecentCompetition(6).catch(() => []),
+  ]);
   const ok = cal && cal.state === "ok" ? cal : null;
-  const todayKst = new Date(nowMs + 9 * 3600_000).toISOString().slice(0, 10);
-  const weekEnd = new Date(nowMs + 9 * 3600_000 + 7 * 86400_000).toISOString().slice(0, 10);
+  const todayKst = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+  const weekEnd = new Date(Date.now() + 9 * 3600_000 + 7 * 86400_000).toISOString().slice(0, 10);
   const week = ok ? ok.days.filter((d) => d.date >= todayKst && d.date <= weekEnd) : [];
   const starts = week.reduce((n, d) => n + d.starts.length, 0);
   const ends = week.reduce((n, d) => n + d.ends.length, 0);
-  const upcoming = week
-    .flatMap((d) => [
-      ...d.starts.map((it) => ({ kind: "접수" as const, date: d.date, it })),
-      ...d.ends.map((it) => ({ kind: "마감" as const, date: d.date, it })),
-    ])
-    .slice(0, 4);
-  return { ok, starts, ends, upcoming };
-}
-
-export function ApplyDailyStrip({
-  data,
-  showCompetition,
-}: {
-  data: ApplyDaily;
-  /** 저장소의 "최근 발표 경쟁률"을 그릴까 — 아래 청약홈 표가 결과를 그리면 false(같은 사실은 한 번) */
-  showCompetition: boolean;
-}) {
-  const { ok, upcoming } = applyWeek(data.cal);
-  const comp = showCompetition ? data.comp : [];
+  const upcoming = week.flatMap((d) => [
+    ...d.starts.map((it) => ({ kind: "접수" as const, date: d.date, it })),
+    ...d.ends.map((it) => ({ kind: "마감" as const, date: d.date, it })),
+  ]).slice(0, 4);
 
   if (!ok && comp.length === 0) return null;
 
@@ -86,53 +50,61 @@ export function ApplyDailyStrip({
     : null;
 
   return (
-    <>
-      {ok && (
-        <section aria-labelledby="apply-week-title" className="flex flex-col gap-1">
-          <h2 id="apply-week-title" className="t-section text-ink">
-            앞으로 7일 접수
-          </h2>
-          {upcoming.length === 0 ? (
-            /* [1012] 규칙 6 — 언제(앞으로 7일). [v4] 빈 상태는 한 줄, 기준 시점은 아래 캡션이 말한다 */
-            <p className="py-3 t-sub text-text-3">앞으로 7일 접수 시작·마감 공고 없음</p>
-          ) : (
-            <ul data-tone="sand" className="divide-y divide-line">
-              {upcoming.map((u, i) => (
-                <SummaryRow
-                  key={i}
-                  label={<span className="block truncate">{u.it.houseName}</span>}
-                  sub={u.it.region}
-                  value={
-                    <span className={u.kind === "접수" ? "text-primary" : "text-warning"}>
-                      {mmdd(u.date)} {u.kind}
-                    </span>
-                  }
-                />
-              ))}
-            </ul>
-          )}
-          {basis && <p className="t-caption text-text-3">{basis} · 청약홈(한국부동산원)</p>}
-        </section>
-      )}
-
-      {comp.length > 0 && (
-        <section aria-labelledby="apply-recent-title" className="flex flex-col gap-1">
-          <h2 id="apply-recent-title" className="t-section text-ink">
-            최근 발표 경쟁률
-          </h2>
-          <ul data-tone="blue" className="divide-y divide-line">
-            {comp.map((c) => (
-              <SummaryRow
-                key={`${c.house_manage_no}:${c.house_ty}`}
-                label={<span className="block truncate">{c.house_nm ?? "단지명 미제공"}</span>}
-                sub={`${c.region ?? "—"} · ${c.house_ty}`}
-                value={c.cmpet_rate_num != null ? `${c.cmpet_rate_num.toLocaleString("ko-KR")} : 1` : c.cmpet_rate ?? "—"}
-              />
+    <section className="rise-in mb-4 grid grid-cols-1 gap-3 md:grid-cols-2" aria-label="오늘의 청약">
+      <div className="card flex flex-col gap-2 p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className="t-body font-bold text-ink">앞으로 7일 접수</h3>
+          <span className="t-caption text-text-3">
+            시작 <b className="text-ink">{starts}</b> · 마감 <b className="text-ink">{ends}</b>
+          </span>
+        </div>
+        {upcoming.length === 0 ? (
+          <p className="t-sub text-text-3">
+            {ok ? "이번 주 접수 시작·마감 공고가 없어요." : "청약 일정을 지금 불러오지 못했어요 — 없는 것과 다릅니다."}
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-1">
+            {upcoming.map((u, i) => (
+              <li key={i} className="flex items-center gap-2 t-sub">
+                <span className={`shrink-0 rounded px-1.5 py-px t-caption font-bold ${u.kind === "접수" ? "bg-primary-soft text-primary" : "bg-warning-soft text-warning"}`}>
+                  {mmdd(u.date)} {u.kind}
+                </span>
+                <span className="truncate font-bold text-ink">{u.it.houseName}</span>
+                <span className="shrink-0 text-text-3">{u.it.region}</span>
+              </li>
             ))}
           </ul>
-          <p className="t-caption text-text-3">1순위 · 해당지역 우선 · 청약홈(한국부동산원) · 매일 갱신</p>
-        </section>
-      )}
-    </>
+        )}
+        <Link href="/apply/calendar" className="inline-block self-start py-[5px] t-sub font-bold text-primary no-underline">
+          날짜별 캘린더 ›
+        </Link>
+      </div>
+
+      <div className="card flex flex-col gap-2 p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className="t-body font-bold text-ink">최근 발표 경쟁률</h3>
+          <span className="t-caption text-text-3">1순위 · 해당지역 우선</span>
+        </div>
+        {comp.length === 0 ? (
+          /* [1011] "첫 적재 뒤 표시돼요" 를 걷었다(소유자 지시) — 적재는 내부 말이다 */
+          <p className="t-sub text-text-3">경쟁률이 아직 없어요 — 준비되면 여기에 표시돼요.</p>
+        ) : (
+          <ul className="flex flex-col gap-1">
+            {comp.map((c) => (
+              <li key={`${c.house_manage_no}:${c.house_ty}`} className="flex items-center gap-2 t-sub">
+                <span className="w-[64px] shrink-0 rounded bg-bg px-1.5 py-px text-center t-caption font-bold tabular-nums text-ink">
+                  {c.cmpet_rate_num != null ? `${c.cmpet_rate_num.toLocaleString("ko-KR")} : 1` : c.cmpet_rate ?? "—"}
+                </span>
+                <span className="truncate font-bold text-ink">{c.house_nm ?? "단지명 미제공"}</span>
+                <span className="shrink-0 text-text-3">
+                  {c.region ?? "—"} · {c.house_ty}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {basis && <p className="t-caption text-text-3">{basis} · 출처 청약홈(한국부동산원)</p>}
+      </div>
+    </section>
   );
 }

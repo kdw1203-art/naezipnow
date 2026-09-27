@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { planLabel } from "@/lib/subscriptions/labels";
 import { PageShell } from "@/app/components/PageShell";
+import { Icon } from "@/app/components/Icon";
 import { BILLING_PERIOD_PRICES, periodPrice, WEEKLY_PASS } from "@/lib/subscriptions/billing-periods";
 import { PlanCards, type TierPricing } from "./PlanCards";
 import { CurrentPlanBadge, UsageCard, WeeklyPassCta, WeeklyPassFrame } from "./ViewerCards";
@@ -121,24 +122,40 @@ const FEATURE_ROWS: { label: string; free: string; plus: string; pro: string; pr
    같이 사라진다. 열 수에 따라 grid 클래스를 **리터럴로** 고른다(Tailwind 는 동적 클래스명을
    못 본다). */
 type CompareCol = { key: "free" | "plus" | "pro"; name: string; price: string; tone: string; soft: boolean };
-/* [v4 · 규칙 6] 열 이름의 장식 기호(✦)를 뗐다 — 이름은 planLabel 단일 출처 그대로 */
 const COMPARE_COLS: CompareCol[] = [
-  { key: "free", name: planLabel("free"), price: "0원", tone: "text-ink", soft: false },
-  { key: "plus", name: planLabel("pro"), price: `${PLUS_MONTHLY}/월`, tone: "text-primary", soft: true },
+  { key: "free", name: "무료", price: "0원", tone: "text-ink", soft: false },
+  { key: "plus", name: "✦ 플러스", price: `${PLUS_MONTHLY}/월`, tone: "text-primary", soft: true },
   ...(isTierOnSale("expert")
-    ? [{ key: "pro" as const, name: planLabel("expert"), price: `${PRO_MONTHLY}/월`, tone: "text-warning", soft: false }]
+    ? [{ key: "pro" as const, name: "✦ 프로", price: `${PRO_MONTHLY}/월`, tone: "text-warning", soft: false }]
     : []),
 ];
 const COMPARE_GRID_NARROW = COMPARE_COLS.length === 3 ? "grid-cols-3" : "grid-cols-2";
 const COMPARE_GRID_WIDE =
-  COMPARE_COLS.length === 3 ? "grid-cols-[minmax(0,1fr)_repeat(3,104px)]" : "grid-cols-[minmax(0,1fr)_repeat(2,104px)]";
-/* [v4 · 규칙 5·10] 열 강조 면(연파랑 띠)을 뗐다 — 열은 정렬로 맞추고, 플러스 값만 굵은 파랑 */
-function cellClass(col: CompareCol, r: (typeof FEATURE_ROWS)[number]): string {
+  COMPARE_COLS.length === 3 ? "grid-cols-[200px_repeat(3,1fr)]" : "grid-cols-[200px_repeat(2,1fr)]";
+function cellClass(col: CompareCol, r: (typeof FEATURE_ROWS)[number], narrow: boolean): string {
   const v = r[col.key];
-  if (v === "—") return "text-text-3";
-  if (col.key === "free") return "text-text-2";
-  if (col.key === "plus") return "font-bold text-primary";
-  return r.proAccent ? "font-bold text-warning" : "font-bold text-ink";
+  if (col.key === "free") return narrow ? (v === "—" ? "text-text-3" : "text-text-2") : `text-center ${v === "—" ? "text-text-3" : "text-text-2"}`;
+  if (col.key === "plus")
+    return narrow
+      ? `rounded-md bg-[rgba(29,79,216,.04)] py-0.5 ${v === "—" ? "text-text-3" : "font-bold text-primary"}`
+      : `bg-[rgba(29,79,216,.04)] py-1 text-center ${v === "—" ? "text-text-3" : "font-bold text-primary"}`;
+  const pro = v === "—" ? (narrow ? "text-text-3" : "font-normal text-text-3") : r.proAccent ? "font-bold text-warning" : "font-bold text-primary";
+  return narrow ? pro : `text-center ${pro}`;
+}
+
+/* 자체 맵이었다 — 같은 페이지 안에서 카드는 "프로 (전문가)", 비교표는 "프로" 였다.
+   단일 출처(lib/subscriptions/labels)로 통일. */
+
+function PlanBadge({ tier }: { tier: "plus" | "pro" }) {
+  return (
+    <span
+      className={`rounded-full bg-brand-navy chip-pad text-[10px] font-bold ${
+        tier === "plus" ? "text-ai-accent" : "text-brand-red-dark"
+      }`}
+    >
+      ✦ {tier === "plus" ? "플러스" : "프로"}
+    </span>
+  );
 }
 
 /* [966] 단건 이용권 만료(plan_expires_at)는 [1007] 부터 /api/subscriptions/summary 가 읽는다 */
@@ -184,8 +201,6 @@ export default async function SubscriptionPage() {
   const recurringAvailability = paymentsReady && recurringReady
     ? "https://schema.org/InStock"
     : "https://schema.org/PreOrder";
-  /* [1012] 히어로 한 줄에 쓰는 AI 분석 도구 한도 — 비교표와 같은 행에서 읽는다(손으로 적지 않는다) */
-  const aiToolRow = PLAN_FEATURE_MATRIX.find((r) => r.feature === "AI 분석 도구") ?? null;
   const plansJsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -238,270 +253,352 @@ export default async function SubscriptionPage() {
     }),
   };
 
-
-  /* [v4 · 규칙 1] 머리 사실 한 줄 — AI 분석 한도(비교표와 같은 행)만. "임장노트·지도는 무료" 문장은 비교표 첫 행이 말한다 */
-  const headFact = aiToolRow
-    ? `AI 분석 ${planLabel("free")} ${aiToolRow.free} · ${planLabel("pro")} ${aiToolRow.pro} · ${planLabel("expert")} ${aiToolRow.expert}`
-    : null;
-  /* [v4 · 규칙 2] 채움 파랑은 화면에 1개 — 지금 카드로 바로 살 수 있는 상품이 주인공이다.
-     월간·연간이 열려 있으면(결제 개통 + 빌링 개방) 플러스 카드 CTA, 아니면 주간권 버튼. */
-  const plansPrimary = paymentsReady && recurringReady;
-  const weeklyDaily = Math.round(WEEKLY_PASS.totalKrw / WEEKLY_PASS.days).toLocaleString("ko-KR");
-  const monthlyDaily = Math.round(tierPricing("pro").monthly / 30).toLocaleString("ko-KR");
-
   return (
-    /* [v4 · 규칙 12] 가운데 한 줄(760px) — PageShell 브레드크럼("멤버십 상세")은 1240 컨테이너 왼쪽 끝에 떨어져
-       본문 줄과 어긋났다(글자뿐, 링크 아님). h1 이 이 줄 맨 위에 선다. */
-    <PageShell>
+    <PageShell breadcrumb="멤버십 상세" wide>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(plansJsonLd) }}
       />
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
-        {/* ── 머리: 제목 한 줄 + 사실 한 줄(+ 로그인 시 현재 플랜 한 줄) ──
-            [v4 · 규칙 1·3] "무료 플랜에서도 한도 없이 쓸 수 있어요 · …" 문장 → 한도 숫자만 */}
-        <header className="flex flex-col gap-0.5">
-          <h1 className="t-title text-ink">멤버십 요금제</h1>
-          {headFact && <p className="t-sub text-text-3">{headFact}</p>}
-          {/* [1007] 로그인한 사람에게만 — 세션 판정 뒤 클라이언트가 붙인다 */}
-          <CurrentPlanBadge />
-        </header>
+      {/* 히어로 (6l) */}
+      <section className="rise-in flex flex-col items-center gap-2 pt-4 text-center">
+        <h1 className="t-title tracking-[-0.5px] text-ink md:t-title">
+          기록은 무료, 판단은 더 깊게
+        </h1>
+        <p className="t-body text-text-2">
+          임장노트와 지도는 영원히 무료. AI 분석의 깊이를 선택하세요.
+        </p>
+        {/* [1007] 로그인한 사람에게만 — 세션 판정 뒤 클라이언트가 붙인다 */}
+        <CurrentPlanBadge />
+      </section>
 
-        {/* 이번 달 사용량 — 로그인한 사람에게만, 값이 있을 때만(/api/me/usage, ViewerCards.UsageCard) */}
-        <UsageCard />
+      {/* 이번 달 사용량 — 로그인한 사람에게만, 값이 있을 때만(/api/me/usage, ViewerCards.UsageCard).
+          "월 30회"가 카드에 적혀 있어도 내가 12회를 썼는지 29회를 썼는지 모르면
+          그 숫자는 판단에 쓸 수 없다. */}
+      <UsageCard />
 
-        {/* 플러스 주간권 — 1회성 단건 결제(자동갱신 없음). 운영자 확정 2026-08-12: 토스 심사 회신 A-1(a) 의 단건 상품.
-            [1003] 요금제 카드 **위** — 지금 카드로 곧장 살 수 있는 상품이라 첫 화면 안에 둔다(심사가 찾는
-            "신용/체크카드 결제창"이 스크롤 없이 보여야 한다). [970 · A-07] id·scroll-mt — ?billing=weekly 복귀 스크롤.
-            [v4 · 규칙 3·6·10] 모바일 가운데 정렬 → 왼쪽 정렬 · 설명 배지("카드 등록 없이") → 사실 줄 · 문장 3개 → 사실 줄 3개.
-            사실(7일·단건·자동 반복청구 없음·만료 후 무료 전환·하루 단가와 월간 비교·결제수단·카드번호 미저장)은 그대로 남긴다. */}
-        <section id="weekly-pass" aria-labelledby="weekly-pass-h" className="scroll-mt-24">
-          <WeeklyPassFrame className="card flex flex-col gap-4 rounded-lg p-4 md:flex-row md:items-center md:justify-between md:p-5">
-            <div className="flex min-w-0 flex-col gap-1">
-              <h2 id="weekly-pass-h" className="t-section text-ink">
-                {WEEKLY_PASS.label} · <span className="t-num">{WEEKLY_PASS.totalKrw.toLocaleString("ko-KR")}원</span>
-              </h2>
-              <p className="t-sub text-text-3">
-                {WEEKLY_PASS.days}일 {planLabel("pro")} 전체 · 카드 등록 없이 1회성 단건 결제 · 자동 반복청구 없음 · 만료 후{" "}
-                {planLabel("free")} 전환(추가 청구 없음)
-              </p>
-              {/* 하루 단가는 월간이 더 싸다 — 그 사실을 감추지 않는다 */}
-              <p className="t-sub text-text-3">
-                하루 {weeklyDaily}원 · 월간은 하루 {monthlyDaily}원
-              </p>
-              {/* [1003] 취급 결제수단 — 결제 버튼 옆에서 읽혀야 한다(2026-09 토스 반려 사유 자리). 결제수단의 단일 출처 */}
-              <p className="t-sub text-text-3">
-                <span className="font-bold text-ink">신용카드 · 체크카드</span> 결제(토스페이먼츠 결제창) · 카드번호는
-                내집나우 서버에 저장되지 않음 ·{" "}
-                <Link
-                  href={PAYMENT_METHODS_PATH}
-                  /* 문장 속 링크의 기준은 WCAG 2.5.8(24px) — inline-block + 세로 패딩 */
-                  className="inline-block py-[5px] font-bold text-primary underline"
-                >
-                  결제 수단 안내
-                </Link>
-              </p>
+      {/* 플러스 주간권 — 1회성 단건 결제(자동갱신 없음). 운영자 확정 2026-08-12:
+          토스 심사 회신 A-1(a) 의 단건 상품. 가격·기간은 WEEKLY_PASS 단일 출처.
+
+          [1003] 요금제 카드 **위**로 올렸다. 예전에는 카드 3종 → 신뢰 스트립 →
+          결제수단 한 줄을 지나야 이 블록이 나왔다. 2026-09-16 13:57 KST 토스 심사
+          세션은 이 화면에 13.5초 머물고 `/subscription/checkout` 에 한 번도 오지
+          못한 채 홈으로 돌아갔다(page_view_events 실측). 지금 이 사이트에서 카드로
+          곧장 살 수 있는 유일한 상품이 주간권이므로 첫 화면 안에 둔다 — 심사가
+          찾는 것("신용/체크카드 결제창")이 스크롤 없이 보여야 한다. */}
+      {/* [970 · A-07] id·scroll-mt — ?billing=weekly 로 돌아온 사람을 PlanCards 가 여기로
+          스크롤한다(헤더 62px 아래). 강조 링은 그때만 붙인다. */}
+      <section
+        id="weekly-pass"
+        className="rise-in-2 mx-auto mt-6 w-full max-w-[1080px] scroll-mt-24"
+      >
+        <WeeklyPassFrame className="card flex flex-col items-center gap-4 rounded-3xl p-6 md:flex-row md:justify-between">
+          <div className="flex flex-col gap-1 text-center md:text-left">
+            <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
+              {/* [C38] 주간권이 위 세 플랜과 나란히 놓이면 "네 번째 요금제"로 읽힌다.
+                  실제로는 **플러스를 카드 등록 없이 먼저 써보는 길**이다 —
+                  월간·연간은 카드 등록형 자동결제(/subscription/billing)이고
+                  이것만 단건이다. 그 차이가 고르는 이유이므로 먼저 적는다. */}
+              <span className="rounded-md bg-primary-soft chip-pad t-caption font-bold text-primary">
+                카드 등록 없이
+              </span>
+              <div className="t-section text-ink">
+                {WEEKLY_PASS.label} · {WEEKLY_PASS.totalKrw.toLocaleString("ko-KR")}원
+              </div>
             </div>
-            {/* [966] 상태별로 정직하게 — 미개통이면 사전 등록, 이미 프로(expert)면 사지 못하게.
-                [1003] 링크 직행(2단계 확인 제거). [1007] 로그인 판정은 WeeklyPassCta 가 세션으로. */}
-            <div className="w-full shrink-0 md:w-[236px]">
-              <WeeklyPassCta
-                paymentsReady={paymentsReady}
-                checkoutBase={REVIEW_CHECKOUT_PATH}
-                weeklyTotalKrw={WEEKLY_PASS.totalKrw}
-                weeklyDays={WEEKLY_PASS.days}
-                primary={!plansPrimary}
-              />
-            </div>
-          </WeeklyPassFrame>
-          {/* P2-8: 환불 규정 직링크 — 약관 제8조(청약철회) 앵커. 상품·금액·환불 규정이 한 화면에 붙어 있어야 한다.
-              [v4 · 규칙 10] 가운데 정렬 → 왼쪽 캡션 한 줄 */}
-          <p className="mt-2 t-sub text-text-3">
-            결제 7일 이내 청약철회(환불) 가능 ·{" "}
-            <Link
-              href="/legal/terms#refund"
-              /* [990] 문장 속 링크 24px 히트 — inline-block + 세로 패딩(44px 히트를 겹치면 윗줄·아랫줄 탭을 가져간다) */
-              className="inline-block py-[5px] font-bold text-primary underline underline-offset-2"
-            >
-              환불 규정 안내
-            </Link>
-          </p>
-        </section>
-
-        {/* 요금제 카드 3종 + 월간/연간 토글 (item 13)
-            [970 · A-06] 비로그인은 currentPlan=null. [1007] 현재 플랜·?billing·?plan·?returnTo 는 PlanCards 가 마운트 뒤 판정. */}
-        <section aria-labelledby="plans-h" className="flex flex-col gap-3">
-          <h2 id="plans-h" className="t-section text-ink">
-            플랜별 가격
-          </h2>
-          <PlanCards
-            pro={tierPricing("pro")}
-            expert={tierPricing("expert")}
-            paymentsReady={paymentsReady}
-            recurringReady={recurringReady}
-            primary={plansPrimary}
-          />
-          {/* [966] 결제 신뢰 스트립 → [v4 · 규칙 7·8] 아이콘 타일 두 칸 → 캡션 한 줄.
-              "7일 이내 청약철회"는 위 환불 줄이 이미 말한다(같은 사실 한 번) — 남는 사실(즉시 적용·영수증·일할 환불)만 */}
-          <p className="t-caption text-text-3">
-            결제 즉시 이용권 적용 · 알림함·이메일로 영수증 발송 · 7일 이후 중도 해지는 잔여기간 일할 환불(약관 제8조)
-          </p>
-        </section>
-
-        {/* E1 — 구독 관리·결제 내역(로그인한 사람에게만 — BillingPanel 이 세션 판정 뒤 /api/subscriptions/summary 로 그린다) */}
-        <BillingPanel />
-
-        {/* 기능 비교표 (9k · [C49] 좁은 화면 배치 · [992] 열은 COMPARE_COLS 에서 유도) + 기간별 할인
-            [v4 · 규칙 5·10] 두 카드 → 한 섹션(제목 + 1px 선 행). 열은 정렬로 맞춘다 */}
-        <section aria-labelledby="compare-h" className="flex flex-col gap-2">
-          <h2 id="compare-h" className="t-section text-ink">
-            기능 비교
-          </h2>
-          {/* ── 좁은 화면(< md): 기능 이름 한 줄 + 값 N칸 ── */}
-          <div className="md:hidden">
-            {/* [v4.1 · 리퀴드 목록] 머리 열은 유리판 안쪽 여백(14px)과 같은 px — 아래 행과 열이 맞는다 */}
-            <div className={`sticky top-[62px] z-10 grid ${COMPARE_GRID_NARROW} gap-1.5 border-b border-line bg-bg px-3.5 py-1.5`}>
-              {COMPARE_COLS.map((c) => (
-                <div key={c.key} className="flex flex-col">
-                  <span className={`t-sub font-bold ${c.tone}`}>{c.name}</span>
-                  <span className="t-sub t-num text-text-3">{c.price}</span>
-                </div>
-              ))}
-            </div>
-            <ul data-tone="blue" className="divide-y divide-line">
-              {FEATURE_ROWS.map((r) => (
-                <li key={r.label} className="py-2">
-                  <div className="t-sub font-bold text-text-2">{r.label}</div>
-                  <div className={`mt-0.5 grid ${COMPARE_GRID_NARROW} gap-1.5 t-sub`}>
-                    {COMPARE_COLS.map((c) => (
-                      <span key={c.key} className={cellClass(c, r)}>
-                        {r[c.key]}
-                      </span>
-                    ))}
-                  </div>
-                </li>
-              ))}
-              <li className="py-2">
-                <div className="t-sub font-bold text-text-2">프로필 인증배지</div>
-                <div className={`mt-0.5 grid ${COMPARE_GRID_NARROW} gap-1.5 t-sub`}>
-                  {COMPARE_COLS.map((c) => (
-                    <span key={c.key} className={c.key === "free" ? "text-text-3" : "font-bold text-text-1"}>
-                      {c.key === "free" ? "—" : `${c.name} 배지`}
-                    </span>
-                  ))}
-                </div>
-              </li>
-            </ul>
-          </div>
-
-          {/* ── 넓은 화면(md+): 기능 열 + 값 N열 ── */}
-          <div className="hidden md:block">
-            <div className={`grid ${COMPARE_GRID_WIDE} items-end gap-2 border-b border-line px-3.5 pb-2`}>
-              <span />
-              {COMPARE_COLS.map((c) => (
-                <div key={c.key} className="flex flex-col">
-                  <span className={`t-body font-bold ${c.tone}`}>{c.name}</span>
-                  <span className="t-sub t-num text-text-3">{c.price}</span>
-                </div>
-              ))}
-            </div>
-            <ul data-tone="blue" className="divide-y divide-line">
-              {FEATURE_ROWS.map((r) => (
-                <li key={r.label} className={`grid ${COMPARE_GRID_WIDE} items-center gap-2 py-2.5 t-sub`}>
-                  <span className="text-text-2">{r.label}</span>
-                  {COMPARE_COLS.map((c) => (
-                    <span key={c.key} className={cellClass(c, r)}>
-                      {r[c.key]}
-                    </span>
-                  ))}
-                </li>
-              ))}
-              <li className={`grid ${COMPARE_GRID_WIDE} items-center gap-2 py-2.5 t-sub`}>
-                <span className="text-text-2">프로필 인증배지</span>
-                {COMPARE_COLS.map((c) => (
-                  <span key={c.key} className={c.key === "free" ? "text-text-3" : "font-bold text-text-1"}>
-                    {c.key === "free" ? "—" : `${c.name} 배지`}
-                  </span>
-                ))}
-              </li>
-            </ul>
-          </div>
-
-          {/* 기간별 할인 (9k) — 월 환산가. [970 · A-05] 열이 셋(라벨 + 월간 + 12개월)이라 가로 스크롤 없음.
-              [970 · A-22] 결제 방식은 recurringOpen 사실 그대로 — 개방 전엔 전부 단건 */}
-          <h3 className="mt-4 t-sub font-bold text-text-2">기간별 할인(월 환산가)</h3>
-          <ul data-tone="mint" className="divide-y divide-line border-y border-line">
-            <li className="grid grid-cols-[88px_repeat(2,1fr)] gap-2 py-1.5 t-sub text-text-3 md:grid-cols-[minmax(0,1fr)_repeat(2,104px)]">
-              <span />
-              {BILLING_PERIOD_PRICES.pro.map((p) => (
-                <span key={p.months}>{p.months === 1 ? "월간" : `${p.months}개월`}</span>
-              ))}
-            </li>
-            {(["pro", ...(isTierOnSale("expert") ? (["expert"] as const) : [])] as const).map((tier) => (
-              <li
-                key={tier}
-                className="grid grid-cols-[88px_repeat(2,1fr)] items-center gap-2 py-2.5 t-sub md:grid-cols-[minmax(0,1fr)_repeat(2,104px)]"
+            <p className="t-sub text-text-3">
+              {WEEKLY_PASS.days}일 동안 플러스 기능 전체 이용 · 1회성 단건 결제(자동
+              반복청구 없음) · 기간이 끝나면 자동으로 무료 플랜으로 돌아가며 추가
+              청구가 없습니다
+            </p>
+            {/* 하루 단가는 월간이 더 싸다 — 그 사실을 감추지 않는다.
+                주간권의 가치는 가격이 아니라 "약정 없이 먼저 써본다"는 데 있다. */}
+            <p className="t-sub text-text-3">
+              하루 {Math.round(WEEKLY_PASS.totalKrw / WEEKLY_PASS.days).toLocaleString("ko-KR")}원
+              꼴이에요. 계속 쓰실 것 같으면 월간(
+              {Math.round(tierPricing("pro").monthly / 30).toLocaleString("ko-KR")}원/일)이 더
+              저렴합니다.
+            </p>
+            {/* [1003] 취급 결제수단 — 990 에서 만든 문장을 요금제 카드 아래에서 여기로
+                옮겼다. "무엇으로 결제하는가"는 결제 버튼 옆에서 읽혀야 하고, 2026-09
+                토스 반려 사유가 정확히 그 자리다("결제수단 신용/체크카드가 확인되지
+                않습니다"). 같은 사실이 두 곳에서 읽히지 않도록 아래 신뢰 스트립의
+                "카드번호는 남지 않아요" 줄은 뺐다 — 결제수단의 단일 출처는 이 줄이다. */}
+            <p className="mt-1 t-sub text-text-3">
+              <span className="font-bold text-ink">신용카드 · 체크카드</span> 결제
+              (토스페이먼츠 결제창) · 카드번호는 내집나우 서버에 저장되지 않습니다 ·{" "}
+              <Link
+                href={PAYMENT_METHODS_PATH}
+                /* 문장 속 링크의 기준은 WCAG 2.5.8(24px) — inline-block + 세로 패딩으로
+                   글자줄만 키운다(44px 히트를 겹치면 위아래 줄의 탭을 훔친다). */
+                className="inline-block py-[5px] font-bold text-primary underline"
               >
-                <span className={`font-bold ${tier === "pro" ? "text-primary" : "text-warning"}`}>{planLabel(tier)}</span>
-                {BILLING_PERIOD_PRICES[tier].map((p) => (
-                  <span key={p.months} className="t-num font-bold text-text-1">
-                    {fmtWon(p.monthlyEquivalentKrw)}
-                    {p.discountPct > 0 && (
-                      <span className="ml-0.5 t-caption font-medium text-text-3">-{Math.round(p.discountPct)}%</span>
-                    )}
+                결제 수단 안내
+              </Link>
+            </p>
+          </div>
+          {/* [966] 상태별로 정직하게: 결제 미개통이면 사전 등록(예전엔 버튼이 통째로
+              사라져 설명만 남는 죽은 카드였다), 이미 프로(expert)면 사지 못하게 —
+              사면 applyPlan 이 "다른 플랜" 으로 보고 7일짜리 플러스로 **강등**된다. */}
+          <div className="w-full shrink-0 md:w-[236px]">
+            {/* [1003] 주간권 버튼은 링크 직행이다(2단계 확인 제거 — 토스 심사 세션이 멈춘 자리).
+               [1004] 월간·연간(PlanCards)의 버튼도 같은 이유로 링크가 됐다 — 확인은 체크아웃·
+               카드 등록 화면이 이미 한 번 더 한다(주문 요약·동의 체크). 목적지 규칙은
+               lib/subscriptions/checkout-href.ts 단일 출처.
+               [1007] 비회원 화면(결제 링크)이 HTML 에 실린다. 프로 이용 중 문구·플러스 연장 문구·
+               게스트 사전 등록 판정은 WeeklyPassCta 가 세션으로 바꾼다. */}
+            <WeeklyPassCta
+              paymentsReady={paymentsReady}
+              checkoutBase={REVIEW_CHECKOUT_PATH}
+              weeklyTotalKrw={WEEKLY_PASS.totalKrw}
+              weeklyDays={WEEKLY_PASS.days}
+            />
+          </div>
+        </WeeklyPassFrame>
+      </section>
+
+      {/* P2-8: 환불 규정 직링크 — 약관 제8조(청약철회) 앵커.
+          [1003] 주간권 블록과 함께 위로 올라왔다 — 상품·금액·환불 규정이 한 화면에
+          붙어 있어야 한다(전자상거래법 고지이자 심사가 한 번에 확인하는 묶음). */}
+      <p className="rise-in-2 mx-auto mt-3 w-full max-w-[1080px] text-center t-sub text-text-3">
+        결제 7일 이내 청약철회(환불) 가능 ·{" "}
+        <Link
+          href="/legal/terms#refund"
+          /* [990] 문장 속 링크의 기준은 WCAG 2.5.8(24px) — 44px 히트를 겹쳐 얹으면
+             윗줄·아랫줄의 탭을 가져간다(989 에서 되돌린 적 있음). inline-block +
+             세로 패딩으로 글자줄만 24px 로 키운다(푸터 대표전화와 같은 방식). */
+          className="inline-block py-[5px] font-bold text-primary underline underline-offset-2"
+        >
+          환불 규정 안내
+        </Link>
+      </p>
+
+      {/* 요금제 카드 3종 + 월간/연간 토글 (item 13) */}
+      <section className="mx-auto mt-8 w-full">
+        {/* [970 · A-06] 비로그인은 currentPlan=null — 게스트에게 무료 카드를 "현재 이용 중"
+            으로 그리면 가입 입구("무료로 시작")가 사라진다. [1007] 현재 플랜·?billing·?plan·
+            ?returnTo 는 PlanCards 가 마운트 뒤 스스로 판정한다(props 생략 = 클라이언트 판정). */}
+        <PlanCards
+          pro={tierPricing("pro")}
+          expert={tierPricing("expert")}
+          paymentsReady={paymentsReady}
+          recurringReady={recurringReady}
+        />
+        {/* [966] 결제 신뢰 스트립 — 카드 아래에서 "무엇이 보장되는지" 를 짧게.
+            전부 코드가 실제로 하는 일이다: 결제 즉시 이용권이 적용되며 영수증 메일·
+            알림이 나가고(965·966), 7일 이내 청약철회는 약관 제8조. */}
+        {/* [1003] "카드번호는 남지 않아요" 줄을 뺐다 — 같은 사실(수단 + 미저장)이 위
+            주간권 블록의 결제수단 한 줄에 모였다. 한 화면에서 두 번 읽히면 어느 쪽이
+            최신인지 알 수 없어지고, 실제로 990 에서 만든 결제수단 문장이 이 카드와
+            내용이 겹친 채 서로 다른 곳에 떨어져 있었다. 단일 출처는 결제 블록이다. */}
+        <ul className="mx-auto mt-4 grid w-full max-w-[1080px] grid-cols-1 gap-2 sm:grid-cols-2">
+          {[
+            { icon: "receipt", title: "즉시 적용 · 영수증 메일", desc: "결제가 끝나면 바로 이용권이 켜지고, 알림함과 이메일로 영수증을 보내드려요" },
+            { icon: "shield", title: "7일 이내 청약철회", desc: "결제 후 7일 이내 전액 환불, 이후 중도 해지는 잔여기간 일할 환불 (약관 제8조)" },
+          ].map((t) => (
+            <li key={t.title} className="flex items-start gap-2.5 rounded-xl border border-line bg-surface px-3.5 py-3">
+              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-hanji text-brand-hanji-ink">
+                <Icon name={t.icon} size={14} />
+              </span>
+              <span className="flex flex-col gap-0.5">
+                <span className="t-sub font-bold text-ink">{t.title}</span>
+                <span className="t-caption leading-[1.5] text-text-3">{t.desc}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        {/* [1003] 취급 결제수단 한 줄은 위 주간권(결제) 블록으로 올렸다 — 결제수단은
+            결제 버튼 옆에서 읽혀야 하고, 심사가 찾는 것도 그 자리다. */}
+      </section>
+      {/* E1 — 구독 관리·결제 내역. `/my` 가 "구독 페이지에서 관리해요"라고 보내던 목적지.
+          로그인하지 않았으면 보여 줄 사실이 없으므로 아예 렌더하지 않는다. */}
+      {/* [1007] 로그인한 사람에게만 — BillingPanel(클라이언트)이 세션 판정 뒤 /api/subscriptions/summary 로 그린다 */}
+      <BillingPanel />
+
+      {/* 기능 비교표 (9k · [C49] 좁은 화면 배치 · [992] 열은 COMPARE_COLS 에서 유도) */}
+      <section className="rise-in-4 card mx-auto mt-8 w-full max-w-[1080px] rounded-3xl px-[22px] py-5">
+        {/* ── 좁은 화면(< md) ── */}
+        <div className="md:hidden">
+          <div className="mb-2 t-sub font-bold text-text-3">기능 비교</div>
+          <div className={`sticky top-[62px] z-10 grid ${COMPARE_GRID_NARROW} gap-1.5 rounded-lg bg-surface py-1.5`}>
+            {COMPARE_COLS.map((c) => (
+              <div key={c.key} className={`text-center ${c.soft ? "rounded-lg bg-[rgba(29,79,216,.06)] py-0.5" : ""}`}>
+                <div className={`t-sub font-bold ${c.tone}`}>{c.name}</div>
+                <div className="t-sub text-text-3">{c.price}</div>
+              </div>
+            ))}
+          </div>
+          {FEATURE_ROWS.map((r) => (
+            <div key={r.label} className="border-t border-divider py-2">
+              <div className="mb-1 t-sub font-semibold text-text-2">{r.label}</div>
+              <div className={`grid ${COMPARE_GRID_NARROW} gap-1.5 text-center t-sub`}>
+                {COMPARE_COLS.map((c) => (
+                  <span key={c.key} className={cellClass(c, r, true)}>
+                    {r[c.key]}
                   </span>
                 ))}
-              </li>
-            ))}
-          </ul>
-          <p className="t-caption text-text-3">
-            {recurringOpen
-              ? "월간·연간은 카드 등록형 자동결제 · 중도 해지 시 잔여기간 일할 환불(고객센터 접수)"
-              : "1회성 단건 결제(자동 갱신 없음) · 중도 해지 시 잔여기간 일할 환불(고객센터 접수)"}
-          </p>
-        </section>
-
-        {/* 고도화 32 — 구독 FAQ. 아래 JSON-LD 는 이 배열 그대로에서 생성한다(화면에 없는 질문을 스키마에만 넣지 않는다).
-            [v4 · 규칙 3·11] 질문 한 줄 행 + 답은 접힘(<details>) — 접혀 있어도 HTML 에 있어 FAQPage 규칙(보이는 내용과 일치)을 지킨다 */}
-        <section aria-labelledby="faq-h" className="flex flex-col">
-          <h2 id="faq-h" className="t-section text-ink">
-            자주 묻는 질문
-          </h2>
-          <ul data-tone="hanji" className="mt-1 divide-y divide-line">
-            {faq.map((f) => (
-              <li key={f.q}>
-                <details className="group">
-                  <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-2 t-body font-bold text-text-1 [&::-webkit-details-marker]:hidden">
-                    {f.q}
-                    <span aria-hidden="true" className="shrink-0 t-body text-text-3 transition-transform group-open:rotate-90">
-                      ›
-                    </span>
-                  </summary>
-                  {/* t-body — 폰 배율의 "li 안 t-sub 한 줄" 규칙에 답이 잘리지 않게(답은 끝까지 읽혀야 한다) */}
-                  <p className="pb-3 t-body text-text-2">{f.a}</p>
-                </details>
-              </li>
-            ))}
-          </ul>
-        </section>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: jsonLdScript(faqJsonLd(faq)) }}
-        />
-
-        {/* [969] 하이드레이션 — <p> 안에 <div> 를 두지 않는다(형제로 분리). 수익 문구 미기재 방침 + 서비스 제공기간 */}
-        <div className="flex flex-col gap-3">
-          <ComplianceNotice variant="payment" recurringOpen={recurringOpen} />
-          {/* "언제든 해지 가능"만 적어 두면 화면 어딘가에 해지 버튼이 있다는 뜻으로 읽힌다 — [970 · A-22]
-              위 FAQ·ComplianceNotice 와 같은 recurringOpen 을 본다. */}
-          <p className="t-caption text-text-3">
-            {recurringOpen
-              ? `${WEEKLY_PASS.label}은 단건, 월간·연간은 자동결제(해지는 구독 관리에서) · 환불 접수는 고객센터 1:1 문의 · 결제 7일 이내 전액 환불 · 부가세 포함 · `
-              : "모든 이용권은 1회성 단건 결제(자동 갱신 없음) · 환불 접수는 고객센터 1:1 문의 · 결제 7일 이내 전액 환불 · 부가세 포함 · "}
-            커뮤니티 글·공개 노트·채팅 등 모든 닉네임 노출 지점에 동일 배지 적용
-          </p>
+              </div>
+            </div>
+          ))}
+          <div className="border-t border-divider py-2">
+            <div className="mb-1 t-sub font-semibold text-text-2">프로필 인증배지</div>
+            <div className={`grid ${COMPARE_GRID_NARROW} items-center gap-1.5 text-center`}>
+              {COMPARE_COLS.map((c) => (
+                <span key={c.key} className={c.soft ? "rounded-md bg-[rgba(29,79,216,.04)] py-0.5" : ""}>
+                  {c.key === "free" ? <span className="t-sub text-text-3">—</span> : <PlanBadge tier={c.key} />}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
+
+        {/* ── 넓은 화면(md+) ── */}
+        <div className="hidden overflow-x-auto md:block">
+          <div className={COMPARE_COLS.length === 3 ? "min-w-[640px]" : "min-w-[520px]"}>
+            <div className={`grid ${COMPARE_GRID_WIDE} items-end gap-2 border-b border-divider pb-3 pt-1.5`}>
+              <span className="t-sub text-text-3">기능 비교</span>
+              {COMPARE_COLS.map((c) => (
+                <div key={c.key} className={`text-center ${c.soft ? "rounded-lg bg-[rgba(29,79,216,.05)] py-1.5" : ""}`}>
+                  <div className={`t-body font-bold ${c.tone}`}>{c.name}</div>
+                  <div className="t-title text-ink">
+                    {c.key === "free" ? "0원" : (
+                      <>
+                        {c.key === "plus" ? PLUS_MONTHLY : PRO_MONTHLY}
+                        <span className="t-sub text-text-3">/월</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {FEATURE_ROWS.map((r) => (
+              <div
+                key={r.label}
+                className={`grid ${COMPARE_GRID_WIDE} items-center gap-2 border-b border-divider py-2.5 t-sub`}
+              >
+                <span className="text-text-2">{r.label}</span>
+                {COMPARE_COLS.map((c) => (
+                  <span key={c.key} className={cellClass(c, r, false)}>
+                    {r[c.key]}
+                  </span>
+                ))}
+              </div>
+            ))}
+            <div className={`grid ${COMPARE_GRID_WIDE} items-center gap-2 py-2.5 t-sub`}>
+              <span className="text-text-2">프로필 인증배지</span>
+              {COMPARE_COLS.map((c) => (
+                <span key={c.key} className={`text-center ${c.soft ? "bg-[rgba(29,79,216,.04)] py-1" : ""}`}>
+                  {c.key === "free" ? <span className="text-text-3">—</span> : <PlanBadge tier={c.key} />}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 기간별 할인 (9k)
+          [970 · A-05] 모바일에서 12개월 열·할인율이 화면 밖이었다 — 열이 셋(라벨+월간+12개월)
+          뿐이라 가로 스크롤이 필요 없다. 최소 폭은 md+ 에서만, 라벨 칸은 모바일 88px,
+          제목 줄은 flex-wrap 으로 부제가 아래로 내려가게. overflow-x-auto 도 md+ 만. */}
+      <section className="rise-in-5 card mx-auto mt-4 w-full max-w-[1080px] rounded-2xl px-5 py-4 md:overflow-x-auto">
+        <div className="md:min-w-[560px]">
+          <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+            <span className="t-section text-ink">기간별 할인 (월 환산가)</span>
+            {/* [970 · A-22] 결제 방식은 recurringOpen 사실 그대로 — 개방 전엔 전부 단건 */}
+            <span className="t-sub text-text-3">
+              {recurringOpen
+                ? "월간·연간은 카드 등록형 자동결제 · 중도 해지 시 잔여기간 일할 환불(고객센터 접수)"
+                : "1회성 단건 결제(자동 갱신 없음) · 중도 해지 시 잔여기간 일할 환불(고객센터 접수)"}
+            </span>
+          </div>
+          <div className="grid grid-cols-[88px_repeat(2,1fr)] gap-2 border-b border-divider py-[7px] t-sub text-text-3 md:grid-cols-[120px_repeat(2,1fr)]">
+            <span />
+            {BILLING_PERIOD_PRICES.pro.map((p) => (
+              <span key={p.months} className="text-center">
+                {p.months === 1 ? "월간" : `${p.months}개월`}
+              </span>
+            ))}
+          </div>
+          <div className="grid grid-cols-[88px_repeat(2,1fr)] items-center gap-2 border-b border-divider py-2.5 t-sub md:grid-cols-[120px_repeat(2,1fr)]">
+            <span className="font-bold text-primary">✦ 플러스</span>
+            {BILLING_PERIOD_PRICES.pro.map((p) => (
+              <span
+                key={p.months}
+                className={`text-center ${
+                  p.months === 12 ? "font-bold text-primary" : "font-bold text-text-1"
+                }`}
+              >
+                {fmtWon(p.monthlyEquivalentKrw)}
+                {p.discountPct > 0 && (
+                  <span className="ml-0.5 t-caption font-medium text-text-3">
+                    -{Math.round(p.discountPct)}%
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+          {isTierOnSale("expert") && (
+          <div className="grid grid-cols-[88px_repeat(2,1fr)] items-center gap-2 py-2.5 t-sub md:grid-cols-[120px_repeat(2,1fr)]">
+            <span className="font-bold text-warning">✦ 프로</span>
+            {BILLING_PERIOD_PRICES.expert.map((p) => (
+              <span
+                key={p.months}
+                className={`text-center ${
+                  p.months === 12 ? "font-bold text-warning" : "font-bold text-text-1"
+                }`}
+              >
+                {fmtWon(p.monthlyEquivalentKrw)}
+                {p.discountPct > 0 && (
+                  <span className="ml-0.5 t-caption font-medium text-text-3">
+                    -{Math.round(p.discountPct)}%
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+          )}
+        </div>
+      </section>
+
+      {/* [992] "배지 노출 예시" 3장 삭제 — 꾸민 그림(가공 닉네임·점수)이었고, 유료 티어가
+          하나가 되면서 배지 비교 자체가 사라졌다. 배지는 비교표 마지막 줄에 있다. */}
+
+      {/* 고도화 32 — 구독 FAQ. 결제 수단·환불·해지가 화면 곳곳에 흩어져 있던
+          것을 한 자리에 모은다. 아래 JSON-LD 는 이 배열 그대로에서 생성한다
+          (화면에 없는 질문을 스키마에만 넣지 않는다 — faqJsonLd 규칙). */}
+      <section className="rise-in-4 card mx-auto mt-8 w-full max-w-[1080px] rounded-3xl px-[22px] py-5">
+        <h2 className="t-section text-ink">자주 묻는 질문</h2>
+        <div className="mt-3 flex flex-col gap-3">
+          {faq.map((f) => (
+            <div key={f.q} className="border-l-2 border-line pl-3">
+              <div className="t-body font-bold text-text-1">{f.q}</div>
+              <p className="mt-0.5 t-sub text-text-3">{f.a}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(faqJsonLd(faq)) }}
+      />
+
+      {/* [969] 하이드레이션 불일치 원인 수정 — 예전엔 아래 안내 <div>(안에 <p>)가 이 <p>
+          **안에** 있었다. 브라우저는 <p> 안의 <div> 를 만나면 <p> 를 먼저 닫아 버리므로
+          서버 HTML 과 React 트리가 달라졌고, /subscription 모바일에서 React #418 이 6회 중
+          1회꼴로 났다(dev 서버 실측: "In HTML, <p> cannot be a descendant of <p>"). 형제로 분리. */}
+      <div className="mx-auto mt-4 w-full max-w-[1080px]">
+        {/* 수익 문구 미기재 방침 + 서비스 제공기간(무형재화 판매정책 필수 표기) */}
+        <ComplianceNotice variant="payment" recurringOpen={recurringOpen} />
       </div>
+      <p className="mx-auto mt-5 w-full max-w-[1080px] t-sub text-text-3">
+        {/* "언제든 해지 가능"만 적어 두면 화면 어딘가에 해지 버튼이 있다는 뜻으로 읽힌다.
+            [970 · A-22] 빌링 개방 후엔 자동결제 해지 버튼이 구독 관리(BillingAutopayCard)에
+            실제로 있다 — 환불 접수만 고객센터. 개방 전엔 전부 단건이라 해지할 것이 없고
+            환불 접수만 남는다. 위 FAQ·ComplianceNotice 와 같은 recurringOpen 을 본다. */}
+        {recurringOpen
+          ? `${WEEKLY_PASS.label}은 단건, 월간·연간은 자동결제(해지는 구독 관리에서) · 환불 접수는 고객센터 1:1 문의 · 결제 7일 이내 전액 환불 · 부가세 포함 · `
+          : "모든 이용권은 1회성 단건 결제(자동 갱신 없음) · 환불 접수는 고객센터 1:1 문의 · 결제 7일 이내 전액 환불 · 부가세 포함 · "}
+        커뮤니티 글·공개 노트·채팅 등 모든 닉네임 노출 지점에 동일 배지 적용
+      </p>
     </PageShell>
   );
 }

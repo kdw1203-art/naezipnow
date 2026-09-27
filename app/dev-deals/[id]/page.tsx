@@ -48,7 +48,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-line bg-surface px-3 py-2.5">
       <div className="text-[10px] text-text-3">{label}</div>
-      <div className="mt-0.5 text-[13px] font-extrabold text-ink">{value}</div>
+      <div className="mt-0.5 text-[13px] font-bold text-ink">{value}</div>
     </div>
   );
 }
@@ -115,7 +115,7 @@ export default async function DevDealDetailPage({
 
           {/* 사업규모 breakdown */}
           <section className="rise-in-1 card p-[var(--pad-card)]">
-            <h2 className="mb-3 text-[15px] font-extrabold text-ink">사업규모</h2>
+            <h2 className="mb-3 text-[15px] font-bold text-ink">사업규모</h2>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <Stat label="부지면적" value={formatAreaM2(deal.landAreaM2)} />
               <Stat label="연면적" value={formatAreaM2(deal.grossFloorAreaM2)} />
@@ -135,7 +135,7 @@ export default async function DevDealDetailPage({
           {/* 필요 협력업체 */}
           {deal.neededPartners.length > 0 && (
             <section className="rise-in-2 card p-[var(--pad-card)]">
-              <h2 className="mb-2 text-[15px] font-extrabold text-ink">필요 협력 분야</h2>
+              <h2 className="mb-2 text-[15px] font-bold text-ink">필요 협력 분야</h2>
               <div className="flex flex-wrap gap-1.5">
                 {deal.neededPartners.map((p) => (
                   <span
@@ -152,7 +152,7 @@ export default async function DevDealDetailPage({
           {/* 상세 설명 */}
           {(deal.summary || deal.description) && (
             <section className="rise-in-2 card p-[var(--pad-card)]">
-              <h2 className="mb-2 text-[15px] font-extrabold text-ink">사업 개요</h2>
+              <h2 className="mb-2 text-[15px] font-bold text-ink">사업 개요</h2>
               {deal.summary && (
                 <p className="text-[13px] font-semibold leading-[1.7] text-ink">
                   {deal.summary}
@@ -168,7 +168,7 @@ export default async function DevDealDetailPage({
 
           {/* 예상 중개수수료 */}
           <section className="rise-in-3 card p-[var(--pad-card)]">
-            <h2 className="mb-1 text-[15px] font-extrabold text-ink">
+            <h2 className="mb-1 text-[15px] font-bold text-ink">
               예상 중개수수료
             </h2>
             <p className="mb-3 text-[12px] text-text-3">
@@ -189,7 +189,7 @@ export default async function DevDealDetailPage({
               </div>
               <div>
                 <div className="text-[10px] text-text-3">예상 수수료(기준)</div>
-                <div className="text-[15px] font-extrabold text-primary">
+                <div className="text-[15px] font-bold text-primary">
                   {commission.estimatedKrw != null
                     ? formatKrwEok(commission.estimatedKrw)
                     : "성사 시 협의"}
@@ -208,7 +208,7 @@ export default async function DevDealDetailPage({
         {/* 사이드: 연락처 + 문의 폼 */}
         <aside className="flex flex-col gap-5">
           <section className="card p-[var(--pad-card)]">
-            <h2 className="mb-2 text-[15px] font-extrabold text-ink">등록자 연락처</h2>
+            <h2 className="mb-2 text-[15px] font-bold text-ink">등록자 연락처</h2>
             <div className="text-[13px] text-text-2">
               담당자{" "}
               <b className="text-ink">{deal.contactName ?? "등록자"}</b>
@@ -223,7 +223,7 @@ export default async function DevDealDetailPage({
           </section>
 
           <section className="card p-[var(--pad-card)]">
-            <h2 className="mb-3 text-[15px] font-extrabold text-ink">참여 문의</h2>
+            <h2 className="mb-3 text-[15px] font-bold text-ink">참여 문의</h2>
             <InquiryForm dealId={deal.id} isSample={deal.isSample} />
           </section>
         </aside>

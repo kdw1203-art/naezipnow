@@ -66,12 +66,12 @@ function Row({ item }: { item: OwnerVerificationItem }) {
     <div className="flex flex-col gap-2 rounded-xl border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.04)] p-4">
       <div className="flex flex-wrap items-center gap-2">
         <span
-          className="rounded-lg chip-pad text-[10px] font-extrabold"
+          className="rounded-lg chip-pad text-[10px] font-bold"
           style={{ color: meta.color, background: meta.bg }}
         >
           {meta.label}
         </span>
-        <span className="text-[13px] font-extrabold text-white">
+        <span className="text-[13px] font-bold text-white">
           {item.complexName || "이름 없음"}
         </span>
         {item.region && <span className="text-[12px] text-[#9aa6b8]">{item.region}</span>}
@@ -152,7 +152,7 @@ function Row({ item }: { item: OwnerVerificationItem }) {
           <button
             type="button"
             onClick={() => void submit("approve")}
-            className="rounded-lg bg-ai-success px-3 py-1.5 text-[12px] font-extrabold text-[#0e1320]"
+            className="rounded-lg bg-ai-success px-3 py-1.5 text-[12px] font-bold text-[#0e1320]"
           >
             승인 확정
           </button>
@@ -178,7 +178,7 @@ function Row({ item }: { item: OwnerVerificationItem }) {
             type="button"
             disabled={!reason.trim()}
             onClick={() => void submit("reject")}
-            className="rounded-lg bg-ai-danger px-3 py-1.5 text-[12px] font-extrabold text-[#0e1320] disabled:opacity-40"
+            className="rounded-lg bg-ai-danger px-3 py-1.5 text-[12px] font-bold text-[#0e1320] disabled:opacity-40"
           >
             반려 확정
           </button>

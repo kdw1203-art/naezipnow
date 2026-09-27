@@ -15,7 +15,7 @@ export default function AdminSocialPage() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-[19px] font-extrabold !text-white">소셜 · 릴스/쇼츠</h1>
+        <h1 className="text-[19px] font-bold !text-white">소셜 · 릴스/쇼츠</h1>
         <p className="mt-1 text-[12px] text-[#9aa6b8]">
           임장노트·홍보 영상을 자동 생성해 인스타 릴스·유튜브 쇼츠로 발행하는 큐입니다.
           매일 11:00 소재 생성 · 15분마다 집행. 자격 증명 미설정 대상은 대기 상태로

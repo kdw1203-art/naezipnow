@@ -22,10 +22,8 @@ import { cityOfRegion, groupRegionsByCity } from "@/lib/town/region-groups";
 import { buildNewsRows } from "@/lib/town/news-list";
 import { isStoryPost } from "@/lib/town/story";
 import { postAttachments } from "@/lib/community/attachments";
-import { feedAuthorLabel, feedDisplayTitle } from "@/lib/town/feed-regions";
-import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
+import { Icon } from "@/app/components/Icon";
 import { TownNewsStrip } from "../TownNewsStrip";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* ============================================================
    [#64] 동네 홈 — /town/{regionId}
@@ -34,18 +32,11 @@ import { TownNewsStrip } from "../TownNewsStrip";
    한 화면에 모으고, 시장 데이터 페이지(/region/[id])와 상호 링크한다.
 
    구분: /region/[id] = 시장 데이터(숫자), /town/[id] = 동네 생활(글·뉴스).
-   이웃 글 상세는 /town/story/[id].
+   [1006] 사람 기록(이웃 글 · 임장노트)과 "이 동네 뉴스"는 **시각적으로 다른 블록**이다 —
+   이웃 글은 작성자 머리글자가 앞에 오는 이야기 카드(.story-*), 뉴스는 한지 면 스트립
+   (.news-strip, 출처·시각)으로 뉴스룸을 가리킨다. 이웃 글 상세는 /town/story/[id].
    generateStaticParams + dynamicParams=false — 카탈로그 62곳만 존재한다
    (임의 문자열은 빌드 매니페스트 밖이라 미들웨어 전에 정적 404 — soft-404 없음).
-
-   [v4] "한 화면 한 가지" — 허브(/town)와 같은 모양. 위에서 아래로:
-     ① 머리 — 제목 "{동네} 동네 홈" + 사실 한 줄(평균 매매가 · 전세가율, 있을 때만) + 오른쪽 알림·작은 글쓰기
-     ② 뉴스 한 행(허브 TownNewsRow 와 같은 모양 · 0건이면 없음) → 뉴스룸 지역 딥링크
-     ③ 이웃 글 목록(1px 선 행) ④ 공개 임장노트 목록(1px 선 행) ⑤ 다른 동네 홈(시·도별 접기)
-     ⑥ 맨 끝 링크 한 줄(시장 데이터 · 지도) + 출처 캡션 한 줄
-   지운 것: 한지 뉴스 스트립 · "자동 수집"/"뉴스룸"/"사람의 기록" 배지 · 시세 카드(3칸 + 출처 문장) ·
-   이야기 아바타 · "Lab 데이터"/"직접방문" 배지 · 빈 상태 설명 문장(한 줄로) · 채움 파랑 "이 동네 이야기 쓰기"
-   (작은 아웃라인으로) · 2열 격자(데스크톱도 가운데 한 줄 760px) · 동네 이름 칩(글자 링크로 — 칩은 필터에만).
    ============================================================ */
 
 /* [1007] 600초 → 6시간. 62개 동네 홈(HTML ~185KB)이 하루 198회 크롤되며 10분마다 다시
@@ -71,11 +62,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { region: id } = await params;
   const region = findCatalogRegionById(id);
-  if (!region) return { title: "동네를 찾을 수 없어요 | 내집나우" };
+  if (!region) return { title: "동네를 찾을 수 없습니다 | 내집나우" };
   /* [970 · C-25] 접미 없던 제목에 `| 내집나우`(폴백 제목과 동일 접미) */
   const title = `${region.name} 동네 홈 — 이웃 글·뉴스·시세 한눈에 | 내집나우`;
-  /* [1012] 규칙 5 — "받아보세요" 권유 제거, 구성만 */
-  const description = `${region.name} 이웃 글 · 공개 임장노트 · 오늘의 ${region.name} 부동산 뉴스 · 평균 매매가·전세가율 요약을 한 화면에.`;
+  const description = `${region.name} 이웃들의 임장·거주 이야기, 오늘의 ${region.name} 부동산 뉴스, 아파트 시세 요약을 한 화면에서. 키워드 알림으로 새 소식을 받아보세요.`;
   return {
     title,
     description,
@@ -106,33 +96,6 @@ function relTime(iso: string): string {
   return relativeTimeLabel(iso, Date.now(), { unit: "hour", justNow: "방금", maxDays: 30, fallback: "md-utc" });
 }
 
-/** [v4] 섹션 머리 — 이름(t-section) + 숫자 · 오른쪽 작은 글자 링크 하나 */
-function SectionHead({
-  id,
-  title,
-  count,
-  href,
-  linkLabel,
-}: {
-  id: string;
-  title: string;
-  count?: number;
-  href: string;
-  linkLabel: string;
-}) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <h2 id={id} className="t-section text-ink">
-        {title}
-        {count !== undefined && count > 0 && <span className="ml-1.5 t-sub font-medium text-text-3">{count}</span>}
-      </h2>
-      <Link href={href} className="tap-line shrink-0 t-sub font-bold text-primary no-underline">
-        {linkLabel}
-      </Link>
-    </div>
-  );
-}
-
 export default async function TownRegionHomePage({
   params,
 }: {
@@ -159,36 +122,20 @@ export default async function TownRegionHomePage({
   const communityPosts = regionPosts
     .filter((p) => isStoryPost(p) && p.visibility !== "link_only")
     .slice(0, 8);
-  /* [1006] 이 동네 뉴스 — 뉴스룸과 같은 조립기(같은 사건 접기)로 행을 만든다.
-     [v4] 한 행이 "{동네} 뉴스 n건"(n = 접은 행 수) + 최신 제목만 말하므로 자르지 않고 센다 */
-  const newsRows = buildNewsRows(regionPosts.filter((p) => p.isAutomated));
+  /* [1006] 이 동네 뉴스 — 뉴스룸과 같은 조립기(같은 사건 접기·요약·출처)로 행을 만든다 */
+  const newsRows = buildNewsRows(regionPosts.filter((p) => p.isAutomated)).slice(0, 6);
   const notes: PublicNoteCard[] =
     notesR.status === "fulfilled"
       ? notesR.value.filter((n) => noteMatchesRegion(n, nameKey)).slice(0, 6)
       : [];
-  const notesFailed = notesR.status === "rejected";
   const snapshot: RegionMarketSnapshot | null =
     snapR.status === "fulfilled" ? snapR.value : null;
   const postsFailed = postsR.status === "rejected";
   /* [970 · C-17] "다른 동네" 접기에서 기본으로 펼칠 시·도 = 지금 보는 동네의 시·도 */
   const ownCity = cityOfRegion(id);
-  const writeHref = `/town/write?region=${encodeURIComponent(region.name)}`;
-  const newsHref = `/town/news?region=${encodeURIComponent(region.name)}`;
-
-  /* [v4 · 규칙 1] 머리 사실 한 줄 — 숫자만(한국부동산원 월간 통계, 있는 값만). 예전 시세 카드(3칸 + 출처 문장)의 값 */
-  const fact = snapshot
-    ? [
-        snapshot.avgSale && snapshot.avgSale > 0 ? `평균 매매가 ${formatKrwShort(snapshot.avgSale)}` : null,
-        snapshot.jeonseRatio !== undefined && Number.isFinite(snapshot.jeonseRatio)
-          ? `전세가율 ${snapshot.jeonseRatio.toFixed(1)}%`
-          : null,
-      ]
-        .filter(Boolean)
-        .join(" · ")
-    : "";
 
   return (
-    <PageShell>
+    <PageShell wide>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -202,166 +149,262 @@ export default async function TownRegionHomePage({
         }}
       />
 
-      {/* [v4] 데스크톱도 가운데 한 줄(최대 760px) — 예전 2열 격자(이웃 글 | 뉴스) 없음 */}
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
-        <div className="flex flex-col gap-3">
-          {/* 동네이야기로 돌아가는 길 — 24px 누름 높이 인라인 링크 */}
-          <nav aria-label="브레드크럼" className="t-sub text-text-3">
-            <Link href="/town" className="tap-line text-text-2 no-underline">
+      {/* 헤더 — 동네 이름 + 행동 */}
+      <div className="rise-in mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <div className="t-sub font-bold text-text-3">
+            <Link href="/town" className="inline-block py-[5px] hover:underline">
               동네이야기
             </Link>{" "}
             › 동네 홈
-          </nav>
-
-          {/* [v4 · 규칙 1·4] 머리 — 제목 한 줄 + 사실 한 줄 · 오른쪽 알림 + 작은 아웃라인 글쓰기(채움 파랑 없음) */}
-          <header className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="t-title text-ink">{region.name} 동네 홈</h1>
-              {fact && <p className="mt-0.5 truncate t-sub text-text-3">{fact}</p>}
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <KeywordAlertButton scope="news" query={region.name} label={`${region.name} 새 소식`} />
-              <Link href={writeHref} className="btn-outline btn-sm no-underline">
-                글쓰기
-              </Link>
-            </div>
-          </header>
-
-          {/* [v4] 뉴스 — 한지 스트립 → 허브와 같은 1px 선 행 하나(0건이면 없음) */}
-          <TownNewsStrip rows={newsRows} title={`${region.name} 뉴스`} href={newsHref} />
-        </div>
-
-        {/* 이웃 글 — 사람의 기록. [v4] 1px 선 행: 제목(굵게) + 작성자 · 시각 · 댓글 · 사진 한 줄 */}
-        <section aria-labelledby="region-stories-title" className="flex flex-col gap-1">
-          <SectionHead
-            id="region-stories-title"
-            title="이웃 글"
-            count={communityPosts.length}
-            href="/town?kind=post"
-            linkLabel="이야기 피드 보기 ›"
-          />
-          {postsFailed ? (
-            <p className="py-3 t-sub text-text-2">이웃 글을 지금 불러오지 못했어요 — 없다는 뜻은 아니에요</p>
-          ) : communityPosts.length === 0 ? (
-            /* [v4 · 규칙 8] 빈 상태는 한 줄 + 동사+대상 링크 — 지어낸 글 없음 */
-            <p className="py-3 t-sub text-text-3">
-              {region.name} 이웃 글 아직 없음 ·{" "}
-              <Link href={writeHref} className="tap-line font-bold text-primary no-underline">
-                {region.name} 이야기 쓰기 ›
-              </Link>
-            </p>
-          ) : (
-            <ul data-tone="hanji" className="divide-y divide-line">
-              {communityPosts.map((p) => {
-                const photoCount = postAttachments(p).length;
-                const meta = [
-                  p.authorLabel?.trim() || "이웃",
-                  relTime(p.createdAt),
-                  `댓글 ${p.commentCount}`,
-                  photoCount > 0 ? `사진 ${photoCount}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ");
-                return (
-                  <SummaryRow
-                    key={p.id}
-                    label={<span className="block truncate">{p.title}</span>}
-                    sub={meta}
-                    href={`/town/story/${p.id}`}
-                  />
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-        {/* 공개 임장노트 — [v4] 카드 격자 → 1px 선 행(제목 + 단지 · 작성자 한 줄). "Lab 데이터"·"직접방문" 배지 없음 */}
-        <section aria-labelledby="region-notes-title" className="flex flex-col gap-1">
-          <SectionHead
-            id="region-notes-title"
-            title="공개 임장노트"
-            count={notes.length}
-            href="/notes"
-            linkLabel="전체 보기 ›"
-          />
-          {notesFailed ? (
-            <p className="py-3 t-sub text-text-2">공개 임장노트를 지금 불러오지 못했어요 — 없다는 뜻은 아니에요</p>
-          ) : notes.length === 0 ? (
-            <p className="py-3 t-sub text-text-3">
-              {region.name} 공개 임장노트 아직 없음 ·{" "}
-              <Link
-                href={`/notes/new?region=${encodeURIComponent(region.name)}`}
-                className="tap-line font-bold text-primary no-underline"
-              >
-                {region.name} 임장노트 쓰기 ›
-              </Link>
-            </p>
-          ) : (
-            <ul data-tone="blue" className="divide-y divide-line">
-              {notes.map((n) => (
-                <SummaryRow
-                  key={n.id}
-                  label={
-                    <span className="block truncate">
-                      {feedDisplayTitle(n.title, n.region, { lab: isLabNoteLabel(n.authorLabel) })}
-                    </span>
-                  }
-                  sub={[n.aptName, feedAuthorLabel(n.authorLabel)].filter(Boolean).join(" · ") || undefined}
-                  href={`/notes/${n.id}`}
-                />
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {/* 다른 동네 홈 — [970 · C-17] 시·도별 <details> 로 전량을 접어 두고, 지금 보는 동네의 시·도만 기본 펼침.
-            [v4] 카드 → 1px 선 행(허브 TownIndex 와 같은 모양), 동네 이름은 칩이 아니라 글자 링크 */}
-        <section aria-labelledby="other-towns-title" className="flex flex-col gap-1">
-          <h2 id="other-towns-title" className="t-section text-ink">
-            다른 동네 홈
-          </h2>
-          <div data-tone="hanji" className="flex flex-col divide-y divide-line border-y border-line">
-            {groupRegionsByCity(REGION_CATALOG, id).map((g) => (
-              <details key={g.key} className="group" open={g.city === ownCity}>
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
-                  <span>
-                    {g.city}
-                    <span className="ml-1.5 t-caption font-normal text-text-3">{g.items.length}곳</span>
-                  </span>
-                  <span className="shrink-0 text-text-3 transition-transform group-open:rotate-45" aria-hidden="true">
-                    +
-                  </span>
-                </summary>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 pb-3">
-                  {g.items.map((r) => (
-                    <Link key={r.id} href={`/town/${r.id}`} className="px-1 py-1 t-sub text-text-2 no-underline">
-                      {r.name}
-                    </Link>
-                  ))}
-                </div>
-              </details>
-            ))}
           </div>
-        </section>
-
-        {/* [v4] 맨 끝 — 이 동네의 다른 화면 링크 한 줄 + 출처 캡션 한 줄(예전 시세 카드의 "한국부동산원 월간 통계 —" 문장) */}
-        <div className="flex flex-col gap-1">
-          <nav aria-label={`${region.name} 더 보기`} className="t-sub text-text-3">
-            {region.name} —{" "}
-            <Link href={`/region/${id}`} className="tap-line font-bold text-text-2 no-underline">
-              시장 데이터 보기
-            </Link>
-            {" · "}
-            <Link
-              href={`/map?region=${encodeURIComponent(region.name)}`}
-              className="tap-line font-bold text-text-2 no-underline"
-            >
-              지도에서 보기
-            </Link>
-          </nav>
-          {fact && <p className="t-caption text-text-3">평균 매매가·전세가율 한국부동산원 월간 통계 · 뉴스 매일 아침 8시 수집</p>}
+          <h1 className="mt-0.5 t-title tracking-tight text-ink">
+            {region.name} 동네 홈
+          </h1>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <KeywordAlertButton scope="news" query={region.name} label={`${region.name} 새 소식`} />
+          <Link
+            href={`/town/write?region=${encodeURIComponent(region.name)}`}
+            className="btn-primary btn-cta px-4 py-[9px] t-body"
+          >
+            이 동네 이야기 쓰기
+          </Link>
         </div>
       </div>
+
+      {/* 시세 요약 스트립 — /region 페이지의 축약판 + 상호 링크 */}
+      {snapshot && (
+        <Link
+          href={`/region/${id}`}
+          className="rise-in-1 card tile mb-5 flex flex-wrap items-center justify-between gap-3 px-5 py-4 no-underline"
+        >
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            {snapshot.avgSale && snapshot.avgSale > 0 && (
+              <div>
+                <div className="t-caption text-text-3">평균 매매가</div>
+                <div className="t-section text-ink tabular-nums">
+                  {formatKrwShort(snapshot.avgSale)}
+                </div>
+              </div>
+            )}
+            {snapshot.jeonseRatio !== undefined && Number.isFinite(snapshot.jeonseRatio) && (
+              <div>
+                <div className="t-caption text-text-3">전세가율</div>
+                <div className="t-section text-ink tabular-nums">
+                  {snapshot.jeonseRatio.toFixed(1)}%
+                </div>
+              </div>
+            )}
+            <div className="t-sub text-text-3">
+              {region.name} 시장 데이터 전체 보기 — 지수 추이·실거래·입주 물량
+            </div>
+          </div>
+          <span className="shrink-0 t-body font-bold text-primary">시장 데이터 →</span>
+        </Link>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* 이웃 글 — 사람의 기록. 이야기 카드 규칙(.story-*): 작성자가 먼저, 그다음 제목·댓글·사진 */}
+        <section className="rise-in-1" aria-labelledby="region-stories-title">
+          <div className="mb-2 flex items-baseline justify-between px-1">
+            <h2 id="region-stories-title" className="t-section text-ink">
+              이웃 글 <span className="story-kind ml-1 t-caption align-middle">사람의 기록</span>
+            </h2>
+            <Link href="/town?kind=post" className="inline-block py-[5px] t-sub font-bold text-primary">
+              이야기 피드 ›
+            </Link>
+          </div>
+          {postsFailed ? (
+            <div className="card rounded-2xl px-5 py-6 t-body text-text-2">
+              글을 지금 불러오지 못했어요. 잠시 후 다시 열어봐 주세요.
+            </div>
+          ) : communityPosts.length === 0 ? (
+            <div className="story-card flex flex-col items-start gap-2 px-5 py-6">
+              {/* [970 · C-20] 해요체 통일 · [1006] 0건은 0건이라고 — 지어낸 글 없음 */}
+              <p className="t-body text-text-2">
+                아직 {region.name} 이웃 글이 없어요 — 이 동네에 다녀오셨다면 첫 이야기를
+                남겨 보세요. 글을 쓰면 포인트가 적립돼요.
+              </p>
+              <Link
+                href={`/town/write?region=${encodeURIComponent(region.name)}`}
+                className="btn-soft rounded-lg px-3.5 py-2 t-sub font-bold"
+              >
+                첫 이야기 쓰기 ›
+              </Link>
+            </div>
+          ) : (
+            <div className="story-card overflow-hidden">
+              <ul className="flex flex-col">
+                {communityPosts.map((p) => {
+                  const author = p.authorLabel?.trim() || "이웃";
+                  const photoCount = postAttachments(p).length;
+                  return (
+                    <li key={p.id} className="border-b border-line last:border-0">
+                      <Link
+                        href={`/town/story/${p.id}`}
+                        className="flex items-center gap-3 px-4 py-3 no-underline transition-colors hover:bg-bg"
+                      >
+                        <span className="story-avatar" aria-hidden="true">
+                          {author.slice(0, 1)}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate t-body font-bold text-ink">{p.title}</div>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 t-sub text-text-3">
+                            <span className="font-bold text-text-2">{author}</span>
+                            <span>{relTime(p.createdAt)}</span>
+                            <span className="inline-flex items-center gap-1">
+                              <Icon name="messages-square" size={11} />
+                              댓글 {p.commentCount}
+                            </span>
+                            {photoCount > 0 && (
+                              <span className="inline-flex items-center gap-1">
+                                <Icon name="camera" size={11} />
+                                사진 {photoCount}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="shrink-0 t-body font-bold text-text-3">›</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+        </section>
+
+        {/* 이 동네 뉴스 — 다른 재질(뉴스룸 스트립). 출처·시각이 앞에 서고 뉴스룸으로 보낸다 */}
+        <section className="rise-in-2" aria-labelledby="region-news-title">
+          <div className="mb-2 flex items-baseline justify-between px-1">
+            <h2 id="region-news-title" className="t-section text-ink">
+              {region.name} 뉴스 <span className="news-tag ml-1 align-middle">뉴스룸</span>
+            </h2>
+            <Link
+              href={`/town/news?region=${encodeURIComponent(region.name)}`}
+              className="inline-block py-[5px] t-sub font-bold text-primary"
+            >
+              뉴스룸 ›
+            </Link>
+          </div>
+          {newsRows.length === 0 ? (
+            <div className="news-strip px-5 py-6 t-body text-text-2">
+              최근 수집된 {region.name} 기사가 없어요. 매일 아침 자동 수집되며, 위의
+              &lsquo;{region.name} 새 소식&rsquo; 알림을 켜 두면 새 기사가 잡히는 대로
+              알림함으로 알려드려요.
+            </div>
+          ) : (
+            <TownNewsStrip
+              rows={newsRows}
+              title={`${region.name} 뉴스`}
+              href={`/town/news?region=${encodeURIComponent(region.name)}`}
+              max={6}
+              showHeader={false}
+            />
+          )}
+        </section>
+      </div>
+
+      {/* 공개 임장노트 */}
+      <section className="rise-in-3 mt-6">
+        <div className="mb-2 flex items-baseline justify-between px-1">
+          <h2 className="t-section text-ink">
+            {region.name} 공개 임장노트{" "}
+            {notes.length > 0 && (
+              <span className="t-sub font-medium text-text-3">{notes.length}편</span>
+            )}
+          </h2>
+          <Link href="/notes" className="inline-block py-[5px] t-sub font-bold text-primary">
+            임장노트 홈 ›
+          </Link>
+        </div>
+        {notes.length === 0 ? (
+          <div className="card flex flex-col items-start gap-2 rounded-2xl px-5 py-6">
+            {/* [970 · C-20] 해요체 통일 */}
+            <p className="t-body text-text-2">
+              아직 {region.name} 공개 임장노트가 없어요. 직접 다녀온 기록이 이 동네의 첫
+              번째 현장 자료가 돼요.
+            </p>
+            <Link
+              href={`/notes/new?region=${encodeURIComponent(region.name)}`}
+              className="btn-soft rounded-lg px-3.5 py-2 t-sub font-bold"
+            >
+              {region.name} 임장노트 쓰기 ›
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
+            {notes.map((n) => (
+              <Link
+                key={n.id}
+                href={`/notes/${n.id}`}
+                className="card tile rounded-2xl px-4 py-3.5"
+              >
+                <div className="truncate t-body font-bold text-ink">{n.title}</div>
+                <div className="mt-1 flex items-center gap-2 t-sub text-text-3">
+                  {n.aptName && <span className="truncate">{n.aptName}</span>}
+                  {/* [970 · C-11] Lab(데이터 분석) 노트는 방문 기록이 아니다 — 피드(/town)는
+                      "Lab 데이터", 여기는 "직접방문" 으로 같은 노트를 다르게 불렀다. 같은 판정
+                      (isLabNoteLabel — lib/town/feed.ts 와 동일)으로 맞춘다. */}
+                  {isLabNoteLabel(n.authorLabel) ? (
+                    <span className="shrink-0">Lab 데이터</span>
+                  ) : (
+                    n.visitDate && <span className="shrink-0">직접방문</span>
+                  )}
+                </div>
+                {n.summary && (
+                  <p className="mt-1.5 line-clamp-2 t-sub text-text-2">
+                    {n.summary}
+                  </p>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* 다른 동네 + 지도 — [970 · C-17] 예전엔 카탈로그 앞 16곳(서울 위주)만 보였다.
+          시·도별 <details> 로 전량을 접어 두고, 지금 보는 동네의 시·도만 기본 펼침. */}
+      <section className="rise-in-4 mt-8" aria-labelledby="other-towns-title">
+        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 px-1">
+          <h2 id="other-towns-title" className="t-body font-bold text-ink">
+            다른 동네 홈
+          </h2>
+          <Link
+            href={`/map?region=${encodeURIComponent(region.name)}`}
+            className="inline-block py-[5px] t-sub font-bold text-primary"
+          >
+            지도에서 {region.name} 보기 ›
+          </Link>
+        </div>
+        <div className="card flex flex-col divide-y divide-line rounded-2xl px-4">
+          {groupRegionsByCity(REGION_CATALOG, id).map((g) => (
+            <details key={g.key} className="group py-2.5" open={g.city === ownCity}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-1 t-body font-bold text-ink">
+                <span>
+                  {g.city}
+                  <span className="ml-1.5 t-caption font-semibold text-text-3">{g.items.length}곳</span>
+                </span>
+                <span className="shrink-0 text-text-3 transition-transform group-open:rotate-45" aria-hidden="true">
+                  +
+                </span>
+              </summary>
+              <div className="flex flex-wrap gap-1.5 pb-1.5 pt-1">
+                {g.items.map((r) => (
+                  <Link
+                    key={r.id}
+                    href={`/town/${r.id}`}
+                    className="chip border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-2"
+                  >
+                    {r.name}
+                  </Link>
+                ))}
+              </div>
+            </details>
+          ))}
+        </div>
+      </section>
     </PageShell>
   );
 }

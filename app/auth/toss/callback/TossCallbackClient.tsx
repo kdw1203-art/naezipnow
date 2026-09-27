@@ -60,7 +60,7 @@ export function TossCallbackClient() {
       <div className="w-full max-w-[360px] rounded-3xl border border-line bg-surface p-6 text-center shadow-[0_10px_30px_rgba(16,28,54,.08)]">
         {failed ? (
           <>
-            <p className="text-[15px] font-extrabold text-ink">
+            <p className="text-[15px] font-bold text-ink">
               토스 로그인에 실패했어요
             </p>
             <p className="mt-2 text-[12px] leading-[1.7] text-text-3">
@@ -68,7 +68,7 @@ export function TossCallbackClient() {
             </p>
             <Link
               href="/login"
-              className="btn-primary btn-cta mt-4 block rounded-xl p-3 text-[13px] font-extrabold text-white"
+              className="btn-primary btn-cta mt-4 block rounded-xl p-3 text-[13px] font-bold text-white"
             >
               로그인 화면으로
             </Link>
@@ -78,7 +78,7 @@ export function TossCallbackClient() {
             <div className="mx-auto flex justify-center">
               <OrbitLoader light label="토스 로그인 처리 중" />
             </div>
-            <p className="mt-3 text-[13px] font-extrabold text-ink">
+            <p className="mt-3 text-[13px] font-bold text-ink">
               토스 로그인 처리 중…
             </p>
             <p className="mt-1 text-[12px] text-text-3">잠시만 기다려 주세요</p>

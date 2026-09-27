@@ -1,4 +1,3 @@
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { BandCell } from "@/lib/market/tx-bands";
 import { formatKrwWon } from "@/lib/format/krw";
 import { formatEokMan } from "@/lib/format/eok-man";
@@ -24,50 +23,74 @@ export function manPerPyeong(won: number | null): string {
   return `${formatEokMan(won / 10_000)}/평`;
 }
 
-/* [v4 · 규칙 5] 표(5열 · 가로 스크롤 520px · 셀 막대 · "평단가 최고" 배지) → 구분선 목록 행.
-   행 = 왼쪽 면적대(굵게) + 보조 한 줄(거래 · 중앙값 · 지역 분위) / 오른쪽 평단가 평균(t-num).
-   ⓘ 두 개(평단가 · 지역 분위)는 머리 줄과 캡션으로 옮겼다(설명 팝업 기능 유지). */
 export function BandTable({
   cells,
+  hiBandSlug,
   topByBand,
 }: {
   cells: readonly BandCell[];
+  /** 평단가 최고 면적대(프리미엄 표시) — 없으면 null */
+  hiBandSlug: string | null;
   /** 면적대별 지역 분위(상위 %) — 표본 8곳 미만이면 null */
   topByBand: Record<string, number | null>;
 }) {
+  const maxPer = Math.max(...cells.map((c) => c.avgPerPyeongKrw ?? 0), 1);
   return (
-    <section className="flex flex-col gap-2" data-reveal="">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="flex items-baseline gap-1.5 t-section text-ink">
-          면적대별 <span className="t-num text-text-3">{cells.length}</span>
-        </h2>
-        <span className="inline-flex items-center gap-0.5 t-caption text-text-3">
-          평단가 평균
-          <Explain term="pyeongdanga" how={PYEONG_HOW} source="국토교통부 실거래가" size={12} />
-        </span>
-      </div>
-      <ul data-tone="blue" className="card flex flex-col divide-y divide-line rounded-lg px-4">
-        {cells.map((c) => {
-          const top = topByBand[c.bandSlug] ?? null;
-          return (
-            <li key={c.bandSlug} className="flex min-h-14 items-center justify-between gap-3 py-3">
-              <span className="min-w-0 flex-1">
-                <span className="block t-body font-bold text-ink">{c.bandLabel}</span>
-                <span className="mt-0.5 block truncate t-sub tabular-nums text-text-3">
-                  {c.txCount.toLocaleString("ko-KR")}건 · 중앙값 {eok(c.medianKrw)}
-                  {top !== null ? ` · 상위 ${top}%` : ""}
+    <div className="card overflow-hidden rounded-lg" data-reveal="">
+      <div className="t-section border-b border-line px-5 py-3.5 text-ink">면적대별 평단가 · 중앙값 · 거래량</div>
+      <div className="relative overflow-x-auto">
+        <table className="t-body w-full min-w-[520px]">
+          <thead>
+            <tr className="t-sub border-b border-line text-left text-text-3">
+              <th className="px-5 py-2 font-semibold">면적대</th>
+              <th className="px-2 py-2 text-right font-semibold">거래</th>
+              <th className="px-2 py-2 text-right font-semibold">중앙값</th>
+              <th className="px-2 py-2 text-right font-semibold">
+                <span className="inline-flex items-center gap-0.5">
+                  평단가 평균
+                  <Explain term="pyeongdanga" how={PYEONG_HOW} source="국토교통부 실거래가" size={12} />
                 </span>
-              </span>
-              <span className="shrink-0 t-body t-num text-ink">{manPerPyeong(c.avgPerPyeongKrw)}</span>
-            </li>
-          );
-        })}
-      </ul>
-      {/* [v4 · 규칙 3] 출처 캡션 한 줄 */}
-      <p className="flex flex-wrap items-center gap-0.5 t-caption text-text-3">
-        국토교통부 실거래 신고(매매) · 상위 % = 수록 지역 중 같은 면적대 평단가 순위
-        <Explain title="지역 분위" how={RANK_HOW} size={12} />
-      </p>
-    </section>
+              </th>
+              <th className="px-5 py-2 text-right font-semibold">
+                <span className="inline-flex items-center gap-0.5">
+                  지역 분위
+                  <Explain title="지역 분위" how={RANK_HOW} size={12} />
+                </span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {cells.map((c) => {
+              const top = topByBand[c.bandSlug] ?? null;
+              return (
+                <tr key={c.bandSlug} className="row-hl border-b border-divider last:border-0">
+                  <td className="px-5 py-2.5">
+                    <span className="font-bold text-ink">{c.bandLabel}</span>
+                    {hiBandSlug === c.bandSlug && (
+                      <span className="t-caption ml-1.5 rounded bg-primary-soft px-1.5 py-px font-bold text-primary">
+                        평단가 최고
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-2 py-2.5 text-right tabular-nums text-text-2">{c.txCount.toLocaleString("ko-KR")}</td>
+                  <td className="px-2 py-2.5 text-right tabular-nums font-semibold text-ink">{eok(c.medianKrw)}</td>
+                  <td
+                    className="cell-bar px-2 py-2.5 text-right font-bold tabular-nums text-success"
+                    style={{ ["--w" as string]: `${Math.round(((c.avgPerPyeongKrw ?? 0) / maxPer) * 100)}%` }}
+                  >
+                    {manPerPyeong(c.avgPerPyeongKrw)}
+                  </td>
+                  <td className="t-sub px-5 py-2.5 text-right text-text-2">{top !== null ? `상위 ${top}%` : "—"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="t-caption px-5 py-2.5 text-text-3">
+        평단가 = 전용면적 평(3.3㎡)당 평균 매매가. 지역 분위는 내집나우에 수록된 지역들 중 같은 면적대 평단가 순위예요(표본
+        8곳 이상일 때만 표시).
+      </div>
+    </div>
   );
 }

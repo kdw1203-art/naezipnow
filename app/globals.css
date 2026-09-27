@@ -5615,6 +5615,9 @@ body.nz-consent-open .back-to-top {
   background: var(--bg);
 }
 .news-row__title {
+  /* [1014] 폰 배율 + 한 줄 규칙에서 제목 링크가 19px 로 얇아져 탭 하한(24px)을 못 채웠다 — 최소 높이로 받친다 */
+  display: block;
+  min-height: 24px;
   font-size: var(--fs-body);
   font-weight: 700;
   line-height: 1.45;
@@ -5691,6 +5694,16 @@ body.nz-consent-open .back-to-top {
 /* "오늘의 뉴스" 스트립 — 동네이야기(/town)·동네 홈에 놓이는 뉴스룸 입구.
    피드 카드와 같은 흰 카드가 아니라 한지 면 + 왼쪽 네이비 굵은 선 — "여기부터는
    다른 재질(기사)"임을 한 눈에 보인다. */
+/* 카테고리 카드 중 "뉴스" 칸 — 뉴스룸으로 가는 입구임이 보이게 한지 면·네이비 아이콘
+   ([1014] 개편 전 동네 카테고리 카드가 돌아오며 다시 쓴다) */
+.news-entry-card {
+  background: var(--brand-hanji);
+  border-color: var(--border);
+}
+.news-entry-card .tile-ico {
+  background: var(--brand-hanji-ink);
+  color: var(--brand-hanji);
+}
 .news-strip {
   background: var(--brand-hanji);
   border: 1px solid var(--border);

@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { PageShell } from "../../components/PageShell";
-import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
+import { NextActions } from "../../components/NextActions";
+import { EmptyState } from "@/app/components/ui/EmptyState";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 
 /* ============================================================
@@ -35,27 +37,39 @@ export const metadata = buildPageMetadata({
 });
 
 export default function SwitchPage() {
-  /* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 지금 되는 화면 구분선 행.
-     지운 것: 아이콘 빈 상태(아이콘 + 두 문장), NextActions 칩(채움 파랑 포함 → 행), 알림 안내 카드(→ 행 하나). 링크는 전부 행으로. */
   return (
     <PageShell breadcrumb="AI 분석 › 포트폴리오 › 갈아타기 추천">
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
-        <header className="flex flex-col gap-0.5">
-          <h1 className="rise-in t-title text-ink">갈아타기 추천 지역</h1>
-          <p className="t-sub text-text-3">추천 계산 준비 중 · 적합도·순위를 지어내지 않음</p>
-        </header>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h1 className="rise-in t-title text-ink">갈아타기 추천 지역</h1>
+      </div>
 
-        <section aria-labelledby="sw-next" className="flex flex-col gap-2">
-          <h2 id="sw-next" className="t-section text-ink">
-            지금 쓸 수 있는 화면
-          </h2>
-          <ul data-tone="blue" className="card flex flex-col divide-y divide-line rounded-lg px-4">
-            <SummaryRow label="지역 시장 온도·시세 타이밍" sub="실데이터" href="/analysis/timing" />
-            <SummaryRow label="관심 단지 비교하기" href="/analysis/compare" />
-            <SummaryRow label="대출·비용 계산기" href="/calculator" />
-            <SummaryRow label="추천이 열리면 알림 받기" href="/notifications" />
-          </ul>
-        </section>
+      <div className="flex flex-col gap-4">
+        <div className="rise-in-1">
+          <EmptyState
+            icon="compass"
+            title="갈아타기 추천은 아직 준비 중이에요"
+            desc="추천 지역·단지는 등록한 자산과 조건(예산·통근·학군)을 실거래·가격지수 데이터와 맞춰봐야 계산할 수 있어요. 자산 등록과 추천 계산이 아직 열리지 않아서, 적합도나 추천 순위를 지어내지 않고 비워둡니다."
+            action={{ label: "실데이터 시세·타이밍 보기", href: "/analysis/timing" }}
+          />
+        </div>
+
+        {/* 준비 중이라고만 하고 끝내면 막다른 화면이 된다 — 지금 실제로 동작하는 화면으로 잇는다 */}
+        <div className="rise-in-2">
+          <NextActions
+            actions={[
+              { label: "지역 시장 온도 보기", href: "/analysis/timing", primary: true },
+              { label: "관심 단지 비교하기", href: "/analysis/compare" },
+              { label: "대출·비용 계산기", href: "/calculator" },
+            ]}
+          />
+        </div>
+
+        <div className="rise-in-3 card rounded-3xl px-[18px] py-4 t-sub text-text-2">
+          갈아타기 추천이 열리면 알림으로 알려드릴게요.{" "}
+          <Link href="/notifications" className="font-bold text-primary no-underline">
+            알림 설정 열기
+          </Link>
+        </div>
       </div>
     </PageShell>
   );

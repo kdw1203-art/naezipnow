@@ -1,6 +1,6 @@
 "use client";
 /* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 1곳). */
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 9곳을 font-bold(700)로 바꿨다. */
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-bold/black 9곳을 font-bold(700)로 바꿨다. */
 
 import { useMemo } from "react";
 import type { CardTheme } from "@/lib/notes/card-themes";

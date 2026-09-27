@@ -32,8 +32,8 @@ export const revalidate = 21_600;
    필터 조합마다 별도 URL 이 색인되면 같은 화면이 수십 개로 쪼개진다. */
 export const metadata = {
   title: "지도에서 비교 | 내집나우",
-  /* [v4 · 규칙 3] 기능 설명 문장("…비교 단계입니다") → 사실 한 줄 · "실거래 시세" → "실거래가"(실거래만 있는 화면) */
-  description: "국토교통부 실거래가와 임장노트를 지도에서 단지별로 비교 — 매매·전세·등록 매물·정비사업·입주 예정.",
+  description:
+    "임장노트에 남긴 단지를 실거래 시세와 함께 지도에서 비교하세요. 기록 → AI 정리 → 지도 비교 흐름의 비교 단계입니다.",
   alternates: seoAlternates("/map"),
 };
 
@@ -91,8 +91,7 @@ function toDanjiItem(
     id: encodeComplexId(regionName, complexName),
     name: complexName,
     note: myNoteCount > 0 ? `노트 ${myNoteCount}건` : null,
-    /* [v4 · 규칙 8] 값이 없으면 빈 문자열 — 화면은 그 줄을 그리지 않는다(예전 "정보 준비 중" 은 목록마다 되풀이됐다) */
-    meta: metaParts.join(" · "),
+    meta: metaParts.length > 0 ? metaParts.join(" · ") : "정보 준비 중",
     /* [1009 · C] "시세 준비 중" → "실거래 없음" — 실거래만 있는 화면에 "시세"라는 말을 쓰지 않는다(표기 표준) */
     price: latest ? formatManwon(latest.avg_manwon) : "실거래 없음",
     delta,

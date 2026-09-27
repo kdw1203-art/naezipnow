@@ -1,5 +1,4 @@
 "use client";
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useEffect, useRef, useState } from "react";
 import { planLabel } from "@/lib/subscriptions/labels";
@@ -723,8 +722,7 @@ export function CheckoutClient() {
       )}
 
       {phase.kind === "error" && (
-        /* [v4 · 규칙 10] 가운데 정렬 오류 카드 → 왼쪽 */
-        <div className="card flex flex-col items-start gap-2 rounded-lg p-4">
+        <div className="card flex flex-col items-center gap-2.5 rounded-2xl px-4 py-8 text-center">
           <p className="t-section text-ink">결제를 시작하지 못했어요</p>
           <p className="t-sub text-text-3">{phase.msg}</p>
           <Link href="/subscription" className="btn-soft btn-sm no-underline">
@@ -736,7 +734,7 @@ export function CheckoutClient() {
       {/* [968 · T4] 위젯이 예상되는(gck) 동안의 로딩 문구는 위젯 자리 안에서 보여 준다 —
           이 카드가 사라지며 생기던 점프를 없앤다. ck 키(위젯 없음)에서만 예전 카드. */}
       {phase.kind === "loading" && !widgetExpected && (
-        <div role="status" className="card rounded-lg p-4 t-body text-text-3">
+        <div role="status" className="card rounded-2xl px-4 py-8 text-center t-body text-text-3">
           {phase.msg}
         </div>
       )}
@@ -820,7 +818,7 @@ export function CheckoutClient() {
             </p>
             <Link
               href={phase.loginHref}
-              className="inline-block py-[5px] t-sub font-bold text-primary no-underline"
+              className="inline-block py-[5px] text-center t-sub font-bold text-primary no-underline"
             >
               계정이 있어요 — 로그인하고 결제하기
             </Link>
@@ -835,13 +833,13 @@ export function CheckoutClient() {
             >
               로그인하고 결제하기
             </Link>
-            <p className="t-sub text-text-3">
-              {phase.amount.toLocaleString("ko-KR")}원 · 로그인 후 같은 화면에서 결제 이어짐
+            <p className="text-center t-sub text-text-3">
+              {phase.amount.toLocaleString("ko-KR")}원 · 로그인하면 같은 화면에서 결제가 이어져요.
             </p>
             {/* [1001] 정기결제는 계정(해지·카드 변경)이 필요하다. 계정 없이 카드 결제를 해 보려면 단건 주간권으로. */}
             <Link
               href={`/subscription/checkout?tier=pro&billing=weekly${params?.returnTo ? `&returnTo=${encodeURIComponent(params.returnTo)}` : ""}`}
-              className="inline-block py-[5px] t-sub font-bold text-primary no-underline"
+              className="inline-block py-[5px] text-center t-sub font-bold text-primary no-underline"
             >
               계정 없이 결제하려면 → {planLabel(WEEKLY_PASS.tier)} 주간권({WEEKLY_PASS.days}일 · {WEEKLY_PASS.totalKrw.toLocaleString("ko-KR")}원 단건)
             </Link>
@@ -860,7 +858,9 @@ export function CheckoutClient() {
                 ? "결제창 여는 중…"
                 : `${phase.amount.toLocaleString("ko-KR")}원 결제하기`}
             </button>
-            <p className="t-sub text-text-3">결제 완료 즉시 구독 적용</p>
+            <p className="text-center t-sub text-text-3">
+              결제 완료 후 자동으로 구독이 활성화돼요.
+            </p>
           </>
         )}
 
@@ -890,7 +890,7 @@ export function CheckoutClient() {
             /* [990] 되돌아가기 링크가 18px 높이라 손끝으로 잘 안 잡혔다. 아래에
                아무것도 없는 단독 링크라 세로 패딩을 줘도 남의 탭을 훔치지 않는다
                (WCAG 2.5.8 의 24px 기준을 넘긴다). */
-            className="mt-1 self-start py-[6px] t-sub font-bold text-text-3 no-underline"
+            className="mt-1 py-[6px] text-center t-sub font-bold text-text-3 no-underline"
           >
             {params?.returnTo ? "← 하던 화면으로 돌아가기" : "← 구독 안내로 돌아가기"}
           </Link>

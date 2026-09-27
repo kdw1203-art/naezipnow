@@ -1,5 +1,5 @@
 "use client";
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 1곳을 font-bold(700)로 바꿨다. */
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-bold/black 1곳을 font-bold(700)로 바꿨다. */
 
 /* 소유확인 신청 — 증빙 이미지를 /api/upload(folder="listing-verify")로 올린 뒤
    POST /api/listings/[id]/verify 로 신청. 실제 인증 배지는 어드민 검토 후 표시된다. */

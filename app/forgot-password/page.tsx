@@ -5,6 +5,7 @@ import { ActionButton } from "@/app/components/ui/ActionButton";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Logo } from "@/app/components/Logo";
+import { Icon } from "@/app/components/Icon";
 
 /** 비밀번호 찾기 — 구 app/auth/forgot-password 포트 (기존 /api/auth/forgot-password 연결 유지) */
 export default function ForgotPasswordPage() {
@@ -67,24 +68,25 @@ export default function ForgotPasswordPage() {
         <div className="rise-in">
           <Logo size={34} />
         </div>
-        {/* [1012 · 규칙 6·8] 안내문에 시점(10분 안) · 굵기 700 · 카드 8px */}
-        {/* [v4 · 규칙 1·3] 제목 한 줄 + 사실 한 줄(문장 → 명사형) */}
-        <div className="flex flex-col gap-0.5">
-          <h1 className="rise-in-1 t-title text-ink">비밀번호 찾기</h1>
-          <p className="rise-in-2 t-sub text-text-3">가입한 이메일로 초기화 링크 · 보통 10분 안 도착</p>
-        </div>
+        <h1 className="rise-in-1 text-[21px] font-bold leading-[1.35] text-ink">
+          비밀번호 찾기
+        </h1>
+        <p className="rise-in-2 text-[13px] text-text-2">
+          가입한 이메일로 비밀번호 초기화 링크를 보내드립니다
+        </p>
 
         {sent ? (
-          /* [v4 · 규칙 7·10] 아이콘 + 가운데 정렬 카드 → 왼쪽 정렬 */
-          <div className="rise-in card flex flex-col gap-2.5 rounded-lg p-5">
-            <div className="text-[15px] font-bold text-ink">메일을 보냈어요</div>
+          <div className="rise-in card flex flex-col gap-2.5 rounded-2xl px-5 py-6 text-center">
+            <Icon name="📬" size={28} />
+            <div className="text-[15px] font-bold text-ink">메일을 보냈습니다</div>
             <p className="text-[13px] leading-[1.6] text-text-2">
-              <strong className="text-ink">{email}</strong> 으로 초기화 링크 발송 · 안 보이면 스팸 폴더 확인
+              <strong className="text-ink">{email}</strong> 으로 비밀번호 초기화 링크를
+              전송했습니다. 메일함을 확인해 주세요. (스팸 폴더도 확인해 보세요)
             </p>
-            <ol className="flex list-decimal flex-col gap-1 pl-5 text-xs text-text-2">
-              <li>메일의 비밀번호 재설정 링크를 눌러요.</li>
-              <li>새 비밀번호(8자 이상)를 입력해요.</li>
-              <li>로그인 화면에서 새 비밀번호로 로그인해요.</li>
+            <ol className="mx-auto flex max-w-[280px] list-decimal flex-col gap-1 pl-5 text-left text-xs text-text-2">
+              <li>이메일의 비밀번호 재설정 링크를 클릭하세요.</li>
+              <li>새 비밀번호(8자 이상)를 입력해 변경을 완료하세요.</li>
+              <li>완료 후 로그인 페이지에서 다시 접속하세요.</li>
             </ol>
             {/* [1002] 10분이 지나도 안 오면 — 기다리게 두지 않고 다음 길을 준다 */}
             <p className="text-xs leading-[1.6] text-text-3">
@@ -160,9 +162,9 @@ export default function ForgotPasswordPage() {
 
         {/* [970 · A-41] 예전엔 flex-1 스페이서 **뒤**에 있어 폼과 링크 사이가 화면 높이만큼
             비었다(min-h-dvh). 폼 바로 아래로 올린다 — 스페이서는 그 아래에 남겨 상단 정렬 유지. */}
-        <div className="rise-in-5 mt-2 text-xs text-text-3">
+        <div className="rise-in-5 mt-2 text-center text-xs text-text-3">
           비밀번호가 기억났나요?{" "}
-          <Link href="/login" className="inline-flex min-h-[24px] items-center font-bold text-primary">
+          <Link href="/login" className="font-bold text-primary">
             로그인
           </Link>
         </div>

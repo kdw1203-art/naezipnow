@@ -1,9 +1,9 @@
 "use client";
-/* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Icon } from "@/app/components/Icon";
 import { CoverageRequestCard } from "./CoverageRequestCard";
 import {
   RECENT_SEARCH_MAX,
@@ -126,15 +126,6 @@ interface Group {
   more: string;
   rows: Row[];
 }
-/* [v4.1 · 리퀴드 목록] 결과 묶음 톤(globals.css `data-tone`) — 단지 blue · 매물 mint · 임장노트 hanji · 이야기 sand · 뉴스 hanji.
-   화면 순서(단지→매물→노트→이야기→뉴스)에서 이웃한 묶음이 같은 색을 갖지 않는다 */
-const SEARCH_GROUP_TONE: Record<SectionKey, "blue" | "hanji" | "mint" | "sand"> = {
-  complexes: "blue",
-  listings: "mint",
-  notes: "hanji",
-  stories: "sand",
-  news: "hanji",
-};
 
 export function SearchClient() {
   const [q, setQ] = useState("");
@@ -418,7 +409,7 @@ export function SearchClient() {
   return (
     <div className="flex flex-col gap-4">
       {/* 큰 검색 입력 */}
-      <div className="rise-in flex w-full items-center gap-2.5 rounded-lg border border-line-strong bg-surface px-4 py-3 text-ink transition-colors focus-within:border-primary">
+      <div className="rise-in flex w-full max-w-[560px] items-center gap-2.5 rounded-2xl border-[1.5px] border-primary bg-surface px-4 py-3 text-ink shadow-[0_8px_28px_rgba(16,28,54,.08)]">
         <span aria-hidden className="text-[19px] text-text-3">
           ⌕
         </span>
@@ -480,9 +471,9 @@ export function SearchClient() {
         <Link
           href={`/map?q=${encodeURIComponent(q.trim())}`}
           onClick={() => saveRecent(q)}
-          /* [v4 · 규칙 2·7] 연파랑 버튼 + 지도 아이콘 → 글자 링크 한 줄(채움·면 없음) */
-          className="rise-in inline-flex min-h-[24px] w-fit max-w-full items-center t-sub font-bold text-primary no-underline"
+          className="btn-soft rise-in inline-flex w-fit max-w-full items-center gap-1.5 rounded-xl px-3.5 py-2 t-body font-bold text-primary"
         >
+          <Icon name="🗺" size={16} className="shrink-0" />
           {/* 띄어쓰기 없는 긴 검색어(최대 80자)도 390px 안에서 접힌다 — body 의 keep-all 이 낱말 안에서 끊지 않았다 */}
           <span className="min-w-0 break-all">‘{q.trim()}’ 지도에서 보기 ›</span>
         </Link>
@@ -551,11 +542,11 @@ export function SearchClient() {
               추천 지역과 달리 이건 진짜 측정값이라 근거를 그대로 적는다. */}
           {popular.length > 0 && (
             <div>
-              {/* [v4 · 규칙 5] 카드 목록 → 1px 선 행(왼쪽 이름 + 보조 한 줄 / 오른쪽 평균가) */}
-              <h2 className="px-1 t-section text-ink">
-                많이 찾는 단지 <span className="t-caption font-medium text-text-3">최근 6개월 실거래·조회 기준</span>
-              </h2>
-              <div data-tone="blue" className="flex flex-col divide-y divide-line">
+              <div className="mb-2 px-1 t-caption font-bold text-text-3">
+                많이 찾는 단지{" "}
+                <span className="font-medium">(최근 6개월 실거래·조회 기준)</span>
+              </div>
+              <div className="flex flex-col gap-1.5">
                 {popular.map((c) => (
                   <Link
                     key={c.id}
@@ -568,17 +559,17 @@ export function SearchClient() {
                         metadata: { complexId: c.id },
                       })
                     }
-                    className="press flex min-h-14 items-center justify-between gap-3 py-3 no-underline"
+                    className="card tile flex items-center justify-between gap-3 rounded-2xl px-4 py-2.5 no-underline"
                   >
                     <div className="min-w-0">
                       <div className="truncate t-body font-bold text-ink">{c.name}</div>
-                      <div className="truncate t-sub text-text-3">
+                      <div className="truncate t-caption text-text-3">
                         {c.regionName}
                         {c.recentTradeCount > 0 ? ` · 6개월 거래 ${c.recentTradeCount}건` : ""}
                       </div>
                     </div>
                     {c.avgPriceManwon != null && c.avgPriceManwon > 0 && (
-                      <span className="shrink-0 t-body t-num text-ink">
+                      <span className="shrink-0 t-sub font-bold text-text-2">
                         {/* [967 · 31] 단지 허브와 같은 "eok1" 얼굴 — 값은 bigint 라 만 분기 반올림 무영향 */}
                         {formatKrwManwon(c.avgPriceManwon, { style: "eok1" })}
                       </span>
@@ -593,82 +584,86 @@ export function SearchClient() {
 
       {/* 로딩 */}
       {hasQuery && busy && total === 0 && (
-        /* [v4 · 규칙 10] 상태 줄은 왼쪽(이 아래 안내·실패·빈 결과 전부) */
-        <div className="mt-2 text-[13px] text-text-3">검색 중…</div>
+        <div className="mt-6 text-center text-[13px] text-text-3">검색 중…</div>
       )}
 
       {/* [1008 · 리뷰 B] 검색어가 너무 길다 — 장애도 결과 없음도 아니다 */}
       {hasQuery && !busy && notice && (
-        <div role="status" className="mt-2 t-section text-ink">
+        <div role="status" className="mt-8 text-center t-section text-ink">
           {notice}
         </div>
       )}
 
       {/* 조회 실패 — "없음"이 아니라 "못 불러왔음"으로 적는다 */}
       {hasQuery && !busy && !notice && failed.length > 0 && (
-        <div className="mt-2 flex flex-col gap-0.5">
+        <div className="mt-8 flex flex-col items-center gap-2 text-center">
           <div className="t-section text-ink">
-            {failed.join("·")} 검색 조회 실패
+            지금은 {failed.join("·")} 검색이 되지 않아요
           </div>
-          <div className="t-sub text-text-3">결과 없음이 아니라 조회 실패 · 잠시 후 다시</div>
+          <div className="t-sub text-text-3">
+            결과가 없는 게 아니라 조회에 실패한 거예요. 잠시 후 다시 시도해 주세요.
+          </div>
         </div>
       )}
 
       {/* 빈 결과 + A8 대안 단지 제안 */}
       {hasQuery && !busy && !notice && failed.length === 0 && total === 0 && (
-        <div className="mt-2 flex flex-col gap-1">
+        <div className="mt-8 flex flex-col items-center gap-2 text-center">
           {/* [1008 · S] 결과 없음 — 사실 한 줄 + 다음 할 일(띄어 쓰는 요령). 예전 문구("검색 결과가 없어요")는
               무엇을 바꿔 쳐야 하는지 말해 주지 않았다 — 결과 없음 82% 의 대부분이 띄어쓰기·괄호 차이였다. */}
           <div className="break-words t-section text-ink">{noMatchTitle(q.trim())}</div>
           <div className="break-words t-sub text-text-3">
             {NO_MATCH_HINT} · {NO_MATCH_EXAMPLE}
           </div>
-          <div className="t-caption text-text-3">매물·임장노트·이웃 이야기·뉴스에도 없음</div>
+          <div className="t-caption text-text-3">매물·임장노트·이웃 이야기·뉴스에서도 찾지 못했어요.</div>
 
           {/* 항목 13 — 막다른 화면 금지: 결과가 없어도 다음 행동은 있어야 한다.
               지도는 텍스트 매칭이 아니라 위치 탐색이라 같은 검색어로도 찾아질 수
               있고, 둘러보기·실거래 허브는 검색어 없이 시작하는 대안 경로다. */}
-          {/* [v4 · 규칙 5·6] 칩 셋(아이콘 포함) → 1px 선 행 셋(오른쪽 ›) */}
-          <ul data-tone="blue" className="mt-2 divide-y divide-line border-y border-line">
-            {[
-              { href: `/map?q=${encodeURIComponent(q.trim())}`, label: "지도에서 찾기", save: true },
-              { href: "/complex/browse", label: "단지 둘러보기", save: false },
-              { href: "/tx", label: "실거래가 허브", save: false },
-            ].map((l) => (
-              <li key={l.label}>
-                <Link
-                  href={l.href}
-                  onClick={l.save ? () => saveRecent(q) : undefined}
-                  className="press flex min-h-12 items-center justify-between gap-3 py-2.5 t-body font-bold text-ink no-underline"
-                >
-                  {l.label}
-                  <span aria-hidden="true" className="text-text-3">
-                    ›
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-3 flex flex-wrap justify-center gap-2">
+            <Link
+              href={`/map?q=${encodeURIComponent(q.trim())}`}
+              onClick={() => saveRecent(q)}
+              className="chip border border-line bg-bg px-3.5 py-2 t-sub font-bold text-primary"
+            >
+              지도에서 찾기
+            </Link>
+            <Link
+              href="/complex/browse"
+              className="chip border border-line bg-bg px-3.5 py-2 t-sub font-bold text-text-2"
+            >
+              단지 둘러보기
+            </Link>
+            <Link
+              href="/tx"
+              className="chip border border-line bg-bg px-3.5 py-2 t-sub font-bold text-text-2"
+            >
+              실거래가 허브
+            </Link>
+          </div>
 
           {suggestions.length > 0 && (
-            <div className="mt-5 w-full">
-              <h2 className="t-section text-ink">
-                이름이 비슷한 단지 <span className="t-num text-text-3">{suggestions.length}</span>
-              </h2>
-              <div data-tone="hanji" className="flex flex-col divide-y divide-line">
+            <div className="mt-5 w-full max-w-[520px] text-left">
+              <div className="mb-2 px-1 t-body font-bold text-ink">
+                혹시 이 단지를 찾으셨나요?{" "}
+                <span className="t-caption font-semibold text-text-3">이름이 비슷한 단지</span>
+              </div>
+              <div className="flex flex-col gap-2">
                 {suggestions.map((c) => (
                   <Link
                     key={c.id}
                     href={complexHrefFromId(c.id)}
-                    className="press flex min-h-14 items-center justify-between gap-3 py-3 no-underline"
+                    className="card tile flex items-center justify-between gap-3 rounded-2xl px-4 py-3 no-underline"
                   >
                     <div className="min-w-0">
-                      <div className="truncate t-body font-bold text-ink">{c.name}</div>
+                      <div className="truncate t-section text-ink">
+                        {c.name}
+                      </div>
                       {c.region && (
                         <div className="truncate t-sub text-text-3">{complexMetaLine(c)}</div>
                       )}
                     </div>
-                    <span aria-hidden="true" className="shrink-0 t-body text-text-3">›</span>
+                    <span className="shrink-0 t-body text-on-dark-muted">›</span>
                   </Link>
                 ))}
               </div>
@@ -696,7 +691,7 @@ export function SearchClient() {
                   onClick={() => setFilter(t.key)}
                   className={`chip inline-flex min-h-10 items-center gap-1 rounded-full border px-3.5 py-2 t-sub font-bold ${
                     filter === t.key
-                      ? "border-brand-hanji-ink bg-brand-hanji text-brand-hanji-ink"
+                      ? "border-primary bg-primary-soft text-primary"
                       : "border-line bg-surface text-text-2"
                   }`}
                 >
@@ -708,13 +703,12 @@ export function SearchClient() {
           )}
           {visibleGroups
             .map((g) => (
-              /* [v4 · 규칙 5] 묶음마다 카드(안에 이야기 카드) → 섹션 제목 + 1px 선 행 */
-              <section key={g.key} className="rise-in flex flex-col">
-                <header className="flex items-baseline justify-between gap-3 border-b border-line pb-1">
-                  <h2 className="t-section text-ink">
-                    {g.label} <span className="t-num text-text-3">{g.rows.length}</span>
-                  </h2>
-                  <div className="flex shrink-0 items-center gap-3">
+              <section key={g.key} className="rise-in card rounded-2xl p-[18px]">
+                <header className="mb-1 flex items-center justify-between">
+                  <div className="t-body font-bold text-ink">
+                    {g.label} <span className="text-text-3">{g.rows.length}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
                     {g.key === "complexes" && (
                       <Link
                         href={`/map?q=${encodeURIComponent(q.trim())}`}
@@ -724,15 +718,13 @@ export function SearchClient() {
                         지도 ›
                       </Link>
                     )}
-                    {/* [1012 · 규칙 5] "더 보기" → 묶음 이름 + 전체(동사 + 대상) */}
                     <Link href={g.more} className="t-sub font-bold text-primary">
-                      {g.label} 전체 보기 ›
+                      더 보기 ›
                     </Link>
                   </div>
                 </header>
-                {/* [v4.1 · 리퀴드 목록] 묶음마다 뜻으로 톤(SEARCH_GROUP_TONE) */}
-                <div data-tone={SEARCH_GROUP_TONE[g.key]} className={g.key === "news" ? "news-list" : "flex flex-col divide-y divide-line"}>
-                  {g.rows.map((r) => {
+                <div className={g.key === "news" ? "news-list" : g.key === "stories" ? "mt-1 flex flex-col gap-2" : "flex flex-col"}>
+                  {g.rows.map((r, i) => {
                     const optId = `search-opt-${flatIndexOf.get(`${g.key}:${r.id}`) ?? ""}`;
                     const active = flatIndexOf.get(`${g.key}:${r.id}`) === activeIdx;
                     const onClick = () => {
@@ -755,26 +747,35 @@ export function SearchClient() {
                           id={optId}
                           href={hrefFor(g.key, r.id)}
                           onClick={onClick}
-                          /* [v4 · 규칙 5·6·7] .story-card(카드 면 — 묶음이 섹션이 되며 카드 안 카드)·머리글자 원·"이야기" 배지
-                             (묶음 제목과 같은 말)·동네 칩·댓글 아이콘 → 1px 선 행: 제목 한 줄 + 메타 한 줄(작성자 · 동네 · 시각 · 댓글 N).
-                             이야기 행은 data-kind="story" 로 뉴스 행(.news-row)과 갈린다 */
-                          data-kind="story"
-                          className={`flex min-h-10 flex-col gap-0.5 py-2.5 no-underline transition-colors hover:text-primary ${
-                            active ? "-mx-1.5 bg-primary-soft px-1.5" : ""
+                          className={`story-card tile flex min-h-10 flex-col gap-1.5 px-3 py-2.5 no-underline ${
+                            active ? "border-primary" : ""
                           }`}
                         >
+                          <span className="flex items-center gap-2">
+                            <span className="story-avatar" aria-hidden="true">
+                              {author.slice(0, 1)}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate t-sub font-bold text-ink">{author}</span>
+                            <span className="story-kind t-caption">이야기</span>
+                          </span>
                           <span className="line-clamp-2 t-body font-bold leading-snug text-ink">
                             {highlightMatch(r.title, settledQuery)}
                           </span>
-                          <span className="truncate t-sub text-text-3">
-                            {[
-                              author,
-                              r.story.region || null,
-                              r.story.createdAt ? relativeTimeLabel(r.story.createdAt) : null,
-                              typeof r.story.commentCount === "number" ? `댓글 ${r.story.commentCount}` : null,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")}
+                          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 t-sub text-text-3">
+                            {r.story.region && (
+                              <span className="rounded-md bg-primary-soft px-1.5 py-px t-caption font-bold text-primary">
+                                {r.story.region}
+                              </span>
+                            )}
+                            {r.story.createdAt && (
+                              <time dateTime={r.story.createdAt}>{relativeTimeLabel(r.story.createdAt)}</time>
+                            )}
+                            {typeof r.story.commentCount === "number" && (
+                              <span className="inline-flex items-center gap-1">
+                                <Icon name="messages-square" size={12} />
+                                댓글 {r.story.commentCount}
+                              </span>
+                            )}
                           </span>
                         </Link>
                       );
@@ -788,9 +789,9 @@ export function SearchClient() {
                           id={optId}
                           href={hrefFor(g.key, r.id)}
                           onClick={onClick}
-                          className={`flex min-h-10 flex-col gap-0.5 py-2.5 transition-colors hover:text-primary ${
-                            active ? "-mx-1.5 bg-primary-soft px-1.5" : ""
-                          }`}
+                          className={`flex min-h-10 flex-col gap-0.5 rounded-lg py-2.5 transition-colors hover:text-primary ${
+                            i < g.rows.length - 1 ? "border-b border-divider" : ""
+                          } ${active ? "-mx-1.5 bg-primary-soft px-1.5" : ""}`}
                         >
                           <span className="flex min-w-0 items-center gap-1.5">
                             <span className="min-w-0 truncate t-body font-bold text-ink">
@@ -833,9 +834,9 @@ export function SearchClient() {
                         id={optId}
                         href={hrefFor(g.key, r.id)}
                         onClick={onClick}
-                        className={`flex min-h-10 items-center justify-between gap-3 py-2.5 transition-colors hover:text-primary ${
-                          active ? "-mx-1.5 bg-primary-soft px-1.5" : ""
-                        }`}
+                        className={`flex items-center justify-between gap-3 rounded-lg py-2.5 transition-colors hover:text-primary ${
+                          i < g.rows.length - 1 ? "border-b border-divider" : ""
+                        } ${active ? "-mx-1.5 bg-primary-soft px-1.5" : ""}`}
                       >
                         <span className="min-w-0 truncate t-body font-bold text-ink">
                           {highlightMatch(r.title, settledQuery)}

@@ -39,7 +39,7 @@ export default function PartnersPage() {
       {/* [970 · A-37] 데스크톱 폭 혼재(720 · 전폭 · 640 · 720)를 한 래퍼(760px 가운데)로 통일 */}
       <div className="mx-auto w-full max-w-[760px]">
       <div className="mb-6">
-        <h1 className="rise-in text-[24px] font-extrabold leading-[1.35] text-ink">
+        <h1 className="rise-in text-[24px] font-bold leading-[1.35] text-ink">
           동네 매물, 내집나우에서 더 많은 이웃에게
         </h1>
         <p className="mt-2 text-[13px] leading-[1.7] text-text-2">
@@ -60,14 +60,14 @@ export default function PartnersPage() {
       <div className="rise-in-1 mb-8 grid grid-cols-1 gap-3 md:grid-cols-3">
         {BENEFITS.map((b) => (
           <div key={b.title} className="card card-pad-sm">
-            <div className="text-[15px] font-extrabold text-ink">{b.title}</div>
+            <div className="text-[15px] font-bold text-ink">{b.title}</div>
             <p className="mt-1.5 text-[13px] leading-[1.7] text-text-2">{b.desc}</p>
           </div>
         ))}
       </div>
 
       <div className="rise-in-1">
-        <h2 className="mb-3 text-[15px] font-extrabold text-ink">제휴 신청</h2>
+        <h2 className="mb-3 text-[15px] font-bold text-ink">제휴 신청</h2>
         <PartnerForm />
       </div>
 

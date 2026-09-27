@@ -1,5 +1,4 @@
 "use client";
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 12곳을 font-bold(700)로 바꿨다. */
 
 import { Switch } from "@/app/components/ui/Switch";
 import { useTheme } from "next-themes";
@@ -345,9 +344,10 @@ function usePrefs() {
 
 function GuestCard() {
   return (
-    /* [v4 · 규칙 10] 가운데 정렬 → 왼쪽(이 파일의 상태 줄 전부) */
-    <div className="card flex flex-col items-start gap-2 rounded-lg p-4">
-      <div className="t-body font-bold text-ink">로그인하고 설정 저장</div>
+    <div className="card flex flex-col items-center gap-2.5 rounded-2xl px-4 py-8 text-center">
+      <div className="t-body font-bold text-ink">
+        로그인하면 설정을 저장할 수 있어요
+      </div>
       <Link
         href={`/login?callbackUrl=${encodeURIComponent("/my/settings")}`}
         className="btn-primary rounded-xl px-5 py-2.5 t-body no-underline"
@@ -379,13 +379,13 @@ function NotificationTab({ channels }: { channels: NotifyChannels }) {
       </Link>
 
       {phase === "loading" && (
-        <div className="card rounded-lg p-4 t-body text-text-3">
+        <div className="card rounded-2xl px-4 py-8 text-center t-body text-text-3">
           알림 설정을 불러오는 중…
         </div>
       )}
       {phase === "guest" && <GuestCard />}
       {phase === "error" && (
-        <div className="card rounded-lg p-4 t-body text-text-3">
+        <div className="card rounded-2xl px-4 py-8 text-center t-body text-text-3">
           설정을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.
         </div>
       )}
@@ -435,8 +435,11 @@ function NotificationTab({ channels }: { channels: NotifyChannels }) {
           {groups.length === 0 && !channels.sms ? (
             /* 채널이 하나도 없을 때 빈 화면만 두면 "설정이 사라졌다" 로 읽힌다.
                지금 상태를 그대로 말한다 — 알림함은 채널과 무관하게 항상 동작한다. */
-            <div className="card rounded-lg p-4 t-sub text-text-2">
-              메일·푸시·문자 알림 발송 없음 · 새 소식은 위의 <span className="font-bold text-text-1">알림함</span>에서
+            <div className="card rounded-2xl px-4 py-6 text-center t-sub text-text-2">
+              지금은 메일·푸시·문자 알림을 보내지 않고 있어요.
+              <br />
+              새 소식은 위의 <span className="font-bold text-text-1">알림함</span>에서 확인하실 수
+              있어요.
             </div>
           ) : (
             <div className="t-caption text-text-3">
@@ -531,9 +534,9 @@ function PrivacyTab() {
             <GuestCard />
           </div>
         ) : phase === "loading" || consents.phase === "loading" ? (
-          <div className="py-6 t-body text-text-3">불러오는 중…</div>
+          <div className="py-6 text-center t-body text-text-3">불러오는 중…</div>
         ) : phase === "error" || !prefs || consents.phase === "error" ? (
-          <div className="py-6 t-body text-text-3">
+          <div className="py-6 text-center t-body text-text-3">
             불러오지 못했어요. 새로고침 후 다시 시도해 주세요.
           </div>
         ) : (
@@ -713,9 +716,9 @@ function ProfileRows() {
         )}
       </div>
       {phase === "loading" ? (
-        <div className="py-4 t-sub text-text-3">프로필을 불러오는 중…</div>
+        <div className="py-4 text-center t-sub text-text-3">프로필을 불러오는 중…</div>
       ) : phase === "error" || !profile ? (
-        <div className="py-4 t-sub text-text-3">
+        <div className="py-4 text-center t-sub text-text-3">
           프로필을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.
         </div>
       ) : (
@@ -887,8 +890,8 @@ function DeleteAccountSection() {
         >
           회원탈퇴
         </button>
-        <p className="t-sub text-text-3">
-          탈퇴 시 공개 글 즉시 비공개 · 개인정보 {DELETE_GRACE_DAYS}일 뒤 파기
+        <p className="text-center t-sub text-text-3">
+          탈퇴 시 공개 글은 즉시 비공개되고, 개인정보는 {DELETE_GRACE_DAYS}일 뒤 파기돼요
         </p>
       </div>
     );
@@ -976,22 +979,16 @@ export function SettingsClient({ channels }: { channels: NotifyChannels }) {
     };
   }, []);
   return (
-    /* [v4 · 규칙 1·12] 가운데 한 줄(560 → 760px) · 제목(h1 "설정")을 이 줄 맨 위에 — PageShell 제목·브레드크럼은
-       1240 컨테이너 왼쪽 끝이라 가운데 줄과 어긋났다 */
-    <PageShell>
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
-        <h1 className="t-title text-ink">설정</h1>
-        {/* [1000] 같은 화면의 상태라 링크가 아니라 버튼(aria-pressed). [v4 · 부품] 유리 알약 캡슐 → 밑줄 탭 */}
-        <div className="rise-in -mt-2 flex gap-5 overflow-x-auto border-b border-line [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="group" aria-label="설정 구분">
+    <PageShell title="설정" breadcrumb="마이 › 설정">
+      <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4">
+        {/* [1000] 탭은 유리 알약(.lg-capsule) — 같은 화면의 상태라 링크가 아니라 버튼(aria-pressed) */}
+        <div className="rise-in lg-capsule self-start" role="group" aria-label="설정 구분">
           {TABS.map((t) => (
             <button
               key={t.key}
               type="button"
               aria-pressed={tab === t.key}
               onClick={() => setTab(t.key)}
-              className={`min-h-10 shrink-0 whitespace-nowrap border-b-2 pb-2 pt-2.5 t-body font-bold transition-colors ${
-                tab === t.key ? "border-brand-hanji-ink text-ink" : "border-transparent text-text-3"
-              }`}
             >
               {t.label}
             </button>

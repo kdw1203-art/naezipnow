@@ -2,29 +2,31 @@ import { PageShell } from "../components/PageShell";
 import { LoadingHint } from "@/app/components/ui/LoadingHint";
 import { Skeleton } from "@/components/Skeleton";
 
-/* [966] 월간 리포트 목록 로딩 스켈레톤.
-   [v4] 실제 페이지와 같은 자리 — 760px 한 줄 · 제목 + 사실 한 줄 · 연도 소제목 · 구분선 행(오른쪽 건수) */
+/* [966] 월간 리포트 목록 로딩 스켈레톤 — 실제 페이지(760px 컬럼 · 제목 · 설명
+   두 줄 · 연도 소제목 · 한 줄짜리 리포트 행)와 같은 자리를 먼저 잡는다. */
 export default function ReportsLoading() {
   return (
     <PageShell breadcrumb="월간 실거래 리포트">
-      <div className="mx-auto flex max-w-[760px] flex-col gap-8">
-        <div>
-          <LoadingHint className="mb-3" />
-          <Skeleton className="h-6 w-64 max-w-full rounded" />
-          <Skeleton className="mt-2 h-3.5 w-56 max-w-full rounded" />
-        </div>
-        <div>
-          <Skeleton className="mb-2 h-4 w-20 rounded" />
-          <div className="card flex flex-col divide-y divide-line rounded-lg px-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex min-h-14 items-center justify-between gap-3 py-3">
-                <div className="flex flex-col gap-1.5">
-                  <Skeleton className="h-3.5 w-28 rounded" />
-                  <Skeleton className="h-3 w-16 rounded" />
+      <div className="mx-auto max-w-[760px]">
+        <LoadingHint className="mb-3" />
+        <Skeleton className="h-7 w-64 max-w-full rounded-lg" />
+        <Skeleton className="mt-3 h-3.5 w-full rounded" />
+        <Skeleton className="mt-2 h-3.5 w-3/4 rounded" />
+
+        <div className="mt-6 flex flex-col gap-5">
+          <div>
+            <Skeleton className="mb-2.5 h-4 w-24 rounded" />
+            <div className="flex flex-col gap-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="card flex items-center justify-between rounded-2xl px-5 py-4"
+                >
+                  <Skeleton className="h-4 w-44 max-w-[60%] rounded" />
+                  <Skeleton className="h-3 w-24 rounded" />
                 </div>
-                <Skeleton className="h-3.5 w-16 rounded" />
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>

@@ -35,7 +35,7 @@ export default async function AdminFreshnessPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-[19px] font-extrabold text-ink">데이터 신선도</h1>
+        <h1 className="text-[19px] font-bold text-ink">데이터 신선도</h1>
         <p className="mt-1 text-[13px] text-text-2">
           소스별 마지막 적재 시각 — 임계를 넘기면 freshness-watch 크론(매일)이 오류
           로그로 승격합니다.{" "}
@@ -88,9 +88,9 @@ export default async function AdminFreshnessPage() {
       {linkage && linkPct !== null && (
         <div className="card rounded-2xl px-4 py-3.5">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="text-[13px] font-extrabold text-ink">뉴스→지역 연결률</span>
+            <span className="text-[13px] font-bold text-ink">뉴스→지역 연결률</span>
             <span
-              className={`text-[19px] font-extrabold tabular-nums ${
+              className={`text-[19px] font-bold tabular-nums ${
                 linkPct >= 80 ? "text-success" : linkPct >= 50 ? "text-ink" : "text-danger"
               }`}
             >
@@ -119,9 +119,9 @@ export default async function AdminFreshnessPage() {
         {geocode && (
           <div className="card rounded-2xl px-4 py-3.5">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="text-[13px] font-extrabold text-ink">지오코딩 커버리지</span>
+              <span className="text-[13px] font-bold text-ink">지오코딩 커버리지</span>
               <span
-                className={`text-[19px] font-extrabold tabular-nums ${
+                className={`text-[19px] font-bold tabular-nums ${
                   geocode.pct >= 95 ? "text-success" : geocode.pct >= 70 ? "text-ink" : "text-danger"
                 }`}
               >
@@ -136,14 +136,14 @@ export default async function AdminFreshnessPage() {
         )}
         {ingestLog && ingestLog.length > 0 && (
           <div className="card rounded-2xl px-4 py-3.5">
-            <div className="text-[13px] font-extrabold text-ink">최근 24시간 수집 로그</div>
+            <div className="text-[13px] font-bold text-ink">최근 24시간 수집 로그</div>
             <div className="mt-2 flex flex-col gap-1">
               {ingestLog.slice(0, 8).map((r) => (
                 <div key={r.source} className="flex items-center gap-2 text-[12px]">
                   <span className="w-24 shrink-0 font-bold text-ink">{r.source}</span>
                   <span className="text-success">ok {r.ok}</span>
                   <span className="text-text-3">skip {r.skipped}</span>
-                  <span className={r.error > 0 ? "font-extrabold text-danger" : "text-text-3"}>
+                  <span className={r.error > 0 ? "font-bold text-danger" : "text-text-3"}>
                     err {r.error}
                   </span>
                   {r.error > 0 && r.lastMessage && (

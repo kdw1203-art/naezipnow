@@ -1,5 +1,5 @@
 "use client";
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
+/* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -165,8 +165,7 @@ export function MyRecordsTab({
           </span>
         </Link>
       ))}
-      {/* [v4 · 규칙 2] 채움 파랑은 머리의 "이 단지 임장노트 쓰기" 하나 — 탭 안의 다음 회차 쓰기는 아웃라인 */}
-      <Link href={noteHref} className="btn-outline rounded-xl p-3 text-center t-body no-underline">
+      <Link href={noteHref} className="btn-primary btn-cta rounded-xl p-3 text-center t-body no-underline">
         {notes.length + 1}회차 임장노트 쓰기
       </Link>
     </div>

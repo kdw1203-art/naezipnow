@@ -89,7 +89,7 @@ export function SubscriptionManageClient(props: Props) {
   /* ── 해지 완료 ── */
   if (state === "done") {
     return (
-      <div className="flex flex-col gap-2 border-y border-line py-3">
+      <div className="flex flex-col gap-2 rounded-xl bg-primary-soft px-4 py-3">
         <p className="t-body font-bold text-ink">{message}</p>
         <p className="t-sub text-text-2">
           마음이 바뀌면 언제든 다시 시작할 수 있어요. 환불(결제 후 7일 이내 청약철회)은{" "}
@@ -129,8 +129,7 @@ export function SubscriptionManageClient(props: Props) {
   const card = cardLabel(a);
   return (
     <div className="flex flex-col gap-3">
-      {/* [v4 · 규칙 5] 항목·값 격자 — 위아래 1px 선으로 목록과 같은 결 */}
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 border-y border-line py-3 t-sub">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 t-sub">
         <dt className="text-text-3">상품</dt>
         <dd className="font-bold text-ink">
           {planLabel(a.plan)} · {a.billing === "annual" ? "연간" : "월간"} 자동결제
@@ -159,8 +158,7 @@ export function SubscriptionManageClient(props: Props) {
       <div className="flex flex-wrap items-center gap-2">
         <Link
           href={`/subscription/billing?tier=${a.plan}&billing=${a.billing}&mode=card`}
-          /* [v4 · 규칙 2] 멈춘 구독의 채움 파랑 "카드 다시 등록"은 화면 맨 위(현재 플랜) 하나 — 여기는 테두리 */
-          className={`${suspended ? "btn-outline" : "btn-soft"} btn-md no-underline`}
+          className={`${suspended ? "btn-primary" : "btn-soft"} btn-md no-underline`}
         >
           {suspended ? "카드 다시 등록" : "카드 변경"}
         </Link>
@@ -226,7 +224,7 @@ export function SubscriptionManageClient(props: Props) {
               <label
                 key={code}
                 className={`flex min-h-10 cursor-pointer items-center gap-2.5 rounded-xl border px-3 t-body ${
-                  reason === code ? "border-brand-hanji-ink bg-brand-hanji text-brand-hanji-ink" : "border-line text-text-1"
+                  reason === code ? "border-primary bg-primary-soft text-ink" : "border-line text-text-1"
                 }`}
               >
                 <input

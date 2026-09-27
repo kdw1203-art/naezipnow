@@ -68,7 +68,7 @@ function Shell({ children }: { children: React.ReactNode }) {
             display: "flex",
           }}
         />
-        <div style={{ fontSize: "34px", fontWeight: 800, color: INK, display: "flex" }}>
+        <div style={{ fontSize: "34px", fontWeight: 700, color: INK, display: "flex" }}>
           내집나우 · naezipnow.com
         </div>
       </div>
@@ -85,7 +85,7 @@ function Badge({ text }: { text: string }) {
         background: "rgba(29,79,216,0.10)",
         color: BLUE,
         fontSize: "34px",
-        fontWeight: 800,
+        fontWeight: 700,
         padding: "14px 30px",
         borderRadius: "9999px",
       }}
@@ -117,7 +117,7 @@ export async function renderNoteFrames(n: NoteFrameInput): Promise<Buffer[]> {
         style={{
           marginTop: "18px",
           fontSize: "96px",
-          fontWeight: 800,
+          fontWeight: 700,
           color: INK,
           lineHeight: 1.15,
           display: "flex",
@@ -138,7 +138,7 @@ export async function renderNoteFrames(n: NoteFrameInput): Promise<Buffer[]> {
         style={{
           marginTop: "64px",
           fontSize: "58px",
-          fontWeight: 800,
+          fontWeight: 700,
           color: INK,
           lineHeight: 1.5,
           display: "flex",
@@ -157,10 +157,10 @@ export async function renderNoteFrames(n: NoteFrameInput): Promise<Buffer[]> {
         {scored.map((s) => (
           <div key={s.label} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <div style={{ fontSize: "44px", fontWeight: 800, color: INK, display: "flex" }}>
+              <div style={{ fontSize: "44px", fontWeight: 700, color: INK, display: "flex" }}>
                 {s.label}
               </div>
-              <div style={{ fontSize: "44px", fontWeight: 800, color: BLUE, display: "flex" }}>
+              <div style={{ fontSize: "44px", fontWeight: 700, color: BLUE, display: "flex" }}>
                 {s.value}
               </div>
             </div>
@@ -198,7 +198,7 @@ export async function renderNoteFrames(n: NoteFrameInput): Promise<Buffer[]> {
         style={{
           marginTop: "320px",
           fontSize: "84px",
-          fontWeight: 800,
+          fontWeight: 700,
           color: INK,
           lineHeight: 1.3,
           display: "flex",
@@ -209,7 +209,7 @@ export async function renderNoteFrames(n: NoteFrameInput): Promise<Buffer[]> {
       <div
         style={{
           fontSize: "84px",
-          fontWeight: 800,
+          fontWeight: 700,
           color: BLUE,
           lineHeight: 1.3,
           display: "flex",
@@ -244,7 +244,7 @@ export async function renderPromoFrames(p: PromoFrameInput): Promise<Buffer[]> {
         style={{
           marginTop: "96px",
           fontSize: "92px",
-          fontWeight: 800,
+          fontWeight: 700,
           color: INK,
           lineHeight: 1.25,
           display: "flex",
@@ -267,7 +267,7 @@ export async function renderPromoFrames(p: PromoFrameInput): Promise<Buffer[]> {
         style={{
           marginTop: "140px",
           fontSize: "150px",
-          fontWeight: 800,
+          fontWeight: 700,
           color: BLUE,
           display: "flex",
         }}
@@ -286,7 +286,7 @@ export async function renderPromoFrames(p: PromoFrameInput): Promise<Buffer[]> {
         style={{
           marginTop: "320px",
           fontSize: "84px",
-          fontWeight: 800,
+          fontWeight: 700,
           color: INK,
           lineHeight: 1.3,
           display: "flex",
@@ -297,7 +297,7 @@ export async function renderPromoFrames(p: PromoFrameInput): Promise<Buffer[]> {
       <div
         style={{
           fontSize: "84px",
-          fontWeight: 800,
+          fontWeight: 700,
           color: BLUE,
           lineHeight: 1.3,
           display: "flex",

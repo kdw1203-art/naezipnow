@@ -1,5 +1,4 @@
 "use client";
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 5곳을 font-bold(700)로 바꿨다. */
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -30,34 +29,41 @@ export type CreatorClientProps = CreatorStats & {
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 
-/* [v4 · 규칙 5] 숫자 칸 격자 → 1px 선 행(왼쪽 항목 / 오른쪽 숫자). 집계가 없는 칸("SNS 공유 —"·"검색 노출 —")은
-   v4 규칙(숫자는 실데이터에서만, 없으면 줄을 뺀다)대로 행을 뺐다 */
-const STAT_ROW = "flex min-h-12 items-center justify-between gap-3 py-2.5";
-
 function PerformanceTab({ stats }: { stats: CreatorStats }) {
-  const rows = [
+  const tiles = [
     { label: "공개 노트", value: stats.publicNoteCount },
     { label: "저장", value: stats.totalSaves },
+    { label: "SNS 공유", value: "—" },
+    { label: "검색 노출", value: "—" },
   ];
   return (
-    <section aria-labelledby="creator-perf-h" className="flex flex-col">
-      <h2 id="creator-perf-h" className="rise-in t-section text-ink">
-        내 콘텐츠 성과 <span className="t-sub font-medium text-text-3">전체 기간</span>
-      </h2>
-      {/* 공개 노트·저장은 실데이터 — 못 읽으면 "—"(허위 수치 금지) */}
-      <ul data-tone="blue" className="rise-in-2 divide-y divide-line">
-        {rows.map((r) => (
-          <li key={r.label} className={STAT_ROW}>
-            <span className="t-body font-bold text-ink">{r.label}</span>
-            <span className="shrink-0 t-body t-num text-ink">{r.value}</span>
-          </li>
+    <div className="flex flex-col gap-3">
+      {/* 상단 글래스 바 — 전체 기간 */}
+      <div className="glass rise-in flex flex-wrap items-center gap-3 rounded-lg px-4 py-3">
+        <span className="t-section text-ink">
+          내 콘텐츠 성과
+        </span>
+        <span className="t-sub text-text-3">전체 기간</span>
+      </div>
+
+      {/* 지표 4종 — 공개 노트·저장은 실데이터, 미집계는 "—" (허위 수치 금지) */}
+      <div className="rise-in-2 grid grid-cols-2 gap-2 md:grid-cols-4">
+        {tiles.map((s) => (
+          <div key={s.label} className="card px-3 py-[10px]">
+            <div className="t-caption text-text-3">{s.label}</div>
+            <div className="mt-[2px] t-section tabular-nums text-ink">
+              {s.value}
+            </div>
+          </div>
         ))}
-      </ul>
-      {/* 협찬 라벨 원칙 — [v4 · 규칙 9] 연파랑 띠 → 끝 캡션 */}
-      <p className="rise-in-3 t-caption font-bold text-text-2">
-        협찬·제공 받은 임장은 &quot;광고&quot; 라벨 필수 · 미표시 확인 시 노출 제한
-      </p>
-    </section>
+      </div>
+
+      {/* 협찬 라벨 원칙 */}
+      <div className="rise-in-3 rounded-lg bg-primary-soft px-4 py-[10px] t-sub font-bold text-primary">
+        협찬·제공 받은 임장은 반드시 &quot;광고&quot; 라벨을 켜야 해요 — 미표시
+        확인 시 노출 제한
+      </div>
+    </div>
   );
 }
 
@@ -113,10 +119,12 @@ function SellReportForm({
   }
 
   return (
-    <form onSubmit={submit} className="rise-in-4 card flex flex-col gap-3 rounded-lg p-4">
+    <form onSubmit={submit} className="rise-in-4 card flex flex-col gap-3 px-4 py-4">
       <div>
-        <h2 className="t-section text-ink">유료 리포트 판매 등록</h2>
-        <div className="mt-[2px] t-sub text-text-3">내 노트·분석을 유료 리포트로 · 포인트 판매 · 가격 100P~100,000P</div>
+        <div className="t-body font-bold text-ink">유료 리포트 판매 등록</div>
+        <div className="mt-[2px] t-sub text-text-3">
+          내 노트·분석을 유료 리포트로 승격해 포인트로 판매해요 (가격 100P~100,000P)
+        </div>
       </div>
 
       {noteOptions.length > 0 && (
@@ -216,59 +224,88 @@ function MonetizationTab({
     },
   ];
 
-  /* [v4 · 규칙 4·5·6] 숫자 칸 격자 → 행 · 네이비 안내 면 → 캡션(사실 그대로: 현금 전환·출금 불가, 서비스 내 혜택 전용) ·
-     "판매중/무료" 알약 → 글자 · 회색 상자 목록 → 1px 선 행 */
   return (
-    <div className="flex flex-col gap-8">
-      <section aria-labelledby="creator-sales-h" className="rise-in flex flex-col">
-        <h2 id="creator-sales-h" className="t-section text-ink">
-          판매 실적
-        </h2>
-        <ul data-tone="mint" className="divide-y divide-line">
-          {tiles.map((t) => (
-            <li key={t.label} className={STAT_ROW}>
-              <span className="t-body font-bold text-ink">{t.label}</span>
-              <span className="shrink-0 t-body t-num text-ink">{t.value}</span>
-            </li>
-          ))}
-        </ul>
-        {/* 포인트 안내 — 2026-08-23 토스 회신 반영: 현금 전환·원화 환산 표기를 전부 제거했다. 판매 보상 포인트는
-            무상 리워드와 동일한 규칙(현금 전환·출금 불가, 사이트 내부 혜택 사용)을 따른다.
-            [970 · C-15] 요율은 marketplace-fees 단일 출처 — 정산 계산(sales.ts)과 같은 값 */}
-        <p className="mt-1 t-caption text-text-3">
-          판매 보상: 리포트 열람 시 플랫폼 몫 {feePct(REPORT_SELLER_FEE_RATE)}를 뺀 포인트 적립
-          {sales.available && <> · 현재 누적 <b className="text-text-1">{fmt(sales.netPoints)}P</b></>} · 현금
-          전환·출금 불가 · 포인트 상점의 서비스 내 혜택(매물 상단 노출·꾸미기 등)에만 사용
-        </p>
-      </section>
+    <div className="flex flex-col gap-3">
+      {/* 실적 요약 */}
+      <div className="rise-in grid grid-cols-2 gap-2 md:grid-cols-4">
+        {tiles.map((t) => (
+          <div key={t.label} className="card px-3 py-[10px]">
+            <div className="t-caption text-text-3">{t.label}</div>
+            <div className="mt-[2px] t-section tabular-nums text-ink">
+              {t.value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 포인트 안내 — 2026-08-23 토스 회신 반영: 현금 전환·원화 환산 표기를 전부
+          제거했다. 판매 보상 포인트는 무상 리워드와 동일한 규칙(현금 전환·출금 불가,
+          사이트 내부 혜택 사용)을 따른다 — "1P≈1원"·"출금 오픈 전까지" 같은 환금성
+          암시 문구가 유의업종 오해의 근거가 된다. */}
+      <div className="rise-in-2 rounded-lg bg-brand-navy/[0.96] px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="t-body font-bold text-white">판매 보상 안내</span>
+          <span className="rounded-full bg-[rgba(224,86,58,.18)] chip-pad t-caption font-bold text-brand-red-dark">
+            현금 전환 불가
+          </span>
+        </div>
+        <div className="mt-2 t-sub text-on-dark-muted">
+          {/* [970 · C-15] 요율은 marketplace-fees 단일 출처 — 정산 계산(sales.ts)과 같은 값 */}
+          리포트가 열람되면 플랫폼 몫 {feePct(REPORT_SELLER_FEE_RATE)}를 뺀 포인트가 적립돼요
+          {sales.available && (
+            <>
+              {" "}
+              — 현재 누적{" "}
+              <b className="text-ai-accent">{fmt(sales.netPoints)}P</b>
+            </>
+          )}
+          .
+          <br />
+          포인트는 현금으로 전환·출금되지 않으며, 포인트 상점의 서비스 내
+          혜택(매물 상단 노출·꾸미기 등)에만 쓸 수 있어요.
+        </div>
+      </div>
 
       {/* 등록 리포트 목록 */}
-      <section aria-labelledby="creator-reports-h" className="rise-in-3 flex flex-col">
-        <h2 id="creator-reports-h" className="t-section text-ink">
-          내 유료 리포트
-        </h2>
+      <div className="rise-in-3 card px-4 py-4">
+        <div className="t-body font-bold text-ink">내 유료 리포트</div>
         {!sales.available ? (
-          <p className="border-y border-line py-3 t-sub text-text-3">판매 실적 조회 실패 · 잠시 후 다시</p>
+          <div className="mt-3 rounded-lg bg-bg px-4 py-6 text-center t-sub text-text-3">
+            판매 실적을 불러올 수 없어요 — 잠시 후 다시 확인해 주세요.
+          </div>
         ) : sales.reports.length === 0 ? (
-          <p className="border-y border-line py-3 t-sub text-text-3">등록한 유료 리포트 없음 · 아래 폼에서 노트 1편 골라 등록</p>
+          <div className="mt-3 rounded-lg bg-bg px-4 py-6 text-center t-sub text-text-3">
+            아직 등록한 유료 리포트가 없어요. 아래에서 첫 리포트를 판매해 보세요.
+          </div>
         ) : (
-          <ul data-tone="hanji" className="divide-y divide-line">
+          <div className="mt-2 flex flex-col gap-[6px]">
             {sales.reports.map((r) => (
-              <li key={r.id} className="flex min-h-14 items-center justify-between gap-3 py-3">
-                <span className="min-w-0">
-                  <span className="block truncate t-body font-bold text-text-1">{r.title}</span>
-                  <span className="mt-0.5 block t-sub text-text-3">
+              <div
+                key={r.id}
+                className="flex items-center justify-between gap-3 rounded-lg bg-bg px-3 py-[10px]"
+              >
+                <div className="min-w-0">
+                  <div className="truncate t-body font-bold text-text-1">
+                    {r.title}
+                  </div>
+                  <div className="mt-[2px] t-sub text-text-3">
                     {fmt(r.price)}P · 판매 {fmt(r.salesCount)}건 · 누적 {fmt(r.grossPoints)}P
-                  </span>
-                </span>
-                <span className={`shrink-0 t-sub font-bold ${r.isPremium ? "text-primary" : "text-text-3"}`}>
+                  </div>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full chip-pad text-[10px] font-bold ${
+                    r.isPremium
+                      ? "bg-primary-soft text-primary"
+                      : "bg-line text-text-3"
+                  }`}
+                >
                   {r.isPremium ? "판매중" : "무료"}
                 </span>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
-      </section>
+      </div>
 
       {/* 판매 등록 폼 */}
       <SellReportForm noteOptions={noteOptions} />
@@ -280,18 +317,14 @@ export function CreatorClient(props: CreatorClientProps) {
   const [tab, setTab] = useState<Tab>("콘텐츠 성과");
 
   return (
-    <div className="mx-auto w-full max-w-[760px]">
-      {/* [v4 · 부품] 칩 두 개 → 밑줄 탭 */}
-      <div className="mb-6 flex gap-5 border-b border-line" role="group" aria-label="크리에이터 메뉴">
+    <div>
+      <div className="mb-4 flex flex-wrap gap-[6px]">
         {TABS.map((t) => (
           <button
             key={t}
             type="button"
-            aria-pressed={tab === t}
             onClick={() => setTab(t)}
-            className={`min-h-10 border-b-2 pb-2 pt-2.5 t-body font-bold transition-colors ${
-              tab === t ? "border-brand-hanji-ink text-ink" : "border-transparent text-text-3"
-            }`}
+            className={tab === t ? "chip-active" : "chip"}
           >
             {t}
           </button>

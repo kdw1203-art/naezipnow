@@ -80,7 +80,7 @@ function MetricCell({
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-[10px] font-semibold text-[#9aa6b8]">{label}</span>
-      <span className="text-[15px] font-extrabold" style={{ color: VERDICT_COLOR[verdict] }}>
+      <span className="text-[15px] font-bold" style={{ color: VERDICT_COLOR[verdict] }}>
         {value === null ? "—" : `${fmt(Math.round(value * 1000) / 1000)}${unit}`}
       </span>
       <span className="text-[10px] text-[#6b7688]">
@@ -254,7 +254,7 @@ function IndexCoveragePanel({ loaded }: { loaded: Loaded<IndexCoverageRow> }) {
       <div className="flex flex-wrap items-end gap-6">
         <div>
           <div className="text-[10px] font-semibold text-[#9aa6b8]">색인률(표본)</div>
-          <div className="text-[24px] font-extrabold text-ai-accent">
+          <div className="text-[24px] font-bold text-ai-accent">
             {rate === null ? "—" : `${rate.toFixed(1)}%`}
           </div>
           <div className="text-[10px] text-[#6b7688]">
@@ -263,12 +263,12 @@ function IndexCoveragePanel({ loaded }: { loaded: Loaded<IndexCoverageRow> }) {
         </div>
         <div>
           <div className="text-[10px] font-semibold text-[#9aa6b8]">사이트맵 제출</div>
-          <div className="text-[24px] font-extrabold text-[#c9d2e0]">{fmt(latest.submitted)}</div>
+          <div className="text-[24px] font-bold text-[#c9d2e0]">{fmt(latest.submitted)}</div>
           <div className="text-[10px] text-[#6b7688]">우리 사이트맵이 싣고 있는 URL 수</div>
         </div>
         <div>
           <div className="text-[10px] font-semibold text-[#9aa6b8]">검사 실패</div>
-          <div className="text-[24px] font-extrabold text-[#c9d2e0]">{fmt(latest.errored)}</div>
+          <div className="text-[24px] font-bold text-[#c9d2e0]">{fmt(latest.errored)}</div>
           <div className="text-[10px] text-[#6b7688]">미색인으로 세지 않습니다</div>
         </div>
         <div className="text-[10px] text-[#6b7688]">기준 주 {latest.collectedWeek}</div>
@@ -362,7 +362,7 @@ export default async function AdminSeoPage() {
   return (
     <div className="flex flex-col gap-5">
       <header>
-        <h1 className="text-[19px] font-extrabold text-[#e8eef8]">SEO 측정</h1>
+        <h1 className="text-[19px] font-bold text-[#e8eef8]">SEO 측정</h1>
         <p className="mt-1 text-[12px] leading-[1.7] text-[#9aa6b8]">
           실사용자 성능(CrUX)과 색인률을 주 단위로 쌓아 둡니다. 둘 다 매주 월요일
           15시(KST) 무렵에 한 번 수집합니다. 반복 관측 루틴(AI 인용·쿼리 갭)은 코드가 아니라
@@ -371,7 +371,7 @@ export default async function AdminSeoPage() {
       </header>
 
       <section className={card}>
-        <h2 className="text-[13px] font-extrabold text-[#e8eef8]">
+        <h2 className="text-[13px] font-bold text-[#e8eef8]">
           실사용자 성능 (CrUX) <span className="text-[10px] font-medium text-[#6b7688]">N5</span>
         </h2>
         <p className="-mt-1 text-[12px] leading-[1.7] text-[#9aa6b8]">
@@ -382,7 +382,7 @@ export default async function AdminSeoPage() {
       </section>
 
       <section className={card}>
-        <h2 className="text-[13px] font-extrabold text-[#e8eef8]">
+        <h2 className="text-[13px] font-bold text-[#e8eef8]">
           색인률 <span className="text-[10px] font-medium text-[#6b7688]">N25</span>
         </h2>
         <p className="-mt-1 text-[12px] leading-[1.7] text-[#9aa6b8]">
@@ -394,7 +394,7 @@ export default async function AdminSeoPage() {
 
       {/* [#102] 타이틀 CTR 실험 배정표 — 배정은 결정적 해시(요청 간 불변) */}
       <section className={card}>
-        <h2 className="text-[13px] font-extrabold text-[#e8eef8]">
+        <h2 className="text-[13px] font-bold text-[#e8eef8]">
           타이틀 실험 <span className="text-[10px] font-medium text-[#6b7688]">#102</span>
         </h2>
         <TitleExperimentPanel />
@@ -402,7 +402,7 @@ export default async function AdminSeoPage() {
 
       {/* [#107] 위젯 채택 — 임베드 비콘(host 일집계) 최근 30일 */}
       <section className={card}>
-        <h2 className="text-[13px] font-extrabold text-[#e8eef8]">
+        <h2 className="text-[13px] font-bold text-[#e8eef8]">
           위젯 채택 <span className="text-[10px] font-medium text-[#6b7688]">#107</span>
         </h2>
         <WidgetAdoptionPanel />
@@ -410,7 +410,7 @@ export default async function AdminSeoPage() {
 
       {/* [#117] 뉴스 → 단지 링크율 — 자동 뉴스가 전환 표면(단지 허브)으로 흐르는 비율 */}
       <section className={card}>
-        <h2 className="text-[13px] font-extrabold text-[#e8eef8]">
+        <h2 className="text-[13px] font-bold text-[#e8eef8]">
           뉴스→단지 연결률 <span className="text-[10px] font-medium text-[#6b7688]">#117</span>
         </h2>
         <NewsComplexLinkPanel />
@@ -527,7 +527,7 @@ async function WidgetAdoptionPanel() {
             {host}
             <span className="ml-1.5 text-[10px] text-[#8b94a6]">{[...v.kinds].join("·")}</span>
           </span>
-          <span className="shrink-0 font-extrabold text-ai-accent tabular-nums">{v.hits}뷰</span>
+          <span className="shrink-0 font-bold text-ai-accent tabular-nums">{v.hits}뷰</span>
         </div>
       ))}
     </div>

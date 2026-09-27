@@ -5,13 +5,11 @@ import { Skeleton } from "@/components/Skeleton";
 /* 통합 검색 로딩 스켈레톤 (#17) — 큰 검색 입력 + 최근/인기 검색 칩 */
 export default function SearchLoading() {
   return (
-    /* [v4] 실제 화면과 같은 가운데 한 줄(760px) · 제목은 줄 안 */
-    <PageShell>
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
-        <h1 className="t-title text-ink">통합 검색</h1>
-        <LoadingHint />
+    <PageShell title="통합 검색" breadcrumb="검색">
+      <LoadingHint className="mb-3" />
+      <div className="flex flex-col gap-4">
         {/* 검색 입력 박스 */}
-        <Skeleton className="h-[52px] w-full rounded-lg" />
+        <Skeleton className="h-[52px] w-full max-w-[560px] rounded-2xl" />
 
         {/* 최근·인기 검색 칩 */}
         <div className="mt-2 flex flex-col gap-5">

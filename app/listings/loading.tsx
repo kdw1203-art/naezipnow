@@ -1,35 +1,38 @@
 import { PageShell } from "../components/PageShell";
 import { Skeleton } from "@/components/Skeleton";
 
-/* 실매물 로딩 스켈레톤 (#41) — [v4] 실제 화면과 같은 뼈대: 가운데 한 줄(760px) · 제목·사실 줄 + 필터 칩 +
-   썸네일 행(72px 정사각 + 세 줄). 행 높이가 실물과 같아 로드 순간 목록이 밀리지 않는다. */
+/* 실매물 로딩 스켈레톤 (#41) — 제목·요약 + 필터 칩 + 매물 카드 그리드 */
 export default function ListingsLoading() {
   return (
-    <PageShell>
-      <div className="mx-auto w-full max-w-[760px]">
-        <Skeleton className="h-7 w-32 rounded-lg" />
-        <Skeleton className="mt-2 h-3.5 w-72 max-w-full rounded" />
+    <PageShell breadcrumb="홈 › 실매물">
+      <Skeleton className="h-7 w-32 rounded-lg" />
+      <Skeleton className="mt-2 h-3.5 w-72 max-w-full rounded" />
 
-        {/* 필터 칩 */}
-        <div className="my-5 flex flex-wrap gap-1.5">
-          {Array.from({ length: 7 }).map((_, i) => (
-            <Skeleton key={i} className="h-7 w-16 rounded-full" />
-          ))}
-        </div>
+      {/* 필터 칩 */}
+      <div className="my-5 flex flex-wrap gap-1.5">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <Skeleton key={i} className="h-7 w-16 rounded-full" />
+        ))}
+      </div>
 
-        {/* 썸네일 행 */}
-        <div className="flex flex-col divide-y divide-line">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex items-start gap-3 py-3">
-              <Skeleton className="h-[72px] w-[72px] shrink-0 rounded-lg" />
-              <div className="flex min-w-0 flex-1 flex-col gap-2 pt-1">
-                <Skeleton className="h-4 w-1/2 rounded" />
-                <Skeleton className="h-4 w-1/3 rounded" />
-                <Skeleton className="h-3 w-2/3 rounded" />
+      {/* 매물 카드 그리드 */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="card overflow-hidden rounded-3xl">
+            {/* [E73] 실물 커버 높이와 같게. h-40(160px)이었는데 실제 카드 이미지는
+                h-[150px] 라(ListingsListClient.tsx), 카드 6장이 로드되는 순간
+                10px×6 만큼 목록이 통째로 밀렸다 — 스켈레톤이 만들어 내는 CLS 다. */}
+            <Skeleton className="h-[150px] w-full" />
+            <div className="flex flex-col gap-2 p-4">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-5 w-24 rounded" />
+                <Skeleton className="h-4 w-12 rounded-full" />
               </div>
+              <Skeleton className="h-3.5 w-2/3 rounded" />
+              <Skeleton className="h-3 w-1/2 rounded" />
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     </PageShell>
   );

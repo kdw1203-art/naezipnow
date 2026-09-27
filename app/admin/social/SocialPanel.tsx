@@ -42,7 +42,7 @@ function StatusChip({ status }: { status: string }) {
         : status === "off"
           ? "text-[#9aa6b8]"
           : "text-ai-accent";
-  return <span className={`text-[12px] font-extrabold ${tone}`}>{STATUS_LABEL[status] ?? status}</span>;
+  return <span className={`text-[12px] font-bold ${tone}`}>{STATUS_LABEL[status] ?? status}</span>;
 }
 
 export function SocialPanel() {
@@ -99,7 +99,7 @@ export function SocialPanel() {
       {/* 자격 증명 상태 + 즉시 실행 */}
       <div className={card}>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-[12px] font-extrabold !text-white">연결 상태</span>
+          <span className="text-[12px] font-bold !text-white">연결 상태</span>
           {configured ? (
             <>
               <span className={`text-[12px] font-bold ${configured.instagram ? "text-ai-success" : "text-[#9aa6b8]"}`}>
@@ -117,7 +117,7 @@ export function SocialPanel() {
               type="button"
               disabled={busy !== null}
               onClick={() => void runAction("소재 생성", "/api/cron/social-autopost")}
-              className="rounded-lg bg-[rgba(126,162,255,.14)] px-3 py-1.5 text-[12px] font-extrabold text-ai-accent disabled:opacity-50"
+              className="rounded-lg bg-[rgba(126,162,255,.14)] px-3 py-1.5 text-[12px] font-bold text-ai-accent disabled:opacity-50"
             >
               {busy === "소재 생성" ? "생성 중…" : "소재 지금 생성"}
             </button>
@@ -125,7 +125,7 @@ export function SocialPanel() {
               type="button"
               disabled={busy !== null}
               onClick={() => void runAction("큐 집행", "/api/cron/social-upload-drain")}
-              className="rounded-lg bg-[rgba(126,162,255,.14)] px-3 py-1.5 text-[12px] font-extrabold text-ai-accent disabled:opacity-50"
+              className="rounded-lg bg-[rgba(126,162,255,.14)] px-3 py-1.5 text-[12px] font-bold text-ai-accent disabled:opacity-50"
             >
               {busy === "큐 집행" ? "집행 중…" : "큐 지금 집행"}
             </button>
@@ -140,7 +140,7 @@ export function SocialPanel() {
 
       {/* 수동 등록 */}
       <div className={card}>
-        <div className="text-[12px] font-extrabold !text-white">수동 등록 (직접 만든 영상)</div>
+        <div className="text-[12px] font-bold !text-white">수동 등록 (직접 만든 영상)</div>
         <div className="grid gap-2 md:grid-cols-2">
           <input
             value={videoUrl}
@@ -175,7 +175,7 @@ export function SocialPanel() {
               setCaption("");
             })
           }
-          className="self-start rounded-lg bg-[rgba(126,162,255,.14)] px-4 py-2 text-[12px] font-extrabold text-ai-accent disabled:opacity-50"
+          className="self-start rounded-lg bg-[rgba(126,162,255,.14)] px-4 py-2 text-[12px] font-bold text-ai-accent disabled:opacity-50"
         >
           큐에 등록
         </button>
@@ -183,7 +183,7 @@ export function SocialPanel() {
 
       {/* 큐 상태표 */}
       <div className={card}>
-        <div className="text-[12px] font-extrabold !text-white">큐 (최근 50건)</div>
+        <div className="text-[12px] font-bold !text-white">큐 (최근 50건)</div>
         {loadError ? (
           <p className="rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-4 text-[12px] text-ai-danger">
             조회 실패 — {loadError}
@@ -203,7 +203,7 @@ export function SocialPanel() {
                 className="flex flex-col gap-1.5 rounded-lg bg-[rgba(255,255,255,.04)] px-3.5 py-3"
               >
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="text-[12px] font-extrabold !text-white">{it.title}</span>
+                  <span className="text-[12px] font-bold !text-white">{it.title}</span>
                   <span className="text-[10px] text-[#9aa6b8]">
                     시도 {it.attempts}회 · 예약 {new Date(it.scheduledAt).toLocaleString("ko-KR")}
                   </span>

@@ -46,7 +46,7 @@ export default async function AdminLayout({
               fill="#7ea2ff"
             />
           </svg>
-          <span className="text-[15px] font-extrabold !text-white">
+          <span className="text-[15px] font-bold !text-white">
             내집나우 Admin
           </span>
         </Link>

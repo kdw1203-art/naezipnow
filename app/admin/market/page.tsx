@@ -51,7 +51,7 @@ export default async function AdminMarketPage() {
 
   return (
     <>
-      <div className="rise-in text-[19px] font-extrabold text-white">
+      <div className="rise-in text-[19px] font-bold text-white">
         마켓·정산 / 공지·배너 관리
       </div>
       <div className="rise-in -mt-2 mb-1 text-[12px] text-[#9aa6b8]">
@@ -62,7 +62,7 @@ export default async function AdminMarketPage() {
         {/* 마켓 · 정산 */}
         <div className={panelCard}>
           <div className="flex items-center justify-between">
-            <span className="text-[15px] font-extrabold text-white">마켓 · 정산</span>
+            <span className="text-[15px] font-bold text-white">마켓 · 정산</span>
             <span className="text-[12px] text-[#9aa6b8]">실 의뢰 집계</span>
           </div>
           <div className="grid grid-cols-3 gap-2.5">
@@ -72,14 +72,14 @@ export default async function AdminMarketPage() {
                 className="rounded-xl border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.05)] p-3"
               >
                 <div className="text-[10px] text-[#9aa6b8]">{s.label}</div>
-                <div className="text-[19px] font-extrabold" style={{ color: s.color }}>
+                <div className="text-[19px] font-bold" style={{ color: s.color }}>
                   {s.value}
                 </div>
               </div>
             ))}
           </div>
           <div className="rounded-xl border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-3.5">
-            <div className="text-[12px] font-extrabold text-white">
+            <div className="text-[12px] font-bold text-white">
               전문가 정산(GMV·수수료){" "}
               <span className="text-[10px] font-medium text-[#9aa6b8]">준비 중</span>
             </div>
@@ -93,7 +93,7 @@ export default async function AdminMarketPage() {
         {/* 공지 · 배너 관리 — 실제 설정된 배너 */}
         <div className={panelCard}>
           <div className="flex items-center justify-between">
-            <span className="text-[15px] font-extrabold text-white">공지 · 배너 관리</span>
+            <span className="text-[15px] font-bold text-white">공지 · 배너 관리</span>
             <span className="text-[12px] text-[#9aa6b8]">
               활성 {banners.filter((b) => b.isActive).length} / 전체 {banners.length}
             </span>
@@ -116,10 +116,10 @@ export default async function AdminMarketPage() {
                   className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.04)] px-3.5 py-3"
                 >
                   <div className="min-w-0">
-                    <div className="truncate text-xs font-extrabold text-white">
+                    <div className="truncate text-xs font-bold text-white">
                       {b.title}{" "}
                       <span
-                        className={`text-[10px] font-extrabold ${
+                        className={`text-[10px] font-bold ${
                           b.isActive ? "text-ai-success" : "text-[#9aa6b8]"
                         }`}
                       >

@@ -211,7 +211,7 @@ export function BannersClient({ initial }: { initial: Row[] }) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-[13px] font-extrabold text-[#e8edf6]">등록된 배너</h2>
+        <h2 className="text-[13px] font-bold text-[#e8edf6]">등록된 배너</h2>
         <button
           type="button"
           onClick={() => {
@@ -226,7 +226,7 @@ export function BannersClient({ initial }: { initial: Row[] }) {
 
       {draft && (
         <div className="flex flex-col gap-3 rounded-3xl border border-[#2b3750] bg-[#141b2b] p-4">
-          <div className="text-[13px] font-extrabold text-[#e8edf6]">
+          <div className="text-[13px] font-bold text-[#e8edf6]">
             {draft.id ? "배너 수정" : "새 배너"}
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -349,7 +349,7 @@ export function BannersClient({ initial }: { initial: Row[] }) {
             }}
           >
             <span className="text-[10px] font-bold uppercase tracking-wide opacity-80">광고</span>
-            <span className="text-[15px] font-extrabold leading-snug">
+            <span className="text-[15px] font-bold leading-snug">
               {draft.title || "제목이 여기 보입니다"}
             </span>
             {draft.subtitle ? (
@@ -413,7 +413,7 @@ export function BannersClient({ initial }: { initial: Row[] }) {
                   <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${badge.cls}`}>
                     {badge.text}
                   </span>
-                  <span className="text-[13px] font-extrabold text-[#e8edf6]">{b.title}</span>
+                  <span className="text-[13px] font-bold text-[#e8edf6]">{b.title}</span>
                   <span className="text-[12px] text-[#8d99ab]">
                     {PLACEMENTS.find((p) => p.value === b.placement)?.label ?? b.placement} · 우선순위{" "}
                     {b.priority}

@@ -95,7 +95,7 @@ function ExperimentCard({ r }: { r: ExperimentResult }) {
   return (
     <div className={darkCard}>
       <div className="flex flex-wrap items-center gap-2">
-        <div className="text-[13px] font-extrabold text-white">{r.def.key}</div>
+        <div className="text-[13px] font-bold text-white">{r.def.key}</div>
         <span
           className={`rounded-full chip-pad text-[10px] font-bold ${
             r.def.enabled
@@ -173,11 +173,11 @@ function ExperimentCard({ r }: { r: ExperimentResult }) {
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">
             <span className="text-[#9aa6b8]">
               대조군 대비{" "}
-              <span className="font-extrabold text-white">{signedPct(r.comparison.lift)}</span>
+              <span className="font-bold text-white">{signedPct(r.comparison.lift)}</span>
             </span>
             <span className="text-[#9aa6b8]">
               양측 p{" "}
-              <span className="font-extrabold text-white">
+              <span className="font-bold text-white">
                 {r.comparison.pValue === null ? "—" : r.comparison.pValue.toFixed(3)}
               </span>
             </span>
@@ -237,7 +237,7 @@ export default async function AdminExperimentsPage() {
 
   return (
     <>
-      <div className="rise-in text-[19px] font-extrabold text-white">실험 (A/B)</div>
+      <div className="rise-in text-[19px] font-bold text-white">실험 (A/B)</div>
       <div className="rise-in -mt-2 mb-1 max-w-[760px] text-[12px] leading-relaxed text-[#9aa6b8]">
         문구·버튼 라벨처럼 <b>사실 주장이 아닌 표현</b>만 실험합니다. 가격·거래 건수·면적·시세는
         사람마다 다르게 보이면 안 되므로 실험 대상이 아닙니다. 전환율의 분모는 사람 수가 아니라{" "}
@@ -254,7 +254,7 @@ export default async function AdminExperimentsPage() {
         />
       ) : results.length === 0 ? (
         <div className={`rise-in-1 ${darkCard}`}>
-          <div className="text-[13px] font-extrabold text-white">등록된 실험이 없습니다</div>
+          <div className="text-[13px] font-bold text-white">등록된 실험이 없습니다</div>
           <p className="text-[12px] leading-relaxed text-[#9aa6b8]">
             실험은 <code className="text-[#c9d2e0]">lib/experiments/registry.ts</code> 에 선언된 것만
             존재합니다. 코드 아무 데서나 만든 키는 서버에서 버려집니다.

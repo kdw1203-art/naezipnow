@@ -4,7 +4,7 @@ import { getPublicRecordDatasetStats } from "@/lib/market/public-records";
 import { RecordsSearchClient } from "./RecordsSearchClient";
 import { CODEF_PRODUCTS } from "@/lib/codef/endpoints";
 import { seoAlternates } from "@/lib/seo/alternates";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-bold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* ── ISR 전환 (사용량 절감 14차, 2026-08-11) ────────────────────────────────
    예전에는 force-dynamic + ?complex= 서버 재렌더였다. ?complex= 는 자유 텍스트

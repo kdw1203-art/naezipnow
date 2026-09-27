@@ -1,4 +1,4 @@
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 4곳을 font-bold(700)로 바꿨다. */
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-bold/black 4곳을 font-bold(700)로 바꿨다. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { listPublicNotes, type InspectionNote } from "@/lib/inspection/store-db";
@@ -152,7 +152,7 @@ export default async function NotesMarketPage() {
                       type="button"
                       disabled
                       title="결제 기능 오픈 후 판매가 시작됩니다"
-                      className="inline-flex flex-1 cursor-not-allowed items-center justify-center gap-1 rounded-lg bg-bg px-3.5 py-2 t-body font-bold text-text-3"
+                      className="inline-flex min-h-10 flex-1 cursor-not-allowed items-center justify-center gap-1 rounded-lg bg-bg px-3.5 py-2 t-body font-bold text-text-3"
                     >
                       <Icon name="lock" size={15} />
                       판매 오픈 준비 중

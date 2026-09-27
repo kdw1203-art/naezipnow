@@ -1,5 +1,5 @@
 "use client";
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
+/* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -93,11 +93,9 @@ export function PriceTab({
 
   return (
     <>
-      {trades.length > 0 && (
-        <div className="px-1 text-xs font-bold text-text-3">
-          실거래 <span className="font-medium text-text-3">· 국토교통부 기준 · 해제 신고 제외</span>
-        </div>
-      )}
+      <div className="px-1 text-xs font-bold text-text-3">
+        실거래 <span className="font-medium text-text-3">· 국토교통부 기준 · 해제 신고 제외</span>
+      </div>
       {/* 실거래 가격 추이 차트 (실데이터 2개월 이상일 때만) */}
       {priceChart}
       {trades.length > 0 ? (
@@ -161,7 +159,7 @@ export function PriceTab({
                   type="button"
                   onClick={() => setAllDeals((v) => !v)}
                   aria-expanded={allDeals}
-                  className="btn-ghost min-h-10 rounded-xl px-3 t-sub"
+                  className="btn-soft min-h-10 rounded-xl px-3 t-sub"
                 >
                   {allDeals ? "접기" : `${bandDeals.length - DEALS_FIRST}건 더 보기`}
                 </button>
@@ -195,9 +193,12 @@ export function PriceTab({
             </div>
           )}
         </>
-      ) : null /* [v4 · 규칙 8] "매매 실거래 없음"은 머리(대표가 자리)가 한 번만 말한다 — 탭에서 다시 말하지 않는다 */}
-      {/* [v4 · 규칙 2] 연한 파랑 면(btn-soft) → 고스트 — 파랑은 머리의 채움 버튼 하나.
-          [D69] 계산기로 **이 단지의 실거래가를 들고** 간다.
+      ) : (
+        <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
+          아직 수집된 국토교통부 실거래가 없어요
+        </div>
+      )}
+      {/* [D69] 계산기로 **이 단지의 실거래가를 들고** 간다.
           예전엔 계산기가 어디서도 값을 받지 못해 8.4억이라는 예시 숫자에서
           늘 새로 시작했다 — 방금 시세를 보고 온 사람에게 그건 남의 숫자다.
           최근 달 평균 매매가(만원)를 그대로 넘긴다. 값이 없으면 링크를
@@ -207,14 +208,14 @@ export function PriceTab({
             D62 매칭이 "서울 강남구" 꼴을 받는다. */}
         <Link
           href={region ? `/analysis/price?region=${encodeURIComponent(region)}` : "/analysis/price"}
-          className="btn-ghost rounded-xl p-3 text-center t-body"
+          className="btn-soft rounded-xl p-3 text-center t-body"
         >
           AI 시세 분석 보기
         </Link>
         {latestAvgManwon > 0 && (
           <Link
             href={`/calculator?price=${latestAvgManwon}${complexName ? `&from=${encodeURIComponent(complexName)}` : ""}${loanRegion ? `&region=${loanRegion}` : ""}`}
-            className="btn-ghost rounded-xl p-3 text-center t-body"
+            className="btn-soft rounded-xl p-3 text-center t-body"
           >
             {/* [1008] "시세" → "실거래가" — 넘기는 값은 최근 달 평균 **실거래가**다(단지 단위 시세 원천 없음) */}
             이 실거래가로 대출 계산

@@ -46,7 +46,7 @@ export default async function AdminModerationPage() {
     return (
       <>
         <div className="rise-in flex flex-wrap items-center justify-between gap-2">
-          <span className="text-[19px] font-extrabold text-white">신고 · 모더레이션</span>
+          <span className="text-[19px] font-bold text-white">신고 · 모더레이션</span>
         </div>
         <ErrorState
           tone="admin"
@@ -72,7 +72,7 @@ export default async function AdminModerationPage() {
   return (
     <>
       <div className="rise-in flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[19px] font-extrabold text-white">신고 · 모더레이션</span>
+        <span className="text-[19px] font-bold text-white">신고 · 모더레이션</span>
         <span className="text-[12px] text-[#9aa6b8]">
           커뮤니티 {stats.bySource.content}건 · 채팅 {stats.bySource.chat}건
         </span>
@@ -88,7 +88,7 @@ export default async function AdminModerationPage() {
             className="rounded-2xl border border-[rgba(255,255,255,.06)] bg-[#12161f] px-4 py-3.5"
           >
             <div className="text-[10px] text-[#9aa6b8]">{c.label}</div>
-            <div className="mt-0.5 text-[15px] font-extrabold" style={{ color: c.color }}>
+            <div className="mt-0.5 text-[15px] font-bold" style={{ color: c.color }}>
               {c.value}
             </div>
           </div>
@@ -99,7 +99,7 @@ export default async function AdminModerationPage() {
         {/* 큐 */}
         <div className={card}>
           <div className="flex items-center justify-between">
-            <span className="text-[15px] font-extrabold text-white">신고 큐</span>
+            <span className="text-[15px] font-bold text-white">신고 큐</span>
             <span className="text-[12px] text-[#9aa6b8]">미처리 우선 · 최신순</span>
           </div>
           <ModerationQueue items={items} />
@@ -108,18 +108,18 @@ export default async function AdminModerationPage() {
         <div className="flex flex-col gap-4">
           {/* 처리 소요 */}
           <div className={card}>
-            <span className="text-[15px] font-extrabold text-white">처리 소요</span>
+            <span className="text-[15px] font-bold text-white">처리 소요</span>
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between rounded-xl border border-[rgba(255,255,255,.07)] bg-[rgba(255,255,255,.03)] px-3.5 py-2.5">
                 <span className="text-[12px] text-[#9aa6b8]">평균 접수→처리</span>
-                <span className="text-[13px] font-extrabold text-white">
+                <span className="text-[13px] font-bold text-white">
                   {hoursLabel(stats.avgHandleHours)}
                 </span>
               </div>
               <div className="flex items-center justify-between rounded-xl border border-[rgba(255,255,255,.07)] bg-[rgba(255,255,255,.03)] px-3.5 py-2.5">
                 <span className="text-[12px] text-[#9aa6b8]">가장 오래 대기</span>
                 <span
-                  className="text-[13px] font-extrabold"
+                  className="text-[13px] font-bold"
                   style={{ color: (stats.oldestOpenHours ?? 0) > 72 ? "var(--ai-danger)" : "#ffffff" }}
                 >
                   {hoursLabel(stats.oldestOpenHours)}
@@ -135,7 +135,7 @@ export default async function AdminModerationPage() {
           {/* 운영 기준 */}
           <div className={card}>
             <div className="flex items-center justify-between">
-              <span className="text-[15px] font-extrabold text-white">운영 기준</span>
+              <span className="text-[15px] font-bold text-white">운영 기준</span>
               <span className="text-[12px] text-[#9aa6b8]">정책 문서</span>
             </div>
             <ol className="flex flex-col gap-1.5">

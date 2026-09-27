@@ -83,7 +83,7 @@ export function DealForm() {
   if (doneId) {
     return (
       <div className="rise-in card flex max-w-[640px] flex-col items-start gap-3 p-6">
-        <div className="text-[15px] font-extrabold text-ink">개발물건이 등록됐어요</div>
+        <div className="text-[15px] font-bold text-ink">개발물건이 등록됐어요</div>
         <p className="text-[13px] leading-[1.7] text-text-2">
           협력업체가 이 물건을 발견하면 참여 문의를 보낼 수 있어요. 문의가 접수되면 등록한
           연락 수단으로 확인해 주세요.

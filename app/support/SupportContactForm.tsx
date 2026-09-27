@@ -140,21 +140,24 @@ export function SupportContactForm({ supportEmail }: { supportEmail: string }) {
 
   if (done) {
     return (
-      /* [v4 · 규칙 6·7·10] 체크 원 + 접수번호 알약 + 가운데 정렬 → 왼쪽 제목 한 줄 + 사실 줄 */
-      <div className="flex flex-col items-start gap-1.5 border-y border-line py-4">
+      <div className="flex flex-col items-center gap-2 py-8 text-center">
+        <span
+          aria-hidden="true"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-success-soft text-success"
+        >
+          ✓
+        </span>
         <div className="t-section text-ink">문의가 접수되었습니다</div>
-        <div className="t-sub text-text-3">
-          {done.ticketNo ? (
-            <>
-              접수번호 <b className="tabular-nums text-ink">{done.ticketNo}</b>
-            </>
-          ) : (
-            "접수번호는 이메일 답변에서 확인"
-          )}{" "}
-          · {RESPONSE_TIME} · 입력한 이메일로 답변
-          {loggedIn && " · 알림함에 접수 확인"}
+        {done.ticketNo ? (
+          <div className="lg-pill tabular-nums">접수번호 {done.ticketNo}</div>
+        ) : (
+          <div className="t-sub text-text-3">접수번호는 이메일 답변에서 확인할 수 있어요</div>
+        )}
+        <div className="t-sub leading-[1.6] text-text-2">
+          {RESPONSE_TIME} — 입력하신 이메일로 답변 드립니다.
+          {loggedIn && " 알림함에도 접수 확인이 남았어요."}
         </div>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
+        <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
           {loggedIn && (
             <Link href="/my/support" className="btn-primary btn-md no-underline">
               내 문의 내역 보기
@@ -187,7 +190,7 @@ export function SupportContactForm({ supportEmail }: { supportEmail: string }) {
             aria-pressed={category === c}
             className={`min-h-10 rounded-full px-3.5 t-sub ${
               category === c
-                ? "border border-brand-hanji-ink bg-brand-hanji font-bold text-brand-hanji-ink"
+                ? "border-[1.5px] border-primary bg-primary-soft font-bold text-primary"
                 : "border border-line bg-surface text-text-2"
             }`}
           >

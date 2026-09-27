@@ -45,14 +45,6 @@ export function thinHeadline(s: Pick<AxisSummary, "total" | "measured">): string
   return `자료 부족 — ${s.total}개 항목 중 ${s.measured}개만 확인됨`;
 }
 
-/**
- * [v4] 요약 목록 "AI 종합 진단 ›" 행의 보조 한 줄 — "5개 항목 중 1개 확인됨". 점수·결론은 싣지 않는다
- * (결과는 AI 진단 화면이 면책과 함께 보여 준다 — 허브는 입구 행 하나).
- */
-export function axisCountLine(s: Pick<AxisSummary, "total" | "measured">): string {
-  return `${s.total}개 항목 중 ${s.measured}개 확인됨`;
-}
-
 /** "확인된 항목: 금리 환경(기준금리 2.5%)" — 확인된 축이 없으면 null */
 export function confirmedAxesLine(s: Pick<AxisSummary, "confirmed">): string | null {
   if (s.confirmed.length === 0) return null;

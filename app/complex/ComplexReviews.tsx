@@ -1,5 +1,5 @@
 "use client";
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
+/* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 /**
  * 거주민 후기 섹션 (호갱노노 "이야기" 벤치마크 — docs/benchmark-proposals.md D4 계열)
@@ -280,14 +280,16 @@ export function ComplexReviews({
               setSubmitState("idle");
               setError(null);
             }}
-            /* [v4] 채움 파랑은 단지 화면의 "임장노트 쓰기" 하나 — 후기 쓰기는 외곽선 */
-            className="btn-outline min-h-10 rounded-lg px-3.5 py-2 t-sub"
+            className="btn-primary rounded-lg px-3.5 py-2 t-sub"
           >
             후기 쓰기
           </button>
         )}
       </div>
-      {/* [v4] 사용법 문장 삭제 — 같은 안내가 쓰기 폼 안(아래)에 이미 있다 */}
+      <p className="mt-1 t-sub text-text-3">
+        직접 살아봤거나 임장에서 확인한 내용만 남겨주세요 · 같은 단지 재작성 시 기존 후기가
+        갱신돼요 · 실거주·방문 후기가 먼저 보여요
+      </p>
 
       {submitState === "done" && (
         <div className="mt-2 rounded-lg bg-primary-soft px-3 py-2 t-sub font-bold text-primary">
@@ -358,7 +360,7 @@ export function ComplexReviews({
               type="button"
               onClick={() => void submit()}
               disabled={submitState === "sending"}
-              className="btn-primary flex-1 rounded-xl p-2.5 t-body"
+              className="btn-primary flex-1 rounded-xl p-2.5 t-body disabled:opacity-60"
             >
               {submitState === "sending" ? "등록 중…" : "후기 등록"}
             </button>
@@ -425,10 +427,9 @@ export function ComplexReviews({
         </div>
       )}
       {loadState === "ready" && reviews.length > 0 && (
-        /* [v4.1 · 리퀴드 목록] 후기 = hanji · 유리판 안이라 첫/끝 행의 세로 여백을 없애지 않는다 */
-        <ul data-tone="hanji" className="mt-3 flex flex-col divide-y divide-line">
+        <ul className="mt-3 flex flex-col divide-y divide-line">
           {reviews.map((r) => (
-            <li key={r.id} className="flex flex-col gap-1.5 py-3">
+            <li key={r.id} className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="t-sub font-bold text-ink">{r.author}</span>
                 <Stars

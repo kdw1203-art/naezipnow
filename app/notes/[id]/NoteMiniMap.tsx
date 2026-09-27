@@ -38,7 +38,6 @@ export function NoteMiniMap({
   const mapHref = noteMapHref({ lat, lng });
 
   const fallback = (
-    /* [1012] 규칙 3 — 지도 폴백 면의 그라데이션 → 회색 단면 */
     <div className="flex h-full w-full items-center justify-center bg-divider text-center">
       <div className="t-sub font-bold text-text-1">
         <Icon name="pin" size={16} /> {label}
@@ -59,8 +58,11 @@ export function NoteMiniMap({
           fallback={fallback}
         />
       </div>
-      {/* [v4 · 규칙 7] 링크 앞 지도 아이콘 제거 — 아이콘은 조작 버튼에만 */}
-      <Link href={mapHref} className="tap-line w-fit t-sub font-bold text-primary no-underline">
+      <Link
+        href={mapHref}
+        className="inline-flex w-fit items-center gap-1 t-sub font-bold text-primary no-underline"
+      >
+        <Icon name="map" size={13} />
         지도에서 보기 ›
       </Link>
     </div>

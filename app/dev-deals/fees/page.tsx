@@ -56,10 +56,10 @@ export default function DevFeesPage() {
       <section className="rise-in-1 mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {STEPS.map((s) => (
           <div key={s.n} className="card p-4">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-soft text-[13px] font-extrabold text-primary">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-soft text-[13px] font-bold text-primary">
               {s.n}
             </div>
-            <div className="mt-2 text-[13px] font-extrabold text-ink">{s.t}</div>
+            <div className="mt-2 text-[13px] font-bold text-ink">{s.t}</div>
             <p className="mt-1 text-[12px] leading-[1.7] text-text-2">{s.d}</p>
           </div>
         ))}
@@ -67,7 +67,7 @@ export default function DevFeesPage() {
 
       {/* 수수료 표 */}
       <section className="rise-in-2 card p-[var(--pad-card)]">
-        <h2 className="text-[15px] font-extrabold text-ink">
+        <h2 className="text-[15px] font-bold text-ink">
           사업규모별 기준 수수료{" "}
           <span className="text-[12px] font-medium text-text-3">(협의 가능)</span>
         </h2>
@@ -83,7 +83,7 @@ export default function DevFeesPage() {
               {COMMISSION_TIERS.map((t) => (
                 <tr key={t.label} className="border-b border-border last:border-0">
                   <td className="py-2.5 pr-4 font-bold text-ink">{t.label}</td>
-                  <td className="py-2.5 font-extrabold text-primary">{t.rateText}</td>
+                  <td className="py-2.5 font-bold text-primary">{t.rateText}</td>
                 </tr>
               ))}
             </tbody>

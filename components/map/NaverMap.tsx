@@ -1029,9 +1029,9 @@ export function NaverMap({
           className="h-full w-full min-h-[200px] border-0"
           loading="lazy"
         />
-        {/* [v4] 블러 띠 → 흰 면 + 1px 선 · 문장 → 사실 한 줄 */}
-        <div className="absolute inset-x-0 bottom-0 z-10 border-t border-line bg-surface px-3 py-2 text-[12px] leading-snug text-text-2">
-          <span className="font-bold text-ink">대체 지도(OSM)</span> · 네이버 지도 불러오기 실패 · {error}
+        <div className="absolute inset-x-0 bottom-0 z-10 bg-amber-50/95 px-3 py-2 text-[12px] leading-snug text-amber-900 backdrop-blur">
+          <span className="font-bold">대체 지도(OSM)</span> — 네이버 지도를 불러오지 못했어요.{" "}
+          {error}
         </div>
       </div>
     );
@@ -1098,8 +1098,7 @@ export function NaverMap({
           disabled={!loaded || geoLoading}
           /* 모바일22 — 36→44px(터치 하한). bottom-right 는 한 손 조작 반경
              (우하단)이며 모바일 탭바(바닥 6px + 높이 ~59px) 위로 띄운다. */
-          /* [v4] 흰색 + 그림자 + 링 → 흰 면(토큰 — 다크 대응) + 1px 선(지도 위 다른 조작 버튼과 같은 모양) */
-          className={`absolute z-20 flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface text-[15px] text-text-1 hover:bg-bg disabled:opacity-60 ${
+          className={`absolute z-20 flex h-11 w-11 items-center justify-center rounded-full bg-white text-[15px] shadow-md ring-1 ring-black/10 hover:bg-slate-50 disabled:opacity-60 ${
             geolocationButtonPosition === "bottom-left"
               ? "bottom-3 left-3"
               : geolocationButtonPosition === "bottom-right"
@@ -1280,7 +1279,7 @@ function buildPriceMarkerHtml(data: MapMarkerData): string {
   return `
   <div style="display:inline-block;transform:translate(-50%,-100%);white-space:nowrap;font-family:sans-serif">
     <div style="display:inline-flex;align-items:center;gap:4px;background:${bg};border:${borderWidth}px solid ${borderColor};border-radius:9999px;padding:3px 9px;box-shadow:0 2px 6px rgba(0,0,0,.18)">
-      ${nameHtml}<span style="font-size:12px;font-weight:800;color:${priceColor}">${price}</span>
+      ${nameHtml}<span style="font-size:12px;font-weight:700;color:${priceColor}">${price}</span>
       ${pctHtml}${star}
     </div>
     <div style="width:0;height:0;margin:-1px auto 0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid ${tip}"></div>

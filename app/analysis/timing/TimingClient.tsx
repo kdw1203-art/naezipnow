@@ -1,19 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 // 서버 전용 체인이 있는 모듈들 — 타입만 가져온다(컴파일에서 소거).
 import type { TrendResult, MarketTemp } from "@/lib/market/temperature";
 import type { RegionMonthlyVolumeRow } from "@/lib/market/store";
+import { Icon } from "@/app/components/Icon";
+import { ToolHero, type HeroKpi } from "@/app/components/analysis/ToolHero";
+import { TrendChart } from "@/app/components/viz/TrendChart";
 import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
 import { Bars } from "@/app/components/viz/Bars";
 import { Gauge } from "@/app/components/viz/Gauge";
+import { Spark } from "@/app/components/viz/Spark";
 import { CountUp } from "@/app/components/motion/CountUp";
 import { SkBlock } from "@/app/components/ui/Skeleton";
 import { Explain } from "@/app/components/explain/Explain";
 import { Delta } from "@/app/components/num/Delta";
 import { DELTA_ARROW, DELTA_CLASS, DELTA_WORD, deltaDir } from "@/lib/format/delta";
-/* [v4] 네이비 ToolHero·히어로 추세선(아래 ScrubLine 과 같은 선)·알림 카드(아이콘 타일 + 설명 + 스파크)는 걷었다 */
 import { TEMPERATURE_EXPLAIN } from "../temperature-explain";
 import { monthWord, reportingDeadlineLabel, volumeCompare } from "./volume-window";
 import { TimingRegionSelect } from "./region-select";
@@ -216,95 +219,109 @@ export function TimingClient({
   const openWords = vc.open.map((o) => monthWord(o.month)).join("·");
   const openUntil = vc.open.length > 0 ? reportingDeadlineLabel(vc.open[vc.open.length - 1].month) : null;
 
-  /* [v4 · 규칙 1·2·8] 첫 화면 = 제목 + 사실 한 줄 → 주인공 숫자 하나(지수 등락) → 나머지 숫자는 한 줄로(같은 사실 한 번).
-     값이 없으면 그 토막을 **아예 만들지 않는다**(빈 칸을 "—"로 채우지 않는다). */
-  const heroFacts: ReactNode[] = [];
+  /* 첫 화면이 "제목 → 빈 카드"였다. 이 도구가 내는 숫자를 먼저 세운다.
+     값이 없으면 그 칸은 **아예 만들지 않는다**(빈 칸을 "—"로 채우지 않는다). */
+  const kpis: HeroKpi[] = [];
   if (trend) {
-    heroFacts.push(
-      <span key="cum" className="inline-flex items-baseline gap-1">
-        기간 누적 <DeltaCount pct={trend.cumulativePct} decimals={1} />
-      </span>,
-    );
+    kpis.push({
+      label: weekly ? "지난주 대비" : "지난달 대비",
+      value: <DeltaCount pct={trend.latestChangePct} decimals={2} />,
+      note: `매매가격지수 · ${trend.points.length}구간 기준`,
+    });
+    kpis.push({
+      label: "기간 누적",
+      value: <DeltaCount pct={trend.cumulativePct} decimals={1} />,
+      note: `${idxLabels[0] ?? ""} 대비 ${idxLabels[idxLabels.length - 1] ?? ""}`,
+    });
   }
   if (temp) {
-    heroFacts.push(
-      <span key="temp">
-        시장 온도 <b className="t-num text-ink">{temp.score}</b>/100
-      </span>,
-    );
+    kpis.push({
+      label: "시장 온도",
+      value: `${temp.score}/100`,
+      note: temp.headline,
+      aside: <Explain {...TEMPERATURE_EXPLAIN} size={12} />,
+    });
   }
   if (vc.closedLast) {
-    heroFacts.push(
-      <span key="vol" className="inline-flex items-baseline gap-1">
-        {monthWord(vc.closedLast.month)} 거래 <b className="t-num text-ink">{vc.closedLast.count.toLocaleString("ko-KR")}건</b>
-        {vc.closedDeltaPct !== null && vc.closedPrev && (
-          <Delta pct={vc.closedDeltaPct} srContext={`${monthWord(vc.closedPrev.month)}보다`} />
-        )}
-      </span>,
-    );
+    kpis.push({
+      label: `${monthWord(vc.closedLast.month)} 거래량`,
+      value: <CountUp value={vc.closedLast.count} suffix="건" />,
+      delta: vc.closedDeltaPct === null || !vc.closedPrev ? null : { pct: vc.closedDeltaPct, label: monthWord(vc.closedPrev.month) },
+      note: openUntil ? `${openWords}은 집계 중 — ${openUntil}까지 신고가 들어와요` : "신고 기한이 지난 달끼리 비교",
+    });
   } else if (lastVol) {
-    heroFacts.push(
-      <span key="vol">
-        {monthWord(lastVol.month)} 거래 <b className="t-num text-ink">{lastVol.count.toLocaleString("ko-KR")}건</b> · 집계 중
-      </span>,
-    );
+    kpis.push({
+      label: `${monthWord(lastVol.month)} 거래량`,
+      value: <CountUp value={lastVol.count} suffix="건" />,
+      note: openUntil ? `집계 중 — ${openUntil}까지 신고가 들어와요` : "",
+    });
   }
 
+  const heroChart = trend ? (
+    <div className="rounded-lg border border-line bg-surface px-2 pb-1 pt-2">
+      <TrendChart
+        values={idxValues}
+        labels={idxLabels}
+        height={92}
+        bands={3}
+        ariaLabel={`${selected.label} 매매가격지수 ${idxValues.length}구간 추세`}
+      />
+    </div>
+  ) : null;
+
   return (
-    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
-      <div className="flex flex-col gap-4">
-        {/* ── [v4 · 규칙 1·4] 머리 — 흰 바탕 제목 + 사실 한 줄(지역 · 원천) ── */}
-        <header className="flex flex-col gap-0.5">
-          <h1 className="t-title text-ink">시세·타이밍 분석</h1>
-          <p className="t-sub text-text-3">
-            {selected.label} · 한국부동산원 {weekly ? "주간" : "월간"} 매매가격지수 · 국토교통부 실거래
-          </p>
-        </header>
-        {/* 지역·단지 고르기 — 조작은 그대로(단지 → 그 지역으로 전환) */}
-        <div className="flex w-full flex-wrap items-end gap-2">
-          <TimingComplexPicker
-            key={`${deep.c ?? ""}|${deep.a ?? ""}`}
-            initialComplexId={deep.c}
-            initialApt={deep.a}
-            currentRegion={selected.id}
-            onRegion={selectRegion}
-          />
-          <TimingRegionSelect options={regions} value={selected.id} disabled={loading} onChange={selectRegion} />
-          {loading && (
-            <span className="t-sub inline-flex items-center gap-1.5 font-bold text-primary">
-              <span className="pulse-dot" style={{ color: "var(--brand-red)" }} />
-              {selected.label} 불러오는 중
-            </span>
-          )}
-        </div>
-        {/* ── [v4 · 규칙 2] 주인공 — 지수 등락 하나(t-display) + 나머지 숫자 한 줄 ── */}
-        {trend && status !== "error" && (
-          <section aria-label="지수 요약" className="flex flex-col gap-0.5">
-            <p className="m-0 t-caption text-text-3">
-              {weekly ? "지난주" : "지난달"} 대비 · 매매가격지수 {trend.points.length}구간
-            </p>
-            <p className="m-0 t-display t-num">
-              <DeltaCount pct={trend.latestChangePct} decimals={2} />
-            </p>
-            {heroFacts.length > 0 && (
-              <p className="m-0 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 t-sub text-text-2">
-                {heroFacts.map((f, i) => (
-                  <span key={i} className="inline-flex items-baseline gap-x-2">
-                    {i > 0 && <span aria-hidden="true" className="text-text-3">·</span>}
-                    {f}
-                  </span>
-                ))}
-              </p>
+    <>
+      <ToolHero
+        eyebrow="지역·시장 흐름"
+        icon="trending-up"
+        title="시세·타이밍 분석"
+        lead={
+          <>
+            {selected.label}의 매매가격지수·거래량·시장 온도를 한 화면에서 봅니다. 모든
+            수치는 실측이고, 없는 구간은 없다고 표시합니다.
+          </>
+        }
+        kpis={kpis}
+        chart={heroChart}
+        toneClass="text-success"
+        actions={
+          <div className="flex w-full flex-wrap items-end gap-2">
+            <TimingComplexPicker
+              key={`${deep.c ?? ""}|${deep.a ?? ""}`}
+              initialComplexId={deep.c}
+              initialApt={deep.a}
+              currentRegion={selected.id}
+              onRegion={selectRegion}
+            />
+            <TimingRegionSelect
+              options={regions}
+              value={selected.id}
+              disabled={loading}
+              onChange={selectRegion}
+            />
+            {loading && (
+              <span className="t-sub inline-flex items-center gap-1.5 font-bold text-primary">
+                <span className="pulse-dot" style={{ color: "var(--brand-red)" }} />
+                {selected.label} 불러오는 중
+              </span>
             )}
-          </section>
-        )}
-      </div>
+          </div>
+        }
+        source={
+          trend
+            ? `한국부동산원 ${trend.periodType === "weekly" ? "주간" : "월간"} 매매가격지수 · 국토교통부 실거래 집계 · 규칙 기반 판정(참고용)`
+            : "한국부동산원 지수 · 국토교통부 실거래 집계"
+        }
+      />
 
       {status === "error" ? (
         /* 조회 실패 — "데이터 없음"과 다른 사실이다. 캐시 API 실패는 no-store 라
            재시도가 의미 있다. */
-        <div className="flex flex-col items-center gap-2 py-6 text-center">
-          <p className="t-section text-ink">{selected.label} 분석을 불러오지 못했어요 · 조회 실패(데이터 없음 아님)</p>
+        <div className="card mt-5 flex flex-col items-center gap-2 rounded-lg p-8 text-center">
+          <p className="t-section text-ink">{selected.label} 분석을 불러오지 못했어요</p>
+          <p className="t-sub text-text-3">
+            데이터가 없는 게 아니라 조회에 실패한 거예요. 잠시 뒤 다시 시도해 주세요.
+          </p>
           <button
             type="button"
             onClick={() => {
@@ -317,19 +334,24 @@ export function TimingClient({
           </button>
         </div>
       ) : (
-        <>
+        <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
           {/* ── 지수 추세 ── */}
-          <section className="flex flex-col gap-2 text-success" data-reveal="">
-            <h2 className="flex items-baseline gap-1.5 t-section text-ink">
-              {selected.label} 매매가격지수
-              {trend && <span className="t-sub font-medium text-text-3">{trend.verdict}</span>}
-            </h2>
+          <div className="chart-card text-success lg:col-span-1" data-reveal="">
+            <div className="chart-head">
+              <span className="t-section text-ink">{selected.label} 매매가격지수</span>
+              {trend && (
+                <span className="chip chip-soft chip-pad t-caption">{trend.verdict}</span>
+              )}
+              <span className="t-caption ml-auto rounded border border-line px-1.5 py-px font-bold text-text-3">
+                실데이터 기준
+              </span>
+            </div>
             {loading ? (
               <SkBlock h={168} />
             ) : trend ? (
-              <div className="card flex flex-col gap-2 rounded-lg px-3 py-3">
+              <>
                 {/* [1009 · A] 누르고 끌면(마우스는 올리기만 해도) 그 달 지수와 "기간 시작 대비" 등락 — 토스증권 관례.
-                    색은 기간 등락(상승 빨강·하락 파랑). */}
+                    늘어나던 TrendChart 는 그 시점 값을 읽을 길이 없었다. 색은 기간 등락(상승 빨강·하락 파랑). */}
                 <ScrubLineLazy
                   key={selected.id}
                   values={idxValues}
@@ -347,20 +369,28 @@ export function TimingClient({
                   footnote={`한국부동산원 ${weekly ? "주간" : "월간"} 아파트 매매가격지수 · 기준 시점 = 100`}
                 />
                 <p className="t-sub text-text-1">{trend.detail}</p>
-              </div>
+              </>
             ) : (
-              <p className="t-sub text-text-3">{selected.label} 지수 시계열 없음 · 다른 지역을 고르기</p>
+              <div className="rounded-lg bg-bg px-3 py-3">
+                <p className="t-sub text-text-3">
+                  {selected.label}의 지수 시계열이 아직 없어요. 다른 지역을 고르거나 수집이
+                  쌓인 뒤 다시 확인해 주세요.
+                </p>
+              </div>
             )}
-          </section>
+          </div>
 
-          {/* ── 시장 온도 — AI(규칙) 결과 패널이라 네이비 면 유지(v4 규칙 4 예외) ── */}
-          <section className="ai-panel flex flex-col gap-3 rounded-lg p-4" data-reveal="">
+          {/* ── 시장 온도 ── */}
+          <div className="ai-panel flex flex-col gap-3 rounded-lg p-4" data-reveal="">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="inline-flex items-center gap-0.5 t-section text-ai-text">
+              <span className="inline-flex items-center gap-0.5 t-section text-ai-text">
                 시장 온도
                 {/* 어두운 판 위 — 버튼 글자색을 판 토큰으로(기본 text-3 은 네이비 위에서 흐리다) */}
                 <Explain {...TEMPERATURE_EXPLAIN} className="text-ai-muted!" />
-              </h2>
+              </span>
+              <span className="t-caption rounded border border-line px-1.5 py-px font-bold text-ai-muted">
+                규칙 기반 · 실데이터 입력
+              </span>
             </div>
             {loading ? (
               <SkBlock h={120} />
@@ -374,85 +404,161 @@ export function TimingClient({
                     size={116}
                     className="shrink-0 text-ai-accent"
                   />
-                  <p className="t-sub min-w-0 flex-1 font-bold text-ai-accent">{temp.headline}</p>
+                  <p className="t-sub min-w-0 flex-1 text-ai-text">
+                    <b className="text-ai-accent">{temp.headline}</b>
+                    <br />
+                    지수 모멘텀(±25)과 거래량 추이(±25)를 50점 기준에 더한 값입니다.
+                  </p>
                 </div>
                 <div className="flex flex-col gap-1">
                   {temp.inputs.map((s) => (
-                    <div key={s.label} className="ai-row">
+                    <div
+                      key={s.label}
+                      className="ai-row"
+                    >
                       <span className="t-sub shrink-0 text-ai-muted">{s.label}</span>
-                      <span className={`t-sub t-num text-right ${s.accent ? "text-ai-accent" : "text-ai-text"}`}>
+                      <span
+                        className={`t-sub t-num text-right ${s.accent ? "text-ai-accent" : "text-ai-text"}`}
+                      >
                         {s.value}
                       </span>
                     </div>
                   ))}
                 </div>
-                {temp.volumeNote && <p className="t-caption text-ai-muted">{temp.volumeNote}</p>}
-                {/* 계산 성격 고지 — 배지 → 캡션 한 줄(규칙 기반 · 참고용) */}
-                <p className="t-caption text-ai-muted">
-                  규칙 기반 판정 · 실데이터 입력 · 참고용 ·{" "}
-                  <Link href="/methodology#temperature" className="tap-line font-bold text-ai-accent no-underline">
+                {temp.volumeNote && (
+                  <p className="t-caption text-ai-muted">{temp.volumeNote}</p>
+                )}
+                <div className="mt-auto flex flex-wrap gap-2 pt-1">
+                  <Link
+                    href="/methodology#temperature"
+                    className="inline-flex min-h-[24px] items-center t-sub font-bold text-ai-accent no-underline"
+                  >
                     계산 공식 ›
-                  </Link>{" "}
-                  <Link href={`/analysis/temperature/${selected.id}`} className="tap-line font-bold text-ai-accent no-underline">
+                  </Link>
+                  <Link
+                    href={`/analysis/temperature/${selected.id}`}
+                    className="inline-flex min-h-[24px] items-center t-sub font-bold text-ai-accent no-underline"
+                  >
                     주간 기록 ›
                   </Link>
-                </p>
+                </div>
               </>
             ) : (
-              <p className="t-sub text-ai-muted">지수 시계열이 없어 온도 계산 안 됨</p>
+              <p className="t-sub text-ai-muted">
+                이 지역은 지수 시계열이 아직 없어 온도를 계산할 수 없어요.
+              </p>
             )}
-          </section>
+          </div>
 
           {/* ── 월별 거래량 ── */}
-          <section className="flex flex-col gap-2 text-primary" data-reveal="">
-            <h2 className="flex items-baseline gap-1.5 t-section text-ink">
-              {selected.label} 월별 매매 거래량
-              {maxVol && (
-                <span className="t-sub font-medium text-text-3">
-                  최다 {`${maxVol.month.slice(2, 4)}.${maxVol.month.slice(4)}`} {maxVol.count.toLocaleString("ko-KR")}건
+          <div className="chart-card text-primary" data-reveal="">
+            <div className="chart-head">
+              <span className="t-section text-ink">{selected.label} 월별 매매 거래량</span>
+              {lastVol && (
+                <span className="t-num t-sub text-primary">
+                  {/* [1009 · A · 리뷰] "최근 80건"은 신고 중인 달인지 말하지 않았다 */}
+                  {monthWord(lastVol.month)} {lastVol.count.toLocaleString("ko-KR")}건{latestOpen ? " · 집계 중" : ""}
                 </span>
               )}
-            </h2>
+              <span className="t-caption ml-auto rounded border border-line px-1.5 py-px font-bold text-text-3">
+                국토교통부 실거래
+              </span>
+            </div>
             {loading ? (
               <SkBlock h={140} />
             ) : volume.length > 0 ? (
               <>
-                <div className="card rounded-lg px-3 py-3">
-                  {/* 신고 중인 달은 숫자만 — 등락은 주인공 줄(신고 마감된 달끼리) */}
-                  {lastVol && latestOpen && (
-                    <p className="mb-1 t-sub text-text-2">
-                      {volLabels[volLabels.length - 1]} <b className="t-num text-ink">{lastVol.count.toLocaleString("ko-KR")}건</b>{" "}
-                      <span className="t-caption text-text-3">집계 중({reportingDeadlineLabel(lastVol.month)}까지 신고)</span>
-                    </p>
-                  )}
-                  <Bars values={volValues} labels={volLabels} height={140} valueSuffix="건" ariaLabel={`${selected.label} 월별 매매 거래량`} />
-                </div>
-                {/* [v4 · 규칙 3] 설명 두 문장 → 캡션 한 줄 */}
+                {/* [1009 · A] 막대만으로는 "그 달 몇 건"을 못 읽었다 — 최근 달·지난달 대비·가장 많았던 달을 숫자로 */}
+                {lastVol && (
+                  <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 t-sub text-text-2">
+                    {latestOpen && (
+                      <span>
+                        {volLabels[volLabels.length - 1]} <b className="t-num text-ink">{lastVol.count.toLocaleString("ko-KR")}건</b>{" "}
+                        <span className="t-caption text-text-3">집계 중({reportingDeadlineLabel(lastVol.month)}까지 신고)</span>
+                      </span>
+                    )}
+                    {vc.closedLast && (
+                      <span className="inline-flex flex-wrap items-baseline gap-x-1">
+                        <span>
+                          {monthWord(vc.closedLast.month)} <b className="t-num text-ink">{vc.closedLast.count.toLocaleString("ko-KR")}건</b>
+                        </span>
+                        {vc.closedDeltaPct !== null && vc.closedPrev && (
+                          <>
+                            <Delta pct={vc.closedDeltaPct} srContext={`${monthWord(vc.closedPrev.month)}보다`} />
+                            <span className="t-caption text-text-3">{monthWord(vc.closedPrev.month)} 대비 · 신고 마감된 달끼리</span>
+                          </>
+                        )}
+                      </span>
+                    )}
+                    {maxVol && (
+                      <span className="t-caption text-text-3">
+                        가장 많았던 달 {`${maxVol.month.slice(2, 4)}.${maxVol.month.slice(4)}`} {maxVol.count.toLocaleString("ko-KR")}건
+                      </span>
+                    )}
+                  </p>
+                )}
+                <Bars
+                  values={volValues}
+                  labels={volLabels}
+                  height={140}
+                  valueSuffix="건"
+                  ariaLabel={`${selected.label} 월별 매매 거래량`}
+                />
                 <p className="t-caption text-text-3">
-                  국토교통부 실거래 ·{" "}
                   {openUntil
-                    ? `${openWords} 신고 기한 전(${openUntil}까지) — 적게 보임 · 등락은 마감된 달끼리`
-                    : "모든 달 신고 기한(계약 후 30일) 지남"}
-                  {nowYm && volume.some((v) => v.month >= nowYm) ? " · 마지막 칸 진행 중인 달" : ""}
+                    ? `${openWords}은 아직 신고 기한 전(계약 후 30일 안에 신고 · ${openUntil}까지)이라 실제보다 적게 보여요 — 등락은 신고가 끝난 달끼리만 비교해요. `
+                    : "모든 달이 신고 기한(계약 후 30일)을 지난 값이에요. "}
+                  가장 진한 막대가 이 구간의 최다 거래월입니다.
+                  {nowYm && volume.some((v) => v.month >= nowYm) ? " (마지막 칸이 진행 중인 달)" : ""}
                 </p>
               </>
             ) : (
-              <p className="t-sub text-text-3">월별 거래량 집계 없음</p>
+              <div className="rounded-lg bg-bg px-3 py-3">
+                <p className="t-sub text-text-3">
+                  월별 거래량 집계가 아직 없어요. 실거래 수집이 쌓이면 자동으로 표시됩니다.
+                </p>
+              </div>
             )}
-          </section>
-        </>
+          </div>
+
+          {/* ── 알림 ── */}
+          <div className="card tile flex flex-col gap-2 rounded-lg p-4" data-reveal="">
+            <span className="tile-ico flex h-9 w-9 items-center justify-center rounded-lg bg-primary-soft text-primary">
+              <Icon name="bell" size={17} />
+            </span>
+            <span className="t-section text-ink">이 지역 알림 받기</span>
+            <p className="t-sub text-text-2">
+              {selected.label}의 실거래 등록·시세 변동이 생기면 알려 드려요.
+            </p>
+            {trend && (
+              /* [1009 · A] 추세선 색 = 기간 등락(상승 빨강·하락 파랑·보합 회색) — 예전엔 늘 초록(도구 색) */
+              <span
+                className={`mt-1 ${
+                  deltaDir(trend.cumulativePct) === "up" ? "text-up" : deltaDir(trend.cumulativePct) === "down" ? "text-down" : "text-text-3"
+                }`}
+              >
+                <Spark values={idxValues} width={140} height={26} smooth />
+              </span>
+            )}
+            <Link href="/notifications" className="btn-soft btn-md mt-auto no-underline">
+              알림 설정 열기
+            </Link>
+          </div>
+        </div>
       )}
 
-      {/* #411 — 도구 간 이어가기: 화면의 **현재 선택 지역** 그대로. 알림 설정(예전 알림 카드)은 첫 행 */}
-      <AnalysisCrossLinks
-        current="timing"
-        regionLabel={selected.label}
-        regionFor={{
-          scenario: selected.id,
-          map: selected.label.split(" ").pop() ?? selected.label,
-        }}
-        note={{ label: "이 지역 알림 기준 설정", href: "/notifications" }}
-      />
-    </div>
+      {/* #411 — 도구 간 이어가기: 화면의 **현재 선택 지역** 그대로. */}
+      <div className="mt-5">
+        <AnalysisCrossLinks
+          current="timing"
+          regionLabel={selected.label}
+          regionFor={{
+            scenario: selected.id,
+            map: selected.label.split(" ").pop() ?? selected.label,
+          }}
+          note={{ label: "알림 기준 설정", href: "/notifications" }}
+        />
+      </div>
+    </>
   );
 }

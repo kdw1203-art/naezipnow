@@ -8,14 +8,15 @@ import { sparklinePath } from "../../app/analysis/sparkline-path.ts";
 import {
   AI_TOOL_COUNT,
   HUB_TOOLS,
-  HUB_TOOL_COUNT,
+  LIVE_TOOLS,
   MARKET_LIVE,
   RECORD_LIVE,
+  SIM_TOOLS,
   TIERS,
   WORKBENCH_CORE,
-  WORKBENCH_FACTS,
+  WORKBENCH_ICONS,
   WORKBENCH_MORE,
-  workbenchSub,
+  workbenchCard,
 } from "../../app/analysis/tool-catalog.ts";
 
 /* ============================================================
@@ -27,19 +28,15 @@ import {
    화면에는 **빈 자리**가 나고 빌드는 통과한다(런타임 조용한 실패).
    ============================================================ */
 
-/* [v4] 허브 목록 행 파일 — 아이콘 타일·글리프·추세선이 돌아오지 않는지 소스 문자열로 본다(서버 전용 의존이 붙은
-   화면 파일은 이 러너에서 불러올 수 없다 — tests/unit/static-pages-1007.test.ts 와 같은 방식). */
-const read = (p: string) => fs.readFileSync(path.join(process.cwd(), p), "utf8");
-const stripComments = (src: string) =>
-  src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
-const HUB_ROW_FILES = [
-  "app/analysis/page.tsx",
-  "app/analysis/hub-row.tsx",
-  "app/analysis/hub-tiers.tsx",
-  "app/analysis/hub-tool-card.tsx",
-  "app/analysis/hub-picker.tsx",
-  "app/analysis/hub-search.tsx",
-];
+const ICON_SRC = fs.readFileSync(
+  path.join(process.cwd(), "app/components/Icon.tsx"),
+  "utf8",
+);
+const ICON_NAMES = new Set(
+  [...ICON_SRC.slice(ICON_SRC.indexOf("ICON_PATHS")).matchAll(
+    /^\s*"?([a-zA-Z0-9_-]+)"?\s*:/gm,
+  )].map((m) => m[1]),
+);
 
 test("UI-02 — 워크벤치 제목과 허브 도구 제목이 하나도 겹치지 않는다", () => {
   const workbench = AI_TOOL_IDS.map((id) => TOOL_IDENTITIES[id].title);
@@ -68,45 +65,36 @@ test("UI-03 — 워크벤치는 CORE + MORE 로 정확히 한 번씩 덮인다",
   assert.equal(AI_TOOL_COUNT, AI_TOOL_IDS.length);
 });
 
-/* [v4] 예전 UI-06 은 "카드 아이콘 이름이 Icon.tsx 에 실존한다"였다. v4 목록 행에는 아이콘 타일이 없다
-   (규칙 7 — 행 앞 장식 아이콘 칸 금지) → 아이콘 이름 필드(icon·WORKBENCH_ICONS)를 지웠고, 대신 행 파일에
-   아이콘·글리프·추세선이 되돌아오지 않는지를 잠근다. */
-test("[v4] UI-06 — 허브 목록 행에 아이콘 타일·글리프·추세선이 없다", () => {
-  for (const f of HUB_ROW_FILES) {
-    const s = stripComments(read(f));
-    assert.ok(!/<Icon\b|<ToolGlyph\b|<Sparkline\b|tile-ico/.test(s), `${f}: 행 앞 장식 아이콘/글리프/추세선`);
+test("UI-06 — 카드 아이콘 이름이 전부 Icon.tsx 에 실존한다", () => {
+  const missing: string[] = [];
+  for (const t of HUB_TOOLS) if (!ICON_NAMES.has(t.icon)) missing.push(t.icon);
+  for (const id of AI_TOOL_IDS) {
+    const n = WORKBENCH_ICONS[id];
+    if (!ICON_NAMES.has(n)) missing.push(`${id}:${n}`);
   }
+  for (const tier of Object.values(TIERS)) {
+    // 계열 아이콘 클래스는 토큰만 쓴다 — raw hex 가 들어오면 대비 보증 밖이다
+    assert.ok(
+      !/#[0-9a-fA-F]{3,8}/.test(tier.iconClass + tier.sparkClass),
+      `계열 ${tier.id} 색에 raw hex`,
+    );
+  }
+  assert.deepEqual(missing, [], `없는 아이콘: ${missing.join(", ")}`);
 });
 
-test("UI-06 — 이모지가 카탈로그에 남아 있지 않다", () => {
+test("UI-06 — 이모지 아이콘이 카탈로그에 남아 있지 않다", () => {
   const emoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u;
   for (const t of HUB_TOOLS) {
-    assert.ok(!emoji.test(t.title + t.sub), `${t.title} 에 이모지`);
+    assert.ok(!emoji.test(t.icon), `${t.title} 아이콘이 이모지다: ${t.icon}`);
   }
-  for (const id of AI_TOOL_IDS) assert.ok(!emoji.test(workbenchSub(id)), `${id} 보조 줄에 이모지`);
 });
 
-/* [v4] 예전 UI-04 는 "실데이터 도구와 예시 계산 도구가 완전히 갈린다"(체험 구역)였다. v4 는 예시 계산 3종을
-   허브에서 뺐다(규칙 9 — "예시 계산" 같은 곁가지 블록 제거) → 허브의 모든 도구는 실데이터 섹션 둘 중 하나다. */
-test("[v4] UI-04 — 허브에는 예시 계산 도구가 없고, 모든 도구가 지역 시세·내 임장노트 섹션에 한 번씩 든다", () => {
-  assert.equal(MARKET_LIVE.length + RECORD_LIVE.length, HUB_TOOLS.length);
-  assert.ok(HUB_TOOLS.every((t) => !("sim" in t)), "예시 계산 표시가 남아 있다");
-  for (const href of ["/analysis/scenario", "/analysis/portfolio", "/analysis/switch"]) {
-    assert.ok(!HUB_TOOLS.some((t) => t.href === href), `${href} 가 허브 목록에 남아 있다`);
-  }
-  assert.equal(HUB_TOOL_COUNT, AI_TOOL_COUNT + MARKET_LIVE.length + RECORD_LIVE.length);
-});
-
-/* [v4] 행 보조 줄 = **결과** 한 줄(규칙 3 — "~해요/~봐요" 기능 설명 문장 금지) */
-test("[v4] 행 보조 줄 — 결과 한 줄, 설명 문장·느낌표 없음", () => {
-  const lines = [...HUB_TOOLS.map((t) => t.sub), ...AI_TOOL_IDS.map((id) => workbenchSub(id))];
-  for (const l of lines) {
-    assert.ok(l.trim().length >= 4 && l.length <= 32, `길이: "${l}"`);
-    assert.ok(!/(해요|봐요|드려요|줘요|합니다|세요)|!/.test(l), `설명 문장: "${l}"`);
-  }
-  /* 결과 이름 + 코드에 있는 개수 — 지어낸 수 없음 */
-  assert.equal(workbenchSub("ai-diagnosis"), `${TOOL_IDENTITIES["ai-diagnosis"].metricLabel} · ${WORKBENCH_FACTS["ai-diagnosis"]}`);
-  assert.equal(workbenchSub("ai-diagnosis"), "투자 점수 · 5개 항목");
+test("UI-04 — 실데이터 도구와 예시 계산 도구가 완전히 갈린다", () => {
+  assert.ok(SIM_TOOLS.length > 0 && LIVE_TOOLS.length > 0);
+  assert.ok(SIM_TOOLS.every((t) => t.sim === true));
+  assert.ok(LIVE_TOOLS.every((t) => !t.sim));
+  assert.equal(SIM_TOOLS.length + LIVE_TOOLS.length, HUB_TOOLS.length);
+  assert.equal(MARKET_LIVE.length + RECORD_LIVE.length, LIVE_TOOLS.length);
 });
 
 test("UI-01 — 모든 도구가 계열 3개 중 하나에 속하고 href 는 유일하다", () => {
@@ -118,12 +106,12 @@ test("UI-01 — 모든 도구가 계열 3개 중 하나에 속하고 href 는 �
   }
 });
 
-/* [v4] workbenchCard()(히어로 빠른 실행 타일용)는 히어로와 함께 지웠다. 목록 행 링크는 서버 조립
-   (workbench-cards.ts workbenchRows — ToolGlyph.tsx 를 끌고 와 이 러너에서 못 부른다)이 같은 규칙을 쓴다. */
-test("워크벤치 행 링크는 /analysis/ai/{id} 를 그대로 쓴다", () => {
-  const src = stripComments(read("app/analysis/workbench-cards.ts"));
-  assert.ok(src.includes("href: `/analysis/ai/${id}`"), "행 링크 모양이 바뀌었다");
-  for (const id of AI_TOOL_IDS) assert.ok(TOOL_IDENTITIES[id].title.length > 0);
+test("워크벤치 카드 링크는 /analysis/ai/{id} 를 그대로 쓴다", () => {
+  for (const id of AI_TOOL_IDS) {
+    const c = workbenchCard(id);
+    assert.equal(c.href, `/analysis/ai/${id}`);
+    assert.ok(c.title.length > 0 && c.desc.length > 0);
+  }
 });
 
 /* ---------- UI-09 스파크라인 — "없으면 안 그린다" 정직성 규칙 ---------- */

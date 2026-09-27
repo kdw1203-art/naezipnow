@@ -1,10 +1,12 @@
 "use client";
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 4곳을 font-bold(700)로 바꿨다. */
 
 import Link from "next/link";
 import { useCallback, useState } from "react";
+import { Icon } from "@/app/components/Icon";
+import { EmptyState } from "@/app/components/ui/EmptyState";
 import {
   TICKET_STATUS_LABEL,
+  TICKET_STATUS_TONE,
   type TicketCategory,
   type TicketStatus,
 } from "@/lib/support/ticket-labels";
@@ -49,13 +51,6 @@ function kstLabel(iso: string | null): string {
   const get = (k: string) => parts.find((p) => p.type === k)?.value ?? "";
   return `${get("year")}.${get("month")}.${get("day")} ${get("hour")}:${get("minute")}`;
 }
-
-/* [v4 · 규칙 6] 상태는 칩(면) 대신 같은 색 글자 — lib/support/ticket-labels 의 TICKET_STATUS_TONE(면+글자)과 같은 색 계열 */
-const STATUS_TEXT: Record<TicketView["status"], string> = {
-  open: "text-primary",
-  answered: "text-success",
-  closed: "text-text-3",
-};
 
 export function TicketList({ initial }: { initial: TicketView[] }) {
   const [tickets, setTickets] = useState<TicketView[]>(initial);
@@ -106,13 +101,17 @@ export function TicketList({ initial }: { initial: TicketView[] }) {
   }
 
   if (tickets.length === 0) {
-    /* [v4 · 규칙 8] 그림 카드 → 한 줄(새 문의 버튼은 머리에 있다) */
-    return <p className="border-y border-line py-3 t-sub text-text-3">남긴 문의 없음 · 1:1 문의 {RESPONSE_TIME}</p>;
+    return (
+      <EmptyState
+        title="아직 남긴 문의가 없어요"
+        desc={`궁금한 점은 1:1 문의로 남겨 주세요. ${RESPONSE_TIME}.`}
+        action={{ label: "새 문의 남기기", href: "/support#contact" }}
+      />
+    );
   }
 
   return (
-    /* [v4 · 규칙 5] 카드 쌓기 → 1px 선 행 */
-    <div data-tone="hanji" className="flex flex-col divide-y divide-line border-y border-line">
+    <div className="flex flex-col gap-2.5">
       {error && (
         <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 t-sub font-semibold text-ink">
           {error}
@@ -125,7 +124,7 @@ export function TicketList({ initial }: { initial: TicketView[] }) {
         return (
           <article
             key={t.id}
-            className={i < 3 ? `rise-in-${i + 1}` : undefined}
+            className={`card rounded-2xl ${i < 3 ? `rise-in-${i + 1}` : ""}`}
             aria-labelledby={`ticket-title-${t.id}`}
           >
             <button
@@ -133,17 +132,20 @@ export function TicketList({ initial }: { initial: TicketView[] }) {
               onClick={() => setOpenId(open ? null : t.id)}
               aria-expanded={open}
               aria-controls={panelId}
-              className="flex w-full min-h-14 items-start gap-3 py-3 text-left"
+              className="flex w-full min-h-10 items-start gap-3 px-4 py-3.5 text-left"
             >
               <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                {/* [v4 · 규칙 6] 분류·상태 칩 → 메타 한 줄 글자(상태는 색 글자) */}
+                <span className="flex flex-wrap items-center gap-1.5">
+                  <span className="chip chip-soft chip-pad t-caption font-bold">{t.category}</span>
+                  <span className={`chip chip-pad t-caption font-bold ${TICKET_STATUS_TONE[t.status]}`}>
+                    {TICKET_STATUS_LABEL[t.status]}
+                  </span>
+                  <span className="t-caption tabular-nums text-text-3">#{t.ticketNo}</span>
+                </span>
                 <span id={`ticket-title-${t.id}`} className="t-body font-bold leading-[1.45] text-ink">
                   {t.subject}
                 </span>
-                <span className="t-sub text-text-3">
-                  <b className={`font-bold ${STATUS_TEXT[t.status]}`}>{TICKET_STATUS_LABEL[t.status]}</b> ·{" "}
-                  {t.category} · 접수 {t.createdLabel || "—"} · <span className="tabular-nums">#{t.ticketNo}</span>
-                </span>
+                <span className="t-sub text-text-3">접수 {t.createdLabel || "—"}</span>
               </span>
               <span
                 aria-hidden="true"
@@ -155,20 +157,24 @@ export function TicketList({ initial }: { initial: TicketView[] }) {
               </span>
             </button>
 
-            <div id={panelId} hidden={!open} className="flex flex-col gap-3 pb-4">
+            <div id={panelId} hidden={!open} className="flex flex-col gap-3 px-4 pb-4">
+              <div className="lg-hairline" />
               <div className="flex flex-col gap-1">
                 <span className="t-caption font-bold uppercase tracking-wide text-text-3">내 문의</span>
                 <p className="whitespace-pre-wrap t-body leading-[1.7] text-text-1">{t.message}</p>
               </div>
               {t.adminReply ? (
-                <div className="flex flex-col gap-1 border-l-2 border-primary pl-3">
+                <div className="lg-glass flex flex-col gap-1 rounded-lg px-4 py-3.5">
                   <span className="flex items-center gap-1.5 t-caption font-bold uppercase tracking-wide text-primary">
+                    <Icon name="messages-square" size={13} />
                     내집나우 답변{t.repliedLabel ? ` · ${t.repliedLabel}` : ""}
                   </span>
                   <p className="whitespace-pre-wrap t-body leading-[1.7] text-ink">{t.adminReply}</p>
                 </div>
               ) : t.status === "open" ? (
-                <p className="t-sub leading-[1.6] text-text-3">답변 전 · {RESPONSE_TIME} · 답변 오면 알림함·이메일 알림</p>
+                <p className="rounded-lg bg-bg px-3.5 py-3 t-sub leading-[1.6] text-text-2">
+                  아직 답변 전이에요. {RESPONSE_TIME} — 답변이 오면 알림함과 이메일로도 알려 드려요.
+                </p>
               ) : null}
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <Link

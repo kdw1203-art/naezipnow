@@ -27,13 +27,14 @@ export default async function QuizPage() {
   return (
     /* 브레드크럼은 두지 않는다 — 바로 아래 h1 과 같은 말을 한 번 더 적을 뿐이었다 */
     <PageShell>
-      {/* [v4 · 규칙 1·3] 제목 한 줄 + 사실 한 줄. 부제("더 비쌀까, 더 쌀까?")는 문제 칸의 질문과 같은 말이라 뺐고,
-          사용법 두 문장은 사실 줄로 */}
       <div className="mx-auto w-full max-w-[560px]">
-        <h1 className="t-title text-ink">실거래가 게임</h1>
-        <p className="mt-0.5 t-sub text-text-3">
-          {load.ok ? `오늘 ${Math.max(0, (load.days[0]?.entries.length ?? 1) - 1)}문제 · ` : ""}전용 84㎡ 안팎 두 단지 실거래 한 건씩 ·
-          국토교통부 신고
+        <h1 className="t-title text-ink">
+          실거래가 게임
+          <span className="mt-0.5 block t-section font-bold text-text-2">더 비쌀까, 더 쌀까?</span>
+        </h1>
+        <p className="mt-1.5 t-sub text-text-3">
+          A 단지의 최근 실거래가를 보고, B 단지가 더 비싸게 거래됐는지 맞혀 보세요. 두 단지 모두 전용 84㎡
+          안팎의 실제 거래 한 건이에요.
         </p>
         {load.ok ? (
           <QuizGame days={load.days} />

@@ -1,4 +1,4 @@
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
+/* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Verdict, VerdictDisplay, VerdictTile } from "@/lib/ai/verdict";

@@ -12,7 +12,7 @@ export const metadata = { title: "홍보 킷 | 내집나우 관리자" };
 const SITE = "https://naezipnow.com";
 
 const CARD = "rounded-2xl border border-[rgba(255,255,255,.12)] bg-[#1a2130] p-5";
-const H2 = "text-[15px] font-extrabold text-white";
+const H2 = "text-[15px] font-bold text-white";
 const MUTED = "text-[12px] leading-[1.7] text-[#9aa6b8]";
 
 function Ext({ href, children }: { href: string; children: React.ReactNode }) {
@@ -66,7 +66,7 @@ function PackSection({ pack, index }: { pack: ComplexPack; index: number }) {
         <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#5f6b7d]">
           단지 글 팩 {index + 1}
         </div>
-        <h3 className="mt-1 text-[19px] font-extrabold text-white">
+        <h3 className="mt-1 text-[19px] font-bold text-white">
           {pack.name}
           <span className="ml-2 text-[13px] font-semibold text-[#9aa6b8]">{pack.region}</span>
         </h3>
@@ -94,7 +94,7 @@ export default async function AdminPromoPage() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-[19px] font-extrabold text-white">홍보 킷</h1>
+        <h1 className="text-[19px] font-bold text-white">홍보 킷</h1>
         <p className="mt-1 text-[13px] leading-[1.7] text-[#9aa6b8]">
           지난 30일 실측 유입에서 시작해, 이번 주 채널별로 할 일을 정하고, 단지 글은
           붙여넣기 완성본으로 내려받는 화면입니다. 발행은 직접 하시고, 글 안의 출처 문단과
@@ -176,7 +176,7 @@ export default async function AdminPromoPage() {
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className={CARD}>
-            <h3 className="text-[13px] font-extrabold text-white">1. 네이버 블로그</h3>
+            <h3 className="text-[13px] font-bold text-white">1. 네이버 블로그</h3>
             <p className={`mt-1 ${MUTED}`}>
               주간 시황은 <Link href="/admin/blog-pack" className="font-bold !text-ai-accent underline">블로그 팩</Link>
               , 단지 글은 아래 팩을 그대로 붙여넣습니다. 네이버 서치어드바이저에 RSS·사이트맵을 한 번
@@ -189,7 +189,7 @@ export default async function AdminPromoPage() {
             </ul>
           </div>
           <div className={CARD}>
-            <h3 className="text-[13px] font-extrabold text-white">2. 네이버 카페 · 커뮤니티</h3>
+            <h3 className="text-[13px] font-bold text-white">2. 네이버 카페 · 커뮤니티</h3>
             <p className={`mt-1 ${MUTED}`}>
               아래 팩의 &ldquo;짧은 글&rdquo;을 씁니다. 규칙 세 가지 — 광고 금지 카페는 존중하고
               올리지 않는다 · 사실(신고분 수치)만 적는다 · 같은 곳에는 주 1회만. 링크는 커뮤니티용
@@ -197,7 +197,7 @@ export default async function AdminPromoPage() {
             </p>
           </div>
           <div className={CARD}>
-            <h3 className="text-[13px] font-extrabold text-white">3. 구글</h3>
+            <h3 className="text-[13px] font-bold text-white">3. 구글</h3>
             <p className={`mt-1 ${MUTED}`}>
               구글·AI 유입은 대부분 단지 페이지로 들어옵니다 — 단지 페이지가 검색의 현관입니다.
               Search Console 에서 단지 사이트맵 색인 수와 &ldquo;크롤됨 · 색인 안 됨&rdquo; 추이를 확인합니다.
@@ -208,7 +208,7 @@ export default async function AdminPromoPage() {
             </ul>
           </div>
           <div className={CARD}>
-            <h3 className="text-[13px] font-extrabold text-white">4. AI 검색 (ChatGPT · Perplexity)</h3>
+            <h3 className="text-[13px] font-bold text-white">4. AI 검색 (ChatGPT · Perplexity)</h3>
             <p className={`mt-1 ${MUTED}`}>
               llms.txt 가 라이브입니다 — 인용 형식(기준월·출처 병기)과 페이지 목록이 실데이터로
               찍힙니다. 단지 글에도 같은 출처 문장이 들어가므로 AI 가 인용할 때 근거가 따라갑니다.
@@ -219,7 +219,7 @@ export default async function AdminPromoPage() {
             </ul>
           </div>
           <div className={CARD}>
-            <h3 className="text-[13px] font-extrabold text-white">5. 카카오 · 공유</h3>
+            <h3 className="text-[13px] font-bold text-white">5. 카카오 · 공유</h3>
             <p className={`mt-1 ${MUTED}`}>
               임장노트 공개 시 나오는 공유 카드(카카오·링크 복사)가 지인 유입의 통로입니다. 카카오
               공유 키(NEXT_PUBLIC_KAKAO_JS_KEY):{" "}

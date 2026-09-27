@@ -1,4 +1,4 @@
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
+/* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import { loadRentHistory, withSectionBudget } from "./section-loaders";
 import type { ComplexRentHistory } from "@/lib/market/complex-rent";
 import { formatKrwWon } from "@/lib/format/krw";
@@ -56,9 +56,8 @@ export function RentView({ hist, name }: { hist: ComplexRentHistory; name: strin
   const valued = jeonseValues.filter((v) => v != null).length;
 
   return (
-    /* [v4] 실거래 탭 안(page.tsx priceExtras)으로 옮겼다 — 탭 패널이 gap 으로 가르므로 mt-6 을 뗐고, 닫힌 탭(hidden)
-       안이라 cv-auto(화면 밖 420px 자리표시 — 모바일 캡처의 빈 상자 원인)도 뗐다. */
-    <section>
+    /* [968 · 7] cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미룬다(page.tsx 주석 참고) */
+    <section className="cv-auto rise-in-5 mt-6">
       <h2 className="mb-2 flex flex-wrap items-center gap-x-1 px-1 t-section text-ink">
         전월세 실거래
         <Explain
@@ -101,7 +100,7 @@ export function RentView({ hist, name }: { hist: ComplexRentHistory; name: strin
       )}
 
       {/* [968 · 6] 767px 이하 — 월별 2행 카드. md+ 는 아래 표. */}
-      <ul data-tone="mint" className="card flex flex-col divide-y divide-divider rounded-2xl px-4 md:hidden">
+      <ul className="card flex flex-col divide-y divide-divider rounded-2xl px-4 md:hidden">
         {shown.map((m) => (
           <li key={m.month} className="flex flex-col gap-1 py-2.5">
             <div className="flex items-baseline justify-between gap-2">

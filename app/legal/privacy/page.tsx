@@ -2,8 +2,6 @@ import { getBusinessInfo } from "@/lib/brand/business-info";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { ExternalLink } from "@/app/components/ui/ExternalLink";
 
-/* [v4 · 규칙 1·5·10] 레이아웃·글자만 정리(문구는 그대로): 가운데 한 줄 760px · 본문 카드 면 제거 · 제목 t-title(800 → 700) ·
-   섹션 제목 t-section 한 단계로 통일 · 섹션 카드 → 위 1px 선. 법적 문구는 한 글자도 바꾸지 않았다. */
 export const metadata = buildPageMetadata({
   title: "개인정보처리방침",
   description: "내집나우(서비스 운영: 우리동네이야기) 개인정보처리방침 전문",
@@ -25,7 +23,7 @@ const Section = ({
   children: React.ReactNode;
 }) => (
   <section className="mt-8 first:mt-0">
-    <h2 className="t-section text-ink">
+    <h2 className="text-[15px] font-bold text-ink">
       {num}. {title}
     </h2>
     <div className="mt-2 space-y-2 text-[13px] leading-7 text-text-1">{children}</div>
@@ -65,10 +63,10 @@ const Table = ({ headers, rows }: { headers: string[]; rows: string[][] }) => (
 export default function PrivacyPage() {
   const info = getBusinessInfo();
   return (
-    <main className="mx-auto w-full max-w-[760px]">
-      <article className="rise-in">
+    <main className="mx-auto w-full max-w-3xl">
+      <article className="card rise-in p-6 md:p-8">
         <div className="mb-6 border-b border-line pb-6">
-          <h1 className="t-title text-ink">개인정보처리방침</h1>
+          <h1 className="text-2xl font-bold text-ink">개인정보처리방침</h1>
           <p className="mt-1 text-[13px] text-text-3">시행일: {UPDATED}</p>
           <div className="mt-3 rounded-lg bg-primary-soft p-3 text-xs leading-relaxed text-primary">
             우리동네이야기(이하 &quot;회사&quot;)는 「개인정보보호법」 및 「정보통신망 이용촉진 및 정보보호 등에
@@ -280,7 +278,7 @@ export default function PrivacyPage() {
                 • 개인정보 침해 신고센터:{" "}
                 <ExternalLink
                   href="https://privacy.kisa.or.kr"
-                  className="tap-line text-primary hover:underline"
+                  className="text-primary hover:underline"
                 >
                   privacy.kisa.or.kr
                 </ExternalLink>{" "}
@@ -290,7 +288,7 @@ export default function PrivacyPage() {
                 • 개인정보 분쟁조정위원회:{" "}
                 <ExternalLink
                   href="https://www.kopico.go.kr"
-                  className="tap-line text-primary hover:underline"
+                  className="text-primary hover:underline"
                 >
                   www.kopico.go.kr
                 </ExternalLink>{" "}
@@ -300,7 +298,7 @@ export default function PrivacyPage() {
                 • 대검찰청 사이버범죄수사단:{" "}
                 <ExternalLink
                   href="https://www.spo.go.kr"
-                  className="tap-line text-primary hover:underline"
+                  className="text-primary hover:underline"
                 >
                   www.spo.go.kr
                 </ExternalLink>{" "}
@@ -310,7 +308,7 @@ export default function PrivacyPage() {
                 • 경찰청 사이버안전국:{" "}
                 <ExternalLink
                   href="https://cyberbureau.police.go.kr"
-                  className="tap-line text-primary hover:underline"
+                  className="text-primary hover:underline"
                 >
                   cyberbureau.police.go.kr
                 </ExternalLink>{" "}

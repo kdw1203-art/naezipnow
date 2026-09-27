@@ -1,5 +1,4 @@
 "use client";
-/* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 1곳) · 손으로 적은 카드 그림자 1곳 제거(카드는 1px 선만). */
 
 import { hasSession } from "@/lib/client/has-session";
 import { useEffect, useState } from "react";
@@ -77,21 +76,23 @@ export function NoteSoftWall({ noteId }: { noteId: string }) {
         }}
       />
       <div className="bg-surface px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-1">
-        {/* [v4 · 규칙 3·10] 가운데 정렬 두 문장 → 왼쪽 정렬 제목 + 사실 한 줄 */}
-        <div className="mx-auto flex w-full max-w-[440px] flex-col gap-2.5 rounded-lg border border-line bg-surface p-5">
+        <div className="mx-auto flex w-full max-w-[440px] flex-col gap-2.5 rounded-3xl border border-line bg-surface p-5 text-center shadow-[0_18px_44px_rgba(15,23,42,.16)]">
           <div className="t-section text-ink">
-            오늘 무료 열람 {FREE_PER_DAY}편 모두 읽음
+            오늘 무료 열람 {FREE_PER_DAY}편을 다 보셨어요
           </div>
-          <p className="t-sub text-text-2">가입하면 임장노트 제한 없이 열람 · 내 노트 기록 · 출석·기록 포인트</p>
+          <p className="t-body text-text-2">
+            무료로 가입하면 모든 임장노트를 제한 없이 읽고, 내 노트도 기록할 수
+            있어요. 가입만 해도 출석·기록으로 포인트가 쌓입니다.
+          </p>
           <Link
             href="/signup"
-            className="btn-primary btn-cta flex min-h-12 items-center justify-center rounded-lg p-3.5 t-body no-underline"
+            className="btn-primary btn-cta rounded-2xl p-3.5 t-body no-underline"
           >
             30초 무료 가입하고 계속 읽기
           </Link>
           <Link
             href="/login"
-            className="tap-line self-start t-sub font-bold text-text-3 no-underline"
+            className="t-sub font-bold text-text-3 no-underline"
           >
             이미 계정이 있어요 — 로그인
           </Link>

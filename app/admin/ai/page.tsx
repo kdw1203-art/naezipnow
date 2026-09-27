@@ -163,7 +163,7 @@ export default async function AdminAiPage() {
   return (
     <>
       <div className="rise-in flex flex-wrap items-center justify-between gap-3">
-        <div className="text-[19px] font-extrabold text-white">
+        <div className="text-[19px] font-bold text-white">
           AI 도구{" "}
           <span className="text-xs font-medium text-[#9aa6b8]">
             실행·소스·피드백 실집계 · 프롬프트 {AI_PROMPT_VERSION}
@@ -205,7 +205,7 @@ export default async function AdminAiPage() {
             ].map((k) => (
               <div key={k.label} className={`${darkCard} p-4`}>
                 <div className="text-[12px] text-[#9aa6b8]">{k.label}</div>
-                <div className="mt-1 text-[19px] font-extrabold tabular-nums text-white">
+                <div className="mt-1 text-[19px] font-bold tabular-nums text-white">
                   {k.value}
                 </div>
                 {"sub" in k && k.sub && (
@@ -217,7 +217,7 @@ export default async function AdminAiPage() {
 
           {/* [945 #42] 무료 한도 소진율 — 가격 경계 조정의 근거 */}
           <div className="rise-in-2 mt-4 flex flex-col gap-2">
-            <div className="text-[15px] font-extrabold text-white">
+            <div className="text-[15px] font-bold text-white">
               무료 한도 소진율 (이달){" "}
               <span className="text-[12px] font-medium text-[#9aa6b8]">
                 도달 0명 = 벽이 없음 · 대부분 도달 = 벽이 낮음
@@ -239,7 +239,7 @@ export default async function AdminAiPage() {
                 ].map((c) => (
                   <div key={c.label} className={`${darkCard} p-4`}>
                     <div className="text-[12px] text-[#9aa6b8]">{c.label}</div>
-                    <div className="mt-1 text-[19px] font-extrabold tabular-nums text-white">
+                    <div className="mt-1 text-[19px] font-bold tabular-nums text-white">
                       도달 {c.h.atLimit}
                       <span className="text-[13px] font-bold text-[#9aa6b8]">
                         {" "}
@@ -260,7 +260,7 @@ export default async function AdminAiPage() {
           </div>
 
           <div className="rise-in-2 mt-4 flex flex-col gap-2">
-            <div className="text-[15px] font-extrabold text-white">도구별 30일</div>
+            <div className="text-[15px] font-bold text-white">도구별 30일</div>
             <div className={`${darkCard} overflow-hidden`}>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-[13px]">

@@ -274,8 +274,7 @@ test("광고 랜딩 /lp/imjang — noindex · 단일 CTA(/notes/new) · generate
   assert.match(cta, /const TARGET = "\/notes\/new"/);
   assert.match(cta, /"generate_lead"/);
   assert.match(cta, /withUtm\(TARGET, window\.location\.search\)/);
-  /* CTA 라벨은 상수 한 곳에서만 정의되고, 버튼은 그 상수만 쓴다(같은 행동 하나).
-     [1012 · 규칙 5] "임장노트 무료로 시작"(금지 문구 "무료로 시작") → "첫 임장노트 쓰기(무료)" */
+  /* CTA 라벨은 상수 한 곳에서만 정의되고, 버튼은 그 상수만 쓴다(같은 행동 하나) */
   assert.match(page, /const CTA_LABEL = "첫 임장노트 쓰기\(무료\)"/);
   assert.ok((page.match(/<LpCta label=\{CTA_LABEL\}/g) ?? []).length >= 1);
   assert.doesNotMatch(page, /<LpCta label="/);
@@ -283,11 +282,7 @@ test("광고 랜딩 /lp/imjang — noindex · 단일 CTA(/notes/new) · generate
 
 test("지역·단지 허브 — data-ai-summary 블록과 WebPage(speakable) JSON-LD 가 같이 있다", () => {
   const region = read("app/region/[id]/page.tsx");
-  /* [v4] 단지 허브의 인용 요약 문단(data-ai-summary)은 맨 끝 "데이터 출처" 접힘(ComplexDataSources) 안으로 옮겼다 —
-     접혀 있어도 서버 HTML 에 있고, 페이지가 같은 citable 문장을 넘긴다. 두 파일을 한 덩어리로 본다. */
-  const complex =
-    read("app/complex/[id]/page.tsx") + "\n" + read("app/complex/[id]/ComplexDataSources.tsx");
-  assert.match(read("app/complex/[id]/page.tsx"), /citable=\{citable\?\.text \?\? null\}/);
+  const complex = read("app/complex/[id]/page.tsx");
   for (const src of [region, complex]) {
     assert.match(src, /data-ai-summary=""/);
     assert.match(src, /webPageJsonLd\(/);

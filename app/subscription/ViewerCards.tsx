@@ -12,53 +12,60 @@ import { useSubscriptionViewer } from "./viewer";
    서버 HTML 과 같은 모양(= 게스트 화면)을 그려 하이드레이션이 어긋나지 않는다.
    문구·조건은 예전 page.tsx 그대로다. */
 
-/** 머리 아래 "현재 플랜 · …" 한 줄 — 로그인일 때만.
-    [v4 · 규칙 1·6] 파란 알약 배지 → 머리 사실 줄과 같은 글자 한 줄 */
+/** 히어로 아래 "현재 플랜 · …" 배지 — 로그인일 때만 */
 export function CurrentPlanBadge() {
   const v = useSubscriptionViewer();
   if (v.status !== "authed") return null;
   return (
-    <p className="t-sub text-text-2">
-      현재 플랜 <b className="text-ink">{v.isAdmin ? "관리자(모든 기능 무제한)" : planLabel(v.plan)}</b>
-    </p>
+    <span className="mt-1 rounded-full bg-primary-soft px-3 py-1 t-sub font-bold text-primary">
+      현재 플랜 · {v.isAdmin ? "관리자 (모든 기능 무제한)" : planLabel(v.plan)}
+    </span>
   );
 }
 
 /** 이번 달 사용량 — 로그인한 사람에게만, 값이 있을 때만.
-    "월 30회"가 카드에 적혀 있어도 내가 12회를 썼는지 29회를 썼는지 모르면 그 숫자는 판단에 쓸 수 없다.
-    [v4 · 규칙 5] KPI 칸 + 막대 → 1px 선 행(왼쪽 항목 / 오른쪽 사용·한도 숫자). 80% 이상이면 보조 줄에 사실 한 줄 */
+    "월 30회"가 카드에 적혀 있어도 내가 12회를 썼는지 29회를 썼는지 모르면 그 숫자는 판단에 쓸 수 없다. */
 export function UsageCard() {
   const v = useSubscriptionViewer();
   if (v.status !== "authed" || !v.usage || v.usage.length === 0) return null;
   const usage = v.usage;
   return (
-    <section aria-labelledby="usage-h" className="flex flex-col" data-reveal="">
-      <h2 id="usage-h" className="t-section text-ink">
-        이번 달 내 사용량
-      </h2>
-      <p className="t-caption text-text-3">
-        {planLabel(v.plan)} 기준 ·{" "}
-        {usage.some((u) => u.lifetime) ? "AI 분석은 누적, 나머지는 매월 1일 초기화" : "매월 1일 초기화"}
-      </p>
-      <ul data-tone="blue" className="mt-1 divide-y divide-line">
-        {usage.map((u) => {
-          const cap = u.limit;
-          const pct = cap === null || cap <= 0 ? 0 : Math.min(100, Math.round((u.used / cap) * 100));
-          const tight = cap !== null && cap > 0 && u.used / cap >= 0.8;
-          return (
-            <li key={u.key} className="flex min-h-12 items-center justify-between gap-3 py-2.5">
-              <span className="flex min-w-0 flex-col">
-                <span className="t-body font-bold text-ink">{u.lifetime ? `${u.label}(누적)` : u.label}</span>
-                {tight && <span className="t-sub text-warning">한도 {pct}% 사용</span>}
-              </span>
-              <span className={`shrink-0 t-body t-num ${tight ? "text-warning" : "text-ink"}`}>
-                {u.used.toLocaleString("ko-KR")}
-                <span className="t-sub text-text-3">{cap === null ? " / 무제한" : ` / ${cap.toLocaleString("ko-KR")}`}</span>
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+    /* [1005] 폭을 아래 결제 블록·카드 3장과 같은 1080px 로 */
+    <section className="mx-auto mt-5 w-full max-w-[1080px]" data-reveal="">
+      <div className="card flex flex-col gap-3 rounded-lg p-4">
+        <div className="flex flex-wrap items-baseline gap-2">
+          <span className="t-section text-ink">이번 달 내 사용량</span>
+          <span className="t-caption ml-auto text-text-3">
+            {planLabel(v.plan)} 기준 ·{" "}
+            {usage.some((u) => u.lifetime) ? "AI 분석은 누적, 나머지는 매월 1일 초기화" : "매월 1일 초기화"}
+          </span>
+        </div>
+        <div className="kpi-row">
+          {usage.map((u) => {
+            const cap = u.limit;
+            const unlimited = cap === null;
+            const pct = cap === null || cap <= 0 ? 0 : Math.min(100, Math.round((u.used / cap) * 100));
+            const tight = cap !== null && cap > 0 && u.used / cap >= 0.8;
+            return (
+              <div key={u.key} className="kpi">
+                <span className="kpi-k">{u.lifetime ? `${u.label} (누적)` : u.label}</span>
+                <span className="kpi-v">
+                  {u.used.toLocaleString("ko-KR")}
+                  <span className="t-sub font-bold text-text-3">
+                    {cap === null ? " / 무제한" : ` / ${cap.toLocaleString("ko-KR")}`}
+                  </span>
+                </span>
+                {!unlimited && (
+                  <span className={`rank-track mt-1 ${tight ? "text-warning" : "text-primary"}`}>
+                    <span className="rank-fill" style={{ width: `${Math.max(3, pct)}%` }} />
+                  </span>
+                )}
+                {tight && <span className="kpi-d text-warning">한도의 {pct}% 사용 — 곧 막혀요</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </section>
   );
 }
@@ -83,7 +90,6 @@ export function WeeklyPassCta({
   checkoutBase,
   weeklyTotalKrw,
   weeklyDays,
-  primary = true,
 }: {
   /** 서버 판정(항목 33): 사업자 고지 + 토스 키 — 배포 단위로 굳는 값이라 ISR 에 실려도 된다 */
   paymentsReady: boolean;
@@ -91,12 +97,8 @@ export function WeeklyPassCta({
   checkoutBase: string;
   weeklyTotalKrw: number;
   weeklyDays: number;
-  /** [v4 · 규칙 2] 이 화면의 채움 파랑 1개가 이 버튼인가 — 월간·연간이 열려 있으면 플러스 카드가 가져가고 여기는 테두리 */
-  primary?: boolean;
 }) {
   const v = useSubscriptionViewer();
-  /* [v4 · 규칙 4] 네이비 면 버튼 → 채움 파랑(주인공일 때) 또는 테두리 */
-  const tone = primary ? "btn-primary" : "btn-outline";
   /* 페이월이 붙여 보낸 ?returnTo= — 마운트 뒤 한 번 읽어 링크에 이어 붙인다(safeInternalPath) */
   const [href, setHref] = useState(checkoutBase);
   useEffect(() => {
@@ -109,9 +111,8 @@ export function WeeklyPassCta({
   const currentPlan = v.status === "authed" ? v.plan : "free";
   if (currentPlan === "expert") {
     return (
-      /* [v4 · 규칙 3·10] 가운데 정렬 회색 상자 → 왼쪽 사실 한 줄 */
-      <p className="t-sub font-bold text-text-2">
-        {planLabel("expert")} 이용 중 · {planLabel("pro")} 기능 전부 열림
+      <p className="rounded-lg bg-bg p-[13px] text-center t-sub font-bold text-text-2">
+        프로 이용 중이라 주간권이 필요 없어요 — 플러스 기능은 이미 전부 열려 있습니다.
       </p>
     );
   }
@@ -121,15 +122,14 @@ export function WeeklyPassCta({
       <div className="flex flex-col gap-1.5">
         <Link
           href={href}
-          className={`press flex min-h-12 w-full items-center justify-center rounded-lg px-3 py-2.5 text-center t-body font-bold no-underline ${tone}`}
+          className="press block w-full rounded-lg bg-brand-navy p-[13px] text-center text-[13px] font-bold text-on-dark no-underline"
         >
           {`카드로 ${weeklyTotalKrw.toLocaleString("ko-KR")}원 결제하기 (${weeklyDays}일 이용권)`}
         </Link>
-        {/* [v4 · 규칙 3·10] 가운데 → 왼쪽, 문장 → 사실 */}
-        <p className="t-caption text-text-3">
+        <p className="text-center t-caption text-text-3">
           {currentPlan === "pro"
-            ? `이용 중인 ${planLabel("pro")} 만료일 뒤로 ${weeklyDays}일 연장`
-            : "신용·체크카드 결제창 · 결제 버튼을 누르기 전까지 청구 없음"}
+            ? "이용 중인 플러스 만료일 뒤로 7일이 이어 붙어요"
+            : "누르면 신용·체크카드 결제창이 열려요 · 결제 버튼을 누르기 전까지 청구되지 않습니다"}
         </p>
       </div>
     );
@@ -139,7 +139,7 @@ export function WeeklyPassCta({
     <PreOrderCta
       tier="pro"
       billing="weekly"
-      className={`w-full ${tone}`}
+      className="w-full bg-brand-navy text-on-dark"
       guest={v.status !== "authed"}
     />
   );

@@ -1,5 +1,5 @@
+import Link from "next/link";
 import { Icon } from "./components/Icon";
-import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 
 /* 최적화 10 — 404 화면의 <title> 이 홈과 글자 하나까지 같았다. 주소를 잘못
@@ -30,38 +30,40 @@ export const metadata = buildPageMetadata({
   description: "주소가 바뀌었거나 삭제된 페이지입니다.",
 });
 
-/** 봇·옛 링크가 가장 많이 닿는 목적지 — 라벨은 그 화면이 실제로 하는 일.
- *  [v4 · 규칙 2·5] 가운데 버튼 두 개(홈으로 · 지도 열기) + 알약 칩 다섯 → 1px 선 목록 행 일곱(홈·지도가 맨 위). */
+/** 봇·옛 링크가 가장 많이 닿는 목적지 — 라벨은 그 화면이 실제로 하는 일 */
 const POPULAR_PATHS = [
-  { href: "/", label: "홈" },
-  { href: "/map", label: "지도" },
-  { href: "/complex/browse", label: "단지 찾기" },
+  { href: "/complex/browse", label: "단지 찾기", primary: true },
   { href: "/tx", label: "지역 실거래" },
   { href: "/town/news", label: "뉴스룸" },
   { href: "/town", label: "동네이야기" },
   { href: "/notes", label: "공개 임장노트" },
 ] as const;
 
-/* [v4 · 한 화면 한 가지] 제목 한 줄 + 사실 한 줄 → 주인공(검색창, 채움 파랑 [검색] 1개) → 자주 찾는 곳 목록 행.
-   지운 것: 브랜드 심볼 그림(처마·온점) · 가운데 정렬 · 설명 두 문장 · 두 번째 채움 파랑("홈으로") · 임의 그림자.
-   [1012 · 규칙 8] 굵기 800 → 700. */
 export default function NotFound() {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[760px] flex-col gap-6 px-4 py-10">
-      <header className="flex flex-col gap-0.5">
-        <p className="rise-in t-caption font-bold tracking-[0.2em] text-text-3">404</p>
-        <h1 className="rise-in-1 t-title text-ink">
-          이 집은 이사 갔어요<span className="text-brand-red">.</span>
-        </h1>
-        <p className="rise-in-2 t-sub text-text-3">주소가 바뀌었거나 삭제된 페이지 · 단지·동네 검색</p>
-      </header>
+    <main className="mx-auto flex min-h-screen w-full max-w-[480px] flex-col items-center justify-center gap-3.5 px-4 py-10 text-center">
+      {/* [962] 404 = 빈 화면의 브랜드 순간 — 처마 아래 온점이 조용히 숨쉬고, 슬로건이 마침표를 찍는다 */}
+      <svg className="rise-in" width="64" height="59" viewBox="0 0 120 120" aria-hidden="true">
+        <path d="M52 28 L68 28" fill="none" stroke="var(--brand-symbol-ink)" strokeWidth="7" strokeLinecap="round" />
+        <path d="M14 46 C 38 64, 82 64, 106 46" fill="none" stroke="var(--brand-symbol-ink)" strokeWidth="7" strokeLinecap="round" />
+        <circle className="empty-dot-breathe" cx="60" cy="86" r="8.5" fill="var(--brand-dot)" style={{ transformOrigin: "60px 86px" }} />
+      </svg>
+      <div className="rise-in t-caption font-bold tracking-[0.2em] text-text-3">404</div>
+      <h1 className="rise-in-1 text-[15px] font-bold text-ink">
+        이 집은 이사 갔어요<span className="text-brand-red">.</span>
+      </h1>
+      <p className="rise-in-2 text-[13px] leading-[1.6] text-text-3">
+        주소가 바뀌었거나 삭제된 페이지예요.
+        <br />
+        찾던 단지나 동네를 바로 검색해 보세요.
+      </p>
 
       {/* 검색 — JS 없이 동작하는 GET 폼. 통합 검색(/search?q=)이 단지·지역·노트·이야기·뉴스를 찾는다. */}
       <form
         action="/search"
         method="get"
         role="search"
-        className="rise-in-2 flex w-full items-center gap-2 rounded-lg border-[1.5px] border-primary bg-surface px-3 py-1.5 text-ink"
+        className="rise-in-2 flex w-full items-center gap-2 rounded-2xl border-[1.5px] border-primary bg-surface px-3 py-1.5 text-ink shadow-[0_8px_28px_rgba(16,28,54,.08)]"
       >
         <Icon name="search" size={16} className="shrink-0 text-text-3" />
         <input
@@ -74,21 +76,42 @@ export default function NotFound() {
           /* 모바일 16px 은 globals.css [968 · 28] 전역 규칙(iOS 줌 방지)이 입힌다 — 여기선 램프 글자만 */
           className="min-h-10 w-full min-w-0 bg-transparent t-body text-ink outline-none placeholder:text-text-3"
         />
-        <button type="submit" className="btn-primary btn-md shrink-0">
+        <button
+          type="submit"
+          className="btn-primary btn-cta shrink-0 rounded-xl px-3.5 py-2 text-[13px]"
+        >
           검색
         </button>
       </form>
 
-      {/* 자주 찾는 곳 — 행 높이 ≥ 56px(SummaryRow). 라벨은 목적지가 실제로 하는 일 그대로 */}
-      <nav aria-labelledby="nf-popular-h" className="rise-in-3 flex flex-col">
-        <h2 id="nf-popular-h" className="t-section text-ink">
-          자주 찾는 곳
-        </h2>
-        <ul className="divide-y divide-line">
-          {POPULAR_PATHS.map((p) => (
-            <SummaryRow key={p.href} label={p.label} href={p.href} />
-          ))}
-        </ul>
+      <div className="rise-in-3 flex gap-2">
+        <Link
+          href="/"
+          className="btn-primary btn-cta rounded-lg px-[22px] py-3 text-[13px]"
+        >
+          홈으로
+        </Link>
+        <Link
+          href="/map"
+          className="inline-flex min-h-10 items-center rounded-lg border border-line bg-surface px-[22px] py-3 text-[13px] font-bold text-text-1 no-underline"
+        >
+          지도 열기
+        </Link>
+      </div>
+
+      {/* 인기 경로 — 40px 칩. 라벨은 목적지가 실제로 하는 일 그대로. */}
+      <nav aria-label="자주 찾는 곳" className="rise-in-4 mt-1 flex flex-wrap justify-center gap-1.5">
+        {POPULAR_PATHS.map((p) => (
+          <Link
+            key={p.href}
+            href={p.href}
+            className={`inline-flex min-h-10 items-center rounded-full px-[13px] text-[12px] font-bold no-underline ${
+              "primary" in p && p.primary ? "bg-primary-soft text-primary" : "bg-bg text-text-1"
+            }`}
+          >
+            {p.label}
+          </Link>
+        ))}
       </nav>
     </main>
   );

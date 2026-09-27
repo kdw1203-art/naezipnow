@@ -53,13 +53,10 @@ export function ListingPreviewPanel({
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[55] flex justify-center px-3 pb-[max(12px,env(safe-area-inset-bottom))]">
-      {/* [1012 · 규칙 1·2] 플로팅 패널 — 반경 8px(2xl) 유지.
-          [v4] 유리(블러) + 큰 그림자 → 흰 면 + 1px 선 · 썸네일 행(동네이야기 FeedRow 모양: 72px 정사각 + 제목 한 줄 +
-          메타 한 줄) · 유형 배지("매매")는 값 앞 글자로 · 사진 없는 칸은 집 아이콘 대신 회색 단면(--divider) */}
-      <div className="pointer-events-auto w-full max-w-[440px] rounded-2xl border border-line bg-surface p-3 [animation:riseIn_200ms_var(--ease-out)_backwards]">
+      <div className="glass-strong pointer-events-auto w-full max-w-[440px] rounded-2xl border border-line p-3 shadow-xl [animation:riseIn_200ms_var(--ease-out)_backwards]">
         <div className="flex items-start gap-3">
           {/* 썸네일 */}
-          <div className="h-[72px] w-[72px] shrink-0 overflow-hidden rounded-lg bg-divider">
+          <div className="h-[68px] w-[68px] shrink-0 overflow-hidden rounded-xl bg-[rgba(127,140,158,.12)]">
             {data?.thumbnailUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -68,36 +65,44 @@ export function ListingPreviewPanel({
                 className="h-full w-full object-cover"
                 loading="lazy"
               />
-            ) : null}
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-text-3">
+                <Icon name="house" size={22} />
+              </div>
+            )}
           </div>
 
           {/* 본문 */}
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="min-w-0 flex-1">
             {state === "loading" ? (
-              <div className="py-3 t-sub text-text-3">매물 정보 불러오는 중…</div>
+              <div className="py-3 t-sub text-text-3">매물 정보를 불러오는 중…</div>
             ) : state === "error" || !data ? (
-              <div className="py-3 t-sub text-text-3">매물 정보 조회 실패</div>
+              <div className="py-3 t-sub text-text-3">매물 정보를 불러올 수 없어요.</div>
             ) : (
               <>
-                {/* [1012 · 규칙 9] 배지 = 검증 사실 명사만("집주인 확인" — 기준 사이트 표기), 4px · 500.
-                    "부스트"(끌어올림 홍보)는 배지에서 뺐다 — 정렬에만 쓰인다. */}
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <span className="min-w-0 truncate t-section text-ink">
-                    {data.listingTypeLabel} {data.priceLabel}
+                <div className="flex items-center gap-1.5">
+                  <span className="rounded-full bg-primary-soft chip-pad t-sub font-bold text-primary">
+                    {data.listingTypeLabel}
                   </span>
                   {data.ownerVerified ? (
-                    <span className="shrink-0 rounded-sm bg-success-soft chip-pad t-caption font-medium text-success">
-                      집주인 확인
+                    <span className="rounded-full bg-[rgba(14,159,110,.12)] chip-pad t-caption font-bold text-success">
+                      소유확인
+                    </span>
+                  ) : null}
+                  {data.boosted ? (
+                    <span className="rounded-full bg-[rgba(245,166,35,.14)] chip-pad t-caption font-bold text-warning">
+                      부스트
                     </span>
                   ) : null}
                 </div>
+                <div className="mt-1 truncate t-section text-ink">
+                  {data.priceLabel}
+                </div>
+                <div className="truncate t-sub font-semibold text-text-1">
+                  {data.complexName || "매물"}
+                </div>
                 <div className="truncate t-sub text-text-3">
-                  {[
-                    data.complexName || "매물",
-                    data.regionName,
-                    data.areaLabel,
-                    data.floor ? `${data.floor}층` : "",
-                  ]
+                  {[data.regionName, data.areaLabel, data.floor ? `${data.floor}층` : ""]
                     .filter(Boolean)
                     .join(" · ")}
                 </div>
@@ -118,13 +123,11 @@ export function ListingPreviewPanel({
 
         {state === "ok" && data ? (
           <div className="mt-2.5 flex items-center gap-2">
-            {/* [1012 · 규칙 5] "상세 보기" → 동사 + 구체 대상 · [v4] 한 줄로 끝나게(단지명은 위 메타 줄).
-                이 판은 딤 없이 지도 위에 뜬다 — 머리의 채움 파랑("이 지역 노트 쓰기")이 함께 보이므로 테두리 버튼(규칙 2) */}
             <Link
               href={`/listings/${data.id}`}
-              className="btn-secondary flex-1 rounded-lg py-2.5 text-center t-body no-underline"
+              className="btn-primary flex-1 rounded-xl py-2.5 text-center t-body"
             >
-              매물 상세 보기
+              상세 보기
             </Link>
           </div>
         ) : null}

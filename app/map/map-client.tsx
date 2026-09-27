@@ -1,7 +1,5 @@
 "use client";
 
-/* [1012 · 규칙 2·8] 이 파일 전체: 임의 그림자 9곳(최대 70px·알파 42%) → --shadow-sm/md/lg 3단(플로팅은 lg 허용) ·
-   font-bold(800) → font-bold(700) · 인포창 인라인 font-weight 800 → 700. 자리마다 주석을 달지 않는다. */
 import {
   Suspense,
   useCallback,
@@ -78,36 +76,30 @@ import { formatKrwManwon, formatKrwWon } from "@/lib/format/krw";
 /** [968 · 25] 모바일 목록 뷰 한 번에 그리는 카드 수 — "더 보기" 마다 이만큼 더 */
 const MAP_LIST_PAGE_SIZE = 40;
 
-/** A1 — 지도 첫 방문 3스텝 안내. 대상이 화면에 없으면 그 스텝은 자동 생략된다.
- *  [v4 · 규칙 3] 두 문장 설명 → 사실 한 줄씩(제목도 명사형). "반경 그리기도 여기" 는 틀린 말이었다 — 반경은 칩 줄에 있다. */
+/** A1 — 지도 첫 방문 3스텝 안내. 대상이 화면에 없으면 그 스텝은 자동 생략된다. */
 const MAP_TOUR_STEPS: CoachmarkStep[] = [
   {
     target: "map-price-panel",
     keepIfMissing: true,
-    title: "가격 = 국토부 실거래 평균",
-    body: "중개사가 올린 매물 호가와 다른 값 · 섞어 보지 않기",
+    title: "가격은 실거래 기준이에요",
+    body: "지도와 목록의 금액은 국토부 실거래가 평균입니다. 중개사가 올린 매물 호가와는 다른 값이니, 두 숫자를 섞어서 보지 마세요.",
   },
   {
     target: "map-filter",
     title: "조건으로 후보 좁히기",
-    body: "가격·면적·준공연도·세대수 · 매물 조건 · 출퇴근 시간",
+    body: "면적·준공연도·거래유형·매물 조건으로 임장 후보를 걸러낼 수 있어요. 반경 그리기도 여기 있습니다.",
   },
   {
     target: "map-note-cta",
     title: "본 곳은 바로 임장노트로",
-    body: "노트 저장 → AI 정리 → 지도에서 후보 나란히 비교",
+    body: "관심 단지를 찾았다면 노트를 남기세요. 저장 후 AI 정리 → 지도에서 후보를 나란히 비교하는 흐름으로 이어집니다.",
   },
 ];
 
 /* ============================================================
-   지도 탐색 (6a) — 실제 네이버 지도 + 오버레이 UI
+   지도 탐색 (6a) — 실제 네이버 지도 + 글래스 오버레이 UI
    단지 목록·시세는 서버(page.tsx)에서 Supabase 실데이터로 주입,
    실패 시 목업 폴백. SDK 로드 실패 시 그라데이션 폴백 유지.
-
-   [v4 · 한 화면 한 가지 — 지도판] 주인공은 지도 하나다. 그 둘레는 최소로:
-   위 = 머리 한 줄(로고 · 노트 쓰기) + 검색 + 칩 한 줄(줌 탭은 lg 미만에서 이 줄 끝으로), 줌 설명 캡션 없음 ·
-   범례는 한 줄 상자/접힘 · 떠 있는 판은 한 줄 제목 + 구분선 행(숫자는 오른쪽) · 유리(블러) → 흰 면 + 1px 선 ·
-   채움 파랑은 화면마다 1개(지도 = "이 지역 노트 쓰기", 단지 판 = "이 단지 보기"). 지도·마커·조회·주소 상태는 그대로.
    ============================================================ */
 
 export interface TradeItem {
@@ -154,16 +146,8 @@ const ZOOM_TABS: { key: Zoom; label: string }[] = [
   { key: "danji", label: "단지" },
 ];
 
-/* [v4 · 규칙 6] 지도 위 칩 한 모양 — 선택 = 한지 + 남색(.chip-active), 나머지 = 흰 면 + 1px 선.
-   동네이야기 지역 칩(app/town/feed-client chipClass)과 같은 모양. 예전엔 켜짐이 채움 파랑(.map-chip[aria-pressed])·
-   옅은 파랑(map-chip-soft)·잉크(map-seg) 세 가지였다. */
-function mapChipClass(on: boolean): string {
-  return `chip whitespace-nowrap px-3 py-1.5 t-sub font-bold transition-colors ${
-    on ? "chip-active border" : "border border-line bg-surface text-text-2"
-  }`;
-}
-
-/** 줌 레벨 탭 버튼 — 헤더(xl+)·플로팅 판(lg~xl)·칩 줄(lg 미만)이 같은 마크업을 쓴다(래퍼 스타일만 다르다). */
+/** 줌 레벨 탭 버튼 — 헤더(xl+)와 플로팅 판(xl 미만)이 같은 마크업을 복사해
+    쓰다 서로 어긋날 수 있던 것을 한 곳으로 모은다(래퍼 스타일만 다르다). */
 function ZoomTabButtons({ zoom, onSelect }: { zoom: Zoom; onSelect: (k: Zoom) => void }) {
   return (
     <>
@@ -171,9 +155,10 @@ function ZoomTabButtons({ zoom, onSelect }: { zoom: Zoom; onSelect: (k: Zoom) =>
         <button
           key={t.key}
           type="button"
-          aria-pressed={zoom === t.key}
           onClick={() => onSelect(t.key)}
-          className={mapChipClass(zoom === t.key)}
+          className={`chip px-3 py-1.5 text-xs transition-colors ${
+            zoom === t.key ? "bg-[rgba(29,79,216,.12)] font-bold text-primary" : "text-text-1"
+          }`}
         >
           {t.label}
         </button>
@@ -194,6 +179,17 @@ const LEVEL_BY_ZOOM: Record<Zoom, number> = { city: 12, dong: 9, danji: 6 };
 // 사실 우선: 단지 상세 탭 라벨엔 허위 건수(매물 12·노트 15)를 넣지 않는다
 const DETAIL_TABS = ["요약", "매물", "실거래", "노트", "이야기"] as const;
 type DetailTab = (typeof DETAIL_TABS)[number];
+
+function HomeIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 2.6 L22 10.4 V20 a1.4 1.4 0 0 1 -1.4 1.4 H14.8 V14.6 H9.2 V21.4 H3.4 A1.4 1.4 0 0 1 2 20 V10.4 Z"
+        fill="#8b95a1"
+      />
+    </svg>
+  );
+}
 
 function deltaClass(tone: "up" | "down" | "flat"): string {
   return tone === "down" ? "delta-down" : tone === "up" ? "delta-up" : "delta-flat";
@@ -264,22 +260,27 @@ function FilterChipGroup({
   valueKey: string;
   onSelect: (key: string) => void;
 }) {
-  /* [v4 · 규칙 6] 선택 = 한지 + 남색(예전 채움 파랑 + 그림자) */
   return (
     <div className="flex flex-col gap-1.5">
       <div className="t-sub font-bold text-text-3">{label}</div>
       <div className="flex flex-wrap gap-1.5">
-        {options.map((o) => (
-          <button
-            key={o.key}
-            type="button"
-            aria-pressed={o.key === valueKey}
-            onClick={() => onSelect(o.key)}
-            className={mapChipClass(o.key === valueKey)}
-          >
-            {o.label}
-          </button>
-        ))}
+        {options.map((o) => {
+          const active = o.key === valueKey;
+          return (
+            <button
+              key={o.key}
+              type="button"
+              onClick={() => onSelect(o.key)}
+              className={`chip whitespace-nowrap px-2.5 py-1.5 text-xs transition-colors ${
+                active
+                  ? "bg-primary text-white font-bold shadow-[0_2px_8px_rgba(29,79,216,.3)]"
+                  : "bg-[var(--glass-bg)] text-text-2"
+              }`}
+            >
+              {o.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -1672,11 +1673,11 @@ export function MapClient({
         : "sale";
 
   // 컴팩트 칩 행: 매매/전세/월세 + 매물 + 필터 …
-  /* [v4 · 규칙 6·7] 칩 한 모양(mapChipClass) · 칩 앞 장식 글자(🏠 ◎ ↔)·파란 숫자 배지를 뺐다 — 숫자는 칩 글자로("필터 3") */
   const filterBar = (
     <>
-      {/* ① 거래유형 — 서로 배타적이라 한 묶음(role=group)으로 둔다. 셋 중 하나만 한지 + 남색. */}
-      <div className="flex items-center gap-1" role="group" aria-label="거래유형">
+      {/* ① 거래유형 — 서로 배타적이라 한 덩어리(세그먼티드)로 묶는다.
+             칩 3개가 흩어져 있으면 "셋 중 하나"라는 규칙이 안 보인다. */}
+      <div className="map-seg" role="group" aria-label="거래유형">
         {(
           [
             { key: "sale", label: "매매" },
@@ -1697,7 +1698,6 @@ export function MapClient({
               setTxType(t.key === "jeonse" ? "rent" : "trade");
               setListingTradeKey(t.key);
             }}
-            className={mapChipClass(topTradeKey === t.key)}
           >
             {t.label}
           </button>
@@ -1711,25 +1711,23 @@ export function MapClient({
         type="button"
         aria-pressed={showListings}
         onClick={() => setShowListings((v) => !v)}
-        className={mapChipClass(showListings)}
+        className="map-chip"
       >
-        매물
+        <Icon name="🏠" size={14} className="inline align-middle" /> 매물
       </button>
       {/* [967 · 23] 접힌 상태의 요약 — "필터 3" 숫자만으로는 무엇이 걸려 있는지
           알 수 없어 지도가 왜 비었는지 되짚기 어려웠다. 걸린 축을 글자로 적는다
           (summarizeMapFilters, lib/map/filter-summary.ts). 패널이 열려 있으면 안
           그린다 — 패널이 곧 요약이다. 폭이 좁은 헤더에서는 잘리고 title 로 전문.
-          자리는 토글 **앞**: "무엇이 걸렸나 → 바꾸기(필터) → 초기화" 순서로 읽힌다.
-          [v4 · 규칙 8] 꼬리 "· N개 적용" 은 뺐다 — 개수는 바로 옆 "필터 N" 이 말한다. */}
+          자리는 토글 **앞**: "무엇이 걸렸나 → 바꾸기(필터) → 초기화" 순서로 읽힌다. */}
       {!filtersExpanded && filterSummary.length > 0 && (
         <span
-          /* [v4] 옅은 파랑 알약(.map-filter-summary) → 흰 면 + 1px 선 글자 요약(파랑은 채움 버튼 하나에만) */
-          className="inline-block max-w-[200px] truncate rounded-full border border-line bg-surface px-2.5 py-1 align-middle t-caption font-bold text-text-2 md:max-w-[240px]"
-          title={filterSummary.join(" · ")}
+          className="map-filter-summary t-caption"
+          title={`${filterSummary.join(" · ")} · ${filterSummary.length}개 적용`}
           role="status"
           aria-label={`적용된 필터: ${filterSummary.join(", ")}`}
         >
-          {filterSummary.join(" · ")}
+          {filterSummary.join(" · ")} · {filterSummary.length}개 적용
         </span>
       )}
       <button
@@ -1746,16 +1744,21 @@ export function MapClient({
             return next;
           })
         }
-        className={mapChipClass(filterActive || filtersExpanded)}
+        className={`map-chip ${filterActive || filtersExpanded ? "map-chip-soft" : ""}`}
       >
-        필터{activeCount > 0 ? ` ${activeCount}` : ""}{" "}
+        필터
+        {activeCount > 0 && (
+          <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 t-caption font-bold text-surface">
+            {activeCount}
+          </span>
+        )}{" "}
         <span className={filtersExpanded ? "inline-block rotate-180" : "inline-block"}>▾</span>
       </button>
       {filterActive && (
         <button
           type="button"
           onClick={resetFilters}
-          className="min-h-10 whitespace-nowrap t-sub font-bold text-text-3 transition-colors hover:text-primary"
+          className="whitespace-nowrap t-sub font-bold text-text-3 underline transition-colors hover:text-primary"
         >
           초기화
         </button>
@@ -1780,9 +1783,9 @@ export function MapClient({
             return next;
           })
         }
-        className={mapChipClass(radiusMode)}
+        className="map-chip"
       >
-        반경
+        ◎ 반경
       </button>
       {radiusMode &&
         RADIUS_PRESETS.map((r) => (
@@ -1791,7 +1794,7 @@ export function MapClient({
             type="button"
             onClick={() => setRadiusM(r)}
             aria-pressed={radiusM === r}
-            className={mapChipClass(radiusM === r)}
+            className={`map-chip ${radiusM === r ? "map-chip-soft" : ""}`}
           >
             {r >= 1000 ? `${r / 1000}km` : `${r}m`}
           </button>
@@ -1800,7 +1803,7 @@ export function MapClient({
         <button
           type="button"
           onClick={() => setRadiusCenter(null)}
-          className="min-h-10 whitespace-nowrap t-sub font-bold text-text-3 transition-colors hover:text-primary"
+          className="whitespace-nowrap t-sub font-bold text-text-3 underline transition-colors hover:text-primary"
         >
           중심 해제
         </button>
@@ -1824,9 +1827,9 @@ export function MapClient({
             return next;
           })
         }
-        className={mapChipClass(measureMode)}
+        className="map-chip"
       >
-        거리 재기
+        ↔ 거리
       </button>
     </>
   );
@@ -1837,18 +1840,16 @@ export function MapClient({
        내려준다(--nz-filter-max-h). 예전에는 여기서 `calc(100dvh-210px)` 로 잡았는데,
        모바일 상단이 218px 이라 패널 아래끝이 화면 밖으로 8px 밀려 있었다
        (402×874 실측: 218~882). 화면 밖으로 나간 필터는 스크롤로도 못 본다. */
-    /* [v4] 유리(블러) + 큰 그림자 → 흰 면 + 1px 선 · 제목 한 줄(t-section) */
-    <div className="flex max-h-[var(--nz-filter-max-h,calc(100dvh-210px))] w-full flex-col gap-3 overflow-y-auto rounded-xl border border-line bg-surface p-4">
+    <div className="glass-strong flex max-h-[var(--nz-filter-max-h,calc(100dvh-210px))] w-full flex-col gap-3 overflow-y-auto rounded-3xl p-4 shadow-[0_16px_40px_rgba(16,28,54,.2)]">
       <div className="flex items-center justify-between">
-        <span className="t-section text-ink">상세 필터</span>
+        <span className="text-[13px] font-bold text-ink">상세 필터</span>
         <button
           type="button"
           onClick={() => setFiltersExpanded(false)}
           aria-label="필터 닫기"
-          className="-my-2 -mr-2.5 flex h-10 w-10 items-center justify-center t-body text-text-3"
+          className="t-body text-text-3"
         >
-          {/* [1012 · 규칙 4] ✕ 활자 → 선 아이콘 x */}
-          <Icon name="x" size={16} />
+          ✕
         </button>
       </div>
       {/* ── 범위 슬라이더 (막대그래프) ──────────────────────────────────
@@ -1912,15 +1913,18 @@ export function MapClient({
             available={facets.households.n}
             total={facets.total}
             step={10}
-            /* [v4 · 규칙 3·8] 비율 문장은 뺐다 — 슬라이더 아래 "값 있는 단지 N/M" 이 같은 사실이다. 이유만 한 줄 */
-            note="K-apt 대장 연결 단지만 · 소규모 단지는 대장 없음"
+            note={
+              facets.total > 0 && facets.households.n < facets.total
+                ? `화면 안 단지의 ${Math.round((facets.households.n / facets.total) * 100)}%만 세대수를 알아요 — K-apt 대장에 연결된 단지만 값이 있고, 의무관리 대상이 아닌 소규모 단지는 대장이 없어 비어 있어요.`
+                : "세대수는 K-apt 대장에 연결된 단지만 알아요 — 의무관리 대상이 아닌 소규모 단지는 대장이 없어 비어 있어요."
+            }
           />
         </>
       ) : (
-        <div className="py-2 t-sub text-text-3">이 지역 분포 불러오는 중…</div>
+        <div className="py-2 t-sub text-text-3">이 지역 분포를 불러오는 중…</div>
       )}
       <FilterChipGroup
-        label="거래유형 · 매물"
+        label={`거래유형 (매물${showListings ? "" : " · 선택 시 매물 레이어 권장"})`}
         options={LISTING_TRADE_OPTIONS}
         valueKey={listingTradeKey}
         onSelect={(key) => {
@@ -1933,7 +1937,7 @@ export function MapClient({
         }}
       />
       <FilterChipGroup
-        label="건물 유형"
+        label="건물 유형 (등록 매물)"
         options={PROPERTY_KIND_OPTIONS}
         valueKey={propertyKindKey}
         onSelect={(key) => {
@@ -1968,27 +1972,48 @@ export function MapClient({
           if (key !== "all") setShowListings(true);
         }}
       />
-      {/* [v4 · 규칙 3] 설명 문단("…기준입니다 · …제외돼요 · 실거래는 아파트 시세입니다") → 사실 한 줄 + 상태 한 줄씩.
-          "시세" 낱말은 뺐다 — 단지 마커는 실거래만 있는 자리다. */}
-      <p className="t-caption text-text-3">유형·방·화장실·주차 = 등록 매물 기준 · 값 없는 매물 제외</p>
-      {showListings && listingFetchStatus === "ok" && listingItems.length === 0 && (
-        <p className="t-caption font-bold text-text-2">
-          {listingDetailFilterActive
-            ? "조건 맞는 등록 매물 0건 · 필터를 풀면 더 보임"
-            : "이 화면 승인된 등록 매물 0건 · 필터 문제 아님"}
-        </p>
-      )}
-      {!detailFiltersSupported && (
-        <p className="t-caption font-bold text-warning">
-          서버에 상세 필터 컬럼 없음 · 유형·방·화장실·주차 조건이 부정확할 수 있음
-        </p>
-      )}
+      <p className="t-caption text-text-3">
+        방·화장실·주차·건물유형은 <b className="text-text-2">등록 매물</b> 기준입니다. 값이
+        없는 매물은 해당 필터에서 제외돼요. 국토부 실거래(단지 마커)는 아파트 시세입니다.
+        {showListings &&
+          listingFetchStatus === "ok" &&
+          listingItems.length === 0 &&
+          !listingDetailFilterActive && (
+            <>
+              {" "}
+              <b className="text-text-2">
+                이 화면에는 아직 승인된 등록 매물이 없어요 — 필터가 고장 난 것이 아닙니다.
+              </b>
+            </>
+          )}
+        {showListings &&
+          listingFetchStatus === "ok" &&
+          listingItems.length === 0 &&
+          listingDetailFilterActive && (
+            <>
+              {" "}
+              <b className="text-text-2">
+                조건을 모두 만족하는 등록 매물이 이 화면에 없어요. 필터를 완화해 보세요.
+              </b>
+            </>
+          )}
+        {!detailFiltersSupported && (
+          <>
+            {" "}
+            <b className="text-warning">
+              지금 서버는 상세 필터 컬럼이 없어 유형·방·화장실·주차 조건이 정확하지 않을 수
+              있어요.
+            </b>
+          </>
+        )}
+      </p>
 
       {/* ===== 지도 레이어 — 정비사업(실적재 공개 자료) ===== */}
       {/* [968 · 24] id — 접힌 칩 행의 "레이어 N" 이 패널을 열고 여기로 스크롤한다 */}
-      {/* [v4 · 규칙 6·7] 레이어 칩 앞 장식 아이콘(bar·landmark·construction·notebook-pen·coin·gavel·school·train)을 뺐다 ·
-          켜짐 = 한지 + 남색 */}
-      <div id="map-layer-section" className="flex flex-col gap-1.5 border-t border-line pt-2.5">
+      <div
+        id="map-layer-section"
+        className="flex flex-col gap-1.5 border-t border-[rgba(16,28,54,.08)] pt-2.5"
+      >
         <div className="t-sub font-bold text-text-3">지도 레이어</div>
         <div className="flex flex-wrap gap-1.5">
           {/* C1 시세 색상 오버레이 토글 — 실거래 평단가 구간별 색 */}
@@ -1996,27 +2021,39 @@ export function MapClient({
             type="button"
             aria-pressed={showPriceOverlay}
             onClick={() => setShowPriceOverlay((v) => !v)}
-            className={mapChipClass(showPriceOverlay)}
+            className={`chip whitespace-nowrap px-2.5 py-1.5 text-xs transition-colors ${
+              showPriceOverlay
+                ? "bg-primary-soft font-bold text-primary"
+                : "bg-[var(--glass-bg)] text-text-2"
+            }`}
           >
-            평단가 색상
+            <Icon name="🎨" size={14} className="inline align-middle" /> 시세 색상
           </button>
           {/* 정비사업 레이어 토글 — 재개발·재건축 사업장을 사업종류별 색상 마커로 */}
           <button
             type="button"
             aria-pressed={showRedevelopment}
             onClick={() => setShowRedevelopment((v) => !v)}
-            className={mapChipClass(showRedevelopment)}
+            className={`chip whitespace-nowrap px-2.5 py-1.5 text-xs transition-colors ${
+              showRedevelopment
+                ? "bg-primary-soft font-bold text-primary"
+                : "bg-[var(--glass-bg)] text-text-2"
+            }`}
           >
-            정비사업
+            <Icon name="landmark" size={14} className="inline align-middle" /> 정비사업
           </button>
           {/* [#74] 입주 예정 레이어 토글 — 자동 수집 입주물량(청약홈) 좌표분 */}
           <button
             type="button"
             aria-pressed={showSupply}
             onClick={() => setShowSupply((v) => !v)}
-            className={mapChipClass(showSupply)}
+            className={`chip whitespace-nowrap px-2.5 py-1.5 text-xs transition-colors ${
+              showSupply
+                ? "bg-primary-soft font-bold text-primary"
+                : "bg-[var(--glass-bg)] text-text-2"
+            }`}
           >
-            입주 예정
+            <Icon name="construction" size={14} className="inline align-middle" /> 입주 예정
           </button>
           {/* [#130] 내 노트 레이어 — 로그인 사용자의 임장 기록 */}
           <button
@@ -2026,18 +2063,26 @@ export function MapClient({
               myNotesManualRef.current = true;
               setShowMyNotes((v) => !v);
             }}
-            className={mapChipClass(showMyNotes)}
+            className={`chip whitespace-nowrap px-2.5 py-1.5 text-xs transition-colors ${
+              showMyNotes
+                ? "bg-primary-soft font-bold text-primary"
+                : "bg-[var(--glass-bg)] text-text-2"
+            }`}
           >
-            내 노트
+            <Icon name="notebook-pen" size={14} className="inline align-middle" /> 내 노트
           </button>
           {/* [#136] 월세 전환 레이어 — 지역별 월세 비중 */}
           <button
             type="button"
             aria-pressed={showRentShare}
             onClick={() => setShowRentShare((v) => !v)}
-            className={mapChipClass(showRentShare)}
+            className={`chip whitespace-nowrap px-2.5 py-1.5 text-xs transition-colors ${
+              showRentShare
+                ? "bg-primary-soft font-bold text-primary"
+                : "bg-[var(--glass-bg)] text-text-2"
+            }`}
           >
-            월세 비중
+            <Icon name="coin" size={14} className="inline align-middle" /> 월세 비중
           </button>
           {/* [937] 공매 배지 레이어 — 온비드 진행 물건 구 단위 집계 */}
           <button
@@ -2054,9 +2099,13 @@ export function MapClient({
                 }
               }
             }}
-            className={mapChipClass(showAuctions)}
+            className={`chip whitespace-nowrap px-2.5 py-1.5 text-[13px] transition-colors ${
+              showAuctions
+                ? "bg-primary-soft font-bold text-primary"
+                : "bg-[var(--glass-bg)] text-text-2"
+            }`}
           >
-            공매
+            <Icon name="gavel" size={14} className="inline align-middle" /> 공매
             {/* [946] '지금 새로 올라옴' 신호 = 브랜드 주홍 */}
             {auctionChipIsNew && (
               <span
@@ -2071,24 +2120,31 @@ export function MapClient({
             type="button"
             aria-pressed={showSchools}
             onClick={() => setShowSchools((v) => !v)}
-            className={mapChipClass(showSchools)}
+            className={`chip whitespace-nowrap px-2.5 py-1.5 text-[13px] transition-colors ${
+              showSchools
+                ? "bg-primary-soft font-bold text-primary"
+                : "bg-[var(--glass-bg)] text-text-2"
+            }`}
           >
-            학교
+            <Icon name="🏫" size={14} className="inline align-middle" /> 학교
           </button>
           <button
             type="button"
             aria-pressed={showStations}
             onClick={() => setShowStations((v) => !v)}
-            className={mapChipClass(showStations)}
+            className={`chip whitespace-nowrap px-2.5 py-1.5 text-[13px] transition-colors ${
+              showStations
+                ? "bg-primary-soft font-bold text-primary"
+                : "bg-[var(--glass-bg)] text-text-2"
+            }`}
           >
-            지하철
+            <Icon name="🚇" size={14} className="inline align-middle" /> 지하철
           </button>
         </div>
         {/* [940] 구 버블 지표 전환 — 넓은 줌의 구 단위 버블에 어떤 숫자를 띄울지.
-            단지 줌·전세 모드에서는 구 버블 자체가 숨으므로 비활성으로 보여 준다.
-            [v4] 비활성은 opacity 대신 --disabled-bg/--disabled-text(디자인 시스템 disabled 규칙) */}
+            단지 줌·전세 모드에서는 구 버블 자체가 숨으므로 비활성으로 보여 준다. */}
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="t-sub font-bold text-text-3">구 버블</span>
+          <span className="t-caption font-bold text-text-3">구 버블</span>
           {(
             [
               ["avg", "평균가"],
@@ -2103,34 +2159,42 @@ export function MapClient({
               aria-pressed={regionMetric === key}
               disabled={txType === "rent"}
               onClick={() => setRegionMetric(key)}
-              className={`${mapChipClass(regionMetric === key)} disabled:border-transparent disabled:bg-[var(--disabled-bg)] disabled:text-[var(--disabled-text)]`}
+              className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors disabled:opacity-40 ${
+                regionMetric === key
+                  ? "bg-primary-soft font-bold text-primary"
+                  : "bg-[var(--glass-bg)] text-text-2"
+              }`}
             >
               {label}
             </button>
           ))}
-          {txType === "rent" && <span className="t-caption text-text-3">전세 모드 · 구 버블 숨김</span>}
+          {txType === "rent" && (
+            <span className="t-caption text-text-3">전세 모드에선 구 버블이 숨어요</span>
+          )}
         </div>
-        {/* [v4 · 규칙 3] 레이어 설명 문장 → 켠 레이어의 출처·사실 한 줄씩(끈 레이어의 설명은 그리지 않는다) */}
-        {showRedevelopment && (
-          <p className="t-caption text-text-3">정비사업 · 공개 자료 참고값 · 추진 단계는 구청 고시 우선</p>
-        )}
-        {showSupply && supplyItems.length > 0 && (
-          <p className="t-caption text-text-3">
-            입주 예정 {supplyItems.length}곳
-            {supplyUncoordinated > 0 ? ` · 좌표 준비 중 ${supplyUncoordinated}곳` : ""} · 청약홈 공고 기준
-          </p>
-        )}
-        {showAuctions && auctionItems.length > 0 && (
-          <p className="t-caption text-text-3">
-            공매 · 구 중심에 건수로 표시
-            {auctionsUncharted > 0 ? ` · 지도 밖 권역 ${auctionsUncharted}건 제외` : ""}
-          </p>
-        )}
+        <div className="t-caption text-text-3">
+          정비사업은 공개 자료 기준 참고값이에요. 실제 추진 단계는 관할 구청 고시를 확인하세요.
+          {showSupply && supplyItems.length > 0 && (
+            <>
+              {" "}
+              입주 예정 {supplyItems.length}곳 표시
+              {supplyUncoordinated > 0 ? ` · 좌표 준비 중 ${supplyUncoordinated}곳` : ""} —
+              입주월은 청약홈 공고 기준이에요.
+            </>
+          )}
+          {showAuctions && auctionItems.length > 0 && (
+            <>
+              {" "}
+              공매는 물건 주소에 좌표가 없어 구 중심에 건수로 모아 보여요
+              {auctionsUncharted > 0 ? ` · 지도 밖 권역 ${auctionsUncharted}건 제외` : ""}.
+            </>
+          )}
+        </div>
       </div>
 
       {/* ===== 출퇴근 필터 (#10) — 회사 주소 + 임계 소요시간 ===== */}
-      <div className="flex flex-col gap-1.5 border-t border-line pt-2.5">
-        <div className="t-sub font-bold text-text-3">출퇴근 · 회사 위치</div>
+      <div className="flex flex-col gap-1.5 border-t border-[rgba(16,28,54,.08)] pt-2.5">
+        <div className="t-sub font-bold text-text-3">출퇴근 (회사 위치)</div>
         <input
           type="text"
           value={officeInput}
@@ -2143,55 +2207,63 @@ export function MapClient({
           }}
           placeholder="회사 주소 (예: 강남구 테헤란로 152)"
           aria-label="회사 주소"
-          className="w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-text-1 outline-none placeholder:text-text-3"
+          className="w-full rounded-lg border border-line bg-[var(--glass-bg-strong)] px-2.5 py-1.5 text-xs text-text-1 outline-none placeholder:text-text-3"
         />
         <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             onClick={() => setOfficeQuery(officeInput.trim())}
-            className="btn-secondary rounded-lg px-2.5 py-1.5 t-sub"
+            className="btn-soft rounded-lg px-2.5 py-1.5 t-sub font-bold"
           >
-            주소 적용
+            적용
           </button>
-          {COMMUTE_OPTIONS.map((o) => (
-            <button
-              key={o.key}
-              type="button"
-              aria-pressed={o.key === commuteKey}
-              onClick={() => setCommuteKey(o.key)}
-              className={mapChipClass(o.key === commuteKey)}
-            >
-              {o.label}
-            </button>
-          ))}
+          {COMMUTE_OPTIONS.map((o) => {
+            const active = o.key === commuteKey;
+            return (
+              <button
+                key={o.key}
+                type="button"
+                onClick={() => setCommuteKey(o.key)}
+                className={`chip whitespace-nowrap px-2.5 py-1.5 text-xs transition-colors ${
+                  active
+                    ? "bg-primary font-bold text-white"
+                    : "bg-[var(--glass-bg)] text-text-2"
+                }`}
+              >
+                {o.label}
+              </button>
+            );
+          })}
         </div>
-        {commuteLoading && <div className="t-caption text-text-3">소요시간 계산 중…</div>}
+        {commuteLoading && (
+          <div className="t-caption text-text-3">소요시간 계산 중…</div>
+        )}
         {commuteError && <div className="t-caption text-danger">{commuteError}</div>}
         {!commuteError && commuteOfficeResolved && commuteBasis === "haversine" && (
-          <div className="t-caption text-text-3">직선거리 기준 추정</div>
+          <div className="t-caption text-text-3">
+            직선거리 기준(정확 소요시간은 연동 시)
+          </div>
         )}
         {!commuteError && commuteOfficeResolved && commuteBasis === "directions" && (
-          <div className="t-caption text-text-3">실시간 경로 기준</div>
+          <div className="t-caption text-text-3">실시간 경로 기준 소요시간</div>
         )}
         {commuteActive && commuteThreshold !== null && (
-          <div className="t-caption font-bold text-ink">
-            출퇴근 {commuteThreshold}분 이내 · 단지 {filteredDanji.length}곳
+          <div className="t-caption font-bold text-primary">
+            출퇴근 {commuteThreshold}분 이내 · 단지 {filteredDanji.length}개
           </div>
         )}
       </div>
 
-      {/* [v4 · 규칙 2] 이 판에서는 채움 파랑을 쓰지 않는다 — 지도 화면의 채움 파랑은 머리의 "이 지역 노트 쓰기" 하나.
-          필터는 누르는 즉시 걸리므로 이 버튼은 판을 닫고 결과를 보는 일이다(동사 + 대상) */}
-      <div className="flex items-center justify-between border-t border-line pt-2.5">
-        <button type="button" onClick={resetFilters} className="min-h-10 t-sub font-bold text-text-3">
+      <div className="flex items-center justify-between border-t border-[rgba(16,28,54,.08)] pt-2.5">
+        <button type="button" onClick={resetFilters} className="t-sub font-bold text-text-3 underline">
           전체 초기화
         </button>
         <button
           type="button"
           onClick={() => setFiltersExpanded(false)}
-          className="btn-secondary rounded-lg px-4 py-2 t-sub"
+          className="btn-primary rounded-lg px-4 py-1.5 text-xs"
         >
-          단지 {filteredDanji.length}곳 보기
+          단지 {filteredDanji.length} 적용
         </button>
       </div>
     </div>
@@ -2228,7 +2300,8 @@ export function MapClient({
      전자는 "이 지역엔 단지가 없다", 후자는 "우리가 못 읽었다". */
   const [popularFailed, setPopularFailed] = useState(false);
   const [popularLoading, setPopularLoading] = useState(true);
-  /* [v4] 순위 막대(1위 건수 기준 길이)는 걷었다 — 행 오른쪽 거래 건수 숫자가 순위 근거다 */
+  /* 순위 막대의 기준값 — 1위 건수. 0이면 막대를 그리지 않는다. */
+  const popularMax = popular.length > 0 ? Math.max(...popular.map((p) => p.recentTradeCount)) : 0;
   const popularTimerRef = useRef<number | null>(null);
   const popularAbortRef = useRef<AbortController | null>(null);
 
@@ -2777,7 +2850,7 @@ export function MapClient({
       label: n.title,
       /* [961] 내 임장노트 = 브랜드 핀(처마+온점). 노트가 쌓일수록 지도 위에 심볼이 퍼진다 */
       brandPin: true,
-      infoHtml: `<div style="min-width:160px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${n.title}</p><p style="font-size:11px;color:#888;margin:3px 0 0">${n.visitDate ?? "내 임장 기록"}${n.avgScore ? ` · 평점 ${n.avgScore}/5` : ""}</p><a href="/notes/${n.id}" style="font-size:11px;color:var(--primary);font-weight:700">노트 열기 ›</a></div>`,
+      infoHtml: `<div style="min-width:160px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${n.title}</p><p style="font-size:11px;color:#888;margin:3px 0 0">${n.visitDate ?? "내 임장 기록"}${n.avgScore ? ` · 평점 ${n.avgScore}/5` : ""}</p><a href="/notes/${n.id}" style="font-size:11px;color:var(--primary);font-weight:700">노트 열기 →</a></div>`,
     }));
   }, [showMyNotes, myNotes]);
 
@@ -2924,8 +2997,7 @@ export function MapClient({
         lng: a.lng,
         label: `${a.name} 공매 ${a.count}건`,
         pinColor: "#7c3aed",
-        /* [v4 · 규칙 3] 출처 줄 한 줄로("온비드(한국자산관리공사) · 구 단위 집계 — 위치는…" → "온비드 · 구 중심 표시") · → 를 › 로 */
-        infoHtml: `<div style="min-width:190px;max-width:240px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${a.name}</p><p style="font-size:13px;margin:3px 0 0;color:#333">공매 진행 <b>${a.count}건</b>${minBid ? ` · 최저입찰 ${minBid}~` : ""}</p>${topHtml}<p style="font-size:11px;color:#888;margin:4px 0 0">온비드 · 구 중심 표시${a.top?.length ? " · 굵은 날짜 = 입찰 마감" : ""}</p><a href="/auctions?gu=${encodeURIComponent(a.name)}" style="font-size:11px;color:var(--primary);font-weight:700">물건 목록 보기 ›</a></div>`,
+        infoHtml: `<div style="min-width:190px;max-width:240px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${a.name}</p><p style="font-size:13px;margin:3px 0 0;color:#333">공매 진행 <b>${a.count}건</b>${minBid ? ` · 최저입찰 ${minBid}~` : ""}</p>${topHtml}<p style="font-size:11px;color:#888;margin:4px 0 0">온비드(한국자산관리공사) · 구 단위 집계 — 위치는 구 중심 표시${a.top?.length ? " · 굵은 날짜는 입찰 마감일" : ""}</p><a href="/auctions?gu=${encodeURIComponent(a.name)}" style="font-size:11px;color:var(--primary);font-weight:700">물건 목록 보기 →</a></div>`,
       };
     });
   }, [showAuctions, auctionItems]);
@@ -2938,7 +3010,6 @@ export function MapClient({
       const hh = s.households
         ? `<p style="font-size:11px;color:#888;margin:2px 0 0">${s.households.toLocaleString()}세대</p>`
         : "";
-      /* [1012 · 규칙 4·8] 인포창 이모지(🏗) 제거 · 인라인 font-weight 800 → 700(이 파일 전체) */
       const infoHtml = `<div style="min-width:170px;max-width:230px">
         <p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${s.name}</p>
         <p style="font-size:12px;margin:3px 0 0;color:#0d9488;font-weight:700">${ymLabel} 입주 예정</p>
@@ -3014,7 +3085,7 @@ export function MapClient({
       const chgDir = deltaDir(r.changePct);
       const chgHtml =
         r.changePct != null && chgDir
-          ? `<span style="color:${chgDir === "up" ? "var(--up)" : chgDir === "down" ? "var(--down)" : "var(--text-3)"};font-weight:700">${deltaText(r.changePct, { compact: true })}</span> <span style="font-size:11px;color:var(--text-3)">전월 대비</span>`
+          ? `<span style="color:${chgDir === "up" ? "var(--up)" : chgDir === "down" ? "var(--down)" : "var(--text-3)"};font-weight:700">${deltaText(r.changePct, { compact: true })}</span> <span style="font-size:11px;color:var(--text-3)">전월 대비 · 한국부동산원</span>`
           : "";
       /* [지도확장 2026-08-31] 주간 시장 온도 — /analysis/temperature 에만 있던
          지표를 지역 마커에 함께. 색은 온도계 관례(높음=붉음, 낮음=푸름, 50 중립).
@@ -3030,7 +3101,6 @@ export function MapClient({
         t != null
           ? `<p style="font-size:11px;margin:2px 0 0;color:var(--text-2)">시장 온도 <b style="color:${tempTok}">${Math.round(t)}</b><span style="color:var(--text-3)">/100${r.tempWeek ? ` · ${r.tempWeek.slice(5).replace("-", ".")}주` : ""}</span></p>`
           : "";
-      /* [v4 · 규칙 8] 등락 옆 "· 한국부동산원" 을 뺐다 — 맨 아래 출처 줄과 같은 사실 */
       const infoHtml = `<div style="padding:10px 14px;min-width:150px;font-family:sans-serif;background:var(--surface);color:var(--ink)">
         <p style="font-weight:700;font-size:13px;margin:0;color:var(--ink)">${r.name}</p>
         <p style="font-size:12px;margin:3px 0 0;color:var(--text-2)">평균 매매 <b style="color:var(--ink)">${price}</b> ${chgHtml}</p>
@@ -3557,33 +3627,34 @@ export function MapClient({
   /* ===== SDK 로드 실패/미설정 시 폴백 — 허위 시세 대신 정직한 안내 =====
      기존엔 가짜 지역 시세 버블(동안구 7.1억 등)을 그렸으나, 사실 우선 원칙에 따라
      실데이터가 아닌 수치는 표시하지 않고 "지도를 불러올 수 없어요" 상태로 대체. */
-  /* [1012 · 규칙 3] 폴백·스켈레톤 그라데이션 → 단색 --divider(이 파일 2곳) · "~습니다" → "~해요" */
   const gradientFallback = (
-    /* [v4 · 규칙 3·7] 빈 화면 — 제목 한 줄 + 사실 한 줄(가운데 정렬은 빈 화면뿐) · 장식 지도 아이콘·설명 문장 삭제 ·
-       파란 옅은 칩 → 흰 면 + 1px 선 */
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 overflow-hidden bg-divider px-8 text-center">
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 overflow-hidden bg-gradient-to-br from-line to-line-strong px-8 text-center">
+      <Icon name="🗺" size={34} />
       <div className="t-section text-ink">지도를 불러오지 못했어요</div>
-      <p className="t-sub text-text-2">지도 타일만 실패 · 실거래는 목록으로 볼 수 있음</p>
+      <p className="max-w-[300px] t-sub text-text-2">
+        지도 타일을 받지 못했습니다. 단지가 없는 게 아니라 지도만 못 그린 상태라,
+        시세·실거래는 그대로 볼 수 있어요.
+      </p>
       {/* 막다른 길로 두지 않는다 — 지도 없이도 갈 수 있는 곳을 준다 */}
       <div className="flex flex-wrap items-center justify-center gap-1.5">
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="btn-secondary btn-md"
+          className="btn-soft btn-md"
         >
           다시 시도
         </button>
         <button
           type="button"
           onClick={() => setMobileView("list")}
-          className={`${mapChipClass(false)} md:hidden`}
+          className="chip chip-soft px-3 py-1.5 t-sub md:hidden"
         >
-          목록 보기 ›
+          목록으로 보기 ›
         </button>
-        <Link href="/analysis/price" className={`${mapChipClass(false)} no-underline`}>
+        <Link href="/analysis/price" className="chip chip-soft px-3 py-1.5 t-sub no-underline">
           면적대별 시세 ›
         </Link>
-        <Link href="/analysis/timing" className={`${mapChipClass(false)} no-underline`}>
+        <Link href="/analysis/timing" className="chip chip-soft px-3 py-1.5 t-sub no-underline">
           시세·타이밍 ›
         </Link>
       </div>
@@ -3605,16 +3676,14 @@ export function MapClient({
    * 다른 오버레이와 겹치지 않는지만 지키면 되고, 안내를 추가할 때 좌표를 새로
    * 고민할 일이 없다.
    */
-  /* [v4 · 규칙 3·8] 안내는 한 줄 사실로 — "~해 주세요/~보여요" 문장과 기능 소개("임장노트·AI 정리·지도 비교로
-     이어져요")를 걷었다. 조회 실패는 "없음"과 다르다는 말(없음 아님)은 남긴다 — 이 화면의 원칙이다. */
   const mapNotices: { key: string; text: string }[] = [];
   if (viewportEmpty || clusterFetchStatus === "error") {
     mapNotices.push({
       key: "cluster",
       text:
         clusterFetchStatus === "error"
-          ? "단지 정보 조회 실패 · 잠시 후 다시 시도"
-          : "이 화면에 표시할 단지 없음 · 좌표 순차 확충 중",
+          ? "일시적 오류로 단지 정보를 불러오지 못했어요 — 잠시 후 다시 시도해 주세요"
+          : "관심 단지를 고르면 임장노트·AI 정리·지도 비교로 이어져요 — 이 지역 좌표는 순차 확충 중",
     });
   }
   /* 절단 안내 — 조용히 두면 거짓 화면이 된다.
@@ -3626,8 +3695,8 @@ export function MapClient({
       key: "truncated",
       text:
         clusterMode === "points"
-          ? "거래량 상위 300개 단지만 표시 · 확대하면 전부"
-          : "단지 수 일부만 집계 · 확대하면 정확",
+          ? "거래량 상위 300개 단지만 표시 중 — 더 확대하면 나머지 단지도 보여요"
+          : "화면이 넓어 단지 수가 일부만 집계됐어요 — 확대하면 정확해져요",
     });
   }
   /* 정비사업 조회 실패 — 마커가 없는 것과 구분해서 말한다. 이걸 안 그리면
@@ -3637,23 +3706,23 @@ export function MapClient({
   if (showRedevelopment && redevFailed) {
     mapNotices.push({
       key: "redev-failed",
-      text: "정비사업 조회 실패(사업장 없음 아님) · 잠시 후 다시 시도",
+      text: "정비사업을 불러오지 못했어요 — 잠시 후 다시 시도해 주세요. 사업장이 없다는 뜻은 아니에요",
     });
   }
   /* [#130] 내 노트 — 로그인·실패·0건을 구분해 말한다 */
   if (showMyNotes && myNotesState === "unauth" && myNotesManualRef.current) {
-    mapNotices.push({ key: "mynotes-auth", text: "내 노트 레이어 · 로그인 필요" });
+    mapNotices.push({ key: "mynotes-auth", text: "내 노트 레이어는 로그인 후 볼 수 있어요" });
   } else if (showMyNotes && myNotesState === "failed") {
-    mapNotices.push({ key: "mynotes-failed", text: "내 노트 조회 실패 · 잠시 후 다시 시도" });
+    mapNotices.push({ key: "mynotes-failed", text: "내 노트를 불러오지 못했어요 — 잠시 후 다시 시도해 주세요" });
   } else if (showMyNotes && myNotesState === "idle" && myNotesLoaded && myNotes.length === 0 && myNotesManualRef.current) {
-    mapNotices.push({ key: "mynotes-empty", text: "좌표 있는 내 노트 없음 · 노트에서 단지를 고르면 표시" });
+    mapNotices.push({ key: "mynotes-empty", text: "좌표가 담긴 내 노트가 아직 없어요 — 작성 시 단지를 검색해 선택하면 지도에 찍혀요" });
   }
 
   /* [#136] 월세 전환 — 실패 안내 */
   if (showRentShare && rentShareFailed) {
     mapNotices.push({
       key: "rentshare-failed",
-      text: "월세 비중 조회 실패 · 잠시 후 다시 시도",
+      text: "월세 비중을 불러오지 못했어요 — 잠시 후 다시 시도해 주세요",
     });
   }
 
@@ -3661,12 +3730,12 @@ export function MapClient({
   if (showAuctions && auctionsFailed) {
     mapNotices.push({
       key: "auctions-failed",
-      text: "공매 조회 실패(물건 없음 아님) · 잠시 후 다시 시도",
+      text: "공매 물건을 불러오지 못했어요 — 잠시 후 다시 시도해 주세요. 물건이 없다는 뜻은 아니에요",
     });
   } else if (showAuctions && auctionsLoaded && auctionItems.length === 0) {
     mapNotices.push({
       key: "auctions-empty",
-      text: "지도 권역에 진행 중인 공매 없음",
+      text: "지금 진행 중인 공매 물건이 지도 권역에 없어요",
     });
   }
 
@@ -3675,13 +3744,13 @@ export function MapClient({
   if ((showSchools || showStations) && poiFailed) {
     mapNotices.push({
       key: "poi-failed",
-      text: "학교·지하철 조회 실패 · 잠시 후 다시 시도",
+      text: "학교·지하철 정보를 불러오지 못했어요 — 잠시 후 다시 시도해 주세요",
     });
   } else if ((showSchools || showStations) && poiData) {
     if (poiData.tooWide) {
       mapNotices.push({
         key: "poi-zoom",
-        text: "학교·지하철 · 더 확대하면 표시",
+        text: "학교·지하철은 지도를 더 확대하면 표시돼요",
       });
     } else if (
       (showSchools && !poiData.schoolsReady) ||
@@ -3691,7 +3760,7 @@ export function MapClient({
         key: "poi-not-ready",
         /* [1011] "— 공공데이터 활용신청 승인 후 자동으로 채워집니다" 를 걷었다(소유자 지시) —
            활용신청·승인은 운영 쪽 사정이고, 방문자가 알아야 할 사실은 "아직 없다" 하나다. */
-        text: "학교·지하철 데이터 준비 중",
+        text: "학교·지하철 데이터가 아직 준비 중이에요",
       });
     }
   }
@@ -3700,11 +3769,11 @@ export function MapClient({
   if (showSupply && supplyFailed) {
     mapNotices.push({
       key: "supply-failed",
-      text: "입주 예정 조회 실패(물량 없음 아님) · 잠시 후 다시 시도",
+      text: "입주 예정 물량을 불러오지 못했어요 — 잠시 후 다시 시도해 주세요. 물량이 없다는 뜻은 아니에요",
     });
   }
   if (geoApplied) {
-    mapNotices.push({ key: "geo", text: "현재 위치로 지도 이동" });
+    mapNotices.push({ key: "geo", text: "현재 위치 기준으로 지도를 맞췄어요" });
   }
 
   /* 매물 레이어 안내(실패 / 빈 인벤토리)는 버튼이 달려 있어 같은 열에 카드로
@@ -3746,7 +3815,7 @@ export function MapClient({
          router.refresh() 로 지도가 통째로 다시 떴다. PullToRefresh 가 이 속성을 보고
          제스처를 무시한다(/map 은 경로로도 끈다 — 이 속성은 다른 화면에 삽입된 지도용). */
       data-ptr-ignore=""
-      className="fixed inset-0 h-[100dvh] w-full touch-manipulation overflow-hidden bg-divider"
+      className="fixed inset-0 h-[100dvh] w-full touch-manipulation overflow-hidden bg-gradient-to-br from-line to-line-strong"
       /* [968 · 24] 탭(끌지 않고 뗀 터치)은 클릭으로 온다 — 접힌 크롬을 즉시 편다.
          끌기는 click 을 만들지 않으므로 접힌 채 유지된다. */
       onClick={chromeCompact ? () => dispatchChrome("tap") : undefined}
@@ -3808,13 +3877,12 @@ export function MapClient({
 
       {/* ===== 마커 호버 요약 — 누르기 전에 보이는 단지 정보 ===== */}
       {hoverMarker && hoverPos && (
-        /* [v4] 유리 + 큰 그림자 + 링 → 흰 면 + 1px 선 · 이름 한 줄 → 값(+등락) → 사실 한 줄 */
         <div
-          className="pointer-events-none absolute z-[46] w-[212px] rounded-lg border border-line bg-surface px-3.5 py-3"
+          className="pointer-events-none absolute z-[46] w-[212px] rounded-lg bg-[var(--glass-bg-strong)] px-3.5 py-3 shadow-[0_12px_30px_rgba(16,28,54,.22)] ring-1 ring-[rgba(16,28,54,.08)]"
           style={{
             // 커서 오른쪽 아래가 기본. 화면 끝에 닿으면 반대편으로 접는다.
             left: Math.min(hoverPos.x + 16, Math.max(8, (mapWrapRef.current?.clientWidth ?? 0) - 220)),
-            top: Math.min(hoverPos.y + 16, Math.max(8, (mapWrapRef.current?.clientHeight ?? 0) - 140)),
+            top: Math.min(hoverPos.y + 16, Math.max(8, (mapWrapRef.current?.clientHeight ?? 0) - 180)),
           }}
         >
           <div className="truncate t-body font-bold text-ink">{hoverMarker.label}</div>
@@ -3823,8 +3891,8 @@ export function MapClient({
               기준 없는 %였다. 비교 기준을 붙인다 — 지역 마커는 한국부동산원 월간 변동률("전월 대비"), 단지 마커는 거래가 있던
               바로 앞 달 평균과의 비교(app/map/page.tsx pctDelta — 달이 비면 더 앞 달)라 "직전 거래월 대비".
               "시세 준비 중" → 실거래만 있는 곳이라 "최근 실거래 없음". */}
-          <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
-            <span className="t-section text-ink tabular-nums">
+          <div className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5">
+            <span className="t-section text-primary tabular-nums">
               {hoverMarker.priceLabel ?? "최근 실거래 없음"}
             </span>
             {hoverMarker.momPct !== undefined && Number.isFinite(hoverMarker.momPct) && (
@@ -3836,17 +3904,27 @@ export function MapClient({
               </span>
             )}
           </div>
-          {/* [v4 · 규칙 3·8] 3칸 격자("—" 채움) + "클릭하면 자세히 봅니다" → 아는 값만 한 줄 */}
-          {(() => {
-            const facts = [
-              hoverMarker.households ? `${hoverMarker.households.toLocaleString("ko-KR")}세대` : null,
-              hoverMarker.buildYear ? `${hoverMarker.buildYear}년` : null,
-              hoverMarker.avgAreaM2 ? `평균 전용 ${Math.round(hoverMarker.avgAreaM2)}㎡` : null,
-            ].filter(Boolean);
-            return facts.length > 0 ? (
-              <div className="mt-1 truncate t-sub text-text-3">{facts.join(" · ")}</div>
-            ) : null;
-          })()}
+          <div className="mt-2 grid grid-cols-3 gap-1.5 border-t border-[rgba(16,28,54,.07)] pt-2">
+            <div>
+              <div className="t-caption text-text-3">세대수</div>
+              <div className="t-sub font-bold text-ink">
+                {hoverMarker.households ? hoverMarker.households.toLocaleString("ko-KR") : "—"}
+              </div>
+            </div>
+            <div>
+              <div className="t-caption text-text-3">준공</div>
+              <div className="t-sub font-bold text-ink">
+                {hoverMarker.buildYear ?? "—"}
+              </div>
+            </div>
+            <div>
+              <div className="t-caption text-text-3">평균 전용</div>
+              <div className="t-sub font-bold text-ink">
+                {hoverMarker.avgAreaM2 ? `${Math.round(hoverMarker.avgAreaM2)}㎡` : "—"}
+              </div>
+            </div>
+          </div>
+          <div className="mt-2 t-caption text-text-3">클릭하면 자세히 봅니다</div>
         </div>
       )}
 
@@ -3866,54 +3944,63 @@ export function MapClient({
             } as CSSProperties
           }
         >
-          {/* [v4] 안내 한 줄 — 굵기 600 → 500(규칙 8 3단), 그림자 없이 어두운 면 한 장 */}
           {mapNotices.map((n) => (
             <div
               key={n.key}
               role="status"
-              className="max-w-full rounded-lg bg-[rgba(16,28,54,.82)] px-3.5 py-2 t-sub font-medium text-white"
+              className="max-w-full rounded-lg bg-[rgba(16,28,54,.82)] px-3.5 py-2 t-sub font-semibold text-white shadow-[0_6px_18px_rgba(16,28,54,.25)]"
             >
               {n.text}
             </div>
           ))}
 
-          {/* [v4 · 규칙 2·3] 매물 안내 카드 — 유리 → 흰 면 + 1px 선 · 설명 두 줄 → 사실 한 줄 ·
-              채움 파랑 "매물 등록하기" → 테두리(지도 화면의 채움 파랑은 머리의 노트 쓰기 하나) */}
           {listingNoticeKind === "error" && (
-            <div role="status" className="pointer-events-auto max-w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 t-sub font-bold text-ink">
-              매물 조회 실패(매물 없음 아님) · 지도를 옮기면 다시 조회
+            <div className="glass pointer-events-auto max-w-full rounded-xl px-3.5 py-2.5">
+              <div className="t-sub font-bold text-ink">매물을 불러오지 못했어요</div>
+              <div className="mt-0.5 t-sub text-text-3">
+                일시적 오류예요. 매물이 없다는 뜻은 아닙니다. 잠시 후 지도를 조금 옮기거나 다시
+                시도해 주세요.
+              </div>
             </div>
           )}
 
           {listingNoticeKind === "empty" && (
-            <div className="pointer-events-auto flex max-w-full flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-line bg-surface px-3.5 py-2">
-              <span className="t-sub font-bold text-ink">
-                {listingFilterNarrowed ? "조건 맞는 등록 매물 없음" : "이 화면 등록 매물 없음"}
-              </span>
-              <span className="flex gap-2">
+            <div className="glass pointer-events-auto max-w-full rounded-xl px-3.5 py-2.5">
+              <div className="t-sub font-bold text-ink">
+                {listingFilterNarrowed
+                  ? "조건에 맞는 등록 매물이 없어요"
+                  : "이 화면에 등록 매물이 아직 없어요"}
+              </div>
+              <div className="mt-0.5 t-sub text-text-3">
+                {listingFilterNarrowed
+                  ? "필터·예산 조건을 완화하거나, 지도를 넓혀 보세요. 포털처럼 매물이 많은 상태가 아니라 승인된 등록분만 보여요."
+                  : "필터 문제가 아니라 아직 쌓인 재고가 적어요. 단지 실거래 마커는 그대로 볼 수 있고, 매물을 올리면 여기 표시돼요."}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
                 {listingFilterNarrowed && (
                   <button
                     type="button"
                     onClick={resetFilters}
-                    className={mapChipClass(false)}
+                    className="rounded-full border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2"
                   >
                     필터 초기화
                   </button>
                 )}
-                <Link href="/listings/new" className={`${mapChipClass(false)} no-underline`}>
-                  매물 등록
+                <Link
+                  href="/listings/new"
+                  className="rounded-full bg-primary px-2.5 py-1 t-sub font-bold text-white"
+                >
+                  매물 등록하기
                 </Link>
-              </span>
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {/* ===== 상단 머리 한 줄 (카메라섬 아래로 세이프에어리어 오프셋) =====
-           [v4] 유리(블러) 알약 → 흰 면 + 1px 선(반경 8). 높이 58px 는 그대로 — 아래 레인(검색 82 · 칩 134)의 기준이다.
-           채움 파랑은 이 화면에서 "이 지역 노트 쓰기" 하나(파란 번짐 그림자 btn-cta 는 뺐다). */}
+      {/* ===== 상단 플로팅 글래스 헤더 (카메라섬 아래로 세이프에어리어 오프셋) ===== */}
       <div
-        className="absolute left-1/2 z-40 flex h-[58px] w-[calc(100%-32px)] max-w-[1180px] -translate-x-1/2 items-center gap-4 rounded-xl border border-line bg-surface px-5"
+        className="glass-strong absolute left-1/2 z-40 flex h-[58px] w-[calc(100%-32px)] max-w-[1180px] -translate-x-1/2 items-center gap-4 rounded-3xl px-5"
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}
       >
         <Link href="/" className="shrink-0">
@@ -3923,6 +4010,7 @@ export function MapClient({
         <div className="hidden w-[280px] md:block">
           <MapSearchBox
             variant="header"
+            placeholder={`아파트명·주소 (예: ${regionLabel})`}
             onSelectComplex={handleSearchSelectComplex}
             onSelectAddress={handleSearchSelectAddress}
           />
@@ -3933,11 +4021,10 @@ export function MapClient({
         {/* 줌 단계 탭 (xl+) — 지도 위에 떠서 우측 마커 라벨(과천제이드자이류 가격
             알약)을 덮던 것을, 이 폭에서는 비어 있던 헤더 가운데로 올린다.
             1024~1279 는 filterBar 까지 넣으면 1180 폭이 모자라 플로팅 판을 유지.
-            줌 레벨 설명(ZOOM_CAPTION)은 title 로만 남긴다(보이는 캡션 상자 없음 — v4). */}
+            줌 레벨 설명(ZOOM_CAPTION)은 title 로 남긴다 — 캡션 상자까지 올리면
+            헤더가 두 줄이 된다. */}
         <div
-          role="group"
-          aria-label="지도 단위"
-          className="hidden shrink-0 items-center gap-1 xl:flex"
+          className="hidden shrink-0 items-center gap-0.5 rounded-full bg-[rgba(16,28,54,.05)] p-1 xl:flex"
           title={ZOOM_CAPTION[zoom]}
         >
           <ZoomTabButtons zoom={zoom} onSelect={handleZoomTab} />
@@ -3951,7 +4038,7 @@ export function MapClient({
               : "/notes/new"
           }
           data-tour="map-note-cta"
-          className="btn-primary shrink-0 rounded-lg px-4 py-[9px] t-body"
+          className="btn-primary btn-cta shrink-0 rounded-xl px-4 py-[9px] t-body"
         >
           이 지역 노트 쓰기
         </Link>
@@ -3982,18 +4069,16 @@ export function MapClient({
         <div
           role="group"
           aria-label="접힌 지도 컨트롤"
-          /* [v4] 유리 알약 → 흰 면 + 1px 선 · 칩 한 모양(mapChipClass) · ⌕ 글자 → 선 아이콘 search(조작 버튼) */
-          className="absolute left-4 z-40 flex items-center gap-1 rounded-full border border-line bg-surface p-1 md:hidden motion-safe:animate-[fadeIn_.16s_ease-out]"
+          className="glass-strong absolute left-4 z-40 flex items-center gap-1 rounded-full p-1 md:hidden motion-safe:animate-[fadeIn_.16s_ease-out]"
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 82px)" }}
         >
           <button
             type="button"
             onClick={() => dispatchChrome("tap")}
-            className={`${mapChipClass(false)} inline-flex items-center gap-1`}
+            className="map-chip"
             aria-label="검색 펼치기"
           >
-            <Icon name="search" size={14} />
-            검색
+            ⌕ 검색
           </button>
           <button
             type="button"
@@ -4003,7 +4088,7 @@ export function MapClient({
               setSelectedId(null);
               setInfoComplex(null);
             }}
-            className={mapChipClass(activeCount > 0)}
+            className={`map-chip ${activeCount > 0 ? "map-chip-soft" : ""}`}
             aria-label={`필터 ${activeCount}개 적용 중, 펼치기`}
           >
             필터{activeCount > 0 ? ` ${activeCount}` : ""}
@@ -4022,7 +4107,7 @@ export function MapClient({
                   ?.scrollIntoView({ block: "nearest" });
               });
             }}
-            className={mapChipClass(activeLayerCount > 0)}
+            className={`map-chip ${activeLayerCount > 0 ? "map-chip-soft" : ""}`}
             aria-label={`레이어 ${activeLayerCount}개 켜짐, 펼치기`}
           >
             레이어 {activeLayerCount}
@@ -4035,13 +4120,13 @@ export function MapClient({
            safe-area-inset-top 기준이다.
              헤더   16 ~  74
              검색바 82 ~ 126 (모바일)
-             필터 칩 134 ~ 178  ← 여기 (칩 40px — 터치 하한 + 위아래 2px)
-             필터 패널 186 ~
-           [v4] "위 = 검색 + 칩 한 줄". 예전엔 검색과 칩 사이에 줌 탭 레인(128~166)이 따로 있어
-           위 크롬이 네 줄(헤더·검색·줌 탭·칩, 16~206)이었다. 줌 탭(시·군·구·동·단지)은 lg 미만에서
-           이 줄 끝으로 옮겼다(구분선 뒤) — 칩 줄이 176 → 134 로 올라가고 필터 패널이 218 → 186 으로 올라간다.
-           md 이상은 검색바가 헤더 안으로 들어가 그 레인이 비므로 88 을 쓴다(오른쪽 240px 비움은
-           떠 있던 줌 판 자리였다 — 줌 탭이 이 줄로 들어와 right-5 로 편다).
+             줌 탭 128 ~ 166
+             필터 칩 176 ~ 206  ← 여기
+             필터 패널 218 ~
+           예전에는 칩 줄이 140 이라 줌 탭(128~166)과 세로로 겹쳤고, 오른쪽 끝이
+           막히지 않아 '매물'·'필터' 칩이 탭 아래로 들어가 눌리지 않았다.
+           (소유자 스크린샷: 시·군·구 알약이 매물 칩을 절반쯤 덮은 상태)
+           md 이상은 검색바가 헤더 안으로 들어가 그 레인이 비므로 88 을 쓴다.
            inline style 은 반응형 top 클래스를 덮어쓰므로 top 은 클래스로만 준다. */}
       {/* [968 · 24] 접힌 동안 투명·inert (md 미만에서만 접힌다).
           [968 · 27] 가로 스크롤 레일 — 설치 앱의 당겨서 새로고침이 여기서 시작되지 않게. */}
@@ -4049,24 +4134,20 @@ export function MapClient({
         <div
           data-ptr-ignore=""
           inert={chromeCompact}
-          className={`scroll-x-hidden-bar absolute left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+134px)] z-30 flex items-center gap-1.5 py-0.5 md:left-[356px] md:right-5 md:top-[calc(env(safe-area-inset-top,0px)+88px)] lg:hidden [&>*]:shrink-0 ${chromeFoldClass}`}
+          className={`scroll-x-hidden-bar absolute left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+176px)] z-30 flex items-center gap-1.5 py-0.5 md:left-[356px] md:right-[240px] md:top-[calc(env(safe-area-inset-top,0px)+88px)] lg:hidden [&>*]:shrink-0 ${chromeFoldClass}`}
         >
           {filterBar}
-          <span className="map-zone-sep" aria-hidden="true" />
-          <div role="group" aria-label="지도 단위" className="flex items-center gap-1" title={ZOOM_CAPTION[zoom]}>
-            <ZoomTabButtons zoom={zoom} onSelect={handleZoomTab} />
-          </div>
         </div>
       )}
 
       {/* ===== 상세 필터 확장 패널 (item3) — 접이식·모바일 친화 =====
            md 상단이 184 였을 때 우상단 줌 캡션(top 168~195, right-5)의 왼쪽
-           64×11px 을 덮어 204 로 내렸었다. [v4] 줌 캡션 상자를 없애고 md 줌 판을 칩 줄로 옮겨
-           그 이유가 사라졌다 — 칩 줄(88~130) 아래 136 으로 올린다. lg~xl 에 남는 떠 있는 줌 판(오른쪽
-           128~166)과는 가로로 떨어져 있다(패널 오른쪽 끝 ≤ 664 · 줌 판 왼쪽 ≥ 834). */}
+           64×11px 을 덮었다 — 768폭에서는 패널 오른쪽 끝이 664 까지 와서 캡션
+           시작점(600)을 지나기 때문이다. 캡션을 숨기는 대신 패널을 캡션 아래
+           204 로 내린다. 겹침을 없애되 존재를 지우지 않는다. */}
       {filtersExpanded && (
         <div
-          className="absolute left-4 top-[calc(env(safe-area-inset-top,0px)+186px)] z-[41] w-[300px] max-w-[calc(100vw_-_32px)] [--nz-filter-max-h:calc(100dvh_-_env(safe-area-inset-top,0px)_-_186px_-_var(--nz-map-bottom-lane)_-_8px)] md:left-[var(--nz-filter-left)] md:top-[calc(env(safe-area-inset-top,0px)+136px)] md:max-w-[calc(100vw_-_var(--nz-filter-left)_-_16px)] md:[--nz-filter-max-h:calc(100dvh_-_env(safe-area-inset-top,0px)_-_136px_-_var(--nz-map-bottom-lane)_-_8px)] lg:left-[var(--nz-filter-left-lg)] lg:max-w-[calc(100vw_-_var(--nz-filter-left-lg)_-_16px)]"
+          className="absolute left-4 top-[calc(env(safe-area-inset-top,0px)+218px)] z-[41] w-[300px] max-w-[calc(100vw_-_32px)] [--nz-filter-max-h:calc(100dvh_-_env(safe-area-inset-top,0px)_-_218px_-_var(--nz-map-bottom-lane)_-_8px)] md:left-[var(--nz-filter-left)] md:top-[calc(env(safe-area-inset-top,0px)+204px)] md:max-w-[calc(100vw_-_var(--nz-filter-left)_-_16px)] md:[--nz-filter-max-h:calc(100dvh_-_env(safe-area-inset-top,0px)_-_204px_-_var(--nz-map-bottom-lane)_-_8px)] lg:left-[var(--nz-filter-left-lg)] lg:max-w-[calc(100vw_-_var(--nz-filter-left-lg)_-_16px)]"
           style={
             {
               "--nz-filter-left": `${filterLeftMdPx}px`,
@@ -4081,25 +4162,23 @@ export function MapClient({
       {/* 현재 위치 안내는 위쪽 상태 안내 열(mapNotices)에서 함께 쌓는다 —
           예전에는 절단 안내와 같은 좌표를 써서 둘이 동시에 뜨면 포개졌다. */}
 
-      {/* ===== 반경 · 거리 재기 안내/결과 =====
-           [v4] 유리 + 큰 그림자 → 흰 면 + 1px 선 · 제목 한 줄(오른쪽 값) + 사용법 한 줄 · 파란 옅은 상자 → 구분선 행 ·
-           채움 파랑 "수정" → 테두리 "옮기기". 모바일 top 212 → 186(칩 줄이 176 → 134 로 올라간 만큼) ·
-           md 이상은 212 그대로(lg~xl 오른쪽 128~166 에 떠 있는 줌 판 아래). */}
+      {/* ===== 반경 · 거리 재기 안내/결과 ===== */}
       {mapClickMode && (
-        <div className="absolute right-3 top-[calc(env(safe-area-inset-top,0px)+186px)] z-[42] flex max-h-[min(70dvh,520px)] w-[min(280px,calc(100vw-24px))] flex-col gap-2 overflow-y-auto rounded-xl border border-line bg-surface px-3.5 py-3 sm:right-5 md:top-[calc(env(safe-area-inset-top,0px)+212px)]">
+        <div
+          className="glass-strong absolute right-3 z-[42] flex max-h-[min(70dvh,520px)] w-[min(280px,calc(100vw-24px))] flex-col gap-2 overflow-y-auto rounded-2xl px-3.5 py-3 shadow-[0_12px_32px_rgba(16,28,54,.18)] sm:right-5"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 212px)" }}
+        >
           {mapClickMode === "radius" ? (
             <>
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="t-section text-ink">반경 보기</span>
-                <span className="t-section text-ink tabular-nums">
-                  {radiusM >= 1000 ? `${radiusM / 1000}km` : `${radiusM}m`}
-                </span>
-              </div>
-              <p className="t-caption text-text-3">
+              <div className="t-sub font-bold text-ink">반경 보기</div>
+              <p className="t-sub text-text-3">
                 {radiusCenter
-                  ? "핸들을 끌어 중심·크기 조정 · 지도를 눌러 중심 이동"
-                  : "지도를 눌러 중심 찍기 · 안 찍으면 화면 중앙"}
+                  ? "중심·크기 핸들을 드래그하거나, 지도를 클릭해 중심을 옮겨요."
+                  : "지도를 클릭해 중심을 찍으세요. 안 찍으면 화면 중앙 기준입니다."}
               </p>
+              <div className="rounded-lg bg-[rgba(29,79,216,.07)] px-2.5 py-2 t-sub font-bold text-primary">
+                반경 {radiusM >= 1000 ? `${radiusM / 1000}km` : `${radiusM}m`} 안 단지 표시
+              </div>
               <label className="flex items-center gap-2 t-sub text-text-2">
                 <span className="shrink-0 font-bold">직접 입력</span>
                 <input
@@ -4122,7 +4201,7 @@ export function MapClient({
                 <button
                   type="button"
                   onClick={() => setRadiusCenter(null)}
-                  className="btn-secondary flex-1 rounded-lg px-2 py-1.5 t-sub"
+                  className="flex-1 rounded-lg border border-line px-2 py-1.5 t-sub font-bold text-text-2"
                 >
                   중심 삭제
                 </button>
@@ -4131,7 +4210,7 @@ export function MapClient({
                   onClick={() => {
                     setRadiusCenter(center);
                   }}
-                  className="btn-secondary flex-1 rounded-lg px-2 py-1.5 t-sub"
+                  className="flex-1 rounded-lg border border-line px-2 py-1.5 t-sub font-bold text-text-2"
                 >
                   화면 중앙으로
                 </button>
@@ -4139,100 +4218,129 @@ export function MapClient({
             </>
           ) : (
             <>
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="t-section text-ink">거리 재기</span>
-                <span className="t-sub text-text-3 tabular-nums">지점 {measurePoints.length}개</span>
+              <div className="flex items-center justify-between">
+                <span className="t-sub font-bold text-ink">거리 재기</span>
+                <span className="t-caption text-text-3">{measurePoints.length}개 지점</span>
               </div>
-              <p className="t-caption text-text-3">
+              <p className="t-sub text-text-3">
                 {measureRelocate
-                  ? "지도를 누르면 선택한 지점이 그곳으로 이동"
-                  : measurePoints.length < 2
-                    ? "지도를 눌러 두 지점 이상 찍기 · 번호를 끌어 이동"
-                    : "지도를 눌러 지점 추가 · 번호를 끌어 이동 · 눌러서 선택"}
+                  ? "지도를 클릭하면 선택한 지점이 그곳으로 옮겨져요."
+                  : "클릭으로 지점 추가 · 번호 드래그로 이동 · 탭해서 선택 후 수정/삭제"}
               </p>
-              {measurePoints.length >= 2 && (
-                <ul className="divide-y divide-line">
-                  <li className="flex min-h-10 items-center justify-between gap-2 py-1.5">
-                    <span className="t-sub text-text-2">직선 · 실선</span>
-                    <span className="t-section text-ink tabular-nums">{formatDistanceM(measureStraightM)}</span>
-                  </li>
-                  {routeResult?.driving ? (
-                    <li>
-                      <button
-                        type="button"
-                        aria-pressed={showDrivingRoute}
-                        onClick={() => setShowDrivingRoute((v) => !v)}
-                        className="flex min-h-10 w-full items-center justify-between gap-2 py-1.5 text-left"
-                      >
-                        <span className="t-sub text-text-2">
-                          차량 · 주황 점선 {showDrivingRoute ? "표시" : "숨김"}
-                        </span>
-                        <span className="t-sub font-bold text-ink tabular-nums">
-                          {formatDistanceM(routeResult.driving.distanceM)} · 약 {routeResult.driving.durationMin}분
-                        </span>
-                      </button>
-                    </li>
-                  ) : !routeLoading ? (
-                    <li className="py-1.5 t-caption text-text-3">차량 경로 없음 · 직선만 표시</li>
-                  ) : null}
+              {measurePoints.length < 2 ? (
+                <p className="t-sub text-text-3">
+                  두 지점 이상이면 직선·차량·도보 거리를 보여 드려요.
+                </p>
+              ) : (
+                <>
+                  <div className="rounded-lg bg-[rgba(29,79,216,.07)] px-2.5 py-2">
+                    <div className="t-caption text-text-3">직선 (실선)</div>
+                    <div className="t-section text-primary">
+                      {formatDistanceM(measureStraightM)}
+                    </div>
+                  </div>
+                  {routeLoading && (
+                    <div className="t-caption text-text-3">차량·도보 경로 찾는 중…</div>
+                  )}
+                  {routeError && (
+                    <div className="t-caption text-danger">{routeError}</div>
+                  )}
+                  {routeResult?.driving && (
+                    <button
+                      type="button"
+                      onClick={() => setShowDrivingRoute((v) => !v)}
+                      className={`rounded-lg px-2.5 py-2 text-left ${
+                        showDrivingRoute
+                          ? "bg-[rgba(230,126,34,.12)]"
+                          : "bg-bg"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between t-caption text-text-3">
+                        <span>차량 (주황 점선)</span>
+                        <span>{showDrivingRoute ? "표시" : "숨김"}</span>
+                      </div>
+                      <div className="t-body font-bold text-warning">
+                        {formatDistanceM(routeResult.driving.distanceM)} · 약{" "}
+                        {routeResult.driving.durationMin}분
+                      </div>
+                    </button>
+                  )}
+                  {!routeLoading && !routeResult?.driving && measurePoints.length >= 2 && (
+                    <div className="rounded-lg bg-bg px-2.5 py-2 t-caption text-text-3">
+                      차량 경로 API 미연동 또는 조회 불가 — 직선만 표시
+                    </div>
+                  )}
                   {routeResult?.walking && (
-                    <li>
-                      <button
-                        type="button"
-                        aria-pressed={showWalkingRoute}
-                        onClick={() => setShowWalkingRoute((v) => !v)}
-                        className="flex min-h-10 w-full items-center justify-between gap-2 py-1.5 text-left"
-                      >
-                        <span className="t-sub text-text-2">
-                          도보{routeResult.walking.basis === "estimate" ? " 추정" : ""} · 청록 점선{" "}
-                          {showWalkingRoute ? "표시" : "숨김"}
+                    <button
+                      type="button"
+                      onClick={() => setShowWalkingRoute((v) => !v)}
+                      className={`rounded-lg px-2.5 py-2 text-left ${
+                        showWalkingRoute
+                          ? "bg-[rgba(13,148,136,.12)]"
+                          : "bg-bg"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between t-caption text-text-3">
+                        <span>
+                          도보{" "}
+                          {routeResult.walking.basis === "estimate" ? "추정" : ""}{" "}
+                          (청록 점선)
                         </span>
-                        <span className="t-sub font-bold text-ink tabular-nums">
-                          {formatDistanceM(routeResult.walking.distanceM)} · 약 {routeResult.walking.durationMin}분
-                        </span>
-                      </button>
-                    </li>
+                        <span>{showWalkingRoute ? "표시" : "숨김"}</span>
+                      </div>
+                      <div className="t-body font-bold text-success">
+                        {formatDistanceM(routeResult.walking.distanceM)} · 약{" "}
+                        {routeResult.walking.durationMin}분
+                      </div>
+                    </button>
                   )}
-                  {measureLegs.length > 1 &&
-                    measureLegs.map((l) => (
-                      <li key={`${l.from}-${l.to}`} className="flex items-center justify-between gap-2 py-1.5 t-sub">
-                        <span className="text-text-2">
-                          {l.from} → {l.to}
-                        </span>
-                        <span className="font-bold text-ink tabular-nums">{formatDistanceM(l.meters)}</span>
-                      </li>
-                    ))}
                   {measureLegs.length > 1 && (
-                    <li className="flex items-center justify-between gap-2 py-1.5 t-sub">
-                      <span className="text-text-3">이어 잰 합계</span>
-                      <span className="font-bold text-ink tabular-nums">{formatDistanceM(measureTotalM)}</span>
-                    </li>
+                    <div className="flex flex-col gap-0.5">
+                      {measureLegs.map((l) => (
+                        <div
+                          key={`${l.from}-${l.to}`}
+                          className="flex items-center justify-between t-sub text-text-2"
+                        >
+                          <span>
+                            {l.from} → {l.to}
+                          </span>
+                          <span className="font-bold text-text-1">
+                            {formatDistanceM(l.meters)}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="mt-0.5 flex items-center justify-between border-t border-[rgba(16,28,54,.08)] pt-1 t-sub">
+                        <span className="text-text-3">이어 잰 합계</span>
+                        <span className="font-bold text-ink">
+                          {formatDistanceM(measureTotalM)}
+                        </span>
+                      </div>
+                    </div>
                   )}
-                </ul>
+                </>
               )}
-              {routeLoading && <div className="t-caption text-text-3">차량·도보 경로 찾는 중…</div>}
-              {routeError && <div className="t-caption text-danger">{routeError}</div>}
 
               {selectedMeasureIdx != null && (
-                <div className="flex items-center justify-between gap-2 border-t border-line pt-2">
-                  <span className="t-sub font-bold text-ink">지점 {selectedMeasureIdx + 1} 선택</span>
-                  <span className="flex gap-1.5">
+                <div className="rounded-lg border border-primary/30 bg-[rgba(29,79,216,.06)] px-2.5 py-2">
+                  <div className="t-sub font-bold text-ink">
+                    지점 {selectedMeasureIdx + 1} 선택됨
+                  </div>
+                  <div className="mt-1.5 flex gap-1.5">
                     <button
                       type="button"
                       onClick={() => setMeasureRelocate(true)}
-                      className="btn-secondary rounded-lg px-3 py-1.5 t-sub"
+                      className="flex-1 rounded-lg bg-primary px-2 py-1.5 t-sub font-bold text-white"
                     >
-                      옮기기
+                      수정
                     </button>
                     <button
                       type="button"
                       onClick={deleteSelectedMeasurePoint}
-                      /* btn-secondary 는 레이어 밖 규칙이라 글자색 유틸을 이긴다 — 삭제(위험 글자)는 직접 그린다 */
-                      className="min-h-10 rounded-lg border border-line-strong bg-surface px-3 py-1.5 t-sub font-bold text-danger"
+                      className="flex-1 rounded-lg border border-danger/40 bg-danger-soft px-2 py-1.5 t-sub font-bold text-danger"
                     >
                       삭제
                     </button>
-                  </span>
+                  </div>
                 </div>
               )}
 
@@ -4245,7 +4353,7 @@ export function MapClient({
                     setMeasureRelocate(false);
                   }}
                   disabled={measurePoints.length === 0}
-                  className="btn-secondary flex-1 rounded-lg px-2 py-1.5 t-sub"
+                  className="flex-1 rounded-lg border border-line px-2 py-1.5 t-sub font-bold text-text-2 disabled:opacity-40"
                 >
                   되돌리기
                 </button>
@@ -4258,46 +4366,48 @@ export function MapClient({
                     setRouteResult(null);
                   }}
                   disabled={measurePoints.length === 0}
-                  className="btn-secondary flex-1 rounded-lg px-2 py-1.5 t-sub"
+                  className="flex-1 rounded-lg border border-line px-2 py-1.5 t-sub font-bold text-text-2 disabled:opacity-40"
                 >
                   전체 삭제
                 </button>
               </div>
 
-              {/* [v4] "액션" 머리말(뜻 없는 말)을 뺐다 — 같은 높이 네 칸 격자는 그대로 */}
               {measurePoints.length >= 2 && (
-                <div className="grid grid-cols-2 gap-1.5 border-t border-line pt-2">
-                  <button
-                    type="button"
-                    onClick={() => void copyMeasureSummary()}
-                    className="btn-secondary rounded-lg px-2 py-1.5 t-sub"
-                  >
-                    거리 복사
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openExternalDirections("car")}
-                    className="btn-secondary rounded-lg px-2 py-1.5 t-sub"
-                  >
-                    차량 길찾기
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openExternalDirections("walk")}
-                    className="btn-secondary rounded-lg px-2 py-1.5 t-sub"
-                  >
-                    도보 길찾기
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedMeasureIdx(0);
-                      setMeasureRelocate(true);
-                    }}
-                    className="btn-secondary rounded-lg px-2 py-1.5 t-sub"
-                  >
-                    시작점 옮기기
-                  </button>
+                <div className="flex flex-col gap-1.5 border-t border-[rgba(16,28,54,.08)] pt-2">
+                  <div className="t-caption font-bold text-text-3">액션</div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => void copyMeasureSummary()}
+                      className="rounded-lg border border-line px-2 py-1.5 t-sub font-bold text-text-2"
+                    >
+                      거리 복사
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openExternalDirections("car")}
+                      className="rounded-lg border border-line px-2 py-1.5 t-sub font-bold text-text-2"
+                    >
+                      차량 길찾기
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openExternalDirections("walk")}
+                      className="rounded-lg border border-line px-2 py-1.5 t-sub font-bold text-text-2"
+                    >
+                      도보 길찾기
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedMeasureIdx(0);
+                        setMeasureRelocate(true);
+                      }}
+                      className="rounded-lg border border-line px-2 py-1.5 t-sub font-bold text-text-2"
+                    >
+                      시작점 수정
+                    </button>
+                  </div>
                 </div>
               )}
             </>
@@ -4313,25 +4423,26 @@ export function MapClient({
               setMeasureRelocate(false);
               setRouteResult(null);
             }}
-            className="btn-secondary rounded-lg px-2 py-1.5 t-sub"
+            className="rounded-lg bg-[rgba(16,28,54,.06)] px-2 py-1.5 t-sub font-bold text-text-2"
           >
-            {mapClickMode === "radius" ? "반경 보기 끝내기" : "거리 재기 끝내기"}
+            끝내기
           </button>
         </div>
       )}
 
-      {/* ===== 줌 레벨 탭 (lg~xl) — xl 이상은 헤더, lg 미만은 칩 줄 끝 =====
-           [v4] 떠 있는 판은 헤더에도 칩 줄에도 자리가 없는 폭(lg~xl, filterBar 가 헤더에 들어가 헤더가 찬다)에서만
-           남긴다 · 유리 → 흰 면 + 1px 선. 그 아래 붙어 있던 줌 설명 상자("줌 레벨 12 · 동별 시세 + 활동량")는
-           지웠다 — 같은 말은 title 로만 남긴다(v4 규칙 3 · 쌓인 설명 캡션 금지). */}
+      {/* ===== 줌 레벨 탭 (xl 미만 — xl 이상은 헤더에 표시) =====
+           지도 위 플로팅 판은 우측 마커 라벨 위에 뜬다. 넓은 화면은 헤더로
+           올렸고(위 헤더 블록), 이 판은 헤더에 자리가 없는 폭에서만 남는다. */}
+      {/* [968 · 24] 모바일 접힘 대상 — 줌 탭도 상단 크롬(128~166 레인)이다 */}
       <div
-        role="group"
-        aria-label="지도 단위"
-        title={ZOOM_CAPTION[zoom]}
-        className="absolute right-5 z-30 hidden items-center gap-1 rounded-full border border-line bg-surface p-1 lg:flex xl:hidden"
-        style={{ top: "calc(env(safe-area-inset-top, 0px) + 128px)" }}
+        inert={chromeCompact}
+        className={`glass absolute right-5 z-30 mt-9 flex items-center gap-0.5 rounded-full p-1 md:mt-0 md:translate-y-9 xl:hidden ${chromeFoldClass}`}
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 92px)" }}
       >
         <ZoomTabButtons zoom={zoom} onSelect={handleZoomTab} />
+      </div>
+      <div className="absolute right-5 top-[92px] z-30 hidden translate-y-[76px] rounded-lg bg-[var(--glass-bg)] px-2.5 py-[5px] t-sub text-text-3 md:block xl:hidden">
+        {ZOOM_CAPTION[zoom]}
       </div>
 
       {/* 줌별 하단 정보 오버레이(보는 사람 수·전문가 수·조회수·급매 등)는
@@ -4341,175 +4452,231 @@ export function MapClient({
           단지를 고르면(selected = 목록 클릭, infoComplex = 마커·검색·인기목록 클릭)
           이 목록은 사라지고 같은 자리에 단지 상세가 들어선다. 예전에는 infoComplex
           를 조건에서 빠뜨려, 마커를 눌러도 목록이 그대로 남고 상세가 지도 하단을
-          가리는 채로 둘 다 떠 있었다(소유자 지적).
-          [v4 · 규칙 1·3·5·8] 유리 → 흰 면 + 1px 선 · 머리 = 제목 한 줄 + 사실 한 줄("{진입 지역}에서 시작 ·
-          최근 6개월 거래순") · 사용법 문장("지도를 움직이면 …바뀝니다")·📍 배지·줄마다 되풀이되던 "최근 6개월"·
-          순위 막대·카드 행 → 구분선 행(왼쪽 순위 · 이름 + 보조 한 줄 / 오른쪽 거래 건수) · 실패 카드 3장 → 한 줄씩. */}
+          가리는 채로 둘 다 떠 있었다(소유자 지적). */}
       {!selected && !infoComplex && panelOpen && (
         <aside
           data-tour="map-price-panel"
-          className="absolute bottom-[var(--nz-map-bottom-lane)] left-5 z-30 hidden w-[320px] flex-col overflow-hidden rounded-xl border border-line bg-surface md:flex"
+          className="glass-strong absolute bottom-[var(--nz-map-bottom-lane)] left-5 z-30 hidden w-[320px] flex-col overflow-hidden rounded-3xl md:flex"
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 92px)" }}
         >
-          <div className="px-5 pb-2 pt-4">
-            <h2 className="t-section text-ink">
+          <div className="flex items-baseline justify-between px-5 pb-1 pt-4">
+            <div className="t-section text-ink">
               {popularScope === "viewport" ? "이 지역 인기 단지" : "전국 인기 단지"}
-            </h2>
-            {/* ?region= 으로 들어왔음을 화면에서도 확인할 수 있게 — 관심지역 칩을
-                눌렀는데 늘 같은 화면이 뜨던 예전과 달라졌다는 신호(예전 📍 배지 → 사실 줄 앞머리) */}
-            <p className="mt-0.5 truncate t-sub text-text-3">
-              {focusedRegion ? `${focusedRegion}에서 시작 · ` : ""}최근 6개월 거래순
-              {txType === "rent" ? " · 가격은 매매 평균" : ""}
-            </p>
+            </div>
+            <div className="t-sub text-text-3">최근 거래순</div>
           </div>
-          {(popularFailed || danjiLoadFailed || regionMarkersLoadFailed) && (
-            <ul className="flex flex-col gap-0.5 px-5 pb-2" role="status">
-              {popularFailed && <li className="t-sub font-bold text-ink">인기 단지 조회 실패(단지 없음 아님)</li>}
+          {/* ?region= 으로 들어왔음을 화면에서도 확인할 수 있게 — 관심지역 칩을
+              눌렀는데 늘 같은 화면이 뜨던 예전과 달라졌다는 신호. */}
+          {focusedRegion && (
+            <div className="px-5 pb-1">
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2.5 py-1 t-sub font-bold text-primary">
+                <Icon name="📍" size={11} />
+                {focusedRegion}에서 시작
+              </span>
+            </div>
+          )}
+          <div className="px-5 pb-2.5 t-sub text-text-3">
+            {popularScope === "viewport"
+              ? "지도를 움직이면 보이는 지역 기준으로 바뀝니다"
+              : "지도를 확대하면 그 지역 기준으로 바뀝니다"}
+          </div>
+          {popularFailed && (
+            <div className="mx-3 mb-2 rounded-lg border border-line bg-surface px-3.5 py-3">
+              <div className="t-sub font-bold text-ink">
+                인기 단지를 지금 불러오지 못했어요
+              </div>
+              <p className="mt-1 t-sub text-text-3">
+                이 지역에 단지가 없는 게 아니라 조회가 실패했습니다. 지도는 그대로 쓸 수 있어요.
+              </p>
+            </div>
+          )}
+          {danjiLoadFailed && (
+            <div className="mx-3 mb-2 rounded-lg border border-line bg-surface px-3.5 py-3">
               {/* [970 · B-38] 실패한 건 지도 마커용 목록이다 — 바로 아래 인기 단지는 멀쩡히
                   나오는데 "단지 목록을 못 불러왔다"고 하면 화면이 스스로를 부정한다 */}
-              {danjiLoadFailed && (
-                <li className="t-sub font-bold text-ink">마커용 단지 목록 조회 실패(0개 아님) · 잠시 후 새로고침</li>
-              )}
-              {!danjiLoadFailed && regionMarkersLoadFailed && (
-                <li className="t-sub font-bold text-ink">지역 시세 말풍선 조회 실패(거래 없음 아님)</li>
-              )}
-            </ul>
+              <div className="t-sub font-bold text-ink">
+                지도 마커용 단지 목록을 지금 불러오지 못했어요
+              </div>
+              <p className="mt-1 t-sub text-text-3">
+                이 지역에 단지가 0개인 게 아니라 마커용 조회가 실패했습니다.{" "}
+                {popular.length > 0 ? "아래 인기 단지와 지도는" : "지도는"} 그대로 쓸 수
+                있어요 — 잠시 후 새로고침해 주세요.
+              </p>
+            </div>
+          )}
+          {!danjiLoadFailed && regionMarkersLoadFailed && (
+            <div className="mx-3 mb-2 rounded-lg border border-line bg-surface px-3.5 py-3">
+              <div className="t-sub font-bold text-ink">
+                지역 시세 말풍선을 불러오지 못했어요
+              </div>
+              <p className="mt-1 t-sub text-text-3">
+                거래가 없는 게 아니라 조회가 실패했습니다. 단지 목록과 지도는 그대로 쓸 수 있어요.
+              </p>
+            </div>
+          )}
+          {txType === "rent" && (
+            <div className="px-5 pb-1.5 t-caption text-text-3">
+              목록 가격은 매매 실거래 평균이에요 — 전세 보증금은 지도 마커에서 확인
+            </div>
           )}
           {!danjiLoadFailed && (rangeActive || commuteActive) && filteredDanji.length === 0 && (
-            <div className="flex items-center justify-between gap-2 px-5 pb-2">
-              <span className="t-sub text-text-2">조건에 맞는 단지 없음</span>
-              <button type="button" onClick={resetFilters} className="min-h-10 shrink-0 t-sub font-bold text-primary">
+            <div className="flex flex-col items-center gap-2 px-5 py-6 text-center">
+              <div className="text-xs text-text-2">조건에 맞는 단지가 없어요.</div>
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="btn-soft rounded-lg px-3 py-1.5 t-sub"
+              >
                 필터 초기화
               </button>
             </div>
           )}
-          <div className="flex-1 overflow-y-auto px-5">
+          <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-3">
             {(rangeActive || commuteActive) && popular.length > 0 && (
-              <p className="pb-1 t-caption text-text-3">순위는 지도 영역 기준 · 상세 필터 미적용</p>
+              <div className="px-2 pb-1 t-caption text-text-3">
+                인기 순위는 지도 영역 기준이에요 — 상세 필터(가격·면적 등)와는 무관합니다.
+              </div>
             )}
             {!popularFailed && !popularLoading && popular.length === 0 && (
-              <p className="py-4 t-sub text-text-3">이 영역에 실거래 기록 단지 없음</p>
+              <div className="px-2 py-6 text-center t-sub text-text-3">
+                이 영역에는 실거래가 기록된 단지가 없어요.
+                <br />
+                지도를 넓히거나 다른 지역으로 옮겨 보세요.
+              </div>
             )}
             {/* 목록이 채워지기 전에는 빈 칸이었다 — 결과가 통째로 튀어나오며
-                패널이 점프했다. 같은 모양(구분선 행)으로 자리를 먼저 잡는다. */}
+                패널이 점프했다. 같은 모양으로 자리를 먼저 잡는다. */}
             {popularLoading && popular.length === 0 && !popularFailed && (
-              <ul className="divide-y divide-line" aria-hidden="true">
+              <div className="flex flex-col gap-2 px-1 py-1">
                 {[0, 1, 2, 3, 4].map((k) => (
-                  <li key={k} className="flex min-h-14 items-center gap-3 py-3">
-                    <span className="skeleton h-3.5 w-3 rounded" />
+                  <div key={k} className="card flex items-center gap-3 rounded-lg px-4 py-3">
+                    <span className="skeleton h-4 w-4 rounded" />
                     <span className="flex min-w-0 flex-1 flex-col gap-1.5">
                       <span className="skeleton h-3.5 w-[70%] rounded" />
                       <span className="skeleton h-2.5 w-[45%] rounded" />
                     </span>
-                    <span className="skeleton h-4 w-10 rounded" />
-                  </li>
+                    <span className="skeleton h-7 w-12 rounded" />
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
-            {popular.length > 0 && (
-              <ul className="divide-y divide-line">
-                {popular.map((p, i) => {
-                  const priceLabel = manwonLabel(p.avgPriceManwon ?? undefined);
-                  const sub = [p.regionName, p.buildYear ? `${p.buildYear}년` : null, priceLabel ? `평균 ${priceLabel}` : null]
-                    .filter(Boolean)
-                    .join(" · ");
-                  return (
-                    <li key={p.id}>
-                      <button
-                        type="button"
-                        onClick={() => openInfoPanel(p.id, p.name, p.lat, p.lng)}
-                        className="press flex min-h-14 w-full items-center gap-3 py-3 text-left"
-                      >
-                        {/* 순위 — "왜 이 순서인가"가 목록의 뜻이다(근거 숫자는 오른쪽) */}
-                        <span className="w-4 shrink-0 t-sub tabular-nums text-text-3">{i + 1}</span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate t-body font-bold text-ink">{p.name}</span>
-                          {sub ? <span className="mt-0.5 block truncate t-sub text-text-3">{sub}</span> : null}
-                        </span>
-                        {/* 순위 근거를 그대로 적는다 — 숨은 점수로 줄 세우지 않는다 */}
-                        <span className="shrink-0 t-body t-num text-ink">
-                          {p.recentTradeCount.toLocaleString("ko-KR")}건
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+            {popular.map((p, i) => {
+              /* 순위 근거(최근 6개월 거래 건수)를 **길이**로도 보인다.
+                 숫자만 세로로 늘어놓으면 1위와 9위의 차이가 안 읽힌다. */
+              const barPct = popularMax > 0
+                ? Math.max(4, Math.round((p.recentTradeCount / popularMax) * 100))
+                : 0;
+              const priceLabel = manwonLabel(p.avgPriceManwon ?? undefined);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => openInfoPanel(p.id, p.name, p.lat, p.lng)}
+                  /* 선택 상태 테두리는 두지 않는다 — 이 목록은 아무것도 선택되지
+                     않았을 때만 그려지므로(위 조건) 선택된 항목이 있을 수 없다. */
+                  className="tile card flex items-center gap-3 rounded-lg px-4 py-3 text-left"
+                >
+                  {/* 순위를 눈에 보이게 — "왜 이 순서인가"가 목록의 뜻이다 */}
+                  <span
+                    className={`t-num shrink-0 text-[13px] ${
+                      i < 3 ? "text-primary" : "text-text-3"
+                    }`}
+                  >
+                    {i + 1}
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col gap-1">
+                    <span className="t-section block truncate text-ink">{p.name}</span>
+                    <span className="t-caption flex flex-wrap items-center gap-x-1.5 text-text-3">
+                      <span className="truncate">{p.regionName}</span>
+                      {p.buildYear ? <span>· {p.buildYear}년</span> : null}
+                      {priceLabel ? (
+                        <span className="t-num font-bold text-primary">· 평균 {priceLabel}</span>
+                      ) : null}
+                    </span>
+                    <span className="rank-track text-primary" aria-hidden="true">
+                      <span className="rank-fill" style={{ width: `${barPct}%` }} />
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-right">
+                    {/* 순위 근거를 그대로 적는다 — 숨은 점수로 줄 세우지 않는다 */}
+                    <span className="t-num block t-body text-ink">
+                      {p.recentTradeCount.toLocaleString("ko-KR")}건
+                    </span>
+                    <span className="t-caption block text-text-3">최근 6개월</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </aside>
       )}
 
-      {/* ===== 모바일 목록 뷰 (지도↔목록 전환) — 데스크탑은 좌측 패널이 담당 =====
-           [v4 · 규칙 5·8] 카드 쌓기(bg-bg 위 흰 카드) → 흰 면 위 구분선 행(SummaryRow 모양: 이름 + 보조 한 줄 / 오른쪽 값) ·
-           줄마다 되풀이되던 "면적 통합"은 뺐다(모든 행이 같은 값 — 머리 "국토부 실거래 평균" 이 같은 사실) ·
-           등락 "—"(비교할 전월 없음)는 그리지 않는다. */}
+      {/* ===== 모바일 목록 뷰 (지도↔목록 전환) — 데스크탑은 좌측 패널이 담당 ===== */}
       {mobileView === "list" && !selected && (
         <div
-          className="absolute inset-x-0 bottom-0 z-30 flex flex-col bg-surface md:hidden"
+          className="absolute inset-x-0 bottom-0 z-30 flex flex-col bg-bg md:hidden"
           /* [970 · B-19] 86px 은 상단 검색 카드 높이에 못 미쳐 목록 헤더("○○ 단지 N")가
              검색창 아래 깔렸다(감사 실측) — 검색 카드 아래(134px)에서 시작한다. */
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 134px)" }}
         >
-          <div className="flex items-baseline justify-between gap-2 border-b border-line px-5 pb-2 pt-3">
-            <h2 className="min-w-0 truncate t-section text-ink">
-              {regionLabel} 단지{danjiLoadFailed ? "" : ` ${filteredDanji.length}`}
+          <div className="flex items-baseline justify-between px-5 pb-2 pt-3">
+            <div className="t-section text-ink">
+              {regionLabel} 단지 {danjiLoadFailed ? "—" : filteredDanji.length}
               {!danjiLoadFailed && (rangeActive || commuteActive) && (
-                <span className="ml-1 t-sub font-medium text-text-3">· 필터 적용</span>
+                <span className="ml-1 t-sub font-bold text-primary">필터 적용</span>
               )}
-            </h2>
-            <span className="shrink-0 t-sub text-text-3">국토부 실거래 평균</span>
+            </div>
+            <span className="t-sub text-text-3">국토부 실거래 평균</span>
           </div>
           {filteredDanji.length === 0 ? (
-            <div className="flex items-center justify-between gap-2 px-5 py-4">
+            <div className="flex flex-col items-center gap-2 px-5 py-10 text-center">
               {/* 2026-07-26: 조회 실패도 여기로 떨어져서 "이 지역 단지 목록을 준비 중이에요"
                   라고 안내했다 — 수집이 안 된 것과 못 읽은 것은 전혀 다른 사건이다. */}
-              <p className="t-sub text-text-2" role="status">
+              <div className="text-xs text-text-2">
                 {danjiLoadFailed
-                  ? "단지 목록 조회 실패(0개 아님) · 잠시 후 새로고침"
+                  ? "단지 목록을 지금 불러오지 못했어요. 단지가 0개인 게 아니라 조회가 실패했습니다."
                   : rangeActive || commuteActive
-                    ? "조건에 맞는 단지 없음"
-                    : "이 지역 단지 목록 준비 중"}
-              </p>
+                    ? "조건에 맞는 단지가 없어요."
+                    : "이 지역 단지 목록을 준비 중이에요."}
+              </div>
               {!danjiLoadFailed && (rangeActive || commuteActive) && (
-                <button type="button" onClick={resetFilters} className="min-h-10 shrink-0 t-sub font-bold text-primary">
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="btn-soft rounded-lg px-3 py-1.5 t-sub"
+                >
                   필터 초기화
                 </button>
               )}
             </div>
           ) : (
             <div
-              className="flex-1 overflow-y-auto px-5"
+              className="flex flex-1 flex-col gap-2 overflow-y-auto px-4"
               style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 96px)" }}
             >
-              {/* [968 · 25] 처음 40개만 + "더 보기". 각 행은 .cv-auto(content-visibility:
-                  auto, globals.css [968 · 7]) — 스크롤 밖 행은 레이아웃·페인트를 미룬다.
-                  [v4] 행 높이가 카드보다 작아 추정 높이(.cv-auto 420px)를 행 높이로 맞춘다(인라인이 이긴다). */}
-              <ul className="divide-y divide-line">
-                {visibleDanji.map((d) => (
-                  <li key={d.id} className="cv-auto" style={{ containIntrinsicSize: "auto 64px" }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        selectDanji(d.id);
-                        setMobileView("map"); // 상세 패널이 지도 위에 뜨므로 지도로 복귀
-                      }}
-                      className="press flex min-h-14 w-full items-center justify-between gap-3 py-3 text-left"
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate t-body font-bold text-ink">{d.name}</span>
-                        {d.meta ? <span className="mt-0.5 block truncate t-sub text-text-3">{d.meta}</span> : null}
-                      </span>
-                      <span className="flex shrink-0 flex-col items-end">
-                        <span className="t-body t-num text-ink">{d.price}</span>
-                        {d.delta && d.delta !== "—" ? (
-                          <span className={`t-caption ${deltaClass(d.deltaTone)}`}>{d.delta}</span>
-                        ) : null}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              {/* [968 · 25] 처음 40개만 + "더 보기". 각 카드는 .cv-auto(content-visibility:
+                  auto, globals.css [968 · 7]) — 스크롤 밖 카드는 레이아웃·페인트를 미룬다. */}
+              {visibleDanji.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => {
+                    selectDanji(d.id);
+                    setMobileView("map"); // 상세 패널이 지도 위에 뜨므로 지도로 복귀
+                  }}
+                  className="cv-auto card flex flex-col gap-1.5 rounded-lg bg-surface px-4 py-3.5 text-left"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="t-body font-bold text-ink">{d.name}</div>
+                    <span className="text-xs text-text-3">{d.size}</span>
+                  </div>
+                  <div className="text-xs text-text-3">{d.meta}</div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="t-section text-ink">{d.price}</span>
+                    <span className={`text-xs ${deltaClass(d.deltaTone)}`}>{d.delta}</span>
+                  </div>
+                </button>
+              ))}
               {listRemaining > 0 && (
                 <button
                   type="button"
@@ -4519,9 +4686,9 @@ export function MapClient({
                       limit: listLimit + MAP_LIST_PAGE_SIZE,
                     })
                   }
-                  className="btn-secondary mt-3 w-full rounded-lg px-4 py-3 t-body"
+                  className="btn-soft mt-1 rounded-lg px-4 py-3 t-body font-bold"
                 >
-                  {listRemaining.toLocaleString("ko-KR")}개 더 보기
+                  더 보기 ({listRemaining.toLocaleString("ko-KR")}개 남음)
                 </button>
               )}
             </div>
@@ -4538,23 +4705,22 @@ export function MapClient({
           type="button"
           inert={chromeCompact}
           onClick={() => setMobileView((v) => (v === "map" ? "list" : "map"))}
-          /* [1012 · 규칙 2·4·8] ☰/🗺 글자 → 선 아이콘 menu/map · 800 → 700.
-             [v4] 유리 + 큰 그림자 → 흰 면 + 1px 선 · "목록으로 보기" → "목록 보기"(동사 + 대상, 한 줄) */
-          className={`absolute left-1/2 z-40 inline-flex min-h-10 -translate-x-1/2 items-center gap-1.5 rounded-full border border-line bg-surface px-5 py-2.5 t-body font-bold text-ink md:hidden ${chromeFoldDownClass}`}
+          className={`glass-strong absolute left-1/2 z-40 inline-flex min-h-10 items-center gap-1.5 -translate-x-1/2 rounded-full px-5 py-2.5 t-body font-bold text-ink shadow-[0_8px_22px_rgba(16,28,54,.2)] md:hidden ${chromeFoldDownClass}`}
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 96px)" }}
         >
+          {/* [1012 · 규칙 4] 이모지(☰·🗺) → 선 아이콘 */}
           <Icon name={mobileView === "map" ? "menu" : "map"} size={16} />
           {mobileView === "map" ? "목록 보기" : "지도 보기"}
         </button>
       )}
 
-      {/* 접기 핸들 ‹ — [v4] 유리 + 그림자 → 흰 면 + 1px 선 */}
+      {/* 접기 핸들 ‹ */}
       {!selected && (
         <button
           type="button"
           onClick={() => setPanelOpen((v) => !v)}
           aria-label={panelOpen ? "패널 접기" : "패널 열기"}
-          className={`absolute top-1/2 z-30 hidden h-16 w-4 -translate-y-1/2 items-center justify-center rounded-r-lg border border-line bg-surface text-[12px] text-text-3 md:flex ${
+          className={`absolute top-1/2 z-30 hidden h-16 w-4 -translate-y-1/2 items-center justify-center rounded-r-xl border border-line bg-[var(--glass-bg-strong)] text-[12px] text-text-3 shadow-[6px_0_14px_rgba(16,28,54,.08)] md:flex ${
             panelOpen ? "left-[340px]" : "left-0"
           }`}
         >
@@ -4566,11 +4732,7 @@ export function MapClient({
            예전에는 좌측에 460px 세로 패널로 붙였다. 폭이 좁아 표·그래프가 다
            눌렸고, 같은 자리를 쓰는 필터·인기 단지 패널과 계속 부딪혔다(소유자 지적).
            화면 가운데 큰 팝업으로 띄우면 두 문제가 같이 사라진다. 더 깊이 보고
-           싶으면 "이 단지 보기"로 단지 홈 페이지로 넘어간다.
-           [v4] 머리 = 이름 한 줄 + 사실 한 줄(내 노트 수는 배지 대신 사실 줄) · 밑줄 탭(남색) · 요약 = 대표가 하나(t-display)
-           + 사실 한 줄 · 카드·옅은 상자 → 구분선 행 · 채움 파랑은 "이 단지 보기" 하나(md 머리 / 모바일 바닥 — 한 번에
-           하나만 보인다). 요약 탭의 "단지 홈에서 실거래 이력·노트 보기" 행은 같은 목적지(= 이 단지 보기)라 지웠다.
-           두 단(md grid-cols-2) → 한 줄(최대 640px). */}
+           싶으면 아래 "전체 화면으로 자세히 보기"로 단지 홈 페이지로 넘어간다. */}
       {selected && (
         <div
           className="absolute inset-0 z-[48] flex items-center justify-center px-4 py-6"
@@ -4586,17 +4748,20 @@ export function MapClient({
           />
           {/* ComplexInfoPanel 과 같은 판단(2026-08-16): 어두운 딤 위 반투명 시트는
               backdrop-filter 가 약한 환경에서 탁해진다 — 불투명 bg-surface 로 고정. */}
-          <aside className="rise-in relative z-10 flex max-h-[min(88dvh,860px)] w-full max-w-[640px] flex-col overflow-hidden rounded-3xl bg-surface shadow-[var(--shadow-lg)]">
-          <div className="flex items-start justify-between gap-3 border-b border-line px-5 pb-3 pt-4">
-            <div className="min-w-0">
-              <h2 className="truncate t-title text-ink">{selected.name}</h2>
-              {(selected.meta || selected.note) && (
-                <p className="mt-0.5 truncate t-sub text-text-3">
-                  {[selected.meta, selected.note ? `내 ${selected.note}` : null].filter(Boolean).join(" · ")}
-                </p>
-              )}
+          <aside className="rise-in relative z-10 flex max-h-[min(88dvh,860px)] w-full max-w-[860px] flex-col overflow-hidden rounded-3xl bg-surface shadow-[0_28px_70px_rgba(16,28,54,.32)]">
+          <div className="flex items-start justify-between border-b border-[rgba(16,28,54,.06)] px-[22px] pb-3.5 pt-5">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="t-title text-ink">{selected.name}</span>
+                {selected.note && (
+                  <span className="rounded-md bg-primary-soft chip-pad t-caption font-bold text-primary">
+                    내 {selected.note}
+                  </span>
+                )}
+              </div>
+              <div className="mt-1 text-xs text-text-2">{selected.meta}</div>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex items-center gap-2">
               {/* [지도확장 2026-08-31] 네이버지도 새 탭 — 거리뷰·로드뷰·주변시설은
                   네이버가 이미 잘한다. 흉내내는 대신 이어 준다(임장 전 현장 확인 동선).
                   이름 검색 딥링크는 공식 문서화된 안정 경로다. */}
@@ -4604,38 +4769,36 @@ export function MapClient({
                 href={`https://map.naver.com/p/search/${encodeURIComponent(`${selected.meta?.split(" · ").pop() ?? ""} ${selected.name}`.trim())}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-secondary hidden rounded-lg px-3 py-2 t-sub no-underline md:inline-flex"
+                className="hidden rounded-xl border border-line px-3 py-2 t-caption font-bold text-text-1 no-underline hover:border-primary hover:text-primary md:inline-flex"
               >
                 네이버지도 ↗
               </a>
               <Link
                 href={complexHrefFromId(selected.id)}
-                className="btn-primary hidden rounded-lg px-3.5 py-2 t-sub no-underline md:inline-flex"
+                className="btn-primary btn-cta hidden rounded-xl px-3.5 py-2 text-xs font-bold text-white md:inline-flex"
               >
-                {/* [1012 · 규칙 5] "자세히 보기" → 동사 + 대상 · [v4] 한 줄로 끝나게 "이 단지 보기" */}
-                이 단지 보기
+                전체 화면으로 자세히 보기 ›
               </Link>
               <button
                 type="button"
                 onClick={() => setSelectedId(null)}
                 aria-label="패널 닫기"
-                className="flex h-10 w-10 items-center justify-center t-body text-text-3"
+                className="t-body text-text-3"
               >
-                <Icon name="x" size={16} />
+                ✕
               </button>
             </div>
           </div>
-          {/* [v4] 밑줄 탭 — 선택 칸 아래 2px 남색 선(단지 허브 탭 · 동네 카테고리 줄과 같은 모양) */}
-          <div role="tablist" aria-label="단지 상세" className="flex gap-5 overflow-x-auto border-b border-line px-5 [scrollbar-width:none]">
+          <div className="flex border-b border-[rgba(16,28,54,.06)] px-[22px]">
             {DETAIL_TABS.map((t) => (
               <button
                 key={t}
                 type="button"
-                role="tab"
-                aria-selected={detailTab === t}
                 onClick={() => setDetailTab(t)}
-                className={`shrink-0 border-b-2 pb-2.5 pt-3 t-body font-bold transition-colors ${
-                  detailTab === t ? "border-brand-hanji-ink text-ink" : "border-transparent text-text-3"
+                className={`px-3.5 py-[11px] text-[13px] ${
+                  detailTab === t
+                    ? "border-b-2 border-primary font-bold text-primary"
+                    : "font-semibold text-text-2"
                 }`}
               >
                 {t}
@@ -4643,45 +4806,57 @@ export function MapClient({
             ))}
           </div>
 
-          <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
+          {/* 요약은 카드가 많아 넓은 화면에서 두 단으로 흘린다 — 460px 시절에는
+              한 줄로 세울 수밖에 없어 스크롤이 길었다. */}
+          <div
+            className={`flex flex-1 flex-col gap-3 overflow-y-auto px-[22px] py-4 ${
+              detailTab === "요약" ? "md:grid md:grid-cols-2 md:content-start md:gap-4" : ""
+            }`}
+          >
             {detailTab === "요약" && (
               <>
                 {/* 사실 우선: 서버 실데이터(시세·전월비)만 표시. 조회수·전문가수·급매·판정은
-                    집계 소스가 없어 허위였으므로 제거.
-                    item3 — 대표가격 근거 병기: 면적 통합 평균 + 언제·몇 건인지(사실 줄) */}
-                <div>
-                  <div className="flex flex-wrap items-baseline gap-x-2">
-                    <span
-                      className={`${selected.avgPriceWon != null ? "t-display" : "t-section"} text-ink tabular-nums`}
-                    >
-                      {selected.price}
-                    </span>
-                    {selected.delta !== "표본 부족" && selected.delta !== "—" && (
-                      <span className={`t-sub font-bold ${deltaClass(selected.deltaTone)}`}>
-                        {selected.delta} 전월비
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-1 t-sub text-text-3">
-                    실거래 평균 · 면적 통합
+                    집계 소스가 없어 허위였으므로 제거. */}
+                <div className="card rounded-lg px-[15px] py-3.5">
+                  {/* item3 — 대표가격 근거 병기: 면적 통합 평균 + 언제·몇 건인지 */}
+                  <div className="t-caption text-text-3">
+                    실거래 평균 (면적 통합
                     {selected.latestYm && selected.latestDealCount != null
                       ? ` · ${selected.latestYm} ${selected.latestDealCount}건`
                       : ""}
-                    {/* 최신월 3건 미만 — 등락률은 노이즈라 표시하지 않는다 */}
-                    {selected.delta === "표본 부족" ? " · 표본 부족(전월비 생략)" : ""} · 국토교통부
-                  </p>
+                    ) · 국토교통부 기준
+                  </div>
+                  <div className="mt-1 flex items-baseline gap-2">
+                    <span className="t-title text-ink">{selected.price}</span>
+                    {selected.delta === "표본 부족" ? (
+                      // 최신월 3건 미만 — 등락률은 노이즈라 표시하지 않는다
+                      <span className="text-xs text-text-3">표본 부족 · 전월비 생략</span>
+                    ) : (
+                      <span className={`text-xs ${deltaClass(selected.deltaTone)}`}>
+                        {selected.delta === "—" ? "— (전월비)" : `${selected.delta} (전월비)`}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                {/* [v4 · 규칙 2] 채움 파랑 "이 단지 임장노트" → 테두리 — 채움은 "이 단지 보기" 하나 */}
-                <div className="grid grid-cols-3 gap-2">
+                <Link
+                  href={complexHrefFromId(selected.id)}
+                  className="flex items-center justify-between rounded-lg border border-line bg-surface px-[15px] py-[13px] text-left"
+                >
+                  <span className="t-body font-bold text-ink">
+                    단지 홈에서 실거래 이력·노트 보기
+                  </span>
+                  <span className="text-xs font-bold text-primary">›</span>
+                </Link>
+                <div className="flex gap-2">
                   <Link
                     href={noteHrefFor(selected)}
-                    className="btn-secondary rounded-lg p-3 text-center text-[13px] no-underline"
+                    className="btn-primary btn-cta flex-1 rounded-xl p-[11px] text-center text-xs"
                   >
-                    노트 쓰기
+                    이 단지 임장노트
                   </Link>
                   <Link
                     href={`/analysis?complexId=${encodeURIComponent(selected.id)}`}
-                    className="btn-secondary rounded-lg p-3 text-center text-[13px] no-underline"
+                    className="btn-secondary flex-1 rounded-xl p-[11px] text-center text-xs"
                   >
                     AI 분석
                   </Link>
@@ -4698,165 +4873,179 @@ export function MapClient({
             )}
 
             {detailTab === "매물" && (
-              <>
+              <div className="flex flex-col gap-3">
                 {complexListingsStatus === "loading" && (
-                  <p className="t-sub text-text-3">매물 불러오는 중…</p>
+                  <div className="card rounded-lg px-[15px] py-6 text-center t-sub text-text-3">
+                    매물을 불러오는 중…
+                  </div>
                 )}
                 {/* 못 읽은 것을 "매물 없음"으로 적지 않는다 — 멀쩡히 올라와 있는
                     남의 매물을 없다고 말하는 셈이 된다. */}
                 {complexListingsStatus === "error" && (
-                  <p className="t-sub font-bold text-ink" role="status">
-                    매물 조회 실패(매물 없음 아님) · 잠시 후 다시 시도
-                  </p>
+                  <div className="card rounded-lg px-[15px] py-6 text-center">
+                    <div className="t-body font-bold text-ink">매물을 불러오지 못했어요</div>
+                    <div className="mt-1 t-sub text-text-3">
+                      잠시 후 다시 시도해 주세요.
+                    </div>
+                  </div>
                 )}
                 {complexListingsStatus === "ok" && complexListings.length > 0 && (
-                  <ul className="divide-y divide-line">
-                    {complexListings.map((l) => {
-                      const sub = [
-                        l.areaM2 ? `${Math.round(l.areaM2)}㎡` : null,
-                        l.floor != null ? `${l.floor}층` : null,
-                        l.ownerVerified ? "집주인 확인" : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ");
-                      return (
-                        <li key={l.id}>
-                          <Link
-                            href={`/listings/${encodeURIComponent(l.id)}`}
-                            className="press flex min-h-14 items-center justify-between gap-3 py-3 no-underline"
-                          >
-                            <span className="min-w-0 flex-1">
-                              <span className="block t-body font-bold text-ink">
-                                {LISTING_TYPE_LABEL[l.listingType]} {listingPriceLabel(l)}
-                              </span>
-                              {sub ? <span className="mt-0.5 block truncate t-sub text-text-3">{sub}</span> : null}
-                            </span>
-                            <span aria-hidden="true" className="t-body text-text-3">
-                              ›
-                            </span>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <div className="card flex flex-col rounded-lg px-[15px] py-1">
+                    {complexListings.map((l, i) => (
+                      <Link
+                        key={l.id}
+                        href={`/listings/${encodeURIComponent(l.id)}`}
+                        className={`flex items-center justify-between gap-2 py-2.5 ${
+                          i < complexListings.length - 1 ? "border-b border-divider" : ""
+                        }`}
+                      >
+                        <span className="flex min-w-0 flex-col">
+                          <span className="t-body font-bold text-ink">
+                            {LISTING_TYPE_LABEL[l.listingType]} {listingPriceLabel(l)}
+                          </span>
+                          <span className="truncate t-sub text-text-3">
+                            {[
+                              l.areaM2 ? `${Math.round(l.areaM2)}㎡` : null,
+                              l.floor != null ? `${l.floor}층` : null,
+                              l.ownerVerified ? "소유 확인" : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ") || "상세 보기"}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-xs font-bold text-primary">›</span>
+                      </Link>
+                    ))}
+                  </div>
                 )}
                 {complexListingsStatus === "ok" && complexListings.length === 0 && (
-                  <p className="t-sub text-text-2">이 단지 등록 매물 없음</p>
+                  <div className="card rounded-lg px-[15px] py-6 text-center">
+                    <div className="t-body font-bold text-ink">
+                      이 단지에 등록된 매물이 아직 없어요
+                    </div>
+                    <div className="mt-1 t-sub text-text-3">
+                      지도 상단의 “매물” 레이어를 켜면 주변 단지의 등록 매물을 볼 수 있어요.
+                    </div>
+                  </div>
                 )}
-                <Link href="/listings/new" className="btn-secondary rounded-lg p-3 text-center t-body no-underline">
-                  내 매물 등록
+                <Link href="/listings/new" className="btn-soft rounded-xl p-3 text-center t-body">
+                  내 매물 등록하기
                 </Link>
-              </>
+              </div>
             )}
 
             {detailTab === "실거래" && (
               <>
+                <div className="px-1 t-sub font-bold text-text-3">
+                  국토교통부 실거래가 기준
+                </div>
                 {trades.length > 0 ? (
-                  <ul className="divide-y divide-line">
+                  <div className="card flex flex-col rounded-lg px-[15px] py-2">
                     {trades.map((t, i) => (
-                      <li key={`${t.date}-${i}`} className="flex min-h-12 items-center justify-between gap-3 py-2.5">
-                        <span className="t-sub text-text-2 tabular-nums">
+                      <div
+                        key={`${t.date}-${i}`}
+                        className={`flex items-center justify-between py-2.5 text-[13px] ${
+                          i < trades.length - 1 ? "border-b border-divider" : ""
+                        }`}
+                      >
+                        <span className="text-text-2">
                           {t.date} · {t.sub}
                         </span>
                         <span className="flex items-baseline gap-2">
-                          <span className="t-body t-num text-ink">{t.price}</span>
-                          {t.delta && t.delta !== "—" ? (
-                            <span className={`t-caption ${deltaClass(t.tone)}`}>{t.delta}</span>
-                          ) : null}
+                          <span className="font-bold text-ink">{t.price}</span>
+                          <span className={`text-[12px] ${deltaClass(t.tone)}`}>{t.delta}</span>
                         </span>
-                      </li>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 ) : (
-                  <p className="t-sub text-text-2">수집된 국토교통부 실거래 없음</p>
+                  <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
+                    아직 수집된 국토교통부 실거래가 없어요
+                  </div>
                 )}
-                {/* 출처는 섹션 끝 캡션 한 줄 */}
-                {trades.length > 0 && <p className="t-caption text-text-3">국토교통부 실거래가 · 월 평균</p>}
               </>
             )}
 
             {detailTab === "노트" && (
               <>
-                {/* item9 — inspection_notes 단지명 매칭 실조회. 없으면 정직한 빈 상태 + 실링크.
-                    [v4] "내 노트" 배지 → 보조 줄 앞머리 */}
+                {/* item9 — inspection_notes 단지명 매칭 실조회. 없으면 정직한 빈 상태 + 실링크 */}
                 {complexNotesStatus === "loading" && (
-                  <p className="t-sub text-text-3">이 단지 임장노트 찾는 중…</p>
+                  <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
+                    이 단지 임장노트를 찾는 중…
+                  </div>
                 )}
                 {complexNotesStatus === "error" && (
-                  <p className="t-sub font-bold text-ink" role="status">
-                    노트 조회 실패 · 잠시 후 다시 시도
-                  </p>
+                  <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
+                    일시적 오류로 노트를 불러오지 못했어요
+                  </div>
                 )}
                 {complexNotesStatus === "ok" && complexNotes.length > 0 && (
-                  <ul className="divide-y divide-line">
-                    {complexNotes.map((n) => {
-                      const sub = [n.mine ? "내 노트" : null, n.visitDate].filter(Boolean).join(" · ");
-                      return (
-                        <li key={n.id}>
-                          <Link
-                            href={`/notes/${encodeURIComponent(n.id)}`}
-                            className="press flex min-h-14 items-center justify-between gap-3 py-3 no-underline"
-                          >
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate t-body font-bold text-ink">{n.title}</span>
-                              {sub ? <span className="mt-0.5 block truncate t-sub text-text-3">{sub}</span> : null}
+                  <div className="card flex flex-col rounded-lg px-[15px] py-1">
+                    {complexNotes.map((n, i) => (
+                      <Link
+                        key={n.id}
+                        href={`/notes/${encodeURIComponent(n.id)}`}
+                        className={`flex items-center justify-between gap-2 py-2.5 text-[13px] ${
+                          i < complexNotes.length - 1 ? "border-b border-divider" : ""
+                        }`}
+                      >
+                        <span className="min-w-0 truncate font-bold text-ink">
+                          {n.mine && (
+                            <span className="mr-1.5 rounded-sm bg-primary-soft chip-pad-tight t-caption font-bold text-primary">
+                              내 노트
                             </span>
-                            <span aria-hidden="true" className="t-body text-text-3">
-                              ›
-                            </span>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                          )}
+                          {n.title}
+                        </span>
+                        <span className="shrink-0 t-sub text-text-3">
+                          {n.visitDate ?? ""}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
                 )}
                 {complexNotesStatus === "ok" && complexNotes.length === 0 && (
-                  <p className="t-sub text-text-2">이 단지 임장노트 없음</p>
+                  <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
+                    아직 이 단지의 임장노트가 없어요 — 첫 노트 → AI 요약 → 지도
+                    비교로 이어져요
+                  </div>
                 )}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex gap-2">
                   <Link
                     href={noteHrefFor(selected)}
-                    className="btn-secondary rounded-lg p-3 text-center t-body no-underline"
+                    className="btn-primary btn-cta flex-1 rounded-xl p-3 text-center t-body"
                   >
                     이 단지 노트 쓰기
                   </Link>
-                  <Link href="/notes" className="btn-secondary rounded-lg p-3 text-center t-body no-underline">
-                    공개 노트 보기
+                  <Link
+                    href="/notes"
+                    className="btn-soft flex-1 rounded-xl p-3 text-center t-body"
+                  >
+                    공개 노트 모아보기
                   </Link>
                 </div>
               </>
             )}
 
             {detailTab === "이야기" && (
-              /* 사실 우선: 하드코딩 Q&A 제거 — 동네이야기로 연결.
-                 [v4] 가운데 정렬 카드 + 버튼 → 목록 행 한 줄(이름 + 보조 한 줄 / ›) */
-              <ul className="divide-y divide-line">
-                <li>
-                  <Link
-                    href="/town"
-                    className="press flex min-h-14 items-center justify-between gap-3 py-3 no-underline"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block t-body font-bold text-ink">동네이야기 열기</span>
-                      <span className="mt-0.5 block truncate t-sub text-text-3">
-                        {selected.name} 이야기는 동네이야기에 모음
-                      </span>
-                    </span>
-                    <span aria-hidden="true" className="t-body text-text-3">
-                      ›
-                    </span>
-                  </Link>
-                </li>
-              </ul>
+              <>
+                {/* 사실 우선: 하드코딩 Q&A 제거 — 동네이야기로 연결 */}
+                <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
+                  이 지역의 질문·이야기를 동네이야기에서 확인해 보세요
+                </div>
+                <Link href="/town" className="btn-soft rounded-xl p-3 text-center t-body">
+                  동네이야기 보기
+                </Link>
+              </>
             )}
           </div>
-          {/* 모바일에서는 머리에 넣을 자리가 없어 아래에 고정 CTA 로 둔다(채움 파랑 1개). */}
-          <div className="border-t border-line px-5 py-3 md:hidden">
+          {/* 모바일에서는 헤더에 넣을 자리가 없어 아래에 고정 CTA 로 둔다. */}
+          <div className="border-t border-[rgba(16,28,54,.06)] px-[22px] py-3 md:hidden">
             <Link
               href={complexHrefFromId(selected.id)}
-              className="btn-primary block rounded-lg p-3 text-center t-body no-underline"
+              className="btn-primary btn-cta block rounded-xl p-3 text-center t-body font-bold text-white"
             >
-              이 단지 보기
+              전체 화면으로 자세히 보기 ›
             </Link>
           </div>
           </aside>
@@ -4902,13 +5091,13 @@ export function MapClient({
            동안은 lg 이상에서만 둔다 — 덮인 버튼은 눌리지 않으면서 눌릴 것처럼
            보인다. lg 에서는 패널이 200~500 이라 겹치지 않는다. */
         /* [968 · 24] 모바일 끌기 중엔 비킨다 — md 이상에서는 chromeCompact 가 늘 false */
-        /* [v4 · 규칙 2] 채움 파랑 + 파란 번짐 그림자 + ＋ 글자 → 흰 면 + 1px 선(지도 화면의 채움 파랑은 머리의 노트 쓰기 하나) */
         inert={chromeCompact}
-        className={`absolute right-5 z-30 min-h-10 items-center rounded-full border border-line bg-surface px-4 py-2.5 t-sub font-bold text-ink no-underline ${
+        className={`btn-primary btn-cta absolute right-5 z-30 items-center gap-1.5 rounded-full px-4 py-3 text-[13px] font-bold text-white shadow-[0_10px_28px_rgba(29,79,216,.42)] ${
           filtersExpanded ? "hidden lg:flex" : "flex"
         } ${chromeFoldDownClass}`}
         style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 220px)" }}
       >
+        <span className="text-[15px] leading-none">＋</span>
         매물 등록
       </Link>
 
@@ -4916,8 +5105,7 @@ export function MapClient({
           [970 · B-37] 폴백(지도를 못 그림)에서는 숨기고, 모바일 목록 뷰가 지도를 덮고 있을
           때도 숨긴다(md 이상은 목록이 사이드바라 지도가 보인다).
           [1008 · M] level 은 idle 마다 실제 줌으로 맞춰지므로 한 칸은 "지금 보이는 축척"에서 한 칸이다.
-          범위는 SDK 줌 범위(6~21)와 같게 — 예전 1~14 자르기는 핀치로 끝까지 간 뒤 반대로 튀었다.
-          [v4] 유리 → 흰 면 + 1px 선(크기·자리 그대로) */}
+          범위는 SDK 줌 범위(6~21)와 같게 — 예전 1~14 자르기는 핀치로 끝까지 간 뒤 반대로 튀었다. */}
       <div
         className={`absolute right-5 z-30 flex-col gap-1.5 ${
           mapFallback ? "hidden" : mobileView === "list" && !selected ? "hidden md:flex" : "flex"
@@ -4928,7 +5116,7 @@ export function MapClient({
           type="button"
           aria-label="확대"
           onClick={() => setLevel((v) => stepLevel(v, -1))}
-          className="flex h-[34px] w-[34px] items-center justify-center rounded-lg border border-line bg-surface t-body text-text-1"
+          className="glass flex h-[34px] w-[34px] items-center justify-center rounded-lg t-body text-text-1"
         >
           ＋
         </button>
@@ -4936,7 +5124,7 @@ export function MapClient({
           type="button"
           aria-label="축소"
           onClick={() => setLevel((v) => stepLevel(v, 1))}
-          className="flex h-[34px] w-[34px] items-center justify-center rounded-lg border border-line bg-surface t-body text-text-1"
+          className="glass flex h-[34px] w-[34px] items-center justify-center rounded-lg t-body text-text-1"
         >
           －
         </button>
@@ -4951,27 +5139,32 @@ export function MapClient({
            이 열의 아래 36px 를 덮었다(834폭 실측 54×36px).
            md 에서 상세 필터 패널(364~664)과 이 열(564~764)은 가로로 겹칠 수밖에
            없어, 패널이 열려 있는 동안은 lg 에서만 보인다. 덮인 채로 두면 읽을 수
-           없고, 읽을 수 없는 범례는 없는 것과 같다.
-           [v4] 유리 → 흰 면 + 1px 선 · 기본 범례는 한 줄 */}
+           없고, 읽을 수 없는 범례는 없는 것과 같다. */}
       <div
         className={`absolute bottom-[var(--nz-map-bottom-lane)] right-[70px] z-30 hidden w-[200px] max-h-[180px] flex-col items-stretch gap-2 ${
           filtersExpanded ? "lg:flex" : "md:flex"
         }`}
       >
         {showRedevelopment && redevLegend.length > 0 && (
-          <div className="flex min-h-0 flex-col gap-1.5 overflow-y-auto rounded-lg border border-line bg-surface px-3 py-2.5">
+          <div className="glass flex min-h-0 flex-col gap-1.5 overflow-y-auto rounded-xl px-3 py-2.5">
             <div className="t-sub font-bold text-ink">정비사업 종류</div>
             <div className="flex flex-col gap-1">
               {redevLegend.map((it) => (
-                <div key={it.label} className="flex items-center gap-1.5 t-sub text-text-1">
-                  <span className="h-[9px] w-[9px] shrink-0 rounded-full" style={{ background: it.color }} />
+                <div
+                  key={it.label}
+                  className="flex items-center gap-1.5 t-sub text-text-1"
+                >
+                  <span
+                    className="h-[9px] w-[9px] shrink-0 rounded-full"
+                    style={{ background: it.color }}
+                  />
                   <span className="truncate">{it.label}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
-        <div className="flex shrink-0 gap-3.5 rounded-lg border border-line bg-surface px-3.5 py-2">
+        <div className="glass flex shrink-0 gap-3.5 rounded-xl px-3.5 py-[9px]">
           <div className="flex items-center gap-1.5 t-sub text-text-1">
             <span className="h-[9px] w-[9px] rounded-sm bg-primary" />
             임장한 단지
@@ -4983,10 +5176,9 @@ export function MapClient({
         </div>
       </div>
 
-      {/* ===== item7 — 모바일 접이식 범례 (기본 접힘) =====
-           상세 필터 패널이 열려 있으면 접는다. 패널(16~316 × 186~)이 이 열을
-           통째로 덮어(실측 57×30px) 범례 토글이 보이지도 눌리지도 않는다.
-           [v4] 유리 → 흰 면 + 1px 선 · 펼친 판의 "범례" 머리말(토글과 같은 말)과 줌 설명 캡션은 지웠다 */}
+      {/* ===== item7 — 모바일 접이식 범례 (기본 접힘). md 전용이던 범례·줌 캡션을 노출 =====
+           상세 필터 패널이 열려 있으면 접는다. 패널(16~316 × 218~786)이 이 열을
+           통째로 덮어(실측 57×30px) 범례 토글이 보이지도 눌리지도 않는다. */}
       {!filtersExpanded && (
       <div
         /* [968 · 24] 끌기 중엔 비킨다 — 범례가 열려 있어도 같이(읽는 중이면 탭으로 즉시 복귀) */
@@ -4995,10 +5187,11 @@ export function MapClient({
         style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 88px)" }}
       >
         {mobileLegendOpen && (
-          <div className="flex w-[196px] flex-col gap-1.5 rounded-lg border border-line bg-surface px-3 py-2.5">
+          <div className="glass flex w-[196px] flex-col gap-1.5 rounded-xl px-3 py-2.5">
+            <div className="t-sub font-bold text-ink">범례</div>
             <div className="flex items-center gap-1.5 t-sub text-text-1">
               <span className="h-[9px] w-[9px] shrink-0 rounded-sm bg-primary" />
-              임장한 단지
+              임장한 단지 (내 노트 있음)
             </div>
             <div className="flex items-center gap-1.5 t-sub text-text-1">
               <span className="h-[9px] w-[9px] shrink-0 rounded-sm border border-line-strong bg-surface" />
@@ -5010,25 +5203,23 @@ export function MapClient({
                   className="h-[9px] w-[9px] shrink-0 rounded-full"
                   style={{ background: JEONSE_MARKER_COLOR }}
                 />
-                전세 평균 보증금
+                전세 평균 보증금 (단지 줌)
               </div>
             ) : (
               showPriceOverlay && (
-                <>
-                  <div className="flex overflow-hidden rounded-sm">
-                    {PRICE_TIERS.map((t) => (
-                      <span
-                        key={t.slug}
-                        className="h-[8px] flex-1"
-                        style={{ background: t.color }}
-                        title={t.label}
-                      />
-                    ))}
-                  </div>
-                  <div className="t-caption text-text-3">평단가 낮음 → 높음 · 회색 {NO_DATA_LABEL}</div>
-                </>
+                <div className="flex overflow-hidden rounded-sm">
+                  {PRICE_TIERS.map((t) => (
+                    <span
+                      key={t.slug}
+                      className="h-[8px] flex-1"
+                      style={{ background: t.color }}
+                      title={t.label}
+                    />
+                  ))}
+                </div>
               )
             )}
+            <div className="t-caption text-text-3">{ZOOM_CAPTION[zoom]}</div>
           </div>
         )}
         <button
@@ -5036,7 +5227,7 @@ export function MapClient({
           aria-expanded={mobileLegendOpen}
           onClick={() => setMobileLegendOpen((v) => !v)}
           /* [989] 실측 54×32 — 지도 위에 떠 있는 조작이라 손가락으로 정확히 짚기 어렵다 */
-          className="min-h-[40px] rounded-full border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-1"
+          className="glass min-h-[40px] rounded-full px-3 py-1.5 t-sub font-bold text-text-1"
         >
           범례 {mobileLegendOpen ? "▾" : "▸"}
         </button>
@@ -5048,89 +5239,98 @@ export function MapClient({
           안내도 같은 열에 있다 — 상단 88px 자리는 모바일 검색창과 md 필터 칩이
           쓰고 있어 카드가 그 아래로 깔렸기 때문이다. */}
 
-      {/* 좌하단 범례 — C1 시세 색상 범례 + C8 가격 표기 범례.
+      {/* 좌하단 범례 열 — C1 시세 색상 범례(위) + C8 가격 표기 범례(아래).
           예전에는 둘이 각각 absolute 였고, 위 카드가 아래 카드의 높이를 손으로
           적어(`bottom + 88px` = C8 실측 79 + 여백 9) 자리를 잡았다. 폭이 좁아져
           C8 이 한 줄 늘어나는 순간 그 숫자만 조용히 틀려서 두 범례가 24px 겹쳤다
           (768폭 실측 130×24px). 형제의 높이는 짐작하지 말고 레이아웃이 재게 둔다.
           두 범례 모두 상세 필터 패널이 열리면 접는다. 패널은 md 364~664 를
           차지해 이 자리를 통째로 덮는데(실측 216×128px 완전 포함), 덮인 범례는
-          읽을 수 없으면서 "지도에 안내가 있다"는 인상만 남긴다.
-          [v4] 유리 카드 두 장 → 흰 면 + 1px 선 한 장 · 제목 한 줄 + 색 띠 + 캡션 한 줄 ·
-          "데이터 없음" 행과 출처 문장을 캡션 한 줄로 · C8 두 줄("가격 표기 안내" 머리말 포함) → 한 줄 */}
+          읽을 수 없으면서 "지도에 안내가 있다"는 인상만 남긴다. */}
       {!filtersExpanded && (showPriceOverlay || showListings) && (
         <div
-          className={`absolute bottom-[var(--nz-map-bottom-lane)] z-30 hidden w-[216px] flex-col gap-1.5 rounded-lg border border-line bg-surface px-3 py-2.5 md:flex ${mdLeftLegendX}`}
+          className={`absolute bottom-[var(--nz-map-bottom-lane)] z-30 hidden w-[216px] flex-col gap-[9px] md:flex ${mdLeftLegendX}`}
         >
-          {showPriceOverlay &&
-            (txType === "rent" ? (
-              <>
-                {/* item2 — 전세 모드 범례: 매매 평단가 색표를 보증금에 갖다 붙이지 않는다 */}
-                <div className="flex items-center gap-1.5 t-sub font-bold text-ink">
-                  <span
-                    className="h-[9px] w-[9px] shrink-0 rounded-full"
-                    style={{ background: JEONSE_MARKER_COLOR }}
-                  />
-                  전세 평균 보증금 · 단지 줌
+        {showPriceOverlay && (
+        <div className="glass flex flex-col gap-1.5 rounded-xl px-3 py-2.5">
+          {txType === "rent" ? (
+            <>
+              {/* item2 — 전세 모드 범례: 매매 평단가 색표를 보증금에 갖다 붙이지 않는다 */}
+              <div className="t-sub font-bold text-ink">전세 평균 보증금</div>
+              <div className="flex items-center gap-1.5 t-sub text-text-1">
+                <span
+                  className="h-[9px] w-[9px] shrink-0 rounded-full"
+                  style={{ background: JEONSE_MARKER_COLOR }}
+                />
+                <span>단지 줌에서 평균 보증금 표시</span>
+              </div>
+              <div className="t-caption text-text-3">
+                국토교통부 전월세 실거래 중 전세 계약 기준 · 월세 계약 제외
+                {ymLabel(priceMeta.latestYm) ? ` · ~${ymLabel(priceMeta.latestYm)} 신고분` : ""}
+                {priceMeta.txCount > 0
+                  ? ` · 화면 내 ${priceMeta.txCount.toLocaleString("ko-KR")}건`
+                  : ""}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="t-sub font-bold text-ink">실거래 평단가 (만원/평)</div>
+              <div>
+                <div className="flex overflow-hidden rounded-sm">
+                  {PRICE_TIERS.map((t) => (
+                    <span
+                      key={t.slug}
+                      className="h-[10px] flex-1"
+                      style={{ background: t.color }}
+                      title={t.label}
+                    />
+                  ))}
                 </div>
-                <p className="t-caption text-text-3">
-                  국토교통부 전세 실거래
-                  {ymLabel(priceMeta.latestYm) ? ` · ~${ymLabel(priceMeta.latestYm)} 신고분` : ""}
-                  {priceMeta.txCount > 0 ? ` · 화면 내 ${priceMeta.txCount.toLocaleString("ko-KR")}건` : ""}
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="t-sub font-bold text-ink">실거래 평단가 · 만원/평</div>
-                <div>
-                  <div className="flex overflow-hidden rounded-sm">
-                    {PRICE_TIERS.map((t) => (
-                      <span
-                        key={t.slug}
-                        className="h-[10px] flex-1"
-                        style={{ background: t.color }}
-                        title={t.label}
-                      />
-                    ))}
-                  </div>
-                  {/* 눈금 — 색이 갈리는 지점을 정확한 값으로 표시 */}
-                  <div className="relative mt-[3px] h-[12px]">
-                    {PRICE_TIERS.slice(1).map((t, i) => (
-                      <span
-                        key={t.slug}
-                        className="absolute top-0 -translate-x-1/2 t-caption text-text-3"
-                        style={{ left: `${((i + 1) / PRICE_TIERS.length) * 100}%` }}
-                      >
-                        {t.minManwon.toLocaleString("ko-KR")}
-                      </span>
-                    ))}
-                  </div>
+                {/* 눈금 — 색이 갈리는 지점을 정확한 값으로 표시 */}
+                <div className="relative mt-[3px] h-[12px]">
+                  {PRICE_TIERS.slice(1).map((t, i) => (
+                    <span
+                      key={t.slug}
+                      className="absolute top-0 -translate-x-1/2 t-caption text-text-3"
+                      style={{ left: `${((i + 1) / PRICE_TIERS.length) * 100}%` }}
+                    >
+                      {t.minManwon.toLocaleString("ko-KR")}
+                    </span>
+                  ))}
                 </div>
-                <p className="flex flex-wrap items-center gap-x-1 t-caption text-text-3">
-                  <span className="h-[8px] w-[8px] shrink-0 rounded-sm" style={{ background: NO_DATA_COLOR }} />
-                  {NO_DATA_LABEL} · 호가 아님
-                  {ymLabel(priceMeta.latestYm) ? ` · ~${ymLabel(priceMeta.latestYm)} 신고분` : ""}
-                  {priceMeta.txCount > 0 ? ` · 화면 내 ${priceMeta.txCount.toLocaleString("ko-KR")}건` : ""}
-                </p>
-              </>
-            ))}
-          {/* C8 가격 표기 범례 — 매물(호가) vs 실거래(국토부 확정가) 구분 명시 */}
-          {showListings && (
-            <p
-              className={`flex flex-wrap items-center gap-x-2 t-caption text-text-2 ${
-                showPriceOverlay ? "border-t border-line pt-1.5" : ""
-              }`}
-            >
-              <span className="inline-flex items-center gap-1">
-                <span className="h-[8px] w-[8px] shrink-0 rounded-full bg-primary" />
-                매물 = 호가
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <span className="h-[8px] w-[8px] shrink-0 rounded-full" style={{ background: JEONSE_MARKER_COLOR }} />
-                실거래 = 국토부 확정가
-              </span>
-            </p>
+              </div>
+              <div className="flex items-center gap-1.5 t-sub text-text-1">
+                <span
+                  className="h-[9px] w-[9px] shrink-0 rounded-sm"
+                  style={{ background: NO_DATA_COLOR }}
+                />
+                <span>{NO_DATA_LABEL} (실거래 없음)</span>
+              </div>
+              <div className="t-caption text-text-3">
+                국토교통부 실거래가(매매) 기준 · 매물 호가 아님
+                {ymLabel(priceMeta.latestYm) ? ` · ~${ymLabel(priceMeta.latestYm)} 신고분` : ""}
+                {priceMeta.txCount > 0
+                  ? ` · 화면 내 ${priceMeta.txCount.toLocaleString("ko-KR")}건`
+                  : ""}
+              </div>
+            </>
           )}
+        </div>
+        )}
+        {/* C8 가격 표기 범례 — 매물(호가) vs 실거래(국토부 확정가) 구분 명시 */}
+        {showListings && (
+        <div className="glass flex flex-col gap-1 rounded-xl px-3 py-2.5">
+          <div className="t-sub font-bold text-ink">가격 표기 안내</div>
+          <div className="flex items-center gap-1.5 t-sub text-text-1">
+            <span className="h-[9px] w-[9px] shrink-0 rounded-full bg-primary" />
+            <span>매물 = 호가(등록가)</span>
+          </div>
+          <div className="flex items-center gap-1.5 t-sub text-text-1">
+            <span className="h-[9px] w-[9px] shrink-0 rounded-full" style={{ background: JEONSE_MARKER_COLOR }} />
+            <span>실거래 = 국토부 확정가</span>
+          </div>
+        </div>
+        )}
         </div>
       )}
 
@@ -5140,41 +5340,41 @@ export function MapClient({
            md 768폭에서 필요한 402px 를 384px 로 눌러 "동네이야기"가 줄바꿈했고,
            바 높이가 51 → 71px 로 늘어 아래 예약 레인(51px 기준)을 20px 뚫고 올라와
            좌우 범례 다섯 개를 11px 씩 덮었다(768폭 실측).
-           inset-x-0 + mx-auto 로 바꾸면 가운데 정렬은 그대로면서 가로 전체를 쓴다.
-           [v4] 유리 알약 → 흰 면 + 1px 선 · "홈" 앞 장식 집 아이콘 삭제(규칙 7) · 현재 칸은 옅은 파랑 면 대신
-           글자색만(전역 탭바와 같은 표시 — text-primary 700) · 굵기 600 → 500. 높이는 ResizeObserver 가 다시 잰다. */}
+           inset-x-0 + mx-auto 로 바꾸면 가운데 정렬은 그대로면서 가로 전체를 쓴다. */}
       <nav
         ref={mapNavRef}
-        aria-label="지도 하단 내비게이션"
-        className="absolute inset-x-0 z-40 mx-auto flex w-fit max-w-[calc(100vw_-_24px)] items-center gap-0.5 rounded-full border border-line bg-surface p-1.5"
+        className="glass-strong absolute inset-x-0 z-40 mx-auto flex w-fit max-w-[calc(100vw_-_24px)] items-center gap-0.5 rounded-full p-1.5"
         style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}
       >
         <Link
           href="/"
-          className="rounded-full px-4 py-[9px] t-body font-medium text-text-2 no-underline transition-colors hover:text-primary"
+          className="flex items-center gap-1.5 rounded-full px-4 py-[9px] t-body font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.08)] hover:text-primary"
         >
-          홈
+          <HomeIcon />홈
         </Link>
         <Link
           href="/notes"
-          className="rounded-full px-4 py-[9px] t-body font-medium text-text-2 no-underline transition-colors hover:text-primary"
+          className="rounded-full px-4 py-[9px] t-body font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.08)] hover:text-primary"
         >
           임장노트
         </Link>
         {/* 현재 페이지 표시 — 옆의 <Link> 들과 생김새가 비슷해 눌러 보게 되므로
             aria-current 로 "여기가 지금 보고 있는 화면"임을 스크린리더에도 알린다. */}
-        <span aria-current="page" className="rounded-full px-4 py-[9px] t-body font-bold text-primary">
+        <span
+          aria-current="page"
+          className="rounded-full bg-[rgba(29,79,216,.12)] px-4 py-[9px] t-body font-bold text-primary"
+        >
           지도
         </span>
         <Link
           href="/analysis"
-          className="hidden rounded-full px-4 py-[9px] t-body font-medium text-text-2 no-underline transition-colors hover:text-primary md:block"
+          className="hidden rounded-full px-4 py-[9px] t-body font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.08)] hover:text-primary md:block"
         >
           AI 분석
         </Link>
         <Link
           href="/town"
-          className="hidden rounded-full px-4 py-[9px] t-body font-medium text-text-2 no-underline transition-colors hover:text-primary md:block"
+          className="hidden rounded-full px-4 py-[9px] t-body font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.08)] hover:text-primary md:block"
         >
           동네이야기
         </Link>

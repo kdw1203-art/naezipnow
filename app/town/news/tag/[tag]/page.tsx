@@ -10,9 +10,8 @@ import { seoAlternates } from "@/lib/seo/alternates";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { logger } from "@/lib/log";
 import { formatKstShortDate } from "@/lib/format/kst";
+import { CoverImage } from "@/app/components/CoverImage";
 import { newsImageUrl } from "@/lib/town/shared";
-import { NewsThumb } from "../../NewsThumb";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* [#103] 뉴스 태그 허브 — /town/news/tag/[slug]
    자동 수집 뉴스(우리 요약 보유분 중심)를 주제별로 묶은 색인 표면.
@@ -74,7 +73,7 @@ export default async function NewsTagPage({
   ).slice(0, 40);
 
   return (
-    <PageShell>
+    <PageShell breadcrumb={`뉴스룸 › ${tag.label}`}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -87,85 +86,80 @@ export default async function NewsTagPage({
           ]),
         }}
       />
-      {/* [v4] "한 화면 한 가지" — 가운데 한 줄(760px): 제목 한 줄 + 사실 한 줄(숫자만) → 기사 행(제목 한 줄 +
-          매체·날짜 한 줄, 1px 선) → 다른 주제 글자 링크 한 줄 → 출처 캡션 한 줄. 주제 칩(링크)·분류 배지·카드 빈 상자 없음. */}
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6">
-        <header>
-          {/* [v4] 문자열 브레드크럼 → 뉴스룸으로 가는 링크가 있는 한 줄(기사 상세와 같은 모양) */}
-          <nav aria-label="브레드크럼" className="mb-2 t-sub text-text-3">
-            <Link href="/town/news" className="tap-line text-text-2 no-underline">
-              뉴스룸
-            </Link>{" "}
-            › 주제
-          </nav>
-          <h1 className="t-title text-ink">{tag.label} 뉴스</h1>
-          {/* [1012 → v4] 사실 한 줄은 숫자만 — 수집 시점·표기 방식은 맨 끝 캡션으로 */}
-          {news.length > 0 && (
-            <p className="mt-0.5 t-sub text-text-3">
-              최근 {news.length.toLocaleString("ko-KR")}건 · 같은 사건 접어 {clusters.length}행
-            </p>
-          )}
-        </header>
+      <h1 className="rise-in text-[21px] font-bold text-ink">{tag.label} 뉴스</h1>
+      <p className="rise-in-1 mt-1 max-w-[640px] text-[13px] leading-[1.7] text-text-2">
+        {tag.label} 관련 보도를 매일 자동 수집해 같은 사건은 하나로 묶었습니다. 각 글에는
+        출처와 원문 링크가 명시됩니다.
+      </p>
 
-        {failed ? (
-          <p className="t-body text-text-2">{tag.label} 뉴스를 지금 불러오지 못했어요 — 없다는 뜻은 아니에요</p>
-        ) : clusters.length === 0 ? (
-          /* [1012] 규칙 6 — 언제(최근 수집분)·무엇(태그 보도). [v4] 빈 상태는 한 줄 */
-          <p className="t-body text-text-3">최근 수집분에 {tag.label} 보도 없음</p>
-        ) : (
-          /* [v4] 뉴스룸 목록과 같은 행 — 제목 한 줄 + 매체 · 날짜 · 분류 · 관련 n 한 줄 */
-          <ul data-tone="hanji" className="divide-y divide-line">
-            {clusters.map((c, i) => {
-              const p = byId.get(c.primary.id)!;
-              const tail = [
-                /* [970 · C-04] timeZone 없는 toLocaleDateString — 서버(UTC)에서 자정 전후 기사가 전날로 */
-                formatKstShortDate(displayIso(p)),
-                p.category,
-                c.related.length > 0 ? `관련 ${c.related.length}` : null,
-              ]
-                .filter(Boolean)
-                .join(" · ");
-              return (
-                <li key={p.id}>
-                  {/* [1013] 뉴스룸 목록과 같은 72px 썸네일 칸(사진 없으면 매체 이름) */}
-                  <Link href={`/town/news/${p.id}`} className="flex min-w-0 items-center gap-3 py-3 no-underline">
-                    <NewsThumb src={newsImageUrl(p)} source={p.sourceName || "뉴스"} priority={i === 0} />
-                    <span className="flex min-w-0 flex-1 flex-col gap-1">
-                      <span className="clamp-2 t-body font-bold text-ink">{p.title}</span>
-                      <span className="flex min-w-0 items-baseline t-sub text-text-3">
-                        <span className="min-w-0 truncate font-bold text-text-2">{p.sourceName || "뉴스"}</span>
-                        <span className="shrink-0 whitespace-pre"> · {tail}</span>
-                      </span>
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        {/* 다른 주제 — [v4] 링크 칩 → 글자 링크 한 줄(칩은 필터에만) + 뉴스룸으로 */}
-        <div className="flex flex-col gap-1">
-          <nav aria-label="다른 주제" className="t-sub text-text-3">
-            다른 주제 —{" "}
-            {NEWS_TAGS.filter((t) => t.slug !== slug)
-              .slice(0, 12)
-              .map((t, i) => (
-                <span key={t.slug}>
-                  {i > 0 && " · "}
-                  <Link href={`/town/news/tag/${t.slug}`} className="tap-line font-bold text-text-2 no-underline">
-                    {t.label}
-                  </Link>
-                </span>
-              ))}
-          </nav>
-          <Link href="/town/news" className="tap-line self-start t-sub font-bold text-primary no-underline">
-            {/* [1012] 규칙 5 — 동사 + 대상 */}
-            뉴스룸 전체 보기 ›
-          </Link>
-          <p className="t-caption text-text-3">자동 수집 기사 · 매일 아침 8시 · 매체명·원문 링크 표기</p>
-        </div>
+      {/* 다른 주제 칩 */}
+      <div className="rise-in-1 mt-3 flex flex-wrap gap-1.5">
+        {NEWS_TAGS.filter((t) => t.slug !== slug)
+          .slice(0, 12)
+          .map((t) => (
+            <Link
+              key={t.slug}
+              href={`/town/news/tag/${t.slug}`}
+              className="chip border border-line bg-surface px-3 py-1.5 text-[12px] font-bold text-text-2"
+            >
+              {t.label}
+            </Link>
+          ))}
+        <Link
+          href="/town/news"
+          className="chip border border-line bg-surface px-3 py-1.5 text-[12px] font-bold text-primary"
+        >
+          전체 뉴스 ›
+        </Link>
       </div>
+
+      {failed ? (
+        <div className="card mt-4 rounded-2xl px-5 py-6 text-[13px] text-text-2">
+          뉴스를 지금 불러오지 못했어요 — 잠시 후 다시 열어봐 주세요.
+        </div>
+      ) : clusters.length === 0 ? (
+        <div className="card mt-4 rounded-2xl px-5 py-6 text-[13px] leading-[1.7] text-text-2">
+          최근 수집분에 {tag.label} 보도가 없어요. 수집은 매일 이어지니 다시 들러 주세요.
+        </div>
+      ) : (
+        /* [1006] 뉴스룸과 같은 행 재질(.news-row) — 분류 태그 · 출처 · 날짜 · 제목 */
+        <div className="news-list mt-4">
+          {clusters.map((c) => {
+            const p = byId.get(c.primary.id)!;
+            return (
+              <article key={p.id} className="news-row news-row--thumb">
+                {/* [1013] 뉴스룸 목록과 같은 썸네일 칸(모든 행 · 사진 없으면 매체 이름) */}
+                <Link href={`/town/news/${p.id}`} className="news-row__thumb block bg-divider" tabIndex={-1} aria-hidden="true">
+                  <CoverImage
+                    src={newsImageUrl(p)}
+                    alt=""
+                    imgClassName="absolute inset-0 h-full w-full object-cover"
+                    sizes="88px"
+                    fallback={
+                      <span className="absolute inset-0 flex items-center justify-center break-keep px-1 text-center t-caption font-bold text-text-3">
+                        {p.sourceName || "뉴스"}
+                      </span>
+                    }
+                  />
+                </Link>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <div className="news-row__meta">
+                    {p.category && <span className="news-tag">{p.category}</span>}
+                    <span className="news-source">{p.sourceName || "뉴스"}</span>
+                    {/* [970 · C-04] timeZone 없는 toLocaleDateString — 서버(UTC)에서 자정 전후 기사가 전날로 */}
+                    <time dateTime={displayIso(p)}>{formatKstShortDate(displayIso(p))}</time>
+                    {c.related.length > 0 && <span>· 관련 보도 {c.related.length}건</span>}
+                  </div>
+                  <Link href={`/town/news/${p.id}`} className="news-row__title no-underline">
+                    <span className="line-clamp-2">{p.title}</span>
+                  </Link>
+                </div>
+                <span aria-hidden="true" />
+              </article>
+            );
+          })}
+        </div>
+      )}
     </PageShell>
   );
 }

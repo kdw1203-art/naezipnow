@@ -20,7 +20,7 @@ export default async function BlogPackPage() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-[19px] font-extrabold text-white">네이버 블로그 주간 팩</h1>
+        <h1 className="text-[19px] font-bold text-white">네이버 블로그 주간 팩</h1>
         <p className="mt-1 text-[13px] leading-[1.7] text-[#9aa6b8]">
           지금 시점 데이터로 만든 붙여넣기 완성본입니다. 발행은 직접 하시고, 본문 안의 출처
           문단과 &ldquo;투자 권유 아님&rdquo; 문구는 지우지 말아 주세요. 이미지는 URL 을

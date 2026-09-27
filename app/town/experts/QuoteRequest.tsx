@@ -16,7 +16,7 @@ import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
 import { Modal, ModalHeader } from "@/app/components/ui/Modal";
 import { CharCount } from "@/app/components/ui/CharCount";
 import { QUOTE_CATEGORIES, findSpecialty } from "@/lib/experts/taxonomy";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-bold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* [953] 카테고리는 분류 체계(taxonomy) 의 quotable 분야 — 목록 필터·프로필 분야와 같은 라벨 */
 const CATEGORIES = QUOTE_CATEGORIES;

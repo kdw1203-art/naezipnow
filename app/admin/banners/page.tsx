@@ -35,7 +35,7 @@ export default async function AdminBannersPage() {
     return (
       <div className="flex flex-col gap-5">
         <header className="flex flex-col gap-1">
-          <h1 className="text-[19px] font-extrabold text-[#e8edf6]">배너 · 하우스광고</h1>
+          <h1 className="text-[19px] font-bold text-[#e8edf6]">배너 · 하우스광고</h1>
         </header>
         <ErrorState
           tone="admin"
@@ -55,7 +55,7 @@ export default async function AdminBannersPage() {
   return (
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-1">
-        <h1 className="text-[19px] font-extrabold text-[#e8edf6]">배너 · 하우스광고</h1>
+        <h1 className="text-[19px] font-bold text-[#e8edf6]">배너 · 하우스광고</h1>
         <p className="text-[13px] leading-relaxed text-[#9aa6b8]">
           등록 {withState.length}건 · 지금 노출 중 {liveCount}건. 노출 중인 배너가 없는
           위치에는 아래 하우스 광고가 대신 나갑니다.
@@ -65,7 +65,7 @@ export default async function AdminBannersPage() {
       <BannersClient initial={withState} />
 
       <section className="flex flex-col gap-2 rounded-3xl border border-[#243049] bg-[#141b2b] p-5">
-        <h2 className="text-[13px] font-extrabold text-[#e8edf6]">
+        <h2 className="text-[13px] font-bold text-[#e8edf6]">
           하우스 광고 (배너 없을 때 대체 노출)
         </h2>
         <p className="text-[12px] leading-relaxed text-[#8d99ab]">

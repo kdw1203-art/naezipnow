@@ -1,5 +1,4 @@
 "use client";
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
@@ -133,9 +132,9 @@ function Chip({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`press min-h-[40px] min-w-[40px] rounded-lg px-3 py-2 text-xs ${
+      className={`press min-h-[40px] rounded-lg px-3 py-2 text-xs ${
         active
-          ? "border border-brand-hanji-ink bg-brand-hanji font-bold text-brand-hanji-ink"
+          ? "border-[1.5px] border-primary bg-primary-soft font-bold text-primary"
           : "border border-line bg-surface text-text-2"
       } ${className}`}
     >
@@ -356,313 +355,333 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
     return `${head} ${body}${hold}${tail}`;
   }, [baseline, calc, isReal, pricePct, incomeManwon, ltvPct]);
 
-  /* [v4 · 규칙 1] 머리 사실 한 줄 — 기준 시세(실데이터면 지역·시점, 아니면 예시) · 상환 방식 */
-  const headFact = isReal
-    ? `${baseline.regionName} 평균 ${baseline.avgSaleLabel} · ${baseline.source.toUpperCase()} ${baseline.period} · 30년 원리금균등`
-    : "예시 시세 8.4억 · 30년 원리금균등 · 지역을 고르면 실제 평균가";
-  const ROW = "flex min-h-12 items-center justify-between gap-3 py-2.5";
-
   return (
     <PageShell breadcrumb="AI 분석 › 시장·대출 시나리오">
       {/* [975] 지도에서 단지 고르기 — 열기 전에는 내려받지 않는다 */}
       {mapNode}
-      {/* [v4 · 한 화면 한 가지] 머리(제목 + 공유 + 사실 한 줄) → 주인공(월 원리금 t-display + 소득 대비) → 조건 입력 →
-          결과 구분선 행(+1.0%p · −0.5%p · 시세 변화) → 금리 스트레스 곡선 → 보유 기간 행 → 규칙 기반 요약(AI 패널 · 면책) → 이어서 분석.
-          지운 것: "실데이터 기준" 배지 3곳, 카드 안 상자(금리 참고·보유 기간 3칸·가운데 정렬 안내), 결과 카드 3장(→ 주인공 + 행),
-          시나리오별 막대(기준·+1·−0.5 = 위 숫자와 같은 사실), 곡선 사용법 문장, AI 칩 타일. 데스크톱 2열 → 가운데 한 줄. */}
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
-        <div className="flex flex-col gap-4">
-          <header className="flex flex-col gap-0.5">
-            <div className="flex items-center justify-between gap-3">
-              <h1 className="rise-in t-title text-ink">시장·대출 시나리오</h1>
-              {/* [AI-27] 현재 조건 세트를 URL로 공유 — 커뮤니티 글감·상담 공유용 */}
-              <button
-                type="button"
-                onClick={copyShareLink}
-                className="press min-h-10 shrink-0 rounded-lg border border-line-strong bg-surface px-3 py-1.5 t-sub font-bold text-text-1"
-              >
-                {shareCopied ? "링크 복사됨 ✓" : "이 조건 공유"}
-              </button>
-            </div>
-            <p className="t-sub text-text-3">{headFact}</p>
-          </header>
-          {!isReal && <SimulationNotice />}
-
-          {/* [v4 · 규칙 2] 주인공 — 월 원리금 하나 + 소득 대비 판정 */}
-          <section aria-label="월 원리금" className="flex flex-col gap-0.5">
-            <p className="m-0 t-caption text-text-3">월 원리금 · 금리 {calc.rate.toFixed(2)}%</p>
-            <TweenNumber value={calc.pay / 10_000} format="eokmanwon" className="block t-display text-ink" />
-            <p className={`m-0 inline-flex flex-wrap items-center gap-0.5 t-sub font-bold ${dsrTone(calc.dsr).cls}`}>
-              소득 대비 {(calc.dsr * 100).toFixed(0)}% · {dsrTone(calc.dsr).label}
-              <Explain
-                term="dsr"
-                title="소득 대비 상환 부담"
-                body="이 화면의 '소득 대비'는 이 대출 하나만 넣은 값이라 실제 DSR(모든 대출 합산)보다 낮게 나와요."
-                how={[
-                  "소득 대비 = 이 대출의 1년 원리금(월 상환액 × 12) ÷ 연 소득",
-                  "30% 이하 적정 · 40% 이하 주의 · 40% 넘으면 위험(대출 계산기와 같은 참고 기준)",
-                  "30년 원리금균등 상환, 금리는 위에서 고른 값 그대로",
-                ]}
-              />
-            </p>
-          </section>
+      <div className="mb-2 flex items-center justify-between">
+        <h1 className="rise-in t-title text-ink">시장·대출 시나리오</h1>
+        {/* [AI-27] 현재 조건 세트를 URL로 공유 — 커뮤니티 글감·상담 공유용 */}
+        <button
+          type="button"
+          onClick={copyShareLink}
+          className="press rise-in min-h-[40px] rounded-lg border border-line-strong bg-surface px-3 py-1.5 t-sub font-bold text-text-1"
+        >
+          {shareCopied ? "링크 복사됨 ✓" : "이 조건 공유"}
+        </button>
+      </div>
+      {!isReal && (
+        <div className="rise-in mb-3">
+          <SimulationNotice />
         </div>
+      )}
 
-        {/* ── 조건 설정 ── */}
-        <section aria-labelledby="scn-inputs" className="flex flex-col gap-2">
-          <h2 id="scn-inputs" className="t-section text-ink">
-            조건
-          </h2>
-          <div className="card flex flex-col gap-3.5 rounded-lg p-4">
-            {/* 단지 선택 → 그 단지 지역의 실시세로 기준가 프리필 */}
-            <ComplexPicker
-              label="단지로 기준가 채우기"
-              onSelect={onComplex}
-              /* [975] 이름을 몰라도 지도에서 눌러 고른다 */
-              onMapClick={openMap}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[380px_minmax(0,1fr)]">
+        {/* 조건 설정 */}
+        <div className="rise-in-1 card flex flex-col gap-3.5 rounded-3xl p-[22px]">
+          <div className="t-section text-ink">조건 설정</div>
+
+          {/* 단지 선택 → 그 단지 지역의 실시세로 기준가 프리필 */}
+          <ComplexPicker
+            label="단지로 기준가 채우기"
+            onSelect={onComplex}
+            /* [975] 이름을 몰라도 지도에서 눌러 고른다 */
+            onMapClick={openMap}
+          />
+
+          {/* 지역 실시세 프리필 */}
+          <label className="flex flex-col gap-1">
+            <span className="t-sub font-bold text-text-2">기준 지역 (실시세)</span>
+            <select
+              value={regionId}
+              onChange={(e) => setRegionId(e.target.value)}
+              className="w-full rounded-lg border border-line bg-surface px-2.5 py-2 text-xs font-bold text-ink"
+            >
+              <option value="">예시 시세로 계산 (8.4억)</option>
+              {REGION_OPTIONS.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+            {regionId && !loadingBaseline && !isReal && (
+              <span className="t-sub text-text-3">
+                이 지역은 아직 실시세 데이터가 없어 예시 시세로 계산해요.
+              </span>
+            )}
+          </label>
+
+          <div className="flex flex-col gap-2.5">
+            <div className="flex justify-between t-body">
+              <span className="text-text-2">대상</span>
+              <span className="text-right font-bold text-ink">
+                {isReal
+                  ? `${pickedName ? `${pickedName} · ` : ""}${baseline.regionName} 평균 · ${baseline.avgSaleLabel}`
+                  : `${pickedName ? `${pickedName} · ` : "예시 시세 · "}8.4억`}
+                {isReal && (
+                  <span className="ml-1 rounded border border-line px-1 py-px t-caption font-semibold text-text-3 align-middle">
+                    실데이터 기준
+                  </span>
+                )}
+              </span>
+            </div>
+            {isReal && (
+              <div className="flex justify-between t-sub text-text-3">
+                <span>출처</span>
+                <span>
+                  {baseline.source.toUpperCase()} · {baseline.period} 기준
+                  {baseline.jeonseRatio !== null
+                    ? ` · 전세가율 ${baseline.jeonseRatio.toFixed(0)}%`
+                    : ""}
+                </span>
+              </div>
+            )}
+            {/* 대출 비율 — 예전 슬라이더는 40%에 고정된 그림이었다. 실제 입력으로 교체. */}
+            <div className="flex justify-between t-body">
+              <span className="inline-flex items-center gap-0.5 text-text-2">
+                대출 비율
+                <Explain
+                  term="ltv"
+                  how={[
+                    "대출액 = 기준 시세 × 대출 비율 · 필요 현금 = 기준 시세 − 대출액",
+                    "실제 한도는 지역(규제지역 여부)·보유 주택 수·가격대에 따라 달라요 — 계산기에서 내 조건으로 확인하세요.",
+                  ]}
+                />
+              </span>
+              <span className="font-bold tabular-nums text-ink">
+                <TweenNumber value={ltvPct} format="int" suffix="%" />
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={70}
+              step={5}
+              value={ltvPct}
+              onChange={(e) => setLtvPct(Number(e.target.value))}
+              aria-label="대출 비율 (%)"
+              className="h-9 w-full cursor-pointer accent-primary max-md:h-11"
             />
-
-            {/* 지역 실시세 프리필 */}
-            <label className="flex flex-col gap-1">
-              <span className="t-sub font-bold text-text-2">기준 지역 (실시세)</span>
-              <select
-                value={regionId}
-                onChange={(e) => setRegionId(e.target.value)}
-                className="w-full rounded-lg border border-line bg-surface px-2.5 py-2 t-sub font-bold text-ink"
-              >
-                <option value="">예시 시세로 계산 (8.4억)</option>
-                {REGION_OPTIONS.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-              {regionId && !loadingBaseline && !isReal && (
-                <span className="t-sub text-text-3">이 지역 실시세 없음 · 예시 시세로 계산</span>
-              )}
+            <label className="flex items-center justify-between gap-2 t-body">
+              <span className="text-text-2">연 소득</span>
+              <span className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min={100}
+                  max={100_000}
+                  step={100}
+                  value={incomeManwon}
+                  onChange={(e) => setIncomeManwon(Math.max(0, Number(e.target.value)))}
+                  aria-label="연 소득 (만원)"
+                  className="w-[90px] rounded-lg border border-line bg-surface px-2 py-1 text-right t-body font-bold text-ink"
+                />
+                <span className="font-bold text-text-2">만원</span>
+              </span>
+            </label>
+            {/* [D68] 금리는 이 화면에서 **가장 많이 만지는 값**인데 숫자 입력칸
+                하나뿐이었다 — 0.05씩 올려 보려면 화살표를 스무 번 눌러야 한다.
+                대출 비율은 이미 슬라이더인데 금리만 아닌 건 일관성 문제이기도 하다.
+                슬라이더를 더하되 숫자칸은 남긴다: 슬라이더는 "훑어보기",
+                숫자칸은 "내 대출 금리 정확히 넣기" — 둘은 다른 용도다.
+                DSR 은 입력이 아니라 결과다(소득·상환액에서 계산된다) — 만질 수
+                있는 것처럼 보이게 하지 않고, 슬라이더를 움직이는 즉시 아래에서
+                다시 계산돼 보인다. */}
+            <div className="flex justify-between t-body">
+              <span className="text-text-2">기준 금리</span>
+              <span className="font-bold text-ink">{baseRate.toFixed(2)}%</span>
+            </div>
+            <input
+              type="range"
+              min={2}
+              max={9}
+              step={0.05}
+              value={Math.min(9, Math.max(2, baseRate))}
+              onChange={(e) => setBaseRate(Number(e.target.value))}
+              aria-label="기준 금리 (연 %) 슬라이더"
+              className="h-9 w-full cursor-pointer accent-primary max-md:h-11"
+            />
+            <label className="flex items-center justify-between gap-2 t-body">
+              <span className="text-text-2">직접 입력</span>
+              <span className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min={0.5}
+                  max={15}
+                  step={0.05}
+                  value={baseRate}
+                  onChange={(e) => setBaseRate(Number(e.target.value))}
+                  aria-label="기준 금리 (연 %)"
+                  className="w-[70px] rounded-lg border border-line bg-surface px-2 py-1 text-right t-body font-bold text-ink"
+                />
+                <span className="font-bold text-text-2">%</span>
+              </span>
             </label>
 
-            <div className="flex flex-col gap-2.5">
-              <div className="flex justify-between gap-2 t-body">
-                <span className="text-text-2">대상</span>
-                <span className="text-right font-bold text-ink">
-                  {isReal
-                    ? `${pickedName ? `${pickedName} · ` : ""}${baseline.regionName} 평균 · ${baseline.avgSaleLabel}`
-                    : `${pickedName ? `${pickedName} · ` : "예시 시세 · "}8.4억`}
-                </span>
-              </div>
-              {isReal && baseline.jeonseRatio !== null && (
-                <div className="flex justify-between t-sub text-text-3">
-                  <span>전세가율</span>
-                  <span className="t-num">{baseline.jeonseRatio.toFixed(0)}%</span>
+            {/* 지금 금리 참고 — 서버가 넘긴 실공시(한국은행 기준금리·금감원 주담대).
+                정책금리는 대출금리가 아니라 참고용, 주담대 중앙값은 '적용' 버튼으로 채운다.
+                값이 없으면(키 미설정) 블록 자체를 감춰 지어낸 숫자를 만들지 않는다. */}
+            {(rates.policy || rates.mortgageMedian != null) && (
+              <div className="rounded-lg border border-line bg-bg px-3 py-2 t-sub">
+                <div className="font-bold text-text-2">지금 금리 참고</div>
+                {rates.policy && (
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span className="text-text-3">한국은행 기준금리(정책)</span>
+                    <span className="font-bold text-ink">
+                      {rates.policy.label}
+                      {rates.policy.cycle ? (
+                        <span className="ml-1 font-semibold text-text-3">
+                          {fmtCycle(rates.policy.cycle)}
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
+                )}
+                {rates.mortgageMedian != null && (
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span className="text-text-3">
+                      시중 주담대 변동 중앙값
+                      {rates.mortgageAsOf ? (
+                        <span className="ml-0.5 text-text-3">({rates.mortgageAsOf})</span>
+                      ) : null}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setBaseRate(Number(rates.mortgageMedian!.toFixed(2)))}
+                      className="shrink-0 rounded-lg border-[1.5px] border-primary px-2 py-0.5 t-sub font-bold text-primary"
+                    >
+                      {rates.mortgageMedian.toFixed(2)}% 적용
+                    </button>
+                  </div>
+                )}
+                <div className="mt-1.5 t-caption text-text-3">
+                  실제 대출 금리 = 기준금리 + 가산금리(신용·LTV·상품별). 위 값은 참고용이며,
+                  내 조건에 맞게 금리를 조정하세요.
                 </div>
-              )}
-              {/* 대출 비율 — 예전 슬라이더는 40%에 고정된 그림이었다. 실제 입력으로 교체. */}
-              <div className="flex justify-between t-body">
-                <span className="inline-flex items-center gap-0.5 text-text-2">
-                  대출 비율
-                  <Explain
-                    term="ltv"
-                    how={[
-                      "대출액 = 기준 시세 × 대출 비율 · 필요 현금 = 기준 시세 − 대출액",
-                      "실제 한도는 지역(규제지역 여부)·보유 주택 수·가격대에 따라 달라요 — 계산기에서 내 조건으로 확인하세요.",
-                    ]}
-                  />
-                </span>
-                <span className="font-bold tabular-nums text-ink">
-                  <TweenNumber value={ltvPct} format="int" suffix="%" />
-                </span>
               </div>
-              <input
-                type="range"
-                min={0}
-                max={70}
-                step={5}
-                value={ltvPct}
-                onChange={(e) => setLtvPct(Number(e.target.value))}
-                aria-label="대출 비율 (%)"
-                className="h-9 w-full cursor-pointer accent-primary max-md:h-11"
-              />
-              <label className="flex items-center justify-between gap-2 t-body">
-                <span className="text-text-2">연 소득</span>
-                <span className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    min={100}
-                    max={100_000}
-                    step={100}
-                    value={incomeManwon}
-                    onChange={(e) => setIncomeManwon(Math.max(0, Number(e.target.value)))}
-                    aria-label="연 소득 (만원)"
-                    className="w-[90px] rounded-lg border border-line bg-surface px-2 py-1 text-right t-body font-bold text-ink"
-                  />
-                  <span className="font-bold text-text-2">만원</span>
-                </span>
-              </label>
-              {/* [D68] 금리 — 슬라이더(훑어보기) + 숫자칸(내 대출 금리 정확히 넣기). DSR 은 입력이 아니라 결과다. */}
-              <div className="flex justify-between t-body">
-                <span className="text-text-2">기준 금리</span>
-                <span className="font-bold text-ink">{baseRate.toFixed(2)}%</span>
-              </div>
-              <input
-                type="range"
-                min={2}
-                max={9}
-                step={0.05}
-                value={Math.min(9, Math.max(2, baseRate))}
-                onChange={(e) => setBaseRate(Number(e.target.value))}
-                aria-label="기준 금리 (연 %) 슬라이더"
-                className="h-9 w-full cursor-pointer accent-primary max-md:h-11"
-              />
-              <label className="flex items-center justify-between gap-2 t-body">
-                <span className="text-text-2">직접 입력</span>
-                <span className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    min={0.5}
-                    max={15}
-                    step={0.05}
-                    value={baseRate}
-                    onChange={(e) => setBaseRate(Number(e.target.value))}
-                    aria-label="기준 금리 (연 %)"
-                    className="w-[70px] rounded-lg border border-line bg-surface px-2 py-1 text-right t-body font-bold text-ink"
-                  />
-                  <span className="font-bold text-text-2">%</span>
-                </span>
-              </label>
+            )}
 
-              {/* 지금 금리 참고 — 서버가 넘긴 실공시(한국은행 기준금리·금감원 주담대). 값이 없으면 블록을 감춘다.
-                  [v4 · 규칙 5] 카드 안 상자 → 1px 선 위 행 두 줄 + 캡션 한 줄 */}
-              {(rates.policy || rates.mortgageMedian != null) && (
-                <div className="flex flex-col border-t border-line pt-2 t-sub">
-                  {rates.policy && (
-                    <div className="flex min-h-10 items-center justify-between gap-2">
-                      <span className="text-text-3">한국은행 기준금리(정책)</span>
-                      <span className="font-bold text-ink">
-                        {rates.policy.label}
-                        {rates.policy.cycle ? (
-                          <span className="ml-1 font-medium text-text-3">{fmtCycle(rates.policy.cycle)}</span>
-                        ) : null}
-                      </span>
-                    </div>
-                  )}
-                  {rates.mortgageMedian != null && (
-                    <div className="flex min-h-10 items-center justify-between gap-2">
-                      <span className="text-text-3">
-                        시중 주담대 변동 중앙값
-                        {rates.mortgageAsOf ? <span className="ml-0.5">({rates.mortgageAsOf})</span> : null}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setBaseRate(Number(rates.mortgageMedian!.toFixed(2)))}
-                        className="min-h-10 shrink-0 rounded-lg border border-primary px-2 t-sub font-bold text-primary"
-                      >
-                        {rates.mortgageMedian.toFixed(2)}% 적용
-                      </button>
-                    </div>
-                  )}
-                  <p className="t-caption text-text-3">실제 금리 = 기준금리 + 가산금리(신용·LTV·상품별) · 참고용</p>
-                </div>
-              )}
-
-              <div className="flex justify-between gap-2 border-t border-line pt-2.5 t-body">
-                <span className="text-text-2">필요 현금 (시세−대출)</span>
-                <TweenNumber value={cashWon / 10_000} format="eokmanwon" className="text-right font-bold text-ink" />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2 border-t border-line pt-3">
-              <div className="t-sub font-bold text-text-2">금리 시나리오</div>
-              <div className="flex flex-wrap gap-1.5">
-                {RATE_OFFSETS.map((c) => (
-                  <Chip
-                    key={c.label}
-                    label={c.offset === 0 ? `기준 ${baseRate}%` : c.label}
-                    active={rateOffset === c.offset}
-                    onClick={() => setRateOffset(c.offset)}
-                  />
-                ))}
-              </div>
-              <div className="mt-1 t-sub font-bold text-text-2">시세 시나리오</div>
-              <div className="flex flex-wrap gap-1.5">
-                {PRICE_CHIPS.map((c) => (
-                  <Chip key={c.label} label={c.label} active={pricePct === c.pct} onClick={() => setPricePct(c.pct)} />
-                ))}
-              </div>
-              <div className="mt-1 t-sub font-bold text-text-2">보유 기간</div>
-              {/* [1009 · A] 세 가지 중 하나 — 같은 화면 상태 전환이라 공용 Segmented(선택 표시가 미끄러진다) */}
-              <Segmented
-                options={PERIOD_CHIPS.map((c) => ({ value: c, label: c }))}
-                value={period}
-                onChange={setPeriod}
-                ariaLabel="보유 기간"
-                className="self-start"
-              />
+            <div className="flex justify-between gap-2 t-body">
+              <span className="text-text-2">필요 현금 (시세−대출)</span>
+              <TweenNumber value={cashWon / 10_000} format="eokmanwon" className="text-right font-bold text-ink" />
             </div>
           </div>
-        </section>
 
-        {/* ── 결과 — [v4 · 규칙 5] 카드 3장 → 구분선 행(왼쪽 조건 + 보조 한 줄 / 오른쪽 금액) ── */}
-        <section aria-labelledby="scn-results" className="flex flex-col gap-2">
-          <h2 id="scn-results" className="t-section text-ink">
-            시나리오별 월 원리금
-          </h2>
-          <ul data-tone="mint" className="card flex flex-col divide-y divide-line rounded-lg px-4">
-            <li className={ROW}>
-              <span className="min-w-0 flex-1">
-                <span className="block t-body font-bold text-ink">금리 +1.0%p</span>
-                <span className={`mt-0.5 block truncate t-sub font-bold ${dsrTone(calc.dsrStress).cls}`}>
-                  소득 대비 {(calc.dsrStress * 100).toFixed(0)}% · {dsrTone(calc.dsrStress).label}
-                </span>
-              </span>
-              {/* [1009 · A] 오류색으로 칠하던 금액 → "지금 대비 ▲ 얼마" */}
-              <span className="flex shrink-0 flex-col items-end">
-                <TweenNumber value={calc.payStress / 10_000} format="eokmanwon" className="t-body t-num text-ink" />
-                <span className="t-caption">
-                  <Delta pct={pctChange(calc.payStress, calc.pay)} diffManwon={(calc.payStress - calc.pay) / 10_000} srContext="지금보다" />
-                </span>
-              </span>
-            </li>
-            <li className={ROW}>
-              <span className="min-w-0 flex-1">
-                <span className="block t-body font-bold text-ink">금리 −0.5%p</span>
-                <span className="mt-0.5 block truncate t-sub text-text-3">
-                  {Math.max(0.5, calc.rate - 0.5).toFixed(2)}%
-                </span>
-              </span>
-              <span className="shrink-0 t-body t-num text-ink">{wonText(calc.bars[2]?.pay ?? 0)}</span>
-            </li>
-            <li className={ROW}>
-              <span className="min-w-0 flex-1">
-                <span className="block t-body font-bold text-ink">
-                  시세 {pricePct === 0 ? "보합" : `${pricePct > 0 ? "+" : ""}${pricePct}%`} 시 자산 변화
-                </span>
-                <span className="mt-0.5 block truncate t-sub text-text-3">
-                  LTV {calc.ltvAfter.toFixed(0)}% · {calc.ltvAfter < 60 ? "안전권" : "주의"}
-                </span>
-              </span>
+          <div className="flex flex-col gap-2 border-t border-divider pt-3">
+            <div className="t-body font-bold text-ink">금리 시나리오</div>
+            <div className="flex flex-wrap gap-1.5">
+              {RATE_OFFSETS.map((c) => (
+                <Chip
+                  key={c.label}
+                  label={c.offset === 0 ? `기준 ${baseRate}%` : c.label}
+                  active={rateOffset === c.offset}
+                  onClick={() => setRateOffset(c.offset)}
+                />
+              ))}
+            </div>
+            <div className="mt-1 t-body font-bold text-ink">시세 시나리오</div>
+            <div className="flex flex-wrap gap-1.5">
+              {PRICE_CHIPS.map((c) => (
+                <Chip
+                  key={c.label}
+                  label={c.label}
+                  active={pricePct === c.pct}
+                  onClick={() => setPricePct(c.pct)}
+                />
+              ))}
+            </div>
+            <div className="mt-1 t-body font-bold text-ink">보유 기간</div>
+            {/* [1009 · A] 세 가지 중 하나 — 같은 화면 상태 전환이라 공용 Segmented(선택 표시가 미끄러진다) */}
+            <Segmented
+              options={PERIOD_CHIPS.map((c) => ({ value: c, label: c }))}
+              value={period}
+              onChange={setPeriod}
+              ariaLabel="보유 기간"
+              className="self-start"
+            />
+          </div>
+
+          <div className="rounded-lg bg-bg p-3 text-center text-xs font-semibold text-text-3">
+            {isReal
+              ? "지역 평균 실시세 기준 · 30년 원리금균등 상환으로 자동 계산돼요"
+              : "예시 시세 기준 · 지역을 선택하면 실제 평균가로 계산돼요"}
+          </div>
+        </div>
+
+        {/* 결과 */}
+        <div className="flex flex-col gap-4">
+          <div className="rise-in-2 grid grid-cols-1 gap-3.5 md:grid-cols-3">
+            <div className="card rounded-2xl p-[18px]">
+              <div className="text-xs text-text-3">
+                월 원리금 ({calc.rate.toFixed(2)}%)
+                {isReal && (
+                  <span className="ml-1 rounded border border-line px-1 py-px t-caption font-semibold">
+                    실데이터 기준
+                  </span>
+                )}
+              </div>
+              <TweenNumber value={calc.pay / 10_000} format="eokmanwon" className="mt-1 block t-title text-ink" />
+              <div className={`mt-0.5 inline-flex flex-wrap items-center gap-0.5 t-sub font-bold ${dsrTone(calc.dsr).cls}`}>
+                소득 대비 {(calc.dsr * 100).toFixed(0)}% · {dsrTone(calc.dsr).label}
+                <Explain
+                  term="dsr"
+                  title="소득 대비 상환 부담"
+                  body="이 화면의 '소득 대비'는 이 대출 하나만 넣은 값이라 실제 DSR(모든 대출 합산)보다 낮게 나와요."
+                  how={[
+                    "소득 대비 = 이 대출의 1년 원리금(월 상환액 × 12) ÷ 연 소득",
+                    "30% 이하 적정 · 40% 이하 주의 · 40% 넘으면 위험(대출 계산기와 같은 참고 기준)",
+                    "30년 원리금균등 상환, 금리는 위에서 고른 값 그대로",
+                  ]}
+                />
+              </div>
+            </div>
+            <div className="card rounded-2xl p-[18px]">
+              <div className="text-xs text-text-3">금리 +1.0%p 시 월 원리금</div>
+              <TweenNumber value={calc.payStress / 10_000} format="eokmanwon" className="mt-1 block t-title text-ink" />
+              {/* [1009 · A] 오류색(text-danger)으로 칠하던 금액 → "지금 대비 ▲ 얼마" 로 무엇이 늘었는지 말한다 */}
+              <div className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 t-sub">
+                <Delta pct={pctChange(calc.payStress, calc.pay)} diffManwon={(calc.payStress - calc.pay) / 10_000} srContext="지금보다" />
+                <span className="t-caption text-text-3">지금 대비</span>
+              </div>
+              <div className={`mt-0.5 t-sub font-bold ${dsrTone(calc.dsrStress).cls}`}>
+                소득 대비 {(calc.dsrStress * 100).toFixed(0)}% · {dsrTone(calc.dsrStress).label}
+              </div>
+            </div>
+            <div className="card rounded-2xl p-[18px]">
+              <div className="text-xs text-text-3">
+                시세 {pricePct === 0 ? "보합" : `${pricePct > 0 ? "+" : ""}${pricePct}%`} 시 자산 변화
+              </div>
               {(() => {
-                /* 등락 관례 — 오르면 빨강 ▲, 내리면 파랑 ▼ */
+                /* 등락 관례 — 오르면 빨강 ▲, 내리면 파랑 ▼(예전엔 오름을 테마색, 내림을 무색으로 칠했다) */
                 const dir = deltaDir(pricePct);
-                if (!dir || dir === "flat") return <span className="shrink-0 t-body t-num delta-flat">보합 · 0원</span>;
+                if (!dir || dir === "flat") return <div className="mt-1 t-title delta-flat">보합 · 0원</div>;
                 return (
-                  <span className={`shrink-0 t-body t-num ${DELTA_CLASS[dir]}`}>
+                  <div className={`mt-1 t-title ${DELTA_CLASS[dir]}`}>
                     <span aria-hidden="true">{DELTA_ARROW[dir]} </span>
                     <span className="sr-only">{DELTA_WORD[dir]} </span>
                     <TweenNumber value={Math.abs(calc.priceDeltaWon) / 10_000} format="eokmanwon" />
-                  </span>
+                  </div>
                 );
               })()}
-            </li>
-          </ul>
-        </section>
+              <div className="mt-0.5 t-sub text-text-3">
+                LTV {calc.ltvAfter.toFixed(0)}%로 {pricePct < 0 ? "상승" : "변동"} ·{" "}
+                {calc.ltvAfter < 60 ? "안전권" : "주의"}
+              </div>
+            </div>
+          </div>
 
-        {/* 금리 스트레스 곡선 — 슬라이더에 실시간 반응하는 그림. [1009 · A] 누르고 끌면 그 금리의 월 상환액 */}
-        <section className="flex flex-col gap-2 text-primary" data-reveal="">
-          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
-            금리 스트레스 곡선 <span className="t-sub font-medium text-text-3">−1.0%p ~ +3.0%p</span>
-          </h2>
-          <div className="card rounded-lg px-3 py-3">
+          {/* 금리 스트레스 곡선 — 슬라이더에 실시간 반응하는 그림.
+              [1009 · A] 누르고 끌면(마우스는 올리기만 해도) 그 금리의 월 상환액이 말풍선에 — 늘어나던 TrendChart 는
+              390px 에서 축 글자가 찌그러졌고 값을 읽을 길이 없었다. */}
+          <div className="chart-card text-primary" data-reveal="">
+            <div className="chart-head">
+              <span className="t-section text-ink">금리 스트레스 곡선</span>
+              <span className="t-sub t-num text-primary">
+                지금 {calc.rate.toFixed(2)}% · 월 <TweenNumber value={calc.pay / 10_000} format="eokmanwon" />
+              </span>
+              <span className="t-caption ml-auto text-text-3">
+                −1.0%p ~ +3.0%p · 0.25%p 간격
+              </span>
+            </div>
             <ScrubLineLazy
               values={calc.curve.map((c) => Math.round(c.pay / 10_000))}
               labels={calc.curve.map((c) => `${c.rate.toFixed(2)}%`)}
@@ -673,58 +692,100 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
               tone="primary"
               ariaLabel="금리별 월 상환액 곡선"
             />
+            <p className="t-sub text-text-2">
+              {calc.breachRate === null ? (
+                <>
+                  +3.0%p 까지 올라도 소득 대비 40%를 넘지 않습니다(현재 조건 기준).
+                </>
+              ) : (
+                <>
+                  금리가 <b className="text-ink">{calc.breachRate.toFixed(2)}%</b> 를
+                  넘어서면 소득 대비 40%(통상 부담 한계)를 지나갑니다. 지금은{" "}
+                  {calc.rate.toFixed(2)}% 입니다.
+                </>
+              )}{" "}
+              세로축은 월 상환액, 가로축은 연 금리예요 — 곡선을 누른 채 좌우로 움직이면 그 금리의 월 상환액이 나와요.
+            </p>
           </div>
-          {/* [v4 · 규칙 3] 사실 한 줄(곡선 사용법 문장은 지웠다) */}
-          <p className="t-sub text-text-2">
-            {calc.breachRate === null ? (
-              "+3.0%p 까지 소득 대비 40% 이하(현재 조건)"
-            ) : (
-              <>
-                소득 대비 40% 넘는 금리 <b className="t-num text-ink">{calc.breachRate.toFixed(2)}%</b> · 지금{" "}
-                {calc.rate.toFixed(2)}%
-              </>
-            )}
-          </p>
-        </section>
 
-        {/* 보유기간 결과 — [v4 · 규칙 5] 상자 3칸 → 구분선 행 */}
-        <section className="flex flex-col gap-2">
-          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
-            {calc.holdYears}년 보유 시 <span className="t-sub font-medium text-text-3">금리 {calc.rate.toFixed(2)}% 고정 가정</span>
-          </h2>
-          <dl data-tone="sand" className="card m-0 flex flex-col divide-y divide-line rounded-lg px-4">
-            {[
-              { label: "갚은 원금", v: calc.holdPrincipal },
-              { label: "낸 이자 (누적)", v: calc.holdInterest },
-              { label: "잔여 원금", v: calc.holdBalance },
-            ].map((r) => (
-              <div key={r.label} className={ROW}>
-                <dt className="t-body text-text-2">{r.label}</dt>
-                {/* [1009 · A] 입력이 바뀌면 이전 값에서 굴러간다 */}
-                <dd className="m-0 shrink-0">
-                  <TweenNumber value={r.v / 10_000} format="eokmanwon" className="t-body t-num text-ink" />
-                </dd>
+          <div className="card flex flex-col gap-3 rounded-lg p-4" data-reveal="">
+            <div className="t-section text-ink">시나리오별 월 부담 비교</div>
+            <div className="flex flex-col gap-2.5">
+              {calc.bars.map((b) => (
+                <div key={b.label} className="flex items-center gap-3">
+                  <span className="w-[90px] shrink-0 text-xs text-text-2">{b.label}</span>
+                  <div className="relative h-[22px] flex-1 rounded-md bg-bg">
+                    <div
+                      className="absolute left-0 flex h-[22px] items-center justify-end rounded-md pr-2 t-sub font-bold text-white transition-[width] duration-200 ease-out motion-reduce:transition-none"
+                      style={{
+                        width: `${Math.max(18, Math.round((b.pay / calc.maxPay) * 92))}%`,
+                        background: b.color,
+                      }}
+                    >
+                      {wonText(b.pay)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 보유기간 결과 — 3·5·10년 칩이 실제로 계산에 연결된 유일한 화면.
+              (예전엔 칩을 눌러도 아무 숫자도 바뀌지 않았다.) */}
+          <div className="rise-in-3 card flex flex-col gap-3 rounded-3xl p-[22px]">
+            <div className="t-section text-ink">
+              {calc.holdYears}년 보유 시 상환 현황
+              <span className="ml-2 t-sub font-semibold text-text-3">
+                30년 원리금균등 · 금리 {calc.rate.toFixed(2)}% 고정 가정
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              {/* [1009 · A] 입력이 바뀌면 이전 값에서 굴러간다 · 계산 결과는 "1억 2,000만원" 표준 표기 */}
+              <div className="rounded-lg bg-bg px-2 py-3">
+                <div className="t-sub text-text-3">갚은 원금</div>
+                <TweenNumber value={calc.holdPrincipal / 10_000} format="eokmanwon" className="mt-1 block t-section break-words text-ink" />
               </div>
-            ))}
-          </dl>
-        </section>
+              <div className="rounded-lg bg-bg px-2 py-3">
+                <div className="t-sub text-text-3">낸 이자 (누적)</div>
+                <TweenNumber value={calc.holdInterest / 10_000} format="eokmanwon" className="mt-1 block t-section break-words text-ink" />
+              </div>
+              <div className="rounded-lg bg-bg px-2 py-3">
+                <div className="t-sub text-text-3">잔여 원금</div>
+                <TweenNumber value={calc.holdBalance / 10_000} format="eokmanwon" className="mt-1 block t-section break-words text-ink" />
+              </div>
+            </div>
+          </div>
 
-        {/* 규칙 기반 요약 — AI 결과 패널이라 네이비 면 유지(v4 규칙 4 예외) · 면책 문장 그대로 */}
-        <section className="ai-panel flex flex-col gap-2 rounded-lg p-4">
-          <span className="t-caption font-bold text-ai-muted">규칙 기반 요약</span>
-          <p className="t-body text-ai-text">{aiComment}</p>
-          <p className="t-caption text-ai-muted">본 분석은 참고용이며 투자 판단의 책임은 이용자에게 있습니다.</p>
-        </section>
+          <div className="rise-in-4 ai-panel flex flex-col gap-2 rounded-3xl p-5 shadow-[0_14px_36px_rgba(16,28,54,.22)]">
+            <div className="flex items-start gap-3">
+              <span className="ai-chip h-[22px] w-[22px] shrink-0 rounded-lg t-sub">AI</span>
+              <div className="flex-1 t-body text-ai-text">{aiComment}</div>
+              <span className="shrink-0 rounded border border-on-dark-faint px-1.5 py-px t-caption font-bold text-ai-muted">
+                규칙 기반 요약
+              </span>
+            </div>
+            <div className="t-caption text-ai-muted">
+              본 분석은 참고용이며 투자 판단의 책임은 이용자에게 있습니다.
+            </div>
+          </div>
+        </div>
 
         {/* #411 — 도구 간 이어가기: 선택한 기준 지역 그대로 (미선택이면 링크만) */}
         <AnalysisCrossLinks
           current="scenario"
-          regionLabel={regionId ? (REGION_OPTIONS.find((r) => r.id === regionId)?.label ?? null) : null}
+          regionLabel={
+            regionId
+              ? (REGION_OPTIONS.find((r) => r.id === regionId)?.label ?? null)
+              : null
+          }
           regionFor={
             regionId
               ? {
                   timing: regionId,
-                  map: REGION_OPTIONS.find((r) => r.id === regionId)?.label.split(" ").pop() ?? undefined,
+                  map:
+                    REGION_OPTIONS.find((r) => r.id === regionId)
+                      ?.label.split(" ")
+                      .pop() ?? undefined,
                 }
               : undefined
           }

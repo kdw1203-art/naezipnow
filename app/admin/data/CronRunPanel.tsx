@@ -285,7 +285,7 @@ export function CronRunPanel() {
         return (
           <div key={g.key} className="flex flex-col gap-2">
             <div className="flex items-baseline gap-2">
-              <span className="text-[12px] font-extrabold text-white">{g.key}</span>
+              <span className="text-[12px] font-bold text-white">{g.key}</span>
               <span
                 className={`text-[10px] ${g.key === "알림" ? "text-[#f2c94c]" : "text-[#9aa6b8]"}`}
               >

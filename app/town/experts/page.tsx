@@ -15,7 +15,7 @@ import { TownCategoryNav } from "../TownCategoryNav";
 import { TownHero } from "../TownHero";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-bold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 전문가 목록 (953 개편) — expert_profiles 실데이터.
    구조: 네이비 히어로(무엇을·왜 믿을지) → 필터·카드 → 견적 요청 → 인증 안내·신청
@@ -230,10 +230,10 @@ export default async function TownExpertsPage() {
           </div>
           <div className="flex shrink-0 flex-col items-start gap-2 md:items-end">
             <ExpertApplyCta />
-            <Link href="/town/experts/join" className="t-sub font-bold text-brand-hanji-ink underline underline-offset-2">
+            <Link href="/town/experts/join" className="tap-line t-sub font-bold text-brand-hanji-ink underline underline-offset-2">
               참여 안내 자세히(절차·비용·FAQ) ›
             </Link>
-            <Link href="/partners" className="t-sub font-bold text-brand-hanji-ink underline underline-offset-2">
+            <Link href="/partners" className="tap-line t-sub font-bold text-brand-hanji-ink underline underline-offset-2">
               중개사무소 제휴 안내 ›
             </Link>
           </div>

@@ -4,8 +4,6 @@ import { BusinessDisclosureBlock } from "../BusinessDisclosureBlock";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { planLabel } from "@/lib/subscriptions/labels";
 
-/* [v4 · 규칙 1·5·10] 레이아웃·글자만 정리(문구는 그대로): 가운데 한 줄 760px · 본문 카드 면 제거 · 제목 t-title(800 → 700) ·
-   섹션 제목 t-section 한 단계로 통일 · 섹션 카드 → 위 1px 선. 법적 문구는 한 글자도 바꾸지 않았다. */
 export const metadata = buildPageMetadata({
   title: "이용약관",
   description: "내집나우(서비스 운영: 우리동네이야기) 이용약관 전문",
@@ -57,7 +55,7 @@ const Section = ({
   children: ReactNode;
 }) => (
   <section id={id} className="mt-8 scroll-mt-24 first:mt-0">
-    <h2 className="t-section text-ink">
+    <h2 className="text-[15px] font-bold text-ink">
       제{num}조 ({title})
     </h2>
     <div className="mt-2 space-y-2 text-[13px] leading-7 text-text-1">{children}</div>
@@ -66,10 +64,10 @@ const Section = ({
 
 export default function TermsPage() {
   return (
-    <main className="mx-auto w-full max-w-[760px]">
-      <article className="rise-in">
+    <main className="mx-auto w-full max-w-3xl">
+      <article className="card rise-in p-6 md:p-8">
         <div className="mb-6 border-b border-line pb-6">
-          <h1 className="t-title text-ink">이용약관</h1>
+          <h1 className="text-2xl font-bold text-ink">이용약관</h1>
           <p className="mt-1 text-[13px] text-text-3">시행일: {UPDATED}</p>
           <div className="mt-3 rounded-lg bg-primary-soft p-3 text-xs leading-relaxed text-primary">
             본 약관은 우리동네이야기(이하 &quot;회사&quot;)가 제공하는 서비스의 이용 조건 및 절차, 회사와
@@ -175,7 +173,7 @@ export default function TermsPage() {
             Section 컴포넌트 대신 동일 마크업을 직접 쓴다. 유상 충전이 없다는
             사실의 약관상 명문화 — PG 심사·소비자 오인 방지의 단일 근거 조항. */}
         <section id="points" className="mt-8 scroll-mt-24">
-          <h2 className="t-section text-ink">제8조의2 (포인트)</h2>
+          <h2 className="text-[15px] font-bold text-ink">제8조의2 (포인트)</h2>
           <div className="mt-2 space-y-2 text-[13px] leading-7 text-text-1">
             <p>① 회사가 제공하는 포인트는 출석, 기록 공개, 친구 초대 등 서비스 내 활동에 대한 보상으로만 적립되는 무상(無償) 리워드이며, 회사는 포인트를 유상으로 판매(충전)하지 않습니다. 회사는 포인트 충전(유상 판매) 기능을 제공하지 않으며, 향후에도 이를 도입하지 않습니다.</p>
             <p>② 포인트는 현금으로 구매·환불·전환할 수 없으며, 회원 간 양도가 불가합니다.</p>

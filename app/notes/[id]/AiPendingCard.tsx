@@ -1,5 +1,4 @@
 "use client";
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 3곳을 font-bold(700)로 바꿨다. */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -99,14 +98,18 @@ export function AiPendingCard({
             <span className="njn-dot njn-dot--breathe shrink-0" aria-hidden="true" />
             <span className="t-body font-bold text-white">AI 정리 중…</span>
           </div>
-          {/* [v4 · 규칙 3] 안내 두 문장 → 사실 한 줄 */}
-          <p className="t-sub text-ai-muted">노트 저장됨 · 정리가 끝나면 이 화면에 자동 반영</p>
+          <p className="t-sub text-ai-muted">
+            노트는 저장됐어요. 이 화면에 그대로 두면 정리가 끝나는 대로 자동으로 반영돼요.
+          </p>
         </div>
       ) : (
         <div role="status" aria-live="polite" className="flex flex-col gap-1.5">
           <p className="t-body font-bold text-white">AI 정리가 늦어지고 있어요</p>
           <p className="t-sub text-ai-muted">
-            노트 저장됨 · 서버 지연 또는 요청 누락 · {canRetry ? "아래에서 다시 요청" : "나중에 다시 열어 확인"}
+            노트는 저장돼 있어요. 서버가 바쁘거나 요청이 전달되지 않았을 수 있어요 —{" "}
+            {canRetry
+              ? "아래에서 다시 정리를 요청하거나, 나중에 이 노트를 다시 열어 확인해 주세요."
+              : "나중에 이 노트를 다시 열어 확인해 주세요."}
           </p>
           {canRetry && <AiRetryButton noteId={noteId} defaultIntent={defaultIntent} />}
           <button

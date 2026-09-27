@@ -108,10 +108,10 @@ export default async function AdminSupportPage({
             return (
               <article key={t.id} className={darkCard} aria-labelledby={`adm-ticket-${t.id}`}>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={`rounded-md chip-pad t-caption font-extrabold ${STATUS_TONE_DARK[t.status]}`}>
+                  <span className={`rounded-md chip-pad t-caption font-bold ${STATUS_TONE_DARK[t.status]}`}>
                     {TICKET_STATUS_LABEL[t.status]}
                   </span>
-                  <span className="rounded-md bg-[rgba(255,255,255,.08)] chip-pad t-caption font-extrabold text-[#c9d2e0]">
+                  <span className="rounded-md bg-[rgba(255,255,255,.08)] chip-pad t-caption font-bold text-[#c9d2e0]">
                     {t.category}
                   </span>
                   <span className="t-caption tabular-nums text-[#9aa6b8]">#{no}</span>
@@ -146,7 +146,7 @@ export default async function AdminSupportPage({
                 })()}
                 {t.adminReply && (
                   <div className="rounded-lg border-l-[3px] border-ai-accent bg-[rgba(126,162,255,.08)] px-3.5 py-3">
-                    <div className="mb-1 t-caption font-extrabold uppercase tracking-wide text-ai-accent">
+                    <div className="mb-1 t-caption font-bold uppercase tracking-wide text-ai-accent">
                       답변{t.repliedAt ? ` · ${formatKstDateTime(t.repliedAt)}` : ""}
                       {t.repliedBy ? ` · ${t.repliedBy}` : ""}
                     </div>

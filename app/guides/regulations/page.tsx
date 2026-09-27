@@ -1,7 +1,7 @@
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 3곳을 font-bold(700)로 바꿨다. */
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
-import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
+import { Icon } from "@/app/components/Icon";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
 
@@ -139,21 +139,27 @@ const SECTIONS: Section[] = [
   },
 ];
 
-/* [v4 · 규칙 5·7] 섹션 = 제목(t-section) + 도입 한 문단 + 용어 구분선 행. 아이콘 타일은 지웠다(icon 값은 카탈로그에 남겨 둔다) */
-/* [v4.1 · 리퀴드 목록] 규제 = sand 부터 섹션마다 톤 순환 — 이웃한 섹션이 같은 색을 갖지 않는다 */
-const SECTION_TONES = ["sand", "blue", "hanji", "mint"] as const;
-const SectionCard = ({ s, tone }: { s: Section; tone: (typeof SECTION_TONES)[number] }) => (
-  <section className="flex flex-col gap-2">
-    <h2 className="t-section text-ink">{s.title}</h2>
-    <p className="t-body leading-[1.75] text-text-2">{s.lead}</p>
-    <dl data-tone={tone} className="card m-0 flex flex-col divide-y divide-line rounded-lg px-4">
+const SectionCard = ({ s }: { s: Section }) => (
+  <section className="card rounded-2xl p-5 md:p-6">
+    <div className="flex items-center gap-2.5">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+        <Icon name={s.icon} size={18} />
+      </span>
+      <h2 className="text-[15px] font-bold leading-snug text-ink">
+        {s.title}
+      </h2>
+    </div>
+    <p className="mt-3 text-[13px] leading-[1.75] text-text-2">{s.lead}</p>
+    <ul className="mt-3.5 flex flex-col gap-2.5">
       {s.points.map((p) => (
-        <div key={p.term} className="py-3">
-          <dt className="t-body font-bold text-ink">{p.term}</dt>
-          <dd className="m-0 mt-0.5 t-sub leading-[1.7] text-text-3">{p.desc}</dd>
-        </div>
+        <li key={p.term} className="border-l-2 border-line pl-3">
+          <div className="text-[13px] font-bold text-text-1">{p.term}</div>
+          <div className="mt-0.5 text-[12px] leading-[1.7] text-text-3">
+            {p.desc}
+          </div>
+        </li>
       ))}
-    </dl>
+    </ul>
   </section>
 );
 
@@ -166,42 +172,74 @@ export default function RegulationsGuidePage() {
   ]);
 
   return (
-    <PageShell breadcrumb="가이드 › 부동산 규제·의무 안내">
+    <PageShell
+      breadcrumb="가이드 › 부동산 규제·의무 안내"
+      title="부동산 규제·의무 안내"
+    >
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
       />
-      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄(최신 수치 확인 안내) → 개념 5절(제목 + 도입 + 용어 행) → 이어 볼 가이드 행 →
-          면책 캡션. 지운 것: 연파랑 경고 상자 + 아이콘(→ 사실 줄), 절마다 아이콘 타일, 면책 카드 + 방패 아이콘(→ 캡션),
-          연파랑 "가이드 보기" 알약(→ 행). */}
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
-        <header className="flex flex-col gap-0.5">
-          <h1 className="rise-in t-title text-ink">부동산 규제·의무 안내</h1>
-          {/* 최신 수치 확인 안내 — 수치를 지어내지 않는다 */}
-          <p className="t-sub text-text-3">
-            개념 {SECTIONS.length}가지 · 수치는 수시로 바뀜 — 국세청·국토교통부·청약홈 확인
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
+        {/* 최신 수치 확인 안내 — 수치를 지어내지 않는다 */}
+        <div className="rise-in flex items-start gap-3 rounded-2xl bg-primary-soft p-4">
+          <Icon
+            name="warning"
+            size={18}
+            className="mt-0.5 shrink-0 text-primary"
+          />
+          <p className="text-[13px] leading-[1.7] text-primary">
+            세율·한도·규제지역 지정 여부 등 <b>구체적인 수치와 최신 여부는 수시로
+            바뀝니다.</b> 국세청(홈택스)·국토교통부·청약홈(한국부동산원) 등 관련
+            기관에서 반드시 직접 확인하세요. 이 페이지는 제도의 개념 이해를 돕는
+            일반 정보이며 특정 수치를 제공하지 않습니다.
           </p>
-        </header>
+        </div>
 
         {/* 개념 섹션 */}
         {SECTIONS.map((s, i) => (
-          <SectionCard key={s.title} s={s} tone={SECTION_TONES[i % SECTION_TONES.length]} />
+          <div key={s.title} className={`rise-in-${Math.min(i + 1, 4)}`}>
+            <SectionCard s={s} />
+          </div>
         ))}
 
-        {/* 관련 가이드 — [v4.1 · 리퀴드 목록] 한 행짜리 목록도 유리판(lq-panel) · 순환의 다음 톤이라 위 섹션과 겹치지 않는다 */}
-        <ul data-tone={SECTION_TONES[SECTIONS.length % SECTION_TONES.length]} className="lq-panel card flex flex-col rounded-lg px-4">
-          <SummaryRow label="계약 전 체크리스트 & 특약 가이드" sub="단계별 확인사항 · 표준계약서 핵심 조항 · 특약 예시" href="/guides/contract" />
-        </ul>
-
-        {/* 투자 판단 안내 + 공통 면책 — 카드 두 장 → 캡션 두 줄(문장은 그대로 짧게) */}
-        <div className="flex flex-col gap-1">
-          <p className="t-caption text-text-3">
-            개념 이해를 돕는 일반 정보 · 특정 주택의 매수·매도·청약 권유나 수익 보장이 아니며 투자 판단과 결과의 책임은 본인에게 있습니다.
-          </p>
-          <p className="t-caption text-text-3">
-            법률·세무 자문이 아닙니다 · 실제 거래·신고·세금은 공인중개사·법무사·세무사 등 전문가와 관련 기관 확인 필요
+        {/* 투자 판단 면책 */}
+        <div className="card rounded-2xl border-line p-5">
+          <div className="flex items-center gap-2 text-[13px] font-bold text-ink">
+            <Icon name="shield" size={16} className="text-text-3" />
+            투자 판단 안내
+          </div>
+          <p className="mt-2 text-[12px] leading-[1.7] text-text-2">
+            본 안내는 제도의 개념 이해를 돕기 위한 일반 정보이며, 특정 주택의
+            매수·매도·청약을 권유하거나 투자 수익을 보장하지 않습니다. 규제·세제는
+            개별 상황에 따라 적용이 달라지므로, 투자 판단과 그 결과에 대한 책임은
+            본인에게 있습니다.
           </p>
         </div>
+
+        {/* 관련 가이드 */}
+        <Link
+          href="/guides/contract"
+          className="tile flex items-center justify-between rounded-2xl border border-line bg-surface px-5 py-4 no-underline"
+        >
+          <div>
+            <div className="text-[13px] font-bold text-ink">
+              계약 전 체크리스트 &amp; 특약 가이드
+            </div>
+            <div className="mt-0.5 text-[12px] text-text-2">
+              단계별 확인사항, 표준계약서 핵심 조항과 특약 예시를 이어서 확인하세요.
+            </div>
+          </div>
+          <span className="shrink-0 rounded-lg bg-primary-soft px-3.5 py-2 text-xs font-bold text-primary">
+            가이드 보기 ›
+          </span>
+        </Link>
+
+        {/* 공통 면책 */}
+        <p className="px-1 pb-2 text-[12px] leading-[1.7] text-text-3">
+          본 안내는 일반 정보이며 법률·세무 자문이 아닙니다. 실제 거래·신고·세금은
+          공인중개사·법무사·세무사 등 전문가와 관련 기관 확인이 필요합니다.
+        </p>
       </div>
     </PageShell>
   );

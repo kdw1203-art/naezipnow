@@ -70,12 +70,12 @@ export default function SafetyPage() {
       {/* [970 · A-35] h1 은 화면의 실제 제목("계약 전, 보증금을 지키는 6가지 확인")으로 — 예전엔
           입력줄 옆 13px 라벨이 h1 이었고 그 문장은 아래 카드 제목으로 따로 있었다.
           입력줄 라벨은 aria-label(입력)로 옮긴다. */}
-      <h1 className="rise-in mb-3 text-[21px] font-extrabold tracking-[-0.4px] text-ink">
+      <h1 className="rise-in mb-3 text-[21px] font-bold tracking-[-0.4px] text-ink">
         계약 전, 보증금을 지키는 6가지 확인
       </h1>
       {/* 대상 입력 */}
       <div className="rise-in mb-4 flex flex-wrap items-center gap-3">
-        <span className="text-[13px] font-extrabold text-ink">전세·월세 보증금 안전 확인</span>
+        <span className="text-[13px] font-bold text-ink">전세·월세 보증금 안전 확인</span>
         <input
           aria-label="주소 또는 단지명"
           value={address}
@@ -103,7 +103,7 @@ export default function SafetyPage() {
           {/* 진단 상태 — 결과를 지어내지 않는다 */}
           {submitted ? (
             <div className="rise-in-1 card flex flex-col gap-2.5 rounded-3xl p-[22px]">
-              <div className="text-[15px] font-extrabold text-ink">
+              <div className="text-[15px] font-bold text-ink">
                 “{submitted}” 전세·월세 안전 진단
               </div>
               <p className="text-[13px] leading-[1.7] text-text-2">
@@ -135,7 +135,7 @@ export default function SafetyPage() {
             </div>
           ) : (
             <div className="rise-in-1 card flex flex-col gap-1.5 rounded-3xl p-[22px]">
-              <div className="text-[15px] font-extrabold text-ink">
+              <div className="text-[15px] font-bold text-ink">
                 계약 전, 보증금을 지키는 6가지 확인
               </div>
               <p className="text-[13px] leading-[1.7] text-text-2">
@@ -148,7 +148,7 @@ export default function SafetyPage() {
 
           {/* 세입자 체크리스트 — 항목·확인 방법 안내 (판정값 없음) */}
           <div className="rise-in-2 card flex flex-col gap-2.5 rounded-3xl p-[22px]">
-            <div className="text-[15px] font-extrabold text-ink">
+            <div className="text-[15px] font-bold text-ink">
               세입자 체크리스트{" "}
               <span className="text-[12px] font-medium text-text-3">
                 직접 확인 가이드
@@ -182,7 +182,7 @@ export default function SafetyPage() {
             </AIPanel>
           </div>
           <div className="rise-in-4 card flex flex-col gap-2 rounded-3xl p-[18px]">
-            <div className="text-[13px] font-extrabold text-ink">
+            <div className="text-[13px] font-bold text-ink">
               전세 vs 월세 vs 매수, 뭐가 유리할까
             </div>
             <p className="text-xs leading-[1.6] text-text-2">

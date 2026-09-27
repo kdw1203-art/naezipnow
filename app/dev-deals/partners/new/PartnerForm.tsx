@@ -69,7 +69,7 @@ export function PartnerForm() {
   if (done) {
     return (
       <div className="rise-in card flex max-w-[640px] flex-col items-start gap-3 p-6">
-        <div className="text-[15px] font-extrabold text-ink">협력업체 등록이 완료됐어요</div>
+        <div className="text-[15px] font-bold text-ink">협력업체 등록이 완료됐어요</div>
         <p className="text-[13px] leading-[1.7] text-text-2">
           디렉터리에 노출되며, 조건에 맞는 개발물건 매칭·참여 기회를 안내받을 수 있어요.
         </p>

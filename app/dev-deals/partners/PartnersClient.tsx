@@ -51,7 +51,7 @@ function PartnerCard({ p }: { p: DevPartner }) {
         </div>
       </div>
 
-      <div className="mt-2 text-[13px] font-extrabold text-ink">{p.companyName}</div>
+      <div className="mt-2 text-[13px] font-bold text-ink">{p.companyName}</div>
       <div className="mt-0.5 text-[12px] text-text-3">{p.region ?? "지역 전국·협의"}</div>
 
       {p.intro && (

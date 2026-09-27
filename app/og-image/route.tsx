@@ -74,7 +74,7 @@ export async function GET() {
         <div
           style={{
             fontSize: "60px",
-            fontWeight: 800,
+            fontWeight: 700,
             color: NAVY,
             lineHeight: 1.25,
             letterSpacing: "-1px",

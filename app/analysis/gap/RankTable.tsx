@@ -1,4 +1,3 @@
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import Link from "next/link";
 import { formatKrwShort } from "@/lib/market/format";
 import { monthsBehind } from "@/lib/newui/as-of-label";
@@ -117,33 +116,32 @@ export function RankTable({
                 </Link>
               </td>
               <td
-                className={`cell-bar py-2 pr-3 text-right font-bold tabular-nums ${
+                className={`cell-bar py-2.5 pr-3 text-right font-bold tabular-nums ${
                   tone === "high" ? "text-primary" : "text-text-2"
                 }`}
                 style={ratioBarStyle(r.ratio, maxRatio)}
               >
                 {r.ratio.toFixed(1)}%
               </td>
-              <td className="py-2 pr-3 text-right tabular-nums text-text-1">
+              <td className="py-2.5 pr-3 text-right tabular-nums text-text-1">
                 {r.avgSale && r.avgSale > 0 ? formatKrwShort(r.avgSale) : "—"}
               </td>
-              <td className="py-2 pr-3 text-right font-bold tabular-nums text-ink">
+              <td className="py-2.5 pr-3 text-right font-bold tabular-nums text-ink">
                 {r.measuredGap !== undefined ? (
                   <>
                     {formatKrwShort(r.measuredGap)}
-                    {/* [v4 · 규칙 6] 설명 배지(알약) → 글자 한 단어 */}
-                    <span className="t-caption ml-1 font-medium text-success">실측</span>
+                    <span className="t-caption ml-1 rounded bg-success-soft px-1 py-px font-bold text-success">실측</span>
                   </>
                 ) : r.gap !== undefined ? (
                   <>
                     {formatKrwShort(r.gap)}
-                    <span className="t-caption ml-1 font-medium text-text-3">추정</span>
+                    <span className="t-caption ml-1 rounded bg-bg px-1 py-px font-bold text-text-3">추정</span>
                   </>
                 ) : (
                   "—"
                 )}
               </td>
-              <td className="py-2 pr-3 text-right tabular-nums text-text-1">
+              <td className="py-2.5 pr-3 text-right tabular-nums text-text-1">
                 {r.rentYield !== undefined ? (
                   `${r.rentYield.toFixed(1)}%`
                 ) : yieldFailed ? (
@@ -152,12 +150,12 @@ export function RankTable({
                   "—"
                 )}
               </td>
-              <td className="py-2 pr-3 text-right tabular-nums">
+              <td className="py-2.5 pr-3 text-right tabular-nums">
                 {/* [1009 · A] 등락 표준 — 예전엔 상승=오류색(text-danger)·하락=테마색(text-primary)이라 이 화면(초록 테마)에서
                     하락이 초록이었다. 이제 ▲ 빨강·▼ 파랑·±0.05% 미만 보합·없으면 "변동 미상" */}
                 <Delta pct={r.saleChange ?? null} digits={2} srContext="지난달보다" />
               </td>
-              <td className="t-sub py-2 text-right text-text-3">
+              <td className="t-sub py-2.5 text-right text-text-3">
                 {fmtPeriod(r.period)} · {r.source.toUpperCase()}
                 {periodNote(r.period) && (
                   <span className="t-caption ml-1 block text-text-3">{periodNote(r.period)}</span>
@@ -167,10 +165,6 @@ export function RankTable({
           ))}
         </tbody>
       </table>
-      {/* [1012 · 규칙 7 · 채점 A] 행 여백 10 → 8px(이 파일 전체) · 출처·시점 줄(시점은 행마다 공표월이 적혀 있다) */}
-      <p className="t-caption py-2 text-text-3">
-        출처 한국부동산원(REB)·KB 공표 지역 통계 · 월세 수익률은 국토교통부 전월세 신고 · 기준 시점은 행 오른쪽 공표월
-      </p>
     </div>
   );
 }

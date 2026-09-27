@@ -61,10 +61,9 @@ export function NoteDetailActions({
 
   /* 상대 경로 — ShareLinkButton 이 누를 때 현재 origin 으로 푼다(SSR 에서 window 불필요) */
   const shareUrl = `/notes/${encodeURIComponent(noteId)}?utm_source=share&utm_medium=note`;
-  /* [v4 · 규칙 2·7] 머리 아래 글자 버튼 한 줄 — 채움·연한 파랑 버튼 다섯 개(btn-soft)를 걷었다.
-     채움 파랑은 판단 덩어리의 버튼 하나뿐이다. 누름 높이는 40px(min-h-10 — 폰에서도 고정). */
-  const textBtn = "inline-flex min-h-10 items-center t-sub font-bold text-text-2 no-underline";
-  const shareClass = textBtn;
+  /* [1009 · T] 터치 화면에선 btn-soft 가 높이 44px(globals (pointer: coarse))인데 <a>(카드·수정)는 글자가 위에 붙어
+     옆 <button>(가운데)과 7px 어긋났다(실측 390px) → 모두 inline-flex 가운데 정렬. */
+  const shareClass = "btn-soft inline-flex items-center px-3.5 py-2 t-body";
 
   /* [1009 · T] 공개 ↔ 비공개 — 결과 토스트에 "되돌리기"(같은 PATCH 를 반대로). 예전엔 전환하면 되돌릴 길이 버튼을 다시
      찾아 누르는 것뿐이었고, 실패 문구는 원인을 말하지 않았다. 연타는 ref 로 막는다(토스트의 되돌리기는 다른 렌더에서 온다). */
@@ -107,20 +106,31 @@ export function NoteDetailActions({
   const toggleVisibility = () => void setVisibility(!isPublic);
 
   return (
-    <div className="relative flex flex-wrap items-center gap-x-4">
+    <div className="relative flex flex-wrap items-center gap-2">
       {/* 나만의 카드 — AI가 기록으로 자동 구성한 카드를 색상·장 선택으로 꾸민다.
-          [v4] 동사 + 대상을 짧게("이 노트로 카드 만들기" → "카드 만들기") — 한 줄에 다섯 개가 들어가게 */}
-      <Link href={`/notes/${noteId}/card`} className={textBtn}>
+          [970 · B-15] 이름을 화면 이름("나만의 카드")으로 고정하고 보조 버튼으로 — 옆의
+          "카드 덱"(/deck)과 헷갈렸고, 상단 줄에 primary 가 둘("지도에서 비교"와)이었다. */}
+      <Link
+        href={`/notes/${noteId}/card`}
+        className="btn-soft inline-flex items-center px-3.5 py-2 t-body font-bold no-underline"
+      >
+        {/* [1012 · 규칙 4] UI 이모지 없음 — "나만의 카드" 글자만 */}
         {isOwner ? "카드 만들기" : "카드 보기"}
       </Link>
       {isOwner && (
-        <Link href={`/notes/${noteId}/edit`} className={textBtn}>
+        <Link
+          href={`/notes/${noteId}/edit`}
+          className="btn-soft inline-flex items-center px-3.5 py-2 t-body no-underline"
+        >
           수정
         </Link>
       )}
       {/* [1012 · 썸네일] 목록에 보이는 썸네일(후보 3장 중 고르기)을 다시 고른다 — 작성자만 */}
       {isOwner && (
-        <Link href={`/notes/${noteId}/cover`} className={textBtn}>
+        <Link
+          href={`/notes/${noteId}/cover`}
+          className="btn-soft inline-flex items-center px-3.5 py-2 t-body no-underline"
+        >
           썸네일 바꾸기
         </Link>
       )}
@@ -129,13 +139,13 @@ export function NoteDetailActions({
           type="button"
           onClick={toggleVisibility}
           disabled={busy}
-          className={`${textBtn} disabled:text-text-3`}
+          className="btn-soft inline-flex items-center px-3.5 py-2 t-body disabled:opacity-60"
         >
           {busy ? "전환 중…" : isPublic ? "비공개로 전환" : "공개로 전환"}
         </button>
       )}
       {isPublic ? (
-        <ShareLinkButton url={shareUrl} label="공유" variant="text" className={shareClass} />
+        <ShareLinkButton url={shareUrl} label="공유 링크" variant="text" className={shareClass} />
       ) : (
         /* 비공개 — 시트·복사 대신 공개 전환 안내만(받아도 못 여는 링크는 만들지 않는다).
            [1009 · T] 토스트는 한 줄(390px 에서 잘리던 34자 문장 → 짧게) + 소유자에겐 바로 "공개로 전환" */
@@ -149,7 +159,7 @@ export function NoteDetailActions({
           }
           className={shareClass}
         >
-          공유
+          공유 링크
         </button>
       )}
       {/* [967 · 3] 삭제 — 소유자만. 확인 단계는 버튼 줄 안에서 펼친다(모달·confirm 없이). */}
@@ -157,7 +167,7 @@ export function NoteDetailActions({
         <button
           type="button"
           onClick={() => setConfirmDelete(true)}
-          className="inline-flex min-h-10 items-center t-sub font-bold text-danger"
+          className="btn-soft inline-flex items-center px-3.5 py-2 t-body text-danger"
         >
           삭제
         </button>
@@ -166,15 +176,17 @@ export function NoteDetailActions({
         <div
           role="alertdialog"
           aria-label="노트 삭제 확인"
-          className="flex w-full flex-wrap items-center gap-2 rounded-lg border border-danger/30 bg-danger-soft px-3.5 py-2"
+          className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5"
         >
-          <span className="t-sub font-bold text-ink">삭제하면 되돌릴 수 없어요</span>
+          <span className="t-body font-bold text-ink">
+            이 노트를 삭제할까요? 되돌릴 수 없어요
+          </span>
           <span className="ml-auto flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => void deleteNote()}
               disabled={deleting}
-              className="inline-flex min-h-10 items-center rounded-lg bg-danger px-3.5 t-sub font-bold text-on-dark disabled:opacity-60"
+              className="rounded-lg bg-danger px-3.5 py-1.5 t-body font-bold text-on-dark disabled:opacity-60"
             >
               {deleting ? "삭제 중…" : "삭제"}
             </button>
@@ -182,7 +194,7 @@ export function NoteDetailActions({
               type="button"
               onClick={() => setConfirmDelete(false)}
               disabled={deleting}
-              className="inline-flex min-h-10 items-center px-2 t-sub font-bold text-text-2"
+              className="btn-soft px-3.5 py-1.5 t-body"
             >
               취소
             </button>

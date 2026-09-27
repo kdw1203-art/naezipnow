@@ -1,8 +1,8 @@
 "use client";
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Icon } from "@/app/components/Icon";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
 import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
 import { fetchMyNotesShared } from "./hub-viewer";
@@ -13,12 +13,6 @@ import { fetchMyNotesShared } from "./hub-viewer";
    강점/약점/확인 필요/총평 을 .ai-panel 로 표시.
    라벨: LLM 성공 시 "AI 생성", 폴백 시 "규칙 기반 요약".
    401 → 로그인 안내 · 429 → 사용량 안내 (10회/시간)
-
-   [v4 · 한 화면 한 가지] 허브 "내 임장노트" 목록의 **"임장노트 분석" 행을 펼치면** 나오는 몸통이 됐다
-   (hub-picker.tsx). 그래서 카드 테두리·아이콘 타일·제목·설명 문장을 걷었다 — 행의 이름·보조 줄이 이미 말한다
-   (카드 안에 카드 금지). 실행 단추는 채움 파랑 → 테두리(btn-outline): 화면의 채움 파랑은 검색 하나.
-   게스트·노트 0편일 때는 누를 수 없는 단추를 세워 두지 않고 할 일 한 줄(로그인 ›·첫 노트 쓰기 ›)만 둔다.
-   AI 결과 판(ai-panel)·"AI 생성/규칙 기반" 라벨·면책 한 줄은 그대로다.
    ============================================================ */
 
 type NoteOption = {
@@ -232,14 +226,20 @@ export function AiNoteAnalysisCard({
     }
   };
 
-  const canRun = loggedIn && notesLoaded && notes.length > 0;
-
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="card flex h-full flex-col gap-2.5 rounded-lg p-4">
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-warning-soft text-warning">
+        <Icon name="bot" size={17} />
+      </div>
+      <div className="t-section text-ink">임장노트 AI 분석</div>
+      <div className="t-sub text-text-2">
+        내 노트의 점수·기록과 지역 실시세를 합쳐 강점·약점·확인 항목을 정리해요
+      </div>
+
       {/* 노트 선택 */}
       {notesLoaded && notes.length > 0 && (
         <label className="flex flex-col gap-1">
-          <span className="t-sub font-bold text-text-3">분석할 노트</span>
+          <span className="text-[12px] font-bold text-text-3">분석할 노트</span>
           <select
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
@@ -253,18 +253,28 @@ export function AiNoteAnalysisCard({
           </select>
         </label>
       )}
-      {/* 허브 검색에서 고른 단지 컨텍스트 (실시세 프리필) — 배지 없이 사실 한 줄 */}
+      {/* 허브 단지 선택기에서 고른 단지 컨텍스트 (실시세 프리필) */}
       {seedComplexName && (
-        <p className="t-sub text-text-2">
-          <b className="text-ink">{seedComplexName}</b>
-          {seedRegionLabel ? ` · ${seedRegionLabel}` : ""}
-          {seedSnap ? ` · 평균 ${seedSnap.avgSaleLabel}${seedSnap.period ? ` (${seedSnap.period})` : ""}` : ""}
-        </p>
+        <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-primary-soft px-3 py-2 text-[12px] font-bold text-primary">
+          <span>선택 단지 {seedComplexName}</span>
+          {seedRegionLabel && <span className="text-text-2">· {seedRegionLabel}</span>}
+          {seedSnap && (
+            <span className="text-text-2">
+              · 평균 {seedSnap.avgSaleLabel}
+              {seedSnap.period ? ` (${seedSnap.period})` : ""}
+            </span>
+          )}
+          <span className="ml-auto rounded border border-line px-1 py-px text-[10px] font-bold text-text-3">
+            실데이터 기준
+          </span>
+        </div>
       )}
       {loggedIn && notesLoaded && notes.length === 0 && state.kind !== "login" && (
-        <div className="flex items-center justify-between gap-2">
-          <span className="t-sub text-text-2">분석할 임장노트 없음</span>
-          <Link href="/notes/new" className="tap-line shrink-0 t-sub font-bold text-primary">
+        <div className="flex items-center justify-between rounded-lg bg-primary-soft px-3 py-2.5">
+          <span className="t-sub font-bold text-primary">
+            분석할 임장노트가 아직 없어요
+          </span>
+          <Link href="/notes/new" className="shrink-0 t-sub font-bold text-primary">
             첫 노트 쓰기 ›
           </Link>
         </div>
@@ -352,9 +362,11 @@ export function AiNoteAnalysisCard({
           </div>
         </div>
       ) : state.kind === "login" ? (
-        <div className="flex items-center justify-between gap-2">
-          <span className="t-sub text-text-2">로그인하면 내 노트로 분석</span>
-          <Link href="/login" className="tap-line shrink-0 t-sub font-bold text-primary">
+        <div className="flex items-center justify-between rounded-lg bg-primary-soft px-3 py-2.5">
+          <span className="t-sub font-bold text-primary">
+            AI 분석은 로그인 후 이용할 수 있어요
+          </span>
+          <Link href="/login" className="shrink-0 t-sub font-bold text-primary">
             로그인 ›
           </Link>
         </div>
@@ -376,21 +388,20 @@ export function AiNoteAnalysisCard({
         </div>
       ) : null}
 
-      {/* 게스트·노트 0편이면 단추를 세우지 않는다(위 한 줄이 할 일을 말한다) — 채움 파랑은 화면에 검색 하나 */}
-      {canRun && (
-        <button
-          type="button"
-          onClick={() => run(state.kind === "done")}
-          disabled={state.kind === "running"}
-          className="btn-outline btn-md w-full"
-        >
-          {state.kind === "running"
-            ? "분석 중…"
-            : state.kind === "done"
-              ? "다시 분석하기"
-              : "선택한 노트 분석하기"}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => run(state.kind === "done")}
+        disabled={
+          state.kind === "running" || !loggedIn || (notesLoaded && notes.length === 0)
+        }
+        className="btn-primary btn-cta mt-auto rounded-lg p-2.5 text-center text-[13px] disabled:opacity-60"
+      >
+        {state.kind === "running"
+          ? "분석 중…"
+          : state.kind === "done"
+            ? "다시 분석하기"
+            : "분석 실행"}
+      </button>
     </div>
   );
 }

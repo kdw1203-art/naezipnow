@@ -28,14 +28,11 @@ export function PostActions({
   postId,
   title,
   saveCount,
-  className = "mb-4 justify-end",
 }: {
   postId: string;
   title: string;
   /** 서버가 센 실제 저장(북마크) 수 — 내 토글은 여기에 더하지 않는다(다음 렌더에 반영). */
   saveCount: number;
-  /** [v4] 놓이는 자리 — 기본은 예전처럼 본문 위 오른쪽 줄. 상세 머리는 메타 줄 옆에 붙인다 */
-  className?: string;
 }) {
   const router = useRouter();
   const { promptSignup } = useSoftSignup();
@@ -117,8 +114,7 @@ export function PostActions({
   }
 
   return (
-    /* [v4] 저장·공유는 작은 아웃라인 둘(btn-sm) — 채움·연한 면 없이 머리 오른쪽에 조용히 선다 */
-    <div className={`flex flex-wrap items-center gap-2 text-[13px] ${className}`}>
+    <div className="mb-4 flex flex-wrap items-center justify-end gap-2 text-[13px]">
       {error && (
         <span className="text-[12px] font-bold text-danger">{error}</span>
       )}
@@ -127,8 +123,8 @@ export function PostActions({
         onClick={() => void toggleSave()}
         disabled={busy}
         aria-pressed={saved}
-        className={`press btn-outline btn-sm gap-1.5 transition-colors disabled:opacity-50 ${
-          saved ? "text-primary" : ""
+        className={`press inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 font-semibold transition-colors disabled:opacity-50 ${
+          saved ? "bg-primary-soft text-primary" : "btn-soft"
         }`}
       >
         <span className="relative inline-flex">
@@ -142,7 +138,7 @@ export function PostActions({
         label="공유"
         copiedLabel="링크 복사됨 ✓"
         variant="text"
-        className="press btn-outline btn-sm"
+        className="press rounded-lg bg-[var(--glass-bg)] px-3.5 py-2 font-semibold text-text-2"
       />
     </div>
   );

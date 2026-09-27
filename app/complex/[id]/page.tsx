@@ -1,4 +1,4 @@
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
+/* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import { cache } from "react";
 import { loanRegionFromRegionName } from "@/lib/finance/loan-rules";
 import { logger } from "@/lib/log";
@@ -28,30 +28,37 @@ import {
 } from "@/lib/complex/complex-store";
 /* [1009 · C] 첫 화면 대표 실거래가(AI 분석과 같은 규칙)·평형별 추이·최근 실거래 목록 — 순수 계산 */
 import {
+  baseSince,
   hubHeadline,
   hubSeries,
   recentDealTuples,
   type HubDeal,
   type HubHeadline,
 } from "@/lib/complex/hub-price";
+import { changeSentence } from "@/lib/format/delta";
 import { hubFaqPriceAnswer, hubMetaPrice } from "@/lib/complex/hub-meta";
-import { formatKrwWon } from "@/lib/format/krw";
+/* [1009 · C 리뷰] 월별 줄 등락의 기준 달(전월/빈 달 다음은 그 달) — 요약 탭 미리보기 줄은 서버에서 센다 */
+import { monthDeltaView, ymRangeShort, type MonthDeltaView } from "@/lib/complex/month-delta";
+import { formatEokMan } from "@/lib/format/eok-man";
 import { HubPriceHero } from "./HubPriceHero";
-import type { ComplexInfoFacts } from "@/lib/complex/info-cells";
+import { ComplexInfoGrid, type ComplexInfoFacts } from "./ComplexInfoGrid";
 import { AreaTextLazy as AreaText } from "./AreaTextLazy";
+import { ExplainLazy as Explain } from "./ExplainLazy";
 /* [995] 읍면동 파싱·평형 요약·최근 12개월 건수 — 순수 함수(단위테스트 complex-seo-995) */
 import {
   parseDong,
   areaBandTitle,
+  topAreaBands,
   bandPriceLabel,
   ymShortLabel,
   countDealsInWindow,
   resolveRegionId,
 } from "@/lib/complex/dong";
 import { kstParts } from "@/lib/format/kst";
-/* [967 · 16] 억/만 표기·행 변환은 클라이언트 필터(면적대·정렬)와 같은 구현을 써야 하므로 lib 에 있다. */
-import { formatManwon, toHubTrades } from "@/lib/complex/hub-trades";
-/* [967 · 17] 모바일 하단 액션 바(관심·노트·호가 점검·AI 분석) — 클라이언트, 머리 행동 줄이 보이면 숨김.
+/* [967 · 16] 억/만 표기·전월비·행 변환은 클라이언트 필터(면적대·정렬)와 같은
+   구현을 써야 하므로 lib 로 옮겼다 — 이 파일 안의 사본을 지웠다. */
+import { ALL_BANDS, formatManwon, toHubTrades, tradeDeltaBases } from "@/lib/complex/hub-trades";
+/* [967 · 17] 모바일 하단 액션 바(관심·노트·호가 점검·AI 분석) — 클라이언트, 원래 CTA 가 보이면 숨김.
    [1008 · Q] 본체는 처음 스크롤할 때 받는다(MobileActionBarLazy — 번들 상쇄) */
 import { MobileActionBarLazy } from "./MobileActionBarLazy";
 import {
@@ -62,9 +69,6 @@ import {
   loadAreaBands,
   loadRentHistory,
   loadHubInspectionNotes,
-  loadUpcomingSupply,
-  loadRedevelopment,
-  logSectionFailure,
   withSectionBudget,
 } from "./section-loaders";
 /* [1007 · P2] 전세가율·자료 완성도 — 지도 패널(detail API)과 같은 순수 모듈·같은 규칙 */
@@ -76,6 +80,7 @@ import {
   type TradeSample,
 } from "@/lib/complex/complex-facts";
 import { getTradeWindowSamples } from "@/lib/complex/complex-trade-window";
+import { ComplexFactsCard } from "./ComplexFactsCard";
 import {
   ComplexHubTabs,
   CompareTrayButton,
@@ -89,34 +94,30 @@ import {
 import { PriceTrendChart, type PricePoint } from "./PriceTrendChart";
 import { complexCanonicalPath, decodeComplexId } from "@/lib/complex/complex-store";
 import { ComplexAxisSummary } from "./ComplexAxisSummary";
-import { pureIdFromParam, complexHrefFromId } from "@/lib/seo/complex-slug";
+import { pureIdFromParam, complexHrefFromId} from "@/lib/seo/complex-slug";
 import { geocodeAndCache } from "@/lib/map/complex-geocode";
 import { settle, startDeadline, SIDE_SECTION_BUDGET_MS } from "@/lib/data/section-budget";
 import { getMarketFreshnessDateLabel } from "@/lib/newui/freshness";
 import { RecentComplexRecorder } from "../../components/RecentComplexes";
+import { MarketFreshnessLine } from "../../components/MarketFreshnessLine";
+import { QaBlock } from "../../components/QaBlock";
+import { AdZone } from "@/app/components/ads/AdZone";
+import { BrandWatermark } from "@/app/components/BrandWatermark";
 import type { FaqItem } from "@/lib/seo/jsonld";
-/* [968 · 3 · 4] 후기 섹션은 뷰포트 근처에서 청크·데이터를 함께 받는 래퍼로 — [v4] 이야기 탭 안 */
+/* [968 · 3 · 4] 후기 섹션은 뷰포트 근처에서 청크·데이터를 함께 받는 래퍼로 */
 import { ComplexReviewsLazy } from "./ComplexReviewsLazy";
 import { ComplexAreaBands } from "./ComplexAreaBands";
 import { RegionRelative } from "./RegionRelative";
+import { NearbyRedevelopment } from "./NearbyRedevelopment";
 import { UpcomingSupply } from "./UpcomingSupply";
 import { ComplexRentSection } from "./ComplexRentSection";
+import { ComplexNearbyPoi } from "./ComplexNearbyPoi";
 import { ShareLinkButton } from "@/app/components/ShareLinkButton";
+import { EmbedSnippet } from "@/app/components/EmbedSnippet";
 import { ComplexNotesNewsAi } from "./ComplexNotesNewsAi";
-/* [1008 · Q] 호가 점검 펼침 버튼(본체는 펼칠 때 받는 청크) · [v4] 거리뷰 버튼도 따로 받는 청크로 */
+/* [1008 · Q] 브리핑 본체는 누를 때 받는다(번들 상쇄) · 호가 점검 펼침 버튼 */
+import { AiBriefingLazy } from "./AiBriefingLazy";
 import { AskingCheckToggle } from "./AskingCheckToggle";
-import { RoadviewLazy } from "./RoadviewLazy";
-/* [v4 · 한 화면 한 가지] 목록 행 · 맨 끝 데이터 출처(접힘) · 머리 사실 한 줄/요약 행 순수 함수 */
-import { SummaryRow } from "./SummaryRow";
-import { ComplexDataSources } from "./ComplexDataSources";
-import {
-  distanceLabel,
-  headFactLine,
-  nearestSupplyValue,
-  walkMinutesLabel,
-} from "@/lib/complex/hub-summary";
-import { getNearbyPoi, type NearbyPoi } from "@/lib/poi/store";
-import type { SupplyItem } from "@/lib/market/supply";
 import { SEOUL_BROWSE_REGIONS, buildComplexTxSlug } from "@/lib/market/complex-transactions";
 import {
   complexResidenceJsonLd,
@@ -132,14 +133,12 @@ import {
   AI_SUMMARY_SELECTOR,
 } from "@/lib/seo/citable-summary";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { RoadviewButton } from "@/components/map/RoadviewButton";
 import {
   listApprovedListings,
   LISTING_TYPE_LABEL,
   type PublicListing,
 } from "@/lib/listings/store-db";
-
-/** 정비사업 한 줄(lib/redevelopment/store listProjects 의 행) — 요약 목록 "인근 정비사업" 행 재료 */
-type RedevProject = Awaited<ReturnType<typeof loadRedevelopment>>[number];
 
 /* ============================================================
    단지 허브 (연동 중심축 화면, SEO 핵심 랜딩 겸용)
@@ -457,13 +456,24 @@ interface HubView {
     /** 최근 **달** 실거래 평균(면적 혼합, eok1) — 메타데이터 제목·JSON-LD priceRange·FAQ 와 같은 값.
         [1009 · C] 첫 화면 대표가는 따로(HubPriceHero — 평형 기준). 이 값은 "월평균 · 면적 혼합"으로만 적는다. */
     price: string;
-    /** [1009 · C] 최근 달 "2026.08" — 출처 줄·FAQ 폴백의 기준 달(없으면 null) */
+    priceSub: string;
+    /** [1009 · C] 최근 달 "2026.08" — KPI 칸의 기준 달(없으면 null) */
     priceYm: string | null;
-    /* [v4] 지표 6칸(월평균·거래·매물·노트·세대·연차)과 데스크탑 "한눈에 보기" 카드를 걷어 listings·notes·deals·age
-       라벨과 priceSub 를 뺐다 — 같은 사실은 머리 사실 줄·요약 목록·탭 제목이 한 번씩 말한다. */
+    listings: string;
+    listingsSub: string;
+    notes: string;
+    notesSub: string;
+    /** 최근 집계 기간 거래 건수 라벨 */
+    deals: string;
+    dealsSub: string;
+    /** 준공/경과 라벨 */
+    age: string;
+    ageSub: string;
   };
-  /* [v4] chips(히어로 칩 줄·데스크탑 사이드 카드)·aiTitle·aiBody(요약 탭 "한눈에 요약" 카드)는 화면이 없어져 걷었다 —
-     같은 사실은 머리 사실 한 줄(lib/complex/hub-summary headFactLine)과 요약 목록이 한 번씩 말한다. */
+  /** 상단 칩용 요약 스펙 */
+  chips: string[];
+  aiTitle: string;
+  aiBody: string;
   /* [967 · 15] myRecord 문자열은 지웠다 — ISR HTML 은 방문자 공용이라 "로그인하면…"
      같은 개인 상태 문구를 서버가 그릴 수 없다. 내 기록 탭은 클라이언트가
      /api/me/complex-records 로 직접 읽는다. */
@@ -650,6 +660,7 @@ function toView(
   const latest = tx.length > 0 ? tx[tx.length - 1] : null;
   /* [1009 · C 리뷰] 여기서 만들던 "▲ 15.8% 전월비"(면적 혼합 월평균끼리, 거래 있던 앞 달과의 비교)를 걷었다 — FAQ·요약 폴백에
      실려 첫 화면 대표가("29억 6,750만원 ▼0.8%")와 다른 말을 했다. 월평균은 "면적 혼합"이라고만 적는다. */
+  const txRange = tx.length > 0 ? ymRangeShort(tx[0].yyyymm, tx[tx.length - 1].yyyymm) : null;
   const dong = row.district || row.city || "지역";
   /* [995] 동 단위로 찾았을 때만 동 이름을 제목에 쓴다 — 구 결과에 동 라벨을 붙이면 거짓말이다 */
   const nearbyLabel =
@@ -687,6 +698,21 @@ function toView(
       : [];
 
   const dealSum = tx.reduce((s, r) => s + (r.deal_count || 0), 0);
+  const chips: string[] = [];
+  if (row.build_year) {
+    chips.push(
+      `${row.build_year}년 · ${new Date().getFullYear() - row.build_year}년차`,
+    );
+  }
+  if (row.households) chips.push(`${row.households.toLocaleString("ko-KR")}세대`);
+  if (row.building_count) chips.push(`${row.building_count}동`);
+  if (row.parking_per_hh) chips.push(`주차 ${row.parking_per_hh}대/세대`);
+  if (row.builder_name) chips.push(row.builder_name);
+  if (row.heating) chips.push(row.heating);
+  if (hubListings.length > 0) chips.push(`매물 ${hubListings.length}`);
+  if (posts.length > 0) chips.push(`이야기 ${posts.length}`);
+  /* [1009 · C 리뷰] "N개월"의 N 은 거래 있는 달 수였다 — 실제 계약월 범위로("26.01~26.08 134건") */
+  if (dealSum > 0 && txRange) chips.push(`${txRange} ${dealSum}건`);
 
   const infoRows: { label: string; value: string }[] = [];
   if (row.build_year) {
@@ -726,12 +752,59 @@ function toView(
          쓰면 방문자에게 거짓말이 된다. */
       /* [1009 · C] "시세 준비 중" → "실거래 없음" — 실거래만 있는 화면에 "시세"라는 말을 쓰지 않는다(표기 표준) */
       price: txFailed ? "조회 실패" : latest ? formatManwon(latest.avg_manwon) : "실거래 없음",
+      priceSub: txFailed
+        ? "실거래를 불러오지 못했습니다"
+        : latest
+          ? "월평균 · 면적 혼합"
+          : "실거래 수집 중",
       priceYm: latest ? `${latest.yyyymm.slice(0, 4)}.${latest.yyyymm.slice(4, 6)}` : null,
+      // D8: 실 매물 연동 — 등록 건수 반영(없으면 "—", 못 읽었으면 그렇다고 적는다)
+      listings: listingsFailed ? "매물 ?" : hubListings.length > 0 ? `매물 ${hubListings.length}` : "매물 —",
+      listingsSub: listingsFailed
+        ? "조회 실패"
+        : hubListings.length > 0
+          ? "등록된 실매물"
+          : "등록 대기",
+      /* [970 · B-17] 이 KPI 는 동네이야기 글 수다 — 탭 라벨("이야기")과 맞춘다 */
+      notes: postsFailed ? "이야기 ?" : `이야기 ${posts.length.toLocaleString("ko-KR")}`,
+      /* [1012 · 규칙 6] "첫 이야기를 남겨보세요"(권유) → 사실("아직 글 없음") */
+      notesSub: postsFailed
+        ? "조회 실패"
+        : posts.length > 0
+          ? "동네이야기 글"
+          : "아직 글 없음",
+      deals: txFailed ? "거래 ?" : dealSum > 0 ? `${dealSum}건` : "—",
+      /* [1009 · C] "최근 N개월"의 N 은 **거래가 있는 달 수**였다(3개 달에 거래가 흩어진 단지도 "최근 3개월").
+         실제로 센 계약월 범위를 적는다 — "26.01~26.08" */
+      dealsSub: txFailed ? "조회 실패" : dealSum > 0 && txRange ? txRange : "실거래 없음",
+      age: row.build_year
+        ? `${new Date().getFullYear() - row.build_year}년`
+        : "—",
+      ageSub: row.build_year ? `${row.build_year}년 준공` : "준공 미확인",
     },
-    /* [v4] 매물 탭의 빈 상태 한 줄(매물이 있으면 쓰지 않는다) — 없음과 조회 실패를 다른 문장으로 */
+    chips,
+    aiTitle: `AI 요약 · ${row.name}`,
+    aiBody: txFailed
+      ? "실거래를 지금 불러오지 못했습니다. 데이터가 없다는 뜻이 아니라 조회에 실패했다는 뜻입니다 — 잠시 후 새로고침해 주세요."
+      : latest
+        ? [
+            /* [1009 · C 리뷰] 대표가를 못 세웠을 때만 쓰는 폴백 — 무엇의 평균인지 적고 혼합 전월비는 싣지 않는다 */
+            `${latest.yyyymm.slice(0, 4)}.${latest.yyyymm.slice(4, 6)} 실거래 평균 ${formatManwon(latest.avg_manwon)}(면적 혼합${
+              latest.deal_count ? ` · ${latest.deal_count}건` : ""
+            })`,
+            row.households ? `총 ${row.households.toLocaleString("ko-KR")}세대` : null,
+            row.build_year ? `${row.build_year}년 준공` : null,
+            row.builder_name ? `시공사 ${row.builder_name}` : null,
+            "국토교통부 실거래·공공데이터 기준. 투자 권유가 아니며 현장 확인 후 판단하세요.",
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        : "실거래가 쌓이면 여기에 요약을 보여 드려요.",
     listingsLabel: listingsFailed
-      ? "매물 정보를 지금 불러오지 못했어요 — 등록된 매물이 없다는 뜻이 아니에요"
-      : `${row.name}에 등록된 실매물이 아직 없어요`,
+      ? "매물 정보를 지금 불러오지 못했습니다 — 등록된 매물이 없다는 뜻이 아닙니다."
+      : hubListings.length > 0
+        ? `등록된 실매물 ${hubListings.length}건 · 국토부 실거래가와 비교하세요`
+        : "실매물 준비 중",
     infoRows,
     spec: {
       households: row.households,
@@ -900,6 +973,14 @@ async function loadView(id: string): Promise<HubView | null> {
     loadFailures,
     { emd, nearbyScope: sameDongR.ok ? sameDongR.data.scope : "district" },
   );
+}
+
+/** [1009 · C 리뷰] 월별 줄(전체)마다 등락 기준 — 앞 줄이 전달이면 "전월 대비", 가운데 달이 비었으면 "26.02 대비" */
+function tradeDeltaViews(trades: HubTrade[]): Record<string, MonthDeltaView> {
+  const bases = tradeDeltaBases(trades, ALL_BANDS);
+  const out: Record<string, MonthDeltaView> = {};
+  for (const t of trades) out[t.ym] = monthDeltaView(t.ym, bases.get(t.ym));
+  return out;
 }
 
 /* ===== SEO — 단지명 title/description, 비로그인 열람 허용 (index 대상) ===== */
@@ -1123,35 +1204,22 @@ export default async function ComplexHubPage({
   ]);
   // 사실 우선: 존재하지 않는 단지는 목업 대신 404
   if (!v) notFound();
+  /* [1007 · P2] 전세가율·자료 완성도 — 지도 패널과 같은 규칙(buildComplexFacts). 재료는 위에서
+     이미 띄운 로더들(전월세 원표본·임장노트·매매 원표본 창)이라 여기서 기다리기만 한다. */
+  const facts = await loadHubFacts({
+    row: rowForFacts,
+    complexId,
+    name: v.name,
+    city: v.city,
+    dong: v.dong,
+  });
 
   /* [1009 · C] 대표 실거래가(AI 분석과 같은 규칙) · 평형별 추이 · 최근 실거래 목록 — loadView 가 이미 받은 공용 행.
      실거래 조회가 실패했으면 부르지 않는다(같은 행이라 같이 실패한다 — "없음"으로 그리지 않는다). */
   const txFailed = v.loadFailures.includes("실거래");
-  /* [v4] 요약 목록 재료 — 전부 예전에 섹션 컴포넌트가 따로 기다리던 **같은 로더·같은 인자**다(React cache — 추가 조회 0).
-     입주물량·정비사업은 base 시점에 프리페치된 약속을 받고, 도보권 역·학교는 예전 ComplexNearbyPoi 가 하던 조회
-     한 번을 여기서 한다. 셋 다 섹션 예산(3초)을 넘기거나 실패하면 그 행만 빠진다. */
-  const supplyArea = v.dong.trim();
-  const supplyCity = (v.city ?? "").trim();
-  const hasCoord = typeof v.lat === "number" && typeof v.lng === "number";
-  const [facts, deals, supplyItems, poi, projects] = await Promise.all([
-    /* [1007 · P2] 전세가율·자료 완성도 — 지도 패널과 같은 규칙(buildComplexFacts). 재료는 이미 띄운 로더들. */
-    loadHubFacts({ row: rowForFacts, complexId, name: v.name, city: v.city, dong: v.dong }),
-    txFailed
-      ? Promise.resolve<HubDeal[] | null>(null)
-      : withSectionBudget(loadDeals(rowForFacts?.canonical_id ?? complexId)).catch((): HubDeal[] | null => null),
-    supplyArea
-      ? withSectionBudget(loadUpcomingSupply(supplyArea, supplyCity)).catch((): SupplyItem[] => [])
-      : Promise.resolve<SupplyItem[]>([]),
-    hasCoord
-      ? withSectionBudget(getNearbyPoi(v.lat as number, v.lng as number)).catch((): NearbyPoi | null => null)
-      : Promise.resolve<NearbyPoi | null>(null),
-    supplyArea
-      ? withSectionBudget(loadRedevelopment(supplyArea, supplyCity)).catch((e: unknown) => {
-          logSectionFailure(`[complex] ${supplyArea} 정비사업(요약 행을 뺍니다)`, e);
-          return [] as RedevProject[];
-        })
-      : Promise.resolve<RedevProject[]>([]),
-  ]);
+  const deals: HubDeal[] | null = txFailed
+    ? null
+    : await withSectionBudget(loadDeals(rowForFacts?.canonical_id ?? complexId)).catch((): HubDeal[] | null => null);
   /* 월별 이력은 있는데 한 건 목록만 비면(키가 안 풀림 등) "거래 없음"이라 단정하지 않는다 — 모른다(null) */
   const dealsKnown: HubDeal[] | null =
     deals && (deals.length > 0 || v.priceSeries.length === 0) ? deals : null;
@@ -1167,12 +1235,52 @@ export default async function ComplexHubPage({
       })
     : null;
   const dealTuples = dealsKnown ? recentDealTuples(dealsKnown, 60) : [];
+  /* 요약 탭 첫 카드 — 예전엔 "AI 요약"이라 적힌 칸에 규칙으로 이은 문장(면적 혼합 월평균·전월비)이 있었다.
+     AI 가 쓴 글이 아니고, 첫 화면 대표가와 다른 숫자를 말했다. 지도 단지 패널과 같은 한 줄(facts.summaryLine —
+     있는 숫자만)에 대표가 문장을 앞세운다. 둘 다 없으면 예전 문장. */
+  const headlineLine =
+    headline?.kind === "rep"
+      ? [
+          `최근 실거래가 ${formatEokMan(headline.priceManwon, { unit: "만원" })}(${
+            headline.basis === "band" ? headline.bandLabel : `전용 ${headline.unitM2}㎡`
+          } 최근 ${headline.sampleSize}건 평균)`,
+          headline.base
+            ? changeSentence({
+                curr: headline.priceManwon,
+                base: headline.base.avgManwon,
+                since: baseSince(headline.base),
+                unit: "manwon",
+              })
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" — ")
+      : headline?.kind === "single"
+        ? `최근 실거래 ${formatEokMan(headline.priceManwon, { unit: "만원" })}(한 건)`
+        : null;
+  const summaryBody =
+    facts.summaryLine || headlineLine
+      ? [headlineLine, facts.summaryLine].filter(Boolean).join(". ") +
+        ". 국토교통부 실거래·공공데이터 기준 — 투자 권유가 아니며 현장 확인 후 판단하세요."
+      : v.aiBody;
   /* 계산기 프리필 — 첫 화면 대표가와 같은 숫자(없으면 최근 달 평균) */
   const calcManwon =
     headline?.priceManwon ??
     (v.priceSeries.length > 0 ? Math.round(v.priceSeries[v.priceSeries.length - 1]?.avgManwon ?? 0) : 0);
 
-  /* [995] 지역 허브 id·라벨("서울 송파구") — 브레드크럼·JSON-LD 탐색경로가 같은 값을 쓴다(resolveRegionId 주석 참고). */
+  /* [995] 첫 화면 "평형별 최근 실거래" 칩 — 본문이 base 시점에 띄운 면적대 로더(React
+     cache)를 같은 인자로 받는다. loadView 가 끝난 뒤라 대개 이미 결과가 와 있고, 아직이면
+     아래 ComplexAreaBands 가 기다릴 3초 예산 안에서 같이 기다린다(추가 질의·추가 대기 없음).
+     실패·초과면 칩 줄을 통째로 숨긴다 — 실패 문구는 표 섹션이 한 번만 적는다. */
+  const heroBands = topAreaBands(
+    await withSectionBudget(loadAreaBands(complexId)).then(
+      (d) => d,
+      () => null,
+    ),
+    3,
+  );
+  /* [995] 지역 허브 id·라벨("서울 송파구") — 브레드크럼 칩·JSON-LD 탐색경로·"시장 보기"
+     알약이 같은 값을 쓴다(resolveRegionId 주석 참고). */
   const regionId = resolveRegionId(v.city, v.dong);
   const regionLabel = axisRegionName(v.city, v.dong) || v.dong;
 
@@ -1217,7 +1325,7 @@ export default async function ComplexHubPage({
   const dataModifiedIso = freshnessLabelToIsoDate(freshness);
 
   const complexJsonLd = [
-    /* WebPage + speakable — 맨 아래 데이터 출처 안의 <section data-ai-summary> 를 가리킨다. 요약이 없으면
+    /* WebPage + speakable — 아래 <section data-ai-summary> 를 가리킨다. 요약이 없으면
        speakable 도 넣지 않는다(없는 셀렉터를 가리키지 않는다). */
     webPageJsonLd({
       path: `/complex/${encodeURIComponent(complexId)}`,
@@ -1241,8 +1349,12 @@ export default async function ComplexHubPage({
       households: v.households,
       priceRange: complexPriceRange,
     }),
-    /* 링크 없는 라벨은 탐색경로의 단계가 아니다(2026-07-27 Search Console 심각 오류).
-       [995] 지역 허브(/region/{id})가 풀리는 단지는 홈 → 지역 → 단지 세 단계. 안 풀리면 두 단계. */
+    /* 예전엔 여기에 { name: v.dong } 이 끼어 있었다. 동 이름만 있고 갈 수 있는
+       페이지가 없어 item(URL)이 빠졌고, 구글은 이걸 심각 오류로 보고 이 페이지의
+       탐색경로를 통째로 무시했다(2026-07-27 Search Console). 링크 없는 라벨은
+       탐색경로의 단계가 아니다.
+       [995] 지역 허브(/region/{id})가 풀리는 단지는 홈 → 지역 → 단지 세 단계 — 세
+       항목 모두 URL 이 있다. 안 풀리면 예전 두 단계 그대로(없는 URL 을 지어내지 않는다). */
     breadcrumbJsonLd([
       { name: "홈", url: "/" },
       ...(regionId ? [{ name: regionLabel, url: `/region/${regionId}` }] : []),
@@ -1250,8 +1362,9 @@ export default async function ComplexHubPage({
     ]),
   ];
 
-  /* [967 · 17] 임장노트 프리필 주소를 한 번만 만든다 — 머리 CTA·하단 액션 바·내 기록 탭이 전부 같은 주소여야 한다
-     (NoteForm 은 ?apt=&region=&complexId=&lat=&lng= 를 읽는다). */
+  /* [967 · 17] 임장노트 프리필 주소를 한 번만 만든다 — CTA·상단 알약·하단 액션 바·
+     내 기록 탭이 전부 같은 주소여야 한다(NoteForm 은 ?apt=&region=&complexId=&lat=&lng=
+     를 읽는다). 예전엔 세 곳이 각자 조립해 좌표가 빠지는 곳이 있었다. */
   const noteHref = (() => {
     const params = new URLSearchParams({ apt: v.name });
     if (v.dong) params.set("region", v.dong);
@@ -1262,7 +1375,8 @@ export default async function ComplexHubPage({
     }
     return `/notes/new?${params.toString()}`;
   })();
-  /* [992 · A1] 하단 바 세 번째 칸 — 이 단지 AI 분석(분석 허브가 complexId 를 받는다). */
+  /* [992 · A1] 하단 바 세 번째 칸: 전문가 상담(/town/experts, 보관) → 이 단지 AI 분석.
+     ComplexNotesNewsAi 의 analysisHref 와 같은 목적지(분석 허브가 complexId 를 받는다). */
   const analysisHref = `/analysis?complexId=${encodeURIComponent(complexId)}`;
 
   /* [1008 · Q] 호가 점검 — 실거래가 있거나(없음이 확인되지 않았거나) 할 때만 입구를 둔다.
@@ -1271,173 +1385,40 @@ export default async function ComplexHubPage({
   /* 호가 점검 API 키 — 실거래 조회 키는 name-id(canonical_id). kapt URL 로 열린 단지도 같은 키로 */
   const askingApiId = rowForFacts?.canonical_id ?? complexId;
 
-  /* ── [v4 · 한 화면 한 가지] 머리 사실 한 줄 · 요약 목록 행 ───────────────────────────────────────────
-     예전 첫 화면: 칩 브레드크럼 → 네이비 히어로(워터마크·칩 줄) → "이 단지 결과 요약" 카드 → 행동 버튼 4 → 지표 6칸 →
-     단지 정보 카드 → 전세가율·자료 완성도 카드 → … 탭. 같은 사실(준공·세대·"실거래 없음")이 서너 번 나왔다.
-     이제: 브레드크럼 한 줄 → 이름 + 관심 → 사실 한 줄 → 대표가(주인공) → 채움 버튼 1 + 보조 2 → 탭(요약 = 행 목록). */
-  const nowYear = nowKst?.year ?? nowDate.getFullYear();
-  const factLine = headFactLine({
-    buildYear: v.buildYear,
-    households: v.households,
-    roadAddress: v.spec.roadAddress,
-    address: v.spec.address,
-    nowYear,
-  });
-  /* 최근 12개월 매매 — 대표가가 있을 때만(없으면 머리가 "신고된 매매 실거래 없음"을 한 번 말했다).
-     건수·중앙값은 지도 패널과 같은 원표본 창(facts.tradeSummary), 못 읽었으면 월별 이력으로 센 건수만. */
-  const trade12 = facts.tradeSummary;
-  const n12 = trade12 ? trade12.count : countDealsInWindow(v.priceSeries, nowYmForSummary, 12);
-  const trade12Sub = trade12?.band ? (
-    <>
-      중앙 {formatKrwWon(trade12.band.medianKrw, { style: "eok1" })} · <AreaText band={trade12.band.label} />
-    </>
-  ) : trade12?.medianKrw != null ? (
-    `중앙 ${formatKrwWon(trade12.medianKrw, { style: "eok1" })} · 면적 혼합`
-  ) : n12 === 0 && headline ? (
-    `마지막 계약 ${headline.latestYm.slice(0, 4)}.${headline.latestYm.slice(4, 6)}`
-  ) : null;
-  const ratio = facts.jeonseRatio;
-  /* 입주물량 — 같은 달 기준(UpcomingSupply 와 같은 서버 달)으로 가장 가까운 예정 달 */
-  const serverYm = `${nowDate.getFullYear()}${String(nowDate.getMonth() + 1).padStart(2, "0")}`;
-  const supplyNext = nearestSupplyValue(supplyItems, serverYm);
-  const station = poi?.stations[0] ?? null;
-  const school = poi?.schools[0] ?? null;
-  const redevSeed = projects.some((p) => p.asOf != null);
-
-  /* 이 화면이 실제로 보여 준 자료의 원천 — 요약 캡션(짧은 이름)과 데이터 출처(긴 이름) */
-  const shortSources = [
-    "국토교통부 실거래가",
-    supplyNext ? "청약홈" : null,
-    station || school ? "공공데이터포털" : null,
-  ].filter((x): x is string => Boolean(x));
-  const fullSources = [
-    `국토교통부 실거래가(매매·전월세 신고)${v.metric.priceYm ? ` · ${v.metric.priceYm.slice(2)} 신고분까지` : ""}`,
-    v.households || v.spec.buildingCount || v.spec.parkingCount || v.spec.builder || v.spec.heating
-      ? "공동주택 단지 정보(K-apt) — 세대수·동 수·주차·난방·시공사"
-      : null,
-    supplyItems.length > 0 ? "청약홈 분양 공고·공공 공급 자료 — 인근 입주 예정(입주 월은 바뀔 수 있음)" : null,
-    station || school
-      ? "공공데이터포털 전국초중등학교위치·도시철도역사정보 표준데이터(공공누리 1유형) — 직선거리를 도보 80m/분으로 환산"
-      : null,
-    projects.length > 0
-      ? redevSeed
-        ? "정비사업 — 정비사업 정보몽땅·지자체 고시 등 공개자료 취합(참고, 최신 단계와 다를 수 있음)"
-        : "정비사업 — 공개 정비사업 자료"
-      : null,
-    "AI 종합 진단 — 한국부동산원·청약홈·이웃 임장노트·한국은행 등(진단 화면에 항목별 출처)",
-  ].filter((x): x is string => Boolean(x));
-
-  /* G5+G13 — 실데이터 Q&A(FAQPage). [v4] 카드 대신 데이터 출처 안에 — 값은 머리와 같은 대표가·세대수 */
-  const faq: FaqItem[] = [];
-  /* [1009 · C 리뷰] 답 = 첫 화면 대표가(같은 평형 최근 N건 평균 · 한 건이면 한 건) */
-  if (headline) {
-    faq.push({ q: `${v.name} 최근 실거래가는 얼마인가요?`, a: hubFaqPriceAnswer(v.name, headline) });
-  } else if (complexPriceRange && v.metric.priceYm) {
-    faq.push({
-      q: `${v.name} 최근 실거래가는 얼마인가요?`,
-      a: `${v.name}의 ${v.metric.priceYm} 실거래 평균은 ${v.metric.price}입니다(그 달 거래 전체 평균 · 평형 혼합). 매물 호가가 아닌 국토교통부에 신고된 실거래 기준이며, 면적대별 실거래가는 실거래 탭의 면적대별 표를 참고하세요.`,
-    });
-  }
-  if (typeof v.households === "number" && v.households > 0) {
-    faq.push({
-      q: `${v.name}는 몇 세대 단지인가요?`,
-      a: `${v.name}는 ${v.dong}에 위치한 총 ${v.households.toLocaleString("ko-KR")}세대 단지입니다 (공동주택 공공데이터 기준).`,
-    });
-  }
-
-  /* 요약 탭 = 행 목록 하나(서버). 행이 다른 탭·다른 화면으로 보낸다 — 설명 문장은 없다. */
-  const summary = (
-    <>
-      <ul data-tone="blue" className="divide-y divide-line">
-        {headline && !txFailed && (
-          <SummaryRow label="최근 12개월 매매" sub={trade12Sub} value={`${n12.toLocaleString("ko-KR")}건`} tab="price" />
-        )}
-        {ratio && (
-          <SummaryRow
-            label="전세가율"
-            sub={`최근 ${ratio.windowMonths}개월 전세 ${ratio.jeonseCount}건 · 매매 ${ratio.tradeCount}건 중앙값`}
-            value={`${ratio.pct}%`}
-          />
-        )}
-        {/* [v4 · 같은 사실 한 번] "인근 입주 예정" 요약 행은 뺐다 — 바로 아래 입주 목록(#upcoming-supply)이 같은 달·세대를
-            먼저 보여 줘, 첫 화면에 같은 사실이 두 번 나왔다(시안 캡처 실측). */}
-        {station && (
-          <SummaryRow
-            label="가까운 역"
-            sub={`${station.name}${station.line ? ` · ${station.line}` : ""} · ${distanceLabel(station.distanceM)}`}
-            value={walkMinutesLabel(station.distanceM)}
-          />
-        )}
-        {school && (
-          <SummaryRow
-            label="가까운 학교"
-            sub={`${school.name}${school.category ? ` · ${school.category}` : ""} · ${distanceLabel(school.distanceM)}`}
-            value={walkMinutesLabel(school.distanceM)}
-          />
-        )}
-        {projects.length > 0 && (
-          <SummaryRow
-            label="인근 정비사업"
-            sub={`${supplyArea} · ${projects
-              .slice(0, 2)
-              .map((p) => p.name)
-              .join(", ")}`}
-            value={`${projects.length}곳${projects.length >= 6 ? " 이상" : ""}`}
-            href="/redevelopment"
-          />
-        )}
-        {showAsking && (
-          /* [1008 · Q] 호가 점검 — 본체·데이터는 펼칠 때(API · CDN 1시간). 하단 바 "호가 점검"(#asking-check)이 여기로 */
-          <SummaryRow
-            id="asking-check"
-            label="호가 점검"
-            sub="같은 면적대 최근 실거래 사이 위치"
-            right={<AskingCheckToggle apiId={askingApiId} />}
-          />
-        )}
-        {hasCoord && (
-          <SummaryRow
-            label="거리뷰"
-            sub="네이버 거리뷰 · 단지 중심 좌표"
-            right={<RoadviewLazy lat={v.lat as number} lng={v.lng as number} label={v.name} />}
-          />
-        )}
-        {/* [OPT-48 → v4] 예전 "이 단지 결과 요약" 카드 → 입구 행 하나(1.2초 예산 · 결과·면책은 AI 진단 화면) */}
-        <ComplexAxisSummary complexId={v.id} regionName={axisRegionName(v.city, v.dong)} />
-      </ul>
-      <p className="mt-1 t-caption text-text-3">
-        출처 {shortSources.join(" · ")}
-        {v.metric.priceYm ? ` · ${v.metric.priceYm.slice(2)} 신고분` : ""}
-      </p>
-    </>
-  );
-
-  /* 이야기 탭 아래(서버 조각) — 거주민 후기 · 이 단지 임장노트 · 관련 기사. 탭이 닫혀 있어도 HTML 에 있다. */
-  const storyExtras = (
-    <>
-      {/* 거주민 후기 (호갱노노 벤치마크) — 실단지 매칭 시에만 (목업 폴백엔 미표시) */}
-      {v.id === complexId && complexId !== "mock-1" && (
-        <ComplexReviewsLazy complexId={complexId} complexName={v.name} />
-      )}
-      <ComplexNotesNewsAi complexId={complexId} name={v.name} region={v.dong} />
-    </>
-  );
-
-  /* 실거래 탭 아래(서버 조각) — 면적대별 실거래가 · 이 동네 대비 · 전월세 · 국토부 이력. 예전엔 첫 화면 바로 아래
-     2열 그리드·섹션이었다. 탭이 닫혀 있어도 HTML 에 있다(검색 의도 "단지명 평형"의 답). */
-  const priceExtras = (
-    <>
-      <ComplexAreaBands complexId={complexId} compact />
-      <RegionRelative complexId={complexId} compact />
-      {/* [#94 잔여] 전월세 실거래 이력 — 매매 중심 화면에 임차 수요 관점 */}
-      <ComplexRentSection region={sectionRegionLabel(v.city, v.dong)} name={v.name} />
-      {/* 국토부 실거래 이력 상세 — 동일 단지명 매칭 시에만 노출 */}
-      {v.txHref && (
-        <Link href={v.txHref} className="inline-flex min-h-10 items-center t-sub font-bold text-primary">
-          {v.name} 국토부 실거래 이력 보기 ›
+  const cta = (
+    <div className="flex flex-col gap-2">
+      <div className="flex gap-2">
+        {/* 연결성: 단지명·지역·단지ID·좌표 프리필로 임장노트 작성 진입 */}
+        <Link
+          href={noteHref}
+          className="btn-primary btn-cta flex-1 rounded-lg p-3 text-center t-body"
+        >
+          이 단지 임장노트 쓰기
         </Link>
-      )}
-    </>
+        <CompareTrayButton complexId={complexId} name={v.name} region={v.dong} />
+      </div>
+      <div className={`grid gap-2 ${showAsking ? "grid-cols-2" : "grid-cols-1"}`}>
+        {showAsking && (
+          <a href="#asking-check" className="btn-soft rounded-lg p-2.5 text-center text-xs">
+            호가 점검 ›
+          </a>
+        )}
+        {/* [1012 · 규칙 5] "지도에서 보기" → 이 단지 자리로 여는 딥링크(hub-client 와 같은 주소) + 구체 대상 */}
+        <Link
+          href={`/map?complexId=${encodeURIComponent(complexId)}`}
+          className="btn-soft rounded-lg p-2.5 text-center text-xs"
+        >
+          {v.name} 지도에서 보기 ›
+        </Link>
+      </div>
+      {/* [1008 · Q] 결정 여정(/journey, 1008 · J) 한 줄 입구 — 단지 하나를 보다가 "그다음 단계"로 */}
+      <Link
+        href="/journey"
+        className="inline-flex min-h-[24px] items-center justify-center t-sub font-bold text-primary"
+      >
+        내 집 마련 여정 — 계약까지 단계별로 보기 ›
+      </Link>
+    </div>
   );
 
   return (
@@ -1451,157 +1432,557 @@ export default async function ComplexHubPage({
       {/* 최근 본 단지 기록 (localStorage nz_recent_complexes · 목업 폴백은 미기록) */}
       <RecentComplexRecorder id={v.id} name={v.name} region={v.dong} />
 
-      {/* [v4] 데스크톱도 가운데 한 줄(최대 760px) — 사이드바(한눈에 보기·다른 단지·CTA·AI 예습 브리핑·광고) 없음 */}
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
-        {/* [968 · 2] fold — 첫 화면(767px 이하)은 rise-in 지연 리빌을 끈다(LCP 후보 = 대표가) */}
-        <div className="fold">
-          {/* 브레드크럼 한 줄 — 시군구(지역 허브) › 읍면동(같은 동 단지 목록 앵커). 24px 누름 높이.
-              [995] 허브 id 가 안 풀리는 지역만 예전처럼 지역 지도(?region=)로 간다. 동 단위 페이지는 없으므로 페이지 안
-              앵커가 정직한 목적지다(목록이 없으면 누를 수 없는 글자). [v4] "‹ 지도" 칩은 맨 아래 "지도에서 보기" 한 줄로. */}
-          <nav aria-label="브레드크럼" className="flex flex-wrap items-center gap-x-1 t-sub text-text-3">
+      {/* [968 · 2] fold — 첫 화면(브레드크럼·히어로·축 요약·행동 알약·KPI·스펙)은 767px
+          이하에서 rise-in 지연 리빌을 끈다(globals.css `.fold.rise-in`, `.fold [class^="rise-in"]`).
+          `backwards` 채움이라 애니메이션이 시작되기 전까지 LCP 후보(히어로 시세)가
+          투명했다. 래퍼는 스타일 없는 블록이라 레이아웃·LCP 요소 순서에 영향이 없다. */}
+      <div className="fold">
+        {/* 브레드크럼 칩 — ‹ 지도 · 시/도+시군구 · 읍면동 · 단지명
+            [995] 시군구 칩은 지역 허브(/region/{id})로 — JSON-LD 탐색경로와 같은 목적지.
+            허브 id 가 안 풀리는 지역만 예전처럼 지역 지도(?region=)로 간다. 읍면동 칩은
+            같은 동 단지 목록(#nearby-complexes)으로 — 동 단위 페이지는 없으므로 페이지
+            안 앵커가 정직한 목적지다(목록이 없으면 누를 수 없는 라벨로 둔다). */}
+        <div className="rise-in flex flex-wrap gap-1.5">
+          <Link
+            href="/map"
+            className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2"
+          >
+            ‹ 지도
+          </Link>
+          {regionId ? (
             <Link
-              href={regionId ? `/region/${regionId}` : `/map?region=${encodeURIComponent(v.dong)}`}
-              className="inline-flex min-h-6 items-center text-text-2 no-underline"
+              href={`/region/${regionId}`}
+              className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2"
             >
               {regionLabel}
             </Link>
-            {v.emd && (
-              <>
-                <span aria-hidden="true">›</span>
-                {v.nearby.length > 0 ? (
-                  <a href="#nearby-complexes" className="inline-flex min-h-6 items-center text-text-2 no-underline">
-                    {v.emd}
-                  </a>
-                ) : (
-                  <span className="inline-flex min-h-6 items-center">{v.emd}</span>
-                )}
-              </>
-            )}
-          </nav>
-
-          {/* 머리 — 흰 바탕 · 이름(t-title) + 관심(40px 하트). [v4 · 규칙 4] 네이비 히어로·워터마크 없음 */}
-          <div className="mt-1.5 flex items-start justify-between gap-3">
-            <h1 className="min-w-0 break-words t-title text-ink">{v.name}</h1>
-            <WatchlistButton complexId={v.id} complexName={v.name} />
-          </div>
-          {/* 사실 한 줄 — 숫자·장소만(있는 값만) */}
-          {factLine && <p className="mt-0.5 t-sub text-text-3">{factLine}</p>}
-
-          {/* 주인공 — 대표 실거래가 하나(t-display) + 사실 한 줄. 없으면 "신고된 매매 실거래 없음"(페이지에서 한 번) */}
-          <div className="mt-6">
-            <HubPriceHero
-              headline={headline}
-              txFailed={txFailed}
-              freshness={freshness}
-              fallback={
-                !dealsKnown && !txFailed && v.priceSeries.length > 0
-                  ? { price: v.metric.price, ym: v.metric.priceYm }
-                  : null
-              }
-            />
-          </div>
-
-          {/* 행동 — 채움 파랑 1개(이 단지 임장노트 쓰기) + 보조 2개(비교 담기 · 공유, 테두리).
-              [967 · 17] id 는 하단 액션 바의 감시 대상 — 이 줄이 화면에 있으면 바를 숨긴다 */}
-          <div id="complex-actions-top" className="mt-6 flex flex-col gap-2">
-            {/* 연결성: 단지명·지역·단지ID·좌표 프리필로 임장노트 작성 진입 */}
+          ) : (
             <Link
-              href={noteHref}
-              className="btn-primary flex min-h-12 items-center justify-center rounded-lg px-4 text-center t-body"
+              href={`/map?region=${encodeURIComponent(v.dong)}`}
+              className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2"
             >
-              이 단지 임장노트 쓰기
+              {regionLabel}
             </Link>
-            <div className="grid grid-cols-2 gap-2">
-              <CompareTrayButton complexId={complexId} name={v.name} region={v.dong} />
-              <ShareLinkButton
-                title={`${v.name} 실거래가·임장노트`}
-                className="btn-secondary inline-flex items-center justify-center gap-1 rounded-lg p-3 text-center text-[13px]"
-              />
-            </div>
-          </div>
+          )}
+          {v.emd &&
+            (v.nearby.length > 0 ? (
+              <a
+                href="#nearby-complexes"
+                className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2 no-underline"
+              >
+                {v.emd}
+              </a>
+            ) : (
+              <span className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2">
+                {v.emd}
+              </span>
+            ))}
+          {/* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */}
+          <span className="chip bg-brand-navy px-2.5 py-1 t-sub font-bold text-on-dark">
+            {v.name}
+          </span>
         </div>
 
-        {/* 탭 — 요약(행 목록) · 이야기 · 매물 · 실거래 · 내 기록. 탭 줄은 헤더 아래에 붙는다(sticky) */}
+        {/* 단지명 + 팔로우 — 가격 히어로와 한 덩어리.
+            [962] 옅은 파랑 그라데이션 → 브랜드 네이비 면 + 심볼 워터마크(홈 시안 "딥 네이비 단색 + 심볼").
+            시세 캡션 앞의 숨쉬는 온점 = "지금 값"(티커와 같은 언어). 델타 색은 남색 위 전용.
+            [968 · 2] 클래스 문자열이 rise-in 으로 시작하지 않아 `.fold.rise-in` 이 맞도록 fold 를 직접 단다. */}
+        {/* [1012 · 규칙 1] 히어로·사이드 카드·후기 카드 12px → 8px(2xl) — 이 화면의 카드는 전부 8px + 1px 선 */}
+        <div className="brand-navy-card fold rise-in mt-3 rounded-2xl px-4 py-4 sm:px-5">
+          <BrandWatermark />
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="t-title tracking-tight text-on-dark">
+                {v.name}
+              </h1>
+              <p className="mt-0.5 t-sub text-on-dark-muted">
+                {v.dong}
+                {v.city && v.city !== v.dong ? ` · ${v.city}` : ""}
+              </p>
+            </div>
+            <WatchlistButton complexId={v.id} complexName={v.name} tone="dark" />
+          </div>
+
+          {/* [1009 · C] 결론 — 대표 실거래가(AI 분석과 같은 평형 규칙, 숫자 크게·단위 작게) + 비교 기준이 적힌 등락 +
+              한 줄 문장. 예전 "최근 실거래 평균 30.9억 ▲ 1.2% 전월비"는 평형 혼합 월평균이었다(HubPriceHero 주석). */}
+          <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
+              <HubPriceHero
+                headline={headline}
+                txFailed={txFailed}
+                freshness={freshness}
+                fallback={
+                  !dealsKnown && !txFailed && v.priceSeries.length > 0
+                    ? { price: v.metric.price, ym: v.metric.priceYm }
+                    : null
+                }
+              />
+            </div>
+            {typeof v.lat === "number" && typeof v.lng === "number" && (
+              <RoadviewButton lat={v.lat} lng={v.lng} label={v.name} />
+            )}
+          </div>
+
+          {/* [995] 평형별 최근 실거래 — 검색 의도 "단지명 평형"의 답을 첫 화면에 둔다.
+              거래 많은 구간 3개, 값은 그 구간의 최근 실거래가와 그 계약월(면적대 표와 같은
+              재료). 누르면 아래 면적대별 표(#area-bands)로. 촘촘한 인라인 링크 기준(24px)
+              을 넘기도록 min-h-6 — `.chip` 은 붙이지 않는다(터치에서 40px 로 커져 히어로
+              밀도가 깨진다). 재료가 없으면 줄 자체를 그리지 않는다. */}
+          {heroBands.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-1">
+              {/* [1009 · C] 칩 값은 그 면적대의 **최근 한 건** — 반올림 없이("29억 6,750만"). 면적은 사용자 단위.
+                  누르면 아래 표로 내려가는 링크라 눌림(press)을 준다. */}
+              <span className="mr-0.5 t-caption font-bold text-on-dark-muted">면적대별 최근 실거래</span>
+              {heroBands.map((b) => {
+                const ym = ymShortLabel(b.latestYm);
+                return (
+                  <a
+                    key={b.label}
+                    href="#area-bands"
+                    className="brand-photo-chip press inline-flex min-h-6 items-center gap-1 rounded-full px-2.5 py-[5px] t-sub font-bold no-underline tabular-nums"
+                  >
+                    <span>
+                      <AreaText band={b.label} />
+                    </span>
+                    <span className="font-bold">{formatEokMan(b.latestManwon)}</span>
+                    {ym && <span className="font-medium opacity-80">· {ym}</span>}
+                  </a>
+                );
+              })}
+            </div>
+          )}
+
+          {v.chips.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1">
+              {v.chips.map((c) => (
+                <span
+                  key={c}
+                  className="brand-photo-chip rounded-full px-2.5 py-[4px] t-sub font-bold"
+                >
+                  {c}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* [1006 · E] 인용 가능한 요약(GEO) — 서버 HTML 에 "어디의 무엇이 언제 기준 얼마"가
+            완결 문장으로 있어야 AI 검색이 이 페이지를 출처로 댈 수 있다. 위 히어로는 숫자
+            조각(KPI)이고 AI 요약 탭은 클라이언트라, 떼어 인용할 문단이 서버 HTML 에 없었다.
+            data-ai-summary 는 위 WebPage JSON-LD 의 speakable.cssSelector 가 가리키는 자리.
+            실거래가 없거나 조회 실패면 섹션 자체가 없다(껍데기 금지). */}
+        {citable && (
+          <section
+            data-ai-summary=""
+            id="ai-summary"
+            aria-label={`${v.name} 실거래 요약`}
+            className="rise-in-1 card mt-3 rounded-2xl px-4 py-3"
+          >
+            <p className="t-body text-text-1">{citable.text}</p>
+            {/* [1012 · 규칙 6·7] 출처를 앞에 두고 "~해요" 체로 */}
+            <p className="mt-1.5 t-caption text-text-3">
+              국토교통부 실거래 단순 평균이에요 — 매물 호가가 아니에요. 최근 1~2개월 수치는 신고
+              지연(계약 후 30일)으로 늘어날 수 있어요.
+            </p>
+          </section>
+        )}
+
+        {/* [OPT-48] 허브 2.0 — AI 워크벤치와 같은 라이브 컨텍스트 요약(1.2초 예산·자체 생략).
+            regionName 은 dec.region 포맷("서울 중랑구")과 같아야 한다 — city===dong 중복 방어. */}
+        <ComplexAxisSummary complexId={v.id} regionName={axisRegionName(v.city, v.dong)} />
+
+        {/* [개선 #32] 행동 줄 — 보고 끝나는 화면에서 다음 행동이 있는 화면으로.
+            [1008 · Q] 결정 도구 둘(호가 점검·비교 담기)을 여기로 모았다: 임장노트 쓰기 · 호가 점검 ·
+            비교 담기 · 공유. "{지역} 시장 보기" 알약은 뺐다 — 같은 목적지(/region/{id})가 바로 위
+            브레드크럼 칩에 있다(행동 줄이 늘지 않게 하나를 덜었다). 모양은 비교 담기 버튼
+            (CompareTrayButton: btn-secondary · rounded-lg · p-3 · 13px — 공용 컴포넌트라 className 을
+            못 받는다)에 맞춘 같은 버튼 넷 — 모바일 2×2, sm 이상 한 줄. 그리드인 이유: 그 버튼의 flex-1 이
+            flex 줄에선 남는 폭을 다 먹는다. 터치 하한 44px 은 globals.css 의 .btn-secondary 규칙이 준다. */}
+        {(() => {
+          const act =
+            "btn-secondary inline-flex items-center justify-center rounded-lg p-3 text-center text-[13px]";
+          return (
+            /* [967 · 17] id 는 하단 액션 바의 감시 대상 — 이 줄이 화면에 있으면 바를 숨긴다 */
+            <div
+              id="complex-actions-top"
+              /* lg 에선 폭을 묶는다 — 본문 폭(1,200px) 그대로 늘리면 버튼 하나가 300~400px 로 퍼졌다 */
+              className={`rise-in-1 mt-3 grid gap-2 ${
+                showAsking ? "grid-cols-2 sm:grid-cols-4 lg:max-w-[720px]" : "grid-cols-3 lg:max-w-[540px]"
+              }`}
+            >
+              <Link href={noteHref} className={act}>
+                임장노트 쓰기
+              </Link>
+              {showAsking && (
+                <a href="#asking-check" className={act}>
+                  호가 점검
+                </a>
+              )}
+              <CompareTrayButton complexId={complexId} name={v.name} region={v.dong} />
+              <ShareLinkButton title={`${v.name} 실거래가·임장노트`} variant="text" className={act} />
+            </div>
+          );
+        })()}
+
+        {/* 지표 6칸 — 월평균·거래·매물·노트·세대·연차 */}
+        <div className="rise-in-1 mt-3 grid grid-cols-3 gap-1.5 md:grid-cols-6">
+          {/* [1009 · C] "시세" → "월평균" — 실거래만 있는 곳에 "시세"라는 말을 쓰지 않고, 이 숫자가 그 달 거래의
+              면적 혼합 평균임을 적는다(첫 화면 대표가와 다른 숫자인 이유). 혼합 평균끼리의 전월비는 팔린 평형
+              구성만 바뀌어도 움직여서 여기서는 빼고, 등락은 대표가(같은 평형) 한 곳에서만 말한다. */}
+          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
+            <div className="t-caption text-text-3">월평균</div>
+            <div className="mt-0.5 truncate t-section text-ink tabular-nums sm:text-[15px]">
+              {v.metric.price}
+            </div>
+            <div className="mt-0.5 truncate t-caption text-text-3 tabular-nums">
+              {v.metric.priceYm ? `${v.metric.priceYm.slice(2)} · 면적 혼합` : v.metric.priceSub}
+            </div>
+          </div>
+          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
+            <div className="inline-flex items-center justify-center gap-0.5 t-caption text-text-3">
+              거래
+              <Explain
+                term="geoRae-ryang"
+                how={[
+                  "아래 기간(계약월)에 신고된 매매 거래 수를 모두 더했어요 — 해제 신고된 거래는 빼요.",
+                  "신고 기한이 계약 후 30일이라 최근 1~2개월은 덜 들어와 있을 수 있어요.",
+                ]}
+                source="국토교통부 실거래가"
+              />
+            </div>
+            <div className="mt-0.5 truncate t-section text-ink tabular-nums sm:text-[15px]">
+              {v.metric.deals}
+            </div>
+            <div className="mt-0.5 truncate t-caption text-text-3">{v.metric.dealsSub}</div>
+          </div>
+          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
+            <div className="t-caption text-text-3">매물</div>
+            <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
+              {v.metric.listings}
+            </div>
+            <div className="mt-0.5 truncate t-caption text-text-3">{v.metric.listingsSub}</div>
+          </div>
+          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
+            <div className="t-caption text-text-3">노트</div>
+            <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
+              {v.metric.notes}
+            </div>
+            <div className="mt-0.5 truncate t-caption text-text-3">{v.metric.notesSub}</div>
+          </div>
+          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
+            <div className="t-caption text-text-3">세대</div>
+            <div className="mt-0.5 truncate t-section text-ink tabular-nums sm:text-[15px]">
+              {v.households ? `${v.households.toLocaleString("ko-KR")}` : "—"}
+            </div>
+            <div className="mt-0.5 truncate t-caption text-text-3">
+              {v.households ? "공공데이터" : "미확인"}
+            </div>
+          </div>
+          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
+            <div className="t-caption text-text-3">연차</div>
+            <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
+              {v.metric.age}
+            </div>
+            <div className="mt-0.5 truncate t-caption text-text-3">{v.metric.ageSub}</div>
+          </div>
+        </div>
+        {/* [1012 · 규칙 7] 지표 6칸의 출처·시점 한 줄 — 값이 있는 것만 말한다(신고월은 최신 계약월) */}
+        <p className="rise-in-1 mt-1.5 px-1 t-caption text-text-3">
+          {v.loadFailures.includes("실거래")
+            ? "실거래 출처 국토교통부 · 지금은 불러오지 못했어요"
+            : `출처 국토교통부 실거래가${v.metric.priceYm ? ` · ${v.metric.priceYm.slice(2)} 신고분` : ""}`}
+          {v.households || v.buildYear ? " · 세대·준공은 공동주택 공공데이터" : ""}
+        </p>
+
+        {/* [1009 · C] 단지 정보 — 네이버 부동산식 사실 격자. 값이 있는 항목만 칸이 된다(ComplexInfoGrid 주석) */}
+        <ComplexInfoGrid facts={v.spec} nowYear={new Date().getFullYear()} />
+      </div>
+      {/* [968 · 2] fold 끝 — 여기서부터는 스크롤 아래(리빌 유지) */}
+
+      {/* [1007 · P2] 전세가율 · 자료 완성도 — 지도 패널(1006)과 같은 규칙. 스펙 시트 바로 아래:
+          "무엇이 있고 무엇이 왜 없는지"가 스펙 다음에 오는 것이 자연스럽다. */}
+      <ComplexFactsCard facts={facts} noteHref={noteHref} />
+
+      {/* 면적대·지역 대비 — 상단 밀도 블록.
+          [968 · 7] cv-auto — 화면 밖이면 레이아웃·페인트를 미룬다(globals.css
+          `.cv-auto{content-visibility:auto;contain-intrinsic-size:auto 420px}`). 모바일에서는
+          스펙 시트 아래라 첫 화면 밖이다. 래퍼를 새로 두지 않고 기존 루트에 단다 —
+          main 의 data-autotrim(`> :empty`)이 빈 블록을 접는 규칙을 그대로 타게. 아래
+          섹션 컴포넌트들도 각자의 <section> 루트에 같은 클래스를 단다.
+          [995] id="area-bands" — 히어로의 평형 칩이 여기로 내려온다. 면적대 표가 이 그리드의
+          첫 칸이라 그리드에 단다(래퍼 div 를 끼우면 표가 없을 때 빈 칸이 autotrim 을 피해
+          여백만 남긴다). scroll-mt-24 는 다른 앵커 섹션과 같은 상단 바 여유. */}
+      <div
+        id="area-bands"
+        className="cv-auto mt-3 grid scroll-mt-24 grid-cols-1 gap-3 lg:grid-cols-2"
+      >
+        <ComplexAreaBands complexId={complexId} compact />
+        <RegionRelative complexId={complexId} compact />
+      </div>
+
+      {/* [1008 · Q] 호가 점검 — "이 가격 괜찮을까?". 면적대별 표 바로 아래(같은 재료의 다음 질문).
+          머리말은 서버 HTML, 펼침 버튼만 클라이언트, 본체·데이터는 펼칠 때(API · CDN 1시간).
+          행동 줄의 "호가 점검"(#asking-check)이 여기로 스크롤하며 펼친다. */}
+      {showAsking && (
+        <section id="asking-check" aria-labelledby="asking-check-title" className="rise-in-1 mt-3 scroll-mt-24">
+          <div className="card flex flex-wrap items-center justify-between gap-x-3 rounded-2xl px-4 py-3.5">
+            <div className="min-w-0 flex-1">
+              <h2 id="asking-check-title" className="flex flex-wrap items-center gap-x-1 t-section text-ink">
+                이 가격 괜찮을까? <span className="t-sub font-bold text-primary">호가 점검</span>
+                {/* [1009 · C] 무엇을 계산하는지 — lib/complex/asking-check 와 같은 말로 */}
+                <Explain
+                  term="hoga"
+                  how={[
+                    "같은 면적대의 최근 12개월 매매 실거래(3건이 안 되면 24개월)에서 최저·중앙값·최고와, 넣은 호가가 그 사이 어디쯤인지 보여 드려요.",
+                    "적정가·목표가를 계산하지 않아요 — 지난 거래 사이에서의 위치예요. 층·향·수리 상태는 반영되지 않아요.",
+                    "해제 신고된 거래는 빼요. 거래가 3건이 안 되면 위치를 말하지 않아요.",
+                  ]}
+                  source="국토교통부 실거래가"
+                />
+              </h2>
+              <p className="mt-0.5 t-sub text-text-3">
+                매물 호가를 넣으면 같은 면적대 최근 실거래 사이 어디쯤인지 보여 드려요.
+              </p>
+            </div>
+            <AskingCheckToggle apiId={askingApiId} />
+          </div>
+        </section>
+      )}
+
+      {/* 국토부 실거래 이력 상세 — 동일 단지명 매칭 시에만 노출 */}
+      {v.txHref && (
+        <div className="rise-in-1 mt-3">
+          <Link
+            href={v.txHref}
+            className="card tile flex items-center justify-between rounded-xl px-4 py-3"
+          >
+            <span className="t-body font-bold text-ink">
+              {v.name} 국토부 실거래 이력 보기
+              <span className="ml-2 t-sub font-medium text-text-3">
+                실거래가 기반 · 매물 호가 아님
+              </span>
+            </span>
+            <span className="t-body font-bold text-primary">→</span>
+          </Link>
+        </div>
+      )}
+
+      {/* 데이터 신선도 캡션(#21) — market_ingest_log 최근 성공 기준.
+          [1007 · P2] 지역 허브와 같은 조각·같은 문장("실거래 마지막 반영 YYYY-MM-DD · 신고 지연 최대 30일"). */}
+      <MarketFreshnessLine label={freshness} className="rise-in-1 mt-1.5" />
+
+      {/* 본문 — 모바일 1열(시안), 데스크탑 2열 확장 */}
+      <div className="mt-4 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <ComplexHubTabs
-          summary={summary}
-          storyExtras={storyExtras}
-          priceExtras={priceExtras}
+          aiTitle="한눈에 요약"
+          aiBody={summaryBody}
           listingsLabel={v.listingsLabel}
           trades={v.trades}
           notes={v.notes}
           notesFailed={v.notesFailed}
           notesWriteHref={v.notesWriteHref}
-          /* [967 · 15] 내 기록 탭의 API 조회 키 — 노트 metadata.complexId 와 같은 순수 id(complexId).
-             라우트 파라미터(id)는 슬러그 장식이 붙어 있을 수 있어 조회에 못 쓴다. 지도 딥링크(/map?complexId=)도 순수 id 로. */
+          /* [967 · 15] 내 기록 탭의 API 조회 키 — 노트 metadata.complexId 와 같은
+             순수 id(complexId)여야 한다. 라우트 파라미터(id)는 슬러그 장식이 붙어
+             있을 수 있어 조회에 못 쓴다. 지도 딥링크(/map?complexId=)도 순수 id 로. */
           complexId={complexId}
           /* 대장 매칭 시 v.id 는 kapt.… — 예전 링크로 쓴 노트가 그 id 를 달고 있다 */
           altComplexId={v.id !== complexId ? v.id : undefined}
           complexName={v.name}
           noteHref={noteHref}
-          /* [970 · B-39] 실거래 탭 → /analysis/price?region= 프리필(지역명 규칙은 축 요약과 같다) */
+          /* [970 · B-39] 시세 탭 → /analysis/price?region= 프리필(지역명 규칙은 축 요약과 같다) */
           priceRegion={axisRegionName(v.city, v.dong) || undefined}
-          /* [1008] 계산기 지역 프리필 — 서버에서 한 번 정해 문자열만 넘긴다(규칙표를 클라이언트 번들에 싣지 않는다) */
+          /* [1008] 계산기 지역 프리필(규제지역·수도권·그 외) — 서버에서 한 번 정해 문자열만 넘긴다(규칙표를
+             클라이언트 번들에 싣지 않는다 — 이 라우트 479/480KB). 모르는 지역이면 undefined(사용자가 고른다). */
           loanRegion={loanRegionFromRegionName(axisRegionName(v.city, v.dong)) ?? undefined}
           listings={v.listings}
-          /* [968 · 4] 차트는 서버에서 한 번 그려 엘리먼트로 넘긴다 — 차트 코드·점 배열은 클라이언트 번들·props 에서 빠진다 */
+          /* [968 · 4] 차트는 여기(서버)서 한 번 그려 엘리먼트로 넘긴다 — 요약·시세 탭이
+             같은 엘리먼트를 쓰고, 차트 코드·점 배열은 클라이언트 번들·props 에서 빠진다.
+             그라데이션 id 씨앗은 단지 id(문서 안에서 유일). */
           priceChart={series ? <PriceTrendChart series={series} complexName={v.name} /> : null}
           /* [1009 · C] 계산기 프리필 = 첫 화면 대표가(없으면 최근 달 평균) */
           latestAvgManwon={calcManwon}
-          /* [1009 · C] 최근 실거래 한 건 단위(최대 60건, [계약월, 일, 만원, 전용㎡, 층]) — 실거래 탭 */
+          /* [1009 · C] 최근 실거래 한 건 단위(최대 60건, [계약월, 일, 만원, 전용㎡, 층]) — 요약 탭 8건·시세 탭 전체 */
           deals={dealTuples}
+          dealsFailed={txFailed}
+          /* [1009 · C 리뷰] 월별 줄 등락의 기준 달 — 요약 탭은 한 건 목록이 없을 때만 월별 줄을 그린다 */
+          tradeDeltas={dealTuples.length === 0 ? tradeDeltaViews(v.trades) : undefined}
         />
 
-        {/* D4 인근 입주물량 — 구분선 목록 최대 4행 + 출처 한 줄 */}
-        {/* [970 · B-02] 시/도까지 넘긴다 — v.dong("중구")만으로는 다른 도시 자료가 섞였다 */}
-        <UpcomingSupply area={v.dong} city={v.city} />
-
-        {/* 내부 링크 그물(#34) — 같은 동(없으면 구) 다른 단지. [v4] 카드 격자 → 구분선 목록 */}
-        {v.nearby.length > 0 && (
-          <section id="nearby-complexes" aria-labelledby="nearby-complexes-title" className="scroll-mt-28">
-            {/* [995] 동 단위로 찾았으면 "{읍면동} 다른 단지", 구로 물러섰으면 "{시군구} 다른 단지" */}
-            <h2 id="nearby-complexes-title" className="t-section text-ink">
-              {v.nearbyLabel} <span className="t-sub font-medium text-text-3">{v.nearby.length}곳</span>
-            </h2>
-            <ul data-tone="blue" className="mt-1 divide-y divide-line">
-              {v.nearby.map((n) => (
-                <SummaryRow key={n.id} label={n.name} sub={n.meta} href={complexHrefFromId(n.id)} />
+        {/* 데스크탑 우측 — 중복 스펙 대신 한눈에 + 인근 + CTA */}
+        <aside className="hidden flex-col gap-3 lg:flex">
+          <div className="rise-in-2 card flex flex-col gap-2 rounded-2xl px-4 py-4">
+            {/* [1012 · 규칙 7·8] 제목 800 → 700 · 출처·시점을 제목 줄에 */}
+            <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+              <div className="t-body font-bold text-ink">한눈에 보기</div>
+              {v.metric.priceYm && (
+                <span className="t-caption text-text-3">국토교통부 · {v.metric.priceYm.slice(2)} 신고분</span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <div className="rounded-xl bg-bg px-2.5 py-2">
+                <div className="t-caption text-text-3">월평균 · 면적 혼합</div>
+                <div className="t-section text-ink tabular-nums">{v.metric.price}</div>
+              </div>
+              <div className="rounded-xl bg-bg px-2.5 py-2">
+                <div className="t-caption text-text-3">거래</div>
+                <div className="t-section text-ink tabular-nums">{v.metric.deals}</div>
+              </div>
+              <div className="rounded-xl bg-bg px-2.5 py-2">
+                <div className="t-caption text-text-3">매물</div>
+                <div className="t-section text-ink">{v.metric.listings}</div>
+              </div>
+              <div className="rounded-xl bg-bg px-2.5 py-2">
+                <div className="t-caption text-text-3">노트</div>
+                <div className="t-section text-ink">{v.metric.notes}</div>
+              </div>
+            </div>
+            {v.chips.slice(0, 8).length > 0 && (
+              <div className="flex flex-wrap gap-1 pt-1">
+                {v.chips.slice(0, 8).map((c) => (
+                  <span
+                    key={c}
+                    className="rounded-full bg-bg chip-pad t-caption font-bold text-text-2"
+                  >
+                    {c}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          {v.nearby.length > 0 && (
+            <div className="rise-in-2 card flex flex-col gap-1.5 rounded-2xl px-4 py-3.5">
+              {/* [995] 동 단위로 찾았으면 "{읍면동} 다른 단지", 구로 물러섰으면 "{시군구} 다른 단지" */}
+              <div className="mb-0.5 t-body font-bold text-ink">{v.nearbyLabel}</div>
+              {v.nearby.slice(0, 5).map((n) => (
+                <Link
+                  key={n.id}
+                  href={complexHrefFromId(n.id)}
+                  className="press rounded-xl px-2 py-2 transition-colors hover:bg-bg"
+                >
+                  <div className="truncate t-sub font-bold text-ink">{n.name}</div>
+                  <div className="truncate t-caption text-text-3">{n.meta}</div>
+                </Link>
               ))}
-            </ul>
-          </section>
-        )}
-
-        {/* 맨 끝 — 지도 한 줄(예전 하단 CTA 묶음 · "‹ 지도" 칩 · "내 집 마련 여정" 줄을 하나로) + 데이터 출처(접힘) */}
-        <div className="flex flex-col gap-2">
-          {/* [1012 · 규칙 5] 이 단지 자리로 여는 딥링크 + 구체 대상 */}
-          <Link
-            href={`/map?complexId=${encodeURIComponent(complexId)}`}
-            className="inline-flex min-h-10 items-center t-sub font-bold text-primary"
-          >
-            {v.name} 지도에서 보기 ›
-          </Link>
-          <ComplexDataSources
+            </div>
+          )}
+          <div className="rise-in-3">{cta}</div>
+          {/* [944] 방문 전 AI 예습 브리핑 — CTA 바로 아래, 노트 시작 동선과 한 몸 */}
+          <AiBriefingLazy
             complexId={complexId}
-            spec={v.spec}
-            nowYear={nowYear}
-            facts={facts}
-            citable={citable?.text ?? null}
-            freshness={freshness}
-            faq={faq}
-            hasTrades={v.priceSeries.length > 0}
-            sources={fullSources}
+            region={v.dong ?? v.city ?? ""}
+            aptName={v.name}
+            noteHref={noteHref}
           />
-        </div>
+          <AdZone placement="sidebar" seed={0} plan={null} />
+        </aside>
       </div>
 
-      {/* [967 · 17] 모바일 하단 액션 바 — 관심 등록·노트 쓰기·호가 점검·AI 분석. 머리 행동 줄이 화면에 있으면 숨긴다.
-          사용자별 상태(관심 여부)는 바 안의 WatchlistButton 이 마운트 뒤 읽는다 — ISR HTML 은 공용이다. */}
+      {/* 내부 링크 그물(#34) — 모바일·전체 그리드.
+          [968 · 7] 탭 아래 섹션 전부 cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미루고
+          스크롤로 다가오면 그때 그린다(브라우저가 온디맨드로 렌더). 하단 CTA
+          sentinel(#complex-actions-bottom)은 cv-auto 밖에 둔다.
+          [995] #area-bands·#nearby-complexes 앵커가 생겼다 — content-visibility:auto 는
+          fragment 이동 대상을 "사용자와 관련 있음"으로 보고 그 자리에서 렌더하므로
+          앵커 이동이 막히지 않는다(scroll-mt-24 는 상단 바 여유). */}
+      {v.nearby.length > 0 && (
+        <section id="nearby-complexes" className="cv-auto rise-in-5 mt-6 scroll-mt-24">
+          <h2 className="mb-2 px-1 t-section text-ink">
+            {v.nearbyLabel}{" "}
+            <span className="t-sub font-medium text-text-3">{v.nearby.length}곳</span>
+          </h2>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+            {v.nearby.map((n) => (
+              <Link
+                key={n.id}
+                href={complexHrefFromId(n.id)}
+                className="card tile rounded-2xl px-3.5 py-3"
+              >
+                <div className="truncate t-body font-bold text-ink">
+                  {n.name}
+                </div>
+                <div className="mt-0.5 truncate t-sub text-text-3">{n.meta}</div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 거주민 후기 (호갱노노 벤치마크) — 실단지 매칭 시에만 (목업 폴백엔 미표시) */}
+      {v.id === complexId && complexId !== "mock-1" && (
+        <section className="cv-auto rise-in-5 mt-6">
+          <ComplexReviewsLazy complexId={complexId} complexName={v.name} />
+        </section>
+      )}
+
+      {/* [#94 잔여] 전월세 실거래 이력 — 매매 중심 화면에 임차 수요 관점 추가 */}
+      <ComplexRentSection region={sectionRegionLabel(v.city, v.dong)} name={v.name} />
+
+      {/* [#96] 도보권 학교·역 — 데이터 적재 후 자동 표시(미적재 시 미표시) */}
+      <ComplexNearbyPoi lat={v.lat} lng={v.lng} name={v.name} />
+
+      {/* D3 정비사업 · D4 입주물량 (면적대·지역대비는 상단으로 이동) */}
+      {/* [970 · B-02] 시/도까지 넘긴다 — v.dong("중구")만으로는 다른 도시 자료가 섞였다 */}
+      <NearbyRedevelopment sigungu={v.dong} city={v.city} />
+      <UpcomingSupply area={v.dong} city={v.city} />
+      {/* [992 · A1] 단지 Q&A(ComplexQna → /qna)는 보관(비노출) — 이 화면의 질문 입구는
+          임장노트·AI 분석(아래 ComplexNotesNewsAi)이 맡는다. */}
+
+      {/* 이 단지 임장노트 · AI 분석 재료 · 관련 기사 —
+          지도 팝업에서 "전체 화면으로 자세히 보기"로 넘어온 사람이 더 알고 싶은 것들.
+          위쪽 "단지 이야기"는 커뮤니티 글이고, 이쪽은 직접 다녀와 쓴 임장노트다. */}
+      <ComplexNotesNewsAi
+        complexId={complexId}
+        name={v.name}
+        region={v.dong}
+      />
+
+      {/* G5+G13 — 실데이터 Q&A + FAQPage 스키마. 시세가 "준비 중"이면 그 질문은 뺀다. */}
+      {(() => {
+        const faq: FaqItem[] = [];
+        /* [1009 · C 리뷰] 답 = 첫 화면 대표가(같은 평형 최근 N건 평균 · 한 건이면 한 건). 예전 답은 면적 혼합 월평균과
+           그 전월비("30.9억입니다 (▲ 15.8% 전월비)")라 첫 화면·제목·공유 카드("29.7억 ▼0.8%")와 달랐다 */
+        if (headline) {
+          faq.push({ q: `${v.name} 최근 실거래가는 얼마인가요?`, a: hubFaqPriceAnswer(v.name, headline) });
+        } else if (complexPriceRange && v.metric.priceYm) {
+          faq.push({
+            q: `${v.name} 최근 실거래가는 얼마인가요?`,
+            a: `${v.name}의 ${v.metric.priceYm} 실거래 평균은 ${v.metric.price}입니다(그 달 거래 전체 평균 · 평형 혼합). 매물 호가가 아닌 국토교통부에 신고된 실거래 기준이며, 면적대별 실거래가는 위 면적대별 표를 참고하세요.`,
+          });
+        }
+        if (typeof v.households === "number" && v.households > 0) {
+          faq.push({
+            q: `${v.name}는 몇 세대 단지인가요?`,
+            a: `${v.name}는 ${v.dong}에 위치한 총 ${v.households.toLocaleString("ko-KR")}세대 단지입니다 (공동주택 공공데이터 기준).`,
+          });
+        }
+        return <div className="cv-auto mt-6"><QaBlock title={`${v.name} Q&A`} items={faq} /></div>;
+      })()}
+
+      {/* N17 — 위젯 배포 진입점. 위젯에는 출처 링크가 박혀 있으므로 퍼가기가 곧 백링크다.
+          [992 · A1] 생성기(/widget)는 보관 — 코드를 여기서 바로 보여 준다. */}
+      <EmbedSnippet
+        kind="complex"
+        id={complexId}
+        heading="이 단지 실거래가를 블로그에 붙이기"
+        desc="최근 실거래가 카드를 iframe 한 줄로 퍼갈 수 있어요. 새 실거래가 신고되면 붙여 둔 카드도 함께 바뀌어요."
+        className="cv-auto rise-in-5 mt-6"
+      />
+
+      {/* 모바일 CTA 2개 (시안 하단) — id 는 하단 액션 바의 감시 대상([967 · 17]) */}
+      <div id="complex-actions-bottom" className="rise-in-4 mt-4 lg:hidden">
+        {cta}
+      </div>
+
+      {/* [967 · 17] 모바일 하단 액션 바 — 관심 등록·노트 쓰기·AI 분석. 위 두 CTA 블록이
+          화면에 있으면 숨겨 같은 행동이 두 번 보이지 않게 한다. 사용자별 상태(관심
+          여부)는 바 안의 WatchlistButton 이 마운트 뒤 읽는다 — ISR HTML 은 공용이다. */}
       <MobileActionBarLazy
         complexId={v.id}
         complexName={v.name}
         noteHref={noteHref}
         analysisHref={analysisHref}
         askingHref={showAsking ? "#asking-check" : undefined}
-        sentinelIds={["complex-actions-top"]}
+        sentinelIds={["complex-actions-top", "complex-actions-bottom"]}
       />
     </PageShell>
   );

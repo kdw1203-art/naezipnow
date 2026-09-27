@@ -20,7 +20,7 @@ import {
   type NoteCardDto,
   type ReportCardDto,
 } from "./LibraryBrowser";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-bold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 항목 46b — 루트 레이아웃 제목을 그대로 상속하던 페이지에 개별 메타데이터.
    [970 · C-26] 예전 메타("베스트 임장노트 라이브러리 · 평점·조회 기준 선별")는 이 화면에

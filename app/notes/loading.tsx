@@ -1,44 +1,40 @@
-/* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 1곳). */
 import { PageShell } from "../components/PageShell";
 import { LoadingHint } from "@/app/components/ui/LoadingHint";
 import { Skeleton } from "@/components/Skeleton";
 
-/* 공개 임장노트 로딩 스켈레톤 (#41) — 실제 NotesFeedClient 배치에 맞춰 헤더 점프를 막는다.
-   [1012 · 인스타 배치] 제목 → 숫자 3칸 → 지역 원 줄(64px) → 격자/피드 탭 → 3열 정사각 격자(모바일 끝까지, 간격 2px). */
+/* 공개 임장노트 로딩 스켈레톤 (#41) — 헤더 + 필터 칩 + 노트 카드 그리드
+   실제 NotesFeedClient 레이아웃(제목·설명 + 필터 3종 + 3열 카드)에 맞춰 헤더 점프 방지 */
 export default function NotesLoading() {
   return (
     <PageShell>
       <LoadingHint className="mb-3" />
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 px-1">
-          <Skeleton className="h-6 w-36 rounded-sm" />
-          <div className="grid grid-cols-3 gap-2">
+        <div className="flex flex-col gap-3 px-1 md:flex-row md:items-end md:justify-between">
+          <div>
+            <Skeleton className="h-7 w-40 rounded-lg" />
+            <Skeleton className="mt-2 h-3.5 w-64 max-w-full rounded" />
+          </div>
+          <div className="flex gap-2">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex flex-col gap-1">
-                <Skeleton className="h-5 w-10 rounded-sm" />
-                <Skeleton className="h-3 w-14 rounded-sm" />
-              </div>
+              <Skeleton key={i} className="h-9 w-16 rounded-full" />
             ))}
           </div>
         </div>
 
-        <div className="-mx-3.5 flex gap-3 overflow-hidden px-3.5 md:mx-0 md:px-0">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex w-[72px] shrink-0 flex-col items-center gap-1.5">
-              <Skeleton className="h-[64px] w-[64px] rounded-full" />
-              <Skeleton className="h-3 w-12 rounded-sm" />
+            <div key={i} className="card overflow-hidden rounded-3xl">
+              <Skeleton className="h-44 w-full" />
+              <div className="flex flex-col gap-2 p-4">
+                <Skeleton className="h-4 w-3/4 rounded" />
+                <Skeleton className="h-3 w-full rounded" />
+                <Skeleton className="h-3 w-2/3 rounded" />
+                <div className="mt-2 flex items-center gap-2">
+                  <Skeleton className="h-6 w-6 rounded-full" />
+                  <Skeleton className="h-3 w-20 rounded" />
+                </div>
+              </div>
             </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-2 border-t border-line">
-          <Skeleton className="mx-auto mt-3 h-5 w-5 rounded-sm" />
-          <Skeleton className="mx-auto mt-3 h-5 w-5 rounded-sm" />
-        </div>
-
-        <div className="-mx-3.5 grid grid-cols-3 gap-0.5 md:mx-auto md:w-full md:max-w-[935px] md:gap-1">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-square w-full rounded-none" />
           ))}
         </div>
       </div>

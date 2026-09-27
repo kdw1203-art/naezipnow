@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ConsultButton } from "./ConsultButton";
 import { Icon } from "@/app/components/Icon";
 import { expertTrustLine } from "@/lib/experts/trust-line";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-bold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 전문가 목록 카드 (953 개편).
    953 전에는 카드 안에 상세 모달이 하나 더 있었다 — 상세 페이지(/town/experts/[id])가

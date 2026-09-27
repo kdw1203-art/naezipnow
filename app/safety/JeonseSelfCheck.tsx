@@ -187,7 +187,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
             <Icon name="shield" size={18} />
           </span>
           <div className="flex flex-col gap-0.5">
-            <div className="text-[15px] font-extrabold text-ink">
+            <div className="text-[15px] font-bold text-ink">
               전세 안심 진단{" "}
               <span className="text-[12px] font-medium text-text-3">자가진단</span>
             </div>
@@ -305,7 +305,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
             >
               <Icon name={LEVEL_STYLE[result.overall].icon} size={24} />
               <div className="flex flex-col">
-                <span className="text-[15px] font-extrabold">
+                <span className="text-[15px] font-bold">
                   종합 {result.overall}
                 </span>
                 <span className="text-[12px] font-medium leading-[1.5] opacity-90">
@@ -334,7 +334,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
                     </div>
                     <div className="flex items-center gap-2">
                       <span
-                        className="text-[15px] font-extrabold"
+                        className="text-[15px] font-bold"
                         style={{ color: LEVEL_STYLE[ind.level].color }}
                       >
                         {ind.value.toFixed(1)}%
@@ -351,7 +351,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
 
             {/* 실행 팁 */}
             <div className="rounded-lg bg-bg px-4 py-3">
-              <div className="mb-1.5 flex items-center gap-1.5 text-[12px] font-extrabold text-ink">
+              <div className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold text-ink">
                 <Icon name="check" size={14} /> 계약 전 실행 팁
               </div>
               <ul className="flex flex-col gap-1.5">

@@ -1,5 +1,4 @@
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
-import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
+import Link from "next/link";
 
 /* 분석 도구 간 이어가기(#411) — 각 도구 상세 하단에서 "지금 보던 컨텍스트
  * 그대로" 다음 도구로 넘어가는 스트립.
@@ -45,25 +44,37 @@ export function AnalysisCrossLinks({
   className?: string;
 }) {
   const label = regionLabel?.trim() || null;
-  /* [v4 · 규칙 5·2] 칩 구름(채움 파랑 칩 1 + 회색 칩 5, 여러 줄로 엇갈려 감김) → 구분선 목록 행(승인 시안 SummaryRow).
-     강조 행동(note)은 첫 행 — 채움 파랑은 쓰지 않는다(화면의 채움 파랑은 각 도구의 주 행동 하나). */
   return (
-    <nav aria-label="이어서 분석" className={`flex flex-col gap-2 ${className ?? ""}`}>
-      <h2 className="flex items-baseline gap-1.5 t-section text-ink">
-        이어서 분석
-        {label && <span className="t-sub font-medium text-text-3">{label} 그대로</span>}
-      </h2>
-      <ul data-tone="hanji" className="card flex flex-col divide-y divide-line rounded-lg px-4">
-        {note && <SummaryRow label={<span className="text-primary">{note.label}</span>} href={note.href} />}
+    <div className={`card flex flex-col gap-2.5 rounded-3xl px-[18px] py-4 ${className ?? ""}`}>
+      <div className="text-xs font-bold text-text-3">
+        이어서 분석{label ? ` — ${label} 그대로` : ""}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {note && (
+          <Link
+            href={note.href}
+            className="chip press bg-primary px-3.5 py-1.5 text-[12px] font-bold text-white no-underline"
+          >
+            {note.label} ›
+          </Link>
+        )}
         {DESTS.filter((d) => d.id !== current).map((d) => {
           const v =
             d.id === "temperature" || d.id === "compare"
               ? undefined
               : regionFor?.[d.id];
           const href = v ? `${d.href}?region=${encodeURIComponent(v)}` : d.href;
-          return <SummaryRow key={d.id} label={d.label} href={href} />;
+          return (
+            <Link
+              key={d.id}
+              href={href}
+              className="chip press bg-bg px-3 py-1.5 text-[12px] font-bold text-text-2 no-underline transition-colors hover:text-primary"
+            >
+              {d.label} ›
+            </Link>
+          );
         })}
-      </ul>
-    </nav>
+      </div>
+    </div>
   );
 }

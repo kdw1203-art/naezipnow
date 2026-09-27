@@ -36,14 +36,11 @@ const TABS: Array<{
   { label: "마이", icon: "user", href: "/my" },
 ];
 
-/** 모바일 하단 탭바 — 균형 5슬롯.
+/** 모바일 하단 플로팅 글래스 탭바 — 중앙 정렬·균형 5슬롯.
  *
- * [1012 · 규칙 C · 신호표 6번] 떠 있는 유리 알약(.glass-strong · rounded-3xl · 좌우 14px 띄움 · 32px 그림자)
- * → **화면 폭 전체 흰 면 + 위 1px 선**(당근·호갱노노). 바닥에 붙고 safe-area 만큼 아래 여백을 더한다.
- * 스크롤 접기(useTabBarCompact)는 유지하되 반투명·내려앉기 대신 중앙 ＋ 원만 줄인다 — 바는 늘 같은 자리.
- *
- * 모바일 실측 4(2026-08-02): 중앙 기록(+) 원이 스크롤 중에도 본문 위에 떠 콘텐츠를 가렸다.
- * 아래로 읽어 내려가는 동안(=콘텐츠 소비 중)은 원을 줄이고, 위로 스크롤(=이동 의도)하면 즉시 복원한다. */
+ * 모바일 실측 4(2026-08-02): 중앙 기록(+) 원이 스크롤 중에도 본문 위에 떠
+ * 콘텐츠를 가렸다. 아래로 읽어 내려가는 동안(=콘텐츠 소비 중)은 바를 살짝
+ * 내리고 반투명하게 접고, 위로 스크롤(=이동 의도)하면 즉시 복원한다. */
 export function TabBar() {
   const pathname = usePathname();
   const isActive = (tab: (typeof TABS)[number]) => tabBarActive(tab.href, pathname, tab.extra);
@@ -59,14 +56,16 @@ export function TabBar() {
 
   return (
     <nav
-      className="tabbar-autohide fixed inset-x-0 bottom-0 z-50 border-t border-line bg-surface md:hidden"
-      /* 홈 인디케이터 아래로는 안 내린다 — safe-area 만큼 바 안쪽 여백 */
-      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      className={`tabbar-autohide fixed left-1/2 z-50 w-[min(420px,calc(100%-28px))] -translate-x-1/2 transition-all duration-300 md:hidden ${
+        compact ? "translate-y-[14px] opacity-85" : ""
+      }`}
+      /* 소유자 캡처(2026-08-04): 바가 콘텐츠 버튼을 가렸다 — 더 아래로,
+         더 얇게. 바닥 여백 16→6px(safe-area 는 그대로 존중 — 홈 인디케이터
+         아래로는 안 내린다). 글씨 11px 은 유지(이전 요청: 메뉴 글씨는 키움). */
+      style={{ bottom: "max(6px, env(safe-area-inset-bottom, 0px))" }}
       aria-label="하단 내비게이션"
     >
-      {/* [1012 · 모바일 60%] tabbar-row — 폰 60% 배율 안에서 탭바만 85% 로 보이게 되돌리는 자리(globals.css).
-          nav 가 아니라 안쪽 줄을 키워 홈 인디케이터 여백(safe-area)은 그대로 둔다 */}
-      <div className="tabbar-row grid grid-cols-5 items-end px-2 pb-1 pt-1">
+      <div className="tabbar-row glass-strong grid grid-cols-5 items-end rounded-3xl px-2 pb-1 pt-1 shadow-[0_12px_32px_rgba(15,23,42,.18)]">
         {TABS.map((tab) =>
           tab.center ? (
             <Link
@@ -90,10 +89,16 @@ export function TabBar() {
               >
                 <Icon name={tab.icon} size={22} strokeWidth={2.2} />
               </span>
-              {/* [970 · A-03] 탭바 글자는 테마 토큰(primary) — 데스크탑 GNB·전체 메뉴의 활성색과 같다.
-                  [1012] 바가 불투명 흰 면이 되어 [976] 의 반투명 대비 보정(primary-strong)은 필요 없어졌다 —
-                  --primary 는 흰 면 위 5.9:1. 굵기는 700(규칙 8). */}
-              <span className="text-[12px] font-bold text-primary">
+              {/* [970 · A-03] text-brand-navy → text-primary: --brand-navy 는 다크에서 뒤집히지
+                  않는 고정 네이비라 다크 글래스 위에서 "기록" 글자가 묻혔다. 토큰을 다크에서
+                  밝게 뒤집으면 네이비 카드 위 한지 글자가 전부 대비를 잃으므로 탭바 글자만
+                  테마 토큰(primary)으로 — 데스크탑 GNB·전체 메뉴의 활성색과도 같아진다. */}
+              {/* [976] text-primary → text-primary-strong. 탭바는 유리라 뒤 배경이
+                  비치는데, 본문이 어두운 화면(/subscription 등)에서는 실제 바탕이
+                  #ced3da 까지 내려가 --primary 가 4.41:1 이었다(axe 실측). 같은 파랑
+                  계열의 진한 값(--primary-strong)이면 5.67:1 이고, 다크에서는 이
+                  토큰이 밝은 쪽(#86a9ff)으로 뒤집히므로 어두운 유리 위에서도 산다. */}
+              <span className="text-[12px] font-bold text-primary-strong">
                 {tab.label}
               </span>
             </Link>
@@ -106,12 +111,24 @@ export function TabBar() {
                  (예전 py-1 은 42px 로 44px 터치 하한 미달). 바는 4px 자라 56px —
                  globals.css --nz-tabbar-offset 도 64→68px 로 같이 올렸다. */
               className={`relative flex flex-col items-center gap-[2px] py-1.5 transition-colors ${
-                /* [970 · A-03] 활성 탭도 text-primary(사유는 위 "기록" 라벨 주석) · 비활성 text-2([975]) */
+                /* [970 · A-03] 활성 탭도 text-primary(사유는 위 "기록" 라벨 주석)
+                   [975] 비활성 text-3 → text-2: 탭바는 반투명 유리라 뒤 배경이
+                   비쳐 실제 바탕이 #d1d6dc 정도가 된다. 거기서 text-3 는 3.75:1
+                   이었다(axe 실측). 이 라벨은 모든 화면 아래에 늘 떠 있다. */
                 isActive(tab) ? "text-primary" : "text-text-2"
               }`}
             >
-              {/* [1012] [1000] 의 "현재 탭 뒤 유리 알약"은 뗐다 — 평면 바에서는 색(primary)과 온점만으로 현재 탭을 말한다.
-                  [962] 현재 탭 = 온점. 탭이 바뀌면 한 번 튄다(njn-pop) — 브랜드 색이 상태 언어가 된다 */}
+              {/* [1000 · 리퀴드 글래스] 현재 탭 뒤에 떠 있는 연한 유리 알약 — 온점(아래)과 함께
+                  "여기"를 면으로도 말한다. 색은 primary 10% 라 유리 뒤 배경이 어두워도 살아 있다. */}
+              <span
+                aria-hidden="true"
+                className={`absolute inset-x-0.5 bottom-0.5 top-1 -z-10 rounded-lg transition-opacity duration-200 ${
+                  isActive(tab)
+                    ? "opacity-100 bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] [box-shadow:inset_0_1px_0_var(--glass-edge)]"
+                    : "opacity-0"
+                }`}
+              />
+              {/* [962] 현재 탭 = 온점. 탭이 바뀌면 한 번 튄다(njn-pop) — 브랜드 색이 상태 언어가 된다 */}
               <span
                 className={`absolute top-0 h-[5px] w-[5px] rounded-full bg-brand-red transition-opacity ${
                   isActive(tab) ? "njn-pop-once opacity-100" : "opacity-0"

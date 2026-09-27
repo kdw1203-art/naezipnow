@@ -46,6 +46,7 @@ const GRADIENT_ALLOW = [
   ["app/admin/", "관리자 화면"],
   ["app/map/MapClientLazy.tsx", "지도 로딩 스켈레톤(연회색 두 톤)"],
   ["app/map/map-client.tsx", "지도 로딩 폴백 스켈레톤"],
+  ["app/notes/[id]/page.tsx", "기록 점수 링(conic-gradient) — 장식이 아니라 값을 그리는 도넛 차트"],
 ];
 const EMOJI_ALLOW = [
   ["app/components/Icon.tsx", "이모지 → 선 아이콘 매핑표(렌더되는 건 아이콘)"],
@@ -81,16 +82,16 @@ const PRIMARY_ALLOW = [
   ["app/dev-deals/new/DealForm.tsx", 2, "상태 분기 — 완료 화면 링크 / 제출"],
   ["app/dev-deals/partners/new/PartnerForm.tsx", 2, "상태 분기 — 완료 화면 링크 / 제출"],
   ["app/listings/new/ListingForm.tsx", 3, "상태 분기(완료 링크) + 지도 위치 확정 오버레이 + 제출 — 오버레이·제출은 동시 가능(담당: listings)"],
-  ["app/map/map-client.tsx", 3, "동시 렌더 가능 — 지도 위 패널·시트·모바일/데스크탑 분기(hidden md:inline-flex)마다 1개(담당: map)"],
-  ["app/my/MyHubView.tsx", 2, "동시 렌더 — 다음 단계·매물 등록·카드 재등록/플랜·포인트 상점 섹션마다 1개(담당: my)"],
+  ["app/map/map-client.tsx", 7, "동시 렌더 가능 — 지도 위 패널·시트·모바일/데스크탑 분기(hidden md:inline-flex)마다 1개(담당: map) · [1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
+  ["app/my/MyHubView.tsx", 5, "동시 렌더 — 다음 단계·매물 등록·카드 재등록/플랜·포인트 상점 섹션마다 1개(담당: my) · [1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
   ["app/my/consultations/ConsultReply.tsx", 2, "트리거(삼항: 답변 있으면 outline)+모달 제출"],
   ["app/my/consultations/ProposeQuote.tsx", 2, "트리거+모달 — 견적 제안 → 제출"],
   ["app/my/creator/page.tsx", 2, "상태 분기 — 비로그인 / 로그인"],
   ["app/my/expert-profile/page.tsx", 2, "상태 분기 — 프로필 없음 두 가지 빈 화면, 같은 링크"],
   ["app/my/listings/BoostButton.tsx", 2, "트리거+확인 — 끌어올리기 → 확인"],
   ["app/my/listings/ListingManageActions.tsx", 2, "동시 렌더 — 저장 + 거래완료 마감(담당: my)"],
-  ["app/my/subscription/SubscriptionManageClient.tsx", 2, "삼항(정지 시만 primary) + 모달 확인 + 재구독 링크(상태 분기)"],
-  ["app/notes/compare/page.tsx", 2, "상태 분기 — need_login / need_more / 결과 / 오류, 각 1개"],
+  ["app/my/subscription/SubscriptionManageClient.tsx", 3, "삼항(정지 시만 primary) + 모달 확인 + 재구독 링크(상태 분기) · [1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
+  ["app/notes/compare/page.tsx", 4, "상태 분기 — need_login / need_more / 결과 / 오류, 각 1개 · [1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
   ["app/notes/templates/[id]/page.tsx", 2, "상태 분기 — 템플릿 없음 화면 / 본문 CTA"],
   ["app/payment/success/GuestClaimForm.tsx", 2, "상태 분기 — 완료(done) 링크 / 제출"],
   ["app/payment/success/page.tsx", 4, "상태 분기 — !ok / guestPending / returnTo / 기본, 각 1개"],
@@ -111,6 +112,18 @@ const PRIMARY_ALLOW = [
   ["app/town/groups/[id]/page.tsx", 3, "상태 분기 — 없음 / 참여 삼항 / 로그인 유도"],
   ["app/town/library/[id]/page.tsx", 2, "상태 분기 — 구매 완료 열람 / 무료 열람"],
   ["components/ListingCompareTray.tsx", 2, "삼항 — canCompare ? 비교 링크 : 비활성 버튼(같은 자리)"],
+  ["app/analysis/hub-record-start.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
+  ["app/analysis/page.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
+  ["app/auctions/AuctionsClient.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
+  ["app/complex/ComplexReviews.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
+  ["app/listings/ListingsListClient.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
+  ["app/my/points/CopyLink.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
+  ["app/not-found.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
+  ["app/notes/[id]/card/NoteCardStudio.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
+  ["app/notes/[id]/page.tsx", 3, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
+  ["app/notes/new/NoteForm.tsx", 3, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
+  ["app/subscription/payment-methods/page.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
+  ["app/town/write/page.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
 ];
 
 const BANNED_PHRASES = ["지금 시작", "시작하세요", "시작하기", "무료로 시작", "더 알아보기", "자세히 알아보기", "지금 바로", "Learn more", "Get started"];
@@ -222,7 +235,7 @@ for (const [rel, { abs, src }] of sources) {
 
 if (problems.length) {
   console.error(`${TAG} FAIL — ${problems.length}건 (docs/design-system.md v3 규칙 1~5 · 6a)`);
-  for (const p of problems.slice(0, 80)) console.error("  " + p);
+  for (const p of problems.slice(0, process.env.AILOOK_ALL ? 100000 : 80)) console.error("  " + p);
   if (problems.length > 80) console.error(`  … 외 ${problems.length - 80}건`);
   process.exit(1);
 }

@@ -97,7 +97,7 @@ export default async function DevDealsHubPage() {
           {/* [970 · C-42] h1 안에 배지 span 이 들어 있어 제목이 "개발물건 중개 B2B 디벨로퍼 매칭"
               으로 읽혔다(스크린리더·검색 스니펫). 배지는 h1 밖 형제로. */}
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <h1 className="text-[19px] font-extrabold leading-[1.3] text-ink md:text-[21px]">
+            <h1 className="text-[19px] font-bold leading-[1.3] text-ink md:text-[21px]">
               개발물건 중개
             </h1>
             <span className="rounded-full bg-primary-soft px-2.5 py-1 text-[12px] font-bold text-primary">
@@ -123,7 +123,7 @@ export default async function DevDealsHubPage() {
           {/* [976] bg-white/70 은 라이트 모드를 전제한 값이다. 다크에서는 이 배너의
               글자색(--primary-strong = 밝은 앰버)이 흰 칩 위에 얹혀 1.14:1 이었다.
               표면 토큰을 쓰면 두 모드 모두 배너 글자색과 충분히 갈린다. */}
-          <span className="mt-px shrink-0 rounded-full bg-surface chip-pad text-[10px] font-extrabold">
+          <span className="mt-px shrink-0 rounded-full bg-surface chip-pad text-[10px] font-bold">
             안내
           </span>
           <span>

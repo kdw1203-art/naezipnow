@@ -22,13 +22,13 @@ export default function MessagesPage() {
   return (
     <PageShell>
       <div className="mx-auto w-full max-w-[480px]">
-        <h1 className="rise-in text-[21px] font-extrabold text-ink">쪽지함</h1>
+        <h1 className="rise-in text-[21px] font-bold text-ink">쪽지함</h1>
 
         <div className="rise-in-1 card mt-4 flex flex-col items-center gap-3 rounded-3xl px-6 py-12 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-[21px]">
             ✉️
           </div>
-          <div className="text-[15px] font-extrabold text-ink">
+          <div className="text-[15px] font-bold text-ink">
             쪽지 기능 준비 중이에요
           </div>
           {/* [992 · A1] 임장 모임 채팅(/town/groups)은 보관(비노출) — 안내 링크를 뺐다.

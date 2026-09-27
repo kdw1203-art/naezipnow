@@ -105,7 +105,7 @@ export default async function AdminQualityPage() {
 
   return (
     <>
-      <div className="rise-in text-[19px] font-extrabold text-white">
+      <div className="rise-in text-[19px] font-bold text-white">
         데이터 품질 · 사용자 세그먼트 · AI 품질 모니터링 · 인증 심사
       </div>
       <div className="rise-in -mt-2 mb-1 text-[12px] text-[#9aa6b8]">
@@ -115,7 +115,7 @@ export default async function AdminQualityPage() {
       {/* F4 — 데이터 품질 검사 (public.data_quality_report 실집계) */}
       <div className={`rise-in-1 ${darkCard}`}>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <span className="text-[13px] font-extrabold text-white">데이터 품질 검사</span>
+          <span className="text-[13px] font-bold text-white">데이터 품질 검사</span>
           <span className="text-[10px] text-[#9aa6b8]">
             {quality
               ? `${quality.generatedAt} 기준 · 검사 시점에 DB 전량을 다시 셉니다`
@@ -129,7 +129,7 @@ export default async function AdminQualityPage() {
           </div>
         ) : (
           <>
-            <div className="flex flex-wrap gap-1.5 text-[10px] font-extrabold">
+            <div className="flex flex-wrap gap-1.5 text-[10px] font-bold">
               {(["defect", "note", "normal", "pass"] as QualityVerdict[]).map((v) => (
                 <span
                   key={v}
@@ -146,7 +146,7 @@ export default async function AdminQualityPage() {
               {quality.groups.map((g) => (
                 <div key={g.key} className="flex flex-col gap-2 rounded-lg bg-[rgba(255,255,255,.05)] p-3.5">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-xs font-extrabold text-white">
+                    <span className="text-xs font-bold text-white">
                       {g.label}{" "}
                       <span className="font-bold text-[#9aa6b8]">{g.table}</span>
                     </span>
@@ -171,13 +171,13 @@ export default async function AdminQualityPage() {
                               className="rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] px-3 py-2.5"
                             >
                               <div className="flex items-baseline justify-between gap-2">
-                                <span className="text-[12px] font-extrabold text-white">
+                                <span className="text-[12px] font-bold text-white">
                                   <span style={{ color: VERDICT_COLOR[c.verdict] }}>
                                     {VERDICT_MARK[c.verdict]}
                                   </span>{" "}
                                   {c.label}
                                 </span>
-                                <span className="shrink-0 text-[12px] font-extrabold tabular-nums text-white">
+                                <span className="shrink-0 text-[12px] font-bold tabular-nums text-white">
                                   {fmt(c.count)}
                                   {ratio && (
                                     <span className="ml-1 font-bold text-[#9aa6b8]">({ratio})</span>
@@ -221,7 +221,7 @@ export default async function AdminQualityPage() {
       <div className="rise-in-2 mt-4 grid grid-cols-1 gap-4 xl:grid-cols-3">
         {/* 사용자 세그먼트 (실데이터) */}
         <div className={darkCard}>
-          <div className="text-[13px] font-extrabold text-white">사용자 세그먼트</div>
+          <div className="text-[13px] font-bold text-white">사용자 세그먼트</div>
           <div className="flex flex-col gap-1.5 text-[12px]">
             {segments.map((s) => (
               <div
@@ -232,7 +232,7 @@ export default async function AdminQualityPage() {
                   <b style={{ color: s.dot }}>●</b> <b className="text-white">{s.label}</b>{" "}
                   <span className="text-[#9aa6b8]">({s.sub})</span>
                 </span>
-                <span className="font-extrabold tabular-nums text-white">{s.value}</span>
+                <span className="font-bold tabular-nums text-white">{s.value}</span>
               </div>
             ))}
           </div>
@@ -244,18 +244,18 @@ export default async function AdminQualityPage() {
         {/* AI 품질 모니터링 (실데이터 + 정직한 준비중) */}
         <div className={darkCard}>
           <div className="flex items-baseline justify-between">
-            <span className="text-[13px] font-extrabold text-white">AI 품질 모니터링</span>
+            <span className="text-[13px] font-bold text-white">AI 품질 모니터링</span>
             <span className="text-[10px] text-[#9aa6b8]">최근 7일</span>
           </div>
           <div className="flex gap-2">
             <div className="flex-1 rounded-xl bg-[rgba(255,255,255,.05)] p-3 text-center">
-              <div className="text-[21px] font-extrabold tabular-nums text-white">
+              <div className="text-[21px] font-bold tabular-nums text-white">
                 {kpi?.aiAnalysisRuns7d != null ? fmt(kpi.aiAnalysisRuns7d) : "—"}
               </div>
               <div className="text-[10px] text-[#9aa6b8]">AI 분석 실행</div>
             </div>
             <div className="flex-1 rounded-xl bg-[rgba(255,255,255,.05)] p-3 text-center">
-              <div className="text-[21px] font-extrabold tabular-nums text-white">
+              <div className="text-[21px] font-bold tabular-nums text-white">
                 {kpi?.platformActivityEvents7d != null ? fmt(kpi.platformActivityEvents7d) : "—"}
               </div>
               <div className="text-[10px] text-[#9aa6b8]">플랫폼 활동 이벤트</div>
@@ -270,7 +270,7 @@ export default async function AdminQualityPage() {
         {/* 인증 심사 (실 대기열) */}
         <div className={darkCard}>
           <div className="flex items-baseline justify-between">
-            <span className="text-[13px] font-extrabold text-white">전문가·중개사 인증 심사</span>
+            <span className="text-[13px] font-bold text-white">전문가·중개사 인증 심사</span>
             <span className="text-[10px] text-[#9aa6b8]">
               대기 {ops ? fmt(ops.pendingVerifications) : "—"}건
             </span>
@@ -297,7 +297,7 @@ export default async function AdminQualityPage() {
       {/* J7 전문가 성과 랭킹 · J8 이상행위 로그 (실집계, 없으면 안내) */}
       <div className="rise-in-3 mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
         <div className={darkCard}>
-          <div className="text-[13px] font-extrabold text-white">전문가 성과 랭킹</div>
+          <div className="text-[13px] font-bold text-white">전문가 성과 랭킹</div>
           {!perfLoaded.ok ? (
             <ErrorState
               tone="admin"
@@ -336,7 +336,7 @@ export default async function AdminQualityPage() {
         </div>
 
         <div className={darkCard}>
-          <div className="text-[13px] font-extrabold text-white">전문가 이상행위 로그</div>
+          <div className="text-[13px] font-bold text-white">전문가 이상행위 로그</div>
           {!fraudLoaded.ok ? (
             <ErrorState
               tone="admin"
@@ -360,7 +360,7 @@ export default async function AdminQualityPage() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span
-                          className={`rounded px-1.5 py-px text-[10px] font-extrabold ${meta.cls}`}
+                          className={`rounded px-1.5 py-px text-[10px] font-bold ${meta.cls}`}
                         >
                           {meta.label}
                         </span>

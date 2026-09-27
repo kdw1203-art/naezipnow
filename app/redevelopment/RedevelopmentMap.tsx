@@ -16,9 +16,9 @@ import {
 } from "@/lib/redevelopment/types";
 import { Icon } from "@/app/components/Icon";
 import { TypeFilterPanel } from "./TypeFilterPanel";
+import { DataSourceCard } from "./DataSourceCard";
 import { NearbyPanel } from "./NearbyPanel";
 import { ProjectDetailPanel } from "./ProjectDetailPanel";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 const SEOUL_CENTER = { lat: 37.5665, lng: 126.978 };
 const MARKER_PREFIX = "redev:";
@@ -26,11 +26,10 @@ const MARKER_PREFIX = "redev:";
 /** 같은 데이터를 보는 세 가지 방식 — 지도 / 목록 / 내용(집계). */
 type ViewKey = "map" | "list" | "content";
 
-/* [v4 · 규칙 7] 탭 글자 앞 장식 아이콘(map·clipboard·file-text)은 뺐다 — 밑줄 탭은 글자만 */
-const VIEWS: { key: ViewKey; label: string }[] = [
-  { key: "map", label: "지도" },
-  { key: "list", label: "목록" },
-  { key: "content", label: "내용" },
+const VIEWS: { key: ViewKey; label: string; icon: string }[] = [
+  { key: "map", label: "지도", icon: "map" },
+  { key: "list", label: "목록", icon: "clipboard" },
+  { key: "content", label: "내용", icon: "file-text" },
 ];
 
 function esc(s: string): string {
@@ -69,7 +68,7 @@ function buildInfoHtml(p: RedevelopmentProject): string {
       : "";
   return `
   <div style="padding:10px 12px;min-width:184px;max-width:220px;font-family:sans-serif;line-height:1.5">
-    <div style="font-weight:800;font-size:13px;color:#111827;margin:0 0 6px">${esc(p.name)}</div>
+    <div style="font-weight:700;font-size:13px;color:#111827;margin:0 0 6px">${esc(p.name)}</div>
     <div style="display:flex;align-items:center;gap:5px;margin:0 0 3px">
       <span style="display:inline-block;width:9px;height:9px;border-radius:9999px;background:${color}"></span>
       <span style="font-size:12px;font-weight:700;color:${color}">${esc(typeLabel)}</span>
@@ -86,9 +85,11 @@ function buildInfoHtml(p: RedevelopmentProject): string {
 export function RedevelopmentMap({
   initialProjects,
   sigunguCounts,
+  sources,
 }: {
   initialProjects: RedevelopmentProject[];
   sigunguCounts: { sigungu: string; count: number }[];
+  sources: { kind: string; source: string; cycle: string }[];
 }) {
   const [types, setTypes] = useState<Set<ProjectTypeKey>>(new Set());
   const [stages, setStages] = useState<Set<StageKey>>(new Set());
@@ -250,130 +251,171 @@ export function RedevelopmentMap({
     return set.size === 1 ? [...set][0] : null;
   }, [initialProjects]);
 
-  /* [v4] 선택 칩 = 한지 + 남색(.chip-active), 나머지 = 흰 면 + 1px 선 — 한 줄 가로 스크롤 필터 칩 */
-  const chip = (on: boolean) =>
-    `chip press shrink-0 px-3 py-1.5 t-sub font-bold ${on ? "chip-active border" : "border border-line bg-surface text-text-2"}`;
-
   return (
-    /* [v4] "한 화면 한 가지" — 주인공은 **지도**(목록·내용은 같은 데이터의 다른 보기). 위에서 아래로:
-         검색 + 사업종류 + 초기화 한 줄 → 진행단계 칩 한 줄 → 지역 칩 한 줄 → 보기 밑줄 탭(지도·목록·내용) + 표시 수
-         → 지도(또는 목록·내용) → 선택 구역 상세 → 면책 캡션 한 줄.
-       지운 것: 사업종류 버튼의 아이콘·채움 파랑 숫자 배지 · "진행단계" 라벨 · "지역 칩의 숫자는 …" 설명 문장 ·
-       보기 알약 탭의 채움 파랑(→ 밑줄 탭) · 목록 카드 격자와 배지(→ 1px 선 행) · 행마다 되풀이되던 취합 시점 문장(→ 끝 캡션 한 번) ·
-       "데이터 출처" 카드(→ 페이지 끝 접힘, page.tsx) · 파랑 면책 상자(→ 캡션). */
-    <div className="flex flex-col gap-3">
-      {/* ===== 검색 · 사업종류 · 초기화 ===== */}
-      <div className="flex flex-wrap items-center gap-2">
-        {/* 구역명 검색 — 타이핑 즉시 지도·목록·집계가 같이 좁혀진다 */}
-        <input
-          type="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          maxLength={40}
-          placeholder="구역명·주소 검색"
-          aria-label="정비구역 검색"
-          className="min-h-10 min-w-[160px] flex-1 rounded-lg border border-line bg-surface px-3 py-1.5 t-body text-ink placeholder:text-text-3"
-        />
-        <button
-          type="button"
-          onClick={() => setTypePanelOpen((v) => !v)}
-          aria-expanded={typePanelOpen}
-          className={chip(typePanelOpen || types.size > 0)}
-        >
-          사업종류{types.size > 0 ? <span className="ml-1 font-normal tabular-nums">{types.size}</span> : null}
-          <span className="ml-1 t-caption leading-none text-text-3">{typePanelOpen ? "▴" : "▾"}</span>
-        </button>
-        <button
-          type="button"
-          onClick={handleReset}
-          className="press inline-flex min-h-10 items-center gap-1 px-1 t-sub font-bold text-text-3"
-        >
-          <Icon name="x" size={13} />
-          초기화
-        </button>
+    <div className="flex flex-col gap-4">
+      {/* ===== 필터 툴바 ===== */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setTypePanelOpen((v) => !v)}
+            aria-expanded={typePanelOpen}
+            className={`press inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13px] font-bold ${
+              typePanelOpen || types.size > 0
+                ? "border-primary bg-primary-soft text-primary"
+                : "border-line bg-surface text-text-1"
+            }`}
+          >
+            <Icon name="landmark" size={15} />
+            사업종류
+            {types.size > 0 ? (
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 t-caption font-bold text-white">
+                {types.size}
+              </span>
+            ) : null}
+            <span className="t-caption leading-none text-text-3">
+              {typePanelOpen ? "▴" : "▾"}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleReset}
+            className="press ml-auto inline-flex items-center gap-1 rounded-full border border-line bg-surface px-3 py-2 t-sub font-semibold text-text-2"
+          >
+            <Icon name="x" size={13} />
+            초기화
+          </button>
+        </div>
+
+        {/* 사업종류 그룹 필터 패널(접이식) */}
+        {typePanelOpen ? (
+          <TypeFilterPanel
+            selected={types}
+            onToggle={toggleType}
+            onSelectAll={() => setTypes(new Set())}
+          />
+        ) : null}
+
+        {/* 진행단계 다중선택 칩 */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 t-sub font-bold text-text-2">진행단계</span>
+          {STAGES.map((s) => {
+            const active = stages.has(s.key);
+            return (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => toggleStage(s.key)}
+                aria-pressed={active}
+                className={`chip press border px-2.5 py-1 text-[12px] ${
+                  active
+                    ? "chip-active border-transparent"
+                    : "border-line bg-surface text-text-2"
+                }`}
+              >
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* 사업종류 그룹 필터 패널(접이식) */}
-      {typePanelOpen ? (
-        <TypeFilterPanel
-          selected={types}
-          onToggle={toggleType}
-          onSelectAll={() => setTypes(new Set())}
-        />
-      ) : null}
+      {/* ===== 지역 선택 ===== */}
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2 t-body">
+          <span className="font-bold text-ink">
+            표시 중 {filtered.length.toLocaleString("ko-KR")}곳
+          </span>
+          <span className="text-text-3">/ 전체 {total.toLocaleString("ko-KR")}곳</span>
+          {sigungu ? (
+            <span className="rounded-full bg-primary-soft chip-pad t-sub font-bold text-primary">
+              {sigungu}
+            </span>
+          ) : null}
+          {/* 구역명 검색 — 타이핑 즉시 지도·목록·집계가 같이 좁혀진다 */}
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            maxLength={40}
+            placeholder="구역명·주소 검색"
+            aria-label="정비구역 검색"
+            className="ml-auto w-[170px] rounded-xl border border-line bg-surface px-3 py-1.5 t-sub text-ink placeholder:text-text-3"
+          />
+        </div>
+        {topSigungu.length > 0 ? (
+          <>
+            <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+              <button
+                type="button"
+                onClick={() => handleSigunguClick(null)}
+                aria-pressed={sigungu === null}
+                className={`chip press shrink-0 border px-2.5 py-1 text-[12px] ${
+                  sigungu === null
+                    ? "chip-active border-transparent"
+                    : "border-line bg-surface text-text-2"
+                }`}
+              >
+                전체
+              </button>
+              {topSigungu.map((s) => (
+                <button
+                  key={s.name}
+                  type="button"
+                  onClick={() => handleSigunguClick(s.name)}
+                  aria-pressed={sigungu === s.name}
+                  className={`chip press shrink-0 border px-2.5 py-1 text-[12px] ${
+                    sigungu === s.name
+                      ? "chip-active border-transparent"
+                      : "border-line bg-surface text-text-2"
+                  }`}
+                >
+                  {s.name} {s.count}
+                </button>
+              ))}
+            </div>
+            <p className="t-caption text-text-3">
+              지역 칩의 숫자는 지금 걸린 사업종류·진행단계 조건에서 센 구역 수예요
+              {regionCounts.length > topSigungu.length
+                ? ` (구역이 많은 순 12개 · 조건에 맞는 시군구 ${regionCounts.length}곳 중)`
+                : ""}
+              . 전체 데이터에는 시군구 {totalSigunguCount.toLocaleString("ko-KR")}곳이 있어요.
+            </p>
+          </>
+        ) : null}
+      </div>
 
-      {/* 진행단계 다중선택 칩 — [v4] 한 줄 가로 스크롤 */}
-      <div className="rail-x -mx-3.5 px-3.5 md:mx-0 md:px-0" role="group" aria-label="진행단계">
-        {STAGES.map((s) => {
-          const active = stages.has(s.key);
+      {/* ===== 보기 방식 — 같은 데이터를 지도/목록/내용으로 ===== */}
+      <div
+        role="tablist"
+        aria-label="보기 방식"
+        className="flex gap-1 rounded-full border border-line bg-surface p-1"
+      >
+        {VIEWS.map((v) => {
+          const active = view === v.key;
           return (
-            <button key={s.key} type="button" onClick={() => toggleStage(s.key)} aria-pressed={active} className={chip(active)}>
-              {s.label}
+            <button
+              key={v.key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setView(v.key)}
+              className={`press flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-bold ${
+                active ? "bg-primary text-white" : "text-text-2"
+              }`}
+              style={active ? { color: "#fff" } : undefined}
+            >
+              <Icon name={v.icon} size={14} />
+              {v.label}
             </button>
           );
         })}
       </div>
 
-      {/* 지역 칩 — 지금 걸린 사업종류·진행단계 조건에서 센 구역 수(칩 숫자 = 누르면 보이는 수). 구역이 많은 순 12개 */}
-      {topSigungu.length > 0 ? (
-        <div
-          className="rail-x -mx-3.5 px-3.5 md:mx-0 md:px-0"
-          role="group"
-          aria-label={`지역 — 조건에 맞는 시군구 ${regionCounts.length}곳 중 많은 순 ${topSigungu.length}곳 · 전체 데이터 시군구 ${totalSigunguCount.toLocaleString("ko-KR")}곳`}
-        >
-          <button
-            type="button"
-            onClick={() => handleSigunguClick(null)}
-            aria-pressed={sigungu === null}
-            className={chip(sigungu === null)}
-          >
-            전체
-          </button>
-          {topSigungu.map((s) => (
-            <button
-              key={s.name}
-              type="button"
-              onClick={() => handleSigunguClick(s.name)}
-              aria-pressed={sigungu === s.name}
-              className={chip(sigungu === s.name)}
-            >
-              {s.name}
-              <span className="ml-1 font-normal tabular-nums">{s.count}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      {/* ===== 보기 방식 — 같은 데이터를 지도/목록/내용으로. [v4] 채움 파랑 알약 → 밑줄 탭 + 오른쪽 표시 수 ===== */}
-      <div className="flex items-end justify-between gap-3 border-b border-line">
-        <div role="tablist" aria-label="보기 방식" className="flex gap-4">
-          {VIEWS.map((v) => {
-            const active = view === v.key;
-            return (
-              <button
-                key={v.key}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setView(v.key)}
-                className={`-mb-px min-h-10 border-b-2 pb-2.5 pt-2 t-body font-bold transition-colors ${
-                  active ? "border-brand-hanji-ink text-ink" : "border-transparent text-text-3"
-                }`}
-              >
-                {v.label}
-              </button>
-            );
-          })}
-        </div>
-        <span className="shrink-0 pb-2.5 t-sub text-text-3">
-          <span className="t-num font-bold text-ink">{filtered.length.toLocaleString("ko-KR")}</span> /{" "}
-          <span className="t-num">{total.toLocaleString("ko-KR")}</span>곳
-        </span>
-      </div>
-
       {/* ===== 지도 뷰 ===== */}
       {view === "map" ? (
-        <div className="overflow-hidden rounded-lg border border-line">
+        <div className="card overflow-hidden rounded-2xl p-1.5">
           <NaverMap
             markers={markers}
             center={center}
@@ -393,82 +435,102 @@ export function RedevelopmentMap({
         </>
       ) : null}
 
-      {/* ===== 목록 뷰 — [v4] 카드 격자(색 알약 배지 둘 + 취합 시점 문장) → 1px 선 행:
-           구역명(사업종류 색 점) + 사업종류 · 단계 · 소재지 · 세대 한 줄. 누르면 지도에서 그 구역을 고른다 ===== */}
+      {/* ===== 목록 뷰 ===== */}
       {view === "list" ? (
         filtered.length === 0 ? (
-          /* [1012] 규칙 6 — 권유("조정해 보세요") 대신 사실: 조건·전체 구역 수. [v4] 한 줄 */
-          <p className="py-8 text-center t-sub text-text-3">
-            이 조건의 정비사업 구역 0곳 · 전체 {initialProjects.length.toLocaleString("ko-KR")}곳
-          </p>
+          <div className="card rounded-2xl px-5 py-8 text-center t-sub text-text-3">
+            선택한 조건에 해당하는 정비사업장이 없어요. 필터를 조정해 보세요.
+          </div>
         ) : (
-          <ul data-tone="sand" className="divide-y divide-line">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {filtered.map((p) => {
               const color = colorForType(p.typeKey);
               const active = selectedId === p.id;
               const households = householdsLabel(p.households);
               const loc = locationLabel({ sigungu: p.sigungu, address: p.address });
               return (
-                <li key={p.id}>
-                  <div
-                    ref={(el) => {
-                      if (el) cardRefs.current.set(p.id, el);
-                      else cardRefs.current.delete(p.id);
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    aria-pressed={active}
-                    onClick={() => handleCardClick(p.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handleCardClick(p.id);
-                      }
-                    }}
-                    className={`press flex min-h-14 cursor-pointer items-center gap-3 py-3 ${active ? "bg-brand-hanji" : ""}`}
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        {/* 사업종류 색 점 — 지도 마커 색과 같은 범례(장식 아이콘이 아니다) */}
-                        <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: color }} aria-hidden="true" />
-                        <span className="truncate t-body font-bold text-ink">{p.name}</span>
-                      </span>
-                      <span className="mt-0.5 block truncate t-sub text-text-3">
-                        {[labelForType(p.typeKey), stageLabel(p.stageKey), loc, households ? `예정 ${households}` : null]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </span>
+                <div
+                  key={p.id}
+                  ref={(el) => {
+                    if (el) cardRefs.current.set(p.id, el);
+                    else cardRefs.current.delete(p.id);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleCardClick(p.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleCardClick(p.id);
+                    }
+                  }}
+                  className={`tile press cursor-pointer rounded-xl border p-3 text-left ${
+                    active ? "border-primary ring-1 ring-primary" : "border-line"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ background: color }}
+                    />
+                    <span className="truncate t-body font-bold text-ink">{p.name}</span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <span
+                      className="rounded-full chip-pad t-sub font-semibold"
+                      style={{ background: `${color}1a`, color }}
+                    >
+                      {labelForType(p.typeKey)}
                     </span>
-                    <span aria-hidden="true" className="shrink-0 t-body text-text-3">
-                      ›
+                    <span className="rounded-full bg-primary-soft chip-pad t-sub font-semibold text-primary">
+                      {stageLabel(p.stageKey)}
                     </span>
                   </div>
-                </li>
+                  {loc ? <div className="mt-1.5 t-sub text-text-2">{loc}</div> : null}
+                  {households ? (
+                    <div className="mt-0.5 t-sub text-text-3">예정 {households}</div>
+                  ) : null}
+                  {p.asOf ? (
+                    <div className="mt-0.5 t-caption text-text-3">
+                      {p.asOf} 공개자료 기준 · 최신 단계와 다를 수 있음
+                    </div>
+                  ) : null}
+                </div>
               );
             })}
-          </ul>
+          </div>
         )
       ) : null}
 
       {/* ===== 내용 뷰 — 지금 조건에 맞는 구역들의 집계 =====
-           집계는 전부 화면에 올라온 행에서만 낸다. 표본 밖 값을 추정해 채우지 않는다.
-           [v4] 카드 네 장 · 숫자 타일 3칸 → 제목 + 1px 선 행 */}
+           집계는 전부 화면에 올라온 행에서만 낸다. 표본 밖 값을 추정해 채우지 않는다. */}
       {view === "content" ? (
-        <div className="flex flex-col gap-6">
-          <section className="flex flex-col gap-1">
-            <h3 className="t-section text-ink">{sigungu ?? "선택한 조건"} 요약</h3>
-            <dl data-tone="blue" className="divide-y divide-line">
-              <div className="flex items-baseline justify-between gap-3 py-2.5">
-                <dt className="t-sub text-text-3">구역 수</dt>
-                <dd className="t-body t-num font-bold text-ink">{filtered.length.toLocaleString("ko-KR")}곳</dd>
+        <div className="flex flex-col gap-3">
+          <section className="card rounded-2xl px-5 py-4">
+            <div className="flex items-baseline justify-between">
+              <h3 className="t-body font-bold text-ink">
+                {sigungu ?? "선택한 조건"} 요약
+              </h3>
+              <span className="t-caption text-text-3">화면에 표시 중인 구역 기준</span>
+            </div>
+            <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <div className="rounded-lg border border-line bg-surface px-3 py-2">
+                <dt className="t-caption font-bold text-text-3">구역 수</dt>
+                <dd className="mt-0.5 t-section text-ink">
+                  {filtered.length.toLocaleString("ko-KR")}곳
+                </dd>
               </div>
-              <div className="flex items-baseline justify-between gap-3 py-2.5">
-                <dt className="t-sub text-text-3">사업종류</dt>
-                <dd className="t-body t-num font-bold text-ink">{summary.types.length}종</dd>
+              <div className="rounded-lg border border-line bg-surface px-3 py-2">
+                <dt className="t-caption font-bold text-text-3">사업종류</dt>
+                <dd className="mt-0.5 t-section text-ink">
+                  {summary.types.length}종
+                </dd>
               </div>
-              <div className="flex items-baseline justify-between gap-3 py-2.5">
-                <dt className="t-sub text-text-3">예정 세대 합계 (공개된 {summary.householdsKnown}곳)</dt>
-                <dd className="t-body t-num font-bold text-ink">
+              <div className="rounded-lg border border-line bg-surface px-3 py-2">
+                <dt className="t-caption font-bold text-text-3">
+                  예정 세대 합계 (공개된 {summary.householdsKnown}곳)
+                </dt>
+                <dd className="mt-0.5 t-section text-ink">
                   {summary.householdsKnown > 0
                     ? `${summary.householdsSum.toLocaleString("ko-KR")}세대`
                     : "공개 자료에 없음"}
@@ -476,27 +538,36 @@ export function RedevelopmentMap({
               </div>
             </dl>
             {summary.householdsMissing > 0 ? (
-              <p className="t-caption text-text-3">
-                {summary.householdsMissing.toLocaleString("ko-KR")}곳은 공개 자료에 세대수 없음 — 합계에서 제외(0세대 아님)
+              <p className="mt-2 t-caption text-text-3">
+                {summary.householdsMissing.toLocaleString("ko-KR")}곳은 공개 자료에 세대수가
+                없어 합계에서 빠졌어요 — 0세대라는 뜻이 아니라 값을 확보하지 못했다는 뜻이에요.
               </p>
             ) : null}
           </section>
 
           {summary.types.length > 0 ? (
-            <section className="flex flex-col gap-2">
-              <h3 className="t-section text-ink">사업종류 분포</h3>
-              <ul className="flex flex-col gap-1.5">
+            <section className="card rounded-2xl px-5 py-4">
+              <h3 className="t-body font-bold text-ink">사업종류 분포</h3>
+              <ul className="mt-2 flex flex-col gap-1.5">
                 {summary.types.map(([key, count]) => {
                   const color = colorForType(key);
                   const pct = filtered.length > 0 ? (count / filtered.length) * 100 : 0;
                   return (
                     <li key={key} className="flex items-center gap-2">
-                      <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} />
-                      <span className="w-[104px] shrink-0 truncate t-sub font-bold text-text-1">{labelForType(key)}</span>
-                      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg">
-                        <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                      <span
+                        className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ background: color }}
+                      />
+                      <span className="w-[104px] shrink-0 truncate t-sub font-semibold text-text-1">
+                        {labelForType(key)}
                       </span>
-                      <span className="w-[54px] shrink-0 text-right t-sub t-num text-text-2">
+                      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg">
+                        <span
+                          className="block h-full rounded-full"
+                          style={{ width: `${pct}%`, background: color }}
+                        />
+                      </span>
+                      <span className="w-[54px] shrink-0 text-right t-sub text-text-2">
                         {count.toLocaleString("ko-KR")}곳
                       </span>
                     </li>
@@ -506,57 +577,70 @@ export function RedevelopmentMap({
             </section>
           ) : null}
 
-          <section className="flex flex-col gap-2">
-            <div className="flex items-baseline justify-between gap-3">
-              <h3 className="t-section text-ink">진행단계 분포</h3>
-              <span className="shrink-0 t-caption text-text-3">도시정비법 일반 절차 7단계</span>
+          <section className="card rounded-2xl px-5 py-4">
+            <div className="flex items-baseline justify-between">
+              <h3 className="t-body font-bold text-ink">진행단계 분포</h3>
+              <span className="t-caption text-text-3">도시정비법 일반 절차 기준 7단계</span>
             </div>
-            <ol className="flex flex-col gap-1.5">
+            <ol className="mt-2 flex flex-col gap-1.5">
               {summary.stages.map(({ stage, count }) => {
                 const pct = filtered.length > 0 ? (count / filtered.length) * 100 : 0;
                 return (
                   <li key={stage.key} className="flex items-center gap-2">
-                    <span className="w-4 shrink-0 t-caption font-bold text-text-3">{stage.order}</span>
-                    {/* 단계 이름을 누르면 그 단계만 거른다(진행단계 칩과 같은 필터) */}
+                    <span className="w-4 shrink-0 t-caption font-bold text-text-3">
+                      {stage.order}
+                    </span>
                     <button
                       type="button"
                       onClick={() => toggleStage(stage.key)}
                       aria-pressed={stages.has(stage.key)}
-                      className={`w-[92px] shrink-0 truncate text-left text-[12px] font-bold ${
+                      className={`w-[92px] shrink-0 truncate text-left text-[12px] font-semibold ${
                         stages.has(stage.key) ? "text-primary" : "text-text-1"
                       }`}
                     >
                       {stage.label}
                     </button>
                     <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg">
-                      <span className="block h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+                      <span
+                        className="block h-full rounded-full bg-primary"
+                        style={{ width: `${pct}%` }}
+                      />
                     </span>
-                    <span className="w-[54px] shrink-0 text-right t-sub t-num text-text-2">
+                    <span className="w-[54px] shrink-0 text-right t-sub text-text-2">
                       {count.toLocaleString("ko-KR")}곳
                     </span>
                   </li>
                 );
               })}
             </ol>
-            <p className="t-caption text-text-3">단계 통과일(인가일)은 확보한 자료에 없어 표시하지 않음</p>
+            <p className="mt-2 t-caption text-text-3">
+              단계 이름을 누르면 그 단계만 걸러서 볼 수 있어요. 각 구역이 단계를 언제
+              통과했는지(인가일)는 확보한 자료에 없어 표시하지 않아요.
+            </p>
           </section>
 
           {regionCounts.length > 0 ? (
-            <section className="flex flex-col gap-1">
-              <h3 className="t-section text-ink">지역별 구역 수</h3>
-              <ul data-tone="sand" className="divide-y divide-line">
+            <section className="card rounded-2xl px-5 py-4">
+              <h3 className="t-body font-bold text-ink">지역별 구역 수</h3>
+              <ul className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">
                 {regionCounts.map((r) => (
                   <li key={r.name}>
                     <button
                       type="button"
                       onClick={() => handleSigunguClick(r.name)}
                       aria-pressed={sigungu === r.name}
-                      className={`press flex min-h-12 w-full items-center justify-between gap-3 py-2.5 text-left ${
-                        sigungu === r.name ? "bg-brand-hanji" : ""
+                      className={`press flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left ${
+                        sigungu === r.name
+                          ? "border-primary bg-primary-soft"
+                          : "border-line bg-surface"
                       }`}
                     >
-                      <span className="truncate t-body font-bold text-ink">{r.name}</span>
-                      <span className="shrink-0 t-body t-num text-text-2">{r.count.toLocaleString("ko-KR")}곳</span>
+                      <span className="truncate t-sub font-semibold text-ink">
+                        {r.name}
+                      </span>
+                      <span className="shrink-0 t-sub font-bold text-text-2">
+                        {r.count.toLocaleString("ko-KR")}곳
+                      </span>
                     </button>
                   </li>
                 ))}
@@ -566,10 +650,16 @@ export function RedevelopmentMap({
         </div>
       ) : null}
 
-      {/* ===== 면책 — [v4] 파랑 상자 → 캡션 한 줄(목록 행마다 되풀이되던 취합 시점도 여기서 한 번) ===== */}
-      <p className="t-caption text-text-3">
-        구역·진행단계는 {asOfLabel ? `${asOfLabel} ` : ""}공개자료 기준 참고값 · 좌표는 구역 대표점 근사값 — 최신
-        고시·단계와 다를 수 있음
+      {/* ===== 데이터 출처 ===== */}
+      <DataSourceCard sources={sources} />
+
+      {/* ===== 면책 ===== */}
+      <p className="flex gap-1.5 rounded-lg bg-primary-soft px-3 py-2 t-caption text-primary">
+        <Icon name="landmark" size={13} className="mt-px shrink-0" />
+        <span>
+          구역·진행단계는 {asOfLabel ? `${asOfLabel} ` : ""}공개자료 기준 참고값이며 좌표는 구역
+          대표점 근사값 — 최신 고시·단계와 다를 수 있어요.
+        </span>
       </p>
     </div>
   );

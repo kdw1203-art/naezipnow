@@ -8,7 +8,6 @@ import type {
   ApplyhomeSearchPayload,
   ApplyhomeSearchTab,
 } from "@/lib/applyhome/types";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /**
  * 청약홈 실데이터 검색 — 이미 완성돼 있던 /api/applyhome/search 를 화면에 배선.
@@ -23,12 +22,6 @@ import type {
  *     보고 계산하면 틀리는 값은 만들지 않는다.
  *   - 손으로 만든 에러/빈 카드 → 공용 ErrorState/EmptyState. 세 상태(키 미설정 mock /
  *     조회 실패 / 진짜 0건)를 절대 한 문장으로 합치지 않는다.
- *
- * [v4] "한 화면 한 가지" — 이 섹션이 /apply 의 주인공이다(채움 파랑은 [공고 검색] 하나).
- *   - 경쟁률/특별공급 알약 탭 → 밑줄 탭 + 같은 줄 오른쪽 총 공고 수(예전 요약 타일 "총 공고")
- *   - 요약 타일 3칸 삭제 — 총 공고는 탭 줄, "표시 중"은 더 보기 버튼, 조회 시각은 표 끝 출처 줄이 이미 말한다
- *   - 지역 칩 → 한 줄 가로 스크롤 필터 칩(선택 = 한지 + 남색), 정렬 알약(네이비 채움) → 작은 글자 토글
- *   - 표를 감싼 카드·로딩 카드·더 보기 카드 → 테두리 없이. 상태 칩(접수 예정·접수 중) → 의미색 글자
  */
 
 const PER_PAGE = 15;
@@ -94,6 +87,13 @@ const EMPTY_STATE: ViewState = {
   detailAvailable: false,
 };
 
+/** "2026-07-27T09:12:33Z" → "07-27 09:12". 파싱 실패 시 앞부분만 그대로 보여준다. */
+function fetchedLabel(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(iso);
+  if (!m) return iso.slice(0, 16);
+  return `${m[2]}-${m[3]} ${m[4]}:${m[5]}`;
+}
+
 type SortKey = "default" | "rate" | "supply";
 
 /** 경쟁률 문자열("152.3:1" | "152.3" | "△" | "-")에서 숫자만. 없으면 null(미달·미공개). */
@@ -147,8 +147,8 @@ function applyStatus(period?: string): { label: string; cls: string } | null {
   if (!Number.isFinite(start) || !Number.isFinite(endDay)) return null;
   const end = endDay + 24 * 60 * 60 * 1000 - 1; // 마감일 그날 자정(KST)까지 접수 중
   const now = Date.now();
-  if (now < start) return { label: "접수 예정", cls: "text-primary" };
-  if (now <= end) return { label: "접수 중", cls: "text-success" };
+  if (now < start) return { label: "접수 예정", cls: "bg-primary-soft text-primary" };
+  if (now <= end) return { label: "접수 중", cls: "bg-success-soft text-success" };
   return null;
 }
 
@@ -156,8 +156,11 @@ function StatusChip({ period }: { period?: string }) {
   const st = applyStatus(period);
   if (!st) return null;
   return (
-    /* [1012] 규칙 9 — 사실 명사(접수 예정·접수 중). [v4 · 규칙 6] 면 있는 배지 → 의미색 글자 */
-    <span className={`ml-1.5 inline-block align-middle t-caption font-bold ${st.cls}`}>{st.label}</span>
+    <span
+      className={`ml-1.5 inline-block rounded-md px-1.5 py-0.5 align-middle text-[10px] font-bold ${st.cls}`}
+    >
+      {st.label}
+    </span>
   );
 }
 
@@ -166,6 +169,16 @@ function DetailField({ label, value }: { label: string; value: string }) {
     <div className="flex flex-col gap-0.5">
       <span className="t-caption font-semibold text-text-3">{label}</span>
       <span className="font-bold text-ink">{value}</span>
+    </div>
+  );
+}
+
+function Tile({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="card flex min-w-0 flex-col gap-0.5 rounded-2xl px-3.5 py-3">
+      <span className="t-caption font-bold text-text-3">{label}</span>
+      <span className="truncate t-section text-ink">{value}</span>
+      {hint && <span className="truncate t-caption text-text-3">{hint}</span>}
     </div>
   );
 }
@@ -253,39 +266,38 @@ export function ApplySearchClient({ initial }: Props) {
       ? state.page * PER_PAGE < state.totalCount
       : state.items.length < state.totalCount);
 
-  /* [v4] 밑줄 탭 — 동네이야기 피드(feed-client)의 유형 탭과 같은 값. 채움 파랑은 [공고 검색] 하나 */
-  const tabClass = (on: boolean) =>
-    `-mb-px min-h-10 border-b-2 pb-2.5 pt-2 t-body font-bold transition-colors ${
-      on ? "border-brand-hanji-ink text-ink" : "border-transparent text-text-3"
-    }`;
+  const tabPill = (on: boolean) =>
+    on
+      ? "press min-h-10 rounded-full bg-primary px-4 py-2 text-[13px] font-bold text-white"
+      : "press glass min-h-10 rounded-full px-4 py-2 text-[13px] font-semibold text-text-2";
 
-  /* [v4] 선택 칩 = 한지 + 남색(.chip-active), 나머지 = 흰 면 + 1px 선 */
   const regionPill = (on: boolean) =>
-    `press chip shrink-0 px-3 py-1.5 t-sub font-bold ${on ? "chip-active border" : "border border-line bg-surface text-text-2"}`;
+    on
+      ? "press chip-active shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold"
+      : "press chip shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold";
 
   const tabLabel = state.tab === "competition" ? "청약 경쟁률" : "특별공급 접수현황";
-  /* 예전 요약 타일의 "총 공고" — 탭 줄 오른쪽 숫자 하나로(결과를 그릴 때만) */
-  const showTotal = !error && state.mode === "live" && state.items.length > 0;
+  const showTiles = !error && state.mode === "live" && state.items.length > 0;
   const displayItems = sortItems(state.items, sortKey);
   const hasResults = !error && !loading && state.items.length > 0;
 
-  /* [v4] 정렬 — 네이비 채움 알약 → 작은 글자 토글(선택 = 굵은 잉크). 표시 중인 행만 다시 세운다는 사실은 title 로 */
-  const sortClass = (on: boolean) => (on ? "font-bold text-ink" : "text-text-3");
-  const sortTitle = `지금 표시 중인 ${state.items.length}건 안에서 다시 세운다(전체 아님)`;
+  /* [970 · B-06] 네이비 알약 글자 text-surface → text-on-dark(다크에서 안 보였다) */
+  const sortPill = (on: boolean) =>
+    on
+      ? "press rounded-full bg-brand-navy px-3 py-1.5 text-[12px] font-bold text-on-dark"
+      : "press glass rounded-full px-3 py-1.5 text-[12px] font-semibold text-text-2";
 
   return (
-    <section aria-labelledby="apply-search-title" className="flex flex-col gap-3">
-      <h2 id="apply-search-title" className="t-section text-ink">
-        경쟁률 · 특별공급
-      </h2>
-      {/* [v4] 탭 줄 — 밑줄 탭(왼쪽) + 총 공고 수(오른쪽) 한 줄 */}
-      <div className="flex items-end justify-between gap-3 border-b border-line">
-        <div className="flex gap-4" role="group" aria-label="청약 자료">
+    <div className="flex flex-col gap-3">
+      {/* 탭 + 검색 행 */}
+      <div className="rise-in-1 flex flex-wrap items-center gap-2">
+        <div className="flex gap-1.5">
           <button
             type="button"
             onClick={() => void load({ tab: "competition", page: 1 })}
             aria-pressed={state.tab === "competition"}
-            className={tabClass(state.tab === "competition")}
+            className={tabPill(state.tab === "competition")}
+            style={state.tab === "competition" ? { color: "#fff" } : undefined}
           >
             경쟁률
           </button>
@@ -293,47 +305,44 @@ export function ApplySearchClient({ initial }: Props) {
             type="button"
             onClick={() => void load({ tab: "special", page: 1 })}
             aria-pressed={state.tab === "special"}
-            className={tabClass(state.tab === "special")}
+            className={tabPill(state.tab === "special")}
+            style={state.tab === "special" ? { color: "#fff" } : undefined}
           >
             특별공급
           </button>
         </div>
-        {showTotal && (
-          <span className="shrink-0 pb-2.5 t-sub text-text-3">
-            {state.region === "전체" ? "전국" : state.region} <span className="t-num">{state.totalCount.toLocaleString()}</span>건
-          </span>
-        )}
+        <form
+          className="flex flex-1 flex-wrap items-center gap-1.5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void load({ q: qInput.trim(), page: 1 });
+          }}
+        >
+          <input
+            type="search"
+            value={qInput}
+            onChange={(e) => setQInput(e.target.value)}
+            maxLength={80}
+            placeholder="단지명·주소 검색"
+            aria-label="단지명·주소 검색"
+            className="min-w-[160px] flex-1 rounded-xl border border-line bg-surface px-3.5 py-2 t-body text-ink placeholder:text-text-3"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-primary press rounded-xl px-4 py-2 t-body disabled:opacity-60"
+          >
+            검색
+          </button>
+        </form>
       </div>
 
-      {/* 검색 — 입력 + [공고 검색](이 화면의 채움 파랑 하나) */}
-      <form
-        className="flex flex-wrap items-center gap-1.5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void load({ q: qInput.trim(), page: 1 });
-        }}
+      {/* 지역 칩 — <select> 였다. 어떤 지역이 있는지 한눈에 보이고 한 번에 눌린다. */}
+      <div
+        role="group"
+        aria-label="지역 필터"
+        className="rise-in-1 -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1"
       >
-        <input
-          type="search"
-          value={qInput}
-          onChange={(e) => setQInput(e.target.value)}
-          maxLength={80}
-          placeholder="단지명·주소 검색"
-          aria-label="단지명·주소 검색"
-          className="min-h-10 min-w-[160px] flex-1 rounded-lg border border-line bg-surface px-3.5 py-2 t-body text-ink placeholder:text-text-3"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="btn-primary btn-md press disabled:opacity-60"
-        >
-          {/* [1012] 규칙 5 — 동사 + 대상 */}
-          공고 검색
-        </button>
-      </form>
-
-      {/* 지역 칩 — <select> 였다. 어떤 지역이 있는지 한눈에 보이고 한 번에 눌린다. [v4] 한 줄 가로 스크롤 */}
-      <div role="group" aria-label="지역 필터" className="rail-x -mx-3.5 px-3.5 md:mx-0 md:px-0">
         {APPLYHOME_REGIONS.map((r) => (
           <button
             key={r}
@@ -347,23 +356,50 @@ export function ApplySearchClient({ initial }: Props) {
         ))}
       </div>
 
-      {/* 상세 API 미승인 등 데이터 한계 안내 — 서버가 준 사실 그대로. [v4] 파랑 상자 → 캡션 한 줄 */}
-      {state.detailNotice && <p className="t-sub text-text-3">{state.detailNotice}</p>}
+      {/* 요약 타일 — 라벨이 곧 세는 대상이다(추정치 아님). */}
+      {showTiles && (
+        <div className="rise-in-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <Tile
+            label={`${tabLabel} 총 공고`}
+            value={`${state.totalCount.toLocaleString()}건`}
+            hint={state.region === "전체" ? "전국" : state.region}
+          />
+          <Tile
+            label="지금 화면에 표시 중"
+            value={`${state.items.length.toLocaleString()}건`}
+            hint={canLoadMore ? "더보기로 이어서" : "전부 표시됨"}
+          />
+          <Tile
+            label="조회 시각"
+            value={state.fetchedAt ? fetchedLabel(state.fetchedAt) : "—"}
+            hint="청약홈 공공데이터"
+          />
+        </div>
+      )}
+
+      {/* 상세 API 미승인 등 데이터 한계 안내 — 서버가 준 사실 그대로 */}
+      {state.detailNotice && (
+        <p className="rise-in-2 rounded-xl bg-primary-soft px-4 py-2.5 t-sub text-primary">
+          {state.detailNotice}
+        </p>
+      )}
 
       {/* 결과 — 실패 / 미설정 / 0건 / 목록을 절대 섞지 않는다 */}
       {error ? (
-        <div role="alert">
+        <div role="alert" className="rise-in-2">
           <ErrorState
             title={error.message}
-            desc="공고가 없는 게 아니라 조회 자체가 실패했어요. 잠시 후 다시 시도해 주세요."
+            desc="공고가 없는 게 아니라 조회 자체가 실패했습니다. 잠시 후 다시 시도해 주세요."
             cause={error.cause}
             onRetry={() => void load({ page: 1 })}
           />
         </div>
       ) : loading ? (
-        <p className="py-12 text-center t-body text-text-3">청약홈 데이터를 불러오는 중…</p>
+        <div className="rise-in-2 card rounded-2xl px-4 py-12 text-center t-body text-text-3">
+          청약홈 데이터를 불러오는 중…
+        </div>
       ) : state.items.length === 0 ? (
-        <div>
+        <div className="rise-in-2">
           {state.mode === "mock" ? (
             /* [970 · C-44] env 변수명(DATA_GO_KR_SERVICE_KEY)이 사용자 화면에 나갔다 — 일반 문구로 */
             <EmptyState
@@ -371,9 +407,9 @@ export function ApplySearchClient({ initial }: Props) {
               /* [1011] "청약홈 연동 준비 중" · "공공데이터가 연결되지 않아" 를 걷었다(소유자 지시) —
                  970·C-44 에서 env 변수명을 걷어낸 것과 같은 줄기로, 연동 상태는 운영 쪽 말이다.
                  지어내지 않는다는 약속(정직성)은 그대로 남긴다. */
-              title="청약 공고를 아직 보여 줄 수 없어요"
-              desc="청약홈 공고 자료를 아직 불러오지 못해요. 지어낸 수치로 표를 채우지는 않아요."
-              action={{ href: "https://www.applyhome.co.kr", label: "청약홈 공고 보기 ↗" }}
+              title="청약 공고를 아직 보여드릴 수 없어요"
+              desc="실제 공고 자료를 아직 불러오지 못해요. 지어낸 수치로 표를 채우지는 않아요."
+              action={{ href: "https://www.applyhome.co.kr", label: "청약홈에서 직접 보기 ↗" }}
             />
           ) : filteredMode && !state.detailAvailable ? (
             /* 0건이 아니라 **필터 기능 자체가 지금 불가**한 상태 — 상세(분양정보)
@@ -390,43 +426,37 @@ export function ApplySearchClient({ initial }: Props) {
           ) : (
             <EmptyState
               icon="search"
-              /* [1012] 규칙 6 — 어디서(지역·검색어)·무엇(탭)·숫자(0건)·출처 */
-              title={`${state.region === "전체" ? "전국" : state.region}${state.q ? ` ‘${state.q}’` : ""} ${tabLabel} 공고가 0건이에요`}
-              desc="청약홈 공공데이터 조회 결과예요 — 지역이나 검색어를 바꾸면 다른 공고가 나올 수 있어요."
-              action={{ href: "/apply", label: `전국 ${tabLabel} 보기` }}
+              title="이 조건에 맞는 공고가 없어요"
+              desc={`${state.region === "전체" ? "전국" : state.region}${
+                state.q ? ` · ‘${state.q}’` : ""
+              } 조건으로는 조회 결과가 0건이었어요. 지역이나 검색어를 바꿔 보세요.`}
+              action={{ href: "/apply", label: "전체 공고 다시 보기" }}
             />
           )}
         </div>
       ) : (
         <>
-          {/* 정렬 — 표시 중인 행만 다시 세운다(전체 아님). [v4] 작은 글자 토글 한 줄, 그 사실은 title 로 */}
+          {/* 정렬 — 표시 중인 행만 다시 세운다(전체 아님). 라벨로 그 사실을 밝힌다. */}
           {hasResults && (
-            <div className="flex items-center justify-end gap-2.5 t-sub" role="group" aria-label="정렬">
-              {(
-                [
-                  ["default", "기본"],
-                  ["rate", "경쟁률순"],
-                  ["supply", "공급순"],
-                ] as const
-              ).map(([k, label]) => (
-                <button
-                  key={k}
-                  type="button"
-                  aria-pressed={sortKey === k}
-                  onClick={() => setSortKey(k)}
-                  title={k === "default" ? undefined : sortTitle}
-                  className={sortClass(sortKey === k)}
-                >
-                  {label}
-                </button>
-              ))}
+            <div className="rise-in-2 flex flex-wrap items-center gap-1.5">
+              <span className="t-sub font-bold text-text-3">정렬</span>
+              <button type="button" onClick={() => setSortKey("default")} className={sortPill(sortKey === "default")}>
+                기본
+              </button>
+              <button type="button" onClick={() => setSortKey("rate")} className={sortPill(sortKey === "rate")}>
+                경쟁률 높은 순
+              </button>
+              <button type="button" onClick={() => setSortKey("supply")} className={sortPill(sortKey === "supply")}>
+                공급 많은 순
+              </button>
+              {sortKey !== "default" && (
+                <span className="t-caption text-text-3">표시 중 {state.items.length}건 기준</span>
+              )}
             </div>
           )}
 
-          {/* [v4] 표 — 카드 테두리 없이. 좁은 화면은 가로 스크롤(5열 표) */}
-          <div className="-mx-3.5 overflow-x-auto px-3.5 md:mx-0 md:px-0">
-            {/* [v4.1 · 리퀴드 목록] 표 묶음도 유리판 한 장(lq-panel) — 경쟁률·공급 숫자 표라 blue */}
-            <div data-tone="blue" className="lq-panel min-w-[480px]">
+          <div className="rise-in-2 card overflow-x-auto rounded-2xl px-[18px] py-1">
+            <div className="min-w-[540px]">
               {state.tab === "competition" ? (
                 <>
                   <div className="grid grid-cols-[1.6fr_.9fr_.8fr_.9fr_1fr] gap-2 border-b border-divider py-2 t-caption text-text-3">
@@ -611,16 +641,18 @@ export function ApplySearchClient({ initial }: Props) {
           type="button"
           disabled={appending}
           onClick={() => void load({ page: state.page + 1, append: true })}
-          className="press btn-ghost btn-md w-full disabled:opacity-60"
+          className="rise-in-3 press card rounded-2xl px-4 py-3 text-center t-body font-bold text-primary disabled:opacity-60"
         >
-          {/* [1012] 규칙 5 — 동사 + 구체 대상(건수). [v4] 카드 → 고스트 버튼, 문장 → "(본 수 / 전체)" */}
           {appending
             ? "불러오는 중…"
             : filteredMode
-              ? `공고 더 보기 (${Math.min(state.page * PER_PAGE, state.totalCount).toLocaleString()} / ${state.totalCount.toLocaleString()}건)`
-              : `공고 더 보기 (${state.items.length.toLocaleString()} / ${state.totalCount.toLocaleString()}건)`}
+              ? `더보기 — 공고 ${state.totalCount.toLocaleString()}건 중 ${Math.min(
+                  state.page * PER_PAGE,
+                  state.totalCount,
+                ).toLocaleString()}건 확인함`
+              : `더보기 (${state.items.length.toLocaleString()} / ${state.totalCount.toLocaleString()}건)`}
         </button>
       )}
-    </section>
+    </div>
   );
 }

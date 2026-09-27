@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageShell } from "../components/PageShell";
+import { Icon } from "@/app/components/Icon";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { getBusinessInfo } from "@/lib/brand/business-info";
 
@@ -77,85 +78,85 @@ export default function CreatorsPage() {
   const { supportEmail } = getBusinessInfo();
   return (
     <PageShell breadcrumb="홈 › 크리에이터 입점">
-      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄(판매 · 보상 · 요율 원천) → 판매까지 3단계 행 → 왜 내집나우 행 → 고지 행 →
-          FAQ 행 → 채움 파랑 1개 + 문의 캡션. 지운 것: 슬로건형 제목·소개 문단(→ 사실 줄), 아이콘 카드 3장(아이콘 타일 → 행),
-          번호 원 카드(→ 행), 고지 회색 상자(→ 행), FAQ 카드(→ 행). 수익 보장·전망 문구 없음 · 요율 숫자 복제 없음(그대로). */}
-      <div className="mx-auto flex max-w-[760px] flex-col gap-8">
-        <header className="flex flex-col gap-0.5">
-          <h1 className="rise-in t-title text-ink">임장 크리에이터 입점 안내</h1>
-          <p className="t-sub text-text-3">
-            리포트 판매 · 보상은 포인트 적립 · 요율은 수수료 안내 공표분
-          </p>
-        </header>
-
-        {/* 판매까지 3단계 */}
-        <section className="flex flex-col gap-2">
-          <h2 className="t-section text-ink">판매까지 3단계</h2>
-          <ol className="card flex flex-col divide-y divide-line rounded-lg px-4">
-            {STEPS.map((s) => (
-              <li key={s.no} className="flex gap-3 py-3">
-                <span className="w-4 shrink-0 t-body t-num text-text-3">{s.no}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block t-body font-bold text-ink">{s.title}</span>
-                  <span className="mt-0.5 block t-sub leading-[1.6] text-text-2">{s.desc}</span>
-                </span>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        {/* 왜 내집나우인가 — [v4 · 규칙 7] 아이콘 타일 삭제(icon 값은 목록에 남긴다) */}
-        <section className="flex flex-col gap-2">
-          <h2 className="t-section text-ink">왜 내집나우인가</h2>
-          <dl className="card m-0 flex flex-col divide-y divide-line rounded-lg px-4">
-            {WHY.map((w) => (
-              <div key={w.title} className="py-3">
-                <dt className="t-body font-bold text-ink">{w.title}</dt>
-                <dd className="m-0 mt-0.5 t-sub leading-[1.65] text-text-2">{w.desc}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-
-        {/* 사실 고지 — 이 정직함이 브랜드다(문장은 그대로 · 상자만 걷음) */}
-        <section className="flex flex-col gap-2">
-          <h2 className="t-section text-ink">있는 그대로의 고지</h2>
-          <ul className="card flex flex-col divide-y divide-line rounded-lg px-4 t-sub leading-[1.65] text-text-2">
-            <li className="py-2.5">판매 수익 규모는 보장하지도, 전망으로 제시하지도 않습니다.</li>
-            <li className="py-2.5">판매 보상은 포인트(P) 적립이며, 포인트는 현금으로 전환·출금되지 않습니다(서비스 내 혜택 전용).</li>
-            <li className="py-2.5">
-              수수료는{" "}
-              <Link href="/legal/fees" className="tap-line font-bold text-primary no-underline">
-                거래·수수료 안내
-              </Link>
-              의 공표 요율만 적용 — 이 페이지에 별도 요율 없음.
-            </li>
-          </ul>
-        </section>
-
-        {/* FAQ */}
-        <section className="flex flex-col gap-2">
-          <h2 className="t-section text-ink">자주 묻는 것</h2>
-          <dl className="card m-0 flex flex-col divide-y divide-line rounded-lg px-4">
-            {FAQ.map((f) => (
-              <div key={f.q} className="py-3">
-                <dt className="t-body font-bold text-ink">{f.q}</dt>
-                <dd className="m-0 mt-1 t-sub leading-[1.65] text-text-2">{f.a}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-
-        {/* CTA — [v4 · 규칙 2] 채움 파랑 하나 · 동사 + 대상 */}
-        <div className="flex flex-col gap-2">
-          <Link href="/my/creator" className="btn-primary press flex min-h-12 items-center justify-center rounded-lg px-4 t-body no-underline">
-            크리에이터 센터 열기
-          </Link>
-          <p className="t-caption text-text-3">
-            입점·제휴 문의 <span className="font-medium">{supportEmail}</span>
-          </p>
-        </div>
+      {/* 히어로 — 수익 보장·전망 없이, 구조만 말한다 */}
+      <div className="mb-7 max-w-[720px]">
+        <h1 className="rise-in text-[24px] font-bold leading-[1.35] text-ink">
+          임장 콘텐츠, 조회수로 끝내지 마세요
+        </h1>
+        <p className="mt-2 text-[13px] leading-[1.7] text-text-2">
+          발로 뛰어 만든 지역 분석과 임장 기록을 내집나우 자료실에서 리포트로
+          판매할 수 있습니다. 한 번 만든 콘텐츠가 그 지역을 검색하는 다음
+          사람에게 계속 팔리는 구조입니다. 수익을 약속하지는 않습니다 —
+          대신 구조와 요율을 전부 공개합니다.
+        </p>
       </div>
+
+      {/* 왜 내집나우인가 */}
+      <div className="mb-8 grid gap-3 sm:grid-cols-3">
+        {WHY.map((w) => (
+          <div key={w.title} className="card rounded-2xl px-4 py-4">
+            <Icon name={w.icon} size={20} className="text-primary" />
+            <div className="mt-2 text-[13px] font-bold text-ink">{w.title}</div>
+            <p className="mt-1 text-[13px] leading-[1.65] text-text-2">{w.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* 판매까지 3단계 */}
+      <h2 className="mb-3 text-[15px] font-bold text-ink">판매까지 3단계</h2>
+      <ol className="mb-8 grid gap-3 sm:grid-cols-3">
+        {STEPS.map((s) => (
+          <li key={s.no} className="card flex gap-3 rounded-2xl px-4 py-4">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[13px] font-bold text-primary">
+              {s.no}
+            </span>
+            <div>
+              <div className="text-[13px] font-bold text-ink">{s.title}</div>
+              <p className="mt-0.5 text-[13px] leading-[1.6] text-text-2">{s.desc}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      {/* 사실 고지 — 이 정직함이 브랜드다 */}
+      <div className="mb-8 max-w-[720px] rounded-2xl border border-line bg-bg px-4 py-3.5">
+        <div className="text-[13px] font-bold text-ink">있는 그대로의 고지</div>
+        <ul className="mt-1.5 flex flex-col gap-1 text-[12px] leading-[1.65] text-text-2">
+          <li>· 판매 수익 규모는 보장하지도, 전망으로 제시하지도 않습니다.</li>
+          <li>
+            · 판매 보상은 포인트(P) 적립이며, 포인트는 현금으로 전환·출금되지
+            않습니다(서비스 내 혜택 전용).
+          </li>
+          <li>
+            · 수수료는{" "}
+            <Link href="/legal/fees" className="tap-line font-bold text-primary underline underline-offset-2">
+              거래·수수료 안내
+            </Link>
+            의 공표 요율만 적용됩니다 — 이 페이지에 별도 요율은 없습니다.
+          </li>
+        </ul>
+      </div>
+
+      {/* FAQ */}
+      <h2 className="mb-3 text-[15px] font-bold text-ink">자주 묻는 것</h2>
+      <div className="mb-8 flex max-w-[720px] flex-col gap-3">
+        {FAQ.map((f) => (
+          <div key={f.q} className="card rounded-2xl px-4 py-3.5">
+            <div className="text-[13px] font-bold text-ink">{f.q}</div>
+            <p className="mt-1 text-[13px] leading-[1.65] text-text-2">{f.a}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* CTA */}
+      <div className="mb-4 flex flex-wrap items-center gap-2.5">
+        <Link href="/my/creator" className="btn-primary press rounded-xl px-5 py-2.5 text-[13px]">
+          크리에이터 센터에서 시작 ›
+        </Link>
+      </div>
+      <p className="text-[12px] text-text-3">
+        입점·제휴 문의: <span className="font-semibold">{supportEmail}</span>
+      </p>
     </PageShell>
   );
 }

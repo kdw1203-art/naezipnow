@@ -1,7 +1,7 @@
 "use client";
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
+/* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import nextDynamic from "next/dynamic";
 import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
@@ -10,9 +10,9 @@ import { useToast } from "@/app/components/toast/ToastProvider";
 import { Icon } from "@/app/components/Icon";
 import type { HubTrade } from "@/lib/complex/hub-trades";
 import type { DealTuple } from "@/lib/complex/hub-price";
-/* [v4] 요약 탭 본문(한눈에 요약 카드·최근 실거래 8건·월별 줄·내 기록 카드·이야기 미리보기)을 걷고 서버가 그린
-   요약 목록(summary)을 받는다 — TradeRow·DealListLazy·MonthDeltaView 는 이제 실거래 탭 청크(PriceTab)만 쓴다.
-   첫 로드 JS 에서 두 모듈과 요약 마크업이 빠진다(/complex/[id] 478/480KB). */
+import { TradeRow } from "./TradeRow";
+import type { MonthDeltaView } from "@/lib/complex/month-delta";
+import { DealListLazy as DealList } from "./DealListLazy";
 import { primeWatching, readWatching } from "./watchlist-status";
 import { canOfferPush, pushResultMessage, subscribeToPush } from "@/lib/push/subscribe-client";
 
@@ -82,12 +82,14 @@ type WatchlistDetail = { complexId: string; watching: boolean };
 export function WatchlistButton({
   complexId,
   complexName,
+  tone = "light",
   variant = "default",
 }: {
   complexId: string;
   complexName: string;
-  /** [967 · 17] "bar" = 모바일 하단 액션 바의 아이콘+라벨 칸.
-      [v4] "default" = 단지명 오른쪽 40px 하트 아이콘 버튼(네이비 히어로가 없어져 tone 을 걷었다). */
+  /** [962] 네이비 히어로 위에서는 한지 글자 */
+  tone?: "light" | "dark";
+  /** [967 · 17] "bar" = 모바일 하단 액션 바의 아이콘+라벨 칸. */
   variant?: "default" | "bar";
 }) {
   const { promptSignup } = useSoftSignup();
@@ -229,8 +231,6 @@ export function WatchlistButton({
     );
   }
 
-  /* [v4 · 규칙 7] 아이콘은 조작 버튼에만 — 관심은 40px 아이콘 버튼(.icon-btn). 글자 라벨은 title·aria 로.
-     담겨 있으면 하트를 주홍으로 채운다(선택 = 주홍, 나우블루는 CTA 전용). */
   return (
     <button
       type="button"
@@ -239,10 +239,18 @@ export function WatchlistButton({
       aria-pressed={watching === true}
       aria-busy={busy}
       aria-label={watching ? "관심 단지에서 빼기" : "관심 단지로 저장"}
-      title={label}
-      className={`icon-btn press shrink-0 ${watching ? "text-brand-red" : "text-text-1"}`}
+      className={`press inline-flex min-h-10 shrink-0 items-center gap-1 rounded-full px-3 text-xs font-bold disabled:opacity-60 ${
+        tone === "dark"
+          ? watching
+            ? "brand-photo-chip"
+            : "bg-brand-hanji text-brand-hanji-ink"
+          : watching
+            ? "border border-line bg-surface text-ink"
+            : "border border-primary/30 bg-primary-soft text-primary"
+      }`}
     >
-      {heart(18)}
+      {heart(14)}
+      {label}
     </button>
   );
 }
@@ -289,19 +297,11 @@ function hrefWithTab(tab: Tab): string {
   return `${window.location.pathname}${s ? `?${s}` : ""}${window.location.hash}`;
 }
 
-
-/* [v4 · 한 화면 한 가지] 탭 본문 규칙
-   · 요약 = 서버가 그린 목록(summary) 하나 — 라벨 왼쪽 · 값 오른쪽 · 1px 구분선 행. 이 파일에는 마크업이 없다.
-   · 이야기·매물·실거래 = 서버 조각(storyExtras·priceExtras)을 **늘 그려 두고 hidden 으로만 숨긴다** — 면적대 표·후기·
-     임장노트·기사가 ISR HTML 에 그대로 남는다(검색 색인). 클라이언트 전용 본문(PriceTab·MyRecordsTab)만 열 때 받는다.
-   · 서버 목록의 행이 다른 탭으로 보낼 때는 `<a href="?tab=price" data-hub-tab="price">` — 여기서 가로채 탭만 바꾼다
-     (JS 가 없거나 새 탭으로 열면 주소의 ?tab= 이 같은 탭을 연다). */
-const TAB_BTN = "press min-h-11 flex-1 border-b-2 px-1 t-body transition-colors";
+/* TradeRow·deltaClass 는 [968 · 4] 에서 ./TradeRow.tsx 로 옮겼다(시세 탭과 공유). */
 
 export function ComplexHubTabs({
-  summary,
-  storyExtras,
-  priceExtras,
+  aiTitle,
+  aiBody,
   listingsLabel,
   trades,
   notes,
@@ -317,14 +317,11 @@ export function ComplexHubTabs({
   priceRegion,
   loanRegion,
   deals = [],
+  dealsFailed = false,
+  tradeDeltas,
 }: {
-  /** [v4] 요약 탭 본문 — 서버가 그린 행 목록(page.tsx) */
-  summary: ReactNode;
-  /** [v4] 이야기 탭 아래 서버 조각 — 거주민 후기 · 이 단지 임장노트 · 관련 기사 */
-  storyExtras?: ReactNode;
-  /** [v4] 실거래 탭 아래 서버 조각 — 면적대별 실거래가 · 이 동네 대비 · 전월세 · 국토부 이력 링크 */
-  priceExtras?: ReactNode;
-  /** 매물이 없을 때의 한 줄 — "아직 없어요"와 "못 불러왔어요"를 서버가 골라 준다 */
+  aiTitle: string;
+  aiBody: string;
   listingsLabel: string;
   trades: HubTrade[];
   notes: HubNote[];
@@ -333,7 +330,8 @@ export function ComplexHubTabs({
   /** 이 단지에 연결된 글을 쓰러 가는 주소 (/town/write?complex=…) */
   notesWriteHref?: string;
   listings: HubListing[];
-  /** [968 · 4] 서버(page.tsx)가 그린 PriceTrendChart — 실거래 탭이 쓴다. 시계열이 2개월 미만이면 null. */
+  /** [968 · 4] 서버(page.tsx)가 그린 PriceTrendChart — 요약·시세 탭이 같은 엘리먼트를 쓴다.
+   *  시계열이 2개월 미만이면 null. 클라이언트로 점 배열·차트 코드를 보내지 않는다. */
   priceChart: ReactNode;
   /** 가장 최근 달 평균 매매가(만원) — 계산기 프리필용. 없으면 0. */
   latestAvgManwon: number;
@@ -345,39 +343,29 @@ export function ComplexHubTabs({
   noteHref?: string;
   /** [967 · 15] 같은 단지의 다른 표기 id(대장 매칭 시 kapt.…) — 내 기록 조회에 함께 쓴다 */
   altComplexId?: string;
-  /** [970 · B-39] 실거래 탭 "AI 시세 분석 보기"에 실을 지역("서울 중랑구") — 없으면 지역 없이 */
+  /** [970 · B-39] 시세 탭 "AI 시세 분석 보기"에 실을 지역("서울 중랑구") — 없으면 지역 없이 */
   priceRegion?: string;
   /** [1008] 계산기 지역(regulated·capital·other) — 서버가 lib/finance/loan-rules 로 정한 값. 없으면 사용자가 고른다 */
   loanRegion?: string;
   /** [1009 · C] 최근 실거래 한 건 단위(최신순, 최대 60) — [계약월, 일, 만원, 전용㎡, 층] */
   deals?: readonly DealTuple[];
+  /** [1009 · C] 실거래 조회 실패 — "없음"과 다른 문장으로 */
+  dealsFailed?: boolean;
+  /** [1009 · C 리뷰] 월별 줄(전체)의 등락 기준 — 서버가 month-delta 로 센 값(요약 탭 미리보기 줄). 라우트 번들에 계산 코드를 싣지 않는다 */
+  tradeDeltas?: Record<string, MonthDeltaView>;
 }) {
   /* SSR·첫 하이드레이션은 언제나 기본 탭 — 프리렌더 HTML 과 정확히 일치해야 한다.
      주소의 ?tab= 은 마운트 뒤에 읽는다([967 · 14]). useSearchParams 를 쓰지 않는 이유:
      프리렌더 페이지에서는 가장 가까운 Suspense 경계까지 서버 HTML 을 비운다
      (/town/news 실측 — ListingsListClient·QnaListClient 주석 참고). */
   const [tab, setTabState] = useState<Tab>(DEFAULT_TAB);
-  const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setTabState(readTabFromLocation());
     /* 뒤로/앞으로 — ?tab= 이 다른 항목으로 돌아오면 그 탭을 편다 */
     const onPop = () => setTabState(readTabFromLocation());
-    /* [v4] 호가 점검은 요약 목록의 한 행(#asking-check)이다 — 하단 바의 "호가 점검"이 다른 탭에서 눌려도 보이게 요약으로 */
-    const onHash = () => {
-      if (window.location.hash !== "#asking-check") return;
-      setTabState("요약");
-      /* 닫힌 탭 안의 행으로는 브라우저가 스크롤하지 못한다 — 탭이 그려진 다음 프레임에 한 번 더 */
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => document.getElementById("asking-check")?.scrollIntoView({ block: "start" })),
-      );
-    };
     window.addEventListener("popstate", onPop);
-    window.addEventListener("hashchange", onHash);
-    return () => {
-      window.removeEventListener("popstate", onPop);
-      window.removeEventListener("hashchange", onHash);
-    };
+    return () => window.removeEventListener("popstate", onPop);
   }, []);
 
   /* 탭 전환은 replaceState — router.replace 는 같은 경로라도 RSC 페이로드를 다시
@@ -393,28 +381,37 @@ export function ComplexHubTabs({
     }
   };
 
-  /* [v4] 서버 목록 행의 탭 이동(data-hub-tab) — 새 탭·수정키 클릭은 브라우저에 맡긴다 */
-  const onPanelClick = (e: MouseEvent<HTMLDivElement>) => {
-    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    const a = (e.target as Element | null)?.closest?.("a[data-hub-tab]");
-    if (!a) return;
-    e.preventDefault();
-    setTab(tabFromId(a.getAttribute("data-hub-tab")));
-    rootRef.current?.scrollIntoView({ block: "start" });
-  };
+  /* latestAvgManwon 은 서버(page.tsx)가 계산해 넘긴다 — 시세 탭 필터·정렬 상태는
+     [968 · 4] PriceTab.tsx 로 옮겼다(탭이 열릴 때만 내려받는 청크). */
+
+  /* [967 · 15] 요약 탭의 "내 기록" 카드 — 예전엔 서버가 넘긴 고정 문구("로그인하면…")
+     였다. 방문자 공용 HTML 에 개인 상태를 단정하는 문장은 못 싣는다. 탭으로 보내는
+     안내만 남긴다(실데이터는 그 탭이 마운트되며 읽는다). */
+  const myRecordCard = (
+    <button
+      type="button"
+      onClick={() => setTab("내 기록")}
+      /* [1009 · C 리뷰] 문장과 "열기 ›"가 390px 에서 붙어 보였다("봐요열기 ›") — 간격. 누를 수 있는 카드라 눌림(press) */
+      className="card tile press flex w-full items-center justify-between gap-3 rounded-lg px-[15px] py-3.5 text-left"
+    >
+      <span className="min-w-0 t-body text-text-1">
+        <b className="text-ink">내 기록</b> — {complexName ?? "이 단지"}에 남긴 임장노트를 회차별로 모아 봐요
+      </span>
+      {/* [1012 · 규칙 5] "열기" → 동사 + 대상 */}
+      <span className="shrink-0 text-xs font-bold text-primary">내 기록 열기 ›</span>
+    </button>
+  );
 
   return (
-    /* [968 · 2] fold — 767px 이하에서 이 안의 rise-in-* 리빌을 끈다. scroll-mt — 행에서 탭을 바꿀 때 탭 줄이 헤더 아래에 선다 */
-    <div ref={rootRef} className="fold flex scroll-mt-12 flex-col gap-4 md:scroll-mt-14" onClick={onPanelClick}>
-      {/* 탭 5개 — [967 · 14] tablist/tab 의미론 + 선택 상태.
-          [v4] 네이비 채움 칩 → 밑줄 탭(네이비 면은 AI 결과 패널에만) · 헤더(모바일 48+1px · md 56+1px · 설치 앱은
-          + safe-area 윗여백 — Header.tsx 와 같은 env) 아래에 붙는다.
-          배경을 깔고 좌우를 본문 여백만큼 넓혀 스크롤되는 글자가 비치지 않게 한다. */}
-      <div
-        className="sticky top-[calc(49px+env(safe-area-inset-top,0px))] z-20 -mx-3.5 flex border-b border-line bg-bg px-3.5 md:top-[calc(57px+env(safe-area-inset-top,0px))] md:-mx-5 md:px-5"
-        role="tablist"
-        aria-label="단지 정보 탭"
-      >
+    /* [968 · 2] fold — 767px 이하에서 이 안의 rise-in-* 리빌을 끈다(globals.css 의
+       `.fold [class^="rise-in"]`). 탭 줄·기본 탭 본문은 첫 화면 안에 있어 지연 리빌이
+       LCP 후보의 표시를 늦추기만 한다. 다른 탭 본문도 같은 자리에 뜨므로 함께 끈다. */
+    <div className="fold flex flex-col gap-3">
+      {/* 탭 칩 5개 — [967 · 14] tablist/tab 의미론 + 선택 상태.
+          [968 · 34] `chip` — 보이는 높이(≈37px)는 그대로 두고 터치 기기에서만 히트 영역을
+          44px 로 넓힌다(globals.css `button.chip::after`, pointer: coarse). `.chip` 이
+          font-weight 600 을 강제하므로 선택 탭의 700 은 `font-bold!` 로 지킨다. */}
+      <div className="rise-in-2 flex flex-wrap gap-1.5 t-body" role="tablist" aria-label="단지 정보 탭">
         {TABS.map((t) => (
           <button
             key={t}
@@ -422,118 +419,216 @@ export function ComplexHubTabs({
             role="tab"
             aria-selected={tab === t}
             onClick={() => setTab(t)}
-            className={`${TAB_BTN} ${tab === t ? "border-ink font-bold text-ink" : "border-transparent text-text-3"}`}
+            className={`chip px-3.5 py-2 transition-colors ${
+              /* [970 · B-06] 네이비 탭 글자 text-surface → text-on-dark(다크에서 안 보였다) */
+              tab === t
+                ? "bg-brand-navy font-bold! text-on-dark"
+                : "border border-line bg-surface text-text-2"
+            }`}
           >
             {t}
           </button>
         ))}
       </div>
 
-      {/* ===== 요약 ===== [v4] 서버 목록 */}
-      <div role="tabpanel" aria-label="요약" hidden={tab !== "요약"}>
-        {summary}
-      </div>
-
-      {/* ===== 이야기 (동네이야기 글 · 거주민 후기 · 임장노트 · 기사) ===== */}
-      <div role="tabpanel" aria-label="이야기" hidden={tab !== "이야기"} className="flex flex-col gap-8">
-        <section aria-labelledby="hub-story-title">
-          <h2 id="hub-story-title" className="t-section text-ink">
-            {complexName ?? "이 단지"} 이야기
-            {notes.length > 0 && <span className="ml-1 t-sub font-medium text-text-3">{notes.length}건</span>}
-          </h2>
-          {notes.length === 0 ? (
-            /* [v4 · 규칙 8] 빈 상태 한 줄 — 실패는 실패라고 */
-            <p className="mt-2 t-sub text-text-3">
-              {notesFailed
-                ? "이야기 목록을 지금 불러오지 못했어요 — 글이 없다는 뜻이 아니에요"
-                : `${complexName ?? "이 단지"} 이야기가 아직 없어요`}
-            </p>
-          ) : (
-            <ul data-tone="hanji" className="mt-1 divide-y divide-line">
-              {notes.map((n) => (
-                /* [1009 · C] 누를 수 없는 행 — 눌림 효과 없음 */
-                <li key={n.id} className="py-3">
-                  <div className="t-body font-bold text-ink">{n.title}</div>
-                  <div className="mt-0.5 flex justify-between gap-2 t-sub text-text-3">
-                    <span className="truncate">{n.author}</span>
-                    <span className="shrink-0 tabular-nums">{n.score}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="mt-3 flex flex-wrap gap-2">
-            {notesWriteHref && !notesFailed && (
-              /* [v4 · 규칙 2] 채움 파랑은 머리의 "이 단지 임장노트 쓰기" 하나 — 여기는 아웃라인 */
-              <Link href={notesWriteHref} className="btn-outline inline-flex min-h-10 items-center px-3.5 t-sub">
-                {complexName ?? "이 단지"} 이야기 쓰기
-              </Link>
-            )}
-            {/* [970 · B-17] 탭 내용(동네이야기)과 같은 곳으로 */}
-            <Link href="/town" className="btn-ghost inline-flex min-h-10 items-center px-3.5 t-sub">
-              동네이야기 모두 보기
-            </Link>
+      {/* ===== 요약 ===== */}
+      {tab === "요약" && (
+        <div className="rise-in-3 flex flex-col gap-3" role="tabpanel">
+          {/* [1009 · C] 예전엔 "AI" 표식이 붙은 패널(AIPanel)이었는데 AI 가 쓴 글이 아니라 공공데이터를 규칙으로 이은
+              문장이다 — AI 분석 결과 요약과 같은 이름("공공데이터 자동 계산")으로 적는다. */}
+          <div className="card flex flex-col gap-1.5 rounded-lg px-[15px] py-3.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="t-body font-bold text-ink">{aiTitle}</span>
+              <span className="shrink-0 t-caption text-text-3">공공데이터 자동 계산</span>
+            </div>
+            <p className="break-words t-body leading-[1.6] text-text-1">{aiBody}</p>
           </div>
-        </section>
-        {storyExtras}
-      </div>
-
-      {/* ===== 매물 ===== */}
-      <div role="tabpanel" aria-label="매물" hidden={tab !== "매물"}>
-        <h2 className="t-section text-ink">
-          등록 매물
-          {listings.length > 0 && <span className="ml-1 t-sub font-medium text-text-3">{listings.length}건</span>}
-        </h2>
-        {listings.length === 0 ? (
-          /* listingsLabel = 빈 상태 한 줄(page.tsx — 없음과 조회 실패를 다른 문장으로) */
-          <p className="mt-2 t-sub text-text-3">{listingsLabel}</p>
-        ) : (
-          <ul data-tone="mint" className="mt-1 divide-y divide-line">
-            {listings.map((l) => (
-              /* [1012 · 규칙 9] 끌어올림은 정렬 순서로만 드러난다(배지·파란 테두리 없음) */
-              <li key={l.id} className="flex items-start justify-between gap-3 py-3">
-                <div className="min-w-0">
-                  <div className="t-body font-bold text-ink">{l.meta}</div>
-                  <div className="mt-0.5 truncate t-sub text-text-3">
-                    {l.agent}
-                    {l.priceNote ? ` · ${l.priceNote}` : ""}
+          {priceChart}
+          {myRecordCard}
+          {deals.length > 0 ? (
+            /* [1009 · C] 월별 평균 줄(8.4억 · N건 · 최저~최고) → 한 건 단위(계약일 · 전용 · 층 · 거래가, 네이버 관례).
+               "전체 보기"는 실거래 탭(면적대 필터·월별 평균 표)으로 — 예전엔 누를 수 없는 글자("시세 탭에서 전체")였다. */
+            <div className="card flex flex-col gap-2 rounded-lg px-3.5 py-3">
+              <div className="flex items-center justify-between gap-2 px-0.5">
+                <span className="t-sub font-bold text-text-2">
+                  최근 실거래 <span className="tabular-nums">{Math.min(deals.length, 8)}건</span>
+                </span>
+                {/* [1009 · C 리뷰] 문장 속 링크가 아니라 혼자 서 있는 조작 — 40px(주요 조작). 줄 높이는 -my 로 그대로 */}
+                <button
+                  type="button"
+                  onClick={() => setTab("실거래")}
+                  className="press -my-2 inline-flex min-h-10 items-center px-1 t-sub font-bold text-primary"
+                >
+                  전체 보기 ›
+                </button>
+              </div>
+              <DealList deals={deals.slice(0, 8)} />
+              <p className="px-0.5 t-caption text-text-3">국토교통부 실거래가 · 해제 신고 제외 · 한 건 금액 그대로</p>
+            </div>
+          ) : trades.length > 0 ? (
+            <div className="card flex flex-col rounded-lg px-3.5 py-2">
+              <div className="flex items-baseline justify-between px-0.5 py-1.5">
+                {/* [1009 · C 리뷰] 줄 수("N개월")는 거래 있는 달 수라 기간처럼 읽혔다 — 무엇의 평균인지(면적 혼합)와 등락 기준만 적는다.
+                    기준은 앞 줄 — 모든 앞 줄이 전달이면 "전월 대비", 아니면 "앞 거래 달 대비"(빈 달 다음 줄엔 기준 달이 붙는다) */}
+                <span className="min-w-0 t-sub font-bold text-text-2">
+                  월평균 · 면적 혼합 ·{" "}
+                  {trades
+                    .slice(0, 18)
+                    .every((t) => !tradeDeltas?.[t.ym]?.basis || tradeDeltas?.[t.ym]?.adjacent)
+                    ? "전월 대비"
+                    : "앞 거래 달 대비"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setTab("실거래")}
+                  className="press -my-2 inline-flex min-h-10 items-center px-1 t-caption font-bold text-primary"
+                >
+                  실거래 탭에서 전체 ›
+                </button>
+              </div>
+              <div className="overflow-hidden rounded-xl bg-bg">
+                {/* [967 · 18] key = yyyymm — 월별 집계라 목록 안에서 유일하다 */}
+                {trades.slice(0, 18).map((t, i) => (
+                  <TradeRow key={t.ym} t={t} dv={tradeDeltas?.[t.ym]} divider={i > 0 ? "top" : "none"} />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
+              {dealsFailed
+                ? "실거래를 지금 불러오지 못했어요 — 거래가 없다는 뜻이 아니에요"
+                : "아직 수집된 국토교통부 실거래가 없어요"}
+            </div>
+          )}
+          {notes.length > 0 && (
+            <div className="card flex flex-col gap-1.5 rounded-lg px-3.5 py-2.5">
+              <div className="px-0.5 t-sub font-bold text-text-2">
+                단지 이야기 미리보기 · {notes.length}건
+              </div>
+              {notes.slice(0, 4).map((n) => (
+                <div
+                  key={n.id}
+                  className="rounded-xl bg-bg px-3 py-2"
+                >
+                  <div className="truncate t-sub font-bold text-ink">{n.title}</div>
+                  <div className="mt-0.5 flex justify-between gap-2 t-caption text-text-3">
+                    <span className="truncate">{n.author}</span>
+                    <span className="shrink-0 font-bold text-primary">{n.score}</span>
                   </div>
                 </div>
-                <div className="shrink-0 text-right t-body t-num text-ink">{l.price}</div>
-              </li>
-            ))}
-          </ul>
-        )}
-        {/* 예전엔 맨 /map — 단지 맥락이 통째로 사라져 전국 지도가 떴다 */}
-        <Link
-          href={complexId ? `/map?complexId=${encodeURIComponent(complexId)}` : "/map"}
-          className="btn-ghost mt-3 inline-flex min-h-10 items-center px-3.5 t-sub"
-        >
-          {complexName ?? "이 단지"} 주변 매물 지도에서 보기
-        </Link>
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* ===== 실거래 ===== [968 · 4] 본문은 PriceTab.tsx(동적 청크) — 필터·정렬·전체 표. 아래 서버 조각은 늘 HTML 에 */}
-      <div role="tabpanel" aria-label="실거래" hidden={tab !== "실거래"} className="flex flex-col gap-8">
-        {tab === "실거래" && (
-          <div className="flex flex-col gap-2.5">
-            <PriceTab
-              trades={trades}
-              deals={deals}
-              latestAvgManwon={latestAvgManwon}
-              complexName={complexName}
-              priceChart={priceChart}
-              region={priceRegion}
-              loanRegion={loanRegion}
-            />
-          </div>
-        )}
-        {priceExtras}
-      </div>
+      {/* ===== 이야기 (동네이야기 글) ===== */}
+      {tab === "이야기" && (
+        <div className="rise-in-3 flex flex-col gap-2.5" role="tabpanel">
+          {notes.length === 0 && (
+            <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
+              {notesFailed ? (
+                <>
+                  <b className="text-ink">지금은 불러올 수 없어요</b>
+                  <div className="mt-1">
+                    노트가 없는 게 아니라 목록을 읽어 오지 못했어요. 잠시 후 다시 열어
+                    주세요.
+                  </div>
+                </>
+              ) : (
+                /* [970 · B-17] 이 목록은 동네이야기 글 — "임장노트가 없다"고 적으면 아래
+                   임장노트 섹션과 어긋난다 */
+                /* [1012 · 규칙 6] 어디서(단지명) */
+                `${complexName ?? "이 단지"} 이야기가 아직 없어요`
+              )}
+            </div>
+          )}
+          {notes.map((n) => (
+            <div
+              key={n.id}
+              /* [1009 · C] 누를 수 없는 카드라 .tile(호버 들림·눌림)을 뺐다 — 눌리는 척하면 죽은 컨트롤처럼 읽힌다 */
+              className="card flex flex-col gap-0.5 rounded-lg px-3.5 py-3"
+            >
+              <div className="t-body font-bold text-ink">{n.title}</div>
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
+                <span className="t-sub text-text-3">{n.author}</span>
+                <span className="t-sub font-bold text-primary">{n.score}</span>
+              </div>
+            </div>
+          ))}
+          {notesWriteHref && !notesFailed && (
+            <Link
+              href={notesWriteHref}
+              className="btn-primary rounded-xl p-3 text-center t-body"
+            >
+              {complexName ?? "이 단지"} 이야기 쓰기
+            </Link>
+          )}
+          {/* [970 · B-17] 탭 내용(동네이야기)과 같은 곳으로 — 예전엔 /notes(임장노트)로 보냈다 */}
+          <Link href="/town" className="btn-soft rounded-xl p-3 text-center t-body">
+            동네이야기 모두 보기
+          </Link>
+        </div>
+      )}
+
+      {/* ===== 매물 ===== */}
+      {tab === "매물" && (
+        <div className="rise-in-3 flex flex-col gap-2.5" role="tabpanel">
+          <div className="px-1 text-xs font-bold text-text-3">{listingsLabel}</div>
+          {listings.length === 0 && (
+            /* [1012 · 규칙 6] "확인해 보세요" → 사실만(다음 행동은 아래 버튼) */
+            <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
+              {complexName ?? "이 단지"}에 등록된 실매물이 아직 없어요
+            </div>
+          )}
+          {listings.map((l) => (
+            <div
+              key={l.id}
+              /* [1012 · 규칙 9] 끌어올린 매물의 파란 테두리·빨간 배지 제거 — 나우블루는 CTA·링크 전용, 배지는 사실 명사만.
+                 끌어올림은 정렬 순서로만 드러난다(store-db 가 boost_until 순으로 준다 — l.urgent 는 화면에 쓰지 않는다). */
+              className="card flex flex-col gap-1.5 rounded-2xl px-[15px] py-3.5"
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="rounded-md bg-bg chip-pad text-[12px] font-medium text-text-2">
+                  {l.badge}
+                </span>
+                <span className="text-[13px] font-bold text-ink">{l.price}</span>
+                {l.priceNote && (
+                  <span className="text-xs font-bold text-primary">{l.priceNote}</span>
+                )}
+              </div>
+              <div className="text-xs text-text-2">{l.meta}</div>
+              <div className="t-sub text-text-3">{l.agent}</div>
+            </div>
+          ))}
+          {/* 예전엔 맨 /map — 단지 맥락이 통째로 사라져 전국 지도가 떴다 */}
+          <Link
+            href={complexId ? `/map?complexId=${encodeURIComponent(complexId)}` : "/map"}
+            className="btn-soft rounded-xl p-3 text-center t-body"
+          >
+            {complexName ?? "이 단지"} 주변 매물 지도에서 보기
+          </Link>
+        </div>
+      )}
+
+      {/* ===== 시세 ===== [968 · 4] 본문은 PriceTab.tsx(동적 청크) — 필터·정렬·전체 표 */}
+      {tab === "실거래" && (
+        <div className="rise-in-3 flex flex-col gap-2.5" role="tabpanel">
+          <PriceTab
+            trades={trades}
+            deals={deals}
+            latestAvgManwon={latestAvgManwon}
+            complexName={complexName}
+            priceChart={priceChart}
+            region={priceRegion}
+            loanRegion={loanRegion}
+          />
+        </div>
+      )}
 
       {/* ===== 내 기록 ===== [967 · 15] 실데이터 — 탭이 열릴 때 클라이언트가 읽는다 */}
       {tab === "내 기록" && (
-        <div role="tabpanel" aria-label="내 기록" className="flex flex-col gap-2.5">
+        <div className="rise-in-3 flex flex-col gap-2.5" role="tabpanel">
           {complexId ? (
             <MyRecordsTab
               complexId={complexId}
@@ -542,7 +637,9 @@ export function ComplexHubTabs({
               noteHref={noteHref ?? "/notes/new"}
             />
           ) : (
-            <p className="t-sub text-text-3">이 단지의 기록은 단지 id 가 있어야 찾을 수 있어요</p>
+            <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
+              이 단지의 기록은 단지 id 가 있어야 찾을 수 있어요
+            </div>
           )}
         </div>
       )}

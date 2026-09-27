@@ -63,7 +63,7 @@ export function ListingCompareTray() {
     <div className="fixed inset-x-0 bottom-[76px] z-40 px-4 md:bottom-6">
       <div className="glass mx-auto flex max-w-[840px] flex-col gap-2.5 rounded-2xl border border-line p-3 shadow-lg">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 text-[13px] font-extrabold text-ink">
+          <div className="flex items-center gap-1.5 text-[13px] font-bold text-ink">
             <Icon name="scale" size={16} strokeWidth={2} />
             비교함 <span className="t-num text-primary">({items.length})</span>
             <span className="text-[12px] font-medium text-text-3">

@@ -1,12 +1,11 @@
 "use client";
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 7곳을 font-bold(700)로 바꿨다. */
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Icon } from "@/app/components/Icon";
 import { useMoment } from "@/app/components/motion/MomentProvider";
 import { useToast } from "@/app/components/toast/ToastProvider";
-import { budgetMapHref, JOURNEY_STAGES, type JourneyCountLabels, type JourneyStage } from "@/lib/journey/stages";
+import { budgetMapHref, JOURNEY_STAGES, type JourneyStage } from "@/lib/journey/stages";
 import {
   countDone,
   currentStageId,
@@ -17,89 +16,108 @@ import {
 import { updateJourney, useJourney, type JourneySync } from "@/lib/journey/client-store";
 import { readJourneySignals, subscribeJourneySignals, type JourneySignals } from "@/lib/journey/signals";
 import { formatKoreanDay, kstDayOf } from "@/lib/journey/dates";
-/* [v4] 승인 시안의 목록 행 부품(서버·클라이언트 공용 — 훅 없음) */
-import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 
 /* ============================================================
    [1008 · J] /journey — 내 집 마련 여정 6단계.
 
-   [v4 · 한 화면 한 가지] 네이비 히어로(진행 링·여섯 칸 스텝퍼·설명 문단) → 흰 바탕 머리(제목 + 사실 한 줄 +
-   "다음 단계" 한 줄). 단계 카드(번호 타일·아이콘 타일·설명 문장·할 일 타일 격자) → 단계마다 **구분선 목록 행**
-   (왼쪽 화면 이름 / 오른쪽 실측 숫자 + `›`). 재미는 두 순간만 남긴다 — 체크 표시가 한 번 튈 때(njnPop),
-   여섯 단계를 다 채웠을 때의 도장 장면(MomentProvider celebrate). 전부 prefers-reduced-motion 에서 멈춘다.
+   구성 문법은 분석 허브(app/analysis/page.tsx)와 같다: 네이비 히어로(.hub-hero) 한 장이 "지금 어디"를 말하고,
+   그 아래 카드가 "무엇을"을 말한다. 재미는 세 순간에만 — 진행 링이 차오를 때, 체크 표시가 한 번 튈 때
+   (njnPop), 여섯 단계를 다 채웠을 때의 도장 장면(MomentProvider celebrate). 전부 prefers-reduced-motion 에서 멈춘다.
 
    서버 HTML 은 모두에게 같다(정적 페이지) — 진행·신호는 마운트 뒤 이 기기/계정에서 읽는다(lib/journey/client-store).
    ============================================================ */
 
-/* [1012 · R2] 리뷰 B −1 — 저장 안내에 숫자(체크 칸 수 · 계정에 있는 체크 수)와 어디에(이 기기·계정). */
-/* [v4 · 규칙 3] 문장 → 사실 한 줄(비회원 줄은 tests/unit/town-1012 가 잠근 문구 그대로) */
-function syncLine(sync: JourneySync, ready: boolean, done: number, total: number): string {
-  if (!ready || sync === "loading") return "진행 상황 불러오는 중…";
+const RING_R = 40;
+const RING_C = 2 * Math.PI * RING_R;
+
+function ProgressRing({ done, total, ready }: { done: number; total: number; ready: boolean }) {
+  const ratio = total > 0 ? done / total : 0;
+  return (
+    <div className="jr-ring" data-ready={ready ? "true" : "false"}>
+      <svg viewBox="0 0 96 96" width="96" height="96" aria-hidden="true">
+        <circle className="jr-ring__track" cx="48" cy="48" r={RING_R} fill="none" strokeWidth="8" />
+        <circle
+          className="jr-ring__arc"
+          cx="48"
+          cy="48"
+          r={RING_R}
+          fill="none"
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={RING_C.toFixed(2)}
+          strokeDashoffset={(RING_C * (1 - ratio)).toFixed(2)}
+          transform="rotate(-90 48 48)"
+        />
+      </svg>
+      <div className="jr-ring__label">
+        <span className="t-title t-num font-bold text-on-dark">
+          {done}
+          <span className="t-sub font-bold text-on-dark-muted">/{total}</span>
+        </span>
+        <span className="t-caption font-bold text-on-dark-muted">단계 완료</span>
+      </div>
+    </div>
+  );
+}
+
+function syncLine(sync: JourneySync, ready: boolean): string {
+  if (!ready || sync === "loading") return "진행 상황을 불러오는 중이에요…";
   switch (sync) {
     case "account":
-      return `체크 ${done}/${total}개 · 내 계정에 저장(다른 기기에서도)`;
+      return "체크는 내 계정에 저장돼요 — 다른 기기에서도 이어서 볼 수 있어요.";
     case "saving":
       return "계정에 저장하는 중…";
     case "fallback":
-      return `계정 저장 실패 · 체크 ${done}/${total}개는 이 기기에만 · 다음에 열 때 계정에 합침`;
+      return "지금은 계정에 저장하지 못해 이 기기에만 저장했어요. 다음에 열 때 다시 계정에 합쳐요.";
     default:
-      return `체크 ${total}개는 이 기기에 저장 · 로그인하면 계정에도 저장돼 다른 기기에서 이어 볼 수 있어요`;
+      return "체크는 이 기기에 저장돼요. 로그인하면 계정에 저장해 다른 기기에서도 이어 볼 수 있어요.";
   }
 }
 
-/* [v4 · 규칙 5] 할 일 = 구분선 목록 행(SummaryRow — 승인 시안 부품). 설명 문장(desc)은 화면에서 뺐다 —
-   행 이름이 곧 화면 이름이고, 오른쪽은 실측 한 토막(없으면 `›`만). 로그인 화면은 보조 줄 한 단어. */
-/* [v4.1 · 리퀴드 목록] 여섯 단계의 할 일 묶음은 톤을 순환(blue→hanji→mint→sand→blue→hanji) — 이웃한 단계가
-   같은 색을 갖지 않는다(globals.css `data-tone`). */
-const STAGE_TONES = ["blue", "hanji", "mint", "sand", "blue", "hanji"] as const;
-
-function StageTasks({
-  stage,
-  counts,
-  tone,
-}: {
-  stage: JourneyStage;
-  counts: JourneyCountLabels["tasks"];
-  tone: (typeof STAGE_TONES)[number];
-}) {
+function StageTasks({ stage }: { stage: JourneyStage }) {
   return (
-    <ul data-tone={tone} className="card m-0 flex list-none flex-col divide-y divide-line rounded-lg p-0 px-4">
-      {stage.tasks.map((t) => {
-        /* [1012 · R2] 규칙 7 — 행 오른쪽 실측 한 토막. 카탈로그의 count 는 늘 비어 있고(정적 숫자 금지)
-           페이지가 실데이터로 만든 counts 에서 href 로 찾는다. 없으면 화살표만. */
-        const count = t.count ?? counts[t.href];
-        return <SummaryRow key={t.href} label={t.label} sub={t.login ? "로그인" : undefined} value={count} href={t.href} />;
-      })}
+    <ul className="m-0 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2 md:grid-cols-3">
+      {stage.tasks.map((t) => (
+        <li key={t.href} className="min-w-0">
+          <Link href={t.href} className="jr-task tile flex h-full items-start gap-2 no-underline">
+            <span className="min-w-0 flex-1">
+              <span className="flex flex-wrap items-center gap-1.5">
+                <span className="t-body font-bold text-ink">{t.label}</span>
+                {t.login && (
+                  <span className="t-caption rounded border border-line px-1 font-bold text-text-3">로그인</span>
+                )}
+              </span>
+              <span className="mt-0.5 block t-sub text-text-2">{t.desc}</span>
+            </span>
+            <span aria-hidden="true" className="tile-go mt-0.5 shrink-0 t-body font-bold text-primary">
+              ›
+            </span>
+          </Link>
+        </li>
+      ))}
       {stage.budgetChips && (
-        /* 예산 칩 — 누르면 지도가 그 상한으로 열린다(필터 입구라 칩으로 남긴다). 한 줄 가로 스크롤 */
-        <li className="flex min-h-14 flex-wrap items-center justify-between gap-x-3 gap-y-2 py-3">
-          <span className="t-body font-bold text-ink">예산 안의 단지 지도</span>
-          <span className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
-            {stage.budgetChips.map((eok) => (
-              <Link
-                key={eok}
-                href={budgetMapHref(eok)}
-                className="chip inline-flex min-h-[32px] shrink-0 items-center border border-line bg-surface px-3 t-sub font-bold text-text-2 no-underline hover:border-primary hover:text-primary"
-              >
-                {eok}억 이하
-              </Link>
-            ))}
-          </span>
+        <li className="min-w-0">
+          <div className="jr-task flex h-full flex-col gap-2">
+            <span className="t-body font-bold text-ink">예산 안의 단지 지도에서 보기</span>
+            <span className="flex flex-wrap gap-1.5">
+              {stage.budgetChips.map((eok) => (
+                <Link
+                  key={eok}
+                  href={budgetMapHref(eok)}
+                  className="chip inline-flex min-h-[32px] items-center border border-line bg-surface px-3 t-sub font-bold text-text-2 no-underline hover:border-primary hover:text-primary"
+                >
+                  {eok}억 이하
+                </Link>
+              ))}
+            </span>
+          </div>
         </li>
       )}
     </ul>
   );
 }
 
-export function JourneyBoard({
-  counts = {},
-  stageNotes = {},
-}: {
-  /** [1012 · R2] href → 카드 오른쪽 실측("오늘 10문제") — app/journey/page.tsx 가 서버에서 읽어 넘긴다 */
-  counts?: JourneyCountLabels["tasks"];
-  /** [1012 · R2] 단계 id → 단계 설명 뒤 실측 한 토막("국토교통부 2026.08 신고분까지") */
-  stageNotes?: JourneyCountLabels["stages"];
-}) {
+export function JourneyBoard() {
   const { state, ready, sync } = useJourney();
   const { showMoment } = useMoment();
   const { showToast } = useToast();
@@ -117,10 +135,6 @@ export function JourneyBoard({
   const done = ready ? countDone(state) : 0;
   const current = ready ? currentStageId(state) : null;
   const currentStage = current ? JOURNEY_STAGES.find((s) => s.id === current) ?? null : null;
-  /* [1012] 규칙 6·7 — 머리 사실 줄은 실측으로: 단계 정의에 실린 화면(할 일) 수와
-     다음 단계의 첫 할 일. 둘 다 lib/journey/stages 의 실제 목록에서 센다. */
-  const taskTotal = JOURNEY_STAGES.reduce((n, st) => n + st.tasks.length + (st.budgetChips ? 1 : 0), 0);
-  const firstTask = currentStage?.tasks[0] ?? null;
   /* ⑥ 신호 — 일정표에 계약일을 넣었다(여정 상태 안의 사실) */
   const contractDate = state.contract?.contractDate ?? null;
   const signalFor = (id: JourneyStageId): string | null =>
@@ -155,7 +169,7 @@ export function JourneyBoard({
     if (countDone(next) === total) {
       showMoment({
         kind: "celebrate",
-        title: "여정 6단계 완주", /* [1012] 규칙 6 — 느낌표 금지 */
+        title: "여정 완주",
         subtitle: "여섯 단계를 모두 체크했어요. 새 집에서의 시작을 응원해요.",
         pill: "내 집 마련 여정 완료",
       });
@@ -181,121 +195,177 @@ export function JourneyBoard({
     });
   };
 
-  /* [v4 · 규칙 1] 머리 사실 한 줄 — 단계 수 · 화면 수 · (불러온 뒤) 체크 수. 숫자만 */
-  const headFact = [`${total}단계`, `화면 ${taskTotal}개`, ...(ready ? [`체크 ${done}/${total}`] : [])].join(" · ");
-
   return (
-    /* [v4 · 규칙 12] 데스크톱도 가운데 한 줄(최대 760px) */
-    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
-      {/* ── [v4 · 규칙 1·4] 머리 — 흰 바탕 제목 + 사실 한 줄 + 다음 단계 한 줄(네이비 히어로·진행 링·스텝퍼 없음) ── */}
-      <header className="flex flex-col gap-0.5">
-        <h1 id="journey-title" className="t-title text-ink">
-          내 집 마련 여정
-        </h1>
-        <p className="t-sub text-text-3">{headFact}</p>
-        {/* 다음 단계(같은 화면 앵커) · 먼저 할 일(그 단계의 첫 화면) — 예전 히어로의 칩·링크 두 개를 한 줄로 */}
-        <p className="mt-1 t-sub text-text-2" aria-live="polite">
-          {ready && currentStage ? (
-            <>
-              다음{" "}
-              <a href={`#stage-${currentStage.id}`} className="tap-line font-bold text-ink no-underline">
-                {currentStage.n}. {currentStage.title} ›
-              </a>
-              {firstTask && (
+    <div className="flex flex-col gap-5 md:gap-6">
+      {/* ── 히어로: 지금 어디 — 진행 링 + 여섯 칸 ── */}
+      {/* 워터마크(BrandWatermark)는 두지 않는다 — 오른쪽 위가 진행 링 자리라 곡선이 "다음 단계" 글자 뒤를 지났다 */}
+      <section className="hub-hero card-pad-lg flex flex-col gap-4" aria-labelledby="journey-title">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-6">
+          <div className="flex max-w-[600px] flex-col gap-1.5">
+            <span className="t-caption font-bold tracking-wider text-on-dark-muted">내 집 마련 여정 · 6단계</span>
+            <h1 id="journey-title" className="t-display text-balance text-on-dark">
+              지금 어느 단계세요?
+            </h1>
+            <p className="t-body max-w-[52ch] text-on-dark-muted">
+              가볍게 둘러보는 것부터 계약·잔금·입주까지 여섯 단계로 나눴어요. 단계마다 왜 필요한지, 무엇을 하면 되는지,
+              바로 쓸 화면을 이어 뒀어요.
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <ProgressRing done={done} total={total} ready={ready} />
+            <div className="flex min-w-0 flex-col gap-1.5">
+              {ready && currentStage ? (
                 <>
-                  {" · "}
-                  <Link href={firstTask.href} className="tap-line font-bold text-primary no-underline">
-                    {firstTask.label} ›
-                  </Link>
+                  <span className="t-caption font-bold text-on-dark-muted">다음 단계</span>
+                  <a
+                    href={`#stage-${currentStage.id}`}
+                    className="brand-photo-chip chip inline-flex min-h-[40px] w-fit items-center gap-1.5 px-3 t-sub font-bold no-underline"
+                  >
+                    {currentStage.n}. {currentStage.title} ›
+                  </a>
                 </>
+              ) : ready ? (
+                <span className="t-sub font-bold text-on-dark">여섯 단계를 모두 체크했어요</span>
+              ) : (
+                <span className="t-sub text-on-dark-muted">진행 상황 확인 중…</span>
               )}
-            </>
-          ) : ready ? (
-            "여섯 단계 모두 체크"
-          ) : (
-            "진행 상황 확인 중…"
-          )}
-        </p>
-      </header>
+            </div>
+          </div>
+        </div>
 
-      {/* ── [v4 · 규칙 5] 여섯 단계 — 단계 제목 한 줄 + 보조 한 줄(상태·실측) / 할 일은 구분선 목록 행 ── */}
-      <ol className="m-0 flex list-none flex-col gap-8 p-0" aria-label="내 집 마련 여섯 단계">
-        {JOURNEY_STAGES.map((s, i) => {
-          const doneAt = ready ? state.done[s.id] ?? null : null;
-          const isDone = Boolean(doneAt);
-          const isCurrent = ready && current === s.id;
-          const signal = !isDone ? signalFor(s.id) : null;
-          const popKey = pop?.id === s.id ? pop.n : 0;
-          /* [v4 · 규칙 3] 보조 한 줄 — 상태(체크한 날·진행 중) + 실측(stageNotes: 최신 신고월 등).
-             단계 설명 문장(why)은 화면에서 뺐다(HowTo 스키마도 화면과 같게 — app/journey/page.tsx) */
-          const facts = [
-            isDone && doneAt ? `${formatKoreanDay(kstDayOf(doneAt) ?? doneAt.slice(0, 10))} 체크` : null,
-            signal ? `진행 중 · ${signal}` : null,
-            stageNotes[s.id] ?? null,
-          ].filter((x): x is string => Boolean(x));
-          return (
-            <li
-              key={s.id}
-              id={`stage-${s.id}`}
-              data-state={isDone ? "done" : isCurrent ? "current" : "todo"}
-              className="flex scroll-mt-24 flex-col gap-2"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 className="m-0 t-section text-ink">
-                    <span className="sr-only">{s.n}단계 · </span>
-                    <span aria-hidden="true" className={`t-num ${isCurrent ? "text-brand-hanji-ink" : "text-text-3"}`}>
-                      {s.n}
-                    </span>{" "}
-                    {s.title}
-                  </h2>
-                  {(isCurrent || facts.length > 0) && (
-                    <p className="m-0 mt-0.5 truncate t-sub text-text-3">
-                      {isCurrent && <span className="font-bold text-brand-hanji-ink">지금 단계</span>}
-                      {isCurrent && facts.length > 0 ? " · " : ""}
-                      {facts.join(" · ")}
-                    </p>
-                  )}
-                </div>
-                {/* 체크 — 조작 버튼이라 아이콘을 남긴다(v4 규칙 7). 이름은 aria-label 이 온전히(동사 + 대상) */}
-                <button
-                  type="button"
-                  onClick={() => toggle(s.id)}
-                  aria-pressed={isDone}
-                  aria-label={isDone ? `${s.short} 단계 완료` : `${s.short} 단계 완료로 표시`}
-                  disabled={!ready}
-                  className={`jr-done btn-md press shrink-0 gap-1 ${isDone ? "jr-done--on" : "btn-outline"}`}
-                >
-                  <Icon
-                    key={popKey}
-                    name="check"
-                    size={16}
-                    strokeWidth={2.4}
-                    className={isDone && popKey ? "njn-pop-once" : ""}
-                  />
-                  {isDone ? "완료" : "완료 표시"}
-                </button>
-              </div>
-              <StageTasks stage={s} counts={counts} tone={STAGE_TONES[i % STAGE_TONES.length]} />
-            </li>
-          );
-        })}
-      </ol>
-
-      {/* ── [v4 · 규칙 3] 맨 끝 캡션 — 저장 위치 · 로그인 · 체크 지우기 · 안내 한 줄 ── */}
-      <div className="flex flex-col gap-1">
-        <p className="m-0 t-caption text-text-3" aria-live="polite">
-          {syncLine(sync, ready, done, total)}
+        <nav aria-label="여정 단계 바로가기" className="grid grid-cols-3 gap-1.5 lg:grid-cols-6">
+          {JOURNEY_STAGES.map((s) => {
+            const isDone = ready && Boolean(state.done[s.id]);
+            const isCurrent = ready && current === s.id;
+            const signal = !isDone ? signalFor(s.id) : null;
+            return (
+              <a
+                key={s.id}
+                href={`#stage-${s.id}`}
+                aria-current={isCurrent ? "step" : undefined}
+                data-state={isDone ? "done" : isCurrent ? "current" : "todo"}
+                className="jr-step"
+              >
+                <span className="jr-step__n" aria-hidden="true">
+                  {isDone ? <Icon name="check" size={12} strokeWidth={3} /> : s.n}
+                </span>
+                <span className="min-w-0 truncate md:hidden">{s.short}</span>
+                <span className="hidden min-w-0 truncate md:inline">{s.title}</span>
+                {isDone && <span className="sr-only">(완료)</span>}
+                {/* [1009 · T] title= 말풍선 제거 — 휴대폰에서는 보이지 않았다. 무엇이 진행 중인지는 아래 단계 카드의
+                    "진행 중 · …" 배지가 글로 말한다 */}
+                {signal && (
+                  <span className="jr-step__dot">
+                    <span className="sr-only">(진행 중)</span>
+                  </span>
+                )}
+              </a>
+            );
+          })}
+        </nav>
+        <p className="m-0 t-caption text-on-dark-muted" aria-live="polite">
+          {syncLine(sync, ready)}
           {ready && sync === "guest" && (
             <>
               {" "}
-              <Link href="/login?callbackUrl=%2Fjourney" className="tap-line font-bold text-primary no-underline">
+              <Link
+                href="/login?callbackUrl=%2Fjourney"
+                className="inline-flex min-h-[24px] items-center font-bold text-on-dark underline-offset-2 hover:underline"
+              >
                 로그인 ›
               </Link>
             </>
           )}
         </p>
-        <p className="m-0 t-caption text-text-3">일반적인 순서 안내 · 법률·세무 판단은 계약·잔금 일정표의 근거 법령 확인</p>
+      </section>
+
+      {/* ── 여섯 단계 ── */}
+      <ol className="m-0 flex list-none flex-col gap-3 p-0" aria-label="내 집 마련 여섯 단계">
+        {JOURNEY_STAGES.map((s) => {
+          const doneAt = ready ? state.done[s.id] ?? null : null;
+          const isDone = Boolean(doneAt);
+          const isCurrent = ready && current === s.id;
+          const signal = !isDone ? signalFor(s.id) : null;
+          const popKey = pop?.id === s.id ? pop.n : 0;
+          return (
+            <li
+              key={s.id}
+              id={`stage-${s.id}`}
+              data-state={isDone ? "done" : isCurrent ? "current" : "todo"}
+              className="jr-stage card scroll-mt-24 rounded-2xl p-4 md:p-5"
+            >
+              <div className="flex items-start gap-3">
+                <span className="jr-stage__num" aria-hidden="true">
+                  {isDone ? (
+                    <Icon key={popKey} name="check" size={18} strokeWidth={2.6} className={popKey ? "njn-pop-once" : ""} />
+                  ) : (
+                    s.n
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <h2 className="m-0 t-section text-ink">
+                      <span className="sr-only">{s.n}단계 · </span>
+                      {s.title}
+                    </h2>
+                    {isCurrent && <span className="jr-badge jr-badge--now">지금 단계</span>}
+                    {isDone && <span className="jr-badge jr-badge--done">완료</span>}
+                    {signal && <span className="jr-badge jr-badge--active">진행 중 · {signal}</span>}
+                  </div>
+                  <p className="m-0 mt-1 t-sub text-text-2">{s.why}</p>
+                </div>
+                <span className="jr-stage__icon hidden sm:flex" aria-hidden="true">
+                  <Icon name={s.icon} size={18} />
+                </span>
+              </div>
+
+              <div className="mt-3">
+                <StageTasks stage={s} />
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-divider pt-3">
+                {/* 안내 한 줄은 필요한 카드에만 — 여섯 장에 같은 문장을 반복하지 않는다 */}
+                <span className="t-caption text-text-3">
+                  {isDone && doneAt
+                    ? `${formatKoreanDay(kstDayOf(doneAt) ?? doneAt.slice(0, 10))}에 체크했어요 · 다시 누르면 풀려요`
+                    : isCurrent
+                      ? "끝냈으면 체크해 두세요 — 순서가 달라도 괜찮아요"
+                      : ""}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => toggle(s.id)}
+                  aria-pressed={isDone}
+                  disabled={!ready}
+                  className={`jr-done btn-md press gap-1.5 ${isDone ? "jr-done--on" : "btn-soft"}`}
+                >
+                  <Icon name="check" size={16} strokeWidth={2.4} />
+                  {isDone ? "완료했어요" : "다 했어요"}
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+
+      {/* ── 끝: 계약 입구 + 안내 ── */}
+      <section className="card flex flex-col gap-3 rounded-2xl p-4 md:flex-row md:items-center md:justify-between md:p-5">
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="t-section text-ink">계약을 앞두고 있나요?</span>
+          <span className="t-sub text-text-2">
+            계약일·잔금일만 넣으면 계약 전 확인부터 거래신고·취득세·등기·전입신고 기한까지 날짜순으로 정리해요.
+          </span>
+        </div>
+        <Link href="/journey/contract" className="btn-primary btn-md shrink-0 no-underline">
+          계약·잔금 일정표 만들기
+        </Link>
+      </section>
+
+      <div className="flex flex-col gap-2 px-1 pb-2">
+        <p className="m-0 t-caption text-text-3">
+          단계 설명과 연결한 화면은 일반적인 순서를 돕는 안내예요. 이미 지난 단계는 체크하고 넘어가도 돼요. 법률·세무
+          판단이 필요한 일은 계약·잔금 일정표의 근거 법령과 공식 안내를 함께 확인하세요.
+        </p>
         {ready && done > 0 && (
           <button
             type="button"

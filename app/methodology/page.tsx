@@ -111,23 +111,27 @@ export default function MethodologyPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(faqJsonLd()) }}
       />
-      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 항목 6개(질문 굵게 + 답 문단, 1px 선으로만 가름) → 최근 변경 행 →
-          정정 이력 한 줄 → 면책 캡션. 지운 것: 정의형 소개 문단(→ 사실 줄), 항목마다 12px 카드, "최근 변경" 설명 문장,
-          회색 안내 상자(→ 캡션). 굵기 800(font-extrabold) → 700. 앵커(#temperature · #corrections 등)는 그대로. */}
-      <div className="mx-auto flex max-w-[760px] flex-col gap-8">
-        <header className="flex flex-col gap-0.5">
-          <h1 className="rise-in t-title text-ink">내집나우 시세는 이렇게 계산합니다</h1>
-          <p className="t-sub text-text-3">
-            국토교통부 실거래 · 항목 {SECTIONS.length}개 · 변경 {CHANGELOG.length}건 · 코드가 실제로 하는 처리 그대로
-          </p>
-        </header>
+      <div className="mx-auto max-w-[760px]">
+        <h1 className="rise-in text-[24px] font-bold text-ink">
+          내집나우 시세는 이렇게 계산합니다
+        </h1>
+        {/* G12 — 정의형 첫 문단: 이 페이지가 무엇인지 완결 문장으로 */}
+        <p className="rise-in-1 mt-2 text-[13px] leading-[1.7] text-text-2">
+          이 페이지는 내집나우(naezipnow.com)이 국토교통부 실거래 데이터를 수집·집계해
+          시세와 지표를 만드는 방식을 공개한 문서입니다. 새로 만든 규칙이 아니라,
+          서비스가 실제로 동작하는 방식을 그대로 적었습니다.
+        </p>
 
-        <div className="card flex flex-col divide-y divide-line rounded-lg px-4">
-          {SECTIONS.map((s) => (
-            <section key={s.id} id={s.id} className="scroll-mt-24 py-4">
-              <h2 className="t-section text-ink">{s.q}</h2>
+        <div className="mt-6 flex flex-col gap-4">
+          {SECTIONS.map((s, i) => (
+            <section
+              key={s.id}
+              id={s.id}
+              className={`rise-in-${Math.min(i + 2, 6)} card rounded-3xl p-6`}
+            >
+              <h2 className="text-[15px] font-bold text-ink">{s.q}</h2>
               {s.a.map((p, j) => (
-                <p key={j} className="mt-1.5 t-body leading-[1.75] text-text-1">
+                <p key={j} className="mt-2 text-[13px] leading-[1.75] text-text-1">
                   {p}
                 </p>
               ))}
@@ -135,35 +139,41 @@ export default function MethodologyPage() {
           ))}
         </div>
 
-        {/* 웹11 — 방법론 최근 변경. CHANGELOG 배열(실제 배포된 변경만) 렌더. [v4] 구분선 행(날짜 = 보조 줄) */}
-        <section id="changelog" className="flex scroll-mt-24 flex-col gap-2">
-          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
-            최근 변경 <span className="t-num text-text-3">{CHANGELOG.length}</span>
-          </h2>
-          <ul className="card flex flex-col divide-y divide-line rounded-lg px-4">
+        {/* 웹11 — 방법론 최근 변경. CHANGELOG 배열(실제 배포된 변경만) 렌더 */}
+        <section id="changelog" className="card mt-6 rounded-3xl p-6">
+          <h2 className="text-[15px] font-bold text-ink">최근 변경</h2>
+          <p className="mt-2 text-[13px] leading-[1.75] text-text-2">
+            집계 방식이 바뀌면 이 목록에 날짜와 함께 남깁니다.
+          </p>
+          <ul className="mt-3 flex flex-col gap-2.5">
             {CHANGELOG.map((c) => (
-              <li key={`${c.date}-${c.text.slice(0, 8)}`} className="py-3">
-                <span className="block t-sub font-bold tabular-nums text-text-3">{c.date}</span>
-                <span className="mt-0.5 block t-body leading-[1.7] text-text-1">{c.text}</span>
+              <li key={`${c.date}-${c.text.slice(0, 8)}`} className="flex gap-3 text-[13px] leading-[1.7]">
+                <span className="shrink-0 font-bold tabular-nums text-text-3">{c.date}</span>
+                <span className="text-text-1">{c.text}</span>
               </li>
             ))}
           </ul>
         </section>
 
-        {/* G21 — 정정 이력. 데이터·집계 오류를 고치면 여기 남긴다. 아직 0건이라고 정직하게 적는다. [v4] 카드 → 한 줄 */}
-        <section id="corrections" className="flex scroll-mt-24 flex-col gap-1">
-          <h2 className="t-section text-ink">정정 이력</h2>
-          <p className="t-body text-text-1">
-            기록된 정정 0건(2026년 7월 공개 이후) · 정정하면 날짜·내용을 여기 남김 · 오류 제보는{" "}
-            <Link href="/support" className="tap-line font-bold text-primary no-underline">
-              고객센터
-            </Link>
+        {/* G21 — 정정 이력. 데이터·집계 오류를 고치면 여기 남긴다.
+            아직 0건이라고 정직하게 적는 것부터가 이 제도의 시작이다. */}
+        <section id="corrections" className="card mt-6 rounded-3xl p-6">
+          <h2 className="text-[15px] font-bold text-ink">정정 이력</h2>
+          <p className="mt-2 text-[13px] leading-[1.75] text-text-1">
+            공개된 수치·집계에서 오류를 발견해 정정하면 날짜와 내용을 이 목록에
+            남깁니다. 이 페이지 공개(2026년 7월) 이후 기록된 정정은 아직 없습니다.
+            오류 제보는 고객센터로 부탁드립니다.
           </p>
         </section>
 
-        <p className="t-caption leading-[1.7] text-text-3">
-          방식이 바뀌면 이 페이지를 갱신 · 시세·분석 결과는 참고용 정보이며 투자 판단의 책임은 이용자 본인에게 있습니다
-        </p>
+        <div className="mt-6 rounded-lg bg-bg p-4 text-[12px] leading-[1.7] text-text-3">
+          본 문서의 방식은 서비스 개선에 따라 바뀔 수 있으며, 바뀌면 이 페이지를
+          갱신합니다. 시세·분석 결과는 참고용 정보이며 투자 판단의 책임은 이용자
+          본인에게 있습니다. 문의:{" "}
+          <Link href="/support" className="font-bold text-primary">
+            고객센터
+          </Link>
+        </div>
       </div>
     </PageShell>
   );

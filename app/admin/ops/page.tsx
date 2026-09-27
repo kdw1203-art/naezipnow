@@ -143,7 +143,7 @@ export default async function AdminOpsPage() {
 
   return (
     <>
-      <div className="rise-in text-[19px] font-extrabold text-white">
+      <div className="rise-in text-[19px] font-bold text-white">
         공지·배너 스케줄러 · 운영 지표 · 권한(RBAC) · 약관 버전 관리
       </div>
 
@@ -153,13 +153,13 @@ export default async function AdminOpsPage() {
       {alerts.length > 0 && (
         <div className="rise-in-1 flex flex-col gap-2.5 rounded-3xl border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-5">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[13px] font-extrabold text-white">운영 경보 (7일)</span>
+            <span className="text-[13px] font-bold text-white">운영 경보 (7일)</span>
             {criticalAlerts.length > 0 ? (
-              <span className="rounded-md bg-[rgba(255,107,107,.16)] px-2 py-0.5 text-[12px] font-extrabold text-ai-danger">
+              <span className="rounded-md bg-[rgba(255,107,107,.16)] px-2 py-0.5 text-[12px] font-bold text-ai-danger">
                 critical {criticalAlerts.length}종 진행 중
               </span>
             ) : (
-              <span className="rounded-md bg-[rgba(76,175,130,.16)] px-2 py-0.5 text-[12px] font-extrabold text-[#4caf82]">
+              <span className="rounded-md bg-[rgba(76,175,130,.16)] px-2 py-0.5 text-[12px] font-bold text-[#4caf82]">
                 진행 중 critical 없음
               </span>
             )}
@@ -179,7 +179,7 @@ export default async function AdminOpsPage() {
                 }`}
               >
                 <span
-                  className={`rounded px-1.5 py-px text-[10px] font-extrabold ${
+                  className={`rounded px-1.5 py-px text-[10px] font-bold ${
                     !a.active
                       ? "bg-[rgba(255,255,255,.08)] text-[#9aa6b8]"
                       : a.severity === "critical"
@@ -192,11 +192,11 @@ export default async function AdminOpsPage() {
                 <span className="text-[13px] font-bold text-white">{a.checkName}</span>
                 {/* [999] 진행 중 / 해소 — 마지막 발생 시각(KST)과 함께 */}
                 {a.active ? (
-                  <span className="rounded px-1.5 py-px text-[10px] font-extrabold bg-[rgba(255,107,107,.12)] text-[#ffb4a8]">
+                  <span className="rounded px-1.5 py-px text-[10px] font-bold bg-[rgba(255,107,107,.12)] text-[#ffb4a8]">
                     진행 중
                   </span>
                 ) : (
-                  <span className="rounded px-1.5 py-px text-[10px] font-extrabold bg-[rgba(76,175,130,.14)] text-[#4caf82]">
+                  <span className="rounded px-1.5 py-px text-[10px] font-bold bg-[rgba(76,175,130,.14)] text-[#4caf82]">
                     해소 · {a.sinceLastHours >= 48 ? `${Math.round(a.sinceLastHours / 24)}일 전` : `${Math.round(a.sinceLastHours)}h 전`}
                   </span>
                 )}
@@ -218,7 +218,7 @@ export default async function AdminOpsPage() {
       {audits.length > 0 && (
         <div className="rise-in-1 rounded-2xl border border-[rgba(255,255,255,.07)] bg-[rgba(255,255,255,.02)] p-4">
           <div className="flex items-baseline justify-between">
-            <span className="text-[15px] font-extrabold text-white">관리자 행위 기록</span>
+            <span className="text-[15px] font-bold text-white">관리자 행위 기록</span>
             <span className="text-[12px] text-[#9aa6b8]">admin_audit_log · 최근 15건</span>
           </div>
           <div className="mt-2">
@@ -251,7 +251,7 @@ export default async function AdminOpsPage() {
           {/* 공지·배너 스케줄러 */}
           <div className={darkCard}>
             <div className="flex items-center justify-between">
-              <span className="text-[13px] font-extrabold text-white">
+              <span className="text-[13px] font-bold text-white">
                 공지·배너 스케줄러
               </span>
               {/* 2026-07-27: async 서버 컴포넌트 안의 <button> 이라 onClick 을 붙일 수
@@ -276,7 +276,7 @@ export default async function AdminOpsPage() {
                     className="flex items-center gap-2.5 rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-2.5"
                   >
                     <span
-                      className={`rounded-md chip-pad text-[10px] font-extrabold ${
+                      className={`rounded-md chip-pad text-[10px] font-bold ${
                         b.isActive
                           ? "bg-success-soft text-success"
                           : "bg-[rgba(0,0,0,.06)] text-[#9aa6b8]"
@@ -303,7 +303,7 @@ export default async function AdminOpsPage() {
               조회 실패는 "에러 없음"으로 위장하지 않는다(ok=false 를 구분 표기). */}
           <div className={darkCard}>
             <div className="flex items-baseline justify-between">
-              <span className="text-[13px] font-extrabold text-white">최근 에러</span>
+              <span className="text-[13px] font-bold text-white">최근 에러</span>
               <span className="text-[10px] text-[#9aa6b8]">
                 {errors.ok ? `24시간 ${errors.total24h.toLocaleString("ko-KR")}건` : "조회 실패"}
               </span>
@@ -324,7 +324,7 @@ export default async function AdminOpsPage() {
                     className="flex items-start gap-2 rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-2.5"
                   >
                     <span
-                      className={`mt-[1px] shrink-0 rounded-md chip-pad text-[10px] font-extrabold ${
+                      className={`mt-[1px] shrink-0 rounded-md chip-pad text-[10px] font-bold ${
                         e.count >= 10 ? "bg-[rgba(192,54,44,.18)] text-[#ff6f61]" : "bg-[rgba(255,255,255,.08)] text-[#9aa6b8]"
                       }`}
                     >
@@ -347,14 +347,14 @@ export default async function AdminOpsPage() {
           {/* 운영 지표 */}
           <div className={darkCard}>
             <div className="flex items-baseline justify-between">
-              <span className="text-[13px] font-extrabold text-white">운영 지표</span>
+              <span className="text-[13px] font-bold text-white">운영 지표</span>
               <span className="text-[10px] text-[#9aa6b8]">실집계</span>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {weekly.map((m) => (
                 <div key={m.label} className="rounded-xl bg-[rgba(255,255,255,.05)] p-3">
                   <div className="text-[10px] text-[#9aa6b8]">{m.label}</div>
-                  <div className="text-[15px] font-extrabold tabular-nums text-white">
+                  <div className="text-[15px] font-bold tabular-nums text-white">
                     {m.value}
                   </div>
                 </div>
@@ -362,7 +362,7 @@ export default async function AdminOpsPage() {
             </div>
             <div className="flex flex-col gap-1.5">
               <div className="flex items-baseline justify-between gap-2">
-                <div className="min-w-0 text-[10px] font-extrabold text-[#9aa6b8]">
+                <div className="min-w-0 text-[10px] font-bold text-[#9aa6b8]">
                   전환 퍼널: {funnelHeader}
                 </div>
                 <span className="shrink-0 text-[10px] text-[#9aa6b8]">
@@ -381,7 +381,7 @@ export default async function AdminOpsPage() {
                           title={`${step.label} · ${step.count.toLocaleString(
                             "ko-KR",
                           )}명${pct != null ? ` · ${pct}%` : ""}`}
-                          className="flex h-[22px] items-center justify-center overflow-hidden rounded-md px-1 text-[10px] font-extrabold"
+                          className="flex h-[22px] items-center justify-center overflow-hidden rounded-md px-1 text-[10px] font-bold"
                           style={{
                             flex,
                             background: funnelBarColor(i),
@@ -423,7 +423,7 @@ export default async function AdminOpsPage() {
           {/* RBAC */}
           <div className={darkCard}>
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-[13px] font-extrabold text-white">
+              <span className="text-[13px] font-bold text-white">
                 역할별 권한 (RBAC)
               </span>
               <span className="shrink-0 text-[10px] text-[#9aa6b8]">
@@ -432,7 +432,7 @@ export default async function AdminOpsPage() {
             </div>
             <div className="overflow-x-auto">
               <div className="flex min-w-[300px] flex-col text-[10px]">
-                <div className="flex rounded-t-lg bg-[rgba(255,255,255,.05)] px-2.5 py-[7px] font-extrabold text-[#9aa6b8]">
+                <div className="flex rounded-t-lg bg-[rgba(255,255,255,.05)] px-2.5 py-[7px] font-bold text-[#9aa6b8]">
                   <span className="flex-[1.6]">콘솔 섹션</span>
                   {RBAC_ROLES.map((role) => (
                     <span
@@ -463,7 +463,7 @@ export default async function AdminOpsPage() {
                         <span
                           key={role}
                           className={`flex-1 text-center ${
-                            allowed ? "font-extrabold text-success" : "text-[#9aa6b8]"
+                            allowed ? "font-bold text-success" : "text-[#9aa6b8]"
                           }`}
                         >
                           {allowed ? "✓" : "—"}
@@ -486,7 +486,7 @@ export default async function AdminOpsPage() {
 
           {/* 약관 · 개인정보 버전 관리 */}
           <div className={darkCard}>
-            <div className="text-[13px] font-extrabold text-white">
+            <div className="text-[13px] font-bold text-white">
               약관 · 개인정보 버전 관리
             </div>
             <div className="flex flex-col gap-[5px] text-[12px]">
@@ -495,7 +495,7 @@ export default async function AdminOpsPage() {
                 className="flex items-center justify-between gap-2 rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-[9px] no-underline"
               >
                 <span className="text-[#c9d2e0]">이용약관 (현행)</span>
-                <span className="flex-shrink-0 rounded-md bg-success-soft chip-pad text-[10px] font-extrabold text-success">
+                <span className="flex-shrink-0 rounded-md bg-success-soft chip-pad text-[10px] font-bold text-success">
                   보기
                 </span>
               </a>
@@ -504,7 +504,7 @@ export default async function AdminOpsPage() {
                 className="flex items-center justify-between gap-2 rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-[9px] no-underline"
               >
                 <span className="text-[#c9d2e0]">개인정보처리방침 (현행)</span>
-                <span className="flex-shrink-0 rounded-md bg-[rgba(126,162,255,.14)] chip-pad text-[10px] font-extrabold text-ai-accent">
+                <span className="flex-shrink-0 rounded-md bg-[rgba(126,162,255,.14)] chip-pad text-[10px] font-bold text-ai-accent">
                   보기
                 </span>
               </a>

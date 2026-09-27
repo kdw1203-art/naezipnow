@@ -6,8 +6,6 @@ import {
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { getBusinessInfo } from "@/lib/brand/business-info";
 
-/* [v4 · 규칙 1·5·10] 레이아웃·글자만 정리(문구는 그대로): 가운데 한 줄 760px · 본문 카드 면 제거 · 제목 t-title(800 → 700) ·
-   섹션 제목 t-section 한 단계로 통일 · 섹션 카드 → 위 1px 선. 법적 문구는 한 글자도 바꾸지 않았다. */
 export const metadata: Metadata = buildPageMetadata({
   title: "거래·수수료 안내",
   /* [970 · A-10] 구 브랜드 "nuguzip" → 내집나우(본문·데이터 필드는 다른 에이전트가 고쳤고, 메타는 여기) */
@@ -20,8 +18,8 @@ export default function FeesPolicyPage() {
   const info = getBusinessInfo();
   return (
     // 페이지 전환 모션 일관화 — globals.css riseIn(dur-md) 재사용
-    <main className="rise-in mx-auto w-full max-w-[760px]">
-      <h1 className="t-title text-ink">거래·수수료 안내</h1>
+    <main className="rise-in mx-auto w-full max-w-3xl">
+      <h1 className="text-2xl font-bold text-ink">거래·수수료 안내</h1>
       {/* [970 · A-10] 구 브랜드 "nuguzip" 표기 → 내집나우(본문 3곳 + 데이터 필드 ours).
           metadata description 의 같은 표기는 I5 몫. */}
       <p className="mt-2 text-[13px] leading-relaxed text-text-2">
@@ -34,7 +32,7 @@ export default function FeesPolicyPage() {
       </p>
 
       <section className="mt-8">
-        <h2 className="t-section text-ink">마켓플레이스 수수료</h2>
+        <h2 className="text-[19px] font-bold text-ink">마켓플레이스 수수료</h2>
         <p className="mt-1 text-xs text-text-3">
           내집나우가 실제로 정산에 적용하는 요율만 싣습니다. 리포트 판매 수수료는 정산
           계산·요금제 비교표와 같은 값이에요.

@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CommentForm } from "./PostInteractions";
 import { ReportButton } from "@/app/components/ReportButton";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* [#65·#66] 댓글 스레드 — 대댓글 1단계 + 글쓴이 채택.
  *
@@ -158,8 +157,7 @@ export function CommentThread({
   if (comments.length === 0) {
     return (
       <p className="py-2 text-[13px] text-text-3">
-        {/* [1012] 규칙 6 — "남겨보세요" 권유 대신 사실. [v4 · 규칙 8] 빈 상태는 짧은 한 줄 */}
-        댓글 아직 없음
+        아직 댓글이 없어요. 첫 댓글을 남겨보세요.
       </p>
     );
   }
@@ -192,7 +190,7 @@ export function CommentThread({
             onCancelDelete={() => setConfirmDeleteId(null)}
           />
           {repliesOf(c.id).map((r) => (
-            <div key={r.id} className="ml-3 border-l-2 border-line pl-3">
+            <div key={r.id} className="ml-9 border-l-2 border-line pl-3">
               <CommentRow
                 postId={postId}
                 c={r}
@@ -211,7 +209,7 @@ export function CommentThread({
             </div>
           ))}
           {replyTo === c.id && (
-            <div className="ml-3">
+            <div className="ml-9">
               <CommentForm postId={postId} parentId={c.id} compact />
             </div>
           )}
@@ -221,7 +219,7 @@ export function CommentThread({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="btn-ghost btn-md w-full"
+          className="btn-soft tap self-center rounded-xl px-4 py-2 text-[13px] font-bold"
         >
           댓글 {hiddenCount}개 더 보기
         </button>
@@ -262,16 +260,18 @@ function CommentRow({
   onCancelDelete: () => void;
 }) {
   return (
-    /* [1012] 규칙 3 — 댓글 아바타 그라데이션 → 단색(--divider).
-       [v4 · 규칙 7] 그 빈 원(글자도 사진도 없는 32px 장식 칸)도 뺐다 — 댓글은 이름 · 시각 한 줄 + 본문 */
-    <div className="flex">
+    <div className="flex gap-2.5">
+      <div className="h-8 w-8 shrink-0 rounded-full bg-divider" />
       <div className="flex flex-1 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-xs font-bold text-ink">
             {c.authorLabel}
           </span>
-          {/* [v4 · 규칙 6] 면 있는 배지 → 의미색 굵은 글자(피드의 "추천글"과 같은 방식) */}
-          {c.adopted && <span className="text-[12px] font-bold text-success">채택된 답변</span>}
+          {c.adopted && (
+            <span className="rounded-md bg-success-soft px-1.5 py-0.5 text-[10px] font-bold text-success">
+              ✓ 채택된 답변
+            </span>
+          )}
           <span className="text-[10px] text-text-3">{label}</span>
         </div>
         <p className="text-[13px] leading-[1.55] text-text-1">{c.body}</p>

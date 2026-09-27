@@ -21,7 +21,7 @@ import {
   filterByTopic,
   isQnaTopicKey,
 } from "@/lib/qna/topics";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-bold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 type StatusKey = "all" | "open" | "answered";
 type SortKey = "recent" | "answers" | "views";

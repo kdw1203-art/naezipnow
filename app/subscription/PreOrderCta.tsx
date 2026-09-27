@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { planLabel } from "@/lib/subscriptions/labels";
 
 /**
  * 결제 미개통 상태의 사전 등록 버튼 (항목 33).
@@ -24,7 +23,6 @@ export function PreOrderCta({
   dark = false,
   weeklyAvailable = false,
   guest = false,
-  hint: showHint = true,
 }: {
   tier: "pro" | "expert";
   billing: "weekly" | "monthly" | "annual";
@@ -37,8 +35,6 @@ export function PreOrderCta({
   weeklyAvailable?: boolean;
   /** [970 · A-38] 비로그인 — 서버(page.tsx)가 세션으로 판정해 내려준다 */
   guest?: boolean;
-  /** [v4] 안내 한 줄을 버튼 아래에 그릴지 — 요금제 카드는 그리드 아래에 한 번만 그린다(카드 CTA 높이 맞춤) */
-  hint?: boolean;
 }) {
   const [state, setState] = useState<"idle" | "busy" | "done" | "error">("idle");
 
@@ -65,17 +61,15 @@ export function PreOrderCta({
 
   if (state === "done") {
     return (
-      /* [v4 · 규칙 10] 가운데 정렬 → 왼쪽 */
-      <div className="rounded-lg bg-primary-soft p-[13px] t-body font-bold text-primary">
-        등록됨 · 결제가 열리면 알림 발송
+      <div className="rounded-lg bg-primary-soft p-[13px] text-center t-body font-bold text-primary">
+        등록됐어요 — 결제가 열리면 알림으로 알려드릴게요
       </div>
     );
   }
 
-  /* [v4 · 규칙 3] 설명 문장 → 사실 한 줄 */
   const hint = weeklyAvailable
-    ? `월간·연간 결제 준비 중 · 지금은 ${planLabel("pro")} 주간권(7일)만 구매 가능`
-    : "결제 준비 중 · 아직 결제가 열리지 않음";
+    ? "월간·연간 결제는 준비 중이에요 — 지금은 플러스 주간권(7일)만 구매할 수 있어요."
+    : "결제 수단을 준비하고 있어요 — 아직 결제가 열리지 않았습니다.";
 
   if (guest) {
     /* 로그인 후 고른 플랜·주기로 돌아온다(page.tsx 가 ?plan=·?billing= 을 읽어 강조) */
@@ -88,11 +82,11 @@ export function PreOrderCta({
         >
           로그인하고 오픈 알림 받기
         </Link>
-        {showHint && (
-          <p className={`t-caption ${dark ? "text-ai-muted" : "text-text-3"}`}>
-            {hint} · 로그인하면 열릴 때 알림
-          </p>
-        )}
+        <p
+          className={`text-center text-[12px] leading-[1.6] ${dark ? "text-ai-muted" : "text-text-3"}`}
+        >
+          {hint} 로그인하면 열릴 때 알림을 보내드려요.
+        </p>
       </>
     );
   }
@@ -109,12 +103,12 @@ export function PreOrderCta({
       >
         {state === "busy" ? "등록 중…" : "오픈 알림 받기"}
       </button>
-      {(showHint || state === "error") && (
-        <p className={`t-caption ${state === "error" ? "font-bold text-danger" : dark ? "text-ai-muted" : "text-text-3"}`}>
-          {showHint ? hint : ""}
-          {state === "error" && `${showHint ? " · " : ""}등록 실패 — 잠시 후 다시 눌러 주세요`}
-        </p>
-      )}
+      <p
+        className={`text-center text-[12px] leading-[1.6] ${dark ? "text-ai-muted" : "text-text-3"}`}
+      >
+        {hint}
+        {state === "error" && " 등록에 실패했어요. 잠시 후 다시 눌러 주세요."}
+      </p>
     </>
   );
 }

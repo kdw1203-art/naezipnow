@@ -1,6 +1,7 @@
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
+import Link from "next/link";
 import { PageShell } from "../../components/PageShell";
-import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
+import { NextActions } from "../../components/NextActions";
+import { EmptyState } from "@/app/components/ui/EmptyState";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 
 /* ============================================================
@@ -43,30 +44,51 @@ export const metadata = buildPageMetadata({
 });
 
 export default function PortfolioPage() {
-  /* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 빈 상태 한 줄 → 지금 되는 화면 구분선 행 4개.
-     지운 것: 아이콘 빈 상태(아이콘 + 세 문장), NextActions 칩(채움 파랑 포함 → 행), 자산 알림 카드(설명 + 목록 + 버튼 → 행 하나).
-     링크는 전부 행으로 남겼다(관심 단지 대시보드 · 계산기 · 시나리오 · 타이밍 · 알림 설정). */
   return (
     <PageShell breadcrumb="분석 도구 › 자산 배분">
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
-        <header className="flex flex-col gap-0.5">
-          <h1 className="rise-in t-title text-ink">자산 배분 시뮬레이터</h1>
-          <p className="t-sub text-text-3">등록된 자산 0건 · 자산 등록 준비 중 · 예시 자산으로 채우지 않음</p>
-        </header>
+      <div className="mb-3 flex items-center justify-between">
+        <h1 className="rise-in t-title text-ink">자산 배분 시뮬레이터</h1>
+      </div>
 
-        <section aria-labelledby="pf-next" className="flex flex-col gap-2">
-          <h2 id="pf-next" className="t-section text-ink">
-            지금 쓸 수 있는 화면
-          </h2>
-          <ul data-tone="blue" className="card flex flex-col divide-y divide-line rounded-lg px-4">
-            <SummaryRow label="관심 단지 대시보드" sub="담은 단지의 현재가·변동" href="/my/watchlist" />
-            <SummaryRow label="대출·비용 계산기" href="/calculator" />
-            <SummaryRow label="매도 vs 보유 시나리오" href="/analysis/scenario" />
-            <SummaryRow label="시세·타이밍 보기" href="/analysis/timing" />
-            {/* 자산 알림은 알림 설정(/notifications)에 실제로 있는 항목 — 숫자를 주장하지 않고 받을 수 있는 것만 */}
-            <SummaryRow label="자산 알림 설정" sub={`등록 뒤 · ${ALERTS.join(" · ")}`} href="/notifications" />
-          </ul>
-        </section>
+      <div className="flex flex-col gap-4">
+        <div className="rise-in-1">
+          <EmptyState
+            icon="wallet"
+            title="아직 등록된 자산이 없어요"
+            desc="총자산·순자산·부동산 비중은 내가 등록한 보유 자산에서 계산돼요. 자산 등록(저장·자동 시세 연동)이 아직 열리지 않아서, 예시 자산으로 대신 채우지 않고 비워둡니다. 지금은 관심 단지를 담아 두면 현재가·변동을 한 표로 볼 수 있어요."
+            action={{ label: "관심 단지 대시보드", href: "/my/watchlist" }}
+          />
+        </div>
+
+        {/* 준비 중이라고만 하고 끝내면 막다른 화면이 된다 — 지금 동작하는 계산으로 잇는다 */}
+        <div className="rise-in-2">
+          <NextActions
+            actions={[
+              { label: "대출·비용 계산기", href: "/calculator", primary: true },
+              { label: "매도 vs 보유 시나리오", href: "/analysis/scenario" },
+              { label: "시세·타이밍 보기", href: "/analysis/timing" },
+            ]}
+          />
+        </div>
+
+        <div className="rise-in-3 card flex flex-col gap-2 rounded-3xl p-[18px]">
+          <div className="t-body font-bold text-ink">자산 알림</div>
+          <div className="t-sub text-text-3">
+            자산 등록이 열리면 아래 알림을 받을 수 있어요.
+          </div>
+          {/* 장식용 가짜 토글 제거 — 실제 알림 설정으로 연결 */}
+          {ALERTS.map((a) => (
+            <div key={a} className="text-xs text-text-1">
+              · {a}
+            </div>
+          ))}
+          <Link
+            href="/notifications"
+            className="btn-soft mt-1 rounded-lg p-2.5 text-center text-xs no-underline"
+          >
+            알림 설정 열기
+          </Link>
+        </div>
       </div>
     </PageShell>
   );

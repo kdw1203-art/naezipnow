@@ -65,7 +65,7 @@ export function InquiryForm({
   if (done) {
     return (
       <div className="flex flex-col items-start gap-2 rounded-xl bg-[rgba(29,79,216,.06)] px-4 py-5">
-        <div className="text-[15px] font-extrabold text-ink">참여 문의가 접수됐어요</div>
+        <div className="text-[15px] font-bold text-ink">참여 문의가 접수됐어요</div>
         <p className="text-[13px] leading-[1.7] text-text-2">
           등록자에게 문의가 전달됩니다. 이후 계약·정산 조건은 <b>당사자 간에 직접</b>{" "}
           협의·확인해 주세요. 내집나우는 소개·매칭만 담당합니다.

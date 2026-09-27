@@ -15,7 +15,6 @@ import { QuoteRequestLink } from "../QuoteRequest";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { DEFAULT_DESKTOP_ORIGIN } from "@/lib/platform-shell";
 import { formatKstDate } from "@/lib/format/kst";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 전문가 상세 (953 개편).
    공유·색인되는 유일한 전문가 주소. 인증 전문가만 index, 심사 중은 noindex.
@@ -315,13 +314,12 @@ export default async function ExpertDetailPage({
         <Section title={e.reviews > 0 ? `후기 ${e.reviews}건` : "후기"} delay={2}>
           {reviews.length === 0 ? (
             <p className="t-sub text-text-3">
-              이 전문가의 후기가 아직 없어요 — 후기는 답변이 완료된 상담의 의뢰자만 남길 수 있어요.
+              아직 후기가 없어요. 후기는 답변이 완료된 상담의 의뢰자만 남길 수 있어요 — 첫 상담을 신청해 보세요.
             </p>
           ) : (
-            /* [v4.1 · 리퀴드 목록] 후기 = hanji · 유리판 안이라 첫/끝 행의 세로 여백을 없애지 않는다 */
-            <div data-tone="hanji" className="flex flex-col divide-y divide-line">
+            <div className="flex flex-col divide-y divide-line">
               {reviews.map((r) => (
-                <div key={r.id} className="flex flex-col gap-1 py-3">
+                <div key={r.id} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <Stars rating={r.rating} size={13} />
                     <span className="t-sub font-bold text-ink">{r.reviewerLabel}</span>

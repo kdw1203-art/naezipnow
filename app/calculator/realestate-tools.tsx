@@ -1,6 +1,4 @@
 "use client";
-/* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 2곳) · 손으로 적은 카드 그림자 1곳 제거(카드는 1px 선만). */
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 2곳을 font-bold(700)로 바꿨다. */
 
 /* 항목 B10 — 부동산 계산기 (전월세 전환 · 갭/전세가율 · 임대수익률)
    전부 클라이언트 계산 · 외부 데이터/ API 없음. 기존 계산기 UI 패턴(카드·다크 결과패널·
@@ -99,11 +97,11 @@ function Field({
   );
 }
 
-/** 결과 카드 안의 보조 행. [v4 · 규칙 4] 네이비 면 → 흰 카드(규칙 계산 결과라 AI 패널이 아니다) — 라이트 토큰 */
+/** 다크 결과 패널 안의 보조 행 */
 function ResultRow({
   label,
   value,
-  tone = "text-ink",
+  tone = "text-ai-text",
 }: {
   label: ReactNode;
   value: string;
@@ -111,13 +109,13 @@ function ResultRow({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-2 text-xs">
-      <span className="text-text-3">{label}</span>
+      <span className="text-ai-muted">{label}</span>
       <span className={`t-num font-bold ${tone}`}>{value}</span>
     </div>
   );
 }
 
-/** 결과 카드 — 결론 한 줄 → 큰 숫자 → 보조 행 → 식(카드 밖 각주) */
+/** 다크 결과 패널 — 결론 한 줄 → 큰 숫자 → 보조 행 → 식(패널 밖 각주) */
 function ResultPanel({
   conclusion,
   primaryLabel,
@@ -134,11 +132,12 @@ function ResultPanel({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="card flex flex-col gap-2.5 rounded-lg p-4">
-        {conclusion && <p className="t-body break-words font-bold text-ink">{conclusion}</p>}
+      {/* [--text-3]: ⓘ 단추 색(var(--text-3))이 어두운 면에서 흐려 패널 안에서만 ai-muted 로 읽게 한다 */}
+      <div className="ai-panel flex flex-col gap-2.5 rounded-3xl p-[18px] shadow-[0_14px_36px_rgba(16,28,54,.22)] [--text-3:var(--ai-muted)]">
+        {conclusion && <p className="t-body break-words font-bold text-ai-text">{conclusion}</p>}
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <span className="flex items-center gap-0.5 text-[13px] text-text-3">{primaryLabel}</span>
-          <span className="t-title text-ink">{primaryValue}</span>
+          <span className="flex items-center gap-0.5 text-[13px] text-ai-muted">{primaryLabel}</span>
+          <span className="t-title text-ai-text">{primaryValue}</span>
         </div>
         {children}
       </div>
@@ -149,7 +148,7 @@ function ResultPanel({
 
 function ToolCard({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
-    <div className="card flex flex-col gap-3 rounded-lg p-[18px]">
+    <div className="card flex flex-col gap-3 rounded-3xl p-[18px]">
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-[13px] font-bold text-ink">{title}</span>
         <span className="text-[12px] font-medium text-text-3">{subtitle}</span>
@@ -209,7 +208,7 @@ export function JeonseWolse() {
       : `보증금 ${nb(manwonText(num(deposit)))}에 월세 ${nb(manwonText(num(monthly)))}이면 전세로는 ${nb(manwonText(convertedJeonse))}이에요`;
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4 lg:grid-cols-2">
       <ToolCard title="1. 전월세 전환" subtitle="전세 ↔ 월세 환산">
         <Segmented
           options={DIRECTIONS}
@@ -277,7 +276,7 @@ export function GapRatio() {
         : `매매가 ${nb(manwonText(priceN))}에 전세 ${nb(manwonText(jeonseN))}이면 갭은 ${nb(manwonText(gap))}, 전세가율은 ${pct(ratio, 1)}예요`;
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4 lg:grid-cols-2">
       <ToolCard title="2. 갭 · 전세가율" subtitle="갭투자 실투자금 · 전세가율">
         <Field label="매매가" value={price} onChange={setPrice} unit="만원" hint={manHint(price)} />
         <Field label="전세가" value={jeonse} onChange={setJeonse} unit="만원" hint={manHint(jeonse)} />
@@ -295,11 +294,11 @@ export function GapRatio() {
         note="갭은 매매가에서 전세가를 뺀 갭투자 실투자금이며, 전세가율(전세 ÷ 매매)이 높을수록 갭이 작아집니다. 취득세·중개보수는 넣지 않았어요."
       >
         <div className="flex items-baseline justify-between gap-2 text-xs">
-          <span className="flex items-center gap-0.5 text-text-3">
+          <span className="flex items-center gap-0.5 text-ai-muted">
             전세가율 (전세 ÷ 매매)
             <Explain term="jeonse-garyul" how="전세가율 = 전세가 ÷ 매매가 × 100" size={12} />
           </span>
-          <TweenPercent value={ratio} digits={1} className="text-[15px] text-ink" />
+          <TweenPercent value={ratio} digits={1} className="text-[15px] text-ai-accent" />
         </div>
         <ResultRow label="매매가" value={manwonText(priceN)} />
         <ResultRow label="전세가" value={manwonText(jeonseN)} />
@@ -346,7 +345,7 @@ export function RentalYield() {
   const losing = primaryYield !== null && primaryYield < 0;
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4 lg:grid-cols-2">
       <ToolCard title="3. 임대수익률" subtitle="연 수익률 · 자기자본수익률">
         <Field label="매매가" value={price} onChange={setPrice} unit="만원" hint={manHint(price)} />
         <Field label="보증금" value={deposit} onChange={setDeposit} unit="만원" hint={manHint(deposit)} />
@@ -364,7 +363,7 @@ export function RentalYield() {
       <ResultPanel
         conclusion={conclusion}
         primaryLabel={hasLoan ? "자기자본수익률 (레버리지)" : "연 임대수익률"}
-        primaryValue={<TweenPercent value={primaryYield} className={losing ? "text-danger" : undefined} />}
+        primaryValue={<TweenPercent value={primaryYield} className={losing ? "text-ai-danger" : undefined} />}
         note={
           hasLoan
             ? "자기자본수익률 = (연 임대수익 − 연 대출이자) ÷ 실투자금(매매가 − 보증금 − 대출금). 세금·관리비·공실은 넣지 않았어요."
@@ -374,11 +373,11 @@ export function RentalYield() {
         <ResultRow label="연 임대수익 (월세 × 12)" value={manwonText(annualRent)} />
         {hasLoan && (
           <>
-            <ResultRow label="연 대출이자" value={manwonText(annualInterest)} tone="text-danger" />
+            <ResultRow label="연 대출이자" value={manwonText(annualInterest)} tone="text-ai-danger" />
             <ResultRow
               label="순 임대수익"
               value={manwonText(netAnnual)}
-              tone={netAnnual < 0 ? "text-danger" : undefined}
+              tone={netAnnual < 0 ? "text-ai-danger" : undefined}
             />
           </>
         )}

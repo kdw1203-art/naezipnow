@@ -1,7 +1,6 @@
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
+import { AdZone } from "@/app/components/ads/AdZone";
 import Link from "next/link";
-import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 import { notFound } from "next/navigation";
 import { PageShell } from "../../components/PageShell";
 import {
@@ -123,52 +122,62 @@ export default async function GlossaryTermPage({
         }}
       />
 
-      {/* [v4 · 한 화면 한 가지] 분류 한 줄 + 제목 → 정의 본문(카드 테두리 없이) + 채움 파랑 1개 → 관련 용어 구분선 행 →
-          같은 분류 칩 한 줄 → 안내 캡션 한 줄. 지운 것: 정의 카드 테두리, 관련 용어 카드(→ 행), 여러 줄 칩(→ 한 줄),
-          하우스 광고(AdZone), 회색 안내 상자(세 문장 → 캡션 한 줄). */}
-      <div className="mx-auto flex max-w-[760px] flex-col gap-8">
-        <header className="flex flex-col gap-0.5">
-          <nav aria-label="분류" className="rise-in t-sub text-text-3">
-            <Link href="/glossary" className="tap-line font-bold text-text-2 no-underline">
-              부동산 용어사전
-            </Link>
-            <span className="mx-1">›</span>
-            <span>{t.category}</span>
-          </nav>
-          <h1 className="rise-in t-title text-ink">{t.term}</h1>
-        </header>
+      <div className="mx-auto max-w-[720px]">
+        <nav className="rise-in text-[12px] text-text-3">
+          <Link href="/glossary" className="font-bold text-primary">
+            부동산 용어사전
+          </Link>
+          <span className="mx-1">›</span>
+          <span>{t.category}</span>
+        </nav>
+
+        <h1 className="rise-in mt-2 text-[24px] font-bold leading-[1.3] text-ink">
+          {t.term}
+        </h1>
 
         {/* 발췌 대비 — 첫 문단만 떼어 가도 무엇에 대한 설명인지 문단 안에서 완결된다. */}
-        <article className="rise-in-1 flex flex-col gap-3">
+        <article className="rise-in-1 mt-4 card rounded-3xl p-6">
           <p className="text-[15px] leading-[1.85] text-text-1">{t.def}</p>
-          {t.extra && <p className="t-body leading-[1.8] text-text-2">{t.extra}</p>}
+          {t.extra && (
+            <p className="mt-3 text-[13px] leading-[1.8] text-text-2">{t.extra}</p>
+          )}
           {t.href && (
-            <Link href={t.href} className="btn-primary flex min-h-12 items-center justify-center rounded-lg px-4 t-body no-underline">
-              {t.hrefLabel ?? "내집나우에서 보기"}
+            <Link
+              href={t.href}
+              className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-[13px] font-bold text-white"
+            >
+              {t.hrefLabel ?? "내집나우에서 보기"} ›
             </Link>
           )}
         </article>
 
         {related.length > 0 && (
-          <section className="flex flex-col gap-2">
-            <h2 className="t-section text-ink">함께 보면 좋은 용어</h2>
-            <ul data-tone="hanji" className="card flex flex-col divide-y divide-line rounded-lg px-4">
+          <section className="rise-in-2 mt-5">
+            <h2 className="text-[13px] font-bold text-ink">함께 보면 좋은 용어</h2>
+            <div className="mt-2 flex flex-col gap-2">
               {related.map((r) => (
-                <SummaryRow key={r.slug} label={r.term} sub={r.short} href={`/glossary/${r.slug}`} />
+                <Link
+                  key={r.slug}
+                  href={`/glossary/${r.slug}`}
+                  className="card rounded-lg p-4"
+                >
+                  <div className="text-[13px] font-bold text-ink">{r.term}</div>
+                  <div className="mt-1 text-[12px] leading-[1.6] text-text-2">{r.short}</div>
+                </Link>
               ))}
-            </ul>
+            </div>
           </section>
         )}
 
         {siblings.length > 0 && (
-          <section className="flex flex-col gap-2">
-            <h2 className="t-section text-ink">{t.category} 용어</h2>
-            <div className="-mx-3.5 flex gap-2 overflow-x-auto px-3.5 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0">
+          <section className="rise-in-3 mt-5">
+            <h2 className="text-[13px] font-bold text-ink">{t.category} 용어</h2>
+            <div className="mt-2 flex flex-wrap gap-2">
               {siblings.map((s) => (
                 <Link
                   key={s.slug}
                   href={`/glossary/${s.slug}`}
-                  className="chip inline-flex min-h-[32px] shrink-0 items-center border border-line bg-surface px-3 t-sub font-bold text-text-1 no-underline"
+                  className="rounded-full border border-line bg-surface px-3 py-1.5 text-[12px] font-bold text-text-1"
                 >
                   {s.term}
                 </Link>
@@ -177,13 +186,17 @@ export default async function GlossaryTermPage({
           </section>
         )}
 
-        {/* [1012 · 규칙 6] 사실 서술. [v4 · 규칙 3] 세 문장 → 캡션 한 줄 */}
-        <p className="t-caption text-text-3">
-          일반 풀이 · 제도 수치(대출 한도·세율·규제 지역)는 시점마다 바뀌고 실제 기준은 금융기관·관할 관청 ·{" "}
-          <Link href="/methodology" className="tap-line font-bold text-primary no-underline">
+        {/* [961] 광고 공간 — 용어 풀이 끝 */}
+        <AdZone placement="article_end" seed={2} plan={null} className="mt-6" />
+        <div className="mt-6 rounded-lg bg-bg p-4 text-[12px] leading-[1.7] text-text-3">
+          용어 풀이는 일반적인 이해를 돕기 위한 것입니다. 대출 한도·세율·규제 지역
+          지정처럼 제도에 따라 달라지는 수치는 시점마다 바뀌므로, 실제 적용 기준은
+          금융기관·관할 관청에서 확인하세요. 내집나우가 시세를 집계하는 방식은{" "}
+          <Link href="/methodology" className="font-bold text-primary">
             데이터 방법론
           </Link>
-        </p>
+          에 적어 두었습니다.
+        </div>
       </div>
     </PageShell>
   );

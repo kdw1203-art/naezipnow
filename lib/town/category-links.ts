@@ -13,31 +13,18 @@
 export type TownCategoryLink = {
   href: string;
   label: string;
-  /**
-   * [v4] 짧은 이름 — /town 맨 아래 "동네 자료 — 뉴스룸 · 청약 · 공매 · 입주 · 정비사업" 한 줄에 쓴다.
-   * 한 줄에 다섯 칸이 390px 안에 들어가야 해서 label("청약 센터")의 앞 토막만. 없으면 label.
-   */
-  short?: string;
   /** 선형 아이콘 이름(app/components/Icon.tsx) — [959] 이모지 식별자를 이름으로 바꿨다.
    *  이모지는 EMOJI_MAP 을 거쳐 그려지긴 했지만 매핑이 없는 글자는 기기 폰트로 떨어졌다. */
   icon: string;
-  /**
-   * 카드 부제. [1012] 규칙 6·7 — **숫자만** 적는다("오늘 기사 4건"). 예전의 "기사 요약 · 자동 수집",
-   * "분양·경쟁률" 같은 내부 설명은 뺐다(기준 사이트의 입구 카드는 이름 + 건수뿐이다).
-   * 카탈로그에는 빈 문자열을 두고, 화면(app/town/page.tsx)이 손에 든 실데이터로 채운다.
-   * 비어 있으면 카드에 부제를 그리지 않는다 — 없는 숫자를 지어내지 않는다.
-   */
   desc: string;
-  /**
-   * 아이콘 칩 색. [1012] 규칙 9 — 예전엔 성격별 3색(파랑·초록·주황)이었다. 색 3종을 나열한 카드 줄은
-   * "AI 가 만든 사이트" 신호 5번(아이콘 나열)이라 **연한 회색 한 가지**(bg-bg + 잉크 글자)로 통일했다.
-   * 필드는 호환을 위해 남긴다(TownPageHead 도 쓴다). raw hex 금지 — 토큰 클래스만.
-   */
+  /** 아이콘 칩 색 — 9칸이 전부 같은 잉크색이라 목록이 눈에 안 들어왔다.
+   *  성격이 비슷한 것끼리 색을 묶는다(사람=파랑 / 공급·분양=초록 /
+   *  글·자료=주황). raw hex 금지 — 토큰 클래스만. */
   tone: string;
   /** 데이터가 사람 손에서 나오는 칸(전문가·모임·자료) — 비어 있을 수 있어 화면이 "모집 중"을 말한다 */
   humanSupplied?: boolean;
   /**
-   * 하위 페이지 머리(TownHero · TownPageHead)의 한 줄.
+   * 하위 페이지 머리(TownPageHead)의 한 줄.
    *
    * [974] 여기로 올린 이유: 같은 문장이 **페이지 본문과 로딩 스켈레톤 두 곳에**
    * 따로 적혀 있어서 서로 어긋났다. 실제로 /qna 는 로딩 중에는 "홈 › 동네이야기 ›
@@ -48,16 +35,20 @@ export type TownCategoryLink = {
    *
    * 문장을 이 목록 한 곳에 두면 두 화면이 어긋날 자리가 없어진다.
    * 문체 규칙은 app/town/TownPageHead.tsx 주석에 있다 — 명사형 "대상 — 출처·구성".
-   * [1012] 규칙 6 — 출처·시점이 드러나는 명사형만. 권유·슬로건 금지.
    */
   headSub: string;
   /**
-   * [978] 하위 페이지 히어로의 제목 세 토막 — **[1012] 에서 렌더를 끊었다.**
-   * "이번 달 청약, 경쟁률까지 보고 정합니다" 같은 문장은 기준 사이트 4곳 어디에도 없는
-   * 슬로건(AI 신호 4번)이라 TownHero 는 이제 카테고리 이름을 h1 로 쓰고 이 값은 읽지 않는다.
-   * 필드는 다음 릴리스에서 지운다(타입만 남김 — 옛 데이터 형태 호환).
+   * [978] 하위 페이지 히어로의 제목 — [앞, 강조, 뒤] 세 토막.
+   *
+   * 동네이야기 홈이 "다녀온 사람의 기록이 **지금** 동네를 말합니다" 인 것과 같은
+   * 모양이다. 강조 한 단어만 주홍(--brand-red-on-dark)으로 뜬다. 문자열 안에
+   * 마크업을 넣어 파싱하지 않고 세 토막으로 받는 이유는, 파싱 규칙이 생기면
+   * 번역·수정할 때마다 그 규칙을 기억해야 하기 때문이다.
+   *
+   * 문체: 홈과 같은 **평서형 한 문장**. headSub(명사형 요약)와 역할이 다르다 —
+   * 제목은 "여기서 무엇을 할 수 있는가", headSub 은 "무엇을 보는 곳인가".
    */
-  heroTitle?: readonly [string, string, string];
+  heroTitle: readonly [string, string, string];
   /** [978] 히어로 아이콘 칩의 글자색 — 네이비 위 고정색(globals.css --on-navy-*). */
   heroTone: string;
   /**
@@ -65,7 +56,6 @@ export type TownCategoryLink = {
    * 없으면 빈 배열 — 없는 버튼을 지어내지 않는다. 옆 카테고리로 보내는 링크도
    * 넣지 않는다(그 이동은 바로 아래 카테고리 줄이 이미 한다 — TownPageHead 주석).
    * 클라이언트 조각이 필요한 칸(모임 만들기)은 페이지가 action 으로 덮어쓴다.
-   * [1012] 규칙 5 — 라벨은 동사+대상("청약 캘린더 보기").
    */
   heroCta: readonly { label: string; href: string; primary?: boolean }[];
   /**
@@ -91,25 +81,22 @@ export function townBreadcrumb(href: string): string {
    첫머리에 둔다 — 질문·상담은 비어 있어도 시작점이 되기 때문이다. */
 /* [992 · A1] Q&A·전문가·모임·자료 네 칸을 뺐다 — 보관(비노출) 영역(lib/seo/archived-routes.ts).
    남은 다섯 칸은 전부 공공데이터·뉴스(사람이 채우지 않아도 비지 않는 칸)다. */
-/* [1012] 아이콘 칩 한 가지 색(규칙 9) — 카드·머리 모두 이 값을 쓴다 */
-const TONE = "bg-bg text-text-2";
-
 export const TOWN_CATEGORY_LINKS: TownCategoryLink[] = [
   /* [1011] 동네이야기(허브) 자신을 첫 칸으로 넣는다(소유자 지시 — "동네이야기가 하단 카드에 없어").
      예전에는 허브만 빠져 있어서 ① GNB 드롭다운(동네이야기·뉴스룸·청약·정비사업)과 카드 줄의
      구성이 서로 달랐고 ② 뉴스룸·청약 같은 하위 화면에서 이 줄만 보고는 허브로 돌아갈 칸이
      없었다(빵부스러기를 찾아야 했다). 지금 보고 있는 화면의 칸은 링크가 아니라 고정 표식으로
      그려지므로(TownCategoryNav 의 aria-current), /town 에서 자기 자신을 누르는 일은 없다. */
-  /* [1012] desc 는 전부 "" — 숫자는 화면이 실데이터로 채운다(app/town/page.tsx categoryItems). */
-  { href: "/town", label: "동네이야기", icon: "messages-square", desc: "", tone: TONE, headSub: "이웃 글 · 공개 임장노트 — 지역별 최신순", heroTone: "text-on-navy-amber", heroCta: [] },
+  { href: "/town", label: "동네이야기", icon: "messages-square", desc: "이웃 글 · 공개 노트", tone: "bg-primary-soft text-primary", headSub: "다녀온 사람의 기록과 이웃 글 — 지역별 최신순", heroTitle: ["다녀온 사람의 기록이 ", "지금", " 동네를 말합니다"], heroTone: "text-on-navy-amber", heroCta: [] },
   /* 모바일 실측(2026-08-02): "뉴스·다이제스트"는 카드 폭(104px)에서 "뉴스·다이제…"
      로 잘렸다. 라벨은 짧게, 다이제스트는 부제로. */
-  /* [1006] 뉴스 칸은 뉴스룸(/town/news)으로 가는 **입구**다 — entry: "newsroom". */
+  /* [1006] 뉴스 칸은 뉴스룸(/town/news)으로 가는 **입구**다 — entry: "newsroom". 히어로 문장은
+     뉴스룸 마스트헤드가 같은 것을 쓴다(app/town/news/page.tsx). */
   /* [1007 · P2] 라벨 "뉴스" → "뉴스룸": 카드·GNB·하위 화면("뉴스룸 전체 ›")이 같은 이름으로
      같은 곳(/town/news)을 가리킨다. 이야기와 다른 재질의 **장소** 이름이라 "뉴스"보다 분명하다. */
-  { href: "/town/news", label: "뉴스룸", short: "뉴스룸", icon: "newspaper", desc: "", tone: TONE, headSub: "부동산 기사 — 매일 아침 8시 수집 · 출처·발행 시각 표기", heroTone: "text-on-navy-amber", heroCta: [{ label: "주간 다이제스트 보기", href: "/digest" }], entry: "newsroom" },
-  { href: "/apply", label: "청약 센터", short: "청약", icon: "ticket", desc: "", tone: TONE, headSub: "청약홈(한국부동산원) 공공데이터 — 경쟁률·특별공급·접수 일정", heroTone: "text-on-navy-green", heroCta: [{ label: "청약 캘린더 보기", href: "/apply/calendar" }] },
-  { href: "/auctions", label: "공매 물건", short: "공매", icon: "hammer", desc: "", tone: TONE, headSub: "온비드 진행·예정 물건 — 감정가·최저입찰가·입찰일", heroTone: "text-on-navy-green", heroCta: [] },
-  { href: "/supply", label: "입주 물량", short: "입주", icon: "construction", desc: "", tone: TONE, headSub: "지역·시기별 아파트 입주 예정 — 청약홈 공고 기준", heroTone: "text-on-navy-green", heroCta: [] },
-  { href: "/redevelopment", label: "정비사업 지도", short: "정비사업", icon: "map", desc: "", tone: TONE, headSub: "재개발·재건축·소규모 정비사업 — 사업종류별 마커", heroTone: "text-on-navy-green", heroCta: [] },
-];
+  { href: "/town/news", label: "뉴스룸", icon: "newspaper", desc: "기사 요약 · 자동 수집", tone: "bg-warning-soft text-warning", headSub: "매일 아침 모은 부동산 기사 요약 — 주간 다이제스트 포함", heroTitle: ["오늘 부동산은 ", "이렇게", " 움직였습니다"], heroTone: "text-on-navy-amber", heroCta: [{ label: "주간 다이제스트", href: "/digest" }], entry: "newsroom" },
+  { href: "/apply", label: "청약 센터", icon: "ticket", desc: "분양·경쟁률", tone: "bg-success-soft text-success", headSub: "청약홈 공공데이터 — 경쟁률·특별공급·접수 일정", heroTitle: ["이번 달 청약, ", "경쟁률", "까지 보고 정합니다"], heroTone: "text-on-navy-green", heroCta: [{ label: "청약 캘린더", href: "/apply/calendar" }] },
+  { href: "/auctions", label: "공매 물건", icon: "hammer", desc: "온비드 공매", tone: "bg-success-soft text-success", headSub: "온비드 진행·예정 물건 — 감정가·최저입찰가·입찰일", heroTitle: ["감정가보다 싼 물건이 ", "지금", " 입찰 중입니다"], heroTone: "text-on-navy-green", heroCta: [] },
+  { href: "/supply", label: "입주 물량", icon: "construction", desc: "공급 일정", tone: "bg-success-soft text-success", headSub: "지역·시기별 아파트 입주 예정 — 청약홈 공고 기준", heroTitle: ["언제 어디에 ", "얼마나", " 들어오는지 봅니다"], heroTone: "text-on-navy-green", heroCta: [] },
+  { href: "/redevelopment", label: "정비사업 지도", icon: "map", desc: "재개발·재건축", tone: "bg-success-soft text-success", headSub: "재개발·재건축·소규모 정비사업 — 사업종류별 컬러 마커", heroTitle: ["우리 동네 재개발이 ", "어디까지", " 왔는지 봅니다"], heroTone: "text-on-navy-green", heroCta: [] },
+        ];

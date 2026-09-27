@@ -267,7 +267,7 @@ export default async function AdminTrafficPage() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-[19px] font-extrabold text-ink">트래픽</h1>
+        <h1 className="text-[19px] font-bold text-ink">트래픽</h1>
         <p className="mt-1 text-[13px] leading-[1.6] text-text-2">
           접속자·체류는 <b className="text-ink">분석 동의 사용자 표본</b>이다(동의
           배너에서 &ldquo;필수만 허용&rdquo;을 누른 방문은 집계에 없음 — 전체
@@ -289,7 +289,7 @@ export default async function AdminTrafficPage() {
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <div>
               <div className="text-[12px] text-text-3">이번 주 페이지뷰 (최근 7일 · 목표 {WEEKLY_PV_TARGET.toLocaleString("ko-KR")})</div>
-              <div className="t-num mt-1 text-[24px] font-extrabold text-ink">
+              <div className="t-num mt-1 text-[24px] font-bold text-ink">
                 {thisWeekPv.toLocaleString("ko-KR")}
                 <span className="ml-2 text-[13px] font-bold text-text-3">
                   / {WEEKLY_PV_TARGET.toLocaleString("ko-KR")}
@@ -298,7 +298,7 @@ export default async function AdminTrafficPage() {
             </div>
             <div className="text-right">
               <div className="text-[12px] text-text-3">지난 주 대비</div>
-              <div className={`t-num mt-1 text-[19px] font-extrabold ${weekDeltaPct === null ? "text-text-3" : weekDeltaPct >= 0 ? "text-success" : "text-danger"}`}>
+              <div className={`t-num mt-1 text-[19px] font-bold ${weekDeltaPct === null ? "text-text-3" : weekDeltaPct >= 0 ? "text-success" : "text-danger"}`}>
                 {weekDeltaPct === null ? "—" : `${weekDeltaPct >= 0 ? "▲" : "▼"} ${Math.abs(weekDeltaPct)}%`}
               </div>
               <div className="mt-0.5 text-[12px] text-text-3">지난 주 {prevWeekPv.toLocaleString("ko-KR")}뷰</div>
@@ -320,7 +320,7 @@ export default async function AdminTrafficPage() {
           {kpis.map((k) => (
             <div key={k.label} className="card rounded-2xl px-5 py-4">
               <div className="text-[12px] text-text-3">{k.label}</div>
-              <div className="t-num mt-1 text-[24px] font-extrabold text-ink">
+              <div className="t-num mt-1 text-[24px] font-bold text-ink">
                 {k.value.toLocaleString("ko-KR")}
               </div>
               <div className="mt-0.5 text-[12px] text-text-3">{k.sub}</div>
@@ -331,7 +331,7 @@ export default async function AdminTrafficPage() {
 
       {/* 일별 추이 */}
       <section className="card rounded-2xl p-5">
-        <h2 className="text-[15px] font-extrabold text-ink">
+        <h2 className="text-[15px] font-bold text-ink">
           일별 추이{" "}
           <span className="text-[12px] font-medium text-text-3">
             최근 14일 · KST 기준 · 막대=페이지뷰, 숫자=방문자
@@ -363,7 +363,7 @@ export default async function AdminTrafficPage() {
 
       {/* 페이지별 조회·체류 */}
       <section className="card rounded-2xl p-5">
-        <h2 className="text-[15px] font-extrabold text-ink">
+        <h2 className="text-[15px] font-bold text-ink">
           페이지별 조회·체류{" "}
           <span className="text-[12px] font-medium text-text-3">최근 30일 · 상위 15개 라우트</span>
         </h2>
@@ -415,7 +415,7 @@ export default async function AdminTrafficPage() {
           페이지뷰(동의 표본)와 모집단이 달라 한 표에 섞지 않고 따로 둔다. */}
       {viewports.length > 0 && (
         <section className="card rounded-2xl p-5">
-          <h2 className="text-[15px] font-extrabold text-ink">
+          <h2 className="text-[15px] font-bold text-ink">
             기기 비율{" "}
             <span className="text-[12px] font-medium text-text-3">
               최근 30일 · 세션 시작 시점 화면 폭 기준(viewport_group_change 계측)
@@ -458,13 +458,13 @@ export default async function AdminTrafficPage() {
       {/* 웹30 — 재방문. visitor_key(2026-08-04 도입) 표본만 — 소급 불가. */}
       {retention && retention.visitors > 0 && (
         <section className="card rounded-2xl p-5">
-          <h2 className="text-[15px] font-extrabold text-ink">
+          <h2 className="text-[15px] font-bold text-ink">
             재방문{" "}
             <span className="text-[12px] font-medium text-text-3">
               최근 30일 · 서로 다른 2일 이상 방문한 방문자 비율
             </span>
           </h2>
-          <p className="mt-2 text-[24px] font-extrabold text-ink">
+          <p className="mt-2 text-[24px] font-bold text-ink">
             {((retention.returning_visitors / retention.visitors) * 100).toFixed(1)}%
             <span className="ml-2 text-[13px] font-semibold text-text-2">
               {retention.returning_visitors.toLocaleString("ko-KR")} /{" "}
@@ -482,7 +482,7 @@ export default async function AdminTrafficPage() {
       {/* 웹18 — 성능(웹바이탈). 7일 p75 스냅샷 + LCP·CLS 주간 추이. */}
       {vitals7d.some((v) => v.samples > 0) && (
         <section className="card rounded-2xl p-5">
-          <h2 className="text-[15px] font-extrabold text-ink">
+          <h2 className="text-[15px] font-bold text-ink">
             성능 (웹바이탈){" "}
             <span className="text-[12px] font-medium text-text-3">
               실사용자 측정(RUM) · p75 · 최근 7일
@@ -506,7 +506,7 @@ export default async function AdminTrafficPage() {
                     className="rounded-lg border border-line bg-bg px-3.5 py-2.5"
                   >
                     <div className="text-[10px] font-bold text-text-3">{v.metric}</div>
-                    <div className={`text-[15px] font-extrabold ${cls}`}>
+                    <div className={`text-[15px] font-bold ${cls}`}>
                       {formatVital(v.metric, v.p75)}
                     </div>
                     <div className="text-[10px] text-text-3">{v.samples}표본</div>
@@ -521,7 +521,7 @@ export default async function AdminTrafficPage() {
             const max = Math.max(...rows.map((r) => r.p75));
             return (
               <div key={metric} className="mt-4">
-                <div className="mb-1.5 text-[12px] font-extrabold text-text-2">
+                <div className="mb-1.5 text-[12px] font-bold text-text-2">
                   {metric} p75 주간 추이{" "}
                   <span className="font-medium text-text-3">최근 12주</span>
                 </div>
@@ -565,7 +565,7 @@ export default async function AdminTrafficPage() {
 
       {/* 유입 경로 — 어디서·어떤 링크로 왔는가 (랜딩 기준) */}
       <section className="card rounded-2xl p-5">
-        <h2 className="text-[15px] font-extrabold text-ink">
+        <h2 className="text-[15px] font-bold text-ink">
           유입 출처{" "}
           <span className="text-[12px] font-medium text-text-3">
             최근 30일 · 세션 첫 방문(랜딩) 기준 · 리퍼러는 호스트만 저장(검색어 등
@@ -606,7 +606,7 @@ export default async function AdminTrafficPage() {
         </p>
 
         {/* UTM 캠페인 — 우리가 발행한 링크 파라미터 기준 */}
-        <h3 className="mt-5 text-[13px] font-extrabold text-ink">
+        <h3 className="mt-5 text-[13px] font-bold text-ink">
           캠페인 링크(UTM){" "}
           <span className="text-[12px] font-medium text-text-3">
             utm_source·medium·campaign 이 붙은 랜딩만
@@ -650,7 +650,7 @@ export default async function AdminTrafficPage() {
         {/* [995] 공유 유입 — 카드에 인쇄된 /n 링크(card)·노트 공유 버튼(share)·카카오(kakao)로
             들어온 세션이 그 뒤 단지를 열었는지·가입/로그인에 닿았는지. 같은 page_view_events
             표본이라 UTM 표 바로 아래 둔다. 실패(null)는 상단 failed 줄에 적히고 여기선 조용히 접는다. */}
-        <h3 className="mt-5 text-[13px] font-extrabold text-ink">
+        <h3 className="mt-5 text-[13px] font-bold text-ink">
           공유 유입(30일){" "}
           <span className="text-[12px] font-medium text-text-3">
             utm_source = card · share · kakao 랜딩 세션의 다음 행동
@@ -712,7 +712,7 @@ export default async function AdminTrafficPage() {
 
       {/* 기능 사용 */}
       <section className="card rounded-2xl p-5">
-        <h2 className="text-[15px] font-extrabold text-ink">
+        <h2 className="text-[15px] font-bold text-ink">
           기능 사용{" "}
           <span className="text-[12px] font-medium text-text-3">
             최근 30일 · 서버 확정 이벤트 · 상위 20개
@@ -764,7 +764,7 @@ export default async function AdminTrafficPage() {
       {/* #413 — 커버리지 수요: 검색 무결과에서 수집한 "열리면 알려주세요".
           지역 확장 우선순위의 근거 데이터다. 조회 실패와 0건을 가른다. */}
       <section className="card rounded-2xl p-5">
-        <h2 className="text-[15px] font-extrabold text-ink">
+        <h2 className="text-[15px] font-bold text-ink">
           커버리지 수요 (최근 30일)
         </h2>
         <p className="mt-0.5 text-[12px] text-text-3">

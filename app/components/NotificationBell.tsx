@@ -1,5 +1,5 @@
 "use client";
-/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
+/* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 
 /* B10 — 헤더 알림 벨 + 미읽음 배지. 마운트 시 경량 카운트 조회.
    [967 · 24] 읽음 이벤트(nz:notifications-read)로 즉시 갱신 + 탭 복귀(visibility·

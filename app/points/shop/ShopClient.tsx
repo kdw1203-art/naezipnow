@@ -1,5 +1,4 @@
 "use client";
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 4곳을 font-bold(700)로 바꿨다. */
 
 /**
  * 포인트 상점 — 교환 인터랙션.
@@ -59,71 +58,88 @@ export function ShopClient({ initialBalance }: { initialBalance: number }) {
     }
   };
 
-  /* [v4 · 한 화면 한 가지] 제목 + 주인공(보유 포인트 숫자 하나) → 상품 1px 선 행(왼쪽 이름·설명 / 오른쪽 포인트 + 교환).
-     지운 것: 잔액 카드 · 높이가 다른 상품 카드 격자(엇갈림) · 행마다 채움 파랑(→ 테두리 버튼) · 계절 알약(→ 글자). */
   return (
-    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6">
-      <header className="rise-in flex items-end justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <h1 className="t-title text-ink">포인트 상점</h1>
-          <p className="t-sub text-text-3">보유 포인트</p>
-          <p className="t-display t-num text-ink">
+    <div className="mx-auto flex max-w-[720px] flex-col gap-3">
+      {/* 잔액 */}
+      <div className="rise-in card flex items-center justify-between rounded-2xl px-5 py-4">
+        <div>
+          <div className="text-[12px] text-text-3">보유 포인트</div>
+          <div className="mt-0.5 text-2xl font-bold text-ink">
             {balance.toLocaleString("ko-KR")}
-            <span className="ml-0.5 t-section text-primary">P</span>
-          </p>
+            <span className="ml-0.5 text-[15px] text-primary">P</span>
+          </div>
         </div>
-        <Link href="/my/points" className="inline-flex min-h-10 shrink-0 items-center t-sub font-bold text-primary no-underline">
-          내역 보기 ›
+        <Link
+          href="/my/points"
+          className="btn-soft btn-sm"
+        >
+          내역 보기
         </Link>
-      </header>
+      </div>
 
-      <ul data-tone="mint" className="rise-in-1 divide-y divide-line">
+      {/* 상품 그리드 */}
+      <div className="rise-in-1 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {SPEND_ITEMS.map((item) => {
           const st = states[item.key] ?? { status: "idle", message: "" };
           const insufficient = balance < item.cost;
           const busy = st.status === "busy";
           const disabled = busy || (insufficient && st.status !== "done");
           return (
-            <li key={item.key} className="flex min-h-14 flex-wrap items-center justify-between gap-x-3 gap-y-1 py-3">
-              <span className="min-w-0 flex-1">
-                <span className="block t-body font-bold text-ink">
-                  {item.label}
-                  {item.season && <span className="ml-1.5 t-caption font-bold text-warning">{item.season} 한정</span>}
-                </span>
-                <span className="mt-0.5 block truncate t-sub text-text-3">{item.desc}</span>
-              </span>
-              <span className="flex shrink-0 items-center gap-2">
-                <span className="t-body t-num text-ink">{item.cost.toLocaleString("ko-KR")}P</span>
+            <div
+              key={item.key}
+              className="card tile flex flex-col rounded-2xl p-5"
+            >
+              <div className="text-[13px] font-bold text-ink">
+                {item.label}
+                {item.season && (
+                  <span className="ml-1.5 align-middle rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-bold text-warning">
+                    {item.season} 한정
+                  </span>
+                )}
+              </div>
+              <div className="mt-1 flex-1 text-[12px] leading-[1.5] text-text-3">
+                {item.desc}
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <div className="text-[15px] font-bold text-primary">
+                  {item.cost.toLocaleString("ko-KR")}P
+                </div>
                 <button
                   type="button"
                   onClick={() => void redeem(item)}
                   disabled={disabled}
-                  className="btn-outline btn-sm min-w-[72px]"
+                  className="btn-primary btn-sm min-w-[72px]"
                 >
                   {busy ? "교환 중…" : st.status === "done" ? "교환 완료" : "교환"}
                 </button>
-              </span>
+              </div>
 
-              {/* 상태 안내 — 행 아래 한 줄 */}
+              {/* 상태 안내 */}
               {st.status === "done" && (
-                <span role="status" className="basis-full t-sub font-bold text-success">
+                <div className="mt-2 rounded-lg bg-success-soft px-3 py-2 text-[12px] font-semibold text-success">
                   {st.message}
-                </span>
+                </div>
               )}
               {st.status === "error" && (
-                <span role="alert" className="basis-full t-sub font-bold text-danger">
+                <div className="mt-2 rounded-lg bg-danger-soft px-3 py-2 text-[12px] font-semibold text-danger">
                   {st.message}
-                </span>
+                </div>
               )}
-              {st.status !== "done" && st.status !== "error" && insufficient && (
-                <span className="basis-full t-caption text-text-3">포인트 부족</span>
-              )}
-            </li>
+              {st.status !== "done" &&
+                st.status !== "error" &&
+                insufficient && (
+                  <div className="mt-2 text-[12px] font-semibold text-text-3">
+                    포인트가 부족해요
+                  </div>
+                )}
+            </div>
           );
         })}
-      </ul>
+      </div>
 
-      <p className="rise-in-2 t-caption leading-[1.6] text-text-3">교환 효과 즉시 적용 · 교환한 포인트는 환불 안 됨</p>
+      <p className="rise-in-2 px-1 text-[12px] leading-[1.6] text-text-3">
+        교환한 효과는 즉시 적용돼요. 포인트는 환불되지 않으니 신중히 교환해 주세요.
+      </p>
     </div>
   );
 }

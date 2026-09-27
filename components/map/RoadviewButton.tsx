@@ -139,8 +139,7 @@ export function RoadviewButton({ lat, lng, label }: RoadviewButtonProps) {
         title={label ? `${label} 거리뷰` : "거리뷰"}
         className={`chip inline-flex w-fit shrink-0 items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold transition-colors ${
           /* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
-          /* [v4] 닫힘 = 유리 칩 → 흰 면 + 1px 선 */
-          open ? "bg-brand-navy text-on-dark" : "border border-line bg-surface text-ink"
+          open ? "bg-brand-navy text-on-dark" : "glass text-ink"
         }`}
       >
         <Icon name="map" size={16} />
@@ -166,7 +165,7 @@ export function RoadviewButton({ lat, lng, label }: RoadviewButtonProps) {
                     href={naverMapHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="chip inline-flex items-center gap-1 border border-line bg-surface px-3 py-1.5 text-[12px] font-bold text-primary"
+                    className="chip glass inline-flex items-center gap-1 px-3 py-1.5 text-[12px] font-bold text-primary"
                   >
                     네이버 지도에서 열기 ↗
                   </a>

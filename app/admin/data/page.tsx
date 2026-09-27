@@ -178,7 +178,7 @@ export default async function AdminDataPage() {
 
   return (
     <>
-      <div className="rise-in text-[19px] font-extrabold text-white">데이터 관리</div>
+      <div className="rise-in text-[19px] font-bold text-white">데이터 관리</div>
       <div className="rise-in -mt-2 mb-1 text-[12px] text-[#9aa6b8]">
         데이터셋별 신선도·적재 로그와 수동 수집 도구입니다.{" "}
         {summaryReady
@@ -223,7 +223,7 @@ export default async function AdminDataPage() {
             className="rounded-2xl border border-[rgba(255,255,255,.06)] bg-[#12161f] px-4 py-3.5"
           >
             <div className="text-[10px] text-[#9aa6b8]">{s.label}</div>
-            <div className="mt-0.5 text-[15px] font-extrabold" style={{ color: s.color }}>
+            <div className="mt-0.5 text-[15px] font-bold" style={{ color: s.color }}>
               {s.value}
             </div>
           </div>
@@ -255,7 +255,7 @@ export default async function AdminDataPage() {
       {/* 데이터셋 신선도 */}
       <div className={`rise-in-2 ${card}`}>
         <div className="flex items-center justify-between">
-          <span className="text-[15px] font-extrabold text-white">데이터셋 신선도</span>
+          <span className="text-[15px] font-bold text-white">데이터셋 신선도</span>
           <span className="text-[12px] text-[#9aa6b8]">테이블별 실집계</span>
         </div>
 
@@ -375,12 +375,12 @@ export default async function AdminDataPage() {
         {/* 지오코딩 진행률 */}
         <div className={card}>
           <div className="flex items-center justify-between">
-            <span className="text-[15px] font-extrabold text-white">단지 좌표 지오코딩</span>
+            <span className="text-[15px] font-bold text-white">단지 좌표 지오코딩</span>
             <span className="text-[12px] text-[#9aa6b8]">네이버(NCP)</span>
           </div>
 
           <div className="flex items-end gap-2">
-            <span className="text-[24px] font-extrabold text-ai-accent">{fmt(ok)}</span>
+            <span className="text-[24px] font-bold text-ai-accent">{fmt(ok)}</span>
             <span className="mb-1 text-[12px] text-[#9aa6b8]">
               / {fmt(total)} 단지 · {pct}%
             </span>
@@ -406,7 +406,7 @@ export default async function AdminDataPage() {
         {/* 소스별 최근 적재 로그 */}
         <div className={card}>
           <div className="flex items-center justify-between">
-            <span className="text-[15px] font-extrabold text-white">최근 적재 로그</span>
+            <span className="text-[15px] font-bold text-white">최근 적재 로그</span>
             <span className="text-[12px] text-[#9aa6b8]">market_ingest_log</span>
           </div>
           {!ingestLoaded.ok ? (
@@ -427,7 +427,7 @@ export default async function AdminDataPage() {
                 나눠 그린다(렌더만 분리, 쿼리는 그대로). */}
             {ingest.some((r) => OPS_CRON_SOURCES.has(r.source)) && (
               <div className="rounded-xl border border-[rgba(255,255,255,.07)]">
-                <div className="border-b border-[rgba(255,255,255,.05)] px-3 py-1.5 text-[10px] font-extrabold text-[#9aa6b8]">
+                <div className="border-b border-[rgba(255,255,255,.05)] px-3 py-1.5 text-[10px] font-bold text-[#9aa6b8]">
                   운영 크론 (알림 드레인 · 만료 스윕)
                 </div>
                 {ingest
@@ -500,7 +500,7 @@ export default async function AdminDataPage() {
         {/* 수동 업로드 */}
         <div className={card}>
           <div className="flex items-center justify-between">
-            <span className="text-[15px] font-extrabold text-white">수동 업로드</span>
+            <span className="text-[15px] font-bold text-white">수동 업로드</span>
             <span className="text-[12px] text-[#9aa6b8]">CSV · XLSX · ZIP</span>
           </div>
           <UploadPanel />
@@ -509,7 +509,7 @@ export default async function AdminDataPage() {
         {/* 수집 작업 실행 */}
         <div className={card}>
           <div className="flex items-center justify-between">
-            <span className="text-[15px] font-extrabold text-white">수집 작업 실행</span>
+            <span className="text-[15px] font-bold text-white">수집 작업 실행</span>
             <span className="text-[12px] text-[#9aa6b8]">즉시 1회</span>
           </div>
           <CronRunPanel />
@@ -519,7 +519,7 @@ export default async function AdminDataPage() {
       {/* R-ONE 카탈로그 */}
       <div className={`rise-in-3 ${card}`}>
         <div className="flex items-center justify-between">
-          <span className="text-[15px] font-extrabold text-white">R-ONE 통계표 카탈로그</span>
+          <span className="text-[15px] font-bold text-white">R-ONE 통계표 카탈로그</span>
           <span className="text-[12px] text-[#9aa6b8]">조회 전용</span>
         </div>
         <RebCatalogPanel />

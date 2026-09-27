@@ -135,7 +135,7 @@ export function ListingCompareView({
     return (
       <div className="rise-in card card-pad-sm flex flex-col items-center gap-3 py-14 text-center">
         <Icon name="scale" size={30} className="text-text-3" />
-        <div className="text-[15px] font-extrabold text-ink">비교함이 비어 있어요</div>
+        <div className="text-[15px] font-bold text-ink">비교함이 비어 있어요</div>
         <p className="max-w-[420px] text-[13px] leading-[1.7] text-text-3">
           매물 목록에서 <b className="text-ink">비교 담기</b>로 2~3개를 담으면 가격·면적·
           실거래 대비를 나란히 비교할 수 있어요.
@@ -176,7 +176,7 @@ export function ListingCompareView({
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex flex-wrap items-center gap-1">
                         <span
-                          className={`rounded-md chip-pad-tight text-[10px] font-extrabold ${
+                          className={`rounded-md chip-pad-tight text-[10px] font-bold ${
                             r.source === "owner"
                               ? "bg-primary-soft text-primary"
                               : "bg-warning-soft text-warning"
@@ -184,7 +184,7 @@ export function ListingCompareView({
                         >
                           {SOURCE_LABEL[r.source]}
                         </span>
-                        <span className="rounded-md bg-bg chip-pad-tight text-[10px] font-extrabold text-text-2">
+                        <span className="rounded-md bg-bg chip-pad-tight text-[10px] font-bold text-text-2">
                           {TYPE_LABEL[r.listingType]}
                         </span>
                       </div>
@@ -199,7 +199,7 @@ export function ListingCompareView({
                     </div>
                     <Link
                       href={`/listings/${r.id}`}
-                      className="text-[15px] font-extrabold leading-[1.35] text-ink hover:text-primary"
+                      className="text-[15px] font-bold leading-[1.35] text-ink hover:text-primary"
                     >
                       {r.complexName}
                     </Link>
@@ -224,7 +224,7 @@ export function ListingCompareView({
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="t-num text-[15px] text-ink">{priceLine(r)}</span>
                       {isMin && (
-                        <span className="rounded-md bg-primary-soft chip-pad-tight text-[10px] font-extrabold text-primary">
+                        <span className="rounded-md bg-primary-soft chip-pad-tight text-[10px] font-bold text-primary">
                           최저가
                         </span>
                       )}
@@ -285,13 +285,13 @@ export function ListingCompareView({
                       <span className="text-ink">{formatDate(r.refreshedAt ?? r.createdAt)}</span>
                       {stale ? (
                         <span
-                          className="rounded-md chip-pad-tight text-[10px] font-extrabold"
+                          className="rounded-md chip-pad-tight text-[10px] font-bold"
                           style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
                         >
                           확인 필요
                         </span>
                       ) : (
-                        <span className="rounded-md bg-success-soft chip-pad-tight text-[10px] font-extrabold text-success">
+                        <span className="rounded-md bg-success-soft chip-pad-tight text-[10px] font-bold text-success">
                           최신
                         </span>
                       )}
@@ -315,7 +315,7 @@ export function ListingCompareView({
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="text-text-2">{SOURCE_LABEL[r.source]}</span>
                     {r.ownerVerified && (
-                      <span className="rounded-md bg-success-soft chip-pad-tight text-[10px] font-extrabold text-success">
+                      <span className="rounded-md bg-success-soft chip-pad-tight text-[10px] font-bold text-success">
                         소유확인
                       </span>
                     )}

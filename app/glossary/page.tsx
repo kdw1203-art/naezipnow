@@ -1,4 +1,3 @@
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import Link from "next/link";
 import { PageShell } from "../components/PageShell";
 import { jsonLdScript } from "@/lib/seo/jsonld";
@@ -52,15 +51,12 @@ export default function GlossaryPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(definedTermSetJsonLd()) }}
       />
-      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 주인공(검색창) → 분류 칩 한 줄 → 분류별 구분선 행 → 안내 캡션 한 줄.
-          지운 것: 소개 문단(→ 사실 줄), 2열 카드(→ 행), 회색 안내 상자(→ 캡션 한 줄). */}
-      <div className="mx-auto flex max-w-[760px] flex-col">
-        <header className="mb-4 flex flex-col gap-0.5">
-          <h1 className="rise-in t-title text-ink">부동산 용어사전</h1>
-          <p className="t-sub text-text-3">
-            용어 {GLOSSARY_TERMS.length}개 · 분류 {groups.length}개 · 용어마다 정의·관련 용어
-          </p>
-        </header>
+      <div className="mx-auto max-w-[820px]">
+        <h1 className="rise-in text-[24px] font-bold text-ink">부동산 용어사전</h1>
+        <p className="rise-in-1 mt-2 text-[13px] leading-[1.7] text-text-2">
+          내집나우 화면과 부동산 거래에서 만나는 용어 {GLOSSARY_TERMS.length}개를 분류별로
+          정리했습니다. 용어를 누르면 정의와 관련 용어를 함께 볼 수 있습니다.
+        </p>
 
         {/* 제안 웹6 — 검색 + 분류 바로가기 + 목록 (클라이언트 필터, 데이터는
             서버 단일 출처 그대로 직렬화해 넘긴다) */}
@@ -71,12 +67,15 @@ export default function GlossaryPage() {
           }))}
         />
 
-        <p className="mt-8 t-caption text-text-3">
-          일반 풀이 · 대출 한도·세율·규제 지역 등 제도 수치는 시점마다 달라 정의에 적지 않음 ·{" "}
-          <Link href="/methodology" className="tap-line font-bold text-primary no-underline">
-            데이터 방법론 보기
+        <div className="mt-6 rounded-lg bg-bg p-4 text-[12px] leading-[1.7] text-text-3">
+          용어 풀이는 일반적인 이해를 돕기 위한 것으로, 대출 한도·세율·규제 지역 지정 등
+          제도 관련 수치는 시점에 따라 달라집니다. 그래서 정의에 특정 수치를 적어 두지
+          않았습니다. 시세 집계 방식은{" "}
+          <Link href="/methodology" className="inline-block py-[5px] font-bold text-primary">
+            데이터 방법론
           </Link>
-        </p>
+          을 참고하세요.
+        </div>
       </div>
     </PageShell>
   );

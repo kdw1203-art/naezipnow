@@ -1,4 +1,3 @@
-/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "../components/PageShell";
@@ -55,24 +54,17 @@ export default async function ListingsPage() {
   const seoulGus = DISTRICTS["서울특별시"];
 
   return (
-    /* [v4 · 한 화면 한 가지] 가운데 한 줄(760px): 제목 + 사실 한 줄 · 채움 파랑 1개(등록) → 필터 칩 → 썸네일 행 목록 →
-       끝 캡션(법적 고지). PageShell 브레드크럼("홈 › 실매물", 글자뿐)은 본문 줄과 어긋나 뺐다 */
-    <PageShell>
-      <div className="mx-auto w-full max-w-[760px]">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <h1 className="rise-in t-title text-ink">실매물</h1>
-          {/* [1012 · 규칙 6·7] 부제에 실건수(있을 때만) — 누가(집주인·중개사)·얼마나(N건) */}
-          <p className="t-sub text-text-3">
-            {items && items.length > 0
-              ? `검수 통과 ${items.length.toLocaleString("ko-KR")}건 · 집주인 직접·중개사 등록`
-              : "검수 통과 매물만 · 집주인 직접·중개사 등록"}
-            {" · 필터는 서울 구 단위"}
+    <PageShell breadcrumb="홈 › 실매물">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="rise-in text-[21px] font-bold text-ink">실매물</h1>
+          <p className="mt-1 text-[13px] text-text-3">
+            검수 통과 매물만 노출 · 현재 필터는 서울 구 단위(전국 등록은 가능, 목록 필터는 서울
+            중심).
           </p>
         </div>
-        {/* [1012 · 규칙 5] 동사 + 구체 대상 */}
-        <Link href="/listings/new" className="btn-primary btn-md shrink-0">
-          내 매물 등록하기
+        <Link href="/listings/new" className="btn-primary btn-md">
+          매물 등록하기
         </Link>
       </div>
 
@@ -81,7 +73,7 @@ export default async function ListingsPage() {
           className="rise-in-1"
           title="매물 목록을 지금 불러올 수 없어요"
           desc="매물이 없는 게 아니라, 목록을 읽어 오지 못했어요. 잠시 후 새로고침해 주세요."
-          action={{ href: "/listings/new", label: "내 매물 등록하기" }}
+          action={{ href: "/listings/new", label: "매물 등록하기" }}
         />
       ) : (
         /* 필터 + 목록은 클라이언트(ListingsListClient) — SSR 은 전체를 HTML 에
@@ -94,9 +86,7 @@ export default async function ListingsPage() {
       {LISTING_COMPARE_ENTRY_OPEN && <ListingCompareTray />}
 
       {/* 법적 고지 */}
-      {/* [1012 · 규칙 10] 임의 검정 알파 면 → --bg 토큰 */}
-      {/* [v4 · 규칙 3] 회색 상자 → 끝 캡션(고지 문장은 그대로) */}
-      <div className="mt-8 border-t border-line pt-3 text-[12px] leading-[1.7] text-text-3">
+      <div className="mt-8 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[12px] leading-[1.7] text-text-3">
         매물 정보는 등록자(집주인·중개사)가 직접 입력한 내용으로, 그 정확성에 대한
         책임은 등록자에게 있습니다. 내집나우의 검수는 형식 요건 확인일 뿐 매물의 진위·
         권리관계를 보증하지 않습니다. 중개 행위는 해당 매물을 등록한 개업공인중개사가
@@ -104,7 +94,6 @@ export default async function ListingsPage() {
       </div>
       {/* 수익 문구 미기재 방침(소유자 방침 2026-08-11) — 마켓 표면 공통 고지 */}
       <ComplianceNotice variant="market" className="mt-2" />
-      </div>
     </PageShell>
   );
 }

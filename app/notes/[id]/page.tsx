@@ -1,12 +1,13 @@
-/* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 7곳). */
 import Link from "next/link";
 import { displayAuthorLabel, isLabAuthor } from "@/lib/notes/author-label";
 import { cache } from "react";
+import { AdZone } from "@/app/components/ads/AdZone";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { PageShell } from "../../components/PageShell";
 import { AIPanel } from "../../components/AIPanel";
 import { ReportButton } from "../../components/ReportButton";
+import { NextActions } from "../../components/NextActions";
 import {
   getNote,
   hasInspectionScores,
@@ -20,7 +21,7 @@ import { NoteAudioTools } from "./NoteAudioTools";
 import { safeAuth } from "@/lib/safe-auth";
 import { findPaidReportIdByNote } from "@/lib/reports/store-db";
 import { hasPurchased } from "@/lib/report-purchases/store-db";
-import { planLabel } from "@/lib/subscriptions/labels";
+import { monthlyPrice } from "@/lib/subscriptions/billing-periods";
 import { resolveComplexHref } from "@/lib/newui/complex-link";
 import { ErrorState } from "@/app/components/ui/EmptyState";
 import { NoteDetailActions } from "./note-actions";
@@ -39,6 +40,7 @@ import { noteContentHash, storedContentHash } from "@/lib/notes/content-hash";
 import { NoteToolsRow } from "./NoteToolsRow";
 import { AiFeedbackButtons } from "@/app/components/AiFeedbackButtons";
 import DeepDivePanel from "./DeepDivePanel";
+import { Icon } from "@/app/components/Icon";
 import { Explain } from "@/app/components/explain/Explain";
 import { JsonLd } from "@/app/components/JsonLd";
 import { publisherRef } from "@/lib/seo/jsonld";
@@ -49,7 +51,6 @@ import { listComplexesInDistrict } from "@/lib/complex/complex-store";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { NoteMiniMap } from "./NoteMiniMap";
-import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 import { NoteVerdictCard } from "./NoteVerdictCard";
 import { resolveComplexPrice } from "@/lib/market/complex-price";
 import { noteCoordsFromMetadata } from "@/lib/notes/note-coords";
@@ -63,26 +64,12 @@ import {
 } from "@/lib/inspection/note-cache";
 import { relativeTime } from "@/lib/notes/feed-note";
 import { isAdmin } from "@/lib/auth/is-admin";
-import { resolveNoteCover } from "@/lib/notes/cover/resolve";
 import { decisionFromMetadata } from "@/lib/inspection/decision";
 import { buildRevisitDelta, revisitOfId, type RevisitDelta } from "@/lib/inspection/revisit";
+import { resolveNoteCover } from "@/lib/notes/cover/resolve";
 
 /* 시안 6c(노트 상세 + AI) + 10f(AI 노트 분석) + 20a(공개 임장노트 표준 11항목) + 20b(SEO)
-   실데이터: inspection_notes → getNote(id) — 공개 노트만 index, 비공개·목업은 noindex
-   [1012] 규칙 8 — 이 파일의 굵기 800(extrabold) 17곳을 전부 700(font-bold)로. 규칙 4 — 이모지 제거.
-
-   [v4 · 한 화면 한 가지] 위에서 아래로 한 줄(데스크톱도 최대 760px, 사이드바 없음):
-     [머리]     제목(h1) + 사실 한 줄(단지 · 지역 · 방문일 · 작성자) + 글자 버튼 줄 + 사진 캐러셀(노트 본문)
-     [주인공]   판단 한 덩어리 — 기록 점수(t-display) · 내 판단 · AI 결론 · 체크 · 대표 실거래가 · 채움 파랑 1개
-     [현장 기록] 메모 + 구분선 행(현장 인상 · 좋았던 점 · 주의할 점 · 날씨 · 촬영) + 음성 · 위치
-     [방문 기록] 회차가 둘 이상일 때만 — 재방문 변화 두 줄 + 회차 행
-     [AI 요약]  잉크 패널(면책 그대로) + 피드백 + 심화 분석(접힘 행)
-     [이어서]   도구 · 지도 비교 · 단지 홈 · 알림 로그인 — 구분선 행에 한 번씩
-     [댓글] · [다른 임장노트] · 맨 끝 출처 한 줄
-   지운 것: 지역·단지 칩 · 직접 방문 도장 · 자료 조사/촬영/운영진 배지(→ 사실 줄·행) · 항목 평가 상자 · 괘선 종이 면 ·
-   유리판 판단 카드의 사실 타일 3칸 · 점수 도넛(conic-gradient)과 축 막대(→ 큰 숫자 + 축 점수 한 줄) · 기록 완성도 카드 ·
-   저장 직후 "다음 행동" 유리 카드 · 근처 후보 카드 · "그래서 다음은?" 카드 · PRO 안내 카드 · 비로그인 관심단지 카드 ·
-   광고 공간(AdZone) · 설명 문장("다녀온 사람이 그 자리에서 느낀 인상이에요…" 등). */
+   실데이터: inspection_notes → getNote(id) — 공개 노트만 index, 비공개·목업은 noindex */
 
 export const dynamic = "force-dynamic";
 
@@ -91,35 +78,36 @@ const BASE_URL = "https://naezipnow.com";
 /* ---------- 뷰 모델 ---------- */
 
 type AxisLevel = "상" | "중" | "하";
-type Axis = { label: string; level: AxisLevel };
+type Axis = { icon: string; label: string; level: AxisLevel };
 /* [1006] id — 같은 단지의 다른 회차로 가는 링크(예전엔 글자만 있고 갈 길이 없었다) */
 type Visit = { id: string; label: string; summary: string; latest: boolean };
 type ScoreBar = { label: string; value: number; bad: boolean };
 
-/* [v4] 뷰 모델 — 칩(지역·단지 배지)·직접 방문 도장·규칙 요약 문장(aiSummary)·근거 문장(evidenceNote)·
-   약한 축(판단 카드 타일)을 걷었다. 머리는 제목 + 사실 한 줄(factLine), 판단 덩어리는 점수·축 점수·체크 */
 type NoteView = {
   breadcrumb: string;
+  chips: string[]; // 지역 › 단지 › 평형 칩 (20a ①)
   oneLiner: string; // 한 줄 총평 = 제목 (20a ③)
-  /** [v4 · 규칙 1] 머리 사실 한 줄 — 단지 · 지역 · 방문일 · 작성자(있는 값만) */
-  factLine: string;
-  weather: string;
-  fieldVerified: boolean; // [#71] 현장 인증 (위치 확인 통과)
+  directVisit: boolean; // 직접 방문 배지 (20a ①)
+  fieldVerified: boolean; // [#71] 현장 인증 배지 (위치 확인 통과)
+  visitMeta: string; // 방문일·작성자 (20a ②)
   /** [983] 운영진(Lab)이 쓴 글인가 — 화면에 "운영진 예시"로 적는다 */
   lab: boolean;
   axes: Axis[]; // 채광·소음·주차·교통 4축 (20a ④)
-  /** 작성자 메모 — 없으면 "" (설명 문장으로 채우지 않는다) */
   body: string;
   photos: string[];
   visits: Visit[];
-  goodPoints: string[]; // 좋았던 점 (20a ⑤) — 없으면 빈 배열
-  cautionPoints: string[]; // 주의할 점 (20a ⑥) — 없으면 빈 배열
+  goodPoints: string[]; // 좋았던 점 (20a ⑤)
+  cautionPoints: string[]; // 주의할 점 (20a ⑥)
+  evidenceNote: string;
   aiInline: string; // 본문 내 AI 요약 (20a ⑨ — AIPanel로 구분)
-  aiBadge: string; // 저장된 AI 분석 vs 규칙 기반 문구 구분
+  aiBadge: string; // 저장된 AI 분석 vs 규칙 기반 문구 구분 배지
+  aiSummary: string;
   /** 입력 축이 없으면 null — 0점을 "종합 점수"로 보여 주지 않는다 */
   totalScore: number | null;
   scoreBars: ScoreBar[];
   scoredAxisCount: number;
+  /** [993] 판단 카드용 — 입력된 축 중 가장 낮은 것(없으면 null) */
+  weakestAxis: { label: string; score: number } | null;
   checklistDone: number;
   checklistTotal: number;
   sourceLabel: string; // 출처 각주 (20a ⑦)
@@ -227,7 +215,9 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
       .filter(([, v]) => v > 0 && v <= 2)
       .forEach(([label, v]) => cautionPoints.push(`${label} 취약 (${v}/5)`));
   }
-  /* [v4 · 규칙 3] "기록된 확정 강점이 아직 없어요" 같은 채움 문장을 넣지 않는다 — 빈 배열이면 화면이 "기록 없음" 한 낱말 */
+  if (goodPoints.length === 0) goodPoints.push("기록된 확정 강점이 아직 없어요");
+  if (cautionPoints.length === 0)
+    cautionPoints.push("기록된 확정 약점이 아직 없어요");
 
   /* 20a ④ 4축: [970 · B-10] 폼이 고른 항목만 fieldRatings 에 남기므로 그 값을 먼저 쓰고,
      없으면 텍스트 키워드, 그것도 없으면 축 점수 — 점수가 0(미입력)인 축은 "중"으로
@@ -251,30 +241,27 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
     if (hit(pros)) return "상";
     return fallbackScore > 0 ? levelFromScore(fallbackScore) : null;
   };
-  /* [v4 · 규칙 7] 축 앞 장식 아이콘(해·스피커·핀·기차)을 걷었다 — 아이콘은 조작 버튼에만. 이름 + 상/중/하 글자 */
-  const axisCandidates: { label: string; level: AxisLevel | null }[] = [
-    { label: "채광", level: axisOrNull("채광", ["채광", "햇빛", "일조", "남향"], s.facility) },
-    { label: "소음", level: axisOrNull("소음", ["소음", "시끄", "조용"], s.location) },
-    { label: "주차", level: axisOrNull("주차", ["주차", "이중주차"], s.facility) },
-    { label: "교통", level: axisOrNull("교통", [], s.transport) },
+  const axisCandidates: { icon: string; label: string; level: AxisLevel | null }[] = [
+    { icon: "sun", label: "채광", level: axisOrNull("채광", ["채광", "햇빛", "일조", "남향"], s.facility) },
+    { icon: "volume", label: "소음", level: axisOrNull("소음", ["소음", "시끄", "조용"], s.location) },
+    { icon: "pin", label: "주차", level: axisOrNull("주차", ["주차", "이중주차"], s.facility) },
+    { icon: "train", label: "교통", level: axisOrNull("교통", [], s.transport) },
   ];
   const axes: Axis[] = axisCandidates.filter((a): a is Axis => a.level !== null);
 
   const doneCount = n.checklist.filter((c) => c.done).length;
+  const meta: string[] = [`방문 ${n.visitDate}`];
+  if (n.weather) meta.push(n.weather);
   /* [983] Lab 표기 7종을 하나로 — 저장값은 그대로 둔다(lib/notes/author-label) */
-  const author = displayAuthorLabel(n.authorLabel) || "내집나우 스카우트";
-  /* [v4 · 규칙 1] 사실 한 줄 — 단지(제목과 다를 때만) · 지역 · 방문일 · 작성자. 날씨는 "현장 기록" 행으로 */
-  const apt = n.aptName?.trim() || "";
-  const factLine = [apt && apt !== n.title.trim() ? apt : "", n.region.trim(), n.visitDate ? `방문 ${n.visitDate}` : "", author]
-    .filter(Boolean)
-    .join(" · ");
+  meta.push(displayAuthorLabel(n.authorLabel) || "내집나우 스카우트");
 
+  const chips = [n.region, displayTitle].filter(Boolean);
   const weakest = scoreEntries
     .filter(([, v]) => v > 0)
     .sort((a, b) => a[1] - b[1])[0];
 
   /* AI 요약 — 저장된 note.aiAnalysis(실호출 결과)를 우선 표시.
-     없을 때만 규칙 기반 문구로 폴백하고, 캡션으로 출처를 구분한다. */
+     없을 때만 규칙 기반 문구로 폴백하고, 배지로 출처를 구분한다. */
   const ai = (n.aiAnalysis ?? null) as Record<string, unknown> | null;
   const storedAiText = [ai?.narrativeSummary, ai?.summary, ai?.detailedConclusion].find(
     (x): x is string => typeof x === "string" && x.trim().length > 0,
@@ -286,7 +273,7 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
           ? `${weakest[0]} 축(${weakest[1]}/5)이 감점 요인입니다.`
           : "축별 점수를 참고하세요."
       }`
-    : "현장 축 점수 미입력 — 종합 점수 없음";
+    : "현장 축 점수가 아직 없어 종합 점수를 내지 않았어요. 노트에서 평가를 채우면 표시됩니다.";
   const aiBadge = storedAiText
     ? aiEngine.startsWith("rule-based")
       ? "규칙 기반 분석"
@@ -295,14 +282,18 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
 
   return {
     breadcrumb: `공개 임장노트 › ${displayTitle}`,
+    chips,
     oneLiner: n.title,
-    factLine,
-    weather: n.weather?.trim() || "",
+    directVisit: Boolean(n.visitDate),
     /* [#71] 현장 인증 — 작성 시점 위치 확인(거리 버킷만 저장) 통과 여부 */
     fieldVerified: Boolean(n.metadata?.visitVerified),
+    visitMeta: meta.join(" · "),
     lab: isLabAuthor(n.authorLabel),
     axes,
-    body: n.summary?.trim() || n.sections.memo?.trim() || "",
+    body:
+      n.summary?.trim() ||
+      n.sections.memo?.trim() ||
+      "본문 메모 없이 점수·체크리스트만 기록된 노트입니다.",
     photos: n.photos,
     visits:
       visitsOverride && visitsOverride.length > 0
@@ -319,11 +310,26 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
           ],
     goodPoints: goodPoints.slice(0, 4),
     cautionPoints: cautionPoints.slice(0, 4),
+    evidenceNote: scored
+      ? `입력 ${scoredAxisCount}개 축 + 체크 ${n.checklist.length}건 기준`
+      : `점수 미입력 · 체크 ${n.checklist.length}건`,
     aiInline: storedAiText ?? ruleInline,
     aiBadge,
+    aiSummary: scored
+      ? `${n.region} ${displayTitle} 방문 기록 기준 — 입력 축 평균 ${avg.toFixed(1)}점입니다. ${
+          goodPoints[0] && !goodPoints[0].includes("아직")
+            ? `강점은 ${goodPoints[0]}, `
+            : ""
+        }${
+          cautionPoints[0] && !cautionPoints[0].includes("아직")
+            ? `약점은 ${cautionPoints[0]} 입니다.`
+            : "축별 점수를 참고해 다음 방문 계획을 세워보세요."
+        }`
+      : `${n.region} ${displayTitle} 방문 기록 — 축 점수가 없어 종합 점수는 표시하지 않아요. 체크·메모를 보강하면 판단 근거가 쌓입니다.`,
     totalScore: total,
     scoredAxisCount,
-    // 값이 기록되지 않은 축(0점)은 생략 — 없는 기록을 있는 것처럼 그리지 않는다
+    weakestAxis: weakest ? { label: weakest[0], score: weakest[1] } : null,
+    // 값이 기록되지 않은 축(0점)은 막대에서 생략 — 없는 기록을 있는 것처럼 그리지 않는다
     scoreBars: scoreEntries
       .filter(([, v]) => v > 0)
       .map(([label, v]) => ({
@@ -529,7 +535,7 @@ export default async function NoteDetailPage({
       <PageShell breadcrumb="임장노트">
         <ErrorState
           title="노트를 불러오지 못했어요"
-          desc="일시적 조회 오류 · 잠시 뒤 새로고침"
+          desc="일시적인 조회 오류예요. 잠시 뒤 새로고침하면 대부분 정상으로 돌아옵니다."
           cause={loaded.message}
           action={{ label: "임장노트 목록", href: "/notes" }}
         />
@@ -796,60 +802,112 @@ export default async function NoteDetailPage({
       }));
   }
 
-  /* ── [v4 · 한 화면 한 가지] 행동 정리 ───────────────────────────────────────────────
-     예전: 채움 파랑이 한 화면에 셋까지(상단 "{지역} 지도에서 비교" · 판단 카드 다음 행동 · 하단 "그래서 다음은?"
-     카드의 primary) + 무료 소유자 PRO 카드 · 비로그인 관심단지 카드의 파랑 버튼. 같은 목적지(지도 비교 · AI 분석 ·
-     단지 홈)가 두세 번씩 나왔다. 지금: 채움 파랑 1개(판단 덩어리) + 나머지는 "이어서" 구분선 행에 한 번씩. */
+  /* [1005 · A4] 저장 직후 "다음 행동" 한 장 — 판단 카드(히어로) 바로 아래. 예전엔 위에 배너
+     여섯 장이 쌓였다(LLM/규칙/실패 안내 · AI 진단 딥링크 · 근처 후보 · 한도). 첫 줄은 AI 결과가
+     어떻게 됐는지(반영·규칙만·미반영)를 사실대로, 그 아래는 행동 셋뿐인 유리 알약 줄:
+     지도 비교(루프) · AI 진단(단지가 있을 때, [AI-40] 가장 뜨거운 순간의 제안) · 카드 공유([D008]
+     지금 있는 유일한 무료 홍보 채널). 단지가 없으면 AI 진단 자리에 회차 기록. 재시도 버튼은
+     아래 AI 요약 패널에 있으므로 여기서 또 만들지 않는다. */
   const aptForTools = realNote.aptName?.trim() ?? "";
-  const regionTrim = realNote.region.trim();
-  const diagnosisHref = aptForTools
-    ? `/analysis/ai/ai-diagnosis?apt=${encodeURIComponent(aptForTools)}&region=${encodeURIComponent(realNote.region)}`
-    : null;
-  /* [995 · 3] 회차 프리필 — 단지 id·좌표·태그·체크리스트를 잇고 round 를 +1 한다(app/notes/new?revisit=) */
-  const revisitHref = `/notes/new?revisit=${encodeURIComponent(realNote.id)}`;
-  /* 주 행동 하나: 소유자 = 다음 방문 노트(저장 직후 + 단지가 있으면 [AI-40] AI 진단 — 가장 뜨거운 순간의 제안) ·
-     다른 사람 = 이 단지 AI 진단 · 단지가 없으면 지도 비교 */
-  const primaryIsDiagnosis = Boolean(diagnosisHref) && (!isOwner || postSave);
-  const primaryAction: { label: string; href: string } =
-    primaryIsDiagnosis && diagnosisHref
-      ? { label: "이 단지 AI 진단 받기", href: diagnosisHref }
-      : isOwner
-        ? { label: "다음 방문 노트 쓰기", href: revisitHref }
-        : { label: "지도에서 이 지역 비교", href: mapCompareHref };
-  /* lib/points/catalog ai_first — 첫 AI 분석 실행 100P(once). 저장 직후 AI 진단이 주 행동일 때만 한 줄 */
-  const primaryCaption = postSave && primaryIsDiagnosis ? "첫 AI 분석 실행 +100P" : null;
-
-  /* [1005 · A4] 저장 직후 AI 정리 상태 — 예전 "다음 행동" 유리 카드(문장 + 알약 셋 + 캡션)를 사실 한 줄로.
-     알약 셋(지도 비교 · AI 진단/회차 기록 · 카드로 공유)은 주 행동 · "이어서" 행 · 머리 "카드 만들기"로 옮겼다. */
-  const postSaveLine = postSave
-    ? aiState === "ready"
-      ? "저장됨 · AI 정리 반영"
+  const nextActionHeadline =
+    aiState === "ready"
+      ? "AI 정리가 반영됐어요 — 이어서 해 볼 것"
       : aiState === "rule"
-        ? "저장됨 · 규칙 기반 요약만 — AI 다시 정리는 아래 AI 요약에서"
-        : "저장됨 · AI 정리 미반영 — 다시 정리는 아래 AI 요약에서"
-    : null;
+        ? "노트는 저장됐고 규칙 기반 요약만 있어요 — AI 정리는 아래 요약에서 다시 시도할 수 있어요"
+        : "노트는 저장됐어요. AI 정리는 반영되지 않았어요 — 아래 요약에서 다시 시도할 수 있어요";
+  const nextActionLinks: Array<{ label: string; href: string }> = [
+    { label: "지도에서 비교", href: mapCompareHref },
+    aptForTools
+      ? {
+          label: "AI 진단",
+          href: `/analysis/ai/ai-diagnosis?apt=${encodeURIComponent(aptForTools)}&region=${encodeURIComponent(realNote.region)}`,
+        }
+      : { label: "회차 기록", href: `/notes/new?revisit=${encodeURIComponent(realNote.id)}` },
+    { label: "카드로 공유", href: `/notes/${realNote.id}/card` },
+  ];
+  const nextActionCard = postSave ? (
+    <section aria-label="다음 행동" className="lg-glass rise-in flex flex-col gap-2.5 p-4">
+      <p className={`t-body font-bold ${aiState === "ready" ? "text-ink" : "text-text-2"}`}>
+        {nextActionHeadline}
+      </p>
+      {/* 유리 알약 줄 — 셋이 390px 안에 들어가지만(≈280px) 긴 단지명 폰트 확대에 대비해 가로 스크롤 */}
+      <nav
+        aria-label="다음 행동 바로가기"
+        className="lg-capsule max-w-full self-start overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {nextActionLinks.map((a) => (
+          <Link key={a.href} href={a.href} className="flex min-h-[40px] items-center">
+            {a.label}
+          </Link>
+        ))}
+      </nav>
+      {aptForTools && (
+        <p className="t-caption text-text-3">
+          AI 진단은 {aptForTools} 실데이터로 1분 · 첫 실행이면 +100P
+        </p>
+      )}
+    </section>
+  ) : null;
+
+  /* [945 #18] 저장 직후 다음 임장 후보 ①비교 후보 ②비교 담기 ③다음 임장 — 루프가 "저장"에서
+     끝나지 않게 한다. [1005] 본문 아래(도구 줄 다음, 댓글 앞)로 내렸다 — 방금 쓴 노트보다
+     먼저 읽을 것이 아니다. 후보가 없으면 통째로 접는다. */
+  const nearbyCard =
+    postSave && nearbyCandidates.length > 0 ? (
+      <section
+        aria-label="근처 비교 후보"
+        className="rise-in-1 card flex flex-col gap-2 rounded-3xl p-5"
+      >
+        <div className="t-section text-ink">다음 임장, 근처 비교 후보로 이어가 볼까요?</div>
+        <p className="t-caption text-text-3">
+          {realNote.region} 최근 거래 많은 단지 — 담아서 표로 비교할 수 있어요.
+        </p>
+        <div className="mt-1 flex flex-col gap-1.5">
+          {nearbyCandidates.map((c) => (
+            <div
+              key={c.id}
+              className="flex items-center justify-between gap-2 rounded-xl bg-bg px-3 py-2"
+            >
+              <Link
+                href={complexHrefFromId(c.id)}
+                className="inline-block min-w-0 flex-1 py-[5px] no-underline"
+              >
+                <span className="t-body font-bold text-ink">{c.name}</span>
+                {c.sub && <span className="ml-1.5 t-caption text-text-3">{c.sub}</span>}
+              </Link>
+              <CompareTrayButton complexId={c.id} name={c.name} region={realNote.region} />
+              <Link
+                href={`/notes/new?apt=${encodeURIComponent(c.name)}&region=${encodeURIComponent(realNote.region)}`}
+                className="btn-soft btn-sm shrink-0 no-underline"
+              >
+                다음 임장 노트
+              </Link>
+            </div>
+          ))}
+        </div>
+      </section>
+    ) : null;
 
   /* [1005 · A4] AI 요약 패널 — pending 이면 이 자리에 폴링 카드가 서고, 이 패널은 "나중에 볼게요"
-     뒤의 폴백이 된다(규칙 기반 요약 + 재시도). 결과가 오면 폴링 카드가 ?ai=ok 로 다시 렌더한다.
-     [v4 · 규칙 6] 호박·에메랄드 색 배지("규칙 기반 요약 · LLM 아님") → 패널 안 캡션 한 줄(같은 말). 면책은 AIPanel 기본값 그대로. */
+     뒤의 폴백이 된다(규칙 기반 요약 + 재시도). 결과가 오면 폴링 카드가 ?ai=ok 로 다시 렌더한다. */
   const aiSummaryPanel = (
     <AIPanel title="AI 요약">
-      <p className="t-caption text-ai-muted">
+      <span
+        className={`mb-1.5 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${
+          v.aiBadge.startsWith("규칙")
+            ? "border border-amber-400/50 bg-amber-500/15 text-amber-100"
+            : "border border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
+        }`}
+      >
         {v.aiBadge}
         {v.aiBadge.startsWith("규칙") ? " · LLM 아님" : " · LLM"}
-      </p>
+      </span>
       <p className="t-body">{v.aiInline}</p>
       {isOwner && !hasLlmAi && (
         <AiRetryButton noteId={id} defaultIntent={retryDefaultIntent(realNote)} />
       )}
     </AIPanel>
   );
-
-  const photoTakenAt =
-    typeof realNote.metadata?.photoTakenAt === "string"
-      ? realNote.metadata.photoTakenAt.slice(5, 16).replace("T", " ")
-      : "";
-  const showVisits = v.visits.length > 1 || revisitDelta !== null;
 
   return (
     <PageShell breadcrumb={v.breadcrumb}>
@@ -863,418 +921,690 @@ export default async function NoteDetailPage({
           공개 노트에만 건다 — 구매 열람·본인 글은 realNote.isPublic 경로가 아니다. */}
       {realNote.isPublic && <NoteSoftWall noteId={realNote.id} />}
 
-      {/* [v4 · 규칙 12] 데스크톱도 가운데 한 줄(최대 760px) — 오른쪽 사이드바(점수 도넛 · 기록 완성도) 없음 */}
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
-        {/* ── 머리: 제목 + 사실 한 줄 + 글자 버튼 줄 + 사진(노트 본문) ── */}
-        <div className="fold flex flex-col gap-3">
-          {/* 게이트 한 줄들 — 구매 열람 · AI 한도 · 저장 직후 상태. [v4 · 규칙 9] 파란 안내 상자 → 사실 한 줄 */}
-          {purchasedAccess && (
-            /* 구매 열람 안내 — 없으면 구매자가 "왜 남의 비공개 글이 보이지?" 하고, 재열람 경로(/my)도 모른 채 떠난다 */
-            <p className="t-sub text-text-2">
-              구매한 리포트로 열람 중 ·{" "}
-              <Link href="/my" className="tap-line font-bold text-primary no-underline">
-                내 구매 목록 ›
-              </Link>
-            </p>
-          )}
-          {isOwner && quotaHit && (
-            /* AI 한도 도달 — 노트는 저장됐다는 사실을 먼저, 다음 행동(요금제)을 한 줄에 */
-            <p className="t-sub text-text-2">
-              이번 달 AI 정리 한도 도달 · 이 노트는 AI 없이 저장 ·{" "}
-              <Link href="/subscription" className="tap-line font-bold text-primary no-underline">
-                요금제 보기 ›
-              </Link>
-            </p>
-          )}
-          {postSaveLine && (
-            <p role="status" className={`t-sub ${aiState === "ready" ? "text-success" : "text-text-2"}`}>
-              {postSaveLine}
-            </p>
-          )}
+      {/* 구매 열람 안내 — 비공개 노트를 리포트 구매로 읽는 중임을 명시.
+          이게 없으면 구매자가 "왜 남의 비공개 글이 보이지?" 하고 혼란스럽고,
+          재열람 경로(/my 구매 목록)도 모른 채 떠난다. */}
+      {purchasedAccess && (
+        <div className="rise-in mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-primary/20 bg-primary-soft px-4 py-3 t-body text-text-1">
+          <span>
+            <span className="font-bold text-primary">구매한 리포트</span>로
+            열람 중이에요 — 이 노트가 리포트의 전달물입니다.
+          </span>
+          <Link href="/my" className="shrink-0 font-bold text-primary no-underline">
+            내 구매 목록 ›
+          </Link>
+        </div>
+      )}
+      {/* AI 한도 도달 안내 — 노트는 저장됐다는 사실을 먼저, 다음 행동(구독)을
+          가격과 함께. 가격은 billing-periods 단일 출처. */}
+      {isOwner && quotaHit && (
+        <div className="rise-in mb-3 rounded-2xl border border-primary/20 bg-primary-soft px-4 py-3 t-body text-text-1">
+          노트는 저장됐어요. 이번 달 AI 정리 한도에 도달해 이번 건은 AI 없이
+          저장됐어요 —{" "}
+          <Link href="/subscription" className="font-bold text-primary">
+            PRO(월 {monthlyPrice("pro").toLocaleString("ko-KR")}원)로 이어서 쓰기 ›
+          </Link>
+        </div>
+      )}
+      {/* [1005 · A4] 저장 직후 배너 6개(루프 안내 3종 · AI 진단 딥링크 · 근처 비교 후보 · 실패)를
+          여기서 쌓지 않는다 — 390px 에서 방금 쓴 노트가 한 화면 아래로 밀렸다. 루프 안내와
+          딥링크는 판단 카드 바로 아래 "다음 행동" 한 장(nextActionCard)으로 합쳤고, 근처 비교
+          후보는 본문 아래(nearbyCard)로 내렸다. 소프트월·구매 안내·한도 안내는 게이트라 그대로. */}
 
-          <header className="flex flex-col gap-1">
-            {/* ② 한 줄 총평 (= 제목) — h1 은 끝까지 읽혀야 해 접힌다(폰 배율 규칙에서도 말줄임 없음) */}
-            <h1 className="break-words t-title text-ink">{v.oneLiner}</h1>
-            {/* ① ③ 사실 한 줄 — 단지 · 지역 · 방문일 · 작성자. [v4 · 규칙 6] 지역·단지 칩 · "직접 방문" 도장 ·
-                "자료 조사" 배지를 걷었다(방문일이 곧 방문 사실). 운영진 글·현장 인증은 사실이라 같은 줄 끝에 글자로 */}
-            <div className="t-sub text-text-3">
-              {v.factLine}
-              {/* [983] 운영진 글에는 그렇다고 적는다 — 공개 노트 27건 중 25건이 Lab 글이다 */}
-              {v.lab && " · 운영진 예시"}
+      {/* 상단 액션 — 공유(클립보드)·공개 토글(소유자) 실동작 */}
+      <div className="rise-in mb-4 flex flex-wrap items-center justify-end gap-2">
+        <NoteDetailActions
+          noteId={id}
+          isOwner={isOwner}
+          initialIsPublic={realNote.isPublic}
+        />
+        {/* [993] "카드 덱"(/notes/[id]/deck) 버튼 제거 — 노트 출력 3종 중 card 만 남기고 보관(992) */}
+        {isOwner && !hasLlmAi && (
+          <Link
+            href={`/analysis?noteId=${encodeURIComponent(id)}`}
+            className="btn-soft px-3.5 py-2 t-body no-underline"
+          >
+            AI 분석 허브
+          </Link>
+        )}
+        {/* 지역 컨텍스트를 넘겨 지도 비교 루프가 끊기지 않게 한다 */}
+        <Link
+          href={mapCompareHref}
+          className="btn-primary btn-cta px-3.5 py-2 t-body"
+        >
+          지도에서 비교
+        </Link>
+      </div>
+
+      {/* `1fr` 은 `minmax(auto, 1fr)` 이라 왼쪽 트랙이 min-content 아래로 안 줄었다.
+          사진 썸네일 10장(가로 1172px)이 트랙을 밀어 올려, 400px 사이드바(판단
+          근거·점수 축)가 통째로 컨테이너 밖으로 나가 있었다 — 실측: 뷰포트 1296
+          에서 문서 scrollWidth 1690, 왼쪽 칼럼 1222px, aside 오른쪽 끝 1690.
+          minmax(0,1fr) + min-w-0 로 고치면 왼쪽 780 / aside 848~1248 로 붙는다. */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+        {/* ===== 좌측: 노트 본문 (20a 표준 구조) ===== */}
+        <div className="flex min-w-0 flex-col gap-4">
+          {/* [993] 판단 카드 — 이 노트가 말하려는 것 한 장. 모바일에서도 맨 위. */}
+          <NoteVerdictCard
+            verdict={reportVerdict ?? v.aiSummary}
+            sourceBadge={reportVerdict ? (hasLlmAi ? "AI 생성" : v.aiBadge) : "규칙 기반 요약"}
+            recommendedAction={reportAction}
+            totalScore={v.totalScore}
+            scoredAxisCount={v.scoredAxisCount}
+            weakestAxis={v.weakestAxis}
+            visitDate={realNote.visitDate}
+            checklistDone={v.checklistDone}
+            checklistTotal={v.checklistTotal}
+            price={verdictPrice}
+            complexHref={complexHref}
+            /* [996 · 4] 내 판단이 있으면 헤드라인, 없으면 소유자에게 "판단 남기기"(수정 3단계) */
+            decision={noteDecision}
+            decisionEditHref={isOwner && !noteDecision ? `/notes/${realNote.id}/edit#decision` : null}
+            next={
+              isOwner
+                ? /* [995 · 3] apt·region 만 넘기던 것을 회차 프리필로 — 단지 id·좌표·태그·
+                     체크리스트를 잇고 round 를 +1 한다(app/notes/new?revisit=). */
+                  {
+                    label: "다시 왔을 때 — 이전 기록 불러와 쓰기",
+                    href: `/notes/new?revisit=${encodeURIComponent(realNote.id)}`,
+                  }
+                : realNote.aptName?.trim()
+                  ? {
+                      label: `${realNote.aptName.trim()} 실데이터로 AI 진단`,
+                      href: `/analysis/ai/ai-diagnosis?apt=${encodeURIComponent(realNote.aptName.trim())}&region=${encodeURIComponent(realNote.region)}`,
+                    }
+                  : { label: "지도에서 이 지역 보기", href: mapCompareHref }
+            }
+          />
+          {/* [1005 · A4] 저장 직후에만 — 히어로 다음, 본문 앞. pending 동안은 안 그린다. */}
+          {nextActionCard}
+          {/* 노트 카드 — 20a 표준 11항목 */}
+          <div className="rise-in card flex flex-col gap-3.5 rounded-3xl p-6">
+            {/* ① 지역·단지 칩 */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {v.chips.map((c, i) => (
+                <span
+                  key={c}
+                  className={
+                    /* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
+                    i === v.chips.length - 1
+                      ? "rounded-full bg-brand-navy px-2.5 py-1 text-[12px] font-bold text-on-dark"
+                      : "rounded-full border border-line bg-surface px-2.5 py-1 text-[12px] font-bold text-text-2"
+                  }
+                >
+                  {c}
+                </span>
+              ))}
+            </div>
+
+            {/* ② 한 줄 총평 (= 제목) */}
+            <h1 className="t-section text-ink md:t-title">
+              {v.oneLiner}
+            </h1>
+
+            {/* ③ 직접 방문 배지 + 방문일·작성자 */}
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              {v.directVisit ? (
+                /* [962] 도장 — "다녀왔다"는 흔적을 배지가 아니라 도장으로. 주홍 이중 테두리, 살짝 기운 각도 */
+                <span className="njn-stamp">
+                  <span className="dot" aria-hidden="true" />
+                  직접 방문
+                </span>
+              ) : (
+                <span className="rounded-md bg-bg chip-pad t-sub font-bold text-text-3">
+                  자료 조사
+                </span>
+              )}
+              {/* [#134] 사진 촬영 시각 — EXIF 기반 방문 시간(장식 신호, 사실 판정 아님) */}
+              {realNote.metadata?.photoTakenAt && (
+                <span className="rounded-md bg-bg chip-pad t-sub font-bold text-text-2">
+                  {realNote.metadata.photoTakenAt.slice(5, 16).replace("T", " ")} 촬영
+                </span>
+              )}
               {/* [#71] 현장 인증 — 작성 시점에 단지 반경 2km 위치 확인을 통과한 노트.
-                  [1009 · T] 설명은 옆 ⓘ 시트(누르면 규칙·저장 범위). 판정은 작성자 브라우저에서 하고 서버는
-                  받은 metadata.visitVerified 를 검증 없이 저장한다 — "기기 위치로 브라우저가 판정한 표시"라고 사실대로. */}
+                  [1009 · T] 설명이 title= 말풍선이라 휴대폰에서는 보이지 않았다 → 옆 ⓘ 시트(누르면 규칙·저장 범위).
+                  how 는 app/notes/new/VisitVerifyCard.tsx 의 실제 판정(거리 ≤ 2,000m · 50m 버킷 · 좌표 비저장)과 같은 말.
+                  [1009 · T 리뷰] 판정은 작성자 브라우저에서 하고 서버는 받은 metadata.visitVerified 를 검증 없이 저장한다(위조 가능 — 기존).
+                  그래서 "근처에 있었다"고 단정하지 않고 "기기 위치로 브라우저가 판정한 표시"라고 사실대로 적는다. */}
               {v.fieldVerified && (
-                <>
-                  {" · "}
-                  <span className="inline-flex items-center gap-0.5 align-middle">
-                    <span className="font-bold text-text-2">현장 인증</span>
-                    <Explain
-                      title="현장 인증"
-                      body="노트를 쓸 때 작성자 기기의 위치로 브라우저가 단지 근처라고 판정한 표시예요. 서버가 위치를 다시 확인하지는 않고, 적힌 내용이 사실인지 보증하는 표시도 아니에요."
-                      how={[
-                        "노트를 쓸 때 ‘현재 위치로 인증하기’를 누르면 그 기기의 현재 위치와 단지 좌표 사이 거리를 브라우저 안에서 계산해요.",
-                        "거리가 2km 안이면 인증 표시가 붙어요.",
-                        "위치 좌표는 저장하지 않아요 — 50m 단위로 뭉갠 거리와 확인한 시각만 남겨요.",
-                      ]}
-                      size={12}
-                    />
+                <span className="inline-flex items-center gap-0.5">
+                  <span className="rounded-md bg-primary-soft chip-pad t-sub font-bold text-primary">
+                    현장 인증
                   </span>
+                  <Explain
+                    title="현장 인증"
+                    body="노트를 쓸 때 작성자 기기의 위치로 브라우저가 단지 근처라고 판정한 표시예요. 서버가 위치를 다시 확인하지는 않고, 적힌 내용이 사실인지 보증하는 표시도 아니에요."
+                    how={[
+                      "노트를 쓸 때 ‘현재 위치로 인증하기’를 누르면 그 기기의 현재 위치와 단지 좌표 사이 거리를 브라우저 안에서 계산해요.",
+                      "거리가 2km 안이면 인증 표시가 붙어요.",
+                      "위치 좌표는 저장하지 않아요 — 50m 단위로 뭉갠 거리와 확인한 시각만 남겨요.",
+                    ]}
+                    size={12}
+                  />
+                </span>
+              )}
+              <span className="text-text-3">{v.visitMeta}</span>
+              {/* [983] 운영진 글에는 그렇다고 적는다 — 공개 노트 27건 중 25건이
+                  Lab 글인데 화면은 "직접 다녀온 사람의 기록"이라고만 말했다. */}
+              {v.lab && (
+                <span className="ml-1.5 inline-flex shrink-0 items-center rounded border border-line px-1 py-px text-[10px] font-semibold leading-[1.4] text-text-3">
+                  운영진 예시
+                </span>
+              )}
+            </div>
+
+            {/* ④ 4축 항목 평가 — 채광·소음·주차·교통 상중하. [970 · B-10] 미입력 축은 빠지고,
+                하나도 없으면 "미입력"이라고 적는다(보통으로 채우지 않는다) */}
+            <div className="flex flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5">
+              <div className="t-sub font-bold text-text-3">
+                항목 평가
+                {v.axes.length === 0 && (
+                  <span className="ml-1.5 font-medium">· 현장 체크를 아직 입력하지 않았어요</span>
+                )}
+              </div>
+              {/* [987 · 28] 이 상/중/하가 무엇인지 밝힌다. 숫자·등급처럼 보이면 측정값으로
+                  읽히는데, 실제로는 다녀온 사람의 인상이다. 확인할 수 있는 것(실거래·
+                  공표 통계)은 아래 "이 노트로 이어서"의 도구가 따로 답한다 — 둘을
+                  같은 화면에 같은 모양으로 두면 독자가 구별할 방법이 없다. */}
+              {v.axes.length > 0 && (
+                <p className="t-caption text-text-3">
+                  다녀온 사람이 그 자리에서 느낀 인상이에요 — 측정값이 아닙니다.
+                </p>
+              )}
+              <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4">
+                {v.axes.map((a) => (
+                  <div
+                    key={a.label}
+                    className="flex items-center justify-between rounded-lg bg-bg px-3 py-2 text-xs text-text-1"
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <Icon name={a.icon} size={16} /> {a.label}
+                    </span>
+                    <b className={`font-bold ${axisToneClass(a.level)}`}>
+                      {a.level}
+                    </b>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 현장 사진 — 큰 무대 + 좌우 클릭 전환. 예전에는 110×78 썸네일을
+                가로로 늘어놓기만 해서 차트가 섞인 사진을 읽을 수 없었다.
+                본문 글은 사진 아래로 내린다(요청). slice(0,10) 로 조용히 잘라
+                내던 것도 없앴다 — 캐러셀은 장수에 상관없이 다 보여 준다. */}
+            {v.photos.length > 0 && <NotePhotoCarousel photos={v.photos} />}
+
+            {/* [987 · 26] 다녀온 사람이 쓴 글 — 종이 면 위에 둔다. 이 화면에서 제일
+                귀한 글인데 예전에는 카드 안의 맨 <p> 였다(AI 요약만 제 면을 갖고
+                있었다). 면이 곧 출처 표시다 — 사유는 globals.css .note-paper 주석. */}
+            {v.body.trim() && (
+              <div className="note-paper t-body">
+                <div className="mb-1.5 t-caption font-bold opacity-70">
+                  현장에서 적은 것
+                </div>
+                <p className="whitespace-pre-wrap">{v.body}</p>
+              </div>
+            )}
+
+            {/* ⑤⑥ 좋았던 점 · 주의할 점 */}
+            <div className="rounded-lg border border-line bg-surface p-3.5 text-xs leading-[1.7] text-text-1">
+              <div>
+                <b className="text-success">좋았던 점</b> —{" "}
+                {v.goodPoints.join(" · ")}
+              </div>
+              <div className="mt-1">
+                <b className="text-danger">주의할 점</b> —{" "}
+                {v.cautionPoints.join(" · ")}
+              </div>
+            </div>
+
+            {/* ⑨ AI 작성부 구분 표시 — 저장된 aiAnalysis 우선, 없으면 규칙 기반 문구 + 배지 구분 */}
+            {/* [970 · B-15] 패널 CTA "지도에서 비교"는 상단 액션·아래 다음 행동과 같은 링크라
+                뺐다(한 화면에 세 번) — 남은 두 곳: 상단 primary, 하단 퍼널 */}
+            {/* [1005 · A4] ?ai=pending + 분석 없음 → 폴링 카드(결과가 오면 ?ai=ok 로 재렌더).
+                그 외엔 평소 패널. 결과를 지어내지 않는다 — 90초 뒤엔 "늦어지고 있어요"다.
+                [M3] 수정 저장(옛 분석이 남아 있음)만 해시 일치를 기다린다 — 신규는 종전대로 존재만. */}
+            {aiState === "pending" ? (
+              <AiPendingCard
+                noteId={id}
+                canRetry={isOwner}
+                defaultIntent={retryDefaultIntent(realNote)}
+                expectedHash={stale ? expectedHash : null}
+                fallback={
+                  stale ? (
+                    /* "나중에 볼게요" 뒤에도 옛 요약이 새 것으로 읽히지 않게 — 무엇의 요약인지 적는다 */
+                    <div className="flex flex-col gap-1.5">
+                      <p className="t-caption text-text-3">
+                        아래는 수정 전 내용 기준 AI 정리예요 — 새 정리는 이 노트를 다시 열면 반영돼요.
+                      </p>
+                      {aiSummaryPanel}
+                    </div>
+                  ) : (
+                    aiSummaryPanel
+                  )
+                }
+              />
+            ) : (
+              aiSummaryPanel
+            )}
+            {isOwner && aiState !== "pending" && (
+              <div className="mt-2">
+                <AiFeedbackButtons
+                  targetType="note_ai"
+                  targetId={id}
+                  context={{
+                    mode: hasLlmAi ? "llm" : "rule",
+                    badge: v.aiBadge,
+                  }}
+                />
+              </div>
+            )}
+
+            {/* [967 · 11] 위치 미니맵 — 좌표가 저장된 노트만. 지역 칩 글자로만 읽히던
+                "어디" 를 지도로 보여 주고 /map 좌표 포커스로 잇는다. */}
+            {noteCoords && (
+              <div className="flex flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="t-sub font-bold text-text-3">위치</span>
+                  <span className="t-caption text-text-3">{v.regionLabel}</span>
+                </div>
+                <NoteMiniMap
+                  lat={noteCoords.lat}
+                  lng={noteCoords.lng}
+                  label={realNote.aptName?.trim() || realNote.title}
+                />
+              </div>
+            )}
+
+            {/* ⑦⑧⑩ 출처·데이터 기준일 각주 + 지역·단지 실 내부 링크 */}
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-line pt-3 t-sub text-text-3">
+              <span className="h-[5px] w-[5px] rounded-full bg-success" />
+              <span>
+                {v.sourceLabel} · 기준일 {v.baseDate}
+              </span>
+              <span>·</span>
+              {/* 예전엔 "OO 시세"가 `/town/market` 으로 갔다. 그 경로는 모임
+                  리다이렉트 경유지라 시세와 아무 상관이 없었고, 어느 지역인지도
+                  전해지지 않았다. 지도가 ?region= 을 받게 됐으니 그리로 보낸다. */}
+              {/* [1009 · T] "시세" → "실거래가" — 지도가 보여 주는 것은 국토부 실거래(시세 추정이 아니다) */}
+              <Link
+                href={`/map?region=${encodeURIComponent(v.regionLabel)}`}
+                className="font-bold text-primary"
+              >
+                {v.regionLabel} 실거래가
+              </Link>
+              {/* 단지 링크 — 실 단지 id를 찾은 경우에만 (mock-1로 보내지 않음) */}
+              {complexHref && (
+                <>
+                  <span>·</span>
+                  <Link href={complexHref} className="font-bold text-primary">
+                    {v.complexLabel} 홈
+                  </Link>
+                  <span>·</span>
+                  <Link href={complexHref} className="font-bold text-primary">
+                    이 단지 노트 더 보기
+                  </Link>
+                </>
+              )}
+              {/* [992 · A1] "이 단지 Q&A"(/qna) 링크 제거 — Q&A 는 보관(비노출). */}
+              {/* 신고 연결(#81) — 타인의 노트만, POST /api/moderation/content-report */}
+              {!isOwner && (
+                <>
+                  <span>·</span>
+                  <ReportButton postId={realNote.id} />
                 </>
               )}
             </div>
-          </header>
+          </div>
 
-          {/* 상단 조작 — 카드 · 수정 · 공개 토글 · 공유 · 삭제(글자 버튼 한 줄, 채움 없음) */}
-          <NoteDetailActions noteId={id} isOwner={isOwner} initialIsPublic={realNote.isPublic} />
-
-          {/* 현장 사진 — 노트 본문. 큰 무대 + 좌우 전환(장수 제한 없음) */}
-          {v.photos.length > 0 && <NotePhotoCarousel photos={v.photos} />}
-        </div>
-
-        {/* ── 주인공: 판단 한 덩어리(기록 점수 · 내 판단 · AI 결론 · 체크 · 대표 실거래가 · 채움 파랑 1개) ── */}
-        <NoteVerdictCard
-          verdict={reportVerdict}
-          verdictIsLlm={hasLlmAi}
-          recommendedAction={reportAction}
-          totalScore={v.totalScore}
-          scoredAxisCount={v.scoredAxisCount}
-          scoreBars={v.scoreBars}
-          checklistDone={v.checklistDone}
-          checklistTotal={v.checklistTotal}
-          price={verdictPrice}
-          /* [996 · 4] 내 판단이 있으면 헤드라인, 없으면 소유자에게 "판단 남기기"(수정 3단계) */
-          decision={noteDecision}
-          decisionEditHref={isOwner && !noteDecision ? `/notes/${realNote.id}/edit#decision` : null}
-          next={primaryAction}
-          nextCaption={primaryCaption}
-        />
-
-        {/* ── 현장 기록: 메모 + 구분선 행(인상 · 좋았던 점 · 주의할 점 · 날씨 · 촬영) + 음성 · 위치 ── */}
-        <section aria-labelledby="note-record-h" className="flex flex-col gap-3">
-          <h2 id="note-record-h" className="t-section text-ink">
-            현장 기록
-          </h2>
-          {/* [987 · 26] 다녀온 사람이 쓴 글. [v4 · 규칙 4] 괘선 종이 면(.note-paper)과 "현장에서 적은 것" 라벨 →
-              흰 바탕 본문(섹션 제목이 곧 출처 표시). 메모가 없으면 채움 문장을 쓰지 않고 줄을 뺀다 */}
-          {v.body && <p className="whitespace-pre-wrap t-body text-text-1">{v.body}</p>}
-          {/* ④⑤⑥ 항목 평가 · 좋았던 점 · 주의할 점 — 왼쪽 이름 / 오른쪽 값, 1px 구분선(ComplexDataSources dl 과 같은 모양) */}
-          <dl data-tone="hanji" className="divide-y divide-line border-y border-line">
-            {/* [970 · B-10] 미입력 축은 빠지고, 하나도 없으면 "미입력"(보통으로 채우지 않는다).
-                [987 · 28] 측정값이 아니라 다녀온 사람의 인상 — 행 이름("현장 인상")이 그 사실을 말한다 */}
-            <div className="flex items-baseline gap-3 py-3">
-              <dt className="w-20 shrink-0 t-sub font-bold text-text-2">현장 인상</dt>
-              <dd className="min-w-0 t-body text-text-1">
-                {v.axes.length === 0
-                  ? "미입력"
-                  : v.axes.map((a, i) => (
-                      <span key={a.label}>
-                        {i > 0 ? " · " : ""}
-                        {a.label} <b className={`font-bold ${axisToneClass(a.level)}`}>{a.level}</b>
-                      </span>
-                    ))}
-              </dd>
-            </div>
-            <div className="flex items-baseline gap-3 py-3">
-              <dt className="w-20 shrink-0 t-sub font-bold text-success">좋았던 점</dt>
-              <dd className="min-w-0 t-body text-text-1">
-                {v.goodPoints.length > 0 ? v.goodPoints.join(" · ") : <span className="text-text-3">기록 없음</span>}
-              </dd>
-            </div>
-            <div className="flex items-baseline gap-3 py-3">
-              <dt className="w-20 shrink-0 t-sub font-bold text-danger">주의할 점</dt>
-              <dd className="min-w-0 t-body text-text-1">
-                {v.cautionPoints.length > 0 ? v.cautionPoints.join(" · ") : <span className="text-text-3">기록 없음</span>}
-              </dd>
-            </div>
-            {v.weather && (
-              <div className="flex items-baseline gap-3 py-3">
-                <dt className="w-20 shrink-0 t-sub font-bold text-text-2">날씨</dt>
-                <dd className="min-w-0 t-body text-text-1">{v.weather}</dd>
-              </div>
-            )}
-            {/* [#134] 사진 촬영 시각 — EXIF 기반(장식 신호, 사실 판정 아님). [v4] 머리 배지 → 행 */}
-            {photoTakenAt && (
-              <div className="flex items-baseline gap-3 py-3">
-                <dt className="w-20 shrink-0 t-sub font-bold text-text-2">사진 촬영</dt>
-                <dd className="min-w-0 t-body tabular-nums text-text-1">{photoTakenAt}</dd>
-              </div>
-            )}
-          </dl>
+          {/* AI 심화 분석 8축 — 저장된 것이 없으면 아무것도 그리지 않는다.
+              (분석 실행 전 노트에 "분석 없음" 껍데기를 띄우지 않기 위해서다.) */}
+          <DeepDivePanel
+            analysis={(realNote.aiAnalysis ?? null) as Record<string, unknown> | null}
+          />
 
           {/* [#133 → AI-36·37] 음성 메모 + 브리핑 듣기·전사 도구 */}
-          {Array.isArray(realNote.metadata?.voiceMemos) && realNote.metadata.voiceMemos.length > 0 && (
-            <NoteAudioTools
-              voiceMemos={realNote.metadata.voiceMemos}
-              isOwner={isOwner}
-              propertyLabel={realNote.aptName ?? realNote.title}
-              briefingScript={[
-                `${realNote.title}. ${realNote.region}${realNote.aptName ? `, ${realNote.aptName}` : ""} 임장 브리핑입니다.`,
-                realNote.summary ?? "",
-                realNote.sections?.memo ? `메모. ${String(realNote.sections.memo).slice(0, 600)}` : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            />
-          )}
+          {Array.isArray(realNote.metadata?.voiceMemos) &&
+            realNote.metadata.voiceMemos.length > 0 && (
+              <NoteAudioTools
+                voiceMemos={realNote.metadata.voiceMemos}
+                isOwner={isOwner}
+                propertyLabel={realNote.aptName ?? realNote.title}
+                briefingScript={[
+                  `${realNote.title}. ${realNote.region}${realNote.aptName ? `, ${realNote.aptName}` : ""} 임장 브리핑입니다.`,
+                  realNote.summary ?? "",
+                  realNote.sections?.memo ? `메모. ${String(realNote.sections.memo).slice(0, 600)}` : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              />
+            )}
 
-          {/* [967 · 11] 위치 미니맵 — 좌표가 저장된 노트만. /map 좌표 포커스로 잇는다 */}
-          {noteCoords && (
-            <NoteMiniMap
-              lat={noteCoords.lat}
-              lng={noteCoords.lng}
-              label={realNote.aptName?.trim() || realNote.title}
-            />
-          )}
-
-          {/* [#131] 직전 저장본 — 본인에게만, 내용 수정이 있었던 노트만. [v4] 카드 → 접힘 한 줄 */}
+          {/* [#131] 직전 저장본 — 본인에게만, 내용 수정이 있었던 노트만 */}
           {isOwner && realNote.metadata?.lastRevision && (
-            <details className="group border-t border-line">
-              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
-                <span>
-                  수정 전 저장본{" "}
-                  <span className="t-sub font-medium text-text-3">
-                    {realNote.metadata.lastRevision.at.slice(0, 16).replace("T", " ")}
-                  </span>
-                </span>
-                <span aria-hidden="true" className="text-text-3 transition-transform group-open:rotate-90">
-                  ›
+            <details className="rise-in-1 card rounded-3xl p-5">
+              <summary className="cursor-pointer t-section text-ink">
+                수정 전 저장본{" "}
+                <span className="t-sub font-medium text-text-3">
+                  {realNote.metadata.lastRevision.at.slice(0, 16).replace("T", " ")} 저장분
                 </span>
               </summary>
-              <div className="flex flex-col gap-1.5 pb-3 t-body text-text-2">
+              <div className="mt-2 flex flex-col gap-1.5 t-body text-text-2">
                 {realNote.metadata.lastRevision.summary && (
                   <p>
-                    <b className="text-ink">요약</b> {realNote.metadata.lastRevision.summary}
+                    <b className="text-ink">요약:</b> {realNote.metadata.lastRevision.summary}
                   </p>
                 )}
                 {realNote.metadata.lastRevision.memo && (
                   <p className="whitespace-pre-wrap">
-                    <b className="text-ink">메모</b> {realNote.metadata.lastRevision.memo}
+                    <b className="text-ink">메모:</b> {realNote.metadata.lastRevision.memo}
                   </p>
                 )}
-                <p className="t-caption text-text-3">직전 1벌만 보관</p>
+                <p className="t-sub text-text-3">
+                  직전 1벌만 보관됩니다. 되돌리려면 내용을 복사해 수정 화면에 붙여넣으세요.
+                </p>
               </div>
             </details>
           )}
-        </section>
 
-        {/* ── 방문 기록 — 회차가 둘 이상이거나 재방문 변화가 있을 때만(1회면 머리의 방문일과 같은 사실) ── */}
-        {showVisits && (
-          <section aria-labelledby="note-visits-h" className="flex flex-col gap-2">
-            <div className="flex items-baseline justify-between gap-3">
-              <h2 id="note-visits-h" className="t-section text-ink">
-                방문 기록 <span className="t-num text-text-3">{v.visits.length}회</span>
-              </h2>
-              {/* 회차 비교(/notes/compare)는 작성자 본인 것만 열린다 — 다른 사람에게는 "내 노트만" 막다른 화면이라 소유자에게만 */}
-              {isOwner && (
-                <Link
-                  href={`/notes/compare?noteId=${encodeURIComponent(id)}`}
-                  className="tap-line shrink-0 t-sub font-bold text-primary no-underline"
-                >
-                  회차 비교 ›
-                </Link>
-              )}
-            </div>
-            {/* [#72] 재방문 변화 — 직전 회차 대비 바뀐 항목만. [v4] 카드 · 알약 칩 · 설명 캡션 → 두 줄 */}
-            {revisitDelta && (
-              <div className="flex flex-col gap-0.5">
-                <p className="t-sub text-text-3">
-                  {revisitDelta.round}회차 · {revisitDelta.fromLabel}({revisitDelta.prevVisitDate}) →{" "}
+          {/* [#72] 재방문 변화 리포트 — 직전 회차 대비, 바뀐 항목만 */}
+          {revisitDelta && (
+            <div className="rise-in-1 card flex flex-col gap-2 rounded-3xl p-6">
+              <div className="text-[15px] font-bold text-ink">
+                재방문 변화{" "}
+                {/* [996 · 4] 회차 — 프리필 사슬(metadata.round)이 적은 값 */}
+                <span className="rounded-md bg-primary-soft px-1.5 py-0.5 t-caption font-bold text-primary">
+                  {revisitDelta.round}회차
+                </span>{" "}
+                <span className="t-sub font-medium text-text-3">
+                  {revisitDelta.fromLabel}({revisitDelta.prevVisitDate}) →{" "}
                   {revisitDelta.toLabel}
-                </p>
-                {/* [996 · 4] 판단이 바뀌었으면 그것이 첫 줄 — 항목 변화보다 먼저 답할 질문이다 */}
-                {revisitDelta.decisionLine && <p className="t-body font-bold text-ink">{revisitDelta.decisionLine}</p>}
-                {revisitDelta.changes.length > 0 ? (
-                  <p className="t-body text-text-1">{revisitDelta.changes.join(" · ")}</p>
-                ) : revisitDelta.decisionLine ? null : (
-                  <p className="t-body text-text-2">직전 회차와 같음 · 비교 {revisitDelta.comparable}개 항목</p>
-                )}
+                </span>
               </div>
-            )}
-            {/* [1006] 다른 회차는 링크 — 현재 노트 줄은 링크가 아니다(자기 자신) */}
-            <ul data-tone="sand" className="divide-y divide-line border-y border-line">
-              {v.visits.map((visit) =>
-                visit.latest ? (
-                  <SummaryRow key={visit.id} label={visit.label} sub={visit.summary} value="현재" />
-                ) : (
-                  <li key={visit.id}>
-                    <Link
-                      href={`/notes/${visit.id}`}
-                      aria-label={`${visit.label} 노트 보기`}
-                      className="press flex min-h-14 items-center justify-between gap-x-3 py-3 no-underline"
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="block t-body font-bold text-ink">{visit.label}</span>
-                        <span className="mt-0.5 block truncate t-sub text-text-3">{visit.summary}</span>
-                      </span>
-                      <span aria-hidden="true" className="t-body text-text-3">
-                        ›
-                      </span>
-                    </Link>
-                  </li>
-                ),
+              {/* [996 · 4] 판단이 바뀌었으면 그것이 첫 줄 — 항목 변화보다 먼저 답할 질문이다 */}
+              {revisitDelta.decisionLine && (
+                <p className="t-body font-bold text-ink">{revisitDelta.decisionLine}</p>
               )}
-            </ul>
-          </section>
-        )}
+              {revisitDelta.changes.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {revisitDelta.changes.map((c) => (
+                    <span
+                      key={c}
+                      className="rounded-full bg-primary-soft px-3 py-1.5 t-sub font-bold text-primary"
+                    >
+                      {c}
+                    </span>
+                  ))}
+                </div>
+              ) : revisitDelta.decisionLine ? null : (
+                <p className="t-body text-text-2">
+                  비교 가능한 {revisitDelta.comparable}개 항목의 평가가 직전 회차와
+                  같아요 — 인상이 유지되고 있다는 것도 기록입니다.
+                </p>
+              )}
+              <p className="t-caption text-text-3">
+                같은 단지에 남긴 직전 기록과 이번 기록의 차이를 자동 비교했어요. 두 회차
+                모두 기록된 항목만 비교합니다.
+              </p>
+            </div>
+          )}
 
-        {/* ── AI 요약 — AI 결과는 잉크 패널(면책 포함) 그대로 + 심화 분석(저장된 것이 있을 때만) ── */}
-        <section aria-label="AI 요약" className="flex flex-col gap-4">
-          {/* ⑨ AI 작성부 구분 표시 — 저장된 aiAnalysis 우선, 없으면 규칙 기반 문구.
-              [1005 · A4] ?ai=pending + 분석 없음 → 폴링 카드(결과가 오면 ?ai=ok 로 재렌더).
-              [M3] 수정 저장(옛 분석이 남아 있음)만 해시 일치를 기다린다 — 신규는 종전대로 존재만. */}
-          {aiState === "pending" ? (
-            <AiPendingCard
-              noteId={id}
-              canRetry={isOwner}
-              defaultIntent={retryDefaultIntent(realNote)}
-              expectedHash={stale ? expectedHash : null}
-              fallback={
-                stale ? (
-                  /* "나중에 볼게요" 뒤에도 옛 요약이 새 것으로 읽히지 않게 — 무엇의 요약인지 적는다 */
-                  <div className="flex flex-col gap-1.5">
-                    <p className="t-caption text-text-3">수정 전 내용 기준 AI 정리 · 다시 열면 새 정리 반영</p>
-                    {aiSummaryPanel}
+          {/* 방문 기록 비교 */}
+          <div className="rise-in-1 card flex flex-col gap-3 rounded-3xl p-6">
+            <div className="flex items-center justify-between">
+              <div className="text-[15px] font-bold text-ink">방문 기록 비교</div>
+              {/* [1009 · T] "인쇄·PDF ›"(/notes/[id]/print) 링크 제거 — 992 에서 노트 출력 3종 중 card 만 남기고 print·deck 을
+                  보관(lib/seo/archived-routes ARCHIVED_PATTERNS)했는데, 993 이 deck 버튼만 빼고 이 입구가 남아 있었다. */}
+              <Link
+                href={`/notes/compare?noteId=${encodeURIComponent(id)}`}
+                className="inline-flex min-h-[24px] items-center text-xs font-bold text-primary"
+              >
+                회차 전체 비교 ›
+              </Link>
+            </div>
+            <div className="flex flex-col">
+              {/* [1006] 다른 회차는 링크 — 예전엔 글자만 있어 "이전 기록"으로 갈 길이 없었다.
+                  현재 노트 줄은 링크가 아니다(자기 자신). 줄 높이 ≥40px(py-2.5 + 20px 줄). */}
+              {v.visits.map((visit, i) => {
+                const rowClass = `flex min-h-[40px] items-center justify-between py-2.5 text-[13px] ${
+                  i < v.visits.length - 1 ? "border-b border-divider" : ""
+                }`;
+                const label = (
+                  <span className={visit.latest ? "font-bold text-primary" : "text-text-2"}>
+                    {visit.label}
+                    {!visit.latest && <span aria-hidden="true"> ›</span>}
+                  </span>
+                );
+                const summary = (
+                  <span className={`font-bold ${visit.latest ? "text-primary" : "text-text-1"}`}>
+                    {visit.summary}
+                  </span>
+                );
+                return visit.latest ? (
+                  <div key={visit.id} className={rowClass} aria-current="true">
+                    {label}
+                    {summary}
                   </div>
                 ) : (
-                  aiSummaryPanel
-                )
-              }
+                  <Link
+                    key={visit.id}
+                    href={`/notes/${visit.id}`}
+                    className={`${rowClass} press no-underline`}
+                    aria-label={`${visit.label} 노트 보기`}
+                  >
+                    {label}
+                    {summary}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* [993] "좋았던 점 · 주의할 점 상세" 카드 삭제 — 위 ⑤⑥ 과 같은 내용을 두 번 그렸다.
+              "다음 단계 제안"(재방문 기록) 링크는 맨 위 판단 카드의 다음 행동으로 옮겼다. */}
+          {/* [986 · 19] 노트에서 도구로 — 저장 직후 배너([AI-40])의 딥링크 하나가
+              12종 중 유일한 길이었고, 그 배너는 저장 직후에만 뜬다. 며칠 뒤 노트를
+              다시 열면 다음에 할 일이 사라졌다. 소유자에게 상시로 둔다. */}
+          {isOwner && (
+            <NoteToolsRow
+              aptName={realNote.aptName ?? ""}
+              region={realNote.region}
+              noteId={id}
+            />
+          )}
+          {/* [1005 · A4] 근처 비교 후보 — 본문·도구 다음, 댓글 앞(저장 직후 소유자만) */}
+          {nearbyCard}
+        </div>
+
+        {/* ===== 우측: AI 분석 ===== */}
+        <aside className="flex flex-col gap-4">
+          {/* [993] "판단 근거 정리" 패널 삭제 — 결론·점수·체크는 맨 위 판단 카드로 갔다(모바일에서 맨 끝에 오던 문제). */}
+          {/* 기록 축 점수 — 입력된 축만 평균. 미입력이면 링을 그리지 않는다 */}
+          <div className="rise-in-2 card flex flex-col items-center gap-3 rounded-3xl p-6">
+            {v.totalScore != null ? (
+              <div
+                className="relative h-[110px] w-[110px] rounded-full"
+                style={{
+                  /* [1005] 링 색은 토큰 — 손으로 적은 브랜드 블루 hex 는 다크·테마 변형에서 그대로 남았다 */
+                  background: `conic-gradient(var(--primary) 0% ${v.totalScore}%, var(--primary-soft) ${v.totalScore}% 100%)`,
+                }}
+              >
+                <div className="absolute inset-[9px] flex flex-col items-center justify-center rounded-full bg-surface">
+                  <span className="t-title leading-none text-primary">
+                    {v.totalScore}
+                  </span>
+                  <span className="t-caption text-text-3">/ 100</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-[110px] w-[110px] flex-col items-center justify-center rounded-full bg-bg">
+                <span className="t-section text-text-3">—</span>
+                <span className="mt-0.5 t-caption text-text-3">미입력</span>
+              </div>
+            )}
+            <div className="text-center text-xs text-text-2">
+              {v.totalScore != null ? (
+                <>
+                  입력 {v.scoredAxisCount}개 축 평균{" "}
+                  <b className="text-primary">{v.totalScore}점</b> · 이 노트 기록 기준
+                </>
+              ) : (
+                <>축 점수가 없어 종합 점수를 표시하지 않아요</>
+              )}
+            </div>
+            <div className="flex w-full flex-col gap-[7px]">
+              {v.scoreBars.map((b) => (
+                <div key={b.label} className="flex items-center gap-2">
+                  <span className="w-11 shrink-0 t-sub text-text-2">
+                    {b.label}
+                  </span>
+                  <div className="relative h-2 flex-1 rounded bg-bg">
+                    <div
+                      className={`absolute left-0 h-2 rounded ${
+                        b.bad ? "bg-danger" : "bg-primary"
+                      }`}
+                      style={{ width: `${b.value}%` }}
+                    />
+                  </div>
+                  <span
+                    className={`text-[12px] font-bold ${
+                      b.bad ? "text-danger" : "text-ink"
+                    }`}
+                  >
+                    {b.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="t-caption text-text-3">
+              점수 = 입력된 축(입지·학군·교통·시설·미래가치)만 평균 × 20 · 미입력
+              축은 평균·막대에서 제외합니다
+            </div>
+          </div>
+
+          {/* 기록 완성도 (10f) */}
+          <div className="rise-in-3 card flex flex-col gap-2 rounded-3xl p-[18px]">
+            <div className="t-body font-bold text-ink">기록 완성도</div>
+            <div className="flex justify-between text-xs">
+              <span className="text-text-2">체크 항목</span>
+              <span className="font-bold text-primary">
+                {v.checklistDone}/{v.checklistTotal} 완료
+              </span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-text-2">시간대 커버리지</span>
+              <span className="font-bold text-primary">
+                {v.visits.length}회 방문 기록
+              </span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-text-2">미확인 항목</span>
+              <span className="font-bold text-danger">
+                {Math.max(v.checklistTotal - v.checklistDone, 0)}건
+              </span>
+            </div>
+          </div>
+
+          {/* G10: '판단 편향 감지'·'체크 제안' 패널은 실제 분석 없이 문구만 고정돼 있던
+              허구 패널이라 제거했다. 편향 분석이 실제로 붙으면 그때 되살린다. */}
+        </aside>
+      </div>
+
+      {/* [967 · 12] 댓글 — 공개 노트(과 소유자 본인)에만. id="comments" 는 받은편지함
+          알림(/notes/[id]#comments)의 착지점이다 — 지우면 알림이 글 맨 위로 떨어진다. */}
+      {wantsComments && (
+        <section
+          id="comments"
+          className="rise-in-2 card mt-5 flex scroll-mt-24 flex-col gap-3 rounded-3xl p-6"
+        >
+          {commentsR.ok ? (
+            <NoteComments
+              noteId={realNote.id}
+              comments={commentViews}
+              relativeLabels={commentLabels}
+              ownCommentIds={commentsR.ownCommentIds}
+              canModerate={canModerateComments}
+              loggedIn={Boolean(viewerEmail)}
             />
           ) : (
-            aiSummaryPanel
-          )}
-          {isOwner && aiState !== "pending" && (
-            <AiFeedbackButtons
-              targetType="note_ai"
-              targetId={id}
-              context={{
-                mode: hasLlmAi ? "llm" : "rule",
-                badge: v.aiBadge,
-              }}
-            />
-          )}
-          {/* 항목 38 — 가치를 받은 화면의 상주 안내. AI 정리가 실제로 반영된 노트를 보는 무료 소유자에게만.
-              [v4 · 규칙 9] 파란 안내 카드 + 채움 버튼 → 캡션 한 줄(플랜명은 planLabel 단일 출처) */}
-          {isOwner && isFreeViewer && hasLlmAi && (
-            <p className="t-caption text-text-3">
-              노트마다 AI 정리 · {planLabel("pro")}{" "}
-              <Link href="/subscription" className="tap-line font-bold text-primary no-underline">
-                요금제 보기 ›
-              </Link>
+            /* 조회 실패를 "댓글 없음" 으로 그리지 않는다 */
+            <p role="alert" className="t-body text-text-2">
+              댓글을 불러오지 못했어요. 잠시 후 새로고침해 주세요.
             </p>
           )}
-
-          {/* AI 심화 분석 8축 — 저장된 것이 없으면 아무것도 그리지 않는다 */}
-          <DeepDivePanel analysis={(realNote.aiAnalysis ?? null) as Record<string, unknown> | null} />
         </section>
+      )}
 
-        {/* ── 이어서 — 예전 상단 버튼 · 본문 끝 링크 줄 · 도구 카드 · "그래서 다음은?" · 로그인 카드를 구분선 행 하나로 ── */}
-        <section aria-labelledby="note-next-h" className="flex flex-col gap-1">
-          <h2 id="note-next-h" className="t-section text-ink">
-            이어서
-          </h2>
-          <ul data-tone="hanji" className="divide-y divide-line border-b border-line">
-            {/* [986 · 19] 노트에서 도구로 — 소유자에게 상시. 단지 4종 + 나머지 + 에이전트 */}
-            {isOwner && <NoteToolsRow aptName={realNote.aptName ?? ""} region={realNote.region} noteId={id} />}
-            {/* 소유자: 주 행동이 AI 진단이면 다음 방문 노트는 여기 한 행으로 */}
-            {isOwner && primaryIsDiagnosis && (
-              <SummaryRow label="다음 방문 노트 쓰기" sub="위치·태그·체크 이어받기" href={revisitHref} />
-            )}
-            {/* 다른 사람: "그래서 다음은?"의 AI 분석 — 이 노트를 맥락으로 분석 허브를 연다 */}
-            {!isOwner && (
-              <SummaryRow
-                label="이 노트로 AI 분석"
-                sub={aptForTools || regionTrim || undefined}
-                href={`/analysis?noteId=${encodeURIComponent(id)}`}
-              />
-            )}
-            {/* 15h-43 노트→지도 루프 — 지역 컨텍스트를 넘겨 비교가 끊기지 않게(주 행동이 이것이면 뺀다) */}
-            {primaryAction.href !== mapCompareHref && (
-              <SummaryRow
-                label="지도에서 비교"
-                sub={[regionTrim, aptForTools].filter(Boolean).join(" · ") || undefined}
-                href={mapCompareHref}
-              />
-            )}
-            {/* 단지 링크 — 실 단지 id를 찾은 경우에만(예전 "{단지} 홈" · "이 단지 노트 더 보기" · "단지 허브 보기"는 같은 주소) */}
-            {complexHref && <SummaryRow label={`${v.complexLabel} 단지 홈`} sub="실거래 · 매물 · 다른 노트" href={complexHref} />}
-            {/* A9 공개노트 전환 훅 — 비로그인 열람자에게 관심단지·알림 로그인 유도. [1009 · T] "시세" → "실거래" */}
-            {!viewerEmail && complexHref && (
-              <SummaryRow
-                label="로그인하고 실거래 알림 받기"
-                sub={`${aptForTools || "이 단지"} 관심 단지 저장`}
-                href={`/login?callbackUrl=${encodeURIComponent(complexHref)}`}
-              />
-            )}
-          </ul>
+      {/* 항목 38 — 가치를 받은 화면의 상주 안내. AI 정리가 실제로 반영된
+          노트를 보는 무료 소유자에게만 보인다(한도 문구가 아니라 가치 문구). */}
+      {isOwner && isFreeViewer && hasLlmAi && (
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary-soft px-4 py-3">
+          <p className="t-body text-text-1">
+            이 AI 정리가 도움이 됐다면 — PRO(월{" "}
+            {monthlyPrice("pro").toLocaleString("ko-KR")}원)에서는 매 노트마다
+            제한 없이 받을 수 있어요.
+          </p>
+          <Link href="/subscription" className="btn-primary btn-sm no-underline">
+            요금제 보기
+          </Link>
+        </div>
+      )}
 
-          {/* [945 #18] 저장 직후 다음 임장 후보 — 같은 구 실거래 활발 단지(매트뷰, 지어내지 않음). 소유자 저장 직후만 */}
-          {postSave && nearbyCandidates.length > 0 && (
-            <div className="mt-3 flex flex-col gap-1">
-              <p className="t-sub font-bold text-text-2">
-                근처 비교 후보 <span className="font-medium text-text-3">{realNote.region} 최근 거래 많은 단지</span>
-              </p>
-              <ul data-tone="blue" className="divide-y divide-line border-y border-line">
-                {nearbyCandidates.map((c) => (
-                  <li key={c.id} className="flex min-h-14 items-center gap-2 py-2">
-                    <Link href={complexHrefFromId(c.id)} className="min-w-0 flex-1 py-1 no-underline">
-                      <span className="block t-body font-bold text-ink">{c.name}</span>
-                      {c.sub && <span className="block truncate t-sub text-text-3">{c.sub}</span>}
-                    </Link>
-                    <CompareTrayButton complexId={c.id} name={c.name} region={realNote.region} />
-                    <Link
-                      href={`/notes/new?apt=${encodeURIComponent(c.name)}&region=${encodeURIComponent(realNote.region)}`}
-                      className="inline-flex min-h-10 shrink-0 items-center t-sub font-bold text-primary no-underline"
-                    >
-                      노트 쓰기
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
-
-        {/* [967 · 12] 댓글 — 공개 노트(과 소유자 본인)에만. id="comments" 는 받은편지함
-            알림(/notes/[id]#comments)의 착지점이다 — 지우면 알림이 글 맨 위로 떨어진다. [v4] 카드 → 섹션 */}
-        {wantsComments && (
-          <section id="comments" className="flex scroll-mt-24 flex-col gap-3">
-            {commentsR.ok ? (
-              <NoteComments
-                noteId={realNote.id}
-                comments={commentViews}
-                relativeLabels={commentLabels}
-                ownCommentIds={commentsR.ownCommentIds}
-                canModerate={canModerateComments}
-                loggedIn={Boolean(viewerEmail)}
-              />
-            ) : (
-              /* 조회 실패를 "댓글 없음" 으로 그리지 않는다 */
-              <p role="alert" className="t-sub text-text-2">
-                댓글을 불러오지 못함 · 잠시 후 새로고침
-              </p>
-            )}
-          </section>
-        )}
-
-        {/* [3차] 같은 지역 다른 노트 + 지역 허브 연결 — 읽고 끝나는 상세를 순환로로 */}
-        {realNote.isPublic && <RelatedNotes currentId={realNote.id} region={realNote.region} />}
-
-        {/* ⑦⑧ 맨 끝 출처 한 줄 — 출처 · 기준일 + 신고(#81, 타인의 노트만).
-            [v4 · 규칙 9] 광고 공간(AdZone article_end)은 뺐다 — 자사 안내 카드는 주 화면에 두지 않는다 */}
-        <p className="flex flex-wrap items-center gap-x-1.5 t-caption text-text-3">
-          <span>
-            출처 {v.sourceLabel} · 기준일 {v.baseDate}
-          </span>
-          {!isOwner && (
-            <>
-              <span aria-hidden="true">·</span>
-              <ReportButton postId={realNote.id} />
-            </>
-          )}
-        </p>
+      {/* 15h-43 노트→AI→지도 루프: 다음 행동을 퍼널 순서로 */}
+      <div className="mt-5">
+        <NextActions
+          actions={[
+            ...(hasLlmAi
+              ? [
+                  {
+                    label: "지도에서 비교",
+                    href: mapCompareHref,
+                    primary: true as const,
+                  },
+                  {
+                    label: "심화 AI 분석",
+                    href: `/analysis?noteId=${encodeURIComponent(id)}`,
+                  },
+                ]
+              : [
+                  {
+                    label: "AI 분석 실행",
+                    href: `/analysis?noteId=${encodeURIComponent(id)}`,
+                    primary: true as const,
+                  },
+                  { label: "지도에서 비교", href: mapCompareHref },
+                ]),
+            ...(complexHref
+              ? [{ label: "단지 허브 보기", href: complexHref }]
+              : []),
+            /* [993] "이 단지 Q&A"(/qna) 제거 — Q&A 는 보관(비노출, 992) */
+          ]}
+        />
       </div>
+
+      {/* [3차] 같은 지역 다른 노트 + 지역 허브 연결 — 읽고 끝나는 상세를 순환로로 */}
+      {realNote.isPublic && (
+        <RelatedNotes currentId={realNote.id} region={realNote.region} />
+      )}
+
+      {/* A9 공개노트 전환 훅 — 비로그인 열람자에게 관심단지·알림 로그인 유도 */}
+      {/* [961] 광고 공간 — 글 끝. 본문을 다 읽은 뒤의 자연스러운 쉼에만 둔다 */}
+      <AdZone placement="article_end" seed={0} plan={null} className="mt-6" />
+      {!viewerEmail && complexHref && (
+        <div className="mt-4 rounded-2xl border border-primary/20 bg-primary-soft p-5 text-center">
+          <div className="t-section text-ink">이 단지가 궁금하신가요?</div>
+          <p className="mx-auto mt-1 max-w-[440px] t-body text-text-3">
+            로그인하면 {realNote.aptName?.trim() || "이 단지"}를 관심 단지로 저장하고, 실거래·시세
+            변동 알림을 받을 수 있어요.
+          </p>
+          <Link
+            href={`/login?callbackUrl=${encodeURIComponent(complexHref)}`}
+            className="btn-primary btn-md mt-3 inline-block no-underline"
+          >
+            로그인하고 시세 알림 받기
+          </Link>
+        </div>
+      )}
     </PageShell>
   );
 }

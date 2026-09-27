@@ -1,5 +1,5 @@
 "use client";
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 3곳을 font-bold(700)로 바꿨다. */
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-bold/black 3곳을 font-bold(700)로 바꿨다. */
 
 import { useEffect, useState } from "react";
 import type { AccountFacts } from "@/lib/me/account-facts";

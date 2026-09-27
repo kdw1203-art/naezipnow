@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
+import { Icon } from "@/app/components/Icon";
 import { inspectionAverageScore, type PublicNoteCard } from "@/lib/inspection/store-db";
 import { listRelatedNotePoolCached, shouldLogNoteTiming } from "@/lib/inspection/note-cache";
 import { regionIdForName } from "@/lib/region/catalog";
@@ -51,33 +51,43 @@ export async function RelatedNotes({
   const regionId = regionIdForName(regionTrim);
   const sameRegionMode = sameRegion.length > 0;
 
-  /* [v4 · 규칙 5·10] 2열 카드 격자 → 구분선 목록 행(이름 + 보조 한 줄 / 별점 · `›`). 핀 아이콘은 뺐다(규칙 7) */
   return (
-    <section aria-labelledby="related-notes-h">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-        <h2 id="related-notes-h" className="t-section text-ink">
-          {sameRegionMode ? `${regionTrim} 다른 임장노트` : "최근 공개 임장노트"}
+    <section className="mt-6">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="t-section text-ink">
+          {sameRegionMode ? `${regionTrim}의 다른 임장노트` : "최근 공개 임장노트"}
         </h2>
         {regionId && (
-          <Link href={`/region/${regionId}`} className="tap-line t-sub font-bold text-primary no-underline">
-            {regionTrim} 시장 데이터 ›
+          <Link
+            href={`/region/${regionId}`}
+            className="inline-flex items-center gap-1 t-sub font-bold text-primary no-underline"
+          >
+            <Icon name="pin" size={13} />
+            {regionTrim} 시장 데이터 보기 ›
           </Link>
         )}
       </div>
-      <ul data-tone="hanji" className="mt-1 divide-y divide-line">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {pool.map((n) => {
           const rating = inspectionAverageScore(n.scores);
           return (
-            <SummaryRow
+            <Link
               key={n.id}
-              label={n.title}
-              sub={[n.region || "전국", n.aptName?.trim()].filter(Boolean).join(" · ")}
-              value={rating > 0 ? `★${rating.toFixed(1)}` : undefined}
               href={`/notes/${n.id}`}
-            />
+              className="card flex flex-col gap-1 rounded-xl p-3.5 no-underline tap-ripple"
+            >
+              <span className="line-clamp-1 t-body font-bold text-ink">{n.title}</span>
+              <span className="flex items-center gap-2 t-sub text-text-3">
+                <span>{n.region || "전국"}</span>
+                {n.aptName?.trim() && <span>· {n.aptName.trim()}</span>}
+                {rating > 0 && (
+                  <span className="font-bold text-ink">★ {rating.toFixed(1)}</span>
+                )}
+              </span>
+            </Link>
           );
         })}
-      </ul>
+      </div>
     </section>
   );
 }

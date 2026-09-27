@@ -1,6 +1,5 @@
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 3곳을 font-bold(700)로 바꿨다. */
 import Link from "next/link";
-import { ErrorState } from "@/app/components/ui/EmptyState";
+import { EmptyState, ErrorState } from "@/app/components/ui/EmptyState";
 import { logger } from "@/lib/log";
 import { listBookmarks } from "@/lib/bookmarks/store";
 import { formatEokMan } from "@/lib/format/eok-man";
@@ -71,9 +70,9 @@ export async function WishlistSection({ email }: { email: string }) {
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="t-sub text-text-3">저장한 매물 {items.length}개</p>
-        <Link href="/listings" className="inline-flex min-h-10 items-center t-sub font-bold text-primary no-underline">
-          매물 둘러보기 ›
+        <p className="t-body text-text-3">저장한 매물 {items.length}개</p>
+        <Link href="/listings" className="t-body font-bold text-primary no-underline">
+          매물 둘러보기 →
         </Link>
       </div>
 
@@ -84,61 +83,72 @@ export async function WishlistSection({ email }: { email: string }) {
           desc="저장한 매물이 0개인 게 아니라 조회가 실패했어요. 잠시 후 새로고침해 주세요."
         />
       ) : items.length === 0 ? (
-        /* [966] 빈 상태 정본화 · [v4 · 규칙 8] 그림 카드 → 한 줄(목록 링크는 바로 위에 있다) */
-        <p className="rise-in border-y border-line py-3 t-sub text-text-3">
-          저장한 매물 없음 · 매물 화면의 관심(♥) 버튼 → 여기에 모임 · 실거래가와 나란히 비교
-        </p>
+        /* [966] 빈 상태 정본화 */
+        <EmptyState
+          icon="heart"
+          className="rise-in"
+          title="아직 저장한 매물이 없어요"
+          desc="마음에 드는 매물의 관심(♥) 버튼을 누르면 여기에 모여요. 실거래가와 비교하며 천천히 살펴보세요."
+          action={{ label: "매물 둘러보기", href: "/listings" }}
+        />
       ) : (
         <>
           {loaded.ok && loaded.failedCount > 0 && (
-            <p className="mb-3 t-caption text-text-3">
-              {loaded.failedCount}건 조회 실패 — 삭제된 게 아닐 수 있음 · 잠시 후 새로고침
+            <p className="mb-3 rounded-xl border border-line bg-bg px-3 py-2 t-sub text-text-2">
+              저장한 매물 중 {loaded.failedCount}건은 지금 불러오지 못했어요 — 삭제된 게
+              아니라 조회가 실패한 것일 수 있습니다. 잠시 후 새로고침해 주세요.
             </p>
           )}
-          {/* [v4 · 규칙 5·10] 높이가 다른 카드 2열 → 1px 선 행(왼쪽 단지·가격·메타 / 오른쪽 ›). 행 전체가 상세 링크 */}
-          <ul data-tone="blue" className="rise-in flex flex-col divide-y divide-line border-y border-line">
-            {items.map((l) => {
-              const stale = isListingStale(l);
-              return (
-                <li key={l.id}>
-                  <Link href={`/listings/${l.id}`} className="press flex min-h-14 items-center justify-between gap-3 py-3 no-underline">
-                    <span className="min-w-0 flex-1">
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        <span className="min-w-0 truncate t-body font-bold text-ink">{l.complexName}</span>
-                        {/* 검증·경과 사실 배지만 — "집주인 확인"(기준 사이트 표기) · "확인 필요" */}
-                        {l.ownerVerified && (
-                          <span className="shrink-0 rounded-sm bg-success-soft chip-pad t-caption font-medium text-success">
-                            집주인 확인
-                          </span>
-                        )}
-                        {stale && (
-                          <span className="shrink-0 rounded-sm bg-warning-soft chip-pad t-caption font-medium text-warning">
-                            확인 필요
-                          </span>
-                        )}
-                      </span>
-                      <span className="mt-0.5 block truncate t-sub text-text-3">
-                        {[
-                          LISTING_TYPE_LABEL[l.listingType],
-                          l.regionName,
-                          l.areaM2 !== null ? `${l.areaM2}㎡` : null,
-                          l.floor !== null ? `${l.floor}층` : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </span>
+          <div className="rise-in grid grid-cols-1 gap-3 md:grid-cols-2">
+          {items.map((l) => {
+            const stale = isListingStale(l);
+            return (
+              <div key={l.id} className="card card-pad-sm flex flex-col gap-2.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="rounded-md bg-bg chip-pad t-sub font-bold text-text-2">
+                    {LISTING_TYPE_LABEL[l.listingType]}
+                  </span>
+                  {l.ownerVerified && (
+                    <span className="rounded-md bg-success-soft chip-pad t-sub font-bold text-success">
+                      소유확인
                     </span>
-                    <span className="flex shrink-0 items-center gap-1.5">
-                      <span className="t-body t-num text-ink">{priceLine(l)}</span>
-                      <span aria-hidden="true" className="t-body text-text-3">
-                        ›
-                      </span>
+                  )}
+                  {stale && (
+                    <span
+                      className="rounded-md chip-pad t-sub font-bold"
+                      style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
+                    >
+                      확인 필요
                     </span>
+                  )}
+                </div>
+
+                <Link
+                  href={`/listings/${l.id}`}
+                  className="t-section text-ink hover:underline"
+                >
+                  {l.complexName}
+                </Link>
+                <div className="t-section t-num text-ink">{priceLine(l)}</div>
+                <div className="t-sub text-text-3">
+                  {[
+                    l.regionName,
+                    l.areaM2 !== null ? `${l.areaM2}㎡` : null,
+                    l.floor !== null ? `${l.floor}층` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </div>
+
+                <div className="mt-1">
+                  <Link href={`/listings/${l.id}`} className="btn-outline btn-sm no-underline">
+                    상세 보기
                   </Link>
-                </li>
-              );
-            })}
-          </ul>
+                </div>
+              </div>
+            );
+          })}
+          </div>
         </>
       )}
     </>

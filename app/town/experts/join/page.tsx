@@ -12,7 +12,7 @@ import { EXPERT_VERIFICATION_PIPELINE, EXPERT_POST_APPROVAL } from "@/lib/expert
 import { EXPERT_CERT_FEES } from "@/lib/billing/marketplace-fees";
 import { ExpertApplyCta } from "../ExpertApplyCta";
 import { TownCategoryNav } from "../../TownCategoryNav";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-bold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* ============================================================
    전문가 참여 안내 — /town/experts/join  (959)
@@ -180,7 +180,7 @@ export default function ExpertJoinPage() {
         </div>
         <p className="mt-2 t-caption text-text-3">
           법률 서비스는 결제 정책상 유료 입점이 불가해 받지 않습니다 · 절차·검증 기준은{" "}
-          <Link href="/legal/expert" className="font-bold text-primary underline underline-offset-2">
+          <Link href="/legal/expert" className="tap-line font-bold text-primary underline underline-offset-2">
             전문가 운영정책
           </Link>
         </p>

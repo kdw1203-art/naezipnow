@@ -43,7 +43,7 @@ export function ReportedListingActions({
 
   if (done) {
     return (
-      <div className="text-[12px] font-extrabold text-ai-success">
+      <div className="text-[12px] font-bold text-ai-success">
         {done === "hidden" ? "숨김 처리 완료" : "숨김 해제 완료 — 신고 수를 0으로 되돌렸어요."}
       </div>
     );
@@ -56,7 +56,7 @@ export function ReportedListingActions({
           type="button"
           onClick={() => act("unhide")}
           disabled={busy}
-          className="rounded-lg bg-ai-success px-3.5 py-1.5 text-[12px] font-extrabold text-[#0c2a17] disabled:opacity-50"
+          className="rounded-lg bg-ai-success px-3.5 py-1.5 text-[12px] font-bold text-[#0c2a17] disabled:opacity-50"
         >
           숨김 해제
         </button>
@@ -65,7 +65,7 @@ export function ReportedListingActions({
           type="button"
           onClick={() => act("hide")}
           disabled={busy}
-          className="rounded-lg bg-danger-fill px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-50"
+          className="rounded-lg bg-danger-fill px-3.5 py-1.5 text-[12px] font-bold text-white disabled:opacity-50"
         >
           숨김 처리
         </button>

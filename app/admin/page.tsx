@@ -97,7 +97,7 @@ export default async function AdminDashboardPage() {
     <>
       {/* 헤더 */}
       <div className="rise-in flex flex-wrap items-center justify-between gap-3">
-        <div className="text-[19px] font-extrabold text-white">
+        <div className="text-[19px] font-bold text-white">
           운영 대시보드{" "}
           <span className="text-xs font-medium text-[#9aa6b8]">
             {today} (실시간)
@@ -107,7 +107,7 @@ export default async function AdminDashboardPage() {
           {/* 매물 검수 대기 링크 (집주인 직접·중개사 등록) */}
           <Link
             href="/admin/listings"
-            className="rounded-lg bg-[rgba(126,162,255,.15)] px-3.5 py-[7px] font-extrabold text-ai-accent"
+            className="rounded-lg bg-[rgba(126,162,255,.15)] px-3.5 py-[7px] font-bold text-ai-accent"
           >
             매물 검수 {pendingListingsCount === null ? "—" : `${pendingListingsLabel}건`}
           </Link>
@@ -126,7 +126,7 @@ export default async function AdminDashboardPage() {
           <div key={k.label} className={`${darkCard} p-4`}>
             <div className="text-[12px] text-[#9aa6b8]">{k.label}</div>
             <div
-              className={`mt-1 text-[21px] font-extrabold ${
+              className={`mt-1 text-[21px] font-bold ${
                 k.accent ? "text-ai-accent" : "text-white"
               }`}
             >
@@ -146,7 +146,7 @@ export default async function AdminDashboardPage() {
       <div className="rise-in-2 grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className={`${darkCard} flex flex-col gap-2.5 p-[18px]`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-[13px] font-extrabold text-white">
+            <div className="text-[13px] font-bold text-white">
               처리 대기{" "}
               <span className="text-[10px] font-medium text-[#9aa6b8]">
                 content_reports 최근 5건
@@ -202,7 +202,7 @@ export default async function AdminDashboardPage() {
           )}
         </div>
         <div className={`${darkCard} flex flex-col gap-2.5 p-[18px]`}>
-          <div className="text-[13px] font-extrabold text-white">
+          <div className="text-[13px] font-bold text-white">
             ETL 상태{" "}
             <span className="text-[10px] font-medium text-[#9aa6b8]">
               market_ingest_log 최신 {ops.etl.length}건
@@ -249,7 +249,7 @@ export default async function AdminDashboardPage() {
             쌓이는지 매일 확인하는 자리. 실행 기록 원문은 데이터 콘솔의
             source=notification-outbox 로 남는다(outbox 드레인 크론). */}
         <div className={`${darkCard} flex flex-col gap-2.5 p-[18px]`}>
-          <div className="text-[13px] font-extrabold text-white">
+          <div className="text-[13px] font-bold text-white">
             알림 발송 큐{" "}
             <span className="text-[10px] font-medium text-[#9aa6b8]">
               notification_outbox
@@ -263,7 +263,7 @@ export default async function AdminDashboardPage() {
             <>
               <div className="flex items-baseline gap-2">
                 <span
-                  className="text-[21px] font-extrabold"
+                  className="text-[21px] font-bold"
                   style={{ color: (kpi?.pendingOutbox ?? 0) > 0 ? "#f2c94c" : "var(--ai-success)" }}
                 >
                   {num(kpi?.pendingOutbox)}
@@ -289,7 +289,7 @@ export default async function AdminDashboardPage() {
       {/* 최근 문의 · 가입 추이 (실집계 — 실패 시 정직한 빈 상태) */}
       <div className="rise-in-2 grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className={`${darkCard} flex flex-col gap-2.5 p-[18px]`}>
-          <div className="text-[13px] font-extrabold text-white">
+          <div className="text-[13px] font-bold text-white">
             최근 문의{" "}
             <span className="text-[10px] font-medium text-[#9aa6b8]">
               /support 접수 · 관리자 인박스 최신 5건
@@ -338,7 +338,7 @@ export default async function AdminDashboardPage() {
           )}
         </div>
         <div className={`${darkCard} flex flex-col gap-2.5 p-[18px]`}>
-          <div className="text-[13px] font-extrabold text-white">
+          <div className="text-[13px] font-bold text-white">
             가입 추이{" "}
             <span className="text-[10px] font-medium text-[#9aa6b8]">
               일별 최근 14일
@@ -391,7 +391,7 @@ export default async function AdminDashboardPage() {
         {/* 회원 관리 — P2-12: profiles 최근 가입 실데이터 (실패 시 빈 상태) */}
         <div className={`${panelCard} flex flex-col gap-3`}>
           <div className="flex items-center justify-between">
-            <span className="text-[15px] font-extrabold text-white">
+            <span className="text-[15px] font-bold text-white">
               회원 관리
             </span>
             <span className="text-[12px] text-[#9aa6b8]">
@@ -441,7 +441,7 @@ export default async function AdminDashboardPage() {
             실제 테이블 집계와 실제 콘솔 링크만 남긴다. */}
         <div className={`${panelCard} flex flex-col gap-3`}>
           <div className="flex items-center justify-between">
-            <span className="text-[15px] font-extrabold text-white">
+            <span className="text-[15px] font-bold text-white">
               노트 · 콘텐츠 현황
             </span>
             <span className="text-[12px] text-[#9aa6b8]">
@@ -486,7 +486,7 @@ export default async function AdminDashboardPage() {
                     className="rounded-xl border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.04)] px-3 py-2.5"
                   >
                     <div className="text-[10px] text-[#9aa6b8]">{s.label}</div>
-                    <div className="mt-0.5 text-[15px] font-extrabold text-white">
+                    <div className="mt-0.5 text-[15px] font-bold text-white">
                       {s.value}
                     </div>
                     <div className="mt-0.5 text-[10px] text-[#6b7688]">
@@ -498,7 +498,7 @@ export default async function AdminDashboardPage() {
               <div className="flex flex-wrap gap-1.5 text-[12px]">
                 <Link
                   href="/admin/listings"
-                  className="rounded-lg bg-[rgba(126,162,255,.15)] px-3 py-[6px] font-extrabold text-ai-accent"
+                  className="rounded-lg bg-[rgba(126,162,255,.15)] px-3 py-[6px] font-bold text-ai-accent"
                 >
                   매물 검수
                 </Link>
@@ -522,10 +522,10 @@ export default async function AdminDashboardPage() {
         {/* 신고 처리 */}
         <div className={`${panelCard} flex flex-col gap-3`}>
           <div className="flex items-center justify-between">
-            <span className="text-[15px] font-extrabold text-white">
+            <span className="text-[15px] font-bold text-white">
               신고 처리
               {openReportCount !== null ? (
-                <span className="ml-1 rounded-full bg-danger-fill chip-pad-tight text-[10px] font-extrabold text-white">
+                <span className="ml-1 rounded-full bg-danger-fill chip-pad-tight text-[10px] font-bold text-white">
                   {openReportCount.toLocaleString("ko-KR")}
                 </span>
               ) : null}
@@ -569,11 +569,11 @@ export default async function AdminDashboardPage() {
                           : "border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.04)]"
                       }`}
                     >
-                      <div className="text-xs font-extrabold text-white">
+                      <div className="text-xs font-bold text-white">
                         {c.status}
                       </div>
                       <div
-                        className={`text-[15px] font-extrabold ${
+                        className={`text-[15px] font-bold ${
                           isOpen ? "text-ai-danger" : "text-[#c9d2e0]"
                         }`}
                       >
@@ -585,7 +585,7 @@ export default async function AdminDashboardPage() {
               </div>
               <Link
                 href="/admin/moderation"
-                className="rounded-lg bg-[rgba(126,162,255,.15)] px-3.5 py-[7px] text-center text-[12px] font-extrabold text-ai-accent"
+                className="rounded-lg bg-[rgba(126,162,255,.15)] px-3.5 py-[7px] text-center text-[12px] font-bold text-ai-accent"
               >
                 신고 콘솔에서 처리하기
               </Link>
@@ -596,10 +596,10 @@ export default async function AdminDashboardPage() {
         {/* 전문가 승인 */}
         <div className={`${panelCard} flex flex-col gap-3`}>
           <div className="flex items-center justify-between">
-            <span className="text-[15px] font-extrabold text-white">
+            <span className="text-[15px] font-bold text-white">
               전문가 승인
               {expertOps && !expertOps.isDemo && expertOps.pendingVerifications > 0 ? (
-                <span className="ml-1 rounded-full bg-danger-fill chip-pad-tight text-[10px] font-extrabold text-white">
+                <span className="ml-1 rounded-full bg-danger-fill chip-pad-tight text-[10px] font-bold text-white">
                   {expertOps.pendingVerifications.toLocaleString("ko-KR")}
                 </span>
               ) : null}
@@ -644,7 +644,7 @@ export default async function AdminDashboardPage() {
                   >
                     <div className="text-[10px] text-[#9aa6b8]">{s.label}</div>
                     <div
-                      className="mt-0.5 text-[19px] font-extrabold"
+                      className="mt-0.5 text-[19px] font-bold"
                       style={{ color: s.color }}
                     >
                       {s.value.toLocaleString("ko-KR")}
@@ -673,7 +673,7 @@ export default async function AdminDashboardPage() {
               ) : (
                 <Link
                   href="/admin/quality"
-                  className="rounded-lg bg-[rgba(126,162,255,.15)] px-3.5 py-[7px] text-center text-[12px] font-extrabold text-ai-accent"
+                  className="rounded-lg bg-[rgba(126,162,255,.15)] px-3.5 py-[7px] text-center text-[12px] font-bold text-ai-accent"
                 >
                   심사 콘솔에서 서류 검토하기
                 </Link>

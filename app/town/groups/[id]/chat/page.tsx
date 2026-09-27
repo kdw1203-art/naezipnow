@@ -3,7 +3,7 @@ import { getMeeting } from "@/lib/meetings/store-db";
 import { safeAuth } from "@/lib/safe-auth";
 import { ChatRoom } from "../ChatRoom";
 import { formatKstMeetingTime } from "@/lib/format/kst";
-/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-bold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 시안 8p — 모임 그룹 채팅방 (+ 10c 메뉴)
    /api/groups/[id]/chat(입장·멱등) + /api/chat/rooms/[roomId]/messages 실배선 */

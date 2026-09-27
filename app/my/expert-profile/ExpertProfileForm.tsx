@@ -1,6 +1,6 @@
 "use client";
 /* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 2곳). */
-/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 2곳을 font-bold(700)로 바꿨다. */
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-bold/black 2곳을 font-bold(700)로 바꿨다. */
 
 import { useMemo, useState } from "react";
 import Link from "next/link";

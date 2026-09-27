@@ -66,7 +66,7 @@ export function OfficeLeadForm() {
   if (state === "done") {
     return (
       <div className="rounded-lg border border-line bg-success-soft px-5 py-6 text-center">
-        <p className="text-[13px] font-extrabold text-success">문의가 접수됐어요</p>
+        <p className="text-[13px] font-bold text-success">문의가 접수됐어요</p>
         <p className="mt-1 text-[13px] leading-[1.7] text-text-2">
           {email.trim()} 로 영업일 기준 24~72시간 안에 답변드립니다.
         </p>
@@ -139,7 +139,7 @@ export function OfficeLeadForm() {
         type="button"
         onClick={submit}
         disabled={state === "sending"}
-        className="rounded-lg bg-primary px-4 py-2.5 text-[13px] font-extrabold text-white disabled:opacity-60"
+        className="min-h-10 rounded-lg bg-primary px-4 py-2.5 text-[13px] font-bold text-white disabled:opacity-60"
       >
         {state === "sending" ? "접수 중…" : "문의 보내기"}
       </button>
