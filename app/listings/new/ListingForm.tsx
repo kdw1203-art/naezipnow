@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 /* 매물 등록 폼 — 지도에서 핀 찍어 등록 → POST /api/listings (authed · 3회/시간) */
 
@@ -263,8 +264,8 @@ export function ListingForm() {
 
   if (done) {
     return (
-      <div className="rise-in card card-pad-sm flex max-w-[640px] flex-col items-start gap-3 py-8">
-        <div className="text-[15px] font-extrabold text-ink">매물 등록이 접수됐어요</div>
+      <div className="rise-in card card-pad-sm mx-auto flex w-full max-w-[760px] flex-col items-start gap-3 py-8">
+        <div className="text-[15px] font-bold text-ink">매물 등록이 접수됐어요</div>
         <p className="text-[13px] leading-[1.7] text-text-2">
           <b>검수 후 노출됩니다 (1~2일)</b>. 형식 요건 확인이 끝나면 실매물 목록에 공개돼요.{" "}
           <b>승인되면 포인트가 지급돼요.</b> 반려 시 사유를 안내드립니다.
@@ -291,7 +292,7 @@ export function ListingForm() {
   const label = "mb-1.5 block text-[13px] font-bold text-ink";
 
   return (
-    <form onSubmit={onSubmit} className="flex max-w-[640px] flex-col gap-4">
+    <form onSubmit={onSubmit} className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
       {/* 지도 위치 지정 */}
       <div>
         <span className={label}>

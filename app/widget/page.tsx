@@ -84,13 +84,13 @@ export default function WidgetPage() {
           <div className="mt-3 flex flex-wrap gap-2">
             <Link
               href="/complex/browse"
-              className="rounded-[10px] bg-primary px-4 py-2 text-[13px] font-bold text-white"
+              className="rounded-lg bg-primary px-4 py-2 text-[13px] font-bold text-white"
             >
               단지 찾아보기 ›
             </Link>
             <Link
               href="/map"
-              className="rounded-[10px] border border-line bg-surface px-4 py-2 text-[13px] font-bold text-text-1"
+              className="rounded-lg border border-line bg-surface px-4 py-2 text-[13px] font-bold text-text-1"
             >
               지도에서 찾기 ›
             </Link>
@@ -122,7 +122,7 @@ export default function WidgetPage() {
           </dl>
         </section>
 
-        <div className="mt-6 rounded-[14px] bg-bg p-4 text-[12px] leading-[1.7] text-text-3">
+        <div className="mt-6 rounded-lg bg-bg p-4 text-[12px] leading-[1.7] text-text-3">
           위젯의 숫자는 신고된 실거래의 단순 평균이며 면적·층을 가중하지 않습니다. 집계
           방식과 잠정치 처리 기준은{" "}
           <Link href="/methodology" className="font-bold text-primary">

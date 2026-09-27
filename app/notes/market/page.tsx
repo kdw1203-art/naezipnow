@@ -1,8 +1,10 @@
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 4곳을 font-bold(700)로 바꿨다. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { listPublicNotes, type InspectionNote } from "@/lib/inspection/store-db";
 import { maskNoteAuthor } from "@/app/town/shared";
 import { CoverImage } from "@/app/components/CoverImage";
+import { Icon } from "@/app/components/Icon";
 
 /* [#143] 유료 리포트 진열대 — 잠금 상태(#70 선행분).
    기준을 넘는 공개 노트를 "판매 예정 리포트"로 미리 진열한다. 결제 버튼은
@@ -57,7 +59,7 @@ export default async function NotesMarketPage() {
         </nav>
         <h1 className="t-title text-ink">
           임장 리포트 진열대{" "}
-          <span className="align-middle rounded-full bg-warning-soft px-2.5 py-1 t-sub font-extrabold text-warning">
+          <span className="align-middle rounded-full bg-warning-soft px-2.5 py-1 t-sub font-bold text-warning">
             판매 오픈 준비 중
           </span>
         </h1>
@@ -67,13 +69,13 @@ export default async function NotesMarketPage() {
           노트에서 무료로 읽을 수 있어요.
         </p>
         <div className="flex flex-wrap gap-1.5">
-          <span className="rounded-[10px] bg-bg px-2.5 py-1 t-sub font-bold text-text-2">
+          <span className="rounded-lg bg-bg px-2.5 py-1 t-sub font-bold text-text-2">
             기준 · 사진 {MIN_PHOTOS}장+
           </span>
-          <span className="rounded-[10px] bg-bg px-2.5 py-1 t-sub font-bold text-text-2">
+          <span className="rounded-lg bg-bg px-2.5 py-1 t-sub font-bold text-text-2">
             본문 {MIN_TEXT.toLocaleString("ko-KR")}자+
           </span>
-          <span className="rounded-[10px] bg-bg px-2.5 py-1 t-sub font-bold text-text-2">
+          <span className="rounded-lg bg-bg px-2.5 py-1 t-sub font-bold text-text-2">
             직접 방문 인증 우대
           </span>
         </div>
@@ -81,11 +83,11 @@ export default async function NotesMarketPage() {
 
       {/* 목록 */}
       {loadFailed ? (
-        <div className="rounded-[14px] border border-line bg-surface px-5 py-8 text-center t-body font-bold text-text-3">
+        <div className="rounded-lg border border-line bg-surface px-5 py-8 text-center t-body font-bold text-text-3">
           목록을 불러오지 못했어요 — 잠시 후 다시 시도해 주세요.
         </div>
       ) : qualified.length === 0 ? (
-        <div className="rounded-[14px] border border-line bg-surface px-5 py-8 text-center">
+        <div className="rounded-lg border border-line bg-surface px-5 py-8 text-center">
           <p className="t-body font-bold text-text-2">
             아직 기준을 충족한 노트가 없어요.
           </p>
@@ -110,13 +112,13 @@ export default async function NotesMarketPage() {
                     /* [970 · B-24] 세로(3:4) 사진은 가운데 크롭에서 건물이 잘렸다 — 위쪽 기준 */
                     imgClassName="absolute inset-0 h-full w-full object-cover object-top"
                     fallback={
-                      <div className="absolute inset-0 flex items-center justify-center bg-primary-soft t-body font-extrabold text-primary">
+                      <div className="absolute inset-0 flex items-center justify-center bg-primary-soft t-body font-bold text-primary">
                         임장노트
                       </div>
                     }
                   />
                   {verified && (
-                    <span className="absolute left-2.5 top-2.5 rounded-full bg-success px-2 py-0.5 t-caption font-extrabold text-surface">
+                    <span className="absolute left-2.5 top-2.5 rounded-full bg-success px-2 py-0.5 t-caption font-bold text-surface">
                       ✓ 직접 방문 인증
                     </span>
                   )}
@@ -131,27 +133,29 @@ export default async function NotesMarketPage() {
                     {maskNoteAuthor(note.authorLabel, note.authorEmail ?? "")}
                   </div>
                   <div className="flex flex-wrap gap-1.5 pt-0.5">
-                    <span className="rounded-[7px] bg-bg px-2 py-0.5 t-sub font-bold text-text-2">
+                    <span className="rounded-lg bg-bg px-2 py-0.5 t-sub font-bold text-text-2">
                       사진 {note.photos.length}장
                     </span>
-                    <span className="rounded-[7px] bg-bg px-2 py-0.5 t-sub font-bold text-text-2">
+                    <span className="rounded-lg bg-bg px-2 py-0.5 t-sub font-bold text-text-2">
                       본문 {textLen.toLocaleString("ko-KR")}자
                     </span>
                   </div>
                   <div className="mt-auto flex items-center gap-2 pt-2.5">
                     <Link
                       href={`/notes/${note.id}`}
-                      className="rounded-[10px] border border-line-strong bg-bg px-3.5 py-2 t-body font-bold text-text-1 no-underline"
+                      className="rounded-lg border border-line-strong bg-bg px-3.5 py-2 t-body font-bold text-text-1 no-underline"
                     >
-                      전문 미리보기
+                      노트 전문 읽기
                     </Link>
+                    {/* [1012] 규칙 4 — 🔒 이모지 → 자물쇠 선 아이콘 */}
                     <button
                       type="button"
                       disabled
                       title="결제 기능 오픈 후 판매가 시작됩니다"
-                      className="flex-1 cursor-not-allowed rounded-[10px] bg-bg px-3.5 py-2 t-body font-extrabold text-text-3"
+                      className="inline-flex flex-1 cursor-not-allowed items-center justify-center gap-1 rounded-lg bg-bg px-3.5 py-2 t-body font-bold text-text-3"
                     >
-                      🔒 판매 오픈 준비 중
+                      <Icon name="lock" size={15} />
+                      판매 오픈 준비 중
                     </button>
                   </div>
                 </div>
@@ -162,13 +166,13 @@ export default async function NotesMarketPage() {
       )}
 
       {/* 작성자 CTA + 정직 고지 */}
-      <div className="rounded-[14px] border border-line bg-bg px-4 py-3.5">
+      <div className="rounded-lg border border-line bg-bg px-4 py-3.5">
         <p className="t-body text-text-2">
           <strong className="text-ink">내 노트도 올리고 싶다면</strong> — 기준(사진{" "}
           {MIN_PHOTOS}장+·본문 {MIN_TEXT.toLocaleString("ko-KR")}자+)을 넘긴 공개
           노트는 자동으로 이 진열대에 올라옵니다.{" "}
           <Link href="/notes/new" className="font-bold text-primary no-underline">
-            임장노트 쓰기 ›
+            진열대 후보 노트 쓰기 ›
           </Link>
         </p>
         <p className="mt-1.5 t-sub text-text-3">

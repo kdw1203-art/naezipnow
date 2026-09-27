@@ -1,5 +1,7 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
+import { Icon } from "@/app/components/Icon";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PageShell } from "../../components/PageShell";
@@ -46,12 +48,9 @@ function bestOf<T>(items: readonly T[], pick: (x: T) => number | null, dir: "max
   return out;
 }
 
+/* [v4 · 규칙 6] 알약 배지 → 글자 한 단어(같은 색 · 면 없음) */
 function WinBadge({ label }: { label: string }) {
-  return (
-    <span className="t-caption ml-1 rounded bg-success-soft px-1 py-px font-extrabold text-success">
-      {label}
-    </span>
-  );
+  return <span className="t-caption ml-1 font-medium text-success">{label}</span>;
 }
 
 function ComparePickerSection() {
@@ -79,10 +78,10 @@ function ComparePickerSection() {
   );
   const { openMap, mapNode } = useMapPick(add, "후보 단지 비교");
 
+  /* [v4 · 규칙 2] 주인공 = 단지 검색 하나(카드 테두리·제목 줄 없음 — 라벨이 곧 제목) */
   return (
-    <div className="rise-in card flex flex-col gap-2 rounded-2xl px-[18px] py-4">
+    <div className="rise-in flex flex-col gap-2">
       {mapNode}
-      <div className="t-body font-extrabold text-ink">비교할 단지 담기</div>
       <ComplexPicker
         label="검색해서 최대 5개까지 담기"
         placeholder="단지명으로 검색 (예: 공작아파트)"
@@ -176,44 +175,40 @@ function CompareTraySection() {
     };
   }, []);
 
+  /* [v4 · 규칙 5] 칩 줄(여러 줄로 감김) → 구분선 목록 행: 왼쪽 단지(굵게) + 지역 한 줄 / 오른쪽 빼기(40px) */
   return (
-    <div className="rise-in card flex flex-col gap-2 rounded-2xl px-[18px] py-4">
-      <div className="t-body font-extrabold text-ink">
-        내가 담은 후보 {items.length}개
-        <span className="ml-1 font-semibold text-text-3">
-          / 최대 {COMPARE_TRAY_MAX}개
-        </span>
-      </div>
+    <section aria-labelledby="tray-h" className="rise-in flex flex-col gap-2">
+      <h2 id="tray-h" className="flex items-baseline gap-1.5 t-section text-ink">
+        담은 후보 <span className="t-num text-text-3">{items.length}/{COMPARE_TRAY_MAX}</span>
+      </h2>
       {items.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
+        <ul data-tone="blue" className="card flex flex-col divide-y divide-line rounded-lg px-4">
           {items.map((item) => (
-            <span
-              key={item.id}
-              className="chip chip-soft flex items-center gap-0.5 py-0 pl-[11px] pr-0 t-sub"
-            >
-              <Link href={`/complex/${encodeURIComponent(item.id)}`} className="inline-flex min-h-[40px] items-center break-words">
-                {item.name}
-                {item.region ? ` · ${item.region}` : ""}
+            <li key={item.id} className="flex min-h-14 items-center justify-between gap-2">
+              <Link
+                href={`/complex/${encodeURIComponent(item.id)}`}
+                className="flex min-h-14 min-w-0 flex-1 flex-col justify-center py-2.5 no-underline"
+              >
+                <span className="block truncate t-body font-bold text-ink">{item.name}</span>
+                {item.region && <span className="block truncate t-sub text-text-3">{item.region}</span>}
               </Link>
-              {/* [1009 · A] ✕ 가 글자 크기(약 12px)뿐이라 손가락으로 누르기 어려웠다 — 40px 로 */}
+              {/* [1009 · A] 손가락 40px · [1012 · 규칙 4] 선 아이콘 x(조작 버튼이라 아이콘 유지) */}
               <button
                 type="button"
                 aria-label={`${item.name} 비교에서 빼기`}
                 onClick={() => void remove(item)}
-                className="press inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-full font-bold text-text-3"
+                className="press inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-text-3"
               >
-                ✕
+                <Icon name="x" size={16} />
               </button>
-            </span>
+            </li>
           ))}
-        </div>
+        </ul>
       ) : (
-        <div className="t-sub text-text-3">
-          {/* [970 · B-45] 빈 상태 안내는 이 카드 한 장뿐 — 아래 비교표·시세 카드는 후보가 생기면 열린다 */}
-          아직 담은 후보가 없어요 — 위 검색이나 단지 화면의 &quot;비교 담기&quot;로 최대{" "}
-          {COMPARE_TRAY_MAX}개까지 담으면, 아래에 최근 6개월 실거래 비교표와 후보 지역 시세
-          스냅샷이 열려요.
-        </div>
+        /* [970 · B-45] 빈 상태 안내는 여기 한 번 — 아래 비교표·시세는 후보가 생기면 열린다. [v4 · 규칙 8] 한 줄 */
+        <p className="t-sub text-text-3">
+          담은 후보 없음 · 위 검색이나 단지 화면의 &quot;비교 담기&quot;로 최대 {COMPARE_TRAY_MAX}곳
+        </p>
       )}
       {/* [AI-22] 트레이 → AI 비교 해석 — 같은 후보로 워크벤치 비교 도구를 연다 */}
       {items.length >= 2 && (
@@ -224,7 +219,7 @@ function CompareTraySection() {
           이 후보들로 AI 비교 해석 ›
         </Link>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -410,13 +405,10 @@ function ComplexCompareTable() {
 
   return (
     <>
-    <div className="card flex flex-col gap-3 rounded-[14px] p-4" data-reveal="">
-      <div className="chart-head">
-        <span className="t-section text-ink">단지별 실거래 비교표</span>
-        <span className="t-caption ml-auto rounded border border-line px-1.5 py-px font-bold text-text-3">
-          실데이터 기준
-        </span>
-      </div>
+    <section className="flex flex-col gap-2" data-reveal="">
+      {/* [v4 · 규칙 6] "실데이터 기준" 배지 삭제 — 출처는 표 아래 캡션 한 줄 */}
+      <h2 className="t-section text-ink">단지별 실거래 비교표</h2>
+      <div className="card flex flex-col gap-3 rounded-lg p-4">
       {loading && !items ? (
         /* 예전엔 "집계하는 중…" 한 줄이라 표가 나타날 때 화면이 통째로 튀었다 */
         <SkTable rows={Math.min(4, ids.length)} />
@@ -425,7 +417,7 @@ function ComplexCompareTable() {
           {/* 성격 비교 — 표는 항목별 우열은 보여 주지만 "어떤 단지인가"는 안 보여 준다.
               값이 있는 단지가 2곳 이상일 때만 그린다(한 곳짜리 레이더는 의미 없다). */}
           {radar.length >= 2 && (
-            <div className="flex flex-wrap items-center justify-center gap-4 rounded-[10px] bg-bg p-3">
+            <div className="flex flex-wrap items-center justify-center gap-4 rounded-lg bg-bg p-3">
               <Radar series={radar} size={236} focus={focusAt} className="max-w-full overflow-visible" />
               <div className="flex flex-col gap-1.5">
                 {/* [1009 · A] 단지를 누르면 그 단지 모양이 진해지고 축에 실제 값이 나온다(같은 화면 상태 전환) */}
@@ -436,26 +428,24 @@ function ComplexCompareTable() {
                       type="button"
                       aria-pressed={i === focusAt}
                       onClick={() => setFocus(i)}
-                      className={`press flex min-h-[40px] items-center gap-2 rounded-[10px] px-2.5 text-left ${
+                      className={`press flex min-h-[40px] items-center gap-2 rounded-lg px-2.5 text-left ${
                         i === focusAt ? "bg-surface shadow-sm" : ""
                       }`}
                     >
                       <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${r.toneClass}`} style={{ background: "currentColor" }} />
-                      <span className={`t-sub break-words ${i === focusAt ? "font-extrabold text-ink" : "font-bold text-text-2"}`}>{r.name}</span>
+                      <span className={`t-sub break-words ${i === focusAt ? "font-bold text-ink" : "font-bold text-text-2"}`}>{r.name}</span>
                     </button>
                   ))}
                 </div>
-                <p className="t-caption max-w-[230px] text-text-3">
-                  각 축은 담긴 단지들 사이의 상대 위치예요(값이 클수록 바깥 — 가격은 비쌀수록 바깥). 누른 단지의 값이 축
-                  이름 아래에 나와요.
-                </p>
+                <p className="t-caption max-w-[230px] text-text-3">축 = 담은 단지끼리 상대 위치 · 가격은 비쌀수록 바깥</p>
               </div>
             </div>
           )}
 
           {/* relative — 칸 안 sr-only 가 가로 스크롤 상자를 벗어나 문서 폭을 늘리지 않게(표 안 <Delta>·ⓘ) */}
           <div className="relative overflow-x-auto">
-            <div className="min-w-[620px]">
+            {/* [v4.1 · 리퀴드 목록] 표 묶음도 유리판 한 장(lq-panel) — 가격 비교라 mint. 가로 스크롤은 바깥 상자가 맡는다 */}
+            <div data-tone="mint" className="lq-panel min-w-[620px] py-2">
               <div className="t-sub grid grid-cols-[1.5fr_1fr_1fr_0.8fr_1.3fr] gap-2 border-b border-divider pb-2 font-bold text-text-3">
                 <span>단지</span>
                 <span className="inline-flex items-center justify-center gap-0.5">
@@ -546,15 +536,14 @@ function ComplexCompareTable() {
             </div>
           </div>
           <p className="t-caption text-text-3">
-            국토교통부 실거래 기준(해제 신고분 제외) · 면적·타입 구분 없는 단순 평균이므로
-            같은 단지라도 평형 구성에 따라 체감과 다를 수 있어요. &ldquo;최저·최다&rdquo;
-            배지는 담긴 단지들 사이의 비교일 뿐 좋고 나쁨의 판정이 아닙니다.
+            국토교통부 실거래(해제 제외) · 면적 구분 없는 단순 평균 · 최저·최다 = 담은 단지끼리 비교(판정 아님)
           </p>
         </>
       ) : (
-        <p className="t-sub text-text-3">집계에 실패했어요. 잠시 후 다시 시도해 주세요.</p>
+        <p className="t-sub text-text-3">집계 실패 · 잠시 후 다시 시도</p>
       )}
-    </div>
+      </div>
+    </section>
     {/* [1008 · Q] 값이 있는 후보가 둘 이상일 때만 — 한 곳짜리 순위는 비교가 아니다 */}
     {items && withData.length >= 2 && <MyCriteriaRank items={criteriaItems} />}
     </>
@@ -671,11 +660,9 @@ function RegionMarketSummary() {
   };
 
   return (
-    <div className="rise-in-2 card flex flex-col gap-3 rounded-[18px] p-[22px]">
+    <section className="rise-in-2 flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <div className="t-section text-ink">
-          후보 지역 실시세 스냅샷
-        </div>
+        <h2 className="t-section text-ink">후보 지역 실시세</h2>
         {regions.length > 0 && (
           /* [1009 · A] 진행(링) → 완료(체크) / 실패(흔들림) — 예전엔 누르면 버튼이 사라졌다가 다시 나타났다 */
           <ActionButton
@@ -683,7 +670,7 @@ function RegionMarketSummary() {
             onClick={generate}
             busyLabel="불러오는 중"
             errorLabel="다시 생성"
-            className="btn-md shrink-0 rounded-[10px] px-3 text-xs"
+            className="btn-md shrink-0 rounded-lg px-3 text-xs"
           >
             {state.kind === "done" ? "요약 다시 생성" : "요약 생성"}
           </ActionButton>
@@ -691,24 +678,19 @@ function RegionMarketSummary() {
       </div>
 
       {state.kind === "idle" ? (
-        <div className="t-sub text-text-3">
-          담은 후보 {regions.length}개 지역의 시세 스냅샷을 준비했어요. &quot;요약
-          생성&quot; 버튼을 누르면 지역 실시세와 종합 코멘트를 불러와요.
-        </div>
+        /* [v4 · 규칙 3] 사용법 두 문장 → 사실 한 줄 */
+        <p className="t-sub text-text-3">후보 {regions.length}개 지역 · 요약 생성 = 지역 실시세 + 종합 코멘트</p>
       ) : state.kind === "loading" ? (
-        <div className="text-xs text-text-3">지역 시세를 불러오는 중…</div>
+        <p className="t-sub text-text-3">지역 시세를 불러오는 중…</p>
       ) : state.kind === "empty" ? (
-        <div className="t-sub text-text-3">
-          담은 후보 지역의 실시세 데이터가 아직 없어요. 시세 수집 후 다시 시도해 주세요.
-        </div>
+        <p className="t-sub text-text-3">후보 지역 실시세 없음 · 시세 수집 뒤 다시</p>
       ) : state.kind === "limited" || state.kind === "error" ? (
-        <div className="rounded-[10px] bg-danger-soft px-3 py-2.5 text-xs font-bold text-danger">
-          {state.message}
-        </div>
+        <p className="rounded-lg border border-danger-border bg-danger-soft px-3 py-2.5 t-sub font-bold text-danger">{state.message}</p>
       ) : (
         <>
+          {/* [v4.1 · 리퀴드 목록] 바깥 카드(테두리·px-4)를 뗐다 — 안쪽 표 묶음이 유리판(lq-panel · 시세 = blue)이 된다 */}
           <div className="relative overflow-x-auto">
-            <div className="min-w-[520px]">
+            <div data-tone="blue" className="lq-panel min-w-[520px] py-2">
               <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr] gap-2 border-b border-divider pb-2 t-sub font-bold text-text-3">
                 <span>지역 (기준월)</span>
                 <span className="text-center">평균 매매가</span>
@@ -733,7 +715,7 @@ function RegionMarketSummary() {
                         {it.period} · {it.source.toUpperCase()}
                       </span>
                     </span>
-                    <span className="text-center font-extrabold text-text-1">
+                    <span className="text-center font-bold text-text-1">
                       {it.avgSaleLabel ?? "—"}
                     </span>
                     <DeltaCell pct={it.saleChangeMonthly} />
@@ -747,34 +729,29 @@ function RegionMarketSummary() {
           </div>
 
           {state.comment && (
-            <div className="ai-panel flex flex-col gap-2 rounded-2xl p-[18px]">
-              <div className="flex items-start gap-3">
-                <span className="ai-chip h-[22px] w-[22px] shrink-0 rounded-[7px] t-sub">
-                  AI
-                </span>
-                <div className="flex-1 text-xs leading-[1.65] text-ai-text">
-                  {state.comment}
-                </div>
-                <span className="shrink-0 rounded border border-on-dark-faint px-1.5 py-px t-caption font-bold text-ai-muted">
-                  {state.mode === "llm" ? "AI 생성" : "규칙 기반 요약"}
-                </span>
-              </div>
-              <div className="t-caption text-ai-muted">
-                {state.disclaimer}.
-              </div>
+            /* AI 결과 패널 — 네이비 면 유지(v4 규칙 4 예외). 생성 방식 표기 + 면책 문장 그대로(칩 타일·배지만 글자로) */
+            <div className="ai-panel flex flex-col gap-2 rounded-lg p-4">
+              <span className="t-caption font-bold text-ai-muted">{state.mode === "llm" ? "AI 생성" : "규칙 기반 요약"}</span>
+              <p className="t-body text-ai-text">{state.comment}</p>
+              <p className="t-caption text-ai-muted">{state.disclaimer}.</p>
             </div>
           )}
         </>
       )}
-    </div>
+    </section>
   );
 }
 
 export default function ComparePage() {
   return (
     <PageShell breadcrumb="AI 분석 › 단지 비교">
-      <h1 className="sr-only">단지 비교</h1>
-      <div className="flex flex-col gap-3.5">
+      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 주인공(단지 검색) → 담은 후보 행(채움 파랑 = AI 비교 해석 하나) →
+          비교표 → 내 기준 순위 → 후보 지역 실시세(AI 패널 · 면책) → 이어서 분석 행. 데스크톱도 가운데 한 줄. */}
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
+        <header className="flex flex-col gap-0.5">
+          <h1 className="t-title text-ink">후보 단지 비교</h1>
+          <p className="t-sub text-text-3">최대 {COMPARE_TRAY_MAX}곳 · 국토교통부 실거래 6·12개월 · 해제 신고 제외</p>
+        </header>
         {/* 단지 선택기 → 비교 트레이 (검색·지도·?complexId=/?apt= 딥링크) */}
         <ComparePickerSection />
 

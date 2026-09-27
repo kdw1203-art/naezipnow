@@ -3,7 +3,6 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal, ModalHeader } from "@/app/components/ui/Modal";
-import { Icon } from "@/app/components/Icon";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { ACTIVE_REGION_CATALOG } from "@/lib/region/catalog";
 import {
@@ -25,7 +24,7 @@ import {
  */
 
 type Variant =
-  /** 히어로: 관심 지역 칩(.lg-pill) + "프로필 편집" 텍스트 버튼 */
+  /** 머리: "프로필 편집" 글자 버튼 하나([v4] — 관심 지역은 머리 사실 줄이 말한다) */
   | "hero"
   /** 설정 행: "편집" 버튼 하나 */
   | "button";
@@ -117,25 +116,16 @@ export function ProfileEditSheet({ initial, variant = "hero", onSaved }: Profile
   return (
     <>
       {variant === "hero" ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {/* 둘 다 시트를 여는 주요 조작이라 40px(min-h-10)로 맞춘다 */}
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="lg-pill min-h-10 max-w-full no-underline"
-            aria-label={currentRegion ? `관심 지역 ${currentRegion} · 변경` : "관심 지역 설정"}
-          >
-            <Icon name="map" size={14} className="shrink-0" />
-            <span className="truncate">{currentRegion || "관심 지역 설정"}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="inline-flex min-h-10 items-center px-1.5 t-sub font-semibold text-primary"
-          >
-            프로필 편집
-          </button>
-        </div>
+        /* [v4 · 규칙 1·6] 유리 알약(관심 지역 칩) + 글자 버튼 두 개 → 글자 버튼 하나. 관심 지역은 /my 머리 사실 줄이
+           말한다(같은 사실 한 번). 누르면 같은 시트가 열린다 — 이름·관심 지역 편집 기능은 그대로. 40px(min-h-10) */
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="inline-flex min-h-10 shrink-0 items-center px-1.5 t-sub font-bold text-primary"
+          aria-label={currentRegion ? `프로필 편집 · 관심 지역 ${currentRegion}` : "프로필 편집 · 관심 지역 설정"}
+        >
+          프로필 편집
+        </button>
       ) : (
         <button type="button" onClick={() => setOpen(true)} className="btn-soft btn-md shrink-0">
           편집

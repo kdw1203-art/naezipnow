@@ -46,12 +46,14 @@ const LazyInner = nextDynamic(() => import("./map-client").then((m) => m.MapClie
 
 function MapPlaceholder() {
   return (
+    /* [1012 · 규칙 3] 로딩 스켈레톤 두 톤 그라데이션 → 단색 --divider(사진 없는 자리와 같은 면) */
     <div
-      className="fixed inset-0 h-[100dvh] w-full animate-pulse bg-gradient-to-br from-line to-line-strong"
+      className="fixed inset-0 h-[100dvh] w-full animate-pulse bg-divider"
       aria-busy="true"
       aria-label="지도 불러오는 중"
     >
-      <p className="absolute bottom-24 left-1/2 -translate-x-1/2 rounded-full bg-[rgba(16,28,54,.72)] px-4 py-2 t-sub font-semibold text-white">
+      {/* [v4] 굵기 600 → 500(굵기 3단 — 라우트 스켈레톤 loading.tsx 와 같은 알약) */}
+      <p className="absolute bottom-24 left-1/2 -translate-x-1/2 rounded-full bg-[rgba(16,28,54,.72)] px-4 py-2 t-sub font-medium text-white">
         지도를 불러오는 중…
       </p>
     </div>

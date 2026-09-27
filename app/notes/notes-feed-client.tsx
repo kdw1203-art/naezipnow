@@ -1,16 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { matchesInterest } from "@/lib/notes/region-match";
+import { relativeTimeLabel } from "@/lib/format/relative-time";
+import {
+  RECENT_DAYS,
+  feedHeaderStats,
+  hasRecentNote,
+  regionChipOf,
+  regionHighlights,
+  type FeedStat,
+  type RegionHighlight,
+} from "./region-chips";
 import { PageShell } from "../components/PageShell";
 import { ExampleBadge } from "../components/ExampleBadge";
 import { EmptyState } from "@/app/components/ui/EmptyState";
 import { Segmented } from "@/app/components/ui/Segmented";
 import { CoverImage } from "@/app/components/CoverImage";
 import { Icon } from "@/app/components/Icon";
+import { ShareLinkButton } from "@/app/components/ShareLinkButton";
 import { useScrollRestore, useScrollRestoreKey } from "@/lib/client/use-scroll-restore";
 import type { FeedNote, TagTone } from "@/lib/notes/feed-note";
 import { LIST_AI_STATE_LABEL, type ListAiState } from "@/lib/notes/ai-status";
@@ -23,7 +34,18 @@ import {
 } from "@/lib/notes/mine-filters";
 import { MineFilterBar } from "./mine-filter-bar";
 
-/* 공개 임장노트 — 인스타그램형(스토리 줄 + 3열 그리드 ⇄ 피드 전환) */
+/* 공개 임장노트 — 머리 숫자 줄 + 지역 하이라이트 줄 + 격자/피드 탭 + 3열 정사각 격자 ⇄ 게시물 피드.
+   [1012] "인스타그램형(스토리 줄)" 이었다 — 원형 아바타 + 그라데이션 링은 다른 서비스의 서명이라(AI 신호표
+   "인스타그램식 스토리 링") 걷고, 지역명 + 노트 수 칩 레일로 바꿨다.
+   [1012-IG] 소유자 지시 "임장노트는 인스타그램을 참조해줘"(범위: 이 목록만 · 기본 보기 3열 격자) —
+   **배치와 흐름만** 가져온다. 로고·그라데이션 링·그 서비스의 아이콘 모양·"스토리" 같은 이름은 쓰지 않는다.
+     · 머리 숫자 줄(노트 · 지역 · 최근 7일) — 손에 든 노트를 센 실값, 0 인 칸은 없다
+     · 지역 원 줄 — 원 안은 그 지역 최근 노트의 실사진(없으면 한지 면 + 짧은 지역명), 최근 7일 새 노트 =
+       주홍 **단색** 링, 선택 = 남색 링(선택 = 한지·남색 규칙)
+     · 격자/피드 탭 — 폭 전체를 반씩 나눈 아이콘 탭, 현재 탭 = 잉크 + 1px 잉크 선
+     · 격자 — 정사각 3열, 모바일은 화면 끝까지 2px 간격, 반경·테두리·그림자 0
+     · 피드 — 머리줄(아바타 · 작성자 · 단지·지역) → 정사각 사진 → 행동 줄(동작하는 것만) → 숫자 → 캡션 → 시각
+   숫자는 전부 실데이터에서만. 저장 수·댓글 수·좋아요는 이 목록 데이터에 없어서 그리지 않는다(지어내지 않는다). */
 
 /* [967 · 19] 카드 타입은 lib/notes/feed-note 로 올렸다(서버 빌더와 한 곳) — 기존
    import 경로(./notes-feed-client 의 FeedNote)는 재수출로 그대로 산다. */
@@ -36,7 +58,7 @@ const TAB_OPTIONS: ReadonlyArray<{ value: NotesTab; label: string }> = [
   { value: "mine", label: "내 노트" },
 ];
 
-/* 정렬·필터 칩.
+/* 정렬·필터 토글.
    "인기" 였던 칩은 "점수순" 으로 바꿨다 — 정렬 키가 작성자 본인이 매긴 임장 점수라
    조회·좋아요·저장 같은 반응 신호가 하나도 섞여 있지 않았기 때문이다. 노트에는 저장
    기능 자체가 없어(bookmarks 의 target_type 에 note 가 없다) 실참여 수치를 넣을 수도
@@ -69,12 +91,14 @@ const AI_BADGE_CLASS: Record<ListAiState, string> = {
 };
 function NoteBadges({ n, onDark = false }: { n: FeedNote; onDark?: boolean }) {
   if (!n.decision && n.round == null && !n.aiStatus) return null;
+  /* [1012] 규칙 9 — 배지는 11px/500, 4px. 사진 위는 네이비 반투명(블러 없음 — 유리는 헤더 전용). */
+  const onDarkClass = "bg-brand-navy/80 text-on-dark";
   return (
     <>
       {n.decision && (
         <span
-          className={`inline-flex shrink-0 items-center rounded px-1.5 py-px t-caption font-extrabold ${
-            onDark ? "bg-white/22 text-white backdrop-blur-sm" : DECISION_BADGE_CLASS[n.decision.choice]
+          className={`inline-flex shrink-0 items-center rounded-sm px-1.5 py-px t-caption font-medium ${
+            onDark ? onDarkClass : DECISION_BADGE_CLASS[n.decision.choice]
           }`}
         >
           {n.decision.label}
@@ -82,8 +106,8 @@ function NoteBadges({ n, onDark = false }: { n: FeedNote; onDark?: boolean }) {
       )}
       {n.round != null && (
         <span
-          className={`inline-flex shrink-0 items-center rounded px-1.5 py-px t-caption font-bold ${
-            onDark ? "bg-white/22 text-white backdrop-blur-sm" : "border border-line text-text-3"
+          className={`inline-flex shrink-0 items-center rounded-sm px-1.5 py-px t-caption font-medium ${
+            onDark ? onDarkClass : "border border-line text-text-3"
           }`}
         >
           {n.round}회차
@@ -91,8 +115,8 @@ function NoteBadges({ n, onDark = false }: { n: FeedNote; onDark?: boolean }) {
       )}
       {n.aiStatus && (
         <span
-          className={`inline-flex shrink-0 items-center rounded px-1.5 py-px t-caption font-bold ${
-            onDark ? "bg-white/22 text-white backdrop-blur-sm" : AI_BADGE_CLASS[n.aiStatus]
+          className={`inline-flex shrink-0 items-center rounded-sm px-1.5 py-px t-caption font-medium ${
+            onDark ? onDarkClass : AI_BADGE_CLASS[n.aiStatus]
           }`}
         >
           {LIST_AI_STATE_LABEL[n.aiStatus]}
@@ -102,284 +126,467 @@ function NoteBadges({ n, onDark = false }: { n: FeedNote; onDark?: boolean }) {
   );
 }
 
-/** 시드 문자열 → 결정적 그라디언트(사진 없는 노트 커버/아바타용) */
-function seedGradient(seed: string): string {
+/** 시드 문자열 → 결정적 단색(사진 없는 노트의 면).
+ *  [1012] hue 무작위 그라데이션을 걷었다 — 기준 사이트에 배경 그라데이션이 없고, 무작위 색은
+ *  "생성된 자리표시자"로 읽힌다. 브랜드 면 셋 중 하나를 시드로 고른다. */
+function seedFace(seed: string): string {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  const hue = h % 360;
-  const hue2 = (hue + 42) % 360;
-  return `linear-gradient(135deg, hsl(${hue} 58% 60%), hsl(${hue2} 62% 48%))`;
+  const FACES = ["var(--brand-hanji)", "var(--primary-soft)", "var(--divider)"];
+  return FACES[h % FACES.length];
 }
 
-/** 지역명에서 짧은 라벨(구/동) 추출 — 스토리·타일 라벨용 */
-function shortLabel(n: FeedNote): string {
-  const r = (n.region ?? "").trim();
-  if (r) {
-    const tokens = r.split(/\s+/).filter(Boolean);
-    return tokens[tokens.length - 1] ?? r;
-  }
-  return n.title.slice(0, 6);
+/** [1012-IG] 작성 시각 상대 라벨 — 서버 빌더(lib/notes/feed-note relativeTime)와 같은 옵션.
+ *  `now` 는 첫 렌더에 서버가 그린 시각(hydration 일치), 마운트 뒤 지금 시각으로 바뀐다.
+ *  ISR(1일) HTML 에 박힌 "방금 전" 이 하루 동안 남지 않게 여기서 다시 센다. */
+function writtenAgo(n: FeedNote, now: number): string {
+  if (!n.createdAt || !Number.isFinite(now)) return "";
+  return relativeTimeLabel(n.createdAt, now, { yesterday: true, maxDays: 31, fallback: "iso-date" });
 }
 
-/* ── 상단 스토리 줄 (최근 임장 · 인스타 스토리 느낌) ──
-   [970 · B-04] 가장자리 붙이기는 PageShell 의 모바일 패딩(px-3.5)만큼만 — -mx-5 는
-   6px 을 더 빼서 가로 스크롤(넘침)을 만들었다. 아래 그리드도 같다. */
-function StoryRail({ notes }: { notes: FeedNote[] }) {
-  const IG_RING =
-    "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)";
+/** 카드·타일이 말할 수 있는 숫자 — 값이 있는 것만(0 은 빼고, 없는 반응 수는 만들지 않는다) */
+function noteNumbers(n: FeedNote): string[] {
+  const photos = n.photoCount ?? 0;
+  return [n.score > 0 ? `기록 ${n.score}점` : "", photos > 0 ? `사진 ${photos}장` : ""].filter(Boolean);
+}
+
+/* ── 머리 숫자 줄 ──
+   [1012-IG] 굵은 숫자 위 · 작은 라벨 아래, 칸 균등(3칸 격자)·왼쪽 정렬. 값은 region-chips.feedHeaderStats
+   (손에 든 노트를 센 값) — 0 인 칸은 거기서 이미 빠진다. */
+function StatRow({ stats }: { stats: FeedStat[] }) {
+  if (stats.length === 0) return null;
   return (
-    <div className="-mx-3.5 overflow-x-auto px-3.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:rounded-2xl md:border md:border-line md:bg-surface md:px-4 md:py-3">
-      <div className="flex gap-3.5 pb-1 md:pb-0">
-        {/* 내 스토리 = 노트 쓰기 */}
-        <Link
-          href="/notes/new"
-          className="press flex w-[64px] shrink-0 flex-col items-center gap-1.5"
+    <dl className="grid grid-cols-3 gap-2">
+      {stats.map((s) => (
+        <div key={s.key} className="flex min-w-0 flex-col-reverse">
+          <dt className="truncate t-sub text-text-2">{s.label}</dt>
+          <dd className="t-section t-num text-ink">{s.value.toLocaleString("ko-KR")}{s.more ? "+" : ""}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/* ── 지역 하이라이트 원 한 개 ──
+   [1012-IG] 원 64px(정확한 크기라 px 값 — 모바일 전역 축소를 받지 않는다). 링 두께가 1px/2px 로 바뀌어도
+   안쪽 원이 54px 로 같도록 안쪽 여백을 4px/3px 로 맞춘다. 원 전체 + 라벨이 한 버튼이다. */
+function HighlightCircle({
+  name,
+  short,
+  count,
+  coverUrl,
+  fresh,
+  active,
+  ariaLabel,
+  onClick,
+}: {
+  name: string;
+  short: string;
+  count: number;
+  coverUrl: string | null;
+  fresh: boolean;
+  active: boolean;
+  ariaLabel: string;
+  onClick: () => void;
+}) {
+  const ring = active
+    ? "border-2 border-brand-hanji-ink"
+    : fresh
+      ? "border-2 border-brand-red"
+      : "border border-line";
+  const inset = active || fresh ? "inset-[3px]" : "inset-[4px]";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      aria-label={ariaLabel}
+      className="press flex w-[72px] shrink-0 flex-col items-center gap-1.5"
+    >
+      <span className={`relative block h-[64px] w-[64px] rounded-full ${ring}`}>
+        <span
+          className={`absolute ${inset} flex items-center justify-center overflow-hidden rounded-full bg-brand-hanji`}
         >
-          <span className="flex h-[62px] w-[62px] items-center justify-center rounded-full border-2 border-dashed border-line-strong text-primary">
-            <Icon name="plus" size={22} />
-          </span>
-          <span className="w-full truncate text-center t-caption text-text-2">
-            노트 쓰기
-          </span>
-        </Link>
-        {notes.slice(0, 14).map((n) => (
-          <Link
-            key={n.id}
-            href={noteHref(n)}
-            className="press flex w-[64px] shrink-0 flex-col items-center gap-1.5"
-          >
-            <span
-              className="h-[62px] w-[62px] rounded-full p-[2.5px]"
-              style={{ background: IG_RING }}
-            >
-              <span className="block h-full w-full overflow-hidden rounded-full border-2 border-surface bg-bg">
-                <CoverImage
-                  src={n.coverUrl}
-                  alt={`${shortLabel(n)} 노트 커버`}
-                  /* [B004] 62px 원에 기본 힌트(50vw)로는 384w 가 내려온다 —
-                     실 표시 크기를 말해 가장 작은 변환(384→실효 128w급)으로. */
-                  sizes="62px"
-                  imgClassName="h-full w-full object-cover"
-                  fallback={
-                    <span
-                      className="flex h-full w-full items-center justify-center t-section text-white"
-                      style={{ background: seedGradient(n.id) }}
-                    >
-                      {shortLabel(n).slice(0, 2)}
-                    </span>
-                  }
-                />
-              </span>
-            </span>
-            <span className="w-full truncate text-center t-caption text-text-2">
-              {shortLabel(n)}
-            </span>
-          </Link>
-        ))}
+          <CoverImage
+            src={coverUrl}
+            alt=""
+            sizes="64px"
+            imgClassName="absolute inset-0 h-full w-full object-cover"
+            fallback={
+              <span className="max-w-full truncate px-1 t-sub font-bold text-brand-hanji-ink">{short}</span>
+            }
+          />
+        </span>
+      </span>
+      <span
+        className={`flex max-w-full items-baseline gap-0.5 t-sub ${
+          active ? "font-bold text-brand-hanji-ink" : "text-text-2"
+        }`}
+      >
+        <span className="truncate">{name}</span>
+        <span className="shrink-0 tabular-nums text-text-3">{count}</span>
+      </span>
+    </button>
+  );
+}
+
+/* ── 상단 지역 하이라이트 줄 ──
+   [1012] 칩 레일("서울 송파구 3")이었다. [1012-IG] 원형 하이라이트 줄로 — 첫 원 = 전체, 이어서 노트가
+   많은 지역부터. 누르면 그 지역만 남기고(전체로 해제) 주소(?region=)에도 남는다. 원 안 사진은 그 지역
+   최근 노트의 실사진이고, 주홍 링은 최근 7일 안에 새 노트가 있다는 뜻이다(범례를 아래 한 줄로 적는다).
+   [970 · B-04] 가장자리 붙이기는 PageShell 의 모바일 패딩(px-3.5)만큼만 — 더 빼면 가로 넘침이 생긴다. */
+function RegionRail({
+  items,
+  total,
+  allFresh,
+  value,
+  onChange,
+}: {
+  items: RegionHighlight[];
+  total: number;
+  allFresh: boolean;
+  value: string | null;
+  onChange: (next: string | null) => void;
+}) {
+  if (items.length === 0) return null;
+  const freshNote = ` · 최근 ${RECENT_DAYS}일 새 노트 있음`;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div
+        role="group"
+        aria-label="지역별 노트"
+        className="-mx-3.5 flex gap-2 overflow-x-auto px-3.5 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden"
+      >
+        <HighlightCircle
+          name="전체"
+          short="전체"
+          count={total}
+          coverUrl={null}
+          fresh={allFresh}
+          active={value === null}
+          ariaLabel={`전체 노트 ${total}건${allFresh ? freshNote : ""}`}
+          onClick={() => onChange(null)}
+        />
+        {items.map((r) => {
+          const active = value === r.label;
+          return (
+            <HighlightCircle
+              key={r.label}
+              name={r.name}
+              short={r.short}
+              count={r.count}
+              coverUrl={r.coverUrl}
+              fresh={r.fresh}
+              active={active}
+              ariaLabel={`${r.label} 노트 ${r.count}건${r.fresh ? freshNote : ""}`}
+              onClick={() => onChange(active ? null : r.label)}
+            />
+          );
+        })}
       </div>
+      {/* [v4 · 설명 문장 삭제] 링 범례 문장은 뺐다 — 뜻은 각 원의 aria-label("최근 7일 새 노트")이 말한다 */}
     </div>
   );
 }
 
-/* ── 그리드 타일 (탐색·프로필 그리드) ── */
-/* [968 · 17] priority — 목록 첫 타일(LCP 후보)만 true. lazy 를 풀고 선점 요청한다. */
+/* ── 격자 / 피드 탭 ──
+   [1012-IG] 오른쪽 작은 아이콘 토글 두 개였다 → 폭 전체를 반씩 나눈 아이콘 탭. 현재 탭 = 잉크 아이콘 +
+   탭 위 1px 잉크 선(줄의 1px 구분선에 겹친다), 나머지 = text-3. 상태 표기는 aria-pressed 로 통일
+   (아래 정렬 토글·지역 원과 같은 방식). 높이 44px 은 정확해야 하는 크기라 px 값. */
+function ViewTabs({ value, onChange }: { value: ViewMode; onChange: (v: ViewMode) => void }) {
+  const tabClass = (active: boolean) =>
+    `-mt-px flex h-[44px] items-center justify-center gap-1.5 border-t ${
+      active ? "border-ink text-ink" : "border-transparent text-text-3"
+    }`;
+  return (
+    <div role="group" aria-label="보기 방식" className="-mx-3.5 grid grid-cols-2 border-t border-line md:mx-0">
+      <button
+        type="button"
+        aria-pressed={value === "grid"}
+        aria-label="격자로 보기"
+        onClick={() => onChange("grid")}
+        className={tabClass(value === "grid")}
+      >
+        <Icon name="grid-3x3" size={22} />
+        <span className="hidden t-sub font-bold md:inline">격자</span>
+      </button>
+      <button
+        type="button"
+        aria-pressed={value === "feed"}
+        aria-label="피드로 보기"
+        onClick={() => onChange("feed")}
+        className={tabClass(value === "feed")}
+      >
+        <Icon name="gallery-vertical" size={22} />
+        <span className="hidden t-sub font-bold md:inline">피드</span>
+      </button>
+    </div>
+  );
+}
+
+/* ── 격자 타일 ──
+   [1012-IG] 3:4 둥근 카드(데스크톱 4~5열) → 정사각 3열, 반경·테두리·그림자 0.
+     · 커버 = 노트의 실사진 첫 장. 없으면(또는 못 받으면) 브랜드 면 단색 위 단지명·지역(데이터 카드 썸네일)
+     · 오른쪽 위 = 점수 칩(있을 때) + "여러 장" 선 아이콘(사진 2장 이상)
+     · 왼쪽 아래 = 판단·회차·AI 배지(있을 때) + 단지명 한 줄. 사진 위에서만 가독 오버레이(검정→투명)
+     · 호버(hover 가능 기기만 — Tailwind v4 의 hover 변형은 @media (hover: hover) 안이다) = 검정 40% + 숫자
+   [968 · 17] priority — 목록 첫 타일(LCP 후보)만 true. */
 function GridTile({ n, priority = false }: { n: FeedNote; priority?: boolean }) {
+  const [photoFailed, setPhotoFailed] = useState(false);
+  const hasPhoto = Boolean(n.coverUrl) && !photoFailed;
+  /* [1012 · 썸네일] 템플릿 썸네일은 제목·숫자를 그림 안에 이미 적었다 — 제목 오버레이·가독 그라데이션을 또 그리지 않는다 */
+  const templateCover = hasPhoto && n.coverTemplate === true;
+  const photos = n.photoCount ?? 0;
+  const multi = hasPhoto && photos >= 2;
+  const numbers = noteNumbers(n);
+  const hasBadges = Boolean(n.decision || n.round != null || n.aiStatus);
   return (
     <Link
       href={noteHref(n)}
-      aria-label={n.isExample ? "예시 — 임장노트 쓰기" : `${n.title} 노트 보기`}
-      /* [1009 · T] press — 누르는 순간 살짝 눌린다(터치 기기의 피드백 · 들림 호버는 md 이상 마우스만) */
-      className="press group relative block aspect-[3/4] overflow-hidden bg-bg md:rounded-2xl md:shadow-[0_1px_2px_rgba(16,28,54,.05),0_8px_20px_rgba(16,28,54,.06)] md:transition-transform md:duration-200 md:hover:-translate-y-1"
+      aria-label={n.isExample ? "예시 — 임장노트 쓰기" : [`${n.title} 노트 보기`, ...numbers].join(" · ")}
+      /* [1009 · T] press — 누르는 순간 살짝 눌린다(터치 기기의 피드백) */
+      className="press group relative block aspect-square overflow-hidden bg-divider"
     >
-      <CoverImage
-        src={n.coverUrl}
-        alt={n.isExample ? "" : `${n.title} 커버 사진`}
-        priority={priority}
-        /* [968 · 17] 실제 열 수(모바일 3열·md 4열·xl 5열)를 말한다 — 기본 50vw 는
-           3열 타일에 한 단계 큰 변환(DPR2 기준 640w→384w)을 내려받게 했다. */
-        sizes="(max-width: 768px) 33vw, (max-width: 1280px) 25vw, 224px"
-        imgClassName="absolute inset-0 h-full w-full object-cover md:transition-transform md:duration-300 md:group-hover:scale-[1.06]"
-        fallback={
-          <span
-            className="absolute inset-0"
-            style={{ background: seedGradient(n.id) }}
+      {hasPhoto ? (
+        <>
+          <CoverImage
+            src={n.coverUrl}
+            alt={n.isExample ? "" : `${n.title} 커버 사진`}
+            priority={priority}
+            /* [968 · 17] 실제 열 수 — 모바일 3열(33vw), md+ 는 최대폭 935px 안의 3열(≈309px) */
+            sizes="(max-width: 768px) 33vw, 309px"
+            imgClassName="absolute inset-0 h-full w-full object-cover"
+            onFailed={() => setPhotoFailed(true)}
           />
-        }
-      />
-      {/* 점수 배지 (인스타 조회수/캐러셀 인디케이터 위치) */}
-      {/* [962] 검정 반투명 → 네이비(어두운 면 = 네이비) + 한지 글자 */}
-      <span className="absolute right-1.5 top-1.5 rounded-md bg-brand-navy/80 chip-pad-tight t-caption font-extrabold text-on-dark backdrop-blur-sm md:right-2.5 md:top-2.5 md:t-sub">
-        {n.score > 0 ? `기록 ${n.score}점` : "점수 없음"}
-      </span>
+          {/* 사진 위 글자 가독 오버레이 — 게이트 허용 목록(이 파일 · from-black)의 유일한 그라데이션 */}
+          {!templateCover && (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 to-transparent"
+            />
+          )}
+        </>
+      ) : (
+        <span aria-hidden="true" className="absolute inset-0" style={{ background: seedFace(n.id) }} />
+      )}
+
+      {(n.score > 0 || multi) && (
+        <span className="absolute right-1.5 top-1.5 flex items-center gap-1 md:right-2 md:top-2">
+          {/* 배지 규칙 — 12px/500 · 4px. 어두운 면 = 네이비 + 한지 글자 */}
+          {n.score > 0 && (
+            <span className="rounded-sm bg-brand-navy/80 px-1 py-px t-sub font-medium text-on-dark">
+              {n.score}점
+            </span>
+          )}
+          {multi && <Icon name="images" size={18} className="text-white drop-shadow-sm" />}
+        </span>
+      )}
       {n.isExample && (
-        <span className="absolute left-1.5 top-1.5 rounded bg-black/45 px-1.5 py-0.5 t-caption font-bold text-white backdrop-blur-sm">
+        <span className="absolute left-1.5 top-1.5 rounded-sm bg-brand-navy/80 px-1.5 py-px t-caption font-medium text-on-dark">
           예시
         </span>
       )}
-      {/* 하단 스크림 + 제목·지역 오버레이 */}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/78 via-black/25 to-transparent px-2 pb-2 pt-7 md:px-3 md:pb-3">
-        <p className="line-clamp-2 t-sub font-bold text-white drop-shadow-sm md:t-body">
-          {n.title}
-        </p>
-        {n.region && (
-          <p className="mt-0.5 truncate t-caption text-white/85 md:mt-1 md:t-sub">
-            {n.region}
-          </p>
-        )}
+
+      <span className="absolute inset-x-0 bottom-0 flex flex-col items-start gap-1 px-1.5 pb-1.5 md:px-2 md:pb-2">
         {/* [996 · 4] 판단·회차 — 타일 안 글자 배지(링크 전체가 이미 탭 대상). [1006] 내 노트는 AI 상태도 */}
-        {(n.decision || n.round != null || n.aiStatus) && (
-          <p className="mt-1 flex flex-wrap gap-1">
-            <NoteBadges n={n} onDark />
-          </p>
+        {hasBadges && (
+          <span className="flex flex-wrap gap-1">
+            <NoteBadges n={n} onDark={hasPhoto} />
+          </span>
         )}
-      </div>
+        {hasPhoto ? (
+          templateCover ? null : <span className="block w-full truncate t-sub font-bold text-white">{n.title}</span>
+        ) : (
+          <>
+            <span className="line-clamp-2 w-full t-sub font-bold text-ink">{n.title}</span>
+            {n.region && <span className="block w-full truncate t-caption text-text-2">{n.region}</span>}
+          </>
+        )}
+      </span>
+
+      {/* 호버 — 데스크톱(hover 가능 기기)·키보드 초점에서만. 링크의 이름(aria-label)이 같은 숫자를 이미 말한다 */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 flex items-center justify-center gap-4 bg-black/40 text-white opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+      >
+        {n.score > 0 && (
+          <span className="flex items-center gap-1 t-section">
+            <Icon name="clipboard" size={18} />
+            {n.score}점
+          </span>
+        )}
+        {photos > 0 && (
+          <span className="flex items-center gap-1 t-section">
+            <Icon name="camera" size={18} />
+            {photos}장
+          </span>
+        )}
+      </span>
     </Link>
   );
 }
 
-/* ── 피드 포스트 카드 (홈 피드) ── */
-/* [968 · 17] priority — 피드 첫 카드(LCP 후보)만 true */
-function PostCard({ n, priority = false }: { n: FeedNote; priority?: boolean }) {
+/* ── 피드 게시물 카드 ──
+   [1012-IG] 머리줄(아바타 32px · 작성자 · "단지명 · 지역") → 정사각 사진(모바일 끝까지) → 행동 줄 →
+   굵은 숫자 줄 → 캡션(작성자 + 단지명 + 본문 첫 2줄) → 노트 전체 읽기 → 태그 → 작성 시각.
+   카드 테두리·그림자 없음, 카드 사이는 여백으로 가른다.
+   행동 줄은 **동작하는 것만**: 댓글(상세 #comments 로 이동) · 공유(공용 ShareLinkButton — 시트 → 복사 →
+   토스트, 공유 이벤트 기록 포함) · 단지 페이지(실 id 를 찾은 노트만). 노트 저장은 기능이 없어(bookmarks
+   target_type 에 note 없음) 아이콘도 두지 않는다. 비공개 내 노트에는 공유·댓글을 그리지 않는다(받아도 못 연다).
+   [968 · 17] priority — 피드 첫 카드(LCP 후보)만 true */
+function PostCard({
+  n,
+  priority = false,
+  now,
+  mine,
+}: {
+  n: FeedNote;
+  priority?: boolean;
+  now: number;
+  mine: boolean;
+}) {
   const detailHref = noteHref(n);
+  const [photoFailed, setPhotoFailed] = useState(false);
+  const hasPhoto = Boolean(n.coverUrl) && !photoFailed;
+  const photos = n.photoCount ?? 0;
+  /* 공개 피드의 노트는 전부 공개. 내 노트는 빌더가 채운 isPublic 이 true 일 때만 */
+  const publicNote = !n.isExample && (!mine || n.isPublic === true);
+  const numbers = noteNumbers(n);
+  const ago = writtenAgo(n, now);
+  const initial = Array.from(n.author.trim())[0] ?? "";
+  const place = [n.title, n.region].filter(Boolean).join(" · ");
+  /* 시각 줄 — (내 노트면 공개 여부) · 작성 시각 · 서버 빌더 footer. 공개 여부를 모르면(예전 응답) 적지 않는다 */
+  const timeParts = [
+    mine && typeof n.isPublic === "boolean" ? (n.isPublic ? "공개" : "비공개") : "",
+    ago ? `${ago} 작성` : "",
+    ...n.footer,
+  ].filter(Boolean);
   return (
-    <article className="mx-auto w-full max-w-[468px] overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_1px_2px_rgba(16,28,54,.04),0_10px_26px_rgba(16,28,54,.05)]">
-      <div className="flex items-center gap-2.5 px-3.5 py-2.5">
-        <div
-          className="h-8 w-8 shrink-0 rounded-full ring-2 ring-primary-soft"
-          style={{ background: seedGradient(n.author) }}
+    <article className="mx-auto w-full max-w-[468px]">
+      <div className="flex items-center gap-2.5 pb-2.5">
+        {/* [953] 목록 카드 아바타 = 남색 원 위 한지 글자. 사진 없는 자리를 꾸미지 않는다 */}
+        <span
           aria-hidden="true"
-        />
-        <div className="min-w-0">
-          <div className="flex items-center gap-1 t-body font-bold text-ink">
+          className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full bg-brand-navy t-sub font-bold text-on-dark"
+        >
+          {initial}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="flex min-w-0 items-center gap-1 t-body font-bold text-ink">
             <span className="truncate">{n.author}</span>
             {n.isExample && <ExampleBadge />}
             {/* [983] 공개 노트 27건 중 25건이 Lab 글인데 화면은 "직접 다녀온 사람이
                 남긴 기록"이라고만 말했다. 운영진 글에는 그렇다고 적는다 — 사실을
                 적는 쪽이 신뢰를 지키고, "내 글이 이 단지 첫 진짜 기록"이 된다. */}
             {n.lab && <ExampleBadge label="운영진 예시" />}
-          </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-            <span className="truncate t-sub text-text-3">{n.title}</span>
-            {/* [996 · 4] 판단·회차 배지 — 제목 옆 글자만 */}
+          </p>
+          {place && <p className="truncate t-sub text-text-2">{place}</p>}
+        </div>
+        {/* [996 · 4] 판단·회차 배지 — 글자만. [1006] 내 노트는 AI 상태도 */}
+        {(n.decision || n.round != null || n.aiStatus) && (
+          <div className="flex shrink-0 flex-wrap justify-end gap-1">
             <NoteBadges n={n} />
           </div>
-        </div>
-        <span
-          className={`ml-auto shrink-0 rounded-full px-2.5 py-1 text-[12px] font-extrabold ${
-            n.scoreTone === "primary"
-              ? "bg-brand-hanji text-brand-hanji-ink" /* [962] 점수 = 한지 + 남색(홈 시안) */
-              : "bg-[rgba(127,140,158,.12)] text-text-3"
-          }`}
-        >
-          {n.score > 0 ? `기록 ${n.score}점` : "점수 없음"}
-        </span>
+        )}
       </div>
+
       <Link
         href={detailHref}
         aria-label={`${n.title} 노트 보기`}
-        className="press relative block aspect-square bg-bg"
+        className="press relative -mx-3.5 block aspect-square overflow-hidden bg-divider md:mx-0"
       >
-        <CoverImage
-          src={n.coverUrl}
-          alt={`${n.title} 커버 사진`}
-          priority={priority}
-          /* [968 · 17] 전폭 카드(최대 468px)인데 기본 힌트(50vw)를 받고 있었다 —
-             모바일에서 절반 해상도 변환이 내려와 흐릿하게 확대됐다. */
-          sizes="(max-width: 768px) 100vw, 468px"
-          imgClassName="absolute inset-0 h-full w-full object-cover"
-          fallback={
-            <div
-              className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 px-7 text-center text-white"
-              style={{ background: seedGradient(n.id) }}
-            >
-              <span className="t-sub font-bold uppercase tracking-[0.14em] text-white/85">
-                임장노트
-              </span>
-              <span className="line-clamp-3 t-title drop-shadow-sm">
-                {n.title}
-              </span>
-              <span className="mt-1 rounded-full bg-white/22 px-3.5 py-1 t-sub font-extrabold backdrop-blur-sm">
-                {n.score > 0 ? `기록 점수 ${n.score}` : "점수 없음"}
-              </span>
-            </div>
-          }
-        />
-      </Link>
-      {/* 하트·댓글·북마크 아이콘 제거 — 기능이 없는 장식은 두지 않는다. 상세 진입은 카드/자세히 보기로 충분 */}
-      {n.complexHref && (
-        <div className="flex items-center px-3.5 pt-3">
-          <Link
-            href={n.complexHref}
-            className="t-sub font-bold text-primary no-underline"
+        {hasPhoto ? (
+          <CoverImage
+            src={n.coverUrl}
+            alt={`${n.title} 커버 사진`}
+            priority={priority}
+            /* [968 · 17] 전폭 카드(최대 468px) — 모바일은 화면 폭 그대로 */
+            sizes="(max-width: 768px) 100vw, 468px"
+            imgClassName="absolute inset-0 h-full w-full object-cover"
+            onFailed={() => setPhotoFailed(true)}
+          />
+        ) : (
+          /* [1012] 사진 없는 자리 — 브랜드 면 단색 위에 제목만. 흰 글자·알약·블러·자간 장식은 걷었다 */
+          <span
+            className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-7 text-center text-ink"
+            style={{ background: seedFace(n.id) }}
           >
-            단지 허브 ›
-          </Link>
+            <span className="t-caption text-text-3">사진 없는 노트</span>
+            <span className="line-clamp-3 t-section">{n.title}</span>
+          </span>
+        )}
+        {hasPhoto && photos >= 2 && (
+          <span className="absolute right-3 top-3">
+            <Icon name="images" size={20} className="text-white drop-shadow-sm" />
+          </span>
+        )}
+      </Link>
+
+      {(publicNote || n.complexHref) && (
+        <div className="-mx-2 flex items-center">
+          {publicNote && (
+            <Link
+              href={`/notes/${n.id}#comments`}
+              aria-label={`${n.title} 노트 댓글 보기`}
+              className="flex h-10 w-10 items-center justify-center text-ink no-underline"
+            >
+              <Icon name="message-circle" size={24} />
+            </Link>
+          )}
+          {publicNote && (
+            <ShareLinkButton
+              variant="icon"
+              label={`${n.title} 노트 공유`}
+              title={`${n.title} 임장노트`}
+              /* 상세의 공유 링크와 같은 주소 — utm_source=share 로 공유 유입이 기존 UTM 집계에 잡힌다 */
+              url={`/notes/${encodeURIComponent(n.id)}?utm_source=share&utm_medium=note`}
+              className="flex h-10 w-10 items-center justify-center text-ink [&_svg]:h-[24px] [&_svg]:w-[24px]"
+            />
+          )}
+          {/* 실 단지 id 를 찾은 노트만 — [1012] 규칙 5 CTA 는 동사 + 대상 */}
+          {n.complexHref && (
+            <Link
+              href={n.complexHref}
+              aria-label={`${n.title} 단지 페이지 보기`}
+              className="ml-auto inline-flex h-10 items-center gap-1 px-2 t-sub font-bold text-primary no-underline"
+            >
+              <Icon name="building2" size={16} />
+              단지 페이지 보기
+            </Link>
+          )}
         </div>
       )}
-      <div className="px-3.5 pb-3.5 pt-2">
-        <p className="t-body text-text-1">
+
+      <div className={publicNote || n.complexHref ? "" : "pt-2.5"}>
+        {/* 굵은 숫자 줄 — 값이 있는 것만(기록 점수·사진 장수). 반응 수는 데이터에 없어 만들지 않는다 */}
+        {numbers.length > 0 && <p className="t-body font-bold text-ink">{numbers.join(" · ")}</p>}
+        <p className="mt-1 line-clamp-2 t-body text-text-1">
           <span className="font-bold text-ink">{n.author}</span>{" "}
+          <span className="font-medium text-ink">{n.title}</span>{" "}
           <span className="text-text-2">{n.excerpt}</span>
         </p>
+        <Link href={detailHref} className="tap-line mt-0.5 inline-block t-sub text-text-3 no-underline">
+          노트 전체 읽기
+        </Link>
+        {/* 태그는 누르는 것이 아니라 글자다 — 나우블루(링크 색)를 쓰지 않는다(규칙 9) */}
         {n.tags.length > 0 && (
-          <p className="mt-1.5 flex flex-wrap gap-x-1.5 gap-y-0.5 t-sub font-semibold text-primary">
+          <p className="mt-1 flex flex-wrap gap-x-1.5 gap-y-0.5 t-sub font-medium text-text-2">
             {n.tags.map((t) => (
               <span key={t.label}>#{t.label.replace(/\s/g, "")}</span>
             ))}
           </p>
         )}
-        <div className="mt-2 flex flex-wrap items-center gap-x-2 t-sub text-text-3">
-          <span>{n.meta}</span>
-          {n.footer.map((f) => (
-            <span key={f}>· {f}</span>
-          ))}
-        </div>
-        <Link
-          href={detailHref}
-          className="mt-2 inline-block t-sub font-semibold text-text-3 no-underline"
-        >
-          자세히 보기 ›
-        </Link>
+        {/* 규칙 7 — 숫자 3개(자가체크 n/5 · 방문일 · 체크 n/m)는 서버 빌더(footer)가 실값으로 채운다.
+            작성 시각은 여기서 다시 센다(writtenAgo). 내 노트는 공개 여부를 맨 앞에 */}
+        {timeParts.length > 0 && (
+          <p className="mt-1.5 flex flex-wrap gap-x-1.5 gap-y-0.5 t-caption text-text-3">
+            {timeParts.map((part, i) => (
+              <span key={`${i}-${part}`}>{i > 0 ? `· ${part}` : part}</span>
+            ))}
+          </p>
+        )}
       </div>
     </article>
-  );
-}
-
-/* 그리드/피드 전환 아이콘 (인라인 SVG) */
-function GridGlyph({ active }: { active: boolean }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      {[3, 10, 17].map((x) =>
-        [3, 10, 17].map((y) => (
-          <rect
-            key={`${x}-${y}`}
-            x={x}
-            y={y}
-            width="4"
-            height="4"
-            rx="1"
-            fill={active ? "currentColor" : "var(--border-strong)"}
-          />
-        )),
-      )}
-    </svg>
-  );
-}
-function FeedGlyph({ active }: { active: boolean }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      {[4, 14].map((y) => (
-        <rect
-          key={y}
-          x="3"
-          y={y}
-          width="18"
-          height="6"
-          rx="1.5"
-          fill={active ? "currentColor" : "var(--border-strong)"}
-        />
-      ))}
-    </svg>
   );
 }
 
@@ -393,6 +600,16 @@ function wantsMineTab(search: string): boolean {
   }
 }
 
+/** [1012-IG] URL 의 지역 원 선택값(?region=서울 마포구) — 공개 뷰에서만 쓴다 */
+function regionFromUrl(search: string): string | null {
+  try {
+    const v = new URLSearchParams(search).get("region")?.trim();
+    return v ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 export function NotesFeedClient({
   notes: publicNotes,
   mine: mineProp,
@@ -402,6 +619,7 @@ export function NotesFeedClient({
   hasMore = false,
   pageSize = 30,
   hasBestMonth = false,
+  renderedAt,
 }: {
   /** 서버가 그린 공개 첫 페이지(모두에게 같은 값 — ISR HTML) */
   notes: FeedNote[];
@@ -421,10 +639,21 @@ export function NotesFeedClient({
   pageSize?: number;
   /** [970 · B-25] /notes/best 에 뽑힌 달이 있는가 — 없으면(또는 못 읽었으면) 링크를 감춘다 */
   hasBestMonth?: boolean;
+  /** [1012-IG] 서버가 이 HTML 을 그린 시각(ms) — "최근 7일"·작성 시각의 첫 렌더 기준(hydration 일치).
+      마운트 뒤에는 지금 시각으로 다시 센다. 생략하면 마운트 전까지 "최근" 판정을 하지 않는다 */
+  renderedAt?: number;
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("최신");
+  /* [1012-IG] 기본 보기 = 격자(소유자 답: 3열 격자) */
   const [view, setView] = useState<ViewMode>("grid");
+  /* [1012] 지역 선택값(시·구 라벨). null = 전체. [1012-IG] 주소 ?region= 과 맞춘다 */
+  const [regionFilter, setRegionFilter] = useState<string | null>(null);
+  /* [1012-IG] 기준 시각 — 첫 렌더는 서버 시각, 마운트 뒤 지금 */
+  const [now, setNow] = useState<number>(renderedAt ?? Number.NaN);
+  useEffect(() => {
+    setNow(Date.now());
+  }, []);
 
   /* ── [1007] 보는 사람·탭 — 서버(ISR)는 비로그인 공개 피드만 그린다. 마운트 뒤:
        ① 세션 프로브(공유 프라미스) → 로그인이면 세그먼트를 그리고 /api/me/alerts 로 관심 지역을 읽어
@@ -471,6 +700,8 @@ export function NotesFeedClient({
   useEffect(() => {
     let cancelled = false;
     const wantMine = mineProp ?? wantsMineTab(window.location.search);
+    /* [1012-IG] 공개 뷰의 지역 원 선택값을 주소에서 되살린다(공유·뒤로가기). 내 노트 뷰는 전용 필터 줄이 맡는다 */
+    if (!wantMine) setRegionFilter(regionFromUrl(window.location.search));
     void getSessionLite().then(async (s) => {
       if (cancelled) return;
       const authed = loggedInProp ?? Boolean(s?.user?.email);
@@ -530,7 +761,7 @@ export function NotesFeedClient({
   const allNotes = useMemo(() => (extra.length > 0 ? [...notes, ...extra] : notes), [notes, extra]);
   const exampleOnly = allNotes.length > 0 && allNotes.every((n) => n.isExample);
   /* [966] 상세 → 뒤로가기 스크롤 복원. 노트는 서버가 내려준 props 라 첫 렌더에 이미
-     그려져 있다(ready) — 타일은 3:4 고정 비율이라 사진이 늦게 와도 높이가 안 변한다. */
+     그려져 있다(ready) — 타일은 정사각 고정 비율이라 사진이 늦게 와도 높이가 안 변한다. */
   useScrollRestore(useScrollRestoreKey(), notes.length > 0);
 
   /* 구독 지역이 없으면 "내 관심 지역" 은 무엇을 눌러도 0건이라 칩 자체를 숨긴다.
@@ -539,19 +770,52 @@ export function NotesFeedClient({
   const activeFilter = filters.includes(filter) ? filter : "최신";
 
   /* [1006] 내 노트 뷰 — 정렬·판단·지역·기간(방문일) 필터. 규칙은 lib/notes/mine-filters(순수),
-     칩은 실제로 있는 값만. 공개 피드는 종전 칩(최신·점수순·관심 지역) 그대로 — 남의 노트에
+     칩은 실제로 있는 값만. 공개 피드는 종전 토글(최신·점수순·관심 지역) 그대로 — 남의 노트에
      판단·AI 상태 필터를 거는 건 다른 화면의 일이다. */
   const [mineFilters, setMineFilters] = useState<MineFilters>(DEFAULT_MINE_FILTERS);
   const mineOptions = useMemo(() => (mine ? mineFilterOptions(allNotes) : null), [mine, allNotes]);
   const mineActive = mine && hasActiveMineFilter(mineFilters);
 
+  /* [1012] 지역 재료 — 공개 뷰에서만(내 노트는 MineFilterBar 가 같은 시·구 칩을 이미 가진다).
+     [1012-IG] 원 표지 사진·최근 7일 링까지 region-chips 의 순수 함수가 센다(손에 든 노트 기준). */
+  const regionItems = useMemo(() => (mine ? [] : regionHighlights(allNotes, now)), [mine, allNotes, now]);
+  const allFresh = useMemo(() => !mine && hasRecentNote(allNotes, now), [mine, allNotes, now]);
+  const activeRegion = regionFilter && regionItems.some((r) => r.label === regionFilter) ? regionFilter : null;
+  const byRegion = activeRegion ? allNotes.filter((n) => regionChipOf(n) === activeRegion) : allNotes;
+
+  /* [1012-IG] 머리 숫자 줄 — 끝까지 다 불러왔으면 "공개 노트", 아니면 "불러온 노트"(region-chips 주석) */
+  const headerStats = useMemo(
+    () => feedHeaderStats(allNotes, { now, mine, complete: reachedEnd }),
+    [allNotes, now, mine, reachedEnd],
+  );
+  const labCount = mine ? 0 : allNotes.filter((n) => n.lab).length;
+
   const visible = mine
     ? applyMineFilters(allNotes, mineFilters)
     : activeFilter === "점수순"
-      ? [...allNotes].sort((a, b) => b.score - a.score)
+      ? [...byRegion].sort((a, b) => b.score - a.score)
       : activeFilter === "내 관심 지역"
-        ? allNotes.filter((n) => n.interested)
-        : allNotes;
+        ? byRegion.filter((n) => n.interested)
+        : byRegion;
+  /* 정렬 줄 왼쪽 — 걸러 낸 결과가 몇 건인지(거를 때만). 숫자는 지금 보이는 카드 수 */
+  const scopeLine =
+    !mine && (activeRegion || activeFilter === "내 관심 지역")
+      ? `${[activeRegion, activeFilter === "내 관심 지역" ? "내 관심 지역" : null].filter(Boolean).join(" · ")} ${visible.length}건`
+      : "";
+
+  /* [1012-IG] 지역 원 → 주소(?region=). 탭 전환과 같은 방식(history.replaceState)으로 주소만 바꾼다 */
+  const selectRegion = (next: string | null) => {
+    setRegionFilter(next);
+    try {
+      window.history.replaceState(
+        window.history.state,
+        "",
+        next ? `/notes?${new URLSearchParams({ region: next }).toString()}` : "/notes",
+      );
+    } catch {
+      /* 주소 갱신 실패는 화면 전환을 막지 않는다 */
+    }
+  };
 
   /* [967 · 20] 세그먼트 → URL(?tab=mine). [1007] 내 노트는 /api/inspection/notes/mine 으로 받고,
      URL 은 history.replaceState 로만 바꾼다(페이지는 ISR — 서버 렌더를 다시 받을 것이 없다).
@@ -564,6 +828,7 @@ export function NotesFeedClient({
       /* 주소 갱신 실패는 화면 전환을 막지 않는다 */
     }
     setFilter("최신");
+    setRegionFilter(null);
     setMineFilters(DEFAULT_MINE_FILTERS);
     setExtra([]);
     setMoreError(null);
@@ -588,7 +853,7 @@ export function NotesFeedClient({
       const qs = new URLSearchParams({ public: "1", before: cursor, limit: String(pageSize) });
       const res = await fetch(`/api/inspection/notes?${qs.toString()}`, { cache: "no-store" });
       if (!res.ok) {
-        setMoreError("더 불러오지 못했어요. 잠시 후 다시 시도해 주세요");
+        setMoreError(`다음 ${pageSize}건을 불러오지 못했어요. 잠시 후 다시 눌러 주세요`);
         return;
       }
       const data = (await res.json().catch(() => null)) as {
@@ -608,13 +873,35 @@ export function NotesFeedClient({
     }
   };
 
+  /* [1012-IG] 이어 불러오기 — 목록 끝(아래 버튼 자리)이 화면 600px 앞까지 오면 다음 페이지를 스스로 받는다.
+     버튼은 그대로 둔다(키보드·IntersectionObserver 없는 브라우저·실패 뒤 다시 시도). 실패하면 자동은 멈추고
+     버튼이 "다시 눌러 주세요" 를 받는다 — 실패를 무한히 되풀이하지 않는다. */
+  const moreRef = useRef<HTMLDivElement | null>(null);
+  const loadMoreRef = useRef(loadMore);
+  loadMoreRef.current = loadMore;
+  const autoMore = !mine && !activeLoadError && hasMore && !reachedEnd && !moreError;
+  useEffect(() => {
+    const el = moreRef.current;
+    if (!autoMore || !el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) void loadMoreRef.current();
+      },
+      { rootMargin: "600px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [autoMore, allNotes.length]);
+
+  const showControls = allNotes.length > 0 && !(mine && mineState.status !== "ok");
+
   return (
     <PageShell>
-      {/* [1005] 안쪽 폭 1240 — 홈·PageShell 과 같은 컨테이너(예전 1120 은 이 화면만 좁았다).
-          카드·타일의 최대 폭은 그대로다(PostCard 468 · 타일 열 수). */}
-      <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-4 md:gap-5">
-        {/* 헤더 */}
-        <div className="px-1">
+      {/* [1012-IG] 가운데 최대폭 935px — 3열 정사각 격자가 데스크톱에서도 3열로 서는 폭(타일 ≈309px).
+          [1005] 의 1240 컨테이너 안에서 가운데 정렬. 피드 카드는 그 안에서 468px. */}
+      <div className="mx-auto flex w-full max-w-[935px] flex-col gap-4 md:gap-5">
+        {/* 머리 — 제목 · 숫자 줄 · 한 줄 소개 · 링크 */}
+        <header className="flex flex-col gap-3">
           {/* [967 · 20] 공개/내 노트 세그먼트 — 로그인했을 때만. 예전엔 내 노트로 가는
               길이 /my 의 링크 하나뿐이라 목록 화면 안에서는 전환이 없었다. */}
           {loggedIn && (
@@ -623,96 +910,89 @@ export function NotesFeedClient({
               value={mine ? "mine" : "public"}
               onChange={switchTab}
               ariaLabel="노트 범위"
-              className="mb-3 w-fit"
+              className="w-fit"
             />
           )}
-          <h1 className="t-title text-ink md:t-title">
-            {mine ? "내 임장노트" : "공개 임장노트"}
-          </h1>
-          <p className="mt-1.5 t-body text-text-2">
-            {mine
-              ? "내가 남긴 임장 기록 — 비공개 노트도 여기서만 보여요"
-              : "이웃들의 실제 임장 기록 — 실회원 기록만 노출돼요"}
-          </p>
-          {!mine && (
-            <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 t-sub">
-              {/* [970 · B-25] 뽑힌 달이 하나라도 있을 때만 — 빈 화면으로 보내지 않는다 */}
-              {hasBestMonth && (
-                <Link href="/notes/best" className="tap-line font-bold text-primary underline">
-                  이달의 공개 임장노트 — 선정 기준까지 공개 ›
+          <h1 className="t-title text-ink">{mine ? "내 임장노트" : "공개 임장노트"}</h1>
+          {/* [1012-IG] 숫자 줄 — 예전 부제 문장("공개 노트 N건 · 지역 M곳 · 이 피드 기준")의 숫자를 옮겼다.
+              아래 소개 문장은 숫자를 되풀이하지 않는다(정보 중복 금지) */}
+          <StatRow stats={headerStats} />
+          <div className="flex flex-col gap-1.5">
+            {/* [1012] 규칙 6 — 누가(현장에 다녀온 사람·나) + 어디서. 운영진 글은 몇 건인지 밝힌다([983]) */}
+            {/* [v4 · 요약본] 소개 문장 → 사실 한 줄. 운영진 글은 몇 건인지 밝힌다([983] — 이웃을 주어로 쓰지 않는다) */}
+            {mine ? (
+              <p className="t-sub text-text-3">비공개 노트는 나에게만 보여요</p>
+            ) : labCount > 0 ? (
+              <p className="t-sub text-text-3">운영진 예시 {labCount}건 포함</p>
+            ) : null}
+            {!mine && (
+              <p className="flex flex-wrap gap-x-3 gap-y-1 t-sub">
+                {/* [970 · B-25] 뽑힌 달이 하나라도 있을 때만 — 빈 화면으로 보내지 않는다 */}
+                {hasBestMonth && (
+                  <Link href="/notes/best" className="tap-line font-bold text-primary underline">
+                    이달의 노트 순위 보기 ›
+                  </Link>
+                )}
+                {/* 임장 가이드(전략 §4-2) — 기록 허브에서 준비 허브로 잇는다 */}
+                <Link href="/imjang" className="tap-line font-bold text-primary underline">
+                  지역별 임장 가이드 보기 ›
                 </Link>
-              )}
-              {/* 임장 가이드(전략 §4-2) — 기록 허브에서 준비 허브로 잇는다 */}
-              <Link href="/imjang" className="tap-line font-bold text-primary underline">
-                지역별 임장 가이드 — 답사 준비 ›
-              </Link>
-              {/* [970 · B-25] 리포트 진열대(/notes/market) 링크는 뺐다 — 판매 오픈 전 잠금
-                  화면이라 헤더에서 보낼 곳이 아니다(페이지 자체는 그대로). */}
-            </p>
-          )}
-        </div>
+                {/* [970 · B-25] 리포트 진열대(/notes/market) 링크는 뺐다 — 판매 오픈 전 잠금
+                    화면이라 헤더에서 보낼 곳이 아니다(페이지 자체는 그대로). */}
+              </p>
+            )}
+          </div>
+        </header>
 
         {/* 조회 실패 — 이 경우 "노트가 없다" 고 읽히면 안 되므로 빈 상태와 분리한다 */}
         {activeLoadError && (
-          <div className="rounded-[10px] border border-line bg-surface px-3.5 py-3 t-sub text-text-2">
+          <div className="rounded-lg border border-line bg-surface px-3.5 py-3 t-sub text-text-2">
             {mine ? "내 임장노트를" : "공개 임장노트를"}{" "}
-            <strong className="text-ink">불러오지 못했습니다</strong>. 노트가 없다는 뜻이 아니라
-            조회 자체가 실패했다는 뜻입니다. 잠시 후 다시 확인해 주세요.
+            <strong className="text-ink">불러오지 못했어요</strong>. 노트가 없다는 뜻이 아니라
+            조회 자체가 실패했다는 뜻이에요. 잠시 후 다시 열어 주세요.
           </div>
         )}
 
-        {/* 스토리 줄 */}
-        {visible.length > 0 && <StoryRail notes={visible} />}
+        {/* [1012-IG] 지역 하이라이트 줄 — 공개 뷰에서, 지역이 잡힌 노트가 하나라도 있을 때 */}
+        {!mine && regionItems.length > 0 && (
+          <RegionRail
+            items={regionItems}
+            total={allNotes.length}
+            allFresh={allFresh}
+            value={activeRegion}
+            onChange={selectRegion}
+          />
+        )}
 
-        {/* 필터 칩 + 뷰 전환. [1006] 내 노트가 0건이면 필터·뷰 전환을 그리지 않는다 — 고를 것이 없다 */}
-        {(!mine || allNotes.length > 0) && (
-        <div className="flex items-center justify-between gap-2 px-1">
-          {mine ? (
-            /* [1006] 내 노트 — 필터는 아래 전용 줄(MineFilterBar). 여기엔 뷰 전환만 */
-            <span className="t-caption text-text-3">보기 방식</span>
-          ) : (
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 t-body [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {filters.map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFilter(f)}
-                className={`chip press shrink-0 px-4 py-2 ${
-                  activeFilter === f
-                    ? "chip-active"
-                    : "border border-line bg-surface text-text-2"
-                }`}
-              >
-                {f}
-              </button>
-            ))}
+        {/* [1012-IG] 정렬 — 탭 줄 위 오른쪽의 작은 글자 토글(높이 40px). 선택 = 한지 + 남색 */}
+        {!mine && allNotes.length > 0 && (
+          <div className="flex items-center justify-between gap-2">
+            <p role="status" className="min-w-0 truncate t-sub text-text-2">
+              {scopeLine}
+            </p>
+            <div role="group" aria-label="정렬" className="-mr-1 flex shrink-0 items-center">
+              {filters.map((f) => {
+                const on = activeFilter === f;
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setFilter(f)}
+                    className="inline-flex h-10 items-center px-0.5"
+                  >
+                    <span
+                      className={`rounded-sm px-2 py-1 t-sub ${
+                        on ? "bg-brand-hanji font-bold text-brand-hanji-ink" : "text-text-3"
+                      }`}
+                    >
+                      {f}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          )}
-          <div className="flex shrink-0 items-center gap-1">
-            <button
-              type="button"
-              aria-label="그리드 보기"
-              aria-pressed={view === "grid"}
-              onClick={() => setView("grid")}
-              className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-                view === "grid" ? "bg-primary-soft text-primary" : "text-text-3"
-              }`}
-            >
-              <GridGlyph active={view === "grid"} />
-            </button>
-            <button
-              type="button"
-              aria-label="피드 보기"
-              aria-pressed={view === "feed"}
-              onClick={() => setView("feed")}
-              className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-                view === "feed" ? "bg-primary-soft text-primary" : "text-text-3"
-              }`}
-            >
-              <FeedGlyph active={view === "feed"} />
-            </button>
-          </div>
-        </div>
         )}
 
         {/* [1006] 내 노트 필터 줄 — 정렬 · 판단 · 지역 · 기간(방문일) */}
@@ -727,18 +1007,20 @@ export function NotesFeedClient({
           />
         )}
 
+        {/* [1012-IG] 격자 / 피드 탭 — 고를 노트가 있을 때만(0건이면 바꿔 볼 것이 없다) */}
+        {showControls && <ViewTabs value={view} onChange={setView} />}
+
         {/* 예시 안내 */}
         {exampleOnly && (
-          <div className="flex items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3.5 py-2.5 t-sub text-text-3">
+          <div className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 py-2.5 t-sub text-text-3">
             <ExampleBadge />
             <span>
-              아직 공개된 임장노트가 없어 샘플 1건을 보여드려요 — 실데이터가
-              쌓이면 자동으로 교체됩니다.
+              아직 공개된 임장노트가 없어 샘플 1건만 보여요 — 첫 공개 노트가 올라오면 샘플은 내려가요.
             </span>
           </div>
         )}
 
-        {/* 본문: 그리드 / 피드 / 빈 상태. [1007] 내 노트는 받는 중이면 빈 상태 대신 안내 — "없어요"를 먼저 말하지 않는다 */}
+        {/* 본문: 격자 / 피드 / 빈 상태. [1007] 내 노트는 받는 중이면 빈 상태 대신 안내 — "없어요"를 먼저 말하지 않는다 */}
         {mine && (mineState.status === "idle" || mineState.status === "loading") ? (
           <p role="status" aria-busy="true" className="py-8 text-center t-sub text-text-3">
             내 임장노트를 불러오는 중…
@@ -765,19 +1047,22 @@ export function NotesFeedClient({
                 </button>
               </div>
             ) : (
+            /* [1012] 규칙 6 — 빈 화면도 어디서·몇 건 중. 지역 원이 골라져 있으면 그 지역명으로 말한다 */
             <EmptyState
               icon="file-text"
               title={
                 activeFilter === "내 관심 지역"
-                  ? "구독한 지역의 노트는 아직 없어요"
-                  : "해당 필터에 맞는 노트가 아직 없어요"
+                  ? activeRegion
+                    ? `${activeRegion}에서 내가 구독한 지역과 겹치는 노트가 없어요`
+                    : "내가 구독한 지역의 공개 노트가 아직 없어요"
+                  : `${activeRegion ?? "이 조건"}의 노트가 아직 없어요`
               }
               desc={
                 activeFilter === "내 관심 지역"
-                  ? `노트 ${allNotes.length}건 중 내가 구독한 지역과 겹치는 건 없었어요. 필터를 '최신'으로 바꾸면 전체를 볼 수 있어요.`
-                  : "필터를 바꾸면 다른 노트를 볼 수 있어요."
+                  ? `이 피드의 노트 ${allNotes.length}건 중 내가 구독한 지역과 겹치는 건 없었어요. 위 '최신'을 누르면 ${allNotes.length}건 전체가 보여요.`
+                  : `이 피드의 노트 ${allNotes.length}건 중 남는 것이 없었어요. 위 '전체' 원을 누르면 ${allNotes.length}건 전체가 보여요.`
               }
-              action={{ label: "임장노트 쓰기", href: "/notes/new" }}
+              action={{ label: "내 임장노트 쓰기", href: "/notes/new" }}
             />
             )
           ) : (
@@ -785,43 +1070,45 @@ export function NotesFeedClient({
               icon="file-text"
               title={
                 mine
-                  ? "아직 작성한 임장노트가 없어요"
-                  : "아직 공개된 임장노트가 없어요"
+                  ? "내가 쓴 임장노트가 아직 없어요"
+                  : "공개된 임장노트가 아직 없어요"
               }
               desc={
                 mine
-                  ? "첫 임장노트를 작성하면 비공개 노트까지 여기에 모여요."
-                  : "아직 공개된 기록이 없어요. 샘플로 채우지 않아요 — 첫 노트를 쓰거나 지도에서 단지를 먼저 둘러보세요."
+                  ? "첫 노트를 쓰면 비공개 노트까지 이 화면에 모여요. 임장 당일 현장에서 퀵 기록으로 시작해도 돼요."
+                  : "샘플로 채우지 않아요. 첫 공개 노트를 쓰거나, 지도에서 단지를 먼저 둘러봐도 돼요."
               }
-              action={{ label: "임장노트 쓰기", href: "/notes/new" }}
+              action={{ label: mine ? "첫 임장노트 쓰기" : "첫 공개 임장노트 쓰기", href: "/notes/new" }}
             />
           )
         ) : view === "grid" ? (
-          // 모바일: 가장자리까지 붙는 촘촘한 3열(인스타 앱). 데스크탑: 넓은 4~5열 보드(둥근 카드·호버·여백)
-          <div className="-mx-3.5 grid grid-cols-3 gap-0.5 md:mx-0 md:grid-cols-4 md:gap-3.5 xl:grid-cols-5">
-            {/* [968 · 17] 첫 타일만 priority — 그리드·피드 중 한 뷰만 그려지므로 한 화면에 하나다 */}
+          /* [1012-IG] 정사각 3열 — 모바일은 페이지 좌우 여백(px-3.5)을 상쇄해 화면 끝까지 · 간격 2px,
+             md+ 는 최대폭 안 3열 · 간격 4px. 반경·테두리·그림자 0 */
+          <div className="-mx-3.5 grid grid-cols-3 gap-0.5 md:mx-0 md:gap-1">
+            {/* [968 · 17] 첫 타일만 priority — 격자·피드 중 한 뷰만 그려지므로 한 화면에 하나다 */}
             {visible.map((n, i) => (
               <GridTile key={n.id} n={n} priority={i === 0} />
             ))}
           </div>
         ) : (
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-8">
             {visible.map((n, i) => (
-              <PostCard key={n.id} n={n} priority={i === 0} />
+              <PostCard key={n.id} n={n} priority={i === 0} now={now} mine={mine} />
             ))}
           </div>
         )}
 
-        {/* [967 · 19] 더 보기 — 공개 뷰에서만(내 노트는 listNotes 가 200건까지 한 번에 준다).
-            첫 페이지가 꽉 찼을 때만 버튼을 그리고, 짧은 응답이 오면 "마지막이에요" 로 닫는다.
-            버튼은 목록 아래 제자리라 스크롤 위치가 그대로 유지된다(위로 튀지 않는다). */}
+        {/* [967 · 19] 다음 페이지 — 공개 뷰에서만(내 노트는 listNotes 가 200건까지 한 번에 준다).
+            첫 페이지가 꽉 찼을 때만 그리고, 짧은 응답이 오면 "마지막이에요" 로 닫는다.
+            [1012-IG] 이 자리가 화면 가까이 오면 스스로 이어 받는다(위 autoMore). 버튼은 대체 수단으로 남긴다. */}
         {!mine && !activeLoadError && hasMore && allNotes.length > 0 && (
-          <div className="flex flex-col items-center gap-2 py-1">
+          <div ref={moreRef} className="flex flex-col items-center gap-2 py-1">
             {reachedEnd ? (
               <p role="status" className="t-sub text-text-3">
-                마지막이에요 — {allNotes.length}건을 모두 봤어요
+                마지막이에요 — 공개 노트 {allNotes.length}건을 모두 봤어요
               </p>
             ) : (
+              /* [1012] 규칙 5 — "더 보기" 는 대상이 없다. 다음 페이지 크기를 적는다 */
               <button
                 type="button"
                 onClick={() => void loadMore()}
@@ -829,7 +1116,7 @@ export function NotesFeedClient({
                 aria-busy={loadingMore}
                 className="btn-soft px-5 py-2.5 t-body font-bold disabled:opacity-60"
               >
-                {loadingMore ? "불러오는 중…" : "더 보기"}
+                {loadingMore ? "불러오는 중…" : `다음 노트 ${pageSize}건 보기`}
               </button>
             )}
             {moreError && (
@@ -847,15 +1134,17 @@ export function NotesFeedClient({
         <div className="rise-in-2 mx-auto flex w-full max-w-[468px] gap-2 md:hidden">
           <Link
             href="/notes/new"
-            className="btn-primary btn-cta flex min-h-[52px] flex-1 items-center justify-center rounded-2xl px-4 py-3 text-center t-section no-underline"
+            className="btn-primary btn-cta flex min-h-[52px] flex-1 items-center justify-center rounded-lg px-4 py-3 text-center t-section no-underline"
           >
-            노트 쓰기
+            임장노트 쓰기
           </Link>
+          {/* [1012] 규칙 4 — 📷 이모지 → 선 아이콘. 점선 테두리(장식)도 1px 실선으로 */}
           <Link
             href="/notes/new?quick=1"
-            className="flex min-h-[52px] flex-1 items-center justify-center rounded-2xl border-[1.5px] border-dashed border-line-strong bg-surface px-4 py-3 text-center t-body font-bold text-text-1 no-underline"
+            className="flex min-h-[52px] flex-1 items-center justify-center gap-1.5 rounded-lg border border-line bg-surface px-4 py-3 text-center t-body font-bold text-text-1 no-underline"
           >
-            📷 현장 퀵 기록
+            <Icon name="camera" size={18} />
+            현장 퀵 기록
           </Link>
         </div>
       </div>

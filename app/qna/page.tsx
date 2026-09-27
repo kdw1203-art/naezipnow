@@ -29,7 +29,8 @@ export const revalidate = 86_400;
 export const metadata: Metadata = {
   title: "단지 Q&A | 내집나우",
   description:
-    "아파트 단지·동네에 대한 궁금증을 묻고 이웃·실거주자에게 답을 받아보세요. 재건축·학군·주차·교통까지 단지 Q&A에서 확인하세요.",
+    /* [1012] 규칙 5 — "받아보세요·확인하세요" 제거 */
+    "아파트 단지·동네 질문에 이웃·실거주자가 답하는 단지 Q&A. 재건축·학군·주차·교통 주제별 질문과 답변 완료 수.",
   robots: { index: true, follow: true },
   alternates: seoAlternates("/qna"),
 };
@@ -120,11 +121,10 @@ export default async function QnaListPage() {
             askForm={<AskForm />}
             sidebar={
               <>
-                <section className="rise-in-2 card flex flex-col gap-2 rounded-[18px] p-[18px]">
-                  <h2 className="t-body font-bold text-ink">질문 전에 여기부터</h2>
+                <section className="rise-in-2 card flex flex-col gap-2 p-[18px]">
+                  <h2 className="t-body font-bold text-ink">질문 전에 볼 기록</h2>
                   <p className="t-sub text-text-3">
-                    이미 남아 있는 기록에 답이 있을 수 있어요. 단지 허브에는 실거래·지도·
-                    임장노트·이 단지 Q&amp;A 가 한 곳에 모여 있습니다.
+                    단지 허브에 실거래·지도·임장노트·이 단지 Q&amp;A 가 한 곳에 있어요.
                   </p>
                   <div className="mt-1 flex flex-col gap-2">
                     {[
@@ -150,9 +150,10 @@ export default async function QnaListPage() {
                       <Link
                         key={l.href}
                         href={l.href}
-                        className="press flex items-center gap-2.5 rounded-xl border border-line bg-surface px-3 py-2.5 no-underline"
+                        className="press flex items-center gap-2.5 rounded-lg border border-line bg-surface px-3 py-2.5 no-underline"
                       >
-                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                        {/* [1012] 규칙 9 — 아이콘 칩은 연한 회색 한 가지 */}
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-bg text-text-2">
                           <Icon name={l.icon} size={16} />
                         </span>
                         <span className="flex flex-col">
@@ -164,12 +165,15 @@ export default async function QnaListPage() {
                   </div>
                 </section>
 
-                <section className="rise-in-3 card flex flex-col gap-2 rounded-[18px] p-[18px]">
-                  <h2 className="t-body font-bold text-ink">이런 걸 물어보세요</h2>
+                <section className="rise-in-3 card flex flex-col gap-2 p-[18px]">
+                  {/* [1012] 규칙 4·5 — "물어보세요" → 명사형, 주제 이모지 → 선 아이콘(Icon 매핑) */}
+                  <h2 className="t-body font-bold text-ink">자주 오르는 질문 주제 {Math.min(6, QNA_TOPICS.length)}가지</h2>
                   <ul className="flex flex-col gap-1.5">
                     {QNA_TOPICS.slice(0, 6).map((t) => (
                       <li key={t.key} className="flex items-start gap-2">
-                        <span className="mt-[1px] shrink-0 t-body">{t.icon}</span>
+                        <span className="mt-[2px] shrink-0 text-text-3">
+                          <Icon name={t.icon} size={13} />
+                        </span>
                         <span className="t-sub text-text-2">{t.hint}</span>
                       </li>
                     ))}
@@ -179,12 +183,11 @@ export default async function QnaListPage() {
                   </p>
                 </section>
 
-                <section className="rise-in-4 card flex flex-col gap-1.5 rounded-[18px] p-[18px]">
+                <section className="rise-in-4 card flex flex-col gap-1.5 p-[18px]">
                   <h2 className="t-body font-bold text-ink">답변은 이웃의 경험이에요</h2>
                   <p className="t-sub text-text-3">
-                    Q&amp;A의 답변은 이용자 개개인의 의견으로 정확성이 보장되지 않습니다. 투자·매매·
-                    임대차 등 계약 판단과 그 결과에 대한 책임은 본인에게 있으니, 참고 자료로만
-                    활용해 주세요.
+                    Q&amp;A의 답변은 이용자 개개인의 의견으로 정확성이 보장되지 않아요. 투자·매매·
+                    임대차 등 계약 판단과 그 결과에 대한 책임은 본인에게 있어요 — 참고 자료로만.
                   </p>
                 </section>
 

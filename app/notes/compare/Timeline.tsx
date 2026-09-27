@@ -1,4 +1,5 @@
-import { Icon } from "@/app/components/Icon";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 3곳을 font-bold(700)로 바꿨다. */
+import Link from "next/link";
 
 /* 시안 9e — 회차 비교 "타임라인" 뷰 (항목 C14)
    page.tsx 의 기존 표 데이터(HEADERS·ROWS·SCORES)를 그대로 파생해
@@ -59,27 +60,22 @@ function ScoreDelta({ delta }: { delta: number }) {
   );
 }
 
-export function Timeline({ steps }: { steps: TimelineStep[] }) {
+/* [v4 · 규칙 3·5·7] 카드 면 · 시계 아이콘 · 부제("회차별 변화 · 이전 회차 대비 하이라이트")를 걷었다.
+   맨 끝 범례("…위 회차·수치는 예시 데이터예요")는 **사실이 아니어서** 지웠다 — 이 표는 2026-07-30 부터 실데이터
+   (listNotesByAuthorForApt)다. 회차 이름은 그 노트로 가는 링크(예전 머리 칩 줄이 하던 일) */
+export function Timeline({ steps, hrefs = [] }: { steps: TimelineStep[]; hrefs?: string[] }) {
   const last = steps.length - 1;
   return (
-    <div className="rise-in-1 card rounded-[18px] px-[22px] py-5">
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Icon name="clock" size={16} className="text-primary" />
-        <h2 className="text-[13px] font-extrabold text-ink">방문 타임라인</h2>
-        <span className="t-sub text-text-3">
-          회차별 변화 · 이전 회차 대비 하이라이트
-        </span>
-      </div>
-
+    <div>
       <ol className="flex flex-col">
         {steps.map((step, i) => (
           <li key={step.n} className="grid grid-cols-[22px_minmax(0,1fr)] gap-3">
             {/* 레일: 회차 점 + 연결선 */}
             <div className="flex flex-col items-center" aria-hidden="true">
               <span
-                className={`mt-0.5 grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full text-[10px] font-extrabold ${
+                className={`mt-0.5 grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full text-[10px] font-bold ${
                   step.latest
-                    ? "bg-primary text-white shadow-[0_2px_8px_rgba(29,79,216,.35)]"
+                    ? "bg-primary text-white"
                     : "bg-primary-soft text-primary"
                 }`}
               >
@@ -92,19 +88,24 @@ export function Timeline({ steps }: { steps: TimelineStep[] }) {
             <div className={`min-w-0 ${i < last ? "pb-5" : ""}`}>
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                 <div className="flex items-baseline gap-2">
-                  <b
-                    className={`text-[13px] ${
-                      step.latest ? "text-primary" : "text-text-1"
-                    }`}
-                  >
-                    {step.n}
-                  </b>
+                  {hrefs[i] ? (
+                    <Link
+                      href={hrefs[i]}
+                      className={`inline-flex min-h-6 items-center t-body font-bold no-underline ${
+                        step.latest ? "text-primary" : "text-text-1"
+                      }`}
+                    >
+                      {step.n}
+                    </Link>
+                  ) : (
+                    <b className={`t-body font-bold ${step.latest ? "text-primary" : "text-text-1"}`}>{step.n}</b>
+                  )}
                   <span className="t-sub text-text-3">{step.meta}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="t-sub text-text-3">종합</span>
                   <span
-                    className={`text-[15px] font-extrabold ${
+                    className={`text-[15px] font-bold ${
                       step.latest ? "text-primary" : "text-text-1"
                     }`}
                   >
@@ -116,13 +117,9 @@ export function Timeline({ steps }: { steps: TimelineStep[] }) {
 
               <div className="mt-2">
                 {step.scoreDelta === null ? (
-                  <p className="t-sub text-text-3">
-                    첫 방문 · 이후 회차를 비교하는 기준 회차예요.
-                  </p>
+                  <span className="block t-sub text-text-3">첫 방문 · 비교 기준</span>
                 ) : step.changes.length === 0 ? (
-                  <p className="t-sub text-text-3">
-                    이전 회차 대비 바뀐 항목이 없어요.
-                  </p>
+                  <span className="block t-sub text-text-3">이전 회차와 같음</span>
                 ) : (
                   <ul className="flex flex-col gap-1.5">
                     {step.changes.map((c) => {
@@ -155,10 +152,6 @@ export function Timeline({ steps }: { steps: TimelineStep[] }) {
         ))}
       </ol>
 
-      <p className="mt-4 border-t border-line pt-3 t-caption text-text-3">
-        ▲ 상승(개선) · ▼ 하락(악화) — 방향 색상은 시세 관례(상승 빨강 / 하락 파랑)를
-        따릅니다. 위 회차·수치는 <b className="font-bold">예시 데이터</b>예요.
-      </p>
     </div>
   );
 }

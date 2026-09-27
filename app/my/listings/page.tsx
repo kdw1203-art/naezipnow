@@ -1,9 +1,8 @@
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 6곳을 font-bold(700)로 바꿨다. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageShell } from "../../components/PageShell";
-import { Icon } from "@/app/components/Icon";
-import { EmptyState } from "@/app/components/ui/EmptyState";
 import { VerifyOwnershipButton } from "./VerifyOwnershipButton";
 import { BoostButton } from "./BoostButton";
 import { ListingManageActions } from "./ListingManageActions";
@@ -21,6 +20,7 @@ import {
   type ListingStaleStage,
 } from "@/lib/listings/store-db";
 import { getOwnerInquiryStats } from "@/lib/listings/inquiries";
+import { EARN_RULES } from "@/lib/points/catalog";
 import { listingPriceLine } from "@/app/listings/price-text";
 
 /* ============================================================
@@ -102,29 +102,24 @@ export default async function MyListingsPage() {
   const expert = await getExpertStatus(session.user.email);
   if (!expert.isBroker) {
     return (
-      <PageShell breadcrumb="마이 › 내 매물" title="내 매물">
-        <div className="mx-auto max-w-[520px]">
-          <div className="rise-in card flex flex-col items-center gap-3 px-5 py-12 text-center">
-            <div className="t-title">
-              <Icon name="🏢" size={26} />
-            </div>
-            <div className="t-section text-ink">
-              매물 등록은 공인중개사 인증 후 이용할 수 있어요
-            </div>
+      /* [v4 · 규칙 1·7·10] 아이콘 + 가운데 정렬 카드 → 제목 한 줄 + 사실 한 줄 + 버튼(760px 줄 왼쪽) */
+      <PageShell>
+        <div className="mx-auto flex w-full max-w-[760px] flex-col items-start gap-3">
+          <header className="flex flex-col gap-0.5">
+            <h1 className="t-title text-ink">내 매물</h1>
             {/* [992 · A1] 전문가 인증 신청(/town/experts)은 보관(비노출) — 신청 입구를
                 약속하지 않고, 인증 회원 전용이라는 사실과 문의처만 말한다. */}
-            <p className="max-w-[420px] t-body text-text-3">
-              매물 등록·검수·노출 관리는 개업공인중개사 인증을 마친 회원에게만 열려 있어요.
-              인증 신청은 지금 받지 않아요 — 필요하시면 고객센터로 문의해 주세요.
+            <p className="t-sub text-text-3">
+              매물 등록·검수·노출 관리는 개업공인중개사 인증 회원 전용 · 인증 신청은 지금 받지 않음
             </p>
-            <Link href="/support" className="btn-soft btn-md mt-1 no-underline">
-              고객센터 문의
-            </Link>
-            <Link href="/my" className="t-sub font-bold text-text-3 no-underline">
-              마이로 돌아가기 ›
-            </Link>
-          </div>
-          <div className="mt-6 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 t-sub text-text-3">
+          </header>
+          <Link href="/support" className="btn-soft btn-md no-underline">
+            고객센터 문의
+          </Link>
+          <Link href="/my" className="inline-flex min-h-10 items-center t-sub font-bold text-text-3 no-underline">
+            마이로 돌아가기 ›
+          </Link>
+          <div className="mt-4 border-t border-line pt-3 t-sub text-text-3">
             내집나우는 광고 매체로서 매물 정보를 게재할 뿐 중개 당사자가 아니며, 매물
             등록·중개 행위는 개업공인중개사가 수행합니다.
           </div>
@@ -149,51 +144,52 @@ export default async function MyListingsPage() {
   ).length;
 
   return (
-    <PageShell breadcrumb="마이 › 내 매물" title="내 매물">
+    /* [v4 · 한 화면 한 가지] 가운데 한 줄(760px): 제목 + 사실 한 줄(상태별 건수) · 등록 버튼(채움 1개) →
+       실적 1px 선 행(노출중·총 조회·받은 문의 — 오른쪽 숫자) → 매물 목록 → 끝 캡션. 실적 칸 격자·주황 상자 → 행·한 줄 */
+    <PageShell>
+      <div className="mx-auto w-full max-w-[760px]">
+      <header className="mb-4 flex flex-col gap-0.5">
+        <h1 className="t-title text-ink">내 매물</h1>
+        <p className="t-sub text-text-3">
+          검수중 {counts.pending ?? 0} · 노출중 {counts.approved ?? 0} · 반려 {counts.rejected ?? 0} · 마감{" "}
+          {counts.closed ?? 0}
+        </p>
+      </header>
+
       {/* 실적 요약 — 실집계(노출중·총 조회·받은 문의) */}
       {items.length > 0 && (
-        <div className="rise-in mb-4 grid grid-cols-3 gap-2.5">
-          <div className="card card-pad-sm flex flex-col gap-0.5">
-            <span className="t-sub text-text-3">노출중 매물</span>
-            <span className="t-title text-ink">{activeCount}</span>
-          </div>
-          <div className="card card-pad-sm flex flex-col gap-0.5">
-            <span className="t-sub text-text-3">총 조회</span>
-            <span className="t-title text-ink">
-              {totalViews.toLocaleString("ko-KR")}
-            </span>
-          </div>
-          <Link
-            href="/my/leads"
-            className="card card-pad-sm flex flex-col gap-0.5 no-underline transition-colors hover:bg-[rgba(29,79,216,.03)]"
-          >
-            <span className="t-sub text-text-3">받은 문의</span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="t-title text-ink">{inquiry.total}</span>
-              {inquiry.unread > 0 && (
-                <span className="rounded-full bg-primary chip-pad-tight t-caption font-extrabold text-white">
-                  새 {inquiry.unread}
+        <ul data-tone="blue" className="rise-in mb-4 divide-y divide-line border-y border-line">
+          <li className="flex min-h-12 items-center justify-between gap-3 py-2.5">
+            <span className="t-body font-bold text-ink">노출중 매물</span>
+            <span className="t-body t-num text-ink">{activeCount}</span>
+          </li>
+          <li className="flex min-h-12 items-center justify-between gap-3 py-2.5">
+            <span className="t-body font-bold text-ink">총 조회</span>
+            <span className="t-body t-num text-ink">{totalViews.toLocaleString("ko-KR")}</span>
+          </li>
+          <li>
+            <Link href="/my/leads" className="press flex min-h-12 items-center justify-between gap-3 py-2.5 no-underline">
+              <span className="t-body font-bold text-ink">받은 문의</span>
+              <span className="flex items-center gap-1.5">
+                {inquiry.unread > 0 && <span className="t-sub font-bold text-primary">새 {inquiry.unread}</span>}
+                <span className="t-body t-num text-ink">{inquiry.total}</span>
+                <span aria-hidden="true" className="t-body text-text-3">
+                  ›
                 </span>
-              )}
-            </span>
-          </Link>
-        </div>
+              </span>
+            </Link>
+          </li>
+        </ul>
       )}
 
-      {/* I10 — 낡은 매물이 있을 때만 뜨는 안내. 없으면 아무 말도 하지 않는다. */}
+      {/* I10 — 낡은 매물이 있을 때만 뜨는 안내. 없으면 아무 말도 하지 않는다. [v4] 주황 상자 + 세 문장 → 한 줄 */}
       {staleCount > 0 && (
-        <div className="rise-in mb-4 rounded-xl bg-[rgba(245,158,11,.08)] px-4 py-3 t-sub text-warning">
-          노출중 매물 {staleCount}건이 {LISTING_STALE_DAYS}일 넘게 갱신되지 않았어요.
-          아직 거래 중이면 끌어올리고, 끝난 거래는 거래완료로 마감해 주세요. 오래된
-          호가가 남아 있으면 문의가 와도 헛걸음이 돼요.
-        </div>
+        <p className="rise-in mb-4 t-sub font-bold text-warning">
+          노출중 {staleCount}건 {LISTING_STALE_DAYS}일 넘게 미갱신 · 거래 중이면 끌어올리기, 끝났으면 거래완료 마감
+        </p>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="t-body text-text-3">
-          검수중 {counts.pending ?? 0} · 노출중 {counts.approved ?? 0} · 반려{" "}
-          {counts.rejected ?? 0} · 마감 {counts.closed ?? 0}
-        </p>
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
         <div className="flex gap-2">
           <Link href="/my/leads" className="btn-outline btn-md no-underline">
             받은 문의{inquiry.unread > 0 ? ` · 새 ${inquiry.unread}` : ""}
@@ -205,45 +201,43 @@ export default async function MyListingsPage() {
       </div>
 
       {items.length === 0 ? (
-        /* [966] 빈 상태 정본화 */
-        <EmptyState
-          icon="building2"
-          className="rise-in"
-          title="아직 등록한 매물이 없어요"
-          desc="지도에서 위치를 찍어 손쉽게 매물을 등록해 보세요. 승인되면 실매물 목록에 노출되고 포인트가 지급돼요."
-          action={{ label: "첫 매물 등록하기", href: "/listings/new" }}
-        />
+        /* [966] 빈 상태 정본화 · [v4 · 규칙 8] 그림 카드 → 한 줄(등록 버튼은 바로 위에 있다)
+           [1012] 규칙 6·7 — 실제 적립 규칙 숫자(listing_approved) */
+        <p className="rise-in border-y border-line py-3 t-sub text-text-3">
+          등록한 매물 없음 · 지도에서 위치를 찍어 등록 → 운영진 승인 뒤 실매물 목록 · {EARN_RULES.listing_approved.points}P 적립
+        </p>
       ) : (
-        <div className="rise-in grid grid-cols-1 gap-3 md:grid-cols-2">
+        /* [v4 · 규칙 10] 높이가 다른 카드 2열(엇갈림) → 한 열 1px 선 목록 */
+        <div data-tone="hanji" className="rise-in flex flex-col divide-y divide-line border-y border-line">
           {items.map((l) => {
             const meta = STATUS_META[l.status];
             const boost = boostRemaining(l.boostUntil);
             const staleStage = l.status === "approved" ? listingStaleStage(l) : 0;
             const staleMeta = staleStage === 0 ? null : STALE_META[staleStage];
             return (
-              <div key={l.id} className="card card-pad-sm flex flex-col gap-2.5">
+              <div key={l.id} className="flex flex-col gap-2 py-3">
                 <div className="flex items-center gap-1.5">
                   <span
-                    className={`rounded-md chip-pad text-[12px] font-extrabold ${meta.cls}`}
+                    className={`rounded-md chip-pad text-[12px] font-bold ${meta.cls}`}
                   >
                     {meta.label}
                   </span>
-                  <span className="rounded-md bg-bg chip-pad t-sub font-extrabold text-text-2">
+                  <span className="rounded-md bg-bg chip-pad t-sub font-bold text-text-2">
                     {LISTING_TYPE_LABEL[l.listingType]}
                   </span>
                   {l.ownerVerified && (
-                    <span className="rounded-md bg-success-soft chip-pad t-sub font-extrabold text-success">
-                      소유확인
+                    <span className="rounded-md bg-success-soft chip-pad t-sub font-bold text-success">
+                      집주인 확인
                     </span>
                   )}
                   {boost && (
-                    <span className="rounded-md bg-[rgba(245,158,11,.14)] chip-pad t-sub font-extrabold text-warning">
+                    <span className="rounded-md bg-[rgba(245,158,11,.14)] chip-pad t-sub font-bold text-warning">
                       {boost}
                     </span>
                   )}
                   {staleMeta && (
                     <span
-                      className={`rounded-md chip-pad text-[12px] font-extrabold ${staleMeta.cls}`}
+                      className={`rounded-md chip-pad text-[12px] font-bold ${staleMeta.cls}`}
                     >
                       {staleMeta.label}
                     </span>
@@ -327,10 +321,11 @@ export default async function MyListingsPage() {
         </div>
       )}
 
-      {/* 법적 고지 */}
-      <div className="mt-8 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 t-sub text-text-3">
+      {/* 법적 고지 — [v4] 회색 상자 → 끝 캡션 */}
+      <div className="mt-8 border-t border-line pt-3 t-sub text-text-3">
         내집나우는 광고 매체로서 매물 정보를 게재할 뿐 중개 당사자가 아니며, 매물 정보의
         정확성에 대한 책임은 등록자에게 있습니다.
+      </div>
       </div>
     </PageShell>
   );

@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 
 /**
  * 클로즈 베타 안내 (홈 전용) — [968 · 39] 모달 → 본문 상단 한 줄 배너.
@@ -100,24 +101,24 @@ export function BetaNoticeModal() {
       role="status"
       aria-label="클로즈 베타 안내"
       data-noprint
-      className="mb-2.5 flex items-center gap-2 rounded-xl border border-line bg-primary-soft px-3 py-2 text-[12px] leading-[1.45] text-text-1"
+      /* [v4 · 한 줄] 두 줄 알약 안내 → 평평한 한 줄(사실 + 링크 + 닫기). 폰에서도 한 줄에 끝난다 */
+      className="mb-2.5 flex items-center gap-2 border-b border-line py-1.5 t-sub text-text-2"
     >
-      <p className="m-0 min-w-0 flex-1">
-        <b className="text-primary">클로즈 베타예요.</b> 정식 출시(올해 하반기)까지 화면이 바뀔 수
-        있고, 확인 안 된 값은 <b className="text-ink">—</b> 로 비워 둬요.{" "}
+      <p className="m-0 min-w-0 flex-1 truncate">
+        <b className="text-ink">클로즈 베타</b> · 정식 출시 하반기 · 미확인 값은 —{" "}
         <Link
           href="/support"
           onClick={close}
-          className="whitespace-nowrap font-bold text-primary underline"
+          className="tap-line whitespace-nowrap font-bold text-primary"
         >
-          의견 보내기
+          의견 보내기 ›
         </Link>
       </p>
       <button
         type="button"
         onClick={close}
         aria-label="베타 안내 닫기"
-        className="tap shrink-0 rounded-full px-1.5 py-0.5 t-caption font-extrabold text-text-3 hover:text-ink"
+        className="tap shrink-0 rounded-full px-1.5 py-0.5 t-caption font-bold text-text-3 hover:text-ink"
       >
         닫기
       </button>

@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 
 import { useState } from "react";
 
@@ -34,29 +35,20 @@ export function CoverageRequestCard({ query }: { query: string }) {
 
   if (state === "done") {
     return (
-      <div className="mt-5 w-full max-w-[520px] rounded-2xl border border-primary/25 bg-primary-soft px-4 py-3.5 text-center">
-        <div className="t-body font-extrabold text-primary">
-          수요를 기록했어요 — 확장 우선순위에 반영됩니다
-        </div>
-        {email.trim() && (
-          <div className="mt-0.5 t-sub text-text-2">
-            이 지역 데이터가 열리면 알려드릴게요.
-          </div>
-        )}
+      /* [v4 · 규칙 10] 가운데 정렬 → 왼쪽 · 문장 → 사실 */
+      <div className="mt-5 w-full rounded-lg bg-primary-soft px-4 py-3">
+        <div className="t-body font-bold text-primary">수요 기록됨 · 확장 우선순위에 반영</div>
+        {email.trim() && <div className="mt-0.5 t-sub text-text-2">이 지역 데이터가 열리면 이메일 알림</div>}
       </div>
     );
   }
 
   return (
-    <div className="card mt-5 flex w-full max-w-[520px] flex-col gap-2.5 rounded-2xl px-4 py-4 text-left">
+    <div className="card mt-5 flex w-full flex-col gap-2.5 rounded-lg p-4">
       <div>
-        <div className="t-body font-extrabold text-ink">
-          찾는 지역이 아직 안 열렸나요?
-        </div>
-        <p className="mt-0.5 t-sub text-text-2">
-          실거래 상세 데이터는 수도권 주요 지역부터 순차 확장 중이에요. 요청이
-          많은 지역부터 엽니다 — 이 검색어를 수요로 기록해 두세요.
-        </p>
+        <div className="t-body font-bold text-ink">찾는 지역이 아직 안 열렸나요?</div>
+        {/* [v4 · 규칙 3] 설명 두 문장 → 사실 한 줄 */}
+        <p className="mt-0.5 t-sub text-text-3">실거래 상세는 수도권 주요 지역부터 순차 확장 · 요청 많은 지역부터</p>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row">
         <input

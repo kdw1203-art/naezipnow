@@ -20,7 +20,7 @@ export function TimingRegionSelect({
       disabled={disabled}
       onChange={(e) => onChange(e.target.value)}
       aria-label="분석 지역 선택"
-      className="rounded-[10px] border border-line bg-surface px-2.5 py-2 text-xs font-bold text-ink disabled:opacity-60"
+      className="rounded-lg border border-line bg-surface px-2.5 py-2 text-xs font-bold text-ink disabled:opacity-60"
     >
       {options.map((o) => (
         <option key={o.id} value={o.id}>

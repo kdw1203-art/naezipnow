@@ -15,6 +15,7 @@ import { TownCategoryNav } from "../TownCategoryNav";
 import { TownHero } from "../TownHero";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 전문가 목록 (953 개편) — expert_profiles 실데이터.
    구조: 네이비 히어로(무엇을·왜 믿을지) → 필터·카드 → 견적 요청 → 인증 안내·신청
@@ -92,20 +93,20 @@ export default async function TownExpertsPage() {
           { label: "인증 전문가", value: verified.length, unit: "명" },
           { label: "누적 상담 답변", value: answered, unit: "건" },
         ]}
-        note="지금 등록된 전문가 기준"
+        note="등록된 전문가 기준"
       />
       <TownCategoryNav stick />
       {/* ---------- 소개 (브랜드 네이비) ---------- */}
-      <section className="rise-in brand-navy-card mb-5 overflow-hidden rounded-[18px] px-5 py-6 md:px-7 md:py-7">
+      <section className="rise-in brand-navy-card mb-5 overflow-hidden rounded-3xl px-5 py-6 md:px-7 md:py-7">
         <BrandWatermark />
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="max-w-[560px]">
+            {/* [1012] 규칙 5 — "지금 물어보기" 슬로건 → 명사형 사실 */}
             <p className="t-section text-on-dark">
-              자격을 확인한 전문가에게, <span className="text-brand-red-dark">지금</span> 물어보기
+              인증 전문가에게 글로 묻기 — 공인중개사·세무사·감정평가사·대출상담사·건축사
             </p>
             <p className="mt-2 t-body text-on-dark-muted">
-              공인중개사·세무사·감정평가사·대출상담사·건축사. 임장노트 링크를 붙여 글로 묻고, 답변은 상담함으로 받아요.
-              고르기 어려우면 견적 요청 하나로 인증 전문가의 제안을 비교하세요.
+              임장노트 링크를 붙여 글로 묻고, 답변은 상담함으로 와요. 견적 요청 하나로 인증 전문가 여러 명의 제안을 비교할 수 있어요.
             </p>
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 t-sub text-on-dark-muted">
               <span className="inline-flex items-center gap-1">
@@ -158,7 +159,7 @@ export default async function TownExpertsPage() {
         {loaded.ok ? (
           <ExpertsClient items={loaded.items.map(toPublicRow)} truncated={loaded.truncated} />
         ) : (
-          <div className="rise-in-2 card flex flex-col items-center gap-3 rounded-[18px] px-6 py-12 text-center">
+          <div className="rise-in-2 card flex flex-col items-center gap-3 px-6 py-12 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-danger-soft text-danger">
               <Icon name="warning" size={22} />
             </div>
@@ -191,7 +192,7 @@ export default async function TownExpertsPage() {
                 className="card tile flex flex-col gap-1 rounded-2xl p-4 no-underline"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="t-body font-extrabold text-ink">{t.label}</span>
+                  <span className="t-body font-bold text-ink">{t.label}</span>
                   <span className="t-caption text-text-3">{t.count > 0 ? `인증 ${t.count}명` : "모집 중"}</span>
                 </div>
                 <span className="t-sub text-text-2">{t.desc}</span>
@@ -202,10 +203,10 @@ export default async function TownExpertsPage() {
       </section>
 
       {/* ---------- 전문가 참여 (한지 띠) ---------- */}
-      <section id="apply" className="mb-6 scroll-mt-24 rounded-[18px] bg-brand-hanji px-5 py-6 md:px-7">
+      <section id="apply" className="mb-6 scroll-mt-24 rounded-3xl bg-brand-hanji px-5 py-6 md:px-7">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="max-w-[560px]">
-            <div className="t-caption font-extrabold tracking-wider text-brand-hanji-ink opacity-70">전문가이신가요?</div>
+            <div className="t-caption font-bold tracking-wider text-brand-hanji-ink opacity-70">전문가이신가요?</div>
             <h2 className="mt-1 t-section text-brand-hanji-ink">자격 인증 후 상담을 받고, 견적 요청에 제안을 보내세요</h2>
             <ul className="mt-3 flex list-none flex-col gap-1 t-sub text-brand-hanji-ink">
               <li>· 프로필 노출 + 상담 신청 수신·답변 — 답변은 의뢰자 상담함과 알림으로 전달</li>
@@ -242,7 +243,7 @@ export default async function TownExpertsPage() {
       {/* ---------- FAQ (JSON-LD 와 같은 배열) ---------- */}
       <section className="mb-6">
         <h2 className="mb-3 t-section text-ink">자주 묻는 질문</h2>
-        <div className="card flex flex-col divide-y divide-line rounded-2xl px-5">
+        <div data-tone="hanji" className="card flex flex-col divide-y divide-line rounded-2xl px-5">
           {EXPERT_FAQ.map((f) => (
             <details key={f.q} className="group py-3.5">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 t-body font-bold text-ink">

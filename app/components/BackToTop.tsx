@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 
 import { usePathname } from "next/navigation";
 import { useScrolledPast } from "@/lib/client/use-scroll-state";
@@ -50,7 +51,7 @@ export function BackToTop() {
       aria-label="맨 위로"
       onClick={toTop}
       data-lane={lane === "default" ? undefined : lane}
-      className={`back-to-top press njn-lift fixed z-40 flex h-11 w-11 items-center justify-center rounded-full bg-brand-navy text-on-dark shadow-[0_6px_18px_rgba(11,37,69,.3)] ${
+      className={`back-to-top press njn-lift fixed z-40 flex h-11 w-11 items-center justify-center rounded-full bg-brand-navy text-on-dark [box-shadow:var(--shadow-md)] ${
         visible ? "is-visible" : ""
       }`}
     >

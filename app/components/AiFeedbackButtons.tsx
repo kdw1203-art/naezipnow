@@ -91,7 +91,7 @@ export function AiFeedbackButtons({
         aria-pressed={choice === "up"}
         className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-bold transition ${
           choice === "up"
-            ? "border-primary bg-primary-soft text-primary"
+            ? "border-brand-hanji-ink bg-brand-hanji text-brand-hanji-ink"
             : "border-line bg-surface text-text-2 hover:border-primary/40"
         }`}
       >
@@ -133,7 +133,7 @@ export function AiFeedbackButtons({
                   ? "어떤 점이 도움이 됐는지 한 줄로"
                   : "무엇이 부족했는지 한 줄로"
               }
-              className="w-full rounded-[10px] border border-line bg-surface px-3 py-2 t-sub text-text-1"
+              className="w-full rounded-lg border border-line bg-surface px-3 py-2 t-sub text-text-1"
             />
           </label>
           {/* 인용 동의는 따로 받는다 — 동의 없이 쓴 문장을 나중에 소개에 올리지 않는다 */}

@@ -218,13 +218,13 @@ export function RegionPicker({
           aria-expanded={open && list.length > 0}
           aria-controls={`${inputId}-listbox`}
           aria-autocomplete="list"
-          className="w-full rounded-[10px] border border-line bg-surface px-4 py-2.5 text-[13px] text-ink outline-none focus:border-primary"
+          className="w-full rounded-lg border border-line bg-surface px-4 py-2.5 text-[13px] text-ink outline-none focus:border-primary"
         />
         {open && query.trim() !== "" && (
           <div
             id={`${inputId}-listbox`}
             role="listbox"
-            className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-[260px] overflow-y-auto rounded-[10px] border border-line bg-surface shadow-lg"
+            className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-[260px] overflow-y-auto rounded-lg border border-line bg-surface shadow-lg"
           >
             {busy && list.length === 0 && (
               <div className="px-4 py-3 text-xs text-text-3">찾는 중…</div>
@@ -236,7 +236,7 @@ export function RegionPicker({
             )}
             {!busy && !failed && list.length === 0 && (
               <div className="px-4 py-3 text-xs text-text-3">
-                일치하는 시·군·구가 없어요. 구 이름으로 찾아보세요.
+                일치하는 시·군·구가 없어요. 구 이름(예: 마포구)으로 다시 찾으면 돼요.
               </div>
             )}
             {list.map((it, i) => {

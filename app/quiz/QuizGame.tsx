@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 12곳을 font-bold(700)로 바꿨다. */
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
@@ -100,8 +101,9 @@ function EntryCard({
     >
       <div className="flex items-start gap-3">
         <span
-          className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full t-sub font-extrabold ${
-            tag === "A" ? "bg-brand-navy text-on-dark" : "bg-brand-hanji text-brand-hanji-ink"
+          className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full t-sub font-bold ${
+            /* [v4 · 규칙 4] A 표시의 네이비 원 → 흰 원 + 1px 선(네이비 면은 AI 결과 패널에만) */
+            tag === "A" ? "border border-line-strong bg-surface text-ink" : "bg-brand-hanji text-brand-hanji-ink"
           }`}
           aria-hidden="true"
         >
@@ -261,10 +263,10 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
       : "";
 
   const caption = (
+    /* [v4 · 규칙 3] 출처 캡션 한 줄(명사형 사실) */
     <p className="t-caption leading-relaxed text-text-3">
-      국토교통부 실거래가 신고(해제 신고 제외) · 아파트 전용 80~86㎡ · {ymDotLabel(day.fromYm)}~
-      {ymDotLabel(day.toYm)} 계약 중 단지별 가장 최근 1건 · 매물 호가가 아니에요. 같은 날엔 누구에게나
-      같은 문제가 나와요.
+      국토교통부 실거래 신고(해제 제외) · 전용 80~86㎡ · {ymDotLabel(day.fromYm)}~{ymDotLabel(day.toYm)} 계약 중 단지별 최근 1건 ·
+      호가 아님 · 같은 날 같은 문제
     </p>
   );
 
@@ -280,13 +282,14 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
     const burst = justFinished && rec.score >= Math.ceil(rec.total * 0.8);
     return (
       <div className="mt-3 flex flex-col gap-3">
-        <section className="card relative overflow-hidden rounded-[18px] px-5 py-6 text-center" aria-label="오늘 결과">
+        {/* [v4 · 규칙 10] 가운데 정렬 결과 카드 → 왼쪽 정렬(주인공 = 점수 t-display) */}
+        <section className="card relative overflow-hidden rounded-lg px-4 py-5" aria-label="오늘 결과">
           {burst && (
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 motion-reduce:hidden">
               {CONFETTI.map(([dx, dy, rot], i) => (
                 <span
                   key={i}
-                  className={`absolute left-1/2 top-[42%] h-[7px] w-[7px] rounded-[2px] opacity-0 motion-safe:animate-[njnConfetti_1.4s_ease-out_forwards] ${CONFETTI_TONES[i % CONFETTI_TONES.length]}`}
+                  className={`absolute left-1/2 top-[42%] h-[7px] w-[7px] rounded-sm opacity-0 motion-safe:animate-[njnConfetti_1.4s_ease-out_forwards] ${CONFETTI_TONES[i % CONFETTI_TONES.length]}`}
                   style={{ "--dx": `${dx}px`, "--dy": `${dy}px`, "--rot": `${rot}deg` } as CSSProperties}
                 />
               ))}
@@ -298,9 +301,9 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
           {/* [1009 · T] 점수는 방금 끝낸 판에서만 0 부터 굴러 올라간다(CountUp — 화면에 들어올 때 한 번, 모션 최소화면 바로) */}
           <p className="mt-1 tabular-nums text-ink motion-safe:animate-[njnPop_520ms_var(--njn-pop)]">
             {justFinished ? (
-              <CountUp value={rec.score} className="t-display font-extrabold" />
+              <CountUp value={rec.score} className="t-display font-bold" />
             ) : (
-              <span className="t-display font-extrabold">{rec.score}</span>
+              <span className="t-display font-bold">{rec.score}</span>
             )}
             <span className="t-title text-text-3"> / {rec.total}</span>
           </p>
@@ -317,7 +320,7 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
             <button
               type="button"
               onClick={() => void share(shareRec, shareAsReplay)}
-              className="btn-primary inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 t-body font-extrabold"
+              className="btn-primary inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 t-body font-bold"
             >
               {copied ? (
                 <Icon key="done" name="check" size={16} strokeWidth={2.6} className="njn-pop-once" />
@@ -335,20 +338,16 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
               다시 풀어 보기
             </button>
           </div>
-          <p className="mt-3 inline-flex items-center justify-center gap-1 t-sub text-text-2">
-            <Icon name="calendar" size={14} />
-            내일 0시(한국 시간)에 새 문제가 열려요
-          </p>
+          {/* [v4 · 규칙 7] 장식 달력 아이콘 삭제 — 사실 한 줄 */}
+          <p className="mt-3 t-sub text-text-3">새 문제 내일 0시(한국 시간)</p>
         </section>
 
         <section aria-labelledby="quiz-seen" className="flex flex-col gap-2">
-          <h2 id="quiz-seen" className="px-0.5 t-section text-ink">
-            오늘 본 단지 <span className="t-sub font-medium text-text-3">{day.entries.length}곳</span>
+          <h2 id="quiz-seen" className="flex items-baseline gap-1.5 t-section text-ink">
+            오늘 본 단지 <span className="t-num text-text-3">{day.entries.length}</span>
           </h2>
-          <p className="px-0.5 t-sub text-text-3">
-            마음에 걸린 단지가 있나요? 눌러서 면적대별 실거래·거래 흐름을 자세히 볼 수 있어요.
-          </p>
-          <ol className="flex flex-col gap-1.5">
+          {/* [v4 · 규칙 5] 타일 목록 → 구분선 행. 안내 문장("마음에 걸린 단지가 있나요?…")은 지웠다 */}
+          <ol data-tone="blue" className="card flex flex-col divide-y divide-line rounded-lg px-4">
             {day.entries.map((e, i) => {
               /* 방금 푼 판이면 이 단지가 B 였던 라운드의 결과(첫 단지는 A 로만 나왔다) */
               const hit = i > 0 && results.length === total ? results[i - 1] : null;
@@ -356,26 +355,23 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
               <li key={`${e.region}|${e.name}`}>
                 <Link
                   href={e.href}
-                  className="card tile flex min-h-11 items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 no-underline"
+                  className="press flex min-h-14 items-center justify-between gap-3 py-3 no-underline"
                 >
                   <span className="min-w-0">
                     <span className="block t-body font-bold break-words text-ink">
+                      {/* 방금 푼 판의 결과 — 알약 배지 → 글자 한 단어(같은 색) */}
                       {hit !== null && (
-                        <span
-                          className={`mr-1.5 inline-block rounded px-1 align-[1px] t-caption font-extrabold ${
-                            hit ? "bg-success-soft text-success" : "bg-danger-soft text-danger"
-                          }`}
-                        >
+                        <span className={`mr-1.5 t-caption font-bold ${hit ? "text-success" : "text-danger"}`}>
                           {hit ? "맞힘" : "틀림"}
                         </span>
                       )}
                       {e.name}
                     </span>
-                    <span className="block t-sub text-text-3">
+                    <span className="block truncate t-sub text-text-3">
                       {e.region} · 전용 {areaLabel(e.areaM2)}㎡{floorText(e)} · {ymDotLabel(e.ym)}
                     </span>
                   </span>
-                  <span className="shrink-0 text-right t-body font-extrabold tabular-nums text-ink">
+                  <span className="shrink-0 text-right t-body font-bold tabular-nums text-ink">
                     {formatEokMan(e.priceManwon)}
                     <span className="ml-1 font-bold text-text-3" aria-hidden="true">›</span>
                   </span>
@@ -404,7 +400,7 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
           {streak >= 2 && (
             <span
               key={streak}
-              className="inline-flex items-center gap-0.5 rounded-full bg-warning-soft px-2 py-0.5 t-sub font-extrabold text-warning motion-safe:animate-[njnPop_420ms_var(--njn-pop)]"
+              className="inline-flex items-center gap-0.5 rounded-full bg-warning-soft px-2 py-0.5 t-sub font-bold text-warning motion-safe:animate-[njnPop_420ms_var(--njn-pop)]"
             >
               <Icon name="flame" size={13} />
               {streak}연속
@@ -428,7 +424,7 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
 
       <EntryCard key={`a-${round}`} tag="A" entry={a} revealed enter={round > 0} />
       <div className="relative z-[1] -my-4 flex justify-center" aria-hidden="true">
-        <span className="rounded-full border border-line bg-surface px-2.5 py-0.5 t-caption font-extrabold text-text-3">
+        <span className="rounded-full border border-line bg-surface px-2.5 py-0.5 t-caption font-bold text-text-3">
           VS
         </span>
       </div>
@@ -448,8 +444,9 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
             lastOk ? "bg-success-soft" : "bg-danger-soft"
           }`}
         >
-          <p className={`t-body font-extrabold ${lastOk ? "text-success" : "text-danger"}`}>
-            {lastOk ? "정답!" : "아쉬워요"}
+          <p className={`t-body font-bold ${lastOk ? "text-success" : "text-danger"}`}>
+            {/* [1012] 규칙 6 — 느낌표 금지("정답!" → "정답") */}
+            {lastOk ? "정답" : "오답"}
           </p>
           {/* [1009 · T] 차이는 등락 표기 한 토막(<Delta>: ▲ 빨강/▼ 파랑 · 금액 먼저 · 기준 = A) — 예전 "(+12%)" 는 색·화살표 없이
               반올림 정수였다 */}
@@ -485,7 +482,7 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
               <button
                 type="button"
                 onClick={() => answer("lower")}
-                className="press inline-flex min-h-[52px] items-center justify-center gap-1.5 rounded-xl bg-down-soft t-section font-extrabold text-down"
+                className="press inline-flex min-h-[52px] items-center justify-center gap-1.5 rounded-xl bg-down-soft t-section font-bold text-down"
               >
                 ▼ 더 싸요
                 <kbd className="hidden rounded border border-line px-1 t-caption font-bold text-text-3 pointer-fine:inline">←</kbd>
@@ -493,7 +490,7 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
               <button
                 type="button"
                 onClick={() => answer("higher")}
-                className="press inline-flex min-h-[52px] items-center justify-center gap-1.5 rounded-xl bg-up-soft t-section font-extrabold text-up"
+                className="press inline-flex min-h-[52px] items-center justify-center gap-1.5 rounded-xl bg-up-soft t-section font-bold text-up"
               >
                 ▲ 더 비싸요
                 <kbd className="hidden rounded border border-line px-1 t-caption font-bold text-text-3 pointer-fine:inline">→</kbd>
@@ -507,7 +504,7 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
               type="button"
               onClick={next}
               /* h-[52px] — 터치 기기의 .btn-primary 하한(44px, globals.css)이 min-h 유틸을 이겨 답 버튼(52px)보다 낮아졌다 */
-              className="btn-primary inline-flex h-[52px] w-full items-center justify-center gap-1.5 rounded-xl t-section font-extrabold"
+              className="btn-primary inline-flex h-[52px] w-full items-center justify-center gap-1.5 rounded-xl t-section font-bold"
             >
               {round + 1 < total ? "다음 문제 →" : "결과 보기"}
             </button>

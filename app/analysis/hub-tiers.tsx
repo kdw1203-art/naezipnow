@@ -2,130 +2,75 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ToolGlyph } from "./ToolGlyph";
-import type { WorkbenchCardDto } from "./workbench-cards";
+import type { WorkbenchRow } from "./workbench-cards";
 import { useHubPicked } from "./hub-context";
+import { ROW_CLASS, RowChevron, RowText } from "./hub-row";
 
 /* ============================================================
-   워크벤치 그리드 — [UI-03 · UI-06 · UI-08 · UI-10 · 958]
+   단지 분석 12행 — [UI-03 · 975 · v4]
 
-   예전: 12장이 한꺼번에 펼쳐졌고 전부 같은 문장을 달고 있었다. 지금: 자주
-   쓰는 4종만 펼치고 8종은 접는다. 958 에서 카드마다 **결과물 모양 글리프**와
-   "무엇이 나오는지"(metricLabel) 한 줄을 붙였다 — 이름만으로는 열두 도구가
-   서로 뭐가 다른지 알 수 없었다.
+   [v4 · 한 화면 한 가지] 카드 4장(글리프 타일 · 성격 배지 · 설명 문단 · 숫자 줄 · "결과:" 줄) + "그 밖의 도구 8"
+   칩 구름을 **구분선 목록 한 벌**로 바꿨다. 행 = 도구 이름 + 결과 한 줄("투자 점수 · 5개 항목") + `›`.
+   앞 5행만 펼치고 나머지는 <details> "12개 모두 보기" 하나로 접는다(칩 구름 없음).
 
-   [975] **카드를 누르면 지도가 함께 뜬다.** 예전엔 단지를 안 고른 채 카드를
-   누르면 빈 도구 화면이 열렸고, 거기서 단지명을 정확히 알아야 시작할 수 있었다.
-   이제 고른 단지가 없으면 카드 클릭이 지도 서랍을 열고(검색도 그 안에 있다),
-   거기서 고른 단지로 **그 도구를** 곧장 연다. 새 탭/가운데 클릭 같은 수식 클릭은
-   가로채지 않고, 서랍 안에 "단지 없이 먼저 보기" 길도 남긴다.
+   [975] **고른 단지가 없으면 행을 눌러도 빈 도구 화면으로 가지 않는다.** 지도 서랍을 열고
+   (검색도 그 안에 있다), 거기서 고른 단지로 **그 도구를** 곧장 연다. 새 탭/가운데 클릭 같은
+   수식 클릭은 가로채지 않고, 서랍 안에 "단지 없이 먼저 보기" 길도 남긴다.
+   고른 단지가 있으면 ?complexId= 를 실어 바로 간다.
    ============================================================ */
 
-export function WorkbenchGrid({ core, more }: { core: WorkbenchCardDto[]; more: WorkbenchCardDto[] }) {
+/** 처음에 펼쳐 두는 행 수 — 나머지는 접힌다 */
+const OPEN_ROWS = 5;
+
+export function WorkbenchList({ rows }: { rows: WorkbenchRow[] }) {
   const { picked, query, openMap } = useHubPicked();
   const router = useRouter();
 
-  /* [980] 카드 내용은 서버가 조립해 준다(app/analysis/workbench-cards.ts).
+  /* [980] 행 내용은 서버가 조립해 준다(app/analysis/workbench-cards.ts).
      여기서 tool-identity·tool-persona 를 직접 import 하면 두 모듈이 통째로
      브라우저 번들에 실려 /analysis 예산(490KB)을 넘긴다 — 실측 502KB. */
-  /* [993] 12 → 4 핵심: 카드는 4장만. 나머지 8종은 접지 않고 **칩 한 줄로 늘 보이게** —
-     접힌 8종은 존재 자체를 몰랐다(90일 실행 6건이 전부 핵심 3종). */
-  const cards = core;
+  const row = (c: WorkbenchRow) => (
+    <li key={c.id}>
+      <Link
+        href={`${c.href}${query}`}
+        onClick={(e) => {
+          /* 단지가 이미 있으면 그대로 간다. 새 탭·가운데 클릭도 건드리지 않는다. */
+          if (picked) return;
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+          e.preventDefault();
+          openMap({
+            purpose: c.title,
+            skipHref: c.href,
+            onPicked: (p) => router.push(`${c.href}?complexId=${encodeURIComponent(p.id)}`),
+          });
+        }}
+        className={ROW_CLASS}
+        data-tool={c.id}
+      >
+        <RowText title={c.title} sub={c.sub} />
+        <RowChevron />
+      </Link>
+    </li>
+  );
+
+  const head = rows.slice(0, OPEN_ROWS);
+  const rest = rows.slice(OPEN_ROWS);
 
   return (
-    <div className="flex flex-col gap-2.5">
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        {cards.map((c) => {
-          const id = c.id;
-          return (
-            <Link
-              key={id}
-              href={`${c.href}${query}`}
-              onClick={(e) => {
-                /* 단지가 이미 있으면 그대로 간다. 새 탭·가운데 클릭도 건드리지 않는다. */
-                if (picked) return;
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-                e.preventDefault();
-                openMap({
-                  purpose: c.title,
-                  skipHref: c.href,
-                  onPicked: (p) =>
-                    router.push(`${c.href}?complexId=${encodeURIComponent(p.id)}`),
-                });
-              }}
-              className="tile card tool-scope tool-rail flex flex-col gap-1.5 rounded-[14px] p-3.5 no-underline"
-              style={c.vars}
-              data-tool={id}
-            >
-              {/* [980] 12칸이 전부 같은 파란 칩이었다 — tier.iconClass 하나를 공유했고,
-                  lib/ai/tool-identity.ts 도 12종 중 10종이 같은 액센트(#3182f6)였다.
-                  이제 칩 색·왼쪽 띠·성격 라벨이 도구마다 다르다. 색은 카드 래퍼에
-                  CSS 변수로 한 번만 꽂는다(personaVars). */}
-              {/* [989] 모바일에서는 성격 배지를 **아이콘 줄 오른쪽**으로 뺀다.
-                  390px 2열은 칸 폭이 171px 뿐이라 제목이 한 줄을 꽉 채우면 배지가
-                  통째로 다음 줄로 내려갔다. 그 28px 때문에 같은 행 옆 카드가 stretch 로
-                  늘어나고, 짧은 카드 안에 100px 짜리 빈 띠가 생겼다(실측 114px).
-                  아이콘 줄은 높이가 48px 로 고정이라 배지를 얹어도 칸 높이가 안 변한다 —
-                  제목 길이와 무관하게 네 칸의 높이가 같아진다. md+ 는 칸이 넓어 제목이
-                  한 줄에 들어가므로 예전처럼 제목 옆에 붙인다(둘 중 하나만 그려진다). */}
-              <span className="flex items-center gap-2">
-                <span className="tool-soft-bg tool-ink tile-ico flex h-12 w-12 items-center justify-center rounded-[10px]">
-                  <ToolGlyph id={c.glyph} size={34} />
-                </span>
-                <span className="tool-soft-bg tool-ink t-caption ms-auto whitespace-nowrap rounded px-1.5 py-px font-extrabold md:hidden">
-                  {c.character}
-                </span>
-              </span>
-              <span className="t-section text-ink">
-                {c.title}{" "}
-                <span className="tool-soft-bg tool-ink t-caption hidden whitespace-nowrap rounded px-1.5 py-px align-middle font-extrabold md:inline-block">
-                  {c.character}
-                </span>
-              </span>
-              {/* 설명은 기능 한 줄(tagline)이 아니라 **이 화면이 하는 일**로 바꿨다 */}
-              <span className="t-sub text-text-2">{c.premise}</span>
-              {c.result && (
-                <span className="t-caption mt-auto inline-flex items-center gap-1 text-text-3">
-                  <span className="tool-ink h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
-                  결과: {c.result}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-      </div>
-
-      {more.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5" aria-label="그 밖의 도구">
-          <span className="t-sub font-bold text-text-3">그 밖의 도구 {more.length}:</span>
-          {more.map((c) => (
-            <Link
-              key={c.id}
-              href={`${c.href}${query}`}
-              className="chip press tool-scope inline-flex min-h-[36px] items-center gap-1.5 border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-1 no-underline"
-              style={c.vars}
-              data-tool={c.id}
-            >
-              <span className="tool-ink inline-flex" aria-hidden="true">
-                <ToolGlyph id={c.glyph} size={16} />
-              </span>
-              {c.title}
-            </Link>
-          ))}
-        </div>
+    /* [v4.1 · 리퀴드 목록] 바깥 카드 테두리·px 를 뗐다 — 안쪽 두 목록이 각각 유리판(테두리·14px 여백)이 되어 겹겹이 됐다.
+       도구 목록 = hanji(바로 아래 "지역 시세" blue 와 구분), "모두 보기"로 이어지는 나머지도 같은 목록이라 같은 톤 */
+    <div className="flex flex-col">
+      <ul data-tone="hanji" className="flex flex-col divide-y divide-line">{head.map(row)}</ul>
+      {rest.length > 0 && (
+        <details className="group border-t border-line">
+          {/* 네이티브 <details> 토글 — summary 줄 전체가 컨트롤이다. 펼치면 글자만 "접기"로 바뀐다 */}
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-center gap-1 t-sub font-bold text-primary [&::-webkit-details-marker]:hidden">
+            <span className="group-open:hidden">{rows.length}개 모두 보기</span>
+            <span className="hidden group-open:inline">접기</span>
+          </summary>
+          <ul data-tone="hanji" className="flex flex-col divide-y divide-line border-t border-line">{rest.map(row)}</ul>
+        </details>
       )}
-
-      <div className="flex flex-wrap items-center gap-2">
-        {picked ? (
-          <span className="t-sub text-text-3">
-            <span className="font-bold text-primary">{picked.name}</span> 기준으로 열려요
-          </span>
-        ) : (
-          <span className="t-sub text-text-3">
-            카드를 누르면 지도가 떠요 — 지도나 검색으로 단지를 고르면 그 도구가 바로 열립니다
-          </span>
-        )}
-      </div>
     </div>
   );
 }

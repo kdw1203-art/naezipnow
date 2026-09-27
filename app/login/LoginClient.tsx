@@ -8,7 +8,6 @@ import { safeInternalPath } from "@/lib/safe-path";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Logo } from "@/app/components/Logo";
-import { Icon } from "@/app/components/Icon";
 import { useMoment } from "@/app/components/motion/MomentProvider";
 
 import type { SocialProvider } from "@/lib/auth/configured-social";
@@ -41,7 +40,9 @@ function resolveCallbackUrl(): string {
  * 그래서 지어낸 노트 카드를 걷어내고, callbackUrl 이 실제로 가리키는 경로에서만
  * 문구를 고른다. 맞는 경로가 없으면 일반 문구로 간다. 노트 문구는 정말 노트
  * 작성 중에 로그인 벽을 만난 사람에게만 나간다. */
-type LoginContext = { line1: string; line2: string; sub: string };
+/* [v4 · 규칙 1·3] 두 줄 제목("매물 문의·등록은 / 로그인 후 이용할 수 있어요") + 설명 문장 →
+   한 줄 제목(동사 + 대상) + 사실 한 줄. 돌아갈 곳 규칙(callbackUrl 경로별 문구)은 그대로. */
+type LoginContext = { title: string; sub: string };
 
 /* 문구도 **실제로 켜져 있는 로그인 수단**만 말한다.
    "카카오·네이버·구글" 을 고정 문자열로 박아 두면, 그 셋 중 하나도 설정돼
@@ -52,115 +53,47 @@ const SOCIAL_LABEL: Record<SocialProvider, string> = {
   toss: "토스",
 };
 
+/* [1012 · 규칙 2·5] 버튼 라벨 = 동사 + 대상("카카오로 로그인") — "3초 만에 시작" 류는 뺐다. 색 그림자 없음
+   (카카오·토스 브랜드색은 각사 가이드가 우선이라 배경색만 유지). */
 const SOCIAL_BUTTON: Record<SocialProvider, { label: string; className: string }> = {
   /* 카카오 브랜드 가이드 — 버튼 배경 #FEE500, 라벨 #191919 (다크에서도 고정) */
   kakao: {
-    label: "카카오로 3초 만에 시작",
-    className: "bg-[#fee500] text-[#191919] shadow-[0_6px_16px_rgba(254,229,0,.3)]",
+    label: "카카오로 로그인",
+    className: "bg-[#fee500] text-[#191919]",
   },
   toss: {
-    label: "토스로 시작",
-    className: "bg-[#3182f6] text-white shadow-[0_6px_16px_rgba(49,130,246,.35)]",
+    label: "토스로 로그인",
+    className: "bg-[#3182f6] text-white",
   },
   google: {
-    label: "Google로 시작",
+    label: "Google로 로그인",
     className: "border border-line bg-surface text-text-1",
   },
 };
 
+/* [1012 · 규칙 6] 안내문 = 누가·언제·어디서 중 둘 + 사실. 로그인이 실제로 바꾸는 것(저장 시점)만 말한다. */
 function genericContext(social: SocialProvider[]): LoginContext {
   return {
-    line1: "내집나우 계정으로",
-    line2: "임장 기록을 이어가세요",
+    title: "로그인",
     sub: social.length
-      ? `${social.map((p) => SOCIAL_LABEL[p]).join("·")} 계정으로 3초면 시작할 수 있어요`
-      : "이메일 계정으로 임장 기록을 이어서 저장할 수 있어요",
+      ? `${social.map((p) => SOCIAL_LABEL[p]).join("·")} 계정 또는 이메일 · 쓰던 임장노트가 계정에 저장`
+      : "이메일 계정 · 이 기기의 임시저장 노트가 계정으로 옮겨짐",
   };
 }
 
 /* 앞에서부터 순서대로 검사한다 — 더 구체적인 경로를 위에 둔다.
    여기 적힌 경로는 전부 실제로 /login?callbackUrl= 을 만드는 자리에서 가져왔다. */
 const CONTEXT_RULES: { prefix: string; ctx: LoginContext }[] = [
-  {
-    prefix: "/notes",
-    ctx: {
-      line1: "방금 쓴 노트,",
-      line2: "잃어버리지 않게 저장할게요",
-      sub: "로그인하면 작성하던 내용 그대로 이어서 저장돼요",
-    },
-  },
-  {
-    prefix: "/subscription",
-    ctx: {
-      line1: "플랜을 고르려면",
-      line2: "먼저 로그인이 필요해요",
-      sub: "로그인하면 보던 구독 화면으로 그대로 돌아갑니다",
-    },
-  },
-  {
-    prefix: "/listings",
-    ctx: {
-      line1: "매물 문의·등록은",
-      line2: "로그인 후 이용할 수 있어요",
-      sub: "로그인하면 보던 매물 화면으로 그대로 돌아갑니다",
-    },
-  },
-  {
-    prefix: "/dev-deals",
-    ctx: {
-      line1: "분양·개발 정보 문의는",
-      line2: "로그인 후 이용할 수 있어요",
-      sub: "로그인하면 보던 화면으로 그대로 돌아갑니다",
-    },
-  },
-  {
-    prefix: "/town/groups",
-    ctx: {
-      line1: "임장 모임 참여는",
-      line2: "로그인 후 이용할 수 있어요",
-      sub: "로그인하면 보던 모임 화면으로 그대로 돌아갑니다",
-    },
-  },
-  {
-    prefix: "/qna",
-    ctx: {
-      line1: "단지 Q&A 질문·답변은",
-      line2: "로그인 후 남길 수 있어요",
-      sub: "로그인하면 보던 질문 화면으로 그대로 돌아갑니다",
-    },
-  },
-  {
-    prefix: "/notifications",
-    ctx: {
-      line1: "알림함은",
-      line2: "로그인 후 볼 수 있어요",
-      sub: "로그인하면 알림함으로 바로 이동합니다",
-    },
-  },
-  {
-    prefix: "/my",
-    ctx: {
-      line1: "내 정보는",
-      line2: "로그인 후 볼 수 있어요",
-      sub: "로그인하면 보던 화면으로 그대로 돌아갑니다",
-    },
-  },
-  {
-    prefix: "/points",
-    ctx: {
-      line1: "포인트 사용은",
-      line2: "로그인 후 이용할 수 있어요",
-      sub: "로그인하면 보던 화면으로 그대로 돌아갑니다",
-    },
-  },
-  {
-    prefix: "/recommend",
-    ctx: {
-      line1: "맞춤 추천은",
-      line2: "로그인 후 받아볼 수 있어요",
-      sub: "로그인하면 추천 화면으로 바로 이동합니다",
-    },
-  },
+  { prefix: "/notes", ctx: { title: "로그인하고 노트 저장", sub: "작성하던 내용 그대로 이어서 저장" } },
+  { prefix: "/subscription", ctx: { title: "로그인하고 플랜 고르기", sub: "로그인 후 보던 구독 화면으로" } },
+  { prefix: "/listings", ctx: { title: "로그인하고 매물 문의·등록", sub: "로그인 후 보던 매물 화면으로" } },
+  { prefix: "/dev-deals", ctx: { title: "로그인하고 분양·개발 문의", sub: "로그인 후 보던 화면으로" } },
+  { prefix: "/town/groups", ctx: { title: "로그인하고 임장 모임 참여", sub: "로그인 후 보던 모임 화면으로" } },
+  { prefix: "/qna", ctx: { title: "로그인하고 Q&A 남기기", sub: "로그인 후 보던 질문 화면으로" } },
+  { prefix: "/notifications", ctx: { title: "로그인하고 알림함 보기", sub: "로그인 후 알림함으로 바로 이동" } },
+  { prefix: "/my", ctx: { title: "로그인하고 내 정보 보기", sub: "로그인 후 보던 화면으로" } },
+  { prefix: "/points", ctx: { title: "로그인하고 포인트 쓰기", sub: "로그인 후 보던 화면으로" } },
+  { prefix: "/recommend", ctx: { title: "로그인하고 맞춤 추천 받기", sub: "로그인 후 추천 화면으로 바로 이동" } },
 ];
 
 function contextForCallback(cb: string, fallback: LoginContext): LoginContext {
@@ -204,12 +137,15 @@ const EMAIL_NOT_CONFIRMED_COPY =
 
 /* 로그인 계정으로 실제로 할 수 있는 것만 적는다 — 각 항목은 코드에 로그인 벽이
    실제로 걸려 있는 기능이다(노트 저장·관심단지·분석 기록·관심 지역 알림). 없는 기능을
-   미끼로 적지 않는다. [994] Q&A·모임은 992 에서 보관돼 목록에서 뺐다. */
-const ACCOUNT_BENEFITS: { icon: string; label: string; desc: string }[] = [
-  { icon: "📝", label: "임장노트 저장", desc: "현장에서 적은 체크·사진을 계정에 보관" },
-  { icon: "⭐", label: "관심 단지", desc: "보던 단지를 모아두고 다시 찾기" },
-  { icon: "🤖", label: "AI 분석 기록", desc: "진단·예측 결과를 기록으로 남겨 다시 보기" },
-  { icon: "🔔", label: "관심 지역 알림", desc: "청약 공고·접수·발표를 수신함으로" },
+   미끼로 적지 않는다. [994] Q&A·모임은 992 에서 보관돼 목록에서 뺐다.
+   [1012 · 규칙 4·6 · 신호표 5번] 이모지(📝⭐🤖🔔) 2×2 아이콘 카드 → 아이콘 없는 명사 + 한 줄 사실 목록.
+   숫자는 코드에서 확인되는 값만(관심 지역 최대 3곳 = /welcome MAX_REGIONS · 노트 사진·체크 항목은 수를 적지 않는다). */
+/* [v4 · 규칙 3] "~남아요/~보여요" 문장 → 명사형 사실 한 줄 */
+const ACCOUNT_BENEFITS: { label: string; desc: string }[] = [
+  { label: "저장", desc: "임장노트 체크·사진·메모 계정 보관" },
+  { label: "관심 단지", desc: "실거래가 바뀌면 홈 '내 관심'에 표시" },
+  { label: "분석 기록", desc: "AI 진단·예측 결과 마이 기록 보관" },
+  { label: "알림", desc: "관심 지역 최대 3곳 청약 공고·접수·발표" },
 ];
 
 /**
@@ -422,17 +358,16 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
         <div className="rise-in">
           <Logo size={34} />
         </div>
-        <h1 className="rise-in-1 text-[21px] font-extrabold leading-[1.35] text-ink">
-          {ctx.line1}
-          <br />
-          {ctx.line2}
-        </h1>
-        <p className="rise-in-2 text-[13px] text-text-2">{ctx.sub}</p>
+        {/* [v4 · 규칙 1] 제목 한 줄 + 사실 한 줄 */}
+        <div className="flex flex-col gap-0.5">
+          <h1 className="rise-in-1 t-title text-ink">{ctx.title}</h1>
+          <p className="rise-in-2 t-sub text-text-3">{ctx.sub}</p>
+        </div>
 
         {verifiedNotice && (
           <div
             role="status"
-            className="rise-in rounded-[10px] bg-primary-soft px-4 py-3 text-[13px] font-bold text-primary"
+            className="rise-in rounded-lg bg-primary-soft px-4 py-3 text-[13px] font-bold text-primary"
           >
             이메일 인증이 완료됐어요. 이제 로그인해 주세요.
           </div>
@@ -440,7 +375,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
         {signupDoneNotice && !verifiedNotice && (
           <div
             role="status"
-            className="rise-in rounded-[10px] bg-primary-soft px-4 py-3 text-[13px] font-bold text-primary"
+            className="rise-in rounded-lg bg-primary-soft px-4 py-3 text-[13px] font-bold text-primary"
           >
             가입이 완료됐어요. 방금 만든 계정으로 로그인해 주세요.
           </div>
@@ -449,7 +384,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
         {error && (
           <div
             role="alert"
-            className="rise-in rounded-[10px] bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger"
+            className="rise-in rounded-lg bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger"
           >
             {error}
             {failHint?.kind === "social" && (
@@ -462,7 +397,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
             {failHint?.kind === "no_account" && (
               <Link
                 href={signupHref}
-                className="mt-2 inline-block rounded-[8px] border border-danger/40 bg-surface px-3 py-1.5 text-[12px] font-bold text-danger no-underline"
+                className="mt-2 inline-block rounded-lg border border-danger/40 bg-surface px-3 py-1.5 text-[12px] font-bold text-danger no-underline"
               >
                 이 이메일로 가입하기 ›
               </Link>
@@ -470,7 +405,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
             {failHint?.kind === "bad_password" && (
               <Link
                 href={`/forgot-password${email.includes("@") ? `?email=${encodeURIComponent(email.trim())}` : ""}`}
-                className="mt-2 inline-block rounded-[8px] border border-danger/40 bg-surface px-3 py-1.5 text-[12px] font-bold text-danger no-underline"
+                className="mt-2 inline-block rounded-lg border border-danger/40 bg-surface px-3 py-1.5 text-[12px] font-bold text-danger no-underline"
               >
                 비밀번호 찾기 ›
               </Link>
@@ -481,7 +416,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
                   type="button"
                   onClick={resendConfirmation}
                   disabled={resendState === "busy" || resendState === "sent"}
-                  className="w-fit rounded-[8px] border border-danger/40 bg-surface px-3 py-1.5 text-[12px] font-bold text-danger disabled:opacity-60"
+                  className="w-fit rounded-lg border border-danger/40 bg-surface px-3 py-1.5 text-[12px] font-bold text-danger disabled:opacity-60"
                 >
                   {resendState === "busy"
                     ? "보내는 중…"
@@ -512,7 +447,8 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
                 type="button"
                 onClick={() => socialSignIn(provider)}
                 disabled={busy !== null}
-                className={`rounded-[14px] p-3.5 text-center text-[15px] font-bold disabled:opacity-60 ${SOCIAL_BUTTON[provider].className}`}
+                /* disabled 는 opacity 가 아니라 토큰 면·글자(디자인 시스템 규칙) */
+                className={`rounded-lg p-3.5 text-center text-[15px] font-bold disabled:bg-[var(--disabled-bg)] disabled:text-[var(--disabled-text)] ${SOCIAL_BUTTON[provider].className}`}
               >
                 {SOCIAL_BUTTON[provider].label}
               </button>
@@ -573,49 +509,46 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
             disabled={busy !== null && busy !== "password"}
             busyLabel="로그인 중"
             errorLabel="정보를 확인해 주세요"
-            className="rounded-[10px] p-3 text-center text-[13px] font-bold"
+            className="rounded-lg p-3 text-center text-[13px] font-bold"
           >
             이메일로 로그인
           </ActionButton>
-          <div className="text-center">
-            <Link href="/forgot-password" className="text-xs font-bold text-text-2">
+          {/* [v4 · 규칙 10] 가운데 정렬 → 왼쪽 */}
+          <div>
+            <Link href="/forgot-password" className="inline-flex min-h-[24px] items-center text-xs font-bold text-text-2">
               비밀번호를 잊으셨나요?
             </Link>
           </div>
         </form>
 
-        <ul className="rise-in-4 grid grid-cols-2 gap-2">
+        {/* [1012] 1px 선으로 나눈 목록 한 장 — 명사(왼쪽, 고정 폭) + 사실 한 줄 */}
+        {/* [v4 · 규칙 5] 테두리 카드 → 위아래 1px 선 목록 */}
+        <ul className="rise-in-4 m-0 list-none divide-y divide-line border-y border-line p-0">
           {ACCOUNT_BENEFITS.map((b) => (
-            <li
-              key={b.label}
-              className="card flex flex-col gap-1 rounded-[14px] px-3.5 py-3"
-            >
-              <span className="flex items-center gap-1.5 text-[13px] font-bold text-ink">
-                <Icon name={b.icon} size={15} />
-                {b.label}
-              </span>
-              <span className="text-[12px] leading-[1.5] text-text-3">{b.desc}</span>
+            <li key={b.label} className="flex items-baseline gap-3 py-2.5">
+              <span className="w-[64px] shrink-0 text-[13px] font-bold text-ink">{b.label}</span>
+              <span className="min-w-0 truncate text-[12px] text-text-3">{b.desc}</span>
             </li>
           ))}
         </ul>
 
-        <div className="rise-in-5 text-center text-xs text-text-3">
+        <div className="rise-in-5 text-xs text-text-3">
           처음이신가요?{" "}
           {/* [970 · A-14] 가입 링크에 callbackUrl 을 넘긴다 — 구독·페이월에서 로그인 벽을 만나
               가입으로 갈아탄 사람이 가입 뒤 홈(/welcome → 노트)으로 떨어져 하던 일을 잃었다.
               SignupClient 가 이 값을 읽어 /welcome?next= 로 잇는다. */}
-          <Link href={signupHref} className="font-bold text-primary">
-            회원가입 온보딩
+          <Link href={signupHref} className="inline-flex min-h-[24px] items-center font-bold text-primary">
+            이메일로 가입하기
           </Link>
         </div>
         {/* [970 · A-13] 동의 문구에 약관·방침 실링크 — 동의 대상 문서를 열 수 없었다 */}
-        <p className="text-center text-[12px] leading-[1.6] text-text-3">
-          시작하면{" "}
-          <Link href="/legal/terms" className="underline underline-offset-2">
+        <p className="text-[12px] leading-[1.6] text-text-3">
+          로그인하면{" "}
+          <Link href="/legal/terms" className="inline-flex min-h-[24px] items-center underline underline-offset-2">
             이용약관
           </Link>
           ·
-          <Link href="/legal/privacy" className="underline underline-offset-2">
+          <Link href="/legal/privacy" className="inline-flex min-h-[24px] items-center underline underline-offset-2">
             개인정보처리방침
           </Link>
           에 동의하게 됩니다

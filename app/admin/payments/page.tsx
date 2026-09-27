@@ -385,7 +385,7 @@ export default async function AdminPaymentsPage({
           <span className="text-[12px] font-medium text-text-3">최근 20건 · 전 제공사</span>
         </h2>
         {orderParam ? (
-          <p className="mt-2 rounded-[10px] bg-bg px-3 py-2 text-[12px] text-text-2">
+          <p className="mt-2 rounded-lg bg-bg px-3 py-2 text-[12px] text-text-2">
             문의에서 넘어온 주문번호 <span className="font-mono text-ink">{orderParam}</span> —{" "}
             {focused
               ? "아래 첫 줄에 올렸어요. 청약철회(7일)·일할 환불은 그 줄의 환불 버튼으로 처리합니다."

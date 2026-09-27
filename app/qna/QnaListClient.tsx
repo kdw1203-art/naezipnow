@@ -21,6 +21,7 @@ import {
   filterByTopic,
   isQnaTopicKey,
 } from "@/lib/qna/topics";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 type StatusKey = "all" | "open" | "answered";
 type SortKey = "recent" | "answers" | "views";
@@ -72,15 +73,16 @@ function QuestionCard({ row }: { row: QnaRow }) {
   return (
     <article className="card tile flex flex-col gap-2">
       <div className="flex items-center gap-1.5">
+        {/* [1012] 규칙 9 — 배지 4px/500, 사실 명사(답변 완료·대기) */}
         <span
-          className={`rounded-md chip-pad text-[12px] font-extrabold ${
-            answered ? "bg-primary-soft text-primary" : "bg-[rgba(127,140,158,.14)] text-text-2"
+          className={`rounded-sm chip-pad t-caption font-medium ${
+            answered ? "bg-primary-soft text-primary" : "bg-bg text-text-2"
           }`}
         >
           {answered ? "답변 완료" : "답변 대기"}
         </span>
         {q.bountyPoints > 0 && (
-          <span className="rounded-md bg-[rgba(245,158,11,.14)] chip-pad t-sub font-extrabold text-warning">
+          <span className="rounded-sm bg-warning-soft chip-pad t-caption font-medium text-warning">
             현상금 {q.bountyPoints.toLocaleString()}P
           </span>
         )}
@@ -228,8 +230,9 @@ export function QnaListClient({
 
   const tabPill = (on: boolean) =>
     on
-      ? "press rounded-full bg-primary px-4 py-2 text-[13px] font-bold"
-      : "press glass rounded-full px-4 py-2 text-[13px] font-semibold text-text-2";
+      /* [1012] 규칙 9 — 채움 파랑은 검색 버튼 1개. 탭 활성 = chip-active, 비활성 = 1px 선 칩 */
+      ? "press chip-active rounded-full px-4 py-2 text-[13px] font-bold"
+      : "press chip rounded-full border border-line bg-surface px-4 py-2 text-[13px] font-semibold text-text-2";
   const chip = (on: boolean) =>
     on
       ? "chip-active px-3 py-1.5 text-xs"
@@ -288,9 +291,9 @@ export function QnaListClient({
           maxLength={80}
           placeholder="단지명·지역·키워드로 질문 검색"
           aria-label="질문 검색"
-          className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3.5 py-2 t-body text-ink placeholder:text-text-3"
+          className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3.5 py-2 t-body text-ink placeholder:text-text-3"
         />
-        <button type="submit" className="btn-primary press rounded-xl px-4 py-2 t-body">
+        <button type="submit" className="btn-primary press rounded-lg px-4 py-2 t-body">
           검색
         </button>
       </form>
@@ -309,7 +312,8 @@ export function QnaListClient({
             onClick={() => set({ topic: f.topic === t.key ? null : t.key })}
             className={chip(f.topic === t.key)}
           >
-            <span className="mr-1">{t.icon}</span>
+            {/* [1012] 규칙 4 — 주제 이모지(lib/qna/topics)는 Icon 이 선 아이콘으로 매핑한다 */}
+            <Icon name={t.icon} size={12} className="mr-1 inline-block align-[-2px]" />
             {t.label}
             <span className="ml-1 opacity-60">{topicCounts[t.key]}</span>
           </button>
@@ -346,22 +350,23 @@ export function QnaListClient({
           {items.length === 0 ? (
             <EmptyState
               icon="messages-square"
+              /* [1012] 규칙 5·6 — "남겨보세요" 권유 대신 사실(모수 100건·조건) + 동사+대상 CTA */
               title={
                 f.q
-                  ? `‘${f.q}’ 관련 질문이 아직 없어요`
+                  ? `최근 질문 ${all.length}건에 ‘${f.q}’ 질문이 없어요`
                   : all.length === 0
-                    ? "아직 등록된 질문이 없어요"
-                    : "이 조건에 맞는 질문이 없어요"
+                    ? "단지 Q&A에 등록된 질문이 아직 없어요"
+                    : `이 조건의 질문이 0건이에요 · 전체 ${all.length}건`
               }
               desc={
                 f.q
-                  ? "최근 질문 100건 안에서는 찾지 못했어요. 위에서 첫 질문을 남기면 이 단지를 보는 다른 사람에게도 함께 보여요."
+                  ? "위 질문하기로 등록한 질문은 이 단지를 보는 사람에게도 보여요."
                   : all.length === 0
-                    ? "이 단지·지역에 대해 궁금한 점을 위에서 첫 질문으로 남겨보세요."
-                    : "상태나 주제 필터를 바꿔 보시거나, 위에서 새 질문을 남겨보세요."
+                    ? "위 질문하기로 등록한 첫 질문이 목록 맨 앞에 실려요."
+                    : "상태·주제 필터를 바꾸면 다른 질문이 보여요."
               }
               action={
-                f.q || all.length > 0 ? { href: "/qna", label: "전체 질문 보기" } : undefined
+                f.q || all.length > 0 ? { href: "/qna", label: `전체 질문 ${all.length}건 보기` } : undefined
               }
             />
           ) : (

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Icon } from "@/app/components/Icon";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /**
  * 선택한 정비사업 구역의 인근 매물 + 최근 실거래 패널.
@@ -78,89 +78,68 @@ export function NearbyPanel({
     return () => controller.abort();
   }, [projectId]);
 
-  /* 실패했을 때 두 칸에 공통으로 쓰는 문구. "없어요" 라고 말하지 않는다. */
-  const failureNote = (
-    <div className="rounded-[10px] border border-line bg-surface px-3 py-4 text-center t-sub text-text-3">
-      지금은 불러오지 못했어요 · 잠시 후 다시 시도해 주세요.
-      <br />
-      <span className="t-sub">없다는 뜻은 아니에요.</span>
-    </div>
-  );
+  /* 실패했을 때 두 칸에 공통으로 쓰는 문구. "없어요" 라고 말하지 않는다. [v4] 빈 상자 → 한 줄 */
+  const failureNote = <p className="py-2 t-sub text-text-3">지금 불러오지 못했어요 — 없다는 뜻은 아니에요</p>;
 
   return (
-    <div className="card rounded-2xl p-[var(--pad-card)]">
-      <div className="flex items-center gap-1.5">
-        <Icon name="landmark" size={16} className="text-primary" />
-        <h3 className="t-section text-ink">
-          「{projectName}」 인근 매물 · 최근 실거래
-        </h3>
-      </div>
+    /* [v4] 카드(아이콘 + 두 칸 격자 + 빈 상자) → 섹션 하나: 최근 실거래 행 → 인근 매물 행 → 캡션 한 줄 */
+    <section className="flex flex-col gap-4 border-t border-line pt-4" aria-label={`${projectName} 인근 매물 · 최근 실거래`}>
+      <h3 className="t-section text-ink">「{projectName}」 인근 매물 · 최근 실거래</h3>
 
       {loading ? (
-        <div className="mt-3 t-sub text-text-3">인근 정보를 불러오는 중…</div>
+        <p className="t-sub text-text-3">인근 정보를 불러오는 중…</p>
       ) : (
-        <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <>
           {/* 최근 실거래 */}
           <div>
-            <div className="mb-1.5 flex items-center justify-between">
-              <span className="t-sub font-bold text-text-2">
-                최근 실거래 {data?.regionLabel ? `· ${data.regionLabel}` : ""}
-              </span>
-            </div>
+            <h4 className="t-sub font-bold text-text-2">
+              최근 실거래{data?.regionLabel ? ` · ${data.regionLabel}` : ""}
+            </h4>
             {data && data.transactions.length > 0 ? (
-              <ul className="flex flex-col divide-y divide-border">
+              <ul data-tone="blue" className="divide-y divide-line">
                 {data.transactions.map((t, i) => (
-                  <li key={`${t.complexName}-${i}`} className="flex items-center justify-between gap-2 py-2">
-                    <div className="min-w-0">
-                      <div className="truncate t-body font-semibold text-ink">
-                        {t.complexName}
-                      </div>
-                      <div className="t-sub text-text-3">
-                        {[pyeong(t.areaM2), t.floor ? `${t.floor}층` : "", t.contractYmd]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </div>
-                    </div>
-                    <div className="delta-up shrink-0 t-body">{t.priceLabel}</div>
+                  <li key={`${t.complexName}-${i}`} className="flex min-h-12 items-center justify-between gap-3 py-2">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate t-body font-bold text-ink">{t.complexName}</span>
+                      <span className="mt-0.5 block truncate t-sub text-text-3">
+                        {[pyeong(t.areaM2), t.floor ? `${t.floor}층` : "", t.contractYmd].filter(Boolean).join(" · ")}
+                      </span>
+                    </span>
+                    <span className="delta-up shrink-0 t-body t-num">{t.priceLabel}</span>
                   </li>
                 ))}
               </ul>
             ) : failed ? (
               failureNote
             ) : (
-              <div className="rounded-[10px] border border-line bg-surface px-3 py-4 text-center t-sub text-text-3">
-                최근 실거래 정보가 없어요.
-              </div>
+              /* [1012] 규칙 6 — 어디서(지역)·출처 */
+              <p className="py-2 t-sub text-text-3">
+                {data?.regionLabel ? `${data.regionLabel} ` : ""}최근 실거래 신고분 없음 · 국토교통부
+              </p>
             )}
           </div>
 
           {/* 인근 매물 */}
           <div>
-            <div className="mb-1.5 flex items-center justify-between">
-              <span className="t-sub font-bold text-text-2">인근 매물 (약 2km)</span>
-              <Link href="/listings/new" className="t-sub font-semibold text-primary">
+            <div className="flex items-baseline justify-between gap-3">
+              <h4 className="t-sub font-bold text-text-2">인근 매물 · 약 2km</h4>
+              <Link href="/listings/new" className="tap-line shrink-0 t-sub font-bold text-primary no-underline">
                 매물 등록 ›
               </Link>
             </div>
             {data && data.listings.length > 0 ? (
-              <ul className="flex flex-col divide-y divide-border">
+              <ul data-tone="mint" className="divide-y divide-line">
                 {data.listings.map((l) => (
-                  <li key={l.id} className="py-2">
+                  <li key={l.id}>
                     <Link
                       href={`/listings/${l.id}`}
-                      className="flex items-center justify-between gap-2 no-underline"
+                      className="flex min-h-12 items-center justify-between gap-3 py-2 no-underline"
                     >
-                      <div className="min-w-0">
-                        <div className="truncate t-body font-semibold text-ink">
-                          {l.complexName || "매물"}
-                        </div>
-                        <span className="rounded-full bg-primary-soft chip-pad-tight t-caption font-semibold text-primary">
-                          {TYPE_LABEL[l.listingType] ?? "매물"}
-                        </span>
-                      </div>
-                      <div className="shrink-0 t-body font-extrabold text-ink">
-                        {l.priceLabel}
-                      </div>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate t-body font-bold text-ink">{l.complexName || "매물"}</span>
+                        <span className="mt-0.5 block t-sub text-text-3">{TYPE_LABEL[l.listingType] ?? "매물"}</span>
+                      </span>
+                      <span className="shrink-0 t-body t-num font-bold text-ink">{l.priceLabel}</span>
                     </Link>
                   </li>
                 ))}
@@ -168,18 +147,15 @@ export function NearbyPanel({
             ) : failed ? (
               failureNote
             ) : (
-              <div className="rounded-[10px] border border-line bg-surface px-3 py-4 text-center t-sub text-text-3">
-                등록된 인근 매물이 없어요.
-              </div>
+              <p className="py-2 t-sub text-text-3">「{projectName}」 2km 안 등록 매물 없음</p>
             )}
           </div>
-        </div>
+        </>
       )}
 
-      <p className="mt-3 t-caption text-text-3">
-        실거래는 시군구 단위 최근 매매(국토부 실거래가) 기준이며, 매물은 반경 약 2km의 등록 매물이에요.
-        구역 경계와 정확히 일치하지 않을 수 있어요.
+      <p className="t-caption text-text-3">
+        실거래 = 시군구 단위 최근 매매(국토교통부) · 매물 = 반경 약 2km 등록 매물 — 구역 경계와 다를 수 있음
       </p>
-    </div>
+    </section>
   );
 }

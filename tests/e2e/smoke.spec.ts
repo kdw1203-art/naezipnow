@@ -141,22 +141,24 @@ test("15. /town/news renders with h1 뉴스 · 자료", async ({ page }) => {
    거짓 빨강이 된다(2026-08-02 run 30725419638 이 그렇게 죽었다). */
 test("16. /subscription renders plan CTAs (결제 개통 여부에 맞는 상태)", async ({ page }) => {
   await page.goto("/subscription");
-  await expect(
-    page.getByRole("heading", { level: 1, name: /기록은 무료, 판단은 더 깊게/ }),
-  ).toBeVisible();
+  /* [1012] 히어로 슬로건("기록은 무료, 판단은 더 깊게") → 왼쪽 정렬 제목 "멤버십 요금제"(디자인 시스템 v3 규칙 6·7) */
+  await expect(page.getByRole("heading", { level: 1, name: /멤버십 요금제/ })).toBeVisible();
   /* [1004] 카드 CTA 는 버튼이 아니라 링크다(2단계 확인 제거 — checkout-href 직행).
      role 을 link 로 고치지 않으면 CI(토스 env 없음)에서는 preorder 분기로 빠져 늘 초록이고,
-     결제가 열린 환경에서만 거짓 빨강이 난다 — 즉 아무것도 지키지 못한다. */
-  const checkout = page.getByRole("link", { name: "플러스 시작하기" });
+     결제가 열린 환경에서만 거짓 빨강이 난다 — 즉 아무것도 지키지 못한다.
+     [1012] "플러스 시작하기" → "플러스 결제하기(월 2,900원)" — 금지 문구 "시작하기" 제거, 가격은
+     billing-periods 주입값이라 여기서는 앞머리만 본다. */
+  const checkout = page.getByRole("link", { name: /^플러스 결제하기/ });
   const preorder = page.getByRole("button", { name: "오픈 알림 받기" });
   await expect(checkout.or(preorder).first()).toBeVisible();
   if ((await checkout.count()) > 0) {
     // 결제 개통 상태 — 두 유료 티어(플러스·프로) 링크가 모두 있어야 한다
-    await expect(page.getByRole("link", { name: "프로 시작하기" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^프로 결제하기/ })).toBeVisible();
   } else {
     // 미개통 상태 — 사전 등록 버튼(PRO·EXPERT 카드 각 1개) + 사실 고지 문구
     expect(await preorder.count()).toBeGreaterThanOrEqual(1);
-    await expect(page.getByText("아직 결제가 열리지 않았습니다").first()).toBeVisible();
+    /* [v4 · 규칙 3] PreOrderCta 안내 문장 → 사실 한 줄("결제 준비 중 · 아직 결제가 열리지 않음") — 앞머리로 본다 */
+    await expect(page.getByText("아직 결제가 열리지 않").first()).toBeVisible();
   }
 });
 
@@ -224,7 +226,8 @@ test("18. /login shows exactly the configured social buttons + 비밀번호 찾�
 test("19. /signup renders with h1", async ({ page }) => {
   await page.goto("/signup");
   await expect(
-    page.getByRole("heading", { level: 1, name: /어떤 집을 찾고 계세요\?/ }),
+    /* [v4 · 규칙 1] 가입 화면 제목 = "회원가입" 한 줄(예전 이 정규식은 이미 화면에 없던 옛 제목이었다) */
+    page.getByRole("heading", { level: 1, name: /회원가입/ }),
   ).toBeVisible();
 });
 

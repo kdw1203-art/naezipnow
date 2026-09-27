@@ -8,14 +8,10 @@ import type { Post } from "@/lib/types/post";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
 
 /* 지역/출처 문자열을 시드로 결정적 그라디언트를 고른다(사진 없는 카드의 커버 폴백). */
-const GRADIENTS = [
-  "linear-gradient(135deg,#dfe7f5,#c9d6ef)",
-  "linear-gradient(135deg,#e7f0e8,#cfe3d4)",
-  "linear-gradient(135deg,#f5e9df,#efd9c9)",
-  "linear-gradient(135deg,#e9e2f5,#d7c9ef)",
-  "linear-gradient(135deg,#dff0f3,#c9e6ef)",
-  "linear-gradient(135deg,#f5dfe5,#efc9d6)",
-];
+/* [1012 · 형태 규율] 파스텔 그라데이션 6종 → 단색 3종. 기준 사이트(당근·호갱노노·숨고·네이버)에
+   배경 그라데이션이 0 이었고, 사진 없는 자리는 회색 단면(당근 bg-neutral-weak)이다. 브랜드 면
+   셋(한지·소프트 블루·연회색)만 시드로 고른다. 이름은 호환을 위해 그대로 두되 값은 단색이다. */
+const GRADIENTS = ["var(--brand-hanji)", "var(--primary-soft)", "var(--divider)"];
 
 function hash(seed: string): number {
   let h = 0;
@@ -23,7 +19,7 @@ function hash(seed: string): number {
   return h;
 }
 
-/** 시드(지역·출처·id)로 결정적 커버 그라디언트 CSS 문자열 */
+/** 시드(지역·출처·id)로 결정적 커버 면 색(단색 토큰) — 이름은 옛것, 값은 [1012]부터 단색 */
 export function seedGradient(seed: string): string {
   return GRADIENTS[hash(seed || "n") % GRADIENTS.length];
 }

@@ -17,7 +17,7 @@ import { formatKrwWon } from "@/lib/format/krw";
 export const dynamic = "force-dynamic";
 
 const darkCard =
-  "rounded-[14px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.05)]";
+  "rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.05)]";
 
 /** 원(KRW) → "2,140만" / "2.6억" / "0원"
  *  [967 · 31] 억·만 분기는 lib/format/krw.ts "short". 1만 미만 "N원"·빈값 "0원" 은 매출 화면 고유 */
@@ -185,7 +185,7 @@ export default async function AdminRevenuePage() {
           수익 대시보드{" "}
           <span className="text-xs font-medium text-[#9aa6b8]">실집계 · 운영·재무</span>
         </div>
-        <span className="rounded-[10px] bg-[rgba(255,255,255,.07)] px-3.5 py-[7px] text-xs font-semibold text-[#c9d2e0]">
+        <span className="rounded-lg bg-[rgba(255,255,255,.07)] px-3.5 py-[7px] text-xs font-semibold text-[#c9d2e0]">
           {kpi.paymentsConfigured ? "결제 연동됨(토스)" : "결제 미연동"}
         </span>
       </div>
@@ -238,7 +238,7 @@ export default async function AdminRevenuePage() {
 
       {/* 최근 플랜 만료 강등 — plan-expiry 스윕이 ingest-log 에 남긴 실기록 */}
       {expiryLog && (
-        <div className="rise-in-2 mt-4 rounded-[14px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-4">
+        <div className="rise-in-2 mt-4 rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-4">
           <div className="flex items-center justify-between">
             <div className="text-[13px] font-extrabold text-white">최근 플랜 만료 스윕</div>
             <Link href="/admin/data" className="text-[12px] font-bold text-ai-accent no-underline">
@@ -254,7 +254,7 @@ export default async function AdminRevenuePage() {
       )}
 
       {/* [#145] 애드센스 신청 게이트 — docs/adsense-timing-decision.md 의 두 조건 추적 */}
-      <div className="rise-in-2 mt-4 rounded-[14px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-4">
+      <div className="rise-in-2 mt-4 rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="text-[13px] font-extrabold text-white">
             애드센스 신청 게이트{" "}
@@ -272,7 +272,7 @@ export default async function AdminRevenuePage() {
 
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {/* 조건 1 — 트래픽 */}
-          <div className="rounded-[12px] border border-[rgba(255,255,255,.07)] bg-[rgba(255,255,255,.03)] p-3.5">
+          <div className="rounded-lg border border-[rgba(255,255,255,.07)] bg-[rgba(255,255,255,.03)] p-3.5">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[12px] font-bold text-[#9aa6b8]">
                 조건 1 · 일 {ADSENSE_SESSION_DAILY}세션 × {ADSENSE_SESSION_DAYS}일 연속
@@ -304,7 +304,7 @@ export default async function AdminRevenuePage() {
           </div>
 
           {/* 조건 2 — 색인 */}
-          <div className="rounded-[12px] border border-[rgba(255,255,255,.07)] bg-[rgba(255,255,255,.03)] p-3.5">
+          <div className="rounded-lg border border-[rgba(255,255,255,.07)] bg-[rgba(255,255,255,.03)] p-3.5">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[12px] font-bold text-[#9aa6b8]">
                 조건 2 · 색인 등록 {ADSENSE_INDEXED_PAGES.toLocaleString("ko-KR")}p 이상
@@ -349,7 +349,7 @@ export default async function AdminRevenuePage() {
       </div>
 
       {/* [#140] 데이터 투자 게이트 — 경매 유료 API 재판정 (docs/court-auction-source-research.md) */}
-      <div className="rise-in-2 mt-4 rounded-[14px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-4">
+      <div className="rise-in-2 mt-4 rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-4">
         <div className="text-[13px] font-extrabold text-white">
           데이터 투자 게이트 · 경매 유료 API{" "}
           <span className="text-[12px] font-medium text-[#9aa6b8]">
@@ -378,7 +378,7 @@ export default async function AdminRevenuePage() {
       </div>
 
       {/* 정직한 준비 중 — 실 데이터 소스 없는 항목 */}
-      <div className="rise-in-2 mt-4 rounded-[14px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-4">
+      <div className="rise-in-2 mt-4 rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-4">
         <div className="text-[13px] font-extrabold text-white">
           결제 실패 · 환불 분쟁 큐{" "}
           <span className="text-[12px] font-medium text-[#9aa6b8]">준비 중</span>

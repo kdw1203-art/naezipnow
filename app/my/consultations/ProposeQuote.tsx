@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 1곳을 font-bold(700)로 바꿨다. */
 
 import { useState } from "react";
 
@@ -47,7 +48,7 @@ export function ProposeQuote({
 
   if (status === "done") {
     return (
-      <span className="rounded-lg bg-success-soft px-3 py-1.5 t-sub font-extrabold text-success">
+      <span className="rounded-lg bg-success-soft px-3 py-1.5 t-sub font-bold text-success">
         ✓ 제안 보냄 — 의뢰자 상담함과 알림으로 전달됐어요
       </span>
     );

@@ -64,7 +64,7 @@ export default async function AdminBannersPage() {
 
       <BannersClient initial={withState} />
 
-      <section className="flex flex-col gap-2 rounded-[20px] border border-[#243049] bg-[#141b2b] p-5">
+      <section className="flex flex-col gap-2 rounded-3xl border border-[#243049] bg-[#141b2b] p-5">
         <h2 className="text-[13px] font-extrabold text-[#e8edf6]">
           하우스 광고 (배너 없을 때 대체 노출)
         </h2>

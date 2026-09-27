@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/app/components/Logo";
-import { Icon } from "@/app/components/Icon";
 /* 최적화 19 — supabase-js 는 **필요할 때** 불러온다.
    정적 import 이던 시절 이 페이지의 First Load JS 는 181kB 였고, 그중 약 66kB가
    @supabase/supabase-js 였다(realtime·storage·functions 포함 — 여기서 쓰는 건
@@ -187,40 +186,35 @@ export default function ResetPasswordPage() {
         <div className="rise-in">
           <Logo size={34} />
         </div>
-        <h1 className="rise-in-1 text-[21px] font-extrabold leading-[1.35] text-ink">
-          새 비밀번호 설정
-        </h1>
-        <p className="rise-in-2 text-[13px] text-text-2">
-          8자 이상, 대소문자·숫자·특수문자 조합을 권장합니다
-        </p>
+        {/* [v4 · 규칙 1] 제목 한 줄 + 사실 한 줄 · [1012 · 규칙 8] 굵기 800 → 700(이 파일 전부) */}
+        <div className="flex flex-col gap-0.5">
+          <h1 className="rise-in-1 t-title text-ink">새 비밀번호 설정</h1>
+          <p className="rise-in-2 t-sub text-text-3">8자 이상 · 대소문자·숫자·특수문자 조합 권장</p>
+        </div>
 
         {done ? (
-          <div className="rise-in card flex flex-col gap-2.5 rounded-2xl px-5 py-6 text-center">
-            <Icon name="✅" size={28} />
-            <div className="text-[15px] font-extrabold text-ink">비밀번호가 변경되었습니다</div>
+          /* [v4 · 규칙 7·10] 아이콘 + 가운데 정렬 카드 → 왼쪽(이 파일의 상태 카드 셋 전부) */
+          <div className="rise-in card flex flex-col gap-2.5 rounded-lg p-5">
+            <div className="text-[15px] font-bold text-ink">비밀번호가 변경되었습니다</div>
             <p className="text-[13px] text-text-2">3초 후 로그인 페이지로 이동합니다…</p>
             <Link
               href="/login"
-              className="btn-primary mt-2 rounded-[10px] p-3 text-center text-[13px] font-bold"
+              className="btn-primary mt-2 rounded-lg p-3 text-center text-[13px] font-bold"
             >
               지금 로그인하기
             </Link>
           </div>
         ) : mode === "checking" ? (
-          <div className="rise-in card rounded-2xl px-5 py-6 text-center text-[13px] text-text-2">
+          <div className="rise-in card rounded-lg p-5 text-[13px] text-text-2">
             링크를 확인하는 중입니다…
           </div>
         ) : mode === "invalid" ? (
-          <div className="rise-in card flex flex-col gap-2.5 rounded-2xl px-5 py-6 text-center">
-            <Icon name="⚠" size={28} />
-            <div className="text-[15px] font-extrabold text-ink">링크가 유효하지 않습니다</div>
-            <p className="text-[13px] leading-[1.6] text-text-2">
-              링크가 만료됐거나 이미 사용됐습니다. 이메일의 링크로 접근했는지 확인하고, 다시
-              비밀번호 찾기를 요청해 주세요.
-            </p>
+          <div className="rise-in card flex flex-col gap-2.5 rounded-lg p-5">
+            <div className="text-[15px] font-bold text-ink">링크가 유효하지 않습니다</div>
+            <p className="text-[13px] leading-[1.6] text-text-2">만료됐거나 이미 사용된 링크 · 비밀번호 찾기 다시 요청</p>
             <Link
               href="/forgot-password"
-              className="btn-primary mt-2 rounded-[10px] p-3 text-center text-[13px] font-bold"
+              className="btn-primary mt-2 rounded-lg p-3 text-center text-[13px] font-bold"
             >
               비밀번호 찾기 다시 하기
             </Link>
@@ -230,7 +224,7 @@ export default function ResetPasswordPage() {
             {error && (
               <div
                 role="alert"
-                className="rise-in rounded-[10px] bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger"
+                className="rise-in rounded-lg bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger"
               >
                 {error}
               </div>
@@ -257,7 +251,7 @@ export default function ResetPasswordPage() {
                     document.getElementById("reset-password-confirm")?.focus();
                   }}
                   aria-describedby="reset-password-hint"
-                  className="w-full rounded-[10px] border border-line bg-surface px-4 py-3 pr-14 text-[13px] text-ink outline-none focus:border-primary"
+                  className="w-full rounded-lg border border-line bg-surface px-4 py-3 pr-14 text-[13px] text-ink outline-none focus:border-primary"
                 />
                 <button
                   type="button"
@@ -291,7 +285,7 @@ export default function ResetPasswordPage() {
                 placeholder="비밀번호 확인"
                 enterKeyHint="done"
                 aria-invalid={Boolean(password2) && password !== password2}
-                className="rounded-[10px] border border-line bg-surface px-4 py-3 text-[13px] text-ink outline-none focus:border-primary"
+                className="rounded-lg border border-line bg-surface px-4 py-3 text-[13px] text-ink outline-none focus:border-primary"
               />
               {password2 && password !== password2 && (
                 <p role="alert" className="text-[12px] font-bold text-danger">비밀번호가 일치하지 않습니다.</p>
@@ -299,7 +293,7 @@ export default function ResetPasswordPage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="btn-primary rounded-[10px] p-3 text-center text-[13px] font-bold disabled:opacity-60"
+                className="btn-primary rounded-lg p-3 text-center text-[13px] font-bold disabled:opacity-60"
               >
                 {busy ? "변경 중…" : "비밀번호 변경"}
               </button>
@@ -311,9 +305,9 @@ export default function ResetPasswordPage() {
         )}
 
         {/* [970 · A-41] 링크를 폼 바로 아래로(스페이서 위) — forgot-password 와 같은 이유 */}
-        <div className="rise-in-5 mt-2 text-center text-xs text-text-3">
+        <div className="rise-in-5 mt-2 text-xs text-text-3">
           비밀번호가 기억났나요?{" "}
-          <Link href="/login" className="font-bold text-primary">
+          <Link href="/login" className="inline-flex min-h-[24px] items-center font-bold text-primary">
             로그인
           </Link>
         </div>

@@ -43,7 +43,7 @@ export function NoteLocationManual({
     <div className="mt-2 flex flex-col gap-2 rounded-xl border border-line bg-surface p-3">
       <div className="flex items-center justify-between gap-2">
         <span className="t-sub font-bold text-ink">직접 입력</span>
-        <span className="t-caption text-text-3">지도·브리핑은 검색으로 고른 단지에만 붙어요</span>
+        <span className="t-caption text-text-3">지도·브리핑은 검색한 단지만</span>
       </div>
       <input
         type="text"

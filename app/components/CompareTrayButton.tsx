@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 
 import { useEffect, useState } from "react";
 import {
@@ -79,9 +80,9 @@ export function CompareTrayButton({
       type="button"
       onClick={onClick}
       aria-pressed={inTray}
-      className={`press flex-1 rounded-[10px] p-3 text-center text-[13px] transition-colors ${
+      className={`press flex-1 rounded-lg p-3 text-center text-[13px] transition-colors ${
         /* [970 · B-06] 네이비 위 글자는 text-on-dark — text-surface 는 다크에서 어두운 면색이 돼 안 보였다 */
-        inTray ? "bg-brand-navy font-extrabold text-on-dark" : "btn-secondary"
+        inTray ? "bg-brand-navy font-bold text-on-dark" : "btn-secondary"
       }`}
     >
       {full ? (

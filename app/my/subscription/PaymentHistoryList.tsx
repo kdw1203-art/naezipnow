@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 1곳을 font-bold(700)로 바꿨다. */
 
 import { useState } from "react";
 import Link from "next/link";
@@ -34,22 +35,19 @@ export type HistoryRow = {
 const PAGE = 20;
 
 const STATUS_TONE: Record<string, string> = {
-  paid: "bg-primary-soft text-primary",
-  done: "bg-primary-soft text-primary",
-  requested: "bg-bg text-text-2",
-  failed: "bg-danger-soft text-danger",
-  cancelled: "bg-bg text-text-3",
-  canceled: "bg-bg text-text-3",
-  refunded: "bg-warning-soft text-warning",
+  paid: "text-primary",
+  done: "text-primary",
+  requested: "text-text-2",
+  failed: "text-danger",
+  cancelled: "text-text-3",
+  canceled: "text-text-3",
+  refunded: "text-warning",
 };
 
 function StatusChip({ status, label }: { status: string | null; label: string }) {
-  const tone = (status && STATUS_TONE[status]) || "bg-bg text-text-2";
-  return (
-    <span className={`inline-block shrink-0 rounded-md px-1.5 py-px t-caption font-bold ${tone}`}>
-      {label}
-    </span>
-  );
+  const tone = (status && STATUS_TONE[status]) || "text-text-2";
+  /* [v4 · 규칙 6] 상태 칩(색 면) → 같은 색 글자(결제 상태는 사실이라 남긴다) */
+  return <span className={`inline-block shrink-0 t-caption font-bold ${tone}`}>{label}</span>;
 }
 
 export function PaymentHistoryList({ ok, rows }: { ok: boolean; rows: HistoryRow[] }) {
@@ -59,37 +57,34 @@ export function PaymentHistoryList({ ok, rows }: { ok: boolean; rows: HistoryRow
   if (!ok) {
     /* 조회 실패를 "내역 없음"으로 보여 주면, 결제한 사람이 자기 기록이 사라졌다고 오해한다. */
     return (
-      <div className="rounded-xl bg-warning-soft px-4 py-4 t-sub text-text-2">
-        결제 내역을 지금 불러오지 못했어요. 잠시 후 새로고침해 주세요 — 결제 기록이 사라진 것은
-        아닙니다.
-      </div>
+      /* [v4 · 규칙 3·8] 상자 + 문장 → 한 줄 */
+      <p role="alert" className="border-y border-line py-3 t-sub font-bold text-warning">
+        결제 내역 조회 실패 · 기록이 사라진 것은 아님 — 잠시 후 새로고침
+      </p>
     );
   }
   if (rows.length === 0) {
     return (
-      <div className="rounded-xl bg-bg px-4 py-6 text-center t-sub text-text-3">
-        아직 결제 내역이 없어요.
-        <br />
-        결제가 완료되면 금액·이용 기간·영수증 링크가 여기에 쌓입니다.
-      </div>
+      <p className="border-y border-line py-3 t-sub text-text-3">결제 내역 없음 · 결제 후 금액·이용 기간·영수증이 여기로</p>
     );
   }
 
   const visible = rows.slice(0, shown);
   return (
     <div className="flex flex-col gap-2">
-      <ul className="flex flex-col gap-2">
+      {/* [v4 · 규칙 5] 테두리 카드 쌓기 → 1px 선 행(누르면 아래로 펼침) */}
+      <ul data-tone="mint" className="flex flex-col divide-y divide-line border-y border-line">
         {visible.map((p) => {
           const expanded = openId === p.id;
           const panelId = `pay-${p.id}`;
           return (
-            <li key={p.id} className="rounded-xl border border-line bg-surface">
+            <li key={p.id}>
               <button
                 type="button"
                 aria-expanded={expanded}
                 aria-controls={panelId}
                 onClick={() => setOpenId(expanded ? null : p.id)}
-                className="flex w-full min-h-10 items-center justify-between gap-3 px-3.5 py-3 text-left"
+                className="flex w-full min-h-14 items-center justify-between gap-3 py-3 text-left"
               >
                 <span className="flex min-w-0 flex-col gap-0.5">
                   <span className="truncate t-body font-bold text-ink">
@@ -101,14 +96,14 @@ export function PaymentHistoryList({ ok, rows }: { ok: boolean; rows: HistoryRow
                   </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
-                  <span className="t-body font-extrabold text-ink t-num">
+                  <span className="t-body font-bold text-ink t-num">
                     {p.amount !== null ? `${p.amount.toLocaleString("ko-KR")}원` : "—"}
                   </span>
                   <span className="t-caption font-bold text-text-3">{expanded ? "접기" : "자세히"}</span>
                 </span>
               </button>
               {expanded && (
-                <div id={panelId} className="border-t border-divider px-3.5 py-3">
+                <div id={panelId} className="pb-3">
                   <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 t-sub">
                     <dt className="text-text-3">주문번호</dt>
                     <dd className="break-all font-mono text-text-1">{p.orderId ?? "—"}</dd>
@@ -169,15 +164,13 @@ export function PaymentHistoryList({ ok, rows }: { ok: boolean; rows: HistoryRow
         <button
           type="button"
           onClick={() => setShown((n) => n + PAGE)}
-          className="btn-soft btn-md w-full"
+          className="btn-ghost btn-md w-full"
         >
-          더 보기 ({Math.min(PAGE, rows.length - shown)}건 더)
+          결제 내역 {Math.min(PAGE, rows.length - shown)}건 더 보기
         </button>
       )}
       {rows.length >= 100 && shown >= rows.length && (
-        <p className="text-center t-caption text-text-3">
-          최근 100건까지 보여 드려요. 그 이전 내역은 고객센터에 문의해 주세요.
-        </p>
+        <p className="t-caption text-text-3">최근 100건까지 · 그 이전 내역은 고객센터 문의</p>
       )}
     </div>
   );

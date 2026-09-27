@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 1곳을 font-bold(700)로 바꿨다. */
 
 import { useMemo } from "react";
 import {
@@ -67,7 +68,7 @@ export function DecisionStep({
   return (
     <div className="rise-in-6 card flex flex-col gap-2.5 p-4">
       <div className="flex items-center justify-between gap-2">
-        <div className="text-[13px] font-extrabold text-ink">
+        <div className="text-[13px] font-bold text-ink">
           판단{" "}
           <span className="text-xs font-medium text-text-3">이 집, 어떻게 할까</span>
         </div>
@@ -97,9 +98,9 @@ export function DecisionStep({
                 if (reasons === null) onReasons(suggestion.reasons);
                 onChoice(c);
               }}
-              className={`relative flex min-h-[44px] flex-col items-center justify-center rounded-[10px] px-1 text-xs ${
+              className={`relative flex min-h-[44px] flex-col items-center justify-center rounded-lg px-1 text-xs ${
                 active
-                  ? "border-[1.5px] border-primary bg-primary-soft font-bold text-primary"
+                  ? "border border-brand-hanji-ink bg-brand-hanji font-bold text-brand-hanji-ink"
                   : suggested
                     ? "border-[1.5px] border-dashed border-primary bg-surface font-bold text-text-1"
                     : "border border-line bg-surface font-semibold text-text-2"
@@ -131,7 +132,8 @@ export function DecisionStep({
         ))}
       </div>
       <p className="t-caption text-text-3">
-        규칙으로 제안한 것 — 최종 판단은 내가 고른다 · 제안 {decisionLabel(suggestion.choice)}
+        {/* [v4 · 규칙 3] "규칙으로 제안한 것 — 최종 판단은 내가 고른다" 문장 → 명사형 */}
+        규칙 제안 {decisionLabel(suggestion.choice)} · 최종 판단은 직접
         {" · "}
         {suggestion.basis}
       </p>

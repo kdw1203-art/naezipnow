@@ -8,6 +8,7 @@ import {
   isStale,
   loadDataFreshness,
 } from "@/lib/newui/data-freshness";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* [945 · 실사용50 #33] 데이터 출처·갱신 주기·한계 — 한 장짜리 신뢰 문서.
    화면 곳곳의 각주("국토부 신고 기준" 등)를 한 페이지로 모은다.
@@ -140,151 +141,137 @@ export default async function DataSourcesPage() {
   ]);
   const now = Date.now();
 
+  const LINK = "tap-line font-bold text-primary no-underline";
+
   return (
     <PageShell breadcrumb="데이터 출처">
-      <div className="mx-auto w-full max-w-[760px]">
-        <h1 className="rise-in text-[24px] font-extrabold leading-[1.3] text-ink">
-          이 숫자, 어디서 왔나요
-        </h1>
-        <p className="rise-in-1 mt-2 t-body leading-[1.75] text-text-2">
-          내집나우의 모든 수치는 아래 원천에서 자동 수집됩니다. 각 원천의 갱신 주기와
-          <b className="text-ink"> 알려진 한계</b>까지 함께 적습니다 — 한계를 모르는 숫자는
-          틀린 숫자보다 위험하기 때문입니다. 계산 공식이 궁금하면{" "}
-          <Link href="/methodology" className="font-bold text-primary">
-            데이터 방법론
-          </Link>
-          을 보세요.
-        </p>
-
-        {/* ── [987 · 신뢰 근거] 지금 실제로 가진 것 ──────────────────────────
-            이 페이지는 출처와 주기를 **글로** 적어 두었지만, 실제로 얼마나 있고
-            마지막에 언제 들어왔는지는 어디에도 없었다. 주기를 적어 두면 사람은
-            그 주기가 지켜지고 있다고 읽는다 — 982에서 단지 대장 적재가 13일간
-            실패하는 동안 화면에는 아무 표시도 없었다.
-
-            후기가 아직 한 건도 없는 서비스가 "왜 믿어야 하나"에 답하는 방법은
-            지어낸 추천사가 아니라 **가진 것을 그대로 보여 주는 것**이다.
-            전부 실카운트이고, 못 읽은 줄은 뺀다. 밀린 것은 밀렸다고 적는다. */}
-        <div className="rise-in-1 card mt-5 flex flex-col gap-4 rounded-[18px] p-5">
-          <div>
-            <h2 className="t-section text-ink">지금 실제로 가지고 있는 것</h2>
-            <p className="mt-1 t-sub text-text-3">
-              아래 수치는 이 페이지를 열 때 데이터베이스에서 직접 센 값입니다 —
-              소개용으로 적어 둔 숫자가 아닙니다.
+      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 주인공(지금 가진 실거래 신고 수 t-display) + 마지막 적재 행 →
+          원천 10곳 접힘 행(이름 + 주기 / 펼치면 원천·쓰임·한계) → AI 라벨 정책 행 → 캡션 한 줄.
+          지운 것: 소개 문단(세 문장 → 사실 줄), 숫자 상자 3칸(→ 주인공 + 한 줄), 원천마다 테두리 카드(→ 접힘 행),
+          정책 설명 문단·정책 카드(→ 행). 전부 실카운트 · 못 읽은 줄은 뺀다(그대로). */}
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
+        <div className="flex flex-col gap-4">
+          <header className="flex flex-col gap-0.5">
+            <h1 className="rise-in t-title text-ink">이 숫자, 어디서 왔나요</h1>
+            <p className="t-sub text-text-3">
+              원천 {SOURCES.length}곳 · 갱신 주기·한계 공개 · 계산 공식은{" "}
+              <Link href="/methodology" className={LINK}>
+                데이터 방법론 ›
+              </Link>
             </p>
-          </div>
+          </header>
 
-          {(coverage.txCount !== null ||
-            coverage.complexCount !== null ||
-            coverage.regionCount !== null) && (
-            <div className="grid grid-cols-3 gap-2">
-              {coverage.txCount !== null && (
-                <div className="flex flex-col gap-0.5 rounded-[12px] bg-bg px-3 py-2.5">
-                  <span className="t-num t-section text-ink">
-                    {formatCount(coverage.txCount)}
-                  </span>
-                  <span className="t-caption text-text-3">실거래 신고분(취소 제외)</span>
-                </div>
+          {/* ── [987 · 신뢰 근거] 지금 실제로 가진 것 — 이 페이지를 열 때 DB 에서 센 실카운트. 못 읽은 줄은 뺀다 ── */}
+          {coverage.txCount !== null ? (
+            <section aria-label="지금 가진 데이터" className="flex flex-col gap-0.5">
+              <p className="m-0 t-caption text-text-3">실거래 신고분(취소 제외) · 지금 센 값</p>
+              <p className="m-0 t-display t-num text-ink">{formatCount(coverage.txCount)}</p>
+              {(coverage.complexCount !== null || coverage.regionCount !== null) && (
+                <p className="m-0 t-sub text-text-2">
+                  {[
+                    coverage.complexCount !== null ? `실거래 있는 단지 ${formatCount(coverage.complexCount)}` : null,
+                    coverage.regionCount !== null ? `시군구 ${formatCount(coverage.regionCount)}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
               )}
-              {coverage.complexCount !== null && (
-                <div className="flex flex-col gap-0.5 rounded-[12px] bg-bg px-3 py-2.5">
-                  <span className="t-num t-section text-ink">
-                    {formatCount(coverage.complexCount)}
-                  </span>
-                  <span className="t-caption text-text-3">실거래 있는 단지</span>
-                </div>
-              )}
-              {coverage.regionCount !== null && (
-                <div className="flex flex-col gap-0.5 rounded-[12px] bg-bg px-3 py-2.5">
-                  <span className="t-num t-section text-ink">
-                    {formatCount(coverage.regionCount)}
-                  </span>
-                  <span className="t-caption text-text-3">실거래 있는 시군구</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {freshness && freshness.some((f) => f.lastOkAt) && (
-            <div className="flex flex-col gap-1.5">
-              <span className="t-sub font-extrabold text-text-3">마지막으로 들어온 때</span>
-              <ul className="flex flex-col gap-1">
-                {freshness.map((f) => {
-                  if (!f.lastOkAt) return null;
-                  const label = freshnessLabel(f.lastOkAt, now);
-                  if (!label) return null;
-                  const stale = isStale(f.lastOkAt, now);
-                  return (
-                    <li key={f.source} className="flex items-baseline justify-between gap-3 t-sub">
-                      <span className="min-w-0 text-text-2">{f.label}</span>
-                      <span
-                        className={`shrink-0 tabular-nums ${
-                          stale ? "font-bold text-warning" : "text-text-3"
-                        }`}
-                      >
-                        {label}
-                        {stale ? " · 밀림" : ""}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-              <p className="t-caption text-text-3">
-                성공한 적재만 셉니다 — 실패한 시도를 &ldquo;갱신됨&rdquo;으로 적지 않습니다.
-                48시간이 넘으면 밀렸다고 표시합니다.
+            </section>
+          ) : (
+            (coverage.complexCount !== null || coverage.regionCount !== null) && (
+              <p className="t-sub text-text-2">
+                {[
+                  coverage.complexCount !== null ? `실거래 있는 단지 ${formatCount(coverage.complexCount)}` : null,
+                  coverage.regionCount !== null ? `시군구 ${formatCount(coverage.regionCount)}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
-            </div>
+            )
           )}
-
           {/* 못 읽었을 때 — 조용히 비우지 않는다. 숫자가 없는 것과 못 읽은 것은 다르다 */}
           {coverage.txCount === null && !freshness && (
-            <p className="t-sub text-text-3">
-              지금은 수치를 불러오지 못했어요. 아래 원천·한계 설명은 그대로 유효합니다.
-            </p>
+            <p className="t-sub text-text-3">수치를 불러오지 못함 · 아래 원천·한계 설명은 그대로 유효</p>
           )}
         </div>
 
-        <div className="rise-in-2 mt-6 flex flex-col gap-3">
-          {SOURCES.map((s) => (
-            <section key={s.name} className="rounded-2xl border border-line bg-surface p-4">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                <h2 className="t-body font-extrabold text-ink">{s.name}</h2>
-                <span className="t-caption font-bold text-primary">{s.cadence}</span>
-              </div>
-              <p className="mt-1 t-sub text-text-2">
-                <span className="font-bold text-text-1">원천</span> {s.origin}
-              </p>
-              <p className="mt-0.5 t-sub text-text-2">
-                <span className="font-bold text-text-1">쓰이는 곳</span> {s.used}
-              </p>
-              <p className="mt-1.5 t-sub leading-[1.65] text-text-3">
-                <span className="font-bold">한계</span> — {s.limits}
-              </p>
-            </section>
-          ))}
-        </div>
+        {freshness && freshness.some((f) => f.lastOkAt) && (
+          <section className="flex flex-col gap-2">
+            <h2 className="t-section text-ink">마지막으로 들어온 때</h2>
+            <ul className="card flex flex-col divide-y divide-line rounded-lg px-4">
+              {freshness.map((f) => {
+                if (!f.lastOkAt) return null;
+                const label = freshnessLabel(f.lastOkAt, now);
+                if (!label) return null;
+                const stale = isStale(f.lastOkAt, now);
+                return (
+                  <li key={f.source} className="flex min-h-12 items-center justify-between gap-3 py-2.5">
+                    <span className="min-w-0 t-body text-text-1">{f.label}</span>
+                    <span className={`shrink-0 t-sub tabular-nums ${stale ? "font-bold text-warning" : "text-text-3"}`}>
+                      {label}
+                      {stale ? " · 밀림" : ""}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="t-caption text-text-3">성공한 적재만 셈 · 48시간 넘으면 &ldquo;밀림&rdquo;</p>
+          </section>
+        )}
 
-        <section className="mt-8">
-          <h2 className="text-[19px] font-extrabold text-ink">AI 콘텐츠 라벨 정책</h2>
-          <p className="mt-1.5 t-body leading-[1.7] text-text-2">
-            내집나우는 AI가 만든 것과 사람이 쓴 것, 실측과 추정을 화면에서 구분합니다.
-            이 정책은 코드 게이트로 강제됩니다 — 라벨 없는 AI 수치는 배포 단계에서 막힙니다.
-          </p>
-          <div className="mt-3 flex flex-col gap-2">
-            {AI_POLICY.map((p) => (
-              <div key={p.label} className="rounded-2xl border border-line bg-surface px-4 py-3">
-                <div className="t-body font-extrabold text-ink">{p.label}</div>
-                <p className="mt-1 t-sub leading-[1.65] text-text-2">{p.rule}</p>
-              </div>
+        {/* 원천 — [v4 · 규칙 3·5] 테두리 카드 → 접힘 행(이름 + 주기 / 펼치면 원천·쓰이는 곳·한계) */}
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+            원천 <span className="t-num text-text-3">{SOURCES.length}</span>
+          </h2>
+          <div className="card flex flex-col divide-y divide-line rounded-lg px-4">
+            {SOURCES.map((s) => (
+              <details key={s.name} className="group">
+                <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
+                  <span className="min-w-0 t-body font-bold text-ink">{s.name}</span>
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    <span className="t-sub text-text-3">{s.cadence.split(" (")[0]}</span>
+                    <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
+                      ›
+                    </span>
+                  </span>
+                </summary>
+                <dl className="m-0 flex flex-col gap-1 pb-3 t-sub text-text-2">
+                  <div>
+                    <dt className="inline font-bold text-text-1">원천</dt> <dd className="m-0 inline">{s.origin}</dd>
+                  </div>
+                  <div>
+                    <dt className="inline font-bold text-text-1">주기</dt> <dd className="m-0 inline">{s.cadence}</dd>
+                  </div>
+                  <div>
+                    <dt className="inline font-bold text-text-1">쓰이는 곳</dt> <dd className="m-0 inline">{s.used}</dd>
+                  </div>
+                  <div className="text-text-3">
+                    <dt className="inline font-bold">한계</dt> <dd className="m-0 inline">— {s.limits}</dd>
+                  </div>
+                </dl>
+              </details>
             ))}
           </div>
         </section>
 
-        <p className="mt-8 t-caption leading-[1.7] text-text-3">
-          갱신 주기는 수집 파이프라인 기준이며, 원천 기관의 발표 일정에 따라 실제 최신
-          시점은 다를 수 있습니다. 파이프라인이 멈추면 내부 신선도 감시가 경보를
-          울리고, 각 화면은 마지막 갱신 시점을 함께 표기합니다. 문의:{" "}
-          <Link href="/support" className="font-bold text-primary">
+        {/* AI 콘텐츠 라벨 정책 — [v4] 설명 문단 → 사실 한 줄, 정책 카드 → 구분선 행 */}
+        <section className="flex flex-col gap-2">
+          <h2 className="t-section text-ink">AI 콘텐츠 라벨 정책</h2>
+          <p className="t-sub text-text-3">AI·사람, 실측·추정을 화면에서 구분 · 코드 게이트로 강제(라벨 없는 AI 수치는 배포에서 막힘)</p>
+          <dl className="card m-0 flex flex-col divide-y divide-line rounded-lg px-4">
+            {AI_POLICY.map((p) => (
+              <div key={p.label} className="py-3">
+                <dt className="t-body font-bold text-ink">{p.label}</dt>
+                <dd className="m-0 mt-0.5 t-sub leading-[1.65] text-text-2">{p.rule}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
+        <p className="t-caption leading-[1.7] text-text-3">
+          주기는 수집 파이프라인 기준 · 원천 기관 발표 일정에 따라 실제 최신 시점은 다를 수 있음 · 파이프라인이 멈추면 신선도 감시가 경보 ·{" "}
+          <Link href="/support" className={LINK}>
             고객센터
           </Link>
         </p>

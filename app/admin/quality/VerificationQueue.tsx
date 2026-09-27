@@ -88,7 +88,7 @@ function ExpertRow({ item }: { item: QueueItem }) {
   }
 
   return (
-    <div className="flex flex-col gap-1.5 rounded-[10px] bg-bg px-3 py-2.5">
+    <div className="flex flex-col gap-1.5 rounded-lg bg-bg px-3 py-2.5">
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
@@ -109,7 +109,7 @@ function ExpertRow({ item }: { item: QueueItem }) {
                 type="button"
                 onClick={() => setEvOpen((v) => !v)}
                 aria-expanded={evOpen}
-                className="rounded-[7px] bg-[rgba(29,79,216,.1)] px-2 py-1 text-[10px] font-extrabold text-primary"
+                className="rounded-lg bg-[rgba(29,79,216,.1)] px-2 py-1 text-[10px] font-extrabold text-primary"
               >
                 {evOpen ? "자료 닫기" : "심사 자료"}
               </button>
@@ -117,14 +117,14 @@ function ExpertRow({ item }: { item: QueueItem }) {
             <button
               type="button"
               onClick={() => setPhase("approve")}
-              className="rounded-[7px] bg-success-fill px-2 py-1 text-[10px] font-extrabold text-white"
+              className="rounded-lg bg-success-fill px-2 py-1 text-[10px] font-extrabold text-white"
             >
               승인
             </button>
             <button
               type="button"
               onClick={() => setPhase("reject")}
-              className="rounded-[7px] bg-danger-soft px-2 py-1 text-[10px] font-extrabold text-danger"
+              className="rounded-lg bg-danger-soft px-2 py-1 text-[10px] font-extrabold text-danger"
             >
               반려
             </button>
@@ -134,7 +134,7 @@ function ExpertRow({ item }: { item: QueueItem }) {
 
       {/* 심사 자료 — 신청서가 저장한 증빙 전부. 이게 없으면 심사가 아니라 도장이다. */}
       {evOpen && ev && (
-        <div className="flex flex-col gap-1.5 rounded-[8px] bg-surface px-2.5 py-2">
+        <div className="flex flex-col gap-1.5 rounded-lg bg-surface px-2.5 py-2">
           {ev.fraudFlags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {ev.fraudFlags.map((f, i) => (
@@ -172,7 +172,7 @@ function ExpertRow({ item }: { item: QueueItem }) {
                     href={u}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-[6px] bg-primary-soft px-2 py-0.5 text-[10px] font-extrabold text-primary no-underline"
+                    className="rounded-lg bg-primary-soft px-2 py-0.5 text-[10px] font-extrabold text-primary no-underline"
                   >
                     증빙 {i + 1} ↗
                   </a>
@@ -182,7 +182,7 @@ function ExpertRow({ item }: { item: QueueItem }) {
                   href={ev.sourceVerificationUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-[6px] border border-line px-2 py-0.5 text-[10px] font-extrabold text-text-2 no-underline"
+                  className="rounded-lg border border-line px-2 py-0.5 text-[10px] font-extrabold text-text-2 no-underline"
                 >
                   공적 조회처 ↗
                 </a>
@@ -200,14 +200,14 @@ function ExpertRow({ item }: { item: QueueItem }) {
           <button
             type="button"
             onClick={() => void submit("approve")}
-            className="rounded-[7px] bg-success-fill px-2.5 py-1 text-[10px] font-extrabold text-white"
+            className="rounded-lg bg-success-fill px-2.5 py-1 text-[10px] font-extrabold text-white"
           >
             승인 확정
           </button>
           <button
             type="button"
             onClick={() => setPhase("idle")}
-            className="rounded-[7px] bg-[rgba(0,0,0,.06)] px-2 py-1 text-[10px] font-bold text-text-2"
+            className="rounded-lg bg-[rgba(0,0,0,.06)] px-2 py-1 text-[10px] font-bold text-text-2"
           >
             취소
           </button>
@@ -220,13 +220,13 @@ function ExpertRow({ item }: { item: QueueItem }) {
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="반려 사유 (신청자에게 전달)"
-            className="min-w-0 flex-1 rounded-[7px] border border-line bg-surface px-2 py-1 text-[12px] text-ink outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-2 py-1 text-[12px] text-ink outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/40"
           />
           <button
             type="button"
             disabled={!reason.trim()}
             onClick={() => void submit("reject")}
-            className="rounded-[7px] bg-danger-fill px-2.5 py-1 text-[10px] font-extrabold text-white disabled:opacity-40"
+            className="rounded-lg bg-danger-fill px-2.5 py-1 text-[10px] font-extrabold text-white disabled:opacity-40"
           >
             반려 확정
           </button>
@@ -236,7 +236,7 @@ function ExpertRow({ item }: { item: QueueItem }) {
               setPhase("idle");
               setReason("");
             }}
-            className="rounded-[7px] bg-[rgba(0,0,0,.06)] px-2 py-1 text-[10px] font-bold text-text-2"
+            className="rounded-lg bg-[rgba(0,0,0,.06)] px-2 py-1 text-[10px] font-bold text-text-2"
           >
             취소
           </button>
@@ -253,7 +253,7 @@ function ExpertRow({ item }: { item: QueueItem }) {
 export function VerificationQueue({ queue }: { queue: QueueItem[] }) {
   if (queue.length === 0) {
     return (
-      <div className="rounded-[14px] bg-bg px-3.5 py-6 text-center text-[12px] text-text-3">
+      <div className="rounded-lg bg-bg px-3.5 py-6 text-center text-[12px] text-text-3">
         현재 심사 대기 중인 신청이 없어요.
       </div>
     );
@@ -266,7 +266,7 @@ export function VerificationQueue({ queue }: { queue: QueueItem[] }) {
         ) : (
           <div
             key={`owner-${q.id}`}
-            className="flex items-center justify-between gap-2 rounded-[10px] bg-bg px-3 py-2.5"
+            className="flex items-center justify-between gap-2 rounded-lg bg-bg px-3 py-2.5"
           >
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
@@ -282,7 +282,7 @@ export function VerificationQueue({ queue }: { queue: QueueItem[] }) {
             </div>
             <Link
               href="/admin/listings"
-              className="flex-shrink-0 rounded-[7px] bg-primary chip-pad text-[10px] font-extrabold text-white no-underline"
+              className="flex-shrink-0 rounded-lg bg-primary chip-pad text-[10px] font-extrabold text-white no-underline"
             >
               증빙 심사 ›
             </Link>

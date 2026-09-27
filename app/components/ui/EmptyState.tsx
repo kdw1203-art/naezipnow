@@ -1,5 +1,29 @@
 import { Icon } from "@/app/components/Icon";
+import { Illust, type IllustName } from "@/app/components/Illust";
 import { Button } from "./Button";
+
+/* [1012 · 규칙 4·10] 빈 화면 그림 = 직접 그린 선 일러스트(public/illust). 호출부가 이미 넘기던 `icon`(선 아이콘 이름)을
+   그림으로 옮긴다 — 이 표에 있는 이름이면 일러스트, 없으면 예전대로 브랜드 심볼(처마 + 숨쉬는 온점). `illust` 를
+   직접 넘기면 그것이 우선. 어드민 톤은 그대로 아이콘. */
+const ICON_TO_ILLUST: Record<string, IllustName> = {
+  "notebook-pen": "empty-notes",
+  "file-text": "empty-notes",
+  clipboard: "empty-notes",
+  book: "empty-notes",
+  map: "map-pin",
+  pin: "map-pin",
+  compass: "map-pin",
+  key: "key-door",
+  house: "key-door",
+  building: "search",
+  search: "search",
+  calendar: "calendar",
+  clock: "calendar",
+  bell: "bell",
+  "bar": "chart",
+  "trending-up": "chart",
+  calculator: "chart",
+};
 
 /** 라이트(공개 화면) / 어드민(다크 셸) 두 표면. 어드민은 `.dark` 클래스에 의존하지 않고
  *  관리자 셸(bg-[#12161f]) 위에서 직접 성립하도록 고정 색을 씁니다. */
@@ -12,6 +36,8 @@ export type EmptyStateAction = {
 
 export type EmptyStateProps = {
   icon?: string;
+  /** 직접 고른 일러스트 — 없으면 icon 이름에서 고른다(ICON_TO_ILLUST), 그것도 없으면 브랜드 심볼 */
+  illust?: IllustName;
   title: string;
   desc?: string;
   action?: EmptyStateAction;
@@ -22,7 +48,7 @@ export type EmptyStateProps = {
 const SHELL: Record<StateTone, string> = {
   light: "card",
   admin:
-    "rounded-[14px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)]",
+    "rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)]",
 };
 
 const PAD: Record<StateTone, string> = {
@@ -58,7 +84,7 @@ const CAUSE: Record<StateTone, string> = {
 };
 
 const ADMIN_LINK =
-  "press inline-flex items-center justify-center rounded-[10px] bg-[rgba(126,162,255,.15)] px-3.5 py-[7px] text-[12px] font-extrabold text-ai-accent no-underline";
+  "press inline-flex items-center justify-center rounded-lg bg-[rgba(126,162,255,.15)] px-3.5 py-[7px] text-[12px] font-bold text-ai-accent no-underline";
 
 function ActionButton({ action, tone }: { action: EmptyStateAction; tone: StateTone }) {
   if (tone === "admin") {
@@ -81,12 +107,14 @@ function ActionButton({ action, tone }: { action: EmptyStateAction; tone: StateT
  */
 export function EmptyState({
   icon,
+  illust,
   title,
   desc,
   action,
   tone = "light",
   className = "",
 }: EmptyStateProps) {
+  const picture: IllustName | null = illust ?? (icon ? (ICON_TO_ILLUST[icon] ?? null) : null);
   return (
     <div
       className={`${SHELL[tone]} ${PAD[tone]} flex flex-col items-center gap-2 text-center ${className}`.trim()}
@@ -95,7 +123,9 @@ export function EmptyState({
          마주치는 화면이 브랜드의 첫 화면이다. 어드민 톤은 기존 유지. */
       style={tone === "light" ? { background: "var(--brand-hanji)", border: "none" } : undefined}
     >
-      {tone === "light" ? (
+      {tone === "light" && picture ? (
+        <Illust name={picture} size={96} className="rounded-lg" />
+      ) : tone === "light" ? (
         /* 온점만 숨쉰다(2.4s) — 심볼 전체를 흔들면 장식이 소음이 된다 */
         <svg width="44" height="40" viewBox="0 0 120 120" aria-hidden="true">
           <path

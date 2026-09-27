@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 import Link from "next/link";
 import { embedSnippet, type EmbedKind } from "@/lib/embed/snippet";
 
@@ -30,11 +31,11 @@ export function EmbedSnippet({
       ? `/embed/complex/${encodeURIComponent(id)}`
       : `/embed/region/${encodeURIComponent(id)}`;
   return (
-    <div className={`flex flex-col gap-1 rounded-[14px] border border-line bg-surface p-4 ${className}`}>
-      <span className="t-body font-extrabold text-ink">{heading}</span>
+    <div className={`flex flex-col gap-1 rounded-lg border border-line bg-surface p-4 ${className}`}>
+      <span className="t-body font-bold text-ink">{heading}</span>
       <span className="t-sub text-text-2">{desc}</span>
       <pre
-        className="mt-2 max-w-full overflow-x-auto rounded-[10px] bg-bg px-3 py-2.5 text-[12px] leading-[1.6] text-text-1 [user-select:all]"
+        className="mt-2 max-w-full overflow-x-auto rounded-lg bg-bg px-3 py-2.5 text-[12px] leading-[1.6] text-text-1 [user-select:all]"
         tabIndex={0}
         aria-label="위젯 삽입 코드"
       >

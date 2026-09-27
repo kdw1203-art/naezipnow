@@ -9,6 +9,7 @@ import { relativeTimeLabel } from "@/lib/format/relative-time";
 import { decisionFromMetadata, decisionLabel, type DecisionChoice } from "@/lib/inspection/decision";
 import { listAiState, noteAiIntent, type ListAiState } from "@/lib/notes/ai-status";
 import { noteContentHash, storedContentHash } from "@/lib/notes/content-hash";
+import { resolveNoteCover } from "@/lib/notes/cover/resolve";
 
 /* [967 · 19] 공개 임장노트 피드 카드 빌더 — 서버 전용.
  *
@@ -34,8 +35,11 @@ export type FeedNote = {
   /** 서버에서 사용자의 지역 알림 구독과 대조해 채운다 (전에는 전부 false 고정이었다) */
   interested: boolean;
   region?: string;
-  /** 커버 이미지(첫 사진). 없으면 그라디언트 타일 폴백 */
+  /** 커버 이미지 — 고른 썸네일(metadata.cover → /api/og/note-cover/{id}?v=…)이 있으면 그것, 없으면 첫 사진.
+   *  둘 다 없으면 null → 클라이언트의 단색 타일 폴백. 규칙은 lib/notes/cover/resolve 한 곳 */
   coverUrl?: string | null;
+  /** [썸네일] coverUrl 이 템플릿 썸네일(제목·사실이 그림 안에 있음)이면 true — 목록이 제목 오버레이를 겹쳐 그리지 않게 */
+  coverTemplate?: boolean;
   /** 단지 허브(/complex/[id]) 링크 — 실 id를 못 찾으면 undefined → 링크 숨김 */
   complexHref?: string;
   /** 더미 1개 원칙: 실데이터 0건일 때만 노출되는 테스트용 샘플 표시 */
@@ -64,6 +68,16 @@ export type FeedNote = {
   aiStatus?: ListAiState;
   visitDate?: string;
   regionGroup?: string;
+  /**
+   * [1012-IG] 실사진 장수(photos.length) — 목록 격자 타일의 "여러 장" 표시(2장 이상)와 피드 카드의
+   * "사진 N장". 공개·내 노트 모두 채운다. 예전 응답(필드 없음)은 0 으로 읽는다.
+   */
+  photoCount?: number;
+  /**
+   * [1012-IG] 내 노트 뷰(mine)에서만 — 공개 여부. 공개 피드의 노트는 전부 공개라 비워 둔다.
+   * 피드 카드가 비공개 노트에 공유·댓글 아이콘을 그리지 않는 근거(받아도 못 여는 링크를 만들지 않는다).
+   */
+  isPublic?: boolean;
 };
 
 /** metadata.round — 정수 2 이상만 배지가 된다(1회차는 배지가 아니라 기본값이다) */
@@ -118,6 +132,8 @@ export function toFeedNote(
   /* [996 · 4] 판단·회차 배지 재료 — 깨진 값은 배지 없음 */
   const decision = decisionFromMetadata(n.metadata);
   const round = roundBadgeOf(n);
+  /* [썸네일] 목록 커버 — 고른 썸네일(원문으로 다시 검증 통과분) → 첫 사진 */
+  const cover = resolveNoteCover(n);
   return {
     id: n.id,
     author: maskAuthor(n),
@@ -141,8 +157,11 @@ export function toFeedNote(
        [967 · 13] 대조 규칙은 lib/notes/region-match 로 — 상세의 관련 노트와 같은 잣대. */
     interested: matchesInterest(n.region, opts?.interestRegions ?? []),
     region: n.region,
-    // 인스타 피드형 커버 — 첫 사진(있으면). 없으면 클라이언트에서 그라디언트 타일 폴백.
-    coverUrl: n.photos?.[0] ?? null,
+    // 인스타 피드형 커버 — 고른 썸네일 → 첫 사진(있으면). 없으면 클라이언트에서 단색 타일 폴백.
+    coverUrl: cover.url,
+    ...(cover.template ? { coverTemplate: true } : {}),
+    /* [1012-IG] 목록의 "여러 장" 표시 재료 — 실제 사진 배열 길이 */
+    photoCount: Array.isArray(n.photos) ? n.photos.length : 0,
     // 실 단지 id를 찾은 경우에만 /complex/[id] 연결, 못 찾으면 링크 숨김 (mock-1로 보내지 않음)
     complexHref: complexHref ?? undefined,
     createdAt: n.createdAt,
@@ -158,6 +177,8 @@ export function toFeedNote(
           }),
           visitDate: n.visitDate.slice(0, 10),
           regionGroup: regionGroupOf(n.region),
+          /* [1012-IG] 피드 카드의 공유·댓글 아이콘은 공개 노트에만 */
+          isPublic: n.isPublic,
         }
       : {}),
   };

@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { formatKrwManwon } from "@/lib/format/krw";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -214,10 +215,10 @@ export function MapPickDrawer({
         onClick={onClose}
         className="absolute inset-0 h-full w-full cursor-default"
       />
-      <div className="relative flex h-[86vh] w-full max-w-[880px] flex-col overflow-hidden rounded-t-[20px] bg-surface md:h-[76vh] md:rounded-[20px]">
+      <div className="relative flex h-[86vh] w-full max-w-[880px] flex-col overflow-hidden rounded-t-3xl bg-surface md:h-[76vh] md:rounded-3xl">
         <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
-            <p className="t-body font-extrabold text-ink">
+            <p className="t-body font-bold text-ink">
               지도에서 단지 고르기
             </p>
             {purpose && (

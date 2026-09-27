@@ -178,7 +178,7 @@ export function AgentChat({ models }: { models: AgentModelChoice[] }) {
             <select
               value={modelId}
               onChange={(e) => setModelId(e.target.value)}
-              className="rounded-[10px] border border-line bg-surface px-2.5 py-1.5 t-sub font-bold text-ink outline-none focus:border-primary"
+              className="rounded-lg border border-line bg-surface px-2.5 py-1.5 t-sub font-bold text-ink outline-none focus:border-primary"
             >
               {models.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -194,11 +194,12 @@ export function AgentChat({ models }: { models: AgentModelChoice[] }) {
       )}
 
       {/* 대화 영역 */}
-      <div className="card flex min-h-[380px] flex-col gap-3 rounded-[18px] p-5">
+      <div className="card flex min-h-[380px] flex-col gap-3 rounded-3xl p-5">
         {messages.length === 0 && (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 py-8 text-center">
-            <div className="ai-chip flex h-11 w-11 items-center justify-center rounded-xl t-body">AI</div>
-            <div className="text-[13px] font-extrabold text-ink">
+            {/* [1012-R2 · 규칙 9] 흰 카드 위 "AI" 표시 — 파랑 채움 → 잉크 외곽선(.ai-chip 은 어두운 패널용) */}
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-line t-body font-bold text-ink">AI</div>
+            <div className="text-[13px] font-bold text-ink">
               내 임장노트와 실거래 데이터로 답하는 에이전트예요
             </div>
             <div className="max-w-sm text-xs leading-[1.6] text-text-3">
@@ -287,7 +288,7 @@ export function AgentChat({ models }: { models: AgentModelChoice[] }) {
           </div>
         )}
         {error && (
-          <div className="flex flex-wrap items-center gap-2 self-start rounded-[10px] bg-danger-soft px-3 py-2.5 text-xs font-bold text-danger">
+          <div className="flex flex-wrap items-center gap-2 self-start rounded-lg bg-danger-soft px-3 py-2.5 text-xs font-bold text-danger">
             <span>{error}</span>
             {lastFailed && !busy && (
               <button

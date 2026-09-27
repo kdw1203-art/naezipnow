@@ -71,12 +71,12 @@ function ShareTemplateForm({ onDone }: { onDone: () => void }) {
           onChange={(e) => setTitle(e.target.value)}
           maxLength={60}
           placeholder="체크리스트 이름 (예: 아이 학령기 실거주 체크)"
-          className="min-w-[220px] flex-1 rounded-[10px] border border-line bg-surface px-3.5 py-2.5 t-body"
+          className="min-w-[220px] flex-1 rounded-lg border border-line bg-surface px-3.5 py-2.5 t-body"
         />
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="rounded-[10px] border border-line bg-surface px-3 py-2.5 t-body"
+          className="rounded-lg border border-line bg-surface px-3 py-2.5 t-body"
           aria-label="카테고리"
         >
           {CATEGORIES.filter((c) => c !== "전체").map((c) => (
@@ -91,14 +91,14 @@ function ShareTemplateForm({ onDone }: { onDone: () => void }) {
         onChange={(e) => setDescription(e.target.value)}
         maxLength={200}
         placeholder="한 줄 소개 (어떤 상황에 쓰는 체크리스트인가요?)"
-        className="rounded-[10px] border border-line bg-surface px-3.5 py-2.5 t-body"
+        className="rounded-lg border border-line bg-surface px-3.5 py-2.5 t-body"
       />
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={7}
         placeholder={"# 등하교 동선\n정문에서 초등학교까지 직접 걸어보기\n횡단보도·신호등 개수 세기\n\n# 소음\n창문 닫고 5분, 열고 5분 있어보기"}
-        className="rounded-[10px] border border-line bg-surface px-3.5 py-2.5 font-mono t-body"
+        className="rounded-lg border border-line bg-surface px-3.5 py-2.5 font-mono t-body"
       />
       <p className="t-sub text-text-3">
         # 으로 시작하는 줄은 섹션 제목, 나머지 줄은 체크 항목이 됩니다. 항목 5개 이상 ·
@@ -107,9 +107,9 @@ function ShareTemplateForm({ onDone }: { onDone: () => void }) {
       </p>
       {needLogin && (
         <p className="t-sub font-bold text-warning">
-          로그인 후 공유할 수 있어요.{" "}
+          로그인한 사람만 공유할 수 있어요.{" "}
           <Link href="/login?callbackUrl=/notes/templates" className="text-primary underline">
-            로그인 ›
+            로그인하고 체크리스트 공유하기 ›
           </Link>
         </p>
       )}
@@ -118,7 +118,7 @@ function ShareTemplateForm({ onDone }: { onDone: () => void }) {
         type="button"
         onClick={submit}
         disabled={busy}
-        className="btn-primary w-fit rounded-[10px] px-5 py-2.5 t-body disabled:opacity-60"
+        className="btn-primary w-fit rounded-lg px-5 py-2.5 t-body disabled:opacity-60"
       >
         {busy ? "저장 중…" : "체크리스트 공유하기"}
       </button>
@@ -138,23 +138,21 @@ function TemplateCard({ t, delay }: { t: NoteTemplate; delay: string }) {
   return (
     <Link
       href={`/notes/templates/${t.id}`}
-      className={`card tile press ${delay} flex flex-col gap-3 rounded-[18px] p-5 no-underline`}
+      /* [1012] 규칙 1·9 — 카드 12px→8px. 배지는 반짝이 아이콘 없이 사실 명사만("내집나우 공식" / "이웃 제작"),
+         연한 배경 + 진한 글자 11px/500, 4px. 카테고리는 배지가 아니라 글자로. */
+      className={`card tile press ${delay} flex flex-col gap-3 rounded-lg p-5 no-underline`}
     >
       <div className="flex flex-wrap items-center gap-1.5">
         {t.isOfficial ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft chip-pad t-sub font-semibold text-primary">
-            <Icon name="sparkles" size={12} />
-            공식
+          <span className="inline-flex items-center rounded-sm bg-primary-soft px-1.5 py-px t-caption font-medium text-primary">
+            내집나우 공식
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 rounded-full bg-success-soft chip-pad t-sub font-semibold text-success">
-            <Icon name="users" size={12} />
+          <span className="inline-flex items-center rounded-sm bg-success-soft px-1.5 py-px t-caption font-medium text-success">
             이웃 제작
           </span>
         )}
-        <span className="rounded-full bg-[rgba(0,0,0,.05)] chip-pad t-sub font-semibold text-text-2">
-          {t.category}
-        </span>
+        <span className="t-caption text-text-3">{t.category}</span>
       </div>
 
       <h2 className="t-section text-ink">
@@ -186,8 +184,9 @@ function TemplateCard({ t, delay }: { t: NoteTemplate; delay: string }) {
         )}
       </div>
 
-      <span className="t-body font-semibold text-primary">
-        자세히 보기 →
+      {/* [1012] 규칙 5 — 동사 + 대상 */}
+      <span className="t-body font-medium text-primary">
+        항목 {itemCount}개 보기 ›
       </span>
     </Link>
   );
@@ -206,7 +205,8 @@ export function TemplateBrowser({ initial }: { initial: NoteTemplate[] }) {
   return (
     <div className="flex flex-col gap-4">
       {/* [#69] 내 체크리스트 공유 — 공식 목록 옆의 UGC 두 번째 축 */}
-      <div className="rise-in card flex flex-col gap-2 rounded-[18px] p-5">
+      {/* [1012] 규칙 6 — 부제는 누가·언제 + 숫자: 이웃이 내 체크리스트로 노트를 저장할 때마다 20P */}
+      <div className="rise-in card flex flex-col gap-2 rounded-lg p-5">
         <button
           type="button"
           onClick={() => setShareOpen((v) => !v)}
@@ -215,7 +215,7 @@ export function TemplateBrowser({ initial }: { initial: NoteTemplate[] }) {
         >
           <span className="t-section text-ink">
             내 체크리스트 공유하기
-            <span className="ml-2 t-sub font-bold text-primary">사용될 때마다 +20P</span>
+            <span className="ml-2 t-sub font-bold text-primary">이웃이 쓸 때마다 +20P</span>
           </span>
           <span className="t-body font-bold text-text-3">{shareOpen ? "접기 ▴" : "열기 ▾"}</span>
         </button>
@@ -250,8 +250,9 @@ export function TemplateBrowser({ initial }: { initial: NoteTemplate[] }) {
       {visible.length === 0 ? (
         <div className="rise-in-1 flex flex-col items-center gap-2 rounded-2xl border border-line bg-surface px-4 py-12 text-center">
           <Icon name="search" size={22} className="text-text-3" />
+          {/* [1012] 규칙 6 — 어느 카테고리에서 몇 개 중 0 인지 */}
           <p className="t-body text-text-2">
-            해당 카테고리의 템플릿이 아직 없어요.
+            {category} 카테고리의 체크리스트가 아직 없어요 — 전체 {initial.length}개는 &lsquo;전체&rsquo; 칩에서 보여요.
           </p>
         </div>
       ) : (

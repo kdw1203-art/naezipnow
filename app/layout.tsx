@@ -51,8 +51,9 @@ export const metadata: Metadata = {
   /* 브랜드 포지션(전략 정본 §6): "임장 관리"라는 비어 있는 카테고리의 첫 이름.
      시세를 '보는' 앱이 아니라 현장에 '가는' 사람의 앱 — 문장도 그 대립을 싣는다. */
   title: "내집나우 — 시세는 누구나 봅니다, 현장은 가 본 사람만 압니다",
+  /* [1012 · 규칙 5] "로그인 없이 시작하세요"(금지 문구) → 실제 동작(로그인 없이 쓰고 저장할 때만 로그인)으로 */
   description:
-    "부동산 임장 관리 플랫폼 내집나우. 임장노트 3분 기록 → AI 정리 → 실거래가 지도 비교. 임장 체크리스트부터 지역 분석 리포트까지, 로그인 없이 시작하세요.",
+    "부동산 임장 관리 플랫폼 내집나우. 임장노트 3분 기록 → AI 정리 → 실거래가 지도 비교. 임장 체크리스트부터 지역 분석 리포트까지, 로그인 없이 쓰고 저장할 때만 로그인합니다.",
   openGraph: {
     title: "내집나우 — 시세는 누구나 봅니다, 현장은 가 본 사람만 압니다",
     description:
@@ -88,6 +89,35 @@ export const viewport: Viewport = {
 const LOWEND_SCRIPT =
   "(function(){try{var m=navigator.deviceMemory;if(typeof m==='number'&&m<=4)document.documentElement.setAttribute('data-lowend','1');}catch(e){}})();";
 
+/* [1012 · 모바일 60%] 소유자(2026-09-27): 모바일 화면을 "지금의 60~70% 수준으로" → 실측 시안(지금·80·70·60%)을
+   보고 **60%** 를 골랐다(본문 13px 이 폰에서 약 8px 로 보인다는 점, 버튼 40px 이 24px 로 준다는 점을 알리고 받은 답).
+   CSS 로 글자·여백을 하나씩 줄이는 대신 **뷰포트 배율**로 줄인다 — 브라우저가 화면 전체를 한 비율로 그리므로
+   px 로 적은 크기(아이콘·지도·임의값 805곳)까지 빠짐없이 같은 비율이 되고, 지도 터치 좌표도 어긋나지 않는다.
+     · 폰만: 화면의 짧은 변이 600px 미만일 때(태블릿·데스크톱은 그대로 — 데스크톱은 viewport 메타를 무시한다).
+     · 레이아웃 폭 = 짧은 변 ÷ 0.6(390폰 → 650px). 768 미만이라 모바일 배치는 그대로다.
+     · iOS 는 글자가 화면에서 16px 보다 작게 보이는 입력칸에 포커스하면 화면을 확대하고 돌아오지 않는다 —
+       iOS 에서만 maximum-scale 로 그 확대를 막는다(iOS 10+ 는 손가락 확대는 이 값과 무관하게 허용한다).
+       안드로이드는 포커스 확대가 없어 maximum-scale 을 두지 않는다(손가락 확대 유지 · Lighthouse meta-viewport 통과).
+     · html[data-mscale] 표식 — 하단 탭바는 85% 로 보이게 되돌린다(globals.css).
+   첫 페인트 전에 바뀌어야 깜빡임이 없다: Next 가 <head> 맨 앞에 viewport 메타를 쓰고, 이 스크립트가 그 뒤에서
+   파싱 중에 즉시 고친다. 그런데 하이드레이션 뒤 Next 가 클라이언트에서 viewport 메타를 **한 장 더** 꽂는다
+   (실측: 로드 직후 innerWidth 650 → 네트워크 유휴 뒤 390, 메타 2장 — 브라우저는 마지막 장을 쓴다). 그래서
+   <head> 를 지켜보다(MutationObserver) 새로 들어오거나 바뀐 viewport 메타를 같은 값으로 되돌린다.
+   화면 전환 때 다시 꽂혀도 같다. 콜백은 렌더 전에 도는 마이크로태스크라 깜빡임이 없다. */
+/* [1012 · 글씨 75%] 소유자(60% 적용 뒤): "글씨 크기는 75% 수준을 유지하고 최대한 한 줄로" → 배율을 0.75 로 올리고
+   (글자가 원래의 75%), 여백·간격은 globals.css html[data-mscale] 에서 0.8 배로 더 조여 60% 를 지킨다. */
+const MOBILE_SCALE = 0.75;
+const MSCALE_SCRIPT =
+  "(function(){try{var S=" +
+  MOBILE_SCALE +
+  ",n=Math.min(screen.width,screen.height);if(!(n>0&&n<600))return;" +
+  "var w=Math.round(n/S),ua=navigator.userAgent||'',ios=/iP(hone|od|ad)/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);" +
+  "var C='width='+w+(ios?', initial-scale='+S+', minimum-scale='+S+', maximum-scale='+S:'')+', viewport-fit=cover, interactive-widget=resizes-content';" +
+  "function fix(){var m=document.querySelectorAll('meta[name=\"viewport\"]');for(var i=0;i<m.length;i++){if(m[i].getAttribute('content')!==C)m[i].setAttribute('content',C);}}" +
+  "fix();document.documentElement.setAttribute('data-mscale',String(S));" +
+  "if(window.MutationObserver)new MutationObserver(fix).observe(document.head,{childList:true,subtree:true,attributes:true,attributeFilter:['content']});" +
+  "}catch(e){}})();";
+
 /**
  * 페이지 함수 실행 상한(초) — 이 레이아웃 아래 **모든 페이지**에 적용된다.
  * (app/api 의 Route Handler 는 각자 route.ts 에서 따로 지정한다 — 35곳.)
@@ -120,6 +150,8 @@ export default function RootLayout({
             <html> 은 suppressHydrationWarning 이라(테마 class 와 같은 이유) 속성이 붙어도
             하이드레이션 경고가 없다. */}
         <script dangerouslySetInnerHTML={{ __html: LOWEND_SCRIPT }} />
+        {/* [1012 · 모바일 60%] 폰에서만 뷰포트 배율 0.6 — 위 MSCALE_SCRIPT 주석 참고 */}
+        <script dangerouslySetInnerHTML={{ __html: MSCALE_SCRIPT }} />
         {/* [969 · 16] 폰트 원점 3 → 0. 여기 있던 G7 preconnect/dns-prefetch(cdn.jsdelivr.net)
             와 아래 [949] preconnect(fonts.gstatic.com)를 지웠다 — 폰트 CSS·woff2 가 전부
             same-origin(/fonts/) 이 되어 미리 열 연결이 없다. 예전에는 폰트 때문에

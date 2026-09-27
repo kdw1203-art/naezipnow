@@ -32,14 +32,15 @@ export const dynamic = "force-static";
    (28·19·13·12) 안에서만 쓴다. `>` 같은 문자가 엔티티로 바뀌지 않게 dangerouslySetInnerHTML
    로 넣는다(사용자 입력이 아닌 상수 문자열이다). */
 const OFFLINE_CSS = `
-.nz-off{box-sizing:border-box;margin:0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;width:100%;max-width:420px;min-height:70vh;padding:24px;text-align:center;color:var(--ink,#191f28);font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.nz-off{box-sizing:border-box;margin:0 auto;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:20px;width:100%;max-width:420px;min-height:70vh;padding:24px;text-align:left;color:var(--ink,#191f28);font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 .nz-off *{box-sizing:border-box}
-.nz-off-glyph{display:flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:16px;background:var(--bg,#f7f9fc);font-size:28px;line-height:1}
-.nz-off-copy{display:flex;flex-direction:column;gap:8px}
-.nz-off-title{margin:0;font-size:19px;line-height:1.3;font-weight:800;color:var(--ink,#191f28)}
+.nz-off-glyph{display:flex;align-items:center;justify-content:center;width:80px;height:60px}
+.nz-off-glyph svg{display:block;width:80px;height:60px}
+.nz-off-copy{display:flex;flex-direction:column;gap:2px}
+.nz-off-title{margin:0;font-size:19px;line-height:1.3;font-weight:700;color:var(--ink,#191f28)}
 .nz-off-desc{margin:0;font-size:13px;line-height:1.6;color:var(--text-3,#606a77)}
-.nz-off-retry{display:flex;flex-direction:column;align-items:center;gap:8px}
-.nz-off-btn{-webkit-appearance:none;appearance:none;display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 24px;border:0;border-radius:16px;background:var(--primary,#1d4fd8);color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:transform .12s ease}
+.nz-off-retry{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.nz-off-btn{-webkit-appearance:none;appearance:none;display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 24px;border:0;border-radius:8px;background:var(--primary,#1d4fd8);color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:transform .12s ease}
 .nz-off-btn:active{transform:scale(.97)}
 .nz-off-status{margin:0;min-height:18px;font-size:12px;color:var(--text-3,#606a77)}
 .nz-off-home{font-size:13px;font-weight:600;color:var(--primary,#1d4fd8);text-decoration:underline;text-underline-offset:4px}
@@ -48,20 +49,40 @@ a[href="#main-content"]:not(:focus){position:absolute;width:1px;height:1px;paddi
 @media (prefers-reduced-motion:reduce){.nz-off-btn{transition:none}.nz-off-btn:active{transform:none}}
 `;
 
+/* [1012 · 규칙 4·10] 이모지(📡) → 직접 그린 선 일러스트 `offline`. 이 문서는 서비스워커가 캐시한 HTML 한 장으로
+   뜨고 프리캐시는 /_next/static 만 담으므로(public/sw.js extractOfflineAssetUrls) <img src="/illust/offline.svg"> 는
+   오프라인에서 깨진다 — public/illust/offline.svg 와 **같은 경로 데이터**를 인라인으로 둔다(둘을 함께 고칠 것).
+   굵기 800 → 700, 반경 16 → 8(규칙 1·8). */
+/* [v4 · 규칙 1·3·10] 가운데 정렬 → 왼쪽 정렬(인라인 CSS) · 그림 120 → 80px · 설명 두 문장 → 사실 한 줄.
+   그림은 테스트(home-1012)가 public/illust/offline.svg 와 같은 경로 데이터를 잠근다 — 크기만 줄였다. */
 export default function OfflinePage() {
   return (
     <main id="main-content" className="nz-off">
       <style dangerouslySetInnerHTML={{ __html: OFFLINE_CSS }} />
       <div aria-hidden="true" className="nz-off-glyph">
-        📡
+        <svg
+          viewBox="0 0 120 90"
+          fill="none"
+          stroke="#0B2545"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          {/* 한지 종이면 — 다크 모드에서도 네이비 선이 읽히게 그림 안에 밝은 면을 둔다(public/illust 와 동일) */}
+          <rect x="0" y="0" width="120" height="90" rx="8" fill="#F6F1E7" stroke="none" />
+          <path d="M60 80V44M46 80h28" />
+          <circle cx="60" cy="40" r="5" fill="#F6F1E7" />
+          <path d="M48 28a17 17 0 0 0 0 24M72 28a17 17 0 0 1 0 24" strokeDasharray="4 4" />
+          <path d="M38 18a31 31 0 0 0 0 44M82 18a31 31 0 0 1 0 44" strokeDasharray="4 5" />
+          <path d="M86 12l12 12M98 12L86 24" stroke="#C8442B" />
+        </svg>
       </div>
 
       <div className="nz-off-copy">
         <h1 className="nz-off-title">인터넷에 연결되어 있지 않아요</h1>
-        <p className="nz-off-desc">
-          내집나우는 시세·실거래를 항상 최신으로 보여주기 위해 오프라인에서는 데이터를
-          저장해 두지 않습니다. 연결이 돌아오면 그대로 이어서 볼 수 있어요.
-        </p>
+        {/* [1012 · 규칙 6] 왜 빈 화면인지(데이터를 저장해 두지 않는다)와 연결이 돌아오면 무엇이 되는지만 */}
+        <p className="nz-off-desc">실거래는 최신값만 · 기기에 저장 안 함 · 연결되면 보던 화면 그대로</p>
       </div>
 
       <RetryButton />

@@ -12,6 +12,7 @@ import { EXPERT_VERIFICATION_PIPELINE, EXPERT_POST_APPROVAL } from "@/lib/expert
 import { EXPERT_CERT_FEES } from "@/lib/billing/marketplace-fees";
 import { ExpertApplyCta } from "../ExpertApplyCta";
 import { TownCategoryNav } from "../../TownCategoryNav";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* ============================================================
    전문가 참여 안내 — /town/experts/join  (959)
@@ -89,17 +90,18 @@ export default function ExpertJoinPage() {
       <TownCategoryNav stick />
 
       {/* ---------- 히어로 (브랜드 네이비) ---------- */}
-      <section className="rise-in brand-navy-card mb-5 overflow-hidden rounded-[18px] px-5 py-6 md:px-7 md:py-7">
+      <section className="rise-in brand-navy-card mb-5 overflow-hidden rounded-3xl px-5 py-6 md:px-7 md:py-7">
         <BrandWatermark />
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="max-w-[580px]">
-            <div className="t-caption font-extrabold tracking-wider text-on-dark-muted">전문가 모집</div>
-            <h1 className="mt-1 t-display text-balance text-on-dark">
-              자격을 확인한 전문가로, <span className="text-brand-red-dark">지금</span> 참여하세요
+            <div className="t-caption font-bold tracking-wider text-on-dark-muted">전문가 모집</div>
+            {/* [1012] 규칙 5·8 — 슬로건("지금 참여하세요") → 명사형 제목(t-title), 본문은 사실만 */}
+            <h1 className="mt-1 t-title text-balance text-on-dark">
+              전문가 참여 신청 — 공인중개사·세무사·감정평가사·대출상담사·건축사
             </h1>
             <p className="mt-2 max-w-[52ch] t-body text-on-dark-muted">
-              내집나우 이용자는 단지 하나를 정해 실거래·임장노트를 보고 온 사람들입니다. 그 질문에
-              글로 답하고, 견적 요청에 제안을 보내고, 답변 완료 의뢰자의 후기를 프로필에 쌓으세요.
+              내집나우 이용자는 단지 하나를 정해 실거래·임장노트를 보고 온 사람들이에요. 그 질문에
+              글로 답하고, 견적 요청에 제안을 보내고, 답변 완료 의뢰자의 후기가 프로필에 쌓여요.
             </p>
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 t-sub text-on-dark-muted">
               <span className="inline-flex items-center gap-1">
@@ -132,7 +134,7 @@ export default function ExpertJoinPage() {
                 <Icon name={o.icon} size={20} />
               </span>
               <div className="min-w-0">
-                <div className="t-body font-extrabold text-ink">{o.title}</div>
+                <div className="t-body font-bold text-ink">{o.title}</div>
                 <p className="mt-0.5 t-sub text-text-2">{o.desc}</p>
               </div>
             </div>
@@ -153,7 +155,7 @@ export default function ExpertJoinPage() {
           {verifiable.map((t) => (
             <div key={t.id} className="card flex flex-col gap-1 rounded-2xl p-4">
               <div className="flex items-center justify-between gap-2">
-                <span className="t-body font-extrabold text-ink">{t.label}</span>
+                <span className="t-body font-bold text-ink">{t.label}</span>
                 <span className="rounded-md bg-primary-soft chip-pad t-caption font-bold text-primary">공개 조회</span>
               </div>
               <span className="t-sub text-text-2">{t.desc}</span>
@@ -168,7 +170,7 @@ export default function ExpertJoinPage() {
           {other && (
             <div className="card flex flex-col gap-1 rounded-2xl border-dashed p-4">
               <div className="flex items-center justify-between gap-2">
-                <span className="t-body font-extrabold text-ink">{other.label}</span>
+                <span className="t-body font-bold text-ink">{other.label}</span>
                 <span className="rounded-md bg-warning-soft chip-pad t-caption font-bold text-warning">서류 심사</span>
               </div>
               <span className="t-sub text-text-2">{other.desc}</span>
@@ -187,15 +189,15 @@ export default function ExpertJoinPage() {
       {/* ---------- 절차 (verification-policy 단일 출처) ---------- */}
       <section className="mb-6">
         <h2 className="mb-3 t-section text-ink">인증 절차</h2>
-        <ol className="card flex list-none flex-col divide-y divide-line rounded-2xl px-5">
+        <ol data-tone="sand" className="card flex list-none flex-col divide-y divide-line rounded-2xl px-5">
           {pipeline.map((s) => (
             <li key={s.id} className="flex items-start gap-3 py-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-navy t-caption font-extrabold text-on-dark t-num">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-navy t-caption font-bold text-on-dark t-num">
                 {s.step}
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="t-body font-extrabold text-ink">{s.label}</span>
+                  <span className="t-body font-bold text-ink">{s.label}</span>
                   {s.slaHours && <span className="t-caption text-text-3">목표 {s.slaHours}시간 안</span>}
                 </div>
                 <p className="t-sub text-text-2">{s.description}</p>
@@ -203,14 +205,14 @@ export default function ExpertJoinPage() {
             </li>
           ))}
         </ol>
-        <p className="mt-2 t-caption text-text-3">단계마다 결과를 알림함으로 보내드려요 · 접수 시 개인정보(계좌 등)는 적지 마세요</p>
+        <p className="mt-2 t-caption text-text-3">단계마다 결과가 알림함에 실려요 · 접수 시 개인정보(계좌 등)는 적지 않아요</p>
       </section>
 
       {/* ---------- 비용 · 정산 (정직 고지) ---------- */}
-      <section className="mb-6 rounded-[18px] bg-brand-hanji px-5 py-5 md:px-7">
+      <section className="mb-6 rounded-3xl bg-brand-hanji px-5 py-5 md:px-7">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="max-w-[560px]">
-            <div className="t-caption font-extrabold tracking-wider text-brand-hanji-ink opacity-70">비용 · 정산</div>
+            <div className="t-caption font-bold tracking-wider text-brand-hanji-ink opacity-70">비용 · 정산</div>
             <h2 className="mt-1 t-section text-brand-hanji-ink">가입 심사비 {feeRow("전문가 가입 심사비")} — 수수료는 결제가 열린 뒤에만</h2>
             <p className="mt-2 t-sub text-brand-hanji-ink opacity-90">
               지금은 프로필에 적은 상담료·리포트료가 <b>안내 금액</b>으로만 표시되고, 결제와 정산은 플랫폼에서 처리하지 않습니다.
@@ -221,7 +223,7 @@ export default function ExpertJoinPage() {
             {EXPERT_CERT_FEES.map((f) => (
               <div key={f.label} className="contents">
                 <dt className="opacity-80">{f.label}</dt>
-                <dd className="text-right font-extrabold t-num">{f.rate}</dd>
+                <dd className="text-right font-bold t-num">{f.rate}</dd>
               </div>
             ))}
           </dl>
@@ -249,7 +251,7 @@ export default function ExpertJoinPage() {
       {/* ---------- FAQ (JSON-LD 와 같은 배열) ---------- */}
       <section className="mb-6">
         <h2 className="mb-3 t-section text-ink">전문가가 자주 묻는 질문</h2>
-        <div className="card flex flex-col divide-y divide-line rounded-2xl px-5">
+        <div data-tone="hanji" className="card flex flex-col divide-y divide-line rounded-2xl px-5">
           {EXPERT_JOIN_FAQ.map((f) => (
             <details key={f.q} className="group py-3.5">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 t-body font-bold text-ink">
@@ -263,7 +265,7 @@ export default function ExpertJoinPage() {
       </section>
 
       {/* ---------- 마지막 CTA ---------- */}
-      <section className="rise-in brand-navy-card mb-5 flex flex-col items-start gap-3 rounded-[18px] px-5 py-5 md:flex-row md:items-center md:justify-between md:px-7">
+      <section className="rise-in brand-navy-card mb-5 flex flex-col items-start gap-3 rounded-3xl px-5 py-5 md:flex-row md:items-center md:justify-between md:px-7">
         <div>
           <div className="t-section text-on-dark">접수부터 승인까지, 진행 상황은 알림으로</div>
           <p className="mt-0.5 t-sub text-on-dark-muted">

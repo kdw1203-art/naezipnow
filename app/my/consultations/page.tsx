@@ -1,3 +1,4 @@
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 17곳을 font-bold(700)로 바꿨다. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -91,7 +92,7 @@ function SectionHead({
 function EmptyCard({ title, body, cta }: { title: string; body: string; cta?: { href: string; label: string } }) {
   return (
     <div className="card flex flex-col items-center gap-2 rounded-2xl px-5 py-9 text-center">
-      <div className="t-body font-extrabold text-ink">{title}</div>
+      <div className="t-body font-bold text-ink">{title}</div>
       <p className="max-w-[420px] t-sub text-text-3">{body}</p>
       {cta && (
         <Link href={cta.href} className="btn-soft btn-md mt-1 no-underline">
@@ -177,7 +178,7 @@ export default async function MyConsultationsPage() {
         ) : (
           <Link href="/town/experts" className="card card-pad-sm flex flex-col justify-between gap-0.5 no-underline">
             <span className="t-sub text-text-3">전문가 찾기</span>
-            <span className="t-body font-extrabold text-primary">분야·지역으로 보기 ›</span>
+            <span className="t-body font-bold text-primary">분야·지역으로 보기 ›</span>
           </Link>
         )}
       </div>
@@ -204,7 +205,7 @@ export default async function MyConsultationsPage() {
                   }`}
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className={`rounded-md chip-pad t-caption font-extrabold ${meta.cls}`}>{meta.label}</span>
+                    <span className={`rounded-md chip-pad t-caption font-bold ${meta.cls}`}>{meta.label}</span>
                     <span className="rounded-md bg-bg chip-pad t-sub font-bold text-text-2">{TYPE_LABEL[c.type]}</span>
                     <Link href={`/town/experts/${c.expertId}`} className="t-body font-bold text-ink no-underline hover:text-primary">
                       {c.expertLabel ?? "전문가"} 님께
@@ -233,7 +234,7 @@ export default async function MyConsultationsPage() {
                       <ReviewForm expertId={c.expertId} expertName={c.expertLabel ?? "전문가"} consultationId={c.id} />
                     )}
                     {c.status === "replied" && reviewedIds.has(c.id) && (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-success-soft chip-pad t-sub font-extrabold text-success">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-success-soft chip-pad t-sub font-bold text-success">
                         <Icon name="check" size={12} /> 후기 남김
                       </span>
                     )}
@@ -265,10 +266,10 @@ export default async function MyConsultationsPage() {
               return (
                 <div key={r.id} className="card flex flex-col gap-2.5 rounded-2xl p-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-md bg-primary-soft chip-pad t-caption font-extrabold text-primary">{r.requestType}</span>
-                    <span className="t-body font-extrabold text-ink">{r.title}</span>
+                    <span className="rounded-md bg-primary-soft chip-pad t-caption font-bold text-primary">{r.requestType}</span>
+                    <span className="t-body font-bold text-ink">{r.title}</span>
                     <span
-                      className={`rounded-md chip-pad t-caption font-extrabold ${
+                      className={`rounded-md chip-pad t-caption font-bold ${
                         r.status === "open" ? "bg-success-soft text-success" : "bg-bg text-text-3"
                       }`}
                     >
@@ -285,7 +286,7 @@ export default async function MyConsultationsPage() {
                     </p>
                   ) : (
                     <div className="flex flex-col gap-2">
-                      <div className="t-sub font-extrabold text-ink">받은 제안 {proposals.length}건</div>
+                      <div className="t-sub font-bold text-ink">받은 제안 {proposals.length}건</div>
                       {proposals.map((p) => (
                         <div key={p.id} className="flex flex-col gap-1.5 rounded-xl border border-line bg-bg px-3.5 py-2.5">
                           <div className="flex flex-wrap items-center gap-2">
@@ -296,7 +297,7 @@ export default async function MyConsultationsPage() {
                             ) : (
                               <span className="t-body font-bold text-ink">{p.expertLabel}</span>
                             )}
-                            <span className="rounded-md bg-primary-soft chip-pad t-caption font-extrabold text-primary">인증</span>
+                            <span className="rounded-md bg-primary-soft chip-pad t-caption font-bold text-primary">인증</span>
                             <span className="ml-auto t-caption text-text-3">{timeAgo(p.createdAt)}</span>
                           </div>
                           <p className="whitespace-pre-wrap t-sub text-text-2">{p.message}</p>
@@ -324,12 +325,12 @@ export default async function MyConsultationsPage() {
           {/* 전문가 요약 */}
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="t-body font-extrabold text-ink">{expert.name}</span>
+              <span className="t-body font-bold text-ink">{expert.name}</span>
               <span className="rounded-md bg-bg chip-pad t-sub font-bold text-text-2">{expert.category}</span>
               {expert.isVerified ? (
-                <span className="rounded-md bg-success-soft chip-pad t-sub font-extrabold text-success">인증 완료</span>
+                <span className="rounded-md bg-success-soft chip-pad t-sub font-bold text-success">인증 완료</span>
               ) : (
-                <span className="rounded-md border border-warning-border bg-warning-soft chip-pad t-sub font-extrabold text-warning">인증 검토 중</span>
+                <span className="rounded-md border border-warning-border bg-warning-soft chip-pad t-sub font-bold text-warning">인증 검토 중</span>
               )}
             </div>
             <div className="flex gap-2">
@@ -383,7 +384,7 @@ export default async function MyConsultationsPage() {
                     className={`card card-pad-sm flex flex-col gap-2.5 ${c.status === "pending" ? "border-l-[3px] border-l-brand-red" : ""}`}
                   >
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className={`rounded-md chip-pad t-caption font-extrabold ${meta.cls}`}>
+                      <span className={`rounded-md chip-pad t-caption font-bold ${meta.cls}`}>
                         {c.status === "replied" ? "답변함" : meta.label}
                       </span>
                       <span className="rounded-md bg-bg chip-pad t-sub font-bold text-text-2">{TYPE_LABEL[c.type]}</span>
@@ -428,7 +429,7 @@ export default async function MyConsultationsPage() {
 
           {/* ── 견적 요청 보드 ── */}
           <div className="mt-8 mb-3 flex items-baseline justify-between">
-            <h3 className="t-body font-extrabold text-ink">견적 요청 보드</h3>
+            <h3 className="t-body font-bold text-ink">견적 요청 보드</h3>
             <span className="t-sub text-text-3">이용자들이 올린 열린 요청 · 제안은 요청당 1건</span>
           </div>
           {boardFailed ? (
@@ -444,8 +445,8 @@ export default async function MyConsultationsPage() {
               {board.map((r) => (
                 <div key={r.id} className="card flex flex-col gap-2 rounded-2xl p-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-md bg-primary-soft chip-pad t-caption font-extrabold text-primary">{r.requestType}</span>
-                    <span className="t-body font-extrabold text-ink">{r.title}</span>
+                    <span className="rounded-md bg-primary-soft chip-pad t-caption font-bold text-primary">{r.requestType}</span>
+                    <span className="t-body font-bold text-ink">{r.title}</span>
                     {(boardProposalCounts.get(r.id) ?? 0) > 0 && (
                       <span className="rounded-md bg-bg chip-pad t-caption font-bold text-text-2">제안 {boardProposalCounts.get(r.id)}건</span>
                     )}
@@ -471,7 +472,7 @@ export default async function MyConsultationsPage() {
 
       {!expert && (
         <div className="mb-9 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-line-strong bg-brand-hanji px-5 py-6 text-center">
-          <div className="t-body font-extrabold text-brand-hanji-ink">전문가이신가요?</div>
+          <div className="t-body font-bold text-brand-hanji-ink">전문가이신가요?</div>
           <p className="t-sub text-brand-hanji-ink">
             자격 인증을 마치면 이 화면에서 상담 신청을 받고 답변하며, 견적 요청 보드에 제안을 보낼 수 있어요.
           </p>

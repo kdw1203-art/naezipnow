@@ -20,9 +20,9 @@
  */
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { AIPanel } from "@/app/components/AIPanel";
+import { useEffect, useMemo, useState } from "react";
 import type { AuctionApiItem } from "@/app/api/auctions/route";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* ── lib/onbid/store 는 server-only(supabase) 를 끌고 와 값 import 불가.
       아래 둘은 원본(lib/onbid/store.ts)에서 복제 — 의미 변경 금지. ── */
@@ -78,27 +78,6 @@ function ddayFrom(v: string | null, now: Date): { label: string; urgent: boolean
   if (diff < 0) return null;
   if (diff === 0) return { label: "D-DAY", urgent: true };
   return { label: `D-${diff}`, urgent: diff <= 3 };
-}
-
-function usageDistribution(
-  items: { usage: string | null }[],
-): { label: string; count: number }[] {
-  return AUCTION_USAGE_FILTERS.map((f) => ({
-    label: f.label,
-    count: items.filter((it) => {
-      const u = it.usage;
-      if (!u || f.match.length === 0) return false;
-      const lower = u.toLowerCase();
-      /* 서버(lib/onbid/store.ts)와 동일 규칙: 한 글자("전"·"답")는 정확일치 —
-         %전% 부분일치는 "전시장"류를 토지로 세는 과매칭이었다(2026-08-22). */
-      return f.match.some((m) =>
-        m.length === 1 ? u.trim() === m : lower.includes(m.toLowerCase()),
-      );
-    }).length,
-  }))
-    .filter((c) => c.count > 0)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
 }
 
 function sigunguDistribution(
@@ -218,14 +197,11 @@ export function AuctionsClient({
   initialItems,
   initialActiveTotal,
   builtAtMs,
-  adSlot,
 }: {
   initialItems: AuctionApiItem[];
   initialActiveTotal: number;
   /** 서버 렌더 시각 — SSR/하이드레이션의 시간 파생값을 일치시키는 기준 */
   builtAtMs: number;
-  /** 서버 조각 — AdSlot 은 server-only 의존이라 여기서 못 그린다 */
-  adSlot: ReactNode;
 }) {
   const [f, setF] = useState<Filter>({ usage: null, gu: null, source: "onbid" });
   const [fetched, setFetched] = useState<Fetched>({ state: "idle" });
@@ -304,46 +280,48 @@ export function AuctionsClient({
       .slice(0, 8);
     const cards = activeItems.map((a) => onbidToCard(a, now));
     const pastCards = pastItems.map((a) => onbidToCard(a, now));
-    const dist = usageDistribution(activeItems);
     const guDist = sigunguDistribution(activeItems);
-    const max = Math.max(1, ...dist.map((d) => d.count));
-    const withDday = cards.filter((c) => c.dday !== null);
-    const imminent = withDday.filter((c) => c.dday?.urgent).slice(0, 4);
-    const ongoing = withDday.filter((c) => !c.dday?.urgent).slice(0, 6);
     const { monthLabel, cells } = buildCalendar(cards.map((c) => c.targetDate), now);
-    return { cards, pastCards, dist, guDist, max, imminent, ongoing, monthLabel, cells };
+    return { cards, pastCards, guDist, monthLabel, cells };
   }, [items, nowMs]);
 
-  const { cards, pastCards, dist, guDist, max, imminent, ongoing, monthLabel, cells } = derived;
+  const { cards, pastCards, guDist, monthLabel, cells } = derived;
   const weekdays = ["월", "화", "수", "목", "금", "토", "일"];
 
+  /* [v4] 선택 칩 = 한지 + 남색(.chip-active), 나머지 = 흰 면 + 1px 선 — 한 줄 가로 스크롤 필터 칩 */
   const chip = (on: boolean) =>
-    on
-      ? "chip-active px-3 py-1.5 text-xs"
-      : "press chip border border-line bg-surface px-3 py-1.5 text-xs text-text-2";
+    `press chip shrink-0 px-3 py-1.5 t-sub font-bold ${on ? "chip-active border" : "border border-line bg-surface text-text-2"}`;
+  const filtered = Boolean(f.usage || f.gu);
+  /* 조건 이름 — 용도는 키("apt")가 아니라 라벨("아파트")로 적는다 */
+  const conditionLabel = [f.gu, AUCTION_USAGE_FILTERS.find((x) => x.key === f.usage)?.label].filter(Boolean).join(" · ");
 
   /* [개선 #23, 2026-08-22] 경매(법원) 탭 제거 — 결정 근거:
      대법원 법원경매정보는 공개 API 를 제공하지 않고, 동기화 코드는 소스 키
      미설정 스텁 상태였다(court_auctions 1행 실측). 상시 "준비 중" 탭은
      신뢰만 깎는다 — 탭을 내리고 아래 외부 링크 한 줄로 대체한다. 백엔드
      (store·sync·크론)는 소스가 생기는 날을 위해 남겨 둔다.
-     구 딥링크(?source=court)는 온비드 화면으로 자연 수렴한다. */
+     구 딥링크(?source=court)는 온비드 화면으로 자연 수렴한다.
+
+     [v4] "한 화면 한 가지" — 주인공은 **물건 목록 하나**(1px 선 행). 위에서 아래로:
+       용도 칩 한 줄 → 지역 칩 한 줄(예전 사이드 "지역별 요약" 버튼 — 같은 gu 필터) → 목록(마감 임박순) → 더 보기 →
+       채움 파랑 "저장 검색으로 알림 받기"(하나) → 입찰 캘린더·지난 공고(접힘).
+     같은 물건을 세 번 보이던 "진행 중 물건" 카드 6장 · "마감 임박/예정" 카드 4장 · 표를 **한 목록**으로 합쳤다
+     (행 = 물건명 + 소재지 · 용도 · 감정가 / 최저입찰가 + D-day). 요약 문장·파랑 안내 상자·"공매 인사이트"
+     네이비 패널(AI 결과가 아니다 — 입찰 중 건수·현재 목록 수·최다 용도 문장)·용도별 막대(불러온 200건 기준 분포)·
+     광고 슬롯은 뺐다. 출처·면책·온비드 링크는 페이지 끝 "데이터 출처"(page.tsx)로. */
   return (
-    <>
-      {/* 상단 필 행: 용도 필터 + CTA */}
-      <div className="rise-in mb-4 flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        {/* 용도 필터 — 한 줄 가로 스크롤 */}
+        <div className="rail-x -mx-3.5 px-3.5 md:mx-0 md:px-0" role="group" aria-label="용도">
           <button
             type="button"
             onClick={() => set({ usage: null })}
+            aria-pressed={!f.usage}
             /* [975] 예전엔 여기 style={{color:"#fff"}} 가 있었다. 962 에서 chip-active
                배경이 잉크 채움 → 한지(#F6F1E7)로 바뀌었는데 이 인라인만 남아서
                크림 위 흰 글자, 1.13:1 이 됐다. 색은 클래스가 정한다. */
-            className={
-              !f.usage
-                ? "chip-active px-3 py-1.5 text-xs"
-                : "press chip border border-line bg-surface px-3 py-1.5 text-xs text-text-2"
-            }
+            className={chip(!f.usage)}
           >
             전체
           </button>
@@ -351,95 +329,143 @@ export function AuctionsClient({
             <button
               key={x.key}
               type="button"
+              aria-pressed={f.usage === x.key}
               onClick={() => set({ usage: f.usage === x.key ? null : x.key })}
-              style={f.usage === x.key ? { color: "#fff" } : undefined}
               className={chip(f.usage === x.key)}
             >
               {x.label}
             </button>
           ))}
         </div>
-        <div className="flex-1" />
-        <div className="flex gap-1.5 text-xs">
-          <a
-            href="https://www.onbid.co.kr"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="press glass rounded-full px-3.5 py-2 font-bold text-primary no-underline"
-          >
-            온비드 바로가기 ↗
-          </a>
-          <Link
-            href="/my/watchlist?tab=searches"
-            className="press rounded-full bg-primary-soft px-3.5 py-2 font-bold text-primary no-underline"
-          >
-            저장 검색으로 알림 받기
-          </Link>
-        </div>
-      </div>
 
-      {/* 요약 라인 */}
-      <p className="rise-in mb-3 t-body text-text-2">
-        한국자산관리공사 <strong className="text-ink">온비드</strong> 공매 부동산 — 입찰
-        중·예정 물건 <strong className="text-ink">{activeTotal.toLocaleString()}건</strong>.
-        감정가·최저입찰가·입찰일정은 공공 데이터 기준입니다.
-      </p>
-
-      {/* 정직 안내 · 면책 */}
-      <div className="rise-in mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-primary-soft px-4 py-3 t-sub text-primary">
-        <span>
-          감정가·최저입찰가·입찰일정은 <b className="font-bold">공공 데이터</b> 기준이며 매일
-          자동 갱신됩니다. 갱신 사이에 변경·취소될 수 있으니 실제 입찰·명도 조건은{" "}
-          <a
-            href="https://www.onbid.co.kr"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-bold text-primary underline"
-          >
-            온비드(onbid.co.kr)
-          </a>{" "}
-          공고 원문을 반드시 확인하세요.
-        </span>
+        {/* 지역(자치구) 필터 — 예전 오른쪽 "지역별 요약" 카드의 버튼과 같은 gu 필터. 숫자는 붙이지 않는다
+            (불러온 목록 기준 수라, 누르면 전체에서 거른 결과와 달라질 수 있다) */}
+        {(guDist.length > 0 || f.gu) && (
+          <div className="rail-x -mx-3.5 px-3.5 md:mx-0 md:px-0" role="group" aria-label="지역">
+            <button type="button" onClick={() => set({ gu: null })} aria-pressed={!f.gu} className={chip(!f.gu)}>
+              전 지역
+            </button>
+            {guDist
+              .filter((g) => g.name !== f.gu)
+              .concat(f.gu ? [{ name: f.gu, count: 0 }] : [])
+              .sort((a, b) => (a.name === f.gu ? -1 : b.name === f.gu ? 1 : 0))
+              .map((g) => (
+                <button
+                  key={g.name}
+                  type="button"
+                  aria-pressed={f.gu === g.name}
+                  onClick={() => set({ gu: f.gu === g.name ? null : g.name })}
+                  className={chip(f.gu === g.name)}
+                >
+                  {g.name}
+                </button>
+              ))}
+          </div>
+        )}
       </div>
 
       {fetchFailed ? (
-        /* 필터 조회 실패 — "0건"이 아니라 실패라고 말한다 */
-        <div className="rise-in-1 card p-[var(--pad-card)]">
-          <div className="rounded-[10px] border border-line bg-surface px-4 py-12 text-center t-body text-text-3">
-            이 조건의 목록을 지금 불러오지 못했어요 — 물건이 0건인 게 아니라 조회가
-            실패했습니다. 잠시 후 다시 시도하거나{" "}
-            <button
-              type="button"
-              onClick={() => set({ usage: null, gu: null })}
-              className="font-bold text-primary underline"
-            >
-              전체 목록으로 돌아가세요
-            </button>
-            .
-          </div>
+        /* 필터 조회 실패 — "0건"이 아니라 실패라고 말한다. [v4] 빈 상자 → 한 줄 + 버튼 */
+        <div className="flex flex-col items-center gap-3 py-12 text-center">
+          <p className="t-body text-text-2">이 조건의 목록을 지금 불러오지 못했어요 — 물건이 0건인 게 아니라 조회 실패</p>
+          <button type="button" onClick={() => set({ usage: null, gu: null })} className="btn-outline btn-md">
+            {/* [1012] 규칙 5 — 동사 + 구체 대상 */}
+            전체 {activeTotal.toLocaleString()}건 보기
+          </button>
         </div>
       ) : fetchLoading ? (
-        <div className="rise-in-1 card p-[var(--pad-card)]">
-          <div className="rounded-[10px] border border-line bg-surface px-4 py-12 text-center t-body text-text-3">
-            조건에 맞는 물건을 불러오는 중…
-          </div>
-        </div>
+        <p className="py-12 text-center t-body text-text-3">조건에 맞는 물건을 불러오는 중…</p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="flex flex-col gap-3">
-            {/* a) 입찰 캘린더 */}
-            <div className="rise-in-1 card flex flex-col gap-2.5 rounded-2xl px-5 py-4">
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-[13px] font-extrabold text-ink">
-                  {monthLabel} 입찰 캘린더
-                </span>
-                <div className="flex gap-2.5 t-sub">
-                  <span className="flex items-center gap-1 text-text-2">
-                    <span className="h-2 w-2 rounded-[2px] bg-primary" />
-                    입찰마감일
-                  </span>
-                </div>
-              </div>
+        <>
+          {/* 주인공 — 진행·예정 물건 목록(마감 임박순). 행 전체가 온비드 검색(새 탭)으로 간다 */}
+          <section aria-labelledby="auction-list-title" className="flex flex-col gap-1">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 id="auction-list-title" className="t-section text-ink">
+                진행·예정 물건
+              </h2>
+              <span className="shrink-0 t-sub text-text-3">
+                {filtered ? (
+                  <>
+                    {conditionLabel}{" "}
+                    <span className="t-num">{cards.length.toLocaleString()}</span>건
+                  </>
+                ) : (
+                  "마감 임박순"
+                )}
+              </span>
+            </div>
+            {cards.length === 0 ? (
+              /* [1012] 규칙 6 — 어디서(조건)·전체 건수. [v4] 빈 상태는 한 줄 */
+              <p className="py-6 t-sub text-text-3">
+                {conditionLabel || "현재 조건"} 진행·예정 공매 물건 0건 · 온비드 전체{" "}
+                {activeTotal.toLocaleString()}건
+              </p>
+            ) : (
+              <ul data-tone="sand" className="divide-y divide-line">
+                {cards.slice(0, rowCap).map((c) => (
+                  <li key={c.key}>
+                    <a
+                      href={c.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="온비드에서 보기"
+                      className="flex min-h-14 items-center gap-3 py-3 no-underline"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate t-body font-bold text-ink">{c.name}</span>
+                        <span className="mt-0.5 block truncate t-sub text-text-3">
+                          {[c.region, c.usage, c.appraisalValue !== "—" ? `감정 ${c.appraisalValue}` : null]
+                            .filter(Boolean)
+                            .join(" · ") || "—"}
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 flex-col items-end gap-0.5">
+                        <span className="t-body font-bold text-ink">
+                          <span className="t-caption font-normal text-text-3">최저 </span>
+                          <span className="t-num">{c.minBidValue}</span>
+                        </span>
+                        {/* [970 · B-35] "D-17" 줄바꿈 금지 · 임박(3일 안)은 위험색 글자 */}
+                        <span
+                          className={`whitespace-nowrap t-caption t-num ${
+                            c.dday?.urgent ? "font-bold text-danger" : "text-text-3"
+                          }`}
+                        >
+                          {c.dday ? c.dday.label : c.dateValue}
+                        </span>
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {cards.length > rowCap && (
+              <button
+                type="button"
+                onClick={() => setRowCap((n) => n + 48)}
+                className="btn-ghost btn-md mt-2 w-full"
+              >
+                {/* [1012] 규칙 5 — 동사 + 대상 */}
+                물건 더 보기 ({Math.min(rowCap, cards.length).toLocaleString()} / {cards.length.toLocaleString()}건)
+              </button>
+            )}
+          </section>
+
+          {/* [1012] 규칙 9 — 이 화면의 채움 파랑 1개. [v4] 목록 위 알약 · 네이비 패널 안 한지 칩 두 곳 → 목록 끝 하나 */}
+          <Link href="/my/watchlist?tab=searches" className="btn-primary btn-md w-full no-underline">
+            저장 검색으로 알림 받기
+          </Link>
+
+          {/* 곁가지 둘 — 접힘(1px 선으로 이어진 행) */}
+          <div className="flex flex-col border-b border-line">
+          {/* 입찰 캘린더 — [v4] 카드 → 접힘(곁가지). 달력 칸 자체는 그대로(마감일이 있는 날 표시) */}
+          <details className="group border-t border-line pt-1">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
+              {monthLabel} 입찰 캘린더
+              <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
+                ›
+              </span>
+            </summary>
+            <div className="flex flex-col gap-2 pb-3">
               <div className="grid grid-cols-7 gap-1 text-center t-caption text-text-3">
                 {weekdays.map((d) => (
                   <span key={d}>{d}</span>
@@ -460,343 +486,48 @@ export function AuctionsClient({
                     }`}
                   >
                     {c.day}
-                    {c.mark && <div className="mt-0.5 h-1.5 rounded-[2px] bg-primary" />}
+                    {c.mark && <div className="mt-0.5 h-1.5 rounded-sm bg-primary" />}
                   </div>
                 ))}
               </div>
+              <p className="t-caption text-text-3">파랑 칸 = 입찰 마감일이 있는 날</p>
             </div>
+          </details>
 
-            {/* b) 진행 중 물건 */}
-            {ongoing.length > 0 && (
-              <>
-                <div className="rise-in-2 px-1 text-xs font-extrabold text-primary">
-                  진행 중 물건 ({ongoing.length}건)
-                </div>
-                {ongoing.map((c) => (
-                  <div
-                    key={c.key}
-                    className="rise-in-2 flex flex-col gap-3 rounded-2xl border-[1.5px] border-primary bg-surface px-[18px] py-3.5 md:flex-row md:items-center md:justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      {c.dday && (
-                        <span
-                          /* [970 · B-35] 좁은 카드에서 "D-17"이 두 줄로 꺾였다 — 줄바꿈·수축 금지 */
-                          className={`shrink-0 whitespace-nowrap rounded-md chip-pad text-[12px] font-extrabold text-white ${
-                            c.dday.urgent ? "bg-danger" : "bg-primary"
-                          }`}
-                        >
-                          {c.dday.label}
-                        </span>
-                      )}
-                      <div>
-                        <div className="flex flex-wrap items-center gap-1.5 text-[13px] font-extrabold text-ink">
-                          {c.name}
-                          {c.usage && (
-                            <span className="rounded bg-primary-soft px-[7px] py-0.5 t-caption font-extrabold text-primary">
-                              {c.usage}
-                            </span>
-                          )}
-                        </div>
-                        <div className="t-sub text-text-3">{c.region || "—"}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3.5">
-                      <div className="text-right">
-                        <div className="t-sub text-text-3">감정가</div>
-                        <div className="t-body font-extrabold text-ink">{c.appraisalValue}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="t-sub text-text-3">최저입찰가</div>
-                        <div className="t-body font-extrabold text-primary">{c.minBidValue}</div>
-                      </div>
-                      <a
-                        href={c.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: "#fff" }}
-                        className="btn-primary rounded-[10px] px-4 py-[9px] text-xs no-underline"
-                      >
-                        온비드 검색 ↗
-                      </a>
-                    </div>
-                  </div>
+          {/* 지난 공고 — 입찰이 마감된 최근 물건. [v4] 카드 안 표 → 접힘 안 1px 선 행 */}
+          {pastCards.length > 0 && (
+            <details className="group border-t border-line pt-1">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
+                <span>
+                  지난 공고 <span className="t-sub font-normal text-text-3">최근 마감 {pastCards.length}건</span>
+                </span>
+                <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
+                  ›
+                </span>
+              </summary>
+              <ul data-tone="hanji" className="divide-y divide-line pb-2">
+                {pastCards.map((c) => (
+                  <li key={c.key} className="flex min-h-14 items-center gap-3 py-3">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate t-body font-bold text-text-2">{c.name}</span>
+                      <span className="mt-0.5 block truncate t-sub text-text-3">
+                        {[c.region, c.usage].filter(Boolean).join(" · ") || "—"}
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 flex-col items-end gap-0.5">
+                      <span className="t-body t-num text-text-2">{c.minBidValue}</span>
+                      <span className="t-caption t-num text-text-3">{c.dateValue} 마감</span>
+                    </span>
+                  </li>
                 ))}
-              </>
-            )}
-
-            {/* c) 마감 임박 / 예정 */}
-            {imminent.length > 0 && (
-              <>
-                <div className="rise-in-3 px-1 pt-1.5 text-xs font-extrabold text-danger">
-                  마감 임박 / 예정 ({imminent.length}건)
-                </div>
-                {imminent.map((c) => (
-                  <div
-                    key={c.key}
-                    className="rise-in-3 card flex items-center justify-between rounded-2xl px-[18px] py-3.5"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="rounded-md bg-danger-fill chip-pad t-sub font-extrabold text-white">
-                        {c.dday?.label}
-                      </span>
-                      <div>
-                        <div className="flex flex-wrap items-center gap-1.5 text-[13px] font-extrabold text-ink">
-                          {c.name}
-                          {c.usage && (
-                            <span className="rounded bg-primary-soft px-[7px] py-0.5 t-caption font-extrabold text-primary">
-                              {c.usage}
-                            </span>
-                          )}
-                        </div>
-                        <div className="t-sub text-text-3">
-                          {c.region || "—"} · 최저입찰가 {c.minBidValue}
-                        </div>
-                      </div>
-                    </div>
-                    <a
-                      href={c.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-[10px] bg-primary-soft px-4 py-[9px] text-xs font-bold text-primary no-underline"
-                    >
-                      온비드 검색 ›
-                    </a>
-                  </div>
-                ))}
-              </>
-            )}
-
-            {/* d) 진행·예정 물건 표 */}
-            <div className="rise-in-4 px-1 pt-1.5 text-xs font-extrabold text-text-3">
-              진행·예정 물건 · 온비드 실데이터 {activeTotal.toLocaleString()}건
-              {(f.usage || f.gu) && <> · 현재 조건 {cards.length.toLocaleString()}건</>}
-            </div>
-            {cards.length === 0 ? (
-              <div className="rise-in-4 card p-[var(--pad-card)]">
-                <div className="rounded-[10px] border border-line bg-surface px-4 py-12 text-center t-body text-text-3">
-                  현재 조건의 진행·예정 공매 물건이 없어요. 데이터는 매일 자동
-                  갱신됩니다.
-                </div>
-              </div>
-            ) : (
-              <div className="rise-in-4 card overflow-x-auto rounded-2xl px-[18px] py-1">
-                <div className="min-w-[560px]">
-                  <div className="grid grid-cols-[1.9fr_.8fr_.8fr_.8fr_1fr] gap-2 border-b border-divider py-2 t-caption text-text-3">
-                    <span>물건 · 소재지</span>
-                    <span className="text-center">용도</span>
-                    <span className="text-center">감정가</span>
-                    <span className="text-center">최저가</span>
-                    <span className="text-center">입찰마감</span>
-                  </div>
-                  {cards.slice(0, rowCap).map((c, i, arr) => (
-                    <div
-                      key={c.key}
-                      className={`grid grid-cols-[1.9fr_.8fr_.8fr_.8fr_1fr] items-center gap-2 py-2.5 text-xs ${
-                        i < arr.length - 1 ? "border-b border-divider" : ""
-                      }`}
-                    >
-                      <span className="truncate-1 font-bold text-ink">
-                        {c.name}
-                        {c.region ? (
-                          <span className="ml-1 t-caption font-medium text-text-3">{c.region}</span>
-                        ) : null}
-                      </span>
-                      <span className="truncate-1 text-center font-bold text-text-1">
-                        {c.usage ?? "—"}
-                      </span>
-                      <span className="text-center font-bold text-text-1">{c.appraisalValue}</span>
-                      <span className="text-center font-extrabold text-primary">{c.minBidValue}</span>
-                      <span className="text-center font-bold text-text-1">{c.dateValue}</span>
-                    </div>
-                  ))}
-                  {cards.length > rowCap && (
-                    <button
-                      type="button"
-                      onClick={() => setRowCap((n) => n + 48)}
-                      className="press my-2 w-full rounded-xl bg-bg py-2.5 text-center t-sub font-bold text-primary"
-                    >
-                      더보기 ({Math.min(rowCap, cards.length).toLocaleString()} /{" "}
-                      {cards.length.toLocaleString()}건)
-                    </button>
-                  )}
-                  <div className="pb-2 pt-1 t-caption text-text-3">
-                    마감 임박순 · 출처: 한국자산관리공사 온비드(공공데이터포털) · 매일 자동
-                    갱신
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* e) 지난 공고 */}
-            {pastCards.length > 0 && (
-              <details className="rise-in-4 card rounded-2xl px-[18px] py-3">
-                <summary className="cursor-pointer text-xs font-extrabold text-text-3">
-                  지난 공고 (최근 마감 {pastCards.length}건 보기)
-                </summary>
-                <div className="mt-2 overflow-x-auto">
-                  <div className="min-w-[560px]">
-                    <div className="grid grid-cols-[1.9fr_.8fr_.8fr_.8fr_1fr] gap-2 border-b border-divider py-2 t-caption text-text-3">
-                      <span>물건 · 소재지</span>
-                      <span className="text-center">용도</span>
-                      <span className="text-center">감정가</span>
-                      <span className="text-center">최저가</span>
-                      <span className="text-center">입찰마감</span>
-                    </div>
-                    {pastCards.map((c, i, arr) => (
-                      <div
-                        key={c.key}
-                        className={`grid grid-cols-[1.9fr_.8fr_.8fr_.8fr_1fr] items-center gap-2 py-2.5 text-xs opacity-70 ${
-                          i < arr.length - 1 ? "border-b border-divider" : ""
-                        }`}
-                      >
-                        <span className="truncate-1 font-bold text-ink">
-                          {c.name}
-                          {c.region ? (
-                            <span className="ml-1 t-caption font-medium text-text-3">
-                              {c.region}
-                            </span>
-                          ) : null}
-                        </span>
-                        <span className="truncate-1 text-center font-bold text-text-1">
-                          {c.usage ?? "—"}
-                        </span>
-                        <span className="text-center font-bold text-text-1">{c.appraisalValue}</span>
-                        <span className="text-center font-bold text-text-1">{c.minBidValue}</span>
-                        <span className="text-center font-bold text-text-1">{c.dateValue}</span>
-                      </div>
-                    ))}
-                    <div className="pb-1 pt-1 t-caption text-text-3">
-                      입찰이 마감된 공고예요 — 결과·재공고 여부는 온비드에서 확인하세요.
-                    </div>
-                  </div>
-                </div>
-              </details>
-            )}
-
-            <p className="rise-in-4 mt-1 px-1 t-sub text-text-3">
-              출처: 한국자산관리공사 온비드(공공데이터포털) · 참고용 정보이며 권리분석·명도·정확한
-              입찰조건은 온비드 공고 원문과 전문가 확인이 필요합니다.
-            </p>
+              </ul>
+              <p className="pb-3 t-caption text-text-3">결과·재공고 여부는 온비드 공고 원문</p>
+            </details>
+          )}
           </div>
-
-          {/* 우측 사이드 */}
-          <aside className="flex flex-col gap-3.5">
-            <div className="rise-in-2">
-              <AIPanel title="공매 인사이트" className="rounded-[18px]">
-                <div className="mb-1.5 flex justify-between rounded-lg bg-[rgba(255,255,255,.07)] px-3 py-2 text-xs">
-                  <span className="text-ai-muted">입찰 중·예정</span>
-                  <span className="font-extrabold text-white">
-                    {activeTotal.toLocaleString()}건
-                  </span>
-                </div>
-                <div className="mb-2 flex justify-between rounded-lg bg-[rgba(255,255,255,.07)] px-3 py-2 text-xs">
-                  <span className="text-ai-muted">현재 목록 표시</span>
-                  <span className="font-extrabold text-ai-accent">
-                    {cards.length.toLocaleString()}건
-                  </span>
-                </div>
-                {dist.length > 0 ? (
-                  <>
-                    현재 목록에서 <b className="text-ai-accent">{dist[0].label}</b>이(가){" "}
-                    {dist[0].count}건으로 가장 많아요. 실입찰 전 공고 원문에서 권리·명도 조건을
-                    반드시 확인하세요.
-                  </>
-                ) : (
-                  <>
-                    현재 조건에 표시할 물건이 없어요. 데이터가 연동·갱신되면 용도 분포·인사이트가
-                    자동으로 채워집니다.
-                  </>
-                )}
-                <Link
-                  href="/my/watchlist?tab=searches"
-                  style={{ color: "#fff" }}
-                  className="btn-primary mt-2.5 block rounded-[10px] p-[11px] text-center text-xs no-underline"
-                >
-                  저장 검색으로 알림 받기
-                </Link>
-              </AIPanel>
-            </div>
-
-            {/* 지역(자치구)별 요약 — 버튼이 gu 필터를 세팅한다 */}
-            <div className="rise-in-3 card flex flex-col gap-2 rounded-[18px] p-[18px]">
-              <div className="flex items-center justify-between t-body font-extrabold text-ink">
-                지역별 요약
-                {f.gu && (
-                  <button
-                    type="button"
-                    onClick={() => set({ gu: null })}
-                    className="t-sub font-bold text-primary"
-                  >
-                    {f.gu} 해제 ×
-                  </button>
-                )}
-              </div>
-              {guDist.length > 0 ? (
-                guDist.map((g) => (
-                  <button
-                    key={g.name}
-                    type="button"
-                    onClick={() => set({ gu: f.gu === g.name ? null : g.name })}
-                    aria-current={f.gu === g.name ? "page" : undefined}
-                    className={`press flex items-center justify-between rounded-lg px-1.5 py-[6px] text-xs ${
-                      f.gu === g.name ? "bg-primary-soft" : ""
-                    }`}
-                  >
-                    <span className="font-bold text-ink">{g.name}</span>
-                    <span className="text-text-2">{g.count}건</span>
-                  </button>
-                ))
-              ) : (
-                <p className="t-caption text-text-3">
-                  표시할 지역 분포가 아직 없어요. 데이터가 갱신되면 자동으로 채워집니다.
-                </p>
-              )}
-              <p className="t-caption text-text-3">
-                지역을 선택하면 해당 자치구 물건만 볼 수 있어요.
-              </p>
-            </div>
-
-            {/* 용도별 요약 */}
-            <div className="rise-in-3 card flex flex-col gap-2 rounded-[18px] p-[18px]">
-              <div className="flex items-center gap-1.5 t-body font-extrabold text-ink">
-                용도별 요약
-              </div>
-              {dist.length > 0 ? (
-                dist.map((d) => (
-                  <div key={d.label} className="flex items-center gap-2">
-                    <span className="w-16 shrink-0 t-sub text-text-1">{d.label}</span>
-                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-primary-soft">
-                      <span
-                        className="block h-full rounded-full bg-primary"
-                        style={{ width: `${Math.round((d.count / max) * 100)}%` }}
-                      />
-                    </span>
-                    <span className="w-7 shrink-0 text-right t-sub font-bold text-ink">
-                      {d.count}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="t-caption text-text-3">
-                  표시할 용도 분포가 아직 없어요. 데이터가 연동되면 자동으로 채워집니다.
-                </p>
-              )}
-              <a
-                href="https://www.onbid.co.kr"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-0.5 inline-flex min-h-[24px] items-center self-start t-sub font-bold text-primary no-underline"
-              >
-                온비드 바로가기 ↗
-              </a>
-            </div>
-
-            {/* 광고 — 서버 조각 */}
-            <div className="rise-in-4">{adSlot}</div>
-          </aside>
-        </div>
+        </>
       )}
-    </>
+    </div>
   );
 }
 

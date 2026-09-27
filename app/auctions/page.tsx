@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { PageShell } from "@/app/components/PageShell";
-import { AdZone } from "@/app/components/ads/AdZone";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
-import { TownHero } from "@/app/town/TownHero";
+import { TownHero, TownSources } from "@/app/town/TownHero";
 import { getAuctions, getActiveAuctionCount } from "@/lib/onbid/store";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { ErrorState } from "@/app/components/ui/EmptyState";
@@ -58,33 +57,62 @@ export default async function AuctionsPage() {
 
   if (!loaded.ok) {
     return (
-      <PageShell breadcrumb="동네이야기 › 공매 물건" wide>
-        <TownHero href="/auctions" />
-        <TownCategoryNav stick />
-        <div className="theme-auction">
-          <ErrorState
-            title="공매 물건을 지금 불러오지 못했어요"
-            desc="진행 중인 물건이 0건인 게 아니라 조회 자체가 실패했습니다. 잠시 후 새로고침해 주세요. 급하시면 온비드에서 직접 확인하실 수 있어요."
-            action={{ href: "https://www.onbid.co.kr", label: "온비드 바로가기" }}
-          />
+      <PageShell>
+        <div className="mx-auto w-full max-w-[760px]">
+          <TownHero href="/auctions" />
+          <TownCategoryNav stick />
+          <div className="theme-auction">
+            <ErrorState
+              title="공매 물건을 지금 불러오지 못했어요"
+              desc="진행 중인 물건이 0건인 게 아니라 조회 자체가 실패했어요. 잠시 후 새로고침해 주세요. 급하면 온비드 공고에서 볼 수 있어요."
+              action={{ href: "https://www.onbid.co.kr", label: "온비드 공고 보기" }}
+            />
+          </div>
         </div>
       </PageShell>
     );
   }
 
   return (
-    <PageShell breadcrumb="동네이야기 › 공매 물건" wide>
-      <TownHero href="/auctions" />
-      <TownCategoryNav stick />
-      <div className="theme-auction">
-        <AuctionsClient
-          initialItems={slimAuctionItems(loaded.items)}
-          initialActiveTotal={loaded.activeTotal}
-          builtAtMs={Date.now()}
-          adSlot={<AdZone placement="community_feed" seed={0} plan={null} />}
+    /* [v4] "한 화면 한 가지" — 가운데 한 줄(760px): 머리(제목 + 입찰 중·예정 건수) → 카테고리 탭 → 필터 칩 두 줄 →
+       물건 목록(주인공) → 알림 받기(채움 파랑 하나) → 캘린더·지난 공고(접힘) → "데이터 출처" 접힘 → 수익 문구 고지.
+       브레드크럼 문자열("동네이야기 › 공매 물건")은 제목·카테고리 탭과 같은 말이라 뺐고, 하우스 광고(AdZone)도 뺐다. */
+    <PageShell>
+      <div className="mx-auto w-full max-w-[760px]">
+        {/* [1012] 규칙 7 — 머리에 실측(입찰 중·예정 건수). [v4] 네이비 히어로 → 흰 머리 사실 한 줄 */}
+        <TownHero
+          href="/auctions"
+          stats={[{ label: "입찰 중·예정", value: loaded.activeTotal, unit: "건" }]}
         />
-        {/* 수익 문구 미기재 방침(소유자 방침 2026-08-11) — 마켓(공매) 표면 고지 */}
-        <ComplianceNotice variant="market" className="mt-6" />
+        <TownCategoryNav stick />
+        <div className="theme-auction flex flex-col gap-8">
+          <AuctionsClient
+            initialItems={slimAuctionItems(loaded.items)}
+            initialActiveTotal={loaded.activeTotal}
+            builtAtMs={Date.now()}
+          />
+
+          {/* [v4 · 규칙 3] 예전 요약 문장 · 파랑 안내 상자 · 목록 끝 출처 문장 · 사이드 "온비드 바로가기"를 한 곳으로 */}
+          <TownSources>
+            <p>한국자산관리공사 온비드(공공데이터포털) · 감정가·최저입찰가·입찰일정 · 매일 자동 갱신</p>
+            <p>갱신 사이 변경·취소 가능 — 실제 입찰·명도 조건은 온비드 공고 원문 우선</p>
+            <p>참고용 정보 — 권리분석·명도·정확한 입찰조건은 온비드 공고 원문과 전문가 확인 필요</p>
+            <p>
+              <a
+                href="https://www.onbid.co.kr"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="tap-line font-bold text-primary no-underline"
+              >
+                {/* [1012] 규칙 5 — 동사 + 대상 */}
+                온비드 공고 보기 ↗
+              </a>
+            </p>
+          </TownSources>
+
+          {/* 수익 문구 미기재 방침(소유자 방침 2026-08-11) — 마켓(공매) 표면 고지 */}
+          <ComplianceNotice variant="market" />
+        </div>
       </div>
     </PageShell>
   );

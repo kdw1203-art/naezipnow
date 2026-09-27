@@ -71,11 +71,11 @@ export default async function AdminListingsPage() {
       <div className="rise-in flex items-center justify-between">
         <div className="text-[19px] font-extrabold text-white">
           매물 검수{" "}
-          <span className="ml-1 rounded-[6px] bg-[rgba(126,162,255,.15)] chip-pad text-[12px] font-extrabold text-ai-accent">
+          <span className="ml-1 rounded-lg bg-[rgba(126,162,255,.15)] chip-pad text-[12px] font-extrabold text-ai-accent">
             {pendingLoaded.ok ? `대기 ${pending.length}건` : "대기 —"}
           </span>
           {pendingVerifications > 0 && (
-            <span className="ml-1 rounded-[6px] bg-[rgba(242,201,76,.15)] chip-pad text-[12px] font-extrabold text-[#f2c94c]">
+            <span className="ml-1 rounded-lg bg-[rgba(242,201,76,.15)] chip-pad text-[12px] font-extrabold text-[#f2c94c]">
               소유확인 {pendingVerifications}건
             </span>
           )}
@@ -105,7 +105,7 @@ export default async function AdminListingsPage() {
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span
-                  className={`rounded-[6px] chip-pad text-[10px] font-extrabold ${
+                  className={`rounded-lg chip-pad text-[10px] font-extrabold ${
                     l.source === "owner"
                       ? "bg-[rgba(126,162,255,.15)] text-ai-accent"
                       : "bg-[rgba(242,201,76,.15)] text-[#f2c94c]"
@@ -113,7 +113,7 @@ export default async function AdminListingsPage() {
                 >
                   {LISTING_SOURCE_LABEL[l.source]}
                 </span>
-                <span className="rounded-[6px] bg-[rgba(255,255,255,.08)] chip-pad text-[10px] font-extrabold text-[#c9d2e0]">
+                <span className="rounded-lg bg-[rgba(255,255,255,.08)] chip-pad text-[10px] font-extrabold text-[#c9d2e0]">
                   {LISTING_TYPE_LABEL[l.listingType]}
                 </span>
                 <span className="text-[13px] font-extrabold text-white">
@@ -139,7 +139,7 @@ export default async function AdminListingsPage() {
               )}
               {(l.isDuplicate || l.flagReason) && (
                 <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-[rgba(214,69,69,.08)] px-2.5 py-1.5">
-                  <span className="rounded-[6px] bg-[rgba(214,69,69,.2)] chip-pad text-[10px] font-extrabold text-ai-danger">
+                  <span className="rounded-lg bg-[rgba(214,69,69,.2)] chip-pad text-[10px] font-extrabold text-ai-danger">
                     ⚠ 자동 플래그
                   </span>
                   <span className="text-[12px] font-bold text-[#ffb3b3]">
@@ -168,7 +168,7 @@ export default async function AdminListingsPage() {
         <div className="text-[15px] font-extrabold text-white">
           신고 누적 · 자동 숨김{" "}
           {reported.length > 0 && (
-            <span className="ml-1 rounded-[6px] bg-[rgba(214,69,69,.18)] chip-pad text-[12px] font-extrabold text-ai-danger">
+            <span className="ml-1 rounded-lg bg-[rgba(214,69,69,.18)] chip-pad text-[12px] font-extrabold text-ai-danger">
               {reported.length}건
             </span>
           )}
@@ -196,11 +196,11 @@ export default async function AdminListingsPage() {
               className="flex flex-col gap-2 rounded-xl border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.04)] p-4"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-[6px] bg-[rgba(214,69,69,.2)] chip-pad text-[10px] font-extrabold text-ai-danger">
+                <span className="rounded-lg bg-[rgba(214,69,69,.2)] chip-pad text-[10px] font-extrabold text-ai-danger">
                   신고 {l.reportCount}건
                 </span>
                 {l.isHidden && (
-                  <span className="rounded-[6px] bg-[rgba(255,255,255,.12)] chip-pad text-[10px] font-extrabold text-[#c9d2e0]">
+                  <span className="rounded-lg bg-[rgba(255,255,255,.12)] chip-pad text-[10px] font-extrabold text-[#c9d2e0]">
                     숨김 중
                   </span>
                 )}
@@ -208,7 +208,7 @@ export default async function AdminListingsPage() {
                 {l.regionName && (
                   <span className="text-[12px] text-[#9aa6b8]">{l.regionName}</span>
                 )}
-                <span className="rounded-[6px] bg-[rgba(255,255,255,.08)] chip-pad text-[10px] font-extrabold text-[#c9d2e0]">
+                <span className="rounded-lg bg-[rgba(255,255,255,.08)] chip-pad text-[10px] font-extrabold text-[#c9d2e0]">
                   {LISTING_TYPE_LABEL[l.listingType]}
                 </span>
               </div>

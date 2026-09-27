@@ -1,4 +1,6 @@
 "use client";
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
+/* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -157,7 +159,7 @@ export function JourneyBanner() {
     return (
       <div className="card flex flex-col gap-3 rounded-2xl px-[18px] py-4">
         <div className="flex items-baseline justify-between gap-2">
-          <div className="text-[13px] font-extrabold text-ink">지금 어디부터 할까요?</div>
+          <div className="text-[13px] font-bold text-ink">지금 어디부터 할까요?</div>
           <p className="hidden text-[12px] text-text-3 sm:block">
             임장(臨場) = 현장에서 직접 확인 — 기록 → AI 정리 → 지도 비교 순서
           </p>
@@ -168,17 +170,17 @@ export function JourneyBanner() {
               <button
                 type="button"
                 onClick={() => select(s)}
-                className="group flex w-full min-w-0 flex-col items-start gap-1 rounded-xl border border-line bg-surface px-3 py-2.5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(29,79,216,.45)] hover:shadow-[0_10px_22px_rgba(16,28,54,.08)]"
+                className="group flex w-full min-w-0 flex-col items-start gap-1 rounded-xl border border-line bg-surface px-3 py-2.5 text-left transition-colors duration-200 hover:border-primary"
               >
                 <span className="flex items-center gap-1.5">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-soft t-caption font-extrabold text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-soft t-caption font-bold text-primary transition-colors group-hover:bg-primary group-hover:text-white">
                     {i + 1}
                   </span>
                   <StepIcon
                     step={s}
                     className="h-4 w-4 text-text-3 transition-all duration-200 group-hover:scale-110 group-hover:text-primary"
                   />
-                  <span className="t-body font-extrabold text-text-1 group-hover:text-primary">
+                  <span className="t-body font-bold text-text-1 group-hover:text-primary">
                     {STEP_LABEL[s].split(". ")[1]}
                   </span>
                 </span>
@@ -208,9 +210,9 @@ export function JourneyBanner() {
               type="button"
               onClick={() => select(s)}
               aria-current={s === step ? "step" : undefined}
-              className={`flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-[12px] font-extrabold transition-all duration-200 ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-[12px] font-bold transition-all duration-200 ${
                 s === step
-                  ? "bg-primary text-white shadow-[0_4px_12px_rgba(29,79,216,.3)]"
+                  ? "bg-primary text-white"
                   : i < activeIdx
                     ? "bg-primary-soft text-primary"
                     : "bg-[rgba(0,0,0,.04)] text-text-3 hover:text-text-1"
@@ -238,7 +240,7 @@ export function JourneyBanner() {
           <Link
             key={r.href + r.label}
             href={r.href}
-            className="group chip border border-primary/30 bg-primary-soft px-2.5 py-1 text-[12px] font-bold text-primary no-underline transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_14px_rgba(29,79,216,.18)]"
+            className="group chip border border-primary/30 bg-primary-soft px-2.5 py-1 text-[12px] font-bold text-primary no-underline transition-colors duration-150 hover:border-primary"
           >
             {r.label}
             <span aria-hidden className="ml-0.5 inline-block transition-transform duration-150 group-hover:translate-x-0.5">

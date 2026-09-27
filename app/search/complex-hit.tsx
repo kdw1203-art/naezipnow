@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 import { highlightParts } from "@/lib/search/highlight";
 import { complexFacts, complexPlace, type ComplexPreview } from "@/lib/search/complex-preview";
 
@@ -12,7 +13,7 @@ export function Hl({ text, q }: { text: string; q: string }) {
     <>
       {parts.map((p, i) =>
         p.hit ? (
-          <mark key={i} className="bg-transparent font-extrabold text-primary">
+          <mark key={i} className="bg-transparent font-bold text-primary">
             {p.text}
           </mark>
         ) : (

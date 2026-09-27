@@ -37,11 +37,13 @@ test("모르는 값은 지어내지 않고 원문을 돌려준다", () => {
   assert.equal(planLabel(""), "—");
 });
 
-test("배지는 유료 플랜에만 ✦ 를 붙인다", () => {
-  assert.equal(planBadgeLabel("pro"), "✦ 플러스");
-  assert.equal(planBadgeLabel("expert"), "✦ 프로");
+/* [1012] ✦ 를 뗐다 — 디자인 시스템 v3 규칙 4(반짝이·이모지 배지 금지). 배지 이름은 planLabel 과 같다. */
+test("배지 이름은 planLabel 과 같고 반짝이(✦)를 붙이지 않는다", () => {
+  assert.equal(planBadgeLabel("pro"), "플러스");
+  assert.equal(planBadgeLabel("expert"), "프로");
   assert.equal(planBadgeLabel("free"), "무료");
   assert.equal(planBadgeLabel("basic"), "무료");
+  assert.doesNotMatch(planBadgeLabel("pro"), /✦/);
 });
 
 test("유료 판정", () => {

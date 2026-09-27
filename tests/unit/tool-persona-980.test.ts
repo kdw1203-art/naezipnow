@@ -74,15 +74,33 @@ test("다크 액센트는 어두운 표면(#171b22) 위 4.5:1 이상", () => {
   assert.deepEqual(bad, []);
 });
 
-test("도구끼리 색이 붙어 보이지 않는다 — 같은 hex 재사용 금지", () => {
+/* [1012 · R2 · C] 주색(나우블루 #1D4FD8)만은 여러 도구가 함께 쓴다 — 보라 계열 5종을 팔레트의 주색으로
+   바꿨기 때문(디자인 시스템 v3 규칙 9). 그 밖의 색은 예전처럼 도구마다 유일해야 한다. */
+const PRIMARY_HEX = "#1d4fd8";
+
+test("도구끼리 색이 붙어 보이지 않는다 — 같은 hex 재사용은 주색(나우블루)만 허용", () => {
   const seen = new Map<string, string>();
   for (const id of PERSONA_IDS) {
     const hex = TOOL_PERSONAS[id].palette.accent.toLowerCase();
+    if (hex === PRIMARY_HEX) continue;
     const prev = seen.get(hex);
     assert.equal(prev, undefined, `${id} 와 ${prev} 가 같은 액센트(${hex})를 쓴다`);
     seen.set(hex, id);
   }
-  assert.equal(seen.size, 16);
+  const primaryUsers = PERSONA_IDS.filter((id) => TOOL_PERSONAS[id].palette.accent.toLowerCase() === PRIMARY_HEX);
+  assert.equal(seen.size + primaryUsers.length, 16);
+  assert.ok(primaryUsers.length >= 1, "나우블루를 쓰는 도구가 하나도 없다");
+});
+
+test("[1012 · R2] 보라·남보라 액센트가 남아 있지 않다 — 팔레트는 나우블루 1 + 의미색 3 + 회색", () => {
+  const purple = ["#6d28d9", "#a21caf", "#7e22ce", "#3730a3", "#4338ca", "#7c3aed"];
+  for (const id of PERSONA_IDS) {
+    const hex = TOOL_PERSONAS[id].palette.accent.toLowerCase();
+    assert.ok(!purple.includes(hex), `${id} 가 보라 액센트(${hex})를 쓴다`);
+  }
+  for (const id of ["ai-prediction", "ai-gap", "ai-economy", "market:timing", "market:gap"] as const) {
+    assert.equal(TOOL_PERSONAS[id].palette.accent.toLowerCase(), PRIMARY_HEX, `${id} 는 나우블루여야 한다`);
+  }
 });
 
 test("실행 중 문구는 도구마다 다르다 — 같은 4줄이면 화면이 같아 보인다", () => {

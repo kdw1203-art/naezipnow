@@ -65,7 +65,7 @@ export function OfficeLeadForm() {
 
   if (state === "done") {
     return (
-      <div className="rounded-[14px] border border-line bg-success-soft px-5 py-6 text-center">
+      <div className="rounded-lg border border-line bg-success-soft px-5 py-6 text-center">
         <p className="text-[13px] font-extrabold text-success">문의가 접수됐어요</p>
         <p className="mt-1 text-[13px] leading-[1.7] text-text-2">
           {email.trim()} 로 영업일 기준 24~72시간 안에 답변드립니다.
@@ -84,7 +84,7 @@ export function OfficeLeadForm() {
             onChange={(e) => setOffice(e.target.value)}
             maxLength={60}
             placeholder="예: ○○공인중개사사무소"
-            className="rounded-[10px] border border-line bg-bg px-3 py-2.5 text-[13px] font-semibold text-ink outline-none focus:border-primary"
+            className="rounded-lg border border-line bg-bg px-3 py-2.5 text-[13px] font-semibold text-ink outline-none focus:border-primary"
           />
         </label>
         <label className="flex flex-col gap-1">
@@ -95,7 +95,7 @@ export function OfficeLeadForm() {
             type="email"
             maxLength={120}
             placeholder="답변 받으실 주소"
-            className="rounded-[10px] border border-line bg-bg px-3 py-2.5 text-[13px] font-semibold text-ink outline-none focus:border-primary"
+            className="rounded-lg border border-line bg-bg px-3 py-2.5 text-[13px] font-semibold text-ink outline-none focus:border-primary"
           />
         </label>
         <label className="flex flex-col gap-1">
@@ -105,7 +105,7 @@ export function OfficeLeadForm() {
             onChange={(e) => setPhone(e.target.value)}
             maxLength={20}
             placeholder="예: 010-0000-0000"
-            className="rounded-[10px] border border-line bg-bg px-3 py-2.5 text-[13px] font-semibold text-ink outline-none focus:border-primary"
+            className="rounded-lg border border-line bg-bg px-3 py-2.5 text-[13px] font-semibold text-ink outline-none focus:border-primary"
           />
         </label>
         <label className="flex flex-col gap-1">
@@ -113,7 +113,7 @@ export function OfficeLeadForm() {
           <select
             value={topic}
             onChange={(e) => setTopic(e.target.value as (typeof TOPICS)[number])}
-            className="rounded-[10px] border border-line bg-bg px-3 py-2.5 text-[13px] font-semibold text-ink outline-none focus:border-primary"
+            className="rounded-lg border border-line bg-bg px-3 py-2.5 text-[13px] font-semibold text-ink outline-none focus:border-primary"
           >
             {TOPICS.map((t) => (
               <option key={t} value={t}>
@@ -131,7 +131,7 @@ export function OfficeLeadForm() {
           maxLength={1000}
           rows={3}
           placeholder="어떤 단지·지역 위젯이 필요한지, 어디에 쓰실 계획인지 적어 주시면 더 정확히 답변드려요."
-          className="resize-y rounded-[10px] border border-line bg-bg px-3 py-2.5 text-[13px] leading-[1.6] text-ink outline-none focus:border-primary"
+          className="resize-y rounded-lg border border-line bg-bg px-3 py-2.5 text-[13px] leading-[1.6] text-ink outline-none focus:border-primary"
         />
       </label>
       {errorMsg && <p className="text-[12px] font-bold text-danger">{errorMsg}</p>}
@@ -139,7 +139,7 @@ export function OfficeLeadForm() {
         type="button"
         onClick={submit}
         disabled={state === "sending"}
-        className="rounded-[10px] bg-primary px-4 py-2.5 text-[13px] font-extrabold text-white disabled:opacity-60"
+        className="rounded-lg bg-primary px-4 py-2.5 text-[13px] font-extrabold text-white disabled:opacity-60"
       >
         {state === "sending" ? "접수 중…" : "문의 보내기"}
       </button>

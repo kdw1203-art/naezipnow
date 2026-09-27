@@ -86,11 +86,13 @@ test("통합 검색 API — stories 그룹이 따로 있고, 뉴스는 is_automa
   assert.match(src, /failed\.length === 5/);
 });
 
-test("검색 화면 — 이야기는 .story-card, 뉴스는 .news-row, 필터에 두 그룹이 따로 선다", () => {
+/* [v4 · 규칙 5] 결과 묶음이 카드 → 섹션(1px 선 행)이 되면서 이야기 카드(.story-card — 카드 안 카드)도 행이 됐다.
+   이야기 행은 data-kind="story" 로 뉴스 행(.news-row)과 갈린다 — "두 그룹이 따로 선다"는 뜻은 그대로 잠근다. */
+test("검색 화면 — 이야기는 data-kind=story 행, 뉴스는 .news-row, 필터에 두 그룹이 따로 선다", () => {
   const src = read("app/search/search-client.tsx");
   assert.match(src, /key: "stories",\s*label: "이야기"/);
   assert.match(src, /key: "news",\s*label: "뉴스"/);
-  assert.match(src, /className=\{`story-card tile/);
+  assert.match(src, /data-kind="story"/);
   assert.match(src, /className=\{`news-row min-h-10/);
   assert.match(src, /aria-pressed=\{filter === t\.key\}/);
   assert.match(src, /min-h-10/, "필터 칩은 40px");
@@ -98,17 +100,24 @@ test("검색 화면 — 이야기는 .story-card, 뉴스는 .news-row, 필터에
 
 /* ---------- 1. 홈 — 동네이야기·뉴스룸 블록(1006 재질 규칙) ---------- */
 
-test("홈 — HomeTownBlock 이 .story-card / .news-strip 재질을 쓰고 클라이언트 JS 가 없다", () => {
+/* [v4 · 한 화면 한 가지] 1006 의 두 재질(.story-card 이야기 카드 · .news-strip 한지 스트립)은 홈에서 걷고 1px 구분선 행
+   하나의 목록("동네 소식")으로 합쳤다 — 카드 안 카드·설명 배지·아이콘 금지(v4 규칙 5·6·7). 이웃 글과 기사는 메타 줄
+   (작성자·동네·시각·댓글 / 매체·날짜)이 가른다. /town·/town/news 의 재질 규칙은 그 화면들이 그대로 쓴다.
+   남기는 계약: 클라이언트 JS 없음 · 제 주소(storyHref/newsHref) · 0건과 실패를 다르게 · 첫 글 쓰기와 뉴스룸 링크. */
+test("홈 — HomeTownBlock 은 구분선 행 목록(이웃 글 → 기사)이고 클라이언트 JS 가 없다", () => {
   const block = read("app/components/home/HomeTownBlock.tsx");
   assert.doesNotMatch(block, /"use client"/);
-  assert.match(block, /story-card/);
-  assert.match(block, /story-avatar/);
-  assert.match(block, /news-strip__item/);
+  /* [v4.1 · 리퀴드 목록] 묶음 톤(data-tone)은 붙어도 된다 — 행 구조는 그대로 */
+  assert.match(block, /<ul (?:data-tone="[a-z]+" )?className=\{HOME_LIST\}>/);
+  assert.doesNotMatch(block, /className="[^"]*(story-card|story-avatar|news-strip)/);
   assert.match(block, /storyHref\(p\.id\)/);
   assert.match(block, /newsHref\(n\.id\)/);
-  /* 0건·실패를 다르게 말한다 */
+  assert.ok(block.indexOf("stories.map(") < block.indexOf("news.map("), "이웃 글이 먼저");
+  /* 0건·실패를 다르게 말한다 — 빈 상태는 한 줄(v4 규칙 8) */
   assert.match(block, /이웃 글을 지금 불러오지 못했어요/);
-  assert.match(block, /아직 이웃이 쓴 이야기가 없어요/);
+  assert.match(block, /이웃 글 아직 없음/);
+  assert.match(block, /href="\/town\/write"/);
+  assert.match(block, /href="\/town\/news"/);
   const page = read("app/page.tsx");
   assert.match(page, /<HomeTownBlock stories=\{data\.stories\} news=\{data\.news\} failed=\{failed\.town\}/);
   const data = read("lib/newui/home-data.ts");
@@ -129,7 +138,9 @@ test("marketFreshnessCaption — 'YYYY.MM.DD' → ISO 날짜 + 신고 지연 30�
   assert.equal(marketFreshnessCaption(""), null);
   /* 두 허브가 같은 조각을 쓴다 */
   assert.match(read("app/region/[id]/page.tsx"), /<MarketFreshnessLine label=\{freshness\}/);
-  assert.match(read("app/complex/[id]/page.tsx"), /<MarketFreshnessLine label=\{freshness\}/);
+  /* [v4] 단지 허브의 신선도 줄은 맨 끝 "데이터 출처" 접힘(ComplexDataSources) 안으로 옮겼다 — 페이지가 같은 라벨을 넘긴다 */
+  assert.match(read("app/complex/[id]/ComplexDataSources.tsx"), /<MarketFreshnessLine label=\{freshness\}/);
+  assert.match(read("app/complex/[id]/page.tsx"), /<ComplexDataSources[\s\S]*?freshness=\{freshness\}/);
   assert.doesNotMatch(read("app/complex/[id]/page.tsx"), /실거래 기준: \{freshness\}/);
 });
 
@@ -234,7 +245,10 @@ test("buildComplexCitableSummary — fragments 를 주면 2~4번째 문장이 �
 test("단지 허브 — buildComplexFacts 재료를 이미 띄운 로더로 채우고, 인용 요약에 같은 조각을 넘긴다", () => {
   const src = read("app/complex/[id]/page.tsx");
   assert.match(src, /fragments: facts\.summaryFragments/);
-  assert.match(src, /<ComplexFactsCard facts=\{facts\} noteHref=\{noteHref\} \/>/);
+  /* [v4] 전세가율·자료 완성도 카드(ComplexFactsCard)는 걷었다 — 전세가율은 요약 목록 한 행(계산됐을 때만),
+     빠진 자료와 그 이유·전세가율을 계산하지 않은 이유는 맨 끝 "데이터 출처" 접힘(ComplexDataSources)이 같은 facts 로 말한다 */
+  assert.match(src, /<ComplexDataSources[\s\S]*?facts=\{facts\}/);
+  assert.match(src, /const ratio = facts\.jeonseRatio;/);
   assert.match(src, /loadRentHistory\(region, args\.name\)/, "전월세 원표본은 ComplexRentSection 과 같은 로더·같은 인자");
   assert.match(src, /loadHubInspectionNotes\(args\.complexId, args\.name\)/, "임장노트도 같은 로더·같은 인자");
   assert.match(src, /getTradeWindowSamples/, "매매 원표본 창은 패널(detail API)과 같은 로더");
@@ -243,7 +257,7 @@ test("단지 허브 — buildComplexFacts 재료를 이미 띄운 로더로 채�
   for (const name of ["loadRentHistory", "loadHubInspectionNotes", "withSectionBudget", "sectionRegionLabel"]) {
     assert.match(loaders, new RegExp(`export (const|function) ${name}`), name);
   }
-  const card = read("app/complex/[id]/ComplexFactsCard.tsx");
+  const card = read("app/complex/[id]/ComplexDataSources.tsx");
   assert.match(card, /아직 계산하지 않아요/);
   assert.match(card, /facts\.jeonseRatioReason/);
   assert.doesNotMatch(card, /시세/);
@@ -299,8 +313,8 @@ test("404 — JS 없는 검색 폼(/search?q=)·인기 경로 5곳·홈 링크, 
   assert.doesNotMatch(code, /cookies\(|headers\(|searchParams|"use client"/);
   assert.doesNotMatch(code, /실거래 시세|내 임장노트/, "시세 표현·잘못된 라벨이 남아 있다");
   assert.match(src, /뉴스룸/);
-  /* 칩·버튼은 40px */
-  assert.match(src, /min-h-10 items-center rounded-full/);
+  /* [v4 · 규칙 5] 알약 칩(40px) → 1px 선 목록 행(SummaryRow · min-h-14 = 56px) — 누르는 칸은 여전히 40px 이상 */
+  assert.match(src, /<SummaryRow key=\{p\.href\} label=\{p\.label\} href=\{p\.href\} \/>/);
 });
 
 /* ---------- 9. 뉴스룸 라벨 통일 ---------- */

@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdSenseUnit } from "@/app/components/ads/AdSenseUnit";
@@ -146,8 +147,16 @@ export default async function TxIndexPage() {
     { name: "지역별 실거래 구간", url: PATH },
   ]);
 
+  /* [v4 · 규칙 1] 머리 사실 한 줄 — 지역 수 · 건수 · 신고 기간 · "호가 아님"(숫자·출처만) */
+  const headFact = [
+    ...(total > 0 ? [`${regions.length}개 지역`, `${total.toLocaleString("ko-KR")}건`] : []),
+    ...(range ? [`${range} 신고`] : []),
+    "국토교통부 실거래 · 호가 아님",
+  ].join(" · ");
+  const GLOSS = "tap-line font-bold text-ink underline decoration-line underline-offset-2";
+
   return (
-    <PageShell breadcrumb="홈 › 지역별 실거래 구간" title="지역별 면적대·가격대 실거래">
+    <PageShell breadcrumb="홈 › 지역별 실거래 구간">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -155,200 +164,153 @@ export default async function TxIndexPage() {
         }}
       />
 
-      <p className="rise-in mb-5 t-body text-text-2">
-        국토교통부 아파트 매매 실거래 신고분을 지역 × 면적대·가격대로 나눠 정리했습니다.
-        {total > 0 && (
-          <>
-            {" "}
-            현재 <strong className="text-ink">{regions.length}개 지역</strong> ·{" "}
-            <strong className="text-ink">{total.toLocaleString("ko-KR")}건</strong>이
-            구간으로 정리돼 있습니다{range && ` (${range} 신고 기준)`}.
-          </>
-        )}{" "}
-        매물 호가가 아니라 실제 체결·신고된 금액입니다.
-        {uncovered > 0 && coverage && (
-          <>
-            {" "}
-            같은 기간 면적이 확인된 신고분{" "}
-            <strong className="text-ink">{coverage.totalTx.toLocaleString("ko-KR")}건</strong> 가운데,
-            구간당 {MIN_BAND_TX}건에 못 미쳐 페이지를 만들지 않은{" "}
-            <strong className="text-ink">{uncovered.toLocaleString("ko-KR")}건</strong>은 위 숫자에서
-            빠져 있습니다.
-          </>
-        )}
-      </p>
+      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 시/도별 접힘 목록(구분선 행, 오른쪽 건수) → 이어 보기 한 줄 →
+          맨 끝 접힘 "읽는 법·출처". 지운 것: 소개 문단(세 문장 → 사실 줄), 지역 타일 격자·미니 막대(→ 행 오른쪽 숫자),
+          "이 숫자를 읽는 법" 카드(→ 맨 끝 접힘, 용어사전 링크는 그대로), 링크 문단(→ 한 줄). */}
+      <div className="mx-auto flex max-w-[760px] flex-col gap-8">
+        <header className="flex flex-col gap-0.5">
+          <h1 className="rise-in t-title text-ink">지역별 면적대·가격대 실거래</h1>
+          <p className="t-sub text-text-3">{headFact}</p>
+        </header>
 
-      {loadError ? (
-        <section className="rise-in-1 card p-[var(--pad-card)]">
-          {/* 모바일 실측 18 — py-8 은 세 줄 문구에 화면의 40% 를 차지했다. 문구는
-              그대로(정직성 유지), 여백만 줄인다. */}
-          <p className="py-4 text-center t-body text-text-3 md:py-8">
-            실거래 집계를 <strong className="text-ink">불러오지 못했습니다</strong>.
-            <br />
-            거래가 없다는 뜻이 아니라 조회 자체가 실패했다는 뜻입니다. 잠시 후 다시
-            확인해 주세요.
+        {loadError ? (
+          /* "못 읽었다"와 "없다"를 섞지 않는다(정직성) — 한 줄 */
+          <p className="card rounded-lg px-4 py-6 text-center t-body text-text-3">
+            실거래 집계를 <strong className="text-ink">불러오지 못했어요</strong> · 조회 실패(거래 없음 아님) · 잠시 후 다시 열기
           </p>
-        </section>
-      ) : regions.length === 0 ? (
-        <section className="rise-in-1 card p-[var(--pad-card)]">
-          <p className="py-4 text-center t-body text-text-3 md:py-8">
-            아직 구간으로 정리된 지역이 없습니다.
-            <br />
-            한 구간에 거래 {MIN_BAND_TX}건이 모이면 이곳에 지역이 나타납니다.
+        ) : regions.length === 0 ? (
+          <p className="card rounded-lg px-4 py-6 text-center t-body text-text-3">
+            구간으로 정리된 지역 없음 · 한 구간에 거래 {MIN_BAND_TX}건이 모이면 생김
           </p>
-        </section>
-      ) : (
-        <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
-          <h2 className="t-section text-ink">
-            지역{" "}
-            <span className="t-sub font-medium text-text-3">
-              거래 많은 순 · 구간별 페이지로 이동
-            </span>
-          </h2>
-          {/* 웹13 — 1440px 에서 3열이 성겨 보였다 → xl 4열. "거래 많은 순"
-              정렬 근거를 미니바로 시각화 — 최대 지역 대비 비율이라 축이
-              하나뿐이고, 수치는 이미 옆에 그대로 적혀 있다(막대는 보조). */}
-          {/* [970 · B-34] 214개 지역을 한 열로 늘어놓으면 모바일에서 14,000px 이었다 — 시/도별
-              <details> 로 접는다(첫 묶음만 펼침). 링크는 접혀 있어도 HTML 에 있어 크롤링·
-              색인에는 영향이 없고, 서버 컴포넌트라 JS 없이 동작한다. 묶음 순서는 거래 많은
-              시/도부터, 카탈로그로 시/도를 모르는 지역은 맨 끝 "그 밖의 지역". */}
-          {(() => {
-            const maxTx = regions.reduce((m, r) => Math.max(m, r.txCount), 0);
-            const groups = groupBySido(regions, (r) => r.name, (r) => r.txCount);
-            return (
-              <div className="mt-3 flex flex-col gap-2">
-                {groups.map((g, gi) => {
-                  const groupTx = g.items.reduce((sum, r) => sum + r.txCount, 0);
-                  return (
-                    <details
-                      key={g.sido}
-                      open={gi === 0}
-                      className="group rounded-[12px] border border-border bg-surface"
-                    >
-                      <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
-                        <span className="t-body font-extrabold text-ink">
-                          {g.sido}{" "}
-                          <span className="t-sub font-medium text-text-3">{g.items.length}개 지역</span>
+        ) : (
+          <section aria-labelledby="tx-regions-h" className="flex flex-col gap-2">
+            <h2 id="tx-regions-h" className="flex items-baseline gap-1.5 t-section text-ink">
+              지역 <span className="t-sub font-medium text-text-3">거래 많은 순</span>
+            </h2>
+            {/* [970 · B-34] 214개 지역을 한 열로 늘어놓으면 모바일에서 14,000px 이었다 — 시/도별
+                <details> 로 접는다(첫 묶음만 펼침). 링크는 접혀 있어도 HTML 에 있어 크롤링·
+                색인에는 영향이 없고, 서버 컴포넌트라 JS 없이 동작한다. 묶음 순서는 거래 많은
+                시/도부터, 카탈로그로 시/도를 모르는 지역은 맨 끝 "그 밖의 지역".
+                [v4 · 규칙 5] 묶음 = 1px 구분선 행, 묶음 안 지역 = 구분선 행(왼쪽 이름 + 구간 수 / 오른쪽 건수) */}
+            <div data-tone="blue" className="card flex flex-col divide-y divide-line rounded-lg px-4">
+              {groupBySido(regions, (r) => r.name, (r) => r.txCount).map((g, gi) => {
+                const groupTx = g.items.reduce((sum, r) => sum + r.txCount, 0);
+                return (
+                  <details key={g.sido} open={gi === 0} className="group">
+                    <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
+                      <span className="t-body font-bold text-ink">
+                        {g.sido} <span className="t-sub font-medium text-text-3">{g.items.length}개 지역</span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        <span className="t-body t-num text-ink">{groupTx.toLocaleString("ko-KR")}건</span>
+                        <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
+                          ›
                         </span>
-                        <span className="shrink-0 t-sub text-text-3">
-                          {groupTx.toLocaleString("ko-KR")}건{" "}
-                          <span aria-hidden className="ml-1 inline-block transition-transform group-open:rotate-180">
-                            ▾
-                          </span>
-                        </span>
-                      </summary>
-                      <div className="grid grid-cols-1 gap-2 px-3 pb-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {g.items.map((r) => (
+                      </span>
+                    </summary>
+                    {/* [v4.1 · 리퀴드 목록] 펼친 안쪽 목록은 hanji — 바깥 blue 판 안에서 구분된다 */}
+                    <ul data-tone="hanji" className="mb-2 flex flex-col divide-y divide-line border-t border-line pl-3">
+                      {g.items.map((r) => (
+                        <li key={r.slug}>
                           <Link
-                            key={r.slug}
                             prefetch={false}
                             href={`/tx/${encodeURIComponent(r.slug)}`}
-                            className="tile flex flex-col gap-1.5 rounded-[10px] border border-border px-3 py-2.5 t-body"
+                            className="press flex min-h-12 items-center justify-between gap-x-3 py-2.5 no-underline"
                           >
-                            <span className="flex items-baseline justify-between gap-3">
-                              <span className="font-bold text-ink">{r.name}</span>
-                              <span className="shrink-0 t-sub text-text-3">
-                                {r.txCount.toLocaleString("ko-KR")}건 · 구간{" "}
-                                {r.areaCells.length + r.priceCells.length}
+                            <span className="min-w-0 flex-1">
+                              <span className="block t-body font-bold text-ink">{r.name}</span>
+                              <span className="block truncate t-sub text-text-3">
+                                구간 {r.areaCells.length + r.priceCells.length}
                               </span>
                             </span>
-                            {maxTx > 0 && (
-                              <span
-                                aria-hidden
-                                className="block h-[3px] overflow-hidden rounded-full bg-bg"
-                              >
-                                <span
-                                  className="block h-full rounded-full bg-primary/45"
-                                  style={{ width: `${Math.max(3, Math.round((r.txCount / maxTx) * 100))}%` }}
-                                />
+                            <span className="flex shrink-0 items-center gap-1.5">
+                              <span className="t-body t-num text-ink">{r.txCount.toLocaleString("ko-KR")}건</span>
+                              <span aria-hidden="true" className="t-body text-text-3">
+                                ›
                               </span>
-                            )}
+                            </span>
                           </Link>
-                        ))}
-                      </div>
-                    </details>
-                  );
-                })}
-              </div>
-            );
-          })()}
-        </section>
-      )}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                );
+              })}
+            </div>
+            {/* 빠진 거래는 감추지 않는다 — 문단 → 사실 캡션 한 줄 */}
+            {uncovered > 0 && coverage && (
+              <p className="t-caption text-text-3">
+                면적 확인 신고 {coverage.totalTx.toLocaleString("ko-KR")}건 중 구간당 {MIN_BAND_TX}건 미만{" "}
+                {uncovered.toLocaleString("ko-KR")}건 제외
+              </p>
+            )}
+          </section>
+        )}
 
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">이 숫자를 읽는 법</h2>
-        {/* [1005] 문장 속 용어 링크를 24px 히트로 세우면 그 줄만 높아진다 — 목록 줄 간격을
-            24px 로 맞춰 링크 있는 줄과 없는 줄이 같은 높이로 선다(.t-body 는 레이어 밖이라
-            leading-* 유틸리티가 지지 않도록 인라인으로) */}
-        <ul className="mt-2 space-y-1.5 t-body text-text-2" style={{ lineHeight: "24px" }}>
-          {/* 항목 14 — 용어 첫 등장에 용어사전 링크(전 페이지 도배가 아니라
-              읽는 법 안내에서 한 번씩만). */}
-          <li>
-            ·{" "}
-            <Link href="/glossary/silgeoraega" className="inline-flex min-h-[24px] min-w-[24px] items-center justify-center font-bold text-ink underline decoration-line underline-offset-2">
-              실거래 신고가
-            </Link>
-            입니다. 매물{" "}
-            <Link href="/glossary/hoga" className="inline-flex min-h-[24px] min-w-[24px] items-center justify-center font-bold text-ink underline decoration-line underline-offset-2">
-              호가
-            </Link>
-            ·중개사 제시가가 아니며, 계약 후 신고까지 시차가 있어 최근 달은 건수가 더 늘어날 수
-            있습니다.
-          </li>
-          <li>
-            · 면적은{" "}
-            <Link href="/glossary/jeonyongmyeonjeok" className="inline-flex min-h-[24px] min-w-[24px] items-center justify-center font-bold text-ink underline decoration-line underline-offset-2">
-              전용면적
-            </Link>{" "}
-            기준입니다.{" "}
-            <Link href="/glossary/gonggeupmyeonjeok" className="inline-flex min-h-[24px] min-w-[24px] items-center justify-center font-bold text-ink underline decoration-line underline-offset-2">
-              분양면적(공급면적)
-            </Link>
-            으로 부르는 평수와 다릅니다.
-          </li>
-          <li>
-            · 구간 평균은 그 구간에 신고된 거래만의 평균입니다. 지역 전체 시세나 특정 단지의
-            현재 가격을 뜻하지 않습니다.
-          </li>
-          <li>
-            · 거래 {MIN_BAND_TX}건 미만 구간은 평균이 한두 건에 흔들려 페이지를 만들지 않습니다.
-            그 구간의 거래는 위 합계에도 포함하지 않았습니다 — 없는 거래가 아니라, 평균을
-            내기에 표본이 모자란 구간입니다.
-          </li>
-        </ul>
-        <p className="mt-2.5 t-sub text-text-3">
-          낯선 용어는{" "}
-          <Link href="/glossary" className="font-bold text-primary">
-            부동산 용어사전 ›
+        {/* 이어 보기 — 예전 링크 문단(네 문장)을 링크 한 줄로. /analysis/price 는 robots Disallow(데모 수치) —
+            색인 허브에서 차단 경로로 링크하지 않는다(항목 46c). timing 은 색인 허용이다. */}
+        <p className="t-sub text-text-3" style={{ lineHeight: "24px" }}>
+          <Link href="/complex/browse" className="tap-line font-bold text-primary no-underline">
+            단지 실거래 브라우즈
           </Link>
-          에서 확인하세요.
+          {" · "}
+          <Link href="/complex/compare" className="tap-line font-bold text-primary no-underline">
+            단지 vs 단지 비교
+          </Link>
+          {" · "}
+          <Link href="/analysis/timing" className="tap-line font-bold text-primary no-underline">
+            타이밍 분석
+          </Link>
+          {" · "}
+          <Link href="/imjang" className="tap-line font-bold text-primary no-underline">
+            임장 가이드
+          </Link>
         </p>
-      </section>
 
-      {/* 애드센스 데스크탑 유닛 — 본문(읽는 법) 아래 빈공간. 모바일 미노출. */}
-      <AdSenseUnit className="mb-6" />
+        {/* 애드센스 데스크탑 유닛 — 목록 아래 빈공간. 모바일 미노출. */}
+        <AdSenseUnit />
 
-      <p className="mb-8 t-sub text-text-3" style={{ lineHeight: "24px" }}>
-        단지 단위로 보려면{" "}
-        <Link href="/complex/browse" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
-          단지 실거래 브라우즈
-        </Link>
-        , 같은 동 단지끼리 나란히 보려면{" "}
-        <Link href="/complex/compare" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
-          단지 vs 단지 비교
-        </Link>
-        , 지역 시세 흐름은{" "}
-        {/* /analysis/price 는 robots Disallow(데모 수치) — 색인 허브에서
-            차단 경로로 링크하지 않는다(항목 46c). timing 은 색인 허용이다. */}
-        <Link href="/analysis/timing" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
-          타이밍 분석
-        </Link>
-        에서 확인하세요. 데이터를 봤다면 다음은 현장 —{" "}
-        <Link href="/imjang" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
-          임장 가이드
-        </Link>
-        로 답사를 준비하세요.
-      </p>
+        {/* [v4 · 규칙 3] "이 숫자를 읽는 법" 카드 → 맨 끝 접힘 하나. 항목 14 — 용어 첫 등장에 용어사전 링크 */}
+        <details className="group border-t border-line pt-1">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
+            읽는 법·출처
+            <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
+              ›
+            </span>
+          </summary>
+          {/* [1005] 문장 속 용어 링크를 24px 히트로 세우면 그 줄만 높아진다 — 줄 간격을 24px 로 */}
+          <ul className="flex flex-col gap-1 pb-3 t-sub text-text-2" style={{ lineHeight: "24px" }}>
+            <li>
+              <Link href="/glossary/silgeoraega" className={GLOSS}>
+                실거래 신고가
+              </Link>{" "}
+              · 매물{" "}
+              <Link href="/glossary/hoga" className={GLOSS}>
+                호가
+              </Link>
+              ·중개사 제시가 아님 · 최근 달은 신고 지연으로 늘 수 있음
+            </li>
+            <li>
+              면적 ={" "}
+              <Link href="/glossary/jeonyongmyeonjeok" className={GLOSS}>
+                전용면적
+              </Link>{" "}
+              ·{" "}
+              <Link href="/glossary/gonggeupmyeonjeok" className={GLOSS}>
+                분양면적(공급면적)
+              </Link>{" "}
+              평수와 다름
+            </li>
+            <li>구간 평균 = 그 구간 신고 거래만의 평균 · 지역 전체·특정 단지의 현재 가격 아님</li>
+            <li>거래 {MIN_BAND_TX}건 미만 구간은 페이지·합계 제외 — 없는 거래가 아니라 표본 부족</li>
+            <li>
+              <Link href="/glossary" className="tap-line font-bold text-primary no-underline">
+                부동산 용어사전에서 찾기 ›
+              </Link>
+            </li>
+          </ul>
+        </details>
+      </div>
     </PageShell>
   );
 }

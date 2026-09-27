@@ -11,6 +11,19 @@
  */
 import { formatEokMan } from "@/lib/format/eok-man";
 import { DELTA_BADGE_CLASS, DELTA_CLASS, type DeltaDir } from "@/lib/format/delta";
+import { kstParts } from "@/lib/format/kst";
+
+/**
+ * [1012 · 규칙 7] 매물 카드의 시점 — "9.25 끌어올림"(끌어올린 적이 있으면 그 날) · "9.25 등록"(없으면 등록일).
+ * 절대 날짜(KST)로 적는 이유: 목록은 ISR HTML 위에서 클라이언트가 그대로 하이드레이션하는데,
+ * "N일 전"은 서버 렌더 시각과 클라이언트 시각이 자정을 사이에 두면 글자가 어긋난다.
+ * 날짜를 못 읽으면 null — 지어내지 않는다.
+ */
+export function listingUpdatedLabel(l: { refreshedAt: string | null; createdAt: string }): string | null {
+  const p = kstParts(l.refreshedAt ?? l.createdAt);
+  if (!p) return null;
+  return `${p.month}.${p.day} ${l.refreshedAt ? "끌어올림" : "등록"}`;
+}
 
 type PriceFields = {
   listingType: "sale" | "jeonse" | "monthly";

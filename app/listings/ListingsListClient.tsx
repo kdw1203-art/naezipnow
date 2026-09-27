@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 /* 실매물 목록 + 필터 (2026-08-10 ISR 전환, /town/news·/dev-deals 레시피)
    서버가 ?type/gu/complex 를 읽어 필터별로 DB 를 다시 질의하던 것을, 전체
@@ -25,7 +26,8 @@ const LISTING_SOURCE_LABEL: Record<string, string> = {
 };
 import { ListingCompareToggle } from "@/components/ListingCompareToggle";
 import type { CompareListing } from "@/components/listing-compare-store";
-import { listingPriceLine } from "./price-text";
+/* [1012 · 규칙 7] 카드의 시점("9.25 끌어올림")은 ./price-text 의 listingUpdatedLabel — 순수 함수(단위검증) */
+import { listingPriceLine, listingUpdatedLabel } from "./price-text";
 import { LISTING_COMPARE_ENTRY_OPEN } from "./compare-entry";
 
 const TYPE_FILTERS = [
@@ -39,13 +41,6 @@ const TYPE_KEYS = ["sale", "jeonse", "monthly"];
 /* [1009 · T] 호가는 한 건의 가격이라 정밀 표기("매매 12억 4,500만") — ./price-text 한 곳(목록·상세·비교함·비교 표 공통).
    예전 formatKrwShort("28.6억")는 28억 6,000만과 28억 5,500만을 같은 숫자로 보여 줬다. */
 const priceLine = listingPriceLine;
-
-/** 부스트 활성 — 클라이언트에서 계산하므로 ISR 주기와 무관하게 현재 시각 기준 */
-function isBoostActive(boostUntil: string | null): boolean {
-  if (!boostUntil) return false;
-  const t = Date.parse(boostUntil);
-  return Number.isFinite(t) && t > Date.now();
-}
 
 function toCompareListing(l: PublicListing): CompareListing {
   return {
@@ -179,124 +174,84 @@ export function ListingsListClient({
       </div>
 
       {list.length === 0 ? (
-        /* [970 · C-39] 필터 때문에 0건인지, 등록 매물 자체가 0건인지를 가른다 —
-           필터로 0건이면 "베타라 공급이 적다" 는 엉뚱한 말이고, 초기화 버튼이 없어
-           칩을 하나씩 되돌려야 했다. */
-        <div className="rise-in-1 card card-pad-sm flex flex-col items-center gap-3 py-14 text-center">
-          <div className="text-[15px] font-extrabold text-ink">
-            {filtersActive
-              ? "이 조건에 맞는 매물이 아직 없어요"
-              : "검수를 통과한 매물이 아직 없어요"}
-          </div>
-          <p className="max-w-[420px] text-[13px] leading-[1.7] text-text-3">
-            {filtersActive ? (
-              <>
-                유형·지역 조건을 바꾸거나 필터를 초기화해 전체 {items.length}건을 볼 수 있어요.
-              </>
-            ) : (
-              <>
-                베타 기간에는 매물 공급이 적을 수 있어요. 집주인은 소유 확인 후 직접 등록하고,
-                중개사무소는 제휴로 노출할 수 있어요. 임장 기록은{" "}
-                <Link href="/notes/new" className="font-bold text-primary underline">
-                  임장노트
-                </Link>
-                로 이어가세요.
-              </>
-            )}
+        /* [970 · C-39] 필터 때문에 0건인지, 등록 매물 자체가 0건인지를 가른다.
+           [v4 · 규칙 8·10] 가운데 정렬 빈 카드 → 한 줄 사실 + 버튼(테두리 — 채움 파랑은 머리의 "내 매물 등록하기" 하나) */
+        <div className="rise-in-1 flex flex-col items-start gap-2 border-y border-line py-4">
+          <p className="t-body font-bold text-ink">
+            {filtersActive ? "이 조건에 맞는 매물 없음" : "검수를 통과한 매물 없음"}
           </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {filtersActive ? (
-              <button
-                type="button"
-                onClick={() => set({ type: "", gu: "", complex: "" })}
-                className="btn-primary btn-md"
-              >
-                필터 초기화
-              </button>
-            ) : (
-              <Link href="/listings/new" className="btn-primary btn-md">
-                매물 등록하기
-              </Link>
-            )}
-          </div>
+          <p className="t-sub text-text-3">
+            {filtersActive
+              ? `유형·지역 조건 변경 또는 필터 초기화 · 전체 ${items.length}건`
+              : /* [1012 · 규칙 6] 사실(누가·무엇을) */ "집주인은 소유 확인 뒤 직접 등록 · 중개사무소는 제휴 · 검수 통과 매물만 표시"}
+          </p>
+          {filtersActive ? (
+            <button type="button" onClick={() => set({ type: "", gu: "", complex: "" })} className="btn-outline btn-md">
+              필터 초기화
+            </button>
+          ) : (
+            <Link href="/listings/new" className="btn-outline btn-md">
+              내 매물 등록하기
+            </Link>
+          )}
         </div>
       ) : (
-        <div className="rise-in-1 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {list.map((l) => {
-            const boostOn = isBoostActive(l.boostUntil);
-            const desc = l.description?.replace(/^\[[^\]]{1,10}\]\s*/, "") ?? "";
-            return (
-              <Link
-                key={l.id}
-                href={`/listings/${l.id}`}
-                className="card tile card-pad-sm flex flex-col gap-2"
-              >
-                {l.thumbnailUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={l.thumbnailUrl}
-                    alt={`${l.complexName} 사진`}
-                    className="mb-1 h-[150px] w-full rounded-xl object-cover"
-                    loading="lazy"
-                  />
-                )}
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span
-                    className={`rounded-md chip-pad text-[12px] font-extrabold ${
-                      l.source === "owner"
-                        ? "bg-[rgba(29,79,216,.08)] text-primary"
-                        : "bg-warning-soft text-warning"
-                    }`}
-                  >
-                    {LISTING_SOURCE_LABEL[l.source]}
+        /* [v4 · 규칙 10 · 부품 "썸네일 행"] 사진 있는 카드·없는 카드가 높이가 달라 엇갈리던 3열 격자 →
+           같은 높이의 행(72px 정사각 썸네일 + 단지명 한 줄 + 가격 + 메타 한 줄). 사진이 없으면 회색 칸. */
+        <ul data-tone="mint" className="rise-in-1 divide-y divide-line">
+          {list.map((l) => (
+            <li key={l.id}>
+              <Link href={`/listings/${l.id}`} className="press flex items-start gap-3 py-3 no-underline">
+                <span className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-lg bg-divider">
+                  {l.thumbnailUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={l.thumbnailUrl}
+                      alt={`${l.complexName} 사진`}
+                      className="absolute inset-0 h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  )}
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="min-w-0 truncate t-body font-bold text-ink">{l.complexName}</span>
+                    {/* [1012 · 규칙 9] 배지 = 검증 사실 명사만 — "집주인 확인"(기준 사이트 표기) 하나만 남긴다.
+                        등록 주체·유형은 아래 메타 글자로. "부스트"(홍보 상태)는 정렬(끌어올림)에만 쓴다. */}
+                    {l.ownerVerified && (
+                      <span className="shrink-0 rounded-sm bg-success-soft chip-pad t-caption font-medium text-success">
+                        집주인 확인
+                      </span>
+                    )}
                   </span>
-                  <span className="rounded-md bg-bg chip-pad text-[12px] font-extrabold text-text-2">
-                    {LISTING_TYPE_LABEL[l.listingType]}
+                  {/* [1012 · 규칙 7] 가격이 행에서 가장 크고 굵다 */}
+                  <span className="t-num t-body font-bold text-ink">{priceLine(l)}</span>
+                  {/* [1012 · 규칙 7] 숫자 — 면적 · 층 + 시점(끌어올림/등록일) · 등록 주체 · 유형 · 지역 */}
+                  <span className="truncate t-sub tabular-nums text-text-3">
+                    {[
+                      LISTING_SOURCE_LABEL[l.source],
+                      LISTING_TYPE_LABEL[l.listingType],
+                      l.regionName || null,
+                      l.areaM2 !== null ? `${l.areaM2}㎡` : null,
+                      l.floor !== null ? `${l.floor}층` : null,
+                      l.authorLabel,
+                      listingUpdatedLabel(l),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </span>
-                  {l.ownerVerified && (
-                    <span className="rounded-md bg-success-soft chip-pad text-[12px] font-extrabold text-success">
-                      소유확인
-                    </span>
-                  )}
-                  {boostOn && (
-                    <span className="rounded-md bg-[rgba(245,158,11,.14)] chip-pad text-[12px] font-extrabold text-warning">
-                      부스트
-                    </span>
-                  )}
-                  {l.regionName && (
-                    <span className="text-[12px] text-text-3">{l.regionName}</span>
-                  )}
-                </div>
-                <div className="text-[15px] font-extrabold leading-[1.4] text-ink">
-                  {l.complexName}
-                </div>
-                <div className="t-num text-[15px] text-ink">
-                  {priceLine(l)}
-                </div>
-                <div className="text-[12px] text-text-3">
-                  {[
-                    l.areaM2 !== null ? `${l.areaM2}㎡` : null,
-                    l.floor !== null ? `${l.floor}층` : null,
-                    l.authorLabel,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </div>
-                {desc.trim() && (
-                  <p className="line-clamp-2 text-[13px] leading-[1.6] text-text-2">
-                    {desc.trim()}
-                  </p>
-                )}
-                <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-                  <span className="text-[12px] font-bold text-primary">상세 보기 →</span>
-                  {/* [1009 · T 리뷰 MED-10] 비교 담기는 보관 경로(/listings/compare)의 입구라 소유자 결정 전까지 끈다(./compare-entry).
-                      꺼 두면 카드 링크(<a>) 안에 단추가 들어 있던 중첩 조작도 없어진다. */}
-                  {LISTING_COMPARE_ENTRY_OPEN && <ListingCompareToggle item={toCompareListing(l)} />}
-                </div>
+                </span>
               </Link>
-            );
-          })}
-        </div>
+              {/* [1009 · T 리뷰 MED-10] 비교 담기는 보관 경로(/listings/compare)의 입구라 소유자 결정 전까지 끈다(./compare-entry).
+                  켜면 행 링크 밖(아래)에 둔다 — 링크 안에 단추가 들어가는 중첩 조작을 만들지 않는다. */}
+              {LISTING_COMPARE_ENTRY_OPEN && (
+                <div className="pb-2">
+                  <ListingCompareToggle item={toCompareListing(l)} />
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
       )}
     </>
   );

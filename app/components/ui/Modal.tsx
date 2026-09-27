@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -245,7 +246,7 @@ export function Modal({
 export function ModalHeader({ title, onClose }: { title: string; onClose: () => void }) {
   return (
     <div className="mb-3 flex items-start justify-between gap-2">
-      <span className="text-[13px] font-extrabold text-ink">{title}</span>
+      <span className="text-[13px] font-bold text-ink">{title}</span>
       {/* [966] 15px 글자 하나가 터치 타깃이었다 — 32px 상자 + .tap(8px 히트 확장). 모양은 그대로. */}
       <button
         type="button"

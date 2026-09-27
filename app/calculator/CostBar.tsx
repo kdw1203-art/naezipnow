@@ -7,7 +7,7 @@ import { manwonText, shareTexts } from "@/lib/finance/money";
  * 두 숫자가 집값 8억 4,000만원을 어떻게 나눠 갖는지(대출이 38%, 내 돈이 62%)는 사용자가 암산해야 했다.
  * 토스 대출 계산 결과처럼 한 줄 막대로 비율을 보여 주고, 막대 오른쪽 두 칸(내 돈 + 세금·보수)이 곧 "필요 현금"이라는
  * 것을 같은 자리에서 말한다. 값은 전부 calc-summary.costBreakdown 의 실제 계산 — 지어낸 칸 없음.
- * 어두운 결과 패널(.ai-panel) 안에 놓인다 — 색은 네이비 면 전용 토큰(on-navy-*·on-dark)만.
+ * [v4 · 규칙 4] 결과가 흰 카드로 바뀌어(네이비는 AI 결과 패널에만) 색도 라이트 토큰 — 대출 파랑 · 내 돈 잉크 · 세금·보수 경고색.
  * 칸 너비는 flex-grow(값에 비례)라 입력이 바뀌면 부드럽게 늘고 준다(모션 최소화면 즉시).
  */
 
@@ -20,13 +20,13 @@ export function CostBar({ breakdown }: { breakdown: CostBreakdown }) {
   >;
   const fees = by.tax.manwon + by.broker.manwon;
   const parts: Part[] = [
-    { key: "loan", label: "대출", manwon: by.loan.manwon, dot: "bg-on-navy-blue" },
-    { key: "equity", label: "내 돈", manwon: by.equity.manwon, dot: "bg-on-dark", sub: "매매가 − 대출" },
+    { key: "loan", label: "대출", manwon: by.loan.manwon, dot: "bg-primary" },
+    { key: "equity", label: "내 돈", manwon: by.equity.manwon, dot: "bg-ink", sub: "매매가 − 대출" },
     {
       key: "fees",
       label: "취득세·중개보수",
       manwon: fees,
-      dot: "bg-on-navy-amber",
+      dot: "bg-warning",
       sub: `취득세 ${manwonText(by.tax.manwon, "만")} · 중개보수 ${manwonText(by.broker.manwon, "만")}`,
     },
   ];
@@ -37,13 +37,13 @@ export function CostBar({ breakdown }: { breakdown: CostBreakdown }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-        <span className="t-sub font-bold text-ai-text">돈의 구성</span>
-        <span className="t-caption text-ai-muted">
+        <span className="t-sub font-bold text-ink">돈의 구성</span>
+        <span className="t-caption text-text-3">
           합계 {manwonText(breakdown.totalManwon)} = 매매가 + 취득세 + 중개보수
         </span>
       </div>
       <div
-        className="flex h-3 w-full gap-[2px] overflow-hidden rounded-full bg-on-dark-panel"
+        className="flex h-3 w-full gap-[2px] overflow-hidden rounded-full bg-line"
         role="img"
         aria-label={`돈의 구성: ${aria}`}
       >
@@ -62,11 +62,11 @@ export function CostBar({ breakdown }: { breakdown: CostBreakdown }) {
           <li key={p.key} className="flex min-w-0 items-start gap-1.5">
             <span aria-hidden="true" className={`mt-[5px] h-2 w-2 shrink-0 rounded-full ${p.dot}`} />
             <span className="flex min-w-0 flex-col">
-              <span className="t-sub text-ai-muted">
-                {p.label} <b className="t-num font-bold text-ai-text">{manwonText(p.manwon)}</b>{" "}
+              <span className="t-sub text-text-3">
+                {p.label} <b className="t-num font-bold text-ink">{manwonText(p.manwon)}</b>{" "}
                 <span className="t-num">{shares[i]}</span>
               </span>
-              {p.sub && <span className="t-caption text-ai-muted break-words">{p.sub}</span>}
+              {p.sub && <span className="t-caption text-text-3 break-words">{p.sub}</span>}
             </span>
           </li>
         ))}

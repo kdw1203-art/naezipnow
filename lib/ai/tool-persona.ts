@@ -152,6 +152,12 @@ export type ToolPersona = {
       눈으로 고르지 않고 tests/unit/tool-persona-980.test.ts 가 계산해 막는다.
    ③ 옆 도구와 붙어 보이지 않게 색상환에서 벌린다. 같은 주제(갭)만 의도적으로
       가깝게 둔다 — AI 갭투자와 지역 갭 스크리너는 실제로 같은 이야기다.
+   ④ [1012 · R2 · C] **보라·남보라(#6D28D9 · #A21CAF · #7E22CE · #3730A3 · #4338CA)는 팔레트에 없다**
+      (디자인 시스템 v3 규칙 9: 주색 나우블루 1 + 의미색 3 + 회색). 시세 예측·갭·경제 지표·
+      지역 흐름·전세가율 순위 5종을 나우블루(--primary #1D4FD8 · 다크 --ai-accent #88AAFF ·
+      soft --primary-soft #EDF2FE)로 바꿨다. 같은 hex 를 여러 도구가 쓰는 건 이 주색뿐이다
+      (tests/unit/tool-persona-980.test.ts 가 그렇게 허용). 분석 허브 목록 카드는 이 색을
+      아예 쓰지 않는다(회색 1종) — 도구 색은 상세 화면(/analysis/ai/[tool])의 정체성으로만.
    ───────────────────────────────────────────────────────────────────────── */
 
 function p(accent: string, accentDark: string, soft: string, softDark: string): PersonaPalette {
@@ -160,6 +166,7 @@ function p(accent: string, accentDark: string, soft: string, softDark: string): 
 
 export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   /* ── AI 도구 12종 ───────────────────────────────────────────────────── */
+  /* [1012 · 규칙 6] 지역·시장 4종의 premise 를 "~습니다" → "~해요" 체로(AI 12종과 같은 말투) */
   "ai-diagnosis": {
     id: "ai-diagnosis",
     character: "점수",
@@ -187,7 +194,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
     character: "시나리오",
     premise: "최근 실거래가에서 출발해 1~5년 뒤 가격을 낙관·기본·비관 세 가지로 그려요",
     composition: "trajectory",
-    palette: p("#6D28D9", "#C3A6FF", "#F4EEFF", "rgba(195,166,255,.14)"),
+    palette: p("#1D4FD8", "#88AAFF", "#EDF2FE", "rgba(136,170,255,.14)"),
     runMotion: "draw",
     reveal: "draw-path",
     runStages: [
@@ -363,7 +370,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
     character: "갭",
     premise: "매매가와 전세가 차이(갭)가 얼마인지, 그 차이가 위험한지 봐요",
     composition: "gauge",
-    palette: p("#A21CAF", "#EDA3F2", "#FBEEFC", "rgba(237,163,242,.14)"),
+    palette: p("#1D4FD8", "#88AAFF", "#EDF2FE", "rgba(136,170,255,.14)"),
     runMotion: "roll",
     reveal: "fill",
     runStages: [
@@ -385,7 +392,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
     character: "지표",
     premise: "금리·미분양 같은 큰 지표가 집값에 주는 신호를 모아 봐요",
     composition: "console",
-    palette: p("#3730A3", "#A3AAFF", "#EEEFFE", "rgba(163,170,255,.14)"),
+    palette: p("#1D4FD8", "#88AAFF", "#EDF2FE", "rgba(136,170,255,.14)"),
     runMotion: "pulse",
     reveal: "flip",
     runStages: [
@@ -434,7 +441,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "market:price": {
     id: "market:price",
     character: "실측",
-    premise: "면적대별로 실제 체결된 값을 늘어놓습니다 — 호가가 아닙니다",
+    premise: "면적대별로 실제 체결된 값을 늘어놓아요 — 호가가 아니에요",
     composition: "atlas",
     palette: p("#0E7490", "#54D3EC", "#E7F6FA", "rgba(84,211,236,.14)"),
     runMotion: "stack",
@@ -447,18 +454,18 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
     ],
     tone: {
       strong: "표본이 넉넉한 구간입니다. 중앙값을 믿을 만해요.",
-      mixed: "구간에 따라 표본이 들쭉날쭉합니다. 적은 구간은 참고만 하세요.",
-      weak: "거래가 적어 값이 튑니다. 평균보다 중앙값을 보세요.",
-      thin: "이 조건의 실거래가 모자랍니다. 기간이나 면적대를 넓혀 보세요.",
+      mixed: "구간에 따라 표본이 들쭉날쭉해요. 적은 구간은 참고만 하세요.",
+      weak: "거래가 적어 값이 튀어요. 평균보다 중앙값을 보세요.",
+      thin: "이 조건의 실거래가 모자라요. 기간이나 면적대를 넓혀 보세요.",
     },
     nextAction: { label: "이 지역 흐름 보기", href: "/analysis/timing" },
   },
   "market:timing": {
     id: "market:timing",
     character: "흐름",
-    premise: "12개월 지수와 모멘텀으로 지역이 어느 쪽으로 가는지 봅니다",
+    premise: "12개월 지수와 모멘텀으로 지역이 어느 쪽으로 가는지 봐요",
     composition: "trajectory",
-    palette: p("#4338CA", "#A7AEFF", "#EEEFFE", "rgba(167,174,255,.14)"),
+    palette: p("#1D4FD8", "#88AAFF", "#EDF2FE", "rgba(136,170,255,.14)"),
     runMotion: "draw",
     reveal: "draw-path",
     runStages: [
@@ -471,14 +478,14 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
       strong: "방향이 일정합니다. 최근 몇 달이 같은 쪽을 봅니다.",
       mixed: "방향이 자주 바뀝니다 — 추세로 부르기 이른 구간이에요.",
       weak: "내리는 쪽이 이어집니다. 반등 신호는 아직 안 잡힙니다.",
-      thin: "지수 표본이 모자라 방향을 말하지 않았습니다.",
+      thin: "지수 표본이 모자라 방향을 말하지 않았어요.",
     },
     nextAction: { label: "단지 단위로 좁혀 보기", href: "/analysis/ai/ai-timing" },
   },
   "market:temperature": {
     id: "market:temperature",
     character: "체온",
-    premise: "매주 잰 기록을 이어 붙여 지금이 아니라 추세를 보여 줍니다",
+    premise: "매주 잰 기록을 이어 붙여 지금이 아니라 추세를 보여 줘요",
     composition: "atlas",
     palette: p("#B45309", "#F0AC4E", "#FDF3E5", "rgba(240,172,78,.14)"),
     runMotion: "pulse",
@@ -491,7 +498,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
     ],
     tone: {
       strong: "여러 주 연속 같은 방향입니다.",
-      mixed: "주마다 오르내립니다 — 한 주 값으로 판단하지 마세요.",
+      mixed: "주마다 오르내려요 — 한 주 값으로 판단하지 마세요.",
       weak: "식는 쪽으로 이어집니다.",
       thin: "쌓인 주가 모자랍니다. 추세로 읽기에는 이릅니다.",
     },
@@ -500,9 +507,9 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "market:gap": {
     id: "market:gap",
     character: "순위",
-    premise: "시군구를 전세가율로 줄 세우고 실측 갭을 먼저 보여 줍니다",
+    premise: "시군구를 전세가율로 줄 세우고 실측 갭을 먼저 보여 줘요",
     composition: "atlas",
-    palette: p("#7E22CE", "#D3A2F7", "#F6EEFD", "rgba(211,162,247,.14)"),
+    palette: p("#1D4FD8", "#88AAFF", "#EDF2FE", "rgba(136,170,255,.14)"),
     runMotion: "sweep",
     reveal: "stagger-rows",
     runStages: [
@@ -513,8 +520,8 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
     ],
     tone: {
       strong: "실측 갭이 잡히는 지역이 충분합니다.",
-      mixed: "실측과 추정이 섞여 있습니다. 표시를 보고 구분하세요.",
-      weak: "대부분 추정값입니다. 순위를 그대로 믿지 마세요.",
+      mixed: "실측과 추정이 섞여 있어요. 표시를 보고 구분하세요.",
+      weak: "대부분 추정값이에요. 순위를 그대로 믿지 마세요.",
       thin: "이 조건의 표본이 모자랍니다.",
     },
     nextAction: { label: "관심 단지 갭 진단", href: "/analysis/ai/ai-gap" },

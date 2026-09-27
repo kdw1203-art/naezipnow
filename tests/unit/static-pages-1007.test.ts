@@ -102,7 +102,9 @@ test("클라이언트 판정 컴포넌트 — use client · useSearchParams 미�
   const files = [
     "app/notes/new/NoteNewEntry.tsx",
     "app/analysis/hub-viewer.ts",
-    "app/analysis/hub-record-start.tsx",
+    /* [v4] hub-record-start.tsx(로그인/게스트 시작 카드)는 지웠다 — 그 판정은 "임장노트 분석" 행(hub-picker)의
+       내 노트 수로 합쳤다. 대신 v4 검색(hub-search — ?complexId/?apt 는 ComplexPicker 가 마운트 뒤 읽는다)을 잠근다. */
+    "app/analysis/hub-search.tsx",
     "app/analysis/hub-picker.tsx",
     "app/map/MapClientLazy.tsx",
     "app/notes/notes-feed-client.tsx",

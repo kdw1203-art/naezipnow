@@ -11,6 +11,7 @@ import {
  * 사업종류 필터 패널 — jaegebal 벤치마크의 그룹형 컬러 필터.
  * 전체 체크 + 그룹(민간주도/공공주도/소규모/기타)별 컬러 알약 다중선택.
  * 선택 없음(전체) = 모든 사업종류 표시.
+ * [v4 · 규칙 5] 카드 → 1px 위아래 선 사이의 펼침(카드 안에 카드 없음). 색 알약은 지도 마커 색과 같은 범례라 그대로.
  */
 export function TypeFilterPanel({
   selected,
@@ -24,13 +25,13 @@ export function TypeFilterPanel({
   const allActive = selected.size === 0;
 
   return (
-    <div className="card rounded-2xl p-4">
+    <div className="border-y border-line py-3">
       {/* 전체 */}
       <button
         type="button"
         onClick={onSelectAll}
         aria-pressed={allActive}
-        className="press flex w-full items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-left"
+        className="press flex min-h-10 w-full items-center gap-2 text-left"
       >
         <span
           className={`flex h-4 w-4 items-center justify-center rounded-md border ${
@@ -42,7 +43,6 @@ export function TypeFilterPanel({
           <Icon name="check" size={11} />
         </span>
         <span className="t-body font-bold text-ink">전체</span>
-        <span className="t-sub text-text-3">모든 사업종류 표시</span>
       </button>
 
       {/* 그룹별 컬러 알약 */}
@@ -62,7 +62,7 @@ export function TypeFilterPanel({
                       type="button"
                       onClick={() => onToggle(t.key)}
                       aria-pressed={active}
-                      className={`press inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-semibold ${
+                      className={`press inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-bold ${
                         active ? "border-transparent" : "border-line bg-surface text-text-2"
                       }`}
                       style={active ? { background: `${t.color}1a`, color: t.color } : undefined}

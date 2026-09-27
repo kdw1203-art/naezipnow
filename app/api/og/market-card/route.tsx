@@ -81,15 +81,16 @@ async function buildRows(): Promise<{ rows: CardRow[]; asOf: string }> {
         .filter((d) => d.date >= today && d.date <= week)
         .reduce((s, d) => s + d.ends.length, 0);
       if (endsToday > 0) {
+        /* [1012 · 규칙 4] 이모지(⏰ 🗓) → 활자(D-0 · D-7). OG 폰트 서브셋에 확실히 있는 글자만 */
         rows.push({
-          icon: "⏰",
+          icon: "D-0",
           label: "오늘 접수 마감 청약",
           value: `${endsToday}건`,
           tone: "#b4571e",
         });
       } else if (endsWeek > 0) {
         rows.push({
-          icon: "🗓",
+          icon: "D-7",
           label: "7일 내 접수 마감 청약",
           value: `${endsWeek}건`,
           tone: "#b4571e",

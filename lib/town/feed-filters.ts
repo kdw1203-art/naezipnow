@@ -4,11 +4,14 @@
  *   ?kind=note|post   유형(전체는 생략)
  *   ?sort=latest      정렬(추천순이 기본이라 생략)
  *   ?mine=1           내 관심지역만
+ *   ?region=mapo      [v4] 지역 칩 하나(lib/town/feed-regions 의 id) — 모르는 id 는 버린다
  *
  * 기본값은 URL 에 적지 않는다 — /town 그대로가 기본 목록이어야 공유 링크가
  * 깨끗하고, 스크롤 복원 키(경로 + 쿼리)도 "필터 없음 = /town" 으로 맞는다.
  * 모르는 값은 기본값으로 떨어뜨린다(잘못 적힌 링크가 빈 화면을 만들지 않게).
  */
+import { isTownFeedRegionId, type TownFeedRegionId } from "./feed-regions";
+
 export const TOWN_FEED_KINDS = ["all", "note", "post"] as const;
 export type TownFeedKind = (typeof TOWN_FEED_KINDS)[number];
 export const TOWN_FEED_SORTS = ["reco", "latest"] as const;
@@ -18,6 +21,8 @@ export type TownFeedFilters = {
   kind: TownFeedKind;
   sort: TownFeedSort;
   mine: boolean;
+  /** [v4] 지역 칩 — 없으면 전체. 선택 필드라 기본값 객체({kind,sort,mine})의 모양은 그대로다. */
+  region?: TownFeedRegionId;
 };
 
 export const TOWN_FEED_DEFAULT_FILTERS: TownFeedFilters = { kind: "all", sort: "reco", mine: false };
@@ -40,10 +45,12 @@ export function parseTownFeedFilters(search: string): TownFeedFilters {
   const kind = sp.get("kind");
   const sort = sp.get("sort");
   const mine = sp.get("mine");
+  const region = sp.get("region");
   return {
     kind: isKind(kind) ? kind : "all",
     sort: isSort(sort) ? sort : "reco",
     mine: mine === "1" || mine === "true",
+    ...(isTownFeedRegionId(region) ? { region } : {}),
   };
 }
 
@@ -61,9 +68,11 @@ export function townFeedFilterQuery(f: TownFeedFilters, currentSearch = ""): str
   sp.delete("kind");
   sp.delete("sort");
   sp.delete("mine");
+  sp.delete("region");
   if (f.kind !== "all") sp.set("kind", f.kind);
   if (f.sort !== "reco") sp.set("sort", f.sort);
   if (f.mine) sp.set("mine", "1");
+  if (f.region) sp.set("region", f.region);
   const q = sp.toString();
   return q ? `?${q}` : "";
 }

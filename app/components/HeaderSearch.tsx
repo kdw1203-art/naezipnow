@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { Icon } from "./Icon";
 import { pushRecentSearch, readRecentSearches } from "@/lib/search/recent-searches";
 import { useSettledSearchQuery } from "@/lib/search/settle";
 import { useShellActive } from "@/lib/client/viewport-shell";
@@ -267,8 +268,9 @@ export function HeaderSearch() {
       {/* 폭 실측(2026-08-16 캡처): w-[200px]에서 입력부 가용폭이 ~125px 인데
           플레이스홀더가 ~150px 라 "검색"이 글자 중간에서 잘렸다. 문구가 온전히
           들어가는 폭으로 넓히고, 그래도 좁아지는 상황은 말줄임(…)으로 접는다. */}
-      <div className="field-focus flex w-[232px] items-center gap-2 rounded-xl bg-[var(--glass-bg)] px-3.5 py-2 text-[13px] text-text-3 xl:w-[252px]">
-        <span aria-hidden>⌕</span>
+      {/* [1012 · 규칙 1·2] 유리 배경 → 회색 면(bg-bg) + 1px 선 + 8px — 평면 헤더와 같은 언어(당근 검색 필드) */}
+      <div className="field-focus flex w-[232px] items-center gap-2 rounded-lg border border-line bg-bg px-3.5 py-2 text-[13px] text-text-3 xl:w-[252px]">
+        <Icon name="search" size={14} className="shrink-0" />
         <input
           ref={inputRef}
           type="search"
@@ -290,7 +292,7 @@ export function HeaderSearch() {
         {/* 항목 12 — 단축키 발견성. 장식이므로 스크린리더에서는 숨긴다(aria-label 에 명시). */}
         <kbd
           aria-hidden
-          className="shrink-0 rounded-md border border-line bg-[var(--glass-bg)] chip-pad-tight font-sans t-caption font-bold text-text-3"
+          className="shrink-0 rounded-sm border border-line bg-surface chip-pad-tight font-sans t-caption font-medium text-text-3"
         >
           /
         </kbd>

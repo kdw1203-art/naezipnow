@@ -1,6 +1,5 @@
 "use client";
 
-import { BrandSloganBand } from "@/app/components/BrandSloganBand";
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -145,17 +144,14 @@ export function WelcomeClient() {
         </Link>
       </div>
 
-      {/* [962] 첫 화면의 첫 줄은 브랜드 — 한지 띠 위 세리프 슬로건 */}
-      <BrandSloganBand className="rise-in" />
-      <h1 className="rise-in text-[21px] font-extrabold leading-[1.35] text-ink">
-        어느 동네가
-        <br />
-        궁금하세요?
-      </h1>
-      <p className="rise-in-1 -mt-2 text-[13px] text-text-2">
-        전국 시·군·구에서 1~{MAX_REGIONS}곳 고르면 그 동네의 실거래·소식을 먼저 보여 드려요.
-        나머지는 나중에 물어볼게요.
-      </p>
+      {/* [v4 · 규칙 1·3] 한지 슬로건 띠([962]) + 두 줄 질문 제목 + 설명 두 문장 → 제목 한 줄 + 사실 한 줄.
+          주인공은 아래 지역 고르기 하나 */}
+      <div className="flex flex-col gap-0.5">
+        <h1 className="rise-in t-title text-ink">관심 지역 고르기</h1>
+        <p className="rise-in-1 t-sub text-text-3">
+          전국 시·군·구 1~{MAX_REGIONS}곳 · 그 동네 실거래·소식 먼저
+        </p>
+      </div>
       <div className="rise-in-2">
         <RegionPicker
           inputId="welcome-region-search"
@@ -169,7 +165,8 @@ export function WelcomeClient() {
         type="button"
         onClick={() => void finish()}
         disabled={regions.length === 0 || busy}
-        className="btn-primary btn-cta rise-in-3 rounded-2xl p-[15px] text-center text-[15px] disabled:opacity-60"
+        /* [1012 · 규칙 1] 8px · disabled 는 .btn-primary:disabled 토큰 면(opacity 아님) */
+        className="btn-primary btn-cta rise-in-3 rounded-lg p-[15px] text-center text-[15px]"
       >
         {busy
           ? "저장 중…"

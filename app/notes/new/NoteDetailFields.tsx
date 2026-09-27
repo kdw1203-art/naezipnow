@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 4곳을 font-bold(700)로 바꿨다. */
 
 import type { Dispatch, SetStateAction } from "react";
 import { Icon } from "@/app/components/Icon";
@@ -87,16 +88,17 @@ export function NoteDetailFields({
         tags.length > 0
       }
     >
-      <summary className="cursor-pointer t-body font-extrabold text-ink">
+      <summary className="cursor-pointer t-body font-bold text-ink">
         더 자세히 적기 <span className="t-sub font-medium text-text-3">(선택 · 체크리스트 · 태그 · 고려사항)</span>
       </summary>
       <div className="mt-3 flex flex-col gap-3">
         {/* 카테고리별 현장 체크리스트 (입지·단지·내부·학군·생활·호재) */}
         <div className="flex flex-col gap-2">
-          <div className="t-body font-extrabold text-ink">
+          <div className="t-body font-bold text-ink">
             체크리스트{" "}
             <span className="t-sub font-medium text-text-3">
-              목적({visitPurpose || "실거주"})에 맞춰 항목이 바뀝니다 ·{" "}
+              {/* [v4 · 규칙 3] 문장 → 명사형 */}
+              {visitPurpose || "실거주"} 기준 ·{" "}
               {checklistGroups.reduce(
                 (n, g) => n + g.items.filter((it) => groupChecked[it.id]).length,
                 0,
@@ -202,10 +204,10 @@ export function NoteDetailFields({
 
         {/* 눈에 띈 점 태그 */}
         <div className="flex flex-col gap-2.5 border-t border-line pt-3">
-          <div className="t-body font-extrabold text-ink">
+          <div className="t-body font-bold text-ink">
             눈에 띈 점{" "}
             <span className="t-sub font-medium text-text-3">
-              탭해서 태그 추가 (예: 초품아 · 이중주차)
+              예: 초품아 · 이중주차
             </span>
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -290,7 +292,7 @@ export function NoteDetailFields({
 
         {/* 고려사항 — 추가 확인 항목 (중요/보통) */}
         <div className="flex flex-col gap-2.5 border-t border-line pt-3">
-          <div className="t-body font-extrabold text-ink">
+          <div className="t-body font-bold text-ink">
             고려사항{" "}
             <span className="t-sub font-medium text-text-3">
               결정 전 꼭 확인할 것 · 중요도 표시

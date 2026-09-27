@@ -109,9 +109,13 @@ test("마이 화면에 포인트 '충전' 문구가 없다(적립·교환만)", 
   assert.ok(VIEW.includes('href="/points/shop"'), "포인트 상점 링크는 유지");
 });
 
-test("빈 상태 그림(EmptyState)은 마이 화면에서 한 번만 쓴다", () => {
+/* [v4 · 규칙 8] 예전엔 "빈 상태 그림(EmptyState)은 한 번만"이었다. v4 에서 빈 상태는 한 줄이 규칙이고,
+   그 한 곳(내 임장노트)의 "첫 임장노트 쓰기"는 다음 할 일 행이 이미 말해 그림 카드를 한 줄로 바꿨다 —
+   그림 카드가 되살아나지 않게, 그리고 빈 노트 자리에 여전히 쓰기 입구가 있는지를 잠근다. */
+test("[v4] 마이 화면 빈 상태는 한 줄 — 그림 카드(EmptyState) 0 · 첫 노트 쓰기 입구는 유지", () => {
   const uses = VIEW.match(/<EmptyState\b/g) ?? [];
-  assert.equal(uses.length, 1);
+  assert.equal(uses.length, 0);
+  assert.ok(VIEW.includes('href="/notes/new" label="첫 임장노트 쓰기"'), "빈 노트 한 줄에 쓰기 입구");
 });
 
 test("보관(비노출) 경로로 가는 입구를 다시 만들지 않는다", () => {

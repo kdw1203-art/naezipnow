@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 3곳을 font-bold(700)로 바꿨다. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -97,15 +98,15 @@ export function RecordPrefsTab({ onGoNotification }: { onGoNotification: () => v
 
   if (phase === "loading") {
     return (
-      <div className="card rounded-2xl px-4 py-8 text-center t-body text-text-3">
+      <div className="card rounded-lg p-4 t-body text-text-3">
         기본값을 불러오는 중…
       </div>
     );
   }
   if (phase === "guest") {
     return (
-      <div className="card flex flex-col items-center gap-2.5 rounded-2xl px-4 py-8 text-center">
-        <div className="t-body font-extrabold text-ink">로그인하면 기본값을 저장할 수 있어요</div>
+      <div className="card flex flex-col items-start gap-2 rounded-lg p-4">
+        <div className="t-body font-bold text-ink">로그인하면 기본값을 저장할 수 있어요</div>
         <Link
           href={`/login?callbackUrl=${encodeURIComponent("/my/settings")}`}
           className="btn-primary btn-md no-underline"
@@ -117,7 +118,7 @@ export function RecordPrefsTab({ onGoNotification }: { onGoNotification: () => v
   }
   if (phase === "error") {
     return (
-      <div className="card rounded-2xl px-4 py-8 text-center t-body text-text-3">
+      <div className="card rounded-lg p-4 t-body text-text-3">
         기본값을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.
       </div>
     );
@@ -135,7 +136,7 @@ export function RecordPrefsTab({ onGoNotification }: { onGoNotification: () => v
 
       {/* ── 표시 ── */}
       <div className="card flex flex-col rounded-2xl px-4 py-1">
-        <div className="pb-1 pt-3 t-sub font-extrabold text-text-3">표시</div>
+        <div className="pb-1 pt-3 t-sub font-bold text-text-3">표시</div>
         <div className="flex items-center justify-between gap-3 py-3">
           <span className="flex min-w-0 flex-col">
             <span className="t-body font-semibold text-text-1">면적 단위</span>
@@ -161,7 +162,7 @@ export function RecordPrefsTab({ onGoNotification }: { onGoNotification: () => v
 
       {/* ── 임장노트 기록 ── */}
       <div className="card flex flex-col rounded-2xl px-4 py-1">
-        <div className="pb-1 pt-3 t-sub font-extrabold text-text-3">임장노트 기록</div>
+        <div className="pb-1 pt-3 t-sub font-bold text-text-3">임장노트 기록</div>
 
         <div className="flex items-center justify-between gap-3 border-b border-divider py-3">
           <span className="flex min-w-0 flex-col">

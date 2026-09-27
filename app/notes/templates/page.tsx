@@ -15,7 +15,7 @@ export const revalidate = 86_400;
 export const metadata: Metadata = {
   title: "임장 노트 템플릿 | 내집나우",
   description:
-    "입지·채광·소음·주차·하자부터 분양권·전월세·재건축까지, 바로 쓰는 임장 체크리스트 템플릿을 골라 임장 노트를 작성하세요. 내집나우가 만든 공식 체크리스트 제공.",
+    "입지·채광·소음·주차·하자부터 분양권·전월세·재건축까지, 임장 가기 전날 고르는 체크리스트 템플릿. 고르면 그 항목이 채워진 임장 노트가 열려요.",
   robots: { index: true, follow: true },
 };
 
@@ -24,10 +24,12 @@ export default async function NoteTemplatesPage() {
 
   return (
     <PageShell breadcrumb="홈 › 임장노트 › 템플릿" title="임장 노트 템플릿">
+      {/* [1012] 규칙 5·6 — "검증된 체크리스트로 시작하세요"(금지 문구) → 언제·어디서 + 실제 템플릿 수.
+          사용법 해설 문단은 걷었다(1011 원칙 — 버튼 라벨이 곧 설명이다). 0건이면 숫자 없이. */}
       <p className="rise-in mb-5 t-body text-text-2">
-        임장 갈 때 무엇을 봐야 할지 막막하다면, 검증된 체크리스트로 시작하세요.
-        아파트 기본 점검부터 분양권·전월세 계약·재건축까지 상황별 템플릿을 골라
-        &lsquo;이 템플릿으로 노트 쓰기&rsquo;를 누르면 바로 임장 노트를 작성할 수 있어요.
+        {items.length > 0
+          ? `임장 가기 전날, 아래 체크리스트 ${items.length}개 중 하나를 고르면 그 항목이 채워진 노트가 열려요.`
+          : "임장 가기 전날 고를 체크리스트가 아직 없어요."}
       </p>
       <TemplateBrowser initial={items} />
     </PageShell>

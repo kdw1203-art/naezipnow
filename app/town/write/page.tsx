@@ -12,11 +12,16 @@ import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { compressImage } from "@/lib/client/image-compress";
 import { MAX_POST_IMAGES } from "@/lib/community/attachments";
 import { useDirtyTracker, useUnsavedGuard } from "@/lib/client/use-unsaved-guard";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* ============================================================
    동네이야기 글쓰기 — POST /api/community/posts 실연동
    필수 필드: title(2자+), body(5자+), city, district, category
    401 → 인라인 로그인 안내, 성공 → 방금 쓴 글 상세로 이동(+ 적립 안내) [970 · C-02]
+
+   [v4] "한 화면 한 가지" — 제목 한 줄(설명 문장·"사람의 기록" 배지 없음) → 게시판 · 지역 · 제목/본문/사진
+   섹션(카드 테두리 없이 여백 + 작은 라벨) → 등록. 채움 파랑은 "이야기 등록" 하나(임시저장 "이어 쓰기"는 아웃라인).
+   게시판 칩의 이모지는 뺐다(v3 규칙 — UI 문자열 이모지 금지).
    ============================================================ */
 
 type CityOption = (typeof CITY_OPTIONS)[number];
@@ -24,7 +29,7 @@ type CityOption = (typeof CITY_OPTIONS)[number];
 const CATEGORIES = COMMUNITY_SUBCATEGORIES.filter((c) => c.id !== "all");
 
 const inputClass =
-  "w-full rounded-xl border border-line bg-surface px-3.5 py-3 text-[13px] text-ink outline-none placeholder:text-text-3 focus:border-primary";
+  "w-full rounded-lg border border-line bg-surface px-3.5 py-3 text-[13px] text-ink outline-none placeholder:text-text-3 focus:border-primary";
 
 /* ============================================================
    [B30] 임시저장 — 길게 쓴 글을 잃지 않는다.
@@ -99,8 +104,8 @@ export default function TownWritePage() {
   return (
     <Suspense
       fallback={
-        <PageShell breadcrumb="동네이야기 › 이야기 쓰기">
-          <div className="mx-auto w-full max-w-[640px] px-1 py-10 t-body text-text-3">
+        <PageShell>
+          <div className="mx-auto w-full max-w-[640px] py-10 t-body text-text-3">
             글쓰기 화면을 준비하고 있어요…
           </div>
         </PageShell>
@@ -381,26 +386,20 @@ function TownWriteForm() {
   };
 
   return (
-    <PageShell breadcrumb="동네이야기 › 이야기 쓰기">
-      <div className="mx-auto flex w-full max-w-[640px] flex-col gap-4">
-        <div className="rise-in px-1">
-          {/* [1006] 여기서 쓰는 건 **이야기**(사람의 기록)다 — 뉴스룸의 기사와 다른 재질.
-              올라가면 동네이야기 피드의 "이야기" 탭과 /town/story/[id] 에 보인다. */}
-          <h1 className="t-title text-ink">
-            이야기 쓰기 <span className="story-kind ml-1 t-caption align-middle">사람의 기록</span>
-          </h1>
-          <p className="mt-1 t-body text-text-2">
-            다녀온 동네의 인상·질문·사진을 이웃과 나눠 보세요 — 동네이야기 피드에 바로 보여요
-          </p>
-        </div>
+    /* [v4 · 규칙 8] 브레드크럼 "동네이야기 › 이야기 쓰기" 는 바로 아래 제목과 같은 말이라 뺐다 */
+    <PageShell>
+      <div className="mx-auto flex w-full max-w-[640px] flex-col gap-5">
+        {/* [1006] 여기서 쓰는 건 **이야기**(사람의 기록)다 — 올라가면 동네이야기 피드의 "이야기" 탭과
+            /town/story/[id] 에 보인다. [v4 · 규칙 1·3·6] 제목 한 줄 — 설명 문장과 "사람의 기록" 배지는 뺐다 */}
+        <h1 className="t-title text-ink">동네이야기 쓰기</h1>
 
         {/* [B30] 되살릴 초안 제안 — 자동으로 덮지 않고 사용자가 고른다 */}
         {restorable && (
-          <div className="rise-in flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface px-4 py-3 text-text-1">
+          <div className="flex flex-wrap items-center gap-2 border-y border-line py-3 text-text-1">
             {/* 좁은 화면에서 미리보기가 버튼을 밀어내면 "언제 저장됐는지"가 잘린다 —
                 본문 줄을 통째로 내려 두 줄로 가른다(390px 실측). */}
             <div className="min-w-0 basis-full sm:basis-auto sm:flex-1">
-              <span className="t-body font-extrabold text-primary">작성 중이던 글</span>
+              <span className="t-body font-bold text-primary">작성 중이던 글</span>
               <span className="ml-1.5 t-sub text-text-3">
                 {savedAgoLabel(restorable.savedAt)} 저장
               </span>
@@ -412,8 +411,9 @@ function TownWriteForm() {
               <button
                 type="button"
                 onClick={() => applyDraft(restorable)}
-                className="btn-primary rounded-[10px] px-3 py-1.5 t-sub"
+                className="btn-outline btn-sm"
               >
+                {/* [v4] 채움 파랑은 화면에 하나("이야기 등록") — 제안의 수락은 아웃라인 */}
                 이어 쓰기
               </button>
               <button
@@ -422,7 +422,7 @@ function TownWriteForm() {
                   clearDraft();
                   setRestorable(null);
                 }}
-                className="btn-secondary rounded-[10px] px-3 py-1.5 t-sub"
+                className="btn-ghost btn-sm"
               >
                 지우기
               </button>
@@ -431,44 +431,40 @@ function TownWriteForm() {
         )}
 
         {complexId && (
-          <div className="rise-in flex flex-wrap items-center gap-2 rounded-xl bg-primary-soft px-4 py-3 t-body text-text-1">
-            <span className="font-extrabold text-primary">
-              {complexName || "선택한 단지"}
-            </span>
-            <span>이야기로 등록돼요 — 이 단지 페이지의 노트 탭에 함께 보여요.</span>
-            <Link
-              href={complexHrefFromId(complexId)}
-              className="font-bold text-primary underline"
-            >
-              단지 보기
+          /* [v4 · 규칙 3] 파랑 안내 상자(설명 문장) → 사실 한 줄: 어느 단지에 붙는 글인지 + 단지로 가는 링크 */
+          <p className="t-sub text-text-3">
+            단지 <b className="font-bold text-ink">{complexName || "선택한 단지"}</b> 이야기 ·{" "}
+            <Link href={complexHrefFromId(complexId)} className="tap-line font-bold text-primary no-underline">
+              단지 보기 ›
             </Link>
-          </div>
+          </p>
         )}
 
-        {/* 카테고리 선택 */}
-        <div className="rise-in-1 card flex flex-col gap-2.5 rounded-[18px] p-5">
-          <div className="t-body font-extrabold text-ink">게시판 선택</div>
+        {/* 카테고리 선택 — [v4 · 규칙 5] 카드 → 작은 라벨 + 선택 칩(누르면 상태가 바뀌는 칩만) */}
+        <div className="flex flex-col gap-2">
+          <div className="t-sub font-bold text-text-2">게시판</div>
           <div className="flex flex-wrap gap-1.5">
             {CATEGORIES.map((c) => (
               <button
                 key={c.id}
                 type="button"
                 onClick={() => setCategory(c.label)}
+                aria-pressed={category === c.label}
                 className={`chip px-3 py-[7px] text-xs ${
                   category === c.label
                     ? "chip-active"
                     : "border border-line bg-surface text-text-2"
                 }`}
               >
-                {c.emoji} {c.label}
+                {c.label}
               </button>
             ))}
           </div>
         </div>
 
         {/* 지역 선택 */}
-        <div className="rise-in-2 card flex flex-col gap-2.5 rounded-[18px] p-5">
-          <div className="t-body font-extrabold text-ink">지역</div>
+        <div className="flex flex-col gap-2">
+          <div className="t-sub font-bold text-text-2">지역</div>
           <div className="grid grid-cols-2 gap-2">
             <select
               value={city}
@@ -498,14 +494,14 @@ function TownWriteForm() {
         </div>
 
         {/* 제목 · 본문 */}
-        <div className="rise-in-3 card flex flex-col gap-3 rounded-[18px] p-5">
+        <div className="flex flex-col gap-3">
           {/* [970 · C-27] placeholder 만 있던 입력 — 스크린리더는 값이 차면 이름을 잃는다. aria-label */}
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={80}
             aria-label="제목"
-            placeholder="제목을 입력하세요 (2글자 이상)"
+            placeholder="제목 (2글자 이상)"
             className={inputClass}
           />
           <textarea
@@ -513,14 +509,14 @@ function TownWriteForm() {
             onChange={(e) => setContent(e.target.value)}
             rows={9}
             aria-label="본문"
-            placeholder="이웃과 나누고 싶은 이야기를 적어주세요 (5글자 이상)"
+            placeholder="본문 (5글자 이상) — 다녀온 날·본 것·느낀 점"
             className={`${inputClass} min-h-[200px] resize-y leading-[1.6]`}
           />
           {/* [B31] 사진 — 피드가 사진 우선 격자인데 이야기 글은 늘 그라디언트 상자였다.
               (API 는 imageUrls 를 이미 받고 있었고, 고르는 UI 만 없었다) */}
-          <div className="flex flex-col gap-2 border-t border-divider pt-3">
+          <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <label className="btn-soft cursor-pointer rounded-[10px] px-3 py-2 t-sub font-bold">
+              <label className="btn-soft cursor-pointer rounded-lg px-3 py-2 t-sub font-bold">
                 사진 추가
                 <input
                   type="file"
@@ -536,11 +532,11 @@ function TownWriteForm() {
               <span className="t-sub text-text-3">
                 {uploading > 0
                   ? `올리는 중… ${uploading}장`
-                  : `${images.length}/${MAX_POST_IMAGES}장 · 자동으로 줄여서 올려요`}
+                  : `${images.length}/${MAX_POST_IMAGES}장`}
               </span>
             </div>
             {uploadError && (
-              <div className="t-sub font-semibold text-danger">{uploadError}</div>
+              <div className="t-sub font-bold text-danger">{uploadError}</div>
             )}
             {images.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -550,13 +546,13 @@ function TownWriteForm() {
                     <img
                       src={url}
                       alt=""
-                      className="h-[72px] w-[72px] rounded-[10px] border border-line object-cover"
+                      className="h-[72px] w-[72px] rounded-lg border border-line object-cover"
                     />
                     <button
                       type="button"
                       aria-label="사진 빼기"
                       onClick={() => setImages((prev) => prev.filter((u) => u !== url))}
-                      className="absolute -right-1.5 -top-1.5 flex h-[22px] w-[22px] items-center justify-center rounded-full bg-brand-navy t-caption font-extrabold text-white"
+                      className="absolute -right-1.5 -top-1.5 flex h-[22px] w-[22px] items-center justify-center rounded-full bg-brand-navy t-caption font-bold text-white"
                     >
                       ×
                     </button>
@@ -576,8 +572,8 @@ function TownWriteForm() {
 
         {/* 오류 안내 */}
         {error && (
-          <div className="card rounded-[14px] border-l-[3px] border-l-danger px-[15px] py-3">
-            <div className="t-body font-semibold text-danger">{error}</div>
+          <div role="alert" className="rounded-lg bg-danger-soft px-3 py-2">
+            <div className="t-body font-bold text-danger">{error}</div>
             {blockedWord && (
               <div className="mt-1.5 t-sub text-text-2">
                 내집나우 커뮤니티는 이웃 모두가 안심하고 이용할 수 있도록 일부
@@ -595,7 +591,7 @@ function TownWriteForm() {
         <div className="flex gap-2">
           <Link
             href="/town"
-            className="btn-secondary flex-1 rounded-[10px] p-3 text-center t-body"
+            className="btn-secondary flex-1 rounded-lg p-3 text-center t-body"
           >
             취소
           </Link>
@@ -603,9 +599,10 @@ function TownWriteForm() {
             type="button"
             onClick={onSubmit}
             disabled={submitting}
-            className="btn-primary btn-cta flex-[2] rounded-[10px] p-3 text-center t-body disabled:opacity-60"
+            className="btn-primary btn-cta flex-[2] rounded-lg p-3 text-center t-body disabled:opacity-60"
           >
-            {submitting ? "등록 중…" : "등록하기"}
+            {/* [1012] 규칙 5 — 동사 + 대상 */}
+            {submitting ? "등록 중…" : "이야기 등록"}
           </button>
         </div>
       </div>

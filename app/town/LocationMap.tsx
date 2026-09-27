@@ -65,8 +65,9 @@ export function LocationMap({
       ]
     : [];
 
+  /* [1012] 규칙 3 — 폴백 그라데이션(from-bg to-line) → 회색 단면(--divider). 사진·지도가 없는 자리는 단색. */
   const fallback = (
-    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-bg to-line text-center">
+    <div className="flex h-full w-full items-center justify-center bg-divider text-center">
       <div>
         <div className="text-2xl">
           <Icon name="📍" size={24} />

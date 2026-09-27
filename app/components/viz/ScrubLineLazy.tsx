@@ -10,7 +10,7 @@ import type { ScrubLine as ScrubLineType } from "./ScrubLine";
    클라이언트 이동으로 처음 그릴 때만 잠깐 같은 높이의 빈 판(스켈레톤)이 보인다 — 자리가 흔들리지 않게. */
 const ScrubLine = dynamic(() => import("./ScrubLine"), {
   /* [1009 · 리뷰 RA] 머리(약 52px)+차트(176)+출처 줄(약 28) ≈ 256 — 228 이면 받은 뒤 아래가 밀렸다 */
-  loading: () => <div className="skeleton h-[256px] w-full rounded-[10px]" aria-hidden="true" />,
+  loading: () => <div className="skeleton h-[256px] w-full rounded-lg" aria-hidden="true" />,
 });
 
 export function ScrubLineLazy(props: ComponentProps<typeof ScrubLineType>) {

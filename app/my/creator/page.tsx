@@ -41,24 +41,20 @@ export default async function CreatorDashboardPage() {
 
   if (!email) {
     return (
-      <PageShell breadcrumb="마이 › 크리에이터" title="크리에이터 대시보드">
-        <div className="mx-auto max-w-[520px]">
-          <div className="rise-in card flex flex-col items-center gap-2 px-5 py-12 text-center">
-            <div className="t-title">✍️</div>
-            <div className="t-section text-ink">
-              로그인하면 내 콘텐츠 성과를 볼 수 있어요
-            </div>
-            <div className="t-sub text-text-3">
-              공개 노트 수·저장 수와 탑 임장러 현황은
-              <br />내 계정 기준으로 집계돼요
-            </div>
-            <Link href="/login" className="btn-primary btn-md mt-2">
-              로그인하고 시작하기
-            </Link>
-            <Link href="/notes" className="t-sub font-bold text-text-3">
-              공개 임장노트 둘러보기 ›
-            </Link>
-          </div>
+      /* [v4 · 규칙 1·7·10] 아이콘 + 가운데 정렬 카드 → 제목 한 줄 + 사실 한 줄 + 버튼(760px 줄 왼쪽) */
+      <PageShell>
+        <div className="mx-auto flex w-full max-w-[760px] flex-col items-start gap-3">
+          <header className="flex flex-col gap-0.5">
+            <h1 className="t-title text-ink">크리에이터 대시보드</h1>
+            {/* 화면이 실제로 세는 것만 말한다(공개 노트 수·저장 수·유료 리포트 판매) — "탑 임장러 현황"은 집계가 없다 */}
+            <p className="t-sub text-text-3">내 계정 기준 · 공개 노트 수 · 저장 수 · 유료 리포트 판매</p>
+          </header>
+          <Link href="/login?callbackUrl=/my/creator" className="btn-primary btn-md no-underline">
+            로그인하고 내 노트 성과 보기
+          </Link>
+          <Link href="/notes" className="inline-flex min-h-10 items-center t-sub font-bold text-text-3 no-underline">
+            공개 임장노트 목록 보기 ›
+          </Link>
         </div>
       </PageShell>
     );
@@ -92,26 +88,19 @@ export default async function CreatorDashboardPage() {
   const isCreator = verified || publicNotesLen > 0;
   if (!isCreator) {
     return (
-      <PageShell breadcrumb="마이 › 크리에이터" title="크리에이터 대시보드">
-        <div className="mx-auto max-w-[520px]">
-          <div className="rise-in card flex flex-col items-center gap-3 px-5 py-12 text-center">
-            <div className="t-title">✍️</div>
-            <div className="t-section text-ink">
-              크리에이터 대시보드는 조건 충족 후 열려요
-            </div>
-            <p className="max-w-[420px] t-body text-text-3">
-              공개 임장노트를 1건 이상 발행하면 콘텐츠 성과·탑 임장러 현황을 볼 수
-              있어요.
-            </p>
-            <div className="flex flex-col gap-2 md:flex-row">
-              <Link href="/notes/new" className="btn-primary btn-md no-underline">
-                공개 노트 작성하기
-              </Link>
-            </div>
-            <Link href="/my" className="t-sub font-bold text-text-3 no-underline">
-              마이로 돌아가기 ›
-            </Link>
-          </div>
+      /* [v4 · 규칙 1·7·10] 이모지(✍) + 가운데 정렬 카드 → 제목 한 줄 + 사실 한 줄 + 버튼 */
+      <PageShell>
+        <div className="mx-auto flex w-full max-w-[760px] flex-col items-start gap-3">
+          <header className="flex flex-col gap-0.5">
+            <h1 className="t-title text-ink">크리에이터 대시보드</h1>
+            <p className="t-sub text-text-3">공개 임장노트 1건 이상 발행 뒤 열림 · 콘텐츠 성과</p>
+          </header>
+          <Link href="/notes/new" className="btn-primary btn-md no-underline">
+            공개 노트 작성하기
+          </Link>
+          <Link href="/my" className="inline-flex min-h-10 items-center t-sub font-bold text-text-3 no-underline">
+            마이로 돌아가기 ›
+          </Link>
         </div>
       </PageShell>
     );
@@ -120,7 +109,8 @@ export default async function CreatorDashboardPage() {
   const sales = await getCreatorSales(email);
 
   return (
-    <PageShell breadcrumb="마이 › 크리에이터" title="크리에이터 대시보드">
+    <PageShell>
+      <h1 className="mx-auto mb-4 w-full max-w-[760px] t-title text-ink">크리에이터 대시보드</h1>
       <CreatorClient
         nickname={session?.user?.name ?? null}
         publicNoteCount={

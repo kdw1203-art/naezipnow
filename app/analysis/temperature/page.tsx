@@ -3,8 +3,6 @@ import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import Link from "next/link";
 import { cache } from "react";
 import { PageShell } from "../../components/PageShell";
-import { ToolHero, type HeroKpi } from "@/app/components/analysis/ToolHero";
-import { Gauge } from "@/app/components/viz/Gauge";
 import { Bars } from "@/app/components/viz/Bars";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
 import { QaBlock } from "../../components/QaBlock";
@@ -126,49 +124,6 @@ export default async function TemperatureHubPage() {
       ? Math.round((rows.reduce((a, r) => a + r.current.score, 0) / rows.length) * 10) / 10
       : null;
 
-  const heroKpis: HeroKpi[] = [];
-  if (rows.length > 0) {
-    heroKpis.push({ label: "기록 지역", value: `${rows.length}곳`, note: weekLabel ? `${weekLabel} 주 기준` : undefined });
-    if (avgScore !== null) {
-      heroKpis.push({
-        label: "평균 온도",
-        value: `${avgScore}`,
-        note: "100점 중 · 50이 중립",
-        aside: <Explain {...TEMPERATURE_EXPLAIN} size={12} />,
-      });
-    }
-    if (hottest) {
-      heroKpis.push({ label: "가장 뜨거운 곳", value: `${hottest.current.score}`, note: `${hottest.current.regionLabel} · ${hottest.current.headline}` });
-    }
-    if (coldest) {
-      heroKpis.push({ label: "가장 차가운 곳", value: `${coldest.current.score}`, note: `${coldest.current.regionLabel} · ${coldest.current.headline}` });
-    }
-    if (compared > 0) {
-      /* [1009 · A] 화살표만 있고 색이 없던 것 → ▲ 빨강(오른 곳) · ▼ 파랑(내린 곳) */
-      heroKpis.push({
-        label: "지난주 대비",
-        value: (
-          <span className="inline-flex items-baseline gap-1.5">
-            <span className="delta-up">
-              <span aria-hidden="true">▲</span>
-              <span className="sr-only">오른 곳</span>
-              {rising}
-            </span>
-            <span aria-hidden="true" className="text-text-3">
-              ·
-            </span>
-            <span className="delta-down">
-              <span aria-hidden="true">▼</span>
-              <span className="sr-only">내린 곳</span>
-              {falling}
-            </span>
-          </span>
-        ),
-        note: `비교 가능한 ${compared}곳 중 오른 곳 · 내린 곳`,
-      });
-    }
-  }
-
   const crumbs = breadcrumbJsonLd([
     { name: "홈", url: "/" },
     { name: "AI 분석", url: "/analysis" },
@@ -194,6 +149,8 @@ export default async function TemperatureHubPage() {
     },
   ];
 
+  const LINK = "tap-line font-bold text-primary no-underline";
+
   return (
     <PageShell breadcrumb="홈 › AI 분석 › 시장 온도 주간 기록" toolScope={personaVars(TOOL_PERSONAS["market:temperature"])}>
       <script
@@ -201,169 +158,93 @@ export default async function TemperatureHubPage() {
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
       />
 
-      <ToolHero
-        eyebrow="지역·시장 흐름"
-        icon="flame"
-        title="지역별 시장 온도 주간 기록"
-        personaId="market:temperature"
-        toneClass="text-warning"
-        /* [1011] 계산 방식("매매가격지수 모멘텀과 거래량 추이를 합쳐")을 걷었다(소유자 지시) —
-           눈금을 읽는 법(50이 중립)과 면책은 남긴다. 방법론은 /methodology 가 맡는다. */
-        lead="동네마다 지금 시장이 얼마나 달아올랐는지 0~100 눈금으로 매주 기록합니다. 50이 중립이고, 매수·매도 권유가 아닙니다."
-        kpis={heroKpis}
-        chart={
-          hottest ? (
-            <div className="flex items-center gap-3 rounded-[10px] border border-line bg-surface px-3 py-2">
-              <Gauge
-                value={hottest.current.score}
-                label={String(hottest.current.score)}
-                caption={hottest.current.regionLabel}
-                size={112}
-                className="shrink-0 text-warning"
-              />
+      {/* [v4 · 한 화면 한 가지] 머리(제목 + 사실 한 줄) → 주인공(평균 온도) + 분포 막대 → 지역 구분선 행(오른쪽 점수·지난주 대비) →
+          링크 한 줄 → 이어서 분석 행 → 맨 끝 접힘 "읽는 법·Q&A".
+          지운 것: 네이비 히어로·아이콘 타일·"성격" 배지·하는 일 문장·KPI 5칸·게이지(가장 뜨거운 곳 = 목록 첫 행),
+          요약 문단(→ 사실 줄), 카드 격자(점수 타일 + 눈금 + 배지 → 행), 배지 설명 문단, "이 기록을 읽는 법" 카드(→ 접힘). */}
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
+        <div className="flex flex-col gap-4">
+          <header className="flex flex-col gap-0.5">
+            <h1 className="t-title text-ink">지역별 시장 온도 주간 기록</h1>
+            <p className="t-sub text-text-3">
+              {weekLabel ? `${weekLabel} 주 · ` : ""}
+              {rows.length > 0 ? `${rows.length}곳 · ` : ""}
+              {compared > 0 && (
+                <>
+                  지난주 대비 <span className="delta-up">▲{rising}</span> <span className="delta-down">▼{falling}</span>
+                </>
+              )}
+            </p>
+          </header>
+          {/* [v4 · 규칙 2] 주인공 — 평균 온도 하나(0~100, 50 중립) + 분포 막대 */}
+          {avgScore !== null && (
+            <section aria-label="평균 온도" className="flex flex-col gap-2">
+              <div>
+                <p className="m-0 inline-flex items-center gap-0.5 t-caption text-text-3">
+                  평균 온도 · 100점 중 · 50이 중립
+                  <Explain {...TEMPERATURE_EXPLAIN} size={12} />
+                </p>
+                <p className="m-0 t-display t-num text-ink">{avgScore}</p>
+                {/* 면책 — 늘 보이게 한 줄 */}
+                <p className="m-0 t-sub text-text-2">관측값 요약 · 매수·매도 권유 아님</p>
+              </div>
               {histValues.length > 1 && (
-                <div className="min-w-0 flex-1 text-warning">
-                  <span className="t-caption block pb-1 text-text-3">
-                    온도 분포 · 10점 구간별 지역 수
-                  </span>
-                  <Bars
-                    values={histValues}
-                    labels={histLabels}
-                    height={62}
-                    valueSuffix="곳"
-                    ariaLabel="시장 온도 분포"
-                  />
+                <div className="card rounded-lg px-3 pb-1 pt-2 text-warning">
+                  <span className="block pb-1 t-caption text-text-3">온도 분포 · 10점 구간별 지역 수</span>
+                  <Bars values={histValues} labels={histLabels} height={62} valueSuffix="곳" ariaLabel="시장 온도 분포" />
                 </div>
               )}
-            </div>
-          ) : null
-        }
-        source={
-          weekLabel
-            ? `${weekLabel}이 속한 주 · 한국부동산원 매매가격지수 · 국토교통부 실거래 거래량 · 그 주에 마지막으로 관측한 값`
-            : "한국부동산원 매매가격지수 · 국토교통부 실거래 거래량"
-        }
-      />
+            </section>
+          )}
+        </div>
 
-      <p className="t-body mb-5 mt-4 text-text-2">
-        {rows.length > 0 && weekLabel && (
-          <>
-            {" "}
-            가장 최근 기록은 <strong className="text-ink">{weekLabel}</strong>이 속한 주이며,{" "}
-            <strong className="text-ink">{rows.length}개 지역</strong>이 담겨 있습니다
-            {compared > 0 && (
-              <>
-                {" "}
-                (지난주와 비교 가능한 {compared}개 중 <strong className="text-ink">{rising}곳
-                상승</strong> · {falling}곳 하락)
-              </>
-            )}
-            .
-          </>
-        )}
-      </p>
-
-      {loadFailed ? (
-        <section className="card mb-6 p-[var(--pad-card)]" data-reveal="">
-          <p className="t-body py-8 text-center text-text-3">
-            <strong className="text-ink">{LOAD_FAILED_LINE}</strong>
-            <br />
-            주간 기록이 없다는 뜻이 아니라, 조회가 제때 끝나지 않았거나 실패했다는 뜻입니다.
+        {loadFailed ? (
+          <p className="card rounded-lg px-4 py-6 text-center t-body text-text-3">
+            <strong className="text-ink">{LOAD_FAILED_LINE}</strong> · 기록 없음이 아니라 조회 실패
           </p>
-        </section>
-      ) : rows.length === 0 ? (
-        <section className="card mb-6 p-[var(--pad-card)]" data-reveal="">
-          <p className="t-body py-8 text-center text-text-3">
-            아직 쌓인 주가 없습니다.
-            <br />
-            주간 기록은 매일 도는 수집 작업이 그 주의 값을 갱신하며 만들어집니다. 첫 기록이
-            생기면 이곳에 나타납니다.
-            <br />
-            <Link href="/analysis/timing" className="inline-block py-[5px] font-bold text-primary underline">
+        ) : rows.length === 0 ? (
+          <div className="flex flex-col items-center gap-1 py-6 text-center">
+            <p className="t-body text-text-3">쌓인 주 없음 · 매일 수집이 그 주 값을 갱신하며 생김</p>
+            <Link href="/analysis/timing" className={`${LINK} t-sub`}>
               지금 이 순간의 시장 온도 보기
             </Link>
-          </p>
-        </section>
-      ) : (
-        <section className="card mb-6 p-[var(--pad-card)]" data-reveal="">
-          <h2 className="t-title flex items-baseline justify-between gap-3 text-ink">
-            <span className="inline-flex items-center gap-0.5">
-              {weekLabel} 주 기준
-              <Explain {...TEMPERATURE_EXPLAIN} />
-            </span>
-            <span className="t-sub shrink-0 text-text-3">
-              온도 높은 순 · {rows.length}개 지역
-            </span>
-          </h2>
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {rows.map(({ current, previous }) => (
-              <TempRegionCard
-                key={current.regionId}
-                current={current}
-                previous={previous}
-                href={`${PATH}/${current.regionId}`}
-              />
-            ))}
           </div>
-          <p className="t-sub mt-3 text-text-3">
-            오른쪽 배지는 지난주 기록과의 점수 차이입니다(▲ 오름 · ▼ 내림 · 보합). 배지가 없으면 그 지역의 직전 주
-            기록이 없다는 뜻입니다(기록이 시작된 첫 주이거나 그 주에 계산 근거가 없었던
-            경우).
-          </p>
-        </section>
-      )}
+        ) : (
+          <section className="flex flex-col gap-2" data-reveal="">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+                온도 높은 순 <span className="t-num text-text-3">{rows.length}</span>
+              </h2>
+              <span className="t-caption text-text-3">점수 · 지난주 대비</span>
+            </div>
+            {/* [v4 · 규칙 5] 카드 격자 → 구분선 행 */}
+            <ul data-tone="blue" className="card flex flex-col divide-y divide-line rounded-lg px-4">
+              {rows.map(({ current, previous }) => (
+                <TempRegionCard
+                  key={current.regionId}
+                  current={current}
+                  previous={previous}
+                  href={`${PATH}/${current.regionId}`}
+                />
+              ))}
+            </ul>
+            <p className="t-caption text-text-3">
+              한국부동산원 지수 · 국토교통부 거래량 · 그 주에 마지막으로 관측한 값 · 지난주 대비가 없으면 직전 주 기록 없음
+            </p>
+          </section>
+        )}
 
-      {hottest && coldest && weekLabel && rows.length >= 2 && (
-        <CitationBlock
-          sentence={`내집나우(naezipnow.com) 집계에 따르면, ${weekLabel}이 속한 주의 시장 온도는 ${hottest.current.regionLabel}가 ${hottest.current.score}점으로 가장 높고 ${coldest.current.regionLabel}가 ${coldest.current.score}점으로 가장 낮다 (0~100 눈금, 50이 중립. 한국부동산원 매매가격지수 모멘텀과 국토교통부 실거래 거래량 추이 기반, 그 주에 마지막으로 관측한 값).`}
-        />
-      )}
+        <p className="t-sub text-text-3">
+          <Link href="/analysis/timing" className={LINK}>
+            시세·타이밍 분석
+          </Link>
+          {" · "}
+          <Link href="/methodology" className={LINK}>
+            데이터 방법론
+          </Link>
+        </p>
 
-      <QaBlock title="시장 온도 Q&A" items={qa} />
-
-      <section className="card mb-6 p-[var(--pad-card)]" data-reveal="">
-        <h2 className="t-title text-ink">이 기록을 읽는 법</h2>
-        <ul className="t-body mt-2 space-y-1.5 text-text-2">
-          <li>
-            · 값은 <strong className="text-ink">그 주에 마지막으로 관측한 온도</strong>입니다.
-            주간 평균이 아니며, 주가 넘어가면 그 값이 그대로 굳습니다.
-          </li>
-          <li>
-            · 점수는 <strong className="text-ink">지수 모멘텀 ±25점</strong>과{" "}
-            <strong className="text-ink">거래량 추이 ±25점</strong>을 50에 더한 값입니다. 어느
-            항이 점수를 밀어 올렸는지는 지역별 페이지에 그대로 적혀 있습니다.
-          </li>
-          <li>
-            · 계산식을 바꾸면 <strong className="text-ink">공식 버전</strong>을 올려 함께
-            저장합니다. 과거 기록을 새 공식으로 다시 칠하지 않으므로, 어느 구간이 다른
-            공식으로 계산됐는지 나중에도 확인할 수 있습니다.
-          </li>
-          <li>
-            · 실거래 신고는 계약일로부터 최대 30일까지 늦어질 수 있어, 거래량 항은 신고가
-            마감되지 않은 이번 달을 빼고 계산합니다.
-          </li>
-        </ul>
-      </section>
-
-      <p className="mb-8 text-[12px] leading-[1.7] text-text-3">
-        지금 이 순간의 온도와 지수·거래량 원본 그래프는{" "}
-        <Link href="/analysis/timing" className="inline-block py-[5px] font-bold text-primary underline">
-          시세·타이밍 분석
-        </Link>
-        , 계산에 쓴 자료의 출처와 갱신 주기는{" "}
-        <Link href="/methodology" className="inline-block py-[5px] font-bold text-primary underline">
-          데이터 방법론
-        </Link>
-        에서 확인하실 수 있습니다.
-      </p>
-
-      {/* #411 — 도구 간 이어가기.
-          [D62·D55] 예전에는 파라미터 없이 보냈다("비교·온도는 지역을 모른다").
-          사실은 안다 — 이 화면의 주인공은 이번 주 가장 뜨거운 지역이다.
-          받는 쪽이 어떤 지역 표기든 읽게 됐으므로(lib/regions/param.ts),
-          그 지역을 그대로 실어 보낸다. hottest 가 없으면(빈 주간) 종전대로 빈손. */}
-      {/* [998] mb-8 제거 — 본문 pb-16 + 푸터 pt-6 과 겹쳐 데스크톱에서 147px 빈 띠(빈 공간 게이트) */}
-      <div>
+        {/* #411 — 도구 간 이어가기. [D62·D55] 이 화면의 주인공 지역(이번 주 가장 뜨거운 곳)을 그대로 실어 보낸다 */}
         <AnalysisCrossLinks
           current="temperature"
           regionLabel={hottest?.current.regionLabel ?? null}
@@ -378,6 +259,30 @@ export default async function TemperatureHubPage() {
               : undefined
           }
         />
+
+        {/* [v4 · 규칙 3] 맨 끝 접힘 하나 — 읽는 법(네 문단 → 한 줄씩) · 인용 · Q&A(FAQPage 스키마) */}
+        <details className="group border-t border-line pt-1">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
+            읽는 법·Q&amp;A
+            <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
+              ›
+            </span>
+          </summary>
+          <div className="flex flex-col pb-3 pt-1">
+            <ul className="mb-4 flex list-none flex-col gap-0.5 p-0">
+              <li className="t-caption text-text-3">값 = 그 주에 마지막으로 관측한 온도(주간 평균 아님) · 주가 넘어가면 굳음</li>
+              <li className="t-caption text-text-3">점수 = 50 + 지수 모멘텀 ±25 + 거래량 추이 ±25 · 어느 항이 밀었는지는 지역 페이지</li>
+              <li className="t-caption text-text-3">계산식을 바꾸면 공식 버전을 올려 함께 저장 · 과거 기록은 다시 칠하지 않음</li>
+              <li className="t-caption text-text-3">신고 지연(최대 30일) 때문에 거래량 항은 이번 달 제외</li>
+            </ul>
+            {hottest && coldest && weekLabel && rows.length >= 2 && (
+              <CitationBlock
+                sentence={`내집나우(naezipnow.com) 집계에 따르면, ${weekLabel}이 속한 주의 시장 온도는 ${hottest.current.regionLabel}가 ${hottest.current.score}점으로 가장 높고 ${coldest.current.regionLabel}가 ${coldest.current.score}점으로 가장 낮다 (0~100 눈금, 50이 중립. 한국부동산원 매매가격지수 모멘텀과 국토교통부 실거래 거래량 추이 기반, 그 주에 마지막으로 관측한 값).`}
+              />
+            )}
+            <QaBlock title="시장 온도 Q&A" items={qa} />
+          </div>
+        </details>
       </div>
     </PageShell>
   );

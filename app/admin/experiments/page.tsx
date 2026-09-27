@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 /* 다크 셸(#12161f) 위에 라이트 토큰 카드가 떠 있던 것을 다크 카드로 통일
    (2026-08-02 감사 — 관리자 콘솔 다크 테마 규칙). */
 const darkCard =
-  "flex flex-col gap-3 rounded-[20px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-5";
+  "flex flex-col gap-3 rounded-3xl border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-5";
 
 function fmt(n: number): string {
   return n.toLocaleString("ko-KR");
@@ -109,7 +109,7 @@ function ExperimentCard({ r }: { r: ExperimentResult }) {
 
       <p className="text-[12px] leading-relaxed text-[#c9d2e0]">{r.def.hypothesis}</p>
 
-      <div className="flex flex-col gap-1 rounded-[10px] bg-[rgba(255,255,255,.05)] px-3 py-2.5 text-[12px] text-[#9aa6b8]">
+      <div className="flex flex-col gap-1 rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-2.5 text-[12px] text-[#9aa6b8]">
         <div>
           노출 이벤트 <span className="font-semibold text-[#c9d2e0]">{r.def.exposureEvent}</span> · 전환
           이벤트 <span className="font-semibold text-[#c9d2e0]">{r.def.primaryMetricEvent}</span>
@@ -169,7 +169,7 @@ function ExperimentCard({ r }: { r: ExperimentResult }) {
       </div>
 
       {r.hasEnoughSample && r.comparison ? (
-        <div className="flex flex-col gap-1.5 rounded-[10px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.05)] px-3 py-2.5">
+        <div className="flex flex-col gap-1.5 rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.05)] px-3 py-2.5">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">
             <span className="text-[#9aa6b8]">
               대조군 대비{" "}
@@ -196,7 +196,7 @@ function ExperimentCard({ r }: { r: ExperimentResult }) {
           <p className="text-[10px] leading-relaxed text-[#9aa6b8]">{r.comparison.caveat}</p>
         </div>
       ) : (
-        <div className="rounded-[10px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.05)] px-3 py-2.5">
+        <div className="rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.05)] px-3 py-2.5">
           <div className="text-[12px] font-bold text-white">표본 부족 — 아직 비교하지 않습니다</div>
           <p className="mt-1 text-[10px] leading-relaxed text-[#9aa6b8]">
             변형당 노출 {fmt(MIN_EXPOSURES_PER_VARIANT)}회 · 전환 {fmt(MIN_CONVERSIONS_PER_VARIANT)}회를
@@ -210,7 +210,7 @@ function ExperimentCard({ r }: { r: ExperimentResult }) {
       )}
 
       {conflicts > 0 && (
-        <div className="rounded-[10px] border border-[#f0c9c9] bg-[#fdecec] px-3 py-2.5 text-[12px] text-[#a33]">
+        <div className="rounded-lg border border-[#f0c9c9] bg-[#fdecec] px-3 py-2.5 text-[12px] text-[#a33]">
           <span className="font-bold">재배정 {fmt(conflicts)}건</span> — 같은 대상이 도중에 다른
           변형을 받았습니다. 변형 구성이나 가중치가 실험 중에 바뀐 흔적이라, 이 비교는 깨끗하지
           않습니다. 구성을 고정한 뒤 다시 시작하는 편이 낫습니다.

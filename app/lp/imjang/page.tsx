@@ -9,7 +9,9 @@ import { LpCta } from "./LpCta";
 /* ============================================================
    [1006 · E] 유료 광고 랜딩 — /lp/imjang
 
-   목적: 검색·소셜 광고에서 들어온 사람에게 행동 하나만 보여 준다("임장노트 무료로 시작").
+   목적: 검색·소셜 광고에서 들어온 사람에게 행동 하나만 보여 준다("첫 임장노트 쓰기(무료)").
+   [1012 · 규칙 5·9] CTA "임장노트 무료로 시작"(금지 문구 "무료로 시작") → "첫 임장노트 쓰기(무료)" — 동사 + 대상.
+   채움 파랑 버튼은 화면당 1개: 위 CTA 만 채움, 아래 두 번째는 테두리(outline).
    규칙:
    - noindex. 광고용 페이지가 자연 검색에 잡히면 같은 내용의 페이지가 둘이 된다(홈·/imjang).
      robots.txt 로 막지 않는다 — 크롤러가 noindex 메타를 읽으려면 접근은 열려 있어야 한다.
@@ -26,111 +28,97 @@ import { LpCta } from "./LpCta";
    내용이 하루 늦어도 잃을 것이 없다. */
 export const revalidate = 86_400;
 
-const CTA_LABEL = "임장노트 무료로 시작";
+const CTA_LABEL = "첫 임장노트 쓰기(무료)";
 
 export const metadata: Metadata = {
-  title: "임장노트 무료로 시작 | 내집나우",
+  title: "첫 임장노트 쓰기(무료) | 내집나우",
   description:
-    "임장(현장 방문) 기록을 국토교통부 실거래가와 나란히 남기는 무료 임장노트. 로그인 없이 바로 쓰기 시작할 수 있습니다.",
+    "임장(현장 방문) 기록을 국토교통부 실거래가와 나란히 남기는 무료 임장노트. 로그인 없이 쓰고, 저장할 때만 로그인합니다.",
   robots: { index: false, follow: true },
 };
 
+/* [v4 · 한 화면 한 가지] 제목 한 줄 + 사실 한 줄 → 주인공 CTA 1개(채움) → 사실 3행(1px 선) → 동선 3행 → 두 번째 CTA(테두리) →
+   끝 캡션(면책·방법론). 지운 것: 머리 위 꼬리표("부동산 임장 관리 · 내집나우") · 두 줄 슬로건 제목 · 가운데 정렬 ·
+   설명 문단 · 높이가 다른 사실 카드 3장(엇갈림) · 체크포인트 4줄 목록(개수만 행에) · 동선 카드 3장. */
 export default async function ImjangLandingPage() {
   const coverage = await loadCoverage();
-  const checkpoints = IMJANG_CHECKPOINTS.slice(0, 4);
   const checklistItemCount = CHECKLIST_GROUPS.reduce((n, g) => n + g.items.length, 0);
+  const coverageLine = [
+    coverage.complexes !== null ? `실거래 1건 이상 단지 ${coverage.complexes.toLocaleString("ko-KR")}곳` : null,
+    coverage.regions !== null ? `지역 통계 ${coverage.regions.toLocaleString("ko-KR")}개 지역` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <PageShell>
-      {/* 히어로 — 한 문장의 약속, 한 개의 행동 */}
-      <section className="rise-in mx-auto max-w-[760px] pt-4 text-center md:pt-10">
-        <p className="t-sub font-bold text-primary">부동산 임장 관리 · 내집나우</p>
-        <h1 className="mt-2 t-display text-ink">
-          실거래가는 누구나 봅니다.
-          <br />
-          현장은 가 본 사람만 압니다.
-        </h1>
-        <p className="mx-auto mt-4 max-w-[560px] t-body text-text-2">
-          임장노트는 무료입니다. 로그인 없이 바로 쓰기 시작하고, 저장할 때 로그인하면 사진과 AI
-          초안이 함께 올라갑니다. 기록 옆에는 국토교통부 실거래가가 나란히 붙습니다.
-        </p>
-        <div className="mt-6 flex justify-center">
-          <LpCta label={CTA_LABEL} />
-        </div>
-        <p className="mt-2 t-caption text-text-3">가입·카드 정보 없이 시작 · 광고 아닌 실거래 신고분 기준</p>
-      </section>
-
-      {/* 사실 3칸 — 실측·코드에 근거한 문장만 */}
-      <section className="rise-in-1 mx-auto mt-10 grid max-w-[960px] grid-cols-1 gap-3 md:grid-cols-3">
-        <div className="card p-[var(--pad-card)]">
-          <div className="t-section text-ink">실거래가 옆에 기록</div>
-          <p className="mt-1.5 t-sub text-text-2">
-            국토교통부 실거래가 공개시스템 신고분을 기준으로 단지·지역 실거래가를 보여 줍니다. 매물
-            호가는 실거래에 섞지 않고, 해제 신고분은 뺍니다.
-          </p>
-          {(coverage.complexes !== null || coverage.regions !== null) && (
-            <p className="mt-2 t-caption text-text-3">
-              {coverage.complexes !== null
-                ? `실거래 1건 이상 단지 ${coverage.complexes.toLocaleString("ko-KR")}곳`
-                : ""}
-              {coverage.complexes !== null && coverage.regions !== null ? " · " : ""}
-              {coverage.regions !== null ? `지역 통계 ${coverage.regions.toLocaleString("ko-KR")}개 지역` : ""}
-              {" (지금 집계 기준)"}
-            </p>
-          )}
-        </div>
-        <div className="card p-[var(--pad-card)]">
-          <div className="t-section text-ink">
-            체크리스트 {CHECKLIST_GROUPS.length}개 영역 · {checklistItemCount}개 항목
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
+        {/* 머리 + 주인공(CTA 하나) */}
+        <section className="rise-in flex flex-col gap-4 pt-2 md:pt-6">
+          <header className="flex flex-col gap-0.5">
+            <h1 className="t-title text-ink">실거래가 옆에 쓰는 임장노트</h1>
+            <p className="t-sub text-text-3">무료 · 로그인 없이 쓰고 저장할 때만 로그인 · 국토교통부 실거래가 나란히</p>
+          </header>
+          <div>
+            <LpCta label={CTA_LABEL} />
           </div>
-          <p className="mt-1.5 t-sub text-text-2">
-            입지·단지·내부·학군·편의·미래가치 항목을 노트에서 바로 체크합니다. 현장에서만 보이는
-            것은 임장 가이드의 체크포인트 {IMJANG_CHECKPOINTS.length}가지가 따로 알려 줍니다.
-          </p>
-          <ul className="mt-2 flex flex-col gap-1">
-            {checkpoints.map((c) => (
-              <li key={c.title} className="flex gap-1.5 t-caption text-text-2">
-                <span aria-hidden="true" className="text-primary">
-                  ✓
-                </span>
-                <span className="break-words">{c.title}</span>
+          <p className="t-caption text-text-3">가입·카드 정보 없이 쓰기 · 광고 아닌 실거래 신고분 기준</p>
+        </section>
+
+        {/* 사실 3행 — 실측·코드에 근거한 것만([v4 · 규칙 5·10] 높이가 다른 카드 3장 → 같은 높이 행) */}
+        <section aria-labelledby="lp-facts-h" className="rise-in-1 flex flex-col">
+          <h2 id="lp-facts-h" className="t-section text-ink">
+            임장노트에 붙는 것
+          </h2>
+          <ul className="divide-y divide-line">
+            <li className="flex min-h-14 flex-col justify-center gap-0.5 py-3">
+              <span className="t-body font-bold text-ink">실거래가 옆에 기록</span>
+              <p className="t-sub text-text-3">
+                {coverageLine ? `${coverageLine}(지금 집계 기준)` : "국토교통부 신고분 · 호가·해제 신고분 제외"}
+              </p>
+            </li>
+            <li className="flex min-h-14 flex-col justify-center gap-0.5 py-3">
+              <span className="t-body font-bold text-ink">
+                체크리스트 {CHECKLIST_GROUPS.length}개 영역 · {checklistItemCount}개 항목
+              </span>
+              <p className="t-sub text-text-3">
+                입지·단지·내부·학군·편의·미래가치 · 현장 체크포인트 {IMJANG_CHECKPOINTS.length}가지
+              </p>
+            </li>
+            <li className="flex min-h-14 flex-col justify-center gap-0.5 py-3">
+              <span className="t-body font-bold text-ink">사실 우선</span>
+              <p className="t-sub text-text-3">모든 수치에 출처·시점 · 조회 실패는 &ldquo;조회 실패&rdquo;로 표시</p>
+            </li>
+          </ul>
+        </section>
+
+        {/* 어떻게 되나 — 실제 동선 3단계([v4] 카드 3장 → 번호 행) */}
+        <section aria-labelledby="lp-flow-h" className="rise-in-2 flex flex-col">
+          <h2 id="lp-flow-h" className="t-section text-ink">
+            첫 노트 동선
+          </h2>
+          <ol className="divide-y divide-line">
+            {[
+              "단지·동네 고르기 → 그 지역 실거래 요약 한 줄이 노트 위에",
+              `체크리스트 ${checklistItemCount}개 항목 · 사진·메모 → 로그인 없이 이 기기에 임시저장`,
+              "저장할 때 로그인 → 사진 업로드 · 내 노트 목록·지도에서 다시 보기",
+            ].map((t, i) => (
+              <li key={t} className="flex min-h-12 items-center gap-3 py-2.5">
+                <span className="t-num w-4 shrink-0 text-primary">{i + 1}</span>
+                <span className="min-w-0 t-body text-text-1">{t}</span>
               </li>
             ))}
-          </ul>
-        </div>
-        <div className="card p-[var(--pad-card)]">
-          <div className="t-section text-ink">사실 우선</div>
-          <p className="mt-1.5 t-sub text-text-2">
-            모든 수치에 기준 시점과 출처를 붙이고, 없는 데이터는 없다고 표시합니다. 조회에 실패한
-            자리는 "조회 실패"라고 적지 "없음"이라고 적지 않습니다.
-          </p>
-          <p className="mt-2 t-caption text-text-3">집계 방법론은 사이트의 /methodology 에 공개돼 있습니다.</p>
-        </div>
-      </section>
+          </ol>
+          <div className="mt-4">
+            <LpCta label={CTA_LABEL} variant="outline" />
+          </div>
+        </section>
 
-      {/* 어떻게 되나 — 실제 동선 3단계 */}
-      <section className="rise-in-2 mx-auto mt-10 max-w-[760px]">
-        <h2 className="t-section text-ink">시작하면 이렇게 됩니다</h2>
-        <ol className="mt-3 flex flex-col gap-2">
-          {[
-            "단지나 동네를 고르면 그 지역의 실거래 요약 한 줄이 노트 위에 붙습니다.",
-            "체크리스트에 답하고 사진·메모를 남깁니다. 로그인 없이도 이 기기에 임시저장됩니다.",
-            "저장할 때 로그인하면 사진이 올라가고, 내 노트 목록과 지도에서 다시 볼 수 있습니다.",
-          ].map((t, i) => (
-            <li key={t} className="card flex gap-3 p-4">
-              <span className="t-num shrink-0 text-primary">{i + 1}</span>
-              <span className="t-body text-text-1">{t}</span>
-            </li>
-          ))}
-        </ol>
-        <div className="mt-6 flex justify-center">
-          <LpCta label={CTA_LABEL} />
-        </div>
-        <p className="mt-4 text-center t-caption text-text-3">
-          실거래 수치는 국토교통부 신고 기반의 참고 자료이며 투자 권유가 아닙니다. 판단과 책임은
-          이용자에게 있습니다.
+        <p className="t-caption text-text-3">
+          실거래 수치는 국토교통부 신고 기반의 참고 자료이며 투자 권유가 아닙니다. 판단과 책임은 이용자에게 있습니다 ·
+          집계 방법론은 /methodology 에 공개
         </p>
-      </section>
+      </div>
     </PageShell>
   );
 }

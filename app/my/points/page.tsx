@@ -1,6 +1,7 @@
+/* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 1곳). */
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 6곳을 font-bold(700)로 바꿨다. */
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
-import { Icon } from "@/app/components/Icon";
 import { ErrorState } from "@/app/components/ui/EmptyState";
 import { safeAuth } from "@/lib/safe-auth";
 import { logger } from "@/lib/log";
@@ -21,22 +22,27 @@ const POINT_TABS: { key: PointsTab; label: string }[] = [
   { key: "missions", label: "미션" },
   { key: "referral", label: "친구 초대" },
 ];
+/* [v4 · 부품] 채움 파랑 알약 탭 → 밑줄 탭(선택 칸 아래 2px 남색 선). 제목(h1 "포인트")도 이 760px 줄 안에서 그린다 —
+   PageShell 제목·브레드크럼("마이 › 포인트 › 지갑", 글자뿐)은 1240 컨테이너 왼쪽 끝이라 가운데 줄과 어긋났다 */
 function PointsTabs({ active }: { active: PointsTab }) {
   return (
-    <nav aria-label="포인트 메뉴" className="mx-auto mb-4 flex w-full max-w-[640px] flex-wrap gap-1.5">
-      {POINT_TABS.map((t) => (
-        <Link
-          key={t.key}
-          href={t.key === "wallet" ? "/my/points" : `/my/points?tab=${t.key}`}
-          aria-current={t.key === active ? "page" : undefined}
-          className={`inline-flex min-h-[40px] items-center rounded-full border px-4 t-body font-bold no-underline ${
-            t.key === active ? "border-primary bg-primary text-white" : "border-line bg-surface text-text-1"
-          }`}
-        >
-          {t.label}
-        </Link>
-      ))}
-    </nav>
+    <div className="mx-auto mb-6 flex w-full max-w-[760px] flex-col gap-2">
+      <h1 className="t-title text-ink">포인트</h1>
+      <nav aria-label="포인트 메뉴" className="flex gap-5 border-b border-line">
+        {POINT_TABS.map((t) => (
+          <Link
+            key={t.key}
+            href={t.key === "wallet" ? "/my/points" : `/my/points?tab=${t.key}`}
+            aria-current={t.key === active ? "page" : undefined}
+            className={`inline-flex min-h-10 items-center border-b-2 pb-2 pt-2.5 t-body font-bold no-underline ${
+              t.key === active ? "border-brand-hanji-ink text-ink" : "border-transparent text-text-3"
+            }`}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </nav>
+    </div>
   );
 }
 
@@ -108,76 +114,69 @@ async function readNicknameEffectUntil(
   }
 }
 
-/* ── 적립 방법 안내 (로그인 여부 무관) ── */
+/* ── 적립 방법 안내 (로그인 여부 무관) ── [v4 · 규칙 5·6] 카드 + 설명 칩("최초 1회"·"하루 N회") → 섹션 + 1px 선 행
+   (보조 줄에 조건 사실, 오른쪽에 포인트) */
 function EarnGuide() {
   return (
-    <div className="rise-in-3 card rounded-2xl p-5">
-      <div className="text-[13px] font-extrabold text-ink">포인트 적립 방법</div>
+    <section aria-labelledby="earn-h" className="rise-in-3 flex flex-col">
+      <h2 id="earn-h" className="t-section text-ink">
+        포인트 적립 방법
+      </h2>
       {/* [970 · A-11] "1P≈1원" 은 2026-08-23 토스 회신(원화 환산 표기 제거)과 어긋나는
           환금성 암시 문구다 — 무상 리워드 규칙(현금 전환·구매 불가, 서비스 내 혜택 전용)만 적는다. */}
-      <div className="mt-0.5 t-sub text-text-3">
-        활동하면 자동으로 쌓여요 · 현금 전환·구매 불가 무상 리워드 · 서비스 내 혜택 전용
-      </div>
-      <div className="mt-3 flex flex-col">
-        {Object.values(EARN_RULES).map((rule, i, arr) => (
-          <div
-            key={rule.key}
-            className={`flex items-center justify-between py-2.5 ${
-              i < arr.length - 1 ? "border-b border-divider" : ""
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <span className="t-body font-semibold text-text-1">
-                {rule.label}
+      <p className="t-caption text-text-3">활동하면 자동 적립 · 현금 전환·구매 불가 무상 리워드 · 서비스 내 혜택 전용</p>
+      <ul data-tone="mint" className="mt-1 divide-y divide-line">
+        {Object.values(EARN_RULES).map((rule) => {
+          const cond = [rule.once ? "최초 1회" : null, rule.dailyCap ? `하루 ${rule.dailyCap}회` : null]
+            .filter(Boolean)
+            .join(" · ");
+          return (
+            <li key={rule.key} className="flex min-h-12 items-center justify-between gap-3 py-2.5">
+              <span className="min-w-0 flex-1">
+                <span className="block t-body font-bold text-ink">{rule.label}</span>
+                {cond && <span className="mt-0.5 block t-sub text-text-3">{cond}</span>}
               </span>
-              {rule.once && (
-                <span className="chip-tag chip-pad-tight t-caption">
-                  최초 1회
-                </span>
-              )}
-              {rule.dailyCap && (
-                <span className="chip-tag chip-pad-tight t-caption">
-                  하루 {rule.dailyCap}회
-                </span>
-              )}
-            </div>
-            <span className="t-body font-extrabold text-primary">
-              +{rule.points.toLocaleString("ko-KR")}P
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
+              <span className="shrink-0 t-body t-num text-primary">+{rule.points.toLocaleString("ko-KR")}P</span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
-/* ── 비로그인 안내 — [970 · C-40] 공용 GuestGate(h1 포함) ── */
+/* ── 비로그인 안내 — [970 · C-40] 공용 GuestGate(h1 포함) ──
+   [v4 · 규칙 3] 설명 문장 → 적립 숫자 사실 한 줄 · 연파랑 타일 → 1px 선 행 */
 function GuestView() {
   return (
     <GuestGate
-      title="로그인하고 내 포인트를 확인하세요"
-      desc="매물 등록 · 임장노트 공개 · 출석으로 포인트가 쌓이고, 상점에서 매물 상단 노출·닉네임 꾸미기로 교환할 수 있어요."
+      /* [1012] 규칙 5·6·7 — 대상 명시 + 실제 적립 규칙의 숫자(EARN_RULES) */
+      title="로그인하고 내 포인트 잔액 보기"
+      desc={`매물 등록 승인 ${EARN_RULES.listing_approved.points}P · 임장노트 공개 ${EARN_RULES.note_public.points}P · 출석 ${EARN_RULES.attendance.points}P · 상점에서 매물 상단 노출·닉네임 꾸미기로 교환`}
       pathname="/my/points"
     >
-      <Link
-        href="/points/shop"
-        className="rise-in-1 flex items-center justify-between rounded-2xl bg-primary-soft px-4 py-[15px]"
-      >
-        <div>
-          <div className="text-[13px] font-extrabold text-primary">포인트 상점 구경하기</div>
-          <div className="mt-0.5 text-xs text-text-2">
-            어떤 혜택으로 바꿀 수 있는지 미리 살펴보세요
-          </div>
-        </div>
-        <span className="t-section text-primary">›</span>
-      </Link>
+      <ul data-tone="mint" className="rise-in-1 divide-y divide-line border-y border-line">
+        <li>
+          <Link href="/points/shop" className="press flex min-h-14 items-center justify-between gap-3 py-3 no-underline">
+            <span className="min-w-0">
+              <span className="block t-body font-bold text-ink">포인트 상점 품목 보기</span>
+              <span className="mt-0.5 block truncate t-sub text-text-3">로그인 전에도 교환 품목·가격 공개</span>
+            </span>
+            <span aria-hidden="true" className="shrink-0 t-body text-text-3">
+              ›
+            </span>
+          </Link>
+        </li>
+      </ul>
 
       <EarnGuide />
     </GuestGate>
   );
 }
 
-/* ── 로그인 — 실데이터 뷰 ── */
+/* ── 로그인 — 실데이터 뷰 ──
+   [v4 · 한 화면 한 가지] 네이비 잔액 패널(적립·사용 두 칸 · 채움 파랑 둘) → 주인공 숫자(t-display) + 사실 한 줄
+   (이번 달 적립·사용) + 출석(채움 1개) → 1px 선 행(상점 · 적용 중 효과) → 내역 행 → 적립 방법 행. */
 function WalletView({
   balance,
   history,
@@ -197,118 +196,88 @@ function WalletView({
     .reduce((s, r) => s + Math.abs(r.delta), 0);
 
   return (
-    <div className="mx-auto flex max-w-[640px] flex-col gap-3">
-      {/* 잔액 히어로 */}
-      <div className="rise-in ai-panel flex flex-col gap-4 rounded-[18px] p-[22px]">
-        <div>
-          <div className="text-xs text-ai-muted">사용 가능한 포인트</div>
-          <div className="mt-1 flex items-end gap-1">
-            <span className="t-title t-num leading-none text-ai-text">
-              {balance.toLocaleString("ko-KR")}
-            </span>
-            <span className="mb-1 text-[19px] font-extrabold text-ai-accent">P</span>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <div className="flex-1 rounded-xl bg-[rgba(255,255,255,.07)] p-3 text-center">
-            <div className="t-sub text-ai-muted">이번 달 적립</div>
-            <div className="t-num mt-0.5 text-[15px] text-ai-accent">
-              +{monthEarned.toLocaleString("ko-KR")}P
-            </div>
-          </div>
-          <div className="flex-1 rounded-xl bg-[rgba(255,255,255,.07)] p-3 text-center">
-            <div className="t-sub text-ai-muted">이번 달 사용</div>
-            <div className="t-num mt-0.5 text-[15px] text-ai-text">
-              −{monthSpent.toLocaleString("ko-KR")}P
-            </div>
-          </div>
+    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
+      {/* 주인공 — 사용 가능한 포인트 숫자 하나 */}
+      <section aria-label="사용 가능한 포인트" className="rise-in flex flex-col gap-3">
+        <div className="flex flex-col gap-0.5">
+          <p className="t-sub text-text-3">사용 가능한 포인트</p>
+          <p className="t-display t-num text-ink">
+            {balance.toLocaleString("ko-KR")}
+            <span className="ml-0.5 t-section text-primary">P</span>
+          </p>
+          <p className="t-sub text-text-3">
+            이번 달 적립 <b className="t-num text-primary">+{monthEarned.toLocaleString("ko-KR")}P</b> · 사용{" "}
+            <b className="t-num text-text-1">−{monthSpent.toLocaleString("ko-KR")}P</b>
+          </p>
         </div>
         <AttendanceButton />
-        <Link
-          href="/points/shop"
-          className="btn-primary rounded-[10px] py-2.5 text-center text-[13px]"
-        >
-          포인트 상점 가기
-        </Link>
-      </div>
+        <ul data-tone="mint" className="divide-y divide-line border-y border-line">
+          <li>
+            <Link href="/points/shop" className="press flex min-h-14 items-center justify-between gap-3 py-3 no-underline">
+              <span className="min-w-0">
+                <span className="block t-body font-bold text-ink">포인트 상점</span>
+                <span className="mt-0.5 block truncate t-sub text-text-3">매물 상단 노출·닉네임 꾸미기 교환</span>
+              </span>
+              <span aria-hidden="true" className="shrink-0 t-body text-text-3">
+                ›
+              </span>
+            </Link>
+          </li>
+          {/* 적용 중인 상점 효과 — 산 것이 지금 켜져 있음을 지갑에서 확인시켜 준다 */}
+          {nickEffect && (
+            <li className="flex min-h-14 items-center justify-between gap-3 py-3">
+              <span className="min-w-0">
+                <span className="block t-body font-bold text-ink">
+                  <span className={nickEffect.kind === "sunset" ? "nick-sunset" : "nick-aurora"}>
+                    닉네임 {nickEffect.kind === "sunset" ? "노을" : "오로라"}
+                  </span>{" "}
+                  적용 중
+                </span>
+                <span className="mt-0.5 block truncate t-sub text-text-3">
+                  {fmtDate(nickEffect.until)}까지 · 동네이야기 글 상세 작성자 이름
+                </span>
+              </span>
+            </li>
+          )}
+        </ul>
+        {/* 무상성 고지 — 상점·약관과 같은 단일 출처 문구(POINTS_GRATUITOUS_NOTICE). [v4] 회색 상자 → 캡션 */}
+        <p className="t-caption text-text-3">{POINTS_GRATUITOUS_NOTICE}</p>
+      </section>
 
-      {/* 적용 중인 상점 효과 — 산 것이 지금 켜져 있음을 지갑에서 확인시켜 준다 */}
-      {nickEffect && (
-        <div className="rise-in-1 card flex items-center justify-between rounded-2xl px-4 py-3">
-          <div className="min-w-0">
-            <div className="t-body font-extrabold text-ink">
-              <span className={nickEffect.kind === "sunset" ? "nick-sunset" : "nick-aurora"}>
-                닉네임 {nickEffect.kind === "sunset" ? "노을" : "오로라"}
-              </span>{" "}
-              적용 중
-            </div>
-            <div className="mt-0.5 t-sub text-text-3">
-              {fmtDate(nickEffect.until)}까지 · 동네이야기 글 상세의 작성자 이름이 빛나요
-            </div>
-          </div>
-          <Icon name="✨" size={18} className="shrink-0 text-primary" />
-        </div>
-      )}
-
-      {/* 무상성 고지 — 상점·약관과 같은 단일 출처 문구 */}
-      <p className="rise-in-1 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 t-sub text-text-3">
-        {POINTS_GRATUITOUS_NOTICE}
-      </p>
-
-      {/* 적립·소비 내역 */}
-      <div className="rise-in-2 card rounded-2xl p-5">
-        <div className="text-[13px] font-extrabold text-ink">포인트 내역</div>
+      {/* 적립·소비 내역 — [v4 · 규칙 5·8] 카드 → 섹션 + 1px 선 행 · 빈 상태 한 줄 */}
+      <section aria-labelledby="history-h" className="rise-in-2 flex flex-col">
+        <h2 id="history-h" className="t-section text-ink">
+          포인트 내역 {history.length > 0 && <span className="t-num text-text-3">{history.length}</span>}
+        </h2>
         {history.length === 0 ? (
-          <div className="flex flex-col items-center gap-1.5 py-8 text-center">
-            <div className="t-body font-bold text-ink">
-              아직 포인트 내역이 없어요
-            </div>
-            <div className="t-sub text-text-3">
-              활동을 시작하면 여기에 적립·사용 기록이 모여요
-            </div>
-          </div>
+          <p className="border-y border-line py-3 t-sub text-text-3">포인트 내역 없음 · 활동하면 적립·사용 기록이 여기로</p>
         ) : (
-          <div className="mt-2 flex flex-col">
+          <ul data-tone="blue" className="divide-y divide-line">
             {history.map((r, i) => {
               const earn = r.delta > 0;
               return (
-                <div
-                  key={`${r.createdAt}-${i}`}
-                  className={`flex items-center justify-between py-3 ${
-                    i < history.length - 1 ? "border-b border-divider" : ""
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <div className="truncate text-[13px] font-bold text-ink">
-                      {reasonLabel(r.reason)}
-                    </div>
-                    <div className="t-sub text-text-3">
+                <li key={`${r.createdAt}-${i}`} className="flex min-h-14 items-center justify-between gap-3 py-3">
+                  <span className="min-w-0">
+                    <span className="block truncate t-body font-bold text-ink">{reasonLabel(r.reason)}</span>
+                    <span className="mt-0.5 block t-sub text-text-3">
                       {fmtDate(r.createdAt)}
-                      {earn && r.expiresAt
-                        ? ` · ${fmtDate(r.expiresAt)} 만료 예정`
-                        : ""}
-                    </div>
-                  </div>
-                  <div className="shrink-0 pl-3 text-right">
+                      {earn && r.expiresAt ? ` · ${fmtDate(r.expiresAt)} 만료 예정` : ""}
+                    </span>
+                  </span>
+                  <span className="shrink-0 pl-3 text-right">
                     {/* [1009 · T] 포인트 적립·사용 — 줄마다 자릿수가 세로로 맞게 tabular-nums(t-num) */}
-                    <div
-                      className={`t-num text-[13px] ${
-                        earn ? "text-primary" : "text-text-3"
-                      }`}
-                    >
+                    <span className={`block t-body t-num ${earn ? "text-primary" : "text-text-3"}`}>
                       {earn ? "+" : "−"}
                       {fmtP(r.delta)}
-                    </div>
-                    <div className="t-sub tabular-nums text-text-3">
-                      잔액 {r.balance.toLocaleString("ko-KR")}P
-                    </div>
-                  </div>
-                </div>
+                    </span>
+                    <span className="block t-sub tabular-nums text-text-3">잔액 {r.balance.toLocaleString("ko-KR")}P</span>
+                  </span>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
-      </div>
+      </section>
 
       <EarnGuide />
     </div>
@@ -325,7 +294,7 @@ export default async function PointsWalletPage({
 
   if (!email) {
     return (
-      <PageShell breadcrumb="포인트 지갑">
+      <PageShell>
         <GuestView />
       </PageShell>
     );
@@ -335,9 +304,9 @@ export default async function PointsWalletPage({
   const tab: PointsTab = rawTab === "missions" || rawTab === "referral" ? rawTab : "wallet";
   if (tab !== "wallet") {
     return (
-      <PageShell title="포인트" breadcrumb={`마이 › 포인트 › ${tab === "missions" ? "미션" : "친구 초대"}`}>
+      <PageShell>
         <PointsTabs active={tab} />
-        <div className="mx-auto w-full max-w-[640px]">
+        <div className="mx-auto w-full max-w-[760px]">
           {tab === "missions" ? <MissionsSection email={email} /> : <ReferralSection email={email} />}
         </div>
       </PageShell>
@@ -362,8 +331,9 @@ export default async function PointsWalletPage({
   if (!loaded.ok) {
     return (
       /* [970 · A-33] 로그인 뷰는 h1 이 없었다(게스트 뷰는 GuestGate 가 h1) — PageShell 제목으로 */
-      <PageShell title="포인트 지갑" breadcrumb="포인트 지갑">
-        <div className="mx-auto w-full max-w-[640px]">
+      <PageShell>
+        <div className="mx-auto w-full max-w-[760px]">
+          <h1 className="mb-3 t-title text-ink">포인트 지갑</h1>
           <ErrorState
             title="포인트 지갑을 지금 불러올 수 없어요"
             /* [970 · C-20] 해요체 통일 */
@@ -377,7 +347,7 @@ export default async function PointsWalletPage({
 
   return (
     /* [970 · A-33] 로그인 뷰 h1 — 지갑 히어로엔 제목 요소가 없다 */
-    <PageShell title="포인트" breadcrumb="마이 › 포인트 › 지갑">
+    <PageShell>
       <PointsTabs active="wallet" />
       <WalletView
         balance={loaded.balance}

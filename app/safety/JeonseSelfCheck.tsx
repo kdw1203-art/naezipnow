@@ -173,15 +173,15 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
   }, [ready, type, depositN, priceN, lienN]);
 
   const inputCls =
-    "w-full rounded-[10px] border border-line bg-surface px-3.5 py-2 text-[13px] text-ink outline-none placeholder:text-text-3 focus:border-primary";
+    "w-full rounded-lg border border-line bg-surface px-3.5 py-2 text-[13px] text-ink outline-none placeholder:text-text-3 focus:border-primary";
 
   return (
     <section id={SELF_CHECK_ANCHOR_ID} className="mt-5 scroll-mt-[72px]">
-      <div className="card flex flex-col gap-4 rounded-[18px] p-[22px]">
+      <div className="card flex flex-col gap-4 rounded-3xl p-[22px]">
         {/* 헤더 */}
         <div className="flex items-start gap-2.5">
           <span
-            className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px]"
+            className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
             style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
           >
             <Icon name="shield" size={18} />
@@ -239,7 +239,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
                     ? "입력한 주소/단지명으로 최근 실거래 평균을 조회해요"
                     : "상단에 주소/단지명을 먼저 입력하세요"
                 }
-                className="btn-soft shrink-0 whitespace-nowrap rounded-[10px] px-2.5 py-2 text-[12px] font-bold disabled:opacity-50"
+                className="btn-soft shrink-0 whitespace-nowrap rounded-lg px-2.5 py-2 text-[12px] font-bold disabled:opacity-50"
               >
                 {lookingUp ? "조회 중…" : "실거래 평균"}
               </button>
@@ -290,14 +290,14 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
 
         {/* 결과 */}
         {!result ? (
-          <div className="rounded-[14px] border border-dashed border-line px-4 py-6 text-center text-[12px] text-text-3">
+          <div className="rounded-lg border border-dashed border-line px-4 py-6 text-center text-[12px] text-text-3">
             전세보증금과 매매 시세를 입력하면 위험도가 계산돼요.
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             {/* 종합 등급 배너 */}
             <div
-              className="flex items-center gap-3 rounded-[14px] px-4 py-3.5"
+              className="flex items-center gap-3 rounded-lg px-4 py-3.5"
               style={{
                 background: LEVEL_STYLE[result.overall].soft,
                 color: LEVEL_STYLE[result.overall].color,
@@ -321,7 +321,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
               {result.indicators.map((ind) => (
                 <div
                   key={ind.key}
-                  className="rounded-[10px] border border-line bg-surface px-3.5 py-3"
+                  className="rounded-lg border border-line bg-surface px-3.5 py-3"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -350,7 +350,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
             </div>
 
             {/* 실행 팁 */}
-            <div className="rounded-[10px] bg-bg px-4 py-3">
+            <div className="rounded-lg bg-bg px-4 py-3">
               <div className="mb-1.5 flex items-center gap-1.5 text-[12px] font-extrabold text-ink">
                 <Icon name="check" size={14} /> 계약 전 실행 팁
               </div>
@@ -371,7 +371,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
 
         {/* 면책 */}
         <div
-          className="flex items-start gap-1.5 rounded-[10px] px-3 py-2.5 text-[12px] leading-[1.6]"
+          className="flex items-start gap-1.5 rounded-lg px-3 py-2.5 text-[12px] leading-[1.6]"
           style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
         >
           <Icon name="warning" size={14} className="mt-0.5 shrink-0" />

@@ -3,12 +3,16 @@ import Link from "next/link";
 import { PageShell } from "../../components/PageShell";
 import {
   SEOUL_BROWSE_REGIONS,
+  buildComplexTxSlug,
   listDistrictComplexSummaries,
   regionDisplayName,
   type ComplexSummary,
   type ComplexTxRegion,
 } from "@/lib/market/complex-transactions";
-import { ComplexSummaryTable } from "../../components/ComplexSummaryTable";
+/* [v4] 공용 표(ComplexSummaryTable — /region/[id] 도 쓴다, 가로 스크롤 560px)는 두고, 이 화면은 같은 요약을
+   구분선 목록 행으로 직접 그린다. 링크 규칙(정본 /complex/{id}, 없으면 /complex/tx)은 표와 같다 */
+import { complexHrefFromNames } from "@/lib/seo/complex-slug";
+import { formatKrwShort } from "@/lib/market/format";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { logger } from "@/lib/log";
 
@@ -91,80 +95,117 @@ export default async function ComplexBrowsePage({
     );
   }
 
+  const LINK = "tap-line font-bold text-primary no-underline";
+
   return (
-    <PageShell breadcrumb="홈 › 단지 실거래 › 서울 단지 브라우즈" title="서울 단지별 실거래 현황">
-      <p className="rise-in mb-4 t-body text-text-2">
-        국토교통부 실거래가 기반 단지별 현황 — 매물 호가가 아닙니다. 구를 선택해
-        최근 실거래가·평단가·거래량을 확인하세요.
-      </p>
+    <PageShell breadcrumb="홈 › 단지 실거래 › 서울 단지 브라우즈">
+      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 구 칩 한 줄(필터) → 단지 구분선 행(오른쪽 최근 실거래가) → 링크 한 줄.
+          지운 것: 사용법 문단(두 문장 → 사실 줄), 네이비 선택 칩(→ 한지 + 남색 chip-active), 가로 스크롤 표(→ 행),
+          채움 파랑 + 카드 타일 CTA 4개(→ 링크 한 줄). */}
+      <div className="mx-auto flex max-w-[760px] flex-col gap-6">
+        <header className="flex flex-col gap-0.5">
+          <h1 className="rise-in t-title text-ink">서울 단지별 실거래 현황</h1>
+          <p className="t-sub text-text-3">
+            {label} · 단지 {summaries.length}곳 · 국토교통부 실거래 · 호가 아님
+          </p>
+        </header>
 
-      {/* A5 — 면적대·가격대 랜딩 진입점 */}
-      <p className="rise-in mb-4 -mt-2 t-body">
-        <Link href="/tx" className="font-bold text-primary underline">
-          지역별 면적대·가격대 실거래 보기 →
-        </Link>
-      </p>
+        {/* 구 선택 칩 — 강남4구 우선. [v4] 필터 칩 = 한 줄 가로 스크롤 · 선택 = 한지 + 남색(chip-active) */}
+        <nav
+          aria-label="구 선택"
+          className="-mx-3.5 flex gap-1.5 overflow-x-auto px-3.5 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0"
+        >
+          {SEOUL_BROWSE_REGIONS.map((r) => {
+            const active = r.id === region.id;
+            return (
+              <Link
+                key={r.id}
+                href={`/complex/browse?district=${encodeURIComponent(regionDisplayName(r))}`}
+                aria-current={active ? "page" : undefined}
+                className={`chip inline-flex min-h-[32px] shrink-0 items-center px-3 t-sub font-bold no-underline ${
+                  active ? "chip-active" : "border border-line bg-surface text-text-2"
+                }`}
+              >
+                {r.name}
+              </Link>
+            );
+          })}
+        </nav>
 
-      {/* 구 선택 칩 — 강남4구 우선 */}
-      <div className="rise-in-1 mb-5 flex flex-wrap gap-1.5">
-        {SEOUL_BROWSE_REGIONS.map((r) => {
-          const active = r.id === region.id;
-          return (
-            <Link
-              key={r.id}
-              href={`/complex/browse?district=${encodeURIComponent(regionDisplayName(r))}`}
-              className={`rounded-full px-3 py-1.5 text-[12px] font-bold transition ${
-                /* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
-                active
-                  ? "bg-brand-navy text-on-dark"
-                  : "card tile text-text-2"
-              }`}
-            >
-              {r.name}
-            </Link>
-          );
-        })}
+        {/* 해당 구 단지 요약 — [v4 · 규칙 5] 구분선 행: 왼쪽 단지 + 보조 한 줄 / 오른쪽 최근 실거래가 */}
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+            {label} 단지 <span className="t-num text-text-3">{summaries.length}</span>
+            <span className="t-sub font-medium text-text-3">최신 거래순</span>
+          </h2>
+          {summariesFailed ? (
+            /* "못 읽었다"와 "없다"를 섞지 않는다 */
+            <p className="card rounded-lg px-4 py-6 text-center t-body text-text-3">단지별 실거래를 불러오지 못했어요 · 조회 실패(데이터 없음 아님)</p>
+          ) : summaries.length === 0 ? (
+            <p className="card rounded-lg px-4 py-6 text-center t-body text-text-3">이 구의 단지별 실거래 준비 중</p>
+          ) : (
+            <ul data-tone="blue" className="card flex flex-col divide-y divide-line rounded-lg px-4">
+              {summaries.map((s) => (
+                <li key={s.complexName}>
+                  {/* 항목 41 — 사이트맵이 내는 정본 URL(/complex/{id}). region_name 이 비면 실거래 상세로 물러선다 */}
+                  <Link
+                    href={
+                      s.regionName
+                        ? complexHrefFromNames(s.regionName, s.complexName)
+                        : `/complex/tx/${buildComplexTxSlug(s.complexName, region.id)}`
+                    }
+                    className="press flex min-h-14 items-center justify-between gap-x-3 py-3 no-underline"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate t-body font-bold text-ink">{s.complexName}</span>
+                      <span className="mt-0.5 block truncate t-sub tabular-nums text-text-3">
+                        {[
+                          s.representativeAreaM2 !== null ? `대표 ${s.representativeAreaM2}㎡` : null,
+                          s.buildYear ? `${s.buildYear}년` : null,
+                          `12개월 ${s.txCount12m}건`,
+                          s.avgPricePerPyeongKrw !== null ? `${formatKrwShort(s.avgPricePerPyeongKrw)}/평` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 flex-col items-end">
+                      <span className="t-body t-num text-ink">{formatKrwShort(s.latestAmountKrw)}</span>
+                      <span className="t-caption tabular-nums text-text-3">
+                        {s.latestYm.length === 6 ? `${s.latestYm.slice(2, 4)}.${s.latestYm.slice(4)}` : s.latestYm}
+                        {s.latestAreaM2 !== null ? ` · ${s.latestAreaM2.toFixed(0)}㎡` : ""}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {/* A5 — 면적대·가격대 랜딩 진입점 + [1012 · 규칙 5] 동사 + 구체 대상(구 이름). [v4] 버튼·타일 → 링크 한 줄 */}
+        <p className="t-sub text-text-3" style={{ lineHeight: "24px" }}>
+          <Link href={`/region/${region.id}`} className={LINK}>
+            {region.name} 시세 허브 보기
+          </Link>
+          {" · "}
+          <Link href={`/map?region=${encodeURIComponent(regionDisplayName(region))}`} className={LINK}>
+            {region.name} 지도에서 보기
+          </Link>
+          {" · "}
+          <Link href="/complex/compare" className={LINK}>
+            {region.name} 단지끼리 비교하기
+          </Link>
+          {" · "}
+          <Link href="/notes/new" className={LINK}>
+            {region.name} 임장노트 쓰기
+          </Link>
+          {" · "}
+          <Link href="/tx" className={LINK}>
+            지역별 면적대·가격대 실거래 보기
+          </Link>
+        </p>
       </div>
-
-      {/* 해당 구 단지 요약 */}
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">
-          {label} 단지별 현황{" "}
-          <span className="t-sub font-medium text-text-3">
-            최신 거래순 · 상위 {summaries.length}개
-          </span>
-        </h2>
-        <ComplexSummaryTable
-          summaries={summaries}
-          regionId={region.id}
-          failed={summariesFailed}
-        />
-      </section>
-
-      {/* CTA */}
-      <section className="rise-in-3 mb-4 flex flex-wrap gap-2">
-        <Link
-          href={`/region/${region.id}`}
-          className="rounded-xl bg-primary px-5 py-3 t-body font-bold text-white shadow-[var(--shadow-cta)]"
-        >
-          {region.name} 지역 허브 보기
-        </Link>
-        <Link href="/map" className="card tile px-5 py-3 t-body font-bold text-ink">
-          지도에서 보기
-        </Link>
-        <Link
-          href="/complex/compare"
-          className="card tile px-5 py-3 t-body font-bold text-ink"
-        >
-          단지끼리 비교하기
-        </Link>
-        <Link
-          href="/notes/new"
-          className="card tile px-5 py-3 t-body font-bold text-ink"
-        >
-          임장노트 쓰기
-        </Link>
-      </section>
     </PageShell>
   );
 }

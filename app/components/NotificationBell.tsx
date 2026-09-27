@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 
 /* B10 — 헤더 알림 벨 + 미읽음 배지. 마운트 시 경량 카운트 조회.
    [967 · 24] 읽음 이벤트(nz:notifications-read)로 즉시 갱신 + 탭 복귀(visibility·
@@ -97,7 +98,7 @@ export function NotificationBell({ variant }: { variant: "desktop" | "mobile" })
       <Icon name="bell" size={size} />
       {count > 0 && (
         /* [962] 읽지 않은 알림 = 주홍 온점 배지, 처음 뜰 때 파문 한 번(njn-badge) */
-        <span className="njn-badge absolute right-0.5 top-0.5 flex h-[15px] min-w-[15px] items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none">
+        <span className="njn-badge absolute right-0.5 top-0.5 flex h-[15px] min-w-[15px] items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none">
           {count > 99 ? "99+" : count}
         </span>
       )}

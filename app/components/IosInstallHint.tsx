@@ -1,4 +1,6 @@
 "use client";
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
+/* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -127,13 +129,13 @@ export function IosInstallHint() {
       aria-label="홈 화면에 추가 안내"
       /* z-50 은 탭바, z-[190] 은 소프트 가입 모달 — 그 사이(InstallPrompt 와 동일).
          정렬에 transform 을 쓰지 않는다(.fade-in 과 충돌 방지, InstallPrompt 주석 참고). */
-      className="fade-in fixed inset-x-0 z-[60] mx-auto w-[min(420px,calc(100%-28px))] rounded-[18px] border border-line bg-surface p-4 shadow-[0_16px_40px_rgba(15,23,42,.18)]"
+      className="fade-in fixed inset-x-0 z-[60] mx-auto w-[min(420px,calc(100%-28px))] rounded-3xl border border-line bg-surface p-4 [box-shadow:var(--shadow-md)]"
       style={{ bottom }}
     >
       <div className="flex items-start gap-3">
         <div
           aria-hidden="true"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-primary-soft text-primary"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary"
         >
           {/* iOS 공유 아이콘(위로 향한 화살표 + 상자) — 찾아야 할 버튼과 같은 모양 */}
           <svg
@@ -152,11 +154,11 @@ export function IosInstallHint() {
           </svg>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-extrabold text-ink">주소창 없이 앱처럼 쓰기</div>
+          <div className="text-[13px] font-bold text-ink">주소창 없이 앱처럼 쓰기</div>
           <p className="mt-1 text-[12px] leading-relaxed text-text-2">
             사파리 <span className="font-semibold text-text-1">공유</span> 버튼을 누르고 목록에서{" "}
-            <span className="font-semibold text-text-1">홈 화면에 추가</span>를 선택하세요. 위아래
-            브라우저 막대가 사라져 화면을 더 넓게 씁니다.
+            <span className="font-semibold text-text-1">홈 화면에 추가</span>를 고르면 돼요. 위아래
+            브라우저 막대가 사라져 화면을 더 넓게 써요.
           </p>
         </div>
       </div>
@@ -164,7 +166,7 @@ export function IosInstallHint() {
         <button
           type="button"
           onClick={dismiss}
-          className="min-h-[44px] flex-1 rounded-xl border border-line bg-surface px-4 text-[13px] font-semibold text-text-2"
+          className="min-h-[44px] flex-1 rounded-lg border border-line bg-surface px-4 text-[13px] font-medium text-text-2"
         >
           닫기
         </button>

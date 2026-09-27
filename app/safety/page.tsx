@@ -84,7 +84,7 @@ export default function SafetyPage() {
             if (e.key === "Enter" && !e.nativeEvent.isComposing) submit();
           }}
           placeholder="주소 또는 단지명을 입력하세요 (예: 관양동 ○○아파트)"
-          className="min-w-[220px] flex-1 rounded-[10px] border border-line bg-surface px-3.5 py-2 text-[13px] text-ink outline-none placeholder:text-text-3 focus:border-primary"
+          className="min-w-[220px] flex-1 rounded-lg border border-line bg-surface px-3.5 py-2 text-[13px] text-ink outline-none placeholder:text-text-3 focus:border-primary"
         />
         {/* [970 · A-35] disabled:opacity-50 제거 — btn-primary 가 이미 :disabled 를 토큰으로
             처리해 두 번 흐려졌다 */}
@@ -92,7 +92,7 @@ export default function SafetyPage() {
           type="button"
           onClick={submit}
           disabled={!address.trim()}
-          className="btn-primary rounded-[10px] px-4 py-2 text-[13px]"
+          className="btn-primary rounded-lg px-4 py-2 text-[13px]"
         >
           안전 진단
         </button>
@@ -102,7 +102,7 @@ export default function SafetyPage() {
         <div className="flex flex-col gap-3.5">
           {/* 진단 상태 — 결과를 지어내지 않는다 */}
           {submitted ? (
-            <div className="rise-in-1 card flex flex-col gap-2.5 rounded-[18px] p-[22px]">
+            <div className="rise-in-1 card flex flex-col gap-2.5 rounded-3xl p-[22px]">
               <div className="text-[15px] font-extrabold text-ink">
                 “{submitted}” 전세·월세 안전 진단
               </div>
@@ -121,20 +121,20 @@ export default function SafetyPage() {
                       .getElementById(SELF_CHECK_ANCHOR_ID)
                       ?.scrollIntoView({ behavior: scrollBehavior(), block: "start" })
                   }
-                  className="btn-primary rounded-[10px] px-4 py-2.5 text-xs"
+                  className="btn-primary rounded-lg px-4 py-2.5 text-xs"
                 >
                   자가진단으로 확인하기
                 </button>
                 <Link
                   href="/notes/new"
-                  className="btn-secondary rounded-[10px] px-4 py-2.5 text-xs no-underline"
+                  className="btn-secondary rounded-lg px-4 py-2.5 text-xs no-underline"
                 >
                   이 집 임장노트 쓰기
                 </Link>
               </div>
             </div>
           ) : (
-            <div className="rise-in-1 card flex flex-col gap-1.5 rounded-[18px] p-[22px]">
+            <div className="rise-in-1 card flex flex-col gap-1.5 rounded-3xl p-[22px]">
               <div className="text-[15px] font-extrabold text-ink">
                 계약 전, 보증금을 지키는 6가지 확인
               </div>
@@ -147,7 +147,7 @@ export default function SafetyPage() {
           )}
 
           {/* 세입자 체크리스트 — 항목·확인 방법 안내 (판정값 없음) */}
-          <div className="rise-in-2 card flex flex-col gap-2.5 rounded-[18px] p-[22px]">
+          <div className="rise-in-2 card flex flex-col gap-2.5 rounded-3xl p-[22px]">
             <div className="text-[15px] font-extrabold text-ink">
               세입자 체크리스트{" "}
               <span className="text-[12px] font-medium text-text-3">
@@ -175,13 +175,13 @@ export default function SafetyPage() {
 
         <aside className="flex flex-col gap-3.5">
           <div className="rise-in-3">
-            <AIPanel title="계약 전 필수 3가지" className="rounded-[18px]">
+            <AIPanel title="계약 전 필수 3가지" className="rounded-3xl">
               ① 잔금일에 <b className="text-ai-accent">근저당 말소 동시 진행</b>{" "}
               특약 ② 전입신고+확정일자 즉시 (대항력) ③ 임대인 국세 완납증명 요청 —
               거부 시 계약 재고
             </AIPanel>
           </div>
-          <div className="rise-in-4 card flex flex-col gap-2 rounded-[18px] p-[18px]">
+          <div className="rise-in-4 card flex flex-col gap-2 rounded-3xl p-[18px]">
             <div className="text-[13px] font-extrabold text-ink">
               전세 vs 월세 vs 매수, 뭐가 유리할까
             </div>
@@ -190,7 +190,7 @@ export default function SafetyPage() {
             </p>
             <Link
               href="/calculator"
-              className="btn-soft mt-1 rounded-[10px] p-2.5 text-center text-xs no-underline"
+              className="btn-soft mt-1 rounded-lg p-2.5 text-center text-xs no-underline"
             >
               대출·비용 계산기로 비교하기
             </Link>

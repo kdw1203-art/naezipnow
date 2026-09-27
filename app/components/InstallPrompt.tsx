@@ -18,6 +18,7 @@ import {
   getDeferredInstallPrompt,
   takeDeferredInstallPrompt,
 } from "@/lib/client/pwa-install-prompt";
+import { Illust } from "@/app/components/Illust";
 
 /**
  * G9 — PWA 설치 프롬프트
@@ -169,20 +170,21 @@ export function InstallPrompt() {
        *   - 가로: -translate-x-1/2 이 사라져 왼쪽 끝이 화면 중앙에 박힘
        * transform 을 안 쓰는 정렬로 바꾸면 애니메이션과 충돌할 여지 자체가 없다.
        * 등장 효과는 opacity 만 건드리는 .fade-in 으로 대체했다. */
-      className="fade-in fixed inset-x-0 z-[60] mx-auto w-[min(420px,calc(100%-28px))] rounded-[18px] border border-line bg-surface p-4 shadow-[0_16px_40px_rgba(15,23,42,.18)]"
+      /* [1012 · 규칙 1·2·4·10] 12px + 1px 선 + --shadow-lg(플로팅은 허용 자리) — 예전 40px/18% 그림자.
+         이모지(🏠) 자리는 직접 그린 선 일러스트(key-door). */
+      className="fade-in fixed inset-x-0 z-[60] mx-auto w-[min(420px,calc(100%-28px))] rounded-3xl border border-line bg-surface p-4 [box-shadow:var(--shadow-lg)]"
       style={{ bottom }}
     >
       <div className="flex items-start gap-3">
-        <div
-          aria-hidden="true"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-primary-soft text-[19px] leading-none"
-        >
-          🏠
-        </div>
+        <Illust name="key-door" size={48} className="shrink-0 rounded-lg" />
         <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-extrabold text-ink">내집나우를 홈 화면에 추가</div>
+          <div className="text-[13px] font-bold text-ink">내집나우를 홈 화면에 추가</div>
+          {/* [1012 · 규칙 6] 실제로 달라지는 것만 — 홈 화면 아이콘 한 번 탭 · 주소창 없는 전체 화면(manifest display:
+              standalone) · 바로가기 3개(임장노트 작성·동네이야기·AI 분석 — manifest shortcuts). 예전 "오프라인에서도
+              다시 볼 수 있다"는 서비스워커가 데이터를 캐시하지 않으므로(app/offline) 사실이 아니었다. */}
           <p className="mt-1 text-[12px] leading-relaxed text-text-2">
-            앱처럼 바로 열 수 있고, 저장한 임장노트는 오프라인에서도 다시 볼 수 있습니다.
+            홈 화면 아이콘 한 번으로 주소창 없이 전체 화면으로 열려요. 아이콘을 길게 누르면 임장노트 작성·동네이야기·AI
+            분석 바로가기 3개가 나와요.
           </p>
         </div>
       </div>
@@ -190,16 +192,16 @@ export function InstallPrompt() {
         <button
           type="button"
           onClick={dismiss}
-          className="min-h-[44px] flex-1 rounded-xl border border-line bg-surface px-4 text-[13px] font-semibold text-text-2"
+          className="min-h-[44px] flex-1 rounded-lg border border-line bg-surface px-4 text-[13px] font-medium text-text-2"
         >
           나중에
         </button>
         <button
           type="button"
           onClick={install}
-          className="btn-primary press min-h-[44px] flex-1 rounded-xl px-4 text-[13px] font-bold"
+          className="btn-primary press min-h-[44px] flex-1 rounded-lg px-4 text-[13px] font-bold"
         >
-          추가하기
+          홈 화면에 추가
         </button>
       </div>
     </div>

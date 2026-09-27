@@ -503,7 +503,7 @@ export default async function AdminTrafficPage() {
                 return (
                   <div
                     key={v.metric}
-                    className="rounded-[12px] border border-line bg-bg px-3.5 py-2.5"
+                    className="rounded-lg border border-line bg-bg px-3.5 py-2.5"
                   >
                     <div className="text-[10px] font-bold text-text-3">{v.metric}</div>
                     <div className={`text-[15px] font-extrabold ${cls}`}>

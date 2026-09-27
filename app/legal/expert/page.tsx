@@ -8,6 +8,8 @@ import {
 import { EXPERT_VERIFICATION_SOURCES } from "@/lib/experts/verification-sources";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 
+/* [v4 · 규칙 1·5·10] 레이아웃·글자만 정리(문구는 그대로): 가운데 한 줄 760px · 본문 카드 면 제거 · 제목 t-title(800 → 700) ·
+   섹션 제목 t-section 한 단계로 통일 · 섹션 카드 → 위 1px 선. 법적 문구는 한 글자도 바꾸지 않았다. */
 export const metadata = buildPageMetadata({
   title: "전문가 운영정책",
   description:
@@ -16,18 +18,18 @@ export const metadata = buildPageMetadata({
 });
 
 const H2 = ({ children }: { children: React.ReactNode }) => (
-  <h2 className="mt-8 text-[19px] font-bold text-ink">{children}</h2>
+  <h2 className="mt-8 t-section text-ink">{children}</h2>
 );
 
 export default function ExpertLegalPolicyPage() {
   return (
-    <main className="mx-auto w-full max-w-3xl">
-      <article className="card rise-in p-6 md:p-8 text-[13px] leading-7 text-text-1">
-        <h1 className="text-2xl font-extrabold text-ink">전문가 운영정책</h1>
+    <main className="mx-auto w-full max-w-[760px]">
+      <article className="rise-in text-[13px] leading-7 text-text-1">
+        <h1 className="t-title text-ink">전문가 운영정책</h1>
         <p className="mt-3 text-[15px] leading-relaxed text-text-2">
           우리동네이야기(내집나우 운영사) 전문가 프로그램은 <strong>자격·소속·서류를 검증한 전문가</strong>만
           상담·리포트 서비스를 제공하도록 설계되어 있습니다. 본 정책은 이용약관·
-          <Link href="/legal/privacy" className="text-primary hover:underline">
+          <Link href="/legal/privacy" className="tap-line text-primary hover:underline">
             개인정보처리방침
           </Link>
           과 함께 적용됩니다.
@@ -35,7 +37,7 @@ export default function ExpertLegalPolicyPage() {
 
         <H2>1. 인증 절차</H2>
         <p className="mt-2">접수 후 아래 단계를 거쳐 인증 배지가 부여됩니다.</p>
-        <div className="mt-2 overflow-x-auto rounded-[14px] border border-line">
+        <div className="mt-2 overflow-x-auto rounded-lg border border-line">
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="bg-bg text-left">
@@ -71,7 +73,7 @@ export default function ExpertLegalPolicyPage() {
                 href={s.verificationUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="break-all text-primary hover:underline"
+                className="tap-line break-all text-primary hover:underline"
               >
                 {s.verificationUrl}
               </a>
@@ -158,7 +160,7 @@ export default function ExpertLegalPolicyPage() {
         <H2>7. 개인정보</H2>
         <p className="mt-2">
           전문가 인증 과정에서 수집하는 자격증 번호, 소속 기관, 인증 서류 이미지 등은{" "}
-          <Link href="/legal/privacy" className="text-primary hover:underline">
+          <Link href="/legal/privacy" className="tap-line text-primary hover:underline">
             개인정보처리방침
           </Link>
           「전문가 인증」 항목에 따릅니다. 인증 철회·탈퇴 시 관련 서류는 지체 없이 파기합니다.
@@ -173,7 +175,7 @@ export default function ExpertLegalPolicyPage() {
 
         <p className="mt-8 border-t border-line pt-4 text-[13px] text-text-3">
           시행일: 2026년 6월 19일 · 개정: 2026년 9월 3일(후기·견적 제안 조항 신설) · 문의:{" "}
-          <Link href="/support" className="text-primary hover:underline">
+          <Link href="/support" className="tap-line text-primary hover:underline">
             고객센터
           </Link>
         </p>

@@ -30,7 +30,9 @@ import {
 /** [968 · 36] 시트를 오른쪽(가장자리 쪽)으로 이만큼 끌면 닫힌다 */
 const SWIPE_CLOSE_PX = 60;
 
-/** 모바일 전체 메뉴 — ☰ 트리거 + 우측 슬라이드 글래스 시트 (md:hidden)
+/** 모바일 전체 메뉴 — ☰ 트리거 + 우측 슬라이드 시트 (md:hidden)
+ *  [1012 · 규칙 1·2·8] 시트 = 불투명 surface(유리 없음) · 왼쪽 모서리 12px · 하단 버튼은 1px 선(예전 .glass 알약) ·
+ *  굵기 800 → 700. 시트의 그림자는 허용 자리(게이트 SHADOW_ALLOW).
  *  GNB 4 대분류 + 서비스·내 계정·고객지원 섹션까지 노출하는 전체 사이트 디렉토리.
  *  닫힘: 배경 탭 · ✕ · 라우트 변경. 열림 동안 body 스크롤 잠금.
  *  오버레이는 createPortal로 document.body에 렌더 — 헤더 글래스의 backdrop-filter가
@@ -228,8 +230,8 @@ export function MobileMenu() {
 
   const rowClass = (href: string) =>
     isActive(href)
-      ? "flex items-center gap-2.5 rounded-[10px] bg-primary-soft px-3 py-[9px] text-[13px] font-bold text-primary"
-      : "flex items-center gap-2.5 rounded-[10px] px-3 py-[9px] text-[13px] font-semibold text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)] active:text-primary";
+      ? "flex items-center gap-2.5 rounded-lg bg-primary-soft px-3 py-[9px] text-[13px] font-bold text-primary"
+      : "flex items-center gap-2.5 rounded-lg px-3 py-[9px] text-[13px] font-semibold text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)] active:text-primary";
 
   return (
     <>
@@ -302,7 +304,7 @@ export function MobileMenu() {
             }}
           >
             <div className="flex items-center justify-between px-5 pb-2 pt-1">
-              <span className="text-[15px] font-extrabold text-ink">전체 메뉴</span>
+              <span className="text-[15px] font-bold text-ink">전체 메뉴</span>
               <button
                 type="button"
                 aria-label="메뉴 닫기"
@@ -319,7 +321,7 @@ export function MobileMenu() {
               <Link
                     prefetch={false}
                 href="/search"
-                className="mb-3 flex items-center gap-2 rounded-xl bg-[rgba(127,140,158,.08)] px-3.5 py-2.5 text-[13px] text-text-3 ring-1 ring-line"
+                className="mb-3 flex items-center gap-2 rounded-lg border border-line bg-bg px-3.5 py-2.5 text-[13px] text-text-3"
               >
                 <Icon name="search" size={16} />
                 지역·단지·매물 검색
@@ -334,8 +336,8 @@ export function MobileMenu() {
                       href={item.href}
                       className={
                         isActive(item.href)
-                          ? "flex items-center gap-2 rounded-xl bg-primary-soft px-3 py-2 text-[15px] font-extrabold text-primary"
-                          : "flex items-center gap-2 rounded-xl px-3 py-2 text-[15px] font-extrabold text-ink transition-colors active:bg-[rgba(29,79,216,.07)]"
+                          ? "flex items-center gap-2 rounded-lg bg-primary-soft px-3 py-2 text-[15px] font-bold text-primary"
+                          : "flex items-center gap-2 rounded-lg px-3 py-2 text-[15px] font-bold text-ink transition-colors active:bg-[rgba(29,79,216,.07)]"
                       }
                     >
                       <Icon name={CAT_ICON[item.label] ?? "search"} size={18} />
@@ -348,7 +350,7 @@ export function MobileMenu() {
                     prefetch={false}
                             key={c.href + c.label}
                             href={c.href}
-                            className="truncate rounded-[10px] px-3 py-[8px] t-body font-semibold text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)] active:text-primary"
+                            className="truncate rounded-lg px-3 py-[8px] t-body font-semibold text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)] active:text-primary"
                           >
                             {/* [970 · A-26] 2열 칸에서 잘리던 긴 라벨은 shortLabel(nav-data) */}
                             {c.shortLabel ?? c.label}
@@ -390,7 +392,7 @@ export function MobileMenu() {
                     <button
                       type="button"
                       onClick={onInstallClick}
-                      className="flex items-center gap-2.5 rounded-[10px] px-3 py-[9px] text-[13px] font-semibold text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)] active:text-primary"
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-[9px] text-[13px] font-semibold text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)] active:text-primary"
                     >
                       <Icon name="square-plus" size={17} />
                       <span className="truncate">홈 화면에 추가</span>
@@ -406,21 +408,21 @@ export function MobileMenu() {
             <div className="flex flex-col gap-2 border-t border-line px-4 pt-3">
               <div className="flex gap-2">
                 {loggedIn === false && (
-                  <Link prefetch={false} href={loginHref} className="glass flex-1 rounded-xl py-2.5 text-center text-[13px] font-bold text-text-1">
+                  <Link prefetch={false} href={loginHref} className="flex-1 rounded-lg border border-line bg-surface py-2.5 text-center text-[13px] font-bold text-text-1">
                     로그인
                   </Link>
                 )}
-                <Link prefetch={false} href="/my" className="glass flex-1 rounded-xl py-2.5 text-center text-[13px] font-bold text-text-1">
+                <Link prefetch={false} href="/my" className="flex-1 rounded-lg border border-line bg-surface py-2.5 text-center text-[13px] font-bold text-text-1">
                   마이페이지
                 </Link>
                 {loggedIn === true && (
                   /* [965] /logout 화면 — 프리페치되면 안 되므로 <a> (HeaderAuth 와 동일 사유) */
-                  <a href="/logout" className="glass flex-1 rounded-xl py-2.5 text-center text-[13px] font-bold text-text-2">
+                  <a href="/logout" className="flex-1 rounded-lg border border-line bg-surface py-2.5 text-center text-[13px] font-bold text-text-2">
                     로그아웃
                   </a>
                 )}
               </div>
-              <Link prefetch={false} href="/notes/new" className="btn-primary rounded-xl py-3 text-center t-body font-bold">
+              <Link prefetch={false} href="/notes/new" className="btn-primary rounded-lg py-3 text-center t-body font-bold">
                 임장노트 쓰기
               </Link>
             </div>

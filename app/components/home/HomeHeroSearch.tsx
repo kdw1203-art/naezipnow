@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,12 +14,12 @@ import { useReducedData } from "@/lib/client/network-hints";
 import { complexItem, flattenUnified, type FlatItem, type UnifiedJson } from "@/app/search/unified-suggest";
 import { QUERY_TOO_LONG, SEARCH_QUERY_MAX, badRequestNotice } from "@/lib/search/complex-preview";
 
-/* 홈 리디자인(#408) 시안 B — 화면 정중앙 대형 검색.
+/* 홈 리디자인(#408) 시안 B — 홈 첫 요소인 검색([1012] 왼쪽 정렬·평면).
  *
  * HeaderSearch 와 같은 원천(/api/search/unified · settle 대기 규칙 · 최근
- * 검색 저장소)을 쓰되, 히어로 크기의 독립 컴포넌트다. 칩은 전부 실데이터:
- * 최근 검색(localStorage) · 최근 본 단지(localStorage) — 없으면 실데이터
- * 커버 지역 바로가기로 대체한다(지어낸 "인기 단지"는 그리지 않는다).
+ * 검색 저장소)을 쓰되, 히어로 크기의 독립 컴포넌트다. 아래 한 줄은 전부 실데이터:
+ * 최근 검색(localStorage) · 최근 본 단지(localStorage) + 지도에서 찾기
+ * (지어낸 "인기 단지"는 그리지 않는다). [v4] 칩 → 글자 링크 한 줄.
  *
  * [968 · 9] 칩·제안은 `<Link>` 다. 예전엔 전부 `<button onClick={router.push}>`
  * 였다 — 프리페치가 없고, 탭 핸들러 안에서 라우터 전환(가장 무거운 /map 포함)이
@@ -41,13 +41,8 @@ const optionId = (i: number) => `hero-opt-${i}`;
 /** 홈 패널에 그리는 줄 수 — 키보드 순환도 이 수만큼(리뷰 B: ↓가 그리지 않은 8번째 줄로 가 Enter 로 안 보이던 곳에 갔다) */
 const HERO_MAX = 7;
 
-/** [950] 지역 칩은 서버(홈)가 실데이터 지역 카드에서 넘긴다 — 티커·카드와 같은 지역.
- *  예전 고정 폴백(동안구·만안구·의왕시·과천시)은 초기 커버리지의 흔적이라 서비스가
- *  안양 근방만 다루는 것처럼 읽혔다(홈 비판 ③). 넘어온 칩이 없으면 칩 행을 그리지 않는다. */
-export interface HeroRegionChip {
-  label: string;
-  href: string;
-}
+/* [v4 · 규칙 6·8] 검색 아래 "지역 바로 보기" 칩 4개(강남·마포·송파·남양주 → /map?region=)는 뺐다 — 바로 아래
+   "지역 동향" 목록의 행이 같은 지역·같은 주소로 간다(같은 사실 두 번). 칩은 누르면 상태가 바뀌는 필터에만 쓴다. */
 
 /** 회전 플레이스홀더 — 검색이 무엇을 찾아 주는지 예고한다(단지·지역·노트·뉴스).
  *  실제 존재하는 단지·지역만 적는다(헬리오시티: 서울 송파구 실거래 다수). */
@@ -60,14 +55,14 @@ const PLACEHOLDERS = [
 
 const searchHref = (k: string) => `/search?q=${encodeURIComponent(k)}`;
 
+/* [1012 · 채점 A · 규칙 1·2] 검색창이 홈의 첫 요소다 — 중앙 정렬 슬로건·부제 문단을 걷고 왼쪽 정렬(숨고식
+   입력 유도 질문 한 줄은 page.tsx 가 그린다). 상자는 1px 선 + 8px + 그림자 없음(기준 4곳 공통) — 예전
+   `border-2 border-primary` + 파란 그림자 32/44px 는 첫 화면의 가장 큰 "AI 티"였다. 포커스일 때만 선이
+   파랗게 바뀐다(field-focus 와 같은 언어). 칩도 그림자·들림(hover:-translate-y) 없이 1px 선.
+   [963] 의 커버리지 한 줄(coverage prop)은 검색 아래 실데이터 입구 목록(HomeEntryList)으로 옮겨 뺐다. */
 export function HomeHeroSearch({
-  regionChips = [],
-  coverage,
   shell,
 }: {
-  regionChips?: HeroRegionChip[];
-  /** [963] 커버리지 한 줄(서버 컴포넌트)을 칩 행 **안에** 받는다 — 아래 §칩 행 주석 참조 */
-  coverage?: ReactNode;
   /** [968 · 8] 어느 벌인지 — 안 보이는 벌은 타이머·조회·리스너를 시작하지 않는다 */
   shell?: Shell;
 }) {
@@ -212,12 +207,11 @@ export function HomeHeroSearch({
   const hasHistory = recents.length > 0 || recentComplexes.length > 0;
 
   return (
-    /* [963] 검색 상자만 560px 로 죄고, 칩·커버리지 행은 바깥 폭을 그대로 쓴다.
-       예전에는 칩 행이 상자 안(560px)에 갇혀 있어서 "칩 + 커버리지 한 줄"이 항상
-       두 줄로 접혔다 — 데스크톱은 1,200px 을 쓸 수 있는데도. */
+    /* [1012] 왼쪽 정렬(mx-auto 없음). [v4 · 규칙 12] 홈이 가운데 한 줄(760px)이 되어 검색 상자도 그 폭을 다 쓴다
+       (예전 640px 죄기는 1240px 2단 화면의 것) — 아래 한 줄과 오른쪽 끝이 맞는다. */
     <div className="w-full">
       {/* 검색 상자 + 자동완성 패널 — 바깥 클릭 감지(boxRef)와 절대배치 기준이 여기다 */}
-      <div ref={boxRef} className="relative mx-auto w-full max-w-[560px]">
+      <div ref={boxRef} className="relative w-full">
         {/* [968 · 9] <form> 으로 감싼다 — 모바일 키보드의 "검색" 키(enterKeyHint)가
             폼 제출로 이어지고, Enter 도 같은 경로(onSubmit)로 수렴한다. */}
         <form
@@ -226,9 +220,9 @@ export function HomeHeroSearch({
             e.preventDefault();
             submit();
           }}
-          className="flex items-center gap-2.5 rounded-2xl border-2 border-primary bg-surface py-3 pl-4 pr-2 shadow-[0_10px_32px_rgba(29,79,216,.14)] transition-shadow duration-300 focus-within:shadow-[0_14px_44px_rgba(29,79,216,.28)] md:py-3.5"
+          className="flex items-center gap-2.5 rounded-lg border border-line-strong bg-surface py-2.5 pl-3.5 pr-1.5 transition-colors focus-within:border-primary md:py-3"
         >
-          <Icon name="search" size={19} className="shrink-0 text-primary" />
+          <Icon name="search" size={19} className="shrink-0 text-text-2" />
           <input
             type="search"
             enterKeyHint="search"
@@ -250,11 +244,11 @@ export function HomeHeroSearch({
             placeholder={PLACEHOLDERS[phIdx]}
             aria-label="통합 검색"
             autoComplete="off"
-            className="w-full min-w-0 bg-transparent text-[15px] font-semibold text-ink outline-none placeholder:font-normal placeholder:text-text-3"
+            className="w-full min-w-0 bg-transparent text-[15px] font-medium text-ink outline-none placeholder:font-normal placeholder:text-text-3"
           />
           <button
             type="submit"
-            className="btn-primary press shrink-0 rounded-xl px-4 py-2 text-[13px]"
+            className="btn-primary press shrink-0 rounded-lg px-4 py-2 text-[13px]"
           >
             검색
           </button>
@@ -286,15 +280,14 @@ export function HomeHeroSearch({
         )}
       </div>
 
-      {/* 칩 — 최근 검색·최근 본 단지 (실기록), 없으면 커버 지역 바로가기.
-          [963] 커버리지 한 줄을 **같은 행**에 둔다(소유자 지시 2026-09-04 "한 줄로").
-          예전엔 칩 행과 커버리지 줄이 위아래 두 줄이었는데, 검색창과 티커 사이에
-          가운데 정렬 텍스트 두 덩이가 층을 이뤄 여백만 벌어졌다. 둘 다 "검색을 돕는
-          보조 정보"라 한 줄에 놓아도 읽는 순서가 흐트러지지 않는다.
-          flex-wrap 이라 칩이 여럿이거나 좁은 화면에서는 알아서 접힌다. */}
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5">
-        {hasHistory ? (
-          <>
+      {/* [v4 · 규칙 6·7] 검색 아래 **한 줄** — 칩(1px 선 알약 + 앞 아이콘)을 글자 링크로. 칩은 필터에만 쓴다.
+          왼쪽: 최근 검색·최근 본 단지(실기록 — 없으면 줄의 이 부분이 없다) / 오른쪽 끝: 지도에서 찾기(늘 있다).
+          넘치면 줄 안에서 가로로 밀린다(줄바꿈으로 두세 줄이 되지 않게). [968 · 9] 전부 Link(프리페치). */}
+      <div className="mt-2 flex min-w-0 items-center gap-3 t-sub">
+        {hasHistory && (
+          /* 가로 스크롤 상자는 세로도 자른다 — 링크의 터치 여백(tap-line 위아래 7px)이 잘리지 않게 같은 만큼 안쪽 여백 */
+          <div className="-my-[7px] flex min-w-0 flex-1 items-center gap-3 overflow-x-auto whitespace-nowrap py-[7px] [scrollbar-width:none]">
+            <span className="shrink-0 text-text-3">최근</span>
             {recents.slice(0, 3).map((k) => (
               <Link
                 key={`r-${k}`}
@@ -302,9 +295,9 @@ export function HomeHeroSearch({
                 prefetch={chipPrefetch}
                 /* 최근 검색 재사용 기록 — 이동을 막지 않고 곁에서 남긴다 */
                 onClick={() => pushRecentSearch(k)}
-                className="chip max-w-[160px] truncate bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
+                className="tap-line max-w-[160px] shrink-0 truncate text-text-2 no-underline"
               >
-                ⌕ {k}
+                {k}
               </Link>
             ))}
             {recentComplexes.slice(0, 3).map((c) => (
@@ -312,41 +305,22 @@ export function HomeHeroSearch({
                 key={`c-${c.id}`}
                 href={complexHrefFromId(c.id)}
                 prefetch={chipPrefetch}
-                className="chip max-w-[180px] truncate bg-primary-soft px-3 py-1.5 t-sub font-bold text-primary no-underline transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
+                className="tap-line max-w-[180px] shrink-0 truncate font-medium text-text-1 no-underline"
               >
-                🏢 {c.name}
+                {c.name}
               </Link>
             ))}
-          </>
-        ) : (
-          regionChips.length > 0 && (
-            <>
-              {/* [950] "열린 지역 · 수요 순 확장 중" 은 전국 218개 시군구를 다루는 지금과
-                  맞지 않는 문구였다. 바로 눌러 볼 수 있는 지역(시세 카드와 같은 곳)만 보인다. */}
-              <span className="text-[12px] font-semibold text-text-3">바로 보기</span>
-              {regionChips.map((r) => (
-                <Link
-                  key={r.label}
-                  href={r.href}
-                  prefetch={chipPrefetch}
-                  className="chip bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
-                >
-                  {r.label}
-                </Link>
-              ))}
-              {/* 내 동네는 지도에서 — 검색 무결과 화면의 수요 카드는 그대로 살아 있다.
-                  [968 · 9] /map 은 가장 무거운 화면이라 Link 프리페치의 이득이 제일 크다. */}
-              <Link
-                href="/map"
-                prefetch={chipPrefetch}
-                className="chip bg-primary-soft px-3 py-1.5 t-sub font-bold text-primary no-underline transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
-              >
-                지도에서 내 동네 찾기
-              </Link>
-            </>
-          )
+          </div>
         )}
-        {coverage}
+        {/* 내 동네는 지도에서 — 검색 무결과 화면의 수요 카드는 그대로 살아 있다.
+            [968 · 9] /map 은 가장 무거운 화면이라 Link 프리페치의 이득이 제일 크다. */}
+        <Link
+          href="/map"
+          prefetch={chipPrefetch}
+          className={`tap-line shrink-0 font-bold text-primary no-underline ${hasHistory ? "ml-auto" : ""}`}
+        >
+          지도에서 내 동네 찾기 ›
+        </Link>
       </div>
     </div>
   );

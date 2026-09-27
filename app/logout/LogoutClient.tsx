@@ -29,7 +29,7 @@ export function LogoutClient() {
             setFailed(false);
             void signOut({ callbackUrl: "/" }).catch(() => setFailed(true));
           }}
-          className="btn-primary rounded-[10px] px-4 py-2 t-sub font-bold"
+          className="btn-primary rounded-lg px-4 py-2 t-sub font-bold"
         >
           다시 시도
         </button>

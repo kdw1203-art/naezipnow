@@ -1,24 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import nextDynamic from "next/dynamic";
-import { Icon } from "@/app/components/Icon";
 import { useHubPicked } from "./hub-context";
 import { useHubViewer } from "./hub-viewer";
+import { ROW_CLASS, RowChevron, RowText } from "./hub-row";
 
 /* ============================================================
-   임장노트 AI 분석 — 허브에서 "내 기록" 계열의 실행 카드.
+   "임장노트 분석" 행 — 허브 "내 임장노트" 목록의 첫 행. 펼치면 임장노트 AI 분석(노트 고르기 → 실행)이 열린다.
 
-   [UI-01·05] 예전에는 이 자리에 **단지 선택기 카드가 하나 더** 있었다.
-   히어로에 검색을 올리면서(UI-05) 그 카드는 통째로 사라졌다 — 한 화면에
-   같은 검색창이 둘일 이유가 없고, 진입점 23개를 줄이는 첫 삭제이기도 하다.
-   고른 단지는 이제 허브 전체가 공유한다(hub-context).
+   [v4 · 한 화면 한 가지] 예전엔 이 자리가 세 덩어리였다 — 로그인/게스트 시작 카드(채움 파랑 단추) ·
+   "임장노트 분석" 도구 카드(/notes 링크) · "임장노트 AI 분석" 실행 카드(아이콘 타일 · 설명 문장 · 채움 파랑
+   "분석 실행"). 같은 일(내 노트를 점수화해 강점·약점·확인 항목 정리)을 세 번 말하고 있었다.
+   → **행 하나**(이름 + 결과 한 줄 / 오른쪽 내 노트 수)로 합치고, 실행 몸통은 펼칠 때만 내려받는다.
 
    [1007] 로그인 여부(loggedIn)와 ?noteId= 는 서버가 아니라 여기서 읽는다 —
    /analysis 를 ISR 로 굳히기 위해서다(하루 1,828회 함수 호출, 사람 방문 한 자릿수).
-   카드 본체(ai-note-analysis, 15KB 소스)는 세션 판정이 끝난 뒤에만 내려받는다
-   (next/dynamic) — 첫 로드 번들에서 빠져 예산(490KB, 실측 488)에 여유가 생긴다.
-   판정 전에는 같은 상자 크기의 머리글+비활성 버튼(자리표시자)만 그린다.
+   몸통(ai-note-analysis)은 **펼친 뒤에만** 내려받는다(next/dynamic) — 첫 로드 묶음 밖.
+   ?noteId= 로 들어오면(노트 상세 "이 노트로 AI 분석 받기") 행을 펼쳐 둔 채 그 자리로 스크롤한다 —
+   예전엔 그 노트가 선택된 카드가 화면 맨 아래에 있어 찾아 내려가야 했다.
    ============================================================ */
 
 const AiNoteAnalysisCard = nextDynamic(
@@ -26,58 +26,66 @@ const AiNoteAnalysisCard = nextDynamic(
   { ssr: false, loading: () => <NoteAnalysisPlaceholder /> },
 );
 
-/** 세션 판정·묶음 다운로드 동안의 자리표시자 — 실제 카드의 머리글·버튼과 같은 높이 규칙 */
+/** 세션 판정·묶음 다운로드 동안의 자리표시자 — 실행 단추 높이만큼 */
 function NoteAnalysisPlaceholder() {
-  return (
-    <div className="card flex h-full flex-col gap-2.5 rounded-[14px] p-4" aria-busy="true">
-      <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-warning-soft text-warning">
-        <Icon name="bot" size={17} />
-      </div>
-      <div className="t-section text-ink">임장노트 AI 분석</div>
-      <div className="t-sub text-text-2">
-        내 노트의 점수·기록과 지역 실시세를 합쳐 강점·약점·확인 항목을 정리해요
-      </div>
-      <button
-        type="button"
-        disabled
-        className="btn-primary btn-cta mt-auto rounded-[10px] p-2.5 text-center text-[13px] disabled:opacity-60"
-      >
-        분석 실행
-      </button>
-    </div>
-  );
+  return <div aria-busy="true" className="h-11 rounded-lg bg-bg" />;
 }
 
-export function HubNoteAnalysis({
-  className,
-}: {
-  /** 그리드 안에 놓일 때 열 span 등 — 카드 자체는 h-full 이라 늘어난다 */
-  className?: string;
-}) {
+export function HubNoteRow({ title, sub }: { title: string; sub: string }) {
   const { picked } = useHubPicked();
-  const { loggedIn } = useHubViewer();
-  /* ?noteId= 컨텍스트 — 마운트 뒤 한 번만(정적 셸에서 useSearchParams 는 Suspense 없이는 프리렌더를 깬다) */
+  const { loggedIn, myNoteCount } = useHubViewer();
   const [noteId, setNoteId] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDetailsElement | null>(null);
+
+  /* ?noteId= 컨텍스트 — 마운트 뒤 한 번만(정적 셸에서 useSearchParams 는 Suspense 없이는 프리렌더를 깬다) */
   useEffect(() => {
+    let id: string | null = null;
     try {
-      setNoteId(new URLSearchParams(window.location.search).get("noteId")?.trim() || null);
+      id = new URLSearchParams(window.location.search).get("noteId")?.trim() || null;
     } catch {
       /* URL 파싱 실패 — 컨텍스트 없이 */
     }
+    if (!id) return;
+    setNoteId(id);
+    setOpen(true);
+    requestAnimationFrame(() => ref.current?.scrollIntoView({ block: "start" }));
   }, []);
+
   return (
-    <div id="ai-note-analysis" className={`scroll-mt-24 ${className ?? ""}`}>
-      {loggedIn === null ? (
-        <NoteAnalysisPlaceholder />
-      ) : (
-        <AiNoteAnalysisCard
-          noteId={noteId}
-          loggedIn={loggedIn}
-          seedComplexName={picked?.name ?? null}
-          seedRegionId={picked?.regionId ?? null}
-          seedRegionLabel={picked?.regionLabel ?? null}
-        />
-      )}
-    </div>
+    <li>
+      <details
+        ref={ref}
+        id="ai-note-analysis"
+        open={open}
+        onToggle={(e) => setOpen(e.currentTarget.open)}
+        className="group scroll-mt-24"
+      >
+        {/* 네이티브 <details> 토글 — summary 줄 전체가 컨트롤이다 */}
+        <summary className={`${ROW_CLASS} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
+          <RowText title={title} sub={sub} />
+          {/* 로그인 + 내 노트 실카운트가 있을 때만 숫자(가짜 0 금지) */}
+          {loggedIn && myNoteCount ? (
+            <span className="shrink-0 t-section t-num text-ink">{myNoteCount.toLocaleString("ko-KR")}편</span>
+          ) : null}
+          <RowChevron className="rotate-90 transition-transform group-open:-rotate-90" />
+        </summary>
+        {open && (
+          <div className="pb-4">
+            {loggedIn === null ? (
+              <NoteAnalysisPlaceholder />
+            ) : (
+              <AiNoteAnalysisCard
+                noteId={noteId}
+                loggedIn={loggedIn}
+                seedComplexName={picked?.name ?? null}
+                seedRegionId={picked?.regionId ?? null}
+                seedRegionLabel={picked?.regionLabel ?? null}
+              />
+            )}
+          </div>
+        )}
+      </details>
+    </li>
   );
 }

@@ -1,3 +1,5 @@
+/* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 0곳) · 손으로 적은 카드 그림자 1곳 제거(카드는 1px 선만). */
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 1곳을 font-bold(700)로 바꿨다. */
 import Link from "next/link";
 import type { Metadata } from "next";
 import { PageShell } from "@/app/components/PageShell";
@@ -113,34 +115,31 @@ export default async function PaymentFailPage({
   const orderIdShown = safeToken(sp.orderId, 64);
   const codeShown = safeToken(sp.code);
 
+  /* [v4 · 한 화면 한 가지] 가운데 정렬 결과 화면 → 왼쪽 제목 한 줄 + 사실 줄 → 행동 버튼(채움 파랑 1개).
+     지운 것: 64px 상태 원(!/−) · 가운데 정렬 · 글자뿐인 브레드크럼("구독 · 결제 결과"). 취소는 중립, 실패는
+     경고색 — 그 구분은 제목 앞 한 단어("취소"/"실패") 색으로 남긴다. */
   return (
-    <PageShell breadcrumb="구독 · 결제 결과">
-      <section className="rise-in mx-auto flex w-full max-w-[480px] flex-col items-center gap-3 pt-10 text-center">
-        {/* 이모지 대신 상태 배지 — 성공 화면과 짝을 이루는 시각 언어.
-            취소는 중립(회색), 실패는 경고색으로 구분한다. 취소한 사람에게
-            경고색을 보여줄 이유가 없다 — 잘못한 게 아니다. */}
-        <span
-          aria-hidden
-          className={`flex h-16 w-16 items-center justify-center rounded-full text-[28px] text-white shadow-[0_10px_28px_rgba(16,28,54,.18)] ${
-            category === "user_cancel" ? "bg-text-3" : "bg-danger"
-          }`}
-        >
-          {category === "user_cancel" ? "−" : "!"}
-        </span>
-        <h1 className="text-[21px] font-extrabold tracking-[-0.4px] text-ink">
-          {category === "user_cancel" ? "결제를 취소했습니다" : "결제가 완료되지 않았습니다"}
-        </h1>
-        <p className="text-[13px] leading-[1.6] text-text-2">{CATEGORY_MESSAGE[category]}</p>
-        {(orderIdShown || codeShown) && (
-          <p className="text-xs text-text-3">
-            {orderIdShown ? `주문번호 ${orderIdShown}` : null}
-            {orderIdShown && codeShown ? " · " : null}
-            {codeShown ? `코드 ${codeShown}` : null}
+    <PageShell>
+      <section className="rise-in mx-auto flex w-full max-w-[520px] flex-col gap-4 pt-4">
+        <header className="flex flex-col gap-1">
+          <p className={`t-sub font-bold ${category === "user_cancel" ? "text-text-3" : "text-danger"}`}>
+            {category === "user_cancel" ? "결제 취소" : "결제 실패"}
           </p>
-        )}
+          <h1 className="t-title text-ink">
+            {category === "user_cancel" ? "결제를 취소했습니다" : "결제가 완료되지 않았습니다"}
+          </h1>
+          <p className="t-body text-text-2">{CATEGORY_MESSAGE[category]}</p>
+          {(orderIdShown || codeShown) && (
+            <p className="t-caption text-text-3">
+              {orderIdShown ? `주문번호 ${orderIdShown}` : null}
+              {orderIdShown && codeShown ? " · " : null}
+              {codeShown ? `코드 ${codeShown}` : null}
+            </p>
+          )}
+        </header>
         {/* 실패 사유마다 통하는 행동이 다르다 — 정지된 카드로 "다시 시도"를
             눌러 봐야 같은 자리에서 또 막힌다. (C45) */}
-        <div className="mt-3 flex w-full flex-col gap-2.5">
+        <div className="flex w-full flex-col gap-2.5">
           <Link
             href={
               CATEGORY_ACTION[category].kind === "support"
@@ -149,22 +148,19 @@ export default async function PaymentFailPage({
                   ? "/subscription"
                   : retryHref
             }
-            className="btn-primary rounded-[14px] p-[13px] text-center text-[15px] font-bold"
+            className="btn-primary rounded-lg p-[13px] text-center text-[15px] font-bold"
           >
             {CATEGORY_ACTION[category].label}
           </Link>
           <Link
             href="/support?category=payment"
-            className="rounded-[14px] border border-line bg-surface p-[13px] text-center text-[15px] font-bold text-text-1"
+            className="rounded-lg border border-line bg-surface p-[13px] text-center text-[15px] font-bold text-text-1"
           >
             문의하기
           </Link>
           {/* [1000] 자동결제 실패 — 등록된 구독·카드 상태를 확인할 곳 */}
           {isBillingRail && (
-            <Link
-              href="/my/subscription"
-              className="inline-block py-[5px] text-center t-sub font-bold text-text-3 no-underline"
-            >
+            <Link href="/my/subscription" className="inline-block self-start py-[5px] t-sub font-bold text-text-3 no-underline">
               구독 관리에서 상태 확인하기
             </Link>
           )}

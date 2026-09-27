@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatKrwManwon, formatKrwWon } from "@/lib/format/krw";
@@ -166,7 +167,7 @@ export function PriceHistoryChart({
         ) : shown.kind === "year" && scenario ? (
           <>
             <span className="t-caption break-words text-text-3">
-              {shown.year}년 뒤 · 기본 시나리오 <b className="font-extrabold text-text-2">(가정 — 예측 아님)</b>
+              {shown.year}년 뒤 · 기본 시나리오 <b className="font-bold text-text-2">(가정 — 예측 아님)</b>
             </span>
             <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
               <span className="t-title t-num text-ink">{formatKrwWon(shown.base, { style: "short" })}</span>
@@ -203,7 +204,7 @@ export function PriceHistoryChart({
                 ? `거래 ${shown.nAll.toLocaleString("ko-KR")}건 · ${basis === "band" ? "같은 면적대" : "같은 평형"} ${shown.n.toLocaleString("ko-KR")}건`
                 : `거래 ${shown.n.toLocaleString("ko-KR")}건`}
               {shown.few && (
-                <span className="ml-1.5 rounded bg-warning-soft px-1.5 py-px font-extrabold text-warning">거래 적음 · 참고용</span>
+                <span className="ml-1.5 rounded bg-warning-soft px-1.5 py-px font-bold text-warning">거래 적음 · 참고용</span>
               )}
             </span>
           </>
@@ -376,7 +377,7 @@ export function PriceHistoryChart({
           <span
             ref={placeTip(act.x)}
             aria-hidden="true"
-            className="pointer-events-none absolute z-10 flex flex-col rounded-[10px] bg-ink px-2 py-1 t-caption font-bold whitespace-nowrap text-surface shadow-sm tabular-nums"
+            className="pointer-events-none absolute z-10 flex flex-col rounded-lg bg-ink px-2 py-1 t-caption font-bold whitespace-nowrap text-surface shadow-sm tabular-nums"
             style={{ left: Math.max(0, act.x - 90), top: tipTop(act.y) }}
           >
             {slotText(act, { label, basis }).tip.map((line, i) => (

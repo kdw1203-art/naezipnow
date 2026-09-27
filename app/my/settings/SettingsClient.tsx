@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 12곳을 font-bold(700)로 바꿨다. */
 
 import { Switch } from "@/app/components/ui/Switch";
 import { useTheme } from "next-themes";
@@ -208,7 +209,7 @@ function SmsAlertCard({
 
   return (
     <div className="card flex flex-col rounded-2xl px-4 py-1">
-      <div className="pb-1 pt-3 t-sub font-extrabold text-text-3">SMS 알림 (문자)</div>
+      <div className="pb-1 pt-3 t-sub font-bold text-text-3">SMS 알림 (문자)</div>
       <button
         type="button"
         role="switch"
@@ -344,10 +345,9 @@ function usePrefs() {
 
 function GuestCard() {
   return (
-    <div className="card flex flex-col items-center gap-2.5 rounded-2xl px-4 py-8 text-center">
-      <div className="t-body font-extrabold text-ink">
-        로그인하면 설정을 저장할 수 있어요
-      </div>
+    /* [v4 · 규칙 10] 가운데 정렬 → 왼쪽(이 파일의 상태 줄 전부) */
+    <div className="card flex flex-col items-start gap-2 rounded-lg p-4">
+      <div className="t-body font-bold text-ink">로그인하고 설정 저장</div>
       <Link
         href={`/login?callbackUrl=${encodeURIComponent("/my/settings")}`}
         className="btn-primary rounded-xl px-5 py-2.5 t-body no-underline"
@@ -371,7 +371,7 @@ function NotificationTab({ channels }: { channels: NotifyChannels }) {
         className="card flex items-center justify-between rounded-2xl px-4 py-3.5 no-underline"
       >
         <div>
-          <div className="t-body font-extrabold text-ink">관심 지역 · 급매 알림 구독</div>
+          <div className="t-body font-bold text-ink">관심 지역 · 급매 알림 구독</div>
           <div className="t-caption text-text-3">구독한 지역·키워드 추가/삭제</div>
         </div>
         {/* [970 · C-24] 흰 카드 위 "›" 가 on-dark-muted(한지 72%)라 안 보였다 → text-text-3 */}
@@ -379,13 +379,13 @@ function NotificationTab({ channels }: { channels: NotifyChannels }) {
       </Link>
 
       {phase === "loading" && (
-        <div className="card rounded-2xl px-4 py-8 text-center t-body text-text-3">
+        <div className="card rounded-lg p-4 t-body text-text-3">
           알림 설정을 불러오는 중…
         </div>
       )}
       {phase === "guest" && <GuestCard />}
       {phase === "error" && (
-        <div className="card rounded-2xl px-4 py-8 text-center t-body text-text-3">
+        <div className="card rounded-lg p-4 t-body text-text-3">
           설정을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.
         </div>
       )}
@@ -400,7 +400,7 @@ function NotificationTab({ channels }: { channels: NotifyChannels }) {
           {groups.map((group) => (
             <div key={group.title} className="card flex flex-col rounded-2xl px-4 py-1">
               <div className="flex items-center justify-between pb-1 pt-3">
-                <span className="t-sub font-extrabold text-text-3">{group.title}</span>
+                <span className="t-sub font-bold text-text-3">{group.title}</span>
                 {/* 푸시는 서버 키만으로는 못 간다 — 이 브라우저의 구독 허용까지 있어야
                     비로소 도착한다. 그래서 켜는 입구를 토글 바로 옆에 둔다.
                     (예전엔 모바일 메뉴에만 있어서 PC 사용자는 켤 방법이 없었다.) */}
@@ -435,11 +435,8 @@ function NotificationTab({ channels }: { channels: NotifyChannels }) {
           {groups.length === 0 && !channels.sms ? (
             /* 채널이 하나도 없을 때 빈 화면만 두면 "설정이 사라졌다" 로 읽힌다.
                지금 상태를 그대로 말한다 — 알림함은 채널과 무관하게 항상 동작한다. */
-            <div className="card rounded-2xl px-4 py-6 text-center t-sub text-text-2">
-              지금은 메일·푸시·문자 알림을 보내지 않고 있어요.
-              <br />
-              새 소식은 위의 <span className="font-bold text-text-1">알림함</span>에서 확인하실 수
-              있어요.
+            <div className="card rounded-lg p-4 t-sub text-text-2">
+              메일·푸시·문자 알림 발송 없음 · 새 소식은 위의 <span className="font-bold text-text-1">알림함</span>에서
             </div>
           ) : (
             <div className="t-caption text-text-3">
@@ -528,15 +525,15 @@ function PrivacyTab() {
   return (
     <div className="flex flex-col gap-3">
       <div className="card flex flex-col rounded-2xl px-4 py-1">
-        <div className="pb-1 pt-3 t-sub font-extrabold text-text-3">선택 동의 · 철회</div>
+        <div className="pb-1 pt-3 t-sub font-bold text-text-3">선택 동의 · 철회</div>
         {phase === "guest" || consents.phase === "guest" ? (
           <div className="py-4">
             <GuestCard />
           </div>
         ) : phase === "loading" || consents.phase === "loading" ? (
-          <div className="py-6 text-center t-body text-text-3">불러오는 중…</div>
+          <div className="py-6 t-body text-text-3">불러오는 중…</div>
         ) : phase === "error" || !prefs || consents.phase === "error" ? (
-          <div className="py-6 text-center t-body text-text-3">
+          <div className="py-6 t-body text-text-3">
             불러오지 못했어요. 새로고침 후 다시 시도해 주세요.
           </div>
         ) : (
@@ -597,7 +594,7 @@ function PrivacyTab() {
       )}
 
       <div className="card flex flex-col gap-2 rounded-2xl p-4">
-        <div className="t-body font-extrabold text-ink">노트 공개 범위</div>
+        <div className="t-body font-bold text-ink">노트 공개 범위</div>
         <p className="text-xs leading-[1.6] text-text-2">
           공개 여부는 노트 작성·수정 화면에서 노트별로 설정할 수 있어요. 사진은 업로드할 때 위치정보(EXIF)를
           지우지만, 본문 글자나 사진 속 인물·차량번호를 자동으로 가려 주지는 않아요. 공개로 올리기 전에
@@ -609,7 +606,7 @@ function PrivacyTab() {
       </div>
 
       <div className="card flex flex-col gap-1.5 rounded-2xl p-4">
-        <div className="t-body font-extrabold text-ink">개인정보 처리</div>
+        <div className="t-body font-bold text-ink">개인정보 처리</div>
         <p className="text-xs leading-[1.6] text-text-2">
           열람·정정·삭제 요청은 개인정보 처리방침의 절차를 따라요.
         </p>
@@ -710,15 +707,15 @@ function ProfileRows() {
   return (
     <div className="card flex flex-col rounded-2xl px-4 py-1">
       <div className="flex items-center justify-between gap-2 pb-1 pt-2">
-        <span className="t-sub font-extrabold text-text-3">프로필</span>
+        <span className="t-sub font-bold text-text-3">프로필</span>
         {phase === "ready" && profile && (
           <ProfileEditSheet variant="button" initial={profile} onSaved={setProfile} />
         )}
       </div>
       {phase === "loading" ? (
-        <div className="py-4 text-center t-sub text-text-3">프로필을 불러오는 중…</div>
+        <div className="py-4 t-sub text-text-3">프로필을 불러오는 중…</div>
       ) : phase === "error" || !profile ? (
-        <div className="py-4 text-center t-sub text-text-3">
+        <div className="py-4 t-sub text-text-3">
           프로필을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.
         </div>
       ) : (
@@ -751,7 +748,7 @@ function AccountTab({ guest, onGoPrivacy }: { guest: boolean; onGoPrivacy: () =>
       <div className="flex flex-col gap-3">
         <GuestCard />
         <div className="card flex flex-col rounded-2xl px-4 py-1">
-          <div className="pb-1 pt-3 t-sub font-extrabold text-text-3">화면</div>
+          <div className="pb-1 pt-3 t-sub font-bold text-text-3">화면</div>
           <ThemeRow />
         </div>
       </div>
@@ -763,7 +760,7 @@ function AccountTab({ guest, onGoPrivacy }: { guest: boolean; onGoPrivacy: () =>
 
       {/* 계정 관리 */}
       <div className="card flex flex-col rounded-2xl px-4 py-1">
-        <div className="pb-1 pt-3 t-sub font-extrabold text-text-3">계정</div>
+        <div className="pb-1 pt-3 t-sub font-bold text-text-3">계정</div>
         <Link
           href="/forgot-password"
           className="flex items-center justify-between border-b border-divider py-3 t-body font-semibold text-text-1 no-underline"
@@ -787,7 +784,7 @@ function AccountTab({ guest, onGoPrivacy }: { guest: boolean; onGoPrivacy: () =>
 
       {/* [1000] 데이터 내보내기 — GET /api/me/export (JSON). 내려받기는 브라우저가 처리한다. */}
       <div className="card flex flex-col gap-2 rounded-2xl p-4">
-        <span className="t-body font-extrabold text-ink">내 데이터 내보내기</span>
+        <span className="t-body font-bold text-ink">내 데이터 내보내기</span>
         <p className="t-sub leading-[1.6] text-text-2">
           프로필 · 임장노트(제목·지역·단지·판단) · 관심 단지·저장 목록 · 알림 구독 · 포인트 내역(최근
           500건) · 결제 내역 · 알림 설정 · 표시·기록 설정 · 내 집 마련 여정(계약·잔금 일정 포함)을 JSON 파일
@@ -872,7 +869,7 @@ function DeleteAccountSection() {
 
   if (done) {
     return (
-      <div role="status" className="rounded-[10px] bg-primary-soft px-4 py-3 t-sub text-primary">
+      <div role="status" className="rounded-lg bg-primary-soft px-4 py-3 t-sub text-primary">
         탈퇴 요청을 접수했어요. 개인정보는 <b>{done}</b> 이후 파기되며, 그 전에 취소하려면 가입
         이메일로 고객센터에 알려 주세요. 잠시 후 로그아웃됩니다.
       </div>
@@ -890,16 +887,16 @@ function DeleteAccountSection() {
         >
           회원탈퇴
         </button>
-        <p className="text-center t-sub text-text-3">
-          탈퇴 시 공개 글은 즉시 비공개되고, 개인정보는 {DELETE_GRACE_DAYS}일 뒤 파기돼요
+        <p className="t-sub text-text-3">
+          탈퇴 시 공개 글 즉시 비공개 · 개인정보 {DELETE_GRACE_DAYS}일 뒤 파기
         </p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-[12px] border border-danger/30 bg-danger-soft/40 p-3">
-      <div className="t-body font-extrabold text-ink">정말 탈퇴하시겠어요?</div>
+    <div className="flex flex-col gap-2 rounded-lg border border-danger/30 bg-danger-soft/40 p-3">
+      <div className="t-body font-bold text-ink">정말 탈퇴하시겠어요?</div>
       <ul className="flex list-disc flex-col gap-1 pl-4 t-sub text-text-2">
         <li>접수 즉시 로그인이 막히고, 공개한 임장노트·매물은 비공개로 바뀝니다.</li>
         <li>
@@ -915,7 +912,7 @@ function DeleteAccountSection() {
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           maxLength={500}
-          className="rounded-[8px] border border-line bg-surface px-3 py-2 t-body text-ink outline-none focus:border-primary"
+          className="rounded-lg border border-line bg-surface px-3 py-2 t-body text-ink outline-none focus:border-primary"
         />
       </label>
       <label className="flex flex-col gap-1 t-sub text-text-2">
@@ -925,7 +922,7 @@ function DeleteAccountSection() {
           onChange={(e) => setConfirm(e.target.value)}
           autoComplete="off"
           aria-invalid={Boolean(error)}
-          className="rounded-[8px] border border-line bg-surface px-3 py-2 t-body text-ink outline-none focus:border-danger"
+          className="rounded-lg border border-line bg-surface px-3 py-2 t-body text-ink outline-none focus:border-danger"
         />
       </label>
       {error && (
@@ -942,7 +939,7 @@ function DeleteAccountSection() {
             setConfirm("");
           }}
           disabled={busy}
-          className="btn-soft flex-1 rounded-[10px] p-2.5 text-center text-xs font-bold"
+          className="btn-soft flex-1 rounded-lg p-2.5 text-center text-xs font-bold"
         >
           취소
         </button>
@@ -950,7 +947,7 @@ function DeleteAccountSection() {
           type="button"
           onClick={submit}
           disabled={busy || confirm.trim() !== DELETE_CONFIRM_WORD}
-          className="flex-1 rounded-[10px] bg-danger p-2.5 text-center text-xs font-bold text-white disabled:opacity-50"
+          className="flex-1 rounded-lg bg-danger p-2.5 text-center text-xs font-bold text-white disabled:opacity-50"
         >
           {busy ? "접수 중…" : "탈퇴 요청"}
         </button>
@@ -979,16 +976,22 @@ export function SettingsClient({ channels }: { channels: NotifyChannels }) {
     };
   }, []);
   return (
-    <PageShell title="설정" breadcrumb="마이 › 설정">
-      <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4">
-        {/* [1000] 탭은 유리 알약(.lg-capsule) — 같은 화면의 상태라 링크가 아니라 버튼(aria-pressed) */}
-        <div className="rise-in lg-capsule self-start" role="group" aria-label="설정 구분">
+    /* [v4 · 규칙 1·12] 가운데 한 줄(560 → 760px) · 제목(h1 "설정")을 이 줄 맨 위에 — PageShell 제목·브레드크럼은
+       1240 컨테이너 왼쪽 끝이라 가운데 줄과 어긋났다 */
+    <PageShell>
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
+        <h1 className="t-title text-ink">설정</h1>
+        {/* [1000] 같은 화면의 상태라 링크가 아니라 버튼(aria-pressed). [v4 · 부품] 유리 알약 캡슐 → 밑줄 탭 */}
+        <div className="rise-in -mt-2 flex gap-5 overflow-x-auto border-b border-line [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="group" aria-label="설정 구분">
           {TABS.map((t) => (
             <button
               key={t.key}
               type="button"
               aria-pressed={tab === t.key}
               onClick={() => setTab(t.key)}
+              className={`min-h-10 shrink-0 whitespace-nowrap border-b-2 pb-2 pt-2.5 t-body font-bold transition-colors ${
+                tab === t.key ? "border-brand-hanji-ink text-ink" : "border-transparent text-text-3"
+              }`}
             >
               {t.label}
             </button>

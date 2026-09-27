@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 2곳을 font-bold(700)로 바꿨다. */
 
 import { ActionButton } from "@/app/components/ui/ActionButton";
 
@@ -64,7 +65,7 @@ export function ReviewForm({
 
   if (done) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-md bg-success-soft chip-pad t-sub font-extrabold text-success">
+      <span className="inline-flex items-center gap-1 rounded-md bg-success-soft chip-pad t-sub font-bold text-success">
         <Icon name="check" size={12} /> 후기 남김
       </span>
     );
@@ -86,7 +87,7 @@ export function ReviewForm({
 
   return (
     <div className="flex w-full flex-col gap-2.5 rounded-2xl border border-line bg-bg p-3.5">
-      <div className="t-sub font-extrabold text-ink">{expertName} 님과의 상담은 어땠나요?</div>
+      <div className="t-sub font-bold text-ink">{expertName} 님과의 상담은 어땠나요?</div>
       <div className="flex items-center gap-2">
         <div className="flex gap-0.5" role="radiogroup" aria-label="별점">
           {[1, 2, 3, 4, 5].map((n) => (

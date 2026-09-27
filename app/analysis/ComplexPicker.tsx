@@ -436,7 +436,7 @@ export function ComplexPicker({
           enterKeyHint="search"
           placeholder={placeholder}
           aria-label={label || "단지 검색"}
-          className="min-w-0 flex-1 rounded-[10px] border border-line bg-surface px-3 py-2 text-xs font-bold text-ink outline-none focus:border-primary"
+          className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-bold text-ink outline-none focus:border-primary"
         />
         {/* [975] 지도 단추 — 부르는 쪽이 서랍을 갖고 있으면 화면을 떠나지 않는다.
             (예전엔 무조건 /map 으로 나갔다가 다시 ?complexId= 로 돌아와야 했다.) */}
@@ -444,7 +444,7 @@ export function ComplexPicker({
           <button
             type="button"
             onClick={onMapClick}
-            className="press flex shrink-0 items-center gap-1 rounded-[10px] border border-line bg-surface px-2.5 text-[12px] font-bold text-primary hover:border-primary"
+            className="press flex shrink-0 items-center gap-1 rounded-lg border border-line bg-surface px-2.5 text-[12px] font-bold text-primary hover:border-primary"
             aria-label="지도에서 단지 찾기"
           >
             <Icon name="map" size={14} /> 지도로 찾기
@@ -452,7 +452,7 @@ export function ComplexPicker({
         ) : (
           <Link
             href="/map"
-            className="flex shrink-0 items-center gap-1 rounded-[10px] border border-line bg-surface px-2.5 text-[12px] font-bold text-primary no-underline hover:border-primary"
+            className="flex shrink-0 items-center gap-1 rounded-lg border border-line bg-surface px-2.5 text-[12px] font-bold text-primary no-underline hover:border-primary"
             aria-label="지도에서 단지 찾기"
           >
             <Icon name="map" size={14} /> 지도로 찾기

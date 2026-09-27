@@ -84,7 +84,7 @@ export function ReportButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={`inline-flex min-h-[24px] items-center text-[12px] text-text-3 underline decoration-line underline-offset-2 transition-colors hover:text-danger ${className ?? ""}`}
+        className={`inline-flex min-h-[24px] min-w-[24px] justify-center items-center text-[12px] text-text-3 underline decoration-line underline-offset-2 transition-colors hover:text-danger ${className ?? ""}`}
       >
         신고
       </button>

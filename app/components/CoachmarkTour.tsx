@@ -244,7 +244,7 @@ export function CoachmarkTour({
       {rect && (
         <div
           aria-hidden
-          className="pointer-events-none absolute rounded-[14px] ring-2 ring-white/90"
+          className="pointer-events-none absolute rounded-lg ring-2 ring-white/90"
           style={{
             top: rect.top - PAD,
             left: rect.left - PAD,
@@ -256,7 +256,8 @@ export function CoachmarkTour({
       )}
 
       <div
-        className="absolute w-[280px] rounded-2xl bg-surface p-4 shadow-[0_18px_44px_rgba(16,28,54,.28)]"
+        /* [1012 · 규칙 1·2] 8px + 1px 선 + --shadow-lg(플로팅은 허용 자리) — 예전 44px/28% 그림자 */
+        className="absolute w-[280px] rounded-lg border border-line bg-surface p-4 [box-shadow:var(--shadow-lg)]"
         style={
           centered
             ? { top: "50%", left: "50%", transform: "translate(-50%,-50%)" }
@@ -266,7 +267,7 @@ export function CoachmarkTour({
         <div className="mb-1 text-[12px] font-bold text-primary">
           {index + 1} / {visibleSteps.length}
         </div>
-        <div className="text-[15px] font-extrabold text-ink">{step.title}</div>
+        <div className="text-[15px] font-bold text-ink">{step.title}</div>
         <p className="mt-1.5 text-[13px] leading-relaxed text-text-2">{step.body}</p>
         <div className="mt-3.5 flex items-center justify-between">
           <button
@@ -291,7 +292,8 @@ export function CoachmarkTour({
               onClick={next}
               className="btn-primary rounded-lg px-3.5 py-1.5 text-[12px]"
             >
-              {isLast ? "시작하기" : "다음"}
+              {/* [1012 · 규칙 5] "시작하기"(금지 문구) → 마지막 단계는 투어를 끝내는 행동 그대로 */}
+              {isLast ? "둘러보기 마치기" : "다음"}
             </button>
           </div>
         </div>

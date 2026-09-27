@@ -1,5 +1,6 @@
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 5곳을 font-bold(700)로 바꿨다. */
 import type { Metadata } from "next";
-import Link from "next/link";
+import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 import { PageShell } from "@/app/components/PageShell";
 import { GUIDES, LEGACY_GUIDES } from "@/lib/guides/catalog";
 import { seoAlternates } from "@/lib/seo/alternates";
@@ -16,6 +17,8 @@ export const metadata: Metadata = {
 };
 
 const CATEGORY_ORDER = ["임장", "시세 읽기", "전세", "청약·분양", "경매·공매"] as const;
+/* [v4.1 · 리퀴드 목록] 분류 묶음 톤 순환(globals.css `data-tone`) — 글 = hanji 부터 */
+const CATEGORY_TONES = ["hanji", "blue", "mint", "sand"] as const;
 
 export default function GuidesIndexPage() {
   const byCategory = CATEGORY_ORDER.map((cat) => ({
@@ -23,52 +26,34 @@ export default function GuidesIndexPage() {
     items: GUIDES.filter((g) => g.category === cat),
   })).filter((x) => x.items.length > 0);
 
+  const sections = [...byCategory, { cat: "계약·규제", items: LEGACY_GUIDES }];
+
   return (
     <PageShell breadcrumb="가이드">
-      <div className="mx-auto w-full max-w-[720px]">
-        <h1 className="rise-in text-[24px] font-extrabold leading-[1.3] text-ink">
-          부동산 실전 가이드
-        </h1>
-        <p className="rise-in-1 mt-2 t-body leading-[1.7] text-text-2">
-          임장 준비부터 계약 안전 점검까지 — 개념은 짧게, 순서는 구체적으로. 각 가이드
-          끝에서 지도·계산기·노트로 바로 이어집니다.
-        </p>
+      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 분류별 구분선 행(제목 굵게 + 설명 한 줄 / ›).
+          지운 것: 소개 문장(→ 사실 줄), 편마다의 테두리 카드(→ 행). */}
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
+        <header className="flex flex-col gap-0.5">
+          <h1 className="rise-in t-title text-ink">부동산 실전 가이드</h1>
+          {/* [1012] 규칙 6·7 — 슬로건 대신 실제 편수(카탈로그) */}
+          <p className="t-sub text-text-3">
+            {GUIDES.length + LEGACY_GUIDES.length}편 · 분류 {sections.length}개 · 끝에서 지도·계산기·임장노트로 연결
+          </p>
+        </header>
 
-        {byCategory.map(({ cat, items }) => (
-          <section key={cat} className="mt-7">
-            <h2 className="t-body font-extrabold text-text-2">{cat}</h2>
-            <div className="mt-2 flex flex-col gap-2">
+        {sections.map(({ cat, items }, si) => (
+          <section key={cat} className="flex flex-col gap-2">
+            <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+              {cat} <span className="t-num text-text-3">{items.length}</span>
+            </h2>
+            {/* [v4.1 · 리퀴드 목록] 분류마다 톤 순환(글 = hanji 부터) — 이웃한 분류가 같은 색을 갖지 않는다 */}
+            <ul data-tone={CATEGORY_TONES[si % CATEGORY_TONES.length]} className="card flex flex-col divide-y divide-line rounded-lg px-4">
               {items.map((g) => (
-                <Link
-                  key={g.slug}
-                  href={`/guides/${g.slug}`}
-                  className="rounded-2xl border border-line bg-surface px-4 py-3.5 no-underline transition hover:border-primary/40"
-                >
-                  <span className="t-body font-extrabold text-ink">{g.title}</span>
-                  <span className="mt-1 block t-sub leading-[1.6] text-text-2">
-                    {g.description}
-                  </span>
-                </Link>
+                <SummaryRow key={g.slug} label={g.title} sub={g.description} href={`/guides/${g.slug}`} />
               ))}
-            </div>
+            </ul>
           </section>
         ))}
-
-        <section className="mt-7">
-          <h2 className="t-body font-extrabold text-text-2">계약·규제</h2>
-          <div className="mt-2 flex flex-col gap-2">
-            {LEGACY_GUIDES.map((g) => (
-              <Link
-                key={g.slug}
-                href={`/guides/${g.slug}`}
-                className="rounded-2xl border border-line bg-surface px-4 py-3.5 no-underline transition hover:border-primary/40"
-              >
-                <span className="t-body font-extrabold text-ink">{g.title}</span>
-                <span className="mt-1 block t-sub leading-[1.6] text-text-2">{g.description}</span>
-              </Link>
-            ))}
-          </div>
-        </section>
       </div>
     </PageShell>
   );

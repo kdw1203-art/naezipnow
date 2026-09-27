@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 /**
  * G5+G12+G13 — Q&A 블록 (GEO 표준 컴포넌트).
  *
@@ -17,7 +18,7 @@ export function QaBlock({ title = "자주 묻는 질문", items }: { title?: str
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(faqJsonLd(items)) }}
       />
-      <h2 className="text-[15px] font-extrabold text-ink">{title}</h2>
+      <h2 className="text-[15px] font-bold text-ink">{title}</h2>
       <dl className="mt-3 flex flex-col gap-3">
         {items.map((it) => (
           <div key={it.q} className="border-b border-border pb-3 last:border-b-0 last:pb-0">

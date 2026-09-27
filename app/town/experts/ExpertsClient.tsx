@@ -276,7 +276,7 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
 
       {/* ---------- 결과 ---------- */}
       {cards.length === 0 ? (
-        <div className="rise-in-2 card flex flex-col items-center gap-3 rounded-[18px] px-6 py-12 text-center">
+        <div className="rise-in-2 card flex flex-col items-center gap-3 px-6 py-12 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-navy text-on-dark">
             <Icon name="search" size={22} />
           </div>
@@ -319,7 +319,7 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
                 ))}
               </div>
             ) : (
-              <div className="card flex flex-col items-center gap-2 rounded-[18px] px-6 py-10 text-center">
+              <div className="card flex flex-col items-center gap-2 px-6 py-10 text-center">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-navy text-on-dark">
                   <Icon name="shield" size={22} />
                 </div>

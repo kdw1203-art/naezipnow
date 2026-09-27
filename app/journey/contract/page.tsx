@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { breadcrumbJsonLd, howToJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
-import { buildContractTimeline } from "@/lib/journey/contract";
+import { buildContractTimeline, LAW_CHECKED_ON } from "@/lib/journey/contract";
 import { ContractPlanner } from "./ContractPlanner";
 
 /* ============================================================
@@ -30,11 +30,18 @@ export const metadata = buildPageMetadata({
 });
 
 export default function ContractSchedulePage() {
-  const steps = buildContractTimeline(
+  const groups = buildContractTimeline(
     { contractDate: null, midDate: null, balanceDate: null, moveInDate: null },
     new Set(),
     null,
-  ).map((g) => ({
+  );
+  /* [v4 · 규칙 1] 머리 사실 한 줄 — 같은 일정표 배열에서 센 숫자(할 일 · 법정 기한)와 법령 확인일 */
+  const headFact = [
+    `할 일 ${groups.reduce((n, g) => n + g.items.length, 0)}개`,
+    `법정 기한 ${groups.filter((g) => g.meta.legal).length}개`,
+    `법령 ${LAW_CHECKED_ON} 확인`,
+  ].join(" · ");
+  const steps = groups.map((g) => ({
     /* 화면과 같은 글만 — 기한 설명은 화면도 법정·권장 단계에만 적는다(ContractPlanner) */
     name: g.meta.legal || g.meta.suggested ? `${g.meta.title} — ${g.meta.dueText}` : g.meta.title,
     text: g.items.map((i) => i.item.title).join(", "),
@@ -54,20 +61,19 @@ export default function ContractSchedulePage() {
   return (
     <PageShell>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript([crumbs, howTo]) }} />
-      <div className="mx-auto flex w-full max-w-[880px] flex-col gap-4">
-        {/* <header> 가 아니라 <div> — 전역 인쇄 규칙(globals.css @media print)이 header 를 숨겨 제목이 종이에서 빠졌다 */}
-        <div className="flex flex-col gap-1.5">
+      {/* [v4 · 규칙 12] 가운데 한 줄(최대 760px) */}
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6">
+        {/* <header> 가 아니라 <div> — 전역 인쇄 규칙(globals.css @media print)이 header 를 숨겨 제목이 종이에서 빠졌다.
+            [v4 · 규칙 1·3] 제목 + 사실 한 줄. 사용법 문단(두 문장)은 지웠다 — 입력칸 이름이 곧 사용법이다 */}
+        <div className="flex flex-col gap-0.5">
           <Link
             href="/journey"
-            className="jr-noprint inline-flex min-h-[24px] w-fit items-center gap-1 t-sub font-bold text-primary no-underline hover:underline"
+            className="jr-noprint inline-flex min-h-[24px] w-fit items-center gap-1 t-sub font-bold text-text-2 no-underline hover:underline"
           >
-            ‹ 내 집 마련 여정 · 6단계 계약·잔금·입주
+            ‹ 내 집 마련 여정
           </Link>
           <h1 className="m-0 t-title text-ink">계약·잔금 일정표</h1>
-          <p className="m-0 t-body text-text-2">
-            계약일과 잔금일을 넣으면 계약 전 확인부터 거래신고·취득세·등기·전입신고까지 할 일과 법정 기한을 날짜순으로
-            정리해요. 기한마다 남은 날(D-day)을 보여 주고, 캘린더에 넣거나 인쇄할 수 있어요.
-          </p>
+          <p className="m-0 t-sub text-text-3">{headFact}</p>
         </div>
         <ContractPlanner />
       </div>

@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 /**
  * 거주민 후기 섹션 (호갱노노 "이야기" 벤치마크 — docs/benchmark-proposals.md D4 계열)
@@ -268,7 +269,7 @@ export function ComplexReviews({
   };
 
   return (
-    <div ref={rootRef} className="card rounded-[18px] px-[18px] py-4">
+    <div ref={rootRef} className="card rounded-2xl px-[18px] py-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="t-section text-ink">거주민 후기</h2>
         {!formOpen && (
@@ -279,26 +280,24 @@ export function ComplexReviews({
               setSubmitState("idle");
               setError(null);
             }}
-            className="btn-primary rounded-[10px] px-3.5 py-2 t-sub"
+            /* [v4] 채움 파랑은 단지 화면의 "임장노트 쓰기" 하나 — 후기 쓰기는 외곽선 */
+            className="btn-outline min-h-10 rounded-lg px-3.5 py-2 t-sub"
           >
             후기 쓰기
           </button>
         )}
       </div>
-      <p className="mt-1 t-sub text-text-3">
-        직접 살아봤거나 임장에서 확인한 내용만 남겨주세요 · 같은 단지 재작성 시 기존 후기가
-        갱신돼요 · 실거주·방문 후기가 먼저 보여요
-      </p>
+      {/* [v4] 사용법 문장 삭제 — 같은 안내가 쓰기 폼 안(아래)에 이미 있다 */}
 
       {submitState === "done" && (
-        <div className="mt-2 rounded-[10px] bg-primary-soft px-3 py-2 t-sub font-bold text-primary">
+        <div className="mt-2 rounded-lg bg-primary-soft px-3 py-2 t-sub font-bold text-primary">
           후기가 등록됐어요. 이웃에게 큰 도움이 됩니다.
         </div>
       )}
 
       {/* 작성 폼 */}
       {formOpen && (
-        <div className="mt-3 flex flex-col gap-2.5 rounded-[14px] border border-line bg-bg p-3.5">
+        <div className="mt-3 flex flex-col gap-2.5 rounded-lg border border-line bg-bg p-3.5">
           {CATEGORIES.map((c) => (
             <StarInput
               key={c.key}
@@ -359,7 +358,7 @@ export function ComplexReviews({
               type="button"
               onClick={() => void submit()}
               disabled={submitState === "sending"}
-              className="btn-primary flex-1 rounded-xl p-2.5 t-body disabled:opacity-60"
+              className="btn-primary flex-1 rounded-xl p-2.5 t-body"
             >
               {submitState === "sending" ? "등록 중…" : "후기 등록"}
             </button>
@@ -382,7 +381,7 @@ export function ComplexReviews({
 
       {/* 평균 요약 */}
       {summary && summary.count > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-[14px] border border-line bg-bg px-3.5 py-3">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border border-line bg-bg px-3.5 py-3">
           <div className="flex items-baseline gap-1.5">
             <span className="t-title text-ink">
               {summary.overall.toFixed(1)}
@@ -416,20 +415,22 @@ export function ComplexReviews({
       )}
       {loadState === "ready" && reviews.length === 0 && (
         <div className="mt-3 flex flex-col items-center gap-1 py-6 text-center">
-          <div className="t-body font-extrabold text-ink">
-            아직 등록된 거주민 후기가 없어요
+          {/* [1012 · 규칙 6] 권유 → 어디서(단지명)·무엇이 없는지 사실만 — 쓰기 입구는 위 버튼 */}
+          <div className="t-body font-bold text-ink">
+            {complexName} 거주민 후기가 아직 없어요
           </div>
           <div className="t-sub text-text-3">
-            이 단지를 다녀오셨다면 첫 후기를 남겨주세요
+            직접 살아봤거나 임장에서 확인한 내용만 받아요
           </div>
         </div>
       )}
       {loadState === "ready" && reviews.length > 0 && (
-        <ul className="mt-3 flex flex-col divide-y divide-line">
+        /* [v4.1 · 리퀴드 목록] 후기 = hanji · 유리판 안이라 첫/끝 행의 세로 여백을 없애지 않는다 */
+        <ul data-tone="hanji" className="mt-3 flex flex-col divide-y divide-line">
           {reviews.map((r) => (
-            <li key={r.id} className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0">
+            <li key={r.id} className="flex flex-col gap-1.5 py-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="t-sub font-extrabold text-ink">{r.author}</span>
+                <span className="t-sub font-bold text-ink">{r.author}</span>
                 <Stars
                   value={
                     (r.noiseScore +

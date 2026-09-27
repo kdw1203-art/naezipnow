@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CountUp } from "@/app/components/motion/CountUp";
 import { BrandSignature } from "@/app/components/BrandSignature";
 import { PageShell } from "../components/PageShell";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
@@ -54,63 +53,54 @@ export default async function AboutPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
       />
-      <div className="mx-auto max-w-[720px]">
-        {/* [961] 브랜드 시그니처 — 소개는 브랜드가 스스로를 말하는 자리 */}
-        <BrandSignature className="rise-in mb-6" />
-        <h1 className="rise-in text-[24px] font-extrabold text-ink">
-          내집나우 — 시세는 누구나 봅니다, 현장은 가 본 사람만 압니다
-        </h1>
-        <p className="rise-in-1 mt-2 text-[13px] leading-[1.7] text-text-2">
-          내집나우(naezipnow.com)은 집을 보러 다니는 기록(임장노트)을 국토교통부 실거래
-          데이터와 나란히 놓고, 부동산 판단의 근거를 쌓도록 돕는 서비스입니다.
+      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄(실측 단지·지역 수) → 원칙 4개(구분선 행) → 링크 한 줄 → 브랜드 시그니처(맨 끝).
+          지운 것: 슬로건형 긴 제목(→ "내집나우 소개" + 슬로건은 시그니처 안), 소개 문단(→ 사실 줄), 숫자 카드 2장(→ 사실 줄),
+          원칙 카드 4장(→ 행), 칩 모양 링크(→ 한 줄). 시그니처는 첫 화면 → 맨 끝으로 옮겼다(없애지 않음). */}
+      <div className="mx-auto flex max-w-[760px] flex-col gap-8">
+        <header className="flex flex-col gap-0.5">
+          <h1 className="rise-in t-title text-ink">내집나우 소개</h1>
+          {/* 고도화 50 — 실적 숫자(실측). 로더 실패면 숫자 토막을 뺀다 — 낡은 숫자를 굳히지 않는다 */}
+          <p className="t-sub text-text-3">
+            임장노트 × 국토교통부 실거래
+            {coverage.complexes !== null ? ` · 집계 단지 ${coverage.complexes.toLocaleString("ko-KR")}` : ""}
+            {coverage.regions !== null ? ` · 지역 ${coverage.regions.toLocaleString("ko-KR")}` : ""}
+          </p>
+        </header>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+            운영 원칙 <span className="t-num text-text-3">{PRINCIPLES.length}</span>
+          </h2>
+          <dl className="card m-0 flex flex-col divide-y divide-line rounded-lg px-4">
+            {PRINCIPLES.map((p) => (
+              <div key={p.title} className="py-3">
+                <dt className="t-body font-bold text-ink">{p.title}</dt>
+                <dd className="m-0 mt-0.5 t-sub leading-[1.7] text-text-2">{p.body}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
+        <p className="t-sub text-text-3">
+          <Link href="/methodology" className="tap-line font-bold text-primary no-underline">
+            데이터 방법론
+          </Link>
+          {" · "}
+          <Link href="/glossary" className="tap-line font-bold text-primary no-underline">
+            용어사전
+          </Link>
+          {" · "}
+          <Link href="/reports" className="tap-line font-bold text-primary no-underline">
+            월간 실거래 리포트
+          </Link>
+          {" · "}
+          <Link href="/support" className="tap-line font-bold text-primary no-underline">
+            고객센터
+          </Link>
         </p>
 
-        {/* 고도화 50 — 실적 숫자(실측·1시간 재검증). 로더 실패면 이 블록 자체가
-            사라진다 — 낡은 숫자를 소개 페이지에 굳히지 않는다. */}
-        {coverage.complexes !== null && coverage.regions !== null && (
-          <div className="rise-in-1 mt-4 grid grid-cols-2 gap-3">
-            <div className="card rounded-2xl px-5 py-4">
-              <div className="t-num text-[21px] font-extrabold text-ink">
-                <CountUp value={coverage.complexes} />
-              </div>
-              <div className="mt-0.5 text-[12px] text-text-3">
-                실거래 집계 단지 · 국토부 신고 기준
-              </div>
-            </div>
-            <div className="card rounded-2xl px-5 py-4">
-              <div className="t-num text-[21px] font-extrabold text-ink">
-                <CountUp value={coverage.regions} />
-              </div>
-              <div className="mt-0.5 text-[12px] text-text-3">
-                시세 랜딩 지역 · 매시간 갱신 집계
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-6 flex flex-col gap-4">
-          {PRINCIPLES.map((p, i) => (
-            <section key={p.title} className={`rise-in-${Math.min(i + 2, 6)} card rounded-[18px] p-6`}>
-              <h2 className="text-[15px] font-extrabold text-ink">{p.title}</h2>
-              <p className="mt-2 text-[13px] leading-[1.75] text-text-1">{p.body}</p>
-            </section>
-          ))}
-        </div>
-
-        <div className="mt-6 flex flex-wrap gap-2 text-[12px]">
-          <Link href="/methodology" className="chip chip-soft px-3.5 py-2 no-underline">
-            데이터 방법론 ›
-          </Link>
-          <Link href="/glossary" className="chip chip-soft px-3.5 py-2 no-underline">
-            용어사전 ›
-          </Link>
-          <Link href="/reports" className="chip chip-soft px-3.5 py-2 no-underline">
-            월간 실거래 리포트 ›
-          </Link>
-          <Link href="/support" className="chip chip-soft px-3.5 py-2 no-underline">
-            고객센터 ›
-          </Link>
-        </div>
+        {/* [961] 브랜드 시그니처 — 소개는 브랜드가 스스로를 말하는 자리. [v4] 첫 화면 → 맨 끝 */}
+        <BrandSignature />
       </div>
     </PageShell>
   );

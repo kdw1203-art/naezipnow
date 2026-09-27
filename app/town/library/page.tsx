@@ -20,6 +20,7 @@ import {
   type NoteCardDto,
   type ReportCardDto,
 } from "./LibraryBrowser";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 항목 46b — 루트 레이아웃 제목을 그대로 상속하던 페이지에 개별 메타데이터.
    [970 · C-26] 예전 메타("베스트 임장노트 라이브러리 · 평점·조회 기준 선별")는 이 화면에
@@ -96,7 +97,7 @@ export default async function TownLibraryPage() {
         <div className="mb-3 flex items-center gap-2">
           <h2 className="t-section text-ink">리포트</h2>
           {!reportsFailed && reports.length === 0 && (
-            <span className="rounded-md bg-bg chip-pad t-sub font-extrabold text-text-2">
+            <span className="rounded-md bg-bg chip-pad t-sub font-bold text-text-2">
               오픈 전
             </span>
           )}
@@ -123,23 +124,24 @@ export default async function TownLibraryPage() {
             cause="잠시 후 새로고침해 주세요."
           />
         ) : reports.length === 0 ? (
-          <div className="card rise-in-1 rounded-2xl px-4 py-5">
-            <p className="t-body font-bold text-ink">유료·단지 리포트는 아직 없어요</p>
-            {/* [970 · C-20] 해요체 통일 */}
+          <div className="card rise-in-1 px-4 py-5">
+            <p className="t-body font-bold text-ink">자료실에 올라온 리포트가 아직 없어요</p>
+            {/* [970 · C-20] 해요체 통일 · [1012] 규칙 6 — 무엇이 있는지(공개 노트 n편) 숫자로 */}
             <p className="mt-1 t-sub text-text-2">
-              지금은 아래 공개 임장노트만 열람할 수 있어요. 리포트가 올라오면 이
-              자리에 실제 목록이 채워져요.
+              {notes.length > 0
+                ? `아래 공개 임장노트 ${notes.length}편은 열람할 수 있어요. 리포트가 올라오면 이 자리에 실려요.`
+                : "리포트가 올라오면 이 자리에 실려요."}
             </p>
             <div className="mt-3 flex flex-wrap gap-4">
               <Link
                 href="/notes"
-                className="t-sub font-extrabold text-primary no-underline"
+                className="t-sub font-bold text-primary no-underline"
               >
                 공개 임장노트 보기 ›
               </Link>
               <Link
                 href="/my/creator"
-                className="t-sub font-extrabold text-primary no-underline"
+                className="t-sub font-bold text-primary no-underline"
               >
                 내 노트를 리포트로 판매하기 ›
               </Link>
@@ -198,19 +200,19 @@ export default async function TownLibraryPage() {
             cause="잠시 후 새로고침해 주세요."
           />
         ) : notes.length === 0 ? (
-          <div className="card flex flex-col items-center gap-2 rounded-[18px] px-6 py-12 text-center">
+          <div className="card flex flex-col items-center gap-2 px-6 py-12 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
               <Icon name="folder" size={22} />
             </div>
             <div className="text-[13px] font-bold text-text-1">
-              공개된 임장노트가 아직 없어요
+              자료실에 공개된 임장노트가 아직 없어요
             </div>
             <div className="max-w-xs text-xs leading-[1.6] text-text-3">
-              노트를 공개하면 이웃들이 자료로 열람할 수 있어요
+              공개로 저장한 첫 노트가 이 자리에 실려요
             </div>
             <Link
               href="/notes/new"
-              className="btn-primary mt-1 rounded-[10px] px-4 py-2 text-xs no-underline"
+              className="btn-primary mt-1 rounded-lg px-4 py-2 text-xs no-underline"
             >
               첫 노트 쓰기
             </Link>
@@ -225,7 +227,8 @@ export default async function TownLibraryPage() {
                 author: maskNoteAuthor(n.authorLabel, n.authorEmail),
                 score: Math.round(inspectionAverageScore(n.scores) * 20),
                 cover: n.photos.find(Boolean) ?? null,
-                gradient: seedGradient(n.region || n.id),
+                /* [1012] gradient → face: 값은 단색 토큰(lib/town/shared.ts) */
+                face: seedGradient(n.region || n.id),
                 /* [970 · C-11] Lab 노트는 방문 기록이 아니다 — 피드(lib/town/feed.ts)와 같은 판정 */
                 lab: isLabNoteLabel(n.authorLabel),
                 visited: Boolean(n.visitDate) && !isLabNoteLabel(n.authorLabel),

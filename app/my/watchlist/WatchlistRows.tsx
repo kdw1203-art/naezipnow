@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 1곳을 font-bold(700)로 바꿨다. */
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -161,11 +162,12 @@ export function WatchlistRows({ initial, max }: { initial: WatchRow[]; max: numb
 
   return (
     <>
-      <p className="mb-2 t-body text-text-3">
+      {/* [v4 · 규칙 3·5] 설명 문장 → 사실 한 줄 · 카드 → 목록 그대로(1px 선) */}
+      <p className="mb-2 t-sub text-text-3">
         관심 단지 <span className="tabular-nums">{rows.length}</span>곳
-        {initial.length >= max && ` (최근 ${max}곳 표시)`} · 시세 변동 ±1% 이상이면 알림을 보내드려요
+        {initial.length >= max && ` (최근 ${max}곳 표시)`} · 실거래가 ±1% 이상 변동 시 알림
       </p>
-      <div className="card rounded-2xl px-[var(--pad-card)] py-1">
+      <div className="border-y border-line">
         <div className="flex items-center justify-between gap-2 border-b border-divider py-2 t-caption text-text-3">
           <span>단지</span>
           <span className="flex items-center gap-0.5">
@@ -196,7 +198,7 @@ export function WatchlistRows({ initial, max }: { initial: WatchRow[]; max: numb
                 </span>
                 <span className="flex shrink-0 flex-col items-end text-right">
                   {r.priceText ? (
-                    <span className="t-body font-extrabold t-num text-ink">{r.priceText}</span>
+                    <span className="t-body font-bold t-num text-ink">{r.priceText}</span>
                   ) : (
                     <span className="t-sub text-text-3">현재가 없음</span>
                   )}

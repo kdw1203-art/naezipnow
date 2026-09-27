@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 2곳을 font-bold(700)로 바꿨다. */
 
 import { useState } from "react";
 
@@ -61,13 +62,13 @@ export function VisitVerifyCard({
   };
 
   return (
-    <div className="rise-in-2 flex flex-col gap-1.5 rounded-[14px] border border-line bg-surface px-4 py-3">
+    <div className="rise-in-2 flex flex-col gap-1.5 rounded-lg border border-line bg-surface px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="t-body font-extrabold text-ink">
+        <div className="t-body font-bold text-ink">
           직접 방문 인증 <span className="font-medium text-text-3">(선택)</span>
         </div>
         {verified ? (
-          <span className="rounded-md bg-success-soft px-2 py-1 t-sub font-extrabold text-success">
+          <span className="rounded-md bg-success-soft px-2 py-1 t-sub font-bold text-success">
             ✓ 현장 인증됨 · 단지 반경{" "}
             {verified.distanceM >= 1000
               ? `${(verified.distanceM / 1000).toFixed(1)}km`
@@ -78,29 +79,26 @@ export function VisitVerifyCard({
             type="button"
             onClick={run}
             disabled={state === "asking"}
-            className="rounded-[10px] border border-line-strong bg-bg px-3 py-1.5 t-sub font-bold text-text-1 disabled:opacity-60"
+            className="rounded-lg border border-line-strong bg-bg px-3 py-1.5 t-sub font-bold text-text-1 disabled:opacity-60"
           >
             {state === "asking" ? "위치 확인 중…" : "현재 위치로 인증하기"}
           </button>
         )}
       </div>
-      <p className="t-sub text-text-3">
-        지금 단지 근처(2km 이내)에 있다면 노트에 &lsquo;현장 인증&rsquo; 배지가 붙어요. 버튼을 누를
-        때 한 번만 위치를 확인하며, 내 위치 좌표는 저장하지도 전송하지도 않습니다 — 거리
-        구간(50m 단위)만 남아요.
-      </p>
+      {/* [v4 · 규칙 3] 세 문장 → 사실 한 줄(판정 반경 · 좌표 비저장 · 50m 거리 구간 — 실제 판정과 같은 말) */}
+      <p className="t-sub text-text-3">단지 2km 안이면 &lsquo;현장 인증&rsquo; · 좌표 저장·전송 없음, 50m 거리 구간만</p>
       {state === "far" && (
         <p className="t-sub font-bold text-warning">
-          단지에서 약 {farKm}km 떨어져 있어 인증되지 않았어요. 현장에서 다시 시도해 주세요.
+          단지에서 약 {farKm}km — 인증 안 됨 · 현장에서 다시
         </p>
       )}
       {state === "denied" && (
         <p className="t-sub font-bold text-text-3">
-          위치 권한이 거부돼 인증을 건너뛰어요 — 인증 없이도 노트는 그대로 저장돼요.
+          위치 권한 거부 — 인증 없이 저장
         </p>
       )}
       {state === "unsupported" && (
-        <p className="t-sub font-bold text-text-3">이 브라우저는 위치 확인을 지원하지 않아요.</p>
+        <p className="t-sub font-bold text-text-3">이 브라우저는 위치 확인 미지원</p>
       )}
     </div>
   );

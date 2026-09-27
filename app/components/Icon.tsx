@@ -1,6 +1,11 @@
 import type { CSSProperties } from "react";
 
 /** 통일 라인 아이콘 세트 — currentColor 상속(라이트/다크·활성 자동), 외부 의존성 없음.
+ *
+ *  [1012 · 라이선스] 경로 데이터의 대부분은 Lucide(https://lucide.dev) 에서 옮겨 적었다.
+ *  Lucide: ISC License — Copyright (c) 2022 Lucide Contributors. Portions Copyright (c) 2013-2022
+ *  Cole Bemis (Feather). 상업 이용 가능, 이 저작권 문구를 사본에 남기는 것이 조건이다(docs/licenses.md).
+ *  나머지(brand-* 등)는 자체 제작.
  *  전체 메뉴·탭바·헤더 및 본문 요소 공용. viewBox 24, stroke 1.8, 둥근 끝.
  *  name 에는 아이콘 이름 또는 이모지 문자를 넣을 수 있고, 이모지는 EMOJI_MAP 으로
  *  라인 아이콘에 매핑됩니다(미매핑 문자는 원문 그대로 폴백 렌더 → 무손실). */
@@ -48,6 +53,9 @@ export const ICON_PATHS: Record<string, string> = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.9 4.9 1.4 1.4"/><path d="m17.7 17.7 1.4 1.4"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.3 17.7-1.4 1.4"/><path d="m19.1 4.9-1.4 1.4"/>',
   plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
   menu: '<path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/>',
+  /* [1012] 체크리스트 빈 네모 · 목록 — 이모지(☐·☰) 대신 */
+  square: '<rect width="18" height="18" x="3" y="3" rx="2"/>',
+  list: '<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>',
   x: '<path d="M18 6 6 18"/><path d="M6 6l12 12"/>',
   "notebook-pen":
     '<path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.4 5.6a1 1 0 1 0-3-3l-5 5a2 2 0 0 0-.5.9l-.8 2.9a.5.5 0 0 0 .6.6l2.9-.8a2 2 0 0 0 .9-.5z"/>',
@@ -166,6 +174,14 @@ export const ICON_PATHS: Record<string, string> = {
   circle: '<circle cx="12" cy="12" r="9"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
   clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  /* [1012-IG] 임장노트 목록(/notes) — 격자/피드 탭 · "여러 장" 표시 · 댓글. Lucide(ISC) grid-3x3 ·
+     gallery-vertical · images · message-circle 에서 옮겨 적었다(stroke 1.8 · currentColor 는 이 컴포넌트가 준다). */
+  "grid-3x3":
+    '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/>',
+  "gallery-vertical": '<path d="M3 2h18"/><rect width="18" height="12" x="3" y="6" rx="2"/><path d="M3 22h18"/>',
+  images:
+    '<path d="m22 11-1.3-1.3a2.4 2.4 0 0 0-3.4 0L11 16"/><path d="M4 8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2"/><circle cx="13" cy="7" r="1"/><rect x="8" y="2" width="14" height="14" rx="2"/>',
+  "message-circle": '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
 };
 
 /** 이모지 → 라인 아이콘 이름 매핑 (본문 요소의 컬러 이모지 대체) */
@@ -174,7 +190,7 @@ export const EMOJI_MAP: Record<string, string> = {
   "🏗": "construction", "🏠": "house", "🏢": "building2", "🏦": "landmark",
   "👥": "users", "💡": "lightbulb", "💬": "messages-square", "💰": "wallet",
   "📈": "trending-up", "📊": "bar", "📋": "clipboard", "📍": "pin", "📚": "book",
-  "📜": "scroll", "📰": "newspaper", "🗞": "newspaper", "🗺": "map", "🛒": "cart",
+  "📜": "scroll", "📰": "newspaper", "🗞": "newspaper", "🗺": "map", "🌤": "sun", "🌤️": "sun", "🛒": "cart",
   "🤝": "handshake", "🧭": "compass", "🧾": "receipt", "⚠": "warning",
   "✨": "sparkles", "⭐": "star", "🌟": "star", "🏆": "trophy", "👍": "thumbs-up",
   "👎": "thumbs-down", "👑": "crown", "💎": "gem", "📓": "notebook-pen",

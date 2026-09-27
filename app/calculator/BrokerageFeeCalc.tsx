@@ -1,4 +1,6 @@
 "use client";
+/* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 2곳). */
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 2곳을 font-bold(700)로 바꿨다. */
 
 import { useMemo, useState } from "react";
 import { Segmented } from "@/app/components/ui/Segmented";
@@ -77,9 +79,9 @@ export function BrokerageFeeCalc() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="card flex flex-col gap-3 rounded-[18px] p-[18px]">
+      <div className="card flex flex-col gap-3 rounded-lg p-[18px]">
         <div className="flex items-baseline justify-between">
-          <span className="text-[13px] font-extrabold text-ink">중개보수 상한 계산</span>
+          <span className="text-[13px] font-bold text-ink">중개보수 상한 계산</span>
           <span className="text-[12px] font-medium text-text-3">법정 상한요율 기준</span>
         </div>
 
@@ -158,16 +160,16 @@ export function BrokerageFeeCalc() {
               {result.capped
                 ? `요율대로면 ${wonText(result.amountWon * result.rate)}이지만 구간 한도액이 적용돼 ${wonText(result.feeWon)}까지예요. `
                 : ""}
-              법정 <b>상한</b>이며 확정 보수가 아니에요 — 실제 보수는 이 금액 이내에서 중개사와 협의해 정합니다.
-              부가가치세 10%는 별도입니다. 일반 정보이며 법률·세무 자문이 아니에요.
+              {/* [v4 · 규칙 3] 세 문장 → 사실 한 줄 */}
+              법정 <b>상한</b> · 확정 보수 아님(이 안에서 협의) · 부가세 10% 별도 · 법률·세무 자문 아님
             </div>
           </div>
         )}
       </div>
 
       {/* 요율표 전문 — 계산 근거를 그대로 공개한다 (검색 사용자가 찾는 표이기도 하다) */}
-      <div className="card flex flex-col gap-3 rounded-[18px] p-[18px]">
-        <span className="text-[13px] font-extrabold text-ink">주택 중개보수 상한요율표</span>
+      <div className="card flex flex-col gap-3 rounded-lg p-[18px]">
+        <span className="text-[13px] font-bold text-ink">주택 중개보수 상한요율표</span>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[420px] text-[12px]">
             <thead>

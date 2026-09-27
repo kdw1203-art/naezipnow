@@ -15,6 +15,12 @@ export type JourneyTask = {
   href: string;
   /** 로그인해야 열리는 화면 — 라벨 옆에 작게 적는다 */
   login?: boolean;
+  /**
+   * [1012 · R2] 카드 오른쪽의 실측 한 토막("오늘 10문제" · "가이드 48곳" · "용어 56개").
+   * **카탈로그에는 절대 적지 않는다** — 값은 app/journey/page.tsx 가 실데이터를 읽어
+   * journeyCountLabels() 로 만들고 JourneyBoard 가 href 로 찾아 붙인다. 없는 값은 표시하지 않는다.
+   */
+  count?: string;
 };
 
 export type JourneyStage = {
@@ -38,10 +44,13 @@ export const JOURNEY_STAGES: readonly JourneyStage[] = [
     n: 1,
     title: "시장 감 잡기",
     short: "시장 감",
-    why: "요즘 얼마에 거래되는지 알아야 나중에 본 집이 비싼지 싼지 가늠할 수 있어요.",
+    /* [1012 · R2] 규칙 6 — 언제(집 보러 가기 전)·어디서(국토교통부 신고분)를 문장에. 최신 신고월·시군구 수는
+       화면이 실데이터로 덧붙인다(journeyCountLabels stages.market). */
+    why: "집 보러 가기 전, 국토교통부 실거래 신고분으로 요즘 거래가부터 익혀요 — 본 집이 비싼지 싼지 가늠하려면요.",
     icon: "compass",
     tasks: [
-      { label: "실거래가 게임", desc: "실제로 거래된 가격을 맞혀 보며 감을 익혀요.", href: "/quiz" },
+      /* [1012 · R2] 규칙 6·7 — 무엇(전용 84㎡ 안팎 두 단지의 실거래)·출처(국토교통부)·언제(날마다) */
+      { label: "실거래가 게임", desc: "전용 84㎡ 안팎 두 단지의 최근 실거래 중 더 비싼 쪽을 맞혀요 · 국토교통부 신고분 · 날마다 새 문제", href: "/quiz" },
       { label: "지도에서 최근 실거래 보기", desc: "관심 동네 단지들의 최근 거래가를 지도에서 봐요.", href: "/map" },
       { label: "용어사전", desc: "전용면적·LTV 같은 말을 쉬운 말로 풀어 뒀어요.", href: "/glossary" },
     ],
@@ -139,6 +148,58 @@ export function journeyStage(id: JourneyStageId): JourneyStage {
 /** 예산 칩 → 지도 링크(억). 홈 HomeBudgetChips 와 같은 `?priceMax=` 형식(lib/map/entry-params parseEokParam). */
 export function budgetMapHref(eok: number): string {
   return `/map?priceMax=${eok}`;
+}
+
+/* ── [1012 · R2] 카드 오른쪽 숫자 — 순수 함수(입력은 서버가 읽은 실데이터, lib/journey/counts.ts) ── */
+
+export type JourneyCountInput = {
+  /** 오늘 실거래가 게임 문제 수 — lib/quiz/load-price-game 오늘 판 사슬 길이 − 1 */
+  quizRounds: number | null;
+  /** 실거래가 있는 시군구 수 — lib/newui/home-coverage(홈 "전국 N개 시군구"와 같은 값) */
+  regionCount: number | null;
+  /** 국토교통부 실거래 최신 신고월 "YYYYMM" — lib/market/tx-bands 지역 목록의 latestYm 최댓값 */
+  latestYm: string | null;
+  /** 임장 가이드 지역 수 — /imjang 인덱스와 같은 listImjangRegions(48).length */
+  imjangRegions: number | null;
+  /** 용어사전 항목 수 — lib/seo/glossary-terms GLOSSARY_TERMS.length */
+  glossaryTerms: number | null;
+  /** 중개보수 법정 상한 요율 구간 수 — lib/finance/brokerage SALE_HOUSE_BRACKETS.length */
+  brokerageBrackets: number | null;
+  /** 대출 규정 확인일 "YYYY-MM-DD" — lib/finance/loan-rules LOAN_RULES_CHECKED_AT */
+  loanRulesCheckedAt: string | null;
+};
+
+export type JourneyCountLabels = {
+  /** href → 카드 오른쪽 한 토막 */
+  tasks: Readonly<Partial<Record<string, string>>>;
+  /** 단계 id → 단계 설명(why) 뒤에 붙는 실측 한 토막 */
+  stages: Readonly<Partial<Record<JourneyStageId, string>>>;
+};
+
+const pos = (v: number | null | undefined): v is number => typeof v === "number" && Number.isFinite(v) && v > 0;
+const ko = (v: number) => v.toLocaleString("ko-KR");
+
+/**
+ * 실데이터 → 카드 라벨. 값이 null·0 이면 그 칸은 비운다(지어내지 않는다).
+ *  · /quiz "오늘 10문제" · /map "218개 시군구" · /glossary "용어 56개" · /imjang "가이드 48곳"
+ *  · /calculator "규정 2026.09 확인" · /calculator/brokerage "요율 구간 6개"
+ *  · market 단계 "국토교통부 2026.08 신고분까지"
+ */
+export function journeyCountLabels(input: JourneyCountInput): JourneyCountLabels {
+  const tasks: Partial<Record<string, string>> = {};
+  const stages: Partial<Record<JourneyStageId, string>> = {};
+  if (pos(input.quizRounds)) tasks["/quiz"] = `오늘 ${ko(input.quizRounds)}문제`;
+  if (pos(input.regionCount)) tasks["/map"] = `${ko(input.regionCount)}개 시군구`;
+  if (pos(input.glossaryTerms)) tasks["/glossary"] = `용어 ${ko(input.glossaryTerms)}개`;
+  if (pos(input.imjangRegions)) tasks["/imjang"] = `가이드 ${ko(input.imjangRegions)}곳`;
+  if (pos(input.brokerageBrackets)) tasks["/calculator/brokerage"] = `요율 구간 ${ko(input.brokerageBrackets)}개`;
+  if (input.loanRulesCheckedAt && /^\d{4}-\d{2}-\d{2}$/.test(input.loanRulesCheckedAt)) {
+    tasks["/calculator"] = `규정 ${input.loanRulesCheckedAt.slice(0, 4)}.${input.loanRulesCheckedAt.slice(5, 7)} 확인`;
+  }
+  if (input.latestYm && /^\d{6}$/.test(input.latestYm)) {
+    stages.market = `국토교통부 ${input.latestYm.slice(0, 4)}.${input.latestYm.slice(4)} 신고분까지`;
+  }
+  return { tasks, stages };
 }
 
 /** HowTo JSON-LD 단계 — 화면에 보이는 제목·한 줄·할 일 이름만으로 만든다(스키마 전용 문장 없음). */

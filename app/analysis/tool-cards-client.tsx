@@ -1,16 +1,19 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { listCompareTray } from "@/lib/newui/compare-tray";
 import { useHubPicked } from "./hub-context";
+import { RowChevron } from "./hub-row";
 
 /* 분석 허브 항목별 고유 기능(#411) — 클라이언트 조각 3종.
  *
- * 1) ToolLink: 카드 클릭 시 "마지막 사용 도구"를 localStorage 에 기록.
- * 2) LastToolChip: 다음 방문 때 "최근 사용 도구 이어가기" 칩 (기록 없으면 없음).
- * 3) CompareTrayCount: 비교 카드 티저 — 지금 담겨 있는 후보 수(실카운트).
- *    0개면 아무것도 그리지 않는다(빈 트레이에 숫자 배지는 소음이다).
+ * 1) ToolLink: 행 클릭 시 "마지막 사용 도구"를 localStorage 에 기록.
+ * 2) LastToolChip: 다음 방문 때 검색창 아래 "최근 · 도구 이름 ›" 글자 링크 (기록 없으면 없음).
+ * 3) CompareTrayValue: 후보 단지 비교 행 오른쪽 값 — 지금 담겨 있는 후보 수(실카운트).
+ *    0개면 숫자 대신 `›`(빈 트레이에 "0곳"은 소음이다).
+ * [v4] 칩·배지 모양을 걷고 목록 행의 글자(보조 링크·오른쪽 값)로 바꿨다.
  */
 
 const LAST_TOOL_KEY = "nz_last_analysis_tool";
@@ -83,16 +86,14 @@ export function LastToolChip() {
   }, []);
   if (!last) return null;
   return (
-    <Link
-      href={last.href}
-      className="chip inline-flex items-center gap-1.5 bg-primary-soft px-3.5 py-2 text-xs font-bold text-primary no-underline"
-    >
-      ↻ 최근 사용 · {last.title} 이어가기 ›
+    <Link href={last.href} className="tap-line t-sub text-text-2 no-underline">
+      최근 · {last.title} ›
     </Link>
   );
 }
 
-export function CompareTrayCount() {
+/** 후보 단지 비교 행 오른쪽 — 담은 후보 수(실카운트) 또는 `›` */
+export function CompareTrayValue() {
   const [count, setCount] = useState(0);
   useEffect(() => {
     try {
@@ -101,11 +102,6 @@ export function CompareTrayCount() {
       setCount(0);
     }
   }, []);
-  if (count <= 0) return null;
-  return (
-    <span className="t-num inline-flex w-fit items-baseline gap-1.5 rounded-xl bg-bg px-3 py-1.5">
-      <span className="text-[15px] font-extrabold text-ink">{count}개</span>
-      <span className="text-[10px] text-text-3">담은 후보 — 바로 비교 가능</span>
-    </span>
-  );
+  if (count <= 0) return <RowChevron />;
+  return <span className="shrink-0 t-section t-num text-ink">{count}곳</span>;
 }

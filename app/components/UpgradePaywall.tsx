@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 
 import Link from "next/link";
 import { useEffect } from "react";
@@ -67,10 +68,10 @@ export function UpgradePaywall({
       onClick={onClose}
     >
       <div
-        className="card w-full max-w-[400px] rounded-[18px] px-5 py-5 shadow-lg"
+        className="card w-full max-w-[400px] rounded-4xl px-5 py-5 [box-shadow:var(--shadow-lg)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="upgrade-paywall-title" className="text-[15px] font-extrabold text-ink">
+        <h2 id="upgrade-paywall-title" className="text-[15px] font-bold text-ink">
           {title}
         </h2>
         <p className="mt-2 text-[13px] leading-[1.65] text-text-2">{message}</p>

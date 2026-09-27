@@ -85,9 +85,10 @@ const nextConfig: NextConfig = {
   // OG 공유 카드 한글 폰트(Pretendard 서브셋)를 각 서버리스 번들에 포함 — process.cwd() 경로로 읽음
   outputFileTracingIncludes: {
     "/api/og/note": ["./lib/og/fonts/**"],
+    /* [1012 · 썸네일] 노트 썸네일 렌더·미리보기 — 한글 폰트를 같이 싣는다 */
+    "/api/og/note-cover": ["./lib/og/fonts/**"],
     "/api/og/complex": ["./lib/og/fonts/**"],
     "/api/og/listing": ["./lib/og/fonts/**"],
-    "/api/screenshot": ["./lib/og/fonts/**"],
     "/og-image": ["./lib/og/fonts/**"],
     // 소셜 자동 영상: 프레임 렌더(한글 폰트) + ffmpeg 바이너리(~76MB, 이 라우트만)
     "/api/cron/social-autopost": ["./lib/og/fonts/**", "./node_modules/ffmpeg-static/ffmpeg"],

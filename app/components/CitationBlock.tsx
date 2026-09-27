@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 /**
  * G8 — "이렇게 인용하세요" 블록.
  *
@@ -8,8 +9,8 @@
 export function CitationBlock({ sentence }: { sentence: string }) {
   return (
     <section className="card mb-6 p-[var(--pad-card)]">
-      <h2 className="text-[13px] font-extrabold text-ink">이 데이터를 인용하실 때</h2>
-      <blockquote className="mt-2 rounded-[10px] border-l-[3px] border-primary bg-bg px-4 py-3 text-[13px] leading-[1.7] text-text-1">
+      <h2 className="text-[13px] font-bold text-ink">이 데이터를 인용하실 때</h2>
+      <blockquote className="mt-2 rounded-lg border-l-[3px] border-primary bg-bg px-4 py-3 text-[13px] leading-[1.7] text-text-1">
         {sentence}
       </blockquote>
       <p className="mt-2 text-[12px] leading-[1.6] text-text-3">

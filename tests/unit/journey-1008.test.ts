@@ -71,7 +71,6 @@ import {
 } from "../../lib/journey/local.ts";
 import { buildExportPayload, type ExportInput } from "../../app/api/me/export/shape.ts";
 import { GLOSSARY_TERMS } from "../../lib/seo/glossary-terms.ts";
-import { HOME_START_DOORS } from "../../lib/brand/home-copy.ts";
 import { NAV } from "../../app/components/nav-data.ts";
 import { PUBLIC_CACHE_RULES } from "../../lib/http/cache-policy.ts";
 
@@ -451,16 +450,21 @@ test("여정 6단계 — 순서·이름·할 일 2~3개, 링크는 실재 화면
   assert.ok(steps.every((x) => x.name && x.text.includes("할 일:")));
 });
 
-test("홈 입구 — 문 넷, 실재 화면으로", () => {
-  assert.equal(HOME_START_DOORS.length, 4);
-  for (const d of HOME_START_DOORS) {
-    if (SAME_RELEASE.has(d.href)) continue;
-    assert.ok(routeExists(d.href), d.href);
+/* [1012] "어디서부터 시작할까요?" 문 넷(HomeStartDoors · HOME_START_DOORS)은 홈에서 뺐다 — 기준 사이트
+   4곳에 없는 "아이콘 나열 입구"라서(docs/design-system.md v3 신호표 5번). 자리는 실데이터 입구 목록
+   (HomeEntryList)이 이었고, 그 계약은 tests/unit/home-1012.test.ts 가 잠근다. 여기 남기는 것은 문 넷의
+   목적지(/quiz · /journey · /journey/contract)가 여전히 실재하고 GNB 에서 닿는다는 사실뿐이다. */
+test("홈 입구 — 옛 문 넷의 목적지는 GNB '임장노트' 하위에 그대로 있다", () => {
+  const kids = (NAV[0].children ?? []).map((c) => c.href);
+  for (const href of ["/journey", "/journey/contract", "/quiz"]) {
+    assert.ok(kids.includes(href), href);
+    if (!SAME_RELEASE.has(href)) assert.ok(routeExists(href), href);
   }
-  const page = read("app/page.tsx");
-  assert.match(page, /<HomeStartDoors \/>/);
+  const page = stripComments(read("app/page.tsx")); // 머리 주석이 옛 이름을 기록하고 있다
+  assert.doesNotMatch(page, /HomeStartDoors|HomeBudgetChips/);
+  assert.match(page, /<HomeEntryList entries=\{homeEntries\} \/>/);
   /* [991] 첫 화면은 정적 — 입구 조각에 클라이언트 JS 없음 */
-  assert.doesNotMatch(read("app/components/home/HomeStartDoors.tsx"), /"use client"/);
+  assert.doesNotMatch(read("app/components/home/HomeEntryList.tsx"), /"use client"/);
 });
 
 /* [1011] "내 집 마련"을 임장노트 하위로 내렸다(소유자 지시). 대분류는 다시 5개.

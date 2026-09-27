@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 1곳을 font-bold(700)로 바꿨다. */
 
 /**
  * [985 · 17] 현장 브리핑 카드 — 위치를 고른 뒤에만 나타난다.
@@ -32,9 +33,9 @@ export function FieldBriefCard({ context }: { context: unknown }) {
   const fetched = briefFetchedLabel(brief.fetchedAt);
 
   return (
-    <div className="rise-in card flex flex-col gap-2.5 rounded-[14px] p-4">
+    <div className="rise-in card flex flex-col gap-2.5 rounded-lg p-4">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="t-body font-extrabold text-ink">지금 이 지역은</span>
+        <span className="t-body font-bold text-ink">지금 이 지역은</span>
         {fetched && <span className="shrink-0 t-caption text-text-3">{fetched}</span>}
       </div>
       {brief.lines.length > 0 && (
@@ -47,19 +48,11 @@ export function FieldBriefCard({ context }: { context: unknown }) {
           ))}
         </ul>
       )}
+      {/* [v4 · 규칙 6] 누를 수 없는 회색 칩 줄 → 글자 한 줄 */}
       {brief.checks.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <span className="t-caption font-bold text-text-3">이 지역에서 특히 볼 것</span>
-          <div className="flex flex-wrap gap-1.5">
-            {brief.checks.map((c) => (
-              /* 누를 수 없는 라벨이다 — 크기를 키우지 않는다(989: 크기는 "눌린다"는
-                 신호라, 안 눌리는 것까지 키우면 거짓말이 된다) */
-              <span key={c} className="rounded-md bg-bg px-2 py-1 t-caption text-text-2">
-                {c}
-              </span>
-            ))}
-          </div>
-        </div>
+        <p className="t-caption text-text-3">
+          <b className="font-bold text-text-2">특히 볼 것</b> · {brief.checks.join(" · ")}
+        </p>
       )}
       {brief.plans.length > 0 && (
         <div className="t-caption text-text-3">

@@ -5,6 +5,8 @@ import { buildPageMetadata } from "@/lib/seo/page-metadata";
 
 /* [970 · A-31] 하위 8개 정책 페이지는 전부 buildPageMetadata(path) 로 canonical 이 있는데
    인덱스만 없었다 — 사이트맵에 있는 URL 이라 같은 경로로 canonical·OG 를 붙인다. */
+/* [v4 · 규칙 1·5·10] 레이아웃·글자만 정리(문구는 그대로): 가운데 한 줄 760px · 본문 카드 면 제거 · 제목 t-title(800 → 700) ·
+   섹션 제목 t-section 한 단계로 통일 · 섹션 카드 → 위 1px 선. 법적 문구는 한 글자도 바꾸지 않았다. */
 export const metadata: Metadata = buildPageMetadata({
   title: "법적 고지",
   description: "이용약관, 개인정보처리방침, 위치/청소년 정책과 개인정보 열람 안내",
@@ -54,35 +56,36 @@ const ITEMS = [
   },
 ];
 
+/* [v4 · 한 화면 한 가지] "Legal Center" 꼬리표 + 카드 머리 + 카드 목록 → 제목 + 사실 한 줄 → 1px 선 행(문서 이름 + 한 줄 · ›) →
+   끝 캡션(문의). 문서 설명 한 줄은 목록 행 보조 줄로 그대로 */
 export default function LegalHubPage() {
   const info = getBusinessInfo();
   return (
-    <main className="mx-auto w-full max-w-3xl">
-      <header className="card rise-in p-6">
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-          Legal Center
-        </p>
-        <h1 className="mt-2 text-2xl font-bold text-ink">법적 고지</h1>
-        <p className="mt-2 text-[13px] leading-relaxed text-text-2">
-          약관 및 정책은 서비스 운영 상황에 맞춰 업데이트될 수 있으며, 중요한 변경 사항은
-          공지 또는 이메일로 사전 안내합니다.
-        </p>
+    <main className="mx-auto flex w-full max-w-[760px] flex-col gap-6">
+      <header className="rise-in flex flex-col gap-0.5">
+        <h1 className="t-title text-ink">법적 고지</h1>
+        <p className="t-sub text-text-3">문서 {ITEMS.length}개 · 중요한 변경은 공지·이메일로 사전 안내</p>
       </header>
 
-      <section className="mt-6 space-y-3">
+      <ul className="divide-y divide-line">
         {ITEMS.map((item) => (
-          <Link key={item.href} href={item.href} className="card tile block p-5">
-            <p className="text-[13px] font-semibold text-ink">{item.title}</p>
-            <p className="mt-1 text-xs leading-relaxed text-text-2">{item.desc}</p>
-          </Link>
+          <li key={item.href}>
+            <Link href={item.href} className="press flex min-h-14 items-center justify-between gap-3 py-3 no-underline">
+              <span className="min-w-0 flex-1">
+                <span className="block t-body font-bold text-ink">{item.title}</span>
+                <span className="mt-0.5 block truncate t-sub text-text-3">{item.desc}</span>
+              </span>
+              <span aria-hidden="true" className="shrink-0 t-body text-text-3">
+                ›
+              </span>
+            </Link>
+          </li>
         ))}
-      </section>
+      </ul>
 
-      <section className="mt-6 rounded-[14px] border border-line bg-bg p-4 text-xs leading-relaxed text-text-2">
-        <p className="font-semibold text-text-1">문의</p>
-        <p className="mt-1">일반 문의: {info.supportEmail}</p>
-        <p>개인정보 문의: {info.privacyEmail}</p>
-      </section>
+      <p className="t-caption text-text-3">
+        일반 문의 {info.supportEmail} · 개인정보 문의 {info.privacyEmail}
+      </p>
     </main>
   );
 }

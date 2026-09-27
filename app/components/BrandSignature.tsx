@@ -9,7 +9,7 @@ import { BrandSymbol } from "@/app/components/Logo";
 export function BrandSignature({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`relative flex flex-col items-center gap-4 rounded-[18px] bg-brand-hanji px-6 py-12 text-center ${className}`}
+      className={`relative flex flex-col items-center gap-4 rounded-3xl bg-brand-hanji px-6 py-12 text-center ${className}`}
       aria-label="내집나우 브랜드 시그니처"
       role="img"
     >

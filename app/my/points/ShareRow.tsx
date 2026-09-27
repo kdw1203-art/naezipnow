@@ -99,7 +99,8 @@ async function copyText(value: string): Promise<boolean> {
 export function ShareRow({ link, code }: { link: string; code: string }) {
   const [toast, setToast] = useState<string | null>(null);
 
-  const message = `내집나우에서 함께 부동산 봐요! 이 링크로 가입하면 나랑 친구 둘 다 300P를 받아요.\n${link}`;
+  /* [1012] 규칙 6 — 느낌표 금지 */
+  const message = `내집나우에서 같이 집 보러 다녀요. 이 링크로 가입하면 나랑 친구 둘 다 300P를 받아요.\n${link}`;
 
   function flash(msg: string) {
     setToast(msg);
@@ -156,7 +157,7 @@ export function ShareRow({ link, code }: { link: string; code: string }) {
         <button
           type="button"
           onClick={() => void share()}
-          className={`press flex flex-col items-center justify-center gap-1.5 rounded-[14px] px-2 py-3 ${
+          className={`press flex flex-col items-center justify-center gap-1.5 rounded-lg px-2 py-3 ${
             KAKAO_JS_KEY
               ? "bg-[#FEE500] text-[#191600]"
               : "bg-surface text-text-1 [border:1px_solid_var(--border)]"
@@ -169,7 +170,7 @@ export function ShareRow({ link, code }: { link: string; code: string }) {
         <button
           type="button"
           onClick={() => void copyLink()}
-          className="press flex flex-col items-center justify-center gap-1.5 rounded-[14px] bg-primary-soft px-2 py-3 text-primary"
+          className="press flex flex-col items-center justify-center gap-1.5 rounded-lg bg-primary-soft px-2 py-3 text-primary"
         >
           <Icon name="link" size={20} />
           <span className="t-sub font-bold">링크복사</span>
@@ -177,7 +178,7 @@ export function ShareRow({ link, code }: { link: string; code: string }) {
 
         <a
           href={smsHref}
-          className="press flex flex-col items-center justify-center gap-1.5 rounded-[14px] bg-surface px-2 py-3 text-text-1 no-underline"
+          className="press flex flex-col items-center justify-center gap-1.5 rounded-lg bg-surface px-2 py-3 text-text-1 no-underline"
           style={{ border: "1px solid var(--border)" }}
         >
           <Icon name="phone" size={20} />

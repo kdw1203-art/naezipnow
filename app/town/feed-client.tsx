@@ -1,12 +1,10 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { getHomePersonal } from "@/lib/client/home-personal";
 import Link from "next/link";
-import { seedGradient, seedCoverHeight } from "./shared";
-import { ExampleBadge } from "../components/ExampleBadge";
-import { Icon } from "@/app/components/Icon";
+import { relativeTimeLabel } from "@/lib/format/relative-time";
 import { CoverImage } from "@/app/components/CoverImage";
 import { useScrollRestore } from "@/lib/client/use-scroll-restore";
 import {
@@ -14,19 +12,27 @@ import {
   townFeedFilterQuery,
   type TownFeedFilters,
 } from "@/lib/town/feed-filters";
+import { feedRegionLabel, regionMatches, townFeedRegionById, townRegionChips, type TownFeedRegionId, feedDisplayTitle, feedAuthorLabel } from "@/lib/town/feed-regions";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
-/* 동네이야기 통합 피드 — 오늘의집/인스타그램형 사진 우선 카드 그리드(매소너리).
-   공개 임장노트(사진 우선) + 커뮤니티 글을 한 피드로 섞어 보여준다.
-   서버에서 카드 배열을 만들어 내려주고, 여기선 필터 탭만 클라이언트로 처리.
+/* 동네이야기 통합 피드 — 공개 임장노트 + 이웃 글(사람의 기록)을 한 목록으로.
+   서버에서 카드 배열을 만들어 내려주고, 여기선 필터·정렬·"더 보기"만 클라이언트로 처리.
    [1006] 이 피드는 **사람의 기록**만 싣는다(kind: note | post). 자동수집 뉴스는 여기
-   들어오지 않는다 — 뉴스는 /town/news(뉴스룸)이고, /town 은 "오늘의 뉴스" 스트립으로
-   그쪽을 가리킬 뿐이다. */
+   들어오지 않는다 — 뉴스는 /town/news(뉴스룸)이고, /town 은 "오늘 뉴스" 한 행으로
+   그쪽을 가리킬 뿐이다.
+
+   [v4] "한 화면 한 가지" — 매소너리 사진 카드(Lab 데이터 배지·#태그·지역 알약·NEW·그림자) 2열을
+   **1px 구분선 행 한 줄 목록**으로 바꿨다. 행 = 왼쪽 72px 정사각 썸네일(사진이 없으면 --divider 단면) +
+   오른쪽 제목 2줄 + 메타 한 줄("서울 동대문구 · 작성자 · 1일 전 · ★3.2" — 있는 값만).
+   지역 줄은 동네 홈 링크 칩 → 피드를 거르는 필터 칩(lib/town/feed-regions), 유형은 밑줄 탭,
+   정렬은 오른쪽 작은 글자 토글. "N개 표시 중"·추천 기준 문장·노트 구성 문장은 화면에서 뺐다
+   (추천 기준은 정렬 버튼의 title 로 남긴다). */
 
 export type FeedCard = {
   id: string;
   href: string;
   kind: "note" | "post";
-  /** 실제 사진 URL — 없으면 지역/출처 시드 그라디언트 커버 */
+  /** 실제 사진 URL — 없으면 썸네일 자리는 --divider 단면 */
   cover: string | null;
   title: string;
   author: string;
@@ -39,22 +45,20 @@ export type FeedCard = {
   visited: boolean;
   createdAt: number;
   isExample: boolean;
-  /** 포인트 추천글 부스트 활성 — 정렬 우선 + '추천글' 배지 */
+  /** 포인트 추천글 부스트 활성 — 정렬 우선 + 메타 줄 맨 앞 "추천글" */
   boosted?: boolean;
-  /** [959] 내집나우 Lab(데이터 분석 카드) 노트 — "직접 방문"이 아니라 "Lab 데이터"로 표기한다 */
+  /** [959] 내집나우 Lab(데이터 분석 카드) 노트 */
   lab?: boolean;
   /** 사진 없는 커버에 크게 적을 이름(단지명 등) */
   aptName?: string | null;
   /** [1006] 이야기(이웃 글) 카드 — 실측 댓글 수. 노트 카드에는 없다. */
   comments?: number;
-  /** [1006] 이야기 카드 — 첨부 사진 장수(커버 외 몇 장이 더 있는지 알리는 용도). */
+  /** [1006] 이야기 카드 — 첨부 사진 장수 */
   photos?: number;
 };
 
-/* [B19] 유형(무엇을 보나)과 정렬(어떤 순서로 보나)은 서로 다른 축인데
-   한 세그먼트에 4칸으로 섞여 있었다. 그래서 "임장노트를 최신순으로" 가
-   **표현 불가능**했고(둘 다 같은 칸을 차지한다), "추천 20 · 최신 20" 처럼
-   같은 수가 두 번 적혀 고장난 것처럼 보였다. 두 줄로 가른다. */
+/* [B19] 유형(무엇을 보나)과 정렬(어떤 순서로 보나)은 서로 다른 축이다 — 한 줄에 섞으면
+   "임장노트를 최신순으로" 가 표현 불가능하다. [v4] 유형 = 밑줄 탭, 정렬 = 같은 줄 오른쪽 글자 토글. */
 const KINDS = [
   { id: "all", label: "전체" },
   { id: "note", label: "임장노트" },
@@ -68,256 +72,121 @@ const SORTS = [
 ] as const;
 type SortId = (typeof SORTS)[number]["id"];
 
-/* [959] 사진이 없는 카드의 커버 — 예전엔 연한 그라디언트 빈 상자였다(23장 중 절반이
-   빈 상자라 피드가 "아무것도 없는 곳"처럼 보였다). 이제 **그 카드가 말하는 것**을 커버로
-   그린다: 단지명(또는 제목)을 크게, 지역을 작게, 노트는 네이비 위 한지 글자, 이야기는 한지
-   위 남색 글자. 사진처럼 꾸미지 않고 "데이터 카드"임을 드러낸다(가짜 사진 금지). */
-function GeneratedCover({ card }: { card: FeedCard }) {
-  const dark = card.kind === "note";
-  const big = (card.aptName?.trim() || card.title).slice(0, 28);
+/* [1012] 시각은 서버·클라이언트의 now 가 달라 문구가 어긋날 수 있어
+   suppressHydrationWarning 으로 한 번만 다시 그린다. */
+function CardTime({ at }: { at: number }) {
+  if (!Number.isFinite(at) || at <= 0) return null;
   return (
-    <div
-      className={`absolute inset-0 flex flex-col justify-end p-3 ${
-        dark ? "bg-brand-navy text-on-dark" : "bg-brand-hanji text-brand-hanji-ink"
-      }`}
-      aria-hidden="true"
-    >
-      <span
-        className={`pointer-events-none absolute -right-3 -top-4 h-16 w-16 rounded-full ${
-          dark ? "bg-brand-red-dark/25" : "bg-brand-red/15"
-        }`}
-      />
-      {/* [975] 밝은 면 쪽이 opacity-70 이었다 — 부모색을 통째로 흐려서 2.9~3.5:1 이 됐다.
-          흐리게 보이려면 색을 낮춰야지 투명도를 낮추면 안 된다(글자까지 사라진다). */}
-      <span className={`t-caption font-extrabold tracking-wider ${dark ? "text-on-dark-muted" : "text-text-3"}`}>
-        {card.region}
-      </span>
-      <span className="clamp-2 t-section leading-snug">{big}</span>
-      {typeof card.rating === "number" && card.rating > 0 && (
-        <span className={`mt-1 t-caption font-bold ${dark ? "text-brand-red-dark" : "text-brand-red"}`}>
-          ★ {card.rating.toFixed(1)}
-        </span>
-      )}
-    </div>
+    <time dateTime={new Date(at).toISOString()} suppressHydrationWarning>
+      {relativeTimeLabel(at, Date.now(), { fallback: "md-ko" })}
+    </time>
   );
 }
 
-function Cover({ card }: { card: FeedCard }) {
-  /* [959] Lab 노트는 현장 방문 기록이 아니라 데이터 분석 카드다 — "✓ 직접 방문" 대신 "Lab 데이터".
-     사람이 다녀온 노트만 방문 배지를 단다. */
-  const label =
-    card.kind === "note"
-      ? card.lab
-        ? "Lab 데이터"
-        : card.visited
-          ? "✓ 직접 방문"
-          : "임장노트"
-      : "이야기";
-  /* [970 · C-06] Lab 배지 text-brand-navy — 다크에서 반투명 흰 칩(bg-surface/90) 위에
-     네이비가 그대로라 안 읽혔다. 잉크 토큰(다크에서 뒤집힘)으로. */
-  const labelColor =
-    card.kind === "note" ? (card.lab ? "text-ink" : "text-success") : "text-primary";
-  const hasPhoto = Boolean(card.cover);
+/* [v4] 목록 행 — 썸네일 72px + 제목 2줄 + 메타 한 줄. 메타 왼쪽(동네 · 작성자)은 말줄임으로 줄어들고,
+   오른쪽(시각 · 평점/댓글/저장)은 줄지 않는다 — 긴 작성자 이름이 숫자를 밀어내지 않게. */
+function FeedRow({ card, priority }: { card: FeedCard; priority: boolean }) {
+  const who = [feedRegionLabel(card.region), feedAuthorLabel(card.author)].filter(Boolean).join(" · ");
+  const tail: ReactNode[] = [];
+  if (Number.isFinite(card.createdAt) && card.createdAt > 0) tail.push(<CardTime key="t" at={card.createdAt} />);
+  if (typeof card.rating === "number" && card.rating > 0) tail.push(`★${card.rating.toFixed(1)}`);
+  if (card.kind === "post" && (card.comments ?? 0) > 0) tail.push(`댓글 ${card.comments}`);
+  if (typeof card.saves === "number" && card.saves > 0) tail.push(`저장 ${card.saves}`);
   return (
-    <div
-      className="relative w-full overflow-hidden"
-      /* CLS 수리(2026-08-16 실측): 이미지가 자연 높이로 렌더돼 로드 순간
-         카드가 통째로 자랐다 — /town p75 CLS 0.414 의 주범. 컨테이너가
-         높이를 **먼저** 확정하고(카드별 시드 높이 = 기존 매소너리 리듬 유지)
-         이미지는 absolute 로 그 안을 채운다. 로드 전후 높이가 같다 = 시프트 0. */
-      style={{
-        background: hasPhoto ? seedGradient(card.region || card.id) : undefined,
-        height: seedCoverHeight(card.id),
-      }}
-    >
-      {hasPhoto ? (
-        <CoverImage
-          src={card.cover}
-          alt={`${card.title} 커버 사진`}
-          imgClassName="absolute inset-0 h-full w-full object-cover object-top"
-        />
-      ) : (
-        <GeneratedCover card={card} />
-      )}
-      {/* 위쪽 배지가 밝은 이미지 위에 올라가면 읽히지 않는다 — 아주 옅은 스크림 */}
-      {hasPhoto && <span className="cover-scrim" aria-hidden="true" />}
-      {/* [961] 글래스 — 사진 위에서만 블러 + 한지 알약이 떠오른다(데스크톱 호버 전용, CSS 가 판정) */}
-      {hasPhoto && (
-        <span className="njn-glass" aria-hidden="true">
-          <span>{card.kind === "note" ? "노트 읽기" : "글 읽기"}</span>
-        </span>
-      )}
-      <span
-        className={`absolute left-2 top-2 z-10 rounded-md bg-surface/90 chip-pad t-caption font-extrabold ${labelColor} ${
-          card.kind === "note" && !card.lab && card.visited ? "njn-stamp njn-stamp--flat" : ""
-        }`}
-      >
-        {card.kind === "note" && !card.lab && card.visited ? "직접 방문" : label}
-      </span>
-      {/* [945-G] 24시간 내 새 글 — "지금 살아 있는 피드"의 실측 신호.
-          점멸은 reduced-motion 에서 정지(badge-new 등록). */}
-      {Date.now() - card.createdAt < 24 * 3600_000 && !card.isExample && (
-        <span className="badge-new absolute right-2 top-2 z-10 t-caption">NEW</span>
-      )}
-      {card.isExample && (
-        <span className="absolute right-2 top-2 rounded-md bg-white/90 px-[3px] py-[2px]">
-          <ExampleBadge />
-        </span>
-      )}
-    </div>
-  );
-}
-
-/* [1006] 이야기(이웃 글) 카드 — 노트 카드와 **다른 재질**.
-   노트는 사진·데이터가 먼저 오는 커버 카드지만, 이야기는 **사람이 먼저** 온다: 작성자
-   머리글자·이름 → 제목 → 동네 배지 → 댓글·사진 수. 사진이 없으면 커버를 지어내지 않고
-   (그라디언트·단지명 커버는 노트의 것) 글 카드로 선다. 규칙은 globals.css .story-card. */
-function StoryCardView({ card, delay }: { card: FeedCard; delay: number }) {
-  const author = card.author.trim() || "이웃";
-  const initial = author.slice(0, 1);
-  const isNew = Date.now() - card.createdAt < 24 * 3600_000;
-  const comments = Math.max(0, card.comments ?? 0);
-  const photos = Math.max(0, card.photos ?? 0);
-  return (
-    <div className={`mb-3 break-inside-avoid rise-in-${Math.min(delay, 6)}`}>
-      <Link href={card.href} className="story-card tile group block overflow-hidden no-underline">
-        {card.cover && (
-          <div className="relative w-full overflow-hidden" style={{ height: seedCoverHeight(card.id) }}>
+    <li>
+      <Link href={card.href} className="flex items-start gap-3 py-3 no-underline">
+        <span className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-lg bg-divider">
+          {card.cover && (
             <CoverImage
               src={card.cover}
-              alt={`${card.title} 사진`}
+              alt=""
+              sizes="72px"
+              priority={priority}
               imgClassName="absolute inset-0 h-full w-full object-cover"
             />
-            <span className="cover-scrim" aria-hidden="true" />
-            {photos > 1 && (
-              <span className="absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 rounded-md bg-surface/90 chip-pad t-caption font-extrabold text-ink">
-                <Icon name="camera" size={11} />
-                {photos}
+          )}
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="clamp-2 t-section text-ink">{feedDisplayTitle(card.title, card.region, { lab: card.lab })}</span>
+          <span className="flex min-w-0 items-baseline t-sub text-text-3">
+            {/* 포인트로 올린 글은 정렬과 무관하게 맨 앞이다 — 그 이유를 한 단어로 밝힌다 */}
+            {card.boosted && <span className="mr-1 shrink-0 font-bold text-text-2">추천글</span>}
+            {who && <span className="min-w-0 truncate">{who}</span>}
+            {tail.length > 0 && (
+              <span className="shrink-0 whitespace-pre">
+                {tail.map((t, i) => (
+                  <span key={i}>
+                    {i > 0 || who ? " · " : ""}
+                    {t}
+                  </span>
+                ))}
               </span>
             )}
-          </div>
-        )}
-        <div className="flex flex-col gap-2 px-3 pb-3 pt-3">
-          <div className="flex items-center gap-2">
-            <span className="story-avatar" aria-hidden="true">
-              {initial}
-            </span>
-            <span className="min-w-0 flex-1 truncate t-sub font-extrabold text-ink">{author}</span>
-            <span className="story-kind t-caption">이야기</span>
-            {isNew && <span className="badge-new t-caption">NEW</span>}
-          </div>
-          <div className="line-clamp-3 t-body font-extrabold leading-snug text-ink">
-            {card.boosted && (
-              <span className="mr-1.5 inline-block align-middle rounded-md bg-primary-soft px-1.5 py-0.5 t-caption font-extrabold text-primary">
-                추천글
-              </span>
-            )}
-            {card.title}
-          </div>
-          <div className="flex flex-wrap items-center gap-1">
-            {card.region && (
-              <span className="rounded-md bg-primary-soft px-1.5 py-px t-caption font-extrabold text-primary">
-                {card.region}
-              </span>
-            )}
-            {card.tags.slice(0, 2).map((t) => (
-              <span key={t} className="rounded-full bg-bg chip-pad t-caption font-semibold text-text-2">
-                #{t}
-              </span>
-            ))}
-          </div>
-          {/* 댓글 수는 0 이어도 적는다 — 이야기는 대화이고, "댓글 0" 은 첫 답을 부르는 사실이다 */}
-          <div className="flex items-center gap-3 t-sub text-text-3">
-            <span className="inline-flex items-center gap-1">
-              <Icon name="messages-square" size={12} />
-              댓글 {comments}
-            </span>
-            {photos > 0 && (
-              <span className="inline-flex items-center gap-1">
-                <Icon name="camera" size={12} />
-                사진 {photos}
-              </span>
-            )}
-            {typeof card.saves === "number" && card.saves > 0 && (
-              <span className="inline-flex items-center gap-1">
-                <Icon name="bookmark" size={12} />
-                {card.saves}
-              </span>
-            )}
-          </div>
-        </div>
+          </span>
+        </span>
       </Link>
-    </div>
+    </li>
   );
 }
 
-function FeedCardView({ card, delay }: { card: FeedCard; delay: number }) {
-  if (card.kind === "post") return <StoryCardView card={card} delay={delay} />;
-  return (
-    <div className={`mb-3 break-inside-avoid rise-in-${Math.min(delay, 6)}`}>
-      <Link
-        href={card.href}
-        className="card tile card-zoom group block overflow-hidden rounded-[14px] no-underline"
-      >
-        <Cover card={card} />
-        {/* [961] 호버 — 커버 아래 주홍 밑줄이 왼쪽에서 차오른다(인터랙션 라이브러리 04) */}
-        <span className="njn-card-bar" aria-hidden="true" />
-        <div className="flex flex-col gap-1.5 px-3 pb-3 pt-2.5">
-          <div className="line-clamp-2 t-body font-extrabold text-ink">
-            {card.boosted && (
-              <span className="mr-1.5 inline-block align-middle rounded-md bg-primary-soft px-1.5 py-0.5 t-caption font-extrabold text-primary">
-                추천글
-              </span>
-            )}
-            {card.title}
-          </div>
-          {card.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {card.tags.slice(0, 3).map((t) => (
-                <span
-                  key={t}
-                  className="rounded-full bg-bg chip-pad t-caption font-semibold text-text-2"
-                >
-                  #{t}
-                </span>
-              ))}
-            </div>
-          )}
-          {/* 지역을 작성자 뒤 메타 텍스트에서 **배지**로 올린다. (B20)
-              동네이야기의 축은 지역인데, 목록에서 어느 동네 글인지 훑어지지 않았다.
-              "홍길동 · 관양동" 처럼 이름 뒤에 붙어 있으면 눈이 그걸 찾지 않는다. */}
-          {card.region && (
-            <span className="w-fit rounded-md bg-primary-soft px-1.5 py-px t-caption font-extrabold text-primary">
-              {card.region}
-            </span>
-          )}
-          <div className="flex items-center justify-between t-sub text-text-3">
-            <span className="min-w-0 truncate">{card.author}</span>
-            {typeof card.rating === "number" && card.rating > 0 ? (
-              <span className="inline-flex shrink-0 items-center gap-1">
-                ★ {card.rating.toFixed(1)}
-              </span>
-            ) : typeof card.saves === "number" ? (
-              <span className="inline-flex shrink-0 items-center gap-1">
-                <Icon name="🔖" size={12} />
-                {card.saves}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </Link>
-    </div>
-  );
+/** /api/home/personal 응답 → 관심지역 목록(대표 지역 먼저, 중복·빈 값 제거) */
+function myRegionsOf(p: { primaryRegion: string | null; regions: string[] | null } | null): string[] {
+  if (!p) return [];
+  return [...new Set([p.primaryRegion, ...(p.regions ?? [])].map((r) => String(r ?? "").trim()).filter(Boolean))];
 }
+type HomePersonal = { primaryRegion: string | null; regions: string[] | null };
 
 /**
- * 피드 안에 광고를 끼워 넣는 위치.
- * lib/ads/adsense-policy 의 정책은 "커뮤니티는 8번째마다"지만, 지금 슬롯이 내려주는
- * 크리에이티브는 한 개뿐이라 8칸마다 반복하면 같은 배너가 화면에 여러 번 잡힌다.
- * 그래서 첫 지점(8번째 카드 뒤)에서 한 번만 넣는다. 카드가 8개도 안 되면
- * 피드가 짧다는 뜻이므로 그리드 아래에 붙인다.
+ * [v4] 머리 오른쪽 작은 아웃라인 "글쓰기" — 쓸 수 있는 것이 두 가지(동네이야기 · 임장노트)라
+ * 큰 버튼 두 개 대신 작은 메뉴 하나로 연다. 채움 파랑은 쓰지 않는다(모바일은 탭바 ＋ 가 노트 쓰기).
+ * [B22] 관심지역이 있으면 동네이야기 쓰기가 그 동네로 미리 채워 열린다(예전 "{동네}에 글쓰기 ›").
  */
-const AD_AFTER_INDEX = 7;
+export function TownWriteMenu() {
+  const ref = useRef<HTMLDetailsElement | null>(null);
+  const [myRegion, setMyRegion] = useState<string | null>(null);
+  useEffect(() => {
+    let dead = false;
+    getHomePersonal<HomePersonal>()
+      .then((p) => {
+        if (!dead) setMyRegion(myRegionsOf(p)[0] ?? null);
+      })
+      .catch(() => {
+        /* 개인화 실패 — 지역 없이 쓰기 화면으로 */
+      });
+    /* 네이티브 <details> 는 바깥을 눌러도·Esc 로도 닫히지 않는다 — 메뉴답게 닫는다 */
+    const onDown = (e: PointerEvent) => {
+      const d = ref.current;
+      if (d?.open && e.target instanceof Node && !d.contains(e.target)) d.open = false;
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && ref.current?.open) ref.current.open = false;
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      dead = true;
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+  const storyHref = myRegion ? `/town/write?region=${encodeURIComponent(myRegion)}` : "/town/write";
+  return (
+    <details ref={ref} className="relative shrink-0">
+      <summary className="btn-outline btn-sm cursor-pointer list-none select-none [&::-webkit-details-marker]:hidden">
+        글쓰기
+      </summary>
+      <div className="dropdown-panel absolute right-0 top-full z-30 mt-1.5 flex w-48 flex-col rounded-lg border border-line bg-surface p-1.5 shadow-md">
+        <Link href={storyHref} className="rounded-sm px-3 py-2.5 t-body font-bold text-ink no-underline hover:bg-bg">
+          동네이야기 쓰기
+          {myRegion && <span className="ml-1 t-sub font-normal text-text-3">{myRegion}</span>}
+        </Link>
+        <Link href="/notes/new" className="rounded-sm px-3 py-2.5 t-body font-bold text-ink no-underline hover:bg-bg">
+          임장노트 쓰기
+        </Link>
+      </div>
+    </details>
+  );
+}
 
 /**
  * 추천 정렬 점수 — 실데이터(최신성 + 노트 평점 + 글 저장수)만 사용한다.
@@ -373,11 +242,15 @@ function writeMoreCache(extra: FeedCard[], more: boolean, firstOldest: number) {
   }
 }
 
+/* [v4] 선택 칩 = 한지 + 남색(.chip-active), 나머지 = 흰 면 + 1px 선 */
+function chipClass(active: boolean): string {
+  return `chip px-3 py-1.5 t-sub font-bold ${active ? "chip-active border" : "border border-line bg-surface text-text-2"}`;
+}
+
 export function TownFeed({
   cards,
   hasMore = false,
   loadFailed = false,
-  ad = null,
 }: {
   cards: FeedCard[];
   /** [967 · 19] 서버가 준 첫 장 너머에 카드가 더 있는가 — "더 보기" 버튼의 첫 상태 */
@@ -387,8 +260,6 @@ export function TownFeed({
    * 목록만 봐서는 구분이 안 된다 — 둘을 다르게 말하려면 이 플래그가 필요하다.
    */
   loadFailed?: boolean;
-  /** 서버에서 렌더한 광고 슬롯(없으면 null) */
-  ad?: ReactNode;
 }) {
   const [kind, setKind] = useState<KindId>("all");
   const [sort, setSort] = useState<SortId>("reco");
@@ -396,8 +267,10 @@ export function TownFeed({
      null = 아직 모름 / [] = 설정 안 함 → 칩을 그리지 않는다. */
   const [myRegions, setMyRegions] = useState<string[] | null>(null);
   const [onlyMine, setOnlyMine] = useState(false);
+  /* [v4] 지역 칩(옛 "우리 동네 홈" 링크 줄) — 없으면 전체 */
+  const [region, setRegion] = useState<TownFeedRegionId | null>(null);
 
-  /* [967 · 21] 필터 ↔ URL 동기화(?kind=&sort=&mine=1) — 새로고침·공유해도 같은 목록.
+  /* [967 · 21] 필터 ↔ URL 동기화(?kind=&sort=&mine=1&region=) — 새로고침·공유해도 같은 목록.
      이 페이지는 revalidate(ISR) 라 useSearchParams 를 쓰면 프리렌더 HTML 에서 피드
      서브트리가 Suspense 폴백으로 비어 나간다(/town/news 에서 실측한 교훈,
      NewsListClient 주석). 그래서 마운트 후 location.search 를 한 번 읽고, 이후엔
@@ -410,6 +283,7 @@ export function TownFeed({
       setKind(f.kind);
       setSort(f.sort);
       setOnlyMine(f.mine);
+      setRegion(f.region ?? null);
     };
     apply();
     setUrlRead(true);
@@ -417,7 +291,10 @@ export function TownFeed({
     window.addEventListener("popstate", apply);
     return () => window.removeEventListener("popstate", apply);
   }, []);
-  const filters: TownFeedFilters = useMemo(() => ({ kind, sort, mine: onlyMine }), [kind, sort, onlyMine]);
+  const filters: TownFeedFilters = useMemo(
+    () => ({ kind, sort, mine: onlyMine, ...(region ? { region } : {}) }),
+    [kind, sort, onlyMine, region],
+  );
   useEffect(() => {
     if (!urlRead) return; // URL 을 읽기 전에 기본값으로 덮어쓰면 딥링크가 지워진다
     try {
@@ -492,8 +369,7 @@ export function TownFeed({
     }
   }, [allCards, cards, moreLoading]);
 
-  /* [966] 상세 → 뒤로가기 스크롤 복원. 카드는 props 로 이미 와 있고 커버 높이는
-     시드로 먼저 확정되므로(위 Cover 주석) 첫 렌더가 곧 ready 다.
+  /* [966] 상세 → 뒤로가기 스크롤 복원. 행 높이는 썸네일(72px)로 먼저 확정되므로 첫 렌더가 곧 ready 다.
      [967 · 21] 키는 경로 + **현재 필터 쿼리**로 직접 조립한다 — 마운트 때 한 번 읽는
      기본 키(useScrollRestoreKey)는 필터를 바꾼 뒤 나갈 때와 돌아올 때가 어긋난다.
      ready 는 URL 을 읽어 필터가 확정되고(urlRead) 다음 장 캐시까지 붙은 뒤(moreRestored). */
@@ -504,13 +380,10 @@ export function TownFeed({
   );
   useEffect(() => {
     let dead = false;
-    getHomePersonal<{ primaryRegion: string | null; regions: string[] | null }>()
+    getHomePersonal<HomePersonal>()
       .then((p) => {
         if (dead || !p) return;
-        const list = [p.primaryRegion, ...(p.regions ?? [])]
-          .map((r) => String(r ?? "").trim())
-          .filter(Boolean);
-        setMyRegions([...new Set(list)]);
+        setMyRegions(myRegionsOf(p));
       })
       .catch(() => {
         /* 개인화 실패 — 칩을 안 그린다. 빈 결과를 "내 지역 글이 없다"로 오인시키지 않는다. */
@@ -536,205 +409,208 @@ export function TownFeed({
     [myRegions],
   );
 
-  /* 각 칸의 실제 개수 — 눌러 보기 전에 결과 크기를 알 수 있게 한다.
-     개수는 **유형**에만 붙인다(정렬은 같은 목록을 다시 세우는 것이라 수가 같다). */
-  const counts = useMemo<Record<KindId, number>>(
-    () => ({
-      all: allCards.length,
-      note: allCards.filter((c) => c.kind === "note").length,
-      post: allCards.filter((c) => c.kind === "post").length,
-    }),
-    [allCards],
-  );
-  /* [1006] "임장노트 30" 안에는 사람이 다녀온 노트와 Lab 데이터 카드가 섞여 있다 —
-     둘을 같은 수로 부르면 "사람 30명이 다녀왔다"로 읽힌다. 탭 아래 한 줄로 가른다. */
-  const noteSplit = useMemo(() => {
-    const notes = allCards.filter((c) => c.kind === "note");
-    const lab = notes.filter((c) => c.lab).length;
-    return { human: notes.length - lab, lab };
-  }, [allCards]);
-
+  /* [v4] 지역 칩 — 손에 든 카드에서 센 수(누르면 보이는 행 수). 0건 동네는 싣지 않되,
+     URL 로 들어온 선택 동네는 0건이어도 칩으로 남겨 "무엇이 걸려 있는지" 보이게 한다. */
+  const selectedRegion = townFeedRegionById(region);
+  const regionChips = useMemo(() => {
+    const chips = townRegionChips(allCards);
+    if (selectedRegion && !chips.some((c) => c.id === selectedRegion.id)) {
+      chips.push({ id: selectedRegion.id, name: selectedRegion.name, count: 0 });
+    }
+    return chips;
+  }, [allCards, selectedRegion]);
   const mineCount = useMemo(
     () => (myRegions && myRegions.length > 0 ? allCards.filter(matchesMine).length : 0),
     [allCards, myRegions, matchesMine],
   );
+  /* 홈에서 정한 관심지역을 여기서도 쓴다(B21) — 없거나 0건이면 칩을 그리지 않는다 */
+  const showMine = Boolean(myRegions && myRegions.length > 0 && (mineCount > 0 || onlyMine));
+  /* ?mine=1 로 들어왔지만 관심지역을 모르면(비로그인·조회 전) 거르는 것이 없다 — "전체"가 켜진 것으로 보인다 */
+  const mineOn = onlyMine && Boolean(myRegions && myRegions.length > 0);
+
+  /* 지역(관심지역·동네 칩)으로 먼저 거른 모수 — 유형 탭의 숫자도 이 모수에서 센다(탭 숫자 = 보이는 행 수) */
+  const scoped = useMemo(() => {
+    let list = onlyMine ? allCards.filter(matchesMine) : allCards;
+    if (selectedRegion) list = list.filter((c) => regionMatches(c.region, selectedRegion.name));
+    return list;
+  }, [allCards, onlyMine, matchesMine, selectedRegion]);
+
+  /* 각 칸의 실제 개수 — 눌러 보기 전에 결과 크기를 알 수 있게 한다.
+     개수는 **유형**에만 붙인다(정렬은 같은 목록을 다시 세우는 것이라 수가 같다). */
+  const counts = useMemo<Record<KindId, number>>(
+    () => ({
+      all: scoped.length,
+      note: scoped.filter((c) => c.kind === "note").length,
+      post: scoped.filter((c) => c.kind === "post").length,
+    }),
+    [scoped],
+  );
+  /* [1012 · R2] 추천순의 기준(실측) — recommendScore 가 실제로 밀어 올리는 카드 수.
+     [v4] 화면 문장에서 정렬 버튼의 title(툴팁)로 옮겼다 — 설명 문장은 목록 위에 세우지 않는다. */
+  const boostedByScore = useMemo(
+    () => allCards.filter((c) => (c.rating ?? 0) > 0 || (c.saves ?? 0) > 0).length,
+    [allCards],
+  );
+  const recoNote =
+    boostedByScore > 0
+      ? `최신순 · 이 피드 ${allCards.length.toLocaleString("ko-KR")}장 중 평점·저장 있는 ${boostedByScore.toLocaleString("ko-KR")}장은 그만큼 위로`
+      : `최신순 · 이 피드 ${allCards.length.toLocaleString("ko-KR")}장에 아직 평점·저장이 없어 올린 순서 그대로`;
 
   const visible = useMemo(() => {
-    let list = onlyMine ? allCards.filter(matchesMine) : allCards;
-    if (kind !== "all") list = list.filter((c) => c.kind === kind);
-    /* 포인트 추천글은 정렬과 무관하게 맨 앞 — 배지('추천글')로 이유를 밝힌다 */
+    const list = kind === "all" ? scoped : scoped.filter((c) => c.kind === kind);
+    /* 포인트 추천글은 정렬과 무관하게 맨 앞 — 메타 줄의 "추천글"로 이유를 밝힌다 */
     const byBoost = (a: FeedCard, b: FeedCard) => Number(b.boosted ?? false) - Number(a.boosted ?? false);
     if (sort === "latest")
       return [...list].sort((a, b) => byBoost(a, b) || b.createdAt - a.createdAt);
     return [...list].sort((a, b) => byBoost(a, b) || recommendScore(b) - recommendScore(a));
-  }, [allCards, kind, sort, onlyMine, matchesMine]);
+  }, [scoped, kind, sort]);
+
+  /* 지역 칩은 하나만 켜진다 — 전체 · 내 관심지역 · 동네 중 하나 */
+  const pickAll = () => {
+    setOnlyMine(false);
+    setRegion(null);
+  };
+  const pickMine = () => {
+    setRegion(null);
+    setOnlyMine((v) => !v);
+  };
+  const pickRegion = (id: TownFeedRegionId) => {
+    setOnlyMine(false);
+    setRegion((cur) => (cur === id ? null : id));
+  };
 
   return (
     <>
-      {/* 유형(무엇) · 정렬(순서)를 두 줄로 가른다 — 한 줄에 섞여 있으면
-          "임장노트를 최신순으로" 를 표현할 수 없다(B19). */}
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <div className="seg" role="group" aria-label="글 유형">
+      {/* [v4] 지역 줄 — 한 줄 가로 스크롤 필터 칩. 칩이 "전체" 하나뿐이면 줄을 그리지 않는다. */}
+      {(regionChips.length > 0 || showMine) && (
+        <div className="rail-x -mx-3.5 px-3.5 py-3 md:mx-0 md:px-0" role="group" aria-label="지역">
+          <button type="button" aria-pressed={!mineOn && !region} onClick={pickAll} className={chipClass(!mineOn && !region)}>
+            전체
+          </button>
+          {showMine && (
+            <button type="button" aria-pressed={mineOn} onClick={pickMine} className={chipClass(mineOn)}>
+              내 관심지역
+              <span className="ml-1 font-normal tabular-nums">{mineCount}</span>
+            </button>
+          )}
+          {regionChips.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              aria-pressed={region === r.id}
+              onClick={() => pickRegion(r.id)}
+              className={chipClass(region === r.id)}
+            >
+              {r.name}
+              <span className="ml-1 font-normal tabular-nums">{r.count}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* [v4] 유형 = 밑줄 탭(왼쪽) · 정렬 = 작은 글자 토글(오른쪽) — 한 줄 */}
+      <div className="flex items-end justify-between gap-3 border-b border-line">
+        <div className="flex gap-4" role="group" aria-label="글 유형">
           {KINDS.map((k) => (
             <button
               key={k.id}
               type="button"
               aria-pressed={kind === k.id}
               onClick={() => setKind(k.id)}
+              className={`-mb-px min-h-10 border-b-2 pb-2.5 pt-2 t-body font-bold transition-colors ${
+                kind === k.id ? "border-brand-hanji-ink text-ink" : "border-transparent text-text-3"
+              }`}
             >
               {k.label}
-              <span className="t-num ml-1 font-normal">{counts[k.id]}</span>
+              <span className="ml-1 font-normal tabular-nums">{counts[k.id]}</span>
             </button>
           ))}
         </div>
-        {/* 홈에서 정한 관심지역을 여기서도 쓴다 (B21) — 없으면 그리지 않는다.
-            "0개"가 나오는 칩을 만들어 두면 눌러 보고 실망하게 된다. */}
-        {myRegions && myRegions.length > 0 && mineCount > 0 && (
-          <button
-            type="button"
-            aria-pressed={onlyMine}
-            onClick={() => setOnlyMine((v) => !v)}
-            className={`chip px-3 py-1.5 t-sub font-bold ${
-              onlyMine ? "chip-active" : "border border-line bg-surface text-text-2"
-            }`}
-          >
-            내 관심지역
-            <span className="t-num ml-1 font-normal">{mineCount}</span>
-          </button>
-        )}
-        {/* 관심지역이 있으면 그 동네로 바로 글쓰기 (B22) — 매번 지역부터
-            다시 고르게 하지 않는다. */}
-        {myRegions && myRegions.length > 0 && (
-          <Link
-            href={`/town/write?region=${encodeURIComponent(myRegions[0])}`}
-            className="ml-auto t-sub font-bold text-primary no-underline"
-          >
-            {myRegions[0]}에 글쓰기 ›
-          </Link>
-        )}
+        <div className="flex shrink-0 items-center gap-2.5 pb-2.5 t-sub" role="group" aria-label="정렬">
+          {SORTS.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              aria-pressed={sort === o.id}
+              onClick={() => setSort(o.id)}
+              title={o.id === "reco" ? recoNote : undefined}
+              className={sort === o.id ? "font-bold text-ink" : "text-text-3"}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="mb-3 flex flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <div className="seg" role="group" aria-label="정렬">
-            {SORTS.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                aria-pressed={sort === o.id}
-                onClick={() => setSort(o.id)}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-          <span className="t-sub text-text-3">
-            {visible.length.toLocaleString("ko-KR")}개 표시 중
-          </span>
-        </div>
-        {/* [B24] 추천의 **기준**을 적는다. 무엇이 위로 올라오는지 모르는 순위는
-            "누가 밀어준 글"로 읽힌다 — 실제로는 위 recommendScore 가 전부다.
-            좁은 화면에서 세그먼트 옆에 붙이면 잘리므로 제 줄을 준다. */}
-        {/* [970 · C-21] "올린 시각이 빠른 순서" 는 오래된 글부터라는 뜻이라 실제 정렬
-            (createdAt 내림차순 = 최근 글부터)과 반대로 읽혔다 */}
-        <span className="t-sub text-text-3">
-          {sort === "reco"
-            ? "최신 글이 먼저, 노트 평점·저장수만큼 위로 올라와요"
-            : "최근에 올린 글부터 보여요"}
-        </span>
-        {/* [1006] 노트 탭의 구성 — 사람 노트와 데이터 카드를 정직하게 가른다 */}
-        {kind !== "post" && counts.note > 0 && noteSplit.lab > 0 && (
-          <span className="t-sub text-text-3">
-            임장노트 {counts.note} = 사람 노트 {noteSplit.human} · Lab 데이터 카드 {noteSplit.lab}
-          </span>
-        )}
-      </div>
-
-      {loadFailed && (
-        // 빨강 글씨 대신 배경으로 신호를 준다. --danger 토큰 자체는 이제 AA 를
-        // 넘지만(#c62828, soft 위 4.83), 11px 안내문은 text-ink(14.24:1)가 확실히
-        // 읽힌다 — 색은 "실패"라는 신호만 지고, 문장은 검정으로 읽는다.
-        <div className="rise-in-2 mb-3 rounded-[10px] border border-line bg-danger-soft px-3.5 py-2.5 t-sub text-ink">
-          {/* [970 · C-20] 해요체 통일 */}
-          일부 글의 조회가 실패했어요. 글이 없다는 뜻은 아니에요 — 잠시 후 새로고침해 주세요.
-        </div>
+      {/* 빈 목록이면 아래 빈 화면이 같은 사실을 말한다 — 여기선 목록이 있을 때만(같은 사실은 한 번) */}
+      {loadFailed && visible.length > 0 && (
+        <p role="status" className="mt-3 rounded-lg bg-danger-soft px-3 py-2 t-sub text-ink">
+          일부 글을 불러오지 못했어요. 잠시 후 새로고침해 주세요.
+        </p>
       )}
 
       {visible.length === 0 ? (
-        <div className="rise-in-3 card flex flex-col items-center gap-2 px-5 py-12 text-center">
-          <div className="t-title"><Icon name="📍" size={26} /></div>
+        <div className="flex flex-col items-center gap-3 py-12 text-center">
           {/* 조회 실패로 목록이 비었을 때 "글이 없어요"라고 하면 사실이 아니다.
-              [967 · 19] 아직 안 받은 장이 남아 있을 때도 마찬가지 — "없다"가 아니라
-              "지금까지 받은 것에는 없다"고 말하고 더 보기로 잇는다. */}
-          <div className="t-section text-ink">
+              [967 · 19] 아직 안 받은 장이 남아 있을 때도 마찬가지 — "지금까지 받은 것에는 없다"고 말하고
+              더 보기로 잇는다. [v4] 빈 화면은 한 줄 + 버튼 하나. */}
+          <p className="t-body text-text-2">
             {loadFailed
-              ? "글을 불러오지 못했어요"
-              : kind === "post" && !onlyMine && !more
-                ? /* [1006] 이야기 탭 0건 — 지금 운영 실측(사람 글 0건)이 그대로 보이는 자리다. 지어내지 않는다 */
-                  "아직 이웃 글이 없어요 — 첫 이야기를 남겨 보세요"
-                : more
-                  ? "지금까지 받은 글에는 이 조건이 없어요"
-                  : onlyMine
-                    ? "내 관심지역 글이 아직 없어요 — 첫 글을 남겨 보세요"
-                    : "이 조건의 글이 아직 없어요 — 첫 글을 남겨 보세요"}
-          </div>
-          <div className="t-sub text-text-3">
-            {loadFailed
-              ? "데이터 조회가 실패했어요. 잠시 후 새로고침해 주세요."
+              ? "글을 불러오지 못했어요. 잠시 후 새로고침해 주세요."
               : more
-                ? "더 보기로 이전 글을 이어서 볼 수 있어요"
-                : kind === "post"
-                  ? "다녀온 동네의 인상·질문·사진을 남기면 이 피드에 바로 보여요"
-                  : "첫 임장노트나 동네이야기를 남기면 가장 먼저 노출돼요"}
-          </div>
-          <Link href="/town/write" className="btn-primary btn-md mt-2">
-            {kind === "post" ? "첫 이야기 쓰기" : "글쓰기"}
-          </Link>
+                ? `지금까지 받은 ${allCards.length.toLocaleString("ko-KR")}건에는 이 조건의 글이 없어요`
+                : mineOn
+                  ? `${myRegions?.[0] ?? "내 관심지역"} 글이 이 피드에 아직 없어요`
+                  : selectedRegion
+                    ? `${selectedRegion.name} 글이 이 피드에 아직 없어요`
+                    : kind === "post"
+                      ? /* [1006] 이야기 탭 0건 — 지금 운영 실측(사람 글 0건)이 그대로 보이는 자리다. 지어내지 않는다 */
+                        "이 피드에 이웃 글이 아직 없어요"
+                      : kind === "note"
+                        ? "이 피드에 공개 임장노트가 아직 없어요"
+                        : "이 조건의 글이 아직 없어요"}
+          </p>
+          {!loadFailed && (
+            <Link href={kind === "note" ? "/notes/new" : "/town/write"} className="btn-primary btn-md no-underline">
+              {kind === "note" ? "임장노트 쓰기" : "동네이야기 쓰기"}
+            </Link>
+          )}
         </div>
       ) : (
-        <>
-          <div className="columns-2 gap-3 md:columns-3 lg:columns-4">
-            {visible.map((card, i) => (
-              <Fragment key={card.id}>
-                <FeedCardView card={card} delay={(i % 6) + 1} />
-                {ad && i === AD_AFTER_INDEX && (
-                  <div className="mb-3 break-inside-avoid">{ad}</div>
-                )}
-              </Fragment>
-            ))}
-          </div>
-          {ad && visible.length <= AD_AFTER_INDEX && <div className="mt-1">{ad}</div>}
-        </>
+        <ul data-tone="hanji" className="divide-y divide-line">
+          {visible.map((card, i) => (
+            <FeedRow key={card.id} card={card} priority={i === 0} />
+          ))}
+        </ul>
       )}
 
-      {/* [967 · 19] 더 보기 / 마지막 — 필터와 무관하게 전체 피드의 다음 장을 붙인다
-          (유형·정렬·관심지역은 받은 카드 위에서 다시 계산된다). 빈 화면에서도
-          그려야 "첫 장엔 없지만 다음 장엔 있는" 노트를 찾아갈 수 있다.
-          [970 · C-22] 단, 더 받을 것도 없고 이 조건에 보이는 것도 0이면 "마지막이에요 ·
-          24개를 다 봤어요" 가 "0개 표시 중" 바로 아래 붙어 모순처럼 읽힌다 — 푸터 생략.
-          보일 때는 "이 조건 N / 전체 M" 으로 무엇을 센 건지 밝힌다. */}
-      {(more || (allCards.length > 0 && visible.length > 0)) && (
-        <div className="mt-2 flex flex-col items-center gap-2">
+      {/* [967 · 19] 더 보기 — 필터와 무관하게 전체 피드의 다음 장을 붙인다(유형·정렬·지역은 받은 카드
+          위에서 다시 계산된다). 빈 화면에서도 그려야 "첫 장엔 없지만 다음 장엔 있는" 글을 찾아갈 수 있다.
+          [v4] 끝에 닿으면 아무것도 적지 않는다("마지막이에요 · 이 조건 N / 전체 M" 상태 문장 삭제).
+          지역을 고른 상태면 그 동네 홈(/town/{id})으로 가는 링크를 목록 끝에 둔다 — 옛 지역 칩이 하던 이동. */}
+      {(more || selectedRegion) && (
+        <div className="mt-3 flex flex-col items-center gap-3 border-t border-line pt-4">
           {moreError && (
             <p role="alert" className="t-sub text-text-2">
               {moreError}
             </p>
           )}
-          {more ? (
+          {more && (
             <button
               type="button"
               onClick={loadMore}
               disabled={moreLoading}
               aria-busy={moreLoading}
-              className="btn-soft tap rounded-xl px-5 py-2.5 t-body font-bold disabled:opacity-60"
+              className="btn-ghost btn-md w-full"
             >
-              {moreLoading ? "불러오는 중…" : "더 보기"}
+              {/* [1012] 규칙 5 — 동사 + 대상 */}
+              {moreLoading ? "불러오는 중…" : "이전 글 더 보기"}
             </button>
-          ) : (
-            <p role="status" className="t-sub text-text-3">
-              마지막이에요 · 이 조건 {visible.length.toLocaleString("ko-KR")} / 전체{" "}
-              {allCards.length.toLocaleString("ko-KR")}개
-            </p>
+          )}
+          {selectedRegion && (
+            <Link href={`/town/${selectedRegion.id}`} className="t-sub font-bold text-primary no-underline">
+              {selectedRegion.name} 동네 홈 보기 ›
+            </Link>
           )}
         </div>
       )}

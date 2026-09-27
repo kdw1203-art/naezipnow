@@ -1,7 +1,11 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+
+/* [v4.1 · 리퀴드 목록] 분류 묶음 톤 순환(globals.css `data-tone`) — 용어 = hanji 부터 */
+const CATEGORY_TONES = ["hanji", "blue", "mint", "sand"] as const;
 
 /* 제안 웹6(2026-08-03) — 용어사전 내부 검색. 56개 용어를 스크롤로만 찾던
    화면에 클라이언트 필터를 얹는다. 데이터는 서버가 넘긴 그대로(단일 출처)라
@@ -35,8 +39,8 @@ export function GlossarySearch({ groups }: { groups: GlossaryGroupData[] }) {
 
   return (
     <>
-      {/* 검색 입력 — 16px 미만은 iOS 포커스 줌 유발(모바일 실측 7과 동일 규칙) */}
-      <div className="rise-in-1 mt-4 flex items-center gap-2 rounded-2xl border border-line bg-surface px-3.5 py-2.5">
+      {/* [v4 · 규칙 2] 주인공 = 검색창 하나. 검색 입력 — 16px 미만은 iOS 포커스 줌 유발(모바일 실측 7과 동일 규칙) */}
+      <div className="rise-in-1 flex min-h-12 items-center gap-2 rounded-lg border border-line-strong bg-surface px-3.5">
         <span aria-hidden className="text-text-3">⌕</span>
         <input
           type="search"
@@ -51,21 +55,21 @@ export function GlossarySearch({ groups }: { groups: GlossaryGroupData[] }) {
             type="button"
             onClick={() => setQ("")}
             aria-label="검색어 지우기"
-            className="shrink-0 text-[13px] text-text-3"
+            className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center t-body text-text-3"
           >
             ✕
           </button>
         )}
       </div>
 
-      {/* 분류 바로가기 — 검색 중에는 앵커가 무의미하므로 숨긴다 */}
+      {/* 분류 바로가기 — 검색 중에는 앵커가 무의미하므로 숨긴다. [v4] 여러 줄 칩 → 한 줄 가로 스크롤 */}
       {!searching && (
-        <nav className="rise-in-1 mt-3 flex flex-wrap gap-2">
+        <nav aria-label="분류 바로가기" className="-mx-3.5 mt-3 flex gap-2 overflow-x-auto px-3.5 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0">
           {groups.map((g) => (
             <a
               key={g.category}
               href={`#${encodeURIComponent(g.category)}`}
-              className="rounded-full border border-line bg-surface px-3 py-1.5 text-[12px] font-bold text-text-1"
+              className="chip inline-flex min-h-[32px] shrink-0 items-center border border-line bg-surface px-3 t-sub font-bold text-text-2 no-underline"
             >
               {g.category} {g.terms.length}
             </a>
@@ -73,40 +77,38 @@ export function GlossarySearch({ groups }: { groups: GlossaryGroupData[] }) {
         </nav>
       )}
 
-      {searching && (
-        <p className="mt-3 text-[12px] text-text-3">
-          ‘{q.trim()}’ 일치 {total}개
-        </p>
-      )}
+      {searching && <p className="mt-3 t-sub text-text-3">‘{q.trim()}’ 일치 {total}개</p>}
 
-      <div className="mt-5 flex flex-col gap-6">
+      <div className="mt-8 flex flex-col gap-8">
         {filtered.length === 0 ? (
-          <div className="card rounded-2xl px-4 py-8 text-center text-[13px] text-text-3">
-            이름·요약에 일치하는 용어가 없어요. 다른 표현으로 검색해 보세요.
-          </div>
+          <p className="py-6 text-center t-body text-text-3">일치하는 용어 없음 · 다른 표현으로 검색</p>
         ) : (
           filtered.map((g, gi) => (
-            <section
-              key={g.category}
-              id={encodeURIComponent(g.category)}
-              className={`rise-in-${Math.min(gi + 2, 6)} scroll-mt-24`}
-            >
-              <h2 className="text-[15px] font-extrabold text-ink">{g.category}</h2>
-              <div className="mt-2 grid gap-2 md:grid-cols-2">
+            <section key={g.category} id={encodeURIComponent(g.category)} className="flex scroll-mt-24 flex-col gap-2">
+              <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+                {g.category} <span className="t-num text-text-3">{g.terms.length}</span>
+              </h2>
+              {/* [v4 · 규칙 5·10] 높이가 다른 2열 카드 → 구분선 행(용어 굵게 + 요약 한 줄 / ›)
+                  [v4.1 · 리퀴드 목록] 분류마다 톤 순환(hanji 부터) — 이웃한 분류가 같은 색을 갖지 않는다 */}
+              <ul data-tone={CATEGORY_TONES[gi % CATEGORY_TONES.length]} className="card flex flex-col divide-y divide-line rounded-lg px-4">
                 {g.terms.map((t) => (
-                  <Link
-                    prefetch={false}
-                    key={t.slug}
-                    href={`/glossary/${t.slug}`}
-                    className="card rounded-[14px] p-4"
-                  >
-                    <div className="text-[13px] font-extrabold text-ink">{t.term}</div>
-                    <div className="mt-1 text-[12px] leading-[1.65] text-text-2">
-                      {t.short}
-                    </div>
-                  </Link>
+                  <li key={t.slug}>
+                    <Link
+                      prefetch={false}
+                      href={`/glossary/${t.slug}`}
+                      className="press flex min-h-14 items-center justify-between gap-x-3 py-3 no-underline"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block t-body font-bold text-ink">{t.term}</span>
+                        <span className="mt-0.5 block truncate t-sub text-text-3">{t.short}</span>
+                      </span>
+                      <span aria-hidden="true" className="shrink-0 t-body text-text-3">
+                        ›
+                      </span>
+                    </Link>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </section>
           ))
         )}

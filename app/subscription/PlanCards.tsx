@@ -7,8 +7,10 @@ import { scrollIntoViewSafely } from "@/lib/ui/scroll";
 import Link from "next/link";
 import { planCheckoutHref, type CheckoutTier } from "@/lib/subscriptions/checkout-href";
 import { PreOrderCta } from "./PreOrderCta";
-import { getPlan, type PlanFeature } from "@/lib/subscriptions/plans";
+import { getPlan, PLAN_FEATURE_MATRIX, type PlanFeature } from "@/lib/subscriptions/plans";
 import { parseSubscriptionParams } from "@/lib/subscriptions/page-params";
+import { planLabel } from "@/lib/subscriptions/labels";
+import { planCtaLabel } from "@/lib/subscriptions/plan-cta";
 import { useSubscriptionViewer } from "./viewer";
 
 /* 구독 플랜 카드 3종 + 월간/연간 토글 (item 13, 클라이언트 상호작용)
@@ -46,75 +48,92 @@ type PlanCard = {
   defTier: "basic" | "pro" | "expert";
   name: string;
   nameTone: string;
-  dark: boolean;
-  badge: string | null;
+  /** [v4.1 · 리퀴드 목록] 기능 목록 유리판 톤 — 이름 색과 같은 계열(무료 mint · 플러스 blue · 프로 sand), 세 카드가 서로 다르다 */
+  listTone: "blue" | "hanji" | "mint" | "sand";
   checkoutTier: CheckoutTier | null;
-  cta: string;
+  /** 테두리 버튼 톤 — 채움 파랑은 아래 `primary` 가 플러스 카드에만 준다(화면에 1개) */
   ctaClass: string;
 };
 
 /* 표시명·톤·CTA 만 여기서 정하고, tagline·기능·한도는 PLAN_DEFINITIONS 가 준다.
    (예전 "14일 무료 체험" 같은 없는 혜택 문구 사고의 재발 방지 — 혜택 문장은
-   전부 단일 출처를 거친다.) */
+   전부 단일 출처를 거친다.)
+   [1012 · 규칙 5·9] CTA 문자열("무료로 시작"·"플러스 시작하기")과 "가장 인기" 배지를 걷었다 —
+   CTA 는 아래 ctaLabel() 이 동사 + 구체 대상 + **주입된 가격**(billing-periods 단일 출처)으로 만든다.
+   배지는 검증 사실 명사만 허용이라 "현재 이용 중"만 남는다. */
 const CARDS: PlanCard[] = [
   {
     kind: "free",
     defTier: "basic",
-    name: "무료",
+    name: planLabel("free"),
     nameTone: "text-ink",
-    dark: false,
-    badge: null,
+    listTone: "mint",
     checkoutTier: null,
-    cta: "무료로 시작",
-    ctaClass: "bg-bg text-text-1",
+    ctaClass: "btn-secondary",
   },
   {
     kind: "pro",
     defTier: "pro",
-    name: "플러스",
-    nameTone: "text-ai-accent",
-    dark: true,
-    badge: "가장 인기",
+    name: planLabel("pro"),
+    nameTone: "text-primary",
+    listTone: "blue",
     checkoutTier: "pro",
-    cta: "플러스 시작하기",
-    ctaClass: "btn-primary btn-cta",
+    ctaClass: "btn-outline",
   },
   {
     kind: "expert",
     defTier: "expert",
-    /* 토스 심사 회신에 적어 낸 상품명은 "프로" 다(가격 잠금 주석 참고).
-       여기만 "프로 (전문가)" 라 같은 페이지 비교표의 "프로" 와 어긋났다. */
-    name: "프로",
+    /* 토스 심사 회신에 적어 낸 상품명은 "프로" 다(가격 잠금 주석 참고) — planLabel 이 그 이름을 준다 */
+    name: planLabel("expert"),
     nameTone: "text-warning",
-    dark: false,
-    badge: null,
+    listTone: "sand",
     checkoutTier: "expert",
-    /* [1004] "전문가로 시작" 은 전문가 등록(공급 0)을 가리켰다 — 파는 상품 이름 그대로 */
-    cta: "프로 시작하기",
-    ctaClass: "border-[1.5px] border-ink bg-surface text-ink",
+    ctaClass: "btn-secondary",
   },
 ];
+
+/* [v4 · 규칙 2·4] 네이비 플러스 카드(어두운 면)를 걷고 세 카드를 같은 흰 카드 + 같은 줄 순서로 맞췄다.
+   채움 파랑은 플러스 CTA 하나 — 그것도 page.tsx 가 "지금 월간·연간을 팔 수 있을 때"만 준다(아니면 주간권 버튼). */
+const CTA_BASE = "flex min-h-12 items-center justify-center rounded-lg px-3 py-2.5 text-center t-body font-bold no-underline";
+
+/** [1012 · 규칙 5] CTA = 동사 + 구체 대상 + 실제 청구액 — lib/subscriptions/plan-cta(순수 함수)에서 만든다.
+ *  가격은 서버가 billing-periods 에서 주입한 값(tierPrice)만 넘긴다. */
+function ctaLabel(
+  card: Pick<PlanCard, "name" | "checkoutTier">,
+  billing: Billing,
+  tierPrice: TierPricing | null,
+  guest: boolean,
+): string {
+  return planCtaLabel(card.name, billing, card.checkoutTier === null ? null : tierPrice, guest);
+}
 
 /** 기능 한 줄 — ✓(제공) / ✓+한도(부분) / —(미포함·잠금) */
 /* 모바일18 — 모바일 상위 5줄 + 토글, md+ 전체. 접힌 항목은 md+ 에서 CSS 로
    항상 보이므로 토글 상태는 모바일에만 영향을 준다. */
-function FeatureList({ features, dark }: { features: PlanFeature[]; dark: boolean }) {
+/* [v4 · 규칙 10] 세 카드의 줄을 맞춘다 — 비교표(PLAN_FEATURE_MATRIX) 줄을 **같은 순서로 먼저**, 카드마다 다른 줄
+   ("무료의 모든 혜택 포함"·커뮤니티·지도)은 그 뒤에. 예전엔 무료 카드만 앞줄이 둘이라 같은 기능이 카드마다 다른 높이에 있었다. */
+const MATRIX_ORDER = new Map(PLAN_FEATURE_MATRIX.map((r, i) => [r.feature, i]));
+function alignedFeatures(features: PlanFeature[]): PlanFeature[] {
+  const inMatrix = features
+    .filter((f) => MATRIX_ORDER.has(f.label))
+    .sort((a, b) => (MATRIX_ORDER.get(a.label) ?? 0) - (MATRIX_ORDER.get(b.label) ?? 0));
+  const rest = features.filter((f) => !MATRIX_ORDER.has(f.label));
+  return [...inMatrix, ...rest];
+}
+
+function FeatureList({ features: raw, tone }: { features: PlanFeature[]; tone: PlanCard["listTone"] }) {
+  const features = alignedFeatures(raw);
   const [expanded, setExpanded] = useState(false);
   const VISIBLE = 5;
   const hidden = features.length - VISIBLE;
   return (
-    <div
-      className={`flex flex-col divide-y text-[13px] leading-[1.5] ${
-        /* [970 · A-28] 구분선 raw hex → divide-line 토큰(다크에서 밝은 선이 그대로 남았다) */
-        dark ? "divide-white/[.06] text-ai-text" : "divide-line text-text-1"
-      }`}
-    >
+    <div data-tone={tone} className="flex flex-col divide-y divide-line t-body text-text-1">
       {features.map((f, i) => (
         <div
           key={f.label}
           className={i >= VISIBLE && !expanded ? "hidden md:block" : undefined}
         >
-          <FeatureRow f={f} dark={dark} />
+          <FeatureRow f={f} />
         </div>
       ))}
       {hidden > 0 && !expanded && (
@@ -122,9 +141,7 @@ function FeatureList({ features, dark }: { features: PlanFeature[]; dark: boolea
           type="button"
           onClick={() => setExpanded(true)}
           /* [989] 실측 36px — 모바일에서만 보이는 버튼인데 손가락 기준에 못 미쳤다 */
-          className={`min-h-[44px] py-2 text-left text-[13px] font-bold md:hidden ${
-            dark ? "text-ai-muted" : "text-primary"
-          }`}
+          className="min-h-[44px] py-2 text-left t-body font-bold text-primary md:hidden"
         >
           전체 기능 {features.length}개 보기 ▾
         </button>
@@ -133,36 +150,18 @@ function FeatureList({ features, dark }: { features: PlanFeature[]; dark: boolea
   );
 }
 
-function FeatureRow({ f, dark }: { f: PlanFeature; dark: boolean }) {
+/* [v4 · 규칙 5·6] 기능 한 줄 = 왼쪽 ✓/— + 이름 / 오른쪽 한도 숫자(t-num). 한도 칩(연파랑 배지) → 오른쪽 값 글자 */
+function FeatureRow({ f }: { f: PlanFeature }) {
   const off = f.included === false;
   return (
-    <div
-      className={`flex items-start justify-between gap-2 py-[5px] ${
-        off ? (dark ? "text-white/35" : "text-text-3") : ""
-      }`}
-    >
+    <div className={`flex items-baseline justify-between gap-2 py-1.5 ${off ? "text-text-3" : ""}`}>
       <span className="flex min-w-0 gap-2">
-        <span
-          aria-hidden
-          className={
-            off
-              ? ""
-              : `font-extrabold ${dark ? "text-ai-accent" : "text-primary"}`
-          }
-        >
+        <span aria-hidden className={off ? "" : "font-bold text-primary"}>
           {off ? "—" : "✓"}
         </span>
         <span className="min-w-0">{f.label}</span>
       </span>
-      {f.note && !off && (
-        <span
-          className={`shrink-0 rounded-md chip-pad-tight text-[10px] font-bold ${
-            dark ? "bg-white/10 text-ai-accent" : "bg-primary-soft text-primary"
-          }`}
-        >
-          {f.note}
-        </span>
-      )}
+      {f.note && !off && <span className="shrink-0 t-sub t-num font-bold text-text-2">{f.note}</span>}
     </div>
   );
 }
@@ -176,6 +175,7 @@ export function PlanCards({
   recurringReady,
   highlightPlan,
   returnTo,
+  primary = true,
 }: {
   /** [970 · A-06] null = 비로그인. 게스트는 어떤 카드도 "현재 이용 중" 이 아니고,
       무료 카드 CTA 가 가입 입구("무료로 시작" → /signup)가 된다.
@@ -200,6 +200,8 @@ export function PlanCards({
   /** [1004] 페이월이 붙여 보낸 복귀 경로. [1007] 없으면 마운트 뒤 ?returnTo= 에서 읽는다
       (클릭 시점이 아니라 마운트 때 한 번 — 예전 서버 판정과 같은 시점 의미) */
   returnTo?: string | null;
+  /** [v4 · 규칙 2] 이 화면의 채움 파랑 1개를 플러스 카드 CTA 가 갖는가(page.tsx 판정). false 면 테두리 */
+  primary?: boolean;
 }) {
   const [billing, setBilling] = useState<Billing>(initialBilling ?? "monthly");
   /* [1007] URL 파라미터(billing·plan·returnTo) — 서버가 안 넘겼으면 마운트 뒤 한 번 읽는다.
@@ -235,7 +237,8 @@ export function PlanCards({
   );
   const shownPaid = cards.filter((c) => c.checkoutTier !== null).map((c) => pricing[c.checkoutTier as "pro" | "expert"]);
   const maxAnnualPct = Math.max(0, ...shownPaid.map((t) => t.annualDiscountPct));
-  const gridCols = cards.length >= 3 ? "md:grid-cols-3" : "max-w-[760px] md:grid-cols-2";
+  const gridCols = cards.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2";
+  const ctaClassOf = (c: PlanCard) => (c.kind === "pro" && primary ? "btn-primary" : c.ctaClass);
 
   /* [970 · A-07] 마운트 후 한 번만 — 서버 렌더에는 스크롤이 없으므로 hydration 과
      무관하다. 주간권 섹션은 이 컴포넌트 밖(page.tsx)에 있어 id 로 찾는다.
@@ -250,17 +253,17 @@ export function PlanCards({
   }, [effectiveHighlight]);
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      {/* 월간 / 연간 토글 */}
+    <div className="flex flex-col items-start gap-3">
+      {/* 월간 / 연간 토글 — [v4 · 규칙 4·10] 가운데 네이비 채움 → 왼쪽, 선택 = 한지 + 남색(필터 칩 규칙) */}
       <div className="rise-in inline-flex gap-1 rounded-full border border-line bg-surface p-1 t-body">
         {(["monthly", "annual"] as const).map((b) => (
           <button
             key={b}
             type="button"
             onClick={() => setBilling(b)}
-            className={`rounded-full px-4 py-1.5 font-bold transition-colors ${
-              /* [970 · A-04] 네이비 토글 글자 text-surface → text-on-dark(다크에서 안 보였다) */
-              billing === b ? "bg-brand-navy text-on-dark" : "text-text-3"
+            aria-pressed={billing === b}
+            className={`min-h-10 rounded-full border border-transparent px-4 font-bold transition-colors ${
+              billing === b ? "chip-active" : "text-text-3"
             }`}
           >
             {b === "monthly" ? "월간" : `연간 최대 -${Math.round(maxAnnualPct)}%`}
@@ -268,7 +271,7 @@ export function PlanCards({
         ))}
       </div>
 
-      <div className={`grid w-full max-w-[1080px] gap-5 ${gridCols}`}>
+      <div className={`grid w-full gap-3 ${gridCols}`}>
         {cards.map((p, i) => {
           const def = getPlan(p.defTier);
           /* [970 · A-06] 게스트(currentPlan=null)는 어느 카드도 현재 이용 중이 아니다 */
@@ -293,63 +296,45 @@ export function PlanCards({
                  세 카드가 같은 hover(살짝 뜸 + 그림자, .tile 규칙·정교한 포인터에서만·감속 모션 존중)를
                  쓴다. 플러스만 다른 동작을 하면 "왜 이 카드만 흔들리지"가 되고, 요금표는 비교 화면이라
                  카드끼리 같은 물리 법칙을 따라야 읽힌다. */
-              className={`rise-in-${Math.min(i + 1, 6)} plan-card relative flex scroll-mt-24 flex-col gap-4 rounded-3xl p-7 ${
-                p.dark
-                  ? "bg-brand-navy shadow-[0_24px_60px_rgba(16,28,54,.28)] md:-translate-y-2"
-                  : "card"
-              } ${isCurrent || isHighlighted ? "ring-2 ring-primary" : ""}`}
+              /* [1012 · 규칙 1·2·8] 카드 8px(2xl) · 그림자 없음(네이비 카드도 60px 그림자·띄움 제거 — 세 카드 같은 물리) ·
+                 배지·이름 800 → 700. 네이비 면은 1px 선 대신 면 색이 경계다. */
+              /* [v4 · 규칙 10] 세 카드 같은 순서(이름·한 줄 → 가격 → 기능 → CTA)·같은 칸 높이 — 연간 모드의 가격 칸은
+                 md 에서 같은 최소 높이라 기능 목록이 세 카드에서 같은 줄에서 시작한다 */
+              className={`rise-in-${Math.min(i + 1, 6)} plan-card card relative flex scroll-mt-24 flex-col gap-4 rounded-lg p-4 md:p-5 ${
+                isCurrent || isHighlighted ? "ring-2 ring-primary" : ""
+              }`}
             >
-              {isCurrent ? (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-navy px-3.5 py-[5px] t-sub font-extrabold text-ai-accent">
-                  현재 이용 중
-                </span>
-              ) : (
-                p.badge && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3.5 py-[5px] t-sub font-extrabold text-white shadow-[0_6px_16px_rgba(29,79,216,.4)]">
-                    {p.badge}
-                  </span>
-                )
-              )}
-
-              <div className="flex flex-col gap-1">
-                <div className={`text-[15px] font-extrabold ${p.nameTone}`}>{p.name}</div>
-                {/* 단일 출처 tagline — "누구를 위한 플랜인가" 한 줄 */}
-                <div className={`text-[12px] ${p.dark ? "text-ai-muted" : "text-text-3"}`}>
-                  {def.tagline}
+              <div className="flex min-w-0 flex-col gap-0.5">
+                {/* [v4 · 규칙 6·10] 가운데 위에 뜬 "현재 이용 중" 배지 → 이름 옆 글자(검증 사실 한 단어) */}
+                <div className="flex items-baseline gap-2">
+                  <span className={`t-section ${p.nameTone}`}>{p.name}</span>
+                  {isCurrent && <span className="t-caption font-bold text-text-2">현재 이용 중</span>}
                 </div>
+                {/* 단일 출처 tagline — "누구를 위한 플랜인가" 한 줄 */}
+                <div className="truncate t-sub text-text-3">{def.tagline}</div>
               </div>
 
-              <div className="flex flex-col gap-0.5">
+              <div className={`flex flex-col gap-0.5 ${billing === "annual" ? "md:min-h-24" : ""}`}>
                 <div className="flex items-baseline gap-1.5">
-                  <span className={`text-[28px] font-extrabold ${p.dark ? "text-white" : "text-ink"}`}>
-                    {tierPrice == null ? "0원" : fmtWon(monthlyShown)}
-                  </span>
-                  {tierPrice != null && (
-                    <span className={`text-[13px] ${p.dark ? "text-ai-muted" : "text-text-3"}`}>/월</span>
-                  )}
+                  <span className="t-num text-[24px] font-bold text-ink">{tierPrice == null ? "0원" : fmtWon(monthlyShown)}</span>
+                  {tierPrice != null && <span className="t-body text-text-3">/월</span>}
                 </div>
                 {tierPrice != null && billing === "annual" && (
                   <>
-                    <span className={`text-[12px] ${p.dark ? "text-ai-muted" : "text-text-3"}`}>
+                    <span className="t-sub text-text-3">
                       연 {fmtWon(tierPrice.annualTotal)} · -{Math.round(tierPrice.annualDiscountPct)}%
                     </span>
                     {/* 월 환산가는 싸 보이게 만드는 표기일 뿐, **얼마를 아끼는지**는
                         말하지 않는다. 연간을 고르는 사람이 알고 싶은 건 그쪽이다. (C48) */}
                     {/* [966] 카드에 실제로 찍히는 건 연 총액이다 — 월 환산가만 크게 보이면
                         27,600원이 한 번에 나가는 사실을 결제창에서야 안다 */}
-                    <span className={`t-caption font-bold ${p.dark ? "text-white/80" : "text-text-2"}`}>
+                    <span className="t-caption font-bold text-text-2">
                       오늘 {fmtWon(tierPrice.annualTotal)} 결제 · 이후 매년 갱신
                     </span>
+                    {/* [v4 · 규칙 6] 절약 배지(연초록 면) → 같은 줄 높이의 글자 사실 */}
                     {p.defTier !== "basic" &&
                       annualSavingKrw(p.defTier as "pro" | "expert") !== null && (
-                        <span
-                          className="mt-0.5 w-fit rounded-md px-1.5 py-px t-caption font-extrabold"
-                          style={
-                            p.dark
-                              ? { background: "rgba(255,255,255,.12)", color: "var(--ai-accent)" }
-                              : { background: "var(--success-soft)", color: "var(--success)" }
-                          }
-                        >
+                        <span className="t-caption font-bold text-success">
                           1년에 {fmtWon(annualSavingKrw(p.defTier as "pro" | "expert")!)} 절약
                         </span>
                       )}
@@ -360,17 +345,13 @@ export function PlanCards({
               {/* 모바일18 — 기능 7~11줄이 모바일에서 카드를 길게 만든다.
                   모바일은 상위 5줄 + "전체 N개 보기" 토글, md+ 는 전체 노출.
                   숨긴 개수를 버튼에 적는다(몇 개가 접혔는지 모르게 하지 않는다). */}
-              <FeatureList features={def.features} dark={p.dark} />
+              <FeatureList features={def.features} tone={p.listTone} />
 
 
               <div className="flex-1" />
 
               {isCurrent ? (
-                <button
-                  type="button"
-                  disabled
-                  className="rounded-[14px] bg-bg p-[13px] text-center text-[15px] font-bold text-text-1 opacity-70"
-                >
+                <button type="button" disabled className={`${CTA_BASE} btn-secondary`}>
                   현재 이용 중
                 </button>
               ) : p.checkoutTier ? (
@@ -386,16 +367,16 @@ export function PlanCards({
                         authed: !isGuest,
                         returnTo: effectiveReturnTo,
                       })}
-                      className={`rounded-[14px] p-[13px] text-center text-[15px] font-bold no-underline ${p.ctaClass}`}
+                      className={`${CTA_BASE} ${ctaClassOf(p)}`}
                     >
-                      {p.cta}
+                      {ctaLabel(p, billing, tierPrice, isGuest)}
                     </Link>
                   ) : (
                     <PreOrderCta
                       tier={p.checkoutTier}
                       billing={billing}
-                      className={p.ctaClass}
-                      dark={p.dark}
+                      hint={false}
+                      className={ctaClassOf(p)}
                       weeklyAvailable={paymentsReady && recurringReady === false}
                       guest={isGuest}
                     />
@@ -409,15 +390,23 @@ export function PlanCards({
                    currentPlan="free" 로 들어와 "현재 이용 중" 비활성 버튼만 보였다. */
                 <Link
                   href={isGuest ? "/signup?callbackUrl=%2Fsubscription" : "/notes/new"}
-                  className={`rounded-[14px] p-[13px] text-center text-[15px] font-bold no-underline ${p.ctaClass}`}
+                  className={`${CTA_BASE} ${ctaClassOf(p)}`}
                 >
-                  {p.cta}
+                  {ctaLabel(p, billing, null, isGuest)}
                 </Link>
               )}
             </div>
           );
         })}
       </div>
+      {/* [v4 · 규칙 8·10] 사전 등록 안내 문장은 카드마다 같은 말이라 그리드 아래 한 번 — 세 카드의 CTA 가 같은 높이에 선다 */}
+      {/* 결제 자체가 닫힌 상태(paymentsReady=false)의 "결제 준비 중"은 위 주간권 버튼 아래가 이미 말한다(같은 사실 한 번) */}
+      {!canCheckout && paymentsReady && cards.some((c) => c.checkoutTier !== null && resolvedPlan !== c.kind) && (
+        <p className="t-caption text-text-3">
+          월간·연간 결제 준비 중 · 지금은 {planLabel("pro")} 주간권(7일)만 구매 가능
+          {isGuest ? " · 로그인하면 열릴 때 알림" : " · 오픈 알림 받기로 등록하면 열릴 때 알림"}
+        </p>
+      )}
     </div>
   );
 }

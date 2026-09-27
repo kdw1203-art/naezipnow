@@ -1,4 +1,6 @@
 "use client";
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
+/* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 
 import Link from "next/link";
 import { FuzzyBadge, Hl } from "./complex-hit";
@@ -45,21 +47,21 @@ export default function UnifiedSuggestPanel(p: Props) {
   const hero = p.variant === "hero";
   const q = p.query;
   const rowClass = (i: number) =>
-    `flex min-h-10 w-full items-center gap-2 rounded-[10px] px-3 py-2 text-left no-underline transition-colors hover:bg-primary-soft ${
+    `flex min-h-10 w-full items-center gap-2 rounded-lg px-3 py-2 text-left no-underline transition-colors hover:bg-primary-soft ${
       p.active === i ? "bg-primary-soft" : ""
     }`;
   const shell = hero
     ? "absolute inset-x-0 top-[calc(100%+8px)] z-40"
     : "absolute left-0 top-[calc(100%+8px)] z-50 w-[340px]";
   const card = hero
-    ? "overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-[0_18px_48px_rgba(16,28,54,.16)] [animation:riseIn_160ms_var(--ease-out)_backwards]"
-    : "glass-strong popover-surface overflow-hidden rounded-2xl p-1.5 [animation:riseIn_180ms_var(--ease-out)_backwards]";
+    ? "overflow-hidden rounded-lg border border-line bg-surface p-1.5 [box-shadow:var(--shadow-md)] [animation:riseIn_160ms_var(--ease-out)_backwards]"
+    : "overflow-hidden rounded-lg border border-line bg-surface p-1.5 [box-shadow:var(--shadow-md)] [animation:riseIn_180ms_var(--ease-out)_backwards]";
 
   if (p.recents) {
     return (
       <div className={shell}>
         <div className={card}>
-          <div id={`${p.listId}-label`} className="px-3 pb-1 pt-1.5 text-[10px] font-extrabold text-text-3">
+          <div id={`${p.listId}-label`} className="px-3 pb-1 pt-1.5 text-[10px] font-bold text-text-3">
             최근 검색
           </div>
           <div role="listbox" id={p.listId} aria-labelledby={`${p.listId}-label`}>
@@ -104,7 +106,7 @@ export default function UnifiedSuggestPanel(p: Props) {
         ) : empty ? (
           <div className="flex flex-col gap-1 px-3 pb-1 pt-2.5">
             <div role="status" className="flex flex-col gap-1">
-              <p className="break-words text-[13px] font-extrabold text-ink">{noMatchTitle(q)}</p>
+              <p className="break-words text-[13px] font-bold text-ink">{noMatchTitle(q)}</p>
               <p className="break-words text-[12px] text-text-3">
                 {NO_MATCH_HINT} · {NO_MATCH_EXAMPLE}
               </p>
@@ -121,7 +123,7 @@ export default function UnifiedSuggestPanel(p: Props) {
         {empty && opts.length > 0 && (
           <div
             id={similarHead}
-            className="border-t border-divider px-3 pb-0.5 pt-2 text-[10px] font-extrabold text-text-3"
+            className="border-t border-divider px-3 pb-0.5 pt-2 text-[10px] font-bold text-text-3"
           >
             혹시 이 단지인가요? · 이름이 비슷한 단지
           </div>
@@ -144,7 +146,7 @@ export default function UnifiedSuggestPanel(p: Props) {
               onClick={() => p.onPick(it)}
               className={rowClass(i)}
             >
-              <span className="shrink-0 rounded bg-primary-soft px-1.5 py-px text-[10px] font-extrabold text-primary">
+              <span className="shrink-0 rounded bg-primary-soft px-1.5 py-px text-[10px] font-bold text-primary">
                 {it.label}
               </span>
               <span className="min-w-0 flex-1">
@@ -169,7 +171,7 @@ export default function UnifiedSuggestPanel(p: Props) {
         <button
           type="button"
           onClick={p.onSubmit}
-          className="mt-0.5 flex min-h-10 w-full items-center rounded-[10px] border-t border-divider px-3 text-left text-[12px] font-bold text-primary transition-colors hover:bg-primary-soft"
+          className="mt-0.5 flex min-h-10 w-full items-center rounded-lg border-t border-divider px-3 text-left text-[12px] font-bold text-primary transition-colors hover:bg-primary-soft"
         >
           {p.submitLabel}
         </button>

@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import {
   nextChargeAtFrom,
@@ -286,7 +287,8 @@ export function BillingEnrollClient() {
       )}
 
       {phase.kind === "loading" && (
-        <div className="card rounded-2xl px-4 py-8 text-center t-body text-text-3">
+        /* [v4 · 규칙 10] 가운데 정렬 상태 카드 → 왼쪽(이 파일의 상태 카드 전부) */
+        <div className="card rounded-lg p-4 t-body text-text-3">
           자동결제 등록 준비 중…
         </div>
       )}
@@ -307,7 +309,7 @@ export function BillingEnrollClient() {
               </div>
               <div className="flex items-center justify-between t-body">
                 <span className="text-text-3">결제 금액</span>
-                <span className="font-extrabold text-ink">
+                <span className="font-bold text-ink">
                   {loginPreview.toLocaleString("ko-KR")}원 / {billingLabel === "연간" ? "년" : "월"}
                 </span>
               </div>
@@ -318,7 +320,7 @@ export function BillingEnrollClient() {
               </p>
             </div>
           )}
-          <div className="card flex flex-col items-center gap-2.5 rounded-2xl px-4 py-8 text-center">
+          <div className="card flex flex-col items-start gap-2 rounded-lg p-4">
             <p className="t-section text-ink">카드를 등록하려면 로그인이 필요해요</p>
             <p className="t-sub text-text-3">로그인하면 이 화면으로 그대로 돌아와요</p>
             <Link
@@ -333,7 +335,7 @@ export function BillingEnrollClient() {
           </div>
           <Link
             href="/subscription"
-            className="mt-1 text-center t-sub font-bold text-text-3 no-underline"
+            className="mt-1 self-start py-[6px] t-sub font-bold text-text-3 no-underline"
           >
             ← 구독 안내로 돌아가기
           </Link>
@@ -341,7 +343,7 @@ export function BillingEnrollClient() {
       )}
 
       {phase.kind === "unavailable" && (
-        <div className="card flex flex-col items-center gap-2.5 rounded-2xl px-4 py-8 text-center">
+        <div className="card flex flex-col items-start gap-2 rounded-lg p-4">
           <p className="t-section text-ink">자동결제는 아직 준비 중이에요</p>
           <p className="t-sub text-text-3">{phase.msg}</p>
           <Link href="/subscription" className="btn-soft btn-sm no-underline">
@@ -351,7 +353,7 @@ export function BillingEnrollClient() {
       )}
 
       {phase.kind === "error" && (
-        <div className="card flex flex-col items-center gap-2.5 rounded-2xl px-4 py-8 text-center">
+        <div className="card flex flex-col items-start gap-2 rounded-lg p-4">
           <p className="t-section text-ink">등록을 시작하지 못했어요</p>
           <p className="t-sub text-text-3">{phase.msg}</p>
           <Link href="/subscription" className="btn-soft btn-sm no-underline">
@@ -371,7 +373,7 @@ export function BillingEnrollClient() {
             </div>
             <div className="flex items-center justify-between t-body">
               <span className="text-text-3">결제 금액</span>
-              <span className="font-extrabold text-ink">
+              <span className="font-bold text-ink">
                 {shownAmount !== null
                   ? `${shownAmount.toLocaleString("ko-KR")}원 / ${billingLabel === "연간" ? "년" : "월"}`
                   : "—"}
@@ -492,7 +494,7 @@ export function BillingEnrollClient() {
             onClick={() => void openBillingAuth()}
             disabled={opening || starting || !enrollOpen}
             aria-disabled={!enrollOpen}
-            className="btn-primary btn-cta rounded-[14px] p-[14px] text-center t-body font-bold disabled:opacity-60"
+            className="btn-primary btn-cta rounded-lg p-[14px] text-center t-body font-bold disabled:opacity-60"
           >
             {opening
               ? "카드 등록창 여는 중…"
@@ -504,7 +506,7 @@ export function BillingEnrollClient() {
                     ? "위 조건에 동의하면 등록할 수 있어요"
                     : "카드 등록하고 자동결제 시작"}
           </button>
-          <p className="text-center t-sub text-text-3">
+          <p className="t-sub text-text-3">
             결제 7일 이내 청약철회(전액 환불) 가능 ·{" "}
             <Link href="/legal/terms#refund" className="underline underline-offset-2">
               환불 규정

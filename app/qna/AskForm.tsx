@@ -8,7 +8,7 @@ import { CharCount } from "@/app/components/ui/CharCount";
 import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
 
 const INPUT =
-  "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[13px] text-ink placeholder:text-text-3";
+  "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[13px] text-ink placeholder:text-text-3";
 
 /** 질문 작성 폼 — 접힘/펼침. 제출 성공 시 router.refresh + 폼 초기화. localStorage 미사용. */
 export function AskForm() {
@@ -110,12 +110,13 @@ export function AskForm() {
         onClick={() => setOpen(true)}
         className="card tile press flex w-full items-center gap-2.5 text-left"
       >
-        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary-soft text-primary">
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary-soft text-primary">
           <Icon name="plus" size={18} />
         </span>
+        {/* [1012] 규칙 5·6 — "질문해 보세요 / 물어보세요" 권유 → 동사+대상 + 무엇을(주제)·누가(이웃) */}
         <span className="flex flex-col">
-          <span className="t-body font-bold text-ink">궁금한 단지·동네, 질문해 보세요</span>
-          <span className="t-sub text-text-3">재건축·학군·주차·교통 등 무엇이든 물어보세요.</span>
+          <span className="t-body font-bold text-ink">단지·동네 질문하기</span>
+          <span className="t-sub text-text-3">재건축·학군·주차·교통 — 그 단지를 아는 이웃이 답해요</span>
         </span>
       </button>
     );
@@ -147,7 +148,7 @@ export function AskForm() {
       <textarea
         className={`${INPUT} min-h-[120px] resize-y`}
         aria-label="질문 내용"
-        placeholder="궁금한 내용을 자세히 적어주세요. (선택)"
+        placeholder="본문 (선택) — 단지명·지역을 함께 적으면 답이 빨라요"
         value={body}
         onChange={(e) => setBody(e.target.value)}
         maxLength={4000}

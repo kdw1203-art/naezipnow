@@ -1,4 +1,6 @@
 "use client";
+/* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 2곳). */
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 2곳을 font-bold(700)로 바꿨다. */
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -176,7 +178,7 @@ export function ExpertProfileForm({ expert }: { expert: ExpertEditable }) {
   return (
     <div className="flex flex-col gap-4">
       {/* 머리: 이름·자격·인증·미리보기 */}
-      <div className="brand-navy-card flex flex-col gap-3 rounded-[18px] p-5">
+      <div className="brand-navy-card flex flex-col gap-3 rounded-lg p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-hanji t-section text-brand-hanji-ink" aria-hidden="true">
@@ -186,7 +188,7 @@ export function ExpertProfileForm({ expert }: { expert: ExpertEditable }) {
               <div className="flex items-center gap-2">
                 <span className="t-section text-on-dark">{expert.name}</span>
                 {expert.isVerified ? (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-brand-hanji chip-pad t-caption font-extrabold text-brand-hanji-ink">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-brand-hanji chip-pad t-caption font-bold text-brand-hanji-ink">
                     <Icon name="shield" size={11} /> 인증
                   </span>
                 ) : (
@@ -224,7 +226,7 @@ export function ExpertProfileForm({ expert }: { expert: ExpertEditable }) {
         )}
       </div>
 
-      <div className="card flex flex-col gap-4 rounded-[18px] p-5 md:p-6">
+      <div className="card flex flex-col gap-4 rounded-lg p-5 md:p-6">
         <Field label="소개" hint="상담자에게 보이는 첫 문단 · 60자 이상 권장">
           <textarea
             value={intro}
@@ -370,7 +372,7 @@ export function ExpertProfileForm({ expert }: { expert: ExpertEditable }) {
         </div>
 
         <div className="flex flex-col gap-3 rounded-2xl bg-bg p-4">
-          <div className="t-sub font-extrabold text-ink">
+          <div className="t-sub font-bold text-ink">
             상호 · 공개 연락처
             <span className="ml-1 t-sub font-medium text-text-3">
               직접 채운 값만 공개돼요 (비우면 미노출{expert.isVerified ? "" : " · 인증 승인 후 노출"})

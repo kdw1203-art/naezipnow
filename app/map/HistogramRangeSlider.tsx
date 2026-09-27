@@ -139,9 +139,8 @@ export function HistogramRangeSlider({
     return (
       <div className="flex flex-col gap-1">
         <div className="t-sub font-bold text-text-3">{label}</div>
-        <div className="t-sub text-text-3">
-          이 지역에는 아직 값이 있는 단지가 없어요
-        </div>
+        {/* [v4 · 규칙 8] 빈 상태 한 줄 */}
+        <div className="t-sub text-text-3">이 지역 값 있는 단지 없음</div>
         {note ? <div className="t-caption text-text-3">{note}</div> : null}
       </div>
     );
@@ -151,7 +150,8 @@ export function HistogramRangeSlider({
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between">
         <span className="t-sub font-bold text-text-3">{label}</span>
-        <span className={`text-[12px] font-bold ${narrowed ? "text-primary" : "text-text-3"}`}>
+        {/* [v4] 좁힌 범위 = 파랑 글자 → 잉크(파랑은 막대·손잡이만) */}
+        <span className={`t-sub font-bold tabular-nums ${narrowed ? "text-ink" : "text-text-3"}`}>
           {format(vMin)} ~ {format(vMax)}
           {value[1] === null && hi > vMin ? "+" : ""}
         </span>
@@ -166,7 +166,7 @@ export function HistogramRangeSlider({
           return (
             <div
               key={i}
-              className={`flex-1 rounded-t-[2px] transition-colors ${
+              className={`flex-1 rounded-t-sm transition-colors ${
                 inSel ? "bg-primary" : "bg-[rgba(16,28,54,.12)]"
               }`}
               style={{ height: `${Math.max(2, (c / maxBin) * 100)}%`, opacity: inSel ? 0.85 : 1 }}
@@ -205,7 +205,7 @@ export function HistogramRangeSlider({
             aria-valuetext={format(v)}
             onPointerDown={onPointerDown(which)}
             onKeyDown={onKey(which)}
-            className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-[1.5px] border-primary bg-surface shadow-[0_2px_6px_rgba(16,28,54,.25)] focus:outline-none focus:ring-2 focus:ring-primary/40 active:cursor-grabbing"
+            className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-[1.5px] border-primary bg-surface shadow-[var(--shadow-sm)] focus:outline-none focus:ring-2 focus:ring-primary/40 active:cursor-grabbing"
             style={{ left: `${pct}%` }}
           />
         ))}
@@ -214,9 +214,10 @@ export function HistogramRangeSlider({
       {/* 값이 없는 단지가 많으면 숨기지 않고 적는다 — 필터가 "없는 값"을
           조건 불만족으로 취급하지 않는다는 사실을 사용자가 알아야 한다. */}
       {available !== undefined && total !== undefined && available < total && (
-        <div className="t-caption text-text-3">
-          이 값이 있는 단지 {available.toLocaleString("ko-KR")}개 / 화면 안{" "}
-          {total.toLocaleString("ko-KR")}개 · 값이 없는 단지는 이 조건으로 걸러지지 않아요
+        /* [v4 · 규칙 3] 사실만 한 줄. 꼬리 "값이 없는 단지는 이 조건으로 걸러지지 않아요" 는 뺐다 — 목록 필터(withinSel)는
+           축을 좁히면 값 모르는 단지를 **빼므로** 목록 쪽에서는 틀린 말이었다 */
+        <div className="t-caption text-text-3 tabular-nums">
+          값 있는 단지 {available.toLocaleString("ko-KR")} / 화면 안 {total.toLocaleString("ko-KR")}
         </div>
       )}
       {note ? <div className="t-caption text-text-3">{note}</div> : null}

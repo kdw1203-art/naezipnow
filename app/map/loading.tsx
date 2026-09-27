@@ -13,28 +13,37 @@ export default function MapLoading() {
       <link rel="preconnect" href="https://nrbe.pstatic.net" />
       {/* 지도 캔버스 자리 */}
       <Skeleton className="absolute inset-0 rounded-none" />
-      {/* 상단 검색바 자리.
+      {/* 상단 머리 자리.
           [E73] 실물 툴바는 h-[58px] · w-[calc(100%-32px)] · max-w-[1180px] 다
           (map-client.tsx). 예전 스켈레톤은 h-11(44px) · 최대 560px 라 높이도
-          14px 짧고 폭은 절반이 안 됐다 — 뜨는 순간 화면이 두 번 다시 그려진다. */}
+          14px 짧고 폭은 절반이 안 됐다 — 뜨는 순간 화면이 두 번 다시 그려진다.
+          [v4] 실물 머리가 반경 8(rounded-xl)이 되어 같이 맞춘다. */}
       <div className="absolute left-1/2 top-4 w-[calc(100%-32px)] max-w-[1180px] -translate-x-1/2">
-        <Skeleton className="h-[58px] w-full rounded-2xl" />
+        <Skeleton className="h-[58px] w-full rounded-xl" />
       </div>
       {/* 좌측 단지 패널 자리 (데스크톱) — 실물은 md:left-[356px] 부터 지도가
-          시작하므로 패널 오른쪽 끝이 344px 이 되도록 left-4 + w-[340px] 를 유지한다. */}
+          시작하므로 패널 오른쪽 끝이 344px 이 되도록 left-4 + w-[340px] 를 유지한다.
+          [v4] 실물 목록이 카드 쌓기 → 흰 면 위 구분선 행이 되어 자리표시도 행 모양으로 */}
       <div className="absolute bottom-6 left-4 top-20 hidden w-[340px] flex-col gap-3 md:flex">
-        <div className="card flex-1 rounded-2xl p-4">
+        <div className="flex-1 rounded-xl border border-line bg-surface p-4">
           <Skeleton className="h-5 w-28 rounded" />
-          <div className="mt-3 flex flex-col gap-2.5">
+          <div className="mt-3 flex flex-col divide-y divide-line">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full rounded-xl" />
+              <div key={i} className="flex min-h-14 items-center gap-3 py-3">
+                <Skeleton className="h-3.5 w-3 rounded" />
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <Skeleton className="h-3.5 w-[70%] rounded" />
+                  <Skeleton className="h-2.5 w-[45%] rounded" />
+                </div>
+                <Skeleton className="h-4 w-10 rounded" />
+              </div>
             ))}
           </div>
         </div>
       </div>
       <div
         role="status"
-        className="absolute bottom-24 left-1/2 -translate-x-1/2 rounded-full bg-[rgba(16,28,54,.72)] px-4 py-2 t-sub font-semibold text-white"
+        className="absolute bottom-24 left-1/2 -translate-x-1/2 rounded-full bg-[rgba(16,28,54,.72)] px-4 py-2 t-sub font-medium text-white"
       >
         지도를 불러오는 중…
       </div>

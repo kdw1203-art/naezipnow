@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
@@ -27,109 +28,78 @@ export default async function AccuracyPage() {
 
   return (
     <PageShell breadcrumb="예측 적중률">
-      <div className="mx-auto flex w-full max-w-[880px] flex-col gap-4">
-        <div className="rise-in">
-          <h1 className="t-title text-ink">시세 예측, 얼마나 맞았나</h1>
-          <p className="mt-1.5 max-w-[62ch] t-body text-text-2">
-            ‘시세 예측’이 쓰는 것과 같은 규칙(직전 3개월 모멘텀 외삽)으로 과거{" "}
-            {BACKTEST.lookbackMonths}개월을 되짚어, 예측이 실제 평당가의 ±
-            {BACKTEST.hitBandPct}% 안에 들어온 비율을 공개합니다. 월 거래{" "}
-            {BACKTEST.minMonthlyTx}건 이상인 지역·월만 계산하며, 잘 나온 구간을
-            골라내지 않습니다.
-          </p>
+      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 주인공(적중률 t-display) + 나머지 두 숫자 한 줄 → 지역·월 구분선 행 →
+          면책·링크 한 줄. 지운 것: 방법 문단(→ 사실 줄), 숫자 카드 3장(→ 주인공 + 한 줄), 6열 표(→ 행), 판정 알약 배지(→ 글자),
+          회색 상자 안내(→ 캡션). */}
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
+        <div className="flex flex-col gap-4">
+          <header className="rise-in flex flex-col gap-0.5">
+            <h1 className="t-title text-ink">시세 예측, 얼마나 맞았나</h1>
+            <p className="t-sub text-text-3">
+              직전 3개월 모멘텀 외삽 · 과거 {BACKTEST.lookbackMonths}개월 · 월 거래 {BACKTEST.minMonthlyTx}건 이상 전부 · 골라내지 않음
+            </p>
+          </header>
+          {bt.total > 0 && (
+            <section aria-label="적중률" className="flex flex-col gap-0.5">
+              <p className="m-0 t-caption text-text-3">실제 평당가 ±{BACKTEST.hitBandPct}% 안 적중률</p>
+              <p className="m-0 t-display t-num text-ink">{bt.hitRatePct}%</p>
+              <p className="m-0 t-sub text-text-2">
+                {bt.hits}/{bt.total} 지역·월 · 평균 절대 오차 <b className="t-num text-ink">{bt.meanAbsErrorPct}%</b> · 검증{" "}
+                {bt.monthsCovered.length}개월({bt.monthsCovered[0]?.slice(0, 4)}.{bt.monthsCovered[0]?.slice(4)}~)
+              </p>
+            </section>
+          )}
         </div>
 
         {bt.total === 0 ? (
-          <div className="card rounded-2xl px-5 py-8 text-center t-body font-bold text-text-3">
-            아직 계산 가능한 표본이 없어요 — 데이터가 쌓이면 이 자리에 성적표가 공개됩니다.
-          </div>
+          <p className="py-6 text-center t-body text-text-3">계산 가능한 표본 없음 · 데이터가 쌓이면 공개</p>
         ) : (
-          <>
-            <div className="rise-in-1 grid grid-cols-3 gap-2">
-              <div className="card rounded-[14px] p-4">
-                <div className="t-sub font-bold text-text-3">±{BACKTEST.hitBandPct}% 적중률</div>
-                <div className="t-title tabular-nums text-ink">
-                  {bt.hitRatePct}%
-                </div>
-                <div className="t-caption text-text-3">{bt.hits}/{bt.total} 지역·월</div>
-              </div>
-              <div className="card rounded-[14px] p-4">
-                <div className="t-sub font-bold text-text-3">평균 절대 오차</div>
-                <div className="t-title tabular-nums text-ink">
-                  {bt.meanAbsErrorPct}%
-                </div>
-                <div className="t-caption text-text-3">예측 대비 실제 편차</div>
-              </div>
-              <div className="card rounded-[14px] p-4">
-                <div className="t-sub font-bold text-text-3">검증 구간</div>
-                <div className="t-title tabular-nums text-ink">
-                  {bt.monthsCovered.length}개월
-                </div>
-                <div className="t-caption text-text-3">
-                  {bt.monthsCovered[0]?.slice(0, 4)}.{bt.monthsCovered[0]?.slice(4)} ~
-                </div>
-              </div>
+          <section className="flex flex-col gap-2">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+                지역·월 <span className="t-num text-text-3">{Math.min(60, bt.cells.length)}</span>
+              </h2>
+              <span className="t-caption text-text-3">오차</span>
             </div>
-
-            <div className="rise-in-2 card overflow-hidden rounded-2xl">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left t-body">
-                  <thead>
-                    <tr className="border-b border-line t-sub text-text-3">
-                      <th className="px-4 py-2.5 font-semibold">지역</th>
-                      <th className="px-4 py-2.5 font-semibold">대상 월</th>
-                      <th className="px-4 py-2.5 text-right font-semibold">예측(평당)</th>
-                      <th className="px-4 py-2.5 text-right font-semibold">실제(평당)</th>
-                      <th className="px-4 py-2.5 text-right font-semibold">오차</th>
-                      <th className="px-4 py-2.5 text-right font-semibold">판정</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {bt.cells.slice(0, 60).map((c) => (
-                      <tr key={`${c.regionName}-${c.month}`} className="border-b border-line/60 last:border-0">
-                        <td className="px-4 py-2 font-bold text-ink">{c.regionName}</td>
-                        <td className="px-4 py-2 tabular-nums text-text-2">
-                          {c.month.slice(0, 4)}.{c.month.slice(4)}
-                        </td>
-                        {/* [1009 · A] 평당가 1억 이상이 "12,017만"(억 미전환)으로 찍혔다 — 표기 표준(formatEokMan) */}
-                        <td className="px-4 py-2 text-right tabular-nums text-text-2">
-                          {formatEokMan(c.predictedPerPyeong / 10000)}
-                        </td>
-                        <td className="px-4 py-2 text-right tabular-nums text-text-2">
-                          {formatEokMan(c.actualPerPyeong / 10000)}
-                        </td>
-                        <td className={`px-4 py-2 text-right tabular-nums font-bold ${Math.abs(c.errorPct) <= BACKTEST.hitBandPct ? "text-success" : "text-danger"}`}>
-                          {c.errorPct > 0 ? "+" : ""}
-                          {c.errorPct}%
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          {c.hit ? (
-                            <span className="rounded-full bg-success-soft px-2 py-0.5 t-caption font-extrabold text-success">적중</span>
-                          ) : (
-                            <span className="rounded-full bg-bg px-2 py-0.5 t-caption font-extrabold text-text-3">벗어남</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {bt.cells.length > 60 && (
-                <div className="px-4 py-2.5 t-sub text-text-3">
-                  최근 60행 표시 · 전체 {bt.total}건은 요약 수치에 모두 반영돼 있습니다.
-                </div>
-              )}
-            </div>
-          </>
+            {/* [v4 · 규칙 5] 6열 표 → 구분선 행: 왼쪽 지역 + 보조 한 줄(월 · 예측 → 실제) / 오른쪽 오차 + 판정 */}
+            <ul data-tone="blue" className="card flex flex-col divide-y divide-line rounded-lg px-4">
+              {bt.cells.slice(0, 60).map((c) => (
+                <li key={`${c.regionName}-${c.month}`} className="flex min-h-14 items-center justify-between gap-3 py-3">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate t-body font-bold text-ink">{c.regionName}</span>
+                    {/* [1009 · A] 평당가 1억 이상이 "12,017만"(억 미전환)으로 찍혔다 — 표기 표준(formatEokMan) */}
+                    <span className="mt-0.5 block truncate t-sub tabular-nums text-text-3">
+                      {c.month.slice(0, 4)}.{c.month.slice(4)} · 예측 {formatEokMan(c.predictedPerPyeong / 10000)} → 실제{" "}
+                      {formatEokMan(c.actualPerPyeong / 10000)}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 flex-col items-end">
+                    <span
+                      className={`t-body t-num ${Math.abs(c.errorPct) <= BACKTEST.hitBandPct ? "text-success" : "text-danger"}`}
+                    >
+                      {c.errorPct > 0 ? "+" : ""}
+                      {c.errorPct}%
+                    </span>
+                    <span className={`t-caption font-medium ${c.hit ? "text-success" : "text-text-3"}`}>
+                      {c.hit ? "적중" : "벗어남"}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {bt.cells.length > 60 && (
+              <p className="t-caption text-text-3">최근 60행 · 전체 {bt.total}건은 위 요약 수치에 모두 반영</p>
+            )}
+          </section>
         )}
 
-        <div className="rounded-[10px] bg-bg px-4 py-3 t-sub text-text-3">
-          이 성적표는 조회 시점의 실거래 집계로 재계산됩니다. 과거 적중률은 미래
-          수익을 보장하지 않으며, 예측 도구도 이 한계를 화면에 함께 표시합니다.{" "}
-          <Link href="/analysis/ai/ai-prediction" className="font-bold text-primary no-underline">
+        {/* 면책 — 늘 보이게 한 줄 + 도구 링크 */}
+        <p className="t-caption text-text-3">
+          조회 시점 실거래 집계로 재계산 · 과거 적중률은 미래 수익을 보장하지 않습니다 ·{" "}
+          <Link href="/analysis/ai/ai-prediction" className="tap-line font-bold text-primary no-underline">
             시세 예측 실행 ›
           </Link>
-        </div>
+        </p>
       </div>
     </PageShell>
   );

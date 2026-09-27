@@ -105,8 +105,7 @@ export function NoteUploadProgress({
       </ul>
       {failed > 0 && !uploading && (
         <p className="t-caption text-text-3">
-          {uploads.find((u) => u.status === "failed")?.error ?? "사진 업로드에 실패했어요."}{" "}
-          성공한 사진은 그대로 남아 있어요.
+          {uploads.find((u) => u.status === "failed")?.error ?? "사진 업로드 실패"} · 성공한 사진은 유지
         </p>
       )}
     </div>
@@ -141,7 +140,7 @@ export function NotePhotoStrip({
                 decoding="async"
                 src={p}
                 alt={isCover ? `대표 사진 (${i + 1}번째)` : `현장 사진 ${i + 1}번째`}
-                className="h-[88px] w-[132px] rounded-[10px] object-cover"
+                className="h-[88px] w-[132px] rounded-lg object-cover"
               />
               {isCover && (
                 <span className="pointer-events-none absolute left-1.5 top-1.5 rounded-md bg-brand-navy px-1.5 py-0.5 t-caption font-bold text-on-dark">

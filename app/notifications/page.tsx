@@ -101,13 +101,14 @@ const UNREAD_STYLE: Record<Category, { bg: string; color: string; border: string
   운영: { bg: "var(--danger-soft)", color: "var(--danger)", border: "var(--danger)" },
 };
 
+/* [v4 · 규칙 3·8] 빈 상태는 한 줄 — "~없어요 · ~받아볼 수 있어요" 문장 → 사실 */
 const EMPTY: Record<TabKey, string> = {
-  전체: "아직 알림이 없어요. 관심 지역·키워드를 구독하면 새 소식을 여기에서 받아볼 수 있어요.",
-  매물: "매물 승인·소유확인 관련 알림이 아직 없어요.",
-  관심지역: "관심 지역의 새 매물 알림이 아직 없어요.",
-  활동: "댓글·좋아요 등 활동 알림이 아직 없어요.",
-  포인트: "포인트 적립·소비 내역이 아직 없어요.",
-  운영: "점검 경보가 없습니다. 전체 현황은 /admin/ops 에서 볼 수 있어요.",
+  전체: "알림 없음 · 관심 지역·키워드를 구독하면 새 소식이 여기로",
+  매물: "매물 승인·소유확인 알림 없음",
+  관심지역: "관심 지역 새 매물 알림 없음",
+  활동: "댓글·좋아요 알림 없음",
+  포인트: "포인트 적립·소비 내역 없음",
+  운영: "점검 경보 없음 · 전체 현황은 /admin/ops",
 };
 
 /* ---------- 유틸 ---------- */
@@ -293,18 +294,17 @@ function AlertSubscriptionSection() {
   };
 
   return (
-    <div className="rise-in-2 card mt-3 flex flex-col gap-2.5 rounded-[14px] px-[15px] py-[13px]">
-      <div className="flex items-center justify-between">
-        <span className="t-body font-extrabold text-ink">알림 구독</span>
-        <span className="t-caption text-text-3">지역·키워드 새 소식 알림</span>
+    /* [v4 · 규칙 5] 카드 → 섹션(제목 + 1px 선). 구독 칩은 누르면 해지되는 조작이라 칩으로 남긴다 */
+    <section aria-labelledby="alert-subs-h" className="rise-in-2 mt-6 flex flex-col gap-2.5 border-b border-line pb-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="alert-subs-h" className="t-section text-ink">
+          알림 구독 {subs.length > 0 && <span className="t-num text-text-3">{subs.length}</span>}
+        </h2>
+        <span className="shrink-0 t-caption text-text-3">지역·키워드 새 소식</span>
       </div>
 
       {/* 현재 구독 칩 */}
-      {loaded && subs.length === 0 && (
-        <div className="t-sub text-text-3">
-          아직 구독이 없어요. 지역이나 키워드를 구독해 보세요.
-        </div>
-      )}
+      {loaded && subs.length === 0 && <div className="t-sub text-text-3">구독한 지역·키워드 없음</div>}
       {subs.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {subs.map((s) => (
@@ -321,7 +321,7 @@ function AlertSubscriptionSection() {
                 aria-label={`${s.label} 구독 해지`}
                 title="구독 해지"
                 onClick={() => onRemove(s.id)}
-                className="tap-44 flex h-full items-center px-2 py-1 t-body font-extrabold leading-none text-text-3 hover:bg-danger-soft hover:text-danger"
+                className="tap-44 flex h-full items-center px-2 py-1 t-body font-bold leading-none text-text-3 hover:bg-danger-soft hover:text-danger"
               >
                 ×
               </button>
@@ -335,7 +335,7 @@ function AlertSubscriptionSection() {
         <select
           value={region}
           onChange={(e) => setRegion(e.target.value)}
-          className="h-8 rounded-[10px] border border-line bg-surface px-2 t-sub text-ink"
+          className="h-10 rounded-lg border border-line bg-surface px-2 t-sub text-ink"
           aria-label="구독할 지역"
         >
           <option value="">지역 선택</option>
@@ -354,20 +354,20 @@ function AlertSubscriptionSection() {
           }}
           maxLength={30}
           placeholder="키워드 (예: 재건축)"
-          className="h-8 min-w-0 flex-1 rounded-[10px] border border-line bg-surface px-2.5 t-sub text-ink placeholder:text-text-3"
+          className="h-10 min-w-0 flex-1 rounded-lg border border-line bg-surface px-2.5 t-sub text-ink placeholder:text-text-3"
           aria-label="구독할 키워드"
         />
         <button
           type="button"
           onClick={() => void onAdd()}
           disabled={busy}
-          className="btn-primary h-8 rounded-[10px] px-3 t-sub font-extrabold disabled:opacity-60"
+          className="btn-outline h-10 rounded-lg px-3 t-sub font-bold"
         >
           {busy ? "추가 중…" : "구독 추가"}
         </button>
       </div>
       {error && <div className="t-caption font-bold text-danger">{error}</div>}
-    </div>
+    </section>
   );
 }
 
@@ -394,66 +394,41 @@ function NotificationCard({
           bg: UNREAD_STYLE[item.category].bg,
           color: UNREAD_STYLE[item.category].color,
         };
-  const border = !isPoint && !item.read ? UNREAD_STYLE[item.category].border : null;
 
+  /* [v4 · 규칙 5·6·7] 카드(왼쪽 색 띠) + 34px 색 글자 타일 → 1px 선 행: 제목 + 본문 한 줄 + 메타 한 줄.
+     종류(TAG)는 메타 줄 맨 앞 글자 한 단어, 안 읽음은 오른쪽 점 하나. 굵기 800 → 700 */
+  const tag =
+    item.category === "운영" ? (item.checkName && CHECK_SHORT[item.checkName]) || TAG.운영 : TAG[item.category];
   const card = (
-    <div
-      className={`card flex gap-2.5 rounded-[14px] px-[15px] py-[13px] ${dim ? "opacity-75" : ""}`}
-      style={border ? { borderLeft: `3px solid ${border}` } : undefined}
-    >
-      {/* 배지 높이(34)와 제목 첫 줄 높이(13×1.6≈21)가 달라, items-start 로 두면
-          배지가 제목보다 6px 높이 떠 보인다. 제목 줄 중앙에 맞춘다. */}
-      <div
-        className="mt-[6px] flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] t-sub font-extrabold"
-        style={{ background: badge.bg, color: badge.color }}
-      >
-        {item.category === "운영"
-          ? (item.checkName && CHECK_SHORT[item.checkName]) || TAG.운영
-          : TAG[item.category]}
-      </div>
+    <div className={`flex gap-2.5 py-3 ${dim ? "opacity-75" : ""}`}>
       <div className="min-w-0 flex-1">
-        {/* 제목 13 · 본문 11 · 메타 9 — 타입 램프 세 칸.
-            예전엔 12 / 10.5 / 10 이라 한 칸도 안 되는 차이로 붙어 있었고,
-            그래서 무엇이 제목인지 눈에 안 들어왔다. */}
         <div
-          className={`break-words t-body font-extrabold ${dim ? "text-text-1" : "text-ink"}`}
+          className={`break-words t-body font-bold ${dim ? "text-text-1" : "text-ink"}`}
           style={isPoint ? { color: up ? "var(--success)" : "var(--danger)" } : undefined}
         >
           {item.title}
         </div>
         {/* 본문은 잘리더라도 2줄까지는 보인다 — 숫자가 첫 줄 끝에서 사라지지 않게. */}
-        {item.body && (
-          <div className="mt-0.5 line-clamp-2 t-sub text-text-2">{item.body}</div>
-        )}
-        {/* 심각도는 메타 줄 맨 앞에 둔다. 제목 줄 오른쪽에 두면 안 읽음 점과
-            오른쪽 끝을 두 개가 나눠 갖고, 서로 다른 높이에 떠서 어수선했다. */}
+        {item.body && <div className="mt-0.5 line-clamp-2 t-sub text-text-2">{item.body}</div>}
         <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 t-caption text-text-3">
           {item.severity && (
-            <span
-              className="rounded-md px-1.5 py-px font-extrabold"
-              style={
-                item.severity === "critical"
-                  ? { background: "var(--danger-soft)", color: "var(--danger)" }
-                  : { background: "var(--warning-soft)", color: "var(--warning)" }
-              }
-            >
+            <span className={`font-bold ${item.severity === "critical" ? "text-danger" : "text-warning"}`}>
               {item.severity === "critical" ? "심각" : "경고"}
             </span>
           )}
+          <span className="font-bold" style={{ color: badge.color }}>
+            {tag}
+          </span>
           <span>{metaLine(item)}</span>
           {item.checkName && (
-            <code className="max-w-full break-all rounded-[4px] border border-line bg-bg px-1 py-px font-mono text-text-3">
+            <code className="max-w-full break-all rounded-sm border border-line bg-bg px-1 py-px font-mono text-text-3">
               {item.checkName}
             </code>
           )}
         </div>
       </div>
       {!isPoint && !item.read && (
-        /* 제목 첫 줄(21px)의 세로 중앙에 맞춘다 — (21-8)/2 ≈ 6.5 */
-        <span
-          className="mt-[12px] h-2 w-2 shrink-0 rounded-full bg-primary"
-          aria-label="안 읽음"
-        />
+        <span className="mt-[8px] h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="안 읽음" />
       )}
     </div>
   );
@@ -638,22 +613,23 @@ export default function NotificationsPage() {
 
   return (
     <PageShell>
-      <div className="mx-auto w-full max-w-[560px]">
-        {/* 타이틀 + 안읽음 카운트 + 모두 읽음 */}
-        <div className="rise-in flex items-center justify-between">
-          <div className="flex items-center gap-2">
+      {/* [v4 · 규칙 12] 가운데 한 줄 560 → 760px */}
+      <div className="mx-auto w-full max-w-[760px]">
+        {/* 타이틀 + 안읽음 수(사실 한 줄) + 모두 읽음 — [v4 · 규칙 1·6] 채움 파랑 숫자 알약 → 사실 줄 */}
+        <div className="rise-in flex items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-0.5">
             <h1 className="t-title text-ink">알림</h1>
             {mode === "live" && unreadCount > 0 && (
-              <span className="rounded-full bg-primary chip-pad t-sub font-extrabold text-white">
-                {unreadCount}
-              </span>
+              <p className="t-sub text-text-3">
+                안 읽음 <b className="t-num text-primary">{unreadCount}</b>
+              </p>
             )}
           </div>
           {mode === "live" && unreadCount > 0 && (
             <button
               type="button"
               onClick={markAllRead}
-              className="t-sub font-bold text-primary"
+              className="inline-flex min-h-10 shrink-0 items-center t-sub font-bold text-primary"
             >
               모두 읽음
             </button>
@@ -662,7 +638,8 @@ export default function NotificationsPage() {
 
         {/* 탭 — 조회 실패 상태에서는 탭을 그리지 않는다(빈 탭 = "알림 없음"으로 읽힌다) */}
         {mode !== "guest" && mode !== "error" && (
-        <div className="tab-scroll rise-in-1 mt-3 flex gap-1.5 overflow-x-auto pb-1">
+        /* [v4 · 부품] 알약 칩 줄 → 밑줄 탭(선택 칸 아래 2px 남색 선 — 동네 카테고리 줄과 같은 모양) */
+        <div className="tab-scroll rise-in-1 mt-3 flex gap-5 overflow-x-auto border-b border-line [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tabs.map((t) => {
             const active = tab === t.key;
             return (
@@ -670,15 +647,14 @@ export default function NotificationsPage() {
                 key={t.key}
                 type="button"
                 onClick={() => setTab(t.key)}
-                className={`chip whitespace-nowrap px-[13px] py-1.5 t-sub ${
-                  active
-                    ? "chip-active"
-                    : "border border-line bg-surface text-text-2"
+                aria-pressed={active}
+                className={`min-h-10 shrink-0 whitespace-nowrap border-b-2 pb-2 pt-2.5 t-body font-bold transition-colors ${
+                  active ? "border-brand-hanji-ink text-ink" : "border-transparent text-text-3"
                 }`}
               >
                 {t.label}
                 {mode === "live" && counts[t.key] > 0 && (
-                  <span className="ml-1 font-normal">{counts[t.key]}</span>
+                  <span className="ml-1 t-sub font-normal">{counts[t.key]}</span>
                 )}
                 {/* 운영 탭에만 안 읽음 점 — 숫자 배지는 사용자 알림 몫이다 */}
                 {t.key === "운영" && mode === "live" && opsUnread > 0 && (
@@ -698,10 +674,11 @@ export default function NotificationsPage() {
             [970 · C-40] 공용 GuestGate — 위에 h1("알림")이 있으므로 카드 제목은 h2 */}
         {mode === "guest" && (
           <div className="rise-in-1 mt-3">
+            {/* [v4 · 규칙 3] 문장 → 짧은 제목 + 사실 한 줄 */}
             <GuestGate
               as="h2"
-              title="로그인하면 알림을 모아볼 수 있어요"
-              desc="매물 승인·관심 지역 새 매물·댓글·포인트 소식이 이곳에 쌓여요."
+              title="로그인하고 알림 모아보기"
+              desc="매물 승인 · 관심 지역 새 매물 · 댓글 · 포인트 소식"
               pathname="/notifications"
             />
           </div>
@@ -709,20 +686,19 @@ export default function NotificationsPage() {
 
         {/* 조회 실패 — "알림이 없다" 가 아니라 "못 읽었다" 고 쓴다 */}
         {mode === "error" && (
-          <div className="rise-in-1 card mt-3 flex flex-col items-center gap-2.5 rounded-[14px] px-[15px] py-10 text-center">
+          /* [v4 · 규칙 10] 가운데 정렬 카드 → 왼쪽 */
+          <div className="rise-in-1 mt-4 flex flex-col items-start gap-2 border-y border-line py-4">
             <div className="t-section text-ink">알림을 지금 불러오지 못했어요</div>
-            <p className="max-w-[320px] t-body text-text-3">
-              알림이 없는 게 아니라 조회 자체가 실패했습니다. 잠시 후 다시 시도해 주세요.
-            </p>
+            <p className="t-body text-text-3">알림이 없는 게 아니라 조회 실패 · 잠시 후 다시</p>
             {errorCause && (
-              <code className="max-w-[320px] break-all rounded-lg border border-line bg-surface px-2.5 py-1.5 font-mono t-caption text-text-3">
+              <code className="max-w-full break-all rounded-lg border border-line bg-surface px-2.5 py-1.5 font-mono t-caption text-text-3">
                 {errorCause}
               </code>
             )}
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="btn-soft mt-1 rounded-xl px-5 py-2.5 t-body font-bold"
+              className="btn-outline btn-md mt-1"
             >
               다시 시도
             </button>
@@ -731,15 +707,13 @@ export default function NotificationsPage() {
 
         {/* 운영 탭 안내 — 이 목록은 요약이고, 전체 이력은 관리자 화면에 있다 */}
         {mode === "live" && tab === "운영" && (
-          <div className="rise-in-1 card mt-3 flex items-center justify-between gap-2 rounded-[14px] px-[15px] py-2.5">
-            <span className="t-sub text-text-2">
-              내부 점검 경보입니다. 사용자에게는 보이지 않아요.
-            </span>
+          <div className="rise-in-1 mt-3 flex items-center justify-between gap-2">
+            <span className="t-sub text-text-3">내부 점검 경보 · 사용자에게 안 보임</span>
             <Link
               href="/admin/ops"
-              className="btn-soft shrink-0 rounded-[10px] px-2.5 py-1.5 t-sub font-extrabold no-underline"
+              className="inline-flex min-h-10 shrink-0 items-center t-sub font-bold text-primary no-underline"
             >
-              전체 보기
+              점검 경보 전체 ›
             </Link>
           </div>
         )}
@@ -748,12 +722,15 @@ export default function NotificationsPage() {
         {showSubs && <AlertSubscriptionSection />}
 
         {/* 알림 리스트 */}
-        <div className="mt-3 flex flex-col gap-2">
+        {/* [v4 · 규칙 5] 카드 쌓기 → 1px 선 목록 */}
+        <div data-tone="sand" className="mt-2 flex flex-col divide-y divide-line">
           {/* 실제 카드 실측 높이 85px(본문 1줄 기준)에 맞춘다 —
               60px 로 두면 데이터가 도착할 때마다 목록이 25px씩 밀린다(CLS). */}
           {mode === "loading" &&
             [0, 1, 2].map((i) => (
-              <div key={i} className="skeleton h-[85px] rounded-[14px]" />
+              <div key={i} className="py-3">
+                <div className="skeleton h-[60px] rounded-lg" />
+              </div>
             ))}
 
           {mode !== "loading" &&
@@ -767,9 +744,7 @@ export default function NotificationsPage() {
             ))}
 
           {mode === "live" && visible.length === 0 && (
-            <div className="card rounded-[14px] px-[15px] py-8 text-center t-body text-text-3">
-              {EMPTY[tab]}
-            </div>
+            <p className="py-4 t-body text-text-3">{EMPTY[tab]}</p>
           )}
         </div>
       </div>

@@ -1,3 +1,4 @@
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 1곳을 font-bold(700)로 바꿨다. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -111,7 +112,7 @@ export default async function MyLeadsPage() {
               >
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span
-                    className={`rounded-md chip-pad text-[12px] font-extrabold ${meta.cls}`}
+                    className={`rounded-md chip-pad text-[12px] font-bold ${meta.cls}`}
                   >
                     {meta.label}
                   </span>

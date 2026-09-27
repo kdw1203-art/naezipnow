@@ -52,14 +52,14 @@ export function NotifyPreorderButton() {
           <button
             type="button"
             onClick={send}
-            className="btn-primary rounded-[10px] px-3 py-1.5 text-[12px]"
+            className="btn-primary rounded-lg px-3 py-1.5 text-[12px]"
           >
             발송
           </button>
           <button
             type="button"
             onClick={() => setPhase("idle")}
-            className="rounded-[10px] border border-line px-3 py-1.5 text-[12px] font-bold text-text-2"
+            className="rounded-lg border border-line px-3 py-1.5 text-[12px] font-bold text-text-2"
           >
             취소
           </button>
@@ -69,7 +69,7 @@ export function NotifyPreorderButton() {
           type="button"
           onClick={() => setPhase("confirm")}
           disabled={phase === "busy"}
-          className="rounded-[10px] border border-line bg-surface px-3 py-1.5 text-[12px] font-bold text-text-1 disabled:opacity-50"
+          className="rounded-lg border border-line bg-surface px-3 py-1.5 text-[12px] font-bold text-text-1 disabled:opacity-50"
         >
           {phase === "busy" ? "발송 중…" : "사전등록자에게 오픈 알림 발송"}
         </button>

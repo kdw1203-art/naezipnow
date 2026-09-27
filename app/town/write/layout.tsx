@@ -15,7 +15,8 @@ import { buildPageMetadata } from "@/lib/seo/page-metadata";
    (이번 배치에서 noIndex 를 건 화면들은 전부 그 반대인 경우다.) */
 export const metadata = buildPageMetadata({
   title: "글쓰기",
-  description: "동네 이야기에 글을 남깁니다. 우리 동네 소식과 임장 후기를 이웃과 나눠 보세요.",
+  /* [1012] 규칙 5 — 권유("나눠 보세요") 대신 구성 */
+  description: "동네이야기 글쓰기 — 제목·본문·지역·사진. 등록하면 동네이야기 피드와 동네 홈에 실립니다.",
   path: "/town/write",
 });
 

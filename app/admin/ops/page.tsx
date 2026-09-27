@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 /* 다크 셸(#12161f) 위에 라이트 토큰 카드가 떠 있던 것을 다크 카드로 통일
    (2026-08-02 감사 — 관리자 콘솔 다크 테마 규칙). */
 const darkCard =
-  "flex flex-col gap-2.5 rounded-[20px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-5";
+  "flex flex-col gap-2.5 rounded-3xl border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-5";
 
 /** 전환 퍼널 바 색상 (진함 → 옅음) — 기존 정적 퍼널 팔레트 계승 */
 const FUNNEL_BAR_COLORS = [
@@ -151,7 +151,7 @@ export default async function AdminOpsPage() {
           쌓이고 아무도 읽지 않았다(7일 critical 169건 · db.query_load 매일).
           메일 발송은 키가 아직 없어 닫혀 있고, 그 전까지 여기가 유일한 눈이다. */}
       {alerts.length > 0 && (
-        <div className="rise-in-1 flex flex-col gap-2.5 rounded-[20px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-5">
+        <div className="rise-in-1 flex flex-col gap-2.5 rounded-3xl border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-5">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[13px] font-extrabold text-white">운영 경보 (7일)</span>
             {criticalAlerts.length > 0 ? (
@@ -259,21 +259,21 @@ export default async function AdminOpsPage() {
                   /admin/banners 의 BannersClient 가 담당하므로 그리로 보낸다. */}
               <Link
                 href="/admin/banners"
-                className="rounded-[9px] bg-primary px-3.5 py-[7px] text-[12px] font-bold text-white no-underline"
+                className="rounded-lg bg-primary px-3.5 py-[7px] text-[12px] font-bold text-white no-underline"
               >
                 + 새 게시
               </Link>
             </div>
             <div className="flex flex-col gap-[5px] text-[12px]">
               {banners.length === 0 ? (
-                <div className="rounded-[10px] bg-[rgba(255,255,255,.05)] px-3 py-4 text-center text-[10px] text-[#9aa6b8]">
+                <div className="rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-4 text-center text-[10px] text-[#9aa6b8]">
                   설정된 공지·배너가 없어요 — 추가하면 지정 지면에 노출됩니다
                 </div>
               ) : (
                 banners.slice(0, 5).map((b) => (
                   <div
                     key={b.id}
-                    className="flex items-center gap-2.5 rounded-[10px] bg-[rgba(255,255,255,.05)] px-3 py-2.5"
+                    className="flex items-center gap-2.5 rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-2.5"
                   >
                     <span
                       className={`rounded-md chip-pad text-[10px] font-extrabold ${
@@ -310,18 +310,18 @@ export default async function AdminOpsPage() {
             </div>
             <div className="flex flex-col gap-[5px] text-[12px]">
               {!errors.ok ? (
-                <div className="rounded-[10px] bg-[rgba(242,201,76,.10)] px-3 py-3 text-[10px] text-[#e3b23c]">
+                <div className="rounded-lg bg-[rgba(242,201,76,.10)] px-3 py-3 text-[10px] text-[#e3b23c]">
                   에러 로그를 불러오지 못했어요 — 에러가 없는 것과 다릅니다. 서비스 역할 키 설정을 확인하세요.
                 </div>
               ) : errors.rows.length === 0 ? (
-                <div className="rounded-[10px] bg-[rgba(255,255,255,.05)] px-3 py-4 text-center text-[10px] text-[#9aa6b8]">
+                <div className="rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-4 text-center text-[10px] text-[#9aa6b8]">
                   최근 30일 기록된 런타임 에러가 없어요.
                 </div>
               ) : (
                 errors.rows.map((e) => (
                   <div
                     key={e.fingerprint}
-                    className="flex items-start gap-2 rounded-[10px] bg-[rgba(255,255,255,.05)] px-3 py-2.5"
+                    className="flex items-start gap-2 rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-2.5"
                   >
                     <span
                       className={`mt-[1px] shrink-0 rounded-md chip-pad text-[10px] font-extrabold ${
@@ -492,7 +492,7 @@ export default async function AdminOpsPage() {
             <div className="flex flex-col gap-[5px] text-[12px]">
               <a
                 href="/legal/terms"
-                className="flex items-center justify-between gap-2 rounded-[10px] bg-[rgba(255,255,255,.05)] px-3 py-[9px] no-underline"
+                className="flex items-center justify-between gap-2 rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-[9px] no-underline"
               >
                 <span className="text-[#c9d2e0]">이용약관 (현행)</span>
                 <span className="flex-shrink-0 rounded-md bg-success-soft chip-pad text-[10px] font-extrabold text-success">
@@ -501,7 +501,7 @@ export default async function AdminOpsPage() {
               </a>
               <a
                 href="/legal/privacy"
-                className="flex items-center justify-between gap-2 rounded-[10px] bg-[rgba(255,255,255,.05)] px-3 py-[9px] no-underline"
+                className="flex items-center justify-between gap-2 rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-[9px] no-underline"
               >
                 <span className="text-[#c9d2e0]">개인정보처리방침 (현행)</span>
                 <span className="flex-shrink-0 rounded-md bg-[rgba(126,162,255,.14)] chip-pad text-[10px] font-extrabold text-ai-accent">
@@ -509,7 +509,7 @@ export default async function AdminOpsPage() {
                 </span>
               </a>
             </div>
-            <div className="rounded-[10px] bg-[rgba(255,255,255,.05)] px-3 py-2.5 text-[10px] leading-[1.6] text-[#c9d2e0]">
+            <div className="rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-2.5 text-[10px] leading-[1.6] text-[#c9d2e0]">
               현행 약관·방침은 각 페이지에 버전·시행일 이력으로 관리됩니다. 개정 시 재동의
               모달·동의 이력 기능은 연동 후 이 자리에서 관리해요.
             </div>

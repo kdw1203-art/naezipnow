@@ -4,6 +4,7 @@ import { getPublicRecordDatasetStats } from "@/lib/market/public-records";
 import { RecordsSearchClient } from "./RecordsSearchClient";
 import { CODEF_PRODUCTS } from "@/lib/codef/endpoints";
 import { seoAlternates } from "@/lib/seo/alternates";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* ── ISR 전환 (사용량 절감 14차, 2026-08-11) ────────────────────────────────
    예전에는 force-dynamic + ?complex= 서버 재렌더였다. ?complex= 는 자유 텍스트
@@ -42,7 +43,7 @@ export default async function DataRecordsPage() {
 
       {/* 데이터셋 연동 현황 */}
       <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
-        <h2 className="text-[15px] font-extrabold text-ink">
+        <h2 className="text-[15px] font-bold text-ink">
           데이터셋 연동 현황{" "}
           <span className="text-[12px] font-medium text-text-3">
             총 {totalRows.toLocaleString()}건 적재
@@ -55,7 +56,7 @@ export default async function DataRecordsPage() {
             return (
               <div
                 key={p.key}
-                className="flex items-center justify-between gap-3 rounded-[10px] border border-line px-3 py-2.5"
+                className="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2.5"
               >
                 <div className="min-w-0">
                   <div className="text-[13px] font-bold text-ink">{p.label}</div>
@@ -65,7 +66,7 @@ export default async function DataRecordsPage() {
                 </div>
                 <div className="shrink-0 text-right">
                   {rows > 0 ? (
-                    <span className="text-[12px] font-extrabold text-primary">
+                    <span className="text-[12px] font-bold text-primary">
                       {rows.toLocaleString()}건
                     </span>
                   ) : (
@@ -82,13 +83,13 @@ export default async function DataRecordsPage() {
             (소유자 지시) — 어떤 중계사와 어떤 자격 증명으로 자료를 끌어오는지는 쓰는 사람이 알 필요가
             없다. 칸마다 붙은 "연동 대기" 배지가 아직 못 보여 준다는 사실을 이미 말한다. */}
         <p className="mt-3 text-[12px] leading-[1.6] text-text-3">
-          실거래·시세 지도는 이미 국토부·KB 공개 데이터로 운영 중입니다.
+          실거래·시세 지도는 국토교통부·KB 공개 데이터로 운영 중이에요.
         </p>
       </section>
 
       {/* 단지 검색 */}
       <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <h2 className="text-[15px] font-extrabold text-ink">단지 자료 조회</h2>
+        <h2 className="text-[15px] font-bold text-ink">단지 자료 조회</h2>
         <RecordsSearchClient />
       </section>
 

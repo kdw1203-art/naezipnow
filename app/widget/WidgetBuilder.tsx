@@ -113,7 +113,7 @@ export function WidgetBuilder() {
           onChange={(e) => setInput(e.target.value)}
           placeholder={`${SITE}/complex/...`}
           spellCheck={false}
-          className="mt-3 w-full rounded-[10px] border border-line bg-surface px-3 py-2.5 text-[13px] text-ink outline-none focus:border-primary"
+          className="mt-3 w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-[13px] text-ink outline-none focus:border-primary"
         />
         {input.trim() !== "" && !target && (
           <p className="mt-2 text-[12px] font-bold text-danger">
@@ -151,14 +151,14 @@ export function WidgetBuilder() {
             type="button"
             onClick={copy}
             disabled={!code}
-            className={`rounded-[10px] px-3 py-1.5 text-[12px] font-bold ${
+            className={`rounded-lg px-3 py-1.5 text-[12px] font-bold ${
               code ? "bg-primary text-white" : "bg-bg text-text-3"
             }`}
           >
             {copied ? "복사했습니다" : "복사"}
           </button>
         </div>
-        <pre className="mt-2 overflow-x-auto rounded-[10px] bg-bg p-3 text-[12px] leading-[1.7] text-text-1">
+        <pre className="mt-2 overflow-x-auto rounded-lg bg-bg p-3 text-[12px] leading-[1.7] text-text-1">
           <code>{code || "위에 단지 주소를 넣으면 코드가 만들어집니다."}</code>
         </pre>
         <p className="mt-2 text-[12px] leading-[1.7] text-text-3">

@@ -1,4 +1,6 @@
 "use client";
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
+/* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 
 import {
   createContext,
@@ -151,8 +153,8 @@ export function SoftSignupProvider({ children }: { children: ReactNode }) {
             onClick={dismiss}
             className="absolute inset-0 h-full w-full cursor-default bg-[rgba(11,20,40,.5)]"
           />
-          <div className="relative w-full max-w-[380px] rounded-[18px] bg-surface p-5 shadow-[0_24px_60px_rgba(16,28,54,.3)]">
-            <div id="soft-signup-title" className="text-[15px] font-extrabold text-ink">
+          <div className="relative w-full max-w-[380px] rounded-4xl border border-line bg-surface p-5 [box-shadow:var(--shadow-md)]">
+            <div id="soft-signup-title" className="text-[15px] font-bold text-ink">
               {intent.title}
             </div>
             <p className="mt-2 text-[13px] leading-relaxed text-text-2">{intent.benefit}</p>

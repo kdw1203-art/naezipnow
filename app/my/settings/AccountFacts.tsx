@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 3곳을 font-bold(700)로 바꿨다. */
 
 import { useEffect, useState } from "react";
 import type { AccountFacts } from "@/lib/me/account-facts";
@@ -39,11 +40,11 @@ export function AccountFactsCards({ onGoPrivacy }: { onGoPrivacy: () => void }) 
   return (
     <>
       <div className="card flex flex-col rounded-2xl px-4 py-1">
-        <div className="pb-1 pt-3 t-sub font-extrabold text-text-3">연결된 로그인</div>
+        <div className="pb-1 pt-3 t-sub font-bold text-text-3">연결된 로그인</div>
         {phase === "loading" ? (
-          <div className="py-4 text-center t-sub text-text-3">불러오는 중…</div>
+          <div className="py-4 t-sub text-text-3">불러오는 중…</div>
         ) : phase === "error" || !facts ? (
-          <div className="py-4 text-center t-sub text-text-3">
+          <div className="py-4 t-sub text-text-3">
             로그인 연결 상태를 지금 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.
           </div>
         ) : (
@@ -60,7 +61,7 @@ export function AccountFactsCards({ onGoPrivacy }: { onGoPrivacy: () => void }) 
               </span>
               {l.linked ? (
                 <span className="flex shrink-0 flex-col items-end">
-                  <span className="rounded-full bg-primary-soft chip-pad t-caption font-extrabold text-primary">
+                  <span className="rounded-full bg-primary-soft chip-pad t-caption font-bold text-primary">
                     연결됨
                   </span>
                   {l.at && <span className="mt-0.5 t-caption text-text-3">{formatKstDate(l.at)}</span>}
@@ -81,11 +82,11 @@ export function AccountFactsCards({ onGoPrivacy }: { onGoPrivacy: () => void }) 
       </div>
 
       <div className="card flex flex-col rounded-2xl px-4 py-1">
-        <div className="pb-1 pt-3 t-sub font-extrabold text-text-3">계정 정보</div>
+        <div className="pb-1 pt-3 t-sub font-bold text-text-3">계정 정보</div>
         {phase === "loading" ? (
-          <div className="py-4 text-center t-sub text-text-3">불러오는 중…</div>
+          <div className="py-4 t-sub text-text-3">불러오는 중…</div>
         ) : phase === "error" || !facts ? (
-          <div className="py-4 text-center t-sub text-text-3">
+          <div className="py-4 t-sub text-text-3">
             계정 정보를 지금 불러오지 못했어요.
           </div>
         ) : (

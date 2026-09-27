@@ -2,7 +2,6 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { PageShell } from "@/app/components/PageShell";
 import { GuestGate } from "@/app/components/GuestGate";
-import { Icon } from "@/app/components/Icon";
 import { safeAuth } from "@/lib/safe-auth";
 import { claimGuestPayments } from "@/lib/payments/guest-claim";
 import { loadMeProfile } from "@/lib/me/profile";
@@ -110,19 +109,23 @@ export default async function MySubscriptionPage() {
   const session = await safeAuth();
   if (!session?.user?.email) {
     return (
-      <PageShell breadcrumb="마이 › 구독 관리">
+      <PageShell>
+        {/* [v4 · 규칙 1·3·5] 문장 제목 → 짧은 제목 + 사실 한 줄, 아래 카드 → 1px 선 행 */}
         <GuestGate
-          title="로그인하고 구독을 관리하세요"
-          desc="현재 플랜 · 자동결제 · 결제 내역 · 영수증 · 해지가 여기에 모여요."
+          title="로그인하고 구독 관리"
+          desc="현재 플랜 · 자동결제 · 결제 내역 · 영수증 · 해지"
           pathname="/my/subscription"
         >
-          <Link
-            href="/subscription"
-            className="rise-in-1 card flex items-center justify-between rounded-[14px] px-4 py-[13px] t-body font-semibold text-text-1 no-underline"
-          >
-            <span>플랜 둘러보기</span>
-            <span className="text-text-3">›</span>
-          </Link>
+          <ul data-tone="mint" className="rise-in-1 divide-y divide-line border-y border-line">
+            <li>
+              <Link href="/subscription" className="press flex min-h-14 items-center justify-between gap-3 py-3 no-underline">
+                <span className="t-body font-bold text-ink">플랜 둘러보기</span>
+                <span aria-hidden="true" className="t-body text-text-3">
+                  ›
+                </span>
+              </Link>
+            </li>
+          </ul>
         </GuestGate>
       </PageShell>
     );
@@ -188,101 +191,52 @@ export default async function MySubscriptionPage() {
     { href: "/support?category=payment", label: "문의" },
   ];
 
+  /* [v4 · 한 화면 한 가지] 가운데 한 줄(760px): 제목 + 사실 한 줄 → 주인공(현재 플랜 이름 하나 + 상태 한 줄) →
+     자동결제 관리 → 결제 내역 → 구독 이력 → 규정 요약(1px 선 행). 지운 것: 유리 히어로·아이콘 알약·알약 캡슐 ·
+     섹션마다 카드 · 히어로의 다음 결제일·금액·카드 칸(자동결제 관리가 같은 사실을 말한다 — 한 번만). */
+  const heroLine =
+    heroState === "active" && autopay
+      ? `다음 결제 ${autopay.nextChargeAt ? formatKstLongDate(autopay.nextChargeAt) : "—"} · ${autopay.amount.toLocaleString("ko-KR")}원/${autopay.billing === "annual" ? "년" : "월"}`
+      : heroState === "suspended"
+        ? `등록 카드 결제 실패 · 자동결제 멈춤${expiresLabel && paid ? ` · 이용권 ${expiresLabel}까지 유지` : ""}${cardText ? ` · 현재 카드 ${cardText}` : ""}`
+        : paid
+          ? expiresLabel
+            ? `${expiresLabel}까지${daysLeft !== null ? `(${daysLeft}일 남음)` : ""} · 자동 반복청구 없음 · 만료 뒤 무료 전환`
+            : "기간 없는 이용권(관리자 부여 등) · 문의는 고객센터"
+          : /* [1004 · 리뷰] "AI 비교 리포트 무제한"은 집행되지 않는 약속이었다 — 요금표(PLAN_FEATURE_MATRIX)의 집행값 */
+            `${planLabel("pro")}: AI 분석 월 50회 · AI 임장노트 자동정리 월 30회`;
+
   return (
-    <PageShell title="구독 관리" breadcrumb="마이 › 구독 관리">
-      <div className="mx-auto flex w-full max-w-[860px] flex-col gap-4">
-        {/* ── (a) 히어로 — 유리판 ── */}
-        <section
-          aria-labelledby="sub-hero-title"
-          className="rise-in lg-glass flex flex-col gap-4 rounded-lg px-5 py-5"
-        >
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-col gap-1">
-              <span id="sub-hero-title" className="t-sub font-bold text-text-3">
-                현재 플랜
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="t-title text-ink">{planLabel(plan)}</span>
-                <span className="lg-pill">
-                  <Icon
-                    name={heroState === "suspended" ? "warning" : paid ? "crown" : "user"}
-                    size={14}
-                  />
-                  {badge}
-                </span>
-              </div>
-            </div>
-            {heroState === "suspended" && (
-              <Link
-                href={`/subscription/billing?tier=${autopay!.plan}&billing=${autopay!.billing}&mode=card`}
-                className="btn-primary btn-md no-underline"
-              >
-                카드 다시 등록
-              </Link>
-            )}
+    <PageShell>
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
+        <header className="flex flex-col gap-0.5">
+          <h1 className="t-title text-ink">구독 관리</h1>
+          <p className="t-sub text-text-3">
+            {badge} · 결제 내역 {history.ok ? `${history.payments.length}건` : "조회 실패"}
+          </p>
+        </header>
+
+        {/* ── (a) 주인공 — 현재 플랜 이름 하나 + 상태 한 줄 ── */}
+        <section aria-labelledby="sub-hero-title" className="rise-in flex flex-col gap-3">
+          <div className="flex flex-col gap-0.5">
+            <p id="sub-hero-title" className="t-sub text-text-3">
+              현재 플랜
+            </p>
+            <p className="t-display text-ink">{planLabel(plan)}</p>
+            <p className={`t-sub ${heroState === "suspended" ? "font-bold text-warning" : "text-text-2"}`}>{heroLine}</p>
           </div>
-
-          <div className="lg-hairline" />
-
-          {heroState === "active" && autopay ? (
-            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="flex flex-col gap-0.5">
-                <dt className="t-caption font-bold text-text-3">다음 결제일</dt>
-                <dd className="t-body font-bold text-ink">
-                  {autopay.nextChargeAt ? formatKstLongDate(autopay.nextChargeAt) : "—"}
-                </dd>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <dt className="t-caption font-bold text-text-3">결제 금액</dt>
-                <dd className="t-body font-bold text-ink t-num">
-                  {autopay.amount.toLocaleString("ko-KR")}원 / {autopay.billing === "annual" ? "년" : "월"}
-                </dd>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <dt className="t-caption font-bold text-text-3">결제 카드</dt>
-                <dd className="t-body font-bold text-ink">{cardText ?? "—"}</dd>
-              </div>
-            </dl>
-          ) : heroState === "suspended" && autopay ? (
-            <div className="flex flex-col gap-1">
-              <p className="t-body font-bold text-warning">
-                등록된 카드로 결제가 되지 않아 자동결제를 잠시 멈췄어요.
-              </p>
-              <p className="t-sub text-text-2">
-                카드를 다시 등록하면 바로 결제되고 이어서 이용할 수 있어요.
-                {expiresLabel && paid ? ` 지금 이용권은 ${expiresLabel}까지 유지돼요.` : ""}
-                {cardText ? ` (현재 카드: ${cardText})` : ""}
-              </p>
-            </div>
-          ) : paid ? (
-            <div className="flex flex-col gap-1">
-              <p className="t-body font-bold text-ink">
-                {expiresLabel
-                  ? `${expiresLabel}까지 이용할 수 있어요${daysLeft !== null ? ` (${daysLeft}일 남음)` : ""}`
-                  : "이용 기간 정보가 없어요"}
-              </p>
-              <p className="t-sub text-text-2">
-                {expiresLabel
-                  ? "자동 반복청구가 없어 만료 뒤에는 추가 청구 없이 무료 플랜으로 돌아가요."
-                  : "관리자 부여 등 기간 없는 이용권이에요. 궁금한 점은 고객센터로 문의해 주세요."}
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1">
-              <p className="t-body font-bold text-ink">무료 플랜을 이용 중이에요</p>
-              <p className="t-sub text-text-2">
-                {/* [1004 · 리뷰] "AI 비교 리포트 무제한"은 집행되지 않는 약속이었다(플러스도 AI 분석은 월 50회).
-                    요금표(PLAN_FEATURE_MATRIX)가 실제로 집행하는 숫자로 바꾼다. */}
-                {planLabel("pro")}로 올리면 AI 분석이 월 50회, AI 임장노트 자동정리가 월 30회로 늘어나요.
-                결제한 적이 있다면 아래 결제 내역에서 확인할 수 있어요.
-              </p>
-            </div>
+          {heroState === "suspended" && (
+            <Link
+              href={`/subscription/billing?tier=${autopay!.plan}&billing=${autopay!.billing}&mode=card`}
+              className="btn-primary btn-md self-start no-underline"
+            >
+              카드 다시 등록
+            </Link>
           )}
-
-          <nav aria-label="구독 바로가기" className="lg-capsule self-start">
+          <nav aria-label="구독 바로가기" className="flex flex-wrap gap-x-4 t-sub">
             {quickActions.map((q) => (
-              <a key={q.href} href={q.href}>
-                {q.label}
+              <a key={q.href} href={q.href} className="inline-flex min-h-10 items-center font-bold text-primary no-underline">
+                {q.label} ›
               </a>
             ))}
           </nav>
@@ -292,13 +246,12 @@ export default async function MySubscriptionPage() {
             실제 라우트(/api/inspection/export, requirePlan("pdf_export") = 프로)로 가는 버튼이
             화면 어디에도 없었다. 적어 놓고 누를 데가 없으면 그것도 지키지 않은 약속이다. */}
         {plan === "expert" && (
-          <section aria-labelledby="export-title" className="rise-in-1 card flex flex-col gap-2 rounded-2xl p-5">
+          <section aria-labelledby="export-title" className="rise-in-1 flex flex-col gap-2">
             <h2 id="export-title" className="t-section text-ink">
               임장 기록 CSV 내보내기
             </h2>
-            <p className="t-sub leading-[1.6] text-text-2">
-              {planLabel("expert")} 이용 중에는 임장 세션 기록(최근 100건)을 CSV 파일로 내려받을 수 있어요.
-              엑셀·구글 시트에서 바로 열립니다.
+            <p className="t-sub text-text-3">
+              {planLabel("expert")} 이용 중 · 임장 세션 기록 최근 100건 · 엑셀·구글 시트에서 열림
             </p>
             <a
               href="/api/inspection/export?format=csv"
@@ -311,7 +264,7 @@ export default async function MySubscriptionPage() {
         )}
 
         {/* ── (b) 자동결제 관리 ── */}
-        <section id="manage" aria-labelledby="manage-title" className="rise-in-1 card flex flex-col gap-3 rounded-2xl p-5 scroll-mt-24">
+        <section id="manage" aria-labelledby="manage-title" className="rise-in-1 flex scroll-mt-24 flex-col gap-3">
           <div className="flex items-center justify-between gap-2">
             <h2 id="manage-title" className="t-section text-ink">자동결제 관리</h2>
             {autopay && (
@@ -352,7 +305,7 @@ export default async function MySubscriptionPage() {
         </section>
 
         {/* ── (c) 결제 내역 ── */}
-        <section aria-labelledby="history-title" className="rise-in-2 card flex flex-col gap-3 rounded-2xl p-5">
+        <section aria-labelledby="history-title" className="rise-in-2 flex flex-col gap-2">
           <div className="flex items-baseline justify-between gap-2">
             <h2 id="history-title" className="t-section text-ink">결제 내역</h2>
             {history.ok && history.payments.length > 0 && (
@@ -363,12 +316,11 @@ export default async function MySubscriptionPage() {
         </section>
 
         {/* ── (d) 구독 이력 타임라인 ── */}
-        <section aria-labelledby="timeline-title" className="rise-in-3 card flex flex-col gap-3 rounded-2xl p-5">
+        <section aria-labelledby="timeline-title" className="rise-in-3 flex flex-col gap-2">
           <h2 id="timeline-title" className="t-section text-ink">구독 이력</h2>
           {events.length === 0 ? (
-            <p className="rounded-xl bg-bg px-4 py-5 text-center t-sub text-text-3">
-              아직 자동결제 이력이 없어요. 카드를 등록하면 등록·결제·변경 기록이 여기에 남아요.
-            </p>
+            /* [v4 · 규칙 8·10] 가운데 정렬 회색 상자 → 한 줄 */
+            <p className="border-y border-line py-3 t-sub text-text-3">자동결제 이력 없음 · 카드 등록 뒤 등록·결제·변경 기록</p>
           ) : (
             <ol className="relative flex flex-col gap-0 border-l border-line pl-4">
               {events.map((ev) => (
@@ -394,9 +346,9 @@ export default async function MySubscriptionPage() {
         </section>
 
         {/* ── (e) 환불·해지 규정 요약 ── */}
-        <section aria-labelledby="policy-title" className="rise-in-3 card mb-2 flex flex-col gap-2.5 rounded-2xl p-5">
+        <section aria-labelledby="policy-title" className="rise-in-3 mb-2 flex flex-col gap-2">
           <h2 id="policy-title" className="t-section text-ink">환불·해지 규정 요약</h2>
-          <ul className="flex list-disc flex-col gap-1.5 pl-4 t-sub text-text-2">
+          <ul data-tone="sand" className="flex flex-col divide-y divide-line border-y border-line t-sub text-text-2 [&>li]:py-2.5">
             <li>
               <b className="text-ink">자동결제 해지</b>는 위 자동결제 관리에서 즉시 — 다음 결제일부터 청구되지 않고,
               이미 결제한 기간은 만료일까지 그대로 이용돼요.

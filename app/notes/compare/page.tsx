@@ -1,3 +1,4 @@
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 5곳을 font-bold(700)로 바꿨다. */
 import Link from "next/link";
 import { PageShell } from "../../components/PageShell";
 import { AIPanel } from "../../components/AIPanel";
@@ -17,6 +18,7 @@ import {
 } from "@/lib/inspection/visit-compare";
 import { AiFeedbackButtons } from "@/app/components/AiFeedbackButtons";
 import { CompareFunnelPing } from "./CompareFunnelPing";
+import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 
 /* 시안 9e — 노트 다회차 비교.
    실데이터: listNotesByAuthorForApt. 예시 목업 제거 — 회차 부족 시 empty+CTA. */
@@ -32,9 +34,9 @@ export const metadata = {
 };
 
 const TONE_CLASS: Record<CellTone, string> = {
-  good: "font-extrabold text-primary",
+  good: "font-bold text-primary",
   avg: "font-bold text-text-2",
-  bad: "font-extrabold text-danger",
+  bad: "font-bold text-danger",
   none: "text-text-3",
 };
 
@@ -97,6 +99,8 @@ async function loadCompareNotes(
   }
 }
 
+/* [v4 · 규칙 5] 표 — 카드 면을 걷고 1px 구분선 행만. 회차가 늘면 가로로 넓어지는 표라 가로 스크롤(760px 한 줄의 예외).
+   최신 회차 칸의 옅은 파랑 면(rgba) → 글자 색(text-primary)으로만 구분 */
 function CompareTable({ model }: { model: VisitCompareModel }) {
   const n = model.colCount;
   const gridStyle = {
@@ -106,23 +110,18 @@ function CompareTable({ model }: { model: VisitCompareModel }) {
   const last = model.scores[model.scores.length - 1]?.value ?? 0;
 
   return (
-    <div className="rise-in-1 card overflow-x-auto rounded-[18px] px-[22px] py-5">
+    <div className="overflow-x-auto">
       <div className="min-w-[520px]">
         <div
-          className="grid items-end gap-2 border-b border-divider pb-2.5 pt-2 t-sub text-text-3"
+          className="grid items-end gap-2 border-b border-line pb-2.5 pt-2 t-sub text-text-3"
           style={gridStyle}
         >
           <span />
           {model.headers.map((h) => (
-            <div
-              key={h.noteId}
-              className={`text-center ${
-                h.latest ? "rounded-lg bg-[rgba(29,79,216,.05)] p-0.5" : ""
-              }`}
-            >
+            <div key={h.noteId} className="text-center">
               <Link
                 href={`/notes/${encodeURIComponent(h.noteId)}`}
-                className={`font-extrabold no-underline ${
+                className={`inline-flex min-h-6 items-center font-bold no-underline ${
                   h.latest ? "text-primary" : "text-text-1"
                 }`}
               >
@@ -136,7 +135,7 @@ function CompareTable({ model }: { model: VisitCompareModel }) {
         {model.rows.map((row) => (
           <div
             key={row.label}
-            className="grid items-center gap-2 border-b border-divider py-[9px] text-xs"
+            className="grid items-center gap-2 border-b border-line py-[9px] t-sub"
             style={gridStyle}
           >
             <span className="text-text-2">{row.label}</span>
@@ -147,21 +146,19 @@ function CompareTable({ model }: { model: VisitCompareModel }) {
             ))}
           </div>
         ))}
-        <div
-          className="grid items-center gap-2 py-[9px] text-xs"
-          style={gridStyle}
-        >
-          <span className="text-text-2">종합 점수</span>
+        <div className="grid items-center gap-2 py-[9px] t-sub" style={gridStyle}>
+          <span className="font-bold text-text-1">종합 점수</span>
           {model.scores.map((s, i) => (
-            <span key={i} className={`text-center font-extrabold ${s.cls}`}>
+            <span key={i} className={`text-center font-bold ${s.cls}`}>
               {s.value}
             </span>
           ))}
         </div>
-        <div className="mt-3 t-sub text-text-3">
-          점수 추이 {first} → {last} · 작성자 5축 평균×20 (0~100)
-        </div>
       </div>
+      {/* 출처·계산은 섹션 끝 캡션 한 줄 */}
+      <p className="mt-1 t-caption text-text-3">
+        종합 = 작성자 5축 평균 × 20 · {first} → {last}
+      </p>
     </div>
   );
 }
@@ -179,89 +176,71 @@ export default async function NotesComparePage({
 
   if (result.kind === "ok") {
     const { model } = result;
+    const regionQ = model.region ? `&region=${encodeURIComponent(model.region)}` : "";
     return (
       <PageShell breadcrumb={`임장노트 › 회차 비교 › ${model.aptName}`}>
         <CompareFunnelPing
           noteId={noteId ?? model.headers[model.headers.length - 1]?.noteId ?? ""}
           aptName={model.aptName}
         />
-        <div className="flex flex-col gap-3.5">
-          <div className="rise-in flex flex-col gap-3 px-1 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h1 className="t-title text-ink">
-                노트 다회차 비교
-              </h1>
-              <p className="mt-1.5 text-[13px] text-text-2">
-                {model.region ? `${model.region} · ` : ""}
-                {model.aptName} — 내 방문 기록 {model.colCount}회
+        {/* [v4 · 한 화면 한 가지] 머리(제목 + 사실 한 줄) → 주인공(표/타임라인) → 채움 파랑 1개 → AI 패널 → 이어서 행.
+            지운 것: 회차 칩 줄(표 머리·타임라인 회차가 같은 링크) · 파랑/회색 알약 링크 두 개(→ 이어서 행) ·
+            "다음 방문 기록 남기기" 카드와 설명 문장("같은 단지를 한 번 더 기록하면 표에 새 열이 붙어요") */}
+        <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
+          <div className="flex flex-col gap-4">
+            <header className="flex flex-col gap-0.5">
+              <h1 className="t-title text-ink">노트 다회차 비교</h1>
+              <p className="t-sub text-text-3">
+                {[model.region, model.aptName, `방문 ${model.colCount}회`].filter(Boolean).join(" · ")}
               </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5 text-xs">
-              {model.headers.map((h) => (
-                <Link
-                  key={h.noteId}
-                  href={`/notes/${encodeURIComponent(h.noteId)}`}
-                  className="chip-tag px-2.5 py-1.5 no-underline"
-                >
-                  {h.n}
-                </Link>
-              ))}
-              <Link
-                href={`/map?apt=${encodeURIComponent(model.aptName)}${
-                  model.region ? `&region=${encodeURIComponent(model.region)}` : ""
-                }`}
-                className="rounded-full border border-primary/30 bg-primary-soft px-2.5 py-1.5 font-bold text-primary no-underline"
-              >
-                지도에서 비교
-              </Link>
-              <Link
-                href="/complex/compare"
-                className="rounded-full border border-line bg-surface px-2.5 py-1.5 font-bold text-text-2 no-underline"
-              >
-                단지 A/B 비교
-              </Link>
-            </div>
-          </div>
+            </header>
 
-          <CompareView
-            timeline={<Timeline steps={model.timeline} />}
-            table={<CompareTable model={model} />}
-          />
+            <CompareView
+              timeline={
+                <Timeline
+                  steps={model.timeline}
+                  hrefs={model.headers.map((h) => `/notes/${encodeURIComponent(h.noteId)}`)}
+                />
+              }
+              table={<CompareTable model={model} />}
+            />
 
-          <div className="rise-in-2">
-            <AIPanel title="다회차 종합 (규칙 요약)">
-              {model.summaryText}
-            </AIPanel>
-            <div className="mt-2">
-              <AiFeedbackButtons
-                targetType="visit_compare"
-                targetId={noteId ?? model.headers[model.headers.length - 1]?.noteId}
-                context={{ aptName: model.aptName, visits: model.colCount }}
-              />
-            </div>
-          </div>
-
-          <div className="rise-in-3 card flex flex-col items-start gap-2.5 rounded-[18px] px-[22px] py-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="text-[13px] font-extrabold text-ink">다음 방문 기록 남기기</div>
-              <p className="mt-0.5 text-xs text-text-2">
-                같은 단지를 한 번 더 기록하면 표에 새 열이 붙어요.
-              </p>
-            </div>
             <Link
-              href={`/notes/new?apt=${encodeURIComponent(model.aptName)}${
-                model.region ? `&region=${encodeURIComponent(model.region)}` : ""
-              }`}
-              className="btn-primary rounded-xl px-4 py-2.5 t-body no-underline"
+              href={`/notes/new?apt=${encodeURIComponent(model.aptName)}${regionQ}`}
+              className="btn-primary flex min-h-12 items-center justify-center rounded-lg px-4 text-center t-body no-underline"
             >
-              이 단지 노트 쓰기
+              이 단지 다음 방문 노트 쓰기
             </Link>
           </div>
+
+          <div className="flex flex-col gap-2">
+            <AIPanel title="다회차 종합 (규칙 요약)">{model.summaryText}</AIPanel>
+            <AiFeedbackButtons
+              targetType="visit_compare"
+              targetId={noteId ?? model.headers[model.headers.length - 1]?.noteId}
+              context={{ aptName: model.aptName, visits: model.colCount }}
+            />
+          </div>
+
+          <section aria-labelledby="compare-next-h" className="flex flex-col gap-1">
+            <h2 id="compare-next-h" className="t-section text-ink">
+              이어서
+            </h2>
+            <ul data-tone="blue" className="divide-y divide-line border-b border-line">
+              <SummaryRow
+                label="지도에서 비교"
+                sub={[model.region, model.aptName].filter(Boolean).join(" · ")}
+                href={`/map?apt=${encodeURIComponent(model.aptName)}${regionQ}`}
+              />
+              <SummaryRow label="단지 A/B 비교" sub="두 단지 실거래 나란히" href="/complex/compare" />
+            </ul>
+          </section>
         </div>
       </PageShell>
     );
   }
 
+  /* [v4 · 규칙 3·8] 빈 상태 — 제목 한 줄 + 사실 한 줄(명사형) + 행동 하나 + 보조 글자 링크. 가운데 카드 → 왼쪽 정렬 */
   const emptyTitle =
     result.kind === "need_login"
       ? "로그인이 필요해요"
@@ -270,78 +249,56 @@ export default async function NotesComparePage({
         : result.kind === "error"
           ? "회차 비교를 불러오지 못했어요"
           : result.kind === "need_more"
-            ? `${result.aptName} 방문이 ${result.count}회예요`
-            : "비교할 노트를 골라 주세요";
+            ? `${result.aptName} 방문 ${result.count}회`
+            : "비교할 노트 없음";
 
   const emptyDesc =
     result.kind === "need_login"
-      ? "같은 단지를 2회 이상 기록한 뒤 회차 비교를 볼 수 있어요."
+      ? "같은 단지 2회 이상 기록 후 비교"
       : result.kind === "forbidden"
-        ? "다른 사람의 임장노트 회차는 비교 화면에서 열 수 없어요."
+        ? "다른 사람의 임장노트 회차는 비교 불가"
         : result.kind === "error"
           ? result.message
           : result.kind === "need_more"
-            ? "같은 단지 노트가 2회 이상이어야 표·타임라인이 채워져요. 예시 데이터로 채우지 않아요."
-            : "노트 상세의 ‘회차 전체 비교’로 들어오거나, 내 노트에서 단지를 고른 뒤 비교해 주세요.";
+            ? "같은 단지 노트 2회부터 표·타임라인 · 예시 데이터 없음"
+            : "노트 상세의 ‘회차 비교’ 또는 내 노트에서 단지 선택";
+
+  const action =
+    result.kind === "need_login"
+      ? {
+          /* [970 · B-14] noteId 를 callbackUrl 에 실어야 로그인 뒤 같은 비교로 돌아온다 */
+          href: `/login?callbackUrl=${encodeURIComponent(noteId ? `/notes/compare?noteId=${noteId}` : "/notes/compare")}`,
+          label: "로그인",
+        }
+      : result.kind === "need_more"
+        ? { href: `/notes/new?apt=${encodeURIComponent(result.aptName)}`, label: "같은 단지 한 번 더 기록" }
+        : { href: "/notes?mine=1", label: "내 노트 보기" };
+  const secondary =
+    result.kind === "need_login"
+      ? null
+      : result.kind === "need_more"
+        ? { href: `/notes/${encodeURIComponent(result.noteId)}`, label: "노트 상세로 ›" }
+        : { href: "/notes/new", label: "임장노트 쓰기 ›" };
 
   return (
     <PageShell breadcrumb="임장노트 › 회차 비교">
-      <div className="flex flex-col gap-3.5">
-        <div className="rise-in px-1">
-          <h1 className="t-title text-ink">노트 다회차 비교</h1>
-          <p className="mt-1.5 text-[13px] text-text-2">
-            같은 단지를 여러 번 기록하면 점수 축 변화를 표로 비교해요.
-          </p>
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
+        <h1 className="t-title text-ink">노트 다회차 비교</h1>
+        <div className="flex flex-col gap-1 border-y border-line py-4">
+          <p className="t-section text-ink">{emptyTitle}</p>
+          <p className="t-sub text-text-2">{emptyDesc}</p>
         </div>
-        <div className="card flex flex-col gap-3 rounded-[18px] px-[22px] py-8 text-center">
-          <div className="t-section text-ink">{emptyTitle}</div>
-          <p className="mx-auto max-w-[420px] t-body text-text-2">
-            {emptyDesc}
-          </p>
-          <div className="mt-1 flex flex-wrap justify-center gap-2">
-            {result.kind === "need_login" ? (
-              <Link
-                /* [970 · B-14] noteId 를 callbackUrl 에 실어야 로그인 뒤 같은 비교로 돌아온다 */
-                href={`/login?callbackUrl=${encodeURIComponent(
-                  noteId ? `/notes/compare?noteId=${noteId}` : "/notes/compare",
-                )}`}
-                className="btn-primary rounded-xl px-4 py-2.5 t-body no-underline"
-              >
-                로그인
-              </Link>
-            ) : result.kind === "need_more" ? (
-              <>
-                <Link
-                  href={`/notes/new?apt=${encodeURIComponent(result.aptName)}`}
-                  className="btn-primary rounded-xl px-4 py-2.5 t-body no-underline"
-                >
-                  같은 단지 한 번 더 기록
-                </Link>
-                <Link
-                  href={`/notes/${encodeURIComponent(result.noteId)}`}
-                  className="btn-secondary rounded-xl px-4 py-2.5 t-body no-underline"
-                >
-                  노트 상세로
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/notes?mine=1"
-                  className="btn-primary rounded-xl px-4 py-2.5 t-body no-underline"
-                >
-                  내 노트 보기
-                </Link>
-                <Link
-                  href="/notes/new"
-                  className="btn-secondary rounded-xl px-4 py-2.5 t-body no-underline"
-                >
-                  임장노트 쓰기
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
+        <Link
+          href={action.href}
+          className="btn-primary flex min-h-12 items-center justify-center rounded-lg px-4 text-center t-body no-underline"
+        >
+          {action.label}
+        </Link>
+        {secondary && (
+          <Link href={secondary.href} className="tap-line w-fit t-sub font-bold text-primary no-underline">
+            {secondary.label}
+          </Link>
+        )}
       </div>
     </PageShell>
   );

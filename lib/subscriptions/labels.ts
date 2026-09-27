@@ -49,11 +49,10 @@ export function planLabel(plan: AnyPlanTier | string | null | undefined): string
   return CANONICAL[k] ?? (k || "—");
 }
 
-/** 배지·헤더용 — 유료 플랜에만 ✦ 를 붙인다(무료에 별을 붙이면 등급이 흐려진다). */
+/** 배지·헤더용 — [1012] ✦ 를 뗐다(디자인 시스템 v3 규칙 4: 반짝이·이모지 배지 금지).
+ *  유료·무료 구분은 배지 색(연한 면 + 진한 글자)이 맡는다. 이름은 planLabel 단일 출처. */
 export function planBadgeLabel(plan: AnyPlanTier | string | null | undefined): string {
-  const k = String(plan ?? "").trim().toLowerCase();
-  const name = planLabel(k);
-  return k === "pro" || k === "expert" || k === "enterprise" ? `✦ ${name}` : name;
+  return planLabel(plan);
 }
 
 /** 유료 플랜인가 — 배지 노출·업그레이드 제안 분기에 쓴다. */

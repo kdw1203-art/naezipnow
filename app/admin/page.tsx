@@ -27,7 +27,7 @@ import { logger } from "@/lib/log";
 export const dynamic = "force-dynamic";
 
 const darkCard =
-  "rounded-[14px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.05)]";
+  "rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.05)]";
 const panelCard = "rounded-2xl bg-[#12161f] p-5 border border-[rgba(255,255,255,.06)]";
 
 export default async function AdminDashboardPage() {
@@ -107,7 +107,7 @@ export default async function AdminDashboardPage() {
           {/* 매물 검수 대기 링크 (집주인 직접·중개사 등록) */}
           <Link
             href="/admin/listings"
-            className="rounded-[10px] bg-[rgba(126,162,255,.15)] px-3.5 py-[7px] font-extrabold text-ai-accent"
+            className="rounded-lg bg-[rgba(126,162,255,.15)] px-3.5 py-[7px] font-extrabold text-ai-accent"
           >
             매물 검수 {pendingListingsCount === null ? "—" : `${pendingListingsLabel}건`}
           </Link>
@@ -361,7 +361,7 @@ export default async function AdminDashboardPage() {
                     title={`${d.label} · ${d.count}명`}
                   >
                     <div
-                      className="w-full rounded-t-[3px]"
+                      className="w-full rounded-t-sm"
                       style={{
                         height: `${Math.max(3, Math.round((d.count / maxSignup) * 64))}px`,
                         background:
@@ -498,19 +498,19 @@ export default async function AdminDashboardPage() {
               <div className="flex flex-wrap gap-1.5 text-[12px]">
                 <Link
                   href="/admin/listings"
-                  className="rounded-[10px] bg-[rgba(126,162,255,.15)] px-3 py-[6px] font-extrabold text-ai-accent"
+                  className="rounded-lg bg-[rgba(126,162,255,.15)] px-3 py-[6px] font-extrabold text-ai-accent"
                 >
                   매물 검수
                 </Link>
                 <Link
                   href="/admin/moderation"
-                  className="rounded-[10px] bg-[rgba(255,255,255,.08)] px-3 py-[6px] font-bold text-[#c9d2e0]"
+                  className="rounded-lg bg-[rgba(255,255,255,.08)] px-3 py-[6px] font-bold text-[#c9d2e0]"
                 >
                   신고 · 블라인드
                 </Link>
                 <Link
                   href="/admin/data"
-                  className="rounded-[10px] bg-[rgba(255,255,255,.08)] px-3 py-[6px] font-bold text-[#c9d2e0]"
+                  className="rounded-lg bg-[rgba(255,255,255,.08)] px-3 py-[6px] font-bold text-[#c9d2e0]"
                 >
                   데이터 적재
                 </Link>
@@ -585,7 +585,7 @@ export default async function AdminDashboardPage() {
               </div>
               <Link
                 href="/admin/moderation"
-                className="rounded-[10px] bg-[rgba(126,162,255,.15)] px-3.5 py-[7px] text-center text-[12px] font-extrabold text-ai-accent"
+                className="rounded-lg bg-[rgba(126,162,255,.15)] px-3.5 py-[7px] text-center text-[12px] font-extrabold text-ai-accent"
               >
                 신고 콘솔에서 처리하기
               </Link>
@@ -673,7 +673,7 @@ export default async function AdminDashboardPage() {
               ) : (
                 <Link
                   href="/admin/quality"
-                  className="rounded-[10px] bg-[rgba(126,162,255,.15)] px-3.5 py-[7px] text-center text-[12px] font-extrabold text-ai-accent"
+                  className="rounded-lg bg-[rgba(126,162,255,.15)] px-3.5 py-[7px] text-center text-[12px] font-extrabold text-ai-accent"
                 >
                   심사 콘솔에서 서류 검토하기
                 </Link>

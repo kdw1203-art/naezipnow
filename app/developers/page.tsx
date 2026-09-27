@@ -137,51 +137,51 @@ export default function DevelopersPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd()) }}
       />
-      <div className="mx-auto max-w-[760px]">
-        <h1 className="rise-in text-[24px] font-extrabold text-ink">공개 집계 API</h1>
-        <p className="rise-in-1 mt-2 text-[13px] leading-[1.7] text-text-2">
-          내집나우(naezipnow.com)은 국토교통부 실거래 신고 자료로 만든 아파트 매매 월간 지역
-          집계를 인증 없이 JSON 으로 제공합니다. 사이트 화면에 이미 공개된 수치와 같은
-          값이며, 출처를 표기하면 누구나 쓸 수 있습니다.
-        </p>
+      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 주인공(한 줄 호출 예시) → 엔드포인트 행 → 응답 필드 행 → 상태 코드 행 →
+          인용 조건 → 자주 묻는 질문 행 → 캡션. 지운 것: 소개 문단(→ 사실 줄), 절마다 12px 카드, 굵기 800, 회색 안내 상자(→ 캡션).
+          문서 본문(엔드포인트·필드·코드·Q&A)은 그대로 — 참조 문서라 내용이 곧 기능이다. */}
+      <div className="mx-auto flex max-w-[760px] flex-col gap-8">
+        <div className="flex flex-col gap-4">
+          <header className="flex flex-col gap-0.5">
+            <h1 className="rise-in t-title text-ink">공개 집계 API</h1>
+            <p className="t-sub text-text-3">
+              아파트 매매 월간 지역 집계 · 인증 없음 · JSON · IP 당 분당 120회
+            </p>
+          </header>
+          {/* 시작하기 — 키 발급·등록 없음. 한 줄이면 최신 월 집계 */}
+          <section aria-label="시작하기" className="flex flex-col gap-1">
+            <pre className="overflow-x-auto rounded-lg border border-line bg-surface p-3 text-[12px] leading-[1.6] text-text-1">
+              <code>{`curl "${BASE}/regions/monthly?limit=5"`}</code>
+            </pre>
+            <p className="t-caption text-text-3">
+              기본 주소 <code className="text-text-2">{BASE}</code> · UTF-8 JSON · 키 발급·등록 없음
+            </p>
+          </section>
+        </div>
 
-        <section className="rise-in-2 card mt-6 rounded-[18px] p-6">
-          <h2 className="text-[15px] font-extrabold text-ink">시작하기</h2>
-          <p className="mt-2 text-[13px] leading-[1.75] text-text-1">
-            키 발급도 등록도 없습니다. 아래 한 줄이면 최신 월의 집계가 나옵니다.
-          </p>
-          <pre className="mt-3 overflow-x-auto rounded-[10px] bg-bg p-3 text-[12px] leading-[1.6] text-text-1">
-            <code>{`curl "${BASE}/regions/monthly?limit=5"`}</code>
-          </pre>
-          <p className="mt-2 text-[12px] leading-[1.7] text-text-3">
-            기본 주소: <code className="text-text-2">{BASE}</code> · 응답은 UTF-8 JSON ·
-            IP 당 분당 120회
-          </p>
-        </section>
-
-        <section className="rise-in-3 mt-6">
-          <h2 className="text-[15px] font-extrabold text-ink">엔드포인트</h2>
-          <div className="mt-3 flex flex-col gap-4">
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+            엔드포인트 <span className="t-num text-text-3">{ENDPOINTS.length}</span>
+          </h2>
+          <div className="card flex flex-col divide-y divide-line rounded-lg px-4">
             {ENDPOINTS.map((e) => (
-              <div key={e.path} className="card rounded-[18px] p-6">
+              <div key={e.path} className="py-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-md bg-primary/10 chip-pad text-[12px] font-extrabold text-primary">
-                    GET
-                  </span>
-                  <code className="text-[13px] font-bold text-ink">{e.path}</code>
+                  <code className="t-sub font-bold text-primary">GET</code>
+                  <code className="t-body font-bold text-ink">{e.path}</code>
                 </div>
-                <p className="mt-1 text-[13px] font-bold text-ink">{e.title}</p>
-                <p className="mt-1 text-[13px] leading-[1.75] text-text-1">{e.desc}</p>
+                <p className="mt-1 t-body font-bold text-ink">{e.title}</p>
+                <p className="mt-1 t-body leading-[1.75] text-text-1">{e.desc}</p>
                 {e.params ? (
-                  <ul className="mt-3 flex flex-col gap-1">
+                  <ul className="mt-2 flex flex-col gap-1">
                     {e.params.map((p) => (
-                      <li key={p.name} className="text-[12px] leading-[1.7] text-text-2">
+                      <li key={p.name} className="t-sub leading-[1.7] text-text-2">
                         <code className="font-bold text-ink">{p.name}</code> — {p.desc}
                       </li>
                     ))}
                   </ul>
                 ) : null}
-                <pre className="mt-3 overflow-x-auto rounded-[10px] bg-bg p-3 text-[12px] leading-[1.6] text-text-1">
+                <pre className="mt-2 overflow-x-auto rounded-lg bg-bg p-3 text-[12px] leading-[1.6] text-text-1">
                   <code>{e.example}</code>
                 </pre>
               </div>
@@ -189,80 +189,91 @@ export default function DevelopersPage() {
           </div>
         </section>
 
-        <section className="card mt-6 rounded-[18px] p-6">
-          <h2 className="text-[15px] font-extrabold text-ink">응답 필드</h2>
-          <ul className="mt-3 flex flex-col gap-1">
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+            응답 필드 <span className="t-num text-text-3">{FIELDS.length}</span>
+          </h2>
+          <dl className="card m-0 flex flex-col divide-y divide-line rounded-lg px-4">
             {FIELDS.map((f) => (
-              <li key={f.name} className="text-[12px] leading-[1.75] text-text-2">
-                <code className="font-bold text-ink">{f.name}</code> — {f.desc}
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="card mt-6 rounded-[18px] p-6">
-          <h2 className="text-[15px] font-extrabold text-ink">상태 코드</h2>
-          <ul className="mt-3 flex flex-col gap-1 text-[12px] leading-[1.75] text-text-2">
-            <li>
-              <code className="font-bold text-ink">200</code> — 정상. 조건에 맞는 행이 하나도
-              없으면 rows 가 빈 배열이며, 이는 “그 조건의 데이터가 없다”는 사실입니다.
-            </li>
-            <li>
-              <code className="font-bold text-ink">400</code> — 요청이 잘못됐습니다. 무엇이 왜
-              틀렸는지 error.message 와 error.hint 에 적습니다.
-            </li>
-            <li>
-              <code className="font-bold text-ink">429</code> — 호출 한도 초과. Retry-After 를
-              참고해 다시 시도해 주세요.
-            </li>
-            <li>
-              <code className="font-bold text-ink">503</code> — 저희가 조회에 실패했습니다.
-              데이터가 없다는 뜻이 <b>아닙니다</b>. 잠시 후 다시 호출하면 성공할 수 있습니다.
-            </li>
-          </ul>
-        </section>
-
-        <section className="card mt-6 rounded-[18px] p-6">
-          <h2 className="text-[15px] font-extrabold text-ink">인용 조건</h2>
-          <p className="mt-2 text-[13px] leading-[1.75] text-text-1">
-            출처를 표기하면 상업적 이용을 포함해 자유롭게 쓸 수 있습니다. 같은 내용이 모든
-            응답의 <code>license</code> 필드에도 실려 있어, 문서를 보지 않고 API 만 쓴 경우에도
-            출처가 함께 이동합니다.
-          </p>
-          <div className="mt-3 rounded-[10px] bg-bg p-3 text-[12px] leading-[1.7] text-text-1">
-            내집나우(naezipnow.com) 집계, {PUBLIC_API_LICENSE.sources[0].name} 자료 기반, ○○○○년
-            ○월 기준
-          </div>
-          <p className="mt-3 text-[12px] leading-[1.7] text-text-3">
-            집계 방식과 한계는{" "}
-            <Link href="/methodology" className="font-bold text-primary">
-              데이터 방법론
-            </Link>
-            에 적혀 있습니다. 평균은 면적·층을 가중하지 않은 단순 평균이며, 최근 1~2개월
-            수치는 신고 지연으로 계속 늘어납니다 — 인용하실 때 함께 밝혀 주세요.
-          </p>
-        </section>
-
-        <section className="card mt-6 rounded-[18px] p-6">
-          <h2 className="text-[15px] font-extrabold text-ink">자주 묻는 질문</h2>
-          <div className="mt-3 flex flex-col gap-4">
-            {QA.map((x) => (
-              <div key={x.q}>
-                <h3 className="text-[13px] font-extrabold text-ink">{x.q}</h3>
-                <p className="mt-1 text-[13px] leading-[1.75] text-text-1">{x.a}</p>
+              <div key={f.name} className="py-2.5">
+                <dt className="t-sub font-bold text-ink">
+                  <code>{f.name}</code>
+                </dt>
+                <dd className="m-0 mt-0.5 t-sub leading-[1.7] text-text-2">{f.desc}</dd>
               </div>
             ))}
-          </div>
+          </dl>
         </section>
 
-        <div className="mt-6 rounded-[14px] bg-bg p-4 text-[12px] leading-[1.7] text-text-3">
-          제공 범위·한도는 서비스 사정에 따라 바뀔 수 있으며, 바뀌면 이 페이지를 먼저
-          갱신합니다. 데이터 오류 제보와 이용 문의는{" "}
-          <Link href="/support" className="font-bold text-primary">
+        <section className="flex flex-col gap-2">
+          <h2 className="t-section text-ink">상태 코드</h2>
+          <dl className="card m-0 flex flex-col divide-y divide-line rounded-lg px-4 t-sub leading-[1.7] text-text-2">
+            <div className="py-2.5">
+              <dt className="font-bold text-ink">
+                <code>200</code>
+              </dt>
+              <dd className="m-0">정상 · rows 가 빈 배열이면 “그 조건의 데이터가 없다”는 사실</dd>
+            </div>
+            <div className="py-2.5">
+              <dt className="font-bold text-ink">
+                <code>400</code>
+              </dt>
+              <dd className="m-0">요청이 잘못됨 · 무엇이 왜 틀렸는지 error.message · error.hint</dd>
+            </div>
+            <div className="py-2.5">
+              <dt className="font-bold text-ink">
+                <code>429</code>
+              </dt>
+              <dd className="m-0">호출 한도 초과 · Retry-After 참고</dd>
+            </div>
+            <div className="py-2.5">
+              <dt className="font-bold text-ink">
+                <code>503</code>
+              </dt>
+              <dd className="m-0">
+                저희가 조회에 실패 · 데이터가 없다는 뜻이 <b>아님</b> · 잠시 후 다시 호출
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="t-section text-ink">인용 조건</h2>
+          <p className="t-body leading-[1.75] text-text-1">
+            출처를 표기하면 상업적 이용을 포함해 자유롭게 쓸 수 있습니다 · 같은 내용이 모든 응답의 <code>license</code> 필드에도
+            실려 출처가 함께 이동합니다.
+          </p>
+          <div className="rounded-lg border border-line bg-surface p-3 text-[12px] leading-[1.7] text-text-1">
+            내집나우(naezipnow.com) 집계, {PUBLIC_API_LICENSE.sources[0].name} 자료 기반, ○○○○년 ○월 기준
+          </div>
+          <p className="t-caption text-text-3">
+            단순 평균(면적·층 가중 없음) · 최근 1~2개월은 신고 지연으로 늘어남 — 인용 때 함께 밝혀 주세요 ·{" "}
+            <Link href="/methodology" className="tap-line font-bold text-primary no-underline">
+              데이터 방법론
+            </Link>
+          </p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+            자주 묻는 질문 <span className="t-num text-text-3">{QA.length}</span>
+          </h2>
+          <dl className="card m-0 flex flex-col divide-y divide-line rounded-lg px-4">
+            {QA.map((x) => (
+              <div key={x.q} className="py-3">
+                <dt className="t-body font-bold text-ink">{x.q}</dt>
+                <dd className="m-0 mt-1 t-body leading-[1.75] text-text-1">{x.a}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
+        <p className="t-caption leading-[1.7] text-text-3">
+          제공 범위·한도가 바뀌면 이 페이지를 먼저 갱신 · 오류 제보·이용 문의는{" "}
+          <Link href="/support" className="tap-line font-bold text-primary no-underline">
             고객센터
           </Link>
-          로 부탁드립니다.
-        </div>
+        </p>
       </div>
     </PageShell>
   );

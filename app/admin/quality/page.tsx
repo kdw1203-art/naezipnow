@@ -38,7 +38,7 @@ const VERDICT_ORDER: Record<QualityVerdict, number> = {
 /* 다크 셸(#12161f) 위에 라이트 토큰 카드가 떠 있던 것을 다크 카드로 통일
    (2026-08-02 감사 — 관리자 콘솔 다크 테마 규칙). */
 const darkCard =
-  "flex flex-col gap-3 rounded-[20px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-5";
+  "flex flex-col gap-3 rounded-3xl border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-5";
 
 function fmt(n: number): string {
   return n.toLocaleString("ko-KR");
@@ -124,7 +124,7 @@ export default async function AdminQualityPage() {
         </div>
 
         {!quality ? (
-          <div className="rounded-[14px] bg-[rgba(255,255,255,.05)] px-3.5 py-6 text-center text-[12px] text-[#9aa6b8]">
+          <div className="rounded-lg bg-[rgba(255,255,255,.05)] px-3.5 py-6 text-center text-[12px] text-[#9aa6b8]">
             품질 집계를 불러오지 못했어요. 수치를 지어내지 않고 비워 둡니다.
           </div>
         ) : (
@@ -133,7 +133,7 @@ export default async function AdminQualityPage() {
               {(["defect", "note", "normal", "pass"] as QualityVerdict[]).map((v) => (
                 <span
                   key={v}
-                  className="rounded-[8px] bg-[rgba(255,255,255,.05)] px-2.5 py-1.5 tabular-nums"
+                  className="rounded-lg bg-[rgba(255,255,255,.05)] px-2.5 py-1.5 tabular-nums"
                   style={{ color: VERDICT_COLOR[v] }}
                 >
                   {VERDICT_MARK[v]} {v === "pass" ? "회귀 감시 통과" : VERDICT_LABEL[v]}{" "}
@@ -144,7 +144,7 @@ export default async function AdminQualityPage() {
 
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
               {quality.groups.map((g) => (
-                <div key={g.key} className="flex flex-col gap-2 rounded-[14px] bg-[rgba(255,255,255,.05)] p-3.5">
+                <div key={g.key} className="flex flex-col gap-2 rounded-lg bg-[rgba(255,255,255,.05)] p-3.5">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-xs font-extrabold text-white">
                       {g.label}{" "}
@@ -168,7 +168,7 @@ export default async function AdminQualityPage() {
                           return (
                             <div
                               key={c.key}
-                              className="rounded-[10px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] px-3 py-2.5"
+                              className="rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] px-3 py-2.5"
                             >
                               <div className="flex items-baseline justify-between gap-2">
                                 <span className="text-[12px] font-extrabold text-white">
@@ -226,7 +226,7 @@ export default async function AdminQualityPage() {
             {segments.map((s) => (
               <div
                 key={s.label}
-                className="flex items-center justify-between rounded-[10px] bg-[rgba(255,255,255,.05)] px-3 py-2.5"
+                className="flex items-center justify-between rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-2.5"
               >
                 <span>
                   <b style={{ color: s.dot }}>●</b> <b className="text-white">{s.label}</b>{" "}
@@ -261,7 +261,7 @@ export default async function AdminQualityPage() {
               <div className="text-[10px] text-[#9aa6b8]">플랫폼 활동 이벤트</div>
             </div>
           </div>
-          <div className="rounded-[9px] bg-[rgba(255,255,255,.05)] px-[11px] py-2 text-[10px] text-[#c9d2e0]">
+          <div className="rounded-lg bg-[rgba(255,255,255,.05)] px-[11px] py-2 text-[10px] text-[#c9d2e0]">
             👍/👎 만족도 비율과 오답 리뷰 집계는 피드백 적재 파이프라인 연동 후 제공됩니다. 지금은
             실행량만 실측으로 표시해요.
           </div>
@@ -306,7 +306,7 @@ export default async function AdminQualityPage() {
               cause={perfLoaded.cause}
             />
           ) : perf.length === 0 ? (
-            <div className="rounded-[14px] bg-[rgba(255,255,255,.05)] px-3.5 py-6 text-center text-[12px] text-[#9aa6b8]">
+            <div className="rounded-lg bg-[rgba(255,255,255,.05)] px-3.5 py-6 text-center text-[12px] text-[#9aa6b8]">
               집계할 상담 데이터가 아직 없어요.
             </div>
           ) : (
@@ -314,7 +314,7 @@ export default async function AdminQualityPage() {
               {perf.map((p, i) => (
                 <div
                   key={p.expertId}
-                  className="flex items-center justify-between gap-2 rounded-[10px] bg-[rgba(255,255,255,.05)] px-3 py-2.5"
+                  className="flex items-center justify-between gap-2 rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-2.5"
                 >
                   <span className="flex items-center gap-2 truncate">
                     <b className="text-[#9aa6b8]">{i + 1}</b>
@@ -345,7 +345,7 @@ export default async function AdminQualityPage() {
               cause={fraudLoaded.cause}
             />
           ) : fraud.length === 0 ? (
-            <div className="rounded-[14px] bg-[rgba(255,255,255,.05)] px-3.5 py-6 text-center text-[12px] text-[#9aa6b8]">
+            <div className="rounded-lg bg-[rgba(255,255,255,.05)] px-3.5 py-6 text-center text-[12px] text-[#9aa6b8]">
               최근 감지된 이상행위가 없어요.
             </div>
           ) : (
@@ -355,7 +355,7 @@ export default async function AdminQualityPage() {
                 return (
                   <div
                     key={f.id}
-                    className="flex items-center justify-between gap-2 rounded-[10px] bg-[rgba(255,255,255,.05)] px-3 py-2.5"
+                    className="flex items-center justify-between gap-2 rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-2.5"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">

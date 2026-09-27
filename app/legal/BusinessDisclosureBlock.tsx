@@ -15,7 +15,7 @@ export function BusinessDisclosureBlock({ className = "", showHours = true }: Pr
 
   return (
     <div
-      className={`space-y-0.5 rounded-[14px] border border-line bg-bg p-3 text-xs text-text-2 ${className}`}
+      className={`space-y-0.5 rounded-lg border border-line bg-bg p-3 text-xs text-text-2 ${className}`}
     >
       <p>
         <strong className="text-text-1">상호명</strong>: {info.legalName}

@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 2곳을 font-bold(700)로 바꿨다. */
 
 /* I2 — 내 매물 수정/거래완료/삭제 (소유자 본인).
    수정: 인라인 폼(거래유형·가격[만원]·면적·층·설명·연락처) → PATCH /api/listings/[id].
@@ -127,7 +128,7 @@ export function ListingManageActions(props: {
       }
       showToast(
         json.awarded
-          ? `거래완료로 마감했어요. ${json.awarded}P 적립!`
+          ? `거래완료로 마감했어요. ${json.awarded}P 적립됐어요` /* [1012] 규칙 6 */
           : "거래완료로 마감했어요.",
       );
       setSoldBusy(false);
@@ -164,7 +165,7 @@ export function ListingManageActions(props: {
 
   if (mode === "edit" || mode === "busy") {
     const input =
-      "w-full rounded-[8px] border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-primary";
+      "w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-primary";
     const lbl = "text-[12px] font-bold text-text-3";
     return (
       <div className="mt-1 flex w-full flex-col gap-2 rounded-xl bg-[rgba(29,79,216,.03)] p-3">
@@ -174,7 +175,7 @@ export function ListingManageActions(props: {
               key={t.key}
               type="button"
               onClick={() => setType(t.key)}
-              className={`flex-1 rounded-[8px] py-1.5 text-[12px] font-extrabold ${
+              className={`flex-1 rounded-lg py-1.5 text-[12px] font-bold ${
                 type === t.key ? "bg-primary text-white" : "bg-bg text-text-2"
               }`}
             >
@@ -326,7 +327,7 @@ export function ListingManageActions(props: {
           type="button"
           disabled={removeBusy}
           onClick={() => void remove()}
-          className="rounded-[8px] bg-danger-fill px-2.5 py-1 t-sub font-extrabold text-white disabled:opacity-60"
+          className="rounded-lg bg-danger-fill px-2.5 py-1 t-sub font-bold text-white disabled:opacity-60"
         >
           {removeBusy ? "삭제 중…" : "삭제"}
         </button>

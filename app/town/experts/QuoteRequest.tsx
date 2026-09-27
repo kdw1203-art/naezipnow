@@ -16,6 +16,7 @@ import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
 import { Modal, ModalHeader } from "@/app/components/ui/Modal";
 import { CharCount } from "@/app/components/ui/CharCount";
 import { QUOTE_CATEGORIES, findSpecialty } from "@/lib/experts/taxonomy";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* [953] 카테고리는 분류 체계(taxonomy) 의 quotable 분야 — 목록 필터·프로필 분야와 같은 라벨 */
 const CATEGORIES = QUOTE_CATEGORIES;
@@ -245,11 +246,11 @@ export function QuoteRequestModal({
               {myRequests.length === 0 ? (
                 <p className="py-2 t-sub text-text-3">아직 보낸 견적 요청이 없어요.</p>
               ) : (
-                <ul className="flex flex-col divide-y divide-line">
+                <ul data-tone="sand" className="flex flex-col divide-y divide-line">
                   {myRequests.slice(0, 5).map((r) => (
                     <li key={r.id} className="flex items-center gap-2 py-2">
                       <span
-                        className={`shrink-0 rounded-md chip-pad-tight t-caption font-extrabold ${
+                        className={`shrink-0 rounded-md chip-pad-tight t-caption font-bold ${
                           r.status === "open"
                             ? "bg-primary-soft text-primary"
                             : "bg-bg text-text-3"
@@ -280,7 +281,7 @@ export function QuoteRequestBanner() {
 
   return (
     <>
-      <div className="rise-in-1 card mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[18px] px-[22px] py-4">
+      <div className="rise-in-1 card mb-4 flex flex-wrap items-center justify-between gap-3 px-[22px] py-4">
         <div>
           <div className="t-section text-ink">
             어떤 전문가가 필요한지 모르겠다면

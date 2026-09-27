@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { ErrorState } from "@/app/components/ui";
-import { Icon } from "@/app/components/Icon";
 import { readBoardPosts } from "@/lib/newui/board-posts";
 import type { Post } from "@/lib/types/post";
 import { postHref } from "@/lib/town/post-href";
@@ -10,9 +9,12 @@ import type { RedevelopmentProject } from "@/lib/redevelopment/types";
 import { SEED_SOURCES } from "@/lib/redevelopment/seed";
 import { logger } from "@/lib/log";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
-import { TownHero } from "@/app/town/TownHero";
+import { TownHero, TownSources } from "@/app/town/TownHero";
+import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 import { RedevelopmentMap } from "./RedevelopmentMap";
+import { DataSourceCard } from "./DataSourceCard";
 import { STAGE_GUIDES, REDEV_GLOSSARY } from "@/lib/redevelopment/stage-guide";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* ============================================================
    정비사업 추적 라이트 (재개발닷컴 벤치마크 D2 축소판)
@@ -32,7 +34,8 @@ export const revalidate = 86_400;
 export const metadata = {
   title: "정비사업 지도 | 내집나우",
   description:
-    "재개발·재건축·소규모 정비사업을 사업종류별 컬러 마커로 보는 정비사업 지도. 사업종류·진행단계로 필터링하고, 7단계 진행 절차와 최신 정비사업 뉴스를 한곳에서 확인하세요.",
+    /* [1012] 규칙 5 — "확인하세요" 제거 */
+    "재개발·재건축·소규모 정비사업을 사업종류별 마커로 보는 정비사업 지도. 사업종류·진행단계 필터, 7단계 진행 절차, 최신 정비사업 뉴스를 한곳에.",
 };
 
 const NEWS_KEYWORD_RE = /재건축|재개발|정비사업/;
@@ -118,231 +121,168 @@ export default async function RedevelopmentPage() {
     /* [972] 형제 8칸과 머리가 달랐다 — PageShell 의 title 을 쓰면 h1 이 **카테고리 줄
        위**에 그려져, 이 페이지만 제목이 102px 에 있고 나머지는 214px 에 있었다
        (Pixel 5 실측). 브레드크럼도 혼자 "홈 › …" 로 시작했다.
-       9칸 공통 머리(TownPageHead: 아이콘 칩 + 제목 + 한 줄)로 맞춘다. */
-    <PageShell breadcrumb="동네이야기 › 정비사업 지도" wide>
-      {/* 카테고리 줄 고정 — 형제 카테고리 페이지(청약·입주·공매)와 동일 패턴 */}
-      {/* [978] 통계는 이 화면이 이미 들고 있는 값만 쓴다 — 머리를 붙이면서 조회를
-          새로 얹지 않는다(976 에서 줄인 DB 왕복을 되돌리는 짓이다). */}
-      <TownHero
-        href="/redevelopment"
-        stats={[{ label: "지도에 실린 구역", value: projects.length, unit: "곳" }]}
-        note="지금 이 지도에 실린 구역 기준"
-      />
-      <TownCategoryNav stick />
-      <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-6">
-        {/* ===== 정비사업 지도 히어로 ===== */}
-        <section className="rise-in flex flex-col gap-3">
-          <p className="t-body text-text-2">
-            사업종류·진행단계로 걸러 원하는 구역만 골라보세요. 마커·목록을 누르면 해당 구역으로
-            지도가 이동해요.
-          </p>
-          {loadError ? (
-            /* 실패를 "구역 없음"으로 바꿔 그리지 않는다 — 둘은 다른 사실이다.
-               원인 원문(cause)도 감추지 않고 그대로 보여 준다. */
-            <ErrorState
-              title="정비사업 구역을 불러오지 못했습니다"
-              desc="구역이 없다는 뜻이 아니라 조회 자체가 실패했다는 뜻이에요. 잠시 후 다시 확인해 주세요."
-              cause={loadError}
-              className="rounded-2xl"
-            />
-          ) : (
-            <RedevelopmentMap
-              initialProjects={projects}
-              sigunguCounts={sigunguCounts}
-              sources={SEED_SOURCES}
-            />
-          )}
-        </section>
+       [v4] 형제 화면과 같은 흰 머리(TownHero) + 카테고리 탭. 브레드크럼 문자열은 제목·탭과 같은 말이라 뺐다.
+       폭: 이 화면만 **최대 1080px** — 주인공이 지도(마커 3천 곳 규모)라 760px 에서는 구역 분포가 한 화면에 안 잡힌다
+       (v4 브리프 "지도·표처럼 넓어야 하는 화면은 예외"). 글 섹션(단계·용어·뉴스)은 그 안에서 760px 로 묶는다. */
+    <PageShell wide>
+      <div className="mx-auto flex w-full max-w-[1080px] flex-col">
+        {/* [978] 통계는 이 화면이 이미 들고 있는 값만 쓴다 — 머리를 붙이면서 조회를 새로 얹지 않는다.
+            [v4 · 규칙 1] 사실 한 줄 = 구역 수 · 시군구 수(예전 지도 위 설명 문장 "…누르면 그 구역으로 지도가 이동해요"의 숫자) */}
+        <TownHero
+          href="/redevelopment"
+          stats={[
+            { label: "구역", value: projects.length, unit: "곳" },
+            { label: "시군구", value: sigunguCounts.length, unit: "곳" },
+          ]}
+        />
+        {/* 카테고리 줄 고정 — 형제 카테고리 페이지(청약·입주·공매)와 동일 패턴 */}
+        <TownCategoryNav stick />
 
-        {/* ===== 아래: 진행단계 가이드 + 뉴스(기존 콘텐츠 보존) ===== */}
-        <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
-          {/* ===== 진행단계 개요 스트립 ===== */}
-        <section className="rise-in card rounded-2xl px-5 py-4">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-[13px] font-extrabold text-ink">
-              재개발·재건축은 이렇게 7단계로 진행돼요
-            </h2>
-            <span className="t-caption text-text-3">도시정비법 일반 절차 기준</span>
-          </div>
-          {/* 가로 스텝 오버뷰 — 좁은 화면은 가로 스크롤 */}
-          <div className="mt-3 -mx-1 overflow-x-auto px-1 pb-1">
-            <ol className="flex min-w-max items-center gap-1">
-              {STAGE_GUIDES.map((s, i) => (
-                <li key={s.key} className="flex items-center gap-1">
-                  <span className="chip chip-soft flex items-center gap-1 px-2.5 py-1 t-sub">
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary t-caption font-extrabold text-white">
-                      {i + 1}
-                    </span>
-                    <Icon name={s.icon} size={13} />
-                    {s.longLabel}
-                  </span>
-                  {i < STAGE_GUIDES.length - 1 && (
-                    <span className="shrink-0 t-sub text-text-3" aria-hidden="true">
-                      ›
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ol>
-          </div>
-          <p className="mt-2 t-sub text-text-2">
-            각 단계의 뜻과 유의점, 그 단계에서 확인할 것을 아래에서 단계별로 정리했어요.
-            단계 오인은 투자 판단에 영향을 줄 수 있으니 실제 진행 여부는 반드시 확인하세요.
-          </p>
-        </section>
-
-        {/* ===== 단계별 상세 트래커(세로 스테퍼) ===== */}
-        <section className="rise-in-1 card rounded-2xl px-5 py-4">
-          <h2 className="text-[13px] font-extrabold text-ink">단계별 상세 · 이 단계에서 확인할 것</h2>
-          <ol className="mt-3 flex flex-col gap-0">
-            {STAGE_GUIDES.map((s, i) => (
-              <li key={s.key} className="flex gap-3">
-                {/* 아이콘 번호 + 연결선 */}
-                <div className="flex flex-col items-center">
-                  <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
-                    <Icon name={s.icon} size={18} />
-                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary t-caption font-extrabold text-white">
-                      {i + 1}
-                    </span>
-                  </span>
-                  {i < STAGE_GUIDES.length - 1 && (
-                    <span className="w-px flex-1 bg-line" aria-hidden="true" />
-                  )}
-                </div>
-
-                {/* 본문 */}
-                <div className={i < STAGE_GUIDES.length - 1 ? "min-w-0 pb-6" : "min-w-0"}>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="t-section text-ink">{s.longLabel}</span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[rgba(29,79,216,.06)] chip-pad t-caption font-semibold text-text-2">
-                      <Icon name="clock" size={11} />
-                      {s.period}
-                    </span>
-                  </div>
-
-                  <p className="mt-1 t-sub text-text-1">{s.desc}</p>
-
-                  {/* 유의점 */}
-                  <div className="mt-2 flex gap-1.5 rounded-[10px] bg-warning-soft px-2.5 py-2">
-                    <Icon
-                      name="warning"
-                      size={13}
-                      className="mt-px shrink-0 text-warning"
-                    />
-                    <p className="t-sub text-warning">
-                      <span className="font-bold">유의점 </span>
-                      {s.caution}
-                    </p>
-                  </div>
-
-                  {/* 이 단계에서 확인할 것 */}
-                  <div className="mt-2">
-                    <div className="t-sub font-bold text-text-2">
-                      이 단계에서 확인할 것
-                    </div>
-                    <ul className="mt-1 flex flex-col gap-1">
-                      {s.checklist.map((c) => (
-                        <li key={c} className="flex gap-1.5">
-                          <Icon
-                            name="check"
-                            size={13}
-                            className="mt-px shrink-0 text-primary"
-                          />
-                          <span className="t-sub text-text-2">{c}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ol>
-
-          {/* 면책 */}
-          <p className="mt-3 flex gap-1.5 rounded-[10px] bg-[rgba(29,79,216,.06)] px-3 py-2 t-caption text-text-2">
-            <Icon name="shield" size={13} className="mt-px shrink-0" />
-            <span>
-              개념 안내용 일반 절차예요. 실제 사업 단계·조합원 자격·분담금은 구역·조합마다
-              다르므로 조합·구청·전문가 확인이 필요해요. 구역별 실제 단계·일정은 지자체
-              고시(정비사업 정보몽땅 등 공공 공개자료) 기준으로 확인하세요.
-            </span>
-          </p>
-        </section>
-
-        {/* ===== 자주 나오는 용어 ===== */}
-        <section className="rise-in-2 card rounded-2xl px-5 py-4">
-          <h2 className="text-[13px] font-extrabold text-ink">자주 나오는 용어</h2>
-          <dl className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-            {REDEV_GLOSSARY.map((g) => (
-              <div
-                key={g.term}
-                className="rounded-[10px] border border-line bg-surface px-3 py-2"
-              >
-                <dt className="t-sub font-extrabold text-ink">{g.term}</dt>
-                <dd className="mt-0.5 t-sub text-text-2">{g.desc}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-
-        {/* ===== 관심 등록 CTA — 실제 존재하는 기능(저장 검색 알림)으로만 연결.
-             "정비사업 소식 알림"은 아직 없는 기능이라 약속하지 않는다. */}
-        <Link
-          href="/my/watchlist?tab=searches"
-          className="rise-in-3 tile flex items-center justify-between rounded-2xl border border-line bg-surface px-5 py-4 no-underline"
-        >
-          <div>
-            <div className="t-body font-extrabold text-ink">
-              관심 지역 검색조건 저장하기
-            </div>
-            <div className="mt-0.5 t-sub text-text-2">
-              저장한 조건에 맞는 새 매물이 올라오면 알림으로 알려드려요. 정비사업 단계 변경
-              알림은 아직 제공하지 않아요.
-            </div>
-          </div>
-          <span className="shrink-0 rounded-[10px] bg-primary-soft px-3.5 py-2 text-xs font-bold text-primary">
-            저장 검색 ›
-          </span>
-        </Link>
-
-        {/* ===== 정비사업 뉴스 (board_posts 실데이터) ===== */}
-        <section className="rise-in-4 card flex flex-col gap-2.5 rounded-2xl px-5 py-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[13px] font-extrabold text-ink">정비사업 뉴스</h2>
-            <Link href="/town/news" className="inline-flex min-h-[24px] items-center t-sub font-extrabold text-primary">
-              뉴스룸 전체 ›
-            </Link>
-          </div>
-          {news.length === 0 &&
-            (newsFailed ? (
-              /* 색은 배경이 지고, 문장은 text-ink 로 읽는다 — 11px 본문에서 가장 확실하다. */
-              <div className="rounded-[10px] bg-danger-soft px-3 py-2 text-center t-sub text-ink">
-                뉴스를 불러오지 못했어요 (조회 실패). 관련 기사가 없다는 뜻은 아니에요.
-              </div>
+        <div className="flex flex-col gap-8">
+          {/* ===== 주인공: 정비사업 지도 ===== */}
+          <section aria-label="정비사업 지도">
+            {loadError ? (
+              /* 실패를 "구역 없음"으로 바꿔 그리지 않는다 — 둘은 다른 사실이다.
+                 원인 원문(cause)도 감추지 않고 그대로 보여 준다. */
+              <ErrorState
+                title="정비사업 구역을 불러오지 못했어요"
+                desc="구역이 없다는 뜻이 아니라 조회 자체가 실패했다는 뜻이에요. 잠시 후 다시 열어 주세요."
+                cause={loadError}
+                className="rounded-lg"
+              />
             ) : (
-              <div className="py-3 text-center t-sub text-text-3">
-                최근 수집된 재건축·재개발 관련 기사가 아직 없어요.
+              <RedevelopmentMap initialProjects={projects} sigunguCounts={sigunguCounts} />
+            )}
+          </section>
+
+          {/* ===== 아래: 진행단계 · 용어 · 알림 · 뉴스(기존 콘텐츠 보존) — 글 섹션은 760px ===== */}
+          <div className="flex w-full max-w-[760px] flex-col gap-8">
+            {/* 재개발·재건축 진행 7단계 — [v4] 개요 칩 줄(아이콘 + 번호 원) + 세로 스테퍼(아이콘 원 · 경고 상자 · 체크 아이콘)
+                두 블록을 **한 목록**으로: 단계마다 1px 선 행 하나(이름 + 기간), 누르면 뜻·유의점·확인할 것이 펼쳐진다 */}
+            <section aria-labelledby="redev-stages-title" className="flex flex-col gap-1">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 id="redev-stages-title" className="t-section text-ink">
+                  재개발·재건축 진행 7단계
+                </h2>
+                <span className="shrink-0 t-caption text-text-3">도시정비법 일반 절차</span>
               </div>
-            ))}
-          {news.map((n) => (
-            <Link key={n.id} href={postHref(n)} className="group no-underline">
-              <div className="t-sub font-bold text-ink group-hover:text-primary">
-                {n.title}
+              {/* li 가 아니라 div — 폰 배율(html[data-mscale])의 "li 안 보조 줄 한 줄" 규칙이 펼친 설명 문단을 자르지 않게 */}
+              <div data-tone="sand" className="divide-y divide-line border-b border-line">
+                {STAGE_GUIDES.map((s, i) => (
+                  <div key={s.key}>
+                    <details className="group">
+                      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate t-body font-bold text-ink">
+                            <span className="t-num text-text-3">{i + 1}.</span> {s.longLabel}
+                          </span>
+                          <span className="mt-0.5 block truncate t-sub text-text-3">{s.period}</span>
+                        </span>
+                        <span aria-hidden="true" className="shrink-0 t-body text-text-3 transition-transform group-open:rotate-90">
+                          ›
+                        </span>
+                      </summary>
+                      <div className="flex flex-col gap-2 pb-3">
+                        <p className="t-sub text-text-1">{s.desc}</p>
+                        <p className="t-sub text-warning">
+                          <span className="font-bold">유의점 </span>
+                          {s.caution}
+                        </p>
+                        <div>
+                          <div className="t-sub font-bold text-text-2">이 단계에서 확인할 것</div>
+                          <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
+                            {s.checklist.map((c) => (
+                              <li key={c} className="t-sub text-text-2">
+                                {c}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </details>
+                  </div>
+                ))}
               </div>
-              <div className="mt-[2px] t-caption text-text-3">
-                {[n.sourceName || n.authorLabel, shortDate(n.sourcePublishedAt || n.createdAt), n.city]
-                  .filter(Boolean)
-                  .join(" · ")}
+            </section>
+
+            {/* ===== 자주 나오는 용어 — [v4] 2열 카드 격자 → 접힘 안 1px 선 행 ===== */}
+            <details className="group border-y border-line">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
+                <span>
+                  자주 나오는 용어 <span className="t-sub font-normal text-text-3">{REDEV_GLOSSARY.length}개</span>
+                </span>
+                <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
+                  ›
+                </span>
+              </summary>
+              <dl data-tone="blue" className="divide-y divide-line pb-2">
+                {REDEV_GLOSSARY.map((g) => (
+                  <div key={g.term} className="py-2.5">
+                    <dt className="t-sub font-bold text-ink">{g.term}</dt>
+                    <dd className="mt-0.5 t-sub text-text-2">{g.desc}</dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
+
+            {/* ===== 정비사업 뉴스 (board_posts 실데이터) — [v4] 카드 → 1px 선 행(제목 한 줄 + 매체 · 날짜 · 지역 한 줄) ===== */}
+            <section aria-labelledby="redev-news-title" className="flex flex-col gap-1">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 id="redev-news-title" className="t-section text-ink">
+                  정비사업 뉴스
+                  {news.length > 0 && <span className="ml-1.5 t-sub font-medium text-text-3">{news.length}건</span>}
+                </h2>
+                <Link href="/town/news" className="tap-line shrink-0 t-sub font-bold text-primary no-underline">
+                  뉴스룸 전체 ›
+                </Link>
               </div>
-            </Link>
-          ))}
-          {news.length > 0 && (
-            <p className="t-caption text-text-3">
-              재건축·재개발·정비사업 키워드 매칭 자동 수집 기사 — 원문·출처는 각 기사에서
-              확인하세요.
-            </p>
-          )}
-        </section>
+              {news.length === 0 &&
+                (newsFailed ? (
+                  <p className="py-3 t-sub text-text-2">뉴스를 불러오지 못했어요 (조회 실패) — 관련 기사가 없다는 뜻은 아니에요</p>
+                ) : (
+                  /* [1012] 규칙 6 — 언제·어디서. [v4] 한 줄 */
+                  <p className="py-3 t-sub text-text-3">최근 수집분에 재건축·재개발 기사 없음</p>
+                ))}
+              {news.length > 0 && (
+                <ul data-tone="hanji" className="divide-y divide-line">
+                  {news.map((n) => (
+                    <li key={n.id}>
+                      <Link href={postHref(n)} className="flex min-w-0 flex-col gap-0.5 py-3 no-underline">
+                        <span className="truncate t-body font-bold text-ink">{n.title}</span>
+                        <span className="truncate t-sub text-text-3">
+                          {[n.sourceName || n.authorLabel, shortDate(n.sourcePublishedAt || n.createdAt), n.city]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            {/* ===== 관심 등록 — 실제 존재하는 기능(저장 검색 알림)으로만 연결.
+                 "정비사업 소식 알림"은 아직 없는 기능이라 약속하지 않는다.
+                 [v4] 타일(설명 두 문장 + 연한 버튼) → 1px 선 행 하나 ===== */}
+            <ul data-tone="blue" className="divide-y divide-line border-y border-line">
+              {/* [1012] 규칙 5 — 동사 + 구체 대상 */}
+              <SummaryRow
+                label="관심 지역 새 매물 알림 받기"
+                sub="저장한 검색 조건의 새 매물 알림 · 정비사업 단계 변경 알림은 없음"
+                href="/my/watchlist?tab=searches"
+              />
+            </ul>
+
+            {/* [v4 · 규칙 3] 데이터 출처 — 예전 지도 아래 "데이터 출처" 카드 · 단계 스테퍼 끝 면책 상자 · 뉴스 끝 캡션을 한 곳으로 */}
+            <TownSources>
+              <DataSourceCard sources={SEED_SOURCES} />
+              <p>
+                7단계는 개념 안내용 일반 절차 — 실제 사업 단계·조합원 자격·분담금은 구역·조합마다 다름 · 구역별 실제 단계·일정은
+                지자체 고시(정비사업 정보몽땅 등 공공 공개자료) 기준 · 조합·구청·전문가 확인 필요
+              </p>
+              <p>정비사업 뉴스 — 재건축·재개발·정비사업 키워드로 고른 자동 수집 기사 · 매체명·원문 링크는 각 기사에</p>
+            </TownSources>
+          </div>
         </div>
       </div>
     </PageShell>

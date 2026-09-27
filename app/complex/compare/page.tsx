@@ -176,126 +176,132 @@ export default async function ComplexComparePage() {
     },
   ];
 
+  /* [v4 · 규칙 1] 머리 사실 한 줄 — 지역·동·조합 수 · 반영 시점(숫자·장소만) */
+  const headFact = [
+    ...(pairs.length > 0
+      ? [
+          `${groups.length}개 지역`,
+          `${dongCount.toLocaleString("ko-KR")}개 동`,
+          `단지 ${complexCount.toLocaleString("ko-KR")}개`,
+          `${pairs.length.toLocaleString("ko-KR")}개 조합`,
+        ]
+      : []),
+    ...(lastYm ? [`${lastYm} 신고분까지`] : []),
+  ].join(" · ");
+  const LINK = "tap-line font-bold text-primary no-underline";
+
   return (
-    <PageShell breadcrumb="홈 › 단지 비교" title="단지 vs 단지 실거래 비교">
+    <PageShell breadcrumb="홈 › 단지 비교">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
       />
 
-      <p className="rise-in mb-5 t-body text-text-2">
-        같은 동에서 거래가 많은 단지끼리 실거래를 나란히 놓고 봅니다.
-        {pairs.length > 0 && (
-          <>
-            {" "}
-            현재 <strong className="text-ink">{groups.length}개 지역</strong> ·{" "}
-            <strong className="text-ink">{dongCount.toLocaleString("ko-KR")}개 동</strong>에서{" "}
-            <strong className="text-ink">단지 {complexCount.toLocaleString("ko-KR")}개</strong>로{" "}
-            <strong className="text-ink">{pairs.length.toLocaleString("ko-KR")}개 조합</strong>을
-            만들었습니다{lastYm && ` (${lastYm} 신고분까지 반영)`}.
-          </>
-        )}{" "}
-        국토교통부 신고 자료이며 매물 호가가 아닙니다.
-      </p>
+      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 지역별 접힘 목록(조합 = 구분선 행) → 링크 한 줄 → 맨 끝 접힘 "비교 기준·Q&A".
+          지운 것: 소개 문단(→ 사실 줄), 지역 카드 + 조합 타일 격자(→ 접힘 + 행), "조합을 고른 기준" 카드(네 문단 → 접힘 안 한 줄씩). */}
+      <div className="mx-auto flex max-w-[760px] flex-col gap-8">
+        <header className="flex flex-col gap-0.5">
+          <h1 className="rise-in t-title text-ink">단지 vs 단지 실거래 비교</h1>
+          <p className="t-sub text-text-3">{headFact}</p>
+        </header>
 
-      {loadFailed ? (
-        <section className="rise-in-1 card p-[var(--pad-card)]">
-          <p className="py-8 text-center t-body text-text-3">
-            <strong className="text-ink">{LOAD_FAILED_LINE}</strong>
-            <br />
-            비교할 단지가 없다는 뜻이 아니라, 조회가 제때 끝나지 않았거나 실패했다는
-            뜻입니다.
+        {loadFailed ? (
+          <p className="card rounded-lg px-4 py-6 text-center t-body text-text-3">
+            <strong className="text-ink">{LOAD_FAILED_LINE}</strong> · 조합 없음이 아니라 조회 실패
           </p>
-        </section>
-      ) : pairs.length === 0 ? (
-        <section className="rise-in-1 card p-[var(--pad-card)]">
-          <p className="py-8 text-center t-body text-text-3">
-            아직 기준을 넘은 조합이 없습니다.
-            <br />
-            같은 동에서 최근 12개월 매매 {MIN_SIDE_TX}건 이상인 단지가 둘 이상 모이면 이곳에
-            나타납니다.
+        ) : pairs.length === 0 ? (
+          <p className="card rounded-lg px-4 py-6 text-center t-body text-text-3">
+            기준을 넘은 조합 없음 · 같은 동 12개월 매매 {MIN_SIDE_TX}건 이상 단지가 둘 이상이면 생김
           </p>
-        </section>
-      ) : (
-        <div className="rise-in-1 mb-6 space-y-4">
-          {groups.map((group) => (
-            <section key={group.regionId} className="card p-[var(--pad-card)]">
-              <h2 className="flex items-baseline justify-between gap-3 t-section text-ink">
-                <Link href={`/region/${group.regionId}`} className="inline-flex min-h-[24px] items-center hover:underline">
-                  {group.label}
-                </Link>
-                <span className="shrink-0 t-sub font-medium text-text-3">
-                  조합 {group.pairs.length}개
-                </span>
-              </h2>
-              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {group.pairs.map((pair) => (
-                  <Link
-                    key={complexPairPath(pair)}
-                    href={complexPairPath(pair)}
-                    className="tile rounded-[10px] border border-border px-3 py-2.5"
-                  >
-                    {/* [1005] body 는 keep-all — 띄어쓰기 없는 긴 단지명(예: 17자)은 못 꺾여
-                        390px 에서 화면을 35px 밀어냈다. 넘칠 때만 꺾는다(overflow-wrap). */}
-                    <span className="block break-words t-body font-bold text-ink">
-                      {pair.complexA}
-                      <span className="mx-1 t-sub font-medium text-text-3">vs</span>
-                      {pair.complexB}
+        ) : (
+          <section aria-labelledby="pairs-h" className="flex flex-col gap-2">
+            <h2 id="pairs-h" className="flex items-baseline gap-1.5 t-section text-ink">
+              지역별 조합 <span className="t-sub font-medium text-text-3">조합 많은 순</span>
+            </h2>
+            {/* [v4 · 규칙 5·10] 지역 = 접힘 행(첫 지역만 펼침) · 조합 = 구분선 행. 링크는 접혀 있어도 HTML 에 있다 */}
+            <div data-tone="blue" className="card flex flex-col divide-y divide-line rounded-lg px-4">
+              {groups.map((group, gi) => (
+                <details key={group.regionId} open={gi === 0} className="group">
+                  <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
+                    <span className="t-body font-bold text-ink">{group.label}</span>
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      <span className="t-body t-num text-ink">{group.pairs.length}개</span>
+                      <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
+                        ›
+                      </span>
                     </span>
-                    <span className="mt-0.5 block t-sub text-text-3">
-                      {pair.dong} · 12개월 {pair.tradeCountA.toLocaleString("ko-KR")}건 vs{" "}
-                      {pair.tradeCountB.toLocaleString("ko-KR")}건
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
+                  </summary>
+                  {/* [v4.1 · 리퀴드 목록] 펼친 안쪽 목록은 hanji — 바깥 blue 판 안에서 구분된다 */}
+                  <ul data-tone="hanji" className="flex flex-col divide-y divide-line border-t border-line pl-3">
+                    {group.pairs.map((pair) => (
+                      <li key={complexPairPath(pair)}>
+                        <Link
+                          href={complexPairPath(pair)}
+                          className="press flex min-h-12 items-center justify-between gap-x-3 py-2.5 no-underline"
+                        >
+                          <span className="min-w-0 flex-1">
+                            {/* [1005] body 는 keep-all — 띄어쓰기 없는 긴 단지명은 넘칠 때만 꺾는다(overflow-wrap) */}
+                            <span className="block break-words t-body font-bold text-ink">
+                              {pair.complexA}
+                              <span className="mx-1 t-sub font-medium text-text-3">vs</span>
+                              {pair.complexB}
+                            </span>
+                            <span className="block truncate t-sub tabular-nums text-text-3">
+                              {pair.dong} · 12개월 {pair.tradeCountA.toLocaleString("ko-KR")}건 vs{" "}
+                              {pair.tradeCountB.toLocaleString("ko-KR")}건
+                            </span>
+                          </span>
+                          <span aria-hidden="true" className="shrink-0 t-body text-text-3">
+                            ›
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                    <li className="py-2">
+                      <Link href={`/region/${group.regionId}`} className={`${LINK} t-sub`}>
+                        {group.label} 지역 허브 보기 ›
+                      </Link>
+                    </li>
+                  </ul>
+                </details>
+              ))}
+            </div>
+          </section>
+        )}
 
-      <QaBlock items={qa} />
+        <p className="t-sub text-text-3">
+          <Link href="/complex/browse" className={LINK}>
+            단지 실거래 브라우즈
+          </Link>
+          {" · "}
+          <Link href="/tx" className={LINK}>
+            실거래 구간
+          </Link>
+          {" · "}
+          <Link href="/notes/new" className={LINK}>
+            임장노트 쓰기
+          </Link>
+        </p>
 
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">조합을 고른 기준</h2>
-        <ul className="mt-2 space-y-1.5 t-body text-text-2">
-          <li>
-            · <strong className="text-ink">같은 법정동</strong>에 있는 단지끼리만 짝지었습니다.
-            생활권이 다른 단지를 나란히 놓으면 가격 차이가 단지 차이인지 동네 차이인지 알 수
-            없습니다.
-          </li>
-          <li>
-            · 최근 12개월 매매 신고가 <strong className="text-ink">양쪽 모두 {MIN_SIDE_TX}건
-            이상</strong>일 때만 페이지를 만듭니다. 거래가 얇으면 평균이 한두 건에 끌려다녀
-            비교 자체가 성립하지 않습니다.
-          </li>
-          <li>
-            · 동마다 거래가 많은 <strong className="text-ink">상위 {TOP_PER_DONG}개 단지</strong>{" "}
-            안에서만 조합을 만듭니다. 가능한 조합을 모두 펼치면 페이지 수는 늘지만 대부분 근거가
-            없는 페이지가 됩니다.
-          </li>
-          <li>
-            · 집계는 하루 한 번 갱신됩니다. 각 비교 페이지의 숫자는 그 페이지가 실제로 읽어 온
-            거래 원본에서 다시 계산하므로, 화면의 건수·평균·월별 그래프는 항상 서로 맞습니다.
-          </li>
-        </ul>
-      </section>
-
-      <p className="mb-8 t-sub text-text-3">
-        단지 하나씩 보려면{" "}
-        <Link href="/complex/browse" className="font-bold text-primary underline">
-          단지 실거래 브라우즈
-        </Link>
-        , 지역 × 면적대·가격대로 보려면{" "}
-        <Link href="/tx" className="font-bold text-primary underline">
-          실거래 구간
-        </Link>
-        , 직접 발품 기록을 남기려면{" "}
-        <Link href="/notes/new" className="font-bold text-primary underline">
-          임장노트 작성
-        </Link>
-        을 이용하세요.
-      </p>
+        {/* [v4 · 규칙 3] 맨 끝 접힘 하나 — 조합 기준(네 문단 → 한 줄씩) + Q&A(FAQPage 스키마) */}
+        <details className="group border-t border-line pt-1">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
+            비교 기준·Q&amp;A
+            <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
+              ›
+            </span>
+          </summary>
+          <div className="flex flex-col pb-3 pt-1">
+            <ul className="mb-4 flex list-none flex-col gap-0.5 p-0">
+              <li className="t-caption text-text-3">같은 법정동 단지끼리만 — 동네 차이와 단지 차이를 섞지 않게</li>
+              <li className="t-caption text-text-3">최근 12개월 매매 양쪽 모두 {MIN_SIDE_TX}건 이상일 때만</li>
+              <li className="t-caption text-text-3">동마다 거래 많은 상위 {TOP_PER_DONG}개 단지 안에서만</li>
+              <li className="t-caption text-text-3">집계 하루 1회 · 비교 페이지 숫자는 그 페이지가 읽은 거래 원본에서 다시 계산</li>
+            </ul>
+            <QaBlock items={qa} />
+          </div>
+        </details>
+      </div>
     </PageShell>
   );
 }

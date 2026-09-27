@@ -21,7 +21,9 @@ export const dynamic = "force-dynamic";
  */
 export default function BillingEnrollPage() {
   return (
-    <PageShell breadcrumb="구독 · 자동결제" title="자동결제 등록">
+    <PageShell>
+      {/* [v4 · 규칙 1·12] 제목을 등록 카드와 같은 520px 가운데 줄 맨 위로(체크아웃 화면과 같은 이유) */}
+      <h1 className="mx-auto mb-3 w-full max-w-[520px] t-title text-ink">자동결제 등록</h1>
       <BillingEnrollClient />
       {/* [970 · A-36] 등록 카드(max-w-[520px])와 같은 폭 — 체크아웃 화면과 동일 */}
       <div className="mx-auto mt-4 w-full max-w-[520px]">

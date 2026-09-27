@@ -1,10 +1,10 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { safeAuth } from "@/lib/safe-auth";
 import { getExpertStatus } from "@/lib/experts/is-verified";
 import { PageShell } from "../../components/PageShell";
-import { Icon } from "@/app/components/Icon";
 import { ListingForm } from "./ListingForm";
 
 /* ============================================================
@@ -30,27 +30,23 @@ export default async function ListingNewPage() {
   const expert = await getExpertStatus(session.user.email);
   if (!expert.isBroker) {
     return (
-      <PageShell breadcrumb="실매물 › 매물 등록" title="매물 등록">
-        <div className="mx-auto max-w-[520px]">
-          <div className="rise-in card flex flex-col items-center gap-3 px-5 py-12 text-center">
-            <div className="text-[24px]"><Icon name="🏢" size={26} /></div>
-            <div className="text-[15px] font-extrabold text-ink">
-              매물 등록은 공인중개사 인증 후 이용할 수 있어요
-            </div>
+      /* [v4 · 규칙 1·7·10] 아이콘 + 가운데 정렬 카드 → 제목 한 줄 + 사실 한 줄 + 버튼(760px 줄 왼쪽) */
+      <PageShell>
+        <div className="mx-auto flex w-full max-w-[760px] flex-col items-start gap-3">
+          <header className="flex flex-col gap-0.5">
+            <h1 className="t-title text-ink">매물 등록</h1>
             {/* [992 · A1] 전문가 인증 신청(/town/experts)은 보관(비노출) — 문의처만 안내 */}
-            <p className="max-w-[420px] text-[13px] leading-[1.7] text-text-3">
-              허위·과장 매물을 막기 위해 매물 등록은 개업공인중개사 인증을 마친
-              회원에게만 열려 있어요. 인증 신청은 지금 받지 않아요 — 필요하시면
-              고객센터로 문의해 주세요.
+            <p className="t-sub text-text-3">
+              개업공인중개사 인증 회원 전용(허위·과장 매물 방지) · 인증 신청은 지금 받지 않음 · 필요하면 고객센터
             </p>
-            <Link href="/support" className="btn-soft btn-md mt-1 no-underline">
-              고객센터 문의
-            </Link>
-            <Link href="/my" className="text-[12px] font-bold text-text-3 no-underline">
-              마이로 돌아가기 ›
-            </Link>
-          </div>
-          <div className="mt-6 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[12px] leading-[1.7] text-text-3">
+          </header>
+          <Link href="/support" className="btn-soft btn-md no-underline">
+            고객센터 문의
+          </Link>
+          <Link href="/my" className="inline-flex min-h-10 items-center text-[12px] font-bold text-text-3 no-underline">
+            마이로 돌아가기 ›
+          </Link>
+          <div className="mt-4 border-t border-line pt-3 text-[12px] leading-[1.7] text-text-3">
             중개 행위는 개업공인중개사가 수행하며, 내집나우는 광고 매체로서 정보를
             게재할 뿐 중개 당사자가 아닙니다.
           </div>
@@ -60,17 +56,19 @@ export default async function ListingNewPage() {
   }
 
   return (
-    <PageShell breadcrumb="실매물 › 매물 등록" title="매물 등록">
-      <div className="rise-in mb-4 rounded-xl bg-[rgba(29,79,216,.06)] px-4 py-3 text-[13px] leading-[1.7] text-text-2">
-        등록하신 매물은 <b>검수 후 노출됩니다 (1~2일)</b>. 형식 요건을 확인한 뒤
-        목록에 공개돼요. 집주인 직접 매물은 추후 등기부등본 등으로{" "}
-        <b>소유 확인 절차</b>를 안내드릴 수 있어요.
-      </div>
+    /* [v4 · 규칙 1·3] 제목 + 사실 한 줄(연파랑 설명 상자 → 명사형) — 폼은 그대로 */
+    <PageShell>
+      <header className="rise-in mx-auto mb-4 flex w-full max-w-[760px] flex-col gap-0.5">
+        <h1 className="t-title text-ink">매물 등록</h1>
+        <p className="t-sub text-text-3">
+          검수 후 노출(1~2일) · 형식 요건 확인 뒤 공개 · 집주인 직접 매물은 등기부등본 등 소유 확인 안내 가능
+        </p>
+      </header>
 
       <ListingForm />
 
       {/* 법적 고지 */}
-      <div className="mt-8 max-w-[640px] rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[12px] leading-[1.7] text-text-3">
+      <div className="mx-auto mt-8 w-full max-w-[760px] border-t border-line pt-3 text-[12px] leading-[1.7] text-text-3">
         허위·과장 매물 등록 시 「공인중개사법」 등 관련 법령에 따라 제재를 받을 수
         있으며, 매물 정보의 정확성에 대한 책임은 등록자에게 있습니다. 내집나우의
         검수는 형식 요건 확인일 뿐 매물의 진위·권리관계를 보증하지 않습니다. 중개

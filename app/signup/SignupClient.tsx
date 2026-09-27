@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { trackPlatformEvent } from "@/lib/platform-events-client";
-import { Icon } from "@/app/components/Icon";
 import { stashSignupHandoff } from "@/lib/onboarding/signup-handoff";
 import { useMoment } from "@/app/components/motion/MomentProvider";
 import { safeInternalPath } from "@/lib/safe-path";
@@ -19,18 +18,19 @@ function welcomeHrefFor(callbackUrl: string | null): string {
   return next === "/" ? "/welcome" : `/welcome?next=${encodeURIComponent(next)}`;
 }
 
+/* [1012 · 규칙 2·5] 라벨 = 동사 + 대상("카카오로 가입") · 색 그림자 없음(브랜드 배경색만 유지) */
 const SOCIAL_BUTTON: Record<SocialProvider, { label: string; className: string }> = {
   /* 카카오 브랜드 가이드 — 배경 #FEE500 · 라벨 #191919 고정 */
   kakao: {
-    label: "카카오로 3초 만에 시작",
-    className: "bg-[#fee500] text-[#191919] shadow-[0_6px_16px_rgba(254,229,0,.3)]",
+    label: "카카오로 가입",
+    className: "bg-[#fee500] text-[#191919]",
   },
   toss: {
-    label: "토스로 시작",
-    className: "bg-[#3182f6] text-white shadow-[0_6px_16px_rgba(49,130,246,.35)]",
+    label: "토스로 가입",
+    className: "bg-[#3182f6] text-white",
   },
   google: {
-    label: "Google로 시작",
+    label: "Google로 가입",
     className: "border border-line bg-surface text-text-1",
   },
 };
@@ -271,19 +271,15 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
         className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col justify-center gap-4 px-7 pb-8"
         style={{ paddingTop: "max(20px, env(safe-area-inset-top, 0px))" }}
       >
-        <div className="rise-in card flex flex-col items-center gap-3 rounded-[18px] p-7 text-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-[21px]">
-            {done === "confirm" ? <Icon name="✉" size={24} /> : "✓"}
-          </span>
-          <h1 className="text-[19px] font-extrabold text-ink">
+        {/* [v4 · 규칙 7·10] 아이콘 원 + 가운데 정렬 카드 → 왼쪽 제목 한 줄 + 사실 한 줄 */}
+        <div className="rise-in card flex flex-col items-start gap-3 rounded-lg p-5">
+          <h1 className="t-title text-ink">
             {done === "confirm" ? "인증 메일을 보냈어요" : "가입이 완료됐어요"}
           </h1>
           <p className="text-[13px] leading-[1.6] text-text-2">
             {done === "confirm" ? (
               <>
-                <b className="text-ink">{email.trim().toLowerCase()}</b>로 인증 메일을 보냈습니다.
-                <br />
-                메일의 링크를 확인한 뒤 로그인해 주세요.
+                <b className="text-ink">{email.trim().toLowerCase()}</b>로 인증 메일 발송 · 링크 확인 뒤 로그인
                 {confirmHint ? (
                   <>
                     <br />
@@ -292,7 +288,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
                 ) : null}
               </>
             ) : (
-              <>이제 방금 만든 계정으로 로그인하면 맞춤 지표와 체크리스트가 준비됩니다.</>
+              <>방금 만든 계정으로 로그인 · 관심 지역 고르기 한 화면 뒤 첫 임장노트</>
             )}
           </p>
           {done === "confirm" ? (
@@ -327,14 +323,14 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
                   setResendBusy(false);
                 }
               }}
-              className="w-full rounded-2xl border border-line bg-surface p-[15px] text-center text-[15px] font-extrabold text-ink disabled:opacity-60"
+              className="w-full rounded-lg border border-line bg-surface p-[15px] text-center text-[15px] font-bold text-ink disabled:bg-[var(--disabled-bg)] disabled:text-[var(--disabled-text)]"
             >
               {resendBusy ? "보내는 중…" : "인증 메일 다시 보내기"}
             </button>
           ) : null}
           <Link
             href={`/login?callbackUrl=${encodeURIComponent(welcomeHref)}`}
-            className="btn-primary btn-cta mt-1 w-full rounded-2xl p-[15px] text-center text-[15px]"
+            className="btn-primary mt-1 w-full rounded-lg p-[15px] text-center text-[15px]"
           >
             로그인하러 가기
           </Link>
@@ -387,12 +383,12 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
         </Link>
       </div>
 
-      <h1 className="rise-in text-[21px] font-extrabold leading-[1.35] text-ink">
-        30초면 시작할 수 있어요
-      </h1>
-      <p className="rise-in-1 -mt-2 text-[13px] text-text-2">
-        가입 후 관심 지역·목표를 골라 맞춤 화면을 만들어 드려요
-      </p>
+      {/* [1012 · 규칙 5·6] "30초면 시작할 수 있어요" → 묻는 것(이메일·비밀번호 둘)과 다음 화면(관심 지역 1~3곳)을 사실로
+          [v4 · 규칙 1] 두 줄 제목 + 설명 문장 → 제목 한 줄 + 사실 한 줄 */}
+      <div className="flex flex-col gap-0.5">
+        <h1 className="rise-in t-title text-ink">회원가입</h1>
+        <p className="rise-in-1 t-sub text-text-3">이메일·비밀번호 두 칸 · 다음은 관심 지역 1~3곳 고르기</p>
+      </div>
 
       {social.length > 0 && (
         <div className="rise-in-2 flex flex-col gap-2.5">
@@ -402,7 +398,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
               type="button"
               onClick={() => socialSignIn(provider)}
               disabled={busy || socialBusy !== null}
-              className={`rounded-[14px] p-3.5 text-center text-[15px] font-bold disabled:opacity-60 ${SOCIAL_BUTTON[provider].className}`}
+              className={`rounded-lg p-3.5 text-center text-[15px] font-bold disabled:bg-[var(--disabled-bg)] disabled:text-[var(--disabled-text)] ${SOCIAL_BUTTON[provider].className}`}
             >
               {socialBusy === provider ? "연결 중…" : SOCIAL_BUTTON[provider].label}
             </button>
@@ -418,7 +414,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
       {/* [개선 #9] 목표 3택·관심지역 검색 블록 제거 — /welcome 온보딩이 수집한다.
           실측에서 이 두 블록 앞에서 거의 전원이 이탈했다(30일 44→1). */}
       <form onSubmit={onSubmit} className="rise-in-5 flex flex-col gap-2">
-        <div className="text-[13px] font-extrabold text-ink">
+        <div className="text-[13px] font-bold text-ink">
           계정 만들기{" "}
           <span className="text-[12px] font-medium text-text-3">이메일로 가입</span>
         </div>
@@ -441,7 +437,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
             e.preventDefault();
             document.getElementById("signup-email")?.focus();
           }}
-          className="rounded-[10px] border border-line bg-surface px-4 py-3 text-[13px] text-ink outline-none focus:border-primary"
+          className="rounded-lg border border-line bg-surface px-4 py-3 text-[13px] text-ink outline-none focus:border-primary"
         />
         <label htmlFor="signup-email" className="sr-only">
           이메일
@@ -460,7 +456,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
             e.preventDefault();
             document.getElementById("signup-password")?.focus();
           }}
-          className="rounded-[10px] border border-line bg-surface px-4 py-3 text-[13px] text-ink outline-none focus:border-primary"
+          className="rounded-lg border border-line bg-surface px-4 py-3 text-[13px] text-ink outline-none focus:border-primary"
         />
         <label htmlFor="signup-password" className="sr-only">
           비밀번호 (8자 이상)
@@ -474,7 +470,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
             placeholder="비밀번호 (8자 이상)"
             autoComplete="new-password"
             enterKeyHint="done"
-            className="w-full rounded-[10px] border border-line bg-surface px-4 py-3 pr-14 text-[13px] text-ink outline-none focus:border-primary"
+            className="w-full rounded-lg border border-line bg-surface px-4 py-3 pr-14 text-[13px] text-ink outline-none focus:border-primary"
           />
           <button
             type="button"
@@ -488,12 +484,12 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
         </div>
         {/* [991] 동의 행 = 탭 대상. 체크박스 16px 만 목표였는데(989 게이트 지적) 행 전체를
             40px 높이 + 좌우 10px 여백으로 키운다 — label 이 토글하므로 행 어디를 눌러도 된다. */}
-        <label className="-mx-2.5 flex min-h-[40px] items-center gap-3 rounded-lg px-2.5 py-1 text-xs text-text-2">
+        <label className="-mx-[10px] flex min-h-[40px] items-center gap-[12px] rounded-lg px-[10px] py-1 text-xs text-text-2">
           <input
             type="checkbox"
             checked={agree}
             onChange={(e) => setAgree(e.target.checked)}
-            className="h-5 w-5 shrink-0 accent-[#1d4fd8]"
+            className="h-[20px] w-[20px] shrink-0 accent-[#1d4fd8]"
           />
           {/* [970 · A-13] 동의 대상 문서를 그 자리에서 열 수 있게 — 링크 없는 동의는 형식뿐이다.
               <label> 안의 <a> 는 HTML 활성화 규칙상 체크박스를 토글하지 않는다(대화형 자손).
@@ -520,23 +516,23 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
             에 동의하며 만 14세 이상입니다
           </span>
         </label>
-        <label className="-mx-2.5 flex min-h-[40px] items-center gap-3 rounded-lg px-2.5 py-1 text-xs text-text-2">
+        <label className="-mx-[10px] flex min-h-[40px] items-center gap-[12px] rounded-lg px-[10px] py-1 text-xs text-text-2">
           <input
             type="checkbox"
             checked={agreeMarketing}
             onChange={(e) => setAgreeMarketing(e.target.checked)}
-            className="h-5 w-5 shrink-0 accent-[#1d4fd8]"
+            className="h-[20px] w-[20px] shrink-0 accent-[#1d4fd8]"
           />
           <span>
-            (선택) 혜택·소식 이메일 수신 — 언제든 설정에서 철회할 수 있어요
+            (선택) 혜택·소식 이메일 수신 — 설정에서 언제든 철회
           </span>
         </label>
-        <label className="-mx-2.5 flex min-h-[40px] items-center gap-3 rounded-lg px-2.5 py-1 text-xs text-text-2">
+        <label className="-mx-[10px] flex min-h-[40px] items-center gap-[12px] rounded-lg px-[10px] py-1 text-xs text-text-2">
           <input
             type="checkbox"
             checked={agreeLocation}
             onChange={(e) => setAgreeLocation(e.target.checked)}
-            className="h-5 w-5 shrink-0 accent-[#1d4fd8]"
+            className="h-[20px] w-[20px] shrink-0 accent-[#1d4fd8]"
           />
           <span>
             (선택) 위치정보 이용(주변 단지·지도 편의) — 설정에서 언제든 철회
@@ -546,22 +542,23 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
         {error && (
           <div
             role="alert"
-            className="rounded-[10px] bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger"
+            className="rounded-lg bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger"
           >
             {error}
           </div>
         )}
 
+        {/* [1012 · 규칙 5] "시작하기"(금지 문구) → 가입 뒤 실제로 가는 곳(노트)까지 라벨에 */}
         <button
           type="submit"
           disabled={busy}
-          className="btn-primary btn-cta rounded-2xl p-[15px] text-center text-[15px] disabled:opacity-60"
+          className="btn-primary btn-cta rounded-lg p-[15px] text-center text-[15px]"
         >
-          {busy ? "가입 중…" : "시작하기"}
+          {busy ? "가입 중…" : "가입하고 노트 쓰기"}
         </button>
-        <div className="text-center text-xs text-text-3">
+        <div className="text-xs text-text-3">
           이미 계정이 있나요?{" "}
-          <Link href={loginHref} className="font-bold text-primary">
+          <Link href={loginHref} className="inline-flex min-h-[24px] items-center font-bold text-primary">
             로그인
           </Link>
         </div>

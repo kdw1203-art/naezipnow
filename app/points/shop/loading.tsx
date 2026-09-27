@@ -2,7 +2,7 @@
    토큰만 사용(bg-surface/border-line) — 다크모드 자동 대응. */
 export default function Loading() {
   return (
-    <div className="mx-auto w-full max-w-5xl animate-pulse space-y-4 px-4 py-8" aria-busy="true" aria-label="포인트 사용처 불러오는 중">
+    <div className="mx-auto w-full max-w-[760px] animate-pulse space-y-4 px-4 py-8" aria-busy="true" aria-label="포인트 사용처 불러오는 중">
       <div className="h-8 w-48 rounded-lg bg-surface" />
       <div className="h-4 w-72 max-w-full rounded bg-surface" />
       <div className="h-40 rounded-2xl border border-line bg-surface" />

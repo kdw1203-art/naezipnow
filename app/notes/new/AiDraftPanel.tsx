@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 1곳을 font-bold(700)로 바꿨다. */
 
 import { useState } from "react";
 import Link from "next/link";
@@ -104,24 +105,24 @@ export function AiDraftPanel({
     applied != null && (Object.keys(applied.checks).length > 0 || applied.satisfaction != null);
 
   return (
+    /* [1012] 규칙 4·9 — ✨ 반짝이 제거, 이중 링(ring-2) 강조 제거. 제목은 동사 + 대상 */
     <section
-      className={`rounded-2xl border p-[13px] ${
-        emphasize
-          ? "border-primary/45 bg-primary-soft/60 ring-2 ring-primary/20"
-          : "border-primary/25 bg-primary-soft/40"
+      className={`rounded-lg border p-[13px] ${
+        emphasize ? "border-primary/45 bg-primary-soft/60" : "border-primary/25 bg-primary-soft/40"
       }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <div className="t-body font-extrabold text-ink">
-            ✨ {emphasize && region.trim() ? `${region.trim()} AI 브리핑으로 시작` : "AI 초안으로 시작"}
+          <div className="t-body font-bold text-ink">
+            {emphasize && region.trim() ? `${region.trim()} AI 브리핑 초안 받기` : "AI 초안 받기"}
           </div>
+          {/* [v4 · 규칙 3] 설명 문장 → 명사형 한 줄 */}
           <p className="mt-0.5 t-caption text-text-2">
             {emphasize && region.trim()
-              ? "고르신 관심지역의 실거래·시세·공급 데이터로 첫 노트 초안을 채워 드려요."
+              ? "관심 지역 실거래·공급 데이터로 초안"
               : /* [1011] 재료 나열을 걷었다(소유자 지시). "현장 확인이 본편"은 남긴다 —
                    초안을 결론으로 오해하지 않게 하는 정직성 문구다. */
-                "방문 전 예습 초안을 채워 드려요 — 현장 확인이 본편입니다."}
+                "예습용 초안 · 현장 확인이 본편"}
           </p>
         </div>
         {state !== "applied" && (
@@ -129,7 +130,8 @@ export function AiDraftPanel({
             type="button"
             onClick={() => void run()}
             disabled={!ready || state === "busy"}
-            className="btn-primary min-h-10 rounded-xl px-3.5 py-2 t-sub font-bold disabled:opacity-50"
+            /* [v4 · 규칙 2] 연한 버튼 — 같은 1단계 화면의 채움 파랑은 "다음 단계" 하나 */
+            className="btn-soft min-h-10 rounded-lg px-3.5 py-2 t-sub font-bold disabled:opacity-50"
           >
             {state === "busy" ? "초안 만드는 중…" : guest ? "로그인하고 AI 초안 받기" : "AI 초안 받기"}
           </button>
@@ -137,21 +139,21 @@ export function AiDraftPanel({
       </div>
 
       {!ready && !disabled && (
-        <p className="mt-1.5 t-caption text-text-3">먼저 위에서 단지나 지역을 선택해 주세요.</p>
+        <p className="mt-1.5 t-caption text-text-3">단지·지역 먼저 선택</p>
       )}
 
       {state === "applied" && applied && (
         <div className="mt-2 rounded-xl bg-surface px-3 py-2.5">
-          <p className="t-sub font-bold text-primary">초안이 채워졌어요 — 아래에서 자유롭게 고쳐 쓰세요.</p>
+          <p className="t-sub font-bold text-primary">초안 채움 · 아래에서 고쳐 쓰기</p>
           {hasScores && (
             <p className="mt-1 t-caption text-text-2">
               <b className="text-warning">점수는 AI 추정(현장 확인 전)</b>
-              {applied.scoreRationale ? ` — ${applied.scoreRationale}` : ""} · 방문 후 직접 조정해 주세요.
+              {applied.scoreRationale ? ` — ${applied.scoreRationale}` : ""} · 방문 후 직접 조정
             </p>
           )}
           {applied.evidence.length > 0 && (
             <p className="mt-1 t-caption text-text-3">
-              데이터 근거 {applied.evidence.length}줄이 메모에 담겼어요 (출처·시점 포함).
+              데이터 근거 {applied.evidence.length}줄 메모에 추가(출처·시점 포함)
             </p>
           )}
         </div>
@@ -159,16 +161,16 @@ export function AiDraftPanel({
 
       {state === "quota" && (
         <p className="mt-2 t-caption text-text-2">
-          이번 달 AI 초안 {usage?.limit ?? ""}회를 모두 썼어요.{" "}
+          이번 달 AI 초안 {usage?.limit ?? ""}회 모두 사용 ·{" "}
           {usage?.plan === "free" ? (
             <>
               <Link href="/subscription" className="inline-block py-[5px] font-bold text-primary underline">
                 플러스
               </Link>
-              에서는 월 100회까지 쓸 수 있어요.
+              {" "}월 100회
             </>
           ) : (
-            "다음 달 1일에 초기화됩니다."
+            "다음 달 1일 초기화"
           )}
         </p>
       )}

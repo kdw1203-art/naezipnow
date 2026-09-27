@@ -1,5 +1,6 @@
-import Link from "next/link";
-import { isPaidPlan } from "@/lib/subscriptions/labels";
+import { isPaidPlan, planLabel } from "@/lib/subscriptions/labels";
+import { periodPrice } from "@/lib/subscriptions/billing-periods";
+import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 import { PageShell } from "@/app/components/PageShell";
 import { safeAuth } from "@/lib/safe-auth";
 import { claimGuestPayments } from "@/lib/payments/guest-claim";
@@ -131,7 +132,8 @@ async function loadMyPurchasedReports(
   }
 }
 
-/* ── 비로그인 안내 — 공용 GuestGate(h1 포함) ── */
+/* ── 비로그인 안내 — 공용 GuestGate(h1 포함) ──
+   [v4 · 규칙 1·3·5] 제목 문장("~관리하세요")·설명 문장 → 짧은 제목 + 사실 한 줄, 아래 메뉴 카드 → 1px 선 행 */
 function GuestView() {
   const menu = [
     { label: "포인트 상점", href: "/points/shop" },
@@ -139,25 +141,12 @@ function GuestView() {
     { label: "고객센터", href: "/support" },
   ];
   return (
-    <GuestGate
-      title="로그인하고 내 활동을 한곳에서 관리하세요"
-      desc="임장노트 · 포인트 · 관심 지역 · 구독이 마이 화면에 모여요."
-      pathname="/my"
-    >
-      <div className="rise-in-1 card flex flex-col rounded-[14px] px-4 py-0.5">
-        {menu.map((m, i, arr) => (
-          <Link
-            key={m.label}
-            href={m.href}
-            className={`flex justify-between py-[13px] t-body font-semibold text-text-1 no-underline ${
-              i < arr.length - 1 ? "border-b border-divider" : ""
-            }`}
-          >
-            <span>{m.label}</span>
-            <span className="text-text-3">›</span>
-          </Link>
+    <GuestGate title="로그인하고 마이 보기" desc="임장노트 · 포인트 · 관심 지역 · 구독" pathname="/my">
+      <ul data-tone="blue" className="rise-in-1 divide-y divide-line">
+        {menu.map((m) => (
+          <SummaryRow key={m.label} label={m.label} href={m.href} />
         ))}
-      </div>
+      </ul>
     </GuestGate>
   );
 }
@@ -167,7 +156,7 @@ export default async function MyPage() {
 
   if (!session?.user?.email) {
     return (
-      <PageShell breadcrumb="마이">
+      <PageShell>
         <GuestView />
       </PageShell>
     );
@@ -251,17 +240,22 @@ export default async function MyPage() {
     ? `/subscription/billing?tier=${suspended.plan}&billing=${suspended.billing}&mode=card`
     : null;
   /* 만료일은 app_users.plan_expires_at (일회성 결제·포인트 교환 경로).
-     자동결제 구독은 next_charge_at 이 기준이라 만료일 대신 다음 결제일을 말한다. */
+     자동결제 구독은 next_charge_at 이 기준이라 만료일 대신 다음 결제일을 말한다.
+     [v4 · 규칙 3] "~해요" 문장 → 한 줄 사실. 무료는 예전 "AI 비교 리포트가 무제한이에요"(플러스 AI 분석은 월 50회 —
+     access.ts 집행값과 어긋난 약속)를 빼고 판매가 단일 출처(billing-periods)의 시작가만 적는다. */
+  const plusFrom = periodPrice("pro", 1)?.totalKrw ?? null;
   const subscriptionLine =
     profile.plan === "free"
-      ? "플러스로 업그레이드하면 AI 비교 리포트가 무제한이에요"
+      ? plusFrom != null
+        ? `${planLabel("pro")} 월 ${plusFrom.toLocaleString("ko-KR")}원부터`
+        : "요금제 비교"
       : autopayLoaded && autopayLoaded.status === "active"
         ? `다음 결제 ${autopayLoaded.nextChargeAt ? formatKstDate(autopayLoaded.nextChargeAt) : "—"} · ${autopayLoaded.amount.toLocaleString("ko-KR")}원/${autopayLoaded.billing === "annual" ? "년" : "월"} 자동결제`
         : suspended
-          ? "등록된 카드로 결제가 되지 않아 자동결제가 멈춰 있어요 — 카드를 다시 등록해 주세요"
+          ? "등록 카드 결제 실패 · 자동결제 멈춤"
           : planExpiresAt
-            ? `${formatKstDate(planExpiresAt)}까지 이용할 수 있어요 · 이후 무료 플랜으로 전환돼요`
-            : "결제 내역과 해지·환불 접수 방법은 구독 관리에서 확인할 수 있어요";
+            ? `${formatKstDate(planExpiresAt)}까지 · 이후 무료 전환`
+            : "결제 내역 · 해지·환불 접수";
 
   const notes = notesLoaded.ok ? notesLoaded.value : [];
   const savedCount: Loaded<number> = savedNotesLoaded.ok
@@ -325,7 +319,9 @@ export default async function MyPage() {
   };
 
   return (
-    <PageShell title="마이">
+    /* [v4 · 규칙 1] 머리(이름 h1 + 사실 줄)는 MyHubView 가 760px 줄 안에서 그린다 — PageShell 제목("마이")은
+       1240 컨테이너 왼쪽 끝이라 가운데 줄과 어긋났다 */
+    <PageShell>
       <MyHubView data={data} />
     </PageShell>
   );

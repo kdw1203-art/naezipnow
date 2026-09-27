@@ -108,7 +108,10 @@ function audit({ primaryMin, inlineMin, minFont, vw }) {
       });
     }
 
-    if (r.right > vw + 1 || r.left < -1) {
+    /* [1012 · 모바일 60%] 폰은 뷰포트 배율 0.6 으로 그린다(app/layout.tsx) — 390 폰의 레이아웃 폭은 650px 이다.
+       "화면 밖" 판정은 에뮬레이션 폭(390)이 아니라 실제 레이아웃 폭으로 한다. */
+    const layoutW = Math.max(vw, de.clientWidth);
+    if (r.right > layoutW + 1 || r.left < -1) {
       let inRail = false;
       for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
         const ov = getComputedStyle(a).overflowX;

@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 import Link from "next/link";
 
 /** AI 결과는 항상 잉크 다크 패널 — 신뢰 시각 언어
@@ -19,8 +20,13 @@ export function AIPanel({
   return (
     <div className={`ai-panel flex flex-col gap-2 p-[18px] ${className}`}>
       <div className="flex items-center gap-[7px]">
-        <span className="ai-chip h-5 w-5 text-[10px]">AI</span>
-        <span className="text-[13px] font-extrabold text-white">{title}</span>
+        {/* [1012-R2 · 규칙 9 · 채점 C] "AI" 배지: 파랑 채움(.ai-chip) → 어두운 면 위 규칙 — 한지 글자(text-on-dark) +
+            한지 45% 외곽선(border-on-dark-faint), 채움 없음. 홈의 채움 파랑은 검색 CTA 하나여야 하고, 네이비 위 파랑 면은
+            브랜드 면 규칙("나우블루는 CTA·링크 전용")에도 어긋난다. 반경 4px(rounded-sm)·20px·10px/700 = 배지 규격. */}
+        <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border border-on-dark-faint text-[10px] font-bold text-on-dark">
+          AI
+        </span>
+        <span className="text-[13px] font-bold text-white">{title}</span>
       </div>
       {/* [964] .fit — AI 패널 본문은 사이드바(340px)에도, 본문 전폭(1,200px)에도 들어간다.
           판정을 화면이 아니라 **이 패널 폭**으로 하면 좁은 자리에서 글자가 한 단 내려가고
@@ -29,7 +35,7 @@ export function AIPanel({
       {cta && (
         <Link
           href={cta.href}
-          className="press mt-0.5 inline-flex w-fit items-center rounded-lg bg-white/10 px-3 py-2 t-body font-extrabold text-ai-accent no-underline"
+          className="press mt-0.5 inline-flex w-fit items-center rounded-lg bg-white/10 px-3 py-2 t-body font-bold text-ai-accent no-underline"
         >
           {cta.label} ›
         </Link>

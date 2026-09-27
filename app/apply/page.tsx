@@ -1,18 +1,16 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ApplyDailyStrip } from "./ApplyDailyStrip";
+import { ApplyDailyStrip, applyWeek, loadApplyDaily } from "./ApplyDailyStrip";
 import { PageShell } from "@/app/components/PageShell";
-import { Icon } from "@/app/components/Icon";
-import { AdZone } from "@/app/components/ads/AdZone";
 import { searchApplyhome } from "@/lib/applyhome/applyhome-search";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
-import { TownHero } from "@/app/town/TownHero";
+import { TownHero, TownSources } from "@/app/town/TownHero";
 import { THEME_APPLY } from "@/lib/theme/presets";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { logger } from "@/lib/log";
 import { ApplySearchClient } from "./ApplySearchClient";
 import type { ApplyInitialResult } from "./ApplySearchClient";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 const APPLYHOME_URL = "https://www.applyhome.co.kr";
 
@@ -43,7 +41,13 @@ export const metadata: Metadata = {
    - 검색·탭·더보기는 이미 완성돼 있던 /api/applyhome/search 를 배선한 것(ApplySearchClient). */
 
 /* 2026-07-27 디자인 고도화(#225) — /supply(입주 물량)·/auctions(공매 물건) 수준으로 올린다.
-   바꾼 것: 테마 래핑, seoAlternates, 실패 원인 보존, 카테고리 연동 사이드, 요약 타일(클라이언트). */
+   바꾼 것: 테마 래핑, seoAlternates, 실패 원인 보존, 카테고리 연동 사이드, 요약 타일(클라이언트).
+
+   [v4] "한 화면 한 가지" — 가운데 한 줄(760px): 머리(제목 + 7일 접수 수 + "청약 캘린더 보기") → 카테고리 탭 →
+   앞으로 7일 접수(1px 선 행) → 주인공: 경쟁률·특별공급 검색과 표 → 맨 끝 "데이터 출처" 접힘 → 수익 문구 고지.
+   지운 것: 네이비 히어로 · 본문 h2 + 출처 부제 · 칩 두 개(캘린더 → 머리, 청약홈 → 데이터 출처) · 파랑 안내 상자 ·
+   오른쪽 사이드("이 숫자를 읽는 법" → 데이터 출처) · 하우스 광고(AdZone) · 요약 타일 3칸(클라이언트).
+   요약 타일(클라이언트) 의 v4 정리는 ApplySearchClient 주석. */
 
 /**
  * 구 lib(청약홈 odcloud)를 서버 컴포넌트에서 직접 호출 — 초기 화면용.
@@ -63,154 +67,77 @@ async function getInitialPayload(): Promise<ApplyInitialResult> {
   }
 }
 
-/* 연동(#225) — 청약은 단독으로 보지 않는다. 같은 지역의 입주 물량(공급 압력),
-   공매 물건(가격 하단), 정비사업(미래 공급)을 같이 봐야 판단이 선다. */
-const CROSS_LINKS: { href: string; icon: string; label: string; desc: string }[] = [
-  {
-    href: "/supply",
-    icon: "calendar",
-    label: "입주 물량",
-    desc: "같은 지역에 언제 몇 세대가 들어오는지",
-  },
-  {
-    href: "/auctions",
-    icon: "gavel",
-    label: "공매 물건",
-    desc: "공매로 나온 물건과 감정가",
-  },
-  {
-    href: "/redevelopment",
-    icon: "map",
-    label: "정비사업 지도",
-    desc: "재건축·재개발 진행 단계",
-  },
-  /* [994] "단지 Q&A"(/qna) 제거 — Q&A 는 보관(비노출, 992) */
-];
+/* 연동(#225) 의 CROSS_LINKS(입주 물량·공매·정비사업 아이콘 3개 나열)는 [1012] 에서 뺐다 —
+   "아이콘 3개 나열 섹션"은 AI 신호 5번이고, 같은 세 입구가 바로 위 카테고리 줄(TownCategoryNav)에
+   숫자 없이 서 있는 것과 중복이었다. */
 
 /* H1 — 이 자리에는 "AD / AdSense 320×64" 라고 적힌 점선 상자가 있었다.
    개발용 자리표시자가 그대로 프로덕션에 나가 있던 것으로, 사용자에게는
    광고가 실릴 자리가 아니라 **깨진 광고**로 보인다. 실제 슬롯
    (`app/components/ads/AdSlot.tsx`)으로 교체한다 — 등록 배너가 있으면 배너를,
-   없으면 하우스 광고를, 둘 다 없으면 `null` 을 반환해 **빈 상자를 남기지 않는다.** */
+   없으면 하우스 광고를, 둘 다 없으면 `null` 을 반환해 **빈 상자를 남기지 않는다.**
+   [v4 · 규칙 9] 그 슬롯(AdZone)도 이 화면에서 뺐다 — 자사 안내 카드는 주 화면에 두지 않는다. */
 
 export default async function ApplyPage() {
-  const initial = await getInitialPayload();
+  /* [v4] 오늘의 청약(캘린더 요약·최근 경쟁률)은 페이지가 한 번 읽어 머리 사실 줄과 목록이 같은 값을 쓴다 */
+  const [initial, daily] = await Promise.all([getInitialPayload(), loadApplyDaily()]);
   // 유료 플랜 광고 제거(H4) — 이 페이지는 force-dynamic 이라 세션을 읽어도 비용이 없다
   /* ISR 전환(2026-08-10): getAdViewer(세션 접근)는 페이지를 동적으로 되돌린다.
      광고 숨김은 plan={null} 경로의 AdFreeGate(클라이언트)가 처리. */
+  /* [v4 · 규칙 9] 하우스 광고(AdZone)는 이 화면에서 뺐다 — 위 주석은 기록으로 남긴다. */
+  const week = applyWeek(daily.cal);
+  /* 아래 청약홈 경쟁률 표가 첫 화면에 결과를 그리는가 — 그러면 저장소의 "최근 발표 경쟁률"은 싣지 않는다(같은 사실은 한 번) */
+  const searchShowsRows = initial.ok && initial.payload.mode === "live" && (initial.payload.items?.length ?? 0) > 0;
 
   return (
-    /* [970 · C-28] 다른 동네이야기 카테고리와 같은 머리(브레드크럼 "동네이야기 › …" +
-       카테고리 줄 + TownPageHead). /qna 와 함께 통일. */
-    <PageShell breadcrumb="동네이야기 › 청약 센터" wide>
-      {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
-      <TownHero href="/apply" />
-      <TownCategoryNav stick />
+    /* [970 · C-28] 다른 동네이야기 카테고리와 같은 머리. [v4] 브레드크럼 문자열("동네이야기 › 청약 센터")은
+       바로 아래 제목·카테고리 탭과 같은 말이라 뺐다(같은 사실은 한 번). */
+    <PageShell>
+      <div className="mx-auto w-full max-w-[760px]">
+        {/* [v4 · 규칙 1] 머리 — 제목 + 사실 한 줄(앞으로 7일 접수 시작·마감 수, 0 이면 빠진다) + 작은 "청약 캘린더 보기"
+            (카탈로그 heroCta — 예전 본문 칩 "청약 캘린더 보기"·스트립 "날짜별 캘린더 보기"와 같은 곳이라 하나로) */}
+        <TownHero
+          href="/apply"
+          stats={[
+            { label: "7일 안 접수 시작", value: week.starts, unit: "건" },
+            { label: "마감", value: week.ends, unit: "건" },
+          ]}
+        />
+        {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
+        <TownCategoryNav stick />
 
-      <div style={THEME_APPLY}>
-        {/* 상단 CTA — 예전의 정적 탭(전체·예정·접수 중·지난 청약)은 클릭해도 아무
-            동작이 없는 장식이라 제거했다. 실동작 탭(경쟁률/특별공급)은 아래 검색 영역에 있다. */}
-        <div className="rise-in mt-4 mb-4 flex flex-wrap items-center gap-2">
-          <h2 className="t-section text-ink">
-            청약 경쟁률 · 특별공급{" "}
-            <span className="t-sub font-bold text-primary">청약홈 실데이터</span>
-          </h2>
-          <div className="flex-1" />
-          {/* [개선 #17] 접수 일정 캘린더 — 접수 시작·마감을 날짜별로 */}
-          <Link
-            href="/apply/calendar"
-            className="glass press rounded-full px-3.5 py-2 text-xs font-bold text-primary no-underline"
-          >
-            📅 청약 캘린더
-          </Link>
-          <a
-            href={APPLYHOME_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="glass press rounded-full px-3.5 py-2 text-xs font-bold text-primary no-underline"
-          >
-            청약홈 공고 보기 ↗
-          </a>
-        </div>
+        <div style={THEME_APPLY} className="flex flex-col gap-8">
+          {/* [994 · D4] 오늘의 청약 — 매일 적재 저장소(기준일 표기). 검색보다 먼저, 사실이 먼저. */}
+          <ApplyDailyStrip data={daily} showCompetition={!searchShowsRows} />
 
-        {/* 정직 안내 — 이 페이지의 표는 전부 청약홈 공공데이터 실데이터 */}
-        <div className="rise-in mb-4 rounded-xl bg-primary-soft px-4 py-3 t-sub text-primary">
-          경쟁률·특별공급 표는 <b>청약홈(한국부동산원) 공공데이터</b>예요. 접수 일정·공고 원문·청약
-          신청은{" "}
-          <a
-            href={APPLYHOME_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block py-[5px] font-bold text-primary underline"
-          >
-            청약홈(applyhome.co.kr)
-          </a>
-          에서 확인하세요. 당첨 가능성·안전마진 같은 <b>예측치는 이 화면에서 만들지 않습니다.</b>
-        </div>
-
-        {/* [994 · D4] 오늘의 청약 — 매일 적재 저장소(기준일 표기). 검색보다 먼저, 사실이 먼저. */}
-        <ApplyDailyStrip />
-
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-          {/* 본문 — 청약홈 실데이터 검색 (경쟁률/특별공급 탭 + 지역·단지명 + 더보기) */}
+          {/* 주인공 — 청약홈 실데이터 검색(경쟁률/특별공급 밑줄 탭 + 지역·단지명 + 표 + 더보기). 채움 파랑은 [공고 검색] 하나 */}
           <ApplySearchClient initial={initial} />
 
-          {/* 우측 사이드 */}
-          <aside className="flex flex-col gap-3.5">
-            <div className="rise-in-3 card flex flex-col gap-2 rounded-[18px] p-[18px]">
-              <div className="flex items-center gap-2 t-body font-extrabold text-ink">
-                <Icon name="lightbulb" className="h-4 w-4 text-primary" />이 숫자를 읽는 법
-              </div>
-              <p className="t-sub text-text-2">
-                경쟁률은 <b>공고 · 주택형(타입) · 순위</b>별로 제공돼요. 그래서 같은 단지가 타입 수만큼
-                여러 줄로 보이는 게 정상이고, 한 줄의 경쟁률은 그 타입 하나의 경쟁률이에요.
-              </p>
-              {/* [1011] "청약홈 분양정보(상세) API 승인 대기 상태라" 를 걷었다(소유자 지시) —
-                  어느 API 가 승인 대기인지는 운영 쪽 사정이고, 읽는 사람에게 필요한 사실은
-                  "이 행은 단지명을 아직 못 받았다"와 "지어내지 않는다" 둘이다. */}
-              <p className="t-sub text-text-2">
-                단지명이 &ldquo;단지명 미제공&rdquo;으로 표시되는 행은 아직 단지명을 확보하지 못하고
-                공고 번호만 있는 경우예요 — 타입코드를 단지명처럼 보여드리지 않아요.
-              </p>
-              <p className="t-sub text-text-3">
-                출처: 청약홈(한국부동산원) 공공데이터포털 · 조회 시점 기준이며 실제 공고·결과는 청약홈
-                원문이 우선합니다.
-              </p>
-            </div>
+          {/* [v4 · 규칙 3] 예전 파랑 안내 상자("경쟁률·특별공급 표는 청약홈 공공데이터예요 …")와 오른쪽 사이드
+              카드("이 숫자를 읽는 법" 세 문단)를 맨 끝 "데이터 출처" 접힘 하나로 모았다 — 문장은 사실 명사로 줄였다 */}
+          <TownSources>
+            <p>경쟁률·특별공급·접수 일정 — 청약홈(한국부동산원) 공공데이터 · 조회 시점 기준 · 실제 공고·결과는 청약홈 원문 우선</p>
+            <p>경쟁률은 공고 · 주택형(타입) · 순위별 — 같은 단지가 타입 수만큼 여러 줄, 한 줄 = 그 타입 하나의 경쟁률</p>
+            {/* [1011] "청약홈 분양정보(상세) API 승인 대기 상태라" 를 걷었다(소유자 지시) — 읽는 사람에게 필요한 사실은
+                "이 행은 단지명을 아직 못 받았다"와 "지어내지 않는다" 둘이다. */}
+            <p>&ldquo;단지명 미제공&rdquo; 행 — 단지명 미확보 · 공고 번호만 있음(타입코드를 단지명처럼 보이지 않음)</p>
+            <p>당첨 가능성·안전마진 같은 예측치 없음</p>
+            <p>
+              접수 일정·공고 원문·청약 신청 —{" "}
+              <a
+                href={APPLYHOME_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="tap-line font-bold text-primary no-underline"
+              >
+                청약홈(applyhome.co.kr) ↗
+              </a>
+            </p>
+          </TownSources>
 
-            <div className="rise-in-4 card flex flex-col gap-1.5 rounded-[18px] p-[18px]">
-              <div className="t-body font-extrabold text-ink">함께 보면 좋아요</div>
-              <p className="mb-1 t-sub text-text-3">
-                청약은 단독으로 보기 어려워요. 같은 지역의 공급·가격 하단도 같이 확인해 보세요.
-              </p>
-              {CROSS_LINKS.map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className="press flex items-center gap-2.5 rounded-xl px-2 py-2 no-underline hover:bg-primary-soft"
-                >
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary-soft">
-                    <Icon name={l.icon} className="h-4 w-4 text-primary" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block t-body font-bold text-ink">{l.label}</span>
-                    <span className="block truncate t-sub text-text-3">{l.desc}</span>
-                  </span>
-                </Link>
-              ))}
-            </div>
-
-            <div className="rise-in-5">
-              <AdZone
-                placement="community_feed"
-                seed={0}
-                plan={null}
-              />
-            </div>
-          </aside>
+          {/* 수익 문구 미기재 방침(소유자 방침 2026-08-11) — 청약·분양 표면 고지 */}
+          <ComplianceNotice variant="market" />
         </div>
-        {/* 수익 문구 미기재 방침(소유자 방침 2026-08-11) — 청약·분양 표면 고지 */}
-        <ComplianceNotice variant="market" className="mt-6" />
       </div>
     </PageShell>
   );

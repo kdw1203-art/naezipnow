@@ -130,7 +130,7 @@ export default async function TownGroupsPage() {
       <TownCategoryNav stick />
 
       {loadFailed ? (
-        <div className="rise-in-2 card flex flex-col items-center gap-3 rounded-[18px] px-6 py-12 text-center">
+        <div className="rise-in-2 card flex flex-col items-center gap-3 px-6 py-12 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
             <Icon name="warning" size={22} />
           </div>

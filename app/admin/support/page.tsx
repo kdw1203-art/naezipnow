@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 
 
 const darkCard =
-  "flex flex-col gap-3 rounded-[20px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-5";
+  "flex flex-col gap-3 rounded-3xl border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-5";
 
 const STATUS_TONE_DARK: Record<TicketStatus, string> = {
   open: "bg-[rgba(126,162,255,.16)] text-ai-accent",
@@ -88,12 +88,12 @@ export default async function AdminSupportPage({
       </nav>
 
       {failed ? (
-        <div className="rise-in-2 rounded-[14px] border border-[#7a2a2a] bg-[#2a1616] px-4 py-4 t-body leading-relaxed text-[#ffb4a8]">
+        <div className="rise-in-2 rounded-lg border border-[#7a2a2a] bg-[#2a1616] px-4 py-4 t-body leading-relaxed text-[#ffb4a8]">
           문의 목록을 불러오지 못했어요 — 문의가 없다는 뜻이 아닙니다. 서비스 역할 키·support_tickets
           테이블을 확인하세요. 그동안 접수된 문의는 운영 메일함과 관리자 알림함에도 남아 있어요.
         </div>
       ) : tickets.length === 0 ? (
-        <div className="rise-in-2 rounded-[14px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] px-4 py-8 text-center">
+        <div className="rise-in-2 rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] px-4 py-8 text-center">
           <p className="t-body font-bold text-white">
             {status ? `${TICKET_STATUS_LABEL[status]} 상태의 문의가 없어요` : "아직 접수된 문의가 없어요"}
           </p>
@@ -130,7 +130,7 @@ export default async function AdminSupportPage({
                     <span>{t.userEmail ? `회원 · ${t.userEmail}` : "비회원"}</span>
                   </div>
                 </div>
-                <p className="whitespace-pre-wrap rounded-[10px] bg-[rgba(255,255,255,.05)] px-3.5 py-3 t-body leading-[1.7] text-[#e6ebf3]">
+                <p className="whitespace-pre-wrap rounded-lg bg-[rgba(255,255,255,.05)] px-3.5 py-3 t-body leading-[1.7] text-[#e6ebf3]">
                   {t.message}
                 </p>
                 {(() => {
@@ -138,14 +138,14 @@ export default async function AdminSupportPage({
                   return orderId ? (
                     <Link
                       href={`/admin/payments?order=${encodeURIComponent(orderId)}`}
-                      className="inline-flex min-h-10 items-center self-start rounded-[10px] border border-[rgba(255,255,255,.14)] px-3 t-sub font-bold !text-ai-accent"
+                      className="inline-flex min-h-10 items-center self-start rounded-lg border border-[rgba(255,255,255,.14)] px-3 t-sub font-bold !text-ai-accent"
                     >
                       결제 관리에서 주문 {orderId} 보기 · 환불 처리 →
                     </Link>
                   ) : null;
                 })()}
                 {t.adminReply && (
-                  <div className="rounded-[10px] border-l-[3px] border-ai-accent bg-[rgba(126,162,255,.08)] px-3.5 py-3">
+                  <div className="rounded-lg border-l-[3px] border-ai-accent bg-[rgba(126,162,255,.08)] px-3.5 py-3">
                     <div className="mb-1 t-caption font-extrabold uppercase tracking-wide text-ai-accent">
                       답변{t.repliedAt ? ` · ${formatKstDateTime(t.repliedAt)}` : ""}
                       {t.repliedBy ? ` · ${t.repliedBy}` : ""}

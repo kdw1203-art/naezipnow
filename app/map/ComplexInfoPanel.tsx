@@ -1,7 +1,10 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import { RingLoader } from "@/app/components/ui/BrandLoader";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+/* [v4 · 부품 표] 목록 행은 단지 허브의 승인 시안 조각을 그대로 쓴다(새 행 부품을 만들지 않는다 — JS 없는 순수 조각) */
+import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 /* [1009 · C] TrendChart+Bars → 손가락으로 훑는 추세선(ScrubLineLazy — 따로 받는 청크) */
 import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
 import { Delta } from "@/app/components/num/Delta";
@@ -29,6 +32,11 @@ import { monthDeltaView, monthDeltasLatestFirst, ymRangeShort } from "@/lib/comp
      전월세(새) → 스펙(없는 값은 이유 한 줄로 묶음) → 임장노트(새) → 지역 대비 →
      후기 → 이야기 → 인근.
    "시세" 라는 말은 쓰지 않는다 — 여기 숫자는 전부 국토부 실거래 신고분이다.
+
+   [v4 · 한 화면 한 가지] 머리(이름 + 사실 한 줄: 준공·세대수·주소) → 주인공 1개(매매 중앙값 t-display) →
+   요약 행(전세·월세·전세가율·동네 대비·임장노트·후기·매물 — SummaryRow) → 추이 → 면적대·월별·이야기·인근(구분선 행) →
+   행동(테두리) → 맨 끝 <details> 데이터 출처(출처·신고 지연·단지 정보·빈 자료) · 바닥 채움 파랑 "이 단지 보기" 하나.
+   카드 안 카드·옅은 상자·배지·설명 문장은 지웠다. 조회·계산은 그대로다.
    ============================================================ */
 
 interface ComplexDetail {
@@ -265,10 +273,11 @@ function PriceTrend({ tx, name }: { tx: TxRow[]; name: string }) {
   /* 마지막 달이 1~2건이면 머리 숫자(ScrubLine — 최신 값 · 기간 시작 대비)가 그 한두 건에 끌려간다 — 허브와 같은 안내 */
   const lastI = values.reduce<number>((acc, v, i) => (v != null ? i : acc), -1);
   const lastFew = lastI >= 0 && counts[lastI] < 3 ? { ym: yms[lastI], n: counts[lastI] } : null;
+  /* [v4 · 규칙 5] 테두리 카드 → 섹션(제목 한 줄 + 오른쪽 사실) · 안내 상자 → 캡션 한 줄 */
   return (
-    <div className="flex flex-col gap-2 rounded-[14px] border border-line bg-surface px-4 py-3">
+    <section className="flex flex-col gap-2">
       <div className="flex items-center gap-0.5">
-        <span className="t-section text-ink">실거래가 추이</span>
+        <h3 className="t-section text-ink">실거래가 추이</h3>
         <Explain
           term="silgeoraega"
           title="실거래가 추이"
@@ -284,8 +293,8 @@ function PriceTrend({ tx, name }: { tx: TxRow[]; name: string }) {
         </span>
       </div>
       {lastFew && (
-        <p className="rounded-lg bg-bg px-2.5 py-1.5 t-caption text-text-2">
-          최근 달({lastFew.ym.slice(2, 4)}.{lastFew.ym.slice(4, 6)})은 거래 {lastFew.n}건이라 그 값에 크게 흔들려요.
+        <p className="t-caption text-text-2">
+          최근 달({lastFew.ym.slice(2, 4)}.{lastFew.ym.slice(4, 6)}) 거래 {lastFew.n}건 · 값이 크게 흔들림
         </p>
       )}
       <ScrubLineLazy
@@ -310,9 +319,9 @@ function PriceTrend({ tx, name }: { tx: TxRow[]; name: string }) {
         defaultRange="all"
         height={150}
         ariaLabel={`${name} 월평균 실거래가 추이`}
-        footnote="국토교통부 실거래가(해제 신고 제외) · 월별 평균 · 면적 혼합 · 속 빈 점은 그 달 거래 1~2건"
+        footnote="국토교통부 실거래가(해제 제외) · 월평균 · 면적 혼합 · 속 빈 점 = 거래 1~2건"
       />
-    </div>
+    </section>
   );
 }
 
@@ -420,17 +429,18 @@ function WatchlistToggle({
       disabled={busy}
       aria-pressed={watching === true}
       aria-busy={busy}
-      className={`press flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border p-[11px] text-xs font-extrabold transition-colors disabled:opacity-60 ${
+      /* [v4] 반경 12 → 8 · 12px 글자 → t-sub · 켜짐 = 한지 + 남색(그대로) · 문구 한 줄로 짧게 */
+      className={`press flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border p-[11px] t-sub font-bold transition-colors disabled:opacity-60 ${
         watching
-          ? "border-primary bg-primary-soft text-primary"
-          : "border-line bg-surface text-text-2"
+          ? "border-brand-hanji-ink bg-brand-hanji text-brand-hanji-ink"
+          : "border-line-strong bg-surface text-text-1"
       }`}
     >
       {/* [1009 · C] 하트 색이 "안 담음 = 빨강(text-danger)"이었다 — danger 는 오류 색이다. 담긴 상태만 채운 하트 */}
       <span key={pop} className={`inline-flex ${pop > 0 ? "njn-pop-once" : ""}`} aria-hidden="true">
         <Icon name="heart" size={14} className={watching ? "fill-current" : ""} />
       </span>
-      {busy ? "저장 중…" : watching ? "관심 단지 담김 · 알림 받는 중" : "관심 단지 담고 실거래 알림 받기"}
+      {busy ? "저장 중…" : watching ? "관심 단지 · 알림 받는 중" : "관심 단지 담기 · 실거래 알림"}
     </button>
   );
 }
@@ -443,66 +453,11 @@ const REVIEW_LABELS: { key: keyof Omit<ReviewSummary, "count">; label: string }[
   { key: "transport", label: "교통" },
 ];
 
-/* [1006] 판단 칩 색 — lib/inspection/decision.ts 의 4종. 토큰 클래스만 쓴다(다크 안전). */
-const DECISION_CHIP: Record<"buy" | "hold" | "pass" | "revisit", string> = {
-  buy: "bg-primary-soft text-primary",
-  hold: "bg-warning-soft text-warning",
-  pass: "bg-danger-soft text-danger",
-  revisit: "bg-bg text-text-2",
-};
+/** [v4] 머리 사실 줄이 이미 말하는 스펙 칸 */
+const HEAD_SPEC_LABELS = new Set(["세대수", "준공", "지역"]);
 
-function SectionHead({
-  title,
-  sub,
-  right,
-}: {
-  title: string;
-  sub?: string;
-  right?: ReactNode;
-}) {
-  return (
-    <div className="mb-2 flex items-end justify-between gap-2">
-      <div className="min-w-0">
-        <div className="t-body font-extrabold text-ink">{title}</div>
-        {sub ? <div className="mt-0.5 t-caption text-text-3">{sub}</div> : null}
-      </div>
-      {right}
-    </div>
-  );
-}
-
-/** [1006] 핵심 숫자 한 칸 — 값이 문장("대장 미연결")이면 작게, 숫자면 크게 */
-function KpiCell({
-  label,
-  value,
-  sub,
-  muted,
-  explain,
-}: {
-  label: string;
-  value: string;
-  sub?: string | null;
-  muted?: boolean;
-  /** [1009 · C] 라벨 옆 ⓘ(<Explain>) */
-  explain?: ReactNode;
-}) {
-  return (
-    <div className="min-w-0 rounded-xl border border-line bg-bg px-2.5 py-2">
-      <div className="flex items-center gap-0.5 t-caption text-text-3">
-        {label}
-        {explain}
-      </div>
-      <div
-        className={`mt-0.5 break-words ${
-          muted ? "t-sub font-bold text-text-2" : "t-section text-ink tabular-nums"
-        }`}
-      >
-        {value}
-      </div>
-      {sub ? <div className="mt-0.5 truncate t-caption text-text-3">{sub}</div> : null}
-    </div>
-  );
-}
+/* [v4 · 규칙 5·6] 판단 칩 색표(DECISION_CHIP)·섹션 머리(SectionHead)·핵심 숫자 칸(KpiCell)은 지웠다 —
+   머리 = 제목 한 줄 + 사실 한 줄, 주인공 = 매매 중앙값 하나(t-display), 나머지는 단지 허브와 같은 목록 행(SummaryRow). */
 
 export function ComplexInfoPanel({
   complexId,
@@ -567,7 +522,6 @@ export function ComplexInfoPanel({
   const rent = data?.rent ?? null;
   const notes = data?.notes ?? null;
   const tradeSummary = facts?.tradeSummary ?? null;
-  const summaryLine = data?.summaryLine ?? null;
   const latest = tx.length > 0 ? tx[tx.length - 1] : null;
   const recent = useMemo(() => [...tx].reverse().slice(0, 14), [tx]);
   /* [1009 · C 리뷰] 줄마다 등락의 기준 — 바로 더 이른 **줄**(거래 있던 달)과 비교하므로 가운데 달이 비면 전월이 아니다.
@@ -604,18 +558,9 @@ export function ComplexInfoPanel({
     ? `/notes/${encodeURIComponent(focusNoteId)}`
     : null;
 
-  /* ── [1006] 핵심 숫자 4칸 ─────────────────────────────────────────────
-     매매 중앙(12개월) / 전세 중앙(12개월) / 세대수 / 준공.
-     없는 값은 "—" 가 아니라 **왜 없는지**(대장 미연결·신고 없음·조회 실패)를 쓴다. */
-  const gapByKey = new Map((facts?.completeness.missing ?? []).map((g) => [g.key, g]));
-  const shortGap = (key: string, fallback: string): string => {
-    const g = gapByKey.get(key);
-    if (!g) return fallback;
-    if (g.reason === "master_unlinked") return "대장 미연결";
-    if (g.reason === "master_empty") return "대장에 없음";
-    if (g.reason === "fetch_failed") return "조회 실패";
-    return fallback;
-  };
+  /* ── [1006] 핵심 숫자 ─────────────────────────────────────────────
+     매매 중앙(12개월) / 전세 중앙(12개월). 없는 값은 "—" 가 아니라 **왜 없는지**(신고 없음·조회 실패)를 쓴다.
+     [v4] 세대수·준공 칸은 머리 사실 줄로 올렸다(없으면 그 토막을 뺀다 — 빠진 이유는 맨 끝 "데이터 출처"의 비어 있는 자료). */
 
   const tradeKpi = (() => {
     if (!data) return { value: loading ? "…" : "—", sub: null as string | null, muted: true };
@@ -643,7 +588,7 @@ export function ComplexInfoPanel({
         muted: false,
       };
     }
-    return { value: `${tradeSummary.count}건`, sub: "표본 3건 미만 — 중앙값 생략", muted: true };
+    return { value: `${tradeSummary.count}건`, sub: "표본 3건 미만 · 중앙값 생략", muted: true };
   })();
 
   const rentKpi = (() => {
@@ -655,7 +600,7 @@ export function ComplexInfoPanel({
       return { value: wonLabel(rent.jeonseMedianKrw) ?? "—", sub: `전세 ${rent.jeonseCount}건`, muted: false };
     }
     if (rent.jeonseCount > 0) {
-      return { value: `전세 ${rent.jeonseCount}건`, sub: "표본 3건 미만 — 중앙값 생략", muted: true };
+      return { value: `전세 ${rent.jeonseCount}건`, sub: "표본 3건 미만 · 중앙값 생략", muted: true };
     }
     return {
       value: "12개월 전세 없음",
@@ -663,11 +608,6 @@ export function ComplexInfoPanel({
       muted: true,
     };
   })();
-
-  const chips = [
-    listingCount != null && listingCount > 0 ? `매물 ${listingCount}건` : null,
-    posts.length > 0 ? `이야기 ${posts.length}건` : null,
-  ].filter((v): v is string => Boolean(v));
 
   const specRows = [
     complex?.households
@@ -694,7 +634,10 @@ export function ComplexInfoPanel({
     /* [1009 · C] "유형 아파트"는 데이터가 아니라 상수(실거래 적재가 아파트만 받는다)라 뺐다 — 허브 단지 정보와 같은 규칙 */
     complex?.kapt_code ? { label: "단지코드", value: complex.kapt_code } : null,
     cityDistrict ? { label: "지역", value: cityDistrict } : null,
-  ].filter((v): v is { label: string; value: string } => Boolean(v));
+  ]
+    /* [v4 · 규칙 8] 머리 사실 줄에 이미 있는 칸(세대수·준공·지역)은 "데이터 출처" 의 단지 정보에서 되풀이하지 않는다 */
+    .filter((v): v is { label: string; value: string } => Boolean(v))
+    .filter((r) => !HEAD_SPEC_LABELS.has(r.label));
 
   /* [1006] 없는 스펙은 줄마다 "—" 를 나열하지 않고 **이유별로 한 줄**로 묶는다.
      대장 미연결(소규모 단지엔 대장이 없다)과 대장엔 있는데 값이 빈 것은 다른 사실이다. */
@@ -732,6 +675,21 @@ export function ComplexInfoPanel({
     sideFailed.has("tradeWindow") ? "매매 12개월 요약" : null,
   ].filter(Boolean);
 
+  /* [v4 · 규칙 1] 머리 사실 한 줄 — 숫자·장소만(있는 값만). 예전 머리의 요약 문장(summaryLine — 아래 숫자를 한 번 더
+     이어 적은 문장)과 "요약할 숫자가 아직 없어요 — …" 안내는 지웠다(규칙 3·8). */
+  const headFacts = [
+    complex?.build_year ? `${complex.build_year}년 준공` : null,
+    complex?.households ? `${complex.households.toLocaleString("ko-KR")}세대` : null,
+    address || null,
+  ].filter(Boolean);
+  const regionHubId = cityDistrict ? regionIdForName(cityDistrict) : null;
+  const reviewLine =
+    reviews && reviews.count > 0
+      ? REVIEW_LABELS.filter(({ key }) => reviews[key] != null)
+          .map(({ key, label }) => `${label} ${reviews[key]}`)
+          .join(" · ")
+      : "";
+
   return (
     <div
       className="fixed inset-0 z-[48] flex items-end justify-center px-0 py-0 sm:items-center sm:px-4 sm:py-6"
@@ -749,210 +707,237 @@ export function ComplexInfoPanel({
           지도 딤과 겹쳐, backdrop-filter 가 약한 환경에서 패널이 탁한 어둠으로
           렌더돼 "보기가 힘들다". 시트/모달은 불투명이 정답 — bg-surface 로 고정해
           어떤 GPU·브라우저에서도 같은 흰 패널을 보장한다. */}
-      <aside className="rise-in relative z-10 flex max-h-[min(94dvh,960px)] w-full max-w-[820px] flex-col overflow-hidden rounded-t-[22px] bg-surface shadow-[0_28px_70px_rgba(16,28,54,.34)] sm:rounded-[24px]">
-        {/* 머리글 — 이름·주소·요약 한 줄 (핵심 숫자 4칸은 스크롤 본문 맨 위) */}
-        <div className="relative border-b border-[rgba(16,28,54,.06)] bg-gradient-to-br from-primary-soft via-surface to-bg px-5 pb-3.5 pt-4">
+      {/* [1012 · 규칙 2] 70px 짜리 임의 그림자 → --shadow-lg(시트·모달 허용, 알파 12%)
+          [v4 · 규칙 12] 한 줄로 읽히게 폭 820 → 640 */}
+      <aside className="lq-scope rise-in relative z-10 flex max-h-[min(94dvh,960px)] w-full max-w-[640px] flex-col overflow-hidden rounded-t-3xl bg-surface shadow-[var(--shadow-lg)] sm:rounded-3xl">
+        {/* 머리 — 이름 한 줄 + 사실 한 줄(준공 · 세대수 · 주소). [1012 · 규칙 3] 그라데이션 없음 · 1px --line */}
+        <div className="border-b border-line bg-surface px-5 pb-3 pt-4">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="truncate t-title tracking-tight text-ink sm:t-title">
-                  {name}
-                </h2>
+                <h2 className="truncate t-title text-ink">{name}</h2>
                 {loading && <RingLoader ink label="단지 정보 불러오는 중" />}
               </div>
-              {address ? (
-                <div className="mt-0.5 truncate t-sub text-text-2">{address}</div>
+              {headFacts.length > 0 ? (
+                <p className="mt-0.5 truncate t-sub text-text-3">{headFacts.join(" · ")}</p>
               ) : null}
             </div>
             <button
               type="button"
               onClick={onClose}
               aria-label="패널 닫기"
-              /* [966] 표면 토큰 — 다크 모드에서 흰 원 위에 밝은 글자가 얹히지 않게 */
-              className="relative ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface/70 t-body text-text-3 after:absolute after:-inset-1.5 after:content-['']"
+              className="-mr-2 flex h-10 w-10 shrink-0 items-center justify-center t-body text-text-3"
             >
-              ✕
+              {/* [1012 · 규칙 4] ✕ 활자 → 선 아이콘 x */}
+              <Icon name="x" size={16} />
             </button>
           </div>
-
-          {/* [1006] 요약 한 줄 — 서버가 있는 숫자만 이어 만든 문장(facts.summaryLine).
-              없는 항목은 문장에서 빠지므로 빈 괄호가 생기지 않는다. */}
-          {summaryLine ? (
-            <p className="mt-2 break-words t-sub font-semibold leading-snug text-ink">
-              {summaryLine}
-            </p>
-          ) : data && facts && !loading ? (
-            <p className="mt-2 t-sub text-text-3">
-              요약할 숫자가 아직 없어요 — 최근 12개월 실거래·세대수·준공 중 하나라도 있으면 여기에 적혀요.
-            </p>
-          ) : null}
         </div>
 
-        <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-3.5 sm:px-5">
-          {/* [1006] 핵심 숫자 4칸 — 머리글이 아니라 스크롤 본문 맨 위에 둔다. 390px 에서 머리글이
-              300px 을 넘으면 본문이 한 화면의 절반도 못 쓴다(하네스 실측). 값이 없으면 "—" 대신 이유.
-              대표행이 없거나(not_found) 못 읽었으면 칸 자체를 그리지 않는다 — "—" 네 개는 정보가 아니다. */}
+        <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-5 py-4">
+          {/* [v4 · 규칙 2] 주인공 — 매매 중앙값 하나(t-display) + 사실 한 줄. 예전 핵심 숫자 4칸(매매·전세·세대수·준공)은
+              매매만 여기 남기고 전세는 아래 행, 세대수·준공은 머리 사실 줄로 갔다.
+              대표행이 없거나(not_found) 못 읽었으면 그리지 않는다 — "—" 는 정보가 아니다. */}
           {(loading || facts) && (
-            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-              <KpiCell
-                label="매매 중앙 · 12개월"
-                value={tradeKpi.value}
-                sub={tradeKpi.sub}
-                muted={tradeKpi.muted}
-                explain={
-                  <Explain
-                    title="매매 중앙값 · 12개월"
-                    how={[
-                      "최근 12개월 매매 실거래 중 거래가 가장 많은 면적대의 가운데 값(중앙값)이에요 — 한두 건의 특이 거래에 평균보다 덜 끌려가요.",
-                      "그 면적대가 3건이 안 되면 면적을 섞은 전체 중앙값을, 전체도 3건이 안 되면 건수만 적어요.",
-                    ]}
-                    source="국토교통부 실거래가"
-                  />
-                }
-              />
-              <KpiCell label="전세 중앙 · 12개월" value={rentKpi.value} sub={rentKpi.sub} muted={rentKpi.muted} />
-              <KpiCell
-                label="세대수"
-                value={
-                  complex?.households
-                    ? complex.households.toLocaleString("ko-KR")
-                    : data && facts
-                      ? shortGap("households", "자료 없음")
-                      : loading
-                        ? "…"
-                        : "—"
-                }
-                sub={complex?.households ? (complex.building_count ? `${complex.building_count}동` : null) : null}
-                muted={!complex?.households}
-              />
-              <KpiCell
-                label="준공"
-                value={complex?.build_year ? `${complex.build_year}년` : data && facts ? "자료 없음" : loading ? "…" : "—"}
-                sub={complex?.build_year ? `${new Date().getFullYear() - complex.build_year}년차` : null}
-                muted={!complex?.build_year}
-              />
-            </div>
-          )}
-
-          {chips.length > 0 && (
-            <div className="-mt-1 flex flex-wrap gap-1">
-              {chips.map((c) => (
-                <span
-                  key={c}
-                  className="chip-soft rounded-full chip-pad t-caption font-bold text-text-2"
-                >
-                  {c}
+            <div>
+              <div className={tradeKpi.muted ? "t-section text-ink" : "t-display text-ink tabular-nums"}>
+                {tradeKpi.value}
+              </div>
+              <p className="mt-1 flex flex-wrap items-center gap-x-1 t-sub text-text-3">
+                <span>
+                  매매 중앙 · 12개월{tradeKpi.sub ? ` · ${tradeKpi.sub}` : ""} · 국토교통부
                 </span>
-              ))}
+                <Explain
+                  title="매매 중앙값 · 12개월"
+                  how={[
+                    "최근 12개월 매매 실거래 중 거래가 가장 많은 면적대의 가운데 값(중앙값)이에요 — 한두 건의 특이 거래에 평균보다 덜 끌려가요.",
+                    "그 면적대가 3건이 안 되면 면적을 섞은 전체 중앙값을, 전체도 3건이 안 되면 건수만 적어요.",
+                  ]}
+                  source="국토교통부 실거래가"
+                />
+              </p>
             </div>
           )}
 
           {failed && (
-            <div className="rounded-xl border border-danger-border bg-danger-soft px-3.5 py-2.5 text-xs text-text-2">
-              단지 상세를 불러오지 못했어요. 전체 화면에서 다시 확인해 주세요.
-            </div>
+            <p role="status" className="t-sub font-bold text-ink">
+              단지 상세 조회 실패 · 아래 &ldquo;이 단지 보기&rdquo;로 다시 열기
+            </p>
           )}
 
           {data?.mode === "not_found" && !failed && (
-            <div className="rounded-xl bg-bg px-3.5 py-2.5 text-xs text-text-2">
-              단지 마스터와 아직 연결되지 않았어요. 실거래·이야기는 아래를 참고해 주세요.
-            </div>
+            <p className="t-sub text-text-2">단지 대장 미연결 · 실거래·이야기만 표시</p>
           )}
 
+          {/* [v4] 이어보기 — 파란 옅은 상자 + 설명 문장 + 채움 파랑 "AI 정리 보기" → 목록 행 두 줄 */}
           {focusNoteHref && (
-            <div className="rounded-2xl border border-primary/25 bg-primary-soft/60 px-3.5 py-3">
-              <div className="t-sub font-extrabold text-ink">임장노트에서 이어보기</div>
-              <p className="mt-0.5 t-sub text-text-2">
-                이 단지를 노트·AI와 함께 지도에서 비교하고 있어요.
-              </p>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <Link
-                  href={focusNoteHref}
-                  className="rounded-xl bg-surface px-2.5 py-2 text-center t-sub font-extrabold text-primary shadow-sm"
-                >
-                  노트 보기
-                </Link>
-                <Link
-                  href={analysisHref}
-                  className="rounded-xl bg-primary px-2.5 py-2 text-center t-sub font-extrabold text-white"
-                >
-                  AI 정리 보기
-                </Link>
-              </div>
-            </div>
+            <section>
+              <h3 className="t-section text-ink">임장노트에서 이어보기</h3>
+              <ul data-tone="hanji" className="mt-1 divide-y divide-line">
+                <SummaryRow label="노트 보기" sub="이 단지로 들어온 노트" href={focusNoteHref} />
+                <SummaryRow label="AI 정리 보기" sub="그 노트의 AI 정리" href={analysisHref} />
+              </ul>
+            </section>
+          )}
+
+          {/* [v4 · 규칙 5·8] 요약 행 — 전월세 카드(전세·월세 상자 + 전세가율 상자) · 이 동네 대비 카드 · 후기 5칸 격자 ·
+              임장노트 카드 · 매물/이야기 배지를 한 목록으로. 같은 숫자(전세 중앙)가 두 번(핵심 칸 + 전월세 카드) 나오던 것을 한 번으로. */}
+          {(facts || region || (reviews && reviews.count > 0) || (listingCount != null && listingCount > 0)) && (
+            <ul data-tone="blue" className="-mt-2 divide-y divide-line">
+              {facts &&
+                (rentKpi.muted ? (
+                  <SummaryRow
+                    label="전세 · 12개월"
+                    sub={[rentFailed ? "조회 실패(없음 아님)" : rentKpi.value, rentKpi.sub].filter(Boolean).join(" · ")}
+                  />
+                ) : (
+                  <SummaryRow label="전세 중앙 · 12개월" sub={rentKpi.sub ?? undefined} value={rentKpi.value} />
+                ))}
+              {facts && rent && rent.wolseCount > 0 && (
+                <SummaryRow
+                  label="월세 중앙 · 보증금/월"
+                  sub={`${rent.wolseCount}건${rent.wolseCount < 3 ? " · 표본 적음" : ""}`}
+                  value={`${wonLabel(rent.wolseMedianDepositKrw) ?? "—"}/${formatKrwWon(rent.wolseMedianMonthlyKrw)}`}
+                />
+              )}
+              {facts && (rent || rentFailed) && (
+                <SummaryRow
+                  label={
+                    <span className="inline-flex items-center gap-0.5">
+                      단지 전세가율
+                      <Explain
+                        term="jeonse-garyul"
+                        how={[
+                          "최근 6개월 전세 보증금 중앙값 ÷ 같은 기간 매매 거래가 중앙값 × 100이에요.",
+                          "전세·매매가 각각 3건 이상일 때만 계산해요. 면적은 가중하지 않아요.",
+                        ]}
+                        source="국토교통부 매매·전월세 실거래 신고"
+                      />
+                    </span>
+                  }
+                  sub={
+                    ratio
+                      ? `최근 ${ratio.windowMonths}개월 · 전세 ${ratio.jeonseCount}건 ÷ 매매 ${ratio.tradeCount}건 중앙`
+                      : (facts.jeonseRatioReason ?? "계산 안 함")
+                  }
+                  value={ratio ? `${ratio.pct}%` : undefined}
+                />
+              )}
+              {region && (
+                /* [1009 · C] 상승=파랑·하락=빨강으로 뒤집혀 있던 두 숫자(평균 대비·구 변동)를 <Delta> 로, 기준을 적는다 */
+                <SummaryRow
+                  label={
+                    <span className="inline-flex items-center gap-0.5">
+                      {region.district} 대비 ㎡당
+                      <Explain
+                        term="pyeongdanga"
+                        title="이 동네 대비(㎡당)"
+                        how={[
+                          "면적이 다른 집끼리 견주려고 평당가 대신 ㎡당 가격을 써요(㎡당 × 3.3058 = 평당).",
+                          "이 단지: 최근 매매 60건(전용면적이 있는 거래)마다 거래금액 ÷ 전용면적을 구해 평균했어요.",
+                          `${region.district} 평균: 한국부동산원 ${region.period ? ymLabel(region.period) : "최근"} 아파트 ㎡당 평균 매매가격이에요.`,
+                          `차이 = (이 단지 − ${region.district} 평균) ÷ ${region.district} 평균 × 100. 층·향·연식은 반영하지 않아요.`,
+                        ]}
+                        source="국토교통부 실거래가 · 한국부동산원"
+                      />
+                    </span>
+                  }
+                  sub={`이 단지 ${region.complexPerM2Manwon.toLocaleString("ko-KR")}만 · 평균 ${region.districtPerM2Manwon.toLocaleString("ko-KR")}만 · ${
+                    region.period ? ymLabel(region.period) : "최근"
+                  }`}
+                  value={<Delta pct={region.deltaPct} srContext={`${region.district} 평균보다`} flatLabel="비슷" />}
+                />
+              )}
+              {region && region.saleChangePct != null && (
+                <SummaryRow
+                  label={`${region.district} 매매가격`}
+                  sub={`전월 대비${region.jeonseRatio != null ? ` · 전세가율 ${region.jeonseRatio}%` : ""} · 한국부동산원`}
+                  value={<Delta pct={region.saleChangePct} srContext="전월보다" />}
+                />
+              )}
+              {region && region.saleChangePct == null && region.jeonseRatio != null && (
+                <SummaryRow label={`${region.district} 전세가율`} sub="한국부동산원" value={`${region.jeonseRatio}%`} />
+              )}
+              {facts && (
+                /* [1006] 임장노트 — 공개 노트 수 + 최신 1건(제목·판단). 0건이면 정직한 빈 상태.
+                   [v4] 판단 색 칩 → 보조 줄 글자 · 카드 머리의 채움 파랑 "이 단지 임장노트 쓰기" → 아래 행동 줄(테두리) 하나로 */
+                <SummaryRow
+                  label="임장노트"
+                  sub={
+                    notesFailed
+                      ? "조회 실패(없음 아님)"
+                      : notes?.latest
+                        ? [
+                            notes.latest.title,
+                            notes.latest.visitDate ? `방문 ${notes.latest.visitDate}` : null,
+                            notes.latest.decision ? notes.latest.decision.label : "판단 미기록",
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")
+                        : "공개 노트 없음"
+                  }
+                  value={!notesFailed && notes && notes.count > 0 ? `${notes.count.toLocaleString("ko-KR")}건` : undefined}
+                  href={!notesFailed && notes?.latest ? `/notes/${encodeURIComponent(notes.latest.id)}` : undefined}
+                />
+              )}
+              {reviews && reviews.count > 0 && (
+                <SummaryRow label="거주민 후기 · 5점" sub={reviewLine || undefined} value={`${reviews.count}건`} />
+              )}
+              {listingCount != null && listingCount > 0 && <SummaryRow label="등록 매물" value={`${listingCount}건`} />}
+            </ul>
           )}
 
           <PriceTrend tx={tx} name={name} />
 
-          {/* 면적대 — 전체 */}
+          {/* 면적대 — 전체. [v4] 배경 길이 막대(cell-bar)·옅은 상자 → 구분선 행(오른쪽 = 최근 한 건) */}
           {bands.length > 0 && (
-            <div className="rounded-[14px] border border-line bg-surface px-3.5 py-2.5">
-              <SectionHead title="면적대별 실거래" sub={`${bands.length}개 구간 · 국토부`} />
-              {/* 면적대 간 격차를 배경 길이로 먼저 보인다 — 숫자 네 줄을
-                  세로로 읽어야 "어느 평형이 비싼가"가 잡히던 자리. */}
-              <div className="overflow-hidden rounded-[10px] bg-bg">
-                {bands.map((b, i) => {
-                  const maxLatest = Math.max(1, ...bands.map((x) => x.latestManwon || 0));
-                  const w = Math.round(((b.latestManwon || 0) / maxLatest) * 100);
-                  return (
-                    <div
-                      key={b.label}
-                      className={`cell-bar row-hl flex items-center justify-between gap-2 px-3 py-2 t-sub text-primary ${
-                        i > 0 ? "border-t border-line" : ""
-                      }`}
-                      style={{ ["--w" as string]: `${w}%` }}
-                    >
-                      <div className="min-w-0">
-                        <div className="font-bold text-ink">{bandLabel(b.label)}</div>
-                        <div className="t-caption text-text-3 tabular-nums">
-                          {b.count}건 · 최근 {ymLabel(b.latestYm)}
-                        </div>
-                      </div>
-                      {/* [1009 · C] 최근 = 한 건 실거래 → 반올림 없이("29억 6,750만"), 평균만 짧은 표기 */}
-                      <div className="shrink-0 text-right">
-                        <div className="t-num font-bold text-ink">
-                          {b.latestManwon > 0 ? formatEokMan(b.latestManwon) : "—"}
-                        </div>
-                        <div className="t-caption text-text-3 tabular-nums">
-                          평균 {manwonLabel(b.avgManwon) ?? "—"}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <section>
+              <h3 className="t-section text-ink">
+                면적대별 실거래 <span className="t-sub font-medium text-text-3">{bands.length}개 구간</span>
+              </h3>
+              <ul data-tone="blue" className="mt-1 divide-y divide-line">
+                {bands.map((b) => (
+                  <li key={b.label} className="flex min-h-14 items-center justify-between gap-3 py-3">
+                    <span className="min-w-0 flex-1">
+                      <span className="block t-body font-bold text-ink">{bandLabel(b.label)}</span>
+                      <span className="mt-0.5 block truncate t-sub text-text-3 tabular-nums">
+                        {b.count}건 · 최근 {ymLabel(b.latestYm)} · 평균 {manwonLabel(b.avgManwon) ?? "—"}
+                      </span>
+                    </span>
+                    {/* [1009 · C] 최근 = 한 건 실거래 → 반올림 없이("29억 6,750만"), 평균만 짧은 표기 */}
+                    <span className="shrink-0 t-body t-num text-ink">
+                      {b.latestManwon > 0 ? formatEokMan(b.latestManwon) : "—"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 t-caption text-text-3">국토교통부 실거래가 · 오른쪽 = 최근 한 건</p>
+            </section>
           )}
 
           {/* 최근 실거래 14개월 */}
           {recent.length > 0 && (
-            <div className="rounded-[14px] border border-line bg-surface px-3.5 py-2.5">
+            <section>
               {/* [1009 · C 리뷰] "최근 N개월"의 N 은 거래 있는 달 수였다 — 실제 계약월 범위로. 등락 기준은 줄마다 적는다 */}
-              <SectionHead
-                title="월별 실거래"
-                sub={`${ymRangeShort(recent[recent.length - 1].yyyymm, recent[0].yyyymm)} · 합 ${dealSum}건 · 월평균(면적 혼합) · ${
-                  recent.every((t) => {
-                    const v = monthDeltaView(t.yyyymm, recentDeltas.get(t.yyyymm));
-                    return v.basis === null || v.adjacent;
-                  })
-                    ? "전월 대비"
-                    : "앞 거래 달 대비"
-                }`}
-              />
-              <div className="max-h-[220px] overflow-y-auto rounded-xl bg-bg">
+              <h3 className="t-section text-ink">월별 실거래</h3>
+              <p className="mt-0.5 t-sub text-text-3">
+                {ymRangeShort(recent[recent.length - 1].yyyymm, recent[0].yyyymm)} · 합 {dealSum}건 · 월평균(면적 혼합) ·{" "}
+                {recent.every((t) => {
+                  const v = monthDeltaView(t.yyyymm, recentDeltas.get(t.yyyymm));
+                  return v.basis === null || v.adjacent;
+                })
+                  ? "전월 대비"
+                  : "앞 거래 달 대비"}
+              </p>
+              <ul data-tone="mint" className="mt-1 max-h-[280px] divide-y divide-line overflow-y-auto">
                 {recent.map((t, i) => {
                   /* [1009 · C] 색·화살표는 <Delta>(상승 ▲ 빨강 · 하락 ▼ 파랑 · ±0.05% 보합). 예전엔 상승=파랑(text-primary)·
                      하락=빨강(text-danger)으로 뒤집혀 있었다. [1009 · C 리뷰] 기준은 앞 줄 — 전월이 아니면 기준 달을 적는다 */
                   const dv = monthDeltaView(t.yyyymm, recentDeltas.get(t.yyyymm));
                   const d = recentDeltas.get(t.yyyymm)?.pct ?? null;
                   return (
-                    <div
-                      key={`${t.yyyymm}-${i}`}
-                      className={`flex items-center justify-between gap-2 px-3 py-2 text-[13px] ${
-                        i > 0 ? "border-t border-line" : ""
-                      }`}
-                    >
-                      <span className="text-text-2 tabular-nums">
+                    <li key={`${t.yyyymm}-${i}`} className="flex min-h-12 items-center justify-between gap-3 py-2.5">
+                      <span className="min-w-0 t-sub text-text-2 tabular-nums">
                         {ymLabel(t.yyyymm)}
                         <span className="ml-1.5 text-text-3">{t.deal_count}건</span>
                         {t.min_manwon && t.max_manwon && t.min_manwon !== t.max_manwon ? (
@@ -962,9 +947,7 @@ export function ComplexInfoPanel({
                         ) : null}
                       </span>
                       <span className="flex items-baseline gap-1.5">
-                        <span className="font-extrabold text-ink tabular-nums">
-                          {manwonLabel(t.avg_manwon) ?? "—"}
-                        </span>
+                        <span className="t-body t-num text-ink">{manwonLabel(t.avg_manwon) ?? "—"}</span>
                         {d != null && dv.basis ? (
                           <span className="flex flex-col items-end">
                             <Delta
@@ -978,365 +961,141 @@ export function ComplexInfoPanel({
                           </span>
                         ) : null}
                       </span>
-                    </div>
+                    </li>
                   );
                 })}
-              </div>
-            </div>
+              </ul>
+            </section>
           )}
 
-          {!loading && recent.length === 0 && !failed && (
-            <div className="rounded-xl bg-bg px-3.5 py-2.5 text-xs text-text-3">
-              최근 실거래 데이터가 아직 없어요.
-            </div>
-          )}
+          {!loading && recent.length === 0 && !failed && <p className="t-sub text-text-2">최근 실거래 없음</p>}
 
-          {/* [1006] 전월세 — 실거래의 62% 가 전월세인데 패널엔 없었다. 12개월 요약 + 가장 최근 달 +
-              단지 전세가율(6개월, 표본 3건 이상일 때만). 신고 없음·실패는 각각 문장으로. */}
-          {facts && (rent || rentFailed) && (
-            <div className="rounded-[14px] border border-line bg-surface px-3.5 py-2.5">
-              <SectionHead
-                title="전월세 실거래"
-                sub={rent ? `최근 ${rent.windowMonths}개월 · 국토부 신고` : "국토부 신고"}
-              />
-              {rentFailed ? (
-                <p className="rounded-xl border border-warning-border bg-warning-soft px-3 py-2 t-sub text-warning">
-                  전월세 실거래를 지금 불러오지 못했어요 — 없는 게 아니라 조회가 실패했어요.
-                </p>
-              ) : rent ? (
-                <>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-xl bg-bg px-3 py-2">
-                      <div className="t-caption text-text-3">전세 보증금 중앙</div>
-                      <div className="t-section text-ink tabular-nums">
-                        {rent.jeonseCount > 0 ? (wonLabel(rent.jeonseMedianKrw) ?? "—") : "없음"}
-                      </div>
-                      <div className="t-caption text-text-3">
-                        {rent.jeonseCount > 0
-                          ? `${rent.jeonseCount}건${rent.jeonseCount < 3 ? " · 표본 적음" : ""}`
-                          : "12개월 신고 없음"}
-                      </div>
-                    </div>
-                    <div className="rounded-xl bg-bg px-3 py-2">
-                      <div className="t-caption text-text-3">월세 중앙 (보증금/월세)</div>
-                      <div className="t-section text-ink tabular-nums">
-                        {rent.wolseCount > 0
-                          ? `${wonLabel(rent.wolseMedianDepositKrw) ?? "—"} / ${formatKrwWon(rent.wolseMedianMonthlyKrw)}`
-                          : "없음"}
-                      </div>
-                      <div className="t-caption text-text-3">
-                        {rent.wolseCount > 0
-                          ? `${rent.wolseCount}건${rent.wolseCount < 3 ? " · 표본 적음" : ""}`
-                          : "12개월 신고 없음"}
-                      </div>
-                    </div>
-                  </div>
-                  {rent.latest && (
-                    <div className="mt-2 t-caption text-text-2">
-                      가장 최근 {ymLabel(rent.latest.ym)} · 전세 {rent.latest.jeonseCount}건
-                      {rent.latest.jeonseCount > 0 && rent.latest.jeonseMedianKrw != null
-                        ? ` 중앙 ${wonLabel(rent.latest.jeonseMedianKrw)}`
-                        : ""}
-                      {" · "}월세 {rent.latest.wolseCount}건
-                    </div>
-                  )}
-                  <div className="mt-2 flex items-start justify-between gap-3 rounded-xl border border-line px-3 py-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-0.5 t-sub font-bold text-ink">
-                        단지 전세가율
-                        <Explain
-                          term="jeonse-garyul"
-                          how={[
-                            "최근 6개월 전세 보증금 중앙값 ÷ 같은 기간 매매 거래가 중앙값 × 100이에요.",
-                            "전세·매매가 각각 3건 이상일 때만 계산해요. 면적은 가중하지 않아요.",
-                          ]}
-                          source="국토교통부 매매·전월세 실거래 신고"
-                        />
-                      </div>
-                      <div className="mt-0.5 t-caption text-text-3">
-                        {ratio
-                          ? `최근 ${ratio.windowMonths}개월 전세 ${ratio.jeonseCount}건 중앙 ${wonLabel(ratio.jeonseMedianKrw)} ÷ 매매 ${ratio.tradeCount}건 중앙 ${wonLabel(ratio.tradeMedianKrw)} · 면적 가중 없음`
-                          : (facts.jeonseRatioReason ?? "계산하지 않았어요")}
-                      </div>
-                    </div>
-                    <div
-                      className={`shrink-0 tabular-nums ${
-                        ratio ? "text-[19px] font-extrabold text-ink" : "t-sub font-bold text-text-3"
-                      }`}
-                    >
-                      {ratio ? `${ratio.pct}%` : "미산출"}
-                    </div>
-                  </div>
-                  <p className="mt-1.5 t-caption text-text-3">
-                    최근 1~2개월은 신고 지연으로 적게 잡힐 수 있고, 갱신·신규 계약이 섞여 있어요.
-                  </p>
-                </>
-              ) : null}
-            </div>
-          )}
-
-          {/* 스펙 — 값 있는 줄만 그리고, 없는 항목은 이유별 한 줄로 */}
-          {(specRows.length > 0 || specGapLines.length > 0) && (
-            <div className="rounded-[14px] border border-line bg-surface px-3.5 py-2.5">
-              <SectionHead title="단지 스펙" sub="국토부 실거래 · K-apt 대장 기준" />
-              {specRows.length > 0 && (
-                <div className="grid grid-cols-2 gap-x-4 gap-y-0 sm:grid-cols-3">
-                  {specRows.map((row) => (
-                    <div
-                      key={row.label}
-                      className="flex items-baseline justify-between gap-2 border-b border-divider py-2 t-body last:border-b-0"
-                    >
-                      <span className="shrink-0 text-text-3">{row.label}</span>
-                      <span className="truncate text-right font-bold text-ink">{row.value}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {specGapLines.length > 0 && (
-                <div className={`flex flex-col gap-1 ${specRows.length > 0 ? "mt-2" : ""}`}>
-                  {specGapLines.map((line) => (
-                    <p key={line.note} className="rounded-xl bg-bg px-3 py-2 t-caption text-text-2">
-                      <b className="text-ink">{line.labels}</b> — {line.note}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* [1006] 임장노트 — 공개 노트 수 + 최신 1건(제목·판단) + 쓰기. 0건이면 정직한 빈 상태. */}
-          {facts && (
-            <div className="rounded-[14px] border border-line bg-surface px-3.5 py-2.5">
-              <SectionHead
-                title="임장노트"
-                sub={
-                  notesFailed
-                    ? "지금 못 읽음"
-                    : notes && notes.count > 0
-                      ? `공개 ${notes.count.toLocaleString("ko-KR")}건`
-                      : "아직 없음"
-                }
-                right={
-                  <Link
-                    href={noteHref}
-                    className="inline-flex min-h-[40px] shrink-0 items-center rounded-xl bg-primary px-3 t-sub font-extrabold text-white"
-                  >
-                    이 단지 임장노트 쓰기
-                  </Link>
-                }
-              />
-              {notesFailed ? (
-                <p className="rounded-xl border border-warning-border bg-warning-soft px-3 py-2 t-sub text-warning">
-                  임장노트를 지금 불러오지 못했어요 — 없는 게 아니라 조회가 실패했어요.
-                </p>
-              ) : notes?.latest ? (
-                <Link
-                  href={`/notes/${encodeURIComponent(notes.latest.id)}`}
-                  className="flex min-h-[44px] items-center justify-between gap-2 rounded-xl bg-bg px-3 py-2 transition-colors hover:bg-primary-soft/60"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate t-sub font-bold text-ink">{notes.latest.title}</div>
-                    <div className="mt-0.5 t-caption text-text-3">
-                      최신 노트{notes.latest.visitDate ? ` · 방문 ${notes.latest.visitDate}` : ""}
-                      {notes.count > 1 ? ` · 외 ${(notes.count - 1).toLocaleString("ko-KR")}건은 전체 화면에서` : ""}
-                    </div>
-                  </div>
-                  {notes.latest.decision ? (
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 t-caption font-extrabold ${DECISION_CHIP[notes.latest.decision.choice]}`}
-                    >
-                      {notes.latest.decision.label}
-                    </span>
-                  ) : (
-                    <span className="shrink-0 t-caption text-text-3">판단 미기록</span>
-                  )}
-                </Link>
-              ) : (
-                <p className="rounded-xl bg-bg px-3 py-2 t-sub text-text-2">
-                  아직 이 단지 공개 임장노트가 없어요. 다녀온 기록이 있다면 첫 노트가 돼요.
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* 지역 대비 */}
-          {region && (
-            <div className="rounded-2xl border border-line bg-surface px-3.5 py-3">
-              {/* [1009 · C] 상승=파랑·하락=빨강으로 뒤집혀 있던 두 숫자(평균 대비·구 변동)를 <Delta> 로, 기준을 적는다 */}
-              <SectionHead
-                title="이 동네 대비"
-                sub={`${region.district} · ㎡당 · ${region.period ? ymLabel(region.period) : "최근"} 기준`}
-                right={
-                  <span className="inline-flex items-center gap-0.5">
-                    <Delta pct={region.deltaPct} className="t-title" srContext={`${region.district} 평균보다`} flatLabel="비슷" />
-                    <Explain
-                      term="pyeongdanga"
-                      title="이 동네 대비(㎡당)"
-                      how={[
-                        "면적이 다른 집끼리 견주려고 평당가 대신 ㎡당 가격을 써요(㎡당 × 3.3058 = 평당).",
-                        "이 단지: 최근 매매 60건(전용면적이 있는 거래)마다 거래금액 ÷ 전용면적을 구해 평균했어요.",
-                        `${region.district} 평균: 한국부동산원 ${region.period ? ymLabel(region.period) : "최근"} 아파트 ㎡당 평균 매매가격이에요.`,
-                        `차이 = (이 단지 − ${region.district} 평균) ÷ ${region.district} 평균 × 100. 층·향·연식은 반영하지 않아요.`,
-                      ]}
-                      source="국토교통부 실거래가 · 한국부동산원"
-                    />
-                  </span>
-                }
-              />
-              <p className="-mt-1 mb-2 t-caption text-text-3">{region.district} 평균 대비</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-bg px-3 py-2">
-                  <div className="t-caption text-text-3">이 단지</div>
-                  <div className="t-section text-ink tabular-nums">
-                    {region.complexPerM2Manwon.toLocaleString("ko-KR")}
-                    <span className="t-caption font-bold text-text-3">만/㎡</span>
-                  </div>
-                </div>
-                <div className="rounded-xl bg-bg px-3 py-2">
-                  <div className="t-caption text-text-3">{region.district} 평균</div>
-                  <div className="t-section text-ink tabular-nums">
-                    {region.districtPerM2Manwon.toLocaleString("ko-KR")}
-                    <span className="t-caption font-bold text-text-3">만/㎡</span>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 t-caption text-text-3">
-                {region.saleChangePct != null && (
-                  <span className="inline-flex items-center gap-x-1">
-                    {region.district} 매매가격
-                    <Delta pct={region.saleChangePct} srContext="전월보다" />
-                    전월 대비
-                  </span>
-                )}
-                {region.jeonseRatio != null && (
-                  <span>
-                    {region.district} 전세가율 <b className="text-text-2">{region.jeonseRatio}%</b>
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* 후기 */}
-          {reviews && reviews.count > 0 && (
-            <div className="rounded-2xl border border-line bg-surface px-3.5 py-3">
-              <SectionHead title="거주민 후기" sub={`${reviews.count}건 평균`} />
-              <div className="grid grid-cols-5 gap-1.5">
-                {REVIEW_LABELS.map(({ key, label }) => {
-                  const v = reviews[key];
-                  const pct = v != null ? Math.min(100, Math.round((v / 5) * 100)) : 0;
-                  return (
-                    <div key={key} className="rounded-xl bg-bg px-1 py-2 text-center">
-                      <div className="t-caption text-text-3">{label}</div>
-                      <div className="t-section text-ink">
-                        {v != null ? v : "—"}
-                      </div>
-                      <div className="mx-auto mt-1 h-1 w-[80%] overflow-hidden rounded-full bg-line">
-                        <div
-                          className="h-full rounded-full bg-primary"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* 이야기 6건 */}
+          {/* 이야기 6건 — [v4] 옅은 상자 카드 → 구분선 행(제목 + 사실 한 줄) */}
           {posts.length > 0 && (
-            <div className="rounded-[14px] border border-line bg-surface px-3.5 py-2.5">
-              <SectionHead title="단지 이야기" sub={`${posts.length}건 · 공개 글`} />
-              <div className="flex flex-col gap-1">
-                {posts.slice(0, 6).map((p, i) => (
-                  <div
-                    key={p.id || `${p.title}-${i}`}
-                    className="rounded-xl bg-bg px-3 py-2"
-                  >
-                    <div className="truncate t-sub font-bold text-ink">{p.title}</div>
-                    <div className="mt-0.5 flex flex-wrap gap-x-2 t-caption text-text-3">
-                      {postDateLabel(p.created_at) && <span>{postDateLabel(p.created_at)}</span>}
-                      {p.district && <span>{p.district}</span>}
-                      {p.like_count != null && <span>공감 {p.like_count}</span>}
-                      {p.comment_count != null && p.comment_count > 0 && (
-                        <span>댓글 {p.comment_count}</span>
+            <section>
+              <h3 className="t-section text-ink">
+                단지 이야기 <span className="t-sub font-medium text-text-3">{posts.length}건</span>
+              </h3>
+              <ul data-tone="hanji" className="mt-1 divide-y divide-line">
+                {posts.slice(0, 6).map((p, i) => {
+                  const meta = [
+                    postDateLabel(p.created_at),
+                    p.district || null,
+                    p.like_count != null ? `공감 ${p.like_count}` : null,
+                    p.comment_count != null && p.comment_count > 0 ? `댓글 ${p.comment_count}` : null,
+                    p.view_count != null && p.view_count > 0 ? `조회 ${p.view_count}` : null,
+                  ].filter(Boolean);
+                  return (
+                    <li key={p.id || `${p.title}-${i}`} className="py-3">
+                      <span className="block truncate t-body font-bold text-ink">{p.title}</span>
+                      {meta.length > 0 && (
+                        <span className="mt-0.5 block truncate t-sub text-text-3">{meta.join(" · ")}</span>
                       )}
-                      {p.view_count != null && p.view_count > 0 && (
-                        <span>조회 {p.view_count}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
           )}
 
           {/* 부가 섹션 조회 실패 고지 — 섹션이 안 보이는 이유가 "없어서"가
-              아니라 "지금 못 읽어서"일 때, 그 사실을 말한다. */}
+              아니라 "지금 못 읽어서"일 때, 그 사실을 말한다. [v4] 노란 상자 → 한 줄 */}
           {failedSections.length > 0 && (
-            <div className="rounded-2xl border border-warning-border bg-warning-soft px-3.5 py-2.5 t-sub text-warning">
-              {failedSections.join(" · ")} 정보를 지금 불러오지 못했어요 — 없는 게 아니라 조회가 실패했습니다.
-            </div>
+            <p role="status" className="t-sub font-bold text-warning">
+              {failedSections.join(" · ")} 조회 실패(없음 아님)
+            </p>
           )}
 
-          {/* 인근 단지 */}
+          {/* 인근 단지 — [v4] 2열 카드 격자 → 구분선 행(단지 허브 "다른 단지"와 같은 SummaryRow) */}
           {nearby.length > 0 && (
-            <div className="rounded-[14px] border border-line bg-surface px-3.5 py-2.5">
-              <SectionHead
-                title={`${complex?.district || "근처"} 다른 단지`}
-                sub="같은 지역 비교"
-              />
-              <div className="grid grid-cols-2 gap-1.5">
+            <section>
+              <h3 className="t-section text-ink">
+                {`${complex?.district || "근처"} 다른 단지`}{" "}
+                <span className="t-sub font-medium text-text-3">{nearby.length}곳</span>
+              </h3>
+              <ul data-tone="blue" className="mt-1 divide-y divide-line">
                 {nearby.map((n) => (
-                  <Link
+                  <SummaryRow
                     key={n.id}
+                    label={n.name}
+                    sub={n.meta || undefined}
                     href={`/complex/${encodeURIComponent(n.id)}`}
-                    className="rounded-xl border border-line bg-bg px-3 py-2 transition-colors hover:border-primary/40"
-                  >
-                    <div className="truncate t-sub font-extrabold text-ink">{n.name}</div>
-                    <div className="mt-0.5 truncate t-caption text-text-3">
-                      {n.meta || "단지 정보"}
-                    </div>
-                  </Link>
+                  />
                 ))}
-              </div>
-            </div>
+              </ul>
+            </section>
           )}
 
-          <WatchlistToggle complexId={complexId} complexName={name} />
-
-          <div className="grid grid-cols-2 gap-2">
-            <Link href={noteHref} className="btn-secondary rounded-xl p-[11px] text-center text-xs">
-              임장노트 쓰기
-            </Link>
-            <Link
-              href={analysisHref}
-              className="btn-secondary rounded-xl p-[11px] text-center text-xs"
-            >
-              AI 분석
-            </Link>
+          {/* 행동 — 관심 · 노트 쓰기 · AI 분석(전부 테두리. 채움 파랑은 맨 아래 "이 단지 보기" 하나) */}
+          <div className="flex flex-col gap-2">
+            <WatchlistToggle complexId={complexId} complexName={name} />
+            <div className="grid grid-cols-2 gap-2">
+              <Link href={noteHref} className="btn-secondary rounded-lg p-3 text-center text-[13px] no-underline">
+                임장노트 쓰기
+              </Link>
+              <Link href={analysisHref} className="btn-secondary rounded-lg p-3 text-center text-[13px] no-underline">
+                AI 분석
+              </Link>
+            </div>
           </div>
 
           {/* [3차] 지도 → 지역 허브 연결 — 단지에서 그 동네 시장 전체(지수·거래량·
               입주·시장 흐름 읽기)로 이어지는 유일한 다리. cityDistrict 가 카탈로그와
-              매칭될 때만 그린다(없는 링크를 만들지 않는다). */}
-          {(() => {
-            const rid = cityDistrict ? regionIdForName(cityDistrict) : null;
-            if (!rid) return null;
-            return (
-              <Link
-                href={`/region/${rid}`}
-                className="btn-secondary block rounded-xl p-[11px] text-center text-xs"
-              >
-                {cityDistrict} 시장 전체 보기 — 지수·거래량·입주
-              </Link>
-            );
-          })()}
-
-          {fetchedLabel && (
-            <p className="text-center t-caption text-text-3">{fetchedLabel} · 실거래·공공데이터</p>
+              매칭될 때만 그린다(없는 링크를 만들지 않는다). [v4] 테두리 버튼 → 목록 행 */}
+          {regionHubId && (
+            <ul data-tone="hanji" className="-mt-2 divide-y divide-line">
+              <SummaryRow label={`${cityDistrict} 시장`} sub="지수 · 거래량 · 입주" href={`/region/${regionHubId}`} />
+            </ul>
           )}
+
+          {/* [v4 · 규칙 3] 맨 끝 <details> "데이터 출처" 하나(단지 허브 ComplexDataSources 와 같은 모양) —
+              갱신 시각 캡션 · 신고 지연 안내 · 단지 스펙 격자 · 빠진 스펙의 이유 줄을 여기에 접었다. */}
+          <details className="group border-t border-line pt-1">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
+              데이터 출처
+              <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
+                ›
+              </span>
+            </summary>
+            <div className="flex flex-col gap-4 pb-3 pt-1">
+              <div>
+                <h4 className="t-sub font-bold text-text-2">출처</h4>
+                <p className="mt-1 t-caption text-text-3">
+                  국토교통부 실거래가(매매·전월세) · K-apt 단지 대장{region ? " · 한국부동산원" : ""}
+                  {fetchedLabel ? ` · ${fetchedLabel}` : ""}
+                </p>
+                <p className="mt-0.5 t-caption text-text-3">
+                  최근 1~2개월은 신고 지연(계약 후 30일)으로 적게 잡힐 수 있음 · 전월세는 갱신·신규 계약 섞임
+                </p>
+              </div>
+              {specRows.length > 0 && (
+                <div>
+                  <h4 className="t-sub font-bold text-text-2">단지 정보</h4>
+                  <dl data-tone="blue" className="mt-1 divide-y divide-line">
+                    {specRows.map((row) => (
+                      <div key={row.label} className="flex items-baseline justify-between gap-3 py-2">
+                        <dt className="shrink-0 t-sub text-text-3">{row.label}</dt>
+                        <dd className="min-w-0 break-words text-right t-sub text-ink tabular-nums">{row.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              )}
+              {/* [1006] 없는 스펙은 이유별 한 줄 — 대장 미연결과 대장엔 있는데 값이 빈 것은 다른 사실이다 */}
+              {specGapLines.length > 0 && (
+                <div>
+                  <h4 className="t-sub font-bold text-text-2">비어 있는 자료</h4>
+                  <ul className="mt-1 flex list-none flex-col gap-0.5 p-0">
+                    {specGapLines.map((line) => (
+                      <li key={line.note} className="t-caption leading-[1.6] text-text-3">
+                        <span className="font-bold text-text-2">{line.labels}</span> — {line.note}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </details>
         </div>
 
         {/* 이 줄은 시트 맨 아래에 고정으로 붙는 CTA 바다. 모바일에서 시트가
@@ -1344,12 +1103,13 @@ export function ComplexInfoPanel({
             안 더하면 standalone 에서 12px 만 남아 버튼 아래쪽이 홈 인디케이터
             자리에 들어간다 — 탭 모드에서는 인셋이 0이라 아무 일도 안 일어나
             조용히 지나가는 종류의 버그다. sm 이상은 시트가 가운데 뜬다. */}
-        <div className="border-t border-[rgba(16,28,54,.06)] bg-surface px-5 py-3 pb-[calc(12px+env(safe-area-inset-bottom,0px))] sm:pb-3">
+        <div className="border-t border-line bg-surface px-5 py-3 pb-[calc(12px+env(safe-area-inset-bottom,0px))] sm:pb-3">
           <Link
             href={detailHref}
-            className="btn-primary btn-cta block rounded-xl p-3 text-center t-body font-extrabold text-white"
+            className="btn-primary block rounded-lg p-3 text-center t-body no-underline"
           >
-            전체 화면으로 더 자세히 보기 ›
+            {/* [1012 · 규칙 5] "더 자세히 보기" → 동사 + 구체 대상 · [v4 · 규칙 2] 이 판의 채움 파랑 하나, 한 줄로 끝나게 */}
+            이 단지 보기
           </Link>
         </div>
       </aside>

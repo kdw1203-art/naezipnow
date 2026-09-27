@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 2곳을 font-bold(700)로 바꿨다. */
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -23,7 +24,7 @@ export function MissionClaim({
 
   if (claimed) {
     return (
-      <span className="rounded-full bg-success-soft px-3 py-1.5 t-sub font-extrabold text-success">
+      <span className="rounded-full bg-success-soft px-3 py-1.5 t-sub font-bold text-success">
         적립 완료 ✓
       </span>
     );
@@ -57,7 +58,7 @@ export function MissionClaim({
             setBusy(false);
           }
         }}
-        className={`rounded-full px-3.5 py-1.5 text-[12px] font-extrabold ${
+        className={`rounded-full px-3.5 py-1.5 text-[12px] font-bold ${
           disabled ? "bg-bg text-text-3" : "bg-primary text-white"
         } disabled:opacity-60`}
       >

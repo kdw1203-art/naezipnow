@@ -12,7 +12,7 @@ import { AI_DRAFT_LIMITS, AI_REPORT_LIMITS } from "@/lib/inspection/quota";
 export const dynamic = "force-dynamic";
 
 const darkCard =
-  "rounded-[14px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.05)]";
+  "rounded-lg border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.05)]";
 
 interface ToolStat {
   tool: string;
@@ -171,7 +171,7 @@ export default async function AdminAiPage() {
         </div>
         <Link
           href="/analysis"
-          className="rounded-[10px] bg-[rgba(255,255,255,.07)] px-3.5 py-[7px] text-xs font-semibold text-[#c9d2e0] no-underline"
+          className="rounded-lg bg-[rgba(255,255,255,.07)] px-3.5 py-[7px] text-xs font-semibold text-[#c9d2e0] no-underline"
         >
           워크벤치 열기 →
         </Link>

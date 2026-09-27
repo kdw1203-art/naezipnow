@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ConsultButton } from "./ConsultButton";
 import { Icon } from "@/app/components/Icon";
 import { expertTrustLine } from "@/lib/experts/trust-line";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 전문가 목록 카드 (953 개편).
    953 전에는 카드 안에 상세 모달이 하나 더 있었다 — 상세 페이지(/town/experts/[id])가
@@ -65,7 +66,7 @@ export function ExpertCard({ e, index }: { e: ExpertCardData; index: number }) {
 
   return (
     <article
-      className={`card tile rise-in-${Math.min(index + 1, 6)} flex flex-col gap-3 rounded-[18px] p-5`}
+      className={`card tile rise-in-${Math.min(index + 1, 6)} flex flex-col gap-3 p-5`}
     >
       {/* 머리: 아바타 · 이름 · 인증 */}
       <div className="flex items-start gap-3">
@@ -87,7 +88,7 @@ export function ExpertCard({ e, index }: { e: ExpertCardData; index: number }) {
             {e.verified ? (
               <span
                 title="자격 서류와 신원 확인을 거쳐 내집나우가 승인한 전문가예요"
-                className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-primary-soft chip-pad-tight t-caption font-extrabold text-primary"
+                className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-primary-soft chip-pad-tight t-caption font-bold text-primary"
               >
                 <Icon name="shield" size={10} /> 인증
               </span>
@@ -114,7 +115,7 @@ export function ExpertCard({ e, index }: { e: ExpertCardData; index: number }) {
 
       {/* 공적으로 조회 가능한 신호 — 값이 있을 때만 */}
       {(e.organization || e.brokerRegistrationNo) && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-[10px] bg-bg px-2.5 py-1.5 t-caption text-text-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg bg-bg px-2.5 py-1.5 t-caption text-text-2">
           {e.organization && <span className="font-bold text-text-1">{e.organization}</span>}
           {e.brokerRegistrationNo && (
             <span>

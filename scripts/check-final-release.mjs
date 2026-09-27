@@ -392,10 +392,14 @@ runGate("UI", "본문+고정 사이드바 그리드의 minmax(0,1fr)", "check-si
   const COMPACT_TOKENS = [
     "--fs-display",
     "--fs-title",
+    /* [1012 · 모바일 축소] 카드 제목도 모바일 14 / md+ 15 로 짝이 생겼다 */
+    "--fs-section",
     "--pad-compact",
     "--pad-card",
     "--pad-hero",
-    "--radius-card",
+    /* [1012] --radius-card 는 짝에서 뺐다 — 디자인 시스템 v3 는 카드 반경을 모든 폭에서 8px 로
+       고정한다(기준 사이트 실측: 당근·숨고 8px, 호갱노노 3~6px — 폭에 따라 달라지지 않는다).
+       모바일에서만 작게 만드는 "원복 짝" 자체가 사라졌으므로 검사 대상이 아니다. */
     /* [992] --sp-card-gap · --sp-section 은 참조 0건이라 globals.css 에서 삭제됐다(A4 GC) —
        되살리면 여기에도 다시 넣어 md+ 원복 짝을 검사한다. */
   ];

@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 import Link from "next/link";
 import {
   buildComplexTxSlug,
@@ -84,7 +85,7 @@ export function ComplexSummaryTable({
                 </Link>
               </td>
               <td className="py-2.5 text-right">
-                <span className="font-extrabold text-ink">
+                <span className="font-bold text-ink">
                   {formatKrwShort(s.latestAmountKrw)}
                 </span>
                 <span className="ml-1 text-[12px] text-text-3">

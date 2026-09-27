@@ -163,7 +163,7 @@ export function NoteLocationSearch({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="rise-in-1 card flex w-full items-center gap-2 rounded-[14px] px-3.5 py-3 text-left"
+        className="rise-in-1 card flex w-full items-center gap-2 rounded-lg px-3.5 py-3 text-left"
       >
         <Icon name="📍" size={16} className="shrink-0" />
         <div className="min-w-0 flex-1">
@@ -177,7 +177,7 @@ export function NoteLocationSearch({
 
       {/* 검색 드롭다운 */}
       {open ? (
-        <div className="glass-strong absolute left-0 right-0 top-[calc(100%+6px)] z-30 rounded-[14px] border border-line p-2 shadow-xl">
+        <div className="glass-strong absolute left-0 right-0 top-[calc(100%+6px)] z-30 rounded-lg border border-line p-2 shadow-xl">
           <div className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2">
             <Icon name="search" size={15} className="text-text-3" />
             <input
@@ -202,12 +202,12 @@ export function NoteLocationSearch({
             {loading || pending ? (
               <div className="px-2 py-3 t-sub text-text-3">검색 중…</div>
             ) : q.trim().length < 2 ? (
-              <div className="px-2 py-3 t-sub text-text-3">두 글자 이상 입력해 주세요.</div>
+              <div className="px-2 py-3 t-sub text-text-3">두 글자 이상 입력</div>
             ) : noResults ? (
               <div role="status" className="px-2 py-3 t-sub text-text-3">
                 {failed
-                  ? "검색이 잠시 안 돼요 — 아래에 직접 적어 주세요."
-                  : "검색 결과가 없어요 — 아래에 단지명·지역을 직접 적어 주세요."}
+                  ? "검색 일시 불가 — 아래에 직접 입력"
+                  : "검색 결과 없음 — 아래에 단지명·지역 직접 입력"}
               </div>
             ) : (
               <>
@@ -221,7 +221,7 @@ export function NoteLocationSearch({
                         key={s.id}
                         type="button"
                         onClick={() => pickComplex(s)}
-                        className="press flex w-full items-center gap-2 rounded-[10px] px-2 py-2 text-left active:bg-primary-soft"
+                        className="press flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left active:bg-primary-soft"
                       >
                         <Icon name="building2" size={15} className="shrink-0 text-primary" />
                         <span className="min-w-0 flex-1">
@@ -244,7 +244,7 @@ export function NoteLocationSearch({
                         key={`${p.name}-${i}`}
                         type="button"
                         onClick={() => pickPlace(p)}
-                        className="press flex w-full items-center gap-2 rounded-[10px] px-2 py-2 text-left active:bg-primary-soft"
+                        className="press flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left active:bg-primary-soft"
                       >
                         <Icon name="map" size={15} className="shrink-0 text-text-2" />
                         <span className="min-w-0 flex-1">

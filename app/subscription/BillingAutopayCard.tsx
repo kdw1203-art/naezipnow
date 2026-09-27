@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import Link from "next/link";
 import { planLabel } from "@/lib/subscriptions/labels";
 
@@ -39,33 +40,33 @@ function fmtDate(iso: string | null): string {
   });
 }
 
+/* [v4 · 규칙 5] 패널 안의 테두리 카드(카드 안에 카드) → 1px 선 아래 행 하나. 문장 → 사실 줄.
+   [v4 · 규칙 2] "카드 다시 등록"은 테두리 버튼 — 요금제 화면의 채움 파랑은 결제 CTA 하나다(멈춤 사실은 경고색 글자로). */
 export function BillingAutopayCard(props: Props) {
   const suspended = props.status === "suspended";
+  const card =
+    props.cardCompany || props.cardNumberMasked
+      ? `${props.cardCompany ?? "카드"} ${props.cardNumberMasked ?? ""}`.trim()
+      : null;
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-line bg-surface px-4 py-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="t-sub font-extrabold text-ink">
+    <div className="flex flex-col gap-1 border-b border-line py-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="min-w-0 t-body font-bold text-ink">
           자동결제 {suspended ? "일시중단" : "이용 중"} · {planLabel(props.plan)}{" "}
           {props.billing === "annual" ? "연간" : "월간"}
         </span>
-        <span className="t-sub font-bold text-ink t-num">
-          {props.amount.toLocaleString("ko-KR")}원 / {props.billing === "annual" ? "년" : "월"}
+        <span className="shrink-0 t-body t-num text-ink">
+          {props.amount.toLocaleString("ko-KR")}원/{props.billing === "annual" ? "년" : "월"}
         </span>
       </div>
-      <p className="t-sub text-text-2">
-        {props.cardCompany || props.cardNumberMasked ? (
-          <>
-            결제 카드: {props.cardCompany ?? "카드"} {props.cardNumberMasked ?? ""} ·{" "}
-          </>
-        ) : null}
+      <p className="t-sub text-text-3">
+        {card ? `${card} · ` : null}
         {suspended ? (
-          <b className="text-warning">
-            결제 실패로 자동결제가 잠시 멈춰 있어요 — 카드를 다시 등록하면 이어서 이용할 수 있어요.
-          </b>
+          <b className="text-warning">결제 실패로 자동결제 멈춤 · 카드 다시 등록 시 이어서 이용</b>
         ) : (
           <>
-            다음 결제 예정일: <b>{fmtDate(props.nextChargeAt)}</b>
+            다음 결제 <b className="text-text-1">{fmtDate(props.nextChargeAt)}</b>
             {props.planExpiresAt ? ` · 이용 기간 ${fmtDate(props.planExpiresAt)}까지` : ""}
           </>
         )}
@@ -74,12 +75,15 @@ export function BillingAutopayCard(props: Props) {
         {suspended && (
           <Link
             href={`/subscription/billing?tier=${props.plan}&billing=${props.billing}&mode=card`}
-            className="btn-primary btn-sm no-underline"
+            className="btn-outline btn-sm no-underline"
           >
             카드 다시 등록
           </Link>
         )}
-        <Link href="/my/subscription#manage" className="btn-soft btn-sm no-underline">
+        <Link
+          href="/my/subscription#manage"
+          className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary no-underline"
+        >
           해지·카드 변경은 구독 관리에서 ›
         </Link>
       </div>

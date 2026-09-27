@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -275,7 +276,7 @@ export function RecentComplexChips({
 
   return (
     <div className={`rise-in flex flex-col gap-1.5 ${className ?? ""}`}>
-      <div className="px-1 text-xs font-extrabold text-text-3">최근 본 단지</div>
+      <div className="px-1 text-xs font-bold text-text-3">최근 본 단지</div>
       <div className="flex flex-wrap gap-[5px]">
         {items.map((r) => (
           <span

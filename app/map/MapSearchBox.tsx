@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Icon } from "@/app/components/Icon";
@@ -313,10 +314,12 @@ export function MapSearchBox({
       ? /* [1008] 세로 패딩 0 + 최소 44px — 터치 기기에서는 전역 규칙([989] input min-height 44px)이 입력칸을
            44px 로 올려 py-2.5 와 합쳐 66px 이 됐고, 82px 에서 시작하는 이 카드가 128px 레인의 줌 탭(시군구·동·단지)
            위쪽 20px 을 덮었다(1008 · M 가짜 SDK 캡처·실측 82→148px). 이제 82→126px. */
-        "glass-strong flex min-h-[44px] items-center gap-2 rounded-2xl px-3.5 py-0"
-      : "flex w-full items-center gap-2 rounded-xl border border-[rgba(255,255,255,.9)] bg-[var(--glass-bg)] px-3.5 py-2";
+        /* [v4] 유리(블러) → 흰 면 + 1px 선(반경 8) */
+        "flex min-h-[44px] items-center gap-2 rounded-xl border border-line bg-surface px-3.5 py-0"
+      : /* [v4] 흰 머리 안의 입력칸 — 옅은 회색 면 + 1px 선 */
+        "flex w-full items-center gap-2 rounded-lg border border-line bg-bg px-3.5 py-2";
   const rowClass = (key: string) =>
-    `flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left hover:bg-bg ${
+    `flex min-h-12 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-bg ${
       active >= 0 && active === optIndex(key) ? "bg-bg" : ""
     }`;
   const q = settledQuery.trim();
@@ -326,8 +329,9 @@ export function MapSearchBox({
   return (
     <div ref={rootRef} className={`relative ${className}`}>
       <div className={shellClass}>
-        <span aria-hidden="true" className="text-[13px] text-text-3">
-          ⌕
+        {/* [v4] ⌕ 활자 → 선 아이콘 search(검색 조작 칸의 아이콘) */}
+        <span aria-hidden="true" className="flex shrink-0 text-text-3">
+          <Icon name="search" size={16} />
         </span>
         {/* [968 · 26] 모바일 글자 크기는 여기서 키우지 않는다 — 16px 은 타입 램프 밖이다.
             globals.css [968 · 28] 의 전역 규칙(767px 이하 input { font-size: 1rem },
@@ -362,13 +366,16 @@ export function MapSearchBox({
             aria-label="검색어 지우기"
             className="shrink-0 text-xs text-text-3"
           >
-            ✕
+            {/* [1012 · 규칙 4] ✕ 활자 → 선 아이콘 x */}
+            <Icon name="x" size={16} />
           </button>
         )}
       </div>
 
       {panelOpen && (
-        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-[60vh] overflow-y-auto rounded-2xl border border-[rgba(255,255,255,.9)] bg-[var(--glass-bg-strong)] p-1.5 shadow-[0_16px_40px_rgba(16,28,54,.2)]">
+        /* [1012 · 규칙 2] 드롭다운 — 40px 임의 그림자 → --shadow-lg · 흰 테두리 → --line */
+        /* [v4] 드롭다운 — 반투명 유리 면 → 불투명 흰 면(그림자는 드롭다운 허용 --shadow-lg 그대로) */
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-[60vh] overflow-y-auto rounded-xl border border-line bg-surface p-1.5 shadow-[var(--shadow-lg)]">
           {/* 안내(검색 중·80자·조회 실패·결과 없음)는 listbox 밖 — role=status 로 읽힌다 */}
           {busy && !hasResults && (
             <div role="status" className="px-3 py-3 text-xs text-text-3">
@@ -389,7 +396,7 @@ export function MapSearchBox({
             /* [1008 · S] 결과 없음 — 사실(없음) · 다음 할 일(띄어 쓰는 요령 · 지도에서 직접 찾기) */
             <div className="flex flex-col gap-1 px-3 pb-1 pt-2.5">
               <div role="status" className="flex flex-col gap-1">
-                <p className="break-words t-sub font-extrabold text-ink">{noMatchTitle(q || query.trim())}</p>
+                <p className="break-words t-sub font-bold text-ink">{noMatchTitle(q || query.trim())}</p>
                 <p className="break-words t-caption text-text-3">
                   {NO_MATCH_HINT} · {NO_MATCH_EXAMPLE}
                 </p>
@@ -397,9 +404,9 @@ export function MapSearchBox({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="inline-flex min-h-10 w-fit items-center gap-1 t-sub font-bold text-primary"
+                className="inline-flex min-h-10 w-fit items-center t-sub font-bold text-primary"
               >
-                <Icon name="map" size={14} /> 목록 닫고 지도에서 직접 찾기
+                지도에서 직접 찾기
               </button>
             </div>
           )}
@@ -415,10 +422,13 @@ export function MapSearchBox({
                 onClick={() => pickAddress(address)}
                 className={rowClass("addr")}
               >
-                <Icon name="📍" size={16} className="shrink-0" />
+                {/* [v4 · 규칙 7] 행 앞 장식 아이콘(📍·🏢)을 뺐다 — 행 = 이름 + 보조 한 줄 / 오른쪽 값 또는 › */}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate t-body font-bold text-ink">{address.address}</span>
-                  <span className="t-sub text-text-3">이 주소로 지도 이동</span>
+                  <span className="block truncate t-sub text-text-3">주소로 지도 이동</span>
+                </span>
+                <span aria-hidden="true" className="shrink-0 t-body text-text-3">
+                  ›
                 </span>
               </button>
             )}
@@ -431,18 +441,19 @@ export function MapSearchBox({
                   <div
                     role="presentation"
                     id={`${listId}-similar`}
-                    className="mt-1 border-t border-[rgba(16,28,54,.06)] px-3 pb-0.5 pt-2 t-caption font-bold text-text-3"
+                    className="mt-1 border-t border-line px-3 pb-0.5 pt-2 t-caption font-bold text-text-3"
                   >
-                    혹시 이 단지인가요? · 이름이 비슷한 단지
+                    이름이 비슷한 단지
                   </div>
                 )}
                 {shown.map((c) => {
                   /* 미리보기 — 있는 값만 점으로 잇는다. 없는 항목은 자리를 비우고 "0"이나 "—"로 채우지 않는다.
-                     [1008 · S] 둘째 줄 = 시군구 읍면동(같은 이름 가르기), 셋째 줄 = 세대수 · 6개월 거래 · 평균 실거래가 · 준공 */
+                     [1008 · S] 시군구 읍면동(같은 이름 가르기) · 세대수 · 6개월 거래 · 평균 실거래가 · 준공.
+                     [v4 · 규칙 5] 세 줄 → 두 줄(이름 / 보조 한 줄) + 오른쪽 값(평균 실거래가). "선택 ›" 글자 → 값 또는 › */
                   const price = priceLabel(c.avgPriceManwon);
                   const bits = [
+                    c.region ? complexPlace(c) : null,
                     ...complexFacts(c),
-                    price ? `평균 실거래 ${price}` : null,
                     c.buildYear ? `${c.buildYear}년` : null,
                   ].filter(Boolean) as string[];
                   const key = `c-${c.id}`;
@@ -458,7 +469,6 @@ export function MapSearchBox({
                       onClick={() => pickComplex(c)}
                       className={rowClass(key)}
                     >
-                      <Icon name="🏢" size={16} className="shrink-0" />
                       <span className="min-w-0 flex-1">
                         <span className="flex min-w-0 items-center gap-1.5">
                           <span className="min-w-0 truncate t-body font-bold text-ink">
@@ -466,12 +476,17 @@ export function MapSearchBox({
                           </span>
                           {c.fuzzy && complexes.length > 0 && <FuzzyBadge />}
                         </span>
-                        {c.region && <span className="block truncate t-sub text-text-3">{complexPlace(c)}</span>}
                         {bits.length > 0 && (
-                          <span className="mt-0.5 block truncate t-sub text-text-2">{bits.join(" · ")}</span>
+                          <span className="mt-0.5 block truncate t-sub text-text-3">{bits.join(" · ")}</span>
                         )}
                       </span>
-                      <span className="shrink-0 t-sub font-bold text-primary">선택 ›</span>
+                      {price ? (
+                        <span className="shrink-0 t-sub font-bold text-ink tabular-nums">실거래 {price}</span>
+                      ) : (
+                        <span aria-hidden="true" className="shrink-0 t-body text-text-3">
+                          ›
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -481,14 +496,14 @@ export function MapSearchBox({
               <div
                 role="group"
                 aria-labelledby={`${listId}-places`}
-                className="mt-1 border-t border-[rgba(16,28,54,.06)] pt-1"
+                className="mt-1 border-t border-line pt-1"
               >
                 <div
                   role="presentation"
                   id={`${listId}-places`}
-                  className="px-3 pb-0.5 pt-1.5 t-caption font-bold uppercase tracking-wide text-text-3"
+                  className="px-3 pb-0.5 pt-1.5 t-caption font-bold text-text-3"
                 >
-                  지도 장소 · 실시간 검색
+                  지도 장소
                 </div>
                 {places.map((p, i) => (
                   <button
@@ -502,12 +517,13 @@ export function MapSearchBox({
                     onClick={() => pickPlace(p)}
                     className={rowClass(`p-${i}`)}
                   >
-                    <Icon name="📍" size={16} className="shrink-0" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate t-body font-bold text-ink">{p.name}</span>
-                      {p.address && <span className="block truncate t-sub text-text-3">{p.address}</span>}
+                      {p.address && <span className="mt-0.5 block truncate t-sub text-text-3">{p.address}</span>}
                     </span>
-                    <span className="shrink-0 t-sub font-bold text-primary">이동 ›</span>
+                    <span aria-hidden="true" className="shrink-0 t-body text-text-3">
+                      ›
+                    </span>
                   </button>
                 ))}
               </div>

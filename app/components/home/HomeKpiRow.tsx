@@ -5,8 +5,7 @@
  * 같은 종류로 읽혔다 — 홈이 무슨 이야기를 하는 화면인지 흐려진 원인 중 하나다.
  * 레벨 카드는 개인 영역(HomeEngagementCard 옆)으로 옮겼다.
  *
- * 이 행 자체도 이제는 주인공이 아니다. 주인공은 HomeTodayLine 의 한 문장이고,
- * 여기는 그 문장을 뒷받침하는 자리다(데스크톱 보조 행).
+ * [v4] 이 파일에는 이제 타입만 남는다(아래 끝 주석).
  *
  * 사실 우선: 값이 없는 칸은 "—"가 아니라 **칸 자체를 뺀다**(그리드가 접힌다).
  */
@@ -38,9 +37,12 @@ export interface KpiTemp {
   score: number;
   headline: string;
   weekLabel: string;
+  /** [v4] 어느 지역의 온도인가(예: "서울 강남구") — 예전 행은 지역 없이 "이번 주 시장 온도 N점"이라 어디 값인지 몰랐다 */
+  regionLabel?: string | null;
 }
 
 /* HomeKpiRow 컴포넌트는 2026-08-26 에 제거했다.
    홈 KPI 3~4칸이 HomeTodayLine 의 보조 지표 줄과 **같은 숫자 두 벌**이었기 때문이다
    (소유자 지적: "주제가 명확하지 않다"의 직접 원인 중 하나).
-   타입 KpiRegion·KpiTemp 는 page.tsx 와 HomeTodayLine 이 계속 쓰므로 남긴다. */
+   [v4] 회전 배너(HomeTodayLine)도 걷혔다 — 타입 KpiRegion 은 지역 행의 접근성 문장(today-line.ts),
+   KpiTemp 는 입구 목록의 온도 행(lib/newui/home-entries)이 계속 쓰므로 남긴다. */

@@ -70,7 +70,7 @@ export function ReplyForm({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-[9px] bg-[rgba(126,162,255,.15)] px-3.5 py-[9px] t-sub font-extrabold text-ai-accent"
+          className="rounded-lg bg-[rgba(126,162,255,.15)] px-3.5 py-[9px] t-sub font-extrabold text-ai-accent"
         >
           {existingReply ? "답변 수정 · 다시 보내기" : "답변 쓰기"}
         </button>
@@ -87,7 +87,7 @@ export function ReplyForm({
         maxLength={TICKET_REPLY_MAX}
         aria-label="답변 내용"
         placeholder="문의자에게 보낼 답변을 적어 주세요. 저장과 동시에 알림함·이메일로 전달됩니다."
-        className="w-full resize-y rounded-[10px] border border-[rgba(255,255,255,.12)] bg-[rgba(255,255,255,.05)] px-3.5 py-3 t-body leading-[1.6] text-white outline-none placeholder:text-[#6f7b8e] focus:border-ai-accent"
+        className="w-full resize-y rounded-lg border border-[rgba(255,255,255,.12)] bg-[rgba(255,255,255,.05)] px-3.5 py-3 t-body leading-[1.6] text-white outline-none placeholder:text-[#6f7b8e] focus:border-ai-accent"
       />
       {error && (
         <p role="alert" className="t-sub font-semibold text-ai-danger">
@@ -108,7 +108,7 @@ export function ReplyForm({
                 setError(null);
               }}
               disabled={busy}
-              className="rounded-[9px] px-3.5 py-[9px] t-sub font-bold text-[#9aa6b8]"
+              className="rounded-lg px-3.5 py-[9px] t-sub font-bold text-[#9aa6b8]"
             >
               취소
             </button>
@@ -116,7 +116,7 @@ export function ReplyForm({
           <button
             type="submit"
             disabled={busy}
-            className="rounded-[9px] bg-primary px-4 py-[9px] t-sub font-extrabold text-white disabled:cursor-not-allowed"
+            className="rounded-lg bg-primary px-4 py-[9px] t-sub font-extrabold text-white disabled:cursor-not-allowed"
           >
             {busy ? "보내는 중…" : "답변 보내기"}
           </button>

@@ -1,7 +1,9 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "../components/PageShell";
+import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 import { AdSenseUnit } from "@/app/components/ads/AdSenseUnit";
 import { formatYmKo, listReportMonths, type ReportMonthSummary } from "@/lib/reports/monthly";
 /* [1009 · 리뷰 H] 목록 로더(listReportMonths)가 1,000행에서 잘리던 것은 lib 에서 고쳤다 — 끝까지 나눠 읽는다 */
@@ -13,6 +15,9 @@ import { reportingClosed } from "@/lib/newui/reporting-window";
 /* [1010] 1h → 1일. 목록(데이터가 있는 달 + 관측된 계절)은 월 경계에서만 늘어난다.
    적재 직후 SOURCE_MAP.molit 이 "/reports" 를 이미 비우므로 TTL 은 안전망이다. */
 export const revalidate = 86_400;
+
+/* [v4.1 · 리퀴드 목록] 연도 묶음 톤 순환(globals.css `data-tone`) — 실거래는 blue 로 시작 */
+const YEAR_TONES = ["blue", "hanji", "mint", "sand"] as const;
 
 /* ============================================================
    S11/G7 — 월간 리포트 목록. 데이터가 있는 달만 나열한다(빈 달 페이지 양산 금지).
@@ -96,6 +101,12 @@ export default async function ReportsIndexPage() {
         }
       : null;
 
+  /* [v4 · 규칙 1] 머리 사실 한 줄 — 출처 · 달 수(실데이터). "시황 글 아님"은 글의 성격을 밝히는 정직성 문구라 남긴다([1011]) */
+  const headFact = ["국토교통부 실거래 집계", ...(months.length > 0 ? [`${months.length}개월`] : []), "시황 글 아님"].join(" · ");
+  /* [v4.1 · 리퀴드 목록] 이사철 묶음은 sand(시기) — 바로 위 마지막 연도 묶음이 sand 로 끝나면 hanji 로 비켜 선다 */
+  const yearCount = new Set(months.map((m) => m.ym.slice(0, 4))).size;
+  const seasonTone = yearCount > 0 && yearCount % YEAR_TONES.length === 0 ? "hanji" : "sand";
+
   return (
     <PageShell breadcrumb="월간 실거래 리포트">
       {itemListJsonLd && (
@@ -104,30 +115,26 @@ export default async function ReportsIndexPage() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
         />
       )}
-      <div className="mx-auto max-w-[760px]">
-        <h1 className="rise-in text-[24px] font-extrabold text-ink">월간 아파트 실거래 리포트</h1>
-        <p className="rise-in-1 mt-2 text-[13px] leading-[1.7] text-text-2">
-          {/* [1011] "매월 자동으로 만들어지는" 파이프라인 설명을 걷었다(소유자 지시).
-              "사람이 쓰는 시황 글이 아니다"는 남긴다 — 글의 성격을 오해하지 않게 하는 정직성 문구다. */}
-          국토교통부 실거래 신고를 달마다 모은 리포트입니다. 사람이 쓰는 시황 글이
-          아니라 데이터 요약이며, 모든 수치는{" "}
-          <Link href="/methodology" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
-            공개된 방법론
-          </Link>
-          을 따릅니다.
-        </p>
+      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 달 목록(구분선 행, 오른쪽 거래 건수) → 이사철 검증 행 → 방법 캡션 한 줄.
+          지운 것: 소개 문단(두 문장), 카드 타일(달마다 한 장), "신고 중" 배지(→ 보조 줄 글자), 이사철 설명 문단(→ 끝 캡션). */}
+      <div className="mx-auto flex max-w-[760px] flex-col gap-8">
+        <header className="flex flex-col gap-0.5">
+          <h1 className="rise-in t-title text-ink">월간 아파트 실거래 리포트</h1>
+          <p className="t-sub text-text-3">
+            {headFact} ·{" "}
+            <Link href="/methodology" className="tap-line font-bold text-primary no-underline">
+              방법론 ›
+            </Link>
+          </p>
+        </header>
 
         {loadError ? (
-          <div className="mt-6 card rounded-2xl px-5 py-8 text-center text-[13px] leading-[1.7] text-text-3">
-            월간 집계를 <strong className="text-ink">불러오지 못했습니다</strong>.
-            <br />
-            리포트가 없다는 뜻이 아니라 조회 자체가 실패했다는 뜻입니다. 잠시 후 다시
-            확인해 주세요.
-          </div>
+          /* "못 읽었다"와 "없다"를 섞지 않는다 — 한 줄로 */
+          <p className="card rounded-lg px-4 py-6 text-center t-body text-text-3">
+            월간 집계를 <strong className="text-ink">불러오지 못했어요</strong> · 조회 실패(리포트 없음 아님) · 잠시 후 다시 열기
+          </p>
         ) : months.length > 0 ? (
-          /* 고도화 38 — 연도별 구분·앵커. 지금은 몇 달이지만 매월 자동으로
-             늘어나는 목록이라, 해가 바뀌기 전에 구조를 넣어 둔다. 연도 칩은
-             실재하는 연도가 2개 이상일 때만 그린다(칩 1개는 장식이다). */
+          /* 고도화 38 — 연도별 구분·앵커. 연도 칩은 실재하는 연도가 2개 이상일 때만 그린다(칩 1개는 장식이다). */
           (() => {
             const byYear = new Map<string, ReportMonthSummary[]>();
             for (const m of months) {
@@ -138,96 +145,87 @@ export default async function ReportsIndexPage() {
             }
             const years = [...byYear.keys()].sort((a, b) => b.localeCompare(a));
             return (
-              <div className="mt-6 flex flex-col gap-5">
+              <div className="flex flex-col gap-6">
                 {years.length > 1 && (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
                     {years.map((y) => (
                       <a
                         key={y}
                         href={`#y${y}`}
-                        className="chip border border-line bg-bg px-3 py-1.5 text-[12px] font-bold text-text-2"
+                        className="chip inline-flex min-h-[32px] shrink-0 items-center border border-line bg-surface px-3 t-sub font-bold text-text-2 no-underline"
                       >
                         {y}년
                       </a>
                     ))}
                   </div>
                 )}
-                {years.map((y) => (
-                  <section key={y} id={`y${y}`}>
-                    <h2 className="mb-2.5 text-[15px] font-extrabold text-text-2">
-                      {y}년{" "}
-                      <span className="text-[12px] font-medium text-text-3">
-                        {byYear.get(y)!.length}개월
-                      </span>
+                {years.map((y, i) => (
+                  <section key={y} id={`y${y}`} className="flex scroll-mt-24 flex-col gap-2">
+                    <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+                      {y}년 <span className="t-num text-text-3">{byYear.get(y)!.length}</span>
                     </h2>
-                    <div className="flex flex-col gap-3">
-                      {byYear.get(y)!.map((m, i) => (
-                        <Link
-                          key={m.ym}
-                          prefetch={false}
-                          href={`/reports/${m.ym}`}
-                          className={`rise-in-${Math.min(i + 2, 6)} card tile flex items-center justify-between rounded-2xl px-5 py-4 no-underline`}
-                        >
-                          <span className="text-[15px] font-extrabold text-ink">
-                            {formatYmKo(m.ym)} 실거래 리포트
-                            {/* 신고 기한이 안 지난 달 — 완결처럼 보이지 않게 */}
-                            {!reportingClosed(m.ym, now) && (
-                              <span className="ml-1.5 inline-block whitespace-nowrap rounded-md bg-primary-soft px-1.5 py-0.5 text-[12px] font-bold text-primary align-middle">
-                                신고 중
+                    {/* [v4 · 규칙 5] 구분선 목록 행 — 왼쪽 달(굵게) + 보조 한 줄(지역 수 · 신고 중) / 오른쪽 거래 건수
+                        [v4.1 · 리퀴드 목록] 실거래 = blue 에서 시작해 연도마다 톤 순환 — 이웃한 해가 같은 색을 갖지 않는다 */}
+                    <ul data-tone={YEAR_TONES[i % YEAR_TONES.length]} className="card flex flex-col divide-y divide-line rounded-lg px-4">
+                      {byYear.get(y)!.map((m) => (
+                        <li key={m.ym}>
+                          <Link
+                            prefetch={false}
+                            href={`/reports/${m.ym}`}
+                            className="press flex min-h-14 items-center justify-between gap-x-3 py-3 no-underline"
+                          >
+                            <span className="min-w-0 flex-1">
+                              <span className="block t-body font-bold text-ink">{formatYmKo(m.ym)}</span>
+                              <span className="mt-0.5 block truncate t-sub text-text-3">
+                                {m.regionCount}개 지역
+                                {/* 신고 기한이 안 지난 달 — 완결처럼 보이지 않게(배지 → 글자) */}
+                                {!reportingClosed(m.ym, now) && <span className="font-bold text-primary"> · 신고 중</span>}
                               </span>
-                            )}
-                          </span>
-                          <span className="shrink-0 pl-2 text-[12px] font-semibold tabular-nums text-text-3">
-                            {m.regionCount}개 지역 · {m.txCount.toLocaleString("ko-KR")}건 ›
-                          </span>
-                        </Link>
+                            </span>
+                            <span className="flex shrink-0 items-center gap-1.5">
+                              <span className="t-body t-num text-ink">{m.txCount.toLocaleString("ko-KR")}건</span>
+                              <span aria-hidden="true" className="t-body text-text-3">
+                                ›
+                              </span>
+                            </span>
+                          </Link>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   </section>
                 ))}
               </div>
             );
           })()
         ) : (
-          <div className="mt-6 card rounded-2xl px-5 py-8 text-center text-[13px] text-text-3">
-            아직 집계된 월이 없어요. 실거래 수집이 쌓이면 자동으로 생성됩니다.
-          </div>
+          <p className="card rounded-lg px-4 py-6 text-center t-body text-text-3">아직 집계된 달 없음 · 한 달치 신고가 쌓이면 생김</p>
         )}
 
         {/* N12 — 계절(이사철) 검증 리포트. 계절의 모든 달이 확정 집계된 해가
             하나라도 있어야 목록에 나온다. 절반만 모인 계절은 만들지 않는다. */}
         {seasons.length > 0 && (
-          <section className="rise-in-4 mt-8">
-            <h2 className="text-[15px] font-extrabold text-ink">이사철 통념 검증 리포트</h2>
-            <p className="mt-1.5 text-[13px] leading-[1.7] text-text-2">
-              &ldquo;2~3월은 이사철이라 거래가 몰린다&rdquo; 같은 말을 실거래 신고 집계로
-              확인합니다. 같은 해 다른 달과 <strong className="text-ink">같은 지역끼리만</strong>{" "}
-              비교하며, 신고가 진행 중인 잠정 월은 넣지 않습니다.
-            </p>
-            <div className="mt-3 flex flex-col gap-3">
+          <section className="flex flex-col gap-2">
+            <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+              이사철 통념 검증 <span className="t-num text-text-3">{seasons.length}</span>
+            </h2>
+            <ul data-tone={seasonTone} className="card flex flex-col divide-y divide-line rounded-lg px-4">
               {seasons.map((s) => (
-                <Link
+                <SummaryRow
                   key={s.def.slug}
+                  label={`${s.def.label} (${s.def.monthsLabel})`}
+                  sub={s.def.claim}
+                  value={s.observedYears.map((y) => `${y}년`).join(" · ")}
                   href={`/reports/season/${s.def.slug}`}
-                  className="card tile flex items-center justify-between rounded-2xl px-5 py-4 no-underline"
-                >
-                  <span>
-                    <span className="block text-[15px] font-extrabold text-ink">
-                      {s.def.label} ({s.def.monthsLabel})
-                    </span>
-                    <span className="mt-0.5 block text-[12px] text-text-3">{s.def.claim}</span>
-                  </span>
-                  <span className="shrink-0 pl-3 text-[12px] font-semibold text-text-3">
-                    {s.observedYears.map((y) => `${y}년`).join(" · ")} ›
-                  </span>
-                </Link>
+                />
               ))}
-            </div>
+            </ul>
+            {/* [v4 · 규칙 3] 설명 문단 → 방법 캡션 한 줄 */}
+            <p className="t-caption text-text-3">같은 해 다른 달과 같은 지역끼리만 비교 · 신고 중인 잠정 달 제외</p>
           </section>
         )}
 
         {/* 애드센스 데스크탑 유닛 — 목록 하단 빈공간. 모바일 미노출. */}
-        <AdSenseUnit className="mt-8" />
+        <AdSenseUnit />
       </div>
     </PageShell>
   );

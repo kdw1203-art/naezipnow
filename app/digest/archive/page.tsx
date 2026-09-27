@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cache } from "react";
 import { PageShell } from "@/app/components/PageShell";
+import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 import {
   listDigestWeeks,
   ARCHIVE_WEEKS,
@@ -63,61 +64,54 @@ export default async function DigestArchivePage() {
   const { weeks, loadFailed } = await load();
 
   return (
-    <PageShell breadcrumb="주간 다이제스트 › 아카이브">
-      <div className="mx-auto max-w-[760px]">
-        <h1 className="rise-in t-title text-ink">주간 다이제스트 아카이브</h1>
-        <p className="rise-in-1 mt-2 t-body text-text-2">
-          <Link href="/digest" className="inline-block py-[5px] font-bold text-primary underline">
-            이번 주 다이제스트
-          </Link>
-          는 오늘로부터 최근 7일이라 매일 내용이 바뀝니다. 여기 있는 주소는{" "}
-          <strong className="text-ink">주가 고정</strong>돼 있어 언제 열어도 같은 주를 보여
-          줍니다. 주는 한국시간 월요일부터 일요일까지이고, 주소는 그 주 월요일 날짜입니다.
-        </p>
-        <p className="rise-in-1 mt-2 t-sub text-text-3">
-          진행 중인 이번 주는 아직 끝나지 않았으므로 넣지 않습니다. 수집된 항목이{" "}
-          {MIN_ITEMS}건 미만인 주도 만들지 않습니다 — 두어 줄짜리 요약을 다이제스트라고 부르지
-          않기 위해서입니다. 최근 {ARCHIVE_WEEKS}주까지 보관합니다.
-        </p>
+    /* [v4] "한 화면 한 가지" — 가운데 한 줄(760px): 제목 한 줄 + 사실 한 줄 → 주 목록(1px 선 행: 몇째 주 + 기간 / 뉴스·이웃 글 수)
+       → 이번 주 링크 · 규칙 캡션 한 줄. 설명 문단 두 개(주소가 고정인 이유 · 넣지 않는 주)를 캡션 한 줄로 줄이고,
+       주 카드 · 빈 상자 카드를 뺐다. */
+    <PageShell>
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6">
+        <header>
+          <h1 className="t-title text-ink">주간 다이제스트 아카이브</h1>
+          {!loadFailed && weeks.length > 0 && (
+            <p className="mt-0.5 t-sub text-text-3">
+              {weeks.length}주 · 최근 {ARCHIVE_WEEKS}주 보관
+            </p>
+          )}
+        </header>
 
         {loadFailed ? (
-          <div className="mt-6 card rounded-2xl px-5 py-8 text-center t-body text-text-3">
-            <strong className="text-ink">{LOAD_FAILED_LINE}</strong>
-            <br />
-            기록이 없다는 뜻이 아니라, 조회가 제때 끝나지 않았거나 실패했다는 뜻입니다.
-          </div>
+          <p className="py-6 t-body text-text-2">
+            <strong className="text-ink">{LOAD_FAILED_LINE}</strong> — 기록이 없다는 뜻이 아니라 조회가 제때 끝나지 않았거나 실패
+          </p>
         ) : weeks.length > 0 ? (
-          <div className="mt-6 flex flex-col gap-3">
+          <ul className="divide-y divide-line">
             {weeks.map((w) => (
-              <Link
+              <SummaryRow
                 key={w.slug}
-                href={`/digest/${w.slug}`}
-                className="card tile flex items-center justify-between gap-3 rounded-2xl px-5 py-4 no-underline"
-              >
-                <span className="min-w-0">
-                  <span className="block t-section text-ink">
-                    {w.ordinalLabel}
+                label={w.ordinalLabel}
+                sub={w.rangeLabel}
+                value={
+                  <span className="t-sub text-text-3">
+                    뉴스 {w.newsCount} · 이웃 글 {w.communityCount}
                   </span>
-                  <span className="mt-0.5 block t-sub text-text-3">{w.rangeLabel}</span>
-                </span>
-                <span className="shrink-0 t-sub font-semibold text-text-3">
-                  뉴스 {w.newsCount} · 이웃 글 {w.communityCount} ›
-                </span>
-              </Link>
+                }
+                href={`/digest/${w.slug}`}
+              />
             ))}
-          </div>
+          </ul>
         ) : (
-          <div className="mt-6 card rounded-2xl px-5 py-8 text-center t-body text-text-3">
-            아직 아카이브에 실을 주가 없습니다. 한 주에 {MIN_ITEMS}건 이상이 쌓이면 그 주가
-            끝난 뒤 자동으로 만들어집니다.
-          </div>
+          <p className="py-6 t-body text-text-3">
+            아카이브에 실을 주 아직 없음 — 한 주에 {MIN_ITEMS}건 이상 쌓이면 그 주가 끝난 뒤 자동 생성
+          </p>
         )}
 
-        <p className="mb-8 mt-5 t-sub text-text-3">
-          <Link href="/digest" className="inline-block py-[5px] font-bold text-primary underline">
-            이번 주 다이제스트 보기
+        <div className="flex flex-col gap-1">
+          <Link href="/digest" className="tap-line self-start t-sub font-bold text-primary no-underline">
+            이번 주 다이제스트 보기 ›
           </Link>
-        </p>
+          <p className="t-caption text-text-3">
+            주 = 한국시간 월~일 · 주소 = 그 주 월요일 날짜(고정 — 인용 가능) · 진행 중인 주와 {MIN_ITEMS}건 미만인 주는 만들지 않음
+          </p>
+        </div>
       </div>
     </PageShell>
   );

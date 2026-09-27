@@ -20,7 +20,7 @@ export function RegionSelect({
         router.push(`/analysis/price?region=${encodeURIComponent(slug)}`);
       }}
       aria-label="지역 선택"
-      className="max-w-[220px] rounded-[10px] border border-line bg-surface px-2.5 py-2 text-[13px] font-bold text-ink"
+      className="max-w-[220px] rounded-lg border border-line bg-surface px-2.5 py-2 text-[13px] font-bold text-ink"
     >
       {regions.map((r) => (
         <option key={r.slug} value={r.slug}>

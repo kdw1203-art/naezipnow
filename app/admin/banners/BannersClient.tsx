@@ -225,7 +225,7 @@ export function BannersClient({ initial }: { initial: Row[] }) {
       </div>
 
       {draft && (
-        <div className="flex flex-col gap-3 rounded-[18px] border border-[#2b3750] bg-[#141b2b] p-4">
+        <div className="flex flex-col gap-3 rounded-3xl border border-[#2b3750] bg-[#141b2b] p-4">
           <div className="text-[13px] font-extrabold text-[#e8edf6]">
             {draft.id ? "배너 수정" : "새 배너"}
           </div>
@@ -397,7 +397,7 @@ export function BannersClient({ initial }: { initial: Row[] }) {
       )}
 
       {initial.length === 0 ? (
-        <p className="rounded-[18px] border border-[#243049] bg-[#141b2b] px-5 py-6 text-[13px] text-[#8d99ab]">
+        <p className="rounded-3xl border border-[#243049] bg-[#141b2b] px-5 py-6 text-[13px] text-[#8d99ab]">
           등록된 배너가 없습니다. 광고 슬롯에는 아래 하우스 광고가 나갑니다.
         </p>
       ) : (
@@ -407,7 +407,7 @@ export function BannersClient({ initial }: { initial: Row[] }) {
             return (
               <li
                 key={b.id}
-                className="flex flex-col gap-2 rounded-[18px] border border-[#243049] bg-[#141b2b] p-4"
+                className="flex flex-col gap-2 rounded-3xl border border-[#243049] bg-[#141b2b] p-4"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${badge.cls}`}>

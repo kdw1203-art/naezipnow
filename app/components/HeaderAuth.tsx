@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { planBadgeLabel } from "@/lib/subscriptions/labels";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getSessionLite } from "@/lib/client/session-lite";
@@ -8,7 +9,9 @@ import { readAuthedHint } from "@/lib/auth/authed-hint";
 import { loginReturnHref } from "@/lib/client/shell-gates";
 
 /* S13-13a 헤더 세션 영역 — /api/auth/session 지연 조회 (정적 셸 ISR 유지)
-   로그인: 이니셜 원형 아바타 + 플랜 배지(✦, 시안 9m 4373행) + 드롭다운
+   로그인: 이니셜 원형 아바타 + 플랜 배지 + 드롭다운
+   [1012 · 규칙 9] 플랜 배지의 "✦"(반짝이 기호)를 뗐다 — 배지는 검증된 사실 명사만("플러스" "전문가" "관리자").
+   배지 형태도 연한 배경 + 같은 색 진한 글자 · 4px · 500 으로(어두운 잉크 알약 → primary-soft).
    비로그인: "로그인" 텍스트 링크 → /login
    [966] 메뉴 키보드 — Esc 닫고 트리거로 복귀 · ↑↓ 로 menuitem 사이 이동(순환) ·
    트리거에서 ↓/↑ 는 열면서 첫/마지막 항목으로. */
@@ -26,11 +29,9 @@ type AuthState =
   | { status: "guest" }
   | { status: "user"; user: SessionUser };
 
-const PLAN_BADGE: Record<string, string> = {
-  pro: "✦ 플러스",
-  expert: "✦ 전문가",
-  enterprise: "✦ 엔터프라이즈",
-};
+/* [1012] 플랜 이름 리터럴을 지웠다 — 이름은 planBadgeLabel(lib/subscriptions/labels) 단일 출처
+   (check:plan-labels 게이트). 배지에 붙던 ✦ 도 같은 판에서 뗐다(규칙 4). */
+const PAID_PLANS = new Set(["pro", "expert", "enterprise"]);
 
 const MENU = [
   { label: "마이", href: "/my" },
@@ -185,7 +186,7 @@ export function HeaderAuth() {
     .toUpperCase();
   /* 관리자는 플랜 대신 "관리자"로 표기 — 운영 계정임이 배지에서 바로 보이게. */
   const planBadge =
-    user.role === "admin" ? "✦ 관리자" : user.plan ? PLAN_BADGE[user.plan] : undefined;
+    user.role === "admin" ? "관리자" : user.plan && PAID_PLANS.has(user.plan) ? planBadgeLabel(user.plan) : undefined;
 
   return (
     <div ref={rootRef} className="relative flex items-center gap-1.5">
@@ -210,7 +211,7 @@ export function HeaderAuth() {
             위에서 --primary 가 4.41:1 로 AA 를 아슬하게 못 넘겼다(axe 실측). 이
             동그라미는 모든 화면 헤더에 있다. primary-soft 는 대비 게이트가 이미
             --primary 와 짝으로 보증하는 면이다(5.94:1). */}
-        <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-primary-soft text-[13px] font-extrabold text-primary">
+        <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-primary-soft text-[13px] font-bold text-primary">
           {initial}
         </span>
       </button>
@@ -222,8 +223,7 @@ export function HeaderAuth() {
         <Link
           href={user.role === "admin" ? "/admin" : "/subscription"}
           prefetch={false}
-          className="hidden rounded-full chip-pad text-[10px] font-extrabold text-ai-accent no-underline md:inline-block"
-          style={{ background: "rgba(25,31,40,.94)" }}
+          className="hidden rounded-sm bg-primary-soft chip-pad text-[12px] font-medium text-primary no-underline md:inline-block"
         >
           {planBadge}
         </Link>
@@ -231,8 +231,8 @@ export function HeaderAuth() {
         <Link
           href="/subscription"
           prefetch={false}
-          title="플랜 비교·업그레이드"
-          className="hidden rounded-full border border-line chip-pad text-[10px] font-extrabold text-text-3 no-underline transition-colors hover:border-primary hover:text-primary md:inline-block"
+          title="요금제 비교"
+          className="hidden rounded-sm border border-line chip-pad text-[12px] font-medium text-text-3 no-underline transition-colors hover:border-primary hover:text-primary md:inline-block"
         >
           무료
         </Link>
@@ -240,12 +240,12 @@ export function HeaderAuth() {
 
       {open && (
         <div className="absolute right-0 top-full z-50 pt-2">
-          {/* [970 · A-01] 계정 메뉴도 GNB 드롭다운과 같은 인라인 흰 배경이었다(다크에서 안 보임)
-              — .popover-surface(surface 토큰 92%, 양 테마)로 통일. */}
+          {/* [970 · A-01] 계정 메뉴도 GNB 드롭다운과 같은 인라인 흰 배경이었다(다크에서 안 보임).
+              [1012 · 규칙 1·2] 유리 → 불투명 surface + 1px 선 + 8px + --shadow-lg(드롭다운은 허용 자리). */}
           <div
             ref={menuRef}
             id={menuId}
-            className="glass-strong popover-surface min-w-[168px] rounded-2xl p-1.5 [animation:riseIn_180ms_var(--ease-out)_backwards]"
+            className="min-w-[168px] rounded-lg border border-line bg-surface p-1.5 [box-shadow:var(--shadow-md)] [animation:riseIn_180ms_var(--ease-out)_backwards]"
             role="menu"
             aria-label="내 계정"
           >
@@ -260,7 +260,7 @@ export function HeaderAuth() {
                 prefetch={false}
                 role="menuitem"
                 onClick={() => setOpen(false)}
-                className="block rounded-[10px] px-3 py-2 text-[13px] font-extrabold text-primary transition-colors hover:bg-[rgba(29,79,216,.08)]"
+                className="block rounded-lg px-3 py-2 text-[13px] font-bold text-primary transition-colors hover:bg-[rgba(29,79,216,.08)]"
               >
                 관리자 콘솔
               </Link>
@@ -272,7 +272,7 @@ export function HeaderAuth() {
                 prefetch={false}
                 role="menuitem"
                 onClick={() => setOpen(false)}
-                className="block rounded-[10px] px-3 py-2 text-[13px] font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.08)] hover:text-primary"
+                className="block rounded-lg px-3 py-2 text-[13px] font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.08)] hover:text-primary"
               >
                 {m.label}
               </Link>
@@ -283,7 +283,7 @@ export function HeaderAuth() {
             <a
               href="/logout"
               role="menuitem"
-              className="block rounded-[10px] px-3 py-2 text-[13px] font-semibold text-danger transition-colors hover:bg-danger-soft"
+              className="block rounded-lg px-3 py-2 text-[13px] font-semibold text-danger transition-colors hover:bg-danger-soft"
             >
               로그아웃
             </a>

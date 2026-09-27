@@ -26,7 +26,7 @@ export function RetryButton() {
       </button>
       {/* 눌렀는데도 이 화면이 그대로면 아직 연결이 안 된 것 — 그 사실만 알려준다 */}
       <p aria-live="polite" className="nz-off-status">
-        {tried ? "아직 연결되지 않았어요. 잠시 후 다시 눌러 주세요." : ""}
+        {tried ? "아직 연결 안 됨 · 잠시 후 다시" : ""}
       </p>
     </div>
   );

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { TemperatureSnapshot } from "@/lib/market/temperature-archive";
-import { DiffBadge } from "./score-diff";
+import { ScoreDiff } from "./score-diff";
 
 /* 점수 밴드 색 — 예전엔 #dc2626·#ea580c·#0284c7·#2563eb 를 인라인 style 로
    박아 두었다. 다크에서 토큰을 안 타 그대로 튀었고, 대비 게이트가 보증하는
@@ -12,9 +12,10 @@ export function scoreToneClass(score: number): string {
   return "bg-primary-soft text-primary";
 }
 
-/* [1009 · A] 온도 허브의 지역 한 칸 — 페이지에서 떼어 냈다(임시 하네스가 실데이터 모양으로 그려 확인하려고).
-   점수(큰 숫자) → 지역·한 줄 → 눈금(50이 중립) → 지난주 대비 배지(등락 표준: ▲ 빨강·▼ 파랑·보합).
-   칸 전체가 링크라 눌림은 .tile(:active)이 준다. */
+/* [1009 · A] 온도 허브의 지역 한 칸.
+   [v4 · 규칙 5·7] 카드 격자(점수 색 타일 + 눈금 막대 + 배지) → 구분선 목록 행:
+   왼쪽 지역(굵게) + 보조 한 줄(판정 한 줄) / 오른쪽 점수(t-num, 점수 밴드 글자색) + 지난주 대비(글자형 등락).
+   행 전체가 링크. 부르는 쪽의 `<ul className="divide-y divide-line">` 이 1px 선으로 가른다. */
 export function TempRegionCard({
   current,
   previous,
@@ -25,26 +26,24 @@ export function TempRegionCard({
   href: string;
 }) {
   const diff = previous ? current.score - previous.score : null;
+  /* 밴드 색은 글자에만(면 없이) — scoreToneClass 의 text-* 만 쓴다 */
+  const tone = scoreToneClass(current.score).split(" ").find((c) => c.startsWith("text-")) ?? "text-ink";
   return (
-    <Link href={href} className="tile card flex items-center gap-3 rounded-[10px] px-3 py-2.5 no-underline">
-      <span
-        className={`tile-ico t-num flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[10px] text-[15px] ${scoreToneClass(current.score)}`}
-      >
-        {current.score}
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="t-sub truncate font-bold text-ink">{current.regionLabel}</span>
-        <span className="t-caption truncate text-text-3">{current.headline}</span>
-        {/* 눈금 위 위치 — 숫자만으로는 "62가 높은 편인가"를 못 읽는다.
-            가운데 눈금이 중립(50)이다. */}
-        <span className="rank-track" aria-hidden="true">
-          <span
-            className={`rank-fill ${current.score >= 55 ? "text-warning" : "text-primary"}`}
-            style={{ width: `${Math.min(100, Math.max(3, current.score))}%` }}
-          />
+    <li>
+      <Link href={href} className="press flex min-h-14 items-center justify-between gap-x-3 py-3 no-underline">
+        <span className="min-w-0 flex-1">
+          <span className="block truncate t-body font-bold text-ink">{current.regionLabel}</span>
+          <span className="mt-0.5 block truncate t-sub text-text-3">{current.headline}</span>
         </span>
-      </span>
-      {diff !== null && <DiffBadge diff={diff} />}
-    </Link>
+        <span className="flex shrink-0 flex-col items-end">
+          <span className={`t-body t-num ${tone}`}>{current.score}</span>
+          {diff !== null && (
+            <span className="t-caption">
+              <ScoreDiff d={diff} sr="지난주보다" />
+            </span>
+          )}
+        </span>
+      </Link>
+    </li>
   );
 }

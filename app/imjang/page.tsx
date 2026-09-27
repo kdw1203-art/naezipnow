@@ -1,3 +1,4 @@
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 3곳을 font-bold(700)로 바꿨다. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "../components/PageShell";
@@ -43,7 +44,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const title = "임장 가이드 — 지역별 답사 준비와 현장 체크포인트 | 내집나우";
   const description =
     regions.length > 0
-      ? `${regions.length}개 지역의 임장(현장 답사) 가이드: 실거래 데이터로 단지 우선순위를 잡고, 현장에서만 확인되는 체크포인트 ${IMJANG_CHECKPOINTS.length}가지로 답사합니다. 시세는 누구나 봅니다 — 현장은 가 본 사람만 압니다.`
+      ? `${regions.length}개 지역의 임장(현장 답사) 가이드: 실거래 데이터로 단지 우선순위를 잡고, 현장에서만 확인되는 체크포인트 ${IMJANG_CHECKPOINTS.length}가지로 답사합니다. 실거래가는 누구나 봅니다 — 현장은 가 본 사람만 압니다.`
       : `임장(현장 답사) 준비 가이드: 실거래 데이터로 단지 우선순위를 잡고, 현장 체크포인트 ${IMJANG_CHECKPOINTS.length}가지로 답사합니다.`;
   return {
     title,
@@ -63,77 +64,80 @@ export default async function ImjangIndexPage() {
   ]);
 
   return (
-    <PageShell breadcrumb="홈 › 임장 가이드" title="임장 가이드">
+    <PageShell breadcrumb="홈 › 임장 가이드">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }} />
 
-      <p className="rise-in mb-5 max-w-[720px] text-[13px] leading-[1.7] text-text-2">
-        임장(臨場)은 집을 데이터가 아니라 현장에서 확인하는 일입니다. 시세·거래량은
-        가기 전에 여기서 보고, 소음·주차·관리 상태처럼{" "}
-        <strong className="text-ink">가야만 알 수 있는 것</strong>은 체크포인트로
-        확인해 기록으로 남기세요. 지역 가이드는 실거래 데이터가 정리된 지역만 엽니다.
-      </p>
+      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 지역 격자(2열 · 같은 높이 행 · 오른쪽 거래 건수) → 체크포인트 구분선 행 →
+          채움 파랑 1개(임장노트 쓰기) + 링크 한 줄. 지운 것: 소개 문단(→ 사실 줄), 여러 줄로 감기는 칩 구름(→ 2열 격자),
+          체크포인트 카드 격자(높이가 다른 카드 → 행), 실패 카드 두 문장(→ 한 줄). */}
+      <div className="mx-auto flex max-w-[760px] flex-col gap-8">
+        <header className="flex flex-col gap-0.5">
+          <h1 className="rise-in t-title text-ink">임장 가이드</h1>
+          {/* [1012] 규칙 6·7 — 어디서·몇 곳·몇 가지(실측). "시세" 는 실거래만 있는 곳에서 금지 */}
+          <p className="t-sub text-text-3">
+            {regions.length > 0 ? `${regions.length}개 지역 · ` : ""}현장 체크포인트 {IMJANG_CHECKPOINTS.length}가지 · 국토교통부 실거래
+          </p>
+        </header>
 
-      {/* 지역 목록 — 실데이터 있는 지역만, 거래 많은 순 */}
-      <section className="mb-7">
-        <h2 className="mb-2 text-[15px] font-extrabold text-ink">
-          지역별 가이드 <span className="text-[12px] font-medium text-text-3">거래 많은 순</span>
-        </h2>
-        {loadError ? (
-          <div className="card rounded-2xl px-4 py-4">
-            <p className="text-[13px] font-bold text-ink">지역 목록을 지금 불러오지 못했어요</p>
-            <p className="mt-1 text-[12px] leading-[1.6] text-text-2">
-              지역이 없다는 뜻이 아니라 조회가 실패했다는 뜻이에요. 잠시 후 새로고침해 주세요.
+        {/* 지역 목록 — 실데이터 있는 지역만, 거래 많은 순 */}
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+            지역별 가이드 <span className="t-sub font-medium text-text-3">거래 많은 순</span>
+          </h2>
+          {loadError ? (
+            <p className="card rounded-lg px-4 py-4 t-body text-text-2">
+              <b className="text-ink">지역 목록을 불러오지 못했어요</b> · 조회 실패(지역 없음 아님) · 잠시 후 새로고침
             </p>
-          </div>
-        ) : regions.length === 0 ? (
-          <div className="card rounded-2xl px-4 py-4 text-[13px] text-text-2">
-            아직 구간이 정리된 지역이 없습니다.
-          </div>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {regions.map((r) => (
-              <Link
-                key={r.slug}
-                prefetch={false}
-                href={`/imjang/${encodeURIComponent(r.slug)}`}
-                className="chip bg-surface px-3.5 py-2 text-[13px] font-bold text-text-1 shadow-sm no-underline hover:text-primary"
-              >
-                {r.name}
-                <span className="ml-1.5 text-[12px] font-medium text-text-3">
-                  {r.txCount.toLocaleString("ko-KR")}건
+          ) : regions.length === 0 ? (
+            <p className="card rounded-lg px-4 py-4 t-body text-text-2">실거래 구간이 정리된 지역 없음</p>
+          ) : (
+            /* [v4 · 규칙 10] 칩 구름 → 2열 격자(행과 열이 맞는 같은 높이 칸) */
+            <ul data-tone="blue" className="lq-panel card grid grid-cols-2 gap-x-4 rounded-lg px-4">
+              {regions.map((r) => (
+                <li key={r.slug} className="border-b border-line">
+                  <Link
+                    prefetch={false}
+                    href={`/imjang/${encodeURIComponent(r.slug)}`}
+                    className="press flex min-h-12 items-center justify-between gap-2 no-underline"
+                  >
+                    <span className="min-w-0 truncate t-body font-bold text-ink">{r.name}</span>
+                    <span className="shrink-0 t-sub t-num text-text-3">{r.txCount.toLocaleString("ko-KR")}건</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {/* 표준 체크포인트 — 인덱스에도 전문 (지역과 무관한 공통 지식). [v4 · 규칙 5] 카드 격자 → 구분선 행 */}
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+            현장 체크포인트 <span className="t-num text-text-3">{IMJANG_CHECKPOINTS.length}</span>
+            <span className="t-sub font-medium text-text-3">데이터로는 알 수 없는 것</span>
+          </h2>
+          <ol data-tone="sand" className="card flex flex-col divide-y divide-line rounded-lg px-4">
+            {IMJANG_CHECKPOINTS.map((c, i) => (
+              <li key={c.title} className="flex min-h-14 items-start gap-3 py-3">
+                <span className="w-5 shrink-0 t-body t-num text-text-3">{String(i + 1).padStart(2, "0")}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block t-body font-bold text-ink">{c.title}</span>
+                  <span className="mt-0.5 block t-sub text-text-3">{c.why}</span>
                 </span>
-              </Link>
+              </li>
             ))}
-          </div>
-        )}
-      </section>
+          </ol>
+        </section>
 
-      {/* 표준 체크포인트 — 인덱스에도 전문 (지역과 무관한 공통 지식) */}
-      <section className="mb-7">
-        <h2 className="mb-1 text-[15px] font-extrabold text-ink">
-          현장 체크포인트 {IMJANG_CHECKPOINTS.length} — 데이터로는 알 수 없는 것
-        </h2>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {IMJANG_CHECKPOINTS.map((c, i) => (
-            <div key={c.title} className="card rounded-2xl px-4 py-3">
-              <div className="text-[13px] font-extrabold text-ink">
-                <span className="mr-1.5 text-primary">{String(i + 1).padStart(2, "0")}</span>
-                {c.title}
-              </div>
-              <p className="mt-1 text-[12px] leading-[1.6] text-text-2">{c.why}</p>
-            </div>
-          ))}
+        <div className="flex flex-col gap-2">
+          {/* [v4 · 규칙 2] 채움 파랑은 이 화면에 이것 하나 */}
+          <Link href="/notes/new" className="btn-primary press flex min-h-12 items-center justify-center rounded-lg px-4 t-body no-underline">
+            체크포인트 {IMJANG_CHECKPOINTS.length}가지로 임장노트 쓰기
+          </Link>
+          <Link href="/tx" className="tap-line w-fit t-sub font-bold text-primary no-underline">
+            지역별 실거래 구간 보기 ›
+          </Link>
         </div>
-      </section>
-
-      <section className="flex flex-wrap items-center gap-2.5">
-        <Link href="/notes/new" className="btn-primary press rounded-xl px-4 py-2.5 text-[13px] no-underline">
-          임장노트 쓰기 ›
-        </Link>
-        <Link href="/tx" className="chip bg-surface px-3.5 py-2.5 text-[13px] font-bold text-text-2 shadow-sm no-underline">
-          지역별 실거래 구간
-        </Link>
-      </section>
+      </div>
     </PageShell>
   );
 }

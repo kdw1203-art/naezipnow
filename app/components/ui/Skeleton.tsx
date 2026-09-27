@@ -14,8 +14,8 @@ export function SkBlock({ h = 120, className }: { h?: number; className?: string
 /** 카드 한 장 모양 — 아이콘 · 제목 · 두 줄 · 숫자 */
 export function SkCard({ className }: { className?: string }) {
   return (
-    <div className={`card flex flex-col gap-2 rounded-[14px] p-4 ${className ?? ""}`}>
-      <span className="skeleton h-9 w-9 rounded-[10px]" />
+    <div className={`card flex flex-col gap-2 rounded-lg p-4 ${className ?? ""}`}>
+      <span className="skeleton h-9 w-9 rounded-lg" />
       <SkLine w="62%" h={14} />
       <SkLine w="90%" h={10} />
       <SkLine w="45%" h={18} className="mt-1" />

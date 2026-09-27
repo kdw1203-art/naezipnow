@@ -5,6 +5,7 @@ import Link from "next/link";
 import { regionIdForName } from "@/lib/region/catalog";
 import { CreateGroupCta } from "./CreateGroupCta";
 import { Icon } from "@/app/components/Icon";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /**
  * /town/groups 클라이언트 셸 (사용량 절감 12차 — ISR 전환의 클라이언트 절반).
@@ -97,13 +98,13 @@ function MeetingCard({
   const dday = ddayLabel(g.whenTs, nowMs);
   return (
     <div
-      className="card tile flex flex-col gap-3 rounded-[14px] p-4"
+      className="card tile flex flex-col gap-3 rounded-lg p-4"
       data-reveal=""
     >
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5">
           <span
-            className={`inline-flex items-center gap-1.5 rounded-md chip-pad t-sub font-extrabold ${meta.style}`}
+            className={`inline-flex items-center gap-1.5 rounded-md chip-pad t-sub font-bold ${meta.style}`}
           >
             <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
             {meta.label}
@@ -396,17 +397,18 @@ export function GroupsClient({
 
       {/* ---------- 섹션 ---------- */}
       {groups.length === 0 ? (
-        <div className="rise-in-2 card flex flex-col items-center gap-3 rounded-[18px] px-6 py-12 text-center">
+        <div className="rise-in-2 card flex flex-col items-center gap-3 px-6 py-12 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
             <Icon name="search" size={22} />
           </div>
           <p className="text-[13px] font-bold text-ink">
-            {filtersActive ? "조건에 맞는 모임이 아직 없어요" : "아직 등록된 모임이 없어요"}
+            {filtersActive ? "이 조건에 맞는 임장 모임이 0개예요" : "모집 중인 임장 모임이 아직 없어요"}
           </p>
+          {/* [1012] 규칙 6 — "모아보세요" 권유 → 사실 */}
           <p className="max-w-xs text-xs leading-[1.6] text-text-3">
             {filtersActive
-              ? "필터를 바꾸거나 직접 모임을 만들어 이웃을 모아보세요."
-              : "첫 모임을 만들어 같이 다녀올 이웃을 모아보세요 — 만들면 채팅방이 함께 열려요."}
+              ? "필터를 풀면 전체 모임이 보여요 — 모임을 만들면 채팅방이 함께 열려요."
+              : "여기서 만든 첫 모임이 이 목록 맨 앞에 실려요 — 만들면 채팅방이 함께 열려요."}
           </p>
           {/* [970 · C-38] "직접 모임을 만들어" 라고 적어 두고 만들기 버튼은 화면 맨 위(머리)에만
               있었다 — 빈 상태 안에서 바로 열 수 있게 같은 모달을 단다. */}
@@ -438,13 +440,13 @@ export function GroupsClient({
                 ))}
               </div>
             ) : (
-              <div className="card flex flex-col items-center gap-2 rounded-[18px] px-6 py-10 text-center">
+              <div className="card flex flex-col items-center gap-2 px-6 py-10 text-center">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
                   <Icon name="users" size={22} />
                 </div>
-                <div className="text-[13px] font-bold text-text-1">지금 모집 중인 모임이 없어요</div>
+                <div className="text-[13px] font-bold text-text-1">모집 중인 임장 모임이 없어요</div>
                 <div className="max-w-xs text-xs leading-[1.6] text-text-3">
-                  직접 모임을 만들어 이웃을 모아보세요.
+                  여기서 만든 모임이 이 자리에 실려요 — 만들면 채팅방이 함께 열려요.
                 </div>
                 <div className="mt-1">
                   <CreateGroupCta />

@@ -1,3 +1,5 @@
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
+/* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { listBanners, type Banner, type BannerPlacement } from "@/lib/admin/banners";
@@ -40,7 +42,7 @@ function BannerCard({ banner }: { banner: Banner }) {
       }}
     >
       <span className="text-[10px] font-bold uppercase tracking-wide opacity-80">광고</span>
-      <span className="text-[15px] font-extrabold leading-snug">{banner.title}</span>
+      <span className="text-[15px] font-bold leading-snug">{banner.title}</span>
       {banner.subtitle ? (
         <span className="text-[12px] leading-relaxed opacity-90">{banner.subtitle}</span>
       ) : null}
@@ -75,118 +77,19 @@ function BannerCard({ banner }: { banner: Banner }) {
   );
 }
 
-/**
- * 하우스 광고(내집나우 안내) 카드.
- *
- * 디자인: 예전엔 순백(bg-surface) 카드라, 커버 이미지가 있는 임장노트 카드들
- * 사이(동네이야기 피드)에 끼면 "빈 구멍"처럼 튀어 리듬을 깼다(2026-08-15 소유자
- * 캡처). 노트 카드와 같은 "커버 + 본문" 실루엣을 주면 의도된 안내 카드로 읽힌다 —
- * 상단에 브랜드 그라데이션 커버 밴드를 얹고(아이브로·안내칩은 그 위 흰 글자),
- * 본문은 아래에 둔다. 홈 피드(밝은 배경)에서도 자연스럽다.
- */
-/** 하우스 광고별 시각 테마 — 색·워터마크 아이콘. 등록 안 된 id 는 기본(브랜드 블루).
- *  [975] 커버 밴드 위 글자는 항상 흰색이다 — from/to 두 스톱 **모두** 흰 글씨
- *  4.5:1 을 넘겨야 한다. 밴드는 justify-between 이라 오른쪽 칩이 to 색 위에 앉는다
- *  (실측으로 걸린 게 정확히 그 자리였다: to #2fa3e0 위 2.82:1). */
-const HOUSE_AD_THEME: Record<string, { from: string; to: string; icon: ReactNode }> = {
-  house_map_real_price: {
-    from: "#1d4fd8",
-    to: "#186f9f", /* 구 #2fa3e0 — 흰 글씨 2.82:1 이었다. 지금 5.51:1 */
-    icon: (
-      // 지도 핀 클러스터 — 장식(숫자 없음). 실거래 금액은 지도에서 실데이터로 본다.
-      <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-        <path d="M18 30c-5.5-6-8-9.6-8-13.4C10 11 13.6 8 18 8s8 3 8 8.6c0 3.8-2.5 7.4-8 13.4Z" />
-        <circle cx="18" cy="16.4" r="2.6" />
-        <path d="M33 22c-3.4-3.7-5-6-5-8.3C28 10.2 30.2 8 33 8s5 2.2 5 5.7c0 2.3-1.6 4.6-5 8.3Z" opacity=".55" />
-      </g>
-    ),
-  },
-  house_note_start: {
-    from: "#1d4fd8",
-    to: "#5b47d8",
-    icon: (
-      <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M11 29V11a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v18l-9-4.5L11 29Z" />
-        <path d="M15 14h10M15 18h6" />
-      </g>
-    ),
-  },
-  house_subscription: {
-    from: "#155e9c",
-    to: "#1d4fd8",
-    icon: (
-      <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <path d="m20 7 12 6-12 6L8 13l12-6Z" />
-        <path d="m8 20 12 6 12-6" opacity=".55" />
-        <path d="m8 26 12 6 12-6" opacity=".3" />
-      </g>
-    ),
-  },
-  house_expert: {
-    from: "#0f766e",
-    to: "#1d4fd8",
-    icon: (
-      <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="20" cy="14" r="5" />
-        <path d="M10 30c1.6-5 5.4-7.5 10-7.5S28.4 25 30 30" />
-        <path d="m27 16 2 2 4-4" opacity=".7" />
-      </g>
-    ),
-  },
-};
-
+/* [v4 · 1012] 자사 안내 카드 — 그라데이션 띠·점 무늬·호버 워터마크를 걷고 평평한 카드 한 장으로.
+   "내집나우 안내"(캡션) → 제목 → 본문 → 글자 링크. 광고주 배너(아래 BannerCard)만 운영자가 고른 색을 쓴다. */
 function HouseAdCard({ ad }: { ad: HouseAd }) {
-  const theme = HOUSE_AD_THEME[ad.id] ?? { from: "#1d4fd8", to: "#3a63de", icon: null };
   return (
     <AdSlotTracker creativeId={ad.id} kind="house">
       <Link
         href={ad.href}
-        className="card group block overflow-hidden rounded-2xl no-underline transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(29,79,216,.35)] hover:shadow-[0_14px_30px_rgba(16,28,54,.12)]"
+        className="card block rounded-lg px-4 py-3.5 no-underline transition-colors duration-200 hover:border-line-strong"
       >
-        {/* 브랜드 커버 밴드 — 지역 워터마크 아이콘이 호버에 살짝 커진다 */}
-        <div
-          className="relative flex items-center justify-between overflow-hidden px-4 py-3.5"
-          style={{ background: `linear-gradient(120deg, ${theme.from}, ${theme.to})` }}
-        >
-          {/* 점 패턴 — 순수 장식 */}
-          <svg
-            aria-hidden
-            className="pointer-events-none absolute inset-0 h-full w-full opacity-[.14]"
-            preserveAspectRatio="xMidYMid slice"
-          >
-            <defs>
-              <pattern id={`had-dots-${ad.id}`} width="14" height="14" patternUnits="userSpaceOnUse">
-                <circle cx="1.5" cy="1.5" r="1.1" fill="white" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill={`url(#had-dots-${ad.id})`} />
-          </svg>
-          {theme.icon && (
-            <svg
-              aria-hidden
-              viewBox="0 0 40 40"
-              className="pointer-events-none absolute -bottom-1.5 right-2 h-11 w-11 text-white opacity-25 transition-transform duration-300 group-hover:scale-110 group-hover:opacity-40"
-            >
-              {theme.icon}
-            </svg>
-          )}
-          <span className="relative text-[12px] font-extrabold tracking-tight text-white">
-            {ad.eyebrow}
-          </span>
-          <span className="relative rounded-md bg-white/20 chip-pad text-[10px] font-bold text-white">
-            내집나우 안내
-          </span>
-        </div>
-        <div className="flex flex-col gap-1 px-4 pb-3.5 pt-2.5">
-          <div className="text-[15px] font-extrabold leading-snug text-ink">{ad.title}</div>
-          <p className="text-[13px] leading-relaxed text-text-2">{ad.body}</p>
-          <span className="mt-1 inline-flex items-center gap-1 text-[13px] font-bold text-primary">
-            {ad.ctaLabel}
-            <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-1">
-              →
-            </span>
-          </span>
-        </div>
+        <div className="t-caption text-text-3">내집나우 안내 · {ad.eyebrow}</div>
+        <div className="mt-1 t-section text-ink">{ad.title}</div>
+        <p className="mt-0.5 t-sub text-text-2">{ad.body}</p>
+        <span className="mt-1.5 inline-block t-sub font-bold text-primary">{ad.ctaLabel} ›</span>
       </Link>
     </AdSlotTracker>
   );

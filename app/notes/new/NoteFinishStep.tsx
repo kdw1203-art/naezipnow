@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 3곳을 font-bold(700)로 바꿨다. */
 
 import { useEffect, useRef } from "react";
 import { Icon } from "@/app/components/Icon";
@@ -55,7 +56,7 @@ export function NoteFinishStep(p: {
     <>
       {/* 메모 + 사진 */}
       <div className="rise-in-6 card flex flex-col gap-2.5 p-4">
-        <div className="text-[13px] font-extrabold text-ink">
+        <div className="text-[13px] font-bold text-ink">
           메모 <span className="text-xs font-medium text-text-3">현장에서 본 그대로</span>
         </div>
         {/* [967 · 8] 자동 높이(4줄~40vh) · 세로 손잡이 · 글자 수(maxLength 와 같은 상한) */}
@@ -96,7 +97,7 @@ export function NoteFinishStep(p: {
             type="button"
             onClick={p.onPick}
             disabled={p.uploading || p.photos.length >= p.maxPhotos}
-            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-line-strong p-[11px] text-center t-body font-bold text-text-2 disabled:opacity-60"
+            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border-[1.5px] border-dashed border-line-strong p-[11px] t-body font-bold text-text-2 disabled:opacity-60"
           >
             <Icon name="📷" size={16} className="inline shrink-0 align-middle" />
             {p.uploading ? "업로드 중…" : `사진 추가 (${p.photos.length}/${p.maxPhotos})`}
@@ -106,7 +107,7 @@ export function NoteFinishStep(p: {
             onClick={p.onCapture}
             disabled={p.uploading || p.photos.length >= p.maxPhotos}
             aria-label="카메라로 촬영해 사진 추가"
-            className="flex shrink-0 items-center justify-center gap-1.5 rounded-[10px] border-[1.5px] border-line-strong bg-surface px-4 p-[11px] t-body font-bold text-text-1 disabled:opacity-60 pointer-fine:hidden"
+            className="flex shrink-0 items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-line-strong bg-surface px-4 p-[11px] t-body font-bold text-text-1 disabled:opacity-60 pointer-fine:hidden"
           >
             <Icon name="camera" size={16} className="inline shrink-0 align-middle" />
             촬영
@@ -124,15 +125,16 @@ export function NoteFinishStep(p: {
         className="rise-in-6 card flex items-center justify-between gap-3 p-4 text-left"
       >
         <div className="min-w-0">
-          <div className="t-body font-extrabold text-ink">공개 노트로 저장</div>
+          <div className="t-body font-bold text-ink">공개 노트로 저장</div>
+          {/* [v4 · 규칙 3] 설명 문장 → 사실 한 줄(포인트는 lib/points/catalog note_public 100P) */}
           <div className="mt-0.5 t-sub text-text-3">
             {p.isPublic
               ? p.visibilityFromPrefs
-                ? "공개 피드에 노출돼요 · 설정에서 정한 기본값 · 노트당 최초 공개 시 100P 적립"
-                : "공개 피드에 노출돼요 · 노트당 최초 공개 시 100P 적립"
+                ? "공개 피드 노출 · 설정 기본값 · 최초 공개 +100P"
+                : "공개 피드 노출 · 최초 공개 +100P"
               : p.visibilityFromPrefs
-                ? "꺼져 있으면 나만 볼 수 있어요 · 설정에서 정한 기본값"
-                : "꺼져 있으면 나만 볼 수 있어요 (기본값)"}
+                ? "끄면 나만 보기 · 설정 기본값"
+                : "끄면 나만 보기 · 기본값"}
           </div>
         </div>
         <Switch on={p.isPublic} />
@@ -149,7 +151,7 @@ export function NoteFinishStep(p: {
             className="mt-0.5 h-4 w-4 accent-primary"
           />
           <span className="min-w-0">
-            <span className="block t-body font-extrabold text-ink">
+            <span className="block t-body font-bold text-ink">
               내집나우 공식 소셜 소재 활용 동의 (선택)
             </span>
             <span className="mt-0.5 block t-sub text-text-3">

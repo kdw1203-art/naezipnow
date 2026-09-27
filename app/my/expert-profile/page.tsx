@@ -137,7 +137,7 @@ function ApplicationStatusCard({
           {submitted} 접수 · {application.expertType ?? application.specialty}
         </p>
         {application.reviewNote && (
-          <div className="mt-3 rounded-[10px] bg-bg px-4 py-3 t-sub text-text-1">
+          <div className="mt-3 rounded-lg bg-bg px-4 py-3 t-sub text-text-1">
             <span className="font-bold text-ink">반려 사유</span> — {application.reviewNote}
           </div>
         )}
@@ -206,7 +206,7 @@ function ApplicationStatusCard({
         })}
       </ol>
       {reviewFlags.length > 0 && (
-        <div className="mt-4 rounded-[10px] bg-warning-soft px-4 py-3">
+        <div className="mt-4 rounded-lg bg-warning-soft px-4 py-3">
           <p className="t-sub font-bold text-ink">자동 검증에서 확인이 필요한 항목</p>
           <ul className="mt-1 flex list-disc flex-col gap-0.5 pl-4 t-sub text-text-2">
             {reviewFlags.map((f, i) => (

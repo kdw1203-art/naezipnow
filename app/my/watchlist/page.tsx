@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageShell } from "../../components/PageShell";
-import { EmptyState, ErrorState } from "@/app/components/ui/EmptyState";
+import { ErrorState } from "@/app/components/ui/EmptyState";
 import { safeAuth } from "@/lib/safe-auth";
 import { listWatchlist, type WatchlistItem } from "@/lib/watchlist/store-db";
 import { resolveComplexPrice, type ComplexPriceResult } from "@/lib/market/complex-price";
@@ -48,22 +48,27 @@ const TABS: { key: WatchTab; label: string }[] = [
   { key: "listings", label: "관심 매물" },
   { key: "searches", label: "저장 검색" },
 ];
+/* [v4 · 부품] 채움 파랑 알약 탭 → 밑줄 탭 · 제목(h1 "관심")을 이 760px 줄 맨 위에(PageShell 제목·브레드크럼은
+   1240 컨테이너 왼쪽 끝이라 가운데 줄과 어긋났다) */
 function WatchTabs({ active }: { active: WatchTab }) {
   return (
-    <nav aria-label="관심 종류" className="mb-4 flex flex-wrap gap-1.5">
-      {TABS.map((t) => (
-        <Link
-          key={t.key}
-          href={t.key === "complex" ? "/my/watchlist" : `/my/watchlist?tab=${t.key}`}
-          aria-current={t.key === active ? "page" : undefined}
-          className={`inline-flex min-h-[40px] items-center rounded-full border px-4 t-body font-bold no-underline ${
-            t.key === active ? "border-primary bg-primary text-white" : "border-line bg-surface text-text-1"
-          }`}
-        >
-          {t.label}
-        </Link>
-      ))}
-    </nav>
+    <div className="mb-4 flex flex-col gap-2">
+      <h1 className="t-title text-ink">관심</h1>
+      <nav aria-label="관심 종류" className="flex gap-5 border-b border-line">
+        {TABS.map((t) => (
+          <Link
+            key={t.key}
+            href={t.key === "complex" ? "/my/watchlist" : `/my/watchlist?tab=${t.key}`}
+            aria-current={t.key === active ? "page" : undefined}
+            className={`inline-flex min-h-10 items-center border-b-2 pb-2 pt-2.5 t-body font-bold no-underline ${
+              t.key === active ? "border-brand-hanji-ink text-ink" : "border-transparent text-text-3"
+            }`}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </nav>
+    </div>
   );
 }
 
@@ -100,9 +105,11 @@ export default async function WatchlistDashboardPage({
   const tab: WatchTab = rawTab === "listings" || rawTab === "searches" ? rawTab : "complex";
   if (tab !== "complex") {
     return (
-      <PageShell breadcrumb={`마이 › 관심 › ${tab === "listings" ? "관심 매물" : "저장 검색"}`} title="관심">
-        <WatchTabs active={tab} />
-        {tab === "listings" ? <WishlistSection email={email} /> : <SavedSearchesSection email={email} />}
+      <PageShell>
+        <div className="mx-auto w-full max-w-[760px]">
+          <WatchTabs active={tab} />
+          {tab === "listings" ? <WishlistSection email={email} /> : <SavedSearchesSection email={email} />}
+        </div>
       </PageShell>
     );
   }
@@ -172,7 +179,8 @@ export default async function WatchlistDashboardPage({
   });
 
   return (
-    <PageShell breadcrumb="마이 › 관심 › 관심 단지" title="관심">
+    <PageShell>
+      <div className="mx-auto w-full max-w-[760px]">
       <WatchTabs active="complex" />
 
       {listFailed ? (
@@ -182,26 +190,28 @@ export default async function WatchlistDashboardPage({
           desc="담아 둔 단지가 0곳인 게 아니라 조회가 실패했어요. 잠시 후 새로고침해 주세요."
         />
       ) : items.length === 0 ? (
-        /* [966] 빈 상태 정본화 · [1009 · H] 무엇을 하면 채워지는지 + 채우면 무엇을 받는지 */
-        <EmptyState
-          icon="pin"
-          className="rise-in"
-          title="아직 담아 둔 단지가 없어요"
-          desc="단지 화면의 “단지 팔로우”나 지도의 “관심 단지 담기”를 누르면 여기에 모여요. 담아 두면 현재가와 지난 점검 대비 등락을 한 번에 보고, 시세가 ±1% 이상 움직이면 알림을 받아요."
-          action={{ label: "지도에서 단지 찾기", href: "/map" }}
-        />
+        /* [966] 빈 상태 정본화 · [1009 · H] 무엇을 하면 채워지는지 + 채우면 무엇을 받는지
+           [v4 · 규칙 8] 그림 카드(EmptyState) + 두 문장 → 한 줄 사실 + 링크 */
+        <div className="rise-in flex flex-col gap-1 border-y border-line py-3">
+          <p className="t-body font-bold text-ink">담아 둔 단지 없음</p>
+          <p className="t-sub text-text-3">
+            단지 팔로우·지도의 관심 단지 담기 → 현재가·등락 한 번에 · 실거래가 ±1% 이상 움직이면 알림
+          </p>
+          <Link href="/map" className="inline-flex min-h-10 items-center self-start t-sub font-bold text-primary no-underline">
+            지도에서 관심 단지 담기 ›
+          </Link>
+        </div>
       ) : (
         <>
           {!notesR.ok && (
-            <p className="mb-3 rounded-xl border border-line bg-bg px-3 py-2 t-sub text-text-2">
-              새 노트 수를 지금 불러오지 못했어요 — 노트가 없는 게 아니라 조회가 실패했습니다.
-            </p>
+            <p className="mb-3 t-caption text-text-3">새 노트 수 조회 실패 — 노트가 없는 게 아님</p>
           )}
           <div className="rise-in">
             <WatchlistRows initial={rows} max={MAX_ROWS} />
           </div>
         </>
       )}
+      </div>
     </PageShell>
   );
 }

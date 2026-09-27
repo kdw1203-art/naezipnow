@@ -105,19 +105,19 @@ export function RecordsSearchClient() {
           maxLength={40}
           placeholder="단지명으로 검색 (예: 은마아파트)"
           /* [970 · B-21] min-w-0 — input 의 기본 최소 폭이 남아 좁은 화면에서 "조회" 버튼을 밖으로 밀었다 */
-          className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3.5 py-2 text-[13px] text-ink outline-none placeholder:text-text-3"
+          className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3.5 py-2 text-[13px] text-ink outline-none placeholder:text-text-3"
         />
         <button
           type="submit"
           disabled={status === "loading"}
-          className="btn-primary shrink-0 rounded-[10px] px-4 py-2 text-[13px] disabled:opacity-60"
+          className="btn-primary shrink-0 rounded-lg px-4 py-2 text-[13px] disabled:opacity-60"
         >
           {status === "loading" ? "조회 중…" : "조회"}
         </button>
       </form>
 
       {status === "error" && (
-        <div className="mt-4 rounded-[10px] border border-line bg-surface px-4 py-8 text-center text-[13px] text-text-2">
+        <div className="mt-4 rounded-lg border border-line bg-surface px-4 py-8 text-center text-[13px] text-text-2">
           &ldquo;{query}&rdquo; 조회에 실패했어요 — 자료가 없는 게 아니라 지금 읽지
           못한 상태예요. 잠시 뒤{" "}
           <button
@@ -132,15 +132,16 @@ export function RecordsSearchClient() {
       )}
 
       {status === "ok" && records.length === 0 && (
-        <div className="mt-4 rounded-[10px] border border-line bg-surface px-4 py-8 text-center text-[13px] text-text-3">
-          &ldquo;{query}&rdquo; 관련 공개 자료가 아직 없어요. 실거래 데이터는{" "}
+        <div className="mt-4 rounded-lg border border-line bg-surface px-4 py-8 text-center text-[13px] text-text-3">
+          {/* [1012] 규칙 5 — "확인해 보세요" → 동사+대상 링크 */}
+          &ldquo;{query}&rdquo; 관련 공개 자료가 아직 없어요 · 실거래는{" "}
           <Link
             href={`/complex/browse`}
             className="font-bold text-primary underline-offset-2 hover:underline"
           >
-            단지 실거래
+            단지 실거래 보기
           </Link>
-          에서 확인해 보세요.
+          에 있어요.
         </div>
       )}
 

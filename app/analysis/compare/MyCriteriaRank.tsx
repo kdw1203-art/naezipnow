@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -57,7 +58,7 @@ export function MyCriteriaRank({ items }: { items: CriteriaInput[] }) {
   const inputById = new Map(items.map((i) => [i.id, i]));
 
   return (
-    <section aria-labelledby="my-criteria-title" className="card flex flex-col gap-3 rounded-[14px] p-4">
+    <section aria-labelledby="my-criteria-title" className="card flex flex-col gap-3 rounded-lg p-4">
       <div>
         <h2 id="my-criteria-title" className="t-section text-ink">
           내 기준으로 줄 세우기
@@ -68,7 +69,7 @@ export function MyCriteriaRank({ items }: { items: CriteriaInput[] }) {
         </p>
       </div>
 
-      <div className="flex flex-col divide-y divide-divider">
+      <div data-tone="hanji" className="flex flex-col divide-y divide-divider">
         {CRITERIA.map((c) => {
           const why = dropped.get(c.key);
           return (
@@ -103,7 +104,7 @@ export function MyCriteriaRank({ items }: { items: CriteriaInput[] }) {
             {result.ranked.map((s) => (
               <li key={s.id} className="flex items-start gap-3">
                 <span
-                  className={`mt-0.5 w-9 shrink-0 text-center t-body font-extrabold tabular-nums ${
+                  className={`mt-0.5 w-9 shrink-0 text-center t-body font-bold tabular-nums ${
                     s.rank === 1 ? "text-primary" : "text-text-2"
                   }`}
                 >

@@ -306,8 +306,11 @@ export async function POST(req: Request) {
     }
 
     if (body.persistAnalysis !== false) {
+      /* [1012 · 썸네일] 시작할 때 읽은 metadata 사본으로 덮어쓰면, AI 정리가 도는 10~20초 사이 작성자가 고른
+         썸네일(metadata.cover)이 지워진다 — 저장 직전 최신 metadata 를 다시 읽어 그 위에 얹는다. */
+      const latestMeta = ((await getNote(note.id).catch(() => null))?.metadata ?? meta) as InspectionAiCacheMeta;
       const nextMeta: InspectionAiCacheMeta = {
-        ...meta,
+        ...latestMeta,
         intent,
         inspectionReport: report as unknown as Record<string, unknown>,
         inspectionReportGeneratedAt: report.generatedAt,

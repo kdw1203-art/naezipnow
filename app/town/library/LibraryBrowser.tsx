@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 자료실 인터랙션(2026-08-22) — 하부 카테고리 7종 중 자료만 클라이언트 상호작용이
    0개였다(필터·정렬·검색 전무, 전부 정적 링크). 이미 서버가 읽어 오던 컬럼
@@ -29,7 +30,9 @@ export type NoteCardDto = {
   author: string;
   score: number; // 0~100
   cover: string | null;
-  gradient: string; // 커버 없는 카드의 시드 그라디언트 (서버 계산)
+  /** 커버 없는 카드의 면 색(단색 토큰, 서버 계산). [1012] 규칙 3 — 이름이 gradient 였으나 값은
+   *  lib/town/shared.ts seedGradient 가 단색 3종(한지·소프트 블루·연회색)만 돌려주므로 `face` 로 바꿨다. */
+  face: string;
   /** [970 · C-11] 내집나우 Lab(데이터 분석) 노트 — "직접 방문" 대신 "Lab 데이터" 배지 */
   lab?: boolean;
   visited: boolean;
@@ -134,21 +137,22 @@ export function ReportsBrowser({ reports }: { reports: ReportCardDto[] }) {
       </div>
 
       {visible.length === 0 ? (
-        <div className="card rounded-2xl px-4 py-6 text-center t-sub text-text-3">
+        /* [1012] 규칙 6 — 권유 대신 조건·모수 */
+        <div className="card px-4 py-6 text-center t-sub text-text-3">
           {query.trim()
-            ? `"${query.trim()}" 와 맞는 리포트가 없어요 — 검색어를 줄여 보세요.`
-            : "이 조건의 리포트가 없어요 — 필터를 바꿔 보세요."}
+            ? `"${query.trim()}" 와 맞는 리포트가 0건이에요 · 전체 ${reports.length}건`
+            : `이 조건의 리포트가 0건이에요 · 전체 ${reports.length}건`}
         </div>
       ) : (
         <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {visible.map((r) => {
             const paid = r.isPremium && r.price > 0;
             return (
-              <li key={r.id} className="card tile rounded-2xl">
+              <li key={r.id} className="card tile">
                 <Link href={`/town/library/${r.id}`} className="block px-4 py-3.5 no-underline">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="line-clamp-2 t-body font-extrabold text-ink">
+                      <div className="line-clamp-2 t-body font-bold text-ink">
                         {r.title}
                       </div>
                       {r.subtitle && (
@@ -158,7 +162,7 @@ export function ReportsBrowser({ reports }: { reports: ReportCardDto[] }) {
                       )}
                       <div className="mt-0.5 truncate t-sub text-text-3">{r.meta}</div>
                     </div>
-                    <span className="shrink-0 t-sub font-extrabold text-primary">
+                    <span className="shrink-0 t-sub font-bold text-primary">
                       {paid ? `${r.price.toLocaleString("ko-KR")}P` : "무료"}
                     </span>
                   </div>
@@ -239,10 +243,10 @@ export function NotesBrowser({ notes }: { notes: NoteCardDto[] }) {
       </div>
 
       {visible.length === 0 ? (
-        <div className="card rounded-2xl px-4 py-6 text-center t-sub text-text-3">
+        <div className="card px-4 py-6 text-center t-sub text-text-3">
           {query.trim()
-            ? `"${query.trim()}" 와 맞는 노트가 없어요 — 검색어를 줄여 보세요.`
-            : "이 조건의 노트가 없어요 — 필터를 바꿔 보세요."}
+            ? `"${query.trim()}" 와 맞는 공개 노트가 0건이에요 · 전체 ${notes.length}건`
+            : `이 조건의 공개 노트가 0건이에요 · 전체 ${notes.length}건`}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
@@ -250,11 +254,11 @@ export function NotesBrowser({ notes }: { notes: NoteCardDto[] }) {
             <Link
               key={n.id}
               href={`/notes/${n.id}`}
-              className="card tile flex flex-col overflow-hidden rounded-2xl"
+              className="card tile flex flex-col overflow-hidden"
             >
               <div
                 className="relative h-[112px] w-full overflow-hidden"
-                style={{ background: n.gradient }}
+                style={{ background: n.face }}
               >
                 {n.cover && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -263,7 +267,7 @@ export function NotesBrowser({ notes }: { notes: NoteCardDto[] }) {
                 {/* [970 · C-11] 피드는 "Lab 데이터", 여기는 "✓ 직접 방문" 으로 같은 노트를 다르게
                     불렀다 — 같은 라벨·같은 색 규칙(feed-client Cover). bg-white/90 → bg-surface/90(다크). */}
                 <span
-                  className={`absolute left-2 top-2 rounded-md bg-surface/90 chip-pad t-caption font-extrabold ${
+                  className={`absolute left-2 top-2 rounded-md bg-surface/90 chip-pad t-caption font-bold ${
                     n.lab ? "text-ink" : n.visited ? "text-success" : "text-primary"
                   }`}
                 >
@@ -271,7 +275,7 @@ export function NotesBrowser({ notes }: { notes: NoteCardDto[] }) {
                 </span>
               </div>
               <div className="flex flex-1 flex-col gap-1 p-3">
-                <div className="line-clamp-2 t-body font-extrabold text-ink">
+                <div className="line-clamp-2 t-body font-bold text-ink">
                   {n.title}
                 </div>
                 <div className="t-sub text-text-3">{n.region}</div>

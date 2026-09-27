@@ -99,6 +99,11 @@ export default async function NotesFeedPage() {
     }
   })();
 
+  /* [1012-IG] 이 HTML 을 그린 시각 — 목록 머리 숫자 줄의 "최근 7일"·지역 원의 주홍 링·피드 카드의
+     작성 시각이 첫 렌더에 쓰는 기준(서버·클라이언트 첫 렌더가 같은 값이라 hydration 이 맞는다).
+     ISR(1일) HTML 이 늙어도 클라이언트가 마운트 뒤 지금 시각으로 다시 센다. 사용자별 값이 아니다. */
+  const renderedAt = Date.now();
+
   return (
     <NotesFeedClient
       notes={notes}
@@ -106,6 +111,7 @@ export default async function NotesFeedPage() {
       hasMore={hasMore}
       pageSize={FIRST_PAGE}
       hasBestMonth={hasBestMonth}
+      renderedAt={renderedAt}
     />
   );
 }

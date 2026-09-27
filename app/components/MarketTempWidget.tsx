@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 import Link from "next/link";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
@@ -183,7 +184,7 @@ export async function MarketTempWidget({ className }: { className?: string }) {
   return (
     <div className={`card flex flex-col gap-2 rounded-2xl px-5 py-4 ${className ?? ""}`}>
       <div className="flex items-center justify-between">
-        <span className="accent-underline text-[13px] font-extrabold text-ink">
+        <span className="accent-underline text-[13px] font-bold text-ink">
           시장 온도{" "}
           <span className="text-[10px] font-medium text-text-3">
             {fmtWeek(weekStart)} 기준 · 50 중립
@@ -210,7 +211,7 @@ export async function MarketTempWidget({ className }: { className?: string }) {
               </span>
               <Sparkline scores={historyByRegion.get(r.current.regionId) ?? []} />
               <span className="flex shrink-0 items-baseline gap-1.5">
-                <span className={`t-num text-[13px] font-extrabold ${tone(r.current.score)}`}>
+                <span className={`t-num text-[13px] font-bold ${tone(r.current.score)}`}>
                   {r.current.score}
                 </span>
                 {delta !== null && delta !== 0 && (

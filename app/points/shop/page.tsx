@@ -1,6 +1,6 @@
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 4곳을 font-bold(700)로 바꿨다. */
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
-import { Icon } from "@/app/components/Icon";
 import { safeAuth } from "@/lib/safe-auth";
 import { getBalance } from "@/lib/points/ledger";
 import { ErrorState } from "@/app/components/ui/EmptyState";
@@ -21,49 +21,39 @@ export const metadata = buildPageMetadata({
   path: "/points/shop",
 });
 
-/* ── 비로그인 안내 (상품은 미리보기로 노출) ── */
+/* ── 비로그인 안내 (상품은 미리보기로 노출) ──
+   [v4 · 한 화면 한 가지] 네이비 가운데 패널(아이콘 · 문장 두 줄) → 제목 한 줄 + 사실 한 줄 + 로그인 버튼(채움 1개) →
+   상품 1px 선 행(오른쪽 포인트). 높이가 다른 카드 격자(엇갈림) 없음. */
 function GuestView() {
   return (
-    <div className="mx-auto flex max-w-[720px] flex-col gap-3">
-      <div className="rise-in ai-panel flex flex-col items-center gap-2 rounded-[18px] px-5 py-8 text-center">
-        <div className="text-2xl"><Icon name="shopping-bag" size={24} /></div>
-        <div className="mt-1 text-[15px] font-extrabold text-white">
-          로그인하고 포인트를 교환하세요
+    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6">
+      <header className="rise-in flex flex-col gap-3">
+        <div className="flex flex-col gap-0.5">
+          <h1 className="t-title text-ink">포인트 상점</h1>
+          <p className="t-sub text-text-3">
+            교환 상품 {SPEND_ITEMS.length}가지 · 서비스 안 혜택 · 현금 전환 없음
+          </p>
         </div>
-        <div className="text-xs leading-[1.6] text-ai-muted">
-          쌓인 포인트로 매물 상단 노출·닉네임 꾸미기 같은 내부 혜택을 받을 수 있어요
-        </div>
-        <Link
-          href="/login?callbackUrl=/points/shop"
-          className="btn-primary mt-3 rounded-[10px] px-6 py-2.5 text-[13px]"
-        >
-          로그인하고 시작하기
+        <Link href="/login?callbackUrl=/points/shop" className="btn-primary btn-md self-start no-underline">
+          로그인하고 포인트 보기
         </Link>
-      </div>
+      </header>
 
-      <div className="rise-in-1 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <ul data-tone="mint" className="rise-in-1 divide-y divide-line">
         {SPEND_ITEMS.map((item) => (
-          <div key={item.key} className="card rounded-2xl p-5 opacity-80">
-            <div className="text-[13px] font-extrabold text-ink">
-              {item.label}
-              {item.season && (
-                <span className="ml-1.5 align-middle rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-extrabold text-warning">
-                  {item.season} 한정
-                </span>
-              )}
-            </div>
-            <div className="mt-1 text-[12px] leading-[1.5] text-text-3">
-              {item.desc}
-            </div>
-            <div className="mt-3 text-[15px] font-extrabold text-primary">
-              {item.cost.toLocaleString("ko-KR")}P
-            </div>
-          </div>
+          <li key={item.key} className="flex min-h-14 items-center justify-between gap-3 py-3">
+            <span className="min-w-0 flex-1">
+              <span className="block t-body font-bold text-ink">
+                {item.label}
+                {item.season && <span className="ml-1.5 t-caption font-bold text-warning">{item.season} 한정</span>}
+              </span>
+              <span className="mt-0.5 block truncate t-sub text-text-3">{item.desc}</span>
+            </span>
+            <span className="shrink-0 t-body t-num text-ink">{item.cost.toLocaleString("ko-KR")}P</span>
+          </li>
         ))}
-      </div>
-      <p className="rise-in-3 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[12px] leading-[1.7] text-text-3">
-        {POINTS_GRATUITOUS_NOTICE}
-      </p>
+      </ul>
+      <p className="rise-in-3 t-caption leading-[1.7] text-text-3">{POINTS_GRATUITOUS_NOTICE}</p>
     </div>
   );
 }
@@ -74,7 +64,7 @@ export default async function PointsShopPage() {
 
   if (!email) {
     return (
-      <PageShell breadcrumb="포인트 상점">
+      <PageShell>
         <GuestView />
       </PageShell>
     );
@@ -93,8 +83,9 @@ export default async function PointsShopPage() {
 
   if (!loaded.ok) {
     return (
-      <PageShell breadcrumb="포인트 상점">
-        <div className="mx-auto w-full max-w-[720px]">
+      <PageShell>
+        <div className="mx-auto w-full max-w-[760px]">
+          <h1 className="mb-3 t-title text-ink">포인트 상점</h1>
           <ErrorState
             title="포인트 상점을 지금 열 수 없어요"
             desc="보유 포인트를 확인하지 못했습니다. 잔액이 0이라는 뜻이 아니라 조회 자체가 실패했어요. 잠시 후 다시 시도해 주세요."
@@ -107,11 +98,12 @@ export default async function PointsShopPage() {
   }
 
   return (
-    <PageShell breadcrumb="포인트 상점">
+    /* [v4 · 규칙 12] PageShell 브레드크럼(글자뿐)은 본문 줄과 어긋나 뺐다 — 제목은 ShopClient 가 760px 줄 안에서 */
+    <PageShell>
       <ShopClient initialBalance={loaded.balance} />
       {/* [992 · A1] "자료실 유료 리포트도 포인트로 구매" 배너 제거 — 자료실(/town/library)은 보관(비노출) */}
-      {/* 무상성 고지 — PG 심사·소비자 오인 방지 공용(단일 출처) */}
-      <p className="mx-auto mt-4 w-full max-w-[720px] rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[12px] leading-[1.7] text-text-3">
+      {/* 무상성 고지 — PG 심사·소비자 오인 방지 공용(단일 출처). [v4] 회색 상자 → 끝 캡션 */}
+      <p className="mx-auto mt-6 w-full max-w-[760px] t-caption leading-[1.7] text-text-3">
         {POINTS_GRATUITOUS_NOTICE}
       </p>
     </PageShell>

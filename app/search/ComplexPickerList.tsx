@@ -1,4 +1,6 @@
 "use client";
+/* [1012 · 규칙 8] 굵기 800 이상(font-extrabold·font-black) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
+/* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 
 import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
@@ -59,7 +61,7 @@ export default function ComplexPickerList({
   const opts = notice || failed ? [] : empty ? similar : items;
   const similarHead = `${listId}-similar`;
   return (
-    <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-80 overflow-y-auto rounded-[10px] border border-line bg-surface shadow-[0_14px_36px_rgba(16,28,54,.16)]">
+    <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-80 overflow-y-auto rounded-lg border border-line bg-surface [box-shadow:var(--shadow-md)]">
       {notice ? (
         <div role="status" className="px-3 py-3 t-sub font-bold text-text-2">
           {notice}
@@ -71,7 +73,7 @@ export default function ComplexPickerList({
       ) : empty ? (
         <div className="flex flex-col gap-1 px-3 pb-2 pt-3">
           <div role="status" className="flex flex-col gap-1">
-            <p className="break-words t-sub font-extrabold text-ink">{noMatchTitle(query)}</p>
+            <p className="break-words t-sub font-bold text-ink">{noMatchTitle(query)}</p>
             <p className="break-words t-caption text-text-3">
               {NO_MATCH_HINT} · {NO_MATCH_EXAMPLE}
             </p>
@@ -80,14 +82,14 @@ export default function ComplexPickerList({
             <button
               type="button"
               onClick={onMap}
-              className="press mt-1 inline-flex min-h-10 w-fit items-center gap-1 rounded-[10px] border border-line px-3 t-sub font-bold text-primary"
+              className="press mt-1 inline-flex min-h-10 w-fit items-center gap-1 rounded-lg border border-line px-3 t-sub font-bold text-primary"
             >
               <Icon name="map" size={14} /> 지도에서 찾기
             </button>
           ) : mapHref ? (
             <Link
               href={mapHref}
-              className="mt-1 inline-flex min-h-10 w-fit items-center gap-1 rounded-[10px] border border-line px-3 t-sub font-bold text-primary no-underline"
+              className="mt-1 inline-flex min-h-10 w-fit items-center gap-1 rounded-lg border border-line px-3 t-sub font-bold text-primary no-underline"
             >
               <Icon name="map" size={14} /> 지도에서 찾기
             </Link>
@@ -119,7 +121,7 @@ export default function ComplexPickerList({
             }`}
           >
             <span className="flex w-full min-w-0 items-center gap-1.5">
-              <span className="min-w-0 break-words text-xs font-extrabold text-ink">
+              <span className="min-w-0 break-words text-xs font-bold text-ink">
                 <Hl text={s.name} q={query} />
               </span>
               {s.fuzzy && !empty && <FuzzyBadge />}
@@ -139,8 +141,8 @@ export function PickedChip({
   picked: { name: string; regionLabel: string | null; priceLabel: string | null };
 }) {
   return (
-    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 rounded-[10px] bg-primary-soft px-3 py-2">
-      <span className="text-xs font-extrabold text-primary">{picked.name}</span>
+    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 rounded-lg bg-primary-soft px-3 py-2">
+      <span className="text-xs font-bold text-primary">{picked.name}</span>
       {picked.regionLabel && <span className="text-[10px] font-bold text-text-2">{picked.regionLabel}</span>}
       {picked.priceLabel && <span className="text-[10px] font-bold text-text-2">· 최근 {picked.priceLabel}</span>}
       <span className="ml-auto rounded border border-line px-1 py-px text-[10px] font-bold text-text-3">

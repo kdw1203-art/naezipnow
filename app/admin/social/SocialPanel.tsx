@@ -92,7 +92,7 @@ export function SocialPanel() {
   }
 
   const card =
-    "flex flex-col gap-3 rounded-[20px] border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-5";
+    "flex flex-col gap-3 rounded-3xl border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-5";
 
   return (
     <div className="flex flex-col gap-5">
@@ -117,7 +117,7 @@ export function SocialPanel() {
               type="button"
               disabled={busy !== null}
               onClick={() => void runAction("소재 생성", "/api/cron/social-autopost")}
-              className="rounded-[10px] bg-[rgba(126,162,255,.14)] px-3 py-1.5 text-[12px] font-extrabold text-ai-accent disabled:opacity-50"
+              className="rounded-lg bg-[rgba(126,162,255,.14)] px-3 py-1.5 text-[12px] font-extrabold text-ai-accent disabled:opacity-50"
             >
               {busy === "소재 생성" ? "생성 중…" : "소재 지금 생성"}
             </button>
@@ -125,14 +125,14 @@ export function SocialPanel() {
               type="button"
               disabled={busy !== null}
               onClick={() => void runAction("큐 집행", "/api/cron/social-upload-drain")}
-              className="rounded-[10px] bg-[rgba(126,162,255,.14)] px-3 py-1.5 text-[12px] font-extrabold text-ai-accent disabled:opacity-50"
+              className="rounded-lg bg-[rgba(126,162,255,.14)] px-3 py-1.5 text-[12px] font-extrabold text-ai-accent disabled:opacity-50"
             >
               {busy === "큐 집행" ? "집행 중…" : "큐 지금 집행"}
             </button>
           </div>
         </div>
         {actionMsg && (
-          <p className="break-all rounded-[10px] bg-[rgba(255,255,255,.05)] px-3 py-2 text-[12px] text-[#c9d2e0]">
+          <p className="break-all rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-2 text-[12px] text-[#c9d2e0]">
             {actionMsg}
           </p>
         )}
@@ -146,13 +146,13 @@ export function SocialPanel() {
             value={videoUrl}
             onChange={(e) => setVideoUrl(e.target.value)}
             placeholder="영상 공개 URL (https:// — social-videos 버킷 권장)"
-            className="rounded-[10px] border border-[rgba(255,255,255,.1)] bg-[rgba(255,255,255,.04)] px-3 py-2 text-[12px] !text-white placeholder:text-[#6b7684]"
+            className="rounded-lg border border-[rgba(255,255,255,.1)] bg-[rgba(255,255,255,.04)] px-3 py-2 text-[12px] !text-white placeholder:text-[#6b7684]"
           />
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="제목 (유튜브 제목·100자)"
-            className="rounded-[10px] border border-[rgba(255,255,255,.1)] bg-[rgba(255,255,255,.04)] px-3 py-2 text-[12px] !text-white placeholder:text-[#6b7684]"
+            className="rounded-lg border border-[rgba(255,255,255,.1)] bg-[rgba(255,255,255,.04)] px-3 py-2 text-[12px] !text-white placeholder:text-[#6b7684]"
           />
         </div>
         <textarea
@@ -160,7 +160,7 @@ export function SocialPanel() {
           onChange={(e) => setCaption(e.target.value)}
           placeholder="캡션/설명 (수익 보장류 표현 금지 — 영구 미기재 방침)"
           rows={2}
-          className="rounded-[10px] border border-[rgba(255,255,255,.1)] bg-[rgba(255,255,255,.04)] px-3 py-2 text-[12px] !text-white placeholder:text-[#6b7684]"
+          className="rounded-lg border border-[rgba(255,255,255,.1)] bg-[rgba(255,255,255,.04)] px-3 py-2 text-[12px] !text-white placeholder:text-[#6b7684]"
         />
         <button
           type="button"
@@ -175,7 +175,7 @@ export function SocialPanel() {
               setCaption("");
             })
           }
-          className="self-start rounded-[10px] bg-[rgba(126,162,255,.14)] px-4 py-2 text-[12px] font-extrabold text-ai-accent disabled:opacity-50"
+          className="self-start rounded-lg bg-[rgba(126,162,255,.14)] px-4 py-2 text-[12px] font-extrabold text-ai-accent disabled:opacity-50"
         >
           큐에 등록
         </button>
@@ -185,7 +185,7 @@ export function SocialPanel() {
       <div className={card}>
         <div className="text-[12px] font-extrabold !text-white">큐 (최근 50건)</div>
         {loadError ? (
-          <p className="rounded-[10px] bg-[rgba(255,255,255,.05)] px-3 py-4 text-[12px] text-ai-danger">
+          <p className="rounded-lg bg-[rgba(255,255,255,.05)] px-3 py-4 text-[12px] text-ai-danger">
             조회 실패 — {loadError}
           </p>
         ) : items == null ? (
@@ -200,7 +200,7 @@ export function SocialPanel() {
             {items.map((it) => (
               <div
                 key={it.id}
-                className="flex flex-col gap-1.5 rounded-[14px] bg-[rgba(255,255,255,.04)] px-3.5 py-3"
+                className="flex flex-col gap-1.5 rounded-lg bg-[rgba(255,255,255,.04)] px-3.5 py-3"
               >
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span className="text-[12px] font-extrabold !text-white">{it.title}</span>

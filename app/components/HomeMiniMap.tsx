@@ -303,7 +303,8 @@ export function HomeMiniMap({
   const [fallbackActive, setFallbackActive] = useState(false);
 
   const staticFallback = (
-    <div className="relative flex h-full w-full flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-primary-soft to-line-strong px-4">
+    /* [1012 · 규칙 3·10] 폴백 그라데이션 → 회색 단면(--divider). 지도가 없는 자리는 회색 면이다. */
+    <div className="relative flex h-full w-full flex-col items-center justify-center gap-1.5 bg-divider px-4">
       <p className="flex items-center gap-1.5 t-body font-bold text-text-1">
         <Icon name="🗺" size={16} /> 지도를 불러오지 못했어요
       </p>
@@ -358,16 +359,16 @@ export function HomeMiniMap({
              near 와 무관하게 늘 그려져 있어, SDK 없이도 /map 으로 갈 수 있다.
              [998] 빈 그라데이션 대신 **같은 실데이터**(지역 · 평균 시세 · 전월비)를 칩으로 그린다 —
              SDK 전에도 답이 있고, 데스크톱 LCP 는 타일이 아니라 이 글자가 된다. */
-          <div className="h-full w-full bg-gradient-to-br from-primary-soft to-line-strong">
+          <div className="h-full w-full bg-divider">
             {shownRegions.length > 0 && (
               <ul className="flex flex-wrap content-start gap-1.5 px-3.5 pb-16 pt-14" aria-label="지역별 평균 시세">
                 {shownRegions.slice(0, 6).map((r) => (
                   <li
                     key={r.id}
-                    className="glass inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 t-sub font-semibold text-text-1"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 t-sub font-semibold text-text-1"
                   >
                     <span>{r.name}</span>
-                    <span className="font-extrabold text-ink">{r.price}</span>
+                    <span className="font-bold text-ink">{r.price}</span>
                     {r.delta && r.delta !== "—" && (
                       <span className={r.tone === "up" ? "delta-up" : r.tone === "down" ? "delta-down" : "text-text-3"}>
                         {r.delta}
@@ -386,7 +387,7 @@ export function HomeMiniMap({
       {/* 상단 좌: 관심지역 배지 */}
       {!fallbackActive && (
       <div className="pointer-events-none absolute left-3.5 top-3.5 z-10">
-        <span className="glass inline-flex items-center gap-1 rounded-full px-3 py-[6px] text-[12px] font-extrabold text-ink shadow-sm">
+        <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface px-3 py-[6px] text-[12px] font-bold text-ink">
           <Icon name="📍" size={12} />
           내 관심지역
           {focus.regionLabel ? (
@@ -402,7 +403,7 @@ export function HomeMiniMap({
       {!fallbackActive && (
       <Link
         href={mapHref(focus.regionQuery ?? focus.regionLabel, focus.regionQuery ? focus.center : null)}
-        className="glass press absolute inset-x-3.5 bottom-3.5 z-10 flex items-center justify-between rounded-2xl px-4 py-2.5 transition-colors hover:text-primary"
+        className="press absolute inset-x-3.5 bottom-3.5 z-10 flex items-center justify-between rounded-lg border border-line bg-surface px-4 py-2.5 transition-colors hover:text-primary"
       >
         {/* 설명이 아니라 **결과**를 적는다. (A08)
             예전 문구는 "…를 지도에서 살펴보세요" — 무엇이 지도에 있는지는 안 말하고
@@ -416,7 +417,7 @@ export function HomeMiniMap({
                 : `${focus.regionLabel} 평균 시세`
               : `주요 ${markers.length}곳 평균 시세`}
         </span>
-        <span className="shrink-0 t-body font-extrabold text-primary">
+        <span className="shrink-0 t-body font-bold text-primary">
           지도 열기 ›
         </span>
       </Link>
