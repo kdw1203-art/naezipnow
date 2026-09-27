@@ -1,6 +1,6 @@
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 9곳을 font-bold(700)로 바꿨다. */
 import type { Metadata } from "next";
-import { AdZone } from "@/app/components/ads/AdZone";
-import Link from "next/link";
+import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
 import { GUIDES, GUIDE_BY_SLUG } from "@/lib/guides/catalog";
@@ -75,97 +75,86 @@ export default async function GuidePage({
         />
       )}
 
-      <div className="mx-auto w-full max-w-[720px]">
-        <p className="rise-in t-caption font-bold text-primary">{guide.category} 가이드</p>
-        <h1 className="rise-in mt-1 text-[24px] font-extrabold leading-[1.3] text-ink">
-          {guide.title}
-        </h1>
-        <p className="rise-in-1 mt-3 t-body leading-[1.75] text-text-2">{guide.intro}</p>
+      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 본문(도입 · 목차 앵커 · 섹션) → 바로 해보기 구분선 행 → Q&A 행 →
+          함께 볼 가이드 행 → 면책 캡션 한 줄. 지운 것: 주홍 눈썹 글자(→ 사실 줄), 목차 상자 테두리, 도구 연결 상자(연파랑 면 +
+          그림자 카드 = 카드 안 카드 → 행), Q&A 카드 테두리, 하우스 광고(AdZone). */}
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
+        <header className="flex flex-col gap-0.5">
+          <h1 className="rise-in t-title text-ink">{guide.title}</h1>
+          <p className="t-sub text-text-3">
+            {guide.category} 가이드 · {guide.sections.length}개 절{guide.faq.length > 0 ? ` · Q&A ${guide.faq.length}` : ""}
+          </p>
+        </header>
 
-        {/* 목차 — 섹션 3개 이상일 때만 */}
-        {guide.sections.length >= 3 && (
-          <nav
-            aria-label="목차"
-            className="rise-in-2 mt-5 rounded-2xl border border-line bg-surface px-4 py-3"
-          >
-            <div className="t-caption font-extrabold text-text-3">이 글의 순서</div>
-            <ol className="mt-1.5 flex flex-col gap-1">
-              {guide.sections.map((s, i) => (
-                <li key={s.heading} className="t-sub text-text-1">
-                  <span className="font-extrabold text-primary">{i + 1}.</span> {s.heading}
-                </li>
-              ))}
-            </ol>
-          </nav>
-        )}
+        <div className="flex flex-col gap-5">
+          <p className="rise-in-1 t-body leading-[1.75] text-text-2">{guide.intro}</p>
 
-        {guide.sections.map((section) => (
-          <section key={section.heading} className="mt-7">
-            <h2 className="text-[19px] font-extrabold text-ink">{section.heading}</h2>
-            <div className="mt-2.5 flex flex-col gap-3">
-              {section.body.map((p) => (
-                <p key={p.slice(0, 24)} className="t-body leading-[1.8] text-text-1">
-                  {p}
-                </p>
-              ))}
-            </div>
-          </section>
-        ))}
+          {/* 목차 — 섹션 3개 이상일 때만. [v4] 상자 → 1px 선 사이 앵커 목록 */}
+          {guide.sections.length >= 3 && (
+            <nav aria-label="목차" className="border-y border-line py-2">
+              <ol className="flex flex-col">
+                {guide.sections.map((s, i) => (
+                  <li key={s.heading}>
+                    <a href={`#g-${i + 1}`} className="tap-line t-sub text-text-1 no-underline">
+                      <span className="mr-1 t-num text-text-3">{i + 1}.</span> {s.heading}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )}
 
-        {/* 도구 연결 — 이 가이드의 다음 행동 */}
-        <section className="mt-8 rounded-2xl border border-primary/25 bg-primary-soft/50 p-4">
-          <h2 className="t-body font-extrabold text-ink">읽었다면, 바로 해보기</h2>
-          <div className="mt-2.5 flex flex-col gap-2">
+          {guide.sections.map((section, i) => (
+            <section key={section.heading} id={`g-${i + 1}`} className="scroll-mt-24">
+              <h2 className="text-[19px] font-bold text-ink">{section.heading}</h2>
+              <div className="mt-2.5 flex flex-col gap-3">
+                {section.body.map((p) => (
+                  <p key={p.slice(0, 24)} className="t-body leading-[1.8] text-text-1">
+                    {p}
+                  </p>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+
+        {/* 도구 연결 — 이 가이드의 다음 행동. [v4 · 규칙 5] 상자 안 카드 → 구분선 행 */}
+        <section className="flex flex-col gap-2">
+          <h2 className="t-section text-ink">바로 해보기</h2>
+          <ul data-tone="blue" className="card flex flex-col divide-y divide-line rounded-lg px-4">
             {guide.tools.map((t) => (
-              <Link
-                key={t.href}
-                href={t.href}
-                className="flex flex-col rounded-xl bg-surface px-3.5 py-2.5 no-underline shadow-sm"
-              >
-                <span className="t-body font-extrabold text-primary">{t.label} ›</span>
-                <span className="mt-0.5 t-caption text-text-2">{t.why}</span>
-              </Link>
+              <SummaryRow key={t.href} label={<span className="text-primary">{t.label}</span>} sub={t.why} href={t.href} />
             ))}
-          </div>
+          </ul>
         </section>
 
         {guide.faq.length > 0 && (
-          <section className="mt-8">
-            <h2 className="text-[19px] font-extrabold text-ink">자주 묻는 질문</h2>
-            <div className="mt-2.5 flex flex-col gap-3">
+          <section className="flex flex-col gap-2">
+            <h2 className="t-section text-ink">자주 묻는 질문</h2>
+            <dl data-tone="hanji" className="card m-0 flex flex-col divide-y divide-line rounded-lg px-4">
               {guide.faq.map((f) => (
-                <div key={f.q} className="rounded-2xl border border-line bg-surface px-4 py-3.5">
-                  <div className="t-body font-extrabold text-ink">Q. {f.q}</div>
-                  <p className="mt-1.5 t-body leading-[1.7] text-text-2">{f.a}</p>
+                <div key={f.q} className="py-3">
+                  <dt className="t-body font-bold text-ink">Q. {f.q}</dt>
+                  <dd className="m-0 mt-1 t-body leading-[1.7] text-text-2">{f.a}</dd>
                 </div>
               ))}
-            </div>
+            </dl>
           </section>
         )}
 
         {related.length > 0 && (
-          <section className="mt-8">
-            <h2 className="t-body font-extrabold text-text-2">함께 보면 좋은 가이드</h2>
-            <div className="mt-2 flex flex-col gap-1.5">
+          <section className="flex flex-col gap-2">
+            <h2 className="t-section text-ink">함께 보면 좋은 가이드</h2>
+            <ul data-tone="mint" className="card flex flex-col divide-y divide-line rounded-lg px-4">
               {related.map((r) => (
-                <Link
-                  key={r.slug}
-                  href={`/guides/${r.slug}`}
-                  className="rounded-xl border border-line bg-surface px-3.5 py-2.5 no-underline"
-                >
-                  <span className="t-body font-bold text-ink">{r.title}</span>
-                  <span className="mt-0.5 block t-caption text-text-3">{r.description}</span>
-                </Link>
+                <SummaryRow key={r.slug} label={r.title} sub={r.description} href={`/guides/${r.slug}`} />
               ))}
-            </div>
+            </ul>
           </section>
         )}
 
-        {/* [961] 광고 공간 — 가이드 본문 끝 */}
-        <AdZone placement="article_end" seed={1} plan={null} className="mt-8" />
-        <p className="mt-8 t-caption leading-[1.7] text-text-3">
-          이 가이드는 일반적인 절차·개념 안내이며 특정 매물·투자에 대한 권유가 아닙니다.
-          계약·세무 등 개별 사안은 공인중개사·법무사·세무사 등 전문가와 확인하세요.
+        <p className="t-caption leading-[1.7] text-text-3">
+          일반적인 절차·개념 안내이며 특정 매물·투자에 대한 권유가 아닙니다 · 계약·세무 등 개별 사안은 공인중개사·법무사·세무사와 확인
         </p>
       </div>
     </PageShell>

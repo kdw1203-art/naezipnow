@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import { ExplainLazy as Explain } from "./ExplainLazy";
 import { formatKrwManwon } from "@/lib/format/krw";
 import { formatEokMan } from "@/lib/format/eok-man";
@@ -42,7 +43,7 @@ export function AreaBandsView({ bands, compact = false }: { bands: readonly Area
         면적대별 실거래가{" "}
         <span className="t-sub font-medium text-text-3">{bands.length}구간 · 국토부</span>
       </h2>
-      <ul className="card flex flex-col divide-y divide-divider rounded-2xl px-4">
+      <ul data-tone="blue" className="card flex flex-col divide-y divide-divider rounded-2xl px-4">
         {bands.map((b) => (
           <li key={b.label} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 py-2.5">
             <div className="min-w-0">
@@ -54,7 +55,7 @@ export function AreaBandsView({ bands, compact = false }: { bands: readonly Area
               </div>
             </div>
             <div className="text-right">
-              <div className="t-body font-extrabold text-ink tabular-nums">{formatEokMan(b.latestManwon)}</div>
+              <div className="t-body font-bold text-ink tabular-nums">{formatEokMan(b.latestManwon)}</div>
               <div className="t-caption text-text-3 tabular-nums">최근 거래 · {ymLabel(b.latestYm)}</div>
             </div>
             {/* 구간 안 분포 — 최저~최고가 같으면(거래 1건 등) 반복 표기 생략 */}

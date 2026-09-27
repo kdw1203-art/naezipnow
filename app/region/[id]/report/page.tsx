@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -86,7 +87,7 @@ export default async function RegionReportIndexPage({
 
       {/* [#106] 다른 지역 아카이브 — 62개 월간 축의 내부 링크 그물 */}
       <section className="rise-in-3 mt-7">
-        <h2 className="mb-2 px-1 t-body font-extrabold text-ink">다른 지역 월간 리포트</h2>
+        <h2 className="mb-2 px-1 t-body font-bold text-ink">다른 지역 월간 리포트</h2>
         <div className="flex flex-wrap gap-1.5">
           {/* [970 · B-33] 같은 시/도 지역을 먼저 — 예전엔 카탈로그 앞 16개(=서울 25구)만
               나와 대구·부산 리포트에서도 "다른 지역"이 늘 서울이었다. */}

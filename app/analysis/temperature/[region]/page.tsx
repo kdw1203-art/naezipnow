@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cache } from "react";
@@ -97,8 +98,8 @@ function streakSentence(history: TemperatureSnapshot[]): string | null {
   if (weeks === 0) return null;
   const word = dir === "up" ? "상승" : "하락";
   return weeks >= 2
-    ? `기록상 ${weeks}주 연속 ${word}했습니다.`
-    : `직전 주보다 ${word}했습니다(연속 흐름은 아직 1주입니다).`;
+    ? `기록상 ${weeks}주 연속 ${word}했어요.`
+    : `직전 주보다 ${word}했어요(연속 흐름은 아직 1주예요).`;
 }
 
 function pct(v: number | null, digits = 2): string {
@@ -172,33 +173,25 @@ export default async function TemperatureRegionPage({
   /* 기록이 아직 없는 경우 — 지역은 유효하므로 404 가 아니라 사실을 적는다. */
   if (!latest) {
     return (
-      <PageShell
-        breadcrumb={`홈 › AI 분석 › 시장 온도 주간 기록 › ${region.label}`}
-        title={`${region.label} 시장 온도 주간 기록`}
-      >
+      <PageShell breadcrumb={`홈 › AI 분석 › 시장 온도 주간 기록 › ${region.label}`}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
         />
-        <section className="rise-in card mb-6 p-[var(--pad-card)]">
-          <p className="py-8 text-center text-[13px] leading-[1.7] text-text-3">
-            아직 이 지역의 저장된 주가 없습니다.
-            <br />
-            매매가격지수 시계열이 4구간 이상 모여야 온도를 계산할 수 있고, 그 뒤부터 매주
-            기록이 쌓입니다.
-            <br />
-            <Link href="/analysis/timing" className="font-bold text-primary underline">
+        {/* [v4 · 규칙 8] 빈 상태 — 제목 + 한 줄 + 링크(설명 두 문장 → 사실 한 줄) */}
+        <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
+          <h1 className="t-title text-ink">{region.label} 시장 온도 주간 기록</h1>
+          <p className="t-body text-text-3">저장된 주 없음 · 지수 시계열 4구간 이상부터 매주 쌓임</p>
+          <p className="t-sub text-text-3">
+            <Link href="/analysis/timing" className="tap-line font-bold text-primary no-underline">
               지금 이 순간의 시장 온도 보기
             </Link>
+            {" · "}
+            <Link href="/analysis/temperature" className="tap-line font-bold text-primary no-underline">
+              시장 온도 주간 기록
+            </Link>
           </p>
-        </section>
-        <p className="mb-8 text-[12px] text-text-3">
-          다른 지역의 기록은{" "}
-          <Link href="/analysis/temperature" className="font-bold text-primary underline">
-            시장 온도 주간 기록
-          </Link>
-          에서 볼 수 있습니다.
-        </p>
+        </div>
       </PageShell>
     );
   }
@@ -280,176 +273,157 @@ export default async function TemperatureRegionPage({
     },
   ];
 
+  const LINK = "tap-line font-bold text-primary no-underline";
+
   return (
-    <PageShell
-      breadcrumb={`홈 › AI 분석 › 시장 온도 주간 기록 › ${region.label}`}
-      title={`${region.label} 시장 온도 주간 기록`}
-    >
+    <PageShell breadcrumb={`홈 › AI 분석 › 시장 온도 주간 기록 › ${region.label}`}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript([crumbs, datasetJsonLd]) }}
       />
 
-      <p className="rise-in mb-5 text-[13px] leading-[1.6] text-text-2">
-        {rangeLabel} · <strong className="text-ink">{history.length}주</strong> 기록 · 0~100
-        눈금(50이 중립) · 매수·매도 권유가 아닙니다.
-      </p>
-
-      {/* 최신 주 요약 */}
-      <section className="rise-in card mb-6 p-[var(--pad-card)]">
-        {/* [1009 · A] 결론(큰 숫자) → 지난주 대비 등락 → 한 줄 설명. 40px 임의 크기 → 램프(t-display) */}
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-baseline gap-0.5">
-            <span className="t-display t-num font-extrabold text-ink">{latest.score}</span>
-            <span className="t-body font-bold text-text-3">/100</span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="inline-flex items-center gap-0.5 text-[13px] font-extrabold text-ink">
-              {latest.headline}
-              <Explain {...TEMPERATURE_EXPLAIN} title="시장 온도" />
-            </div>
-            <div className="mt-0.5 text-[12px] text-text-3">
-              {formatWeekKorean(latest.weekStart)}이 속한 주
+      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 주인공(이번 주 점수 t-display + 지난주 대비) → 주간 추이선 →
+          주별 기록 구분선 행 → 링크 한 줄 → 맨 끝 접힘 "읽는 법·Q&A".
+          지운 것: 요약 카드 테두리·정의 설명 문단(→ 접힘), 주별 표(5열 · 가로 스크롤 → 행), 출처 설명 문단(→ 캡션 한 줄),
+          채움 파랑 + 카드 타일 CTA 4개(→ 링크 한 줄). */}
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
+        <div className="flex flex-col gap-4">
+          <header className="flex flex-col gap-0.5">
+            <h1 className="rise-in t-title text-ink">{region.label} 시장 온도 주간 기록</h1>
+            <p className="t-sub text-text-3">
+              {rangeLabel} · {history.length}주 기록 · 공식 v{latest.formulaVersion}
+            </p>
+          </header>
+          {/* [1009 · A] 결론(큰 숫자) → 지난주 대비 등락 → 한 줄. [v4 · 규칙 2] 주인공 하나 */}
+          <section aria-label="이번 주 온도" className="flex flex-col gap-0.5">
+            <p className="m-0 inline-flex items-center gap-0.5 t-caption text-text-3">
+              {formatWeekKorean(latest.weekStart)}이 속한 주 · 0~100 · 50이 중립
+              <Explain {...TEMPERATURE_EXPLAIN} title="시장 온도" size={12} />
+            </p>
+            <p className="m-0 flex items-baseline gap-2">
+              <span className="t-display t-num text-ink">{latest.score}</span>
               {diff !== null && (
-                <>
-                  {" · "}
-                  지난주 대비{" "}
-                  <strong className="font-extrabold">
-                    <ScoreDiff d={diff} sr="지난주보다" />
-                  </strong>
-                </>
+                <span className="t-body font-bold">
+                  <ScoreDiff d={diff} sr="지난주보다" />
+                </span>
               )}
-            </div>
+            </p>
+            <p className="m-0 t-sub text-text-2">
+              <b className="text-ink">{latest.headline}</b>
+              {flow ? ` · ${flow}` : ""}
+            </p>
+            {/* 면책 — 늘 보이게 한 줄 */}
+            <p className="m-0 t-caption text-text-3">관측값 요약 · 매수·매도 권유가 아닙니다</p>
+          </section>
+        </div>
+
+        {/* 주간 추이 */}
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-baseline justify-between gap-3 t-section text-ink">
+            주간 추이
+            <span className="shrink-0 t-sub font-medium text-text-3">
+              최고 {maxScore} · 평균 {avgScore} · 최저 {minScore}
+            </span>
+          </h2>
+          {/* [1009 · A] 누르고 끌면 그 주 점수가 나오는 추세선(ScrubLine). 선 색 = 기간 등락(상승 빨강·하락 파랑). */}
+          <div className="card rounded-lg px-3 py-3">
+            <ScrubLineLazy
+              values={slots.map((w) => w.row?.score ?? null)}
+              labels={slots.map((w) => formatWeekLabel(w.weekStart))}
+              fullLabels={slots.map((w) => `${formatWeekKorean(w.weekStart)} 주${w.row ? ` · ${w.row.headline}` : " · 기록 없음"}`)}
+              format="int"
+              suffix="점"
+              tone="auto"
+              height={150}
+              ariaLabel={`${region.label} 시장 온도 주간 추이`}
+              /* [1009 · A · 리뷰] 세로축을 0~100 으로 고정하고 중립 50 에 기준선 */
+              yDomain={[0, 100]}
+              refLine={{ value: 50, label: "중립 50" }}
+              footnote="세로축 0~100점 · 가로 점선 = 중립 50 · 그 주에 마지막으로 관측한 값 · 기록이 빠진 주는 점선으로 건너뜀"
+            />
           </div>
-        </div>
-        {flow && <p className="mt-3 text-[13px] leading-[1.7] text-text-1">{flow}</p>}
-        <p className="mt-2 text-[12px] leading-[1.7] text-text-3">
-          이 값은 <strong className="text-ink">그 주에 마지막으로 관측한 온도</strong>입니다.
-          주간 평균이 아니며, 수집 작업이 같은 주 안에서는 값을 갱신하고 주가 넘어가면 그대로
-          굳습니다. 공식 버전 v{latest.formulaVersion} 기준으로 계산됐습니다.
-        </p>
-      </section>
+          {history.length < 4 && <p className="t-caption text-text-3">{history.length}주치 기록 — 추세로 보기엔 이름</p>}
+        </section>
 
-      {/* 주간 추이 */}
-      <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
-        <h2 className="flex items-baseline justify-between gap-3 text-[15px] font-extrabold text-ink">
-          주간 추이
-          <span className="shrink-0 text-[12px] font-medium text-text-3">
-            최고 {maxScore} · 평균 {avgScore} · 최저 {minScore}
-          </span>
-        </h2>
-        {/* [1009 · A] 막대마다 title= 말풍선(마우스를 올려야만 보임)이던 주간 추이 → 누르고 끌면 그 주 점수가 나오는
-            추세선(ScrubLine). 휴대폰에서는 막대 값을 읽을 길이 없었다. 선 색 = 기간 등락(상승 빨강·하락 파랑). */}
-        <div className="mt-3">
-          <ScrubLineLazy
-            values={slots.map((w) => w.row?.score ?? null)}
-            labels={slots.map((w) => formatWeekLabel(w.weekStart))}
-            fullLabels={slots.map((w) => `${formatWeekKorean(w.weekStart)} 주${w.row ? ` · ${w.row.headline}` : " · 기록 없음"}`)}
-            format="int"
-            suffix="점"
-            tone="auto"
-            height={150}
-            ariaLabel={`${region.label} 시장 온도 주간 추이`}
-            /* [1009 · A · 리뷰] 세로축을 0~100 으로 고정하고 중립 50 에 기준선 — 예전엔 데이터 범위로 늘어나
-               (안양 만안 64~75 가 바닥~꼭대기) "0~100 눈금 · 50이 중립" 각주와 그림이 달랐다 */
-            yDomain={[0, 100]}
-            refLine={{ value: 50, label: "중립 50" }}
-            footnote="세로축 0~100점 · 가로 점선 = 중립 50 · 그 주에 마지막으로 관측한 값 · 기록이 빠진 주는 점선으로 건너뜀"
-          />
-        </div>
-        {history.length < 4 && (
-          <p className="mt-3 text-[12px] leading-[1.7] text-text-3">
-            아직 {history.length}주치 기록뿐이라 추세라고 부르기엔 이릅니다. 주가 쌓일수록 그래프가
-            길어집니다.
-          </p>
-        )}
-      </section>
-
-      {/* 주별 기록 */}
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <h2 className="text-[15px] font-extrabold text-ink">
-          주별 기록{" "}
-          <span className="text-[12px] font-medium text-text-3">최근 {recent.length}주</span>
-        </h2>
-        <div className="relative mt-3 overflow-x-auto">
-          <table className="w-full min-w-[460px] text-left text-[13px]">
-            <thead>
-              <tr className="border-b border-border text-[12px] text-text-3">
-                <th className="py-2 font-medium">주(월요일)</th>
-                <th className="py-2 text-right font-medium">온도</th>
-                <th className="py-2 text-right font-medium">지수 최근 평균</th>
-                <th className="py-2 text-right font-medium">거래량(최근/직전)</th>
-                <th className="py-2 font-medium">요약</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recent.map((h, i) => {
-                const before = recent[i + 1] ?? null;
-                const d = before ? h.score - before.score : null;
-                return (
-                  <tr key={h.weekStart} className="border-b border-border last:border-b-0">
-                    <td className="py-2.5 text-text-2">{formatWeekLabel(h.weekStart)}</td>
-                    <td className="py-2.5 text-right tabular-nums">
-                      <span className="font-extrabold text-ink">{h.score}</span>
-                      {d !== null && (
-                        <span className="ml-1 text-[12px]">
-                          <ScoreDiff d={d} unit="" sr="전주보다" />
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-2.5 text-right text-text-2">{pct(h.momentumPct)}</td>
-                    <td className="py-2.5 text-right text-text-2">
+        {/* 주별 기록 — [v4 · 규칙 5] 표(5열) → 구분선 행: 왼쪽 주 + 보조 한 줄(지수·거래량·판정) / 오른쪽 점수·전주 대비 */}
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+            주별 기록 <span className="t-num text-text-3">{recent.length}</span>
+          </h2>
+          <ul data-tone="blue" className="card flex flex-col divide-y divide-line rounded-lg px-4">
+            {recent.map((h, i) => {
+              const before = recent[i + 1] ?? null;
+              const d = before ? h.score - before.score : null;
+              return (
+                <li key={h.weekStart} className="flex min-h-14 items-center justify-between gap-3 py-3">
+                  <span className="min-w-0 flex-1">
+                    <span className="block t-body font-bold tabular-nums text-ink">{formatWeekLabel(h.weekStart)} 주</span>
+                    <span className="mt-0.5 block truncate t-sub tabular-nums text-text-3">
+                      지수 {pct(h.momentumPct)} · 거래{" "}
                       {h.volumeRecentCount !== null && h.volumePriorCount !== null
-                        ? `${h.volumeRecentCount.toLocaleString("ko-KR")} / ${h.volumePriorCount.toLocaleString("ko-KR")}건`
-                        : "미반영"}
-                    </td>
-                    <td className="py-2.5 text-[12px] text-text-2">{h.headline}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <p className="mt-2 text-[12px] leading-[1.7] text-text-3">
-          &ldquo;미반영&rdquo;은 그 주에 완결월 거래량이 4개월치에 못 미쳐 거래량 항을 빼고 지수
-          모멘텀만으로 계산했다는 뜻입니다. 없는 값을 0으로 채우지 않습니다.
+                        ? `${h.volumeRecentCount.toLocaleString("ko-KR")}/${h.volumePriorCount.toLocaleString("ko-KR")}건`
+                        : "미반영"}{" "}
+                      · {h.headline}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 flex-col items-end">
+                    <span className="t-body t-num text-ink">{h.score}</span>
+                    {d !== null && (
+                      <span className="t-caption">
+                        <ScoreDiff d={d} unit="" sr="전주보다" />
+                      </span>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          {/* [v4 · 규칙 3] 출처 설명 문단 → 캡션 한 줄 */}
+          <p className="t-caption text-text-3">
+            한국부동산원 매매가격지수 · 국토교통부 실거래 거래량 · 내집나우 주간 산출 · 미반영 = 완결월 거래량 4개월 미만(지수만)
+          </p>
+        </section>
+
+        <p className="t-sub text-text-3">
+          <Link href={`/analysis/timing?region=${encodeURIComponent(region.id)}`} className={LINK}>
+            {region.name} 지수·거래량 원본 보기
+          </Link>
+          {" · "}
+          <Link href={`/region/${region.id}`} className={LINK}>
+            {region.name} 지역 허브
+          </Link>
+          {" · "}
+          <Link href="/analysis/temperature" className={LINK}>
+            다른 지역 온도
+          </Link>
+          {" · "}
+          <Link href="/methodology" className={LINK}>
+            데이터 방법론
+          </Link>
         </p>
-      </section>
 
-      <CitationBlock
-        sentence={`내집나우(naezipnow.com) 집계에 따르면, ${region.label}의 시장 온도는 ${formatWeekKorean(
-          latest.weekStart,
-        )}이 속한 주 기준 ${latest.score}점이다 (0~100 눈금, 50이 중립. 한국부동산원 아파트 매매가격지수 모멘텀과 국토교통부 실거래 거래량 추이 기반, 그 주에 마지막으로 관측한 값).`}
-      />
-
-      <QaBlock title={`${region.label} 시장 온도 Q&A`} items={qa} />
-
-      <section className="rise-in-3 mb-8 flex flex-wrap gap-2">
-        <Link
-          href={`/analysis/timing?region=${encodeURIComponent(region.id)}`}
-          className="rounded-xl bg-primary px-5 py-3 text-[13px] font-bold text-white shadow-[var(--shadow-cta)]"
-        >
-          {region.name} 지수·거래량 원본 보기
-        </Link>
-        <Link
-          href={`/region/${region.id}`}
-          className="card tile px-5 py-3 text-[13px] font-bold text-ink"
-        >
-          {region.name} 지역 허브
-        </Link>
-        <Link
-          href="/analysis/temperature"
-          className="card tile px-5 py-3 text-[13px] font-bold text-ink"
-        >
-          다른 지역 온도
-        </Link>
-        <Link
-          href="/methodology"
-          className="card tile px-5 py-3 text-[13px] font-bold text-ink"
-        >
-          데이터 방법론
-        </Link>
-      </section>
+        {/* [v4 · 규칙 3] 맨 끝 접힘 하나 — 값의 정의 · 인용 · Q&A(FAQPage 스키마) */}
+        <details className="group border-t border-line pt-1">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
+            읽는 법·Q&amp;A
+            <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
+              ›
+            </span>
+          </summary>
+          <div className="flex flex-col pb-3 pt-1">
+            <p className="mb-4 t-caption text-text-3">
+              값 = 그 주에 마지막으로 관측한 온도(주간 평균 아님) · 같은 주 안에서는 갱신되고 주가 넘어가면 굳음 · 공식 버전 v
+              {latest.formulaVersion}
+            </p>
+            <CitationBlock
+              sentence={`내집나우(naezipnow.com) 집계에 따르면, ${region.label}의 시장 온도는 ${formatWeekKorean(
+                latest.weekStart,
+              )}이 속한 주 기준 ${latest.score}점이다 (0~100 눈금, 50이 중립. 한국부동산원 아파트 매매가격지수 모멘텀과 국토교통부 실거래 거래량 추이 기반, 그 주에 마지막으로 관측한 값).`}
+            />
+            <QaBlock title={`${region.label} 시장 온도 Q&A`} items={qa} />
+          </div>
+        </details>
+      </div>
     </PageShell>
   );
 }

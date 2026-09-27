@@ -1,3 +1,4 @@
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 7곳을 font-bold(700)로 바꿨다. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -65,7 +66,7 @@ export async function generateMetadata({
     "ko-KR",
   )}건 기준 거래 활발 단지 ${Math.min(topComplexes.length, 10)}곳과 현장에서만 확인되는 체크포인트 ${
     IMJANG_CHECKPOINTS.length
-  }가지.${range ? ` 국토교통부 신고 ${range}.` : ""} 시세는 데이터로, 현장은 발로.`;
+  }가지.${range ? ` 국토교통부 신고 ${range}.` : ""} 실거래는 데이터로, 현장은 발로.`;
   const path = `/imjang/${encodeURIComponent(region.slug)}`;
   return {
     title,
@@ -121,7 +122,7 @@ export default async function ImjangRegionPage({
   }
   faq.push({
     q: "임장노트는 왜 쓰나요?",
-    a: "시세는 누구나 볼 수 있지만 소음·주차·관리 상태 같은 현장 정보는 가 본 사람만 압니다. 기록해 두면 여러 단지를 같은 기준으로 비교할 수 있고, 내집나우는 기록을 AI 로 정리해 실거래 데이터와 나란히 놓아 줍니다.",
+    a: "실거래가는 누구나 볼 수 있지만 소음·주차·관리 상태 같은 현장 정보는 가 본 사람만 압니다. 기록해 두면 여러 단지를 같은 기준으로 비교할 수 있고, 내집나우는 기록을 AI 로 정리해 실거래 데이터와 나란히 놓아 줍니다.",
   });
 
   const crumbs = breadcrumbJsonLd([
@@ -130,156 +131,164 @@ export default async function ImjangRegionPage({
     { name: region.name, url: `/imjang/${encodeURIComponent(region.slug)}` },
   ]);
 
+  const LINK = "tap-line font-bold text-primary no-underline";
+
   return (
-    <PageShell
-      breadcrumb={`홈 › 임장 가이드 › ${region.name}`}
-      title={`${region.name} 임장 가이드`}
-    >
+    <PageShell breadcrumb={`홈 › 임장 가이드 › ${region.name}`}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
       />
 
-      {/* 데이터 브리핑 — 가기 전에 아는 것 */}
-      <p className="rise-in mb-4 text-[13px] leading-[1.65] text-text-2">
-        답사 전 데이터 브리핑: 이 지역 실거래{" "}
-        <strong className="text-ink">{region.txCount.toLocaleString("ko-KR")}건</strong>
-        {range && ` (국토교통부 신고 ${range})`} · 단지{" "}
-        <strong className="text-ink">{region.complexCount.toLocaleString("ko-KR")}곳</strong>
-        {busiestArea &&
-          ` · 최다 거래 면적대 ${busiestArea.bandLabel} (평균 ${formatKrwShort(busiestArea.avgKrw)})`}
-        . 시세는 여기까지 — 아래부터는 현장의 몫입니다.
-      </p>
+      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄(데이터 브리핑) → 단지 구분선 행(오른쪽 거래 건수) → 체크포인트 행 →
+          다녀온 기록 행 → 채움 파랑 1개 + 링크 한 줄 → 맨 끝 접힘 "출처·Q&A".
+          지운 것: 브리핑 문단(→ 사실 줄), 우선순위 설명 문단, 체크포인트 카드 격자(→ 행), 노트 카드 격자·점수 배지(→ 행 오른쪽 숫자),
+          칩 모양 링크 2개(→ 링크 한 줄), 맨 끝 출처 문단(→ 접힘). */}
+      <div className="mx-auto flex max-w-[760px] flex-col gap-8">
+        <header className="flex flex-col gap-0.5">
+          <h1 className="rise-in t-title text-ink">{region.name} 임장 가이드</h1>
+          {/* 데이터 브리핑 — 가기 전에 아는 것. [1012] "시세" 는 실거래만 있는 곳에서 금지 */}
+          <p className="t-sub text-text-3">
+            실거래 {region.txCount.toLocaleString("ko-KR")}건{range ? ` · ${range}` : ""} · 단지{" "}
+            {region.complexCount.toLocaleString("ko-KR")}곳
+            {busiestArea ? ` · 최다 ${busiestArea.bandLabel} 평균 ${formatKrwShort(busiestArea.avgKrw)}` : ""}
+          </p>
+        </header>
 
-      {/* 임장 우선순위 — 실거래 합산 상위 단지 */}
-      <section className="mb-6">
-        <h2 className="mb-1 text-[15px] font-extrabold text-ink">어느 단지부터 볼까 — 거래 활발 순</h2>
-        <p className="mb-2.5 text-[12px] leading-[1.6] text-text-3">
-          거래가 많은 단지는 가격 근거가 풍부해 비교의 기준점이 됩니다. 첫 임장은
-          기준점부터 잡고, 관심 단지를 그 자로 재는 순서를 권합니다.
-        </p>
-        {topComplexes.length === 0 ? (
-          <div className="card rounded-2xl px-4 py-4 text-[13px] text-text-2">
-            면적대 구간에 정리된 단지가 아직 없습니다 — 아래 실거래 구간 페이지에서
-            지역 전체 흐름을 먼저 확인하세요.
-          </div>
-        ) : (
-          <ol className="card overflow-hidden rounded-2xl">
-            {topComplexes.map((c, i) => (
-              <li key={c.name} className="flex items-center gap-3 border-b border-border px-4 py-2.5 last:border-b-0">
-                <span className="w-5 shrink-0 text-center text-[13px] font-extrabold text-primary">
-                  {i + 1}
-                </span>
-                <Link
-                  prefetch={false}
-                  href={`/search?q=${encodeURIComponent(c.name)}`}
-                  className="min-w-0 flex-1 truncate text-[13px] font-bold text-ink no-underline hover:text-primary"
-                >
-                  {c.name}
-                </Link>
-                <span className="shrink-0 text-[12px] text-text-2">
-                  {c.txCount.toLocaleString("ko-KR")}건
-                </span>
-                <span className="hidden shrink-0 text-[12px] text-text-3 sm:inline">
-                  {c.avgKrw > 0 ? `평균 ${formatKrwShort(c.avgKrw)}` : "가격 확인 필요"}
+        {/* 임장 우선순위 — 실거래 합산 상위 단지. [v4 · 규칙 5] 행 오른쪽 = 거래 건수 */}
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+            어느 단지부터 <span className="t-sub font-medium text-text-3">거래 활발 순 · 기준점부터</span>
+          </h2>
+          {topComplexes.length === 0 ? (
+            <p className="card rounded-lg px-4 py-4 t-body text-text-2">면적대 구간에 정리된 단지 없음 · 아래 실거래 구간에서 지역 흐름</p>
+          ) : (
+            <ol data-tone="blue" className="card flex flex-col divide-y divide-line rounded-lg px-4">
+              {topComplexes.map((c, i) => (
+                <li key={c.name}>
+                  <Link
+                    prefetch={false}
+                    href={`/search?q=${encodeURIComponent(c.name)}`}
+                    className="press flex min-h-14 items-center justify-between gap-3 py-3 no-underline"
+                  >
+                    <span className="w-5 shrink-0 t-body t-num text-text-3">{i + 1}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate t-body font-bold text-ink">{c.name}</span>
+                      <span className="mt-0.5 block truncate t-sub text-text-3">
+                        {c.avgKrw > 0 ? `평균 ${formatKrwShort(c.avgKrw)}` : "가격 확인 필요"}
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      <span className="t-body t-num text-ink">{c.txCount.toLocaleString("ko-KR")}건</span>
+                      <span aria-hidden="true" className="t-body text-text-3">
+                        ›
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+
+        {/* 표준 체크포인트 — 가야만 확인되는 것들. [v4 · 규칙 5] 카드 격자 → 구분선 행 */}
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+            현장 체크포인트 <span className="t-num text-text-3">{IMJANG_CHECKPOINTS.length}</span>
+            <span className="t-sub font-medium text-text-3">데이터로는 알 수 없는 것</span>
+          </h2>
+          <ol data-tone="sand" className="card flex flex-col divide-y divide-line rounded-lg px-4">
+            {IMJANG_CHECKPOINTS.map((c, i) => (
+              <li key={c.title} className="flex min-h-14 items-start gap-3 py-3">
+                <span className="w-5 shrink-0 t-body t-num text-text-3">{String(i + 1).padStart(2, "0")}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block t-body font-bold text-ink">{c.title}</span>
+                  <span className="mt-0.5 block t-sub text-text-3">{c.why}</span>
                 </span>
               </li>
             ))}
           </ol>
-        )}
-      </section>
+        </section>
 
-      {/* 표준 체크포인트 — 가야만 확인되는 것들 */}
-      <section className="mb-6">
-        <h2 className="mb-1 text-[15px] font-extrabold text-ink">
-          현장 체크포인트 {IMJANG_CHECKPOINTS.length} — 데이터로는 알 수 없는 것
-        </h2>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {IMJANG_CHECKPOINTS.map((c, i) => (
-            <div key={c.title} className="card rounded-2xl px-4 py-3">
-              <div className="text-[13px] font-extrabold text-ink">
-                <span className="mr-1.5 text-primary">{String(i + 1).padStart(2, "0")}</span>
-                {c.title}
-              </div>
-              <p className="mt-1 text-[12px] leading-[1.6] text-text-2">{c.why}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+        {/* 이 지역 공개 임장노트 — 가 본 사람의 기록 (U3 플라이휠). [v4] 카드 격자 → 행(오른쪽 평균 점수) */}
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+            다녀온 기록 {regionNotes.length > 0 && <span className="t-num text-text-3">{regionNotes.length}</span>}
+          </h2>
+          {notesFailed ? (
+            <p className="t-body text-text-2">공개 노트를 불러오지 못했어요 · 조회 실패(없음 아님)</p>
+          ) : regionNotes.length === 0 ? (
+            /* [1012] 규칙 5·6 — 어디서 + 동사·대상 링크 */
+            <p className="t-body text-text-2">
+              {region.name} 공개 임장노트 없음 ·{" "}
+              <Link href="/notes/new" className={LINK}>
+                {region.name} 첫 임장노트 쓰기
+              </Link>
+            </p>
+          ) : (
+            <ul data-tone="hanji" className="card flex flex-col divide-y divide-line rounded-lg px-4">
+              {regionNotes.map((n) => {
+                const avg = inspectionAverageScore(n.scores);
+                return (
+                  <li key={n.id}>
+                    <Link
+                      prefetch={false}
+                      href={`/notes/${encodeURIComponent(n.id)}`}
+                      className="press flex min-h-14 items-center justify-between gap-3 py-3 no-underline"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate t-body font-bold text-ink">{n.title}</span>
+                        <span className="mt-0.5 block truncate t-sub text-text-3">
+                          {[n.aptName, n.region].filter(Boolean).join(" · ")}
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        {avg > 0 && <span className="t-body t-num text-ink">{avg.toFixed(1)}</span>}
+                        <span aria-hidden="true" className="t-body text-text-3">
+                          ›
+                        </span>
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
 
-      {/* 이 지역 공개 임장노트 — 가 본 사람의 기록 (U3 플라이휠) */}
-      <section className="mb-6">
-        <h2 className="mb-1 text-[15px] font-extrabold text-ink">이 지역을 다녀온 기록</h2>
-        {notesFailed ? (
-          <p className="text-[13px] text-text-2">
-            공개 노트를 지금 불러오지 못했어요 — 없는 게 아니라 조회가 실패했다는 뜻이에요.
-          </p>
-        ) : regionNotes.length === 0 ? (
-          <p className="text-[13px] leading-[1.65] text-text-2">
-            아직 이 지역의 공개 임장노트가 없어요 —{" "}
-            <Link href="/notes/new" className="font-bold text-primary underline">
-              첫 기록의 주인공
+        {/* 다음 행동 — 기록으로 잇는다. [1012] CTA 는 동사 + 대상(지역명) · [v4 · 규칙 2] 채움 파랑 하나 */}
+        <div className="flex flex-col gap-2">
+          <Link href="/notes/new" className="btn-primary press flex min-h-12 items-center justify-center rounded-lg px-4 t-body no-underline">
+            {region.name} 임장노트 쓰기
+          </Link>
+          <p className="t-sub text-text-3">
+            <Link prefetch={false} href={`/map?q=${encodeURIComponent(region.name)}`} className={LINK}>
+              {region.name} 지도에서 보기
             </Link>
-            이 되어 보세요. 공개 노트는 이 페이지와 검색에 실려 다음 방문자를 돕습니다.
+            {" · "}
+            <Link prefetch={false} href={`/tx/${encodeURIComponent(region.slug)}`} className={LINK}>
+              면적대·가격대 실거래 {region.txCount.toLocaleString("ko-KR")}건 보기
+            </Link>
+            {/* [992 · A1] 노트 템플릿(/notes/templates)·모임(/town/groups) 칩 제거 — 둘 다 보관(비노출) */}
           </p>
-        ) : (
-          <div className="grid gap-2 sm:grid-cols-2">
-            {regionNotes.map((n) => {
-              const avg = inspectionAverageScore(n.scores);
-              return (
-                <Link
-                  key={n.id}
-                  prefetch={false}
-                  href={`/notes/${encodeURIComponent(n.id)}`}
-                  className="card tile flex items-center gap-3 rounded-2xl px-4 py-3 no-underline"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-extrabold text-ink">
-                      {n.title}
-                    </span>
-                    <span className="mt-0.5 block truncate text-[12px] text-text-3">
-                      {[n.aptName, n.region].filter(Boolean).join(" · ")}
-                    </span>
-                  </span>
-                  {avg > 0 && (
-                    <span className="shrink-0 rounded-lg bg-primary-soft px-2 py-1 text-[12px] font-extrabold text-primary">
-                      {avg.toFixed(1)}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
+        </div>
+
+        {/* [v4 · 규칙 3] 맨 끝 접힘 하나 — 출처 + Q&A(FAQPage 스키마 · 같은 배열) */}
+        <details className="group border-t border-line pt-1">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
+            출처·Q&amp;A
+            <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
+              ›
+            </span>
+          </summary>
+          <div className="flex flex-col pb-3 pt-1">
+            <p className="mb-4 t-caption text-text-3">
+              국토교통부 신고 기준(해제분 제외) · 매물 호가 아님 · 면적대 구간에 정리된 건수라 지역 전체 신고분과 다를 수 있음
+            </p>
+            <QaBlock title={`${region.name} 임장 Q&A`} items={faq} />
           </div>
-        )}
-      </section>
-
-      <QaBlock title={`${region.name} 임장 Q&A`} items={faq} />
-
-      {/* 다음 행동 — 기록으로 잇는다 */}
-      <section className="mb-4 flex flex-wrap items-center gap-2.5">
-        <Link href="/notes/new" className="btn-primary press rounded-xl px-4 py-2.5 text-[13px] no-underline">
-          임장노트 쓰기 ›
-        </Link>
-        <Link
-          prefetch={false}
-          href={`/map?q=${encodeURIComponent(region.name)}`}
-          className="chip bg-surface px-3.5 py-2.5 text-[13px] font-bold text-text-2 shadow-sm no-underline"
-        >
-          지도에서 보기
-        </Link>
-        <Link
-          prefetch={false}
-          href={`/tx/${encodeURIComponent(region.slug)}`}
-          className="chip bg-surface px-3.5 py-2.5 text-[13px] font-bold text-text-2 shadow-sm no-underline"
-        >
-          면적대·가격대 실거래 자세히
-        </Link>
-        {/* [992 · A1] 노트 템플릿(/notes/templates)·모임(/town/groups) 칩 제거 — 둘 다 보관(비노출) */}
-      </section>
-      <p className="text-[12px] leading-[1.6] text-text-3">
-        실거래 수치는 국토교통부 신고 기준(해제분 제외)이며 매물 호가가 아닙니다.
-        면적대 구간에 정리된 건수라 지역 전체 신고분과 다를 수 있습니다.
-      </p>
+        </details>
+      </div>
     </PageShell>
   );
 }

@@ -1,3 +1,5 @@
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 6곳을 font-bold(700)로 바꿨다. */
+import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -241,7 +243,8 @@ export default async function PublicProfilePage({
     id: n.id,
     title: n.aptName?.trim() || n.title,
     /* [970 · C-41] 노트 사진이 있으면 타일 배경으로 — 회색 그라디언트만 6칸이던 자리 */
-    photo: n.photos.find(Boolean) ?? null,
+    /* [1012 · 썸네일] 목록 커버 규칙 한 곳(lib/notes/cover/resolve) — 고른 썸네일이 있으면 그것 */
+    photo: noteCoverUrl(n),
   }));
   const noteCount = authored.length;
   // 사실 우선: 지역·소개는 실데이터가 있을 때만 (허위 기본값 금지)
@@ -252,21 +255,8 @@ export default async function PublicProfilePage({
   return (
     <PageShell breadcrumb={`발견 › @${displayName}`}>
       <div className="mx-auto max-w-[640px]">
-        {/* 커버 — 지적도 패턴 (14a) */}
-        <div
-          className="rise-in relative h-[110px] overflow-hidden rounded-t-[20px]"
-          style={{ background: "linear-gradient(135deg,#1d4fd8,#16389c)" }}
-        >
-          <div
-            className="absolute inset-0 opacity-[0.14]"
-            style={{
-              backgroundImage:
-                "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg,#fff 1px, transparent 1px)",
-              backgroundSize: "30px 22px, 36px 22px",
-              transform: "rotate(-6deg) scale(1.3)",
-            }}
-          />
-        </div>
+        {/* 커버 — [1012] 규칙 3 — 파랑 그라데이션 + 격자 무늬(지적도 패턴) → 네이비 단색(어두운 면 = 네이비) */}
+        <div className="rise-in relative h-[110px] overflow-hidden rounded-t-lg bg-brand-navy" />
 
         <div className="rise-in-2 card rounded-t-none border-t-0 px-5 pb-5">
           {/* 아바타 + 이름 + 팔로우 */}
@@ -287,14 +277,14 @@ export default async function PublicProfilePage({
             ) : (
               <span
                 aria-hidden="true"
-                className="flex h-[56px] w-[56px] shrink-0 items-center justify-center rounded-full border-[3px] border-bg bg-brand-navy text-[19px] font-extrabold text-on-dark"
+                className="flex h-[56px] w-[56px] shrink-0 items-center justify-center rounded-full border-[3px] border-bg bg-brand-navy text-[19px] font-bold text-on-dark"
               >
                 {Array.from(displayName.trim())[0] ?? "?"}
               </span>
             )}
             <div className="min-w-0 flex-1 pb-1">
               <div className="flex flex-wrap items-center gap-[6px]">
-                <h1 className="text-[15px] font-extrabold text-ink">
+                <h1 className="text-[15px] font-bold text-ink">
                   {displayName}
                 </h1>
               </div>
@@ -326,14 +316,14 @@ export default async function PublicProfilePage({
 
           {/* 통계 2종 — 실데이터(공개 노트 수·팔로워)만 */}
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <div className="rounded-[10px] border border-line bg-bg px-2 py-[10px] text-center">
-              <div className="text-[15px] font-extrabold text-ink">
+            <div className="rounded-lg border border-line bg-bg px-2 py-[10px] text-center">
+              <div className="text-[15px] font-bold text-ink">
                 {noteCount}
               </div>
               <div className="text-[10px] text-text-3">공개 노트</div>
             </div>
-            <div className="rounded-[10px] border border-line bg-bg px-2 py-[10px] text-center">
-              <div className="text-[15px] font-extrabold text-ink">
+            <div className="rounded-lg border border-line bg-bg px-2 py-[10px] text-center">
+              <div className="text-[15px] font-bold text-ink">
                 {followerCount === null ? "—" : followerCount.toLocaleString("ko-KR")}
               </div>
               <div className="text-[10px] text-text-3">
@@ -352,7 +342,7 @@ export default async function PublicProfilePage({
           {/* [970 · C-41] "전체 보기 ›" 는 이 사용자의 노트가 아니라 /notes 전체로 갔다 —
               작성자별 목록 화면이 없으므로 링크를 지우고 그리드에 더 많이(GRID_CAP) 싣는다. */}
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="flex items-center gap-[6px] text-[13px] font-extrabold text-ink">
+            <h2 className="flex items-center gap-[6px] text-[13px] font-bold text-ink">
               공개 노트
             </h2>
             {noteCount > 0 && (
@@ -360,8 +350,9 @@ export default async function PublicProfilePage({
             )}
           </div>
           {grid.length === 0 && (
+            /* [1012] 규칙 6 — 누가 */
             <div className="card px-5 py-8 text-center text-[12px] text-text-3">
-              아직 공개한 임장노트가 없어요
+              {displayName}님이 공개한 임장노트가 아직 없어요
             </div>
           )}
           <div className="grid grid-cols-3 gap-[6px]">
@@ -373,14 +364,14 @@ export default async function PublicProfilePage({
                     {g.title}
                   </span>
                   {i === grid.length - 1 && noteCount > grid.length && (
-                    <span className="absolute right-[6px] top-[6px] rounded-[4px] bg-brand-navy/85 chip-pad-tight text-[10px] font-extrabold text-on-dark">
+                    <span className="absolute right-[6px] top-[6px] rounded-sm bg-brand-navy/85 chip-pad-tight text-[10px] font-bold text-on-dark">
                       +{noteCount - grid.length}
                     </span>
                   )}
                 </>
               );
-              const cls =
-                "relative block aspect-square overflow-hidden rounded-[10px] bg-gradient-to-br from-line to-line-strong";
+              /* [1012] 규칙 3·10 — 사진 없는 타일의 그라데이션 → 회색 단면 */
+              const cls = "relative block aspect-square overflow-hidden rounded-lg bg-divider";
               return (
                 <Link key={g.id} href={`/notes/${g.id}`} className={cls}>
                   {/* [970 · C-41] 노트 사진이 있으면 타일에 깐다(없으면 종전 그라디언트) */}

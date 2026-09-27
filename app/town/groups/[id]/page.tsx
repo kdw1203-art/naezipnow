@@ -8,6 +8,7 @@ import { ShareButton } from "./ShareButton";
 import { LocationMap } from "../../LocationMap";
 import { Icon } from "@/app/components/Icon";
 import { formatKstLongDate } from "@/lib/format/kst";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 시안 8o(모임 상세) 고도화 — 모임 정보 카드(일정·장소·정원·참여자) + 공유 +
    참여 상태별 CTA. "채팅방 입장"은 /town/groups/[id]/chat 로 분리(실채팅 유지). */
@@ -72,7 +73,7 @@ export default async function TownGroupDetailPage({
     return (
       <PageShell breadcrumb="동네이야기 › 임장 모임">
         <div className="mx-auto flex max-w-[420px] flex-col items-center gap-3 py-20 text-center">
-          <div className="text-[19px] font-extrabold text-ink">모임을 찾을 수 없어요</div>
+          <div className="text-[19px] font-bold text-ink">모임을 찾을 수 없어요</div>
           <p className="text-[13px] leading-[1.6] text-text-2">
             삭제되었거나 잘못된 링크일 수 있어요.
           </p>
@@ -123,9 +124,9 @@ export default async function TownGroupDetailPage({
       <div className="mx-auto grid max-w-[900px] grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         {/* ---------- 모임 정보 카드 ---------- */}
         <div className="flex flex-col gap-4">
-          <div className="rise-in card flex flex-col gap-3 rounded-[18px] p-6">
+          <div className="rise-in card flex flex-col gap-3 p-6">
             <div className="flex items-center justify-between">
-              <span className={`rounded-md chip-pad text-[12px] font-extrabold ${statusStyle}`}>
+              <span className={`rounded-md chip-pad text-[12px] font-bold ${statusStyle}`}>
                 {statusLabel} {meeting.currentMembers}/{meeting.maxMembers}
               </span>
               <span className="text-[12px] text-text-3">
@@ -134,7 +135,7 @@ export default async function TownGroupDetailPage({
               </span>
             </div>
 
-            <h1 className="text-[21px] font-extrabold leading-[1.35] text-ink">{meeting.title}</h1>
+            <h1 className="text-[21px] font-bold leading-[1.35] text-ink">{meeting.title}</h1>
 
             <div className="flex flex-col gap-2 text-[13px] text-text-1">
               <div className="flex gap-2">
@@ -173,9 +174,9 @@ export default async function TownGroupDetailPage({
           </div>
 
           {/* 참여자 카드 */}
-          <div className="rise-in-1 card flex flex-col gap-3 rounded-[18px] p-5">
+          <div className="rise-in-1 card flex flex-col gap-3 p-5">
             <div className="flex items-center justify-between">
-              <div className="text-[13px] font-extrabold text-ink">
+              <div className="text-[13px] font-bold text-ink">
                 참여자 {meeting.currentMembers}
                 <span className="text-text-3"> / {meeting.maxMembers}</span>
               </div>
@@ -196,8 +197,8 @@ export default async function TownGroupDetailPage({
 
         {/* ---------- 사이드: 위치 + 공유 + CTA ---------- */}
         <div className="flex flex-col gap-3">
-          <div className="rise-in-1 card flex flex-col gap-2 rounded-[18px] p-5">
-            <div className="text-[13px] font-extrabold text-ink">모임 장소</div>
+          <div className="rise-in-1 card flex flex-col gap-2 p-5">
+            <div className="text-[13px] font-bold text-ink">모임 장소</div>
             {/* 지역명을 좌표로 해석해 네이버 지도로 표시(정확 집결지는 채팅방 안내) */}
             <LocationMap
               region={meeting.region}
@@ -211,18 +212,17 @@ export default async function TownGroupDetailPage({
           </div>
 
           {/* 크루 도구 — 답사 전 준비를 내집나우 안에서 끝내게 한다 */}
-          <div className="rise-in-1 card flex flex-col gap-2 rounded-[18px] p-5">
-            <div className="text-[13px] font-extrabold text-ink">임장 준비</div>
+          <div className="rise-in-1 card flex flex-col gap-2 p-5">
+            <div className="text-[13px] font-bold text-ink">임장 준비</div>
             <p className="text-[12px] leading-[1.6] text-text-2">
-              가기 전에 데이터 브리핑과 현장 체크포인트를 훑고, 다녀와서는 각자
-              노트로 남겨 비교해 보세요.
+              가기 전 데이터 브리핑·현장 체크포인트, 다녀온 뒤 각자의 임장노트 — 아래 링크에 있어요.
             </p>
             <div className="flex flex-col gap-1.5">
               {imjangRegion && (
                 <Link
                   prefetch={false}
                   href={`/imjang/${encodeURIComponent(imjangRegion.slug)}`}
-                  className="text-[13px] font-extrabold text-primary no-underline"
+                  className="text-[13px] font-bold text-primary no-underline"
                 >
                   {imjangRegion.name} 임장 가이드 ›
                 </Link>

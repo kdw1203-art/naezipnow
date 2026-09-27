@@ -13,9 +13,13 @@
  *
  * 딥링크 모양은 워크벤치가 이미 읽는 것을 그대로 쓴다(`?apt=&region=`,
  * WorkbenchClient `[OPT-48]`). 새 규약을 만들지 않는다.
+ *
+ * [v4 · 규칙 5·7] 카드(2열 도구 타일 + 성격 배지 + "결과:" 줄 + 설명 문단 + 회색 상자 속 에이전트 링크) →
+ * **구분선 목록 행**(단지 허브 SummaryRow). 부르는 쪽(page.tsx "이어서" 목록)의 `<ul className="divide-y">` 안에
+ * `<li>` 행만 넣는다. 행 = 도구 이름 + 결과 한 줄(허브 행과 같은 `sub`) / `›`.
  */
-import Link from "next/link";
 import { workbenchCardData } from "@/app/analysis/workbench-cards";
+import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 
 export function NoteToolsRow({
   aptName,
@@ -43,60 +47,22 @@ export function NoteToolsRow({
   }).toString();
 
   return (
-    <div className="rise-in-1 card flex flex-col gap-3 rounded-[18px] p-6">
-      <div className="flex items-baseline justify-between gap-2">
-        <div className="text-[15px] font-extrabold text-ink">이 노트로 이어서</div>
-        <span className="shrink-0 t-caption text-text-3">
-          {apt || reg} 기준으로 열려요
-        </span>
-      </div>
-      <p className="t-sub text-text-3">
-        현장에서 본 것 옆에 실데이터를 놓고 봅니다 — 도구는 이 노트의 단지로 바로 열려요.
-      </p>
-      <div className="grid grid-cols-2 gap-2">
-        {core.map((c) => (
-          <Link
-            key={c.id}
-            href={`${c.href}?${query}`}
-            className="tile card tool-scope tool-rail flex flex-col gap-1 rounded-[14px] p-3 no-underline"
-            style={c.vars}
-            data-tool={c.id}
-          >
-            <span className="tool-soft-bg tool-ink t-caption w-fit whitespace-nowrap rounded px-1.5 py-px font-extrabold">
-              {c.character}
-            </span>
-            <span className="t-sub font-extrabold text-ink">{c.title}</span>
-            {c.result && (
-              <span className="t-caption text-text-3">결과: {c.result}</span>
-            )}
-          </Link>
-        ))}
-      </div>
-      {/* 나머지는 허브로 — 노트 화면에 12칸을 다 펼치면 노트가 안 읽힌다.
-          noteId 를 실어 보내면 허브가 이 노트를 컨텍스트로 잡는다. */}
-      <Link
+    <>
+      {core.map((c) => (
+        <SummaryRow key={c.id} label={c.title} sub={`${subject} · ${c.sub}`} href={`${c.href}?${query}`} />
+      ))}
+      {/* 나머지는 허브로 — noteId 를 실어 보내면 허브가 이 노트를 컨텍스트로 잡는다 */}
+      <SummaryRow
+        label={`AI 분석 도구 ${more.length}개 더`}
+        sub={more
+          .slice(0, 3)
+          .map((m) => m.title)
+          .join(" · ")}
         href={`/analysis?noteId=${encodeURIComponent(noteId)}`}
-        className="tap-line w-fit t-sub font-bold text-primary"
-      >
-        나머지 {more.length}개 도구 보기 ›
-      </Link>
-
-      {/* [986 · 24] 이 노트에 묻기 — 도구는 정해진 한 가지를 계산하고, 에이전트는
-          내 노트와 실거래를 조회해 **아무 질문에나** 답한다. 에이전트 화면은 이미
-          있는데 노트에서 넘어가는 길이 없어서, 질문을 처음부터 타이핑해야 했다.
-          질문은 이 노트의 사실로 채워 보내되 **자동 전송하지 않는다**(AgentChat) —
+      />
+      {/* [986 · 24] 이 노트에 묻기 — 질문은 이 노트의 사실로 채워 보내되 **자동 전송하지 않는다**(AgentChat) —
           누르지도 않은 질문에 한도가 깎이면 안 된다. */}
-      <div className="mt-1 flex flex-col gap-2 rounded-xl bg-bg px-3.5 py-3">
-        <span className="t-caption font-bold text-text-3">
-          정해진 계산 말고 그냥 물어보고 싶다면
-        </span>
-        <Link
-          href={`/agent?q=${encodeURIComponent(agentQuestion)}`}
-          className="tap-line w-fit t-sub font-extrabold text-ai-accent"
-        >
-          “{agentQuestion}” 에이전트에게 묻기 ›
-        </Link>
-      </div>
-    </div>
+      <SummaryRow label="에이전트에게 묻기" sub={agentQuestion} href={`/agent?q=${encodeURIComponent(agentQuestion)}`} />
+    </>
   );
 }

@@ -231,7 +231,8 @@ export default async function QnaDetailPage({
         <h2 className="mb-2.5 t-body font-bold text-ink">답변 {answers.length}</h2>
         {answers.length === 0 ? (
           <div className="card t-body text-text-3">
-            아직 답변이 없어요. 첫 번째 답변을 남겨보세요.
+            {/* [1012] 규칙 6 — 권유 대신 사실 */}
+            이 질문에 달린 답변이 아직 없어요 — 아래 칸에 쓴 답변이 첫 답변으로 실려요
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -269,7 +270,7 @@ export default async function QnaDetailPage({
     href: "/map",
     icon: "map",
     label: "지도에서 위치 보기",
-    desc: "주변 단지·시세를 지도로 확인",
+    desc: "주변 단지·실거래를 지도에서",
   });
   related.push({
     href: "/notes",
@@ -286,19 +287,20 @@ export default async function QnaDetailPage({
 
   const aside = (
     <div className="flex flex-col gap-3">
-      <section className="card flex flex-col gap-2 rounded-[18px] p-[18px]">
-        <h2 className="t-body font-bold text-ink">이어서 확인하기</h2>
+      <section className="card flex flex-col gap-2 p-[18px]">
+        <h2 className="t-body font-bold text-ink">이 단지의 다른 기록</h2>
         <p className="t-sub text-text-3">
-          답변을 기다리는 동안, 이미 남아 있는 자료에서 먼저 확인할 수 있어요.
+          답변을 기다리는 동안 볼 수 있는 실거래·지도·임장노트예요.
         </p>
         <div className="mt-1 flex flex-col gap-2">
           {related.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className="press flex items-center gap-2.5 rounded-xl border border-line bg-surface px-3 py-2.5 no-underline"
+              className="press flex items-center gap-2.5 rounded-lg border border-line bg-surface px-3 py-2.5 no-underline"
             >
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary-soft text-primary">
+              {/* [1012] 규칙 9 — 아이콘 칩 회색 한 가지 */}
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-bg text-text-2">
                 <Icon name={l.icon} size={16} />
               </span>
               <span className="flex flex-col">
@@ -311,7 +313,7 @@ export default async function QnaDetailPage({
       </section>
 
       {topics.length > 0 && (
-        <section className="card flex flex-col gap-2 rounded-[18px] p-[18px]">
+        <section className="card flex flex-col gap-2 p-[18px]">
           <h2 className="t-body font-bold text-ink">비슷한 주제 더 보기</h2>
           {/* 주제는 태그·본문에서 추정한 값이라 단정하지 않고 "검색 링크" 로만 쓴다 */}
           <div className="flex flex-wrap gap-1.5">
@@ -324,7 +326,9 @@ export default async function QnaDetailPage({
                   href={`/qna?topic=${k}`}
                   className="press chip border border-line bg-surface px-3 py-1.5 text-xs text-text-2 no-underline"
                 >
-                  {t.icon} {t.label}
+                  {/* [1012] 규칙 4 — 주제 이모지 → 선 아이콘 */}
+                  <Icon name={t.icon} size={12} className="mr-1 inline-block align-[-2px]" />
+                  {t.label}
                 </Link>
               );
             })}

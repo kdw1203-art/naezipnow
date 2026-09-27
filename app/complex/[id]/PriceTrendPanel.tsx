@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useState } from "react";
 import { ScrubLine, type ScrubRange } from "@/app/components/viz/ScrubLine";
@@ -76,9 +77,9 @@ export function PriceTrendPanel({
   const isBand = tab.unitM2 == null;
 
   return (
-    <section aria-label="실거래가 추이" className="card flex flex-col gap-2.5 rounded-[14px] px-[15px] py-3.5">
+    <section aria-label="실거래가 추이" className="card flex flex-col gap-2.5 rounded-lg px-[15px] py-3.5">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="inline-flex items-center gap-0.5 t-body font-extrabold text-ink">
+        <h3 className="inline-flex items-center gap-0.5 t-body font-bold text-ink">
           실거래가 추이
           <Explain
             term="silgeoraega"

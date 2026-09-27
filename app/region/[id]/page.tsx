@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
 import { AdZone } from "@/app/components/ads/AdZone";
 import Link from "next/link";
@@ -1025,7 +1026,7 @@ export default async function RegionHubPage({
                     <td className="py-2 pr-3 text-right tabular-nums text-text-1">
                       {b.count.toLocaleString("ko-KR")}건
                     </td>
-                    <td className="py-2 pr-3 text-right font-extrabold tabular-nums text-ink">
+                    <td className="py-2 pr-3 text-right font-bold tabular-nums text-ink">
                       {formatKrwShort(b.medianKrw)}
                     </td>
                     <td className="py-2 text-right tabular-nums text-text-1">
@@ -1130,7 +1131,7 @@ export default async function RegionHubPage({
                 </div>
                 <div className="shrink-0 text-right">
                   {/* [1009 · H 리뷰] 달이 00·13 같은 행(운영 /region/mapo "2027.00")은 "월 미정" — /supply 의 validYm 과 같은 규칙 */}
-                  <div className="t-body font-extrabold tabular-nums text-ink">{moveInLabel(s.moveInYm)}</div>
+                  <div className="t-body font-bold tabular-nums text-ink">{moveInLabel(s.moveInYm)}</div>
                   <div className="t-sub text-text-3">
                     {s.households ? `${s.households.toLocaleString()}세대` : "—"}
                   </div>
@@ -1197,8 +1198,9 @@ export default async function RegionHubPage({
         {!notesR.ok ? (
           <LoadFailed what="공개 임장노트" />
         ) : notes.length === 0 ? (
+          /* [1012 · 규칙 6] "첫 노트를 남겨보세요"(권유) → 어디서·무엇이 없는지 사실만 */
           <p className="py-6 text-center t-body text-text-3">
-            아직 이 지역의 공개 임장노트가 없어요. 첫 노트를 남겨보세요.
+            {name}에 공개된 임장노트가 아직 없어요.
           </p>
         ) : (
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -1285,25 +1287,25 @@ export default async function RegionHubPage({
         />
       )}
 
-      {/* CTA */}
+      {/* CTA — [1012 · 규칙 5] 동사 + 구체 대상(지역명) · 지도는 이 지역으로 여는 딥링크 · 채움 파랑 1개 */}
       <section className="rise-in-3 mb-4 flex flex-wrap gap-2">
         <Link
           href="/notes/new"
-          className="rounded-xl bg-primary px-5 py-3 t-body font-bold text-white shadow-[var(--shadow-cta)]"
+          className="rounded-xl bg-primary px-5 py-3 t-body font-bold text-white"
         >
-          이 지역 임장노트 쓰기
+          {name} 임장노트 쓰기
         </Link>
         <Link
-          href="/map"
+          href={`/map?region=${encodeURIComponent(mapRegion)}`}
           className="card tile px-5 py-3 t-body font-bold text-ink"
         >
-          지도에서 보기
+          {name} 지도에서 보기
         </Link>
         <Link
           href="/notifications"
           className="card tile px-5 py-3 t-body font-bold text-ink"
         >
-          시세 알림 구독
+          {name} 시세 알림 받기
         </Link>
       </section>
       {/* [961] 광고 공간 — 페이지 끝 */}

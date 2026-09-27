@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -109,7 +110,7 @@ export default async function SharedRunPage({
           <div className="t-sub font-bold text-text-3">
             내집나우 AI 분석 결과 공유 · {at} 기준 결과
           </div>
-          <h1 className="mt-1 t-title font-extrabold text-ink">
+          <h1 className="mt-1 t-title font-bold text-ink">
             {dec?.name ? `${dec.name} · ` : ""}
             {identity.title}
           </h1>
@@ -158,13 +159,13 @@ export default async function SharedRunPage({
 
         {external && run.markdown && (
           <details className="card rounded-2xl p-4" open={!run.structured_summary?.verdict}>
-            <summary className="cursor-pointer t-body font-extrabold text-text-2">AI 해설 [AI 서술]</summary>
+            <summary className="cursor-pointer t-body font-bold text-text-2">AI 해설 [AI 서술]</summary>
             {/* [1008 · 리뷰 A-18] 예전 기록의 꼬리 줄(밑줄 기울임·내부 말)을 결과 화면과 같게 걷는다 */}
             <div className="mt-2 whitespace-pre-wrap t-body text-text-1">{cleanAiMarkdown(run.markdown)}</div>
           </details>
         )}
 
-        <div className="rounded-[10px] bg-bg px-4 py-3 t-sub text-text-3">
+        <div className="rounded-lg bg-bg px-4 py-3 t-sub text-text-3">
           이 화면은 실행한 그때의 결과예요 — 지금 자료와 다를 수 있어요. 숫자는 공공데이터를 자동 계산한
           참고값이며 투자 권유가 아닙니다.
         </div>

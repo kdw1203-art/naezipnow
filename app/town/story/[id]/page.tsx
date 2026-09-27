@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
 import { ReportButton } from "@/app/components/ReportButton";
 import { CoverImage } from "@/app/components/CoverImage";
-import { AdZone } from "@/app/components/ads/AdZone";
+import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 import { Icon } from "@/app/components/Icon";
 import { getStoryPost, listStoryPosts } from "@/lib/town/story";
 import { isPostHidden } from "@/lib/moderation/reports-store";
@@ -21,6 +21,7 @@ import { CommentThread } from "../../news/[id]/CommentThread";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
 import type { Post } from "@/lib/types/post";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* ============================================================
    [1006] 이야기 상세 — /town/story/[id] · posts 테이블(사람 글) **전용**.
@@ -29,6 +30,10 @@ import type { Post } from "@/lib/types/post";
    보도)이고, 여기는 사람의 것이다: 작성자 · 동네 · 본문 · 사진 · 댓글. 규칙은
    globals.css "[1006]" 블록(.story-*). 자동수집 글은 여기서 열리지 않는다(404).
    댓글·공감·저장 API 는 posts 스토어에 쓰므로 이 화면의 컨트롤은 전부 실제로 동작한다.
+
+   [v4] "한 화면 한 가지" — 가운데 한 줄(760px): 머리(브레드크럼 · 제목 · 작성자 한 줄 + 저장·공유) → 사진 → 본문 →
+   태그 글자 → 신고·도움돼요 줄 → 댓글 → 이 동네(지도 + 행) → 다른 이웃 글(행). 이야기 카드 · 사이드바 ·
+   "이야기"/지역 알약 배지 · 아바타 · 채움 파랑 "임장노트 쓰기" · 하우스 광고(AdZone)를 뺐다.
    ============================================================ */
 
 /* ISR — 댓글·공감 API 가 revalidatePath("/town/story/[id]") 로 즉시 재생성한다.
@@ -143,7 +148,6 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
 
   const region = regionLabel(post);
   const author = post.authorLabel?.trim() || "이웃";
-  const initial = author.slice(0, 1);
   const photos = postAttachments(post);
   const bodyParas = paragraphs(post.body);
   const activeComments = post.comments.filter((c) => !c.deletedAt);
@@ -166,7 +170,7 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
   }
 
   return (
-    <PageShell breadcrumb={`동네이야기 › 이야기 › ${region}`}>
+    <PageShell>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -180,187 +184,175 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
         }}
       />
 
-      {/* 저장·공유 — POST /api/bookmarks(type: post) · Web Share */}
-      <PostActions postId={post.id} title={post.title} saveCount={post.bookmarkCount ?? 0} />
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex flex-col gap-4">
-          {/* ---------- 이야기 본문 — 사람이 먼저 ---------- */}
-          <article className="rise-in story-card flex flex-col gap-4 p-5 md:p-7">
-            <header className="flex items-center gap-3">
-              <span className="story-avatar story-avatar--lg" aria-hidden="true">
-                {initial}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span
-                    className={`t-body font-extrabold text-ink ${
-                      nickEffect.nick === "aurora" ? "nick-aurora" : nickEffect.nick === "sunset" ? "nick-sunset" : ""
-                    }`}
-                  >
-                    {author}
-                  </span>
-                  {nickEffect.badge && (
-                    <span title="가을 산책 배지 — 포인트 상점" aria-label="가을 산책 배지">
-                      🍂
-                    </span>
-                  )}
-                  <span className="story-kind t-caption">이야기</span>
-                  <span className="rounded-md bg-primary-soft px-1.5 py-px t-caption font-extrabold text-primary">
-                    {region}
-                  </span>
-                </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 t-caption text-text-3">
-                  <span>{post.category}</span>
-                  {/* updatedAt 은 댓글·공감이 붙어도 바뀌는 값이라 "수정됨" 표식으로 쓰지 않는다 */}
-                  <time dateTime={post.createdAt}>{formatKstDateTime(post.createdAt)}</time>
-                </div>
-              </div>
-            </header>
-
+      {/* [v4] 가운데 한 줄(최대 760px) — 예전 이야기 카드 + 340px 사이드바(동네·다른 이웃 글·광고) 2열 없음 */}
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
+        {/* ---------- 이야기 본문 — 사람이 먼저 ---------- */}
+        <article className="flex flex-col gap-4">
+          {/* [v4 · 규칙 1·6] 머리 — 브레드크럼 · 제목 · 작성자 한 줄(작성자 · 동네 · 게시판 · 시각) + 저장·공유.
+              "이야기" 알약 · 지역 알약 배지 · 머리글자 아바타는 뺐다 — 같은 사실을 메타 줄 한 번으로 */}
+          <header className="flex flex-col gap-2">
+            <nav aria-label="브레드크럼" className="t-sub text-text-3">
+              <Link href="/town?kind=post" className="tap-line text-text-2 no-underline">
+                동네이야기
+              </Link>{" "}
+              › 이야기
+            </nav>
             <h1 className="t-title text-ink">{post.title}</h1>
-
-            {/* [B31] 이웃이 올린 사진 — 한 장이면 넓게, 여러 장이면 격자로. 비율로 높이를
-                먼저 잡아 로드 전후 시프트가 0이다. 없으면 아무것도 그리지 않는다. */}
-            {photos.length > 0 && (
-              <div className={photos.length === 1 ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2 sm:grid-cols-3"}>
-                {photos.map((url, i) => (
-                  <div
-                    key={url}
-                    className={`relative w-full overflow-hidden rounded-[10px] bg-bg ${
-                      photos.length === 1 ? "aspect-[16/10] max-h-[420px]" : "aspect-square"
-                    }`}
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <p className="flex min-w-0 items-center gap-1 t-sub text-text-3">
+                <span
+                  className={`shrink-0 font-bold text-text-2 ${
+                    nickEffect.nick === "aurora" ? "nick-aurora" : nickEffect.nick === "sunset" ? "nick-sunset" : ""
+                  }`}
+                >
+                  {author}
+                </span>
+                {/* [1012] 규칙 4 — 🍂 이모지 → 선 아이콘(footprints, 주홍). 포인트 상점 "가을 산책 배지"
+                    효과는 그대로(lib/points/catalog.ts 의 설명 문구는 통합자 몫). 사용자가 산 표식이라 v4 에서도 남긴다. */}
+                {nickEffect.badge && (
+                  <span
+                    className="inline-flex shrink-0 items-center text-brand-red"
+                    title="가을 산책 배지 — 포인트 상점"
+                    aria-label="가을 산책 배지"
                   >
-                    <CoverImage
-                      src={url}
-                      alt={`${post.title} 사진 ${i + 1}`}
-                      imgClassName="absolute inset-0 h-full w-full object-cover"
-                      sizes={photos.length === 1 ? "(max-width: 768px) 100vw, 640px" : "(max-width: 768px) 50vw, 220px"}
-                      priority={i === 0}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
+                    <Icon name="footprints" size={14} />
+                  </span>
+                )}
+                {/* updatedAt 은 댓글·공감이 붙어도 바뀌는 값이라 "수정됨" 표식으로 쓰지 않는다 */}
+                <span className="min-w-0 truncate">
+                  · {region} · {post.category} · <time dateTime={post.createdAt}>{formatKstDateTime(post.createdAt)}</time>
+                </span>
+              </p>
+              {/* 저장·공유 — POST /api/bookmarks(type: post) · Web Share */}
+              <PostActions postId={post.id} title={post.title} saveCount={post.bookmarkCount ?? 0} className="shrink-0" />
+            </div>
+          </header>
 
-            <div className="story-body flex flex-col gap-3">
-              {bodyParas.map((t, i) => (
-                <p key={i}>{t}</p>
+          {/* [B31] 이웃이 올린 사진 — 한 장이면 넓게, 여러 장이면 정사각 격자로. 비율로 높이를
+              먼저 잡아 로드 전후 시프트가 0이다. 없으면 아무것도 그리지 않는다. */}
+          {photos.length > 0 && (
+            <div className={photos.length === 1 ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2 sm:grid-cols-3"}>
+              {photos.map((url, i) => (
+                <div
+                  key={url}
+                  className={`relative w-full overflow-hidden rounded-lg bg-bg ${
+                    photos.length === 1 ? "aspect-[16/10] max-h-[420px]" : "aspect-square"
+                  }`}
+                >
+                  <CoverImage
+                    src={url}
+                    alt={`${post.title} 사진 ${i + 1}`}
+                    imgClassName="absolute inset-0 h-full w-full object-cover"
+                    sizes={photos.length === 1 ? "(max-width: 768px) 100vw, 640px" : "(max-width: 768px) 50vw, 220px"}
+                    priority={i === 0}
+                  />
+                </div>
               ))}
             </div>
+          )}
 
-            {post.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5" aria-label="태그">
-                {post.tags.slice(0, 8).map((t) => (
-                  <span key={t} className="rounded-full bg-bg chip-pad t-sub font-semibold text-text-2">
-                    #{t}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-divider pt-3.5">
-              <div className="flex flex-wrap items-center gap-1 t-caption text-text-3">
-                <span>{region} 이웃이 남긴 글 ·</span>
-                {/* 신고 연결(#81) — POST /api/moderation/content-report */}
-                <ReportButton postId={post.id} />
-              </div>
-              {/* POST /api/community/posts/[id]/like — posts 스토어에 쓰므로 여기선 실제로 동작한다 */}
-              <div className="flex gap-3.5 text-xs text-text-2">
-                <LikeButton postId={post.id} initialCount={post.likeCount} />
-              </div>
-            </div>
-          </article>
-
-          {/* ---------- 댓글 ---------- */}
-          {/* id="comments" — 댓글 알림(메일·인앱)의 착지점. lib/notifications/comment-notify.ts 가
-              이 앵커로 링크를 만든다. */}
-          <section id="comments" className="rise-in-1 card flex scroll-mt-24 flex-col gap-3 rounded-[18px] px-5 py-5 md:px-[26px]">
-            <div className="flex items-center gap-2 t-section text-ink">
-              <Icon name="messages-square" size={16} />
-              댓글 {post.commentCount}
-            </div>
-            {activeComments.length === 0 && (
-              <p className="t-sub text-text-3">아직 댓글이 없어요 — 첫 답을 남겨 보세요.</p>
-            )}
-            {/* [#65·#66] 채택·대댓글 스레드 — 상대시각은 서버에서 계산해 넘긴다(하이드레이션 불일치 방지) */}
-            <CommentThread
-              postId={post.id}
-              comments={activeComments.map((c) => ({
-                id: c.id,
-                authorLabel: c.authorLabel,
-                body: c.body,
-                createdAt: c.createdAt,
-                parentId: c.parentId ?? null,
-                adopted: c.adopted === true,
-              }))}
-              relativeLabels={Object.fromEntries(activeComments.map((c) => [c.id, relativeTime(c.createdAt)]))}
-            />
-            <CommentForm postId={post.id} />
-          </section>
-        </div>
-
-        {/* ---------- 사이드바 ---------- */}
-        <aside className="flex flex-col gap-3.5">
-          {/* 이 동네 — 지도 + 동네 홈 + 노트 쓰기. 글의 지역이 곧 이야기의 축이다 */}
-          <div className="rise-in-2 card flex flex-col gap-2.5 rounded-[18px] p-[18px]">
-            <div className="t-body font-extrabold text-ink">{region}</div>
-            {(post.city || post.district) && (
-              <div className="relative">
-                <LocationMap region={post.city} city={post.city} district={post.district} label={region} className="h-[150px]" />
-                <Link
-                  href={mapHref}
-                  className="absolute bottom-2.5 right-2.5 rounded-lg bg-[var(--glass-bg)] px-2.5 py-[5px] t-sub font-bold text-primary"
-                >
-                  {regionQuery ? `${regionQuery} 지도 열기` : "지도에서 열기"} ›
-                </Link>
-              </div>
-            )}
-            <div className="flex flex-col gap-2">
-              {regionId && (
-                <Link href={`/town/${regionId}`} className="btn-soft rounded-[10px] px-3.5 py-2.5 text-center t-sub font-bold no-underline">
-                  {region} 동네 홈 ›
-                </Link>
-              )}
-              <Link href={noteNewHref} className="btn-primary btn-cta rounded-[10px] px-3.5 py-2.5 text-center t-sub no-underline">
-                {regionQuery ? `${regionQuery} 임장노트 쓰기` : "이 지역 임장노트 쓰기"}
-              </Link>
-            </div>
+          <div className="story-body flex flex-col gap-3">
+            {bodyParas.map((t, i) => (
+              <p key={i}>{t}</p>
+            ))}
           </div>
 
-          {/* 다른 이웃 글 — 있으면 목록, 없으면 정직하게 */}
-          <div className="rise-in-3 card flex flex-col gap-1 rounded-[18px] p-[18px]">
-            <div className="mb-1.5 t-body font-extrabold text-ink">다른 이웃 글</div>
-            {others.length === 0 ? (
-              <p className="t-sub text-text-3">아직 다른 이웃 글이 없어요.</p>
-            ) : (
-              others.map((p, i) => (
-                <Link
-                  key={p.id}
-                  href={`/town/story/${p.id}`}
-                  className={`flex items-center gap-2.5 py-[7px] no-underline ${i < others.length - 1 ? "border-b border-divider" : ""}`}
-                >
-                  <span className="story-avatar" aria-hidden="true">
-                    {(p.authorLabel?.trim() || "이").slice(0, 1)}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="line-clamp-2 t-sub font-bold leading-[1.4] text-ink">{p.title}</span>
-                    <span className="block t-caption text-text-3">
-                      {p.authorLabel || "이웃"} · {regionLabel(p)} · 댓글 {p.commentCount}
-                    </span>
-                  </span>
-                </Link>
-              ))
-            )}
-            <Link href="/town?kind=post" className="mt-1 inline-flex min-h-[24px] items-center t-sub font-bold text-primary no-underline">
+          {/* [v4 · 규칙 6] 태그 — 알약 칩 → 글자 한 줄(누르는 것이 아니다) */}
+          {post.tags.length > 0 && (
+            <p className="t-sub text-text-3" aria-label="태그">
+              {post.tags
+                .slice(0, 8)
+                .map((t) => `#${t}`)
+                .join(" ")}
+            </p>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+            <div className="flex flex-wrap items-center gap-1 t-caption text-text-3">
+              <span>{region} 이웃이 남긴 글 ·</span>
+              {/* 신고 연결(#81) — POST /api/moderation/content-report */}
+              <ReportButton postId={post.id} />
+            </div>
+            {/* POST /api/community/posts/[id]/like — posts 스토어에 쓰므로 여기선 실제로 동작한다 */}
+            <div className="flex gap-3.5 text-xs text-text-2">
+              <LikeButton postId={post.id} initialCount={post.likeCount} />
+            </div>
+          </div>
+        </article>
+
+        {/* ---------- 댓글 ---------- */}
+        {/* id="comments" — 댓글 알림(메일·인앱)의 착지점. lib/notifications/comment-notify.ts 가
+            이 앵커로 링크를 만든다. [v4 · 규칙 5·7] 카드 · 말풍선 아이콘 → 섹션 제목(t-section) + 스레드 */}
+        <section id="comments" aria-labelledby="story-comments-title" className="flex scroll-mt-24 flex-col gap-3">
+          <h2 id="story-comments-title" className="t-section text-ink">
+            댓글 <span className="t-num">{post.commentCount}</span>
+          </h2>
+          {/* [1012] 규칙 6 — 권유("남겨 보세요") 대신 사실. CommentThread 가 같은 자리에서 빈 문구를 그리므로 중복을 뺀다 */}
+          {/* [#65·#66] 채택·대댓글 스레드 — 상대시각은 서버에서 계산해 넘긴다(하이드레이션 불일치 방지) */}
+          <CommentThread
+            postId={post.id}
+            comments={activeComments.map((c) => ({
+              id: c.id,
+              authorLabel: c.authorLabel,
+              body: c.body,
+              createdAt: c.createdAt,
+              parentId: c.parentId ?? null,
+              adopted: c.adopted === true,
+            }))}
+            relativeLabels={Object.fromEntries(activeComments.map((c) => [c.id, relativeTime(c.createdAt)]))}
+          />
+          <CommentForm postId={post.id} />
+        </section>
+
+        {/* 이 동네 — 지도 + 동네 홈 + 노트 쓰기. 글의 지역이 곧 이야기의 축이다.
+            [v4] 사이드 카드(연한 버튼 + 채움 파랑 "임장노트 쓰기") → 섹션 하나 + 1px 선 행(채움 파랑 없음) */}
+        <section aria-labelledby="story-place-title" className="flex flex-col gap-2">
+          <h2 id="story-place-title" className="t-section text-ink">
+            {region}
+          </h2>
+          {(post.city || post.district) && (
+            <div className="relative">
+              <LocationMap region={post.city} city={post.city} district={post.district} label={region} className="h-[150px]" />
+              <Link
+                href={mapHref}
+                className="absolute bottom-2.5 right-2.5 rounded-lg border border-line bg-surface px-2.5 py-[5px] t-sub font-bold text-primary"
+              >
+                {regionQuery ? `${regionQuery} 지도 열기` : "지도에서 열기"} ›
+              </Link>
+            </div>
+          )}
+          <ul data-tone="blue" className="divide-y divide-line">
+            {regionId && <SummaryRow label={`${region} 동네 홈`} href={`/town/${regionId}`} />}
+            <SummaryRow label={regionQuery ? `${regionQuery} 임장노트 쓰기` : "이 지역 임장노트 쓰기"} href={noteNewHref} />
+          </ul>
+        </section>
+
+        {/* 다른 이웃 글 — 있으면 목록, 없으면 한 줄. [v4] 사이드 카드(머리글자 아바타 + 두 줄 제목) → 1px 선 행 */}
+        <section aria-labelledby="story-others-title" className="flex flex-col gap-1">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 id="story-others-title" className="t-section text-ink">
+              다른 이웃 글
+            </h2>
+            <Link href="/town?kind=post" className="tap-line shrink-0 t-sub font-bold text-primary no-underline">
               이야기 피드 전체 ›
             </Link>
           </div>
-
-          <div className="rise-in-4">
-            <AdZone placement="sidebar" seed={0} plan={null} />
-          </div>
-        </aside>
+          {others.length === 0 ? (
+            /* 최근 이웃 글(지역 무관 최신 5건)에서 고른다 — 예전 문구 "{동네}에 올라온…" 은 지역으로 거르지 않는 목록이라 틀렸다 */
+            <p className="py-3 t-sub text-text-3">다른 이웃 글 아직 없음</p>
+          ) : (
+            <ul data-tone="hanji" className="divide-y divide-line">
+              {others.map((p) => (
+                <SummaryRow
+                  key={p.id}
+                  label={<span className="block truncate">{p.title}</span>}
+                  sub={`${p.authorLabel || "이웃"} · ${regionLabel(p)} · 댓글 ${p.commentCount}`}
+                  href={`/town/story/${p.id}`}
+                />
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
     </PageShell>
   );

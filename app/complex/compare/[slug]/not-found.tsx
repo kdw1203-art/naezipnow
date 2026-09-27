@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -29,8 +30,8 @@ export default function ComplexCompareNotFound() {
         <path d="M14 46 C 38 64, 82 64, 106 46" fill="none" stroke="var(--brand-symbol-ink)" strokeWidth="7" strokeLinecap="round" />
         <circle className="empty-dot-breathe" cx="60" cy="86" r="8.5" fill="var(--brand-dot)" style={{ transformOrigin: "60px 86px" }} />
       </svg>
-      <div className="rise-in t-caption font-extrabold tracking-[0.2em] text-text-3">404</div>
-      <h1 className="rise-in-1 text-[15px] font-extrabold text-ink">
+      <div className="rise-in t-caption font-bold tracking-[0.2em] text-text-3">404</div>
+      <h1 className="rise-in-1 text-[15px] font-bold text-ink">
         이 비교는 지금 제공되지 않아요<span className="text-brand-red">.</span>
       </h1>
       <p className="rise-in-2 text-[13px] leading-[1.6] text-text-3">
@@ -44,7 +45,7 @@ export default function ComplexCompareNotFound() {
             <Link
               key={name}
               href={`/search?q=${encodeURIComponent(name)}`}
-              className="btn-primary btn-cta rounded-[14px] px-[18px] py-3 text-[13px]"
+              className="btn-primary btn-cta rounded-lg px-[18px] py-3 text-[13px]"
             >
               {name} 검색
             </Link>
@@ -52,17 +53,18 @@ export default function ComplexCompareNotFound() {
         </div>
       )}
       <div className="rise-in-4 mt-1 flex flex-wrap justify-center gap-1.5">
+        {/* [1012 · 규칙 5] "둘러보기"·"시세" → 동사 + 구체 대상(실거래만 있는 곳에 "시세" 금지) */}
         <Link
           href="/complex/browse"
           className="rounded-full bg-primary-soft px-[13px] py-[7px] text-[12px] font-bold text-primary"
         >
-          단지 둘러보기
+          서울 단지별 실거래 보기
         </Link>
         <Link
           href="/tx"
           className="rounded-full bg-bg px-[13px] py-[7px] text-[12px] font-bold text-text-1"
         >
-          실거래 시세
+          지역별 실거래 구간 보기
         </Link>
         <Link
           href="/search"

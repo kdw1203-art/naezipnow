@@ -6,7 +6,7 @@ import { CharCount } from "@/app/components/ui/CharCount";
 import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
 
 const INPUT =
-  "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[13px] text-ink placeholder:text-text-3";
+  "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[13px] text-ink placeholder:text-text-3";
 
 /** 답변 작성 폼. 예시 질문이면 안내 문구만 노출. 성공 시 router.refresh + 초기화. localStorage 미사용. */
 export function AnswerForm({
@@ -65,7 +65,7 @@ export function AnswerForm({
   if (isSample) {
     return (
       <div className="card t-body text-text-3">
-        예시 질문에는 답변할 수 없어요. 실제 질문에 답변을 남겨보세요.
+        예시 질문에는 답변할 수 없어요 — 답변은 실제 질문에만 달려요.
       </div>
     );
   }
@@ -75,7 +75,7 @@ export function AnswerForm({
       <h2 className="t-body font-bold text-ink">답변 작성</h2>
       <textarea
         className={`${INPUT} min-h-[120px] resize-y`}
-        placeholder="이웃에게 도움이 될 답변을 남겨주세요. (5자 이상)"
+        placeholder="답변 (5자 이상) — 직접 본 것·겪은 것이면 근거를 함께"
         value={body}
         onChange={(e) => setBody(e.target.value)}
         maxLength={4000}

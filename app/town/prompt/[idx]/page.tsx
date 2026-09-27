@@ -15,6 +15,7 @@ import {
 } from "@/lib/town/prompts";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* [#63] 글감 스레드 — 질문 하나 = 고정 URL 하나(/town/prompt/0~13).
  * 같은 질문이 14일 주기로 돌아오며 답변이 이 페이지에 계속 쌓인다 —
@@ -70,18 +71,18 @@ export default async function PromptThreadPage({
       <TownCategoryNav />
       <div className="mx-auto w-full max-w-[720px]">
         <section className="rise-in card mb-4 p-5">
-          <div className="flex items-center gap-1.5 text-[12px] font-extrabold text-primary">
+          <div className="flex items-center gap-1.5 text-[12px] font-bold text-primary">
             <Icon name="notebook-pen" size={13} />
             동네 질문 {i + 1} / {TOWN_PROMPTS.length}
             {isToday && (
               <span className="rounded-md bg-primary-soft px-1.5 py-0.5 text-[10px]">오늘의 질문</span>
             )}
           </div>
-          <h1 className="mt-1.5 text-[19px] font-extrabold leading-[1.45] text-ink">{question}</h1>
+          <h1 className="mt-1.5 text-[19px] font-bold leading-[1.45] text-ink">{question}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Link
               href={`/town/write?topic=${encodeURIComponent(question)}&pi=${i}`}
-              className="btn-cta rounded-full px-4 py-2 text-[13px] font-extrabold no-underline tap-ripple"
+              className="btn-cta rounded-full px-4 py-2 text-[13px] font-bold no-underline tap-ripple"
             >
               내 동네 이야기로 답하기 +50P
             </Link>
@@ -126,7 +127,7 @@ export default async function PromptThreadPage({
 
         {/* 다른 질문 둘러보기 */}
         <div className="mt-6">
-          <h2 className="mb-2 text-[13px] font-extrabold text-ink">다른 동네 질문</h2>
+          <h2 className="mb-2 text-[13px] font-bold text-ink">다른 동네 질문</h2>
           <div className="flex flex-wrap gap-1.5">
             {TOWN_PROMPTS.map((q, qi) =>
               qi === i ? null : (

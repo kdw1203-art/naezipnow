@@ -9,6 +9,7 @@ import { safeAuth } from "@/lib/safe-auth";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { logger } from "@/lib/log";
 import { BuyReportButton } from "./BuyReportButton";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 리포트 상세·구매 — 자료실이 일부러 링크를 걸지 않던 "상세·구매 화면"이 이것이다.
    전달물 = 연결된 임장노트(source_note_id): 구매 기록이 있으면 그 노트를 열람한다.
@@ -109,9 +110,9 @@ export default async function ReportDetailPage({
           </Link>
         </div>
 
-        <div className="rise-in card flex flex-col gap-4 rounded-[18px] p-6">
+        <div className="rise-in card flex flex-col gap-4 p-6">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-md bg-primary-soft px-2 py-0.5 text-[10px] font-extrabold text-primary">
+            <span className="rounded-md bg-primary-soft px-2 py-0.5 text-[10px] font-bold text-primary">
               {r.category}
             </span>
             {r.region && (
@@ -124,7 +125,7 @@ export default async function ReportDetailPage({
             </span>
           </div>
 
-          <h1 className="text-[19px] font-extrabold leading-[1.4] text-ink">{r.title}</h1>
+          <h1 className="text-[19px] font-bold leading-[1.4] text-ink">{r.title}</h1>
           {r.subtitle && (
             <p className="text-[13px] leading-[1.7] text-text-2">{r.subtitle}</p>
           )}
@@ -141,7 +142,7 @@ export default async function ReportDetailPage({
 
           {r.tableOfContents.length > 0 && (
             <div className="flex flex-col gap-1.5 rounded-2xl bg-bg p-4">
-              <div className="text-[12px] font-extrabold text-ink">목차</div>
+              <div className="text-[12px] font-bold text-ink">목차</div>
               {r.tableOfContents.map((t, i) => (
                 <div key={i} className="text-[13px] text-text-1">
                   {i + 1}. {t}
@@ -152,7 +153,7 @@ export default async function ReportDetailPage({
 
           {r.previewContent && (
             <div className="flex flex-col gap-1.5">
-              <div className="text-[12px] font-extrabold text-ink">미리보기</div>
+              <div className="text-[12px] font-bold text-ink">미리보기</div>
               <p className="whitespace-pre-wrap rounded-2xl bg-bg p-4 text-[13px] leading-[1.75] text-text-1">
                 {r.previewContent}
               </p>

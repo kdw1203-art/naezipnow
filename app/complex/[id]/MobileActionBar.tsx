@@ -14,7 +14,8 @@ import { WatchlistButton } from "./hub-client";
       보이지 않게, IntersectionObserver).
    ② 전체 화면 모달이 열려 있지 않을 때(ui/Modal 이 body 에 data-modal-open 을
       남긴다 — InstallPrompt·IosInstallHint 와 같은 판정).
-   ③ md 미만(클래스 md:hidden). 데스크탑은 우측 사이드바 CTA 가 늘 보인다. */
+   ③ md 미만(클래스 md:hidden). [v4] 감시 대상은 머리 행동 줄(#complex-actions-top) 하나 — 하단 CTA 묶음·데스크탑
+   사이드바는 없어졌다(데스크탑은 같은 머리 행동 줄이 첫 화면에 있다). */
 
 export function MobileActionBar({
   complexId,
@@ -95,8 +96,9 @@ export function MobileActionBar({
       aria-label="단지 빠른 행동"
       className="complex-actionbar fixed inset-x-0 z-30 flex justify-center px-3 md:hidden"
     >
+      {/* [1012 · 규칙 2] 32px 임의 그림자 → --shadow-md(알파 10%) — .glass 가 1px --line 선을 이미 그린다 */}
       <div
-        className={`glass grid w-full max-w-[560px] gap-1 rounded-2xl p-1.5 shadow-[0_12px_32px_rgba(16,28,54,.16)] ${
+        className={`glass grid w-full max-w-[560px] gap-1 rounded-2xl p-1.5 shadow-[var(--shadow-md)] ${
           askingHref ? "grid-cols-4" : "grid-cols-3"
         }`}
       >

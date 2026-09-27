@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { PRICE_BANDS } from "@/lib/market/bands";
 import { formatKrwWon } from "@/lib/format/krw";
@@ -40,7 +41,7 @@ function Bars({ rows, total }: { rows: { key: string; n: number }[]; total: numb
           <span className="h-2 rounded-full bg-bg" aria-hidden="true">
             <span className="block h-2 rounded-full bg-primary" style={{ width: `${Math.round((r.n / total) * 100)}%` }} />
           </span>
-          <span className="font-extrabold text-ink">
+          <span className="font-bold text-ink">
             {r.n}곳 <span className="font-medium text-text-3">({Math.round((r.n / total) * 100)}%)</span>
           </span>
         </li>
@@ -68,7 +69,7 @@ export function PortfolioMix({
   return (
     <section className="card tool-rail flex flex-col gap-3 rounded-2xl p-4" aria-label="관심 단지 구성">
       <div className="flex flex-col gap-1">
-        <h2 className="t-section font-extrabold text-ink">관심 단지 {total}곳의 구성</h2>
+        <h2 className="t-section font-bold text-ink">관심 단지 {total}곳의 구성</h2>
         <p className="t-body text-text-1">
           {topRegion && topRegion.n >= 2 && topRegion.n / total >= 0.5
             ? `${topRegion.key}에 ${topRegion.n}곳(${Math.round((topRegion.n / total) * 100)}%)이 몰려 있어요 — 같은 지역 흐름에 함께 흔들려요.`
@@ -76,11 +77,11 @@ export function PortfolioMix({
         </p>
       </div>
       <div className="flex flex-col gap-1.5">
-        <h3 className="t-sub font-extrabold text-text-1">지역</h3>
+        <h3 className="t-sub font-bold text-text-1">지역</h3>
         <Bars rows={regions.slice(0, 5)} total={total} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <h3 className="t-sub font-extrabold text-text-1">가격대</h3>
+        <h3 className="t-sub font-bold text-text-1">가격대</h3>
         {priced.length > 0 ? (
           <Bars rows={bands} total={priced.length} />
         ) : (
@@ -93,9 +94,9 @@ export function PortfolioMix({
       </div>
       <ul className="flex flex-col gap-1.5 border-t border-line pt-3" aria-label="관심 단지">
         {items.map((it) => (
-          <li key={it.complexId} className="flex items-center justify-between gap-2 rounded-[12px] bg-bg px-3 py-2">
+          <li key={it.complexId} className="flex items-center justify-between gap-2 rounded-lg bg-bg px-3 py-2">
             <span className="flex min-w-0 flex-col">
-              <b className="break-words t-sub font-extrabold text-ink">{it.complexName}</b>
+              <b className="break-words t-sub font-bold text-ink">{it.complexName}</b>
               <span className="t-caption text-text-3">
                 {regionOf(it.complexId) ?? "지역 모름"}
                 {it.lastPriceKrw ? ` · 기준가 ${formatKrwWon(it.lastPriceKrw, { style: "short" })}` : ""}

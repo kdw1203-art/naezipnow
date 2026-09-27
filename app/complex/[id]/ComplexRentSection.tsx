@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import { loadRentHistory, withSectionBudget } from "./section-loaders";
 import type { ComplexRentHistory } from "@/lib/market/complex-rent";
 import { formatKrwWon } from "@/lib/format/krw";
@@ -55,8 +56,9 @@ export function RentView({ hist, name }: { hist: ComplexRentHistory; name: strin
   const valued = jeonseValues.filter((v) => v != null).length;
 
   return (
-    /* [968 · 7] cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미룬다(page.tsx 주석 참고) */
-    <section className="cv-auto rise-in-5 mt-6">
+    /* [v4] 실거래 탭 안(page.tsx priceExtras)으로 옮겼다 — 탭 패널이 gap 으로 가르므로 mt-6 을 뗐고, 닫힌 탭(hidden)
+       안이라 cv-auto(화면 밖 420px 자리표시 — 모바일 캡처의 빈 상자 원인)도 뗐다. */
+    <section>
       <h2 className="mb-2 flex flex-wrap items-center gap-x-1 px-1 t-section text-ink">
         전월세 실거래
         <Explain
@@ -99,7 +101,7 @@ export function RentView({ hist, name }: { hist: ComplexRentHistory; name: strin
       )}
 
       {/* [968 · 6] 767px 이하 — 월별 2행 카드. md+ 는 아래 표. */}
-      <ul className="card flex flex-col divide-y divide-divider rounded-2xl px-4 md:hidden">
+      <ul data-tone="mint" className="card flex flex-col divide-y divide-divider rounded-2xl px-4 md:hidden">
         {shown.map((m) => (
           <li key={m.month} className="flex flex-col gap-1 py-2.5">
             <div className="flex items-baseline justify-between gap-2">
@@ -109,7 +111,7 @@ export function RentView({ hist, name }: { hist: ComplexRentHistory; name: strin
             <div className="flex items-baseline justify-between gap-3 t-body">
               <span className="shrink-0 text-text-3">전세 보증금</span>
               <span className="flex min-w-0 items-baseline gap-2">
-                <span className="font-extrabold text-ink tabular-nums">{eok1(m.jeonseMedianDepositKrw)}</span>
+                <span className="font-bold text-ink tabular-nums">{eok1(m.jeonseMedianDepositKrw)}</span>
                 <span className="t-sub text-text-2 tabular-nums">{m.jeonseCount > 0 ? `${m.jeonseCount}건` : "—"}</span>
               </span>
             </div>
@@ -142,7 +144,7 @@ export function RentView({ hist, name }: { hist: ComplexRentHistory; name: strin
             {shown.map((m) => (
               <tr key={m.month} className="border-b border-divider last:border-0">
                 <td className="py-2.5 pr-3 font-bold text-ink tabular-nums">{ymDot(m.month)}</td>
-                <td className="py-2.5 pr-3 text-right font-extrabold text-ink tabular-nums">
+                <td className="py-2.5 pr-3 text-right font-bold text-ink tabular-nums">
                   {eok1(m.jeonseMedianDepositKrw)}
                 </td>
                 <td className="py-2.5 pr-3 text-right text-text-2 tabular-nums">
@@ -160,9 +162,9 @@ export function RentView({ hist, name }: { hist: ComplexRentHistory; name: strin
         </table>
       </div>
       <p className="t-caption mt-1.5 px-1 text-text-3">
-        국토교통부 전월세 신고 기준. 최근 1~2개월은 신고 지연으로 실제보다 적게 잡힐 수
-        있고, 신고분에는 갱신·신규 계약이 섞여 있어 체감 시세와 다를 수 있습니다. 중앙값은
-        면적을 가중하지 않은 값입니다.
+        출처 국토교통부 전월세 신고. 최근 1~2개월은 신고 지연으로 실제보다 적게 잡힐 수
+        있고, 신고분에는 갱신·신규 계약이 섞여 있어 체감과 다를 수 있어요. 중앙값은
+        면적을 가중하지 않은 값이에요.
       </p>
     </section>
   );

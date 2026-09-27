@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 3곳을 font-bold(700)로 바꿨다. */
 
 /* 현장 사진 캐러셀 — 이전에는 110×78 썸네일을 가로로 늘어놓기만 해서
    차트가 섞인 사진은 사실상 읽을 수 없었다. 큰 무대 + 좌우 클릭 전환 +
@@ -164,7 +165,7 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
         /* [968 · 37] touch-pan-y — 세로 스크롤은 브라우저에 맡기고 가로만 우리가 본다.
            [968 · 27] data-ptr-ignore — 설치 앱의 당겨서 새로고침이 무대 위 끌기에 끼어들지 않게. */
         data-ptr-ignore=""
-        className="brand-photo-frame relative w-full min-w-0 touch-pan-y overflow-hidden rounded-[14px] outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="brand-photo-frame relative w-full min-w-0 touch-pan-y overflow-hidden rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         {/* [968 · 37] 가운데(양쪽 22% 를 뺀 56%)를 탭하면 크게 보기 — 예전엔 좌우 38% 투명
             버튼이 무대 대부분을 덮어 사진을 눌러도 넘어가기만 했다. 접근 가능한 진입로는
@@ -179,7 +180,7 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
         >
           {isFailed ? (
             <div className="flex flex-col items-center gap-1 px-6 text-center">
-              <span className="t-body font-extrabold text-[var(--brand-hanji)]">
+              <span className="t-body font-bold text-[var(--brand-hanji)]">
                 사진을 불러오지 못했어요
               </span>
               <span className="t-sub text-[rgba(246,241,231,.6)]">
@@ -242,7 +243,7 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
             aria-live: 스크린리더도 장 전환을 들을 수 있게 (조용한 상태 변경 금지) */}
         <span
           aria-live="polite"
-          className="brand-photo-chip pointer-events-none absolute bottom-2 right-2 z-10 rounded-full px-2.5 py-1 t-sub font-extrabold"
+          className="brand-photo-chip pointer-events-none absolute bottom-2 right-2 z-10 rounded-full px-2.5 py-1 t-sub font-bold"
         >
           {idx + 1} / {total}
         </span>
@@ -252,7 +253,7 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
             type="button"
             onClick={() => setZoom(true)}
             aria-label="사진 전체화면으로 보기"
-            className="brand-photo-chip absolute right-2 top-2 z-10 rounded-full px-2.5 py-1 t-sub font-extrabold backdrop-blur-sm transition"
+            className="brand-photo-chip absolute right-2 top-2 z-10 rounded-full px-2.5 py-1 t-sub font-bold backdrop-blur-sm transition"
           >
             <span className="njn-dot mr-1.5 inline-block h-[7px] w-[7px] align-middle" aria-hidden="true" />크게 보기
           </button>

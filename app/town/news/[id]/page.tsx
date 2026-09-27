@@ -20,8 +20,7 @@ import {
 } from "@/lib/newui/complex-link";
 import { NEWS_TAGS } from "@/lib/news/tags";
 import { townHandoff } from "@/lib/town/handoff";
-import { AdZone } from "@/app/components/ads/AdZone";
-import { Icon } from "@/app/components/Icon";
+import { SummaryRow } from "@/app/complex/[id]/SummaryRow";
 import { ReadingProgress } from "./ReadingProgress";
 import { PostActions } from "./PostInteractions";
 import { NewsHero } from "./NewsHero";
@@ -35,6 +34,7 @@ import {
 } from "@/lib/news-seo";
 import { newsArticleJsonLd, withNewsArticleDefaults } from "@/lib/town/news-jsonld";
 import { jsonLdScript } from "@/lib/seo/jsonld";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* ============================================================
    뉴스 상세 — board_posts(자동수집 기사) **전용**. 없는 글은 notFound() (목업 기사 금지).
@@ -45,6 +45,14 @@ import { jsonLdScript } from "@/lib/seo/jsonld";
      · posts 에 있는 글이 이 주소로 오면 /town/story/[id] 로 **영구 리다이렉트**(옛 링크 보호)
      · 기사에는 출처 · 원문 링크 · 관련 보도 · 우리 요약 — 댓글·공감 없음
      · NewsArticle JSON-LD 는 우리 요약 유무와 무관하게 항상(lib/town/news-jsonld)
+
+   [v4] "한 화면 한 가지" — 가운데 한 줄(760px). 위에서 아래로:
+     머리(브레드크럼 · 제목 · 메타 한 줄 + 저장·공유) → 핵심 요약(AI 패널 — 요약 파이프라인 결과) → 사진 → 요약/본문
+     → 배경 · 시장에 주는 의미(제목 + 문단) → 원문 한 행 → FAQ → 관련 지역·태그 글자 링크 → 저작권 줄
+     → 관련 보도(1px 선 행) → 기사 속 위치(지도 + 행) → 다른 기사(이웃 기사 + 유사 기사 행).
+   지운 것: 본문 카드 · 340px 사이드바 · 메타 줄 배지(분류 · "자동 수집"/"내집나우 요약") · 머리의 원문 링크(끝 행과 중복) ·
+   옛 글 "3줄 요약" 네이비 패널(AI 결과 아님 · 본문과 같은 문단) · 칩(지역·태그 → 글자 링크) · "이 지역 임장노트"
+   설명 문장 · 하우스 광고(AdZone).
    ============================================================ */
 
 /* 비용 실측(2026-08-10): force-dynamic 이라 익명·크롤러 요청마다 오리진 함수가
@@ -116,8 +124,8 @@ export async function generateMetadata({
   }
   if (!post) {
     return {
-      title: "기사를 찾을 수 없습니다 | 내집나우",
-      description: "요청하신 기사를 찾을 수 없습니다.",
+      title: "기사를 찾을 수 없어요 | 내집나우",
+      description: "요청하신 기사를 찾을 수 없어요.",
       robots: { index: false, follow: false },
     };
   }
@@ -248,12 +256,8 @@ export default async function TownNewsDetailPage({
   const summaryParas = summary ? splitSummary(summary) : [];
   const keyPoints = seo.key_points ?? [];
   const faq = seo.faq ?? [];
-  /* 예전 3줄 요약은 원문 앞 3문단을 55자로 자른 것 — 우리 요약이 있으면 새로 쓴 핵심 문장을 쓴다. */
-  const legacySummary = renderOwnSummary
-    ? []
-    : paragraphs(post.body)
-        .slice(0, 3)
-        .map((t, i) => `${["①", "②", "③"][i] ?? "·"} ${t.slice(0, 55)}`);
+  /* [v4] 옛 글의 "3줄 요약"(원문 앞 3문단을 55자로 자른 것)은 걷었다 — 바로 아래 본문(bodyParas)이 같은 문단을
+     그대로 싣는다(규칙 8). 우리 요약이 있는 글은 keyPoints(핵심 요약)가 그 자리다. */
   const saveCount = post.bookmarkCount ?? 0;
   const heroImage = newsImageUrl(post);
 
@@ -321,8 +325,21 @@ export default async function TownNewsDetailPage({
     regionIdForName([post.city, post.district].filter(Boolean).join(" ")) ??
     (post.district ? regionIdForName(post.district) : null);
 
+  /* [v4] "다른 기사" 한 목록 — 이웃 기사(목록 정렬 기준 다음·이전) + 유사 기사. 예전엔 카드 두 장 + 사이드 카드 따로 */
+  const otherRows: { key: string; label: string; sub: string; href: string }[] = [
+    ...(newerPost?.id
+      ? [{ key: `n-${newerPost.id}`, label: newerPost.title, sub: "다음 기사 · 최신", href: `/town/news/${encodeURIComponent(newerPost.id)}` }]
+      : []),
+    ...(olderPost?.id
+      ? [{ key: `o-${olderPost.id}`, label: olderPost.title, sub: "이전 기사", href: `/town/news/${encodeURIComponent(olderPost.id)}` }]
+      : []),
+    ...similarPosts
+      .filter((s) => s.id && s.id !== newerPost?.id && s.id !== olderPost?.id)
+      .map((s) => ({ key: `s-${s.id}`, label: s.title, sub: s.meta, href: `/town/news/${s.id}` })),
+  ];
+
   return (
-    <PageShell breadcrumb={`뉴스룸 › ${category} › ${region}`}>
+    <PageShell>
       {/* [945-G] 읽기 진행 바 — 긴 글에서만 나타난다(컴포넌트가 판정) */}
       <ReadingProgress />
       <script
@@ -330,321 +347,239 @@ export default async function TownNewsDetailPage({
         dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
 
-      {/* 저장·공유(POST /api/bookmarks · Web Share) — PostInteractions.tsx 주석 참고 */}
-      <PostActions postId={post.id} title={title} saveCount={saveCount} />
-
-      {/* [998 · A5] md → lg: 태블릿(768~1023)은 1열, 2열은 lg 부터. */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex flex-col gap-4">
-          {/* ---------- 기사 본문 ---------- */}
-          <article className="rise-in card flex flex-col gap-4 rounded-[18px] p-5 md:p-7">
-            {/* [1006] 뉴스 재질의 머리 — 분류 태그 · 출처 · 발행시각(신문 데이트라인) */}
-            <div className="news-row__meta">
-              <span className="news-tag">{category}</span>
-              <span className="news-source">{sourceName}</span>
-              <time dateTime={publishedIso}>{fullDateTime(publishedIso)}</time>
-              <span>· {renderOwnSummary ? "내집나우 요약" : "자동 수집"}</span>
-              {regionId && (
-                <Link
-                  href={`/region/${regionId}`}
-                  className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline"
-                >
-                  {region} 시세 보기 ›
-                </Link>
-              )}
+      {/* [v4] 가운데 한 줄(최대 760px) — 예전 본문 카드 + 오른쪽 사이드바(관련 보도·위치·노트·유사 기사·광고) 2열 없음 */}
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
+        {/* ---------- 기사 ---------- */}
+        <article className="flex flex-col gap-5">
+          {/* [v4 · 규칙 1] 머리 — 브레드크럼(뉴스룸 링크 › 분류) · 제목 · 메타 한 줄 + 저장·공유.
+              예전 메타 줄의 분류 배지(.news-tag)·"자동 수집"/"내집나우 요약" 배지는 뺐다(규칙 6) — 같은 사실은 기사 끝
+              저작권 줄이 말한다. "{지역} 시세 보기"는 아래 "이 지역" 목록으로 옮겼다. */}
+          <header className="flex flex-col gap-2">
+            <nav aria-label="브레드크럼" className="t-sub text-text-3">
+              <Link href="/town/news" className="tap-line text-text-2 no-underline">
+                뉴스룸
+              </Link>{" "}
+              › {category}
+            </nav>
+            {/* [1012] 규칙 8 — 24px → t-title(20px): 본문 13~14px 의 2배 안 */}
+            <h1 className="t-title leading-[1.4] text-ink">{title}</h1>
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              {/* [v4] 메타 한 줄 — 매체 · 발행 시각 · 지역(분류는 브레드크럼이 말한다 — 같은 사실은 한 번) */}
+              <p className="min-w-0 truncate t-sub text-text-3">
+                {sourceName} · <time dateTime={publishedIso}>{fullDateTime(publishedIso)}</time> · {region}
+              </p>
+              {/* 저장·공유(POST /api/bookmarks · Web Share) — PostInteractions.tsx 주석 참고 */}
+              <PostActions postId={post.id} title={title} saveCount={saveCount} className="shrink-0" />
             </div>
-            <h1 className="text-2xl font-extrabold leading-[1.4] text-ink">{title}</h1>
+          </header>
 
-            {/* 원문 ↗ — 요약본 사이트의 예의는 원문으로 잘 보내는 것. 머리에도 한 번. */}
-            {post.sourceUrl && (
-              <a
-                href={post.sourceUrl}
-                target="_blank"
-                rel="noopener nofollow"
-                className="inline-flex min-h-[24px] w-fit items-center gap-1 t-sub font-bold text-primary no-underline"
-              >
-                <Icon name="link" size={13} />
-                원문 보기{sourceHost ? ` · ${sourceHost}` : ""}
-              </a>
-            )}
-
-            {keyPoints.length > 0 ? (
-              <AIPanel title="핵심 요약">
-                {keyPoints.map((t, i) => (
-                  <span key={i}>
-                    {i > 0 && <br />}
-                    {`· ${t}`}
-                  </span>
-                ))}
-              </AIPanel>
-            ) : legacySummary.length > 0 ? (
-              <AIPanel title="3줄 요약">
-                {legacySummary.map((t, i) => (
-                  <span key={i}>
-                    {i > 0 && <br />}
-                    {t}
-                  </span>
-                ))}
-              </AIPanel>
-            ) : null}
-
-            {/* 원문 사진 — og:image 가 있을 때만. 없으면 아무것도 그리지 않는다(빈 상자 금지).
-                [970 · C-12] 로드 실패 시 NewsHero 가 상자·캡션까지 통째로 치운다. */}
-            {heroImage ? <NewsHero src={heroImage} sourceName={post.sourceName} /> : null}
-
-            <div className="flex flex-col gap-4 text-[13px] leading-[1.85] text-text-1">
-              {/* 우리가 쓴 요약 — 원문 문장을 옮기지 않고 핵심 사실만 재구성한 글 */}
-              {summaryParas.map((t, i) => (
-                <p key={`sum-${i}`}>{t}</p>
-              ))}
-              {/* 우리 요약이 없는 옛 글은 종전대로 원문 본문을 그린다(noindex 유지). */}
-              {bodyParas.map((t, i) => (
-                <p key={`body-${i}`}>{t}</p>
-              ))}
-
-              {renderOwnSummary && context ? (
-                <section className="rounded-[14px] border border-line bg-bg px-4 py-3">
-                  <h2 className="mb-1 text-[12px] font-extrabold text-text-3">배경</h2>
-                  <p className="text-[13px] leading-[1.75] text-text-1">{context}</p>
-                </section>
-              ) : null}
-
-              {renderOwnSummary && implication ? (
-                <section className="rounded-[14px] border border-primary/25 bg-primary-soft px-4 py-3">
-                  <h2 className="mb-1 text-[12px] font-extrabold text-primary">시장에 주는 의미</h2>
-                  <p className="text-[13px] leading-[1.75] text-text-1">{implication}</p>
-                </section>
-              ) : null}
-
-              {/* 웹12 — 원문 링크 카드형 CTA. 출처명·호스트를 함께 보여 어디로 가는지 알게 한다. */}
-              {post.sourceUrl && (
-                <a
-                  href={post.sourceUrl}
-                  target="_blank"
-                  rel="noopener nofollow"
-                  className="tile flex items-center justify-between gap-3 rounded-[14px] border border-line bg-bg px-4 py-3 no-underline"
-                >
-                  <span className="min-w-0">
-                    <span className="block text-[12px] font-semibold text-text-3">
-                      원문 출처{post.sourceName ? ` · ${post.sourceName}` : ""}
-                    </span>
-                    <span className="block text-[13px] font-extrabold text-primary">기사 전문 읽기 ↗</span>
-                  </span>
-                  {sourceHost && <span className="shrink-0 text-[12px] text-text-3">{sourceHost}</span>}
-                </a>
-              )}
-            </div>
-
-            {/* FAQ — FAQPage 구조화 데이터와 화면 내용이 같아야 유효하므로 함께 낸다. */}
-            {faq.length > 0 ? (
-              <section aria-label="자주 묻는 질문" className="flex flex-col gap-3 border-t border-divider pt-4">
-                <h2 className="text-[15px] font-extrabold text-ink">자주 묻는 질문</h2>
-                <dl className="flex flex-col gap-3">
-                  {faq.map((f, i) => (
-                    <div key={i} className="flex flex-col gap-1">
-                      <dt className="text-[13px] font-extrabold text-ink">Q. {f.q}</dt>
-                      <dd className="text-[13px] leading-[1.7] text-text-1">{f.a}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-            ) : null}
-
-            {/* 관련 지역 — 해석되는 시군구만 링크(죽은 링크 금지) */}
-            {geo.places && geo.places.length > 0 ? (
-              <nav aria-label="관련 지역" className="flex flex-wrap items-center gap-1.5 border-t border-divider pt-3.5">
-                <span className="text-[12px] font-bold text-text-3">관련 지역</span>
-                {geo.places.map((place) => {
-                  const words = place.split(/\s+/).filter(Boolean);
-                  const rid =
-                    regionIdForName(place) ??
-                    (words.length >= 2 ? regionIdForName(words.slice(0, 2).join(" ")) : null) ??
-                    (words.length >= 2 ? regionIdForName(words[1]) : null);
-                  return rid ? (
-                    <Link
-                      key={place}
-                      href={`/region/${rid}`}
-                      className="chip border border-line bg-bg px-2.5 py-1 text-[12px] font-bold text-primary no-underline"
-                    >
-                      {place}
-                    </Link>
-                  ) : (
-                    <span key={place} className="chip border border-line bg-bg px-2.5 py-1 text-[12px] text-text-2">
-                      {place}
-                    </span>
-                  );
-                })}
-              </nav>
-            ) : null}
-
-            {tagLinks.length > 0 && (
-              <nav aria-label="관련 태그" className="flex flex-wrap gap-1.5">
-                {tagLinks.map((t) =>
-                  t.href ? (
-                    <Link
-                      key={t.label}
-                      href={t.href}
-                      className="chip border border-line bg-bg px-2.5 py-1 text-[12px] font-bold text-primary no-underline"
-                    >
-                      #{t.label}
-                      {t.kind === "complex" && <span className="ml-1 font-medium text-text-3">시세</span>}
-                    </Link>
-                  ) : (
-                    <span key={t.label} className="chip border border-line bg-bg px-2.5 py-1 text-[12px] text-text-2">
-                      #{t.label}
-                    </span>
-                  ),
-                )}
-              </nav>
-            )}
-
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-divider pt-3.5">
-              <div className="flex flex-wrap items-center gap-1 text-[12px] text-text-3">
-                <span>
-                  {renderOwnSummary
-                    ? `내집나우가 원문을 요약·정리한 글입니다 · 원문 저작권은 ${post.sourceName || "원 매체"}에 있음 ·`
-                    : "자동 수집 콘텐츠 · 저작권은 원 매체에 있음 ·"}
+          {/* 우리 요약의 핵심 문장 — 요약 파이프라인이 새로 쓴 글이라 AI 결과 패널(네이비)에 둔다(v4 규칙 4 의 예외).
+              [v4] 우리 요약이 없는 옛 글의 "3줄 요약"(원문 앞 3문단을 55자로 자른 것)은 뺐다 — AI 결과가 아닌데 네이비
+              패널이었고, 바로 아래 본문이 같은 문단을 그대로 싣는다(규칙 8 — 같은 사실은 한 번). */}
+          {keyPoints.length > 0 ? (
+            <AIPanel title="핵심 요약">
+              {keyPoints.map((t, i) => (
+                <span key={i}>
+                  {i > 0 && <br />}
+                  {`· ${t}`}
                 </span>
-                {/* 신고 연결(#81) — POST /api/moderation/content-report */}
-                <ReportButton postId={post.id} />
-              </div>
-              {/* [1006] 기사에는 댓글·공감이 없다 — 의견은 동네이야기로 */}
-              <Link
-                href={`/town/write?topic=${encodeURIComponent(title.slice(0, 60))}${regionQuery ? `&region=${encodeURIComponent(regionQuery)}` : ""}`}
-                className="inline-flex min-h-[24px] items-center gap-1 t-sub font-bold text-primary no-underline"
-              >
-                <Icon name="messages-square" size={13} />
-                이 기사로 동네이야기 쓰기 ›
-              </Link>
-            </div>
-          </article>
+              ))}
+            </AIPanel>
+          ) : null}
 
-          {/* 웹19 — 이웃 기사 내비게이션(목록 정렬 기준). 있는 방향만 그린다. */}
-          {(newerPost?.id || olderPost?.id) && (
-            <nav aria-label="이웃 기사" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {newerPost?.id ? (
-                <Link
-                  href={`/town/news/${encodeURIComponent(newerPost.id)}`}
-                  className="card tile flex flex-col gap-1 rounded-[14px] px-4 py-3 no-underline"
-                >
-                  <span className="text-[10px] font-bold text-text-3">‹ 다음 기사(최신)</span>
-                  <span className="line-clamp-2 text-[13px] font-bold leading-snug text-ink">{newerPost.title}</span>
-                </Link>
-              ) : (
-                <span className="hidden sm:block" />
-              )}
-              {olderPost?.id && (
-                <Link
-                  href={`/town/news/${encodeURIComponent(olderPost.id)}`}
-                  className="card tile flex flex-col gap-1 rounded-[14px] px-4 py-3 no-underline sm:items-end sm:text-right"
-                >
-                  <span className="text-[10px] font-bold text-text-3">이전 기사 ›</span>
-                  <span className="line-clamp-2 text-[13px] font-bold leading-snug text-ink">{olderPost.title}</span>
-                </Link>
-              )}
+          {/* 원문 사진 — og:image 가 있을 때만. 없으면 아무것도 그리지 않는다(빈 상자 금지).
+              [970 · C-12] 로드 실패 시 NewsHero 가 상자·캡션까지 통째로 치운다. */}
+          {heroImage ? <NewsHero src={heroImage} sourceName={post.sourceName} /> : null}
+
+          <div className="flex flex-col gap-4 text-[13px] leading-[1.85] text-text-1">
+            {/* 우리가 쓴 요약 — 원문 문장을 옮기지 않고 핵심 사실만 재구성한 글 */}
+            {summaryParas.map((t, i) => (
+              <p key={`sum-${i}`}>{t}</p>
+            ))}
+            {/* 우리 요약이 없는 옛 글은 종전대로 원문 본문을 그린다(noindex 유지). */}
+            {bodyParas.map((t, i) => (
+              <p key={`body-${i}`}>{t}</p>
+            ))}
+          </div>
+
+          {/* [v4 · 규칙 5] 배경·시장에 주는 의미 — 테두리 상자 두 개 → 섹션 제목 + 문단(카드 없음) */}
+          {renderOwnSummary && context ? (
+            <section className="flex flex-col gap-1">
+              <h2 className="t-section text-ink">배경</h2>
+              <p className="text-[13px] leading-[1.75] text-text-1">{context}</p>
+            </section>
+          ) : null}
+          {renderOwnSummary && implication ? (
+            <section className="flex flex-col gap-1">
+              <h2 className="t-section text-ink">시장에 주는 의미</h2>
+              <p className="text-[13px] leading-[1.75] text-text-1">{implication}</p>
+            </section>
+          ) : null}
+
+          {/* 웹12 — 원문 링크. 요약본 사이트의 예의는 원문으로 잘 보내는 것.
+              [v4] 머리의 "원문 보기 · 호스트" 와 본문 끝 타일이 같은 곳으로 가는 두 버튼이었다 — 1px 선 행 하나로 */}
+          {post.sourceUrl && (
+            <a
+              href={post.sourceUrl}
+              target="_blank"
+              rel="noopener nofollow"
+              className="flex min-h-14 items-center justify-between gap-3 border-y border-line py-3 no-underline"
+            >
+              <span className="min-w-0 flex-1">
+                {/* [1012] 규칙 5 — 동사 + 구체 대상(매체명) */}
+                <span className="block t-body font-bold text-primary">
+                  {post.sourceName ? `${post.sourceName}에서 전문 읽기 ↗` : "원문에서 전문 읽기 ↗"}
+                </span>
+                {sourceHost && <span className="mt-0.5 block truncate t-sub text-text-3">{sourceHost}</span>}
+              </span>
+            </a>
+          )}
+
+          {/* FAQ — FAQPage 구조화 데이터와 화면 내용이 같아야 유효하므로 함께 낸다. */}
+          {faq.length > 0 ? (
+            <section aria-label="자주 묻는 질문" className="flex flex-col gap-2">
+              <h2 className="t-section text-ink">자주 묻는 질문</h2>
+              <dl className="flex flex-col gap-3">
+                {faq.map((f, i) => (
+                  <div key={i} className="flex flex-col gap-1">
+                    <dt className="text-[13px] font-bold text-ink">Q. {f.q}</dt>
+                    <dd className="text-[13px] leading-[1.7] text-text-1">{f.a}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ) : null}
+
+          {/* 관련 지역 · 태그 — [v4] 칩 두 줄 → 글자 링크 한 줄씩(칩은 필터에만 — 규칙 6).
+              해석되는 시군구·단지·주제만 링크(죽은 링크 금지), 나머지는 글자 그대로 */}
+          {geo.places && geo.places.length > 0 ? (
+            <nav aria-label="관련 지역" className="t-sub text-text-3">
+              관련 지역 —{" "}
+              {geo.places.map((place, i) => {
+                const words = place.split(/\s+/).filter(Boolean);
+                const rid =
+                  regionIdForName(place) ??
+                  (words.length >= 2 ? regionIdForName(words.slice(0, 2).join(" ")) : null) ??
+                  (words.length >= 2 ? regionIdForName(words[1]) : null);
+                return (
+                  <span key={place}>
+                    {i > 0 && " · "}
+                    {rid ? (
+                      <Link href={`/region/${rid}`} className="tap-line font-bold text-text-2 no-underline">
+                        {place}
+                      </Link>
+                    ) : (
+                      place
+                    )}
+                  </span>
+                );
+              })}
+            </nav>
+          ) : null}
+          {tagLinks.length > 0 && (
+            <nav aria-label="관련 태그" className="t-sub text-text-3">
+              {tagLinks.map((t, i) => (
+                <span key={t.label}>
+                  {i > 0 && " · "}
+                  {t.href ? (
+                    <Link href={t.href} className="tap-line font-bold text-text-2 no-underline">
+                      #{t.label}
+                      {t.kind === "complex" && <span className="ml-1 font-normal text-text-3">시세</span>}
+                    </Link>
+                  ) : (
+                    `#${t.label}`
+                  )}
+                </span>
+              ))}
             </nav>
           )}
-        </div>
 
-        {/* ---------- 사이드바 ---------- */}
-        <aside className="flex flex-col gap-3.5">
-          {/* [#67] 관련 보도 — 같은 사건을 다룬 다른 매체. 뉴스룸에서 제일 먼저 오는 부가 정보다 */}
-          {clusterRelated.length > 0 && (
-            <div className="rise-in-2 card flex flex-col gap-1 rounded-[18px] p-[18px]">
-              <div className="mb-1.5 text-[13px] font-extrabold text-ink">
-                관련 보도 {clusterRelated.length}건{" "}
-                <span className="text-[12px] font-medium text-text-3">같은 사건 · 다른 매체</span>
-              </div>
-              {clusterRelated.map((s, i) => (
-                <Link
-                  key={s.id}
-                  href={`/town/news/${s.id}`}
-                  className={`flex flex-col gap-0.5 py-[7px] ${i < clusterRelated.length - 1 ? "border-b border-divider" : ""}`}
-                >
-                  <div className="line-clamp-2 text-xs font-bold leading-[1.4] text-ink">{s.title}</div>
-                  <div className="text-[10px] text-text-3">{s.meta}</div>
-                </Link>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+            <div className="flex flex-wrap items-center gap-1 t-caption text-text-3">
+              <span>
+                {renderOwnSummary
+                  ? `내집나우가 원문을 요약·정리한 글입니다 · 원문 저작권은 ${post.sourceName || "원 매체"}에 있음 ·`
+                  : "자동 수집 콘텐츠 · 저작권은 원 매체에 있음 ·"}
+              </span>
+              {/* 신고 연결(#81) — POST /api/moderation/content-report */}
+              <ReportButton postId={post.id} />
+            </div>
+            {/* [1006] 기사에는 댓글·공감이 없다 — 의견은 동네이야기로 */}
+            <Link
+              href={`/town/write?topic=${encodeURIComponent(title.slice(0, 60))}${regionQuery ? `&region=${encodeURIComponent(regionQuery)}` : ""}`}
+              className="tap-line t-sub font-bold text-primary no-underline"
+            >
+              이 기사로 동네이야기 쓰기 ›
+            </Link>
+          </div>
+        </article>
+
+        {/* [#67] 관련 보도 — 같은 사건을 다룬 다른 매체. [v4] 사이드 카드 → 1px 선 행 목록(제목 + 매체 · 날짜) */}
+        {clusterRelated.length > 0 && (
+          <section aria-labelledby="news-related-title" className="flex flex-col gap-1">
+            <h2 id="news-related-title" className="t-section text-ink">
+              관련 보도 <span className="t-sub font-medium text-text-3">{clusterRelated.length}건</span>
+            </h2>
+            <ul data-tone="hanji" className="divide-y divide-line">
+              {clusterRelated.map((s) => (
+                <SummaryRow key={s.id} label={<span className="block truncate">{s.title}</span>} sub={s.meta} href={`/town/news/${s.id}`} />
               ))}
-            </div>
-          )}
+            </ul>
+          </section>
+        )}
 
-          {/* 기사 속 위치 — [970 · C-32] 지역이 비어 있는 전국 기사에는 지도를 그리지 않는다 */}
-          {(post.city || post.district || post.relatedSite) && (
-            <div className="rise-in-2 card flex flex-col gap-2.5 rounded-[18px] p-[18px]">
-              <div className="text-[13px] font-extrabold text-ink">
-                {post.city || post.district ? "기사 속 위치" : "연관 단지"}
-              </div>
-              {(post.city || post.district) && (
-                <div className="relative">
-                  <LocationMap
-                    region={post.city}
-                    city={post.city}
-                    district={post.district}
-                    label={region}
-                    className="h-[150px]"
-                  />
-                  <Link
-                    href={mapHref}
-                    className="absolute bottom-2.5 right-2.5 rounded-lg bg-[var(--glass-bg)] px-2.5 py-[5px] text-[12px] font-bold text-primary"
-                  >
-                    {regionQuery ? `${regionQuery} 지도 열기` : "지도에서 열기"} ›
-                  </Link>
-                </div>
-              )}
-              {post.relatedSite && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-text-2">연관 단지</span>
-                  {relatedSiteHref ? (
-                    <Link href={relatedSiteHref} className="font-bold text-primary">
-                      {post.relatedSite} 시세 ›
-                    </Link>
-                  ) : (
-                    <span className="font-bold text-ink">{post.relatedSite}</span>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 이 지역 임장노트 — 사실 우선: 허위 노트 목록·건수 없이 작성/열람 진입만 */}
-          <div className="rise-in-3 card flex flex-col gap-2.5 rounded-[18px] p-[18px]">
-            <div className="text-[13px] font-extrabold text-ink">{regionQuery || "이 지역"} 임장노트</div>
-            <p className="text-[12px] leading-relaxed text-text-3">
-              현장을 다녀오셨다면 임장노트로 기록해 이웃과 공유해 보세요.
-              {regionQuery ? ` 지역은 ${regionQuery}로 미리 채워집니다.` : ""}
-            </p>
-            <div className="flex gap-2">
-              <Link href={noteNewHref} className="btn-primary btn-cta flex-1 rounded-[10px] p-2.5 text-center text-[12px]">
-                {regionQuery ? `${regionQuery} 노트 쓰기` : "이 지역 노트 쓰기"}
-              </Link>
-              <Link href="/notes" className="btn-soft flex-1 rounded-[10px] p-2.5 text-center text-[12px]">
-                공개 노트 보기
+        {/* 이 지역 — 기사 속 위치(지도) + 시세·연관 단지·임장노트로 가는 행.
+            [970 · C-32] 지역이 비어 있는 전국 기사에는 지도를 그리지 않는다.
+            [v4] 사이드 카드 두 장(위치 · "이 지역 임장노트" 설명 문장 + 버튼 둘) → 섹션 하나 + 1px 선 행 */}
+        <section aria-labelledby="news-place-title" className="flex flex-col gap-2">
+          <h2 id="news-place-title" className="t-section text-ink">
+            {post.city || post.district ? "기사 속 위치" : "이 지역"}
+          </h2>
+          {(post.city || post.district) && (
+            <div className="relative">
+              <LocationMap
+                region={post.city}
+                city={post.city}
+                district={post.district}
+                label={region}
+                className="h-[150px]"
+              />
+              <Link
+                href={mapHref}
+                className="absolute bottom-2.5 right-2.5 rounded-lg border border-line bg-surface px-2.5 py-[5px] text-[12px] font-bold text-primary"
+              >
+                {/* [1012] 유리 토큰(--glass-bg) 대신 불투명 면 + 1px 선 */}
+                {regionQuery ? `${regionQuery} 지도 열기` : "지도에서 열기"} ›
               </Link>
             </div>
-          </div>
-
-          {/* 유사 기사 — 실데이터 있을 때만 */}
-          {similarPosts.length > 0 && (
-            <div className="rise-in-4 card flex flex-col gap-1 rounded-[18px] p-[18px]">
-              <div className="mb-1.5 text-[13px] font-extrabold text-ink">유사 기사</div>
-              {similarPosts.map((s, i) => (
-                <Link
-                  key={s.title}
-                  href={s.id ? `/town/news/${s.id}` : "/town/news"}
-                  className={`flex flex-col gap-0.5 py-[7px] ${i < similarPosts.length - 1 ? "border-b border-divider" : ""}`}
-                >
-                  <div className="line-clamp-2 text-xs font-bold leading-[1.4] text-ink">{s.title}</div>
-                  <div className="text-[10px] text-text-3">{s.meta}</div>
-                </Link>
-              ))}
-            </div>
           )}
+          <ul data-tone="blue" className="divide-y divide-line">
+            {regionId && <SummaryRow label={`${region} 시세 보기`} href={`/region/${regionId}`} />}
+            {post.relatedSite &&
+              (relatedSiteHref ? (
+                <SummaryRow label={`${post.relatedSite} 시세`} sub="연관 단지" href={relatedSiteHref} />
+              ) : (
+                <SummaryRow label={post.relatedSite} sub="연관 단지" />
+              ))}
+            {/* 사실 우선: 허위 노트 목록·건수 없이 작성/열람 진입만. 새 노트의 지역 칸은 미리 채워진다(townHandoff) */}
+            <SummaryRow label={regionQuery ? `${regionQuery} 임장노트 쓰기` : "이 지역 임장노트 쓰기"} href={noteNewHref} />
+            <SummaryRow label="공개 임장노트 보기" href="/notes" />
+          </ul>
+        </section>
 
-          {/* AD 슬롯 — 등록 배너도 하우스 광고도 없으면 AdSlot 이 null 을 반환해 빈 상자를 남기지 않는다 */}
-          <div className="rise-in-5">
-            <AdZone placement="sidebar" seed={0} plan={null} />
-          </div>
-        </aside>
+        {/* 다른 기사 — 웹19 이웃 기사(목록 정렬 기준) + 유사 기사. 실데이터 있을 때만 */}
+        {otherRows.length > 0 && (
+          <section aria-labelledby="news-other-title" className="flex flex-col gap-1">
+            <h2 id="news-other-title" className="t-section text-ink">
+              다른 기사
+            </h2>
+            <ul data-tone="hanji" className="divide-y divide-line">
+              {otherRows.map((r) => (
+                <SummaryRow key={r.key} label={<span className="block truncate">{r.label}</span>} sub={r.sub} href={r.href} />
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
     </PageShell>
   );

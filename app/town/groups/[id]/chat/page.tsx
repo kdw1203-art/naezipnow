@@ -3,6 +3,7 @@ import { getMeeting } from "@/lib/meetings/store-db";
 import { safeAuth } from "@/lib/safe-auth";
 import { ChatRoom } from "../ChatRoom";
 import { formatKstMeetingTime } from "@/lib/format/kst";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 시안 8p — 모임 그룹 채팅방 (+ 10c 메뉴)
    /api/groups/[id]/chat(입장·멱등) + /api/chat/rooms/[roomId]/messages 실배선 */
@@ -34,7 +35,7 @@ export default async function TownGroupChatPage({
   if (!meeting) {
     return (
       <div className="mx-auto flex h-dvh w-full max-w-[480px] flex-col items-center justify-center gap-3 bg-bg px-6 text-center">
-        <div className="text-[19px] font-extrabold text-ink">모임을 찾을 수 없어요</div>
+        <div className="text-[19px] font-bold text-ink">모임을 찾을 수 없어요</div>
         <p className="text-[13px] leading-[1.6] text-text-2">
           삭제되었거나 잘못된 링크일 수 있어요.
         </p>
@@ -65,16 +66,16 @@ export default async function TownGroupChatPage({
             ‹
           </Link>
           <div className="flex-1">
-            <div className="text-[13px] font-extrabold text-ink">{meeting.title}</div>
+            <div className="text-[13px] font-bold text-ink">{meeting.title}</div>
             <div className="text-[10px] text-text-3">{metaLine}</div>
           </div>
         </div>
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-          <div className="text-[15px] font-extrabold text-ink">
+          <div className="text-[15px] font-bold text-ink">
             로그인하면 모임 채팅에 참여할 수 있어요
           </div>
           <p className="text-[13px] leading-[1.6] text-text-2">
-            {meeting.description || "모임 멤버들과 일정·체크리스트를 나눠 보세요."}
+            {meeting.description || "모임 멤버 채팅 — 일정·체크리스트"}
           </p>
           <Link
             href={`/login?callbackUrl=${encodeURIComponent(`/town/groups/${id}/chat`)}`}

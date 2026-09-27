@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+/* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-extrabold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 시안 8p(모임 그룹 채팅방 · 모바일) + 10c(채팅방 메뉴 — 회원)
    실배선: POST /api/groups/[id]/chat → roomId,
@@ -308,7 +309,7 @@ export function ChatRoom({
           ‹
         </Link>
         <div className="flex-1">
-          <div className="text-[13px] font-extrabold text-ink">
+          <div className="text-[13px] font-bold text-ink">
             {title}{" "}
             <span className="text-[12px] font-semibold text-text-3">
               {phase === "ready" ? shownMemberCount : memberCount}
@@ -339,7 +340,7 @@ export function ChatRoom({
 
         {phase === "error" && (
           <div className="mt-8 flex flex-col items-center gap-2.5 self-center text-center">
-            <div className="text-[13px] font-extrabold text-ink">
+            <div className="text-[13px] font-bold text-ink">
               채팅은 모임 참여 후 이용할 수 있어요
             </div>
             {errorMsg && (
@@ -358,11 +359,12 @@ export function ChatRoom({
 
         {phase === "ready" && messages.length === 0 && (
           <div className="mt-8 flex flex-col items-center gap-1.5 self-center text-center">
-            <div className="text-[13px] font-extrabold text-ink">
+            <div className="text-[13px] font-bold text-ink">
               아직 메시지가 없어요
             </div>
             <p className="text-xs text-text-2">
-              첫 인사를 남기고 임장 일정을 잡아 보세요.
+              {/* [1012] 규칙 6 — 권유 대신 사실 */}
+              이 모임 채팅방에 올라온 메시지가 아직 없어요 — 아래 칸에 쓴 메시지가 첫 메시지예요
             </p>
           </div>
         )}
@@ -381,7 +383,7 @@ export function ChatRoom({
           if (m.isMine) {
             return (
               <div key={m.id} className="flex flex-col items-end gap-[3px]">
-                <div className="btn-primary max-w-[240px] self-end whitespace-pre-wrap break-words rounded-[14px] rounded-br-[4px] px-[13px] py-2.5 text-[13px] font-normal leading-[1.5]">
+                <div className="btn-primary max-w-[240px] self-end whitespace-pre-wrap break-words rounded-lg rounded-br-sm px-[13px] py-2.5 text-[13px] font-normal leading-[1.5]">
                   {m.body}
                 </div>
                 <span className="text-[10px] text-text-3">
@@ -393,13 +395,14 @@ export function ChatRoom({
           const isBlocked = blocked.includes(m.senderId);
           return (
             <div key={m.id} className="group flex items-end gap-2">
-              <div className="h-7 w-7 shrink-0 rounded-full bg-gradient-to-br from-line to-bg" />
+              {/* [1012] 규칙 3 — 아바타 그라데이션 → 단색(--divider) */}
+              <div className="h-7 w-7 shrink-0 rounded-full bg-divider" />
               <div>
                 <div className="mb-[3px] text-[10px] text-text-3">
                   {m.senderLabel}
                 </div>
                 <div
-                  className={`max-w-[240px] whitespace-pre-wrap break-words rounded-[14px] rounded-bl-[4px] border border-line bg-surface px-[13px] py-2.5 text-[13px] leading-[1.5] ${
+                  className={`max-w-[240px] whitespace-pre-wrap break-words rounded-lg rounded-bl-sm border border-line bg-surface px-[13px] py-2.5 text-[13px] leading-[1.5] ${
                     isBlocked ? "italic text-text-3" : "text-text-1"
                   }`}
                 >
@@ -430,7 +433,7 @@ export function ChatRoom({
       )}
 
       {/* ---------- 입력바 ---------- */}
-      <div className="glass-strong mx-3.5 mb-[18px] flex items-center gap-2 rounded-[18px] px-3.5 py-2.5">
+      <div className="glass-strong mx-3.5 mb-[18px] flex items-center gap-2 rounded-3xl px-3.5 py-2.5">
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -468,9 +471,9 @@ export function ChatRoom({
             style={{ boxShadow: "-16px 0 44px rgba(16,28,54,.2)" }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[13px] font-extrabold text-ink">
+              <span className="text-[13px] font-bold text-ink">
                 채팅방 메뉴{" "}
-                <span className="rounded bg-bg px-[7px] py-[2px] text-[10px] font-extrabold text-text-2">
+                <span className="rounded bg-bg px-[7px] py-[2px] text-[10px] font-bold text-text-2">
                   회원
                 </span>
               </span>
@@ -485,12 +488,12 @@ export function ChatRoom({
             </div>
 
             <div className="flex flex-col gap-1 rounded-xl bg-bg px-3.5 py-3">
-              <div className="text-[13px] font-extrabold text-ink">{title}</div>
+              <div className="text-[13px] font-bold text-ink">{title}</div>
               <div className="text-[12px] text-text-3">{metaLine}</div>
             </div>
 
             <div className="flex flex-col">
-              <div className="py-1.5 text-[10px] font-extrabold tracking-widest text-text-3">
+              <div className="py-1.5 text-[10px] font-bold tracking-widest text-text-3">
                 멤버 {shownMemberCount}
               </div>
               {members.map((m, i) => (
@@ -500,12 +503,13 @@ export function ChatRoom({
                     i < members.length - 1 ? "border-b border-divider" : ""
                   }`}
                 >
-                  <div className="h-[30px] w-[30px] rounded-full bg-gradient-to-br from-line to-bg" />
+                  {/* [1012] 규칙 3 — 아바타 그라데이션 → 단색(--divider) */}
+                  <div className="h-[30px] w-[30px] rounded-full bg-divider" />
                   <div className="flex-1">
                     <div className="text-xs font-bold text-ink">
                       {m.isSelf ? "나" : m.label}{" "}
                       {m.role === "owner" && (
-                        <span className="rounded bg-warning-soft px-[5px] py-px text-[10px] font-extrabold text-warning">
+                        <span className="rounded bg-warning-soft px-[5px] py-px text-[10px] font-bold text-warning">
                           모임장
                         </span>
                       )}
@@ -580,7 +584,7 @@ export function ChatRoom({
             style={{ boxShadow: "0 16px 44px rgba(16,28,54,.24)" }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[13px] font-extrabold text-ink">
+              <span className="text-[13px] font-bold text-ink">
                 {actionMsg.senderLabel} 님의 메시지
               </span>
               <button
@@ -598,7 +602,7 @@ export function ChatRoom({
               </p>
             )}
             <div>
-              <div className="mb-1.5 text-[10px] font-extrabold tracking-widest text-text-3">
+              <div className="mb-1.5 text-[10px] font-bold tracking-widest text-text-3">
                 신고 사유 선택
               </div>
               <div className="flex flex-wrap gap-1.5">

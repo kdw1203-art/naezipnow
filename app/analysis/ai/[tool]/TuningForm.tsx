@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 /* [981] 도구별 보정 입력 폼 — **열릴 때만** 내려받는다(워크벤치 본체 예산 480KB).
    폼이 묻는 값은 전부 lib/ai/analysis-engine.ts 가 실제로 읽는 필드다
@@ -45,7 +46,7 @@ export function TuningForm({
                 <select
                   value={typeof value[f.key] === "string" ? (value[f.key] as string) : ""}
                   onChange={(e) => set(f.key, e.target.value)}
-                  className="min-h-[40px] rounded-[10px] border border-line bg-surface px-3 t-body font-semibold text-ink outline-none focus:border-primary"
+                  className="min-h-[40px] rounded-lg border border-line bg-surface px-3 t-body font-semibold text-ink outline-none focus:border-primary"
                 >
                   {f.options.map((o) => (
                     <option key={o.value} value={o.value}>
@@ -66,7 +67,7 @@ export function TuningForm({
                   onChange={(e) => set(f.key, e.target.value)}
                   rows={2}
                   placeholder={f.placeholder}
-                  className="rounded-[10px] border border-line bg-surface px-3 py-2 t-body font-semibold text-ink outline-none focus:border-primary"
+                  className="rounded-lg border border-line bg-surface px-3 py-2 t-body font-semibold text-ink outline-none focus:border-primary"
                 />
                 {f.hint && <span className="t-caption text-text-3">{f.hint}</span>}
               </label>
@@ -80,7 +81,7 @@ export function TuningForm({
               <span className="flex flex-wrap items-center gap-1.5 t-sub font-bold text-text-2">
                 {f.label}
                 {f.kind === "number" && f.unit ? <span className="font-bold text-text-3">({f.unit})</span> : null}
-                {auto && <span className="rounded bg-primary-soft px-1.5 py-px t-caption font-extrabold text-primary">최근 실거래가로 채움</span>}
+                {auto && <span className="rounded bg-primary-soft px-1.5 py-px t-caption font-bold text-primary">최근 실거래가로 채움</span>}
               </span>
               <span className="flex items-center gap-2">
                 <input
@@ -88,7 +89,7 @@ export function TuningForm({
                   onChange={(e) => set(f.key, e.target.value)}
                   inputMode={f.kind === "number" ? "numeric" : undefined}
                   placeholder={f.placeholder}
-                  className="min-h-[40px] w-full min-w-0 max-w-[200px] rounded-[10px] border border-line bg-surface px-3 t-body font-semibold text-ink outline-none focus:border-primary"
+                  className="min-h-[40px] w-full min-w-0 max-w-[200px] rounded-lg border border-line bg-surface px-3 t-body font-semibold text-ink outline-none focus:border-primary"
                 />
                 {/* [1009 · A] 넣은 숫자를 반올림 없이 읽어 준다("50800" → "5억 800만원") — 짧은 "5.1억"은 넣은 값과
                     달라 보여 오타를 가렸다 */}

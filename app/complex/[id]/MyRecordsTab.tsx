@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -79,7 +80,7 @@ export function MyRecordsTab({
       <div className="flex flex-col gap-2.5" role="status" aria-label="내 기록 불러오는 중">
         {/* 카드 두 장 모양 — 실제 목록과 같은 자리를 먼저 잡는다 */}
         {[0, 1].map((i) => (
-          <div key={i} className="card flex flex-col gap-2 rounded-[14px] px-3.5 py-3">
+          <div key={i} className="card flex flex-col gap-2 rounded-lg px-3.5 py-3">
             <SkLine w="58%" h={14} />
             <SkLine w="36%" h={10} />
           </div>
@@ -130,20 +131,20 @@ export function MyRecordsTab({
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between px-1">
-        <span className="text-xs font-extrabold text-text-3">
+        <span className="text-xs font-bold text-text-3">
           내 임장노트 {notes.length}건
           {watching === true && <span className="ml-1.5 font-medium">· 관심 단지</span>}
         </span>
         {/* [970 · B-40] "내 노트"는 /notes?tab=mine 이 맞다 — /notes 는 공개 피드다 */}
         <Link href="/notes?tab=mine" className="t-caption font-bold text-primary">
-          내 노트 전체 ›
+          내 노트 전체 보기 ›
         </Link>
       </div>
       {notes.map((n, i) => (
         <Link
           key={n.id}
           href={`/notes/${encodeURIComponent(n.id)}`}
-          className="card tile flex items-center justify-between gap-3 rounded-[14px] px-3.5 py-3 no-underline"
+          className="card tile flex items-center justify-between gap-3 rounded-lg px-3.5 py-3 no-underline"
         >
           <span className="min-w-0">
             <span className="block truncate t-body font-bold text-ink">{n.title || "제목 없는 노트"}</span>
@@ -164,7 +165,8 @@ export function MyRecordsTab({
           </span>
         </Link>
       ))}
-      <Link href={noteHref} className="btn-primary btn-cta rounded-xl p-3 text-center t-body no-underline">
+      {/* [v4 · 규칙 2] 채움 파랑은 머리의 "이 단지 임장노트 쓰기" 하나 — 탭 안의 다음 회차 쓰기는 아웃라인 */}
+      <Link href={noteHref} className="btn-outline rounded-xl p-3 text-center t-body no-underline">
         {notes.length + 1}회차 임장노트 쓰기
       </Link>
     </div>

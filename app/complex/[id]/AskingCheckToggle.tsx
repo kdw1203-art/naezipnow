@@ -37,9 +37,10 @@ export function AskingCheckToggle({ apiId }: { apiId: string }) {
           if (open && location.hash === HASH) history.replaceState(history.state, "", location.pathname + location.search);
           setOpen(!open);
         }}
-        className="btn-soft min-h-10 shrink-0 rounded-xl px-3.5 t-sub"
+        className="btn-outline min-h-10 shrink-0 rounded-xl px-3.5 t-sub"
       >
-        {open ? "접기" : "열기"}
+        {/* [v4] 요약 목록 "호가 점검" 행의 오른쪽 조작 — "열기"(대상 없음) → 동사 + 대상 */}
+        {open ? "접기" : "호가 넣기"}
       </button>
       <div id="asking-check-body" className="basis-full">
         {open && <Panel apiId={apiId} />}

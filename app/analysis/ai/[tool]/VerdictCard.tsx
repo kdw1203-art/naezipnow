@@ -1,9 +1,10 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Verdict, VerdictDisplay, VerdictTile } from "@/lib/ai/verdict";
 import { Won } from "@/app/components/num/Won";
 import { Delta } from "@/app/components/num/Delta";
-import { metricDisplay, tileCaption, tileDisplay, verdictSources } from "./verdict-display";
+import { evidenceSources, metricDisplay, tileCaption, tileDisplay, verdictSources } from "./verdict-display";
 
 /* ============================================================
    [993] 판단 카드 → [1008 · W] **결과 요약** — AI 분석의 결과값을 한 형식으로.
@@ -63,12 +64,12 @@ function ShownValue({
 }) {
   if (display?.kind === "won") return <Won manwon={display.manwon} unit={unit} className={`${size} text-ink`} />;
   if (display?.kind === "delta") {
-    return <Delta pct={display.pct} digits={display.digits} srContext={display.base} className={`${size} font-extrabold`} />;
+    return <Delta pct={display.pct} digits={display.digits} srContext={display.base} className={`${size} font-bold`} />;
   }
   const [num, u] = splitValue(value);
   return (
     <span className="flex items-baseline gap-0.5 break-words">
-      <b className={`${size} font-extrabold tabular-nums text-ink`}>{num}</b>
+      <b className={`${size} font-bold tabular-nums text-ink`}>{num}</b>
       {u && <span className={`${size === "t-display" ? "t-body" : "t-sub"} font-bold text-text-2`}>{u}</span>}
     </span>
   );
@@ -90,8 +91,8 @@ export function VerdictTiles({
         const display = tileDisplay(t);
         const aside = tileAside?.(t);
         return (
-          <li key={t.key} className="flex min-w-0 flex-col rounded-[12px] bg-bg px-3 py-2.5">
-            <span className="flex items-center gap-0.5 t-caption font-extrabold text-text-3">
+          <li key={t.key} className="flex min-w-0 flex-col rounded-lg bg-bg px-3 py-2.5">
+            <span className="flex items-center gap-0.5 t-caption font-bold text-text-3">
               <span className="min-w-0 break-words">{t.label}</span>
               {aside}
             </span>
@@ -99,14 +100,14 @@ export function VerdictTiles({
               {t.value ? (
                 <ShownValue value={t.value} display={display} size="t-title" unit="만" />
               ) : (
-                <b className="t-title font-extrabold text-text-3">—</b>
+                <b className="t-title font-bold text-text-3">—</b>
               )}
             </span>
             {/* 등락 칸은 비교 기준을 값 바로 아래에 — "기준 없는 %" 를 두지 않는다 */}
             {display?.kind === "delta" && <span className="t-caption font-bold text-text-2">{display.base}</span>}
             <span className="mt-0.5 t-caption leading-snug text-text-3 break-words">{tileCaption(t, when)}</span>
             {t.value && t.confidence !== "ok" && CONF_TEXT[t.confidence] && (
-              <span className="mt-1 self-start rounded bg-warning-soft px-1.5 py-px t-caption font-extrabold text-warning">
+              <span className="mt-1 self-start rounded bg-warning-soft px-1.5 py-px t-caption font-bold text-warning">
                 {CONF_TEXT[t.confidence]}
               </span>
             )}
@@ -125,6 +126,7 @@ export function VerdictCard({
   bare = false,
   metricAside,
   tileAside,
+  emptyTilesLine = null,
 }: {
   verdict: Verdict;
   /** 도구 말투 한 줄(persona.tone[band]) — 결론 아래 보조 문장 */
@@ -139,32 +141,37 @@ export function VerdictCard({
   metricAside?: ReactNode;
   /** [1009 · A] 칸 이름 옆 ⓘ */
   tileAside?: (t: VerdictTile) => ReactNode;
+  /** [1012 · R2 · complex A6] 핵심 숫자 칸이 **전부** 값 없음("—")일 때 칸 격자 대신 그릴 한 줄
+   *  ("아직 신고된 매매 실거래가 없어요 — 계약 후 30일 안에 신고"). 안 넘기면 예전처럼 "—" 칸 4개. */
+  emptyTilesLine?: string | null;
 }) {
   const m = verdict.metric;
   const asOf = ymLabel(m?.asOf ?? verdict.tiles?.find((t) => t.asOf)?.asOf ?? null);
   const tiles = tilesOf(verdict);
   const md = metricDisplay(m);
-  const sources = verdictSources(verdict);
+  /* [1012 · R2 · complex A6] 값 있는 칸이 없으면 데이터 출처(evidence)의 원천으로 — 출처 한 줄이 접힘 밖에 늘 보이게 */
+  const sources = verdictSources(verdict) ?? evidenceSources(verdict.evidence ?? []);
+  const allTilesEmpty = tiles.length > 0 && tiles.every((t) => t.value == null);
   return (
     <section className="verdict flex flex-col gap-3" data-band={verdict.band} aria-label="결과 요약">
       {/* ① 알약 + 이유 */}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="verdict-band inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 t-sub font-extrabold" data-band={verdict.band}>
+        <span className="verdict-band inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 t-sub font-bold" data-band={verdict.band}>
           <span aria-hidden="true">●</span>
           {BAND_TEXT[verdict.band] ?? verdict.bandLabel}
         </span>
         {verdict.bandReason && <span className="min-w-0 t-sub font-bold text-text-2 break-words">{verdict.bandReason}</span>}
       </div>
       {/* ② 결론 한 줄 — 숫자보다 문장이 먼저(토스 관례) */}
-      <p className="t-section font-extrabold text-ink break-words" style={{ textWrap: "balance" }}>
+      <p className="t-section font-bold text-ink break-words" style={{ textWrap: "balance" }}>
         {verdict.headline}
       </p>
       {toneLine && !compact && <p className="t-sub text-text-2">{toneLine}</p>}
 
       {/* ③ 대표 수치 */}
       {m && (
-        <div className="verdict-metric flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-[12px] px-3.5 py-3">
-          <span className="flex items-center gap-0.5 t-sub font-extrabold text-text-2">
+        <div className="verdict-metric flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-lg px-3.5 py-3">
+          <span className="flex items-center gap-0.5 t-sub font-bold text-text-2">
             {m.label}
             {metricAside}
           </span>
@@ -178,8 +185,16 @@ export function VerdictCard({
         </div>
       )}
 
-      {/* ④ 핵심 숫자 칸 */}
-      {!compact && <VerdictTiles tiles={tiles} tileAside={tileAside} />}
+      {/* ④ 핵심 숫자 칸 — [1012 · R2 · complex A6] 4칸이 전부 "—" 면(그리고 부르는 쪽이 한 줄을 줬으면) 격자 대신 한 문장.
+          "—" 4칸을 지표처럼 세워 두는 것이 규칙 0-1("없는 값은 지표처럼 꾸미지 않는다") 위반이었다. */}
+      {!compact &&
+        (allTilesEmpty && emptyTilesLine ? (
+          <p className="rounded-lg bg-bg px-3 py-2.5 t-sub text-text-2 break-words" aria-label="핵심 숫자">
+            {emptyTilesLine}
+          </p>
+        ) : (
+          <VerdictTiles tiles={tiles} tileAside={tileAside} />
+        ))}
 
       {/* ⑤ 출처·기준 한 줄 — 칸마다 되풀이하던 출처를 여기 모은다 */}
       {!compact && (
@@ -189,16 +204,16 @@ export function VerdictCard({
       )}
 
       {!compact && !bare && (verdict.evidence.length > 0 || extraChips) && (
-        <details className="rounded-[10px] bg-bg px-3.5 py-2.5">
-          <summary className="cursor-pointer t-sub font-extrabold text-text-2">데이터 출처 {verdict.evidence.length}곳</summary>
+        <details className="rounded-lg bg-bg px-3.5 py-2.5">
+          <summary className="cursor-pointer t-sub font-bold text-text-2">데이터 출처 {verdict.evidence.length}곳</summary>
           <ul className="mt-2 flex flex-col gap-1.5">
             {verdict.evidence.map((e) => (
               <li key={e.label} className="flex flex-wrap items-baseline gap-x-2 t-sub text-text-2">
-                <b className="font-extrabold text-text-1">{e.label}</b>
+                <b className="font-bold text-text-1">{e.label}</b>
                 <span>{e.source}</span>
                 {ymLabel(e.asOf) && <span className="text-text-3">{ymLabel(e.asOf)}</span>}
                 {e.confidence !== "ok" && CONF_TEXT[e.confidence] && (
-                  <span className="t-caption font-extrabold text-warning">{CONF_TEXT[e.confidence]}</span>
+                  <span className="t-caption font-bold text-warning">{CONF_TEXT[e.confidence]}</span>
                 )}
                 {e.href && (
                   <Link href={e.href} className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline">
@@ -213,8 +228,8 @@ export function VerdictCard({
       )}
 
       {!compact && !bare && verdict.counters.length > 0 && (
-        <details className="rounded-[10px] bg-bg px-3.5 py-2.5">
-          <summary className="cursor-pointer t-sub font-extrabold text-text-2">
+        <details className="rounded-lg bg-bg px-3.5 py-2.5">
+          <summary className="cursor-pointer t-sub font-bold text-text-2">
             결과가 달라지는 경우 {verdict.counters.length}가지
           </summary>
           <ul className="mt-1.5 flex flex-col gap-1">

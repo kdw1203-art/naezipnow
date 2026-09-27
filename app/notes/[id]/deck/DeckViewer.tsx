@@ -1,4 +1,6 @@
 "use client";
+/* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 1곳). */
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 6곳을 font-bold(700)로 바꿨다. */
 
 /**
  * 임장노트 카드 덱 뷰어.
@@ -74,7 +76,7 @@ function ScoreBars({ scores, dark }: { scores: DeckPage["scores"]; dark: boolean
             />
           </span>
           <span
-            className={`w-[34px] shrink-0 text-right text-[12px] font-extrabold tabular-nums ${
+            className={`w-[34px] shrink-0 text-right text-[12px] font-bold tabular-nums ${
               dark ? "text-white" : "text-ink"
             }`}
           >
@@ -97,7 +99,7 @@ function DeckCard({ page, index, total }: { page: DeckPage; index: number; total
       aria-label={`${index + 1} / ${total}`}
     >
       <div
-        className={`relative flex aspect-[4/5] flex-col overflow-hidden rounded-[24px] border border-border shadow-sm ${t.card}`}
+        className={`relative flex aspect-[4/5] flex-col overflow-hidden rounded-lg border border-border shadow-sm ${t.card}`}
       >
         {/* 배경 사진 — 표지·사진 카드만 전면 사용 */}
         {full && page.photo && (
@@ -124,14 +126,14 @@ function DeckCard({ page, index, total }: { page: DeckPage; index: number; total
             }`}
           >
           {page.eyebrow && (
-            <p className={`text-[12px] font-extrabold tracking-wide ${t.eyebrow}`}>
+            <p className={`text-[12px] font-bold tracking-wide ${t.eyebrow}`}>
               {page.eyebrow}
             </p>
           )}
 
           {page.title && (
             <h2
-              className={`text-[19px] font-extrabold leading-[1.35] ${t.title} ${
+              className={`text-[19px] font-bold leading-[1.35] ${t.title} ${
                 page.kind === "cover" ? "text-[24px]" : ""
               }`}
             >
@@ -168,7 +170,7 @@ function DeckCard({ page, index, total }: { page: DeckPage; index: number; total
                 <li key={i} className="flex items-start gap-2">
                   <span
                     aria-hidden
-                    className={`mt-px shrink-0 font-extrabold ${
+                    className={`mt-px shrink-0 font-bold ${
                       c.done ? "text-success" : dark ? "text-white/40" : "text-text-3"
                     }`}
                   >
@@ -205,7 +207,7 @@ function DeckCard({ page, index, total }: { page: DeckPage; index: number; total
               출처 · {page.source}
             </span>
             <span
-              className={`text-[12px] font-extrabold tabular-nums ${
+              className={`text-[12px] font-bold tabular-nums ${
                 dark ? "text-white/60" : "text-text-3"
               }`}
             >
@@ -306,7 +308,7 @@ export function DeckViewer({ deck }: { deck: NoteDeck }) {
                 style={{ width: `${Math.round(((active + 1) / total) * 100)}%` }}
               />
             </span>
-            <span className="t-sub font-extrabold tabular-nums text-text-2">
+            <span className="t-sub font-bold tabular-nums text-text-2">
               {active + 1} / {total}
             </span>
           </div>

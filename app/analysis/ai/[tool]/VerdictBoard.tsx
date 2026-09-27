@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -112,7 +113,7 @@ export function VerdictBoard({
   return (
     <section ref={sectionRef} className="card flex flex-col gap-2 rounded-2xl p-4" aria-label="다른 도구로 본 이 단지">
       <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-        <h2 className="t-section font-extrabold text-ink">다른 도구로 본 이 단지</h2>
+        <h2 className="t-section font-bold text-ink">다른 도구로 본 이 단지</h2>
         <span className="t-caption text-text-3">칸을 누르면 그 도구로 이어서 봐요</span>
       </div>
       {/* 합의 한 줄 — 둘 이상 도착했을 때만. 한 도구로 "합의"를 말하지 않는다. */}
@@ -125,11 +126,11 @@ export function VerdictBoard({
         {BOARD_TOOLS.map((t) => {
           const x = tileOf(t);
           const current = t === tool;
-          if (x.status === "loading") return <SkBlock key={t} h={76} className="rounded-[12px]" />;
+          if (x.status === "loading") return <SkBlock key={t} h={76} className="rounded-lg" />;
           if (x.status === "fail")
             return (
-              <div key={t} className="flex min-h-10 flex-col justify-center rounded-[12px] border border-dashed border-line px-3 py-2.5">
-                <span className="t-caption font-extrabold text-text-3">{BOARD_TOOL_LABEL[t]}</span>
+              <div key={t} className="flex min-h-10 flex-col justify-center rounded-lg border border-dashed border-line px-3 py-2.5">
+                <span className="t-caption font-bold text-text-3">{BOARD_TOOL_LABEL[t]}</span>
                 <span className="t-sub text-text-3">지금은 불러오지 못했어요</span>
               </div>
             );
@@ -147,15 +148,15 @@ export function VerdictBoard({
           const body = (
             <>
               <span className="flex items-center justify-between gap-1">
-                <span className="t-caption font-extrabold text-text-3">{BOARD_TOOL_LABEL[t]}</span>
-                <span className="verdict-band shrink-0 rounded-md px-1.5 py-px t-caption font-extrabold" data-band={x.item.band}>
+                <span className="t-caption font-bold text-text-3">{BOARD_TOOL_LABEL[t]}</span>
+                <span className="verdict-band shrink-0 rounded-md px-1.5 py-px t-caption font-bold" data-band={x.item.band}>
                   {x.item.bandLabel}
                 </span>
               </span>
               {showMetric ? (
                 <>
                   <span className="truncate t-caption text-text-3">{metric.label}</span>
-                  <span className="t-section t-fit font-extrabold tabular-nums leading-tight text-ink">
+                  <span className="t-section t-fit font-bold tabular-nums leading-tight text-ink">
                     {metric.value}
                     {metric.unit ?? ""}
                   </span>
@@ -171,7 +172,7 @@ export function VerdictBoard({
             <div
               key={t}
               aria-current="page"
-              className="tool-soft-bg flex min-h-10 flex-col gap-1 rounded-[12px] border-2 px-3 py-2.5"
+              className="tool-soft-bg flex min-h-10 flex-col gap-1 rounded-lg border-2 px-3 py-2.5"
               style={{ borderColor: "var(--tool-accent)" }}
             >
               {body}
@@ -182,7 +183,7 @@ export function VerdictBoard({
             <Link
               key={t}
               href={`/analysis/ai/${t}?complexId=${encodeURIComponent(complexId)}`}
-              className="press flex min-h-10 flex-col gap-1 rounded-[12px] border border-line bg-surface px-3 py-2.5 no-underline"
+              className="press flex min-h-10 flex-col gap-1 rounded-lg border border-line bg-surface px-3 py-2.5 no-underline"
             >
               {body}
             </Link>
@@ -244,7 +245,7 @@ export function MyNotesChip({ complexId }: { complexId: string }) {
   return (
     /* [1009 · A] title= 말풍선(마우스를 올려야만 보임)을 걷고 "비공개 포함"을 글자로 — 휴대폰에서도 읽힌다 */
     <span className="inline-flex min-h-[28px] items-center gap-1 rounded-full border border-line bg-surface px-2.5 py-0.5 t-caption text-text-2">
-      <b className="font-extrabold text-text-1">내 임장노트</b>
+      <b className="font-bold text-text-1">내 임장노트</b>
       <span className="text-text-3">(비공개 포함)</span>
       <span>
         {my.count}건{my.score != null ? ` · ${my.count > 1 ? "평균" : "기록"} ${my.score}점` : ""}

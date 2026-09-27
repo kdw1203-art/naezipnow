@@ -141,6 +141,16 @@ export default async function BestNotesMonthPage({
     { name: `${label}`, url: `/notes/best/${month.ym}` },
   ]);
 
+  /* [v4 · 한 화면 한 가지] 머리(제목 + 사실 한 줄: 공개·자격·수록·작성자 수) → 주인공(선정 노트 구분선 행, 점수 내역은
+     행마다 접힘) → 맨 끝 "선정 기준" 접힘(인용 문단 · 계산식 · 자주 묻는 질문). 지운 것: 첫 문단(→ 접힘 안, JSON-LD 는 그대로) ·
+     숫자 3칸 카드(→ 사실 줄) · 노트 카드와 요약 발췌 140자 · "점수는 이렇게 계산했습니다" 카드(→ 접힘) */
+  const headFact = [
+    `공개 ${month.totalCount}편`,
+    `${MIN_SCORE}점 이상 ${month.qualifiedCount}편`,
+    `수록 ${month.picks.length}편`,
+    `작성자 ${authorCount}명`,
+  ].join(" · ");
+
   return (
     <PageShell breadcrumb={`임장노트 › 이달의 노트 › ${label}`}>
       <script
@@ -149,144 +159,114 @@ export default async function BestNotesMonthPage({
           __html: jsonLdScript([articleJsonLd, itemListJsonLd, crumbs]),
         }}
       />
-      <div className="mx-auto max-w-[860px]">
-        <h1 className="rise-in t-title text-ink">
-          {label} 이달의 공개 임장노트
-        </h1>
-        <p className="rise-in-1 mt-2 t-body text-text-1">{leadSentence}</p>
-
-        {/* 집계 요약 — 뽑힌 수만 보여 주면 분모를 숨기는 셈이 된다 */}
-        <div className="rise-in-1 mt-4 grid grid-cols-3 gap-2">
-          <div className="rounded-[10px] border border-border px-4 py-3">
-            <p className="t-sub font-bold text-text-3">그 달 공개 노트</p>
-            <p className="mt-0.5 t-section text-ink">{month.totalCount}편</p>
-          </div>
-          <div className="rounded-[10px] border border-border px-4 py-3">
-            <p className="t-sub font-bold text-text-3">{MIN_SCORE}점 이상</p>
-            <p className="mt-0.5 t-section text-ink">{month.qualifiedCount}편</p>
-          </div>
-          <div className="rounded-[10px] border border-border px-4 py-3">
-            <p className="t-sub font-bold text-text-3">여기 실린 노트</p>
-            <p className="mt-0.5 t-section text-primary">
-              {month.picks.length}편
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8">
+        <header className="flex flex-col gap-0.5">
+          <h1 className="t-title text-ink">{label} 이달의 공개 임장노트</h1>
+          <p className="t-sub text-text-3">{headFact}</p>
+          {/* 상한 때문에 빠진 노트가 있으면 그 사실만 한 줄 — 분모를 숨기지 않는다 */}
+          {month.qualifiedCount > month.picks.length && (
+            <p className="t-caption text-text-3">
+              상한 적용 — 한 달 최대 {MAX_NOTES_PER_MONTH}편 · 같은 작성자 최대 {MAX_PER_AUTHOR}편 · 빠진 노트가 더 나쁘다는 뜻 아님
             </p>
-          </div>
-        </div>
+          )}
+        </header>
 
-        {month.qualifiedCount > month.picks.length && (
-          <p className="rise-in-1 mt-2 t-sub text-text-3">
-            자격을 갖춘 {month.qualifiedCount}편 가운데 {month.picks.length}편만 실렸습니다 — 한
-            달 최대 {MAX_NOTES_PER_MONTH}편, 같은 작성자 최대 {MAX_PER_AUTHOR}편 상한 때문입니다.
-            상한에 걸려 빠진 노트가 더 나쁜 노트라는 뜻은 아닙니다.
-          </p>
-        )}
-
-        {/* 선정 노트 — 축별 원값과 배점을 그대로 노출해 검산 가능하게 한다 */}
-        <div className="rise-in-2 mt-6 flex flex-col gap-4">
+        {/* 선정 노트 — 행 = 순위 · 제목 / 합계 점수. 축별 원값과 배점은 행 아래 접힘(검산 가능) */}
+        <ol data-tone="hanji" className="divide-y divide-line border-y border-line">
           {month.picks.map((p, i) => (
-            <article key={p.note.id} className="card rounded-2xl p-[var(--pad-card)]">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="t-sub font-extrabold text-text-3">
-                    {i + 1}위 · {placeLabel(p.note)}
-                  </p>
-                  <h2 className="mt-1 t-section text-ink">
-                    <Link href={`/notes/${p.note.id}`} className="no-underline hover:underline">
-                      {p.note.title}
-                    </Link>
-                  </h2>
-                  <p className="mt-1 t-sub text-text-3">
-                    {maskAuthor(p.note)} · {p.note.visitDate || p.note.createdAt.slice(0, 10)} 방문
-                    기록
-                  </p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="t-title leading-none text-primary">
-                    {p.total}
-                  </p>
-                  <p className="mt-1 t-sub font-bold text-text-3">/ {MAX_SCORE}점</p>
-                </div>
-              </div>
-
-              {p.note.summary?.trim() && (
-                <p className="mt-3 t-body text-text-2">
-                  {p.note.summary.trim().length > 140
-                    ? `${p.note.summary.trim().slice(0, 140)}…`
-                    : p.note.summary.trim()}
-                </p>
-              )}
-
-              <div className="mt-3 overflow-x-auto">
-                <table className="w-full min-w-[420px] border-collapse t-sub">
-                  <thead>
-                    <tr className="border-b border-border text-left text-text-3">
-                      <th className="py-1.5 pr-2 font-bold">항목</th>
-                      <th className="py-1.5 pr-2 text-right font-bold">실측</th>
-                      <th className="py-1.5 text-right font-bold">점수</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {p.breakdown.map((b) => (
-                      <tr key={b.key} className="border-b border-border last:border-b-0">
-                        <td className="py-1.5 pr-2 text-text-2">{b.label}</td>
-                        <td className="py-1.5 pr-2 text-right tabular-nums text-text-2">
-                          {b.raw.toLocaleString("ko-KR")}
-                          {b.unit}
-                        </td>
-                        <td className="py-1.5 text-right font-bold tabular-nums text-ink">
-                          {b.points}
-                          <span className="font-normal text-text-3"> / {b.max}</span>
-                        </td>
+            <li key={p.note.id} className="py-3">
+              <Link href={`/notes/${p.note.id}`} className="press flex items-center justify-between gap-3 no-underline">
+                <span className="min-w-0 flex-1">
+                  <span className="block t-body font-bold text-ink">
+                    <span className="mr-1.5 t-num text-text-3">{i + 1}위</span>
+                    {p.note.title}
+                  </span>
+                  <span className="mt-0.5 block truncate t-sub text-text-3">
+                    {placeLabel(p.note)} · {maskAuthor(p.note)} · 방문 {p.note.visitDate || p.note.createdAt.slice(0, 10)}
+                  </span>
+                </span>
+                <span className="shrink-0 t-body t-num text-ink">
+                  {p.total}
+                  <span className="font-medium text-text-3">/{MAX_SCORE}</span>
+                </span>
+              </Link>
+              <details className="group mt-1">
+                <summary className="inline-flex min-h-6 cursor-pointer list-none items-center gap-1 t-sub font-bold text-text-2 [&::-webkit-details-marker]:hidden">
+                  점수 내역
+                  <span aria-hidden="true" className="text-text-3 transition-transform group-open:rotate-90">
+                    ›
+                  </span>
+                </summary>
+                <div className="mt-1 overflow-x-auto">
+                  <table className="w-full min-w-[420px] border-collapse t-sub">
+                    <thead>
+                      <tr className="border-b border-line text-left text-text-3">
+                        <th className="py-1.5 pr-2 font-bold">항목</th>
+                        <th className="py-1.5 pr-2 text-right font-bold">실측</th>
+                        <th className="py-1.5 text-right font-bold">점수</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <p className="mt-3">
-                <Link
-                  href={`/notes/${p.note.id}`}
-                  className="t-body font-bold text-primary underline"
-                >
-                  노트 전문 보기 ›
-                </Link>
-              </p>
-            </article>
+                    </thead>
+                    <tbody>
+                      {p.breakdown.map((b) => (
+                        <tr key={b.key} className="border-b border-line last:border-b-0">
+                          <td className="py-1.5 pr-2 text-text-2">{b.label}</td>
+                          <td className="py-1.5 pr-2 text-right tabular-nums text-text-2">
+                            {b.raw.toLocaleString("ko-KR")}
+                            {b.unit}
+                          </td>
+                          <td className="py-1.5 text-right font-bold tabular-nums text-ink">
+                            {b.points}
+                            <span className="font-normal text-text-3"> / {b.max}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            </li>
           ))}
-        </div>
+        </ol>
 
-        {/* 계산식 재게시 — 목록에서 넘어오지 않은 방문자도 기준을 볼 수 있어야 한다 */}
-        <section className="rise-in-3 card mt-6 p-[var(--pad-card)]">
-          <h2 className="t-section text-ink">점수는 이렇게 계산했습니다</h2>
-          <div className="mt-3 flex flex-col gap-3">
-            {SCORE_AXES.map((a) => (
-              <div key={a.key} className="border-b border-border pb-3 last:border-b-0 last:pb-0">
-                <p className="t-body font-extrabold text-ink">
-                  {a.label} <span className="text-primary">{a.max}점</span>
-                </p>
-                <p className="mt-0.5 t-sub text-text-3">{a.how}</p>
-              </div>
-            ))}
-          </div>
-          <p className="mt-4 t-sub text-text-3">
-            이 점수는 <strong className="text-ink">기록의 충실도</strong>만 잽니다. 그 단지가 좋은
-            단지인지, 값이 적절한지와는 무관합니다.
+        {/* 맨 끝 — 이어지는 링크 한 줄 + 선정 기준 접힘(인용 문단 · 계산식 · 자주 묻는 질문) */}
+        <div className="flex flex-col gap-2">
+          <p className="flex flex-wrap gap-x-4 t-sub">
+            <Link href="/notes/best" className="tap-line font-bold text-primary no-underline">
+              다른 달 보기 ›
+            </Link>
+            <Link href="/notes" className="tap-line font-bold text-primary no-underline">
+              공개 임장노트 전체 ›
+            </Link>
+            <Link href="/notes/new" className="tap-line font-bold text-primary no-underline">
+              내 임장노트 쓰기 ›
+            </Link>
           </p>
-        </section>
-
-        <QaBlock items={faq} />
-
-        <p className="mb-8 mt-5 flex flex-wrap gap-4 t-sub text-text-3">
-          <Link href="/notes/best" className="inline-block py-[5px] font-bold text-primary underline">
-            다른 달 보기
-          </Link>
-          <Link href="/notes" className="inline-block py-[5px] font-bold text-primary underline">
-            공개 임장노트 전체 보기
-          </Link>
-          <Link href="/notes/new" className="inline-block py-[5px] font-bold text-primary underline">
-            내 임장노트 쓰기
-          </Link>
-        </p>
+          <details className="group border-t border-line pt-1">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
+              선정 기준 {MAX_SCORE}점
+              <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
+                ›
+              </span>
+            </summary>
+            <div className="flex flex-col gap-4 pb-3">
+              {/* G12 — 발췌해도 완결되는 첫 문단(실측치만). Article JSON-LD description 과 같은 문장 */}
+              <p className="t-sub text-text-2">{leadSentence}</p>
+              <dl data-tone="blue" className="divide-y divide-line">
+                {SCORE_AXES.map((a) => (
+                  <div key={a.key} className="flex items-baseline gap-3 py-2">
+                    <dt className="w-24 shrink-0 t-sub font-bold text-text-2">
+                      {a.label} <span className="t-num text-ink">{a.max}</span>
+                    </dt>
+                    <dd className="min-w-0 t-sub text-text-3">{a.how}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="t-caption text-text-3">기록 충실도만 측정 · 단지의 좋고 나쁨·값과 무관</p>
+              {/* G5+G13 — Q&A + FAQPage JSON-LD(보이는 질문·답과 같은 배열) */}
+              <QaBlock items={faq} />
+            </div>
+          </details>
+        </div>
       </div>
     </PageShell>
   );

@@ -10,6 +10,7 @@
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Icon } from "@/app/components/Icon";
 
 export function RefreshButton({
   listingId,
@@ -45,8 +46,11 @@ export function RefreshButton({
   }
 
   if (phase === "done") {
+    /* [1012 · 규칙 4] "✓" 활자 → 선 아이콘 check */
     return (
-      <span className="text-[12px] font-bold text-success">끌어올렸어요 ✓</span>
+      <span className="inline-flex items-center gap-1 text-[12px] font-bold text-success">
+        <Icon name="check" size={12} /> 끌어올렸어요
+      </span>
     );
   }
 

@@ -136,7 +136,7 @@ export default async function InvitePage({
     <main className="mx-auto flex min-h-[70vh] max-w-[520px] flex-col items-center justify-center px-5 py-12">
       {code ? <script dangerouslySetInnerHTML={{ __html: cookieScript }} /> : null}
 
-      <div className="card glass w-full rounded-[22px] p-7 text-center">
+      <div className="card glass w-full rounded-3xl p-7 text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary-soft text-primary">
           <Icon name="gift" size={28} />
         </div>
@@ -176,7 +176,7 @@ export default async function InvitePage({
           ].map((b) => (
             <div
               key={b.t}
-              className="flex items-center gap-3 rounded-[14px] bg-surface px-3.5 py-2.5"
+              className="flex items-center gap-3 rounded-lg bg-surface px-3.5 py-2.5"
               style={{ border: "1px solid var(--border)" }}
             >
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
@@ -193,13 +193,13 @@ export default async function InvitePage({
         <div className="mt-6 flex flex-col gap-2.5">
           <Link
             href="/signup"
-            className="btn-primary btn-cta press rounded-[10px] py-3.5 text-center text-[15px] font-bold no-underline"
+            className="btn-primary btn-cta press rounded-lg py-3.5 text-center text-[15px] font-bold no-underline"
           >
             Google로 3초 가입하고 300P 받기
           </Link>
           <Link
             href="/login"
-            className="press rounded-[10px] py-2.5 text-center text-[13px] font-semibold text-text-2 no-underline"
+            className="press rounded-lg py-2.5 text-center text-[13px] font-semibold text-text-2 no-underline"
           >
             이미 계정이 있어요 · 로그인
           </Link>

@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import Link from "next/link";
 import { buildComplexTxSlug, type ComplexSummary } from "@/lib/market/complex-transactions";
 import { complexHrefFromNames } from "@/lib/seo/complex-slug";
@@ -69,7 +70,7 @@ export function RegionComplexList({
                 </span>
               </span>
               <span className="flex shrink-0 flex-col items-end text-right">
-                <span className="t-body font-extrabold t-num text-ink">
+                <span className="t-body font-bold t-num text-ink">
                   {formatEokMan(s.latestAmountKrw / 10_000)}
                 </span>
                 <span className="t-caption tabular-nums text-text-3">

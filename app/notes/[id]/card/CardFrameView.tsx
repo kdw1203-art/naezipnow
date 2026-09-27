@@ -1,4 +1,6 @@
 "use client";
+/* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 1곳). */
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 9곳을 font-bold(700)로 바꿨다. */
 
 import { useMemo } from "react";
 import type { CardTheme } from "@/lib/notes/card-themes";
@@ -39,12 +41,12 @@ export function CardFrameView({
 }) {
   return (
     <div
-      className="relative flex aspect-[4/5] w-full flex-col justify-between overflow-hidden rounded-[18px] p-6"
+      className="relative flex aspect-[4/5] w-full flex-col justify-between overflow-hidden rounded-lg p-6"
       style={{ background: theme.bg, color: theme.ink }}
     >
       {/* 상단 브랜드 표식 + 페이지 인디케이터 */}
       <div className="flex items-center justify-between">
-        <span className="t-sub font-extrabold tracking-tight" style={{ color: theme.accent }}>
+        <span className="t-sub font-bold tracking-tight" style={{ color: theme.accent }}>
           내집나우 임장노트
         </span>
         {typeof index === "number" && typeof total === "number" && (
@@ -96,7 +98,7 @@ function CtaQr({ url, theme }: { url: string; theme: CardTheme }) {
         width={QR_PX}
         height={QR_PX}
         shapeRendering="crispEdges"
-        className="shrink-0 rounded-[6px]"
+        className="shrink-0 rounded-lg"
       >
         <rect width="100%" height="100%" fill={qr.bg} />
         <path d={qr.path} fill={qr.fg} />
@@ -150,7 +152,7 @@ function FrameBody({ content, theme }: { content: FrameContent; theme: CardTheme
     case "scoreBars":
       return (
         <div className="flex flex-col gap-2.5">
-          <span className="mb-1 t-body font-extrabold" style={{ color: theme.ink }}>
+          <span className="mb-1 t-body font-bold" style={{ color: theme.ink }}>
             항목별 점수
           </span>
           {content.bars.map((b) => (
@@ -164,7 +166,7 @@ function FrameBody({ content, theme }: { content: FrameContent; theme: CardTheme
                   style={{ width: `${Math.max(4, Math.min(100, b.value))}%`, background: theme.accent }}
                 />
               </div>
-              <span className="w-7 shrink-0 text-right t-sub font-extrabold" style={{ color: theme.ink }}>
+              <span className="w-7 shrink-0 text-right t-sub font-bold" style={{ color: theme.ink }}>
                 {b.value}
               </span>
             </div>
@@ -175,7 +177,7 @@ function FrameBody({ content, theme }: { content: FrameContent; theme: CardTheme
     case "summary":
       return (
         <div className="flex flex-col gap-2">
-          <span className="t-body font-extrabold" style={{ color: theme.accent }}>
+          <span className="t-body font-bold" style={{ color: theme.accent }}>
             {content.heading}
           </span>
           <span className="t-body font-bold" style={{ color: theme.ink }}>
@@ -187,7 +189,7 @@ function FrameBody({ content, theme }: { content: FrameContent; theme: CardTheme
     case "checklist":
       return (
         <div className="flex flex-col gap-2">
-          <span className="mb-1 t-body font-extrabold" style={{ color: theme.ink }}>
+          <span className="mb-1 t-body font-bold" style={{ color: theme.ink }}>
             현장 체크
           </span>
           {content.items.map((it, i) => (
@@ -213,7 +215,7 @@ function FrameBody({ content, theme }: { content: FrameContent; theme: CardTheme
       return (
         <div className="flex flex-col gap-2">
           <span
-            className="t-body font-extrabold"
+            className="t-body font-bold"
             style={{ color: content.tone === "pos" ? theme.accent : "#f87171" }}
           >
             {content.heading}
@@ -248,7 +250,7 @@ function FrameBody({ content, theme }: { content: FrameContent; theme: CardTheme
     case "tags":
       return (
         <div className="flex flex-col gap-3">
-          <span className="t-body font-extrabold" style={{ color: theme.ink }}>
+          <span className="t-body font-bold" style={{ color: theme.ink }}>
             {content.heading}
           </span>
           <div className="flex flex-wrap gap-2">
@@ -271,7 +273,7 @@ function FrameBody({ content, theme }: { content: FrameContent; theme: CardTheme
     case "market":
       return (
         <div className="flex flex-col gap-3">
-          <span className="t-body font-extrabold" style={{ color: theme.ink }}>
+          <span className="t-body font-bold" style={{ color: theme.ink }}>
             {content.heading}
           </span>
           <div className="flex flex-col gap-2">
@@ -312,7 +314,7 @@ function FrameBody({ content, theme }: { content: FrameContent; theme: CardTheme
             {content.heading}
           </span>
           <span
-            className="rounded-full px-4 py-1.5 t-body font-extrabold"
+            className="rounded-full px-4 py-1.5 t-body font-bold"
             style={{ background: theme.chipBg, color: theme.chipInk }}
           >
             {content.sub}

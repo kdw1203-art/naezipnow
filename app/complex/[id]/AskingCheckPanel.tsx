@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useEffect, useMemo, useState } from "react";
 import { formatEokMan } from "@/lib/format/eok-man";
@@ -52,7 +53,7 @@ function DistributionBar({ prices, asking }: { prices: readonly number[]; asking
     <div className="relative mt-2 h-12" aria-hidden="true">
       {ax !== null && (
         <span
-          className="absolute top-0 -translate-x-1/2 whitespace-nowrap rounded bg-brand-red px-1.5 t-caption font-extrabold text-on-dark"
+          className="absolute top-0 -translate-x-1/2 whitespace-nowrap rounded bg-brand-red px-1.5 t-caption font-bold text-on-dark"
           style={{ left: `${Math.min(88, Math.max(12, ax))}%` }}
         >
           내 호가
@@ -166,7 +167,7 @@ export function AskingCheckPanel({ apiId }: { apiId: string }) {
               aria-pressed={on}
               onClick={() => setBand(o.slug)}
               className={`press inline-flex min-h-10 items-center gap-1 rounded-full border px-3 t-sub font-bold tabular-nums ${
-                on ? "border-primary bg-primary-soft text-primary" : "border-line bg-surface text-text-2"
+                on ? "border-brand-hanji-ink bg-brand-hanji text-brand-hanji-ink" : "border-line bg-surface text-text-2" /* [1012-R2 · 규칙 9] 선택 = 한지·남색 */
               }`}
             >
               {areaBandLabelByUnit(o.label, unit)}
@@ -227,7 +228,7 @@ export function AskingCheckPanel({ apiId }: { apiId: string }) {
               {chip && (
                 <>
                   {" "}
-                  <span className="ml-0.5 inline-block rounded-full bg-primary-soft px-2 py-px t-sub font-extrabold text-primary">
+                  <span className="ml-0.5 inline-block rounded-full bg-primary-soft px-2 py-px t-sub font-bold text-primary">
                     {chip}
                   </span>
                 </>

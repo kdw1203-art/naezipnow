@@ -1,3 +1,4 @@
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 2곳을 font-bold(700)로 바꿨다. */
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -120,7 +121,7 @@ export default async function NoteDeckPage({ params }: { params: Promise<{ id: s
       {/* 내용이 모자라 플랜 최소 장수에 못 미친 경우 — 채워 넣는 대신 사실대로 말한다. */}
       {deck.shortOf > 0 && (
         <div className="mt-4 rounded-2xl border border-border bg-surface p-4">
-          <p className="t-body font-extrabold text-ink">
+          <p className="t-body font-bold text-ink">
             지금 노트로 만들 수 있는 카드는 {deck.pages.length}장이에요
           </p>
           <p className="mt-1.5 t-body text-text-2">
@@ -153,7 +154,7 @@ export default async function NoteDeckPage({ params }: { params: Promise<{ id: s
       {/* 상한 때문에 잘린 분량이 실제로 있을 때만 상위 플랜을 안내한다. */}
       {deck.trimmed > 0 && upgradeRange && (
         <div className="mt-4 rounded-2xl border border-border bg-primary-soft p-4">
-          <p className="t-body font-extrabold text-ink">
+          <p className="t-body font-bold text-ink">
             이 노트에는 {deck.trimmed}장이 더 있어요
           </p>
           <p className="mt-1.5 t-body text-text-2">

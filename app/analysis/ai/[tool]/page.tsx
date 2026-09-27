@@ -1,8 +1,10 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
 import { ToolGlyph, WORKBENCH_GLYPH } from "../../ToolGlyph";
+import { TIERS } from "../../tool-catalog";
 import { AI_TOOL_IDS, isAiAnalysisToolId, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
@@ -99,16 +101,18 @@ export default async function AiToolPage({
               <ToolGlyph id={WORKBENCH_GLYPH[tid] ?? "radar"} size={44} />
             </span>
             <div className="min-w-0 flex-1">
-              <nav className="t-caption font-extrabold tracking-wider text-on-dark-muted">
+              <nav className="t-caption font-bold tracking-wider text-on-dark-muted">
                 {/* [975] 네이비 위에서는 전역 링크 파랑이 2.32:1 로 무너진다 — 밑줄과 위치로 링크임을 말한다 */}
                 <Link href="/analysis" className="inline-flex min-h-[24px] items-center text-on-dark no-underline hover:underline">
                   AI 분석
                 </Link>{" "}
-                › 단지 하나를 깊게
+                {/* [1012 · R2 · B5] 허브 계열 이름과 같은 명사형(TIERS.complex.label) — "단지 하나를 깊게"는 옛 소망문의 꼬리였다 */}
+                › {TIERS.complex.label}
               </nav>
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <h1 className="t-title text-on-dark">{identity.title}</h1>
-                <span className="rounded-md bg-on-dark-panel px-2 py-px t-caption font-extrabold tracking-wider text-on-dark-muted">
+                {/* [1012 · 규칙 9] 성격 배지 12px/500/4px */}
+                <span className="rounded-md bg-on-dark-panel px-2 py-px t-caption font-medium tracking-wider text-on-dark-muted">
                   {persona.character}
                 </span>
               </div>
@@ -132,7 +136,7 @@ export default async function AiToolPage({
         {/* 면책 — check-ai-compliance.mjs 가 이 마커의 존재를 검사한다 */}
         <p
           data-ai-compliance="notice"
-          className="rounded-[10px] bg-bg px-4 py-3 t-sub text-text-3"
+          className="rounded-lg bg-bg px-4 py-3 t-sub text-text-3"
         >
           이 화면의 숫자는 공공데이터(국토교통부 실거래·전월세 신고, 한국부동산원, 청약홈 등)를 정해진
           방식으로 자동 계산한 참고값이에요. AI 해설은 외부 AI 모델이 쓴 문장이라 [AI 서술]로 따로

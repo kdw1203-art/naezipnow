@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
 import { findCatalogRegionById } from "@/lib/region/catalog";
 import { getRegionSnapshot, getRegionMonthlyVolume, getRegionSeries } from "@/lib/market/store";
@@ -42,9 +43,10 @@ function FallbackCard({ name }: { name: string }) {
       style={{ fontFamily: "system-ui, sans-serif" }}
       className="flex flex-col gap-1 rounded-2xl border border-[#e3e8f1] bg-white p-4"
     >
-      <div className="text-[15px] font-extrabold text-[#1c2433]">{name || "지역"} 시세</div>
+      <div className="text-[15px] font-bold text-[#1c2433]">{name || "지역"} 시세</div>
+      {/* [1012 · 규칙 5·6] "~됩니다" → "~돼요" · 링크 = 동사 + 대상 */}
       <p className="text-[12px] text-[#6b7686]">
-        시세를 불러오지 못했어요. 잠시 후 새로고침하면 표시됩니다.
+        시세를 불러오지 못했어요. 잠시 후 새로고침하면 표시돼요.
       </p>
       <a
         href="https://naezipnow.com"
@@ -52,7 +54,7 @@ function FallbackCard({ name }: { name: string }) {
         rel="noopener noreferrer"
         className="text-[12px] font-bold text-[#1d4fd8]"
       >
-        내집나우에서 보기 ↗
+        내집나우 지역 시세 열기 ↗
       </a>
     </div>
   );
@@ -121,7 +123,7 @@ export default async function EmbedRegionPage({
       />
 
       <div className="flex items-baseline justify-between gap-2">
-        <div className="text-[15px] font-extrabold text-[#1c2433]">
+        <div className="text-[15px] font-bold text-[#1c2433]">
           {region.name} 아파트 시세
         </div>
         {periodYm && <div className="text-[10px] text-[#8b94a6]">{formatYm(periodYm)} 기준</div>}
@@ -133,7 +135,7 @@ export default async function EmbedRegionPage({
             <div className="text-[10px] text-[#8b94a6]">
               {ov.avgPrice.basis === "reb" ? "평균 매매가" : "신고 실거래 평균"}
             </div>
-            <div className="text-[21px] font-extrabold leading-tight tabular-nums text-[#1c2433]">
+            <div className="text-[21px] font-bold leading-tight tabular-nums text-[#1c2433]">
               {formatKrwShort(ov.avgPrice.krw)}
             </div>
           </div>
@@ -144,7 +146,7 @@ export default async function EmbedRegionPage({
             <div>
               <div className="text-[10px] text-[#8b94a6]">매매지수 전월 대비</div>
               <div
-                className="text-[15px] font-extrabold leading-tight tabular-nums"
+                className="text-[15px] font-bold leading-tight tabular-nums"
                 style={{ color: EMBED_DELTA_COLOR[dir] }}
               >
                 <span className="sr-only">{DELTA_WORD[dir]} </span>
@@ -156,7 +158,7 @@ export default async function EmbedRegionPage({
         {ov.jeonse && (
           <div>
             <div className="text-[10px] text-[#8b94a6]">전세가율</div>
-            <div className="text-[15px] font-extrabold leading-tight tabular-nums text-[#1c2433]">
+            <div className="text-[15px] font-bold leading-tight tabular-nums text-[#1c2433]">
               {ov.jeonse.value.toFixed(1)}%
             </div>
           </div>
@@ -181,9 +183,10 @@ export default async function EmbedRegionPage({
           href={`https://naezipnow.com/region/${id}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[12px] font-extrabold text-[#1d4fd8]"
+          className="text-[12px] font-bold text-[#1d4fd8]"
         >
-          내집나우에서 자세히 ↗
+          {/* [1012 · 규칙 5] "자세히" → 동사 + 구체 대상 */}
+          {region.name} 시세 전체 보기 ↗
         </a>
       </div>
     </div>

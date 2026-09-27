@@ -9,6 +9,26 @@ import type { NoteDraft } from "@/lib/ai/note-draft-core";
  * 브리핑 → "이 내용으로 노트 시작" 은 기존 프리필 링크로 잇는다(작성 화면의
  * AI 초안 패널이 같은 내용을 다시 만들 수 있어, 여기서는 이동만 한다). */
 
+/* [1012 · 규칙 4] 체크리스트의 빈 네모 — Icon.tsx 규격(24 뷰박스 · stroke 1.8 · round)과 같게 */
+function CheckSquare() {
+  return (
+    <svg
+      width={14}
+      height={14}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="mt-[3px] shrink-0 text-text-3"
+    >
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+    </svg>
+  );
+}
+
 export function AiBriefingCard({
   complexId,
   region,
@@ -83,9 +103,11 @@ export function AiBriefingCard({
         <div className="min-w-0">
           {/* [1011] 재료 나열(실거래·시세·공급 데이터)을 걷었다(소유자 지시) — 쓰는 사람에게 필요한 것은
                 무엇으로 만드는지가 아니라 이 버튼이 무엇을 해 주는지다. */}
-          <h2 className="t-body font-extrabold text-ink">✨ AI 예습 브리핑</h2>
+          {/* [1012 · 규칙 4·8] 반짝이 이모지 제거 · 800 → 700 */}
+          <h2 className="t-body font-bold text-ink">AI 예습 브리핑</h2>
+          {/* [1012 · 규칙 6] "예습하세요" → 어디서(단지명)·언제(방문 전) — 1011 의 재료 나열 금지는 유지 */}
           <p className="mt-0.5 t-caption text-text-3">
-            방문 전에 이 단지를 한 장으로 예습하세요.
+            {aptName} 방문 전에 볼 것을 한 장으로 요약해요.
           </p>
         </div>
         {state !== "done" && (
@@ -116,11 +138,15 @@ export function AiBriefingCard({
           )}
           {draft.todo.length > 0 && (
             <div>
-              <div className="t-sub font-extrabold text-text-1">현장에서 확인할 것</div>
+              {/* [1012 · 규칙 8] 800 → 700 */}
+              <div className="t-sub font-bold text-text-1">현장에서 확인할 것</div>
               <ul className="mt-1 flex flex-col gap-1">
                 {draft.todo.slice(0, 5).map((t, i) => (
-                  <li key={`${t}-${i}`} className="t-sub text-text-2">
-                    ☐ {t}
+                  /* [1012 · 규칙 4] "☐" 활자 → 선 아이콘(빈 네모). Icon.tsx 에 square 가 없어 같은
+                     획 규격(1.8 · round)의 인라인 SVG 로 그린다 — 통합자가 square 를 추가하면 교체 */
+                  <li key={`${t}-${i}`} className="flex items-start gap-1.5 t-sub text-text-2">
+                    <CheckSquare />
+                    <span>{t}</span>
                   </li>
                 ))}
               </ul>
@@ -135,7 +161,8 @@ export function AiBriefingCard({
             href={noteHref}
             className="btn-primary mt-1 w-fit rounded-xl px-3.5 py-2 t-sub font-bold no-underline"
           >
-            이 단지 임장노트 시작 →
+            {/* [1012 · 규칙 5] "시작 →" → 동사 + 구체 대상 */}
+            {aptName} 임장노트 쓰기
           </Link>
         </div>
       )}

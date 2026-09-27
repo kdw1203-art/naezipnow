@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import type { HubTrade } from "@/lib/complex/hub-trades";
 import type { MonthDeltaView } from "@/lib/complex/month-delta";
@@ -38,7 +39,7 @@ export function TradeRow({
         <span className="ml-1.5 text-text-3">{t.sub}</span>
       </span>
       <span className="flex shrink-0 items-baseline gap-1.5">
-        <span className="font-extrabold text-ink tabular-nums">{t.price}</span>
+        <span className="font-bold text-ink tabular-nums">{t.price}</span>
         <span className="flex flex-col items-end">
           <span className={`t-caption tabular-nums ${dir ? deltaClass(dir) : "text-text-3"}`}>
             {dv ? (

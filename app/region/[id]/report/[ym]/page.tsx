@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -266,7 +267,7 @@ export default async function RegionMonthlyReportPage({
                     <td className="py-2.5 pr-3 text-right tabular-nums text-text-1">
                       {d.areaM2 !== null ? `${Math.round(d.areaM2)}㎡` : "—"}
                     </td>
-                    <td className="py-2.5 pr-3 text-right font-extrabold tabular-nums text-ink">
+                    <td className="py-2.5 pr-3 text-right font-bold tabular-nums text-ink">
                       {/* [1009 · H] 한 건의 신고가 = 정밀 표기("12억 4,500만") */}
                       {formatEokMan(d.priceKrw / 10_000)}
                     </td>

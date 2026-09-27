@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -72,7 +73,7 @@ function MdLite({ text }: { text: string }) {
         const t = cleanAiLine(ln.trim());
         if (!t) return <div key={i} className="h-1" />;
         if (t.startsWith("## ")) return <div key={i} className="mt-2 t-section text-ink">{t.slice(3)}</div>;
-        if (t.startsWith("> ")) return <div key={i} className="rounded-[10px] bg-warning-soft px-3 py-2 t-sub font-bold text-warning">{t.slice(2)}</div>;
+        if (t.startsWith("> ")) return <div key={i} className="rounded-lg bg-warning-soft px-3 py-2 t-sub font-bold text-warning">{t.slice(2)}</div>;
         if (t.startsWith("- ") || t.startsWith("* ")) return <div key={i} className="pl-3">· {renderBold(t.slice(2))}</div>;
         if (t === "---") return <hr key={i} className="my-1 border-line" />;
         return <div key={i}>{renderBold(t)}</div>;
@@ -85,7 +86,7 @@ function Card({ title, sub, children, id }: { title: string; sub?: ReactNode; ch
   return (
     <section id={id} className="card flex scroll-mt-20 flex-col gap-3 rounded-2xl p-4" aria-label={title}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-        <h2 className="t-section font-extrabold text-ink">{title}</h2>
+        <h2 className="t-section font-bold text-ink">{title}</h2>
         {sub && <span className="t-caption text-text-3">{sub}</span>}
       </div>
       {children}
@@ -103,9 +104,9 @@ function SignalLights({ signals }: { signals: Insight["signals"] }) {
   return (
     <ul className="grid grid-cols-1 gap-2 sm:grid-cols-3">
       {signals.map((s) => (
-        <li key={s.key} className="flex flex-col gap-1.5 rounded-[12px] bg-bg px-3 py-3">
+        <li key={s.key} className="flex flex-col gap-1.5 rounded-lg bg-bg px-3 py-3">
           <div className="flex items-center justify-between gap-2">
-            <span className="t-body font-extrabold text-ink">{s.label}</span>
+            <span className="t-body font-bold text-ink">{s.label}</span>
             <span className="flex items-center gap-1 rounded-full bg-surface px-1.5 py-1" aria-hidden="true">
               {(["red", "yellow", "green"] as const).map((c) => (
                 <span key={c} className={`h-3 w-3 rounded-full ${LIGHT_BG[c]} ${s.state === c ? "" : "opacity-20"}`} />
@@ -113,7 +114,7 @@ function SignalLights({ signals }: { signals: Insight["signals"] }) {
             </span>
           </div>
           <span
-            className={`t-sub font-extrabold ${s.state === "green" ? "text-success" : s.state === "red" ? "text-danger" : s.state === "yellow" ? "text-warning" : "text-text-3"}`}
+            className={`t-sub font-bold ${s.state === "green" ? "text-success" : s.state === "red" ? "text-danger" : s.state === "yellow" ? "text-warning" : "text-text-3"}`}
           >
             {LIGHT_WORD[s.state]}
           </span>
@@ -144,8 +145,8 @@ function RiskChecklist({ checks }: { checks: NonNullable<Insight["checks"]> }) {
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-                <span className="t-body font-extrabold text-ink">
-                  {c.label} <span className={`t-sub font-extrabold ${m.cls}`}>{m.word}</span>
+                <span className="t-body font-bold text-ink">
+                  {c.label} <span className={`t-sub font-bold ${m.cls}`}>{m.word}</span>
                 </span>
                 <span className="t-body font-bold tabular-nums text-text-1">{c.value ?? "—"}</span>
               </div>
@@ -168,11 +169,11 @@ function ScoreBreakdown({ radar }: { radar: Insight["radar"] }) {
         {radar.map((a) => (
           <li key={a.key} className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <span className="w-[68px] shrink-0 t-sub font-extrabold text-text-1">{a.label}</span>
+              <span className="w-[68px] shrink-0 t-sub font-bold text-text-1">{a.label}</span>
               <span className="h-2 flex-1 overflow-hidden rounded-full bg-line" aria-hidden="true">
                 {a.score != null && <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.max(3, a.score)}%` }} />}
               </span>
-              <span className="w-[52px] shrink-0 text-right t-sub font-extrabold tabular-nums text-ink">
+              <span className="w-[52px] shrink-0 text-right t-sub font-bold tabular-nums text-ink">
                 {a.score != null ? `${a.score}점` : "—"}
               </span>
             </div>
@@ -189,14 +190,14 @@ function RouteList({ picked, similar, onPick }: { picked: PickedLite; similar: S
   const max = Math.max(1, ...similar.map((s) => s.txCount));
   return (
     <ol className="flex flex-col gap-2">
-      <li className="flex items-center gap-3 rounded-[12px] bg-primary-soft px-3 py-2.5">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary t-sub font-extrabold text-white">1</span>
-        <span className="min-w-0 flex-1 break-words t-body font-extrabold text-ink">{picked.name}</span>
+      <li className="flex items-center gap-3 rounded-lg bg-primary-soft px-3 py-2.5">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary t-sub font-bold text-white">1</span>
+        <span className="min-w-0 flex-1 break-words t-body font-bold text-ink">{picked.name}</span>
         <span className="shrink-0 t-caption font-bold text-primary">지금 보는 단지</span>
       </li>
       {similar.map((s, i) => (
-        <li key={s.id} className="flex items-center gap-3 rounded-[12px] bg-bg px-3 py-2">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line-strong t-sub font-extrabold text-text-1">
+        <li key={s.id} className="flex items-center gap-3 rounded-lg bg-bg px-3 py-2">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line-strong t-sub font-bold text-text-1">
             {i + 2}
           </span>
           <span className="flex min-w-0 flex-1 flex-col gap-1">
@@ -246,8 +247,8 @@ function ContractCard({ contract }: { contract: ContractCheck }) {
           <b className="text-ink">{formatKrwWon(contract.saleEstimateMan * 10_000, { style: "short" })}</b>이에요 — 실거래가와 견줘 보세요.
         </p>
       )}
-      <div className="flex flex-col gap-1.5 rounded-[12px] bg-bg px-3 py-3">
-        <h3 className="t-sub font-extrabold text-text-1">계약서 특약·챙길 일</h3>
+      <div className="flex flex-col gap-1.5 rounded-lg bg-bg px-3 py-3">
+        <h3 className="t-sub font-bold text-text-1">계약서 특약·챙길 일</h3>
         <ul className="flex flex-col gap-1">
           {contract.clauses.map((c, i) => (
             <li key={i} className="t-sub text-text-2">
@@ -317,13 +318,13 @@ function LoanCard({ loan }: { loan: LoanCalc | null }) {
         {rows.map(([k, v], i) => (
           <div key={i} className="contents">
             <dt className="t-sub text-text-2">{k}</dt>
-            <dd className="text-right t-sub font-extrabold tabular-nums text-ink">{v}</dd>
+            <dd className="text-right t-sub font-bold tabular-nums text-ink">{v}</dd>
           </div>
         ))}
       </dl>
       {loan.yields && loan.holdingYears != null ? (
-        <div className="flex flex-col gap-1.5 rounded-[12px] bg-bg px-3 py-3">
-          <h3 className="t-sub font-extrabold text-text-1">{loan.holdingYears}년 뒤 팔면 — 넣은 돈 대비 연 수익률(가정)</h3>
+        <div className="flex flex-col gap-1.5 rounded-lg bg-bg px-3 py-3">
+          <h3 className="t-sub font-bold text-text-1">{loan.holdingYears}년 뒤 팔면 — 넣은 돈 대비 연 수익률(가정)</h3>
           <ul className="flex flex-col gap-1">
             {loan.yields.map((y) => {
               /* [1009 · A] 이익 = 빨강 ▲ · 손실 = 파랑 ▼(등락 관례). 예전엔 손실만 오류색(text-danger)이라
@@ -410,9 +411,9 @@ function ChecklistCard({
       <div className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2">
         {groups.map((g) => (
           <fieldset key={g.title} className="flex flex-col gap-0.5">
-            <legend className="mb-1 t-sub font-extrabold text-text-1">{g.title}</legend>
+            <legend className="mb-1 t-sub font-bold text-text-1">{g.title}</legend>
             {g.items.map((it) => (
-              <label key={it.id} className="flex min-h-[40px] items-center gap-2.5 rounded-[10px] px-1 t-sub text-text-1">
+              <label key={it.id} className="flex min-h-[40px] items-center gap-2.5 rounded-lg px-1 t-sub text-text-1">
                 <input type="checkbox" className="h-5 w-5 shrink-0" checked={checked.has(it.id)} onChange={() => onToggle(it.id)} />
                 <span className={checked.has(it.id) ? "text-text-3 line-through" : ""}>{it.label}</span>
               </label>
@@ -459,7 +460,7 @@ function CompareTable({ tray, currentId, currentVerdict }: { tray: PickedLite[];
             <tr>
               <th scope="col" className="w-[30%] pb-2 text-left t-caption font-bold text-text-3">항목</th>
               {tray.map((c) => (
-                <th key={c.id} scope="col" className="break-words pb-2 text-left font-extrabold text-ink">
+                <th key={c.id} scope="col" className="break-words pb-2 text-left font-bold text-ink">
                   {c.name}
                 </th>
               ))}
@@ -471,7 +472,7 @@ function CompareTable({ tray, currentId, currentVerdict }: { tray: PickedLite[];
               {tray.map((c) => {
                 const v = col(c.id);
                 return (
-                  <td key={c.id} className="py-2 font-extrabold text-ink">
+                  <td key={c.id} className="py-2 font-bold text-ink">
                     {!v ? "…" : v.failed ? "못 불러옴" : (v.verdict?.bandReason?.match(/종합 점수 (\d+)점/)?.[1] ?? "—") + (v.verdict?.bandReason?.match(/종합 점수 \d+점/) ? "점" : "")}
                   </td>
                 );
@@ -487,7 +488,7 @@ function CompareTable({ tray, currentId, currentVerdict }: { tray: PickedLite[];
                   const d = t ? tileDisplay(t) : null;
                   return (
                     <td key={c.id} className="py-2 pr-1 align-top">
-                      <span className="break-words font-extrabold tabular-nums text-ink">
+                      <span className="break-words font-bold tabular-nums text-ink">
                         {!v ? "…" : v.failed ? "못 불러옴" : d?.kind === "delta" ? <Delta pct={d.pct} digits={d.digits} srContext={d.base} /> : (t?.value ?? "—")}
                       </span>
                       {/* 좁은 화면에선 설명 줄을 접는다 — 칸 폭(3곳 × 80px)에 "2026.03~2026.08" 이 넘쳐 옆 칸을 덮었다 */}
@@ -559,7 +560,7 @@ function PriceFlowCard({
             scenario={scenario ? { startKrw: scenario.startKrw, years: scenario.years, path: scenario.path } : null}
           />
           {series?.sparse && (
-            <p className="rounded-[10px] bg-bg px-3 py-2 t-sub text-text-2">
+            <p className="rounded-lg bg-bg px-3 py-2 t-sub text-text-2">
               거래가 적어 추이를 그리기 어려워요 — 거래가 있었던 달만 점으로 찍었어요.
             </p>
           )}
@@ -577,7 +578,7 @@ function PriceFlowCard({
           </p>
         </>
       ) : (
-        <p className="rounded-[10px] bg-bg px-3 py-3 t-sub text-text-2">
+        <p className="rounded-lg bg-bg px-3 py-3 t-sub text-text-2">
           {failed || hasPrice
             ? "그래프 자료를 지금은 불러오지 못했어요. 잠시 뒤 다시 열어 주세요."
             : "이 단지는 최근 매매 실거래가 없어 그래프를 그리지 않았어요."}
@@ -821,21 +822,21 @@ function Details({
 
   return (
     <details className="card group rounded-2xl p-4">
-      <summary className="flex min-h-[40px] cursor-pointer items-center justify-between gap-2 t-body font-extrabold text-ink">
+      <summary className="flex min-h-[40px] cursor-pointer items-center justify-between gap-2 t-body font-bold text-ink">
         자세히 보기
         <span className="t-caption font-bold text-text-3">데이터 출처 {evidence.length}곳 · 결과가 달라지는 경우 · 공유</span>
       </summary>
       <div className="mt-3 flex flex-col gap-4">
         <div>
-          <h3 className="t-sub font-extrabold text-text-1">데이터 출처</h3>
+          <h3 className="t-sub font-bold text-text-1">데이터 출처</h3>
           <ul className="mt-1.5 flex flex-col gap-1.5">
             {evidence.map((e) => (
               <li key={e.label} className="flex flex-wrap items-baseline gap-x-2 t-sub text-text-2">
-                <b className="font-extrabold text-text-1">{e.label}</b>
+                <b className="font-bold text-text-1">{e.label}</b>
                 <span className="break-words">{e.source}</span>
                 {ymLabel(e.asOf) && <span className="text-text-3">{ymLabel(e.asOf)}</span>}
                 {e.confidence !== "ok" && (
-                  <span className="t-caption font-extrabold text-warning">
+                  <span className="t-caption font-bold text-warning">
                     {e.confidence === "thin" ? "거래 적음 · 참고용" : e.confidence === "stale" ? "오래된 자료" : "자료 부족"}
                   </span>
                 )}
@@ -856,7 +857,7 @@ function Details({
 
         {counters.length > 0 && (
           <div>
-            <h3 className="t-sub font-extrabold text-text-1">결과가 달라지는 경우</h3>
+            <h3 className="t-sub font-bold text-text-1">결과가 달라지는 경우</h3>
             <ul className="mt-1.5 flex flex-col gap-1">
               {counters.map((c, i) => (
                 <li key={i} className="t-sub text-text-2">· {c}</li>
@@ -867,7 +868,7 @@ function Details({
 
         {ctx.news?.items?.length ? (
           <div>
-            <h3 className="t-sub font-extrabold text-text-1">관련 뉴스</h3>
+            <h3 className="t-sub font-bold text-text-1">관련 뉴스</h3>
             <ul className="mt-1.5 flex flex-col gap-1">
               {ctx.news.items.slice(0, 3).map((n) => (
                 <li key={n.id}>
@@ -882,7 +883,7 @@ function Details({
 
         {ctx.notes && ctx.notes.count > 0 && (
           <div>
-            <h3 className="t-sub font-extrabold text-text-1">이웃 임장노트</h3>
+            <h3 className="t-sub font-bold text-text-1">이웃 임장노트</h3>
             <p className="mt-1 t-sub text-text-2">
               {ctx.notes.count}건{ctx.notes.avgScore != null ? ` · 평균 ${ctx.notes.avgScore}점(5점 만점)` : ""}
               {ctx.notes.latest && (
@@ -966,7 +967,7 @@ function Details({
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="한 줄 이유(선택)"
                   aria-label="한 줄 이유"
-                  className="min-h-[40px] w-full min-w-0 max-w-[220px] rounded-[10px] border border-line bg-surface px-2.5 t-sub"
+                  className="min-h-[40px] w-full min-w-0 max-w-[220px] rounded-lg border border-line bg-surface px-2.5 t-sub"
                 />
               </>
             )}
@@ -1062,7 +1063,7 @@ export function ResultView({
         <div className="card flex flex-col gap-2.5 rounded-2xl p-4" role="status">
           {result.code === "QUOTA_EXCEEDED" ? (
             <>
-              <p className="t-section font-extrabold text-ink">{result.error ?? "무료 AI 해설을 모두 사용했어요."}</p>
+              <p className="t-section font-bold text-ink">{result.error ?? "무료 AI 해설을 모두 사용했어요."}</p>
               <p className="t-body text-text-2">
                 {/* [1004 · 리뷰] "한도 없이"는 사실이 아니다 — 주간권은 plan=pro 라 AI 분석 월 50회(access.ts ai_analysis) */}
                 플러스 주간권은 <b className="text-ink">1,100원으로 7일 동안</b> 이 도구 12종을 월 50회까지 쓸 수 있어요. 자동 갱신
@@ -1083,7 +1084,7 @@ export function ResultView({
               AI 해설은 로그인하면 받을 수 있어요.{" "}
               <Link
                 href={`/login?callbackUrl=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : "/analysis")}`}
-                className="inline-flex min-h-[24px] items-center font-extrabold text-primary no-underline"
+                className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline"
               >
                 로그인 ›
               </Link>
@@ -1173,7 +1174,7 @@ export function ResultView({
         </Card>
       )}
       {!running && result?.ok && result.askedLlm && !external && (
-        <p className="rounded-[10px] bg-bg px-3.5 py-2.5 t-sub text-text-2">
+        <p className="rounded-lg bg-bg px-3.5 py-2.5 t-sub text-text-2">
           지금은 AI 해설을 받지 못해 공공데이터 자동 계산 결과만 보여 드려요. 잠시 뒤 다시 눌러 주세요.
         </p>
       )}

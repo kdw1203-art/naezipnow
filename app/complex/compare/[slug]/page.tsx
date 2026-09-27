@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cache } from "react";
@@ -281,13 +282,13 @@ function Metric({
   note?: string;
 }) {
   return (
-    <tr className="border-b border-border last:border-b-0 align-top">
+    <tr className="border-b border-line last:border-b-0 align-top">
       <th scope="row" className="py-2.5 pr-2 text-left t-sub font-medium text-text-3">
         {label}
         {note ? <span className="block t-caption text-text-3">{note}</span> : null}
       </th>
-      <td className="py-2.5 text-right t-body font-extrabold text-ink">{valueA}</td>
-      <td className="py-2.5 text-right t-body font-extrabold text-ink">{valueB}</td>
+      <td className="py-2.5 text-right t-body font-bold text-ink">{valueA}</td>
+      <td className="py-2.5 text-right t-body font-bold text-ink">{valueB}</td>
     </tr>
   );
 }
@@ -417,346 +418,324 @@ export default async function ComplexComparePage({
     ]),
   ];
 
+  const LINK = "tap-line font-bold text-primary no-underline";
+
   return (
-    <PageShell
-      breadcrumb={`홈 › 단지 비교 › ${regionLabel} ${pair.dong}`}
-      title={`${a.name} vs ${b.name}`}
-    >
+    <PageShell breadcrumb={`홈 › 단지 비교 › ${regionLabel} ${pair.dong}`}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
 
-      <p className="rise-in mb-5 t-body text-text-2">
-        {regionLabel} {pair.dong} · 국토교통부 실거래가(매매) {windowLabel} 기준 ·{" "}
-        <strong className="text-ink">
-          {a.count + b.count}
-          {countSuffix}
-        </strong>{" "}
-        거래 비교 · 매물 호가 아님
-      </p>
-
-      {/* 한눈에 비교 */}
-      <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">한눈에 비교</h2>
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[420px] t-body">
-            <thead>
-              <tr className="border-b border-border t-sub text-text-3">
-                <th className="py-2 text-left font-medium">항목</th>
-                <th className="py-2 text-right font-medium">
-                  <Link href={pathA} className="text-primary underline">
-                    {a.name}
-                  </Link>
-                </th>
-                <th className="py-2 text-right font-medium">
-                  <Link href={pathB} className="text-primary underline">
-                    {b.name}
-                  </Link>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <Metric
-                label="12개월 매매"
-                note={windowLabel}
-                valueA={`${a.count}${countSuffix}`}
-                valueB={`${b.count}${countSuffix}`}
-              />
-              <Metric
-                label="평균 거래가"
-                note="면적 혼합"
-                valueA={formatKrwShort(a.avgAmountKrw)}
-                valueB={formatKrwShort(b.avgAmountKrw)}
-              />
-              <Metric
-                label="평균 평당가"
-                note="전용면적 기준"
-                valueA={formatKrwShort(a.avgPerPyeongKrw)}
-                valueB={formatKrwShort(b.avgPerPyeongKrw)}
-              />
-              <Metric
-                label="최근 거래"
-                valueA={
-                  a.latest
-                    ? `${formatKrwShort(a.latest.dealAmountKrw)} · ${formatYmd(a.latest.contractYm, a.latest.contractDay)}`
-                    : "—"
-                }
-                valueB={
-                  b.latest
-                    ? `${formatKrwShort(b.latest.dealAmountKrw)} · ${formatYmd(b.latest.contractYm, b.latest.contractDay)}`
-                    : "—"
-                }
-              />
-              <Metric
-                label="거래 중앙 면적"
-                note="전용"
-                valueA={a.medianAreaM2 !== null ? `${a.medianAreaM2.toFixed(1)}㎡` : "—"}
-                valueB={b.medianAreaM2 !== null ? `${b.medianAreaM2.toFixed(1)}㎡` : "—"}
-              />
-              <Metric
-                label="준공"
-                valueA={a.buildYear ? `${a.buildYear}년` : "—"}
-                valueB={b.buildYear ? `${b.buildYear}년` : "—"}
-              />
-            </tbody>
-          </table>
-        </div>
-        {priceGap && (
-          <p className="mt-3 t-sub text-text-2">
-            평균 거래가는 {priceGap}. 두 단지의 주력 면적대가 다르면 이 차이에는 면적 차이가
-            섞여 있습니다 — 아래 <strong className="text-ink">면적대별 비교</strong>를 함께
-            보세요.
+      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 주인공(한눈에 비교 표 — 두 단지를 같은 행에 놓는 화면이라 표가 맞다) →
+          면적대별 표 → 월별 거래량 막대 → 최근 거래 표 → 링크 한 줄 → 맨 끝 접힘 "만든 방법·Q&A".
+          지운 것: 소개 문단(→ 사실 줄), 설명 문단 두 개(→ 캡션 한 줄씩), "이 비교를 만든 방법" 카드(→ 접힘),
+          채움 파랑 + 카드 타일 CTA 5개(→ 링크 한 줄), 섹션마다의 카드 테두리(표만 카드). */}
+      <div className="mx-auto flex max-w-[760px] flex-col gap-8">
+        <header className="flex flex-col gap-0.5">
+          <h1 className="rise-in break-words t-title text-ink">
+            {a.name} vs {b.name}
+          </h1>
+          <p className="t-sub text-text-3">
+            {regionLabel} {pair.dong} · {windowLabel} · {a.count + b.count}
+            {countSuffix} 거래 · 호가 아님
           </p>
-        )}
-      </section>
+        </header>
 
-      {/* 면적대별 비교 */}
-      {sharedBands.length > 0 && (
-        <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
-          <h2 className="t-section text-ink">
-            면적대별 비교{" "}
-            <span className="t-sub font-medium text-text-3">
-              {windowLabel} 평균 · 거래 있는 구간만
-            </span>
-          </h2>
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[460px] text-left t-body">
+        {/* 한눈에 비교 — [v4 · 규칙 2] 주인공 */}
+        <section className="flex flex-col gap-2">
+          <h2 className="t-section text-ink">한눈에 비교</h2>
+          <div className="card overflow-x-auto rounded-lg px-4 py-1">
+            <table className="w-full t-body">
               <thead>
-                <tr className="border-b border-border t-sub text-text-3">
-                  <th className="py-2 font-medium">전용면적</th>
-                  <th className="py-2 text-right font-medium">{a.name}</th>
-                  <th className="py-2 text-right font-medium">{b.name}</th>
-                  <th className="py-2 text-right font-medium">차이</th>
+                <tr className="border-b border-line t-sub text-text-3">
+                  <th className="py-2 text-left font-medium">항목</th>
+                  <th className="py-2 text-right font-medium">
+                    <Link href={pathA} className="text-primary underline">
+                      {a.name}
+                    </Link>
+                  </th>
+                  <th className="py-2 text-right font-medium">
+                    <Link href={pathB} className="text-primary underline">
+                      {b.name}
+                    </Link>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {sharedBands.map((band) => {
-                  const cellA = a.bandByLabel.get(band.label);
-                  const cellB = b.bandByLabel.get(band.label);
-                  const diff =
-                    cellA && cellB ? Math.abs(cellA.avgKrw - cellB.avgKrw) : null;
-                  const higher =
-                    cellA && cellB ? (cellA.avgKrw > cellB.avgKrw ? a.name : b.name) : null;
-                  return (
-                    <tr key={band.slug} className="border-b border-border last:border-b-0">
-                      <td className="py-2.5 font-bold text-ink">{band.label}</td>
-                      <td className="py-2.5 text-right">
-                        {cellA ? (
-                          <>
-                            <span className="font-extrabold text-ink">
-                              {formatKrwShort(cellA.avgKrw)}
-                            </span>
-                            <span className="ml-1 t-sub text-text-3">
-                              {cellA.count}건
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-text-3">거래 없음</span>
-                        )}
-                      </td>
-                      <td className="py-2.5 text-right">
-                        {cellB ? (
-                          <>
-                            <span className="font-extrabold text-ink">
-                              {formatKrwShort(cellB.avgKrw)}
-                            </span>
-                            <span className="ml-1 t-sub text-text-3">
-                              {cellB.count}건
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-text-3">거래 없음</span>
-                        )}
-                      </td>
-                      <td className="py-2.5 text-right t-sub text-text-2">
-                        {diff !== null && higher ? (
-                          <>
-                            {formatKrwShort(diff)}
-                            <span className="ml-1 t-caption text-text-3">{higher}↑</span>
-                          </>
-                        ) : (
-                          <span className="text-text-3">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                <Metric
+                  label="12개월 매매"
+                  note={windowLabel}
+                  valueA={`${a.count}${countSuffix}`}
+                  valueB={`${b.count}${countSuffix}`}
+                />
+                <Metric
+                  label="평균 거래가"
+                  note="면적 혼합"
+                  valueA={formatKrwShort(a.avgAmountKrw)}
+                  valueB={formatKrwShort(b.avgAmountKrw)}
+                />
+                <Metric
+                  label="평균 평당가"
+                  note="전용면적 기준"
+                  valueA={formatKrwShort(a.avgPerPyeongKrw)}
+                  valueB={formatKrwShort(b.avgPerPyeongKrw)}
+                />
+                <Metric
+                  label="최근 거래"
+                  valueA={
+                    a.latest
+                      ? `${formatKrwShort(a.latest.dealAmountKrw)} · ${formatYmd(a.latest.contractYm, a.latest.contractDay)}`
+                      : "—"
+                  }
+                  valueB={
+                    b.latest
+                      ? `${formatKrwShort(b.latest.dealAmountKrw)} · ${formatYmd(b.latest.contractYm, b.latest.contractDay)}`
+                      : "—"
+                  }
+                />
+                <Metric
+                  label="거래 중앙 면적"
+                  note="전용"
+                  valueA={a.medianAreaM2 !== null ? `${a.medianAreaM2.toFixed(1)}㎡` : "—"}
+                  valueB={b.medianAreaM2 !== null ? `${b.medianAreaM2.toFixed(1)}㎡` : "—"}
+                />
+                <Metric
+                  label="준공"
+                  valueA={a.buildYear ? `${a.buildYear}년` : "—"}
+                  valueB={b.buildYear ? `${b.buildYear}년` : "—"}
+                />
               </tbody>
             </table>
           </div>
-          {bothBands.length === 0 && (
-            <p className="mt-2 t-sub text-text-3">
-              두 단지가 같이 거래된 면적 구간이 없습니다. 이 경우 평균 거래가 비교는 면적이
-              다른 집을 견주는 셈이므로, 위 표의 &ldquo;평균 평당가&rdquo;를 보는 편이
-              낫습니다.
-            </p>
-          )}
+          {/* [v4 · 규칙 3] 설명 문단 → 사실 캡션 한 줄 */}
+          {priceGap && <p className="t-caption text-text-3">평균 거래가: {priceGap} · 면적 혼합 값 — 같은 면적대는 아래 표</p>}
         </section>
-      )}
 
-      {/* 월별 거래량 */}
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">
-          월별 거래량{" "}
-          <span className="t-sub font-medium text-text-3">{windowLabel} · 계약월 기준</span>
-        </h2>
-        <div className="mt-3 flex items-center gap-4 t-sub text-text-2">
-          <span className="flex items-center gap-1">
-            <span
-              className="inline-block h-2 w-3 rounded-[2px]"
-              style={{ background: "var(--primary)" }}
-            />
-            {a.name}
-          </span>
-          <span className="flex items-center gap-1">
-            <span
-              className="inline-block h-2 w-3 rounded-[2px]"
-              style={{ background: "var(--primary)", opacity: 0.35 }}
-            />
-            {b.name}
-          </span>
-        </div>
-        <div className="mt-3 flex h-[110px] items-end gap-[5px]">
-          {months.map((ym) => {
-            const ca = a.countByYm.get(ym) ?? 0;
-            const cb = b.countByYm.get(ym) ?? 0;
-            return (
-              <div
-                key={ym}
-                className="flex min-w-0 flex-1 flex-col items-center gap-1"
-                title={`${formatYm(ym)} · ${a.name} ${ca}건 · ${b.name} ${cb}건`}
-              >
-                <div className="flex h-[96px] w-full items-end justify-center gap-[2px]">
-                  <div
-                    className="w-1/2 rounded-t-[3px]"
-                    style={{
-                      height: `${ca > 0 ? 6 + Math.round((ca / maxMonthly) * 88) : 2}px`,
-                      background: ca > 0 ? "var(--primary)" : "var(--border)",
-                    }}
-                  />
-                  <div
-                    className="w-1/2 rounded-t-[3px]"
-                    style={{
-                      height: `${cb > 0 ? 6 + Math.round((cb / maxMonthly) * 88) : 2}px`,
-                      background: cb > 0 ? "var(--primary)" : "var(--border)",
-                      opacity: cb > 0 ? 0.35 : 1,
-                    }}
-                  />
-                </div>
-                <span className="t-caption text-text-3">{shortYm(ym)}</span>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* 최근 거래 이력 */}
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">
-          최근 거래 이력{" "}
-          <span className="t-sub font-medium text-text-3">각 단지 최근 6건</span>
-        </h2>
-        <div className="mt-3 grid gap-5 sm:grid-cols-2">
-          {[a, b].map((side, idx) => (
-            <div key={side.name}>
-              <h3 className="t-body font-extrabold text-ink">
-                <Link href={idx === 0 ? pathA : pathB} className="text-primary underline">
-                  {side.name}
-                </Link>
-              </h3>
-              <table className="mt-2 w-full text-left t-sub">
+        {/* 면적대별 비교 — 두 단지 × 구간이라 표 그대로(가로가 넓으면 칸 안에서 스크롤) */}
+        {sharedBands.length > 0 && (
+          <section className="flex flex-col gap-2">
+            <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+              면적대별 비교 <span className="t-sub font-medium text-text-3">{windowLabel} 평균</span>
+            </h2>
+            <div className="card overflow-x-auto rounded-lg px-4 py-1">
+              <table className="w-full min-w-[460px] text-left t-body">
                 <thead>
-                  <tr className="border-b border-border t-caption text-text-3">
-                    <th className="py-1.5 font-medium">계약일</th>
-                    <th className="py-1.5 font-medium">전용</th>
-                    <th className="py-1.5 text-right font-medium">거래금액</th>
+                  <tr className="border-b border-line t-sub text-text-3">
+                    <th className="py-2 font-medium">전용면적</th>
+                    <th className="py-2 text-right font-medium">{a.name}</th>
+                    <th className="py-2 text-right font-medium">{b.name}</th>
+                    <th className="py-2 text-right font-medium">차이</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {side.windowRows.slice(0, 6).map((t, i) => (
-                    <tr
-                      key={`${t.contractYm}-${t.contractDay ?? 0}-${t.areaM2 ?? 0}-${t.floor ?? 0}-${i}`}
-                      className="border-b border-border last:border-b-0"
-                    >
-                      <td className="py-2 text-text-2">
-                        {formatYmd(t.contractYm, t.contractDay)}
-                      </td>
-                      <td className="py-2 text-text-2">
-                        {t.areaM2 !== null ? `${t.areaM2.toFixed(1)}㎡` : "—"}
-                      </td>
-                      <td className="py-2 text-right font-extrabold text-ink">
-                        {formatKrwShort(t.dealAmountKrw)}
-                      </td>
-                    </tr>
-                  ))}
+                  {sharedBands.map((band) => {
+                    const cellA = a.bandByLabel.get(band.label);
+                    const cellB = b.bandByLabel.get(band.label);
+                    const diff =
+                      cellA && cellB ? Math.abs(cellA.avgKrw - cellB.avgKrw) : null;
+                    const higher =
+                      cellA && cellB ? (cellA.avgKrw > cellB.avgKrw ? a.name : b.name) : null;
+                    return (
+                      <tr key={band.slug} className="border-b border-line last:border-b-0">
+                        <td className="py-2.5 font-bold text-ink">{band.label}</td>
+                        <td className="py-2.5 text-right">
+                          {cellA ? (
+                            <>
+                              <span className="font-bold text-ink">
+                                {formatKrwShort(cellA.avgKrw)}
+                              </span>
+                              <span className="ml-1 t-sub text-text-3">
+                                {cellA.count}건
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-text-3">거래 없음</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 text-right">
+                          {cellB ? (
+                            <>
+                              <span className="font-bold text-ink">
+                                {formatKrwShort(cellB.avgKrw)}
+                              </span>
+                              <span className="ml-1 t-sub text-text-3">
+                                {cellB.count}건
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-text-3">거래 없음</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 text-right t-sub text-text-2">
+                          {diff !== null && higher ? (
+                            <>
+                              {formatKrwShort(diff)}
+                              <span className="ml-1 t-caption text-text-3">{higher}↑</span>
+                            </>
+                          ) : (
+                            <span className="text-text-3">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-          ))}
-        </div>
-      </section>
+            <p className="t-caption text-text-3">
+              {bothBands.length === 0
+                ? "같이 거래된 면적 구간 없음 · 평균 평당가 비교가 더 맞음"
+                : "거래 있는 구간만"}
+            </p>
+          </section>
+        )}
 
-      <QaBlock items={qa} />
+        {/* 월별 거래량 — 막대 그대로 */}
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+            월별 거래량 <span className="t-sub font-medium text-text-3">{windowLabel} · 계약월</span>
+          </h2>
+          <div className="card rounded-lg px-4 py-3">
+            <div className="flex items-center gap-4 t-sub text-text-2">
+              <span className="flex min-w-0 items-center gap-1">
+                <span className="inline-block h-2 w-3 shrink-0 rounded-sm" style={{ background: "var(--primary)" }} />
+                <span className="truncate">{a.name}</span>
+              </span>
+              <span className="flex min-w-0 items-center gap-1">
+                <span
+                  className="inline-block h-2 w-3 shrink-0 rounded-sm"
+                  style={{ background: "var(--primary)", opacity: 0.35 }}
+                />
+                <span className="truncate">{b.name}</span>
+              </span>
+            </div>
+            <div className="mt-3 flex h-[110px] items-end gap-[5px]">
+              {months.map((ym) => {
+                const ca = a.countByYm.get(ym) ?? 0;
+                const cb = b.countByYm.get(ym) ?? 0;
+                return (
+                  <div
+                    key={ym}
+                    className="flex min-w-0 flex-1 flex-col items-center gap-1"
+                    title={`${formatYm(ym)} · ${a.name} ${ca}건 · ${b.name} ${cb}건`}
+                  >
+                    <div className="flex h-[96px] w-full items-end justify-center gap-[2px]">
+                      <div
+                        className="w-1/2 rounded-t-sm"
+                        style={{
+                          height: `${ca > 0 ? 6 + Math.round((ca / maxMonthly) * 88) : 2}px`,
+                          background: ca > 0 ? "var(--primary)" : "var(--border)",
+                        }}
+                      />
+                      <div
+                        className="w-1/2 rounded-t-sm"
+                        style={{
+                          height: `${cb > 0 ? 6 + Math.round((cb / maxMonthly) * 88) : 2}px`,
+                          background: cb > 0 ? "var(--primary)" : "var(--border)",
+                          opacity: cb > 0 ? 0.35 : 1,
+                        }}
+                      />
+                    </div>
+                    <span className="t-caption text-text-3">{shortYm(ym)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
 
-      {/* 방법론·출처 */}
-      <section className="rise-in-3 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">이 비교를 만든 방법</h2>
-        <ul className="mt-2 flex flex-col gap-1.5 t-sub text-text-2">
-          <li>
-            출처: 국토교통부 실거래가 공개시스템 아파트 매매 신고 자료. 해제된 거래는
-            제외했습니다. 매물 호가·시세가 아닙니다.
-          </li>
-          <li>
-            집계 구간: 계약월 {windowLabel}. 표에 적힌 건수·평균가는 이 구간에서 실제로
-            조회한 거래를 직접 센 값입니다.
-            {partial
-              ? " 표본 상한에 걸린 단지가 있어 건수는 최소값(이상)으로 표기했습니다."
-              : ""}
-          </li>
-          <li>
-            수록 기준: 같은 법정동에 있고 양쪽 모두 최근 12개월 매매 20건 이상인 조합만
-            비교 페이지를 만듭니다. 거래가 얇으면 평균이 한두 건에 휘둘려 비교가 의미를
-            잃기 때문입니다.
-          </li>
-          <li>
-            평균 거래가는 면적을 섞은 값이라 단지 간 면적 구성이 다르면 그대로 비교하기
-            어렵습니다. 같은 면적대끼리 본 값이 위 &ldquo;면적대별 비교&rdquo; 표입니다.
-          </li>
-          <li>
-            실거래 신고는 계약일로부터 최대 30일까지 늦어질 수 있어 최근 1~2개월 건수는
-            나중에 늘어날 수 있습니다.
-          </li>
-        </ul>
-      </section>
+        {/* 최근 거래 이력 — 두 단지 나란히(같은 높이 행) */}
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+            최근 거래 <span className="t-sub font-medium text-text-3">각 단지 최근 6건</span>
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[a, b].map((side, idx) => (
+              <div key={side.name} className="card rounded-lg px-4 py-2">
+                <h3 className="truncate py-1 t-body font-bold">
+                  <Link href={idx === 0 ? pathA : pathB} className="text-primary no-underline">
+                    {side.name} ›
+                  </Link>
+                </h3>
+                <table className="w-full text-left t-sub">
+                  <thead>
+                    <tr className="border-b border-line t-caption text-text-3">
+                      <th className="py-1.5 font-medium">계약일</th>
+                      <th className="py-1.5 font-medium">전용</th>
+                      <th className="py-1.5 text-right font-medium">거래금액</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {side.windowRows.slice(0, 6).map((t, i) => (
+                      <tr
+                        key={`${t.contractYm}-${t.contractDay ?? 0}-${t.areaM2 ?? 0}-${t.floor ?? 0}-${i}`}
+                        className="border-b border-line last:border-b-0"
+                      >
+                        <td className="py-2 tabular-nums text-text-2">
+                          {formatYmd(t.contractYm, t.contractDay)}
+                        </td>
+                        <td className="py-2 tabular-nums text-text-2">
+                          {t.areaM2 !== null ? `${t.areaM2.toFixed(1)}㎡` : "—"}
+                        </td>
+                        <td className="py-2 text-right font-bold tabular-nums text-ink">
+                          {formatKrwShort(t.dealAmountKrw)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        </section>
 
-      {/* 다음 행동 */}
-      <section className="rise-in-3 mb-4 flex flex-wrap gap-2">
-        <Link
-          href="/notes/new"
-          className="rounded-xl bg-primary px-5 py-3 t-body font-bold text-white shadow-[var(--shadow-cta)]"
-        >
-          두 단지 임장노트 쓰기
-        </Link>
-        <Link href={pathA} className="card tile px-5 py-3 t-body font-bold text-ink">
-          {a.name} 실거래
-        </Link>
-        <Link href={pathB} className="card tile px-5 py-3 t-body font-bold text-ink">
-          {b.name} 실거래
-        </Link>
-        <Link
-          href={`/region/${region.id}`}
-          className="card tile px-5 py-3 t-body font-bold text-ink"
-        >
-          {region.name} 지역 허브
-        </Link>
-        <Link
-          href="/complex/compare"
-          className="card tile px-5 py-3 t-body font-bold text-ink"
-        >
-          다른 단지 비교
-        </Link>
-      </section>
+        {/* 다음 행동 — [1012 · 규칙 5] 링크 = 동사 + 구체 대상. [v4] 채움 파랑 + 타일 4개 → 링크 한 줄 */}
+        <p className="t-sub text-text-3" style={{ lineHeight: "24px" }}>
+          <Link href="/notes/new" className={LINK}>
+            {a.name}·{b.name} 임장노트 쓰기
+          </Link>
+          {" · "}
+          <Link href={pathA} className={LINK}>
+            {a.name} 실거래 보기
+          </Link>
+          {" · "}
+          <Link href={pathB} className={LINK}>
+            {b.name} 실거래 보기
+          </Link>
+          {" · "}
+          <Link href={`/region/${region.id}`} className={LINK}>
+            {region.name} 시세 허브 보기
+          </Link>
+          {" · "}
+          <Link href="/complex/compare" className={LINK}>
+            다른 조합 비교 목록 보기
+          </Link>
+        </p>
+
+        {/* [v4 · 규칙 3] 맨 끝 접힘 하나 — 만든 방법(다섯 문단 → 한 줄씩) + Q&A(FAQPage 스키마 · 같은 배열) */}
+        <details className="group border-t border-line pt-1">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
+            만든 방법·Q&amp;A
+            <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
+              ›
+            </span>
+          </summary>
+          <div className="flex flex-col pb-3 pt-1">
+            <ul className="mb-4 flex list-none flex-col gap-0.5 p-0">
+              <li className="t-caption text-text-3">국토교통부 실거래가 공개시스템 아파트 매매 신고 · 해제 거래 제외 · 호가 아님</li>
+              <li className="t-caption text-text-3">
+                계약월 {windowLabel} · 건수·평균가는 이 구간에서 조회한 거래를 직접 센 값
+                {partial ? " · 표본 상한에 걸린 단지는 건수 최소값(이상)" : ""}
+              </li>
+              <li className="t-caption text-text-3">같은 법정동 · 양쪽 모두 최근 12개월 매매 20건 이상인 조합만</li>
+              <li className="t-caption text-text-3">평균 거래가는 면적 혼합 값 · 같은 면적대끼리는 면적대별 비교 표</li>
+              <li className="t-caption text-text-3">신고는 계약 후 최대 30일 지연 · 최근 1~2개월 건수는 늘 수 있음</li>
+            </ul>
+            <QaBlock items={qa} />
+          </div>
+        </details>
+      </div>
     </PageShell>
   );
 }

@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { formatEokMan } from "@/lib/format/eok-man";
 import type { DealTuple } from "@/lib/complex/hub-price";
@@ -39,7 +40,7 @@ export function DealList({
             <span className="tabular-nums text-text-2">{dealDateLabel(ym, day)}</span>
             <span className="tabular-nums text-text-2">{area != null ? unitAreaLabel(unitKeyOf(area), unit) : "—"}</span>
             <span className="tabular-nums text-text-3">{floorLabel(floor)}</span>
-            <span className="whitespace-nowrap text-right font-extrabold tabular-nums text-ink">{formatEokMan(man)}</span>
+            <span className="whitespace-nowrap text-right font-bold tabular-nums text-ink">{formatEokMan(man)}</span>
           </li>
         ))}
       </ul>

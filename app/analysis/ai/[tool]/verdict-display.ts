@@ -59,6 +59,21 @@ export function verdictSources(v: Pick<Verdict, "tiles" | "numbers">): string | 
   return seen.length ? seen.join(" · ") : null;
 }
 
+/**
+ * [1012 · R2 · complex A6] 칸에 값이 하나도 없을 때의 출처 한 줄 — 데이터 출처(evidence)의 원천을 중복 없이.
+ * 예전엔 verdictSources 가 null 이면 출처가 접힌 "데이터 출처 N곳" 안에만 있었다(리뷰 −1) — 표 아래 한 줄에 늘 보이게.
+ * 원천이 하나도 없으면 null(지어내지 않는다).
+ */
+export function evidenceSources(evidence: readonly { source: string }[]): string | null {
+  const seen: string[] = [];
+  for (const e of evidence) {
+    const s = (e.source ?? "").trim();
+    if (!s || seen.includes(s)) continue;
+    seen.push(s);
+  }
+  return seen.length ? seen.join(" · ") : null;
+}
+
 /** 칸 아래 작은 설명 — 값이 있으면 "설명 · 기준 달", 없으면 "자료 없음 · 이유"(출처는 카드 아래 한 줄로) */
 export function tileCaption(t: VerdictTile, when: string | null): string {
   if (t.value == null) return t.note ? `자료 없음 · ${t.note}` : "자료 없음";

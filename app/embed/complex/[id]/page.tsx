@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
@@ -118,7 +119,7 @@ function Wordmark() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="내집나우 홈"
-      className="absolute right-3 top-3 inline-flex items-center gap-1 text-[10px] font-extrabold text-text-3 transition-colors hover:text-primary"
+      className="absolute right-3 top-3 inline-flex items-center gap-1 text-[10px] font-bold text-text-3 transition-colors hover:text-primary"
     >
       <Icon name="house" size={11} />
       내집나우
@@ -156,7 +157,7 @@ function EmbedPrice({ view }: { view: EmbedView }) {
             : ""}
       </div>
       <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
-        <Won manwon={h.priceManwon} className="t-title font-extrabold text-ink" />
+        <Won manwon={h.priceManwon} className="t-title font-bold text-ink" />
         {pct !== null && h.base && <Delta pct={pct} className="t-sub" srContext={baseSince(h.base)} />}
       </div>
       <div className="mt-0.5 t-caption text-text-3">
@@ -218,11 +219,13 @@ function EmbedCard({ view }: { view: EmbedView }) {
         rel="noopener noreferrer"
         className="mt-3 flex items-center justify-center gap-1 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90"
       >
-        내집나우에서 자세히 보기 →
+        {/* [1012 · 규칙 5] "자세히 보기" → 동사 + 구체 대상 */}
+        {view.name} 실거래 전체 보기 →
       </Link>
 
+      {/* [1012 · 규칙 6] "판단하세요" → 사실만 */}
       <div className="mt-1.5 text-center t-caption text-text-3">
-        국토교통부 실거래가(해제 신고 제외) 기준 · 현장 확인 후 판단하세요
+        국토교통부 실거래가(해제 신고 제외) 기준 · 매물 호가 아님
       </div>
     </div>
   );

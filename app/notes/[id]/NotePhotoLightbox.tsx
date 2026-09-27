@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 2곳을 font-bold(700)로 바꿨다. */
 
 import { useEffect, useRef } from "react";
 
@@ -109,7 +110,7 @@ export function NotePhotoLightbox({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between px-4 py-2.5 text-[var(--brand-hanji)]">
-          <span className="t-body font-extrabold" aria-live="polite">
+          <span className="t-body font-bold" aria-live="polite">
             <span className="njn-dot mr-2 inline-block h-[8px] w-[8px] align-middle" aria-hidden="true" />
             {label} {idx + 1} / {total}
           </span>
@@ -117,7 +118,7 @@ export function NotePhotoLightbox({
             ref={closeRef}
             type="button"
             onClick={onClose}
-            className="brand-photo-chip min-h-[40px] rounded-full px-3 py-1.5 t-sub font-extrabold transition"
+            className="brand-photo-chip min-h-[40px] rounded-full px-3 py-1.5 t-sub font-bold transition"
           >
             닫기 (Esc)
           </button>

@@ -1,3 +1,4 @@
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -138,14 +139,9 @@ export default async function TxBandPage({ params }: { params: Promise<Params> }
   const regionHref = `/tx/${encodeURIComponent(region.slug)}`;
   const pyeong = m2ToPyeong(cell.avgAreaM2);
 
+  /* [v4 · 규칙 2·5] 주인공 = 중앙값 하나(t-display). 나머지 수치는 구분선 행(왼쪽 이름 / 오른쪽 값).
+     거래 건수·단지 수는 머리 사실 줄에 한 번만(같은 사실 한 번) */
   const stats: Array<{ label: string; value: string; hint?: string }> = [
-    { label: "거래 건수", value: `${cell.txCount.toLocaleString("ko-KR")}건`, hint: range },
-    { label: "거래된 단지", value: `${cell.complexCount.toLocaleString("ko-KR")}곳` },
-    {
-      label: "중앙값",
-      value: formatKrwShort(cell.medianKrw),
-      hint: "절반은 이 금액보다 낮게 거래",
-    },
     { label: "평균", value: formatKrwShort(cell.avgKrw) },
     {
       label: "최저 ~ 최고",
@@ -170,6 +166,9 @@ export default async function TxBandPage({ params }: { params: Promise<Params> }
         ]
       : []),
   ];
+  const CHIP =
+    "chip inline-flex min-h-[32px] shrink-0 items-center border border-line bg-surface px-3 t-sub font-bold text-ink no-underline hover:border-primary";
+  const otherKind: BandKind = kind === "area" ? "price" : "area";
 
   const crumbs = breadcrumbJsonLd([
     { name: "홈", url: "/" },
@@ -182,162 +181,141 @@ export default async function TxBandPage({ params }: { params: Promise<Params> }
   ]);
 
   return (
-    <PageShell
-      breadcrumb={`홈 › 지역별 실거래 구간 › ${region.name} › ${BAND_KIND_LABEL[kind]} ${cell.bandLabel}`}
-      title={pageTitle(region, kind, cell)}
-    >
+    <PageShell breadcrumb={`홈 › 지역별 실거래 구간 › ${region.name} › ${BAND_KIND_LABEL[kind]} ${cell.bandLabel}`}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
       />
 
-      <p className="rise-in mb-5 t-body text-text-2">
-        국토교통부 아파트 매매 실거래{" "}
-        <strong className="text-ink">{cell.txCount.toLocaleString("ko-KR")}건</strong>
-        {range && ` · ${range} 신고 기준`} · 중앙값{" "}
-        <strong className="text-ink">{formatKrwShort(cell.medianKrw)}</strong>. 매물 호가가 아니라
-        실제 체결·신고된 금액입니다.
-      </p>
-
-      {/* 구간 요약 */}
-      <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">
-          {cell.bandLabel} 요약{" "}
-          <span className="t-sub font-medium text-text-3">
-            {kind === "area" ? "전용면적 기준" : "거래금액 기준"}
-          </span>
-        </h2>
-        <div className="mt-3 grid grid-cols-2 gap-x-4 sm:grid-cols-3">
-          {stats.map((s) => (
-            <div key={s.label} className="border-b border-border py-2.5">
-              <div className="t-sub text-text-3">{s.label}</div>
-              <div className="t-section leading-tight text-ink">{s.value}</div>
-              {s.hint && <div className="mt-0.5 t-sub text-text-3">{s.hint}</div>}
+      {/* [v4 · 한 화면 한 가지] 제목 + 사실 한 줄 → 주인공(중앙값) + 수치 행 → 단지 구분선 행(오른쪽 평균) + 출처 한 줄 →
+          다른 구간 칩 한 줄 × 2 → 링크 한 줄. 지운 것: 소개 문단(→ 사실 줄), 요약 격자 7칸(→ 주인공 + 행 4개),
+          단지 표(가로 스크롤 520px → 행), 여러 줄 칩 구름(→ 한 줄 가로 스크롤), 맨 끝 설명 문단(/tx 읽는 법과 같은 말). */}
+      <div className="mx-auto flex max-w-[760px] flex-col gap-8">
+        <div className="flex flex-col gap-4">
+          <header className="flex flex-col gap-0.5">
+            <h1 className="rise-in t-title text-ink">{pageTitle(region, kind, cell)}</h1>
+            <p className="t-sub text-text-3">
+              {cell.txCount.toLocaleString("ko-KR")}건 · 단지 {cell.complexCount.toLocaleString("ko-KR")}곳
+              {range ? ` · ${range} 신고` : ""} · 호가 아님
+            </p>
+          </header>
+          <section aria-label={`${cell.bandLabel} 요약`} className="flex flex-col gap-3">
+            <div>
+              <p className="m-0 t-caption text-text-3">
+                중앙값 · {kind === "area" ? "전용면적 기준" : "거래금액 기준"}
+              </p>
+              <p className="m-0 t-display t-num text-ink">{formatKrwShort(cell.medianKrw)}</p>
             </div>
-          ))}
+            <dl data-tone="mint" className="card m-0 flex flex-col divide-y divide-line rounded-lg px-4">
+              {stats.map((s) => (
+                <div key={s.label} className="flex min-h-12 items-center justify-between gap-3 py-2.5">
+                  <dt className="t-body text-text-2">
+                    {s.label}
+                    {s.hint && <span className="ml-1.5 t-sub text-text-3">{s.hint}</span>}
+                  </dt>
+                  <dd className="m-0 shrink-0 t-body t-num text-ink">{s.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
         </div>
-      </section>
 
-      {/* 단지 목록 */}
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">
-          이 구간에서 거래된 단지{" "}
-          <span className="t-sub font-medium text-text-3">
-            거래 많은 순 · 상위 {Math.min(complexes.length, 40)}곳
-          </span>
-        </h2>
-        {complexesFailed ? (
-          <p className="py-6 text-center t-body text-text-3">
-            단지별 내역을 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.
-          </p>
-        ) : complexes.length === 0 ? (
-          <p className="py-6 text-center t-body text-text-3">
-            이 구간에서 거래된 단지 내역이 아직 정리되지 않았습니다.
-          </p>
-        ) : (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[520px] text-left t-body">
-              <thead>
-                <tr className="border-b border-border t-sub text-text-3">
-                  <th className="py-2 font-medium">단지</th>
-                  <th className="py-2 font-medium">거래</th>
-                  <th className="py-2 text-right font-medium">평균</th>
-                  <th className="py-2 text-right font-medium">최저~최고</th>
-                  <th className="py-2 text-right font-medium">최근</th>
-                </tr>
-              </thead>
-              <tbody>
+        {/* 단지 목록 — [v4 · 규칙 5] 표 → 구분선 행(왼쪽 단지 + 보조 한 줄 / 오른쪽 평균) */}
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-baseline gap-1.5 t-section text-ink">
+            거래된 단지 <span className="t-num text-text-3">{Math.min(complexes.length, 40)}</span>
+            <span className="t-sub font-medium text-text-3">거래 많은 순</span>
+          </h2>
+          {complexesFailed ? (
+            <p className="card rounded-lg px-4 py-6 text-center t-body text-text-3">단지별 내역을 불러오지 못했어요 · 잠시 후 다시 열기</p>
+          ) : complexes.length === 0 ? (
+            <p className="card rounded-lg px-4 py-6 text-center t-body text-text-3">단지별 내역 아직 없음</p>
+          ) : (
+            <>
+              <ul data-tone="blue" className="card flex flex-col divide-y divide-line rounded-lg px-4">
                 {complexes.map((c) => (
-                  <tr key={c.name} className="border-b border-border last:border-b-0">
-                    <td className="py-2.5">
-                      <Link
-                        href={complexHrefFromNames(region.name, c.name)}
-                        className="font-bold text-primary underline"
-                      >
-                        {c.name}
-                      </Link>
-                      {c.avgAreaM2 !== null && (
-                        <span className="ml-1.5 t-sub text-text-3">
-                          {c.avgAreaM2.toFixed(0)}㎡
+                  <li key={c.name}>
+                    <Link
+                      href={complexHrefFromNames(region.name, c.name)}
+                      className="press flex min-h-14 items-center justify-between gap-x-3 py-3 no-underline"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate t-body font-bold text-ink">{c.name}</span>
+                        <span className="mt-0.5 block truncate t-sub tabular-nums text-text-3">
+                          {[
+                            c.avgAreaM2 !== null ? `${c.avgAreaM2.toFixed(0)}㎡` : null,
+                            `${c.txCount}건`,
+                            `${formatKrwShort(c.minKrw)}~${formatKrwShort(c.maxKrw)}`,
+                            `최근 ${formatYm(c.latestYm)}`,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
                         </span>
-                      )}
-                    </td>
-                    <td className="py-2.5 text-text-2">{c.txCount}건</td>
-                    <td className="py-2.5 text-right font-extrabold text-ink">
-                      {formatKrwShort(c.avgKrw)}
-                    </td>
-                    <td className="py-2.5 text-right t-sub text-text-2">
-                      {formatKrwShort(c.minKrw)}~{formatKrwShort(c.maxKrw)}
-                    </td>
-                    <td className="py-2.5 text-right t-sub text-text-3">
-                      {formatYm(c.latestYm)}
-                    </td>
-                  </tr>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        <span className="t-body t-num text-ink">{formatKrwShort(c.avgKrw)}</span>
+                        <span aria-hidden="true" className="t-body text-text-3">
+                          ›
+                        </span>
+                      </span>
+                    </Link>
+                  </li>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </ul>
+              <p className="t-caption text-text-3">
+                오른쪽 = 평균 · 국토교통부 실거래 신고{range ? ` · ${range} 신고분` : ""} · 해제 신고 제외
+              </p>
+            </>
+          )}
+        </section>
+
+        {/* 같은 지역 다른 구간 · 다른 기준 구간 — 내부 링크. [v4] 칩 구름 → 한 줄 가로 스크롤 */}
+        {(siblings.length > 0 || crossCells.length > 0) && (
+          <section className="flex flex-col gap-3">
+            {siblings.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <h2 className="t-section text-ink">
+                  다른 {BAND_KIND_LABEL[kind]}
+                </h2>
+                <div className="-mx-3.5 flex gap-2 overflow-x-auto px-3.5 [scrollbar-width:none] md:mx-0 md:px-0">
+                  {siblings.map((s) => (
+                    <Link key={s.bandSlug} href={`${regionHref}/${kind}/${s.bandSlug}`} className={CHIP}>
+                      {s.bandLabel}
+                      <span className="ml-1 font-medium text-text-3">{s.txCount.toLocaleString("ko-KR")}건</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+            {crossCells.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <h2 className="t-section text-ink">
+                  {BAND_KIND_LABEL[otherKind]}별로 보기
+                </h2>
+                <div className="-mx-3.5 flex gap-2 overflow-x-auto px-3.5 [scrollbar-width:none] md:mx-0 md:px-0">
+                  {crossCells.map((s) => (
+                    <Link key={s.bandSlug} href={`${regionHref}/${otherKind}/${s.bandSlug}`} className={CHIP}>
+                      {s.bandLabel}
+                      <span className="ml-1 font-medium text-text-3">{s.txCount.toLocaleString("ko-KR")}건</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
         )}
-      </section>
 
-      {/* 같은 지역 다른 구간 — 내부 링크 */}
-      {siblings.length > 0 && (
-        <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-          <h2 className="t-section text-ink">
-            {region.name} 다른 {BAND_KIND_LABEL[kind]}
-          </h2>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {siblings.map((s) => (
-              <Link
-                key={s.bandSlug}
-                href={`${regionHref}/${kind}/${s.bandSlug}`}
-                className="tile rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink"
-              >
-                {s.bandLabel}
-                <span className="ml-1 font-medium text-text-3">
-                  {s.txCount.toLocaleString("ko-KR")}건
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {crossCells.length > 0 && (
-        <section className="rise-in-3 card mb-6 p-[var(--pad-card)]">
-          <h2 className="t-section text-ink">
-            {region.name} {BAND_KIND_LABEL[kind === "area" ? "price" : "area"]}별로 보기
-          </h2>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {crossCells.map((s) => (
-              <Link
-                key={s.bandSlug}
-                href={`${regionHref}/${kind === "area" ? "price" : "area"}/${s.bandSlug}`}
-                className="tile rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink"
-              >
-                {s.bandLabel}
-                <span className="ml-1 font-medium text-text-3">
-                  {s.txCount.toLocaleString("ko-KR")}건
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <p className="mb-8 t-sub text-text-3">
-        평균·중앙값은 이 구간에 신고된 거래만으로 계산한 값이며, 특정 단지의 현재 가격이나 지역
-        전체 시세를 뜻하지 않습니다. 계약 후 신고까지 시차가 있어 최근 달 건수는 더 늘어날 수
-        있습니다. 면적은 전용면적 기준입니다.
-        <br />
-        <Link href={regionHref} className="font-bold text-primary underline">
-          {region.name} 구간 전체
-        </Link>
-        {" · "}
-        <Link href="/tx" className="font-bold text-primary underline">
-          다른 지역
-        </Link>
-      </p>
+        {/* [1012 · 규칙 5] 링크는 동사 + 대상. [v4] 설명 문단은 지우고 링크 한 줄만 */}
+        <p className="t-sub text-text-3">
+          <Link href={regionHref} className="tap-line font-bold text-primary no-underline">
+            {region.name} 구간 전체 보기
+          </Link>
+          {" · "}
+          <Link href="/tx" className="tap-line font-bold text-primary no-underline">
+            지역별 실거래 구간 목록
+          </Link>
+        </p>
+      </div>
     </PageShell>
   );
 }

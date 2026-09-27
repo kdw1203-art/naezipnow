@@ -85,10 +85,11 @@ export default async function NoteCardPage({
   if (!note) {
     return (
       <PageShell breadcrumb="임장노트 · 카드">
-        <div className="card mx-auto mt-8 max-w-[520px] rounded-2xl px-5 py-8 text-center">
-          <p className="t-section text-ink">노트를 찾을 수 없어요</p>
-          <Link href="/notes" className="btn-soft btn-sm mt-3 inline-block no-underline">
-            공개 임장노트 보기
+        {/* [v4 · 규칙 8·10] 빈 화면 한 줄 + 링크 한 줄(가운데 카드 → 왼쪽 정렬) */}
+        <div className="mx-auto flex w-full max-w-[760px] flex-col gap-1">
+          <h1 className="t-title text-ink">노트를 찾을 수 없음</h1>
+          <Link href="/notes" className="tap-line t-sub font-bold text-primary no-underline">
+            공개 임장노트 보기 ›
           </Link>
         </div>
       </PageShell>
@@ -103,9 +104,9 @@ export default async function NoteCardPage({
   if (!note.isPublic && !isOwner) {
     return (
       <PageShell breadcrumb="임장노트 · 카드">
-        <div className="card mx-auto mt-8 max-w-[520px] rounded-2xl px-5 py-8 text-center">
-          <p className="t-section text-ink">비공개 노트예요</p>
-          <p className="mt-1 t-sub text-text-3">작성자만 이 카드를 볼 수 있어요.</p>
+        <div className="mx-auto flex w-full max-w-[760px] flex-col gap-1">
+          <h1 className="t-title text-ink">비공개 노트</h1>
+          <p className="t-sub text-text-3">작성자만 열람</p>
         </div>
       </PageShell>
     );
@@ -142,21 +143,22 @@ export default async function NoteCardPage({
 
   return (
     <PageShell breadcrumb="임장노트 · 나만의 카드">
-      <div className="mx-auto w-full max-w-[860px]">
-        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-          <div>
-            <h1 className="t-section text-ink">나만의 임장 카드</h1>
-            <p className="t-sub text-text-3">
-              {aptLabel}
-              {note.region ? ` · ${note.region}` : ""}
-            </p>
-          </div>
-          <Link href={`/notes/${id}`} className="btn-soft btn-sm no-underline">
-            ← 노트로 돌아가기
+      {/* [v4 · 규칙 1·12] 머리 = 제목(t-title) + 사실 한 줄 + 글자 링크. 스튜디오는 미리보기·편집이 나란히 서는
+          작업 화면이라 760px 한 줄의 예외로 860px 을 그대로 둔다(md 이상 두 칸) */}
+      <div className="mx-auto flex w-full max-w-[860px] flex-col gap-4">
+        <header className="flex flex-col gap-0.5">
+          <h1 className="t-title text-ink">나만의 임장 카드</h1>
+          <p className="t-sub text-text-3">
+            {aptLabel}
+            {note.region ? ` · ${note.region}` : ""}
+            {!saved && isOwner ? " · AI 자동 구성(저장 전)" : ""}
+          </p>
+          <Link href={`/notes/${id}`} className="tap-line w-fit t-sub font-bold text-primary no-underline">
+            노트로 돌아가기 ›
           </Link>
-        </div>
+        </header>
 
-        <div className="card rounded-[18px] p-5 md:p-6">
+        <div>
           <NoteCardStudio
             noteId={id}
             available={available}
@@ -172,12 +174,6 @@ export default async function NoteCardPage({
           />
         </div>
 
-        {!saved && isOwner && (
-          <p className="mt-3 text-center t-sub text-text-3">
-            AI가 기록을 바탕으로 카드를 자동으로 구성했어요. 색상·장을 바꾼 뒤 저장하면
-            나만의 카드가 완성돼요.
-          </p>
-        )}
       </div>
     </PageShell>
   );

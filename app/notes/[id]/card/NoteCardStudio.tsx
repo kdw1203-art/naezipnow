@@ -1,4 +1,6 @@
 "use client";
+/* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 1곳). */
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 4곳을 font-bold(700)로 바꿨다. */
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { CardFrameView } from "./CardFrameView";
@@ -287,7 +289,7 @@ export function NoteCardStudio({
             />
           </div>
         ) : (
-          <div className="aspect-[4/5] w-full rounded-[18px] bg-[rgba(0,0,0,.05)]" />
+          <div className="aspect-[4/5] w-full rounded-lg bg-[rgba(0,0,0,.05)]" />
         )}
         {/* 장 네비게이션 (점) */}
         <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
@@ -303,19 +305,21 @@ export function NoteCardStudio({
             />
           ))}
         </div>
-        <p className="mt-2 text-center t-sub text-text-3">
+        {/* [v4 · 규칙 10] 글은 왼쪽 정렬 */}
+        <p className="mt-2 t-sub text-text-3">
           {frames.length}장 · {activeFrame?.label ?? ""}
         </p>
         <button
           type="button"
           onClick={download}
           disabled={shooting || !activeFrame}
-          className="btn-primary press mt-2.5 min-h-10 w-full rounded-[10px] px-4 py-2.5 t-body font-bold disabled:opacity-60"
+          className="btn-primary press mt-2.5 min-h-10 w-full rounded-lg px-4 py-2.5 t-body font-bold disabled:opacity-60"
         >
           {shooting ? "이미지 만드는 중…" : "이 장 이미지로 저장"}
         </button>
-        <p className="mt-1.5 text-center t-caption text-text-3">
-          {CARD_IMAGE_SIZE.width}×{CARD_IMAGE_SIZE.height} PNG · 카카오톡·인스타에서 안 잘리는 비율
+        {/* [v4 · 규칙 3] "카카오톡·인스타에서 안 잘리는 비율" 설명 삭제 — 크기 사실만 */}
+        <p className="mt-1.5 t-caption text-text-3">
+          {CARD_IMAGE_SIZE.width}×{CARD_IMAGE_SIZE.height} PNG
         </p>
 
         {/* [995] 공유 줄 — 소유자·열람자 모두. 카드 이미지는 링크가 안 눌리므로 장마다
@@ -327,7 +331,7 @@ export function NoteCardStudio({
                 type="button"
                 onClick={() => void shareImage()}
                 disabled={shooting || !activeFrame}
-                className="btn-soft press flex min-h-10 min-w-[120px] flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3 py-2 t-body font-bold disabled:opacity-60"
+                className="btn-soft press flex min-h-10 min-w-[120px] flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 t-body font-bold disabled:opacity-60"
               >
                 <Icon name="share" size={14} />
                 이미지로 공유
@@ -335,7 +339,7 @@ export function NoteCardStudio({
               <button
                 type="button"
                 onClick={() => void copyLink()}
-                className="btn-soft press flex min-h-10 min-w-[120px] flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3 py-2 t-body font-bold"
+                className="btn-soft press flex min-h-10 min-w-[120px] flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 t-body font-bold"
               >
                 <Icon name="link" size={14} />
                 {copied ? "복사됨 ✓" : "링크 복사"}
@@ -345,22 +349,19 @@ export function NoteCardStudio({
                 <button
                   type="button"
                   onClick={() => void shareKakao()}
-                  className="press flex min-h-10 min-w-[120px] flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-[#FEE500] px-3 py-2 t-body font-bold text-[#191600]"
+                  className="press flex min-h-10 min-w-[120px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#FEE500] px-3 py-2 t-body font-bold text-[#191600]"
                 >
                   <Icon name="messages-square" size={14} />
                   카카오톡
                 </button>
               )}
             </div>
-            <p className="mt-1.5 text-center t-sub text-text-3">
-              카드에 찍힌 <span className="font-bold text-text-2">{shareLabel}</span> 로 이 노트에
-              돌아와요
+            <p className="mt-1.5 t-sub text-text-3">
+              카드 링크 <span className="font-bold text-text-2">{shareLabel}</span>
             </p>
           </div>
         ) : (
-          <p className="mt-3 text-center t-sub text-text-3">
-            비공개 노트예요 — 공개로 전환하면 링크·이미지로 공유할 수 있어요
-          </p>
+          <p className="mt-3 t-sub text-text-3">비공개 노트 · 공개로 전환하면 링크·이미지 공유</p>
         )}
       </div>
 
@@ -371,10 +372,8 @@ export function NoteCardStudio({
               130가지라 고르는 것 자체가 일이고, 실제로 만들어진 카드는 0건이었다.
               고르면 끝나는 벌을 먼저 두고, 빌더는 아래에 그대로 남긴다. */}
           <div>
-            <div className="mb-1 t-sub font-extrabold text-ink">완성된 카드 고르기</div>
-            <p className="mb-2 t-caption text-text-3">
-              누르면 색과 장 구성이 한 번에 잡혀요. 아래에서 계속 손볼 수 있어요.
-            </p>
+            {/* [v4 · 규칙 3] 사용법 문장("누르면 색과 장 구성이 한 번에 잡혀요…") 삭제 */}
+            <div className="mb-2 t-sub font-bold text-ink">완성된 카드 고르기</div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {CARD_PRESETS.map((p) => {
                 const usable = p.frameIds.filter((id) => byId.has(id));
@@ -394,11 +393,11 @@ export function NoteCardStudio({
                       );
                     }}
                     aria-pressed={on}
-                    className={`press flex flex-col gap-0.5 rounded-[12px] border px-3 py-2.5 text-left ${
-                      on ? "border-primary bg-primary-soft" : "border-line bg-surface"
+                    className={`press flex flex-col gap-0.5 rounded-lg border px-3 py-2.5 text-left ${
+                      on ? "border-brand-hanji-ink bg-brand-hanji" : "border-line bg-surface"
                     }`}
                   >
-                    <span className="t-body font-extrabold text-ink">{p.label}</span>
+                    <span className="t-body font-bold text-ink">{p.label}</span>
                     <span className="t-caption leading-[1.5] text-text-2">{p.premise}</span>
                     <span className="t-caption text-text-3">
                       {usable.length}장
@@ -412,7 +411,7 @@ export function NoteCardStudio({
 
           {/* 테마 10종 */}
           <div>
-            <div className="mb-2 t-sub font-extrabold text-ink">카드 색상 테마</div>
+            <div className="mb-2 t-sub font-bold text-ink">카드 색상 테마</div>
             <div className="flex flex-wrap gap-2">
               {CARD_THEMES.map((t) => (
                 <button
@@ -437,7 +436,7 @@ export function NoteCardStudio({
           {/* 프레임(장) 선택 */}
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <span className="t-sub font-extrabold text-ink">
+              <span className="t-sub font-bold text-ink">
                 카드에 담을 장 (최소 {MIN_FRAMES}장)
               </span>
               <span className="t-sub text-text-3">{selected.length}장 선택</span>
@@ -452,9 +451,9 @@ export function NoteCardStudio({
                     type="button"
                     onClick={() => toggle(f.id)}
                     disabled={locked}
-                    className={`flex items-center gap-1.5 rounded-[10px] border px-2.5 py-2 text-left text-[12px] font-bold transition-all ${
+                    className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-left text-[12px] font-bold transition-all ${
                       on
-                        ? "border-primary bg-primary-soft text-primary"
+                        ? "border-brand-hanji-ink bg-brand-hanji text-brand-hanji-ink"
                         : "border-line bg-surface text-text-2"
                     } ${locked ? "opacity-70" : ""}`}
                   >
@@ -468,11 +467,12 @@ export function NoteCardStudio({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* [v4 · 규칙 2] 채움 파랑은 "이 장 이미지로 저장" 하나 — 구성 저장은 테두리 버튼 */}
             <button
               type="button"
               onClick={() => void save()}
               disabled={saving}
-              className="btn-primary btn-sm rounded-[10px] px-4 py-2 t-body font-bold disabled:opacity-60"
+              className="btn-outline btn-md rounded-lg px-4 t-body font-bold"
             >
               {saving ? "저장 중…" : "카드 저장"}
             </button>
@@ -482,16 +482,11 @@ export function NoteCardStudio({
               </span>
             )}
           </div>
-          <p className="t-sub text-text-3">
-            표지는 항상 첫 장이에요. 담은 장의 내용은 임장노트에서 기록한 값으로 자동으로 채워지고,
-            데이터가 없는 장은 목록에 나오지 않아요.
-          </p>
+          <p className="t-sub text-text-3">표지 고정 · 장 내용은 노트 기록 값 · 데이터 없는 장 제외</p>
         </div>
       ) : (
         <div className="flex min-w-0 flex-1 flex-col justify-center">
-          <p className="t-body text-text-2">
-            작성자가 만든 {frames.length}장짜리 임장 카드예요. 점을 눌러 넘겨 보세요.
-          </p>
+          <p className="t-body text-text-2">작성자 카드 {frames.length}장</p>
         </div>
       )}
     </div>

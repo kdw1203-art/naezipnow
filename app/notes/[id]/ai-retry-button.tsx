@@ -1,4 +1,5 @@
 "use client";
+/* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-extrabold/black 1곳을 font-bold(700)로 바꿨다. */
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -112,7 +113,7 @@ export function AiRetryButton({
         onClick={run}
         disabled={busy}
         aria-busy={busy}
-        className="press inline-flex min-h-[40px] w-fit items-center rounded-lg bg-white/10 px-3 py-2 t-sub font-extrabold text-ai-accent disabled:opacity-60"
+        className="press inline-flex min-h-[40px] w-fit items-center rounded-lg bg-white/10 px-3 py-2 t-sub font-bold text-ai-accent disabled:opacity-60"
       >
         {busy ? "AI 정리 중…" : "AI 다시 정리하기"}
       </button>

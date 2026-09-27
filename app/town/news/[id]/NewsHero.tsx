@@ -16,7 +16,7 @@ export function NewsHero({ src, sourceName }: { src: string; sourceName?: string
   const [failed, setFailed] = useState(false);
   if (failed) return null;
   return (
-    <div className="relative aspect-[16/9] max-h-[380px] w-full overflow-hidden rounded-[14px] bg-bg">
+    <div className="relative aspect-[16/9] max-h-[380px] w-full overflow-hidden rounded-lg bg-bg">
       <CoverImage
         src={src}
         alt=""
@@ -25,7 +25,7 @@ export function NewsHero({ src, sourceName }: { src: string; sourceName?: string
         onFailed={() => setFailed(true)}
       />
       {sourceName && (
-        <span className="absolute bottom-0 left-0 rounded-tr-[10px] bg-[var(--glass-bg)] px-3 py-[5px] text-[12px] text-text-3">
+        <span className="absolute bottom-0 left-0 rounded-tr-lg bg-[var(--glass-bg)] px-3 py-[5px] text-[12px] text-text-3">
           사진: {sourceName}
         </span>
       )}

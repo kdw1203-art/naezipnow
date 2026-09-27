@@ -14,90 +14,64 @@
 import type { StoredDeepDiveSection } from "@/lib/inspection/deep-dive-view";
 import { filledStoredAxisCount, readStoredDeepDive } from "@/lib/inspection/deep-dive-view";
 
-/** 축별 대표 색 — 순서대로 돌려 쓴다(의미가 아니라 구분용). */
-const ACCENTS = [
-  "bg-danger/10 text-danger",
-  "bg-warning/10 text-warning",
-  "bg-success/10 text-success",
-  "bg-primary-soft text-primary",
-];
-
+/* [v4 · 규칙 5·6] 카드 → 구분선 목록 행(접힘). 축마다 돌려 쓰던 색 배지(eyebrow)·"해석" 파란 상자·사실 칩을 걷고
+   글자 위계로만 가른다 — 행 = 축 이름(굵게) / 오른쪽 확인 상태 · `›`. 펼치면 헤드라인 · 해석 · 사실 한 줄 · 근거 · 출처. */
 function AxisBlock({
-  index,
   open,
   section,
 }: {
-  index: number;
   open: boolean;
   section: StoredDeepDiveSection;
 }) {
   const unavailable = section.status === "unavailable";
-  const accent = unavailable
-    ? "bg-text-3/10 text-text-3"
-    : (ACCENTS[index % ACCENTS.length] ?? "bg-primary-soft text-primary");
 
+  /* 행 바깥을 <li> 로 감싸지 않는다 — 폰 배율의 "li 안 t-sub 한 줄" 규칙(globals.css)이 펼친 본문의 사실·출처 줄까지 자른다 */
   return (
-    <details
-      open={open && !unavailable}
-      className="group rounded-[14px] border border-line bg-surface px-3.5 py-3"
-    >
-      <summary className="flex cursor-pointer list-none items-center gap-2">
-        <span
-          className={`inline-flex shrink-0 items-center rounded px-1.5 py-px text-[10px] font-bold ${accent}`}
-        >
-          {section.eyebrow}
-        </span>
-        <span className="flex-1 t-body font-extrabold text-ink">{section.label}</span>
-        <span className="t-sub font-bold text-text-3">
+    <details open={open && !unavailable} className="group">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 py-2.5 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0 flex-1 t-body font-bold text-ink">{section.label}</span>
+        <span className={`shrink-0 t-sub ${unavailable ? "text-text-3" : "text-text-2"}`}>
           {unavailable ? "확인하지 못함" : section.status === "partial" ? "일부 확인" : "확인"}
         </span>
-        <span className="t-body text-text-3 group-open:hidden">›</span>
+        <span aria-hidden="true" className="shrink-0 t-body text-text-3 transition-transform group-open:rotate-90">
+          ›
+        </span>
       </summary>
 
-      <div className="mt-2 flex flex-col gap-2">
-        {section.headline && (
-          <p className="t-body font-bold text-text-1">{section.headline}</p>
-        )}
-
+      <div className="flex flex-col gap-1.5 pb-3">
+        {section.headline && <p className="t-body font-bold text-text-1">{section.headline}</p>}
         {section.insight && (
-          <p className="rounded-[10px] bg-primary-soft px-2.5 py-2 t-sub text-primary">
-            <b className="mr-1">해석</b>
+          <p className="t-body text-text-1">
+            <b className="mr-1 font-bold text-text-3">해석</b>
             {section.insight}
           </p>
         )}
-
         {section.facts.length > 0 && (
-          <ul className="flex flex-wrap gap-1.5">
-            {section.facts.map((fact) => (
-              <li
-                key={`${fact.label}-${fact.value}`}
-                className="rounded-[8px] bg-bg chip-pad t-sub text-text-2"
-              >
-                <b className="mr-1 font-bold text-text-1">{fact.label}</b>
-                {fact.value}
-              </li>
+          <p className="t-sub text-text-2">
+            {section.facts.map((fact, i) => (
+              <span key={`${fact.label}-${fact.value}`}>
+                {i > 0 ? " · " : ""}
+                <b className="font-bold text-text-1">{fact.label}</b> {fact.value}
+              </span>
             ))}
-          </ul>
+          </p>
         )}
-
         {section.bullets.length > 0 && (
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col gap-0.5">
             {section.bullets.map((bullet) => (
               <li key={bullet} className="flex gap-1.5 t-body text-text-1">
-                <span className="mt-[7px] h-[4px] w-[4px] shrink-0 rounded-full bg-text-3/45" />
+                <span aria-hidden="true" className="shrink-0 text-text-3">
+                  ·
+                </span>
                 <span>{bullet}</span>
               </li>
             ))}
           </ul>
         )}
-
         {/* 못 채운 사유 — 비어 있는 축을 "해당 없음"으로 바꿔 적지 않는다. */}
-        {section.note && (
-          <p className="t-sub text-text-3">{section.note}</p>
-        )}
-
+        {section.note && <p className="t-sub text-text-3">{section.note}</p>}
         {section.sources.length > 0 && (
-          <p className="t-sub text-text-3">출처 · {section.sources.join(" · ")}</p>
+          <p className="t-caption text-text-3">출처 · {section.sources.join(" · ")}</p>
         )}
       </div>
     </details>
@@ -116,42 +90,29 @@ export default function DeepDivePanel({
   const total = deepDive.sections.length;
 
   return (
-    <section className="rise-in-1 card flex flex-col gap-3 rounded-[18px] p-6">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <div className="text-[15px] font-extrabold text-ink">AI 심화 분석</div>
-          <div className="mt-0.5 t-sub text-text-3">
-            노트에 적힌 내용과 공개 데이터를 함께 읽어 {total}개 축으로 정리했어요 · {filled}개 축
-            확인
-          </div>
-        </div>
-      </div>
+    <section aria-labelledby="deep-dive-h" className="flex flex-col gap-1">
+      {/* [v4 · 규칙 3] "노트에 적힌 내용과 공개 데이터를 함께 읽어 N개 축으로 정리했어요" 설명 문장 → 숫자만 */}
+      <h2 id="deep-dive-h" className="t-section text-ink">
+        AI 심화 분석{" "}
+        <span className="t-sub font-medium text-text-3">
+          {filled}/{total}개 축 확인
+        </span>
+      </h2>
 
-      <div className="flex flex-col gap-2">
+      <div data-tone="blue" className="divide-y divide-line border-y border-line">
         {deepDive.sections.map((section, i) => (
-          <AxisBlock key={section.id} index={i} open={i < 2} section={section} />
+          <AxisBlock key={section.id} open={i < 2} section={section} />
         ))}
       </div>
 
-      {/* 못 읽은 소스 — 어떤 축이 왜 비었는지 한 곳에 모아 둔다. */}
+      {/* 못 읽은 소스 — 어떤 축이 왜 비었는지 한 줄로 모아 둔다. */}
       {deepDive.gaps.length > 0 && (
-        <div className="rounded-[10px] border border-line bg-bg px-3 py-2.5">
-          <div className="t-sub font-bold text-text-2">이번에 확인하지 못한 자료</div>
-          <ul className="mt-1 flex flex-col gap-0.5">
-            {deepDive.gaps.map((gap) => (
-              <li key={gap} className="t-sub text-text-3">
-                · {gap}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {deepDive.disclaimer && (
-        <p className="border-t border-line pt-2.5 t-sub text-text-3">
-          {deepDive.disclaimer}
+        <p className="mt-1 t-caption text-text-3">
+          <b className="font-bold text-text-2">확인하지 못한 자료</b> · {deepDive.gaps.join(" · ")}
         </p>
       )}
+
+      {deepDive.disclaimer && <p className="t-caption text-text-3">{deepDive.disclaimer}</p>}
     </section>
   );
 }

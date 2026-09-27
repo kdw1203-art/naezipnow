@@ -11,14 +11,15 @@ import nextDynamic from "next/dynamic";
 
 type Props = { complexId: string; region: string; aptName: string; noteHref: string };
 
-function BriefingShell({ busy, onStart }: { busy: boolean; onStart?: () => void }) {
+function BriefingShell({ busy, onStart, aptName }: { busy: boolean; onStart?: () => void; aptName: string }) {
   return (
     <section className="card flex flex-col gap-2 rounded-2xl p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="t-body font-extrabold text-ink">✨ AI 예습 브리핑</h2>
+          {/* [1012 · 규칙 4·8·6] 반짝이 이모지 제거 · 800 → 700 · 부제는 AiBriefingCard 와 같은 문장(단지명·방문 전) */}
+          <h2 className="t-body font-bold text-ink">AI 예습 브리핑</h2>
           <p className="mt-0.5 t-caption text-text-3">
-            방문 전에 이 단지를 한 장으로 예습하세요.
+            {aptName ? `${aptName} 방문 전에` : "방문 전에"} 볼 것을 한 장으로 요약해요.
           </p>
         </div>
         <button
@@ -39,11 +40,12 @@ function BriefingShell({ busy, onStart }: { busy: boolean; onStart?: () => void 
 
 const AiBriefingCard = nextDynamic(() => import("./AiBriefingCard").then((m) => m.AiBriefingCard), {
   ssr: false,
-  loading: () => <BriefingShell busy />,
+  /* 청크 로딩 중엔 단지명을 모르므로 껍데기는 제목만(부제 단지명 자리는 아래 armed 분기에서 채운다) */
+  loading: () => <BriefingShell busy aptName="" />,
 });
 
 export function AiBriefingLazy(props: Props) {
   const [armed, setArmed] = useState(false);
-  if (!armed) return <BriefingShell busy={false} onStart={() => setArmed(true)} />;
+  if (!armed) return <BriefingShell busy={false} aptName={props.aptName} onStart={() => setArmed(true)} />;
   return <AiBriefingCard {...props} autoRun />;
 }

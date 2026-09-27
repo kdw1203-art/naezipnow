@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -501,7 +502,7 @@ export function WorkbenchClient({
         <div className="flex flex-col gap-3 lg:col-start-1 lg:row-start-1">
           {(needsComplex || isContract) && (
             <section className="card flex flex-col gap-2.5 rounded-2xl p-4" aria-label="단지 고르기">
-              <h2 className="t-body font-extrabold text-ink">① 단지 고르기</h2>
+              <h2 className="t-body font-bold text-ink">① 단지 고르기</h2>
               {isContract && (
                 <p className="t-sub text-text-2">
                   단지를 고르면 그 지역 평균 전세가율을 참고값으로 보여 줘요. ② 에 이 집 전세가율·보증금과 확인 여부를
@@ -526,9 +527,9 @@ export function WorkbenchClient({
                 placeholder="단지 이름 (예: 공작아파트)"
               />
               {picked && (
-                <div className="flex flex-col gap-0.5 rounded-[12px] bg-primary-soft px-3 py-2.5">
+                <div className="flex flex-col gap-0.5 rounded-lg bg-primary-soft px-3 py-2.5">
                   <div className="flex flex-wrap items-baseline gap-x-2">
-                    <b className="break-words t-body font-extrabold text-ink">{picked.name}</b>
+                    <b className="break-words t-body font-bold text-ink">{picked.name}</b>
                     <span className="t-sub font-bold text-text-2">{picked.regionLabel || picked.region}</span>
                   </div>
                   <span className="t-sub text-text-2">
@@ -683,7 +684,7 @@ export function WorkbenchClient({
                 aria-expanded={condOpen}
                 className="flex min-h-[48px] w-full items-center justify-between gap-2 px-4 py-2.5 text-left"
               >
-                <span className="t-body font-extrabold text-ink">
+                <span className="t-body font-bold text-ink">
                   {hasCalc ? "② 내 조건" : "② AI 해설에 넣을 조건"} <span className="t-sub font-bold text-text-3">(선택)</span>
                 </span>
                 <span className="t-sub font-bold text-primary">{condOpen ? "접기" : "펼치기"}</span>
@@ -698,7 +699,7 @@ export function WorkbenchClient({
 
           {showRun && (
             <section className="card flex flex-col gap-2.5 rounded-2xl p-4" aria-label={hasCalc ? "다시 계산" : "AI 해설 받기"}>
-              <h2 className="t-body font-extrabold text-ink">{hasCalc ? "③ 내 조건으로 다시 계산" : "③ AI 해설 받기"}</h2>
+              <h2 className="t-body font-bold text-ink">{hasCalc ? "③ 내 조건으로 다시 계산" : "③ AI 해설 받기"}</h2>
               {/* [1011] 설명 문단을 걷었다(소유자 지시) — 무엇을 하는 버튼인지는 제목과 버튼 글자가
                   이미 말한다. 로그인이 필요하다는 사실은 눌러 봐야 아는 대신 버튼 글자로 미리 말한다. */}
               {hasCalc && llmAvailable && (
@@ -770,13 +771,13 @@ function FirstVisitGuide({
   ];
   return (
     <section className="card flex flex-col gap-4 rounded-2xl p-4 md:p-5" aria-label="이렇게 써요">
-      <h2 className="t-section font-extrabold text-ink">이렇게 써요</h2>
+      <h2 className="t-section font-bold text-ink">이렇게 써요</h2>
       <ol className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {steps.map((s, i) => (
-          <li key={s.t} className="flex gap-2.5 rounded-[12px] bg-bg px-3 py-3 sm:flex-col sm:gap-1.5">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary t-sub font-extrabold text-white">{i + 1}</span>
+          <li key={s.t} className="flex gap-2.5 rounded-lg bg-bg px-3 py-3 sm:flex-col sm:gap-1.5">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary t-sub font-bold text-white">{i + 1}</span>
             <span className="flex flex-col gap-0.5">
-              <b className="t-body font-extrabold text-ink">{s.t}</b>
+              <b className="t-body font-bold text-ink">{s.t}</b>
               <span className="t-sub text-text-2">{s.d}</span>
             </span>
           </li>
@@ -784,7 +785,10 @@ function FirstVisitGuide({
       </ol>
       {quickPicks.length > 0 && (
         <div className="flex flex-col gap-2">
-          <span className="t-sub font-extrabold text-text-1">처음이라면 — 최근 거래가 많은 단지로 둘러보기</span>
+          {/* [1012 · 규칙 6·7] "둘러보기" → 사실(어디서·얼마나): 최근 6개월 거래 많은 단지 N곳 */}
+          <span className="t-sub font-bold text-text-1">
+            최근 6개월 거래가 많은 단지 {quickPicks.length}곳 — 누르면 바로 계산해요
+          </span>
           <div className="flex flex-wrap gap-1.5">
             {quickPicks.map((q) => (
               <button
@@ -793,7 +797,7 @@ function FirstVisitGuide({
                 onClick={() => onQuickPick(q)}
                 className="chip press flex min-h-[40px] flex-col items-start border border-line bg-surface px-3 py-1.5 text-left"
               >
-                <span className="t-sub font-extrabold text-ink">{q.name}</span>
+                <span className="t-sub font-bold text-ink">{q.name}</span>
                 <span className="t-caption text-text-3">
                   {q.region} · 최근 6개월 {q.recentTrades.toLocaleString("ko-KR")}건
                 </span>
@@ -870,7 +874,7 @@ function EconomyWatchPanel({ currentRate }: { currentRate: number }) {
 
   return (
     <div id="economy-watch" className="card scroll-mt-20 rounded-2xl p-4">
-      <div className="t-body font-extrabold text-ink">
+      <div className="t-body font-bold text-ink">
         기준금리 알림 걸기{" "}
         <span className="t-sub font-medium text-text-3">지금 {currentRate}% · 조건이 되면 알림함으로 한 번</span>
       </div>
@@ -879,7 +883,7 @@ function EconomyWatchPanel({ currentRate }: { currentRate: number }) {
           value={direction}
           onChange={(e) => setDirection(e.target.value as "above" | "below")}
           aria-label="알림 조건"
-          className="min-h-[40px] rounded-[10px] border border-line bg-surface px-2.5 t-body font-bold text-ink"
+          className="min-h-[40px] rounded-lg border border-line bg-surface px-2.5 t-body font-bold text-ink"
         >
           <option value="above">이상으로 오르면</option>
           <option value="below">이하로 내리면</option>
@@ -889,7 +893,7 @@ function EconomyWatchPanel({ currentRate }: { currentRate: number }) {
           onChange={(e) => setThreshold(e.target.value)}
           inputMode="decimal"
           aria-label="기준금리(%)"
-          className="min-h-[40px] w-[90px] rounded-[10px] border border-line bg-surface px-3 t-body font-bold text-ink"
+          className="min-h-[40px] w-[90px] rounded-lg border border-line bg-surface px-3 t-body font-bold text-ink"
         />
         <span className="t-sub font-bold text-text-2">%</span>
         <ActionButton

@@ -1,4 +1,5 @@
 "use client";
+/* [1012 · 규칙 8] font-extrabold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -92,9 +93,11 @@ export function PriceTab({
 
   return (
     <>
-      <div className="px-1 text-xs font-extrabold text-text-3">
-        실거래 <span className="font-medium text-text-3">· 국토교통부 기준 · 해제 신고 제외</span>
-      </div>
+      {trades.length > 0 && (
+        <div className="px-1 text-xs font-bold text-text-3">
+          실거래 <span className="font-medium text-text-3">· 국토교통부 기준 · 해제 신고 제외</span>
+        </div>
+      )}
       {/* 실거래 가격 추이 차트 (실데이터 2개월 이상일 때만) */}
       {priceChart}
       {trades.length > 0 ? (
@@ -145,7 +148,7 @@ export function PriceTab({
           </div>
           {/* [1009 · C] 한 건 단위 목록 — 네이버 부동산 단지 화면 "실거래가" 목록(계약일·전용·층·거래가) */}
           {bandDeals.length > 0 && (
-            <div className="card flex flex-col gap-2 rounded-[14px] px-3.5 py-3">
+            <div className="card flex flex-col gap-2 rounded-lg px-3.5 py-3">
               <div className="flex items-baseline justify-between gap-2 px-0.5">
                 <span className="t-sub font-bold text-text-2">
                   {bandLabel} 실거래 <span className="tabular-nums">{bandDeals.length}건</span>
@@ -158,7 +161,7 @@ export function PriceTab({
                   type="button"
                   onClick={() => setAllDeals((v) => !v)}
                   aria-expanded={allDeals}
-                  className="btn-soft min-h-10 rounded-xl px-3 t-sub"
+                  className="btn-ghost min-h-10 rounded-xl px-3 t-sub"
                 >
                   {allDeals ? "접기" : `${bandDeals.length - DEALS_FIRST}건 더 보기`}
                 </button>
@@ -166,7 +169,7 @@ export function PriceTab({
             </div>
           )}
           {shownTrades.length > 0 ? (
-            <div className="card flex flex-col overflow-hidden rounded-[14px] px-0 py-0">
+            <div className="card flex flex-col overflow-hidden rounded-lg px-0 py-0">
               {/* [1009 · C] 이 표의 가격은 그 달 거래의 **평균**이다 — 머리에 "월평균"과 비교 기준을 적는다.
                   [1009 · C 리뷰] 전체 보기는 평형을 섞은 평균이라 적는다(헬리오시티 8월 ▲15.8% 는 84·110㎡ 달과 39·59㎡ 포함 달의
                   비교였다). 기준은 앞 줄 — 모든 앞 줄이 전달이면 "전월 대비", 아니면 "앞 거래 달 대비"이고 빈 달 다음 줄에 기준 달을 적는다. */}
@@ -187,17 +190,14 @@ export function PriceTab({
               ))}
             </div>
           ) : (
-            <div className="card rounded-[14px] px-[15px] py-6 text-center t-body text-text-3">
+            <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
               이 면적대의 실거래가 표에 없어요
             </div>
           )}
         </>
-      ) : (
-        <div className="card rounded-[14px] px-[15px] py-6 text-center t-body text-text-3">
-          아직 수집된 국토교통부 실거래가 없어요
-        </div>
-      )}
-      {/* [D69] 계산기로 **이 단지의 실거래가를 들고** 간다.
+      ) : null /* [v4 · 규칙 8] "매매 실거래 없음"은 머리(대표가 자리)가 한 번만 말한다 — 탭에서 다시 말하지 않는다 */}
+      {/* [v4 · 규칙 2] 연한 파랑 면(btn-soft) → 고스트 — 파랑은 머리의 채움 버튼 하나.
+          [D69] 계산기로 **이 단지의 실거래가를 들고** 간다.
           예전엔 계산기가 어디서도 값을 받지 못해 8.4억이라는 예시 숫자에서
           늘 새로 시작했다 — 방금 시세를 보고 온 사람에게 그건 남의 숫자다.
           최근 달 평균 매매가(만원)를 그대로 넘긴다. 값이 없으면 링크를
@@ -207,14 +207,14 @@ export function PriceTab({
             D62 매칭이 "서울 강남구" 꼴을 받는다. */}
         <Link
           href={region ? `/analysis/price?region=${encodeURIComponent(region)}` : "/analysis/price"}
-          className="btn-soft rounded-xl p-3 text-center t-body"
+          className="btn-ghost rounded-xl p-3 text-center t-body"
         >
           AI 시세 분석 보기
         </Link>
         {latestAvgManwon > 0 && (
           <Link
             href={`/calculator?price=${latestAvgManwon}${complexName ? `&from=${encodeURIComponent(complexName)}` : ""}${loanRegion ? `&region=${loanRegion}` : ""}`}
-            className="btn-soft rounded-xl p-3 text-center t-body"
+            className="btn-ghost rounded-xl p-3 text-center t-body"
           >
             {/* [1008] "시세" → "실거래가" — 넘기는 값은 최근 달 평균 **실거래가**다(단지 단위 시세 원천 없음) */}
             이 실거래가로 대출 계산
