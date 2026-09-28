@@ -1,8 +1,9 @@
+/* [1023 · AI 분석] 머리 통일 — h1 t-display 손 마크업(.pxs-head) → 공용 PageHead(아이콘 칩 40 · h1.t-title · 사실 한 줄 | 오른쪽 칩·지역 검색). 본문은 그대로. */
 import Link from "next/link";
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import { PageShell } from "../../components/PageShell";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
-import { Icon } from "@/app/components/Icon";
+import { PageHead } from "@/app/components/PageHead";
 import type { HeroKpi } from "@/app/components/analysis/ToolHero";
 import { findTemperatureRegionIdByName } from "@/lib/market/temperature";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
@@ -268,26 +269,25 @@ export default async function PricePage({
           </div>
         )}
 
-        {/* 머리 — 아이콘 칩 · 제목 · 사실 한 줄 | 지역 칩 · 지역 바꾸기 · 연도 */}
-        <header className="pxs-head">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <span className="tile-ico flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-              <Icon name="bar" size={18} />
-            </span>
-            <div className="min-w-0">
-              <h1 className="t-display text-ink">면적대별 실거래가</h1>
-              <p className="t-sub text-text-3">
-                국토교통부 신고 · {ymLabel(target.firstYm)}~{ymLabel(target.latestYm)} · {target.name}{" "}
-                {target.txCount.toLocaleString("ko-KR")}건
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="chip chip-soft chip-pad t-sub">{target.name}</span>
-            <RegionSelect regions={selectRegions} current={target.slug} />
-            {yearChip && <span className="chip chip-pad t-sub border border-line text-text-2">{yearChip}</span>}
-          </div>
-        </header>
+        {/* 머리 — 아이콘 칩 · 제목 · 사실 한 줄 | 지역 칩 · 지역 바꾸기 · 연도. [1023] 공용 PageHead(허브·노트·동네와 같은 t-title) */}
+        <PageHead
+          icon="bar"
+          title="면적대별 실거래가"
+          sub={
+            <>
+              국토교통부 신고 · {ymLabel(target.firstYm)}~{ymLabel(target.latestYm)} · {target.name}{" "}
+              {target.txCount.toLocaleString("ko-KR")}건
+            </>
+          }
+          subOnPhone
+          actions={
+            <>
+              <span className="chip chip-soft chip-pad t-sub">{target.name}</span>
+              <RegionSelect regions={selectRegions} current={target.slug} />
+              {yearChip && <span className="chip chip-pad t-sub border border-line text-text-2">{yearChip}</span>}
+            </>
+          }
+        />
 
         {/* 통계 타일 5칸 */}
         <div className="pxs-stat mt-3">

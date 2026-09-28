@@ -1,4 +1,6 @@
 "use client";
+/* [1023 · 동네 ①] 필터(자격·분야·지역·정렬) URL 반영을 pushState → replaceState 로. 칩 한 번 누를 때마다 히스토리 항목이 쌓여
+   뒤로가기가 필터를 되감았다 — 이제 주소만 바뀌고(공유·새로고침 유지) 뒤로가기는 이전 페이지로 간다. 첫 값은 마운트 뒤 location.search. */
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -12,7 +14,7 @@ import { Icon } from "@/app/components/Icon";
  * /town/experts 클라이언트 셸 (953 개편).
  *
  * 서버(ISR)는 전량(상한 200)을 SSR 로 그리고, ?type/?sub/?region/?sort 는 마운트 후
- * location.search 에서 읽는다. 칩은 pushState 버튼(useSearchParams 는 프리렌더 HTML
+ * location.search 에서 읽는다. 칩은 replaceState 버튼(useSearchParams 는 프리렌더 HTML
  * 에서 서브트리를 지운다 — /town/news 실측 교훈).
  *
  * 953 에서 바뀐 것
@@ -162,7 +164,11 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
     if (next.region !== "all") usp.set("region", next.region);
     if (next.sort !== "recommended") usp.set("sort", next.sort);
     const s = usp.toString();
-    window.history.pushState(null, "", s ? `/town/experts?${s}` : "/town/experts");
+    try {
+      window.history.replaceState(window.history.state, "", s ? `/town/experts?${s}` : "/town/experts");
+    } catch {
+      /* history 갱신 실패 — 목록 동작과 무관 */
+    }
   };
 
   const sub = findSub(EXPERT_SUBCATEGORIES, filter.sub);
@@ -197,7 +203,7 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
 
   return (
     <>
-      {/* ---------- 필터 (pushState — 서버 왕복 없음) ----------
+      {/* ---------- 필터 (replaceState — 서버 왕복 없음) ----------
           [970 · C-13] 0명 목록 위에 자격·분야 칩 두 줄이 서 있었다 — 누를수록 0이 0으로
           바뀔 뿐이다. 지역·정렬 줄과 같은 조건(items > 0)으로 통째로 접는다. */}
       {items.length > 0 && (

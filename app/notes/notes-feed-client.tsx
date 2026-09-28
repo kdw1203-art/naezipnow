@@ -1,5 +1,8 @@
 "use client";
-/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
+/* [1023 · 임장노트] docs/review-1022.md 1장 — ① 필터 칩 줄 왼쪽 검색칸(제목·지역·단지명 클라이언트 필터, 지역 칩과 AND,
+   0건은 "검색어에 맞는 노트가 없어요" + 지우기) · ① 내 노트 회차 묶기(같은 aptName 2건 이상 → 접힌 묶음 카드 + 회차 비교 링크)
+   · ② "더 보기" 실패는 같은 버튼이 "다시 시도" · ② 내 노트 조회 실패 카드에 다시 시도(loadMine) · ② 폰 격자 타일은 판단 배지 하나만.
+   [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { seedGradient as seedFace } from "@/lib/town/shared";
@@ -25,6 +28,8 @@ import {
   type MineFilters,
 } from "@/lib/notes/mine-filters";
 import { MineFilterBar } from "./mine-filter-bar";
+import { filterNotesByQuery } from "@/lib/notes/feed-search";
+import { groupNoteRounds } from "@/lib/notes/round-groups";
 
 /* 공개 임장노트 — 인스타그램형(스토리 줄 + 3열 그리드 ⇄ 피드 전환) */
 
@@ -70,19 +75,22 @@ const AI_BADGE_CLASS: Record<ListAiState, string> = {
   stale: "bg-warning-soft text-warning",
   none: "border border-line text-text-3",
 };
-function NoteBadges({ n, onDark = false }: { n: FeedNote; onDark?: boolean }) {
+/* [1023 · 임장노트 ②] only="decision" — 폰 3열 격자 타일(≈118px)은 배지 하나(판단)만. 회차·AI 는 피드 카드에서만 */
+function NoteBadges({ n, onDark = false, only }: { n: FeedNote; onDark?: boolean; only?: "decision" }) {
   if (!n.decision && n.round == null && !n.aiStatus) return null;
+  const decision = n.decision ? (
+    <span
+      className={`inline-flex shrink-0 items-center rounded px-1.5 py-px t-caption font-bold ${
+        onDark ? "bg-white/22 text-white backdrop-blur-sm" : DECISION_BADGE_CLASS[n.decision.choice]
+      }`}
+    >
+      {n.decision.label}
+    </span>
+  ) : null;
+  if (only === "decision") return decision;
   return (
     <>
-      {n.decision && (
-        <span
-          className={`inline-flex shrink-0 items-center rounded px-1.5 py-px t-caption font-bold ${
-            onDark ? "bg-white/22 text-white backdrop-blur-sm" : DECISION_BADGE_CLASS[n.decision.choice]
-          }`}
-        >
-          {n.decision.label}
-        </span>
-      )}
+      {decision}
       {n.round != null && (
         <span
           className={`inline-flex shrink-0 items-center rounded px-1.5 py-px t-caption font-bold ${
@@ -236,10 +244,11 @@ function GridTile({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
               {n.region}
             </p>
           )}
-          {/* [996 · 4] 판단·회차 — 타일 안 글자 배지(링크 전체가 이미 탭 대상). [1006] 내 노트는 AI 상태도 */}
-          {(n.decision || n.round != null || n.aiStatus) && (
+          {/* [996 · 4] 판단 — 타일 안 글자 배지(링크 전체가 이미 탭 대상).
+              [1023 · 임장노트 ②] 3열 격자(≈118px)에서 배지 두 개가 겹쳤다 — 타일은 판단 하나만(회차·AI 는 피드 카드) */}
+          {n.decision && (
             <p className="mt-1 flex flex-wrap gap-1">
-              <NoteBadges n={n} onDark />
+              <NoteBadges n={n} onDark only="decision" />
             </p>
           )}
         </div>
@@ -420,6 +429,66 @@ function PostCard({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
         )}
       </div>
     </article>
+  );
+}
+
+/* ── [1023 · 임장노트 ①] 내 노트 회차 묶음 카드 ──
+   같은 단지(aptName) 2건 이상 → 한 장(단지명 · N회차 · 최근 방문일)으로 접힌다. 머리(40px 이상)를 누르면
+   회차별 PostCard 가 펼쳐진다. 머리 오른쪽 "회차 비교 ›" 는 있는 화면(/notes/compare?noteId=) — 그 화면이
+   noteId 로 같은 단지의 내 노트를 모으므로 가장 최근 회차의 id 를 넘긴다. 데이터는 손에 든 카드뿐(lib/notes/round-groups). */
+function RoundGroupCard({
+  aptName,
+  notes,
+  latestVisit,
+}: {
+  aptName: string;
+  notes: FeedNote[];
+  latestVisit: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const latest = notes[0];
+  const panelId = `rounds-${latest?.id ?? aptName}`;
+  return (
+    <section className="mx-auto w-full max-w-[468px] overflow-hidden rounded-2xl border border-line bg-surface md:max-w-none" aria-label={`${aptName} 회차 묶음`}>
+      <div className="flex items-center gap-2 pl-3.5 pr-2 md:pl-4">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls={panelId}
+          className="flex min-h-[52px] min-w-0 flex-1 items-center gap-2.5 py-2 text-left"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary" aria-hidden="true">
+            <Icon name="repeat" size={16} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate t-body font-bold text-ink">{aptName}</span>
+            <span className="block truncate t-caption text-text-3">
+              {notes.length}회차{latestVisit ? ` · 최근 방문 ${latestVisit}` : ""}
+              {latest?.region ? ` · ${latest.region}` : ""}
+            </span>
+          </span>
+          <span className={`shrink-0 text-text-3 transition-transform ${open ? "rotate-90" : ""}`} aria-hidden="true">
+            <Chevron dir="right" />
+          </span>
+        </button>
+        {latest && !latest.isExample && (
+          <Link
+            href={`/notes/compare?noteId=${encodeURIComponent(latest.id)}`}
+            className="tap-line inline-flex min-h-[24px] shrink-0 items-center t-sub font-bold text-primary no-underline"
+          >
+            회차 비교 ›
+          </Link>
+        )}
+      </div>
+      {open && (
+        <div id={panelId} className="flex flex-col gap-3 border-t border-line bg-bg p-2 md:p-3">
+          {notes.map((n) => (
+            <PostCard key={n.id} n={n} />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -640,6 +709,9 @@ export function NotesFeedClient({
   const [view, setView] = useState<ViewMode>("grid");
   /* [1016] 데스크톱 왼쪽 레일의 지역 — 지금 목록에 있는 지역(구·동 짧은 라벨)만, 많은 순 8개 */
   const [regionPick, setRegionPick] = useState<string | null>(null);
+  /* [1023 · 임장노트 ①] 검색칸 — 제목·지역·단지명 클라이언트 필터(lib/notes/feed-search). 추가 조회 없음.
+     "더 보기" 로 받은 카드도 allNotes 에 합쳐지므로 그대로 걸린다. 지역 칩(regionPick)과 AND. */
+  const [query, setQuery] = useState("");
 
   /* ── [1007] 보는 사람·탭 — 서버(ISR)는 비로그인 공개 피드만 그린다. 마운트 뒤:
        ① 세션 프로브(공유 프라미스) → 로그인이면 세그먼트를 그리고 /api/me/alerts 로 관심 지역을 읽어
@@ -767,7 +839,12 @@ export function NotesFeedClient({
       : activeFilter === "내 관심 지역"
         ? allNotes.filter((n) => n.interested)
         : allNotes;
-  const visible = regionPick ? sorted.filter((n) => shortLabel(n) === regionPick) : sorted;
+  const regionFiltered = regionPick ? sorted.filter((n) => shortLabel(n) === regionPick) : sorted;
+  /* [1023 · 임장노트 ①] 검색어는 지역 칩 뒤에 AND 로 — 둘 다 걸린 카드만 */
+  const queryActive = query.trim().length > 0;
+  const visible = queryActive ? filterNotesByQuery(regionFiltered, query) : regionFiltered;
+  /* [1023 · 임장노트 ①] 내 노트 회차 묶기 — 같은 단지 2건 이상이면 묶음(피드 카드 배열에서만 · 폰 격자는 낱장) */
+  const mineGroups = useMemo(() => (mine ? groupNoteRounds(visible) : null), [mine, visible]);
   const railRegions = useMemo(() => {
     const m = new Map<string, number>();
     for (const n of allNotes) {
@@ -792,6 +869,7 @@ export function NotesFeedClient({
     }
     setFilter("최신");
     setRegionPick(null);
+    setQuery("");
     setMineFilters(DEFAULT_MINE_FILTERS);
     setExtra([]);
     setMoreError(null);
@@ -896,10 +974,22 @@ export function NotesFeedClient({
 
         {/* 조회 실패 — 이 경우 "노트가 없다" 고 읽히면 안 되므로 빈 상태와 분리한다 */}
         {activeLoadError && (
-          <div className="rounded-lg border border-line bg-surface px-3.5 py-3 t-sub text-text-2">
-            {mine ? "내 임장노트를" : "공개 임장노트를"}{" "}
-            <strong className="text-ink">불러오지 못했습니다</strong>. 노트가 없는 것이 아니라 조회가
-            실패한 것입니다. 잠시 후 다시 확인해 주세요.
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface px-3.5 py-3 t-sub text-text-2">
+            <span>
+              {mine ? "내 임장노트를" : "공개 임장노트를"}{" "}
+              <strong className="text-ink">불러오지 못했습니다</strong>. 노트가 없는 것이 아니라 조회가
+              실패한 것입니다.
+            </span>
+            {/* [1023 · 임장노트 ②] 내 노트 조회 실패 — 같은 자리에서 다시 시도(loadMine 재호출). 공개 피드는 서버 렌더라 손잡이 없음 */}
+            {mine && (
+              <button
+                type="button"
+                onClick={() => void loadMine()}
+                className="btn-outline btn-md shrink-0"
+              >
+                다시 시도
+              </button>
+            )}
           </div>
         )}
 
@@ -913,12 +1003,38 @@ export function NotesFeedClient({
 
         {/* 필터 칩 + 뷰 전환. [1006] 내 노트가 0건이면 필터·뷰 전환을 그리지 않는다 — 고를 것이 없다 */}
         {(!mine || allNotes.length > 0) && (
-        <div className="flex items-center justify-between gap-2 px-1">
+        <div className="flex flex-wrap items-center gap-2 px-1">
+          {/* [1023 · 임장노트 ①] 검색칸 — 필터 칩 줄 왼쪽(폰은 한 줄 통째, sm+ 는 왼쪽 220px). 높이 40 · 지우기 × 40px.
+              제목·지역·단지명을 손에 든 목록에서 즉시 거른다(추가 조회 없음). */}
+          <div className="field-focus relative flex h-10 basis-full items-center rounded-xl border border-line bg-surface sm:w-[220px] sm:basis-auto">
+            <Icon name="search" size={16} className="pointer-events-none absolute left-3 text-text-3" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="단지 · 지역 · 제목"
+              aria-label="노트 검색"
+              enterKeyHint="search"
+              autoComplete="off"
+              className="h-10 w-full min-w-0 bg-transparent pl-9 pr-10 t-body text-ink outline-none placeholder:text-text-3 [&::-webkit-search-cancel-button]:hidden"
+            />
+            {queryActive && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="검색어 지우기"
+                className="absolute right-0 flex h-10 w-10 items-center justify-center text-text-3"
+              >
+                <Icon name="x" size={16} />
+              </button>
+            )}
+          </div>
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
           {mine ? (
             /* [1006] 내 노트 — 필터는 아래 전용 줄(MineFilterBar). 여기엔 뷰 전환만 */
             <span className="t-caption text-text-3">보기 방식</span>
           ) : (
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 t-body [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="-mx-1 flex min-w-0 gap-2 overflow-x-auto px-1 t-body [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {filters.map((f) => (
               <button
                 key={f}
@@ -960,6 +1076,7 @@ export function NotesFeedClient({
               <FeedGlyph active={view === "feed"} />
             </button>
           </div>
+          </div>
         </div>
         )}
 
@@ -992,7 +1109,24 @@ export function NotesFeedClient({
           /* 빈 상태를 한 문장으로 뭉뚱그리면 "노트가 없다"와 "필터가 걸러 냈다"가
              섞인다. 노트는 있는데 필터 결과만 0건인 경우를 따로 적는다. */
           allNotes.length > 0 ? (
-            mineActive ? (
+            queryActive ? (
+              /* [1023 · 임장노트 ①] 검색어가 걸러 낸 0건 — 다음 행동은 "지우기". 지역 칩이 같이 걸려 있으면 그것도 적는다 */
+              <div className="flex flex-col items-center gap-2">
+                <EmptyState
+                  icon="search"
+                  title="검색어에 맞는 노트가 없어요"
+                  desc={`노트 ${allNotes.length}건 중 0건 · "${query.trim()}"${regionPick ? ` · 지역 ${regionPick}` : ""}`}
+                  className="w-full"
+                />
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="btn-soft px-5 py-2.5 t-body font-bold"
+                >
+                  검색어 지우기
+                </button>
+              </div>
+            ) : mineActive ? (
               /* [1006] 내 노트 — 필터가 걸러 낸 0건. 다음 행동은 "쓰기"가 아니라 "필터 지우기"다 */
               <div className="flex flex-col items-center gap-2">
                 <EmptyState
@@ -1055,9 +1189,18 @@ export function NotesFeedClient({
             {/* [1016] 게시물 피드 — 폰은 피드 보기일 때, md+ 는 항상(페이스북 구성). 폰 격자일 때 md+ 전용이라
                 숨긴 사진은 lazy 라 내려받지 않는다(priority 는 격자 첫 칸이 맡는다). */}
             <div className={`flex flex-col gap-4 md:gap-4 ${view === "grid" ? "hidden md:flex" : ""}`}>
-              {visible.map((n, i) => (
-                <PostCard key={n.id} n={n} priority={view === "feed" && i === 0} />
-              ))}
+              {mineGroups
+                ? /* [1023 · 임장노트 ①] 내 노트 — 같은 단지 2건 이상은 묶음 카드(접힘), 나머지는 낱장 */
+                  mineGroups.map((g, i) =>
+                    g.kind === "single" ? (
+                      <PostCard key={g.note.id} n={g.note} priority={view === "feed" && i === 0} />
+                    ) : (
+                      <RoundGroupCard key={`group-${g.key}`} aptName={g.aptName} notes={g.notes} latestVisit={g.latestVisit} />
+                    ),
+                  )
+                : visible.map((n, i) => (
+                    <PostCard key={n.id} n={n} priority={view === "feed" && i === 0} />
+                  ))}
             </div>
           </>
         )}
@@ -1079,7 +1222,8 @@ export function NotesFeedClient({
                 aria-busy={loadingMore}
                 className="btn-soft px-5 py-2.5 t-body font-bold disabled:opacity-60"
               >
-                {loadingMore ? "불러오는 중…" : "더 보기"}
+                {/* [1023 · 임장노트 ②] 실패 뒤에는 같은 버튼이 "다시 시도" — 눌러야 한다는 걸 라벨이 말한다(loadMore 재호출) */}
+                {loadingMore ? "불러오는 중…" : moreError ? "다시 시도" : "더 보기"}
               </button>
             )}
             {moreError && (

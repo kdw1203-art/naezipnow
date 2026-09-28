@@ -4,6 +4,8 @@
  * 같은 도구·같은 지역(또는 단지) 키로 직전 점수와 비교해 "▲/▼ N점" 비교 칩을 만들어줍니다.
  *
  * 저장 한도: 도구 × 키 조합당 최대 8개 (오래된 항목부터 제거).
+ *
+ * [1023 · AI 분석] 허브용 읽기(listRecentHistory · findLastRun · daysSinceRun) 추가 — 저장 형식 불변.
  */
 
 const KEY = "woodong:ai-history:v1";
@@ -86,6 +88,36 @@ export function pickHistoryCompareChip(
     tone,
     hint: `이전 분석은 ${prev.score}점 / ${new Date(prev.createdAt).toLocaleDateString("ko-KR")}`,
   };
+}
+
+/* [1023 · AI 분석] 허브가 읽는 두 조회 — 저장 형식·기존 API 는 그대로, 읽기만 늘렸다.
+   · listRecentHistory: 모든 키를 펼쳐 최신순 N개(같은 도구·같은 키는 최신 1건만) — 허브 "최근 실행 결과" 줄.
+   · findLastRun: 도구 + 키(단지 id)로 마지막 실행 1건 — 허브 실행 4칸의 "마지막 실행 N일 전" 캡션.
+   서버에서는 항상 빈 값(read 가 {} 를 낸다) — 마운트 뒤에만 부른다. */
+export function listRecentHistory(limit = 3): HistoryEntry[] {
+  const s = read();
+  const seen = new Set<string>();
+  const out: HistoryEntry[] = [];
+  for (const [k, list] of Object.entries(s)) {
+    const e = Array.isArray(list) ? list.find((x) => x && typeof x.createdAt === "string") : undefined;
+    if (!e || seen.has(k)) continue;
+    seen.add(k);
+    out.push(e);
+  }
+  out.sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
+  return out.slice(0, Math.max(0, limit));
+}
+
+export function findLastRun(tool: string, groupKey: string): HistoryEntry | null {
+  const list = listHistory(tool, groupKey);
+  return list.find((x) => x && typeof x.createdAt === "string") ?? null;
+}
+
+/** 실행 시각 → 며칠 전인지(0 = 오늘). 날짜가 아니면 null */
+export function daysSinceRun(createdAt: string, now: number = Date.now()): number | null {
+  const t = Date.parse(createdAt);
+  if (!Number.isFinite(t)) return null;
+  return Math.max(0, Math.floor((now - t) / 86_400_000));
 }
 
 /** 도구별 group key 생성 헬퍼 (도구마다 식별자가 다름) */

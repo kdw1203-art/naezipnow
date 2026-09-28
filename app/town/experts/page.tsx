@@ -1,6 +1,6 @@
+/* [1023 · 동네 ③] 소개 카드의 3칸 통계 중 머리(TownHero)와 겹치는 두 칸 삭제 — 평균 후기 평점만 한 줄(있을 때만). CountUp 은 더 쓰지 않는다. */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import Link from "next/link";
-import { CountUp } from "@/app/components/motion/CountUp";
 import { PageShell } from "../../components/PageShell";
 import { ExpertApplyCta } from "./ExpertApplyCta";
 import { QuoteRequestBanner } from "./QuoteRequest";
@@ -134,27 +134,19 @@ export default async function TownExpertsPage() {
         </div>
         {/* 커버리지 — 실측만. 0 이면 0.
             [970 · C-13] 다만 등록 전문가가 아예 0명이면 "0 · 0 · —" 세 칸은 지표가 아니라
-            빈 칸 세 개다 — 모집 중이라는 사실 한 줄로 바꾼다(조회 실패는 목록 쪽이 말한다). */}
+            빈 칸 세 개다 — 모집 중이라는 사실 한 줄로 바꾼다(조회 실패는 목록 쪽이 말한다).
+            [1023 · 동네 ③] 인증 전문가·누적 상담 답변 두 칸은 머리(TownHero stats)와 같은 숫자였다 — 한 번만.
+            머리에 없는 수는 평균 후기 평점뿐이라 그것만, 후기가 있을 때만 한 줄로 남긴다("후기 아직 없음" 빈 칸 삭제). */}
         {loaded.ok && loaded.items.length === 0 ? (
           <p className="mt-5 border-t border-line pt-4 t-sub text-text-2">
             모집 중 · 인증 심사 통과 순으로 공개
           </p>
-        ) : (
-        <div className="mt-5 grid grid-cols-3 gap-2 border-t border-line pt-4">
-          <div>
-            <div className="t-section text-ink t-num">{loaded.ok ? <CountUp value={verified.length} /> : "—"}</div>
-            <div className="t-caption text-text-2">인증 전문가</div>
-          </div>
-          <div>
-            <div className="t-section text-ink t-num">{loaded.ok ? <CountUp value={answered} /> : "—"}</div>
-            <div className="t-caption text-text-2">답변 완료 상담</div>
-          </div>
-          <div>
-            <div className="t-section text-ink t-num">{avgRating !== null ? avgRating.toFixed(1) : "—"}</div>
-            <div className="t-caption text-text-2">{avgRating !== null ? "평균 후기 평점" : "후기 아직 없음"}</div>
-          </div>
-        </div>
-        )}
+        ) : avgRating !== null ? (
+          <p className="mt-5 border-t border-line pt-4 t-sub text-text-2">
+            평균 후기 평점 <b className="t-num text-ink">{avgRating.toFixed(1)}</b> · 후기{" "}
+            <b className="t-num text-ink">{reviewed.reduce((n, e) => n + e.reviews, 0).toLocaleString("ko-KR")}</b>건
+          </p>
+        ) : null}
       </section>
 
       {/* ---------- 목록 ---------- */}

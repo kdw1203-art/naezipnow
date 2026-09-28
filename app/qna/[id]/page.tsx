@@ -1,5 +1,8 @@
+/* [1023 · 동네 ①] 질문 카드의 단지명·지역 배지 → 링크(단지 허브는 행에 complexId 가 있을 때만 · 지역은 카탈로그 매핑이 있을 때만).
+   오른쪽 "이 단지의 다른 기록" 의 공개 노트 링크는 지역 매핑이 있으면 /notes 대신 그 동네 홈(공개 임장노트 묶음) — /notes 에 검색 파라미터가 없다. */
 import { cache } from "react";
 import { AdZone } from "@/app/components/ads/AdZone";
+import { regionIdForName } from "@/lib/region/catalog";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { PageShell } from "@/app/components/PageShell";
@@ -161,6 +164,12 @@ export default async function QnaDetailPage({
     }
   }
   const topics = topicsOf(question);
+  /* [1023 · 동네 ①] 배지 링크의 근거 — 단지는 행의 id 만(이름 검색 결과로 배지를 링크로 만들지 않는다), 지역은 카탈로그 매핑 */
+  const complexIdHref = question.complexId ? `/complex/${encodeURIComponent(question.complexId)}` : null;
+  const regionId = question.region ? regionIdForName(question.region) : null;
+  const townHref = regionId ? `/town/${regionId}` : null;
+  const badgeCls = "rounded-full bg-primary-soft chip-pad t-sub font-semibold text-primary";
+  const badgeLinkCls = `${badgeCls} inline-flex min-h-[24px] items-center no-underline hover:underline`;
 
   const body = (
     <>
@@ -174,16 +183,22 @@ export default async function QnaDetailPage({
       <article className="card rise-in">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5">
-            {question.complexName && (
-              <span className="rounded-full bg-primary-soft chip-pad t-sub font-semibold text-primary">
-                {question.complexName}
-              </span>
-            )}
-            {question.region && (
-              <span className="rounded-full bg-primary-soft chip-pad t-sub font-semibold text-primary">
-                {question.region}
-              </span>
-            )}
+            {question.complexName &&
+              (complexIdHref ? (
+                <Link href={complexIdHref} className={badgeLinkCls} aria-label={`${question.complexName} 단지 허브`}>
+                  {question.complexName}
+                </Link>
+              ) : (
+                <span className={badgeCls}>{question.complexName}</span>
+              ))}
+            {question.region &&
+              (townHref ? (
+                <Link href={townHref} className={badgeLinkCls} aria-label={`${question.region} 동네 홈`}>
+                  {question.region}
+                </Link>
+              ) : (
+                <span className={badgeCls}>{question.region}</span>
+              ))}
             {question.bountyPoints > 0 && (
               <span className="rounded-full bg-primary-soft chip-pad t-sub font-semibold text-primary">
                 현상금 {question.bountyPoints.toLocaleString()}P
@@ -273,12 +288,22 @@ export default async function QnaDetailPage({
     label: "지도에서 위치 보기",
     desc: "주변 단지 · 실거래",
   });
-  related.push({
-    href: "/notes",
-    icon: "clipboard",
-    label: "공개 임장노트",
-    desc: "현장 기록",
-  });
+  /* [1023 · 동네 ①] 지역 매핑이 있으면 그 동네 홈(이웃 글 · 뉴스 · 공개 임장노트 묶음)으로, 없으면 전체 공개 노트 */
+  if (townHref && question.region) {
+    related.push({
+      href: townHref,
+      icon: "pin",
+      label: `${question.region} 동네 홈`,
+      desc: "이웃 글 · 뉴스 · 공개 임장노트",
+    });
+  } else {
+    related.push({
+      href: "/notes",
+      icon: "clipboard",
+      label: "공개 임장노트",
+      desc: "현장 기록",
+    });
+  }
   related.push({
     href: "/notes/new",
     icon: "notebook-pen",

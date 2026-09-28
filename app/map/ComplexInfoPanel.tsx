@@ -1,4 +1,5 @@
 "use client";
+/* [1023 · 지도] 검토 2장 ③·④ — 미연결 고지 뒷문장(권유) → 사실 한 줄 · SectionHead 머리 items-end → items-baseline(글자만 있는 줄). */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import { RingLoader } from "@/app/components/ui/BrandLoader";
 
@@ -464,7 +465,7 @@ function SectionHead({
   right?: ReactNode;
 }) {
   return (
-    <div className="mb-2 flex items-end justify-between gap-2">
+    <div className="mb-2 flex items-baseline justify-between gap-2">
       <div className="min-w-0">
         <div className="t-body font-bold text-ink">{title}</div>
         {sub ? <div className="mt-0.5 t-caption text-text-3">{sub}</div> : null}
@@ -859,7 +860,7 @@ export function ComplexInfoPanel({
 
           {data?.mode === "not_found" && !failed && (
             <div className="rounded-xl bg-bg px-3.5 py-2.5 t-sub text-text-2">
-              단지 마스터와 아직 연결되지 않았어요. 실거래·이야기는 아래를 참고해 주세요.
+              단지 마스터와 아직 연결되지 않음 · 아래는 실거래·이야기
             </div>
           )}
 

@@ -70,3 +70,8 @@ npx.cmd vercel --prod
    (`Structured data (JSON-LD) check` = 구조화 데이터, `Dead control check` = 장식용
    컨트롤, `Link integrity check` = 끊긴 링크, `Cache policy check` = 캐시 정책 …).
 3. 우선 `npx.cmd vercel --prod` 로 운영을 살리고, 스텝 이름을 세션에 전달한다.
+
+
+## 2026-09-28 갱신
+
+배포 절차의 현행 정본은 `docs/strategy/growth-1023.md` 2장 R1 표(브리프 → 병렬 구현 → 통합 검증 → 문서 → 패키지 → 소유자 적용 → 배포 확인)다. 세션이 push 를 못 하는 동안(git 403) 6단계는 소유자가 PowerShell 스크립트로 적용한다.

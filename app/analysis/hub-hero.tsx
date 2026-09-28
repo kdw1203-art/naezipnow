@@ -1,4 +1,6 @@
 "use client";
+/* [1023 · AI 분석] 검색 카드 아래 최근 실행 결과 3건(HubRecentRuns, history-store) · 단지 고른 뒤 실행 4칸에 "마지막 실행 N일 전"
+   캡션(같은 저장소를 단지 id 로 조회 — 기록이 있는 칸만). 마운트 뒤 읽는다(서버 HTML 은 비움). */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 
 import { useEffect, useState } from "react";
@@ -16,6 +18,8 @@ import {
 } from "./tool-catalog";
 import { useHubPicked } from "./hub-context";
 import { LastToolChip } from "./tool-cards-client";
+import { HubRecentRuns, recentRunWhen } from "./hub-recent";
+import { findLastRun } from "@/lib/ai/history-store";
 
 /* ============================================================
    분석 허브 히어로 — [UI-05 · UI-10 · 958]
@@ -125,6 +129,26 @@ export function HubHero({
   const regionHref = picked?.regionId
     ? `/analysis/timing?region=${encodeURIComponent(picked.regionId)}`
     : `/analysis/timing${q}`;
+  /* [1023] 실행 4칸의 "마지막 실행 N일 전" — 고른 단지 id 로 history-store 조회(기록이 있는 칸만). picked 는 마운트 뒤에만 생긴다 */
+  const pickedId = picked?.id ?? null;
+  const [lastRun, setLastRun] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!pickedId) {
+      setLastRun({});
+      return;
+    }
+    const next: Record<string, string> = {};
+    for (const id of WORKBENCH_CORE) {
+      try {
+        const e = findLastRun(id, pickedId);
+        const when = e ? recentRunWhen(e.createdAt) : null;
+        if (when) next[id] = when;
+      } catch {
+        /* 저장소 읽기 실패 — 캡션만 없다 */
+      }
+    }
+    setLastRun(next);
+  }, [pickedId]);
 
   /* [1021] 소유자(허브 머리 캡처): "이 문구와 디자인도 바꿔줘 구성도 함께". 슬로건 히어로(카드·워터마크·통계 띠·한도 띠)를 걷고
      다른 도구 머리와 같은 **흰 머리 한 줄**로: 아이콘 칩 + "AI 분석" + 사실 한 줄(실거래·단지·도구 수는 같은 실측값을 글자 안에) |
@@ -171,6 +195,9 @@ export function HubHero({
 
       </div>
 
+      {/* [1023] 최근 실행 결과 3건 — 기록이 있을 때만(마운트 뒤) */}
+      <HubRecentRuns />
+
       {/* 고른 즉시 실행 지점을 띄운다 — 다시 아래로 찾아 내려갈 필요가 없다 */}
       {picked && (
         <div className="card flex flex-col gap-2.5 rounded-2xl p-3.5">
@@ -198,8 +225,14 @@ export function HubHero({
                   <span className="tile-ico flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
                     <ToolGlyph id={WORKBENCH_GLYPH[id] ?? "radar"} size={22} />
                   </span>
-                  <span className="t-sub min-w-0 flex-1 truncate font-bold text-ink">
-                    {c.title}
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="t-sub truncate font-bold text-ink">{c.title}</span>
+                    {/* [1023] 같은 단지로 실행한 기록이 있을 때만 */}
+                    {lastRun[id] && (
+                      <span className="t-caption truncate text-text-3">
+                        {lastRun[id] === "오늘" ? "오늘 실행" : `마지막 실행 ${lastRun[id]}`}
+                      </span>
+                    )}
                   </span>
                 </Link>
               );

@@ -1,3 +1,5 @@
+/* [1023 · AI 분석] 나머지 8종의 단지 고르기 전 머리 — 네이비 면(hub-hero + 한지 글리프 칸) → 흰 PageHead(아이콘 칩 40 · h1.t-title · premise 한 줄).
+   브레드크럼은 PageShell 이 이미 그린다. 4종(frame) 머리·면책·캐시·메타는 그대로. */
 /* [1022 · 단지 분석 고도화] 지시 3 — 시세 예측의 내 조건에 대출 비율·금리·상환 기간(prediction-cost-fields.ts)을 붙여
    부채꼴 위 "비용 포함 손익분기" 선의 재료로 쓴다(엔진이 읽는 키만). 나머지는 그대로. */
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
@@ -5,11 +7,11 @@
    머리 한 줄(아이콘 칩 · 제목 · identity.useCase · 기준 시점 칩)을 WorkbenchClient 가 그린다(칩은 결과가 선 뒤 값이라 클라이언트).
    페르소나 전제문(persona.premise)은 넣지 않는다(1015 규칙). 나머지 8종은 예전 머리 그대로. 캐시·메타·면책은 그대로. */
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
+import { PageHead } from "@/app/components/PageHead";
 import { ToolGlyph, WORKBENCH_GLYPH } from "../../ToolGlyph";
-import { TIERS } from "../../tool-catalog";
+import { TIERS, WORKBENCH_ICONS } from "../../tool-catalog";
 import { AI_TOOL_IDS, isAiAnalysisToolId, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
@@ -98,38 +100,16 @@ export default async function AiToolPage({
         style={personaVars(persona)}
         data-tool={tid}
       >
-        {/* [958→1011] 도구 머리 — 네이비 면 + 결과물 글리프 + 제목 + 이 화면이 하는 일 한 줄.
-            [1011] "넣는 것 · 자동으로 불러오는 것 · 보여 주는 것" 3칸을 걷었다(소유자 지시).
-            이 서비스가 어떻게 만들어지는지는 쓰는 사람이 알 필요가 없는 층의 이야기다 —
-            무엇을 해 주는 화면인지는 제목과 바로 아래 한 줄이 이미 말한다. */}
+        {/* [958→1011→1023] 도구 머리 — 예전 네이비 면 + 한지 글리프 칸을 걷고 허브·지역 도구와 같은 흰 PageHead
+            (아이콘 칩 40 · h1.t-title · 이 화면이 하는 일 한 줄 = persona.premise). 브레드크럼은 PageShell 의 것 하나.
+            [1011] "넣는 것 · 자동으로 불러오는 것 · 보여 주는 것" 3칸은 그때 걷었다(소유자 지시). */}
         {!complexHeader && (
-        <section className="hub-hero rise-in flex flex-col gap-4 p-5 max-md:p-4 md:p-6">
-          <div className="flex items-start gap-4">
-            {/* [980] 글리프 칸에 도구 색 띠 — 네이비 위 글자색은 on-dark 토큰 그대로(대비) */}
-            <span
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-brand-hanji text-brand-hanji-ink"
-              style={{ boxShadow: `inset 0 0 0 3px ${persona.palette.accent}` }}
-            >
-              <ToolGlyph id={WORKBENCH_GLYPH[tid] ?? "radar"} size={44} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <nav className="t-caption font-bold tracking-wider text-on-dark-muted">
-                {/* [975] 네이비 위에서는 전역 링크 파랑이 2.32:1 로 무너진다 — 밑줄과 위치로 링크임을 말한다 */}
-                <Link href="/analysis" className="inline-flex min-h-[24px] items-center text-on-dark no-underline hover:underline">
-                  AI 분석
-                </Link>{" "}
-                {/* [1012 · R2 · B5] 허브 계열 이름과 같은 명사형(TIERS.complex.label) — "단지 하나를 깊게"는 옛 소망문의 꼬리였다 */}
-                › {TIERS.complex.label}
-              </nav>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <h1 className="t-title text-on-dark">{identity.title}</h1>
-                {/* [1015 · 규칙 C] 성격 배지(persona.character)는 걷었다 — 도구 색 띠(글리프 칸)만 남는다 */}
-              </div>
-              {/* [1008 · W] 이 화면이 하는 일 한 줄(쉬운 말) — 기능 설명(tagline)과 두 줄로 겹치던 것을 하나로 */}
-              <p className="mt-1 t-body text-on-dark">{persona.premise}</p>
-            </div>
-          </div>
-        </section>
+          <PageHead
+            icon={WORKBENCH_ICONS[tid] ?? "sparkles"}
+            title={identity.title}
+            sub={persona.premise}
+            subOnPhone
+          />
         )}
 
         <WorkbenchClient

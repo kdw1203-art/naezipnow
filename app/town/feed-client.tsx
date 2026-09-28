@@ -1,9 +1,11 @@
 "use client";
+/* [1023 · 동네 ①②③] 카드 지역 글자 → 동네 홈 링크(카탈로그 매핑이 있을 때만) · 피드 조회 실패 고지 흰 카드 + "다시 시도"(첫 장 재조회) · 빈 상태 꼬리 설명문 → 사실 한 줄. */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { regionIdForName } from "@/lib/region/catalog";
 import { Explain } from "@/app/components/explain/Explain";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { getHomePersonal } from "@/lib/client/home-personal";
 import Link from "next/link";
 import { seedGradient, seedCoverHeight } from "./shared";
@@ -179,6 +181,38 @@ function Cover({ card }: { card: FeedCard }) {
   );
 }
 
+/* [1023 · 동네 ①] 카드의 지역 배지 → 동네 홈(/town/{regionId}).
+   카드 전체가 <Link> 라 안에 <a> 를 또 두면 중첩 앵커(유효하지 않은 HTML · 브라우저가 쪼갠다).
+   그래서 role="link" 스팬이 클릭·Enter 를 카드 링크 대신 가로채 router.push 로 간다.
+   카탈로그(lib/region/catalog regionIdForName)에 매핑이 없는 지역은 예전처럼 글자만 — 죽은 링크를 만들지 않는다.
+   폰 24px 하한(min-h-[24px]). */
+function RegionChip({ region, className }: { region: string; className: string }) {
+  const router = useRouter();
+  const regionId = regionIdForName(region);
+  if (!regionId) return <span className={className}>{region}</span>;
+  const href = `/town/${regionId}`;
+  const go = (e: { preventDefault: () => void; stopPropagation: () => void }) => {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(href);
+  };
+  return (
+    <span
+      role="link"
+      tabIndex={0}
+      data-href={href}
+      aria-label={`${region} 동네 홈`}
+      onClick={go}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") go(e);
+      }}
+      className={`${className} inline-flex min-h-[24px] cursor-pointer items-center hover:underline`}
+    >
+      {region}
+    </span>
+  );
+}
+
 /* [1006] 이야기(이웃 글) 카드 — 노트 카드와 **다른 재질**.
    노트는 사진·데이터가 먼저 오는 커버 카드지만, 이야기는 **사람이 먼저** 온다: 작성자
    머리글자·이름 → 제목 → 동네 배지 → 댓글·사진 수. 사진이 없으면 커버를 지어내지 않고
@@ -227,9 +261,7 @@ function StoryCardView({ card, delay }: { card: FeedCard; delay: number }) {
           </div>
           <div className="flex flex-wrap items-center gap-1">
             {card.region && (
-              <span className="rounded-md bg-primary-soft px-1.5 py-px t-caption font-bold text-primary">
-                {card.region}
-              </span>
+              <RegionChip region={card.region} className="rounded-md bg-primary-soft px-1.5 py-px t-caption font-bold text-primary" />
             )}
             {card.tags.slice(0, 2).map((t) => (
               <span key={t} className="rounded-full bg-bg chip-pad t-caption font-semibold text-text-2">
@@ -303,9 +335,7 @@ function FeedCardView({ card, delay }: { card: FeedCard; delay: number }) {
               동네이야기의 축은 지역인데, 목록에서 어느 동네 글인지 훑어지지 않았다.
               "홍길동 · 관양동" 처럼 이름 뒤에 붙어 있으면 눈이 그걸 찾지 않는다. */}
           {card.region && (
-            <span className="w-fit rounded-md bg-primary-soft px-1.5 py-px t-caption font-bold text-primary">
-              {card.region}
-            </span>
+            <RegionChip region={card.region} className="w-fit rounded-md bg-primary-soft px-1.5 py-px t-caption font-bold text-primary" />
           )}
           <div className="flex items-center justify-between t-sub text-text-3">
             <span className="min-w-0 truncate">{card.author}</span>
@@ -475,19 +505,17 @@ export function TownFeed({
     return [...cards, ...extra.filter((c) => !seen.has(c.id))];
   }, [cards, extra]);
 
-  const loadMore = useCallback(async () => {
-    if (moreLoading) return;
-    const oldest = oldestOf(allCards);
-    if (oldest <= 0) {
-      setMore(false);
-      return;
-    }
-    const before = new Date(oldest).toISOString();
-    setMoreLoading(true);
-    setMoreError(null);
-    try {
+  /* [1023 · 동네 ②] 서버 첫 장의 실패 플래그를 로컬로 든다 — "다시 시도" 가 성공하면 고지를 내린다.
+     같은 fetch(/api/town/feed)를 쓰되 경계를 지금 시각으로 두어 첫 장을 다시 받는다(카드 0장이어도 동작). */
+  const [failed, setFailed] = useState(loadFailed);
+  const [retrying, setRetrying] = useState(false);
+
+  /** /api/town/feed 한 장 — 더 보기(경계 = 가장 오래된 카드)와 다시 시도(경계 = 지금)가 같이 쓴다 */
+  const fetchPage = useCallback(
+    async (beforeMs: number, seen: number) => {
+      const before = new Date(beforeMs).toISOString();
       const r = await fetch(
-        `/api/town/feed?before=${encodeURIComponent(before)}&limit=${PAGE_SIZE}&seen=${allCards.length}`,
+        `/api/town/feed?before=${encodeURIComponent(before)}&limit=${PAGE_SIZE}&seen=${seen}`,
         { cache: "no-store" },
       );
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -497,16 +525,48 @@ export function TownFeed({
         const have = new Set([...cards, ...prev].map((c) => c.id));
         return [...prev, ...items.filter((c) => !have.has(c.id))];
       });
+      return { hasMore: Boolean(j.hasMore), loadFailed: Boolean(j.loadFailed) };
+    },
+    [cards],
+  );
+
+  const loadMore = useCallback(async () => {
+    if (moreLoading) return;
+    const oldest = oldestOf(allCards);
+    if (oldest <= 0) {
+      setMore(false);
+      return;
+    }
+    setMoreLoading(true);
+    setMoreError(null);
+    try {
+      const j = await fetchPage(oldest, allCards.length);
       /* 한쪽 소스가 실패한 장은 "마지막"이 아니라 "일부를 못 받았다"고 말하고,
          버튼을 남겨 다시 누를 수 있게 한다 */
-      setMore(Boolean(j.hasMore) || Boolean(j.loadFailed));
+      setMore(j.hasMore || j.loadFailed);
       if (j.loadFailed) setMoreError("일부 글을 불러오지 못했어요. 잠시 후 다시 눌러 주세요.");
     } catch {
       setMoreError("더 불러오지 못했어요. 잠시 후 다시 눌러 주세요.");
     } finally {
       setMoreLoading(false);
     }
-  }, [allCards, cards, moreLoading]);
+  }, [allCards, fetchPage, moreLoading]);
+
+  /* [1023 · 동네 ②] 첫 장 다시 시도 — 서버(ISR)가 실패한 소스를 지금 다시 읽는다. 성공하면 고지가 내려가고
+     받은 카드는 기존 목록에 합쳐진다(중복 제거). 다시 실패하면 고지는 그대로다. */
+  const retryFeed = useCallback(async () => {
+    if (retrying) return;
+    setRetrying(true);
+    try {
+      const j = await fetchPage(Date.now(), 0);
+      setFailed(j.loadFailed);
+      if (j.hasMore) setMore(true);
+    } catch {
+      setFailed(true);
+    } finally {
+      setRetrying(false);
+    }
+  }, [fetchPage, retrying]);
 
   /* [966] 상세 → 뒤로가기 스크롤 복원. 카드는 props 로 이미 와 있고 커버 높이는
      시드로 먼저 확정되므로(위 Cover 주석) 첫 렌더가 곧 ready 다.
@@ -665,13 +725,25 @@ export function TownFeed({
         />
       </div>
 
-      {loadFailed && (
-        // 빨강 글씨 대신 배경으로 신호를 준다. --danger 토큰 자체는 이제 AA 를
-        // 넘지만(#c62828, soft 위 4.83), 11px 안내문은 text-ink(14.24:1)가 확실히
-        // 읽힌다 — 색은 "실패"라는 신호만 지고, 문장은 검정으로 읽는다.
-        <div className="rise-in-2 mb-3 rounded-lg border border-line bg-danger-soft px-3.5 py-2.5 t-sub text-ink">
-          {/* [970 · C-20] 해요체 통일 */}
-          일부 글의 조회가 실패했어요. 글이 없다는 뜻은 아니에요. 잠시 후 새로고침해 주세요.
+      {failed && (
+        /* [1023 · 동네 ②④] 위험색 면(bg-danger-soft) → 흰 카드 + "다시 시도"(40px). 문장은 사실만 —
+           실패했다는 것과 지금 손에 든 글 수. 권유("새로고침해 주세요")·설명("글이 없다는 뜻은 아니에요")은 걷었다. */
+        <div
+          role="alert"
+          className="rise-in-2 card mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg px-3.5 py-2.5 t-sub text-ink"
+        >
+          <span>
+            일부 글 조회 실패 · 받은 글 <b className="t-num">{allCards.length}</b>건
+          </span>
+          <button
+            type="button"
+            onClick={retryFeed}
+            disabled={retrying}
+            aria-busy={retrying}
+            className="btn-soft btn-md rounded-xl disabled:opacity-60"
+          >
+            {retrying ? "불러오는 중…" : "다시 시도"}
+          </button>
         </div>
       )}
 
@@ -682,7 +754,7 @@ export function TownFeed({
               [967 · 19] 아직 안 받은 장이 남아 있을 때도 마찬가지 — "없다"가 아니라
               "지금까지 받은 것에는 없다"고 말하고 더 보기로 잇는다. */}
           <div className="t-section text-ink">
-            {loadFailed
+            {failed
               ? "글을 불러오지 못했어요"
               : kind === "post" && !onlyMine && !more
                 ? /* [1006] 이야기 탭 0건 — 지금 운영 실측(사람 글 0건)이 그대로 보이는 자리다. 지어내지 않는다 */
@@ -693,18 +765,30 @@ export function TownFeed({
                     ? "내 관심지역 글이 아직 없어요"
                     : "이 조건의 글이 아직 없어요"}
           </div>
+          {/* [1023 · 동네 ③] 설명문 꼬리("…남기면 바로 보여요"·"…가장 먼저 노출돼요") → 사실 한 줄.
+              무엇을 셌는지(유형 · 관심지역)와 0건, 더 받을 장이 있으면 지금 손에 든 수. */}
           <div className="t-sub text-text-3">
-            {loadFailed
-              ? "데이터 조회가 실패했어요. 잠시 후 새로고침해 주세요."
-              : more
-                ? "더 보기로 이전 글을 이어서 볼 수 있어요"
-                : kind === "post"
-                  ? "다녀온 동네의 인상·질문·사진을 남기면 이 피드에 바로 보여요"
-                  : "첫 임장노트나 동네이야기를 남기면 가장 먼저 노출돼요"}
+            이 피드 · {onlyMine ? "내 관심지역 " : ""}
+            {kind === "post" ? "이웃 글" : kind === "note" ? "임장노트" : "글"} 0건
+            {more && allCards.length > 0 ? ` · 받은 글 ${allCards.length.toLocaleString("ko-KR")}건` : ""}
           </div>
-          <Link href="/town/write" className="btn-primary btn-md mt-2">
-            {kind === "post" ? "첫 이야기 쓰기" : "글쓰기"}
-          </Link>
+          {/* [1023 · 동네 ②] 실패면 "다시 시도" 가 먼저(위 고지와 같은 함수). 글쓰기는 채움 파랑을 쓰지 않는다 —
+              이 화면의 채움 파랑은 머리의 "이야기 쓰기" 하나(화면당 1개). */}
+          {failed ? (
+            <button
+              type="button"
+              onClick={retryFeed}
+              disabled={retrying}
+              aria-busy={retrying}
+              className="btn-soft btn-md mt-2 rounded-xl disabled:opacity-60"
+            >
+              {retrying ? "불러오는 중…" : "다시 시도"}
+            </button>
+          ) : (
+            <Link href="/town/write" className="btn-soft btn-md mt-2 rounded-xl no-underline">
+              {kind === "post" ? "첫 이야기 쓰기" : "글쓰기"}
+            </Link>
+          )}
         </div>
       ) : (
         <>

@@ -46,7 +46,7 @@ export function HomeTownBlock({
           <h2 className="t-section text-ink">동네이야기</h2>
           <Link
             href="/town"
-            className="inline-block py-[5px] text-[12px] text-text-3 transition-colors hover:text-primary"
+            className="inline-block py-[5px] t-sub text-text-3 transition-colors hover:text-primary"
           >
             더보기
           </Link>
@@ -115,7 +115,7 @@ export function HomeTownBlock({
           <h2 className="t-section text-ink">뉴스룸</h2>
           <Link
             href="/town/news"
-            className="inline-block py-[5px] text-[12px] text-text-3 transition-colors hover:text-primary"
+            className="inline-block py-[5px] t-sub text-text-3 transition-colors hover:text-primary"
           >
             더보기
           </Link>

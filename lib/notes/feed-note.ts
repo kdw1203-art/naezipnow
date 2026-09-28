@@ -11,6 +11,8 @@ import { listAiState, noteAiIntent, type ListAiState } from "@/lib/notes/ai-stat
 import { noteContentHash, storedContentHash } from "@/lib/notes/content-hash";
 import { resolveNoteCover } from "@/lib/notes/cover/resolve";
 
+/* [1023 · 임장노트] FeedNote 에 aptName(선택) 추가 — 피드 검색칸 · 내 노트 회차 묶기 키. 나머지 동일. */
+
 /* [967 · 19] 공개 임장노트 피드 카드 빌더 — 서버 전용.
  *
  * 예전엔 app/notes/page.tsx 안에만 있었다. "더 보기" 가 붙으면서 같은 카드가
@@ -82,6 +84,12 @@ export type FeedNote = {
    * 피드 카드가 비공개 노트에 공유·댓글 아이콘을 그리지 않는 근거(받아도 못 여는 링크를 만들지 않는다).
    */
   isPublic?: boolean;
+  /**
+   * [1023 · 임장노트] 단지명 원문(n.aptName, 공백 걷음) — 피드 검색칸(단지·지역·제목)과 내 노트
+   * 회차 묶기(같은 aptName 2건 이상)의 키. title 은 aptName 이 없을 때 노트 제목으로 대체되므로
+   * 묶기 키로는 못 쓴다. 없으면 생략(예전 응답도 같은 모양).
+   */
+  aptName?: string;
 };
 
 /** metadata.round — 정수 2 이상만 배지가 된다(1회차는 배지가 아니라 기본값이다) */
@@ -161,6 +169,8 @@ export function toFeedNote(
        [967 · 13] 대조 규칙은 lib/notes/region-match 로 — 상세의 관련 노트와 같은 잣대. */
     interested: matchesInterest(n.region, opts?.interestRegions ?? []),
     region: n.region,
+    /* [1023 · 임장노트] 검색·회차 묶기 키 — 있을 때만 */
+    ...(n.aptName?.trim() ? { aptName: n.aptName.trim() } : {}),
     // 인스타 피드형 커버 — 고른 썸네일 → 첫 사진(있으면). 없으면 클라이언트에서 단색 타일 폴백.
     coverUrl: cover.url,
     coverWideUrl: cover.template ? resolveNoteCover(n, { shape: "wide" }).url : cover.url,

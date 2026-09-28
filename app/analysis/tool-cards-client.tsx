@@ -1,4 +1,5 @@
 "use client";
+/* [1023 · AI 분석] 최근 사용 칩 문구 — "↻ 최근 사용 · {도구} 이어가기 ›" 의 권유 꼬리("이어가기")와 기호를 걷고 "최근 사용 · {도구} ›". */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
@@ -9,7 +10,7 @@ import { useHubPicked } from "./hub-context";
 /* 분석 허브 항목별 고유 기능(#411) — 클라이언트 조각 3종.
  *
  * 1) ToolLink: 카드 클릭 시 "마지막 사용 도구"를 localStorage 에 기록.
- * 2) LastToolChip: 다음 방문 때 "최근 사용 도구 이어가기" 칩 (기록 없으면 없음).
+ * 2) LastToolChip: 다음 방문 때 "최근 사용 · {도구} ›" 칩 (기록 없으면 없음).
  * 3) CompareTrayCount: 비교 카드 티저 — 지금 담겨 있는 후보 수(실카운트).
  *    0개면 아무것도 그리지 않는다(빈 트레이에 숫자 배지는 소음이다).
  */
@@ -88,7 +89,7 @@ export function LastToolChip() {
       href={last.href}
       className="chip inline-flex items-center gap-1.5 bg-primary-soft px-3.5 py-2 t-sub font-bold text-primary no-underline"
     >
-      ↻ 최근 사용 · {last.title} 이어가기 ›
+      최근 사용 · {last.title} ›
     </Link>
   );
 }

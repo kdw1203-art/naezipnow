@@ -1,4 +1,5 @@
 "use client";
+/* [1023 · AI 분석] 비교표 머리의 "실데이터 기준" 부연 라벨 제거 · AI 코멘트 판 네이비(.ai-panel + on-dark 토큰) → 흰 카드·잉크 토큰. */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -412,9 +413,7 @@ function ComplexCompareTable() {
     <div className="card flex flex-col gap-3 rounded-lg p-4" data-reveal="">
       <div className="chart-head">
         <span className="t-section text-ink">단지별 실거래 비교표</span>
-        <span className="t-caption ml-auto rounded border border-line px-1.5 py-px font-bold text-text-3">
-          실데이터 기준
-        </span>
+        {/* [1023] "실데이터 기준" 부연 라벨은 걷었다 — 제목이 이미 실거래를 말한다 */}
       </div>
       {loading && !items ? (
         /* 예전엔 "집계하는 중…" 한 줄이라 표가 나타날 때 화면이 통째로 튀었다 */
@@ -745,19 +744,20 @@ function RegionMarketSummary() {
           </div>
 
           {state.comment && (
-            <div className="ai-panel flex flex-col gap-2 rounded-2xl p-[18px]">
+            /* [1023] 흰 카드 위 잉크 토큰 — 예전 네이비 .ai-panel */
+            <div className="flex flex-col gap-2 rounded-2xl border border-line bg-bg p-4">
               <div className="flex items-start gap-3">
-                <span className="ai-chip h-[22px] w-[22px] shrink-0 rounded-lg t-sub">
+                <span className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-lg border border-line t-caption font-bold text-ink">
                   AI
                 </span>
-                <div className="flex-1 text-xs leading-[1.65] text-ai-text">
+                <div className="flex-1 t-sub text-text-1">
                   {state.comment}
                 </div>
-                <span className="shrink-0 rounded border border-on-dark-faint px-1.5 py-px t-caption font-bold text-ai-muted">
+                <span className="shrink-0 rounded border border-line px-1.5 py-px t-caption font-bold text-text-3">
                   {state.mode === "llm" ? "AI 생성" : "규칙 기반 요약"}
                 </span>
               </div>
-              <div className="t-caption text-ai-muted">
+              <div className="t-caption text-text-3">
                 {state.disclaimer}.
               </div>
             </div>

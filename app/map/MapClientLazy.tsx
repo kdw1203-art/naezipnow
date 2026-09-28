@@ -1,4 +1,5 @@
 "use client";
+/* [1023 · 지도] 로딩 셸 면 그라데이션 → bg-bg(지도 타일이 덮는 면 · 검토 2장 ④). */
 
 /* [OPT-06·26] 지도 클라이언트(5,300줄) 지연 로드 경계.
    서버 컴포넌트에서는 next/dynamic 의 ssr:false 를 쓸 수 없어서, 이 얇은
@@ -47,7 +48,7 @@ const LazyInner = nextDynamic(() => import("./map-client").then((m) => m.MapClie
 function MapPlaceholder() {
   return (
     <div
-      className="fixed inset-0 h-[100dvh] w-full animate-pulse bg-gradient-to-br from-line to-line-strong"
+      className="fixed inset-0 h-[100dvh] w-full animate-pulse bg-bg"
       aria-busy="true"
       aria-label="지도 불러오는 중"
     >

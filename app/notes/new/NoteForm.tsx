@@ -1,4 +1,6 @@
 "use client";
+/* [1023 · 임장노트] docs/review-1022.md 1장 — ① 3단계 NoteFinishStep 에 저장 전 요약 재료(summary) 전달(폼 상태 그대로, 새 데이터 없음)
+   · ③ 오프라인 배너 경고색 면 → 흰 카드 + 아이콘만 경고색(같은 화면의 다른 고지와 통일). 뒤로가기 보호(beforeunload)는 useUnsavedGuard 로 이미 있다. */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 0곳) · 손으로 적은 카드 그림자 1곳 제거(카드는 1px 선만). */
 /* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-bold/black 10곳을 font-bold(700)로 바꿨다. */
@@ -2420,15 +2422,16 @@ export function NoteForm({
         {offline && (
           <div
             role="status"
-            className="rise-in flex items-center gap-2.5 rounded-lg border border-warning-border bg-warning-soft px-4 py-3"
+            /* [1023 · 임장노트 ③] 경고색 면 → 흰 카드(같은 화면의 다른 고지와 같은 면) · 색 신호는 아이콘만 */
+            className="rise-in flex items-center gap-2.5 rounded-lg border border-line bg-surface px-4 py-3"
           >
-            <Icon name="warning" size={16} className="shrink-0" />
+            <Icon name="warning" size={16} className="shrink-0 text-warning" />
             {/* [985 · 15] "사진 업로드는 연결 후에 해주세요"는 이제 사실이 아니다 —
                 오프라인에서 담은 사진은 이 기기(IndexedDB)에 보관되고 연결이
                 돌아오면 자동으로 올라간다. 문구가 낡은 채로 남으면 사용자는
                 할 수 있는 일을 안 한다. */}
-            <p className="t-sub leading-[1.6] text-warning">
-              <b>오프라인.</b> 입력과 사진은 이 기기에 보관 중. 연결이 돌아오면 사진은 자동
+            <p className="t-sub leading-[1.6] text-text-2">
+              <b className="text-ink">오프라인.</b> 입력과 사진은 이 기기에 보관 중. 연결이 돌아오면 사진은 자동
               업로드, 저장은 한 번 더 누르면 됩니다.
             </p>
           </div>
@@ -3191,6 +3194,18 @@ export function NoteForm({
             visibilityFromPrefs={visibilityFromPrefs}
             socialShareConsent={socialShareConsent}
             onSocialConsent={setSocialShareConsent}
+            /* [1023 · 임장노트 ①] 저장 전 요약 — 폼 상태 그대로(점수는 저장 페이로드와 같은 composeScoresFromChecks) */
+            summary={{
+              aptName: loc.aptName,
+              region: loc.region,
+              visitDate,
+              scores: composeScoresFromChecks(checks),
+              checklistDone: checklistDoneCount,
+              checklistTotal,
+              photoCount: photos.length,
+              memo,
+              decision: decisionChoice,
+            }}
           />
         )}
         </div>

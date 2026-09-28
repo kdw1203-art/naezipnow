@@ -1,5 +1,7 @@
+/* [1023 · AI 분석] 머리 통일 — h1 t-display 손 마크업(.pxs-head) → 공용 PageHead(t-title). 본문은 그대로. */
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import { PageShell } from "@/app/components/PageShell";
+import { PageHead } from "@/app/components/PageHead";
 import { getAllRegionSnapshots } from "@/lib/market/store";
 import {
   getRegionRentYieldMap,
@@ -9,7 +11,6 @@ import {
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { logger } from "@/lib/log";
 import { ErrorState } from "@/app/components/ui";
-import { Icon } from "@/app/components/Icon";
 import { faqJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { Explain } from "@/app/components/explain/Explain";
 import { OTHER_SIDO_LABEL, sidoOfRegionName } from "@/lib/market/sido-group";
@@ -114,35 +115,34 @@ export default async function GapScreenerPage() {
 
   return (
     <PageShell breadcrumb="분석 › 전세가율·갭" toolScope={personaVars(TOOL_PERSONAS["market:gap"])}>
-      {/* 머리 — 아이콘 칩 · 제목 · 사실 한 줄(정의·계산은 ⓘ) | 집계 지역 수 칩 */}
-      <header className="pxs-head">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="tile-ico flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-            <Icon name="landmark" size={18} />
-          </span>
-          <div className="min-w-0">
-            <h1 className="t-display text-ink">전세가율·갭 스크리너</h1>
-            <p className="t-sub inline-flex flex-wrap items-center gap-0.5 text-text-3">
-              한국부동산원·KB 공표 전세가율 + 평균 매매가 · 갭 = 평균 매매가 − 전세 신고 중앙값(최근 3개월) · 전세 30건 미만은 비율 환산 추정
-              <Explain
-                term="jeonse-garyul"
-                title="전세가율과 갭"
-                body="전세가율은 매매가 대비 전세가의 비율이고, 높을수록 갭이 작다."
-                how={GAP_HOW}
-                source="한국부동산원(REB)·KB 공표 지역 통계 · 국토교통부 전월세 실거래 신고"
-              />
-            </p>
-          </div>
-        </div>
-        {rows.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="chip chip-soft chip-pad t-sub">{rows.length}곳</span>
-            {measured > 0 && (
-              <span className="chip chip-pad t-sub border border-line text-text-2">실측 갭 {measured}곳</span>
-            )}
-          </div>
-        )}
-      </header>
+      {/* 머리 — 아이콘 칩 · 제목 · 사실 한 줄(정의·계산은 ⓘ) | 집계 지역 수 칩. [1023] 공용 PageHead(t-title) */}
+      <PageHead
+        icon="landmark"
+        title="전세가율·갭 스크리너"
+        sub={
+          <>
+            한국부동산원·KB 공표 전세가율 + 평균 매매가 · 갭 = 평균 매매가 − 전세 신고 중앙값(최근 3개월) · 전세 30건 미만은 비율 환산 추정
+            <Explain
+              term="jeonse-garyul"
+              title="전세가율과 갭"
+              body="전세가율은 매매가 대비 전세가의 비율이고, 높을수록 갭이 작다."
+              how={GAP_HOW}
+              source="한국부동산원(REB)·KB 공표 지역 통계 · 국토교통부 전월세 실거래 신고"
+            />
+          </>
+        }
+        subOnPhone
+        actions={
+          rows.length > 0 ? (
+            <>
+              <span className="chip chip-soft chip-pad t-sub">{rows.length}곳</span>
+              {measured > 0 && (
+                <span className="chip chip-pad t-sub border border-line text-text-2">실측 갭 {measured}곳</span>
+              )}
+            </>
+          ) : undefined
+        }
+      />
 
       {loadFailed ? (
         <div className="mt-3">

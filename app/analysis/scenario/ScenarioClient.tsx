@@ -1,4 +1,5 @@
 "use client";
+/* [1023 · AI 분석] "실데이터 기준" 부연 라벨 2곳 제거 · AI 코멘트 판 네이비(.ai-panel + on-dark 토큰) → 흰 카드·잉크 토큰. 계산·문구 불변. */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
@@ -416,11 +417,7 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
                 {isReal
                   ? `${pickedName ? `${pickedName} · ` : ""}${baseline.regionName} 평균 · ${baseline.avgSaleLabel}`
                   : `${pickedName ? `${pickedName} · ` : "예시 시세 · "}8.4억`}
-                {isReal && (
-                  <span className="ml-1 rounded border border-line px-1 py-px t-caption font-semibold text-text-3 align-middle">
-                    실데이터 기준
-                  </span>
-                )}
+                {/* [1023] "실데이터 기준" 부연 라벨은 걷었다 — 바로 아래 출처 줄이 사실을 말한다 */}
               </span>
             </div>
             {isReal && (
@@ -610,11 +607,6 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
             <div className="card rounded-2xl p-[18px]">
               <div className="text-xs text-text-3">
                 월 원리금 ({calc.rate.toFixed(2)}%)
-                {isReal && (
-                  <span className="ml-1 rounded border border-line px-1 py-px t-caption font-semibold">
-                    실데이터 기준
-                  </span>
-                )}
               </div>
               <TweenNumber value={calc.pay / 10_000} format="eokmanwon" className="mt-1 block t-title text-ink" />
               <div className={`mt-0.5 inline-flex flex-wrap items-center gap-0.5 t-sub font-bold ${dsrTone(calc.dsr).cls}`}>
@@ -753,15 +745,16 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
             </div>
           </div>
 
-          <div className="rise-in-4 ai-panel flex flex-col gap-2 rounded-3xl p-5 shadow-[0_14px_36px_rgba(16,28,54,.22)]">
+          {/* [1023] 흰 카드 위 잉크 토큰 — 예전 네이비 .ai-panel(큰 그림자 포함) */}
+          <div className="rise-in-4 flex flex-col gap-2 rounded-3xl border border-line bg-bg p-5">
             <div className="flex items-start gap-3">
-              <span className="ai-chip h-[22px] w-[22px] shrink-0 rounded-lg t-sub">AI</span>
-              <div className="flex-1 t-body text-ai-text">{aiComment}</div>
-              <span className="shrink-0 rounded border border-on-dark-faint px-1.5 py-px t-caption font-bold text-ai-muted">
+              <span className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-lg border border-line t-caption font-bold text-ink">AI</span>
+              <div className="flex-1 t-body text-text-1">{aiComment}</div>
+              <span className="shrink-0 rounded border border-line px-1.5 py-px t-caption font-bold text-text-3">
                 규칙 기반 요약
               </span>
             </div>
-            <div className="t-caption text-ai-muted">
+            <div className="t-caption text-text-3">
               본 분석은 참고용이며 투자 판단의 책임은 이용자에게 있습니다.
             </div>
           </div>

@@ -1,4 +1,6 @@
 "use client";
+/* [1023 · 지도] 관심 단지 레이어(/api/me/watchlist + 지도가 가진 좌표) · 뷰포트 단지·거래 한 줄 · 레이어 실패 고지 재시도 버튼 ·
+   타일 실패·셸 면 그라데이션 → bg-bg. 새 API·새 계산 없음(lib/map/watch-layer). */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import {
@@ -71,6 +73,7 @@ import {
   tierTextColor,
 } from "@/lib/map/price-tiers";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
+import { placeWatchItems, viewportCountLabel } from "@/lib/map/watch-layer";
 import { useCopy } from "@/lib/ui/use-copy";
 import { formatKrwManwon, formatKrwWon } from "@/lib/format/krw";
 
@@ -1112,6 +1115,22 @@ export function MapClient({
   const [myNotesLoaded, setMyNotesLoaded] = useState(false);
   const myNotesManualRef = useRef(false);
 
+  /* ===== [1023 · 지도] 관심 단지 레이어 — /api/me/watchlist(기존 읽기 API) 목록에 지도가 이미 가진
+     좌표(SSR 시드·뷰포트 인기·클러스터 포인트)를 붙인다. 게스트(401)·실패·0건은 내 노트와 같은 규칙. */
+  const [showWatchlist, setShowWatchlist] = useState(false);
+  const [watchItems, setWatchItems] = useState<Array<{ complexId: string; complexName: string }>>([]);
+  const [watchState, setWatchState] = useState<"idle" | "unauth" | "failed">("idle");
+  const [watchLoaded, setWatchLoaded] = useState(false);
+  const watchManualRef = useRef(false);
+
+  /* [1023 · 지도] 레이어 실패 고지의 "다시 시도" — 키별 횟수를 올리면 해당 레이어 effect 가 다시 돈다
+     (각 fetch 는 effect 안의 함수라 밖에서 부를 수 없다 · 호출 순서는 그대로). */
+  const [layerRetry, setLayerRetry] = useState<Record<string, number>>({});
+  const retryLayer = useCallback(
+    (key: string) => setLayerRetry((m) => ({ ...m, [key]: (m[key] ?? 0) + 1 })),
+    [],
+  );
+
   /* ===== [#136] 월세 전환 레이어 — 지역별 월세 비중(신고 3개월) ===== */
   const [showRentShare, setShowRentShare] = useState(false);
   const [rentShareItems, setRentShareItems] = useState<
@@ -1189,6 +1208,7 @@ export function MapClient({
         setShowRedevelopment(on.has("redev"));
         setShowSupply(on.has("supply"));
         setShowMyNotes(on.has("mynotes"));
+        setShowWatchlist(on.has("watchlist"));
         setShowRentShare(on.has("rentshare"));
         setShowAuctions(on.has("auctions"));
         setShowSchools(on.has("schools"));
@@ -1209,6 +1229,7 @@ export function MapClient({
         redev?: boolean;
         supply?: boolean;
         myNotes?: boolean;
+        watchlist?: boolean;
         rentShare?: boolean;
         auctions?: boolean;
         schools?: boolean;
@@ -1222,6 +1243,7 @@ export function MapClient({
       if (typeof p.redev === "boolean") setShowRedevelopment(p.redev);
       if (typeof p.supply === "boolean") setShowSupply(p.supply);
       if (typeof p.myNotes === "boolean") setShowMyNotes(p.myNotes);
+      if (typeof p.watchlist === "boolean") setShowWatchlist(p.watchlist);
       if (typeof p.rentShare === "boolean") setShowRentShare(p.rentShare);
       if (typeof p.auctions === "boolean") setShowAuctions(p.auctions);
       if (typeof p.schools === "boolean") setShowSchools(p.schools);
@@ -1249,6 +1271,7 @@ export function MapClient({
           redev: showRedevelopment,
           supply: showSupply,
           myNotes: showMyNotes,
+          watchlist: showWatchlist,
           rentShare: showRentShare,
           auctions: showAuctions,
           schools: showSchools,
@@ -1271,6 +1294,7 @@ export function MapClient({
         showRedevelopment ? "redev" : null,
         showSupply ? "supply" : null,
         showMyNotes ? "mynotes" : null,
+        showWatchlist ? "watchlist" : null,
         showRentShare ? "rentshare" : null,
         showAuctions ? "auctions" : null,
         showSchools ? "schools" : null,
@@ -1283,7 +1307,7 @@ export function MapClient({
     } catch {
       /* 주소창 동기화 실패 — 지도 동작과 무관 */
     }
-  }, [showPriceOverlay, showListings, showRedevelopment, showSupply, showMyNotes, showRentShare, showAuctions, regionMetric, txType]);
+  }, [showPriceOverlay, showListings, showRedevelopment, showSupply, showMyNotes, showWatchlist, showRentShare, showAuctions, regionMetric, txType]);
   const [redevItems, setRedevItems] = useState<RedevelopmentProject[]>([]);
   /* 조회 실패와 "정말 0건"은 지도에서 똑같이 보인다 — 둘 다 마커가 없다.
      그래서 실패는 따로 들고 있다가 말로 알린다. */
@@ -1331,6 +1355,7 @@ export function MapClient({
     showRedevelopment,
     showSupply,
     showMyNotes,
+    showWatchlist,
     showRentShare,
     showAuctions,
     showSchools,
@@ -2074,6 +2099,22 @@ export function MapClient({
           >
             <Icon name="notebook-pen" size={14} className="inline align-middle" /> 내 노트
           </button>
+          {/* [1023 · 지도] 관심 단지 레이어 — 내 노트 옆. 목록은 기존 /api/me/watchlist */}
+          <button
+            type="button"
+            aria-pressed={showWatchlist}
+            onClick={() => {
+              watchManualRef.current = true;
+              setShowWatchlist((v) => !v);
+            }}
+            className={`chip whitespace-nowrap px-2.5 py-1.5 t-sub transition-colors ${
+              showWatchlist
+                ? "bg-primary-soft font-bold text-primary"
+                : "bg-[var(--glass-bg)] text-text-2"
+            }`}
+          >
+            <Icon name="bookmark" size={14} className="inline align-middle" /> 관심 단지
+          </button>
           {/* [#136] 월세 전환 레이어 — 지역별 월세 비중 */}
           <button
             type="button"
@@ -2780,7 +2821,7 @@ export function MapClient({
       window.clearTimeout(t);
       controller.abort();
     };
-  }, [showRedevelopment, viewBounds]);
+  }, [showRedevelopment, viewBounds, layerRetry.redev]);
 
   /* [#74] 입주 예정 레이어 — 토글 ON 시 1회 로드(전국 좌표분 ≤ 수백 건, 일 1회 갱신
      데이터라 뷰포트 재조회가 필요 없다). 실패는 실패로 들고 와 안내로 말한다. */
@@ -2814,7 +2855,7 @@ export function MapClient({
       });
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showSupply]);
+  }, [showSupply, layerRetry.supply]);
 
   /* [#130] 내 노트 로드 — 토글 ON 시 1회. 401 이면 로그인 안내로 말한다. */
   useEffect(() => {
@@ -2842,7 +2883,7 @@ export function MapClient({
       });
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showMyNotes]);
+  }, [showMyNotes, layerRetry.mynotes]);
 
   const myNoteMarkers = useMemo<MapMarkerData[]>(() => {
     if (!showMyNotes) return [];
@@ -2856,6 +2897,65 @@ export function MapClient({
       infoHtml: `<div style="min-width:160px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${n.title}</p><p style="font-size:11px;color:#888;margin:3px 0 0">${n.visitDate ?? "내 임장 기록"}${n.avgScore ? ` · 평점 ${n.avgScore}/5` : ""}</p><a href="/notes/${n.id}" style="font-size:11px;color:var(--primary);font-weight:700">노트 열기 →</a></div>`,
     }));
   }, [showMyNotes, myNotes]);
+
+  /* [1023 · 지도] 관심 단지 로드 — 토글 ON 시 1회. 401 은 로그인 안내(내 노트와 같은 처리). 재시도는 layerRetry.watch */
+  useEffect(() => {
+    if (!showWatchlist) return;
+    if (watchItems.length > 0 || watchState === "unauth") return;
+    const controller = new AbortController();
+    setWatchState("idle");
+    fetch("/api/me/watchlist", { signal: controller.signal })
+      .then(async (r) => {
+        if (r.status === 401) {
+          setWatchState("unauth");
+          return { items: [] };
+        }
+        if (!r.ok) throw new Error(String(r.status));
+        return r.json();
+      })
+      .then((json: { items?: Array<{ complexId?: unknown; complexName?: unknown }> }) => {
+        if (controller.signal.aborted) return;
+        const items = Array.isArray(json.items) ? json.items : [];
+        setWatchItems(
+          items
+            .filter((w) => typeof w.complexId === "string" && w.complexId)
+            .map((w) => ({
+              complexId: String(w.complexId),
+              complexName: typeof w.complexName === "string" ? w.complexName : "",
+            })),
+        );
+        setWatchLoaded(true);
+      })
+      .catch((e) => {
+        if (controller.signal.aborted || (e as Error)?.name === "AbortError") return;
+        setWatchState("failed");
+      });
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showWatchlist, layerRetry.watch]);
+
+  /* 좌표는 지도가 이미 가진 것만 — SSR 시드 · 뷰포트 인기 · 클러스터 포인트. 못 붙인 수는 고지로 말한다. */
+  const watchPlacement = useMemo(() => {
+    if (!showWatchlist || watchItems.length === 0) return { placed: [], unplaced: 0 };
+    return placeWatchItems(watchItems, [...danji, ...viewportDanji, ...extraPoints]);
+  }, [showWatchlist, watchItems, danji, viewportDanji, extraPoints]);
+  const watchSourceIds = useMemo(
+    () => new Set(watchPlacement.placed.map((p) => p.sourceId)),
+    [watchPlacement],
+  );
+  const watchMarkers = useMemo<MapMarkerData[]>(
+    () =>
+      watchPlacement.placed.map((p) => ({
+        id: `watch:${p.complexId}`,
+        lat: p.lat,
+        lng: p.lng,
+        label: p.name,
+        favorite: true,
+        pinColor: "var(--warning)",
+        infoHtml: "",
+      })),
+    [watchPlacement],
+  );
 
   /* [#136] 월세 전환 로드 — 토글 ON 시 1회 (6h 캐시 API) */
   useEffect(() => {
@@ -2875,7 +2975,7 @@ export function MapClient({
       });
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showRentShare]);
+  }, [showRentShare, layerRetry.rentshare]);
 
   const rentShareMarkers = useMemo<MapMarkerData[]>(() => {
     if (!showRentShare) return [];
@@ -2913,7 +3013,7 @@ export function MapClient({
       });
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAuctions]);
+  }, [showAuctions, layerRetry.auctions]);
 
   /* [943] POI 로드 — 정비사업과 같은 뷰포트 재조회 패턴(idle 후 500ms 디바운스).
      둘 중 하나라도 켜져 있으면 한 번에 받는다(학교·역이 같은 API). */
@@ -2942,8 +3042,7 @@ export function MapClient({
       window.clearTimeout(t);
       controller.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showSchools, showStations, viewBounds]);
+  }, [showSchools, showStations, viewBounds, layerRetry.poi]);
 
   const schoolMarkers = useMemo<MapMarkerData[]>(() => {
     if (!showSchools || !poiData) return [];
@@ -3203,6 +3302,7 @@ export function MapClient({
       ...redevelopmentMarkers,
       ...supplyMarkers,
       ...myNoteMarkers,
+      ...watchMarkers,
       ...rentShareMarkers,
       ...auctionMarkers,
       ...schoolMarkers,
@@ -3294,13 +3394,23 @@ export function MapClient({
             (m) => haversineM(radiusFilterLat, radiusFilterLng, m.lat, m.lng) <= radiusM,
           )
         : base;
+    /* [1023 · 지도] 관심 단지 — 이미 그려진 단지 마커에는 ★ 만 얹고(겹친 알약 방지),
+       화면 마커에 없는 단지만 별도 핀으로 */
+    const drawn = new Set(shownBase.map((m) => m.id));
+    const starred = watchSourceIds.size
+      ? shownBase.map((m) => (watchSourceIds.has(m.id) ? { ...m, favorite: true } : m))
+      : shownBase;
+    const watchExtra = watchMarkers.filter(
+      (_, i) => !drawn.has(watchPlacement.placed[i]?.sourceId ?? ""),
+    );
     return withSearch([
       ...regionLayer,
-      ...shownBase,
+      ...starred,
       ...listingMarkers,
       ...redevelopmentMarkers,
       ...supplyMarkers,
       ...myNoteMarkers,
+      ...watchExtra,
       ...rentShareMarkers,
       ...auctionMarkers,
       ...schoolMarkers,
@@ -3321,6 +3431,9 @@ export function MapClient({
     redevelopmentMarkers,
     supplyMarkers,
     myNoteMarkers,
+    watchMarkers,
+    watchSourceIds,
+    watchPlacement,
     rentShareMarkers,
     auctionMarkers,
     schoolMarkers,
@@ -3516,6 +3629,19 @@ export function MapClient({
       setListingPreviewId(m.id.slice("listing:".length));
       return;
     }
+    // [1023 · 지도] 관심 단지 핀 → 그 단지 패널(단지 마커와 같은 경로)
+    if (m.id.startsWith("watch:")) {
+      const id = m.id.slice("watch:".length);
+      if (danji.some((d) => d.id === id)) {
+        selectDanji(id);
+        return;
+      }
+      setSelectedId(null);
+      setCenter({ lat: m.lat, lng: m.lng });
+      setSearchMarker({ id, name: m.label, lat: m.lat, lng: m.lng });
+      setInfoComplex({ id, name: m.label });
+      return;
+    }
     // 클러스터 클릭 → 해당 지점으로 두 단계 확대
     if (m.id.startsWith("cluster:")) {
       setCenter({ lat: m.lat, lng: m.lng });
@@ -3631,7 +3757,7 @@ export function MapClient({
      기존엔 가짜 지역 시세 버블(동안구 7.1억 등)을 그렸으나, 사실 우선 원칙에 따라
      실데이터가 아닌 수치는 표시하지 않고 "지도를 불러올 수 없어요" 상태로 대체. */
   const gradientFallback = (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 overflow-hidden bg-gradient-to-br from-line to-line-strong px-8 text-center">
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 overflow-hidden bg-bg px-8 text-center">
       <Icon name="map" size={34} />
       <div className="t-section text-ink">지도를 불러오지 못했어요</div>
       <p className="max-w-[300px] t-sub text-text-2">
@@ -3679,7 +3805,8 @@ export function MapClient({
    * 다른 오버레이와 겹치지 않는지만 지키면 되고, 안내를 추가할 때 좌표를 새로
    * 고민할 일이 없다.
    */
-  const mapNotices: { key: string; text: string }[] = [];
+  /* [1023 · 지도] 실패 고지에는 그 레이어를 다시 조회하는 손잡이(retry)를 단다 — 문구만 있고 손잡이가 없던 7종. */
+  const mapNotices: { key: string; text: string; retry?: () => void }[] = [];
   if (viewportEmpty || clusterFetchStatus === "error") {
     mapNotices.push({
       key: "cluster",
@@ -3687,6 +3814,13 @@ export function MapClient({
         clusterFetchStatus === "error"
           ? "일시적 오류로 단지 정보를 불러오지 못했어요 — 잠시 후 다시 시도해 주세요"
           : "관심 단지를 고르면 임장노트·AI 정리·지도 비교로 이어져요 — 이 지역 좌표는 순차 확충 중",
+      retry:
+        clusterFetchStatus === "error"
+          ? () => {
+              const last = lastIdleRef.current;
+              if (last) scheduleClusterFetch(last.bounds, last.zoom);
+            }
+          : undefined,
     });
   }
   /* 절단 안내 — 조용히 두면 거짓 화면이 된다.
@@ -3710,15 +3844,38 @@ export function MapClient({
     mapNotices.push({
       key: "redev-failed",
       text: "정비사업을 불러오지 못했어요 — 잠시 후 다시 시도해 주세요. 사업장이 없다는 뜻은 아니에요",
+      retry: () => retryLayer("redev"),
     });
   }
   /* [#130] 내 노트 — 로그인·실패·0건을 구분해 말한다 */
   if (showMyNotes && myNotesState === "unauth" && myNotesManualRef.current) {
     mapNotices.push({ key: "mynotes-auth", text: "내 노트 레이어는 로그인 후 볼 수 있어요" });
   } else if (showMyNotes && myNotesState === "failed") {
-    mapNotices.push({ key: "mynotes-failed", text: "내 노트를 불러오지 못했어요 — 잠시 후 다시 시도해 주세요" });
+    mapNotices.push({
+      key: "mynotes-failed",
+      text: "내 노트를 불러오지 못했어요 — 잠시 후 다시 시도해 주세요",
+      retry: () => retryLayer("mynotes"),
+    });
   } else if (showMyNotes && myNotesState === "idle" && myNotesLoaded && myNotes.length === 0 && myNotesManualRef.current) {
     mapNotices.push({ key: "mynotes-empty", text: "좌표가 담긴 내 노트가 아직 없어요 — 작성 시 단지를 검색해 선택하면 지도에 찍혀요" });
+  }
+
+  /* [1023 · 지도] 관심 단지 — 로그인·실패·0건·좌표 못 붙인 수를 구분해 말한다(내 노트와 같은 규칙) */
+  if (showWatchlist && watchState === "unauth" && watchManualRef.current) {
+    mapNotices.push({ key: "watch-auth", text: "관심 단지 레이어는 로그인 후 볼 수 있어요" });
+  } else if (showWatchlist && watchState === "failed") {
+    mapNotices.push({
+      key: "watch-failed",
+      text: "관심 단지를 불러오지 못했어요 — 잠시 후 다시 시도해 주세요",
+      retry: () => retryLayer("watch"),
+    });
+  } else if (showWatchlist && watchState === "idle" && watchLoaded && watchItems.length === 0 && watchManualRef.current) {
+    mapNotices.push({ key: "watch-empty", text: "관심 단지가 아직 없어요" });
+  } else if (showWatchlist && watchLoaded && watchPlacement.unplaced > 0) {
+    mapNotices.push({
+      key: "watch-unplaced",
+      text: `관심 단지 ${watchPlacement.placed.length}곳 표시 · 좌표 없음 ${watchPlacement.unplaced}곳`,
+    });
   }
 
   /* [#136] 월세 전환 — 실패 안내 */
@@ -3726,6 +3883,7 @@ export function MapClient({
     mapNotices.push({
       key: "rentshare-failed",
       text: "월세 비중을 불러오지 못했어요 — 잠시 후 다시 시도해 주세요",
+      retry: () => retryLayer("rentshare"),
     });
   }
 
@@ -3734,6 +3892,7 @@ export function MapClient({
     mapNotices.push({
       key: "auctions-failed",
       text: "공매 물건을 불러오지 못했어요 — 잠시 후 다시 시도해 주세요. 물건이 없다는 뜻은 아니에요",
+      retry: () => retryLayer("auctions"),
     });
   } else if (showAuctions && auctionsLoaded && auctionItems.length === 0) {
     mapNotices.push({
@@ -3748,6 +3907,7 @@ export function MapClient({
     mapNotices.push({
       key: "poi-failed",
       text: "학교·지하철 정보를 불러오지 못했어요 — 잠시 후 다시 시도해 주세요",
+      retry: () => retryLayer("poi"),
     });
   } else if ((showSchools || showStations) && poiData) {
     if (poiData.tooWide) {
@@ -3773,6 +3933,7 @@ export function MapClient({
     mapNotices.push({
       key: "supply-failed",
       text: "입주 예정 물량을 불러오지 못했어요 — 잠시 후 다시 시도해 주세요. 물량이 없다는 뜻은 아니에요",
+      retry: () => retryLayer("supply"),
     });
   }
   if (geoApplied) {
@@ -3800,6 +3961,14 @@ export function MapClient({
      오른쪽 경계를 안 정한 게 원인이라, 최대폭을 우측 예약 열
      (--nz-map-right-lane)에서 빼서 같이 정한다. 자리가 좁으면 줄바꿈으로
      좁아질 뿐 사라지지는 않는다 — 겹침을 없애되 존재를 지우지 않는다. */
+  /* [1023 · 지도] 뷰포트 한 줄 — 목록 헤더와 같은 수(filteredDanji) · 거래 수는 서버가 뷰포트 기준으로 센 값이 있을 때만.
+     filterBar 는 priceMeta 선언보다 앞에서 만들어지므로 여기서 따로 만들어 칩 줄 끝에 붙인다. */
+  const viewportCountChip = (
+    <span className="map-count t-caption" title="화면 안 단지 수 · 실거래 건수">
+      {viewportCountLabel(filteredDanji.length, priceMeta.txCount, danjiLoadFailed)}
+    </span>
+  );
+
   const mdSidebarOpen = !selected && !infoComplex && panelOpen;
   const mdLeftLegendX = mdSidebarOpen
     ? "md:left-[356px] md:max-w-[calc(100vw_-_356px_-_var(--nz-map-right-lane))]"
@@ -3819,7 +3988,7 @@ export function MapClient({
          router.refresh() 로 지도가 통째로 다시 떴다. PullToRefresh 가 이 속성을 보고
          제스처를 무시한다(/map 은 경로로도 끈다 — 이 속성은 다른 화면에 삽입된 지도용). */
       data-ptr-ignore=""
-      className="lq-scope fixed inset-0 h-[100dvh] w-full touch-manipulation overflow-hidden bg-gradient-to-br from-line to-line-strong"
+      className="lq-scope fixed inset-0 h-[100dvh] w-full touch-manipulation overflow-hidden bg-bg"
       /* [968 · 24] 탭(끌지 않고 뗀 터치)은 클릭으로 온다 — 접힌 크롬을 즉시 편다.
          끌기는 click 을 만들지 않으므로 접힌 채 유지된다. */
       onClick={chromeCompact ? () => dispatchChrome("tap") : undefined}
@@ -3952,9 +4121,19 @@ export function MapClient({
             <div
               key={n.key}
               role="status"
-              className="max-w-full rounded-lg bg-[rgba(16,28,54,.82)] px-3.5 py-2 t-sub font-semibold text-white shadow-[0_6px_18px_rgba(16,28,54,.25)]"
+              className={`max-w-full rounded-lg bg-[rgba(16,28,54,.82)] px-3.5 py-2 t-sub font-semibold text-white shadow-[0_6px_18px_rgba(16,28,54,.25)] ${n.retry ? "pointer-events-auto" : ""}`}
             >
               {n.text}
+              {/* [1023 · 지도] 재시도 손잡이 — 글 속 단추 기준 24px 이상 */}
+              {n.retry && (
+                <button
+                  type="button"
+                  onClick={n.retry}
+                  className="map-notice-retry ml-2 inline-flex min-h-[24px] items-center align-middle t-sub font-bold"
+                >
+                  다시 시도
+                </button>
+              )}
             </div>
           ))}
 
@@ -4016,7 +4195,10 @@ export function MapClient({
           />
         </div>
         {/* 매매/전세는 filterBar 안의 실제 토글 — 장식용 칩이었던 것을 배선(item2) */}
-        <div className="hidden items-center gap-1.5 lg:flex">{filterBar}</div>
+        <div className="hidden items-center gap-1.5 lg:flex">
+          {filterBar}
+          {viewportCountChip}
+        </div>
         <div className="flex-1" />
         {/* 줌 단계 탭 (xl+) — 지도 위에 떠서 우측 마커 라벨(과천제이드자이류 가격
             알약)을 덮던 것을, 이 폭에서는 비어 있던 헤더 가운데로 올린다.
@@ -4137,6 +4319,7 @@ export function MapClient({
           className={`scroll-x-hidden-bar absolute left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+176px)] z-30 flex items-center gap-1.5 py-0.5 md:left-[356px] md:right-[240px] md:top-[calc(env(safe-area-inset-top,0px)+88px)] lg:hidden [&>*]:shrink-0 ${chromeFoldClass}`}
         >
           {filterBar}
+          {viewportCountChip}
         </div>
       )}
 

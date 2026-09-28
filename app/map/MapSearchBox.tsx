@@ -1,8 +1,10 @@
 "use client";
+/* [1023 · 지도] 입력 전 상태에 "최근 본 단지" 줄 — app/components/RecentComplexes 의 저장소(useRecentComplexes) 재사용 · 새 데이터 없음. */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Icon } from "@/app/components/Icon";
+import { useRecentComplexes } from "@/app/components/RecentComplexes";
 import { useSettledSearchQuery } from "@/lib/search/settle";
 import { formatKrwManwon } from "@/lib/format/krw";
 import { FuzzyBadge, Hl } from "@/app/search/complex-hit";
@@ -129,6 +131,9 @@ export function MapSearchBox({
   const rootRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const { query: settledQuery, compositionProps } = useSettledSearchQuery(query);
+  /* [1023 · 지도] 입력 전(빈 칸) 포커스 때만 최근 본 단지 줄을 연다 — 목록은 localStorage(+로그인 병합) */
+  const [recentOpen, setRecentOpen] = useState(false);
+  const { items: recents } = useRecentComplexes();
   /* 아직 굳지 않은 입력은 "아직 안 물어본 상태"다. 이걸 대기로 안 치면 치는
      도중에 "일치하는 단지가 없어요"가 떴다 사라진다 — 확인한 적 없는 사실을
      화면에 쓰는 셈이다. */
@@ -227,6 +232,14 @@ export function MapSearchBox({
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
+  useEffect(() => {
+    if (!recentOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setRecentOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [recentOpen]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -286,6 +299,7 @@ export function MapSearchBox({
     if (e.nativeEvent.isComposing) return;
     if (e.key === "Escape") {
       if (open) setOpen(false);
+      else if (recentOpen) setRecentOpen(false);
       else e.currentTarget.blur();
       return;
     }
@@ -323,6 +337,7 @@ export function MapSearchBox({
   const q = settledQuery.trim();
   const panelOpen = open && query.trim().length >= 1;
   const showSimilar = !busy && !notice && complexes.length === 0 && similar.length > 0;
+  const recentPanelOpen = recentOpen && query.trim().length === 0 && recents.length > 0;
 
   return (
     <div ref={rootRef} className={`relative ${className}`}>
@@ -341,7 +356,10 @@ export function MapSearchBox({
           autoFocus={autoFocus}
           onChange={(e) => setQuery(e.target.value)}
           {...compositionProps}
-          onFocus={() => (hasResults || similar.length > 0 || failed || !!notice) && setOpen(true)}
+          onFocus={() => {
+            if (hasResults || similar.length > 0 || failed || !!notice) setOpen(true);
+            setRecentOpen(true);
+          }}
           onKeyDown={onKeyDown}
           role="combobox"
           aria-expanded={panelOpen}
@@ -367,6 +385,35 @@ export function MapSearchBox({
           </button>
         )}
       </div>
+
+      {/* [1023 · 지도] 입력 전 — 최근 본 단지(최대 8 · 최신순). 고르면 단지 선택 흐름 그대로(좌표는 상위가 조회) */}
+      {recentPanelOpen && !panelOpen && (
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 rounded-2xl border border-[rgba(255,255,255,.9)] bg-[var(--glass-bg-strong)] p-1.5 shadow-[0_16px_40px_rgba(16,28,54,.2)]">
+          <div className="px-3 pb-0.5 pt-1.5 t-caption font-bold text-text-3">최근 본 단지</div>
+          <div role="list" aria-label="최근 본 단지">
+            {recents.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                role="listitem"
+                onClick={() => {
+                  onSelectComplex({ id: r.id, name: r.name, region: r.region ?? "" });
+                  setQuery(r.name);
+                  setRecentOpen(false);
+                }}
+                className="flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left hover:bg-bg"
+              >
+                <Icon name="clock" size={16} className="shrink-0" />
+                <span className="min-w-0 flex-1 truncate t-body font-bold text-ink">
+                  {r.name}
+                  {r.region ? <span className="ml-1 t-sub font-normal text-text-3">{r.region}</span> : null}
+                </span>
+                <span className="shrink-0 t-sub font-bold text-primary">선택 ›</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {panelOpen && (
         <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-[60vh] overflow-y-auto rounded-2xl border border-[rgba(255,255,255,.9)] bg-[var(--glass-bg-strong)] p-1.5 shadow-[0_16px_40px_rgba(16,28,54,.2)]">

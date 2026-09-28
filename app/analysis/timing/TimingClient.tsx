@@ -1,4 +1,5 @@
 "use client";
+/* [1023 · AI 분석] 머리 통일 — h1 t-display 손 마크업(.pxs-head) → 공용 PageHead(t-title). 본문은 그대로. */
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -6,6 +7,7 @@ import Link from "next/link";
 import type { TrendResult, MarketTemp } from "@/lib/market/temperature";
 import type { RegionMonthlyVolumeRow } from "@/lib/market/store";
 import { Icon } from "@/app/components/Icon";
+import { PageHead } from "@/app/components/PageHead";
 import type { HeroKpi } from "@/app/components/analysis/ToolHero";
 import { Gauge } from "@/app/components/viz/Gauge";
 import { Spark } from "@/app/components/viz/Spark";
@@ -286,34 +288,31 @@ export function TimingClient({
 
   return (
     <>
-      {/* 머리 — 아이콘 칩 · 제목 · 출처 한 줄 | 단지로 찾기 · 지역 선택 */}
-      <header className="pxs-head">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="tile-ico flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-            <Icon name="trending-up" size={18} />
-          </span>
-          <div className="min-w-0">
-            <h1 className="t-display text-ink">시세·타이밍 분석</h1>
-            <p className="t-sub text-text-3">{sourceLine}</p>
-          </div>
-        </div>
-        <div className="flex w-full flex-wrap items-end gap-2 lg:w-auto lg:justify-end">
-          <TimingComplexPicker
-            key={`${deep.c ?? ""}|${deep.a ?? ""}`}
-            initialComplexId={deep.c}
-            initialApt={deep.a}
-            currentRegion={selected.id}
-            onRegion={selectRegion}
-          />
-          <TimingRegionSelect options={regions} value={selected.id} disabled={loading} onChange={selectRegion} />
-          {loading && (
-            <span className="t-sub inline-flex min-h-[24px] items-center gap-1.5 font-bold text-primary">
-              <span className="pulse-dot" style={{ color: "var(--brand-red)" }} />
-              {selected.label} 불러오는 중
-            </span>
-          )}
-        </div>
-      </header>
+      {/* 머리 — 아이콘 칩 · 제목 · 출처 한 줄 | 단지로 찾기 · 지역 선택. [1023] 공용 PageHead(t-title) */}
+      <PageHead
+        icon="trending-up"
+        title="시세·타이밍 분석"
+        sub={sourceLine}
+        subOnPhone
+        actions={
+          <>
+            <TimingComplexPicker
+              key={`${deep.c ?? ""}|${deep.a ?? ""}`}
+              initialComplexId={deep.c}
+              initialApt={deep.a}
+              currentRegion={selected.id}
+              onRegion={selectRegion}
+            />
+            <TimingRegionSelect options={regions} value={selected.id} disabled={loading} onChange={selectRegion} />
+            {loading && (
+              <span className="t-sub inline-flex min-h-[24px] items-center gap-1.5 font-bold text-primary">
+                <span className="pulse-dot" style={{ color: "var(--brand-red)" }} />
+                {selected.label} 불러오는 중
+              </span>
+            )}
+          </>
+        }
+      />
 
       {/* 타일 4칸 — 값이 있는 칸만 */}
       {kpis.length > 0 && (

@@ -1,3 +1,5 @@
+/* [1023 · 임장노트] docs/review-1022.md 1장 ① — 목록 카드 머리 아래에 점수 축 3개(배점 대비 비율 높은 순, lib/notes/best-axes) 작은 막대 + 숫자.
+   값은 아래 배점 표와 같은 month.picks[].breakdown — 새 계산 없음. 막대 폭은 points/max 뿐(inline width). */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -21,6 +23,7 @@ import { seoAlternates } from "@/lib/seo/alternates";
 import { CoverImage } from "@/app/components/CoverImage";
 import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 import { seedGradient } from "@/lib/town/shared";
+import { topBreakdownAxes } from "@/lib/notes/best-axes";
 
 /* ============================================================
    N13 — 이달의 공개 임장노트(월별 상세).
@@ -230,6 +233,24 @@ export default async function BestNotesMonthPage({
                   <p className="mt-1 t-sub font-bold text-text-3">/ {MAX_SCORE}점</p>
                 </div>
               </div>
+
+              {/* [1023 · 임장노트 ①] 점수 축 3개 — 왜 뽑혔는지 카드에서 바로. 전체 5축·원값은 아래 배점 표 */}
+              <ul className="notes-best-axes m-0 mt-3 grid list-none grid-cols-1 gap-x-4 gap-y-1.5 p-0 sm:grid-cols-3" aria-label="점수 축 상위 3개">
+                {topBreakdownAxes(p.breakdown, 3).map((b) => (
+                  <li key={b.key} className="min-w-0">
+                    <div className="flex items-baseline justify-between gap-2 t-caption">
+                      <span className="truncate font-bold text-text-2">{b.label}</span>
+                      <span className="t-num shrink-0 text-ink">
+                        {b.points}
+                        <span className="font-normal text-text-3"> / {b.max}</span>
+                      </span>
+                    </div>
+                    <div className="notes-best-axes__track mt-1" aria-hidden="true">
+                      <span className="notes-best-axes__bar" style={{ width: `${b.pct}%` }} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
 
               {p.note.summary?.trim() && (
                 <p className="mt-3 t-body text-text-2">

@@ -1,3 +1,5 @@
+/* [1023 · AI 분석] 시장 계열 카드의 티저 지역 고정 해제 — teaserByRegion 이 오면 추세선·값 줄을 RegionTeaser(클라이언트)가
+   고른 단지의 지역으로 바꿔 그린다. 없으면 예전처럼 서버가 그린다(JS 0). */
 import type { ReactNode } from "react";
 import { Icon } from "@/app/components/Icon";
 import { Delta } from "@/app/components/num/Delta";
@@ -6,6 +8,7 @@ import { marketPersonaByHref, personaVars } from "@/lib/ai/tool-persona";
 import { ToolGlyph, HUB_GLYPH } from "./ToolGlyph";
 import { Sparkline } from "./Sparkline";
 import { ToolLink } from "./tool-cards-client";
+import { RegionTeaser } from "./hub-region-teaser";
 import { ACCEPTS_COMPLEX, TIERS, type HubTool } from "./tool-catalog";
 import type { HubTeaser } from "./hub-teasers";
 
@@ -24,14 +27,18 @@ function sparkTone(series: readonly number[]): string {
 export function ToolCard({
   t,
   teaser,
+  teaserByRegion,
   extra,
 }: {
   t: HubTool;
   teaser?: HubTeaser | null;
+  /** [1023] 지역별 같은 티저(regionId → 티저). 있으면 고른 단지의 지역으로 바꿔 보인다 */
+  teaserByRegion?: Record<string, HubTeaser> | null;
   extra?: ReactNode;
 }) {
   const tier = TIERS[t.tier];
-  const spark = teaser && teaser.series.length >= 2 ? teaser.series : null;
+  const swap = Boolean(teaserByRegion && Object.keys(teaserByRegion).length > 0);
+  const spark = !swap && teaser && teaser.series.length >= 2 ? teaser.series : null;
   /* [980] 지역·시장 4종에도 성격을 준다. AI 도구와 **같은 개성 체계이되 다른 계열**이다
      — 이쪽은 AI 가 판단하는 화면이 아니라 공표 통계를 그대로 늘어놓는 화면이라,
      성격 라벨도 "실측·흐름·체온·순위" 처럼 재는 행위로 붙였다. 나머지 카드(체험·기록)는
@@ -67,13 +74,15 @@ export function ToolCard({
             <Sparkline values={spark} width={72} height={24} />
           </span>
         )}
+        {swap && <RegionTeaser slot="spark" fallback={teaser ?? null} byRegion={teaserByRegion!} />}
       </div>
       {/* [989] 배지는 제목 글줄 안으로 — 사유는 app/analysis/hub-tiers.tsx 주석 참고
           (2열 좁은 칸에서 배지가 제 줄을 차지해 옆 카드에 빈 띠를 만들었다) */}
       {/* [1015 · 규칙 C] 성격 배지("실측·흐름·체온·순위")는 걷었다 — 도구 색만 남는다 */}
       <span className="t-section text-ink">{t.title}</span>
       <span className="t-sub text-text-2">{persona ? persona.premise : t.desc}</span>
-      {teaser && (
+      {swap && <RegionTeaser slot="value" fallback={teaser ?? null} byRegion={teaserByRegion!} />}
+      {!swap && teaser && (
         /* [963] .fit — 캡션이 화면이 아니라 **이 칸** 폭으로 판정되게. 2열 그리드의
            좁은 칸에서 캡션이 3줄로 접히던 것을 자간·줄바꿈 규칙이 흡수한다. */
         <span className="fit flex flex-col gap-0.5 rounded-lg bg-bg px-2.5 py-1.5">
@@ -83,7 +92,7 @@ export function ToolCard({
           ) : (
             <span className="t-num t-section t-fit text-ink">{teaser.value}</span>
           )}
-          {/* [958] 티저는 강남구 고정 표본 — 지역을 캡션이 아니라 값 옆에서 말한다 */}
+          {/* [958] 티저 기본값은 강남구 표본 — 지역을 캡션이 아니라 값 옆에서 말한다. [1023] 시장 카드는 위 RegionTeaser 가 고른 단지의 지역으로 바꾼다 */}
           <span className="t-caption t-fit text-text-3">{teaser.caption}</span>
         </span>
       )}

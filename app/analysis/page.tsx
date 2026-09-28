@@ -1,3 +1,5 @@
+/* [1023 · AI 분석] 검토(docs/review-1022.md 3장) 적용 — 최근 실행 결과 3건(hub-recent) · 실행 4칸 "마지막 실행 N일 전" · 시장 카드 티저 지역 고정 해제
+   (loadHubTeasersByRegion → ToolCard teaserByRegion) · 계열 "N종" 배지 → 그 계열 앵커 · 기록 시작 카드 게스트/로그인 같은 최소 높이(.hub-start). */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import { AdZone } from "@/app/components/ads/AdZone";
 import Link from "next/link";
@@ -7,7 +9,7 @@ import type { InspectionNote } from "@/lib/inspection/store-db";
 import { listPublicNotesWithFallback } from "@/lib/inspection/public-notes-cached";
 import { listPublicNotes } from "@/lib/inspection/store-db";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
-import { loadHubTeasers, type HubTeaser } from "./hub-teasers";
+import { loadHubTeasers, loadHubTeasersByRegion, type HubTeaser, type HubTeasers } from "./hub-teasers";
 import { loadHomeCoverage } from "@/lib/newui/home-coverage";
 import { FEATURE_RULES } from "@/lib/subscriptions/access";
 import { isTierOnSale } from "@/lib/subscriptions/sell-config";
@@ -104,8 +106,14 @@ function TierHead({ id, count }: { id: TierId; count: number }) {
         </span>
         {/* [1022 · 정렬·글씨·테마] 섹션 제목은 t-section — 화면 제목(t-title)은 머리 하나뿐 */}
         <h2 className="accent-underline t-section text-balance text-ink">{t.question}</h2>
-        {/* [1015 · 규칙 C] 제목 옆 배지("단지 1곳 · 12종")는 개수만, 기능 설명 한 줄(hint)은 걷었다 */}
-        <span className="t-caption ml-auto shrink-0 text-text-3 tabular-nums">{count}종</span>
+        {/* [1015 · 규칙 C] 제목 옆 배지("단지 1곳 · 12종")는 개수만, 기능 설명 한 줄(hint)은 걷었다.
+            [1023] 배지는 그 계열 앵커 링크(24px 하한) — 위 계열 칩과 같은 목적지 */}
+        <a
+          href={`#tier-${id}`}
+          className="t-caption ml-auto inline-flex min-h-[24px] shrink-0 items-center text-text-3 tabular-nums no-underline hover:underline"
+        >
+          {count}종
+        </a>
       </div>
     </div>
   );
@@ -128,8 +136,10 @@ export const revalidate = 86_400;
 export default async function AnalysisHubPage() {
   /* 카드별 실측 티저 + 12구간 추세선. 실패/없음이면 해당 키가 아예 없고,
      카드에서는 그 줄이 빠질 뿐이다(가짜 수치·"—" 채움 없음). */
-  const [teasers, coverage, publicRows] = await Promise.all([
+  const [teasers, teasersByRegion, coverage, publicRows] = await Promise.all([
     loadHubTeasers().catch(() => ({})),
+    /* [1023] 대표 지역 8곳의 시장 티저 — 고른 단지의 지역으로 카드가 바뀐다(hub-region-teaser). 실패는 빈 객체(강남 한 벌 그대로) */
+    loadHubTeasersByRegion().catch(() => ({}) as Record<string, HubTeasers>),
     /* [958] 히어로 커버리지 — 홈과 같은 6시간 캐시 실측값(0이면 0, 실패면 —) */
     loadHomeCoverage().catch(() => ({ txCount: null, complexCount: null, regionCount: null })),
     /* 게스트 미리보기 — 공개 노트의 실제 AI 요약. [949] 모두에게 같은 값이라 페이지 캐시(ISR)에
@@ -182,17 +192,27 @@ export default async function AnalysisHubPage() {
           >
             <TierHead id="market" count={MARKET_LIVE.length} />
             <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-              {MARKET_LIVE.map((t) => (
-                <ToolCard
-                  key={t.href}
-                  t={t}
-                  teaser={
-                    t.teaser && t.teaser in teasers
-                      ? (teasers as Record<string, HubTeaser>)[t.teaser]
-                      : null
+              {MARKET_LIVE.map((t) => {
+                const key = t.teaser;
+                /* [1023] 이 카드의 티저를 지역별로 모은다(있는 지역만). 비면 서버 렌더 그대로 */
+                const byRegion: Record<string, HubTeaser> = {};
+                if (key) {
+                  for (const [rid, set] of Object.entries(teasersByRegion)) {
+                    const v = (set as Record<string, HubTeaser | undefined>)[key];
+                    if (v) byRegion[rid] = v;
                   }
-                />
-              ))}
+                }
+                return (
+                  <ToolCard
+                    key={t.href}
+                    t={t}
+                    teaser={
+                      key && key in teasers ? (teasers as Record<string, HubTeaser>)[key] : null
+                    }
+                    teaserByRegion={byRegion}
+                  />
+                );
+              })}
             </div>
           </section>
 
@@ -209,7 +229,8 @@ export default async function AnalysisHubPage() {
             <HubRecordStart
               guest={
                 publicPreview ? (
-                  <div className="card flex flex-col gap-2.5 rounded-lg p-4">
+                  /* [1023] .hub-start — 게스트·로그인 카드 같은 최소 높이(세션 판정 뒤 바꿔 끼울 때 레이아웃 점프를 줄인다) */
+                  <div className="card hub-start flex flex-col gap-2.5 rounded-lg p-4">
                     <span className="t-section text-ink">공개 노트 AI 정리 미리보기</span>
                     <div className="ai-panel flex flex-col gap-1.5 rounded-lg p-3.5">
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -240,7 +261,7 @@ export default async function AnalysisHubPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="card flex flex-col gap-2.5 rounded-lg p-4">
+                  <div className="card hub-start flex flex-col gap-2.5 rounded-lg p-4">
                     {/* 공개 AI 미리보기 0건 — 샘플 리포트로 채우지 않는다. [1015 · 규칙 B·D] 빈 화면은 한 줄 */}
                     <span className="t-section text-ink">공개된 AI 정리 없음</span>
                     <div className="flex flex-wrap gap-2">

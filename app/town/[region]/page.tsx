@@ -1,3 +1,4 @@
+/* [1023 · 동네 ①] 머리 캡션(facts) — 이 동네 공개 임장노트 N · 최근 3건. 페이지가 이미 읽는 노트 배열만 센다(추가 조회 없음). */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -132,10 +133,13 @@ export default async function TownRegionHomePage({
     .slice(0, 8);
   /* [1006] 이 동네 뉴스 — 뉴스룸과 같은 조립기(같은 사건 접기·요약·출처)로 행을 만든다 */
   const newsRows = buildNewsRows(regionPosts.filter((p) => p.isAutomated)).slice(0, 6);
-  const notes: InspectionNote[] =
-    notesR.status === "fulfilled"
-      ? notesR.value.filter((n) => noteMatchesRegion(n, nameKey)).slice(0, 6)
-      : [];
+  /* [1023 · 동네 ①] 지역 일치 노트 전량(읽어 온 100편 안에서)을 먼저 들고, 목록은 6편만 그린다.
+     머리 캡션의 N 은 전량 쪽 — 목록 6편을 "N편" 이라 부르면 실제보다 적게 말한다. */
+  const regionNotes: InspectionNote[] =
+    notesR.status === "fulfilled" ? notesR.value.filter((n) => noteMatchesRegion(n, nameKey)) : [];
+  const notes: InspectionNote[] = regionNotes.slice(0, 6);
+  /* 최근 3건 — listPublicNotes 는 최신순이므로 앞 3편 */
+  const recentNotes = regionNotes.slice(0, 3);
   const snapshot: RegionMarketSnapshot | null =
     snapR.status === "fulfilled" ? snapR.value : null;
   const postsFailed = postsR.status === "rejected";
@@ -172,6 +176,28 @@ export default async function TownRegionHomePage({
         }
         subOnPhone
         className="mb-4 max-md:mb-3"
+        /* [1023 · 동네 ①] 이 동네 공개 임장노트 N · 최근 3건(제목 링크). 0편이면 캡션을 그리지 않는다(PageHead 규칙). */
+        facts={
+          regionNotes.length > 0 ? (
+            <>
+              <span>
+                이 동네 공개 임장노트 <b className="t-num text-ink">{regionNotes.length}</b>
+              </span>
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <span>최근 {recentNotes.length}건</span>
+                {recentNotes.map((n) => (
+                  <Link
+                    key={n.id}
+                    href={`/notes/${n.id}`}
+                    className="inline-flex min-h-[24px] max-w-[220px] items-center truncate text-text-2 no-underline hover:underline"
+                  >
+                    {n.title}
+                  </Link>
+                ))}
+              </span>
+            </>
+          ) : undefined
+        }
         actions={
           <>
             <KeywordAlertButton scope="news" query={region.name} label={`${region.name} 새 소식`} />
@@ -327,8 +353,9 @@ export default async function TownRegionHomePage({
         <div className="mb-2 flex items-baseline justify-between px-1">
           <h2 className="t-section text-ink">
             {region.name} 공개 임장노트{" "}
-            {notes.length > 0 && (
-              <span className="t-sub font-medium text-text-3">{notes.length}편</span>
+            {/* [1023 · 동네 ①] 머리 캡션과 같은 수(지역 일치 전량) — 목록 6편과 다른 수를 두 번 말하지 않는다 */}
+            {regionNotes.length > 0 && (
+              <span className="t-sub font-medium text-text-3">{regionNotes.length}편</span>
             )}
           </h2>
           <Link href="/notes" className="inline-block py-[5px] t-sub font-bold text-primary">

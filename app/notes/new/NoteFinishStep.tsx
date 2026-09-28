@@ -1,5 +1,7 @@
 "use client";
-/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
+/* [1023 · 임장노트] docs/review-1022.md 1장 ① — 3단계 끝(저장 버튼 위)에 "저장 전 요약" 카드: 단지 · 방문일 · 점수 5축 · 체크 N/M · 사진 N ·
+   판단 · 메모 첫 줄. 폼 상태만 줄로 만든다(lib/notes/finish-summary) — 새 데이터 없음. summary prop 은 선택(없으면 안 그린다).
+   [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useEffect, useRef } from "react";
 import { Icon } from "@/app/components/Icon";
@@ -7,6 +9,8 @@ import { Switch } from "@/app/components/ui/Switch";
 import { CharCount } from "@/app/components/ui/CharCount";
 import { NotePhotoStrip, NoteUploadProgress } from "./NotePhotoBlocks";
 import type { UploadItem } from "./NoteForm";
+import { finishSummaryRows, type FinishSummaryInput } from "@/lib/notes/finish-summary";
+import { decisionLabel, type DecisionChoice } from "@/lib/inspection/decision";
 
 /* [1006] 3단계 "무엇을 남길까"의 본문 — 메모 · 사진 줄 · 사진 추가/촬영 · 공개 스위치 ·
    소셜 소재 동의. NoteForm 에서 분리해 next/dynamic 으로 받는다(DecisionStep·NoteDetailFields
@@ -39,6 +43,9 @@ export function NoteFinishStep(p: {
   visibilityFromPrefs: boolean;
   socialShareConsent: boolean;
   onSocialConsent: (v: boolean) => void;
+  /** [1023] 저장 전 요약 재료 — NoteForm 의 상태 그대로(판단은 choice 로 받아 여기서 라벨로 — 초기 번들에 decision 모듈을 넣지 않는다).
+      생략하면 요약 카드를 그리지 않는다 */
+  summary?: Omit<FinishSummaryInput, "decisionLabel"> & { decision: DecisionChoice | null };
 }) {
   /* [967 · 8] 본문 자동 높이 — 내용만큼 자라고(4줄 최소) 40vh 에서 멈춰 안에서 스크롤.
      height 대신 min-height 를 밀어 사용자가 손잡이로 키운 높이는 지킨다. */
@@ -159,6 +166,24 @@ export function NoteFinishStep(p: {
             </span>
           </span>
         </label>
+      )}
+
+      {/* [1023 · 임장노트 ①] 저장 전 요약 — 저장 버튼 바로 위. 없는 값은 "—"(지어내지 않는다) */}
+      {p.summary && (
+        <section className="rise-in-6 card flex flex-col gap-2 p-4" aria-label="저장 전 요약">
+          <div className="t-body font-bold text-ink">저장 전 요약</div>
+          <dl className="m-0 flex flex-col divide-y divide-line" data-tone="plain">
+            {finishSummaryRows({
+              ...p.summary,
+              decisionLabel: p.summary.decision ? decisionLabel(p.summary.decision) : null,
+            }).map((r) => (
+              <div key={r.label} className="flex min-h-[32px] items-baseline gap-3 py-1.5">
+                <dt className="w-14 shrink-0 t-sub text-text-3">{r.label}</dt>
+                <dd className="m-0 min-w-0 flex-1 break-words t-sub text-ink">{r.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
       )}
     </>
   );

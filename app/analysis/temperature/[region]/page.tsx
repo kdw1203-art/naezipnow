@@ -1,3 +1,4 @@
+/* [1023 · AI 분석] 임의 px(text-[13/12/15px]) 17곳 → 램프 유틸(t-body/t-sub/t-section). 구조·데이터 불변. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cache } from "react";
@@ -181,7 +182,7 @@ export default async function TemperatureRegionPage({
           dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
         />
         <section className="rise-in card mb-6 p-[var(--pad-card)]">
-          <p className="py-8 text-center text-[13px] leading-[1.7] text-text-3">
+          <p className="py-8 text-center t-body text-text-3">
             아직 이 지역의 저장된 주가 없습니다.
             <br />
             매매가격지수 시계열이 4구간 이상 모여야 온도를 계산할 수 있고, 그 뒤부터 매주
@@ -192,7 +193,7 @@ export default async function TemperatureRegionPage({
             </Link>
           </p>
         </section>
-        <p className="mb-8 text-[12px] text-text-3">
+        <p className="mb-8 t-sub text-text-3">
           다른 지역의 기록은{" "}
           <Link href="/analysis/temperature" className="font-bold text-primary underline">
             시장 온도 주간 기록
@@ -303,11 +304,11 @@ export default async function TemperatureRegionPage({
             <span className="t-body font-bold text-text-3">/100</span>
           </div>
           <div className="min-w-0 flex-1">
-            <div className="inline-flex items-center gap-0.5 text-[13px] font-bold text-ink">
+            <div className="inline-flex items-center gap-0.5 t-body font-bold text-ink">
               {latest.headline}
               <Explain {...TEMPERATURE_EXPLAIN} title="시장 온도" />
             </div>
-            <div className="mt-0.5 text-[12px] text-text-3">
+            <div className="mt-0.5 t-sub text-text-3">
               {formatWeekKorean(latest.weekStart)}이 속한 주
               {diff !== null && (
                 <>
@@ -321,16 +322,16 @@ export default async function TemperatureRegionPage({
             </div>
           </div>
         </div>
-        {flow && <p className="mt-3 text-[13px] leading-[1.7] text-text-1">{flow}</p>}
+        {flow && <p className="mt-3 t-body text-text-1">{flow}</p>}
         {/* [1015 · 규칙 B·D] 읽는 법 세 문장 → 사실 한 줄(방법은 위 ⓘ) */}
         <p className="mt-2 t-caption text-text-3">그 주에 마지막으로 관측한 값(주간 평균 아님) · 공식 v{latest.formulaVersion}</p>
       </section>
 
       {/* 주간 추이 */}
       <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
-        <h2 className="flex items-baseline justify-between gap-3 text-[15px] font-bold text-ink">
+        <h2 className="flex items-baseline justify-between gap-3 t-section text-ink">
           주간 추이
-          <span className="shrink-0 text-[12px] font-medium text-text-3">
+          <span className="shrink-0 t-sub font-medium text-text-3">
             최고 {maxScore} · 평균 {avgScore} · 최저 {minScore}
           </span>
         </h2>
@@ -360,14 +361,14 @@ export default async function TemperatureRegionPage({
 
       {/* 주별 기록 */}
       <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <h2 className="text-[15px] font-bold text-ink">
+        <h2 className="t-section text-ink">
           주별 기록{" "}
-          <span className="text-[12px] font-medium text-text-3">최근 {recent.length}주</span>
+          <span className="t-sub font-medium text-text-3">최근 {recent.length}주</span>
         </h2>
         <div className="relative mt-3 overflow-x-auto">
-          <table className="w-full min-w-[460px] text-left text-[13px]">
+          <table className="w-full min-w-[460px] text-left t-body">
             <thead>
-              <tr className="border-b border-border text-[12px] text-text-3">
+              <tr className="border-b border-border t-sub text-text-3">
                 <th className="py-2 font-medium">주(월요일)</th>
                 <th className="py-2 text-right font-medium">온도</th>
                 <th className="py-2 text-right font-medium">지수 최근 평균</th>
@@ -385,7 +386,7 @@ export default async function TemperatureRegionPage({
                     <td className="py-2.5 text-right tabular-nums">
                       <span className="font-bold text-ink">{h.score}</span>
                       {d !== null && (
-                        <span className="ml-1 text-[12px]">
+                        <span className="ml-1 t-sub">
                           <ScoreDiff d={d} unit="" sr="전주보다" />
                         </span>
                       )}
@@ -396,7 +397,7 @@ export default async function TemperatureRegionPage({
                         ? `${h.volumeRecentCount.toLocaleString("ko-KR")} / ${h.volumePriorCount.toLocaleString("ko-KR")}건`
                         : "미반영"}
                     </td>
-                    <td className="py-2.5 text-[12px] text-text-2">{h.headline}</td>
+                    <td className="py-2.5 t-sub text-text-2">{h.headline}</td>
                   </tr>
                 );
               })}
@@ -419,25 +420,25 @@ export default async function TemperatureRegionPage({
       <section className="rise-in-3 mb-8 flex flex-wrap gap-2">
         <Link
           href={`/analysis/timing?region=${encodeURIComponent(region.id)}`}
-          className="rounded-xl bg-primary px-5 py-3 text-[13px] font-bold text-white shadow-[var(--shadow-cta)]"
+          className="rounded-xl bg-primary px-5 py-3 t-body font-bold text-white shadow-[var(--shadow-cta)]"
         >
           {region.name} 지수·거래량 원본 보기
         </Link>
         <Link
           href={`/region/${region.id}`}
-          className="card tile px-5 py-3 text-[13px] font-bold text-ink"
+          className="card tile px-5 py-3 t-body font-bold text-ink"
         >
           {region.name} 지역 허브
         </Link>
         <Link
           href="/analysis/temperature"
-          className="card tile px-5 py-3 text-[13px] font-bold text-ink"
+          className="card tile px-5 py-3 t-body font-bold text-ink"
         >
           다른 지역 온도
         </Link>
         <Link
           href="/methodology"
-          className="card tile px-5 py-3 text-[13px] font-bold text-ink"
+          className="card tile px-5 py-3 t-body font-bold text-ink"
         >
           데이터 방법론
         </Link>

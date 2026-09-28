@@ -1,4 +1,5 @@
 "use client";
+/* [1023 · AI 분석] 로그인 카드에 .hub-start(게스트 카드와 같은 최소 높이) — 세션 판정 뒤 바꿔 끼울 때 레이아웃 점프를 줄인다. */
 
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -15,7 +16,7 @@ export function HubRecordStart({ guest }: { guest: ReactNode }) {
   const { loggedIn, myNoteCount } = useHubViewer();
   if (!loggedIn) return <>{guest}</>;
   return (
-    <div className="card tile flex flex-col gap-3 rounded-lg p-4 md:flex-row md:items-center md:justify-between">
+    <div className="card tile hub-start flex flex-col gap-3 rounded-lg p-4 md:flex-row md:items-center md:justify-between">
       <div className="flex flex-col gap-1">
         {/* [1015 · 규칙 D] 사실 한 줄(숫자) — 기능 설명("점수화하고 … 정리해 드려요")은 걷었다 */}
         <span className="t-section text-ink">

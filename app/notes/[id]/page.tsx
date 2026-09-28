@@ -1,5 +1,8 @@
-/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
+/* [1023 · 임장노트] docs/review-1022.md 1장 — ① RelatedNotes 에 aptName 을 넘겨 같은 단지를 앞줄로 · ② 댓글 조회 실패 자리에 "다시 시도"
+   (CommentsRetry — 서버 조회를 router.refresh 로 다시 돌린다) · ③ 지역·단지 칩 마지막 칩의 네이비 채움 → 테두리 칩 + 굵기(화면당 채움 1개 규칙).
+   [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import Link from "next/link";
+import { CommentsRetry } from "./comments-retry";
 import { displayAuthorLabel, isLabAuthor } from "@/lib/notes/author-label";
 import { cache } from "react";
 import { AdZone } from "@/app/components/ads/AdZone";
@@ -1018,9 +1021,9 @@ export default async function NoteDetailPage({
                 <span
                   key={c}
                   className={
-                    /* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
+                    /* [1023 · 임장노트 ③] 마지막 칩(단지)의 네이비 채움 → 테두리 칩 + 잉크 굵게 — 화면당 채움 1개는 판단 카드 */
                     i === v.chips.length - 1
-                      ? "rounded-full bg-brand-navy px-2.5 py-1 t-sub font-bold text-on-dark"
+                      ? "rounded-full border border-line-strong bg-surface px-2.5 py-1 t-sub font-bold text-ink"
                       : "rounded-full border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2"
                   }
                 >
@@ -1517,10 +1520,13 @@ export default async function NoteDetailPage({
               loggedIn={Boolean(viewerEmail)}
             />
           ) : (
-            /* 조회 실패를 "댓글 없음" 으로 그리지 않는다 */
-            <p role="alert" className="t-body text-text-2">
-              댓글을 불러오지 못했어요. 잠시 후 새로고침해 주세요.
-            </p>
+            /* 조회 실패를 "댓글 없음" 으로 그리지 않는다. [1023 · 임장노트 ②] 같은 자리에 다시 시도(서버 조회를 다시 돌린다) */
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p role="alert" className="t-body text-text-2">
+                댓글을 불러오지 못했어요.
+              </p>
+              <CommentsRetry />
+            </div>
           )}
         </section>
       )}
@@ -1569,7 +1575,7 @@ export default async function NoteDetailPage({
 
       {/* [3차] 같은 지역 다른 노트 + 지역 허브 연결 — 읽고 끝나는 상세를 순환로로 */}
       {realNote.isPublic && (
-        <RelatedNotes currentId={realNote.id} region={realNote.region} />
+        <RelatedNotes currentId={realNote.id} region={realNote.region} aptName={realNote.aptName} />
       )}
 
       {/* A9 공개노트 전환 훅 — 비로그인 열람자에게 관심단지·알림 로그인 유도 */}

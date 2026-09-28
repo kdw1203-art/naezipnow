@@ -1,4 +1,5 @@
 "use client";
+/* [1023 · AI 분석] 결과 판 — 네이비 AI 패널(.ai-panel + on-dark 토큰) → 흰 카드(bg-bg · 잉크 토큰). 임의 px → 램프. 구조·데이터·문구 불변. */
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -237,7 +238,7 @@ export function AiNoteAnalysisCard({
       {/* 노트 선택 */}
       {notesLoaded && notes.length > 0 && (
         <label className="flex flex-col gap-1">
-          <span className="text-[12px] font-bold text-text-3">분석할 노트</span>
+          <span className="t-sub font-bold text-text-3">분석할 노트</span>
           <select
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
@@ -253,7 +254,7 @@ export function AiNoteAnalysisCard({
       )}
       {/* 허브 단지 선택기에서 고른 단지 컨텍스트 (실시세 프리필) */}
       {seedComplexName && (
-        <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-primary-soft px-3 py-2 text-[12px] font-bold text-primary">
+        <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-primary-soft px-3 py-2 t-sub font-bold text-primary">
           <span>선택 단지 {seedComplexName}</span>
           {seedRegionLabel && <span className="text-text-2">· {seedRegionLabel}</span>}
           {seedSnap && (
@@ -277,51 +278,51 @@ export function AiNoteAnalysisCard({
       )}
 
       {state.kind === "done" ? (
-        <div className="ai-panel flex flex-col gap-2 rounded-lg p-3.5">
+        /* [1023] 흰 카드(bg-bg) 위 잉크 토큰 — 예전 네이비 .ai-panel 의 on-dark·ai-* 토큰을 걷었다 */
+        <div className="flex flex-col gap-2 rounded-lg border border-line bg-bg p-3.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="t-sub font-bold text-on-dark">
+            <span className="t-sub font-bold text-ink">
               {state.result.headline}
             </span>
-            {/* [1009 · A] 팔레트 색(emerald·amber) → 판 토큰, title= 말풍선(마우스를 올려야만 보임) 제거 —
-                규칙 요약일 때의 설명은 바로 아래 줄에 글자로 있다. 이 판의 날것 rgba 4곳·text-white 2곳도
-                on-dark 토큰으로, "다시 시도"(높이 약 20px)는 40px 로 */}
+            {/* [1009 · A] 팔레트 색(emerald·amber) → 토큰, title= 말풍선(마우스를 올려야만 보임) 제거 —
+                규칙 요약일 때의 설명은 바로 아래 줄에 글자로 있다. "다시 시도"(높이 약 20px)는 40px 로 */}
             <span
-              className={`shrink-0 rounded border border-on-dark-faint bg-on-dark-panel px-1.5 py-0.5 t-caption font-bold ${
-                state.result.mode === "llm" ? "text-ai-success" : "text-ai-muted"
+              className={`shrink-0 rounded border border-line bg-surface px-1.5 py-0.5 t-caption font-bold ${
+                state.result.mode === "llm" ? "text-success" : "text-text-3"
               }`}
             >
               {state.result.mode === "llm" ? "AI 생성 · LLM" : "규칙 기반 요약 · LLM 아님"}
             </span>
           </div>
           {state.result.cached && (
-            <div className="t-caption font-bold text-ai-muted">
+            <div className="t-caption font-bold text-text-3">
               노트 내용이 그대로라 저장된 분석을 다시 표시. 새로 하려면 &quot;다시 분석하기&quot;.
             </div>
           )}
           {state.result.mode === "rule" && (
-            <div className="flex flex-wrap items-center gap-2 rounded-lg bg-on-dark-panel px-2.5 py-1.5">
-              <span className="flex-1 t-caption leading-[1.5] text-ai-muted">
+            <div className="flex flex-wrap items-center gap-2 rounded-lg bg-surface px-2.5 py-1.5">
+              <span className="flex-1 t-caption text-text-3">
                 AI 모델이 일시적으로 응답하지 않아 규칙 기반으로 요약했어요.
               </span>
               <button
                 type="button"
                 onClick={() => run(true)}
-                className="press inline-flex min-h-10 shrink-0 items-center rounded-lg border border-on-dark-faint px-3 t-caption font-bold text-ai-accent"
+                className="press inline-flex min-h-10 shrink-0 items-center rounded-lg border border-line px-3 t-caption font-bold text-primary"
               >
                 다시 시도
               </button>
             </div>
           )}
           {state.result.marketSummary && (
-            <div className="rounded-lg bg-on-dark-panel px-2.5 py-1.5 t-caption font-bold text-ai-accent">
+            <div className="rounded-lg bg-surface px-2.5 py-1.5 t-caption font-bold text-primary">
               실시세 {state.result.marketSummary}
             </div>
           )}
           {state.result.strengths.length > 0 && (
             <div>
-              <div className="t-caption font-bold text-ai-accent">강점</div>
+              <div className="t-caption font-bold text-primary">강점</div>
               {state.result.strengths.map((b) => (
-                <div key={b} className="text-[12px] leading-[1.55] text-ai-text">
+                <div key={b} className="t-sub text-text-1">
                   · {b}
                 </div>
               ))}
@@ -329,9 +330,9 @@ export function AiNoteAnalysisCard({
           )}
           {state.result.risks.length > 0 && (
             <div>
-              <div className="t-caption font-bold text-ai-danger">약점·리스크</div>
+              <div className="t-caption font-bold text-danger">약점·리스크</div>
               {state.result.risks.map((b) => (
-                <div key={b} className="text-[12px] leading-[1.55] text-ai-text">
+                <div key={b} className="t-sub text-text-1">
                   · {b}
                 </div>
               ))}
@@ -339,20 +340,20 @@ export function AiNoteAnalysisCard({
           )}
           {state.result.followUps.length > 0 && (
             <div>
-              <div className="t-caption font-bold text-ai-muted">확인 필요</div>
+              <div className="t-caption font-bold text-text-3">확인 필요</div>
               {state.result.followUps.map((b) => (
-                <div key={b} className="text-[12px] leading-[1.55] text-ai-text">
+                <div key={b} className="t-sub text-text-1">
                   · {b}
                 </div>
               ))}
             </div>
           )}
           {state.result.verdict && (
-            <div className="border-t border-on-dark-panel pt-1.5 text-[12px] leading-[1.55] text-ai-text">
-              <b className="text-on-dark">총평</b> · {state.result.verdict}
+            <div className="border-t border-line pt-1.5 t-sub text-text-1">
+              <b className="text-ink">총평</b> · {state.result.verdict}
             </div>
           )}
-          <div className="t-caption leading-[1.5] text-ai-muted">
+          <div className="t-caption text-text-3">
             {state.result.disclaimer}.
           </div>
         </div>
@@ -389,7 +390,7 @@ export function AiNoteAnalysisCard({
         disabled={
           state.kind === "running" || !loggedIn || (notesLoaded && notes.length === 0)
         }
-        className="btn-primary btn-cta mt-auto rounded-lg p-2.5 text-center text-[13px] disabled:opacity-60"
+        className="btn-primary btn-cta mt-auto rounded-lg p-2.5 text-center t-body disabled:opacity-60"
       >
         {state.kind === "running"
           ? "분석 중…"

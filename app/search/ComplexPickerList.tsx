@@ -1,4 +1,5 @@
 "use client";
+/* [1023 · AI 분석] 고른 단지 칩의 "실데이터 기준" 부연 라벨 제거 · text-xs → 램프. */
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 /* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 
@@ -142,12 +143,10 @@ export function PickedChip({
 }) {
   return (
     <div className="mt-0.5 flex flex-wrap items-center gap-1.5 rounded-lg bg-primary-soft px-3 py-2">
-      <span className="text-xs font-bold text-primary">{picked.name}</span>
+      <span className="t-sub font-bold text-primary">{picked.name}</span>
       {picked.regionLabel && <span className="t-caption font-bold text-text-2">{picked.regionLabel}</span>}
       {picked.priceLabel && <span className="t-caption font-bold text-text-2">· 최근 {picked.priceLabel}</span>}
-      <span className="ml-auto rounded border border-line px-1 py-px t-caption font-bold text-text-3">
-        실데이터 기준
-      </span>
+      {/* [1023] "실데이터 기준" 부연 라벨은 걷었다 */}
     </div>
   );
 }

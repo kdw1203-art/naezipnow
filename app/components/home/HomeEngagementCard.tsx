@@ -165,17 +165,17 @@ export function HomeEngagementCard({ shell }: { shell?: Shell } = {}) {
           {/* ① 출석 — 하루의 첫 탭 */}
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[13px] font-bold text-ink">
+              <div className="t-body font-bold text-ink">
                 {st.checkedToday
                   ? "오늘 출석 완료"
                   : "오늘 출석하고 포인트 받기"}
                 {st.streak > 1 && (
-                  <span className="ml-1.5 text-[12px] font-bold text-warning">
+                  <span className="ml-1.5 t-sub font-bold text-warning">
                     연속 {st.streak}일
                   </span>
                 )}
               </div>
-              <div className="text-[12px] text-text-3">
+              <div className="t-sub text-text-3">
                 {st.checkedToday
                   ? justEarned
                     ? `+${justEarned}P 적립됐어요`
@@ -201,7 +201,7 @@ export function HomeEngagementCard({ shell }: { shell?: Shell } = {}) {
 
           {/* ② 포인트 → 상점 최고 아이템(상단 노출 7일) 진행바 */}
           <div>
-            <div className="mb-1 flex items-center justify-between text-[12px]">
+            <div className="mb-1 flex items-center justify-between t-sub">
               <span className="text-text-3">
                 내 포인트{" "}
                 <b className="text-ink">
@@ -245,7 +245,7 @@ export function HomeEngagementCard({ shell }: { shell?: Shell } = {}) {
               <span className="t-body font-bold text-primary">
                 관심지역을 정하면 홈·알림이 내 동네 기준으로 바뀌어요
               </span>
-              <span className="text-[13px] font-bold text-primary">›</span>
+              <span className="t-body font-bold text-primary">›</span>
             </Link>
           )}
 
@@ -258,7 +258,7 @@ export function HomeEngagementCard({ shell }: { shell?: Shell } = {}) {
               <span className="t-body font-bold text-primary">
                 첫 임장노트 쓰면 +300P (공개 100P + 완주 보너스 200P)
               </span>
-              <span className="text-[13px] font-bold text-primary">›</span>
+              <span className="t-body font-bold text-primary">›</span>
             </Link>
           )}
         </div>

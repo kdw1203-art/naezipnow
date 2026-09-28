@@ -1,3 +1,5 @@
+/* [1023 · 임장노트] docs/review-1022.md 1장 ① — 같은 단지(aptName 일치)를 앞줄("같은 단지" 캡션), 나머지 지역 일치를 뒤("같은 지역").
+   풀·매칭(rankRelatedNotes)·상한은 그대로, 정렬만(lib/notes/related-order). aptName 은 선택 prop — 없으면 풀에서 현재 노트를 찾아 쓴다. */
 import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
 import { CoverImage } from "@/app/components/CoverImage";
@@ -5,6 +7,7 @@ import { inspectionAverageScore, type PublicNoteCard } from "@/lib/inspection/st
 import { listRelatedNotePoolCached, shouldLogNoteTiming } from "@/lib/inspection/note-cache";
 import { regionIdForName } from "@/lib/region/catalog";
 import { rankRelatedNotes } from "@/lib/notes/region-match";
+import { orderRelatedByApt } from "@/lib/notes/related-order";
 import { seedGradient } from "@/lib/town/shared";
 import { logger } from "@/lib/log";
 
@@ -28,9 +31,12 @@ const RELATED_CAP = 6;
 export async function RelatedNotes({
   currentId,
   region,
+  aptName,
 }: {
   currentId: string;
   region: string;
+  /** [1023] 현재 노트의 단지명 — 같은 단지를 앞줄로. 생략하면 풀에서 현재 노트의 aptName 을 찾는다 */
+  aptName?: string | null;
 }) {
   let notes: PublicNoteCard[] = [];
   const t0 = Date.now();
@@ -55,6 +61,10 @@ export async function RelatedNotes({
 
   const regionId = regionIdForName(regionTrim);
   const sameRegionMode = sameRegion.length > 0;
+  /* [1023] 같은 단지 앞줄 — 캡션은 같은 단지가 한 건이라도 있을 때만(전부 지역 일치면 머리("N의 다른 임장노트")가 이미 말한다) */
+  const currentApt = aptName ?? notes.find((n) => n.id === currentId)?.aptName ?? null;
+  const ordered = orderRelatedByApt(pool, currentApt);
+  const showTier = sameRegionMode && ordered.some((o) => o.tier === "apt");
 
   return (
     <section className="mt-6 max-md:mt-4">
@@ -73,7 +83,7 @@ export async function RelatedNotes({
         )}
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {pool.map((n) => {
+        {ordered.map(({ note: n, tier }) => {
           const rating = inspectionAverageScore(n.scores);
           const cover = n.cover ?? null;
           return (
@@ -99,7 +109,14 @@ export async function RelatedNotes({
                 />
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="line-clamp-1 t-body font-bold text-ink">{n.title}</span>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  {showTier && (
+                    <span className={`shrink-0 rounded px-1.5 py-px t-caption font-bold ${tier === "apt" ? "bg-primary-soft text-primary" : "border border-line text-text-3"}`}>
+                      {tier === "apt" ? "같은 단지" : "같은 지역"}
+                    </span>
+                  )}
+                  <span className="line-clamp-1 t-body font-bold text-ink">{n.title}</span>
+                </span>
                 <span className="flex items-center gap-2 t-sub text-text-3">
                   <span className="truncate">
                     {n.region || "전국"}

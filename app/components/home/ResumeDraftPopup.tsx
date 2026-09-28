@@ -76,10 +76,10 @@ export function ResumeDraftPopup() {
           <Icon name="notebook-pen" size={17} />
         </span>
         <Link href="/notes/new" className="min-w-0 flex-1 no-underline">
-          <span className="block text-[13px] font-bold leading-tight text-ink">
+          <span className="block t-body font-bold leading-tight text-ink">
             작성 중인 노트 이어서 쓰기
           </span>
-          <span className="mt-0.5 block truncate text-[12px] text-text-3">
+          <span className="mt-0.5 block truncate t-sub text-text-3">
             {[where, ago ? `${ago} 저장됨` : null].filter(Boolean).join(" · ") ||
               "임시저장된 노트가 있어요"}
           </span>
@@ -88,7 +88,7 @@ export function ResumeDraftPopup() {
           type="button"
           onClick={dismiss}
           aria-label="이어서 쓰기 알림 닫기"
-          className="relative shrink-0 rounded-full p-1 text-[13px] text-text-3 after:absolute after:-inset-2 after:content-['']"
+          className="relative shrink-0 rounded-full p-1 t-body text-text-3 after:absolute after:-inset-2 after:content-['']"
         >
           ✕
         </button>

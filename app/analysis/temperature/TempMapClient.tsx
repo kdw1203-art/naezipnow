@@ -1,4 +1,5 @@
 "use client";
+/* [1023 · AI 분석] 머리 통일 — h1 t-display 손 마크업(.pxs-head) → 공용 PageHead(t-title). 본문은 그대로. */
 
 /* [1022 · 온도 지도] 지시 1 — 타일 지도를 우리나라 지도 모양으로.
    1단계 전국: 시/도 17개를 한반도 모양 격자(6열)에 놓은 타일(버튼 ≥40px · 이름·평균 온도·기록 지역 수). 기록 없는 시/도는 회색 "기록 없음"(누를 수 없음).
@@ -12,7 +13,7 @@
    숫자는 서버가 이미 낸 값만(주마다 weekStats — 예전 히어로 KPI 와 같은 식). 주 전환·권역·타일/목록은 클라이언트 상태. */
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { Icon } from "@/app/components/Icon";
+import { PageHead } from "@/app/components/PageHead";
 import { Explain } from "@/app/components/explain/Explain";
 import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
 import type { TemperatureLatest } from "@/lib/market/temperature-archive";
@@ -224,37 +225,36 @@ export function TempMapClient({
 
   return (
     <>
-      {/* 머리 — 아이콘 칩 · 제목 · 사실 한 줄 | 주 선택 칩 · 권역 */}
-      <header className="pxs-head">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="tile-ico flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-            <Icon name="flame" size={18} />
-          </span>
-          <div className="min-w-0">
-            <h1 className="t-display text-ink">지역별 시장 온도</h1>
-            <p className="t-sub inline-flex flex-wrap items-center gap-0.5 text-text-3">
-              0~100 · 50 중립 · 매매가격지수 + 거래량 · 매주 기록 · {totalCount}곳
-              {weeks[0] && ` (${formatWeekKorean(weeks[0].weekStart)} 주)`}
-              <Explain {...TEMPERATURE_EXPLAIN} size={12} />
-            </p>
+      {/* 머리 — 아이콘 칩 · 제목 · 사실 한 줄 | 주 선택 칩. [1023] 공용 PageHead(t-title) */}
+      <PageHead
+        icon="flame"
+        title="지역별 시장 온도"
+        sub={
+          <>
+            0~100 · 50 중립 · 매매가격지수 + 거래량 · 매주 기록 · {totalCount}곳
+            {weeks[0] && ` (${formatWeekKorean(weeks[0].weekStart)} 주)`}
+            <Explain {...TEMPERATURE_EXPLAIN} size={12} />
+          </>
+        }
+        subOnPhone
+        actions={
+          <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="기준 주">
+            {WEEK_CHIPS.filter((c) => weeks.some((w) => w.key === c.key)).map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => setWeekKey(c.key)}
+                aria-pressed={weekKey === c.key}
+                className={`chip press min-h-10 border px-3 py-1.5 t-sub ${
+                  weekKey === c.key ? "chip-active" : "border-line bg-surface text-text-2"
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
           </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="기준 주">
-          {WEEK_CHIPS.filter((c) => weeks.some((w) => w.key === c.key)).map((c) => (
-            <button
-              key={c.key}
-              type="button"
-              onClick={() => setWeekKey(c.key)}
-              aria-pressed={weekKey === c.key}
-              className={`chip press min-h-10 border px-3 py-1.5 t-sub ${
-                weekKey === c.key ? "chip-active" : "border-line bg-surface text-text-2"
-              }`}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-      </header>
+        }
+      />
 
       {/* 타일 — 평균 · 가장 뜨거운 · 가장 차가운 · 지난주 대비 · 내 관심 지역(있을 때만) */}
       <div className="tmp-stat mt-3">

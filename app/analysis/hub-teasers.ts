@@ -1,4 +1,6 @@
 import "server-only";
+/* [1023 · AI 분석] 티저 지역 고정 해제 — 적재 함수에 regionId 인자를 넣고(캐시 키에 인자가 실린다) 허브 대표 지역 8곳을
+   한 벌씩 더 적는다(loadHubTeasersByRegion). 강남구 한 벌(loadHubTeasers)은 예전 그대로 — 카드 기본값. */
 
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
@@ -44,6 +46,19 @@ import { pickLatestMonthlyAverage, shortMonthLabel } from "@/lib/market/region-s
 /** 허브 대표 지역 — 홈 KPI 와 같은 기준(강남: 지수·스냅샷·온도 모두 실존 확인). */
 const HUB_REGION_ID = "gangnam";
 const HUB_REGION_LABEL = "강남구";
+
+/** [1023] 고른 단지의 지역으로 바꿔 보여 줄 수 있는 지역 — 홈 카드 지역(CARD_REGION_MONTHLY_NAMES) 앞 8곳.
+ *  캐시가 지역 수만큼 늘어나므로(하루 1회 적재) 여기서 끊는다. 목록 밖 지역은 강남구 한 벌 그대로. */
+export const HUB_TEASER_REGIONS: readonly { id: string; label: string }[] = [
+  { id: "gangnam", label: HUB_REGION_LABEL },
+  { id: "mapo", label: "마포구" },
+  { id: "songpa", label: "송파구" },
+  { id: "namyangju", label: "남양주시" },
+  { id: "seocho", label: "서초구" },
+  { id: "yongsan", label: "용산구" },
+  { id: "seongdong", label: "성동구" },
+  { id: "seongnam-bundang", label: "성남 분당구" },
+];
 
 /** 카드에 얹는 시계열 길이 — 12구간(월 12개월 / 주 12주). */
 const SPARK_POINTS = 12;
@@ -99,10 +114,10 @@ type PriceTeaserSource =
   | { kind: "reb"; perM2Manwon: number; period: string | null }
   | { kind: "monthly"; avgWon: number; month: string; count: number };
 
-async function loadMonthlyFallback(): Promise<PriceTeaserSource | null> {
+async function loadMonthlyFallback(regionId: string): Promise<PriceTeaserSource | null> {
   const sb = getReadOnlySupabase();
   if (!sb) return null;
-  const monthlyName = CARD_REGION_MONTHLY_NAMES[HUB_REGION_ID];
+  const monthlyName = CARD_REGION_MONTHLY_NAMES[regionId];
   if (!monthlyName) return null;
   /* 최근 10개월이면 부분 집계(당월)를 건너뛰어도 넉넉하다 — 홈 폴백과 같은 창 */
   const { data, error } = await sb
@@ -121,16 +136,17 @@ async function loadMonthlyFallback(): Promise<PriceTeaserSource | null> {
 const loadSnapshotTeaser = cache(
   /* [1010] TTL·태그 근거는 이 파일 아래 주석 참고 */
   unstable_cache(
-    async (): Promise<PriceTeaserSource | null> => {
-      const snap = await getRegionSnapshot(HUB_REGION_ID);
+    async (regionId: string): Promise<PriceTeaserSource | null> => {
+      const snap = await getRegionSnapshot(regionId);
       if (snap && typeof snap.perM2Sale === "number" && snap.perM2Sale > 0) {
         /* per_m2_sale 은 **원** 단위다 (프로덕션 실측 30,384,497원/㎡ ≈ 3,038만).
            첫 배포에서 원값에 '만'을 붙여 "30,384,497만"으로 나갔다 — 만원 환산. */
         return { kind: "reb", perM2Manwon: Math.round(snap.perM2Sale / 10_000), period: snap.period ?? null };
       }
-      return loadMonthlyFallback();
+      return loadMonthlyFallback(regionId);
     },
-    ["analysis-hub-price-teaser-v2"],
+    /* [1023] v3: regionId 인자 — unstable_cache 는 인자를 키에 싣는다(지역별 한 벌) */
+    ["analysis-hub-price-teaser-v3"],
     { revalidate: 86_400, tags: [CACHE_TAGS.market] },
   ),
 );
@@ -147,11 +163,11 @@ function weeksBetween(from: string | undefined, to: string | undefined): number 
 /* 지수 시계열 — 월간/주간 각각 한 벌씩만 읽어 캐시한다(카드 4장이 공유). */
 const loadSeries = cache(
   unstable_cache(
-    async () => {
+    async (regionId: string) => {
       const [saleMonthly, saleWeekly, ratioMonthly] = await Promise.all([
-        getRegionSeries(HUB_REGION_ID, "sale_index", "monthly", SPARK_POINTS),
-        getRegionSeries(HUB_REGION_ID, "sale_index", "weekly", SPARK_POINTS),
-        getRegionSeries(HUB_REGION_ID, "jeonse_ratio", "monthly", SPARK_POINTS),
+        getRegionSeries(regionId, "sale_index", "monthly", SPARK_POINTS),
+        getRegionSeries(regionId, "sale_index", "weekly", SPARK_POINTS),
+        getRegionSeries(regionId, "jeonse_ratio", "monthly", SPARK_POINTS),
       ]);
       return {
         saleMonthly: saleMonthly.map((p) => p.value),
@@ -161,8 +177,8 @@ const loadSeries = cache(
         ratio: ratioMonthly,
       };
     },
-    /* v2: saleWeeklySpan 추가(모양이 바뀌어 옛 캐시를 읽지 않게) */
-    ["analysis-hub-series-v2"],
+    /* v2: saleWeeklySpan 추가(모양이 바뀌어 옛 캐시를 읽지 않게) · [1023] v3: regionId 인자 */
+    ["analysis-hub-series-v3"],
     { revalidate: 86_400, tags: [CACHE_TAGS.market] },
   ),
 );
@@ -170,19 +186,21 @@ const loadSeries = cache(
 /** 온도 스파크라인용 12주 이력 — 최신값·헤드라인은 위젯 캐시에서 따로 온다. */
 const loadTempHistory = cache(
   unstable_cache(
-    () => listRegionTemperatureHistory(HUB_REGION_ID, SPARK_POINTS),
-    ["analysis-hub-temp-history-v1"],
+    (regionId: string) => listRegionTemperatureHistory(regionId, SPARK_POINTS),
+    /* [1023] v2: regionId 인자 */
+    ["analysis-hub-temp-history-v2"],
     { revalidate: 86_400, tags: [CACHE_TAGS.market] },
   ),
 );
 
-export async function loadHubTeasers(): Promise<HubTeasers> {
+export async function loadHubTeasers(regionId: string = HUB_REGION_ID): Promise<HubTeasers> {
+  const regionLabel = HUB_TEASER_REGIONS.find((r) => r.id === regionId)?.label ?? HUB_REGION_LABEL;
   const [tempRes, tempHistRes, priceRes, seriesRes, baseRes] =
     await Promise.allSettled([
       loadLatestTemperatures(),
-      loadTempHistory(),
-      loadSnapshotTeaser(),
-      loadSeries(),
+      loadTempHistory(regionId),
+      loadSnapshotTeaser(regionId),
+      loadSeries(regionId),
       getBaseRate(),
     ]);
 
@@ -196,7 +214,7 @@ export async function loadHubTeasers(): Promise<HubTeasers> {
       const month = fmtMonth(src.period);
       out.price = {
         value: `㎡당 ${src.perM2Manwon.toLocaleString("ko-KR")}만`,
-        caption: `${HUB_REGION_LABEL} 매매 시세 · 부동산원${month ? ` · ${month} 기준` : ""}`,
+        caption: `${regionLabel} 매매 시세 · 부동산원${month ? ` · ${month} 기준` : ""}`,
         series: series?.saleMonthly ?? [],
       };
     } else {
@@ -204,7 +222,7 @@ export async function loadHubTeasers(): Promise<HubTeasers> {
       const month = shortMonthLabel(src.month);
       out.price = {
         value: `평균 ${formatEok(src.avgWon)}`,
-        caption: `${HUB_REGION_LABEL} 실거래 평균 · 국토부 신고 ${src.count.toLocaleString("ko-KR")}건${month ? ` · ${month} 기준` : ""}`,
+        caption: `${regionLabel} 실거래 평균 · 국토부 신고 ${src.count.toLocaleString("ko-KR")}건${month ? ` · ${month} 기준` : ""}`,
         series: series?.saleMonthly ?? [],
       };
     }
@@ -221,7 +239,7 @@ export async function loadHubTeasers(): Promise<HubTeasers> {
         value: `${pct > 0 ? "+" : ""}${pct}%`,
         /* [1009 · A] 비교 기준을 캡션에 — "기준 없는 %" 금지(표기 표준).
            [리뷰] 주간 점 n개의 첫~끝은 n−1주다(12점 → "11주 전 대비") — 날짜로 센 주 수가 있으면 그것을 쓴다 */
-        caption: `${HUB_REGION_LABEL} 매매지수 · ${series.saleWeeklySpan ?? w.length - 1}주 전 대비`,
+        caption: `${regionLabel} 매매지수 · ${series.saleWeeklySpan ?? w.length - 1}주 전 대비`,
         series: w,
         deltaPct: pct,
       };
@@ -230,14 +248,14 @@ export async function loadHubTeasers(): Promise<HubTeasers> {
 
   /* ── 지역별 시장 온도: 이번 주 점수 + 주간 이력 ── */
   if (tempRes.status === "fulfilled") {
+    /* [1023] 대표 지역(강남)만 첫 행으로 물러선다 — 다른 지역은 그 지역 행이 없으면 티저를 내지 않는다(카드는 강남 한 벌로) */
     const row =
-      tempRes.value.rows.find((r) => r.current.regionId === HUB_REGION_ID) ??
-      tempRes.value.rows[0] ??
-      null;
+      tempRes.value.rows.find((r) => r.current.regionId === regionId) ??
+      (regionId === HUB_REGION_ID ? (tempRes.value.rows[0] ?? null) : null);
     if (row) {
       const hist =
         tempHistRes.status === "fulfilled" &&
-        row.current.regionId === HUB_REGION_ID
+        row.current.regionId === regionId
           ? tempHistRes.value.map((s) => s.score)
           : [];
       out.temp = {
@@ -254,7 +272,7 @@ export async function loadHubTeasers(): Promise<HubTeasers> {
     const last = series.ratio[series.ratio.length - 1];
     out.gap = {
       value: `${Math.round(last.value * 10) / 10}%`,
-      caption: `${HUB_REGION_LABEL} 전세가율${fmtMonth(last.period) ? ` · ${fmtMonth(last.period)} 기준` : ""}`,
+      caption: `${regionLabel} 전세가율${fmtMonth(last.period) ? ` · ${fmtMonth(last.period)} 기준` : ""}`,
       series: vals,
     };
   }
@@ -268,5 +286,22 @@ export async function loadHubTeasers(): Promise<HubTeasers> {
     };
   }
 
+  return out;
+}
+
+/** [1023] 허브 대표 지역 8곳의 티저 — 키는 regionId. 실패한 지역은 빠진다(카드는 강남 한 벌로 물러선다).
+ *  기준금리(baseRate)는 지역과 무관하므로 여기서는 빼고 시장 4종만 싣는다. */
+export async function loadHubTeasersByRegion(): Promise<Record<string, HubTeasers>> {
+  const settled = await Promise.allSettled(
+    HUB_TEASER_REGIONS.map(async (r) => [r.id, await loadHubTeasers(r.id)] as const),
+  );
+  const out: Record<string, HubTeasers> = {};
+  for (const s of settled) {
+    if (s.status !== "fulfilled") continue;
+    const [id, t] = s.value;
+    const { baseRate: _omit, ...market } = t;
+    void _omit;
+    if (Object.keys(market).length > 0) out[id] = market;
+  }
   return out;
 }

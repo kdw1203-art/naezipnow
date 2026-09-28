@@ -1,3 +1,4 @@
+/* [1023 · 동네 ①] 주제(NEWS_TAGS) 칩 줄을 머리 바로 아래로 — 오른쪽 레일 끝의 같은 칩은 걷었다(레일엔 정비사업·입주 물량 링크만). */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import Link from "next/link";
 import { AdZone } from "@/app/components/ads/AdZone";
@@ -169,6 +170,22 @@ export default async function TownNewsPage() {
           </>
         }
       />
+      {/* [1023 · 동네 ①] 주제 칩 줄 — 머리 바로 아래. /town/news/tag/[tag] 에서만 보이던 다른 주제 칩이 첫 화면에도 선다.
+          NEWS_TAGS 정적 목록(추가 조회 없음) · 폰은 가로 스크롤 · 칩 높이 ≥24px. */}
+      <nav
+        aria-label="주제별 뉴스"
+        className="-mt-1 mb-3 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {NEWS_TAGS.map((t) => (
+          <Link
+            key={t.slug}
+            href={`/town/news/tag/${t.slug}`}
+            className="chip inline-flex min-h-[24px] shrink-0 items-center border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline"
+          >
+            {t.label}
+          </Link>
+        ))}
+      </nav>
       {/* [1018] 소유자: "뉴스룸을 누르면 (카테고리 줄이 사라지는데) 목록은 나오도록 유지" — 다른 동네 카테고리와 같은 카테고리 줄 */}
       <TownCategoryNav stick />
 
@@ -246,21 +263,10 @@ export default async function TownNewsPage() {
           {/* [개선 #13] 키워드 알림 구독 */}
           <NewsAlertSubscribe />
 
-          {/* [#103] 주제 허브 진입 */}
-          <section className="card rounded-2xl px-4 py-4" aria-label="주제별 뉴스">
-            <h2 className="t-section text-ink">주제별</h2>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {NEWS_TAGS.slice(0, 10).map((t) => (
-                <Link
-                  key={t.slug}
-                  href={`/town/news/tag/${t.slug}`}
-                  className="chip border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-2"
-                >
-                  {t.label}
-                </Link>
-              ))}
-            </div>
-            <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-line pt-3 t-sub">
+          {/* [#103] 주제 허브 진입 — [1023 · 동네 ①] 주제 칩은 머리 아래로 올라갔다(같은 칩을 두 번 그리지 않는다). 지도·물량 링크만 남는다. */}
+          <section className="card rounded-2xl px-4 py-4" aria-label="정비사업 · 입주 물량">
+            <h2 className="t-section text-ink">정비사업 · 입주 물량</h2>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 t-sub">
               <Link href="/redevelopment" className="tap-line font-bold text-text-2 no-underline">
                 정비사업 지도 ›
               </Link>
