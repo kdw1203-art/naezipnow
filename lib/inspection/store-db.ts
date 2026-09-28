@@ -1,5 +1,6 @@
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { getReadOnlySupabase, readOnlyClientHasServiceRole } from "@/lib/newui/supabase-read";
+import { resolveNoteCover } from "@/lib/notes/cover/resolve";
 import { WORKBENCH_COMPLEXES, compositeScore } from "@/lib/ai/workbench-constants";
 
 export type InspectionScores = {
@@ -431,6 +432,10 @@ export type PublicNoteCard = {
   scores: InspectionScores;
   /** [950] 작성 주체 라벨 — "내집나우 Lab …"(데이터 노트) 과 사람 노트를 화면에서 구분한다 */
   authorLabel: string | null;
+  /** [1015 · 썸네일] 목록 썸네일 주소(고른 템플릿 → 첫 사진 → null). 서버에서 계산해 두고 jsonb 는 싣지 않는다 */
+  cover: string | null;
+  /** cover 가 템플릿 썸네일(제목이 그림 안에 있음)이면 true — 목록이 제목 오버레이를 겹치지 않게 */
+  coverTemplate: boolean;
 };
 
 /**
@@ -462,7 +467,9 @@ export async function listPublicNoteCards(
     .from("inspection_notes")
     /* 한 줄짜리 **리터럴**이어야 한다. `"a," + "b"` 로 쪼개면 supabase-js 가
        컬럼 목록을 타입 수준에서 못 읽어 data 가 GenericStringError[] 로 떨어진다. */
-    .select("id,title,region,apt_name,visit_date,summary,created_at,author_label,score_location,score_school,score_transport,score_facility,score_future")
+    /* [1015] 썸네일 판정 재료(metadata.cover · 숫자 검증용 본문 · photos)까지 읽는다. jsonb 를 카드에 싣지는 않고
+       cover 주소 한 줄로 접는다. 이 목록을 읽는 화면은 전부 ISR(1일) 이라 요청당 비용이 아니라 재생성당 비용이다. */
+    .select("id,title,region,apt_name,visit_date,summary,created_at,author_label,score_location,score_school,score_transport,score_facility,score_future,sections,checklist,transportation,weather,metadata,photos")
     .eq("is_public", true)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -474,23 +481,43 @@ export async function listPublicNoteCards(
         `${error.code ? ` [${error.code}]` : ""}${error.hint ? ` · 힌트: ${error.hint}` : ""}`,
     );
   }
-  return (data ?? []).map((r: Record<string, unknown>) => ({
-    id: String(r.id),
-    title: String(r.title ?? ""),
-    region: String(r.region ?? ""),
-    aptName: (r.apt_name as string | null) ?? null,
-    visitDate: String(r.visit_date ?? "").slice(0, 10),
-    summary: (r.summary as string | null) ?? null,
-    createdAt: String(r.created_at ?? ""),
-    authorLabel: (r.author_label as string | null) ?? null,
-    scores: {
+  return (data ?? []).map((r: Record<string, unknown>) => {
+    const scores = {
       location: Number(r.score_location ?? 0),
       school: Number(r.score_school ?? 0),
       transport: Number(r.score_transport ?? 0),
       facility: Number(r.score_facility ?? 0),
       future: Number(r.score_future ?? 0),
-    },
-  }));
+    };
+    const cover = resolveNoteCover({
+      id: String(r.id),
+      title: (r.title as string | null) ?? null,
+      aptName: (r.apt_name as string | null) ?? null,
+      region: (r.region as string | null) ?? null,
+      summary: (r.summary as string | null) ?? null,
+      sections: r.sections,
+      checklist: r.checklist,
+      transportation: (r.transportation as string | null) ?? null,
+      weather: (r.weather as string | null) ?? null,
+      scores,
+      metadata: r.metadata,
+      photos: r.photos,
+      authorLabel: (r.author_label as string | null) ?? null,
+    });
+    return {
+      id: String(r.id),
+      title: String(r.title ?? ""),
+      region: String(r.region ?? ""),
+      aptName: (r.apt_name as string | null) ?? null,
+      visitDate: String(r.visit_date ?? "").slice(0, 10),
+      summary: (r.summary as string | null) ?? null,
+      createdAt: String(r.created_at ?? ""),
+      authorLabel: (r.author_label as string | null) ?? null,
+      scores,
+      cover: cover.url,
+      coverTemplate: cover.template,
+    };
+  });
 }
 
 /** [950] Lab(데이터·AI 편집) 노트인가 — author_label 에 "Lab" 이 들어가면 그렇다(실측: 공개 22건 전부). */

@@ -62,14 +62,14 @@ export function PreOrderCta({
   if (state === "done") {
     return (
       <div className="rounded-lg bg-primary-soft p-[13px] text-center t-body font-bold text-primary">
-        등록됐어요 — 결제가 열리면 알림으로 알려드릴게요
+        오픈 알림 등록 완료. 결제가 열리면 알림으로 안내합니다.
       </div>
     );
   }
 
   const hint = weeklyAvailable
-    ? "월간·연간 결제는 준비 중이에요 — 지금은 플러스 주간권(7일)만 구매할 수 있어요."
-    : "결제 수단을 준비하고 있어요 — 아직 결제가 열리지 않았습니다.";
+    ? "월간·연간 결제는 준비 중입니다. 지금은 플러스 주간권(7일)만 구매할 수 있습니다."
+    : "결제 수단 준비 중입니다. 아직 결제가 열리지 않았습니다.";
 
   if (guest) {
     /* 로그인 후 고른 플랜·주기로 돌아온다(page.tsx 가 ?plan=·?billing= 을 읽어 강조) */
@@ -85,7 +85,7 @@ export function PreOrderCta({
         <p
           className={`text-center text-[12px] leading-[1.6] ${dark ? "text-ai-muted" : "text-text-3"}`}
         >
-          {hint} 로그인하면 열릴 때 알림을 보내드려요.
+          {hint} 로그인하면 열릴 때 알림을 받습니다.
         </p>
       </>
     );

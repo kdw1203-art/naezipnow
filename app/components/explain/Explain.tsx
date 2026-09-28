@@ -66,8 +66,12 @@ export function Explain({
   const warm = () => {
     void loadSheet();
   };
+  /* [1015] 데스크톱은 마우스를 올리면 한 문단 미리보기(소유자: "물음표 칸을 만들어 마우스를 올리면 보이는 정도로") —
+     CSS 만으로 보인다(hover: hover · pointer: fine). 누르면 전과 같이 시트(계산 방법·출처까지). 폰은 탭 → 시트. */
+  const firstBody = Array.isArray(content.body) ? content.body[0] : content.body;
+  const preview = firstBody ?? (content.term ? `${explainTermName(content.term)} — 누르면 정의가 열립니다` : null);
   return (
-    <>
+    <span className="explain-wrap">
       <button
         type="button"
         className={`explain-btn ${className ?? ""}`}
@@ -87,6 +91,12 @@ export function Explain({
       >
         <Icon name="info" size={size} strokeWidth={2} />
       </button>
+      {preview && (
+        <span className="explain-tip" role="tooltip" aria-hidden="true">
+          {content.title && <b>{content.title}</b>}
+          {preview}
+        </span>
+      )}
       {armed && (
         /* [1009 · 리뷰 RA] 시트는 포털(document.body)이지만 React 이벤트는 **React 트리**를 따라 올라간다 —
            조상에 <Link>·onClick 이 있으면 시트 안 닫기 버튼만 눌러도 그 링크가 눌린 것으로 처리될 수 있다.
@@ -95,7 +105,7 @@ export function Explain({
           <ExplainSheet open={open} onClose={() => setOpen(false)} name={name} {...content} />
         </span>
       )}
-    </>
+    </span>
   );
 }
 

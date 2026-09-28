@@ -161,12 +161,14 @@ export function WatchlistRows({ initial, max }: { initial: WatchRow[]; max: numb
 
   return (
     <>
+      {/* [1015 · 규칙 D] "알림을 보내드려요" → 사실 한 줄 */}
       <p className="mb-2 t-body text-text-3">
         관심 단지 <span className="tabular-nums">{rows.length}</span>곳
-        {initial.length >= max && ` (최근 ${max}곳 표시)`} · 시세 변동 ±1% 이상이면 알림을 보내드려요
+        {initial.length >= max && ` (최근 ${max}곳 표시)`} · 시세 ±1% 변동 시 알림
       </p>
-      <div className="card rounded-2xl px-[var(--pad-card)] py-1">
-        <div className="flex items-center justify-between gap-2 border-b border-divider py-2 t-caption text-text-3">
+      {/* [1015 · 규칙 I] 관심 단지·실거래 = blue 톤 리퀴드 판(카드 안 행 목록 → lq-panel) */}
+      <div className="lq-panel py-1" data-tone="blue">
+        <div className="flex items-center justify-between gap-2 border-b py-2 t-caption text-text-3">
           <span>단지</span>
           <span className="flex items-center gap-0.5">
             현재가 · 기준가 대비
@@ -177,6 +179,7 @@ export function WatchlistRows({ initial, max }: { initial: WatchRow[]; max: numb
                 "현재가 = 거래가 가장 많은 전용면적 구간의 최근 최대 6건 평균(최소 3건, 해제 신고 제외) — 시세 변동 알림과 같은 계산이에요.",
                 "기준가 = 가격 알림 점검이 마지막으로 본 값이에요. 대표 면적대가 바뀐 단지는 비교하지 않아요.",
                 "기준가 대비 = (현재가 − 기준가) ÷ 기준가 × 100",
+                "새 노트 = 최근 30일 공개 임장노트 수",
               ]}
               source="국토교통부 실거래 신고"
             />
@@ -184,7 +187,7 @@ export function WatchlistRows({ initial, max }: { initial: WatchRow[]; max: numb
         </div>
         <ul className="flex flex-col">
           {rows.map((r) => (
-            <li key={r.id} className="flex items-center gap-1 border-b border-divider last:border-b-0">
+            <li key={r.id} className="flex items-center gap-1 border-b last:border-b-0">
               <Link
                 href={r.href}
                 className="press -mx-2 flex min-w-0 flex-1 items-start justify-between gap-3 rounded-xl px-2 py-2.5 no-underline transition-colors hover:bg-bg"
@@ -222,11 +225,8 @@ export function WatchlistRows({ initial, max }: { initial: WatchRow[]; max: numb
           ))}
         </ul>
       </div>
-      <p className="mt-2 t-sub text-text-3">
-        현재가는 거래가 가장 많은 전용면적 구간의 최근 최대 6건 평균(최소 3건, 해제 신고 제외)이에요. 기준가 대비는
-        마지막 알림 점검 때 본 값과 비교하고, 대표 면적대가 바뀐 단지는 비교하지 않아요. 새 노트는 최근 30일 공개
-        임장노트 수예요.
-      </p>
+      {/* [1015 · 규칙 B] 목록 아래 설명 문단은 열 머리의 <Explain>(현재가 · 기준가 대비)과 같은 내용이라 뺐다 —
+          데스크톱 hover 미리보기 · 폰 탭 시트. */}
     </>
   );
 }

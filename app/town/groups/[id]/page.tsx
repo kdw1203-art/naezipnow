@@ -207,7 +207,7 @@ export default async function TownGroupDetailPage({
               label={meeting.region || meeting.city || "모임 장소"}
             />
             <p className="text-[12px] leading-[1.5] text-text-3">
-              지역 기준 지도예요 · 정확한 집결 장소는 모임 채팅방에서 안내돼요.
+              지역 기준 지도 · 집결 장소는 모임 채팅방 안내
             </p>
           </div>
 
@@ -215,7 +215,7 @@ export default async function TownGroupDetailPage({
           <div className="rise-in-1 card flex flex-col gap-2 p-5">
             <div className="text-[13px] font-bold text-ink">임장 준비</div>
             <p className="text-[12px] leading-[1.6] text-text-2">
-              가기 전 데이터 브리핑·현장 체크포인트, 다녀온 뒤 각자의 임장노트 — 아래 링크에 있어요.
+              데이터 브리핑 · 현장 체크포인트 · 임장노트
             </p>
             <div className="flex flex-col gap-1.5">
               {imjangRegion && (
@@ -274,7 +274,7 @@ export default async function TownGroupDetailPage({
                 {isOrganizer
                   ? "내가 만든 모임이에요"
                   : isPast
-                    ? "일정이 지난 모임이에요 — 후기·정리는 채팅에서 나눌 수 있어요"
+                    ? "일정이 지난 모임이에요. 후기·정리는 채팅에서"
                     : isFull
                       ? "정원이 차서 새로 참여할 수는 없어요"
                       : "채팅방 입장 시 모임 참여로 확정돼요"}

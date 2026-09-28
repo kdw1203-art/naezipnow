@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
+import { Explain } from "@/app/components/explain/Explain";
+import { BROKERAGE_BASIS } from "@/lib/finance/brokerage";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { howToJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { CalculatorNav } from "../CalculatorNav";
@@ -35,26 +37,22 @@ export default async function CalculatorToolPage({ params }: { params: Promise<{
     <PageShell breadcrumb={`투자 도구 › ${t.label}`} title={t.label}>
       <div className="mx-auto w-full max-w-[640px]">
         <CalculatorNav current={`/calculator/${t.id}`} />
-        <p className="rise-in mb-4 text-[13px] leading-[1.75] text-text-2">{t.intro}</p>
+        {/* [1015 · 규칙 B] 소개 한 줄 + "이용 방법" 3단계는 ⓘ 하나로 접는다(데스크톱 hover 미리보기 · 폰 탭 시트).
+            HowTo JSON-LD 는 같은 배열(t.howTo.steps)에서 만든다 — 화면(시트)과 스키마가 같은 글이다. */}
+        <p className="rise-in mb-4 flex flex-wrap items-center gap-x-1 t-body leading-[1.75] text-text-2 max-md:mb-3">
+          <span>{t.intro}</span>
+          {t.howTo && (
+            <Explain
+              title="이용 방법"
+              body={t.howTo.steps.map((s, i) => `${i + 1}. ${s.name}: ${s.text}`)}
+              source={BROKERAGE_BASIS}
+            />
+          )}
+        </p>
         <div className="rise-in-1">{t.render()}</div>
 
         {t.howTo && (
           <>
-            {/* [#55] 이용 방법 — HowTo JSON-LD 와 같은 배열에서 렌더 */}
-            <section className="rise-in-2 mt-6">
-              <h2 className="mb-2 text-[13px] font-bold text-ink">이용 방법</h2>
-              <ol className="flex list-none flex-col gap-2 p-0">
-                {t.howTo.steps.map((s, i) => (
-                  <li key={s.name} className="card flex gap-3 rounded-xl px-4 py-3">
-                    <span className="text-[13px] font-bold tabular-nums text-primary">{i + 1}</span>
-                    <div>
-                      <div className="text-[13px] font-bold text-ink">{s.name}</div>
-                      <p className="mt-0.5 text-[13px] leading-[1.7] text-text-2">{s.text}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </section>
             <script
               type="application/ld+json"
               dangerouslySetInnerHTML={{

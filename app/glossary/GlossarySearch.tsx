@@ -36,13 +36,13 @@ export function GlossarySearch({ groups }: { groups: GlossaryGroupData[] }) {
   return (
     <>
       {/* 검색 입력 — 16px 미만은 iOS 포커스 줌 유발(모바일 실측 7과 동일 규칙) */}
-      <div className="rise-in-1 mt-4 flex items-center gap-2 rounded-2xl border border-line bg-surface px-3.5 py-2.5">
+      <div className="rise-in-1 mt-4 flex items-center gap-2 rounded-2xl border border-line bg-surface px-3.5 py-2.5 max-md:mt-3">
         <span aria-hidden className="text-text-3">⌕</span>
         <input
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="용어 검색 (예: 전용면적, 갭투자)"
+          placeholder="용어 검색"
           aria-label="용어 검색"
           className="w-full bg-transparent text-[15px] text-ink outline-none placeholder:text-text-3 md:text-[13px]"
         />
@@ -51,7 +51,7 @@ export function GlossarySearch({ groups }: { groups: GlossaryGroupData[] }) {
             type="button"
             onClick={() => setQ("")}
             aria-label="검색어 지우기"
-            className="shrink-0 text-[13px] text-text-3"
+            className="shrink-0 t-body text-text-3"
           >
             ✕
           </button>
@@ -65,7 +65,7 @@ export function GlossarySearch({ groups }: { groups: GlossaryGroupData[] }) {
             <a
               key={g.category}
               href={`#${encodeURIComponent(g.category)}`}
-              className="rounded-full border border-line bg-surface px-3 py-1.5 text-[12px] font-bold text-text-1"
+              className="rounded-full border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-1"
             >
               {g.category} {g.terms.length}
             </a>
@@ -74,15 +74,15 @@ export function GlossarySearch({ groups }: { groups: GlossaryGroupData[] }) {
       )}
 
       {searching && (
-        <p className="mt-3 text-[12px] text-text-3">
+        <p className="mt-3 t-sub text-text-3">
           ‘{q.trim()}’ 일치 {total}개
         </p>
       )}
 
-      <div className="mt-5 flex flex-col gap-6">
+      <div className="mt-5 flex flex-col gap-6 max-md:mt-4 max-md:gap-4">
         {filtered.length === 0 ? (
-          <div className="card rounded-2xl px-4 py-8 text-center text-[13px] text-text-3">
-            이름·요약에 일치하는 용어가 없어요. 다른 표현으로 검색해 보세요.
+          <div className="card rounded-2xl px-4 py-8 text-center t-body text-text-3 max-md:py-5">
+            일치하는 용어가 없어요.
           </div>
         ) : (
           filtered.map((g, gi) => (
@@ -91,17 +91,17 @@ export function GlossarySearch({ groups }: { groups: GlossaryGroupData[] }) {
               id={encodeURIComponent(g.category)}
               className={`rise-in-${Math.min(gi + 2, 6)} scroll-mt-24`}
             >
-              <h2 className="text-[15px] font-bold text-ink">{g.category}</h2>
+              <h2 className="t-section text-ink">{g.category}</h2>
               <div className="mt-2 grid gap-2 md:grid-cols-2">
                 {g.terms.map((t) => (
                   <Link
                     prefetch={false}
                     key={t.slug}
                     href={`/glossary/${t.slug}`}
-                    className="card rounded-lg p-4"
+                    className="card rounded-lg p-4 max-md:p-3"
                   >
-                    <div className="text-[13px] font-bold text-ink">{t.term}</div>
-                    <div className="mt-1 text-[12px] leading-[1.65] text-text-2">
+                    <div className="t-body font-bold text-ink">{t.term}</div>
+                    <div className="mt-1 t-sub leading-[1.65] text-text-2">
                       {t.short}
                     </div>
                   </Link>

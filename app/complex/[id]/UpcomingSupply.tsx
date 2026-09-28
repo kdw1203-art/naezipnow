@@ -46,7 +46,7 @@ export async function UpcomingSupply({
 
   return (
     /* [968 · 7] cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미룬다(page.tsx 주석 참고) */
-    <section className="cv-auto rise-in-5 mt-6">
+    <section className="cv-auto rise-in-5 mt-6 max-md:mt-3">
       <h2 className="mb-2 px-1 t-section text-ink">
         인근 입주물량{" "}
         <span className="t-sub font-medium text-text-3">
@@ -54,12 +54,12 @@ export async function UpcomingSupply({
           {totalHouseholds > 0 ? ` · 약 ${totalHouseholds.toLocaleString("ko-KR")}세대` : ""}
         </span>
       </h2>
-      <div className="card overflow-hidden rounded-2xl">
-        <ul className="flex flex-col">
+      {/* [1015 · 규칙 I] 공급 목록 = sand 리퀴드 판 */}
+      <ul className="lq-panel flex flex-col divide-y" data-tone="sand">
           {shown.map((i, idx) => (
             <li
               key={`${i.moveInYm}-${i.aptName}-${idx}`}
-              className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 last:border-0"
+              className="flex items-center justify-between gap-3 py-2.5"
             >
               <div className="min-w-0">
                 <div className="truncate t-body font-bold text-ink">
@@ -70,7 +70,7 @@ export async function UpcomingSupply({
                 </div>
               </div>
               <div className="shrink-0 text-right">
-                <div className="t-body font-bold text-primary">{fmtYm(i.moveInYm)}</div>
+                <div className="t-body t-num font-bold">{fmtYm(i.moveInYm)}</div>
                 {i.households != null && (
                   <div className="t-sub text-text-3">
                     {i.households.toLocaleString("ko-KR")}세대
@@ -79,11 +79,9 @@ export async function UpcomingSupply({
               </div>
             </li>
           ))}
-        </ul>
-      </div>
-      <p className="mt-1.5 px-1 t-sub text-text-3">
-        입주물량은 주변 시세·전세에 영향을 줄 수 있어요. 공공 공급 데이터 기준이며 일정은 변동될 수 있습니다.
-      </p>
+      </ul>
+      {/* [1015 · 규칙 B·D] 설명 문장("영향을 줄 수 있어요")은 걷고 출처·주의만 */}
+      <p className="mt-1.5 px-1 t-caption text-text-3">공공 공급 데이터 기준 · 일정은 변동될 수 있음</p>
     </section>
   );
 }

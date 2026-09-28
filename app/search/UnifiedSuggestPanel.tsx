@@ -61,7 +61,7 @@ export default function UnifiedSuggestPanel(p: Props) {
     return (
       <div className={shell}>
         <div className={card}>
-          <div id={`${p.listId}-label`} className="px-3 pb-1 pt-1.5 text-[10px] font-bold text-text-3">
+          <div id={`${p.listId}-label`} className="px-3 pb-1 pt-1.5 t-caption font-bold text-text-3">
             최근 검색
           </div>
           <div role="listbox" id={p.listId} aria-labelledby={`${p.listId}-label`}>
@@ -123,7 +123,7 @@ export default function UnifiedSuggestPanel(p: Props) {
         {empty && opts.length > 0 && (
           <div
             id={similarHead}
-            className="border-t border-divider px-3 pb-0.5 pt-2 text-[10px] font-bold text-text-3"
+            className="border-t border-divider px-3 pb-0.5 pt-2 t-caption font-bold text-text-3"
           >
             혹시 이 단지인가요? · 이름이 비슷한 단지
           </div>
@@ -146,7 +146,7 @@ export default function UnifiedSuggestPanel(p: Props) {
               onClick={() => p.onPick(it)}
               className={rowClass(i)}
             >
-              <span className="shrink-0 rounded bg-primary-soft px-1.5 py-px text-[10px] font-bold text-primary">
+              <span className="shrink-0 rounded bg-primary-soft px-1.5 py-px t-caption font-bold text-primary">
                 {it.label}
               </span>
               <span className="min-w-0 flex-1">

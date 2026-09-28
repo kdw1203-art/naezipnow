@@ -68,20 +68,13 @@ export function WorkbenchGrid({ core, more }: { core: WorkbenchCardDto[]; more: 
                   아이콘 줄은 높이가 48px 로 고정이라 배지를 얹어도 칸 높이가 안 변한다 —
                   제목 길이와 무관하게 네 칸의 높이가 같아진다. md+ 는 칸이 넓어 제목이
                   한 줄에 들어가므로 예전처럼 제목 옆에 붙인다(둘 중 하나만 그려진다). */}
+              {/* [1015 · 규칙 C] 성격 배지(character — "실측·체온·자동" 류)는 걷었다. 도구 색(왼쪽 띠·아이콘 면)은 그대로. */}
               <span className="flex items-center gap-2">
                 <span className="tool-soft-bg tool-ink tile-ico flex h-12 w-12 items-center justify-center rounded-lg">
                   <ToolGlyph id={c.glyph} size={34} />
                 </span>
-                <span className="tool-soft-bg tool-ink t-caption ms-auto whitespace-nowrap rounded px-1.5 py-px font-bold md:hidden">
-                  {c.character}
-                </span>
               </span>
-              <span className="t-section text-ink">
-                {c.title}{" "}
-                <span className="tool-soft-bg tool-ink t-caption hidden whitespace-nowrap rounded px-1.5 py-px align-middle font-bold md:inline-block">
-                  {c.character}
-                </span>
-              </span>
+              <span className="t-section text-ink">{c.title}</span>
               {/* 설명은 기능 한 줄(tagline)이 아니라 **이 화면이 하는 일**로 바꿨다 */}
               <span className="t-sub text-text-2">{c.premise}</span>
               {c.result && (
@@ -115,17 +108,14 @@ export function WorkbenchGrid({ core, more }: { core: WorkbenchCardDto[]; more: 
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        {picked ? (
+      {/* [1015 · 규칙 B] 사용법 문장("카드를 누르면 지도가 떠요 …")은 걷었다 — 고른 단지가 있을 때만 그 사실 한 줄 */}
+      {picked && (
+        <div className="flex flex-wrap items-center gap-2">
           <span className="t-sub text-text-3">
-            <span className="font-bold text-primary">{picked.name}</span> 기준으로 열려요
+            <span className="font-bold text-primary">{picked.name}</span> 기준
           </span>
-        ) : (
-          <span className="t-sub text-text-3">
-            카드를 누르면 지도가 떠요 — 지도나 검색으로 단지를 고르면 그 도구가 바로 열립니다
-          </span>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

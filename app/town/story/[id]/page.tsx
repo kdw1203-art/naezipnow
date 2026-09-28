@@ -183,10 +183,10 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
       {/* 저장·공유 — POST /api/bookmarks(type: post) · Web Share */}
       <PostActions postId={post.id} title={post.title} saveCount={post.bookmarkCount ?? 0} />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-5 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex flex-col gap-4 max-md:gap-3">
           {/* ---------- 이야기 본문 — 사람이 먼저 ---------- */}
-          <article className="rise-in story-card flex flex-col gap-4 p-5 md:p-7">
+          <article className="rise-in story-card flex flex-col gap-4 p-5 max-md:p-3.5 md:p-7">
             <header className="flex items-center gap-3">
               <span className="story-avatar story-avatar--lg" aria-hidden="true">
                 {initial}
@@ -205,7 +205,7 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
                       <Icon name="sprout" size={14} className="inline align-middle" />
                     </span>
                   )}
-                  <span className="story-kind t-caption">이야기</span>
+                  {/* [1015] "이야기" 부연 라벨을 걷었다(브리프 규칙 C) — 지역 칩만 남긴다 */}
                   <span className="rounded-md bg-primary-soft px-1.5 py-px t-caption font-bold text-primary">
                     {region}
                   </span>
@@ -281,7 +281,7 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
               댓글 {post.commentCount}
             </div>
             {activeComments.length === 0 && (
-              <p className="t-sub text-text-3">아직 댓글이 없어요 — 첫 답을 남겨 보세요.</p>
+              <p className="t-sub text-text-3">아직 댓글이 없어요.</p>
             )}
             {/* [#65·#66] 채택·대댓글 스레드 — 상대시각은 서버에서 계산해 넘긴다(하이드레이션 불일치 방지) */}
             <CommentThread
@@ -329,16 +329,18 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
           </div>
 
           {/* 다른 이웃 글 — 있으면 목록, 없으면 정직하게 */}
-          <div className="rise-in-3 card flex flex-col gap-1 p-[18px]">
+          <div className="rise-in-3 card flex flex-col gap-1 p-[18px] max-md:p-3.5">
             <div className="mb-1.5 t-body font-bold text-ink">다른 이웃 글</div>
             {others.length === 0 ? (
               <p className="t-sub text-text-3">아직 다른 이웃 글이 없어요.</p>
             ) : (
-              others.map((p, i) => (
+              /* [1015] 행 목록 = 리퀴드 판(hanji — 사람이 쓴 글, 브리프 규칙 I) */
+              <div className="lq-panel flex flex-col" data-tone="hanji">
+              {others.map((p, i) => (
                 <Link
                   key={p.id}
                   href={`/town/story/${p.id}`}
-                  className={`flex items-center gap-2.5 py-[7px] no-underline ${i < others.length - 1 ? "border-b border-divider" : ""}`}
+                  className={`flex items-center gap-2.5 py-[7px] no-underline ${i < others.length - 1 ? "border-b" : ""}`}
                 >
                   <span className="story-avatar" aria-hidden="true">
                     {(p.authorLabel?.trim() || "이").slice(0, 1)}
@@ -350,7 +352,8 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
                     </span>
                   </span>
                 </Link>
-              ))
+              ))}
+              </div>
             )}
             <Link href="/town?kind=post" className="mt-1 inline-flex min-h-[24px] items-center t-sub font-bold text-primary no-underline">
               이야기 피드 전체 ›

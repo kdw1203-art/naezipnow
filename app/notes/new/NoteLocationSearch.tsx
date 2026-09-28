@@ -167,9 +167,9 @@ export function NoteLocationSearch({
       >
         <Icon name="📍" size={16} className="shrink-0" />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-bold text-ink">{value.aptName || "단지·주소 검색"}</div>
+          <div className="truncate t-body font-bold text-ink">{value.aptName || "단지·주소 검색"}</div>
           <div className="truncate t-sub text-text-3">
-            {value.region ? `${value.region} · 눌러서 변경` : "단지명이나 주소를 검색해 연결"}
+            {value.region ? `${value.region} · 변경` : "단지명 또는 주소 검색"}
           </div>
         </div>
         <Icon name="search" size={15} className="shrink-0 text-text-3" />
@@ -206,8 +206,8 @@ export function NoteLocationSearch({
             ) : noResults ? (
               <div role="status" className="px-2 py-3 t-sub text-text-3">
                 {failed
-                  ? "검색 일시 불가 — 아래에 직접 입력"
-                  : "검색 결과 없음 — 아래에 단지명·지역 직접 입력"}
+                  ? "검색 일시 불가. 아래에 직접 입력"
+                  : "검색 결과 없음. 아래에 단지명·지역 직접 입력"}
               </div>
             ) : (
               <>
@@ -278,7 +278,7 @@ export function NoteLocationSearch({
                 aria-expanded={false}
                 className="inline-block py-[5px] t-sub font-bold text-primary"
               >
-                검색에 없어요 — 직접 입력 ›
+                직접 입력 ›
               </button>
             </div>
           )}

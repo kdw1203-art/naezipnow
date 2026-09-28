@@ -43,7 +43,7 @@ function AxisBlock({
     >
       <summary className="flex cursor-pointer list-none items-center gap-2">
         <span
-          className={`inline-flex shrink-0 items-center rounded px-1.5 py-px text-[10px] font-bold ${accent}`}
+          className={`inline-flex shrink-0 items-center rounded px-1.5 py-px t-caption font-bold ${accent}`}
         >
           {section.eyebrow}
         </span>
@@ -116,15 +116,13 @@ export default function DeepDivePanel({
   const total = deepDive.sections.length;
 
   return (
-    <section className="rise-in-1 card flex flex-col gap-3 rounded-3xl p-6">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <div className="text-[15px] font-bold text-ink">AI 심화 분석</div>
-          <div className="mt-0.5 t-sub text-text-3">
-            노트에 적힌 내용과 공개 데이터를 함께 읽어 {total}개 축으로 정리했어요 · {filled}개 축
-            확인
-          </div>
-        </div>
+    <section className="rise-in-1 card flex flex-col gap-3 rounded-3xl p-6 max-md:p-3.5">
+      {/* [1015 · 규칙 C·D] 제목 아래 설명 문장 → 숫자 한 줄 */}
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="t-section text-ink">AI 심화 분석</h2>
+        <span className="shrink-0 t-sub text-text-3">
+          {total}개 축 중 {filled}개 확인
+        </span>
       </div>
 
       <div className="flex flex-col gap-2">

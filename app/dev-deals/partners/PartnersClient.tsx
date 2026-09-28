@@ -65,7 +65,7 @@ function PartnerCard({ p }: { p: DevPartner }) {
           {p.specialties.map((s) => (
             <span
               key={s}
-              className="rounded-full bg-[rgba(0,0,0,.04)] chip-pad text-[10px] font-medium text-text-2"
+              className="rounded-full bg-[rgba(0,0,0,.04)] chip-pad t-caption font-medium text-text-2"
             >
               {s}
             </span>

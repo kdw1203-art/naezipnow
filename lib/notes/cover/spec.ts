@@ -142,8 +142,9 @@ export function coverVersion(spec: Pick<CoverSpec, "chosenAt" | "variant">, phot
 }
 
 /** 렌더 라우트 주소(상대) — 목록 카드·OG 가 같은 함수로 만든다 */
-export function coverImagePath(noteId: string, version: string): string {
-  return `/api/og/note-cover/${encodeURIComponent(noteId)}?v=${encodeURIComponent(version)}`;
+export type CoverShape = "square" | "wide";
+export function coverImagePath(noteId: string, version: string, shape: CoverShape = "square"): string {
+  return `/api/og/note-cover/${encodeURIComponent(noteId)}?v=${encodeURIComponent(version)}${shape === "wide" ? "&shape=wide" : ""}`;
 }
 
 /* ── 사진 주소 허용 규칙 ─────────────────────────────────────────────────────

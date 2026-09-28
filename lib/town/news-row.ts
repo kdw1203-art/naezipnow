@@ -29,6 +29,8 @@ export type NewsRow = {
   sourceUrl: string | null;
   /** 실제 이미지 URL 이 있을 때만 — 없으면 <img> 자체를 그리지 않는다 */
   image: string | null;
+  /** [1015] 조회 수(posts.view_count) — "많이 본 뉴스" 레일이 쓴다. 0 이면 0 */
+  views: number;
   /** [#67] 같은 사건을 다룬 다른 매체 보도(최대 4건) */
   related: NewsRelated[];
 };

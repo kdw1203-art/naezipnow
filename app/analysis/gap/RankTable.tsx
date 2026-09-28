@@ -11,12 +11,12 @@ import { Delta } from "@/app/components/num/Delta";
 /* [1009 · A] 표 머리 ⓘ — 이 화면의 계산과 같은 말(아래 GapScreenerPage 의 계산·FAQ 와 같은 식) */
 const GAP_HOW = [
   "실측 갭 = 지역 평균 매매가 − 전세 신고 보증금 중앙값(최근 3개월, 전세 30건 이상인 지역만)",
-  "추정 갭 = 지역 평균 매매가 × (1 − 전세가율) — 전세 신고가 30건 미만인 지역",
-  "지역 평균이라 단지·면적에 따라 실제 갭은 크게 달라요.",
+  "추정 갭 = 지역 평균 매매가 × (1 − 전세가율). 전세 신고가 30건 미만인 지역",
+  "지역 평균이라 단지·면적에 따라 실제 갭은 크게 다르다.",
 ];
 const YIELD_HOW = [
   "(최근 3개월 월세 신고 중앙값 × 12) ÷ (평균 매매가 − 월세 보증금 중앙값)",
-  "월세 표본이 30건 미만인 지역은 적지 않아요. 세금·수리비·공실은 넣지 않았어요.",
+  "월세 표본이 30건 미만인 지역은 적지 않는다. 세금·수리비·공실은 반영하지 않는다.",
 ];
 
 export type Row = {
@@ -74,7 +74,9 @@ export function RankTable({
   /* relative — 칸 안 <Delta> 의 sr-only(position:absolute)가 이 가로 스크롤 상자를 벗어나 모바일 문서 폭을
      +127px 늘렸다(390px 실측 — 하네스). 이 상자를 기준 상자로 만들어 안에서 잘리게 한다 */
   return (
-    <div className="card relative overflow-x-auto rounded-lg px-4 py-2">
+    /* [1015 · 규칙 I] 표 껍데기 = blue 리퀴드 판(스크롤 상자는 그 안쪽) */
+    <div className="lq-panel relative py-1" data-tone="blue">
+    <div className="relative overflow-x-auto">
       <table className="t-body w-full min-w-[600px]">
         <thead>
           <tr className="t-sub border-b border-line text-left text-text-3">
@@ -82,7 +84,7 @@ export function RankTable({
             <th className="py-2 pr-3 text-right font-semibold">
               <span className="inline-flex items-center gap-0.5">
                 전세가율
-                <Explain term="jeonse-garyul" how="공표 지역 통계(한국부동산원·KB)의 매매가 대비 전세가 비율이에요." size={12} />
+                <Explain term="jeonse-garyul" how="공표 지역 통계(한국부동산원·KB)의 매매가 대비 전세가 비율." size={12} />
               </span>
             </th>
             <th className="py-2 pr-3 text-right font-semibold">평균 매매가</th>
@@ -165,6 +167,7 @@ export function RankTable({
           ))}
         </tbody>
       </table>
+    </div>
     </div>
   );
 }

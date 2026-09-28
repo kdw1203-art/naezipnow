@@ -29,7 +29,7 @@ import { isStoryPost } from "@/lib/town/story";
 import type { FeedCard } from "@/app/town/feed-client";
 import type { Post } from "@/lib/types/post";
 import { logger } from "@/lib/log";
-import { noteCoverUrl } from "@/lib/notes/cover/resolve";
+import { noteCoverUrl, resolveNoteCover } from "@/lib/notes/cover/resolve";
 
 /** 첫 장(서버 렌더) 카드 수 — 예전 listPublicNotes(40) 상한과 같은 수 */
 export const TOWN_FEED_FIRST_PAGE = 40;
@@ -54,8 +54,10 @@ export function noteToCard(n: InspectionNote): FeedCard {
     id: n.id,
     href: `/notes/${n.id}`,
     kind: "note",
-    /* [썸네일] 고른 썸네일 → 첫 사진 — 노트 목록(lib/notes/feed-note)과 같은 함수 */
-    cover: noteCoverUrl(n),
+    /* [썸네일] 고른 썸네일 → 첫 사진 — 노트 목록(lib/notes/feed-note)과 같은 함수.
+       [1015] 피드 카드 커버는 가로로 넓은 자리라 템플릿이면 넓은 판(1200×630) — 정사각 판을 잘라 쓰면 제목이 잘렸다 */
+    cover: noteCoverUrl(n, "wide"),
+    coverTemplate: resolveNoteCover(n).template,
     title: oneLiner.length > 40 ? `${oneLiner.slice(0, 40)}…` : oneLiner,
     author: maskNoteAuthor(n.authorLabel, n.authorEmail),
     region: n.region || "전국",

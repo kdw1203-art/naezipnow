@@ -404,6 +404,8 @@ interface ComplexNoteItem {
   visitDate: string | null;
   region: string | null;
   mine: boolean;
+  /** [1015 · 규칙 H] 40px 정사각 썸네일 — /api/map/complex-notes 가 붙이면 그린다 */
+  cover?: string | null;
 }
 
 /** 매물 탭 — /api/listings?complex= 응답에서 실제로 쓰는 필드만 (PublicListing 부분집합) */
@@ -1993,7 +1995,7 @@ export function MapClient({
             <>
               {" "}
               <b className="text-text-2">
-                조건을 모두 만족하는 등록 매물이 이 화면에 없어요. 필터를 완화해 보세요.
+                조건을 모두 만족하는 등록 매물이 이 화면에 없어요.
               </b>
             </>
           )}
@@ -2173,7 +2175,7 @@ export function MapClient({
           )}
         </div>
         <div className="t-caption text-text-3">
-          정비사업은 공개 자료 기준 참고값이에요. 실제 추진 단계는 관할 구청 고시를 확인하세요.
+          정비사업은 공개 자료 기준 참고값 · 실제 추진 단계는 관할 구청 고시
           {showSupply && supplyItems.length > 0 && (
             <>
               {" "}
@@ -2205,7 +2207,7 @@ export function MapClient({
               setOfficeQuery(officeInput.trim());
             }
           }}
-          placeholder="회사 주소 (예: 강남구 테헤란로 152)"
+          placeholder="회사 주소"
           aria-label="회사 주소"
           className="w-full rounded-lg border border-line bg-[var(--glass-bg-strong)] px-2.5 py-1.5 text-xs text-text-1 outline-none placeholder:text-text-3"
         />
@@ -3807,6 +3809,7 @@ export function MapClient({
     // dvh 미지원 브라우저는 inset-0(bottom:0)이 폴백으로 풀스크린 유지.
     <div
       ref={mapWrapRef}
+      /* [1015 · 규칙 I] 지도는 <main> 밖(fixed) — 리퀴드 목록 톤은 .lq-scope 안에서만 그려진다 */
       /* [968 · 26] touch-manipulation: 더블탭 확대를 끄면 브라우저가 탭마다 두 번째 탭을
          기다리는 300ms 지연이 사라진다(지도 위 칩·버튼 응답). 핀치 줌은 그대로 — 지도
          SDK 가 자기 캔버스에서 직접 처리한다.
@@ -3815,7 +3818,7 @@ export function MapClient({
          router.refresh() 로 지도가 통째로 다시 떴다. PullToRefresh 가 이 속성을 보고
          제스처를 무시한다(/map 은 경로로도 끈다 — 이 속성은 다른 화면에 삽입된 지도용). */
       data-ptr-ignore=""
-      className="fixed inset-0 h-[100dvh] w-full touch-manipulation overflow-hidden bg-gradient-to-br from-line to-line-strong"
+      className="lq-scope fixed inset-0 h-[100dvh] w-full touch-manipulation overflow-hidden bg-gradient-to-br from-line to-line-strong"
       /* [968 · 24] 탭(끌지 않고 뗀 터치)은 클릭으로 온다 — 접힌 크롬을 즉시 편다.
          끌기는 click 을 만들지 않으므로 접힌 채 유지된다. */
       onClick={chromeCompact ? () => dispatchChrome("tap") : undefined}
@@ -3957,10 +3960,7 @@ export function MapClient({
           {listingNoticeKind === "error" && (
             <div className="glass pointer-events-auto max-w-full rounded-xl px-3.5 py-2.5">
               <div className="t-sub font-bold text-ink">매물을 불러오지 못했어요</div>
-              <div className="mt-0.5 t-sub text-text-3">
-                일시적 오류예요. 매물이 없다는 뜻은 아닙니다. 잠시 후 지도를 조금 옮기거나 다시
-                시도해 주세요.
-              </div>
+              <div className="mt-0.5 t-sub text-text-3">일시적 오류. 잠시 후 지도를 조금 옮기거나 다시 시도해 주세요.</div>
             </div>
           )}
 
@@ -3972,9 +3972,8 @@ export function MapClient({
                   : "이 화면에 등록 매물이 아직 없어요"}
               </div>
               <div className="mt-0.5 t-sub text-text-3">
-                {listingFilterNarrowed
-                  ? "필터·예산 조건을 완화하거나, 지도를 넓혀 보세요. 포털처럼 매물이 많은 상태가 아니라 승인된 등록분만 보여요."
-                  : "필터 문제가 아니라 아직 쌓인 재고가 적어요. 단지 실거래 마커는 그대로 볼 수 있고, 매물을 올리면 여기 표시돼요."}
+                {/* [1015 · 규칙 D] 빈 화면 한 줄 */}
+                {listingFilterNarrowed ? "승인된 등록 매물만 표시 · 필터·예산을 넓히면 더 보임" : "승인된 등록 매물만 표시 · 단지 실거래 마커는 그대로"}
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {listingFilterNarrowed && (
@@ -4010,7 +4009,7 @@ export function MapClient({
         <div className="hidden w-[280px] md:block">
           <MapSearchBox
             variant="header"
-            placeholder={`아파트명·주소 (예: ${regionLabel})`}
+            placeholder="아파트명·주소"
             onSelectComplex={handleSearchSelectComplex}
             onSelectAddress={handleSearchSelectAddress}
           />
@@ -4229,7 +4228,7 @@ export function MapClient({
               </p>
               {measurePoints.length < 2 ? (
                 <p className="t-sub text-text-3">
-                  두 지점 이상이면 직선·차량·도보 거리를 보여 드려요.
+                  두 지점 이상이면 직선·차량·도보 거리 표시.
                 </p>
               ) : (
                 <>
@@ -4540,8 +4539,6 @@ export function MapClient({
             {!popularFailed && !popularLoading && popular.length === 0 && (
               <div className="px-2 py-6 text-center t-sub text-text-3">
                 이 영역에는 실거래가 기록된 단지가 없어요.
-                <br />
-                지도를 넓히거나 다른 지역으로 옮겨 보세요.
               </div>
             )}
             {/* 목록이 채워지기 전에는 빈 칸이었다 — 결과가 통째로 튀어나오며
@@ -4980,16 +4977,21 @@ export function MapClient({
                   </div>
                 )}
                 {complexNotesStatus === "ok" && complexNotes.length > 0 && (
-                  <div className="card flex flex-col rounded-lg px-[15px] py-1">
-                    {complexNotes.map((n, i) => (
+                  /* [1015 · 규칙 H·I] 노트 행 = hanji 리퀴드 판 + 40px 정사각 썸네일(API 가 cover 를 주면 그림, 없으면 단색 칸) */
+                  <div className="lq-panel flex flex-col divide-y py-1" data-tone="hanji">
+                    {complexNotes.map((n) => (
                       <Link
                         key={n.id}
                         href={`/notes/${encodeURIComponent(n.id)}`}
-                        className={`flex items-center justify-between gap-2 py-2.5 text-[13px] ${
-                          i < complexNotes.length - 1 ? "border-b border-divider" : ""
-                        }`}
+                        className="flex items-center justify-between gap-2 py-2.5 text-[13px]"
                       >
-                        <span className="min-w-0 truncate font-bold text-ink">
+                        <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-brand-hanji" aria-hidden="true">
+                          {n.cover && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={n.cover} alt="" width={40} height={40} loading="lazy" className="h-10 w-10 object-cover" />
+                          )}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate font-bold text-ink">
                           {n.mine && (
                             <span className="mr-1.5 rounded-sm bg-primary-soft chip-pad-tight t-caption font-bold text-primary">
                               내 노트
@@ -5005,10 +5007,7 @@ export function MapClient({
                   </div>
                 )}
                 {complexNotesStatus === "ok" && complexNotes.length === 0 && (
-                  <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
-                    아직 이 단지의 임장노트가 없어요 — 첫 노트 → AI 요약 → 지도
-                    비교로 이어져요
-                  </div>
+                  <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">아직 이 단지의 임장노트가 없어요</div>
                 )}
                 <div className="flex gap-2">
                   <Link
@@ -5031,7 +5030,7 @@ export function MapClient({
               <>
                 {/* 사실 우선: 하드코딩 Q&A 제거 — 동네이야기로 연결 */}
                 <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
-                  이 지역의 질문·이야기를 동네이야기에서 확인해 보세요
+                  이 지역의 질문·이야기는 동네이야기에
                 </div>
                 <Link href="/town" className="btn-soft rounded-xl p-3 text-center t-body">
                   동네이야기 보기

@@ -163,7 +163,7 @@ export default async function InvitePage({
 
         <p className="mt-2 text-[13px] leading-[1.6] text-text-3">
           초대 링크로 가입을 완료하면 초대한 친구와 나 모두에게
-          <br className="hidden sm:block" /> 300P를 바로 드려요.
+          <br className="hidden sm:block" /> 300P 지급.
         </p>
 
         <div className="mt-5 flex flex-col gap-2 text-left">

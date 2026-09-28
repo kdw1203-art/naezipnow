@@ -99,16 +99,16 @@ export function AiPendingCard({
             <span className="t-body font-bold text-white">AI 정리 중…</span>
           </div>
           <p className="t-sub text-ai-muted">
-            노트는 저장됐어요. 이 화면에 그대로 두면 정리가 끝나는 대로 자동으로 반영돼요.
+            노트는 저장됐어요. 정리가 끝나면 이 화면에 자동으로 반영돼요.
           </p>
         </div>
       ) : (
         <div role="status" aria-live="polite" className="flex flex-col gap-1.5">
           <p className="t-body font-bold text-white">AI 정리가 늦어지고 있어요</p>
           <p className="t-sub text-ai-muted">
-            노트는 저장돼 있어요. 서버가 바쁘거나 요청이 전달되지 않았을 수 있어요 —{" "}
+            노트는 저장돼 있어요. 서버가 바쁘거나 요청이 전달되지 않았을 수 있어요.{" "}
             {canRetry
-              ? "아래에서 다시 정리를 요청하거나, 나중에 이 노트를 다시 열어 확인해 주세요."
+              ? "아래에서 다시 요청하거나, 나중에 이 노트를 다시 열어 확인해 주세요."
               : "나중에 이 노트를 다시 열어 확인해 주세요."}
           </p>
           {canRetry && <AiRetryButton noteId={noteId} defaultIntent={defaultIntent} />}

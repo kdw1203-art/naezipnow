@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { Icon } from "@/app/components/Icon";
 
 /* 표 / 타임라인 뷰 전환 — 상호작용(토글)만 클라이언트로 격리.
-   두 뷰 모두 page.tsx 에서 동일한 예시 데이터로 서버 렌더된 노드를 받는다. */
+   두 뷰 모두 page.tsx 에서 같은 실노트 모델로 서버 렌더된 노드를 받는다([1015] 주석의 "예시 데이터"는 옛말). */
 
 type ViewMode = "table" | "timeline";
 
@@ -39,7 +39,7 @@ export function CompareView({
               role="tab"
               aria-selected={active}
               onClick={() => setView(t.id)}
-              className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-[13px] font-bold transition ${
+              className={`flex items-center gap-1.5 rounded-xl px-4 py-2 t-body font-bold transition ${
                 active ? "bg-surface text-primary shadow-sm" : "text-text-3"
               }`}
             >

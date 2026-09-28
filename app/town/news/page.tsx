@@ -6,6 +6,7 @@ import { Icon } from "@/app/components/Icon";
 import { getWeeklyDigest, type WeeklyDigest } from "@/lib/newui/digest";
 import { NEWS_TAGS } from "@/lib/news/tags";
 import { NewsListClient } from "./NewsListClient";
+import { CoverImage } from "@/app/components/CoverImage";
 import { NewsAlertSubscribe } from "./NewsAlertSubscribe";
 import { ErrorState } from "@/app/components/ui";
 import { logger } from "@/lib/log";
@@ -114,155 +115,154 @@ export default async function TownNewsPage() {
   const isEmpty = newsCount === 0 && !newsFailed;
   const dateLabel = formatKstLongDate(Date.now(), { weekday: true });
 
+  /* [1015 · 네이버 뉴스 방식] 오른쪽 레일 "많이 본 뉴스" — 손에 든 목록에서 조회 수 상위 5(0 은 뺀다). 추가 조회 없음 */
+  const mostRead = [...rows].filter((r) => r.views > 0).sort((a, b) => b.views - a.views).slice(0, 5);
+
   return (
     <PageShell breadcrumb="뉴스룸" wide>
-      {/* 마스트헤드 — 네이비 카드가 아니라 한지 면(신문 머리). 숫자는 손에 든 목록만 센다. */}
-      <header className="newsroom-masthead rise-in mb-4 px-5 py-5 md:px-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="min-w-0 max-w-[640px]">
-            <div className="news-dateline">
-              <span className="inline-flex items-center gap-1.5">
-                <Icon name="newspaper" size={13} />
-                뉴스룸
-              </span>
-              <span aria-hidden="true">|</span>
-              <span>{dateLabel}</span>
-              <span aria-hidden="true">|</span>
-              <span>매일 아침 자동 수집 · 출처·발행 시각 명시</span>
-            </div>
-            <h1 className="newsroom-title mt-2 text-balance">오늘 부동산은 이렇게 움직였습니다</h1>
-            <p className="mt-1.5 t-body text-text-2">
-              수집한 기사를 출처와 함께 행으로 정리하고, 같은 사건은 한 줄로 접었습니다. 원문은 ↗ 로
-              바로 갑니다.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {/* [1006] 여기엔 글쓰기 버튼이 없다 — 사람의 기록은 동네이야기(/town)로 */}
-            <Link
-              href="/town"
-              className="btn-secondary inline-flex min-h-[40px] items-center gap-1 rounded-xl px-4 py-2 t-body font-bold no-underline"
-            >
-              <Icon name="messages-square" size={14} />
-              동네이야기
-            </Link>
-            <Link
-              href="/digest"
-              className="btn-primary btn-cta inline-flex min-h-[40px] items-center rounded-xl px-4 py-2 t-body no-underline"
-            >
-              주간 다이제스트
-            </Link>
-          </div>
-        </div>
-        {(todayCount > 0 || newsCount > 0) && (
-          <div className="news-dateline mt-4 border-t border-line pt-3">
-            {/* [970 · C-30] 0 은 그리지 않는다 */}
+      {/* [1015 · 규칙 C] 한지 마스트헤드(튀는 색면) → 흰 머리. 부연("매일 아침 자동 수집 · 출처·발행 시각 명시")·설명 문장 삭제.
+          숫자는 손에 든 목록만 센다. */}
+      <header className="rise-in mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-line pb-4">
+        <div className="min-w-0">
+          <h1 className="t-display text-ink">부동산 뉴스</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 t-sub text-text-3">
+            <span>{dateLabel}</span>
             {todayCount > 0 && (
               <span>
-                오늘 기사 <b>{todayCount}</b>
+                오늘 <b className="t-num text-ink">{todayCount}</b>건
               </span>
             )}
-            {/* "건" = 기사 수, "행" = 같은 사건을 접은 목록 행 수 — 목록(NewsListClient)도 같은 단위를 쓴다 */}
             {newsCount > 0 && (
               <span>
-                최근 수집 기사 <b>{newsCount.toLocaleString("ko-KR")}</b>건
+                최근 <b className="t-num text-ink">{newsCount.toLocaleString("ko-KR")}</b>건
               </span>
             )}
             {rows.length > 0 && rows.length < newsCount && (
               <span>
-                같은 사건 접어 <b>{rows.length.toLocaleString("ko-KR")}</b>행
+                같은 사건 접어 <b className="t-num text-ink">{rows.length.toLocaleString("ko-KR")}</b>행
               </span>
             )}
-            <span className="font-medium normal-case tracking-normal">지금 이 화면에 실린 기사 기준</span>
           </div>
-        )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/town"
+            className="btn-secondary inline-flex min-h-[40px] items-center gap-1 rounded-xl px-4 py-2 t-body font-bold no-underline"
+          >
+            <Icon name="messages-square" size={14} />
+            동네이야기
+          </Link>
+          <Link
+            href="/digest"
+            className="btn-primary btn-cta inline-flex min-h-[40px] items-center rounded-xl px-4 py-2 t-body no-underline"
+          >
+            주간 다이제스트
+          </Link>
+        </div>
       </header>
 
-      {/* 주간 다이제스트 요약 (#6) — 실패·빈 데이터 시 생략(fail-soft) */}
-      {digest && digestHasContent && (
-        <Link
-          href="/digest"
-          className="rise-in ai-panel mb-4 flex items-center justify-between gap-3 rounded-3xl p-5 no-underline"
-        >
-          <div className="flex min-w-0 flex-col gap-1">
-            <div className="flex items-center gap-1.5 t-sub font-bold text-ai-accent">
-              <Icon name="file-text" size={14} />
-              주간 다이제스트
-              <span className="rounded bg-white/10 px-1.5 py-px t-caption text-ai-text">{digest.weekLabel}</span>
+      {/* [1015 · 네이버 뉴스 방식] 데스크톱 2단 — 왼쪽 헤드라인 목록(사진 + 제목 + 요약 + 매체·시각), 오른쪽 레일(많이 본 뉴스 ·
+          주간 다이제스트 · 키워드 알림 · 주제 · 광고 1). 폰은 한 열 — 목록 뒤에 레일 순서 그대로. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
+        <div className="min-w-0">
+          {isEmpty ? (
+            <div className="card rise-in mb-5 flex flex-col items-center gap-2 px-6 py-10 text-center">
+              <div className="t-section text-ink">최근 수집된 기사 없음</div>
             </div>
-            <div className="t-section text-white">{digestSummaryLine(digest)}</div>
-            {digestTeaser && <div className="truncate text-xs text-ai-text">{digestTeaser}</div>}
-          </div>
-          <span className="shrink-0 rounded-lg bg-white/15 px-3.5 py-2 text-xs font-bold text-white">
-            전체 보기 ›
-          </span>
-        </Link>
-      )}
-
-      {/* [개선 #13] 키워드 알림 구독 — 뉴스가 매일 쌓이는 이 화면이 구독 전환의 최적 지점 */}
-      <NewsAlertSubscribe />
-
-      {/* [#103] 주제 허브 진입 — 클러스터·요약을 재활용하는 색인 표면 */}
-      <div className="rise-in mb-4 flex flex-wrap items-center gap-1.5">
-        <span className="t-caption font-bold tracking-wider text-text-3">주제별</span>
-        {NEWS_TAGS.slice(0, 10).map((t) => (
-          <Link
-            key={t.slug}
-            href={`/town/news/tag/${t.slug}`}
-            className="chip border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-2"
-          >
-            {t.label}
-          </Link>
-        ))}
-      </div>
-
-      {/* 목록 — SSR 은 항상 첫 장 40행을 HTML 에 그리고, 필터는 마운트 후 적용된다 */}
-      {isEmpty ? (
-        <div className="card rise-in mb-5 flex flex-col items-center gap-2 px-6 py-10 text-center">
-          <div className="t-title">
-            <Icon name="newspaper" size={26} />
-          </div>
-          {/* [1006] 예시 카드를 깔지 않는다 — 0건이면 0건이라고 말한다 */}
-          <div className="t-section text-ink">아직 수집된 기사가 없어요</div>
-          <p className="t-sub text-text-3">매일 아침 자동 수집돼요. 키워드 알림을 켜 두면 새 기사가 잡히는 대로 알려드려요.</p>
+          ) : newsFailed ? (
+            <div className="rise-in mb-5">
+              <ErrorState
+                title="뉴스를 불러오지 못했어요"
+                desc="조회가 실패했습니다. 수집된 뉴스가 없다는 뜻은 아닙니다. 잠시 후 다시 열어 주세요."
+                action={{ label: "동네이야기 보기", href: "/town" }}
+              />
+            </div>
+          ) : (
+            <NewsListClient
+              rows={firstPage.items}
+              categories={categories}
+              regions={regions}
+              total={firstPage.total}
+              hasMore={firstPage.hasMore}
+            />
+          )}
         </div>
-      ) : newsFailed ? (
-        <div className="rise-in mb-5">
-          <ErrorState
-            title="뉴스를 불러오지 못했어요"
-            desc="데이터 조회가 실패했습니다. 수집된 뉴스가 없다는 뜻은 아니에요. 잠시 후 다시 열어봐 주세요."
-            action={{ label: "동네이야기 보기", href: "/town" }}
-          />
-        </div>
-      ) : (
-        <NewsListClient
-          rows={firstPage.items}
-          categories={categories}
-          regions={regions}
-          total={firstPage.total}
-          hasMore={firstPage.hasMore}
-        />
-      )}
 
-      {/* 뉴스에서 자주 다뤄지는 두 표면으로의 상설 진입 */}
-      <div className="mt-6 flex flex-wrap items-center gap-2">
-        <Link
-          href="/redevelopment"
-          className="press chip inline-flex items-center gap-1 border border-line bg-surface px-3 py-1.5 t-sub text-text-2 no-underline"
-        >
-          <Icon name="building2" size={13} />
-          정비사업 지도에서 확인
-        </Link>
-        <Link
-          href="/supply"
-          className="press chip inline-flex items-center gap-1 border border-line bg-surface px-3 py-1.5 t-sub text-text-2 no-underline"
-        >
-          <Icon name="calendar" size={13} />
-          입주 예정 물량 보기
-        </Link>
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-[76px] lg:self-start" aria-label="뉴스룸 보조">
+          {mostRead.length > 0 && (
+            <section className="card rounded-2xl px-4 py-4" aria-label="많이 본 뉴스">
+              <h2 className="t-section text-ink">많이 본 뉴스</h2>
+              <ol className="m-0 mt-1 flex list-none flex-col divide-y divide-line p-0" data-tone="blue">
+                {mostRead.map((r, i) => (
+                  <li key={r.id}>
+                    <Link href={`/town/news/${r.id}`} className="flex items-center gap-3 py-2.5 no-underline">
+                      <span className="w-4 shrink-0 t-sub font-bold text-text-3 tabular-nums">{i + 1}</span>
+                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className="line-clamp-2 t-body font-bold leading-snug text-ink">{r.title}</span>
+                        <span className="truncate t-caption text-text-3">{r.source}</span>
+                      </span>
+                      {r.image && (
+                        <span className="relative h-[52px] w-[72px] shrink-0 overflow-hidden rounded-lg bg-divider">
+                          <CoverImage src={r.image} alt="" sizes="72px" imgClassName="absolute inset-0 h-full w-full object-cover" />
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          {/* 주간 다이제스트 요약 (#6) — 실패·빈 데이터 시 생략(fail-soft) */}
+          {digest && digestHasContent && (
+            <Link
+              href="/digest"
+              className="rise-in ai-panel flex items-center justify-between gap-3 rounded-2xl p-4 no-underline"
+            >
+              <div className="flex min-w-0 flex-col gap-1">
+                <div className="flex items-center gap-1.5 t-sub font-bold text-ai-accent">
+                  <Icon name="file-text" size={14} />
+                  주간 다이제스트
+                  <span className="rounded bg-white/10 px-1.5 py-px t-caption text-ai-text">{digest.weekLabel}</span>
+                </div>
+                <div className="t-body font-bold text-white">{digestSummaryLine(digest)}</div>
+                {digestTeaser && <div className="truncate t-caption text-ai-text">{digestTeaser}</div>}
+              </div>
+              <span className="shrink-0 t-sub font-bold text-white">›</span>
+            </Link>
+          )}
+
+          {/* [개선 #13] 키워드 알림 구독 */}
+          <NewsAlertSubscribe />
+
+          {/* [#103] 주제 허브 진입 */}
+          <section className="card rounded-2xl px-4 py-4" aria-label="주제별 뉴스">
+            <h2 className="t-section text-ink">주제별</h2>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {NEWS_TAGS.slice(0, 10).map((t) => (
+                <Link
+                  key={t.slug}
+                  href={`/town/news/tag/${t.slug}`}
+                  className="chip border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-2"
+                >
+                  {t.label}
+                </Link>
+              ))}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-line pt-3 t-sub">
+              <Link href="/redevelopment" className="tap-line font-bold text-text-2 no-underline">
+                정비사업 지도 ›
+              </Link>
+              <Link href="/supply" className="tap-line font-bold text-text-2 no-underline">
+                입주 예정 물량 ›
+              </Link>
+            </div>
+          </section>
+
+          {/* [1015 · 규칙 G] 광고 — 레일 끝 1곳(폰에서는 목록·레일 뒤) */}
+          <AdZone placement="page_bottom" seed={4} plan={null} />
+        </aside>
       </div>
-
-      {/* [961] 광고 공간 — 뉴스 목록 끝 */}
-      <AdZone placement="page_bottom" seed={4} plan={null} className="mt-6" />
     </PageShell>
   );
 }

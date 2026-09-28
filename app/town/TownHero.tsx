@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
 import { CountUp } from "@/app/components/motion/CountUp";
-import { BrandWatermark } from "@/app/components/BrandWatermark";
 import { TOWN_CATEGORY_LINKS } from "@/lib/town/category-links";
 
 /* ============================================================
@@ -74,30 +73,24 @@ export function TownHero({
 }) {
   const link = TOWN_CATEGORY_LINKS.find((l) => l.href === href);
   if (!link) return null;
-  const [before, accent, after] = link.heroTitle;
   const shown = stats.filter((s) => Number.isFinite(s.value) && s.value > 0);
 
+  /* [1017] 소유자(2026-09-28, 폰 동네 피드 캡처의 네이비 띠에 ×): "임장·지도를 제외하고 나머지 카테고리에서는
+     전부 삭제". 네이비 히어로(슬로건·워터마크·통계 띠)를 걷고 **흰 머리 한 줄**(아이콘 칩 + 카테고리 이름 + 한 줄 +
+     오른쪽 버튼)로. 통계는 캡션 한 줄로만 남긴다(0 은 여전히 안 그린다). props·호출부는 그대로. */
   return (
-    <section className="brand-navy-card rise-in mb-4 rounded-3xl px-5 py-5 md:px-6">
-      <BrandWatermark />
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex min-w-0 max-w-[600px] items-start gap-3">
+    <section className="rise-in mb-4 flex flex-col gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <span
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-on-dark-panel ${link.heroTone}`}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${link.tone}`}
             aria-hidden="true"
           >
-            <Icon name={link.icon} size={22} />
+            <Icon name={link.icon} size={20} />
           </span>
           <div className="min-w-0">
-            <span className="t-caption font-bold tracking-wider text-on-dark-muted">
-              동네이야기 · {link.label}
-            </span>
-            <h1 className="mt-1 t-display text-balance text-on-dark">
-              {before}
-              <span className="text-brand-red-dark">{accent}</span>
-              {after}
-            </h1>
-            <p className="mt-1.5 t-body text-on-dark-muted">{link.headSub}</p>
+            <h1 className="t-title text-ink">{link.label}</h1>
+            <p className="mt-0.5 t-sub text-text-2 max-md:hidden">{link.headSub}</p>
           </div>
         </div>
         {action ? (
@@ -110,8 +103,8 @@ export function TownHero({
                 href={c.href}
                 className={
                   c.primary
-                    ? "btn-primary btn-cta rounded-xl px-4 py-2.5 t-body no-underline"
-                    : "brand-photo-chip rounded-xl px-4 py-2.5 t-body font-bold no-underline"
+                    ? "btn-primary btn-md rounded-xl no-underline"
+                    : "btn-outline btn-md rounded-xl no-underline"
                 }
               >
                 {c.label}
@@ -122,31 +115,27 @@ export function TownHero({
       </div>
 
       {shown.length > 0 && (
-        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-on-dark-faint pt-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 t-caption text-text-3">
           {shown.map((s) =>
             s.href ? (
-              <Link
-                key={s.label}
-                href={s.href}
-                className="t-sub text-on-dark-muted no-underline"
-              >
+              <Link key={s.label} href={s.href} className="no-underline">
                 {s.label}{" "}
-                <b className="t-num text-on-dark">
+                <b className="t-num text-ink">
                   <CountUp value={s.value} />
                   {s.unit ?? ""}
                 </b>
               </Link>
             ) : (
-              <span key={s.label} className="t-sub text-on-dark-muted">
+              <span key={s.label}>
                 {s.label}{" "}
-                <b className="t-num text-on-dark">
+                <b className="t-num text-ink">
                   <CountUp value={s.value} />
                   {s.unit ?? ""}
                 </b>
               </span>
             ),
           )}
-          {note && <span className="t-caption text-on-dark-muted">{note}</span>}
+          {note && <span>{note}</span>}
         </div>
       )}
     </section>

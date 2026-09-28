@@ -67,7 +67,7 @@ export default async function TownGroupChatPage({
           </Link>
           <div className="flex-1">
             <div className="text-[13px] font-bold text-ink">{meeting.title}</div>
-            <div className="text-[10px] text-text-3">{metaLine}</div>
+            <div className="t-caption text-text-3">{metaLine}</div>
           </div>
         </div>
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">

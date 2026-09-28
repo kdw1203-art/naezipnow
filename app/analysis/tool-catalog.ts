@@ -21,7 +21,7 @@ export type TierId = "complex" | "market" | "record";
 
 export interface TierMeta {
   id: TierId;
-  /** 사용자가 스스로에게 묻는 문장 — 기능명이 아니라 목적으로 고르게 한다 */
+  /** 계열 제목 — [1015 · 규칙 D] 소망문("단지 하나를 깊게 보고 싶어요")이 아니라 명사(label 과 같은 값) */
   question: string;
   hint: string;
   /** 아이콘 배경·강조에 쓰는 토큰 클래스 (raw hex 금지 — 대비 게이트 통과 조건) */
@@ -37,7 +37,7 @@ export interface TierMeta {
 export const TIERS: Record<TierId, TierMeta> = {
   complex: {
     id: "complex",
-    question: "단지 하나를 깊게 보고 싶어요",
+    question: "단지 분석",
     hint: "단지명만 넣으면 실거래·전월세·공급·뉴스가 자동으로 붙습니다",
     iconClass: "bg-primary-soft text-primary",
     sparkClass: "text-primary",
@@ -46,7 +46,7 @@ export const TIERS: Record<TierId, TierMeta> = {
   },
   market: {
     id: "market",
-    question: "지역·시장 흐름이 궁금해요",
+    question: "지역 시세",
     hint: "국토교통부 실거래와 공표 통계로 계산합니다",
     iconClass: "bg-success-soft text-success",
     sparkClass: "text-success",
@@ -55,7 +55,7 @@ export const TIERS: Record<TierId, TierMeta> = {
   },
   record: {
     id: "record",
-    question: "내가 쓴 기록을 정리하고 싶어요",
+    question: "내 임장노트",
     hint: "임장노트를 점수화하고 후보를 나란히 비교합니다",
     iconClass: "bg-warning-soft text-warning",
     sparkClass: "text-warning",
@@ -118,7 +118,8 @@ export function workbenchCard(id: AiAnalysisToolId) {
 export const HUB_TOOLS: readonly HubTool[] = [
   {
     href: "/analysis/price",
-    title: "면적대별 실거래 시세",
+    /* [1015] "시세" 낱말은 실거래만 있는 곳에서 쓰지 않는다 → "면적대별 실거래가" */
+    title: "면적대별 실거래가",
     desc: "지역·면적대 평단가와 중앙값, 면적 프리미엄을 실거래로",
     icon: "bar",
     tier: "market",

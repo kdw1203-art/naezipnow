@@ -25,11 +25,9 @@ export default async function NoteTemplatesPage() {
   return (
     <PageShell breadcrumb="홈 › 임장노트 › 템플릿" title="임장 노트 템플릿">
       {/* [1012] 규칙 5·6 — "검증된 체크리스트로 시작하세요"(금지 문구) → 언제·어디서 + 실제 템플릿 수.
-          사용법 해설 문단은 걷었다(1011 원칙 — 버튼 라벨이 곧 설명이다). 0건이면 숫자 없이. */}
-      <p className="rise-in mb-5 t-body text-text-2">
-        {items.length > 0
-          ? `임장 가기 전날, 아래 체크리스트 ${items.length}개 중 하나를 고르면 그 항목이 채워진 노트가 열려요.`
-          : "임장 가기 전날 고를 체크리스트가 아직 없어요."}
+          [1015 · 규칙 B·D] 사용법 문장("~고르면 그 항목이 채워진 노트가 열려요")은 걷고 숫자 한 줄만. 0건이면 숫자 없이. */}
+      <p className="rise-in mb-5 t-body text-text-2 max-md:mb-3">
+        {items.length > 0 ? `임장 전날 고르는 체크리스트 ${items.length}개` : "체크리스트가 아직 없어요."}
       </p>
       <TemplateBrowser initial={items} />
     </PageShell>

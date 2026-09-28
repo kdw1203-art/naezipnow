@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
 import type { HomeNewsItem, HomeStoryItem } from "@/lib/newui/home-data";
 import { storyHref, newsHref } from "@/lib/town/post-href";
+import { CoverImage } from "@/app/components/CoverImage";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
 
 /* ============================================================
@@ -16,7 +17,7 @@ import { relativeTimeLabel } from "@/lib/format/relative-time";
      · 이야기 = 흰 카드(.story-card) · 머리글자(.story-avatar) · "이야기" 한지 알약 ·
        동네 배지 · 댓글 수. 사진이 없으면 커버를 지어내지 않는다(여기서는 커버 자체를
        그리지 않는다 — 홈은 목록이 아니라 입구다).
-     · 뉴스 = 한지 면 스트립(.news-strip) · 출처 · 제목 · 날짜 한 줄씩. 카드가 아니다.
+     · 뉴스 = [1015] 흰 카드 + 원문 사진 행(한지 스트립은 소유자 지시로 뺐다).
      · 0건은 0건이라고 말한다(가짜 카드 없음). 조회 실패는 "못 불러왔다"고 따로 말한다.
    ============================================================ */
 
@@ -41,10 +42,8 @@ export function HomeTownBlock({
       {/* ── 동네이야기 — 사람의 기록 ───────────────────────────────── */}
       <div className="card flex flex-col gap-2 rounded-2xl px-4 py-4">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="t-section text-ink">
-            동네이야기{" "}
-            <span className="t-caption font-bold text-text-3">사람의 기록</span>
-          </h2>
+          {/* [1015 · 규칙 C] 제목 옆 부연("사람의 기록") 삭제 — 소유자 지시 */}
+          <h2 className="t-section text-ink">동네이야기</h2>
           <Link
             href="/town"
             className="inline-block py-[5px] text-[12px] text-text-3 transition-colors hover:text-primary"
@@ -57,9 +56,7 @@ export function HomeTownBlock({
         ) : stories.length === 0 ? (
           /* 0건 — 빈 방을 뉴스로 채우지 않는다(뉴스는 옆 칸의 다른 재질). 첫 글로 안내한다. */
           <div className="flex flex-col gap-2">
-            <p className="m-0 t-sub text-text-3">
-              아직 이웃이 쓴 이야기가 없어요. 다녀온 동네의 첫 기록을 남겨 보세요.
-            </p>
+            <p className="m-0 t-sub text-text-3">아직 이웃이 쓴 이야기가 없습니다.</p>
             <Link
               href="/town/write"
               className="btn-secondary inline-flex min-h-10 w-fit items-center gap-1.5 rounded-xl px-3.5 t-sub font-bold no-underline"
@@ -83,7 +80,6 @@ export function HomeTownBlock({
                       {initial}
                     </span>
                     <span className="min-w-0 flex-1 truncate t-sub font-bold text-ink">{p.author}</span>
-                    <span className="story-kind t-caption">이야기</span>
                   </span>
                   <span className="line-clamp-2 t-body font-bold leading-snug text-ink">{p.title}</span>
                   <span className="flex flex-wrap items-center gap-x-2 gap-y-1 t-sub text-text-3">
@@ -112,43 +108,48 @@ export function HomeTownBlock({
         )}
       </div>
 
-      {/* ── 뉴스룸 — 자동수집 기사(다른 재질: 한지 면 + 왼쪽 네이비 선) ───── */}
-      <div className="news-strip flex flex-col px-4 py-3" aria-label="뉴스룸">
+      {/* ── 뉴스룸 — [1015 · 규칙 C·K] 한지 스트립(튀는 색면) → 이웃 글 칸과 같은 흰 카드. 제목 옆 부연("자동 수집 · 최신")
+          삭제. 행 = 원문 사진(있을 때만, 없으면 사진 칸 없음) + 제목 두 줄 + 매체·날짜 — 소유자: 뉴스는 원문 사진 유지 */}
+      <div className="card flex flex-col gap-2 rounded-2xl px-4 py-4" aria-label="뉴스룸">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="news-strip__label m-0">
-            <Icon name="newspaper" size={12} />
-            뉴스룸
-            <span className="font-semibold tracking-normal text-text-3">자동 수집 · 최신</span>
-          </h2>
+          <h2 className="t-section text-ink">뉴스룸</h2>
           <Link
             href="/town/news"
-            className="inline-flex min-h-[24px] items-center gap-0.5 t-sub font-bold text-primary no-underline"
+            className="inline-block py-[5px] text-[12px] text-text-3 transition-colors hover:text-primary"
           >
-            뉴스룸 전체
-            <span aria-hidden="true">›</span>
+            더보기
           </Link>
         </div>
         {failed ? (
-          <p className="m-0 mt-2 t-sub text-text-3">뉴스를 지금 불러오지 못했어요.</p>
+          <p className="m-0 t-sub text-text-3">뉴스를 지금 불러오지 못했어요.</p>
         ) : news.length === 0 ? (
-          <p className="m-0 mt-2 t-sub text-text-3">최근 수집된 기사가 아직 없어요.</p>
+          <p className="m-0 t-sub text-text-3">최근 기사 없음</p>
         ) : (
-          <div className="mt-1 flex flex-col">
+          <ul className="m-0 flex list-none flex-col divide-y divide-line p-0" data-tone="plain">
             {news.map((n) => (
-              <Link key={n.id} href={newsHref(n.id)} className="news-strip__item">
-                {n.source && <span className="news-source">{n.source}</span>}
-                <span className="news-title">{n.title}</span>
-                {n.when && (
-                  <time
-                    dateTime={n.publishedAt ?? undefined}
-                    className="shrink-0 t-caption text-text-3 tabular-nums"
-                  >
-                    {n.when.slice(5)}
-                  </time>
-                )}
-              </Link>
+              <li key={n.id}>
+                <Link href={newsHref(n.id)} className="flex items-center gap-3 py-2 no-underline">
+                  {n.image && (
+                    <span className="relative h-[52px] w-[72px] shrink-0 overflow-hidden rounded-lg bg-divider">
+                      <CoverImage src={n.image} alt="" sizes="72px" imgClassName="absolute inset-0 h-full w-full object-cover" />
+                    </span>
+                  )}
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="line-clamp-2 t-body font-bold leading-snug text-ink">{n.title}</span>
+                    <span className="flex min-w-0 items-baseline t-caption text-text-3">
+                      {n.source && <span className="min-w-0 truncate font-bold text-text-2">{n.source}</span>}
+                      {n.when && (
+                        <time dateTime={n.publishedAt ?? undefined} className="shrink-0 whitespace-pre tabular-nums">
+                          {n.source ? " · " : ""}
+                          {n.when.slice(5)}
+                        </time>
+                      )}
+                    </span>
+                  </span>
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </div>
     </section>

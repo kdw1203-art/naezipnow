@@ -70,9 +70,10 @@ export type ReportSummaryInput = {
 
 /**
  * 머리 한 줄 · 비교 문구 · 첫 문단(G12).
- *  · 신고 중인 달: 비교하지 않는다 — "9월 아파트 매매 신고 3,889건 — 신고 기한(10/30)까지 늘어요"
- *  · 기한이 지난 두 달 + 공통 지역: "3월 아파트 매매 신고가 전월보다 19.0% 늘었어요"(보합 |x|<0.05% 는 "거의 같아요")
+ *  · 신고 중인 달: 비교하지 않는다 — "9월 아파트 매매 신고 3,889건 · 신고 기한 10/30 까지 잠정"
+ *  · 기한이 지난 두 달 + 공통 지역: "3월 아파트 매매 신고 전월 대비 19.0% 증가"(보합 |x|<0.05% 는 "전월과 비슷")
  *  · 비교 불가: "3월 아파트 매매 신고 47,517건"
+ * [1015 · 규칙 D] 머리 한 줄은 명사형("~늘었어요/~줄었어요" · 대시 잇기 → "증가/감소" · 가운뎃점). 첫 문단의 대시도 마침표로.
  */
 export function reportSummary(input: ReportSummaryInput): {
   headline: string;
@@ -83,11 +84,11 @@ export function reportSummary(input: ReportSummaryInput): {
   const txText = input.txCount.toLocaleString("ko-KR");
   let headline: string;
   if (open) {
-    headline = `${monthOnly} 아파트 매매 신고 ${txText}건 — ${deadline ? `신고 기한(${deadline})까지 늘어요` : "신고가 더 들어오는 중이에요"}`;
+    headline = `${monthOnly} 아파트 매매 신고 ${txText}건 · ${deadline ? `신고 기한 ${deadline} 까지 잠정` : "신고 진행 중"}`;
   } else if (compare && deltaDir(compare.pct)) {
     const dir = deltaDir(compare.pct);
-    headline = `${monthOnly} 아파트 매매 신고가 ${
-      dir === "flat" ? "전월과 거의 같아요" : `전월보다 ${absPctText(compare.pct)} ${dir === "up" ? "늘었어요" : "줄었어요"}`
+    headline = `${monthOnly} 아파트 매매 신고 ${
+      dir === "flat" ? "전월과 비슷" : `전월 대비 ${absPctText(compare.pct)} ${dir === "up" ? "증가" : "감소"}`
     }`;
   } else {
     headline = `${monthOnly} 아파트 매매 신고 ${txText}건`;
@@ -98,11 +99,11 @@ export function reportSummary(input: ReportSummaryInput): {
       )}건 → ${compare.curTx.toLocaleString("ko-KR")}건, ${signedPctText(compare.pct)}`
     : null;
   const leadSentence = open
-    ? `${label} 내집나우 집계 지역(${regionCount}곳)의 아파트 매매 실거래 신고는 지금까지 ${txText}건입니다 — 신고 기한(계약 후 30일${
+    ? `${label} 내집나우 집계 지역(${regionCount}곳)의 아파트 매매 실거래 신고는 지금까지 ${txText}건입니다. 신고 기한(계약 후 30일${
         deadline ? ` · ${deadline}` : ""
       })이 지나지 않아 더 늘어날 잠정치이며, 국토교통부 실거래 신고 기준입니다.`
     : `${label} 내집나우 집계 지역(${regionCount}곳)의 아파트 매매 실거래는 총 ${txText}건입니다${
         compareText ? ` (${compareText})` : ""
-      } — 국토교통부 실거래 신고 기준.`;
+      }. 국토교통부 실거래 신고 기준.`;
   return { headline, compareText, leadSentence };
 }

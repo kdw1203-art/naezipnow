@@ -17,6 +17,8 @@ import { useScrollRestore } from "@/lib/client/use-scroll-restore";
 import { formatKrwManwon } from "@/lib/format/krw";
 import { newsHref, storyHref } from "@/lib/town/post-href";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
+/* [1015 · 규칙 H] 임장노트 행 40px 정사각 썸네일 — 커버가 없으면 단색 칸(값은 단색 토큰) */
+import { seedGradient } from "@/lib/town/shared";
 import { FuzzyBadge, Hl, complexMetaLine } from "./complex-hit";
 import {
   NO_MATCH_EXAMPLE,
@@ -59,7 +61,8 @@ interface UnifiedResults {
   /** [1008 · S] 미리보기 값(읍면동·세대수·6개월 거래·비슷한 이름)은 선택 — 옛 응답엔 없다 */
   complexes: ComplexPreview[];
   listings: { id: string; title: string; price: string }[];
-  notes: { id: string; title: string }[];
+  /** [1015] cover·region 은 선택 — 통합 검색 API 가 붙이면 그대로 그린다(정사각 40px 자리) */
+  notes: { id: string; title: string; cover?: string | null; region?: string | null }[];
   stories: UnifiedStory[];
   news: UnifiedNews[];
 }
@@ -119,6 +122,8 @@ interface Row {
   story?: UnifiedStory;
   /** [1007] 뉴스 행 — 출처·발행시각 */
   news?: UnifiedNews;
+  /** [1015] 임장노트 행 — 썸네일(없으면 단색 칸) */
+  note?: { cover: string | null; seed: string };
 }
 interface Group {
   key: SectionKey;
@@ -345,7 +350,11 @@ export function SearchClient() {
       key: "notes",
       label: "임장노트",
       more: "/notes",
-      rows: results.notes.map((n) => ({ id: n.id, title: n.title })),
+      rows: results.notes.map((n) => ({
+        id: n.id,
+        title: n.title,
+        note: { cover: typeof n.cover === "string" && n.cover ? n.cover : null, seed: n.region || n.id },
+      })),
     },
     {
       key: "stories",
@@ -600,9 +609,7 @@ export function SearchClient() {
           <div className="t-section text-ink">
             지금은 {failed.join("·")} 검색이 되지 않아요
           </div>
-          <div className="t-sub text-text-3">
-            결과가 없는 게 아니라 조회에 실패한 거예요. 잠시 후 다시 시도해 주세요.
-          </div>
+          <div className="t-sub text-text-3">조회 실패. 잠시 후 다시 시도해 주세요.</div>
         </div>
       )}
 
@@ -615,7 +622,7 @@ export function SearchClient() {
           <div className="break-words t-sub text-text-3">
             {NO_MATCH_HINT} · {NO_MATCH_EXAMPLE}
           </div>
-          <div className="t-caption text-text-3">매물·임장노트·이웃 이야기·뉴스에서도 찾지 못했어요.</div>
+          <div className="t-caption text-text-3">매물·임장노트·이웃 이야기·뉴스에도 없음</div>
 
           {/* 항목 13 — 막다른 화면 금지: 결과가 없어도 다음 행동은 있어야 한다.
               지도는 텍스트 매칭이 아니라 위치 탐색이라 같은 검색어로도 찾아질 수
@@ -703,7 +710,7 @@ export function SearchClient() {
           )}
           {visibleGroups
             .map((g) => (
-              <section key={g.key} className="rise-in card rounded-2xl p-[18px]">
+              <section key={g.key} className="rise-in card rounded-2xl p-[18px] max-md:p-3.5">
                 <header className="mb-1 flex items-center justify-between">
                   <div className="t-body font-bold text-ink">
                     {g.label} <span className="text-text-3">{g.rows.length}</span>
@@ -723,8 +730,18 @@ export function SearchClient() {
                     </Link>
                   </div>
                 </header>
-                <div className={g.key === "news" ? "news-list" : g.key === "stories" ? "mt-1 flex flex-col gap-2" : "flex flex-col"}>
-                  {g.rows.map((r, i) => {
+                {/* [1015 · 규칙 I] 행 목록은 리퀴드 판 — 단지 blue · 매물 mint · 임장노트 hanji(이야기 카드·뉴스 행은 제 재질 그대로) */}
+                <div
+                  className={
+                    g.key === "news"
+                      ? "news-list"
+                      : g.key === "stories"
+                        ? "mt-1 flex flex-col gap-2"
+                        : "lq-panel mt-1 flex flex-col divide-y"
+                  }
+                  data-tone={g.key === "complexes" ? "blue" : g.key === "listings" ? "mint" : g.key === "notes" ? "hanji" : undefined}
+                >
+                  {g.rows.map((r) => {
                     const optId = `search-opt-${flatIndexOf.get(`${g.key}:${r.id}`) ?? ""}`;
                     const active = flatIndexOf.get(`${g.key}:${r.id}`) === activeIdx;
                     const onClick = () => {
@@ -789,9 +806,9 @@ export function SearchClient() {
                           id={optId}
                           href={hrefFor(g.key, r.id)}
                           onClick={onClick}
-                          className={`flex min-h-10 flex-col gap-0.5 rounded-lg py-2.5 transition-colors hover:text-primary ${
-                            i < g.rows.length - 1 ? "border-b border-divider" : ""
-                          } ${active ? "-mx-1.5 bg-primary-soft px-1.5" : ""}`}
+                          className={`flex min-h-10 flex-col gap-0.5 py-2.5 transition-colors hover:text-primary ${
+                            active ? "-mx-1.5 bg-primary-soft px-1.5" : ""
+                          }`}
                         >
                           <span className="flex min-w-0 items-center gap-1.5">
                             <span className="min-w-0 truncate t-body font-bold text-ink">
@@ -834,15 +851,28 @@ export function SearchClient() {
                         id={optId}
                         href={hrefFor(g.key, r.id)}
                         onClick={onClick}
-                        className={`flex items-center justify-between gap-3 rounded-lg py-2.5 transition-colors hover:text-primary ${
-                          i < g.rows.length - 1 ? "border-b border-divider" : ""
-                        } ${active ? "-mx-1.5 bg-primary-soft px-1.5" : ""}`}
+                        className={`flex items-center justify-between gap-3 py-2.5 transition-colors hover:text-primary ${
+                          active ? "-mx-1.5 bg-primary-soft px-1.5" : ""
+                        }`}
                       >
-                        <span className="min-w-0 truncate t-body font-bold text-ink">
+                        {r.note && (
+                          /* [1015 · 규칙 H] 40px 정사각 썸네일 — 고른 템플릿 → 첫 사진 → 단색 칸 */
+                          <span
+                            className="h-10 w-10 shrink-0 overflow-hidden rounded-lg"
+                            style={r.note.cover ? undefined : { background: seedGradient(r.note.seed) }}
+                            aria-hidden="true"
+                          >
+                            {r.note.cover && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={r.note.cover} alt="" width={40} height={40} loading="lazy" className="h-10 w-10 object-cover" />
+                            )}
+                          </span>
+                        )}
+                        <span className="min-w-0 flex-1 truncate t-body font-bold text-ink">
                           {highlightMatch(r.title, settledQuery)}
                         </span>
                         {r.meta && (
-                          <span className="shrink-0 t-sub text-text-3">{r.meta}</span>
+                          <span className="shrink-0 t-sub t-num">{r.meta}</span>
                         )}
                       </Link>
                     );

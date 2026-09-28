@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
+import { AdZone } from "@/app/components/ads/AdZone";
 import { QaBlock } from "@/app/components/QaBlock";
 import { CitationBlock } from "@/app/components/CitationBlock";
 import { PressSummaryBlock } from "@/app/components/PressSummaryBlock";
@@ -92,7 +93,8 @@ export async function generateMetadata({
       robots: { index: false, follow: true },
     };
   }
-  const title = `${def.label} ${def.monthsLabel} 아파트 거래, 정말 몰릴까 — 실거래로 검증 | 내집나우`;
+  /* [1015 · 규칙 D] 물음형 제목 → 명사 */
+  const title = `${def.label}(${def.monthsLabel}) 아파트 거래량 검증 리포트 | 내집나우`;
   const description = `${def.monthsLabel} 아파트 매매 실거래를 같은 해 다른 달과 비교했습니다. ${report.latest.year}년 ${def.monthsLabel} 거래 ${report.latest.txCount.toLocaleString("ko-KR")}건, 국토교통부 신고 기준.`;
   const path = `/reports/season/${slug}`;
   return {
@@ -127,16 +129,17 @@ export default async function SeasonReportPage({
     if (!lastCompared?.vsOffSeason) return null;
     const lift = lastCompared.vsOffSeason.liftPct;
     const v = seasonVerdict(lift);
-    const head = `${lastCompared.year}년 ${def.monthsLabel} 거래는 같은 해 다른 달`;
-    if (v === "higher") return `${head}보다 ${absPctText(lift)} 많았어요`;
-    if (v === "lower") return `${head}보다 ${absPctText(lift)} 적었어요`;
-    return `${head}과 거의 차이가 없었어요`;
+    /* [1015 · 규칙 D] 결론 한 줄은 명사형("~많았어요" → "많음") */
+    const head = `${lastCompared.year}년 ${def.monthsLabel} 거래, 같은 해 다른 달`;
+    if (v === "higher") return `${head}보다 ${absPctText(lift)} 많음`;
+    if (v === "lower") return `${head}보다 ${absPctText(lift)} 적음`;
+    return `${head}과 차이 없음`;
   })();
 
   /* G12 — 발췌해도 완결되는 첫 문단. 비교가 불가능하면 그 사실을 문장으로 쓴다. */
   let leadSentence: string;
   if (compared.length === 0) {
-    leadSentence = `${latest.year}년 ${def.monthsLabel} 아파트 매매 실거래는 ${latest.txCount.toLocaleString("ko-KR")}건입니다. 같은 해 다른 달의 집계가 아직 없어 "${def.label}에 거래가 몰리는가"는 이 데이터로 판단할 수 없습니다 — 국토교통부 실거래 신고 기준.`;
+    leadSentence = `${latest.year}년 ${def.monthsLabel} 아파트 매매 실거래는 ${latest.txCount.toLocaleString("ko-KR")}건입니다. 같은 해 다른 달의 집계가 아직 없어 "${def.label}에 거래가 몰리는가"는 이 데이터로 판단할 수 없습니다. 국토교통부 실거래 신고 기준.`;
   } else {
     const c = compared[compared.length - 1]!;
     const vs = c.vsOffSeason!;
@@ -152,7 +155,7 @@ export default async function SeasonReportPage({
           : abs === "0.0%"
             ? `과 ${seasonVerdictText(v)}`
             : `보다 ${abs} ${vs.liftPct > 0 ? "많았지만" : "적었지만"} ±${SEASON_LIFT_THRESHOLD_PCT}% 안이라 ${seasonVerdictText(v)}`;
-    leadSentence = `${c.year}년 ${def.monthsLabel}의 아파트 매매 실거래는 월평균 ${n(vs.seasonPerMonth)}건으로, 같은 해 같은 지역(${vs.regionCount}곳)의 다른 달 월평균 ${n(vs.offPerMonth)}건${tail} — 국토교통부 실거래 신고 기준.`;
+    leadSentence = `${c.year}년 ${def.monthsLabel}의 아파트 매매 실거래는 월평균 ${n(vs.seasonPerMonth)}건으로, 같은 해 같은 지역(${vs.regionCount}곳)의 다른 달 월평균 ${n(vs.offPerMonth)}건${tail}. 국토교통부 실거래 신고 기준.`;
   }
 
   const citation =
@@ -223,13 +226,16 @@ export default async function SeasonReportPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript([articleJsonLd, crumbs]) }}
       />
-      <div className="mx-auto max-w-[860px]">
-        <h1 className="rise-in text-[24px] font-bold text-ink">
-          {def.label}({def.monthsLabel}), 정말 거래가 몰릴까
+      {/* [1015 · 규칙 F·G] 데스크톱 2단 — 본문 + 340px 레일(목차 · 관련 화면 · 데이터 출처 · 광고 1). 폰은 한 열, 광고는 페이지 끝 1. */}
+      <div className="mx-auto grid max-w-[1100px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
+      <div className="min-w-0">
+        {/* [1015 · 규칙 D] 물음형 제목("정말 거래가 몰릴까") → 명사 */}
+        <h1 className="rise-in t-title text-ink">
+          {def.label}({def.monthsLabel}) 거래량 검증
         </h1>
         {/* [1009 · H] 결론 → 큰 숫자(계절 월평균 vs 다른 달 월평균) → 판정 기준. 첫 문단(G12)은 인용용 전문으로 아래에 */}
         {headline && lastCompared?.vsOffSeason && (
-          <section aria-label="검증 결과" className="rise-in-1 card mt-3 rounded-2xl p-[var(--pad-card)]">
+          <section id="summary" aria-label="검증 결과" className="rise-in-1 card mt-3 rounded-2xl p-[var(--pad-card)] max-md:mt-2">
             <p className="m-0 t-caption text-text-3">
               공통 지역 {lastCompared.vsOffSeason.regionCount.toLocaleString("ko-KR")}곳 · 국토교통부 실거래 신고
             </p>
@@ -256,32 +262,33 @@ export default async function SeasonReportPage({
               </div>
             </div>
             <p className="m-0 mt-2 flex items-center gap-0.5 t-caption text-text-3">
-              ±{SEASON_LIFT_THRESHOLD_PCT}% 안은 &ldquo;차이 없음&rdquo;으로 판정해요
+              ±{SEASON_LIFT_THRESHOLD_PCT}% 안은 &ldquo;차이 없음&rdquo;으로 판정
               <Explain
                 title="계절 판정"
-                body="이사철 통념을 실거래 신고 건수로 확인해요. 판정 문턱은 결론에 맞춰 고르지 않도록 코드에 고정돼 있어요."
+                body="이사철 통념을 실거래 신고 건수로 확인한다. 판정 문턱은 결론에 맞춰 고르지 않도록 코드에 고정."
                 how={[
-                  `${def.monthsLabel}의 월평균 거래와 같은 해 나머지 달의 월평균 거래를 비교해요.`,
-                  "비교 대상 달에 모두 등장하는 공통 지역만 더해요 — 달마다 집계 지역 수가 달라 생기는 착시를 없애려고요.",
-                  `차이 = (${def.monthsLabel} 월평균 − 다른 달 월평균) ÷ 다른 달 월평균 × 100, ±${SEASON_LIFT_THRESHOLD_PCT}% 이상이면 "많았다/적었다"`,
-                  "신고 기한(계약 후 30일)이 안 지난 잠정 월과 계절의 일부 달만 있는 해는 빼요.",
+                  `${def.monthsLabel}의 월평균 거래와 같은 해 나머지 달의 월평균 거래를 비교`,
+                  "비교 대상 달에 모두 등장하는 공통 지역만 합산(달마다 집계 지역 수가 달라 생기는 착시 제거)",
+                  `차이 = (${def.monthsLabel} 월평균 − 다른 달 월평균) ÷ 다른 달 월평균 × 100, ±${SEASON_LIFT_THRESHOLD_PCT}% 이상이면 "많음/적음"`,
+                  "신고 기한(계약 후 30일)이 안 지난 잠정 월과 계절의 일부 달만 있는 해는 제외",
                 ]}
                 source="국토교통부 실거래 신고 · 월별 집계"
               />
             </p>
           </section>
         )}
-        <p className="rise-in-1 mt-3 text-[13px] leading-[1.7] text-text-2">{leadSentence}</p>
+        {/* [1015 · 규칙 E] 첫 문단(G12)은 머리 카드와 같은 숫자 — 폰에서는 숨긴다(HTML 에는 남는다) */}
+        <p className="rise-in-1 mt-3 t-body leading-[1.7] text-text-2 max-md:hidden">{leadSentence}</p>
 
         {/* 검증 대상이 된 통념을 먼저 밝힌다 — 이 페이지가 무엇에 답하는지 */}
-        <div className="rise-in-1 mt-4 card rounded-2xl p-5">
-          <p className="text-[12px] font-bold text-text-3">검증 대상 통념</p>
-          <p className="mt-1 text-[13px] font-bold leading-[1.6] text-ink">“{def.claim}”</p>
-          <p className="mt-1.5 text-[12px] leading-[1.6] text-text-3">{def.rationale}</p>
+        <div className="rise-in-1 mt-4 card rounded-2xl p-5 max-md:mt-3 max-md:p-3.5">
+          <p className="t-caption font-bold text-text-3">검증 대상 통념</p>
+          <p className="mt-1 t-body font-bold leading-[1.6] text-ink">“{def.claim}”</p>
+          <p className="mt-1.5 t-sub leading-[1.6] text-text-3">{def.rationale}</p>
         </div>
 
         {!report.canClaimSeasonality && (
-          <p className="rise-in-1 mt-3 text-[12px] leading-[1.6] text-text-3">
+          <p className="rise-in-1 mt-3 t-sub leading-[1.6] text-text-3">
             지금까지 {def.monthsLabel}이 온전히 집계된 해는 {report.years.length}개(
             {report.years.map((y) => `${y.year}년`).join(", ")})입니다. 한 해만으로는 그 해가
             특이했을 가능성을 배제할 수 없어,{" "}
@@ -289,20 +296,20 @@ export default async function SeasonReportPage({
           </p>
         )}
 
-        {/* 연도별 계절 vs 계절 외 */}
-        <section className="rise-in-2 card mt-5 p-[var(--pad-card)]">
-          <h2 className="text-[15px] font-bold text-ink">
+        {/* 연도별 계절 vs 계절 외 — [1015 · 규칙 I] 표 껍데기 lq-panel(blue) */}
+        <section id="years" className="rise-in-2 card mt-5 p-[var(--pad-card)] max-md:mt-3">
+          <h2 className="t-section text-ink">
             연도별 {def.monthsLabel} vs 같은 해 다른 달
           </h2>
           {/* [1009 · H] 차이 열 — 예전 text-danger/text-primary(테마를 타는 색) → <Delta>. ±5% 안이면 숫자 옆에
               "차이 없음"을 함께 적는다(색은 표준 등락, 판정은 이 페이지의 고정 문턱). 숫자 열은 tabular-nums */}
           {/* relative — 표 안 <Delta> 의 스크린리더 글자(sr-only, position:absolute)가 가로 스크롤 상자 밖 문서 폭을
               넓히지 않게(390px 에서 문서 폭 461px 실측). 절대 위치 자식의 기준 상자를 스크롤 상자 안으로 둔다. */}
-          <div className="relative mt-3 overflow-x-auto">
+          <div data-tone="blue" className="lq-panel relative mt-3 overflow-x-auto max-md:mt-2">
             {/* [1009 · H] 390px 에서 가로 스크롤 없이 — 계절 합계 열(월평균과 같은 정보)은 sm 부터 */}
-            <table className="w-full text-left text-[13px]">
+            <table className="w-full text-left t-body">
               <thead>
-                <tr className="border-b border-border text-[12px] text-text-3">
+                <tr className="border-b border-border t-sub text-text-3">
                   <th className="py-2 font-medium">연도</th>
                   <th className="hidden py-2 text-right font-medium sm:table-cell">{def.monthsLabel} 거래</th>
                   <th className="py-2 text-right font-medium">{def.monthsLabel} 월평균</th>
@@ -340,16 +347,15 @@ export default async function SeasonReportPage({
               </tbody>
             </table>
           </div>
+          {/* [1015 · 규칙 J] 계산 기준 설명은 위 ⓘ(계절 판정)와 같은 말 — 공통 지역 수만 한 줄로 */}
           {compared.length > 0 && (
-            <p className="mt-3 text-[12px] leading-[1.6] text-text-3">
-              비교는 해당 연도의 비교 대상 달에 <strong>모두 등장하는 공통 지역</strong>으로만
-              계산했습니다 (가장 최근 연도 {compared[compared.length - 1]!.vsOffSeason!.regionCount}
-              곳). 달마다 집계 지역 수가 달라 생기는 착시를 없애기 위해서입니다. ±
-              {SEASON_LIFT_THRESHOLD_PCT}% 이내는 &ldquo;차이 없음&rdquo;으로 봅니다.
+            <p className="mt-3 t-caption leading-[1.6] text-text-3">
+              비교 대상 달에 모두 등장하는 공통 지역 기준(가장 최근 연도 {compared[compared.length - 1]!.vsOffSeason!.regionCount}곳) · ±
+              {SEASON_LIFT_THRESHOLD_PCT}% 이내는 차이 없음
             </p>
           )}
           {report.pending.length > 0 && (
-            <p className="mt-2 text-[12px] leading-[1.6] text-text-3">
+            <p className="mt-2 t-caption leading-[1.6] text-text-3">
               아직 세지 않은 해:{" "}
               {report.pending.map((p) => `${p.year}년(${p.reason})`).join(" · ")}. 계절의 일부
               달만 있거나 신고가 진행 중인 해는 계절 합계에 넣지 않습니다.
@@ -359,36 +365,33 @@ export default async function SeasonReportPage({
 
         {/* 전년 대비 */}
         {yoy && (
-          <section className="rise-in-3 card mt-5 p-[var(--pad-card)]">
-            <h2 className="text-[15px] font-bold text-ink">
+          <section id="yoy" className="rise-in-3 card mt-5 p-[var(--pad-card)] max-md:mt-3">
+            <h2 className="t-section text-ink">
               {yoy.fromYear}년 → {yoy.toYear}년 {def.monthsLabel} 비교
             </h2>
-            <p className="mt-2 text-[13px] leading-[1.7] text-text-2">
-              두 해 {def.monthsLabel}에 모두 집계된 지역{" "}
-              <strong className="text-ink">{yoy.regionCount}곳</strong> 기준입니다.
-            </p>
+            <p className="mt-1 t-caption text-text-3">두 해 {def.monthsLabel}에 모두 집계된 지역 {yoy.regionCount}곳 기준</p>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {/* [1009 · H] 예전 `>= 0 ? text-danger : text-primary` — 0% 도 빨강, 하락은 테마색(초록·보라가 될 수 있다).
                   <Delta> 로 ▲/▼·보합 + 비교 기준(전년 대비). */}
               <div className="rounded-lg border border-border px-4 py-3">
-                <p className="text-[12px] font-semibold text-text-3">거래량</p>
-                <p className="mt-1 text-[15px] font-bold tabular-nums text-ink">
+                <p className="t-sub font-semibold text-text-3">거래량</p>
+                <p className="mt-1 t-section tabular-nums text-ink">
                   {yoy.fromTx.toLocaleString("ko-KR")}건 → {yoy.toTx.toLocaleString("ko-KR")}건
                 </p>
-                <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1 text-[13px]">
+                <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1 t-body">
                   <Delta pct={yoy.txDeltaPct} srContext={`${yoy.fromYear}년보다`} />
-                  <span className="text-[12px] text-text-3">{yoy.fromYear}년 대비</span>
+                  <span className="t-sub text-text-3">{yoy.fromYear}년 대비</span>
                 </p>
               </div>
               <div className="rounded-lg border border-border px-4 py-3">
-                <p className="text-[12px] font-semibold text-text-3">평균 매매가</p>
-                <p className="mt-1 text-[15px] font-bold tabular-nums text-ink">
+                <p className="t-sub font-semibold text-text-3">평균 매매가</p>
+                <p className="mt-1 t-section tabular-nums text-ink">
                   {eok(yoy.fromAvgKrw)} → {eok(yoy.toAvgKrw)}
                 </p>
                 {yoy.avgDeltaPct !== null && (
-                  <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1 text-[13px]">
+                  <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1 t-body">
                     <Delta pct={yoy.avgDeltaPct} srContext={`${yoy.fromYear}년보다`} />
-                    <span className="text-[12px] text-text-3">{yoy.fromYear}년 대비 · 거래량 가중 평균</span>
+                    <span className="t-sub text-text-3">{yoy.fromYear}년 대비 · 거래량 가중 평균</span>
                   </p>
                 )}
               </div>
@@ -398,17 +401,15 @@ export default async function SeasonReportPage({
 
         {/* 최신 관측 연도의 지역별 */}
         {report.topRegions.length > 0 && (
-          <section className="rise-in-4 card mt-5 p-[var(--pad-card)]">
-            <h2 className="text-[15px] font-bold text-ink">
-              {latest.year}년 {def.monthsLabel} 거래 상위 지역{" "}
-              <span className="text-[12px] font-medium text-text-3">
-                거래량순 · 상위 {report.topRegions.length}곳
-              </span>
+          <section id="regions" className="rise-in-4 card mt-5 p-[var(--pad-card)] max-md:mt-3">
+            <h2 className="t-section text-ink">
+              {latest.year}년 {def.monthsLabel} 거래 상위 지역
             </h2>
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full text-left text-[13px]">
+            <p className="mt-0.5 t-caption text-text-3">거래량순 · 상위 {report.topRegions.length}곳</p>
+            <div data-tone="blue" className="lq-panel mt-3 overflow-x-auto max-md:mt-2">
+              <table className="w-full text-left t-body">
                 <thead>
-                  <tr className="border-b border-border text-[12px] text-text-3">
+                  <tr className="border-b border-border t-sub text-text-3">
                     <th className="py-2 font-medium">지역</th>
                     <th className="py-2 text-right font-medium">{def.monthsLabel} 거래</th>
                     <th className="py-2 text-right font-medium">평균 매매가</th>
@@ -427,17 +428,16 @@ export default async function SeasonReportPage({
                 </tbody>
               </table>
             </div>
-            <p className="mt-3 text-[12px] leading-[1.6] text-text-3">
-              평균가는 면적·타입 구분 없는 거래량 가중 평균입니다. 해제(취소) 신고분은 집계에서
-              제외했습니다 —{" "}
+            <p className="mt-3 t-caption leading-[1.6] text-text-3">
+              평균가는 면적·타입 구분 없는 거래량 가중 평균 · 해제(취소) 신고분 제외 ·{" "}
               <Link href="/methodology" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
-                집계 방법론 보기
+                집계 방법론
               </Link>
             </p>
           </section>
         )}
 
-        <div className="rise-in-5 mt-5">
+        <div id="cite" className="rise-in-5 mt-5 max-md:mt-3">
           <CitationBlock sentence={citation} />
           <PressSummaryBlock
             sentences={pressSentences}
@@ -447,7 +447,7 @@ export default async function SeasonReportPage({
           <QaBlock title={`${def.label} 실거래 Q&A`} items={faq} />
         </div>
 
-        <p className="mb-8 text-[12px] text-text-3">
+        <p className="mb-2 t-sub text-text-3 lg:hidden">
           <Link href="/reports" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
             월간 실거래 리포트
           </Link>
@@ -460,6 +460,38 @@ export default async function SeasonReportPage({
             지역별 실거래 상세
           </Link>
         </p>
+        {/* [1015 · 규칙 G] 페이지 끝 광고 1 */}
+        <AdZone placement="page_bottom" seed={3} plan={null} className="mt-6 max-md:mt-4" />
+      </div>
+
+      {/* [1015 · 규칙 F] 데스크톱 레일 — 목차 · 관련 화면 · 데이터 출처 · 광고 1(데스크톱만) */}
+      <aside className="hidden flex-col gap-3 lg:sticky lg:top-[76px] lg:flex lg:self-start">
+        <nav aria-label="목차" className="card rounded-2xl px-4 py-3">
+          <div className="t-caption font-bold text-text-3">목차</div>
+          <ol className="m-0 mt-1.5 flex list-none flex-col p-0">
+            {headline && <li><a href="#summary" className="flex min-h-[36px] items-center t-sub font-bold text-ink no-underline">검증 결과</a></li>}
+            <li><a href="#years" className="flex min-h-[36px] items-center t-sub font-bold text-ink no-underline">연도별 비교</a></li>
+            {yoy && <li><a href="#yoy" className="flex min-h-[36px] items-center t-sub font-bold text-ink no-underline">전년 대비</a></li>}
+            {report.topRegions.length > 0 && <li><a href="#regions" className="flex min-h-[36px] items-center t-sub font-bold text-ink no-underline">거래 상위 지역</a></li>}
+            <li><a href="#cite" className="flex min-h-[36px] items-center t-sub font-bold text-ink no-underline">인용 · Q&amp;A</a></li>
+          </ol>
+        </nav>
+        <nav aria-label="관련 화면" className="card rounded-2xl px-4 py-1">
+          <Link href="/reports" className="flex min-h-[40px] items-center justify-between gap-2 border-b border-divider py-2 t-sub font-bold text-ink no-underline">
+            월간 실거래 리포트 <span aria-hidden="true" className="text-text-3">›</span>
+          </Link>
+          <Link href="/analysis/timing" className="flex min-h-[40px] items-center justify-between gap-2 border-b border-divider py-2 t-sub font-bold text-ink no-underline">
+            매수·매도 타이밍 분석 <span aria-hidden="true" className="text-text-3">›</span>
+          </Link>
+          <Link href="/tx" className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline">
+            지역별 실거래 상세 <span aria-hidden="true" className="text-text-3">›</span>
+          </Link>
+        </nav>
+        <p className="px-1 t-caption leading-[1.6] text-text-3">
+          데이터 출처: 국토교통부 실거래가 공개시스템 신고분(해제 신고분 제외) · {latest.year}년 {def.monthsLabel} 집계
+        </p>
+        <AdZone placement="sidebar" seed={1} plan={null} />
+      </aside>
       </div>
     </PageShell>
   );

@@ -22,7 +22,7 @@ export const dynamic = "force-static";
 const PATH = "/journey";
 const TITLE = "내 집 마련 여정 — 시장 감부터 계약·잔금까지 6단계";
 const DESCRIPTION =
-  "시장 감 잡기·예산 정하기·후보 좁히기·현장 확인(임장)·비교·결정·계약·잔금·입주 — 여섯 단계마다 왜 필요한지, 할 일, 바로 쓸 화면(실거래 지도·계산기·임장노트·비교·계약 일정표)을 이어 둔 안내입니다.";
+  "시장 감 잡기·예산 정하기·후보 좁히기·현장 확인(임장)·비교·결정·계약·잔금·입주. 여섯 단계마다 할 일과 바로 쓸 화면(실거래 지도·계산기·임장노트·비교·계약 일정표)을 이어 둔 안내입니다.";
 
 export const metadata = buildPageMetadata({
   title: TITLE,

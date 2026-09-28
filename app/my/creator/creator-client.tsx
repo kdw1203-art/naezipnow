@@ -271,11 +271,11 @@ function MonetizationTab({
         <div className="t-body font-bold text-ink">내 유료 리포트</div>
         {!sales.available ? (
           <div className="mt-3 rounded-lg bg-bg px-4 py-6 text-center t-sub text-text-3">
-            판매 실적을 불러올 수 없어요 — 잠시 후 다시 확인해 주세요.
+            판매 실적을 불러올 수 없어요. 잠시 후 다시 확인해 주세요.
           </div>
         ) : sales.reports.length === 0 ? (
           <div className="mt-3 rounded-lg bg-bg px-4 py-6 text-center t-sub text-text-3">
-            아직 등록한 유료 리포트가 없어요. 아래에서 첫 리포트를 판매해 보세요.
+            아직 등록한 유료 리포트가 없어요.
           </div>
         ) : (
           <div className="mt-2 flex flex-col gap-[6px]">
@@ -293,7 +293,7 @@ function MonetizationTab({
                   </div>
                 </div>
                 <span
-                  className={`shrink-0 rounded-full chip-pad text-[10px] font-bold ${
+                  className={`shrink-0 rounded-full chip-pad t-caption font-bold ${
                     r.isPremium
                       ? "bg-primary-soft text-primary"
                       : "bg-line text-text-3"

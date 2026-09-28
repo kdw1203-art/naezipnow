@@ -76,8 +76,7 @@ export default async function DigestArchivePage() {
         </p>
         <p className="rise-in-1 mt-2 t-sub text-text-3">
           진행 중인 이번 주는 아직 끝나지 않았으므로 넣지 않습니다. 수집된 항목이{" "}
-          {MIN_ITEMS}건 미만인 주도 만들지 않습니다 — 두어 줄짜리 요약을 다이제스트라고 부르지
-          않기 위해서입니다. 최근 {ARCHIVE_WEEKS}주까지 보관합니다.
+          {MIN_ITEMS}건 미만인 주도 만들지 않습니다. 최근 {ARCHIVE_WEEKS}주까지 보관합니다.
         </p>
 
         {loadFailed ? (

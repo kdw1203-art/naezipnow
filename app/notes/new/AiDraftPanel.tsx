@@ -88,6 +88,7 @@ export function AiDraftPanel({
       }
       if (!res.ok || !json.ok || !json.draft) {
         setErrorMsg(json.error ?? "초안을 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
+        /* [1015] 문구는 그대로 — 오류 한 줄은 대화체 허용 */
         setState("error");
         return;
       }
@@ -104,24 +105,20 @@ export function AiDraftPanel({
     applied != null && (Object.keys(applied.checks).length > 0 || applied.satisfaction != null);
 
   return (
-    <section
-      className={`rounded-2xl border p-[13px] ${
-        emphasize
-          ? "border-primary/45 bg-primary-soft/60 ring-2 ring-primary/20"
-          : "border-primary/25 bg-primary-soft/40"
-      }`}
-    >
+    /* [1015 · 규칙 C·J] 파란 색면·링 → 흰 카드 + 1px 선(.card). 버튼은 outline — 이 화면의 채움 파랑은 저장 하나.
+       강조(emphasize)는 테두리 굵기로만. */
+    <section className={`card rounded-2xl p-[13px] ${emphasize ? "border-line-strong" : ""}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <div className="t-body font-bold text-ink">
-            {emphasize && region.trim() ? `${region.trim()} AI 브리핑으로 시작` : "AI 초안 받기"}
+            {emphasize && region.trim() ? `${region.trim()} AI 초안` : "AI 초안"}
           </div>
           <p className="mt-0.5 t-caption text-text-2">
             {emphasize && region.trim()
-              ? "고르신 관심지역의 실거래·시세·공급 데이터로 첫 노트 초안을 채워 드려요."
+              ? `${region.trim()} 실거래·시세·공급 데이터로 초안 작성`
               : /* [1011] 재료 나열을 걷었다(소유자 지시). "현장 확인이 본편"은 남긴다 —
                    초안을 결론으로 오해하지 않게 하는 정직성 문구다. */
-                "방문 전 예습 초안을 채워 드려요 — 현장 확인이 본편입니다."}
+                "방문 전 예습용 초안. 현장 확인이 본편."}
           </p>
         </div>
         {state !== "applied" && (
@@ -129,7 +126,7 @@ export function AiDraftPanel({
             type="button"
             onClick={() => void run()}
             disabled={!ready || state === "busy"}
-            className="btn-primary min-h-10 rounded-xl px-3.5 py-2 t-sub font-bold disabled:opacity-50"
+            className="btn-outline min-h-10 rounded-xl px-3.5 py-2 t-sub font-bold disabled:opacity-50"
           >
             {state === "busy" ? "초안 만드는 중…" : guest ? "로그인하고 AI 초안 받기" : "AI 초안 받기"}
           </button>
@@ -137,21 +134,21 @@ export function AiDraftPanel({
       </div>
 
       {!ready && !disabled && (
-        <p className="mt-1.5 t-caption text-text-3">먼저 위에서 단지나 지역을 선택해 주세요.</p>
+        <p className="mt-1.5 t-caption text-text-3">단지 또는 지역을 먼저 선택</p>
       )}
 
       {state === "applied" && applied && (
-        <div className="mt-2 rounded-xl bg-surface px-3 py-2.5">
-          <p className="t-sub font-bold text-primary">초안이 채워졌어요 — 아래에서 자유롭게 고쳐 쓰세요.</p>
+        <div className="mt-2 rounded-xl bg-bg px-3 py-2.5">
+          <p className="t-sub font-bold text-primary">초안 적용됨. 아래에서 고쳐 쓰기.</p>
           {hasScores && (
             <p className="mt-1 t-caption text-text-2">
               <b className="text-warning">점수는 AI 추정(현장 확인 전)</b>
-              {applied.scoreRationale ? ` — ${applied.scoreRationale}` : ""} · 방문 후 직접 조정해 주세요.
+              {applied.scoreRationale ? ` · ${applied.scoreRationale}` : ""} · 방문 후 조정
             </p>
           )}
           {applied.evidence.length > 0 && (
             <p className="mt-1 t-caption text-text-3">
-              데이터 근거 {applied.evidence.length}줄이 메모에 담겼어요 (출처·시점 포함).
+              데이터 근거 {applied.evidence.length}줄 메모에 포함(출처·시점)
             </p>
           )}
         </div>

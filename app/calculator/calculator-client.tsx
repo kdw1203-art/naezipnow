@@ -125,7 +125,8 @@ function deriveAverageRate(rates: MortgageRateItem[]): number | null {
    예전 값의 loanRatio 는 읽지 않는다(규칙이 바뀌어 같은 비율이 같은 뜻이 아니다). */
 const STORAGE_KEY = "nuguzip:calculator:loan:v1";
 type StoredInputs = {
-  price: number;
+  /** [1015] 빈 칸(null)도 저장 — 예시 기본값 없이 시작한다 */
+  price: number | null;
   loanPick: number | null;
   years: number;
   assumedRate: number;
@@ -153,7 +154,9 @@ const extLinkCls =
 
 export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) {
   const [section, setSection] = useState<Section>("loan");
-  const [price, setPrice] = useState(84000); // 만원
+  /* [1015 · 규칙 B] 예전 기본값 84,000만원은 우리가 정한 예시 숫자였다 — 실데이터가 아닌 예시 값은 두지 않는다.
+     빈 칸에서 시작하고(null), 매매가가 들어오기 전에는 결과 대신 빈 상태 한 줄만 그린다. 저장값·URL 프리필은 그대로 복원한다. */
+  const [price, setPrice] = useState<number | null>(null); // 만원
   /* 입력칸에 치는 도중의 글자 — 범위를 벗어난 중간값("8")으로 매매가가 튀지 않게 따로 든다 */
   const [priceDraft, setPriceDraft] = useState<string | null>(null);
   /* [D69] 이 금액이 어디서 왔는지 — 실거래에서 넘겨받았을 때만 값이 있다.
@@ -268,10 +271,12 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
   }, [price, loanPick, years, assumedRate, incomeManwon, cashManwon, existingDebtMonthly, ownership, region]);
 
   /* ── 한도: 최대 대출 = min(LTV × 매매가, 가격 구간 한도) ── */
-  const limit = computeLoanLimit({ priceManwon: price, region, ownership });
+  const hasPrice = price !== null && price >= PRICE_MIN_MANWON;
+  const priceN = hasPrice ? price : 0;
+  const limit = computeLoanLimit({ priceManwon: priceN, region, ownership });
   const maxLoan = limit.maxLoanManwon;
   const loan = loanPick === null ? maxLoan : Math.min(Math.max(0, loanPick), maxLoan);
-  const loanPct = price > 0 ? Math.round((loan / price) * 100) : 0;
+  const loanPct = priceN > 0 ? Math.round((loan / priceN) * 100) : 0;
   /* 수도권·규제지역 주담대 만기 30년 이내(6·27) — 40년을 골라 둔 채 지역을 바꾸면 30년으로 계산한다 */
   const termCap = maxTermYears(region);
   const effectiveYears = termCap !== null ? Math.min(years, termCap) : years;
@@ -285,16 +290,16 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
   const totalInterest = loan > 0 ? Math.max(0, monthly * effectiveYears * 12 - loan) : 0;
 
   /* 취득세 — 보유 주택 구분·가격 구간·지역(규제지역 추가 구입 중과)의 대략 규칙표로 */
-  const acqTax = acquisitionTaxOf(price, ownership, region);
-  const acqRateLabel = acquisitionRateLabel(price, ownership, region);
+  const acqTax = acquisitionTaxOf(priceN, ownership, region);
+  const acqRateLabel = acquisitionRateLabel(priceN, ownership, region);
   /* [1009 · T] 중개보수(법정 상한)를 필요 현금에 넣는다 — 예전 필요 현금은 매매가 − 대출 + 취득세뿐이라 집을 살 때 실제로
      나가는 중개보수(8.4억이면 최대 336만원)가 빠져 있었다. 요율표는 중개보수 계산기와 같은 lib/finance/brokerage. */
-  const brokerFee = brokerageFeeCap({ amountWon: price * 10_000, deal: "sale" });
+  const brokerFee = brokerageFeeCap({ amountWon: priceN * 10_000, deal: "sale" });
   const brokerManwon = brokerFee ? brokerFee.feeWon / 10_000 : 0;
-  const cashNeeded = price - loan + acqTax + brokerManwon;
+  const cashNeeded = priceN - loan + acqTax + brokerManwon;
   /* [1009 · T] 결론 한 줄(숫자보다 문장 먼저) · 돈의 구성 막대 — 전부 위의 실제 계산값에서(lib/finance/calc-summary) */
   const conclusion = loanConclusion({ limit, region, ownership });
-  const breakdown = costBreakdown({ priceManwon: price, loanManwon: loan, acqTaxManwon: acqTax, brokerManwon });
+  const breakdown = costBreakdown({ priceManwon: priceN, loanManwon: loan, acqTaxManwon: acqTax, brokerManwon });
 
   /* 판정 — 소득을 입력했을 때만 계산 (기존 대출 월 상환액 포함) */
   const monthlyTotal = monthly + Math.max(0, existingDebtMonthly);
@@ -313,35 +318,35 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
     "최대 대출 = min(LTV × 매매가, 가격 구간 한도)",
     ...ltvTableLines(),
     priceTierLine(),
-    "실제 한도는 DSR·소득·신용·은행 심사로 더 낮을 수 있어요.",
+    "실제 한도는 DSR·소득·신용·은행 심사로 더 낮을 수 있다.",
   ];
   const cashHow = [
     "필요 현금 = 매매가 − 대출 + 취득세 + 중개보수(법정 상한)",
-    "등기 비용(국민주택채권·인지세 등)과 이사비는 넣지 않았어요.",
+    "등기 비용(국민주택채권·인지세 등)과 이사비는 제외.",
   ];
   const monthlyHow = [
-    "월 상환액 = 대출 × r ÷ (1 − (1 + r)^−n) — r 은 연 금리 ÷ 12, n 은 기간(년) × 12",
+    "월 상환액 = 대출 × r ÷ (1 − (1 + r)^−n), r 은 연 금리 ÷ 12, n 은 기간(년) × 12",
     rateIsLive
-      ? "금리는 은행별 공시 금리(변동, 없으면 고정) 범위의 중간값을 평균한 값이에요."
-      : "금리는 공시를 불러오지 못해 직접 정한 가정치예요.",
+      ? "금리는 은행별 공시 금리(변동, 없으면 고정) 범위의 중간값을 평균한 값."
+      : "금리는 공시를 불러오지 못해 직접 정한 가정치.",
     "총 이자 = 월 상환액 × 개월 수 − 대출",
   ];
   const brokerHow = [
-    `중개보수 상한 = 매매가 × 상한요율(한도액이 있으면 그 금액까지)${brokerFee ? ` — 이 집은 ${brokerFee.rateLabel}` : ""}`,
+    `중개보수 상한 = 매매가 × 상한요율(한도액이 있으면 그 금액까지)${brokerFee ? `. 이 집은 ${brokerFee.rateLabel}` : ""}`,
     `주택 매매 요율: ${bracketLine(SALE_HOUSE_BRACKETS)}`,
   ];
   const burdenHow = [
     "이 화면의 부담률 = (월 상환액 + 기존 대출 월 상환액) × 12 ÷ 연 소득",
-    "30% 이하 적정 · 40% 이하 주의 · 그 위는 위험으로 나눴어요(이 화면의 구분).",
+    "30% 이하 적정 · 40% 이하 주의 · 그 위는 위험(이 화면의 구분).",
     stressFloor !== null
-      ? `은행 DSR 심사는 금리에 스트레스 금리(하한 ${stressFloor}%)를 더해 따로 봐요 — 한도가 더 줄 수 있어요.`
-      : "은행 DSR 심사는 이 계산과 따로예요 — 한도가 더 줄 수 있어요.",
+      ? `은행 DSR 심사는 금리에 스트레스 금리(하한 ${stressFloor}%)를 더해 따로 본다. 한도가 더 줄 수 있다.`
+      : "은행 DSR 심사는 이 계산과 별개. 한도가 더 줄 수 있다.",
   ];
 
   /* CTA 조건 전달 — 임장노트 메모 프리셋 · 시나리오 딥링크 파라미터 */
   const memoDraft = [
     "대출 계산 조건 (내집나우 계산기)",
-    `- 매매가 ${manwonText(price)} · ${regionLabel} · ${ownership}`,
+    `- 매매가 ${manwonText(priceN)} · ${regionLabel} · ${ownership}`,
     `- 최대 대출 ${manwonText(maxLoan)} (LTV ${limit.ltvPct}%${limit.capManwon !== null ? ` · 가격 구간 한도 ${manwonText(limit.capManwon)}` : ""}) · ${LOAN_RULES_BASIS_LABEL}${
       conclusion.caveat ? ` · ${conclusion.caveat}` : ""
     }`,
@@ -371,10 +376,8 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
           각자 검색 랜딩으로 분리됐다(방문 실측 상위 진입 경로의 SEO 확장). */}
       <CalculatorNav current="/calculator" />
       {/* 사실 우선: 예전 문구("기기에만 저장 · 외부 전송 없음")는 거짓이었다 — 계산을 서버 API 로 보냈다.
-          [1008 · M] 이제 계산이 전부 이 화면에서 끝나 문구가 사실이 됐다. */}
-      <div className="rise-in -mt-2 mb-4 text-[12px] text-text-3">
-        입력값은 이 브라우저 안에서만 계산·저장돼요(서버로 보내지 않아요) · 다음 방문 때 그대로 복원돼요
-      </div>
+          [1008 · M] 이제 계산이 전부 이 화면에서 끝나 문구가 사실이 됐다. [1015 · 규칙 D] 명사형 한 줄 */}
+      <div className="rise-in -mt-2 mb-4 t-sub text-text-3 max-md:mb-3">입력값은 이 브라우저에만 저장 · 서버 전송 없음</div>
 
       <Segmented
         options={SECTIONS}
@@ -387,17 +390,15 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
       {section === "realestate" && <RealEstateTools />}
 
       {section === "loan" && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[400px_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[400px_minmax(0,1fr)]">
           {/* ---------- 입력 ---------- */}
           <div className="flex min-w-0 flex-col gap-3">
-            <div className="rise-in text-[12px] font-semibold text-text-3">
-              집을 살 때(매매 · 주택담보대출) 쓰는 계산기예요. 전월세는 위 &lsquo;전월세 전환 계산기&rsquo;에서 볼 수 있어요.
-            </div>
+            {/* [1015 · 규칙 B] "집을 살 때 쓰는 계산기예요 … 전월세는 …" 사용법 문장 삭제 — 위 계산기 목록이 그 말을 한다 */}
 
-            {/* 1. 어디에 · 어떤 조건으로 */}
-            <section className="rise-in-1 card flex flex-col gap-3 rounded-3xl p-[18px]" aria-labelledby="calc-step-1">
-              <h2 id="calc-step-1" className="text-[13px] font-bold text-ink">
-                1. 어디서 · 어떤 조건으로 사나요
+            {/* 1. 어디에 · 어떤 조건으로 — [1015 · 규칙 D] 물음형 제목 → 명사 */}
+            <section className="rise-in-1 card flex flex-col gap-3 rounded-3xl p-[18px] max-md:p-3.5" aria-labelledby="calc-step-1">
+              <h2 id="calc-step-1" className="t-body font-bold text-ink">
+                1. 지역 · 보유 주택 · 매매가
               </h2>
               <div className="flex flex-col gap-1.5">
                 <span className="text-[12px] font-bold text-text-2">지역</span>
@@ -416,8 +417,8 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                             : "border border-line bg-surface text-text-2"
                         }`}
                       >
-                        <span className="text-[13px] font-bold">{r.label}</span>
-                        <span className="whitespace-pre-line break-words text-[10px] leading-tight">{r.hint}</span>
+                        <span className="t-body font-bold">{r.label}</span>
+                        <span className="whitespace-pre-line break-words t-caption leading-tight">{r.hint}</span>
                       </button>
                     );
                   })}
@@ -434,9 +435,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                         </li>
                       ))}
                     </ul>
-                    <p className="mt-1 leading-relaxed">
-                      지정·해제는 바뀔 수 있어요 — 살 집이 해당되는지는 국토교통부 공고로 확인해 주세요.
-                    </p>
+                    <p className="mt-1 leading-relaxed">지정·해제는 바뀔 수 있음. 해당 여부는 국토교통부 공고 기준.</p>
                   </details>
                 )}
               </div>
@@ -468,7 +467,8 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                     <input
                       id="calc-price"
                       inputMode="numeric"
-                      value={priceDraft ?? price.toLocaleString("ko-KR")}
+                      value={priceDraft ?? (price !== null ? price.toLocaleString("ko-KR") : "")}
+                      placeholder=""
                       onChange={(e) => {
                         setPriceDraft(e.target.value);
                         const n = Number(e.target.value.replace(/[^0-9]/g, ""));
@@ -479,6 +479,8 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                           const n = Number(priceDraft.replace(/[^0-9]/g, ""));
                           if (Number.isFinite(n) && n > 0) {
                             setPrice(Math.min(PRICE_MAX_MANWON, Math.max(PRICE_MIN_MANWON, n)));
+                          } else if (priceDraft.trim() === "") {
+                            setPrice(null);
                           }
                         }
                         setPriceDraft(null);
@@ -489,14 +491,11 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                     <span className="text-xs font-bold text-text-2">만원</span>
                   </span>
                 </div>
-                <div className="t-num text-right text-[15px] text-ink">{manwonText(price)}</div>
-                {/* [D69] 이 숫자의 출처. 기본값(8.4억)은 우리가 정한 예시이고,
-                    단지 화면에서 넘어온 값은 그 단지의 실거래가다 — 둘은 믿을 근거가
-                    전혀 다르므로 화면이 구분해서 말해야 한다. */}
+                {hasPrice && <div className="t-num text-right text-[15px] text-ink">{manwonText(priceN)}</div>}
+                {/* [D69] 이 숫자의 출처 — 단지 화면에서 넘어온 값은 그 단지의 실거래가다. 화면이 그 사실을 말한다. */}
                 {priceFrom && (
-                  <div className="rounded-lg bg-primary-soft px-2.5 py-1.5 text-[12px] text-text-1">
-                    <b className="text-primary">{priceFrom}</b> 실거래가를 넣었어요
-                    {priceClamped && " (계산기 범위에 맞춰 조정)"} · 바꿔도 돼요
+                  <div className="rounded-lg bg-primary-soft px-2.5 py-1.5 t-sub text-text-1">
+                    <b className="text-primary">{priceFrom}</b> 실거래가{priceClamped && " (계산기 범위에 맞춰 조정)"}
                   </div>
                 )}
                 <input
@@ -504,17 +503,17 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                   min={PRICE_MIN_MANWON}
                   max={PRICE_MAX_MANWON}
                   step={500}
-                  value={price}
+                  value={priceN || PRICE_MIN_MANWON}
                   onChange={(e) => setPrice(Number(e.target.value))}
-                  className="h-9 w-full cursor-pointer accent-primary max-md:h-11"
+                  className="h-9 w-full cursor-pointer accent-primary max-md:h-[40px]"
                   aria-label="매매가"
                 />
               </div>
             </section>
 
             {/* 2. 대출 조건 */}
-            <section className="rise-in-2 card flex flex-col gap-3 rounded-3xl p-[18px]" aria-labelledby="calc-step-2">
-              <h2 id="calc-step-2" className="text-[13px] font-bold text-ink">
+            <section className="rise-in-2 card flex flex-col gap-3 rounded-3xl p-[18px] max-md:p-3.5" aria-labelledby="calc-step-2">
+              <h2 id="calc-step-2" className="t-body font-bold text-ink">
                 2. 대출 조건
               </h2>
               <div className="flex items-center justify-between gap-2">
@@ -536,7 +535,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                       /* 맨 끝 칸은 "최대" — 매매가·지역을 바꿔도 최대를 따라가게 null 로 둔다 */
                       setLoanPick(v + LOAN_STEP_MANWON > maxLoan ? null : v);
                     }}
-                    className="h-9 w-full cursor-pointer accent-primary max-md:h-11"
+                    className="h-9 w-full cursor-pointer accent-primary max-md:h-[40px]"
                     aria-label="대출 금액"
                   />
                   <div className="flex items-center justify-between text-[12px] text-text-3">
@@ -553,9 +552,10 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                   </div>
                 </>
               ) : (
-                <p className="rounded-lg bg-warning-soft px-3 py-2 text-[12px] leading-relaxed text-text-1">
-                  수도권·규제지역에서 집이 있는데 한 채 더 사는 주담대는 막혀 있어요(LTV 0%) — 아래 필요 현금은
-                  매매가 전액 기준이에요.
+                <p className="rounded-lg bg-warning-soft px-3 py-2 t-sub leading-relaxed text-text-1">
+                  {hasPrice
+                    ? "수도권·규제지역에서 집이 있는데 한 채 더 사는 주담대는 불가(LTV 0%). 아래 필요 현금은 매매가 전액 기준."
+                    : "매매가를 넣으면 대출 금액을 고를 수 있음"}
                 </p>
               )}
 
@@ -577,7 +577,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                   step={0.05}
                   value={assumedRate}
                   onChange={(e) => setAssumedRate(Number(e.target.value))}
-                  className="h-9 w-full cursor-pointer accent-primary max-md:h-11"
+                  className="h-9 w-full cursor-pointer accent-primary max-md:h-[40px]"
                   aria-label="가정 금리"
                 />
               )}
@@ -609,7 +609,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                 </div>
               </div>
               {termCap !== null && (
-                <p className="-mt-1 text-[12px] text-text-3">수도권·규제지역 주담대 만기는 {termCap}년 이내예요(6·27 대책).</p>
+                <p className="-mt-1 t-sub text-text-3">수도권·규제지역 주담대 만기 {termCap}년 이내(6·27 대책)</p>
               )}
             </section>
 
@@ -621,8 +621,8 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
             >
               <summary className="flex min-h-[48px] cursor-pointer items-center justify-between gap-2 py-1.5">
                 <span className="flex min-w-0 flex-col">
-                  <span className="text-[13px] font-bold text-ink">3. 내 형편 (선택)</span>
-                  <span className="text-[12px] text-text-3">소득·현금을 넣으면 부담률·현금 충분 여부가 나와요</span>
+                  <span className="t-body font-bold text-ink">3. 내 형편 (선택)</span>
+                  <span className="t-sub text-text-3">연 소득 · 보유 현금 → 부담률 · 현금 충분 여부</span>
                 </span>
                 <Icon
                   name="plus"
@@ -631,9 +631,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                 />
               </summary>
               <div className="flex flex-col gap-2.5 pb-3 pt-1">
-                <div className="text-[12px] text-text-3">
-                  소득·현금은 이 기기에서만 쓰여요. 소득을 넣으면 소득 대비 부담률이 계산돼요.
-                </div>
+                {/* [1015 · 규칙 B] "소득·현금은 이 기기에서만 쓰여요…" 사용법 두 문장 삭제 · [규칙 B] 예시 placeholder("예: 7,000") 제거 */}
                 <label className="flex items-center justify-between gap-2 text-[13px]">
                   <span className="text-text-2">연 소득 (세전)</span>
                   <span className="flex items-center gap-1">
@@ -641,7 +639,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                       inputMode="numeric"
                       value={incomeManwon != null ? incomeManwon.toLocaleString("ko-KR") : ""}
                       onChange={(e) => setIncomeManwon(parseManwon(e.target.value))}
-                      placeholder="예: 7,000"
+                      placeholder=""
                       aria-label="연 소득 (만원)"
                       className={numInputCls}
                     />
@@ -655,7 +653,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                       inputMode="numeric"
                       value={cashManwon != null ? cashManwon.toLocaleString("ko-KR") : ""}
                       onChange={(e) => setCashManwon(parseManwon(e.target.value))}
-                      placeholder="예: 55,000"
+                      placeholder=""
                       aria-label="보유 현금 (만원)"
                       className={numInputCls}
                     />
@@ -669,7 +667,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                       inputMode="numeric"
                       value={existingDebtMonthly > 0 ? existingDebtMonthly.toLocaleString("ko-KR") : ""}
                       onChange={(e) => setExistingDebtMonthly(parseManwon(e.target.value) ?? 0)}
-                      placeholder="없으면 비움"
+                      placeholder=""
                       aria-label="기존 대출 월 상환액 (만원)"
                       className={numInputCls}
                     />
@@ -682,11 +680,12 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
             {/* [1009 · T] 휴대폰 결과 미리보기 — 결과 카드는 입력 아래(390px 에서 1,248px, 화면 1.5장 밑)라 슬라이더를
                 움직여도 바뀌는 숫자가 보이지 않았다. 입력 칸 맨 끝에 두고 sticky 로 탭바 위에 붙인다 — 입력을 훑는
                 동안엔 바닥에 떠 있다가, 입력이 끝나는 자리에서 제자리로 멈춘다(결과 카드와 겹치지 않는다). 데스크톱은 옆 칸이 결과라 없다. */}
+            {hasPrice && (
             <div className="sticky bottom-[calc(var(--nz-tabbar-offset)+8px)] z-10 md:bottom-4 lg:hidden">
               <a
                 href="#calc-result"
                 className="glass press flex flex-col gap-1 rounded-2xl px-4 py-2.5 no-underline shadow-[var(--shadow-float)]"
-                aria-label={`계산 결과로 이동 — 최대 대출 ${manwonText(maxLoan)}, 필요 현금 ${manwonText(cashNeeded)}${
+                aria-label={`계산 결과로 이동. 최대 대출 ${manwonText(maxLoan)}, 필요 현금 ${manwonText(cashNeeded)}${
                   conclusion.caveat ? `, ${conclusion.caveat}` : ""
                 }`}
               >
@@ -712,23 +711,34 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                 )}
               </a>
             </div>
+            )}
           </div>
 
           {/* ---------- 결과 ---------- */}
           <div className="flex min-w-0 flex-col gap-3">
+            {/* [1015 · 규칙 B] 매매가가 없으면 결과를 그리지 않는다 — 빈 상태 한 줄(예시 숫자로 채우지 않는다) */}
+            {!hasPrice && (
+              <section id="calc-result" className="rise-in-1 card flex scroll-mt-24 flex-col gap-1 rounded-3xl p-[18px] max-md:p-3.5" aria-label="계산 결과">
+                <p className="t-section text-ink">매매가를 넣으면 최대 대출 · 필요 현금 · 월 상환액</p>
+                <p className="t-sub text-text-3">
+                  {regionLabel} · {ownership} · LTV {limit.ltvPct}% · {LOAN_RULES_BASIS_LABEL}
+                </p>
+              </section>
+            )}
             {/* [1009 · T] 결과 한 장 — 결론 한 줄(문장) → 큰 숫자 셋(값이 바뀌면 굴러간다) → 돈의 구성 막대 → 세부 줄.
                 어려운 말(LTV·취득세·원리금균등·중개보수·DSR) 옆에 ⓘ — 누르면 정의와 "이 화면은 이렇게 계산했어요"(코드와 같은 식).
                 [--text-3] 덮어쓰기: ⓘ 단추 색(var(--text-3))이 어두운 면에서 흐려 결과 패널 안에서만 ai-muted 로 읽게 한다. */}
+            {hasPrice && (
             <section
               id="calc-result"
-              className="rise-in-1 ai-panel flex scroll-mt-24 flex-col gap-4 rounded-3xl p-[18px] shadow-[0_14px_36px_rgba(16,28,54,.22)] [--text-3:var(--ai-muted)]"
+              className="rise-in-1 ai-panel flex scroll-mt-24 flex-col gap-4 rounded-3xl p-[18px] shadow-[0_14px_36px_rgba(16,28,54,.22)] max-md:p-3.5 [--text-3:var(--ai-muted)]"
               aria-label="계산 결과"
             >
               <div className="flex flex-col gap-1">
                 <p className="t-section break-words text-ai-text">{conclusion.sentence}</p>
                 {/* [1009 · T 리뷰 · 법령] 확정할 수 없는 금액이면 조건을 결론 바로 밑에(수도권 밖 생애최초 6억원 한도 — calc-summary) */}
                 {conclusion.caveat && (
-                  <p className="t-sub break-words font-bold text-on-navy-amber">{conclusion.caveat}이 필요해요</p>
+                  <p className="t-sub break-words font-bold text-on-navy-amber">{conclusion.caveat}</p>
                 )}
                 <p className="t-sub break-words text-ai-muted">
                   {conclusion.basis} · {LOAN_RULES_BASIS_LABEL}
@@ -744,7 +754,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                   <TweenMoney value={maxLoan} className="mt-0.5 block t-display text-ai-accent" />
                   {loanPick !== null && loan < maxLoan && (
                     <div className="mt-0.5 t-sub text-ai-muted">
-                      지금은 대출 <b className="t-num font-bold text-ai-text">{manwonText(loan)}</b>으로 계산하고 있어요
+                      대출 <b className="t-num font-bold text-ai-text">{manwonText(loan)}</b> 기준
                     </div>
                   )}
                 </div>
@@ -754,7 +764,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                       필요 현금
                       <Explain
                         title="필요 현금"
-                        body="대출 말고 내 돈으로 준비해야 하는 금액이에요."
+                        body="대출 말고 내 돈으로 준비해야 하는 금액."
                         how={cashHow}
                         source={`${ACQ_TAX_BASIS} · ${BROKERAGE_BASIS}`}
                       />
@@ -811,8 +821,8 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                       <Explain
                         title="중개보수(법정 상한)"
                         body={[
-                          "중개사무소에 내는 보수의 법정 최고액이에요. 실제 보수는 이 금액 안에서 협의해 정하고, 부가세 10%는 따로예요.",
-                          "직거래라면 0원이에요.",
+                          "중개사무소에 내는 보수의 법정 최고액. 실제 보수는 이 금액 안에서 협의하고 부가세 10%는 별도.",
+                          "직거래라면 0원.",
                         ]}
                         how={brokerHow}
                         source={BROKERAGE_BASIS}
@@ -850,21 +860,21 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                     </div>
                   ) : null}
                 </dl>
-                {(burden === null || burdenLabel === null) && (
-                  <p className="m-0 t-sub">‘3. 내 형편’에 연 소득을 넣으면 소득 대비 부담률(적정/주의/위험)이 나와요.</p>
-                )}
+                {/* [1015 · 규칙 B] "'3. 내 형편'에 연 소득을 넣으면 …" 사용법 문장 삭제 — 3번 칸 제목이 같은 말을 한다 */}
               </div>
             </section>
+            )}
 
-            {/* 최대 대출이 정해지는 식 — 규칙을 숨기지 않는다 */}
-            <section className="rise-in-2 card flex flex-col gap-2.5 rounded-3xl px-5 py-[18px]" aria-labelledby="calc-rule">
+            {/* 최대 대출이 정해지는 식 — 규칙을 숨기지 않는다. [1015 · 규칙 D] 제목 명사형 · 문장 어미 정리 */}
+            {hasPrice && (
+            <section className="rise-in-2 card flex flex-col gap-2.5 rounded-3xl px-5 py-[18px] max-md:p-3.5" aria-labelledby="calc-rule">
               <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
-                <h2 id="calc-rule" className="text-[13px] font-bold text-ink">
-                  최대 대출은 이렇게 정해져요
+                <h2 id="calc-rule" className="t-body font-bold text-ink">
+                  최대 대출 계산식
                 </h2>
-                <span className="text-[12px] font-bold text-primary">{LOAN_RULES_BASIS_LABEL}</span>
+                <span className="t-sub font-bold text-primary">{LOAN_RULES_BASIS_LABEL}</span>
               </div>
-              <div className="rounded-lg bg-bg px-3.5 py-3 text-[13px] leading-relaxed text-text-1">
+              <div className="rounded-lg bg-bg px-3.5 py-3 t-body leading-relaxed text-text-1">
                 <div className="font-bold text-ink">
                   최대 대출 ={" "}
                   {limit.capManwon !== null && limit.binding !== "none"
@@ -873,31 +883,31 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                 </div>
                 {limit.binding === "none" ? (
                   <div className="mt-1 break-words">
-                    = {limit.ltvPct}% × {manwonText(price)} = <b className="text-ink">0원</b> — {regionLabel}에서
-                    &lsquo;{ownership}&rsquo;은 집을 사는 주담대를 받을 수 없어요(6·27 대책).
+                    = {limit.ltvPct}% × {manwonText(priceN)} = <b className="text-ink">0원</b>. {regionLabel}에서
+                    &lsquo;{ownership}&rsquo;은 주택 구입 주담대 불가(6·27 대책).
                   </div>
                 ) : limit.capManwon !== null ? (
                   <div className="mt-1 break-words">
-                    = min(<b className={limit.binding === "ltv" ? "text-primary" : undefined}>{limit.ltvPct}% × {manwonText(price)} = {manwonText(limit.ltvAmountManwon)}</b>,{" "}
+                    = min(<b className={limit.binding === "ltv" ? "text-primary" : undefined}>{limit.ltvPct}% × {manwonText(priceN)} = {manwonText(limit.ltvAmountManwon)}</b>,{" "}
                     <b className={limit.binding === "cap" ? "text-primary" : undefined}>{manwonText(limit.capManwon)}</b>) ={" "}
                     <b className="text-ink">{manwonText(maxLoan)}</b>
                   </div>
                 ) : (
                   <div className="mt-1 break-words">
-                    = {limit.ltvPct}% × {manwonText(price)} = <b className="text-ink">{manwonText(maxLoan)}</b>
+                    = {limit.ltvPct}% × {manwonText(priceN)} = <b className="text-ink">{manwonText(maxLoan)}</b>
                   </div>
                 )}
-                <div className="mt-1 text-[12px] text-text-3">
+                <div className="mt-1 t-sub text-text-3">
                   {regionLabel} · {ownership} LTV {limit.ltvPct}%
                   {limit.binding === "none"
                     ? ""
                     : capitalOrRegulated
                       ? " · 수도권·규제지역 가격 구간 한도 적용"
-                      : " · 이 지역은 금액 상한 없이 LTV·DSR로 정해져요"}
+                      : " · 금액 상한 없음, LTV·DSR 기준"}
                 </div>
               </div>
               {capitalOrRegulated && limit.binding !== "none" && (
-                <ul className="grid grid-cols-1 gap-1 text-[12px] sm:grid-cols-3" aria-label="주택가격별 주담대 한도">
+                <ul className="grid grid-cols-1 gap-1 t-sub sm:grid-cols-3" aria-label="주택가격별 주담대 한도">
                   {PRICE_TIER_CAPS.map((t) => {
                     const active = limit.capManwon === t.capManwon;
                     return (
@@ -913,32 +923,32 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                   })}
                 </ul>
               )}
-              <ul className="flex list-disc flex-col gap-1 pl-4 text-[12px] leading-relaxed text-text-2">
+              <ul className="flex list-disc flex-col gap-1 pl-4 t-sub leading-relaxed text-text-2">
                 {moveInMonths !== null && limit.binding !== "none" && (
-                  <li>주담대로 집을 사면 {moveInMonths}개월 안에 전입해야 해요.</li>
+                  <li>주담대로 집을 사면 {moveInMonths}개월 안에 전입 의무.</li>
                 )}
                 {ownership === "1주택 처분조건" && (
                   <li>
                     {capitalOrRegulated
-                      ? "기존 집을 6개월 안에 팔아야 무주택과 같은 LTV를 받아요."
-                      : "기존 집을 팔아야 하는 기한은 은행에 확인해 주세요."}
+                      ? "기존 집을 6개월 안에 팔아야 무주택과 같은 LTV."
+                      : "기존 집을 팔아야 하는 기한은 은행 확인."}
                   </li>
                 )}
                 {!capitalOrRegulated && ownership === "생애최초" && (
-                  <li>수도권 밖 생애최초는 도입 당시(2022.8) 금액 한도가 6억원이었어요 — 지금 적용되는지는 은행에 확인해 주세요.</li>
+                  <li>수도권 밖 생애최초는 도입 당시(2022.8) 금액 한도 6억원. 지금 적용되는지는 은행 확인.</li>
                 )}
                 {stressFloor !== null && (
                   <li>
-                    은행은 DSR(소득 대비 원리금)을 볼 때 금리에 스트레스 금리(하한 {stressFloor}%)를 더해 봐요 — 소득에 따라 한도가 더 줄 수 있어요.
+                    은행 DSR(소득 대비 원리금) 심사는 금리에 스트레스 금리(하한 {stressFloor}%)를 더한다. 소득에 따라 한도가 더 줄 수 있음.
                   </li>
                 )}
-                <li>정책대출(보금자리론·디딤돌)은 자체 한도·자격이 따로 있어요 — 한국주택금융공사에서 확인해 주세요.</li>
-                <li>토지거래허가구역이면 계약 전에 허가를 받아야 하고 실거주 의무가 붙어요 — 해당 여부는 토지이음에서 확인해 주세요.</li>
+                <li>정책대출(보금자리론·디딤돌)은 자체 한도·자격이 별도. 한국주택금융공사 확인.</li>
+                <li>토지거래허가구역이면 계약 전 허가 필요, 실거주 의무. 해당 여부는 토지이음 확인.</li>
               </ul>
-              <p className="rounded-lg bg-warning-soft px-3 py-2 text-[12px] font-semibold leading-relaxed text-text-1">
-                실제 한도는 DSR·소득·신용·은행 심사로 더 낮을 수 있어요. 일반 정보이며 금융·법률·세무 자문이 아니에요.
+              <p className="rounded-lg bg-warning-soft px-3 py-2 t-sub font-semibold leading-relaxed text-text-1">
+                실제 한도는 DSR·소득·신용·은행 심사로 더 낮을 수 있음. 일반 정보이며 금융·법률·세무 자문이 아님.
               </p>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12px] text-text-3">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 t-sub text-text-3">
                 <span>출처</span>
                 {LOAN_RULE_SOURCES.slice(0, 2).map((s) => (
                   <a key={s.href} href={s.href} target="_blank" rel="noopener noreferrer" className={extLinkCls}>
@@ -946,7 +956,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                   </a>
                 ))}
               </div>
-              <details className="text-[12px] text-text-3">
+              <details className="t-sub text-text-3">
                 <summary className="inline-flex min-h-[40px] cursor-pointer items-center font-bold text-text-2">
                   근거 더 보기
                 </summary>
@@ -963,42 +973,51 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                   근거: 금융위원회 가계부채 대책(6·27 · 9·7 · 10·15) · 지방세법 제11조·제13조의2 · 지방세특례제한법
                   제36조의3. 확인일 2026-09-21.
                 </p>
+                {/* [1015 · 규칙 B·J] 예전 "참고 안내" 카드(계산 기준·제외 항목 한 문단)를 이 접힘 안으로 — 같은 사실을 두 카드에 두지 않는다 */}
+                <p className="mt-2 leading-relaxed">
+                  계산 기준: 최대 대출은 {LOAN_RULES_BASIS_LABEL} 규칙(지역·보유 주택별 LTV, 수도권·규제지역 주택가격 구간 한도).
+                  월 상환액은 입력한 대출 금액·금리·기간의 원리금균등 식. 취득세는 대략 구간(1주택 계열 1.1~3.3%, 규제지역 추가
+                  구입 8.4%, 생애최초 12억 이하 최대 200만원 감면)이며 전용 85㎡ 초과 농어촌특별세와 3주택 이상 중과(12%)는
+                  제외. 필요 현금에는 중개보수 법정 상한(공인중개사법 시행규칙 제20조, 부가세 별도) 포함, 등기 비용·이사비는
+                  제외. 향후 가격 상승·수익률은 확정된 사실이 아니라 표시하지 않음.
+                </p>
               </details>
             </section>
+            )}
 
+            {hasPrice && (
             <div className="rise-in-3 flex flex-col gap-1.5 sm:flex-row">
               <Link
                 href={noteHref}
                 className="flex min-h-[44px] flex-1 items-center justify-between rounded-lg bg-primary-soft px-4 py-[11px]"
               >
-                <span className="text-[13px] font-bold text-primary">이 조건으로 임장노트에 저장</span>
-                <span className="text-[13px] font-bold text-primary">›</span>
+                <span className="t-body font-bold text-primary">이 조건으로 임장노트에 저장</span>
+                <span className="t-body font-bold text-primary">›</span>
               </Link>
               {/* 계산기→시나리오 연결 (15h) — 현재 조건(대출비율·금리·소득)을 딥링크로 전달 */}
               <Link
                 href={scenarioHref}
                 className="flex min-h-[44px] flex-1 items-center justify-between rounded-lg border border-line bg-surface px-4 py-[11px]"
               >
-                <span className="text-[13px] font-bold text-text-1">이 조건으로 시장·대출 시나리오 보기</span>
-                <span className="text-[13px] font-bold text-text-2">›</span>
+                <span className="t-body font-bold text-text-1">이 조건으로 시장·대출 시나리오 보기</span>
+                <span className="t-body font-bold text-text-2">›</span>
               </Link>
             </div>
+            )}
 
             {/* P2-4: 은행별 금리 — 공시 실데이터(변동/고정 min~max) 또는 원출처 안내 */}
-            <div className="rise-in-4 card flex flex-col gap-1 overflow-x-auto rounded-3xl px-5 py-[18px]">
-              <div className="mb-1.5 flex items-baseline justify-between">
-                <span className="flex items-center gap-1.5 text-[13px] font-bold text-ink">
-                  은행별 금리 비교{" "}
-                  <span className="text-[12px] font-medium text-text-3">
-                    {mortgage.live
-                      ? `주담대 공시 금리${mortgage.asOf ? ` · ${mortgage.asOf} 기준` : ""}`
-                      : "공시 미연동"}
-                  </span>
+            <div className="rise-in-4 card flex flex-col gap-1 overflow-x-auto rounded-3xl px-5 py-[18px] max-md:p-3.5">
+              <div className="mb-1.5 flex flex-col">
+                <span className="t-body font-bold text-ink">은행별 금리 비교</span>
+                <span className="t-caption text-text-3">
+                  {mortgage.live
+                    ? `주담대 공시 금리${mortgage.asOf ? ` · ${mortgage.asOf} 기준` : ""}`
+                    : "공시 미연동"}
                 </span>
               </div>
               {mortgage.live ? (
                 <div className="min-w-[540px]">
-                  <div className="grid grid-cols-[1.2fr_1fr_1fr_1fr] gap-2 border-b border-divider py-2 text-[12px] text-text-3">
+                  <div className="grid grid-cols-[1.2fr_1fr_1fr_1fr] gap-2 border-b border-divider py-2 t-sub text-text-3">
                     <span>은행</span>
                     <span className="text-center">변동금리</span>
                     <span className="text-center">고정금리</span>
@@ -1033,18 +1052,17 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                       </div>
                     );
                   })}
-                  <div className="mt-2 text-[12px] text-text-3">
-                    금리 출처: {mortgage.source}
-                    {mortgage.asOf ? ` · 공시 기준월 ${mortgage.asOf}` : ""} · 월 원리금은 현재 입력한
-                    대출액({manwonText(loan)})·{effectiveYears}년 원리금균등 기준 참고 계산이며 실제
-                    조건은 은행 심사에 따라 달라집니다
+                  <div className="mt-2 t-caption text-text-3">
+                    출처: {mortgage.source}
+                    {mortgage.asOf ? ` · 공시 기준월 ${mortgage.asOf}` : ""} · 월 원리금은 대출 {manwonText(loan)} ·{" "}
+                    {effectiveYears}년 원리금균등 기준 참고 계산 · 실제 조건은 은행 심사
                   </div>
                 </div>
               ) : (
                 <EmptyState
                   icon="bar"
                   title="은행별 공시 금리를 아직 불러올 수 없어요"
-                  desc="금융감독원 공시 연동 전이라 은행별 금리를 표시하지 않습니다. 지어낸 금리를 보여주는 대신, 원출처에서 직접 확인해 주세요. 위 계산은 직접 정한 가정 금리를 쓴 참고 계산입니다."
+                  desc="금융감독원 공시 연동 전이라 은행별 금리를 표시하지 않습니다. 위 계산은 직접 정한 가정 금리 기준입니다."
                   action={{
                     label: "금융상품 한눈에에서 비교하기",
                     href: "https://finlife.fss.or.kr",
@@ -1054,18 +1072,8 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
             </div>
 
             {/* 사실 우선: 임의 가정(+8% 상승·손익분기·연 수익률 등) 기반 수익률 시뮬레이션과
-                특정 수치를 단정하던 AI 판단 보조를 제거. 시세 상승 전망은 사실이 아니므로 표시하지 않음. */}
-            <div className="rise-in-5 card flex flex-col gap-1.5 rounded-3xl px-5 py-[18px]">
-              <div className="text-[13px] font-bold text-ink">참고 안내</div>
-              <p className="text-[12px] leading-relaxed text-text-2">
-                최대 대출은 {LOAN_RULES_BASIS_LABEL} 규칙(지역·보유 주택별 LTV, 수도권·규제지역 주택가격 구간 한도)으로,
-                월 상환액은 입력한 대출 금액·금리·기간의 원리금균등 식으로 계산했어요. 취득세는 대략 구간(1주택 계열
-                1.1~3.3%, 규제지역 추가 구입 8.4%, 생애최초 12억 이하 최대 200만원 감면)이며 전용 85㎡ 초과
-                농어촌특별세와 3주택 이상 중과(12%)는 넣지 않았어요. 필요 현금에는 중개보수 법정 상한(공인중개사법 시행규칙
-                제20조, 부가세 별도)을 넣었고 등기 비용·이사비는 넣지 않았어요. 실제 대출 한도와 금리는 소득·DSR·신용·주택 수 등
-                은행 심사에 따라 달라지고, 향후 시세 상승·수익률은 확정된 사실이 아니므로 표시하지 않아요.
-              </p>
-            </div>
+                특정 수치를 단정하던 AI 판단 보조를 제거. 가격 상승 전망은 사실이 아니므로 표시하지 않음.
+                [1015 · 규칙 B·J] "참고 안내" 카드는 계산식 카드의 "근거 더 보기" 접힘 안으로 옮겼다. */}
           </div>
         </div>
       )}

@@ -67,10 +67,8 @@ export function DecisionStep({
   return (
     <div className="rise-in-6 card flex flex-col gap-2.5 p-4">
       <div className="flex items-center justify-between gap-2">
-        <div className="text-[13px] font-bold text-ink">
-          판단{" "}
-          <span className="text-xs font-medium text-text-3">이 집, 어떻게 할까</span>
-        </div>
+        {/* [1015 · 규칙 C·D] 물음형 부연("이 집, 어떻게 할까")은 지웠다 */}
+        <div className="t-body font-bold text-ink">판단</div>
         {reasons !== null && (
           /* [989] 문장 옆 텍스트 조작 — 24px(py-[5px] + 12px 글자) */
           <button
@@ -97,17 +95,19 @@ export function DecisionStep({
                 if (reasons === null) onReasons(suggestion.reasons);
                 onChoice(c);
               }}
-              className={`relative flex min-h-[44px] flex-col items-center justify-center rounded-lg px-1 text-xs ${
+              /* [1015 · 규칙 9] 고른 칸 = 한지 + 남색(현장 체크 칸과 같은 세 토큰) — 파랑은 CTA·링크에만.
+                 제안 칸은 같은 남색 점선 테두리 */
+              className={`relative flex min-h-[44px] flex-col items-center justify-center rounded-lg px-1 t-sub ${
                 active
-                  ? "border-[1.5px] border-primary bg-primary-soft font-bold text-primary"
+                  ? "border-[1.5px] border-brand-hanji-ink bg-brand-hanji font-bold text-brand-hanji-ink"
                   : suggested
-                    ? "border-[1.5px] border-dashed border-primary bg-surface font-bold text-text-1"
+                    ? "border-[1.5px] border-dashed border-brand-hanji-ink bg-surface font-bold text-text-1"
                     : "border border-line bg-surface font-semibold text-text-2"
               }`}
             >
               {decisionLabel(c)}
               {suggested && (
-                <span className="mt-0.5 rounded bg-primary-soft px-1 t-caption font-bold text-primary">
+                <span className="mt-0.5 rounded bg-brand-hanji px-1 t-caption font-bold text-brand-hanji-ink">
                   제안
                 </span>
               )}
@@ -123,17 +123,16 @@ export function DecisionStep({
             value={v}
             maxLength={DECISION_REASON_MAX}
             onChange={(e) => editLine(i, e.target.value)}
-            placeholder={i === 0 ? "근거 — 예: 남향이라 오후 채광 좋음" : "근거 (선택)"}
+            placeholder={i === 0 ? "근거 (예: 남향이라 오후 채광 좋음)" : "근거 (선택)"}
             aria-label={`판단 근거 ${i + 1}`}
             enterKeyHint="done"
-            className="min-h-[40px] w-full rounded-lg border border-line bg-surface px-3 text-[13px] text-text-1 outline-none placeholder:text-text-3 focus:border-primary"
+            className="min-h-[40px] w-full rounded-lg border border-line bg-surface px-3 t-body text-text-1 outline-none placeholder:text-text-3 focus:border-primary"
           />
         ))}
       </div>
+      {/* [1015 · 규칙 D] 사실만 — 무엇을 근거로 무엇을 제안했는지 */}
       <p className="t-caption text-text-3">
-        규칙으로 제안한 것 — 최종 판단은 내가 고른다 · 제안 {decisionLabel(suggestion.choice)}
-        {" · "}
-        {suggestion.basis}
+        규칙 제안 {decisionLabel(suggestion.choice)} · {suggestion.basis} · 최종 선택은 작성자
       </p>
     </div>
   );

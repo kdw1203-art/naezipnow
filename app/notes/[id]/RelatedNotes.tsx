@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
+import { CoverImage } from "@/app/components/CoverImage";
 import { inspectionAverageScore, type PublicNoteCard } from "@/lib/inspection/store-db";
 import { listRelatedNotePoolCached, shouldLogNoteTiming } from "@/lib/inspection/note-cache";
 import { regionIdForName } from "@/lib/region/catalog";
 import { rankRelatedNotes } from "@/lib/notes/region-match";
+import { seedGradient } from "@/lib/town/shared";
 import { logger } from "@/lib/log";
 
 /* [3차] 같은 지역의 다른 임장노트 — 노트 상세의 이탈 지점을 순환 지점으로.
@@ -16,7 +18,10 @@ import { logger } from "@/lib/log";
  * 같은 잣대. "서울 송파구 가락동" 옆에 "서울 송파구 잠실동" 노트가 나온다. 최대 6건.
  * [969 · 20] 풀은 데이터 캐시(5분, public-notes 태그)의 **카드 컬럼** 50장이다 — 예전엔
  * 요청마다 전체 행(jsonb 5개 포함) 50건을 실조회했고, 이 조회는 Suspense 경계가 없어
- * 공개 노트 상세의 TTFB 에 그대로 얹혔다. 매칭·정렬(rankRelatedNotes)은 그대로다. */
+ * 공개 노트 상세의 TTFB 에 그대로 얹혔다. 매칭·정렬(rankRelatedNotes)은 그대로다.
+ * [1015 · 규칙 H] 행마다 44px 정사각 썸네일 — 주소는 PublicNoteCard.cover(lib/inspection/store-db 가 resolveNoteCover 로 계산).
+ * PublicNoteCard 에 metadata·photos 가 실리기 전까지는 null → 단색 칸(seedGradient) — 통합자가
+ * listPublicNoteCards 의 select 에 커버 재료를 더하면 그대로 썸네일이 뜬다(보고서). */
 
 const RELATED_CAP = 6;
 
@@ -52,7 +57,7 @@ export async function RelatedNotes({
   const sameRegionMode = sameRegion.length > 0;
 
   return (
-    <section className="mt-6">
+    <section className="mt-6 max-md:mt-4">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h2 className="t-section text-ink">
           {sameRegionMode ? `${regionTrim}의 다른 임장노트` : "최근 공개 임장노트"}
@@ -63,26 +68,47 @@ export async function RelatedNotes({
             className="inline-flex items-center gap-1 t-sub font-bold text-primary no-underline"
           >
             <Icon name="pin" size={13} />
-            {regionTrim} 시장 데이터 보기 ›
+            {regionTrim} 시장 데이터 ›
           </Link>
         )}
       </div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {pool.map((n) => {
           const rating = inspectionAverageScore(n.scores);
+          const cover = n.cover ?? null;
           return (
             <Link
               key={n.id}
               href={`/notes/${n.id}`}
-              className="card flex flex-col gap-1 rounded-xl p-3.5 no-underline tap-ripple"
+              className="card flex items-center gap-3 rounded-xl p-3 no-underline tap-ripple"
             >
-              <span className="line-clamp-1 t-body font-bold text-ink">{n.title}</span>
-              <span className="flex items-center gap-2 t-sub text-text-3">
-                <span>{n.region || "전국"}</span>
-                {n.aptName?.trim() && <span>· {n.aptName.trim()}</span>}
-                {rating > 0 && (
-                  <span className="font-bold text-ink">★ {rating.toFixed(1)}</span>
-                )}
+              {/* 정사각 썸네일 44px — 템플릿 썸네일은 글자가 그림 안에 있으니 겹쳐 적지 않는다(제목은 옆 칸) */}
+              <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-divider">
+                <CoverImage
+                  src={cover}
+                  alt=""
+                  sizes="44px"
+                  imgClassName="h-full w-full object-cover"
+                  fallback={
+                    <span
+                      aria-hidden="true"
+                      className="block h-full w-full"
+                      style={{ background: seedGradient(n.id) }}
+                    />
+                  }
+                />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="line-clamp-1 t-body font-bold text-ink">{n.title}</span>
+                <span className="flex items-center gap-2 t-sub text-text-3">
+                  <span className="truncate">
+                    {n.region || "전국"}
+                    {n.aptName?.trim() ? ` · ${n.aptName.trim()}` : ""}
+                  </span>
+                  {rating > 0 && (
+                    <span className="shrink-0 font-bold text-ink">★ {rating.toFixed(1)}</span>
+                  )}
+                </span>
               </span>
             </Link>
           );

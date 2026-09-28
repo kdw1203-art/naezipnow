@@ -38,6 +38,10 @@ export type FeedNote = {
   /** 커버 이미지 — 고른 썸네일(metadata.cover → /api/og/note-cover/{id}?v=…)이 있으면 그것, 없으면 첫 사진.
    *  둘 다 없으면 null → 클라이언트의 단색 타일 폴백. 규칙은 lib/notes/cover/resolve 한 곳 */
   coverUrl?: string | null;
+  /** [1017] 게시물 카드의 좌우 넘김(데스크톱) — 실사진 주소 앞 8장. 없으면 생략(넘김 버튼도 없다) */
+  photos?: string[];
+  /** [1016] 넓은 칸(피드 카드 1200×630)용 — 템플릿 썸네일이면 wide 판, 사진이면 같은 사진. 예전 응답(없음)은 coverUrl 로 */
+  coverWideUrl?: string | null;
   /** [썸네일] coverUrl 이 템플릿 썸네일(제목·사실이 그림 안에 있음)이면 true — 목록이 제목 오버레이를 겹쳐 그리지 않게 */
   coverTemplate?: boolean;
   /** 단지 허브(/complex/[id]) 링크 — 실 id를 못 찾으면 undefined → 링크 숨김 */
@@ -159,9 +163,13 @@ export function toFeedNote(
     region: n.region,
     // 인스타 피드형 커버 — 고른 썸네일 → 첫 사진(있으면). 없으면 클라이언트에서 단색 타일 폴백.
     coverUrl: cover.url,
+    coverWideUrl: cover.template ? resolveNoteCover(n, { shape: "wide" }).url : cover.url,
     ...(cover.template ? { coverTemplate: true } : {}),
     /* [1012-IG] 목록의 "여러 장" 표시 재료 — 실제 사진 배열 길이 */
     photoCount: Array.isArray(n.photos) ? n.photos.length : 0,
+    ...(Array.isArray(n.photos) && n.photos.length > 0
+      ? { photos: n.photos.filter((u) => typeof u === "string" && u.trim()).slice(0, 8) }
+      : {}),
     // 실 단지 id를 찾은 경우에만 /complex/[id] 연결, 못 찾으면 링크 숨김 (mock-1로 보내지 않음)
     complexHref: complexHref ?? undefined,
     createdAt: n.createdAt,

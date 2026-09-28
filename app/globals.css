@@ -312,8 +312,43 @@
     --fs-title: 21px;
     --fs-section: 15px;
     --pad-compact: 14px;
-    --pad-card: 18px;
-    --pad-hero: 22px;
+    --pad-card: 16px;
+    --pad-hero: 20px;
+  }
+}
+
+/* ============================================================
+   [1015 · 데스크톱 밀도]
+   소유자(2026-09-28): "전체적으로 데스크탑도 밀도를 올려주는데, 필요한 부분에 대해서는 사이즈 조절 등을 통해서
+   빈공간 확보도 해주는 등의 유연성 있는 화면 구성" · "검토 후에 사이트의 페이지 전체에 도입".
+   근거·원칙은 docs/layout-principles-1015.md. 요지:
+     · 데스크톱은 시야 거리가 멀어 글자는 그대로 두고(--fs-* 위 블록 유지) **간격만** 0.875 배(4 → 3.5px).
+       모바일 [1012] 와 같은 방식 — Tailwind 숫자 유틸(p-4 · gap-3 · mt-6 …) 11,000여 곳이 한 번에 줄고,
+       px 로 적은 임의값(h-[44px] 등 "정확해야 하는 크기")은 그대로.
+     · 카드 패딩 18 → 16, 히어로 22 → 20 (위 md+ 블록). 본문 줄 길이는 50~75자 안에 두는 max-w 를 페이지가
+       이미 갖고 있어(prose·max-w-[640px]) 전역 제한은 두지 않는다.
+     · 40px 조작 하한은 데스크톱에서도 고정(마우스 표적 크기 — 클릭 오차 감소).
+     · "빈공간 확보"는 각 페이지가 lg: 2단 레일(본문 + 광고·요약 사이드)로 푼다 — 1015 담당 작업.
+   ============================================================ */
+@media (min-width: 768px) {
+  :root {
+    --spacing: 0.21875rem; /* 3.5px = 4px × 0.875 */
+  }
+  .h-10 {
+    height: 40px;
+  }
+  .min-h-10 {
+    min-height: 40px;
+  }
+  .w-10 {
+    width: 40px;
+  }
+  .min-w-10 {
+    min-width: 40px;
+  }
+  .size-10 {
+    width: 40px;
+    height: 40px;
   }
 }
 
@@ -687,6 +722,20 @@ main :where(:is(section, article):nth-of-type(4n + 4)) :where([class~="divide-y"
 :is(main, .lq-scope) [data-tone="sand"] {
   --lq-tint: var(--lq-sand);
   --lq-ink: var(--lq-sand-ink);
+}
+/* [1015] plain — 흰 카드 **안**에 놓인 목록(홈·동네 홈의 뉴스 칸). 소유자: "뉴스룸 카드색상처럼 튀게 하지말고
+   테마에 어울리도록". 카드 안에 색판이 또 들어가면 액자가 둘이라, 이 톤은 판을 걷고 행 사이 선만 남긴다. */
+:is(main, .lq-scope) [data-tone="plain"] {
+  --lq-tint: var(--border);
+  --lq-ink: var(--ink);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-inline: 0;
+}
+:is(main, .lq-scope) [data-tone="plain"] > * {
+  border-color: var(--border);
 }
 /* 행 사이 선도 같은 톤으로 옅게 · 누르면 그 톤이 살짝 짙어진다 */
 :is(main, .lq-scope) :is([class~="divide-y"], .lq-panel) > * {
@@ -2731,13 +2780,24 @@ html[data-drag-scrolling] * {
 /* ---------- 히어로 (UI-05 → 958 브랜드 네이비) — 검색이 화면 첫 요소가 된다 ----------
    958: 전문가·동네이야기 허브와 같은 "브랜드 네이비 면"으로 통일한다. 어두운 면은
    네이비, 그 위 글자는 한지, 신호는 주홍 — 라이트 틴트 그라데이션은 걷어냈다. */
+/* [1017] 소유자(2026-09-28): 네이비 히어로 띠는 "임장·지도를 제외하고 나머지 카테고리에서는 전부 삭제".
+   AI 분석 허브·도구 머리(.hub-hero)도 그 띠다 — 흰 카드로 바꾼다. 안의 글자는 on-dark 토큰으로 적혀 있어
+   (tsx 30여 곳), 여기서 그 토큰만 잉크 계열로 되돌린다: 소스를 다시 손대지 않고 라이트·다크 둘 다 맞는다. */
 .hub-hero {
   position: relative;
   overflow: hidden;
-  background: var(--brand-navy);
-  border: 1px solid rgba(246, 241, 231, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-xl);
-  --glyph-accent: var(--brand-red-on-dark);
+  --on-dark: var(--ink);
+  --on-dark-muted: var(--text-2);
+  --on-dark-faint: var(--border);
+  --on-dark-panel: var(--primary-soft);
+  --brand-red-on-dark: var(--brand-red);
+  --glyph-accent: var(--brand-red);
+}
+.hub-hero .brand-wm {
+  display: none;
 }
 /* 오른쪽 위 주홍 광원 한 점 — 카드 무리와 다른 "면"이라는 걸 알린다 */
 /* [1012] .hub-hero::after 주홍 radial-gradient 광원을 지웠다 — 장식 그라데이션(규칙 3). */
@@ -3239,7 +3299,8 @@ a.rank-row:hover {
    ============================================================ */
 @media (max-width: 767px) {
   :root {
-    --fs-caption: 11px;
+    /* [1015 · 규칙 E] 11 → 12px: 폰 배율 0.75 에서 11px 는 화면에서 8px 대였다. 12px 미만 글자가 없게 */
+    --fs-caption: 12px;
   }
   /* 토큰(.t-caption)을 안 쓰고 `text-[10px]` 를 직접 적은 자리가 321곳 있다.
      한 곳씩 고치면 다음에 또 새로 생긴다 — 유틸리티 자체를 모바일에서만 한 칸
@@ -3985,6 +4046,11 @@ a.rank-row:hover {
   width: 0;
   background: var(--brand-red);
   transition: width 350ms var(--njn-out);
+}
+/* [1016] 글래스 알약(노트 읽기)은 호버 기기 전용 — 터치 기기에서는 아래 미디어 블록이 안 먹어 글자가 사진 위에 그대로 보였다
+   (폰 가로 카드에서 118px 사진 칸에 "노트 읽기" 가 떠 있었다). */
+.njn-glass {
+  display: none;
 }
 @media (hover: hover) and (pointer: fine) {
   .tile:hover .njn-card-bar,
@@ -6261,6 +6327,46 @@ body.nz-consent-open .back-to-top {
   .explain-btn:hover {
     color: var(--primary);
     background: var(--primary-soft);
+  }
+}
+/* [1015] ⓘ 미리보기 — 데스크톱(마우스)에서만, 올리면 한 문단. 폰은 탭 → 시트. 카드·행 안에 놓여도 위로 뜬다. */
+.explain-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.explain-tip {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  z-index: 60;
+  width: max-content;
+  max-width: 280px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--fs-sub);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text-2);
+  text-align: left;
+  white-space: normal;
+  word-break: keep-all;
+  pointer-events: none;
+}
+.explain-tip > b {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 700;
+  color: var(--ink);
+}
+@media (hover: hover) and (pointer: fine) {
+  .explain-wrap:hover .explain-tip,
+  .explain-btn:focus-visible + .explain-tip {
+    display: block;
   }
 }
 .explain-btn:focus-visible {

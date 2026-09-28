@@ -32,7 +32,7 @@ type Section = {
 const SECTIONS: Section[] = [
   {
     icon: "map",
-    title: "규제지역 — 투기과열지구·조정대상지역",
+    title: "규제지역(투기과열지구·조정대상지역)",
     lead: "정부(국토교통부)가 주택 가격이 급등하거나 투기 우려가 큰 곳을 지정해 대출·세제·청약·전매 등을 더 엄격하게 적용하는 제도입니다. 지정·해제는 시장 상황에 따라 수시로 바뀝니다.",
     points: [
       {
@@ -70,7 +70,7 @@ const SECTIONS: Section[] = [
   },
   {
     icon: "wallet",
-    title: "대출 규제 — LTV·DSR 개요",
+    title: "대출 규제(LTV·DSR) 개요",
     lead: "주택담보대출은 '집값 대비 얼마까지(LTV)'와 '소득 대비 갚을 능력이 되는가(DSR)'라는 두 축으로 한도가 정해집니다. 규제지역·보유 주택 수·소득에 따라 달라지고 자주 바뀝니다.",
     points: [
       {
@@ -139,22 +139,23 @@ const SECTIONS: Section[] = [
   },
 ];
 
+/* [1015 · 규칙 I] 카드 안 항목 목록 → 리퀴드 행 목록(규제 = sand). 카드·아이콘 머리 뼈대는 그대로. */
 const SectionCard = ({ s }: { s: Section }) => (
-  <section className="card rounded-2xl p-5 md:p-6">
+  <section className="card rounded-2xl p-5 max-md:p-3.5 md:p-6">
     <div className="flex items-center gap-2.5">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
         <Icon name={s.icon} size={18} />
       </span>
-      <h2 className="text-[15px] font-bold leading-snug text-ink">
+      <h2 className="t-section leading-snug text-ink">
         {s.title}
       </h2>
     </div>
-    <p className="mt-3 text-[13px] leading-[1.75] text-text-2">{s.lead}</p>
-    <ul className="mt-3.5 flex flex-col gap-2.5">
+    <p className="mt-3 t-body leading-[1.75] text-text-2 max-md:mt-2">{s.lead}</p>
+    <ul data-tone="sand" className="lq-panel m-0 mt-3.5 flex list-none flex-col divide-y p-0 max-md:mt-2.5">
       {s.points.map((p) => (
-        <li key={p.term} className="border-l-2 border-line pl-3">
-          <div className="text-[13px] font-bold text-text-1">{p.term}</div>
-          <div className="mt-0.5 text-[12px] leading-[1.7] text-text-3">
+        <li key={p.term} className="py-2.5">
+          <div className="t-body font-bold text-text-1">{p.term}</div>
+          <div className="mt-0.5 t-sub leading-[1.7] text-text-2">
             {p.desc}
           </div>
         </li>
@@ -180,21 +181,11 @@ export default function RegulationsGuidePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
       />
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
-        {/* 최신 수치 확인 안내 — 수치를 지어내지 않는다 */}
-        <div className="rise-in flex items-start gap-3 rounded-2xl bg-primary-soft p-4">
-          <Icon
-            name="warning"
-            size={18}
-            className="mt-0.5 shrink-0 text-primary"
-          />
-          <p className="text-[13px] leading-[1.7] text-primary">
-            세율·한도·규제지역 지정 여부 등 <b>구체적인 수치와 최신 여부는 수시로
-            바뀝니다.</b> 국세청(홈택스)·국토교통부·청약홈(한국부동산원) 등 관련
-            기관에서 반드시 직접 확인하세요. 이 페이지는 제도의 개념 이해를 돕는
-            일반 정보이며 특정 수치를 제공하지 않습니다.
-          </p>
-        </div>
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4 max-md:gap-3">
+        {/* 최신 수치 확인 안내 — 수치를 지어내지 않는다. [1015 · 규칙 B·C] 파란 안내 블록 → 사실 한 줄 */}
+        <p className="rise-in -mt-1 t-sub text-text-2">
+          개념만 다룸 · 세율·한도·규제지역 지정은 수시로 바뀜 · 최신 수치는 국세청(홈택스)·국토교통부·청약홈(한국부동산원)
+        </p>
 
         {/* 개념 섹션 */}
         {SECTIONS.map((s, i) => (
@@ -204,12 +195,12 @@ export default function RegulationsGuidePage() {
         ))}
 
         {/* 투자 판단 면책 */}
-        <div className="card rounded-2xl border-line p-5">
-          <div className="flex items-center gap-2 text-[13px] font-bold text-ink">
+        <div className="card rounded-2xl border-line p-5 max-md:p-3.5">
+          <div className="flex items-center gap-2 t-body font-bold text-ink">
             <Icon name="shield" size={16} className="text-text-3" />
             투자 판단 안내
           </div>
-          <p className="mt-2 text-[12px] leading-[1.7] text-text-2">
+          <p className="mt-2 t-sub leading-[1.7] text-text-2">
             본 안내는 제도의 개념 이해를 돕기 위한 일반 정보이며, 특정 주택의
             매수·매도·청약을 권유하거나 투자 수익을 보장하지 않습니다. 규제·세제는
             개별 상황에 따라 적용이 달라지므로, 투자 판단과 그 결과에 대한 책임은
@@ -223,22 +214,20 @@ export default function RegulationsGuidePage() {
           className="tile flex items-center justify-between rounded-2xl border border-line bg-surface px-5 py-4 no-underline"
         >
           <div>
-            <div className="text-[13px] font-bold text-ink">
+            <div className="t-body font-bold text-ink">
               계약 전 체크리스트 &amp; 특약 가이드
             </div>
-            <div className="mt-0.5 text-[12px] text-text-2">
-              단계별 확인사항, 표준계약서 핵심 조항과 특약 예시를 이어서 확인하세요.
-            </div>
+            <div className="mt-0.5 t-sub text-text-2">단계별 확인사항 · 표준계약서 핵심 조항 · 특약 예시</div>
           </div>
-          <span className="shrink-0 rounded-lg bg-primary-soft px-3.5 py-2 text-xs font-bold text-primary">
+          <span className="shrink-0 rounded-lg bg-primary-soft px-3.5 py-2 t-sub font-bold text-primary">
             가이드 보기 ›
           </span>
         </Link>
 
-        {/* 공통 면책 */}
-        <p className="px-1 pb-2 text-[12px] leading-[1.7] text-text-3">
+        {/* 공통 면책 — [1008 · J] 법률 서비스(법무사) 권고 없음 원칙(계약 가이드와 같은 문장) */}
+        <p className="px-1 pb-2 t-sub leading-[1.7] text-text-3">
           본 안내는 일반 정보이며 법률·세무 자문이 아닙니다. 실제 거래·신고·세금은
-          공인중개사·법무사·세무사 등 전문가와 관련 기관 확인이 필요합니다.
+          중개사무소·세무 전문가와 관련 기관 확인이 필요합니다.
         </p>
       </div>
     </PageShell>

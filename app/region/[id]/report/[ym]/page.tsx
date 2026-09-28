@@ -199,15 +199,13 @@ export default async function RegionMonthlyReportPage({
       />
 
       <h1 className="rise-in t-title tracking-tight text-ink md:t-title">
-        {region.name} 아파트 시장 — {label}
+        {region.name} 아파트 시장 · {label}
       </h1>
-      <p className="rise-in-1 mt-1.5 t-body text-text-2">
-        {label}에 고정된 월간 스냅샷입니다. 신고 지연분이 이후 반영될 수 있어 하루 1회
-        갱신됩니다. 최신 시황은{" "}
+      <p className="rise-in-1 mt-1.5 t-sub text-text-3">
+        {label} 고정 월간 스냅샷 · 신고 지연분 반영을 위해 하루 1회 갱신 ·{" "}
         <Link href={`/region/${id}`} className="font-bold text-primary">
-          {region.name} 지역 페이지
+          {region.name} 최신 시황 ›
         </Link>
-        에서 보세요.
       </p>
 
       {facts.length > 0 && (
@@ -247,7 +245,9 @@ export default async function RegionMonthlyReportPage({
             {label} 상위 실거래{" "}
             <span className="t-sub font-medium text-text-3">신고 금액순 5건</span>
           </h2>
-          <div className="card overflow-x-auto rounded-2xl px-4 py-2">
+          {/* [1015 · 규칙 I] 실거래 표 껍데기 = blue 리퀴드 판(스크롤 상자는 안쪽) */}
+          <div className="lq-panel py-2" data-tone="blue">
+          <div className="overflow-x-auto">
             <table className="w-full min-w-[420px] t-body">
               <thead>
                 <tr className="border-b border-line text-left t-sub text-text-3">
@@ -279,9 +279,9 @@ export default async function RegionMonthlyReportPage({
               </tbody>
             </table>
           </div>
+          </div>
           <p className="t-caption mt-1.5 px-1 text-text-3">
-            국토교통부 실거래 신고 기준(취소 신고 제외). 신고 기한이 계약 후 30일이라 이후
-            추가·정정될 수 있습니다.
+            국토교통부 실거래 신고 기준(취소 신고 제외) · 신고 기한이 계약 후 30일이라 이후 추가·정정될 수 있음
           </p>
         </section>
       )}

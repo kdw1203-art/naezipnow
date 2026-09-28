@@ -148,13 +148,10 @@ export function WelcomeClient() {
       {/* [962] 첫 화면의 첫 줄은 브랜드 — 한지 띠 위 세리프 슬로건 */}
       <BrandSloganBand className="rise-in" />
       <h1 className="rise-in text-[21px] font-bold leading-[1.35] text-ink">
-        어느 동네가
-        <br />
-        궁금하세요?
+        관심 지역 선택
       </h1>
       <p className="rise-in-1 -mt-2 text-[13px] text-text-2">
-        전국 시·군·구에서 1~{MAX_REGIONS}곳 고르면 그 동네의 실거래·소식을 먼저 보여 드려요.
-        나머지는 나중에 물어볼게요.
+        전국 시·군·구에서 1~{MAX_REGIONS}곳. 고른 동네의 실거래·소식이 먼저 보입니다.
       </p>
       <div className="rise-in-2">
         <RegionPicker

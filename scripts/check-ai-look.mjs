@@ -70,7 +70,6 @@ const SHADOW_ALLOW = [
 ];
 const PHRASE_ALLOW = [
   ["app/admin/", "관리자 화면"],
-  ["app/developers/", "개발자 문서(섹션 제목 '시작하기')"],
 ];
 /* [1012-R2 · 규칙 6a] 파일당 `btn-primary` 리터럴 상한 — [경로(정확히 일치), 상한, 이유].
    "상태 분기" = 로그인/빈/오류/완료처럼 한 번에 하나만 그려지는 가지. "트리거+모달" = 여는 버튼과 모달 안 제출
@@ -78,12 +77,13 @@ const PHRASE_ALLOW = [
    담당 축이 줄여야 할 대상이고, 여기서는 **늘지만 못하게** 상한만 고정한다(1012 R2 실측값).
    상한을 내릴 때는 이유도 같이 고친다. 새 파일에서 2개 이상이면 목록에 넣지 말고 하나로 줄인다. */
 const PRIMARY_ALLOW = [
-    ["app/dev-deals/DevDealsListClient.tsx", 3, "동시 렌더 — 목록 행마다 '참여 문의' + 빈 화면 '개발물건 등록' + 상단 등록 링크(담당: dev-deals)"],
+  ["app/notes/notes-feed-client.tsx", 2, "[1016] 반응형 분기 — 폰 CTA(md:hidden)와 데스크톱 왼쪽 레일 노트 쓰기(lg만). 한 화면엔 하나"],
+    ["app/dev-deals/DevDealsListClient.tsx", 2, "동시 렌더 — 목록 행마다 '참여 문의' + 빈 화면 '개발물건 등록' + 상단 등록 링크(담당: dev-deals)"],
   ["app/dev-deals/new/DealForm.tsx", 2, "상태 분기 — 완료 화면 링크 / 제출"],
   ["app/dev-deals/partners/new/PartnerForm.tsx", 2, "상태 분기 — 완료 화면 링크 / 제출"],
   ["app/listings/new/ListingForm.tsx", 3, "상태 분기(완료 링크) + 지도 위치 확정 오버레이 + 제출 — 오버레이·제출은 동시 가능(담당: listings)"],
   ["app/map/map-client.tsx", 7, "동시 렌더 가능 — 지도 위 패널·시트·모바일/데스크탑 분기(hidden md:inline-flex)마다 1개(담당: map) · [1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
-  ["app/my/MyHubView.tsx", 5, "동시 렌더 — 다음 단계·매물 등록·카드 재등록/플랜·포인트 상점 섹션마다 1개(담당: my) · [1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
+  ["app/my/MyHubView.tsx", 3, "동시 렌더 — 다음 단계·매물 등록·카드 재등록/플랜·포인트 상점 섹션마다 1개(담당: my) · [1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
   ["app/my/consultations/ConsultReply.tsx", 2, "트리거(삼항: 답변 있으면 outline)+모달 제출"],
   ["app/my/consultations/ProposeQuote.tsx", 2, "트리거+모달 — 견적 제안 → 제출"],
   ["app/my/creator/page.tsx", 2, "상태 분기 — 비로그인 / 로그인"],
@@ -97,7 +97,6 @@ const PRIMARY_ALLOW = [
   ["app/payment/success/page.tsx", 4, "상태 분기 — !ok / guestPending / returnTo / 기본, 각 1개"],
   ["app/quiz/QuizGame.tsx", 2, "상태 분기 — 결과 화면 공유 / 진행 중 '다음'"],
   ["app/reset-password/page.tsx", 3, "상태 분기 — 완료 / 만료 / 폼 제출"],
-  ["app/safety/page.tsx", 2, "동시 렌더 가능 — 주소 조회 제출 + 자가진단 앵커(담당: safety)"],
   ["app/signup/SignupClient.tsx", 2, "상태 분기 — 인증 메일 안내의 로그인 링크 / 가입 제출"],
   ["app/subscription/billing/BillingEnrollClient.tsx", 2, "상태 분기 — 비로그인 유도 링크 / 카드 등록"],
   ["app/subscription/checkout/CheckoutClient.tsx", 4, "상태 분기 — guestPay / preview / ready / window-ready, 각 1개"],
@@ -112,16 +111,10 @@ const PRIMARY_ALLOW = [
   ["app/town/groups/[id]/page.tsx", 3, "상태 분기 — 없음 / 참여 삼항 / 로그인 유도"],
   ["app/town/library/[id]/page.tsx", 2, "상태 분기 — 구매 완료 열람 / 무료 열람"],
   ["components/ListingCompareTray.tsx", 2, "삼항 — canCompare ? 비교 링크 : 비활성 버튼(같은 자리)"],
-  ["app/analysis/hub-record-start.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
-  ["app/analysis/page.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
-  ["app/auctions/AuctionsClient.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
-  ["app/complex/ComplexReviews.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
   ["app/listings/ListingsListClient.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
   ["app/my/points/CopyLink.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
-  ["app/not-found.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
   ["app/notes/[id]/card/NoteCardStudio.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
-  ["app/notes/[id]/page.tsx", 3, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
-  ["app/notes/new/NoteForm.tsx", 3, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
+  ["app/notes/new/NoteForm.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
   ["app/subscription/payment-methods/page.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
   ["app/town/write/page.tsx", 2, "[1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
 ];

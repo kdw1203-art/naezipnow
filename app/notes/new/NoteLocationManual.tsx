@@ -55,7 +55,7 @@ export function NoteLocationManual({
         }}
         aria-label="지역 (시·군·구)"
         aria-invalid={error?.field === "region" || undefined}
-        placeholder="지역 — 예: 서울 강남구"
+        placeholder="지역 (예: 서울 강남구)"
         enterKeyHint="next"
         className={inputCls(error?.field === "region")}
       />
@@ -76,7 +76,7 @@ export function NoteLocationManual({
         }}
         aria-label="단지명"
         aria-invalid={error?.field === "aptName" || undefined}
-        placeholder="단지명 — 예: 은마아파트"
+        placeholder="단지명 (예: 은마아파트)"
         enterKeyHint="done"
         className={inputCls(error?.field === "aptName")}
       />
@@ -85,7 +85,7 @@ export function NoteLocationManual({
           {error.error}
         </p>
       ) : null}
-      <button type="button" onClick={commit} className="btn-primary btn-md w-full">
+      <button type="button" onClick={commit} className="btn-outline btn-md w-full">
         이 위치로
       </button>
     </div>

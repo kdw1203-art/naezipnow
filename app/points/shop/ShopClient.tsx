@@ -92,7 +92,7 @@ export function ShopClient({ initialBalance }: { initialBalance: number }) {
               <div className="text-[13px] font-bold text-ink">
                 {item.label}
                 {item.season && (
-                  <span className="ml-1.5 align-middle rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-bold text-warning">
+                  <span className="ml-1.5 align-middle rounded-full bg-warning-soft px-2 py-0.5 t-caption font-bold text-warning">
                     {item.season} 한정
                   </span>
                 )}

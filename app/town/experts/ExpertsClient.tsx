@@ -71,15 +71,15 @@ function toCard(e: ExpertPublicRow): ExpertCardData {
     title: e.title,
     typeLabel: type?.label ?? e.category,
     initial: initialOf(e.name),
-    regionLine: [e.regions.slice(0, 2).join("·") || "전국", e.experience ? `경력 ${e.experience}` : null]
-      .filter(Boolean)
-      .join(" · "),
+    /* [1015] 경력은 이름 아래 신뢰 줄(평점 옆)로 올라갔다 — 지역 줄에는 지역만(같은 값을 두 번 적지 않는다) */
+    regionLine: e.regions.slice(0, 2).join("·") || "전국",
     regions: e.regions,
     tags: e.specialties.filter(Boolean).slice(0, 3),
     rating: e.rating,
     reviews: e.reviews,
     consultations: e.consultations,
     responseLabel: responseTimeLabel(null, e.responseTime),
+    experience: e.experience?.trim() || null,
     introduction: e.introduction,
     consultFeeLabel: fee(e.consultationFee),
     verified: e.isVerified,
@@ -270,7 +270,7 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
 
       {truncated && (
         <p className="mb-3 t-sub text-text-3">
-          등록 전문가가 조회 상한에 도달해 일부가 잘렸을 수 있어요 — 필터 결과가 실제보다 적게 보일 수 있습니다.
+          등록 전문가가 조회 상한에 도달해 일부가 잘렸을 수 있어요. 필터 결과가 실제보다 적게 보일 수 있습니다.
         </p>
       )}
 
@@ -285,11 +285,11 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
               ? "인증 전문가가 아직 없어요"
               : `조건에 맞는 전문가가 아직 없어요`}
           </p>
+          {/* [1015] 빈 화면은 한 줄(브리프 규칙 D) */}
           <p className="max-w-xs t-sub text-text-3">
             {!filtersActive
-              ? /* [970 · C-20] 해요체 통일 */
-                "베타 기간이라 공급이 적어요. 인증 심사가 끝나는 대로 여기에 올라와요. 그동안은 견적 요청을 남겨 두거나, 임장노트·단지 Q&A 로 판단을 이어가세요."
-              : "다른 자격·분야·지역을 보거나, 견적 요청을 남겨 두면 인증 전문가가 먼저 제안을 보내요."}
+              ? "인증 심사가 끝나는 대로 여기에 올라와요."
+              : "견적 요청을 남겨 두면 인증 전문가가 먼저 제안을 보내요."}
           </p>
           <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
             {filtersActive && (
@@ -324,7 +324,7 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
                   <Icon name="shield" size={22} />
                 </div>
                 <div className="t-body font-bold text-text-1">아직 인증된 전문가가 없어요</div>
-                <div className="max-w-xs t-sub text-text-3">인증 심사를 통과하면 상담 가능한 전문가로 노출돼요. 아래 심사 중 프로필은 상담을 받지 않아요.</div>
+                <div className="max-w-xs t-sub text-text-3">아래 심사 중 프로필은 상담을 받지 않아요.</div>
               </div>
             )}
           </section>

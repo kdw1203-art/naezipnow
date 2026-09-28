@@ -15,6 +15,7 @@ import type {
   RecentComplexCard,
   SectionState,
 } from "@/lib/me/my-hub";
+import { seedGradient } from "@/lib/town/shared";
 import { AttendanceButton } from "./points/AttendanceButton";
 import { ProfileEditSheet } from "./ProfileEditSheet";
 
@@ -39,6 +40,8 @@ export type MyHubNote = {
   /** 0~100 */
   score: number;
   region: string;
+  /** [1015 · 규칙 H] 목록 썸네일 주소(noteCoverUrl) — 없으면 단색 칸 */
+  cover: string | null;
 };
 
 export type MyHubAlert = { id: string; type: "region" | "keyword" | string; value: string };
@@ -75,16 +78,22 @@ export type MyHubData = {
   aiUsage: { lifetime: boolean; used: number; limit: number | null } | null;
 };
 
-/* 흰 카드 위 메뉴 행 — 더 보기·전문가 메뉴가 같은 모양을 쓴다 */
-function MenuRows({ items }: { items: { label: string; href: string; desc?: string }[] }) {
+/* 메뉴 행 묶음 — [1015 · 규칙 I] 리퀴드 판 한 장(lq-panel) + 톤(포인트 = mint · 도구 메뉴 = blue) */
+function MenuRows({
+  items,
+  tone,
+}: {
+  items: { label: string; href: string; desc?: string }[];
+  tone: "blue" | "hanji" | "mint" | "sand";
+}) {
   return (
-    <div className="card flex flex-col rounded-lg px-4 py-0.5">
+    <div className="lq-panel flex flex-col py-0.5" data-tone={tone}>
       {items.map((m, i, arr) => (
         <Link
           key={m.href}
           href={m.href}
-          className={`flex items-center justify-between gap-3 py-[13px] no-underline ${
-            i < arr.length - 1 ? "border-b border-divider" : ""
+          className={`flex items-center justify-between gap-3 py-[13px] no-underline max-md:py-2.5 ${
+            i < arr.length - 1 ? "border-b" : ""
           }`}
         >
           <span className="flex min-w-0 flex-col">
@@ -125,18 +134,37 @@ function OneLine({
   );
 }
 
-function NoteRow({ n, sub }: { n: MyHubNote; sub?: string }) {
+/* [1015 · 규칙 H] 44px 정사각 썸네일 — noteCoverUrl(템플릿 썸네일이면 그 그림, 아니면 첫 사진), 없으면 단색 칸.
+   제목은 옆 칸에 있으므로 템플릿 그림 위에 글자를 겹치지 않는다. */
+function NoteThumb({ n }: { n: MyHubNote }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="h-11 w-11 shrink-0 overflow-hidden rounded-lg"
+      style={{ background: seedGradient(n.region || n.id) }}
+    >
+      {n.cover && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={n.cover} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+      )}
+    </span>
+  );
+}
+
+/* 판(lq-panel) 안의 노트 한 행 — 썸네일 · 제목 · 메타 · 점수. 묶음 쪽이 톤을 정한다. */
+function NoteRow({ n, sub, last }: { n: MyHubNote; sub?: string; last?: boolean }) {
   return (
     <Link
       href={`/notes/${n.id}`}
-      className="card tile flex items-center justify-between rounded-lg px-4 py-3 no-underline"
+      className={`flex items-center gap-3 py-2.5 no-underline ${last ? "" : "border-b"}`}
     >
-      <div className="min-w-0">
+      <NoteThumb n={n} />
+      <div className="min-w-0 flex-1">
         <div className="truncate t-body font-bold text-ink">{n.title}</div>
         <div className="t-sub text-text-3">{sub ?? n.meta}</div>
       </div>
       {/* [1009 · T] 점수가 없는 노트(축 미입력)는 "0점"이 아니라 "점수 없음" — 공개 노트 피드와 같은 말(0점은 최저점으로 읽힌다) */}
-      <span className={`t-num shrink-0 pl-2 t-sub font-bold ${n.score > 0 ? "text-primary" : "text-text-3"}`}>
+      <span className={`t-num shrink-0 pl-2 t-sub font-bold ${n.score > 0 ? "" : "text-text-3"}`}>
         {n.score > 0 ? `기록 ${n.score}점` : "점수 없음"}
       </span>
     </Link>
@@ -172,9 +200,9 @@ export function MyHubView({ data }: { data: MyHubData }) {
   const levelSummary = levels.length > 0 ? regionLevelSummary(levels) : null;
 
   return (
-    <div className="mx-auto flex max-w-[1040px] flex-col gap-4">
-      {/* ── 프로필 + 활동 요약 (유리판) ── */}
-      <section aria-label="내 프로필" className="rise-in lg-glass flex flex-col gap-4 rounded-lg p-5">
+    <div className="mx-auto flex max-w-[1040px] flex-col gap-4 max-md:gap-3">
+      {/* ── 프로필 + 활동 요약 (유리판) — [1015 · 규칙 E] 폰 안쪽 여백 압축 ── */}
+      <section aria-label="내 프로필" className="rise-in lg-glass flex flex-col gap-4 rounded-lg p-5 max-md:gap-3 max-md:p-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             {avatarUrl ? (
@@ -243,7 +271,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
         )}
         {!ledger.ok && !summary.some((x) => x.failed) && (
           <span className="t-caption text-text-3">
-            포인트 잔액을 지금 불러오지 못했어요 — 0 P 라는 뜻이 아니라 조회가 실패했어요.
+            포인트 잔액을 지금 불러오지 못했어요. 0 P 가 아니라 조회 실패입니다.
           </span>
         )}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -263,7 +291,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
       {nextStep && (
         <section
           aria-label="다음 할 일"
-          className="rise-in-1 card flex flex-col gap-3 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between"
+          className="rise-in-1 card flex flex-col gap-3 rounded-2xl p-4 max-md:p-3.5 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex min-w-0 flex-col gap-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -290,26 +318,25 @@ export function MyHubView({ data }: { data: MyHubData }) {
         </section>
       )}
 
-      {/* ── 한도 임박 안내 — 사실(사용량)만 말하고 다음 단계를 보여준다 ── */}
+      {/* ── 한도 임박 — 사실(사용량)만. [1015] 권유 꼬리("플러스는 … 늘어나요") 제거 ── */}
       {!isAdminViewer && !paid && nearLimit.length > 0 && (
-        <section className="rise-in-1 card flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
+        <section className="rise-in-1 card flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4 max-md:p-3.5">
           <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="t-body font-bold text-ink">무료 한도가 가까워졌어요</span>
+            <span className="t-body font-bold text-ink">무료 한도 임박</span>
             <span className="t-sub text-text-3">
-              {nearLimit.map((i) => `${i.label} ${i.used}/${i.limit}`).join(" · ")} — 플러스는 이 한도가
-              크게 늘어나요.
+              {nearLimit.map((i) => `${i.label} ${i.used}/${i.limit}`).join(" · ")}
             </span>
           </div>
           <Link href="/subscription" className="btn-soft btn-md shrink-0 no-underline">
-            플랜 비교 보기 ›
+            플랜 비교 ›
           </Link>
         </section>
       )}
 
       {/* ── 2열: 좌 활동 / 우 구독·포인트·더 보기 (데스크톱) ── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_336px] lg:items-start">
-        <div className="flex min-w-0 flex-col gap-4">
-          {/* ── 최근 본 단지 — 가로 레일 ── */}
+      <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_336px] lg:items-start">
+        <div className="flex min-w-0 flex-col gap-4 max-md:gap-3">
+          {/* ── 최근 본 단지 — 가로 레일(폰) · [1015 · 규칙 F] 데스크톱은 줄바꿈 격자 ── */}
           <section className="flex flex-col gap-2.5">
             <SectionHead title="최근 본 단지" href="/map" hrefLabel="지도" />
             {recent.kind === "error" ? (
@@ -317,7 +344,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
             ) : recent.kind === "empty" ? (
               <OneLine text="아직 본 단지가 없어요" href="/map" label="지도에서 둘러보기" />
             ) : (
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible">
                 {recent.items.map((c) => (
                   <Link
                     key={c.id}
@@ -332,7 +359,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
             )}
           </section>
 
-          {/* ── 내 임장노트 — 빈 상태 그림은 여기 한 곳만 ── */}
+          {/* ── 내 임장노트 — 빈 상태 그림은 여기 한 곳만. [1015 · 규칙 H·I] 썸네일 행 목록 = hanji 톤 ── */}
           <section className="flex flex-col gap-2.5">
             <SectionHead
               title="내 임장노트"
@@ -341,7 +368,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
             />
             {notes.kind === "error" ? (
               <OneLine
-                text="내 노트를 지금 불러오지 못했어요 — 없는 게 아니라 조회가 실패했어요"
+                text="내 노트를 지금 불러오지 못했어요. 없는 게 아니라 조회 실패입니다."
                 tone="error"
               />
             ) : notes.kind === "empty" ? (
@@ -352,9 +379,9 @@ export function MyHubView({ data }: { data: MyHubData }) {
                 action={{ label: "첫 노트 쓰기", href: "/notes/new" }}
               />
             ) : (
-              <div className="grid gap-2.5 sm:grid-cols-2">
-                {notes.items.map((n) => (
-                  <NoteRow key={n.id} n={n} />
+              <div className="lq-panel flex flex-col" data-tone="hanji">
+                {notes.items.map((n, i, arr) => (
+                  <NoteRow key={n.id} n={n} last={i === arr.length - 1} />
                 ))}
               </div>
             )}
@@ -364,9 +391,10 @@ export function MyHubView({ data }: { data: MyHubData }) {
           {levelSummary && (
             <section className="flex flex-col gap-2.5">
               <SectionHead title="지역 임장 레벨" href="/notes?mine=1" hrefLabel="내 노트" />
-              <div className="card flex flex-col gap-3 rounded-2xl p-5">
+              <div className="card flex flex-col gap-3 rounded-2xl p-5 max-md:p-3.5">
+                {/* [1015] 문장 → 사실 한 줄 */}
                 <div className="t-sub text-text-3">
-                  지금까지 <b className="text-ink">{levelSummary.regionCount}개 지역</b>을 임장했어요
+                  임장 지역 <b className="text-ink">{levelSummary.regionCount}곳</b>
                   {levelSummary.topLabel ? (
                     <>
                       {" · 최고 "}
@@ -409,11 +437,12 @@ export function MyHubView({ data }: { data: MyHubData }) {
           )}
 
           {/* ── 관심 — 단지·노트·알림 세 줄을 한 카드에 ── */}
+          {/* [1015 · 규칙 I] 관심 단지·저장 노트·알림 세 줄 = blue 톤 리퀴드 판 */}
           <section className="flex flex-col gap-2.5">
             <SectionHead title="관심" href="/my/watchlist" hrefLabel="관심 단지 대시보드" />
-            <div className="card flex flex-col rounded-2xl px-4 py-1">
+            <div className="lq-panel flex flex-col py-1" data-tone="blue">
               {/* 관심 단지 */}
-              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-divider py-3">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b py-3">
                 <span className="flex min-w-0 flex-col">
                   <span className="t-caption font-bold text-text-3">관심 단지</span>
                   <span className="t-body font-bold text-ink">
@@ -421,7 +450,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
                       ? "지금 불러오지 못했어요"
                       : watchlistCount.value === 0
                         ? "아직 담은 단지가 없어요"
-                        : `${watchlistCount.value.toLocaleString("ko-KR")}개 담아 뒀어요`}
+                        : `${watchlistCount.value.toLocaleString("ko-KR")}개`}
                   </span>
                 </span>
                 {watchlistCount.ok && (
@@ -435,7 +464,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
               </div>
 
               {/* 저장한 노트 */}
-              <div className="flex flex-col gap-2 border-b border-divider py-3">
+              <div className="flex flex-col gap-2 border-b py-3">
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                   <span className="flex min-w-0 flex-col">
                     <span className="t-caption font-bold text-text-3">저장한 노트</span>
@@ -457,9 +486,9 @@ export function MyHubView({ data }: { data: MyHubData }) {
                   )}
                 </div>
                 {savedNotes.kind === "items" && (
-                  <div className="flex flex-col gap-2">
-                    {savedNotes.items.map((n) => (
-                      <NoteRow key={n.id} n={n} />
+                  <div className="flex flex-col">
+                    {savedNotes.items.map((n, i, arr) => (
+                      <NoteRow key={n.id} n={n} last={i === arr.length - 1} />
                     ))}
                   </div>
                 )}
@@ -506,7 +535,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
               <SectionHead title="구매한 리포트" />
               {purchased.kind === "error" ? (
                 <OneLine
-                  text="구매 내역을 지금 불러오지 못했어요 — 내역이 없는 게 아니라 조회가 실패했어요"
+                  text="구매 내역을 지금 불러오지 못했어요. 내역이 없는 게 아니라 조회 실패입니다."
                   tone="error"
                 />
               ) : purchased.kind === "empty" ? null : (
@@ -533,20 +562,20 @@ export function MyHubView({ data }: { data: MyHubData }) {
               영역이라 [1006] 입구를 그리지 않는다(lib/seo/archived-routes.ts). 살아 있는 건 내 매물뿐. ── */}
           {expert.isVerified && expert.isBroker && (
             <section className="flex flex-col gap-2.5">
-              <SectionHead title="중개" sub="공인중개사 인증 완료" />
-              <div className="card flex flex-col gap-3 rounded-2xl p-5 md:flex-row md:items-center md:justify-between">
+              {/* [1015 · 규칙 C] 제목 옆 부연("공인중개사 인증 완료") 제거 — 이 섹션은 인증 회원에게만 보인다 */}
+              <SectionHead title="중개" />
+              <div className="card flex flex-col gap-3 rounded-2xl p-5 max-md:p-3.5 md:flex-row md:items-center md:justify-between">
                 <div>
                   <div className="t-body font-bold text-ink">내 매물</div>
-                  <div className="mt-0.5 t-sub text-text-3">
-                    {expert.brokerNo ? `등록번호 ${expert.brokerNo} · ` : ""}매물을 등록하고 관리할 수
-                    있어요
-                  </div>
+                  {/* [1015] 사용법 문장("등록하고 관리할 수 있어요") 제거 — 등록번호 사실만 */}
+                  {expert.brokerNo && <div className="mt-0.5 t-sub text-text-3">등록번호 {expert.brokerNo}</div>}
                 </div>
+                {/* [1015 · 규칙 J] 채움 파랑은 화면당 1개(다음 할 일) — 보조는 outline */}
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Link href="/my/listings" className="btn-soft btn-md no-underline">
                     내 매물 관리
                   </Link>
-                  <Link href="/listings/new" className="btn-primary btn-md no-underline">
+                  <Link href="/listings/new" className="btn-outline btn-md no-underline">
                     매물 등록
                   </Link>
                 </div>
@@ -556,14 +585,14 @@ export function MyHubView({ data }: { data: MyHubData }) {
         </div>
 
         {/* ── 우측: 구독 · 포인트 · 더 보기 ── */}
-        <aside className="flex min-w-0 flex-col gap-4">
+        <aside className="flex min-w-0 flex-col gap-4 max-md:gap-3">
           {/* 구독 상태 — 관리(해지·카드·영수증)는 /my/subscription 한 곳 */}
           <section className="flex flex-col gap-2.5">
             <SectionHead title="구독 상태" href="/my/subscription" hrefLabel="플랜 관리" />
-            <div className="card flex flex-col gap-3 rounded-2xl p-5">
+            <div className="card flex flex-col gap-3 rounded-2xl p-5 max-md:p-3.5">
               <div className="min-w-0">
                 <div className="t-body font-bold text-ink">현재 플랜 · {planLabel(plan)}</div>
-                <div className="mt-0.5 t-sub text-text-3">{subscription.line}</div>
+                {subscription.line && <div className="mt-0.5 t-sub text-text-3">{subscription.line}</div>}
                 {subscription.lastPayment && (
                   <div className="mt-1 t-caption text-text-3">
                     최근 결제 · {subscription.lastPayment.at} · {subscription.lastPayment.amount}{" "}
@@ -604,7 +633,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
                   : Math.min(100, Math.round((aiUsage.used / Math.max(1, limit)) * 100));
                 const atLimit = !unlimited && remaining === 0;
                 return (
-                  <div className="card flex flex-col gap-2 rounded-2xl p-4">
+                  <div className="card flex flex-col gap-2 rounded-2xl p-4 max-md:p-3.5">
                     <div className="flex items-center justify-between">
                       <span className="t-sub font-bold text-ink">
                         {aiUsage.lifetime ? "무료 AI 분석 (누적)" : "이번 달 AI 분석"}
@@ -628,17 +657,19 @@ export function MyHubView({ data }: { data: MyHubData }) {
                         />
                       </div>
                     )}
-                    <div className="t-sub text-text-3">
-                      {unlimited
-                        ? "유료 플랜은 AI 비교 리포트가 무제한이에요."
-                        : atLimit
+                    {/* [1015 · 규칙 D] 권유문 → 사실 한 줄. 무제한은 위 숫자 칸이 이미 말한다.
+                        한도 숫자는 실제 limit 값(예전엔 "3회"·"1,100원" 을 손으로 적었다). */}
+                    {!unlimited && (
+                      <div className="t-sub text-text-3">
+                        {atLimit
                           ? aiUsage.lifetime
-                            ? "무료 3회를 다 썼어요. 주간권(1,100원·7일)이나 플러스로 계속할 수 있어요."
-                            : "이번 달 무료 한도를 다 썼어요. 플러스로 올리면 무제한으로 분석할 수 있어요."
+                            ? `무료 ${limit}회 모두 사용 · 주간권 또는 플러스로 계속`
+                            : `이번 달 무료 ${limit}회 모두 사용 · 플러스는 월 한도 확대`
                           : aiUsage.lifetime
-                            ? `무료로 ${remaining}회 더 분석할 수 있어요 (월 초기화 없음).`
-                            : `이번 달 무료로 ${remaining}회 더 분석할 수 있어요.`}
-                    </div>
+                            ? `${remaining}회 남음 · 월 초기화 없음`
+                            : `이번 달 ${remaining}회 남음`}
+                      </div>
+                    )}
                   </div>
                 );
               })()}
@@ -647,19 +678,20 @@ export function MyHubView({ data }: { data: MyHubData }) {
           {/* 포인트 — 적립 입구 3개 + 상점(교환). 내역(원장)은 /my/points 한 곳에서만 그린다. */}
           <section className="flex flex-col gap-2.5">
             <SectionHead title="포인트" href="/my/points" hrefLabel="전체 내역" />
+            {/* [1015 · 규칙 C·I] 사용법 부연("실행한 분석 다시 보기 · 같은 도구 재실행") 제거 · 포인트 = mint 톤 */}
             <MenuRows
+              tone="mint"
               items={[
                 { label: "미션", href: "/my/points?tab=missions", desc: "시작 3미션 200P · 주간 미션 매주 리셋" },
-                { label: "AI 분석 기록", href: "/my/analyses", desc: "실행한 분석 다시 보기 · 같은 도구 재실행" },
-                { label: "친구 초대", href: "/my/points?tab=referral", desc: "내 링크로 가입하면 친구와 나 모두 300P" },
+                { label: "AI 분석 기록", href: "/my/analyses" },
+                { label: "친구 초대", href: "/my/points?tab=referral", desc: "내 링크 가입 시 친구와 나 모두 300P" },
               ]}
             />
-            <div className="card flex flex-col gap-3 rounded-2xl p-4">
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="t-body font-bold text-ink">포인트 상점</span>
-                <span className="t-sub text-text-3">모은 포인트로 리포트·이용권을 교환해요.</span>
-              </div>
-              <Link href="/points/shop" className="btn-primary btn-md self-start no-underline">
+            {/* [1015] "리포트·이용권을 교환해요" 는 사실이 아니었다(포인트↔이용권 교환은 2026-08-23 토스 회신으로 제거,
+                상점 품목은 매물 상단 노출·추천글·닉네임 효과) — 설명 문장을 지우고 링크만. 채움 파랑 → soft. */}
+            <div className="card flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4 max-md:p-3.5">
+              <span className="t-body font-bold text-ink">포인트 상점</span>
+              <Link href="/points/shop" className="btn-soft btn-md shrink-0 no-underline">
                 포인트 상점 가기
               </Link>
             </div>
@@ -669,9 +701,10 @@ export function MyHubView({ data }: { data: MyHubData }) {
           <section className="mb-2 flex flex-col gap-2.5">
             <SectionHead title="더 보기" />
             <MenuRows
+              tone="blue"
               items={[
                 { label: "설정", href: "/my/settings", desc: "프로필 · 기록 기본값 · 알림 · 테마 · 데이터 내보내기" },
-                { label: "내 문의 내역", href: "/my/support", desc: "고객센터에 남긴 문의와 답변" },
+                { label: "내 문의 내역", href: "/my/support" },
                 { label: "고객센터", href: "/support" },
                 { label: "크리에이터 대시보드", href: "/my/creator" },
                 ...(isAdminViewer ? [{ label: "관리자 콘솔", href: "/admin" }] : []),

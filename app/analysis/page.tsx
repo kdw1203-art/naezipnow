@@ -102,11 +102,9 @@ function TierHead({ id, count }: { id: TierId; count: number }) {
           <Icon name={TIER_ICON[id]} size={16} />
         </span>
         <h2 className="accent-underline t-title text-balance text-ink">{t.question}</h2>
-        <span className="t-caption ml-auto shrink-0 rounded border border-line px-1.5 py-px font-bold text-text-3">
-          {t.badge} · {count}종
-        </span>
+        {/* [1015 · 규칙 C] 제목 옆 배지("단지 1곳 · 12종")는 개수만, 기능 설명 한 줄(hint)은 걷었다 */}
+        <span className="t-caption ml-auto shrink-0 text-text-3 tabular-nums">{count}종</span>
       </div>
-      <p className="t-sub text-text-3">{t.hint}</p>
     </div>
   );
 }
@@ -158,7 +156,7 @@ export default async function AnalysisHubPage() {
   return (
     <PageShell>
       <HubPickedProvider>
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 max-md:gap-3">
           {/* ── 히어로: 검색이 화면의 첫 요소 (UI-05·10) ── */}
           <HubHero
             coverage={coverage}
@@ -225,36 +223,26 @@ export default async function AnalysisHubPage() {
                         {publicPreview.teaser.length >= 160 ? "…" : ""}
                       </p>
                     </div>
-                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                      <span className="t-sub text-text-3">
-                        실제 공개 임장노트의 정리 결과예요. 로그인하면 내 노트도 같은
-                        방식으로 정리해요
-                      </span>
-                      <div className="flex shrink-0 flex-wrap gap-2">
-                        <Link
-                          href={`/notes/${publicPreview.id}`}
-                          className="btn-primary btn-md no-underline"
-                        >
-                          전체 AI 요약 보기
-                        </Link>
-                        <Link href="/notes/new" className="btn-soft btn-md no-underline">
-                          내 노트 쓰기
-                        </Link>
-                      </div>
+                    {/* [1015 · 규칙 B·J] 기능 설명("로그인하면 내 노트도 같은 방식으로…")은 걷고, 채움 파랑은 outline 으로
+                        (이 화면의 채움 파랑은 노트 AI 분석 카드의 "분석 실행" 하나) */}
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      <Link
+                        href={`/notes/${publicPreview.id}`}
+                        className="btn-outline btn-md no-underline"
+                      >
+                        전체 AI 요약 보기
+                      </Link>
+                      <Link href="/notes/new" className="btn-soft btn-md no-underline">
+                        내 노트 쓰기
+                      </Link>
                     </div>
                   </div>
                 ) : (
                   <div className="card flex flex-col gap-2.5 rounded-lg p-4">
-                    {/* 공개 AI 미리보기 0건 — 샘플 리포트로 채우지 않는다 */}
-                    <span className="t-section text-ink">
-                      아직 공개된 AI 정리가 없어요
-                    </span>
-                    <p className="t-body text-text-2">
-                      샘플 리포트로 채우지 않아요. 임장노트를 남기면 같은 방식으로
-                      장단점·시세 맥락을 정리해 드려요.
-                    </p>
+                    {/* 공개 AI 미리보기 0건 — 샘플 리포트로 채우지 않는다. [1015 · 규칙 B·D] 빈 화면은 한 줄 */}
+                    <span className="t-section text-ink">공개된 AI 정리 없음</span>
                     <div className="flex flex-wrap gap-2">
-                      <Link href="/notes/new" className="btn-primary btn-md no-underline">
+                      <Link href="/notes/new" className="btn-outline btn-md no-underline">
                         임장노트 쓰고 AI 받기
                       </Link>
                       <Link href="/notes" className="btn-soft btn-md no-underline">
@@ -303,14 +291,11 @@ export default async function AnalysisHubPage() {
             <span className="ai-chip tile-ico flex h-11 w-11 shrink-0 items-center justify-center rounded-lg">
               <Icon name="bot" size={20} />
             </span>
+            {/* [1015 · 규칙 B·D] 물음형 제목·예시 질문은 걷고 명사 제목 + 사실 한 줄 */}
             <span className="flex min-w-0 flex-1 flex-col gap-1">
-              <span className="t-section text-ai-text">
-                셋 다 아닌가요? 에이전트에게 그냥 물어보세요
-              </span>
+              <span className="t-section text-ai-text">에이전트</span>
               <span className="t-sub text-ai-text">
-                “내 노트 중 점수가 가장 높았던 단지, 지금 실거래는 어때?” — 내
-                임장노트·실거래를 직접 조회해 답하고, 무엇을 봤는지 목록으로
-                같이 보여 줍니다 (현재 수도권 실거래 기준)
+                내 임장노트·실거래 조회 · 참고한 자료 목록 표시 · 수도권 실거래 기준
               </span>
             </span>
             <span className="tile-go t-sub shrink-0 font-bold text-ai-accent">
@@ -319,11 +304,10 @@ export default async function AnalysisHubPage() {
           </Link>
 
           {/* ── 체험 구역 (UI-04) — 실데이터와 섞지 않는다. 기본 접힘 ── */}
-          <details className="hub-sim card rise-in-3 rounded-lg p-4">
+          <details className="hub-sim card rise-in-3 rounded-lg p-4 max-md:p-3.5">
             <summary className="flex flex-wrap items-center gap-2">
-              <span className="t-section text-ink">
-                예시 계산으로 먼저 감 잡기
-              </span>
+              {/* [1015 · 규칙 D] "먼저 감 잡기" → 명사 */}
+              <span className="t-section text-ink">예시 계산</span>
               <span className="t-caption rounded border border-line px-1.5 py-px font-bold text-text-3">
                 실데이터 아님 · {SIM_TOOLS.length}종
               </span>
@@ -335,10 +319,7 @@ export default async function AnalysisHubPage() {
                 </span>
               </span>
             </summary>
-            <p className="t-sub mt-2 text-text-3">
-              아래 넷은 아직 실연동 전이라 예시 수치로 계산합니다. 위 도구들과
-              달리 결과를 의사결정에 그대로 쓰면 안 됩니다.
-            </p>
+            <p className="t-sub mt-2 text-text-3">실연동 전 도구 · 예시 수치로 계산 · 의사결정 근거로 쓰지 않는다</p>
             <div className="mt-3 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
               {SIM_TOOLS.map((t) => (
                 <ToolCard
@@ -361,7 +342,7 @@ export default async function AnalysisHubPage() {
         </div>
       </HubPickedProvider>
       {/* [961] 광고 공간 — 허브 맨 아래(도구 입력·결과 사이에는 두지 않는다) */}
-      <AdZone placement="page_bottom" seed={2} plan={null} className="mt-8" />
+      <AdZone placement="page_bottom" seed={2} plan={null} className="mt-8 max-md:mt-4" />
     </PageShell>
   );
 }

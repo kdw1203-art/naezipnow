@@ -10,8 +10,7 @@ import { AdZone } from "./components/ads/AdZone";
 import { AdSenseUnit } from "./components/ads/AdSenseUnit";
 import { Footer } from "./components/Footer";
 import { HomeHeroSearch } from "./components/home/HomeHeroSearch";
-import { HomeBudgetChips } from "./components/home/HomeBudgetChips";
-import { HomeStartDoors } from "./components/home/HomeStartDoors";
+import { CoverImage } from "./components/CoverImage";
 import { HomeMyRail } from "./components/home/HomeMyRail";
 import type { KpiRegion, KpiTemp } from "./components/home/HomeKpiRow";
 import { HomeTodayLine } from "./components/home/HomeTodayLine";
@@ -27,7 +26,6 @@ import type { Metadata } from "next";
 import type { HomeBriefing } from "@/lib/newui/home-data";
 import {
   HOME_AI_BRIEFING_LABEL,
-  HOME_AI_EXAMPLE_LINE,
   HOME_AI_GATEWAY_LEAD,
   HOME_AI_GATEWAY_TITLE,
   HOME_CTA_AI,
@@ -93,12 +91,7 @@ function HomeAiGateway({
       cta={{ href: HOME_CTA_AI.href, label: HOME_CTA_AI.label }}
     >
       <p className="m-0 t-body t-fit">{HOME_AI_GATEWAY_LEAD}</p>
-      {/* [1008 · J] 예시 두 칸(입력 → AI 정리, [963]) → 한 줄. 두 칸은 모바일에서 세로 150px 을 차지했다 —
-          검색 아래 "어디서부터 시작할까요?" 문 넷을 넣은 만큼 여기서 덜어 첫 화면 높이를 지킨다.
-          형태(메모 → 리스크·장점·다음에 볼 것)는 이 한 줄이 그대로 말한다(수치 창작 없음). */}
-      <p className="fit m-0 mt-1 rounded-lg border border-white/15 bg-white/5 px-2.5 py-2 t-sub t-fit leading-[1.55] text-white/85">
-        {HOME_AI_EXAMPLE_LINE}
-      </p>
+      {/* [1015 · 규칙 B] "예: …" 예시 줄(HOME_AI_EXAMPLE_LINE)은 뺐다 — 예시 카드·문장 금지 */}
       {/* 링크 세 줄 → 한 줄. [958] 분석 허브로 가는 길 · 실제 공개 노트 예시. "로그인 없이 단지 데이터 진단
           미리보기"([1002])는 검색 아래 문 ② "후보가 있어요 → 단지 종합 진단"이 같은 화면으로 간다(중복 제거).
           [989] 카드 안에 단독으로 서는 링크 — 위아래 6px 로 31px. */}
@@ -230,19 +223,28 @@ export default async function Home() {
           {/* ① 검색 — 질문 한 줄 + 대형 검색 + 실기록 칩. 전폭. */}
           <div className="flex flex-col gap-3 pb-3 pt-1.5 md:py-5">
             <p className="t-display text-center text-ink">어느 단지가 궁금하세요?</p>
-            <p className="-mt-1 text-center t-sub text-text-2">{HOME_HERO_SUBLINE_SHORT}</p>
+            <p className="-mt-1 text-center t-sub text-text-2 max-md:hidden">{HOME_HERO_SUBLINE_SHORT}</p>
             <HomeHeroSearch
               regionChips={heroRegionChips}
               coverage={
                 <HomeCoverageLine coverage={coverage} publicNotes={data.publicNotesTotal} />
               }
             />
-            {/* [1002] 조건 탐색 입구 — 단지 이름을 모르는 방문자는 검색창에 칠 게 없다.
-                예산 한 줄로 지도 필터(?priceMax=억)에 바로 들어간다. 지역은 첫 시세 카드와
-                같은 곳(실데이터), 카드가 없으면 지역 없이 예산만. 서버 렌더·클라이언트 JS 없음. */}
-            <HomeBudgetChips regionName={regions[0]?.name ?? null} />
-            {/* [1008 · J] 상황으로 고르는 입구 — 구경·후보·계약·처음. 서버 렌더·JS 없음(HomeStartDoors 주석). */}
-            <HomeStartDoors />
+            {/* [1015 · 규칙 B] "예산으로 찾기" 칩 줄과 "어디서부터 시작할까요?" 문 4개는 뺐다(소유자: "필요 없는 부분 —
+                물음표 칸으로 마우스를 올리면 보이는 정도로"). 네 입구는 아래 ⓘ 한 줄(hover 미리보기·탭 시트)로 접었다. */}
+            <p className="m-0 flex items-center justify-center gap-1 t-caption text-text-3">
+              처음이라면
+              <Explain
+                title="처음 오신 분께"
+                body={[
+                  "실거래가 게임: 실거래가를 맞혀 보며 시세 감을 잡는 곳(/quiz).",
+                  "단지 종합 진단: 후보 단지 이름을 넣으면 실거래·전월세·공급·뉴스를 한 화면에(/analysis).",
+                  "계약·잔금 일정표: 계약을 앞두고 법정 기한을 날짜로(/journey/contract).",
+                  "내 집 마련 여정: 처음부터 6단계로(/journey).",
+                ]}
+                source="예산으로 찾기는 지도(/map)의 가격 필터"
+              />
+            </p>
           </div>
 
           {/* ② 오늘의 시장 — 한 문장. 넷을 동시에 말하면 무엇이 중요한지 사라진다. */}
@@ -320,6 +322,8 @@ export default async function Home() {
                     />
                   )
                 ) : (
+                  /* [1015 · 규칙 H·C] 행 왼쪽 44px 정사각 썸네일(고른 템플릿 → 첫 사진 → 단색 칸), "Lab 데이터/이웃" 배지 대신
+                     메타 줄(동네 · 단지 · 작성 주체). 점수 배지는 그대로. */
                   notes.slice(0, 3).map((n, i, arr) => (
                     <Link
                       key={n.id}
@@ -328,17 +332,18 @@ export default async function Home() {
                         i < arr.length - 1 ? "border-b border-divider" : ""
                       }`}
                     >
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        <span
-                          className={`shrink-0 rounded px-1 py-px t-caption font-bold ${
-                            n.kind === "lab"
-                              ? "bg-[rgba(0,0,0,.05)] text-text-3"
-                              : "bg-primary-soft text-primary"
-                          }`}
-                        >
-                          {n.kind === "lab" ? "Lab 데이터" : "이웃"}
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-divider" aria-hidden="true">
+                          {n.cover && (
+                            <CoverImage src={n.cover} alt="" sizes="44px" imgClassName="absolute inset-0 h-full w-full object-cover" />
+                          )}
                         </span>
-                        <span className="truncate font-semibold text-text-1">{n.title}</span>
+                        <span className="flex min-w-0 flex-col gap-0.5">
+                          <span className="truncate font-semibold text-text-1">{n.title}</span>
+                          <span className="truncate t-caption text-text-3">
+                            {[n.region, n.kind === "lab" ? "내집나우 Lab" : null].filter(Boolean).join(" · ")}
+                          </span>
+                        </span>
                       </span>
                       <span
                         className={`shrink-0 rounded-md px-1.5 py-0.5 t-caption font-bold tabular-nums ${
@@ -353,6 +358,9 @@ export default async function Home() {
                 )}
                 {allLabNotes && <p className="m-0 t-caption text-text-3">{LAB_NOTES_CAPTION}</p>}
               </section>
+
+              {/* [1015 · 규칙 G] 폰 광고 자리 = 첫 본문 섹션(공개 임장노트) 뒤 1곳(데스크톱은 오른쪽 레일) */}
+              <AdZone placement="home_feed" seed={1} plan={null} className="lg:hidden" />
 
               {/* ⑤ 지역 동향 — 4장(모바일 2열·xl 4열). 스파크라인·딥링크는 카드 안.
                   [1009 · H 리뷰] 제목 "지역 시세" → "지역 동향": 카드 4장 중 서울 3장의 가격은 국토부 신고 실거래 평균이라
@@ -402,12 +410,6 @@ export default async function Home() {
                   isStoryPost 로 갈라 만든 것이라 추가 왕복이 없고, 클라이언트 JS 도 없다.
                   0건은 0건으로(가짜 카드 없음), 실패는 실패로 말한다. */}
               <HomeTownBlock stories={data.stories} news={data.news} failed={failed.town} now={renderedAt} />
-
-              {/* [1008 · J] 본문 끝 "임장노트 쓰기" 버튼은 뺐다 — 헤더 "노트 쓰기"(데스크톱 상시)·탭바 "기록"(모바일
-                  상시)·AI 입구 "노트로 AI 정리 시작"과 같은 목적지라 네 번째 같은 말이었다. 검색 아래 문 넷을 넣은 만큼
-                  홈을 덜어 낸 자리다(파일 머리 [991]·[1008] 주석). */}
-
-              <AdZone placement="home_feed" seed={1} plan={null} className="lg:hidden" />
             </div>
           </div>
         </div>

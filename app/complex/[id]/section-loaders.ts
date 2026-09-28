@@ -12,6 +12,8 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { readRelatedTownPosts } from "@/lib/newui/board-posts";
 import { logger } from "@/lib/log";
 import { startDeadline, SectionBudgetExpiredError, type Deadline } from "@/lib/data/section-budget";
+/* [1015 · 규칙 H] 노트 목록 썸네일 — 홈·동네 피드·프로필과 같은 함수(고른 썸네일 → 첫 사진 → null) */
+import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 
 /* [949 · 대규모 최적화] 단지 허브 곁다리 섹션의 조회를 **한 곳에서 React cache() 로
    감싼다** — 그래야 페이지 본문이 대표행을 받는 순간 미리 불을 붙여 두고(prefetch),
@@ -146,6 +148,45 @@ export interface HubInspectionNoteRow {
   title: string;
   region: string | null;
   visitDate: string | null;
+  /** [1015 · 규칙 H] 40px 정사각 썸네일 주소 — 없으면 null(화면은 단색 칸) */
+  cover: string | null;
+}
+
+/* [1015] 썸네일 판정(noteCoverUrl)은 노트 원문으로 문구의 숫자를 다시 검증한다 — 그 재료 열(요약·본문·체크리스트·점수·
+   metadata·사진)까지 함께 읽는다(최대 6행). `.select()` 인자는 리터럴이어야 해서(store-db 주석) 두 질의에 같은 줄을 적었다. */
+function num(v: unknown): number | undefined {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function toNoteRow(r: Record<string, unknown>): HubInspectionNoteRow {
+  const id = String(r.id);
+  return {
+    id,
+    title: String(r.title ?? "임장노트"),
+    region: r.region ? String(r.region) : null,
+    visitDate: r.visit_date ? String(r.visit_date).slice(0, 10) : null,
+    cover: noteCoverUrl({
+      id,
+      title: typeof r.title === "string" ? r.title : null,
+      aptName: typeof r.apt_name === "string" ? r.apt_name : null,
+      region: typeof r.region === "string" ? r.region : null,
+      summary: typeof r.summary === "string" ? r.summary : null,
+      sections: r.sections,
+      checklist: r.checklist,
+      transportation: typeof r.transportation === "string" ? r.transportation : null,
+      weather: typeof r.weather === "string" ? r.weather : null,
+      scores: {
+        location: num(r.score_location),
+        school: num(r.score_school),
+        transport: num(r.score_transport),
+        facility: num(r.score_facility),
+        future: num(r.score_future),
+      },
+      metadata: r.metadata,
+      photos: r.photos,
+    }),
+  };
 }
 
 /** 단지명 정규화 — /api/map/complex-notes 와 같은 기준 */
@@ -165,7 +206,7 @@ async function readInspectionNotes(
     const byId = complexId
       ? await sb
           .from("inspection_notes")
-          .select("id, title, region, visit_date")
+          .select("id,title,region,visit_date,apt_name,summary,sections,checklist,transportation,weather,score_location,score_school,score_transport,score_facility,score_future,metadata,photos")
           .filter("metadata->>complexId", "eq", complexId)
           .eq("is_public", true)
           .order("created_at", { ascending: false })
@@ -177,7 +218,7 @@ async function readInspectionNotes(
     if (rows.length === 0 && core.length >= 2) {
       const byName = await sb
         .from("inspection_notes")
-        .select("id, title, region, visit_date, apt_name")
+        .select("id,title,region,visit_date,apt_name,summary,sections,checklist,transportation,weather,score_location,score_school,score_transport,score_facility,score_future,metadata,photos")
         .ilike("apt_name", `%${core}%`)
         .eq("is_public", true)
         .order("created_at", { ascending: false })
@@ -189,12 +230,7 @@ async function readInspectionNotes(
     }
 
     return {
-      notes: rows.slice(0, 6).map((r) => ({
-        id: String(r.id),
-        title: String(r.title ?? "임장노트"),
-        region: r.region ? String(r.region) : null,
-        visitDate: r.visit_date ? String(r.visit_date).slice(0, 10) : null,
-      })),
+      notes: rows.slice(0, 6).map(toNoteRow),
       failed: false,
     };
   } catch (err) {

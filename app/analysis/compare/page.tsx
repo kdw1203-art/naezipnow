@@ -83,9 +83,10 @@ function ComparePickerSection() {
     <div className="rise-in card flex flex-col gap-2 rounded-2xl px-[18px] py-4">
       {mapNode}
       <div className="t-body font-bold text-ink">비교할 단지 담기</div>
+      {/* [1015 · 규칙 B] 예시("예: 공작아파트")는 걷었다 */}
       <ComplexPicker
-        label="검색해서 최대 5개까지 담기"
-        placeholder="단지명으로 검색 (예: 공작아파트)"
+        label={`단지 검색 · 최대 ${COMPARE_TRAY_MAX}개`}
+        placeholder="단지명 검색"
         clearOnSelect
         showChip={false}
         onSelect={add}
@@ -209,10 +210,8 @@ function CompareTraySection() {
         </div>
       ) : (
         <div className="t-sub text-text-3">
-          {/* [970 · B-45] 빈 상태 안내는 이 카드 한 장뿐 — 아래 비교표·시세 카드는 후보가 생기면 열린다 */}
-          아직 담은 후보가 없어요 — 위 검색이나 단지 화면의 &quot;비교 담기&quot;로 최대{" "}
-          {COMPARE_TRAY_MAX}개까지 담으면, 아래에 최근 6개월 실거래 비교표와 후보 지역 시세
-          스냅샷이 열려요.
+          {/* [970 · B-45] 빈 상태 안내는 이 카드 한 장뿐. [1015 · 규칙 D] 한 줄 */}
+          담은 후보 없음 · 위 검색이나 단지 화면의 &quot;비교 담기&quot;로 최대 {COMPARE_TRAY_MAX}개
         </div>
       )}
       {/* [AI-22] 트레이 → AI 비교 해석 — 같은 후보로 워크벤치 비교 도구를 연다 */}
@@ -446,8 +445,7 @@ function ComplexCompareTable() {
                   ))}
                 </div>
                 <p className="t-caption max-w-[230px] text-text-3">
-                  각 축은 담긴 단지들 사이의 상대 위치예요(값이 클수록 바깥 — 가격은 비쌀수록 바깥). 누른 단지의 값이 축
-                  이름 아래에 나와요.
+                  각 축은 담긴 단지들 사이의 상대 위치(클수록 바깥, 가격은 비쌀수록 바깥). 누른 단지의 값이 축 이름 아래에 표시.
                 </p>
               </div>
             </div>
@@ -485,8 +483,8 @@ function ComplexCompareTable() {
                   <Explain
                     term="geoRae-ryang"
                     how={[
-                      `앞 숫자: ${windowText(win?.from6m, 6)} 매매 신고 건수 · 뒤 숫자: ${windowText(win?.from12m, 12)} 건수예요.`,
-                      "이번 달·지난달 계약은 아직 신고 중이라 덜 잡혀요. 뒤 숫자는 단지마다 최근 300건까지 세요.",
+                      `앞 숫자: ${windowText(win?.from6m, 6)} 매매 신고 건수 · 뒤 숫자: ${windowText(win?.from12m, 12)} 건수.`,
+                      "이번 달·지난달 계약은 아직 신고 중이라 덜 잡힌다. 뒤 숫자는 단지마다 최근 300건까지.",
                     ]}
                     size={12}
                   />
@@ -718,7 +716,7 @@ function RegionMarketSummary() {
                 </span>
                 <span className="inline-flex items-center justify-center gap-0.5">
                   전세가율
-                  <Explain term="jeonse-garyul" how="지역 아파트의 매매가 대비 전세가 비율(공표 통계)이에요 — 단지 값이 아니라 지역 평균이에요." size={12} />
+                  <Explain term="jeonse-garyul" how="지역 아파트의 매매가 대비 전세가 비율(공표 통계). 단지 값이 아니라 지역 평균." size={12} />
                 </span>
               </div>
               {state.items.map((it) => {
@@ -772,9 +770,9 @@ function RegionMarketSummary() {
 
 export default function ComparePage() {
   return (
-    <PageShell breadcrumb="AI 분석 › 단지 비교">
+    <PageShell breadcrumb="분석 › 단지 비교">
       <h1 className="sr-only">단지 비교</h1>
-      <div className="flex flex-col gap-3.5">
+      <div className="flex flex-col gap-3.5 max-md:gap-3">
         {/* 단지 선택기 → 비교 트레이 (검색·지도·?complexId=/?apt= 딥링크) */}
         <ComparePickerSection />
 

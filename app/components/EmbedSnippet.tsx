@@ -42,7 +42,7 @@ export function EmbedSnippet({
         <code>{code}</code>
       </pre>
       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 t-sub text-text-3">
-        <span>코드를 한 번 탭하면 전체가 선택돼요 · 무료 · 출처 표기 포함</span>
+        <span>탭하면 전체 선택 · 무료 · 출처 표기 포함</span>
         <Link
           href={previewHref}
           target="_blank"

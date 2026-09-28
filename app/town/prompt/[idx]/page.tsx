@@ -70,12 +70,12 @@ export default async function PromptThreadPage({
     <PageShell breadcrumb="동네이야기 › 오늘의 질문">
       <TownCategoryNav />
       <div className="mx-auto w-full max-w-[720px]">
-        <section className="rise-in card mb-4 p-5">
+        <section className="rise-in card mb-4 p-5 max-md:mb-3 max-md:p-3.5">
           <div className="flex items-center gap-1.5 text-[12px] font-bold text-primary">
             <Icon name="notebook-pen" size={13} />
             동네 질문 {i + 1} / {TOWN_PROMPTS.length}
             {isToday && (
-              <span className="rounded-md bg-primary-soft px-1.5 py-0.5 text-[10px]">오늘의 질문</span>
+              <span className="rounded-md bg-primary-soft px-1.5 py-0.5 t-caption">오늘의 질문</span>
             )}
           </div>
           <h1 className="mt-1.5 text-[19px] font-bold leading-[1.45] text-ink">{question}</h1>
@@ -97,7 +97,7 @@ export default async function PromptThreadPage({
           <EmptyState
             icon="messages-square"
             title="아직 이 질문에 달린 답변이 없어요"
-            desc="첫 답변이 이 페이지의 시작이 됩니다. 우리 동네 이야기를 들려주세요."
+            desc="첫 답변이 이 페이지의 시작이 됩니다."
             action={{
               href: `/town/write?topic=${encodeURIComponent(question)}&pi=${i}`,
               label: "첫 답변 쓰기 +50P",

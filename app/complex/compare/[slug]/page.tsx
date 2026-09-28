@@ -437,9 +437,11 @@ export default async function ComplexComparePage({
       </p>
 
       {/* 한눈에 비교 */}
-      <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">한눈에 비교</h2>
-        <div className="mt-3 overflow-x-auto">
+      <section className="rise-in-1 card mb-6 p-[var(--pad-card)] max-md:mb-3 max-md:p-3.5">
+        {/* [1015 · 규칙 D] "한눈에"(마케팅 부사) → "요약" · 표 껍데기는 blue 리퀴드 판(스크롤 상자는 그 안쪽) */}
+        <h2 className="t-section text-ink">요약 비교</h2>
+        <div className="lq-panel mt-3 py-1" data-tone="blue">
+        <div className="overflow-x-auto">
           <table className="w-full min-w-[420px] t-body">
             <thead>
               <tr className="border-b border-border t-sub text-text-3">
@@ -502,18 +504,17 @@ export default async function ComplexComparePage({
             </tbody>
           </table>
         </div>
+        </div>
         {priceGap && (
           <p className="mt-3 t-sub text-text-2">
-            평균 거래가는 {priceGap}. 두 단지의 주력 면적대가 다르면 이 차이에는 면적 차이가
-            섞여 있습니다 — 아래 <strong className="text-ink">면적대별 비교</strong>를 함께
-            보세요.
+            평균 거래가는 {priceGap}. 주력 면적대가 다르면 면적 차이가 섞인 값이라 아래 면적대별 비교가 기준.
           </p>
         )}
       </section>
 
       {/* 면적대별 비교 */}
       {sharedBands.length > 0 && (
-        <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
+        <section className="rise-in-1 card mb-6 p-[var(--pad-card)] max-md:mb-3 max-md:p-3.5">
           <h2 className="t-section text-ink">
             면적대별 비교{" "}
             <span className="t-sub font-medium text-text-3">
@@ -596,7 +597,7 @@ export default async function ComplexComparePage({
       )}
 
       {/* 월별 거래량 */}
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
+      <section className="rise-in-2 card mb-6 p-[var(--pad-card)] max-md:mb-3 max-md:p-3.5">
         <h2 className="t-section text-ink">
           월별 거래량{" "}
           <span className="t-sub font-medium text-text-3">{windowLabel} · 계약월 기준</span>
@@ -652,7 +653,7 @@ export default async function ComplexComparePage({
       </section>
 
       {/* 최근 거래 이력 */}
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
+      <section className="rise-in-2 card mb-6 p-[var(--pad-card)] max-md:mb-3 max-md:p-3.5">
         <h2 className="t-section text-ink">
           최근 거래 이력{" "}
           <span className="t-sub font-medium text-text-3">각 단지 최근 6건</span>
@@ -699,10 +700,15 @@ export default async function ComplexComparePage({
 
       <QaBlock items={qa} />
 
-      {/* 방법론·출처 */}
-      <section className="rise-in-3 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">이 비교를 만든 방법</h2>
-        <ul className="mt-2 flex flex-col gap-1.5 t-sub text-text-2">
+      {/* 방법론·출처 — [1015 · 규칙 J] 페이지 맨 끝 "데이터 출처" 접힘 하나(내용은 그대로) */}
+      <details className="group rise-in-3 mb-6 border-t border-line pt-1 max-md:mb-3">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 t-body font-bold text-ink [&::-webkit-details-marker]:hidden">
+          데이터 출처
+          <span aria-hidden="true" className="t-body text-text-3 transition-transform group-open:rotate-90">
+            ›
+          </span>
+        </summary>
+        <ul className="mt-1 flex flex-col gap-1.5 pb-3 t-sub text-text-2">
           <li>
             출처: 국토교통부 실거래가 공개시스템 아파트 매매 신고 자료. 해제된 거래는
             제외했습니다. 매물 호가·시세가 아닙니다.
@@ -728,7 +734,7 @@ export default async function ComplexComparePage({
             나중에 늘어날 수 있습니다.
           </li>
         </ul>
-      </section>
+      </details>
 
       {/* 다음 행동 */}
       <section className="rise-in-3 mb-4 flex flex-wrap gap-2">

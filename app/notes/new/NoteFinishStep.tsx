@@ -55,9 +55,8 @@ export function NoteFinishStep(p: {
     <>
       {/* 메모 + 사진 */}
       <div className="rise-in-6 card flex flex-col gap-2.5 p-4">
-        <div className="text-[13px] font-bold text-ink">
-          메모 <span className="text-xs font-medium text-text-3">현장에서 본 그대로</span>
-        </div>
+        {/* [1015 · 규칙 C] 제목 옆 부연("현장에서 본 그대로")은 지웠다 — placeholder 가 예를 든다 */}
+        <div className="t-body font-bold text-ink">메모</div>
         {/* [967 · 8] 자동 높이(4줄~40vh) · 세로 손잡이 · 글자 수(maxLength 와 같은 상한) */}
         <textarea
           ref={memoRef}
@@ -128,11 +127,11 @@ export function NoteFinishStep(p: {
           <div className="mt-0.5 t-sub text-text-3">
             {p.isPublic
               ? p.visibilityFromPrefs
-                ? "공개 피드에 노출돼요 · 설정에서 정한 기본값 · 노트당 최초 공개 시 100P 적립"
-                : "공개 피드에 노출돼요 · 노트당 최초 공개 시 100P 적립"
+                ? "공개 피드 노출 · 설정에서 정한 기본값 · 노트당 최초 공개 시 100P"
+                : "공개 피드 노출 · 노트당 최초 공개 시 100P"
               : p.visibilityFromPrefs
-                ? "꺼져 있으면 나만 볼 수 있어요 · 설정에서 정한 기본값"
-                : "꺼져 있으면 나만 볼 수 있어요 (기본값)"}
+                ? "나만 보기 · 설정에서 정한 기본값"
+                : "나만 보기 (기본값)"}
           </div>
         </div>
         <Switch on={p.isPublic} />
@@ -154,8 +153,8 @@ export function NoteFinishStep(p: {
             </span>
             <span className="mt-0.5 block t-sub text-text-3">
               이 노트의 지역·단지명·요약·체감 점수를 내집나우 공식 인스타그램 릴스·유튜브 쇼츠
-              영상으로 만들어 게시하는 데 동의해요. 동의는 노트 수정에서 언제든 철회할 수 있고,
-              철회하면 이후 소재로 쓰이지 않아요.
+              영상으로 만들어 게시하는 데 동의합니다. 동의는 노트 수정에서 언제든 철회할 수 있고,
+              철회 후에는 소재로 쓰이지 않습니다.
             </span>
           </span>
         </label>

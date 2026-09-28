@@ -51,10 +51,11 @@ const LEVEL_STYLE: Record<
 };
 
 const TIPS = [
-  "잔금 당일 전입신고 + 확정일자를 받아 대항력과 우선변제권을 확보하세요.",
-  "전세보증금 반환보증(HUG·SGI) 가입 가능 여부와 요건을 미리 확인하세요.",
-  "계약 직전과 잔금일에 등기부등본을 다시 열람해 근저당·가압류 변동을 확인하세요.",
-  "임대인 국세·지방세 완납증명을 요청하고, 선순위 근저당 말소 특약을 넣으세요.",
+  /* [1015 · 규칙 D] 권유형 어미 → 사실·명사형 */
+  "잔금 당일 전입신고 + 확정일자: 대항력과 우선변제권 확보.",
+  "전세보증금 반환보증(HUG·SGI) 가입 가능 여부와 요건을 미리 확인.",
+  "계약 직전과 잔금일에 등기부등본 재열람: 근저당·가압류 변동 확인.",
+  "임대인 국세·지방세 완납증명 요청, 선순위 근저당 말소 특약.",
 ] as const;
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
@@ -85,7 +86,7 @@ function LevelBadge({ level }: { level: Level }) {
 
 export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
   const [deposit, setDeposit] = useState(""); // 전세보증금 (만원)
-  const [price, setPrice] = useState(""); // 매매 시세 추정 (만원)
+  const [price, setPrice] = useState(""); // 매매가 추정 (만원)
   const [lien, setLien] = useState(""); // 선순위 근저당 채권최고액 (만원)
   const [type, setType] = useState<HousingType>("아파트");
 
@@ -103,13 +104,13 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
           r.latestYm.length === 6 ? `${r.latestYm.slice(0, 4)}.${r.latestYm.slice(4, 6)}` : "";
         setLookupNote(
           `${[r.regionName, r.complexName].filter(Boolean).join(" ")} 최근 매매 ${r.sampleSize}건 평균` +
-            `${ym ? ` (~${ym})` : ""} — 단지명 부분일치 근사값이라 실제 시세와 다를 수 있어요.`,
+            `${ym ? ` (~${ym})` : ""}. 단지명 부분일치 근사값이라 실제 가격과 다를 수 있음.`,
         );
       } else {
         setLookupNote(
           r.reason === "not-found" || r.reason === "empty-query"
-            ? "입력한 주소/단지명과 일치하는 최근 실거래를 찾지 못했어요. 시세를 직접 입력해 주세요."
-            : "실거래 조회가 지금은 어려워요. 시세를 직접 입력해 주세요.",
+            ? "입력한 주소/단지명과 일치하는 최근 실거래를 찾지 못했어요. 매매가를 직접 입력해 주세요."
+            : "실거래 조회가 지금은 어려워요. 매매가를 직접 입력해 주세요.",
         );
       }
     });
@@ -148,25 +149,25 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
           key: "전세가율",
           value: jeonseRatio,
           level: jeonseLevel,
-          formula: "보증금 ÷ 시세",
+          formula: "보증금 ÷ 매매가",
           explain:
-            "매매 시세 대비 보증금 비율이에요. 높을수록 집값이 내렸을 때 보증금을 온전히 돌려받기 어려워요.",
+            "매매가 대비 보증금 비율. 높을수록 집값이 내렸을 때 보증금을 온전히 돌려받기 어렵다.",
         },
         {
           key: "근저당비율",
           value: lienRatio,
           level: lienLevel,
-          formula: "선순위 근저당 ÷ 시세",
+          formula: "선순위 근저당 ÷ 매매가",
           explain:
-            "집에 이미 잡혀 있는 대출(근저당) 규모예요. 경매로 넘어가면 근저당이 내 보증금보다 먼저 변제돼요.",
+            "집에 이미 잡혀 있는 대출(근저당) 규모. 경매로 넘어가면 근저당이 내 보증금보다 먼저 변제된다.",
         },
         {
           key: "부채비율",
           value: debtRatio,
           level: debtLevel,
-          formula: "(보증금 + 근저당) ÷ 시세",
+          formula: "(보증금 + 근저당) ÷ 매매가",
           explain:
-            "보증금과 선순위 근저당을 합친 총부담이 시세에서 차지하는 비율이에요. 깡통전세를 가늠하는 핵심 지표로, 통상 90%를 넘으면 위험이 커요.",
+            "보증금과 선순위 근저당을 합친 총부담이 매매가에서 차지하는 비율. 깡통전세를 가늠하는 핵심 지표로, 통상 90%를 넘으면 위험이 크다.",
         },
       ] as const,
     };
@@ -177,7 +178,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
 
   return (
     <section id={SELF_CHECK_ANCHOR_ID} className="mt-5 scroll-mt-[72px]">
-      <div className="card flex flex-col gap-4 rounded-3xl p-[22px]">
+      <div className="card flex flex-col gap-4 rounded-3xl p-[22px] max-md:gap-3 max-md:p-3.5">
         {/* 헤더 */}
         <div className="flex items-start gap-2.5">
           <span
@@ -187,16 +188,11 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
             <Icon name="shield" size={18} />
           </span>
           <div className="flex flex-col gap-0.5">
-            <div className="text-[15px] font-bold text-ink">
-              전세 안심 진단{" "}
-              <span className="text-[12px] font-medium text-text-3">자가진단</span>
-            </div>
-            <p className="text-[12px] leading-[1.6] text-text-2">
-              보증금·시세·선순위 근저당을 입력하면 전세가율·근저당비율·부채비율을
-              계산해 깡통전세 위험도를 안전·주의·위험으로 알려드려요.
-            </p>
+            <div className="t-section text-ink">전세 안심 자가진단</div>
+            {/* [1015 · 규칙 B·D] 사용법 문장("입력하면 … 알려드려요") → 사실 한 줄 */}
+            <p className="t-sub leading-[1.6] text-text-2">전세가율 · 근저당비율 · 부채비율 → 안전 · 주의 · 위험</p>
             {subject ? (
-              <p className="text-[12px] font-bold text-primary">진단 대상: {subject}</p>
+              <p className="t-sub font-bold text-primary">진단 대상: {subject}</p>
             ) : null}
           </div>
         </div>
@@ -211,13 +207,13 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
               inputMode="numeric"
               value={depositN ? fmt(depositN) : ""}
               onChange={(e) => setDeposit(e.target.value)}
-              placeholder="예: 30,000"
+              placeholder=""
               className={inputCls}
             />
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-[12px] font-bold text-text-1">
-              매매 시세(추정) <span className="text-text-3">(만원)</span>
+              매매가(추정) <span className="text-text-3">(만원)</span>
             </span>
             <div className="flex gap-1.5">
               <input
@@ -227,25 +223,21 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
                   setPrice(e.target.value);
                   setLookupNote(null);
                 }}
-                placeholder="예: 40,000"
+                placeholder=""
                 className={inputCls}
               />
               <button
                 type="button"
                 onClick={runLookup}
                 disabled={!subject?.trim() || lookingUp}
-                title={
-                  subject?.trim()
-                    ? "입력한 주소/단지명으로 최근 실거래 평균을 조회해요"
-                    : "상단에 주소/단지명을 먼저 입력하세요"
-                }
+                title={subject?.trim() ? "입력한 주소/단지명의 최근 실거래 평균 조회" : "상단에 주소/단지명을 먼저 입력"}
                 className="btn-soft shrink-0 whitespace-nowrap rounded-lg px-2.5 py-2 text-[12px] font-bold disabled:opacity-50"
               >
                 {lookingUp ? "조회 중…" : "실거래 평균"}
               </button>
             </div>
             {lookupNote ? (
-              <span className="text-[10px] leading-[1.5] text-text-3">{lookupNote}</span>
+              <span className="t-caption leading-[1.5] text-text-3">{lookupNote}</span>
             ) : null}
           </label>
           <label className="flex flex-col gap-1.5">
@@ -282,16 +274,14 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
             ))}
           </div>
           {type === "빌라·다세대" && (
-            <span className="text-[12px] text-text-3">
-              환금성이 낮아 기준을 더 보수적으로 적용해요
-            </span>
+            <span className="t-sub text-text-3">환금성이 낮아 기준을 더 보수적으로 적용</span>
           )}
         </div>
 
         {/* 결과 */}
         {!result ? (
-          <div className="rounded-lg border border-dashed border-line px-4 py-6 text-center text-[12px] text-text-3">
-            전세보증금과 매매 시세를 입력하면 위험도가 계산돼요.
+          <div className="rounded-lg border border-dashed border-line px-4 py-6 text-center t-sub text-text-3 max-md:py-4">
+            전세보증금과 매매가를 넣으면 위험도 계산
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -308,10 +298,9 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
                 <span className="text-[15px] font-bold">
                   종합 {result.overall}
                 </span>
-                <span className="text-[12px] font-medium leading-[1.5] opacity-90">
+                <span className="t-sub font-medium leading-[1.5] opacity-90">
                   {LEVEL_STYLE[result.overall].headline} · {type} 기준(부채비율{" "}
-                  {result.t.debtSafe}% 이하 안전 / {result.t.debtWarn}% 이상 위험) · 전세가율·
-                  근저당비율·부채비율 중 가장 나쁜 등급을 따라요
+                  {result.t.debtSafe}% 이하 안전 / {result.t.debtWarn}% 이상 위험) · 세 지표 중 가장 나쁜 등급
                 </span>
               </div>
             </div>
@@ -328,7 +317,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
                       <span className="text-[13px] font-bold text-text-1">
                         {ind.key}
                       </span>
-                      <span className="text-[10px] text-text-3">
+                      <span className="t-caption text-text-3">
                         {ind.formula}
                       </span>
                     </div>

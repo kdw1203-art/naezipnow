@@ -68,8 +68,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       ? COVER_IMMUTABLE_CACHE_CONTROL
       : OG_DYNAMIC_CACHE_CONTROL;
 
+  /* [1015] ?shape=wide — 넓은 카드 커버(1200×630). 주소가 다르므로 캐시 키도 다르다 */
+  const shape = req.nextUrl.searchParams.get("shape") === "wide" ? "wide" : "square";
   return renderCoverPng(
     { variant: spec.variant, headline: spec.headline, fact: spec.fact, sub: spec.sub, photoSrc },
     cacheControl,
+    shape,
   );
 }

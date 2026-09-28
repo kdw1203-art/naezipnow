@@ -269,7 +269,7 @@ export function ComplexReviews({
   };
 
   return (
-    <div ref={rootRef} className="card rounded-2xl px-[18px] py-4">
+    <div ref={rootRef} className="card rounded-2xl px-[18px] py-4 max-md:px-3.5 max-md:py-3">
       <div className="flex items-center justify-between gap-2">
         <h2 className="t-section text-ink">거주민 후기</h2>
         {!formOpen && (
@@ -280,16 +280,14 @@ export function ComplexReviews({
               setSubmitState("idle");
               setError(null);
             }}
-            className="btn-primary rounded-lg px-3.5 py-2 t-sub"
+            /* [1015 · 규칙 J] 채움 파랑은 화면당 1개 — 여기는 outline(등록 버튼은 폼 안에서만 채움) */
+            className="btn-outline rounded-lg px-3.5 py-2 t-sub"
           >
             후기 쓰기
           </button>
         )}
       </div>
-      <p className="mt-1 t-sub text-text-3">
-        직접 살아봤거나 임장에서 확인한 내용만 남겨주세요 · 같은 단지 재작성 시 기존 후기가
-        갱신돼요 · 실거주·방문 후기가 먼저 보여요
-      </p>
+      {/* [1015 · 규칙 B] 사용법 세 문장은 폼을 열었을 때만(아래 폼 안의 한 줄) — 목록 위에서는 걷었다 */}
 
       {submitState === "done" && (
         <div className="mt-2 rounded-lg bg-primary-soft px-3 py-2 t-sub font-bold text-primary">
@@ -313,7 +311,7 @@ export function ComplexReviews({
             onChange={(e) => setComment(e.target.value)}
             rows={3}
             maxLength={500}
-            placeholder="한줄 후기 (선택 · 500자 이내) — 예: 저녁 8시 이후 주차 자리가 부족해요"
+            placeholder="한줄 후기 (선택 · 500자 이내)"
             className="w-full resize-none rounded-xl border border-line bg-surface p-3 t-body text-ink outline-none placeholder:text-text-3 focus:border-primary"
           />
           {/* [966] 글자 수 — maxLength 와 같은 상한 */}
@@ -349,7 +347,7 @@ export function ComplexReviews({
               value={residentPeriod}
               onChange={(e) => setResidentPeriod(e.target.value)}
               maxLength={60}
-              placeholder="거주/방문 시기 (선택) — 예: 2023~2024, 2024년 3월 방문"
+              placeholder="거주/방문 시기 (선택)"
               className="w-full rounded-xl border border-line bg-surface px-3 py-2 t-sub text-ink outline-none placeholder:text-text-3 focus:border-primary"
             />
           </div>
@@ -427,9 +425,9 @@ export function ComplexReviews({
         </div>
       )}
       {loadState === "ready" && reviews.length > 0 && (
-        <ul className="mt-3 flex flex-col divide-y divide-line">
+        <ul className="lq-panel mt-3 flex flex-col divide-y" data-tone="hanji">
           {reviews.map((r) => (
-            <li key={r.id} className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0">
+            <li key={r.id} className="flex flex-col gap-1.5 py-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="t-sub font-bold text-ink">{r.author}</span>
                 <Stars

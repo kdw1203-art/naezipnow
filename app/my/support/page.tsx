@@ -85,7 +85,7 @@ export default async function MySupportPage() {
                   : "남긴 문의가 없어요"}
               </span>
               <span className="t-sub text-text-2">
-                {SUPPORT_HOURS} · {RESPONSE_TIME} — 답변은 여기와 이메일({email})로 드려요.
+                {SUPPORT_HOURS} · {RESPONSE_TIME} · 답변은 여기와 이메일({email})로
               </span>
             </div>
             <Link href="/support#contact" className="btn-primary btn-md shrink-0 no-underline">

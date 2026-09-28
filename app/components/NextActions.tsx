@@ -13,7 +13,7 @@ export type NextActionItem = {
 export function NextActions({ actions }: { actions: NextActionItem[] }) {
   return (
     <div className="card flex flex-col gap-2.5 rounded-lg px-[18px] py-4">
-      <div className="text-xs font-bold text-text-3">그래서 다음은?</div>
+      <div className="text-xs font-bold text-text-3">다음 행동</div>
       <div className="flex flex-col gap-2 sm:flex-row">
         {actions.map((a) => (
           <Link

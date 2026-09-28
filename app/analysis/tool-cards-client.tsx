@@ -105,7 +105,7 @@ export function CompareTrayCount() {
   return (
     <span className="t-num inline-flex w-fit items-baseline gap-1.5 rounded-xl bg-bg px-3 py-1.5">
       <span className="text-[15px] font-bold text-ink">{count}개</span>
-      <span className="text-[10px] text-text-3">담은 후보 — 바로 비교 가능</span>
+      <span className="t-caption text-text-3">담은 후보</span>
     </span>
   );
 }

@@ -107,7 +107,7 @@ export function AiBriefingCard({
           <h2 className="t-body font-bold text-ink">AI 예습 브리핑</h2>
           {/* [1012 · 규칙 6] "예습하세요" → 어디서(단지명)·언제(방문 전) — 1011 의 재료 나열 금지는 유지 */}
           <p className="mt-0.5 t-caption text-text-3">
-            {aptName} 방문 전에 볼 것을 한 장으로 요약해요.
+            {aptName} 방문 전에 볼 것을 한 장으로 요약.
           </p>
         </div>
         {state !== "done" && (

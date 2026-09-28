@@ -112,11 +112,11 @@ export default async function ReportDetailPage({
 
         <div className="rise-in card flex flex-col gap-4 p-6">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-md bg-primary-soft px-2 py-0.5 text-[10px] font-bold text-primary">
+            <span className="rounded-md bg-primary-soft px-2 py-0.5 t-caption font-bold text-primary">
               {r.category}
             </span>
             {r.region && (
-              <span className="rounded-md bg-bg px-2 py-0.5 text-[10px] font-bold text-text-2">
+              <span className="rounded-md bg-bg px-2 py-0.5 t-caption font-bold text-text-2">
                 {r.region}
               </span>
             )}
@@ -166,10 +166,10 @@ export default async function ReportDetailPage({
             {canRead && noteHref ? (
               <div className="flex flex-col gap-2">
                 <Link href={noteHref} className="btn-primary rounded-xl p-3.5 text-center text-[13px] no-underline">
-                  {isOwner ? "내 노트 열람 (판매 중)" : "구매 완료 — 노트 전문 열람"}
+                  {isOwner ? "내 노트 열람 (판매 중)" : "구매 완료 · 노트 전문 열람"}
                 </Link>
                 {!isOwner && (
-                  <p className="text-center text-[10px] text-text-3">
+                  <p className="text-center t-caption text-text-3">
                     구매 이력은 계정에 남아 언제든 다시 열람할 수 있어요.
                   </p>
                 )}
@@ -180,9 +180,9 @@ export default async function ReportDetailPage({
                  자료를 못 여는 화면). 바로 열람으로 잇는다. */
               <div className="flex flex-col gap-2">
                 <Link href={noteHref} className="btn-primary rounded-xl p-3.5 text-center text-[13px] no-underline">
-                  무료 열람 — 노트 전문 보기
+                  무료 열람 · 노트 전문 보기
                 </Link>
-                <p className="text-center text-[10px] text-text-3">
+                <p className="text-center t-caption text-text-3">
                   이 리포트는 무료로 공개돼 있어요.
                 </p>
               </div>
@@ -191,7 +191,7 @@ export default async function ReportDetailPage({
                  될 수 있다. "모르겠다"는 상태 그대로 보여주고 재시도를 권한다. */
               <p className="rounded-xl bg-danger-soft px-4 py-3 text-center text-[12px] leading-[1.7] text-ink">
                 구매 이력을 지금 확인하지 못했어요. 이미 구매하셨다면 잠시 후
-                새로고침해 주세요 — 확인 없이 결제 버튼을 보여드리지 않아요.
+                새로고침해 주세요. 확인 없이 결제 버튼을 보여드리지 않아요.
               </p>
             ) : noteHref && isPaid ? (
               <BuyReportButton reportId={r.id} price={r.price} title={r.title} />
@@ -203,7 +203,7 @@ export default async function ReportDetailPage({
           </div>
         </div>
 
-        <p className="mt-3 text-center text-[10px] leading-[1.6] text-text-3">
+        <p className="mt-3 text-center t-caption text-text-3">
           리포트는 작성자 개인의 기록·의견이며 투자 판단의 책임은 이용자에게 있어요 ·
           판매 대금은 포인트로 정산됩니다
         </p>

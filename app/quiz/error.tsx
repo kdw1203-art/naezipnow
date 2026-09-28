@@ -14,7 +14,7 @@ export default function Error({
     <AreaError
       area="quiz"
       title="오늘의 문제를 불러오지 못했어요"
-      desc="실거래 자료를 읽는 중에 문제가 생겼어요. 지어낸 문제는 내지 않아요 — 잠시 뒤 다시 시도해 주세요."
+      desc="실거래 자료를 읽는 중에 문제가 생겼어요. 지어낸 문제는 내지 않아요. 잠시 뒤 다시 시도해 주세요."
       error={error}
       reset={reset}
       links={[{ href: "/map", label: "지도" }, { href: "/", label: "홈" }]}

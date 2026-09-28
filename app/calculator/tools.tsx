@@ -40,11 +40,11 @@ export const CALCULATOR_TOOLS: readonly CalculatorTool[] = [
     description:
       "매매·전세·월세 중개수수료 상한을 법정 요율표로 계산합니다. 거래금액 구간별 상한요율·한도액, 오피스텔·상가 요율까지 한 화면에.",
     ogSub: "법정 상한요율표 기준 · 매매·전세·월세",
+    /* [1015 · 규칙 B·D] 소개 문단은 사실 한 줄 — 사용법("넣으면 … 나와요")·권유("쓰세요")는 뺐다 */
     intro: (
       <>
-        중개보수는 <b className="text-ink">법으로 정한 상한요율 이내에서 협의</b>로 정합니다.
-        매매가나 보증금·월세를 넣으면 내 거래의 법정 상한액이 바로 나와요 — 협의의 출발점으로
-        쓰세요.
+        중개보수는 <b className="text-ink">법정 상한요율 이내에서 협의</b>. 공인중개사법 시행규칙 제20조 요율표 기준, 부가세
+        별도.
       </>
     ),
     render: () => <BrokerageFeeCalc />,
@@ -59,12 +59,12 @@ export const CALCULATOR_TOOLS: readonly CalculatorTool[] = [
     label: "전월세 전환 계산기",
     title: "전월세 전환 계산기 — 전세↔월세 환산",
     description:
-      "전세 보증금을 월세로, 월세를 전세로 환산합니다. 전월세 전환율을 직접 조정해 우리 집 조건으로 계산해 보세요.",
+      "전세 보증금을 월세로, 월세를 전세로 환산합니다. 전월세 전환율을 직접 조정할 수 있습니다.",
     ogSub: "전세 ↔ 월세 환산 · 전환율 조정",
     intro: (
       <>
-        전세와 월세 조건을 같은 저울에 올리는 계산기예요. 보증금을 낮추는 대신 월세를 얼마나
-        내는 게 손해가 아닌지, <b className="text-ink">전환율</b>을 바꿔 가며 비교해 보세요.
+        월세 = (전세보증금 − 월세보증금) × <b className="text-ink">전환율</b> ÷ 12. 계약 중 전환은 주택임대차보호법의
+        상한(연 10%와 기준금리 + 2%p 중 낮은 쪽) 이내.
       </>
     ),
     render: () => <JeonseWolse />,
@@ -78,9 +78,8 @@ export const CALCULATOR_TOOLS: readonly CalculatorTool[] = [
     ogSub: "갭(실투자금)과 전세가율을 한 번에",
     intro: (
       <>
-        매매가에서 전세가를 뺀 것이 <b className="text-ink">갭(실투자금)</b>, 매매가 대비 전세가의
-        비율이 <b className="text-ink">전세가율</b>이에요. 갭이 작을수록 진입은 쉽지만, 전세가가
-        빠지면 그만큼 돌려막을 돈이 필요해집니다 — 두 숫자를 같이 보세요.
+        <b className="text-ink">갭(실투자금)</b> = 매매가 − 전세가 · <b className="text-ink">전세가율</b> = 전세가 ÷ 매매가.
+        갭이 작을수록 진입은 쉽지만 전세가가 빠지면 그만큼 돌려줄 돈이 필요하다.
       </>
     ),
     render: () => <GapRatio />,
@@ -90,13 +89,12 @@ export const CALCULATOR_TOOLS: readonly CalculatorTool[] = [
     label: "임대수익률 계산기",
     title: "임대수익률 계산기",
     description:
-      "매매가·보증금·월세로 연 임대수익률을 계산합니다. 대출 없이 순수 자기자본 기준의 수익률을 빠르게 확인해 보세요.",
+      "매매가·보증금·월세로 연 임대수익률을 계산합니다. 대출 없는 자기자본 기준과 대출 반영 기준을 함께 계산합니다.",
     ogSub: "실투자금 기준 연 수익률",
     intro: (
       <>
-        월세 물건의 수익률은 <b className="text-ink">(연 월세 수입) ÷ (실투자금)</b>으로 봅니다.
-        매매가에서 보증금을 뺀 실투자금 기준이라, 보증금 비중이 큰 물건일수록 수익률이 다르게
-        보여요.
+        연 수익률 = <b className="text-ink">(연 월세 수입) ÷ (실투자금)</b>. 실투자금 = 매매가 − 보증금(대출이 있으면 −
+        대출금). 세금·관리비·공실은 제외.
       </>
     ),
     render: () => <RentalYield />,

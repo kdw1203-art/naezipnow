@@ -23,9 +23,10 @@ export function DealList({
   /* 390px 카드 안쪽 ≈ 300px — 계약일 74 · 전용 48 · 층 46 · 간격 24 를 빼면 거래가 칸이 ~110px 라
      "34억 7,000만"이 한 줄에 들어간다(하네스 실측: 예전 폭 배분에선 두 줄로 꺾였다) */
   const cols = "grid grid-cols-[4.6rem_3rem_2.9rem_minmax(0,1fr)] items-baseline gap-x-2";
+  /* [1015 · 규칙 I] 실거래 목록 = blue 리퀴드 판(lq-panel 이 좌우 14px 을 준다 — 행의 px 는 뺐다) */
   return (
-    <div className={`overflow-hidden rounded-xl bg-bg ${className ?? ""}`}>
-      <div className={`${cols} border-b border-line px-3.5 py-1.5 t-caption text-text-3`} aria-hidden="true">
+    <div className={`lq-panel overflow-hidden ${className ?? ""}`} data-tone="blue">
+      <div className={`${cols} border-b border-line py-1.5 t-caption text-text-3`} aria-hidden="true">
         <span>계약일</span>
         <span>전용</span>
         <span>층</span>
@@ -35,12 +36,12 @@ export function DealList({
         {deals.map(([ym, day, man, area, floor], i) => (
           <li
             key={`${ym}-${day ?? 0}-${man}-${area ?? 0}-${floor ?? 0}-${i}`}
-            className={`${cols} px-3.5 py-2 t-sub ${i > 0 ? "border-t border-divider" : ""}`}
+            className={`${cols} py-2 t-sub ${i > 0 ? "border-t border-divider" : ""}`}
           >
             <span className="tabular-nums text-text-2">{dealDateLabel(ym, day)}</span>
             <span className="tabular-nums text-text-2">{area != null ? unitAreaLabel(unitKeyOf(area), unit) : "—"}</span>
             <span className="tabular-nums text-text-3">{floorLabel(floor)}</span>
-            <span className="whitespace-nowrap text-right font-bold tabular-nums text-ink">{formatEokMan(man)}</span>
+            <span className="t-num whitespace-nowrap text-right font-bold tabular-nums">{formatEokMan(man)}</span>
           </li>
         ))}
       </ul>

@@ -91,7 +91,6 @@ function QuestionCard({ row }: { row: QnaRow }) {
             예시
           </span>
         )}
-        <span className="ml-auto t-sub text-text-3">{row.timeLabel}</span>
       </div>
 
       <Link href={`/qna/${q.id}`} className="no-underline">
@@ -111,7 +110,9 @@ function QuestionCard({ row }: { row: QnaRow }) {
         </div>
       )}
 
-      {(complexHref || q.complexName || q.region) && (
+      {/* [1015] 당근 동네 글 카드의 정보 순서(동네 라벨 · N분 전 · 관심 수)를 따른다 — 시각을 맨 위 배지 줄에서
+          내려 동네 칩 옆에 두고, 답변·조회 수는 아래 줄에 그대로(브리프 규칙 M). 새 데이터 없음. */}
+      {(complexHref || q.complexName || q.region || row.timeLabel) && (
         <div className="flex flex-wrap items-center gap-1.5">
           {complexHref ? (
             <Link
@@ -135,6 +136,7 @@ function QuestionCard({ row }: { row: QnaRow }) {
               {q.region}
             </span>
           )}
+          <span className="ml-auto t-sub text-text-3">{row.timeLabel}</span>
         </div>
       )}
 
@@ -337,12 +339,12 @@ export function QnaListClient({
       <p className="rise-in-1 mt-2.5 t-sub text-text-3">
         {activeTopic ? `‘${activeTopic.label}’ 주제 ` : ""}
         <b className="text-text-1">{items.length}</b>건
-        {f.q && <> — 최근 질문 100건 안에서 ‘{f.q}’ 를 찾은 결과예요.</>}
-        {activeTopic && <> — 주제는 작성자가 붙인 태그와 제목·본문에서 추정해 좁힌 결과예요.</>}
+        {f.q && <> · 최근 질문 100건 기준</>}
+        {activeTopic && <> · 주제는 태그·제목·본문 기준 추정</>}
       </p>
       )}
 
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="mt-4 grid grid-cols-1 gap-4 max-md:mt-3 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
         {/* ── 본문 ───────────────────────────────── */}
         <div className="flex flex-col gap-4">
           <div className="rise-in-2">{askForm}</div>
@@ -379,7 +381,7 @@ export function QnaListClient({
         </div>
 
         {/* ── 사이드 (서버 조각) ─────────────────── */}
-        <aside className="flex flex-col gap-3.5">{sidebar}</aside>
+        <aside className="flex flex-col gap-3.5 max-md:gap-3">{sidebar}</aside>
       </div>
     </>
   );

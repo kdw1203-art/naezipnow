@@ -33,10 +33,8 @@ function NoteAnalysisPlaceholder() {
       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-warning-soft text-warning">
         <Icon name="bot" size={17} />
       </div>
+      {/* [1015 · 규칙 B] 기능 설명 한 줄은 걷었다(실제 카드 ai-note-analysis 와 같은 머리글) */}
       <div className="t-section text-ink">임장노트 AI 분석</div>
-      <div className="t-sub text-text-2">
-        내 노트의 점수·기록과 지역 실시세를 합쳐 강점·약점·확인 항목을 정리해요
-      </div>
       <button
         type="button"
         disabled

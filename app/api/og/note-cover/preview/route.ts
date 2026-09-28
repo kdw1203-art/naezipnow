@@ -27,5 +27,5 @@ export async function GET(req: NextRequest) {
       ? "private, max-age=3600"
       : "no-store"
     : OG_STATIC_CACHE_CONTROL;
-  return renderCoverPng({ ...input, photoSrc }, cacheControl);
+  return renderCoverPng({ ...input, photoSrc }, cacheControl, req.nextUrl.searchParams.get("shape") === "wide" ? "wide" : "square");
 }

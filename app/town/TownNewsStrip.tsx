@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
 import type { NewsRow } from "@/lib/town/news-row";
+import { CoverImage } from "@/app/components/CoverImage";
 
 /* ============================================================
    [1006] "오늘의 뉴스" 스트립 — 동네이야기(/town)·동네 홈(/town/[region])에 놓이는
@@ -32,19 +33,15 @@ export function TownNewsStrip({
   const items = rows.slice(0, Math.max(1, max));
   if (items.length === 0) return null;
   return (
-    <section
-      className={`news-strip rise-in px-4 py-3 ${className}`}
-      aria-label={title}
-    >
+    /* [1015 · 규칙 C·K] 한지 스트립(튀는 색면) → 흰 카드. 제목 옆 "뉴스룸 · 자동 수집" 부연 삭제(소유자 지시).
+       행 = 원문 사진(있을 때만) + 제목 + 매체 · 시각 — 뉴스는 원문 사진을 그대로 쓴다(템플릿 썸네일 아님). */
+    <section className={`card rise-in rounded-2xl px-4 py-3 max-md:px-3.5 ${className}`} aria-label={title}>
       {showHeader && (
         <div className="flex items-center justify-between gap-2">
-          <span className="news-strip__label">
-            <Icon name="newspaper" size={12} />
+          <h2 className="m-0 inline-flex items-center gap-1.5 t-section text-ink">
+            <Icon name="newspaper" size={14} />
             {title}
-            <span className="font-semibold tracking-normal text-text-3">
-              뉴스룸 · 자동 수집
-            </span>
-          </span>
+          </h2>
           <Link
             href={href}
             className="inline-flex min-h-[24px] items-center gap-0.5 t-sub font-bold text-primary no-underline"
@@ -54,24 +51,29 @@ export function TownNewsStrip({
           </Link>
         </div>
       )}
-      <div className={`flex flex-col ${showHeader ? "mt-1" : ""}`}>
+      <ul className={`m-0 flex list-none flex-col divide-y divide-line p-0 ${showHeader ? "mt-1" : ""}`} data-tone="plain">
         {items.map((r) => (
-          <Link
-            key={r.id}
-            href={`/town/news/${r.id}`}
-            className="news-strip__item"
-          >
-            {r.source && <span className="news-source">{r.source}</span>}
-            <span className="news-title">{r.title}</span>
-            <time
-              dateTime={r.publishedAt}
-              className="shrink-0 t-caption text-text-3"
-            >
-              {r.timeLabel}
-            </time>
-          </Link>
+          <li key={r.id}>
+            <Link href={`/town/news/${r.id}`} className="flex items-center gap-3 py-2 no-underline">
+              {r.image && (
+                <span className="relative h-[48px] w-[64px] shrink-0 overflow-hidden rounded-lg bg-divider">
+                  <CoverImage src={r.image} alt="" sizes="64px" imgClassName="absolute inset-0 h-full w-full object-cover" />
+                </span>
+              )}
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="truncate t-body font-bold text-ink">{r.title}</span>
+                <span className="flex min-w-0 items-baseline t-caption text-text-3">
+                  {r.source && <span className="min-w-0 truncate font-bold text-text-2">{r.source}</span>}
+                  <time dateTime={r.publishedAt} className="shrink-0 whitespace-pre">
+                    {r.source ? " · " : ""}
+                    {r.timeLabel}
+                  </time>
+                </span>
+              </span>
+            </Link>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }

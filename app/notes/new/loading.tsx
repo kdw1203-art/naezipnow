@@ -49,9 +49,7 @@ export default function NoteNewLoading() {
       <LoadingHint className="mt-3" />
 
       <div className="mt-3.5 flex flex-col gap-3">
-        {/* 로그인 없이 작성 안내 */}
-        <Skeleton className="h-[43px] w-full rounded-lg" />
-
+        {/* [1015] 비회원 안내 띠는 폼에서 지웠다 — 골격도 같이 뺀다 */}
         {/* 사진 먼저 담기 · 촬영 */}
         <div aria-hidden className="flex gap-2">
           <Skeleton className="h-11 flex-1 rounded-lg" />

@@ -45,13 +45,15 @@ export async function ApplyDailyStrip() {
      쓰는 사람이 알 필요가 없다. 신뢰도를 좌우하는 기준 시점과 갱신 주기는 그대로 남긴다. */
   const basis = ok
     ? ok.source === "store"
-      ? `기준 ${kstDate(ok.fetchedAt) ?? "—"} · 매일 자동 갱신`
+      ? `${kstDate(ok.fetchedAt) ?? "—"} 기준 · 매일 갱신`
       : "청약홈 즉시 조회"
     : null;
 
+  /* [1015] 두 목록은 리퀴드 판(sand — 청약 접수·일정 톤). 카드 안 행 목록이라 lq-panel 로(브리프 규칙 I).
+     빈 화면 문구의 "—" 잇기는 마침표로(규칙 D). */
   return (
-    <section className="rise-in mb-4 grid grid-cols-1 gap-3 md:grid-cols-2" aria-label="오늘의 청약">
-      <div className="card flex flex-col gap-2 p-4">
+    <section className="rise-in mb-4 grid grid-cols-1 gap-3 md:grid-cols-2 max-md:mb-3" aria-label="오늘의 청약">
+      <div className="card flex flex-col gap-2 p-4 max-md:p-3.5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 className="t-body font-bold text-ink">앞으로 7일 접수</h3>
           <span className="t-caption text-text-3">
@@ -60,12 +62,12 @@ export async function ApplyDailyStrip() {
         </div>
         {upcoming.length === 0 ? (
           <p className="t-sub text-text-3">
-            {ok ? "이번 주 접수 시작·마감 공고가 없어요." : "청약 일정을 지금 불러오지 못했어요 — 없는 것과 다릅니다."}
+            {ok ? "이번 주 접수 시작·마감 공고가 없어요." : "청약 일정을 지금 불러오지 못했어요. 일정이 없다는 뜻은 아니에요."}
           </p>
         ) : (
-          <ul className="flex flex-col gap-1">
+          <ul className="lq-panel flex flex-col" data-tone="sand">
             {upcoming.map((u, i) => (
-              <li key={i} className="flex items-center gap-2 t-sub">
+              <li key={i} className="flex items-center gap-2 border-b py-1.5 last:border-b-0 t-sub">
                 <span className={`shrink-0 rounded px-1.5 py-px t-caption font-bold ${u.kind === "접수" ? "bg-primary-soft text-primary" : "bg-warning-soft text-warning"}`}>
                   {mmdd(u.date)} {u.kind}
                 </span>
@@ -80,19 +82,19 @@ export async function ApplyDailyStrip() {
         </Link>
       </div>
 
-      <div className="card flex flex-col gap-2 p-4">
+      <div className="card flex flex-col gap-2 p-4 max-md:p-3.5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 className="t-body font-bold text-ink">최근 발표 경쟁률</h3>
           <span className="t-caption text-text-3">1순위 · 해당지역 우선</span>
         </div>
         {comp.length === 0 ? (
           /* [1011] "첫 적재 뒤 표시돼요" 를 걷었다(소유자 지시) — 적재는 내부 말이다 */
-          <p className="t-sub text-text-3">경쟁률이 아직 없어요 — 준비되면 여기에 표시돼요.</p>
+          <p className="t-sub text-text-3">발표된 경쟁률이 아직 없어요.</p>
         ) : (
-          <ul className="flex flex-col gap-1">
+          <ul className="lq-panel flex flex-col" data-tone="sand">
             {comp.map((c) => (
-              <li key={`${c.house_manage_no}:${c.house_ty}`} className="flex items-center gap-2 t-sub">
-                <span className="w-[64px] shrink-0 rounded bg-bg px-1.5 py-px text-center t-caption font-bold tabular-nums text-ink">
+              <li key={`${c.house_manage_no}:${c.house_ty}`} className="flex items-center gap-2 border-b py-1.5 last:border-b-0 t-sub">
+                <span className="t-num w-[64px] shrink-0 rounded bg-bg px-1.5 py-px text-center t-caption font-bold">
                   {c.cmpet_rate_num != null ? `${c.cmpet_rate_num.toLocaleString("ko-KR")} : 1` : c.cmpet_rate ?? "—"}
                 </span>
                 <span className="truncate font-bold text-ink">{c.house_nm ?? "단지명 미제공"}</span>

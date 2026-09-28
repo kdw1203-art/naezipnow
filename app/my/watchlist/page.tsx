@@ -57,7 +57,8 @@ function WatchTabs({ active }: { active: WatchTab }) {
           href={t.key === "complex" ? "/my/watchlist" : `/my/watchlist?tab=${t.key}`}
           aria-current={t.key === active ? "page" : undefined}
           className={`inline-flex min-h-[40px] items-center rounded-full border px-4 t-body font-bold no-underline ${
-            t.key === active ? "border-primary bg-primary text-white" : "border-line bg-surface text-text-1"
+            /* [1015 · 규칙 9] 활성 탭 = 한지 + 남색(chip-active), 채움 파랑은 CTA 전용 */
+            t.key === active ? "chip-active" : "border-line bg-surface text-text-1"
           }`}
         >
           {t.label}
@@ -187,14 +188,15 @@ export default async function WatchlistDashboardPage({
           icon="pin"
           className="rise-in"
           title="아직 담아 둔 단지가 없어요"
-          desc="단지 화면의 “단지 팔로우”나 지도의 “관심 단지 담기”를 누르면 여기에 모여요. 담아 두면 현재가와 지난 점검 대비 등락을 한 번에 보고, 시세가 ±1% 이상 움직이면 알림을 받아요."
+          /* [1015 · 규칙 B] 빈 화면의 긴 권유문(사용법 두 문장) → 한 줄 */
+          desc="단지 화면의 “단지 팔로우”나 지도의 “관심 단지 담기”로 담은 단지가 여기에 모여요."
           action={{ label: "지도에서 단지 찾기", href: "/map" }}
         />
       ) : (
         <>
           {!notesR.ok && (
             <p className="mb-3 rounded-xl border border-line bg-bg px-3 py-2 t-sub text-text-2">
-              새 노트 수를 지금 불러오지 못했어요 — 노트가 없는 게 아니라 조회가 실패했습니다.
+              새 노트 수를 지금 불러오지 못했어요. 노트가 없는 게 아니라 조회 실패입니다.
             </p>
           )}
           <div className="rise-in">

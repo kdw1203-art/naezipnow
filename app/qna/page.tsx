@@ -10,7 +10,6 @@ import { listQuestions } from "@/lib/qna/store";
 import { complexHrefKey, resolveComplexHrefs } from "@/lib/newui/complex-link";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { logger } from "@/lib/log";
-import { QNA_TOPICS } from "@/lib/qna/topics";
 import { AskForm } from "./AskForm";
 import { QnaListClient, type QnaRow } from "./QnaListClient";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
@@ -121,30 +120,30 @@ export default async function QnaListPage() {
             askForm={<AskForm />}
             sidebar={
               <>
-                <section className="rise-in-2 card flex flex-col gap-2 p-[18px]">
+                {/* [1015] 레일 정리(브리프 규칙 B·C·D): 카드 머리의 설명문("…한 곳에 있어요")과 링크 부제의 안내문을
+                    명사로, "자주 오르는 질문 주제" 힌트 카드(예시 문장 6개 + "…더 잘 닿아요" 사용법)는 걷었다 —
+                    주제는 위 필터 칩 줄이 이미 보여 준다. 답변 면책은 남기되 문장만 다듬었다. */}
+                <section className="rise-in-2 card flex flex-col gap-2 p-[18px] max-md:p-3.5">
                   <h2 className="t-body font-bold text-ink">질문 전에 볼 기록</h2>
-                  <p className="t-sub text-text-3">
-                    단지 허브에 실거래·지도·임장노트·이 단지 Q&amp;A 가 한 곳에 있어요.
-                  </p>
                   <div className="mt-1 flex flex-col gap-2">
                     {[
                       {
                         href: "/map",
                         icon: "map",
                         label: "지도에서 단지 찾기",
-                        desc: "지도를 눌러 단지 허브로 이동",
+                        desc: "단지 허브 · 실거래 · 지도",
                       },
                       {
                         href: "/notes",
                         icon: "clipboard",
                         label: "공개 임장노트 보기",
-                        desc: "다녀온 사람이 남긴 현장 기록",
+                        desc: "현장 기록",
                       },
                       {
                         href: "/notes/new",
                         icon: "notebook-pen",
                         label: "임장노트 쓰기",
-                        desc: "본 것을 적어두면 질문이 구체해져요",
+                        desc: "내 현장 기록",
                       },
                     ].map((l) => (
                       <Link
@@ -165,29 +164,11 @@ export default async function QnaListPage() {
                   </div>
                 </section>
 
-                <section className="rise-in-3 card flex flex-col gap-2 p-[18px]">
-                  {/* [1012] 규칙 4·5 — "물어보세요" → 명사형, 주제 이모지 → 선 아이콘(Icon 매핑) */}
-                  <h2 className="t-body font-bold text-ink">자주 오르는 질문 주제 {Math.min(6, QNA_TOPICS.length)}가지</h2>
-                  <ul className="flex flex-col gap-1.5">
-                    {QNA_TOPICS.slice(0, 6).map((t) => (
-                      <li key={t.key} className="flex items-start gap-2">
-                        <span className="mt-[2px] shrink-0 text-text-3">
-                          <Icon name={t.icon} size={13} />
-                        </span>
-                        <span className="t-sub text-text-2">{t.hint}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-1 t-sub text-text-3">
-                    단지명과 지역을 함께 적으면 그 단지를 아는 이웃에게 더 잘 닿아요.
-                  </p>
-                </section>
-
-                <section className="rise-in-4 card flex flex-col gap-1.5 p-[18px]">
-                  <h2 className="t-body font-bold text-ink">답변은 이웃의 경험이에요</h2>
+                <section className="rise-in-4 card flex flex-col gap-1.5 p-[18px] max-md:p-3.5">
+                  <h2 className="t-body font-bold text-ink">답변 안내</h2>
                   <p className="t-sub text-text-3">
-                    Q&amp;A의 답변은 이용자 개개인의 의견으로 정확성이 보장되지 않아요. 투자·매매·
-                    임대차 등 계약 판단과 그 결과에 대한 책임은 본인에게 있어요 — 참고 자료로만.
+                    답변은 이용자 개인의 의견이며 정확성이 보장되지 않습니다. 투자·매매·임대차 등
+                    계약 판단과 그 책임은 본인에게 있습니다.
                   </p>
                 </section>
 

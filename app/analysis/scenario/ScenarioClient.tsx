@@ -342,7 +342,7 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
     const stress = dsrTone(calc.dsrStress);
     const head = isReal
       ? `${baseline.regionName} 평균 매매가 ${baseline.avgSaleLabel}(${baseline.period} 기준) 실데이터와 입력하신 조건(연 소득 ${incomeManwon.toLocaleString("ko-KR")}만원 · 대출 ${ltvPct}%)으로 계산했습니다.`
-      : `예시 시세(8.4억)와 입력하신 조건(연 소득 ${incomeManwon.toLocaleString("ko-KR")}만원 · 대출 ${ltvPct}%) 기준입니다. 지역을 선택하면 실제 평균가로 다시 계산해요.`;
+      : `예시 시세(8.4억)와 입력하신 조건(연 소득 ${incomeManwon.toLocaleString("ko-KR")}만원 · 대출 ${ltvPct}%) 기준입니다. 지역을 선택하면 실제 평균가로 다시 계산합니다.`;
     const body =
       stress.label !== "위험"
         ? `금리 1%p 상승 시에도 월 ${wonText(calc.payStress)}(소득 대비 ${(calc.dsrStress * 100).toFixed(0)}%)로 ${stress.label} 범위입니다.`
@@ -356,7 +356,7 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
   }, [baseline, calc, isReal, pricePct, incomeManwon, ltvPct]);
 
   return (
-    <PageShell breadcrumb="AI 분석 › 시장·대출 시나리오">
+    <PageShell breadcrumb="분석 › 시장·대출 시나리오">
       {/* [975] 지도에서 단지 고르기 — 열기 전에는 내려받지 않는다 */}
       {mapNode}
       <div className="mb-2 flex items-center justify-between">
@@ -376,9 +376,9 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[380px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-5 max-md:gap-3 lg:grid-cols-[380px_minmax(0,1fr)]">
         {/* 조건 설정 */}
-        <div className="rise-in-1 card flex flex-col gap-3.5 rounded-3xl p-[22px]">
+        <div className="rise-in-1 card flex flex-col gap-3.5 rounded-3xl p-[22px] max-md:p-3.5">
           <div className="t-section text-ink">조건 설정</div>
 
           {/* 단지 선택 → 그 단지 지역의 실시세로 기준가 프리필 */}
@@ -405,9 +405,7 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
               ))}
             </select>
             {regionId && !loadingBaseline && !isReal && (
-              <span className="t-sub text-text-3">
-                이 지역은 아직 실시세 데이터가 없어 예시 시세로 계산해요.
-              </span>
+              <span className="t-sub text-text-3">이 지역은 실시세 자료가 없어 예시 시세로 계산</span>
             )}
           </label>
 
@@ -444,7 +442,7 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
                   term="ltv"
                   how={[
                     "대출액 = 기준 시세 × 대출 비율 · 필요 현금 = 기준 시세 − 대출액",
-                    "실제 한도는 지역(규제지역 여부)·보유 주택 수·가격대에 따라 달라요 — 계산기에서 내 조건으로 확인하세요.",
+                    "실제 한도는 지역(규제지역 여부)·보유 주택 수·가격대에 따라 다르다. 계산기에서 내 조건으로 확인.",
                   ]}
                 />
               </span>
@@ -554,8 +552,7 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
                   </div>
                 )}
                 <div className="mt-1.5 t-caption text-text-3">
-                  실제 대출 금리 = 기준금리 + 가산금리(신용·LTV·상품별). 위 값은 참고용이며,
-                  내 조건에 맞게 금리를 조정하세요.
+                  실제 대출 금리 = 기준금리 + 가산금리(신용·LTV·상품별) · 위 값은 참고용
                 </div>
               </div>
             )}
@@ -704,7 +701,7 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
                   {calc.rate.toFixed(2)}% 입니다.
                 </>
               )}{" "}
-              세로축은 월 상환액, 가로축은 연 금리예요 — 곡선을 누른 채 좌우로 움직이면 그 금리의 월 상환액이 나와요.
+              세로축 월 상환액 · 가로축 연 금리 · 곡선을 누른 채 좌우로 움직이면 그 금리의 월 상환액 표시.
             </p>
           </div>
 

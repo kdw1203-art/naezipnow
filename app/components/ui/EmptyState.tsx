@@ -124,7 +124,8 @@ export function EmptyState({
       style={tone === "light" ? { background: "var(--brand-hanji)", border: "none" } : undefined}
     >
       {tone === "light" && picture ? (
-        <Illust name={picture} size={96} className="rounded-lg" />
+        /* [1015 · 규칙 E] 폰에서는 64px — 빈 화면 그림이 한 화면을 차지하지 않게(데스크톱 96) */
+        <Illust name={picture} size={96} className="rounded-lg max-md:h-16 max-md:w-16" />
       ) : tone === "light" ? (
         /* 온점만 숨쉰다(2.4s) — 심볼 전체를 흔들면 장식이 소음이 된다 */
         <svg width="44" height="40" viewBox="0 0 120 120" aria-hidden="true">

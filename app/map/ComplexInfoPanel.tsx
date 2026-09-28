@@ -134,6 +134,8 @@ interface NotesBriefDto {
     title: string;
     visitDate: string | null;
     decision: { choice: "buy" | "hold" | "pass" | "revisit"; label: string } | null;
+    /** [1015 · 규칙 H] 40px 정사각 썸네일 — detail API 가 붙이면 그린다(없으면 단색 칸) */
+    cover?: string | null;
   } | null;
 }
 
@@ -273,9 +275,9 @@ function PriceTrend({ tx, name }: { tx: TxRow[]; name: string }) {
           term="silgeoraega"
           title="실거래가 추이"
           how={[
-            "그 달 신고된 매매 거래의 평균이에요. 평형을 나누지 않은 평균이라 그 달 팔린 평형 구성에 따라 출렁일 수 있어요 — 평형별 추이는 전체 화면에서 볼 수 있어요.",
-            "거래가 1~2건인 달은 속 빈 점으로 그려요. 거래가 없는 달은 비워 두고 점선으로 건너뛰어요.",
-            "해제 신고된 거래는 빼요.",
+            "그 달 신고된 매매 거래의 평균. 평형을 나누지 않은 평균이라 그 달 팔린 평형 구성에 따라 출렁일 수 있다. 평형별 추이는 전체 화면에.",
+            "거래가 1~2건인 달은 속 빈 점. 거래가 없는 달은 비워 두고 점선으로 건너뛴다.",
+            "해제 신고된 거래는 제외.",
           ]}
           source="국토교통부 실거래가"
         />
@@ -733,8 +735,9 @@ export function ComplexInfoPanel({
   ].filter(Boolean);
 
   return (
+    /* [1015 · 규칙 I] <main> 밖의 시트 — 리퀴드 목록 톤은 .lq-scope 안에서만 그려진다 */
     <div
-      className="fixed inset-0 z-[48] flex items-end justify-center px-0 py-0 sm:items-center sm:px-4 sm:py-6"
+      className="lq-scope fixed inset-0 z-[48] flex items-end justify-center px-0 py-0 sm:items-center sm:px-4 sm:py-6"
       role="dialog"
       aria-modal="true"
       aria-label={`${name} 단지 정보`}
@@ -783,7 +786,7 @@ export function ComplexInfoPanel({
             </p>
           ) : data && facts && !loading ? (
             <p className="mt-2 t-sub text-text-3">
-              요약할 숫자가 아직 없어요 — 최근 12개월 실거래·세대수·준공 중 하나라도 있으면 여기에 적혀요.
+              요약할 숫자 아직 없음(최근 12개월 실거래·세대수·준공 중 하나라도 있으면 표시)
             </p>
           ) : null}
         </div>
@@ -803,8 +806,8 @@ export function ComplexInfoPanel({
                   <Explain
                     title="매매 중앙값 · 12개월"
                     how={[
-                      "최근 12개월 매매 실거래 중 거래가 가장 많은 면적대의 가운데 값(중앙값)이에요 — 한두 건의 특이 거래에 평균보다 덜 끌려가요.",
-                      "그 면적대가 3건이 안 되면 면적을 섞은 전체 중앙값을, 전체도 3건이 안 되면 건수만 적어요.",
+                      "최근 12개월 매매 실거래 중 거래가 가장 많은 면적대의 가운데 값(중앙값). 한두 건의 특이 거래에 평균보다 덜 끌려간다.",
+                      "그 면적대가 3건이 안 되면 면적을 섞은 전체 중앙값을, 전체도 3건이 안 되면 건수만 적는다.",
                     ]}
                     source="국토교통부 실거래가"
                   />
@@ -1001,7 +1004,7 @@ export function ComplexInfoPanel({
               />
               {rentFailed ? (
                 <p className="rounded-xl border border-warning-border bg-warning-soft px-3 py-2 t-sub text-warning">
-                  전월세 실거래를 지금 불러오지 못했어요 — 없는 게 아니라 조회가 실패했어요.
+                  전월세 실거래를 지금 불러오지 못했어요. 잠시 후 다시 열어 주세요.
                 </p>
               ) : rent ? (
                 <>
@@ -1047,8 +1050,8 @@ export function ComplexInfoPanel({
                         <Explain
                           term="jeonse-garyul"
                           how={[
-                            "최근 6개월 전세 보증금 중앙값 ÷ 같은 기간 매매 거래가 중앙값 × 100이에요.",
-                            "전세·매매가 각각 3건 이상일 때만 계산해요. 면적은 가중하지 않아요.",
+                            "최근 6개월 전세 보증금 중앙값 ÷ 같은 기간 매매 거래가 중앙값 × 100.",
+                            "전세·매매가 각각 3건 이상일 때만 계산. 면적 미가중.",
                           ]}
                           source="국토교통부 매매·전월세 실거래 신고"
                         />
@@ -1096,7 +1099,7 @@ export function ComplexInfoPanel({
                 <div className={`flex flex-col gap-1 ${specRows.length > 0 ? "mt-2" : ""}`}>
                   {specGapLines.map((line) => (
                     <p key={line.note} className="rounded-xl bg-bg px-3 py-2 t-caption text-text-2">
-                      <b className="text-ink">{line.labels}</b> — {line.note}
+                      <b className="text-ink">{line.labels}</b> · {line.note}
                     </p>
                   ))}
                 </div>
@@ -1127,14 +1130,25 @@ export function ComplexInfoPanel({
               />
               {notesFailed ? (
                 <p className="rounded-xl border border-warning-border bg-warning-soft px-3 py-2 t-sub text-warning">
-                  임장노트를 지금 불러오지 못했어요 — 없는 게 아니라 조회가 실패했어요.
+                  임장노트를 지금 불러오지 못했어요. 잠시 후 다시 열어 주세요.
                 </p>
               ) : notes?.latest ? (
                 <Link
                   href={`/notes/${encodeURIComponent(notes.latest.id)}`}
-                  className="flex min-h-[44px] items-center justify-between gap-2 rounded-xl bg-bg px-3 py-2 transition-colors hover:bg-primary-soft/60"
+                  className="lq-panel flex min-h-[44px] items-center justify-between gap-2 py-2 transition-colors"
+                  data-tone="hanji"
                 >
-                  <div className="min-w-0">
+                  {/* [1015 · 규칙 H] 40px 정사각 썸네일 자리 — cover 가 없으면 단색 칸 */}
+                  <span
+                    className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-brand-hanji"
+                    aria-hidden="true"
+                  >
+                    {notes.latest.cover && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={notes.latest.cover} alt="" width={40} height={40} loading="lazy" className="h-10 w-10 object-cover" />
+                    )}
+                  </span>
+                  <div className="min-w-0 flex-1">
                     <div className="truncate t-sub font-bold text-ink">{notes.latest.title}</div>
                     <div className="mt-0.5 t-caption text-text-3">
                       최신 노트{notes.latest.visitDate ? ` · 방문 ${notes.latest.visitDate}` : ""}
@@ -1152,9 +1166,7 @@ export function ComplexInfoPanel({
                   )}
                 </Link>
               ) : (
-                <p className="rounded-xl bg-bg px-3 py-2 t-sub text-text-2">
-                  아직 이 단지 공개 임장노트가 없어요. 다녀온 기록이 있다면 첫 노트가 돼요.
-                </p>
+                <p className="rounded-xl bg-bg px-3 py-2 t-sub text-text-2">아직 이 단지 공개 임장노트가 없어요.</p>
               )}
             </div>
           )}
@@ -1276,7 +1288,7 @@ export function ComplexInfoPanel({
               아니라 "지금 못 읽어서"일 때, 그 사실을 말한다. */}
           {failedSections.length > 0 && (
             <div className="rounded-2xl border border-warning-border bg-warning-soft px-3.5 py-2.5 t-sub text-warning">
-              {failedSections.join(" · ")} 정보를 지금 불러오지 못했어요 — 없는 게 아니라 조회가 실패했습니다.
+              {failedSections.join(" · ")} 정보를 지금 불러오지 못했어요. 잠시 후 다시 열어 주세요.
             </div>
           )}
 
@@ -1329,7 +1341,7 @@ export function ComplexInfoPanel({
                 href={`/region/${rid}`}
                 className="btn-secondary block rounded-xl p-[11px] text-center text-xs"
               >
-                {cityDistrict} 시장 전체 보기 — 지수·거래량·입주
+                {cityDistrict} 시장 전체 보기 · 지수·거래량·입주
               </Link>
             );
           })()}

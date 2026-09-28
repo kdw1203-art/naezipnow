@@ -2,7 +2,7 @@ import "server-only";
 import { ImageResponse } from "next/og";
 import { OG_FONT_FAMILY, ogFonts } from "@/lib/og/font";
 import { COVER_SIZE } from "./spec";
-import { buildCoverTree, type CoverRenderInput } from "./tree";
+import { buildCoverTree, COVER_WIDE, type CoverRenderInput, type CoverTreeOptions } from "./tree";
 
 /**
  * 썸네일 PNG 응답 — 렌더 라우트·미리보기 라우트 공용. 서버 전용(next/og + 한글 폰트 파일).
@@ -16,10 +16,15 @@ export const COVER_PRIVATE_CACHE_CONTROL = "private, no-store";
 /** 비공개 노트 커버 + v 일치 — 작성자 브라우저에만 1년(내용 주소라 바뀌면 주소가 바뀐다) */
 export const COVER_PRIVATE_IMMUTABLE_CACHE_CONTROL = "private, max-age=31536000, immutable";
 
-export function renderCoverPng(input: CoverRenderInput, cacheControl: string): ImageResponse {
-  return new ImageResponse(buildCoverTree(input, { fontFamily: OG_FONT_FAMILY }), {
-    width: COVER_SIZE,
-    height: COVER_SIZE,
+export function renderCoverPng(
+  input: CoverRenderInput,
+  cacheControl: string,
+  shape: NonNullable<CoverTreeOptions["shape"]> = "square",
+): ImageResponse {
+  const wide = shape === "wide";
+  return new ImageResponse(buildCoverTree(input, { fontFamily: OG_FONT_FAMILY, shape }), {
+    width: wide ? COVER_WIDE.width : COVER_SIZE,
+    height: wide ? COVER_WIDE.height : COVER_SIZE,
     ...ogFonts(),
     headers: { "Cache-Control": cacheControl },
   });

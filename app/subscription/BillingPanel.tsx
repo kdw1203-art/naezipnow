@@ -142,7 +142,7 @@ export function BillingPanel() {
   return (
     <section
       id="billing"
-      className="rise-in-3 card mx-auto mt-8 w-full max-w-[1080px] scroll-mt-24 rounded-3xl px-[22px] py-5"
+      className="rise-in-3 card mx-auto mt-8 w-full max-w-[1080px] scroll-mt-24 rounded-3xl px-[22px] py-5 max-md:mt-5 max-md:px-4 max-md:py-4"
       aria-busy={!data && !failed}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -190,11 +190,12 @@ export function BillingPanel() {
             결제가 완료되면 금액·이용 기간·영수증 링크가 구독 관리에 쌓입니다.
           </div>
         ) : (
-          <ul className="flex flex-col gap-2">
+          /* [1015 · 규칙 I] 결제 내역 = mint 톤 — 낱개 카드 li 를 리퀴드 판 한 장의 행으로 */
+          <ul className="lq-panel flex flex-col" data-tone="mint">
             {payments.map((p) => (
               <li
                 key={p.id}
-                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-line px-3.5 py-2.5"
+                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b py-2.5 last:border-b-0"
               >
                 <span className="flex min-w-0 flex-col">
                   <span className="t-body font-bold text-ink">

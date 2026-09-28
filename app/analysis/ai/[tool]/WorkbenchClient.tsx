@@ -503,10 +503,9 @@ export function WorkbenchClient({
           {(needsComplex || isContract) && (
             <section className="card flex flex-col gap-2.5 rounded-2xl p-4" aria-label="단지 고르기">
               <h2 className="t-body font-bold text-ink">① 단지 고르기</h2>
+              {/* [1015 · 규칙 B] 사용법 두 문장은 걷고 링크만 */}
               {isContract && (
                 <p className="t-sub text-text-2">
-                  단지를 고르면 그 지역 평균 전세가율을 참고값으로 보여 줘요. ② 에 이 집 전세가율·보증금과 확인 여부를
-                  넣으면 이 계약 기준으로 다시 계산해요. 계약서 항목은{" "}
                   <Link href="/safety" className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline">
                     전세 안전 셀프체크 ›
                   </Link>
@@ -524,7 +523,7 @@ export function WorkbenchClient({
                 clearOnSelect
                 initialComplexId={null}
                 initialApt={null}
-                placeholder="단지 이름 (예: 공작아파트)"
+                placeholder="단지 이름"
               />
               {picked && (
                 <div className="flex flex-col gap-0.5 rounded-lg bg-primary-soft px-3 py-2.5">
@@ -787,7 +786,7 @@ function FirstVisitGuide({
         <div className="flex flex-col gap-2">
           {/* [1012 · 규칙 6·7] "둘러보기" → 사실(어디서·얼마나): 최근 6개월 거래 많은 단지 N곳 */}
           <span className="t-sub font-bold text-text-1">
-            최근 6개월 거래가 많은 단지 {quickPicks.length}곳 — 누르면 바로 계산해요
+            최근 6개월 거래가 많은 단지 {quickPicks.length}곳
           </span>
           <div className="flex flex-wrap gap-1.5">
             {quickPicks.map((q) => (
@@ -833,7 +832,7 @@ function EconomyWatchPanel({ currentRate }: { currentRate: number }) {
     const t = Number(threshold);
     if (!Number.isFinite(t) || t <= 0 || t > 20) {
       setState("fail");
-      setNote("0보다 크고 20 이하인 %로 넣어 주세요(예: 3.25).");
+      setNote("0보다 크고 20 이하인 %로 넣어 주세요.");
       return;
     }
     setState("busy");
@@ -858,7 +857,7 @@ function EconomyWatchPanel({ currentRate }: { currentRate: number }) {
         setState("fail");
         setNote(
           res.status === 400
-            ? (json.error ?? "알림을 걸지 못했어요 — 숫자(예: 3.25)를 확인하고 다시 눌러 주세요.")
+            ? (json.error ?? "알림을 걸지 못했어요. 숫자를 확인하고 다시 눌러 주세요.")
             : res.status === 429
               ? "너무 자주 눌렀어요 — 1분쯤 뒤에 다시 눌러 주세요."
               : json.error

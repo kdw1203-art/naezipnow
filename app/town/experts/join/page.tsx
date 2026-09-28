@@ -97,11 +97,11 @@ export default function ExpertJoinPage() {
             <div className="t-caption font-bold tracking-wider text-on-dark-muted">전문가 모집</div>
             {/* [1012] 규칙 5·8 — 슬로건("지금 참여하세요") → 명사형 제목(t-title), 본문은 사실만 */}
             <h1 className="mt-1 t-title text-balance text-on-dark">
-              전문가 참여 신청 — 공인중개사·세무사·감정평가사·대출상담사·건축사
+              전문가 참여 신청 · 공인중개사 · 세무사 · 감정평가사 · 대출상담사 · 건축사
             </h1>
+            {/* [1015] "~하고, ~하고, ~해요" 문장 → 명사 나열(브리프 규칙 D) */}
             <p className="mt-2 max-w-[52ch] t-body text-on-dark-muted">
-              내집나우 이용자는 단지 하나를 정해 실거래·임장노트를 보고 온 사람들이에요. 그 질문에
-              글로 답하고, 견적 요청에 제안을 보내고, 답변 완료 의뢰자의 후기가 프로필에 쌓여요.
+              글 상담 답변 · 견적 요청 제안 · 답변 완료 의뢰자 후기
             </p>
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 t-sub text-on-dark-muted">
               <span className="inline-flex items-center gap-1">
@@ -147,9 +147,9 @@ export default function ExpertJoinPage() {
 
       {/* ---------- 누가 ---------- */}
       <section className="mb-6">
-        <h2 className="mb-1 t-section text-ink">누가 신청할 수 있나</h2>
+        <h2 className="mb-1 t-section text-ink">신청 자격</h2>
         <p className="mb-3 t-sub text-text-2">
-          자격이 있는 유형은 각 협회·기관의 공개 조회로 등록 상태를 확인해요. 그 밖의 전문가는 증빙 서류 심사로 확인해요.
+          자격 유형은 협회·기관 공개 조회로, 그 밖의 전문가는 증빙 서류 심사로 확인합니다.
         </p>
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {verifiable.map((t) => (
@@ -161,7 +161,7 @@ export default function ExpertJoinPage() {
               <span className="t-sub text-text-2">{t.desc}</span>
               {t.source && (
                 <span className="t-caption text-text-3">
-                  확인 · {t.source.label} — {t.source.searchHint}
+                  확인 · {t.source.label} · {t.source.searchHint}
                 </span>
               )}
               {t.extraScope && <span className="t-caption font-bold text-brand-navy">+ {t.extraScope}</span>}
@@ -209,26 +209,27 @@ export default function ExpertJoinPage() {
       </section>
 
       {/* ---------- 비용 · 정산 (정직 고지) ---------- */}
-      <section className="mb-6 rounded-3xl bg-brand-hanji px-5 py-5 md:px-7">
+      {/* [1015] 한지 면 → 흰 카드 + 1px 선(브리프 규칙 C). 문구는 그대로(수수료 정직 고지), 대시만 가운뎃점으로 */}
+      <section className="card mb-6 rounded-2xl px-5 py-5 md:px-7 max-md:px-3.5 max-md:py-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="max-w-[560px]">
-            <div className="t-caption font-bold tracking-wider text-brand-hanji-ink opacity-70">비용 · 정산</div>
-            <h2 className="mt-1 t-section text-brand-hanji-ink">가입 심사비 {feeRow("전문가 가입 심사비")} — 수수료는 결제가 열린 뒤에만</h2>
-            <p className="mt-2 t-sub text-brand-hanji-ink opacity-90">
+            <div className="t-caption font-bold tracking-wider text-text-3">비용 · 정산</div>
+            <h2 className="mt-1 t-section text-ink">가입 심사비 {feeRow("전문가 가입 심사비")} · 수수료는 결제가 열린 뒤에만</h2>
+            <p className="mt-2 t-sub text-text-2">
               지금은 프로필에 적은 상담료·리포트료가 <b>안내 금액</b>으로만 표시되고, 결제와 정산은 플랫폼에서 처리하지 않습니다.
               결제 기능이 열리면 아래 요율이 결제된 상담에만 적용되며, 변경 시 사전 고지합니다.
             </p>
           </div>
-          <dl className="grid shrink-0 grid-cols-2 gap-x-6 gap-y-1.5 t-sub text-brand-hanji-ink md:min-w-[280px]">
+          <dl className="lq-panel grid shrink-0 grid-cols-2 gap-x-6 gap-y-1.5 py-2 t-sub text-text-2 md:min-w-[280px]" data-tone="mint">
             {EXPERT_CERT_FEES.map((f) => (
               <div key={f.label} className="contents">
-                <dt className="opacity-80">{f.label}</dt>
+                <dt>{f.label}</dt>
                 <dd className="text-right font-bold t-num">{f.rate}</dd>
               </div>
             ))}
           </dl>
         </div>
-        <Link href="/legal/fees" className="mt-3 inline-block t-caption font-bold text-brand-hanji-ink underline underline-offset-2">
+        <Link href="/legal/fees" className="mt-3 inline-block t-caption font-bold text-primary underline underline-offset-2">
           거래·수수료 안내 전체 보기 ›
         </Link>
       </section>
@@ -269,7 +270,7 @@ export default function ExpertJoinPage() {
         <div>
           <div className="t-section text-on-dark">접수부터 승인까지, 진행 상황은 알림으로</div>
           <p className="mt-0.5 t-sub text-on-dark-muted">
-            로그인 후 신청 — 계정에 연결해 접수하고, 인증되면 마이 › 전문가 프로필에서 바로 관리합니다.
+            로그인 후 신청 · 인증되면 마이 › 전문가 프로필에서 관리
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">

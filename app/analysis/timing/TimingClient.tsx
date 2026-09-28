@@ -247,13 +247,13 @@ export function TimingClient({
       label: `${monthWord(vc.closedLast.month)} 거래량`,
       value: <CountUp value={vc.closedLast.count} suffix="건" />,
       delta: vc.closedDeltaPct === null || !vc.closedPrev ? null : { pct: vc.closedDeltaPct, label: monthWord(vc.closedPrev.month) },
-      note: openUntil ? `${openWords}은 집계 중 — ${openUntil}까지 신고가 들어와요` : "신고 기한이 지난 달끼리 비교",
+      note: openUntil ? `${openWords}은 집계 중 · ${openUntil}까지 신고` : "신고 기한이 지난 달끼리 비교",
     });
   } else if (lastVol) {
     kpis.push({
       label: `${monthWord(lastVol.month)} 거래량`,
       value: <CountUp value={lastVol.count} suffix="건" />,
-      note: openUntil ? `집계 중 — ${openUntil}까지 신고가 들어와요` : "",
+      note: openUntil ? `집계 중 · ${openUntil}까지 신고` : "",
     });
   }
 
@@ -271,16 +271,10 @@ export function TimingClient({
 
   return (
     <>
+      {/* [1015 · 규칙 B·C] 제목 위 부연·기능 설명(lead)은 걷었다 — KPI 와 지역 선택만 */}
       <ToolHero
-        eyebrow="지역·시장 흐름"
         icon="trending-up"
         title="시세·타이밍 분석"
-        lead={
-          <>
-            {selected.label}의 매매가격지수·거래량·시장 온도를 한 화면에서 봅니다. 모든
-            수치는 실측이고, 없는 구간은 없다고 표시합니다.
-          </>
-        }
         kpis={kpis}
         chart={heroChart}
         toneClass="text-success"
@@ -319,9 +313,7 @@ export function TimingClient({
            재시도가 의미 있다. */
         <div className="card mt-5 flex flex-col items-center gap-2 rounded-lg p-8 text-center">
           <p className="t-section text-ink">{selected.label} 분석을 불러오지 못했어요</p>
-          <p className="t-sub text-text-3">
-            데이터가 없는 게 아니라 조회에 실패한 거예요. 잠시 뒤 다시 시도해 주세요.
-          </p>
+          <p className="t-sub text-text-3">조회 실패. 잠시 뒤 다시 시도해 주세요.</p>
           <button
             type="button"
             onClick={() => {
@@ -506,17 +498,15 @@ export function TimingClient({
                 />
                 <p className="t-caption text-text-3">
                   {openUntil
-                    ? `${openWords}은 아직 신고 기한 전(계약 후 30일 안에 신고 · ${openUntil}까지)이라 실제보다 적게 보여요 — 등락은 신고가 끝난 달끼리만 비교해요. `
-                    : "모든 달이 신고 기한(계약 후 30일)을 지난 값이에요. "}
-                  가장 진한 막대가 이 구간의 최다 거래월입니다.
-                  {nowYm && volume.some((v) => v.month >= nowYm) ? " (마지막 칸이 진행 중인 달)" : ""}
+                    ? `${openWords}은 신고 기한 전(계약 후 30일 · ${openUntil}까지)이라 실제보다 적음 · 등락은 신고가 끝난 달끼리 비교`
+                    : "모든 달이 신고 기한(계약 후 30일)을 지난 값"}
+                  {" · 가장 진한 막대 = 최다 거래월"}
+                  {nowYm && volume.some((v) => v.month >= nowYm) ? " · 마지막 칸은 진행 중인 달" : ""}
                 </p>
               </>
             ) : (
               <div className="rounded-lg bg-bg px-3 py-3">
-                <p className="t-sub text-text-3">
-                  월별 거래량 집계가 아직 없어요. 실거래 수집이 쌓이면 자동으로 표시됩니다.
-                </p>
+                <p className="t-sub text-text-3">월별 거래량 집계 아직 없음</p>
               </div>
             )}
           </div>
@@ -527,9 +517,7 @@ export function TimingClient({
               <Icon name="bell" size={17} />
             </span>
             <span className="t-section text-ink">이 지역 알림 받기</span>
-            <p className="t-sub text-text-2">
-              {selected.label}의 실거래 등록·시세 변동이 생기면 알려 드려요.
-            </p>
+            <p className="t-sub text-text-2">{selected.label} 실거래 등록·지수 변동 알림</p>
             {trend && (
               /* [1009 · A] 추세선 색 = 기간 등락(상승 빨강·하락 파랑·보합 회색) — 예전엔 늘 초록(도구 색) */
               <span

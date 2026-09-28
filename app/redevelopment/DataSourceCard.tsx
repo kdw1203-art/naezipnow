@@ -42,7 +42,7 @@ export function DataSourceCard({
       </div>
 
       <p className="mt-2 t-caption text-text-3">
-        공개 자료를 취합·정리한 참고 정보예요. 원문·최신 고시는 각 출처에서 확인하세요.
+        공개 자료를 취합·정리한 참고 정보입니다. 원문·최신 고시는 각 출처가 우선합니다.
       </p>
     </section>
   );

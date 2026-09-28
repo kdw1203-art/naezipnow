@@ -31,7 +31,7 @@ export async function generateMetadata({
     title: `${tpl.title} | 임장 노트 템플릿 | 내집나우`,
     description:
       tpl.description ||
-      `${tpl.category} 임장 체크리스트 — ${tpl.sections.length}개 섹션의 점검 항목으로 임장 노트를 작성하세요.`,
+      `${tpl.category} 임장 체크리스트. ${tpl.sections.length}개 섹션의 점검 항목이 채워진 임장 노트.`,
     robots: { index: !tpl.isSample, follow: true },
   };
 }
@@ -91,7 +91,7 @@ export default async function NoteTemplateDetailPage({
         {tpl.sections.map((section, i) => (
           <section
             key={`${section.title}-${i}`}
-            className="card rise-in-1 flex flex-col gap-3 rounded-lg p-5"
+            className="card rise-in-1 flex flex-col gap-3 rounded-lg p-5 max-md:gap-2 max-md:p-3.5"
           >
             <h2 className="flex items-center gap-2 t-section text-ink">
               <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-soft t-sub font-bold text-primary">
@@ -149,11 +149,11 @@ export default async function NoteTemplateDetailPage({
           전용 신고 큐는 공유 볼륨이 생기면(주 10건+) 모더레이션 체계로 승격한다. */}
       {!tpl.isOfficial && (
         <p className="mt-4 t-sub text-text-3">
-          부적절한 내용(광고·비방·저작권)이 보이면{" "}
+          부적절한 내용(광고·비방·저작권)은{" "}
           <Link href={`/support?subject=${encodeURIComponent(`체크리스트 신고: ${tpl.title}`)}`} className="font-bold text-primary">
             고객센터로 신고
           </Link>
-          해 주세요 — 확인 후 비공개 처리됩니다.
+          . 확인 후 비공개 처리.
         </p>
       )}
     </PageShell>

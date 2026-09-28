@@ -4,6 +4,7 @@ import { readBoardPosts } from "@/lib/newui/board-posts";
 import { SupportContactForm } from "./SupportContactForm";
 import { FaqSearch, type FaqSearchItem } from "./FaqSearch";
 import { Icon } from "@/app/components/Icon";
+import { Explain } from "@/app/components/explain/Explain";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import {
   supportFaqByCategory,
@@ -124,9 +125,9 @@ export default async function SupportPage() {
 
   const QUICK: { title: string; desc: string; href: string; icon: string; primary?: boolean }[] = [
     { title: "1:1 문의", desc: `${SUPPORT_HOURS} · ${RESPONSE_TIME}`, href: "#contact", icon: "mail", primary: true },
-    { title: "자주 묻는 질문", desc: `데이터 · 노트 · 구독 · AI — 전체 ${faqAll.length}개`, href: "/support/faq", icon: "help" },
+    { title: "자주 묻는 질문", desc: `전체 ${faqAll.length}개`, href: "/support/faq", icon: "help" },
     { title: "오류 · 데이터 신고", desc: "시세·크롤링 데이터 오류 제보", href: "#contact", icon: "warning" },
-    { title: "내 문의 내역", desc: "남긴 문의와 답변을 화면에서 봐요 (로그인)", href: "/my/support", icon: "file-text" },
+    { title: "내 문의 내역", desc: "로그인 필요", href: "/my/support", icon: "file-text" },
   ];
 
   return (
@@ -134,12 +135,13 @@ export default async function SupportPage() {
       {/* ── 히어로 — 유리판: 응답 시간 + FAQ 검색(실제 입력·필터) ── */}
       <section
         aria-labelledby="support-hero-title"
-        className="rise-in lg-glass mb-4 flex flex-col gap-3 rounded-lg px-5 py-5 md:px-6"
+        className="rise-in lg-glass mb-4 flex flex-col gap-3 rounded-lg px-5 py-5 max-md:mb-3 max-md:gap-2.5 max-md:px-4 max-md:py-4 md:px-6"
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">
+            {/* [1015 · 규칙 D] 물음형 제목("무엇을 도와드릴까요?") → 명사 */}
             <span id="support-hero-title" className="t-section text-ink">
-              무엇을 도와드릴까요?
+              FAQ 검색 · 1:1 문의
             </span>
             <span className="t-sub text-text-2">
               {SUPPORT_HOURS} · {RESPONSE_TIME} · 답변은 이메일과 내 문의 내역으로
@@ -233,9 +235,15 @@ export default async function SupportPage() {
 
           {/* 1:1 문의 폼 (P2-2) — /api/support 실연동 */}
           <section id="contact" aria-labelledby="contact-title" className="rise-in-3 card flex flex-col gap-3 scroll-mt-24 rounded-2xl px-5 py-[18px]">
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <h2 id="contact-title" className="t-section text-ink">1:1 문의 남기기</h2>
-              <span className="t-sub text-text-3">{RESPONSE_TIME}</span>
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+              <h2 id="contact-title" className="t-section text-ink">1:1 문의</h2>
+              {/* [1015 · 규칙 B] 아래 있던 "문의는 이렇게 처리돼요" 3단계 섹션(사용법)을 제목 옆 ⓘ 하나로 접었다 */}
+              <Explain
+                title="문의 처리"
+                body={CONTACT_FLOW.map((f, i) => `${i + 1}. ${f.step}: ${f.desc}`)}
+                source={`${SUPPORT_HOURS} · ${RESPONSE_TIME}`}
+              />
+              <span className="ml-auto t-sub text-text-3">{RESPONSE_TIME}</span>
             </div>
             <SupportContactForm supportEmail={supportEmail} />
           </section>
@@ -283,36 +291,8 @@ export default async function SupportPage() {
             </section>
           )}
 
-          {/* 문의 처리 흐름 — 실제 절차만 */}
-          <section aria-labelledby="flow-title" className="rise-in-3 card flex flex-col gap-3 rounded-3xl px-5 py-[18px]">
-            <h2 id="flow-title" className="t-section text-ink">문의는 이렇게 처리돼요</h2>
-            <ol className="grid grid-cols-1 gap-2 md:grid-cols-3">
-              {CONTACT_FLOW.map((f, i) => (
-                <li key={f.step} className="flex gap-2.5 rounded-lg bg-bg px-3.5 py-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary t-sub font-bold text-white">
-                    {i + 1}
-                  </span>
-                  <span className="flex flex-col gap-0.5">
-                    <span className="t-body font-bold text-ink">{f.step}</span>
-                    <span className="t-sub leading-[1.6] text-text-2">{f.desc}</span>
-                  </span>
-                </li>
-              ))}
-            </ol>
-            <div className="lg-hairline" />
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="t-sub text-text-2">
-                남긴 문의와 답변은{" "}
-                <Link href="/my/support" className="inline-block py-[5px] font-bold text-primary no-underline">
-                  내 문의 내역
-                </Link>
-                에서 볼 수 있어요 (로그인 필요).
-              </span>
-              <a href="#contact" className="btn-soft btn-md shrink-0 no-underline">
-                문의 남기기
-              </a>
-            </div>
-          </section>
+          {/* [1015 · 규칙 B] "문의는 이렇게 처리돼요" 3단계 섹션은 1:1 문의 제목 옆 ⓘ 로 접었다(CONTACT_FLOW 그대로).
+              "내 문의 내역" 링크는 상단 QUICK 타일과 사이드 메뉴에 이미 있다. */}
 
           {/* FAQ 미리보기 — 답은 lib/support/faq.ts 한 곳에서 온다. 화면마다 답을 복제하지 않는다. */}
           <section id="faq" aria-labelledby="faq-title" className="rise-in-4 card flex flex-col gap-1 scroll-mt-24 rounded-3xl px-5 py-[18px] md:px-6">
@@ -339,16 +319,8 @@ export default async function SupportPage() {
             ))}
           </section>
 
-          {/* 해결 안 됐나요 */}
-          <div className="rise-in-5 ai-panel flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
-            <div>
-              <div className="t-body font-bold text-white">해결이 안 되셨나요?</div>
-              <div className="mt-0.5 t-sub text-ai-muted">{SUPPORT_HOURS} · {RESPONSE_TIME}</div>
-            </div>
-            <a href="#contact" className="btn-primary btn-md rounded-full no-underline">
-              1:1 문의
-            </a>
-          </div>
+          {/* [1015 · 규칙 B·D] "해결이 안 되셨나요?" 네이비 띠(물음형 제목 + 같은 화면 세 번째 1:1 문의 입구) 제거 —
+              1:1 문의 폼은 이 화면 위에 이미 있고, 상단 QUICK 타일·사이드 메뉴가 그리로 보낸다. 채움 파랑도 하나 줄었다. */}
 
           {/* 제휴 · 광고 */}
           <div className="rise-in-5 grid gap-3 md:grid-cols-2">

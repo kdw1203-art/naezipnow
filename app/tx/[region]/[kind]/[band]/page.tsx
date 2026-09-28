@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "../../../../components/PageShell";
+import { AdZone } from "@/app/components/ads/AdZone";
 import {
   findTxRegionBySlug,
   listBandComplexes,
@@ -138,15 +139,11 @@ export default async function TxBandPage({ params }: { params: Promise<Params> }
   const regionHref = `/tx/${encodeURIComponent(region.slug)}`;
   const pyeong = m2ToPyeong(cell.avgAreaM2);
 
+  /* [1015 · 규칙 M] 직방 계산기·네이버 실거래의 "큰 숫자 + 항목 표" — 중앙값은 머리에 크게, 나머지는 행 목록 */
   const stats: Array<{ label: string; value: string; hint?: string }> = [
+    { label: "평균", value: formatKrwShort(cell.avgKrw) },
     { label: "거래 건수", value: `${cell.txCount.toLocaleString("ko-KR")}건`, hint: range },
     { label: "거래된 단지", value: `${cell.complexCount.toLocaleString("ko-KR")}곳` },
-    {
-      label: "중앙값",
-      value: formatKrwShort(cell.medianKrw),
-      hint: "절반은 이 금액보다 낮게 거래",
-    },
-    { label: "평균", value: formatKrwShort(cell.avgKrw) },
     {
       label: "최저 ~ 최고",
       value: `${formatKrwShort(cell.minKrw)} ~ ${formatKrwShort(cell.maxKrw)}`,
@@ -191,58 +188,59 @@ export default async function TxBandPage({ params }: { params: Promise<Params> }
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
       />
 
-      <p className="rise-in mb-5 t-body text-text-2">
-        국토교통부 아파트 매매 실거래{" "}
+      {/* [1015 · 규칙 B] 사실 한 줄 */}
+      <p className="rise-in mb-4 t-sub text-text-2 max-md:mb-3">
         <strong className="text-ink">{cell.txCount.toLocaleString("ko-KR")}건</strong>
-        {range && ` · ${range} 신고 기준`} · 중앙값{" "}
-        <strong className="text-ink">{formatKrwShort(cell.medianKrw)}</strong>. 매물 호가가 아니라
-        실제 체결·신고된 금액입니다.
+        {range && ` · ${range} 신고 기준`} · 단지 {cell.complexCount.toLocaleString("ko-KR")}곳 · 국토교통부 실거래 · 매물 호가 아님
       </p>
 
-      {/* 구간 요약 */}
-      <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">
-          {cell.bandLabel} 요약{" "}
-          <span className="t-sub font-medium text-text-3">
-            {kind === "area" ? "전용면적 기준" : "거래금액 기준"}
-          </span>
-        </h2>
-        <div className="mt-3 grid grid-cols-2 gap-x-4 sm:grid-cols-3">
+      {/* [1015 · 규칙 F·G] 데스크톱 2단 — 본문(요약·단지 표) + 340px 레일(구간 칩 · 관련 화면 · 데이터 출처 · 광고 1). 폰은 한 열, 광고는 끝 1. */}
+      <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
+      <div className="min-w-0">
+      {/* 구간 요약 — [1015 · 규칙 M] 직방 계산기·네이버 실거래의 "큰 숫자 + 항목 표": 중앙값 크게, 나머지는 행 목록(lq-panel) */}
+      <section className="rise-in-1 card mb-4 p-[var(--pad-card)] max-md:mb-3">
+        <h2 className="t-section text-ink">{cell.bandLabel} 요약</h2>
+        <p className="mt-0.5 t-caption text-text-3">{kind === "area" ? "전용면적 기준" : "거래금액 기준"}</p>
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-2">
+          <span className="t-sub text-text-3">중앙값</span>
+          <span className="t-display t-num text-ink">{formatKrwShort(cell.medianKrw)}</span>
+          <span className="t-caption text-text-3">절반은 이 금액보다 낮게 거래</span>
+        </div>
+        <dl data-tone="blue" className="lq-panel m-0 mt-3 flex flex-col divide-y max-md:mt-2">
           {stats.map((s) => (
-            <div key={s.label} className="border-b border-border py-2.5">
-              <div className="t-sub text-text-3">{s.label}</div>
-              <div className="t-section leading-tight text-ink">{s.value}</div>
-              {s.hint && <div className="mt-0.5 t-sub text-text-3">{s.hint}</div>}
+            <div key={s.label} className="flex min-h-[40px] items-center justify-between gap-3 py-2">
+              <dt className="t-sub text-text-2">
+                {s.label}
+                {s.hint && <span className="ml-1.5 t-caption text-text-3">{s.hint}</span>}
+              </dt>
+              <dd className="m-0 t-num t-body font-bold text-ink">{s.value}</dd>
             </div>
           ))}
-        </div>
+        </dl>
       </section>
 
-      {/* 단지 목록 */}
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">
-          이 구간에서 거래된 단지{" "}
-          <span className="t-sub font-medium text-text-3">
-            거래 많은 순 · 상위 {Math.min(complexes.length, 40)}곳
-          </span>
-        </h2>
+      {/* 단지 목록 — [1015 · 규칙 M] 네이버부동산 실거래 표 순서(단지 · 면적 · 가격 · 거래일)로 열을 재배치, 껍데기 lq-panel */}
+      <section className="rise-in-2 card mb-4 p-[var(--pad-card)] max-md:mb-3">
+        <h2 className="t-section text-ink">이 구간에서 거래된 단지</h2>
+        <p className="mt-0.5 t-caption text-text-3">거래 많은 순 · 상위 {Math.min(complexes.length, 40)}곳</p>
         {complexesFailed ? (
-          <p className="py-6 text-center t-body text-text-3">
+          <p className="py-6 text-center t-body text-text-3 max-md:py-4">
             단지별 내역을 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.
           </p>
         ) : complexes.length === 0 ? (
-          <p className="py-6 text-center t-body text-text-3">
+          <p className="py-6 text-center t-body text-text-3 max-md:py-4">
             이 구간에서 거래된 단지 내역이 아직 정리되지 않았습니다.
           </p>
         ) : (
-          <div className="mt-3 overflow-x-auto">
+          <div data-tone="blue" className="lq-panel mt-3 overflow-x-auto max-md:mt-2">
             <table className="w-full min-w-[520px] text-left t-body">
               <thead>
                 <tr className="border-b border-border t-sub text-text-3">
                   <th className="py-2 font-medium">단지</th>
-                  <th className="py-2 font-medium">거래</th>
+                  <th className="py-2 text-right font-medium">전용</th>
                   <th className="py-2 text-right font-medium">평균</th>
                   <th className="py-2 text-right font-medium">최저~최고</th>
+                  <th className="py-2 text-right font-medium">거래</th>
                   <th className="py-2 text-right font-medium">최근</th>
                 </tr>
               </thead>
@@ -256,20 +254,18 @@ export default async function TxBandPage({ params }: { params: Promise<Params> }
                       >
                         {c.name}
                       </Link>
-                      {c.avgAreaM2 !== null && (
-                        <span className="ml-1.5 t-sub text-text-3">
-                          {c.avgAreaM2.toFixed(0)}㎡
-                        </span>
-                      )}
                     </td>
-                    <td className="py-2.5 text-text-2">{c.txCount}건</td>
-                    <td className="py-2.5 text-right font-bold text-ink">
+                    <td className="py-2.5 text-right t-sub tabular-nums text-text-3">
+                      {c.avgAreaM2 !== null ? `${c.avgAreaM2.toFixed(0)}㎡` : "—"}
+                    </td>
+                    <td className="py-2.5 text-right t-num font-bold text-ink">
                       {formatKrwShort(c.avgKrw)}
                     </td>
-                    <td className="py-2.5 text-right t-sub text-text-2">
+                    <td className="py-2.5 text-right t-sub tabular-nums text-text-2">
                       {formatKrwShort(c.minKrw)}~{formatKrwShort(c.maxKrw)}
                     </td>
-                    <td className="py-2.5 text-right t-sub text-text-3">
+                    <td className="py-2.5 text-right tabular-nums text-text-2">{c.txCount}건</td>
+                    <td className="py-2.5 text-right t-sub tabular-nums text-text-3">
                       {formatYm(c.latestYm)}
                     </td>
                   </tr>
@@ -280,64 +276,63 @@ export default async function TxBandPage({ params }: { params: Promise<Params> }
         )}
       </section>
 
-      {/* 같은 지역 다른 구간 — 내부 링크 */}
-      {siblings.length > 0 && (
-        <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-          <h2 className="t-section text-ink">
-            {region.name} 다른 {BAND_KIND_LABEL[kind]}
-          </h2>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {siblings.map((s) => (
-              <Link
-                key={s.bandSlug}
-                href={`${regionHref}/${kind}/${s.bandSlug}`}
-                className="tile rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink"
-              >
-                {s.bandLabel}
-                <span className="ml-1 font-medium text-text-3">
-                  {s.txCount.toLocaleString("ko-KR")}건
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {crossCells.length > 0 && (
-        <section className="rise-in-3 card mb-6 p-[var(--pad-card)]">
-          <h2 className="t-section text-ink">
-            {region.name} {BAND_KIND_LABEL[kind === "area" ? "price" : "area"]}별로 보기
-          </h2>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {crossCells.map((s) => (
-              <Link
-                key={s.bandSlug}
-                href={`${regionHref}/${kind === "area" ? "price" : "area"}/${s.bandSlug}`}
-                className="tile rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink"
-              >
-                {s.bandLabel}
-                <span className="ml-1 font-medium text-text-3">
-                  {s.txCount.toLocaleString("ko-KR")}건
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <p className="mb-8 t-sub text-text-3">
-        평균·중앙값은 이 구간에 신고된 거래만으로 계산한 값이며, 특정 단지의 현재 가격이나 지역
-        전체 시세를 뜻하지 않습니다. 계약 후 신고까지 시차가 있어 최근 달 건수는 더 늘어날 수
-        있습니다. 면적은 전용면적 기준입니다.
-        <br />
-        <Link href={regionHref} className="font-bold text-primary underline">
-          {region.name} 구간 전체
-        </Link>
-        {" · "}
-        <Link href="/tx" className="font-bold text-primary underline">
-          다른 지역
-        </Link>
+      <p className="mb-2 t-caption text-text-3">
+        평균·중앙값은 이 구간에 신고된 거래만의 값 · 특정 단지의 현재 가격이 아님 · 전용면적 기준 · 최근 달 건수는 신고 시차로 더 늘 수 있음
       </p>
+      {/* [1015 · 규칙 G] 페이지 끝 광고 1 */}
+      <AdZone placement="page_bottom" seed={6} plan={null} className="mt-6 max-md:mt-4" />
+      </div>
+
+      <aside className="flex flex-col gap-3 lg:sticky lg:top-[76px] lg:self-start">
+        {/* 같은 지역 다른 구간 — [1015 · 규칙 M] 네이버부동산의 면적·가격 필터 칩 한 줄처럼, 구간 칩을 레일에 모은다 */}
+        {siblings.length > 0 && (
+          <section className="card rounded-2xl px-4 py-3">
+            <h2 className="t-sub font-bold text-ink">{region.name} 다른 {BAND_KIND_LABEL[kind]}</h2>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {siblings.map((s) => (
+                <Link
+                  key={s.bandSlug}
+                  href={`${regionHref}/${kind}/${s.bandSlug}`}
+                  className="tile rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink"
+                >
+                  {s.bandLabel}
+                  <span className="ml-1 font-medium text-text-3">{s.txCount.toLocaleString("ko-KR")}건</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+        {crossCells.length > 0 && (
+          <section className="card rounded-2xl px-4 py-3">
+            <h2 className="t-sub font-bold text-ink">{region.name} {BAND_KIND_LABEL[kind === "area" ? "price" : "area"]}별</h2>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {crossCells.map((s) => (
+                <Link
+                  key={s.bandSlug}
+                  href={`${regionHref}/${kind === "area" ? "price" : "area"}/${s.bandSlug}`}
+                  className="tile rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink"
+                >
+                  {s.bandLabel}
+                  <span className="ml-1 font-medium text-text-3">{s.txCount.toLocaleString("ko-KR")}건</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+        <nav aria-label="관련 화면" data-tone="blue" className="lq-panel flex flex-col divide-y">
+          <Link href={regionHref} className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline">
+            {region.name} 구간 전체 <span aria-hidden="true" className="text-text-3">›</span>
+          </Link>
+          <Link href="/tx" className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline">
+            다른 지역 <span aria-hidden="true" className="text-text-3">›</span>
+          </Link>
+        </nav>
+        <p className="px-1 t-caption leading-[1.6] text-text-3">
+          데이터 출처: 국토교통부 실거래가 공개시스템 신고분(해제 신고분 제외){range ? ` · ${range}` : ""}
+        </p>
+        <AdZone placement="sidebar" seed={2} plan={null} className="hidden lg:block" />
+      </aside>
+      </div>
     </PageShell>
   );
 }

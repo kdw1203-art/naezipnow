@@ -111,7 +111,7 @@ export function RegionHero({
                     `${avgPrice.ym ? ymLong(avgPrice.ym) : "그 달"}에 계약해 국토교통부에 신고된 이 지역 아파트 매매 ${
                       avgPrice.trades?.toLocaleString("ko-KR") ?? ""
                     }건의 가격을 단순 평균했어요(해제 신고 제외).`,
-                    "어떤 평형이 많이 팔렸는지에 따라 달마다 크게 움직여요 — 추세는 위 시세 지수로 보세요.",
+                    "어떤 평형이 많이 팔렸는지에 따라 달마다 크게 움직인다. 추세는 위 시세 지수로.",
                   ]
             }
             source={
@@ -140,7 +140,7 @@ export function RegionHero({
             term="jeonse-garyul"
             how={[
               "한국부동산원이 공표한 이 지역 아파트 전세가율(매매가 대비 전세가 비율)을 옮겨요.",
-              "전월 대비는 지난달 전세가율과의 차이(%p)예요.",
+              "전월 대비는 지난달 전세가율과의 차이(%p).",
             ]}
             source={`한국부동산원 R-ONE${jeonse.ym ? ` · ${ymLong(jeonse.ym)} 기준` : ""}`}
           />
@@ -163,7 +163,7 @@ export function RegionHero({
             how={[
               "국토교통부에 신고된 이 지역 아파트 매매 건수를 계약한 달 기준으로 셌어요.",
               "신고 기한(계약 후 30일)이 지나지 않은 달은 아직 신고가 들어오는 중이라 이 칸에서 빼고 따로 적어요.",
-              "전월 대비는 신고가 끝난 두 달끼리 비교해요.",
+              "전월 대비는 신고가 끝난 두 달끼리 비교.",
             ]}
             source="국토교통부 실거래가 공개시스템"
           />
@@ -187,7 +187,7 @@ export function RegionHero({
       {overview.subline && <p className="m-0 mt-0.5 t-body font-bold text-text-2">{overview.subline}</p>}
       {!overview.hasReb && (
         <p className="m-0 mt-1.5 t-sub text-text-3">
-          한국부동산원 지역 통계는 아직 없어요 — 공표되면 붙어요. 아래 숫자는 국토교통부 실거래 신고 자료예요.
+          한국부동산원 지역 통계 아직 없음(공표되면 반영) · 아래 숫자는 국토교통부 실거래 신고 자료
         </p>
       )}
       {tiles.length > 0 && (

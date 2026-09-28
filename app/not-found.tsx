@@ -52,11 +52,8 @@ export default function NotFound() {
       <h1 className="rise-in-1 text-[15px] font-bold text-ink">
         이 집은 이사 갔어요<span className="text-brand-red">.</span>
       </h1>
-      <p className="rise-in-2 text-[13px] leading-[1.6] text-text-3">
-        주소가 바뀌었거나 삭제된 페이지예요.
-        <br />
-        찾던 단지나 동네를 바로 검색해 보세요.
-      </p>
+      {/* [1015 · 규칙 D] 두 문장 → 사실 한 줄(검색창이 곧 다음 행동이다) */}
+      <p className="rise-in-2 t-body leading-[1.6] text-text-3">주소가 바뀌었거나 삭제된 페이지</p>
 
       {/* 검색 — JS 없이 동작하는 GET 폼. 통합 검색(/search?q=)이 단지·지역·노트·이야기·뉴스를 찾는다. */}
       <form
@@ -84,10 +81,11 @@ export default function NotFound() {
         </button>
       </form>
 
+      {/* [1015 · 규칙 J] 채움 파랑은 검색 버튼 하나 — "홈으로"는 지도 열기와 같은 외곽선 */}
       <div className="rise-in-3 flex gap-2">
         <Link
           href="/"
-          className="btn-primary btn-cta rounded-lg px-[22px] py-3 text-[13px]"
+          className="inline-flex min-h-10 items-center rounded-lg border border-line bg-surface px-[22px] py-3 text-[13px] font-bold text-text-1 no-underline"
         >
           홈으로
         </Link>

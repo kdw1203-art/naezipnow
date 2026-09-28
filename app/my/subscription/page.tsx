@@ -258,8 +258,8 @@ export default async function MySubscriptionPage() {
             <div className="flex flex-col gap-1">
               <p className="t-body font-bold text-ink">
                 {expiresLabel
-                  ? `${expiresLabel}까지 이용할 수 있어요${daysLeft !== null ? ` (${daysLeft}일 남음)` : ""}`
-                  : "이용 기간 정보가 없어요"}
+                  ? `${expiresLabel}까지 이용${daysLeft !== null ? ` (${daysLeft}일 남음)` : ""}`
+                  : "이용 기간 정보 없음"}
               </p>
               <p className="t-sub text-text-2">
                 {expiresLabel
@@ -269,12 +269,12 @@ export default async function MySubscriptionPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-1">
-              <p className="t-body font-bold text-ink">무료 플랜을 이용 중이에요</p>
+              <p className="t-body font-bold text-ink">무료 플랜 이용 중</p>
               <p className="t-sub text-text-2">
                 {/* [1004 · 리뷰] "AI 비교 리포트 무제한"은 집행되지 않는 약속이었다(플러스도 AI 분석은 월 50회).
                     요금표(PLAN_FEATURE_MATRIX)가 실제로 집행하는 숫자로 바꾼다. */}
-                {planLabel("pro")}로 올리면 AI 분석이 월 50회, AI 임장노트 자동정리가 월 30회로 늘어나요.
-                결제한 적이 있다면 아래 결제 내역에서 확인할 수 있어요.
+                {/* [1015] 권유문 → 사실 한 줄(숫자는 요금표 PLAN_FEATURE_MATRIX 가 집행하는 값 그대로) */}
+                {planLabel("pro")}는 AI 분석 월 50회 · AI 임장노트 자동정리 월 30회
               </p>
             </div>
           )}

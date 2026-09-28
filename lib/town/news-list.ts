@@ -91,6 +91,7 @@ export function buildNewsRows(posts: Post[], now: number = Date.now()): NewsRow[
       host: hostOf(p.sourceUrl),
       sourceUrl: p.sourceUrl?.trim() || null,
       image: newsImageUrl(p),
+      views: Math.max(0, Number(p.viewCount ?? 0) || 0),
       related: c.related.slice(0, 4).map((r) => {
         const rp = byId.get(r.id)!;
         return {

@@ -231,8 +231,8 @@ export default async function QnaDetailPage({
         <h2 className="mb-2.5 t-body font-bold text-ink">답변 {answers.length}</h2>
         {answers.length === 0 ? (
           <div className="card t-body text-text-3">
-            {/* [1012] 규칙 6 — 권유 대신 사실 */}
-            이 질문에 달린 답변이 아직 없어요 — 아래 칸에 쓴 답변이 첫 답변으로 실려요
+            {/* [1012] 규칙 6 — 권유 대신 사실 · [1015] 한 줄로 */}
+            이 질문에 달린 답변이 아직 없어요.
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -258,40 +258,38 @@ export default async function QnaDetailPage({
      단지 허브는 위에서 조회에 성공했을 때만 넣는다. */
   const linkedName = question.complexName ?? question.region ?? null;
   const related: { href: string; icon: string; label: string; desc: string }[] = [];
+  /* [1015] 링크 부제는 명사만, 카드 머리의 안내문("답변을 기다리는 동안 …예요")은 걷었다(브리프 규칙 B·D) */
   if (complexHref && linkedName) {
     related.push({
       href: complexHref,
       icon: "building",
       label: `${linkedName} 단지 허브`,
-      desc: "실거래·지도·임장노트가 한 곳에",
+      desc: "실거래 · 지도 · 임장노트",
     });
   }
   related.push({
     href: "/map",
     icon: "map",
     label: "지도에서 위치 보기",
-    desc: "주변 단지·실거래를 지도에서",
+    desc: "주변 단지 · 실거래",
   });
   related.push({
     href: "/notes",
     icon: "clipboard",
     label: "공개 임장노트",
-    desc: "다녀온 사람이 남긴 현장 기록",
+    desc: "현장 기록",
   });
   related.push({
     href: "/notes/new",
     icon: "notebook-pen",
     label: "임장노트 쓰기",
-    desc: "직접 보고 온 것을 적어두기",
+    desc: "내 현장 기록",
   });
 
   const aside = (
     <div className="flex flex-col gap-3">
-      <section className="card flex flex-col gap-2 p-[18px]">
+      <section className="card flex flex-col gap-2 p-[18px] max-md:p-3.5">
         <h2 className="t-body font-bold text-ink">이 단지의 다른 기록</h2>
-        <p className="t-sub text-text-3">
-          답변을 기다리는 동안 볼 수 있는 실거래·지도·임장노트예요.
-        </p>
         <div className="mt-1 flex flex-col gap-2">
           {related.map((l) => (
             <Link
@@ -313,8 +311,8 @@ export default async function QnaDetailPage({
       </section>
 
       {topics.length > 0 && (
-        <section className="card flex flex-col gap-2 p-[18px]">
-          <h2 className="t-body font-bold text-ink">비슷한 주제 더 보기</h2>
+        <section className="card flex flex-col gap-2 p-[18px] max-md:p-3.5">
+          <h2 className="t-body font-bold text-ink">비슷한 주제</h2>
           {/* 주제는 태그·본문에서 추정한 값이라 단정하지 않고 "검색 링크" 로만 쓴다 */}
           <div className="flex flex-wrap gap-1.5">
             {topics.map((k) => {
@@ -341,7 +339,7 @@ export default async function QnaDetailPage({
   return (
     <PageShell breadcrumb="동네이야기 › 단지 Q&A" title={question.title} wide>
       <TownCategoryNav stick />
-      <div className={`${QNA_THEME_CLASS} mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]`}>
+      <div className={`${QNA_THEME_CLASS} mt-4 grid grid-cols-1 gap-4 max-md:mt-3 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]`}>
         <div>{body}</div>
         {aside}
       </div>

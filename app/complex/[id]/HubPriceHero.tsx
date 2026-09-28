@@ -62,10 +62,9 @@ export function HubPriceHero({
         <p className="mt-1 t-section text-on-dark">
           {txFailed ? "실거래를 지금 불러오지 못했어요" : "아직 신고된 매매 실거래가 없어요"}
         </p>
+        {/* [1015 · 규칙 D] 대시 잇기 없이 한 줄 */}
         <p className="mt-0.5 t-sub text-on-dark-muted">
-          {txFailed
-            ? "거래가 없다는 뜻이 아니라 조회에 실패한 거예요 — 잠시 후 새로고침해 주세요."
-            : "신고가 들어오면 여기에 가장 최근 거래가 보여요(계약 후 30일 안에 신고)."}
+          {txFailed ? "조회 실패이지 거래가 없다는 뜻은 아닙니다. 잠시 후 새로고침해 주세요." : "계약 후 30일 안에 신고 · 신고가 들어오면 가장 최근 거래 표시"}
         </p>
       </div>
     );
@@ -94,15 +93,15 @@ export function HubPriceHero({
             term="silgeoraega"
             title="최근 실거래가"
             how={[
-              "이 단지는 같은 평형·면적대 거래가 3건이 안 돼 평균을 내지 않고, 가장 최근에 계약된 한 건을 그대로 보여 드려요(신고 순서가 아니라 계약일 순서).",
-              "해제 신고된 거래는 빼요.",
+              "이 단지는 같은 평형·면적대 거래가 3건이 안 돼 평균을 내지 않고, 가장 최근에 계약된 한 건을 그대로 표시(신고 순서가 아니라 계약일 순서).",
+              "해제 신고된 거래는 제외.",
             ]}
             source={source}
           />
         </div>
         <Won manwon={h.priceManwon} className="mt-1 block t-display leading-none text-on-dark" />
         <p className="mt-1.5 t-sub text-on-dark-muted">
-          {d ? `${dealDateLabel(d.ym, d.day)} 계약` : range} · 한 건 거래라 평균이 아니에요
+          {d ? `${dealDateLabel(d.ym, d.day)} 계약` : range} · 한 건 거래(평균 아님)
         </p>
       </div>
     );
@@ -128,13 +127,13 @@ export function HubPriceHero({
           term="silgeoraega"
           title="최근 실거래가"
           how={[
-            `${h.basis === "band" ? `${what} 면적대(평형마다 3건이 안 돼 면적대로 묶었어요)` : `전용 ${h.unitM2}㎡ — 최근 거래가 가장 많은 평형`}의 최근 ${h.sampleSize}건 평균이에요 · ${range} 계약.`,
+            `${h.basis === "band" ? `${what} 면적대(평형마다 3건이 안 돼 면적대로 묶음)` : `전용 ${h.unitM2}㎡(최근 거래가 가장 많은 평형)`}의 최근 ${h.sampleSize}건 평균 · ${range} 계약.`,
             /* [1009 · C 리뷰] 예전 문구 "아래 그래프의 '기간 시작 대비'와 같은 기준이에요"는 사실이 아니었다 — 여기는 한 건 단위
                (기간 첫 거래 최대 6건 평균), 그래프 머리는 달 평균끼리다(헬리오시티: 여기 ▼0.8% · 그래프 ▼1.2%, 둘 다 "26.01"). */
             base
-              ? `비교 기준: 같은 ${h.basis === "band" ? "면적대" : "평형"}의 기간 첫 거래 ${base.count}건 평균 ${formatEokMan(base.avgManwon, { unit: "만원" })}(${ymRangeLabel(base.firstYm, base.latestYm)} 계약). 아래 그래프 머리는 달 평균끼리 비교라 숫자가 조금 다를 수 있어요.`
-              : `비교 기준: 대표가 표본(최근 거래) 말고 같은 ${h.basis === "band" ? "면적대" : "평형"} 거래가 3건이 안 돼 비교하지 않아요 — 아래 그래프도 이 ${h.basis === "band" ? "면적대" : "평형"}은 기간 등락을 적지 않아요.`,
-            "AI 분석의 '최근 실거래가'와 같은 규칙이에요(최근 200건 중 가장 많이 거래된 평형, 3건 이상). 해제 신고된 거래는 빼요.",
+              ? `비교 기준: 같은 ${h.basis === "band" ? "면적대" : "평형"}의 기간 첫 거래 ${base.count}건 평균 ${formatEokMan(base.avgManwon, { unit: "만원" })}(${ymRangeLabel(base.firstYm, base.latestYm)} 계약). 아래 그래프 머리는 달 평균끼리 비교라 숫자가 조금 다를 수 있다.`
+              : `비교 기준: 대표가 표본(최근 거래) 말고 같은 ${h.basis === "band" ? "면적대" : "평형"} 거래가 3건이 안 돼 비교하지 않는다. 아래 그래프도 이 ${h.basis === "band" ? "면적대" : "평형"}은 기간 등락을 적지 않는다.`,
+            "AI 분석의 '최근 실거래가'와 같은 규칙(최근 200건 중 가장 많이 거래된 평형, 3건 이상). 해제 신고된 거래는 제외.",
           ]}
           source={source}
         />
@@ -144,7 +143,7 @@ export function HubPriceHero({
         {pct !== null && <Delta pct={pct} className="t-section" srContext={since} />}
       </div>
       <p className="mt-1.5 t-sub text-on-dark-muted">
-        {sentence ?? `${range} 계약 ${h.sampleSize}건 평균 · 비교할 거래가 아직 적어요`}
+        {sentence ?? `${range} 계약 ${h.sampleSize}건 평균 · 비교할 거래 부족`}
       </p>
     </div>
   );

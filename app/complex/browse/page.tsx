@@ -93,10 +93,8 @@ export default async function ComplexBrowsePage({
 
   return (
     <PageShell breadcrumb="홈 › 단지 실거래 › 서울 단지 브라우즈" title="서울 단지별 실거래 현황">
-      <p className="rise-in mb-4 t-body text-text-2">
-        국토교통부 실거래가 기반 단지별 현황 — 매물 호가가 아닙니다. 구를 선택해
-        최근 실거래가·평단가·거래량을 확인하세요.
-      </p>
+      {/* [1015 · 규칙 B·D] 사용법 문장("구를 선택해 … 확인하세요")은 걷고 출처 한 줄만 */}
+      <p className="rise-in mb-4 t-caption text-text-3 max-md:mb-2">국토교통부 실거래가 기준 · 매물 호가 아님</p>
 
       {/* A5 — 면적대·가격대 랜딩 진입점 */}
       <p className="rise-in mb-4 -mt-2 t-body">
@@ -106,7 +104,7 @@ export default async function ComplexBrowsePage({
       </p>
 
       {/* 구 선택 칩 — 강남4구 우선 */}
-      <div className="rise-in-1 mb-5 flex flex-wrap gap-1.5">
+      <div className="rise-in-1 mb-5 flex flex-wrap gap-1.5 max-md:mb-3">
         {SEOUL_BROWSE_REGIONS.map((r) => {
           const active = r.id === region.id;
           return (
@@ -127,18 +125,21 @@ export default async function ComplexBrowsePage({
       </div>
 
       {/* 해당 구 단지 요약 */}
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">
+      <section className="rise-in-2 mb-6 max-md:mb-3">
+        <h2 className="mb-1.5 px-0.5 t-section text-ink">
           {label} 단지별 현황{" "}
           <span className="t-sub font-medium text-text-3">
             최신 거래순 · 상위 {summaries.length}개
           </span>
         </h2>
-        <ComplexSummaryTable
-          summaries={summaries}
-          regionId={region.id}
-          failed={summariesFailed}
-        />
+        {/* [1015 · 규칙 I] 실거래 표 껍데기 = blue 리퀴드 판(스크롤 상자는 표 부품 안쪽) */}
+        <div className="lq-panel pb-2" data-tone="blue">
+          <ComplexSummaryTable
+            summaries={summaries}
+            regionId={region.id}
+            failed={summariesFailed}
+          />
+        </div>
       </section>
 
       {/* CTA */}

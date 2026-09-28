@@ -115,14 +115,8 @@ export function ToolHero({
               </span>
             )}
             <h1 className="t-display text-balance text-on-dark">{title}</h1>
-            {persona && (
-              <span className="rounded-md bg-on-dark-panel px-2 py-px t-caption font-bold tracking-wider text-on-dark-muted">
-                {persona.character}
-              </span>
-            )}
           </div>
-          {/* 하는 일 한 줄이 먼저, 자료 설명(lead)이 그 뒤 — 들어온 사람이 읽는 순서다 */}
-          {persona && <p className="t-body max-w-[52ch] text-on-dark">{persona.premise}</p>}
+          {/* [1015 · 규칙 C] 성격 배지(persona.character)·설명 문장(premise)은 뺐다 — personaId 는 도구 색 아이콘 칩에만 쓴다 */}
           {lead && <p className="t-body max-w-[52ch] text-on-dark-muted">{lead}</p>}
         </div>
         {chart && (

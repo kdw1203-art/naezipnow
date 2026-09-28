@@ -1,5 +1,6 @@
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import Link from "next/link";
+import { seedGradient } from "@/lib/town/shared";
 import {
   loadHubInspectionNotes,
   loadRelatedNews,
@@ -24,6 +25,10 @@ import {
 
    조회가 실패하면 섹션을 생략한다. "노트 0건"과 "조회 실패"는 다른 말이라,
    실패를 0건처럼 그리지 않는다.
+
+   [1015 · 규칙 H·I] 노트 행에 40px 정사각 썸네일(noteCoverUrl — 홈·피드와 같은 함수, 없으면 단색 칸)을 왼쪽에,
+   목록 껍데기는 리퀴드 판(lq-panel · 노트 = hanji · 기사 = blue). 이 자리의 커버 칸은 **정사각**(40px)이다.
+   AI 분석 버튼은 채움 파랑에서 outline 으로(화면당 채움 파랑 1개 — 히어로 아래 "임장노트 쓰기").
    ========================================================================== */
 
 /* [968 · 1] loadNotes·loadNews 는 section-loaders.ts(loadHubInspectionNotes·loadRelatedNews)로
@@ -62,9 +67,9 @@ export async function ComplexNotesNewsAi({
 
   return (
     /* [968 · 7] cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미룬다(page.tsx 주석 참고) */
-    <section className="cv-auto mt-6 grid gap-4 lg:grid-cols-3">
+    <section className="cv-auto mt-6 grid gap-4 max-md:mt-3 max-md:gap-3 lg:grid-cols-3">
       {/* ── 이 단지 임장노트 ─────────────────────────────────────────────── */}
-      <div className="card rounded-2xl p-5">
+      <div className="card rounded-2xl p-5 max-md:p-3.5">
         <div className="flex items-baseline justify-between">
           <h2 className="t-section text-ink">이 단지 임장노트</h2>
           {notes.length > 0 && (
@@ -74,8 +79,7 @@ export async function ComplexNotesNewsAi({
 
         {notesFailed ? (
           <p className="mt-3 t-sub text-text-3">
-            노트를 지금 불러오지 못했어요. 노트가 없는 게 아니라 조회가 실패한 거예요 —
-            잠시 후 새로고침해 주세요.
+            노트를 지금 불러오지 못했어요. 잠시 후 새로고침해 주세요.
           </p>
         ) : notes.length === 0 ? (
           /* [1012 · 규칙 6] 권유("남겨 주세요") → 어디서(단지명) 사실만 — 쓰기 입구는 위 행동 줄이 맡는다 */
@@ -83,18 +87,32 @@ export async function ComplexNotesNewsAi({
             {name}에 공개된 임장노트가 아직 없어요.
           </p>
         ) : (
-          <ul className="mt-3 flex flex-col gap-2">
+          <ul className="lq-panel mt-3 flex list-none flex-col divide-y p-0" data-tone="hanji">
             {notes.map((n) => (
               <li key={n.id}>
                 <Link
                   href={`/notes/${encodeURIComponent(n.id)}`}
-                  className="block rounded-xl border border-line bg-surface px-3.5 py-2.5 transition-colors hover:border-primary"
+                  className="press flex min-h-12 items-center gap-3 py-2 no-underline"
                 >
-                  <span className="block truncate t-body font-bold text-ink">
-                    {n.title}
+                  {/* 40px 정사각 썸네일 — 고른 템플릿 → 첫 사진 → 단색 칸 */}
+                  <span
+                    className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-divider"
+                    style={n.cover ? undefined : { background: seedGradient(n.region || n.id) }}
+                    aria-hidden="true"
+                  >
+                    {n.cover && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={n.cover} alt="" width={40} height={40} loading="lazy" className="h-10 w-10 object-cover" />
+                    )}
                   </span>
-                  <span className="mt-0.5 block t-sub text-text-3">
-                    {[n.visitDate, n.region].filter(Boolean).join(" · ") || "방문일 미기재"}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate t-body font-bold text-ink">{n.title}</span>
+                    <span className="mt-0.5 block truncate t-sub text-text-3">
+                      {[n.visitDate, n.region].filter(Boolean).join(" · ") || "방문일 미기재"}
+                    </span>
+                  </span>
+                  <span aria-hidden="true" className="t-body text-text-3">
+                    ›
                   </span>
                 </Link>
               </li>
@@ -111,7 +129,7 @@ export async function ComplexNotesNewsAi({
       </div>
 
       {/* ── AI 분석 ──────────────────────────────────────────────────────── */}
-      <div className="card rounded-2xl p-5">
+      <div className="card rounded-2xl p-5 max-md:p-3.5">
         <h2 className="t-section text-ink">AI 분석</h2>
         {/* [1011] "AI 가 읽는 재료는 아래와 같습니다" 문단과 그 아래 소스 목록(실거래 N건 ·
             추이 · 이웃 노트 N건 · 지역 뉴스 N건)을 걷었다(소유자 지시 — 같은 종류를 AI 도구
@@ -120,32 +138,32 @@ export async function ComplexNotesNewsAi({
             그대로 붙는다(check:ai-compliance 가 강제한다). */}
         <Link
           href={analysisHref}
-          className="btn-primary btn-cta mt-3 block rounded-xl p-2.5 text-center t-sub font-bold text-white"
+          className="btn-outline mt-3 block rounded-xl p-2.5 text-center t-sub font-bold"
         >
           이 단지 AI 분석 받기
         </Link>
       </div>
 
       {/* ── 관련 기사 ────────────────────────────────────────────────────── */}
-      <div className="card rounded-2xl p-5">
+      <div className="card rounded-2xl p-5 max-md:p-3.5">
         <h2 className="t-section text-ink">관련 기사</h2>
         {news.length === 0 ? (
           <p className="mt-3 t-sub text-text-3">
             이 단지·지역을 다룬 기사가 아직 모이지 않았어요.
           </p>
         ) : (
-          <ul className="mt-3 flex flex-col gap-2">
+          <ul className="lq-panel mt-3 flex list-none flex-col divide-y p-0" data-tone="blue">
             {news.map((n) => (
               <li key={n.id}>
-                <Link
-                  href={n.href}
-                  className="block rounded-xl border border-line bg-surface px-3.5 py-2.5 transition-colors hover:border-primary"
-                >
-                  <span className="line-clamp-2 block t-body font-bold text-ink">
-                    {n.title}
+                <Link href={n.href} className="press flex min-h-12 items-center gap-3 py-2 no-underline">
+                  <span className="min-w-0 flex-1">
+                    <span className="line-clamp-2 block t-body font-bold text-ink">{n.title}</span>
+                    <span className="mt-0.5 block t-sub text-text-3">
+                      {[n.source, n.when].filter(Boolean).join(" · ") || "출처 미상"}
+                    </span>
                   </span>
-                  <span className="mt-0.5 block t-sub text-text-3">
-                    {[n.source, n.when].filter(Boolean).join(" · ") || "출처 미상"}
+                  <span aria-hidden="true" className="t-body text-text-3">
+                    ›
                   </span>
                 </Link>
               </li>

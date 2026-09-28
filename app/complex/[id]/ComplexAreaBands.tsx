@@ -43,7 +43,8 @@ export function AreaBandsView({ bands, compact = false }: { bands: readonly Area
         면적대별 실거래가{" "}
         <span className="t-sub font-medium text-text-3">{bands.length}구간 · 국토부</span>
       </h2>
-      <ul className="card flex flex-col divide-y divide-divider rounded-2xl px-4">
+      {/* [1015 · 규칙 I] 실거래 목록 = blue 리퀴드 판 */}
+      <ul className="lq-panel flex flex-col divide-y" data-tone="blue">
         {bands.map((b) => (
           <li key={b.label} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 py-2.5">
             <div className="min-w-0">
@@ -75,7 +76,7 @@ export function AreaBandsView({ bands, compact = false }: { bands: readonly Area
         구간 · {period} 계약분 {totalCount.toLocaleString("ko-KR")}건 기준 ·
         <span className="inline-flex items-center">
           해제 신고
-          <Explain term="haejegeorae" how="해제 신고된 거래는 이 표의 건수·평균·최저·최고에서 모두 빼요." />
+          <Explain term="haejegeorae" how="해제 신고된 거래는 이 표의 건수·평균·최저·최고에서 모두 제외." />
         </span>
         제외 · 평균은 표본 기간 전체 거래의 산술평균
       </p>
@@ -104,10 +105,7 @@ export async function ComplexAreaBands({
     return (
       <section className={wrap}>
         <h2 className="mb-1.5 px-0.5 t-section text-ink">면적대별 실거래가</h2>
-        <p className="card rounded-2xl px-4 py-3.5 t-body text-text-3">
-          지금은 면적대별 실거래가를 불러오지 못했어요. 거래가 없는 게 아니라 조회에 실패한
-          것이라, 잠시 후 새로고침하면 보일 수 있어요.
-        </p>
+        <p className="card rounded-2xl px-4 py-3.5 t-body text-text-3">면적대별 실거래가를 지금 불러오지 못했어요. 잠시 후 새로고침해 주세요.</p>
       </section>
     );
   }

@@ -166,12 +166,12 @@ export default async function SharedRunPage({
         )}
 
         <div className="rounded-lg bg-bg px-4 py-3 t-sub text-text-3">
-          이 화면은 실행한 그때의 결과예요 — 지금 자료와 다를 수 있어요. 숫자는 공공데이터를 자동 계산한
+          실행한 그때의 결과이며 지금 자료와 다를 수 있습니다. 숫자는 공공데이터를 자동 계산한
           참고값이며 투자 권유가 아닙니다.
         </div>
 
         <Link href={`/analysis/ai/${run.tool}`} className="btn-primary btn-md self-start no-underline">
-          지금 자료로 직접 해 보기 ›
+          지금 자료로 다시 계산 ›
         </Link>
       </div>
     </PageShell>

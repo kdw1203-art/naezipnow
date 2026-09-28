@@ -131,7 +131,7 @@ export function ExpertApplyCta({
         setPhase("idle");
         promptSignup({
           action: "expert_register",
-          title: "전문가 인증을 접수할까요?",
+          title: "전문가 인증 접수",
           benefit:
             "인증 신청은 계정에 연결해서 접수해요. 1차 자동 검증 결과와 이후 심사 안내를 내 알림함으로 받아보실 수 있습니다.",
           callbackUrl: "/town/experts",

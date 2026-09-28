@@ -215,12 +215,12 @@ export function SupplyClient({
   const tableHiddenCount = list.length - tableRows.length;
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
       {/* ── 본문 ── */}
       <div className="flex flex-col gap-3">
         {truncated && (
           <div className="rounded-lg border border-line bg-surface px-4 py-3 t-sub text-text-3">
-            데이터가 조회 상한에 도달해 일부가 잘렸을 수 있어요 — 지역별 곳수·
+            데이터가 조회 상한에 도달해 일부가 잘렸을 수 있어요. 지역별 곳수·
             세대수 합계가 실제보다 적게 보일 수 있습니다.
           </div>
         )}
@@ -242,15 +242,18 @@ export function SupplyClient({
                   [1009 · H 리뷰] 출처를 사실대로: apartment_supply 1,338행 중 983행(73%)은 청약홈 분양공고 입주예정월을 매일
                   자동 적재한 것(lib/market/supply-ingest.ts · 마지막 적재 2026-09-20), 나머지 355행이 2026년 2월 수동 업로드분이다.
                   예전 문구 "공공데이터 입주예정물량 · 수동 적재"·"자동 갱신 없음"은 자동 경로가 생기기 전 이야기였다. */}
+              {/* [1015] 시트 문구에서 "적재" 같은 내부 낱말을 걷고(1011 지시와 같은 줄기) 어미를 줄였다(브리프 규칙 D).
+                  페이지 위 안내 띠를 걷었으므로 월 단위·두 원천·기준 시점은 여기 한 곳이 말한다. */}
               <Explain
                 term="ipju-mulryang"
+                body="청약홈 분양공고의 입주예정월(매일 갱신)과 2026년 2월에 받은 공공데이터 입주예정물량을 합친 자료입니다. 사업 진행·일정 변경에 따라 실제와 다를 수 있습니다."
                 how={[
-                  "청약홈 분양공고의 입주예정월(매일 자동 적재)과 공공데이터 입주예정물량(2026년 2월 수동 적재분)의 단지별 세대수를 입주월로 묶어 더했어요(입주월 순 마지막 24개월까지 표시).",
-                  "입주는 월 단위로만 공개돼 날짜는 알 수 없어요. 세대수가 비어 있는 단지는 0으로 더해져요.",
-                  "지역을 고르면 그 시·도 단지만 더해요.",
+                  "두 원천의 단지별 세대수를 입주월로 묶어 더합니다(입주월 순 마지막 24개월 표시).",
+                  "입주는 월 단위로만 공개되어 날짜는 없습니다. 세대수가 빈 단지는 0으로 더합니다.",
+                  "지역을 고르면 그 시·도 단지만 더합니다.",
                 ]}
-                source={`청약홈 분양공고(공공데이터포털 API · 매일 자동) · 공공데이터 입주예정물량(2026년 2월 수동)${
-                  asOfLabel ? ` · 최근 적재 ${asOfLabel}` : ""
+                source={`청약홈 분양공고(공공데이터포털 · 매일) · 공공데이터 입주예정물량(2026년 2월)${
+                  asOfLabel ? ` · ${asOfLabel} 기준` : ""
                 }`}
               />
             </span>
@@ -332,7 +335,7 @@ export function SupplyClient({
           {noMonth.length > 0 && (
             <p className="m-0 t-caption text-text-3">
               입주월이 비었거나 달이 잘못 적힌 {noMonth.length.toLocaleString("ko-KR")}곳(
-              {noMonthHouseholds.toLocaleString("ko-KR")}세대)은 월별 합계에서 뺐어요 — 아래 표에는 “월 미정”으로 있어요.
+              {noMonthHouseholds.toLocaleString("ko-KR")}세대)은 월별 합계에서 뺐어요. 아래 표에는 “월 미정”으로 있어요.
             </p>
           )}
         </div>
@@ -388,8 +391,7 @@ export function SupplyClient({
             ))}
             {featuredMore > 0 && (
               <p className="rise-in-2 px-1 t-sub text-text-3">
-                외 {featuredMore.toLocaleString()}곳 — 전체 목록은 아래 표에서
-                확인하세요.
+                외 {featuredMore.toLocaleString()}곳은 아래 표에 있습니다.
               </p>
             )}
           </>
@@ -432,10 +434,11 @@ export function SupplyClient({
                 </span>
               </div>
             ))}
+            {/* [1015] 설명문("…추려 보여드려요 — …확인하세요") → 숫자 한 줄(브리프 규칙 D) */}
             <p className="rise-in-3 px-1 t-sub text-text-3">
               {upcomingMore > 0
-                ? `이번 분기·예정 카드는 대표 단지를 추려 보여드려요 (예정 외 ${upcomingMore.toLocaleString()}곳). 전체 목록은 아래 표에서 확인하세요.`
-                : "이번 분기·예정 카드는 대표 단지를 추려 보여드려요 — 전체 목록은 아래 표에서 확인하세요."}
+                ? `대표 ${upcomingShown.length}곳 · 예정 외 ${upcomingMore.toLocaleString()}곳은 아래 표에 있습니다.`
+                : `대표 ${upcomingShown.length}곳 · 전체 목록은 아래 표에 있습니다.`}
             </p>
           </>
         )}
@@ -452,7 +455,8 @@ export function SupplyClient({
             해당 지역 입주 예정 물량 데이터가 없어요.
           </div>
         ) : (
-          <div className="rise-in-4 card overflow-x-auto rounded-2xl px-[18px] py-1">
+          /* [1015] 표 껍데기 = 리퀴드 판(sand — 입주 일정 톤, 브리프 규칙 I) */
+          <div className="rise-in-4 lq-panel overflow-x-auto py-1" data-tone="sand">
             <div className="min-w-[520px]">
               <div className="grid grid-cols-[1.8fr_.8fr_.8fr_.9fr] gap-2 border-b border-divider py-2 t-caption text-text-3">
                 <span>단지 · 지역</span>
@@ -497,8 +501,8 @@ export function SupplyClient({
                 </div>
               )}
               <div className="pb-2 pt-1 t-caption text-text-3">
-                출처 청약홈 분양공고(매일 자동 적재) · 공공데이터 입주예정물량(2026년 2월 수동 적재)
-                {asOfLabel ? ` · 최근 적재 ${asOfLabel}` : ""}
+                출처 청약홈 분양공고(매일 갱신) · 공공데이터 입주예정물량(2026년 2월)
+                {asOfLabel ? ` · ${asOfLabel} 기준` : ""}
               </div>
             </div>
           </div>
@@ -506,35 +510,21 @@ export function SupplyClient({
       </div>
 
       {/* ── 우측 사이드 (청약 센터 aside 구성) ── */}
-      <aside className="flex flex-col gap-3.5">
-        {/* AI 인사이트 패널 (실 수치 — 최다 입주 시기·총 세대수) */}
-        <div className="rise-in-2">
+      <aside className="flex flex-col gap-3.5 max-md:gap-3">
+        {/* AI 인사이트 패널 (실 수치 — 최다 입주 시기·총 세대수)
+            [1015] 폰에서는 숨긴다 — 위 KPI 줄과 같은 숫자라 한 화면에 두 번 나온다(브리프 규칙 E). 데스크톱 레일은 그대로. */}
+        <div className="rise-in-2 max-md:hidden">
+          {/* [1015] 위 KPI 줄(합계·가장 많은 달)과 같은 숫자를 다시 적던 두 칸과 "…유리할 수 있어요" 조언 문장을 걷고
+              사실 한 줄만(브리프 규칙 D·J — 같은 사실 두 곳 금지). */}
           <AIPanel title="입주 물량 인사이트" className="rounded-3xl">
             {monthly.length === 0 ? (
-              <>
-                표시할 입주 물량 데이터가 없어요. 지역을 바꾸거나 전국을 선택해
-                보세요.
-              </>
+              <>표시할 입주 물량 데이터가 없어요.</>
             ) : (
               <>
-                <div className="mb-1.5 flex justify-between rounded-lg bg-[rgba(255,255,255,.07)] px-3 py-2 text-xs">
-                  <span className="text-ai-muted">최다 입주 시기</span>
-                  <span className="font-bold text-white">
-                    {peak ? fmtYm(peak.ym) : "—"}
-                  </span>
-                </div>
-                <div className="mb-2 flex justify-between rounded-lg bg-[rgba(255,255,255,.07)] px-3 py-2 text-xs">
-                  <span className="text-ai-muted">총 예정 세대</span>
-                  <span className="font-bold text-ai-accent">
-                    {totalHouseholds.toLocaleString()}세대
-                  </span>
-                </div>
-                {scope}기준{" "}
-                <b className="text-ai-accent">{peak ? fmtYm(peak.ym) : "—"}</b>
-                에 입주가 가장 몰려 있어요
-                {peak ? ` (약 ${peak.households.toLocaleString()}세대)` : ""}.
-                입주장에는 인근 전·월세 매물이 늘어 임차 협상에 유리할 수
-                있어요.
+                {scope}기준 최다 입주 <b className="text-ai-accent">{peak ? fmtYm(peak.ym) : "—"}</b>
+                {peak ? ` · ${peak.households.toLocaleString()}세대 · ${peak.count}곳` : ""}
+                {" · "}
+                {monthlyShown.length}개월 합계 {totalHouseholds.toLocaleString()}세대
               </>
             )}
           </AIPanel>
@@ -553,6 +543,8 @@ export function SupplyClient({
             </p>
           ) : (
             <>
+              {/* [1015] 지역 행 목록 = 리퀴드 판(blue — 본문 표(sand)와 다른 톤, 브리프 규칙 I) */}
+              <div className="lq-panel flex flex-col" data-tone="blue">
               {regions.slice(0, regionsOpen ? regions.length : 5).map((r, i) => {
                 const on = region === r.region;
                 return (
@@ -561,8 +553,8 @@ export function SupplyClient({
                     type="button"
                     onClick={() => selectRegion(on ? null : r.region)}
                     aria-pressed={on}
-                    className={`press flex min-h-[40px] w-full items-center justify-between rounded-lg px-1.5 py-[7px] text-left text-xs ${
-                      on ? "bg-primary-soft" : ""
+                    className={`press flex min-h-[40px] w-full items-center justify-between border-b py-[7px] text-left text-xs last:border-b-0 ${
+                      on ? "font-bold" : ""
                     }`}
                   >
                     <span className="flex items-center gap-2 font-bold text-ink">
@@ -571,12 +563,13 @@ export function SupplyClient({
                       </span>
                       {r.region}
                     </span>
-                    <span className="tabular-nums text-text-2">
+                    <span className="t-num text-text-2">
                       {r.households.toLocaleString("ko-KR")}세대 · {r.count}곳
                     </span>
                   </button>
                 );
               })}
+              </div>
               {regions.length > 5 && (
                 <button
                   type="button"
@@ -596,9 +589,7 @@ export function SupplyClient({
                   전국 전체 보기
                 </button>
               )}
-              <p className="mt-1 t-caption text-text-3">
-                지역을 선택하면 해당 지역 입주 물량만 볼 수 있어요.
-              </p>
+              {/* [1015] "지역을 선택하면 …볼 수 있어요" 사용법 문장은 걷었다(브리프 규칙 B) */}
             </>
           )}
         </div>

@@ -22,6 +22,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AIPanel } from "@/app/components/AIPanel";
+import { Explain } from "@/app/components/explain/Explain";
 import type { AuctionApiItem } from "@/app/api/auctions/route";
 
 /* ── lib/onbid/store 는 server-only(supabase) 를 끌고 와 값 import 불가.
@@ -378,35 +379,32 @@ export function AuctionsClient({
         </div>
       </div>
 
-      {/* 요약 라인 */}
-      <p className="rise-in mb-3 t-body text-text-2">
-        한국자산관리공사 <strong className="text-ink">온비드</strong> 공매 부동산 — 입찰
-        중·예정 물건 <strong className="text-ink">{activeTotal.toLocaleString()}건</strong>.
-        감정가·최저입찰가·입찰일정은 공공 데이터 기준입니다.
-      </p>
-
-      {/* 정직 안내 · 면책 */}
-      <div className="rise-in mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-primary-soft px-4 py-3 t-sub text-primary">
+      {/* 요약 한 줄 — 사실만(숫자·출처). [1015] 아래에 있던 안내 띠("…기준이며 매일 자동 갱신됩니다. …반드시
+          확인하세요")는 걷고 ⓘ 하나로 접었다(브리프 규칙 B). 갱신 주기·원문 우선 원칙은 시트 안에 그대로. */}
+      <p className="rise-in mb-4 flex flex-wrap items-center gap-x-1 t-body text-text-2 max-md:mb-3">
         <span>
-          감정가·최저입찰가·입찰일정은 <b className="font-bold">공공 데이터</b> 기준이며 매일
-          자동 갱신됩니다. 갱신 사이에 변경·취소될 수 있으니 실제 입찰·명도 조건은{" "}
-          <a
-            href="https://www.onbid.co.kr"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="tap-line font-bold text-primary underline"
-          >
-            온비드(onbid.co.kr)
-          </a>{" "}
-          공고 원문을 반드시 확인하세요.
+          온비드 입찰 중·예정 물건{" "}
+          <strong className="text-ink">{activeTotal.toLocaleString()}건</strong> · 한국자산관리공사 공공데이터
         </span>
-      </div>
+        <Explain
+          title="공매 물건 자료"
+          body={[
+            "감정가·최저입찰가·입찰일정은 한국자산관리공사 온비드 공공데이터 기준이고 매일 갱신됩니다.",
+            "갱신 사이에 변경·취소될 수 있어 실제 입찰·명도 조건은 온비드(onbid.co.kr) 공고 원문이 우선합니다.",
+          ]}
+          how={[
+            "진행·예정 = 입찰 마감일이 오늘 이후인 물건. 마감 임박 = D-3 이내.",
+            "용도 분류(아파트·오피스텔·빌라·단독·토지·상가)는 온비드 용도 문자열을 그대로 묶은 것입니다.",
+          ]}
+          source="한국자산관리공사 온비드(공공데이터포털) · 매일 갱신"
+        />
+      </p>
 
       {fetchFailed ? (
         /* 필터 조회 실패 — "0건"이 아니라 실패라고 말한다 */
         <div className="rise-in-1 card p-[var(--pad-card)]">
-          <div className="rounded-lg border border-line bg-surface px-4 py-12 text-center t-body text-text-3">
-            이 조건의 목록을 지금 불러오지 못했어요 — 물건이 0건인 게 아니라 조회가
+          <div className="rounded-lg border border-line bg-surface px-4 py-12 text-center t-body text-text-3 max-md:py-6">
+            이 조건의 목록을 지금 불러오지 못했어요. 물건이 0건인 게 아니라 조회가
             실패했습니다. 잠시 후 다시 시도하거나{" "}
             <button
               type="button"
@@ -425,10 +423,10 @@ export function AuctionsClient({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex flex-col gap-3">
             {/* a) 입찰 캘린더 */}
-            <div className="rise-in-1 card flex flex-col gap-2.5 rounded-2xl px-5 py-4">
+            <div className="rise-in-1 card flex flex-col gap-2.5 rounded-2xl px-5 py-4 max-md:px-3.5 max-md:py-3">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-[13px] font-bold text-ink">
                   {monthLabel} 입찰 캘린더
@@ -449,7 +447,7 @@ export function AuctionsClient({
                 {cells.map((c, i) => (
                   <div
                     key={i}
-                    className={`h-11 rounded-lg px-1.5 py-1 text-[10px] ${
+                    className={`h-11 rounded-lg px-1.5 py-1 t-caption ${
                       c.mark
                         ? "border border-line bg-primary-soft text-text-1"
                         : c.muted
@@ -509,12 +507,12 @@ export function AuctionsClient({
                         <div className="t-sub text-text-3">최저입찰가</div>
                         <div className="t-body font-bold text-primary">{c.minBidValue}</div>
                       </div>
+                      {/* [1015] 행마다 채움 파랑이던 버튼을 outline 으로 — 채움 파랑은 화면당 1개(브리프 규칙 J) */}
                       <a
                         href={c.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{ color: "#fff" }}
-                        className="btn-primary rounded-lg px-4 py-[9px] text-xs no-underline"
+                        className="btn-outline rounded-lg px-4 py-[9px] text-xs no-underline"
                       >
                         온비드 검색 ↗
                       </a>
@@ -573,13 +571,13 @@ export function AuctionsClient({
             </div>
             {cards.length === 0 ? (
               <div className="rise-in-4 card p-[var(--pad-card)]">
-                <div className="rounded-lg border border-line bg-surface px-4 py-12 text-center t-body text-text-3">
-                  현재 조건의 진행·예정 공매 물건이 없어요. 데이터는 매일 자동
-                  갱신됩니다.
+                <div className="rounded-lg border border-line bg-surface px-4 py-12 text-center t-body text-text-3 max-md:py-6">
+                  현재 조건의 진행·예정 공매 물건이 없어요.
                 </div>
               </div>
             ) : (
-              <div className="rise-in-4 card overflow-x-auto rounded-2xl px-[18px] py-1">
+              /* [1015] 표 껍데기 = 리퀴드 판(sand — 공매 톤, 브리프 규칙 I) */
+              <div className="rise-in-4 lq-panel overflow-x-auto py-1" data-tone="sand">
                 <div className="min-w-[560px]">
                   <div className="grid grid-cols-[1.9fr_.8fr_.8fr_.8fr_1fr] gap-2 border-b border-divider py-2 t-caption text-text-3">
                     <span>물건 · 소재지</span>
@@ -666,7 +664,7 @@ export function AuctionsClient({
                       </div>
                     ))}
                     <div className="pb-1 pt-1 t-caption text-text-3">
-                      입찰이 마감된 공고예요 — 결과·재공고 여부는 온비드에서 확인하세요.
+                      입찰 마감 공고 · 결과·재공고 여부는 온비드 원문 기준
                     </div>
                   </div>
                 </div>
@@ -680,7 +678,7 @@ export function AuctionsClient({
           </div>
 
           {/* 우측 사이드 */}
-          <aside className="flex flex-col gap-3.5">
+          <aside className="flex flex-col gap-3.5 max-md:gap-3">
             <div className="rise-in-2">
               <AIPanel title="공매 인사이트" className="rounded-3xl">
                 <div className="mb-1.5 flex justify-between rounded-lg bg-[rgba(255,255,255,.07)] px-3 py-2 text-xs">
@@ -695,17 +693,13 @@ export function AuctionsClient({
                     {cards.length.toLocaleString()}건
                   </span>
                 </div>
+                {/* [1015] 문장 대신 사실 한 줄(브리프 규칙 D) — 권리·명도 원문 확인 원칙은 위 ⓘ와 아래 각주에 있다 */}
                 {dist.length > 0 ? (
                   <>
-                    현재 목록에서 <b className="text-ai-accent">{dist[0].label}</b>이(가){" "}
-                    {dist[0].count}건으로 가장 많아요. 실입찰 전 공고 원문에서 권리·명도 조건을
-                    반드시 확인하세요.
+                    현재 목록 최다 용도 <b className="text-ai-accent">{dist[0].label}</b> {dist[0].count}건.
                   </>
                 ) : (
-                  <>
-                    현재 조건에 표시할 물건이 없어요. 데이터가 연동·갱신되면 용도 분포·인사이트가
-                    자동으로 채워집니다.
-                  </>
+                  <>현재 조건에 표시할 물건이 없어요.</>
                 )}
                 <Link
                   href="/my/watchlist?tab=searches"
@@ -731,29 +725,28 @@ export function AuctionsClient({
                   </button>
                 )}
               </div>
+              {/* [1015] 자치구 행 목록 = 리퀴드 판(blue — 이웃 표(sand)와 다른 톤, 브리프 규칙 I).
+                  "지역을 선택하면 …볼 수 있어요" 사용법 문장은 걷었다(규칙 B). */}
               {guDist.length > 0 ? (
-                guDist.map((g) => (
-                  <button
-                    key={g.name}
-                    type="button"
-                    onClick={() => set({ gu: f.gu === g.name ? null : g.name })}
-                    aria-current={f.gu === g.name ? "page" : undefined}
-                    className={`press flex items-center justify-between rounded-lg px-1.5 py-[6px] text-xs ${
-                      f.gu === g.name ? "bg-primary-soft" : ""
-                    }`}
-                  >
-                    <span className="font-bold text-ink">{g.name}</span>
-                    <span className="text-text-2">{g.count}건</span>
-                  </button>
-                ))
+                <div className="lq-panel flex flex-col" data-tone="blue">
+                  {guDist.map((g) => (
+                    <button
+                      key={g.name}
+                      type="button"
+                      onClick={() => set({ gu: f.gu === g.name ? null : g.name })}
+                      aria-current={f.gu === g.name ? "page" : undefined}
+                      className={`press flex min-h-10 items-center justify-between border-b py-2 text-xs last:border-b-0 ${
+                        f.gu === g.name ? "font-bold" : ""
+                      }`}
+                    >
+                      <span className="font-bold text-ink">{g.name}</span>
+                      <span className="t-num text-text-2">{g.count}건</span>
+                    </button>
+                  ))}
+                </div>
               ) : (
-                <p className="t-caption text-text-3">
-                  표시할 지역 분포가 아직 없어요. 데이터가 갱신되면 자동으로 채워집니다.
-                </p>
+                <p className="t-caption text-text-3">표시할 지역 분포가 아직 없어요.</p>
               )}
-              <p className="t-caption text-text-3">
-                지역을 선택하면 해당 자치구 물건만 볼 수 있어요.
-              </p>
             </div>
 
             {/* 용도별 요약 */}
@@ -777,9 +770,7 @@ export function AuctionsClient({
                   </div>
                 ))
               ) : (
-                <p className="t-caption text-text-3">
-                  표시할 용도 분포가 아직 없어요. 데이터가 연동되면 자동으로 채워집니다.
-                </p>
+                <p className="t-caption text-text-3">표시할 용도 분포가 아직 없어요.</p>
               )}
               <a
                 href="https://www.onbid.co.kr"

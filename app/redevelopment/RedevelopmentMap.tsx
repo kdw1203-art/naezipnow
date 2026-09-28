@@ -376,7 +376,7 @@ export function RedevelopmentMap({
               ))}
             </div>
             <p className="t-caption text-text-3">
-              지역 칩의 숫자는 지금 걸린 사업종류·진행단계 조건에서 센 구역 수예요
+              지역 칩의 숫자 = 현재 사업종류·진행단계 조건의 구역 수
               {regionCounts.length > topSigungu.length
                 ? ` (구역이 많은 순 12개 · 조건에 맞는 시군구 ${regionCounts.length}곳 중)`
                 : ""}
@@ -439,7 +439,7 @@ export function RedevelopmentMap({
       {view === "list" ? (
         filtered.length === 0 ? (
           <div className="card rounded-2xl px-5 py-8 text-center t-sub text-text-3">
-            선택한 조건에 해당하는 정비사업장이 없어요. 필터를 조정해 보세요.
+            선택한 조건에 해당하는 정비사업장이 없어요.
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -540,7 +540,7 @@ export function RedevelopmentMap({
             {summary.householdsMissing > 0 ? (
               <p className="mt-2 t-caption text-text-3">
                 {summary.householdsMissing.toLocaleString("ko-KR")}곳은 공개 자료에 세대수가
-                없어 합계에서 빠졌어요 — 0세대라는 뜻이 아니라 값을 확보하지 못했다는 뜻이에요.
+                없어 합계에서 빠졌어요. 0세대가 아니라 값을 확보하지 못한 것입니다.
               </p>
             ) : null}
           </section>
@@ -658,7 +658,7 @@ export function RedevelopmentMap({
         <Icon name="landmark" size={13} className="mt-px shrink-0" />
         <span>
           구역·진행단계는 {asOfLabel ? `${asOfLabel} ` : ""}공개자료 기준 참고값이며 좌표는 구역
-          대표점 근사값 — 최신 고시·단계와 다를 수 있어요.
+          대표점 근사값입니다. 최신 고시·단계와 다를 수 있습니다.
         </span>
       </p>
     </div>

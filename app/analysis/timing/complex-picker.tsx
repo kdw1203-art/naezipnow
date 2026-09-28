@@ -36,7 +36,7 @@ export function TimingComplexPicker({
         label="단지로 지역 찾기"
         /* [975] 이 선택기는 네이비 히어로 위에 앉는다 — 기본 회색 라벨은 2.8:1 이었다 */
         labelClassName="text-on-dark-muted"
-        placeholder="단지명 검색 (예: 공작아파트)"
+        placeholder="단지명 검색"
         showChip={false}
         initialComplexId={initialComplexId}
         initialApt={initialApt}

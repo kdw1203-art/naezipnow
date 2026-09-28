@@ -145,11 +145,10 @@ export default function DevelopersPage() {
           값이며, 출처를 표기하면 누구나 쓸 수 있습니다.
         </p>
 
-        <section className="rise-in-2 card mt-6 rounded-3xl p-6">
-          <h2 className="text-[15px] font-bold text-ink">시작하기</h2>
-          <p className="mt-2 text-[13px] leading-[1.75] text-text-1">
-            키 발급도 등록도 없습니다. 아래 한 줄이면 최신 월의 집계가 나옵니다.
-          </p>
+        {/* [1015 · 규칙 D] 섹션 제목 "시작하기"(금지 문구 예외 목록에 있던 것) → 명사 "첫 호출" */}
+        <section className="rise-in-2 card mt-6 rounded-3xl p-6 max-md:mt-4 max-md:p-4">
+          <h2 className="t-section text-ink">첫 호출</h2>
+          <p className="mt-2 t-body leading-[1.75] text-text-1">키 발급·등록 없음. 아래 한 줄로 최신 월 집계.</p>
           <pre className="mt-3 overflow-x-auto rounded-lg bg-bg p-3 text-[12px] leading-[1.6] text-text-1">
             <code>{`curl "${BASE}/regions/monthly?limit=5"`}</code>
           </pre>
@@ -159,11 +158,11 @@ export default function DevelopersPage() {
           </p>
         </section>
 
-        <section className="rise-in-3 mt-6">
-          <h2 className="text-[15px] font-bold text-ink">엔드포인트</h2>
-          <div className="mt-3 flex flex-col gap-4">
+        <section className="rise-in-3 mt-6 max-md:mt-4">
+          <h2 className="t-section text-ink">엔드포인트</h2>
+          <div className="mt-3 flex flex-col gap-4 max-md:gap-3">
             {ENDPOINTS.map((e) => (
-              <div key={e.path} className="card rounded-3xl p-6">
+              <div key={e.path} className="card rounded-3xl p-6 max-md:p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-md bg-primary/10 chip-pad text-[12px] font-bold text-primary">
                     GET
@@ -176,7 +175,7 @@ export default function DevelopersPage() {
                   <ul className="mt-3 flex flex-col gap-1">
                     {e.params.map((p) => (
                       <li key={p.name} className="text-[12px] leading-[1.7] text-text-2">
-                        <code className="font-bold text-ink">{p.name}</code> — {p.desc}
+                        <code className="font-bold text-ink">{p.name}</code>: {p.desc}
                       </li>
                     ))}
                   </ul>
@@ -189,41 +188,43 @@ export default function DevelopersPage() {
           </div>
         </section>
 
-        <section className="card mt-6 rounded-3xl p-6">
-          <h2 className="text-[15px] font-bold text-ink">응답 필드</h2>
-          <ul className="mt-3 flex flex-col gap-1">
+        <section className="card mt-6 rounded-3xl p-6 max-md:mt-4 max-md:p-4">
+          <h2 className="t-section text-ink">응답 필드</h2>
+          {/* [1015 · 규칙 I] 필드 표 → 리퀴드 행 목록(blue = 도구) */}
+          <dl data-tone="blue" className="lq-panel m-0 mt-3 flex flex-col divide-y">
             {FIELDS.map((f) => (
-              <li key={f.name} className="text-[12px] leading-[1.75] text-text-2">
-                <code className="font-bold text-ink">{f.name}</code> — {f.desc}
-              </li>
+              <div key={f.name} className="flex flex-col gap-0.5 py-2 t-sub leading-[1.6] sm:flex-row sm:gap-3">
+                <dt className="shrink-0 sm:w-[180px]"><code className="font-bold text-ink">{f.name}</code></dt>
+                <dd className="m-0 text-text-2">{f.desc}</dd>
+              </div>
             ))}
-          </ul>
+          </dl>
         </section>
 
-        <section className="card mt-6 rounded-3xl p-6">
-          <h2 className="text-[15px] font-bold text-ink">상태 코드</h2>
+        <section className="card mt-6 rounded-3xl p-6 max-md:mt-4 max-md:p-4">
+          <h2 className="t-section text-ink">상태 코드</h2>
           <ul className="mt-3 flex flex-col gap-1 text-[12px] leading-[1.75] text-text-2">
             <li>
-              <code className="font-bold text-ink">200</code> — 정상. 조건에 맞는 행이 하나도
+              <code className="font-bold text-ink">200</code>: 정상. 조건에 맞는 행이 하나도
               없으면 rows 가 빈 배열이며, 이는 “그 조건의 데이터가 없다”는 사실입니다.
             </li>
             <li>
-              <code className="font-bold text-ink">400</code> — 요청이 잘못됐습니다. 무엇이 왜
+              <code className="font-bold text-ink">400</code>: 요청이 잘못됐습니다. 무엇이 왜
               틀렸는지 error.message 와 error.hint 에 적습니다.
             </li>
             <li>
-              <code className="font-bold text-ink">429</code> — 호출 한도 초과. Retry-After 를
+              <code className="font-bold text-ink">429</code>: 호출 한도 초과. Retry-After 를
               참고해 다시 시도해 주세요.
             </li>
             <li>
-              <code className="font-bold text-ink">503</code> — 저희가 조회에 실패했습니다.
+              <code className="font-bold text-ink">503</code>: 저희가 조회에 실패했습니다.
               데이터가 없다는 뜻이 <b>아닙니다</b>. 잠시 후 다시 호출하면 성공할 수 있습니다.
             </li>
           </ul>
         </section>
 
-        <section className="card mt-6 rounded-3xl p-6">
-          <h2 className="text-[15px] font-bold text-ink">인용 조건</h2>
+        <section className="card mt-6 rounded-3xl p-6 max-md:mt-4 max-md:p-4">
+          <h2 className="t-section text-ink">인용 조건</h2>
           <p className="mt-2 text-[13px] leading-[1.75] text-text-1">
             출처를 표기하면 상업적 이용을 포함해 자유롭게 쓸 수 있습니다. 같은 내용이 모든
             응답의 <code>license</code> 필드에도 실려 있어, 문서를 보지 않고 API 만 쓴 경우에도
@@ -239,12 +240,12 @@ export default function DevelopersPage() {
               데이터 방법론
             </Link>
             에 적혀 있습니다. 평균은 면적·층을 가중하지 않은 단순 평균이며, 최근 1~2개월
-            수치는 신고 지연으로 계속 늘어납니다 — 인용하실 때 함께 밝혀 주세요.
+            수치는 신고 지연으로 계속 늘어납니다. 인용할 때 함께 밝혀 주세요.
           </p>
         </section>
 
-        <section className="card mt-6 rounded-3xl p-6">
-          <h2 className="text-[15px] font-bold text-ink">자주 묻는 질문</h2>
+        <section className="card mt-6 rounded-3xl p-6 max-md:mt-4 max-md:p-4">
+          <h2 className="t-section text-ink">자주 묻는 질문</h2>
           <div className="mt-3 flex flex-col gap-4">
             {QA.map((x) => (
               <div key={x.q}>

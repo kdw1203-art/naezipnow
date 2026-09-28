@@ -16,6 +16,9 @@ import {
 import type { InspectionNote } from "@/lib/inspection/store-db";
 import { breadcrumbJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { CoverImage } from "@/app/components/CoverImage";
+import { noteCoverUrl } from "@/lib/notes/cover/resolve";
+import { seedGradient } from "@/lib/town/shared";
 
 /* ============================================================
    N13 — 이달의 공개 임장노트(월별 상세).
@@ -91,7 +94,7 @@ export default async function BestNotesMonthPage({
   const authorCount = new Set(month.picks.map((p) => p.note.authorEmail.toLowerCase())).size;
 
   /* G12 — 발췌해도 완결되는 첫 문단. 실측치만 쓴다. */
-  const leadSentence = `${label}에 공개된 임장노트는 ${month.totalCount}편이고, 그중 ${MIN_SCORE}점(${MAX_SCORE}점 만점) 이상 기록을 갖춘 노트는 ${month.qualifiedCount}편입니다. 이 페이지는 그중 상위 ${month.picks.length}편을 작성자 ${authorCount}명 기준으로 싣습니다 — 순위는 사람이 고른 것이 아니라 아래 다섯 축의 합계 점수입니다.`;
+  const leadSentence = `${label}에 공개된 임장노트는 ${month.totalCount}편이고, 그중 ${MIN_SCORE}점(${MAX_SCORE}점 만점) 이상 기록을 갖춘 노트는 ${month.qualifiedCount}편입니다. 이 페이지는 그중 상위 ${month.picks.length}편을 작성자 ${authorCount}명 기준으로 싣습니다. 순위는 사람이 고른 것이 아니라 아래 다섯 축의 합계 점수입니다.`;
 
   const faq: FaqItem[] = [
     {
@@ -100,7 +103,7 @@ export default async function BestNotesMonthPage({
     },
     {
       q: "점수가 높으면 좋은 단지라는 뜻인가요?",
-      a: "아닙니다. 이 점수는 기록이 얼마나 자세한지만 잽니다. 그 단지가 좋은지, 값이 적절한지와는 무관합니다. 노트에 적힌 입지·학군 점수가 높다고 가산점을 주지도 않습니다 — 그러면 후하게 쓸수록 뽑히게 되기 때문입니다.",
+      a: "아닙니다. 이 점수는 기록이 얼마나 자세한지만 잽니다. 그 단지가 좋은지, 값이 적절한지와는 무관합니다. 노트에 적힌 입지·학군 점수가 높다고 가산점을 주지도 않습니다. 그러면 후하게 쓸수록 뽑히게 되기 때문입니다.",
     },
     {
       q: "왜 어떤 달은 페이지가 없나요?",
@@ -175,18 +178,38 @@ export default async function BestNotesMonthPage({
 
         {month.qualifiedCount > month.picks.length && (
           <p className="rise-in-1 mt-2 t-sub text-text-3">
-            자격을 갖춘 {month.qualifiedCount}편 가운데 {month.picks.length}편만 실렸습니다 — 한
-            달 최대 {MAX_NOTES_PER_MONTH}편, 같은 작성자 최대 {MAX_PER_AUTHOR}편 상한 때문입니다.
-            상한에 걸려 빠진 노트가 더 나쁜 노트라는 뜻은 아닙니다.
+            자격을 갖춘 {month.qualifiedCount}편 가운데 {month.picks.length}편만 실렸습니다. 한 달
+            최대 {MAX_NOTES_PER_MONTH}편, 같은 작성자 최대 {MAX_PER_AUTHOR}편 상한 때문이며, 상한에
+            걸려 빠진 노트가 더 나쁜 노트라는 뜻은 아닙니다.
           </p>
         )}
 
         {/* 선정 노트 — 축별 원값과 배점을 그대로 노출해 검산 가능하게 한다 */}
-        <div className="rise-in-2 mt-6 flex flex-col gap-4">
+        {/* [1015 · 규칙 H] 글마다 48px 정사각 썸네일(noteCoverUrl — 고른 템플릿 썸네일 → 첫 사진 → 단색 칸) */}
+        <div className="rise-in-2 mt-6 flex flex-col gap-4 max-md:mt-4 max-md:gap-3">
           {month.picks.map((p, i) => (
-            <article key={p.note.id} className="card rounded-2xl p-[var(--pad-card)]">
+            <article key={p.note.id} className="card rounded-2xl p-[var(--pad-card)] max-md:p-3.5">
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
+                <Link
+                  href={`/notes/${p.note.id}`}
+                  aria-label={`${p.note.title} 노트 보기`}
+                  className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-divider"
+                >
+                  <CoverImage
+                    src={noteCoverUrl(p.note)}
+                    alt=""
+                    sizes="48px"
+                    imgClassName="h-full w-full object-cover"
+                    fallback={
+                      <span
+                        aria-hidden="true"
+                        className="block h-full w-full"
+                        style={{ background: seedGradient(p.note.id) }}
+                      />
+                    }
+                  />
+                </Link>
+                <div className="min-w-0 flex-1">
                   <p className="t-sub font-bold text-text-3">
                     {i + 1}위 · {placeLabel(p.note)}
                   </p>
@@ -216,7 +239,8 @@ export default async function BestNotesMonthPage({
                 </p>
               )}
 
-              <div className="mt-3 overflow-x-auto">
+              {/* [1015 · 규칙 I] 배점 표 = 리퀴드 판(점수 = blue) */}
+              <div className="lq-panel mt-3 overflow-x-auto" data-tone="blue">
                 <table className="w-full min-w-[420px] border-collapse t-sub">
                   <thead>
                     <tr className="border-b border-border text-left text-text-3">
@@ -233,7 +257,7 @@ export default async function BestNotesMonthPage({
                           {b.raw.toLocaleString("ko-KR")}
                           {b.unit}
                         </td>
-                        <td className="py-1.5 text-right font-bold tabular-nums text-ink">
+                        <td className="t-num py-1.5 text-right">
                           {b.points}
                           <span className="font-normal text-text-3"> / {b.max}</span>
                         </td>
@@ -256,8 +280,8 @@ export default async function BestNotesMonthPage({
         </div>
 
         {/* 계산식 재게시 — 목록에서 넘어오지 않은 방문자도 기준을 볼 수 있어야 한다 */}
-        <section className="rise-in-3 card mt-6 p-[var(--pad-card)]">
-          <h2 className="t-section text-ink">점수는 이렇게 계산했습니다</h2>
+        <section className="rise-in-3 card mt-6 p-[var(--pad-card)] max-md:mt-4 max-md:p-3.5">
+          <h2 className="t-section text-ink">점수 계산식</h2>
           <div className="mt-3 flex flex-col gap-3">
             {SCORE_AXES.map((a) => (
               <div key={a.key} className="border-b border-border pb-3 last:border-b-0 last:pb-0">

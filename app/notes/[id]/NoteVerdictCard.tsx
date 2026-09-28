@@ -61,13 +61,14 @@ export function NoteVerdictCard(p: NoteVerdictProps) {
   const scoreText =
     p.totalScore != null ? `기록 점수 ${p.totalScore} / 100` : "점수 미입력";
   const scoreHint =
-    p.totalScore != null ? `${p.scoredAxisCount}개 축 평균 × 20` : "현장 체크를 채우면 점수가 생겨요";
+    p.totalScore != null ? `${p.scoredAxisCount}개 축 평균 × 20` : "현장 체크 미입력";
   const summaryLabel = isLlm ? "AI 요약" : "규칙 요약";
   /* 근거를 이어 붙인 문장과 요약이 같으면 두 번 읽히지 않게 뺀다 */
   const summaryDuplicate =
     decision != null && decision.reasons.join(" · ").trim() === p.verdict.trim();
   return (
-    <section className="lg-glass rise-in flex flex-col gap-3 p-5" aria-label="이 노트의 판단">
+    /* [1015 · 규칙 E] 폰 안쪽 여백 p-5 → 3.5 */
+    <section className="lg-glass rise-in flex flex-col gap-3 p-5 max-md:gap-2.5 max-md:p-3.5" aria-label="이 노트의 판단">
       <div className="flex flex-wrap items-center gap-2">
         <span className="verdict-band rounded-md px-2 py-0.5 t-caption font-bold tracking-wider" data-band={tone}>
           {decision ? decisionLabel(decision.choice) : scoreText}
@@ -111,7 +112,7 @@ export function NoteVerdictCard(p: NoteVerdictProps) {
             /* [989] 문장 옆 텍스트 링크 — 24px(py-[5px] + 12px 글자). 판단이 없다는 사실을
                숨기지 않고, 남길 길을 같은 자리에 둔다. */
             <p className="-mt-1 t-sub text-text-3">
-              아직 내 판단이 없어요 —{" "}
+              내 판단 없음 ·{" "}
               <Link href={p.decisionEditHref} className="inline-block py-[5px] font-bold text-primary no-underline">
                 판단 남기기 ›
               </Link>
@@ -121,15 +122,16 @@ export function NoteVerdictCard(p: NoteVerdictProps) {
       )}
       {p.recommendedAction && (
         <p className="t-body text-text-2">
-          <b className="font-bold text-ink">추천 행동</b> — {p.recommendedAction}
+          <b className="mr-1.5 font-bold text-ink">추천 행동</b>
+          {p.recommendedAction}
         </p>
       )}
 
-      <div className="grid grid-cols-3 gap-2">
+      {/* [1015 · 규칙 J] 실거래 매칭이 없으면 "매칭 없음" 빈 타일을 그리지 않는다(2칸). 방문 칸의 설명 캡션도 뺐다 */}
+      <div className={`grid gap-2 ${p.price ? "grid-cols-3" : "grid-cols-2"}`}>
         <div className="rounded-lg bg-bg px-3 py-2.5">
           <div className="t-caption font-bold text-text-3">방문</div>
           <div className="mt-0.5 t-body font-bold tabular-nums text-ink">{p.visitDate}</div>
-          <div className="t-caption text-text-3">작성자 직접 기록</div>
         </div>
         <div className="rounded-lg bg-bg px-3 py-2.5">
           <div className="t-caption font-bold text-text-3">체크</div>
@@ -166,13 +168,7 @@ export function NoteVerdictCard(p: NoteVerdictProps) {
               {formatYm(p.price.latestYm)} · 국토부
             </div>
           </div>
-        ) : (
-          <div className="rounded-lg bg-bg px-3 py-2.5">
-            <div className="t-caption font-bold text-text-3">대표 실거래가</div>
-            <div className="mt-0.5 t-body font-bold text-text-3">매칭 없음</div>
-            <div className="t-caption text-text-3">단지가 실거래와 연결되면 표시</div>
-          </div>
-        )}
+        ) : null}
       </div>
 
       <Link

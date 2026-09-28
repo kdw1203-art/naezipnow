@@ -2,7 +2,7 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "../components/PageShell";
-import { AdSenseUnit } from "@/app/components/ads/AdSenseUnit";
+import { AdZone } from "@/app/components/ads/AdZone";
 import { formatYmKo, listReportMonths, type ReportMonthSummary } from "@/lib/reports/monthly";
 /* [1009 · 리뷰 H] 목록 로더(listReportMonths)가 1,000행에서 잘리던 것은 lib 에서 고쳤다 — 끝까지 나눠 읽는다 */
 import { listSeasonAvailability, type SeasonAvailability } from "@/lib/reports/seasonal";
@@ -28,6 +28,9 @@ export const revalidate = 86_400;
      1) 정상 — 월 목록
      2) 조회 실패 — 그렇게 말하고 noindex (깨진 껍데기를 색인시키지 않는다)
      3) 정말로 빈 결과 — "아직 집계된 월이 없다" 는 별개의 문장
+
+   [1015] 목록은 리퀴드 행 목록(lq-panel · 월간 = blue · 이사철 = sand). 데스크톱은 본문 + 340px 레일
+   (연도 목차 · 관련 화면 · 데이터 출처 · 광고 1). 광고는 레일 1(데스크톱) + 페이지 끝 1 — 첫 화면 안에는 없다.
    ============================================================ */
 
 type ReportsIndexData = {
@@ -71,6 +74,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return loadError ? { ...base, robots: { index: false, follow: true } } : base;
 }
 
+const railLinkCls =
+  "flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline";
+
 export default async function ReportsIndexPage() {
   const { months, seasons, loadError } = await loadReportsIndex();
   /* [970 · B-32 → 1009 · H] "아직 신고가 들어오는 달" 표시 — 예전엔 이번 달에만 "집계 중"을 달아, 신고 기한(말일 + 30일)이
@@ -96,6 +102,17 @@ export default async function ReportsIndexPage() {
         }
       : null;
 
+  /* 고도화 38 — 연도별 구분·앵커. 연도 칩은 실재하는 연도가 2개 이상일 때만 그린다(칩 1개는 장식이다). */
+  const byYear = new Map<string, ReportMonthSummary[]>();
+  for (const m of months) {
+    const y = m.ym.slice(0, 4);
+    const bucket = byYear.get(y);
+    if (bucket) bucket.push(m);
+    else byYear.set(y, [m]);
+  }
+  const years = [...byYear.keys()].sort((a, b) => b.localeCompare(a));
+  const latest = months[0] ?? null;
+
   return (
     <PageShell breadcrumb="월간 실거래 리포트">
       {itemListJsonLd && (
@@ -104,130 +121,135 @@ export default async function ReportsIndexPage() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
         />
       )}
-      <div className="mx-auto max-w-[760px]">
-        <h1 className="rise-in text-[24px] font-bold text-ink">월간 아파트 실거래 리포트</h1>
-        <p className="rise-in-1 mt-2 text-[13px] leading-[1.7] text-text-2">
-          {/* [1011] "매월 자동으로 만들어지는" 파이프라인 설명을 걷었다(소유자 지시).
-              "사람이 쓰는 시황 글이 아니다"는 남긴다 — 글의 성격을 오해하지 않게 하는 정직성 문구다. */}
-          국토교통부 실거래 신고를 달마다 모은 리포트입니다. 사람이 쓰는 시황 글이
-          아니라 데이터 요약이며, 모든 수치는{" "}
+      <div className="mx-auto max-w-[1100px]">
+        <h1 className="rise-in t-title text-ink">월간 아파트 실거래 리포트</h1>
+        {/* [1011] "매월 자동으로 만들어지는" 파이프라인 설명을 걷었다(소유자 지시).
+            "사람이 쓰는 시황 글이 아니다"는 남긴다 — 글의 성격을 오해하지 않게 하는 정직성 문구다.
+            [1015 · 규칙 B] 사실 한 줄: 최신 달 · 지역 수 · 건수(실데이터) */}
+        <p className="rise-in-1 mt-1.5 t-sub text-text-2">
+          국토교통부 실거래 신고를 달마다 모은 데이터 요약. 사람이 쓰는 시황 글이 아니며 수치는{" "}
           <Link href="/methodology" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
             공개된 방법론
           </Link>
           을 따릅니다.
+          {latest && (
+            <>
+              {" "}
+              최신 {formatYmKo(latest.ym)} · {latest.regionCount}개 지역 · {latest.txCount.toLocaleString("ko-KR")}건.
+            </>
+          )}
         </p>
 
-        {loadError ? (
-          <div className="mt-6 card rounded-2xl px-5 py-8 text-center text-[13px] leading-[1.7] text-text-3">
-            월간 집계를 <strong className="text-ink">불러오지 못했습니다</strong>.
-            <br />
-            리포트가 없다는 뜻이 아니라 조회 자체가 실패했다는 뜻입니다. 잠시 후 다시
-            확인해 주세요.
-          </div>
-        ) : months.length > 0 ? (
-          /* 고도화 38 — 연도별 구분·앵커. 지금은 몇 달이지만 매월 자동으로
-             늘어나는 목록이라, 해가 바뀌기 전에 구조를 넣어 둔다. 연도 칩은
-             실재하는 연도가 2개 이상일 때만 그린다(칩 1개는 장식이다). */
-          (() => {
-            const byYear = new Map<string, ReportMonthSummary[]>();
-            for (const m of months) {
-              const y = m.ym.slice(0, 4);
-              const bucket = byYear.get(y);
-              if (bucket) bucket.push(m);
-              else byYear.set(y, [m]);
-            }
-            const years = [...byYear.keys()].sort((a, b) => b.localeCompare(a));
-            return (
-              <div className="mt-6 flex flex-col gap-5">
-                {years.length > 1 && (
-                  <div className="flex flex-wrap gap-2">
-                    {years.map((y) => (
-                      <a
-                        key={y}
-                        href={`#y${y}`}
-                        className="chip border border-line bg-bg px-3 py-1.5 text-[12px] font-bold text-text-2"
+        <div className="mt-4 grid grid-cols-1 gap-4 max-md:mt-3 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
+          <div className="flex min-w-0 flex-col gap-5 max-md:gap-3">
+            {loadError ? (
+              <div className="card rounded-2xl px-5 py-8 text-center t-body text-text-3 max-md:py-5">
+                월간 집계를 <strong className="text-ink">불러오지 못했습니다</strong>.
+                <br />
+                리포트가 없다는 뜻이 아니라 조회 자체가 실패했다는 뜻입니다. 잠시 후 다시 확인해 주세요.
+              </div>
+            ) : months.length > 0 ? (
+              years.map((y) => (
+                <section key={y} id={`y${y}`} className="scroll-mt-24">
+                  <h2 className="mb-2 t-section text-ink">
+                    {y}년 <span className="t-sub font-medium text-text-3">{byYear.get(y)!.length}개월</span>
+                  </h2>
+                  {/* [1015 · 규칙 I] 카드 타일 묶음 → 리퀴드 행 목록(blue = 실거래·거래 건수) */}
+                  <div data-tone="blue" className="lq-panel flex flex-col divide-y">
+                    {byYear.get(y)!.map((m) => (
+                      <Link
+                        key={m.ym}
+                        prefetch={false}
+                        href={`/reports/${m.ym}`}
+                        className="flex min-h-[48px] items-center justify-between gap-3 py-2.5 no-underline"
                       >
-                        {y}년
-                      </a>
+                        <span className="t-body font-bold text-ink">
+                          {formatYmKo(m.ym)} 실거래 리포트
+                          {/* 신고 기한이 안 지난 달 — 완결처럼 보이지 않게 */}
+                          {!reportingClosed(m.ym, now) && (
+                            <span className="ml-1.5 inline-block whitespace-nowrap rounded-md bg-primary-soft px-1.5 py-0.5 t-caption font-bold text-primary align-middle">
+                              신고 중
+                            </span>
+                          )}
+                        </span>
+                        <span className="t-num shrink-0 t-sub font-bold text-text-3">
+                          {m.regionCount}개 지역 · {m.txCount.toLocaleString("ko-KR")}건 ›
+                        </span>
+                      </Link>
                     ))}
                   </div>
-                )}
-                {years.map((y) => (
-                  <section key={y} id={`y${y}`}>
-                    <h2 className="mb-2.5 text-[15px] font-bold text-text-2">
-                      {y}년{" "}
-                      <span className="text-[12px] font-medium text-text-3">
-                        {byYear.get(y)!.length}개월
-                      </span>
-                    </h2>
-                    <div className="flex flex-col gap-3">
-                      {byYear.get(y)!.map((m, i) => (
-                        <Link
-                          key={m.ym}
-                          prefetch={false}
-                          href={`/reports/${m.ym}`}
-                          className={`rise-in-${Math.min(i + 2, 6)} card tile flex items-center justify-between rounded-2xl px-5 py-4 no-underline`}
-                        >
-                          <span className="text-[15px] font-bold text-ink">
-                            {formatYmKo(m.ym)} 실거래 리포트
-                            {/* 신고 기한이 안 지난 달 — 완결처럼 보이지 않게 */}
-                            {!reportingClosed(m.ym, now) && (
-                              <span className="ml-1.5 inline-block whitespace-nowrap rounded-md bg-primary-soft px-1.5 py-0.5 text-[12px] font-bold text-primary align-middle">
-                                신고 중
-                              </span>
-                            )}
-                          </span>
-                          <span className="shrink-0 pl-2 text-[12px] font-semibold tabular-nums text-text-3">
-                            {m.regionCount}개 지역 · {m.txCount.toLocaleString("ko-KR")}건 ›
-                          </span>
-                        </Link>
-                      ))}
-                    </div>
-                  </section>
-                ))}
+                </section>
+              ))
+            ) : (
+              <div className="card rounded-2xl px-5 py-8 text-center t-body text-text-3 max-md:py-5">
+                아직 집계된 월이 없어요. 실거래 수집이 쌓이면 생성됩니다.
               </div>
-            );
-          })()
-        ) : (
-          <div className="mt-6 card rounded-2xl px-5 py-8 text-center text-[13px] text-text-3">
-            아직 집계된 월이 없어요. 실거래 수집이 쌓이면 자동으로 생성됩니다.
+            )}
+
+            {/* N12 — 계절(이사철) 검증 리포트. 계절의 모든 달이 확정 집계된 해가
+                하나라도 있어야 목록에 나온다. 절반만 모인 계절은 만들지 않는다. */}
+            {seasons.length > 0 && (
+              <section className="rise-in-4">
+                <h2 className="mb-2 t-section text-ink">이사철 통념 검증 리포트</h2>
+                {/* [1015 · 규칙 B] 설명 문단("…확인합니다. 같은 지역끼리만 비교하며…") → 사실 한 줄로. 계산 기준은 상세의 ⓘ */}
+                <div data-tone="sand" className="lq-panel flex flex-col divide-y">
+                  {seasons.map((s) => (
+                    <Link
+                      key={s.def.slug}
+                      href={`/reports/season/${s.def.slug}`}
+                      className="flex min-h-[48px] items-center justify-between gap-3 py-2.5 no-underline"
+                    >
+                      <span className="min-w-0">
+                        <span className="block t-body font-bold text-ink">
+                          {s.def.label} ({s.def.monthsLabel})
+                        </span>
+                        <span className="mt-0.5 block t-sub text-text-3">{s.def.claim}</span>
+                      </span>
+                      <span className="t-num shrink-0 t-sub font-bold text-text-3">
+                        {s.observedYears.map((y) => `${y}년`).join(" · ")} ›
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+                <p className="mt-1.5 t-caption text-text-3">같은 해 같은 지역끼리 비교 · 신고 진행 중인 잠정 월 제외</p>
+              </section>
+            )}
           </div>
-        )}
 
-        {/* N12 — 계절(이사철) 검증 리포트. 계절의 모든 달이 확정 집계된 해가
-            하나라도 있어야 목록에 나온다. 절반만 모인 계절은 만들지 않는다. */}
-        {seasons.length > 0 && (
-          <section className="rise-in-4 mt-8">
-            <h2 className="text-[15px] font-bold text-ink">이사철 통념 검증 리포트</h2>
-            <p className="mt-1.5 text-[13px] leading-[1.7] text-text-2">
-              &ldquo;2~3월은 이사철이라 거래가 몰린다&rdquo; 같은 말을 실거래 신고 집계로
-              확인합니다. 같은 해 다른 달과 <strong className="text-ink">같은 지역끼리만</strong>{" "}
-              비교하며, 신고가 진행 중인 잠정 월은 넣지 않습니다.
+          {/* [1015 · 규칙 F·G] 데스크톱 오른쪽 레일 — 연도 목차 · 관련 화면 · 데이터 출처 · 광고 1. 폰은 본문 아래에 이어진다(광고는 숨김). */}
+          <aside className="flex flex-col gap-3 lg:sticky lg:top-[76px] lg:self-start">
+            {years.length > 1 && (
+              <nav aria-label="연도" className="card rounded-2xl px-4 py-3">
+                <div className="t-caption font-bold text-text-3">연도</div>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {years.map((y) => (
+                    <a key={y} href={`#y${y}`} className="chip border border-line bg-bg px-3 py-1.5 t-sub font-bold text-text-2 no-underline">
+                      {y}년
+                    </a>
+                  ))}
+                </div>
+              </nav>
+            )}
+            <nav aria-label="관련 화면" className="card rounded-2xl px-4 py-1">
+              <Link href="/tx" className={`${railLinkCls} border-b border-divider`}>
+                지역별 실거래 상세 <span aria-hidden="true" className="text-text-3">›</span>
+              </Link>
+              <Link href="/analysis/timing" className={`${railLinkCls} border-b border-divider`}>
+                매수·매도 타이밍 분석 <span aria-hidden="true" className="text-text-3">›</span>
+              </Link>
+              <Link href="/developers" className={railLinkCls}>
+                공개 집계 API <span aria-hidden="true" className="text-text-3">›</span>
+              </Link>
+            </nav>
+            <p className="px-1 t-caption leading-[1.6] text-text-3">
+              데이터 출처: 국토교통부 실거래가 공개시스템 신고분(해제 신고분 제외). 신고 기한(계약 후 30일) 전인 달은 잠정치.
             </p>
-            <div className="mt-3 flex flex-col gap-3">
-              {seasons.map((s) => (
-                <Link
-                  key={s.def.slug}
-                  href={`/reports/season/${s.def.slug}`}
-                  className="card tile flex items-center justify-between rounded-2xl px-5 py-4 no-underline"
-                >
-                  <span>
-                    <span className="block text-[15px] font-bold text-ink">
-                      {s.def.label} ({s.def.monthsLabel})
-                    </span>
-                    <span className="mt-0.5 block text-[12px] text-text-3">{s.def.claim}</span>
-                  </span>
-                  <span className="shrink-0 pl-3 text-[12px] font-semibold text-text-3">
-                    {s.observedYears.map((y) => `${y}년`).join(" · ")} ›
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
+            <AdZone placement="sidebar" seed={1} plan={null} className="hidden lg:block" />
+          </aside>
+        </div>
 
-        {/* 애드센스 데스크탑 유닛 — 목록 하단 빈공간. 모바일 미노출. */}
-        <AdSenseUnit className="mt-8" />
+        {/* [961 → 1015 · 규칙 G] 페이지 끝 광고 1 — 예전 AdSenseUnit(목록 하단·데스크톱 전용) 자리 */}
+        <AdZone placement="page_bottom" seed={2} plan={null} className="mt-6 max-md:mt-4" />
       </div>
     </PageShell>
   );

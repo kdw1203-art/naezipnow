@@ -112,7 +112,7 @@ export function WeeklyPassCta({
   if (currentPlan === "expert") {
     return (
       <p className="rounded-lg bg-bg p-[13px] text-center t-sub font-bold text-text-2">
-        프로 이용 중이라 주간권이 필요 없어요 — 플러스 기능은 이미 전부 열려 있습니다.
+        프로 이용 중에는 주간권이 필요 없습니다. 플러스 기능은 이미 전부 열려 있습니다.
       </p>
     );
   }

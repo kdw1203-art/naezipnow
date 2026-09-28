@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { searchComplexes, suggestComplexes, type ComplexRow } from "@/lib/complex/complex-store";
+import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 import { parseDong } from "@/lib/complex/dong";
 import { searchComplexPreviews } from "@/lib/search/complex-search";
 import type { ComplexPreview } from "@/lib/search/complex-preview";
@@ -61,6 +62,9 @@ export interface UnifiedListing {
 export interface UnifiedNote {
   id: string;
   title: string;
+  /** [1015 · 썸네일] 행 왼쪽 정사각 썸네일(고른 템플릿 → 첫 사진), 없으면 null */
+  cover?: string | null;
+  region?: string | null;
 }
 export interface UnifiedNews {
   id: string;
@@ -221,7 +225,7 @@ export async function GET(req: Request) {
       if (!sb) return [];
       const { data, error } = await sb
         .from("inspection_notes")
-        .select("id, title")
+        .select("id, title, region, apt_name, summary, sections, checklist, transportation, weather, score_location, score_school, score_transport, score_facility, score_future, metadata, photos")
         .eq("is_public", true)
         .or(
           /* [#129] 메모 본문까지 전문 검색 — trgm 인덱스(20260823150000)로 뒷받침 */
@@ -234,6 +238,27 @@ export async function GET(req: Request) {
       return (data as Array<Record<string, unknown>>).map((n) => ({
         id: String(n.id),
         title: String(n.title ?? "임장노트"),
+        region: (n.region as string | null) ?? null,
+        cover: noteCoverUrl({
+          id: String(n.id),
+          title: (n.title as string | null) ?? null,
+          aptName: (n.apt_name as string | null) ?? null,
+          region: (n.region as string | null) ?? null,
+          summary: (n.summary as string | null) ?? null,
+          sections: n.sections,
+          checklist: n.checklist,
+          transportation: (n.transportation as string | null) ?? null,
+          weather: (n.weather as string | null) ?? null,
+          scores: {
+            location: Number(n.score_location ?? 0),
+            school: Number(n.score_school ?? 0),
+            transport: Number(n.score_transport ?? 0),
+            facility: Number(n.score_facility ?? 0),
+            future: Number(n.score_future ?? 0),
+          },
+          metadata: n.metadata,
+          photos: n.photos,
+        }),
       }));
     }),
     // [1007] 이야기 — posts 표(이웃 글)에서 제목·시/구·본문을 DB단 ilike 매칭.

@@ -152,7 +152,8 @@ function MeetingCard({
             className="inline-flex items-center gap-1 font-semibold text-primary no-underline"
           >
             <Icon name="pin" size={12} />
-            {g.region} 시세 보기
+            {/* [1015] "시세" 낱말 금지(브리프) — /region 은 지수·실거래·입주 물량 화면이다 */}
+            {g.region} 시장 데이터
           </Link>
         ) : (
           <span className="inline-flex items-center gap-1">

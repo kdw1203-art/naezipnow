@@ -329,7 +329,7 @@ export default async function PaymentSuccessPage({
               </div>
             </dl>
             <p className="border-t border-line bg-bg px-5 py-3 text-[12px] leading-[1.6] text-text-3">
-              해지·카드 변경은 구독 페이지의 구독 관리에서 언제든 가능해요 — 해지하면 다음
+              해지·카드 변경은 구독 페이지의 구독 관리에서 언제든 가능해요. 해지하면 다음
               결제일에 청구되지 않아요.
             </p>
           </div>
@@ -358,7 +358,7 @@ export default async function PaymentSuccessPage({
               </Link>
               <p className="text-[12px] leading-[1.6] text-text-3">
                 이 화면이 떴다면 이용권은 아직 켜지지 않았어요. 다시 결제하기 전에 문의를
-                먼저 남겨 주세요{orderId ? " — 주문번호가 문의에 함께 담겨요" : ""}.
+                먼저 남겨 주세요.{orderId ? " 주문번호가 문의에 함께 담겨요." : ""}
               </p>
             </>
           ) : guestPending && !record?.userEmail && orderId && paymentKey ? (
@@ -386,7 +386,7 @@ export default async function PaymentSuccessPage({
                 href={`/login?callbackUrl=${encodeURIComponent(selfHref)}`}
                 className="rounded-lg border border-line bg-surface p-[13px] text-center text-[13px] font-bold text-text-1"
               >
-                이미 계정이 있어요 — 로그인
+                로그인하고 이용권 연결하기
               </Link>
             </>
           ) : returnTo ? (

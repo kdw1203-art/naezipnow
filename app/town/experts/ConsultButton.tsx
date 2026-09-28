@@ -52,7 +52,7 @@ export function ConsultButton({
         setStatus("idle");
         promptSignup({
           action: "expert_consult",
-          title: `${expertName} 님께 상담을 신청할까요?`,
+          title: `${expertName} 님께 상담 신청`,
           benefit:
             "상담은 계정으로 주고받아요. 가입하면 전문가 답변이 등록될 때 내 상담 내역에서 확인할 수 있습니다.",
           callbackUrl: "/town/experts",
@@ -145,7 +145,7 @@ export function ConsultButton({
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
               maxLength={2000}
-              placeholder="상담받고 싶은 내용을 구체적으로 적어주세요 (10자 이상). 임장노트 링크를 함께 붙이면 더 정확한 답변을 받을 수 있어요."
+              placeholder="상담 내용 (10자 이상) · 임장노트 링크 첨부 가능"
               className="w-full resize-none rounded-xl border border-line bg-bg p-3 t-body text-ink outline-none placeholder:text-text-3 focus:border-primary"
             />
             {consultType === "call" && (

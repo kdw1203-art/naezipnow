@@ -5,7 +5,9 @@ import { Skeleton } from "@/components/Skeleton";
 export default function DigestLoading() {
   return (
     <PageShell breadcrumb="주간 다이제스트">
-      <div className="mx-auto flex w-full max-w-[480px] flex-col gap-2.5">
+      {/* [1015] 본문이 데스크톱 2단(본문 + 340px 레일)이 됐다 — 스켈레톤도 같은 폭(왼쪽 열만 그린다) */}
+      <div className="mx-auto grid w-full max-w-[860px] grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="flex min-w-0 flex-col gap-2.5">
         {/* 헤더 */}
         <Skeleton className="h-7 w-56 max-w-full rounded-lg" />
         <Skeleton className="h-3.5 w-40 rounded" />
@@ -27,6 +29,7 @@ export default function DigestLoading() {
             </div>
           </div>
         ))}
+      </div>
       </div>
     </PageShell>
   );

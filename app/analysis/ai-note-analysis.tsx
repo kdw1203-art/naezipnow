@@ -231,10 +231,8 @@ export function AiNoteAnalysisCard({
       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-warning-soft text-warning">
         <Icon name="bot" size={17} />
       </div>
+      {/* [1015 · 규칙 B] 기능 설명 한 줄("점수·기록과 지역 실시세를 합쳐 … 정리해요")은 걷었다 */}
       <div className="t-section text-ink">임장노트 AI 분석</div>
-      <div className="t-sub text-text-2">
-        내 노트의 점수·기록과 지역 실시세를 합쳐 강점·약점·확인 항목을 정리해요
-      </div>
 
       {/* 노트 선택 */}
       {notesLoaded && notes.length > 0 && (
@@ -264,9 +262,7 @@ export function AiNoteAnalysisCard({
               {seedSnap.period ? ` (${seedSnap.period})` : ""}
             </span>
           )}
-          <span className="ml-auto rounded border border-line px-1 py-px text-[10px] font-bold text-text-3">
-            실데이터 기준
-          </span>
+          {/* [1015 · 규칙 C] "실데이터 기준" 배지는 걷었다 */}
         </div>
       )}
       {loggedIn && notesLoaded && notes.length === 0 && state.kind !== "login" && (
@@ -299,8 +295,7 @@ export function AiNoteAnalysisCard({
           </div>
           {state.result.cached && (
             <div className="t-caption font-bold text-ai-muted">
-              노트 내용이 그대로라 저장된 분석을 다시 보여드려요. 새로 분석하려면
-              &quot;다시 분석하기&quot;를 누르세요.
+              노트 내용이 그대로라 저장된 분석을 다시 표시. 새로 하려면 &quot;다시 분석하기&quot;.
             </div>
           )}
           {state.result.mode === "rule" && (
@@ -354,10 +349,10 @@ export function AiNoteAnalysisCard({
           )}
           {state.result.verdict && (
             <div className="border-t border-on-dark-panel pt-1.5 text-[12px] leading-[1.55] text-ai-text">
-              <b className="text-on-dark">총평</b> — {state.result.verdict}
+              <b className="text-on-dark">총평</b> · {state.result.verdict}
             </div>
           )}
-          <div className="text-[10px] leading-[1.5] text-ai-muted">
+          <div className="t-caption leading-[1.5] text-ai-muted">
             {state.result.disclaimer}.
           </div>
         </div>
@@ -366,7 +361,7 @@ export function AiNoteAnalysisCard({
           <span className="t-sub font-bold text-primary">
             AI 분석은 로그인 후 이용할 수 있어요
           </span>
-          <Link href="/login" className="shrink-0 t-sub font-bold text-primary">
+          <Link href="/login" className="inline-flex min-h-[24px] shrink-0 items-center t-sub font-bold text-primary">
             로그인 ›
           </Link>
         </div>

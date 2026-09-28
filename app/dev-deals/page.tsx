@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { PageShell } from "../components/PageShell";
 import { listDeals } from "@/lib/dev-deals/store";
-import { type DevDeal } from "@/lib/dev-deals/types";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { logger } from "@/lib/log";
 import { DevDealsListClient } from "./DevDealsListClient";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
+import { Explain } from "@/app/components/explain/Explain";
+import { AdZone } from "@/app/components/ads/AdZone";
 
 /* [2026-08-10 저녁 재전환] 필터는 DevDealsListClient(클라이언트), DB 왕복 1회.
    낮에 ISR 로 갔다가 되돌렸었다 — 프로덕션 서비스롤 키가 유실돼(Pro 재임포트)
@@ -34,33 +35,8 @@ export const metadata: Metadata = {
 const DISCLAIMER =
   "내집나우는 개발물건의 소개·정보 게시 플랫폼으로, 당사자 간 계약·자금 정산에 관여하지 않습니다. 게시 정보의 정확성은 등록자에게 있으며, 실제 거래·인허가·수수료 약정은 반드시 당사자 간 확인 및 전문가(법무·세무·공인중개사 등) 자문을 거치시기 바랍니다. 표기된 중개 수수료는 기준이며 사업 규모·조건에 따라 협의됩니다.";
 
-/** 등록 물건이 0건일 때 레이아웃을 보여주기 위한 예시 카드용 더미(예시 배지 표시) */
-const EXAMPLE_DEAL: DevDeal = {
-  id: "example",
-  ownerEmail: null,
-  title: "○○구 가로주택정비사업 — 시공·설계·신탁·PF 협력사 모집",
-  dealType: "가로주택정비",
-  region: "서울 성북",
-  address: null,
-  landAreaM2: 3200,
-  grossFloorAreaM2: 11800,
-  units: 168,
-  totalCostKrw: 42000000000,
-  neededPartners: ["시공", "설계", "신탁", "PF"],
-  budgetText: null,
-  summary:
-    "노후 저층주거지 가로주택정비 — 조합 설립 완료. 시공·설계·신탁·PF 협력사를 찾습니다.",
-  description: null,
-  contactName: "김담당",
-  contactMasked: "010-****-1234",
-  status: "open",
-  isVerified: false,
-  isSample: true,
-  viewCount: 0,
-  inquiryCount: 0,
-  createdAt: "2026-01-01T00:00:00.000Z",
-  updatedAt: null,
-};
+/* [1015 · 규칙 B] 0건일 때 그리던 예시 카드(가공 데이터 EXAMPLE_DEAL — "○○구 가로주택정비사업 · 168세대 · 420억")를 지웠다.
+   예시 카드는 실데이터가 아니면 그리지 않는다. 빈 화면은 한 줄 + 등록 버튼. */
 
 export default async function DevDealsHubPage() {
   /* 2026-07-26: store 가 실패 때 `[]` 를 돌려주던 걸 던지도록 고쳤다. 여기서
@@ -93,61 +69,35 @@ export default async function DevDealsHubPage() {
           .theme-dev-deals — 인라인 style 이면 다크 값도, 대비 게이트도 없다([975]). */}
       <div className="theme-dev-deals">
         {/* 헤더 · 역할 요약(면책 취지 포함) */}
-        <div className="rise-in mb-4">
+        <div className="rise-in mb-4 max-md:mb-3">
           {/* [970 · C-42] h1 안에 배지 span 이 들어 있어 제목이 "개발물건 중개 B2B 디벨로퍼 매칭"
-              으로 읽혔다(스크린리더·검색 스니펫). 배지는 h1 밖 형제로. */}
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              으로 읽혔다(스크린리더·검색 스니펫). 배지는 h1 밖 형제로.
+              [1015 · 규칙 B·C] 제목 옆 "B2B 디벨로퍼 매칭" 부연 배지, 기능 설명 문단(누가 등록하면 누가 문의한다 …),
+              "안내" 색면 배너(면책 — 아래 DISCLAIMER 와 같은 사실의 반복)를 지웠다. 역할·면책은 페이지 끝 DISCLAIMER
+              한 곳과 제목 옆 ⓘ 하나로. */}
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
             <h1 className="text-[19px] font-bold leading-[1.3] text-ink md:text-[21px]">
               개발물건 중개
             </h1>
-            <span className="rounded-full bg-primary-soft px-2.5 py-1 text-[12px] font-bold text-primary">
-              B2B 디벨로퍼 매칭
-            </span>
+            <Explain
+              title="개발물건 중개"
+              body="시행사·부동산사업자가 정비사업·신축·부지 등 개발물건을 등록하면 시공사·설계사·신탁·PF 등 협력업체가 참여 문의를 보내는 B2B 매칭 게시판."
+              how="내집나우는 소개·정보 게시(매칭)만 하고 결제·자금 정산에 관여하지 않는다. 계약·인허가·수수료 약정은 당사자 간 확인과 전문가 자문을 거친다."
+              source="/dev-deals/fees 수수료 기준 · 페이지 끝 면책 고지"
+            />
           </div>
-          <p className="mt-2 max-w-3xl text-[13px] leading-[1.7] text-text-2">
-            시행사·개발을 원하는 부동산사업자가 <strong className="text-ink">개발물건</strong>
-            (정비사업·신축·부지 등)을 등록하면,{" "}
-            <strong className="text-ink">시공사·설계사·신탁·PF·기타 협력업체</strong>가 이를 발견해
-            참여 문의·제안을 보냅니다. 내집나우는 양측을 이어주는{" "}
-            <strong className="text-ink">소개·중개(매칭)</strong> 역할만 하며{" "}
-            <strong className="text-ink">결제·정산은 진행하지 않습니다</strong> — 실제 계약·정산은
-            당사자 간 오프라인으로 진행됩니다.
-          </p>
-        </div>
-
-        {/* 역할·출처 안내 배너(앰버 틴트) */}
-        <div
-          className="rise-in mb-4 flex items-start gap-2 rounded-xl bg-primary-soft px-4 py-3 text-[12px] leading-[1.6]"
-          style={{ color: "var(--primary-strong)" }}
-        >
-          {/* [976] bg-white/70 은 라이트 모드를 전제한 값이다. 다크에서는 이 배너의
-              글자색(--primary-strong = 밝은 앰버)이 흰 칩 위에 얹혀 1.14:1 이었다.
-              표면 토큰을 쓰면 두 모드 모두 배너 글자색과 충분히 갈린다. */}
-          <span className="mt-px shrink-0 rounded-full bg-surface chip-pad text-[10px] font-bold">
-            안내
-          </span>
-          <span>
-            내집나우는 개발물건 <strong>소개·정보 게시 플랫폼</strong>이에요. 게시 정보의 정확성·거래 책임은
-            당사자에게 있으며, <strong>결제·자금 정산은 제공하지 않습니다.</strong> 계약·인허가·수수료
-            약정은 반드시 당사자 확인과 전문가 자문을 거치세요.
-          </span>
         </div>
 
         {/* 목록 + 필터는 클라이언트(DevDealsListClient) — 서버 렌더를 필터와
             무관하게 만들어 ISR 한 벌로 재사용한다. 실패는 loadFailed 로 전달해
             빈 결과와 구분한다(예시 카드로 장애를 덮지 않는다). */}
-        <DevDealsListClient
-          all={all}
-          regions={regions}
-          exampleDeal={EXAMPLE_DEAL}
-          loadFailed={loadFailed}
-        />
+        <DevDealsListClient all={all} regions={regions} loadFailed={loadFailed} />
 
-        {/* 면책 고지(앰버 틴트) */}
-        <div
-          className="rise-in-4 mt-8 rounded-xl bg-primary-soft px-4 py-3 text-[12px] leading-[1.7]"
-          style={{ color: "var(--primary-strong)" }}
-        >
+        {/* [1015 · 규칙 G] 광고 자리 — 페이지 끝 1곳(폰·데스크톱 같음). 첫 화면·필터·목록 사이에는 없다. */}
+        <AdZone placement="page_bottom" seed={4} plan={null} className="mt-8 max-md:mt-5" />
+
+        {/* 면책 고지 — [1015 · 규칙 C] 앰버 색면 → 흰 카드 + 1px 선(문구는 그대로) */}
+        <div className="rise-in-4 card mt-4 rounded-xl px-4 py-3 text-[12px] leading-[1.7] text-text-3">
           {DISCLAIMER}
         </div>
         {/* 수익 문구 미기재 방침(소유자 방침 2026-08-11) — 마켓 표면 공통 고지 */}

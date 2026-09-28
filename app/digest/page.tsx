@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { HouseMark } from "@/app/components/Logo";
 import { ErrorState } from "@/app/components/ui";
+import { AdZone } from "@/app/components/ads/AdZone";
 import { getWeeklyDigest, type WeeklyDigest } from "@/lib/newui/digest";
 import { Delta } from "@/app/components/num/Delta";
 import { Explain } from "@/app/components/explain/Explain";
@@ -91,7 +92,10 @@ export default async function DigestPage() {
 
   return (
     <PageShell breadcrumb="주간 다이제스트">
-      <div className="mx-auto flex w-full max-w-[480px] flex-col gap-2.5">
+      {/* [1015] 데스크톱 2단 — 480px 한 열이라 옆이 비던 화면(브리프 규칙 F). 본문 카드는 그대로 두고
+          아카이브 링크·기준 시각·관련 링크·광고 1 을 오른쪽 340px 레일로 옮겼다. 폰은 한 열 그대로(순서 같음). */}
+      <div className="mx-auto grid w-full max-w-[860px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="flex min-w-0 flex-col gap-2.5">
         {/* 푸시 미리보기 카드 */}
         <div className="rise-in glass-strong flex gap-2.5 rounded-2xl px-3.5 py-3 shadow-[0_8px_24px_rgba(16,28,54,.12)]">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
@@ -119,9 +123,9 @@ export default async function DigestPage() {
         >
           <div>
             <div className="t-body font-bold text-ink">매주 받아보기</div>
+            {/* [1015] 안내문 → 사실 한 줄(브리프 규칙 D) */}
             <div className="mt-0.5 t-sub text-text-2">
-              설정 › 알림 › 푸시 알림에서 ‘주간 다이제스트’를 켜면 매주 월요일 저녁에
-              이 요약을 한 번 보내드려요.
+              설정 › 알림 › 푸시 알림 ‘주간 다이제스트’ · 매주 월요일 저녁 1회
             </div>
           </div>
           <span className="shrink-0 rounded-lg bg-primary-soft px-3.5 py-2 text-xs font-bold text-primary">
@@ -175,12 +179,12 @@ export default async function DigestPage() {
               시장 요약
               <Explain
                 title="시장 요약"
-                body="주요 지역의 한국부동산원 월간 통계예요."
+                body="주요 지역의 한국부동산원 월간 통계입니다."
                 how={[
-                  "가격 = 한국부동산원이 공표한 지역 아파트 평균 매매가격(없으면 중위가격)이에요.",
-                  "등락 = 같은 통계의 매매가격지수 전월 대비 변동률이에요. 평균가 자체의 변화가 아니에요.",
-                  "월간 변동률이 없는 지역은 주간 변동률(전주 대비)로 대신하고, 그 줄에 “전주 대비”라고 적어요.",
-                  "값이 비어 있는 지역은 싣지 않아요.",
+                  "가격 = 한국부동산원이 공표한 지역 아파트 평균 매매가격(없으면 중위가격).",
+                  "등락 = 같은 통계의 매매가격지수 전월 대비 변동률. 평균가 자체의 변화가 아닙니다.",
+                  "월간 변동률이 없는 지역은 주간 변동률(전주 대비)로 대신하고, 그 줄에 “전주 대비”라고 적습니다.",
+                  "값이 비어 있는 지역은 싣지 않습니다.",
                 ]}
                 source={`한국부동산원 R-ONE${market[0]?.periodLabel ? ` · ${market[0].periodLabel} 기준` : ""}`}
               />
@@ -200,8 +204,11 @@ export default async function DigestPage() {
                 주요 지역 시세로 표시할 최신 스냅샷이 아직 없어요.
               </div>
             ))}
+          {/* [1015] 가격·등락 행 목록 = 리퀴드 판(blue — 시세 톤, 브리프 규칙 I) */}
+          {market.length > 0 && (
+          <div className="lq-panel flex flex-col" data-tone="blue">
           {market.map((m) => (
-            <div key={m.regionId} className="flex items-center justify-between t-sub">
+            <div key={m.regionId} className="flex items-center justify-between border-b py-1.5 last:border-b-0 t-sub">
               <span className="text-text-2">
                 <b className="font-bold text-ink">{m.name}</b>
                 <span className="ml-1 text-text-3">{m.city}</span>
@@ -217,6 +224,8 @@ export default async function DigestPage() {
               </span>
             </div>
           ))}
+          </div>
+          )}
         </div>
 
         {/* 커뮤니티 (최근 7일 이웃 글) */}
@@ -232,9 +241,7 @@ export default async function DigestPage() {
               이웃 글을 불러오지 못했어요 (조회 실패). 글이 없다는 뜻은 아니에요.
             </div>
           ) : community.count === 0 ? (
-            <div className="t-sub text-text-3">
-              이번 주 새 이웃 글이 아직 없어요. 첫 글을 남겨보세요.
-            </div>
+            <div className="t-sub text-text-3">이번 주 새 이웃 글이 아직 없어요.</div>
           ) : (
             <>
               <div className="t-sub text-text-2">
@@ -254,19 +261,42 @@ export default async function DigestPage() {
           )}
         </div>
 
+      </div>
+
+      {/* ===== 오른쪽 레일(데스크톱) — 관련 링크 · 아카이브 · 기준 시각 · 광고 1. 폰은 본문 아래 ===== */}
+      <aside className="flex min-w-0 flex-col gap-2.5">
+        <div className="rise-in-4 card flex flex-col gap-1.5 rounded-2xl px-4 py-3.5">
+          <div className="text-xs font-bold text-ink">관련 화면</div>
+          {[
+            { href: "/town/news", label: "뉴스룸" },
+            { href: "/town", label: "동네이야기" },
+            { href: "/apply", label: "청약 경쟁률 · 특별공급" },
+            { href: "/supply", label: "입주 물량" },
+          ].map((l) => (
+            <Link key={l.href} href={l.href} className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary no-underline">
+              {l.label} ›
+            </Link>
+          ))}
+        </div>
+
         {/* N23 — 이 페이지는 "최근 7일" 이라 어제 본 내용과 오늘 본 내용이 다르다.
             그래서 이 주소는 인용할 수 없다. 주 단위로 고정된 아카이브를 따로 둔다. */}
-        <p className="rise-in-5 text-center t-sub text-text-3">
-          <Link href="/digest/archive" className="font-bold text-primary">
+        <p className="rise-in-5 px-1 t-sub text-text-3">
+          <Link href="/digest/archive" className="inline-flex min-h-[24px] items-center font-bold text-primary">
             지난 주간 다이제스트 아카이브 ›
           </Link>
         </p>
 
-        <p className="rise-in-5 text-center t-caption text-text-3">
+        <p className="rise-in-5 px-1 t-caption text-text-3">
           데이터 기준 시각 {asOfLabel(digest.generatedAt)}
           {digest.marketAsOf ? ` · 실거래 기준 ${digest.marketAsOf} (국토교통부)` : ""}
         </p>
+      </aside>
       </div>
+
+      {/* [1015] 광고 — 페이지 끝 1곳(브리프 규칙 G: 첫 화면 밖). 레일은 짧아 데스크톱 첫 화면 안에 들어오므로
+          본문이 끝난 뒤에 둔다. 이 화면에 광고 자리가 없었다. */}
+      <AdZone placement="page_bottom" seed={0} plan={null} className="mx-auto mt-6 w-full max-w-[860px] max-md:mt-4" />
     </PageShell>
   );
 }

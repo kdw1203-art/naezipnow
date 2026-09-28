@@ -35,13 +35,14 @@ function BannerCard({ banner }: { banner: Banner }) {
   const href = banner.ctaUrl || null;
   const inner = (
     <div
-      className="flex flex-col gap-1 rounded-2xl px-5 py-4"
+      /* [1015 · 규칙 G] 광고 자리는 흰 카드와 같은 재질 — 배너 색(bgFrom·bgTo)은 단색 면 하나로만, 그라데이션 없음 */
+      className="card flex flex-col gap-1 rounded-lg px-5 py-4"
       style={{
-        background: `linear-gradient(135deg, ${banner.bgFrom}, ${banner.bgTo})`,
-        color: banner.textColor || "white",
+        background: banner.bgFrom || undefined,
+        color: banner.textColor || undefined,
       }}
     >
-      <span className="text-[10px] font-bold uppercase tracking-wide opacity-80">광고</span>
+      <span className="t-caption font-bold opacity-80">광고</span>
       <span className="text-[15px] font-bold leading-snug">{banner.title}</span>
       {banner.subtitle ? (
         <span className="text-[12px] leading-relaxed opacity-90">{banner.subtitle}</span>

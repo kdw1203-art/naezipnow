@@ -27,23 +27,24 @@ export const metadata: Metadata = {
 const STAGES: { name: string; desc: string }[] = [
   {
     name: "가계약",
-    desc: "매물을 잡기 위해 소액을 먼저 거는 단계예요. 걸기 전에 등기부·시세·조건을 확인하고, 가계약금 반환 조건(계약 불성립 시)을 문자·계약서로 명확히 남기세요.",
+    /* [1015 · 규칙 D] 단계 설명 "~예요/~하세요" → 사실 문장. 내용은 그대로 */
+    desc: "매물을 잡기 위해 소액을 먼저 거는 단계. 걸기 전에 등기부·실거래·조건을 확인하고, 가계약금 반환 조건(계약 불성립 시)을 문자·계약서로 남긴다.",
   },
   {
     name: "계약 (본계약)",
-    desc: "표준계약서를 작성하고 보통 매매대금·보증금의 10% 안팎을 계약금으로 지급해요. 소유자 신분증과 등기부상 소유자 일치를 확인하고 특약을 빠짐없이 적으세요.",
+    desc: "표준계약서를 작성하고 보통 매매대금·보증금의 10% 안팎을 계약금으로 지급한다. 소유자 신분증과 등기부상 소유자 일치를 확인하고 특약을 빠짐없이 적는다.",
   },
   {
     name: "중도금",
-    desc: "중도금을 지급하면 이행에 착수한 것으로 보아 일방적 계약 해제가 어려워져요. 자금 계획과 대출 실행 일정을 미리 점검하세요.",
+    desc: "중도금을 지급하면 이행에 착수한 것으로 보아 일방적 계약 해제가 어려워진다. 자금 계획과 대출 실행 일정을 미리 점검.",
   },
   {
     name: "잔금",
-    desc: "잔금일에 등기부를 다시 열람해 근저당 등 권리변동을 확인하고, 소유권 이전 등기를 접수해요. 관리비·공과금 정산도 이때 마무리해요.",
+    desc: "잔금일에 등기부를 다시 열람해 근저당 등 권리변동을 확인하고 소유권 이전 등기를 접수한다. 관리비·공과금 정산도 이때 마무리.",
   },
   {
     name: "입주",
-    desc: "임차인은 전입신고와 확정일자를 바로 받아 대항력·우선변제권을 확보하세요. 시설·하자를 점검하고 열쇠·설비를 인수해요.",
+    desc: "임차인은 전입신고와 확정일자를 바로 받아 대항력·우선변제권을 확보한다. 시설·하자를 점검하고 열쇠·설비를 인수.",
   },
 ];
 
@@ -120,36 +121,36 @@ const DOC_CHECKS: { icon: string; title: string; lead: string; points: string[] 
   {
     icon: "file-text",
     title: "등기부등본 (등기사항전부증명서)",
-    lead: "부동산의 소유관계와 권리 상태를 보여주는 가장 중요한 서류예요. 세 부분으로 나눠 살펴보세요.",
+    lead: "부동산의 소유관계와 권리 상태를 보여주는 서류. 표제부·갑구·을구 세 부분.",
     points: [
-      "표제부 — 부동산의 소재지·면적·구조 등 기본 표시가 계약서와 일치하는지 확인",
-      "갑구 — 소유자, 가압류·가처분·경매 개시 등 소유권 관련 사항. 소유자와 계약 상대방이 같은지 대조",
-      "을구 — 근저당권·전세권 등 담보. 선순위 채권 규모가 보증금·매매가에 비해 과도하지 않은지 확인",
+      "표제부: 부동산의 소재지·면적·구조 등 기본 표시가 계약서와 일치하는지 확인",
+      "갑구: 소유자, 가압류·가처분·경매 개시 등 소유권 관련 사항. 소유자와 계약 상대방이 같은지 대조",
+      "을구: 근저당권·전세권 등 담보. 선순위 채권 규모가 보증금·매매가에 비해 과도하지 않은지 확인",
     ],
   },
   {
     icon: "building",
     title: "건축물대장",
-    lead: "건물의 실제 면적·용도·구조와 위법 여부를 확인하는 서류예요. 등기부만으로는 알기 어려운 정보가 담겨요.",
+    lead: "건물의 실제 면적·용도·구조와 위법 여부를 확인하는 서류. 등기부만으로는 알기 어려운 정보.",
     points: [
-      "위반건축물 표기 — 불법 증축·용도 변경으로 '위반건축물'로 적혀 있는지 확인",
-      "면적·용도·층수 — 실제 사용 현황과 광고·계약 내용이 일치하는지 대조",
-      "무허가·미등기 여부 — 대장에 없는 부분이 있는지 확인",
+      "위반건축물 표기: 불법 증축·용도 변경으로 '위반건축물'로 적혀 있는지 확인",
+      "면적·용도·층수: 실제 사용 현황과 광고·계약 내용이 일치하는지 대조",
+      "무허가·미등기 여부: 대장에 없는 부분이 있는지 확인",
     ],
   },
 ];
 
 const StepDiagram = () => (
-  <section className="rise-in card rounded-2xl p-5 md:p-6">
+  <section className="rise-in card rounded-2xl p-5 max-md:p-3.5 md:p-6">
     <div className="flex items-center gap-2.5">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
         <Icon name="footprints" size={18} />
       </span>
-      <h2 className="text-[15px] font-bold text-ink">
+      <h2 className="t-section text-ink">
         계약 단계별 확인사항
       </h2>
     </div>
-    <ol className="mt-4 flex flex-col gap-0">
+    <ol className="mt-4 flex flex-col gap-0 max-md:mt-3">
       {STAGES.map((s, i) => (
         <li key={s.name} className="flex gap-3">
           <div className="flex flex-col items-center">
@@ -160,9 +161,9 @@ const StepDiagram = () => (
               <span className="w-px flex-1 bg-line" aria-hidden="true" />
             )}
           </div>
-          <div className={i < STAGES.length - 1 ? "pb-4" : ""}>
-            <div className="text-[13px] font-bold text-ink">{s.name}</div>
-            <div className="mt-0.5 text-[12px] leading-[1.7] text-text-2">
+          <div className={i < STAGES.length - 1 ? "pb-4 max-md:pb-3" : ""}>
+            <div className="t-body font-bold text-ink">{s.name}</div>
+            <div className="mt-0.5 t-sub leading-[1.7] text-text-2">
               {s.desc}
             </div>
           </div>
@@ -180,13 +181,13 @@ const ClauseColumn = ({
   clauses: Clause[];
 }) => (
   <div className="flex flex-col gap-2.5">
-    <div className="inline-flex w-fit items-center rounded-full bg-primary-soft px-3 py-1 text-[12px] font-bold text-primary">
+    <div className="inline-flex w-fit items-center rounded-full bg-primary-soft px-3 py-1 t-sub font-bold text-primary">
       {label}
     </div>
     {clauses.map((c) => (
       <div key={c.term} className="border-l-2 border-line pl-3">
-        <div className="text-[13px] font-bold text-text-1">{c.term}</div>
-        <div className="mt-0.5 text-[12px] leading-[1.7] text-text-3">
+        <div className="t-body font-bold text-text-1">{c.term}</div>
+        <div className="mt-0.5 t-sub leading-[1.7] text-text-3">
           {c.desc}
         </div>
       </div>
@@ -198,7 +199,7 @@ export default function ContractGuidePage() {
   /* 항목 46 잔여 — HowTo 구조화 데이터. 화면에 실제 렌더되는 STAGES 배열
      그대로에서 생성한다(스키마 전용 단계 추가 금지 — faqJsonLd 와 같은 규칙). */
   const howTo = howToJsonLd({
-    name: "부동산 계약 단계별 확인사항 — 가계약부터 입주까지",
+    name: "부동산 계약 단계별 확인사항(가계약부터 입주까지)",
     description:
       "가계약·본계약·중도금·잔금·입주 다섯 단계에서 각각 확인할 사항을 정리한 절차 안내입니다. 실제 계약 내용은 중개사무소와 관련 기관에 확인하세요.",
     path: PATH,
@@ -218,16 +219,8 @@ export default function ContractGuidePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript([crumbs, howTo]) }}
       />
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
-        {/* 전문가 확인 권고 안내 */}
-        <div className="rise-in flex items-start gap-3 rounded-2xl bg-primary-soft p-4">
-          <Icon name="shield" size={18} className="mt-0.5 shrink-0 text-primary" />
-          <p className="text-[13px] leading-[1.7] text-primary">
-            아래 내용은 계약을 준비할 때 살펴볼 <b>일반적인 확인 포인트</b>예요.
-            실제 계약서 작성과 특약 문구는 개별 사안에 따라 달라지므로, 서명 전
-            <b>중개사무소의 확인·설명</b>을 꼼꼼히 듣고 필요한 내용은 관련 기관에 확인하세요.
-          </p>
-        </div>
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4 max-md:gap-3">
+        {/* [1015 · 규칙 B] 머리의 "일반적인 확인 포인트예요 … 확인하세요" 안내 블록 삭제 — 맨 끝 고지 한 줄이 같은 말을 한다 */}
 
         {/* [1008 · J] 계산하는 도구로 가는 입구 한 줄 — 계약일·잔금일을 넣으면 날짜가 붙은 할 일 목록이 된다 */}
         <Link
@@ -239,10 +232,8 @@ export default function ContractGuidePage() {
               <Icon name="calendar" size={18} />
             </span>
             <span className="min-w-0">
-              <span className="block t-body font-bold text-ink">내 계약일로 일정표 만들기</span>
-              <span className="block t-sub text-text-2">
-                계약일·잔금일을 넣으면 거래신고·취득세·등기·전입신고 기한까지 날짜순으로 정리해요
-              </span>
+              <span className="block t-body font-bold text-ink">계약·잔금 일정표</span>
+              <span className="block t-sub text-text-2">계약일·잔금일 입력 → 거래신고·취득세·등기·전입신고 기한 날짜순</span>
             </span>
           </span>
           <span aria-hidden="true" className="tile-go shrink-0 t-body font-bold text-primary">
@@ -254,51 +245,49 @@ export default function ContractGuidePage() {
         <StepDiagram />
 
         {/* 2. 표준계약서 핵심 조항 */}
-        <section className="rise-in-1 card rounded-2xl p-5 md:p-6">
+        <section className="rise-in-1 card rounded-2xl p-5 max-md:p-3.5 md:p-6">
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
               <Icon name="file-text" size={18} />
             </span>
-            <h2 className="text-[15px] font-bold text-ink">
+            <h2 className="t-section text-ink">
               표준계약서 핵심 조항
             </h2>
           </div>
-          <p className="mt-3 text-[13px] leading-[1.75] text-text-2">
-            국토교통부 표준임대차·표준매매 계약서를 기준으로, 당사자 인적사항과
-            목적물 표시(등기부와 일치)를 먼저 확인한 뒤 아래 핵심 조항을
-            점검하세요.
+          <p className="mt-3 t-body leading-[1.75] text-text-2 max-md:mt-2">
+            국토교통부 표준임대차·표준매매 계약서 기준. 당사자 인적사항과 목적물 표시(등기부와 일치)를 먼저 확인한 뒤 아래
+            핵심 조항 점검.
           </p>
-          <div className="mt-4 grid gap-5 sm:grid-cols-2">
+          <div className="mt-4 grid gap-5 max-md:mt-3 max-md:gap-4 sm:grid-cols-2">
             <ClauseColumn label="임대차 계약" clauses={LEASE_CLAUSES} />
             <ClauseColumn label="매매 계약" clauses={SALE_CLAUSES} />
           </div>
         </section>
 
         {/* 3. 자주 쓰는 특약 예시 */}
-        <section className="rise-in-2 card rounded-2xl p-5 md:p-6">
+        <section className="rise-in-2 card rounded-2xl p-5 max-md:p-3.5 md:p-6">
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
               <Icon name="handshake" size={18} />
             </span>
-            <h2 className="text-[15px] font-bold text-ink">
+            <h2 className="t-section text-ink">
               자주 쓰는 특약 예시
             </h2>
           </div>
-          <p className="mt-3 text-[13px] leading-[1.75] text-text-2">
-            특약은 표준 조항으로 담기 어려운 개별 약속을 적는 부분이에요. 아래는
-            참고용 예시 표현이며, 실제 문구는 상황에 맞게 전문가와 다듬으세요.
+          <p className="mt-3 t-body leading-[1.75] text-text-2 max-md:mt-2">
+            특약은 표준 조항으로 담기 어려운 개별 약속을 적는 부분. 아래는 참고용 예시 표현이며 실제 문구는 상황에 맞게 조정.
           </p>
-          <div className="mt-4 flex flex-col gap-3">
+          <div className="mt-4 flex flex-col gap-3 max-md:mt-3 max-md:gap-2">
             {SPECIAL_TERMS.map((t) => (
               <div
                 key={t.title}
                 className="rounded-lg border border-line bg-bg p-3.5"
               >
-                <div className="flex items-center gap-1.5 text-[13px] font-bold text-ink">
+                <div className="flex items-center gap-1.5 t-body font-bold text-ink">
                   <Icon name="check" size={14} className="text-primary" />
                   {t.title}
                 </div>
-                <p className="mt-1.5 text-[12px] leading-[1.7] text-text-2">
+                <p className="mt-1.5 t-sub leading-[1.7] text-text-2">
                   {t.example}
                 </p>
               </div>
@@ -307,30 +296,30 @@ export default function ContractGuidePage() {
         </section>
 
         {/* 4. 등기부·건축물대장 확인 포인트 */}
-        <section className="rise-in-3 card rounded-2xl p-5 md:p-6">
+        <section className="rise-in-3 card rounded-2xl p-5 max-md:p-3.5 md:p-6">
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
               <Icon name="search" size={18} />
             </span>
-            <h2 className="text-[15px] font-bold text-ink">
+            <h2 className="t-section text-ink">
               등기부·건축물대장 확인 포인트
             </h2>
           </div>
-          <div className="mt-4 flex flex-col gap-4">
+          <div className="mt-4 flex flex-col gap-4 max-md:mt-3 max-md:gap-3">
             {DOC_CHECKS.map((d) => (
               <div key={d.title}>
-                <div className="flex items-center gap-2 text-[13px] font-bold text-ink">
+                <div className="flex items-center gap-2 t-body font-bold text-ink">
                   <Icon name={d.icon} size={16} className="text-text-3" />
                   {d.title}
                 </div>
-                <p className="mt-1.5 text-[12px] leading-[1.7] text-text-2">
+                <p className="mt-1.5 t-sub leading-[1.7] text-text-2">
                   {d.lead}
                 </p>
                 <ul className="mt-2 flex flex-col gap-1.5">
                   {d.points.map((p) => (
                     <li
                       key={p}
-                      className="flex gap-2 text-[12px] leading-[1.7] text-text-3"
+                      className="flex gap-2 t-sub leading-[1.7] text-text-3"
                     >
                       <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-primary" />
                       <span>{p}</span>
@@ -340,10 +329,10 @@ export default function ContractGuidePage() {
               </div>
             ))}
           </div>
-          <p className="mt-4 rounded-lg bg-[rgba(29,79,216,.06)] px-3 py-2 text-[12px] leading-[1.7] text-text-2">
-            등기부등본은 인터넷등기소(iros.go.kr), 건축물대장은 정부24(gov.kr)에서
-            열람할 수 있어요. 계약~잔금 사이 권리가 바뀔 수 있으니 <b>잔금 직전에
-            다시 한 번</b> 열람하세요.
+          {/* [1015 · 규칙 C·D] 파란 색면 안내 → 흰 면 위 사실 한 줄 */}
+          <p className="mt-4 rounded-lg bg-bg px-3 py-2 t-sub leading-[1.7] text-text-2 max-md:mt-3">
+            등기부등본: 인터넷등기소(iros.go.kr) · 건축물대장: 정부24(gov.kr). 계약~잔금 사이 권리가 바뀔 수 있어{" "}
+            <b>잔금 직전 재열람</b> 권장.
           </p>
         </section>
 
@@ -353,20 +342,18 @@ export default function ContractGuidePage() {
           className="tile flex items-center justify-between rounded-2xl border border-line bg-surface px-5 py-4 no-underline"
         >
           <div>
-            <div className="text-[13px] font-bold text-ink">
+            <div className="t-body font-bold text-ink">
               부동산 규제·의무 안내
             </div>
-            <div className="mt-0.5 text-[12px] text-text-2">
-              규제지역·대출·세금·청약 등 계약 전 알아둘 제도 개념을 함께 확인하세요.
-            </div>
+            <div className="mt-0.5 t-sub text-text-2">규제지역·대출·세금·청약 제도의 개념</div>
           </div>
-          <span className="shrink-0 rounded-lg bg-primary-soft px-3.5 py-2 text-xs font-bold text-primary">
+          <span className="shrink-0 rounded-lg bg-primary-soft px-3.5 py-2 t-sub font-bold text-primary">
             가이드 보기 ›
           </span>
         </Link>
 
         {/* 공통 면책 */}
-        <p className="px-1 pb-2 text-[12px] leading-[1.7] text-text-3">
+        <p className="px-1 pb-2 t-sub leading-[1.7] text-text-3">
           본 안내는 일반 정보이며 법률·세무 자문이 아닙니다. 실제 거래·신고·세금은
           중개사무소·세무 전문가와 관련 기관 확인이 필요합니다.
         </p>

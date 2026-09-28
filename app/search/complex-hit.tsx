@@ -27,7 +27,7 @@ export function Hl({ text, q }: { text: string; q: string }) {
 /** 오타 추정 후보 표시 — "이 이름이 맞다" 가 아니라 "비슷하다" 를 정직하게 */
 export function FuzzyBadge() {
   return (
-    <span className="shrink-0 rounded border border-line px-1 text-[10px] font-bold text-text-3">비슷한 이름</span>
+    <span className="shrink-0 rounded border border-line px-1 t-caption font-bold text-text-3">비슷한 이름</span>
   );
 }
 

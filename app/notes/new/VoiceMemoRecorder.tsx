@@ -187,7 +187,7 @@ export function VoiceMemoRecorder({
               </div>
               {txState[u] === "error" && (
                 <p className="t-caption font-semibold text-warning">
-                  전사에 실패했어요 — 잠시 후 다시 눌러 주세요.
+                  전사에 실패했어요. 잠시 후 다시 눌러 주세요.
                 </p>
               )}
               {txState[u] === "unavailable" && (
@@ -204,12 +204,10 @@ export function VoiceMemoRecorder({
         <p className="t-sub font-bold text-text-3">이 브라우저는 녹음을 지원하지 않아요.</p>
       )}
       {state === "error" && (
-        <p className="t-sub font-bold text-warning">저장에 실패했어요 — 다시 시도해 주세요.</p>
+        <p className="t-sub font-bold text-warning">저장에 실패했어요. 다시 시도해 주세요.</p>
       )}
-      <p className="t-caption text-text-3">
-        말로 남긴 첫인상은 나중에 글로 옮길 때 가장 좋은 재료가 됩니다. 녹음은 노트에
-        첨부되며, 공개 노트에서는 다른 사람도 들을 수 있어요.
-      </p>
+      {/* [1015 · 규칙 B] 권유 문장은 뺐다 — 공개 범위 사실만 */}
+      <p className="t-caption text-text-3">녹음은 노트에 첨부 · 공개 노트에서는 다른 사람도 들을 수 있음</p>
     </div>
   );
 }

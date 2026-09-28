@@ -45,14 +45,15 @@ export const JOURNEY_STAGES: readonly JourneyStage[] = [
     title: "시장 감 잡기",
     short: "시장 감",
     /* [1012 · R2] 규칙 6 — 언제(집 보러 가기 전)·어디서(국토교통부 신고분)를 문장에. 최신 신고월·시군구 수는
-       화면이 실데이터로 덧붙인다(journeyCountLabels stages.market). */
-    why: "집 보러 가기 전, 국토교통부 실거래 신고분으로 요즘 거래가부터 익혀요 — 본 집이 비싼지 싼지 가늠하려면요.",
+       화면이 실데이터로 덧붙인다(journeyCountLabels stages.market).
+       [1015 · 규칙 D] "~익혀요 — ~하려면요" 대화체·대시 잇기 → 사실 두 문장. 아래 desc 도 같은 규칙. */
+    why: "집 보러 가기 전 국토교통부 실거래 신고분으로 요즘 거래가부터. 본 집이 비싼지 싼지 가늠하는 기준.",
     icon: "compass",
     tasks: [
       /* [1012 · R2] 규칙 6·7 — 무엇(전용 84㎡ 안팎 두 단지의 실거래)·출처(국토교통부)·언제(날마다) */
-      { label: "실거래가 게임", desc: "전용 84㎡ 안팎 두 단지의 최근 실거래 중 더 비싼 쪽을 맞혀요 · 국토교통부 신고분 · 날마다 새 문제", href: "/quiz" },
-      { label: "지도에서 최근 실거래 보기", desc: "관심 동네 단지들의 최근 거래가를 지도에서 봐요.", href: "/map" },
-      { label: "용어사전", desc: "전용면적·LTV 같은 말을 쉬운 말로 풀어 뒀어요.", href: "/glossary" },
+      { label: "실거래가 게임", desc: "전용 84㎡ 안팎 두 단지 중 더 비싼 쪽 맞히기 · 국토교통부 신고분 · 날마다 새 문제", href: "/quiz" },
+      { label: "지도에서 최근 실거래 보기", desc: "관심 동네 단지들의 최근 거래가", href: "/map" },
+      { label: "용어사전", desc: "전용면적·LTV 같은 말의 뜻", href: "/glossary" },
     ],
   },
   {
@@ -60,15 +61,15 @@ export const JOURNEY_STAGES: readonly JourneyStage[] = [
     n: 2,
     title: "예산 정하기",
     short: "예산",
-    why: "대출·세금까지 넣어 ‘실제로 쓸 수 있는 돈’을 알아야 헛걸음을 줄여요.",
+    why: "대출·세금까지 넣은 ‘실제로 쓸 수 있는 돈’이 헛걸음을 줄인다.",
     icon: "wallet",
     tasks: [
       {
         label: "대출·필요 현금 계산",
-        desc: "매매가·소득·가진 돈을 넣으면 월 상환액과 취득세를 더한 필요 현금을 계산해요.",
+        desc: "매매가·소득·가진 돈 → 월 상환액 · 취득세를 더한 필요 현금",
         href: "/calculator",
       },
-      { label: "중개보수 계산", desc: "거래 금액에 따른 중개보수 상한을 미리 봐요.", href: "/calculator/brokerage" },
+      { label: "중개보수 계산", desc: "거래 금액별 중개보수 법정 상한", href: "/calculator/brokerage" },
     ],
     budgetChips: [3, 5, 7, 10],
   },
@@ -77,14 +78,14 @@ export const JOURNEY_STAGES: readonly JourneyStage[] = [
     n: 3,
     title: "후보 좁히기",
     short: "후보",
-    why: "후보를 3~5곳으로 줄여야 현장 확인과 비교에 시간을 쓸 수 있어요.",
+    why: "후보를 3~5곳으로 줄여야 현장 확인과 비교에 시간을 쓸 수 있다.",
     icon: "target",
     tasks: [
-      { label: "단지 종합 진단", desc: "단지 하나를 넣으면 항목별로 따져 종합 점수로 정리해요.", href: "/analysis/ai/ai-diagnosis" },
-      { label: "단지 이름으로 찾기", desc: "이름을 알면 바로 그 단지의 실거래·기록으로 가요.", href: "/search" },
+      { label: "단지 종합 진단", desc: "단지 하나를 항목별로 따진 종합 점수", href: "/analysis/ai/ai-diagnosis" },
+      { label: "단지 이름으로 찾기", desc: "단지 이름 → 실거래·기록", href: "/search" },
       {
         label: "관심 단지 모아 보기",
-        desc: "마음에 드는 단지를 모아 두면 가격 변동을 한곳에서 볼 수 있어요.",
+        desc: "관심 단지의 가격 변동을 한곳에서",
         href: "/my/watchlist",
         login: true,
       },
@@ -95,12 +96,12 @@ export const JOURNEY_STAGES: readonly JourneyStage[] = [
     n: 4,
     title: "현장 확인(임장)",
     short: "임장",
-    why: "사진과 숫자로는 안 보이는 소음·경사·주차·관리 상태는 직접 가 봐야 알아요.",
+    why: "사진과 숫자로는 안 보이는 소음·경사·주차·관리 상태는 현장에서만 확인된다.",
     icon: "footprints",
     tasks: [
-      { label: "임장 동선 짜기", desc: "하루에 돌 단지 순서를 정해 지도 위에 이어 줘요.", href: "/analysis/ai/ai-inspection" },
-      { label: "임장노트 쓰기", desc: "현장에서 본 것을 항목별로 적어 두면 나중에 나란히 비교할 수 있어요.", href: "/notes/new" },
-      { label: "지역별 임장 가이드", desc: "동네마다 현장에서 볼 점을 모아 뒀어요.", href: "/imjang" },
+      { label: "임장 동선 짜기", desc: "하루에 돌 단지 순서를 지도 위에", href: "/analysis/ai/ai-inspection" },
+      { label: "임장노트 쓰기", desc: "현장에서 본 것을 항목별로 기록, 나중에 나란히 비교", href: "/notes/new" },
+      { label: "지역별 임장 가이드", desc: "동네별 현장 체크포인트", href: "/imjang" },
     ],
   },
   {
@@ -108,12 +109,12 @@ export const JOURNEY_STAGES: readonly JourneyStage[] = [
     n: 5,
     title: "비교·결정",
     short: "비교",
-    why: "같은 기준으로 나란히 놓아야 느낌이 아니라 근거로 고를 수 있어요.",
+    why: "같은 기준으로 나란히 놓아야 느낌이 아니라 근거로 고른다.",
     icon: "scale",
     tasks: [
-      { label: "비교함에서 나란히 보기", desc: "후보를 2곳 이상 담아 한 표에서 비교해요.", href: "/analysis/compare" },
-      { label: "매수 타이밍 보기", desc: "지역 거래량 흐름으로 지금이 어느 국면인지 봐요.", href: "/analysis/ai/ai-timing" },
-      { label: "내 임장노트 다시 보기", desc: "다녀온 곳의 기록을 한곳에서 다시 읽어요.", href: "/notes?tab=mine", login: true },
+      { label: "비교함에서 나란히 보기", desc: "후보 2곳 이상을 한 표에서", href: "/analysis/compare" },
+      { label: "매수 타이밍 보기", desc: "지역 거래량 흐름으로 본 지금의 국면", href: "/analysis/ai/ai-timing" },
+      { label: "내 임장노트 다시 보기", desc: "다녀온 곳의 기록을 한곳에서", href: "/notes?tab=mine", login: true },
     ],
   },
   {
@@ -121,20 +122,20 @@ export const JOURNEY_STAGES: readonly JourneyStage[] = [
     n: 6,
     title: "계약·잔금·입주",
     short: "계약",
-    why: "도장을 찍은 뒤에도 신고·대출·등기·세금·전입신고까지 기한이 정해진 일이 이어져요.",
+    why: "계약 뒤에도 신고·대출·등기·세금·전입신고까지 기한이 정해진 일이 이어진다.",
     icon: "key",
     tasks: [
       {
         label: "계약·잔금 일정표",
-        desc: "계약일·잔금일을 넣으면 할 일과 법정 기한을 날짜순으로 정리해요.",
+        desc: "계약일·잔금일 → 할 일과 법정 기한을 날짜순으로",
         href: "/journey/contract",
       },
       {
         label: "계약 전 체크리스트·특약",
-        desc: "등기부·건축물대장 보는 법과 자주 쓰는 특약을 정리했어요.",
+        desc: "등기부·건축물대장 보는 법 · 자주 쓰는 특약",
         href: "/guides/contract",
       },
-      { label: "규제·의무 안내", desc: "규제지역·대출·세금 제도를 계약 전에 확인해요.", href: "/guides/regulations" },
+      { label: "규제·의무 안내", desc: "규제지역·대출·세금 제도의 개념", href: "/guides/regulations" },
     ],
   },
 ];
@@ -206,6 +207,6 @@ export function journeyCountLabels(input: JourneyCountInput): JourneyCountLabels
 export function journeyHowToSteps(): { name: string; text: string }[] {
   return JOURNEY_STAGES.map((s) => ({
     name: `${s.n}단계 · ${s.title}`,
-    text: `${s.why} 할 일: ${s.tasks.map((t) => t.label).join(", ")}${s.budgetChips ? ", 예산 안의 단지 지도에서 보기" : ""}.`,
+    text: `${s.why} 할 일: ${s.tasks.map((t) => t.label).join(", ")}${s.budgetChips ? ", 예산으로 지도 보기" : ""}.`,
   }));
 }

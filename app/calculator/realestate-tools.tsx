@@ -68,7 +68,7 @@ function Field({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-0.5">
-        <label htmlFor={id} className="text-[13px] text-text-2">
+        <label htmlFor={id} className="t-body text-text-2">
           {label}
         </label>
         {explain}
@@ -84,12 +84,12 @@ function Field({
           aria-describedby={hint ? hintId : undefined}
           className="input w-full px-3 py-2.5 pr-12 text-right text-[13px] font-bold text-ink"
         />
-        <span className="pointer-events-none absolute right-3 text-[12px] font-semibold text-text-3">
+        <span className="pointer-events-none absolute right-3 t-sub font-semibold text-text-3">
           {unit}
         </span>
       </div>
       {hint && (
-        <span id={hintId} className="t-num text-right text-[12px] font-semibold text-text-3">
+        <span id={hintId} className="t-num text-right t-sub font-semibold text-text-3">
           {hint}
         </span>
       )}
@@ -108,7 +108,7 @@ function ResultRow({
   tone?: string;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-2 text-xs">
+    <div className="flex items-baseline justify-between gap-2 t-sub">
       <span className="text-ai-muted">{label}</span>
       <span className={`t-num font-bold ${tone}`}>{value}</span>
     </div>
@@ -133,25 +133,25 @@ function ResultPanel({
   return (
     <div className="flex flex-col gap-3">
       {/* [--text-3]: ⓘ 단추 색(var(--text-3))이 어두운 면에서 흐려 패널 안에서만 ai-muted 로 읽게 한다 */}
-      <div className="ai-panel flex flex-col gap-2.5 rounded-3xl p-[18px] shadow-[0_14px_36px_rgba(16,28,54,.22)] [--text-3:var(--ai-muted)]">
+      <div className="ai-panel flex flex-col gap-2.5 rounded-3xl p-[18px] shadow-[0_14px_36px_rgba(16,28,54,.22)] max-md:p-3.5 [--text-3:var(--ai-muted)]">
         {conclusion && <p className="t-body break-words font-bold text-ai-text">{conclusion}</p>}
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <span className="flex items-center gap-0.5 text-[13px] text-ai-muted">{primaryLabel}</span>
+          <span className="flex items-center gap-0.5 t-body text-ai-muted">{primaryLabel}</span>
           <span className="t-title text-ai-text">{primaryValue}</span>
         </div>
         {children}
       </div>
-      {note && <div className="px-1 text-[12px] leading-[1.6] text-text-3">{note}</div>}
+      {note && <div className="px-1 t-sub leading-[1.6] text-text-3">{note}</div>}
     </div>
   );
 }
 
 function ToolCard({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
-    <div className="card flex flex-col gap-3 rounded-3xl p-[18px]">
+    <div className="card flex flex-col gap-3 rounded-3xl p-[18px] max-md:p-3.5">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[13px] font-bold text-ink">{title}</span>
-        <span className="text-[12px] font-medium text-text-3">{subtitle}</span>
+        <span className="t-body font-bold text-ink">{title}</span>
+        <span className="t-sub font-medium text-text-3">{subtitle}</span>
       </div>
       {children}
     </div>
@@ -173,10 +173,11 @@ const DIRECTIONS = [
 
 export function JeonseWolse() {
   const [dir, setDir] = useState<"toWolse" | "toJeonse">("toWolse");
-  const [jeonse, setJeonse] = useState("50000"); // 전세보증금 (만원)
-  const [deposit, setDeposit] = useState("10000"); // 월세보증금 (만원)
+  /* [1015 · 규칙 B] 금액 예시 기본값(50,000·10,000·165)은 뺐다 — 빈 칸에서 시작. 전환율은 조정하는 매개변수라 시작값을 둔다. */
+  const [jeonse, setJeonse] = useState(""); // 전세보증금 (만원)
+  const [deposit, setDeposit] = useState(""); // 월세보증금 (만원)
   const [rate, setRate] = useState("5.5"); // 전월세전환율 (%)
-  const [monthly, setMonthly] = useState("165"); // 월세 (만원) — 역산 입력
+  const [monthly, setMonthly] = useState(""); // 월세 (만원) — 역산 입력
 
   const rateN = num(rate);
   const gapToConvert = num(jeonse) - num(deposit);
@@ -189,23 +190,24 @@ export function JeonseWolse() {
       how={[
         "전세 → 월세: 월세 = (전세보증금 − 월세보증금) × 전환율 ÷ 12",
         "월세 → 전세: 전세보증금 = 월세보증금 + 월세 × 12 ÷ 전환율",
-        "계약 중에 보증금을 월세로 바꿀 때는 법이 정한 상한(연 10%와 한국은행 기준금리 + 2%p 중 낮은 쪽)을 넘을 수 없어요.",
+        "계약 중에 보증금을 월세로 바꿀 때는 법이 정한 상한(연 10%와 한국은행 기준금리 + 2%p 중 낮은 쪽)을 넘을 수 없다.",
       ]}
       source="주택임대차보호법 제7조의2 · 같은 법 시행령 제9조"
       size={12}
     />
   );
 
+  /* [1015 · 규칙 D] 결론 문장은 명사형("~이에요" 없이). 금액이 없으면 문장도 없다 */
   const toWolseSentence =
-    rateN <= 0
+    rateN <= 0 || num(jeonse) <= 0
       ? null
       : gapToConvert <= 0
-        ? "월세보증금이 전세보증금보다 크거나 같아 월세로 바꿀 금액이 없어요"
-        : `전세 ${nb(manwonText(num(jeonse)))}을 보증금 ${nb(manwonText(num(deposit)))}으로 바꾸면 월세는 ${nb(wonText(monthlyRent * 10_000))}이에요`;
+        ? "월세보증금이 전세보증금보다 크거나 같아 월세로 바꿀 금액 없음"
+        : `전세 ${nb(manwonText(num(jeonse)))} → 보증금 ${nb(manwonText(num(deposit)))} 이면 월세 ${nb(wonText(monthlyRent * 10_000))}`;
   const toJeonseSentence =
     rateN <= 0 || num(monthly) <= 0
       ? null
-      : `보증금 ${nb(manwonText(num(deposit)))}에 월세 ${nb(manwonText(num(monthly)))}이면 전세로는 ${nb(manwonText(convertedJeonse))}이에요`;
+      : `보증금 ${nb(manwonText(num(deposit)))} · 월세 ${nb(manwonText(num(monthly)))} → 전세 ${nb(manwonText(convertedJeonse))}`;
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -260,8 +262,8 @@ export function JeonseWolse() {
 /* ---------- 2. 갭·전세가율 ---------- */
 
 export function GapRatio() {
-  const [price, setPrice] = useState("84000"); // 매매가 (만원)
-  const [jeonse, setJeonse] = useState("60000"); // 전세가 (만원)
+  const [price, setPrice] = useState(""); // 매매가 (만원) — [1015] 예시 기본값 없이
+  const [jeonse, setJeonse] = useState(""); // 전세가 (만원)
 
   const priceN = num(price);
   const jeonseN = num(jeonse);
@@ -272,8 +274,8 @@ export function GapRatio() {
     priceN <= 0 || jeonseN <= 0 || ratio === null
       ? null
       : gap < 0
-        ? `전세가가 매매가보다 ${nb(manwonText(-gap))} 높아요 — 집을 팔아도 보증금을 다 돌려주기 어려운 상태예요`
-        : `매매가 ${nb(manwonText(priceN))}에 전세 ${nb(manwonText(jeonseN))}이면 갭은 ${nb(manwonText(gap))}, 전세가율은 ${pct(ratio, 1)}예요`;
+        ? `전세가가 매매가보다 ${nb(manwonText(-gap))} 높음. 집을 팔아도 보증금을 다 돌려주기 어려운 상태`
+        : `매매가 ${nb(manwonText(priceN))} · 전세 ${nb(manwonText(jeonseN))} → 갭 ${nb(manwonText(gap))}, 전세가율 ${pct(ratio, 1)}`;
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -287,13 +289,13 @@ export function GapRatio() {
         primaryLabel={
           <>
             갭 (매매 − 전세)
-            <Explain term="gap-tuja" how="갭 = 매매가 − 전세가 — 전세를 끼고 살 때 내 돈으로 채울 금액이에요." size={12} />
+            <Explain term="gap-tuja" how="갭 = 매매가 − 전세가. 전세를 끼고 살 때 내 돈으로 채울 금액." size={12} />
           </>
         }
         primaryValue={<TweenMoney value={gap} />}
-        note="갭은 매매가에서 전세가를 뺀 갭투자 실투자금이며, 전세가율(전세 ÷ 매매)이 높을수록 갭이 작아집니다. 취득세·중개보수는 넣지 않았어요."
+        note="갭 = 매매가 − 전세가(갭투자 실투자금). 전세가율(전세 ÷ 매매)이 높을수록 갭이 작다. 취득세·중개보수 제외."
       >
-        <div className="flex items-baseline justify-between gap-2 text-xs">
+        <div className="flex items-baseline justify-between gap-2 t-sub">
           <span className="flex items-center gap-0.5 text-ai-muted">
             전세가율 (전세 ÷ 매매)
             <Explain term="jeonse-garyul" how="전세가율 = 전세가 ÷ 매매가 × 100" size={12} />
@@ -310,11 +312,11 @@ export function GapRatio() {
 /* ---------- 3. 임대수익률 ---------- */
 
 export function RentalYield() {
-  const [price, setPrice] = useState("84000"); // 매매가 (만원)
-  const [deposit, setDeposit] = useState("5000"); // 보증금 (만원)
-  const [monthly, setMonthly] = useState("200"); // 월세 (만원)
-  const [loan, setLoan] = useState("0"); // 대출금 (만원, 선택)
-  const [loanRate, setLoanRate] = useState("4.0"); // 금리 (%, 선택)
+  const [price, setPrice] = useState(""); // 매매가 (만원) — [1015] 예시 기본값 없이
+  const [deposit, setDeposit] = useState(""); // 보증금 (만원)
+  const [monthly, setMonthly] = useState(""); // 월세 (만원)
+  const [loan, setLoan] = useState(""); // 대출금 (만원, 선택)
+  const [loanRate, setLoanRate] = useState("4.0"); // 금리 (%, 선택) — 조정하는 매개변수라 시작값을 둔다
 
   const priceN = num(price);
   const depositN = num(deposit);
@@ -352,7 +354,7 @@ export function RentalYield() {
         <Field label="월세" value={monthly} onChange={setMonthly} unit="만원" hint={manHint(monthly)} />
         <div className="flex items-center gap-2 border-t border-divider pt-3">
           <Icon name="landmark" size={14} className="text-text-3" />
-          <span className="text-[12px] font-semibold text-text-3">대출 (선택 · 레버리지 반영)</span>
+          <span className="t-sub font-semibold text-text-3">대출 (선택 · 레버리지 반영)</span>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Field label="대출금" value={loan} onChange={setLoan} unit="만원" hint={manHint(loan)} />
@@ -366,8 +368,8 @@ export function RentalYield() {
         primaryValue={<TweenPercent value={primaryYield} className={losing ? "text-ai-danger" : undefined} />}
         note={
           hasLoan
-            ? "자기자본수익률 = (연 임대수익 − 연 대출이자) ÷ 실투자금(매매가 − 보증금 − 대출금). 세금·관리비·공실은 넣지 않았어요."
-            : "연 수익률 = 연 임대수익(월세 × 12) ÷ 실투자금(매매가 − 보증금). 세금·관리비·공실은 넣지 않았어요."
+            ? "자기자본수익률 = (연 임대수익 − 연 대출이자) ÷ 실투자금(매매가 − 보증금 − 대출금). 세금·관리비·공실 제외."
+            : "연 수익률 = 연 임대수익(월세 × 12) ÷ 실투자금(매매가 − 보증금). 세금·관리비·공실 제외."
         }
       >
         <ResultRow label="연 임대수익 (월세 × 12)" value={manwonText(annualRent)} />

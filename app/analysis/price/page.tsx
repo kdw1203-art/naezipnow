@@ -28,9 +28,9 @@ import { BandTable, PYEONG_HOW, manPerPyeong } from "./BandTable";
    면적 프리미엄(소형/대형 평단가 역전)을 계산한다. /tx 지역 랜딩과 색인 경쟁을
    피하려 noIndex 는 유지 — 여긴 SEO 페이지가 아니라 상호작용 분석 도구다. */
 export const metadata = buildPageMetadata({
-  title: "면적대별 실거래 시세 분석",
+  title: "면적대별 실거래가 분석",
   description:
-    "국토교통부 실거래가로 지역·면적대별 평단가와 지역 분위를 비교하고, 소형·대형 평단가 역전(면적 프리미엄)까지 한눈에 봅니다.",
+    "국토교통부 실거래가로 지역·면적대별 평단가와 지역 분위를 비교하고, 소형·대형 평단가 역전(면적 프리미엄)까지 봅니다.",
   path: "/analysis/price",
   noIndex: true,
 });
@@ -57,7 +57,7 @@ function ymLabel(ym: string | null): string {
 function EmptyState({ msg }: { msg: string }) {
   return (
     <div className="card mx-auto mt-8 max-w-[560px] rounded-2xl px-5 py-10 text-center">
-      <p className="text-[13px] font-bold text-ink">실거래 시세를 불러오지 못했어요</p>
+      <p className="text-[13px] font-bold text-ink">실거래가를 불러오지 못했어요</p>
       <p className="mt-1 text-[12px] leading-relaxed text-text-3">{msg}</p>
       <Link href="/tx" className="btn-soft btn-sm mt-4 inline-block no-underline">
         지역별 실거래 보기
@@ -77,7 +77,7 @@ export default async function PricePage({
     regions = await listTxRegions();
   } catch {
     return (
-      <PageShell breadcrumb="AI 분석 · 면적대별 시세">
+      <PageShell breadcrumb="분석 · 면적대별 실거래가">
         <EmptyState msg="실거래 집계를 일시적으로 읽지 못했어요. 잠시 후 다시 시도해 주세요." />
       </PageShell>
     );
@@ -87,7 +87,7 @@ export default async function PricePage({
   const areaRegions = regions.filter((r) => r.areaCells.length > 0);
   if (areaRegions.length === 0) {
     return (
-      <PageShell breadcrumb="AI 분석 · 면적대별 시세" toolScope={personaVars(TOOL_PERSONAS["market:price"])}>
+      <PageShell breadcrumb="분석 · 면적대별 실거래가" toolScope={personaVars(TOOL_PERSONAS["market:price"])}>
         <EmptyState msg="아직 면적대별로 정리된 실거래가 없어요." />
       </PageShell>
     );
@@ -201,24 +201,22 @@ export default async function PricePage({
   }));
 
   return (
-    <PageShell breadcrumb="AI 분석 · 면적대별 실거래 시세">
+    <PageShell breadcrumb="분석 · 면적대별 실거래가">
       <div className="mx-auto w-full max-w-[900px]">
         {/* [D62] 넘겨받은 지역을 못 찾았으면 **그 사실을 말한다.**
             예전에는 조용히 첫 지역으로 갈아탔다 — 화면에는 다른 동네의 숫자가
             아무 표시 없이 떠 있었고, 사용자는 그게 자기가 고른 지역인 줄 알았다. */}
         {regionMissed && (
           <div className="mb-3 rounded-lg border border-line bg-warning-soft px-3.5 py-2.5 t-sub text-ink">
-            “{wanted}”는 실거래 집계에 아직 없는 지역이에요 — 대신{" "}
-            <b>{target.name}</b>를 보여 드립니다. 아래에서 지역을 바꿀 수 있어요.
+            “{wanted}”는 실거래 집계에 아직 없는 지역. 대신 <b>{target.name}</b> 표시.
           </div>
         )}
+        {/* [1015 · 규칙 B·C] 제목 위 부연(eyebrow)·성격 배지(personaId)·기능 설명(lead)은 걷었다 — 출처는 source 한 줄 */}
         <ToolHero
-          eyebrow="지역·시장 흐름"
-          icon="bar"
-          title="면적대별 실거래 시세"
           personaId="market:price"
+          icon="bar"
+          title="면적대별 실거래가"
           toneClass="text-success"
-          lead={`${target.name}의 면적대별 평단가·중앙값·거래량을 국토교통부 신고 매매가로 정리했습니다.`}
           kpis={heroKpis}
           chart={
             perValues.some((v) => v > 0) ? (
@@ -244,9 +242,9 @@ export default async function PricePage({
           source={`${ymLabel(target.firstYm)}~${ymLabel(target.latestYm)} · 국토교통부 신고 매매가 기준`}
         />
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
           {/* 좌: 면적대 표 + 평단가 곡선 */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 max-md:gap-3">
             <BandTable
               cells={cells}
               hiBandSlug={premiumKind ? (hiBand?.bandSlug ?? null) : null}
@@ -311,29 +309,34 @@ export default async function PricePage({
           {/* 우: 인사이트 */}
           <div className="flex flex-col gap-3.5">
             {hiBand && premiumKind && premiumRatio && (
-              <div className="card tile flex flex-col gap-2 rounded-lg p-4" data-reveal="">
-                <div className="t-section text-ink">면적 프리미엄</div>
+              <div className="card tile flex flex-col gap-2 rounded-lg p-4 max-md:p-3.5" data-reveal="">
+                {/* [1015 · 규칙 B·D] 해설 문장은 ⓘ 로, 본문은 사실 한 줄(숫자) */}
+                <div className="inline-flex items-center gap-0.5 t-section text-ink">
+                  면적 프리미엄
+                  <Explain
+                    title="면적 프리미엄"
+                    body={
+                      premiumKind === "소형"
+                        ? "소형 평단가가 높으면 실수요·임대수요가 두텁거나 재건축 기대가 반영된 경우가 많다."
+                        : "대형 평단가가 높으면 학군·조망 등 프리미엄이 큰 평형에 몰린 지역일 수 있다."
+                    }
+                    how="면적대별 평단가(거래금액 ÷ 전용면적 × 3.3058)의 최고 ÷ 최저."
+                    source="국토교통부 실거래가"
+                  />
+                </div>
                 <div className="t-body text-text-2">
-                  {target.name}에서 평단가가 가장 높은 면적대는{" "}
-                  <b className="text-primary">{hiBand.bandLabel}</b>
-                  {premiumKind === "소형" ? " (소형 프리미엄)" : " (대형 프리미엄)"}이에요.
+                  평단가 최고 면적대 <b className="text-primary">{hiBand.bandLabel}</b>
+                  {premiumKind === "소형" ? " (소형 프리미엄)" : " (대형 프리미엄)"}
                   {loBand && loBand.bandSlug !== hiBand.bandSlug && (
                     <>
-                      {" "}
-                      가장 낮은 <b>{loBand.bandLabel}</b> 대비{" "}
-                      <b className="text-ink">{premiumRatio.toFixed(2)}배</b> 수준입니다.
+                      {" · "}최저 <b>{loBand.bandLabel}</b> 대비 <b className="text-ink">{premiumRatio.toFixed(2)}배</b>
                     </>
                   )}
-                </div>
-                <div className="t-sub text-text-3">
-                  {premiumKind === "소형"
-                    ? "소형 평단가가 높으면 실수요·임대수요가 두텁거나 재건축 기대가 반영된 경우가 많아요."
-                    : "대형 평단가가 높으면 학군·조망 등 프리미엄이 큰 평형에 몰린 지역일 수 있어요."}
                 </div>
               </div>
             )}
 
-            <div className="card tile flex flex-col gap-2 rounded-lg p-4" data-reveal="">
+            <div className="card tile flex flex-col gap-2 rounded-lg p-4 max-md:p-3.5" data-reveal="">
               <div className="t-section text-ink">거래가 가장 많은 면적대</div>
               {busiest ? (
                 <>
@@ -342,16 +345,14 @@ export default async function PricePage({
                     최근 실거래 {busiest.txCount.toLocaleString("ko-KR")}건 · 중앙값{" "}
                     {eok(busiest.medianKrw)} · 평단가 {manPerPyeong(busiest.avgPerPyeongKrw)}
                   </div>
-                  <div className="t-sub text-text-3">
-                    거래가 몰린 면적대는 환금성이 좋아 실거래가도 촘촘하게 형성돼요.
-                  </div>
+                  {/* [1015 · 규칙 B] 해설("환금성이 좋아 …")은 걷었다 */}
                 </>
               ) : (
-                <div className="t-sub text-text-3">데이터가 부족해요.</div>
+                <div className="t-sub text-text-3">자료 부족</div>
               )}
             </div>
 
-            <div className="card tile flex flex-col gap-2 rounded-lg p-4" data-reveal="">
+            <div className="card tile flex flex-col gap-2 rounded-lg p-4 max-md:p-3.5" data-reveal="">
               {/* [1011] "이 데이터로 할 수 있는 것" 사용법 해설을 걷었다(소유자 지시) —
                   표를 보면 알 수 있는 것을 다시 풀어 쓴 문단이었다. 아래 링크는 남긴다. */}
               <div className="t-section text-ink">이 지역 실거래 더 보기</div>

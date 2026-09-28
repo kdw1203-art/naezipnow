@@ -222,7 +222,7 @@ function SmsAlertCard({
             관심단지 가격 변동 SMS 받기
           </span>
           <span className="block t-caption text-text-3">
-            시세가 의미 있게 변하면 문자로 알려드려요
+            시세 변동 시 문자 알림
           </span>
         </span>
         <Toggle on={on} />
@@ -443,7 +443,7 @@ function NotificationTab({ channels }: { channels: NotifyChannels }) {
             </div>
           ) : (
             <div className="t-caption text-text-3">
-              변경 즉시 저장돼요
+              변경 즉시 저장
             </div>
           )}
         </>
@@ -582,7 +582,7 @@ function PrivacyTab() {
               <Toggle on={consents.location} />
             </button>
             <div className="py-2 t-caption text-text-3">
-              변경 즉시 저장돼요
+              변경 즉시 저장
               {consents.updatedAt
                 ? ` · 마지막 갱신 ${formatKstDate(consents.updatedAt)}`
                 : " · 아직 바꾼 기록이 없어요"}

@@ -6,6 +6,7 @@
  * 세션이 있으면 내 노트(비공개 포함)도 함께 세어 mineCount 로 내려준다.
  */
 import { NextResponse } from "next/server";
+import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { applyRateLimit, READ_RATE_LIMIT } from "@/lib/rate-limit";
@@ -37,6 +38,27 @@ function mapRows(
     visitDate: r.visit_date ? String(r.visit_date).slice(0, 10) : null,
     region: r.region ? String(r.region) : null,
     mine: myEmail != null && String(r.author_email ?? "").toLowerCase() === myEmail,
+    /* [1015 · 썸네일] 비공개(내) 노트의 템플릿 썸네일 주소도 작성자 본인에게만 내려간다(렌더 라우트가 소유자 확인) */
+    cover: noteCoverUrl({
+      id: String(r.id),
+      title: (r.title as string | null) ?? null,
+      aptName: (r.apt_name as string | null) ?? null,
+      region: (r.region as string | null) ?? null,
+      summary: (r.summary as string | null) ?? null,
+      sections: r.sections,
+      checklist: r.checklist,
+      transportation: (r.transportation as string | null) ?? null,
+      weather: (r.weather as string | null) ?? null,
+      scores: {
+        location: Number(r.score_location ?? 0),
+        school: Number(r.score_school ?? 0),
+        transport: Number(r.score_transport ?? 0),
+        facility: Number(r.score_facility ?? 0),
+        future: Number(r.score_future ?? 0),
+      },
+      metadata: r.metadata,
+      photos: r.photos,
+    }),
   }));
   const mineCount = data.filter(
     (r) => myEmail != null && String(r.author_email ?? "").toLowerCase() === myEmail,
@@ -66,7 +88,7 @@ export async function GET(req: NextRequest) {
     if (complexId) {
       let q = sb
         .from("inspection_notes")
-        .select("id, title, apt_name, region, visit_date, is_public, author_email, metadata")
+        .select("id, title, apt_name, region, visit_date, is_public, author_email, metadata, summary, sections, checklist, transportation, weather, score_location, score_school, score_transport, score_facility, score_future, photos")
         .filter("metadata->>complexId", "eq", complexId)
         .order("created_at", { ascending: false })
         .limit(30);
@@ -94,7 +116,7 @@ export async function GET(req: NextRequest) {
 
     let q = sb
       .from("inspection_notes")
-      .select("id, title, apt_name, region, visit_date, is_public, author_email")
+      .select("id, title, apt_name, region, visit_date, is_public, author_email, metadata, summary, sections, checklist, transportation, weather, score_location, score_school, score_transport, score_facility, score_future, photos")
       .ilike("apt_name", `%${core}%`)
       .order("created_at", { ascending: false })
       .limit(30);

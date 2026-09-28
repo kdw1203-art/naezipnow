@@ -95,7 +95,7 @@ function UnavailableCard({ reason }: { reason: "notfound" | "error" }) {
         </div>
         <div className="mt-1 text-xs leading-[1.6] text-text-2">
           {reason === "notfound"
-            ? "주소가 바뀌었거나 아직 등록되지 않은 단지예요."
+            ? "주소가 바뀌었거나 아직 등록되지 않은 단지입니다."
             : "일시적인 오류입니다. 잠시 후 다시 시도해 주세요."}
         </div>
       </div>
@@ -119,7 +119,7 @@ function Wordmark() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="내집나우 홈"
-      className="absolute right-3 top-3 inline-flex items-center gap-1 text-[10px] font-bold text-text-3 transition-colors hover:text-primary"
+      className="absolute right-3 top-3 inline-flex items-center gap-1 t-caption font-bold text-text-3 transition-colors hover:text-primary"
     >
       <Icon name="house" size={11} />
       내집나우

@@ -41,9 +41,10 @@ export async function ComplexAxisSummary({
   const { verdict, axes } = applyAxisRule(raw, diagnosisRadar(ctx));
 
   return (
-    <section aria-label="이 단지 결과 요약" className="mt-4 rounded-2xl border border-line bg-surface p-4">
+    <section aria-label="이 단지 결과 요약" className="mt-4 rounded-2xl border border-line bg-surface p-4 max-md:mt-3 max-md:p-3.5">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-[13px] font-bold text-ink">이 단지 결과 요약 — 공공데이터 자동 계산</h2>
+        {/* [1015 · 규칙 C·D] 제목 옆 부연("— 공공데이터 자동 계산")은 걷었다 — 결과 카드(VerdictCard)가 같은 말을 이미 단다 */}
+        <h2 className="text-[13px] font-bold text-ink">이 단지 결과 요약</h2>
         {/* [1012 · R2 · B] "AI 진단으로 ›"(동사 없음) → 동사 + 구체 대상 */}
         <Link
           href={`/analysis/ai/ai-diagnosis?complexId=${encodeURIComponent(complexId)}`}
@@ -63,9 +64,8 @@ export async function ComplexAxisSummary({
       {/* [1009 · C 리뷰] "숫자마다 기준일·출처 표기"는 이제 사실이 아니다 — 결과 카드(VerdictCard)가 칸마다 되풀이하던 출처를
           카드 아래 한 줄("출처 … · 기준 …")과 "데이터 출처" 접힘으로 모았다. 그 자리를 가리키게 고쳤다.
           [1012 · R2] 그 한 줄은 이제 값이 없을 때도 출처(데이터 출처의 원천)를 적는다 — 접힘 밖에 늘 보인다. */}
-      <p className="mt-2 t-caption text-text-3">
-        참고용 요약이며 투자 권유가 아니에요 · 출처와 기준일은 위 카드 맨 아래 한 줄에 적었어요 · 거래가 적거나 오래된 자료는 그 사실을 함께 적어요
-      </p>
+      {/* [1015 · 규칙 D] 세 문장 나열 → 사실 한 줄(면책은 남긴다) */}
+      <p className="mt-2 t-caption text-text-3">참고용 요약 · 투자 권유 아님 · 출처와 기준일은 카드 맨 아래 한 줄</p>
     </section>
   );
 }

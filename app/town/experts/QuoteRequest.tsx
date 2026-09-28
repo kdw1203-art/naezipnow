@@ -152,7 +152,7 @@ export function QuoteRequestModal({
             <Link href="/my/consultations#requests" className="font-bold text-primary">
               마이 › 상담함
             </Link>
-            에 모여요. 여러 제안을 비교하고 프로필로 이어가세요.
+            에 모여요.
           </p>
           <button
             type="button"
@@ -213,7 +213,7 @@ export function QuoteRequestModal({
             onChange={(e) => setContent(e.target.value)}
             rows={4}
             maxLength={2000}
-            placeholder="필요한 내용을 구체적으로 적어주세요 (10자 이상). 예: 관양동 구축 84㎡ 임장에 동행해 주실 분을 찾아요."
+            placeholder="필요한 내용 (10자 이상)"
             className="w-full resize-none rounded-xl border border-line bg-bg p-3 t-body text-ink outline-none placeholder:text-text-3 focus:border-primary"
           />
           {/* [966] 글자 수 — maxLength 와 같은 상한 */}
@@ -284,10 +284,10 @@ export function QuoteRequestBanner() {
       <div className="rise-in-1 card mb-4 flex flex-wrap items-center justify-between gap-3 px-[22px] py-4">
         <div>
           <div className="t-section text-ink">
-            어떤 전문가가 필요한지 모르겠다면
+            견적 요청
           </div>
           <p className="mt-0.5 t-sub text-text-3">
-            {CATEGORIES.join("·")} — 필요한 내용을 남기면 인증 전문가가 제안을 보내요 (요청당 전문가 1건)
+            {CATEGORIES.join(" · ")} · 인증 전문가 제안(요청당 1건)
           </p>
         </div>
         <button

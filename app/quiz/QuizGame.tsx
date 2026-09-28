@@ -244,7 +244,7 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
     const url = new URL("/quiz", window.location.href).toString();
     if (typeof navigator.share === "function") {
       try {
-        await navigator.share({ title: "실거래가 게임 — 더 비쌀까, 더 쌀까?", text, url });
+        await navigator.share({ title: "실거래가 게임 — 오늘의 10문제", text, url });
         return;
       } catch (e) {
         /* 시트를 닫은 것은 취소 — 클립보드로 대신하지 않는다 */
@@ -260,11 +260,11 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
       ? `${lastOk ? "정답" : "오답"}. B는 A보다 ${formatEokMan(fact.diffManwon)} ${fact.direction === "higher" ? "비싸요" : "싸요"}.`
       : "";
 
+  /* [1015 · 규칙 D] 각주는 사실 나열 — "~아니에요/~나와요" 없이 */
   const caption = (
     <p className="t-caption leading-relaxed text-text-3">
       국토교통부 실거래가 신고(해제 신고 제외) · 아파트 전용 80~86㎡ · {ymDotLabel(day.fromYm)}~
-      {ymDotLabel(day.toYm)} 계약 중 단지별 가장 최근 1건 · 매물 호가가 아니에요. 같은 날엔 누구에게나
-      같은 문제가 나와요.
+      {ymDotLabel(day.toYm)} 계약 중 단지별 가장 최근 1건 · 매물 호가 아님 · 같은 날은 같은 문제
     </p>
   );
 
@@ -279,8 +279,8 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
     const best = store?.best ?? null;
     const burst = justFinished && rec.score >= Math.ceil(rec.total * 0.8);
     return (
-      <div className="mt-3 flex flex-col gap-3">
-        <section className="card relative overflow-hidden rounded-3xl px-5 py-6 text-center" aria-label="오늘 결과">
+      <div className="mt-3 flex flex-col gap-3 max-md:gap-2.5">
+        <section className="card relative overflow-hidden rounded-3xl px-5 py-6 text-center max-md:px-4 max-md:py-4" aria-label="오늘 결과">
           {burst && (
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 motion-reduce:hidden">
               {CONFETTI.map(([dx, dy, rot], i) => (
@@ -310,7 +310,7 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
             {best && !(best.date === day.date && best.score === rec.score && best.streak === rec.streak)
               ? ` · 최고 기록 ${best.score}/${best.total}(${quizDateLabel(best.date)})`
               : ""}
-            {replay ? " · 오늘 기록은 첫 판만 남아요" : ""}
+            {replay ? " · 오늘 기록은 첫 판만" : ""}
           </p>
           <div className="mt-4 grid grid-cols-2 gap-2">
             {/* [1009 · T] 복사로 넘어간 공유는 버튼 자리에서도 "복사했어요" + 체크가 한 번 튄다(토스트와 함께) */}
@@ -332,23 +332,21 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
               className="btn-secondary inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 t-body font-bold"
             >
               <Icon name="repeat" size={16} />
-              다시 풀어 보기
+              다시 풀기
             </button>
           </div>
           <p className="mt-3 inline-flex items-center justify-center gap-1 t-sub text-text-2">
             <Icon name="calendar" size={14} />
-            내일 0시(한국 시간)에 새 문제가 열려요
+            새 문제는 내일 0시(한국 시간)
           </p>
         </section>
 
+        {/* [1015 · 규칙 B·I] 사용법 문장("마음에 걸린 단지가 있나요? …") 삭제 · 카드 묶음 → 리퀴드 행 목록(blue = 실거래) */}
         <section aria-labelledby="quiz-seen" className="flex flex-col gap-2">
           <h2 id="quiz-seen" className="px-0.5 t-section text-ink">
             오늘 본 단지 <span className="t-sub font-medium text-text-3">{day.entries.length}곳</span>
           </h2>
-          <p className="px-0.5 t-sub text-text-3">
-            마음에 걸린 단지가 있나요? 눌러서 면적대별 실거래·거래 흐름을 자세히 볼 수 있어요.
-          </p>
-          <ol className="flex flex-col gap-1.5">
+          <ol data-tone="blue" className="lq-panel m-0 flex list-none flex-col divide-y p-0">
             {day.entries.map((e, i) => {
               /* 방금 푼 판이면 이 단지가 B 였던 라운드의 결과(첫 단지는 A 로만 나왔다) */
               const hit = i > 0 && results.length === total ? results[i - 1] : null;
@@ -356,7 +354,7 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
               <li key={`${e.region}|${e.name}`}>
                 <Link
                   href={e.href}
-                  className="card tile flex min-h-11 items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 no-underline"
+                  className="flex min-h-11 items-center justify-between gap-3 py-2.5 no-underline"
                 >
                   <span className="min-w-0">
                     <span className="block t-body font-bold break-words text-ink">
@@ -375,7 +373,7 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
                       {e.region} · 전용 {areaLabel(e.areaM2)}㎡{floorText(e)} · {ymDotLabel(e.ym)}
                     </span>
                   </span>
-                  <span className="shrink-0 text-right t-body font-bold tabular-nums text-ink">
+                  <span className="t-num shrink-0 text-right t-body font-bold text-ink">
                     {formatEokMan(e.priceManwon)}
                     <span className="ml-1 font-bold text-text-3" aria-hidden="true">›</span>
                   </span>
@@ -398,7 +396,7 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
       </div>
       <div className="flex items-center justify-between gap-2">
         <p className="t-sub font-bold text-text-2">
-          {quizDateLabel(day.date)} {stale ? "문제 · 새 문제를 준비하고 있어요" : "오늘의 문제"}
+          {quizDateLabel(day.date)} {stale ? "문제 · 새 문제 준비 중" : "오늘의 문제"}
         </p>
         <div className="flex items-center gap-1.5">
           {streak >= 2 && (

@@ -210,7 +210,7 @@ export default async function MyListingsPage() {
           icon="building2"
           className="rise-in"
           title="아직 등록한 매물이 없어요"
-          desc="지도에서 위치를 찍어 손쉽게 매물을 등록해 보세요. 승인되면 실매물 목록에 노출되고 포인트가 지급돼요."
+          desc="승인된 매물은 실매물 목록에 실리고 포인트가 지급돼요."
           action={{ label: "첫 매물 등록하기", href: "/listings/new" }}
         />
       ) : (

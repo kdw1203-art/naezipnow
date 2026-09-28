@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { listPublicNotes, type InspectionNote } from "@/lib/inspection/store-db";
 import { maskNoteAuthor } from "@/app/town/shared";
+import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 import { CoverImage } from "@/app/components/CoverImage";
 import { Icon } from "@/app/components/Icon";
 
@@ -17,7 +18,7 @@ import { Icon } from "@/app/components/Icon";
 export const revalidate = 86_400;
 
 export const metadata: Metadata = {
-  title: "임장 리포트 진열대 — 판매 오픈 준비 중 | 내집나우",
+  title: "임장 리포트 진열대 · 판매 오픈 준비 중 | 내집나우",
   description:
     "기준을 충족한 임장노트가 유료 리포트로 판매될 예정입니다. 사진 5장 이상, 본문 2,000자 이상의 검증된 현장 기록.",
   alternates: { canonical: "/notes/market" },
@@ -48,7 +49,7 @@ export default async function NotesMarketPage() {
     );
 
   return (
-    <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 px-4 py-6">
+    <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 px-4 py-6 max-md:gap-3 max-md:py-4">
       {/* 헤더 */}
       <div className="flex flex-col gap-2">
         <nav className="t-sub font-semibold text-text-3">
@@ -63,10 +64,9 @@ export default async function NotesMarketPage() {
             판매 오픈 준비 중
           </span>
         </h1>
+        {/* [1015 · 규칙 D] 설명 세 문장 → 사실 한 줄 */}
         <p className="t-body text-text-2">
-          아래 기준을 충족한 공개 임장노트는 결제 기능이 열리면 작성자가 유료
-          리포트로 판매할 수 있어요. 지금은 진열만 미리 공개합니다 — 전문은 각
-          노트에서 무료로 읽을 수 있어요.
+          기준 충족 공개 노트의 진열 · 판매는 결제 오픈 후 · 전문은 지금 각 노트에서 무료
         </p>
         <div className="flex flex-wrap gap-1.5">
           <span className="rounded-lg bg-bg px-2.5 py-1 t-sub font-bold text-text-2">
@@ -84,7 +84,7 @@ export default async function NotesMarketPage() {
       {/* 목록 */}
       {loadFailed ? (
         <div className="rounded-lg border border-line bg-surface px-5 py-8 text-center t-body font-bold text-text-3">
-          목록을 불러오지 못했어요 — 잠시 후 다시 시도해 주세요.
+          목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
         </div>
       ) : qualified.length === 0 ? (
         <div className="rounded-lg border border-line bg-surface px-5 py-8 text-center">
@@ -106,8 +106,9 @@ export default async function NotesMarketPage() {
                 className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface"
               >
                 <div className="relative h-[150px] w-full overflow-hidden bg-bg">
+                  {/* [1015 · 규칙 H] 커버 주소는 lib/notes/cover/resolve 한 곳 — 이 자리는 넓은 커버(150px 가로) → 통합자가 wide 판으로 바꾼다(보고서) */}
                   <CoverImage
-                    src={note.photos?.[0] ?? null}
+                    src={noteCoverUrl(note, "wide")}
                     alt=""
                     /* [970 · B-24] 세로(3:4) 사진은 가운데 크롭에서 건물이 잘렸다 — 위쪽 기준 */
                     imgClassName="absolute inset-0 h-full w-full object-cover object-top"
@@ -168,16 +169,14 @@ export default async function NotesMarketPage() {
       {/* 작성자 CTA + 정직 고지 */}
       <div className="rounded-lg border border-line bg-bg px-4 py-3.5">
         <p className="t-body text-text-2">
-          <strong className="text-ink">내 노트도 올리고 싶다면</strong> — 기준(사진{" "}
-          {MIN_PHOTOS}장+·본문 {MIN_TEXT.toLocaleString("ko-KR")}자+)을 넘긴 공개
-          노트는 자동으로 이 진열대에 올라옵니다.{" "}
+          기준(사진 {MIN_PHOTOS}장+ · 본문 {MIN_TEXT.toLocaleString("ko-KR")}자+)을 넘긴 공개 노트는
+          자동으로 진열.{" "}
           <Link href="/notes/new" className="font-bold text-primary no-underline">
-            진열대 후보 노트 쓰기 ›
+            임장노트 쓰기 ›
           </Link>
         </p>
         <p className="mt-1.5 t-sub text-text-3">
-          판매 가격·정산은 결제 기능 오픈 후 작성자가 직접 정합니다. 오픈 전까지
-          어떤 결제도 발생하지 않아요.
+          가격·정산은 결제 오픈 후 작성자가 정함 · 오픈 전 결제 없음
         </p>
       </div>
     </div>

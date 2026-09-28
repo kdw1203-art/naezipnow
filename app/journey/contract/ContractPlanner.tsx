@@ -190,7 +190,7 @@ function MoneyField({
             type="text"
             inputMode="numeric"
             autoComplete="off"
-            placeholder="예: 85000"
+            placeholder=""
             value={draft}
             disabled={disabled}
             onChange={(e) => {
@@ -302,13 +302,14 @@ export function ContractPlanner() {
   const split = paymentSplit(plan);
   /* 남은 기한이 없을 때의 요약 — 지난 법정 기한에 체크 안 한 일이 있으면 그 수를 말한다(리뷰 C) */
   const overdue = overdueLegalCount(groups);
+  /* [1015 · 규칙 D] 요약 문장 셋을 명사형으로("~있어요/~했어요/~없어요" → "N개/모두 체크/없음") */
   const noNextText = !today
-    ? "날짜 계산 중…"
+    ? "날짜 계산 중"
     : overdue > 0
-      ? `지난 법정 기한에 체크하지 않은 일이 ${overdue}개 있어요`
+      ? `지난 법정 기한에 체크하지 않은 일 ${overdue}개`
       : doneItems === totalItems
-        ? "할 일을 모두 체크했어요"
-        : "남은 기한이 없어요";
+        ? "할 일 모두 체크"
+        : "남은 기한 없음";
 
   const setDate = (key: DateKey, value: string | null) => {
     updateJourney((s) => withContractPlan(s, { ...(s.contract ?? EMPTY_PLAN), [key]: value }, nowIso()));
@@ -352,29 +353,29 @@ export function ContractPlanner() {
       /* 토스트는 한 줄(390px 에서 23자 안쪽) — 여는 법은 버튼 아래 안내가 말한다 */
       showToast("캘린더 파일을 내려받았어요");
     } catch {
-      showToast("캘린더 파일을 만들지 못했어요 — 인쇄로 저장해 주세요");
+      showToast("캘린더 파일을 만들지 못했어요. 인쇄로 저장해 주세요");
     }
   };
 
   const saveNote =
     !ready || sync === "loading"
-      ? "불러오는 중…"
+      ? "불러오는 중"
       : sync === "account" || sync === "saving"
-        ? "내 계정에 저장돼요"
+        ? "저장 위치: 내 계정"
         : sync === "fallback"
-          ? "지금은 이 기기에만 저장돼요"
-          : "이 기기에 저장돼요 · 로그인하면 계정에 저장";
+          ? "저장 위치: 이 기기(계정 저장 실패)"
+          : "저장 위치: 이 기기";
 
   const calcHref = plan.priceManwon ? `/calculator?price=${plan.priceManwon}` : "/calculator";
   const nextState = next ? stateClass(next) : null;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 max-md:gap-3">
       {/* ── 입력 ── */}
-      <section className="card rounded-2xl p-4 md:p-5" aria-labelledby="jr-plan-inputs">
+      <section className="card rounded-2xl p-4 max-md:p-3.5 md:p-5" aria-labelledby="jr-plan-inputs">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 id="jr-plan-inputs" className="m-0 t-section text-ink">
-            날짜 넣기
+            날짜·금액
           </h2>
           <span className="t-caption font-bold text-text-3" aria-live="polite">
             {saveNote}
@@ -399,7 +400,7 @@ export function ContractPlanner() {
           <MoneyField
             id="jr-price"
             label="매매가"
-            hint="선택 — 잔금·취득세·대출 계산에 써요"
+            hint="선택 · 잔금·취득세·대출 계산에 사용"
             value={plan.priceManwon}
             disabled={!ready}
             onCommit={(v) => setAmount("priceManwon", v)}
@@ -451,9 +452,7 @@ export function ContractPlanner() {
             </p>
           )}
           {split && split.balanceManwon !== null && <PaymentBar split={split} />}
-          {split && split.depositManwon === null && (
-            <p className="m-0 t-caption text-text-3">계약금을 넣으면 잔금(매매가 − 계약금 − 중도금)을 계산해 잔금일 칸에 적어요.</p>
-          )}
+          {/* [1015 · 규칙 B] "계약금을 넣으면 잔금을 계산해 …" 사용법 문장 삭제 — 넣으면 막대가 나타난다 */}
         </div>
 
         {warnings.length > 0 && (
@@ -491,16 +490,10 @@ export function ContractPlanner() {
             </button>
           )}
         </div>
+        {/* [1015 · 규칙 B·D] 캘린더 사용법 두 문장 삭제 — 비활성 이유 한 줄만 */}
         {!canCalendar && (
           <p className="jr-noprint m-0 mt-2 t-caption text-text-3">
-            {anyDated
-              ? "남은 기한이 없어요 — 지난 날이나 모두 체크한 일은 캘린더에 넣지 않아요."
-              : "계약일이나 잔금일을 넣으면 기한마다 알림이 붙은 캘린더 일정으로 내려받을 수 있어요."}
-          </p>
-        )}
-        {canCalendar && (
-          <p className="jr-noprint m-0 mt-2 t-caption text-text-3">
-            내려받은 .ics 파일을 열면 휴대폰·PC 캘린더에 기한마다 알림이 붙은 일정이 들어가요.
+            {anyDated ? "남은 기한 없음. 지난 날·체크한 일은 캘린더에 넣지 않음" : "계약일 또는 잔금일 입력 뒤 캘린더 저장 가능"}
           </p>
         )}
       </section>
@@ -524,9 +517,7 @@ export function ContractPlanner() {
               )}
               {/* 다가오는 기한이 있어도 지난 법정 기한을 체크하지 않았으면 함께 말한다 — 요약만 보고 넘어가지 않게 */}
               {next && overdue > 0 && (
-                <span className="t-caption font-bold text-on-dark-muted">
-                  지난 법정 기한에 체크하지 않은 일 {overdue}개 — 아래 목록에서 확인하세요
-                </span>
+                <span className="t-caption font-bold text-on-dark-muted">지난 법정 기한에 체크하지 않은 일 {overdue}개</span>
               )}
             </div>
             {/* [1009 · T] D-day 를 크게 — 요약에서 가장 먼저 읽혀야 하는 숫자(예전엔 제목 옆 작은 알약이었다) */}
@@ -550,17 +541,17 @@ export function ContractPlanner() {
       )}
 
       {/* ── 날짜순 할 일 ── */}
-      <ol className="jr-timeline m-0 flex list-none flex-col gap-3 p-0" aria-label="계약·잔금 할 일">
+      <ol className="jr-timeline m-0 flex list-none flex-col gap-3 p-0 max-md:gap-2" aria-label="계약·잔금 할 일">
         {groups.map((g) => {
           const st = stateClass(g);
           const money = phaseAmount(g.phase, split);
           return (
-            <li key={g.phase} className="jr-group card rounded-2xl p-4 md:p-5" data-state={st}>
+            <li key={g.phase} className="jr-group card rounded-2xl p-4 max-md:p-3.5 md:p-5" data-state={st}>
               {/* 줄바꿈 없이 — 쉬는 날 설명 한 줄이 붙어도 D-day 는 오른쪽 위에 남는다(390px 에서 아래 줄로 떨어졌다) */}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="t-caption font-bold tracking-wide text-text-3">
-                    {g.due ? formatKoreanDay(g.due) : "날짜를 넣으면 기한이 붙어요"}
+                    {g.due ? formatKoreanDay(g.due) : "날짜 미입력"}
                   </span>
                   <h3 className="m-0 flex flex-wrap items-center gap-1.5 t-section text-ink">
                     {g.meta.title}
@@ -651,17 +642,17 @@ export function ContractPlanner() {
       </ol>
 
       {/* ── 고지 ── */}
-      <aside className="flex flex-col gap-1.5 rounded-2xl border border-line bg-bg p-4" aria-label="안내">
+      <aside className="flex flex-col gap-1.5 rounded-2xl border border-line bg-bg p-4 max-md:p-3.5" aria-label="안내">
         <p className="m-0 flex items-start gap-1.5 t-sub font-bold text-text-1">
           <Icon name="shield" size={15} className="mt-0.5 shrink-0 text-text-3" />
           일반 정보이며 법률·세무 자문이 아닙니다.
         </p>
+        {/* [1015 · 규칙 D] 고지 문단 — "~했어요/~하세요" 대화체 → 사실 문장. 내용(확인일·근거 법령·공휴일 범위)은 그대로 */}
         <p className="m-0 t-caption leading-[1.7] text-text-3">
-          법정 기한은 {LAW_CHECKED_ON}에 국가법령정보센터(law.go.kr) 원문으로 확인했어요. 기한 날짜는 기준일 다음 날부터
-          셌고(민법 제157조), {REST_DAY_RULE}. 공휴일은 {HOLIDAY_YEARS.join("·")}년 월력요항(우주항공청)과 공휴일 법령으로
-          계산했고, 그 밖의 해는 토·일만 반영해요 — 마지막 날이 가까우면 미리 하세요. 규제지역·토지거래허가구역·대출 기준은
-          바뀔 수 있으니 계약 전에 공식 안내와 거래하는 은행·중개사무소에 꼭 확인하세요. 넣은 날짜·금액은 이 기기에,
-          로그인하면 내 계정에만 저장돼요.
+          법정 기한은 {LAW_CHECKED_ON} 국가법령정보센터(law.go.kr) 원문 기준. 기한 날짜는 기준일 다음 날부터 계산(민법
+          제157조), {REST_DAY_RULE}. 공휴일은 {HOLIDAY_YEARS.join("·")}년 월력요항(우주항공청)과 공휴일 법령 기준이며 그 밖의
+          해는 토·일만 반영. 규제지역·토지거래허가구역·대출 기준은 계약 전 공식 안내와 거래 은행·중개사무소에서 확인.
+          넣은 날짜·금액은 이 기기에, 로그인하면 내 계정에만 저장.
         </p>
         <p className="jr-refs m-0 flex flex-wrap items-center gap-x-3 t-caption">
           {REST_DAY_LAWS.map((l) => (

@@ -171,7 +171,7 @@ export default async function TemperatureHubPage() {
 
   const crumbs = breadcrumbJsonLd([
     { name: "홈", url: "/" },
-    { name: "AI 분석", url: "/analysis" },
+    { name: "분석", url: "/analysis" },
     { name: "시장 온도 주간 기록", url: PATH },
   ]);
 
@@ -195,21 +195,19 @@ export default async function TemperatureHubPage() {
   ];
 
   return (
-    <PageShell breadcrumb="홈 › AI 분석 › 시장 온도 주간 기록" toolScope={personaVars(TOOL_PERSONAS["market:temperature"])}>
+    <PageShell breadcrumb="홈 › 분석 › 시장 온도 주간 기록" toolScope={personaVars(TOOL_PERSONAS["market:temperature"])}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
       />
 
+      {/* [1015 · 규칙 B·C·D] 제목 위 부연·성격 배지·설명 문단은 걷고 눈금 사실 한 줄만 */}
       <ToolHero
-        eyebrow="지역·시장 흐름"
+        personaId="market:temperature"
         icon="flame"
         title="지역별 시장 온도 주간 기록"
-        personaId="market:temperature"
         toneClass="text-warning"
-        /* [1011] 계산 방식("매매가격지수 모멘텀과 거래량 추이를 합쳐")을 걷었다(소유자 지시) —
-           눈금을 읽는 법(50이 중립)과 면책은 남긴다. 방법론은 /methodology 가 맡는다. */
-        lead="동네마다 지금 시장이 얼마나 달아올랐는지 0~100 눈금으로 매주 기록합니다. 50이 중립이고, 매수·매도 권유가 아닙니다."
+        lead="0~100 눈금 · 50 중립 · 매주 기록 · 매수·매도 권유 아님"
         kpis={heroKpis}
         chart={
           hottest ? (
@@ -245,23 +243,12 @@ export default async function TemperatureHubPage() {
         }
       />
 
-      <p className="t-body mb-5 mt-4 text-text-2">
-        {rows.length > 0 && weekLabel && (
-          <>
-            {" "}
-            가장 최근 기록은 <strong className="text-ink">{weekLabel}</strong>이 속한 주이며,{" "}
-            <strong className="text-ink">{rows.length}개 지역</strong>이 담겨 있습니다
-            {compared > 0 && (
-              <>
-                {" "}
-                (지난주와 비교 가능한 {compared}개 중 <strong className="text-ink">{rising}곳
-                상승</strong> · {falling}곳 하락)
-              </>
-            )}
-            .
-          </>
-        )}
-      </p>
+      {/* [1015 · 규칙 D] 문장 → 사실 한 줄(숫자·시점). 히어로 KPI 와 겹치는 상승·하락 수는 뺐다 */}
+      {rows.length > 0 && weekLabel && (
+        <p className="mb-5 mt-4 t-sub text-text-3 max-md:mb-3 max-md:mt-3">
+          최근 기록 {weekLabel} 주 · {rows.length}개 지역
+        </p>
+      )}
 
       {loadFailed ? (
         <section className="card mb-6 p-[var(--pad-card)]" data-reveal="">
@@ -276,20 +263,26 @@ export default async function TemperatureHubPage() {
           <p className="t-body py-8 text-center text-text-3">
             아직 쌓인 주가 없습니다.
             <br />
-            주간 기록은 매일 도는 수집 작업이 그 주의 값을 갱신하며 만들어집니다. 첫 기록이
-            생기면 이곳에 나타납니다.
-            <br />
             <Link href="/analysis/timing" className="inline-block py-[5px] font-bold text-primary underline">
               지금 이 순간의 시장 온도 보기
             </Link>
           </p>
         </section>
       ) : (
-        <section className="card mb-6 p-[var(--pad-card)]" data-reveal="">
+        <section className="card mb-6 p-[var(--pad-card)] max-md:mb-3 max-md:p-3.5" data-reveal="">
           <h2 className="t-title flex items-baseline justify-between gap-3 text-ink">
             <span className="inline-flex items-center gap-0.5">
               {weekLabel} 주 기준
-              <Explain {...TEMPERATURE_EXPLAIN} />
+              {/* [1015 · 규칙 B] "이 기록을 읽는 법" 네 문장과 배지 읽는 법을 이 ⓘ 하나에 합쳤다 */}
+              <Explain
+                {...TEMPERATURE_EXPLAIN}
+                body={[
+                  "값은 그 주에 마지막으로 관측한 온도. 주간 평균이 아니며 주가 넘어가면 그 값이 그대로 굳는다.",
+                  "카드 오른쪽 배지는 지난주 기록과의 점수 차이(▲ 오름 · ▼ 내림 · 보합). 배지가 없으면 그 지역의 직전 주 기록이 없다는 뜻.",
+                  "계산식을 바꾸면 공식 버전을 올려 함께 저장한다. 과거 기록을 새 공식으로 다시 칠하지 않는다.",
+                  "실거래 신고는 계약일로부터 최대 30일까지 늦어질 수 있어, 거래량 항은 신고가 마감되지 않은 이번 달을 빼고 계산한다.",
+                ]}
+              />
             </span>
             <span className="t-sub shrink-0 text-text-3">
               온도 높은 순 · {rows.length}개 지역
@@ -305,11 +298,6 @@ export default async function TemperatureHubPage() {
               />
             ))}
           </div>
-          <p className="t-sub mt-3 text-text-3">
-            오른쪽 배지는 지난주 기록과의 점수 차이입니다(▲ 오름 · ▼ 내림 · 보합). 배지가 없으면 그 지역의 직전 주
-            기록이 없다는 뜻입니다(기록이 시작된 첫 주이거나 그 주에 계산 근거가 없었던
-            경우).
-          </p>
         </section>
       )}
 
@@ -321,41 +309,15 @@ export default async function TemperatureHubPage() {
 
       <QaBlock title="시장 온도 Q&A" items={qa} />
 
-      <section className="card mb-6 p-[var(--pad-card)]" data-reveal="">
-        <h2 className="t-title text-ink">이 기록을 읽는 법</h2>
-        <ul className="t-body mt-2 space-y-1.5 text-text-2">
-          <li>
-            · 값은 <strong className="text-ink">그 주에 마지막으로 관측한 온도</strong>입니다.
-            주간 평균이 아니며, 주가 넘어가면 그 값이 그대로 굳습니다.
-          </li>
-          <li>
-            · 점수는 <strong className="text-ink">지수 모멘텀 ±25점</strong>과{" "}
-            <strong className="text-ink">거래량 추이 ±25점</strong>을 50에 더한 값입니다. 어느
-            항이 점수를 밀어 올렸는지는 지역별 페이지에 그대로 적혀 있습니다.
-          </li>
-          <li>
-            · 계산식을 바꾸면 <strong className="text-ink">공식 버전</strong>을 올려 함께
-            저장합니다. 과거 기록을 새 공식으로 다시 칠하지 않으므로, 어느 구간이 다른
-            공식으로 계산됐는지 나중에도 확인할 수 있습니다.
-          </li>
-          <li>
-            · 실거래 신고는 계약일로부터 최대 30일까지 늦어질 수 있어, 거래량 항은 신고가
-            마감되지 않은 이번 달을 빼고 계산합니다.
-          </li>
-        </ul>
-      </section>
-
-      <p className="mb-8 text-[12px] leading-[1.7] text-text-3">
-        지금 이 순간의 온도와 지수·거래량 원본 그래프는{" "}
-        <Link href="/analysis/timing" className="inline-block py-[5px] font-bold text-primary underline">
-          시세·타이밍 분석
+      {/* [1015 · 규칙 B] "이 기록을 읽는 법" 문단 → 위 ⓘ 로. 안내문("~에서 확인하실 수 있습니다") → 링크 칩 */}
+      <nav aria-label="관련 화면" className="mb-8 flex flex-wrap gap-1.5 max-md:mb-4">
+        <Link href="/analysis/timing" className="chip chip-soft t-sub px-3 py-1.5 no-underline">
+          시세·타이밍 분석 ›
         </Link>
-        , 계산에 쓴 자료의 출처와 갱신 주기는{" "}
-        <Link href="/methodology" className="inline-block py-[5px] font-bold text-primary underline">
-          데이터 방법론
+        <Link href="/methodology" className="chip chip-soft t-sub px-3 py-1.5 no-underline">
+          데이터 방법론 ›
         </Link>
-        에서 확인하실 수 있습니다.
-      </p>
+      </nav>
 
       {/* #411 — 도구 간 이어가기.
           [D62·D55] 예전에는 파라미터 없이 보냈다("비교·온도는 지역을 모른다").

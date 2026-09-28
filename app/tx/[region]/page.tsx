@@ -86,23 +86,23 @@ function BandTable({
   cells: BandCell[];
 }) {
   if (cells.length === 0) return null;
+  /* [1015 · 규칙 I·M] 표 껍데기 lq-panel(blue = 실거래). 열 순서는 네이버부동산 실거래 표(단지 → 가격 → 거래일)를 따라
+     구간(정체) → 중앙값·평균(가격) → 거래·단지(건수) 순. [규칙 C] 제목 옆 부연은 캡션 한 줄로. */
   return (
-    <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
-      <h2 className="t-section text-ink">
-        {BAND_KIND_LABEL[kind]}별{" "}
-        <span className="t-sub font-medium text-text-3">
-          {kind === "area" ? "전용면적 기준" : "거래금액 기준"} · {cells.length}구간
-        </span>
-      </h2>
-      <div className="mt-3 overflow-x-auto">
+    <section className="rise-in-1 card mb-4 p-[var(--pad-card)] max-md:mb-3">
+      <h2 className="t-section text-ink">{BAND_KIND_LABEL[kind]}별</h2>
+      <p className="mt-0.5 t-caption text-text-3">
+        {kind === "area" ? "전용면적 기준" : "거래금액 기준"} · {cells.length}구간
+      </p>
+      <div data-tone="blue" className="lq-panel mt-3 overflow-x-auto max-md:mt-2">
         <table className="w-full min-w-[460px] text-left t-body">
           <thead>
             <tr className="border-b border-border t-sub text-text-3">
               <th className="py-2 font-medium">{kind === "area" ? "전용면적" : "거래금액"}</th>
-              <th className="py-2 font-medium">거래</th>
-              <th className="py-2 font-medium">단지</th>
               <th className="py-2 text-right font-medium">중앙값</th>
               <th className="py-2 text-right font-medium">평균</th>
+              <th className="py-2 text-right font-medium">거래</th>
+              <th className="py-2 text-right font-medium">단지</th>
             </tr>
           </thead>
           <tbody>
@@ -116,12 +116,10 @@ function BandTable({
                     {c.bandLabel}
                   </Link>
                 </td>
-                <td className="py-2.5 text-text-2">{c.txCount.toLocaleString("ko-KR")}건</td>
-                <td className="py-2.5 text-text-2">{c.complexCount.toLocaleString("ko-KR")}곳</td>
-                <td className="py-2.5 text-right font-bold text-ink">
-                  {formatKrwShort(c.medianKrw)}
-                </td>
-                <td className="py-2.5 text-right text-text-2">{formatKrwShort(c.avgKrw)}</td>
+                <td className="py-2.5 text-right t-num font-bold text-ink">{formatKrwShort(c.medianKrw)}</td>
+                <td className="py-2.5 text-right tabular-nums text-text-2">{formatKrwShort(c.avgKrw)}</td>
+                <td className="py-2.5 text-right tabular-nums text-text-2">{c.txCount.toLocaleString("ko-KR")}건</td>
+                <td className="py-2.5 text-right tabular-nums text-text-2">{c.complexCount.toLocaleString("ko-KR")}곳</td>
               </tr>
             ))}
           </tbody>
@@ -233,14 +231,16 @@ export default async function TxRegionPage({
         dangerouslySetInnerHTML={{ __html: jsonLdScript([crumbs, datasetJsonLd]) }}
       />
 
-      <p className="rise-in mb-5 t-body text-text-2">
-        국토교통부 아파트 매매 실거래{" "}
+      {/* [1015 · 규칙 B] 사실 한 줄 */}
+      <p className="rise-in mb-4 t-sub text-text-2 max-md:mb-3">
         <strong className="text-ink">{region.txCount.toLocaleString("ko-KR")}건</strong>
-        {range && ` (${range} 신고 기준)`} · 단지{" "}
-        <strong className="text-ink">{region.complexCount.toLocaleString("ko-KR")}곳</strong>. 매물
-        호가가 아닙니다.
+        {range && ` · ${range} 신고 기준`} · 단지{" "}
+        <strong className="text-ink">{region.complexCount.toLocaleString("ko-KR")}곳</strong> · 국토교통부 실거래 · 매물 호가 아님
       </p>
 
+      {/* [1015 · 규칙 F·G] 데스크톱 2단 — 본문 + 340px 레일(같은 시/도 다른 지역 · 관련 화면 · 데이터 출처 · 광고 1). 폰은 한 열, 광고는 끝 1. */}
+      <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
+      <div className="min-w-0">
       <BandTable region={region} kind="area" cells={region.areaCells} />
       <BandTable region={region} kind="price" cells={region.priceCells} />
 
@@ -254,50 +254,52 @@ export default async function TxRegionPage({
         />
       )}
 
-      {/* 웹9 — 같은 시/도 인접 지역 칩 (실재 허브만) */}
-      {siblings.length > 0 && (
-        <section className="mb-6">
-          <h2 className="mb-2 t-body font-bold text-ink">
-            {sido}의 다른 지역{" "}
-            <span className="t-sub font-medium text-text-3">거래 많은 순</span>
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {siblings.map((s) => (
-              <Link
-                key={s.slug}
-                prefetch={false}
-                href={`/tx/${encodeURIComponent(s.slug)}`}
-                className="chip border border-line bg-bg px-3 py-1.5 t-sub font-bold text-text-2 no-underline transition-colors hover:border-primary hover:text-primary"
-              >
-                {s.name.slice(sido.length).trim() || s.name}
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <p className="mb-8 t-sub text-text-3">
-        거래 10건 미만 구간은 평균이 한두 건에 크게 흔들려 따로 페이지를 만들지 않습니다. 면적은
-        전용면적 기준이며, 계약 후 신고까지 시차가 있어 최근 달 건수는 더 늘어날 수 있습니다.
-        <br />
-        <Link href="/tx" className="font-bold text-primary underline">
-          다른 지역 보기
-        </Link>
-        {" · "}
-        <Link href="/complex/browse" className="font-bold text-primary underline">
-          단지별 실거래 브라우즈
-        </Link>
-        {" · "}
-        {/* 시세(보기) → 임장(가기) 연결 — 같은 지역 원천이라 슬러그가 1:1 이다 */}
-        <Link
-          href={`/imjang/${encodeURIComponent(region.slug)}`}
-          className="font-bold text-primary underline"
-        >
-          이 지역 임장 가이드
-        </Link>
+      <p className="mb-2 t-caption text-text-3">
+        거래 10건 미만 구간은 페이지를 만들지 않음 · 전용면적 기준 · 최근 달 건수는 신고 시차로 더 늘 수 있음
       </p>
       {/* [961] 광고 공간 — 페이지 끝 */}
-      <AdZone placement="page_bottom" seed={1} plan={null} className="mt-6" />
+      <AdZone placement="page_bottom" seed={1} plan={null} className="mt-6 max-md:mt-4" />
+      </div>
+
+      <aside className="flex flex-col gap-3 lg:sticky lg:top-[76px] lg:self-start">
+        {/* 웹9 — 같은 시/도 인접 지역 칩 (실재 허브만) */}
+        {siblings.length > 0 && (
+          <section className="card rounded-2xl px-4 py-3">
+            <h2 className="t-sub font-bold text-ink">{sido}의 다른 지역</h2>
+            <p className="t-caption text-text-3">거래 많은 순</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {siblings.map((s) => (
+                <Link
+                  key={s.slug}
+                  prefetch={false}
+                  href={`/tx/${encodeURIComponent(s.slug)}`}
+                  className="chip border border-line bg-bg px-3 py-1.5 t-sub font-bold text-text-2 no-underline transition-colors hover:border-primary hover:text-primary"
+                >
+                  {s.name.slice(sido.length).trim() || s.name}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+        <nav aria-label="관련 화면" data-tone="blue" className="lq-panel flex flex-col divide-y">
+          {/* 시세(보기) → 임장(가기) 연결 — 같은 지역 원천이라 슬러그가 1:1 이다 */}
+          <Link href={`/imjang/${encodeURIComponent(region.slug)}`} className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline">
+            {region.name} 임장 가이드 <span aria-hidden="true" className="text-text-3">›</span>
+          </Link>
+          <Link href="/complex/browse" className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline">
+            단지별 실거래 브라우즈 <span aria-hidden="true" className="text-text-3">›</span>
+          </Link>
+          <Link href="/tx" className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline">
+            다른 지역 <span aria-hidden="true" className="text-text-3">›</span>
+          </Link>
+        </nav>
+        <p className="px-1 t-caption leading-[1.6] text-text-3">
+          데이터 출처: 국토교통부 실거래가 공개시스템 신고분(해제 신고분 제외){range ? ` · ${range}` : ""}
+          {region.lastDataAt ? ` · 갱신 ${region.lastDataAt.toISOString().slice(0, 10)}` : ""}
+        </p>
+        <AdZone placement="sidebar" seed={2} plan={null} className="hidden lg:block" />
+      </aside>
+      </div>
     </PageShell>
   );
 }

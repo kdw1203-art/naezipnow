@@ -312,7 +312,7 @@ export default function ResetPasswordPage() {
 
         {/* [970 · A-41] 링크를 폼 바로 아래로(스페이서 위) — forgot-password 와 같은 이유 */}
         <div className="rise-in-5 mt-2 text-center text-xs text-text-3">
-          비밀번호가 기억났나요?{" "}
+          비밀번호를 기억한다면{" "}
           <Link href="/login" className="font-bold text-primary">
             로그인
           </Link>

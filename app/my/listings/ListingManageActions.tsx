@@ -297,7 +297,7 @@ export function ListingManageActions(props: {
     return (
       <span className="inline-flex flex-wrap items-center gap-1.5">
         <span className="t-sub font-bold text-text-3">
-          거래가 끝났나요? 마감하면 목록에서 내려가고 다시 수정할 수 없어요.
+          거래완료로 마감하면 목록에서 내려가고 다시 수정할 수 없습니다.
         </span>
         <button
           type="button"

@@ -45,13 +45,13 @@ export async function NearbyRedevelopment({
 
   return (
     /* [968 · 7] cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미룬다(page.tsx 주석 참고) */
-    <section className="cv-auto rise-in-5 mt-6">
+    <section className="cv-auto rise-in-5 mt-6 max-md:mt-3">
       <h2 className="mb-2 px-1 t-section text-ink">
         인근 정비사업 <span className="t-sub font-medium text-text-3">{gu}</span>
       </h2>
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {projects.map((p) => (
-          <div key={p.id} className="card flex flex-col gap-1.5 rounded-2xl px-4 py-3.5">
+          <div key={p.id} className="card flex flex-col gap-1.5 rounded-2xl px-4 py-3.5 max-md:px-3.5 max-md:py-3">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="rounded-md bg-bg chip-pad t-sub font-bold text-text-2">
                 {typeLabel(p.typeKey)}
@@ -77,8 +77,7 @@ export async function NearbyRedevelopment({
       </div>
       {hasSeed && (
         <p className="mt-1.5 px-1 t-caption text-text-3">
-          {seedAsOf ? `${seedAsOf} ` : ""}공개자료(정비사업 정보몽땅·지자체 고시 등) 취합 기준
-          참고 정보예요 — 최신 단계와 다를 수 있어요.
+          {seedAsOf ? `${seedAsOf} ` : ""}공개자료(정비사업 정보몽땅·지자체 고시 등) 취합 기준 · 최신 단계와 다를 수 있음
         </p>
       )}
       <Link

@@ -16,6 +16,7 @@
  * 기존 목업 값으로 폴백한다. DB 쓰기 없음.
  */
 import "server-only";
+import { newsImageUrl } from "@/lib/town/shared";
 import { unstable_cache } from "next/cache";
 import { loadHomeData, type HomeData, EMPTY_HOME_DATA } from "@/lib/landing/data";
 import { getReadOnlySupabase } from "@/lib/newui/supabase-read";
@@ -108,6 +109,10 @@ export interface HomeNoteItem {
   hot: boolean;
   /** [950] "lab" = 내집나우 Lab 데이터·AI 편집 노트, "user" = 사람이 쓴 노트 */
   kind: "lab" | "user";
+  /** [1015 · 썸네일] 행 왼쪽 정사각 썸네일 주소(고른 템플릿 → 첫 사진), 없으면 null */
+  cover: string | null;
+  /** 동네·단지 한 줄(메타) — 목록 행의 보조 줄 */
+  region: string;
 }
 
 /** [950] 커뮤니티 글이 없을 때 홈이 대신 보여 주는 자동수집 뉴스 한 줄 */
@@ -119,6 +124,8 @@ export interface HomeNewsItem {
   when: string | null;
   /** [1007] 표시 시각(ISO) — source_published_at 없으면 created_at. <time dateTime> 용 */
   publishedAt: string | null;
+  /** [1015] 원문 매체 대표 사진(og:image) — 없으면 null(사진 칸을 그리지 않는다) */
+  image: string | null;
 }
 
 /**
@@ -813,10 +820,13 @@ async function loadNewHomeDataInternal(): Promise<NewHomeData> {
       const score = noteScoreOf(n);
       return {
         id: n.id,
-        title: n.aptName && !n.title.includes(n.aptName) ? `${n.aptName} — ${n.title}` : n.title,
+        /* [1015 · 규칙 D] 단지명은 메타 줄(region)에 — 제목에 "단지 — 제목" 으로 잇지 않는다 */
+        title: n.title,
         score: `${score}점`,
         hot: score >= 75,
         kind: (isLabNoteLabel(n.authorLabel) ? "lab" : "user") as HomeNoteItem["kind"],
+        cover: n.cover,
+        region: [n.region, n.aptName && !n.title.includes(n.aptName) ? n.aptName : null].filter(Boolean).join(" · "),
       };
     })
     .sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "user" ? -1 : 1))
@@ -835,6 +845,7 @@ async function loadNewHomeDataInternal(): Promise<NewHomeData> {
         source: p.sourceName ? String(p.sourceName) : null,
         when: iso ? String(iso).slice(0, 10).replace(/-/g, ".") : null,
         publishedAt: iso ? String(iso) : null,
+        image: newsImageUrl(p),
       };
     });
   /* [1007] 이웃 글 — 같은 배열에서 사람 글만(readRelatedTownPosts 는 posts 스토어를 병합한다).

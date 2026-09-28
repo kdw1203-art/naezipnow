@@ -22,15 +22,15 @@ function welcomeHrefFor(callbackUrl: string | null): string {
 const SOCIAL_BUTTON: Record<SocialProvider, { label: string; className: string }> = {
   /* 카카오 브랜드 가이드 — 배경 #FEE500 · 라벨 #191919 고정 */
   kakao: {
-    label: "카카오로 3초 만에 시작",
+    label: "카카오로 가입",
     className: "bg-[#fee500] text-[#191919] shadow-[0_6px_16px_rgba(254,229,0,.3)]",
   },
   toss: {
-    label: "토스로 시작",
+    label: "토스로 가입",
     className: "bg-[#3182f6] text-white shadow-[0_6px_16px_rgba(49,130,246,.35)]",
   },
   google: {
-    label: "Google로 시작",
+    label: "Google로 가입",
     className: "border border-line bg-surface text-text-1",
   },
 };
@@ -387,11 +387,12 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
         </Link>
       </div>
 
+      {/* [1015 · 규칙 D] 마케팅 제목("30초면 시작할 수 있어요")·"만들어 드려요" 부제 → 명사 제목 + 사실 한 줄 */}
       <h1 className="rise-in text-[21px] font-bold leading-[1.35] text-ink">
-        30초면 시작할 수 있어요
+        회원가입
       </h1>
       <p className="rise-in-1 -mt-2 text-[13px] text-text-2">
-        가입 후 관심 지역·목표를 골라 맞춤 화면을 만들어 드려요
+        가입 후 관심 지역·목표 선택 화면으로 이어집니다
       </p>
 
       {social.length > 0 && (
@@ -560,7 +561,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
           {busy ? "가입 중…" : "가입하고 노트 쓰기"}
         </button>
         <div className="text-center text-xs text-text-3">
-          이미 계정이 있나요?{" "}
+          이미 계정이 있다면{" "}
           <Link href={loginHref} className="font-bold text-primary">
             로그인
           </Link>

@@ -314,19 +314,19 @@ export default async function ListingDetailPage({
             )}
           </div>
 
-          {/* 제목 · 가격 */}
+          {/* 가격 · 제목 — [1015 · 규칙 M · 직방] 가격이 가장 크게 먼저, 단지명은 그 아래(h1 은 그대로 단지명) */}
           <div>
-            <h1 className="text-[24px] font-bold leading-[1.3] text-ink">
-              {listing.complexName}
-            </h1>
-            <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              <span className="t-num text-[21px] text-ink">{priceLine(listing)}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="t-num text-[24px] font-bold leading-[1.3] text-ink">{priceLine(listing)}</span>
               {compareBadge && (
                 <span className={compareBadge.badgeClass}>
                   {compareBadge.dir === "flat" ? compareBadge.label : `실거래 대비 ${compareBadge.label}`}
                 </span>
               )}
             </div>
+            <h1 className="mt-1 text-[19px] font-bold leading-[1.3] text-ink">
+              {listing.complexName}
+            </h1>
           </div>
 
           {/* 관심 저장(#1) · 소유주 끌어올리기(#6) */}
@@ -340,32 +340,32 @@ export default async function ListingDetailPage({
           </div>
           {stale && (
             <p className="text-[12px] leading-[1.6] text-text-3">
-              마지막 갱신 이후 시간이 지난 매물이에요. 정보가 유효한지 등록자에게 확인해 주세요.
-              {isOwner ? " 끌어올리기를 누르면 최신 매물로 다시 노출돼요." : ""}
+              마지막 갱신 이후 시간이 지난 매물입니다. 정보가 유효한지 등록자에게 확인해 주세요.
             </p>
           )}
 
-          {/* 스펙 */}
-          <div className="flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-text-2">
-            {listing.areaM2 !== null && (
-              <span>
-                전용 <b className="text-ink">{listing.areaM2}㎡</b>
-              </span>
-            )}
-            {listing.floor !== null && (
-              <span>
-                <b className="text-ink">{listing.floor}층</b>
-              </span>
-            )}
-            {listing.regionName && (
-              <span>
-                지역 <b className="text-ink">{listing.regionName}</b>
-              </span>
-            )}
-            <span>
-              조회 <b className="text-ink">{listing.viewCount.toLocaleString("ko-KR")}</b>
-            </span>
-          </div>
+          {/* 스펙 — [1015 · 규칙 M · 직방] 면적·층·방/욕실·주차를 칸으로(있는 값만) · 실거래·가격 = blue 톤 판 */}
+          <dl className="lq-panel grid grid-cols-3 gap-y-3 py-3 text-[13px] sm:grid-cols-5" data-tone="blue">
+            {(
+              [
+                listing.areaM2 !== null ? ["전용면적", `${listing.areaM2}㎡`] : null,
+                listing.floor !== null ? ["층", `${listing.floor}층`] : null,
+                listing.rooms !== null || listing.bathrooms !== null
+                  ? ["방 · 욕실", `${listing.rooms ?? "—"} · ${listing.bathrooms ?? "—"}`]
+                  : null,
+                listing.parkingSpaces !== null ? ["주차", `${listing.parkingSpaces}대`] : null,
+                listing.regionName ? ["지역", listing.regionName] : null,
+                ["조회", listing.viewCount.toLocaleString("ko-KR")],
+              ] as ([string, string] | null)[]
+            )
+              .filter((x): x is [string, string] => x !== null)
+              .map(([k, v]) => (
+                <div key={k} className="flex flex-col gap-0.5">
+                  <dt className="t-caption text-text-3">{k}</dt>
+                  <dd className="t-num font-bold text-ink">{v}</dd>
+                </div>
+              ))}
+          </dl>
 
           {/* 주소 */}
           {listing.address && (
@@ -451,7 +451,7 @@ export default async function ListingDetailPage({
 
           {/* 신고 */}
           <div className="flex items-center gap-3">
-            <span className="text-[12px] text-text-3">이 매물에 문제가 있나요?</span>
+            <span className="text-[12px] text-text-3">매물 신고</span>
             <ReportButton postId={listing.id} />
           </div>
         </div>
@@ -512,9 +512,7 @@ export default async function ListingDetailPage({
           {listing.status === "approved" && !isOwner && (
             <div className="card card-pad-sm flex flex-col gap-2.5">
               <div className="text-[13px] font-bold text-ink">문의하기</div>
-              <p className="text-[12px] leading-[1.6] text-text-3">
-                전화 대신 문의를 남기면 등록자가 확인 후 남겨 주신 연락처로 회신해요.
-              </p>
+              {/* [1015 · 규칙 B] 사용법 문장 제거 — 폼 자체가 말한다 */}
               <InquiryForm listingId={listing.id} loggedIn={viewerEmail !== null} />
             </div>
           )}

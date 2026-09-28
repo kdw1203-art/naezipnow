@@ -2,7 +2,6 @@ import Link from "next/link";
 import { PageShell } from "../../components/PageShell";
 import { AIPanel } from "../../components/AIPanel";
 import { CompareView } from "./CompareView";
-import { Timeline } from "./Timeline";
 import { safeAuth } from "@/lib/safe-auth";
 import {
   getNote,
@@ -17,6 +16,8 @@ import {
 } from "@/lib/inspection/visit-compare";
 import { AiFeedbackButtons } from "@/app/components/AiFeedbackButtons";
 import { CompareFunnelPing } from "./CompareFunnelPing";
+import { noteCoverUrl } from "@/lib/notes/cover/resolve";
+import { Timeline, VisitThumb } from "./Timeline";
 
 /* 시안 9e — 노트 다회차 비교.
    실데이터: listNotesByAuthorForApt. 예시 목업 제거 — 회차 부족 시 empty+CTA. */
@@ -97,7 +98,7 @@ async function loadCompareNotes(
   }
 }
 
-function CompareTable({ model }: { model: VisitCompareModel }) {
+function CompareTable({ model, covers }: { model: VisitCompareModel; covers: (string | null)[] }) {
   const n = model.colCount;
   const gridStyle = {
     gridTemplateColumns: `90px repeat(${n}, minmax(72px, 1fr))`,
@@ -106,20 +107,22 @@ function CompareTable({ model }: { model: VisitCompareModel }) {
   const last = model.scores[model.scores.length - 1]?.value ?? 0;
 
   return (
-    <div className="rise-in-1 card overflow-x-auto rounded-3xl px-[22px] py-5">
-      <div className="min-w-[520px]">
+    <div className="rise-in-1 card overflow-x-auto rounded-3xl px-[22px] py-5 max-md:px-3.5 max-md:py-3.5">
+      {/* [1015 · 규칙 I] 회차 표 = 리퀴드 판(점수 = blue) */}
+      <div className="lq-panel min-w-[520px]" data-tone="blue">
         <div
           className="grid items-end gap-2 border-b border-divider pb-2.5 pt-2 t-sub text-text-3"
           style={gridStyle}
         >
           <span />
-          {model.headers.map((h) => (
+          {model.headers.map((h, i) => (
             <div
               key={h.noteId}
-              className={`text-center ${
+              className={`flex flex-col items-center text-center ${
                 h.latest ? "rounded-lg bg-[rgba(29,79,216,.05)] p-0.5" : ""
               }`}
             >
+              <VisitThumb src={covers[i] ?? null} seed={h.noteId} />
               <Link
                 href={`/notes/${encodeURIComponent(h.noteId)}`}
                 className={`font-bold no-underline ${
@@ -136,7 +139,7 @@ function CompareTable({ model }: { model: VisitCompareModel }) {
         {model.rows.map((row) => (
           <div
             key={row.label}
-            className="grid items-center gap-2 border-b border-divider py-[9px] text-xs"
+            className="grid items-center gap-2 border-b border-divider py-[9px] t-sub"
             style={gridStyle}
           >
             <span className="text-text-2">{row.label}</span>
@@ -148,7 +151,7 @@ function CompareTable({ model }: { model: VisitCompareModel }) {
           </div>
         ))}
         <div
-          className="grid items-center gap-2 py-[9px] text-xs"
+          className="grid items-center gap-2 py-[9px] t-sub"
           style={gridStyle}
         >
           <span className="text-text-2">종합 점수</span>
@@ -178,22 +181,28 @@ export default async function NotesComparePage({
   const result = await loadCompareNotes(noteId, email);
 
   if (result.kind === "ok") {
-    const { model } = result;
+    const { model, notes } = result;
+    /* [1015 · 규칙 H] 회차 열 순서(headers)대로 커버 주소 — 표 머리칸·타임라인 공용 */
+    const byId = new Map(notes.map((n) => [n.id, n]));
+    const covers = model.headers.map((h) => {
+      const n = byId.get(h.noteId);
+      return n ? noteCoverUrl(n) : null;
+    });
     return (
       <PageShell breadcrumb={`임장노트 › 회차 비교 › ${model.aptName}`}>
         <CompareFunnelPing
           noteId={noteId ?? model.headers[model.headers.length - 1]?.noteId ?? ""}
           aptName={model.aptName}
         />
-        <div className="flex flex-col gap-3.5">
+        <div className="flex flex-col gap-3.5 max-md:gap-3">
           <div className="rise-in flex flex-col gap-3 px-1 md:flex-row md:items-end md:justify-between">
             <div>
               <h1 className="t-title text-ink">
                 노트 다회차 비교
               </h1>
-              <p className="mt-1.5 text-[13px] text-text-2">
+              <p className="mt-1.5 t-body text-text-2">
                 {model.region ? `${model.region} · ` : ""}
-                {model.aptName} — 내 방문 기록 {model.colCount}회
+                {model.aptName} · 방문 {model.colCount}회
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-1.5 text-xs">
@@ -224,8 +233,8 @@ export default async function NotesComparePage({
           </div>
 
           <CompareView
-            timeline={<Timeline steps={model.timeline} />}
-            table={<CompareTable model={model} />}
+            timeline={<Timeline steps={model.timeline} covers={covers} />}
+            table={<CompareTable model={model} covers={covers} />}
           />
 
           <div className="rise-in-2">
@@ -241,13 +250,9 @@ export default async function NotesComparePage({
             </div>
           </div>
 
-          <div className="rise-in-3 card flex flex-col items-start gap-2.5 rounded-3xl px-[22px] py-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="text-[13px] font-bold text-ink">다음 방문 기록 남기기</div>
-              <p className="mt-0.5 text-xs text-text-2">
-                같은 단지를 한 번 더 기록하면 표에 새 열이 붙어요.
-              </p>
-            </div>
+          {/* [1015 · 규칙 B] 사용법 문장("같은 단지를 한 번 더 기록하면 표에 새 열이 붙어요")은 뺐다 */}
+          <div className="rise-in-3 card flex flex-col items-start gap-2.5 rounded-3xl px-[22px] py-5 max-md:px-3.5 max-md:py-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="t-body font-bold text-ink">다음 방문 기록</div>
             <Link
               href={`/notes/new?apt=${encodeURIComponent(model.aptName)}${
                 model.region ? `&region=${encodeURIComponent(model.region)}` : ""
@@ -281,17 +286,15 @@ export default async function NotesComparePage({
         : result.kind === "error"
           ? result.message
           : result.kind === "need_more"
-            ? "같은 단지 노트가 2회 이상이어야 표·타임라인이 채워져요. 예시 데이터로 채우지 않아요."
-            : "노트 상세의 ‘회차 전체 비교’로 들어오거나, 내 노트에서 단지를 고른 뒤 비교해 주세요.";
+            ? "같은 단지 노트 2회 이상부터 표·타임라인이 채워져요."
+            : "노트 상세의 ‘회차 전체 비교’에서 들어올 수 있어요.";
 
   return (
     <PageShell breadcrumb="임장노트 › 회차 비교">
       <div className="flex flex-col gap-3.5">
         <div className="rise-in px-1">
           <h1 className="t-title text-ink">노트 다회차 비교</h1>
-          <p className="mt-1.5 text-[13px] text-text-2">
-            같은 단지를 여러 번 기록하면 점수 축 변화를 표로 비교해요.
-          </p>
+          <p className="mt-1.5 t-body text-text-2">같은 단지의 회차별 점수 축 비교</p>
         </div>
         <div className="card flex flex-col gap-3 rounded-3xl px-[22px] py-8 text-center">
           <div className="t-section text-ink">{emptyTitle}</div>

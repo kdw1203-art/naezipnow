@@ -19,7 +19,7 @@ function BriefingShell({ busy, onStart, aptName }: { busy: boolean; onStart?: ()
           {/* [1012 · 규칙 4·8·6] 반짝이 이모지 제거 · 800 → 700 · 부제는 AiBriefingCard 와 같은 문장(단지명·방문 전) */}
           <h2 className="t-body font-bold text-ink">AI 예습 브리핑</h2>
           <p className="mt-0.5 t-caption text-text-3">
-            {aptName ? `${aptName} 방문 전에` : "방문 전에"} 볼 것을 한 장으로 요약해요.
+            {aptName ? `${aptName} 방문 전에` : "방문 전에"} 볼 것을 한 장으로 요약.
           </p>
         </div>
         <button

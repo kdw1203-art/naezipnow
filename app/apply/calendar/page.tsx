@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
+import { AdZone } from "@/app/components/ads/AdZone";
 import { ErrorState, EmptyState } from "@/app/components/ui/EmptyState";
 import { buildApplyCalendar, weekSlugFor } from "@/lib/applyhome/calendar";
 import { seoAlternates } from "@/lib/seo/alternates";
@@ -38,11 +39,14 @@ export default async function ApplyCalendarPage() {
 
   return (
     <PageShell breadcrumb="동네이야기 › 청약 센터 › 청약 캘린더" title="청약 캘린더">
-      <div className="mx-auto w-full max-w-[760px]">
-        <div className="rise-in mb-4 flex flex-wrap items-center gap-2">
+      {/* [1015] 데스크톱 2단 — 760px 한 열 옆이 비던 화면(브리프 규칙 F). 오른쪽 340px 레일 = 관련 링크 · 출처 · 광고 1.
+          폰은 한 열, 레일은 본문 아래. */}
+      <div className="mx-auto grid w-full max-w-[1080px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="min-w-0">
+        <div className="rise-in mb-4 flex flex-wrap items-center gap-2 max-md:mb-3">
+          {/* [1015] 안내문 → 사실 한 줄(브리프 규칙 D) */}
           <p className="min-w-0 flex-1 t-body text-text-2">
-            앞으로 5주 안의 아파트 청약 <b className="text-ink">접수 시작·마감</b>을
-            날짜별로 모았어요. 출처는 청약홈(한국부동산원) 공공데이터입니다.
+            앞으로 5주 <b className="text-ink">접수 시작·마감</b> · 청약홈(한국부동산원) 공공데이터
           </p>
           <Link
             href="/apply"
@@ -59,7 +63,7 @@ export default async function ApplyCalendarPage() {
           <EmptyState
             icon="lock"
             title="접수 일정을 아직 보여드릴 수 없어요"
-            desc="준비되면 이 자리에 접수 일정이 채워져요."
+            desc="준비되면 이 자리에 접수 일정이 실려요."
             action={{ href: "https://www.applyhome.co.kr", label: "청약홈에서 직접 보기 ↗" }}
           />
         ) : cal.state === "error" ? (
@@ -73,7 +77,7 @@ export default async function ApplyCalendarPage() {
           <EmptyState
             icon="calendar"
             title="앞으로 5주 안에 잡힌 접수 일정이 없어요"
-            desc="새 모집공고가 올라오면 이 캘린더에 자동으로 나타납니다."
+            desc="새 모집공고가 올라오면 이 캘린더에 실립니다."
             action={{ href: "/apply", label: "전체 공고 보기" }}
           />
         ) : (
@@ -106,14 +110,14 @@ export default async function ApplyCalendarPage() {
             <p className="text-center t-sub text-text-3">
               {/* [994] 저장소(매일 적재)면 기준 시각을, 라이브면 그 사실을 적는다 */}
               {cal.source === "store"
-                ? `기준 ${new Date(cal.fetchedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })} 적재 · 매일 자동 갱신`
+                ? `${new Date(cal.fetchedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })} 기준 · 매일 갱신`
                 : "청약홈 즉시 조회 기준"}
               {" "}· 정확한 일정·자격은 청약홈 공고 원문을 확인하세요
             </p>
           </div>
         )}
         {/* [#53] 주간 아카이브 링크 — 지난 주 일정은 고정 URL 로 남는다 */}
-        <div className="mt-5 flex flex-wrap justify-center gap-2">
+        <div className="mt-5 flex flex-wrap justify-center gap-2 max-md:mt-3">
           {[weekSlugFor(-2), weekSlugFor(-1), weekSlugFor(0)].map((s) => (
             <Link
               key={s}
@@ -125,6 +129,38 @@ export default async function ApplyCalendarPage() {
           ))}
         </div>
       </div>
+
+      <aside className="flex min-w-0 flex-col gap-3">
+        <div className="card flex flex-col gap-1.5 p-[18px] max-md:p-3.5">
+          <div className="t-body font-bold text-ink">관련 데이터</div>
+          {[
+            { href: "/apply", label: "청약 경쟁률 · 특별공급" },
+            { href: "/supply", label: "입주 물량" },
+            { href: "/auctions", label: "공매 물건" },
+          ].map((l) => (
+            <Link key={l.href} href={l.href} className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary no-underline">
+              {l.label} ›
+            </Link>
+          ))}
+          <a
+            href="https://www.applyhome.co.kr"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary no-underline"
+          >
+            청약홈 공고 원문 ↗
+          </a>
+        </div>
+        <p className="px-1 t-caption text-text-3">
+          출처 청약홈(한국부동산원) 공공데이터 ·{" "}
+          <Link href="/data-sources" className="font-bold text-primary no-underline">
+            데이터 출처와 한계
+          </Link>
+        </p>
+      </aside>
+      </div>
+      {/* [1015] 광고 — 페이지 끝 1곳(브리프 규칙 G: 첫 화면 밖). 레일은 짧아 데스크톱 첫 화면 안에 들어오므로 본문 뒤에 둔다 */}
+      <AdZone placement="page_bottom" seed={0} plan={null} className="mx-auto mt-6 w-full max-w-[1080px] max-md:mt-4" />
     </PageShell>
   );
 }
@@ -146,7 +182,7 @@ function CalendarRow({
   const body = (
     <>
       <span
-        className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
+        className={`shrink-0 rounded-md px-1.5 py-0.5 t-caption font-bold ${
           kind === "start" ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
         }`}
       >

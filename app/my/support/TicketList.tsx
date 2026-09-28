@@ -173,7 +173,7 @@ export function TicketList({ initial }: { initial: TicketView[] }) {
                 </div>
               ) : t.status === "open" ? (
                 <p className="rounded-lg bg-bg px-3.5 py-3 t-sub leading-[1.6] text-text-2">
-                  아직 답변 전이에요. {RESPONSE_TIME} — 답변이 오면 알림함과 이메일로도 알려 드려요.
+                  답변 대기 중 · {RESPONSE_TIME} · 답변은 알림함과 이메일로도 전달
                 </p>
               ) : null}
               <div className="flex flex-wrap items-center justify-between gap-2">

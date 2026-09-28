@@ -26,11 +26,11 @@ export const metadata = buildPageMetadata({
 const PRINCIPLES: { title: string; body: string }[] = [
   {
     title: "사실이 최우선입니다",
-    body: "모든 시세는 국토교통부에 신고된 실거래만 집계하고, 수치에는 기준 시점을 붙입니다. 매물 호가·추정치를 시세라고 부르지 않습니다.",
+    body: "모든 가격은 국토교통부에 신고된 실거래만 집계하고, 수치에는 기준 시점을 붙입니다. 매물 호가·추정치를 실거래처럼 부르지 않습니다.",
   },
   {
     title: "없는 데이터는 없다고 말합니다",
-    body: "실거래가 없는 단지에 추정 시세를 만들지 않고, 데이터가 부족하면 화면에 그대로 '아직 없다'고 적습니다. AI 기능도 조회된 데이터에서만 답하며, 어떤 데이터를 읽었는지 답변과 함께 보여줍니다.",
+    body: "실거래가 없는 단지에 추정 가격을 만들지 않고, 데이터가 부족하면 화면에 그대로 '아직 없다'고 적습니다. AI 기능도 조회된 데이터에서만 답하며, 어떤 데이터를 읽었는지 답변과 함께 보여줍니다.",
   },
   {
     title: "계산 방식을 공개합니다",
@@ -57,10 +57,10 @@ export default async function AboutPage() {
       <div className="mx-auto max-w-[720px]">
         {/* [961] 브랜드 시그니처 — 소개는 브랜드가 스스로를 말하는 자리 */}
         <BrandSignature className="rise-in mb-6" />
-        <h1 className="rise-in text-[24px] font-bold text-ink">
-          내집나우 — 시세는 누구나 봅니다, 현장은 가 본 사람만 압니다
-        </h1>
-        <p className="rise-in-1 mt-2 text-[13px] leading-[1.7] text-text-2">
+        {/* [1015 · 규칙 D] 대시로 이은 슬로건 제목 → 명사 제목 + 슬로건 한 줄 */}
+        <h1 className="rise-in t-title text-ink">내집나우 소개</h1>
+        <p className="rise-in-1 mt-1 t-body font-bold text-ink">실거래는 누구나 봅니다. 현장은 가 본 사람만 압니다.</p>
+        <p className="rise-in-1 mt-2 t-body leading-[1.7] text-text-2">
           내집나우(naezipnow.com)은 집을 보러 다니는 기록(임장노트)을 국토교통부 실거래
           데이터와 나란히 놓고, 부동산 판단의 근거를 쌓도록 돕는 서비스입니다.
         </p>
@@ -68,36 +68,33 @@ export default async function AboutPage() {
         {/* 고도화 50 — 실적 숫자(실측·1시간 재검증). 로더 실패면 이 블록 자체가
             사라진다 — 낡은 숫자를 소개 페이지에 굳히지 않는다. */}
         {coverage.complexes !== null && coverage.regions !== null && (
-          <div className="rise-in-1 mt-4 grid grid-cols-2 gap-3">
-            <div className="card rounded-2xl px-5 py-4">
-              <div className="t-num text-[21px] font-bold text-ink">
+          <div className="rise-in-1 mt-4 grid grid-cols-2 gap-3 max-md:mt-3 max-md:gap-2">
+            <div className="card rounded-2xl px-5 py-4 max-md:px-3.5 max-md:py-3">
+              <div className="t-num t-title text-ink">
                 <CountUp value={coverage.complexes} />
               </div>
-              <div className="mt-0.5 text-[12px] text-text-3">
-                실거래 집계 단지 · 국토부 신고 기준
-              </div>
+              <div className="mt-0.5 t-sub text-text-3">실거래 집계 단지 · 국토부 신고 기준</div>
             </div>
-            <div className="card rounded-2xl px-5 py-4">
-              <div className="t-num text-[21px] font-bold text-ink">
+            <div className="card rounded-2xl px-5 py-4 max-md:px-3.5 max-md:py-3">
+              <div className="t-num t-title text-ink">
                 <CountUp value={coverage.regions} />
               </div>
-              <div className="mt-0.5 text-[12px] text-text-3">
-                시세 랜딩 지역 · 매시간 갱신 집계
-              </div>
+              {/* [1015] "시세 랜딩 지역 · 매시간 갱신" → 실거래 지역(재검증은 1일) */}
+              <div className="mt-0.5 t-sub text-text-3">실거래 집계 지역 · 국토부 신고 기준</div>
             </div>
           </div>
         )}
 
-        <div className="mt-6 flex flex-col gap-4">
+        <div className="mt-6 flex flex-col gap-4 max-md:mt-4 max-md:gap-3">
           {PRINCIPLES.map((p, i) => (
-            <section key={p.title} className={`rise-in-${Math.min(i + 2, 6)} card rounded-3xl p-6`}>
-              <h2 className="text-[15px] font-bold text-ink">{p.title}</h2>
-              <p className="mt-2 text-[13px] leading-[1.75] text-text-1">{p.body}</p>
+            <section key={p.title} className={`rise-in-${Math.min(i + 2, 6)} card rounded-3xl p-6 max-md:p-4`}>
+              <h2 className="t-section text-ink">{p.title}</h2>
+              <p className="mt-2 t-body leading-[1.75] text-text-1">{p.body}</p>
             </section>
           ))}
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-2 text-[12px]">
+        <div className="mt-6 flex flex-wrap gap-2 t-sub max-md:mt-4">
           <Link href="/methodology" className="chip chip-soft px-3.5 py-2 no-underline">
             데이터 방법론 ›
           </Link>

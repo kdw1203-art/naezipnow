@@ -6,6 +6,7 @@ import { buildFeedNotes } from "@/lib/notes/feed-note";
 import { listBestNoteMonths } from "@/lib/inspection/best-notes";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { PUBLIC_NOTES_LIST_TAG } from "@/lib/inspection/note-cache-tags";
+import { AdZone } from "@/app/components/ads/AdZone";
 
 /* 시안 7a — 공개 임장노트 피드. 실데이터: inspection_notes(is_public) → listPublicNotes
    [967 · 19] 카드 빌더(toFeedNote·상대시각·태그·관심 지역 대조)는 lib/notes/feed-note 로
@@ -106,6 +107,10 @@ export default async function NotesFeedPage() {
       hasMore={hasMore}
       pageSize={FIRST_PAGE}
       hasBestMonth={hasBestMonth}
+      /* [1015 · 규칙 G] 페이지 끝 광고 1곳 — 서버 컴포넌트(AdZone)를 노드로 넘긴다(클라이언트 목록은 광고 부품을 import 하지 않는다) */
+      ad={<AdZone placement="page_bottom" seed={5} plan={null} className="mt-2" />}
+      /* [1016] 데스크톱 오른쪽 레일(페이스북 구성) 광고 — lg+ 에서만 그려지는 레일 안 */
+      adSide={<AdZone placement="sidebar" seed={6} plan={null} />}
     />
   );
 }

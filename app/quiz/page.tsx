@@ -15,9 +15,9 @@ import { QuizGame } from "./QuizGame";
 export const revalidate = 21600;
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "실거래가 게임 — 더 비쌀까, 더 쌀까?",
+  title: "실거래가 게임 — 오늘의 10문제",
   description:
-    "두 아파트 중 어느 쪽 최근 실거래가가 더 높을까요? 국토교통부 실거래 신고로만 만든 오늘의 10문제 — 풀다 보면 동네 실거래가 감이 생겨요.",
+    "두 아파트 중 최근 실거래가가 더 높은 쪽을 고르는 게임. 국토교통부 실거래 신고로만 만든 오늘의 10문제, 전용 84㎡ 안팎.",
   path: "/quiz",
   og: { badge: "게임", sub: "오늘의 10문제 · 국토교통부 실거래로만" },
 });
@@ -28,13 +28,10 @@ export default async function QuizPage() {
     /* 브레드크럼은 두지 않는다 — 바로 아래 h1 과 같은 말을 한 번 더 적을 뿐이었다 */
     <PageShell>
       <div className="mx-auto w-full max-w-[560px]">
-        <h1 className="t-title text-ink">
-          실거래가 게임
-          <span className="mt-0.5 block t-section font-bold text-text-2">더 비쌀까, 더 쌀까?</span>
-        </h1>
-        <p className="mt-1.5 t-sub text-text-3">
-          A 단지의 최근 실거래가를 보고, B 단지가 더 비싸게 거래됐는지 맞혀 보세요. 두 단지 모두 전용 84㎡
-          안팎의 실제 거래 한 건이에요.
+        {/* [1015 · 규칙 D] 물음형 부제("더 비쌀까, 더 쌀까?")·사용법 문단 → 사실 한 줄. 문제 수·기준은 실데이터(오늘 판) */}
+        <h1 className="t-title text-ink">실거래가 게임</h1>
+        <p className="mt-1 t-sub text-text-3">
+          {load.ok ? `오늘 ${Math.max(0, (load.days[0]?.entries.length ?? 1) - 1)}문제 · ` : ""}전용 84㎡ 안팎 · 국토교통부 실거래 신고 · 날마다 새 문제
         </p>
         {load.ok ? (
           <QuizGame days={load.days} />
@@ -45,7 +42,7 @@ export default async function QuizPage() {
             desc={
               load.reason === "unconfigured"
                 ? "실거래 자료에 연결되지 않은 환경이에요. 지어낸 문제는 내지 않아요."
-                : "지금은 실거래 자료를 읽지 못했어요. 잠시 뒤 다시 들어와 주세요 — 지어낸 문제는 내지 않아요."
+                : "지금은 실거래 자료를 읽지 못했어요. 지어낸 문제는 내지 않아요."
             }
             action={{ href: "/map", label: "지도에서 실거래 보기" }}
           />

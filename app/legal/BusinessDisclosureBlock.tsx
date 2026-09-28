@@ -65,7 +65,7 @@ export function BusinessDisclosureBlock({ className = "", showHours = true }: Pr
         </p>
       ) : null}
       {!complete ? (
-        <p className="pt-1 text-[10px] text-danger">
+        <p className="pt-1 t-caption text-danger">
           통신판매업 신고번호가 아직 등록되지 않았습니다. 유료 결제는 고지 완료 후
           열립니다. (NEXT_PUBLIC_MAIL_ORDER_SALES_NUMBER)
         </p>

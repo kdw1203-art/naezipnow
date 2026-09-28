@@ -90,7 +90,7 @@ function ShareTemplateForm({ onDone }: { onDone: () => void }) {
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         maxLength={200}
-        placeholder="한 줄 소개 (어떤 상황에 쓰는 체크리스트인가요?)"
+        placeholder="한 줄 소개 (예: 아이 학령기 실거주)"
         className="rounded-lg border border-line bg-surface px-3.5 py-2.5 t-body"
       />
       <textarea
@@ -100,10 +100,10 @@ function ShareTemplateForm({ onDone }: { onDone: () => void }) {
         placeholder={"# 등하교 동선\n정문에서 초등학교까지 직접 걸어보기\n횡단보도·신호등 개수 세기\n\n# 소음\n창문 닫고 5분, 열고 5분 있어보기"}
         className="rounded-lg border border-line bg-surface px-3.5 py-2.5 font-mono t-body"
       />
+      {/* [1015 · 규칙 D] 설명 세 문장 → 규칙 나열 한 줄 */}
       <p className="t-sub text-text-3">
-        # 으로 시작하는 줄은 섹션 제목, 나머지 줄은 체크 항목이 됩니다. 항목 5개 이상 ·
-        하루 3개까지 공유할 수 있어요. 공유하면 모두에게 공개되고, 다른 이웃이 내
-        체크리스트로 노트를 저장할 때마다 20P(일 5회)가 적립됩니다.
+        # 줄 = 섹션 제목 · 나머지 줄 = 항목 · 항목 5개 이상 · 하루 3개 · 모두에게 공개 · 이웃이 저장할 때마다
+        20P(일 5회)
       </p>
       {needLogin && (
         <p className="t-sub font-bold text-warning">
@@ -140,7 +140,7 @@ function TemplateCard({ t, delay }: { t: NoteTemplate; delay: string }) {
       href={`/notes/templates/${t.id}`}
       /* [1012] 규칙 1·9 — 카드 12px→8px. 배지는 반짝이 아이콘 없이 사실 명사만("내집나우 공식" / "이웃 제작"),
          연한 배경 + 진한 글자 11px/500, 4px. 카테고리는 배지가 아니라 글자로. */
-      className={`card tile press ${delay} flex flex-col gap-3 rounded-lg p-5 no-underline`}
+      className={`card tile press ${delay} flex flex-col gap-3 rounded-lg p-5 no-underline max-md:gap-2 max-md:p-3.5`}
     >
       <div className="flex flex-wrap items-center gap-1.5">
         {t.isOfficial ? (
@@ -203,10 +203,10 @@ export function TemplateBrowser({ initial }: { initial: NoteTemplate[] }) {
   }, [initial, category]);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 max-md:gap-3">
       {/* [#69] 내 체크리스트 공유 — 공식 목록 옆의 UGC 두 번째 축 */}
       {/* [1012] 규칙 6 — 부제는 누가·언제 + 숫자: 이웃이 내 체크리스트로 노트를 저장할 때마다 20P */}
-      <div className="rise-in card flex flex-col gap-2 rounded-lg p-5">
+      <div className="rise-in card flex flex-col gap-2 rounded-lg p-5 max-md:p-3.5">
         <button
           type="button"
           onClick={() => setShareOpen((v) => !v)}
@@ -214,7 +214,7 @@ export function TemplateBrowser({ initial }: { initial: NoteTemplate[] }) {
           aria-expanded={shareOpen}
         >
           <span className="t-section text-ink">
-            내 체크리스트 공유하기
+            내 체크리스트 공유
             <span className="ml-2 t-sub font-bold text-primary">이웃이 쓸 때마다 +20P</span>
           </span>
           <span className="t-body font-bold text-text-3">{shareOpen ? "접기 ▴" : "열기 ▾"}</span>
@@ -252,11 +252,11 @@ export function TemplateBrowser({ initial }: { initial: NoteTemplate[] }) {
           <Icon name="search" size={22} className="text-text-3" />
           {/* [1012] 규칙 6 — 어느 카테고리에서 몇 개 중 0 인지 */}
           <p className="t-body text-text-2">
-            {category} 카테고리의 체크리스트가 아직 없어요 — 전체 {initial.length}개는 &lsquo;전체&rsquo; 칩에서 보여요.
+            {category} 체크리스트 0개. 전체 {initial.length}개는 &lsquo;전체&rsquo; 칩에서.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 max-md:gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((t, i) => (
             <TemplateCard
               key={t.id}

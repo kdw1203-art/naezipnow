@@ -201,31 +201,33 @@ export default async function ComplexTxPage({
       </p>
 
       {/* 단지 개요 */}
-      <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">단지 개요</h2>
-        <div className="mt-2">
+      <section className="rise-in-1 mb-6 max-md:mb-3">
+        <h2 className="mb-1.5 px-0.5 t-section text-ink">단지 개요</h2>
+        {/* [1015 · 규칙 I·J] 사실 행 목록(이름 / 값) = hanji 리퀴드 판 */}
+        <div className="lq-panel flex flex-col divide-y" data-tone="hanji">
           {overviewRows.map((r) => (
             <div
               key={r.label}
-              className="flex items-baseline justify-between gap-3 border-b border-border py-2 t-body last:border-b-0"
+              className="flex min-h-11 items-center justify-between gap-3 py-2 t-body"
             >
-              <span className="shrink-0 text-text-3">{r.label}</span>
-              <span className="text-right font-bold text-ink">{r.value}</span>
+              <span className="shrink-0 font-bold text-ink">{r.label}</span>
+              <span className="t-num text-right">{r.value}</span>
             </div>
           ))}
         </div>
         {aptMatch && (
-          <p className="mt-2 t-sub text-text-3">
-            단지 정보: 공동주택 단지 데이터({aptMatch.name}) 병합
+          <p className="mt-1.5 px-1 t-caption text-text-3">
+            단지 정보 출처 · 공동주택 단지 데이터({aptMatch.name})
           </p>
         )}
       </section>
 
       {/* 면적대별 요약 */}
       {bands.length > 0 && (
-        <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
+        <section className="rise-in-1 card mb-6 p-[var(--pad-card)] max-md:mb-3 max-md:p-3.5">
+          {/* [1015] "시세" 낱말은 실거래만 있는 곳에서 쓰지 않는다 → "면적대별 실거래가" */}
           <h2 className="t-section text-ink">
-            면적대별 시세{" "}
+            면적대별 실거래가{" "}
             <span className="t-sub font-medium text-text-3">
               최근 {transactions.length}건 기준
             </span>
@@ -263,15 +265,13 @@ export default async function ComplexTxPage({
       )}
 
       {/* 12개월 월별 거래량·평균가 미니 차트 */}
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
+      <section className="rise-in-2 card mb-6 p-[var(--pad-card)] max-md:mb-3 max-md:p-3.5">
         <h2 className="t-section text-ink">
           월별 거래{" "}
           <span className="t-sub font-medium text-text-3">최근 12개월 · 거래량·평균가</span>
         </h2>
         {count12m === 0 ? (
-          <p className="py-6 text-center t-body text-text-3">
-            최근 12개월 거래가 없습니다. 아래 전체 이력에서 과거 거래를 확인하세요.
-          </p>
+          <p className="py-6 text-center t-body text-text-3">최근 12개월 거래 없음 · 과거 거래는 아래 거래 이력에</p>
         ) : (
           <>
             <div className="mt-4 flex h-[110px] items-end gap-[6px]">
@@ -306,7 +306,7 @@ export default async function ComplexTxPage({
       </section>
 
       {/* 최근 거래 30건 표 */}
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
+      <section className="rise-in-2 card mb-6 p-[var(--pad-card)] max-md:mb-3 max-md:p-3.5">
         <h2 className="t-section text-ink">
           거래 이력{" "}
           <span className="t-sub font-medium text-text-3">

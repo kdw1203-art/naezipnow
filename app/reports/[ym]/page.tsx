@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "../../components/PageShell";
+import { AdZone } from "@/app/components/ads/AdZone";
 import { QaBlock } from "../../components/QaBlock";
 import { CitationBlock } from "../../components/CitationBlock";
 import { PressSummaryBlock } from "../../components/PressSummaryBlock";
@@ -216,12 +217,14 @@ export default async function MonthlyReportPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript([articleJsonLd, crumbs]) }}
       />
-      <div className="mx-auto max-w-[860px]">
-        <h1 className="rise-in text-[24px] font-bold text-ink">
+      {/* [1015 · 규칙 F·G] 데스크톱 2단 — 본문 + 340px 레일(목차 · 관련 화면 · 데이터 출처 · 광고 1). 폰은 한 열, 광고는 페이지 끝 1. */}
+      <div className="mx-auto grid max-w-[1100px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
+      <div className="min-w-0">
+        <h1 className="rise-in t-title text-ink">
           {label} 아파트 실거래 리포트
         </h1>
         {/* [1009 · H] 결론 → 큰 숫자 → 비교 기준(토스식 한 화면 한 메시지). 아래 첫 문단(G12)은 인용용 전문이라 그대로 둔다 */}
-        <section aria-label={`${label} 거래 요약`} className="rise-in-1 card mt-3 rounded-2xl p-[var(--pad-card)]">
+        <section id="summary" aria-label={`${label} 거래 요약`} className="rise-in-1 card mt-3 rounded-2xl p-[var(--pad-card)] max-md:mt-2">
           <p className="m-0 t-caption text-text-3">
             집계 지역 {report.regionCount.toLocaleString("ko-KR")}곳 · 국토교통부 실거래 신고
             {open ? ` · 신고 중${deadline ? `(기한 ${deadline})` : ""}` : ""}
@@ -243,63 +246,67 @@ export default async function MonthlyReportPage({
             )}
           </div>
         </section>
-        <p className="rise-in-1 mt-3 text-[13px] leading-[1.7] text-text-2">{leadSentence}</p>
+        {/* [1015 · 규칙 E] 첫 문단(G12 인용용 전문)은 머리 카드와 같은 숫자를 되풀이한다 — 폰에서는 숨긴다(HTML 에는 남는다) */}
+        <p className="rise-in-1 mt-3 t-body leading-[1.7] text-text-2 max-md:hidden">{leadSentence}</p>
         {/* [1009 · H] 신고 중인 달이라는 사실은 머리 카드("신고 중(기한 10/30)")와 첫 문단이 말한다 — 같은 말을 한 번 더 두지 않는다 */}
 
         {/* 상승·하락 상위 (거래 10건 이상 지역만 — 소표본 변동 과대 해석 방지) */}
+        {/* [1015 · 규칙 I] 상승·하락 상위 — 카드 안 행 목록을 리퀴드 판으로(상승 = sand · 하락 = blue, 이웃 목록은 다른 톤) */}
         {!open && (report.risers.length > 0 || report.fallers.length > 0) && (
-          <div className="rise-in-2 mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div id="movers" className="rise-in-2 mt-5 grid grid-cols-1 gap-3 max-md:mt-3 md:grid-cols-2">
             {report.risers.length > 0 && (
-              <div className="card rounded-2xl p-5">
+              <section className="card rounded-2xl p-5 max-md:p-3.5">
                 <div className="flex items-center gap-0.5">
-                  <h2 className="text-[13px] font-bold text-ink">평당가 상승 상위</h2>
+                  <h2 className="t-section text-ink">평당가 상승 상위</h2>
                   {/* [1009 · H] 예전 머리 "평균가 상승 상위" — 실제 순위 기준은 평당가 평균의 전월비(trend_delta_pct)다 */}
                   <Explain
                     title="평당가 상승·하락 상위"
-                    body="그 달 평당가(3.3㎡당 가격) 평균이 전월보다 가장 많이 오르거나 내린 지역이에요. 평균 매매가의 순위가 아니에요."
+                    body="그 달 평당가(3.3㎡당 가격) 평균이 전월보다 가장 많이 오르거나 내린 지역. 평균 매매가의 순위가 아니다."
                     how={[
-                      "이번 달과 전월 모두 거래 10건 이상인 지역만 비교해요(적은 표본의 큰 출렁임 제외).",
-                      "평당가 평균 = 해제 신고를 뺀 거래 건별 평당가의 단순 평균 — 그 달 어떤 단지·연식이 많이 팔렸는지에 따라 움직여요.",
+                      "이번 달과 전월 모두 거래 10건 이상인 지역만 비교(적은 표본의 큰 출렁임 제외)",
+                      "평당가 평균 = 해제 신고를 뺀 거래 건별 평당가의 단순 평균. 그 달 어떤 단지·연식이 많이 팔렸는지에 따라 움직인다",
                       "변동률 = (이번 달 평당가 평균 − 전월 평당가 평균) ÷ 전월 평당가 평균 × 100",
                     ]}
                     source={`국토교통부 실거래 신고 · ${label} 집계`}
                   />
                 </div>
-                {report.risers.map((r) => (
-                  <div key={r.regionName} className="mt-2 flex justify-between gap-2 text-[13px]">
-                    <span className="font-bold text-ink break-words">{r.regionName}</span>
-                    <Delta pct={r.deltaPct} srContext="평당가 전월보다" className="shrink-0" />
-                  </div>
-                ))}
-              </div>
+                <div data-tone="sand" className="lq-panel mt-2 flex flex-col divide-y">
+                  {report.risers.map((r) => (
+                    <div key={r.regionName} className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-body">
+                      <span className="font-bold text-ink break-words">{r.regionName}</span>
+                      <Delta pct={r.deltaPct} srContext="평당가 전월보다" className="shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              </section>
             )}
             {report.fallers.length > 0 && (
-              <div className="card rounded-2xl p-5">
-                <h2 className="text-[13px] font-bold text-ink">평당가 하락 상위</h2>
-                {report.fallers.map((r) => (
-                  <div key={r.regionName} className="mt-2 flex justify-between gap-2 text-[13px]">
-                    <span className="font-bold text-ink break-words">{r.regionName}</span>
-                    <Delta pct={r.deltaPct} srContext="평당가 전월보다" className="shrink-0" />
-                  </div>
-                ))}
-              </div>
+              <section className="card rounded-2xl p-5 max-md:p-3.5">
+                <h2 className="t-section text-ink">평당가 하락 상위</h2>
+                <div data-tone="blue" className="lq-panel mt-2 flex flex-col divide-y">
+                  {report.fallers.map((r) => (
+                    <div key={r.regionName} className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-body">
+                      <span className="font-bold text-ink break-words">{r.regionName}</span>
+                      <Delta pct={r.deltaPct} srContext="평당가 전월보다" className="shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              </section>
             )}
           </div>
         )}
 
-        {/* 지역별 표 */}
-        <section className="rise-in-3 card mt-5 p-[var(--pad-card)]">
-          <h2 className="text-[15px] font-bold text-ink">
-            지역별 거래량·평균가{" "}
-            <span className="text-[12px] font-medium text-text-3">거래량순 · {report.regionCount}개 지역</span>
-          </h2>
+        {/* 지역별 표 — [1015 · 규칙 I] 표 껍데기 lq-panel(blue = 실거래) · [규칙 C] 제목 옆 부연("거래량순 · N개 지역")은 표 머리 캡션으로 */}
+        <section id="regions" className="rise-in-3 card mt-5 p-[var(--pad-card)] max-md:mt-3">
+          <h2 className="t-section text-ink">지역별 거래량·평균가</h2>
+          <p className="mt-0.5 t-caption text-text-3">거래량순 · {report.regionCount}개 지역</p>
           {/* [1009 · H] 390px 에서 가로 스크롤(min-width 520) 없이 — 평당가 열은 sm 부터. 숫자 열은 tabular-nums,
               등락은 <Delta>(예전 text-danger/text-primary 는 테마를 타는 색이었다). 평당가는 평균이라 짧은 표기 —
               예전 "11,783만"은 억으로 넘기지 않은 표기였다. 신고 기한 안의 달은 전월 대비 열을 그리지 않는다(반쪽 비교). */}
-          <div className="mt-3">
-            <table className="w-full text-left text-[13px]">
+          <div data-tone="blue" className="lq-panel mt-3 max-md:mt-2">
+            <table className="w-full text-left t-body">
               <thead>
-                <tr className="border-b border-border text-[12px] text-text-3">
+                <tr className="border-b border-border t-sub text-text-3">
                   <th className="py-2 font-medium">지역</th>
                   <th className="py-2 text-right font-medium">거래량</th>
                   <th className="py-2 text-right font-medium">평균가</th>
@@ -332,20 +339,20 @@ export default async function MonthlyReportPage({
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-[12px] leading-[1.6] text-text-3">
-            평균가·평당가는 면적·타입 구분 없는 단순 평균입니다.{" "}
+          <p className="mt-3 t-caption leading-[1.6] text-text-3">
+            평균가·평당가는 면적·타입 구분 없는 단순 평균.{" "}
             {open
-              ? "신고 기한이 지나지 않은 달이라 전월과 비교하지 않습니다."
-              : "전월 대비는 평당가 평균의 변동률로, 이번 달과 전월 모두 거래 10건 이상일 때만 적습니다."}{" "}
-            해제(취소) 신고분은 집계에서 제외했습니다 —{" "}
+              ? "신고 기한이 지나지 않은 달이라 전월과 비교하지 않음."
+              : "전월 대비는 평당가 평균의 변동률, 이번 달과 전월 모두 거래 10건 이상일 때만."}{" "}
+            해제(취소) 신고분 제외.{" "}
             <Link href="/methodology" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
-              집계 방법론 보기
+              집계 방법론
             </Link>
           </p>
         </section>
 
         {/* G8 인용 블록 + N18 언론 인용 요약 + G5/G13 Q&A */}
-        <div className="rise-in-4 mt-5">
+        <div id="cite" className="rise-in-4 mt-5 max-md:mt-3">
           <CitationBlock sentence={citation} />
           <PressSummaryBlock
             sentences={pressSentences}
@@ -355,7 +362,7 @@ export default async function MonthlyReportPage({
           <QaBlock title={`${label} 실거래 Q&A`} items={faq} />
         </div>
 
-        <p className="mb-8 text-[12px] text-text-3">
+        <p className="mb-2 t-sub text-text-3 lg:hidden">
           <Link href="/reports" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
             다른 달 리포트
           </Link>
@@ -364,6 +371,37 @@ export default async function MonthlyReportPage({
             지역별 실거래 상세
           </Link>
         </p>
+        {/* [1015 · 규칙 G] 페이지 끝 광고 1 */}
+        <AdZone placement="page_bottom" seed={3} plan={null} className="mt-6 max-md:mt-4" />
+      </div>
+
+      {/* [1015 · 규칙 F] 데스크톱 레일 — 목차 · 관련 화면 · 데이터 출처 · 광고 1(데스크톱만) */}
+      <aside className="hidden flex-col gap-3 lg:sticky lg:top-[76px] lg:flex lg:self-start">
+        <nav aria-label="목차" className="card rounded-2xl px-4 py-3">
+          <div className="t-caption font-bold text-text-3">목차</div>
+          <ol className="m-0 mt-1.5 flex list-none flex-col p-0">
+            <li><a href="#summary" className="flex min-h-[36px] items-center t-sub font-bold text-ink no-underline">거래 요약</a></li>
+            {!open && (report.risers.length > 0 || report.fallers.length > 0) && (
+              <li><a href="#movers" className="flex min-h-[36px] items-center t-sub font-bold text-ink no-underline">평당가 상승·하락 상위</a></li>
+            )}
+            <li><a href="#regions" className="flex min-h-[36px] items-center t-sub font-bold text-ink no-underline">지역별 거래량·평균가</a></li>
+            <li><a href="#cite" className="flex min-h-[36px] items-center t-sub font-bold text-ink no-underline">인용 · Q&amp;A</a></li>
+          </ol>
+        </nav>
+        <nav aria-label="관련 화면" className="card rounded-2xl px-4 py-1">
+          <Link href="/reports" className="flex min-h-[40px] items-center justify-between gap-2 border-b border-divider py-2 t-sub font-bold text-ink no-underline">
+            다른 달 리포트 <span aria-hidden="true" className="text-text-3">›</span>
+          </Link>
+          <Link href="/tx" className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline">
+            지역별 실거래 상세 <span aria-hidden="true" className="text-text-3">›</span>
+          </Link>
+        </nav>
+        <p className="px-1 t-caption leading-[1.6] text-text-3">
+          데이터 출처: 국토교통부 실거래가 공개시스템 신고분(해제 신고분 제외) · {label} 집계
+          {report.updatedAt ? ` · 갱신 ${report.updatedAt.slice(0, 10)}` : ""}
+        </p>
+        <AdZone placement="sidebar" seed={1} plan={null} />
+      </aside>
       </div>
     </PageShell>
   );

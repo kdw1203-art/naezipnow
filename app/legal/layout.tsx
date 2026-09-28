@@ -20,9 +20,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
       <div className="mx-auto flex w-full max-w-5xl gap-8">
         {/* 사이드 네비 */}
         <aside className="hidden w-52 shrink-0 lg:block">
-          <p className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-text-3">
-            법적 고지
-          </p>
+          <p className="mb-3 text-[12px] font-semibold text-text-3">법적 고지</p>
           <nav className="space-y-0.5">
             {NAV_ITEMS.map((item) => (
               <Link

@@ -1,4 +1,25 @@
 import { Icon } from "@/app/components/Icon";
+import { CoverImage } from "@/app/components/CoverImage";
+import { seedGradient } from "@/lib/town/shared";
+
+/* [1015 · 규칙 H] 회차별 40px 정사각 썸네일 — 표 머리칸(page.tsx CompareTable)과 타임라인이 같은 부품을 쓴다.
+   주소는 호출부가 lib/notes/cover/resolve noteCoverUrl 로 만든다(고른 템플릿 썸네일 → 첫 사진 → 단색 칸). */
+export function VisitThumb({ src, seed, size = 40 }: { src: string | null; seed: string; size?: number }) {
+  return (
+    <span
+      className="block shrink-0 overflow-hidden rounded-lg bg-divider"
+      style={{ width: size, height: size }}
+    >
+      <CoverImage
+        src={src}
+        alt=""
+        sizes={`${size}px`}
+        imgClassName="h-full w-full object-cover"
+        fallback={<span aria-hidden="true" className="block h-full w-full" style={{ background: seedGradient(seed) }} />}
+      />
+    </span>
+  );
+}
 
 /* 시안 9e — 회차 비교 "타임라인" 뷰 (항목 C14)
    page.tsx 의 기존 표 데이터(HEADERS·ROWS·SCORES)를 그대로 파생해
@@ -50,7 +71,7 @@ function ScoreDelta({ delta }: { delta: number }) {
   const sign = delta > 0 ? `+${delta}` : delta < 0 ? `${delta}` : "0";
   return (
     <span
-      className={`inline-flex items-center gap-0.5 rounded-md bg-[rgba(0,0,0,.035)] chip-pad-tight text-[12px] ${cls}`}
+      className={`inline-flex items-center gap-0.5 rounded-md bg-[rgba(0,0,0,.035)] chip-pad-tight t-sub ${cls}`}
       aria-label={`이전 회차 대비 ${delta > 0 ? "상승" : delta < 0 ? "하락" : "동일"} ${Math.abs(delta)}점`}
     >
       <span aria-hidden="true">{glyph}</span>
@@ -59,16 +80,14 @@ function ScoreDelta({ delta }: { delta: number }) {
   );
 }
 
-export function Timeline({ steps }: { steps: TimelineStep[] }) {
+export function Timeline({ steps, covers = [] }: { steps: TimelineStep[]; covers?: (string | null)[] }) {
   const last = steps.length - 1;
   return (
-    <div className="rise-in-1 card rounded-3xl px-[22px] py-5">
+    <div className="rise-in-1 card rounded-3xl px-[22px] py-5 max-md:px-3.5 max-md:py-3.5">
+      {/* [1015 · 규칙 C] 제목 옆 부연("회차별 변화 · 이전 회차 대비 하이라이트")은 지웠다 */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Icon name="clock" size={16} className="text-primary" />
-        <h2 className="text-[13px] font-bold text-ink">방문 타임라인</h2>
-        <span className="t-sub text-text-3">
-          회차별 변화 · 이전 회차 대비 하이라이트
-        </span>
+        <h2 className="t-body font-bold text-ink">방문 타임라인</h2>
       </div>
 
       <ol className="flex flex-col">
@@ -76,11 +95,10 @@ export function Timeline({ steps }: { steps: TimelineStep[] }) {
           <li key={step.n} className="grid grid-cols-[22px_minmax(0,1fr)] gap-3">
             {/* 레일: 회차 점 + 연결선 */}
             <div className="flex flex-col items-center" aria-hidden="true">
+              {/* [1015] 임의 그림자 제거 · text-[10px] → t-caption */}
               <span
-                className={`mt-0.5 grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full text-[10px] font-bold ${
-                  step.latest
-                    ? "bg-primary text-white shadow-[0_2px_8px_rgba(29,79,216,.35)]"
-                    : "bg-primary-soft text-primary"
+                className={`mt-0.5 grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full t-caption font-bold ${
+                  step.latest ? "bg-primary text-white" : "bg-primary-soft text-primary"
                 }`}
               >
                 {i + 1}
@@ -91,23 +109,17 @@ export function Timeline({ steps }: { steps: TimelineStep[] }) {
             {/* 본문 */}
             <div className={`min-w-0 ${i < last ? "pb-5" : ""}`}>
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <div className="flex items-baseline gap-2">
-                  <b
-                    className={`text-[13px] ${
-                      step.latest ? "text-primary" : "text-text-1"
-                    }`}
-                  >
-                    {step.n}
-                  </b>
-                  <span className="t-sub text-text-3">{step.meta}</span>
+                {/* [1015 · 규칙 H] 회차 썸네일 40px */}
+                <div className="flex items-center gap-2">
+                  <VisitThumb src={covers[i] ?? null} seed={step.n} />
+                  <div className="flex flex-col">
+                    <b className={`t-body ${step.latest ? "text-primary" : "text-text-1"}`}>{step.n}</b>
+                    <span className="t-sub text-text-3">{step.meta}</span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="t-sub text-text-3">종합</span>
-                  <span
-                    className={`text-[15px] font-bold ${
-                      step.latest ? "text-primary" : "text-text-1"
-                    }`}
-                  >
+                  <span className={`t-section font-bold ${step.latest ? "text-primary" : "text-text-1"}`}>
                     {step.score}
                   </span>
                   {step.scoreDelta !== null && <ScoreDelta delta={step.scoreDelta} />}
@@ -116,13 +128,9 @@ export function Timeline({ steps }: { steps: TimelineStep[] }) {
 
               <div className="mt-2">
                 {step.scoreDelta === null ? (
-                  <p className="t-sub text-text-3">
-                    첫 방문 · 이후 회차를 비교하는 기준 회차예요.
-                  </p>
+                  <p className="t-sub text-text-3">첫 방문 · 비교 기준 회차</p>
                 ) : step.changes.length === 0 ? (
-                  <p className="t-sub text-text-3">
-                    이전 회차 대비 바뀐 항목이 없어요.
-                  </p>
+                  <p className="t-sub text-text-3">이전 회차와 같음</p>
                 ) : (
                   <ul className="flex flex-col gap-1.5">
                     {step.changes.map((c) => {
@@ -130,10 +138,10 @@ export function Timeline({ steps }: { steps: TimelineStep[] }) {
                       return (
                         <li
                           key={c.axis}
-                          className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs"
+                          className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 t-sub"
                         >
                           <span
-                            className={`inline-flex w-[52px] shrink-0 items-center gap-0.5 text-[12px] font-bold ${meta.cls}`}
+                            className={`inline-flex w-[52px] shrink-0 items-center gap-0.5 t-sub font-bold ${meta.cls}`}
                           >
                             <span aria-hidden="true">{meta.glyph}</span>
                             {meta.label}
@@ -155,9 +163,9 @@ export function Timeline({ steps }: { steps: TimelineStep[] }) {
         ))}
       </ol>
 
+      {/* [1015] "위 회차·수치는 예시 데이터예요" 는 사실이 아니었다(실노트 점수 축) — 지웠다. 범례만 한 줄 */}
       <p className="mt-4 border-t border-line pt-3 t-caption text-text-3">
-        ▲ 상승(개선) · ▼ 하락(악화) — 방향 색상은 시세 관례(상승 빨강 / 하락 파랑)를
-        따릅니다. 위 회차·수치는 <b className="font-bold">예시 데이터</b>예요.
+        ▲ 개선 · ▼ 악화 · 색은 시세 관례(상승 빨강 · 하락 파랑)
       </p>
     </div>
   );

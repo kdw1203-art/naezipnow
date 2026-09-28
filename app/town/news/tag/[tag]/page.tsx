@@ -11,6 +11,7 @@ import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { logger } from "@/lib/log";
 import { formatKstShortDate } from "@/lib/format/kst";
 import { CoverImage } from "@/app/components/CoverImage";
+import { Icon } from "@/app/components/Icon";
 import { newsImageUrl } from "@/lib/town/shared";
 
 /* [#103] 뉴스 태그 허브 — /town/news/tag/[slug]
@@ -136,8 +137,8 @@ export default async function NewsTagPage({
                     imgClassName="absolute inset-0 h-full w-full object-cover"
                     sizes="88px"
                     fallback={
-                      <span className="absolute inset-0 flex items-center justify-center break-keep px-1 text-center t-caption font-bold text-text-3">
-                        {p.sourceName || "뉴스"}
+                      <span className="absolute inset-0 flex items-center justify-center text-text-3" aria-hidden="true">
+                        <Icon name="newspaper" size={18} />
                       </span>
                     }
                   />

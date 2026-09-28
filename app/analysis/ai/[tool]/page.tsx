@@ -91,7 +91,7 @@ export default async function AiToolPage({
             [1011] "넣는 것 · 자동으로 불러오는 것 · 보여 주는 것" 3칸을 걷었다(소유자 지시).
             이 서비스가 어떻게 만들어지는지는 쓰는 사람이 알 필요가 없는 층의 이야기다 —
             무엇을 해 주는 화면인지는 제목과 바로 아래 한 줄이 이미 말한다. */}
-        <section className="hub-hero rise-in flex flex-col gap-4 p-5 md:p-6">
+        <section className="hub-hero rise-in flex flex-col gap-4 p-5 max-md:p-4 md:p-6">
           <div className="flex items-start gap-4">
             {/* [980] 글리프 칸에 도구 색 띠 — 네이비 위 글자색은 on-dark 토큰 그대로(대비) */}
             <span
@@ -111,10 +111,7 @@ export default async function AiToolPage({
               </nav>
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <h1 className="t-title text-on-dark">{identity.title}</h1>
-                {/* [1012 · 규칙 9] 성격 배지 12px/500/4px */}
-                <span className="rounded-md bg-on-dark-panel px-2 py-px t-caption font-medium tracking-wider text-on-dark-muted">
-                  {persona.character}
-                </span>
+                {/* [1015 · 규칙 C] 성격 배지(persona.character)는 걷었다 — 도구 색 띠(글리프 칸)만 남는다 */}
               </div>
               {/* [1008 · W] 이 화면이 하는 일 한 줄(쉬운 말) — 기능 설명(tagline)과 두 줄로 겹치던 것을 하나로 */}
               <p className="mt-1 t-body text-on-dark">{persona.premise}</p>
@@ -138,10 +135,11 @@ export default async function AiToolPage({
           data-ai-compliance="notice"
           className="rounded-lg bg-bg px-4 py-3 t-sub text-text-3"
         >
+          {/* [1015 · 규칙 D] 어미만 다듬었다 — "투자 권유"·"책임" 등 면책 낱말은 그대로(check:ai-compliance) */}
           이 화면의 숫자는 공공데이터(국토교통부 실거래·전월세 신고, 한국부동산원, 청약홈 등)를 정해진
-          방식으로 자동 계산한 참고값이에요. AI 해설은 외부 AI 모델이 쓴 문장이라 [AI 서술]로 따로
-          표시해요. 거래가 적거나 오래된 자료는 그 사실을 함께 적어요. 투자 권유·수익 보장·법률·세무
-          자문이 아니며, 최종 판단과 책임은 이용자 본인에게 있어요.
+          방식으로 자동 계산한 참고값입니다. AI 해설은 외부 AI 모델이 쓴 문장이라 [AI 서술]로 따로
+          표시하고, 거래가 적거나 오래된 자료는 그 사실을 함께 적습니다. 투자 권유·수익 보장·법률·세무
+          자문이 아니며, 최종 판단과 책임은 이용자 본인에게 있습니다.
         </p>
       </div>
     </PageShell>

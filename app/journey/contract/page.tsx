@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { breadcrumbJsonLd, howToJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
-import { buildContractTimeline } from "@/lib/journey/contract";
+import { buildContractTimeline, CONTRACT_PHASES } from "@/lib/journey/contract";
 import { ContractPlanner } from "./ContractPlanner";
 
 /* ============================================================
@@ -36,7 +36,7 @@ export default function ContractSchedulePage() {
     null,
   ).map((g) => ({
     /* 화면과 같은 글만 — 기한 설명은 화면도 법정·권장 단계에만 적는다(ContractPlanner) */
-    name: g.meta.legal || g.meta.suggested ? `${g.meta.title} — ${g.meta.dueText}` : g.meta.title,
+    name: g.meta.legal || g.meta.suggested ? `${g.meta.title}(${g.meta.dueText})` : g.meta.title,
     text: g.items.map((i) => i.item.title).join(", "),
   }));
   const howTo = howToJsonLd({
@@ -54,8 +54,9 @@ export default function ContractSchedulePage() {
   return (
     <PageShell>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript([crumbs, howTo]) }} />
-      <div className="mx-auto flex w-full max-w-[880px] flex-col gap-4">
+      <div className="mx-auto flex w-full max-w-[880px] flex-col gap-4 max-md:gap-3">
         {/* <header> 가 아니라 <div> — 전역 인쇄 규칙(globals.css @media print)이 header 를 숨겨 제목이 종이에서 빠졌다 */}
+        {/* [1015 · 규칙 B] 사용법 문단("계약일과 잔금일을 넣으면 … 인쇄할 수 있어요") → 사실 한 줄 */}
         <div className="flex flex-col gap-1.5">
           <Link
             href="/journey"
@@ -64,9 +65,9 @@ export default function ContractSchedulePage() {
             ‹ 내 집 마련 여정 · 6단계 계약·잔금·입주
           </Link>
           <h1 className="m-0 t-title text-ink">계약·잔금 일정표</h1>
-          <p className="m-0 t-body text-text-2">
-            계약일과 잔금일을 넣으면 계약 전 확인부터 거래신고·취득세·등기·전입신고까지 할 일과 법정 기한을 날짜순으로
-            정리해요. 기한마다 남은 날(D-day)을 보여 주고, 캘린더에 넣거나 인쇄할 수 있어요.
+          <p className="m-0 t-sub text-text-2">
+            {/* 숫자는 lib/journey/contract CONTRACT_PHASES(법정 기한)에서 — 손으로 적지 않는다 */}
+            {`거래신고 ${CONTRACT_PHASES.report.offsetDays}일 · 취득세·등기 ${CONTRACT_PHASES.afterBalance.offsetDays}일 · 전입신고 ${CONTRACT_PHASES.moveIn.offsetDays}일 · 캘린더(.ics)·인쇄`}
           </p>
         </div>
         <ContractPlanner />

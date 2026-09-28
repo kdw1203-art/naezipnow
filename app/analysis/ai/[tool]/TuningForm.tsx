@@ -28,7 +28,7 @@ export function TuningForm({
   const set = (k: string, v: string | boolean) => onChange({ ...value, [k]: v });
   return (
     <div className="mt-3 flex flex-col gap-3">
-      <p className="t-sub text-text-3">전부 선택이에요. 비워 두면 공공데이터 값으로 계산해요.</p>
+      <p className="t-sub text-text-3">전부 선택 · 비워 두면 공공데이터 값으로 계산</p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
         {fields.map((f) => {
           if (f.kind === "toggle") {

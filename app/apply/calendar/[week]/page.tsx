@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
+import { AdZone } from "@/app/components/ads/AdZone";
 import { ErrorState, EmptyState } from "@/app/components/ui/EmptyState";
 import {
   buildApplyWeek,
@@ -70,16 +71,17 @@ export default async function ApplyWeekPage({
 
   return (
     <PageShell breadcrumb="동네이야기 › 청약 센터 › 청약 캘린더" title={`${label} 청약 일정`}>
-      <div className="mx-auto w-full max-w-[760px]">
-        <div className="rise-in mb-4 flex flex-wrap items-center gap-2">
+      {/* [1015] 데스크톱 2단(이번 주 캘린더와 같은 레일 — 관련 링크 · 출처 · 광고 1, 브리프 규칙 F·G) */}
+      <div className="mx-auto grid w-full max-w-[1080px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="min-w-0">
+        <div className="rise-in mb-4 flex flex-wrap items-center gap-2 max-md:mb-3">
           <p className="min-w-0 flex-1 t-body text-text-2">
             {range ? (
               <>
-                <b className="text-ink">{range.start} ~ {range.end}</b> 접수 시작·마감
-                일정입니다. 출처는 청약홈(한국부동산원) 공공데이터입니다.
+                <b className="text-ink">{range.start} ~ {range.end}</b> 접수 시작·마감 · 청약홈(한국부동산원) 공공데이터
               </>
             ) : (
-              "주간 청약 일정입니다."
+              "주간 청약 일정"
             )}
           </p>
           <Link
@@ -97,7 +99,7 @@ export default async function ApplyWeekPage({
           <EmptyState
             icon="lock"
             title="접수 일정을 아직 보여드릴 수 없어요"
-            desc="준비되면 이 자리에 접수 일정이 채워져요."
+            desc="준비되면 이 자리에 접수 일정이 실려요."
             action={{ href: "https://www.applyhome.co.kr", label: "청약홈에서 직접 보기 ↗" }}
           />
         ) : result.state === "error" ? (
@@ -139,7 +141,7 @@ export default async function ApplyWeekPage({
         )}
 
         {/* 주간 네비 — 지난주·이번주만 (미래 주는 캘린더가 담당) */}
-        <div className="mt-5 flex flex-wrap justify-center gap-2">
+        <div className="mt-5 flex flex-wrap justify-center gap-2 max-md:mt-3">
           {[weekSlugFor(-2), weekSlugFor(-1), thisWeek].map((s) =>
             s === slug ? null : (
               <Link
@@ -153,6 +155,38 @@ export default async function ApplyWeekPage({
           )}
         </div>
       </div>
+
+      <aside className="flex min-w-0 flex-col gap-3">
+        <div className="card flex flex-col gap-1.5 p-[18px] max-md:p-3.5">
+          <div className="t-body font-bold text-ink">관련 데이터</div>
+          {[
+            { href: "/apply", label: "청약 경쟁률 · 특별공급" },
+            { href: "/supply", label: "입주 물량" },
+            { href: "/auctions", label: "공매 물건" },
+          ].map((l) => (
+            <Link key={l.href} href={l.href} className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary no-underline">
+              {l.label} ›
+            </Link>
+          ))}
+          <a
+            href="https://www.applyhome.co.kr"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary no-underline"
+          >
+            청약홈 공고 원문 ↗
+          </a>
+        </div>
+        <p className="px-1 t-caption text-text-3">
+          출처 청약홈(한국부동산원) 공공데이터 ·{" "}
+          <Link href="/data-sources" className="font-bold text-primary no-underline">
+            데이터 출처와 한계
+          </Link>
+        </p>
+      </aside>
+      </div>
+      {/* [1015] 광고 — 페이지 끝 1곳(브리프 규칙 G: 첫 화면 밖) */}
+      <AdZone placement="page_bottom" seed={1} plan={null} className="mx-auto mt-6 w-full max-w-[1080px] max-md:mt-4" />
     </PageShell>
   );
 }
@@ -182,7 +216,7 @@ function WeekRow({
   const body = (
     <>
       <span
-        className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
+        className={`shrink-0 rounded-md px-1.5 py-0.5 t-caption font-bold ${
           kind === "start" ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
         }`}
       >
@@ -197,7 +231,7 @@ function WeekRow({
       </span>
       {winnerLabel && (
         <span
-          className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
+          className={`shrink-0 rounded-md px-1.5 py-0.5 t-caption font-bold ${
             winner && winner <= today ? "bg-primary-soft text-primary" : "bg-bg text-text-3"
           }`}
         >

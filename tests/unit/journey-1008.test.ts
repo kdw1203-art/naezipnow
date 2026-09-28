@@ -451,16 +451,17 @@ test("여정 6단계 — 순서·이름·할 일 2~3개, 링크는 실재 화면
   assert.ok(steps.every((x) => x.name && x.text.includes("할 일:")));
 });
 
-test("홈 입구 — 문 넷, 실재 화면으로", () => {
+/* [1015] 홈의 문 넷(HomeStartDoors)·예산 칩(HomeBudgetChips)은 소유자 지시로 뺐다("필요 없는 부분 — 물음표 칸으로").
+   네 목적지는 ⓘ(Explain) 본문 한 줄과 주 메뉴에 남는다. 목적지 실재는 그대로 잠근다. */
+test("홈 입구 — 문 넷은 ⓘ 로 접혔고, 목적지 넷은 실재 화면", () => {
   assert.equal(HOME_START_DOORS.length, 4);
   for (const d of HOME_START_DOORS) {
     if (SAME_RELEASE.has(d.href)) continue;
     assert.ok(routeExists(d.href), d.href);
   }
   const page = read("app/page.tsx");
-  assert.match(page, /<HomeStartDoors \/>/);
-  /* [991] 첫 화면은 정적 — 입구 조각에 클라이언트 JS 없음 */
-  assert.doesNotMatch(read("app/components/home/HomeStartDoors.tsx"), /"use client"/);
+  assert.doesNotMatch(page, /<HomeStartDoors \/>|<HomeBudgetChips /);
+  assert.match(page, /title="처음 오신 분께"/);
 });
 
 /* [1011] "내 집 마련"을 임장노트 하위로 내렸다(소유자 지시). 대분류는 다시 5개.
@@ -656,10 +657,11 @@ test("요약 — 기한이 모두 지났고 체크가 없으면 '다 했어요'�
   assert.equal(overdueLegalCount(g), 4);
   const allDone = buildContractTimeline(d, new Set(CONTRACT_ITEMS.map((i) => i.id)), "2026-09-21");
   assert.equal(overdueLegalCount(allDone), 0);
-  /* 화면 문구: 지난 법정 기한 수 · 모두 체크 · 남은 기한 없음 — 옛 "남은 날짜의 할 일을 모두 체크했어요"는 없다 */
+  /* 화면 문구: 지난 법정 기한 수 · 모두 체크 · 남은 기한 없음 — 옛 "남은 날짜의 할 일을 모두 체크했어요"는 없다
+     [1015] 대화체("~있어요/~없어요") → 명사형("N개"/"없음")으로 바뀐 문구를 잠근다 */
   const planner = read("app/journey/contract/ContractPlanner.tsx");
-  assert.match(planner, /지난 법정 기한에 체크하지 않은 일이 \$\{overdue\}개 있어요/);
-  assert.match(planner, /남은 기한이 없어요/);
+  assert.match(planner, /지난 법정 기한에 체크하지 않은 일 \$\{overdue\}개/);
+  assert.match(planner, /남은 기한 없음/);
   assert.doesNotMatch(planner, /남은 날짜의 할 일을 모두 체크했어요/);
 });
 

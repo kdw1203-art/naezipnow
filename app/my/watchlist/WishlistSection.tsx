@@ -88,14 +88,14 @@ export async function WishlistSection({ email }: { email: string }) {
           icon="heart"
           className="rise-in"
           title="아직 저장한 매물이 없어요"
-          desc="마음에 드는 매물의 관심(♥) 버튼을 누르면 여기에 모여요. 실거래가와 비교하며 천천히 살펴보세요."
+          desc="매물의 관심(♥) 버튼으로 저장한 매물이 여기에 모여요."
           action={{ label: "매물 둘러보기", href: "/listings" }}
         />
       ) : (
         <>
           {loaded.ok && loaded.failedCount > 0 && (
             <p className="mb-3 rounded-xl border border-line bg-bg px-3 py-2 t-sub text-text-2">
-              저장한 매물 중 {loaded.failedCount}건은 지금 불러오지 못했어요 — 삭제된 게
+              저장한 매물 중 {loaded.failedCount}건은 지금 불러오지 못했어요. 삭제된 게
               아니라 조회가 실패한 것일 수 있습니다. 잠시 후 새로고침해 주세요.
             </p>
           )}
@@ -123,13 +123,14 @@ export async function WishlistSection({ email }: { email: string }) {
                   )}
                 </div>
 
+                {/* [1015 · 규칙 M · 직방] 가격이 먼저 크게 → 단지명 → 동네·면적·층 */}
+                <div className="t-section t-num text-ink">{priceLine(l)}</div>
                 <Link
                   href={`/listings/${l.id}`}
-                  className="t-section text-ink hover:underline"
+                  className="t-body font-bold text-ink hover:underline"
                 >
                   {l.complexName}
                 </Link>
-                <div className="t-section t-num text-ink">{priceLine(l)}</div>
                 <div className="t-sub text-text-3">
                   {[
                     l.regionName,

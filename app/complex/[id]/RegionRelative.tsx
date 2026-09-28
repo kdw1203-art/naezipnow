@@ -22,7 +22,8 @@ function ymLabel(s: string | null): string {
 export function RegionRelativeView({ r, compact = false }: { r: RegionRelativeData; compact?: boolean }) {
   const wrap = compact ? "rise-in-1" : "rise-in-5 mt-6";
   const dir = deltaDir(r.deltaPct);
-  const verdict = dir === "up" ? "높아요" : "낮아요";
+  /* [1015 · 규칙 D] 결과 문장은 짧게(명사형) */
+  const verdict = dir === "up" ? "높음" : "낮음";
   const maxV = Math.max(r.complexPerM2Manwon, r.districtPerM2Manwon, 1);
   const complexW = Math.min(100, Math.round((r.complexPerM2Manwon / maxV) * 100));
   const districtW = Math.min(100, Math.round((r.districtPerM2Manwon / maxV) * 100));
@@ -37,15 +38,15 @@ export function RegionRelativeView({ r, compact = false }: { r: RegionRelativeDa
           term="pyeongdanga"
           title="이 동네 대비(㎡당)"
           how={[
-            "면적이 다른 집끼리 견주려고 평당가 대신 ㎡당 가격을 써요(㎡당 × 3.3058 = 평당).",
-            "이 단지: 최근 매매 60건(전용면적이 있는 거래)마다 거래금액 ÷ 전용면적을 구해 평균했어요.",
-            `${r.district} 평균: 한국부동산원 ${period || "최근"} 아파트 ㎡당 평균 매매가격이에요.`,
-            `차이 = (이 단지 − ${r.district} 평균) ÷ ${r.district} 평균 × 100. 층·향·연식은 반영하지 않아요.`,
+            "면적이 다른 집끼리 견주려고 평당가 대신 ㎡당 가격을 쓴다(㎡당 × 3.3058 = 평당).",
+            "이 단지: 최근 매매 60건(전용면적이 있는 거래)마다 거래금액 ÷ 전용면적을 구해 평균.",
+            `${r.district} 평균: 한국부동산원 ${period || "최근"} 아파트 ㎡당 평균 매매가격.`,
+            `차이 = (이 단지 − ${r.district} 평균) ÷ ${r.district} 평균 × 100. 층·향·연식은 반영하지 않는다.`,
           ]}
           source={`국토교통부 실거래가 · 한국부동산원${period ? ` ${period}` : ""}`}
         />
       </h2>
-      <div className={`card flex flex-col gap-2.5 rounded-2xl ${compact ? "px-4 py-3.5" : "p-5"}`}>
+      <div className={`card flex flex-col gap-2.5 rounded-2xl ${compact ? "px-4 py-3.5 max-md:px-3.5 max-md:py-3" : "p-5 max-md:p-3.5"}`}>
         <div className="flex flex-wrap items-baseline gap-x-2">
           {dir === "up" || dir === "down" ? (
             <>
@@ -55,7 +56,7 @@ export function RegionRelativeView({ r, compact = false }: { r: RegionRelativeDa
               </span>
             </>
           ) : (
-            <span className="t-section text-ink">{r.district} 평균과 비슷해요</span>
+            <span className="t-section text-ink">{r.district} 평균과 비슷함</span>
           )}
         </div>
 
@@ -88,7 +89,7 @@ export function RegionRelativeView({ r, compact = false }: { r: RegionRelativeDa
               전월 대비
               <Explain
                 term="maemae-gagyeok-jisu"
-                how={`한국부동산원이 매달 발표하는 ${r.district} 아파트 매매가격 변동률(전월 대비)이에요 — 이 단지가 아니라 ${r.district} 전체의 흐름이에요.`}
+                how={`한국부동산원이 매달 발표하는 ${r.district} 아파트 매매가격 변동률(전월 대비). 이 단지가 아니라 ${r.district} 전체의 흐름.`}
                 source={`한국부동산원${period ? ` · ${period}` : ""}`}
               />
             </span>
@@ -125,10 +126,7 @@ export async function RegionRelative({
     return (
       <section className={wrap}>
         <h2 className="mb-1.5 px-0.5 t-section text-ink">이 동네 대비</h2>
-        <p className="card rounded-2xl px-4 py-3.5 t-body text-text-3">
-          지금은 동네 평균과 비교하지 못했어요. 비교할 자료가 없는 게 아니라 조회에
-          실패한 것이라, 잠시 후 다시 보면 나올 수 있어요.
-        </p>
+        <p className="card rounded-2xl px-4 py-3.5 t-body text-text-3">동네 평균을 지금 불러오지 못했어요. 잠시 후 새로고침해 주세요.</p>
       </section>
     );
   }

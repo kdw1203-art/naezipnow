@@ -1,5 +1,5 @@
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
-import { cache } from "react";
+import { cache, type ReactNode } from "react";
 import { loanRegionFromRegionName } from "@/lib/finance/loan-rules";
 import { logger } from "@/lib/log";
 import {
@@ -100,7 +100,7 @@ import { settle, startDeadline, SIDE_SECTION_BUDGET_MS } from "@/lib/data/sectio
 import { getMarketFreshnessDateLabel } from "@/lib/newui/freshness";
 import { RecentComplexRecorder } from "../../components/RecentComplexes";
 import { MarketFreshnessLine } from "../../components/MarketFreshnessLine";
-import { QaBlock } from "../../components/QaBlock";
+/* [1015 · 규칙 J] Q&A(QaBlock)·퍼가기(EmbedSnippet) 카드는 페이지 맨 끝 "데이터 출처" 접힘(ComplexFactsCard) 안으로 */
 import { AdZone } from "@/app/components/ads/AdZone";
 import { BrandWatermark } from "@/app/components/BrandWatermark";
 import type { FaqItem } from "@/lib/seo/jsonld";
@@ -113,7 +113,6 @@ import { UpcomingSupply } from "./UpcomingSupply";
 import { ComplexRentSection } from "./ComplexRentSection";
 import { ComplexNearbyPoi } from "./ComplexNearbyPoi";
 import { ShareLinkButton } from "@/app/components/ShareLinkButton";
-import { EmbedSnippet } from "@/app/components/EmbedSnippet";
 import { ComplexNotesNewsAi } from "./ComplexNotesNewsAi";
 /* [1008 · Q] 브리핑 본체는 누를 때 받는다(번들 상쇄) · 호가 점검 펼침 버튼 */
 import { AiBriefingLazy } from "./AiBriefingLazy";
@@ -783,9 +782,10 @@ function toView(
       ageSub: row.build_year ? `${row.build_year}년 준공` : "준공 미확인",
     },
     chips,
-    aiTitle: `AI 요약 · ${row.name}`,
+    aiTitle: `요약 · ${row.name}`,
+    /* [1015 · 규칙 D] 대시(—)로 잇던 문장을 마침표로, "~드려요"를 사실 한 줄로 */
     aiBody: txFailed
-      ? "실거래를 지금 불러오지 못했습니다. 데이터가 없다는 뜻이 아니라 조회에 실패했다는 뜻입니다 — 잠시 후 새로고침해 주세요."
+      ? "실거래를 지금 불러오지 못했습니다. 조회 실패이지 거래가 없다는 뜻은 아닙니다. 잠시 후 새로고침해 주세요."
       : latest
         ? [
             /* [1009 · C 리뷰] 대표가를 못 세웠을 때만 쓰는 폴백 — 무엇의 평균인지 적고 혼합 전월비는 싣지 않는다 */
@@ -795,16 +795,16 @@ function toView(
             row.households ? `총 ${row.households.toLocaleString("ko-KR")}세대` : null,
             row.build_year ? `${row.build_year}년 준공` : null,
             row.builder_name ? `시공사 ${row.builder_name}` : null,
-            "국토교통부 실거래·공공데이터 기준. 투자 권유가 아니며 현장 확인 후 판단하세요.",
+            "국토교통부 실거래·공공데이터 기준. 투자 권유가 아니며 현장 확인 후 판단.",
           ]
             .filter(Boolean)
             .join(" · ")
-        : "실거래가 쌓이면 여기에 요약을 보여 드려요.",
+        : "아직 신고된 매매 실거래 없음. 신고가 들어오면 요약이 생긴다.",
     listingsLabel: listingsFailed
-      ? "매물 정보를 지금 불러오지 못했습니다 — 등록된 매물이 없다는 뜻이 아닙니다."
+      ? "매물 정보를 지금 불러오지 못했습니다. 등록된 매물이 없다는 뜻은 아닙니다."
       : hubListings.length > 0
-        ? `등록된 실매물 ${hubListings.length}건 · 국토부 실거래가와 비교하세요`
-        : "실매물 준비 중",
+        ? `등록 실매물 ${hubListings.length}건 · 국토부 실거래가 비교 기준`
+        : "등록된 실매물 없음",
     infoRows,
     spec: {
       households: row.households,
@@ -1254,14 +1254,15 @@ export default async function ComplexHubPage({
             : null,
         ]
           .filter(Boolean)
-          .join(" — ")
+          .join(". ")
       : headline?.kind === "single"
         ? `최근 실거래 ${formatEokMan(headline.priceManwon, { unit: "만원" })}(한 건)`
         : null;
+  /* [1015 · 규칙 D] 대시(—) 잇기 대신 마침표 */
   const summaryBody =
     facts.summaryLine || headlineLine
       ? [headlineLine, facts.summaryLine].filter(Boolean).join(". ") +
-        ". 국토교통부 실거래·공공데이터 기준 — 투자 권유가 아니며 현장 확인 후 판단하세요."
+        ". 국토교통부 실거래·공공데이터 기준. 투자 권유가 아니며 현장 확인 후 판단."
       : v.aiBody;
   /* 계산기 프리필 — 첫 화면 대표가와 같은 숫자(없으면 최근 달 평균) */
   const calcManwon =
@@ -1416,7 +1417,7 @@ export default async function ComplexHubPage({
         href="/journey"
         className="inline-flex min-h-[24px] items-center justify-center t-sub font-bold text-primary"
       >
-        내 집 마련 여정 — 계약까지 단계별로 보기 ›
+        내 집 마련 여정 단계별로 보기 ›
       </Link>
     </div>
   );
@@ -1552,18 +1553,8 @@ export default async function ComplexHubPage({
             </div>
           )}
 
-          {v.chips.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1">
-              {v.chips.map((c) => (
-                <span
-                  key={c}
-                  className="brand-photo-chip rounded-full px-2.5 py-[4px] t-sub font-bold"
-                >
-                  {c}
-                </span>
-              ))}
-            </div>
-          )}
+          {/* [1015 · 규칙 J] 스펙 칩 줄(준공·세대·동·주차·시공사·난방·매물 N·이야기 N·거래 건수)은 걷었다 —
+              같은 숫자가 바로 아래 지표 칸과 단지 정보 목록에 한 번 더 있었다(같은 사실 두 곳 금지). */}
         </div>
 
         {/* [1006 · E] 인용 가능한 요약(GEO) — 서버 HTML 에 "어디의 무엇이 언제 기준 얼마"가
@@ -1576,13 +1567,12 @@ export default async function ComplexHubPage({
             data-ai-summary=""
             id="ai-summary"
             aria-label={`${v.name} 실거래 요약`}
-            className="rise-in-1 card mt-3 rounded-2xl px-4 py-3"
+            className="rise-in-1 card mt-3 rounded-2xl px-4 py-3 max-md:px-3.5 max-md:py-2.5"
           >
             <p className="t-body text-text-1">{citable.text}</p>
-            {/* [1012 · 규칙 6·7] 출처를 앞에 두고 "~해요" 체로 */}
+            {/* [1015 · 규칙 D] 사실 한 줄(가운뎃점 나열) — "~에요"·대시 잇기 없이 */}
             <p className="mt-1.5 t-caption text-text-3">
-              국토교통부 실거래 단순 평균이에요 — 매물 호가가 아니에요. 최근 1~2개월 수치는 신고
-              지연(계약 후 30일)으로 늘어날 수 있어요.
+              국토교통부 실거래 단순 평균 · 매물 호가 아님 · 최근 1~2개월은 신고 지연(계약 후 30일)으로 늘 수 있음
             </p>
           </section>
         )}
@@ -1624,84 +1614,91 @@ export default async function ComplexHubPage({
           );
         })()}
 
-        {/* 지표 6칸 — 월평균·거래·매물·노트·세대·연차 */}
-        <div className="rise-in-1 mt-3 grid grid-cols-3 gap-1.5 md:grid-cols-6">
-          {/* [1009 · C] "시세" → "월평균" — 실거래만 있는 곳에 "시세"라는 말을 쓰지 않고, 이 숫자가 그 달 거래의
+        {/* 지표 칸 — 월평균·거래·매물·이야기.
+            [1015 · 규칙 J] 세대·연차 칸은 뺐다(바로 아래 단지 정보 목록과 같은 숫자). 값이 없는 칸("—")은 그리지 않고,
+            네 칸이 전부 비면 격자 대신 한 문장. 조회 실패("?")는 사실이라 칸으로 남긴다. */}
+        {(() => {
+          type Tile = { key: string; label: ReactNode; value: string; sub: string; num?: boolean };
+          const txF = v.loadFailures.includes("실거래");
+          const tiles: Tile[] = [];
+          /* [1009 · C] "시세" → "월평균" — 실거래만 있는 곳에 "시세"라는 말을 쓰지 않고, 이 숫자가 그 달 거래의
               면적 혼합 평균임을 적는다(첫 화면 대표가와 다른 숫자인 이유). 혼합 평균끼리의 전월비는 팔린 평형
-              구성만 바뀌어도 움직여서 여기서는 빼고, 등락은 대표가(같은 평형) 한 곳에서만 말한다. */}
-          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
-            <div className="t-caption text-text-3">월평균</div>
-            <div className="mt-0.5 truncate t-section text-ink tabular-nums sm:text-[15px]">
-              {v.metric.price}
+              구성만 바뀌어도 움직여서 여기서는 빼고, 등락은 대표가(같은 평형) 한 곳에서만 말한다. */
+          if (txF || v.priceSeries.length > 0) {
+            tiles.push({
+              key: "price",
+              label: "월평균",
+              value: v.metric.price,
+              sub: v.metric.priceYm ? `${v.metric.priceYm.slice(2)} · 면적 혼합` : v.metric.priceSub,
+              num: true,
+            });
+          }
+          if (txF || (v.dealCount ?? 0) > 0) {
+            tiles.push({
+              key: "deals",
+              label: (
+                <span className="inline-flex items-center justify-center gap-0.5">
+                  거래
+                  <Explain
+                    term="geoRae-ryang"
+                    how={[
+                      "아래 기간(계약월)에 신고된 매매 거래 수의 합. 해제 신고된 거래는 제외.",
+                      "신고 기한이 계약 후 30일이라 최근 1~2개월은 덜 들어와 있을 수 있다.",
+                    ]}
+                    source="국토교통부 실거래가"
+                  />
+                </span>
+              ),
+              value: v.metric.deals,
+              sub: v.metric.dealsSub,
+              num: true,
+            });
+          }
+          if (v.loadFailures.includes("매물") || v.listings.length > 0) {
+            tiles.push({ key: "listings", label: "매물", value: v.metric.listings, sub: v.metric.listingsSub });
+          }
+          if (v.notesFailed || v.notes.length > 0) {
+            tiles.push({ key: "notes", label: "이야기", value: v.metric.notes, sub: v.metric.notesSub });
+          }
+          if (tiles.length === 0) {
+            return (
+              <p className="rise-in-1 card mt-3 rounded-xl px-4 py-3 t-body text-text-2">
+                {v.name} · 신고된 매매 실거래 없음 · 등록 매물 없음 · 이야기 글 없음
+              </p>
+            );
+          }
+          return (
+            <div
+              className={`rise-in-1 mt-3 grid gap-1.5 ${
+                tiles.length >= 4 ? "grid-cols-2 sm:grid-cols-4" : tiles.length === 3 ? "grid-cols-3" : "grid-cols-2"
+              }`}
+            >
+              {tiles.map((t) => (
+                <div key={t.key} className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3 max-md:py-2">
+                  <div className="t-caption text-text-3">{t.label}</div>
+                  <div className={`mt-0.5 truncate t-section text-ink sm:text-[15px] ${t.num ? "tabular-nums" : ""}`}>
+                    {t.value}
+                  </div>
+                  <div className="mt-0.5 truncate t-caption text-text-3 tabular-nums">{t.sub}</div>
+                </div>
+              ))}
             </div>
-            <div className="mt-0.5 truncate t-caption text-text-3 tabular-nums">
-              {v.metric.priceYm ? `${v.metric.priceYm.slice(2)} · 면적 혼합` : v.metric.priceSub}
-            </div>
-          </div>
-          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
-            <div className="inline-flex items-center justify-center gap-0.5 t-caption text-text-3">
-              거래
-              <Explain
-                term="geoRae-ryang"
-                how={[
-                  "아래 기간(계약월)에 신고된 매매 거래 수를 모두 더했어요 — 해제 신고된 거래는 빼요.",
-                  "신고 기한이 계약 후 30일이라 최근 1~2개월은 덜 들어와 있을 수 있어요.",
-                ]}
-                source="국토교통부 실거래가"
-              />
-            </div>
-            <div className="mt-0.5 truncate t-section text-ink tabular-nums sm:text-[15px]">
-              {v.metric.deals}
-            </div>
-            <div className="mt-0.5 truncate t-caption text-text-3">{v.metric.dealsSub}</div>
-          </div>
-          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
-            <div className="t-caption text-text-3">매물</div>
-            <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
-              {v.metric.listings}
-            </div>
-            <div className="mt-0.5 truncate t-caption text-text-3">{v.metric.listingsSub}</div>
-          </div>
-          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
-            <div className="t-caption text-text-3">노트</div>
-            <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
-              {v.metric.notes}
-            </div>
-            <div className="mt-0.5 truncate t-caption text-text-3">{v.metric.notesSub}</div>
-          </div>
-          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
-            <div className="t-caption text-text-3">세대</div>
-            <div className="mt-0.5 truncate t-section text-ink tabular-nums sm:text-[15px]">
-              {v.households ? `${v.households.toLocaleString("ko-KR")}` : "—"}
-            </div>
-            <div className="mt-0.5 truncate t-caption text-text-3">
-              {v.households ? "공공데이터" : "미확인"}
-            </div>
-          </div>
-          <div className="card rounded-xl px-2.5 py-2.5 text-center sm:px-3">
-            <div className="t-caption text-text-3">연차</div>
-            <div className="mt-0.5 truncate t-section text-ink sm:text-[15px]">
-              {v.metric.age}
-            </div>
-            <div className="mt-0.5 truncate t-caption text-text-3">{v.metric.ageSub}</div>
-          </div>
-        </div>
-        {/* [1012 · 규칙 7] 지표 6칸의 출처·시점 한 줄 — 값이 있는 것만 말한다(신고월은 최신 계약월) */}
+          );
+        })()}
+        {/* [1012 · 규칙 7] 지표 칸의 출처·시점 한 줄 — 값이 있는 것만 말한다(신고월은 최신 계약월) */}
         <p className="rise-in-1 mt-1.5 px-1 t-caption text-text-3">
           {v.loadFailures.includes("실거래")
-            ? "실거래 출처 국토교통부 · 지금은 불러오지 못했어요"
+            ? "실거래 출처 국토교통부 · 지금은 불러오지 못함"
             : `출처 국토교통부 실거래가${v.metric.priceYm ? ` · ${v.metric.priceYm.slice(2)} 신고분` : ""}`}
           {v.households || v.buildYear ? " · 세대·준공은 공동주택 공공데이터" : ""}
         </p>
 
-        {/* [1009 · C] 단지 정보 — 네이버 부동산식 사실 격자. 값이 있는 항목만 칸이 된다(ComplexInfoGrid 주석) */}
-        <ComplexInfoGrid facts={v.spec} nowYear={new Date().getFullYear()} />
+        {/* [1015 · 규칙 J] 단지 정보 — 네이버 단지 정보 표 순서의 SummaryRow 행 목록(값 있는 항목만) + 전세가율 행 */}
+        <ComplexInfoGrid facts={v.spec} nowYear={new Date().getFullYear()} jeonse={facts.jeonseRatio} />
       </div>
       {/* [968 · 2] fold 끝 — 여기서부터는 스크롤 아래(리빌 유지) */}
 
-      {/* [1007 · P2] 전세가율 · 자료 완성도 — 지도 패널(1006)과 같은 규칙. 스펙 시트 바로 아래:
-          "무엇이 있고 무엇이 왜 없는지"가 스펙 다음에 오는 것이 자연스럽다. */}
-      <ComplexFactsCard facts={facts} noteHref={noteHref} />
+      {/* [1015 · 규칙 J] 전세가율은 위 단지 정보 목록의 한 행으로, 자료 완성도·출처는 페이지 맨 끝 "데이터 출처" 접힘으로 */}
 
       {/* 면적대·지역 대비 — 상단 밀도 블록.
           [968 · 7] cv-auto — 화면 밖이면 레이아웃·페인트를 미룬다(globals.css
@@ -1725,24 +1722,23 @@ export default async function ComplexHubPage({
           행동 줄의 "호가 점검"(#asking-check)이 여기로 스크롤하며 펼친다. */}
       {showAsking && (
         <section id="asking-check" aria-labelledby="asking-check-title" className="rise-in-1 mt-3 scroll-mt-24">
-          <div className="card flex flex-wrap items-center justify-between gap-x-3 rounded-2xl px-4 py-3.5">
+          <div className="card flex flex-wrap items-center justify-between gap-x-3 rounded-2xl px-4 py-3.5 max-md:px-3.5 max-md:py-2.5">
             <div className="min-w-0 flex-1">
+              {/* [1015 · 규칙 B·D] 물음형 제목("이 가격 괜찮을까?")과 사용법 문장은 걷고, 계산 방법은 ⓘ 하나로 */}
               <h2 id="asking-check-title" className="flex flex-wrap items-center gap-x-1 t-section text-ink">
-                이 가격 괜찮을까? <span className="t-sub font-bold text-primary">호가 점검</span>
+                호가 점검
                 {/* [1009 · C] 무엇을 계산하는지 — lib/complex/asking-check 와 같은 말로 */}
                 <Explain
                   term="hoga"
+                  body="매물 호가를 넣으면 같은 면적대 최근 실거래(최저·중앙값·최고) 사이 어디쯤인지 보여 준다."
                   how={[
-                    "같은 면적대의 최근 12개월 매매 실거래(3건이 안 되면 24개월)에서 최저·중앙값·최고와, 넣은 호가가 그 사이 어디쯤인지 보여 드려요.",
-                    "적정가·목표가를 계산하지 않아요 — 지난 거래 사이에서의 위치예요. 층·향·수리 상태는 반영되지 않아요.",
-                    "해제 신고된 거래는 빼요. 거래가 3건이 안 되면 위치를 말하지 않아요.",
+                    "같은 면적대의 최근 12개월 매매 실거래(3건이 안 되면 24개월)에서 최저·중앙값·최고를 구하고, 넣은 호가의 위치를 표시.",
+                    "적정가·목표가를 계산하지 않는다. 지난 거래 사이에서의 위치이며 층·향·수리 상태는 반영되지 않는다.",
+                    "해제 신고된 거래는 제외. 거래가 3건이 안 되면 위치를 말하지 않는다.",
                   ]}
                   source="국토교통부 실거래가"
                 />
               </h2>
-              <p className="mt-0.5 t-sub text-text-3">
-                매물 호가를 넣으면 같은 면적대 최근 실거래 사이 어디쯤인지 보여 드려요.
-              </p>
             </div>
             <AskingCheckToggle apiId={askingApiId} />
           </div>
@@ -1754,14 +1750,10 @@ export default async function ComplexHubPage({
         <div className="rise-in-1 mt-3">
           <Link
             href={v.txHref}
-            className="card tile flex items-center justify-between rounded-xl px-4 py-3"
+            className="card tile flex items-center justify-between rounded-xl px-4 py-3 max-md:px-3.5 max-md:py-2.5"
           >
-            <span className="t-body font-bold text-ink">
-              {v.name} 국토부 실거래 이력 보기
-              <span className="ml-2 t-sub font-medium text-text-3">
-                실거래가 기반 · 매물 호가 아님
-              </span>
-            </span>
+            {/* [1015 · 규칙 C] 부연 라벨("실거래가 기반 · 매물 호가 아님")은 걷었다 — 제목이 이미 "실거래 이력"이다 */}
+            <span className="t-body font-bold text-ink">{v.name} 국토부 실거래 이력 보기</span>
             <span className="t-body font-bold text-primary">→</span>
           </Link>
         </div>
@@ -1772,9 +1764,10 @@ export default async function ComplexHubPage({
       <MarketFreshnessLine label={freshness} className="rise-in-1 mt-1.5" />
 
       {/* 본문 — 모바일 1열(시안), 데스크탑 2열 확장 */}
-      <div className="mt-4 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="mt-4 grid grid-cols-1 gap-5 max-md:mt-3 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
         <ComplexHubTabs
-          aiTitle="한눈에 요약"
+          /* [1015 · 규칙 D] "한눈에"(마케팅 부사) → "요약" */
+          aiTitle="요약"
           aiBody={summaryBody}
           listingsLabel={v.listingsLabel}
           trades={v.trades}
@@ -1808,47 +1801,9 @@ export default async function ComplexHubPage({
           tradeDeltas={dealTuples.length === 0 ? tradeDeltaViews(v.trades) : undefined}
         />
 
-        {/* 데스크탑 우측 — 중복 스펙 대신 한눈에 + 인근 + CTA */}
+        {/* 데스크탑 우측 — 인근 + CTA + 브리핑 + 광고.
+            [1015 · 규칙 J] "한눈에 보기" 카드(월평균·거래·매물·노트 + 스펙 칩)는 걷었다 — 바로 위 지표 칸과 같은 숫자였다. */}
         <aside className="hidden flex-col gap-3 lg:flex">
-          <div className="rise-in-2 card flex flex-col gap-2 rounded-2xl px-4 py-4">
-            {/* [1012 · 규칙 7·8] 제목 800 → 700 · 출처·시점을 제목 줄에 */}
-            <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-              <div className="t-body font-bold text-ink">한눈에 보기</div>
-              {v.metric.priceYm && (
-                <span className="t-caption text-text-3">국토교통부 · {v.metric.priceYm.slice(2)} 신고분</span>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              <div className="rounded-xl bg-bg px-2.5 py-2">
-                <div className="t-caption text-text-3">월평균 · 면적 혼합</div>
-                <div className="t-section text-ink tabular-nums">{v.metric.price}</div>
-              </div>
-              <div className="rounded-xl bg-bg px-2.5 py-2">
-                <div className="t-caption text-text-3">거래</div>
-                <div className="t-section text-ink tabular-nums">{v.metric.deals}</div>
-              </div>
-              <div className="rounded-xl bg-bg px-2.5 py-2">
-                <div className="t-caption text-text-3">매물</div>
-                <div className="t-section text-ink">{v.metric.listings}</div>
-              </div>
-              <div className="rounded-xl bg-bg px-2.5 py-2">
-                <div className="t-caption text-text-3">노트</div>
-                <div className="t-section text-ink">{v.metric.notes}</div>
-              </div>
-            </div>
-            {v.chips.slice(0, 8).length > 0 && (
-              <div className="flex flex-wrap gap-1 pt-1">
-                {v.chips.slice(0, 8).map((c) => (
-                  <span
-                    key={c}
-                    className="rounded-full bg-bg chip-pad t-caption font-bold text-text-2"
-                  >
-                    {c}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
           {v.nearby.length > 0 && (
             <div className="rise-in-2 card flex flex-col gap-1.5 rounded-2xl px-4 py-3.5">
               {/* [995] 동 단위로 찾았으면 "{읍면동} 다른 단지", 구로 물러섰으면 "{시군구} 다른 단지" */}
@@ -1885,7 +1840,7 @@ export default async function ComplexHubPage({
           fragment 이동 대상을 "사용자와 관련 있음"으로 보고 그 자리에서 렌더하므로
           앵커 이동이 막히지 않는다(scroll-mt-24 는 상단 바 여유). */}
       {v.nearby.length > 0 && (
-        <section id="nearby-complexes" className="cv-auto rise-in-5 mt-6 scroll-mt-24">
+        <section id="nearby-complexes" className="cv-auto rise-in-5 mt-6 scroll-mt-24 max-md:mt-3">
           <h2 className="mb-2 px-1 t-section text-ink">
             {v.nearbyLabel}{" "}
             <span className="t-sub font-medium text-text-3">{v.nearby.length}곳</span>
@@ -1895,7 +1850,7 @@ export default async function ComplexHubPage({
               <Link
                 key={n.id}
                 href={complexHrefFromId(n.id)}
-                className="card tile rounded-2xl px-3.5 py-3"
+                className="card tile rounded-2xl px-3.5 py-3 max-md:px-3 max-md:py-2.5"
               >
                 <div className="truncate t-body font-bold text-ink">
                   {n.name}
@@ -1909,7 +1864,7 @@ export default async function ComplexHubPage({
 
       {/* 거주민 후기 (호갱노노 벤치마크) — 실단지 매칭 시에만 (목업 폴백엔 미표시) */}
       {v.id === complexId && complexId !== "mock-1" && (
-        <section className="cv-auto rise-in-5 mt-6">
+        <section className="cv-auto rise-in-5 mt-6 max-md:mt-3">
           <ComplexReviewsLazy complexId={complexId} complexName={v.name} />
         </section>
       )}
@@ -1936,7 +1891,8 @@ export default async function ComplexHubPage({
         region={v.dong}
       />
 
-      {/* G5+G13 — 실데이터 Q&A + FAQPage 스키마. 시세가 "준비 중"이면 그 질문은 뺀다. */}
+      {/* [1015 · 규칙 J] 페이지 맨 끝 "데이터 출처" 접힘 하나 — 출처 · 빈 자료와 이유 · 지번 주소·단지코드 ·
+          실데이터 Q&A(FAQPage 스키마) · 위젯 퍼가기(실거래 있는 단지만). 예전엔 Q&A 카드·퍼가기 카드·완성도 카드가 따로였다. */}
       {(() => {
         const faq: FaqItem[] = [];
         /* [1009 · C 리뷰] 답 = 첫 화면 대표가(같은 평형 최근 N건 평균 · 한 건이면 한 건). 예전 답은 면적 혼합 월평균과
@@ -1946,7 +1902,7 @@ export default async function ComplexHubPage({
         } else if (complexPriceRange && v.metric.priceYm) {
           faq.push({
             q: `${v.name} 최근 실거래가는 얼마인가요?`,
-            a: `${v.name}의 ${v.metric.priceYm} 실거래 평균은 ${v.metric.price}입니다(그 달 거래 전체 평균 · 평형 혼합). 매물 호가가 아닌 국토교통부에 신고된 실거래 기준이며, 면적대별 실거래가는 위 면적대별 표를 참고하세요.`,
+            a: `${v.name}의 ${v.metric.priceYm} 실거래 평균은 ${v.metric.price}입니다(그 달 거래 전체 평균 · 평형 혼합). 매물 호가가 아닌 국토교통부에 신고된 실거래 기준이며, 면적대별 실거래가는 위 면적대별 표에 있습니다.`,
           });
         }
         if (typeof v.households === "number" && v.households > 0) {
@@ -1955,23 +1911,32 @@ export default async function ComplexHubPage({
             a: `${v.name}는 ${v.dong}에 위치한 총 ${v.households.toLocaleString("ko-KR")}세대 단지입니다 (공동주택 공공데이터 기준).`,
           });
         }
-        return <div className="cv-auto mt-6"><QaBlock title={`${v.name} Q&A`} items={faq} /></div>;
+        /* 이 화면이 실제로 보여 준 자료의 원천만(중복 없이) */
+        const sources = [
+          ...(v.priceSeries.length > 0 || txFailed ? ["국토교통부 아파트 매매 실거래가 신고(해제 신고 제외)"] : []),
+          ...(facts.completeness.have.includes("rent") ? ["국토교통부 전월세 실거래 신고"] : []),
+          ...(v.households || v.spec.kaptCode ? ["공동주택 단지 정보(K-apt) · 공공데이터포털"] : []),
+          ...(v.buildYear ? ["준공연도 · 국토교통부 실거래 신고분"] : []),
+        ];
+        return (
+          <ComplexFactsCard
+            facts={facts}
+            noteHref={noteHref}
+            spec={v.spec}
+            faq={faq}
+            sources={sources}
+            embedId={v.priceSeries.length > 0 ? complexId : null}
+          />
+        );
       })()}
-
-      {/* N17 — 위젯 배포 진입점. 위젯에는 출처 링크가 박혀 있으므로 퍼가기가 곧 백링크다.
-          [992 · A1] 생성기(/widget)는 보관 — 코드를 여기서 바로 보여 준다. */}
-      <EmbedSnippet
-        kind="complex"
-        id={complexId}
-        heading="이 단지 실거래가를 블로그에 붙이기"
-        desc="최근 실거래가 카드를 iframe 한 줄로 퍼갈 수 있어요. 새 실거래가 신고되면 붙여 둔 카드도 함께 바뀌어요."
-        className="cv-auto rise-in-5 mt-6"
-      />
 
       {/* 모바일 CTA 2개 (시안 하단) — id 는 하단 액션 바의 감시 대상([967 · 17]) */}
       <div id="complex-actions-bottom" className="rise-in-4 mt-4 lg:hidden">
         {cta}
       </div>
+
+      {/* [1015 · 규칙 G] 페이지 끝 광고 1 — 폰은 이 한 곳, 데스크톱은 오른쪽 레일(sidebar) + 여기 둘 */}
+      <AdZone placement="page_bottom" seed={1} plan={null} className="mt-6 max-md:mt-3" />
 
       {/* [967 · 17] 모바일 하단 액션 바 — 관심 등록·노트 쓰기·AI 분석. 위 두 CTA 블록이
           화면에 있으면 숨겨 같은 행동이 두 번 보이지 않게 한다. 사용자별 상태(관심

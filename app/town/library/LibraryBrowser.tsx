@@ -30,6 +30,8 @@ export type NoteCardDto = {
   author: string;
   score: number; // 0~100
   cover: string | null;
+  /** [1015] 템플릿 썸네일(제목이 그림 안에 있음)이면 true — 위에 글자를 겹치지 않는다(브리프 규칙 H) */
+  coverTemplate?: boolean;
   /** 커버 없는 카드의 면 색(단색 토큰, 서버 계산). [1012] 규칙 3 — 이름이 gradient 였으나 값은
    *  lib/town/shared.ts seedGradient 가 단색 3종(한지·소프트 블루·연회색)만 돌려주므로 `face` 로 바꿨다. */
   face: string;
@@ -231,7 +233,7 @@ export function NotesBrowser({ notes }: { notes: NoteCardDto[] }) {
           className={chip(visitedOnly)}
           disabled={visitedCount === 0}
         >
-          ✓ 직접 방문 {visitedCount}
+          직접 방문 {visitedCount}
         </button>
         <span className="mx-1 h-4 w-px bg-line" aria-hidden />
         <button type="button" onClick={() => setSort("latest")} className={chip(sort === "latest")}>
@@ -264,15 +266,8 @@ export function NotesBrowser({ notes }: { notes: NoteCardDto[] }) {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={n.cover} alt="" loading="lazy" className="h-full w-full object-cover" />
                 )}
-                {/* [970 · C-11] 피드는 "Lab 데이터", 여기는 "✓ 직접 방문" 으로 같은 노트를 다르게
-                    불렀다 — 같은 라벨·같은 색 규칙(feed-client Cover). bg-white/90 → bg-surface/90(다크). */}
-                <span
-                  className={`absolute left-2 top-2 rounded-md bg-surface/90 chip-pad t-caption font-bold ${
-                    n.lab ? "text-ink" : n.visited ? "text-success" : "text-primary"
-                  }`}
-                >
-                  {n.lab ? "Lab 데이터" : n.visited ? "✓ 직접 방문" : "임장노트"}
-                </span>
+                {/* [1015] 커버 위 "Lab 데이터 / ✓ 직접 방문 / 임장노트" 배지를 걷었다(소유자 지시 4 · 브리프 규칙 C) —
+                    작성자는 아래 메타 줄의 이름이 말한다. 템플릿 썸네일 위에도 글자를 겹치지 않는다(규칙 H). */}
               </div>
               <div className="flex flex-1 flex-col gap-1 p-3">
                 <div className="line-clamp-2 t-body font-bold text-ink">

@@ -66,7 +66,7 @@ const dateLabel = formatKstDate;
 
 function Section({ title, children, delay = 1 }: { title: string; children: React.ReactNode; delay?: number }) {
   return (
-    <section className={`rise-in-${delay} card mt-3 flex flex-col gap-2.5 p-5 md:p-6`}>
+    <section className={`rise-in-${delay} card mt-3 flex flex-col gap-2.5 p-5 max-md:p-3.5 md:p-6`}>
       <h2 className="t-body font-bold text-ink">{title}</h2>
       {children}
     </section>
@@ -139,7 +139,9 @@ export default async function ExpertDetailPage({
     <PageShell breadcrumb={`동네이야기 › 전문가 › ${e.name}`}>
       {e.isVerified && <JsonLd data={jsonLd} />}
 
-      <div className="mx-auto w-full max-w-[760px]">
+      {/* [1015] 데스크톱 2단 — 760px 한 열이라 옆이 비던 화면(브리프 규칙 F). 히어로는 전폭 그대로, 그 아래를
+          왼쪽(소개·전문 분야·사무소·후기) + 오른쪽 340px 레일(요금·검증 정보·함께 볼 전문가)로. 카드는 그대로 옮겼다. */}
+      <div className="mx-auto w-full max-w-[1080px]">
         <div className="mb-3">
           <Link href="/town/experts" className="t-sub font-bold text-text-3 no-underline">
             ← 전문가 목록
@@ -147,7 +149,7 @@ export default async function ExpertDetailPage({
         </div>
 
         {/* ---------- 히어로 (네이비) ---------- */}
-        <section className="rise-in brand-navy-card flex flex-col gap-4 rounded-3xl p-5 md:p-6">
+        <section className="rise-in brand-navy-card flex flex-col gap-4 rounded-3xl p-5 max-md:p-4 md:p-6">
           <div className="flex items-start gap-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-brand-hanji t-title text-brand-hanji-ink" aria-hidden="true">
               {Array.from(e.name.trim())[0] ?? "전"}
@@ -220,11 +222,13 @@ export default async function ExpertDetailPage({
             </div>
           ) : (
             <p className="rounded-xl bg-on-dark-panel px-4 py-3 t-sub text-on-dark">
-              인증 심사 중인 프로필이에요. 상담 신청·연락처는 인증 완료 후 열려요.
+              인증 심사 중 · 상담 신청·연락처는 인증 완료 후 공개
             </p>
           )}
         </section>
 
+        <div className="grid grid-cols-1 gap-x-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0">
         {/* ---------- 소개 ---------- */}
         {e.introduction?.trim() && (
           <Section title="소개" delay={1}>
@@ -248,7 +252,7 @@ export default async function ExpertDetailPage({
             </div>
           ) : (
             <p className="t-sub text-text-3">
-              {type ? `${type.label} — ${type.desc}` : "전문 분야를 아직 적지 않았어요."}
+              {type ? `${type.label} · ${type.desc}` : "전문 분야 미기재"}
             </p>
           )}
           {type?.extraScope && e.isVerified && (
@@ -289,35 +293,16 @@ export default async function ExpertDetailPage({
                 </div>
               )}
             </div>
-            <p className="t-caption text-text-3">전문가가 직접 공개한 값이에요. 플랫폼 밖 선결제 유도는 신고 대상입니다.</p>
-          </Section>
-        )}
-
-        {/* ---------- 요금 ---------- */}
-        {(e.consultationFee > 0 || e.reportFee > 0) && (
-          <Section title="이용 요금 안내" delay={2}>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl bg-bg px-4 py-3">
-                <div className="t-caption text-text-3">상담료</div>
-                <div className="t-section t-num text-ink">{feeLabel(e.consultationFee)}</div>
-              </div>
-              <div className="rounded-xl bg-bg px-4 py-3">
-                <div className="t-caption text-text-3">리포트료</div>
-                <div className="t-section t-num text-ink">{feeLabel(e.reportFee)}</div>
-              </div>
-            </div>
-            <p className="t-caption text-text-3">전문가가 적은 안내 금액이에요. 결제·정산은 별도 안내 전까지 플랫폼에서 처리하지 않습니다.</p>
+            <p className="t-caption text-text-3">전문가가 직접 공개한 값입니다. 플랫폼 밖 선결제 유도는 신고 대상입니다.</p>
           </Section>
         )}
 
         {/* ---------- 후기 ---------- */}
         <Section title={e.reviews > 0 ? `후기 ${e.reviews}건` : "후기"} delay={2}>
           {reviews.length === 0 ? (
-            <p className="t-sub text-text-3">
-              아직 후기가 없어요. 후기는 답변이 완료된 상담의 의뢰자만 남길 수 있어요 — 첫 상담을 신청해 보세요.
-            </p>
+            <p className="t-sub text-text-3">아직 후기가 없어요. 답변이 완료된 상담의 의뢰자만 남길 수 있어요.</p>
           ) : (
-            <div className="flex flex-col divide-y divide-line">
+            <div className="flex flex-col divide-y divide-line" data-tone="hanji">
               {reviews.map((r) => (
                 <div key={r.id} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -331,6 +316,26 @@ export default async function ExpertDetailPage({
             </div>
           )}
         </Section>
+        </div>
+
+        {/* ---------- 오른쪽 레일 — 요금 · 검증 정보 · 함께 볼 전문가 (폰은 본문 아래 같은 순서) ---------- */}
+        <aside className="min-w-0">
+        {/* ---------- 요금 ---------- */}
+        {(e.consultationFee > 0 || e.reportFee > 0) && (
+          <Section title="이용 요금" delay={2}>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl bg-bg px-4 py-3">
+                <div className="t-caption text-text-3">상담료</div>
+                <div className="t-section t-num text-ink">{feeLabel(e.consultationFee)}</div>
+              </div>
+              <div className="rounded-xl bg-bg px-4 py-3">
+                <div className="t-caption text-text-3">리포트료</div>
+                <div className="t-section t-num text-ink">{feeLabel(e.reportFee)}</div>
+              </div>
+            </div>
+            <p className="t-caption text-text-3">전문가가 적은 안내 금액입니다. 결제·정산은 별도 안내 전까지 플랫폼에서 처리하지 않습니다.</p>
+          </Section>
+        )}
 
         {/* ---------- 검증 정보 ---------- */}
         {e.isVerified && (
@@ -347,7 +352,7 @@ export default async function ExpertDetailPage({
                 <div className="flex items-start gap-2">
                   <Icon name="check" size={14} className="mt-0.5 shrink-0 text-success" />
                   <span>
-                    {type.source.label}에서 등록 상태 확인 —{" "}
+                    {type.source.label} 등록 상태 확인 ·{" "}
                     <a href={type.source.verificationUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-primary">
                       직접 조회 ↗
                     </a>
@@ -368,8 +373,8 @@ export default async function ExpertDetailPage({
 
         {/* ---------- 같은 자격의 다른 전문가 ---------- */}
         {similar.length > 0 && (
-          <Section title="함께 볼 만한 전문가" delay={3}>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <Section title="같은 자격의 다른 전문가" delay={3}>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-1">
               {similar.map((x) => (
                 <Link key={x.id} href={`/town/experts/${x.id}`} className="tile flex flex-col gap-0.5 rounded-xl border border-line bg-bg px-3.5 py-3 no-underline">
                   <span className="t-body font-bold text-ink">{x.name}</span>
@@ -384,9 +389,11 @@ export default async function ExpertDetailPage({
             </div>
           </Section>
         )}
+        </aside>
+        </div>
 
         <p className="mt-4 text-center t-caption text-text-3">
-          상담 답변은 전문가 개인의 의견이며 내집나우는 상담 당사자가 아니에요. 개인정보(전화번호·계좌)는 남기지 마세요.
+          상담 답변은 전문가 개인의 의견이며 내집나우는 상담 당사자가 아닙니다. 전화번호·계좌는 남기지 마세요.
         </p>
       </div>
     </PageShell>

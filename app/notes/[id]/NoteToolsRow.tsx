@@ -43,16 +43,10 @@ export function NoteToolsRow({
   }).toString();
 
   return (
-    <div className="rise-in-1 card flex flex-col gap-3 rounded-3xl p-6">
-      <div className="flex items-baseline justify-between gap-2">
-        <div className="text-[15px] font-bold text-ink">이 노트로 이어서</div>
-        <span className="shrink-0 t-caption text-text-3">
-          {apt || reg} 기준으로 열려요
-        </span>
-      </div>
-      <p className="t-sub text-text-3">
-        현장에서 본 것 옆에 실데이터를 놓고 봅니다 — 도구는 이 노트의 단지로 바로 열려요.
-      </p>
+    <div className="rise-in-1 card flex flex-col gap-3 rounded-3xl p-6 max-md:p-3.5">
+      {/* [1015 · 규칙 B·C] 제목 옆 부연("~ 기준으로 열려요")과 사용법 문장("현장에서 본 것 옆에 실데이터를 …")은 지웠다.
+          어느 단지로 여는지는 제목에 이름으로 적는다. */}
+      <h2 className="t-section text-ink">{apt || reg} 데이터 도구</h2>
       <div className="grid grid-cols-2 gap-2">
         {core.map((c) => (
           <Link
@@ -87,9 +81,6 @@ export function NoteToolsRow({
           질문은 이 노트의 사실로 채워 보내되 **자동 전송하지 않는다**(AgentChat) —
           누르지도 않은 질문에 한도가 깎이면 안 된다. */}
       <div className="mt-1 flex flex-col gap-2 rounded-xl bg-bg px-3.5 py-3">
-        <span className="t-caption font-bold text-text-3">
-          정해진 계산 말고 그냥 물어보고 싶다면
-        </span>
         <Link
           href={`/agent?q=${encodeURIComponent(agentQuestion)}`}
           className="tap-line w-fit t-sub font-bold text-ai-accent"

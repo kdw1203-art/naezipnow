@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "../../components/PageShell";
 import { QaBlock } from "../../components/QaBlock";
+/* [1015 · 규칙 B] "조합을 고른 기준" 문단은 제목 옆 ⓘ 하나로(단지 상세와 같은 지연 청크) */
+import { ExplainLazy as Explain } from "../[id]/ExplainLazy";
 import {
   complexPairPath,
   listComplexPairs,
@@ -183,19 +185,29 @@ export default async function ComplexComparePage() {
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
       />
 
-      <p className="rise-in mb-5 t-body text-text-2">
-        같은 동에서 거래가 많은 단지끼리 실거래를 나란히 놓고 봅니다.
+      {/* [1015 · 규칙 B·D] 기능 설명 문장은 걷고 사실 한 줄(숫자·출처·시점) + 기준은 ⓘ 하나 */}
+      <p className="rise-in mb-5 flex flex-wrap items-center gap-x-1 t-sub text-text-2 max-md:mb-3">
         {pairs.length > 0 && (
-          <>
-            {" "}
-            현재 <strong className="text-ink">{groups.length}개 지역</strong> ·{" "}
-            <strong className="text-ink">{dongCount.toLocaleString("ko-KR")}개 동</strong>에서{" "}
-            <strong className="text-ink">단지 {complexCount.toLocaleString("ko-KR")}개</strong>로{" "}
-            <strong className="text-ink">{pairs.length.toLocaleString("ko-KR")}개 조합</strong>을
-            만들었습니다{lastYm && ` (${lastYm} 신고분까지 반영)`}.
-          </>
-        )}{" "}
-        국토교통부 신고 자료이며 매물 호가가 아닙니다.
+          <span className="tabular-nums">
+            {groups.length}개 지역 · {dongCount.toLocaleString("ko-KR")}개 동 · 단지{" "}
+            {complexCount.toLocaleString("ko-KR")}개 · {pairs.length.toLocaleString("ko-KR")}개 조합
+            {lastYm && ` · ${lastYm} 신고분까지`} ·{" "}
+          </span>
+        )}
+        <span className="inline-flex items-center">
+          국토교통부 실거래 · 매물 호가 아님
+          <Explain
+            title="조합을 고른 기준"
+            body="같은 법정동에서 최근 12개월 매매 신고가 많은 단지끼리만 짝지어 실거래를 나란히 놓는다."
+            how={[
+              "같은 법정동에 있는 단지끼리만 짝지었다. 생활권이 다른 단지를 나란히 놓으면 가격 차이가 단지 차이인지 동네 차이인지 알 수 없다.",
+              `최근 12개월 매매 신고가 양쪽 모두 ${MIN_SIDE_TX}건 이상일 때만 페이지를 만든다. 거래가 얇으면 평균이 한두 건에 끌려다닌다.`,
+              `동마다 거래가 많은 상위 ${TOP_PER_DONG}개 단지 안에서만 조합을 만든다.`,
+              "집계는 하루 한 번 갱신. 각 비교 페이지의 숫자는 그 페이지가 읽어 온 거래 원본에서 다시 계산한다.",
+            ]}
+            source="국토교통부 아파트 매매 실거래 신고(해제 신고 제외)"
+          />
+        </span>
       </p>
 
       {loadFailed ? (
@@ -217,9 +229,9 @@ export default async function ComplexComparePage() {
           </p>
         </section>
       ) : (
-        <div className="rise-in-1 mb-6 space-y-4">
+        <div className="rise-in-1 mb-6 space-y-4 max-md:mb-3 max-md:space-y-3">
           {groups.map((group) => (
-            <section key={group.regionId} className="card p-[var(--pad-card)]">
+            <section key={group.regionId} className="card p-[var(--pad-card)] max-md:p-3.5">
               <h2 className="flex items-baseline justify-between gap-3 t-section text-ink">
                 <Link href={`/region/${group.regionId}`} className="inline-flex min-h-[24px] items-center hover:underline">
                   {group.label}
@@ -256,46 +268,18 @@ export default async function ComplexComparePage() {
 
       <QaBlock items={qa} />
 
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">조합을 고른 기준</h2>
-        <ul className="mt-2 space-y-1.5 t-body text-text-2">
-          <li>
-            · <strong className="text-ink">같은 법정동</strong>에 있는 단지끼리만 짝지었습니다.
-            생활권이 다른 단지를 나란히 놓으면 가격 차이가 단지 차이인지 동네 차이인지 알 수
-            없습니다.
-          </li>
-          <li>
-            · 최근 12개월 매매 신고가 <strong className="text-ink">양쪽 모두 {MIN_SIDE_TX}건
-            이상</strong>일 때만 페이지를 만듭니다. 거래가 얇으면 평균이 한두 건에 끌려다녀
-            비교 자체가 성립하지 않습니다.
-          </li>
-          <li>
-            · 동마다 거래가 많은 <strong className="text-ink">상위 {TOP_PER_DONG}개 단지</strong>{" "}
-            안에서만 조합을 만듭니다. 가능한 조합을 모두 펼치면 페이지 수는 늘지만 대부분 근거가
-            없는 페이지가 됩니다.
-          </li>
-          <li>
-            · 집계는 하루 한 번 갱신됩니다. 각 비교 페이지의 숫자는 그 페이지가 실제로 읽어 온
-            거래 원본에서 다시 계산하므로, 화면의 건수·평균·월별 그래프는 항상 서로 맞습니다.
-          </li>
-        </ul>
-      </section>
-
-      <p className="mb-8 t-sub text-text-3">
-        단지 하나씩 보려면{" "}
-        <Link href="/complex/browse" className="font-bold text-primary underline">
-          단지 실거래 브라우즈
+      {/* [1015 · 규칙 B] "조합을 고른 기준" 문단 → 위 ⓘ 로 접었다. 안내문("~을 이용하세요")은 링크 칩 세 개로 */}
+      <nav aria-label="관련 화면" className="mb-8 flex flex-wrap gap-1.5 max-md:mb-4">
+        <Link href="/complex/browse" className="chip chip-soft t-sub px-3 py-1.5 no-underline">
+          단지 실거래 브라우즈 ›
         </Link>
-        , 지역 × 면적대·가격대로 보려면{" "}
-        <Link href="/tx" className="font-bold text-primary underline">
-          실거래 구간
+        <Link href="/tx" className="chip chip-soft t-sub px-3 py-1.5 no-underline">
+          면적대·가격대 실거래 ›
         </Link>
-        , 직접 발품 기록을 남기려면{" "}
-        <Link href="/notes/new" className="font-bold text-primary underline">
-          임장노트 작성
+        <Link href="/notes/new" className="chip chip-soft t-sub px-3 py-1.5 no-underline">
+          임장노트 쓰기 ›
         </Link>
-        을 이용하세요.
-      </p>
+      </nav>
     </PageShell>
   );
 }

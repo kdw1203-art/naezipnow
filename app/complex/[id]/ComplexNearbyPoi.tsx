@@ -30,7 +30,7 @@ export async function ComplexNearbyPoi({
 
   return (
     /* [968 · 7] cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미룬다(page.tsx 주석 참고) */
-    <section className="cv-auto rise-in-5 mt-6">
+    <section className="cv-auto rise-in-5 mt-6 max-md:mt-3">
       <h2 className="mb-2 px-1 t-section text-ink">
         {name} 도보권 학교·역{" "}
         <span className="t-sub font-medium text-text-3">직선거리 기준</span>
@@ -92,9 +92,7 @@ export async function ComplexNearbyPoi({
         )}
       </div>
       <p className="t-caption mt-1.5 px-1 text-text-3">
-        출처 공공데이터포털 전국초중등학교위치·도시철도역사정보 표준데이터(공공누리
-        1유형). 직선거리를 도보 80m/분으로 환산한 값이라 실제 경로·시간과 다를 수
-        있어요. 배정 학군은 교육청 기준이 따로 있어요.
+        출처 공공데이터포털 전국초중등학교위치·도시철도역사정보(공공누리 1유형) · 직선거리를 도보 80m/분으로 환산 · 배정 학군은 교육청 기준이 따로 있음
       </p>
     </section>
   );

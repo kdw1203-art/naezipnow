@@ -68,7 +68,8 @@ test("[1012] 노트 쓰기 — AI 초안·녹음 버튼에서 반짝이·마이�
   assert.ok(!form.includes("🎙") && form.includes("`(음성) ${text}`"));
   const tpl = stripComments(read("app/notes/templates/page.tsx"));
   assert.ok(!tpl.includes("시작하세요"));
-  assert.ok(tpl.includes("체크리스트 ${items.length}개 중 하나를 고르면"), "템플릿 수는 실제 목록 길이");
+  /* [1015] 사용법 문장("~ 중 하나를 고르면 그 항목이 채워진 노트가 열려요")을 걷고 숫자 한 줄만 남겼다 — 실제 목록 길이는 그대로 */
+  assert.ok(tpl.includes("체크리스트 ${items.length}개"), "템플릿 수는 실제 목록 길이");
 });
 
 test("[1012] 마이·포인트·결제·프로필·베스트 — 대상 명시 CTA · 네이비 단색 헤더 · 글자 순위 배지", () => {

@@ -8,6 +8,7 @@ import {
 } from "@/lib/inspection/store-db";
 import { listReports, type UserReport } from "@/lib/reports/store-db";
 import { seedGradient, maskNoteAuthor } from "../shared";
+import { resolveNoteCover } from "@/lib/notes/cover/resolve";
 import { Icon } from "@/app/components/Icon";
 import { TownCategoryNav } from "../TownCategoryNav";
 import { TownHero } from "../TownHero";
@@ -127,11 +128,9 @@ export default async function TownLibraryPage() {
           <div className="card rise-in-1 px-4 py-5">
             <p className="t-body font-bold text-ink">자료실에 올라온 리포트가 아직 없어요</p>
             {/* [970 · C-20] 해요체 통일 · [1012] 규칙 6 — 무엇이 있는지(공개 노트 n편) 숫자로 */}
-            <p className="mt-1 t-sub text-text-2">
-              {notes.length > 0
-                ? `아래 공개 임장노트 ${notes.length}편은 열람할 수 있어요. 리포트가 올라오면 이 자리에 실려요.`
-                : "리포트가 올라오면 이 자리에 실려요."}
-            </p>
+            {notes.length > 0 && (
+              <p className="mt-1 t-sub text-text-2">아래 공개 임장노트 {notes.length}편은 열람할 수 있어요.</p>
+            )}
             <div className="mt-3 flex flex-wrap gap-4">
               <Link
                 href="/notes"
@@ -219,22 +218,27 @@ export default async function TownLibraryPage() {
           </div>
         ) : (
           <NotesBrowser
-            notes={notes.map(
-              (n): NoteCardDto => ({
+            notes={notes.map((n): NoteCardDto => {
+              /* [1015] 커버는 noteCoverUrl 규칙(템플릿 썸네일 → 없으면 첫 사진)로 — 목록 격자·피드와 같은 출처
+                 (브리프 규칙 H). 이 자리는 넓은 커버(카드 폭 × 112px)라 정사각 템플릿이 잘린다 — 통합자가
+                 `?shape=wide` 판을 붙이면 여기가 그것을 쓸 자리다(보고서). */
+              const cover = resolveNoteCover(n, { shape: "wide" });
+              return {
                 id: n.id,
                 title: n.aptName?.trim() || n.title,
                 region: n.region,
                 author: maskNoteAuthor(n.authorLabel, n.authorEmail),
                 score: Math.round(inspectionAverageScore(n.scores) * 20),
-                cover: n.photos.find(Boolean) ?? null,
+                cover: cover.url,
+                coverTemplate: cover.template,
                 /* [1012] gradient → face: 값은 단색 토큰(lib/town/shared.ts) */
                 face: seedGradient(n.region || n.id),
                 /* [970 · C-11] Lab 노트는 방문 기록이 아니다 — 피드(lib/town/feed.ts)와 같은 판정 */
                 lab: isLabNoteLabel(n.authorLabel),
                 visited: Boolean(n.visitDate) && !isLabNoteLabel(n.authorLabel),
                 createdAt: Date.parse(n.createdAt) || 0,
-              }),
-            )}
+              };
+            })}
           />
         )}
       </section>

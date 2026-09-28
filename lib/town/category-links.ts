@@ -87,16 +87,16 @@ export const TOWN_CATEGORY_LINKS: TownCategoryLink[] = [
      구성이 서로 달랐고 ② 뉴스룸·청약 같은 하위 화면에서 이 줄만 보고는 허브로 돌아갈 칸이
      없었다(빵부스러기를 찾아야 했다). 지금 보고 있는 화면의 칸은 링크가 아니라 고정 표식으로
      그려지므로(TownCategoryNav 의 aria-current), /town 에서 자기 자신을 누르는 일은 없다. */
-  { href: "/town", label: "동네이야기", icon: "messages-square", desc: "이웃 글 · 공개 노트", tone: "bg-primary-soft text-primary", headSub: "다녀온 사람의 기록과 이웃 글 — 지역별 최신순", heroTitle: ["다녀온 사람의 기록이 ", "지금", " 동네를 말합니다"], heroTone: "text-on-navy-amber", heroCta: [] },
+  { href: "/town", label: "동네이야기", icon: "messages-square", desc: "이웃 글 · 공개 노트", tone: "bg-primary-soft text-primary", headSub: "이웃 글과 공개 임장노트, 지역별 최신순", heroTitle: ["다녀온 사람의 기록이 ", "지금", " 동네를 말합니다"], heroTone: "text-on-navy-amber", heroCta: [] },
   /* 모바일 실측(2026-08-02): "뉴스·다이제스트"는 카드 폭(104px)에서 "뉴스·다이제…"
      로 잘렸다. 라벨은 짧게, 다이제스트는 부제로. */
   /* [1006] 뉴스 칸은 뉴스룸(/town/news)으로 가는 **입구**다 — entry: "newsroom". 히어로 문장은
      뉴스룸 마스트헤드가 같은 것을 쓴다(app/town/news/page.tsx). */
   /* [1007 · P2] 라벨 "뉴스" → "뉴스룸": 카드·GNB·하위 화면("뉴스룸 전체 ›")이 같은 이름으로
      같은 곳(/town/news)을 가리킨다. 이야기와 다른 재질의 **장소** 이름이라 "뉴스"보다 분명하다. */
-  { href: "/town/news", label: "뉴스룸", icon: "newspaper", desc: "기사 요약 · 자동 수집", tone: "bg-warning-soft text-warning", headSub: "매일 아침 모은 부동산 기사 요약 — 주간 다이제스트 포함", heroTitle: ["오늘 부동산은 ", "이렇게", " 움직였습니다"], heroTone: "text-on-navy-amber", heroCta: [{ label: "주간 다이제스트", href: "/digest" }], entry: "newsroom" },
-  { href: "/apply", label: "청약 센터", icon: "ticket", desc: "분양·경쟁률", tone: "bg-success-soft text-success", headSub: "청약홈 공공데이터 — 경쟁률·특별공급·접수 일정", heroTitle: ["이번 달 청약, ", "경쟁률", "까지 보고 정합니다"], heroTone: "text-on-navy-green", heroCta: [{ label: "청약 캘린더", href: "/apply/calendar" }] },
-  { href: "/auctions", label: "공매 물건", icon: "hammer", desc: "온비드 공매", tone: "bg-success-soft text-success", headSub: "온비드 진행·예정 물건 — 감정가·최저입찰가·입찰일", heroTitle: ["감정가보다 싼 물건이 ", "지금", " 입찰 중입니다"], heroTone: "text-on-navy-green", heroCta: [] },
-  { href: "/supply", label: "입주 물량", icon: "construction", desc: "공급 일정", tone: "bg-success-soft text-success", headSub: "지역·시기별 아파트 입주 예정 — 청약홈 공고 기준", heroTitle: ["언제 어디에 ", "얼마나", " 들어오는지 봅니다"], heroTone: "text-on-navy-green", heroCta: [] },
-  { href: "/redevelopment", label: "정비사업 지도", icon: "map", desc: "재개발·재건축", tone: "bg-success-soft text-success", headSub: "재개발·재건축·소규모 정비사업 — 사업종류별 컬러 마커", heroTitle: ["우리 동네 재개발이 ", "어디까지", " 왔는지 봅니다"], heroTone: "text-on-navy-green", heroCta: [] },
+  { href: "/town/news", label: "뉴스룸", icon: "newspaper", desc: "기사 요약 · 다이제스트", tone: "bg-warning-soft text-warning", headSub: "매일 아침 모은 부동산 기사 요약과 주간 다이제스트", heroTitle: ["오늘 부동산은 ", "이렇게", " 움직였습니다"], heroTone: "text-on-navy-amber", heroCta: [{ label: "주간 다이제스트", href: "/digest" }], entry: "newsroom" },
+  { href: "/apply", label: "청약 센터", icon: "ticket", desc: "분양·경쟁률", tone: "bg-success-soft text-success", headSub: "청약홈 공공데이터 · 경쟁률 · 특별공급 · 접수 일정", heroTitle: ["이번 달 청약, ", "경쟁률", "까지 보고 정합니다"], heroTone: "text-on-navy-green", heroCta: [{ label: "청약 캘린더", href: "/apply/calendar" }] },
+  { href: "/auctions", label: "공매 물건", icon: "hammer", desc: "온비드 공매", tone: "bg-success-soft text-success", headSub: "온비드 진행·예정 물건 · 감정가 · 최저입찰가 · 입찰일", heroTitle: ["감정가보다 싼 물건이 ", "지금", " 입찰 중입니다"], heroTone: "text-on-navy-green", heroCta: [] },
+  { href: "/supply", label: "입주 물량", icon: "construction", desc: "공급 일정", tone: "bg-success-soft text-success", headSub: "지역·시기별 아파트 입주 예정, 청약홈 공고 기준", heroTitle: ["언제 어디에 ", "얼마나", " 들어오는지 봅니다"], heroTone: "text-on-navy-green", heroCta: [] },
+  { href: "/redevelopment", label: "정비사업 지도", icon: "map", desc: "재개발·재건축", tone: "bg-success-soft text-success", headSub: "재개발 · 재건축 · 소규모 정비사업, 사업종류별 마커", heroTitle: ["우리 동네 재개발이 ", "어디까지", " 왔는지 봅니다"], heroTone: "text-on-navy-green", heroCta: [] },
         ];

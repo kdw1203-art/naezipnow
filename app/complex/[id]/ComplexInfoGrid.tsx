@@ -1,51 +1,73 @@
-/* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
-/* [1009 · C] 단지 정보 — 네이버 부동산 단지 화면의 "단지 정보" 격자(라벨 위 · 값 아래, 칸 단위).
+/* [1015 · 규칙 J] 단지 정보 — 네이버 부동산 "단지 정보" 표의 항목 순서(세대수 → 준공 → 주차 → 동 수 → 시공사 → 난방)를
+   SummaryRow 행(이름 / 값)으로. 1009 의 격자(라벨 위 · 값 아래)에서 행 목록으로 바꾼 것 말고는 같다:
+   **데이터에 실제로 있는 항목만** 행이 된다(없는 행·"—" 나열 금지). 빠진 항목과 이유·출처는 페이지 맨 끝
+   "데이터 출처"(ComplexFactsCard)가 말한다. 전세가율(단지 6개월 중앙값)은 같은 목록의 한 행 — 예전엔 따로 카드였다.
+   서버 조각 — JS 없음. */
 
-   왜: 예전 "단지 스펙"은 라벨·값을 한 줄에 좌우로 늘어놓은 목록(text-xs)이라 값이 오른쪽 끝에 붙어 흩어졌고,
-   데이터가 아닌 상수("유형 아파트" — 실거래 적재가 아파트만 받아서 모든 단지가 같은 값)까지 한 칸을 차지했다.
-   지금은 **데이터에 실제로 있는 항목만** 칸으로 만든다(없는 칸은 만들지 않는다 — "—" 나열 금지). 빠진 항목과 이유는
-   바로 아래 "자료 완성도"(ComplexFactsCard)가 말한다. 숫자는 tabular-nums. 서버 조각 — JS 없음. */
-
+import type { ComplexFacts } from "@/lib/complex/complex-facts";
 import { complexInfoCells, type ComplexInfoFacts } from "@/lib/complex/info-cells";
+import { formatKrwWon } from "@/lib/format/krw";
+import { ExplainLazy as Explain } from "./ExplainLazy";
+import { SummaryRow } from "./SummaryRow";
 
 export type { ComplexInfoFacts } from "@/lib/complex/info-cells";
 
-export function ComplexInfoGrid({ facts, nowYear }: { facts: ComplexInfoFacts; nowYear: number }) {
-  const cells = complexInfoCells(facts, nowYear);
+/* 네이버 단지 정보 표 순서 — 세대수·준공·주차가 먼저, 나머지는 그 뒤 */
+const ORDER = ["세대수", "준공", "주차", "동 수", "시공사", "난방"];
+
+function eok(krw: number): string {
+  return formatKrwWon(krw, { style: "eok1" });
+}
+
+function ymLabel(ym: string): string {
+  return /^\d{6}$/.test(ym) ? `${ym.slice(0, 4)}.${ym.slice(4)}` : ym;
+}
+
+export function ComplexInfoGrid({
+  facts,
+  nowYear,
+  jeonse = null,
+}: {
+  facts: ComplexInfoFacts;
+  nowYear: number;
+  /** 단지 전세가율(complex-facts) — 계산됐을 때만 행. 못 낸 이유는 "데이터 출처"에 */
+  jeonse?: ComplexFacts["jeonseRatio"] | null;
+}) {
+  const cells = [...complexInfoCells(facts, nowYear)].sort(
+    (a, b) => (ORDER.indexOf(a.label) + 1 || 99) - (ORDER.indexOf(b.label) + 1 || 99),
+  );
   const addr = facts.roadAddress?.trim() || facts.address?.trim() || null;
-  const jibun = facts.roadAddress?.trim() && facts.address?.trim() ? facts.address.trim() : null;
-  if (cells.length === 0 && !addr) return null;
+  if (cells.length === 0 && !addr && !jeonse) return null;
   return (
-    <section aria-labelledby="complex-info-title" className="rise-in-1 card mt-3 rounded-2xl px-4 py-3.5">
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 id="complex-info-title" className="t-body font-bold text-ink">
-          단지 정보
-        </h2>
-        <span className="t-caption text-text-3">{cells.length > 0 ? `${cells.length}개 항목` : "주소만 확인"}</span>
-      </div>
-      {cells.length > 0 && (
-        <dl className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-3 lg:grid-cols-6">
-          {cells.map((c) => (
-            <div key={c.label} className={`min-w-0 ${c.wide ? "col-span-2 sm:col-span-1 lg:col-span-2" : ""}`}>
-              <dt className="t-caption text-text-3">{c.label}</dt>
-              <dd className="mt-0.5 break-words t-body font-bold text-ink tabular-nums">
-                {c.value}
-                {c.sub && <span className="ml-1 t-sub font-medium text-text-3">{c.sub}</span>}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      )}
-      {addr && (
-        <div className="mt-3 border-t border-divider pt-2.5">
-          <div className="t-caption text-text-3">주소</div>
-          <p className="mt-0.5 break-words t-body text-ink">{addr}</p>
-          {jibun && jibun !== addr && <p className="break-words t-sub text-text-3">{jibun}</p>}
-        </div>
-      )}
-      <p className="mt-2 t-caption text-text-3">
-        출처 · 공동주택 단지 정보(K-apt)·국토교통부 실거래 신고{facts.kaptCode ? ` · 단지코드 ${facts.kaptCode}` : ""}
-      </p>
+    <section aria-labelledby="complex-info-title" className="rise-in-1 mt-3">
+      <h2 id="complex-info-title" className="mb-1.5 px-0.5 t-section text-ink">
+        단지 정보
+      </h2>
+      <ul className="lq-panel flex list-none flex-col divide-y p-0" data-tone="hanji">
+        {cells.map((c) => (
+          <SummaryRow key={c.label} label={c.label} value={c.sub ? `${c.value} · ${c.sub}` : c.value} />
+        ))}
+        {jeonse && (
+          <SummaryRow
+            label={
+              <span className="inline-flex items-center gap-0.5">
+                전세가율
+                <Explain
+                  term="jeonse-garyul"
+                  how={[
+                    `최근 ${jeonse.windowMonths}개월 전세 보증금 중앙값 ÷ 같은 기간 매매 거래가 중앙값 × 100.`,
+                    "전세·매매 각각 3건 이상일 때만 계산. 면적 미가중이라 평형 구성이 다르면 실제와 차이가 날 수 있다.",
+                  ]}
+                  source={`국토교통부 매매·전월세 실거래 신고 · ${ymLabel(jeonse.fromYm)}~${ymLabel(jeonse.toYm)}`}
+                />
+              </span>
+            }
+            sub={`전세 중앙 ${eok(jeonse.jeonseMedianKrw)}(${jeonse.jeonseCount}건) ÷ 매매 중앙 ${eok(jeonse.tradeMedianKrw)}(${jeonse.tradeCount}건)`}
+            value={`${jeonse.pct}%`}
+          />
+        )}
+        {addr && <SummaryRow label="주소" value={addr} />}
+      </ul>
     </section>
   );
 }

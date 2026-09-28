@@ -122,8 +122,10 @@ export default async function GlossaryTermPage({
         }}
       />
 
-      <div className="mx-auto max-w-[720px]">
-        <nav className="rise-in text-[12px] text-text-3">
+      {/* [1015 · 규칙 F·G] 데스크톱 2단 — 본문 + 340px 레일(관련 화면 · 광고 1). 폰은 한 열, 광고는 글 끝 1. */}
+      <div className="mx-auto grid max-w-[1100px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
+      <div className="min-w-0 lg:max-w-[720px]">
+        <nav className="rise-in t-sub text-text-3">
           <Link href="/glossary" className="font-bold text-primary">
             부동산 용어사전
           </Link>
@@ -131,38 +133,42 @@ export default async function GlossaryTermPage({
           <span>{t.category}</span>
         </nav>
 
-        <h1 className="rise-in mt-2 text-[24px] font-bold leading-[1.3] text-ink">
+        <h1 className="rise-in mt-2 t-title leading-[1.3] text-ink">
           {t.term}
         </h1>
 
         {/* 발췌 대비 — 첫 문단만 떼어 가도 무엇에 대한 설명인지 문단 안에서 완결된다. */}
-        <article className="rise-in-1 mt-4 card rounded-3xl p-6">
+        <article className="rise-in-1 mt-4 card rounded-3xl p-6 max-md:mt-3 max-md:p-4">
           <p className="text-[15px] leading-[1.85] text-text-1">{t.def}</p>
           {t.extra && (
-            <p className="mt-3 text-[13px] leading-[1.8] text-text-2">{t.extra}</p>
+            <p className="mt-3 t-body leading-[1.8] text-text-2">{t.extra}</p>
           )}
           {t.href && (
             <Link
               href={t.href}
-              className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-[13px] font-bold text-white"
+              className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 t-body font-bold text-white"
             >
               {t.hrefLabel ?? "내집나우에서 보기"} ›
             </Link>
           )}
         </article>
 
+        {/* [1015 · 규칙 I] 관련 용어 — 카드 묶음 → 리퀴드 행 목록(blue) */}
         {related.length > 0 && (
-          <section className="rise-in-2 mt-5">
-            <h2 className="text-[13px] font-bold text-ink">함께 보면 좋은 용어</h2>
-            <div className="mt-2 flex flex-col gap-2">
+          <section className="rise-in-2 mt-5 max-md:mt-4">
+            <h2 className="mb-2 t-section text-ink">관련 용어</h2>
+            <div data-tone="blue" className="lq-panel flex flex-col divide-y">
               {related.map((r) => (
                 <Link
                   key={r.slug}
                   href={`/glossary/${r.slug}`}
-                  className="card rounded-lg p-4"
+                  className="flex min-h-[44px] items-center justify-between gap-3 py-2 no-underline"
                 >
-                  <div className="text-[13px] font-bold text-ink">{r.term}</div>
-                  <div className="mt-1 text-[12px] leading-[1.6] text-text-2">{r.short}</div>
+                  <span className="min-w-0">
+                    <span className="block t-body font-bold text-ink">{r.term}</span>
+                    <span className="mt-0.5 block t-sub leading-[1.5] text-text-2">{r.short}</span>
+                  </span>
+                  <span aria-hidden="true" className="shrink-0 t-body font-bold text-text-3">›</span>
                 </Link>
               ))}
             </div>
@@ -170,14 +176,14 @@ export default async function GlossaryTermPage({
         )}
 
         {siblings.length > 0 && (
-          <section className="rise-in-3 mt-5">
-            <h2 className="text-[13px] font-bold text-ink">{t.category} 용어</h2>
+          <section className="rise-in-3 mt-5 max-md:mt-4">
+            <h2 className="t-section text-ink">{t.category} 용어</h2>
             <div className="mt-2 flex flex-wrap gap-2">
               {siblings.map((s) => (
                 <Link
                   key={s.slug}
                   href={`/glossary/${s.slug}`}
-                  className="rounded-full border border-line bg-surface px-3 py-1.5 text-[12px] font-bold text-text-1"
+                  className="rounded-full border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-1"
                 >
                   {s.term}
                 </Link>
@@ -187,16 +193,31 @@ export default async function GlossaryTermPage({
         )}
 
         {/* [961] 광고 공간 — 용어 풀이 끝 */}
-        <AdZone placement="article_end" seed={2} plan={null} className="mt-6" />
-        <div className="mt-6 rounded-lg bg-bg p-4 text-[12px] leading-[1.7] text-text-3">
-          용어 풀이는 일반적인 이해를 돕기 위한 것입니다. 대출 한도·세율·규제 지역
-          지정처럼 제도에 따라 달라지는 수치는 시점마다 바뀌므로, 실제 적용 기준은
-          금융기관·관할 관청에서 확인하세요. 내집나우가 시세를 집계하는 방식은{" "}
-          <Link href="/methodology" className="font-bold text-primary">
+        <AdZone placement="article_end" seed={2} plan={null} className="mt-6 max-md:mt-4" />
+        <p className="mt-6 t-caption leading-[1.7] text-text-3 max-md:mt-4">
+          일반적인 이해를 돕는 풀이. 대출 한도·세율·규제 지역 지정 같은 제도 수치는 시점마다 바뀌므로 실제 적용 기준은
+          금융기관·관할 관청 확인. 집계 방식은{" "}
+          <Link href="/methodology" className="inline-flex min-h-[24px] items-center font-bold text-primary">
             데이터 방법론
           </Link>
-          에 적어 두었습니다.
-        </div>
+        </p>
+      </div>
+
+      {/* [1015 · 규칙 F] 데스크톱 레일 — 관련 화면 · 광고 1 */}
+      <aside className="hidden flex-col gap-3 lg:sticky lg:top-[76px] lg:flex lg:self-start">
+        <nav aria-label="관련 화면" data-tone="hanji" className="lq-panel flex flex-col divide-y">
+          <Link href="/glossary" className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline">
+            용어사전 전체 <span aria-hidden="true" className="text-text-3">›</span>
+          </Link>
+          <Link href="/guides" className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline">
+            부동산 실전 가이드 <span aria-hidden="true" className="text-text-3">›</span>
+          </Link>
+          <Link href="/calculator" className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline">
+            대출·비용 계산기 <span aria-hidden="true" className="text-text-3">›</span>
+          </Link>
+        </nav>
+        <AdZone placement="sidebar" seed={3} plan={null} />
+      </aside>
       </div>
     </PageShell>
   );

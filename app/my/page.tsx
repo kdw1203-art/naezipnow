@@ -38,6 +38,7 @@ import {
   toLoaded,
   type Loaded,
 } from "@/lib/me/my-hub";
+import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 import { MyHubView, type MyHubData, type MyHubNote } from "./MyHubView";
 
 /* 마이 허브 — 프로필·활동 요약·임장노트·관심·구독·포인트를 한 화면에.
@@ -72,6 +73,8 @@ function toHubNote(n: InspectionNote, mine: boolean): MyHubNote {
       : `${n.authorLabel?.trim() || "임장러"} · ${shortDate(n.visitDate)}`,
     score: noteScore(n),
     region: n.region,
+    /* [1015 · 규칙 H] 목록 썸네일 — 커버 규칙 한 곳(lib/notes/cover/resolve). 정사각 44px 자리. */
+    cover: noteCoverUrl(n),
   };
 }
 
@@ -252,16 +255,18 @@ export default async function MyPage() {
     : null;
   /* 만료일은 app_users.plan_expires_at (일회성 결제·포인트 교환 경로).
      자동결제 구독은 next_charge_at 이 기준이라 만료일 대신 다음 결제일을 말한다. */
+  /* [1015 · 규칙 D] 권유문("업그레이드하면 … 무제한이에요" — 집행되지 않는 약속이기도 했다: 플러스 AI 분석은 월 50회)을
+     뺐다. 무료 플랜은 빈 줄(카드에 "현재 플랜 · 무료" + 버튼만). 나머지는 사실 한 줄. */
   const subscriptionLine =
     profile.plan === "free"
-      ? "플러스로 업그레이드하면 AI 비교 리포트가 무제한이에요"
+      ? ""
       : autopayLoaded && autopayLoaded.status === "active"
         ? `다음 결제 ${autopayLoaded.nextChargeAt ? formatKstDate(autopayLoaded.nextChargeAt) : "—"} · ${autopayLoaded.amount.toLocaleString("ko-KR")}원/${autopayLoaded.billing === "annual" ? "년" : "월"} 자동결제`
         : suspended
-          ? "등록된 카드로 결제가 되지 않아 자동결제가 멈춰 있어요 — 카드를 다시 등록해 주세요"
+          ? "카드 결제 실패로 자동결제가 멈춰 있습니다. 카드를 다시 등록해 주세요."
           : planExpiresAt
-            ? `${formatKstDate(planExpiresAt)}까지 이용할 수 있어요 · 이후 무료 플랜으로 전환돼요`
-            : "결제 내역과 해지·환불 접수 방법은 구독 관리에서 확인할 수 있어요";
+            ? `${formatKstDate(planExpiresAt)}까지 이용 · 이후 무료 플랜 전환`
+            : "결제 내역 · 해지 · 환불 접수는 구독 관리에서";
 
   const notes = notesLoaded.ok ? notesLoaded.value : [];
   const savedCount: Loaded<number> = savedNotesLoaded.ok

@@ -101,13 +101,14 @@ const UNREAD_STYLE: Record<Category, { bg: string; color: string; border: string
   운영: { bg: "var(--danger-soft)", color: "var(--danger)", border: "var(--danger)" },
 };
 
+/* [1015 · 규칙 B] 빈 화면은 한 줄 — 권유 꼬리("구독하면 … 받아볼 수 있어요")를 뺐다(구독 폼이 바로 위에 있다) */
 const EMPTY: Record<TabKey, string> = {
-  전체: "아직 알림이 없어요. 관심 지역·키워드를 구독하면 새 소식을 여기에서 받아볼 수 있어요.",
-  매물: "매물 승인·소유확인 관련 알림이 아직 없어요.",
-  관심지역: "관심 지역의 새 매물 알림이 아직 없어요.",
-  활동: "댓글·좋아요 등 활동 알림이 아직 없어요.",
+  전체: "아직 알림이 없어요.",
+  매물: "매물 승인·소유확인 알림이 아직 없어요.",
+  관심지역: "관심 지역 새 매물 알림이 아직 없어요.",
+  활동: "댓글·좋아요 알림이 아직 없어요.",
   포인트: "포인트 적립·소비 내역이 아직 없어요.",
-  운영: "점검 경보가 없습니다. 전체 현황은 /admin/ops 에서 볼 수 있어요.",
+  운영: "점검 경보가 없습니다.",
 };
 
 /* ---------- 유틸 ---------- */
@@ -293,17 +294,16 @@ function AlertSubscriptionSection() {
   };
 
   return (
-    <div className="rise-in-2 card mt-3 flex flex-col gap-2.5 rounded-lg px-[15px] py-[13px]">
+    /* [1015 · 규칙 C·I] 제목 옆 부연("지역·키워드 새 소식 알림") 제거 · 알림 구독 = sand 톤 판 */
+    <div className="lq-panel rise-in-2 mt-3 flex flex-col gap-2.5 py-[13px] lg:mt-0" data-tone="sand">
       <div className="flex items-center justify-between">
         <span className="t-body font-bold text-ink">알림 구독</span>
-        <span className="t-caption text-text-3">지역·키워드 새 소식 알림</span>
+        {loaded && subs.length > 0 && <span className="t-caption t-num text-text-3">{subs.length}건</span>}
       </div>
 
       {/* 현재 구독 칩 */}
       {loaded && subs.length === 0 && (
-        <div className="t-sub text-text-3">
-          아직 구독이 없어요. 지역이나 키워드를 구독해 보세요.
-        </div>
+        <div className="t-sub text-text-3">아직 구독한 지역·키워드가 없어요.</div>
       )}
       {subs.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -638,7 +638,14 @@ export default function NotificationsPage() {
 
   return (
     <PageShell>
-      <div className="mx-auto w-full max-w-[560px]">
+      {/* [1015 · 규칙 F] 데스크톱에서 560px 한 열 옆이 비었다 → lg: 알림 목록 + 오른쪽 340px 레일(알림 구독).
+          폰은 전과 같은 한 열 순서(제목 → 탭 → 구독 → 목록). 구독 판은 폰에서는 전체·관심지역 탭에서만, 데스크톱 레일에서는 항상. */}
+      <div
+        className={`mx-auto w-full max-w-[560px] ${
+          mode === "live" ? "grid-cols-1 lg:grid lg:max-w-[920px] lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-x-6" : ""
+        }`}
+      >
+      <div className="lg:col-start-1">
         {/* 타이틀 + 안읽음 카운트 + 모두 읽음 */}
         <div className="rise-in flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -729,12 +736,10 @@ export default function NotificationsPage() {
           </div>
         )}
 
-        {/* 운영 탭 안내 — 이 목록은 요약이고, 전체 이력은 관리자 화면에 있다 */}
+        {/* 운영 탭 — 이 목록은 요약이고, 전체 이력은 관리자 화면에 있다 */}
         {mode === "live" && tab === "운영" && (
           <div className="rise-in-1 card mt-3 flex items-center justify-between gap-2 rounded-lg px-[15px] py-2.5">
-            <span className="t-sub text-text-2">
-              내부 점검 경보입니다. 사용자에게는 보이지 않아요.
-            </span>
+            <span className="t-sub text-text-2">내부 점검 경보 · 관리자에게만 표시</span>
             <Link
               href="/admin/ops"
               className="btn-soft shrink-0 rounded-lg px-2.5 py-1.5 t-sub font-bold no-underline"
@@ -743,12 +748,17 @@ export default function NotificationsPage() {
             </Link>
           </div>
         )}
+      </div>
 
-        {/* 알림 구독 (#47) — 로그인 상태의 전체·관심지역 탭 */}
-        {showSubs && <AlertSubscriptionSection />}
+        {/* 알림 구독 (#47) — 로그인 상태. 폰은 전체·관심지역 탭에서만(예전과 같다), 데스크톱은 오른쪽 레일에 항상 */}
+        {mode === "live" && (
+          <div className={`lg:col-start-2 lg:row-span-2 lg:row-start-1 ${showSubs ? "" : "max-lg:hidden"}`}>
+            <AlertSubscriptionSection />
+          </div>
+        )}
 
         {/* 알림 리스트 */}
-        <div className="mt-3 flex flex-col gap-2">
+        <div className="mt-3 flex flex-col gap-2 lg:col-start-1">
           {/* 실제 카드 실측 높이 85px(본문 1줄 기준)에 맞춘다 —
               60px 로 두면 데이터가 도착할 때마다 목록이 25px씩 밀린다(CLS). */}
           {mode === "loading" &&

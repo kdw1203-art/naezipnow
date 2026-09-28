@@ -8,7 +8,7 @@
  *    (저장 뒤 본문에서 그 숫자가 지워졌으면 옛 숫자를 계속 걸어 두지 않는다 — 사진으로 돌아간다)
  *  · 아니면 지금처럼 첫 사진(없으면 null → 화면의 단색 타일)
  */
-import { coverImagePath, coverVersion, readCoverSpec, type CoverSpec } from "./spec";
+import { coverImagePath, coverVersion, readCoverSpec, type CoverShape, type CoverSpec } from "./spec";
 import { buildNumberCorpus, verifyCoverText, type CoverNote } from "./verify";
 import { coverPhotoOf } from "./rules";
 
@@ -36,16 +36,19 @@ export function validCoverSpec(note: CoverNote): CoverSpec | null {
   return verifyCoverText(spec, buildNumberCorpus(note)).ok ? spec : null;
 }
 
-export function resolveNoteCover(note: CoverNote & { id: string }, opts: { photoHost?: string | null } = {}): ResolvedCover {
+export function resolveNoteCover(
+  note: CoverNote & { id: string },
+  opts: { photoHost?: string | null; shape?: CoverShape } = {},
+): ResolvedCover {
   const spec = validCoverSpec(note);
   if (spec) {
     const photoUrl = spec.variant === "photo" ? (opts.photoHost === undefined ? coverPhotoOf(note) : coverPhotoOf(note, opts.photoHost)) : null;
-    return { url: coverImagePath(note.id, coverVersion(spec, photoUrl)), template: true, spec, photoUrl };
+    return { url: coverImagePath(note.id, coverVersion(spec, photoUrl), opts.shape), template: true, spec, photoUrl };
   }
   return { url: firstPhoto(note), template: false, spec: null, photoUrl: null };
 }
 
-/** 목록 카드용 한 줄 — 주소만 */
-export function noteCoverUrl(note: CoverNote & { id: string }): string | null {
-  return resolveNoteCover(note).url;
+/** 목록 카드용 한 줄 — 주소만. [1015] 넓은 카드 커버 자리는 shape="wide"(1200×630) */
+export function noteCoverUrl(note: CoverNote & { id: string }, shape: CoverShape = "square"): string | null {
+  return resolveNoteCover(note, { shape }).url;
 }

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { CountUp } from "@/app/components/motion/CountUp";
-import { BrandWatermark } from "@/app/components/BrandWatermark";
 import { PageShell } from "../components/PageShell";
 /* [967 · 19] 카드 변환·병합은 lib/town/feed.ts 로 옮겼다 — "더 보기"(/api/town/feed)와
    첫 장이 같은 코드로 카드를 만들어야 하기 때문이다. */
@@ -19,7 +18,7 @@ import { logger } from "@/lib/log";
 export const metadata = buildPageMetadata({
   title: "동네이야기",
   description:
-    "다녀온 사람의 기록 — 이웃 글과 공개 임장노트를 한 피드에서. 사진과 판단으로 먼저 보고 관심 단지로 이어집니다.",
+    "이웃 글과 공개 임장노트를 한 피드에서. 사진과 판단으로 먼저 보고 관심 단지로 이어집니다.",
   path: "/town",
   og: { badge: "동네이야기", sub: "이웃 글 · 공개 임장노트 피드" },
 });
@@ -172,73 +171,58 @@ export default async function TownPage() {
 
   return (
     <PageShell wide>
-      {/* [959] 동네이야기 히어로 — 브랜드 네이비 면(전문가·AI 분석 허브와 같은 규칙).
-          정적 제목 한 줄이 아니라 오늘의 활기(실측 카드 기준)와 글쓰기 출발점이 먼저 읽힌다. */}
-      <section className="brand-navy-card rise-in mb-4 rounded-3xl px-5 py-5 md:px-6">
-        <BrandWatermark />
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="max-w-[560px]">
-            <span className="t-caption font-bold tracking-wider text-on-dark-muted">동네이야기 · 사람의 기록</span>
-            <h1 className="mt-1 t-display text-on-dark">
-              다녀온 사람의 기록이 <span className="text-brand-red-dark">지금</span> 동네를 말합니다
-            </h1>
-            {/* [1006] 여기는 사람의 기록만 — 뉴스·청약·공매는 아래 다른 재질의 입구로 간다 */}
-            <p className="mt-1.5 t-body text-on-dark-muted">
-              이웃이 쓴 이야기와 공개 임장노트 — 누가 · 어느 동네에서 · 무엇을 보고 어떻게 판단했는지를
-              사진과 함께 동네 단위로 모아 봅니다.
-            </p>
+      {/* [1017] 소유자(폰 캡처의 네이비 띠에 ×): "임장·지도를 제외하고 나머지 카테고리에서는 전부 삭제".
+          네이비 히어로(슬로건 · 워터마크 · 통계 띠) → 흰 머리 한 줄. 버튼 둘은 그대로, 숫자는 캡션 한 줄. */}
+      <section className="rise-in mb-3 flex flex-col gap-1.5 md:mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="t-title text-ink">동네이야기</h1>
+            <p className="mt-0.5 t-sub text-text-2 max-md:hidden">이웃 글과 공개 임장노트를 동네 단위로.</p>
           </div>
           <div className="flex gap-2">
-            <Link href="/town/write" className="btn-primary btn-cta rounded-xl px-4 py-2.5 t-body no-underline">
+            <Link href="/town/write" className="btn-primary btn-md rounded-xl no-underline">
               이야기 쓰기
             </Link>
-            <Link href="/notes/new" className="brand-photo-chip rounded-xl px-4 py-2.5 t-body font-bold no-underline">
+            <Link href="/notes/new" className="btn-outline btn-md rounded-xl no-underline">
               임장노트 쓰기
             </Link>
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-on-dark-faint pt-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 t-caption text-text-3">
           {/* [970 · C-30] "오늘 새 글 0" 은 살아 있다는 신호가 아니라 비었다는 고백이다 — 0이면 숨긴다 */}
           {todayCount > 0 && (
-            <span className="t-sub text-on-dark-muted">
-              오늘 새 글 <b className="t-num text-on-dark"><CountUp value={todayCount} /></b>
+            <span>
+              오늘 새 글 <b className="t-num text-ink"><CountUp value={todayCount} /></b>
             </span>
           )}
-          <span className="t-sub text-on-dark-muted">
-            이번 주 <b className="t-num text-on-dark"><CountUp value={weekCount} /></b>
+          <span>
+            이번 주 <b className="t-num text-ink"><CountUp value={weekCount} /></b>
           </span>
-          <span className="t-sub text-on-dark-muted">
-            이 피드 <b className="t-num text-on-dark"><CountUp value={cards.length} /></b>건
+          <span>
+            이 피드 <b className="t-num text-ink"><CountUp value={cards.length} /></b>건
           </span>
-          {/* [1006] 무엇의 기록인지 — 이웃 글·사람 노트·Lab 데이터 카드를 가른다(0 은 생략) */}
           {storyCount > 0 && (
-            <span className="t-sub text-on-dark-muted">
-              이웃 글 <b className="t-num text-on-dark">{storyCount}</b>
+            <span>
+              이웃 글 <b className="t-num text-ink">{storyCount}</b>
             </span>
           )}
           {humanNoteCount > 0 && (
-            <span className="t-sub text-on-dark-muted">
-              사람 노트 <b className="t-num text-on-dark">{humanNoteCount}</b>
+            <span>
+              사람 노트 <b className="t-num text-ink">{humanNoteCount}</b>
             </span>
           )}
           {labNoteCount > 0 && (
-            <span className="t-sub text-on-dark-muted">
-              Lab 데이터 카드 <b className="t-num text-on-dark">{labNoteCount}</b>
+            <span>
+              Lab 노트 <b className="t-num text-ink">{labNoteCount}</b>
             </span>
           )}
           {hottest && (
-            <Link href={`/town/${hottest.id}`} className="t-sub text-on-dark-muted no-underline">
-              가장 활발한 동네 <b className="text-brand-red-dark">{hottest.name} ›</b>
+            <Link href={`/town/${hottest.id}`} className="no-underline">
+              가장 활발한 동네 <b className="text-brand-red">{hottest.name} ›</b>
             </Link>
           )}
-          {/* [975] on-dark-faint(45%)는 선·구분자용이다 — 글자에 쓰면 네이비 위 3.86:1 */}
-          <span className="t-caption text-on-dark-muted">지금 이 피드에 실린 글 기준</span>
         </div>
       </section>
-
-      {/* [1006] 오늘의 뉴스 — 피드에 섞지 않는다. 다른 재질(한지 면·행)의 한 줄 스트립으로
-          뉴스룸(/town/news)을 가리킨다. 0건이면 그리지 않는다. */}
-      <TownNewsStrip rows={newsRows.slice(0, NEWS_STRIP_ROWS)} className="mb-4" />
 
       {/* 동네이야기 카테고리 — 청약·입주·공매 + 뉴스룸 입구 (인터랙티브).
           목록은 lib/town/category-links.ts 단일 소스. 하위 페이지도 같은 것을 쓴다. */}
@@ -277,6 +261,11 @@ export default async function TownPage() {
           </a>
         </div>
       </div>
+
+      {/* [1006] 오늘의 뉴스 — 피드에 섞지 않는다. 뉴스룸(/town/news)을 가리키는 한 줄 스트립. 0건이면 그리지 않는다.
+          [1017] 소유자: "폰 동네피드에서는 (카테고리·지역 칩이) 더 위에 있어야" — 카테고리 줄 · 지역 칩 **아래**로 내렸다.
+          유형·정렬 칩은 목록(TownFeed) 안에 붙어 있어 그대로 목록 바로 위다. */}
+      <TownNewsStrip rows={newsRows.slice(0, NEWS_STRIP_ROWS)} className="mb-4" />
 
       {/* [992 · A1] 오늘의 글감(TownPromptCard)·전문가 띠(TownExpertBand) 제거 — 글감 스레드와
           전문가는 보관(비노출) 영역이다(사람 글 0건·전문가 0명, lib/seo/archived-routes.ts).

@@ -61,6 +61,8 @@ export interface ComplexNotesBrief {
     visitDate: string | null;
     /** metadata.decision 이 있을 때만 — 없으면 null(지어내지 않는다) */
     decision: { choice: "buy" | "hold" | "pass" | "revisit"; label: string } | null;
+    /** [1015 · 썸네일] 정사각 썸네일 주소(고른 템플릿 → 첫 사진), 없으면 null */
+    cover?: string | null;
   } | null;
 }
 
@@ -379,6 +381,7 @@ export function summarizeRents(
  * 단지 전세가율 — 최근 6개월 전세 보증금 중앙값 ÷ 같은 기간 매매 중앙값.
  * 둘 다 표본 3건 이상일 때만 숫자를 낸다. 면적을 가중하지 않는다(호출부가 명기).
  */
+/* [1015 · 규칙 D] 화면에 그대로 쓰는 이유 문구 — 명사형(어미 "~해요" 없이). 규칙·숫자는 그대로 */
 export function computeJeonseRatio(
   trades: ReadonlyArray<TradeSample> | null,
   rents: ReadonlyArray<RentSample> | null,
@@ -389,10 +392,10 @@ export function computeJeonseRatio(
       ratio: null,
       reason:
         trades == null && rents == null
-          ? "매매·전세 실거래를 지금 불러오지 못해 계산하지 않았어요"
+          ? "매매·전세 실거래를 지금 불러오지 못해 계산하지 않음"
           : trades == null
-            ? "매매 실거래를 지금 불러오지 못해 계산하지 않았어요"
-            : "전세 실거래를 지금 불러오지 못해 계산하지 않았어요",
+            ? "매매 실거래를 지금 불러오지 못해 계산하지 않음"
+            : "전세 실거래를 지금 불러오지 못해 계산하지 않음",
     };
   }
   const fromYm = ymMonthsBefore(nowYm, RATIO_WINDOW_MONTHS - 1);
@@ -410,13 +413,13 @@ export function computeJeonseRatio(
     if (t.length < MIN_SAMPLES) parts.push(`매매 ${t.length}건`);
     return {
       ratio: null,
-      reason: `최근 ${RATIO_WINDOW_MONTHS}개월 ${parts.join(" · ")} — 각 ${MIN_SAMPLES}건 이상일 때만 계산해요`,
+      reason: `최근 ${RATIO_WINDOW_MONTHS}개월 ${parts.join(" · ")} · 각 ${MIN_SAMPLES}건 이상일 때만 계산`,
     };
   }
   const tm = medianOf(t);
   const jm = medianOf(j);
   if (tm == null || jm == null || tm <= 0) {
-    return { ratio: null, reason: "중앙값을 만들 수 없어 계산하지 않았어요" };
+    return { ratio: null, reason: "중앙값을 만들 수 없어 계산하지 않음" };
   }
   return {
     ratio: {
@@ -448,7 +451,7 @@ export function buildCompleteness(input: {
     missing.push({ key, label: FACT_LABELS[key], reason, note });
 
   if (c?.build_year) have.push("build_year");
-  else gap("build_year", "not_in_source", "실거래 신고에 준공연도가 없어요");
+  else gap("build_year", "not_in_source", "실거래 신고에 준공연도 없음");
 
   const linked = isMasterLinked(c);
   for (const k of MASTER_KEYS) {
@@ -460,31 +463,31 @@ export function buildCompleteness(input: {
       gap(
         k.key,
         "master_unlinked",
-        "K-apt 대장 미연결 — 의무관리 대상이 아닌 소규모 단지는 대장 자체가 없어요",
+        "K-apt 대장 미연결 · 의무관리 대상이 아닌 소규모 단지는 대장 자체가 없음",
       );
     } else if (k.key === "households") {
       gap(
         k.key,
         "master_empty",
-        "대장에 세대수가 없어요 — 같은 필지에 단지가 여럿이면 틀린 값 대신 비워 둬요",
+        "대장에 세대수 없음 · 같은 필지에 단지가 여럿이면 틀린 값 대신 비워 둠",
       );
     } else {
-      gap(k.key, "master_empty", "연결된 대장에 이 항목이 비어 있어요");
+      gap(k.key, "master_empty", "연결된 대장에 이 항목이 비어 있음");
     }
   }
 
   const ts = input.tradeSummary;
-  if (ts == null) gap("trades", "fetch_failed", "매매 실거래를 지금 불러오지 못했어요");
+  if (ts == null) gap("trades", "fetch_failed", "매매 실거래를 지금 불러오지 못함");
   else if (ts.count > 0) have.push("trades");
-  else gap("trades", "no_trade_12m", "최근 12개월 매매 신고가 없어요");
+  else gap("trades", "no_trade_12m", "최근 12개월 매매 신고 없음");
 
-  if (input.rents == null) gap("rent", "fetch_failed", "전월세 실거래를 지금 불러오지 못했어요");
+  if (input.rents == null) gap("rent", "fetch_failed", "전월세 실거래를 지금 불러오지 못함");
   else if (input.rents.length > 0) have.push("rent");
-  else gap("rent", "no_rent_24m", "최근 24개월 전월세 신고가 없어요");
+  else gap("rent", "no_rent_24m", "최근 24개월 전월세 신고 없음");
 
-  if (input.notes == null) gap("notes", "fetch_failed", "임장노트를 지금 불러오지 못했어요");
+  if (input.notes == null) gap("notes", "fetch_failed", "임장노트를 지금 불러오지 못함");
   else if (input.notes.count > 0) have.push("notes");
-  else gap("notes", "no_notes", "아직 이 단지 임장노트가 없어요");
+  else gap("notes", "no_notes", "아직 이 단지 임장노트 없음");
 
   return { have, missing };
 }

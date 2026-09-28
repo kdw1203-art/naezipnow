@@ -54,8 +54,9 @@ export default function PortfolioPage() {
         <div className="rise-in-1">
           <EmptyState
             icon="wallet"
-            title="아직 등록된 자산이 없어요"
-            desc="총자산·순자산·부동산 비중은 내가 등록한 보유 자산에서 계산돼요. 자산 등록(저장·자동 시세 연동)이 아직 열리지 않아서, 예시 자산으로 대신 채우지 않고 비워둡니다. 지금은 관심 단지를 담아 두면 현재가·변동을 한 표로 볼 수 있어요."
+            title="등록된 자산 없음"
+            /* [1015 · 규칙 B·D] 긴 권유문 → 사실 한 줄(예시 자산으로 채우지 않는다는 원칙은 그대로) */
+            desc="자산 등록(저장·시세 연동)이 아직 열리지 않아 예시 자산으로 채우지 않고 비워 둔다."
             action={{ label: "관심 단지 대시보드", href: "/my/watchlist" }}
           />
         </div>
@@ -71,11 +72,9 @@ export default function PortfolioPage() {
           />
         </div>
 
-        <div className="rise-in-3 card flex flex-col gap-2 rounded-3xl p-[18px]">
+        <div className="rise-in-3 card flex flex-col gap-2 rounded-3xl p-[18px] max-md:p-3.5">
           <div className="t-body font-bold text-ink">자산 알림</div>
-          <div className="t-sub text-text-3">
-            자산 등록이 열리면 아래 알림을 받을 수 있어요.
-          </div>
+          <div className="t-sub text-text-3">자산 등록이 열리면 받을 수 있는 알림</div>
           {/* 장식용 가짜 토글 제거 — 실제 알림 설정으로 연결 */}
           {ALERTS.map((a) => (
             <div key={a} className="text-xs text-text-1">

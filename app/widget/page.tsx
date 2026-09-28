@@ -75,7 +75,7 @@ export default function WidgetPage() {
         </div>
 
         <section className="rise-in-2 mt-6">
-          <h2 className="text-[15px] font-bold text-ink">단지 주소는 어디서 찾나요?</h2>
+          <h2 className="text-[15px] font-bold text-ink">단지 주소 찾기</h2>
           <p className="mt-2 text-[13px] leading-[1.8] text-text-1">
             단지 브라우즈에서 구를 고르면 단지 목록이 나옵니다. 원하는 단지를 눌러
             단지 페이지로 들어간 뒤, 브라우저 주소창의 주소를 그대로 복사해 위에
@@ -99,7 +99,7 @@ export default function WidgetPage() {
 
         {/* [#144] 중개사 사무소 B2B 리드 — 첫 B2B 퍼널 (백엔드는 /api/support 재사용) */}
         <section className="rise-in-2 mt-6">
-          <h2 className="text-[15px] font-bold text-ink">공인중개사 사무소인가요?</h2>
+          <h2 className="text-[15px] font-bold text-ink">공인중개사 사무소 문의</h2>
           <p className="mt-2 text-[13px] leading-[1.8] text-text-1">
             사무소 홈페이지·블로그에 담당 단지 시세를 상시 노출하고 싶다면 문의를
             남겨 주세요. 활용 방법을 직접 안내드리고, 사무소에서 필요한 위젯 구성이

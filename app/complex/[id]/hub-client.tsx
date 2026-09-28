@@ -394,8 +394,9 @@ export function ComplexHubTabs({
       /* [1009 · C 리뷰] 문장과 "열기 ›"가 390px 에서 붙어 보였다("봐요열기 ›") — 간격. 누를 수 있는 카드라 눌림(press) */
       className="card tile press flex w-full items-center justify-between gap-3 rounded-lg px-[15px] py-3.5 text-left"
     >
+      {/* [1015 · 규칙 D] 대시 잇기·"~봐요" 없이 */}
       <span className="min-w-0 t-body text-text-1">
-        <b className="text-ink">내 기록</b> — {complexName ?? "이 단지"}에 남긴 임장노트를 회차별로 모아 봐요
+        <b className="text-ink">내 기록</b> · {complexName ?? "이 단지"} 임장노트 회차별 모음
       </span>
       {/* [1012 · 규칙 5] "열기" → 동사 + 대상 */}
       <span className="shrink-0 text-xs font-bold text-primary">내 기록 열기 ›</span>
@@ -486,7 +487,8 @@ export function ComplexHubTabs({
                   실거래 탭에서 전체 ›
                 </button>
               </div>
-              <div className="overflow-hidden rounded-xl bg-bg">
+              {/* [1015 · 규칙 I] 월별 실거래 줄 = blue 리퀴드 판(TradeRow 가 제 px 를 가져 판의 px 는 끈다) */}
+              <div className="lq-panel overflow-hidden px-0!" data-tone="blue">
                 {/* [967 · 18] key = yyyymm — 월별 집계라 목록 안에서 유일하다 */}
                 {trades.slice(0, 18).map((t, i) => (
                   <TradeRow key={t.ym} t={t} dv={tradeDeltas?.[t.ym]} divider={i > 0 ? "top" : "none"} />
@@ -496,8 +498,8 @@ export function ComplexHubTabs({
           ) : (
             <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
               {dealsFailed
-                ? "실거래를 지금 불러오지 못했어요 — 거래가 없다는 뜻이 아니에요"
-                : "아직 수집된 국토교통부 실거래가 없어요"}
+                ? "실거래를 지금 불러오지 못했어요. 잠시 후 새로고침해 주세요."
+                : "아직 신고된 국토교통부 실거래가 없어요"}
             </div>
           )}
           {notes.length > 0 && (
@@ -528,13 +530,8 @@ export function ComplexHubTabs({
           {notes.length === 0 && (
             <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
               {notesFailed ? (
-                <>
-                  <b className="text-ink">지금은 불러올 수 없어요</b>
-                  <div className="mt-1">
-                    노트가 없는 게 아니라 목록을 읽어 오지 못했어요. 잠시 후 다시 열어
-                    주세요.
-                  </div>
-                </>
+                /* [1015 · 규칙 D] 오류 한 줄 */
+                "이야기를 지금 불러오지 못했어요. 잠시 후 다시 열어 주세요."
               ) : (
                 /* [970 · B-17] 이 목록은 동네이야기 글 — "임장노트가 없다"고 적으면 아래
                    임장노트 섹션과 어긋난다 */
@@ -556,10 +553,11 @@ export function ComplexHubTabs({
               </div>
             </div>
           ))}
+          {/* [1015 · 규칙 J] 채움 파랑은 화면당 1개(히어로 아래 "임장노트 쓰기") — 여기는 outline */}
           {notesWriteHref && !notesFailed && (
             <Link
               href={notesWriteHref}
-              className="btn-primary rounded-xl p-3 text-center t-body"
+              className="btn-outline rounded-xl p-3 text-center t-body"
             >
               {complexName ?? "이 단지"} 이야기 쓰기
             </Link>

@@ -70,7 +70,7 @@ export default async function DataRecordsPage() {
                       {rows.toLocaleString()}건
                     </span>
                   ) : (
-                    <span className="rounded-full bg-bg chip-pad text-[10px] font-semibold text-text-3">
+                    <span className="rounded-full bg-bg chip-pad t-caption font-semibold text-text-3">
                       연동 대기
                     </span>
                   )}

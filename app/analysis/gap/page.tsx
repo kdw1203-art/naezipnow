@@ -27,11 +27,11 @@ import { RankTable, type Row } from "./RankTable";
  * 지역 평균은 단지·면적별 편차를 가리므로 각 행이 지역 허브로 연결된다. */
 
 export const metadata = buildPageMetadata({
-  title: "전세가율·갭 스크리너 — 지역별 랭킹",
+  title: "전세가율·갭 스크리너 · 지역별 랭킹",
   description:
     "전국 시군구 전세가율 상·하위 랭킹과 평균 매매가 기준 추정 갭. 한국부동산원·KB 공표 통계 기반.",
   path: "/analysis/gap",
-  og: { badge: "AI 분석", sub: "전세가율 랭킹 · 추정 갭 — 공표 통계 기반" },
+  og: { badge: "분석", sub: "전세가율 랭킹 · 추정 갭 · 공표 통계 기반" },
 });
 
 /* [1010] 1h → 1일. 이 화면의 원천은 하루 1회 적재되는 국토부 실거래·집계이고,
@@ -135,7 +135,7 @@ export default async function GapScreenerPage() {
         label: "전세가율 중앙값",
         value: `${median.toFixed(1)}%`,
         note: "절반이 이 값보다 높다",
-        aside: <Explain term="jeonse-garyul" how="공표 지역 통계(한국부동산원·KB)의 매매가 대비 전세가 비율 — 집계 지역을 줄 세운 가운데 값이에요." size={12} />,
+        aside: <Explain term="jeonse-garyul" how="공표 지역 통계(한국부동산원·KB)의 매매가 대비 전세가 비율. 집계 지역을 줄 세운 가운데 값." size={12} />,
       });
     }
     kpis.push({
@@ -152,20 +152,19 @@ export default async function GapScreenerPage() {
       kpis.push({
         label: "실측 갭 지역",
         value: `${measured}곳`,
-        note: "전세 신고 30건 이상 — 나머지는 비율 환산 추정",
+        note: "전세 신고 30건 이상 · 나머지는 비율 환산 추정",
       });
     }
   }
 
   return (
-    <PageShell breadcrumb="AI 분석 › 전세가율·갭" toolScope={personaVars(TOOL_PERSONAS["market:gap"])}>
+    <PageShell breadcrumb="분석 › 전세가율·갭" toolScope={personaVars(TOOL_PERSONAS["market:gap"])}>
+      {/* [1015 · 규칙 B·C] 제목 위 부연·성격 배지·기능 설명(lead)은 걷었다 */}
       <ToolHero
-        eyebrow="지역·시장 흐름"
+        personaId="market:gap"
         icon="landmark"
         title="전세가율·갭 스크리너"
-        personaId="market:gap"
         toneClass="text-success"
-        lead="수도권 시군구를 전세가율 순으로 줄 세워, 갭이 작은 곳과 큰 곳을 한 화면에서 봅니다."
         kpis={kpis}
         chart={
           histValues.length > 1 ? (
@@ -183,27 +182,33 @@ export default async function GapScreenerPage() {
             </div>
           ) : null
         }
-        source="한국부동산원(REB)·KB 공표 지역 통계 — 지역·출처별 공표 주기가 달라 기준 시점이 지역마다 다릅니다(표의 기준 열 참고)."
+        source="한국부동산원(REB)·KB 공표 지역 통계 · 지역·출처별 공표 주기가 달라 기준 시점이 지역마다 다름(표의 기준 열)"
       />
 
-      <p className="mb-4 mt-4 max-w-[720px] t-body text-text-2">
-        전세가율은 매매가 대비 전세가의 비율이고, 높을수록 갭이 작습니다. 갭은{" "}
-        <b className="text-ink">평균 매매가 − 전세 신고 중앙값(최근 3개월)</b>의{" "}
-        <b className="text-ink">실측</b>을 우선 표시하고, 전세 표본이 30건 미만인 지역만
-        비율 환산 <b className="text-ink">추정</b>으로 대신합니다. 전월세 신고는
-        갱신·신규 계약이 구분되지 않아 실측값에도 그 한계가 섞여 있으며, 단지·면적에
-        따라 실제 갭은 크게 다릅니다.
+      {/* [1015 · 규칙 B] 정의·계산 문단은 ⓘ 하나로 접었다(표 머리의 ⓘ 와 같은 말) */}
+      <p className="mb-4 mt-4 inline-flex items-center gap-0.5 t-sub text-text-3 max-md:mb-3 max-md:mt-3">
+        갭 = 평균 매매가 − 전세 신고 중앙값(최근 3개월) · 전세 30건 미만은 비율 환산 추정
+        <Explain
+          term="jeonse-garyul"
+          title="전세가율과 갭"
+          body="전세가율은 매매가 대비 전세가의 비율이고, 높을수록 갭이 작다."
+          how={[
+            "갭은 평균 매매가 − 전세 신고 중앙값(최근 3개월)의 실측을 우선 표시하고, 전세 표본이 30건 미만인 지역만 비율 환산 추정(평균 매매가 × (1 − 전세가율))으로 대신한다.",
+            "전월세 신고는 갱신·신규 계약이 구분되지 않아 실측값에도 그 한계가 섞여 있고, 단지·면적에 따라 실제 갭은 크게 다르다.",
+          ]}
+          source="한국부동산원(REB)·KB 공표 지역 통계 · 국토교통부 전월세 실거래 신고"
+        />
       </p>
 
       {loadFailed ? (
         <ErrorState
           title="지역 시세를 지금 불러오지 못했어요"
-          desc="조회가 실패했습니다. 전세가율 데이터가 없다는 뜻은 아니에요 — 잠시 후 다시 열어봐 주세요."
+          desc="조회가 실패했습니다. 잠시 후 다시 열어 주세요."
         />
       ) : rows.length === 0 ? (
         <ErrorState
           title="전세가율 데이터가 아직 없어요"
-          desc="공표 통계 적재 후 표시됩니다. 시세 지수 적재(매일)가 끝나면 채워져요."
+          desc="공표 통계 적재(매일) 뒤 표시."
           action={{ href: "/analysis", label: "다른 분석 도구 보기" }}
         />
       ) : (
@@ -211,15 +216,13 @@ export default async function GapScreenerPage() {
           {yieldFailed && (
             <div className="mb-4 rounded-lg border border-line bg-warning-soft px-3.5 py-2.5">
               <p className="t-sub text-ink">
-                월세 환산 수익률·실측 갭을 지금 불러오지 못했어요. 그 열이 비어 있는 건
-                <b> 표본이 없어서가 아니라 조회가 실패했기 때문</b>입니다 — 전세가율은
-                그대로 실측값입니다.
+                월세 환산 수익률·실측 갭 열을 지금 불러오지 못했어요(조회 실패). 전세가율은 그대로 실측값.
               </p>
             </div>
           )}
-          <section className="mb-6" data-reveal="">
+          <section className="mb-6 max-md:mb-3" data-reveal="">
             <h2 className="mb-2 t-title text-ink">
-              전세가율 상위 — 갭이 작은 지역 TOP {top.length}
+              전세가율 상위 · 갭이 작은 지역 {top.length}곳
             </h2>
             {/* 막대가 먼저, 표는 그 아래. 순위는 길이로 읽고 세부는 표에서 읽는다 */}
             <div className="card mb-2 rounded-lg p-3 text-success">
@@ -235,16 +238,13 @@ export default async function GapScreenerPage() {
               />
             </div>
             <RankTable rows={top} tone="high" maxRatio={maxRatio} yieldFailed={yieldFailed} />
-            <p className="mt-2 t-sub text-text-3">
-              전세가율이 높은 지역은 갭이 작은 만큼, 전세가 하락 시 보증금 반환 부담
-              (역전세)·매매가와 전세가 역전 위험도 함께 큽니다. 갭이 작다는 산술이
-              &lsquo;안전하다&rsquo;는 뜻이 아닙니다.
-            </p>
+            {/* [1015 · 규칙 B·D] 해설 세 문장 → 주의 한 줄 */}
+            <p className="mt-2 t-caption text-text-3">갭이 작은 지역은 역전세·매매가·전세가 역전 위험도 함께 큼 · 안전하다는 뜻 아님</p>
           </section>
 
-          <section className="mb-6" data-reveal="">
+          <section className="mb-6 max-md:mb-3" data-reveal="">
             <h2 className="mb-2 t-title text-ink">
-              전세가율 하위 — 갭이 큰 지역 {bottom.length}곳
+              전세가율 하위 · 갭이 큰 지역 {bottom.length}곳
             </h2>
             <div className="card mb-2 rounded-lg p-3 text-warning">
               <RankBars
@@ -279,7 +279,7 @@ export default async function GapScreenerPage() {
             return (
               <section key={g} id={`sido-${g}`} className="mb-6 scroll-mt-20">
                 <h2 className="mb-2 t-title text-ink">
-                  {g} 전체 — 전세가율 순 {groupRows.length}개 지역
+                  {g} 전체 · 전세가율 순 {groupRows.length}개 지역
                 </h2>
                 <RankTable rows={groupRows} tone="high" maxRatio={maxRatio} yieldFailed={yieldFailed} />
               </section>
@@ -328,9 +328,7 @@ export default async function GapScreenerPage() {
       })()}
 
       <p className="mt-6 t-caption text-text-3">
-        출처: 한국부동산원(REB)·KB 공표 지역 통계 — 지역·출처별 최신 공표 주기 기준이라
-        시점이 지역마다 다를 수 있습니다(각 행의 기준 열 참고). 본 화면은 공표 통계의
-        산술 정리이며 투자 권유가 아닙니다. 판단과 책임은 이용자에게 있습니다.
+        출처 한국부동산원(REB)·KB 공표 지역 통계 · 지역·출처별 공표 주기 기준(각 행의 기준 열) · 공표 통계의 산술 정리이며 투자 권유가 아님 · 판단과 책임은 이용자에게 있음
       </p>
     </PageShell>
   );

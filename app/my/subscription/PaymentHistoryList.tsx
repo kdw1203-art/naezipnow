@@ -78,18 +78,19 @@ export function PaymentHistoryList({ ok, rows }: { ok: boolean; rows: HistoryRow
   const visible = rows.slice(0, shown);
   return (
     <div className="flex flex-col gap-2">
-      <ul className="flex flex-col gap-2">
+      {/* [1015 · 규칙 I] 결제 내역 = mint 톤 — 낱개 카드 li 를 리퀴드 판 한 장의 행으로 */}
+      <ul className="lq-panel flex flex-col" data-tone="mint">
         {visible.map((p) => {
           const expanded = openId === p.id;
           const panelId = `pay-${p.id}`;
           return (
-            <li key={p.id} className="rounded-xl border border-line bg-surface">
+            <li key={p.id} className="border-b last:border-b-0">
               <button
                 type="button"
                 aria-expanded={expanded}
                 aria-controls={panelId}
                 onClick={() => setOpenId(expanded ? null : p.id)}
-                className="flex w-full min-h-10 items-center justify-between gap-3 px-3.5 py-3 text-left"
+                className="flex w-full min-h-10 items-center justify-between gap-3 py-3 text-left"
               >
                 <span className="flex min-w-0 flex-col gap-0.5">
                   <span className="truncate t-body font-bold text-ink">
@@ -108,7 +109,7 @@ export function PaymentHistoryList({ ok, rows }: { ok: boolean; rows: HistoryRow
                 </span>
               </button>
               {expanded && (
-                <div id={panelId} className="border-t border-divider px-3.5 py-3">
+                <div id={panelId} className="border-t border-divider py-3">
                   <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 t-sub">
                     <dt className="text-text-3">주문번호</dt>
                     <dd className="break-all font-mono text-text-1">{p.orderId ?? "—"}</dd>
@@ -176,7 +177,7 @@ export function PaymentHistoryList({ ok, rows }: { ok: boolean; rows: HistoryRow
       )}
       {rows.length >= 100 && shown >= rows.length && (
         <p className="text-center t-caption text-text-3">
-          최근 100건까지 보여 드려요. 그 이전 내역은 고객센터에 문의해 주세요.
+          최근 100건까지 표시. 그 이전 내역은 고객센터에 문의해 주세요.
         </p>
       )}
     </div>

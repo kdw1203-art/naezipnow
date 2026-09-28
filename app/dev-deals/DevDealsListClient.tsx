@@ -44,7 +44,7 @@ function statusStyle(status: string): CSSProperties {
 function SampleBadge() {
   return (
     <span
-      className="chip chip-pad text-[10px]"
+      className="chip chip-pad t-caption"
       style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
     >
       예시
@@ -70,7 +70,7 @@ function DealCard({ d }: { d: DevDeal }) {
           </span>
           {d.isVerified && (
             <span
-              className="chip chip-pad text-[10px]"
+              className="chip chip-pad t-caption"
               style={{ background: "var(--success-soft)", color: "var(--success)" }}
             >
               검증
@@ -79,7 +79,7 @@ function DealCard({ d }: { d: DevDeal }) {
           {d.isSample && <SampleBadge />}
         </div>
         <span
-          className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold"
+          className="shrink-0 rounded-full px-2.5 py-1 t-caption font-bold"
           style={statusStyle(d.status)}
         >
           {STATUS_LABEL[d.status] ?? d.status}
@@ -110,7 +110,7 @@ function DealCard({ d }: { d: DevDeal }) {
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <div className="rounded-xl bg-primary-soft px-3 py-2.5">
-          <div className="text-[10px]" style={{ color: "var(--primary-strong)" }}>
+          <div className="t-caption" style={{ color: "var(--primary-strong)" }}>
             총사업비
           </div>
           <div className="mt-0.5 text-[15px] font-bold text-primary">
@@ -119,7 +119,7 @@ function DealCard({ d }: { d: DevDeal }) {
         </div>
         {stats.slice(0, 2).map((s) => (
           <div key={s.label} className="rounded-xl bg-bg px-3 py-2.5">
-            <div className="text-[10px] text-text-3">{s.label}</div>
+            <div className="t-caption text-text-3">{s.label}</div>
             <div className="mt-0.5 text-[13px] font-bold text-ink">{s.value}</div>
           </div>
         ))}
@@ -127,10 +127,10 @@ function DealCard({ d }: { d: DevDeal }) {
 
       {d.neededPartners.length > 0 && (
         <div>
-          <div className="mb-1 text-[10px] font-bold text-text-3">필요 협력분야</div>
+          <div className="mb-1 t-caption font-bold text-text-3">필요 협력분야</div>
           <div className="flex flex-wrap gap-1">
             {d.neededPartners.map((p) => (
-              <span key={p} className="chip-tag chip-pad text-[10px]">
+              <span key={p} className="chip-tag chip-pad t-caption">
                 {p}
               </span>
             ))}
@@ -139,7 +139,7 @@ function DealCard({ d }: { d: DevDeal }) {
       )}
 
       <div className="mt-1 flex items-center justify-between gap-3 border-t border-line pt-3">
-        <div className="min-w-0 text-[10px] leading-[1.5] text-text-3">
+        <div className="min-w-0 t-caption leading-[1.5] text-text-3">
           {d.contactMasked && (
             <div className="truncate">
               담당 {d.contactName ? `${d.contactName} · ` : ""}
@@ -184,12 +184,10 @@ function pushFilterUrl(next: Filter) {
 export function DevDealsListClient({
   all,
   regions,
-  exampleDeal,
   loadFailed = false,
 }: {
   all: DevDeal[];
   regions: string[];
-  exampleDeal: DevDeal;
   /** 서버의 listDeals 가 던진 경우 — 빈 결과("아직 없어요")와 절대 같은 문장을
       쓰지 않는다. 실패는 목록 자리에서만 "못 불러왔다"고 말한다. */
   loadFailed?: boolean;
@@ -311,7 +309,7 @@ export function DevDealsListClient({
           {/* 보조 필터: 협력분야 · 지역 */}
           <div className="flex flex-col gap-2.5">
             <div>
-              <div className="mb-1 text-[10px] font-bold text-text-3">필요 협력분야</div>
+              <div className="mb-1 t-caption font-bold text-text-3">필요 협력분야</div>
               <div className="flex flex-wrap gap-1.5">
                 <button type="button" onClick={() => set("partner", undefined)} className={pillClass(!filter.partner)}>
                   전체
@@ -330,7 +328,7 @@ export function DevDealsListClient({
             </div>
             {regions.length > 0 && (
               <div>
-                <div className="mb-1 text-[10px] font-bold text-text-3">지역</div>
+                <div className="mb-1 t-caption font-bold text-text-3">지역</div>
                 <div className="flex flex-wrap gap-1.5">
                   <button type="button" onClick={() => set("region", undefined)} className={pillClass(!filter.region)}>
                     전체
@@ -368,23 +366,17 @@ export function DevDealsListClient({
               </p>
             </div>
           ) : deals.length === 0 ? (
-            <div className="flex flex-col gap-3">
-              <div className="card rounded-2xl p-[var(--pad-card)] text-center">
-                <div className="text-[13px] font-bold text-ink">
-                  조건에 맞는 개발물건이 아직 없어요
-                </div>
-                <p className="mx-auto mt-1 max-w-md text-[12px] leading-[1.6] text-text-3">
-                  아래는 등록 시 노출되는 화면 <b>예시</b>예요. 개발물건을 등록하면
-                  시공·설계·신탁·PF 등 협력업체의 참여 문의를 받아볼 수 있어요.
-                </p>
-                <Link
-                  href="/dev-deals/new"
-                  className="btn-primary btn-md mt-3 inline-flex no-underline press"
-                >
-                  개발물건 등록
-                </Link>
+            /* [1015 · 규칙 B] 예시 카드(가공 데이터)·권유 문단 제거 — 한 줄 + 등록 버튼 */
+            <div className="card rounded-2xl p-[var(--pad-card)] text-center">
+              <div className="text-[13px] font-bold text-ink">
+                {filterActive ? "조건에 맞는 개발물건이 아직 없어요" : "등록된 개발물건이 아직 없어요"}
               </div>
-              <DealCard d={exampleDeal} />
+              <Link
+                href="/dev-deals/new"
+                className="btn-primary btn-md mt-3 inline-flex no-underline press"
+              >
+                개발물건 등록
+              </Link>
             </div>
           ) : (
             <div className="grid gap-3 xl:grid-cols-2">
@@ -403,42 +395,16 @@ export function DevDealsListClient({
 }
 
 /* 사이드 카드 — 정적. children 으로 넘기지 않고 여기 둔 이유: 원래 page.tsx 의
-   aside 마크업을 그대로 옮겨 2단 그리드 정렬을 보존한다. */
-const MATCH_STEPS: { title: string; desc: string }[] = [
-  { title: "개발물건 등록", desc: "시행사·부동산사업자가 정비사업·신축·부지 정보를 올려요." },
-  { title: "협력업체 매칭", desc: "시공·설계·신탁·PF·마케팅 등 필요한 협력분야로 연결돼요." },
-  { title: "직접 협의", desc: "매칭된 당사자끼리 조건을 협의해요. 정산은 당사자 간에." },
-];
-
+   aside 마크업을 그대로 옮겨 2단 그리드 정렬을 보존한다.
+   [1015 · 규칙 B·D] "이렇게 매칭돼요" 3단계(사용법)·"협력업체를 찾으시나요?"(물음형 제목 + 권유 문단)를 지우고,
+   레일은 수수료 사실 한 줄 + 링크 두 개만. 채움 파랑도 상단 "개발물건 등록" 하나로. */
 function DevDealsSidebar() {
   return (
     <aside className="rise-in-3 flex flex-col gap-3">
       <div className="card rounded-2xl p-[var(--pad-card)]">
-        <div className="text-[13px] font-bold text-ink">이렇게 매칭돼요</div>
-        <ol className="mt-3 flex flex-col gap-3">
-          {MATCH_STEPS.map((s, i) => (
-            <li key={s.title} className="flex gap-3">
-              <span
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[12px] font-bold"
-                style={{ color: "var(--primary-strong)" }}
-              >
-                {i + 1}
-              </span>
-              <div>
-                <div className="text-[13px] font-bold text-ink">{s.title}</div>
-                <div className="text-[12px] leading-[1.6] text-text-3">{s.desc}</div>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </div>
-
-      <div className="card rounded-2xl p-[var(--pad-card)]">
         <div className="text-[13px] font-bold text-ink">중개 수수료</div>
         <p className="mt-1.5 text-[12px] leading-[1.6] text-text-2">
-          매칭이 성사되면 <strong className="text-ink">사업규모(총사업비)</strong>에 따라 중개
-          수수료가 부과돼요. <strong className="text-ink">내집나우는 결제·정산을 진행하지 않으며</strong>{" "}
-          실제 정산은 당사자 간에 이뤄집니다.
+          매칭 성사 시 총사업비 기준으로 부과. 결제·정산은 당사자 간.
         </p>
         <Link
           href="/dev-deals/fees"
@@ -449,17 +415,16 @@ function DevDealsSidebar() {
       </div>
 
       <div className="card rounded-2xl p-[var(--pad-card)]">
-        <div className="text-[13px] font-bold text-ink">협력업체를 찾으시나요?</div>
+        <div className="text-[13px] font-bold text-ink">협력업체 디렉토리</div>
         <p className="mt-1.5 text-[12px] leading-[1.6] text-text-2">
-          검증된 시공·설계·신탁·PF·마케팅·감리 협력업체를 디렉토리에서 확인하고, 우리 회사를
-          등록해 매칭 기회를 받으세요.
+          시공 · 설계 · 신탁 · PF · 마케팅 · 감리
         </p>
         <div className="mt-3 flex flex-col gap-2">
           <Link href="/dev-deals/partners" className="btn-outline btn-md no-underline press">
             협력업체 디렉토리
           </Link>
-          <Link href="/dev-deals/new" className="btn-primary btn-md no-underline press">
-            개발물건 등록하기
+          <Link href="/dev-deals/partners/new" className="btn-outline btn-md no-underline press">
+            우리 회사 등록
           </Link>
         </div>
       </div>

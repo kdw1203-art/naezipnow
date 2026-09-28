@@ -219,15 +219,16 @@ export default async function DigestWeekPage({
             <Explain
               term="sijang-ondo"
               how={[
-                "50점을 중립으로 ① 매매가격지수 모멘텀(최근 3구간 평균 변동률 — 월간 지수면 월 ±1%, 주간 지수면 주 ±0.3% 를 ±25점)과 ② 거래량 추이(이번 달을 뺀 최근 최대 3개월 합을 그 직전 같은 개월 수의 합과 비교, ±50% 변화를 ±25점)를 더하고 5~95점 안으로 잘라요.",
-                "이번 달을 뺀 거래량 월이 4개 미만이면 지수 모멘텀만 반영해요.",
-                "매수·매도 추천이 아니라 시장 상태를 요약한 숫자예요.",
+                "50점을 중립으로 ① 매매가격지수 모멘텀(최근 3구간 평균 변동률. 월간 지수면 월 ±1%, 주간 지수면 주 ±0.3% 를 ±25점)과 ② 거래량 추이(이번 달을 뺀 최근 최대 3개월 합을 그 직전 같은 개월 수의 합과 비교, ±50% 변화를 ±25점)를 더하고 5~95점 안으로 자릅니다.",
+                "이번 달을 뺀 거래량 월이 4개 미만이면 지수 모멘텀만 반영합니다.",
+                "매수·매도 추천이 아니라 시장 상태를 요약한 숫자입니다.",
               ]}
               source="내집나우 주간 산출 · 한국부동산원 지수 · 국토교통부 실거래 신고"
             />
           </div>
           {data.temperature.length > 0 ? (
-            <div className="mt-3 overflow-x-auto">
+            /* [1015] 표 껍데기 = 리퀴드 판(blue — 시장 지수 톤, 브리프 규칙 I) */
+            <div className="lq-panel mt-3 overflow-x-auto py-1" data-tone="blue">
               <table className="w-full min-w-[420px] border-collapse t-body">
                 <thead>
                   <tr className="border-b border-border text-left text-text-3">
@@ -259,8 +260,7 @@ export default async function DigestWeekPage({
             </div>
           ) : (
             <p className="mt-3 t-body text-text-3">
-              그 주에 기록된 시장 온도 스냅샷이 없습니다. 다른 주 값으로 대신 채우지 않습니다 —
-              그 주의 숫자가 아니기 때문입니다.
+              그 주에 기록된 시장 온도 스냅샷이 없습니다. 다른 주 값으로 대신 채우지 않습니다.
             </p>
           )}
         </section>

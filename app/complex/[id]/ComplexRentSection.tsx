@@ -57,15 +57,15 @@ export function RentView({ hist, name }: { hist: ComplexRentHistory; name: strin
 
   return (
     /* [968 · 7] cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미룬다(page.tsx 주석 참고) */
-    <section className="cv-auto rise-in-5 mt-6">
+    <section className="cv-auto rise-in-5 mt-6 max-md:mt-3">
       <h2 className="mb-2 flex flex-wrap items-center gap-x-1 px-1 t-section text-ink">
         전월세 실거래
         <Explain
           title="전월세 실거래"
           how={[
-            "월세가 0원인 신고는 전세, 그 밖은 월세로 나눠 그 달 보증금·월세의 중앙값(가운데 값)을 적어요 — 한두 건의 특이 거래에 평균보다 덜 끌려가요.",
-            "면적을 가중하지 않아요(평형 구성이 다른 달끼리는 차이가 날 수 있어요).",
-            "신고분에는 갱신·신규 계약이 섞여 있고, 최근 1~2개월은 신고 지연으로 적게 잡힐 수 있어요.",
+            "월세가 0원인 신고는 전세, 그 밖은 월세로 나눠 그 달 보증금·월세의 중앙값(가운데 값)을 적는다. 한두 건의 특이 거래에 평균보다 덜 끌려간다.",
+            "면적 미가중(평형 구성이 다른 달끼리는 차이가 날 수 있다).",
+            "신고분에는 갱신·신규 계약이 섞여 있고, 최근 1~2개월은 신고 지연으로 적게 잡힐 수 있다.",
           ]}
           source={`국토교통부 전월세 실거래 신고 · ${hist.periodLabel}`}
         />
@@ -100,7 +100,8 @@ export function RentView({ hist, name }: { hist: ComplexRentHistory; name: strin
       )}
 
       {/* [968 · 6] 767px 이하 — 월별 2행 카드. md+ 는 아래 표. */}
-      <ul className="card flex flex-col divide-y divide-divider rounded-2xl px-4 md:hidden">
+      {/* [1015 · 규칙 I] 전월세 실거래 목록(폰) = blue 리퀴드 판 */}
+      <ul className="lq-panel flex flex-col divide-y md:hidden" data-tone="blue">
         {shown.map((m) => (
           <li key={m.month} className="flex flex-col gap-1 py-2.5">
             <div className="flex items-baseline justify-between gap-2">

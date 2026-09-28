@@ -28,14 +28,7 @@ import { LastToolChip } from "./tool-cards-client";
      · 커버리지(실거래·단지·지역 수)는 홈과 같은 6시간 캐시 실측값 — 0이면 0.
    ============================================================ */
 
-/* [1008 · W] 쉬운 말 — "규칙 계산 → 원하면 AI 서술" 은 처음 온 사람이 알아듣지 못했다(소유자)
-   [1011] 가운데 칸("실거래·전월세·입주 예정 자료 자동으로")을 걷었다(소유자 지시) — 자료를 어디서
-   어떻게 끌어오는지는 쓰는 사람이 알 필요가 없는 층의 이야기다. 사람이 실제로 하는 동작만 남긴다
-   (/analysis/ai/[tool] 히어로의 "자동으로 불러오는 것" 칸을 걷은 것과 같은 판단). */
-const STEPS: readonly { n: number; label: string }[] = [
-  { n: 1, label: "단지 고르기" },
-  { n: 2, label: "숫자·그래프로 결과 → 원하면 AI 해설" },
-];
+/* [1015 · 규칙 B] 사용법 스텝퍼("1 단지 고르기 → 2 숫자·그래프로 결과")는 걷었다 — 검색칸 하나면 무엇을 하는 화면인지 보인다. */
 
 const TIER_ORDER: readonly TierId[] = ["complex", "market", "record"];
 
@@ -133,23 +126,15 @@ export function HubHero({
     : `/analysis/timing${q}`;
 
   return (
-    <section className="hub-hero rise-in card-pad-lg flex flex-col gap-4">
+    <section className="hub-hero rise-in card-pad-lg flex flex-col gap-4 max-md:gap-3 max-md:py-4">
       <BrandWatermark />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex max-w-[600px] flex-col gap-1.5">
-          <span className="t-caption font-bold tracking-wider text-on-dark-muted">
-            AI 분석 · 단지 하나에서 시작
-          </span>
+          {/* [1015 · 규칙 B·C] 제목 위 부연("AI 분석 · 단지 하나에서 시작")과 기능 설명 문단("AI 해설은 원할 때만…")은
+              걷었다 — 네이비 히어로·제목·검색 카드는 틀이라 그대로. */}
           <h1 className="t-display text-balance text-on-dark">
             단지 하나를 넣으면, 판단 근거가 <span className="text-brand-red-dark">지금</span> 모입니다
           </h1>
-          {/* [1011] 앞 문장("… 실거래·전월세 신고·입주 예정·지역 통계를 … 모아 … 보여 줘요")을 걷었다
-              (소유자 지시). "무엇을 넣으면 무엇이 나온다"는 바로 위 제목과 아래 검색칸이 이미 말하고,
-              어떤 자료를 어떤 순서로 모으는지는 쓰는 사람의 몫이 아니다. 출처·기준 시점은 숫자마다
-              따로 붙으므로 그 약속 한 줄만 남긴다. */}
-          <p className="t-body max-w-[52ch] text-on-dark-muted">
-            AI 해설은 원할 때만 덧붙여요. 모든 숫자에는 출처와 기준 시점이 붙어요.
-          </p>
         </div>
         <div className="flex flex-col items-start gap-2 md:items-end">
           <LastToolChip />
@@ -164,23 +149,14 @@ export function HubHero({
           initialApt={initialApt}
           onSelect={setPicked}
           showChip={false}
-          label="① 단지 검색"
-          /* [970 · B-28] 좁은 화면(≤480px)에서는 예시까지 적으면 placeholder 가 잘렸다 */
-          placeholder={narrow ? "단지명 검색" : "단지명으로 검색 (예: 은마아파트)"}
+          label="단지 검색"
+          /* [1015 · 규칙 B] 예시("예: 은마아파트")는 걷었다 — 폰·데스크톱 같은 한마디 */
+          placeholder={narrow ? "단지명 검색" : "단지명 검색"}
           /* [975] 이름을 몰라도 시작할 수 있게 — /map 으로 나갔다 돌아오는 대신
              이 자리에서 지도를 연다. 임장은 보통 "여기 뭐지?"로 시작한다. */
           onMapClick={() => openMap()}
         />
 
-        {/* 절차는 화면당 한 번만(UI-10). 미측정 소요시간 약속은 뺐다(958). */}
-        <div className="hub-steps t-sub mt-3 text-text-3">
-          {STEPS.map((s) => (
-            <span key={s.n} className="hub-step">
-              <span className="hub-step-n">{s.n}</span>
-              <span className="font-bold">{s.label}</span>
-            </span>
-          ))}
-        </div>
       </div>
 
       {/* 고른 즉시 실행 지점을 띄운다 — 다시 아래로 찾아 내려갈 필요가 없다 */}
@@ -195,9 +171,7 @@ export function HubHero({
             {picked.priceLabel && (
               <span className="t-sub t-num text-text-2">최근 월평균 {picked.priceLabel}</span>
             )}
-            <span className="t-caption ml-auto rounded border border-line px-1.5 py-px font-bold text-text-3">
-              실데이터 기준
-            </span>
+            {/* [1015 · 규칙 C] "실데이터 기준" 배지는 걷었다 */}
           </div>
 
           <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4">

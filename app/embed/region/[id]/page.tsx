@@ -126,13 +126,13 @@ export default async function EmbedRegionPage({
         <div className="text-[15px] font-bold text-[#1c2433]">
           {region.name} 아파트 시세
         </div>
-        {periodYm && <div className="text-[10px] text-[#8b94a6]">{formatYm(periodYm)} 기준</div>}
+        {periodYm && <div className="t-caption text-[#8b94a6]">{formatYm(periodYm)} 기준</div>}
       </div>
 
       <div className="flex flex-wrap items-end gap-x-5 gap-y-1.5">
         {ov.avgPrice && (
           <div>
-            <div className="text-[10px] text-[#8b94a6]">
+            <div className="t-caption text-[#8b94a6]">
               {ov.avgPrice.basis === "reb" ? "평균 매매가" : "신고 실거래 평균"}
             </div>
             <div className="text-[21px] font-bold leading-tight tabular-nums text-[#1c2433]">
@@ -144,7 +144,7 @@ export default async function EmbedRegionPage({
           const dir = deltaDir(change) ?? "flat";
           return (
             <div>
-              <div className="text-[10px] text-[#8b94a6]">매매지수 전월 대비</div>
+              <div className="t-caption text-[#8b94a6]">매매지수 전월 대비</div>
               <div
                 className="text-[15px] font-bold leading-tight tabular-nums"
                 style={{ color: EMBED_DELTA_COLOR[dir] }}
@@ -157,7 +157,7 @@ export default async function EmbedRegionPage({
         })()}
         {ov.jeonse && (
           <div>
-            <div className="text-[10px] text-[#8b94a6]">전세가율</div>
+            <div className="t-caption text-[#8b94a6]">전세가율</div>
             <div className="text-[15px] font-bold leading-tight tabular-nums text-[#1c2433]">
               {ov.jeonse.value.toFixed(1)}%
             </div>
@@ -170,7 +170,7 @@ export default async function EmbedRegionPage({
       <div className="flex items-center justify-between border-t border-[#f0f3f8] pt-2">
         {/* [1009 · H] 출처는 이 카드가 실제로 쓴 자료만 — 예전 "한국부동산원·KB 공표 통계"는 KB 자료를 쓰지 않는데 적혀 있었고,
             국토부 신고 거래량·평균을 싣게 된 지금은 국토교통부가 빠지면 안 된다 */}
-        <span className="text-[10px] text-[#8b94a6]">
+        <span className="t-caption text-[#8b94a6]">
           {[
             ov.hasReb || change !== null ? "한국부동산원 공표 통계" : null,
             ov.volume || ov.avgPrice?.basis === "tx" ? "국토교통부 실거래 신고" : null,

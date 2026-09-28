@@ -48,7 +48,7 @@ export function PartnerForm() {
         <div className="text-[15px] font-bold text-ink">제휴 신청이 접수됐어요</div>
         <p className="text-[13px] leading-[1.7] text-text-2">
           <b>검토 후 연락드립니다.</b> 남겨주신 연락처(이메일·전화)로 영업일 기준
-          2~3일 내 안내드려요.
+          2~3일 내 안내합니다.
         </p>
       </div>
     );

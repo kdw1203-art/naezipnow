@@ -97,16 +97,17 @@ export default async function TownExpertsPage() {
       />
       <TownCategoryNav stick />
       {/* ---------- 소개 (브랜드 네이비) ---------- */}
-      <section className="rise-in brand-navy-card mb-5 overflow-hidden rounded-3xl px-5 py-6 md:px-7 md:py-7">
+      <section className="rise-in brand-navy-card mb-5 overflow-hidden rounded-3xl px-5 py-6 md:px-7 md:py-7 max-md:mb-3 max-md:py-4">
         <BrandWatermark />
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="max-w-[560px]">
-            {/* [1012] 규칙 5 — "지금 물어보기" 슬로건 → 명사형 사실 */}
+            {/* [1012] 규칙 5 — "지금 물어보기" 슬로건 → 명사형 사실
+                [1015] 대시 잇기·설명 두 문장("…상담함으로 와요. …비교할 수 있어요")을 명사 줄로(브리프 규칙 D) */}
             <p className="t-section text-on-dark">
-              인증 전문가에게 글로 묻기 — 공인중개사·세무사·감정평가사·대출상담사·건축사
+              인증 전문가 상담 · 공인중개사 · 세무사 · 감정평가사 · 대출상담사 · 건축사
             </p>
             <p className="mt-2 t-body text-on-dark-muted">
-              임장노트 링크를 붙여 글로 묻고, 답변은 상담함으로 와요. 견적 요청 하나로 인증 전문가 여러 명의 제안을 비교할 수 있어요.
+              글 상담 · 상담함 답변 · 견적 요청 1건으로 여러 전문가 제안 비교
             </p>
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 t-sub text-on-dark-muted">
               <span className="inline-flex items-center gap-1">
@@ -124,7 +125,8 @@ export default async function TownExpertsPage() {
               같은 링크가 둘이면 어느 쪽이 주인지 알 수 없다. 여기는 목록으로
               내려가는 한 개만 남긴다. */}
           <div className="flex shrink-0 gap-2 md:flex-col md:items-end">
-            <a href="#experts" className="btn-primary btn-cta rounded-xl px-5 py-2.5 t-body no-underline">
+            {/* [1015] 채움 파랑 → 네이비 위 보조 칩. 화면의 채움 파랑은 카드의 "상담 신청" 하나로(브리프 규칙 J) */}
+            <a href="#experts" className="brand-photo-chip rounded-xl px-5 py-2.5 t-body font-bold no-underline">
               전문가 보기
             </a>
           </div>
@@ -134,7 +136,7 @@ export default async function TownExpertsPage() {
             빈 칸 세 개다 — 모집 중이라는 사실 한 줄로 바꾼다(조회 실패는 목록 쪽이 말한다). */}
         {loaded.ok && loaded.items.length === 0 ? (
           <p className="mt-5 border-t border-on-dark-faint pt-4 t-sub text-on-dark-muted">
-            모집 중 — 인증 심사를 통과한 순서로 공개돼요
+            모집 중 · 인증 심사 통과 순으로 공개
           </p>
         ) : (
         <div className="mt-5 grid grid-cols-3 gap-2 border-t border-on-dark-faint pt-4">
@@ -180,8 +182,9 @@ export default async function TownExpertsPage() {
       </div>
 
       {/* ---------- 자격별 안내 ---------- */}
-      <section className="mb-6">
-        <h2 className="mb-3 t-section text-ink">어떤 전문가에게 무엇을 물을까</h2>
+      <section className="mb-6 max-md:mb-4">
+        {/* [1015] 물음형 제목("어떤 전문가에게 무엇을 물을까") → 명사(브리프 규칙 D) */}
+        <h2 className="mb-3 t-section text-ink">자격별 상담 범위</h2>
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {typeCounts
             .filter((t) => t.id !== "other")
@@ -202,38 +205,30 @@ export default async function TownExpertsPage() {
         </div>
       </section>
 
-      {/* ---------- 전문가 참여 (한지 띠) ---------- */}
-      <section id="apply" className="mb-6 scroll-mt-24 rounded-3xl bg-brand-hanji px-5 py-6 md:px-7">
+      {/* ---------- 전문가 참여 ----------
+          [1015] 한지 면 띠 → 흰 카드 + 1px 선(브리프 규칙 C — 브랜드 면은 히어로·네이비 띠에만). "전문가이신가요?"
+          물음 라벨과 기능 설명 5줄(프로필 노출·제안 보내기·직접 관리·후기·리드)은 걷었다(규칙 B·D) — 절차·비용·FAQ 는
+          /town/experts/join 이 전부 담고 있고 링크가 바로 옆에 있다. 인증 대상·정책 링크는 남긴다. */}
+      <section id="apply" className="card mb-6 scroll-mt-24 rounded-2xl px-5 py-5 md:px-7 max-md:mb-4 max-md:px-3.5 max-md:py-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="max-w-[560px]">
-            <div className="t-caption font-bold tracking-wider text-brand-hanji-ink opacity-70">전문가이신가요?</div>
-            <h2 className="mt-1 t-section text-brand-hanji-ink">자격 인증 후 상담을 받고, 견적 요청에 제안을 보내세요</h2>
-            <ul className="mt-3 flex list-none flex-col gap-1 t-sub text-brand-hanji-ink">
-              <li>· 프로필 노출 + 상담 신청 수신·답변 — 답변은 의뢰자 상담함과 알림으로 전달</li>
-              <li>· 견적 요청 보드에 제안 보내기(요청당 1건) — 의뢰자가 제안을 비교해 프로필로 찾아옵니다</li>
-              <li>· 소개·전문 분야·활동 지역·상담료·연락처를 직접 관리 (마이 › 전문가 프로필)</li>
-              <li>· 답변 완료 상담의 의뢰자 후기가 프로필에 쌓입니다</li>
-              <li>· 공인중개사: 매물 등록·관리 + 받은 문의(리드), 상호·등록번호 표시</li>
-            </ul>
-            {/* [978] opacity-80 을 뺐다. 이 문단 안에는 링크(/legal/expert)가 있는데,
-                부모 투명도가 링크 색(--primary)까지 흐려 한지 위 4.07:1 이었다(axe 실측).
-                투명도로 흐리게 만들면 글자까지 같이 사라진다 — 크기(t-caption)가
-                이미 위계를 말하고 있으므로 색은 그대로 둔다. */}
-            <p className="mt-3 t-caption text-brand-hanji-ink">
+            <h2 className="t-section text-ink">전문가 참여</h2>
+            <p className="mt-1 t-sub text-text-2">자격 인증 · 상담 수신 · 견적 요청 제안 · 의뢰자 후기</p>
+            <p className="mt-3 t-caption text-text-3">
               인증 대상: {EXPERT_TYPES.filter((t) => t.id !== "other").map((t) => t.label).join("·")} 및 서류·인터뷰 심사를 거친 기타 전문가.
               법률 서비스는 정책상 유료 입점 불가. 절차·검증 기준은{" "}
-              <Link href="/legal/expert" className="font-bold underline underline-offset-2">
+              <Link href="/legal/expert" className="font-bold text-primary underline underline-offset-2">
                 전문가 운영정책
               </Link>
-              에서 확인할 수 있어요.
+              에 있습니다.
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-start gap-2 md:items-end">
             <ExpertApplyCta />
-            <Link href="/town/experts/join" className="tap-line t-sub font-bold text-brand-hanji-ink underline underline-offset-2">
-              참여 안내 자세히(절차·비용·FAQ) ›
+            <Link href="/town/experts/join" className="tap-line t-sub font-bold text-primary underline underline-offset-2">
+              참여 안내(절차·비용·FAQ) ›
             </Link>
-            <Link href="/partners" className="tap-line t-sub font-bold text-brand-hanji-ink underline underline-offset-2">
+            <Link href="/partners" className="tap-line t-sub font-bold text-primary underline underline-offset-2">
               중개사무소 제휴 안내 ›
             </Link>
           </div>
@@ -258,7 +253,7 @@ export default async function TownExpertsPage() {
 
       {/* 베타 공급 부족의 실제 대안 */}
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <span className="t-sub text-text-3">원하는 전문가가 없다면:</span>
+        <span className="t-sub text-text-3">다른 경로</span>
         <Link href="/qna" className="press chip border border-line bg-surface px-3 py-1.5 t-sub text-text-2 no-underline">
           이웃에게 묻기 (단지 Q&A)
         </Link>
@@ -271,8 +266,7 @@ export default async function TownExpertsPage() {
       </div>
 
       <p className="mt-4 text-center t-sub text-text-3">
-        상담·견적 요청은 로그인 후 이용할 수 있어요 · 개인정보(전화번호·계좌)는 남기지 마세요 ·
-        플랫폼 밖 결제 유도는 신고 대상입니다
+        상담·견적 요청은 로그인 후 · 전화번호·계좌 기재 금지 · 플랫폼 밖 결제 유도는 신고 대상
       </p>
       <ComplianceNotice className="mt-3" />
     </PageShell>

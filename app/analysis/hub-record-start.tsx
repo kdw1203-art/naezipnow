@@ -17,26 +17,23 @@ export function HubRecordStart({ guest }: { guest: ReactNode }) {
   return (
     <div className="card tile flex flex-col gap-3 rounded-lg p-4 md:flex-row md:items-center md:justify-between">
       <div className="flex flex-col gap-1">
+        {/* [1015 · 규칙 D] 사실 한 줄(숫자) — 기능 설명("점수화하고 … 정리해 드려요")은 걷었다 */}
         <span className="t-section text-ink">
           {myNoteCount !== null
             ? myNoteCount > 0
-              ? `내 노트 ${myNoteCount}건이 분석을 기다려요`
-              : "아직 작성한 임장노트가 없어요"
-            : "내 노트로 바로 분석할 수 있어요"}
-        </span>
-        <span className="t-sub text-text-3">
-          {myNoteCount === 0
-            ? "첫 임장노트를 남기면 AI 분석이 열려요"
-            : "기록을 점수화하고 강점·약점·체크 제안을 정리해 드려요"}
+              ? `내 임장노트 ${myNoteCount}건`
+              : "작성한 임장노트 없음"
+            : "내 임장노트"}
         </span>
       </div>
+      {/* [1015 · 규칙 J] 채움 파랑은 화면당 1개(노트 AI 분석 카드의 "분석 실행") — 여기는 outline */}
       {myNoteCount === 0 ? (
-        <Link href="/notes/new" className="btn-primary btn-md shrink-0">
+        <Link href="/notes/new" className="btn-outline btn-md shrink-0">
           첫 노트 쓰기
         </Link>
       ) : (
-        <a href="#ai-note-analysis" className="btn-primary btn-md shrink-0">
-          내 노트로 분석 시작
+        <a href="#ai-note-analysis" className="btn-outline btn-md shrink-0">
+          내 노트로 분석 열기
         </a>
       )}
     </div>

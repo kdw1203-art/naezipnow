@@ -93,7 +93,7 @@ export function NoteUploadProgress({
               </span>
             )}
             <span className="sr-only">
-              {u.name} —{" "}
+              {u.name} ·{" "}
               {u.status === "uploading"
                 ? "업로드 중"
                 : u.status === "done"

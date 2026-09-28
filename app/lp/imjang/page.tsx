@@ -43,30 +43,29 @@ export default async function ImjangLandingPage() {
   return (
     <PageShell>
       {/* 히어로 — 한 문장의 약속, 한 개의 행동 */}
-      <section className="rise-in mx-auto max-w-[760px] pt-4 text-center md:pt-10">
-        <p className="t-sub font-bold text-primary">부동산 임장 관리 · 내집나우</p>
+      <section className="rise-in mx-auto max-w-[760px] pt-4 text-center max-md:pt-2 md:pt-10">
+        <p className="t-sub font-bold text-primary">내집나우 임장노트</p>
         <h1 className="mt-2 t-display text-ink">
           실거래가는 누구나 봅니다.
           <br />
           현장은 가 본 사람만 압니다.
         </h1>
-        <p className="mx-auto mt-4 max-w-[560px] t-body text-text-2">
-          임장노트는 무료입니다. 로그인 없이 바로 쓰기 시작하고, 저장할 때 로그인하면 사진과 AI
-          초안이 함께 올라갑니다. 기록 옆에는 국토교통부 실거래가가 나란히 붙습니다.
+        {/* [1015 · 규칙 D] 세 문장 나열 → 사실 한 줄 */}
+        <p className="mx-auto mt-4 max-w-[560px] t-body text-text-2 max-md:mt-3">
+          임장노트 무료 · 로그인 없이 작성, 저장할 때 로그인 · 기록 옆에 국토교통부 실거래가
         </p>
-        <div className="mt-6 flex justify-center">
+        <div className="mt-6 flex justify-center max-md:mt-4">
           <LpCta label={CTA_LABEL} />
         </div>
-        <p className="mt-2 t-caption text-text-3">가입·카드 정보 없이 시작 · 광고 아닌 실거래 신고분 기준</p>
+        <p className="mt-2 t-caption text-text-3">가입·카드 정보 없이 · 실거래 신고분 기준</p>
       </section>
 
       {/* 사실 3칸 — 실측·코드에 근거한 문장만 */}
-      <section className="rise-in-1 mx-auto mt-10 grid max-w-[960px] grid-cols-1 gap-3 md:grid-cols-3">
+      <section className="rise-in-1 mx-auto mt-10 grid max-w-[960px] grid-cols-1 gap-3 max-md:mt-6 md:grid-cols-3">
         <div className="card p-[var(--pad-card)]">
           <div className="t-section text-ink">실거래가 옆에 기록</div>
           <p className="mt-1.5 t-sub text-text-2">
-            국토교통부 실거래가 공개시스템 신고분을 기준으로 단지·지역 실거래가를 보여 줍니다. 매물
-            호가는 실거래에 섞지 않고, 해제 신고분은 뺍니다.
+            국토교통부 실거래가 공개시스템 신고분 기준의 단지·지역 실거래가. 매물 호가는 섞지 않고 해제 신고분은 제외.
           </p>
           {(coverage.complexes !== null || coverage.regions !== null) && (
             <p className="mt-2 t-caption text-text-3">
@@ -84,8 +83,8 @@ export default async function ImjangLandingPage() {
             체크리스트 {CHECKLIST_GROUPS.length}개 영역 · {checklistItemCount}개 항목
           </div>
           <p className="mt-1.5 t-sub text-text-2">
-            입지·단지·내부·학군·편의·미래가치 항목을 노트에서 바로 체크합니다. 현장에서만 보이는
-            것은 임장 가이드의 체크포인트 {IMJANG_CHECKPOINTS.length}가지가 따로 알려 줍니다.
+            입지·단지·내부·학군·편의·미래가치 항목을 노트에서 체크. 현장에서만 보이는 것은 임장 가이드의 체크포인트{" "}
+            {IMJANG_CHECKPOINTS.length}가지.
           </p>
           <ul className="mt-2 flex flex-col gap-1">
             {checkpoints.map((c) => (
@@ -101,34 +100,32 @@ export default async function ImjangLandingPage() {
         <div className="card p-[var(--pad-card)]">
           <div className="t-section text-ink">사실 우선</div>
           <p className="mt-1.5 t-sub text-text-2">
-            모든 수치에 기준 시점과 출처를 붙이고, 없는 데이터는 없다고 표시합니다. 조회에 실패한
-            자리는 "조회 실패"라고 적지 "없음"이라고 적지 않습니다.
+            모든 수치에 기준 시점과 출처. 없는 데이터는 없다고, 조회 실패는 실패라고 표시.
           </p>
-          <p className="mt-2 t-caption text-text-3">집계 방법론은 사이트의 /methodology 에 공개돼 있습니다.</p>
+          <p className="mt-2 t-caption text-text-3">집계 방법론: /methodology</p>
         </div>
       </section>
 
-      {/* 어떻게 되나 — 실제 동선 3단계 */}
-      <section className="rise-in-2 mx-auto mt-10 max-w-[760px]">
-        <h2 className="t-section text-ink">시작하면 이렇게 됩니다</h2>
-        <ol className="mt-3 flex flex-col gap-2">
+      {/* 어떻게 되나 — 실제 동선 3단계. [1015 · 규칙 D·I] 카드 셋 → 리퀴드 행 목록(hanji), 제목 명사형, 문장은 사실만 */}
+      <section className="rise-in-2 mx-auto mt-10 max-w-[760px] max-md:mt-6">
+        <h2 className="mb-2 t-section text-ink">이용 흐름</h2>
+        <ol data-tone="hanji" className="lq-panel m-0 flex list-none flex-col divide-y p-0">
           {[
-            "단지나 동네를 고르면 그 지역의 실거래 요약 한 줄이 노트 위에 붙습니다.",
-            "체크리스트에 답하고 사진·메모를 남깁니다. 로그인 없이도 이 기기에 임시저장됩니다.",
-            "저장할 때 로그인하면 사진이 올라가고, 내 노트 목록과 지도에서 다시 볼 수 있습니다.",
+            "단지나 동네를 고르면 그 지역의 실거래 요약 한 줄이 노트 위에 붙는다.",
+            "체크리스트에 답하고 사진·메모를 남긴다. 로그인 없이도 이 기기에 임시저장.",
+            "저장할 때 로그인하면 사진이 올라가고 내 노트 목록과 지도에서 다시 볼 수 있다.",
           ].map((t, i) => (
-            <li key={t} className="card flex gap-3 p-4">
-              <span className="t-num shrink-0 text-primary">{i + 1}</span>
+            <li key={t} className="flex gap-3 py-2.5">
+              <span className="t-num shrink-0 t-body font-bold text-primary">{i + 1}</span>
               <span className="t-body text-text-1">{t}</span>
             </li>
           ))}
         </ol>
-        <div className="mt-6 flex justify-center">
+        <div className="mt-6 flex justify-center max-md:mt-4">
           <LpCta label={CTA_LABEL} />
         </div>
         <p className="mt-4 text-center t-caption text-text-3">
-          실거래 수치는 국토교통부 신고 기반의 참고 자료이며 투자 권유가 아닙니다. 판단과 책임은
-          이용자에게 있습니다.
+          실거래 수치는 국토교통부 신고 기반의 참고 자료이며 투자 권유가 아닙니다. 판단과 책임은 이용자에게 있습니다.
         </p>
       </section>
     </PageShell>

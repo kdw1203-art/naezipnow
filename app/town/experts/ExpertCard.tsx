@@ -29,6 +29,8 @@ export type ExpertCardData = {
   consultations: number;
   /** 실측 또는 전문가가 적은 응답 안내 — 없으면 null */
   responseLabel: string | null;
+  /** [1015] 경력 문자열(전문가가 적은 값) — 이름 아래 신뢰 줄에 쓴다(숨고 카드 순서). 없으면 null */
+  experience: string | null;
   introduction: string;
   consultFeeLabel: string;
   verified: boolean;
@@ -64,9 +66,12 @@ export function ExpertCard({ e, index }: { e: ExpertCardData; index: number }) {
     reviews: e.reviews,
   });
 
+  /* [1015] 숨고 고수 카드의 정보 순서(사진 · 이름 → 평점·리뷰 수 → 경력 → 고용 수)를 따른다(브리프 규칙 M):
+     평점 별과 후기 수를 맨 아래 지표 줄에서 이름 바로 아래로 올리고, 경력을 그 옆에 둔다. 아래 줄은 상담료만.
+     새 데이터 없음 — 카드에 이미 실리던 값의 자리만 바꿨다. */
   return (
     <article
-      className={`card tile rise-in-${Math.min(index + 1, 6)} flex flex-col gap-3 p-5`}
+      className={`card tile rise-in-${Math.min(index + 1, 6)} flex flex-col gap-3 p-5 max-md:p-3.5`}
     >
       {/* 머리: 아바타 · 이름 · 인증 */}
       <div className="flex items-start gap-3">
@@ -99,6 +104,18 @@ export function ExpertCard({ e, index }: { e: ExpertCardData; index: number }) {
                 </span>
               )
             )}
+          </div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 t-caption text-text-2">
+            {e.reviews > 0 ? (
+              <span className="inline-flex items-center gap-1">
+                <Stars rating={e.rating} />
+                <b className="t-num text-ink">{e.rating.toFixed(1)}</b>
+                <span className="text-text-3">({e.reviews})</span>
+              </span>
+            ) : (
+              <span className="text-text-3">후기 아직 없음</span>
+            )}
+            {e.experience && <span>경력 {e.experience}</span>}
           </div>
           {trust && (
             <p className="mt-0.5 truncate t-caption text-text-2" title={trust}>
@@ -142,17 +159,11 @@ export function ExpertCard({ e, index }: { e: ExpertCardData; index: number }) {
       {/* 지표 — 실측만. 없는 건 지표처럼 보이지 않게 뺀다.
           [967 · 26] 답변 수·응답 안내·후기 건수는 위 신뢰 한 줄로 올라갔다 — 여기는
           평점 별(값)과 상담료만. */}
-      <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 t-caption text-text-3">
-        {e.reviews > 0 ? (
-          <span className="inline-flex items-center gap-1">
-            <Stars rating={e.rating} />
-            <b className="t-num text-ink">{e.rating.toFixed(1)}</b>
-          </span>
-        ) : (
-          <span>후기 아직 없음</span>
-        )}
-        {e.consultFeeLabel !== "—" && <span className="ml-auto">상담료 {e.consultFeeLabel}</span>}
-      </div>
+      {e.consultFeeLabel !== "—" && (
+        <div className="mt-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1 t-caption text-text-3">
+          <span>상담료 {e.consultFeeLabel}</span>
+        </div>
+      )}
 
       <div className="flex gap-2">
         {e.actionable && e.id ? (

@@ -47,7 +47,7 @@ export async function generateMetadata({
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-line bg-surface px-3 py-2.5">
-      <div className="text-[10px] text-text-3">{label}</div>
+      <div className="t-caption text-text-3">{label}</div>
       <div className="mt-0.5 text-[13px] font-bold text-ink">{value}</div>
     </div>
   );
@@ -176,19 +176,19 @@ export default async function DevDealDetailPage({
             </p>
             <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
               <div>
-                <div className="text-[10px] text-text-3">해당 구간</div>
+                <div className="t-caption text-text-3">해당 구간</div>
                 <div className="text-[13px] font-bold text-ink">
                   {commission.tierLabel}
                 </div>
               </div>
               <div>
-                <div className="text-[10px] text-text-3">기준 요율</div>
+                <div className="t-caption text-text-3">기준 요율</div>
                 <div className="text-[13px] font-bold text-ink">
                   {commission.rateText}
                 </div>
               </div>
               <div>
-                <div className="text-[10px] text-text-3">예상 수수료(기준)</div>
+                <div className="t-caption text-text-3">예상 수수료(기준)</div>
                 <div className="text-[15px] font-bold text-primary">
                   {commission.estimatedKrw != null
                     ? formatKrwEok(commission.estimatedKrw)

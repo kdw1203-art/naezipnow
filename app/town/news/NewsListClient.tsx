@@ -69,12 +69,11 @@ function NewsRowView({ row, lead = false }: { row: NewsRow; lead?: boolean }) {
      매체가 막으면(핫링크 차단·삭제) 같은 칸에 매체 이름 — 빈 회색 상자도, 들쭉날쭉한 행 높이도 없다. */
   const [thumbFailed, setThumbFailed] = useState(false);
   const thumb = Boolean(row.image) && !thumbFailed;
+  /* [1015 · 규칙 K] 글자 폴백(매체 이름 칸)은 뺐다 — 소유자: 뉴스는 원문 사진만, 템플릿·글자 썸네일 아님.
+     사진이 없으면 같은 크기의 빈 칸 + 선 아이콘(행 높이는 그대로). */
   const thumbFallback = (
-    <span
-      aria-hidden
-      className="absolute inset-0 flex items-center justify-center break-keep px-1 text-center t-caption font-bold text-text-3"
-    >
-      {row.source || "뉴스"}
+    <span aria-hidden className="absolute inset-0 flex items-center justify-center text-text-3">
+      <Icon name="newspaper" size={18} />
     </span>
   );
   return (

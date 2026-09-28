@@ -84,10 +84,10 @@ export function VisitVerifyCard({
           </button>
         )}
       </div>
+      {/* [1015 · 규칙 D] 설명 세 문장 → 사실 한 줄(개인정보 사실은 남긴다) */}
       <p className="t-sub text-text-3">
-        지금 단지 근처(2km 이내)에 있다면 노트에 &lsquo;현장 인증&rsquo; 배지가 붙어요. 버튼을 누를
-        때 한 번만 위치를 확인하며, 내 위치 좌표는 저장하지도 전송하지도 않습니다 — 거리
-        구간(50m 단위)만 남아요.
+        단지 2km 이내에서 누르면 &lsquo;현장 인증&rsquo; 표시. 좌표는 저장·전송하지 않고 50m 단위 거리만
+        남김.
       </p>
       {state === "far" && (
         <p className="t-sub font-bold text-warning">
@@ -96,7 +96,7 @@ export function VisitVerifyCard({
       )}
       {state === "denied" && (
         <p className="t-sub font-bold text-text-3">
-          위치 권한이 거부돼 인증을 건너뛰어요 — 인증 없이도 노트는 그대로 저장돼요.
+          위치 권한이 거부돼 인증을 건너뛰어요. 인증 없이도 노트는 저장돼요.
         </p>
       )}
       {state === "unsupported" && (

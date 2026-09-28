@@ -16,9 +16,9 @@ import { formatEokMan } from "@/lib/format/eok-man";
 export const revalidate = 86_400;
 
 export const metadata = buildPageMetadata({
-  title: "시세 예측 적중률 — 우리 성적표 공개",
+  title: "시세 예측 적중률 · 성적표 공개",
   description:
-    "내집나우 시세 예측(3개월 모멘텀 외삽)의 과거 적중률을 공개합니다. 예측 ±5% 안에 실제 평당가가 들어온 비율과 평균 오차 — 실측 그대로.",
+    "내집나우 시세 예측(3개월 모멘텀 외삽)의 과거 적중률을 공개합니다. 예측 ±5% 안에 실제 평당가가 들어온 비율과 평균 오차, 실측 그대로.",
   path: "/analysis/accuracy",
 });
 
@@ -29,19 +29,17 @@ export default async function AccuracyPage() {
     <PageShell breadcrumb="예측 적중률">
       <div className="mx-auto flex w-full max-w-[880px] flex-col gap-4">
         <div className="rise-in">
-          <h1 className="t-title text-ink">시세 예측, 얼마나 맞았나</h1>
-          <p className="mt-1.5 max-w-[62ch] t-body text-text-2">
-            ‘시세 예측’이 쓰는 것과 같은 규칙(직전 3개월 모멘텀 외삽)으로 과거{" "}
-            {BACKTEST.lookbackMonths}개월을 되짚어, 예측이 실제 평당가의 ±
-            {BACKTEST.hitBandPct}% 안에 들어온 비율을 공개합니다. 월 거래{" "}
-            {BACKTEST.minMonthlyTx}건 이상인 지역·월만 계산하며, 잘 나온 구간을
-            골라내지 않습니다.
+          {/* [1015 · 규칙 D] 물음형 제목 → 명사 · 설명 문단 → 사실 한 줄(숫자) */}
+          <h1 className="t-title text-ink">시세 예측 적중률</h1>
+          <p className="mt-1.5 max-w-[62ch] t-sub text-text-3">
+            직전 3개월 모멘텀 외삽 · 과거 {BACKTEST.lookbackMonths}개월 · 실제 평당가 ±{BACKTEST.hitBandPct}% 안 비율 · 월 거래{" "}
+            {BACKTEST.minMonthlyTx}건 이상 지역·월 전부(구간 선별 없음)
           </p>
         </div>
 
         {bt.total === 0 ? (
           <div className="card rounded-2xl px-5 py-8 text-center t-body font-bold text-text-3">
-            아직 계산 가능한 표본이 없어요 — 데이터가 쌓이면 이 자리에 성적표가 공개됩니다.
+            아직 계산 가능한 표본이 없어요.
           </div>
         ) : (
           <>

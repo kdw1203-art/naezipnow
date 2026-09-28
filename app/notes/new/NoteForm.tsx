@@ -475,6 +475,10 @@ function visitFromRevisit(seed: RevisitPrefill): Record<string, string> {
   return out;
 }
 
+/* [1015 · 규칙 D] 단계 이름은 명사로 — lib/notes/form-steps 의 title 은 물음형("어디를 봤나요")이라 화면에서는
+   이 표를 쓴다(lib 는 통합자 소유 · 보고서에 같은 값으로 바꿔 달라고 적었다). short(어디·무엇·기록)는 탭 그대로. */
+const STEP_TITLE: Record<NoteStep, string> = { 1: "위치와 방문 정보", 2: "현장 체크", 3: "메모와 판단" };
+
 /* [995 · 5a] 1단계 도우미 — 세 카드(AI 초안·음성 메모·현장 브리핑)를 한 줄 탭으로 */
 type HelperTab = "ai" | "voice" | "brief";
 
@@ -1306,10 +1310,10 @@ export function NoteForm({
   const autosaveStatus = draftPending
     ? "임시저장 대기 중…"
     : autosaveFailed
-      ? "이 기기에 임시저장을 못 했어요 — 저장소 접근이 막혀 있어요"
+      ? "이 기기에 임시저장을 못 했어요. 저장소 접근이 막혀 있어요"
       : lastAutosaveAt
         ? `${clockLabel(lastAutosaveAt) ?? ""} 임시저장됨`.trim()
-        : "입력하면 이 기기에 자동 임시저장돼요";
+        : "입력 시 이 기기에 자동 임시저장";
   /* [1005 · B3] 상단 바용 짧은 꼴 — 390px 에서 버튼 옆에 들어가야 한다. 같은 사실, 적은 글자 */
   const autosaveShort = draftPending
     ? "저장 대기 중…"
@@ -1317,7 +1321,7 @@ export function NoteForm({
       ? "임시저장 실패"
       : lastAutosaveAt
         ? "이 기기에 자동 저장"
-        : "입력하면 자동 저장";
+        : "입력 시 자동 저장";
   const draftButtonLabel =
     !draftPending && !autosaveFailed && lastAutosaveAt
       ? `저장됨 ${clockLabel(lastAutosaveAt) ?? ""}`.trim()
@@ -1775,8 +1779,8 @@ export function NoteForm({
       if (!stored) {
         setSaveError(
           isOffline
-            ? "오프라인이고 이 브라우저에 사진을 담아 둘 수 없어요 — 연결된 뒤에 다시 담아 주세요."
-            : "이 브라우저에 사진을 담아 둘 수 없어요 — 로그인한 뒤 다시 담아 주세요.",
+            ? "오프라인이고 이 브라우저에 사진을 담아 둘 수 없어요. 연결된 뒤에 다시 담아 주세요."
+            : "이 브라우저에 사진을 담아 둘 수 없어요. 로그인한 뒤 다시 담아 주세요.",
         );
       }
       return;
@@ -1869,7 +1873,7 @@ export function NoteForm({
     if (uploading) {
       if (!saveAfterUpload) {
         setSaveAfterUpload(true);
-        showToast("사진을 올리는 중이에요 — 끝나면 저장돼요");
+        showToast("사진을 올리는 중이에요. 끝나면 저장돼요");
       }
       return;
     }
@@ -2085,7 +2089,7 @@ export function NoteForm({
         showToast(`남은 사진 ${stays}장은 이 노트의 수정 화면에서 올릴 수 있어요`);
       }
       if (leftover.removed > 0) {
-        showToast(`${leftover.removed}장은 올라가지 않았어요 — 수정 화면에서 다시 담아 주세요`);
+        showToast(`${leftover.removed}장은 올라가지 않았어요. 수정 화면에서 다시 담아 주세요`);
       }
       /* [1007 · P2] GA4 note_saved — 동의 게이트 뒤에서만, 범주값만(id·이메일 없음).
          첫 로드 예산(470KB)을 지키려 저장 순간에만 모듈을 내려받는다 — 실패해도 저장 흐름과 무관. */
@@ -2108,12 +2112,12 @@ export function NoteForm({
       const offline = typeof navigator !== "undefined" && navigator.onLine === false;
       setSaveError(
         offline
-          ? "오프라인이에요 — 작성 내용은 이 기기에 초안으로 안전하게 보관 중입니다. 연결이 돌아오면 저장을 다시 눌러 주세요."
+          ? "오프라인이에요. 작성 내용은 이 기기에 초안으로 보관 중입니다. 연결이 돌아오면 저장을 다시 눌러 주세요."
           : "네트워크 오류로 저장하지 못했어요. 작성 내용은 초안으로 보관 중이니 연결을 확인한 뒤 다시 시도해 주세요.",
       );
       if (offline && typeof window !== "undefined") {
         const onBack = () => {
-          setSaveError("연결이 돌아왔어요 — 지금 저장을 다시 누르면 이어서 제출됩니다.");
+          setSaveError("연결이 돌아왔어요. 저장을 다시 누르면 이어서 제출됩니다.");
           window.removeEventListener("online", onBack);
         };
         window.addEventListener("online", onBack);
@@ -2136,7 +2140,7 @@ export function NoteForm({
     /* [M2] 실패한 장이 있으면 저장하지 않는다 — 이동해 버리면 실패를 볼 기회가 없다 */
     const failed = uploads.filter((u) => u.status === "failed").length;
     if (failed > 0) {
-      setSaveError(`사진 ${failed}장이 올라가지 않았어요 — 다시 시도하거나 빼고 저장해 주세요`);
+      setSaveError(`사진 ${failed}장이 올라가지 않았어요. 다시 시도하거나 빼고 저장해 주세요`);
       return;
     }
     void handleSaveRef.current();
@@ -2175,16 +2179,14 @@ export function NoteForm({
         <Icon name="📷" size={16} className="inline shrink-0 align-middle" />
         <span className="truncate">
           {/* [970 · B-23] 퀵모드는 촬영 버튼이 앞에 와 폭이 좁다 — 짧은 라벨 */}
+          {/* [1015 · 규칙 D] 권유문("현장이면 지금 찍어 두세요")은 뺐다 */}
           {uploading
             ? "업로드 중…"
-            : quickMode
-              ? `사진 담기${photos.length > 0 ? ` (${photos.length}/${MAX_PHOTOS})` : ""}`
-              : photos.length > 0
-                ? `사진 먼저 담기 (${photos.length}/${MAX_PHOTOS})`
-                : "사진 먼저 담기 — 현장이면 지금 찍어 두세요"}
+            : `사진 담기${photos.length > 0 ? ` (${photos.length}/${MAX_PHOTOS})` : ""}`}
         </span>
       </button>
     );
+    /* [1015 · 규칙 J] 퀵모드의 촬영 버튼도 채움 파랑이 아니라 테두리 — 채움은 저장 하나 */
     const captureBtn = (
       <button
         key="capture"
@@ -2192,11 +2194,7 @@ export function NoteForm({
         onClick={() => captureRef.current?.click()}
         disabled={uploading || photos.length >= MAX_PHOTOS}
         aria-label="카메라로 촬영해 사진 추가"
-        className={`flex min-h-[44px] shrink-0 items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 t-body font-bold disabled:opacity-60 pointer-fine:hidden ${
-          quickMode
-            ? "btn-primary"
-            : "border-[1.5px] border-line-strong bg-surface text-text-1"
-        }`}
+        className="flex min-h-[44px] shrink-0 items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-line-strong bg-surface px-4 py-2.5 t-body font-bold text-text-1 disabled:opacity-60 pointer-fine:hidden"
       >
         <Icon name="camera" size={16} className="inline shrink-0 align-middle" />
         촬영
@@ -2238,7 +2236,7 @@ export function NoteForm({
   /* [1005 · B4] 7항목 중 6개가 선택인데 "1/7 항목 입력"은 실패처럼 읽혔다(위치만
      있으면 완전한 노트다). 상단 바는 **단계**를 말하고, 항목 수는 2개 이상 채웠을
      때만 "잘 채워지고 있어요"로 — 필수처럼 보이게 하지 않는다. */
-  const fillPill = progressDone >= 2 ? `잘 채워지고 있어요 · ${progressDone}/${progressItems.length}` : null;
+  const fillPill = progressDone >= 2 ? `입력 ${progressDone}/${progressItems.length}` : null;
   /* [984] 단계 완료 표시 — 위 progressItems 와 **같은 값**을 본다. 두 곳에서 따로
      세면 한쪽만 고쳐져 진행 바와 탭이 다른 말을 하게 된다. */
   const doneByStep = stepDone({
@@ -2301,8 +2299,8 @@ export function NoteForm({
           </h1>
           <div className="truncate t-caption text-text-3">
             {quickMode
-              ? "현장 퀵 기록 · 위치와 한 줄이면 돼요"
-              : `${step}단계 · ${NOTE_STEPS[step - 1].short} · ${step}/${NOTE_STEPS.length}`}
+              ? "현장 퀵 기록 · 위치 · 사진 · 한 줄"
+              : `${step}단계 · ${STEP_TITLE[step]} · ${step}/${NOTE_STEPS.length}`}
           </div>
         </div>
         {/* [967 · 10] 수정 모드도 임시저장이 도니 버튼을 같이 보인다.
@@ -2324,22 +2322,11 @@ export function NoteForm({
         </div>
       </div>
 
+      {/* [1015 · 규칙 B·C] 설명 두 문장짜리 파란 띠 → 사실 한 줄, 흰 카드 */}
       {(preferAi || fromWelcome) && !isEdit && (
-        <div
-          role="status"
-          className="mt-2.5 rounded-lg border border-primary/25 bg-primary-soft px-3.5 py-2.5 t-sub text-text-1"
-        >
-          {fromWelcome ? (
-            <>
-              <b className="text-primary">온보딩 루프</b> — 저장하면 AI 정리를 바로 요청하고,
-              이어서 지도에서 후보를 비교해요. 결과는 노트에서 볼 수 있어요.
-            </>
-          ) : (
-            <>
-              <b className="text-primary">AI 정리 경로</b> — 노트를 저장하면 AI 정리를 바로
-              요청해요. 결과(LLM 또는 &quot;규칙 기반&quot; 배지)는 노트에서 확인합니다.
-            </>
-          )}
+        <div role="status" className="card mt-2.5 rounded-lg px-3.5 py-2.5 t-sub text-text-2">
+          저장 시 AI 정리 자동 요청 · 결과는 노트에서
+          {fromWelcome ? " · 이어서 지도 비교" : ""}
         </div>
       )}
 
@@ -2351,7 +2338,7 @@ export function NoteForm({
           aria-valuemin={1}
           aria-valuemax={NOTE_STEPS.length}
           aria-valuenow={step}
-          aria-label={`작성 단계 ${step}/${NOTE_STEPS.length} · ${NOTE_STEPS[step - 1].title}`}
+          aria-label={`작성 단계 ${step}/${NOTE_STEPS.length} · ${STEP_TITLE[step]}`}
         >
           <div
             className="absolute left-0 top-0 h-1 rounded-sm bg-primary transition-[width] duration-300"
@@ -2379,7 +2366,7 @@ export function NoteForm({
                   type="button"
                   onClick={() => goStep(st.n)}
                   aria-current={active ? "step" : undefined}
-                  aria-label={`${st.n}단계 ${st.title}${doneByStep[st.n] ? " · 입력함" : ""}`}
+                  aria-label={`${st.n}단계 ${STEP_TITLE[st.n]}${doneByStep[st.n] ? " · 입력함" : ""}`}
                   className={`note-step-btn flex min-h-[44px] w-full items-center justify-center gap-1 rounded-lg px-1 t-sub font-bold transition-colors ${
                     active
                       ? "bg-surface text-ink"
@@ -2403,11 +2390,9 @@ export function NoteForm({
         </ol>
         <div className="mt-2 flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <span className="t-body font-bold text-ink">
-              {NOTE_STEPS[step - 1].title}
-            </span>{" "}
+            <span className="t-body font-bold text-ink">{STEP_TITLE[step]}</span>{" "}
             <span className="t-sub text-text-3">{NOTE_STEPS[step - 1].hint}</span>
-            {/* [1005 · B4] 기록 완성도 — 2개 이상 채웠을 때만, 긍정문으로. 필수가 아니다 */}
+            {/* [1005 · B4] 기록 완성도 — 2개 이상 채웠을 때만. 필수가 아니다. [1015] 문구는 숫자만("입력 3/7") */}
             {fillPill && (
               <span className="ml-1.5 inline-block rounded-full bg-primary-soft px-2 py-0.5 t-caption font-bold text-primary">
                 {fillPill}
@@ -2441,10 +2426,9 @@ export function NoteForm({
                 오프라인에서 담은 사진은 이 기기(IndexedDB)에 보관되고 연결이
                 돌아오면 자동으로 올라간다. 문구가 낡은 채로 남으면 사용자는
                 할 수 있는 일을 안 한다. */}
-            <p className="text-xs leading-[1.6] text-warning">
-              <b>오프라인이에요.</b> 입력 내용과 담은 사진은 이 기기에 보관되고
-              있어요. 연결이 돌아오면 사진은 자동으로 올라가고, 저장을 한 번
-              눌러 주시면 그대로 이어서 제출됩니다.
+            <p className="t-sub leading-[1.6] text-warning">
+              <b>오프라인.</b> 입력과 사진은 이 기기에 보관 중. 연결이 돌아오면 사진은 자동
+              업로드, 저장은 한 번 더 누르면 됩니다.
             </p>
           </div>
         )}
@@ -2459,11 +2443,9 @@ export function NoteForm({
             <div className="flex items-center gap-2.5">
               <Icon name="📥" size={16} className="shrink-0" />
               <p className="min-w-0 flex-1 t-sub leading-[1.6] text-text-1">
-                이 기기에 담아 둔 사진 <b>{queuedPhotos}장</b> —{" "}
+                이 기기에 담아 둔 사진 <b>{queuedPhotos}장</b> ·{" "}
                 {/* [1005 · A2] 비회원이면 로그인 뒤, 아니면 연결되면 — 사실대로 */}
-                {isGuest === true
-                  ? "저장할 때 로그인하면 함께 올라가요."
-                  : "연결되면 자동으로 올라가요."}
+                {isGuest === true ? "저장 시 로그인하면 함께 업로드" : "연결되면 자동 업로드"}
               </p>
               {isGuest === true ? (
                 <button
@@ -2499,7 +2481,7 @@ export function NoteForm({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={p.url} alt="" className="h-12 w-16 rounded-lg object-cover" />
                     <span className="absolute inset-x-0 bottom-0 rounded-b-lg bg-brand-navy/80 px-1 text-center t-caption font-bold text-on-dark">
-                      {isGuest === true ? "로그인 뒤 올라가요" : "연결되면 올라가요"}
+                      {isGuest === true ? "로그인 후" : "연결 후"}
                     </span>
                   </li>
                 ))}
@@ -2517,17 +2499,18 @@ export function NoteForm({
           >
             <Icon name="📝" size={18} className="shrink-0" />
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-bold text-ink">
-                {isEdit ? "저장하지 않은 수정 내용이 있어요" : "작성 중이던 노트가 있어요"}
+              <div className="t-sub font-bold text-ink">
+                {isEdit ? "저장하지 않은 수정본" : "작성 중이던 노트"}
               </div>
               {draftSavedLabel && (
                 <div className="t-caption text-text-3">{draftSavedLabel}</div>
               )}
             </div>
+            {/* [1015 · 규칙 J] 채움 파랑(bg-primary) → outline. 이 화면의 채움은 저장 버튼 하나 */}
             <button
               type="button"
               onClick={restoreDraft}
-              className="shrink-0 rounded-lg bg-primary px-3 py-2 t-sub font-bold text-white"
+              className="btn-outline shrink-0 rounded-lg px-3 py-2 t-sub font-bold"
             >
               {isEdit ? "복원" : "이어서 쓰기"}
             </button>
@@ -2542,29 +2525,23 @@ export function NoteForm({
         )}
 
         {/* 템플릿 적용 안내 */}
+        {/* [1015 · 규칙 C·D] 파란 띠 → 흰 카드, 문장 → 사실 한 줄 */}
         {template && !isEdit && (
-          <div className="rise-in flex items-center gap-2.5 rounded-lg border border-primary/20 bg-primary-soft px-4 py-3">
+          <div className="rise-in card flex items-center gap-2.5 rounded-lg px-4 py-3">
             <Icon name="notebook-pen" size={16} className="shrink-0 text-primary" />
-            <div className="min-w-0 flex-1 text-xs text-text-2">
-              <b className="text-primary">{template.title}</b> 템플릿 적용 — 점검
-              항목 {todoItems.length}개가 고려사항 체크리스트에 채워졌어요.
+            <div className="min-w-0 flex-1 t-sub text-text-2">
+              <b className="text-primary">{template.title}</b> 템플릿 · 고려사항 {todoItems.length}개 채움
             </div>
           </div>
         )}
 
-        {/* 로그인 없이 작성 안내 — [1005 · A2] 이제 사실인 문장만: 사진·AI 초안은 저장 때
-            로그인하면 함께 간다(비회원의 사진은 이 기기에 담긴다). 비회원이 **확정**됐을 때만 —
-            모름(null) 동안 띄우면 로그인한 사람에게 한 번 깜빡인다 */}
-        {!isEdit && isGuest === true && (
-          <div className="rise-in rounded-lg border border-primary/20 bg-primary-soft px-4 py-3 text-center text-xs font-semibold text-primary">
-            로그인 없이 써도 돼요 — 사진·AI 초안은 저장할 때 로그인하면 함께 올라가요.
-          </div>
-        )}
+        {/* [1015 · 규칙 B] 비회원 안내 띠("로그인 없이 써도 돼요 — …")는 지웠다 — 저장 버튼 아래
+            "저장할 때만 로그인" 한 줄이 같은 사실을 말한다. 담아 둔 사진 안내(queuedPhotos)는 그대로. */}
 
         {/* [970 · B-12] 로그인 안내도 상단에 — 저장 바(B-11)에서 401 을 받은 사람은 폼 중간에 있다 */}
         {needLogin && (
-          <div className="rounded-lg border border-primary/20 bg-primary-soft px-4 py-3 text-center t-body text-primary">
-            저장하려면 로그인이 필요해요 — 작성한 내용은 유지돼요.{" "}
+          <div className="card rounded-lg px-4 py-3 text-center t-body text-primary">
+            저장에는 로그인이 필요해요. 작성한 내용은 유지돼요.{" "}
             <Link href={loginHref} className="inline-block py-[5px] font-bold underline underline-offset-2">
               로그인하기 ›
             </Link>
@@ -2613,11 +2590,11 @@ export function NoteForm({
                   <span className="block t-caption text-text-3">
                     {isPublic
                       ? visibilityFromPrefs
-                        ? "설정에서 정한 기본값: 공개 · 공개 피드에 노출돼요"
-                        : "공개 피드에 노출돼요"
+                        ? "설정에서 정한 기본값: 공개 · 공개 피드 노출"
+                        : "공개 피드 노출"
                       : visibilityFromPrefs
-                        ? "설정에서 정한 기본값: 비공개 · 나만 볼 수 있어요"
-                        : "나만 볼 수 있어요"}
+                        ? "설정에서 정한 기본값: 비공개 · 나만 보기"
+                        : "나만 보기"}
                   </span>
                 </span>
                 <Switch on={isPublic} />
@@ -2638,7 +2615,7 @@ export function NoteForm({
                 저장
               </ActionButton>
               <div className="flex items-center justify-between">
-                <span className="t-caption text-text-3">저장할 때만 로그인 · 나머지는 나중에 채워도 돼요</span>
+                <span className="t-caption text-text-3">저장할 때만 로그인 · 나머지는 나중에</span>
                 <button
                   type="button"
                   onClick={() => setQuickMode(false)}
@@ -2659,27 +2636,25 @@ export function NoteForm({
         <div className={step === 1 ? "flex flex-col gap-3" : "hidden"}>
         {/* [995 · 3] 회차 배너 — 무엇을 이어받았고 무엇은 새로 적는지 먼저 말한다.
             말없이 채워진 칸은 도움이 아니라 불안이다(984 · 05 와 같은 원칙). */}
+        {/* [1015 · 규칙 C·D] 파란 띠 → 흰 카드, 설명 문장 → 사실 나열 */}
         {revisitActive && revisitSeed && (
-          <div
-            role="status"
-            className="rise-in flex flex-col gap-1.5 rounded-lg border border-primary/20 bg-primary-soft px-4 py-3"
-          >
+          <div role="status" className="rise-in card flex flex-col gap-1.5 rounded-lg px-4 py-3">
             <div className="flex items-start gap-2.5">
               <Icon name="🔁" size={18} className="shrink-0 text-primary" />
               <div className="min-w-0 flex-1">
-                <div className="text-xs font-bold text-ink">
+                <div className="t-sub font-bold text-ink">
                   {/* [1006] "3개월 전" — 언제 기록과 비교하는지 날짜만 두면 현장에서 셈을 해야 한다 */}
                   재방문 ·{" "}
                   {revisitSeed.previousAgoLabel
                     ? `${revisitSeed.previousAgoLabel}(${revisitSeed.previousVisitDate})`
                     : revisitSeed.previousVisitDate}{" "}
-                  기록을 불러왔어요
+                  기록 불러옴
                 </div>
                 <div className="t-caption text-text-3">
-                  위치·태그·체크는 그대로, 사진과 메모는 새로 적습니다 ·{" "}
+                  위치·태그·체크 이어받음 · 사진·메모는 새로 ·{" "}
                   {revisitLinked
-                    ? `이번이 ${revisitSeed.round}회차 · 저장하면 노트에서 지난 기록과 달라진 점을 비교해요`
-                    : "다른 단지를 골라 회차로는 묶지 않아요"}
+                    ? `${revisitSeed.round}회차 · 저장 후 노트에서 지난 기록과 비교`
+                    : "다른 단지 · 회차로 묶지 않음"}
                 </div>
               </div>
             </div>
@@ -2717,7 +2692,8 @@ export function NoteForm({
             위치를 안 골랐을 때만. 언제 것인지 밝혀 준다("3일 전") — 모르는 값이
             저절로 채워지면 도움이 아니라 불안이다. 한 번 쓰거나 닫으면 사라진다. */}
         {!isEdit && carryOver && !carryOverUsed && !loc.aptName.trim() && (
-          <div className="rise-in flex items-center gap-2.5 rounded-lg border border-primary/20 bg-primary-soft px-4 py-3">
+          /* [1015 · 규칙 C] 파란 띠 → 흰 카드 */
+          <div className="rise-in card flex items-center gap-2.5 rounded-lg px-4 py-3">
             <Icon name="📍" size={18} className="shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="truncate t-body font-bold text-ink">
@@ -2740,7 +2716,7 @@ export function NoteForm({
                 });
                 setCarryOverUsed(true);
               }}
-              className="chip shrink-0 border border-primary bg-primary-soft px-3 t-sub font-bold text-primary"
+              className="chip shrink-0 border border-line-strong bg-surface px-3 t-sub font-bold text-primary"
             >
               이어받기
             </button>
@@ -2857,7 +2833,7 @@ export function NoteForm({
                         promptSignup({
                           action: "note_ai_draft",
                           title: "AI 초안은 로그인 후 받을 수 있어요",
-                          benefit: "로그인하면 실거래·시세 데이터로 첫 초안을 채워 드려요. 적은 내용은 그대로 남아요.",
+                          benefit: "로그인하면 실거래·시세 데이터로 초안이 채워져요. 적은 내용은 그대로 남아요.",
                           callbackUrl: window.location.pathname + window.location.search,
                         })
                       }
@@ -2886,9 +2862,9 @@ export function NoteForm({
                     <p className="rounded-lg border border-line bg-surface px-4 py-3 t-sub text-text-3">
                       {fieldContext === null
                         ? loc.region.trim()
-                          ? "아직 이 지역의 브리핑이 없어요 — 위치를 고른 직후라면 잠시 뒤 다시 열어 보세요."
-                          : "위치를 고르면 이 지역의 시세·공기질·개발계획을 여기서 봐요."
-                        : "이 지역은 아직 실을 만한 시세·공기질·개발계획 데이터가 없어요."}
+                          ? "이 지역 브리핑 없음. 위치를 고른 직후라면 잠시 뒤 다시."
+                          : "위치를 고르면 시세·공기질·개발계획 표시"
+                        : "이 지역 시세·공기질·개발계획 데이터 없음"}
                     </p>
                   )}
                 </div>
@@ -2966,7 +2942,7 @@ export function NoteForm({
               />
               {visitDateFromPhoto && (
                 <span role="status" className="t-caption text-text-3">
-                  사진 촬영일로 채웠어요
+                  사진 촬영일
                 </span>
               )}
             </div>
@@ -2999,7 +2975,7 @@ export function NoteForm({
                   className="self-start rounded-lg border border-line bg-bg px-2.5 py-1.5 text-left t-sub text-text-2"
                 >
                   제안 · {weatherHint.slice(0, 48)}
-                  {weatherHint.length > 48 ? "…" : ""} (탭하여 적용)
+                  {weatherHint.length > 48 ? "…" : ""}
                 </button>
               )}
               <input
@@ -3022,17 +2998,16 @@ export function NoteForm({
         {/* [984] 예전 [#68] 퀵모드 배너("세부 항목 펼치기")를 걷었다 — 접힌 섹션을
             여는 통로였는데, 이제 그 섹션들이 **2단계 자체**라 열 것이 없다.
             대신 이 단계가 건너뛰어도 되는 곳이라는 사실만 한 줄로 적는다. */}
-        <p className="t-sub text-text-3">
-          여기는 비워 둬도 저장됩니다 — 기억나는 것만 누르고 넘어가세요.
-        </p>
+        {/* [1015 · 규칙 B] "여기는 비워 둬도 저장됩니다 — 기억나는 것만 누르고 넘어가세요" 사용법 문장은 지웠다 —
+            아래 "여기까지 저장" 버튼이 같은 사실을 말한다. */}
 
         {/* 현장 체크 — 세그먼트 평가 (9항목 → 5축 점수) */}
         <div className="rise-in-3 card flex flex-col gap-2.5 p-4">
-          <div className="text-[13px] font-bold text-ink">
+          <div className="t-body font-bold text-ink">
             현장 체크{" "}
-            <span className="text-xs font-medium text-text-3">
+            <span className="t-sub font-medium text-text-3">
               {/* [970 · B-10] 고른 항목만 점수가 된다는 걸 여기서 말한다 */}
-              고른 항목만 점수에 들어가요 · {countCheckedItems(checks)}/{CHECK_KEYS.length}
+              고른 항목만 점수 반영 · {countCheckedItems(checks)}/{CHECK_KEYS.length}
             </span>
           </div>
           {/* [995 · 3] 지난 체크 — 읽기만. 지난 값을 칸에 채워 두면 안 본 것을 본 것처럼
@@ -3272,8 +3247,8 @@ export function NoteForm({
       {!quickMode && (
       <div ref={ctaRef} className="mt-4 flex flex-col gap-2">
         {needLogin && (
-          <div className="rounded-lg border border-primary/20 bg-primary-soft px-4 py-3 text-center t-body text-primary">
-            저장하려면 로그인이 필요해요 — 작성한 내용은 유지돼요.{" "}
+          <div className="card rounded-lg px-4 py-3 text-center t-body text-primary">
+            저장에는 로그인이 필요해요. 작성한 내용은 유지돼요.{" "}
             <Link href={loginHref} className="inline-block py-[5px] font-bold underline underline-offset-2">
               로그인하기 ›
             </Link>
@@ -3367,7 +3342,7 @@ export function NoteForm({
                 </div>
               ) : needLogin ? (
                 <div role="status" className="truncate t-caption font-bold text-primary">
-                  저장하려면 로그인이 필요해요 — 작성한 내용은 유지돼요
+                  저장에는 로그인이 필요해요. 작성한 내용은 유지돼요
                 </div>
               ) : (
                 <div role="status" className="truncate t-caption text-text-3">

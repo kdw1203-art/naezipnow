@@ -131,7 +131,8 @@ export function ComplexPicker({
   initialApt,
   showChip = true,
   clearOnSelect = false,
-  placeholder = "단지명으로 검색 (예: 공작아파트)",
+  /* [1015 · 규칙 B] 예시("예: 공작아파트")는 걷었다 */
+  placeholder = "단지명 검색",
   label = "단지 선택",
   labelClassName = "text-text-3",
   onMapClick,
@@ -476,7 +477,7 @@ export function ComplexPicker({
         />
       )}
 
-      {loading && <span className="text-[10px] text-text-3">검색 중…</span>}
+      {loading && <span className="t-caption text-text-3">검색 중…</span>}
 
       {showChip && selected && <PickedChip picked={selected} />}
     </div>

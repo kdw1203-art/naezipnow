@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AdSenseUnit } from "@/app/components/ads/AdSenseUnit";
+import { AdZone } from "@/app/components/ads/AdZone";
+import { Explain } from "@/app/components/explain/Explain";
 import { PageShell } from "../components/PageShell";
 import {
   getTxCoverage,
@@ -155,29 +156,38 @@ export default async function TxIndexPage() {
         }}
       />
 
-      <p className="rise-in mb-5 t-body text-text-2">
-        국토교통부 아파트 매매 실거래 신고분을 지역 × 면적대·가격대로 나눠 정리했습니다.
-        {total > 0 && (
+      {/* [1015 · 규칙 B] 설명 문단 → 사실 한 줄(지역 수 · 건수 · 기간 · 출처). 집계 범위 설명과 "읽는 법" 네 줄은 ⓘ 하나로 접는다.
+          숫자는 전부 실데이터(listTxRegions·getTxCoverage). */}
+      <p className="rise-in mb-4 flex flex-wrap items-center gap-x-1 t-sub text-text-2 max-md:mb-3">
+        {total > 0 ? (
           <>
-            {" "}
-            현재 <strong className="text-ink">{regions.length}개 지역</strong> ·{" "}
-            <strong className="text-ink">{total.toLocaleString("ko-KR")}건</strong>이
-            구간으로 정리돼 있습니다{range && ` (${range} 신고 기준)`}.
+            <strong className="text-ink">{regions.length}개 지역</strong> ·{" "}
+            <strong className="text-ink">{total.toLocaleString("ko-KR")}건</strong>
+            {range && ` · ${range} 신고 기준`} · 국토교통부 실거래 · 매물 호가 아님
           </>
-        )}{" "}
-        매물 호가가 아니라 실제 체결·신고된 금액입니다.
-        {uncovered > 0 && coverage && (
-          <>
-            {" "}
-            같은 기간 면적이 확인된 신고분{" "}
-            <strong className="text-ink">{coverage.totalTx.toLocaleString("ko-KR")}건</strong> 가운데,
-            구간당 {MIN_BAND_TX}건에 못 미쳐 페이지를 만들지 않은{" "}
-            <strong className="text-ink">{uncovered.toLocaleString("ko-KR")}건</strong>은 위 숫자에서
-            빠져 있습니다.
-          </>
+        ) : (
+          <>국토교통부 아파트 매매 실거래 · 지역 × 면적대·가격대 · 매물 호가 아님</>
         )}
+        <Explain
+          title="이 숫자를 읽는 법"
+          body={[
+            "실거래 신고가. 매물 호가·중개사 제시가가 아니며, 계약 후 신고까지 시차가 있어 최근 달은 건수가 더 늘어날 수 있다.",
+            "면적은 전용면적 기준. 분양면적(공급면적)으로 부르는 평수와 다르다.",
+            "구간 평균은 그 구간에 신고된 거래만의 평균. 지역 전체나 특정 단지의 현재 가격이 아니다.",
+            `거래 ${MIN_BAND_TX}건 미만 구간은 평균이 한두 건에 흔들려 페이지를 만들지 않고, 그 거래는 위 합계에도 넣지 않았다.`,
+            ...(uncovered > 0 && coverage
+              ? [
+                  `같은 기간 면적이 확인된 신고분 ${coverage.totalTx.toLocaleString("ko-KR")}건 가운데 구간당 ${MIN_BAND_TX}건에 못 미친 ${uncovered.toLocaleString("ko-KR")}건은 위 숫자에서 빠져 있다.`,
+                ]
+              : []),
+          ]}
+          source={`국토교통부 실거래가 공개시스템${range ? ` · ${range} 신고분` : ""} · 해제 신고분 제외`}
+        />
       </p>
 
+      {/* [1015 · 규칙 F·G] 데스크톱 2단 — 본문(지역 목록) + 340px 레일(관련 용어 · 관련 화면 · 데이터 출처 · 광고 1). 폰은 한 열, 광고는 끝 1. */}
+      <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
+      <div className="min-w-0">
       {loadError ? (
         <section className="rise-in-1 card p-[var(--pad-card)]">
           {/* 모바일 실측 18 — py-8 은 세 줄 문구에 화면의 40% 를 차지했다. 문구는
@@ -198,13 +208,10 @@ export default async function TxIndexPage() {
           </p>
         </section>
       ) : (
-        <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
-          <h2 className="t-section text-ink">
-            지역{" "}
-            <span className="t-sub font-medium text-text-3">
-              거래 많은 순 · 구간별 페이지로 이동
-            </span>
-          </h2>
+        <section className="rise-in-1 card p-[var(--pad-card)]">
+          {/* [1015 · 규칙 C] 제목 옆 부연("구간별 페이지로 이동") 삭제 — 정렬 기준만 캡션으로 */}
+          <h2 className="t-section text-ink">지역</h2>
+          <p className="mt-0.5 t-caption text-text-3">거래 많은 순</p>
           {/* 웹13 — 1440px 에서 3열이 성겨 보였다 → xl 4열. "거래 많은 순"
               정렬 근거를 미니바로 시각화 — 최대 지역 대비 비율이라 축이
               하나뿐이고, 수치는 이미 옆에 그대로 적혀 있다(막대는 보조). */}
@@ -216,7 +223,7 @@ export default async function TxIndexPage() {
             const maxTx = regions.reduce((m, r) => Math.max(m, r.txCount), 0);
             const groups = groupBySido(regions, (r) => r.name, (r) => r.txCount);
             return (
-              <div className="mt-3 flex flex-col gap-2">
+              <div className="mt-3 flex flex-col gap-2 max-md:mt-2">
                 {groups.map((g, gi) => {
                   const groupTx = g.items.reduce((sum, r) => sum + r.txCount, 0);
                   return (
@@ -275,80 +282,47 @@ export default async function TxIndexPage() {
         </section>
       )}
 
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">이 숫자를 읽는 법</h2>
-        {/* [1005] 문장 속 용어 링크를 24px 히트로 세우면 그 줄만 높아진다 — 목록 줄 간격을
-            24px 로 맞춰 링크 있는 줄과 없는 줄이 같은 높이로 선다(.t-body 는 레이어 밖이라
-            leading-* 유틸리티가 지지 않도록 인라인으로) */}
-        <ul className="mt-2 space-y-1.5 t-body text-text-2" style={{ lineHeight: "24px" }}>
-          {/* 항목 14 — 용어 첫 등장에 용어사전 링크(전 페이지 도배가 아니라
-              읽는 법 안내에서 한 번씩만). */}
-          <li>
-            ·{" "}
-            <Link href="/glossary/silgeoraega" className="inline-flex min-h-[24px] min-w-[24px] items-center justify-center font-bold text-ink underline decoration-line underline-offset-2">
-              실거래 신고가
+      {/* [1015 · 규칙 B] "이 숫자를 읽는 법" 설명 블록은 위 ⓘ 로 접었다. 용어 링크(항목 14)와 관련 화면 링크는 오른쪽 레일로. */}
+      {/* [961 → 1015 · 규칙 G] 페이지 끝 광고 1 — 예전 AdSenseUnit(읽는 법 아래·데스크톱 전용) 자리 */}
+      <AdZone placement="page_bottom" seed={5} plan={null} className="mt-6 max-md:mt-4" />
+      </div>
+
+      <aside className="flex flex-col gap-3 lg:sticky lg:top-[76px] lg:self-start">
+        {/* 항목 14 — 용어 첫 등장에 용어사전 링크. [1015] 문장 속 링크 → 레일의 행 목록 */}
+        <nav aria-label="관련 용어" data-tone="hanji" className="lq-panel flex flex-col divide-y">
+          {[
+            ["/glossary/silgeoraega", "실거래 신고가"],
+            ["/glossary/hoga", "호가"],
+            ["/glossary/jeonyongmyeonjeok", "전용면적"],
+            ["/glossary/gonggeupmyeonjeok", "공급면적(분양면적)"],
+          ].map(([href, label]) => (
+            <Link key={href} href={href} className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline">
+              {label} <span aria-hidden="true" className="text-text-3">›</span>
             </Link>
-            입니다. 매물{" "}
-            <Link href="/glossary/hoga" className="inline-flex min-h-[24px] min-w-[24px] items-center justify-center font-bold text-ink underline decoration-line underline-offset-2">
-              호가
-            </Link>
-            ·중개사 제시가가 아니며, 계약 후 신고까지 시차가 있어 최근 달은 건수가 더 늘어날 수
-            있습니다.
-          </li>
-          <li>
-            · 면적은{" "}
-            <Link href="/glossary/jeonyongmyeonjeok" className="inline-flex min-h-[24px] min-w-[24px] items-center justify-center font-bold text-ink underline decoration-line underline-offset-2">
-              전용면적
-            </Link>{" "}
-            기준입니다.{" "}
-            <Link href="/glossary/gonggeupmyeonjeok" className="inline-flex min-h-[24px] min-w-[24px] items-center justify-center font-bold text-ink underline decoration-line underline-offset-2">
-              분양면적(공급면적)
-            </Link>
-            으로 부르는 평수와 다릅니다.
-          </li>
-          <li>
-            · 구간 평균은 그 구간에 신고된 거래만의 평균입니다. 지역 전체 시세나 특정 단지의
-            현재 가격을 뜻하지 않습니다.
-          </li>
-          <li>
-            · 거래 {MIN_BAND_TX}건 미만 구간은 평균이 한두 건에 흔들려 페이지를 만들지 않습니다.
-            그 구간의 거래는 위 합계에도 포함하지 않았습니다 — 없는 거래가 아니라, 평균을
-            내기에 표본이 모자란 구간입니다.
-          </li>
-        </ul>
-        <p className="mt-2.5 t-sub text-text-3">
-          낯선 용어는{" "}
-          <Link href="/glossary" className="font-bold text-primary">
-            부동산 용어사전 ›
+          ))}
+          <Link href="/glossary" className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-primary no-underline">
+            부동산 용어사전 <span aria-hidden="true">›</span>
           </Link>
-          에서 확인하세요.
+        </nav>
+        <nav aria-label="관련 화면" data-tone="blue" className="lq-panel flex flex-col divide-y">
+          {/* /analysis/price 는 robots Disallow(데모 수치) — 색인 허브에서 차단 경로로 링크하지 않는다(항목 46c). timing 은 색인 허용이다. */}
+          {[
+            ["/complex/browse", "단지 실거래 브라우즈"],
+            ["/complex/compare", "단지 vs 단지 비교"],
+            ["/analysis/timing", "지역 거래 흐름 · 타이밍 분석"],
+            ["/imjang", "임장 가이드"],
+          ].map(([href, label]) => (
+            <Link key={href} href={href} className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline">
+              {label} <span aria-hidden="true" className="text-text-3">›</span>
+            </Link>
+          ))}
+        </nav>
+        <p className="px-1 t-caption leading-[1.6] text-text-3">
+          데이터 출처: 국토교통부 실거래가 공개시스템 신고분(해제 신고분 제외){range ? ` · ${range}` : ""} · 구간당 {MIN_BAND_TX}건 이상만
         </p>
-      </section>
-
-      {/* 애드센스 데스크탑 유닛 — 본문(읽는 법) 아래 빈공간. 모바일 미노출. */}
-      <AdSenseUnit className="mb-6" />
-
-      <p className="mb-8 t-sub text-text-3" style={{ lineHeight: "24px" }}>
-        단지 단위로 보려면{" "}
-        <Link href="/complex/browse" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
-          단지 실거래 브라우즈
-        </Link>
-        , 같은 동 단지끼리 나란히 보려면{" "}
-        <Link href="/complex/compare" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
-          단지 vs 단지 비교
-        </Link>
-        , 지역 시세 흐름은{" "}
-        {/* /analysis/price 는 robots Disallow(데모 수치) — 색인 허브에서
-            차단 경로로 링크하지 않는다(항목 46c). timing 은 색인 허용이다. */}
-        <Link href="/analysis/timing" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
-          타이밍 분석
-        </Link>
-        에서 확인하세요. 데이터를 봤다면 다음은 현장 —{" "}
-        <Link href="/imjang" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
-          임장 가이드
-        </Link>
-        로 답사를 준비하세요.
-      </p>
+        <AdZone placement="sidebar" seed={1} plan={null} className="hidden lg:block" />
+      </aside>
+      </div>
     </PageShell>
   );
 }

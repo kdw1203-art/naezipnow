@@ -70,12 +70,12 @@ export default function SafetyPage() {
       {/* [970 · A-35] h1 은 화면의 실제 제목("계약 전, 보증금을 지키는 6가지 확인")으로 — 예전엔
           입력줄 옆 13px 라벨이 h1 이었고 그 문장은 아래 카드 제목으로 따로 있었다.
           입력줄 라벨은 aria-label(입력)로 옮긴다. */}
-      <h1 className="rise-in mb-3 text-[21px] font-bold tracking-[-0.4px] text-ink">
+      <h1 className="rise-in mb-3 t-title tracking-[-0.4px] text-ink max-md:mb-2">
         계약 전, 보증금을 지키는 6가지 확인
       </h1>
       {/* 대상 입력 */}
-      <div className="rise-in mb-4 flex flex-wrap items-center gap-3">
-        <span className="text-[13px] font-bold text-ink">전세·월세 보증금 안전 확인</span>
+      <div className="rise-in mb-4 flex flex-wrap items-center gap-3 max-md:mb-3 max-md:gap-2">
+        <span className="t-body font-bold text-ink">전세·월세 보증금 안전 확인</span>
         <input
           aria-label="주소 또는 단지명"
           value={address}
@@ -83,7 +83,7 @@ export default function SafetyPage() {
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.nativeEvent.isComposing) submit();
           }}
-          placeholder="주소 또는 단지명을 입력하세요 (예: 관양동 ○○아파트)"
+          placeholder="주소 또는 단지명"
           className="min-w-[220px] flex-1 rounded-lg border border-line bg-surface px-3.5 py-2 text-[13px] text-ink outline-none placeholder:text-text-3 focus:border-primary"
         />
         {/* [970 · A-35] disabled:opacity-50 제거 — btn-primary 가 이미 :disabled 를 토큰으로
@@ -98,22 +98,19 @@ export default function SafetyPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex flex-col gap-3.5">
-          {/* 진단 상태 — 결과를 지어내지 않는다 */}
+      <div className="grid grid-cols-1 gap-5 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex flex-col gap-3.5 max-md:gap-3">
+          {/* 진단 상태 — 결과를 지어내지 않는다. [1015 · 규칙 B·D] 사용법 문단 → 사실 두 줄 */}
           {submitted ? (
-            <div className="rise-in-1 card flex flex-col gap-2.5 rounded-3xl p-[22px]">
-              <div className="text-[15px] font-bold text-ink">
+            <div className="rise-in-1 card flex flex-col gap-2.5 rounded-3xl p-[22px] max-md:p-3.5">
+              <div className="t-section text-ink">
                 “{submitted}” 전세·월세 안전 진단
               </div>
-              <p className="text-[13px] leading-[1.7] text-text-2">
-                아래 <b className="text-ink">전세 안심 진단(자가진단)</b>에 이 대상이
-                연결됐어요. 보증금·시세·근저당을 입력하면 위험도가 바로 계산돼요.
-                등기부·건축물대장 자동 대조 진단은 <b className="text-ink">준비 중</b>
-                이라 자동 판정 결과는 지어내지 않아요 — 체크리스트로 직접 확인도
-                병행하세요.
+              <p className="t-body leading-[1.7] text-text-2">
+                아래 자가진단에 연결됨. 등기부·건축물대장 자동 대조는 준비 중이라 자동 판정은 없음.
               </p>
               <div className="flex flex-wrap gap-2 pt-1">
+                {/* [1015 · 규칙 J] 채움 파랑은 상단 "안전 진단" 하나 — 보조는 outline */}
                 <button
                   type="button"
                   onClick={() =>
@@ -121,7 +118,7 @@ export default function SafetyPage() {
                       .getElementById(SELF_CHECK_ANCHOR_ID)
                       ?.scrollIntoView({ behavior: scrollBehavior(), block: "start" })
                   }
-                  className="btn-primary rounded-lg px-4 py-2.5 text-xs"
+                  className="btn-outline rounded-lg px-4 py-2.5 text-xs"
                 >
                   자가진단으로 확인하기
                 </button>
@@ -134,65 +131,47 @@ export default function SafetyPage() {
               </div>
             </div>
           ) : (
-            <div className="rise-in-1 card flex flex-col gap-1.5 rounded-3xl p-[22px]">
-              <div className="text-[15px] font-bold text-ink">
-                계약 전, 보증금을 지키는 6가지 확인
-              </div>
-              <p className="text-[13px] leading-[1.7] text-text-2">
-                주소를 입력하고 “안전 진단”을 누르면 아래 자가진단에 대상이 연결되고,
-                해당 지역 실거래 평균으로 시세를 채울 수 있어요. 등기부 자동 분석
-                진단 기능은 준비 중입니다.
-              </p>
-            </div>
+            /* [1015 · 규칙 B·J] h1 과 같은 제목을 되풀이하던 카드 → 사실 한 줄 */
+            <p className="rise-in-1 t-sub text-text-3">
+              주소 입력 뒤 “안전 진단” → 아래 자가진단에 연결, 지역 실거래 평균으로 매매가 칸 채움 가능 · 등기부 자동 분석은 준비 중
+            </p>
           )}
 
-          {/* 세입자 체크리스트 — 항목·확인 방법 안내 (판정값 없음) */}
-          <div className="rise-in-2 card flex flex-col gap-2.5 rounded-3xl p-[22px]">
-            <div className="text-[15px] font-bold text-ink">
-              세입자 체크리스트{" "}
-              <span className="text-[12px] font-medium text-text-3">
-                직접 확인 가이드
-              </span>
+          {/* 세입자 체크리스트 — 항목·확인 방법 안내 (판정값 없음). [1015 · 규칙 I] 행 목록 → 리퀴드 판(sand = 주의·확인) */}
+          <div className="rise-in-2 card flex flex-col gap-2.5 rounded-3xl p-[22px] max-md:p-3.5">
+            <div className="t-section text-ink">세입자 체크리스트</div>
+            <div data-tone="sand" className="lq-panel flex flex-col divide-y">
+              {CHECK_ITEMS.map((c) => (
+                <div key={c.label} className="flex flex-col gap-0.5 py-[9px]">
+                  <span className="t-body font-bold text-text-1">{c.label}</span>
+                  <span className="t-sub text-text-3">{c.how}</span>
+                </div>
+              ))}
             </div>
-            {CHECK_ITEMS.map((c, i) => (
-              <div
-                key={c.label}
-                className={`flex flex-col gap-0.5 py-[9px] ${
-                  i < CHECK_ITEMS.length - 1 ? "border-b border-divider" : ""
-                }`}
-              >
-                <span className="text-[13px] font-bold text-text-1">{c.label}</span>
-                <span className="text-[12px] text-text-3">{c.how}</span>
-              </div>
-            ))}
-            <div className="text-[10px] leading-[1.6] text-text-3">
-              등기부등본은 인터넷등기소(iros.go.kr), 건축물대장은
-              정부24(gov.kr)에서 열람할 수 있어요. 이 화면은 보증금을 지키는
-              임차(전세·월세) 계약 기준이며, 매매 계약 위험 진단은 준비 중이에요.
+            <div className="t-caption leading-[1.6] text-text-3">
+              등기부등본: 인터넷등기소(iros.go.kr) · 건축물대장: 정부24(gov.kr). 임차(전세·월세) 계약 기준, 매매 계약 위험 진단은
+              준비 중.
             </div>
           </div>
         </div>
 
-        <aside className="flex flex-col gap-3.5">
+        <aside className="flex flex-col gap-3.5 max-md:gap-3">
           <div className="rise-in-3">
             <AIPanel title="계약 전 필수 3가지" className="rounded-3xl">
               ① 잔금일에 <b className="text-ai-accent">근저당 말소 동시 진행</b>{" "}
-              특약 ② 전입신고+확정일자 즉시 (대항력) ③ 임대인 국세 완납증명 요청 —
+              특약 ② 전입신고+확정일자 즉시 (대항력) ③ 임대인 국세 완납증명 요청,
               거부 시 계약 재고
             </AIPanel>
           </div>
-          <div className="rise-in-4 card flex flex-col gap-2 rounded-3xl p-[18px]">
-            <div className="text-[13px] font-bold text-ink">
-              전세 vs 월세 vs 매수, 뭐가 유리할까
-            </div>
-            <p className="text-xs leading-[1.6] text-text-2">
-              대출 금리·기회비용을 넣고 월 부담을 직접 비교해 보세요.
-            </p>
+          {/* [1015 · 규칙 D] 물음형 제목("뭐가 유리할까")·권유 문장 → 명사 + 사실 한 줄 */}
+          <div className="rise-in-4 card flex flex-col gap-2 rounded-3xl p-[18px] max-md:p-3.5">
+            <div className="t-body font-bold text-ink">전세 · 월세 · 매수 월 부담 비교</div>
+            <p className="text-xs leading-[1.6] text-text-2">대출 금리·기회비용 입력 기준</p>
             <Link
               href="/calculator"
               className="btn-soft mt-1 rounded-lg p-2.5 text-center text-xs no-underline"
             >
-              대출·비용 계산기로 비교하기
+              대출·비용 계산기
             </Link>
           </div>
         </aside>

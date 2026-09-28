@@ -97,7 +97,7 @@ export function GuestClaimForm({
         이용권을 받을 이메일
       </label>
       <p className="text-[12px] leading-[1.6] text-text-3">
-        결제는 끝났어요. 이메일을 알려 주시면 이 결제에 7일 이용권을 연결해 드려요 — 영수증도 같은
+        결제는 끝났어요. 이메일을 알려 주시면 이 결제에 7일 이용권을 연결해 드려요. 영수증도 같은
         주소로 보내드립니다.
       </p>
       <input

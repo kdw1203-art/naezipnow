@@ -23,14 +23,15 @@ const POINT_TABS: { key: PointsTab; label: string }[] = [
 ];
 function PointsTabs({ active }: { active: PointsTab }) {
   return (
-    <nav aria-label="포인트 메뉴" className="mx-auto mb-4 flex w-full max-w-[640px] flex-wrap gap-1.5">
+    <nav aria-label="포인트 메뉴" className="mx-auto mb-4 flex w-full max-w-[640px] flex-wrap gap-1.5 lg:max-w-[1000px]">
       {POINT_TABS.map((t) => (
         <Link
           key={t.key}
           href={t.key === "wallet" ? "/my/points" : `/my/points?tab=${t.key}`}
           aria-current={t.key === active ? "page" : undefined}
           className={`inline-flex min-h-[40px] items-center rounded-full border px-4 t-body font-bold no-underline ${
-            t.key === active ? "border-primary bg-primary text-white" : "border-line bg-surface text-text-1"
+            /* [1015 · 규칙 9] 활성 탭 = 한지 + 남색(chip-active), 채움 파랑은 CTA 전용 */
+            t.key === active ? "chip-active" : "border-line bg-surface text-text-1"
           }`}
         >
           {t.label}
@@ -108,22 +109,23 @@ async function readNicknameEffectUntil(
   }
 }
 
-/* ── 적립 방법 안내 (로그인 여부 무관) ── */
+/* ── 적립 방법 (로그인 여부 무관) — [1015 · 규칙 I] 적립 규칙표 = blue 톤(이웃 내역 판은 mint) ── */
 function EarnGuide() {
   return (
-    <div className="rise-in-3 card rounded-2xl p-5">
+    <div className="rise-in-3 card rounded-2xl p-5 max-md:p-3.5">
       <div className="text-[13px] font-bold text-ink">포인트 적립 방법</div>
       {/* [970 · A-11] "1P≈1원" 은 2026-08-23 토스 회신(원화 환산 표기 제거)과 어긋나는
-          환금성 암시 문구다 — 무상 리워드 규칙(현금 전환·구매 불가, 서비스 내 혜택 전용)만 적는다. */}
+          환금성 암시 문구다 — 무상 리워드 규칙(현금 전환·구매 불가, 서비스 내 혜택 전용)만 적는다.
+          [1015] "활동하면 자동으로 쌓여요" 부연 제거 — 무상성 사실만 남긴다. */}
       <div className="mt-0.5 t-sub text-text-3">
-        활동하면 자동으로 쌓여요 · 현금 전환·구매 불가 무상 리워드 · 서비스 내 혜택 전용
+        현금 전환·구매 불가 무상 리워드 · 서비스 내 혜택 전용
       </div>
-      <div className="mt-3 flex flex-col">
+      <div className="lq-panel mt-3 flex flex-col" data-tone="blue">
         {Object.values(EARN_RULES).map((rule, i, arr) => (
           <div
             key={rule.key}
             className={`flex items-center justify-between py-2.5 ${
-              i < arr.length - 1 ? "border-b border-divider" : ""
+              i < arr.length - 1 ? "border-b" : ""
             }`}
           >
             <div className="flex items-center gap-2">
@@ -141,7 +143,7 @@ function EarnGuide() {
                 </span>
               )}
             </div>
-            <span className="t-body font-bold text-primary">
+            <span className="t-num t-body font-bold">
               +{rule.points.toLocaleString("ko-KR")}P
             </span>
           </div>
@@ -159,17 +161,13 @@ function GuestView() {
       desc="매물 등록 · 임장노트 공개 · 출석으로 포인트가 쌓이고, 상점에서 매물 상단 노출·닉네임 꾸미기로 교환할 수 있어요."
       pathname="/my/points"
     >
+      {/* [1015] 색면 카드 + 권유 부제("미리 살펴보세요") → 흰 카드 한 줄 링크 */}
       <Link
         href="/points/shop"
-        className="rise-in-1 flex items-center justify-between rounded-2xl bg-primary-soft px-4 py-[15px]"
+        className="rise-in-1 card flex items-center justify-between rounded-lg px-4 py-3 no-underline"
       >
-        <div>
-          <div className="text-[13px] font-bold text-primary">포인트 상점 구경하기</div>
-          <div className="mt-0.5 text-xs text-text-2">
-            어떤 혜택으로 바꿀 수 있는지 미리 살펴보세요
-          </div>
-        </div>
-        <span className="t-section text-primary">›</span>
+        <span className="text-[13px] font-bold text-ink">포인트 상점</span>
+        <span className="t-section text-text-3">›</span>
       </Link>
 
       <EarnGuide />
@@ -197,9 +195,12 @@ function WalletView({
     .reduce((s, r) => s + Math.abs(r.delta), 0);
 
   return (
-    <div className="mx-auto flex max-w-[640px] flex-col gap-3">
+    /* [1015 · 규칙 F] 데스크톱에서 640px 한 열 옆이 비었다 → lg: 본문(잔액·내역) + 오른쪽 340px 레일(적립 방법).
+       폰은 전과 같은 한 열 순서. 새 부품 없이 기존 카드를 옮겨 놓았다. */
+    <div className="mx-auto flex max-w-[640px] grid-cols-1 flex-col gap-3 lg:grid lg:max-w-[1000px] lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-5">
+      <div className="flex min-w-0 flex-col gap-3">
       {/* 잔액 히어로 */}
-      <div className="rise-in ai-panel flex flex-col gap-4 rounded-3xl p-[22px]">
+      <div className="rise-in ai-panel flex flex-col gap-4 rounded-3xl p-[22px] max-md:gap-3 max-md:p-4">
         <div>
           <div className="text-xs text-ai-muted">사용 가능한 포인트</div>
           <div className="mt-1 flex items-end gap-1">
@@ -224,9 +225,10 @@ function WalletView({
           </div>
         </div>
         <AttendanceButton />
+        {/* [1015 · 규칙 J] 채움 파랑은 출석 버튼 하나 — 상점 링크는 네이비 면 위 보조(brand-photo-chip) */}
         <Link
           href="/points/shop"
-          className="btn-primary rounded-lg py-2.5 text-center text-[13px]"
+          className="brand-photo-chip rounded-lg py-2.5 text-center text-[13px] font-bold no-underline"
         >
           포인트 상점 가기
         </Link>
@@ -255,27 +257,24 @@ function WalletView({
         {POINTS_GRATUITOUS_NOTICE}
       </p>
 
-      {/* 적립·소비 내역 */}
-      <div className="rise-in-2 card rounded-2xl p-5">
+      {/* 적립·소비 내역 — [1015 · 규칙 I] 포인트 = mint 톤 리퀴드 판 */}
+      <div className="rise-in-2 card rounded-2xl p-5 max-md:p-3.5">
         <div className="text-[13px] font-bold text-ink">포인트 내역</div>
         {history.length === 0 ? (
-          <div className="flex flex-col items-center gap-1.5 py-8 text-center">
+          <div className="flex flex-col items-center gap-1.5 py-8 text-center max-md:py-5">
             <div className="t-body font-bold text-ink">
               아직 포인트 내역이 없어요
             </div>
-            <div className="t-sub text-text-3">
-              활동을 시작하면 여기에 적립·사용 기록이 모여요
-            </div>
           </div>
         ) : (
-          <div className="mt-2 flex flex-col">
+          <div className="lq-panel mt-2 flex flex-col" data-tone="mint">
             {history.map((r, i) => {
               const earn = r.delta > 0;
               return (
                 <div
                   key={`${r.createdAt}-${i}`}
                   className={`flex items-center justify-between py-3 ${
-                    i < history.length - 1 ? "border-b border-divider" : ""
+                    i < history.length - 1 ? "border-b" : ""
                   }`}
                 >
                   <div className="min-w-0">
@@ -293,7 +292,7 @@ function WalletView({
                     {/* [1009 · T] 포인트 적립·사용 — 줄마다 자릿수가 세로로 맞게 tabular-nums(t-num) */}
                     <div
                       className={`t-num text-[13px] ${
-                        earn ? "text-primary" : "text-text-3"
+                        earn ? "" : "text-text-3"
                       }`}
                     >
                       {earn ? "+" : "−"}
@@ -309,8 +308,11 @@ function WalletView({
           </div>
         )}
       </div>
+      </div>
 
-      <EarnGuide />
+      <aside className="flex min-w-0 flex-col gap-3">
+        <EarnGuide />
+      </aside>
     </div>
   );
 }

@@ -190,24 +190,33 @@ export type CoverTreeOptions = {
   size?: number;
   /** satori 에 등록한 글꼴 이름 */
   fontFamily?: string;
+  /** [1015] 넓은 판(1200×630) — 카드 커버(3:2·16:9)처럼 가로로 넓은 자리용. 정사각 판을 잘라 쓰면
+   *  제목이 잘렸다(소유자: "썸네일 비율이 이상해서 화면에 제대로 안 나온다"). 배치는 같고 폭만 넓다. */
+  shape?: "square" | "wide";
 };
+
+/** 넓은 판 크기 — OG 표준(1200×630) */
+export const COVER_WIDE = { width: 1200, height: 630 } as const;
 
 /**
  * 썸네일 한 장의 요소 트리. 크기를 바꿔도 비율이 같게 모든 치수를 size/720 로 늘인다.
  */
 export function buildCoverTree(input: CoverRenderInput, opts: CoverTreeOptions = {}): ReactElement {
-  const size = opts.size ?? COVER_SIZE;
+  const wide = opts.shape === "wide";
+  const size = opts.size ?? (wide ? COVER_WIDE.height : COVER_SIZE);
+  const width = wide ? Math.round(size * (COVER_WIDE.width / COVER_WIDE.height)) : size;
   const k = size / COVER_SIZE;
   const px = (n: number) => Math.round(n * k);
   const photo = input.variant === "photo" && input.photoSrc ? input.photoSrc : null;
   const variant: CoverVariant = input.variant === "photo" && !photo ? "navy" : input.variant;
   const p = COVER_PALETTES[variant];
   const pad = px(56);
-  const inner = size - pad * 2;
+  const inner = width - pad * 2;
   const leftRule = variant === "hanji" ? px(8) + px(28) : 0;
   const textWidth = inner - leftRule;
 
-  const hLines = headlineLines(input.headline);
+  /* 넓은 판은 제목이 한 줄에 들어가는 폭이 넓다 — 한 줄 상한을 폭에 비례해 올린다 */
+  const hLines = headlineLines(input.headline, wide ? 8.2 * (width / size) * 0.85 : undefined);
   const hSize = fitFontSize(hLines, textWidth, px(hLines.length > 1 ? 92 : 100), px(48));
   const fLines = input.fact ? factLines(input.fact) : [];
   const dotSize = px(16);
@@ -219,9 +228,9 @@ export function buildCoverTree(input: CoverRenderInput, opts: CoverTreeOptions =
     layers.push(
       el("img", {
         src: photo,
-        width: size,
+        width,
         height: size,
-        style: { position: "absolute", top: 0, left: 0, width: size, height: size, objectFit: "cover" },
+        style: { position: "absolute", top: 0, left: 0, width, height: size, objectFit: "cover" },
       }),
     );
     /* 사진 위 글자 가독 오버레이 — 그라데이션은 이 변형(사진 위)에만 쓴다 */
@@ -324,7 +333,7 @@ export function buildCoverTree(input: CoverRenderInput, opts: CoverTreeOptions =
     "div",
     {
       style: {
-        width: size,
+        width,
         height: size,
         display: "flex",
         flexDirection: "column",

@@ -27,6 +27,7 @@ import { ListingCompareToggle } from "@/components/ListingCompareToggle";
 import type { CompareListing } from "@/components/listing-compare-store";
 import { listingPriceLine } from "./price-text";
 import { LISTING_COMPARE_ENTRY_OPEN } from "./compare-entry";
+import { relativeTimeLabel } from "@/lib/format/relative-time";
 
 const TYPE_FILTERS = [
   { key: "", label: "전체" },
@@ -87,6 +88,12 @@ export function ListingsListClient({
   seoulGus: readonly string[];
 }) {
   const [filter, setFilter] = useState<Filter>({ type: "", gu: "", complex: "" });
+  /* [1015 · 규칙 M · 당근부동산] 카드 메타에 "N분 전"(끌어올리기 또는 등록 시각). ISR HTML 과 하이드레이션이 어긋나지 않게
+     마운트 뒤에만 현재 시각을 잡는다 — 그 전에는 날짜(YYYY.MM.DD)를 그대로 찍는다. */
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    setNow(Date.now());
+  }, []);
   useEffect(() => {
     const read = () => {
       const p = new URLSearchParams(window.location.search);
@@ -152,7 +159,7 @@ export function ListingsListClient({
       </div>
 
       {/* 서울 구 필터 */}
-      <div className="rise-in-1 mb-5 flex gap-1.5 overflow-x-auto pb-1 text-[12px]">
+      <div className="rise-in-1 mb-5 flex gap-1.5 overflow-x-auto pb-1 text-[12px] max-md:mb-3 md:flex-wrap md:overflow-visible">
         <button
           type="button"
           onClick={() => set({ gu: "" })}
@@ -188,21 +195,11 @@ export function ListingsListClient({
               ? "이 조건에 맞는 매물이 아직 없어요"
               : "검수를 통과한 매물이 아직 없어요"}
           </div>
+          {/* [1015 · 규칙 B] 빈 화면의 긴 권유문(베타·집주인·중개사무소·임장노트 세 문장) → 사실 한 줄 */}
           <p className="max-w-[420px] text-[13px] leading-[1.7] text-text-3">
-            {filtersActive ? (
-              <>
-                유형·지역 조건을 바꾸거나 필터를 초기화해 전체 {items.length}건을 볼 수 있어요.
-              </>
-            ) : (
-              <>
-                베타 기간에는 매물 공급이 적을 수 있어요. 집주인은 소유 확인 후 직접 등록하고,
-                중개사무소는 제휴로 노출할 수 있어요. 임장 기록은{" "}
-                <Link href="/notes/new" className="font-bold text-primary underline">
-                  임장노트
-                </Link>
-                로 이어가세요.
-              </>
-            )}
+            {filtersActive
+              ? `필터를 초기화하면 전체 ${items.length}건`
+              : "집주인 직접 등록 · 제휴 중개사 등록 매물이 검수 뒤 여기에 실립니다"}
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             {filtersActive ? (
@@ -225,11 +222,16 @@ export function ListingsListClient({
           {list.map((l) => {
             const boostOn = isBoostActive(l.boostUntil);
             const desc = l.description?.replace(/^\[[^\]]{1,10}\]\s*/, "") ?? "";
+            /* 끌어올린 시각이 있으면 그것, 없으면 등록 시각 — 신선도 판정(isListingStale)과 같은 기준 */
+            const at = l.refreshedAt ?? l.createdAt;
+            const when = now === null ? at.slice(0, 10).replace(/-/g, ".") : relativeTimeLabel(at, now, { yesterday: true });
             return (
+              /* [1015 · 규칙 M] 당근부동산·직방 카드 순서 — 사진 → 가격(크게) → 단지명 → 면적·층 → 동네 · N분 전 · 조회.
+                 배지("집주인 직접"·"소유확인"·"부스트")는 검증 사실 명사만, 사진 위가 아니라 제목 줄 위 한 줄. */
               <Link
                 key={l.id}
                 href={`/listings/${l.id}`}
-                className="card tile card-pad-sm flex flex-col gap-2"
+                className="card tile card-pad-sm flex flex-col gap-1.5"
               >
                 {l.thumbnailUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -241,6 +243,9 @@ export function ListingsListClient({
                   />
                 )}
                 <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="rounded-md bg-bg chip-pad text-[12px] font-bold text-text-2">
+                    {LISTING_TYPE_LABEL[l.listingType]}
+                  </span>
                   <span
                     className={`rounded-md chip-pad text-[12px] font-bold ${
                       l.source === "owner"
@@ -249,9 +254,6 @@ export function ListingsListClient({
                     }`}
                   >
                     {LISTING_SOURCE_LABEL[l.source]}
-                  </span>
-                  <span className="rounded-md bg-bg chip-pad text-[12px] font-bold text-text-2">
-                    {LISTING_TYPE_LABEL[l.listingType]}
                   </span>
                   {l.ownerVerified && (
                     <span className="rounded-md bg-success-soft chip-pad text-[12px] font-bold text-success">
@@ -263,22 +265,23 @@ export function ListingsListClient({
                       부스트
                     </span>
                   )}
-                  {l.regionName && (
-                    <span className="text-[12px] text-text-3">{l.regionName}</span>
-                  )}
+                </div>
+                <div className="t-num text-[19px] font-bold leading-[1.3] text-ink">
+                  {priceLine(l)}
                 </div>
                 <div className="text-[15px] font-bold leading-[1.4] text-ink">
                   {l.complexName}
                 </div>
-                <div className="t-num text-[15px] text-ink">
-                  {priceLine(l)}
-                </div>
-                <div className="text-[12px] text-text-3">
+                <div className="text-[12px] text-text-2">
                   {[
                     l.areaM2 !== null ? `${l.areaM2}㎡` : null,
                     l.floor !== null ? `${l.floor}층` : null,
-                    l.authorLabel,
                   ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </div>
+                <div className="text-[12px] text-text-3">
+                  {[l.regionName, when, `조회 ${l.viewCount.toLocaleString("ko-KR")}`, l.authorLabel]
                     .filter(Boolean)
                     .join(" · ")}
                 </div>

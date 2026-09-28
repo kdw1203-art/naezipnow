@@ -1,5 +1,5 @@
 /* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-bold/black 6곳을 font-bold(700)로 바꿨다. */
-import { noteCoverUrl } from "@/lib/notes/cover/resolve";
+import { resolveNoteCover } from "@/lib/notes/cover/resolve";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -138,7 +138,8 @@ async function listAuthorPublicNotes(
   }
 }
 
-type GridNote = { id: string; title: string; photo: string | null };
+/** [1015 · 규칙 H] template — 템플릿 썸네일(제목이 그림 안에 있음)이면 타일에 제목을 겹쳐 적지 않는다 */
+type GridNote = { id: string; title: string; photo: string | null; template: boolean };
 
 /** [970 · C-41] 프로필 그리드에 싣는 노트 상한 — "전체 보기" 링크가 갈 곳(작성자별 목록)이
     /notes 에 없어 링크를 지우는 대신, 여기서 더 많이 보여 준다. 그 이상은 +N 배지. */
@@ -160,7 +161,7 @@ export async function generateMetadata({
   return {
     /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
     title: `${name}님의 임장 프로필 | 내집나우`,
-    description: `${name}님이 직접 다녀온 공개 임장노트를 모아 봅니다 — 내집나우`,
+    description: `${name}님이 직접 다녀온 공개 임장노트 모음 · 내집나우`,
     // P2-10 색인 정책: 공개 프로필은 당분간 색인하지 않음
     robots: { index: false, follow: false },
   };
@@ -239,14 +240,23 @@ export default async function PublicProfilePage({
     );
   }
 
-  const grid: GridNote[] = authored.slice(0, GRID_CAP).map((n) => ({
-    id: n.id,
-    title: n.aptName?.trim() || n.title,
+  const grid: GridNote[] = authored.slice(0, GRID_CAP).map((n) => {
     /* [970 · C-41] 노트 사진이 있으면 타일 배경으로 — 회색 그라디언트만 6칸이던 자리 */
     /* [1012 · 썸네일] 목록 커버 규칙 한 곳(lib/notes/cover/resolve) — 고른 썸네일이 있으면 그것 */
-    photo: noteCoverUrl(n),
-  }));
+    const cover = resolveNoteCover(n);
+    return { id: n.id, title: n.aptName?.trim() || n.title, photo: cover.url, template: cover.template };
+  });
   const noteCount = authored.length;
+  /* [1015 · 규칙 M 숨고] 고수 프로필 카드의 "활동 기간" 자리 — 첫 공개 노트의 작성 월(실데이터에서만). 0편이면 없음 */
+  const firstNoteYm = (() => {
+    const first = authored
+      .map((n) => n.createdAt)
+      .filter((d) => typeof d === "string" && d.length >= 7)
+      .sort()[0];
+    if (!first) return null;
+    const [y, m] = first.slice(0, 7).split("-");
+    return y && m ? `${y}.${Number(m)}` : null;
+  })();
   // 사실 우선: 지역·소개는 실데이터가 있을 때만 (허위 기본값 금지)
   const region = profile?.region || authored[0]?.region?.trim() || null;
   const handleLabel = profile?.handle ?? displayName;
@@ -258,7 +268,7 @@ export default async function PublicProfilePage({
         {/* 커버 — [1012] 규칙 3 — 파랑 그라데이션 + 격자 무늬(지적도 패턴) → 네이비 단색(어두운 면 = 네이비) */}
         <div className="rise-in relative h-[110px] overflow-hidden rounded-t-lg bg-brand-navy" />
 
-        <div className="rise-in-2 card rounded-t-none border-t-0 px-5 pb-5">
+        <div className="rise-in-2 card rounded-t-none border-t-0 px-5 pb-5 max-md:px-3.5 max-md:pb-3.5">
           {/* 아바타 + 이름 + 팔로우 */}
           <div className="-mt-6 flex items-end gap-3">
             {/* [970 · C-41] 아바타 — 올린 사진이 있으면 그것, 없으면 빈 회색 원 대신 이름 첫 글자
@@ -284,13 +294,13 @@ export default async function PublicProfilePage({
             )}
             <div className="min-w-0 flex-1 pb-1">
               <div className="flex flex-wrap items-center gap-[6px]">
-                <h1 className="text-[15px] font-bold text-ink">
+                <h1 className="t-section font-bold text-ink">
                   {displayName}
                 </h1>
               </div>
               {/* [970 · C-10] 표시 주소가 "naezipnow.com/@닉네임" 이었는데 /@… 라우트는 없어 404 —
                   실제 경로(/u/{handle})로 적는다. */}
-              <div className="mt-[2px] text-[12px] text-text-3">
+              <div className="mt-[2px] t-sub text-text-3">
                 naezipnow.com/u/{handleLabel}
                 {region ? ` · ${region}` : ""}
               </div>
@@ -302,7 +312,7 @@ export default async function PublicProfilePage({
               /* [970 · C-41] 로그인 뒤 이 프로필로 돌아오게 callbackUrl */
               <Link
                 href={`/login?callbackUrl=${encodeURIComponent(`/u/${encodeURIComponent(input)}`)}`}
-                className="mb-1 shrink-0 rounded-full bg-primary px-4 py-[7px] text-[12px] font-bold text-white"
+                className="mb-1 shrink-0 rounded-full bg-primary px-4 py-[7px] t-sub font-bold text-white"
               >
                 팔로우
               </Link>
@@ -311,22 +321,23 @@ export default async function PublicProfilePage({
 
           {/* 소개 — 실데이터가 있을 때만 (허위 소개·태그 금지) */}
           {bio && (
-            <p className="mt-3 text-[13px] leading-[1.6] text-text-1">{bio}</p>
+            <p className="mt-3 t-body leading-[1.6] text-text-1">{bio}</p>
           )}
 
-          {/* 통계 2종 — 실데이터(공개 노트 수·팔로워)만 */}
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          {/* 통계 — 실데이터(공개 노트 수·팔로워·첫 노트 월)만. [1015 · 규칙 M 숨고] 사진·수·활동 기간 순.
+              [1015 · 규칙 I] 통계 묶음 = 리퀴드 판(blue)의 격자 → lq-panel 은 행 목록용이라 여기선 타일 그대로 */}
+          <div className={`mt-3 grid gap-2 ${firstNoteYm ? "grid-cols-3" : "grid-cols-2"}`}>
             <div className="rounded-lg border border-line bg-bg px-2 py-[10px] text-center">
-              <div className="text-[15px] font-bold text-ink">
+              <div className="t-section font-bold text-ink">
                 {noteCount}
               </div>
-              <div className="text-[10px] text-text-3">공개 노트</div>
+              <div className="t-caption text-text-3">공개 노트</div>
             </div>
             <div className="rounded-lg border border-line bg-bg px-2 py-[10px] text-center">
-              <div className="text-[15px] font-bold text-ink">
+              <div className="t-section font-bold text-ink">
                 {followerCount === null ? "—" : followerCount.toLocaleString("ko-KR")}
               </div>
-              <div className="text-[10px] text-text-3">
+              <div className="t-caption text-text-3">
                 {followerCount === null
                   ? followHidden
                     ? "팔로워 (비공개)"
@@ -334,24 +345,30 @@ export default async function PublicProfilePage({
                   : "팔로워"}
               </div>
             </div>
+            {firstNoteYm && (
+              <div className="rounded-lg border border-line bg-bg px-2 py-[10px] text-center">
+                <div className="t-section font-bold tabular-nums text-ink">{firstNoteYm}</div>
+                <div className="t-caption text-text-3">첫 공개 노트</div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* 노트 그리드 — 프로필 매칭 시 해당 사용자의 공개 노트 실데이터 */}
-        <div className="rise-in-5 mt-4">
+        <div className="rise-in-5 mt-4 max-md:mt-3">
           {/* [970 · C-41] "전체 보기 ›" 는 이 사용자의 노트가 아니라 /notes 전체로 갔다 —
               작성자별 목록 화면이 없으므로 링크를 지우고 그리드에 더 많이(GRID_CAP) 싣는다. */}
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="flex items-center gap-[6px] text-[13px] font-bold text-ink">
+            <h2 className="flex items-center gap-[6px] t-body font-bold text-ink">
               공개 노트
             </h2>
             {noteCount > 0 && (
-              <span className="text-[12px] font-bold text-text-3">{noteCount}편</span>
+              <span className="t-sub font-bold text-text-3">{noteCount}편</span>
             )}
           </div>
           {grid.length === 0 && (
             /* [1012] 규칙 6 — 누가 */
-            <div className="card px-5 py-8 text-center text-[12px] text-text-3">
+            <div className="card px-5 py-8 text-center t-sub text-text-3">
               {displayName}님이 공개한 임장노트가 아직 없어요
             </div>
           )}
@@ -359,12 +376,15 @@ export default async function PublicProfilePage({
             {grid.map((g, i) => {
               const inner = (
                 <>
-                  {/* [970 · B-06] 네이비 스크림 위 글자 text-surface → text-on-dark(다크에서 안 보였다) — 아래 +N 배지도 같다 */}
-                  <span className="absolute inset-x-0 bottom-0 truncate bg-brand-navy/70 px-2 py-1 text-[10px] font-bold text-on-dark">
-                    {g.title}
-                  </span>
+                  {/* [970 · B-06] 네이비 스크림 위 글자 text-surface → text-on-dark(다크에서 안 보였다) — 아래 +N 배지도 같다.
+                      [1015 · 규칙 H] 템플릿 썸네일(제목이 그림 안)이면 제목 띠를 겹치지 않는다 */}
+                  {!g.template && (
+                    <span className="absolute inset-x-0 bottom-0 truncate bg-brand-navy/70 px-2 py-1 t-caption font-bold text-on-dark">
+                      {g.title}
+                    </span>
+                  )}
                   {i === grid.length - 1 && noteCount > grid.length && (
-                    <span className="absolute right-[6px] top-[6px] rounded-sm bg-brand-navy/85 chip-pad-tight text-[10px] font-bold text-on-dark">
+                    <span className="absolute right-[6px] top-[6px] rounded-sm bg-brand-navy/85 chip-pad-tight t-caption font-bold text-on-dark">
                       +{noteCount - grid.length}
                     </span>
                   )}
@@ -373,7 +393,7 @@ export default async function PublicProfilePage({
               /* [1012] 규칙 3·10 — 사진 없는 타일의 그라데이션 → 회색 단면 */
               const cls = "relative block aspect-square overflow-hidden rounded-lg bg-divider";
               return (
-                <Link key={g.id} href={`/notes/${g.id}`} className={cls}>
+                <Link key={g.id} href={`/notes/${g.id}`} aria-label={`${g.title} 노트 보기`} className={cls}>
                   {/* [970 · C-41] 노트 사진이 있으면 타일에 깐다(없으면 종전 그라디언트) */}
                   {g.photo && (
                     // eslint-disable-next-line @next/next/no-img-element

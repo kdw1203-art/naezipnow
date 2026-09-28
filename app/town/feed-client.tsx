@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Explain } from "@/app/components/explain/Explain";
 import { usePathname } from "next/navigation";
 import { getHomePersonal } from "@/lib/client/home-personal";
 import Link from "next/link";
@@ -28,6 +29,8 @@ export type FeedCard = {
   kind: "note" | "post";
   /** 실제 사진 URL — 없으면 지역/출처 시드 그라디언트 커버 */
   cover: string | null;
+  /** [1015] cover 가 템플릿 썸네일(1200×630, 제목이 그림 안에 있음)이면 true — 카드는 그 비율 그대로 보인다 */
+  coverTemplate?: boolean;
   title: string;
   author: string;
   region: string;
@@ -102,17 +105,20 @@ function GeneratedCover({ card }: { card: FeedCard }) {
   );
 }
 
+/* [959] Lab 노트는 현장 방문 기록이 아니라 데이터 분석 카드다 — "✓ 직접 방문" 대신 "Lab 데이터".
+   사람이 다녀온 노트만 방문 배지를 단다. [1016] 폰 카드의 메타 줄도 같은 글자를 쓴다. */
+function coverLabel(card: FeedCard): string {
+  return card.kind === "note"
+    ? card.lab
+      ? "Lab 데이터"
+      : card.visited
+        ? "직접 방문"
+        : "임장노트"
+    : "이야기";
+}
+
 function Cover({ card }: { card: FeedCard }) {
-  /* [959] Lab 노트는 현장 방문 기록이 아니라 데이터 분석 카드다 — "✓ 직접 방문" 대신 "Lab 데이터".
-     사람이 다녀온 노트만 방문 배지를 단다. */
-  const label =
-    card.kind === "note"
-      ? card.lab
-        ? "Lab 데이터"
-        : card.visited
-          ? "✓ 직접 방문"
-          : "임장노트"
-      : "이야기";
+  const label = coverLabel(card);
   /* [970 · C-06] Lab 배지 text-brand-navy — 다크에서 반투명 흰 칩(bg-surface/90) 위에
      네이비가 그대로라 안 읽혔다. 잉크 토큰(다크에서 뒤집힘)으로. */
   const labelColor =
@@ -120,21 +126,24 @@ function Cover({ card }: { card: FeedCard }) {
   const hasPhoto = Boolean(card.cover);
   return (
     <div
-      className="relative w-full overflow-hidden"
+      /* [1016] 폰은 카드가 가로 한 줄(사진 왼쪽 · 글 오른쪽)이라 사진 칸을 1200×630 비율로 고정(시드 높이 무시).
+         템플릿 썸네일은 제 비율, 사진은 위쪽 기준으로 잘린다. */
+      className="relative w-full overflow-hidden max-md:h-auto! max-md:aspect-[1200/630] max-md:rounded-md"
       /* CLS 수리(2026-08-16 실측): 이미지가 자연 높이로 렌더돼 로드 순간
          카드가 통째로 자랐다 — /town p75 CLS 0.414 의 주범. 컨테이너가
          높이를 **먼저** 확정하고(카드별 시드 높이 = 기존 매소너리 리듬 유지)
          이미지는 absolute 로 그 안을 채운다. 로드 전후 높이가 같다 = 시프트 0. */
       style={{
         background: hasPhoto ? seedGradient(card.region || card.id) : undefined,
-        height: seedCoverHeight(card.id),
+        /* [1015] 템플릿 썸네일은 제 비율(1200×630)로 — 시드 높이에 맞춰 자르면 제목이 잘린다(소유자 지시) */
+        ...(card.coverTemplate ? { aspectRatio: "1200 / 630" } : { height: seedCoverHeight(card.id) }),
       }}
     >
       {hasPhoto ? (
         <CoverImage
           src={card.cover}
           alt={`${card.title} 커버 사진`}
-          imgClassName="absolute inset-0 h-full w-full object-cover object-top"
+          imgClassName={`absolute inset-0 h-full w-full object-cover ${card.coverTemplate ? "" : "object-top"}`}
         />
       ) : (
         <GeneratedCover card={card} />
@@ -147,20 +156,21 @@ function Cover({ card }: { card: FeedCard }) {
           <span>{card.kind === "note" ? "노트 읽기" : "글 읽기"}</span>
         </span>
       )}
+      {/* [1016] 폰 사진 칸(약 118px)에는 배지가 안 들어간다 — 글 쪽 메타 줄(FeedCardView)이 대신 적는다 */}
       <span
-        className={`absolute left-2 top-2 z-10 rounded-md bg-surface/90 chip-pad t-caption font-bold ${labelColor} ${
+        className={`absolute left-2 top-2 z-10 rounded-md bg-surface/90 chip-pad t-caption font-bold max-md:hidden ${labelColor} ${
           card.kind === "note" && !card.lab && card.visited ? "njn-stamp njn-stamp--flat" : ""
         }`}
       >
-        {card.kind === "note" && !card.lab && card.visited ? "직접 방문" : label}
+        {label}
       </span>
       {/* [945-G] 24시간 내 새 글 — "지금 살아 있는 피드"의 실측 신호.
           점멸은 reduced-motion 에서 정지(badge-new 등록). */}
       {Date.now() - card.createdAt < 24 * 3600_000 && !card.isExample && (
-        <span className="badge-new absolute right-2 top-2 z-10 t-caption">NEW</span>
+        <span className="badge-new absolute right-2 top-2 z-10 t-caption max-md:right-1 max-md:top-1">NEW</span>
       )}
       {card.isExample && (
-        <span className="absolute right-2 top-2 rounded-md bg-white/90 px-[3px] py-[2px]">
+        <span className="absolute right-2 top-2 rounded-md bg-white/90 px-[3px] py-[2px] max-md:hidden">
           <ExampleBadge />
         </span>
       )}
@@ -180,9 +190,9 @@ function StoryCardView({ card, delay }: { card: FeedCard; delay: number }) {
   const photos = Math.max(0, card.photos ?? 0);
   return (
     <div className={`mb-3 break-inside-avoid rise-in-${Math.min(delay, 6)}`}>
-      <Link href={card.href} className="story-card tile group block overflow-hidden no-underline">
+      <Link href={card.href} className={`story-card tile group block overflow-hidden no-underline ${card.cover ? "max-md:flex max-md:items-center max-md:gap-2.5 max-md:p-2.5" : ""}`}>
         {card.cover && (
-          <div className="relative w-full overflow-hidden" style={{ height: seedCoverHeight(card.id) }}>
+          <div className="relative w-full overflow-hidden max-md:h-auto! max-md:w-[118px] max-md:shrink-0 max-md:aspect-[1200/630] max-md:rounded-md" style={{ height: seedCoverHeight(card.id) }}>
             <CoverImage
               src={card.cover}
               alt={`${card.title} 사진`}
@@ -197,7 +207,7 @@ function StoryCardView({ card, delay }: { card: FeedCard; delay: number }) {
             )}
           </div>
         )}
-        <div className="flex flex-col gap-2 px-3 pb-3 pt-3">
+        <div className={`flex min-w-0 flex-1 flex-col gap-2 px-3 pb-3 pt-3 ${card.cover ? "max-md:gap-1 max-md:p-0" : ""}`}>
           <div className="flex items-center gap-2">
             <span className="story-avatar" aria-hidden="true">
               {initial}
@@ -255,14 +265,19 @@ function FeedCardView({ card, delay }: { card: FeedCard; delay: number }) {
   if (card.kind === "post") return <StoryCardView card={card} delay={delay} />;
   return (
     <div className={`mb-3 break-inside-avoid rise-in-${Math.min(delay, 6)}`}>
+      {/* [1016] 소유자: "모바일에서 이 부분은 각 카드가 가로 정렬이 되도록" — 폰은 사진(왼쪽 118px) + 글(오른쪽) 한 줄,
+          md+ 는 전과 같은 세로 카드(매소너리). */}
       <Link
         href={card.href}
-        className="card tile card-zoom group block overflow-hidden rounded-lg no-underline"
+        className="card tile card-zoom group block overflow-hidden rounded-lg no-underline max-md:flex max-md:items-center max-md:gap-2.5 max-md:p-2.5"
       >
-        <Cover card={card} />
+        <div className="max-md:w-[118px] max-md:shrink-0 md:contents">
+          <Cover card={card} />
+        </div>
         {/* [961] 호버 — 커버 아래 주홍 밑줄이 왼쪽에서 차오른다(인터랙션 라이브러리 04) */}
-        <span className="njn-card-bar" aria-hidden="true" />
-        <div className="flex flex-col gap-1.5 px-3 pb-3 pt-2.5">
+        <span className="njn-card-bar max-md:hidden" aria-hidden="true" />
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5 px-3 pb-3 pt-2.5 max-md:gap-1 max-md:p-0">
+          <span className="t-caption font-bold text-text-3 md:hidden">{coverLabel(card)}</span>
           <div className="line-clamp-2 t-body font-bold text-ink">
             {card.boosted && (
               <span className="mr-1.5 inline-block align-middle rounded-md bg-primary-soft px-1.5 py-0.5 t-caption font-bold text-primary">
@@ -637,17 +652,16 @@ export function TownFeed({
             좁은 화면에서 세그먼트 옆에 붙이면 잘리므로 제 줄을 준다. */}
         {/* [970 · C-21] "올린 시각이 빠른 순서" 는 오래된 글부터라는 뜻이라 실제 정렬
             (createdAt 내림차순 = 최근 글부터)과 반대로 읽혔다 */}
-        <span className="t-sub text-text-3">
-          {sort === "reco"
-            ? "최신 글이 먼저, 노트 평점·저장수만큼 위로 올라와요"
-            : "최근에 올린 글부터 보여요"}
-        </span>
-        {/* [1006] 노트 탭의 구성 — 사람 노트와 데이터 카드를 정직하게 가른다 */}
-        {kind !== "post" && counts.note > 0 && noteSplit.lab > 0 && (
-          <span className="t-sub text-text-3">
-            임장노트 {counts.note} = 사람 노트 {noteSplit.human} · Lab 데이터 카드 {noteSplit.lab}
-          </span>
-        )}
+        {/* [1015 · 규칙 B·C] 정렬 설명 문장·"임장노트 N = 사람 노트 · Lab 데이터 카드" 부연은 ⓘ 하나로 접었다(소유자 지시) */}
+        <Explain
+          title="정렬 기준"
+          body={[
+            sort === "reco" ? "추천순: 최신 글이 먼저, 노트 평점·저장 수만큼 위로." : "최신순: 최근에 올린 글부터.",
+            ...(kind !== "post" && counts.note > 0 && noteSplit.lab > 0
+              ? [`임장노트 ${counts.note}건 = 사람이 다녀온 노트 ${noteSplit.human} · 내집나우 Lab 데이터 카드 ${noteSplit.lab}`]
+              : []),
+          ]}
+        />
       </div>
 
       {loadFailed && (
@@ -656,7 +670,7 @@ export function TownFeed({
         // 읽힌다 — 색은 "실패"라는 신호만 지고, 문장은 검정으로 읽는다.
         <div className="rise-in-2 mb-3 rounded-lg border border-line bg-danger-soft px-3.5 py-2.5 t-sub text-ink">
           {/* [970 · C-20] 해요체 통일 */}
-          일부 글의 조회가 실패했어요. 글이 없다는 뜻은 아니에요 — 잠시 후 새로고침해 주세요.
+          일부 글의 조회가 실패했어요. 글이 없다는 뜻은 아니에요. 잠시 후 새로고침해 주세요.
         </div>
       )}
 
@@ -693,7 +707,8 @@ export function TownFeed({
         </div>
       ) : (
         <>
-          <div className="columns-2 gap-3 md:columns-3 lg:columns-4">
+          {/* [1016] 폰은 한 열(카드가 가로 한 줄) · md+ 매소너리 3~4열 */}
+          <div className="flex flex-col md:block md:columns-3 md:gap-3 lg:columns-4">
             {visible.map((card, i) => (
               <Fragment key={card.id}>
                 <FeedCardView card={card} delay={(i % 6) + 1} />

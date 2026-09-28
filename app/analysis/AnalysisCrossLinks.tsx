@@ -11,7 +11,7 @@ import Link from "next/link";
  */
 
 const DESTS = [
-  { id: "price", href: "/analysis/price", label: "면적대별 실거래 시세" },
+  { id: "price", href: "/analysis/price", label: "면적대별 실거래가" },
   { id: "timing", href: "/analysis/timing", label: "시세·타이밍 분석" },
   { id: "scenario", href: "/analysis/scenario", label: "시장·대출 시나리오" },
   { id: "temperature", href: "/analysis/temperature", label: "지역별 시장 온도" },

@@ -67,10 +67,10 @@ export function NoteAudioTools({
       const json: { text?: string; error?: string } = await res.json().catch(() => ({}));
       setTranscripts((p) => ({
         ...p,
-        [url]: res.ok && json.text ? json.text : "전사에 실패했어요 — 잠시 후 다시 시도해 주세요.",
+        [url]: res.ok && json.text ? json.text : "전사에 실패했어요. 잠시 후 다시 시도해 주세요.",
       }));
     } catch {
-      setTranscripts((p) => ({ ...p, [url]: "전사에 실패했어요 — 네트워크를 확인해 주세요." }));
+      setTranscripts((p) => ({ ...p, [url]: "전사에 실패했어요. 네트워크를 확인해 주세요." }));
     } finally {
       setBusyUrl(null);
     }
@@ -94,7 +94,7 @@ export function NoteAudioTools({
             : ttsState === "playing"
               ? "⏸ 멈추기"
               : ttsState === "error"
-                ? "듣기 실패 — 다시 시도"
+                ? "듣기 실패 · 다시 시도"
                 : "노트 브리핑 듣기"}
         </button>
       </div>
@@ -128,7 +128,7 @@ export function NoteAudioTools({
                 {copied && copiedUrl === u ? "복사됨 ✓" : "복사"}
               </button>
               <span className="ml-1 t-caption text-text-3">
-                — 노트 수정에서 메모에 붙여넣어 저장하세요 (음성 메모 {i + 1})
+                · 음성 메모 {i + 1} · 노트 수정의 메모에 붙여넣기
               </span>
             </div>
           )}

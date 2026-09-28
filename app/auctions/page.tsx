@@ -64,7 +64,7 @@ export default async function AuctionsPage() {
         <div className="theme-auction">
           <ErrorState
             title="공매 물건을 지금 불러오지 못했어요"
-            desc="진행 중인 물건이 0건인 게 아니라 조회 자체가 실패했습니다. 잠시 후 새로고침해 주세요. 급하시면 온비드에서 직접 확인하실 수 있어요."
+            desc="진행 중인 물건이 0건인 게 아니라 조회 자체가 실패했습니다. 잠시 후 새로고침해 주세요."
             action={{ href: "https://www.onbid.co.kr", label: "온비드 바로가기" }}
           />
         </div>

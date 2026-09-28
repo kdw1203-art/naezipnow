@@ -157,7 +157,7 @@ function StatusChip({ period }: { period?: string }) {
   if (!st) return null;
   return (
     <span
-      className={`ml-1.5 inline-block rounded-md px-1.5 py-0.5 align-middle text-[10px] font-bold ${st.cls}`}
+      className={`ml-1.5 inline-block rounded-md px-1.5 py-0.5 align-middle t-caption font-bold ${st.cls}`}
     >
       {st.label}
     </span>
@@ -266,9 +266,10 @@ export function ApplySearchClient({ initial }: Props) {
       ? state.page * PER_PAGE < state.totalCount
       : state.items.length < state.totalCount);
 
+  /* [1015] 탭 활성 = chip-active(한지 + 남색). 채움 파랑은 검색 버튼 1개만(브리프 규칙 J · /qna 와 같은 규칙). */
   const tabPill = (on: boolean) =>
     on
-      ? "press min-h-10 rounded-full bg-primary px-4 py-2 text-[13px] font-bold text-white"
+      ? "press chip-active min-h-10 rounded-full px-4 py-2 text-[13px] font-bold"
       : "press glass min-h-10 rounded-full px-4 py-2 text-[13px] font-semibold text-text-2";
 
   const regionPill = (on: boolean) =>
@@ -297,7 +298,6 @@ export function ApplySearchClient({ initial }: Props) {
             onClick={() => void load({ tab: "competition", page: 1 })}
             aria-pressed={state.tab === "competition"}
             className={tabPill(state.tab === "competition")}
-            style={state.tab === "competition" ? { color: "#fff" } : undefined}
           >
             경쟁률
           </button>
@@ -306,7 +306,6 @@ export function ApplySearchClient({ initial }: Props) {
             onClick={() => void load({ tab: "special", page: 1 })}
             aria-pressed={state.tab === "special"}
             className={tabPill(state.tab === "special")}
-            style={state.tab === "special" ? { color: "#fff" } : undefined}
           >
             특별공급
           </button>
@@ -356,25 +355,34 @@ export function ApplySearchClient({ initial }: Props) {
         ))}
       </div>
 
-      {/* 요약 타일 — 라벨이 곧 세는 대상이다(추정치 아님). */}
+      {/* 요약 타일 — 라벨이 곧 세는 대상이다(추정치 아님).
+          [1015] 폰에서는 타일 세 칸 대신 사실 한 줄(브리프 규칙 E — "표시 중"·"조회 시각"은 더보기 버튼과
+          표 각주에 다시 나오는 값이라 폰에서는 접는다). 데스크톱 타일은 그대로. */}
       {showTiles && (
-        <div className="rise-in-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <Tile
-            label={`${tabLabel} 총 공고`}
-            value={`${state.totalCount.toLocaleString()}건`}
-            hint={state.region === "전체" ? "전국" : state.region}
-          />
-          <Tile
-            label="지금 화면에 표시 중"
-            value={`${state.items.length.toLocaleString()}건`}
-            hint={canLoadMore ? "더보기로 이어서" : "전부 표시됨"}
-          />
-          <Tile
-            label="조회 시각"
-            value={state.fetchedAt ? fetchedLabel(state.fetchedAt) : "—"}
-            hint="청약홈 공공데이터"
-          />
-        </div>
+        <>
+          <p className="rise-in-2 px-1 t-sub text-text-2 md:hidden">
+            {tabLabel} 총 공고 <b className="text-ink">{state.totalCount.toLocaleString()}건</b> ·{" "}
+            {state.region === "전체" ? "전국" : state.region}
+            {state.fetchedAt ? ` · ${fetchedLabel(state.fetchedAt)} 조회` : ""}
+          </p>
+          <div className="rise-in-2 grid grid-cols-2 gap-2 max-md:hidden sm:grid-cols-3">
+            <Tile
+              label={`${tabLabel} 총 공고`}
+              value={`${state.totalCount.toLocaleString()}건`}
+              hint={state.region === "전체" ? "전국" : state.region}
+            />
+            <Tile
+              label="지금 화면에 표시 중"
+              value={`${state.items.length.toLocaleString()}건`}
+              hint={canLoadMore ? "더보기로 이어서" : "전부 표시됨"}
+            />
+            <Tile
+              label="조회 시각"
+              value={state.fetchedAt ? fetchedLabel(state.fetchedAt) : "—"}
+              hint="청약홈 공공데이터"
+            />
+          </div>
+        </>
       )}
 
       {/* 상세 API 미승인 등 데이터 한계 안내 — 서버가 준 사실 그대로 */}
@@ -420,7 +428,7 @@ export function ApplySearchClient({ initial }: Props) {
               title="지역·단지명 필터를 지금 사용할 수 없어요"
               /* [1011] "분양정보(상세) API 연동이 준비되지 않아" 를 걷었다(소유자 지시) — 970·C-44 에서
                  env 변수명을 걷어낸 것과 같은 줄기다. 남길 사실은 "지금은 못 쓴다"와 "0건이 아니다" 둘. */
-              desc="지역·단지명으로 걸러 보는 기능이 아직 준비 중이에요. 공고가 없다는 뜻이 아니에요 — ‘전체’로 돌아가면 전국 공고를 볼 수 있어요."
+              desc="지역·단지명으로 걸러 보는 기능이 아직 준비 중이에요. 공고가 없다는 뜻이 아니라, ‘전체’로 돌아가면 전국 공고가 보여요."
               action={{ href: "/apply", label: "전체 공고 보기" }}
             />
           ) : (
@@ -455,7 +463,8 @@ export function ApplySearchClient({ initial }: Props) {
             </div>
           )}
 
-          <div className="rise-in-2 card overflow-x-auto rounded-2xl px-[18px] py-1">
+          {/* [1015] 표 껍데기는 리퀴드 판(sand — 청약 톤). 가로 스크롤은 globals.css 가 lq-panel 에서도 auto 로 둔다(규칙 I). */}
+          <div className="rise-in-2 lq-panel overflow-x-auto py-1" data-tone="sand">
             <div className="min-w-[540px]">
               {state.tab === "competition" ? (
                 <>
@@ -646,10 +655,10 @@ export function ApplySearchClient({ initial }: Props) {
           {appending
             ? "불러오는 중…"
             : filteredMode
-              ? `더보기 — 공고 ${state.totalCount.toLocaleString()}건 중 ${Math.min(
+              ? `더보기 · 공고 ${state.totalCount.toLocaleString()}건 중 ${Math.min(
                   state.page * PER_PAGE,
                   state.totalCount,
-                ).toLocaleString()}건 확인함`
+                ).toLocaleString()}건 확인`
               : `더보기 (${state.items.length.toLocaleString()} / ${state.totalCount.toLocaleString()}건)`}
         </button>
       )}

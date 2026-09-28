@@ -8,7 +8,9 @@ import {
   normalizeRegionKey,
 } from "@/lib/region/catalog";
 import { readTownPosts } from "@/lib/newui/board-posts";
-import { isLabNoteLabel, listPublicNoteCards, type PublicNoteCard } from "@/lib/inspection/store-db";
+import { listPublicNotes, type InspectionNote } from "@/lib/inspection/store-db";
+import { noteCoverUrl } from "@/lib/notes/cover/resolve";
+import { maskNoteAuthor, seedGradient } from "@/lib/town/shared";
 import { getRegionSnapshot } from "@/lib/market/store";
 import type { RegionMarketSnapshot } from "@/lib/market/types";
 import type { Post } from "@/lib/types/post";
@@ -24,6 +26,7 @@ import { isStoryPost } from "@/lib/town/story";
 import { postAttachments } from "@/lib/community/attachments";
 import { Icon } from "@/app/components/Icon";
 import { TownNewsStrip } from "../TownNewsStrip";
+import { AdZone } from "@/app/components/ads/AdZone";
 
 /* ============================================================
    [#64] 동네 홈 — /town/{regionId}
@@ -64,8 +67,8 @@ export async function generateMetadata({
   const region = findCatalogRegionById(id);
   if (!region) return { title: "동네를 찾을 수 없습니다 | 내집나우" };
   /* [970 · C-25] 접미 없던 제목에 `| 내집나우`(폴백 제목과 동일 접미) */
-  const title = `${region.name} 동네 홈 — 이웃 글·뉴스·시세 한눈에 | 내집나우`;
-  const description = `${region.name} 이웃들의 임장·거주 이야기, 오늘의 ${region.name} 부동산 뉴스, 아파트 시세 요약을 한 화면에서. 키워드 알림으로 새 소식을 받아보세요.`;
+  const title = `${region.name} 동네 홈 · 이웃 글 · 뉴스 · 시장 요약 | 내집나우`;
+  const description = `${region.name} 이웃 글과 공개 임장노트, 오늘의 ${region.name} 부동산 뉴스, 아파트 시장 요약. 키워드 알림 지원.`;
   return {
     title,
     description,
@@ -85,7 +88,7 @@ function postMatchesRegion(p: Post, nameKey: string): boolean {
   return normalizeRegionKey(p.title).includes(nameKey);
 }
 
-function noteMatchesRegion(n: PublicNoteCard, nameKey: string): boolean {
+function noteMatchesRegion(n: InspectionNote, nameKey: string): boolean {
   const k = normalizeRegionKey(n.region ?? "");
   return Boolean(k && (k.includes(nameKey) || nameKey.includes(k)));
 }
@@ -107,9 +110,12 @@ export default async function TownRegionHomePage({
   const nameKey = normalizeRegionKey(region.name);
 
   /* 실패는 섹션 단위로 접는다 — 동네 홈이 한 소스 장애로 통째로 죽지 않게 */
+  /* [1015] listPublicNoteCards → listPublicNotes: 노트 행의 썸네일(noteCoverUrl — metadata.cover·photos 를 읽는다)을
+     그리려면 카드 전용 컬럼만으로는 부족하다(브리프 규칙 H). 공개 노트는 34편 남짓이고 이 화면은 7일 ISR 이라
+     무게는 감당된다(프로필 /u/[handle] 과 같은 호출). */
   const [postsR, notesR, snapR] = await Promise.allSettled([
     readTownPosts(),
-    listPublicNoteCards(100),
+    listPublicNotes(100),
     getRegionSnapshot(id),
   ]);
   if (postsR.status === "rejected") logger.error(`[town/${id}] 글 조회 실패`, postsR.reason);
@@ -124,7 +130,7 @@ export default async function TownRegionHomePage({
     .slice(0, 8);
   /* [1006] 이 동네 뉴스 — 뉴스룸과 같은 조립기(같은 사건 접기·요약·출처)로 행을 만든다 */
   const newsRows = buildNewsRows(regionPosts.filter((p) => p.isAutomated)).slice(0, 6);
-  const notes: PublicNoteCard[] =
+  const notes: InspectionNote[] =
     notesR.status === "fulfilled"
       ? notesR.value.filter((n) => noteMatchesRegion(n, nameKey)).slice(0, 6)
       : [];
@@ -150,7 +156,7 @@ export default async function TownRegionHomePage({
       />
 
       {/* 헤더 — 동네 이름 + 행동 */}
-      <div className="rise-in mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div className="rise-in mb-4 flex flex-wrap items-end justify-between gap-3 max-md:mb-3">
         <div>
           <div className="t-sub font-bold text-text-3">
             <Link href="/town" className="inline-block py-[5px] hover:underline">
@@ -177,7 +183,7 @@ export default async function TownRegionHomePage({
       {snapshot && (
         <Link
           href={`/region/${id}`}
-          className="rise-in-1 card tile mb-5 flex flex-wrap items-center justify-between gap-3 px-5 py-4 no-underline"
+          className="rise-in-1 card tile mb-5 flex flex-wrap items-center justify-between gap-3 px-5 py-4 no-underline max-md:mb-3 max-md:px-3.5 max-md:py-3"
         >
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             {snapshot.avgSale && snapshot.avgSale > 0 && (
@@ -196,36 +202,33 @@ export default async function TownRegionHomePage({
                 </div>
               </div>
             )}
-            <div className="t-sub text-text-3">
-              {region.name} 시장 데이터 전체 보기 — 지수 추이·실거래·입주 물량
-            </div>
+            <div className="t-sub text-text-3">지수 추이 · 실거래 · 입주 물량</div>
           </div>
           <span className="shrink-0 t-body font-bold text-primary">시장 데이터 →</span>
         </Link>
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* 이웃 글 — 사람의 기록. 이야기 카드 규칙(.story-*): 작성자가 먼저, 그다음 제목·댓글·사진 */}
+      <div className="grid grid-cols-1 gap-6 max-md:gap-3 lg:grid-cols-2">
+        {/* 이웃 글 — 사람의 기록. 이야기 카드 규칙(.story-*): 작성자가 먼저, 그다음 제목·댓글·사진
+            [1015] 제목 옆 "사람의 기록"·"뉴스룸" 부연 라벨을 걷었다(소유자 지시 4 · 브리프 규칙 C). 행 목록은
+            리퀴드 판 hanji(사람이 쓴 글). 행 메타는 당근 동네 글 카드 순서(작성자 · N시간 전 · 공감 · 댓글 · 사진). */}
         <section className="rise-in-1" aria-labelledby="region-stories-title">
           <div className="mb-2 flex items-baseline justify-between px-1">
             <h2 id="region-stories-title" className="t-section text-ink">
-              이웃 글 <span className="story-kind ml-1 t-caption align-middle">사람의 기록</span>
+              이웃 글
             </h2>
             <Link href="/town?kind=post" className="inline-block py-[5px] t-sub font-bold text-primary">
               이야기 피드 ›
             </Link>
           </div>
           {postsFailed ? (
-            <div className="card rounded-2xl px-5 py-6 t-body text-text-2">
+            <div className="card rounded-2xl px-5 py-6 t-body text-text-2 max-md:px-3.5 max-md:py-4">
               글을 지금 불러오지 못했어요. 잠시 후 다시 열어봐 주세요.
             </div>
           ) : communityPosts.length === 0 ? (
-            <div className="story-card flex flex-col items-start gap-2 px-5 py-6">
-              {/* [970 · C-20] 해요체 통일 · [1006] 0건은 0건이라고 — 지어낸 글 없음 */}
-              <p className="t-body text-text-2">
-                아직 {region.name} 이웃 글이 없어요 — 이 동네에 다녀오셨다면 첫 이야기를
-                남겨 보세요. 글을 쓰면 포인트가 적립돼요.
-              </p>
+            <div className="story-card flex flex-col items-start gap-2 px-5 py-6 max-md:px-3.5 max-md:py-4">
+              {/* [970 · C-20] 해요체 통일 · [1006] 0건은 0건이라고 — 지어낸 글 없음 · [1015] 한 줄로 */}
+              <p className="t-body text-text-2">아직 {region.name} 이웃 글이 없어요.</p>
               <Link
                 href={`/town/write?region=${encodeURIComponent(region.name)}`}
                 className="btn-soft rounded-lg px-3.5 py-2 t-sub font-bold"
@@ -234,16 +237,16 @@ export default async function TownRegionHomePage({
               </Link>
             </div>
           ) : (
-            <div className="story-card overflow-hidden">
-              <ul className="flex flex-col">
+            <div>
+              <ul className="lq-panel flex flex-col" data-tone="hanji">
                 {communityPosts.map((p) => {
                   const author = p.authorLabel?.trim() || "이웃";
                   const photoCount = postAttachments(p).length;
                   return (
-                    <li key={p.id} className="border-b border-line last:border-0">
+                    <li key={p.id} className="border-b last:border-0">
                       <Link
                         href={`/town/story/${p.id}`}
-                        className="flex items-center gap-3 px-4 py-3 no-underline transition-colors hover:bg-bg"
+                        className="flex items-center gap-3 py-3 no-underline transition-colors"
                       >
                         <span className="story-avatar" aria-hidden="true">
                           {author.slice(0, 1)}
@@ -253,6 +256,12 @@ export default async function TownRegionHomePage({
                           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 t-sub text-text-3">
                             <span className="font-bold text-text-2">{author}</span>
                             <span>{relTime(p.createdAt)}</span>
+                            {p.likeCount > 0 && (
+                              <span className="inline-flex items-center gap-1">
+                                <Icon name="heart" size={11} />
+                                공감 {p.likeCount}
+                              </span>
+                            )}
                             <span className="inline-flex items-center gap-1">
                               <Icon name="messages-square" size={11} />
                               댓글 {p.commentCount}
@@ -279,7 +288,7 @@ export default async function TownRegionHomePage({
         <section className="rise-in-2" aria-labelledby="region-news-title">
           <div className="mb-2 flex items-baseline justify-between px-1">
             <h2 id="region-news-title" className="t-section text-ink">
-              {region.name} 뉴스 <span className="news-tag ml-1 align-middle">뉴스룸</span>
+              {region.name} 뉴스
             </h2>
             <Link
               href={`/town/news?region=${encodeURIComponent(region.name)}`}
@@ -289,10 +298,9 @@ export default async function TownRegionHomePage({
             </Link>
           </div>
           {newsRows.length === 0 ? (
-            <div className="news-strip px-5 py-6 t-body text-text-2">
-              최근 수집된 {region.name} 기사가 없어요. 매일 아침 자동 수집되며, 위의
-              &lsquo;{region.name} 새 소식&rsquo; 알림을 켜 두면 새 기사가 잡히는 대로
-              알림함으로 알려드려요.
+            /* [1015] 한지 면(.news-strip) → 흰 카드 + 1px 선(브리프 규칙 C) · 빈 화면은 한 줄 */
+            <div className="card rounded-2xl px-5 py-6 t-body text-text-2 max-md:px-3.5 max-md:py-4">
+              최근 수집된 {region.name} 기사가 없어요.
             </div>
           ) : (
             <TownNewsStrip
@@ -306,8 +314,10 @@ export default async function TownRegionHomePage({
         </section>
       </div>
 
-      {/* 공개 임장노트 */}
-      <section className="rise-in-3 mt-6">
+      {/* 공개 임장노트
+          [1015] 카드 왼쪽에 44px 정사각 썸네일(noteCoverUrl — 템플릿/첫 사진, 없으면 단색 칸)을 붙였다(브리프 규칙 H).
+          정사각 자리라 wide 판은 필요 없다. "Lab 데이터"·"직접방문" 배지는 걷고 작성자 이름을 메타 줄에 둔다(규칙 C). */}
+      <section className="rise-in-3 mt-6 max-md:mt-3">
         <div className="mb-2 flex items-baseline justify-between px-1">
           <h2 className="t-section text-ink">
             {region.name} 공개 임장노트{" "}
@@ -320,12 +330,9 @@ export default async function TownRegionHomePage({
           </Link>
         </div>
         {notes.length === 0 ? (
-          <div className="card flex flex-col items-start gap-2 rounded-2xl px-5 py-6">
-            {/* [970 · C-20] 해요체 통일 */}
-            <p className="t-body text-text-2">
-              아직 {region.name} 공개 임장노트가 없어요. 직접 다녀온 기록이 이 동네의 첫
-              번째 현장 자료가 돼요.
-            </p>
+          <div className="card flex flex-col items-start gap-2 rounded-2xl px-5 py-6 max-md:px-3.5 max-md:py-4">
+            {/* [970 · C-20] 해요체 통일 · [1015] 한 줄로 */}
+            <p className="t-body text-text-2">아직 {region.name} 공개 임장노트가 없어요.</p>
             <Link
               href={`/notes/new?region=${encodeURIComponent(region.name)}`}
               className="btn-soft rounded-lg px-3.5 py-2 t-sub font-bold"
@@ -335,38 +342,44 @@ export default async function TownRegionHomePage({
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
-            {notes.map((n) => (
-              <Link
-                key={n.id}
-                href={`/notes/${n.id}`}
-                className="card tile rounded-2xl px-4 py-3.5"
-              >
-                <div className="truncate t-body font-bold text-ink">{n.title}</div>
-                <div className="mt-1 flex items-center gap-2 t-sub text-text-3">
-                  {n.aptName && <span className="truncate">{n.aptName}</span>}
-                  {/* [970 · C-11] Lab(데이터 분석) 노트는 방문 기록이 아니다 — 피드(/town)는
-                      "Lab 데이터", 여기는 "직접방문" 으로 같은 노트를 다르게 불렀다. 같은 판정
-                      (isLabNoteLabel — lib/town/feed.ts 와 동일)으로 맞춘다. */}
-                  {isLabNoteLabel(n.authorLabel) ? (
-                    <span className="shrink-0">Lab 데이터</span>
-                  ) : (
-                    n.visitDate && <span className="shrink-0">직접방문</span>
-                  )}
-                </div>
-                {n.summary && (
-                  <p className="mt-1.5 line-clamp-2 t-sub text-text-2">
-                    {n.summary}
-                  </p>
-                )}
-              </Link>
-            ))}
+            {notes.map((n) => {
+              const cover = noteCoverUrl(n);
+              return (
+                <Link
+                  key={n.id}
+                  href={`/notes/${n.id}`}
+                  className="card tile flex items-start gap-3 rounded-2xl px-4 py-3.5 max-md:px-3.5 max-md:py-3"
+                >
+                  <span
+                    className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg"
+                    style={{ background: seedGradient(n.region || n.id) }}
+                    aria-hidden="true"
+                  >
+                    {cover && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={cover} alt="" loading="lazy" className="h-full w-full object-cover" />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate t-body font-bold text-ink">{n.title}</span>
+                    <span className="mt-0.5 flex items-center gap-2 t-sub text-text-3">
+                      {n.aptName && <span className="truncate">{n.aptName}</span>}
+                      <span className="shrink-0">{maskNoteAuthor(n.authorLabel, n.authorEmail)}</span>
+                    </span>
+                    {n.summary && (
+                      <span className="mt-1 block line-clamp-2 t-sub text-text-2">{n.summary}</span>
+                    )}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         )}
       </section>
 
       {/* 다른 동네 + 지도 — [970 · C-17] 예전엔 카탈로그 앞 16곳(서울 위주)만 보였다.
           시·도별 <details> 로 전량을 접어 두고, 지금 보는 동네의 시·도만 기본 펼침. */}
-      <section className="rise-in-4 mt-8" aria-labelledby="other-towns-title">
+      <section className="rise-in-4 mt-8 max-md:mt-4" aria-labelledby="other-towns-title">
         <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 px-1">
           <h2 id="other-towns-title" className="t-body font-bold text-ink">
             다른 동네 홈
@@ -405,6 +418,10 @@ export default async function TownRegionHomePage({
           ))}
         </div>
       </section>
+
+      {/* [1015] 광고 — 페이지 끝 1곳(브리프 규칙 G: 첫 화면 밖). 이 화면에 광고 자리가 없었다.
+          ISR 7일 페이지라 plan={null} + AdFreeGate(클라이언트)가 유료 플랜을 가린다. */}
+      <AdZone placement="page_bottom" seed={0} plan={null} className="mt-6 max-md:mt-4" />
     </PageShell>
   );
 }

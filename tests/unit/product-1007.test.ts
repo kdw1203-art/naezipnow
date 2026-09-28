@@ -98,17 +98,19 @@ test("검색 화면 — 이야기는 .story-card, 뉴스는 .news-row, 필터에
 
 /* ---------- 1. 홈 — 동네이야기·뉴스룸 블록(1006 재질 규칙) ---------- */
 
-test("홈 — HomeTownBlock 이 .story-card / .news-strip 재질을 쓰고 클라이언트 JS 가 없다", () => {
+test("홈 — HomeTownBlock 이 .story-card 재질 + 흰 뉴스 카드(원문 사진)를 쓰고 클라이언트 JS 가 없다", () => {
   const block = read("app/components/home/HomeTownBlock.tsx");
   assert.doesNotMatch(block, /"use client"/);
   assert.match(block, /story-card/);
   assert.match(block, /story-avatar/);
-  assert.match(block, /news-strip__item/);
+  /* [1015] 뉴스 칸은 한지 스트립(.news-strip) → 흰 카드 + 원문 사진 행(소유자: "튀지 않게 테마에 맞추고 뉴스는 원문 사진") */
+  assert.doesNotMatch(block, /news-strip/);
+  assert.match(block, /<CoverImage src=\{n\.image\}/);
   assert.match(block, /storyHref\(p\.id\)/);
   assert.match(block, /newsHref\(n\.id\)/);
   /* 0건·실패를 다르게 말한다 */
   assert.match(block, /이웃 글을 지금 불러오지 못했어요/);
-  assert.match(block, /아직 이웃이 쓴 이야기가 없어요/);
+  assert.match(block, /아직 이웃이 쓴 이야기가 없습니다/);
   const page = read("app/page.tsx");
   assert.match(page, /<HomeTownBlock stories=\{data\.stories\} news=\{data\.news\} failed=\{failed\.town\}/);
   const data = read("lib/newui/home-data.ts");
@@ -234,7 +236,8 @@ test("buildComplexCitableSummary — fragments 를 주면 2~4번째 문장이 �
 test("단지 허브 — buildComplexFacts 재료를 이미 띄운 로더로 채우고, 인용 요약에 같은 조각을 넘긴다", () => {
   const src = read("app/complex/[id]/page.tsx");
   assert.match(src, /fragments: facts\.summaryFragments/);
-  assert.match(src, /<ComplexFactsCard facts=\{facts\} noteHref=\{noteHref\} \/>/);
+  /* [1015] 카드가 페이지 맨 끝 "데이터 출처" 접힘이 되며 spec·faq·sources·embedId 를 더 받는다 — facts·noteHref 배선은 그대로 */
+  assert.match(src, /<ComplexFactsCard\s+facts=\{facts\}\s+noteHref=\{noteHref\}/);
   assert.match(src, /loadRentHistory\(region, args\.name\)/, "전월세 원표본은 ComplexRentSection 과 같은 로더·같은 인자");
   assert.match(src, /loadHubInspectionNotes\(args\.complexId, args\.name\)/, "임장노트도 같은 로더·같은 인자");
   assert.match(src, /getTradeWindowSamples/, "매매 원표본 창은 패널(detail API)과 같은 로더");

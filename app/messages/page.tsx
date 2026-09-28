@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageShell } from "../components/PageShell";
+import { Icon } from "@/app/components/Icon";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 
 /* P0-5 목업 정직화: 하드코딩 쪽지함(받은·보낸 가짜 대화)을 제거하고
@@ -24,9 +25,10 @@ export default function MessagesPage() {
       <div className="mx-auto w-full max-w-[480px]">
         <h1 className="rise-in text-[21px] font-bold text-ink">쪽지함</h1>
 
-        <div className="rise-in-1 card mt-4 flex flex-col items-center gap-3 rounded-3xl px-6 py-12 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-[21px]">
-            ✉️
+        <div className="rise-in-1 card mt-4 flex flex-col items-center gap-3 rounded-3xl px-6 py-12 text-center max-md:py-8">
+          {/* [1015 · 규칙 4] UI 이모지(✉️) → 선 아이콘 */}
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
+            <Icon name="mail" size={22} />
           </div>
           <div className="text-[15px] font-bold text-ink">
             쪽지 기능 준비 중이에요

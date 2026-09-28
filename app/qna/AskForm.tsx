@@ -116,7 +116,8 @@ export function AskForm() {
         {/* [1012] 규칙 5·6 — "질문해 보세요 / 물어보세요" 권유 → 동사+대상 + 무엇을(주제)·누가(이웃) */}
         <span className="flex flex-col">
           <span className="t-body font-bold text-ink">단지·동네 질문하기</span>
-          <span className="t-sub text-text-3">재건축·학군·주차·교통 — 그 단지를 아는 이웃이 답해요</span>
+          {/* [1015] 부제는 주제 명사만(브리프 규칙 D) */}
+          <span className="t-sub text-text-3">재건축 · 학군 · 주차 · 교통</span>
         </span>
       </button>
     );
@@ -136,11 +137,12 @@ export function AskForm() {
         </button>
       </div>
 
-      {/* [970 · C-27] placeholder 만 있던 입력 다섯 칸 — 값이 차면 이름을 잃는다. aria-label */}
+      {/* [970 · C-27] placeholder 만 있던 입력 다섯 칸 — 값이 차면 이름을 잃는다. aria-label
+          [1015] placeholder 의 "예: …" 예시 문장·사용법("…적으면 답이 빨라요")은 걷었다(브리프 규칙 B) */}
       <input
         className={INPUT}
         aria-label="질문 제목"
-        placeholder="질문 제목 (예: 은마아파트 재건축 진행 상황이 궁금해요)"
+        placeholder="질문 제목 (4글자 이상)"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         maxLength={120}
@@ -148,7 +150,7 @@ export function AskForm() {
       <textarea
         className={`${INPUT} min-h-[120px] resize-y`}
         aria-label="질문 내용"
-        placeholder="본문 (선택) — 단지명·지역을 함께 적으면 답이 빨라요"
+        placeholder="본문 (선택)"
         value={body}
         onChange={(e) => setBody(e.target.value)}
         maxLength={4000}
@@ -170,7 +172,7 @@ export function AskForm() {
         <input
           className={INPUT}
           aria-label="지역"
-          placeholder="지역 (선택, 예: 서울 강남구)"
+          placeholder="지역 (선택)"
           value={region}
           onChange={(e) => setRegion(e.target.value)}
           maxLength={80}
@@ -180,7 +182,7 @@ export function AskForm() {
       <input
         className={INPUT}
         aria-label="태그"
-        placeholder="태그 (쉼표로 구분, 예: 재건축,학군)"
+        placeholder="태그 (쉼표로 구분)"
         value={tags}
         onChange={(e) => setTags(e.target.value)}
         maxLength={120}

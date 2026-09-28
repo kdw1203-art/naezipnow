@@ -52,7 +52,7 @@ export function WelcomeHandoff() {
           <div>
             <div className="t-body font-bold text-ink">온보딩 루프 완료</div>
             <p className="mt-0.5 t-sub text-text-2">
-              {aiLabel} · 같은 생활권 후보를 지도에서 비교해 보세요
+              {aiLabel} · 같은 생활권 후보 지도 비교
             </p>
           </div>
           <button

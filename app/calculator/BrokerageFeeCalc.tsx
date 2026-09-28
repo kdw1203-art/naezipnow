@@ -49,9 +49,10 @@ const inputCls =
 export function BrokerageFeeCalc() {
   const [deal, setDeal] = useState<BrokerageDeal>("sale");
   const [prop, setProp] = useState<BrokerageProperty>("house");
-  const [priceMan, setPriceMan] = useState("80000"); // 매매가 (만원)
-  const [depositMan, setDepositMan] = useState("30000"); // 보증금 (만원)
-  const [monthlyMan, setMonthlyMan] = useState("0"); // 월세 (만원)
+  /* [1015 · 규칙 B] 예시 기본값(80,000·30,000)은 실데이터가 아니라 뺐다 — 빈 칸에서 시작, 금액이 없으면 결과도 없다 */
+  const [priceMan, setPriceMan] = useState(""); // 매매가 (만원)
+  const [depositMan, setDepositMan] = useState(""); // 보증금 (만원)
+  const [monthlyMan, setMonthlyMan] = useState(""); // 월세 (만원)
 
   const result = useMemo(() => {
     const toWon = (s: string) => Math.max(0, Number(s.replace(/[^0-9.]/g, "")) || 0) * 10000;
@@ -72,15 +73,15 @@ export function BrokerageFeeCalc() {
   /* 결론 한 줄 — 실제 계산값으로만(금액이 없으면 문장도 없다) */
   const dealWord = deal === "sale" ? "매매" : "임대차";
   const conclusion = result
-    ? `거래금액 ${nb(wonText(result.amountWon))} ${dealWord}의 중개보수는 최대 ${nb(wonText(result.feeWon))}이에요`
+    ? `거래금액 ${nb(wonText(result.amountWon))} ${dealWord}의 중개보수 상한 ${nb(wonText(result.feeWon))}`
     : null;
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="card flex flex-col gap-3 rounded-3xl p-[18px]">
+      <div className="card flex flex-col gap-3 rounded-3xl p-[18px] max-md:p-3.5">
         <div className="flex items-baseline justify-between">
-          <span className="text-[13px] font-bold text-ink">중개보수 상한 계산</span>
-          <span className="text-[12px] font-medium text-text-3">법정 상한요율 기준</span>
+          <span className="t-body font-bold text-ink">중개보수 상한 계산</span>
+          <span className="t-sub font-medium text-text-3">법정 상한요율 기준</span>
         </div>
 
         <Segmented options={DEALS} value={deal} onChange={setDeal} ariaLabel="거래 유형" className="self-start" />
@@ -88,7 +89,7 @@ export function BrokerageFeeCalc() {
 
         {deal === "sale" ? (
           <label className="flex flex-col gap-1">
-            <span className="text-[12px] font-bold text-text-2">매매가 (만원)</span>
+            <span className="t-sub font-bold text-text-2">매매가 (만원)</span>
             <input
               type="text"
               inputMode="numeric"
@@ -101,7 +102,7 @@ export function BrokerageFeeCalc() {
         ) : (
           <div className="grid grid-cols-2 gap-2.5">
             <label className="flex flex-col gap-1">
-              <span className="text-[12px] font-bold text-text-2">보증금 (만원)</span>
+              <span className="t-sub font-bold text-text-2">보증금 (만원)</span>
               <input
                 type="text"
                 inputMode="numeric"
@@ -112,7 +113,7 @@ export function BrokerageFeeCalc() {
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-[12px] font-bold text-text-2">월세 (만원)</span>
+              <span className="t-sub font-bold text-text-2">월세 (만원)</span>
               <input
                 type="text"
                 inputMode="numeric"
@@ -125,8 +126,9 @@ export function BrokerageFeeCalc() {
           </div>
         )}
 
+        {!result && <p className="m-0 t-sub text-text-3">{deal === "sale" ? "매매가를 넣으면 법정 상한액" : "보증금·월세를 넣으면 법정 상한액"}</p>}
         {result && (
-          <div className="flex flex-col gap-1.5 rounded-2xl bg-bg p-4">
+          <div className="flex flex-col gap-1.5 rounded-2xl bg-bg p-4 max-md:p-3">
             {conclusion && <p className="t-body break-words font-bold text-ink">{conclusion}</p>}
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
               <span className="flex items-center gap-0.5 t-sub text-text-3">
@@ -134,11 +136,11 @@ export function BrokerageFeeCalc() {
                 <Explain
                   title="중개보수(법정 상한)"
                   body={[
-                    "중개사무소에 내는 보수의 법정 최고액이에요. 실제 보수는 이 금액 안에서 중개사와 협의해 정해요.",
-                    "부가가치세 10%는 따로예요. 시·도 조례로 일부 다를 수 있어요.",
+                    "중개사무소에 내는 보수의 법정 최고액. 실제 보수는 이 금액 안에서 중개사와 협의.",
+                    "부가가치세 10% 별도. 시·도 조례로 일부 다를 수 있다.",
                   ]}
                   how={[
-                    "상한 = 거래금액 × 상한요율 — 구간 한도액이 있으면 그 금액까지",
+                    "상한 = 거래금액 × 상한요율, 구간 한도액이 있으면 그 금액까지",
                     `주택 매매: ${bracketLine(SALE_HOUSE_BRACKETS)}`,
                     `주택 임대차: ${bracketLine(LEASE_HOUSE_BRACKETS)}`,
                     "임대차 거래금액 = 보증금 + 월세 × 100 (5천만원 미만이면 월세 × 70)",
@@ -149,29 +151,29 @@ export function BrokerageFeeCalc() {
               </span>
               <TweenMoney value={result.feeWon} unit="원" className="t-title text-primary" />
             </div>
-            <div className="text-[12px] text-text-3">{result.amountNote}</div>
-            <div className="text-[12px] text-text-2">
+            <div className="t-sub text-text-3">{result.amountNote}</div>
+            <div className="t-sub text-text-2">
               거래금액 <b className="t-num font-bold text-ink">{wonText(result.amountWon)}</b> · 적용 상한요율{" "}
               <b className="font-bold text-ink">{result.rateLabel}</b>
             </div>
-            <div className="text-[12px] leading-[1.7] text-text-3">
+            <div className="t-sub leading-[1.7] text-text-3">
               {result.capped
-                ? `요율대로면 ${wonText(result.amountWon * result.rate)}이지만 구간 한도액이 적용돼 ${wonText(result.feeWon)}까지예요. `
+                ? `요율대로면 ${wonText(result.amountWon * result.rate)}, 구간 한도액 적용으로 ${wonText(result.feeWon)}. `
                 : ""}
-              법정 <b>상한</b>이며 확정 보수가 아니에요 — 실제 보수는 이 금액 이내에서 중개사와 협의해 정합니다.
-              부가가치세 10%는 별도입니다. 일반 정보이며 법률·세무 자문이 아니에요.
+              법정 <b>상한</b>이며 확정 보수가 아님. 실제 보수는 이 금액 이내에서 중개사와 협의. 부가가치세 10% 별도. 일반 정보이며
+              법률·세무 자문이 아님.
             </div>
           </div>
         )}
       </div>
 
       {/* 요율표 전문 — 계산 근거를 그대로 공개한다 (검색 사용자가 찾는 표이기도 하다) */}
-      <div className="card flex flex-col gap-3 rounded-3xl p-[18px]">
-        <span className="text-[13px] font-bold text-ink">주택 중개보수 상한요율표</span>
+      <div className="card flex flex-col gap-3 rounded-3xl p-[18px] max-md:p-3.5">
+        <span className="t-body font-bold text-ink">주택 중개보수 상한요율표</span>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[420px] text-[12px]">
+          <table className="w-full min-w-[420px] t-sub">
             <thead>
-              <tr className="border-b border-line text-left text-[12px] text-text-3">
+              <tr className="border-b border-line text-left t-sub text-text-3">
                 <th className="py-1.5 pr-2 font-semibold">거래금액</th>
                 <th className="py-1.5 pr-2 font-semibold">매매·교환</th>
                 <th className="py-1.5 font-semibold">임대차</th>
@@ -189,10 +191,10 @@ export function BrokerageFeeCalc() {
             </tbody>
           </table>
         </div>
-        <p className="text-[12px] leading-[1.7] text-text-3">
+        <p className="t-sub leading-[1.7] text-text-3">
           오피스텔(전용 85㎡ 이하·주거설비 갖춤): 매매 0.5% · 임대차 0.4%. 토지·상가 등
           주택 외: 0.9% 이내 협의. 근거: 공인중개사법 시행규칙 제20조(법정 상한요율) ·
-          한국공인중개사협회 게시 요율표 대조(2026-08). 지자체 조례로 일부 다를 수 있어요.
+          한국공인중개사협회 게시 요율표 대조(2026-08). 지자체 조례로 일부 다를 수 있음.
         </p>
       </div>
     </div>

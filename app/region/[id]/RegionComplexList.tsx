@@ -30,17 +30,15 @@ export function RegionComplexList({
 }) {
   if (failed) {
     return (
-      <p className="py-6 text-center t-body text-text-3">
-        단지별 실거래를 지금 불러오지 못했어요. 데이터가 없다는 뜻이 아니라 조회에 실패했다는 뜻이에요 — 잠시 뒤 다시
-        열어 주세요.
-      </p>
+      <p className="py-6 text-center t-body text-text-3">단지별 실거래를 지금 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.</p>
     );
   }
   if (summaries.length === 0) {
     return <p className="py-6 text-center t-body text-text-3">이 지역에서 수집된 단지별 매매 실거래가 아직 없어요.</p>;
   }
   return (
-    <ul className="mt-2 flex flex-col">
+    /* [1015 · 규칙 I] 단지별 실거래 목록 = blue 리퀴드 판 */
+    <ul className="lq-panel mt-2 flex flex-col divide-y" data-tone="blue">
       {summaries.map((s) => {
         const href = s.regionName
           ? complexHrefFromNames(s.regionName, s.complexName)
@@ -52,10 +50,10 @@ export function RegionComplexList({
           s.avgPricePerPyeongKrw !== null ? `평균 평당 ${formatKrwShort(s.avgPricePerPyeongKrw)}` : null,
         ].filter(Boolean);
         return (
-          <li key={s.complexName} className="border-b border-divider last:border-b-0">
+          <li key={s.complexName}>
             <Link
               href={href}
-              className="press -mx-2 flex items-start justify-between gap-3 rounded-xl px-2 py-2.5 no-underline transition-colors hover:bg-bg"
+              className="press flex items-start justify-between gap-3 py-2.5 no-underline"
             >
               <span className="flex min-w-0 flex-col">
                 <span className="t-body font-bold text-ink break-words">{s.complexName}</span>
@@ -70,7 +68,7 @@ export function RegionComplexList({
                 </span>
               </span>
               <span className="flex shrink-0 flex-col items-end text-right">
-                <span className="t-body font-bold t-num text-ink">
+                <span className="t-body font-bold t-num">
                   {formatEokMan(s.latestAmountKrw / 10_000)}
                 </span>
                 <span className="t-caption tabular-nums text-text-3">

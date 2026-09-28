@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   /* "캘린더" 표기는 제거(2026-08-22) — 실제 화면은 월별 물량 막대 + 단지 목록이지
      달력 격자가 아니다. 이름이 화면과 다르면 찾던 것을 못 찾았다고 느낀다. */
   description:
-    "전국·지역별 아파트 입주 예정 물량(공급) — 입주월·단지·세대수. 공급이 많은 시기와 지역을 한눈에.",
+    "전국·지역별 아파트 입주 예정 물량(공급). 입주월·단지·세대수와 공급이 많은 시기·지역.",
   robots: { index: true, follow: true },
   // N7 — 필터·정렬 파라미터 조합이 별개 URL 로 색인되지 않도록 canonical 고정
   alternates: seoAlternates("/supply"),
@@ -63,7 +63,15 @@ export default async function SupplyPage() {
             아무 동작이 없는 장식이라 제거했다. "입주 물량 알림" 칩도 뺐다 —
             /notifications 는 알림함일 뿐 입주 알림을 켜는 설정이 없어서, 신청할 수
             없는 알림을 신청 버튼처럼 걸어 두면 신청했다고 오해하게 만든다. */}
-        <div className="rise-in mb-4 flex flex-wrap items-center gap-2">
+        {/* [1015] 이 줄 아래 있던 안내 띠("입주는 월 단위로 …예요. …합친 자료예요. …다를 수 있어요")를 걷었다
+            (브리프 규칙 B). 같은 사실(월 단위 · 두 원천 · 기준 시점)은 "월별 입주 물량" 제목 옆 ⓘ(SupplyClient)
+            시트 안에 이미 있고, 일정 변경 면책은 페이지 끝 한 줄이 맡는다. */}
+        <div className="rise-in mb-4 flex flex-wrap items-center gap-2 max-md:mb-3">
+          {asOfLabel && (
+            <p className="t-sub text-text-3">
+              {asOfLabel} 기준 · 청약홈 분양공고 · 공공데이터 입주예정물량
+            </p>
+          )}
           <div className="flex-1" />
           <div className="flex flex-wrap gap-1.5 text-xs">
             <a
@@ -85,32 +93,6 @@ export default async function SupplyPage() {
               청약 경쟁률 보기
             </Link>
           </div>
-        </div>
-
-        {/* 정직 안내 배너 (초록 틴트) — 화면의 모든 수치가 실데이터가 된 뒤로는
-            "예시 구성" 이라고 적을 것이 없다. 남은 사실(월 단위 · 두 원천 · 일정 변경 가능)만 적는다. */}
-        <div
-          className="rise-in mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-primary-soft px-4 py-3 t-sub"
-          style={{ color: "var(--primary-strong)" }}
-        >
-          <span>
-            {/* [1011] "자동 적재 · 수동 적재분 · 최근 적재" 같은 내부 낱말을 걷었다(소유자 지시).
-                다만 "2026년 2월에 받은"은 그 절반이 오래된 자료라는 **신선도 경고**라 남긴다. */}
-            입주는 <b>월 단위</b>로 공개되는 자료라 일자는 알 수 없어요. 청약홈
-            분양공고의 입주예정월(매일 갱신)과 2026년 2월에 받은 공공데이터
-            입주예정물량을 합친 자료예요{asOfLabel ? `(${asOfLabel} 기준)` : ""}. 사업
-            진행·일정 변경에 따라 실제와 다를 수 있어요. 아래 “지난·전체 입주 예정
-            단지” 표는{" "}
-            <a
-              href={SOURCE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-bold text-primary underline"
-            >
-              공공데이터(data.go.kr)
-            </a>{" "}
-            기반입니다.
-          </span>
         </div>
 
         {all.ok ? (

@@ -8,7 +8,6 @@ import { safeInternalPath } from "@/lib/safe-path";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Logo } from "@/app/components/Logo";
-import { Icon } from "@/app/components/Icon";
 import { useMoment } from "@/app/components/motion/MomentProvider";
 
 import type { SocialProvider } from "@/lib/auth/configured-social";
@@ -55,15 +54,15 @@ const SOCIAL_LABEL: Record<SocialProvider, string> = {
 const SOCIAL_BUTTON: Record<SocialProvider, { label: string; className: string }> = {
   /* 카카오 브랜드 가이드 — 버튼 배경 #FEE500, 라벨 #191919 (다크에서도 고정) */
   kakao: {
-    label: "카카오로 3초 만에 시작",
+    label: "카카오로 로그인",
     className: "bg-[#fee500] text-[#191919] shadow-[0_6px_16px_rgba(254,229,0,.3)]",
   },
   toss: {
-    label: "토스로 시작",
+    label: "토스로 로그인",
     className: "bg-[#3182f6] text-white shadow-[0_6px_16px_rgba(49,130,246,.35)]",
   },
   google: {
-    label: "Google로 시작",
+    label: "Google로 로그인",
     className: "border border-line bg-surface text-text-1",
   },
 };
@@ -205,11 +204,12 @@ const EMAIL_NOT_CONFIRMED_COPY =
 /* 로그인 계정으로 실제로 할 수 있는 것만 적는다 — 각 항목은 코드에 로그인 벽이
    실제로 걸려 있는 기능이다(노트 저장·관심단지·분석 기록·관심 지역 알림). 없는 기능을
    미끼로 적지 않는다. [994] Q&A·모임은 992 에서 보관돼 목록에서 뺐다. */
-const ACCOUNT_BENEFITS: { icon: string; label: string; desc: string }[] = [
-  { icon: "notebook-pen", label: "임장노트 저장", desc: "현장에서 적은 체크·사진을 계정에 보관" },
-  { icon: "star", label: "관심 단지", desc: "보던 단지를 모아두고 다시 찾기" },
-  { icon: "bot", label: "AI 분석 기록", desc: "진단·예측 결과를 기록으로 남겨 다시 보기" },
-  { icon: "bell", label: "관심 지역 알림", desc: "청약 공고·접수·발표를 수신함으로" },
+/* [1015 · 규칙 B] 아이콘 타일 4장(기능 설명 블록) → 한 줄 나열. 항목은 그대로(로그인 벽이 걸린 기능만). */
+const ACCOUNT_BENEFITS: { label: string }[] = [
+  { label: "임장노트 저장" },
+  { label: "관심 단지" },
+  { label: "AI 분석 기록" },
+  { label: "관심 지역 알림" },
 ];
 
 /**
@@ -579,33 +579,22 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
           </ActionButton>
           <div className="text-center">
             <Link href="/forgot-password" className="text-xs font-bold text-text-2">
-              비밀번호를 잊으셨나요?
+              비밀번호 찾기
             </Link>
           </div>
         </form>
 
-        <ul className="rise-in-4 grid grid-cols-2 gap-2">
-          {ACCOUNT_BENEFITS.map((b) => (
-            <li
-              key={b.label}
-              className="card flex flex-col gap-1 rounded-lg px-3.5 py-3"
-            >
-              <span className="flex items-center gap-1.5 text-[13px] font-bold text-ink">
-                <Icon name={b.icon} size={15} />
-                {b.label}
-              </span>
-              <span className="text-[12px] leading-[1.5] text-text-3">{b.desc}</span>
-            </li>
-          ))}
-        </ul>
+        <p className="rise-in-4 text-center text-[12px] leading-[1.6] text-text-3">
+          로그인 후 {ACCOUNT_BENEFITS.map((b) => b.label).join(" · ")}
+        </p>
 
         <div className="rise-in-5 text-center text-xs text-text-3">
-          처음이신가요?{" "}
+          계정이 없다면{" "}
           {/* [970 · A-14] 가입 링크에 callbackUrl 을 넘긴다 — 구독·페이월에서 로그인 벽을 만나
               가입으로 갈아탄 사람이 가입 뒤 홈(/welcome → 노트)으로 떨어져 하던 일을 잃었다.
               SignupClient 가 이 값을 읽어 /welcome?next= 로 잇는다. */}
           <Link href={signupHref} className="font-bold text-primary">
-            회원가입 온보딩
+            회원가입
           </Link>
         </div>
         {/* [970 · A-13] 동의 문구에 약관·방침 실링크 — 동의 대상 문서를 열 수 없었다 */}

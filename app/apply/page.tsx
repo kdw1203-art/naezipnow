@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ApplyDailyStrip } from "./ApplyDailyStrip";
 import { PageShell } from "@/app/components/PageShell";
 import { Icon } from "@/app/components/Icon";
+import { Explain } from "@/app/components/explain/Explain";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { searchApplyhome } from "@/lib/applyhome/applyhome-search";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
@@ -64,25 +65,26 @@ async function getInitialPayload(): Promise<ApplyInitialResult> {
 }
 
 /* 연동(#225) — 청약은 단독으로 보지 않는다. 같은 지역의 입주 물량(공급 압력),
-   공매 물건(가격 하단), 정비사업(미래 공급)을 같이 봐야 판단이 선다. */
+   공매 물건(가격 하단), 정비사업(미래 공급)을 같이 봐야 판단이 선다.
+   [1015] 부제는 그 화면의 자료 이름만(명사) — 설명문을 걷었다(브리프 규칙 D). */
 const CROSS_LINKS: { href: string; icon: string; label: string; desc: string }[] = [
   {
     href: "/supply",
     icon: "calendar",
     label: "입주 물량",
-    desc: "같은 지역에 언제 몇 세대가 들어오는지",
+    desc: "입주월 · 세대수",
   },
   {
     href: "/auctions",
     icon: "gavel",
     label: "공매 물건",
-    desc: "공매로 나온 물건과 감정가",
+    desc: "감정가 · 최저입찰가",
   },
   {
     href: "/redevelopment",
     icon: "map",
     label: "정비사업 지도",
-    desc: "재건축·재개발 진행 단계",
+    desc: "재건축 · 재개발 단계",
   },
   /* [994] "단지 Q&A"(/qna) 제거 — Q&A 는 보관(비노출, 992) */
 ];
@@ -110,10 +112,24 @@ export default async function ApplyPage() {
       <div style={THEME_APPLY}>
         {/* 상단 CTA — 예전의 정적 탭(전체·예정·접수 중·지난 청약)은 클릭해도 아무
             동작이 없는 장식이라 제거했다. 실동작 탭(경쟁률/특별공급)은 아래 검색 영역에 있다. */}
-        <div className="rise-in mt-4 mb-4 flex flex-wrap items-center gap-2">
-          <h2 className="t-section text-ink">
-            청약 경쟁률 · 특별공급{" "}
-            <span className="t-sub font-bold text-primary">청약홈 실데이터</span>
+        {/* [1015] 제목 옆 "청약홈 실데이터" 부연 라벨과 아래 안내 띠("…예요. …확인하세요. 예측치는 만들지
+            않습니다"), 오른쪽 레일의 "이 숫자를 읽는 법" 카드를 걷고 ⓘ 하나로 접었다(브리프 규칙 B·C).
+            읽는 법(공고·주택형·순위별 행 · 단지명 미제공 행)과 출처는 그대로 시트 안에 있다. */}
+        <div className="rise-in mt-4 mb-4 flex flex-wrap items-center gap-2 max-md:mb-3">
+          <h2 className="flex items-center gap-0.5 t-section text-ink">
+            청약 경쟁률 · 특별공급
+            <Explain
+              title="청약 경쟁률 · 특별공급"
+              body={[
+                "경쟁률·특별공급 표는 청약홈(한국부동산원) 공공데이터입니다. 접수 일정·공고 원문·청약 신청은 청약홈(applyhome.co.kr)에서 봅니다.",
+                "당첨 가능성·안전마진 같은 예측치는 이 화면에서 만들지 않습니다.",
+              ]}
+              how={[
+                "경쟁률은 공고 · 주택형(타입) · 순위별로 제공됩니다. 같은 단지가 타입 수만큼 여러 줄로 보이고, 한 줄의 경쟁률은 그 타입 하나의 값입니다.",
+                "단지명이 ‘단지명 미제공’인 행은 공고 번호만 있는 경우입니다. 타입코드를 단지명처럼 보여 주지 않습니다.",
+              ]}
+              source="청약홈(한국부동산원) 공공데이터포털 · 조회 시점 기준, 실제 공고·결과는 청약홈 원문이 우선"
+            />
           </h2>
           <div className="flex-1" />
           {/* [개선 #17] 접수 일정 캘린더 — 접수 시작·마감을 날짜별로 */}
@@ -133,56 +149,17 @@ export default async function ApplyPage() {
           </a>
         </div>
 
-        {/* 정직 안내 — 이 페이지의 표는 전부 청약홈 공공데이터 실데이터 */}
-        <div className="rise-in mb-4 rounded-xl bg-primary-soft px-4 py-3 t-sub text-primary">
-          경쟁률·특별공급 표는 <b>청약홈(한국부동산원) 공공데이터</b>예요. 접수 일정·공고 원문·청약
-          신청은{" "}
-          <a
-            href={APPLYHOME_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block py-[5px] font-bold text-primary underline"
-          >
-            청약홈(applyhome.co.kr)
-          </a>
-          에서 확인하세요. 당첨 가능성·안전마진 같은 <b>예측치는 이 화면에서 만들지 않습니다.</b>
-        </div>
-
         {/* [994 · D4] 오늘의 청약 — 매일 적재 저장소(기준일 표기). 검색보다 먼저, 사실이 먼저. */}
         <ApplyDailyStrip />
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
           {/* 본문 — 청약홈 실데이터 검색 (경쟁률/특별공급 탭 + 지역·단지명 + 더보기) */}
           <ApplySearchClient initial={initial} />
 
-          {/* 우측 사이드 */}
-          <aside className="flex flex-col gap-3.5">
-            <div className="rise-in-3 card flex flex-col gap-2 p-[18px]">
-              <div className="flex items-center gap-2 t-body font-bold text-ink">
-                <Icon name="lightbulb" className="h-4 w-4 text-primary" />이 숫자를 읽는 법
-              </div>
-              <p className="t-sub text-text-2">
-                경쟁률은 <b>공고 · 주택형(타입) · 순위</b>별로 제공돼요. 그래서 같은 단지가 타입 수만큼
-                여러 줄로 보이는 게 정상이고, 한 줄의 경쟁률은 그 타입 하나의 경쟁률이에요.
-              </p>
-              {/* [1011] "청약홈 분양정보(상세) API 승인 대기 상태라" 를 걷었다(소유자 지시) —
-                  어느 API 가 승인 대기인지는 운영 쪽 사정이고, 읽는 사람에게 필요한 사실은
-                  "이 행은 단지명을 아직 못 받았다"와 "지어내지 않는다" 둘이다. */}
-              <p className="t-sub text-text-2">
-                단지명이 &ldquo;단지명 미제공&rdquo;으로 표시되는 행은 아직 단지명을 확보하지 못하고
-                공고 번호만 있는 경우예요 — 타입코드를 단지명처럼 보여드리지 않아요.
-              </p>
-              <p className="t-sub text-text-3">
-                출처: 청약홈(한국부동산원) 공공데이터포털 · 조회 시점 기준이며 실제 공고·결과는 청약홈
-                원문이 우선합니다.
-              </p>
-            </div>
-
-            <div className="rise-in-4 card flex flex-col gap-1.5 p-[18px]">
-              <div className="t-body font-bold text-ink">함께 보면 좋아요</div>
-              <p className="mb-1 t-sub text-text-3">
-                청약은 단독으로 보기 어려워요. 같은 지역의 공급·가격 하단도 같이 확인해 보세요.
-              </p>
+          {/* 우측 사이드 — 관련 링크 · 데이터 출처 · 광고 1 (브리프 규칙 F·G) */}
+          <aside className="flex flex-col gap-3.5 max-md:gap-3">
+            <div className="rise-in-4 card flex flex-col gap-1.5 p-[18px] max-md:p-3.5">
+              <div className="t-body font-bold text-ink">관련 데이터</div>
               {CROSS_LINKS.map((l) => (
                 <Link
                   key={l.href}
@@ -199,6 +176,13 @@ export default async function ApplyPage() {
                 </Link>
               ))}
             </div>
+
+            <p className="px-1 t-caption text-text-3">
+              출처 청약홈(한국부동산원) 공공데이터포털 ·{" "}
+              <Link href="/data-sources" className="font-bold text-primary no-underline">
+                데이터 출처와 한계
+              </Link>
+            </p>
 
             <div className="rise-in-5">
               <AdZone

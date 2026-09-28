@@ -96,7 +96,7 @@ export function NoteDetailFields({
           <div className="t-body font-bold text-ink">
             체크리스트{" "}
             <span className="t-sub font-medium text-text-3">
-              목적({visitPurpose || "실거주"})에 맞춰 항목이 바뀝니다 ·{" "}
+              목적 {visitPurpose || "실거주"} ·{" "}
               {checklistGroups.reduce(
                 (n, g) => n + g.items.filter((it) => groupChecked[it.id]).length,
                 0,
@@ -205,7 +205,7 @@ export function NoteDetailFields({
           <div className="t-body font-bold text-ink">
             눈에 띈 점{" "}
             <span className="t-sub font-medium text-text-3">
-              탭해서 태그 추가 (예: 초품아 · 이중주차)
+              (예: 초품아 · 이중주차)
             </span>
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -220,7 +220,7 @@ export function NoteDetailFields({
                     active
                       ? t.tone === "neg"
                         ? "bg-danger-soft font-bold text-danger"
-                        : "bg-primary-soft font-bold text-primary"
+                        : "chip-active font-bold"
                       : "border border-line bg-surface text-text-2"
                   }`}
                 >
@@ -293,7 +293,7 @@ export function NoteDetailFields({
           <div className="t-body font-bold text-ink">
             고려사항{" "}
             <span className="t-sub font-medium text-text-3">
-              결정 전 꼭 확인할 것 · 중요도 표시
+              중요 · 보통
             </span>
           </div>
           {todoItems.map((todo) => {
@@ -322,7 +322,7 @@ export function NoteDetailFields({
                   {todo.text}
                 </span>
                 <span
-                  className={`rounded-full chip-pad text-[10px] font-bold ${
+                  className={`rounded-full chip-pad t-caption font-bold ${
                     todo.level === "중요"
                       ? "bg-danger-soft text-danger"
                       : "bg-bg text-text-2"

@@ -30,7 +30,7 @@ export function BuyReportButton({
         setBusy(false);
         promptSignup({
           action: "report_buy",
-          title: `‘${title}’ 리포트를 구매할까요?`,
+          title: `‘${title}’ 리포트 구매`,
           benefit: "구매한 리포트(연결된 임장노트)는 계정으로 언제든 다시 열람할 수 있어요.",
           callbackUrl: window.location.pathname,
         });
@@ -60,7 +60,7 @@ export function BuyReportButton({
         {busy ? "구매 중…" : `${price.toLocaleString("ko-KR")}P 로 구매하고 노트 열람`}
       </button>
       {error && <p className="text-[12px] font-semibold text-danger">{error}</p>}
-      <p className="text-[10px] leading-[1.6] text-text-3">
+      <p className="t-caption text-text-3">
         구매 즉시 연결된 임장노트 전문을 열람할 수 있어요 · 포인트는 마이 › 포인트에서 확인
       </p>
     </div>

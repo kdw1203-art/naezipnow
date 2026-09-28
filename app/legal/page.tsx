@@ -58,22 +58,24 @@ export default function LegalHubPage() {
   const info = getBusinessInfo();
   return (
     <main className="mx-auto w-full max-w-3xl">
-      <header className="card rise-in p-6">
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-          Legal Center
-        </p>
-        <h1 className="mt-2 text-2xl font-bold text-ink">법적 고지</h1>
+      {/* [1015 · 규칙 C] 제목 위 영문 부연 라벨("Legal Center") 삭제. 본문 문장은 그대로 */}
+      <header className="card rise-in p-6 max-md:p-4">
+        <h1 className="text-2xl font-bold text-ink">법적 고지</h1>
         <p className="mt-2 text-[13px] leading-relaxed text-text-2">
           약관 및 정책은 서비스 운영 상황에 맞춰 업데이트될 수 있으며, 중요한 변경 사항은
           공지 또는 이메일로 사전 안내합니다.
         </p>
       </header>
 
-      <section className="mt-6 space-y-3">
+      {/* [1015 · 규칙 I] 문서 카드 묶음 → 리퀴드 행 목록(sand = 규제·고지) */}
+      <section data-tone="sand" className="lq-panel mt-6 flex flex-col divide-y max-md:mt-4">
         {ITEMS.map((item) => (
-          <Link key={item.href} href={item.href} className="card tile block p-5">
-            <p className="text-[13px] font-semibold text-ink">{item.title}</p>
-            <p className="mt-1 text-xs leading-relaxed text-text-2">{item.desc}</p>
+          <Link key={item.href} href={item.href} className="flex min-h-[48px] items-center justify-between gap-3 py-2.5 no-underline">
+            <span className="min-w-0">
+              <span className="block text-[13px] font-semibold text-ink">{item.title}</span>
+              <span className="mt-0.5 block text-xs leading-relaxed text-text-2">{item.desc}</span>
+            </span>
+            <span aria-hidden="true" className="shrink-0 text-[13px] font-bold text-text-3">›</span>
           </Link>
         ))}
       </section>

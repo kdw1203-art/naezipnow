@@ -77,24 +77,24 @@ export function NoteSoftWall({ noteId }: { noteId: string }) {
       />
       <div className="bg-surface px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-1">
         <div className="mx-auto flex w-full max-w-[440px] flex-col gap-2.5 rounded-3xl border border-line bg-surface p-5 text-center shadow-[0_18px_44px_rgba(15,23,42,.16)]">
+          {/* [1015 · 규칙 D] 권유문 두 문장 → 사실 한 줄(가입 뒤 달라지는 것) */}
           <div className="t-section text-ink">
-            오늘 무료 열람 {FREE_PER_DAY}편을 다 보셨어요
+            오늘 무료 열람 {FREE_PER_DAY}편 소진
           </div>
           <p className="t-body text-text-2">
-            무료로 가입하면 모든 임장노트를 제한 없이 읽고, 내 노트도 기록할 수
-            있어요. 가입만 해도 출석·기록으로 포인트가 쌓입니다.
+            가입 후 임장노트 열람 제한 없음 · 내 노트 기록 · 출석 포인트
           </p>
           <Link
             href="/signup"
             className="btn-primary btn-cta rounded-2xl p-3.5 t-body no-underline"
           >
-            30초 무료 가입하고 계속 읽기
+            무료 가입하고 계속 읽기
           </Link>
           <Link
             href="/login"
             className="t-sub font-bold text-text-3 no-underline"
           >
-            이미 계정이 있어요 — 로그인
+            로그인
           </Link>
         </div>
       </div>

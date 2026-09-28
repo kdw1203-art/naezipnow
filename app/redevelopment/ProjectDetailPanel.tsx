@@ -117,7 +117,7 @@ export function ProjectDetailPanel({
                 }`}
               >
                 <span
-                  className={`text-[10px] font-bold ${
+                  className={`t-caption font-bold ${
                     state === "future" ? "text-text-3" : "text-text-2"
                   }`}
                 >
@@ -142,9 +142,9 @@ export function ProjectDetailPanel({
           })}
         </ol>
         <p className="mt-1.5 t-caption text-text-3">
-          공개 자료에서 확인한 건 <b className="text-text-2">현재 단계</b> 하나예요. 각 단계를 언제
-          통과했는지(인가일 등)는 확보하지 못해 표시하지 않아요 — 날짜가 필요하면 지자체 고시·조합
-          공고를 확인하세요.
+          공개 자료에서 확인한 값은 <b className="text-text-2">현재 단계</b> 하나입니다. 각 단계의
+          통과 날짜(인가일 등)는 확보하지 못해 표시하지 않습니다. 날짜는 지자체 고시·조합
+          공고 기준입니다.
         </p>
       </div>
 

@@ -149,7 +149,7 @@ function cellClass(col: CompareCol, r: (typeof FEATURE_ROWS)[number], narrow: bo
 function PlanBadge({ tier }: { tier: "plus" | "pro" }) {
   return (
     <span
-      className={`rounded-full bg-brand-navy chip-pad text-[10px] font-bold ${
+      className={`rounded-full bg-brand-navy chip-pad t-caption font-bold ${
         tier === "plus" ? "text-ai-accent" : "text-brand-red-dark"
       }`}
     >
@@ -260,12 +260,13 @@ export default async function SubscriptionPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(plansJsonLd) }}
       />
       {/* 히어로 (6l) */}
-      <section className="rise-in flex flex-col items-center gap-2 pt-4 text-center">
+      <section className="rise-in flex flex-col items-center gap-2 pt-4 text-center max-md:pt-2">
         <h1 className="t-title tracking-[-0.5px] text-ink md:t-title">
           기록은 무료, 판단은 더 깊게
         </h1>
+        {/* [1015] 권유형 부제("선택하세요") → 사실 한 줄 */}
         <p className="t-body text-text-2">
-          임장노트와 지도는 영원히 무료. AI 분석의 깊이를 선택하세요.
+          임장노트 · 지도 · 실거래는 무료. 유료 플랜은 AI 분석의 깊이와 월 한도가 다릅니다.
         </p>
         {/* [1007] 로그인한 사람에게만 — 세션 판정 뒤 클라이언트가 붙인다 */}
         <CurrentPlanBadge />
@@ -289,9 +290,9 @@ export default async function SubscriptionPage() {
           스크롤한다(헤더 62px 아래). 강조 링은 그때만 붙인다. */}
       <section
         id="weekly-pass"
-        className="rise-in-2 mx-auto mt-6 w-full max-w-[1080px] scroll-mt-24"
+        className="rise-in-2 mx-auto mt-6 w-full max-w-[1080px] scroll-mt-24 max-md:mt-4"
       >
-        <WeeklyPassFrame className="card flex flex-col items-center gap-4 rounded-3xl p-6 md:flex-row md:justify-between">
+        <WeeklyPassFrame className="card flex flex-col items-center gap-4 rounded-3xl p-6 max-md:gap-3 max-md:p-4 md:flex-row md:justify-between">
           <div className="flex flex-col gap-1 text-center md:text-left">
             <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
               {/* [C38] 주간권이 위 세 플랜과 나란히 놓이면 "네 번째 요금제"로 읽힌다.
@@ -312,11 +313,10 @@ export default async function SubscriptionPage() {
             </p>
             {/* 하루 단가는 월간이 더 싸다 — 그 사실을 감추지 않는다.
                 주간권의 가치는 가격이 아니라 "약정 없이 먼저 써본다"는 데 있다. */}
+            {/* [1015] 권유문("계속 쓰실 것 같으면 …") → 하루 단가 사실 한 줄. 숫자는 그대로 단일 출처 계산. */}
             <p className="t-sub text-text-3">
-              하루 {Math.round(WEEKLY_PASS.totalKrw / WEEKLY_PASS.days).toLocaleString("ko-KR")}원
-              꼴이에요. 계속 쓰실 것 같으면 월간(
-              {Math.round(tierPricing("pro").monthly / 30).toLocaleString("ko-KR")}원/일)이 더
-              저렴합니다.
+              하루 {Math.round(WEEKLY_PASS.totalKrw / WEEKLY_PASS.days).toLocaleString("ko-KR")}원 ·
+              월간은 하루 {Math.round(tierPricing("pro").monthly / 30).toLocaleString("ko-KR")}원
             </p>
             {/* [1003] 취급 결제수단 — 990 에서 만든 문장을 요금제 카드 아래에서 여기로
                 옮겼다. "무엇으로 결제하는가"는 결제 버튼 옆에서 읽혀야 하고, 2026-09
@@ -373,7 +373,7 @@ export default async function SubscriptionPage() {
       </p>
 
       {/* 요금제 카드 3종 + 월간/연간 토글 (item 13) */}
-      <section className="mx-auto mt-8 w-full">
+      <section className="mx-auto mt-8 w-full max-md:mt-5">
         {/* [970 · A-06] 비로그인은 currentPlan=null — 게스트에게 무료 카드를 "현재 이용 중"
             으로 그리면 가입 입구("무료로 시작")가 사라진다. [1007] 현재 플랜·?billing·?plan·
             ?returnTo 는 PlanCards 가 마운트 뒤 스스로 판정한다(props 생략 = 클라이언트 판정). */}
@@ -415,7 +415,9 @@ export default async function SubscriptionPage() {
       <BillingPanel />
 
       {/* 기능 비교표 (9k · [C49] 좁은 화면 배치 · [992] 열은 COMPARE_COLS 에서 유도) */}
-      <section className="rise-in-4 card mx-auto mt-8 w-full max-w-[1080px] rounded-3xl px-[22px] py-5">
+      {/* [1015] 폰은 카드 안쪽 여백 압축. (비교표 자체는 sticky 열 머리가 있어 lq-panel(overflow hidden)을 씌우지 않는다 —
+          mint 톤은 카드 기능 목록·기간별 할인·결제 내역에 붙였다) */}
+      <section className="rise-in-4 card mx-auto mt-8 w-full max-w-[1080px] rounded-3xl px-[22px] py-5 max-md:mt-5 max-md:px-4 max-md:py-4">
         {/* ── 좁은 화면(< md) ── */}
         <div className="md:hidden">
           <div className="mb-2 t-sub font-bold text-text-3">기능 비교</div>
@@ -499,7 +501,8 @@ export default async function SubscriptionPage() {
           [970 · A-05] 모바일에서 12개월 열·할인율이 화면 밖이었다 — 열이 셋(라벨+월간+12개월)
           뿐이라 가로 스크롤이 필요 없다. 최소 폭은 md+ 에서만, 라벨 칸은 모바일 88px,
           제목 줄은 flex-wrap 으로 부제가 아래로 내려가게. overflow-x-auto 도 md+ 만. */}
-      <section className="rise-in-5 card mx-auto mt-4 w-full max-w-[1080px] rounded-2xl px-5 py-4 md:overflow-x-auto">
+      <section className="rise-in-5 card mx-auto mt-4 w-full max-w-[1080px] rounded-2xl px-5 py-4 max-md:mt-3 max-md:px-4 md:overflow-x-auto">
+        {/* [1015 · 규칙 I] 요금제 = mint 톤 — 표 행 묶음을 lq-panel 로(제목 줄은 판 밖) */}
         <div className="md:min-w-[560px]">
           <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
             <span className="t-section text-ink">기간별 할인 (월 환산가)</span>
@@ -510,6 +513,7 @@ export default async function SubscriptionPage() {
                 : "1회성 단건 결제(자동 갱신 없음) · 중도 해지 시 잔여기간 일할 환불(고객센터 접수)"}
             </span>
           </div>
+          <div className="lq-panel mt-1" data-tone="mint">
           <div className="grid grid-cols-[88px_repeat(2,1fr)] gap-2 border-b border-divider py-[7px] t-sub text-text-3 md:grid-cols-[120px_repeat(2,1fr)]">
             <span />
             {BILLING_PERIOD_PRICES.pro.map((p) => (
@@ -556,6 +560,7 @@ export default async function SubscriptionPage() {
             ))}
           </div>
           )}
+          </div>
         </div>
       </section>
 
@@ -565,7 +570,7 @@ export default async function SubscriptionPage() {
       {/* 고도화 32 — 구독 FAQ. 결제 수단·환불·해지가 화면 곳곳에 흩어져 있던
           것을 한 자리에 모은다. 아래 JSON-LD 는 이 배열 그대로에서 생성한다
           (화면에 없는 질문을 스키마에만 넣지 않는다 — faqJsonLd 규칙). */}
-      <section className="rise-in-4 card mx-auto mt-8 w-full max-w-[1080px] rounded-3xl px-[22px] py-5">
+      <section className="rise-in-4 card mx-auto mt-8 w-full max-w-[1080px] rounded-3xl px-[22px] py-5 max-md:mt-5 max-md:px-4 max-md:py-4">
         <h2 className="t-section text-ink">자주 묻는 질문</h2>
         <div className="mt-3 flex flex-col gap-3">
           {faq.map((f) => (

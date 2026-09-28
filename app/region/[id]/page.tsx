@@ -1,6 +1,8 @@
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
 import { AdZone } from "@/app/components/ads/AdZone";
+/* [1015 · 규칙 H] 노트 행 40px 정사각 썸네일 — 커버가 없으면 단색 칸(값은 단색 토큰) */
+import { seedGradient } from "@/lib/town/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "../../components/PageShell";
@@ -761,6 +763,10 @@ export default async function RegionHubPage({
         <p className="t-sub text-text-2">{lead}</p>
       </section>
 
+      {/* [1015 · 규칙 F] 데스크톱 2단 — 본문(시세 흐름 ~ 정비사업) + 오른쪽 340px 레일(임장노트·면적대·Q&A·퍼가기·CTA·광고 1).
+          DOM 순서는 예전 섹션 순서 그대로라 폰(한 열)에서는 바뀐 것이 없다. 새 부품 없음 — 기존 카드를 옮겨 놓았다. */}
+      <div className="grid-cols-1 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-5">
+      <div className="min-w-0">
       {/* [1009 · H] 시세 흐름 — 지수·전세가율·거래량을 한 카드에서 탭으로 바꿔 보고, 누르고 끌어 그 달 값을 읽는다.
           예전 두 CSS 막대(칸마다 title= — 휴대폰에선 값이 안 보였다)를 대신한다. 셋 다 없으면 예전처럼 사실을 적는다. */}
       {trendDatasets.length > 0 ? (
@@ -781,8 +787,8 @@ export default async function RegionHubPage({
                   term="sijang-ondo"
                   how={[
                     "50점을 중립으로 ① 매매가격지수 모멘텀(최근 3구간 평균 변동률 — 월간 지수면 월 ±1%, 주간 지수면 주 ±0.3% 를 ±25점)과 ② 거래량 추이(이번 달을 뺀 최근 최대 3개월 합을 그 직전 같은 개월 수의 합과 비교, ±50% 변화를 ±25점)를 더하고 5~95점 안으로 잘라요.",
-                    "이번 달을 뺀 거래량 월이 4개 미만이면 지수 모멘텀만 반영해요.",
-                    "매수·매도 추천이 아니라 시장 상태를 요약한 숫자예요.",
+                    "이번 달을 뺀 거래량 월이 4개 미만이면 지수 모멘텀만 반영.",
+                    "매수·매도 추천이 아니라 시장 상태를 요약한 숫자.",
                   ]}
                   source="내집나우 주간 산출 · 한국부동산원 지수 · 국토교통부 실거래 신고"
                 />
@@ -829,7 +835,7 @@ export default async function RegionHubPage({
               href={`/region/${id}/report`}
               className="inline-flex min-h-[24px] items-center t-body font-bold text-primary"
             >
-              월간 리포트 아카이브 — 지난달까지의 월별 스냅샷 ›
+              월간 리포트 아카이브 ›
             </Link>
           </div>
         </section>
@@ -850,13 +856,12 @@ export default async function RegionHubPage({
             이 지역에서 수집된 아파트 매매 실거래가 아직 없습니다.
           </p>
         ) : (
-          <ul className="mt-2">
+          /* [1015 · 규칙 I] 실거래 목록 = blue 리퀴드 판 */
+          <ul className="lq-panel mt-2 flex flex-col divide-y" data-tone="blue">
             {transactions.map((t, i) => (
               <li
                 key={`${t.complexName}-${t.contractYm}-${i}`}
-                className={`flex items-center justify-between gap-3 py-3 ${
-                  i < transactions.length - 1 ? "border-b border-border" : ""
-                }`}
+                className="flex items-center justify-between gap-3 py-3"
               >
                 <div className="min-w-0">
                   <div className="t-body font-bold text-ink break-words">
@@ -869,7 +874,7 @@ export default async function RegionHubPage({
                     {t.floor !== null ? ` · ${t.floor}층` : ""}
                   </div>
                 </div>
-                <div className="shrink-0 t-section t-num text-ink">
+                <div className="shrink-0 t-section t-num">
                   {formatEokMan(t.dealAmountKrw / 10_000)}
                 </div>
               </li>
@@ -889,7 +894,7 @@ export default async function RegionHubPage({
           </h2>
         </div>
         {complexSummaries.length > 0 && complexR.ok && (
-          <p className="m-0 mt-1 t-caption text-text-3">최근 거래순 · 오른쪽 가격은 가장 최근 신고 1건이에요</p>
+          <p className="m-0 mt-1 t-caption text-text-3">최근 거래순 · 오른쪽 가격은 가장 최근 신고 1건</p>
         )}
         <ExpandableComplexRows
           canExpand={complexSummaries.length > 12}
@@ -991,7 +996,7 @@ export default async function RegionHubPage({
           <p className="mt-3 t-sub text-text-3">
             국토교통부 전월세 신고 기준.
             {rentOpen.length > 0
-              ? ` ${rentOpen.map((m) => `${ymMonth(m.month)} ${m.count.toLocaleString("ko-KR")}건`).join("·")}은 신고 기한(계약 후 30일) 안이라 더 늘어요 — 그래프에서 뺐어요.`
+              ? ` ${rentOpen.map((m) => `${ymMonth(m.month)} ${m.count.toLocaleString("ko-KR")}건`).join("·")}은 신고 기한(계약 후 30일) 안이라 더 늘 수 있어 그래프에서 뺐다.`
               : ""}{" "}
             신고분에는 갱신·신규 계약이 섞여 있어 체감 시세와 다를 수 있습니다. 중앙값은 지역 전체
             기준이라 단지별 편차가 큽니다.
@@ -1002,8 +1007,9 @@ export default async function RegionHubPage({
       {/* [#52] 평형대별 시세 — "○○구 30평대" 검색 수요를 지역 페이지 안에서 받는다 */}
       {areaBands && areaBands.bands.length > 0 && (
         <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
+          {/* [1015] "시세" 낱말은 실거래만 있는 곳에서 쓰지 않는다 → "평형대별 매매 실거래" */}
           <h2 className="t-section text-ink">
-            평형대별 매매 시세{" "}
+            평형대별 매매 실거래{" "}
             <span className="t-sub font-medium text-text-3">
               {areaBands.periodLabel} 신고 {areaBands.sampleCount.toLocaleString("ko-KR")}건
               {areaBands.truncated ? " 표본" : ""} 기준
@@ -1058,10 +1064,10 @@ export default async function RegionHubPage({
             <Explain
               term="ipju-mulryang"
               how={[
-                "주소에 이 지역이 들어간 단지를 이번 달 이후 입주월 순으로 최대 24곳 읽어요 — 목록은 앞의 6곳, 연도 합계는 24곳 전부예요.",
-                "연도 막대는 세대수가 공개된 단지만 더했어요 — 세대수 미상은 뺀 건수를 따로 적어요.",
-                "입주월의 달이 비었거나 잘못 적힌 단지는 “월 미정”으로 적어요. 같은 단지가 두 입주월로 올라 있으면 연도 합계에 두 번 들어갈 수 있어요(원자료 그대로).",
-                "사업 진행에 따라 입주 일정은 바뀔 수 있어요.",
+                "주소에 이 지역이 들어간 단지를 이번 달 이후 입주월 순으로 최대 24곳 읽는다. 목록은 앞의 6곳, 연도 합계는 24곳 전부.",
+                "연도 막대는 세대수가 공개된 단지만 더한다. 세대수 미상은 뺀 건수를 따로 적는다.",
+                "입주월의 달이 비었거나 잘못 적힌 단지는 “월 미정”. 같은 단지가 두 입주월로 올라 있으면 연도 합계에 두 번 들어갈 수 있다(원자료 그대로).",
+                "사업 진행에 따라 입주 일정은 바뀔 수 있다.",
               ]}
               source="청약홈 분양공고(매일 자동) · 공공데이터 입주예정물량(2026년 2월 수동)"
             />
@@ -1110,11 +1116,12 @@ export default async function RegionHubPage({
               </div>
             );
           })()}
-          <ul className="mt-2">
+          {/* [1015 · 규칙 I] 공급 목록 = sand 리퀴드 판 */}
+          <ul className="lq-panel mt-2 flex flex-col divide-y" data-tone="sand">
             {supply.slice(0, 6).map((s, i) => (
               <li
                 key={`${s.moveInYm}-${i}`}
-                className="flex items-center justify-between gap-3 border-b border-border py-3 last:border-0"
+                className="flex items-center justify-between gap-3 py-3"
               >
                 <div className="min-w-0">
                   <div className="truncate t-body font-bold text-ink">
@@ -1131,7 +1138,7 @@ export default async function RegionHubPage({
                 </div>
                 <div className="shrink-0 text-right">
                   {/* [1009 · H 리뷰] 달이 00·13 같은 행(운영 /region/mapo "2027.00")은 "월 미정" — /supply 의 validYm 과 같은 규칙 */}
-                  <div className="t-body font-bold tabular-nums text-ink">{moveInLabel(s.moveInYm)}</div>
+                  <div className="t-body t-num font-bold tabular-nums">{moveInLabel(s.moveInYm)}</div>
                   <div className="t-sub text-text-3">
                     {s.households ? `${s.households.toLocaleString()}세대` : "—"}
                   </div>
@@ -1158,11 +1165,12 @@ export default async function RegionHubPage({
               공개 자료 확인분 {projects.length.toLocaleString("ko-KR")}곳
             </span>
           </h2>
-          <ul className="mt-2">
+          {/* [1015 · 규칙 I] 규제·정비 목록 = sand 리퀴드 판 */}
+          <ul className="lq-panel mt-2 flex flex-col divide-y" data-tone="sand">
             {projectsShown.map((p) => (
               <li
                 key={p.id}
-                className="flex items-center justify-between gap-3 border-b border-border py-3 last:border-0"
+                className="flex items-center justify-between gap-3 py-3"
               >
                 <div className="min-w-0">
                   <div className="truncate t-body font-bold text-ink">{p.name}</div>
@@ -1177,10 +1185,7 @@ export default async function RegionHubPage({
               </li>
             ))}
           </ul>
-          <p className="mt-3 t-sub text-text-3">
-            진행 단계는 공개 고시·언론 공개정보 기준 참고값입니다. 확정 일정과 조건은
-            조합·지자체 공고를 확인해 주세요.
-          </p>
+          <p className="mt-3 t-caption text-text-3">진행 단계는 공개 고시·언론 공개정보 기준 참고값 · 확정 일정·조건은 조합·지자체 공고</p>
           <Link
             href="/redevelopment"
             className="mt-2 inline-flex min-h-[24px] items-center t-sub font-bold text-primary"
@@ -1190,8 +1195,11 @@ export default async function RegionHubPage({
         </section>
       )}
 
+      </div>
+      {/* ── 오른쪽 레일(데스크톱) · 폰은 한 열 그대로 — 임장노트 · 면적대·가격대 · Q&A · 퍼가기 · CTA · 광고 */}
+      <aside className="min-w-0">
       {/* 이 지역 공개 임장노트 */}
-      <section className="rise-in-3 card mb-6 p-[var(--pad-card)]">
+      <section className="rise-in-3 card mb-6 p-[var(--pad-card)] max-md:mb-3">
         <h2 className="t-section text-ink">
           {name} 공개 임장노트
         </h2>
@@ -1203,28 +1211,39 @@ export default async function RegionHubPage({
             {name}에 공개된 임장노트가 아직 없어요.
           </p>
         ) : (
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-            {notes.map((n) => (
-              <Link
-                key={n.id}
-                href={`/notes/${n.id}`}
-                className="card tile block p-4"
-              >
-                <div className="truncate t-body font-bold text-ink">
-                  {n.title}
-                </div>
-                <div className="mt-1 t-sub text-text-3">
-                  {n.region}
-                  {n.aptName ? ` · ${n.aptName}` : ""} · {n.visitDate}
-                </div>
-                {n.summary ? (
-                  <p className="mt-2 line-clamp-2 t-sub text-text-2">
-                    {n.summary}
-                  </p>
-                ) : null}
-              </Link>
-            ))}
-          </div>
+          /* [1015 · 규칙 H·I] 행 목록(hanji 판) + 왼쪽 40px 정사각 썸네일. 카드 목록(PublicNoteCard)에는 아직 cover 가 없어
+             통합자가 붙일 때까지 단색 칸 — 'cover' 필드가 오면 그대로 그린다(정사각 자리). */
+          <ul className="lq-panel mt-3 flex list-none flex-col divide-y p-0" data-tone="hanji">
+            {notes.map((n) => {
+              const cover = "cover" in n && typeof (n as { cover?: unknown }).cover === "string" ? (n as { cover: string }).cover : null;
+              return (
+                <li key={n.id}>
+                  <Link href={`/notes/${n.id}`} className="press flex min-h-12 items-center gap-3 py-2 no-underline">
+                    <span
+                      className="h-10 w-10 shrink-0 overflow-hidden rounded-lg"
+                      style={cover ? undefined : { background: seedGradient(n.region || n.id) }}
+                      aria-hidden="true"
+                    >
+                      {cover && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={cover} alt="" width={40} height={40} loading="lazy" className="h-10 w-10 object-cover" />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate t-body font-bold text-ink">{n.title}</span>
+                      <span className="mt-0.5 block truncate t-sub text-text-3">
+                        {n.aptName ? `${n.aptName} · ` : ""}
+                        {n.visitDate}
+                      </span>
+                    </span>
+                    <span aria-hidden="true" className="t-body text-text-3">
+                      ›
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </section>
 
@@ -1281,8 +1300,8 @@ export default async function RegionHubPage({
         <EmbedSnippet
           kind="region"
           id={id}
-          heading={`${name} 시세를 블로그·홈페이지에 붙이기`}
-          desc={`중개사무소 블로그·홈페이지에 iframe 한 줄로 ${name} 평균 매매가·전세가율·지수 변동 카드를 실을 수 있습니다. 시세가 갱신되면 붙여넣은 위젯도 함께 갱신됩니다.`}
+          heading={`${name} 시세 카드 퍼가기`}
+          desc={`iframe 한 줄 · 평균 매매가·전세가율·지수 변동 · 갱신되면 붙여 둔 카드도 함께 바뀐다`}
           className="rise-in-3 mb-4"
         />
       )}
@@ -1308,8 +1327,14 @@ export default async function RegionHubPage({
           {name} 시세 알림 받기
         </Link>
       </section>
+      {/* [1015 · 규칙 G] 오른쪽 레일 광고 1 — 데스크톱만(폰은 아래 페이지 끝 한 곳) */}
+      <div className="hidden lg:block">
+        <AdZone placement="sidebar" seed={1} plan={null} />
+      </div>
+      </aside>
+      </div>
       {/* [961] 광고 공간 — 페이지 끝 */}
-      <AdZone placement="page_bottom" seed={0} plan={null} className="mt-6" />
+      <AdZone placement="page_bottom" seed={0} plan={null} className="mt-6 max-md:mt-3" />
     </PageShell>
   );
 }

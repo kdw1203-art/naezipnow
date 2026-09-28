@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { ErrorState } from "@/app/components/ui";
 import { Icon } from "@/app/components/Icon";
+import { AdZone } from "@/app/components/ads/AdZone";
 import { readBoardPosts } from "@/lib/newui/board-posts";
 import type { Post } from "@/lib/types/post";
 import { postHref } from "@/lib/town/post-href";
@@ -129,13 +130,11 @@ export default async function RedevelopmentPage() {
         note="지금 이 지도에 실린 구역 기준"
       />
       <TownCategoryNav stick />
-      <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-6 max-md:gap-3">
         {/* ===== 정비사업 지도 히어로 ===== */}
+        {/* [1015] 지도 위 사용법 문장("…걸러 원하는 구역만 골라보세요. 마커·목록을 누르면 …이동해요")은 걷었다
+            (브리프 규칙 B) — 필터·마커는 화면이 스스로 말한다. */}
         <section className="rise-in flex flex-col gap-3">
-          <p className="t-body text-text-2">
-            사업종류·진행단계로 걸러 원하는 구역만 골라보세요. 마커·목록을 누르면 해당 구역으로
-            지도가 이동해요.
-          </p>
           {loadError ? (
             /* 실패를 "구역 없음"으로 바꿔 그리지 않는다 — 둘은 다른 사실이다.
                원인 원문(cause)도 감추지 않고 그대로 보여 준다. */
@@ -154,14 +153,16 @@ export default async function RedevelopmentPage() {
           )}
         </section>
 
-        {/* ===== 아래: 진행단계 가이드 + 뉴스(기존 콘텐츠 보존) ===== */}
-        <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
+        {/* ===== 아래: 진행단계 가이드 + 뉴스(기존 콘텐츠 보존) =====
+            [1015] 데스크톱은 2단 — 왼쪽 7단계 가이드, 오른쪽 340px 레일(정비사업 뉴스 · 용어 · 저장 검색 · 광고 1).
+            760px 한 열이라 옆이 비던 화면(브리프 규칙 F). 카드는 그대로 옮겨 놓았다. 폰은 한 열 그대로. */}
+        <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex min-w-0 flex-col gap-4 max-md:gap-3">
           {/* ===== 진행단계 개요 스트립 ===== */}
-        <section className="rise-in card rounded-2xl px-5 py-4">
+        <section className="rise-in card rounded-2xl px-5 py-4 max-md:px-3.5 max-md:py-3">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-[13px] font-bold text-ink">
-              재개발·재건축은 이렇게 7단계로 진행돼요
-            </h2>
+            {/* [1015] 물음·설명형 제목("…이렇게 7단계로 진행돼요") → 명사(브리프 규칙 D) */}
+            <h2 className="text-[13px] font-bold text-ink">정비사업 7단계</h2>
             <span className="t-caption text-text-3">도시정비법 일반 절차 기준</span>
           </div>
           {/* 가로 스텝 오버뷰 — 좁은 화면은 가로 스크롤 */}
@@ -185,14 +186,12 @@ export default async function RedevelopmentPage() {
               ))}
             </ol>
           </div>
-          <p className="mt-2 t-sub text-text-2">
-            각 단계의 뜻과 유의점, 그 단계에서 확인할 것을 아래에서 단계별로 정리했어요.
-            단계 오인은 투자 판단에 영향을 줄 수 있으니 실제 진행 여부는 반드시 확인하세요.
-          </p>
+          {/* [1015] "…아래에서 단계별로 정리했어요. …반드시 확인하세요" 안내 문단은 걷었다(브리프 규칙 B) —
+              단계별 상세와 면책 한 줄이 바로 아래에 있다. */}
         </section>
 
         {/* ===== 단계별 상세 트래커(세로 스테퍼) ===== */}
-        <section className="rise-in-1 card rounded-2xl px-5 py-4">
+        <section className="rise-in-1 card rounded-2xl px-5 py-4 max-md:px-3.5 max-md:py-3">
           <h2 className="text-[13px] font-bold text-ink">단계별 상세 · 이 단계에서 확인할 것</h2>
           <ol className="mt-3 flex flex-col gap-0">
             {STAGE_GUIDES.map((s, i) => (
@@ -262,51 +261,18 @@ export default async function RedevelopmentPage() {
           <p className="mt-3 flex gap-1.5 rounded-lg bg-[rgba(29,79,216,.06)] px-3 py-2 t-caption text-text-2">
             <Icon name="shield" size={13} className="mt-px shrink-0" />
             <span>
-              개념 안내용 일반 절차예요. 실제 사업 단계·조합원 자격·분담금은 구역·조합마다
-              다르므로 조합·구청·전문가 확인이 필요해요. 구역별 실제 단계·일정은 지자체
-              고시(정비사업 정보몽땅 등 공공 공개자료) 기준으로 확인하세요.
+              일반 절차 기준의 개념 안내입니다. 실제 사업 단계·조합원 자격·분담금은 구역·조합마다
+              다르므로 조합·구청·전문가 확인이 필요합니다. 구역별 실제 단계·일정은 지자체
+              고시(정비사업 정보몽땅 등 공공 공개자료) 기준입니다.
             </span>
           </p>
         </section>
+        </div>
 
-        {/* ===== 자주 나오는 용어 ===== */}
-        <section className="rise-in-2 card rounded-2xl px-5 py-4">
-          <h2 className="text-[13px] font-bold text-ink">자주 나오는 용어</h2>
-          <dl className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-            {REDEV_GLOSSARY.map((g) => (
-              <div
-                key={g.term}
-                className="rounded-lg border border-line bg-surface px-3 py-2"
-              >
-                <dt className="t-sub font-bold text-ink">{g.term}</dt>
-                <dd className="mt-0.5 t-sub text-text-2">{g.desc}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-
-        {/* ===== 관심 등록 CTA — 실제 존재하는 기능(저장 검색 알림)으로만 연결.
-             "정비사업 소식 알림"은 아직 없는 기능이라 약속하지 않는다. */}
-        <Link
-          href="/my/watchlist?tab=searches"
-          className="rise-in-3 tile flex items-center justify-between rounded-2xl border border-line bg-surface px-5 py-4 no-underline"
-        >
-          <div>
-            <div className="t-body font-bold text-ink">
-              관심 지역 검색조건 저장하기
-            </div>
-            <div className="mt-0.5 t-sub text-text-2">
-              저장한 조건에 맞는 새 매물이 올라오면 알림으로 알려드려요. 정비사업 단계 변경
-              알림은 아직 제공하지 않아요.
-            </div>
-          </div>
-          <span className="shrink-0 rounded-lg bg-primary-soft px-3.5 py-2 text-xs font-bold text-primary">
-            저장 검색 ›
-          </span>
-        </Link>
-
+        {/* ===== 오른쪽 레일(데스크톱) — 뉴스 · 용어 · 저장 검색 · 광고 1 ===== */}
+        <aside className="flex min-w-0 flex-col gap-4 max-md:gap-3">
         {/* ===== 정비사업 뉴스 (board_posts 실데이터) ===== */}
-        <section className="rise-in-4 card flex flex-col gap-2.5 rounded-2xl px-5 py-4">
+        <section className="rise-in-2 card flex flex-col gap-2.5 rounded-2xl px-5 py-4 max-md:px-3.5 max-md:py-3">
           <div className="flex items-center justify-between">
             <h2 className="text-[13px] font-bold text-ink">정비사업 뉴스</h2>
             <Link href="/town/news" className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary">
@@ -336,13 +302,47 @@ export default async function RedevelopmentPage() {
               </div>
             </Link>
           ))}
-          {news.length > 0 && (
-            <p className="t-caption text-text-3">
-              재건축·재개발·정비사업 키워드 매칭 자동 수집 기사 — 원문·출처는 각 기사에서
-              확인하세요.
-            </p>
-          )}
+          {/* [1015] "…키워드 매칭 자동 수집 기사 — …확인하세요" 부연은 걷었다(브리프 규칙 C — "자동 수집" 라벨) */}
         </section>
+
+        {/* ===== 자주 나오는 용어 ===== */}
+        <section className="rise-in-3 card rounded-2xl px-5 py-4 max-md:px-3.5 max-md:py-3">
+          <h2 className="text-[13px] font-bold text-ink">자주 나오는 용어</h2>
+          <dl className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-1">
+            {REDEV_GLOSSARY.map((g) => (
+              <div
+                key={g.term}
+                className="rounded-lg border border-line bg-surface px-3 py-2"
+              >
+                <dt className="t-sub font-bold text-ink">{g.term}</dt>
+                <dd className="mt-0.5 t-sub text-text-2">{g.desc}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
+        {/* ===== 관심 등록 CTA — 실제 존재하는 기능(저장 검색 알림)으로만 연결.
+             "정비사업 소식 알림"은 아직 없는 기능이라 약속하지 않는다. */}
+        <Link
+          href="/my/watchlist?tab=searches"
+          className="rise-in-4 tile flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-5 py-4 no-underline max-md:px-3.5 max-md:py-3"
+        >
+          <div>
+            <div className="t-body font-bold text-ink">
+              관심 지역 검색조건 저장하기
+            </div>
+            <div className="mt-0.5 t-sub text-text-2">
+              저장 조건에 맞는 새 매물 알림. 정비사업 단계 변경 알림은 아직 제공하지 않습니다.
+            </div>
+          </div>
+          <span className="shrink-0 rounded-lg bg-primary-soft px-3.5 py-2 text-xs font-bold text-primary">
+            저장 검색 ›
+          </span>
+        </Link>
+
+        {/* [1015] 광고 — 레일 1곳(첫 화면 밖). 이 화면에 광고 자리가 없었다(브리프 규칙 G: 폰 2·데스크톱 2 이하). */}
+        <AdZone placement="sidebar" seed={0} plan={null} />
+        </aside>
         </div>
       </div>
     </PageShell>

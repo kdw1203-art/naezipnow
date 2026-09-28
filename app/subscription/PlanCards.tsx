@@ -74,7 +74,8 @@ const CARDS: PlanCard[] = [
     name: "플러스",
     nameTone: "text-ai-accent",
     dark: true,
-    badge: "가장 인기",
+    /* [1015 · 규칙 C·9] "가장 인기" 형용사 배지 제거 — 검증된 사실 명사만 배지로. 네이비 카드 자체(틀)는 그대로. */
+    badge: null,
     checkoutTier: "pro",
     cta: "플러스 결제하기",
     ctaClass: "btn-primary btn-cta",
@@ -98,23 +99,24 @@ const CARDS: PlanCard[] = [
 /** 기능 한 줄 — ✓(제공) / ✓+한도(부분) / —(미포함·잠금) */
 /* 모바일18 — 모바일 상위 5줄 + 토글, md+ 전체. 접힌 항목은 md+ 에서 CSS 로
    항상 보이므로 토글 상태는 모바일에만 영향을 준다. */
-function FeatureList({ features, dark }: { features: PlanFeature[]; dark: boolean }) {
+function FeatureList({ features }: { features: PlanFeature[] }) {
   const [expanded, setExpanded] = useState(false);
   const VISIBLE = 5;
   const hidden = features.length - VISIBLE;
   return (
+    /* [1015 · 규칙 I] 요금제 기능 목록 = mint 톤. `divide-y` 묶음은 globals.css 의 리퀴드 판(밝은 색면)으로 그려지므로
+       네이비 카드 안에서도 글자는 밝은 판 위의 어두운 글자(text-text-1)여야 한다 — 예전 text-ai-text(한지색)는
+       그 판 위에서 읽히지 않았다. */
     <div
-      className={`flex flex-col divide-y text-[13px] leading-[1.5] ${
-        /* [970 · A-28] 구분선 raw hex → divide-line 토큰(다크에서 밝은 선이 그대로 남았다) */
-        dark ? "divide-white/[.06] text-ai-text" : "divide-line text-text-1"
-      }`}
+      className="flex flex-col divide-y divide-line py-1 text-[13px] leading-[1.5] text-text-1"
+      data-tone="mint"
     >
       {features.map((f, i) => (
         <div
           key={f.label}
           className={i >= VISIBLE && !expanded ? "hidden md:block" : undefined}
         >
-          <FeatureRow f={f} dark={dark} />
+          <FeatureRow f={f} />
         </div>
       ))}
       {hidden > 0 && !expanded && (
@@ -122,9 +124,7 @@ function FeatureList({ features, dark }: { features: PlanFeature[]; dark: boolea
           type="button"
           onClick={() => setExpanded(true)}
           /* [989] 실측 36px — 모바일에서만 보이는 버튼인데 손가락 기준에 못 미쳤다 */
-          className={`min-h-[44px] py-2 text-left text-[13px] font-bold md:hidden ${
-            dark ? "text-ai-muted" : "text-primary"
-          }`}
+          className="min-h-[44px] py-2 text-left text-[13px] font-bold text-primary md:hidden"
         >
           전체 기능 {features.length}개 보기 ▾
         </button>
@@ -133,33 +133,21 @@ function FeatureList({ features, dark }: { features: PlanFeature[]; dark: boolea
   );
 }
 
-function FeatureRow({ f, dark }: { f: PlanFeature; dark: boolean }) {
+/* [1015] 밝은 리퀴드 판 위의 행 — dark 카드에서도 같은 색(판이 밝다). 한도 배지 text-[10px] → t-caption. */
+function FeatureRow({ f }: { f: PlanFeature }) {
   const off = f.included === false;
   return (
     <div
-      className={`flex items-start justify-between gap-2 py-[5px] ${
-        off ? (dark ? "text-white/35" : "text-text-3") : ""
-      }`}
+      className={`flex items-start justify-between gap-2 py-[5px] ${off ? "text-text-3" : ""}`}
     >
       <span className="flex min-w-0 gap-2">
-        <span
-          aria-hidden
-          className={
-            off
-              ? ""
-              : `font-bold ${dark ? "text-ai-accent" : "text-primary"}`
-          }
-        >
+        <span aria-hidden className={off ? "" : "font-bold text-primary"}>
           {off ? "—" : "✓"}
         </span>
         <span className="min-w-0">{f.label}</span>
       </span>
       {f.note && !off && (
-        <span
-          className={`shrink-0 rounded-md chip-pad-tight text-[10px] font-bold ${
-            dark ? "bg-white/10 text-ai-accent" : "bg-primary-soft text-primary"
-          }`}
-        >
+        <span className="shrink-0 rounded-md bg-primary-soft chip-pad-tight t-caption font-bold text-primary">
           {f.note}
         </span>
       )}
@@ -250,7 +238,7 @@ export function PlanCards({
   }, [effectiveHighlight]);
 
   return (
-    <div className="flex flex-col items-center gap-6">
+    <div className="flex flex-col items-center gap-6 max-md:gap-4">
       {/* 월간 / 연간 토글 */}
       <div className="rise-in inline-flex gap-1 rounded-full border border-line bg-surface p-1 t-body">
         {(["monthly", "annual"] as const).map((b) => (
@@ -268,7 +256,7 @@ export function PlanCards({
         ))}
       </div>
 
-      <div className={`grid w-full max-w-[1080px] gap-5 ${gridCols}`}>
+      <div className={`grid w-full max-w-[1080px] gap-5 max-md:gap-3 ${gridCols}`}>
         {cards.map((p, i) => {
           const def = getPlan(p.defTier);
           /* [970 · A-06] 게스트(currentPlan=null)는 어느 카드도 현재 이용 중이 아니다 */
@@ -293,7 +281,7 @@ export function PlanCards({
                  세 카드가 같은 hover(살짝 뜸 + 그림자, .tile 규칙·정교한 포인터에서만·감속 모션 존중)를
                  쓴다. 플러스만 다른 동작을 하면 "왜 이 카드만 흔들리지"가 되고, 요금표는 비교 화면이라
                  카드끼리 같은 물리 법칙을 따라야 읽힌다. */
-              className={`rise-in-${Math.min(i + 1, 6)} plan-card relative flex scroll-mt-24 flex-col gap-4 rounded-3xl p-7 ${
+              className={`rise-in-${Math.min(i + 1, 6)} plan-card relative flex scroll-mt-24 flex-col gap-4 rounded-3xl p-7 max-md:gap-3 max-md:p-5 ${
                 p.dark
                   ? "bg-brand-navy shadow-[0_24px_60px_rgba(16,28,54,.28)] md:-translate-y-2"
                   : "card"
@@ -360,7 +348,7 @@ export function PlanCards({
               {/* 모바일18 — 기능 7~11줄이 모바일에서 카드를 길게 만든다.
                   모바일은 상위 5줄 + "전체 N개 보기" 토글, md+ 는 전체 노출.
                   숨긴 개수를 버튼에 적는다(몇 개가 접혔는지 모르게 하지 않는다). */}
-              <FeatureList features={def.features} dark={p.dark} />
+              <FeatureList features={def.features} />
 
 
               <div className="flex-1" />

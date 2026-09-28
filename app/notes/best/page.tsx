@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
+import { Explain } from "@/app/components/explain/Explain";
 import {
   listBestNoteMonths,
   formatYmKo,
@@ -75,15 +76,27 @@ export default async function BestNotesIndexPage() {
     <PageShell breadcrumb="이달의 공개 임장노트">
       <div className="mx-auto max-w-[760px]">
         <h1 className="rise-in t-title text-ink">이달의 공개 임장노트</h1>
-        <p className="rise-in-1 mt-2 t-body text-text-2">
-          공개에 동의한 임장노트 중 <strong className="text-ink">기록이 충실한 노트</strong>를
-          매달 정리합니다. 운영자가 마음에 드는 노트를 고르는 방식이 아니라, 아래 계산식으로
-          점수를 매겨 상위를 싣습니다.
+        {/* [1015 · 규칙 B·D] 설명 문단 세 문장 → 사실 한 줄 */}
+        <p className="rise-in-1 mt-2 t-body text-text-2 max-md:mt-1">
+          공개 임장노트 중 기록이 충실한 노트를 매달 아래 계산식({MAX_SCORE}점 만점)으로 뽑습니다.
         </p>
 
-        {/* 선정 기준 — 문서 N13 의 "선정 기준 공개" */}
-        <section className="rise-in-2 card mt-6 p-[var(--pad-card)]">
-          <h2 className="t-section text-ink">선정 기준 (총 {MAX_SCORE}점)</h2>
+        {/* 선정 기준 — 문서 N13 의 "선정 기준 공개".
+            [1015 · 규칙 B] 다섯 축(계산식)은 이 페이지의 본체라 그대로. 그 아래 규칙 세 문장은 ⓘ 로 접었다. */}
+        <section className="rise-in-2 card mt-6 p-[var(--pad-card)] max-md:mt-4 max-md:p-3.5">
+          <h2 className="flex items-center gap-1 t-section text-ink">
+            선정 기준 (총 {MAX_SCORE}점)
+            <Explain
+              title="선정 규칙"
+              body={[
+                `${MIN_SCORE}점 미만은 후보로 세지 않는다. 자격 노트가 ${MIN_NOTES_PER_MONTH}편 미만인 달은 만들지 않는다.`,
+                `한 달 최대 ${MAX_NOTES_PER_MONTH}편, 같은 작성자 최대 ${MAX_PER_AUTHOR}편.`,
+                "점수는 기록의 충실도만 잰다. 단지의 좋고 나쁨, 값의 적정성과 무관하며, 노트에 적힌 입지·학군 점수가 높아도 가산점은 없다.",
+              ]}
+              source="lib/inspection/best-notes 계산식 · 사람이 고르지 않음"
+              size={12}
+            />
+          </h2>
           <div className="mt-3 flex flex-col gap-3">
             {SCORE_AXES.map((a) => (
               <div key={a.key} className="border-b border-border pb-3 last:border-b-0 last:pb-0">
@@ -94,21 +107,6 @@ export default async function BestNotesIndexPage() {
               </div>
             ))}
           </div>
-          <ul className="mt-4 flex list-disc flex-col gap-1.5 pl-5 t-sub text-text-3">
-            <li>
-              {MIN_SCORE}점 미만은 후보로 세지 않고, 자격 노트가 {MIN_NOTES_PER_MONTH}편 미만인
-              달은 아예 만들지 않습니다. 두 편짜리 선정은 선정이 아니기 때문입니다.
-            </li>
-            <li>
-              한 달에 최대 {MAX_NOTES_PER_MONTH}편, 같은 작성자는 최대 {MAX_PER_AUTHOR}편까지만
-              싣습니다.
-            </li>
-            <li>
-              이 점수는 <strong className="text-ink">기록의 충실도</strong>만 잽니다. 그 단지가
-              좋은 단지인지, 값이 적절한지와는 무관합니다. 노트에 적힌 입지·학군 점수가 높다고
-              가산점을 주지 않습니다 — 그러면 후하게 쓸수록 뽑히게 되기 때문입니다.
-            </li>
-          </ul>
         </section>
 
         {loadFailed ? (
@@ -119,12 +117,12 @@ export default async function BestNotesIndexPage() {
             뜻입니다.
           </div>
         ) : months.length > 0 ? (
-          <div className="mt-6 flex flex-col gap-3">
+          <div className="mt-6 flex flex-col gap-3 max-md:mt-4 max-md:gap-2">
             {months.map((m) => (
               <Link
                 key={m.ym}
                 href={`/notes/best/${m.ym}`}
-                className="card tile flex items-center justify-between rounded-2xl px-5 py-4 no-underline"
+                className="card tile flex items-center justify-between rounded-2xl px-5 py-4 no-underline max-md:px-3.5 max-md:py-3"
               >
                 <span className="t-section text-ink">
                   {formatYmKo(m.ym)} 이달의 임장노트
@@ -138,7 +136,7 @@ export default async function BestNotesIndexPage() {
         ) : (
           <div className="mt-6 card rounded-2xl px-5 py-8 text-center t-body text-text-3">
             아직 기준을 채운 달이 없습니다. 한 달에 {MIN_SCORE}점 이상 노트가{" "}
-            {MIN_NOTES_PER_MONTH}편 모이면 자동으로 만들어집니다.
+            {MIN_NOTES_PER_MONTH}편 모이면 만들어집니다.
             <br />
             <Link href="/notes/new" className="mt-2 inline-block font-bold text-primary underline">
               임장노트 쓰기
@@ -192,31 +190,32 @@ async function FieldVerifiedLeaderboard() {
     return null;
   }
   if (rows.length === 0) return null;
+  /* [1015 · 규칙 C·B] 제목 옆 부연("단지 반경 2km 위치 확인을 통과한 기록")과 아래 각주는 ⓘ 하나로.
+     [1015 · 규칙 I] 순위 행 묶음 = 리퀴드 판(점수·통계 = blue), 오른쪽 값은 .t-num */
   return (
-    <section className="mt-8">
-      <h2 className="t-section text-ink">
-        이달의 현장 인증{" "}
-        <span className="t-sub font-medium text-text-3">
-          단지 반경 2km 위치 확인을 통과한 기록
-        </span>
+    <section className="mt-8 max-md:mt-5">
+      <h2 className="flex items-center gap-1 t-section text-ink">
+        이달의 현장 인증
+        <Explain
+          title="현장 인증 순위"
+          body="이번 달 공개 노트 중 단지 반경 2km 위치 확인을 통과한 노트를 작성자별로 센 수. 매월 1일 리셋."
+          how="인증은 노트를 쓸 때 선택이며 위치 좌표는 저장되지 않는다(50m 단위 거리만)."
+          size={12}
+        />
       </h2>
-      <div className="card mt-2 rounded-2xl px-4 py-2">
-        {rows.map((r, i) => (
-          <div
-            key={r.label}
-            className="flex items-center justify-between border-b border-divider py-2.5 t-body last:border-0"
-          >
-            <span className="font-bold text-ink">
-              <span className="mr-2">{i + 1}위</span>
-              {r.label}
-            </span>
-            <span className="font-bold text-primary tabular-nums">{r.count}편</span>
-          </div>
-        ))}
+      <div className="card mt-2 rounded-2xl px-4 py-1">
+        <div className="flex flex-col divide-y" data-tone="blue">
+          {rows.map((r, i) => (
+            <div key={r.label} className="flex items-center justify-between py-2.5 t-body">
+              <span className="font-bold text-ink">
+                <span className="mr-2">{i + 1}위</span>
+                {r.label}
+              </span>
+              <span className="t-num">{r.count}편</span>
+            </div>
+          ))}
+        </div>
       </div>
-      <p className="t-caption mt-1.5 text-text-3">
-        매월 1일 리셋 · 인증은 작성 시 선택이며 위치 좌표는 저장되지 않습니다.
-      </p>
     </section>
   );
 }

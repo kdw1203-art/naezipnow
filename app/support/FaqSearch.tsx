@@ -24,7 +24,7 @@ function norm(s: string): string {
 
 export function FaqSearch({
   items,
-  placeholder = "궁금한 점을 검색해 보세요 (예: 해지, 환불, 위치정보)",
+  placeholder = "FAQ 검색 · 해지 · 환불 · 위치정보",
   contactHref = "#contact",
   className = "",
 }: {

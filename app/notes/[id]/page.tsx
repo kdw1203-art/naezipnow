@@ -215,9 +215,9 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
       .filter(([, v]) => v > 0 && v <= 2)
       .forEach(([label, v]) => cautionPoints.push(`${label} 취약 (${v}/5)`));
   }
-  if (goodPoints.length === 0) goodPoints.push("기록된 확정 강점이 아직 없어요");
-  if (cautionPoints.length === 0)
-    cautionPoints.push("기록된 확정 약점이 아직 없어요");
+  /* [1015 · 규칙 D] "기록된 확정 강점이 아직 없어요" → 두 글자. aiSummary 의 `includes("아직")` 판정도 같이 바꿨다 */
+  if (goodPoints.length === 0) goodPoints.push("기록 없음");
+  if (cautionPoints.length === 0) cautionPoints.push("기록 없음");
 
   /* 20a ④ 4축: [970 · B-10] 폼이 고른 항목만 fieldRatings 에 남기므로 그 값을 먼저 쓰고,
      없으면 텍스트 키워드, 그것도 없으면 축 점수 — 점수가 0(미입력)인 축은 "중"으로
@@ -268,12 +268,10 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
   );
   const aiEngine = typeof ai?.engine === "string" ? ai.engine : "";
   const ruleInline = scored
-    ? `입력 ${scoredAxisCount}개 축 평균 ${avg.toFixed(1)}/5점 — ${
-        weakest
-          ? `${weakest[0]} 축(${weakest[1]}/5)이 감점 요인입니다.`
-          : "축별 점수를 참고하세요."
+    ? `입력 ${scoredAxisCount}개 축 평균 ${avg.toFixed(1)}/5점. ${
+        weakest ? `${weakest[0]} 축(${weakest[1]}/5)이 감점 요인.` : "축별 점수 참고."
       }`
-    : "현장 축 점수가 아직 없어 종합 점수를 내지 않았어요. 노트에서 평가를 채우면 표시됩니다.";
+    : "현장 축 점수 미입력. 종합 점수 없음.";
   const aiBadge = storedAiText
     ? aiEngine.startsWith("rule-based")
       ? "규칙 기반 분석"
@@ -316,16 +314,14 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
     aiInline: storedAiText ?? ruleInline,
     aiBadge,
     aiSummary: scored
-      ? `${n.region} ${displayTitle} 방문 기록 기준 — 입력 축 평균 ${avg.toFixed(1)}점입니다. ${
-          goodPoints[0] && !goodPoints[0].includes("아직")
-            ? `강점은 ${goodPoints[0]}, `
-            : ""
+      ? `${n.region} ${displayTitle} 방문 기록 기준 입력 축 평균 ${avg.toFixed(1)}점. ${
+          goodPoints[0] && goodPoints[0] !== "기록 없음" ? `강점 ${goodPoints[0]}, ` : ""
         }${
-          cautionPoints[0] && !cautionPoints[0].includes("아직")
-            ? `약점은 ${cautionPoints[0]} 입니다.`
-            : "축별 점수를 참고해 다음 방문 계획을 세워보세요."
+          cautionPoints[0] && cautionPoints[0] !== "기록 없음"
+            ? `약점 ${cautionPoints[0]}.`
+            : "축별 점수 참고."
         }`
-      : `${n.region} ${displayTitle} 방문 기록 — 축 점수가 없어 종합 점수는 표시하지 않아요. 체크·메모를 보강하면 판단 근거가 쌓입니다.`,
+      : `${n.region} ${displayTitle} 방문 기록. 축 점수가 없어 종합 점수는 없음.`,
     totalScore: total,
     scoredAxisCount,
     weakestAxis: weakest ? { label: weakest[0], score: weakest[1] } : null,
@@ -372,11 +368,11 @@ export async function generateMetadata({
   }
 
   const displayTitle = note.aptName?.trim() || note.title;
-  const title = `${note.title} — ${note.region} 임장노트 | 내집나우`;
+  const title = `${note.title} · ${note.region} 임장노트 | 내집나우`;
   const description = (
     note.summary?.trim() ||
     note.sections.memo?.trim() ||
-    `${note.region} ${displayTitle} 직접 방문 임장 기록 — 채광·소음·주차·교통 평가와 좋았던 점·주의할 점.`
+    `${note.region} ${displayTitle} 직접 방문 임장 기록. 채광·소음·주차·교통 평가와 좋았던 점·주의할 점.`
   ).slice(0, 150);
   const canonical = `${BASE_URL}/notes/${note.id}`;
 
@@ -809,12 +805,13 @@ export default async function NoteDetailPage({
      지금 있는 유일한 무료 홍보 채널). 단지가 없으면 AI 진단 자리에 회차 기록. 재시도 버튼은
      아래 AI 요약 패널에 있으므로 여기서 또 만들지 않는다. */
   const aptForTools = realNote.aptName?.trim() ?? "";
+  /* [1015 · 규칙 D] 대시로 잇던 두 문장을 마침표로, 사실만 */
   const nextActionHeadline =
     aiState === "ready"
-      ? "AI 정리가 반영됐어요 — 이어서 해 볼 것"
+      ? "저장됨 · AI 정리 반영됨"
       : aiState === "rule"
-        ? "노트는 저장됐고 규칙 기반 요약만 있어요 — AI 정리는 아래 요약에서 다시 시도할 수 있어요"
-        : "노트는 저장됐어요. AI 정리는 반영되지 않았어요 — 아래 요약에서 다시 시도할 수 있어요";
+        ? "저장됨 · 규칙 기반 요약만 있음. AI 정리 재시도는 아래 요약 패널에서."
+        : "저장됨 · AI 정리 미반영. 재시도는 아래 요약 패널에서.";
   const nextActionLinks: Array<{ label: string; href: string }> = [
     { label: "지도에서 비교", href: mapCompareHref },
     aptForTools
@@ -842,9 +839,7 @@ export default async function NoteDetailPage({
         ))}
       </nav>
       {aptForTools && (
-        <p className="t-caption text-text-3">
-          AI 진단은 {aptForTools} 실데이터로 1분 · 첫 실행이면 +100P
-        </p>
+        <p className="t-caption text-text-3">AI 진단 · {aptForTools} 실데이터 기준 · 첫 실행 +100P</p>
       )}
     </section>
   ) : null;
@@ -856,18 +851,15 @@ export default async function NoteDetailPage({
     postSave && nearbyCandidates.length > 0 ? (
       <section
         aria-label="근처 비교 후보"
-        className="rise-in-1 card flex flex-col gap-2 rounded-3xl p-5"
+        className="rise-in-1 card flex flex-col gap-2 rounded-3xl p-5 max-md:p-3.5"
       >
-        <div className="t-section text-ink">다음 임장, 근처 비교 후보로 이어가 볼까요?</div>
-        <p className="t-caption text-text-3">
-          {realNote.region} 최근 거래 많은 단지 — 담아서 표로 비교할 수 있어요.
-        </p>
-        <div className="mt-1 flex flex-col gap-1.5">
+        {/* [1015 · 규칙 D] 물음형 제목("다음 임장, 근처 비교 후보로 이어가 볼까요?") → 명사 + 사실 한 줄 */}
+        <h2 className="t-section text-ink">근처 비교 후보</h2>
+        <p className="t-caption text-text-3">{realNote.region} 최근 거래 많은 단지</p>
+        {/* [1015 · 규칙 I] 단지 행 묶음 = 리퀴드 판(거래·단지 = blue) */}
+        <div className="mt-1 flex flex-col divide-y" data-tone="blue">
           {nearbyCandidates.map((c) => (
-            <div
-              key={c.id}
-              className="flex items-center justify-between gap-2 rounded-xl bg-bg px-3 py-2"
-            >
+            <div key={c.id} className="flex items-center justify-between gap-2 py-2">
               <Link
                 href={complexHrefFromId(c.id)}
                 className="inline-block min-w-0 flex-1 py-[5px] no-underline"
@@ -893,7 +885,7 @@ export default async function NoteDetailPage({
   const aiSummaryPanel = (
     <AIPanel title="AI 요약">
       <span
-        className={`mb-1.5 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${
+        className={`mb-1.5 inline-flex items-center rounded px-1.5 py-0.5 t-caption font-bold ${
           v.aiBadge.startsWith("규칙")
             ? "border border-amber-400/50 bg-amber-500/15 text-amber-100"
             : "border border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
@@ -924,11 +916,11 @@ export default async function NoteDetailPage({
       {/* 구매 열람 안내 — 비공개 노트를 리포트 구매로 읽는 중임을 명시.
           이게 없으면 구매자가 "왜 남의 비공개 글이 보이지?" 하고 혼란스럽고,
           재열람 경로(/my 구매 목록)도 모른 채 떠난다. */}
+      {/* [1015 · 규칙 C] 안내 띠 두 장의 파란 색면(bg-primary-soft) → 흰 카드 + 1px 선(.card) */}
       {purchasedAccess && (
-        <div className="rise-in mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-primary/20 bg-primary-soft px-4 py-3 t-body text-text-1">
+        <div className="rise-in card mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3 t-body text-text-1">
           <span>
-            <span className="font-bold text-primary">구매한 리포트</span>로
-            열람 중이에요 — 이 노트가 리포트의 전달물입니다.
+            <span className="font-bold text-primary">구매한 리포트</span>의 전달물로 열람 중.
           </span>
           <Link href="/my" className="shrink-0 font-bold text-primary no-underline">
             내 구매 목록 ›
@@ -938,11 +930,10 @@ export default async function NoteDetailPage({
       {/* AI 한도 도달 안내 — 노트는 저장됐다는 사실을 먼저, 다음 행동(구독)을
           가격과 함께. 가격은 billing-periods 단일 출처. */}
       {isOwner && quotaHit && (
-        <div className="rise-in mb-3 rounded-2xl border border-primary/20 bg-primary-soft px-4 py-3 t-body text-text-1">
-          노트는 저장됐어요. 이번 달 AI 정리 한도에 도달해 이번 건은 AI 없이
-          저장됐어요 —{" "}
+        <div className="rise-in card mb-3 rounded-2xl px-4 py-3 t-body text-text-1">
+          이번 달 AI 정리 한도 도달. 노트는 AI 정리 없이 저장됐습니다.{" "}
           <Link href="/subscription" className="font-bold text-primary">
-            PRO(월 {monthlyPrice("pro").toLocaleString("ko-KR")}원)로 이어서 쓰기 ›
+            PRO(월 {monthlyPrice("pro").toLocaleString("ko-KR")}원) 보기 ›
           </Link>
         </div>
       )}
@@ -967,11 +958,9 @@ export default async function NoteDetailPage({
             AI 분석 허브
           </Link>
         )}
-        {/* 지역 컨텍스트를 넘겨 지도 비교 루프가 끊기지 않게 한다 */}
-        <Link
-          href={mapCompareHref}
-          className="btn-primary btn-cta px-3.5 py-2 t-body"
-        >
+        {/* 지역 컨텍스트를 넘겨 지도 비교 루프가 끊기지 않게 한다.
+            [1015 · 규칙 J] 채움 파랑은 판단 카드의 다음 행동 하나만 — 상단 줄은 outline */}
+        <Link href={mapCompareHref} className="btn-outline px-3.5 py-2 t-body no-underline">
           지도에서 비교
         </Link>
       </div>
@@ -981,9 +970,10 @@ export default async function NoteDetailPage({
           근거·점수 축)가 통째로 컨테이너 밖으로 나가 있었다 — 실측: 뷰포트 1296
           에서 문서 scrollWidth 1690, 왼쪽 칼럼 1222px, aside 오른쪽 끝 1690.
           minmax(0,1fr) + min-w-0 로 고치면 왼쪽 780 / aside 848~1248 로 붙는다. */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+      {/* [1015 · 규칙 E] 폰 열 간격 gap-5 → 3, 카드 간격 4 → 3(데스크톱 그대로) */}
+      <div className="grid grid-cols-1 gap-3 md:gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         {/* ===== 좌측: 노트 본문 (20a 표준 구조) ===== */}
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-3 md:gap-4">
           {/* [993] 판단 카드 — 이 노트가 말하려는 것 한 장. 모바일에서도 맨 위. */}
           <NoteVerdictCard
             verdict={reportVerdict ?? v.aiSummary}
@@ -1005,7 +995,7 @@ export default async function NoteDetailPage({
                 ? /* [995 · 3] apt·region 만 넘기던 것을 회차 프리필로 — 단지 id·좌표·태그·
                      체크리스트를 잇고 round 를 +1 한다(app/notes/new?revisit=). */
                   {
-                    label: "다시 왔을 때 — 이전 기록 불러와 쓰기",
+                    label: "이전 기록 불러와 다시 쓰기",
                     href: `/notes/new?revisit=${encodeURIComponent(realNote.id)}`,
                   }
                 : realNote.aptName?.trim()
@@ -1019,7 +1009,7 @@ export default async function NoteDetailPage({
           {/* [1005 · A4] 저장 직후에만 — 히어로 다음, 본문 앞. pending 동안은 안 그린다. */}
           {nextActionCard}
           {/* 노트 카드 — 20a 표준 11항목 */}
-          <div className="rise-in card flex flex-col gap-3.5 rounded-3xl p-6">
+          <div className="rise-in card flex flex-col gap-3.5 rounded-3xl p-6 max-md:gap-3 max-md:p-3.5">
             {/* ① 지역·단지 칩 */}
             <div className="flex flex-wrap items-center gap-1.5">
               {v.chips.map((c, i) => (
@@ -1073,44 +1063,38 @@ export default async function NoteDetailPage({
                   </span>
                   <Explain
                     title="현장 인증"
-                    body="노트를 쓸 때 작성자 기기의 위치로 브라우저가 단지 근처라고 판정한 표시예요. 서버가 위치를 다시 확인하지는 않고, 적힌 내용이 사실인지 보증하는 표시도 아니에요."
+                    body="노트를 쓸 때 작성자 기기의 위치로 브라우저가 단지 근처라고 판정한 표시. 서버가 위치를 다시 확인하지 않으며, 적힌 내용의 사실 여부를 보증하는 표시도 아니다."
                     how={[
-                      "노트를 쓸 때 ‘현재 위치로 인증하기’를 누르면 그 기기의 현재 위치와 단지 좌표 사이 거리를 브라우저 안에서 계산해요.",
-                      "거리가 2km 안이면 인증 표시가 붙어요.",
-                      "위치 좌표는 저장하지 않아요 — 50m 단위로 뭉갠 거리와 확인한 시각만 남겨요.",
+                      "노트를 쓸 때 ‘현재 위치로 인증하기’를 누르면 그 기기의 현재 위치와 단지 좌표 사이 거리를 브라우저 안에서 계산한다.",
+                      "거리가 2km 안이면 인증 표시가 붙는다.",
+                      "위치 좌표는 저장하지 않는다. 50m 단위로 뭉갠 거리와 확인 시각만 남는다.",
                     ]}
                     size={12}
                   />
                 </span>
               )}
               <span className="text-text-3">{v.visitMeta}</span>
-              {/* [983] 운영진 글에는 그렇다고 적는다 — 공개 노트 27건 중 25건이
-                  Lab 글인데 화면은 "직접 다녀온 사람의 기록"이라고만 말했다. */}
-              {v.lab && (
-                <span className="ml-1.5 inline-flex shrink-0 items-center rounded border border-line px-1 py-px text-[10px] font-semibold leading-[1.4] text-text-3">
-                  운영진 예시
-                </span>
-              )}
+              {/* [1015 · 규칙 C] "운영진 예시" 설명 배지는 뺐다 — visitMeta 끝의 작성자 이름이 이미
+                  "내집나우 Lab"(displayAuthorLabel)이라 메타 줄의 이름만으로 구분된다. */}
             </div>
 
             {/* ④ 4축 항목 평가 — 채광·소음·주차·교통 상중하. [970 · B-10] 미입력 축은 빠지고,
                 하나도 없으면 "미입력"이라고 적는다(보통으로 채우지 않는다) */}
             <div className="flex flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5">
-              <div className="t-sub font-bold text-text-3">
+              <div className="flex items-center gap-1 t-sub font-bold text-text-3">
                 항목 평가
-                {v.axes.length === 0 && (
-                  <span className="ml-1.5 font-medium">· 현장 체크를 아직 입력하지 않았어요</span>
+                {v.axes.length === 0 && <span className="ml-0.5 font-medium">· 미입력</span>}
+                {/* [987 · 28] 이 상/중/하가 무엇인지 밝힌다 — 다녀온 사람의 인상이지 측정값이 아니다.
+                    [1015 · 규칙 B] 설명 문장 한 줄이 제목 아래 상주하던 것을 ⓘ 하나로 접었다(데스크톱 hover · 폰 탭). */}
+                {v.axes.length > 0 && (
+                  <Explain
+                    title="항목 평가"
+                    body="다녀온 사람이 현장에서 느낀 인상(좋음·보통·아쉬움)을 상·중·하로 적은 것. 측정값이 아니다."
+                    how="작성 화면의 현장 체크에서 고른 값을 먼저 쓰고, 없으면 좋았던 점·주의할 점 글의 낱말, 그것도 없으면 축 점수(4 이상 상 · 2 이하 하)로 정한다. 입력이 없는 축은 뺀다."
+                    size={12}
+                  />
                 )}
               </div>
-              {/* [987 · 28] 이 상/중/하가 무엇인지 밝힌다. 숫자·등급처럼 보이면 측정값으로
-                  읽히는데, 실제로는 다녀온 사람의 인상이다. 확인할 수 있는 것(실거래·
-                  공표 통계)은 아래 "이 노트로 이어서"의 도구가 따로 답한다 — 둘을
-                  같은 화면에 같은 모양으로 두면 독자가 구별할 방법이 없다. */}
-              {v.axes.length > 0 && (
-                <p className="t-caption text-text-3">
-                  다녀온 사람이 그 자리에서 느낀 인상이에요 — 측정값이 아닙니다.
-                </p>
-              )}
               <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4">
                 {v.axes.map((a) => (
                   <div
@@ -1147,14 +1131,15 @@ export default async function NoteDetailPage({
             )}
 
             {/* ⑤⑥ 좋았던 점 · 주의할 점 */}
-            <div className="rounded-lg border border-line bg-surface p-3.5 text-xs leading-[1.7] text-text-1">
-              <div>
-                <b className="text-success">좋았던 점</b> —{" "}
-                {v.goodPoints.join(" · ")}
+            {/* [1015 · 규칙 D] 대시 잇기 → 제목 칸 / 내용 칸 */}
+            <div className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-3.5 t-sub leading-[1.7] text-text-1">
+              <div className="flex gap-2">
+                <b className="w-14 shrink-0 text-success">좋았던 점</b>
+                <span className="min-w-0">{v.goodPoints.join(" · ")}</span>
               </div>
-              <div className="mt-1">
-                <b className="text-danger">주의할 점</b> —{" "}
-                {v.cautionPoints.join(" · ")}
+              <div className="flex gap-2">
+                <b className="w-14 shrink-0 text-danger">주의할 점</b>
+                <span className="min-w-0">{v.cautionPoints.join(" · ")}</span>
               </div>
             </div>
 
@@ -1175,7 +1160,7 @@ export default async function NoteDetailPage({
                     /* "나중에 볼게요" 뒤에도 옛 요약이 새 것으로 읽히지 않게 — 무엇의 요약인지 적는다 */
                     <div className="flex flex-col gap-1.5">
                       <p className="t-caption text-text-3">
-                        아래는 수정 전 내용 기준 AI 정리예요 — 새 정리는 이 노트를 다시 열면 반영돼요.
+                        아래는 수정 전 내용 기준 AI 정리. 새 정리는 이 노트를 다시 열면 반영.
                       </p>
                       {aiSummaryPanel}
                     </div>
@@ -1233,16 +1218,13 @@ export default async function NoteDetailPage({
               >
                 {v.regionLabel} 실거래가
               </Link>
-              {/* 단지 링크 — 실 단지 id를 찾은 경우에만 (mock-1로 보내지 않음) */}
+              {/* 단지 링크 — 실 단지 id를 찾은 경우에만 (mock-1로 보내지 않음).
+                  [1015 · 규칙 J] 같은 주소의 링크 둘("~ 홈"·"이 단지 노트 더 보기") → 하나 */}
               {complexHref && (
                 <>
                   <span>·</span>
                   <Link href={complexHref} className="font-bold text-primary">
-                    {v.complexLabel} 홈
-                  </Link>
-                  <span>·</span>
-                  <Link href={complexHref} className="font-bold text-primary">
-                    이 단지 노트 더 보기
+                    {v.complexLabel} 단지 홈
                   </Link>
                 </>
               )}
@@ -1282,11 +1264,11 @@ export default async function NoteDetailPage({
 
           {/* [#131] 직전 저장본 — 본인에게만, 내용 수정이 있었던 노트만 */}
           {isOwner && realNote.metadata?.lastRevision && (
-            <details className="rise-in-1 card rounded-3xl p-5">
+            <details className="rise-in-1 card rounded-3xl p-5 max-md:p-3.5">
               <summary className="cursor-pointer t-section text-ink">
                 수정 전 저장본{" "}
                 <span className="t-sub font-medium text-text-3">
-                  {realNote.metadata.lastRevision.at.slice(0, 16).replace("T", " ")} 저장분
+                  {realNote.metadata.lastRevision.at.slice(0, 16).replace("T", " ")} · 직전 1벌만 보관
                 </span>
               </summary>
               <div className="mt-2 flex flex-col gap-1.5 t-body text-text-2">
@@ -1300,26 +1282,29 @@ export default async function NoteDetailPage({
                     <b className="text-ink">메모:</b> {realNote.metadata.lastRevision.memo}
                   </p>
                 )}
-                <p className="t-sub text-text-3">
-                  직전 1벌만 보관됩니다. 되돌리려면 내용을 복사해 수정 화면에 붙여넣으세요.
-                </p>
               </div>
             </details>
           )}
 
           {/* [#72] 재방문 변화 리포트 — 직전 회차 대비, 바뀐 항목만 */}
           {revisitDelta && (
-            <div className="rise-in-1 card flex flex-col gap-2 rounded-3xl p-6">
-              <div className="text-[15px] font-bold text-ink">
-                재방문 변화{" "}
+            <div className="rise-in-1 card flex flex-col gap-2 rounded-3xl p-6 max-md:p-3.5">
+              <div className="flex flex-wrap items-center gap-1.5 t-section text-ink">
+                재방문 변화
                 {/* [996 · 4] 회차 — 프리필 사슬(metadata.round)이 적은 값 */}
                 <span className="rounded-md bg-primary-soft px-1.5 py-0.5 t-caption font-bold text-primary">
                   {revisitDelta.round}회차
-                </span>{" "}
+                </span>
                 <span className="t-sub font-medium text-text-3">
                   {revisitDelta.fromLabel}({revisitDelta.prevVisitDate}) →{" "}
                   {revisitDelta.toLabel}
                 </span>
+                {/* [1015 · 규칙 B] 카드 맨 아래 설명 두 문장 → ⓘ */}
+                <Explain
+                  title="재방문 변화"
+                  body="같은 단지에 남긴 직전 기록과 이번 기록을 견준 결과. 두 회차 모두 기록된 항목만 비교."
+                  size={12}
+                />
               </div>
               {/* [996 · 4] 판단이 바뀌었으면 그것이 첫 줄 — 항목 변화보다 먼저 답할 질문이다 */}
               {revisitDelta.decisionLine && (
@@ -1338,37 +1323,31 @@ export default async function NoteDetailPage({
                 </div>
               ) : revisitDelta.decisionLine ? null : (
                 <p className="t-body text-text-2">
-                  비교 가능한 {revisitDelta.comparable}개 항목의 평가가 직전 회차와
-                  같아요 — 인상이 유지되고 있다는 것도 기록입니다.
+                  비교한 {revisitDelta.comparable}개 항목 모두 직전 회차와 같음.
                 </p>
               )}
-              <p className="t-caption text-text-3">
-                같은 단지에 남긴 직전 기록과 이번 기록의 차이를 자동 비교했어요. 두 회차
-                모두 기록된 항목만 비교합니다.
-              </p>
             </div>
           )}
 
           {/* 방문 기록 비교 */}
-          <div className="rise-in-1 card flex flex-col gap-3 rounded-3xl p-6">
+          <div className="rise-in-1 card flex flex-col gap-3 rounded-3xl p-6 max-md:p-3.5">
             <div className="flex items-center justify-between">
-              <div className="text-[15px] font-bold text-ink">방문 기록 비교</div>
+              <h2 className="t-section text-ink">방문 기록 비교</h2>
               {/* [1009 · T] "인쇄·PDF ›"(/notes/[id]/print) 링크 제거 — 992 에서 노트 출력 3종 중 card 만 남기고 print·deck 을
                   보관(lib/seo/archived-routes ARCHIVED_PATTERNS)했는데, 993 이 deck 버튼만 빼고 이 입구가 남아 있었다. */}
               <Link
                 href={`/notes/compare?noteId=${encodeURIComponent(id)}`}
-                className="inline-flex min-h-[24px] items-center text-xs font-bold text-primary"
+                className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary"
               >
                 회차 전체 비교 ›
               </Link>
             </div>
-            <div className="flex flex-col">
+            {/* [1015 · 규칙 I] 회차 행 묶음 = 리퀴드 판(사람이 쓴 기록 = hanji). 행 사이 선은 divide-y 가 긋는다 */}
+            <div className="flex flex-col divide-y" data-tone="hanji">
               {/* [1006] 다른 회차는 링크 — 예전엔 글자만 있어 "이전 기록"으로 갈 길이 없었다.
                   현재 노트 줄은 링크가 아니다(자기 자신). 줄 높이 ≥40px(py-2.5 + 20px 줄). */}
-              {v.visits.map((visit, i) => {
-                const rowClass = `flex min-h-[40px] items-center justify-between py-2.5 text-[13px] ${
-                  i < v.visits.length - 1 ? "border-b border-divider" : ""
-                }`;
+              {v.visits.map((visit) => {
+                const rowClass = "flex min-h-[40px] items-center justify-between py-2.5 t-body";
                 const label = (
                   <span className={visit.latest ? "font-bold text-primary" : "text-text-2"}>
                     {visit.label}
@@ -1376,7 +1355,7 @@ export default async function NoteDetailPage({
                   </span>
                 );
                 const summary = (
-                  <span className={`font-bold ${visit.latest ? "text-primary" : "text-text-1"}`}>
+                  <span className={`t-num font-bold ${visit.latest ? "text-primary" : "text-text-1"}`}>
                     {visit.summary}
                   </span>
                 );
@@ -1417,13 +1396,15 @@ export default async function NoteDetailPage({
         </div>
 
         {/* ===== 우측: AI 분석 ===== */}
-        <aside className="flex flex-col gap-4">
+        <aside className="flex flex-col gap-3 md:gap-4">
           {/* [993] "판단 근거 정리" 패널 삭제 — 결론·점수·체크는 맨 위 판단 카드로 갔다(모바일에서 맨 끝에 오던 문제). */}
-          {/* 기록 축 점수 — 입력된 축만 평균. 미입력이면 링을 그리지 않는다 */}
-          <div className="rise-in-2 card flex flex-col items-center gap-3 rounded-3xl p-6">
+          {/* 기록 축 점수 — 입력된 축만 평균. 미입력이면 링을 그리지 않는다.
+              [1015 · 규칙 E] 종합 점수 링은 맨 위 판단 카드의 "기록 점수 N/100"과 같은 사실이라 폰에서는 숨기고(max-md:hidden)
+              축 막대만 남긴다. 데스크톱(오른쪽 레일)은 그대로. */}
+          <div className="rise-in-2 card flex flex-col items-center gap-3 rounded-3xl p-6 max-md:gap-2 max-md:p-3.5">
             {v.totalScore != null ? (
               <div
-                className="relative h-[110px] w-[110px] rounded-full"
+                className="relative h-[110px] w-[110px] rounded-full max-md:hidden"
                 style={{
                   /* [1005] 링 색은 토큰 — 손으로 적은 브랜드 블루 hex 는 다크·테마 변형에서 그대로 남았다 */
                   background: `conic-gradient(var(--primary) 0% ${v.totalScore}%, var(--primary-soft) ${v.totalScore}% 100%)`,
@@ -1437,20 +1418,26 @@ export default async function NoteDetailPage({
                 </div>
               </div>
             ) : (
-              <div className="flex h-[110px] w-[110px] flex-col items-center justify-center rounded-full bg-bg">
+              <div className="flex h-[110px] w-[110px] flex-col items-center justify-center rounded-full bg-bg max-md:hidden">
                 <span className="t-section text-text-3">—</span>
                 <span className="mt-0.5 t-caption text-text-3">미입력</span>
               </div>
             )}
-            <div className="text-center text-xs text-text-2">
+            <div className="flex items-center justify-center gap-1 text-center t-sub text-text-2">
               {v.totalScore != null ? (
-                <>
-                  입력 {v.scoredAxisCount}개 축 평균{" "}
-                  <b className="text-primary">{v.totalScore}점</b> · 이 노트 기록 기준
-                </>
+                <span>
+                  입력 {v.scoredAxisCount}개 축 평균 <b className="text-primary">{v.totalScore}점</b>
+                </span>
               ) : (
-                <>축 점수가 없어 종합 점수를 표시하지 않아요</>
+                <span>축 점수 미입력</span>
               )}
+              {/* [1015 · 규칙 B] 카드 맨 아래 계산 설명 문장 → ⓘ(데스크톱 hover 미리보기 · 폰 탭 시트) */}
+              <Explain
+                title="기록 점수"
+                body="입력된 축(입지·학군·교통·시설·미래가치)만 평균 × 20. 미입력 축은 평균과 막대에서 뺀다."
+                source="작성자 직접 방문 기록"
+                size={12}
+              />
             </div>
             <div className="flex w-full flex-col gap-[7px]">
               {v.scoreBars.map((b) => (
@@ -1467,7 +1454,7 @@ export default async function NoteDetailPage({
                     />
                   </div>
                   <span
-                    className={`text-[12px] font-bold ${
+                    className={`t-sub font-bold tabular-nums ${
                       b.bad ? "text-danger" : "text-ink"
                     }`}
                   >
@@ -1476,37 +1463,38 @@ export default async function NoteDetailPage({
                 </div>
               ))}
             </div>
-            <div className="t-caption text-text-3">
-              점수 = 입력된 축(입지·학군·교통·시설·미래가치)만 평균 × 20 · 미입력
-              축은 평균·막대에서 제외합니다
-            </div>
           </div>
 
-          {/* 기록 완성도 (10f) */}
-          <div className="rise-in-3 card flex flex-col gap-2 rounded-3xl p-[18px]">
-            <div className="t-body font-bold text-ink">기록 완성도</div>
-            <div className="flex justify-between text-xs">
-              <span className="text-text-2">체크 항목</span>
-              <span className="font-bold text-primary">
-                {v.checklistDone}/{v.checklistTotal} 완료
-              </span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-text-2">시간대 커버리지</span>
-              <span className="font-bold text-primary">
-                {v.visits.length}회 방문 기록
-              </span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-text-2">미확인 항목</span>
-              <span className="font-bold text-danger">
-                {Math.max(v.checklistTotal - v.checklistDone, 0)}건
-              </span>
+          {/* 기록 완성도 (10f).
+              [1015 · 규칙 E] 체크 N/N 은 판단 카드에도 있어 폰에서는 카드째 숨긴다(데스크톱 레일만).
+              [1015 · 규칙 I] 통계 행 묶음 = 리퀴드 판(blue). "시간대 커버리지"는 실제 값(회차 수)과 이름이 달라 "방문 회차"로. */}
+          <div className="rise-in-3 card flex flex-col gap-2 rounded-3xl p-[18px] max-md:hidden">
+            <h2 className="t-section text-ink">기록 완성도</h2>
+            <div className="flex flex-col divide-y" data-tone="blue">
+              <div className="flex justify-between py-2 t-sub">
+                <span className="text-text-2">체크 항목</span>
+                <span className="t-num">
+                  {v.checklistDone}/{v.checklistTotal}
+                </span>
+              </div>
+              <div className="flex justify-between py-2 t-sub">
+                <span className="text-text-2">방문 회차</span>
+                <span className="t-num">{v.visits.length}회</span>
+              </div>
+              <div className="flex justify-between py-2 t-sub">
+                <span className="text-text-2">미확인 항목</span>
+                <span className="t-num text-danger">
+                  {Math.max(v.checklistTotal - v.checklistDone, 0)}건
+                </span>
+              </div>
             </div>
           </div>
 
           {/* G10: '판단 편향 감지'·'체크 제안' 패널은 실제 분석 없이 문구만 고정돼 있던
               허구 패널이라 제거했다. 편향 분석이 실제로 붙으면 그때 되살린다. */}
+
+          {/* [1015 · 규칙 G] 데스크톱 오른쪽 레일 광고 1곳(홈과 같은 hidden lg:block). 폰은 글 끝 article_end 하나뿐 */}
+          <AdZone placement="sidebar" seed={0} plan={null} className="hidden lg:block" />
         </aside>
       </div>
 
@@ -1537,30 +1525,26 @@ export default async function NoteDetailPage({
 
       {/* 항목 38 — 가치를 받은 화면의 상주 안내. AI 정리가 실제로 반영된
           노트를 보는 무료 소유자에게만 보인다(한도 문구가 아니라 가치 문구). */}
+      {/* [1015 · 규칙 C·J] 파란 색면 → 흰 카드. 채움 파랑은 판단 카드 하나뿐이라 여기는 outline */}
       {isOwner && isFreeViewer && hasLlmAi && (
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary-soft px-4 py-3">
+        <div className="card mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3 max-md:mt-3">
           <p className="t-body text-text-1">
-            이 AI 정리가 도움이 됐다면 — PRO(월{" "}
-            {monthlyPrice("pro").toLocaleString("ko-KR")}원)에서는 매 노트마다
-            제한 없이 받을 수 있어요.
+            PRO(월 {monthlyPrice("pro").toLocaleString("ko-KR")}원): 노트마다 AI 정리 제한 없음.
           </p>
-          <Link href="/subscription" className="btn-primary btn-sm no-underline">
+          <Link href="/subscription" className="btn-outline btn-sm no-underline">
             요금제 보기
           </Link>
         </div>
       )}
 
-      {/* 15h-43 노트→AI→지도 루프: 다음 행동을 퍼널 순서로 */}
-      <div className="mt-5">
+      {/* 15h-43 노트→AI→지도 루프: 다음 행동을 퍼널 순서로.
+          [1015 · 규칙 J] primary 표식 없이 — 화면의 채움 파랑은 판단 카드의 다음 행동 하나 */}
+      <div className="mt-5 max-md:mt-3">
         <NextActions
           actions={[
             ...(hasLlmAi
               ? [
-                  {
-                    label: "지도에서 비교",
-                    href: mapCompareHref,
-                    primary: true as const,
-                  },
+                  { label: "지도에서 비교", href: mapCompareHref },
                   {
                     label: "심화 AI 분석",
                     href: `/analysis?noteId=${encodeURIComponent(id)}`,
@@ -1570,7 +1554,6 @@ export default async function NoteDetailPage({
                   {
                     label: "AI 분석 실행",
                     href: `/analysis?noteId=${encodeURIComponent(id)}`,
-                    primary: true as const,
                   },
                   { label: "지도에서 비교", href: mapCompareHref },
                 ]),
@@ -1590,16 +1573,16 @@ export default async function NoteDetailPage({
       {/* A9 공개노트 전환 훅 — 비로그인 열람자에게 관심단지·알림 로그인 유도 */}
       {/* [961] 광고 공간 — 글 끝. 본문을 다 읽은 뒤의 자연스러운 쉼에만 둔다 */}
       <AdZone placement="article_end" seed={0} plan={null} className="mt-6" />
+      {/* [1015 · 규칙 C·D·J] 물음형 제목("이 단지가 궁금하신가요?") → 명사, 파란 색면 → 흰 카드, 채움 → outline */}
       {!viewerEmail && complexHref && (
-        <div className="mt-4 rounded-2xl border border-primary/20 bg-primary-soft p-5 text-center">
-          <div className="t-section text-ink">이 단지가 궁금하신가요?</div>
+        <div className="card mt-4 p-5 text-center max-md:p-3.5">
+          <div className="t-section text-ink">관심 단지 알림</div>
           <p className="mx-auto mt-1 max-w-[440px] t-body text-text-3">
-            로그인하면 {realNote.aptName?.trim() || "이 단지"}를 관심 단지로 저장하고, 실거래·시세
-            변동 알림을 받을 수 있어요.
+            로그인 후 {realNote.aptName?.trim() || "이 단지"} 관심 단지 저장 · 실거래 변동 알림
           </p>
           <Link
             href={`/login?callbackUrl=${encodeURIComponent(complexHref)}`}
-            className="btn-primary btn-md mt-3 inline-block no-underline"
+            className="btn-outline btn-md mt-3 inline-block no-underline"
           >
             로그인하고 시세 알림 받기
           </Link>

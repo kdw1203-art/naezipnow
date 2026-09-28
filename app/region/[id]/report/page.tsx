@@ -55,10 +55,9 @@ export default async function RegionReportIndexPage({
       <h1 className="rise-in t-title tracking-tight text-ink">
         {region.name} 월간 리포트 아카이브
       </h1>
-      <p className="rise-in-1 mt-1.5 max-w-[640px] t-body text-text-2">
-        매월 1일이 지나면 직전 달의 {region.name} 아파트 시장이 스냅샷으로 고정됩니다 —
-        거래량·평균가·중앙값·상위 실거래·가격지수. &ldquo;그때 얼마였지&rdquo;가 궁금할 때
-        찾는 페이지입니다.
+      {/* [1015 · 규칙 B·D] 기능 설명 문단 → 사실 한 줄 */}
+      <p className="rise-in-1 mt-1.5 max-w-[640px] t-sub text-text-3">
+        매월 1일 이후 직전 달 스냅샷 고정 · 거래량·평균가·중앙값·상위 실거래·가격지수
       </p>
 
       <div className="rise-in-1 mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">

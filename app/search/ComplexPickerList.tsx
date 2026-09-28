@@ -143,9 +143,9 @@ export function PickedChip({
   return (
     <div className="mt-0.5 flex flex-wrap items-center gap-1.5 rounded-lg bg-primary-soft px-3 py-2">
       <span className="text-xs font-bold text-primary">{picked.name}</span>
-      {picked.regionLabel && <span className="text-[10px] font-bold text-text-2">{picked.regionLabel}</span>}
-      {picked.priceLabel && <span className="text-[10px] font-bold text-text-2">· 최근 {picked.priceLabel}</span>}
-      <span className="ml-auto rounded border border-line px-1 py-px text-[10px] font-bold text-text-3">
+      {picked.regionLabel && <span className="t-caption font-bold text-text-2">{picked.regionLabel}</span>}
+      {picked.priceLabel && <span className="t-caption font-bold text-text-2">· 최근 {picked.priceLabel}</span>}
+      <span className="ml-auto rounded border border-line px-1 py-px t-caption font-bold text-text-3">
         실데이터 기준
       </span>
     </div>

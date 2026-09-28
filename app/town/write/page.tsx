@@ -382,16 +382,13 @@ function TownWriteForm() {
 
   return (
     <PageShell breadcrumb="동네이야기 › 이야기 쓰기">
-      <div className="mx-auto flex w-full max-w-[640px] flex-col gap-4">
+      <div className="mx-auto flex w-full max-w-[640px] flex-col gap-4 max-md:gap-3">
         <div className="rise-in px-1">
           {/* [1006] 여기서 쓰는 건 **이야기**(사람의 기록)다 — 뉴스룸의 기사와 다른 재질.
               올라가면 동네이야기 피드의 "이야기" 탭과 /town/story/[id] 에 보인다. */}
-          <h1 className="t-title text-ink">
-            이야기 쓰기 <span className="story-kind ml-1 t-caption align-middle">사람의 기록</span>
-          </h1>
-          <p className="mt-1 t-body text-text-2">
-            다녀온 동네의 인상·질문·사진을 이웃과 나눠 보세요 — 동네이야기 피드에 바로 보여요
-          </p>
+          {/* [1015] 제목 옆 "사람의 기록" 라벨과 권유 문장("…나눠 보세요 — …보여요")을 걷었다(소유자 지시 4 · 규칙 C·D) */}
+          <h1 className="t-title text-ink">이야기 쓰기</h1>
+          <p className="mt-1 t-sub text-text-3">동네이야기 피드에 바로 실립니다</p>
         </div>
 
         {/* [B30] 되살릴 초안 제안 — 자동으로 덮지 않고 사용자가 고른다 */}
@@ -435,7 +432,7 @@ function TownWriteForm() {
             <span className="font-bold text-primary">
               {complexName || "선택한 단지"}
             </span>
-            <span>이야기로 등록돼요 — 이 단지 페이지의 노트 탭에 함께 보여요.</span>
+            <span>이야기로 등록되고 이 단지 페이지의 노트 탭에도 실립니다.</span>
             <Link
               href={complexHrefFromId(complexId)}
               className="font-bold text-primary underline"
@@ -446,7 +443,7 @@ function TownWriteForm() {
         )}
 
         {/* 카테고리 선택 */}
-        <div className="rise-in-1 card flex flex-col gap-2.5 p-5">
+        <div className="rise-in-1 card flex flex-col gap-2.5 p-5 max-md:p-3.5">
           <div className="t-body font-bold text-ink">게시판 선택</div>
           <div className="flex flex-wrap gap-1.5">
             {CATEGORIES.map((c) => (
@@ -460,14 +457,15 @@ function TownWriteForm() {
                     : "border border-line bg-surface text-text-2"
                 }`}
               >
-                {c.emoji} {c.label}
+                {/* [1015] 게시판 칩의 이모지를 걷었다(디자인 시스템 v3 규칙 4 — UI 이모지 0). 이름만 */}
+                {c.label}
               </button>
             ))}
           </div>
         </div>
 
         {/* 지역 선택 */}
-        <div className="rise-in-2 card flex flex-col gap-2.5 p-5">
+        <div className="rise-in-2 card flex flex-col gap-2.5 p-5 max-md:p-3.5">
           <div className="t-body font-bold text-ink">지역</div>
           <div className="grid grid-cols-2 gap-2">
             <select
@@ -498,14 +496,14 @@ function TownWriteForm() {
         </div>
 
         {/* 제목 · 본문 */}
-        <div className="rise-in-3 card flex flex-col gap-3 p-5">
+        <div className="rise-in-3 card flex flex-col gap-3 p-5 max-md:p-3.5">
           {/* [970 · C-27] placeholder 만 있던 입력 — 스크린리더는 값이 차면 이름을 잃는다. aria-label */}
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={80}
             aria-label="제목"
-            placeholder="제목을 입력하세요 (2글자 이상)"
+            placeholder="제목 (2글자 이상)"
             className={inputClass}
           />
           <textarea
@@ -513,7 +511,7 @@ function TownWriteForm() {
             onChange={(e) => setContent(e.target.value)}
             rows={9}
             aria-label="본문"
-            placeholder="이웃과 나누고 싶은 이야기를 적어주세요 (5글자 이상)"
+            placeholder="본문 (5글자 이상)"
             className={`${inputClass} min-h-[200px] resize-y leading-[1.6]`}
           />
           {/* [B31] 사진 — 피드가 사진 우선 격자인데 이야기 글은 늘 그라디언트 상자였다.
@@ -536,7 +534,7 @@ function TownWriteForm() {
               <span className="t-sub text-text-3">
                 {uploading > 0
                   ? `올리는 중… ${uploading}장`
-                  : `${images.length}/${MAX_POST_IMAGES}장 · 자동으로 줄여서 올려요`}
+                  : `${images.length}/${MAX_POST_IMAGES}장 · 자동 축소`}
               </span>
             </div>
             {uploadError && (

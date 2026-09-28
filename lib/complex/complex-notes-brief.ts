@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 import { decisionFromMetadata, decisionLabel } from "@/lib/inspection/decision";
 import { normalizeComplexName } from "@/lib/complex/master-match";
 import type { ComplexNotesBrief } from "@/lib/complex/complex-facts";
@@ -24,9 +25,23 @@ type Row = {
   region: string | null;
   apt_name: string | null;
   decision: unknown;
+  summary?: string | null;
+  sections?: unknown;
+  checklist?: unknown;
+  transportation?: string | null;
+  weather?: string | null;
+  score_location?: number | null;
+  score_school?: number | null;
+  score_transport?: number | null;
+  score_facility?: number | null;
+  score_future?: number | null;
+  metadata?: unknown;
+  photos?: unknown;
 };
 
-const SELECT = "id, title, visit_date, region, apt_name, decision:metadata->decision";
+/* [1015 · 썸네일] 최신 노트 한 건의 썸네일 주소까지 — 판정 재료(metadata·본문·사진)를 같이 읽는다(행 1건) */
+const SELECT =
+  "id, title, visit_date, region, apt_name, decision:metadata->decision, summary, sections, checklist, transportation, weather, score_location, score_school, score_transport, score_facility, score_future, metadata, photos";
 
 function toBrief(rows: Row[], count: number): ComplexNotesBrief {
   const top = rows[0];
@@ -39,6 +54,26 @@ function toBrief(rows: Row[], count: number): ComplexNotesBrief {
       title: String(top.title ?? "임장노트"),
       visitDate: top.visit_date ? String(top.visit_date).slice(0, 10) : null,
       decision: dec ? { choice: dec.choice, label: decisionLabel(dec.choice) } : null,
+      cover: noteCoverUrl({
+        id: String(top.id),
+        title: top.title,
+        aptName: top.apt_name,
+        region: top.region,
+        summary: top.summary ?? null,
+        sections: top.sections,
+        checklist: top.checklist,
+        transportation: top.transportation ?? null,
+        weather: top.weather ?? null,
+        scores: {
+          location: Number(top.score_location ?? 0),
+          school: Number(top.score_school ?? 0),
+          transport: Number(top.score_transport ?? 0),
+          facility: Number(top.score_facility ?? 0),
+          future: Number(top.score_future ?? 0),
+        },
+        metadata: top.metadata,
+        photos: top.photos,
+      }),
     },
   };
 }

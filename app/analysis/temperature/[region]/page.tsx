@@ -164,7 +164,7 @@ export default async function TemperatureRegionPage({
 
   const crumbs = breadcrumbJsonLd([
     { name: "홈", url: "/" },
-    { name: "AI 분석", url: "/analysis" },
+    { name: "분석", url: "/analysis" },
     { name: "시장 온도 주간 기록", url: "/analysis/temperature" },
     { name: region.label, url: path },
   ]);
@@ -173,7 +173,7 @@ export default async function TemperatureRegionPage({
   if (!latest) {
     return (
       <PageShell
-        breadcrumb={`홈 › AI 분석 › 시장 온도 주간 기록 › ${region.label}`}
+        breadcrumb={`홈 › 분석 › 시장 온도 주간 기록 › ${region.label}`}
         title={`${region.label} 시장 온도 주간 기록`}
       >
         <script
@@ -282,7 +282,7 @@ export default async function TemperatureRegionPage({
 
   return (
     <PageShell
-      breadcrumb={`홈 › AI 분석 › 시장 온도 주간 기록 › ${region.label}`}
+      breadcrumb={`홈 › 분석 › 시장 온도 주간 기록 › ${region.label}`}
       title={`${region.label} 시장 온도 주간 기록`}
     >
       <script
@@ -290,9 +290,8 @@ export default async function TemperatureRegionPage({
         dangerouslySetInnerHTML={{ __html: jsonLdScript([crumbs, datasetJsonLd]) }}
       />
 
-      <p className="rise-in mb-5 text-[13px] leading-[1.6] text-text-2">
-        {rangeLabel} · <strong className="text-ink">{history.length}주</strong> 기록 · 0~100
-        눈금(50이 중립) · 매수·매도 권유가 아닙니다.
+      <p className="rise-in mb-5 t-sub text-text-3 max-md:mb-3">
+        {rangeLabel} · <strong className="text-ink">{history.length}주</strong> 기록 · 0~100 눈금(50 중립) · 매수·매도 권유 아님
       </p>
 
       {/* 최신 주 요약 */}
@@ -323,11 +322,8 @@ export default async function TemperatureRegionPage({
           </div>
         </div>
         {flow && <p className="mt-3 text-[13px] leading-[1.7] text-text-1">{flow}</p>}
-        <p className="mt-2 text-[12px] leading-[1.7] text-text-3">
-          이 값은 <strong className="text-ink">그 주에 마지막으로 관측한 온도</strong>입니다.
-          주간 평균이 아니며, 수집 작업이 같은 주 안에서는 값을 갱신하고 주가 넘어가면 그대로
-          굳습니다. 공식 버전 v{latest.formulaVersion} 기준으로 계산됐습니다.
-        </p>
+        {/* [1015 · 규칙 B·D] 읽는 법 세 문장 → 사실 한 줄(방법은 위 ⓘ) */}
+        <p className="mt-2 t-caption text-text-3">그 주에 마지막으로 관측한 값(주간 평균 아님) · 공식 v{latest.formulaVersion}</p>
       </section>
 
       {/* 주간 추이 */}
@@ -358,10 +354,7 @@ export default async function TemperatureRegionPage({
           />
         </div>
         {history.length < 4 && (
-          <p className="mt-3 text-[12px] leading-[1.7] text-text-3">
-            아직 {history.length}주치 기록뿐이라 추세라고 부르기엔 이릅니다. 주가 쌓일수록 그래프가
-            길어집니다.
-          </p>
+          <p className="mt-3 t-caption text-text-3">{history.length}주치 기록 · 추세 판단에는 이름</p>
         )}
       </section>
 
@@ -410,9 +403,8 @@ export default async function TemperatureRegionPage({
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-[12px] leading-[1.7] text-text-3">
-          &ldquo;미반영&rdquo;은 그 주에 완결월 거래량이 4개월치에 못 미쳐 거래량 항을 빼고 지수
-          모멘텀만으로 계산했다는 뜻입니다. 없는 값을 0으로 채우지 않습니다.
+        <p className="mt-2 t-caption text-text-3">
+          &ldquo;미반영&rdquo; = 완결월 거래량이 4개월치에 못 미쳐 지수 모멘텀만으로 계산 · 없는 값을 0으로 채우지 않음
         </p>
       </section>
 

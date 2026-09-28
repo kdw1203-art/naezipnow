@@ -315,7 +315,7 @@ export function ChatRoom({
               {phase === "ready" ? shownMemberCount : memberCount}
             </span>
           </div>
-          <div className="text-[10px] text-text-3">{metaLine}</div>
+          <div className="t-caption text-text-3">{metaLine}</div>
         </div>
         <button
           type="button"
@@ -333,7 +333,7 @@ export function ChatRoom({
         className="flex flex-1 flex-col gap-2.5 overflow-y-auto px-5 py-3.5"
       >
         {phase === "joining" && (
-          <div className="self-center rounded-full bg-[rgba(25,31,40,.08)] px-3.5 py-[5px] text-[10px] text-text-2">
+          <div className="self-center rounded-full bg-[rgba(25,31,40,.08)] px-3.5 py-[5px] t-caption text-text-2">
             채팅방에 연결하는 중…
           </div>
         )}
@@ -374,7 +374,7 @@ export function ChatRoom({
             return (
               <div
                 key={m.id}
-                className="self-center rounded-full bg-[rgba(25,31,40,.08)] px-3.5 py-[5px] text-[10px] text-text-2"
+                className="self-center rounded-full bg-[rgba(25,31,40,.08)] px-3.5 py-[5px] t-caption text-text-2"
               >
                 {m.body}
               </div>
@@ -386,7 +386,7 @@ export function ChatRoom({
                 <div className="btn-primary max-w-[240px] self-end whitespace-pre-wrap break-words rounded-lg rounded-br-sm px-[13px] py-2.5 text-[13px] font-normal leading-[1.5]">
                   {m.body}
                 </div>
-                <span className="text-[10px] text-text-3">
+                <span className="t-caption text-text-3">
                   {timeLabel(m.createdAt)}
                 </span>
               </div>
@@ -398,7 +398,7 @@ export function ChatRoom({
               {/* [1012] 규칙 3 — 아바타 그라데이션 → 단색(--divider) */}
               <div className="h-7 w-7 shrink-0 rounded-full bg-divider" />
               <div>
-                <div className="mb-[3px] text-[10px] text-text-3">
+                <div className="mb-[3px] t-caption text-text-3">
                   {m.senderLabel}
                 </div>
                 <div
@@ -408,7 +408,7 @@ export function ChatRoom({
                 >
                   {isBlocked ? "차단한 사용자의 메시지예요." : m.body}
                 </div>
-                <span className="text-[10px] text-text-3">
+                <span className="t-caption text-text-3">
                   {timeLabel(m.createdAt)}
                 </span>
               </div>
@@ -473,7 +473,7 @@ export function ChatRoom({
             <div className="flex items-center justify-between">
               <span className="text-[13px] font-bold text-ink">
                 채팅방 메뉴{" "}
-                <span className="rounded bg-bg px-[7px] py-[2px] text-[10px] font-bold text-text-2">
+                <span className="rounded bg-bg px-[7px] py-[2px] t-caption font-bold text-text-2">
                   회원
                 </span>
               </span>
@@ -493,7 +493,7 @@ export function ChatRoom({
             </div>
 
             <div className="flex flex-col">
-              <div className="py-1.5 text-[10px] font-bold tracking-widest text-text-3">
+              <div className="py-1.5 t-caption font-bold tracking-widest text-text-3">
                 멤버 {shownMemberCount}
               </div>
               {members.map((m, i) => (
@@ -509,7 +509,7 @@ export function ChatRoom({
                     <div className="text-xs font-bold text-ink">
                       {m.isSelf ? "나" : m.label}{" "}
                       {m.role === "owner" && (
-                        <span className="rounded bg-warning-soft px-[5px] py-px text-[10px] font-bold text-warning">
+                        <span className="rounded bg-warning-soft px-[5px] py-px t-caption font-bold text-warning">
                           모임장
                         </span>
                       )}
@@ -520,7 +520,7 @@ export function ChatRoom({
                       type="button"
                       disabled={actionBusy}
                       onClick={() => void toggleBlock(m.id)}
-                      className={`shrink-0 rounded-lg border px-2 py-1 text-[10px] font-bold disabled:opacity-40 ${
+                      className={`shrink-0 rounded-lg border px-2 py-1 t-caption font-bold disabled:opacity-40 ${
                         blocked.includes(m.id)
                           ? "border-line bg-bg text-text-2"
                           : "border-line bg-surface text-text-3 hover:text-danger"
@@ -602,7 +602,7 @@ export function ChatRoom({
               </p>
             )}
             <div>
-              <div className="mb-1.5 text-[10px] font-bold tracking-widest text-text-3">
+              <div className="mb-1.5 t-caption font-bold tracking-widest text-text-3">
                 신고 사유 선택
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -629,7 +629,7 @@ export function ChatRoom({
                 ? "이 사용자 차단 해제"
                 : "이 사용자 차단하기"}
             </button>
-            <p className="text-[10px] leading-[1.5] text-text-3">
+            <p className="t-caption text-text-3">
               신고는 운영팀이 확인해요 · 차단하면 이 사용자의 메시지가 가려집니다
             </p>
           </div>

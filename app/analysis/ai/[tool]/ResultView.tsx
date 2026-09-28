@@ -244,7 +244,7 @@ function ContractCard({ contract }: { contract: ContractCheck }) {
       {contract.saleEstimateMan != null && (
         <p className="t-sub text-text-2">
           보증금 ÷ 전세가율로 거꾸로 잡은 매매가는 약{" "}
-          <b className="text-ink">{formatKrwWon(contract.saleEstimateMan * 10_000, { style: "short" })}</b>이에요 — 실거래가와 견줘 보세요.
+          <b className="text-ink">{formatKrwWon(contract.saleEstimateMan * 10_000, { style: "short" })}</b> · 실거래가와 비교 기준.
         </p>
       )}
       <div className="flex flex-col gap-1.5 rounded-lg bg-bg px-3 py-3">
@@ -258,7 +258,7 @@ function ContractCard({ contract }: { contract: ContractCheck }) {
         </ul>
       </div>
       <p className="t-caption text-text-3">
-        일반 정보예요(법률 자문 아님). 전입신고·확정일자의 효력은 주택임대차보호법 제3조(대항력)·제3조의2(우선변제)에 따라요.
+        일반 정보(법률 자문 아님). 전입신고·확정일자의 효력은 주택임대차보호법 제3조(대항력)·제3조의2(우선변제)에 따른다.
       </p>
     </Card>
   );
@@ -347,11 +347,11 @@ function LoanCard({ loan }: { loan: LoanCalc | null }) {
           </ul>
           <p className="t-caption text-text-3">
             넣은 돈 = 계약 때 내 돈 + {loan.holdingYears}년 동안 낸 원리금({manWonText(loan.yields[0].cashOutKrw)}) · 받는 돈 = 판 값 − 남은 대출.
-            가격 가정은 시세 예측과 같은 낙관·기본·비관 시나리오예요.
+            가격 가정은 시세 예측과 같은 낙관·기본·비관 시나리오.
           </p>
         </div>
       ) : (
-        <p className="t-sub text-text-2">② 에 보유 기간을 넣으면 그 기간 뒤 팔았을 때의 연 수익률(가정)도 계산해요.</p>
+        <p className="t-sub text-text-2">② 에 보유 기간을 넣으면 그 기간 뒤 팔았을 때의 연 수익률(가정)도 계산.</p>
       )}
       <p className="t-caption text-text-3">
         {loan.termAssumed ? "상환 기간을 비워 30년으로 계산했어요. " : ""}취득세·중개보수·보유세·임대료는 넣지 않았어요 — 실제 부담은 더 커요.
@@ -535,7 +535,7 @@ function PriceFlowCard({
     `선: ${series?.label ?? "대표 평형"} 월평균이에요. 이 단지에서 가장 많이 거래된 ${unitWord} 하나만 이었어요 — ${unitWord}마다 가격이 달라 섞으면 그 달 팔린 구성에 따라 선이 출렁여요.`,
     `막대: 그 달 전체 매매 건수 — 진한 부분이 선과 같은 ${unitWord}이에요.`,
     "속 빈 점: 거래가 1~2건뿐인 달이에요. 한두 건 값이 흐름처럼 보이지 않게 선에서 뺐어요.",
-    "점선: 거래가 없거나 적은 달을 건너뛴 자리예요(빈 달을 지어내 잇지 않아요).",
+    "점선: 거래가 없거나 적은 달을 건너뛴 자리(빈 달을 지어내 잇지 않는다).",
     ...(scenario ? [`시나리오: ${scenarioAssumptionLine(scenario)}`] : []),
     "그래프를 누른 채 좌우로 움직이면(마우스는 올리기만 해도) 그 달 값이 위 큰 숫자에 나와요.",
   ];
@@ -630,7 +630,7 @@ function NextActions({
       setWatch(next);
       /* 토스트는 한 줄 — 390px 에서 잘리지 않는 길이로(핵심 먼저, 이름은 뒤) */
       if (next === "done") showToast(`관심 단지에 담았어요 · ${picked.name}`, { label: "관심 단지 보기", href: "/my/watchlist" });
-      else if (next === "fail") showToast("담지 못했어요 — 연결이 잠시 불안정해요. 다시 눌러 주세요");
+      else if (next === "fail") showToast("담지 못했어요. 연결을 확인하고 다시 눌러 주세요");
     } catch {
       setWatch("fail");
       showToast("담지 못했어요 — 인터넷 연결을 확인하고 다시 눌러 주세요");
@@ -1124,7 +1124,7 @@ export function ResultView({
           {similar.length > 0 ? (
             <RouteList picked={picked} similar={similar} onPick={onPickSimilar} />
           ) : (
-            <p className="t-sub text-text-2">같은 지역에 함께 볼 거래 많은 단지가 아직 없어요 — 이 단지에 집중해 보세요.</p>
+            <p className="t-sub text-text-2">같은 지역에 함께 볼 거래 많은 단지가 아직 없어요.</p>
           )}
           <Link href={`/map?complexId=${encodeURIComponent(picked.id)}`} className="inline-flex min-h-[24px] items-center self-start t-sub font-bold text-primary no-underline">
             지도에서 위치 보기 ›
@@ -1170,12 +1170,12 @@ export function ResultView({
       {!running && external && result?.markdown && (
         <Card title="AI 해설" sub="[AI 서술] · 외부 AI 모델이 쓴 문장" id="ai-narrative">
           <MdLite text={result.markdown} />
-          <p className="t-caption text-text-3">숫자는 위 결과 요약·데이터 출처를 기준으로 보세요. AI 문장은 틀릴 수 있어요.</p>
+          <p className="t-caption text-text-3">숫자의 기준은 위 결과 요약·데이터 출처 · AI 문장은 틀릴 수 있음</p>
         </Card>
       )}
       {!running && result?.ok && result.askedLlm && !external && (
         <p className="rounded-lg bg-bg px-3.5 py-2.5 t-sub text-text-2">
-          지금은 AI 해설을 받지 못해 공공데이터 자동 계산 결과만 보여 드려요. 잠시 뒤 다시 눌러 주세요.
+          AI 해설을 지금 받지 못해 공공데이터 자동 계산 결과만 표시. 잠시 뒤 다시 눌러 주세요.
         </p>
       )}
 
