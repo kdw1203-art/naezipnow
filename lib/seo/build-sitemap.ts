@@ -368,6 +368,17 @@ export async function loadRegionEntries(): Promise<MetadataRoute.Sitemap> {
         });
       }
     }
+    /* [1024 · 원룸·오피스텔] /rent/[region] — 비아파트 전월세 행이 있는 수도권 지역만(0행은 noindex 라 싣지 않는다).
+       하나라도 있으면 목록 /rent 도 같이. 조회 실패는 지역 사이트맵을 볼모 잡지 않는다(lastmod 와 같은 원칙). */
+    try {
+      const { getSudogwonRentCounts } = await import("@/lib/rent/region-counts");
+      const { rentSitemapPaths } = await import("@/lib/rent/params");
+      for (const path of rentSitemapPaths(await getSudogwonRentCounts())) {
+        entries.push({ url: `${BASE_URL}${path}`, priority: path === "/rent" ? 0.6 : 0.5 });
+      }
+    } catch (e) {
+      logger.warn("[sitemap] 원룸·오피스텔 실거래 지역 목록을 읽지 못했습니다 — /rent 항목 없이 냅니다", e);
+    }
     return entries;
   });
 }

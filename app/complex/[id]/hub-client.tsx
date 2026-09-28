@@ -319,6 +319,7 @@ export function ComplexHubTabs({
   deals = [],
   dealsFailed = false,
   tradeDeltas,
+  summaryDeals = true,
 }: {
   aiTitle: string;
   aiBody: string;
@@ -353,6 +354,8 @@ export function ComplexHubTabs({
   dealsFailed?: boolean;
   /** [1009 · C 리뷰] 월별 줄(전체)의 등락 기준 — 서버가 month-delta 로 센 값(요약 탭 미리보기 줄). 라우트 번들에 계산 코드를 싣지 않는다 */
   tradeDeltas?: Record<string, MonthDeltaView>;
+  /** [1024] 요약 탭의 최근 실거래 목록 — 본문(최근 실거래 표)이 같은 목록을 이미 보여 주면 false(같은 사실 두 곳 금지). 실거래 탭은 그대로 */
+  summaryDeals?: boolean;
 }) {
   /* SSR·첫 하이드레이션은 언제나 기본 탭 — 프리렌더 HTML 과 정확히 일치해야 한다.
      주소의 ?tab= 은 마운트 뒤에 읽는다([967 · 14]). useSearchParams 를 쓰지 않는 이유:
@@ -446,7 +449,7 @@ export function ComplexHubTabs({
           </div>
           {priceChart}
           {myRecordCard}
-          {deals.length > 0 ? (
+          {!summaryDeals ? null : deals.length > 0 ? (
             /* [1009 · C] 월별 평균 줄(8.4억 · N건 · 최저~최고) → 한 건 단위(계약일 · 전용 · 층 · 거래가, 네이버 관례).
                "전체 보기"는 실거래 탭(면적대 필터·월별 평균 표)으로 — 예전엔 누를 수 없는 글자("시세 탭에서 전체")였다. */
             <div className="card flex flex-col gap-2 rounded-lg px-3.5 py-3">

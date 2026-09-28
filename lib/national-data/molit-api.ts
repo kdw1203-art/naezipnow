@@ -1,3 +1,4 @@
+/* [1024] 연립다세대 전월세(RTMSDataSvcRHRent) 매핑 추가 · 페이징(maxPages) — 이력 백필·비아파트 수집용 */
 import { encodingKeyForUrl } from "@/lib/public-data/data-go-kr-keys";
 import { resolveSigunguCd } from "@/lib/national-data/region-codes";
 
@@ -46,16 +47,26 @@ export type MolitUnavailableReason =
   /** 정상 응답인데 항목이 0건이었다 — 이건 진짜 "없음"이다 */
   | "empty";
 
+/** [1024] 응답 봉투의 totalCount — 없으면 null(페이징 판단 불가 → 1페이지만) */
+export function parseMolitTotalCount(text: string): number | null {
+  const m = /<totalCount>\s*(\d+)\s*<\/totalCount>/.exec(text);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) ? n : null;
+}
+
 async function fetchMolitRtms(
   path: string,
-  params: { district?: string; lawdCd?: string; yyyymm?: string; numOfRows?: number },
+  params: { district?: string; lawdCd?: string; yyyymm?: string; numOfRows?: number; pageNo?: number },
 ): Promise<{
   rows: Record<string, unknown>[];
   mode: "live" | "mock";
   reason?: MolitUnavailableReason;
+  /** [1024] 서버가 알려 준 전체 건수(페이징용). 못 읽으면 null */
+  totalCount: number | null;
 }> {
   const key = molitKey();
-  if (!key) return { rows: [], mode: "mock", reason: "not-configured" };
+  if (!key) return { rows: [], mode: "mock", reason: "not-configured", totalCount: null };
 
   // lawdCd 가 명시되면 그대로 사용. district 이름 매칭은 동명이구(부산 동구/대전 동구,
   // 서울 중구/대구 중구 등)에서 첫 번째 매칭으로 오해석돼 다른 도시 데이터를
@@ -67,22 +78,23 @@ async function fetchMolitRtms(
   url.searchParams.set("serviceKey", key);
   url.searchParams.set("LAWD_CD", lawd);
   url.searchParams.set("DEAL_YMD", dealYmd);
-  url.searchParams.set("pageNo", "1");
+  url.searchParams.set("pageNo", String(Math.max(1, Math.floor(params.pageNo ?? 1))));
   url.searchParams.set("numOfRows", String(params.numOfRows ?? 30));
 
   try {
     const res = await fetch(url.toString(), { next: { revalidate: 3600 } });
-    if (!res.ok) return { rows: [], mode: "mock", reason: "fetch-failed" };
+    if (!res.ok) return { rows: [], mode: "mock", reason: "fetch-failed", totalCount: null };
     const text = await res.text();
     const items = parseMolitXmlItems(text);
-    if (items.length > 0) return { rows: items, mode: "live" };
+    const totalCount = parseMolitTotalCount(text);
+    if (items.length > 0) return { rows: items, mode: "live", totalCount };
     /* 200 인데 item 이 하나도 없다 — 그 달 그 지역에 신고된 거래가 없거나,
        응답이 오류 XML 이다. 후자를 구분해 둔다: 국토부는 실패도 200 으로
        돌려주면서 resultCode 를 00 이 아닌 값으로 준다. */
     const okCode = /<resultCode>\s*0*0\s*<\/resultCode>/.test(text);
-    return { rows: [], mode: "mock", reason: okCode ? "empty" : "fetch-failed" };
+    return { rows: [], mode: "mock", reason: okCode ? "empty" : "fetch-failed", totalCount };
   } catch {
-    return { rows: [], mode: "mock", reason: "fetch-failed" };
+    return { rows: [], mode: "mock", reason: "fetch-failed", totalCount: null };
   }
 }
 
@@ -118,6 +130,7 @@ export type MolitRtmsType =
   | "offi-sale"
   | "offi-rent"
   | "rh-sale" // 연립다세대 매매
+  | "rh-rent" // [1024] 연립다세대 전월세
   | "sh-sale" // 단독/다가구 매매
   | "sh-rent" // 단독/다가구 전월세
   | "land-sale" // 토지 매매
@@ -140,6 +153,9 @@ const RTMS_TYPES: Record<MolitRtmsType, RtmsTypeConfig> = {
   "offi-sale": { service: "RTMSDataSvcOffiTrade", kind: "trade", nameField: "offiNm", areaField: "excluUseAr" },
   "offi-rent": { service: "RTMSDataSvcOffiRent", kind: "rent", nameField: "offiNm", areaField: "excluUseAr" },
   "rh-sale": { service: "RTMSDataSvcRHTrade", kind: "trade", nameField: "mhouseNm", areaField: "excluUseAr" },
+  /* [1024] 연립다세대 전월세 — 매매(RHTrade)와 같은 건물명·전용면적 필드. 서비스명은 data.go.kr 의
+     "국토교통부_연립다세대 전월세 실거래가 자료" 표준 표기(RTMSDataSvcRHRent/getRTMSDataSvcRHRent). */
+  "rh-rent": { service: "RTMSDataSvcRHRent", kind: "rent", nameField: "mhouseNm", areaField: "excluUseAr" },
   "sh-sale": { service: "RTMSDataSvcSHTrade", kind: "trade", nameField: "houseType", areaField: "totalFloorAr" },
   "sh-rent": { service: "RTMSDataSvcSHRent", kind: "rent", nameField: "houseType", areaField: "totalFloorAr" },
   "land-sale": { service: "RTMSDataSvcLandTrade", kind: "trade", nameField: "jimok", areaField: "dealArea" },
@@ -200,14 +216,34 @@ function normalizeDeal(cfg: RtmsTypeConfig, r: Record<string, unknown>): MolitDe
 /** 유형별 실거래가 조회 → 정규화된 거래 목록. */
 export async function fetchMolitDeals(
   type: MolitRtmsType,
-  params: { district?: string; lawdCd?: string; yyyymm?: string; numOfRows?: number },
+  params: {
+    district?: string;
+    lawdCd?: string;
+    yyyymm?: string;
+    numOfRows?: number;
+    /**
+     * [1024] 최대 페이지 수(기본 1 = 예전과 같은 동작). 대형 구의 전월세는 한 달에 1,000건을
+     * 넘는 달이 있어(numOfRows 상한) 1페이지만 받으면 뒤가 잘린다. totalCount 가 numOfRows×페이지를
+     * 넘는 동안만 다음 페이지를 부른다 — 서버가 totalCount 를 안 주면 1페이지로 끝낸다.
+     */
+    maxPages?: number;
+  },
 ): Promise<{ deals: MolitDeal[]; mode: "live" | "mock"; reason?: MolitUnavailableReason }> {
   const cfg = RTMS_TYPES[type];
-  const { rows, mode, reason } = await fetchMolitRtms(
-    `${cfg.service}/get${cfg.service}`,
-    params,
-  );
-  return { deals: rows.map((r) => normalizeDeal(cfg, r)), mode, reason };
+  const path = `${cfg.service}/get${cfg.service}`;
+  const maxPages = Math.max(1, Math.min(10, Math.floor(params.maxPages ?? 1)));
+  const perPage = params.numOfRows ?? 30;
+  const first = await fetchMolitRtms(path, { ...params, pageNo: 1 });
+  const rows = [...first.rows];
+  if (first.mode === "live" && maxPages > 1 && first.totalCount != null) {
+    const pages = Math.min(maxPages, Math.ceil(first.totalCount / Math.max(1, perPage)));
+    for (let pageNo = 2; pageNo <= pages; pageNo++) {
+      const next = await fetchMolitRtms(path, { ...params, pageNo });
+      if (next.mode !== "live") break;
+      rows.push(...next.rows);
+    }
+  }
+  return { deals: rows.map((r) => normalizeDeal(cfg, r)), mode: first.mode, reason: first.reason };
 }
 
 /** 거래 목록 요약(건수·평균 매매가/㎡·평균 보증금). */

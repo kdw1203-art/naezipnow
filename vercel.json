@@ -59,6 +59,18 @@
     {
       "path": "/api/cron/news-revalidate",
       "schedule": "40 23,1,5 * * *"
+    },
+    {
+      "path": "/api/cron/molit-history-backfill",
+      "schedule": "40 2 * * *"
+    },
+    {
+      "path": "/api/cron/molit-nonapt-ingest",
+      "schedule": "50 2 * * *"
+    },
+    {
+      "path": "/api/cron/kapt-mgmt-fee-ingest",
+      "schedule": "10 3 * * *"
     }
   ]
 }

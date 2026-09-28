@@ -1,3 +1,4 @@
+/* [1024 · 원룸·오피스텔] 머리 sub 끝에 "원룸·오피스텔 실거래 월세 ›" 링크 1줄(수도권만) — /rent/[region]. 조회 추가 없음. */
 /* [1023 · 동네 ①] 머리 캡션(facts) — 이 동네 공개 임장노트 N · 최근 3건. 페이지가 이미 읽는 노트 배열만 센다(추가 조회 없음). */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import type { Metadata } from "next";
@@ -30,6 +31,7 @@ import { postAttachments } from "@/lib/community/attachments";
 import { Icon } from "@/app/components/Icon";
 import { TownNewsStrip } from "../TownNewsStrip";
 import { AdZone } from "@/app/components/ads/AdZone";
+import { isSudogwonRegion } from "@/lib/rent/params";
 
 /* ============================================================
    [#64] 동네 홈 — /town/{regionId}
@@ -172,6 +174,15 @@ export default async function TownRegionHomePage({
               동네이야기
             </Link>
             {" › 동네 홈 · 이웃 글 · 뉴스 · 시세 · 공개 임장노트"}
+            {/* [1024 · 원룸·오피스텔] 수도권(비아파트 수집 범위)만 — 동네 실거래 전월세 화면으로 한 줄 */}
+            {isSudogwonRegion(region) && (
+              <>
+                {" · "}
+                <Link href={`/rent/${id}`} className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline hover:underline">
+                  원룸·오피스텔 실거래 월세 ›
+                </Link>
+              </>
+            )}
           </>
         }
         subOnPhone

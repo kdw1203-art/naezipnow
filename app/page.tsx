@@ -235,22 +235,27 @@ export default async function Home() {
               커버리지 숫자는 ⓘ 안으로(처음이라면 ⓘ 와 합침). */}
           <div className="flex flex-col gap-3 pb-3 pt-2 md:gap-4 md:py-7">
             <p className="t-display text-center text-ink">어느 단지가 궁금하세요?</p>
-            <HomeHeroSearch regionChips={heroRegionChips} />
             {/* [1015 · 규칙 B] "예산으로 찾기" 칩 줄과 "어디서부터 시작할까요?" 문 4개는 뺐다(소유자: "필요 없는 부분 —
-                물음표 칸으로 마우스를 올리면 보이는 정도로"). 네 입구는 아래 ⓘ 한 줄(hover 미리보기·탭 시트)로 접었다. */}
-            <p className="m-0 flex items-center justify-center gap-1 t-caption text-text-3">
-              처음이라면
-              <Explain
-                title="처음 오신 분께"
-                body={[
-                  "실거래가 게임: 실거래가를 맞혀 보며 시세 감을 잡는 곳(/quiz).",
-                  "단지 종합 진단: 후보 단지 이름을 넣으면 실거래·전월세·공급·뉴스를 한 화면에(/analysis).",
-                  "계약·잔금 일정표: 계약을 앞두고 법정 기한을 날짜로(/journey/contract).",
-                  "내 집 마련 여정: 처음부터 6단계로(/journey).",
-                ]}
-                source={[coverageLine, "예산으로 찾기는 지도(/map)의 가격 필터"].filter(Boolean).join(" · ")}
-              />
-            </p>
+                물음표 칸으로 마우스를 올리면 보이는 정도로"). 네 입구는 ⓘ 하나(hover 미리보기·탭 시트)로 접었다.
+                [1024] 소유자(캡처): "이런건 한줄로 바꿔줘" — "처음이라면 ⓘ" 를 칩 행의 coverage 슬롯으로 넘겨 칩과 같은 줄에 둔다. */}
+            <HomeHeroSearch
+              regionChips={heroRegionChips}
+              coverage={
+                <span className="inline-flex min-h-[24px] shrink-0 items-center gap-1 whitespace-nowrap t-caption text-text-3">
+                  처음이라면
+                  <Explain
+                    title="처음 오신 분께"
+                    body={[
+                      "실거래가 게임: 실거래가를 맞혀 보며 시세 감을 잡는 곳(/quiz).",
+                      "단지 종합 진단: 후보 단지 이름을 넣으면 실거래·전월세·공급·뉴스를 한 화면에(/analysis).",
+                      "계약·잔금 일정표: 계약을 앞두고 법정 기한을 날짜로(/journey/contract).",
+                      "내 집 마련 여정: 처음부터 6단계로(/journey).",
+                    ]}
+                    source={[coverageLine, "예산으로 찾기는 지도(/map)의 가격 필터"].filter(Boolean).join(" · ")}
+                  />
+                </span>
+              }
+            />
           </div>
 
           {/* ② 오늘의 시장 — 한 문장. 넷을 동시에 말하면 무엇이 중요한지 사라진다. */}

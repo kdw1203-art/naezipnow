@@ -1,4 +1,5 @@
 import "server-only";
+/* [1024] 상세 패치에 manageAreaM2(관리비부과면적) 추가 */
 /**
  * 전국 공동주택 단지 마스터 ETL
  * ─────────────────────────────────────────────────────────────────────
@@ -88,6 +89,12 @@ function toApprovalDate(v: string | undefined): string | null {
 function toPositiveInt(v: string | undefined): number | null {
   const n = Number((v ?? "").replace(/[^\d]/g, ""));
   return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** [1024] 면적(㎡, 소수 허용) — toPositiveInt 는 자릿수 외 문자를 지워 "12345.67" 을 1234567 로 만든다 */
+function toPositiveArea(v: string | undefined): number | null {
+  const n = Number((v ?? "").replace(/[^\d.]/g, ""));
+  return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null;
 }
 
 /** null 값을 제거한 얕은 객체 — RPC 도 한 번 더 걸러 주지만 전송량을 줄인다. */
@@ -441,6 +448,8 @@ function toDetailPatch(d: AptComplexDetail): Record<string, unknown> {
     approvalDate: toApprovalDate(d.kaptUsedate),
     buildingCount: toPositiveInt(d.kaptDongCnt),
     householdCount: toPositiveInt(d.hhldCnt),
+    /* [1024] 관리비부과면적(㎡) — complex_mgmt_fee.per_m2_krw 의 분모. 기존 행은 비어 있다(재보강 전까지 ㎡당 null). */
+    manageAreaM2: toPositiveArea(d.kaptMarea),
     lat: coord?.lat ?? null,
     lng: coord?.lng ?? null,
   });

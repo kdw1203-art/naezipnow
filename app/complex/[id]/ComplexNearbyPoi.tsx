@@ -5,11 +5,6 @@ import { getNearbyPoi, type NearbyPoi } from "@/lib/poi/store";
    데이터가 아직 적재되지 않았으면(오너 패킷 ⑧ 대기) 섹션 자체를 그리지 않는다 —
    빈 껍데기도, "준비 중" 배너도 만들지 않는다. 조회 실패도 접는다(곁다리 관례). */
 
-function walkLabel(distanceM: number): string {
-  const min = Math.max(1, Math.round(distanceM / 80));
-  return `도보 약 ${min}분 (${distanceM >= 1000 ? `${(distanceM / 1000).toFixed(1)}km` : `${distanceM}m`})`;
-}
-
 export async function ComplexNearbyPoi({
   lat,
   lng,
@@ -28,72 +23,45 @@ export async function ComplexNearbyPoi({
   }
   if (poi.schools.length === 0 && poi.stations.length === 0) return null;
 
+  /* [1024 · 단지 상세] 시안 mock1024/complex-d — "학교" · "지하철" 흰 카드 2칸(이름 | 거리 · 도보). 0행이면 섹션 생략(위). */
+  const dist = (m: number) => `${m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${m}m`} · 도보 ${Math.max(1, Math.round(m / 80))}분`;
+  const card = (title: string, id: string, rows: { key: string; name: string; sub: string | null; m: number }[]) =>
+    rows.length === 0 ? null : (
+      <section aria-labelledby={id} className="card rounded-2xl px-4 py-3.5 max-md:px-3.5 max-md:py-3">
+        <h2 id={id} className="t-section text-ink">
+          {title}
+        </h2>
+        <ul className="mt-1 flex list-none flex-col divide-y p-0" data-tone="plain">
+          {rows.map((r) => (
+            <li key={r.key} className="flex min-h-10 items-center justify-between gap-3 py-2">
+              <span className="min-w-0 truncate t-body text-text-1">
+                {r.name}
+                {r.sub && <span className="ml-1.5 t-caption text-text-3">{r.sub}</span>}
+              </span>
+              <span className="shrink-0 t-sub text-text-3 tabular-nums">{dist(r.m)}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
   return (
     /* [968 · 7] cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미룬다(page.tsx 주석 참고) */
-    <section className="cv-auto rise-in-5 mt-6 max-md:mt-3">
-      <h2 className="mb-2 px-1 t-section text-ink">
-        {name} 도보권 학교·역{" "}
-        <span className="t-sub font-medium text-text-3">직선거리 기준</span>
-      </h2>
+    <div className="cv-auto rise-in-1 mt-3">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {poi.schools.length > 0 && (
-          <div className="card rounded-2xl px-4 py-3">
-            <div className="mb-1 t-sub font-bold text-text-2">
-              학교 {poi.schools.length}곳 (1.2km 이내)
-            </div>
-            <ul className="flex flex-col">
-              {poi.schools.map((s) => (
-                <li
-                  key={`${s.name}-${s.distanceM}`}
-                  className="flex items-baseline justify-between gap-3 border-b border-divider py-2 t-body last:border-0"
-                >
-                  <span className="min-w-0 truncate font-bold text-ink">
-                    {s.name}
-                    {s.category && (
-                      <span className="ml-1.5 t-sub font-medium text-text-3">
-                        {s.category}
-                      </span>
-                    )}
-                  </span>
-                  <span className="shrink-0 t-sub text-text-2 tabular-nums">
-                    {walkLabel(s.distanceM)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+        {card(
+          "학교",
+          "poi-schools-title",
+          poi.schools.map((s) => ({ key: `${s.name}-${s.distanceM}`, name: s.name, sub: s.category, m: s.distanceM })),
         )}
-        {poi.stations.length > 0 && (
-          <div className="card rounded-2xl px-4 py-3">
-            <div className="mb-1 t-sub font-bold text-text-2">
-              도시철도역 {poi.stations.length}곳 (1.5km 이내)
-            </div>
-            <ul className="flex flex-col">
-              {poi.stations.map((s) => (
-                <li
-                  key={`${s.name}-${s.line}-${s.distanceM}`}
-                  className="flex items-baseline justify-between gap-3 border-b border-divider py-2 t-body last:border-0"
-                >
-                  <span className="min-w-0 truncate font-bold text-ink">
-                    {s.name}
-                    {s.line && (
-                      <span className="ml-1.5 t-sub font-medium text-text-3">
-                        {s.line}
-                      </span>
-                    )}
-                  </span>
-                  <span className="shrink-0 t-sub text-text-2 tabular-nums">
-                    {walkLabel(s.distanceM)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+        {card(
+          "지하철",
+          "poi-stations-title",
+          poi.stations.map((s) => ({ key: `${s.name}-${s.line}-${s.distanceM}`, name: s.name, sub: s.line, m: s.distanceM })),
         )}
       </div>
       <p className="t-caption mt-1.5 px-1 text-text-3">
-        출처 공공데이터포털 전국초중등학교위치·도시철도역사정보(공공누리 1유형) · 직선거리를 도보 80m/분으로 환산 · 배정 학군은 교육청 기준이 따로 있음
+        출처 공공데이터포털 전국초중등학교위치·도시철도역사정보(공공누리 1유형) · {name} 좌표 기준 직선거리 · 도보 80m/분 환산 · 학교 1.2km · 역 1.5km 이내 · 배정 학군은 교육청 기준이 따로 있음
       </p>
-    </section>
+    </div>
   );
 }

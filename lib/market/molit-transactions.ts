@@ -12,6 +12,8 @@
  * 넣으면 거래 건수·평균가 집계가 이중 계상된다. 따라서 "비어 있는 구·월"만 채운다.
  * → 결과적으로 전국 미커버 시군구/최신월을 넓히는 방향으로만 동작한다.
  */
+/* [1024] keepRaw:false(이력·비아파트는 raw 미저장) · types 명시 · 유형별 커버 판정 · codes+gapsFirst 조합 ·
+   비아파트 그룹(officetel·rowhouse·house) 확장 — 이력 백필(molit-history-backfill)·비아파트(molit-nonapt-ingest)가 쓴다 */
 import { createHash } from "node:crypto";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -29,6 +31,24 @@ import {
 /* 호출부(크론·테스트)가 한 곳만 알면 되게 다시 내보낸다 */
 export { createTouchedComplexSink, TOUCHED_COMPLEX_CAP };
 export type { TouchedComplexSink } from "@/lib/market/touched-complexes";
+/* [1024] 순수 도우미는 molit-core.ts 에 둔다(server-only 사슬 밖 → node:test 가 직접 부른다). 여기서 다시 내보낸다. */
+import {
+  compactRaw,
+  isCapitalAreaCode,
+  isRecentMonth,
+  molitDatasetLabel,
+} from "@/lib/market/molit-core";
+export {
+  CAPITAL_AREA_PREFIXES,
+  compactRaw,
+  isCapitalAreaCode,
+  isRecentMonth,
+  molitDatasetLabel,
+  NONAPT_PROPERTY_TYPES,
+  RECENT_MONTHS,
+  shiftYm,
+} from "@/lib/market/molit-core";
+export type { NonAptPropertyType } from "@/lib/market/molit-core";
 
 /** 1평 = 3.305785㎡ */
 const M2_PER_PYEONG = 3.305785;
@@ -56,8 +76,12 @@ const M2_PER_PYEONG = 3.305785;
  * 환경변수 `MOLIT_PROPERTY_TYPES` (쉼표 구분, 기본 "apartment"):
  *   apartment            아파트 매매·전월세      (기본)
  *   officetel            오피스텔 매매·전월세
- *   rowhouse             연립다세대 매매
+ *   rowhouse             연립다세대 매매·전월세  ([1024] rh-rent 추가)
+ *   house                단독·다가구 매매·전월세 ([1024] 신규)
  * 예) MOLIT_PROPERTY_TYPES=apartment,officetel
+ *
+ * [1024] 비아파트는 매일 크론 `molit-nonapt-ingest` 가 env 와 무관하게 `types` 옵션으로 켠다
+ * (수도권·최근 12개월·raw 미저장). 여기 env 는 전국 일일 크론(molit-transactions-ingest)용이다.
  *
  * 켜기 전에 알아 둘 것: 유형 하나당 시군구 253개 × 월 1회 왕복이 그대로 늘고,
  * market_transactions 행 수도 함께 늘어난다. DB 용량·ETL 시간에 직접 영향이 있다
@@ -79,17 +103,33 @@ const ALL_TARGET_TYPES: Record<string, TargetType[]> = {
     { type: "offi-sale", transactionType: "trade", propertyType: "officetel" },
     { type: "offi-rent", transactionType: "rent", propertyType: "officetel" },
   ],
-  rowhouse: [{ type: "rh-sale", transactionType: "trade", propertyType: "rowhouse" }],
+  rowhouse: [
+    { type: "rh-sale", transactionType: "trade", propertyType: "rowhouse" },
+    { type: "rh-rent", transactionType: "rent", propertyType: "rowhouse" },
+  ],
+  house: [
+    { type: "sh-sale", transactionType: "trade", propertyType: "house" },
+    { type: "sh-rent", transactionType: "rent", propertyType: "house" },
+  ],
 };
+
+/** [1024] 유형 그룹 키(apartment·officetel·rowhouse·house) 목록 — 테스트·크론 파라미터 검증용 */
+export function listTargetTypeKeys(): string[] {
+  return Object.keys(ALL_TARGET_TYPES);
+}
 
 /**
  * 이번 실행에서 수집할 유형 목록.
  *
  * 알 수 없는 값은 조용히 무시하지 않고 경고로 남긴다 — 오타 하나로 오피스텔이
  * 안 쌓이고 있는데 아무도 모르는 상황을 만들지 않기 위해서다.
+ *
+ * @param explicit [1024] env 대신 호출부가 그룹 키를 직접 준다(비아파트 크론). 비어 있으면 env.
  */
-export function resolveTargetTypes(): TargetType[] {
-  const raw = (process.env.MOLIT_PROPERTY_TYPES ?? "apartment").trim();
+export function resolveTargetTypes(explicit?: readonly string[]): TargetType[] {
+  const raw = explicit?.length
+    ? explicit.join(",")
+    : (process.env.MOLIT_PROPERTY_TYPES ?? "apartment").trim();
   const keys = raw
     .split(",")
     .map((s) => s.trim().toLowerCase())
@@ -170,29 +210,41 @@ export function listMolitSigungu(): SigunguInfo[] {
   return listLeafSigungu().filter((i) => !MOLIT_PARENT_ONLY_CODES.has(i.sigunguCd));
 }
 
+/** [1024] 수도권 시군구(자치구 단위, 코드순) — 이력 백필·비아파트 수집 대상 */
+export function listCapitalSigungu(): SigunguInfo[] {
+  return listMolitSigungu().filter((i) => isCapitalAreaCode(i.sigunguCd));
+}
+
 /**
  * [997] 계약월 yyyymm 에 적재 행이 0인 시군구(코드 오름차순, limit 개). 조회 실패는 "빈 곳"으로 세지 않는다 —
  * 못 읽은 코드는 건너뛴다(빈 곳으로 잘못 세면 이미 채운 달을 다시 받는다).
+ *
+ * @param propertyTypes [1024] 이 유형들만 세어 "빈 곳"을 판정한다(비우면 유형 무관). 아파트 92만 행이
+ *   이미 있는 (구, 월)에 오피스텔을 넣으려면 아파트 행을 세면 안 된다 — 전부 "채워짐"이 된다.
  */
 export async function findCoverageGaps(
   sb: SupabaseClient,
   yyyymm: string,
   candidates: SigunguInfo[],
   limit: number,
+  propertyTypes?: readonly string[],
 ): Promise<SigunguInfo[]> {
   const out: SigunguInfo[] = [];
   for (const info of candidates) {
     if (out.length >= limit) break;
-    const { count, error } = await sb
+    let q = sb
       .from("market_transactions")
       .select("id", { count: "exact", head: true })
       .eq("region_code", info.sigunguCd)
       .eq("contract_ym", yyyymm);
+    if (propertyTypes?.length) q = q.in("property_type", [...propertyTypes]);
+    const { count, error } = await q;
     if (error) continue;
     if ((count ?? 0) === 0) out.push(info);
   }
   return out;
 }
+
 
 function pricePerPyeong(amountKrw: number | null, areaM2: number | null): number | null {
   if (!amountKrw || !areaM2 || areaM2 <= 0) return null;
@@ -234,6 +286,8 @@ function toRow(
     kind: "trade" | "rent";
     type: MolitRtmsType;
     propertyType: string;
+    /** [1024] false 면 raw 를 저장하지 않는다(과거월·비아파트). 해제 판정은 여기서 이미 끝난다. */
+    keepRaw: boolean;
   },
 ): Record<string, unknown> | null {
   const day = Number(deal.dealDate.slice(8, 10));
@@ -294,7 +348,7 @@ function toRow(
     // 해제분도 행 자체는 남긴다(해제 이력도 사실이다). 다만 시세·집계·알림에서는
     // is_cancelled=true 로 걸러진다 — 판정은 적재 시 한 번만 한다.
     is_cancelled: isCancelledDeal(deal.raw),
-    raw: deal.raw,
+    raw: ctx.keepRaw ? deal.raw : compactRaw(deal.raw),
     collected_at: new Date().toISOString(),
   };
 }
@@ -390,6 +444,10 @@ export function autoTargetMonth(now = new Date()): string {
  * @param opts.gapsFirst  [997] 그 달에 **0행인 시군구**만 골라 처리(sliceSize 개까지). 행정구역 개편(996)처럼
  *                        코드가 바뀌어 한 번도 못 채운 구·월을 슬라이스 회전(8일 주기·당월 한정)에 맡기지 않고
  *                        GH ETL 이 매일 지난 달들에 대해 메운다. 빈 곳이 없으면 아무것도 하지 않는다.
+ *                        [1024] codes 와 함께 주면 **그 코드들 중** 빈 곳만 고른다(수도권 백필).
+ * @param opts.keepRaw    [1024] false 면 raw 를 저장하지 않는다(기본 true — 일일 크론은 예전과 같다).
+ * @param opts.types      [1024] 유형 그룹 키(apartment·officetel·rowhouse·house). 비우면 env(MOLIT_PROPERTY_TYPES).
+ * @param opts.maxPages   [1024] 유형·구·월당 최대 페이지(기본 1 = 예전과 같다). 백필은 3.
  */
 export async function ingestMolitTransactions(opts: {
   yyyymm?: string;
@@ -398,14 +456,21 @@ export async function ingestMolitTransactions(opts: {
   codes?: string[];
   gapsFirst?: boolean;
   now?: Date;
+  keepRaw?: boolean;
+  types?: readonly string[];
+  maxPages?: number;
 } = {}): Promise<MolitIngestResult> {
   const now = opts.now ?? new Date();
   const yyyymm = (opts.yyyymm ?? autoTargetMonth(now)).replace(/[^0-9]/g, "").slice(0, 6);
   const all = listMolitSigungu();
   const sliceSize = Math.max(1, Math.min(60, opts.sliceSize ?? 16));
+  const keepRaw = opts.keepRaw ?? true;
+  const maxPages = Math.max(1, Math.min(10, opts.maxPages ?? 1));
   /* 수집 유형은 실행마다 환경변수로 정해진다(기본 아파트). 왜 스위치로 뒀는지는
-     ALL_TARGET_TYPES 위 주석 참고. */
-  const targetTypes = resolveTargetTypes();
+     ALL_TARGET_TYPES 위 주석 참고. [1024] 호출부가 types 를 주면 env 를 보지 않는다. */
+  const targetTypes = resolveTargetTypes(opts.types);
+  /* [1024] 커버 판정은 이 실행이 다루는 property_type 만 센다 — 아파트 행이 있다고 오피스텔이 "채워진" 게 아니다 */
+  const propertyTypes = [...new Set(targetTypes.map((t) => t.propertyType))];
   logger.info(
     `[molit] ${yyyymm} 수집 유형: ${targetTypes.map((t) => t.type).join(", ")}`,
   );
@@ -435,14 +500,20 @@ export async function ingestMolitTransactions(opts: {
   let targets: SigunguInfo[];
   let sliceIdx = 0;
   if (opts.codes?.length) {
-    targets = opts.codes
+    const infos = opts.codes
       .map((c) => getSigunguInfo(c.trim()))
-      .filter((i): i is SigunguInfo => Boolean(i))
-      .slice(0, 60);
+      .filter((i): i is SigunguInfo => Boolean(i));
+    if (opts.gapsFirst) {
+      /* [1024] 주어진 코드 집합 안에서 빈 (시군구, 계약월, 유형)만 — 수도권 이력 백필이 쓴다. 상한은 sliceSize. */
+      targets = await findCoverageGaps(sb, yyyymm, infos, sliceSize, propertyTypes);
+      sliceIdx = -1;
+    } else {
+      targets = infos.slice(0, 60);
+    }
   } else if (opts.gapsFirst) {
     /* [997] 빈 (시군구, 계약월) 먼저 — (region_code, contract_ym) 인덱스로 HEAD 카운트만 돈다(코드당 1왕복,
        전국 ~260개 ≈ 수 초). 빈 곳이 없으면 targets 가 비어 루프가 바로 끝난다(= 로그 "시도=0"). */
-    targets = await findCoverageGaps(sb, yyyymm, all, sliceSize);
+    targets = await findCoverageGaps(sb, yyyymm, all, sliceSize, propertyTypes);
     sliceIdx = -1;
   } else {
     const windows = Math.max(1, Math.ceil(all.length / sliceSize));
@@ -494,11 +565,13 @@ export async function ingestMolitTransactions(opts: {
     const regionName = molitRegionLabel(info);
     try {
       // 이미 플랫폼 ETL 이 채운 구·월이면 건너뜀 (이중 계상 방지)
+      /* [1024] 이 실행의 유형만 센다 — 아파트 행이 있는 (구, 월)에 오피스텔을 넣을 수 있어야 한다 */
       const { count, error: coverageError } = await sb
         .from("market_transactions")
         .select("id", { count: "exact", head: true })
         .eq("region_code", info.sigunguCd)
-        .eq("contract_ym", yyyymm);
+        .eq("contract_ym", yyyymm)
+        .in("property_type", propertyTypes);
       /* 조회 실패를 "아직 안 채워졌다" 로 바꾸지 않는다. 여기서 그냥 진행하면
          이미 채운 달을 MOLIT 에서 다시 받아 다시 upsert 한다 — 실패한 DB 를
          더 두드리면서, 확인도 못 한 채. 못 읽었으면 못 읽었다고 센다. */
@@ -510,14 +583,9 @@ export async function ingestMolitTransactions(opts: {
         continue;
       }
       consecutiveDbErrors = 0;
-const RECENT_MONTHS = 3;
-    const ymNum = Number(yyyymm);
-    const nowYm = now.getUTCFullYear() * 100 + (now.getUTCMonth() + 1);
-    const monthsAgo =
-      (Math.floor(nowYm / 100) - Math.floor(ymNum / 100)) * 12 +
-      ((nowYm % 100) - (ymNum % 100));
-    const isRecent = Number.isFinite(ymNum) && monthsAgo < RECENT_MONTHS;
-     if (!isRecent && (count ?? 0) > 0) {
+      /* 최근 달(신고지연 흡수 구간)은 행이 있어도 다시 받는다 — external_key upsert 라 이중 계상 없음 */
+      const isRecent = isRecentMonth(yyyymm, now);
+      if (!isRecent && (count ?? 0) > 0) {
         result.alreadyCovered += 1;
         result.regions.push({ code: info.sigunguCd, name: regionName, rows: count ?? 0, status: "covered" });
         continue;
@@ -526,14 +594,23 @@ const RECENT_MONTHS = 3;
       result.attempted += 1;
       const rows: Record<string, unknown>[] = [];
       let mode: "live" | "mock" = "mock";
+      /* [1024] "못 불렀다"(키 없음·네트워크·오류 XML)와 "불렀는데 0건"을 가른다. 예전엔 셋 다 mode:"mock" 하나로
+         configured=false·"빈응답" 이 됐다. 이력 백필 커서는 configured=false 면 달을 넘기지 않으므로, 진짜 거래가
+         없는 구(옹진군 같은 곳)를 "키 없음"으로 읽으면 백필이 그 달에 영원히 멈춘다. 반대로 네트워크 실패를
+         "0건"으로 읽으면 그 (구, 월)이 빈 채로 넘어간다. */
+      let notConfigured = false;
+      let fetchFailed = false;
       for (const t of targetTypes) {
         const res = await fetchMolitDeals(t.type, {
           lawdCd: info.sigunguCd, // 이름 매칭 금지 — 동명이구 오적재 방지 (아래 커밋 메시지 참고)
           district: info.sigungu,
           yyyymm,
           numOfRows: 1000,
+          maxPages,
         });
         if (res.mode === "live") mode = "live";
+        else if (res.reason === "not-configured") notConfigured = true;
+        else if (res.reason === "fetch-failed") fetchFailed = true;
         for (const deal of res.deals) {
           const row = toRow(deal, {
             info,
@@ -542,19 +619,29 @@ const RECENT_MONTHS = 3;
             kind: t.transactionType,
             type: t.type,
             propertyType: t.propertyType,
+            keepRaw,
           });
           if (row) rows.push(row);
         }
       }
 
-      if (mode !== "live") {
-        // 인증키 미설정/응답 실패 — 조용히 종료(가짜 데이터 생성 금지)
+      if (notConfigured) {
+        // 인증키 미설정 — 조용히 종료(가짜 데이터 생성 금지)
         result.configured = false;
         result.regions.push({ code: info.sigunguCd, name: regionName, rows: 0, status: "empty" });
         result.empty += 1;
         continue;
       }
-      if (rows.length === 0) {
+      if (fetchFailed) {
+        /* 유형 하나라도 못 받았으면 이 구·월은 통째로 다음 실행에 — 절반만 넣으면 (구, 월, 유형) 커버 판정이
+           "채워짐"이 되어 나머지 절반은 영영 안 온다. DB 오류가 아니므로 연속 오류 차단기는 건드리지 않는다. */
+        result.errors += 1;
+        result.regions.push({ code: info.sigunguCd, name: regionName, rows: 0, status: "error" });
+        firstError ??= `${info.sigunguCd}: 국토부 API 응답 실패(네트워크·5xx·오류 XML)`;
+        continue;
+      }
+      if (mode !== "live" || rows.length === 0) {
+        /* 정상 응답인데 0건 — 그 달 그 구에 신고된 거래가 없다(사실) */
         result.empty += 1;
         result.regions.push({ code: info.sigunguCd, name: regionName, rows: 0, status: "empty" });
         continue;
@@ -628,12 +715,13 @@ const RECENT_MONTHS = 3;
 
   await logIngest({
     source: "molit",
-    dataset: `아파트 매매·전월세 실거래 ${yyyymm}`,
+    dataset: `${molitDatasetLabel(propertyTypes)} ${yyyymm}`,
     origin: "cron-fetch",
     rows: result.inserted,
     status: result.errors > 0 ? "error" : result.inserted > 0 ? "ok" : "skipped",
     message:
       `slice=${result.slice} 시도=${result.attempted} 기존커버=${result.alreadyCovered} 빈응답=${result.empty} 오류=${result.errors}` +
+      (keepRaw ? "" : " raw=미저장") +
       (aborted ? ` 중단=DB오류${DB_ERROR_ABORT_THRESHOLD}회연속(남은 시군구 미확인)` : "") +
       (firstError ? ` 첫오류=${firstError.slice(0, 300)}` : ""),
   });

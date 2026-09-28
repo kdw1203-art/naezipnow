@@ -1,4 +1,5 @@
 /** market_* 테이블 읽기/쓰기 (서버 전용). Supabase 미설정 시 안전하게 빈 값 반환. */
+/* [1024] IngestSource 에 kapt-mgmt-fee 추가 */
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { marketRegionNameCandidates } from "@/lib/market/region-name-candidates";
 import {
@@ -212,7 +213,9 @@ export type IngestSource =
   /** [994] 청약 공고·경쟁률 저장(supply-ingest 가 함께 적재) — 캘린더·알림·기준일의 출처 */
   | "applyhome"
   /** [994] 청약 알림 스윕(app/api/cron/applyhome-alerts) */
-  | "applyhome-alerts";
+  | "applyhome-alerts"
+  /** [1024] K-apt 관리비 적재(app/api/cron/kapt-mgmt-fee-ingest) */
+  | "kapt-mgmt-fee";
 
 /**
  * F3(#147) — 크론이 던진 예외를 적재 로그에 남길 수 있는 한 줄짜리 사유로 만든다.

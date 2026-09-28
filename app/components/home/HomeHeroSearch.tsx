@@ -294,7 +294,8 @@ export function HomeHeroSearch({
           가운데 정렬 텍스트 두 덩이가 층을 이뤄 여백만 벌어졌다. 둘 다 "검색을 돕는
           보조 정보"라 한 줄에 놓아도 읽는 순서가 흐트러지지 않는다.
           flex-wrap 이라 칩이 여럿이거나 좁은 화면에서는 알아서 접힌다. */}
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5">
+      {/* [1024] 소유자: "홈 모바일도 처음이라면 부분을 위로 올려서 한 줄로" — 폰은 줄바꿈 대신 한 줄 가로 스크롤(칩 + ⓘ 같은 줄). */}
+      <div className="scroll-x-hidden-bar mt-3 flex items-center gap-x-2.5 gap-y-1.5 max-md:-mx-3.5 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3.5 md:flex-wrap md:justify-center">
         {hasHistory ? (
           <>
             {recents.slice(0, 3).map((k) => (
@@ -304,7 +305,7 @@ export function HomeHeroSearch({
                 prefetch={chipPrefetch}
                 /* 최근 검색 재사용 기록 — 이동을 막지 않고 곁에서 남긴다 */
                 onClick={() => pushRecentSearch(k)}
-                className="chip max-w-[160px] truncate bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
+                className="chip max-w-[160px] shrink-0 truncate bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
               >
                 ⌕ {k}
               </Link>
@@ -314,7 +315,7 @@ export function HomeHeroSearch({
                 key={`c-${c.id}`}
                 href={complexHrefFromId(c.id)}
                 prefetch={chipPrefetch}
-                className="chip max-w-[180px] truncate bg-primary-soft px-3 py-1.5 t-sub font-bold text-primary no-underline transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
+                className="chip max-w-[180px] shrink-0 truncate bg-primary-soft px-3 py-1.5 t-sub font-bold text-primary no-underline transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
               >
                 {c.name}
               </Link>
@@ -325,13 +326,13 @@ export function HomeHeroSearch({
             <>
               {/* [950] "열린 지역 · 수요 순 확장 중" 은 전국 218개 시군구를 다루는 지금과
                   맞지 않는 문구였다. 바로 눌러 볼 수 있는 지역(시세 카드와 같은 곳)만 보인다. */}
-              <span className="t-sub font-semibold text-text-3">바로 보기</span>
+              <span className="t-sub shrink-0 font-semibold text-text-3 max-md:hidden">바로 보기</span>
               {regionChips.map((r) => (
                 <Link
                   key={r.label}
                   href={r.href}
                   prefetch={chipPrefetch}
-                  className="chip bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
+                  className="chip shrink-0 bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
                 >
                   {r.label}
                 </Link>
@@ -341,7 +342,7 @@ export function HomeHeroSearch({
               <Link
                 href="/map"
                 prefetch={chipPrefetch}
-                className="chip bg-primary-soft px-3 py-1.5 t-sub font-bold text-primary no-underline transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
+                className="chip shrink-0 bg-primary-soft px-3 py-1.5 t-sub font-bold text-primary no-underline transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
               >
                 지도에서 내 동네 찾기
               </Link>

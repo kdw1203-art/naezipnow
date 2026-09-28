@@ -98,6 +98,12 @@ export interface ComplexRow {
   parking_per_hh: number | null;
   builder_name: string | null;
   heating: string | null;
+  /** [1024] 승강기 대수 — K-apt 상세(elevatorCount). 대장 매칭이 없으면 없다(선택 필드 — 다른 생성자를 깨지 않게) */
+  elevator_count?: number | null;
+  /** [1024] 관리방식("위탁관리"·"자치관리") — K-apt metadata.manageType */
+  manage_type?: string | null;
+  /** [1024] 분양형태("분양"·"임대") — K-apt metadata.saleType */
+  sale_type?: string | null;
 }
 
 export interface ComplexTransactionRow {
@@ -282,6 +288,10 @@ type AptEnrich = {
   buildingCount: number | null;
   /** 총 주차대수 — 같은 출처 조건 */
   parkingCount: number | null;
+  /** [1024] 승강기·관리방식·분양형태 — K-apt 값 그대로(없으면 null). 개요 스트립이 쓴다 */
+  elevatorCount: number | null;
+  manageType: string | null;
+  saleType: string | null;
 };
 
 /**
@@ -392,6 +402,11 @@ async function enrichFromApartmentComplex(
     households: fromV4Detail ? posInt(m.householdCount) : null,
     buildingCount: fromV4Detail ? posInt(m.buildingCount) : null,
     parkingCount: fromV4Detail ? posInt(m.parkingCount) : null,
+    /* [1024] 승강기는 V4 상세 키(elevatorCount) — 세대수와 같은 출처 조건. 관리방식·분양형태는 마스터 ETL 이
+       21,658행에 채운 키라 표식 없이 쓴다(문자열 그대로, 빈 문자열은 null). */
+    elevatorCount: fromV4Detail ? posInt(m.elevatorCount) : null,
+    manageType: typeof m.manageType === "string" && m.manageType.trim() ? m.manageType.trim() : null,
+    saleType: typeof m.saleType === "string" && m.saleType.trim() ? m.saleType.trim() : null,
   };
 }
 
@@ -525,6 +540,10 @@ async function enrichFromMasterLink(
     households: m.households,
     buildingCount: m.building_count,
     parkingCount: m.parking_count,
+    /* [1024] 필지 연결 매트뷰에는 이 세 열이 없다 — 모른다(null) */
+    elevatorCount: null,
+    manageType: null,
+    saleType: null,
   };
 }
 
@@ -590,6 +609,10 @@ function applyMasterEnrich(base: ComplexRow, apt: AptEnrich): ComplexRow {
     if (apt.parkingCount != null && apt.households != null && apt.households > 0) {
       base.parking_per_hh = Math.round((apt.parkingCount / apt.households) * 100) / 100;
     }
+    /* [1024] 개요 스트립 세 칸 — 값이 있을 때만 덮는다 */
+    base.elevator_count = apt.elevatorCount ?? base.elevator_count ?? null;
+    base.manage_type = apt.manageType ?? base.manage_type ?? null;
+    base.sale_type = apt.saleType ?? base.sale_type ?? null;
   }
   return base;
 }
@@ -647,6 +670,9 @@ export async function getComplexByKaptCode(kaptCode: string): Promise<ComplexRow
     base.lat = m.lat;
     base.lng = m.lng;
   }
+  /* [1024] 실거래 없는 kapt 단지도 관리방식·분양형태는 마스터가 안다 */
+  base.manage_type = typeof m.manageType === "string" && m.manageType.trim() ? m.manageType.trim() : null;
+  base.sale_type = typeof m.saleType === "string" && m.saleType.trim() ? m.saleType.trim() : null;
   return base;
 }
 

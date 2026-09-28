@@ -7812,3 +7812,35 @@ body.nz-consent-open .back-to-top {
 .hub-start {
   min-height: 7.5rem;
 }
+
+/* [1024 · 단지 상세] 개요 스트립 8칸(app/complex/[id]/ComplexOverviewStrip.tsx) — 칸 사이 1px 선. 폰 4×2(위 줄 아래 선), md 이상 8×1.
+   nth-child 규칙은 유틸로 못 적어 여기 둔다. 색은 토큰(--border). */
+.cx-strip > * {
+  border-right: 1px solid var(--border);
+}
+.cx-strip > :nth-child(4n) {
+  border-right: 0;
+}
+@media (max-width: 767px) {
+  .cx-strip > :nth-child(-n + 4) {
+    border-bottom: 1px solid var(--border);
+  }
+}
+@media (min-width: 768px) {
+  .cx-strip > :nth-child(4n) {
+    border-right: 1px solid var(--border);
+  }
+  .cx-strip > :nth-child(8n) {
+    border-right: 0;
+  }
+}
+/* 기간 칩 중 데이터가 없어 꺼진 것(3년·5년·전체) — 비활성 토큰. 매매|전세|월세 세그먼트의 꺼진 칸(전월세 신고 없음)도 같은 색 */
+.cx-chip-off,
+.seg > button:disabled {
+  background: var(--disabled-bg);
+  color: var(--disabled-text);
+  cursor: default;
+}
+.seg > button:disabled:hover {
+  color: var(--disabled-text);
+}

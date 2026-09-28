@@ -1,0 +1,94 @@
+/* [1024 · 단지 상세] 최근 실거래 표 — 계약일·타입·층·가격·비고(신고가 배지 · 해제 취소선). 시안 mock1024/complex-d.
+   서버 조각. 행 재료는 complex-v2-model.recentDealRows(타입별 신고가 = tx-extremes, 한 건뿐인 타입은 배지 없음).
+   해제 신고 행은 취소선 + "해제" 배지 규칙만 둔다 — getComplexDeals 는 해제분(is_cancelled)을 읽지 않아 지금은 오지 않는다.
+   면적은 ㎡ 로 그리고 붙은 뒤 설정(평)이면 바뀐다(AreaTextLazy). */
+import Link from "next/link";
+import { formatEokMan } from "@/lib/format/eok-man";
+import { dealDateLabel, floorLabel } from "@/lib/complex/deal-format";
+import { AreaTextLazy as AreaText } from "./AreaTextLazy";
+import type { RecentDealRow } from "./complex-v2-model";
+
+export function RecentDealsTable({
+  rows,
+  total,
+  allHref,
+  failed = false,
+}: {
+  rows: readonly RecentDealRow[];
+  /** 기간 안 매매 건수(해제 제외) — 모르면 null */
+  total: number | null;
+  /** "전체 N건 ›" 목적지(실거래 탭) */
+  allHref: string;
+  /** 실거래 조회 실패 — "없음"과 다른 문장 */
+  failed?: boolean;
+}) {
+  return (
+    <section aria-labelledby="recent-deals-title" className="card rise-in-1 mt-3 rounded-2xl px-4 py-3.5 max-md:px-3.5 max-md:py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="recent-deals-title" className="t-section text-ink">
+          최근 실거래
+        </h2>
+        <span className="t-caption text-text-3 tabular-nums">
+          매매 · 전체 타입 · 해제 제외{total != null ? ` ${total.toLocaleString("ko-KR")}건` : ""}
+        </span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="mt-2 rounded-lg bg-bg px-3 py-4 text-center t-body text-text-3">
+          {failed ? "실거래를 지금 불러오지 못했습니다. 잠시 후 새로고침해 주세요." : "아직 신고된 매매 실거래 없음"}
+        </p>
+      ) : (
+        <div className="-mx-1 mt-2 overflow-x-auto px-1">
+          <table className="w-full min-w-[360px] border-collapse t-body">
+            <thead>
+              <tr className="text-left t-caption text-text-3">
+                <th scope="col" className="border-b border-line py-1.5 pr-2 font-semibold">계약일</th>
+                <th scope="col" className="border-b border-line py-1.5 pr-2 font-semibold">타입</th>
+                <th scope="col" className="border-b border-line py-1.5 pr-2 font-semibold">층</th>
+                <th scope="col" className="border-b border-line py-1.5 pr-2 text-right font-semibold">가격</th>
+                <th scope="col" className="border-b border-line py-1.5 font-semibold">비고</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => {
+                const muted = r.cancelled ? "text-text-3" : "text-text-1";
+                return (
+                  <tr key={`${r.ym}-${r.day ?? 0}-${r.man}-${r.typeM2 ?? 0}-${r.floor ?? 0}-${i}`} className="border-b border-divider last:border-0">
+                    <td className={`whitespace-nowrap py-2 pr-2 tabular-nums ${muted}`}>{dealDateLabel(r.ym, r.day)}</td>
+                    <td className={`whitespace-nowrap py-2 pr-2 tabular-nums ${muted}`}>
+                      {r.typeM2 != null ? <AreaText unitM2={r.typeM2} /> : "—"}
+                    </td>
+                    <td className={`whitespace-nowrap py-2 pr-2 tabular-nums ${muted}`}>{floorLabel(r.floor)}</td>
+                    <td
+                      className={`whitespace-nowrap py-2 pr-2 text-right tabular-nums ${
+                        r.cancelled ? "text-text-3 line-through" : "t-num text-ink"
+                      }`}
+                    >
+                      {formatEokMan(r.man)}
+                    </td>
+                    <td className="whitespace-nowrap py-2">
+                      {r.cancelled ? (
+                        <span className="inline-flex items-center rounded-sm bg-bg px-1.5 py-px t-caption font-bold text-text-3">해제</span>
+                      ) : r.high ? (
+                        <span className="inline-flex items-center rounded-sm bg-up-soft px-1.5 py-px t-caption font-bold text-up">신고가</span>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {rows.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <Link href={allHref} className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary">
+            전체{total != null ? ` ${total.toLocaleString("ko-KR")}건` : ""} ›
+          </Link>
+          <span className="t-caption text-text-3">국토교통부 실거래가 · 신고가는 타입별 기간 내 최고 실거래 · 한 건 금액 그대로</span>
+        </div>
+      )}
+    </section>
+  );
+}
+
+export default RecentDealsTable;

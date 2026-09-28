@@ -1,4 +1,6 @@
 /**
+ * [1024] fetchAptJson 내보냄 · 기본정보의 kaptMarea(관리비부과면적) 정규화 — 관리비 적재가 쓴다
+ *
  * 국토교통부 공동주택 정보 API 클라이언트
  * - 공동주택 단지 목록제공 서비스  (AptListService4)   ← 2026-08 개편(V3 폐기): JSON, sigunguCode
  * - 공동주택 기본 정보제공 서비스  (AptBasisInfoServiceV5) ← 2026-08 개편(V4 폐기): getAphusBassInfoV5
@@ -37,8 +39,9 @@ function serviceKey(): string | null {
   return encodingKeyForUrl();
 }
 
-/** data.go.kr JSON 응답에서 item(s)·totalCount 를 뽑고, 인증·쿼터 오류는 던진다. */
-async function fetchAptJson(
+/** data.go.kr JSON 응답에서 item(s)·totalCount 를 뽑고, 인증·쿼터 오류는 던진다.
+ *  [1024] 관리비 클라이언트(kapt-mgmt-fee-api.ts)가 같은 봉투 규칙을 쓰므로 내보낸다. */
+export async function fetchAptJson(
   service: string,
   operation: string,
   params: Record<string, string | number>,
@@ -242,6 +245,7 @@ export interface AptComplexDetail {
   kaptdaCnt?: string;      // 건물 수
   kaptArea?: string;       // 대지면적(㎡)
   kaptTarea?: string;      // 연면적(㎡)
+  kaptMarea?: string;      // [1024] 관리비부과면적(㎡) — 관리비 ㎡당 환산의 분모
   kaptMgrStle?: string;    // 관리 방식
   heatSplyMthdCd?: string; // 난방 방식
   elevCnt?: string;        // 승강기 수
@@ -271,6 +275,7 @@ function normalizeComplexDetail(r: Record<string, string>): AptComplexDetail {
     kaptdaCnt: r.kaptdaCnt || undefined,
     kaptArea: r.kaptTarea || r.kaptArea || undefined,
     kaptTarea: r.kaptTarea || undefined,
+    kaptMarea: r.kaptMarea || undefined,
     kaptMgrStle: r.codeMgrNm || r.kaptMgrStle || undefined,
     heatSplyMthdCd: r.codeHeatNm || r.heatSplyMthdCd || undefined,
     elevCnt: r.kaptdEcnt || r.elevCnt || undefined,

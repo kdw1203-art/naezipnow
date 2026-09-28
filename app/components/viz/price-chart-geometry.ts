@@ -42,6 +42,8 @@ export type PriceChartLayout = {
   } | null;
   /** [1022] 수평 안내선(손익분기 등) — 입력 guides 순서대로 y. 없으면 [] */
   guides: { valueKrw: number; y: number }[];
+  /** [1024 · 단지 상세] 신고가▲·신저가▼ 표식 — 그 달 x 에 **그 거래 금액**의 y(월 중앙값이 아니라 한 건 값). 없으면 [] */
+  marks: { ym: string; kind: "high" | "low"; valueMan: number; x: number; y: number }[];
   /** 최근 달 x */
   lastX: number;
   /** [1008 · 리뷰 A-17] 첫 달 라벨을 그려도 최근 달 라벨과 안 겹치나(모바일 5년 시나리오에서 겹쳤다) */
@@ -86,6 +88,8 @@ export function layoutPriceChart(input: {
   scenario?: { startKrw: number; path: readonly ChartScenarioPoint[] } | null;
   /** [1022] 수평 안내선 값(원) — 유한한 양수만 그린다 */
   guides?: readonly number[] | null;
+  /** [1024] 신고가·신저가 표식(만원) — 달 축에 없는 ym 은 버린다. 값은 y 범위에 넣어 화살표가 그림 밖으로 나가지 않게 */
+  marks?: readonly { ym: string; kind: "high" | "low"; valueMan: number }[] | null;
   box: ChartBox;
 }): PriceChartLayout | null {
   const { months, box } = input;
@@ -108,6 +112,10 @@ export function layoutPriceChart(input: {
   /* [1022] 안내선은 가격 점이 있을 때만 범위에 넣는다(안내선 하나로 눈금을 지어내지 않는다) */
   const guideKrw = (input.guides ?? []).filter((g) => Number.isFinite(g) && g > 0);
   if (vals.length > 0) for (const g of guideKrw) vals.push(g / 10_000);
+  const markIn = (input.marks ?? []).filter(
+    (m) => Number.isFinite(m.valueMan) && m.valueMan > 0 && months.some((x) => x.ym === m.ym),
+  );
+  if (vals.length > 0) for (const m of markIn) vals.push(m.valueMan);
   if (vals.length === 0) {
     /* 가격 점이 하나도 없으면 막대만 — 선·눈금을 지어내지 않는다 */
   }
@@ -212,6 +220,9 @@ export function layoutPriceChart(input: {
 
   const lastX = xOf(P - 1);
   const guides = vals.length ? guideKrw.map((g) => ({ valueKrw: g, y: yOf(g / 10_000) })) : [];
+  const marks = vals.length
+    ? markIn.map((m) => ({ ...m, x: xOf(months.findIndex((x) => x.ym === m.ym)), y: yOf(m.valueMan) }))
+    : [];
   return {
     points,
     segments,
@@ -221,6 +232,7 @@ export function layoutPriceChart(input: {
     ticks,
     fan,
     guides,
+    marks,
     lastX,
     firstLabel: P > 1 && lastX - xOf(0) >= MIN_LABEL_GAP,
     plotTop,
