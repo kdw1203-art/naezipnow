@@ -189,7 +189,7 @@ function GridTile({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
       href={noteHref(n)}
       aria-label={n.isExample ? "예시 · 임장노트 쓰기" : `${n.title} 노트 보기`}
       /* [1009 · T] press — 누르는 순간 살짝 눌린다(터치 기기의 피드백 · 들림 호버는 md 이상 마우스만) */
-      className="press group relative block aspect-[3/4] overflow-hidden bg-bg md:rounded-2xl md:shadow-[0_1px_2px_rgba(16,28,54,.05),0_8px_20px_rgba(16,28,54,.06)] md:transition-transform md:duration-200 md:hover:-translate-y-1"
+      className="press group relative block aspect-square overflow-hidden bg-bg md:rounded-2xl md:shadow-[0_1px_2px_rgba(16,28,54,.05),0_8px_20px_rgba(16,28,54,.06)] md:transition-transform md:duration-200 md:hover:-translate-y-1"
     >
       <CoverImage
         src={n.coverUrl}
@@ -743,7 +743,7 @@ export function NotesFeedClient({
   const allNotes = useMemo(() => (extra.length > 0 ? [...notes, ...extra] : notes), [notes, extra]);
   const exampleOnly = allNotes.length > 0 && allNotes.every((n) => n.isExample);
   /* [966] 상세 → 뒤로가기 스크롤 복원. 노트는 서버가 내려준 props 라 첫 렌더에 이미
-     그려져 있다(ready) — 타일은 3:4 고정 비율이라 사진이 늦게 와도 높이가 안 변한다. */
+     그려져 있다(ready) — 타일은 정사각 고정 비율이라 사진이 늦게 와도 높이가 안 변한다([1018] 3:4 → 1:1, 표지가 720 정사각이라 양옆이 잘렸다). */
   useScrollRestore(useScrollRestoreKey(), notes.length > 0);
 
   /* 구독 지역이 없으면 "내 관심 지역" 은 무엇을 눌러도 0건이라 칩 자체를 숨긴다.
