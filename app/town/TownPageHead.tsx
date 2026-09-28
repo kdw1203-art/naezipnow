@@ -1,5 +1,6 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import type { ReactNode } from "react";
-import { Icon } from "@/app/components/Icon";
+import { PageHead } from "@/app/components/PageHead";
 import { TOWN_CATEGORY_LINKS } from "@/lib/town/category-links";
 
 /* [978] **이 컴포넌트는 더 이상 9칸 머리가 아니다.**
@@ -48,23 +49,16 @@ export function TownPageHead({
      그 목록에 없는 페이지(하위 상세 등)를 위한 예외 통로로만 남긴다. */
   const heading = title ?? link?.label ?? "";
   const subline = sub ?? link?.headSub;
+  /* [1022 · 정렬·글씨·테마] 공용 PageHead 로 — 아이콘 칩 40 · h1.t-title · 사실 한 줄 · 오른쪽 액션. */
   return (
-    <div className={`rise-in mb-4 flex items-start justify-between gap-3 ${className}`}>
-      <div className="flex min-w-0 items-start gap-3">
-        {link && (
-          <span
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${link.tone}`}
-            aria-hidden="true"
-          >
-            <Icon name={link.icon} size={20} />
-          </span>
-        )}
-        <div className="min-w-0">
-          <h1 className="t-title text-ink">{heading}</h1>
-          {subline && <p className="mt-0.5 t-sub text-text-2">{subline}</p>}
-        </div>
-      </div>
-      {action && <div className="shrink-0">{action}</div>}
-    </div>
+    <PageHead
+      icon={link?.icon}
+      tone={link?.tone}
+      title={heading}
+      sub={subline}
+      subOnPhone
+      actions={action}
+      className={`mb-4 ${className}`.trim()}
+    />
   );
 }

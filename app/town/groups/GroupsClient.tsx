@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -402,11 +403,11 @@ export function GroupsClient({
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
             <Icon name="search" size={22} />
           </div>
-          <p className="text-[13px] font-bold text-ink">
+          <p className="t-body font-bold text-ink">
             {filtersActive ? "이 조건에 맞는 임장 모임이 0개예요" : "모집 중인 임장 모임이 아직 없어요"}
           </p>
           {/* [1012] 규칙 6 — "모아보세요" 권유 → 사실 */}
-          <p className="max-w-xs text-xs leading-[1.6] text-text-3">
+          <p className="max-w-xs t-sub leading-[1.6] text-text-3">
             {filtersActive
               ? "필터를 풀면 전체 모임이 보여요 — 모임을 만들면 채팅방이 함께 열려요."
               : "여기서 만든 첫 모임이 이 목록 맨 앞에 실려요 — 만들면 채팅방이 함께 열려요."}
@@ -418,12 +419,12 @@ export function GroupsClient({
               <button
                 type="button"
                 onClick={() => apply({ region: "all", status: "all", sort: "soon", q: "" })}
-                className="btn-soft rounded-lg px-4 py-2 text-xs"
+                className="btn-soft rounded-lg px-4 py-2 t-sub"
               >
                 필터 초기화
               </button>
             )}
-            <CreateGroupCta label="첫 모임 만들기" className="rounded-lg px-4 py-2 text-xs" />
+            <CreateGroupCta label="첫 모임 만들기" className="rounded-lg px-4 py-2 t-sub" />
           </div>
         </div>
       ) : (
@@ -445,8 +446,8 @@ export function GroupsClient({
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
                   <Icon name="users" size={22} />
                 </div>
-                <div className="text-[13px] font-bold text-text-1">모집 중인 임장 모임이 없어요</div>
-                <div className="max-w-xs text-xs leading-[1.6] text-text-3">
+                <div className="t-body font-bold text-text-1">모집 중인 임장 모임이 없어요</div>
+                <div className="max-w-xs t-sub leading-[1.6] text-text-3">
                   여기서 만든 모임이 이 자리에 실려요 — 만들면 채팅방이 함께 열려요.
                 </div>
                 <div className="mt-1">

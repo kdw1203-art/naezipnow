@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import Link from "next/link";
 import { CountUp } from "@/app/components/motion/CountUp";
 import { PageShell } from "../../components/PageShell";
@@ -8,7 +9,6 @@ import { listExpertsAll, type UserExpertProfile } from "@/lib/experts/store-db";
 import { EXPERT_TYPES } from "@/lib/experts/taxonomy";
 import { EXPERT_FAQ } from "@/lib/experts/faq";
 import { Icon } from "@/app/components/Icon";
-import { BrandWatermark } from "@/app/components/BrandWatermark";
 import { JsonLd } from "@/app/components/JsonLd";
 import { faqJsonLd } from "@/lib/seo/jsonld";
 import { TownCategoryNav } from "../TownCategoryNav";
@@ -96,28 +96,29 @@ export default async function TownExpertsPage() {
         note="등록된 전문가 기준"
       />
       <TownCategoryNav stick />
-      {/* ---------- 소개 (브랜드 네이비) ---------- */}
-      <section className="rise-in brand-navy-card mb-5 overflow-hidden rounded-3xl px-5 py-6 md:px-7 md:py-7 max-md:mb-3 max-md:py-4">
-        <BrandWatermark />
+      {/* ---------- 소개 ---------- */}
+      {/* [1022 · 정렬·글씨·테마] 네이비 면(card + 워터마크) → 흰 카드. 1017 이 9칸 머리에서 네이비를 걷었는데 이 소개
+          블록만 네이비로 남아 전문가 화면만 튀었다. 내용·숫자는 그대로, 색만 토큰(text-ink · text-text-2 · border-line). */}
+      <section className="rise-in card mb-5 overflow-hidden rounded-2xl px-5 py-6 md:px-7 md:py-7 max-md:mb-3 max-md:py-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="max-w-[560px]">
             {/* [1012] 규칙 5 — "지금 물어보기" 슬로건 → 명사형 사실
                 [1015] 대시 잇기·설명 두 문장("…상담함으로 와요. …비교할 수 있어요")을 명사 줄로(브리프 규칙 D) */}
-            <p className="t-section text-on-dark">
+            <p className="t-section text-ink">
               인증 전문가 상담 · 공인중개사 · 세무사 · 감정평가사 · 대출상담사 · 건축사
             </p>
-            <p className="mt-2 t-body text-on-dark-muted">
+            <p className="mt-2 t-body text-text-2">
               글 상담 · 상담함 답변 · 견적 요청 1건으로 여러 전문가 제안 비교
             </p>
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 t-sub text-on-dark-muted">
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 t-sub text-text-2">
               <span className="inline-flex items-center gap-1">
-                <Icon name="shield" size={13} className="text-on-dark" /> 서류·신원 확인 후 인증
+                <Icon name="shield" size={13} className="text-ink" /> 서류·신원 확인 후 인증
               </span>
               <span className="inline-flex items-center gap-1">
-                <Icon name="star" size={13} className="text-brand-red-dark" /> 후기는 답변 완료 의뢰자만
+                <Icon name="star" size={13} className="text-brand-red" /> 후기는 답변 완료 의뢰자만
               </span>
               <span className="inline-flex items-center gap-1">
-                <Icon name="lock" size={13} className="text-on-dark" /> 연락처·계좌 교환 차단
+                <Icon name="lock" size={13} className="text-ink" /> 연락처·계좌 교환 차단
               </span>
             </div>
           </div>
@@ -126,7 +127,7 @@ export default async function TownExpertsPage() {
               내려가는 한 개만 남긴다. */}
           <div className="flex shrink-0 gap-2 md:flex-col md:items-end">
             {/* [1015] 채움 파랑 → 네이비 위 보조 칩. 화면의 채움 파랑은 카드의 "상담 신청" 하나로(브리프 규칙 J) */}
-            <a href="#experts" className="brand-photo-chip rounded-xl px-5 py-2.5 t-body font-bold no-underline">
+            <a href="#experts" className="btn-outline btn-md rounded-xl no-underline">
               전문가 보기
             </a>
           </div>
@@ -135,22 +136,22 @@ export default async function TownExpertsPage() {
             [970 · C-13] 다만 등록 전문가가 아예 0명이면 "0 · 0 · —" 세 칸은 지표가 아니라
             빈 칸 세 개다 — 모집 중이라는 사실 한 줄로 바꾼다(조회 실패는 목록 쪽이 말한다). */}
         {loaded.ok && loaded.items.length === 0 ? (
-          <p className="mt-5 border-t border-on-dark-faint pt-4 t-sub text-on-dark-muted">
+          <p className="mt-5 border-t border-line pt-4 t-sub text-text-2">
             모집 중 · 인증 심사 통과 순으로 공개
           </p>
         ) : (
-        <div className="mt-5 grid grid-cols-3 gap-2 border-t border-on-dark-faint pt-4">
+        <div className="mt-5 grid grid-cols-3 gap-2 border-t border-line pt-4">
           <div>
-            <div className="t-section text-on-dark t-num">{loaded.ok ? <CountUp value={verified.length} /> : "—"}</div>
-            <div className="t-caption text-on-dark-muted">인증 전문가</div>
+            <div className="t-section text-ink t-num">{loaded.ok ? <CountUp value={verified.length} /> : "—"}</div>
+            <div className="t-caption text-text-2">인증 전문가</div>
           </div>
           <div>
-            <div className="t-section text-on-dark t-num">{loaded.ok ? <CountUp value={answered} /> : "—"}</div>
-            <div className="t-caption text-on-dark-muted">답변 완료 상담</div>
+            <div className="t-section text-ink t-num">{loaded.ok ? <CountUp value={answered} /> : "—"}</div>
+            <div className="t-caption text-text-2">답변 완료 상담</div>
           </div>
           <div>
-            <div className="t-section text-on-dark t-num">{avgRating !== null ? avgRating.toFixed(1) : "—"}</div>
-            <div className="t-caption text-on-dark-muted">{avgRating !== null ? "평균 후기 평점" : "후기 아직 없음"}</div>
+            <div className="t-section text-ink t-num">{avgRating !== null ? avgRating.toFixed(1) : "—"}</div>
+            <div className="t-caption text-text-2">{avgRating !== null ? "평균 후기 평점" : "후기 아직 없음"}</div>
           </div>
         </div>
         )}

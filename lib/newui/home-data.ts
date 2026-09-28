@@ -640,7 +640,7 @@ async function loadRegionCardsFallback(): Promise<HomeRegionCard[]> {
     .eq("property_type", "apartment")
     .in("region_name", names)
     .order("month", { ascending: false })
-    .limit(40);
+    .limit(names.length * 10); /* [1022] 지역 수 × 최근 10개월 */
   if (error) throw error;
   if (!Array.isArray(data)) return [];
   /* [1009 · H] 신고 기한이 지난 달만 — 신고 중인 달의 반쪽 평균을 카드에 올리지 않는다 */

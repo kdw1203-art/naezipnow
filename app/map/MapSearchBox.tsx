@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Icon } from "@/app/components/Icon";
@@ -326,12 +327,12 @@ export function MapSearchBox({
   return (
     <div ref={rootRef} className={`relative ${className}`}>
       <div className={shellClass}>
-        <span aria-hidden="true" className="text-[13px] text-text-3">
+        <span aria-hidden="true" className="t-body text-text-3">
           ⌕
         </span>
         {/* [968 · 26] 모바일 글자 크기는 여기서 키우지 않는다 — 16px 은 타입 램프 밖이다.
             globals.css [968 · 28] 의 전역 규칙(767px 이하 input { font-size: 1rem },
-            특이성 (0,3,1))이 이 text-[13px] 유틸리티(0,1,0)를 이기므로 iOS 포커스 확대가
+            특이성 (0,3,1))이 이 t-body 유틸리티(0,1,0)를 이기므로 iOS 포커스 확대가
             나지 않는다. enterKeyHint 는 키보드 확인 키를 "검색"으로, 자동완성·자동교정은
             단지명(고유명사)에 방해라 끈다. */}
         <input
@@ -353,14 +354,14 @@ export function MapSearchBox({
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
-          className="min-w-0 flex-1 bg-transparent text-[13px] text-text-1 outline-none placeholder:text-text-3"
+          className="min-w-0 flex-1 bg-transparent t-body text-text-1 outline-none placeholder:text-text-3"
         />
         {query && (
           <button
             type="button"
             onClick={clear}
             aria-label="검색어 지우기"
-            className="shrink-0 text-xs text-text-3"
+            className="shrink-0 t-sub text-text-3"
           >
             ✕
           </button>
@@ -371,7 +372,7 @@ export function MapSearchBox({
         <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-[60vh] overflow-y-auto rounded-2xl border border-[rgba(255,255,255,.9)] bg-[var(--glass-bg-strong)] p-1.5 shadow-[0_16px_40px_rgba(16,28,54,.2)]">
           {/* 안내(검색 중·80자·조회 실패·결과 없음)는 listbox 밖 — role=status 로 읽힌다 */}
           {busy && !hasResults && (
-            <div role="status" className="px-3 py-3 text-xs text-text-3">
+            <div role="status" className="px-3 py-3 t-sub text-text-3">
               검색 중…
             </div>
           )}
@@ -415,7 +416,7 @@ export function MapSearchBox({
                 onClick={() => pickAddress(address)}
                 className={rowClass("addr")}
               >
-                <Icon name="📍" size={16} className="shrink-0" />
+                <Icon name="pin" size={16} className="shrink-0" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate t-body font-bold text-ink">{address.address}</span>
                   <span className="t-sub text-text-3">이 주소로 지도 이동</span>
@@ -458,7 +459,7 @@ export function MapSearchBox({
                       onClick={() => pickComplex(c)}
                       className={rowClass(key)}
                     >
-                      <Icon name="🏢" size={16} className="shrink-0" />
+                      <Icon name="building2" size={16} className="shrink-0" />
                       <span className="min-w-0 flex-1">
                         <span className="flex min-w-0 items-center gap-1.5">
                           <span className="min-w-0 truncate t-body font-bold text-ink">
@@ -502,7 +503,7 @@ export function MapSearchBox({
                     onClick={() => pickPlace(p)}
                     className={rowClass(`p-${i}`)}
                   >
-                    <Icon name="📍" size={16} className="shrink-0" />
+                    <Icon name="pin" size={16} className="shrink-0" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate t-body font-bold text-ink">{p.name}</span>
                       {p.address && <span className="block truncate t-sub text-text-3">{p.address}</span>}

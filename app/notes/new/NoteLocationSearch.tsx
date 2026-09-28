@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useEffect, useRef, useState } from "react";
 import nextDynamic from "next/dynamic";
@@ -165,7 +166,7 @@ export function NoteLocationSearch({
         onClick={() => setOpen((v) => !v)}
         className="rise-in-1 card flex w-full items-center gap-2 rounded-lg px-3.5 py-3 text-left"
       >
-        <Icon name="📍" size={16} className="shrink-0" />
+        <Icon name="pin" size={16} className="shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="truncate t-body font-bold text-ink">{value.aptName || "단지·주소 검색"}</div>
           <div className="truncate t-sub text-text-3">

@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 import Link from "next/link";
 import { embedSnippet, type EmbedKind } from "@/lib/embed/snippet";
@@ -35,7 +36,7 @@ export function EmbedSnippet({
       <span className="t-body font-bold text-ink">{heading}</span>
       <span className="t-sub text-text-2">{desc}</span>
       <pre
-        className="mt-2 max-w-full overflow-x-auto rounded-lg bg-bg px-3 py-2.5 text-[12px] leading-[1.6] text-text-1 [user-select:all]"
+        className="mt-2 max-w-full overflow-x-auto rounded-lg bg-bg px-3 py-2.5 t-sub leading-[1.6] text-text-1 [user-select:all]"
         tabIndex={0}
         aria-label="위젯 삽입 코드"
       >

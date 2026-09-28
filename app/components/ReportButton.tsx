@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 /**
  * 신고 연결 (#81) — 작은 "신고" 텍스트 버튼 → 사유 선택 → POST /api/moderation/content-report
@@ -72,7 +73,7 @@ export function ReportButton({
 
   if (state === "done") {
     return (
-      <span className={`inline-flex min-h-[24px] items-center gap-1 text-[12px] font-bold text-success ${className ?? ""}`}>
+      <span className={`inline-flex min-h-[24px] items-center gap-1 t-sub font-bold text-success ${className ?? ""}`}>
         <Icon name="check" size={13} strokeWidth={2.6} className="njn-pop-once" />
         신고했어요
       </span>
@@ -84,7 +85,7 @@ export function ReportButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={`inline-flex min-h-[24px] min-w-[24px] justify-center items-center text-[12px] text-text-3 underline decoration-line underline-offset-2 transition-colors hover:text-danger ${className ?? ""}`}
+        className={`inline-flex min-h-[24px] min-w-[24px] justify-center items-center t-sub text-text-3 underline decoration-line underline-offset-2 transition-colors hover:text-danger ${className ?? ""}`}
       >
         신고
       </button>
@@ -93,7 +94,7 @@ export function ReportButton({
 
   return (
     <span className={`inline-flex flex-wrap items-center gap-1.5 ${className ?? ""}`}>
-      <span className="text-[12px] text-text-3">신고 사유:</span>
+      <span className="t-sub text-text-3">신고 사유:</span>
       {CATEGORIES.map((c) => (
         <button
           key={c.id}
@@ -101,7 +102,7 @@ export function ReportButton({
           disabled={busyId !== null}
           aria-busy={busyId === c.id || undefined}
           onClick={() => void submit(c)}
-          className="chip press inline-flex min-h-[32px] items-center gap-1 border border-line bg-surface px-2.5 text-[12px] font-bold text-text-2 transition-colors hover:border-danger hover:text-danger disabled:opacity-60"
+          className="chip press inline-flex min-h-[32px] items-center gap-1 border border-line bg-surface px-2.5 t-sub font-bold text-text-2 transition-colors hover:border-danger hover:text-danger disabled:opacity-60"
         >
           {busyId === c.id && <span className="njn-ring njn-ring--ink" aria-hidden="true" />}
           {c.label}
@@ -114,12 +115,12 @@ export function ReportButton({
           setOpen(false);
           setState("idle");
         }}
-        className="inline-flex min-h-[24px] items-center px-1 text-[12px] text-text-3"
+        className="inline-flex min-h-[24px] items-center px-1 t-sub text-text-3"
       >
         취소
       </button>
       {state === "error" && (
-        <span role="alert" className="text-[12px] font-bold text-danger">
+        <span role="alert" className="t-sub font-bold text-danger">
           접수하지 못했어요 — 잠시 후 다시 눌러 주세요
         </span>
       )}

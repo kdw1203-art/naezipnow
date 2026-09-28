@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import {
   useCallback,
@@ -228,8 +229,8 @@ export function MobileMenu() {
 
   const rowClass = (href: string) =>
     isActive(href)
-      ? "flex items-center gap-2.5 rounded-lg bg-primary-soft px-3 py-[9px] text-[13px] font-bold text-primary"
-      : "flex items-center gap-2.5 rounded-lg px-3 py-[9px] text-[13px] font-semibold text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)] active:text-primary";
+      ? "flex items-center gap-2.5 rounded-lg bg-primary-soft px-3 py-[9px] t-body font-bold text-primary"
+      : "flex items-center gap-2.5 rounded-lg px-3 py-[9px] t-body font-semibold text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)] active:text-primary";
 
   return (
     <>
@@ -302,7 +303,7 @@ export function MobileMenu() {
             }}
           >
             <div className="flex items-center justify-between px-5 pb-2 pt-1">
-              <span className="text-[15px] font-bold text-ink">전체 메뉴</span>
+              <span className="t-section font-bold text-ink">전체 메뉴</span>
               <button
                 type="button"
                 aria-label="메뉴 닫기"
@@ -319,7 +320,7 @@ export function MobileMenu() {
               <Link
                     prefetch={false}
                 href="/search"
-                className="mb-3 flex items-center gap-2 rounded-xl bg-[rgba(127,140,158,.08)] px-3.5 py-2.5 text-[13px] text-text-3 ring-1 ring-line"
+                className="mb-3 flex items-center gap-2 rounded-xl bg-[rgba(127,140,158,.08)] px-3.5 py-2.5 t-body text-text-3 ring-1 ring-line"
               >
                 <Icon name="search" size={16} />
                 지역·단지·매물 검색
@@ -334,8 +335,8 @@ export function MobileMenu() {
                       href={item.href}
                       className={
                         isActive(item.href)
-                          ? "flex items-center gap-2 rounded-xl bg-primary-soft px-3 py-2 text-[15px] font-bold text-primary"
-                          : "flex items-center gap-2 rounded-xl px-3 py-2 text-[15px] font-bold text-ink transition-colors active:bg-[rgba(29,79,216,.07)]"
+                          ? "flex items-center gap-2 rounded-xl bg-primary-soft px-3 py-2 t-section font-bold text-primary"
+                          : "flex items-center gap-2 rounded-xl px-3 py-2 t-section font-bold text-ink transition-colors active:bg-[rgba(29,79,216,.07)]"
                       }
                     >
                       <Icon name={CAT_ICON[item.label] ?? "search"} size={18} />
@@ -362,7 +363,7 @@ export function MobileMenu() {
 
               {/* [991] 내 계정 + 고객지원 — 한 묶음, 네 줄. 서비스 12개 묶음은 삭제(파일 위 주석). */}
               <div className="mt-5">
-                <div className="mb-1 px-1 text-[12px] font-bold uppercase tracking-wide text-text-3">
+                <div className="mb-1 px-1 t-sub font-bold uppercase tracking-wide text-text-3">
                   내 계정 · 지원
                 </div>
                 <div className="grid grid-cols-2 gap-x-1">
@@ -377,7 +378,7 @@ export function MobileMenu() {
 
               {/* 화면·알림 설정 */}
               <div className="mt-5">
-                <div className="mb-1 px-1 text-[12px] font-bold uppercase tracking-wide text-text-3">
+                <div className="mb-1 px-1 t-sub font-bold uppercase tracking-wide text-text-3">
                   화면 · 알림
                 </div>
                 <div className="grid grid-cols-2 items-center gap-x-1">
@@ -390,7 +391,7 @@ export function MobileMenu() {
                     <button
                       type="button"
                       onClick={onInstallClick}
-                      className="flex items-center gap-2.5 rounded-lg px-3 py-[9px] text-[13px] font-semibold text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)] active:text-primary"
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-[9px] t-body font-semibold text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)] active:text-primary"
                     >
                       <Icon name="square-plus" size={17} />
                       <span className="truncate">홈 화면에 추가</span>
@@ -406,16 +407,16 @@ export function MobileMenu() {
             <div className="flex flex-col gap-2 border-t border-line px-4 pt-3">
               <div className="flex gap-2">
                 {loggedIn === false && (
-                  <Link prefetch={false} href={loginHref} className="glass flex-1 rounded-xl py-2.5 text-center text-[13px] font-bold text-text-1">
+                  <Link prefetch={false} href={loginHref} className="glass flex-1 rounded-xl py-2.5 text-center t-body font-bold text-text-1">
                     로그인
                   </Link>
                 )}
-                <Link prefetch={false} href="/my" className="glass flex-1 rounded-xl py-2.5 text-center text-[13px] font-bold text-text-1">
+                <Link prefetch={false} href="/my" className="glass flex-1 rounded-xl py-2.5 text-center t-body font-bold text-text-1">
                   마이페이지
                 </Link>
                 {loggedIn === true && (
                   /* [965] /logout 화면 — 프리페치되면 안 되므로 <a> (HeaderAuth 와 동일 사유) */
-                  <a href="/logout" className="glass flex-1 rounded-xl py-2.5 text-center text-[13px] font-bold text-text-2">
+                  <a href="/logout" className="glass flex-1 rounded-xl py-2.5 text-center t-body font-bold text-text-2">
                     로그아웃
                   </a>
                 )}

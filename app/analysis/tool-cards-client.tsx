@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
@@ -85,7 +86,7 @@ export function LastToolChip() {
   return (
     <Link
       href={last.href}
-      className="chip inline-flex items-center gap-1.5 bg-primary-soft px-3.5 py-2 text-xs font-bold text-primary no-underline"
+      className="chip inline-flex items-center gap-1.5 bg-primary-soft px-3.5 py-2 t-sub font-bold text-primary no-underline"
     >
       ↻ 최근 사용 · {last.title} 이어가기 ›
     </Link>
@@ -104,7 +105,7 @@ export function CompareTrayCount() {
   if (count <= 0) return null;
   return (
     <span className="t-num inline-flex w-fit items-baseline gap-1.5 rounded-xl bg-bg px-3 py-1.5">
-      <span className="text-[15px] font-bold text-ink">{count}개</span>
+      <span className="t-section font-bold text-ink">{count}개</span>
       <span className="t-caption text-text-3">담은 후보</span>
     </span>
   );

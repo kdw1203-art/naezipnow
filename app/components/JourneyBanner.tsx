@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 /* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 
@@ -159,8 +160,8 @@ export function JourneyBanner() {
     return (
       <div className="card flex flex-col gap-3 rounded-2xl px-[18px] py-4">
         <div className="flex items-baseline justify-between gap-2">
-          <div className="text-[13px] font-bold text-ink">지금 어디부터 할까요?</div>
-          <p className="hidden text-[12px] text-text-3 sm:block">
+          <div className="t-body font-bold text-ink">지금 어디부터 할까요?</div>
+          <p className="hidden t-sub text-text-3 sm:block">
             임장(臨場) = 현장에서 직접 확인 — 기록 → AI 정리 → 지도 비교 순서
           </p>
         </div>
@@ -187,7 +188,7 @@ export function JourneyBanner() {
                 <span className="truncate t-caption text-text-3">{STEP_DESC[s]}</span>
               </button>
               {i < STEP_KEYS.length - 1 && (
-                <span aria-hidden className="shrink-0 px-1 text-[12px] text-text-3">
+                <span aria-hidden className="shrink-0 px-1 t-sub text-text-3">
                   →
                 </span>
               )}
@@ -210,7 +211,7 @@ export function JourneyBanner() {
               type="button"
               onClick={() => select(s)}
               aria-current={s === step ? "step" : undefined}
-              className={`flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-[12px] font-bold transition-all duration-200 ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 t-sub font-bold transition-all duration-200 ${
                 s === step
                   ? "bg-primary text-white"
                   : i < activeIdx
@@ -233,14 +234,14 @@ export function JourneyBanner() {
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[12px] text-text-3">
+        <span className="t-sub text-text-3">
           {STEP_DESC[step]} — 추천
         </span>
         {recs.map((r) => (
           <Link
             key={r.href + r.label}
             href={r.href}
-            className="group chip border border-primary/30 bg-primary-soft px-2.5 py-1 text-[12px] font-bold text-primary no-underline transition-colors duration-150 hover:border-primary"
+            className="group chip border border-primary/30 bg-primary-soft px-2.5 py-1 t-sub font-bold text-primary no-underline transition-colors duration-150 hover:border-primary"
           >
             {r.label}
             <span aria-hidden className="ml-0.5 inline-block transition-transform duration-150 group-hover:translate-x-0.5">
@@ -251,7 +252,7 @@ export function JourneyBanner() {
         <button
           type="button"
           onClick={reset}
-          className="ml-auto text-[12px] font-semibold text-text-3 underline transition-colors hover:text-text-1"
+          className="ml-auto t-sub font-semibold text-text-3 underline transition-colors hover:text-text-1"
         >
           단계 다시 고르기
         </button>

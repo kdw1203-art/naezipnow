@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 
 import Link from "next/link";
@@ -71,10 +72,10 @@ export function UpgradePaywall({
         className="card w-full max-w-[400px] rounded-4xl px-5 py-5 [box-shadow:var(--shadow-lg)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="upgrade-paywall-title" className="text-[15px] font-bold text-ink">
+        <h2 id="upgrade-paywall-title" className="t-section font-bold text-ink">
           {title}
         </h2>
-        <p className="mt-2 text-[13px] leading-[1.65] text-text-2">{message}</p>
+        <p className="mt-2 t-body leading-[1.65] text-text-2">{message}</p>
         <p className="mt-2 rounded-xl bg-bg px-3 py-2 t-sub text-text-2">
           <span className="font-bold text-ink">{WEEKLY_PASS.label} {WEEKLY_PASS.totalKrw.toLocaleString("ko-KR")}원</span>
           ({WEEKLY_PASS.days}일 · 단건) 부터 · 플러스 월 {monthly.toLocaleString("ko-KR")}원 · VAT 포함
@@ -82,7 +83,7 @@ export function UpgradePaywall({
         <div className="mt-4 flex flex-col gap-2">
           <Link
             href={ctaHref}
-            className="btn-primary btn-cta rounded-xl py-3 text-center text-[13px] no-underline"
+            className="btn-primary btn-cta rounded-xl py-3 text-center t-body no-underline"
             onClick={onClose}
           >
             {ctaLabel}
@@ -90,7 +91,7 @@ export function UpgradePaywall({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl py-2.5 text-[13px] font-semibold text-text-3"
+            className="rounded-xl py-2.5 t-body font-semibold text-text-3"
           >
             닫기
           </button>

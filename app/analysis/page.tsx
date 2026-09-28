@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import { AdZone } from "@/app/components/ads/AdZone";
 import Link from "next/link";
 import { PageShell } from "../components/PageShell";
@@ -46,7 +47,7 @@ import { AI_TOOL_COUNT, MARKET_LIVE, RECORD_LIVE, SIM_TOOLS, TIERS, type TierId 
      [체험]    예시 계산 4종 — 접힘. 실데이터와 섞지 않는다 (UI-04)
 
    글자 크기는 램프 유틸(.t-display/.t-title/.t-section/.t-sub/.t-caption)만
-   쓴다 — 이 화면에 있던 text-[24px]·[15px]·[13.5px]·[11.5px]·[10.5px]·[9px]
+   쓴다 — 이 화면에 있던 t-display·[15px]·[13.5px]·[11.5px]·[10.5px]·[9px]
    같은 임의값을 전부 걷어냈다(UI-07).
    ============================================================ */
 
@@ -101,7 +102,8 @@ function TierHead({ id, count }: { id: TierId; count: number }) {
         >
           <Icon name={TIER_ICON[id]} size={16} />
         </span>
-        <h2 className="accent-underline t-title text-balance text-ink">{t.question}</h2>
+        {/* [1022 · 정렬·글씨·테마] 섹션 제목은 t-section — 화면 제목(t-title)은 머리 하나뿐 */}
+        <h2 className="accent-underline t-section text-balance text-ink">{t.question}</h2>
         {/* [1015 · 규칙 C] 제목 옆 배지("단지 1곳 · 12종")는 개수만, 기능 설명 한 줄(hint)은 걷었다 */}
         <span className="t-caption ml-auto shrink-0 text-text-3 tabular-nums">{count}종</span>
       </div>

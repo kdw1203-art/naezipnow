@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import Link from "next/link";
 import { ConsultButton } from "./ConsultButton";
@@ -76,7 +77,7 @@ export function ExpertCard({ e, index }: { e: ExpertCardData; index: number }) {
       {/* 머리: 아바타 · 이름 · 인증 */}
       <div className="flex items-start gap-3">
         <div
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-navy t-section text-on-dark"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-soft t-section text-primary"
           aria-hidden="true"
         >
           {e.initial}

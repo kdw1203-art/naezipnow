@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useEffect, useState } from "react";
 import nextDynamic from "next/dynamic";
@@ -38,7 +39,7 @@ function NoteAnalysisPlaceholder() {
       <button
         type="button"
         disabled
-        className="btn-primary btn-cta mt-auto rounded-lg p-2.5 text-center text-[13px] disabled:opacity-60"
+        className="btn-primary btn-cta mt-auto rounded-lg p-2.5 text-center t-body disabled:opacity-60"
       >
         분석 실행
       </button>

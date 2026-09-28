@@ -1,4 +1,8 @@
 "use client";
+/* [1022 · 단지 분석 고도화] 지시 3 — variant="complex" 에서 ① 이전 실행 기록(lib/ai/history-store 에 verdict 가 설 때 저장 →
+   lib/ai/history-compare 로 "지난번 N점 → 지금 M점"·"지난번 좋음 2 : 주의 1" 한 줄, 있을 때만) ② 시세 예측 시나리오 강조 상태
+   (부채꼴·해마다 표가 같은 focus) ③ 비용 포함 손익분기(lib/ai/scenario-breakeven — 내 조건의 대출 비율·금리가 있을 때만)
+   ④ 종합 진단 타일 아래 "근거 N개 · 오래된 자료 N개"(verdict.evidence 만 센다). 데이터 로딩·API 는 그대로. */
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 /* [1021 · 단지 분석 /analysis/ai] 단지 분석 4종(진단·예측·동선·타이밍)은 variant="complex" — 시안(mock8)대로
    대표 그림(signature-cards.tsx) → 타일 4칸 → (예측: 해마다·가정) → 실거래 흐름 → 근거·출처 → AI 해설 → 자세히 보기.
@@ -17,6 +21,10 @@ import { formatKrwWon } from "@/lib/format/krw";
 import { formatEokMan } from "@/lib/format/eok-man";
 import { DELTA_ARROW, DELTA_CLASS, DELTA_WORD, deltaDir } from "@/lib/format/delta";
 import { verdictNextActions, verdictNoteMemo } from "@/lib/ai/next-action-routing";
+import { buildGroupKey, listHistory, pushHistory, type HistoryEntry } from "@/lib/ai/history-store";
+import { countSignals, encodeSignalCombo, scoreHistoryLine, shouldRecord, signalHistoryLine } from "@/lib/ai/history-compare";
+import { scenarioBreakEven } from "@/lib/ai/scenario-breakeven";
+import type { ScenarioKey } from "@/lib/ai/price-scenarios";
 import { addToCompareTray } from "@/lib/newui/compare-tray";
 import { hasSession } from "@/lib/client/has-session";
 import { freeQuotaLabel, weeklyPassCheckoutHref } from "@/lib/payments/paywall-links";
@@ -307,6 +315,28 @@ function LoanCard({ loan }: { loan: LoanCalc | null }) {
       </p>
     </Card>
   );
+}
+
+/* ── [1022] 이전 실행 기록 — verdict 가 설 때 history-store(localStorage)에 남기고, 같은 키의 이전 항목을 돌려준다 ──
+   같은 날 같은 값이면 다시 저장하지 않는다(history-compare.shouldRecord) — 새로 고칠 때마다 "지난번"이 몇 분 전이 되지 않게. */
+
+function useRunHistory(
+  tool: AiAnalysisToolId,
+  groupKey: string | null,
+  current: { score: number | null; oneLine: string | null; headline: string | null; createdAt: string | null },
+): HistoryEntry[] {
+  const [entries, setEntries] = useState<HistoryEntry[]>([]);
+  const { score, oneLine, headline, createdAt } = current;
+  useEffect(() => {
+    if (!groupKey || !createdAt) {
+      setEntries([]);
+      return;
+    }
+    const before = listHistory(tool, groupKey);
+    if (shouldRecord(before, { score, oneLine, createdAt })) pushHistory({ tool, groupKey, score, headline, oneLine, createdAt });
+    setEntries(listHistory(tool, groupKey));
+  }, [tool, groupKey, score, oneLine, headline, createdAt]);
+  return entries;
 }
 
 /* ── [1008 · 리뷰 A-3] 투자 체크리스트 — 확인할 항목(체크 상태는 이 기기에만 저장) ─────────────── */
@@ -1011,6 +1041,7 @@ export function ResultView({
   variant,
   onHorizon,
   phoneCondition,
+  tuning = null,
 }: {
   tool: AiAnalysisToolId;
   coreTool: boolean;
@@ -1038,7 +1069,28 @@ export function ResultView({
   onHorizon?: ((months: string) => void) | null;
   /** [1021] 폰 한 열 순서(타일 → 내 조건 → 근거)를 위해 타일 아래에 놓는 "내 조건" 카드(lg 에서는 레일이 그린다) */
   phoneCondition?: ReactNode;
+  /** [1022] 내 조건(TuningForm) 현재 값 — 시세 예측 손익분기 선의 재료(대출 비율·금리·상환 기간). 입력 즉시 선이 움직인다 */
+  tuning?: Record<string, string | boolean> | null;
 }) {
+  /* [1022] 시세 예측 — 강조한 시나리오(부채꼴·해마다 표가 같이 본다) */
+  const [scenarioFocus, setScenarioFocus] = useState<ScenarioKey | null>(null);
+  /* [1022] 이전 실행 기록 — 종합 진단은 같은 단지, 매수 타이밍은 같은 지역 */
+  const metricScore = tool === "ai-diagnosis" && verdict?.metric && /^\d+(\.\d+)?$/.test(verdict.metric.value) ? Number(verdict.metric.value) : null;
+  const signalCombo = tool === "ai-timing" ? encodeSignalCombo(countSignals(insight.signals.map((x) => x.state))) : null;
+  const historyKey =
+    variant === "complex" && verdict
+      ? tool === "ai-diagnosis" && picked
+        ? buildGroupKey(tool, [picked.id])
+        : tool === "ai-timing" && ctx.region?.name
+          ? buildGroupKey(tool, [ctx.region.name])
+          : null
+      : null;
+  const history = useRunHistory(tool, historyKey, {
+    score: metricScore,
+    oneLine: signalCombo,
+    headline: verdict?.headline ?? null,
+    createdAt: verdict?.computedAt ?? null,
+  });
   const external = Boolean(result?.ok && result.source && result.source !== "internal" && result.source !== "stub");
   const hasComplex = Boolean(picked && ctx.complex);
   const at = result?.at ? new Date(result.at) : null;
@@ -1114,6 +1166,20 @@ export function ResultView({
     const sources = verdict ? verdictSources(verdict) : null;
     const asOf = ymLabel(verdict?.metric?.asOf ?? tiles.find((t) => t.asOf)?.asOf ?? null);
     const scenario = tool === "ai-prediction" ? (verdict?.scenario ?? null) : null;
+    /* [1022] 비용 포함 손익분기 — 내 조건에 대출 비율·금리가 있을 때만(scenario-breakeven 이 null 이면 선 없음) */
+    const breakEven =
+      scenario && tuning
+        ? scenarioBreakEven({ startKrw: scenario.startKrw, years: scenario.years, ltvPct: tuning.ltvPct, ratePct: tuning.mortgageRatePct, termYears: tuning.loanTermYears })
+        : null;
+    /* [1022] 종합 진단 타일 아래 — 근거 N개 · 오래된 자료 N개(verdict.evidence 의 confidence 만 센다) */
+    const evidenceN = verdict?.evidence?.length ?? 0;
+    const staleN = verdict?.evidence?.filter((e) => e.confidence === "stale").length ?? 0;
+    const historyLine =
+      tool === "ai-diagnosis"
+        ? scoreHistoryLine(history, { score: metricScore, createdAt: verdict?.computedAt ?? null })
+        : tool === "ai-timing"
+          ? signalHistoryLine(history, verdict?.computedAt ?? null)
+          : null;
     return (
       <div className="flex flex-col gap-3">
         {failure}
@@ -1122,14 +1188,27 @@ export function ResultView({
           <DiagnosisSignature
             verdict={verdict}
             radar={insight.radar}
+            asOf={asOf}
+            complexId={hasComplex && picked ? picked.id : null}
+            historyLine={historyLine}
             metricAside={(() => {
               const c = verdict ? metricExplain(verdict) : null;
               return c ? <Explain {...c} /> : null;
             })()}
           />
         )}
-        {tool === "ai-prediction" && <PredictionSignature verdict={verdict} scenario={scenario} onHorizon={onHorizon} />}
-        {tool === "ai-timing" && <TimingSignature verdict={verdict} signals={insight.signals} series={series} />}
+        {tool === "ai-prediction" && (
+          <PredictionSignature
+            verdict={verdict}
+            scenario={scenario}
+            onHorizon={onHorizon}
+            asOf={asOf}
+            focus={scenarioFocus}
+            onFocus={setScenarioFocus}
+            breakEven={breakEven}
+          />
+        )}
+        {tool === "ai-timing" && <TimingSignature verdict={verdict} signals={insight.signals} series={series} asOf={asOf} historyLine={historyLine} />}
         {tool === "ai-inspection" && picked && (
           <InspectionSignature picked={picked} similar={similar} recent6={series?.recent6 ?? null} onPick={onPickSimilar} />
         )}
@@ -1150,6 +1229,7 @@ export function ResultView({
               {result?.ok && at && (result.appliedCalc || external)
                 ? ` · ${result.appliedCalc ? "내 조건 반영 · " : ""}${at.getHours()}:${String(at.getMinutes()).padStart(2, "0")} 계산`
                 : ""}
+              {tool === "ai-diagnosis" && evidenceN > 0 ? ` · 근거 ${evidenceN}개 · 오래된 자료 ${staleN}개` : ""}
             </p>
           </div>
         )}
@@ -1158,7 +1238,7 @@ export function ResultView({
         {phoneCondition && <div className="lg:hidden">{phoneCondition}</div>}
 
         {/* 시세 예측 — 해마다 표 · 가정 */}
-        {scenario && <ScenarioTables scenario={scenario} startLabel={series?.label ?? ctx.complex?.price?.bandLabel ?? null} />}
+        {scenario && <ScenarioTables scenario={scenario} startLabel={series?.label ?? ctx.complex?.price?.bandLabel ?? null} focus={scenarioFocus} />}
 
         {/* 이 단지 실거래 흐름(예측은 위 부채꼴이 시나리오라 여기선 과거만) */}
         {hasComplex && (

@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -353,7 +354,7 @@ export default async function TownNewsDetailPage({
                 </Link>
               )}
             </div>
-            <h1 className="text-2xl font-bold leading-[1.4] text-ink">{title}</h1>
+            <h1 className="t-display font-bold leading-[1.4] text-ink">{title}</h1>
 
             {/* 원문 ↗ — 요약본 사이트의 예의는 원문으로 잘 보내는 것. 머리에도 한 번. */}
             {post.sourceUrl && (
@@ -392,7 +393,7 @@ export default async function TownNewsDetailPage({
                 [970 · C-12] 로드 실패 시 NewsHero 가 상자·캡션까지 통째로 치운다. */}
             {heroImage ? <NewsHero src={heroImage} sourceName={post.sourceName} /> : null}
 
-            <div className="flex flex-col gap-4 text-[13px] leading-[1.85] text-text-1">
+            <div className="flex flex-col gap-4 t-body leading-[1.85] text-text-1">
               {/* 우리가 쓴 요약 — 원문 문장을 옮기지 않고 핵심 사실만 재구성한 글 */}
               {summaryParas.map((t, i) => (
                 <p key={`sum-${i}`}>{t}</p>
@@ -404,15 +405,15 @@ export default async function TownNewsDetailPage({
 
               {renderOwnSummary && context ? (
                 <section className="rounded-lg border border-line bg-bg px-4 py-3">
-                  <h2 className="mb-1 text-[12px] font-bold text-text-3">배경</h2>
-                  <p className="text-[13px] leading-[1.75] text-text-1">{context}</p>
+                  <h2 className="mb-1 t-sub font-bold text-text-3">배경</h2>
+                  <p className="t-body leading-[1.75] text-text-1">{context}</p>
                 </section>
               ) : null}
 
               {renderOwnSummary && implication ? (
                 <section className="rounded-lg border border-primary/25 bg-primary-soft px-4 py-3">
-                  <h2 className="mb-1 text-[12px] font-bold text-primary">시장에 주는 의미</h2>
-                  <p className="text-[13px] leading-[1.75] text-text-1">{implication}</p>
+                  <h2 className="mb-1 t-sub font-bold text-primary">시장에 주는 의미</h2>
+                  <p className="t-body leading-[1.75] text-text-1">{implication}</p>
                 </section>
               ) : null}
 
@@ -425,12 +426,12 @@ export default async function TownNewsDetailPage({
                   className="tile flex items-center justify-between gap-3 rounded-lg border border-line bg-bg px-4 py-3 no-underline"
                 >
                   <span className="min-w-0">
-                    <span className="block text-[12px] font-semibold text-text-3">
+                    <span className="block t-sub font-semibold text-text-3">
                       원문 출처{post.sourceName ? ` · ${post.sourceName}` : ""}
                     </span>
-                    <span className="block text-[13px] font-bold text-primary">기사 전문 읽기 ↗</span>
+                    <span className="block t-body font-bold text-primary">기사 전문 읽기 ↗</span>
                   </span>
-                  {sourceHost && <span className="shrink-0 text-[12px] text-text-3">{sourceHost}</span>}
+                  {sourceHost && <span className="shrink-0 t-sub text-text-3">{sourceHost}</span>}
                 </a>
               )}
             </div>
@@ -438,12 +439,12 @@ export default async function TownNewsDetailPage({
             {/* FAQ — FAQPage 구조화 데이터와 화면 내용이 같아야 유효하므로 함께 낸다. */}
             {faq.length > 0 ? (
               <section aria-label="자주 묻는 질문" className="flex flex-col gap-3 border-t border-divider pt-4">
-                <h2 className="text-[15px] font-bold text-ink">자주 묻는 질문</h2>
+                <h2 className="t-section font-bold text-ink">자주 묻는 질문</h2>
                 <dl className="flex flex-col gap-3">
                   {faq.map((f, i) => (
                     <div key={i} className="flex flex-col gap-1">
-                      <dt className="text-[13px] font-bold text-ink">Q. {f.q}</dt>
-                      <dd className="text-[13px] leading-[1.7] text-text-1">{f.a}</dd>
+                      <dt className="t-body font-bold text-ink">Q. {f.q}</dt>
+                      <dd className="t-body leading-[1.7] text-text-1">{f.a}</dd>
                     </div>
                   ))}
                 </dl>
@@ -453,7 +454,7 @@ export default async function TownNewsDetailPage({
             {/* 관련 지역 — 해석되는 시군구만 링크(죽은 링크 금지) */}
             {geo.places && geo.places.length > 0 ? (
               <nav aria-label="관련 지역" className="flex flex-wrap items-center gap-1.5 border-t border-divider pt-3.5">
-                <span className="text-[12px] font-bold text-text-3">관련 지역</span>
+                <span className="t-sub font-bold text-text-3">관련 지역</span>
                 {geo.places.map((place) => {
                   const words = place.split(/\s+/).filter(Boolean);
                   const rid =
@@ -464,12 +465,12 @@ export default async function TownNewsDetailPage({
                     <Link
                       key={place}
                       href={`/region/${rid}`}
-                      className="chip border border-line bg-bg px-2.5 py-1 text-[12px] font-bold text-primary no-underline"
+                      className="chip border border-line bg-bg px-2.5 py-1 t-sub font-bold text-primary no-underline"
                     >
                       {place}
                     </Link>
                   ) : (
-                    <span key={place} className="chip border border-line bg-bg px-2.5 py-1 text-[12px] text-text-2">
+                    <span key={place} className="chip border border-line bg-bg px-2.5 py-1 t-sub text-text-2">
                       {place}
                     </span>
                   );
@@ -484,13 +485,13 @@ export default async function TownNewsDetailPage({
                     <Link
                       key={t.label}
                       href={t.href}
-                      className="chip border border-line bg-bg px-2.5 py-1 text-[12px] font-bold text-primary no-underline"
+                      className="chip border border-line bg-bg px-2.5 py-1 t-sub font-bold text-primary no-underline"
                     >
                       #{t.label}
                       {t.kind === "complex" && <span className="ml-1 font-medium text-text-3">시세</span>}
                     </Link>
                   ) : (
-                    <span key={t.label} className="chip border border-line bg-bg px-2.5 py-1 text-[12px] text-text-2">
+                    <span key={t.label} className="chip border border-line bg-bg px-2.5 py-1 t-sub text-text-2">
                       #{t.label}
                     </span>
                   ),
@@ -499,7 +500,7 @@ export default async function TownNewsDetailPage({
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-divider pt-3.5">
-              <div className="flex flex-wrap items-center gap-1 text-[12px] text-text-3">
+              <div className="flex flex-wrap items-center gap-1 t-sub text-text-3">
                 <span>
                   {renderOwnSummary
                     ? `내집나우가 원문을 요약·정리한 글입니다 · 원문 저작권은 ${post.sourceName || "원 매체"}에 있음 ·`
@@ -527,8 +528,8 @@ export default async function TownNewsDetailPage({
                   href={`/town/news/${encodeURIComponent(newerPost.id)}`}
                   className="card tile flex flex-col gap-1 rounded-lg px-4 py-3 no-underline"
                 >
-                  <span className="text-[10px] font-bold text-text-3">‹ 다음 기사(최신)</span>
-                  <span className="line-clamp-2 text-[13px] font-bold leading-snug text-ink">{newerPost.title}</span>
+                  <span className="t-caption font-bold text-text-3">‹ 다음 기사(최신)</span>
+                  <span className="line-clamp-2 t-body font-bold leading-snug text-ink">{newerPost.title}</span>
                 </Link>
               ) : (
                 <span className="hidden sm:block" />
@@ -538,8 +539,8 @@ export default async function TownNewsDetailPage({
                   href={`/town/news/${encodeURIComponent(olderPost.id)}`}
                   className="card tile flex flex-col gap-1 rounded-lg px-4 py-3 no-underline sm:items-end sm:text-right"
                 >
-                  <span className="text-[10px] font-bold text-text-3">이전 기사 ›</span>
-                  <span className="line-clamp-2 text-[13px] font-bold leading-snug text-ink">{olderPost.title}</span>
+                  <span className="t-caption font-bold text-text-3">이전 기사 ›</span>
+                  <span className="line-clamp-2 t-body font-bold leading-snug text-ink">{olderPost.title}</span>
                 </Link>
               )}
             </nav>
@@ -551,9 +552,9 @@ export default async function TownNewsDetailPage({
           {/* [#67] 관련 보도 — 같은 사건을 다룬 다른 매체. 뉴스룸에서 제일 먼저 오는 부가 정보다 */}
           {clusterRelated.length > 0 && (
             <div className="rise-in-2 card flex flex-col gap-1 p-[18px]">
-              <div className="mb-1.5 text-[13px] font-bold text-ink">
+              <div className="mb-1.5 t-body font-bold text-ink">
                 관련 보도 {clusterRelated.length}건{" "}
-                <span className="text-[12px] font-medium text-text-3">같은 사건 · 다른 매체</span>
+                <span className="t-sub font-medium text-text-3">같은 사건 · 다른 매체</span>
               </div>
               {clusterRelated.map((s, i) => (
                 <Link
@@ -561,8 +562,8 @@ export default async function TownNewsDetailPage({
                   href={`/town/news/${s.id}`}
                   className={`flex flex-col gap-0.5 py-[7px] ${i < clusterRelated.length - 1 ? "border-b border-divider" : ""}`}
                 >
-                  <div className="line-clamp-2 text-xs font-bold leading-[1.4] text-ink">{s.title}</div>
-                  <div className="text-[10px] text-text-3">{s.meta}</div>
+                  <div className="line-clamp-2 t-sub font-bold leading-[1.4] text-ink">{s.title}</div>
+                  <div className="t-caption text-text-3">{s.meta}</div>
                 </Link>
               ))}
             </div>
@@ -571,7 +572,7 @@ export default async function TownNewsDetailPage({
           {/* 기사 속 위치 — [970 · C-32] 지역이 비어 있는 전국 기사에는 지도를 그리지 않는다 */}
           {(post.city || post.district || post.relatedSite) && (
             <div className="rise-in-2 card flex flex-col gap-2.5 p-[18px]">
-              <div className="text-[13px] font-bold text-ink">
+              <div className="t-body font-bold text-ink">
                 {post.city || post.district ? "기사 속 위치" : "연관 단지"}
               </div>
               {(post.city || post.district) && (
@@ -585,14 +586,14 @@ export default async function TownNewsDetailPage({
                   />
                   <Link
                     href={mapHref}
-                    className="absolute bottom-2.5 right-2.5 rounded-lg bg-[var(--glass-bg)] px-2.5 py-[5px] text-[12px] font-bold text-primary"
+                    className="absolute bottom-2.5 right-2.5 rounded-lg bg-[var(--glass-bg)] px-2.5 py-[5px] t-sub font-bold text-primary"
                   >
                     {regionQuery ? `${regionQuery} 지도 열기` : "지도에서 열기"} ›
                   </Link>
                 </div>
               )}
               {post.relatedSite && (
-                <div className="flex justify-between text-xs">
+                <div className="flex justify-between t-sub">
                   <span className="text-text-2">연관 단지</span>
                   {relatedSiteHref ? (
                     <Link href={relatedSiteHref} className="font-bold text-primary">
@@ -608,16 +609,17 @@ export default async function TownNewsDetailPage({
 
           {/* 이 지역 임장노트 — 사실 우선: 허위 노트 목록·건수 없이 작성/열람 진입만 */}
           <div className="rise-in-3 card flex flex-col gap-2.5 p-[18px]">
-            <div className="text-[13px] font-bold text-ink">{regionQuery || "이 지역"} 임장노트</div>
-            <p className="text-[12px] leading-relaxed text-text-3">
-              현장을 다녀오셨다면 임장노트로 기록해 이웃과 공유해 보세요.
-              {regionQuery ? ` 지역은 ${regionQuery}로 미리 채워집니다.` : ""}
+            <div className="t-body font-bold text-ink">{regionQuery || "이 지역"} 임장노트</div>
+            {/* [1022 · 정렬·글씨·테마] 권유문("…공유해 보세요") → 사실 한 줄 */}
+            <p className="t-sub leading-relaxed text-text-3">
+              현장 기록 · 공개 노트는 동네이야기 피드에 실림
+              {regionQuery ? ` · 지역 ${regionQuery} 자동 입력` : ""}
             </p>
             <div className="flex gap-2">
-              <Link href={noteNewHref} className="btn-primary btn-cta flex-1 rounded-lg p-2.5 text-center text-[12px]">
+              <Link href={noteNewHref} className="btn-primary btn-cta flex-1 rounded-lg p-2.5 text-center t-sub">
                 {regionQuery ? `${regionQuery} 노트 쓰기` : "이 지역 노트 쓰기"}
               </Link>
-              <Link href="/notes" className="btn-soft flex-1 rounded-lg p-2.5 text-center text-[12px]">
+              <Link href="/notes" className="btn-soft flex-1 rounded-lg p-2.5 text-center t-sub">
                 공개 노트 보기
               </Link>
             </div>
@@ -626,15 +628,15 @@ export default async function TownNewsDetailPage({
           {/* 유사 기사 — 실데이터 있을 때만 */}
           {similarPosts.length > 0 && (
             <div className="rise-in-4 card flex flex-col gap-1 p-[18px]">
-              <div className="mb-1.5 text-[13px] font-bold text-ink">유사 기사</div>
+              <div className="mb-1.5 t-body font-bold text-ink">유사 기사</div>
               {similarPosts.map((s, i) => (
                 <Link
                   key={s.title}
                   href={s.id ? `/town/news/${s.id}` : "/town/news"}
                   className={`flex flex-col gap-0.5 py-[7px] ${i < similarPosts.length - 1 ? "border-b border-divider" : ""}`}
                 >
-                  <div className="line-clamp-2 text-xs font-bold leading-[1.4] text-ink">{s.title}</div>
-                  <div className="text-[10px] text-text-3">{s.meta}</div>
+                  <div className="line-clamp-2 t-sub font-bold leading-[1.4] text-ink">{s.title}</div>
+                  <div className="t-caption text-text-3">{s.meta}</div>
                 </Link>
               ))}
             </div>

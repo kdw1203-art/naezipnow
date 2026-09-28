@@ -226,9 +226,11 @@ export function HomeHeroSearch({
             e.preventDefault();
             submit();
           }}
-          className="flex items-center gap-2.5 rounded-2xl border-2 border-primary bg-surface py-3 pl-4 pr-2 shadow-[0_10px_32px_rgba(29,79,216,.14)] transition-shadow duration-300 focus-within:shadow-[0_14px_44px_rgba(29,79,216,.28)] md:py-3.5"
+          /* [1022] 소유자: "검색창 있는 부분을 좀더 심플하고 요즘 트렌드에 맞게" — 두꺼운 파란 테두리·큰 파란 그림자 → 얇은 선 알약 +
+             옅은 그림자, 포커스 때만 파란 선. 버튼은 안쪽 둥근 버튼 하나. */
+          className="home-search flex items-center gap-2.5 rounded-full border border-line bg-surface py-2 pl-5 pr-2 transition-[box-shadow,border-color] duration-200 focus-within:border-primary md:py-2.5"
         >
-          <Icon name="search" size={19} className="shrink-0 text-primary" />
+          <Icon name="search" size={19} className="shrink-0 text-text-3" />
           <input
             type="search"
             enterKeyHint="search"
@@ -250,11 +252,11 @@ export function HomeHeroSearch({
             placeholder={PLACEHOLDERS[phIdx]}
             aria-label="통합 검색"
             autoComplete="off"
-            className="w-full min-w-0 bg-transparent text-[15px] font-semibold text-ink outline-none placeholder:font-normal placeholder:text-text-3"
+            className="w-full min-w-0 bg-transparent t-section text-ink outline-none placeholder:font-normal placeholder:text-text-3"
           />
           <button
             type="submit"
-            className="btn-primary press shrink-0 rounded-xl px-4 py-2 text-[13px]"
+            className="btn-primary press h-10 shrink-0 rounded-full px-5 t-body"
           >
             검색
           </button>

@@ -177,7 +177,8 @@ test("온도 허브 — ToolHero/게이지 없음 · 주 선택은 클라이언�
   assert.ok(!page.includes("searchParams"), "주 선택은 쿼리가 아니라 클라이언트 상태");
   assert.ok(page.includes("listTemperaturesForWeek") && page.includes("listRegionTemperatureHistory"), "지난주·4주 전·12주 선은 아카이브에서");
   assert.ok(page.includes("weekSlots(history)"), "12주 선은 week-slots 로(빠진 주는 null)");
-  assert.ok(client.includes("grid-cols-4 gap-1.5 md:grid-cols-6 lg:grid-cols-9"), "타일 지도 열 수");
+  /* [1022] 타일 지도는 고정 4/6/9열 격자 → 우리나라 지도 모양(전국 시/도 6열 · 시/도 안 lat/lng 8열/폰 5열, tests/unit/temperature-1022.test.ts) */
+  assert.ok(client.includes("tm-grid") && !client.includes("lg:grid-cols-9"), "타일 지도는 지도 모양 격자(고정 열 격자 아님)");
   assert.ok(client.includes("hidden lg:flex lg:flex-col lg:gap-3 lg:sticky lg:top-[76px] lg:self-start"), "레일 클래스");
   assert.ok(client.includes("grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px]"), "본문 그리드(base grid-cols-1)");
   assert.ok(client.includes("TempRegionCard"), "예전 목록은 목록 보기 토글로 남긴다");

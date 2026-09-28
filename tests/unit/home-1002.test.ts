@@ -120,16 +120,14 @@ test("[1002·A] 행이 없거나 전부 미달이면 카드 0장(빈 배열) —
 });
 
 test("[1002·A] CARD_REGIONS 의 모든 카드 id 에 월 집계 region_name 이 있다(두 표 동기)", () => {
-  assert.equal(CARD_REGIONS.length, 4);
+  /* [1022] 4 → 12곳(홈이 4장씩 돌린다). 두 표의 키가 정확히 같아야 한다 */
+  assert.equal(CARD_REGIONS.length, 12);
   for (const t of CARD_REGIONS) {
     assert.ok(CARD_REGION_MONTHLY_NAMES[t.id], `${t.id} 의 market_region_monthly 이름이 없다`);
   }
-  assert.deepEqual(CARD_REGION_MONTHLY_NAMES, {
-    gangnam: "서울 강남구",
-    mapo: "서울 마포구",
-    songpa: "서울 송파구",
-    namyangju: "남양주시",
-  });
+  assert.deepEqual(Object.keys(CARD_REGION_MONTHLY_NAMES).sort(), CARD_REGIONS.map((t) => t.id).sort());
+  assert.equal(CARD_REGION_MONTHLY_NAMES.gangnam, "서울 강남구");
+  assert.equal(CARD_REGION_MONTHLY_NAMES.namyangju, "남양주시");
 });
 
 test("[1002·A] deltaOf · formatEok · periodLabelOf — home-data 에서 옮긴 규칙 그대로", () => {

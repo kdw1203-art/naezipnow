@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 import { getBusinessInfo } from "@/lib/brand/business-info";
 
@@ -30,12 +31,12 @@ export function PressSummaryBlock({
 
   return (
     <section className="card mb-6 p-[var(--pad-card)]">
-      <h2 className="text-[13px] font-bold text-ink">언론 인용용 요약</h2>
-      <p className="mt-1 text-[12px] leading-[1.6] text-text-3">
+      <h2 className="t-body font-bold text-ink">언론 인용용 요약</h2>
+      <p className="mt-1 t-sub leading-[1.6] text-text-3">
         기사·리포트에 그대로 옮겨 쓰실 수 있도록 정리했습니다 · {asOfLabel}
       </p>
 
-      <blockquote className="mt-3 rounded-lg border-l-[3px] border-primary bg-bg px-4 py-3 text-[13px] leading-[1.8] text-text-1">
+      <blockquote className="mt-3 rounded-lg border-l-[3px] border-primary bg-bg px-4 py-3 t-body leading-[1.8] text-text-1">
         {clean.map((s, i) => (
           <span key={i}>
             {s}
@@ -44,7 +45,7 @@ export function PressSummaryBlock({
         ))}
       </blockquote>
 
-      <dl className="mt-3 grid grid-cols-1 gap-1.5 text-[12px] leading-[1.6] sm:grid-cols-[88px_minmax(0,1fr)]">
+      <dl className="mt-3 grid grid-cols-1 gap-1.5 t-sub leading-[1.6] sm:grid-cols-[88px_minmax(0,1fr)]">
         <dt className="font-bold text-text-2">출처 표기</dt>
         <dd className="text-text-1">내집나우(naezipnow.com), 국토교통부 실거래 신고 기반 자체 집계</dd>
         <dt className="font-bold text-text-2">집계 방법</dt>
@@ -63,7 +64,7 @@ export function PressSummaryBlock({
         </dd>
       </dl>
 
-      <p className="mt-3 text-[12px] leading-[1.6] text-text-3">
+      <p className="mt-3 t-sub leading-[1.6] text-text-3">
         {provisional
           ? "이 달은 실거래 신고 기한(계약 후 30일)이 지나지 않아 잠정치입니다 — 인용 시 “잠정”을 함께 밝혀 주세요. "
           : ""}

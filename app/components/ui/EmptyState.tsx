@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import { Icon } from "@/app/components/Icon";
 import { Illust, type IllustName } from "@/app/components/Illust";
 import { Button } from "./Button";
@@ -57,13 +58,13 @@ const PAD: Record<StateTone, string> = {
 };
 
 const TITLE: Record<StateTone, string> = {
-  light: "text-[15px] font-bold text-ink",
-  admin: "text-[13px] font-bold text-white",
+  light: "t-section font-bold text-ink",
+  admin: "t-body font-bold text-white",
 };
 
 const DESC: Record<StateTone, string> = {
-  light: "text-[13px] leading-[1.6] text-text-3",
-  admin: "text-[12px] leading-[1.6] text-[#9aa6b8]",
+  light: "t-body leading-[1.6] text-text-3",
+  admin: "t-sub leading-[1.6] text-[#9aa6b8]",
 };
 
 const ICON_WRAP: Record<StateTone, string> = {
@@ -78,13 +79,13 @@ const ERROR_ICON_WRAP: Record<StateTone, string> = {
 
 const CAUSE: Record<StateTone, string> = {
   light:
-    "rounded-lg bg-bg px-2.5 py-1.5 font-mono text-[12px] leading-[1.5] text-text-3",
+    "rounded-lg bg-bg px-2.5 py-1.5 font-mono t-sub leading-[1.5] text-text-3",
   admin:
-    "rounded-lg bg-[rgba(255,255,255,.05)] px-2.5 py-1.5 font-mono text-[10px] leading-[1.5] text-[#9aa6b8]",
+    "rounded-lg bg-[rgba(255,255,255,.05)] px-2.5 py-1.5 font-mono t-caption leading-[1.5] text-[#9aa6b8]",
 };
 
 const ADMIN_LINK =
-  "press inline-flex items-center justify-center rounded-lg bg-[rgba(126,162,255,.15)] px-3.5 py-[7px] text-[12px] font-bold text-ai-accent no-underline";
+  "press inline-flex items-center justify-center rounded-lg bg-[rgba(126,162,255,.15)] px-3.5 py-[7px] t-sub font-bold text-ai-accent no-underline";
 
 function ActionButton({ action, tone }: { action: EmptyStateAction; tone: StateTone }) {
   if (tone === "admin") {
@@ -118,10 +119,10 @@ export function EmptyState({
   return (
     <div
       className={`${SHELL[tone]} ${PAD[tone]} flex flex-col items-center gap-2 text-center ${className}`.trim()}
-      /* [946 리브랜딩 · 모션 07] 공개 화면의 빈 상태 = 한지 + 숨쉬는 온점.
-         비어 있음이 초라함이 아니라 기다림이 되게 — 신규 사용자가 가장 먼저
-         마주치는 화면이 브랜드의 첫 화면이다. 어드민 톤은 기존 유지. */
-      style={tone === "light" ? { background: "var(--brand-hanji)", border: "none" } : undefined}
+      /* [946 리브랜딩 · 모션 07] 공개 화면의 빈 상태 = 숨쉬는 온점. 어드민 톤은 기존 유지.
+         [1022 · 정렬·글씨·테마] 한지 면(inline background: var(--brand-hanji)) → 흰 카드(.card 그대로).
+         빈 상태 41곳이 이 부품을 쓰는데, 다른 카드는 전부 흰 바탕이라 빈 상태만 노랗게 튀었다(1018 이 한지 판을
+         흰색으로 바꾼 것과 같은 이유). 가운데 정렬·온점·그림은 그대로. */
     >
       {tone === "light" && picture ? (
         /* [1015 · 규칙 E] 폰에서는 64px — 빈 화면 그림이 한 화면을 차지하지 않게(데스크톱 96) */

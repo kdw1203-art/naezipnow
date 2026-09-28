@@ -1,7 +1,9 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
+import { PageHead } from "@/app/components/PageHead";
 import { readTownPosts } from "@/lib/newui/board-posts";
 import { NEWS_TAGS, findNewsTag, postMatchesTag } from "@/lib/news/tags";
 import { clusterNews } from "@/lib/news/cluster";
@@ -87,11 +89,13 @@ export default async function NewsTagPage({
           ]),
         }}
       />
-      <h1 className="rise-in text-[21px] font-bold text-ink">{tag.label} 뉴스</h1>
-      <p className="rise-in-1 mt-1 max-w-[640px] text-[13px] leading-[1.7] text-text-2">
-        {tag.label} 관련 보도를 매일 자동 수집해 같은 사건은 하나로 묶었습니다. 각 글에는
-        출처와 원문 링크가 명시됩니다.
-      </p>
+      {/* [1022 · 정렬·글씨·테마] t-title 맨 h1 + 설명 두 문장 → 공용 PageHead + 사실 한 줄 */}
+      <PageHead
+        icon="newspaper"
+        title={`${tag.label} 뉴스`}
+        sub={`${tag.label} 관련 보도 · 같은 사건은 한 묶음 · 출처·원문 링크 명시`}
+        subOnPhone
+      />
 
       {/* 다른 주제 칩 */}
       <div className="rise-in-1 mt-3 flex flex-wrap gap-1.5">
@@ -101,25 +105,25 @@ export default async function NewsTagPage({
             <Link
               key={t.slug}
               href={`/town/news/tag/${t.slug}`}
-              className="chip border border-line bg-surface px-3 py-1.5 text-[12px] font-bold text-text-2"
+              className="chip border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-2"
             >
               {t.label}
             </Link>
           ))}
         <Link
           href="/town/news"
-          className="chip border border-line bg-surface px-3 py-1.5 text-[12px] font-bold text-primary"
+          className="chip border border-line bg-surface px-3 py-1.5 t-sub font-bold text-primary"
         >
           전체 뉴스 ›
         </Link>
       </div>
 
       {failed ? (
-        <div className="card mt-4 rounded-2xl px-5 py-6 text-[13px] text-text-2">
+        <div className="card mt-4 rounded-2xl px-5 py-6 t-body text-text-2">
           뉴스를 지금 불러오지 못했어요 — 잠시 후 다시 열어봐 주세요.
         </div>
       ) : clusters.length === 0 ? (
-        <div className="card mt-4 rounded-2xl px-5 py-6 text-[13px] leading-[1.7] text-text-2">
+        <div className="card mt-4 rounded-2xl px-5 py-6 t-body leading-[1.7] text-text-2">
           최근 수집분에 {tag.label} 보도가 없어요. 수집은 매일 이어지니 다시 들러 주세요.
         </div>
       ) : (

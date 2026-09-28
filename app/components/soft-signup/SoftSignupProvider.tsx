@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 /* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 
@@ -154,10 +155,10 @@ export function SoftSignupProvider({ children }: { children: ReactNode }) {
             className="absolute inset-0 h-full w-full cursor-default bg-[rgba(11,20,40,.5)]"
           />
           <div className="relative w-full max-w-[380px] rounded-4xl border border-line bg-surface p-5 [box-shadow:var(--shadow-md)]">
-            <div id="soft-signup-title" className="text-[15px] font-bold text-ink">
+            <div id="soft-signup-title" className="t-section font-bold text-ink">
               {intent.title}
             </div>
-            <p className="mt-2 text-[13px] leading-relaxed text-text-2">{intent.benefit}</p>
+            <p className="mt-2 t-body leading-relaxed text-text-2">{intent.benefit}</p>
             <a
               href={loginHref(callback)}
               onClick={() => {
@@ -171,7 +172,7 @@ export function SoftSignupProvider({ children }: { children: ReactNode }) {
                   /* 계측 실패가 흐름을 막지 않는다 */
                 }
               }}
-              className="btn-primary mt-4 block rounded-xl px-4 py-3 text-center text-[13px] font-bold no-underline"
+              className="btn-primary mt-4 block rounded-xl px-4 py-3 text-center t-body font-bold no-underline"
             >
               {ctaLabel}
             </a>
@@ -179,11 +180,11 @@ export function SoftSignupProvider({ children }: { children: ReactNode }) {
               ref={closeRef}
               type="button"
               onClick={dismiss}
-              className="mt-2 w-full rounded-xl px-4 py-2.5 text-center text-[13px] font-semibold text-text-3"
+              className="mt-2 w-full rounded-xl px-4 py-2.5 text-center t-body font-semibold text-text-3"
             >
               지금은 그냥 둘러볼게요
             </button>
-            <p className="mt-2 text-center text-[12px] text-text-3">
+            <p className="mt-2 text-center t-sub text-text-3">
               가입은 무료이고, 지금 보던 화면으로 돌아옵니다.
             </p>
           </div>

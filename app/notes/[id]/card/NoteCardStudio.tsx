@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { CardFrameView } from "./CardFrameView";
@@ -420,7 +421,7 @@ export function NoteCardStudio({
                   type="button"
                   onClick={() => setThemeId(t.id)}
                   aria-pressed={themeId === t.id}
-                  className={`press flex h-9 items-center gap-1.5 rounded-full border px-2.5 text-[12px] font-bold transition-all ${
+                  className={`press flex h-9 items-center gap-1.5 rounded-full border px-2.5 t-sub font-bold transition-all ${
                     themeId === t.id ? "border-primary ring-2 ring-primary/30" : "border-line"
                   }`}
                 >
@@ -452,7 +453,7 @@ export function NoteCardStudio({
                     type="button"
                     onClick={() => toggle(f.id)}
                     disabled={locked}
-                    className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-left text-[12px] font-bold transition-all ${
+                    className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-left t-sub font-bold transition-all ${
                       on
                         ? "border-primary bg-primary-soft text-primary"
                         : "border-line bg-surface text-text-2"
@@ -477,7 +478,7 @@ export function NoteCardStudio({
               {saving ? "저장 중…" : "카드 저장"}
             </button>
             {msg && (
-              <span className={`text-[12px] font-bold ${saved === "err" ? "text-danger" : "text-text-2"}`}>
+              <span className={`t-sub font-bold ${saved === "err" ? "text-danger" : "text-text-2"}`}>
                 {msg}
               </span>
             )}
@@ -490,7 +491,7 @@ export function NoteCardStudio({
       ) : (
         <div className="flex min-w-0 flex-1 flex-col justify-center">
           <p className="t-body text-text-2">
-            작성자가 만든 {frames.length}장짜리 임장 카드예요. 점을 눌러 넘겨 보세요.
+            작성자가 만든 임장 카드 {frames.length}장 · 아래 점으로 이동
           </p>
         </div>
       )}

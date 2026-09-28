@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 /**
  * 관심 지역 선택기 — 검색 + 인기 지역 칩.
@@ -218,7 +219,7 @@ export function RegionPicker({
           aria-expanded={open && list.length > 0}
           aria-controls={`${inputId}-listbox`}
           aria-autocomplete="list"
-          className="w-full rounded-lg border border-line bg-surface px-4 py-2.5 text-[13px] text-ink outline-none focus:border-primary"
+          className="w-full rounded-lg border border-line bg-surface px-4 py-2.5 t-body text-ink outline-none focus:border-primary"
         />
         {open && query.trim() !== "" && (
           <div
@@ -227,15 +228,15 @@ export function RegionPicker({
             className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-[260px] overflow-y-auto rounded-lg border border-line bg-surface shadow-lg"
           >
             {busy && list.length === 0 && (
-              <div className="px-4 py-3 text-xs text-text-3">찾는 중…</div>
+              <div className="px-4 py-3 t-sub text-text-3">찾는 중…</div>
             )}
             {!busy && failed && (
-              <div className="px-4 py-3 text-xs text-text-3">
+              <div className="px-4 py-3 t-sub text-text-3">
                 지역을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
               </div>
             )}
             {!busy && !failed && list.length === 0 && (
-              <div className="px-4 py-3 text-xs text-text-3">
+              <div className="px-4 py-3 t-sub text-text-3">
                 일치하는 시·군·구가 없어요. 구 이름(예: 마포구)으로 다시 찾으면 돼요.
               </div>
             )}
@@ -254,7 +255,7 @@ export function RegionPicker({
                     setOpen(false);
                   }}
                   disabled={!active && full}
-                  className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-[13px] disabled:opacity-40 ${
+                  className={`flex w-full items-center gap-2 px-4 py-2.5 text-left t-body disabled:opacity-40 ${
                     i === cursor ? "bg-primary-soft" : "bg-transparent"
                   }`}
                 >
@@ -262,7 +263,7 @@ export function RegionPicker({
                     {active ? "✓ " : ""}
                     {it.name}
                   </span>
-                  <span className="text-[12px] text-text-3">{it.sido}</span>
+                  <span className="t-sub text-text-3">{it.sido}</span>
                 </button>
               );
             })}
@@ -281,7 +282,7 @@ export function RegionPicker({
               onClick={() => toggle(name)}
               aria-pressed={active}
               disabled={!active && full}
-              className={`rounded-full px-[13px] py-[7px] text-xs transition disabled:opacity-40 ${
+              className={`rounded-full px-[13px] py-[7px] t-sub transition disabled:opacity-40 ${
                 active
                   ? "bg-primary-soft font-bold text-primary"
                   : "border border-line bg-surface text-text-2"

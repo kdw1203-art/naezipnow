@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -105,7 +106,7 @@ export default async function ReportDetailPage({
     <PageShell breadcrumb={`동네이야기 › 자료실 › ${r.title}`}>
       <div className="mx-auto w-full max-w-[680px]">
         <div className="mb-3">
-          <Link href="/town/library" className="text-[12px] font-bold text-text-3 no-underline">
+          <Link href="/town/library" className="t-sub font-bold text-text-3 no-underline">
             ← 자료실
           </Link>
         </div>
@@ -120,20 +121,20 @@ export default async function ReportDetailPage({
                 {r.region}
               </span>
             )}
-            <span className="ml-auto text-[12px] text-text-3">
+            <span className="ml-auto t-sub text-text-3">
               {r.authorLabel?.trim() || "내집나우 크리에이터"}
             </span>
           </div>
 
-          <h1 className="text-[19px] font-bold leading-[1.4] text-ink">{r.title}</h1>
+          <h1 className="t-title font-bold leading-[1.4] text-ink">{r.title}</h1>
           {r.subtitle && (
-            <p className="text-[13px] leading-[1.7] text-text-2">{r.subtitle}</p>
+            <p className="t-body leading-[1.7] text-text-2">{r.subtitle}</p>
           )}
 
           {r.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {r.tags.map((t) => (
-                <span key={t} className="rounded-full bg-bg px-2.5 py-1 text-[12px] text-text-2">
+                <span key={t} className="rounded-full bg-bg px-2.5 py-1 t-sub text-text-2">
                   #{t}
                 </span>
               ))}
@@ -142,9 +143,9 @@ export default async function ReportDetailPage({
 
           {r.tableOfContents.length > 0 && (
             <div className="flex flex-col gap-1.5 rounded-2xl bg-bg p-4">
-              <div className="text-[12px] font-bold text-ink">목차</div>
+              <div className="t-sub font-bold text-ink">목차</div>
               {r.tableOfContents.map((t, i) => (
-                <div key={i} className="text-[13px] text-text-1">
+                <div key={i} className="t-body text-text-1">
                   {i + 1}. {t}
                 </div>
               ))}
@@ -153,8 +154,8 @@ export default async function ReportDetailPage({
 
           {r.previewContent && (
             <div className="flex flex-col gap-1.5">
-              <div className="text-[12px] font-bold text-ink">미리보기</div>
-              <p className="whitespace-pre-wrap rounded-2xl bg-bg p-4 text-[13px] leading-[1.75] text-text-1">
+              <div className="t-sub font-bold text-ink">미리보기</div>
+              <p className="whitespace-pre-wrap rounded-2xl bg-bg p-4 t-body leading-[1.75] text-text-1">
                 {r.previewContent}
               </p>
             </div>
@@ -165,7 +166,7 @@ export default async function ReportDetailPage({
           <div className="border-t border-line pt-4">
             {canRead && noteHref ? (
               <div className="flex flex-col gap-2">
-                <Link href={noteHref} className="btn-primary rounded-xl p-3.5 text-center text-[13px] no-underline">
+                <Link href={noteHref} className="btn-primary rounded-xl p-3.5 text-center t-body no-underline">
                   {isOwner ? "내 노트 열람 (판매 중)" : "구매 완료 · 노트 전문 열람"}
                 </Link>
                 {!isOwner && (
@@ -179,7 +180,7 @@ export default async function ReportDetailPage({
                  예전엔 price>0 게이트에 걸려 "열람 준비 중"이 나갔다(있는 무료
                  자료를 못 여는 화면). 바로 열람으로 잇는다. */
               <div className="flex flex-col gap-2">
-                <Link href={noteHref} className="btn-primary rounded-xl p-3.5 text-center text-[13px] no-underline">
+                <Link href={noteHref} className="btn-primary rounded-xl p-3.5 text-center t-body no-underline">
                   무료 열람 · 노트 전문 보기
                 </Link>
                 <p className="text-center t-caption text-text-3">
@@ -189,14 +190,14 @@ export default async function ReportDetailPage({
             ) : !purchasedRead.ok ? (
               /* 구매 이력 확인 실패 — 결제 버튼을 그리면 이미 산 사람이 또 사게
                  될 수 있다. "모르겠다"는 상태 그대로 보여주고 재시도를 권한다. */
-              <p className="rounded-xl bg-danger-soft px-4 py-3 text-center text-[12px] leading-[1.7] text-ink">
+              <p className="rounded-xl bg-danger-soft px-4 py-3 text-center t-sub leading-[1.7] text-ink">
                 구매 이력을 지금 확인하지 못했어요. 이미 구매하셨다면 잠시 후
                 새로고침해 주세요. 확인 없이 결제 버튼을 보여드리지 않아요.
               </p>
             ) : noteHref && isPaid ? (
               <BuyReportButton reportId={r.id} price={r.price} title={r.title} />
             ) : (
-              <p className="rounded-xl bg-bg px-4 py-3 text-center text-[12px] text-text-3">
+              <p className="rounded-xl bg-bg px-4 py-3 text-center t-sub text-text-3">
                 이 리포트는 아직 열람 연결이 준비되지 않았어요.
               </p>
             )}

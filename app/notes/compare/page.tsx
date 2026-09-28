@@ -1,5 +1,7 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import Link from "next/link";
 import { PageShell } from "../../components/PageShell";
+import { PageHead } from "@/app/components/PageHead";
 import { AIPanel } from "../../components/AIPanel";
 import { CompareView } from "./CompareView";
 import { safeAuth } from "@/lib/safe-auth";
@@ -195,17 +197,15 @@ export default async function NotesComparePage({
           aptName={model.aptName}
         />
         <div className="flex flex-col gap-3.5 max-md:gap-3">
-          <div className="rise-in flex flex-col gap-3 px-1 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h1 className="t-title text-ink">
-                노트 다회차 비교
-              </h1>
-              <p className="mt-1.5 t-body text-text-2">
-                {model.region ? `${model.region} · ` : ""}
-                {model.aptName} · 방문 {model.colCount}회
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          {/* [1022 · 정렬·글씨·테마] 공용 PageHead(아이콘 칩 40 · h1 · 사실 한 줄 | 오른쪽 회차 칩) */}
+          <PageHead
+            icon="repeat"
+            title="노트 다회차 비교"
+            sub={`${model.region ? `${model.region} · ` : ""}${model.aptName} · 방문 ${model.colCount}회`}
+            subOnPhone
+            className="px-1"
+            actions={
+            <div className="flex flex-wrap items-center gap-1.5 t-sub">
               {model.headers.map((h) => (
                 <Link
                   key={h.noteId}
@@ -230,7 +230,8 @@ export default async function NotesComparePage({
                 단지 A/B 비교
               </Link>
             </div>
-          </div>
+            }
+          />
 
           <CompareView
             timeline={<Timeline steps={model.timeline} covers={covers} />}
@@ -292,10 +293,8 @@ export default async function NotesComparePage({
   return (
     <PageShell breadcrumb="임장노트 › 회차 비교">
       <div className="flex flex-col gap-3.5">
-        <div className="rise-in px-1">
-          <h1 className="t-title text-ink">노트 다회차 비교</h1>
-          <p className="mt-1.5 t-body text-text-2">같은 단지의 회차별 점수 축 비교</p>
-        </div>
+        {/* [1022 · 정렬·글씨·테마] 공용 PageHead */}
+        <PageHead icon="repeat" title="노트 다회차 비교" sub="같은 단지의 회차별 점수 축 비교" subOnPhone className="px-1" />
         <div className="card flex flex-col gap-3 rounded-3xl px-[22px] py-8 text-center">
           <div className="t-section text-ink">{emptyTitle}</div>
           <p className="mx-auto max-w-[420px] t-body text-text-2">

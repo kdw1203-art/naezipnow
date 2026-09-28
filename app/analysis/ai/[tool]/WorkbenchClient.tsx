@@ -1,4 +1,6 @@
 "use client";
+/* [1022 · 단지 분석 고도화] 지시 3 — 단지 분석 4종 분기에서 ResultView 에 내 조건 현재 값(tuning)을 넘긴다(시세 예측 손익분기 선 재료 —
+   입력 즉시 반영, 새 상태 없음). 나머지 로딩·재계산·저장 로직은 그대로. */
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 /* [1021 · 단지 분석 /analysis/ai] 단지 분석 4종(진단·예측·동선·타이밍)은 시안(mock8)대로 새 뼈대 —
    머리(아이콘 칩·제목·useCase 한 줄·기준 시점 칩) → `grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px]`
@@ -736,6 +738,7 @@ export function WorkbenchClient({
                   onPick({ id: s.id, name: s.name, region: picked?.region ?? "", regionId: null, regionLabel: picked?.regionLabel ?? picked?.region ?? null, priceLabel: null } as PickedComplex)
                 }
                 variant="complex"
+                tuning={tuning}
                 onHorizon={
                   tool === "ai-prediction" && fieldKeys.includes("horizonMonths")
                     ? (months: string) => {

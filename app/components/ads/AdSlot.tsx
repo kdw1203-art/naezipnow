@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 /* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 import Link from "next/link";
@@ -43,16 +44,16 @@ function BannerCard({ banner }: { banner: Banner }) {
       }}
     >
       <span className="t-caption font-bold opacity-80">광고</span>
-      <span className="text-[15px] font-bold leading-snug">{banner.title}</span>
+      <span className="t-section font-bold leading-snug">{banner.title}</span>
       {banner.subtitle ? (
-        <span className="text-[12px] leading-relaxed opacity-90">{banner.subtitle}</span>
+        <span className="t-sub leading-relaxed opacity-90">{banner.subtitle}</span>
       ) : null}
       {/* ctaLabel 과 ctaUrl 은 서로 독립인 nullable 컬럼이고, 어드민 폼은 빈 URL 을
           null 로 저장한다. 예전에는 라벨만 있으면 무조건 그렸기 때문에, URL 없는
           배너에서 굵은 밑줄 텍스트가 링크처럼 보이는데 감싸는 <a> 가 없어 눌러도
           아무 일도 없었다. 갈 곳이 있을 때만 CTA 를 그린다. */}
       {banner.ctaLabel && href ? (
-        <span className="mt-1.5 text-[12px] font-bold underline underline-offset-2">
+        <span className="mt-1.5 t-sub font-bold underline underline-offset-2">
           {banner.ctaLabel}
         </span>
       ) : null}

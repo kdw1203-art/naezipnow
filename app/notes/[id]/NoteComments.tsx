@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -187,7 +188,7 @@ function CommentRow({
           <span className="t-caption text-text-3">{label}</span>
         </div>
         <p
-          className={`whitespace-pre-wrap break-words text-[13px] leading-[1.55] ${
+          className={`whitespace-pre-wrap break-words t-body leading-[1.55] ${
             c.deleted ? "text-text-3" : "text-text-1"
           }`}
         >
@@ -321,7 +322,7 @@ function NoteCommentForm({
           rows={parentId ? 1 : 2}
           aria-label={parentId ? "답글 내용" : "댓글 내용"}
           placeholder={parentId ? "답글 남기기…" : "이 노트에 댓글 남기기…"}
-          className="min-w-0 flex-1 resize-none bg-transparent py-[6px] text-[13px] leading-[1.5] text-ink outline-none placeholder:text-text-3"
+          className="min-w-0 flex-1 resize-none bg-transparent py-[6px] t-body leading-[1.5] text-ink outline-none placeholder:text-text-3"
         />
         {/* [1009 · T] 실측 390px: "등록" 20×22px(주요 조작인데 24px 미만) → 40×40 히트. 글자는 아래·오른쪽 정렬로
             입력칸 마지막 줄 높이(6px 띄움)에 그대로 둔다. 답글·삭제(20×24)는 가로 24px 로. */}

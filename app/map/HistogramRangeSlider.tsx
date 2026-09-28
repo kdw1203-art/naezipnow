@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useCallback, useMemo, useRef, useState } from "react";
 
@@ -151,7 +152,7 @@ export function HistogramRangeSlider({
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between">
         <span className="t-sub font-bold text-text-3">{label}</span>
-        <span className={`text-[12px] font-bold ${narrowed ? "text-primary" : "text-text-3"}`}>
+        <span className={`t-sub font-bold ${narrowed ? "text-primary" : "text-text-3"}`}>
           {format(vMin)} ~ {format(vMax)}
           {value[1] === null && hi > vMin ? "+" : ""}
         </span>

@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 import Link from "next/link";
 import type {
   AnchorHTMLAttributes,
@@ -55,9 +56,9 @@ const BASE =
   "press tap-ripple inline-flex items-center justify-center gap-1.5 rounded-xl font-bold no-underline text-center transition-colors disabled:bg-[var(--disabled-bg)] disabled:text-[var(--disabled-text)] disabled:border-[var(--disabled-bg)] disabled:shadow-none disabled:pointer-events-none";
 
 const SIZES: Record<ButtonSize, string> = {
-  sm: "px-3 py-1.5 text-[12px]",
-  md: "px-4 py-2.5 text-[13px]",
-  lg: "px-5 py-3 text-[15px]",
+  sm: "px-3 py-1.5 t-sub",
+  md: "px-4 py-2.5 t-body",
+  lg: "px-5 py-3 t-section",
 };
 
 const VARIANTS: Record<ButtonVariant, string> = {

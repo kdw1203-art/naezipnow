@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import { PageShell } from "../components/PageShell";
 import { LoadingHint } from "@/app/components/ui/LoadingHint";
 import { Skeleton } from "@/components/Skeleton";
@@ -9,10 +10,14 @@ export default function NotesLoading() {
     <PageShell>
       <LoadingHint className="mb-3" />
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 px-1 md:flex-row md:items-end md:justify-between">
-          <div>
-            <Skeleton className="h-7 w-40 rounded-lg" />
-            <Skeleton className="mt-2 h-3.5 w-64 max-w-full rounded" />
+        {/* [1022 · 정렬·글씨·테마] 머리 스켈레톤 = PageHead 모양(아이콘 칩 40 + 제목 + 한 줄 | 오른쪽 칩) */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 w-10 rounded-xl" />
+            <div>
+              <Skeleton className="h-6 w-32 rounded-lg" />
+              <Skeleton className="mt-1.5 hidden h-3.5 w-64 max-w-full rounded md:block" />
+            </div>
           </div>
           <div className="flex gap-2">
             {Array.from({ length: 3 }).map((_, i) => (

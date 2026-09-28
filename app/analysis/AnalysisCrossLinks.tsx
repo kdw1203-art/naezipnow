@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import Link from "next/link";
 
 /* 분석 도구 간 이어가기(#411) — 각 도구 상세 하단에서 "지금 보던 컨텍스트
@@ -45,15 +46,16 @@ export function AnalysisCrossLinks({
 }) {
   const label = regionLabel?.trim() || null;
   return (
-    <div className={`card flex flex-col gap-2.5 rounded-3xl px-[18px] py-4 ${className ?? ""}`}>
-      <div className="text-xs font-bold text-text-3">
+    /* [1022 · 정렬·글씨·테마] 반경 눈금(rounded-2xl) · 패딩 눈금(p-4) · 글자 램프(t-sub) — 임의 px 제거 */
+    <div className={`card flex flex-col gap-2.5 rounded-2xl p-4 ${className ?? ""}`}>
+      <div className="t-sub font-bold text-text-3">
         이어서 분석{label ? ` — ${label} 그대로` : ""}
       </div>
       <div className="flex flex-wrap gap-1.5">
         {note && (
           <Link
             href={note.href}
-            className="chip press bg-primary px-3.5 py-1.5 text-[12px] font-bold text-white no-underline"
+            className="chip press bg-primary px-3.5 py-1.5 t-sub font-bold text-white no-underline"
           >
             {note.label} ›
           </Link>
@@ -68,7 +70,7 @@ export function AnalysisCrossLinks({
             <Link
               key={d.id}
               href={href}
-              className="chip press bg-bg px-3 py-1.5 text-[12px] font-bold text-text-2 no-underline transition-colors hover:text-primary"
+              className="chip press bg-bg px-3 py-1.5 t-sub font-bold text-text-2 no-underline transition-colors hover:text-primary"
             >
               {d.label} ›
             </Link>

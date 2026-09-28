@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -98,7 +99,7 @@ export function TabBar() {
                   #ced3da 까지 내려가 --primary 가 4.41:1 이었다(axe 실측). 같은 파랑
                   계열의 진한 값(--primary-strong)이면 5.67:1 이고, 다크에서는 이
                   토큰이 밝은 쪽(#86a9ff)으로 뒤집히므로 어두운 유리 위에서도 산다. */}
-              <span className="text-[12px] font-bold text-primary-strong">
+              <span className="t-sub font-bold text-primary-strong">
                 {tab.label}
               </span>
             </Link>
@@ -142,7 +143,7 @@ export function TabBar() {
                 <Icon name={tab.icon} size={20} />
               </span>
               <span
-                className={`text-[12px] leading-none ${
+                className={`t-sub leading-none ${
                   isActive(tab) ? "font-bold" : "font-semibold"
                 }`}
               >

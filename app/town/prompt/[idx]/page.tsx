@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -71,22 +72,22 @@ export default async function PromptThreadPage({
       <TownCategoryNav />
       <div className="mx-auto w-full max-w-[720px]">
         <section className="rise-in card mb-4 p-5 max-md:mb-3 max-md:p-3.5">
-          <div className="flex items-center gap-1.5 text-[12px] font-bold text-primary">
+          <div className="flex items-center gap-1.5 t-sub font-bold text-primary">
             <Icon name="notebook-pen" size={13} />
             동네 질문 {i + 1} / {TOWN_PROMPTS.length}
             {isToday && (
               <span className="rounded-md bg-primary-soft px-1.5 py-0.5 t-caption">오늘의 질문</span>
             )}
           </div>
-          <h1 className="mt-1.5 text-[19px] font-bold leading-[1.45] text-ink">{question}</h1>
+          <h1 className="mt-1.5 t-title font-bold leading-[1.45] text-ink">{question}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Link
               href={`/town/write?topic=${encodeURIComponent(question)}&pi=${i}`}
-              className="btn-cta rounded-full px-4 py-2 text-[13px] font-bold no-underline tap-ripple"
+              className="btn-cta rounded-full px-4 py-2 t-body font-bold no-underline tap-ripple"
             >
               내 동네 이야기로 답하기 +50P
             </Link>
-            <span className="text-[12px] text-text-3">
+            <span className="t-sub text-text-3">
               답변 {posts.length}
               {posts.length >= 50 ? "+" : ""}개
             </span>
@@ -112,14 +113,14 @@ export default async function PromptThreadPage({
                 href={postHref(p)}
                 className={`rise-in-${Math.min(pi + 1, 6)} card block rounded-2xl p-4 no-underline tap-ripple`}
               >
-                <div className="flex items-center gap-2 text-[12px] text-text-3">
+                <div className="flex items-center gap-2 t-sub text-text-3">
                   <span className="font-bold text-text-2">{p.authorLabel}</span>
                   <span>{[p.city, p.district].filter(Boolean).join(" ") || "전국"}</span>
                   <span>· {relativeDay(p.createdAt)}</span>
                   {p.commentCount > 0 && <span>· 댓글 {p.commentCount}</span>}
                 </div>
-                <h2 className="mt-1 text-[15px] font-bold leading-[1.5] text-ink">{p.title}</h2>
-                <p className="mt-1 line-clamp-2 text-[13px] leading-[1.65] text-text-2">{p.body}</p>
+                <h2 className="mt-1 t-section font-bold leading-[1.5] text-ink">{p.title}</h2>
+                <p className="mt-1 line-clamp-2 t-body leading-[1.65] text-text-2">{p.body}</p>
               </Link>
             ))}
           </div>
@@ -127,14 +128,14 @@ export default async function PromptThreadPage({
 
         {/* 다른 질문 둘러보기 */}
         <div className="mt-6">
-          <h2 className="mb-2 text-[13px] font-bold text-ink">다른 동네 질문</h2>
+          <h2 className="mb-2 t-body font-bold text-ink">다른 동네 질문</h2>
           <div className="flex flex-wrap gap-1.5">
             {TOWN_PROMPTS.map((q, qi) =>
               qi === i ? null : (
                 <Link
                   key={qi}
                   href={`/town/prompt/${qi}`}
-                  className="chip border border-line bg-surface px-3 py-1.5 text-[12px] font-semibold text-text-2 no-underline"
+                  className="chip border border-line bg-surface px-3 py-1.5 t-sub font-semibold text-text-2 no-underline"
                 >
                   {q.length > 24 ? `${q.slice(0, 24)}…` : q}
                 </Link>

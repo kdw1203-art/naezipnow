@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useState } from "react";
 import { CoverImage } from "@/app/components/CoverImage";
@@ -25,7 +26,7 @@ export function NewsHero({ src, sourceName }: { src: string; sourceName?: string
         onFailed={() => setFailed(true)}
       />
       {sourceName && (
-        <span className="absolute bottom-0 left-0 rounded-tr-lg bg-[var(--glass-bg)] px-3 py-[5px] text-[12px] text-text-3">
+        <span className="absolute bottom-0 left-0 rounded-tr-lg bg-[var(--glass-bg)] px-3 py-[5px] t-sub text-text-3">
           사진: {sourceName}
         </span>
       )}

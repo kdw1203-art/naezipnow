@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { seedGradient as seedFace } from "@/lib/town/shared";
@@ -7,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { matchesInterest } from "@/lib/notes/region-match";
 import { PageShell } from "../components/PageShell";
+import { PageHead } from "../components/PageHead";
 import { ExampleBadge } from "../components/ExampleBadge";
 import { EmptyState } from "@/app/components/ui/EmptyState";
 import { Segmented } from "@/app/components/ui/Segmented";
@@ -208,7 +210,7 @@ function GridTile({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
       />
       {/* 점수 배지 (인스타 조회수/캐러셀 인디케이터 위치) */}
       {/* [962] 검정 반투명 → 네이비(어두운 면 = 네이비) + 한지 글자 */}
-      <span className="absolute right-1.5 top-1.5 rounded-md bg-brand-navy/80 chip-pad-tight t-caption font-bold text-on-dark backdrop-blur-sm md:right-2.5 md:top-2.5 md:t-sub">
+      <span className="absolute right-1.5 top-1.5 rounded-md bg-brand-navy/80 chip-pad-tight t-caption font-bold text-on-dark backdrop-blur-sm md:right-2.5 md:top-2.5">
         {n.score > 0 ? `기록 ${n.score}점` : "점수 없음"}
       </span>
       {n.isExample && (
@@ -226,11 +228,11 @@ function GridTile({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
           겹쳐 적지 않는다(같은 제목이 두 번 보였다). 사진 커버·폴백 면에만 그린다. */}
       {!n.coverTemplate && (
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/78 via-black/25 to-transparent px-2 pb-2 pt-7 md:px-3 md:pb-3">
-          <p className="line-clamp-2 t-sub font-bold text-white drop-shadow-sm md:t-body">
+          <p className="line-clamp-2 t-sub font-bold text-white drop-shadow-sm">
             {n.title}
           </p>
           {n.region && (
-            <p className="mt-0.5 truncate t-caption text-white/85 md:mt-1 md:t-sub">
+            <p className="mt-0.5 truncate t-caption text-white/85 md:mt-1">
               {n.region}
             </p>
           )}
@@ -366,7 +368,7 @@ function PostCard({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
           </div>
         </div>
         <span
-          className={`shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold ${
+          className={`shrink-0 rounded-full px-2.5 py-1 t-sub font-bold ${
             n.scoreTone === "primary"
               ? "bg-brand-hanji text-brand-hanji-ink" /* [962] 점수 = 한지 + 남색(홈 시안) */
               : "bg-[rgba(127,140,158,.12)] text-text-3"
@@ -851,44 +853,46 @@ export function NotesFeedClient({
       />
       {/* [1015 · 규칙 E] 폰 섹션 간격 gap-4 → gap-3 */}
       <div className="flex w-full flex-col gap-3 md:gap-4 lg:mx-auto lg:max-w-[640px]">
-        {/* 헤더 */}
-        <div className="px-1">
-          {/* [967 · 20] 공개/내 노트 세그먼트 — 로그인했을 때만. 예전엔 내 노트로 가는
-              길이 /my 의 링크 하나뿐이라 목록 화면 안에서는 전환이 없었다. */}
-          {loggedIn && (
-            <Segmented<NotesTab>
-              options={TAB_OPTIONS}
-              value={mine ? "mine" : "public"}
-              onChange={switchTab}
-              ariaLabel="노트 범위"
-              className="mb-3 w-fit"
-            />
-          )}
-          {/* [1015 · 규칙 C] 제목 아래 부연 문장("이웃들의 실제 임장 기록 — 실회원 기록만 노출돼요" ·
-              "내가 남긴 임장 기록 — 비공개 노트도 여기서만 보여요")은 지웠다. 링크 둘은 그대로, 이름만 짧게. */}
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <h1 className="t-title text-ink md:t-title">
-              {mine ? "내 임장노트" : "공개 임장노트"}
-            </h1>
-            {/* [1016] lg+ 는 왼쪽 레일에 같은 링크가 있다 */}
-            {!mine && (
-              <p className="flex flex-wrap gap-x-3 gap-y-1 t-sub lg:hidden">
-                {/* [970 · B-25] 뽑힌 달이 하나라도 있을 때만 — 빈 화면으로 보내지 않는다 */}
-                {hasBestMonth && (
-                  <Link href="/notes/best" className="tap-line font-bold text-primary underline">
-                    이달의 임장노트 ›
+        {/* 헤더 — [1022 · 정렬·글씨·테마] 공용 PageHead(아이콘 칩 40 · h1.t-title · 사실 한 줄 | 오른쪽 세그먼트·링크).
+            [967 · 20] 공개/내 노트 세그먼트는 로그인했을 때만. [1015 · 규칙 C] 부연 문장은 없고 사실 한 줄만. */}
+        <PageHead
+          icon="notebook-pen"
+          title={mine ? "내 임장노트" : "공개 임장노트"}
+          sub={
+            mine
+              ? "내가 남긴 임장노트 · 비공개 포함"
+              : "직접 다녀온 사람의 공개 기록 · 단지별 항목 점수 · 현장 메모"
+          }
+          className="px-1"
+          actions={
+            <>
+              {loggedIn && (
+                <Segmented<NotesTab>
+                  options={TAB_OPTIONS}
+                  value={mine ? "mine" : "public"}
+                  onChange={switchTab}
+                  ariaLabel="노트 범위"
+                />
+              )}
+              {/* [1016] lg+ 는 왼쪽 레일에 같은 링크가 있다 */}
+              {!mine && (
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1 t-sub lg:hidden">
+                  {/* [970 · B-25] 뽑힌 달이 하나라도 있을 때만 — 빈 화면으로 보내지 않는다 */}
+                  {hasBestMonth && (
+                    <Link href="/notes/best" className="tap-line font-bold text-primary underline">
+                      이달의 임장노트 ›
+                    </Link>
+                  )}
+                  {/* 임장 가이드(전략 §4-2) — 기록 허브에서 준비 허브로 잇는다 */}
+                  <Link href="/imjang" className="tap-line font-bold text-primary underline">
+                    임장 가이드 ›
                   </Link>
-                )}
-                {/* 임장 가이드(전략 §4-2) — 기록 허브에서 준비 허브로 잇는다 */}
-                <Link href="/imjang" className="tap-line font-bold text-primary underline">
-                  임장 가이드 ›
-                </Link>
-                {/* [970 · B-25] 리포트 진열대(/notes/market) 링크는 뺐다 — 판매 오픈 전 잠금
-                    화면이라 헤더에서 보낼 곳이 아니다(페이지 자체는 그대로). */}
-              </p>
-            )}
-          </div>
-        </div>
+                  {/* [970 · B-25] 리포트 진열대(/notes/market) 링크는 뺐다 — 판매 오픈 전 잠금 화면 */}
+                </span>
+              )}
+            </>
+          }
+        />
 
         {/* 조회 실패 — 이 경우 "노트가 없다" 고 읽히면 안 되므로 빈 상태와 분리한다 */}
         {activeLoadError && (

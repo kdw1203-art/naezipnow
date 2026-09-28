@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useEffect, useId, useRef, useState } from "react";
 import { planBadgeLabel } from "@/lib/subscriptions/labels";
@@ -165,14 +166,14 @@ export function HeaderAuth() {
           /* [989] 실측(390×844) 33×20 — 헤더의 주요 조작인데 손가락 기준에 한참 못 미쳤다.
              글자 크기는 그대로 두고 좌우·상하 여백으로 44px 를 만든다(-mx 로 시각적
              정렬은 유지). 옆 아이콘과 gap-3(12px) 이라 히트 영역이 겹치지 않는다. */
-          className="-mx-2 whitespace-nowrap px-2 py-3 text-[13px] font-bold text-text-1 transition-colors hover:text-primary"
+          className="-mx-2 whitespace-nowrap px-2 py-3 t-body font-bold text-text-1 transition-colors hover:text-primary"
         >
           로그인
         </Link>
         <Link
           href="/signup"
           prefetch={false}
-          className="hidden whitespace-nowrap py-3 text-[13px] font-bold text-text-2 transition-colors hover:text-primary md:inline"
+          className="hidden whitespace-nowrap py-3 t-body font-bold text-text-2 transition-colors hover:text-primary md:inline"
         >
           회원가입
         </Link>
@@ -211,7 +212,7 @@ export function HeaderAuth() {
             위에서 --primary 가 4.41:1 로 AA 를 아슬하게 못 넘겼다(axe 실측). 이
             동그라미는 모든 화면 헤더에 있다. primary-soft 는 대비 게이트가 이미
             --primary 와 짝으로 보증하는 면이다(5.94:1). */}
-        <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-primary-soft text-[13px] font-bold text-primary">
+        <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-primary-soft t-body font-bold text-primary">
           {initial}
         </span>
       </button>
@@ -223,7 +224,7 @@ export function HeaderAuth() {
         <Link
           href={user.role === "admin" ? "/admin" : "/subscription"}
           prefetch={false}
-          className="hidden rounded-sm bg-primary-soft chip-pad text-[12px] font-medium text-primary no-underline md:inline-block"
+          className="hidden rounded-sm bg-primary-soft chip-pad t-sub font-medium text-primary no-underline md:inline-block"
         >
           {planBadge}
         </Link>
@@ -232,7 +233,7 @@ export function HeaderAuth() {
           href="/subscription"
           prefetch={false}
           title="요금제 비교"
-          className="hidden rounded-sm border border-line chip-pad text-[12px] font-medium text-text-3 no-underline transition-colors hover:border-primary hover:text-primary md:inline-block"
+          className="hidden rounded-sm border border-line chip-pad t-sub font-medium text-text-3 no-underline transition-colors hover:border-primary hover:text-primary md:inline-block"
         >
           무료
         </Link>
@@ -249,7 +250,7 @@ export function HeaderAuth() {
             role="menu"
             aria-label="내 계정"
           >
-            <div className="truncate px-3 pb-1 pt-2 text-[12px] text-text-3">
+            <div className="truncate px-3 pb-1 pt-2 t-sub text-text-3">
               {user.name?.trim() || user.email}
             </div>
             {/* 관리자 콘솔 진입점 — 이 링크가 없어 관리자가 /admin 존재를
@@ -260,7 +261,7 @@ export function HeaderAuth() {
                 prefetch={false}
                 role="menuitem"
                 onClick={() => setOpen(false)}
-                className="block rounded-lg px-3 py-2 text-[13px] font-bold text-primary transition-colors hover:bg-[rgba(29,79,216,.08)]"
+                className="block rounded-lg px-3 py-2 t-body font-bold text-primary transition-colors hover:bg-[rgba(29,79,216,.08)]"
               >
                 관리자 콘솔
               </Link>
@@ -272,7 +273,7 @@ export function HeaderAuth() {
                 prefetch={false}
                 role="menuitem"
                 onClick={() => setOpen(false)}
-                className="block rounded-lg px-3 py-2 text-[13px] font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.08)] hover:text-primary"
+                className="block rounded-lg px-3 py-2 t-body font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.08)] hover:text-primary"
               >
                 {m.label}
               </Link>
@@ -283,7 +284,7 @@ export function HeaderAuth() {
             <a
               href="/logout"
               role="menuitem"
-              className="block rounded-lg px-3 py-2 text-[13px] font-semibold text-danger transition-colors hover:bg-danger-soft"
+              className="block rounded-lg px-3 py-2 t-body font-semibold text-danger transition-colors hover:bg-danger-soft"
             >
               로그아웃
             </a>

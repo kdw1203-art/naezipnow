@@ -123,8 +123,8 @@ test("[1021] 대표 그림 — 기존 부품(ScoreRadar·Sparkline·시나리오
   assert.match(fan, /base: "stroke-primary"/);
   /* 시나리오 "지금 대비"는 scenario 두 값의 비율(pctChange)만 — 새 계산 없음 */
   assert.match(sig, /pctChange\(last\.base, scenario\.startKrw\)/);
-  /* 신호등 흐름선은 시계열이 있을 때만(result-series) */
-  assert.match(sig, /vals && vals\.length >= 2 &&/);
+  /* 신호등 흐름선은 시계열이 있을 때만(result-series) — [1022] signalFlow(달·마지막 값 라벨 포함)로 바뀜, 2개 미만 규칙 그대로 */
+  assert.match(sig, /flow && flow\.values\.length >= 2 &&/);
   /* 임장 동선 — 좌표가 없어 지도 카드는 없다(순서 목록만) */
   assert.doesNotMatch(sig, /MapFrame|<svg[^>]*map/i);
 });

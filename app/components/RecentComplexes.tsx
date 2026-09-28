@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -276,12 +277,12 @@ export function RecentComplexChips({
 
   return (
     <div className={`rise-in flex flex-col gap-1.5 ${className ?? ""}`}>
-      <div className="px-1 text-xs font-bold text-text-3">최근 본 단지</div>
+      <div className="px-1 t-sub font-bold text-text-3">최근 본 단지</div>
       <div className="flex flex-wrap gap-[5px]">
         {items.map((r) => (
           <span
             key={r.id}
-            className="chip flex items-center gap-1.5 border border-line bg-bg px-3 py-1.5 text-[12px] text-text-2"
+            className="chip flex items-center gap-1.5 border border-line bg-bg px-3 py-1.5 t-sub text-text-2"
           >
             <Link
               href={complexHrefFromId(r.id)}

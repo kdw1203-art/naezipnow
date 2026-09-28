@@ -1,16 +1,22 @@
 "use client";
 
-/* [1021 · 지역 시세 temperature] 온도 허브 본문 — 시안(mock8/temp)대로.
+/* [1022 · 온도 지도] 지시 1 — 타일 지도를 우리나라 지도 모양으로.
+   1단계 전국: 시/도 17개를 한반도 모양 격자(6열)에 놓은 타일(버튼 ≥40px · 이름·평균 온도·기록 지역 수). 기록 없는 시/도는 회색 "기록 없음"(누를 수 없음).
+   2단계 시/도 안: 그 시/도의 시군구를 lat/lng 로 격자에 놓는다(데스크톱 8열 · 폰 5열, 같은 DOM 에 두 좌표를 CSS 변수로).
+   타일은 기존 온도 타일(색·값·링크·범례 그대로). 위에 "전국 › 서울" + "전국으로", 오른쪽 시/도 칩 줄. URL 은 ?sido= 를 replaceState 로만 남긴다.
+   권역 select 는 시/도 선택과 겹쳐 없앴다. "목록 보기" 토글·주 선택은 그대로.
+   [1021 · 지역 시세 temperature] 온도 허브 본문 — 시안(mock8/temp)대로.
    머리(아이콘 칩·제목·사실 한 줄 | 주 선택 칩·권역) → 타일 5칸(내 관심 지역은 구독 지역이 있을 때만) →
    온도 타일 지도(69곳 색 타일 = 그 지역 기록 링크 · 범례 · 목록 보기 토글) → 12주 온도 선(주간 기록이 있을 때만) |
    레일: 온도 높은 순 8곳 + 전체 · 이어서 칩. 폰은 한 열(레일은 본문 아래).
    숫자는 서버가 이미 낸 값만(주마다 weekStats — 예전 히어로 KPI 와 같은 식). 주 전환·권역·타일/목록은 클라이언트 상태. */
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { Icon } from "@/app/components/Icon";
 import { Explain } from "@/app/components/explain/Explain";
 import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
 import type { TemperatureLatest } from "@/lib/market/temperature-archive";
+import { KOREA_TILE_COLS, cellMap, layoutByLatLng } from "@/lib/market/korea-tile-layout";
 import { formatWeekKorean, formatWeekLabel } from "@/lib/market/week-label";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { fetchUserRegions, readUserRegionsLocal, type UserRegion } from "@/lib/me/user-regions";
@@ -21,8 +27,11 @@ import {
   TEMP_BANDS,
   WEEK_CHIPS,
   filterBySido,
+  layoutInputs,
   matchWatchRegion,
+  nameInSido,
   sidoOptions,
+  sidoTiles,
   tempBand,
   weekStats,
   type WeekKey,
@@ -43,6 +52,36 @@ export type HistoryView = {
 
 const PATH = "/analysis/temperature";
 const RAIL_COUNT = 8;
+/* [1022] 2단계(시/도 안) 격자 열 수 — 데스크톱 8열 · 폰 5열(가로 스크롤 없음). 전국은 KOREA_TILE_COLS(6열, 폰도 같다) */
+const SIDO_COLS = 8;
+const SIDO_COLS_PHONE = 5;
+const SIDO_PARAM = "sido";
+
+/** [1022] ?sido= 를 주소에만 남긴다(replaceState — 서버 재렌더·라우터 이동 없음). 실패해도 화면은 상태로 돈다. */
+function writeSidoParam(sido: string | null) {
+  try {
+    const url = new URL(window.location.href);
+    if (sido) url.searchParams.set(SIDO_PARAM, sido);
+    else url.searchParams.delete(SIDO_PARAM);
+    window.history.replaceState(window.history.state, "", url);
+  } catch {
+    /* 주소를 못 바꿔도 상태는 이미 바뀌었다 */
+  }
+}
+
+function readSidoParam(): string | null {
+  try {
+    return new URLSearchParams(window.location.search).get(SIDO_PARAM);
+  } catch {
+    return null;
+  }
+}
+
+/** 격자 칸 좌표를 CSS 변수로 — 데스크톱(--c/--r)·폰(--cm/--rm). 값은 1부터(grid-column/row) */
+function cellStyle(desk: { col: number; row: number }, phone?: { col: number; row: number }): CSSProperties {
+  const p = phone ?? desk;
+  return { "--c": desk.col + 1, "--r": desk.row + 1, "--cm": p.col + 1, "--rm": p.row + 1 } as CSSProperties;
+}
 
 /* [1015 · 규칙 B] "이 기록을 읽는 법" 네 문장 — 예전 화면의 ⓘ 그대로 */
 const READ_HOW = [
@@ -110,6 +149,35 @@ export function TempMapClient({
   const mine = useMemo(() => matchWatchRegion(watch, week?.rows ?? []), [watch, week]);
   const weekKorean = week ? formatWeekKorean(week.weekStart) : null;
   const chipLabel = WEEK_CHIPS.find((c) => c.key === weekKey)?.label ?? "이번 주";
+
+  /* [1022] 1단계 전국 타일(시/도 평균·지역 수) · 2단계 시/도 안 lat/lng 배치(데스크톱·폰 두 열 수) */
+  const nation = useMemo(() => sidoTiles(week?.rows ?? []), [week]);
+  const sidoLayout = useMemo(() => {
+    if (!sido || rows.length === 0) return null;
+    const inputs = layoutInputs(rows);
+    const desk = layoutByLatLng(inputs, SIDO_COLS);
+    const phone = layoutByLatLng(inputs, SIDO_COLS_PHONE);
+    const deskCells = cellMap(desk);
+    const phoneCells = cellMap(phone);
+    /* DOM 순서 = 데스크톱 격자 읽는 순서(위→아래, 왼→오른) — 키보드 이동이 지도 순서와 맞게 */
+    const ordered = [...rows].sort((a, b) => {
+      const ca = deskCells.get(a.current.regionId);
+      const cb = deskCells.get(b.current.regionId);
+      return (ca?.row ?? 0) - (cb?.row ?? 0) || (ca?.col ?? 0) - (cb?.col ?? 0);
+    });
+    return { desk, phone, deskCells, phoneCells, ordered };
+  }, [sido, rows]);
+
+  const selectSido = useCallback((next: string | null) => {
+    setSido(next);
+    writeSidoParam(next);
+  }, []);
+
+  /* 첫 진입 — 주소의 ?sido= 가 기록 있는 시/도면 그 단계로(서버는 쿼리를 읽지 않는다) */
+  useEffect(() => {
+    const s = readSidoParam();
+    if (s && sidos.includes(s)) setSido(s);
+  }, [sidos]);
 
   const railList = (
     <div className="card rounded-2xl p-3.5">
@@ -185,21 +253,6 @@ export function TempMapClient({
               {c.label}
             </button>
           ))}
-          {sidos.length > 1 && (
-            <select
-              value={sido ?? ""}
-              onChange={(e) => setSido(e.target.value || null)}
-              aria-label="권역"
-              className="min-h-10 rounded-lg border border-line bg-surface px-2.5 py-1 t-sub font-bold text-ink"
-            >
-              <option value="">전체 권역</option>
-              {sidos.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          )}
         </div>
       </header>
 
@@ -296,26 +349,101 @@ export function TempMapClient({
               </div>
             </div>
 
+            {/* [1022] 2단계 머리 — 브레드크럼 "전국 › 서울" + "전국으로" | 시/도 칩 줄(다른 시/도로 바로) */}
+            {sido && (
+              <nav className="mt-3 flex flex-wrap items-center justify-between gap-2" aria-label="지도 단계">
+                <div className="flex items-center gap-2">
+                  <span className="t-sub font-bold text-ink" aria-current="location">
+                    전국 › {sido}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => selectSido(null)}
+                    className="chip press min-h-10 border border-line bg-surface px-3 py-1.5 t-sub text-text-2"
+                  >
+                    전국으로
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="시/도">
+                  {sidos.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => selectSido(s)}
+                      aria-pressed={s === sido}
+                      className={`chip press min-h-10 border px-3 py-1.5 t-sub ${
+                        s === sido ? "chip-active" : "border-line bg-surface text-text-2"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </nav>
+            )}
+
             {rows.length === 0 ? (
               <p className="t-sub py-6 text-center text-text-3">{sido} 기록 없음</p>
-            ) : view === "tile" ? (
-              <ul className="mt-3 grid grid-cols-4 gap-1.5 md:grid-cols-6 lg:grid-cols-9" aria-label={`${weekKorean} 주 온도 타일`}>
-                {rows.map((r) => (
-                  <li key={r.current.regionId} className="min-w-0">
-                    <Link
-                      href={`${PATH}/${encodeURIComponent(r.current.regionId)}`}
-                      className="tmp-tile press no-underline"
-                      data-band={tempBand(r.current.score)}
-                      title={`${r.current.regionLabel} ${r.current.score} · ${r.current.headline}`}
-                    >
-                      <span className="tmp-tile-v t-num">{r.current.score}</span>
-                      <span className="tmp-tile-k">{r.current.regionLabel}</span>
-                      <span className="tmp-tile-d">
-                        <ScoreDelta row={r} />
+            ) : view === "tile" && !sido ? (
+              /* [1022] 1단계 — 전국 시/도 타일(한반도 모양 6열 격자). 타일 = 버튼 → 2단계 */
+              <ul
+                className="tm-grid tm-nation mt-3"
+                style={{ "--tm-cols": KOREA_TILE_COLS, "--tm-cols-m": KOREA_TILE_COLS } as CSSProperties}
+                aria-label={`${weekKorean} 주 전국 시/도 온도 타일`}
+              >
+                {nation.map((t) =>
+                  t.count > 0 && t.avg !== null ? (
+                    <li key={t.key} className="tm-cell min-w-0" style={cellStyle(t)}>
+                      <button
+                        type="button"
+                        onClick={() => selectSido(t.key)}
+                        className="tmp-tile tm-sido press"
+                        data-band={t.band ?? undefined}
+                        title={`${t.label} 평균 ${t.avg} · ${t.count}곳`}
+                      >
+                        <span className="tmp-tile-k">{t.label}</span>
+                        <span className="tmp-tile-v t-num">{t.avg}</span>
+                        <span className="tmp-tile-d">{t.count}곳</span>
+                      </button>
+                    </li>
+                  ) : (
+                    <li key={t.key} className="tm-cell min-w-0" style={cellStyle(t)}>
+                      <span className="tmp-tile tm-sido" data-empty="" aria-disabled="true">
+                        <span className="tmp-tile-k">{t.label}</span>
+                        <span className="tmp-tile-d">기록 없음</span>
                       </span>
-                    </Link>
-                  </li>
-                ))}
+                    </li>
+                  ),
+                )}
+              </ul>
+            ) : view === "tile" && sidoLayout ? (
+              /* [1022] 2단계 — 시/도 안 시군구를 lat/lng 로 배치(경도→열 · 위도→행). 타일은 기존 온도 타일 그대로 */
+              <ul
+                className="tm-grid mt-3"
+                style={{ "--tm-cols": sidoLayout.desk.cols, "--tm-cols-m": sidoLayout.phone.cols } as CSSProperties}
+                aria-label={`${weekKorean} 주 ${sido} 온도 타일`}
+              >
+                {sidoLayout.ordered.map((r) => {
+                  const id = r.current.regionId;
+                  const d = sidoLayout.deskCells.get(id);
+                  const p = sidoLayout.phoneCells.get(id);
+                  return (
+                    <li key={id} className="tm-cell min-w-0" style={d ? cellStyle(d, p) : undefined}>
+                      <Link
+                        href={`${PATH}/${encodeURIComponent(id)}`}
+                        className="tmp-tile press no-underline"
+                        data-band={tempBand(r.current.score)}
+                        title={`${r.current.regionLabel} ${r.current.score} · ${r.current.headline}`}
+                      >
+                        <span className="tmp-tile-v t-num">{r.current.score}</span>
+                        <span className="tmp-tile-k">{nameInSido(r.current.regionLabel, sido ?? "")}</span>
+                        <span className="tmp-tile-d">
+                          <ScoreDelta row={r} />
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -329,7 +457,10 @@ export function TempMapClient({
                 ))}
               </div>
             )}
-            <p className="mt-2 t-sub text-text-3">그 주에 마지막으로 관측한 값(주간 평균 아님) · 타일을 누르면 그 지역 기록</p>
+            <p className="mt-2 t-sub text-text-3">
+              그 주에 마지막으로 관측한 값(주간 평균 아님) ·{" "}
+              {sido || view === "list" ? "타일을 누르면 그 지역 기록" : "시/도 온도 = 기록 지역 평균 · 시/도를 누르면 그 안의 시군구"}
+            </p>
           </section>
 
           {/* 12주 온도 — 주간 기록이 있을 때만(1위 지역) */}

@@ -30,11 +30,21 @@ export interface CardRegionTarget {
   city: string;
 }
 
+/* [1022] 4 → 12 곳. 소유자: "홈에서 지역 동향이 위에서 아래로 카드가 넘어가듯(주식처럼) 다른 지역들도 보여지게" —
+   홈이 4장씩 3쪽으로 돌린다. 스냅샷·월 집계·주간 지수 조회는 전부 이 배열 길이에 비례해 넓어진다(home-data). */
 export const CARD_REGIONS: readonly CardRegionTarget[] = [
   { id: "gangnam", name: "강남구", city: "서울" },
   { id: "mapo", name: "마포구", city: "서울" },
   { id: "songpa", name: "송파구", city: "서울" },
   { id: "namyangju", name: "남양주", city: "경기" },
+  { id: "seocho", name: "서초구", city: "서울" },
+  { id: "yongsan", name: "용산구", city: "서울" },
+  { id: "seongdong", name: "성동구", city: "서울" },
+  { id: "seongnam-bundang", name: "성남 분당구", city: "경기" },
+  { id: "nowon", name: "노원구", city: "서울" },
+  { id: "gangseo", name: "강서구", city: "서울" },
+  { id: "suwon-yeongtong", name: "수원 영통구", city: "경기" },
+  { id: "incheon-yeonsu", name: "연수구", city: "인천" },
 ];
 
 /**
@@ -48,6 +58,14 @@ export const CARD_REGION_MONTHLY_NAMES: Record<string, string> = {
   mapo: "서울 마포구",
   songpa: "서울 송파구",
   namyangju: "남양주시",
+  seocho: "서울 서초구",
+  yongsan: "서울 용산구",
+  seongdong: "서울 성동구",
+  "seongnam-bundang": "성남 분당구",
+  nowon: "서울 노원구",
+  gangseo: "서울 강서구",
+  "suwon-yeongtong": "수원 영통구",
+  "incheon-yeonsu": "인천 연수구",
 };
 
 /** 원 단위 평균 매매가 → "32.5억" 형식

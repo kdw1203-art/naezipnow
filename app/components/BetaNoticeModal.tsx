@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 /**
  * 클로즈 베타 안내 (홈 전용) — [968 · 39] 모달 → 본문 상단 한 줄 배너.
@@ -100,7 +101,7 @@ export function BetaNoticeModal() {
       role="status"
       aria-label="클로즈 베타 안내"
       data-noprint
-      className="mb-2.5 flex items-center gap-2 rounded-xl border border-line bg-primary-soft px-3 py-2 text-[12px] leading-[1.45] text-text-1"
+      className="mb-2.5 flex items-center gap-2 rounded-xl border border-line bg-primary-soft px-3 py-2 t-sub leading-[1.45] text-text-1"
     >
       <p className="m-0 min-w-0 flex-1">
         <b className="text-primary">클로즈 베타예요.</b> 정식 출시(올해 하반기)까지 화면이 바뀔 수

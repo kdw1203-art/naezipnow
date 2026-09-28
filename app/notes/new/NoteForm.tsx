@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 0곳) · 손으로 적은 카드 그림자 1곳 제거(카드는 1px 선만). */
 /* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-bold/black 10곳을 font-bold(700)로 바꿨다. */
 
@@ -2176,7 +2177,7 @@ export function NoteForm({
         disabled={uploading || photos.length >= MAX_PHOTOS}
         className="flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border-[1.5px] border-dashed border-line-strong bg-surface px-4 py-2.5 t-body font-bold text-text-2 disabled:opacity-60"
       >
-        <Icon name="📷" size={16} className="inline shrink-0 align-middle" />
+        <Icon name="camera" size={16} className="inline shrink-0 align-middle" />
         <span className="truncate">
           {/* [970 · B-23] 퀵모드는 촬영 버튼이 앞에 와 폭이 좁다 — 짧은 라벨 */}
           {/* [1015 · 규칙 D] 권유문("현장이면 지금 찍어 두세요")은 뺐다 */}
@@ -2288,7 +2289,7 @@ export function NoteForm({
         <Link
           href={editId ? `/notes/${editId}` : "/notes"}
           aria-label="닫기"
-          className="inline-flex min-h-10 min-w-10 items-center justify-center text-[15px] text-text-1"
+          className="inline-flex min-h-10 min-w-10 items-center justify-center t-body text-text-1"
         >
           ✕
         </Link>
@@ -2421,7 +2422,7 @@ export function NoteForm({
             role="status"
             className="rise-in flex items-center gap-2.5 rounded-lg border border-warning-border bg-warning-soft px-4 py-3"
           >
-            <Icon name="📴" size={16} className="shrink-0" />
+            <Icon name="warning" size={16} className="shrink-0" />
             {/* [985 · 15] "사진 업로드는 연결 후에 해주세요"는 이제 사실이 아니다 —
                 오프라인에서 담은 사진은 이 기기(IndexedDB)에 보관되고 연결이
                 돌아오면 자동으로 올라간다. 문구가 낡은 채로 남으면 사용자는
@@ -2441,7 +2442,7 @@ export function NoteForm({
             className="flex flex-col gap-2 rounded-lg border border-line bg-bg px-4 py-3"
           >
             <div className="flex items-center gap-2.5">
-              <Icon name="📥" size={16} className="shrink-0" />
+              <Icon name="mail" size={16} className="shrink-0" />
               <p className="min-w-0 flex-1 t-sub leading-[1.6] text-text-1">
                 이 기기에 담아 둔 사진 <b>{queuedPhotos}장</b> ·{" "}
                 {/* [1005 · A2] 비회원이면 로그인 뒤, 아니면 연결되면 — 사실대로 */}
@@ -2497,7 +2498,7 @@ export function NoteForm({
             role="status"
             className="lg-glass rise-in flex items-center gap-2.5 rounded-lg px-4 py-3"
           >
-            <Icon name="📝" size={18} className="shrink-0" />
+            <Icon name="notebook-pen" size={18} className="shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="t-sub font-bold text-ink">
                 {isEdit ? "저장하지 않은 수정본" : "작성 중이던 노트"}
@@ -2568,7 +2569,7 @@ export function NoteForm({
                 rows={2}
                 maxLength={MEMO_MAX}
                 enterKeyHint="done"
-                className="w-full resize-none rounded-xl bg-bg p-3 text-[13px] leading-[1.55] text-text-1 outline-none placeholder:text-text-3"
+                className="w-full resize-none rounded-xl bg-bg p-3 t-body leading-[1.55] text-text-1 outline-none placeholder:text-text-3"
                 placeholder="예: 남향이라 오후 채광 좋음. 뒤 도로 소음 약간"
               />
             </div>
@@ -2610,7 +2611,7 @@ export function NoteForm({
                 onClick={handleSave}
                 busyLabel="저장 중"
                 errorLabel="다시 시도해 주세요"
-                className="btn-cta rounded-2xl p-[15px] text-center text-[15px]"
+                className="btn-cta rounded-2xl p-[15px] text-center t-section"
               >
                 저장
               </ActionButton>
@@ -2640,7 +2641,7 @@ export function NoteForm({
         {revisitActive && revisitSeed && (
           <div role="status" className="rise-in card flex flex-col gap-1.5 rounded-lg px-4 py-3">
             <div className="flex items-start gap-2.5">
-              <Icon name="🔁" size={18} className="shrink-0 text-primary" />
+              <Icon name="repeat" size={18} className="shrink-0 text-primary" />
               <div className="min-w-0 flex-1">
                 <div className="t-sub font-bold text-ink">
                   {/* [1006] "3개월 전" — 언제 기록과 비교하는지 날짜만 두면 현장에서 셈을 해야 한다 */}
@@ -2694,7 +2695,7 @@ export function NoteForm({
         {!isEdit && carryOver && !carryOverUsed && !loc.aptName.trim() && (
           /* [1015 · 규칙 C] 파란 띠 → 흰 카드 */
           <div className="rise-in card flex items-center gap-2.5 rounded-lg px-4 py-3">
-            <Icon name="📍" size={18} className="shrink-0" />
+            <Icon name="pin" size={18} className="shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="truncate t-body font-bold text-ink">
                 {carryOver.aptName}
@@ -2894,7 +2895,7 @@ export function NoteForm({
           </div>
           {VISIT_GROUPS.map((g) => (
             <div key={g.label} className="flex items-start gap-2">
-              <span className="w-14 shrink-0 pt-2 text-xs text-text-2">{g.label}</span>
+              <span className="w-14 shrink-0 pt-2 t-sub text-text-2">{g.label}</span>
               <div className="flex flex-wrap gap-1.5">
                 {g.options.map((opt) => {
                   const active = visit[g.label] === opt;
@@ -2908,7 +2909,7 @@ export function NoteForm({
                       }}
                       /* [1012-R2 · 규칙 9 · 채점 C] 선택 표시 = 한지 + 남색(.chip-active). 파랑 외곽선+소프트는
                          CTA 와 같은 색이라 "눌러야 할 것"으로 읽혔다 — 나우블루는 CTA·링크·하락 delta 에만. */
-                      className={`chip rounded-full border px-3 py-1.5 text-xs ${
+                      className={`chip rounded-full border px-3 py-1.5 t-sub ${
                         active ? "chip-active" : "border-line bg-surface text-text-2"
                       }`}
                     >
@@ -2921,7 +2922,7 @@ export function NoteForm({
           ))}
           {/* [967 · 2] 방문일 — 오늘까지만. 촬영일로 채웠으면 그 사실을 적는다 */}
           <div className="flex items-start gap-2">
-            <label htmlFor="note-visit-date" className="w-14 shrink-0 pt-1.5 text-xs text-text-2">
+            <label htmlFor="note-visit-date" className="w-14 shrink-0 pt-1.5 t-sub text-text-2">
               방문일
             </label>
             <div className="flex flex-1 flex-col gap-1">
@@ -2937,7 +2938,7 @@ export function NoteForm({
                   /* 빈 값(지우기)은 오늘로 — 방문일 없는 노트는 목록에서 정렬이 깨진다 */
                   setVisitDate(v && v <= todayIso ? v : todayIso);
                 }}
-                className="w-full min-h-[36px] rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-text-1 outline-none"
+                className="w-full min-h-[36px] rounded-lg border border-line bg-surface px-2.5 py-1.5 t-sub text-text-1 outline-none"
                 aria-label="방문일"
               />
               {visitDateFromPhoto && (
@@ -2948,7 +2949,7 @@ export function NoteForm({
             </div>
           </div>
           <div className="flex items-start gap-2">
-            <span className="w-14 shrink-0 pt-1.5 text-xs text-text-2">날씨</span>
+            <span className="w-14 shrink-0 pt-1.5 t-sub text-text-2">날씨</span>
             <div className="flex flex-1 flex-col gap-1.5">
               <div className="flex flex-wrap gap-1.5">
                 {WEATHER_CHIPS.map((opt) => {
@@ -2959,7 +2960,7 @@ export function NoteForm({
                       type="button"
                       onClick={() => setWeather(active ? "" : opt)}
                       /* [1012-R2 · 규칙 9] 같은 줄의 유형·시간대·목적 칩과 같은 선택 표시(한지 + 남색) */
-                      className={`chip rounded-full border px-3 py-1.5 text-xs ${
+                      className={`chip rounded-full border px-3 py-1.5 t-sub ${
                         active ? "chip-active" : "border-line bg-surface text-text-2"
                       }`}
                     >
@@ -2985,7 +2986,7 @@ export function NoteForm({
                 placeholder="직접 입력 (선택)"
                 /* [968 · 29] 한 줄 입력 — Enter 는 자판 닫기("완료") */
                 enterKeyHint="done"
-                className="w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-text-1 outline-none"
+                className="w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 t-sub text-text-1 outline-none"
                 aria-label="방문 날씨"
               />
             </div>
@@ -3057,7 +3058,7 @@ export function NoteForm({
                       }
                       /* [989] h-9(36px) → 모바일에서만 44px. 만족도는 손가락으로 고르는 3분할 */
                       /* [1012-R2 · 규칙 9] 고른 칸 = 한지 + 남색(.chip-active 와 같은 세 토큰). 칩이 아니라 칸이라 클래스 대신 유틸로 */
-                      className={`flex h-9 flex-1 items-center justify-center rounded-lg border px-2 text-xs max-md:h-11 ${
+                      className={`flex h-9 flex-1 items-center justify-center rounded-lg border px-2 t-sub max-md:h-11 ${
                         active
                           ? "border-brand-hanji-ink bg-brand-hanji font-bold text-brand-hanji-ink"
                           : "border-line bg-surface font-semibold text-text-2"
@@ -3074,7 +3075,7 @@ export function NoteForm({
           {/* 종합 만족도 — [970 · B-10] 기본 "미입력". 슬라이더를 움직이면 값이 생기고,
               "지우기"로 다시 미입력으로 돌아간다(안 건드린 노트에 7.5 를 적지 않는다). */}
           <div className="mt-0.5 flex flex-col gap-1.5">
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between t-sub">
               <span className="text-text-2">종합 만족도</span>
               <span className="flex items-center gap-2">
                 {satisfaction === null ? (
@@ -3311,13 +3312,13 @@ export function NoteForm({
               onClick={handleSave}
               busyLabel="저장 중"
               errorLabel="다시 시도해 주세요"
-              className="btn-cta min-w-0 flex-1 rounded-2xl p-[15px] text-center text-[15px]"
+              className="btn-cta min-w-0 flex-1 rounded-2xl p-[15px] text-center t-section"
             >
               {isEdit ? "수정 완료 → AI 정리 받기" : "기록 완료 → AI 정리 받기"}
             </ActionButton>
           </div>
         )}
-        <div className="text-center text-xs text-text-3">
+        <div className="text-center t-sub text-text-3">
           저장할 때만 로그인 · 체크 항목은 다음 임장에도 유지
         </div>
       </div>

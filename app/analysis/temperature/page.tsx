@@ -26,7 +26,10 @@ import { weekSlots } from "./week-slots";
 import { pairWeeks } from "./temp-map-model";
 import { TempMapClient, type HistoryView, type WeekView } from "./TempMapClient";
 
-/* [1021 · 지역 시세 temperature] 시안(mock8/temp)대로 — 네이비/게이지 히어로(ToolHero) 대신
+/* [1022 · 온도 지도] 지시 1 — 타일 지도를 우리나라 지도 모양으로(TempMapClient): 전국 시/도 타일 → 시/도 안 lat/lng 배치.
+   서버는 그대로다 — 같은 주간 기록을 내리고, 시/도 선택은 클라이언트 상태(?sido= 는 replaceState 로만 · 서버는 쿼리를 읽지 않는다).
+   권역 select 는 시/도 선택과 겹쳐 없앴다. 캐시 정책·SEO·Q&A·인용 그대로.
+   [1021 · 지역 시세 temperature] 시안(mock8/temp)대로 — 네이비/게이지 히어로(ToolHero) 대신
    머리(아이콘 칩·제목·사실 한 줄 | 주 선택 칩·권역) → 타일 5칸 → 69곳 색 타일 지도(+목록 보기 토글) →
    12주 온도 선(주간 기록이 있을 때만) | 레일(온도 높은 순 8곳 · 이어서 칩). 본문은 TempMapClient(주 전환은 클라이언트 상태).
    데이터: 이번 주(listLatestTemperatures)에 더해 지난주·4주 전(listTemperaturesForWeek — 그 주와 그 직전 주)과

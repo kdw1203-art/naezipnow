@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import dynamic from "next/dynamic";
@@ -267,7 +268,7 @@ export function HeaderSearch() {
       {/* 폭 실측(2026-08-16 캡처): w-[200px]에서 입력부 가용폭이 ~125px 인데
           플레이스홀더가 ~150px 라 "검색"이 글자 중간에서 잘렸다. 문구가 온전히
           들어가는 폭으로 넓히고, 그래도 좁아지는 상황은 말줄임(…)으로 접는다. */}
-      <div className="field-focus flex w-[232px] items-center gap-2 rounded-xl bg-[var(--glass-bg)] px-3.5 py-2 text-[13px] text-text-3 xl:w-[252px]">
+      <div className="field-focus flex w-[232px] items-center gap-2 rounded-xl bg-[var(--glass-bg)] px-3.5 py-2 t-body text-text-3 xl:w-[252px]">
         <span aria-hidden>⌕</span>
         <input
           ref={inputRef}
@@ -285,7 +286,7 @@ export function HeaderSearch() {
           placeholder="단지·매물·노트·뉴스 검색"
           aria-label="통합 검색 (단축키 /)"
           autoComplete="off"
-          className="w-full text-ellipsis bg-transparent text-[13px] text-ink outline-none placeholder:text-text-3"
+          className="w-full text-ellipsis bg-transparent t-body text-ink outline-none placeholder:text-text-3"
         />
         {/* 항목 12 — 단축키 발견성. 장식이므로 스크린리더에서는 숨긴다(aria-label 에 명시). */}
         <kbd

@@ -1,9 +1,11 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CountUp } from "@/app/components/motion/CountUp";
 import { Icon } from "@/app/components/Icon";
+import { PageHead } from "@/app/components/PageHead";
 import { ComplexPicker } from "./ComplexPicker";
 import { ToolGlyph, WORKBENCH_GLYPH } from "./ToolGlyph";
 import {
@@ -129,27 +131,28 @@ export function HubHero({
      오른쪽 최근 사용 칩 + 계열 칩 3개. 검색 카드는 그대로 첫 조작. 한도는 검색 아래 캡션 한 줄. */
   return (
     <section className="rise-in flex flex-col gap-3 max-md:gap-2.5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary" aria-hidden="true">
-            <Icon name="sparkles" size={20} />
-          </span>
-          <div className="min-w-0">
-            <h1 className="t-title text-ink">AI 분석</h1>
-            <p className="m-0 t-sub text-text-2">
-              단지 하나로 종합 진단 · 시세 예측 · 임장 동선 · 매수 타이밍
-              <span className="max-md:hidden">
-                {" "}· 실거래 <b className="t-num text-ink"><Num n={coverage.txCount} /></b>건 · 단지{" "}
-                <b className="t-num text-ink"><Num n={coverage.complexCount} /></b>곳 · 도구 <b className="t-num text-ink"><CountUp value={toolCount} /></b>개
-              </span>
-            </p>
+      {/* [1022 · 정렬·글씨·테마] 머리는 공용 PageHead(아이콘 칩 40 · h1.t-title · 사실 한 줄 | 오른쪽 칩) — 임장노트·동네와 같은 한 줄 */}
+      <PageHead
+        icon="sparkles"
+        title="AI 분석"
+        sub={
+          <>
+            단지 하나로 종합 진단 · 시세 예측 · 임장 동선 · 매수 타이밍
+            <span className="max-md:hidden">
+              {" "}· 실거래 <b className="t-num text-ink"><Num n={coverage.txCount} /></b>건 · 단지{" "}
+              <b className="t-num text-ink"><Num n={coverage.complexCount} /></b>곳 · 도구{" "}
+              <b className="t-num text-ink"><CountUp value={toolCount} /></b>개
+            </span>
+          </>
+        }
+        subOnPhone
+        actions={
+          <div className="flex flex-col items-start gap-2 md:items-end">
+            <LastToolChip />
+            <TierNav />
           </div>
-        </div>
-        <div className="flex flex-col items-start gap-2 md:items-end">
-          <LastToolChip />
-          <TierNav />
-        </div>
-      </div>
+        }
+      />
 
       {/* 검색 — 이 화면의 출발점(UI-05) */}
       <div className="card rounded-2xl p-3.5">

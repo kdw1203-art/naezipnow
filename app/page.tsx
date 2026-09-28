@@ -15,11 +15,13 @@ import { HomeMyRail } from "./components/home/HomeMyRail";
 import type { KpiRegion, KpiTemp } from "./components/home/HomeKpiRow";
 import { HomeTodayLine } from "./components/home/HomeTodayLine";
 import { RegionPulseCards } from "./components/home/RegionPulseCards";
+import { RollingPanel } from "./components/home/RollingPanel";
+import { chunkPages } from "./components/home/chunk-pages";
 import { HomeTownBlock } from "./components/home/HomeTownBlock";
 import { loadLatestTemperatures } from "./components/MarketTempWidget";
 import { loadNewHomeData } from "@/lib/newui/home-data";
 import { loadHomeCoverage } from "@/lib/newui/home-coverage";
-import { HomeCoverageLine } from "./components/home/HomeCoverageLine";
+import { formatCount } from "@/lib/newui/home-coverage";
 import { Explain } from "./components/explain/Explain";
 import { getBaseRate } from "@/lib/market/base-rate";
 import type { Metadata } from "next";
@@ -29,7 +31,6 @@ import {
   HOME_AI_GATEWAY_LEAD,
   HOME_AI_GATEWAY_TITLE,
   HOME_CTA_AI,
-  HOME_HERO_SUBLINE_SHORT,
   HOME_PAGE_H1,
 } from "@/lib/brand/home-copy";
 import { seoAlternates } from "@/lib/seo/alternates";
@@ -178,6 +179,15 @@ export default async function Home() {
   } catch {
     kpiTemp = null; // 아카이브 없음/조회 실패 — 온도 항목만 빠진다
   }
+  /* [1022] 커버리지 숫자는 검색 칩 줄에서 빼고 ⓘ 안 한 줄로 */
+  const coverageLine = [
+    coverage.txCount ? `국토교통부 실거래 ${formatCount(coverage.txCount)}건` : null,
+    coverage.complexCount ? `단지 ${formatCount(coverage.complexCount)}개` : null,
+    coverage.regionCount ? `전국 ${formatCount(coverage.regionCount)}개 시군구` : null,
+    data.publicNotesTotal ? `공개 임장노트 ${formatCount(data.publicNotesTotal)}편` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const kpiRegion: KpiRegion | null = regions[0]
     ? {
         name: regions[0].name,
@@ -221,15 +231,11 @@ export default async function Home() {
           <ResumeDraftPopup />
 
           {/* ① 검색 — 질문 한 줄 + 대형 검색 + 실기록 칩. 전폭. */}
-          <div className="flex flex-col gap-3 pb-3 pt-1.5 md:py-5">
+          {/* [1022] 소유자: "검색창 있는 부분을 좀더 심플하고 요즘 트렌드에 맞게" — 부제 삭제, 검색 알약 하나 + 칩 한 줄,
+              커버리지 숫자는 ⓘ 안으로(처음이라면 ⓘ 와 합침). */}
+          <div className="flex flex-col gap-3 pb-3 pt-2 md:gap-4 md:py-7">
             <p className="t-display text-center text-ink">어느 단지가 궁금하세요?</p>
-            <p className="-mt-1 text-center t-sub text-text-2 max-md:hidden">{HOME_HERO_SUBLINE_SHORT}</p>
-            <HomeHeroSearch
-              regionChips={heroRegionChips}
-              coverage={
-                <HomeCoverageLine coverage={coverage} publicNotes={data.publicNotesTotal} />
-              }
-            />
+            <HomeHeroSearch regionChips={heroRegionChips} />
             {/* [1015 · 규칙 B] "예산으로 찾기" 칩 줄과 "어디서부터 시작할까요?" 문 4개는 뺐다(소유자: "필요 없는 부분 —
                 물음표 칸으로 마우스를 올리면 보이는 정도로"). 네 입구는 아래 ⓘ 한 줄(hover 미리보기·탭 시트)로 접었다. */}
             <p className="m-0 flex items-center justify-center gap-1 t-caption text-text-3">
@@ -242,7 +248,7 @@ export default async function Home() {
                   "계약·잔금 일정표: 계약을 앞두고 법정 기한을 날짜로(/journey/contract).",
                   "내 집 마련 여정: 처음부터 6단계로(/journey).",
                 ]}
-                source="예산으로 찾기는 지도(/map)의 가격 필터"
+                source={[coverageLine, "예산으로 찾기는 지도(/map)의 가격 필터"].filter(Boolean).join(" · ")}
               />
             </p>
           </div>
@@ -324,7 +330,12 @@ export default async function Home() {
                 ) : (
                   /* [1015 · 규칙 H·C] 행 왼쪽 44px 정사각 썸네일(고른 템플릿 → 첫 사진 → 단색 칸), "Lab 데이터/이웃" 배지 대신
                      메타 줄(동네 · 단지 · 작성 주체). 점수 배지는 그대로. */
-                  notes.slice(0, 3).map((n, i, arr) => (
+                  /* [1022] 3편씩 쪽으로 나눠 아래→위로 넘긴다(공개 임장노트도 지역 동향과 같은 회전판) */
+                  <RollingPanel
+                    label="공개 임장노트 쪽"
+                    pages={chunkPages(notes, 3).map((page, pi) => (
+                      <div key={pi} className="flex flex-col">
+                        {page.map((n, i, arr) => (
                     <Link
                       key={n.id}
                       href={`/notes/${n.id}`}
@@ -354,7 +365,10 @@ export default async function Home() {
                         {n.score}
                       </span>
                     </Link>
-                  ))
+                  ))}
+                      </div>
+                    ))}
+                  />
                 )}
                 {allLabNotes && <p className="m-0 t-caption text-text-3">{LAB_NOTES_CAPTION}</p>}
               </section>
@@ -392,7 +406,13 @@ export default async function Home() {
                   )
                 ) : (
                   <>
-                    <RegionPulseCards regions={regions.slice(0, 4)} />
+                    {/* [1022] 4장씩 쪽으로 나눠 주식 시세판처럼 아래→위로 넘긴다(RollingPanel). 12곳 = 3쪽 */}
+                    <RollingPanel
+                      label="지역 동향 쪽"
+                      pages={chunkPages(regions, 4).map((page, i) => (
+                        <RegionPulseCards key={i} regions={page} />
+                      ))}
+                    />
                     {/* [1002] 스냅샷 실패 → 월 집계 폴백 카드. 값은 실측이지만 시점이
                         오래됐다는 사실을 카드 아래 한 줄로 적는다(카드 meta 의 "마지막 집계"
                         와 같은 말). 실패를 "준비 중"으로도, 오래된 값을 "지금"으로도 위장하지 않는다. */}

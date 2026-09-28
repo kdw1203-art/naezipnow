@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -304,14 +305,14 @@ export function ChatRoom({
         <Link
           href={`/town/groups/${groupId}`}
           aria-label="뒤로"
-          className="text-[15px] text-text-1"
+          className="t-body text-text-1"
         >
           ‹
         </Link>
         <div className="flex-1">
-          <div className="text-[13px] font-bold text-ink">
+          <div className="t-body font-bold text-ink">
             {title}{" "}
-            <span className="text-[12px] font-semibold text-text-3">
+            <span className="t-sub font-semibold text-text-3">
               {phase === "ready" ? shownMemberCount : memberCount}
             </span>
           </div>
@@ -321,7 +322,7 @@ export function ChatRoom({
           type="button"
           aria-label="채팅방 메뉴"
           onClick={() => setMenuOpen(true)}
-          className="text-[15px] text-text-1"
+          className="t-body text-text-1"
         >
           ☰
         </button>
@@ -340,17 +341,17 @@ export function ChatRoom({
 
         {phase === "error" && (
           <div className="mt-8 flex flex-col items-center gap-2.5 self-center text-center">
-            <div className="text-[13px] font-bold text-ink">
+            <div className="t-body font-bold text-ink">
               채팅은 모임 참여 후 이용할 수 있어요
             </div>
             {errorMsg && (
-              <p className="max-w-[280px] text-xs leading-[1.6] text-text-2">
+              <p className="max-w-[280px] t-sub leading-[1.6] text-text-2">
                 {errorMsg}
               </p>
             )}
             <Link
               href="/town/groups"
-              className="btn-secondary rounded-xl px-4 py-2 text-xs no-underline"
+              className="btn-secondary rounded-xl px-4 py-2 t-sub no-underline"
             >
               모임 목록으로
             </Link>
@@ -359,10 +360,10 @@ export function ChatRoom({
 
         {phase === "ready" && messages.length === 0 && (
           <div className="mt-8 flex flex-col items-center gap-1.5 self-center text-center">
-            <div className="text-[13px] font-bold text-ink">
+            <div className="t-body font-bold text-ink">
               아직 메시지가 없어요
             </div>
-            <p className="text-xs text-text-2">
+            <p className="t-sub text-text-2">
               {/* [1012] 규칙 6 — 권유 대신 사실 */}
               이 모임 채팅방에 올라온 메시지가 아직 없어요 — 아래 칸에 쓴 메시지가 첫 메시지예요
             </p>
@@ -383,7 +384,7 @@ export function ChatRoom({
           if (m.isMine) {
             return (
               <div key={m.id} className="flex flex-col items-end gap-[3px]">
-                <div className="btn-primary max-w-[240px] self-end whitespace-pre-wrap break-words rounded-lg rounded-br-sm px-[13px] py-2.5 text-[13px] font-normal leading-[1.5]">
+                <div className="btn-primary max-w-[240px] self-end whitespace-pre-wrap break-words rounded-lg rounded-br-sm px-[13px] py-2.5 t-body font-normal leading-[1.5]">
                   {m.body}
                 </div>
                 <span className="t-caption text-text-3">
@@ -402,7 +403,7 @@ export function ChatRoom({
                   {m.senderLabel}
                 </div>
                 <div
-                  className={`max-w-[240px] whitespace-pre-wrap break-words rounded-lg rounded-bl-sm border border-line bg-surface px-[13px] py-2.5 text-[13px] leading-[1.5] ${
+                  className={`max-w-[240px] whitespace-pre-wrap break-words rounded-lg rounded-bl-sm border border-line bg-surface px-[13px] py-2.5 t-body leading-[1.5] ${
                     isBlocked ? "italic text-text-3" : "text-text-1"
                   }`}
                 >
@@ -416,7 +417,7 @@ export function ChatRoom({
                 type="button"
                 aria-label="메시지 신고·차단"
                 onClick={() => setActionMsg(m)}
-                className="mb-3 shrink-0 px-1 text-[13px] text-text-3 opacity-60 transition-opacity hover:opacity-100"
+                className="mb-3 shrink-0 px-1 t-body text-text-3 opacity-60 transition-opacity hover:opacity-100"
               >
                 ⋯
               </button>
@@ -427,7 +428,7 @@ export function ChatRoom({
 
       {/* ---------- 처리 결과 안내 ---------- */}
       {notice && (
-        <div className="pointer-events-none mx-auto mb-1.5 w-fit max-w-[90%] rounded-full bg-[rgba(25,31,40,.78)] px-4 py-1.5 text-[12px] font-semibold text-white">
+        <div className="pointer-events-none mx-auto mb-1.5 w-fit max-w-[90%] rounded-full bg-[rgba(25,31,40,.78)] px-4 py-1.5 t-sub font-semibold text-white">
           {notice}
         </div>
       )}
@@ -444,14 +445,14 @@ export function ChatRoom({
             phase === "ready" ? "메시지 입력…" : "채팅방 연결 후 입력할 수 있어요"
           }
           disabled={phase !== "ready"}
-          className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-text-3 disabled:opacity-60"
+          className="min-w-0 flex-1 bg-transparent t-body text-ink outline-none placeholder:text-text-3 disabled:opacity-60"
         />
         <button
           type="button"
           aria-label="전송"
           onClick={() => void send()}
           disabled={phase !== "ready" || sending || !draft.trim()}
-          className="btn-primary relative flex h-8 w-8 items-center justify-center rounded-full text-[13px] after:absolute after:-inset-1.5 after:content-[''] disabled:opacity-50"
+          className="btn-primary relative flex h-8 w-8 items-center justify-center rounded-full t-body after:absolute after:-inset-1.5 after:content-[''] disabled:opacity-50"
         >
           ↑
         </button>
@@ -471,7 +472,7 @@ export function ChatRoom({
             style={{ boxShadow: "-16px 0 44px rgba(16,28,54,.2)" }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[13px] font-bold text-ink">
+              <span className="t-body font-bold text-ink">
                 채팅방 메뉴{" "}
                 <span className="rounded bg-bg px-[7px] py-[2px] t-caption font-bold text-text-2">
                   회원
@@ -481,15 +482,15 @@ export function ChatRoom({
                 type="button"
                 aria-label="닫기"
                 onClick={() => setMenuOpen(false)}
-                className="text-[15px] text-text-3"
+                className="t-body text-text-3"
               >
                 ✕
               </button>
             </div>
 
             <div className="flex flex-col gap-1 rounded-xl bg-bg px-3.5 py-3">
-              <div className="text-[13px] font-bold text-ink">{title}</div>
-              <div className="text-[12px] text-text-3">{metaLine}</div>
+              <div className="t-body font-bold text-ink">{title}</div>
+              <div className="t-sub text-text-3">{metaLine}</div>
             </div>
 
             <div className="flex flex-col">
@@ -506,7 +507,7 @@ export function ChatRoom({
                   {/* [1012] 규칙 3 — 아바타 그라데이션 → 단색(--divider) */}
                   <div className="h-[30px] w-[30px] rounded-full bg-divider" />
                   <div className="flex-1">
-                    <div className="text-xs font-bold text-ink">
+                    <div className="t-sub font-bold text-ink">
                       {m.isSelf ? "나" : m.label}{" "}
                       {m.role === "owner" && (
                         <span className="rounded bg-warning-soft px-[5px] py-px t-caption font-bold text-warning">
@@ -532,7 +533,7 @@ export function ChatRoom({
                 </div>
               ))}
               {members.length === 0 && (
-                <div className="py-2 text-[12px] text-text-3">
+                <div className="py-2 t-sub text-text-3">
                   멤버 정보를 불러오는 중이에요.
                 </div>
               )}
@@ -544,14 +545,14 @@ export function ChatRoom({
               <div className="flex gap-2">
                 <Link
                   href={`/town/groups/${groupId}`}
-                  className="btn-secondary flex-1 rounded-xl p-2.5 text-center text-xs no-underline"
+                  className="btn-secondary flex-1 rounded-xl p-2.5 text-center t-sub no-underline"
                   onClick={() => setMenuOpen(false)}
                 >
                   모임 정보
                 </Link>
                 <Link
                   href="/town/groups"
-                  className="btn-secondary flex-1 rounded-xl p-2.5 text-center text-xs no-underline"
+                  className="btn-secondary flex-1 rounded-xl p-2.5 text-center t-sub no-underline"
                   onClick={() => setMenuOpen(false)}
                 >
                   모임 목록
@@ -561,7 +562,7 @@ export function ChatRoom({
                 type="button"
                 onClick={() => void leaveRoom()}
                 disabled={leaving || phase !== "ready"}
-                className="rounded-xl border border-line bg-bg p-2.5 text-center text-xs font-bold text-danger disabled:opacity-50"
+                className="rounded-xl border border-line bg-bg p-2.5 text-center t-sub font-bold text-danger disabled:opacity-50"
               >
                 {leaving ? "나가는 중…" : "방 나가기"}
               </button>
@@ -584,20 +585,20 @@ export function ChatRoom({
             style={{ boxShadow: "0 16px 44px rgba(16,28,54,.24)" }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[13px] font-bold text-ink">
+              <span className="t-body font-bold text-ink">
                 {actionMsg.senderLabel} 님의 메시지
               </span>
               <button
                 type="button"
                 aria-label="닫기"
                 onClick={() => setActionMsg(null)}
-                className="text-[15px] text-text-3"
+                className="t-body text-text-3"
               >
                 ✕
               </button>
             </div>
             {actionMsg.body && (
-              <p className="line-clamp-2 rounded-xl bg-bg px-3 py-2 text-[12px] leading-[1.5] text-text-2">
+              <p className="line-clamp-2 rounded-xl bg-bg px-3 py-2 t-sub leading-[1.5] text-text-2">
                 {actionMsg.body}
               </p>
             )}
@@ -612,7 +613,7 @@ export function ChatRoom({
                     type="button"
                     disabled={actionBusy}
                     onClick={() => void reportMessage(actionMsg, r)}
-                    className="chip border border-line bg-bg px-3 py-1.5 text-[12px] font-bold text-text-2 hover:border-danger hover:text-danger disabled:opacity-40"
+                    className="chip border border-line bg-bg px-3 py-1.5 t-sub font-bold text-text-2 hover:border-danger hover:text-danger disabled:opacity-40"
                   >
                     {r}
                   </button>
@@ -623,7 +624,7 @@ export function ChatRoom({
               type="button"
               disabled={actionBusy}
               onClick={() => void toggleBlock(actionMsg.senderId)}
-              className="rounded-xl border border-line bg-bg p-2.5 text-xs font-bold text-danger disabled:opacity-40"
+              className="rounded-xl border border-line bg-bg p-2.5 t-sub font-bold text-danger disabled:opacity-40"
             >
               {blocked.includes(actionMsg.senderId)
                 ? "이 사용자 차단 해제"

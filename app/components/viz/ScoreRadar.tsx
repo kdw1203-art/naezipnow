@@ -1,4 +1,6 @@
-/* [1008 · W] 종합 진단 5항목 레이더 — 잰 항목만 모양을 만든다.
+/* [1022 · 단지 분석 고도화] 축 이름 굵기 800 → 700(규칙: 800 금지). 지역 평균 겹치기는 verdict/insight 에 지역 축 점수가
+ * 없어(레이더 5축이 이미 지역 통계로 만든 점수다) 넣지 않았다 — 없는 데이터를 그리지 않는다.
+ * [1008 · W] 종합 진단 5항목 레이더 — 잰 항목만 모양을 만든다.
  *
  * app/components/viz/Radar.tsx 는 후보 비교용(값이 전부 있는 전제)이라 빈 항목을 0 으로 그리면
  * "0점"처럼 보인다 — 자료가 없는 항목은 꼭짓점을 찍지 않고 이름 옆에 "자료 없음"을 적는다.
@@ -63,7 +65,7 @@ export function ScoreRadar({ items }: { items: readonly RadarItem[] }) {
         /* 이름 아래 점수 — 두 줄로 좁게(위 꼭짓점도 캔버스 안에 들어온다: 첫 줄 윗변 ≈ 6px) */
         const y0 = p.y - 2;
         return (
-          <text key={it.key} x={p.x} y={y0} textAnchor={anchor} fontSize={10} style={SVG_CAPTION} fontWeight={800} className={it.score == null ? "fill-text-3" : "fill-text-1"}>
+          <text key={it.key} x={p.x} y={y0} textAnchor={anchor} fontSize={10} style={SVG_CAPTION} fontWeight={700} className={it.score == null ? "fill-text-3" : "fill-text-1"}>
             {it.label}
             <tspan x={p.x} dy={13} fontWeight={700} className={it.score == null ? "fill-text-3" : "fill-primary"}>
               {it.score != null ? `${it.score}점` : "자료 없음"}

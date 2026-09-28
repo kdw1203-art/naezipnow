@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 import Link from "next/link";
 import { PageShell } from "../../components/PageShell";
 import { listMeetings, type UserMeeting } from "@/lib/meetings/store-db";
@@ -134,13 +135,13 @@ export default async function TownGroupsPage() {
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
             <Icon name="warning" size={22} />
           </div>
-          <p className="text-[13px] font-bold text-ink">모임 목록을 불러오지 못했어요</p>
+          <p className="t-body font-bold text-ink">모임 목록을 불러오지 못했어요</p>
           {/* [970 · C-20] 합니다체 → 해요체 통일 */}
-          <p className="max-w-xs text-xs leading-[1.6] text-text-3">
+          <p className="max-w-xs t-sub leading-[1.6] text-text-3">
             일시적인 오류예요. 모임이 없는 게 아니라, 지금 목록을 읽지 못한
             상태예요. 잠시 뒤 새로고침해 주세요.
           </p>
-          <Link href="/town/groups" className="btn-soft rounded-lg px-4 py-2 text-xs no-underline">
+          <Link href="/town/groups" className="btn-soft rounded-lg px-4 py-2 t-sub no-underline">
             다시 불러오기
           </Link>
         </div>

@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 import { Icon } from "@/app/components/Icon";
 import { CoverImage } from "@/app/components/CoverImage";
 import { seedGradient } from "@/lib/town/shared";
@@ -95,7 +96,7 @@ export function Timeline({ steps, covers = [] }: { steps: TimelineStep[]; covers
           <li key={step.n} className="grid grid-cols-[22px_minmax(0,1fr)] gap-3">
             {/* 레일: 회차 점 + 연결선 */}
             <div className="flex flex-col items-center" aria-hidden="true">
-              {/* [1015] 임의 그림자 제거 · text-[10px] → t-caption */}
+              {/* [1015] 임의 그림자 제거 · t-caption → t-caption */}
               <span
                 className={`mt-0.5 grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full t-caption font-bold ${
                   step.latest ? "bg-primary text-white" : "bg-primary-soft text-primary"

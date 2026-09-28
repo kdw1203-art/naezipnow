@@ -1,6 +1,7 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Icon } from "@/app/components/Icon";
+import { PageHead } from "@/app/components/PageHead";
 import { CountUp } from "@/app/components/motion/CountUp";
 import { TOWN_CATEGORY_LINKS } from "@/lib/town/category-links";
 
@@ -78,66 +79,57 @@ export function TownHero({
   /* [1017] 소유자(2026-09-28, 폰 동네 피드 캡처의 네이비 띠에 ×): "임장·지도를 제외하고 나머지 카테고리에서는
      전부 삭제". 네이비 히어로(슬로건·워터마크·통계 띠)를 걷고 **흰 머리 한 줄**(아이콘 칩 + 카테고리 이름 + 한 줄 +
      오른쪽 버튼)로. 통계는 캡션 한 줄로만 남긴다(0 은 여전히 안 그린다). props·호출부는 그대로. */
+  /* [1022 · 정렬·글씨·테마] 머리 부품을 app/components/PageHead 로 올렸다 — 허브·임장노트·동네 홈이 같은 한 줄.
+     여기는 카테고리 목록(아이콘·색·라벨·한 줄·버튼)을 그 부품에 꽂기만 한다. */
+  const actionNode = action ? (
+    action
+  ) : link.heroCta.length > 0 ? (
+    link.heroCta.map((c) => (
+      <Link
+        key={c.href}
+        href={c.href}
+        className={
+          c.primary ? "btn-primary btn-md rounded-xl no-underline" : "btn-outline btn-md rounded-xl no-underline"
+        }
+      >
+        {c.label}
+      </Link>
+    ))
+  ) : null;
+  const facts =
+    shown.length > 0 ? (
+      <>
+        {shown.map((s) =>
+          s.href ? (
+            <Link key={s.label} href={s.href} className="no-underline">
+              {s.label}{" "}
+              <b className="t-num text-ink">
+                <CountUp value={s.value} />
+                {s.unit ?? ""}
+              </b>
+            </Link>
+          ) : (
+            <span key={s.label}>
+              {s.label}{" "}
+              <b className="t-num text-ink">
+                <CountUp value={s.value} />
+                {s.unit ?? ""}
+              </b>
+            </span>
+          ),
+        )}
+        {note && <span>{note}</span>}
+      </>
+    ) : null;
   return (
-    <section className="rise-in mb-4 flex flex-col gap-2">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <span
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${link.tone}`}
-            aria-hidden="true"
-          >
-            <Icon name={link.icon} size={20} />
-          </span>
-          <div className="min-w-0">
-            <h1 className="t-title text-ink">{link.label}</h1>
-            <p className="mt-0.5 t-sub text-text-2 max-md:hidden">{link.headSub}</p>
-          </div>
-        </div>
-        {action ? (
-          <div className="flex gap-2">{action}</div>
-        ) : link.heroCta.length > 0 ? (
-          <div className="flex gap-2">
-            {link.heroCta.map((c) => (
-              <Link
-                key={c.href}
-                href={c.href}
-                className={
-                  c.primary
-                    ? "btn-primary btn-md rounded-xl no-underline"
-                    : "btn-outline btn-md rounded-xl no-underline"
-                }
-              >
-                {c.label}
-              </Link>
-            ))}
-          </div>
-        ) : null}
-      </div>
-
-      {shown.length > 0 && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 t-caption text-text-3">
-          {shown.map((s) =>
-            s.href ? (
-              <Link key={s.label} href={s.href} className="no-underline">
-                {s.label}{" "}
-                <b className="t-num text-ink">
-                  <CountUp value={s.value} />
-                  {s.unit ?? ""}
-                </b>
-              </Link>
-            ) : (
-              <span key={s.label}>
-                {s.label}{" "}
-                <b className="t-num text-ink">
-                  <CountUp value={s.value} />
-                  {s.unit ?? ""}
-                </b>
-              </span>
-            ),
-          )}
-          {note && <span>{note}</span>}
-        </div>
-      )}
-    </section>
+    <PageHead
+      icon={link.icon}
+      tone={link.tone}
+      title={link.label}
+      sub={link.headSub}
+      actions={actionNode}
+      facts={facts}
+      className="mb-4"
+    />
   );
 }

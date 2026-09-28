@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getMeeting } from "@/lib/meetings/store-db";
@@ -73,13 +74,13 @@ export default async function TownGroupDetailPage({
     return (
       <PageShell breadcrumb="동네이야기 › 임장 모임">
         <div className="mx-auto flex max-w-[420px] flex-col items-center gap-3 py-20 text-center">
-          <div className="text-[19px] font-bold text-ink">모임을 찾을 수 없어요</div>
-          <p className="text-[13px] leading-[1.6] text-text-2">
+          <div className="t-title font-bold text-ink">모임을 찾을 수 없어요</div>
+          <p className="t-body leading-[1.6] text-text-2">
             삭제되었거나 잘못된 링크일 수 있어요.
           </p>
           <Link
             href="/town/groups"
-            className="btn-primary rounded-xl px-5 py-2.5 text-[13px] no-underline"
+            className="btn-primary rounded-xl px-5 py-2.5 t-body no-underline"
           >
             모임 목록으로
           </Link>
@@ -126,33 +127,33 @@ export default async function TownGroupDetailPage({
         <div className="flex flex-col gap-4">
           <div className="rise-in card flex flex-col gap-3 p-6">
             <div className="flex items-center justify-between">
-              <span className={`rounded-md chip-pad text-[12px] font-bold ${statusStyle}`}>
+              <span className={`rounded-md chip-pad t-sub font-bold ${statusStyle}`}>
                 {statusLabel} {meeting.currentMembers}/{meeting.maxMembers}
               </span>
-              <span className="text-[12px] text-text-3">
+              <span className="t-sub text-text-3">
                 {meeting.category}
                 {meeting.fee > 0 ? ` · 참가비 ${meeting.fee.toLocaleString("ko-KR")}원` : " · 무료"}
               </span>
             </div>
 
-            <h1 className="text-[21px] font-bold leading-[1.35] text-ink">{meeting.title}</h1>
+            <h1 className="t-title font-bold leading-[1.35] text-ink">{meeting.title}</h1>
 
-            <div className="flex flex-col gap-2 text-[13px] text-text-1">
+            <div className="flex flex-col gap-2 t-body text-text-1">
               <div className="flex gap-2">
-                <span className="w-5 text-center"><Icon name="📅" size={16} className="inline align-middle" /></span>
+                <span className="w-5 text-center"><Icon name="calendar" size={16} className="inline align-middle" /></span>
                 <span>{formatSchedule(meeting.scheduledAt)}</span>
               </div>
               <div className="flex gap-2">
-                <span className="w-5 text-center"><Icon name="📍" size={16} className="inline align-middle" /></span>
+                <span className="w-5 text-center"><Icon name="pin" size={16} className="inline align-middle" /></span>
                 <span>{meeting.region || [meeting.city, meeting.district].filter(Boolean).join(" ") || "장소 미정"}</span>
               </div>
               <div className="flex gap-2">
-                <span className="w-5 text-center"><Icon name="👤" size={16} className="inline align-middle" /></span>
+                <span className="w-5 text-center"><Icon name="user" size={16} className="inline align-middle" /></span>
                 <span>모임장 · {meeting.organizerLabel || meeting.hostLabel}</span>
               </div>
               {meeting.checklist.length > 0 && (
                 <div className="flex gap-2">
-                  <span className="w-5 text-center"><Icon name="🚶" size={16} className="inline align-middle" /></span>
+                  <span className="w-5 text-center"><Icon name="footprints" size={16} className="inline align-middle" /></span>
                   <span>{meeting.checklist.slice(0, 4).join(" → ")}</span>
                 </div>
               )}
@@ -161,14 +162,14 @@ export default async function TownGroupDetailPage({
             {meeting.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {meeting.tags.slice(0, 6).map((t) => (
-                  <span key={t} className="rounded-full bg-bg px-2.5 py-1 text-[12px] text-text-2">
+                  <span key={t} className="rounded-full bg-bg px-2.5 py-1 t-sub text-text-2">
                     #{t}
                   </span>
                 ))}
               </div>
             )}
 
-            <p className="whitespace-pre-wrap rounded-xl bg-bg px-4 py-3.5 text-[13px] leading-[1.7] text-text-2">
+            <p className="whitespace-pre-wrap rounded-xl bg-bg px-4 py-3.5 t-body leading-[1.7] text-text-2">
               {meeting.description || "모임 소개가 아직 없어요."}
             </p>
           </div>
@@ -176,11 +177,11 @@ export default async function TownGroupDetailPage({
           {/* 참여자 카드 */}
           <div className="rise-in-1 card flex flex-col gap-3 p-5">
             <div className="flex items-center justify-between">
-              <div className="text-[13px] font-bold text-ink">
+              <div className="t-body font-bold text-ink">
                 참여자 {meeting.currentMembers}
                 <span className="text-text-3"> / {meeting.maxMembers}</span>
               </div>
-              <div className="text-[12px] text-text-3">{isFull ? "정원이 찼어요" : `${remaining}자리 남음`}</div>
+              <div className="t-sub text-text-3">{isFull ? "정원이 찼어요" : `${remaining}자리 남음`}</div>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-bg">
               <div className="h-full rounded-full bg-primary" style={{ width: `${fillPct}%` }} />
@@ -189,7 +190,7 @@ export default async function TownGroupDetailPage({
                 지운다. 참여자 프로필을 읽지 않고 색만 다른 원을 currentMembers 수만큼
                 그리던 것이라, 정원이 0명일 때도 원이 하나 떠서 "누군가 있다"고 보였다.
                 실제로 아는 사실은 인원수뿐이므로 인원수만 남긴다. */}
-            <p className="text-[12px] leading-[1.5] text-text-3">
+            <p className="t-sub leading-[1.5] text-text-3">
               참여 확정 시 채팅방에서 멤버들과 일정·체크리스트를 나눌 수 있어요 · 연락처는 공개되지 않아요
             </p>
           </div>
@@ -198,7 +199,7 @@ export default async function TownGroupDetailPage({
         {/* ---------- 사이드: 위치 + 공유 + CTA ---------- */}
         <div className="flex flex-col gap-3">
           <div className="rise-in-1 card flex flex-col gap-2 p-5">
-            <div className="text-[13px] font-bold text-ink">모임 장소</div>
+            <div className="t-body font-bold text-ink">모임 장소</div>
             {/* 지역명을 좌표로 해석해 네이버 지도로 표시(정확 집결지는 채팅방 안내) */}
             <LocationMap
               region={meeting.region}
@@ -206,15 +207,15 @@ export default async function TownGroupDetailPage({
               district={meeting.district}
               label={meeting.region || meeting.city || "모임 장소"}
             />
-            <p className="text-[12px] leading-[1.5] text-text-3">
+            <p className="t-sub leading-[1.5] text-text-3">
               지역 기준 지도 · 집결 장소는 모임 채팅방 안내
             </p>
           </div>
 
           {/* 크루 도구 — 답사 전 준비를 내집나우 안에서 끝내게 한다 */}
           <div className="rise-in-1 card flex flex-col gap-2 p-5">
-            <div className="text-[13px] font-bold text-ink">임장 준비</div>
-            <p className="text-[12px] leading-[1.6] text-text-2">
+            <div className="t-body font-bold text-ink">임장 준비</div>
+            <p className="t-sub leading-[1.6] text-text-2">
               데이터 브리핑 · 현장 체크포인트 · 임장노트
             </p>
             <div className="flex flex-col gap-1.5">
@@ -222,15 +223,15 @@ export default async function TownGroupDetailPage({
                 <Link
                   prefetch={false}
                   href={`/imjang/${encodeURIComponent(imjangRegion.slug)}`}
-                  className="text-[13px] font-bold text-primary no-underline"
+                  className="t-body font-bold text-primary no-underline"
                 >
                   {imjangRegion.name} 임장 가이드 ›
                 </Link>
               )}
-              <Link href="/notes/templates" className="text-[13px] font-bold text-text-2 no-underline hover:text-primary">
+              <Link href="/notes/templates" className="t-body font-bold text-text-2 no-underline hover:text-primary">
                 노트 템플릿 보기 ›
               </Link>
-              <Link href="/notes/new" className="text-[13px] font-bold text-text-2 no-underline hover:text-primary">
+              <Link href="/notes/new" className="t-body font-bold text-text-2 no-underline hover:text-primary">
                 임장노트 쓰기 ›
               </Link>
             </div>
@@ -240,7 +241,7 @@ export default async function TownGroupDetailPage({
             <ShareButton title={meeting.title} />
             <Link
               href="/town/groups"
-              className="btn-secondary flex-1 rounded-xl p-3 text-center text-[13px] no-underline"
+              className="btn-secondary flex-1 rounded-xl p-3 text-center t-body no-underline"
             >
               목록
             </Link>
@@ -255,7 +256,7 @@ export default async function TownGroupDetailPage({
                 href={`/town/groups/${id}/chat`}
                 className={`${
                   isPast || (isFull && !isOrganizer) ? "btn-secondary" : "btn-primary"
-                } rise-in-2 rounded-2xl p-3.5 text-center text-[15px] no-underline`}
+                } rise-in-2 rounded-2xl p-3.5 text-center t-body no-underline`}
                 style={
                   isPast || (isFull && !isOrganizer)
                     ? undefined
@@ -270,7 +271,7 @@ export default async function TownGroupDetailPage({
                       ? "모집 마감 · 참여했다면 채팅방 입장"
                       : "참여하기 → 채팅방 입장"}
               </Link>
-              <p className="rise-in-3 text-center text-[12px] text-text-3">
+              <p className="rise-in-3 text-center t-sub text-text-3">
                 {isOrganizer
                   ? "내가 만든 모임이에요"
                   : isPast
@@ -284,12 +285,12 @@ export default async function TownGroupDetailPage({
             <>
               <Link
                 href={`/login?callbackUrl=${encodeURIComponent(`/town/groups/${id}`)}`}
-                className="btn-primary rise-in-2 rounded-2xl p-3.5 text-center text-[15px] no-underline"
+                className="btn-primary rise-in-2 rounded-2xl p-3.5 text-center t-section no-underline"
                 style={{ boxShadow: "0 10px 26px rgba(29,79,216,.35)" }}
               >
                 로그인하고 참여하기
               </Link>
-              <p className="rise-in-3 text-center text-[12px] text-text-3">
+              <p className="rise-in-3 text-center t-sub text-text-3">
                 로그인하면 모임 채팅에 참여할 수 있어요
               </p>
             </>

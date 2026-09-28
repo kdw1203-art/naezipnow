@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useState } from "react";
 import Link from "next/link";
@@ -92,7 +93,7 @@ export function KeywordAlertButton({
 
   if (phase === "done" || phase === "exists") {
     return (
-      <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium text-text-2 ${className}`}>
+      <span className={`inline-flex items-center gap-1.5 t-sub font-medium text-text-2 ${className}`}>
         <Icon name="check" size={14} className={phase === "done" ? "njn-pop-once text-success" : ""} />
         {phase === "done" ? "알림 설정됨" : "이미 받고 있어요"} ·{" "}
         <Link href="/my/watchlist?tab=searches" className="underline underline-offset-2">
@@ -106,7 +107,7 @@ export function KeywordAlertButton({
     return (
       <Link
         href="/login"
-        className={`press inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[12px] font-semibold text-ink tap-ripple ${className}`}
+        className={`press inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 t-sub font-semibold text-ink tap-ripple ${className}`}
       >
         <Icon name="bell" size={14} />
         로그인하고 알림 받기
@@ -120,7 +121,7 @@ export function KeywordAlertButton({
       onClick={subscribe}
       disabled={phase === "busy"}
       aria-busy={phase === "busy" || undefined}
-      className={`press inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[12px] font-semibold text-ink tap-ripple ${className}`}
+      className={`press inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 t-sub font-semibold text-ink tap-ripple ${className}`}
     >
       {phase === "busy" ? <span className="njn-ring njn-ring--ink" aria-hidden="true" /> : <Icon name="bell" size={14} />}
       {phase === "busy" ? "설정 중…" : phase === "error" ? "다시 시도" : `‘${q}’ 새 소식 알림`}

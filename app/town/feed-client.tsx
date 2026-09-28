@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Explain } from "@/app/components/explain/Explain";
@@ -314,7 +315,7 @@ function FeedCardView({ card, delay }: { card: FeedCard; delay: number }) {
               </span>
             ) : typeof card.saves === "number" ? (
               <span className="inline-flex shrink-0 items-center gap-1">
-                <Icon name="🔖" size={12} />
+                <Icon name="bookmark" size={12} />
                 {card.saves}
               </span>
             ) : null}
@@ -676,7 +677,7 @@ export function TownFeed({
 
       {visible.length === 0 ? (
         <div className="rise-in-3 card flex flex-col items-center gap-2 px-5 py-12 text-center">
-          <div className="t-title"><Icon name="📍" size={26} /></div>
+          <div className="t-title"><Icon name="pin" size={26} /></div>
           {/* 조회 실패로 목록이 비었을 때 "글이 없어요"라고 하면 사실이 아니다.
               [967 · 19] 아직 안 받은 장이 남아 있을 때도 마찬가지 — "없다"가 아니라
               "지금까지 받은 것에는 없다"고 말하고 더 보기로 잇는다. */}
@@ -685,12 +686,12 @@ export function TownFeed({
               ? "글을 불러오지 못했어요"
               : kind === "post" && !onlyMine && !more
                 ? /* [1006] 이야기 탭 0건 — 지금 운영 실측(사람 글 0건)이 그대로 보이는 자리다. 지어내지 않는다 */
-                  "아직 이웃 글이 없어요 — 첫 이야기를 남겨 보세요"
+                  "아직 이웃 글이 없어요"
                 : more
                   ? "지금까지 받은 글에는 이 조건이 없어요"
                   : onlyMine
-                    ? "내 관심지역 글이 아직 없어요 — 첫 글을 남겨 보세요"
-                    : "이 조건의 글이 아직 없어요 — 첫 글을 남겨 보세요"}
+                    ? "내 관심지역 글이 아직 없어요"
+                    : "이 조건의 글이 아직 없어요"}
           </div>
           <div className="t-sub text-text-3">
             {loadFailed

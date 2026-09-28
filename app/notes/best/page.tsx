@@ -1,6 +1,8 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
+import { PageHead } from "@/app/components/PageHead";
 import { Explain } from "@/app/components/explain/Explain";
 import {
   listBestNoteMonths,
@@ -75,11 +77,13 @@ export default async function BestNotesIndexPage() {
   return (
     <PageShell breadcrumb="이달의 공개 임장노트">
       <div className="mx-auto max-w-[760px]">
-        <h1 className="rise-in t-title text-ink">이달의 공개 임장노트</h1>
-        {/* [1015 · 규칙 B·D] 설명 문단 세 문장 → 사실 한 줄 */}
-        <p className="rise-in-1 mt-2 t-body text-text-2 max-md:mt-1">
-          공개 임장노트 중 기록이 충실한 노트를 매달 아래 계산식({MAX_SCORE}점 만점)으로 뽑습니다.
-        </p>
+        {/* [1015 · 규칙 B·D] 설명 문단 세 문장 → 사실 한 줄. [1022 · 정렬·글씨·테마] 공용 PageHead(아이콘 칩 40 · h1 · 사실 한 줄) */}
+        <PageHead
+          icon="trophy"
+          title="이달의 공개 임장노트"
+          sub={`공개 임장노트 중 기록 충실도 상위 · 매달 아래 계산식(${MAX_SCORE}점 만점)`}
+          subOnPhone
+        />
 
         {/* 선정 기준 — 문서 N13 의 "선정 기준 공개".
             [1015 · 규칙 B] 다섯 축(계산식)은 이 페이지의 본체라 그대로. 그 아래 규칙 세 문장은 ⓘ 로 접었다. */}

@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 /**
  * G5+G12+G13 — Q&A 블록 (GEO 표준 컴포넌트).
@@ -18,12 +19,12 @@ export function QaBlock({ title = "자주 묻는 질문", items }: { title?: str
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(faqJsonLd(items)) }}
       />
-      <h2 className="text-[15px] font-bold text-ink">{title}</h2>
+      <h2 className="t-section font-bold text-ink">{title}</h2>
       <dl className="mt-3 flex flex-col gap-3">
         {items.map((it) => (
           <div key={it.q} className="border-b border-border pb-3 last:border-b-0 last:pb-0">
-            <dt className="text-[13px] font-bold text-ink">{it.q}</dt>
-            <dd className="mt-1 text-[13px] leading-[1.7] text-text-2">{it.a}</dd>
+            <dt className="t-body font-bold text-ink">{it.q}</dt>
+            <dd className="mt-1 t-body leading-[1.7] text-text-2">{it.a}</dd>
           </div>
         ))}
       </dl>

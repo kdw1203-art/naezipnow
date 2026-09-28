@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import { RingLoader } from "@/app/components/ui/BrandLoader";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -422,7 +423,7 @@ function WatchlistToggle({
       disabled={busy}
       aria-pressed={watching === true}
       aria-busy={busy}
-      className={`press flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border p-[11px] text-xs font-bold transition-colors disabled:opacity-60 ${
+      className={`press flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border p-[11px] t-sub font-bold transition-colors disabled:opacity-60 ${
         watching
           ? "border-primary bg-primary-soft text-primary"
           : "border-line bg-surface text-text-2"
@@ -851,13 +852,13 @@ export function ComplexInfoPanel({
           )}
 
           {failed && (
-            <div className="rounded-xl border border-danger-border bg-danger-soft px-3.5 py-2.5 text-xs text-text-2">
+            <div className="rounded-lg border border-line bg-surface px-3.5 py-2.5 t-sub text-text-2">
               단지 상세를 불러오지 못했어요. 전체 화면에서 다시 확인해 주세요.
             </div>
           )}
 
           {data?.mode === "not_found" && !failed && (
-            <div className="rounded-xl bg-bg px-3.5 py-2.5 text-xs text-text-2">
+            <div className="rounded-xl bg-bg px-3.5 py-2.5 t-sub text-text-2">
               단지 마스터와 아직 연결되지 않았어요. 실거래·이야기는 아래를 참고해 주세요.
             </div>
           )}
@@ -951,7 +952,7 @@ export function ComplexInfoPanel({
                   return (
                     <div
                       key={`${t.yyyymm}-${i}`}
-                      className={`flex items-center justify-between gap-2 px-3 py-2 text-[13px] ${
+                      className={`flex items-center justify-between gap-2 px-3 py-2 t-body ${
                         i > 0 ? "border-t border-line" : ""
                       }`}
                     >
@@ -989,7 +990,7 @@ export function ComplexInfoPanel({
           )}
 
           {!loading && recent.length === 0 && !failed && (
-            <div className="rounded-xl bg-bg px-3.5 py-2.5 text-xs text-text-3">
+            <div className="rounded-xl bg-bg px-3.5 py-2.5 t-sub text-text-3">
               최근 실거래 데이터가 아직 없어요.
             </div>
           )}
@@ -1003,7 +1004,7 @@ export function ComplexInfoPanel({
                 sub={rent ? `최근 ${rent.windowMonths}개월 · 국토부 신고` : "국토부 신고"}
               />
               {rentFailed ? (
-                <p className="rounded-xl border border-warning-border bg-warning-soft px-3 py-2 t-sub text-warning">
+                <p className="rounded-lg border border-line bg-surface px-3 py-2 t-sub text-text-2">
                   전월세 실거래를 지금 불러오지 못했어요. 잠시 후 다시 열어 주세요.
                 </p>
               ) : rent ? (
@@ -1064,7 +1065,7 @@ export function ComplexInfoPanel({
                     </div>
                     <div
                       className={`shrink-0 tabular-nums ${
-                        ratio ? "text-[19px] font-bold text-ink" : "t-sub font-bold text-text-3"
+                        ratio ? "t-title font-bold text-ink" : "t-sub font-bold text-text-3"
                       }`}
                     >
                       {ratio ? `${ratio.pct}%` : "미산출"}
@@ -1129,7 +1130,7 @@ export function ComplexInfoPanel({
                 }
               />
               {notesFailed ? (
-                <p className="rounded-xl border border-warning-border bg-warning-soft px-3 py-2 t-sub text-warning">
+                <p className="rounded-lg border border-line bg-surface px-3 py-2 t-sub text-text-2">
                   임장노트를 지금 불러오지 못했어요. 잠시 후 다시 열어 주세요.
                 </p>
               ) : notes?.latest ? (
@@ -1285,9 +1286,10 @@ export function ComplexInfoPanel({
           )}
 
           {/* 부가 섹션 조회 실패 고지 — 섹션이 안 보이는 이유가 "없어서"가
-              아니라 "지금 못 읽어서"일 때, 그 사실을 말한다. */}
+              아니라 "지금 못 읽어서"일 때, 그 사실을 말한다.
+              [1022 · 정렬·글씨·테마] 경고색 면(bg-warning-soft) → 흰 카드 + 본문색 — /notes 조회 실패 카드와 같은 모양(이 패널의 실패 고지 4곳 동일). */}
           {failedSections.length > 0 && (
-            <div className="rounded-2xl border border-warning-border bg-warning-soft px-3.5 py-2.5 t-sub text-warning">
+            <div className="rounded-lg border border-line bg-surface px-3.5 py-2.5 t-sub text-text-2">
               {failedSections.join(" · ")} 정보를 지금 불러오지 못했어요. 잠시 후 다시 열어 주세요.
             </div>
           )}
@@ -1319,12 +1321,12 @@ export function ComplexInfoPanel({
           <WatchlistToggle complexId={complexId} complexName={name} />
 
           <div className="grid grid-cols-2 gap-2">
-            <Link href={noteHref} className="btn-secondary rounded-xl p-[11px] text-center text-xs">
+            <Link href={noteHref} className="btn-secondary rounded-xl p-[11px] text-center t-sub">
               임장노트 쓰기
             </Link>
             <Link
               href={analysisHref}
-              className="btn-secondary rounded-xl p-[11px] text-center text-xs"
+              className="btn-secondary rounded-xl p-[11px] text-center t-sub"
             >
               AI 분석
             </Link>
@@ -1339,7 +1341,7 @@ export function ComplexInfoPanel({
             return (
               <Link
                 href={`/region/${rid}`}
-                className="btn-secondary block rounded-xl p-[11px] text-center text-xs"
+                className="btn-secondary block rounded-xl p-[11px] text-center t-sub"
               >
                 {cityDistrict} 시장 전체 보기 · 지수·거래량·입주
               </Link>

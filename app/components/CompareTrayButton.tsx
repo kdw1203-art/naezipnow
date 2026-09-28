@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 
 import { useEffect, useState } from "react";
@@ -80,7 +81,7 @@ export function CompareTrayButton({
       type="button"
       onClick={onClick}
       aria-pressed={inTray}
-      className={`press flex-1 rounded-lg p-3 text-center text-[13px] transition-colors ${
+      className={`press flex-1 rounded-lg p-3 text-center t-body transition-colors ${
         /* [970 · B-06] 네이비 위 글자는 text-on-dark — text-surface 는 다크에서 어두운 면색이 돼 안 보였다 */
         inTray ? "bg-brand-navy font-bold text-on-dark" : "btn-secondary"
       }`}

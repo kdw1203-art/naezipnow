@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 /* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 
@@ -154,8 +155,8 @@ export function IosInstallHint() {
           </svg>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-bold text-ink">주소창 없이 앱처럼 쓰기</div>
-          <p className="mt-1 text-[12px] leading-relaxed text-text-2">
+          <div className="t-body font-bold text-ink">주소창 없이 앱처럼 쓰기</div>
+          <p className="mt-1 t-sub leading-relaxed text-text-2">
             사파리 <span className="font-semibold text-text-1">공유</span> 버튼을 누르고 목록에서{" "}
             <span className="font-semibold text-text-1">홈 화면에 추가</span>를 고르면 돼요. 위아래
             브라우저 막대가 사라져 화면을 더 넓게 써요.
@@ -166,7 +167,7 @@ export function IosInstallHint() {
         <button
           type="button"
           onClick={dismiss}
-          className="min-h-[44px] flex-1 rounded-lg border border-line bg-surface px-4 text-[13px] font-medium text-text-2"
+          className="min-h-[44px] flex-1 rounded-lg border border-line bg-surface px-4 t-body font-medium text-text-2"
         >
           닫기
         </button>

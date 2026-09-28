@@ -1,7 +1,9 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
+import { PageHead } from "@/app/components/PageHead";
 import { QaBlock } from "@/app/components/QaBlock";
 import {
   getBestNotesMonth,
@@ -153,10 +155,8 @@ export default async function BestNotesMonthPage({
         }}
       />
       <div className="mx-auto max-w-[860px]">
-        <h1 className="rise-in t-title text-ink">
-          {label} 이달의 공개 임장노트
-        </h1>
-        <p className="rise-in-1 mt-2 t-body text-text-1">{leadSentence}</p>
+        {/* [1022 · 정렬·글씨·테마] 공용 PageHead(아이콘 칩 40 · h1 · 사실 한 줄) */}
+        <PageHead icon="trophy" title={`${label} 이달의 공개 임장노트`} sub={leadSentence} subOnPhone />
 
         {/* 집계 요약 — 뽑힌 수만 보여 주면 분모를 숨기는 셈이 된다 */}
         <div className="rise-in-1 mt-4 grid grid-cols-3 gap-2">

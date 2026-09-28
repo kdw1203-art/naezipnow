@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { NaverMap } from "@/components/map/NaverMapLazy";
 import type { MapMarkerData } from "@/components/map/NaverMap";
@@ -69,8 +70,8 @@ export function LocationMap({
   const fallback = (
     <div className="flex h-full w-full items-center justify-center bg-divider text-center">
       <div>
-        <div className="text-2xl">
-          <Icon name="📍" size={24} />
+        <div className="t-display">
+          <Icon name="pin" size={24} />
         </div>
         <div className="mt-1 t-sub font-bold text-text-1">
           {region || city || "장소 미정"}

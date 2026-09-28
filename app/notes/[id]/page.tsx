@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import Link from "next/link";
 import { displayAuthorLabel, isLabAuthor } from "@/lib/notes/author-label";
 import { cache } from "react";
@@ -838,8 +839,9 @@ export default async function NoteDetailPage({
           </Link>
         ))}
       </nav>
+      {/* [1022 · 정렬·글씨·테마] "실데이터 기준" 부연 라벨 삭제(1015 규칙 C 와 같은 처리) */}
       {aptForTools && (
-        <p className="t-caption text-text-3">AI 진단 · {aptForTools} 실데이터 기준 · 첫 실행 +100P</p>
+        <p className="t-caption text-text-3">AI 진단 · {aptForTools} · 첫 실행 +100P</p>
       )}
     </section>
   ) : null;
@@ -1018,8 +1020,8 @@ export default async function NoteDetailPage({
                   className={
                     /* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
                     i === v.chips.length - 1
-                      ? "rounded-full bg-brand-navy px-2.5 py-1 text-[12px] font-bold text-on-dark"
-                      : "rounded-full border border-line bg-surface px-2.5 py-1 text-[12px] font-bold text-text-2"
+                      ? "rounded-full bg-brand-navy px-2.5 py-1 t-sub font-bold text-on-dark"
+                      : "rounded-full border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2"
                   }
                 >
                   {c}
@@ -1028,12 +1030,12 @@ export default async function NoteDetailPage({
             </div>
 
             {/* ② 한 줄 총평 (= 제목) */}
-            <h1 className="t-section text-ink md:t-title">
+            <h1 className="t-title text-ink">
               {v.oneLiner}
             </h1>
 
             {/* ③ 직접 방문 배지 + 방문일·작성자 */}
-            <div className="flex flex-wrap items-center gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-2 t-sub">
               {v.directVisit ? (
                 /* [962] 도장 — "다녀왔다"는 흔적을 배지가 아니라 도장으로. 주홍 이중 테두리, 살짝 기운 각도 */
                 <span className="njn-stamp">
@@ -1099,7 +1101,7 @@ export default async function NoteDetailPage({
                 {v.axes.map((a) => (
                   <div
                     key={a.label}
-                    className="flex items-center justify-between rounded-lg bg-bg px-3 py-2 text-xs text-text-1"
+                    className="flex items-center justify-between rounded-lg bg-bg px-3 py-2 t-sub text-text-1"
                   >
                     <span className="inline-flex items-center gap-1">
                       <Icon name={a.icon} size={16} /> {a.label}

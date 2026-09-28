@@ -1,6 +1,8 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import Link from "next/link";
 import { CountUp } from "@/app/components/motion/CountUp";
 import { PageShell } from "../components/PageShell";
+import { PageHead } from "../components/PageHead";
 /* [967 · 19] 카드 변환·병합은 lib/town/feed.ts 로 옮겼다 — "더 보기"(/api/town/feed)와
    첫 장이 같은 코드로 카드를 만들어야 하기 때문이다. */
 import { loadTownFeed, TOWN_FEED_FIRST_PAGE } from "@/lib/town/feed";
@@ -173,56 +175,59 @@ export default async function TownPage() {
     <PageShell wide>
       {/* [1017] 소유자(폰 캡처의 네이비 띠에 ×): "임장·지도를 제외하고 나머지 카테고리에서는 전부 삭제".
           네이비 히어로(슬로건 · 워터마크 · 통계 띠) → 흰 머리 한 줄. 버튼 둘은 그대로, 숫자는 캡션 한 줄. */}
-      <section className="rise-in mb-3 flex flex-col gap-1.5 md:mb-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="t-title text-ink">동네이야기</h1>
-            <p className="mt-0.5 t-sub text-text-2 max-md:hidden">이웃 글과 공개 임장노트를 동네 단위로.</p>
-          </div>
-          <div className="flex gap-2">
+      {/* [1022 · 정렬·글씨·테마] 공용 PageHead — 허브·임장노트와 같은 한 줄(아이콘 칩 40 · h1 · 사실 한 줄 | 버튼 둘). 숫자 줄은 그대로 캡션. */}
+      <PageHead
+        icon="messages-square"
+        title="동네이야기"
+        sub="이웃 글과 공개 임장노트 · 동네 단위"
+        className="mb-3 md:mb-4"
+        actions={
+          <>
             <Link href="/town/write" className="btn-primary btn-md rounded-xl no-underline">
               이야기 쓰기
             </Link>
             <Link href="/notes/new" className="btn-outline btn-md rounded-xl no-underline">
               임장노트 쓰기
             </Link>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 t-caption text-text-3">
-          {/* [970 · C-30] "오늘 새 글 0" 은 살아 있다는 신호가 아니라 비었다는 고백이다 — 0이면 숨긴다 */}
-          {todayCount > 0 && (
+          </>
+        }
+        facts={
+          <>
+            {/* [970 · C-30] "오늘 새 글 0" 은 살아 있다는 신호가 아니라 비었다는 고백이다 — 0이면 숨긴다 */}
+            {todayCount > 0 && (
+              <span>
+                오늘 새 글 <b className="t-num text-ink"><CountUp value={todayCount} /></b>
+              </span>
+            )}
             <span>
-              오늘 새 글 <b className="t-num text-ink"><CountUp value={todayCount} /></b>
+              이번 주 <b className="t-num text-ink"><CountUp value={weekCount} /></b>
             </span>
-          )}
-          <span>
-            이번 주 <b className="t-num text-ink"><CountUp value={weekCount} /></b>
-          </span>
-          <span>
-            이 피드 <b className="t-num text-ink"><CountUp value={cards.length} /></b>건
-          </span>
-          {storyCount > 0 && (
             <span>
-              이웃 글 <b className="t-num text-ink">{storyCount}</b>
+              이 피드 <b className="t-num text-ink"><CountUp value={cards.length} /></b>건
             </span>
-          )}
-          {humanNoteCount > 0 && (
-            <span>
-              사람 노트 <b className="t-num text-ink">{humanNoteCount}</b>
-            </span>
-          )}
-          {labNoteCount > 0 && (
-            <span>
-              Lab 노트 <b className="t-num text-ink">{labNoteCount}</b>
-            </span>
-          )}
-          {hottest && (
-            <Link href={`/town/${hottest.id}`} className="no-underline">
-              가장 활발한 동네 <b className="text-brand-red">{hottest.name} ›</b>
-            </Link>
-          )}
-        </div>
-      </section>
+            {storyCount > 0 && (
+              <span>
+                이웃 글 <b className="t-num text-ink">{storyCount}</b>
+              </span>
+            )}
+            {humanNoteCount > 0 && (
+              <span>
+                임장노트 <b className="t-num text-ink">{humanNoteCount}</b>
+              </span>
+            )}
+            {labNoteCount > 0 && (
+              <span>
+                Lab 노트 <b className="t-num text-ink">{labNoteCount}</b>
+              </span>
+            )}
+            {hottest && (
+              <Link href={`/town/${hottest.id}`} className="no-underline">
+                가장 활발한 동네 <b className="text-brand-red">{hottest.name} ›</b>
+              </Link>
+            )}
+          </>
+        }
+      />
 
       {/* 동네이야기 카테고리 — 청약·입주·공매 + 뉴스룸 입구 (인터랙티브).
           목록은 lib/town/category-links.ts 단일 소스. 하위 페이지도 같은 것을 쓴다. */}

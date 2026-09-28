@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012] 규칙 1·2 — 본문 카드 반경 12px→8px(rounded-3xl→rounded-lg 1곳). */
 /* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-bold/black 6곳을 font-bold(700)로 바꿨다. */
 
@@ -62,7 +63,7 @@ function ScoreBars({ scores, dark }: { scores: DeckPage["scores"]; dark: boolean
       {scores.map((s) => (
         <div key={s.label} className="flex items-center gap-2.5">
           <span
-            className={`w-[52px] shrink-0 text-[12px] font-bold ${dark ? "text-white/85" : "text-text-2"}`}
+            className={`w-[52px] shrink-0 t-sub font-bold ${dark ? "text-white/85" : "text-text-2"}`}
           >
             {s.label}
           </span>
@@ -76,7 +77,7 @@ function ScoreBars({ scores, dark }: { scores: DeckPage["scores"]; dark: boolean
             />
           </span>
           <span
-            className={`w-[34px] shrink-0 text-right text-[12px] font-bold tabular-nums ${
+            className={`w-[34px] shrink-0 text-right t-sub font-bold tabular-nums ${
               dark ? "text-white" : "text-ink"
             }`}
           >
@@ -126,15 +127,15 @@ function DeckCard({ page, index, total }: { page: DeckPage; index: number; total
             }`}
           >
           {page.eyebrow && (
-            <p className={`text-[12px] font-bold tracking-wide ${t.eyebrow}`}>
+            <p className={`t-sub font-bold tracking-wide ${t.eyebrow}`}>
               {page.eyebrow}
             </p>
           )}
 
           {page.title && (
             <h2
-              className={`text-[19px] font-bold leading-[1.35] ${t.title} ${
-                page.kind === "cover" ? "text-[24px]" : ""
+              className={`t-title font-bold leading-[1.35] ${t.title} ${
+                page.kind === "cover" ? "t-display" : ""
               }`}
             >
               {page.title}
@@ -142,7 +143,7 @@ function DeckCard({ page, index, total }: { page: DeckPage; index: number; total
           )}
 
           {page.body.length > 0 && (
-            <div className={`flex flex-col gap-2 text-[13px] leading-relaxed ${t.body}`}>
+            <div className={`flex flex-col gap-2 t-body leading-relaxed ${t.body}`}>
               {page.body.map((p, i) => (
                 <p key={i}>{p}</p>
               ))}
@@ -150,7 +151,7 @@ function DeckCard({ page, index, total }: { page: DeckPage; index: number; total
           )}
 
           {page.bullets.length > 0 && (
-            <ul className={`flex flex-col gap-2 text-[13px] leading-relaxed ${t.body}`}>
+            <ul className={`flex flex-col gap-2 t-body leading-relaxed ${t.body}`}>
               {page.bullets.map((b, i) => (
                 <li key={i} className="flex gap-2">
                   <span aria-hidden className={dark ? "text-white/60" : "text-primary"}>
@@ -190,7 +191,7 @@ function DeckCard({ page, index, total }: { page: DeckPage; index: number; total
               {page.chips.map((c) => (
                 <span
                   key={c}
-                  className={`rounded-full px-2.5 py-1 text-[12px] font-bold ${
+                  className={`rounded-full px-2.5 py-1 t-sub font-bold ${
                     dark ? "bg-white/15 text-white" : "bg-surface text-primary"
                   }`}
                 >
@@ -203,11 +204,11 @@ function DeckCard({ page, index, total }: { page: DeckPage; index: number; total
           </div>
 
           <div className="flex items-center justify-between pt-3">
-            <span className={`text-[12px] font-bold ${dark ? "text-white/60" : "text-text-3"}`}>
+            <span className={`t-sub font-bold ${dark ? "text-white/60" : "text-text-3"}`}>
               출처 · {page.source}
             </span>
             <span
-              className={`text-[12px] font-bold tabular-nums ${
+              className={`t-sub font-bold tabular-nums ${
                 dark ? "text-white/60" : "text-text-3"
               }`}
             >

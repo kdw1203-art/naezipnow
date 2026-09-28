@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 /**
  * 임장러 팔로우 버튼 (당근/SNS 벤치마크) — user_follows 실배선
@@ -110,7 +111,7 @@ export function FollowButton({ handle }: { handle: string }) {
       disabled={busy || state === "loading"}
       aria-pressed={following}
       aria-busy={busy || undefined}
-      className={`press mb-1 inline-flex min-h-[40px] shrink-0 items-center gap-1 rounded-full px-4 py-[7px] text-[12px] font-bold transition-colors ${
+      className={`press mb-1 inline-flex min-h-[40px] shrink-0 items-center gap-1 rounded-full px-4 py-[7px] t-sub font-bold transition-colors ${
         following ? "border border-line bg-surface text-text-2" : "bg-primary text-white"
       } ${busy ? "opacity-80" : ""}`}
     >

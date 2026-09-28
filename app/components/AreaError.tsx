@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useEffect } from "react";
 import Link from "next/link";
@@ -56,7 +57,7 @@ export function AreaError({
         retryLabel="다시 시도"
         className="w-full"
       />
-      <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[13px]">
+      <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 t-body">
         {links.map((l, i) => (
           <span key={l.href} className="flex items-center gap-2">
             {i > 0 && <span className="text-text-3">·</span>}

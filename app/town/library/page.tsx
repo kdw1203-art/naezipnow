@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 import Link from "next/link";
 import { PageShell } from "../../components/PageShell";
 import {
@@ -203,15 +204,15 @@ export default async function TownLibraryPage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
               <Icon name="folder" size={22} />
             </div>
-            <div className="text-[13px] font-bold text-text-1">
+            <div className="t-body font-bold text-text-1">
               자료실에 공개된 임장노트가 아직 없어요
             </div>
-            <div className="max-w-xs text-xs leading-[1.6] text-text-3">
+            <div className="max-w-xs t-sub leading-[1.6] text-text-3">
               공개로 저장한 첫 노트가 이 자리에 실려요
             </div>
             <Link
               href="/notes/new"
-              className="btn-primary mt-1 rounded-lg px-4 py-2 text-xs no-underline"
+              className="btn-primary mt-1 rounded-lg px-4 py-2 t-sub no-underline"
             >
               첫 노트 쓰기
             </Link>

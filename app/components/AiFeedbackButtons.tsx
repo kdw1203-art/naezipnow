@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useState } from "react";
 import { Icon } from "@/app/components/Icon";
@@ -82,7 +83,7 @@ export function AiFeedbackButtons({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 text-[12px] text-text-3">
+    <div className="flex flex-wrap items-center gap-2 t-sub text-text-3">
       <span>이 정리가 도움이 됐나요?</span>
       <button
         type="button"

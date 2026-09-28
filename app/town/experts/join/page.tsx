@@ -1,7 +1,7 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { Icon } from "@/app/components/Icon";
-import { BrandWatermark } from "@/app/components/BrandWatermark";
 import { JsonLd } from "@/app/components/JsonLd";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
@@ -89,35 +89,34 @@ export default function ExpertJoinPage() {
       />
       <TownCategoryNav stick />
 
-      {/* ---------- 히어로 (브랜드 네이비) ---------- */}
-      <section className="rise-in brand-navy-card mb-5 overflow-hidden rounded-3xl px-5 py-6 md:px-7 md:py-7">
-        <BrandWatermark />
+      {/* ---------- 머리 ---------- */}
+      {/* [1022 · 정렬·글씨·테마] 네이비 히어로(워터마크·"전문가 모집" 부연 라벨) → 흰 카드 머리. 다른 동네 하위 화면과 같은 바탕. */}
+      <section className="rise-in card mb-5 overflow-hidden rounded-2xl px-5 py-6 md:px-7 md:py-7">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="max-w-[580px]">
-            <div className="t-caption font-bold tracking-wider text-on-dark-muted">전문가 모집</div>
             {/* [1012] 규칙 5·8 — 슬로건("지금 참여하세요") → 명사형 제목(t-title), 본문은 사실만 */}
-            <h1 className="mt-1 t-title text-balance text-on-dark">
+            <h1 className="mt-1 t-title text-balance text-ink">
               전문가 참여 신청 · 공인중개사 · 세무사 · 감정평가사 · 대출상담사 · 건축사
             </h1>
             {/* [1015] "~하고, ~하고, ~해요" 문장 → 명사 나열(브리프 규칙 D) */}
-            <p className="mt-2 max-w-[52ch] t-body text-on-dark-muted">
+            <p className="mt-2 max-w-[52ch] t-body text-text-2">
               글 상담 답변 · 견적 요청 제안 · 답변 완료 의뢰자 후기
             </p>
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 t-sub text-on-dark-muted">
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 t-sub text-text-2">
               <span className="inline-flex items-center gap-1">
-                <Icon name="check" size={13} className="text-brand-red-dark" /> 가입 심사비 {feeRow("전문가 가입 심사비")}
+                <Icon name="check" size={13} className="text-brand-red" /> 가입 심사비 {feeRow("전문가 가입 심사비")}
               </span>
               <span className="inline-flex items-center gap-1">
-                <Icon name="shield" size={13} className="text-on-dark" /> 협회·기관 공개 조회로 인증
+                <Icon name="shield" size={13} className="text-ink" /> 협회·기관 공개 조회로 인증
               </span>
               <span className="inline-flex items-center gap-1">
-                <Icon name="clock" size={13} className="text-on-dark" /> 1차 자동 검증 24시간
+                <Icon name="clock" size={13} className="text-ink" /> 1차 자동 검증 24시간
               </span>
             </div>
           </div>
           <div className="flex shrink-0 flex-col items-start gap-2 md:items-end">
             <ExpertApplyCta label="전문가 인증 신청하기" />
-            <Link href="/town/experts" className="brand-photo-chip rounded-xl px-5 py-2.5 t-sub font-bold no-underline">
+            <Link href="/town/experts" className="btn-outline btn-md rounded-xl no-underline">
               전문가 목록 보기 ›
             </Link>
           </div>
@@ -130,7 +129,7 @@ export default function ExpertJoinPage() {
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {OPENS.map((o) => (
             <div key={o.title} className="card flex gap-3 rounded-2xl p-4">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-navy text-on-dark">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
                 <Icon name={o.icon} size={20} />
               </span>
               <div className="min-w-0">
@@ -192,7 +191,7 @@ export default function ExpertJoinPage() {
         <ol data-tone="sand" className="card flex list-none flex-col divide-y divide-line rounded-2xl px-5">
           {pipeline.map((s) => (
             <li key={s.id} className="flex items-start gap-3 py-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-navy t-caption font-bold text-on-dark t-num">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-soft t-caption font-bold text-primary t-num">
                 {s.step}
               </span>
               <div className="min-w-0 flex-1">
@@ -266,16 +265,17 @@ export default function ExpertJoinPage() {
       </section>
 
       {/* ---------- 마지막 CTA ---------- */}
-      <section className="rise-in brand-navy-card mb-5 flex flex-col items-start gap-3 rounded-3xl px-5 py-5 md:flex-row md:items-center md:justify-between md:px-7">
+      {/* [1022 · 정렬·글씨·테마] 마지막 CTA 도 네이비 → 흰 카드 */}
+      <section className="rise-in card mb-5 flex flex-col items-start gap-3 rounded-2xl px-5 py-5 md:flex-row md:items-center md:justify-between md:px-7">
         <div>
-          <div className="t-section text-on-dark">접수부터 승인까지, 진행 상황은 알림으로</div>
-          <p className="mt-0.5 t-sub text-on-dark-muted">
+          <div className="t-section text-ink">접수부터 승인까지, 진행 상황은 알림으로</div>
+          <p className="mt-0.5 t-sub text-text-2">
             로그인 후 신청 · 인증되면 마이 › 전문가 프로필에서 관리
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <ExpertApplyCta label="전문가 인증 신청하기" />
-          <Link href="/partners" className="brand-photo-chip rounded-xl px-4 py-2.5 t-sub font-bold no-underline">
+          <Link href="/partners" className="btn-outline btn-md rounded-xl no-underline">
             중개사무소 제휴 ›
           </Link>
         </div>

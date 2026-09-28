@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -178,11 +179,11 @@ export function InstallPrompt() {
       <div className="flex items-start gap-3">
         <Illust name="key-door" size={48} className="shrink-0 rounded-lg" />
         <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-bold text-ink">내집나우를 홈 화면에 추가</div>
+          <div className="t-body font-bold text-ink">내집나우를 홈 화면에 추가</div>
           {/* [1012 · 규칙 6] 실제로 달라지는 것만 — 홈 화면 아이콘 한 번 탭 · 주소창 없는 전체 화면(manifest display:
               standalone) · 바로가기 3개(임장노트 작성·동네이야기·AI 분석 — manifest shortcuts). 예전 "오프라인에서도
               다시 볼 수 있다"는 서비스워커가 데이터를 캐시하지 않으므로(app/offline) 사실이 아니었다. */}
-          <p className="mt-1 text-[12px] leading-relaxed text-text-2">
+          <p className="mt-1 t-sub leading-relaxed text-text-2">
             홈 화면 아이콘 한 번으로 주소창 없이 전체 화면으로 열려요. 아이콘을 길게 누르면 임장노트 작성·동네이야기·AI
             분석 바로가기 3개가 나와요.
           </p>
@@ -192,14 +193,14 @@ export function InstallPrompt() {
         <button
           type="button"
           onClick={dismiss}
-          className="min-h-[44px] flex-1 rounded-lg border border-line bg-surface px-4 text-[13px] font-medium text-text-2"
+          className="min-h-[44px] flex-1 rounded-lg border border-line bg-surface px-4 t-body font-medium text-text-2"
         >
           나중에
         </button>
         <button
           type="button"
           onClick={install}
-          className="btn-primary press min-h-[44px] flex-1 rounded-lg px-4 text-[13px] font-bold"
+          className="btn-primary press min-h-[44px] flex-1 rounded-lg px-4 t-body font-bold"
         >
           홈 화면에 추가
         </button>

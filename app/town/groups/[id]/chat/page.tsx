@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 import Link from "next/link";
 import { getMeeting } from "@/lib/meetings/store-db";
 import { safeAuth } from "@/lib/safe-auth";
@@ -35,13 +36,13 @@ export default async function TownGroupChatPage({
   if (!meeting) {
     return (
       <div className="mx-auto flex h-dvh w-full max-w-[480px] flex-col items-center justify-center gap-3 bg-bg px-6 text-center">
-        <div className="text-[19px] font-bold text-ink">모임을 찾을 수 없어요</div>
-        <p className="text-[13px] leading-[1.6] text-text-2">
+        <div className="t-title font-bold text-ink">모임을 찾을 수 없어요</div>
+        <p className="t-body leading-[1.6] text-text-2">
           삭제되었거나 잘못된 링크일 수 있어요.
         </p>
         <Link
           href="/town/groups"
-          className="btn-primary rounded-xl px-5 py-2.5 text-[13px] no-underline"
+          className="btn-primary rounded-xl px-5 py-2.5 t-body no-underline"
         >
           모임 목록으로
         </Link>
@@ -62,28 +63,28 @@ export default async function TownGroupChatPage({
     return (
       <div className="mx-auto flex h-dvh w-full max-w-[480px] flex-col bg-bg">
         <div className="glass mx-3.5 mt-3.5 flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5">
-          <Link href={`/town/groups/${id}`} aria-label="뒤로" className="text-[15px] text-text-1">
+          <Link href={`/town/groups/${id}`} aria-label="뒤로" className="t-body text-text-1">
             ‹
           </Link>
           <div className="flex-1">
-            <div className="text-[13px] font-bold text-ink">{meeting.title}</div>
+            <div className="t-body font-bold text-ink">{meeting.title}</div>
             <div className="t-caption text-text-3">{metaLine}</div>
           </div>
         </div>
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-          <div className="text-[15px] font-bold text-ink">
+          <div className="t-section font-bold text-ink">
             로그인하면 모임 채팅에 참여할 수 있어요
           </div>
-          <p className="text-[13px] leading-[1.6] text-text-2">
+          <p className="t-body leading-[1.6] text-text-2">
             {meeting.description || "모임 멤버 채팅 — 일정·체크리스트"}
           </p>
           <Link
             href={`/login?callbackUrl=${encodeURIComponent(`/town/groups/${id}/chat`)}`}
-            className="btn-primary rounded-xl px-6 py-3 text-[13px] no-underline"
+            className="btn-primary rounded-xl px-6 py-3 t-body no-underline"
           >
             로그인하고 참여하기
           </Link>
-          <Link href={`/town/groups/${id}`} className="text-xs text-text-3 no-underline">
+          <Link href={`/town/groups/${id}`} className="t-sub text-text-3 no-underline">
             모임 정보로 돌아가기
           </Link>
         </div>

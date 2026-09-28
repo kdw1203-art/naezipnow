@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { Icon } from "@/app/components/Icon";
 import type { UploadItem } from "./NoteForm";
@@ -162,7 +163,7 @@ export function NotePhotoStrip({
                 aria-label="앞으로"
                 disabled={isCover}
                 onClick={() => onShift(i, -1)}
-                className="tap grid h-7 w-7 place-items-center rounded-lg border border-line bg-surface text-[13px] text-text-2 disabled:opacity-40"
+                className="tap grid h-7 w-7 place-items-center rounded-lg border border-line bg-surface t-body text-text-2 disabled:opacity-40"
               >
                 ◀
               </button>
@@ -183,7 +184,7 @@ export function NotePhotoStrip({
                 aria-label="뒤로"
                 disabled={isLast}
                 onClick={() => onShift(i, 1)}
-                className="tap grid h-7 w-7 place-items-center rounded-lg border border-line bg-surface text-[13px] text-text-2 disabled:opacity-40"
+                className="tap grid h-7 w-7 place-items-center rounded-lg border border-line bg-surface t-body text-text-2 disabled:opacity-40"
               >
                 ▶
               </button>

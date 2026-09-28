@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { readAuthedHint } from "@/lib/auth/authed-hint";
@@ -264,16 +265,16 @@ export function CoachmarkTour({
             : { top: bubbleTop, left: bubbleLeft }
         }
       >
-        <div className="mb-1 text-[12px] font-bold text-primary">
+        <div className="mb-1 t-sub font-bold text-primary">
           {index + 1} / {visibleSteps.length}
         </div>
-        <div className="text-[15px] font-bold text-ink">{step.title}</div>
-        <p className="mt-1.5 text-[13px] leading-relaxed text-text-2">{step.body}</p>
+        <div className="t-section font-bold text-ink">{step.title}</div>
+        <p className="mt-1.5 t-body leading-relaxed text-text-2">{step.body}</p>
         <div className="mt-3.5 flex items-center justify-between">
           <button
             type="button"
             onClick={() => finish("skip")}
-            className="text-[12px] font-semibold text-text-3 underline-offset-2 hover:underline"
+            className="t-sub font-semibold text-text-3 underline-offset-2 hover:underline"
           >
             건너뛰기
           </button>
@@ -282,7 +283,7 @@ export function CoachmarkTour({
               <button
                 type="button"
                 onClick={() => setIndex((i) => Math.max(0, i - 1))}
-                className="btn-soft rounded-lg px-3 py-1.5 text-[12px]"
+                className="btn-soft rounded-lg px-3 py-1.5 t-sub"
               >
                 이전
               </button>
@@ -290,7 +291,7 @@ export function CoachmarkTour({
             <button
               type="button"
               onClick={next}
-              className="btn-primary rounded-lg px-3.5 py-1.5 text-[12px]"
+              className="btn-primary rounded-lg px-3.5 py-1.5 t-sub"
             >
               {/* [1012 · 규칙 5] "시작하기"(금지 문구) → 마지막 단계는 투어를 끝내는 행동 그대로 */}
               {isLast ? "둘러보기 마치기" : "다음"}

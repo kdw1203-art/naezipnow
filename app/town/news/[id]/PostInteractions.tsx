@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -114,9 +115,9 @@ export function PostActions({
   }
 
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-end gap-2 text-[13px]">
+    <div className="mb-4 flex flex-wrap items-center justify-end gap-2 t-body">
       {error && (
-        <span className="text-[12px] font-bold text-danger">{error}</span>
+        <span className="t-sub font-bold text-danger">{error}</span>
       )}
       <button
         type="button"
@@ -214,7 +215,7 @@ export function LikeButton({
       onClick={() => void toggle()}
       disabled={busy}
       aria-pressed={liked ?? false}
-      className={`text-xs font-bold transition-colors disabled:opacity-50 ${
+      className={`t-sub font-bold transition-colors disabled:opacity-50 ${
         liked ? "text-primary underline underline-offset-2" : "text-primary"
       }`}
     >
@@ -296,28 +297,28 @@ export function CommentForm({
           maxLength={1000}
           aria-label="댓글 내용"
           placeholder={parentId ? "답글 남기기…" : "댓글 남기기…"}
-          className="min-w-0 flex-1 bg-transparent py-[6px] text-[13px] text-ink outline-none placeholder:text-text-3"
+          className="min-w-0 flex-1 bg-transparent py-[6px] t-body text-ink outline-none placeholder:text-text-3"
         />
         <button
           type="submit"
           disabled={busy || body.trim().length === 0}
-          className="shrink-0 text-xs font-bold text-primary disabled:opacity-40"
+          className="shrink-0 t-sub font-bold text-primary disabled:opacity-40"
         >
           {busy ? "등록 중…" : "등록"}
         </button>
       </div>
       {error && (
-        <p role="alert" className="px-1 text-[12px] font-bold text-danger">
+        <p role="alert" className="px-1 t-sub font-bold text-danger">
           {error}
         </p>
       )}
       {earned > 0 && (
-        <p className="px-1 text-[12px] font-bold text-success">
+        <p className="px-1 t-sub font-bold text-success">
           댓글 적립 +{earned}P — 포인트 내역에서 확인할 수 있어요
         </p>
       )}
       {!compact && (
-        <p className="px-1 text-[10px] leading-[1.5] text-text-3">
+        <p className="px-1 t-caption leading-[1.5] text-text-3">
           로그인 후 등록돼요 · 첫 댓글은 +20P · 개인정보(전화번호·계좌)는 적지 마세요
         </p>
       )}

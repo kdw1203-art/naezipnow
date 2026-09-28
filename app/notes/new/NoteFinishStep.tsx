@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useEffect, useRef } from "react";
 import { Icon } from "@/app/components/Icon";
@@ -65,7 +66,7 @@ export function NoteFinishStep(p: {
           onBlur={() => p.onMemoBlur(p.memo)}
           rows={4}
           maxLength={p.memoMax}
-          className="w-full resize-y overflow-y-auto rounded-xl bg-bg p-3.5 text-[13px] leading-[1.55] text-text-1 outline-none placeholder:text-text-3"
+          className="w-full resize-y overflow-y-auto rounded-xl bg-bg p-3.5 t-body leading-[1.55] text-text-1 outline-none placeholder:text-text-3"
           placeholder="예: 남향이라 오후 채광 좋음. 단지 뒤 도로 소음 약간 있음"
           aria-label="메모"
         />
@@ -97,7 +98,7 @@ export function NoteFinishStep(p: {
             disabled={p.uploading || p.photos.length >= p.maxPhotos}
             className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border-[1.5px] border-dashed border-line-strong p-[11px] text-center t-body font-bold text-text-2 disabled:opacity-60"
           >
-            <Icon name="📷" size={16} className="inline shrink-0 align-middle" />
+            <Icon name="camera" size={16} className="inline shrink-0 align-middle" />
             {p.uploading ? "업로드 중…" : `사진 추가 (${p.photos.length}/${p.maxPhotos})`}
           </button>
           <button

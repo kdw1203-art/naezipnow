@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { hasSession } from "@/lib/client/has-session";
 import { useEffect, useState } from "react";
@@ -156,8 +157,8 @@ export function CommentThread({
 
   if (comments.length === 0) {
     return (
-      <p className="py-2 text-[13px] text-text-3">
-        아직 댓글이 없어요. 첫 댓글을 남겨보세요.
+      <p className="py-2 t-body text-text-3">
+        댓글 0건
       </p>
     );
   }
@@ -165,7 +166,7 @@ export function CommentThread({
   return (
     <div className="flex flex-col gap-3">
       {error && (
-        <p role="alert" className="text-[12px] font-bold text-danger">
+        <p role="alert" className="t-sub font-bold text-danger">
           {error}
         </p>
       )}
@@ -219,7 +220,7 @@ export function CommentThread({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="btn-soft tap self-center rounded-xl px-4 py-2 text-[13px] font-bold"
+          className="btn-soft tap self-center rounded-xl px-4 py-2 t-body font-bold"
         >
           댓글 {hiddenCount}개 더 보기
         </button>
@@ -264,23 +265,23 @@ function CommentRow({
       <div className="h-8 w-8 shrink-0 rounded-full bg-divider" />
       <div className="flex flex-1 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-bold text-ink">
+          <span className="t-sub font-bold text-ink">
             {c.authorLabel}
           </span>
           {c.adopted && (
-            <span className="rounded-md bg-success-soft px-1.5 py-0.5 text-[10px] font-bold text-success">
+            <span className="rounded-md bg-success-soft px-1.5 py-0.5 t-caption font-bold text-success">
               ✓ 채택된 답변
             </span>
           )}
-          <span className="text-[10px] text-text-3">{label}</span>
+          <span className="t-caption text-text-3">{label}</span>
         </div>
-        <p className="text-[13px] leading-[1.55] text-text-1">{c.body}</p>
+        <p className="t-body leading-[1.55] text-text-1">{c.body}</p>
         <div className="flex flex-wrap items-center gap-3">
           {onReply && (
             <button
               type="button"
               onClick={onReply}
-              className="text-[12px] font-bold text-text-3"
+              className="t-sub font-bold text-text-3"
             >
               {replying ? "답글 닫기" : "답글"}
             </button>
@@ -290,7 +291,7 @@ function CommentRow({
               type="button"
               onClick={onAdopt}
               disabled={busy}
-              className="text-[12px] font-bold text-primary disabled:opacity-50"
+              className="t-sub font-bold text-primary disabled:opacity-50"
             >
               {busy ? "채택 중…" : "채택하기 (+30P)"}
             </button>
@@ -300,7 +301,7 @@ function CommentRow({
             <button
               type="button"
               onClick={onAskDelete}
-              className="text-[12px] font-bold text-text-3 hover:text-danger"
+              className="t-sub font-bold text-text-3 hover:text-danger"
             >
               삭제
             </button>
@@ -311,14 +312,14 @@ function CommentRow({
               aria-label="댓글 삭제 확인"
               className="inline-flex flex-wrap items-center gap-1.5 rounded-lg bg-danger-soft px-2 py-1"
             >
-              <span className="text-[12px] font-bold text-ink">
+              <span className="t-sub font-bold text-ink">
                 이 댓글을 삭제할까요?
               </span>
               <button
                 type="button"
                 onClick={onConfirmDelete}
                 disabled={deleting}
-                className="rounded-md bg-danger px-2 py-0.5 text-[12px] font-bold text-on-dark disabled:opacity-60"
+                className="rounded-md bg-danger px-2 py-0.5 t-sub font-bold text-on-dark disabled:opacity-60"
               >
                 {deleting ? "삭제 중…" : "삭제"}
               </button>
@@ -326,7 +327,7 @@ function CommentRow({
                 type="button"
                 onClick={onCancelDelete}
                 disabled={deleting}
-                className="text-[12px] font-bold text-text-2"
+                className="t-sub font-bold text-text-2"
               >
                 취소
               </button>

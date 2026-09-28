@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 import Link from "next/link";
 import {
@@ -35,7 +36,7 @@ export function ComplexSummaryTable({
 }) {
   if (failed) {
     return (
-      <p className="py-6 text-center text-[13px] leading-[1.7] text-text-3">
+      <p className="py-6 text-center t-body leading-[1.7] text-text-3">
         단지별 실거래를 지금 불러오지 못했습니다. 데이터가 없다는 뜻이 아니라 조회에
         실패했다는 뜻입니다 — 잠시 후 새로고침해 주세요.
       </p>
@@ -43,16 +44,16 @@ export function ComplexSummaryTable({
   }
   if (summaries.length === 0) {
     return (
-      <p className="py-6 text-center text-[13px] text-text-3">
+      <p className="py-6 text-center t-body text-text-3">
         이 지역의 단지별 실거래 데이터를 준비 중입니다.
       </p>
     );
   }
   return (
     <div className="mt-3 overflow-x-auto">
-      <table className="w-full min-w-[560px] text-left text-[13px]">
+      <table className="w-full min-w-[560px] text-left t-body">
         <thead>
-          <tr className="border-b border-border text-[12px] text-text-3">
+          <tr className="border-b border-border t-sub text-text-3">
             <th className="py-2 font-medium">단지</th>
             <th className="py-2 text-right font-medium">최근 실거래가</th>
             <th className="py-2 text-right font-medium">평균 평단가</th>
@@ -78,7 +79,7 @@ export function ComplexSummaryTable({
                   <span className="block truncate font-bold text-ink underline-offset-2 hover:underline">
                     {s.complexName}
                   </span>
-                  <span className="mt-0.5 block text-[12px] text-text-3">
+                  <span className="mt-0.5 block t-sub text-text-3">
                     {s.representativeAreaM2 !== null ? `대표 ${s.representativeAreaM2}㎡` : ""}
                     {s.buildYear ? ` · ${s.buildYear}년` : ""}
                   </span>
@@ -88,7 +89,7 @@ export function ComplexSummaryTable({
                 <span className="font-bold text-ink">
                   {formatKrwShort(s.latestAmountKrw)}
                 </span>
-                <span className="ml-1 text-[12px] text-text-3">
+                <span className="ml-1 t-sub text-text-3">
                   {shortYm(s.latestYm)}
                   {s.latestAreaM2 !== null ? ` · ${s.latestAreaM2.toFixed(0)}㎡` : ""}
                 </span>

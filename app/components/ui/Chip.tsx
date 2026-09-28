@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -27,7 +28,7 @@ export type ChipProps = {
 };
 
 const BASE =
-  "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-semibold no-underline";
+  "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-3 py-1.5 t-body font-semibold no-underline";
 
 /** 진짜로 눌리는 칩(링크·버튼)에만 붙이는 눌림 피드백 */
 const INTERACTIVE = "press";

@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import type { Dispatch, SetStateAction } from "react";
 import { Icon } from "@/app/components/Icon";
@@ -170,7 +171,7 @@ export function NoteDetailFields({
                           className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-left hover:bg-surface"
                         >
                           <span
-                            className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md text-[12px] ${
+                            className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md t-sub ${
                               checked
                                 ? "bg-primary text-white"
                                 : "border-[1.5px] border-line-strong bg-surface"
@@ -179,7 +180,7 @@ export function NoteDetailFields({
                             {checked ? "✓" : ""}
                           </span>
                           <span
-                            className={`flex-1 text-[13px] ${
+                            className={`flex-1 t-body ${
                               checked ? "font-semibold text-ink" : "text-text-1"
                             }`}
                           >
@@ -216,7 +217,7 @@ export function NoteDetailFields({
                   key={t.label}
                   type="button"
                   onClick={() => toggleTag(t.label)}
-                  className={`chip rounded-full px-3 py-1.5 text-xs ${
+                  className={`chip rounded-full px-3 py-1.5 t-sub ${
                     active
                       ? t.tone === "neg"
                         ? "bg-danger-soft font-bold text-danger"
@@ -233,7 +234,7 @@ export function NoteDetailFields({
               type="button"
               onClick={() => setTagInputOpen((v) => !v)}
               aria-expanded={tagInputOpen}
-              className="chip rounded-full bg-bg px-3 py-1.5 text-xs text-text-3"
+              className="chip rounded-full bg-bg px-3 py-1.5 t-sub text-text-3"
             >
               ＋ 직접 입력
             </button>
@@ -263,7 +264,7 @@ export function NoteDetailFields({
                 aria-label="추가할 태그"
                 /* [968 · 29] Enter = 추가 — 자판에도 "완료" 로 보인다 */
                 enterKeyHint="done"
-                className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 text-[13px] text-text-1 outline-none placeholder:text-text-3 focus:border-primary"
+                className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 t-body text-text-1 outline-none placeholder:text-text-3 focus:border-primary"
               />
               <button
                 type="button"
@@ -306,7 +307,7 @@ export function NoteDetailFields({
                 className="flex items-center gap-2.5 rounded-xl bg-bg px-3 py-[11px] text-left"
               >
                 <span
-                  className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md text-[12px] ${
+                  className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md t-sub ${
                     done
                       ? "bg-primary text-white"
                       : "border-[1.5px] border-line-strong bg-surface"
@@ -315,7 +316,7 @@ export function NoteDetailFields({
                   {done ? "✓" : ""}
                 </span>
                 <span
-                  className={`flex-1 text-[13px] ${
+                  className={`flex-1 t-body ${
                     done ? "text-text-3 line-through" : "text-text-1"
                   }`}
                 >
@@ -358,7 +359,7 @@ export function NoteDetailFields({
                 aria-label="추가할 고려사항"
                 /* [968 · 29] Enter = 추가 — 자판에도 "완료" 로 보인다 */
                 enterKeyHint="done"
-                className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 text-[13px] text-text-1 outline-none placeholder:text-text-3 focus:border-primary"
+                className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 t-body text-text-1 outline-none placeholder:text-text-3 focus:border-primary"
               />
               <button
                 type="button"

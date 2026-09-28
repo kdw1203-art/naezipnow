@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 /**
  * G8 — "이렇게 인용하세요" 블록.
@@ -9,11 +10,11 @@
 export function CitationBlock({ sentence }: { sentence: string }) {
   return (
     <section className="card mb-6 p-[var(--pad-card)]">
-      <h2 className="text-[13px] font-bold text-ink">이 데이터를 인용하실 때</h2>
-      <blockquote className="mt-2 rounded-lg border-l-[3px] border-primary bg-bg px-4 py-3 text-[13px] leading-[1.7] text-text-1">
+      <h2 className="t-body font-bold text-ink">이 데이터를 인용하실 때</h2>
+      <blockquote className="mt-2 rounded-lg border-l-[3px] border-primary bg-bg px-4 py-3 t-body leading-[1.7] text-text-1">
         {sentence}
       </blockquote>
-      <p className="mt-2 text-[12px] leading-[1.6] text-text-3">
+      <p className="mt-2 t-sub leading-[1.6] text-text-3">
         출처 표기와 기준월을 함께 인용해 주세요 · 집계 방식은{" "}
         <a href="/methodology" className="inline-block py-[5px] font-bold text-primary underline">
           데이터 방법론

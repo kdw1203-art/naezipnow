@@ -1,4 +1,6 @@
 "use client";
+/* [1022 · 단지 분석 고도화] 지시 3 — 매수 타이밍 레일에 "이 지역 알림" 카드(기존 알림함 /notifications 링크만 — /analysis/timing 의
+   같은 카드와 같은 문구·같은 링크, 새 알림 기능 없음). */
 /* [1021 · 단지 분석 /analysis/ai] 오른쪽 레일(단지 분석 4종) — ① 내 조건(TuningForm · 다시 계산, 기존 로직)
    ② 이 결과로(임장노트에 담기 · 관심 단지 담기 · 다른 단지와 비교 · 결과 링크 복사 — ResultView 의 기존 버튼을 옮겼다, 새 기능 없음)
    ③ 이어서 보기(다른 도구 칩 — verdict-board 의 4종 + 임장 동선, 딥링크 ?complexId=).
@@ -75,6 +77,14 @@ export function ResultRail({
           </button>
         )}
       </RailCard>
+      {tool === "ai-timing" && picked && (
+        <RailCard title="이 지역 알림">
+          <p className="t-sub text-text-2 break-words">{picked.region} 실거래 등록·지수 변동</p>
+          <Link href="/notifications" className="btn-soft btn-md gap-1.5 no-underline">
+            <Icon name="bell" size={16} /> 알림 설정
+          </Link>
+        </RailCard>
+      )}
       {picked && (
         <RailCard title="이어서 보기">
           <ul className="flex flex-wrap gap-1.5">

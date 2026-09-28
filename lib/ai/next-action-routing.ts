@@ -242,3 +242,27 @@ export function verdictNextActions(params: {
   const href = complexId ? `${base.href}${base.href.includes("?") ? "&" : "?"}complexId=${encodeURIComponent(complexId)}` : base.href;
   return { primary: { ...base, href }, secondary };
 }
+
+/* ── [1022 · 단지 분석 고도화] 종합 진단 축별 "이 축이 낮으면 → 이어서 볼 도구" ─────────────────────
+   지시 3 ①. 레이더 5축(insight-blocks diagnosisRadar 의 key)마다 그 축을 깊게 보는 도구 하나 — 새 판정이 아니라
+   같은 단지 딥링크(?complexId=)만 낸다. 낮음의 기준은 화면이 이미 쓰는 색 규칙(signature-cards scoreTone: 50점 미만 = 주의)이다. */
+
+/** 축 점수가 이 값 미만이면 "이어서 볼 도구" 링크를 붙인다 — signature-cards.tsx scoreTone 의 주의 색과 같은 경계 */
+export const RADAR_AXIS_LOW = 50;
+
+export const RADAR_AXIS_FOLLOW_UP: Record<string, { tool: AiAnalysisToolId; label: string }> = {
+  momentum: { tool: "ai-prediction", label: "시세 예측" },
+  liquidity: { tool: "ai-timing", label: "매수 타이밍" },
+  supply: { tool: "ai-risk", label: "리스크 점검" },
+  field: { tool: "ai-inspection", label: "임장 동선" },
+  macro: { tool: "ai-simulator", label: "수익률 계산" },
+};
+
+/** 축 키 + 점수 → 이어서 볼 도구 링크. 점수가 없거나 RADAR_AXIS_LOW 이상이면 null(링크를 붙이지 않는다) */
+export function radarAxisFollowUp(axisKey: string, score: number | null | undefined, complexId: string | null): NextActionTarget | null {
+  if (score == null || !Number.isFinite(score) || score >= RADAR_AXIS_LOW) return null;
+  const m = RADAR_AXIS_FOLLOW_UP[axisKey];
+  if (!m) return null;
+  const q = complexId ? `?complexId=${encodeURIComponent(complexId)}` : "";
+  return { label: m.label, href: `/analysis/ai/${m.tool}${q}` };
+}

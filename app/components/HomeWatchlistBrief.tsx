@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 /* [OPT-47] 개인화 홈 카드 — 로그인 + 워치 단지에 최근 거래가 있을 때만 나타난다.
    홈 정적 캐시를 지키기 위한 클라이언트 섬: 없으면 아무것도 렌더하지 않는다
@@ -76,17 +77,17 @@ export function HomeWatchlistBrief({
       className="rounded-2xl border border-line bg-surface p-4"
     >
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-[13px] font-bold text-ink">{brief.title}</h2>
+        <h2 className="t-body font-bold text-ink">{brief.title}</h2>
         {/* [1009 · H] "워치리스트"(내부 용어) → 화면 이름 그대로 "관심 단지". 24px 히트(글 속 링크 규칙) */}
         <Link
           href={brief.href ?? "/my/watchlist"}
-          className="inline-flex min-h-[24px] shrink-0 items-center text-xs font-semibold text-primary"
+          className="inline-flex min-h-[24px] shrink-0 items-center t-sub font-semibold text-primary"
         >
           {brief.linkLabel ?? "관심 단지 ›"}
         </Link>
       </div>
-      <p className="mt-1 text-[13px] text-text-2">{brief.body}</p>
-      <p className="mt-1 text-[12px] text-text-3">
+      <p className="mt-1 t-body text-text-2">{brief.body}</p>
+      <p className="mt-1 t-sub text-text-3">
         {brief.complexCount > 0
           ? `관심 단지 ${brief.complexCount.toLocaleString("ko-KR")}곳 · 최근 7일 신규 신고 ${brief.tradeCount.toLocaleString("ko-KR")}건 · 국토부 실거래 기준`
           : "관심지역 요약 · 국토부 실거래·공표 지수 기준"}

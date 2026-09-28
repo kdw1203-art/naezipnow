@@ -1,9 +1,11 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageShell } from "../../components/PageShell";
+import { PageHead } from "@/app/components/PageHead";
 import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
 import { useMoment } from "@/app/components/motion/MomentProvider";
 import { COMMUNITY_SUBCATEGORIES } from "@/lib/subcategories";
@@ -24,7 +26,7 @@ type CityOption = (typeof CITY_OPTIONS)[number];
 const CATEGORIES = COMMUNITY_SUBCATEGORIES.filter((c) => c.id !== "all");
 
 const inputClass =
-  "w-full rounded-xl border border-line bg-surface px-3.5 py-3 text-[13px] text-ink outline-none placeholder:text-text-3 focus:border-primary";
+  "w-full rounded-xl border border-line bg-surface px-3.5 py-3 t-body text-ink outline-none placeholder:text-text-3 focus:border-primary";
 
 /* ============================================================
    [B30] 임시저장 — 길게 쓴 글을 잃지 않는다.
@@ -383,13 +385,11 @@ function TownWriteForm() {
   return (
     <PageShell breadcrumb="동네이야기 › 이야기 쓰기">
       <div className="mx-auto flex w-full max-w-[640px] flex-col gap-4 max-md:gap-3">
-        <div className="rise-in px-1">
-          {/* [1006] 여기서 쓰는 건 **이야기**(사람의 기록)다 — 뉴스룸의 기사와 다른 재질.
-              올라가면 동네이야기 피드의 "이야기" 탭과 /town/story/[id] 에 보인다. */}
-          {/* [1015] 제목 옆 "사람의 기록" 라벨과 권유 문장("…나눠 보세요 — …보여요")을 걷었다(소유자 지시 4 · 규칙 C·D) */}
-          <h1 className="t-title text-ink">이야기 쓰기</h1>
-          <p className="mt-1 t-sub text-text-3">동네이야기 피드에 바로 실립니다</p>
-        </div>
+        {/* [1006] 여기서 쓰는 건 **이야기**(사람의 기록)다 — 뉴스룸의 기사와 다른 재질.
+            올라가면 동네이야기 피드의 "이야기" 탭과 /town/story/[id] 에 보인다.
+            [1015] 제목 옆 "사람의 기록" 라벨과 권유 문장을 걷었다(소유자 지시 4 · 규칙 C·D).
+            [1022 · 정렬·글씨·테마] 공용 PageHead */}
+        <PageHead icon="square-plus" title="이야기 쓰기" sub="동네이야기 피드 · 등록 즉시 게시" subOnPhone className="px-1" />
 
         {/* [B30] 되살릴 초안 제안 — 자동으로 덮지 않고 사용자가 고른다 */}
         {restorable && (
@@ -451,7 +451,7 @@ function TownWriteForm() {
                 key={c.id}
                 type="button"
                 onClick={() => setCategory(c.label)}
-                className={`chip px-3 py-[7px] text-xs ${
+                className={`chip px-3 py-[7px] t-sub ${
                   category === c.label
                     ? "chip-active"
                     : "border border-line bg-surface text-text-2"

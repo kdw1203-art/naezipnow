@@ -21,8 +21,16 @@ import { Explain } from "@/app/components/explain/Explain";
 import { PYEONG_HOW, manPerPyeong } from "./BandTable";
 import { BandShelf } from "./BandShelf";
 import type { ShelfBand } from "./band-shelf-model";
+import { CompareComplexes } from "./CompareComplexes";
+import { AREA_BANDS } from "@/lib/market/bands";
 
-/* [1021 · 지역 시세 price·timing] 시안(mock8/price)대로 — 머리(아이콘·제목·"국토교통부 신고 · 기간 · 지역 N건" + 지역 칩·
+/* [1022 · 면적대별 검색·비교] 지시 2 — "검색기능이 추가되어 쉽게쉽게 검색하고, 타단지 비교까지".
+   ① 머리의 지역 바꾸기(RegionSelect)가 셀렉트 → 검색형 입력(타이핑 → 시군구 자동완성, 같은 배열·같은 이동 규칙).
+   ② 선반 아래 "타 단지 비교" 카드(CompareComplexes, 클라이언트): ComplexPicker 로 최대 4곳 → 면적대 5칸 × 최근 실거래가
+      (기존 /api/complex/[id]/detail 의 areaBands) + 최근 거래월. 선택은 ?cmp=(replaceState)+localStorage.
+      기준 행으로 이 지역 면적대별 중앙값(이미 있는 선반 값)을 같이 놓는다. 서버 데이터 로딩·revalidate·noIndex 는 그대로.
+
+   [1021 · 지역 시세 price·timing] 시안(mock8/price)대로 — 머리(아이콘·제목·"국토교통부 신고 · 기간 · 지역 N건" + 지역 칩·
    지역 바꾸기(기존 RegionSelect)·연도) → 통계 타일 5칸(지금 값 + 최근 달) → 면적 선반 5칸(BandShelf: 누르면 상위 단지가
    그 면적대로) → 상위 단지 목록 / 레일(범위 카드 · 이어서 칩). 예전 ToolHero·BandTable·평단가 곡선 카드는 선반이 대신한다
    (표의 ⓘ 문구는 선반 머리로). 분포 히스토그램은 분포 데이터가 없어 생략. 데이터 로딩·revalidate·noIndex 는 그대로.
@@ -245,6 +253,8 @@ export default async function PricePage({
       ? `${target.latestYm.slice(0, 4)}년`
       : null;
   const timingRegionId = findTemperatureRegionIdByName(target.name);
+  /* [1022] 비교 표의 기준 행 — 면적대 5칸(AREA_BANDS 순서) 중앙값 문자열, 이 지역에 없는 칸은 null */
+  const referenceMedians = AREA_BANDS.map((b) => bands.find((x) => x.slug === b.slug)?.medianText ?? null);
 
   return (
     <PageShell breadcrumb="분석 · 면적대별 실거래가">
@@ -300,6 +310,7 @@ export default async function PricePage({
           hiSlug={premiumKind ? (hiBand?.bandSlug ?? null) : null}
           regionName={target.name}
           regionSlug={target.slug}
+          below={<CompareComplexes regionName={target.name} reference={referenceMedians} />}
           rail={
             /* #411 — 도구 간 이어가기: 보던 지역 그대로 타이밍·시나리오·지도로 */
             <AnalysisCrossLinks

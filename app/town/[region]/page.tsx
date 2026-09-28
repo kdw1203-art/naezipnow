@@ -1,7 +1,9 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
+import { PageHead } from "@/app/components/PageHead";
 import {
   REGION_CATALOG,
   findCatalogRegionById,
@@ -156,28 +158,32 @@ export default async function TownRegionHomePage({
       />
 
       {/* 헤더 — 동네 이름 + 행동 */}
-      <div className="rise-in mb-4 flex flex-wrap items-end justify-between gap-3 max-md:mb-3">
-        <div>
-          <div className="t-sub font-bold text-text-3">
-            <Link href="/town" className="inline-block py-[5px] hover:underline">
+      {/* [1022 · 정렬·글씨·테마] 브레드크럼 + h1 → 공용 PageHead(아이콘 칩 40 · h1 · 사실 한 줄 | 버튼 둘). 브레드크럼은 sub 자리의 링크로. */}
+      <PageHead
+        icon="pin"
+        title={`${region.name} 동네 홈`}
+        sub={
+          <>
+            <Link href="/town" className="inline-flex min-h-[24px] items-center text-text-2 no-underline hover:underline">
               동네이야기
-            </Link>{" "}
-            › 동네 홈
-          </div>
-          <h1 className="mt-0.5 t-title tracking-tight text-ink">
-            {region.name} 동네 홈
-          </h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <KeywordAlertButton scope="news" query={region.name} label={`${region.name} 새 소식`} />
-          <Link
-            href={`/town/write?region=${encodeURIComponent(region.name)}`}
-            className="btn-primary btn-cta px-4 py-[9px] t-body"
-          >
-            이 동네 이야기 쓰기
-          </Link>
-        </div>
-      </div>
+            </Link>
+            {" › 동네 홈 · 이웃 글 · 뉴스 · 시세 · 공개 임장노트"}
+          </>
+        }
+        subOnPhone
+        className="mb-4 max-md:mb-3"
+        actions={
+          <>
+            <KeywordAlertButton scope="news" query={region.name} label={`${region.name} 새 소식`} />
+            <Link
+              href={`/town/write?region=${encodeURIComponent(region.name)}`}
+              className="btn-primary btn-md rounded-xl no-underline"
+            >
+              이 동네 이야기 쓰기
+            </Link>
+          </>
+        }
+      />
 
       {/* 시세 요약 스트립 — /region 페이지의 축약판 + 상호 링크 */}
       {snapshot && (

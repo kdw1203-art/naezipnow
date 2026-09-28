@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 /* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-bold/black 4곳을 font-bold(700)로 바꿨다. */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -6,6 +7,7 @@ import { maskNoteAuthor } from "@/app/town/shared";
 import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 import { CoverImage } from "@/app/components/CoverImage";
 import { Icon } from "@/app/components/Icon";
+import { PageHead } from "@/app/components/PageHead";
 
 /* [#143] 유료 리포트 진열대 — 잠금 상태(#70 선행분).
    기준을 넘는 공개 노트를 "판매 예정 리포트"로 미리 진열한다. 결제 버튼은
@@ -58,16 +60,18 @@ export default async function NotesMarketPage() {
           </Link>{" "}
           › 리포트 진열대
         </nav>
-        <h1 className="t-title text-ink">
-          임장 리포트 진열대{" "}
-          <span className="align-middle rounded-full bg-warning-soft px-2.5 py-1 t-sub font-bold text-warning">
-            판매 오픈 준비 중
-          </span>
-        </h1>
-        {/* [1015 · 규칙 D] 설명 세 문장 → 사실 한 줄 */}
-        <p className="t-body text-text-2">
-          기준 충족 공개 노트의 진열 · 판매는 결제 오픈 후 · 전문은 지금 각 노트에서 무료
-        </p>
+        {/* [1015 · 규칙 D] 설명 세 문장 → 사실 한 줄. [1022 · 정렬·글씨·테마] 공용 PageHead · 경고색 알약 → 테두리 칩 */}
+        <PageHead
+          icon="store"
+          title="임장 리포트 진열대"
+          sub="기준 충족 공개 노트의 진열 · 판매는 결제 오픈 후 · 전문은 지금 각 노트에서 무료"
+          subOnPhone
+          actions={
+            <span className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2">
+              판매 오픈 준비 중
+            </span>
+          }
+        />
         <div className="flex flex-wrap gap-1.5">
           <span className="rounded-lg bg-bg px-2.5 py-1 t-sub font-bold text-text-2">
             기준 · 사진 {MIN_PHOTOS}장+

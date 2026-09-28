@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -306,13 +307,13 @@ export function HomeMiniMap({
     /* [1012 · 규칙 3·10] 폴백 그라데이션 → 회색 단면(--divider). 지도가 없는 자리는 회색 면이다. */
     <div className="relative flex h-full w-full flex-col items-center justify-center gap-1.5 bg-divider px-4">
       <p className="flex items-center gap-1.5 t-body font-bold text-text-1">
-        <Icon name="🗺" size={16} /> 지도를 불러오지 못했어요
+        <Icon name="map" size={16} /> 지도를 불러오지 못했어요
       </p>
       <div className="mt-0.5 flex items-center gap-2">
-        <Link href="/welcome" className="btn-soft px-3 py-1.5 text-[12px]">
+        <Link href="/welcome" className="btn-soft px-3 py-1.5 t-sub">
           {focus.regionLabel ? "관심지역 수정" : "관심지역 설정"}
         </Link>
-        <Link href={mapHref(focus.regionQuery ?? focus.regionLabel, focus.regionQuery ? focus.center : null)} className="btn-soft px-3 py-1.5 text-[12px]">
+        <Link href={mapHref(focus.regionQuery ?? focus.regionLabel, focus.regionQuery ? focus.center : null)} className="btn-soft px-3 py-1.5 t-sub">
           지도 다시 열기 ›
         </Link>
       </div>
@@ -387,8 +388,8 @@ export function HomeMiniMap({
       {/* 상단 좌: 관심지역 배지 */}
       {!fallbackActive && (
       <div className="pointer-events-none absolute left-3.5 top-3.5 z-10">
-        <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface px-3 py-[6px] text-[12px] font-bold text-ink">
-          <Icon name="📍" size={12} />
+        <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface px-3 py-[6px] t-sub font-bold text-ink">
+          <Icon name="pin" size={12} />
           내 관심지역
           {focus.regionLabel ? (
             <span className="text-primary"> · {focus.regionLabel}</span>

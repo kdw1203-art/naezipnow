@@ -1,6 +1,8 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import Link from "next/link";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { PageShell } from "../../components/PageShell";
+import { PageHead } from "@/app/components/PageHead";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
 import { readTownPosts } from "@/lib/newui/board-posts";
 import { Icon } from "@/app/components/Icon";
@@ -123,11 +125,15 @@ export default async function TownNewsPage() {
     <PageShell breadcrumb="동네이야기 › 뉴스룸" wide>
       {/* [1015 · 규칙 C] 한지 마스트헤드(튀는 색면) → 흰 머리. 부연("매일 아침 자동 수집 · 출처·발행 시각 명시")·설명 문장 삭제.
           숫자는 손에 든 목록만 센다. */}
-      <header className="rise-in mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-line pb-4">
-        <div className="min-w-0">
-          <h1 className="t-display text-ink">부동산 뉴스</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 t-sub text-text-3">
-            <span>{dateLabel}</span>
+      {/* [1022 · 정렬·글씨·테마] t-display 머리 → 공용 PageHead(t-title) — 다른 동네 카테고리 머리와 같은 크기·정렬 */}
+      <PageHead
+        icon="newspaper"
+        title="부동산 뉴스"
+        sub={dateLabel}
+        subOnPhone
+        className="mb-4 border-b border-line pb-4"
+        facts={
+          <>
             {todayCount > 0 && (
               <span>
                 오늘 <b className="t-num text-ink">{todayCount}</b>건
@@ -143,9 +149,10 @@ export default async function TownNewsPage() {
                 같은 사건 접어 <b className="t-num text-ink">{rows.length.toLocaleString("ko-KR")}</b>행
               </span>
             )}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
+          </>
+        }
+        actions={
+          <>
           <Link
             href="/town"
             className="btn-secondary inline-flex min-h-[40px] items-center gap-1 rounded-xl px-4 py-2 t-body font-bold no-underline"
@@ -159,8 +166,9 @@ export default async function TownNewsPage() {
           >
             주간 다이제스트
           </Link>
-        </div>
-      </header>
+          </>
+        }
+      />
       {/* [1018] 소유자: "뉴스룸을 누르면 (카테고리 줄이 사라지는데) 목록은 나오도록 유지" — 다른 동네 카테고리와 같은 카테고리 줄 */}
       <TownCategoryNav stick />
 

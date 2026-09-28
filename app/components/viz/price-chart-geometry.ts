@@ -3,6 +3,8 @@
  * "거래가 적으면 선을 잇지 않는다" 같은 정직성 규칙과 축 눈금을 단위테스트로 잠그기 위해서다
  * (node --test 는 .tsx 를 못 읽는다). 좌표는 픽셀 — 렌더가 컨테이너 폭을 재서 넘긴다(글자가 늘어나지 않게).
  * [1021 · 단지 분석 /analysis/ai] layoutScenarioFan — 시세 예측 대표 그림(부채꼴만)이 같은 규칙을 쓴다(아래).
+ * [1022 · 단지 분석 고도화] guides — 부채꼴 위 수평 안내선(비용 포함 손익분기). 값(원)만 받아 y 를 돌려준다.
+ *   안내선 값도 y 범위에 넣어 선이 그림 밖으로 나가지 않게 한다. 없으면(기본) 빈 배열 — 다른 소비자는 영향 없음.
  */
 
 import { formatEokMan } from "@/lib/format/eok-man";
@@ -38,6 +40,8 @@ export type PriceChartLayout = {
     startX: number;
     startY: number;
   } | null;
+  /** [1022] 수평 안내선(손익분기 등) — 입력 guides 순서대로 y. 없으면 [] */
+  guides: { valueKrw: number; y: number }[];
   /** 최근 달 x */
   lastX: number;
   /** [1008 · 리뷰 A-17] 첫 달 라벨을 그려도 최근 달 라벨과 안 겹치나(모바일 5년 시나리오에서 겹쳤다) */
@@ -80,6 +84,8 @@ const MIN_LABEL_GAP = 40;
 export function layoutPriceChart(input: {
   months: readonly ChartMonth[];
   scenario?: { startKrw: number; path: readonly ChartScenarioPoint[] } | null;
+  /** [1022] 수평 안내선 값(원) — 유한한 양수만 그린다 */
+  guides?: readonly number[] | null;
   box: ChartBox;
 }): PriceChartLayout | null {
   const { months, box } = input;
@@ -99,6 +105,9 @@ export function layoutPriceChart(input: {
     vals.push(input.scenario.startKrw / 10_000);
     for (const p of input.scenario.path) vals.push(p.opt / 10_000, p.pess / 10_000);
   }
+  /* [1022] 안내선은 가격 점이 있을 때만 범위에 넣는다(안내선 하나로 눈금을 지어내지 않는다) */
+  const guideKrw = (input.guides ?? []).filter((g) => Number.isFinite(g) && g > 0);
+  if (vals.length > 0) for (const g of guideKrw) vals.push(g / 10_000);
   if (vals.length === 0) {
     /* 가격 점이 하나도 없으면 막대만 — 선·눈금을 지어내지 않는다 */
   }
@@ -202,6 +211,7 @@ export function layoutPriceChart(input: {
   }
 
   const lastX = xOf(P - 1);
+  const guides = vals.length ? guideKrw.map((g) => ({ valueKrw: g, y: yOf(g / 10_000) })) : [];
   return {
     points,
     segments,
@@ -210,6 +220,7 @@ export function layoutPriceChart(input: {
     barMax,
     ticks,
     fan,
+    guides,
     lastX,
     firstLabel: P > 1 && lastX - xOf(0) >= MIN_LABEL_GAP,
     plotTop,
@@ -226,6 +237,8 @@ export function layoutPriceChart(input: {
  */
 export function layoutScenarioFan(input: {
   scenario: { startKrw: number; path: readonly ChartScenarioPoint[] } | null | undefined;
+  /** [1022] 수평 안내선 값(원) — 손익분기 등 */
+  guides?: readonly number[] | null;
   box: Omit<ChartBox, "barH">;
 }): PriceChartLayout | null {
   const s = input.scenario;
@@ -233,6 +246,7 @@ export function layoutScenarioFan(input: {
   return layoutPriceChart({
     months: [{ ym: "", avgMan: s.startKrw / 10_000, n: 0, nAll: 0 }],
     scenario: s,
+    guides: input.guides ?? null,
     box: { ...input.box, barH: 0 },
   });
 }

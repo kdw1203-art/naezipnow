@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /**
  * 수익 보장·확정 수익 문구 영구 미기재 방침 고지 — 단일 출처.
  *
@@ -52,7 +53,7 @@ export function ComplianceNotice({
 }) {
   return (
     <div
-      className={`rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[12px] leading-[1.7] text-text-3 ${className}`}
+      className={`rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 t-sub leading-[1.7] text-text-3 ${className}`}
     >
       <p>{NO_PROFIT_GUARANTEE_TEXT}</p>
       {variant === "payment" && (

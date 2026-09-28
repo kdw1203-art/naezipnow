@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -148,28 +149,29 @@ export default async function ExpertDetailPage({
           </Link>
         </div>
 
-        {/* ---------- 히어로 (네이비) ---------- */}
-        <section className="rise-in brand-navy-card flex flex-col gap-4 rounded-3xl p-5 max-md:p-4 md:p-6">
+        {/* ---------- 머리 ---------- */}
+        {/* [1022 · 정렬·글씨·테마] 네이비 히어로 → 흰 카드(전문가 목록·참여 안내와 같은 바탕). 한지 아바타·배지는 primary-soft 토큰. */}
+        <section className="rise-in card flex flex-col gap-4 rounded-2xl p-5 max-md:p-4 md:p-6">
           <div className="flex items-start gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-brand-hanji t-title text-brand-hanji-ink" aria-hidden="true">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary-soft t-title text-primary" aria-hidden="true">
               {Array.from(e.name.trim())[0] ?? "전"}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="t-title text-on-dark">{e.name}</h1>
+                <h1 className="t-title text-ink">{e.name}</h1>
                 {e.isVerified ? (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-brand-hanji chip-pad t-caption font-bold text-brand-hanji-ink">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-primary-soft chip-pad t-caption font-bold text-primary">
                     <Icon name="shield" size={11} /> 인증 전문가
                   </span>
                 ) : (
-                  <span className="rounded-md border border-on-dark-faint chip-pad t-caption font-semibold text-on-dark-muted">인증 심사 중</span>
+                  <span className="rounded-md border border-line chip-pad t-caption font-semibold text-text-2">인증 심사 중</span>
                 )}
               </div>
-              <div className="mt-1 t-body text-on-dark">
+              <div className="mt-1 t-body text-ink">
                 <b>{typeLabel}</b>
-                {e.title && e.title !== typeLabel ? <span className="text-on-dark-muted"> · {e.title}</span> : null}
+                {e.title && e.title !== typeLabel ? <span className="text-text-2"> · {e.title}</span> : null}
               </div>
-              <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 t-sub text-on-dark-muted">
+              <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 t-sub text-text-2">
                 {e.regions.length > 0 && (
                   <span className="inline-flex items-center gap-1">
                     <Icon name="pin" size={12} /> {e.regions.slice(0, 4).join(" · ")}
@@ -190,38 +192,38 @@ export default async function ExpertDetailPage({
           </div>
 
           {/* 지표 — 실계산 값만 */}
-          <div className="grid grid-cols-3 gap-2 border-t border-on-dark-faint pt-4">
+          <div className="grid grid-cols-3 gap-2 border-t border-line pt-4">
             <div>
-              <div className="t-section t-num text-on-dark">{replied !== null ? replied : "—"}</div>
-              <div className="t-caption text-on-dark-muted">답변 완료 상담</div>
+              <div className="t-section t-num text-ink">{replied !== null ? replied : "—"}</div>
+              <div className="t-caption text-text-2">답변 완료 상담</div>
             </div>
             <div>
-              <div className="t-section text-on-dark">{respLabel ?? "—"}</div>
-              <div className="t-caption text-on-dark-muted">
+              <div className="t-section text-ink">{respLabel ?? "—"}</div>
+              <div className="t-caption text-text-2">
                 {stats?.responseRate != null ? `응답률 ${stats.responseRate}% (90일)` : "응답 안내"}
               </div>
             </div>
             <div>
-              <div className="flex items-center gap-1.5 t-section t-num text-on-dark">
+              <div className="flex items-center gap-1.5 t-section t-num text-ink">
                 {e.reviews > 0 ? (
                   <>
-                    <span className="text-brand-red-dark">★</span> {e.rating.toFixed(1)}
+                    <span className="text-brand-red">★</span> {e.rating.toFixed(1)}
                   </>
                 ) : (
                   "—"
                 )}
               </div>
-              <div className="t-caption text-on-dark-muted">{e.reviews > 0 ? `후기 ${e.reviews}건` : "후기 아직 없음"}</div>
+              <div className="t-caption text-text-2">{e.reviews > 0 ? `후기 ${e.reviews}건` : "후기 아직 없음"}</div>
             </div>
           </div>
 
           {e.isVerified ? (
             <div className="flex flex-col gap-2 sm:flex-row">
               <ConsultButton expertId={e.id} expertName={e.name} className="btn-primary btn-cta flex-1 rounded-xl px-4 py-3 t-body" />
-              <QuoteRequestLink className="brand-photo-chip flex-1 rounded-xl px-4 py-3 text-center t-body font-bold" />
+              <QuoteRequestLink className="btn-outline flex-1 rounded-xl px-4 py-3 text-center t-body font-bold" />
             </div>
           ) : (
-            <p className="rounded-xl bg-on-dark-panel px-4 py-3 t-sub text-on-dark">
+            <p className="rounded-xl border border-line bg-bg px-4 py-3 t-sub text-text-2">
               인증 심사 중 · 상담 신청·연락처는 인증 완료 후 공개
             </p>
           )}

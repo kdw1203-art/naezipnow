@@ -1,3 +1,4 @@
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 import Link from "next/link";
 import { cache } from "react";
@@ -184,15 +185,15 @@ export async function MarketTempWidget({ className }: { className?: string }) {
   return (
     <div className={`card flex flex-col gap-2 rounded-2xl px-5 py-4 ${className ?? ""}`}>
       <div className="flex items-center justify-between">
-        <span className="accent-underline text-[13px] font-bold text-ink">
+        <span className="accent-underline t-body font-bold text-ink">
           시장 온도{" "}
-          <span className="text-[10px] font-medium text-text-3">
+          <span className="t-caption font-medium text-text-3">
             {fmtWeek(weekStart)} 기준 · 50 중립
           </span>
         </span>
         <Link
           href="/analysis/temperature"
-          className="text-[12px] text-text-3 transition-colors hover:text-primary"
+          className="t-sub text-text-3 transition-colors hover:text-primary"
         >
           전체 지역
         </Link>
@@ -204,18 +205,18 @@ export async function MarketTempWidget({ className }: { className?: string }) {
             <Link
               key={r.current.regionId}
               href={`/analysis/temperature/${encodeURIComponent(r.current.regionId)}`}
-              className="press flex items-center justify-between gap-2 border-b border-divider py-[6px] text-xs no-underline last:border-0"
+              className="press flex items-center justify-between gap-2 border-b border-divider py-[6px] t-sub no-underline last:border-0"
             >
               <span className="flex-1 truncate font-semibold text-text-1">
                 {r.current.regionLabel}
               </span>
               <Sparkline scores={historyByRegion.get(r.current.regionId) ?? []} />
               <span className="flex shrink-0 items-baseline gap-1.5">
-                <span className={`t-num text-[13px] font-bold ${tone(r.current.score)}`}>
+                <span className={`t-num t-body font-bold ${tone(r.current.score)}`}>
                   {r.current.score}
                 </span>
                 {delta !== null && delta !== 0 && (
-                  <span className="text-[10px] text-text-3">
+                  <span className="t-caption text-text-3">
                     {delta > 0 ? "▲" : "▼"}
                     {Math.abs(delta)}
                   </span>
@@ -225,7 +226,7 @@ export async function MarketTempWidget({ className }: { className?: string }) {
           );
         })}
       </div>
-      <p className="text-[10px] leading-relaxed text-text-3">
+      <p className="t-caption leading-relaxed text-text-3">
         실거래 지수 모멘텀 + 거래량 추이 기반 주간 산출 · 투자 권유 아님
       </p>
     </div>

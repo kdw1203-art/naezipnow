@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -55,11 +56,11 @@ export function BuyReportButton({
         type="button"
         onClick={() => void buy()}
         disabled={busy}
-        className="btn-primary rounded-xl p-3.5 text-[13px] disabled:opacity-60"
+        className="btn-primary rounded-xl p-3.5 t-body disabled:opacity-60"
       >
         {busy ? "구매 중…" : `${price.toLocaleString("ko-KR")}P 로 구매하고 노트 열람`}
       </button>
-      {error && <p className="text-[12px] font-semibold text-danger">{error}</p>}
+      {error && <p className="t-sub font-semibold text-danger">{error}</p>}
       <p className="t-caption text-text-3">
         구매 즉시 연결된 임장노트 전문을 열람할 수 있어요 · 포인트는 마이 › 포인트에서 확인
       </p>

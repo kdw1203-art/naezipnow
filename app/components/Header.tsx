@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -109,7 +110,7 @@ export function Header() {
                           /* [963] whitespace-nowrap — "통합 지도 (탐색·실거래·매물)" 이
                              168px 패널 안에서 3줄로 접혀 메뉴가 세로로 길어졌다.
                              메뉴 항목은 접지 않고 패널이 가장 긴 라벨에 맞춰 넓어진다. */
-                          className="block whitespace-nowrap rounded-lg px-3 py-2 text-[13px] font-semibold text-text-1 transition-all duration-[120ms] hover:translate-x-0.5 hover:bg-[rgba(29,79,216,.08)] hover:text-primary"
+                          className="block whitespace-nowrap rounded-lg px-3 py-2 t-body font-semibold text-text-1 transition-all duration-[120ms] hover:translate-x-0.5 hover:bg-[rgba(29,79,216,.08)] hover:text-primary"
                         >
                           {c.label}
                         </Link>
@@ -150,7 +151,7 @@ export function Header() {
         <Link
           href="/notes/new"
           prefetch={false}
-          className="btn-primary btn-cta press hidden px-4 py-[9px] text-[13px] transition-transform hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-glow)] md:block"
+          className="btn-primary btn-cta press hidden px-4 py-[9px] t-body transition-transform hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-glow)] md:block"
         >
           노트 쓰기
         </Link>

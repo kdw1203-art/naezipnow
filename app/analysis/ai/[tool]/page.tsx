@@ -1,3 +1,5 @@
+/* [1022 · 단지 분석 고도화] 지시 3 — 시세 예측의 내 조건에 대출 비율·금리·상환 기간(prediction-cost-fields.ts)을 붙여
+   부채꼴 위 "비용 포함 손익분기" 선의 재료로 쓴다(엔진이 읽는 키만). 나머지는 그대로. */
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 /* [1021 · 단지 분석 /analysis/ai] 단지 분석 4종(진단·예측·동선·타이밍)은 시안(mock8)대로 — 네이비/흰 히어로 카드 대신
    머리 한 줄(아이콘 칩 · 제목 · identity.useCase · 기준 시점 칩)을 WorkbenchClient 가 그린다(칩은 결과가 선 뒤 값이라 클라이언트).
@@ -16,6 +18,7 @@ import { isAnthropicConfigured, isOpenAiConfigured } from "@/lib/ai/env-keys";
 import { getActiveComplexes } from "@/lib/ai/popular-complexes";
 import { WorkbenchClient } from "./WorkbenchClient";
 import { isFrameTool } from "./frame-tools";
+import { PREDICTION_COST_FIELDS } from "./prediction-cost-fields";
 
 /* [AI-31·32] 통합 AI 워크벤치 — 12종 도구의 단일 실행 표면.
    [1008 · W] ① 단지 고르기 → (공공데이터 자동 계산 결과가 바로 선다: 결과 요약·숫자 타일·그래프)
@@ -134,7 +137,7 @@ export default async function AiToolPage({
           title={identity.title}
           tips={identity.tips}
           persona={persona}
-          fields={tuningFields(tid)}
+          fields={tid === "ai-prediction" ? [...tuningFields(tid), ...PREDICTION_COST_FIELDS] : tuningFields(tid)}
           llmAvailable={isOpenAiConfigured() || isAnthropicConfigured()}
           quickPicks={quickPicks}
           resultKind={RESULT_KIND[tid]}

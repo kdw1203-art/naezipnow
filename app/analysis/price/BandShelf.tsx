@@ -11,7 +11,9 @@ import { initialShelfSlug, shelfCards, type ShelfBand } from "./band-shelf-model
    지시(시안 mock8/price): 칸을 누르면 아래 "실거래 상위 단지"가 그 면적대로 바뀐다 — 클라이언트 상태 하나(selected).
    데이터는 서버(page.tsx)가 면적대마다 미리 읽어 넘긴다(listBandComplexes × 면적대 수, 하루 1회 재생성이라 비용 미미).
    분포 히스토그램은 셀에 분포 데이터가 없어(최저·평균·중앙·최고뿐) 넣지 않고, 그 네 값을 범위 카드로 보인다.
-   폰: 선반은 가로 스크롤 레일(스냅) — .pxs-shelf(globals.css [1021] 블록). */
+   폰: 선반은 가로 스크롤 레일(스냅) — .pxs-shelf(globals.css [1021] 블록).
+   [1022 · 면적대별 검색·비교] 지시 2 — 본문 열의 상위 단지 카드 아래에 `below`(타 단지 비교 카드, page.tsx 가 넘긴다)를
+   그린다. 선반·상태·레일은 그대로다. */
 
 export function BandShelf({
   bands,
@@ -20,6 +22,7 @@ export function BandShelf({
   regionName,
   regionSlug,
   rail,
+  below,
 }: {
   bands: readonly ShelfBand[];
   busiestSlug: string | null;
@@ -28,6 +31,8 @@ export function BandShelf({
   regionSlug: string;
   /** 레일 아래쪽(이어서 분석 칩) — 서버 컴포넌트를 그대로 받는다 */
   rail: ReactNode;
+  /** [1022] 상위 단지 카드 아래(본문 열) — 타 단지 비교 카드 */
+  below?: ReactNode;
 }) {
   const [selected, setSelected] = useState<string | null>(() => initialShelfSlug(bands, busiestSlug));
   const cards = shelfCards(bands, busiestSlug, hiSlug);
@@ -135,6 +140,7 @@ export function BandShelf({
               {regionName} 전체 실거래·단지 보기
             </Link>
           </div>
+          {below}
           {/* 폰 — 레일 내용을 본문 아래 한 열로 */}
           <div className="flex flex-col gap-3 lg:hidden">{railNodes}</div>
         </div>

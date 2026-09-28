@@ -1,4 +1,5 @@
 "use client";
+/* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -80,7 +81,7 @@ export function AdSenseUnit({ className }: { className?: string }) {
     /* hidden lg:block — 모바일·태블릿 제외는 CSS 로도 이중 보장.
        라벨을 붙여 광고임을 명시한다(콘텐츠로 위장 금지). */
     <div className={`hidden lg:block ${className ?? ""}`}>
-      <div className="mb-1 text-[10px] font-semibold tracking-wide text-text-3">광고</div>
+      <div className="mb-1 t-caption font-semibold tracking-wide text-text-3">광고</div>
       <ins
         className="adsbygoogle"
         style={{ display: "block" }}
