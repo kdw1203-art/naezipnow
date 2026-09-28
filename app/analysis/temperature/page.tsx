@@ -3,15 +3,16 @@ import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import Link from "next/link";
 import { cache } from "react";
 import { PageShell } from "../../components/PageShell";
-import { ToolHero, type HeroKpi } from "@/app/components/analysis/ToolHero";
-import { Gauge } from "@/app/components/viz/Gauge";
-import { Bars } from "@/app/components/viz/Bars";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
 import { QaBlock } from "../../components/QaBlock";
 import { CitationBlock } from "../../components/CitationBlock";
 import {
   listLatestTemperatures,
+  listRegionTemperatureHistory,
+  listTemperaturesForWeek,
+  shiftWeeks,
   type TemperatureLatest,
+  type TemperatureSnapshot,
 } from "@/lib/market/temperature-archive";
 import { formatWeekKorean } from "@/lib/market/temperature";
 import { breadcrumbJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
@@ -20,9 +21,17 @@ import {
   LOAD_FAILED_LINE,
   loadWithinPrerenderBudget,
 } from "@/lib/data/prerender-budget";
-import { Explain } from "@/app/components/explain/Explain";
-import { TEMPERATURE_EXPLAIN } from "../temperature-explain";
-import { TempRegionCard } from "./TempRegionCard";
+import { logger } from "@/lib/log";
+import { weekSlots } from "./week-slots";
+import { pairWeeks } from "./temp-map-model";
+import { TempMapClient, type HistoryView, type WeekView } from "./TempMapClient";
+
+/* [1021 · 지역 시세 temperature] 시안(mock8/temp)대로 — 네이비/게이지 히어로(ToolHero) 대신
+   머리(아이콘 칩·제목·사실 한 줄 | 주 선택 칩·권역) → 타일 5칸 → 69곳 색 타일 지도(+목록 보기 토글) →
+   12주 온도 선(주간 기록이 있을 때만) | 레일(온도 높은 순 8곳 · 이어서 칩). 본문은 TempMapClient(주 전환은 클라이언트 상태).
+   데이터: 이번 주(listLatestTemperatures)에 더해 지난주·4주 전(listTemperaturesForWeek — 그 주와 그 직전 주)과
+   1위 지역 최근 12주(listRegionTemperatureHistory)를 같은 프리렌더 예산 안에서 읽는다. 곁가지 조회의 실패는
+   그 칩·선을 **빼는** 것으로 그친다(본문 "못 읽음"은 이번 주 조회에만 걸린다). 캐시 정책·SEO·Q&A·인용은 그대로. */
 
 /* ============================================================
    N11 — 시장 온도 주간 기록 허브 (/analysis/temperature)
@@ -67,17 +76,51 @@ type HubData = {
   rows: TemperatureLatest[];
   /** 조회가 실패했거나 상한 안에 끝나지 않았다. false 라야 "읽었고 결과가 이만큼"이다. */
   loadFailed: boolean;
+  /** [1021] 주 선택 칩 — 이번 주(rows) + 기록이 있는 지난주·4주 전만 */
+  weeks: WeekView[];
+  /** [1021] 1위 지역 최근 12주(오래된 → 최근). 없으면 [] */
+  history: TemperatureSnapshot[];
 };
 
+/** 곁가지 조회 — 실패해도 본문을 접지 않는다(그 칩·선만 빠진다). 로그는 남긴다. */
+async function quiet<T>(what: string, work: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await work();
+  } catch (e) {
+    logger.error(`[/analysis/temperature] ${what} 조회 실패 — 그 부분만 생략`, e);
+    return fallback;
+  }
+}
+
+const HISTORY_WEEKS = 12;
+
 const loadHub = cache(async (): Promise<HubData> => {
-  const run = await loadWithinPrerenderBudget("[/analysis/temperature] 주간 기록", () =>
-    listLatestTemperatures(),
-  );
+  const run = await loadWithinPrerenderBudget("[/analysis/temperature] 주간 기록", async () => {
+    const base = await listLatestTemperatures();
+    const ws = base.weekStart;
+    if (!ws || base.rows.length === 0) return { ...base, weeks: [] as WeekView[], history: [] as TemperatureSnapshot[] };
+    const hottest = base.rows[0].current;
+    const weekOf = (offset: number) =>
+      quiet(`${offset}주 전`, () => listTemperaturesForWeek(shiftWeeks(ws, offset)), [] as TemperatureSnapshot[]);
+    const [w1, w2, w4, w5, history] = await Promise.all([
+      weekOf(-1),
+      weekOf(-2),
+      weekOf(-4),
+      weekOf(-5),
+      quiet("1위 지역 최근 주", () => listRegionTemperatureHistory(hottest.regionId, HISTORY_WEEKS), [] as TemperatureSnapshot[]),
+    ]);
+    const weeks: WeekView[] = [{ key: "this", weekStart: ws, rows: base.rows }];
+    const prev = pairWeeks(w1, w2);
+    if (prev.length > 0) weeks.push({ key: "prev", weekStart: shiftWeeks(ws, -1), rows: prev });
+    const four = pairWeeks(w4, w5);
+    if (four.length > 0) weeks.push({ key: "4w", weekStart: shiftWeeks(ws, -4), rows: four });
+    return { weekStart: ws, rows: base.rows, weeks, history };
+  });
   /* 실패를 빈 목록으로 흘려보내면 "아직 쌓인 주가 없습니다" 가 뜬다 —
      크론이 매주 쌓아 둔 기록을 없다고 단정하는 셈이다. 반드시 갈라 놓는다. */
   return run.ok
-    ? { weekStart: run.data.weekStart, rows: run.data.rows, loadFailed: false }
-    : { weekStart: null, rows: [], loadFailed: true };
+    ? { weekStart: run.data.weekStart, rows: run.data.rows, loadFailed: false, weeks: run.data.weeks, history: run.data.history }
+    : { weekStart: null, rows: [], loadFailed: true, weeks: [], history: [] };
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -102,72 +145,25 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function TemperatureHubPage() {
-  const { weekStart, rows, loadFailed } = await loadHub();
+  const { weekStart, rows, loadFailed, weeks, history } = await loadHub();
 
   const weekLabel = weekStart ? formatWeekKorean(weekStart) : null;
   const hottest = rows[0] ?? null;
   const coldest = rows.length > 0 ? rows[rows.length - 1] : null;
-  const rising = rows.filter((r) => r.previous && r.current.score > r.previous.score).length;
-  const falling = rows.filter((r) => r.previous && r.current.score < r.previous.score).length;
-  const compared = rows.filter((r) => r.previous).length;
 
-  /* 첫 화면 숫자 — 62개 지역 카드 격자만 있던 자리에 "지금 시장이 어느 쪽인가"를 세운다. */
-  const BIN = 10;
-  const binned = new Map<number, number>();
-  for (const r of rows) {
-    const b = Math.min(90, Math.floor(r.current.score / BIN) * BIN);
-    binned.set(b, (binned.get(b) ?? 0) + 1);
-  }
-  const binKeys = [...binned.keys()].sort((a, b) => a - b);
-  const histValues = binKeys.map((k) => binned.get(k) ?? 0);
-  const histLabels = binKeys.map((k) => `${k}`);
-  const avgScore =
-    rows.length > 0
-      ? Math.round((rows.reduce((a, r) => a + r.current.score, 0) / rows.length) * 10) / 10
+  /* [1021] 12주 온도 선 — 주간 기록이 2주 이상일 때만. 빠진 주는 week-slots 가 null 칸으로 끊는다 */
+  const historyView: HistoryView | null =
+    hottest && history.length >= 2
+      ? {
+          regionId: hottest.current.regionId,
+          regionLabel: hottest.current.regionLabel,
+          slots: weekSlots(history).map((w) => ({
+            weekStart: w.weekStart,
+            score: w.row?.score ?? null,
+            headline: w.row?.headline ?? null,
+          })),
+        }
       : null;
-
-  const heroKpis: HeroKpi[] = [];
-  if (rows.length > 0) {
-    heroKpis.push({ label: "기록 지역", value: `${rows.length}곳`, note: weekLabel ? `${weekLabel} 주 기준` : undefined });
-    if (avgScore !== null) {
-      heroKpis.push({
-        label: "평균 온도",
-        value: `${avgScore}`,
-        note: "100점 중 · 50이 중립",
-        aside: <Explain {...TEMPERATURE_EXPLAIN} size={12} />,
-      });
-    }
-    if (hottest) {
-      heroKpis.push({ label: "가장 뜨거운 곳", value: `${hottest.current.score}`, note: `${hottest.current.regionLabel} · ${hottest.current.headline}` });
-    }
-    if (coldest) {
-      heroKpis.push({ label: "가장 차가운 곳", value: `${coldest.current.score}`, note: `${coldest.current.regionLabel} · ${coldest.current.headline}` });
-    }
-    if (compared > 0) {
-      /* [1009 · A] 화살표만 있고 색이 없던 것 → ▲ 빨강(오른 곳) · ▼ 파랑(내린 곳) */
-      heroKpis.push({
-        label: "지난주 대비",
-        value: (
-          <span className="inline-flex items-baseline gap-1.5">
-            <span className="delta-up">
-              <span aria-hidden="true">▲</span>
-              <span className="sr-only">오른 곳</span>
-              {rising}
-            </span>
-            <span aria-hidden="true" className="text-text-3">
-              ·
-            </span>
-            <span className="delta-down">
-              <span aria-hidden="true">▼</span>
-              <span className="sr-only">내린 곳</span>
-              {falling}
-            </span>
-          </span>
-        ),
-        note: `비교 가능한 ${compared}곳 중 오른 곳 · 내린 곳`,
-      });
-    }
-  }
 
   const crumbs = breadcrumbJsonLd([
     { name: "홈", url: "/" },
@@ -201,55 +197,6 @@ export default async function TemperatureHubPage() {
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
       />
 
-      {/* [1015 · 규칙 B·C·D] 제목 위 부연·성격 배지·설명 문단은 걷고 눈금 사실 한 줄만 */}
-      <ToolHero
-        personaId="market:temperature"
-        icon="flame"
-        title="지역별 시장 온도 주간 기록"
-        toneClass="text-warning"
-        lead="0~100 눈금 · 50 중립 · 매주 기록 · 매수·매도 권유 아님"
-        kpis={heroKpis}
-        chart={
-          hottest ? (
-            <div className="flex items-center gap-3 rounded-lg border border-line bg-surface px-3 py-2">
-              <Gauge
-                value={hottest.current.score}
-                label={String(hottest.current.score)}
-                caption={hottest.current.regionLabel}
-                size={112}
-                className="shrink-0 text-warning"
-              />
-              {histValues.length > 1 && (
-                <div className="min-w-0 flex-1 text-warning">
-                  <span className="t-caption block pb-1 text-text-3">
-                    온도 분포 · 10점 구간별 지역 수
-                  </span>
-                  <Bars
-                    values={histValues}
-                    labels={histLabels}
-                    height={62}
-                    valueSuffix="곳"
-                    ariaLabel="시장 온도 분포"
-                  />
-                </div>
-              )}
-            </div>
-          ) : null
-        }
-        source={
-          weekLabel
-            ? `${weekLabel}이 속한 주 · 한국부동산원 매매가격지수 · 국토교통부 실거래 거래량 · 그 주에 마지막으로 관측한 값`
-            : "한국부동산원 매매가격지수 · 국토교통부 실거래 거래량"
-        }
-      />
-
-      {/* [1015 · 규칙 D] 문장 → 사실 한 줄(숫자·시점). 히어로 KPI 와 겹치는 상승·하락 수는 뺐다 */}
-      {rows.length > 0 && weekLabel && (
-        <p className="mb-5 mt-4 t-sub text-text-3 max-md:mb-3 max-md:mt-3">
-          최근 기록 {weekLabel} 주 · {rows.length}개 지역
-        </p>
-      )}
-
       {loadFailed ? (
         <section className="card mb-6 p-[var(--pad-card)]" data-reveal="">
           <p className="t-body py-8 text-center text-text-3">
@@ -269,36 +216,31 @@ export default async function TemperatureHubPage() {
           </p>
         </section>
       ) : (
-        <section className="card mb-6 p-[var(--pad-card)] max-md:mb-3 max-md:p-3.5" data-reveal="">
-          <h2 className="t-title flex items-baseline justify-between gap-3 text-ink">
-            <span className="inline-flex items-center gap-0.5">
-              {weekLabel} 주 기준
-              {/* [1015 · 규칙 B] "이 기록을 읽는 법" 네 문장과 배지 읽는 법을 이 ⓘ 하나에 합쳤다 */}
-              <Explain
-                {...TEMPERATURE_EXPLAIN}
-                body={[
-                  "값은 그 주에 마지막으로 관측한 온도. 주간 평균이 아니며 주가 넘어가면 그 값이 그대로 굳는다.",
-                  "카드 오른쪽 배지는 지난주 기록과의 점수 차이(▲ 오름 · ▼ 내림 · 보합). 배지가 없으면 그 지역의 직전 주 기록이 없다는 뜻.",
-                  "계산식을 바꾸면 공식 버전을 올려 함께 저장한다. 과거 기록을 새 공식으로 다시 칠하지 않는다.",
-                  "실거래 신고는 계약일로부터 최대 30일까지 늦어질 수 있어, 거래량 항은 신고가 마감되지 않은 이번 달을 빼고 계산한다.",
-                ]}
+        /* [1021] 시안(mock8/temp) 본문 — 머리·타일·타일 지도·12주 선·레일. 주 칩은 기록이 있는 주만(loadHub 가 이번 주→지난주→4주 전 순으로 담는다) */
+        <div className="mb-6 max-md:mb-3">
+          <TempMapClient
+            weeks={weeks}
+            history={historyView}
+            totalCount={rows.length}
+            rail={
+              /* #411 — 도구 간 이어가기. [D62·D55] 이 화면의 주인공은 이번 주 가장 뜨거운 지역 — 그 지역을 실어 보낸다 */
+              <AnalysisCrossLinks
+                current="temperature"
+                regionLabel={hottest?.current.regionLabel ?? null}
+                regionFor={
+                  hottest
+                    ? {
+                        price: hottest.current.regionLabel,
+                        timing: hottest.current.regionId,
+                        scenario: hottest.current.regionId,
+                        map: hottest.current.regionLabel,
+                      }
+                    : undefined
+                }
               />
-            </span>
-            <span className="t-sub shrink-0 text-text-3">
-              온도 높은 순 · {rows.length}개 지역
-            </span>
-          </h2>
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {rows.map(({ current, previous }) => (
-              <TempRegionCard
-                key={current.regionId}
-                current={current}
-                previous={previous}
-                href={`${PATH}/${current.regionId}`}
-              />
-            ))}
-          </div>
-        </section>
+            }
+          />
+        </div>
       )}
 
       {hottest && coldest && weekLabel && rows.length >= 2 && (
@@ -310,7 +252,8 @@ export default async function TemperatureHubPage() {
       <QaBlock title="시장 온도 Q&A" items={qa} />
 
       {/* [1015 · 규칙 B] "이 기록을 읽는 법" 문단 → 위 ⓘ 로. 안내문("~에서 확인하실 수 있습니다") → 링크 칩 */}
-      <nav aria-label="관련 화면" className="mb-8 flex flex-wrap gap-1.5 max-md:mb-4">
+      {/* [998] mb-8 제거 — 본문 pb-16 + 푸터 pt-6 과 겹쳐 데스크톱에서 빈 띠(빈 공간 게이트). 도구 간 이어가기 칩은 [1021] 레일로 */}
+      <nav aria-label="관련 화면" className="flex flex-wrap gap-1.5">
         <Link href="/analysis/timing" className="chip chip-soft t-sub px-3 py-1.5 no-underline">
           시세·타이밍 분석 ›
         </Link>
@@ -318,29 +261,6 @@ export default async function TemperatureHubPage() {
           데이터 방법론 ›
         </Link>
       </nav>
-
-      {/* #411 — 도구 간 이어가기.
-          [D62·D55] 예전에는 파라미터 없이 보냈다("비교·온도는 지역을 모른다").
-          사실은 안다 — 이 화면의 주인공은 이번 주 가장 뜨거운 지역이다.
-          받는 쪽이 어떤 지역 표기든 읽게 됐으므로(lib/regions/param.ts),
-          그 지역을 그대로 실어 보낸다. hottest 가 없으면(빈 주간) 종전대로 빈손. */}
-      {/* [998] mb-8 제거 — 본문 pb-16 + 푸터 pt-6 과 겹쳐 데스크톱에서 147px 빈 띠(빈 공간 게이트) */}
-      <div>
-        <AnalysisCrossLinks
-          current="temperature"
-          regionLabel={hottest?.current.regionLabel ?? null}
-          regionFor={
-            hottest
-              ? {
-                  price: hottest.current.regionLabel,
-                  timing: hottest.current.regionId,
-                  scenario: hottest.current.regionId,
-                  map: hottest.current.regionLabel,
-                }
-              : undefined
-          }
-        />
-      </div>
     </PageShell>
   );
 }

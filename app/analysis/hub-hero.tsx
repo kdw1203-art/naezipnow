@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CountUp } from "@/app/components/motion/CountUp";
 import { Icon } from "@/app/components/Icon";
-import { BrandWatermark } from "@/app/components/BrandWatermark";
 import { ComplexPicker } from "./ComplexPicker";
 import { ToolGlyph, WORKBENCH_GLYPH } from "./ToolGlyph";
 import {
@@ -78,7 +77,7 @@ function TierNav() {
             href={`#tier-${id}`}
             aria-current={on ? "true" : undefined}
             className={`chip t-sub shrink-0 px-3 py-1.5 font-bold no-underline transition-colors ${
-              on ? "bg-brand-hanji text-brand-hanji-ink" : "brand-photo-chip"
+              on ? "chip-active" : "border border-line bg-surface text-text-2"
             }`}
           >
             {t.question}
@@ -125,16 +124,26 @@ export function HubHero({
     ? `/analysis/timing?region=${encodeURIComponent(picked.regionId)}`
     : `/analysis/timing${q}`;
 
+  /* [1021] 소유자(허브 머리 캡처): "이 문구와 디자인도 바꿔줘 구성도 함께". 슬로건 히어로(카드·워터마크·통계 띠·한도 띠)를 걷고
+     다른 도구 머리와 같은 **흰 머리 한 줄**로: 아이콘 칩 + "AI 분석" + 사실 한 줄(실거래·단지·도구 수는 같은 실측값을 글자 안에) |
+     오른쪽 최근 사용 칩 + 계열 칩 3개. 검색 카드는 그대로 첫 조작. 한도는 검색 아래 캡션 한 줄. */
   return (
-    <section className="hub-hero rise-in card-pad-lg flex flex-col gap-4 max-md:gap-3 max-md:py-4">
-      <BrandWatermark />
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex max-w-[600px] flex-col gap-1.5">
-          {/* [1015 · 규칙 B·C] 제목 위 부연("AI 분석 · 단지 하나에서 시작")과 기능 설명 문단("AI 해설은 원할 때만…")은
-              걷었다 — 네이비 히어로·제목·검색 카드는 틀이라 그대로. */}
-          <h1 className="t-display text-balance text-on-dark">
-            단지 하나를 넣으면, 판단 근거가 <span className="text-brand-red-dark">지금</span> 모입니다
-          </h1>
+    <section className="rise-in flex flex-col gap-3 max-md:gap-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary" aria-hidden="true">
+            <Icon name="sparkles" size={20} />
+          </span>
+          <div className="min-w-0">
+            <h1 className="t-title text-ink">AI 분석</h1>
+            <p className="m-0 t-sub text-text-2">
+              단지 하나로 종합 진단 · 시세 예측 · 임장 동선 · 매수 타이밍
+              <span className="max-md:hidden">
+                {" "}· 실거래 <b className="t-num text-ink"><Num n={coverage.txCount} /></b>건 · 단지{" "}
+                <b className="t-num text-ink"><Num n={coverage.complexCount} /></b>곳 · 도구 <b className="t-num text-ink"><CountUp value={toolCount} /></b>개
+              </span>
+            </p>
+          </div>
         </div>
         <div className="flex flex-col items-start gap-2 md:items-end">
           <LastToolChip />
@@ -142,7 +151,7 @@ export function HubHero({
         </div>
       </div>
 
-      {/* 검색 — 이 화면의 출발점(UI-05). 네이비 위 한 장의 밝은 카드 */}
+      {/* 검색 — 이 화면의 출발점(UI-05) */}
       <div className="card rounded-2xl p-3.5">
         <ComplexPicker
           initialComplexId={initialComplexId}
@@ -217,42 +226,26 @@ export function HubHero({
         </div>
       )}
 
-      {/* 커버리지 + 한도 — 실측만, 실행 전에 미리 */}
-      <div className="flex flex-col gap-3 border-t border-on-dark-faint pt-4 md:flex-row md:items-end md:justify-between">
-        <div className="grid grid-cols-3 gap-3 md:gap-6">
-          <div>
-            <div className="t-section t-num text-on-dark"><Num n={coverage.txCount} /></div>
-            <div className="t-caption text-on-dark-muted">실거래 신고분(취소 제외)</div>
-          </div>
-          <div>
-            <div className="t-section t-num text-on-dark"><Num n={coverage.complexCount} /></div>
-            <div className="t-caption text-on-dark-muted">실거래 있는 단지</div>
-          </div>
-          <div>
-            <div className="t-section t-num text-on-dark"><CountUp value={toolCount} /></div>
-            <div className="t-caption text-on-dark-muted">분석 도구(실데이터)</div>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 t-caption text-on-dark-muted">
-          <span className="inline-flex items-center gap-1">
-            <Icon name="lock" size={12} className="text-on-dark" /> 단지 분석 한도
-          </span>
+      {/* 한도 — 실행 전에 미리, 캡션 한 줄 */}
+      <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 px-1 t-caption text-text-3">
+        <span className="inline-flex items-center gap-1">
+          <Icon name="lock" size={12} /> 단지 분석 한도
+        </span>
+        <span>
+          무료 <b className="text-ink">{quota.freeLifetime ? `누적 ${quota.free}회` : `월 ${quota.free}회`}</b>
+        </span>
+        <span>
+          플러스 <b className="text-ink">월 {quota.plus}회</b>
+        </span>
+        {quota.proOnSale && (
           <span>
-            무료 <b className="text-on-dark">{quota.freeLifetime ? `누적 ${quota.free}회` : `월 ${quota.free}회`}</b>
+            프로 <b className="text-ink">{quota.pro === null ? "무제한" : `월 ${quota.pro}회`}</b>
           </span>
-          <span>
-            플러스 <b className="text-on-dark">월 {quota.plus}회</b>
-          </span>
-          {quota.proOnSale && (
-            <span>
-              프로 <b className="text-on-dark">{quota.pro === null ? "무제한" : `월 ${quota.pro}회`}</b>
-            </span>
-          )}
-          <Link href="/subscription" className="font-bold text-brand-red-dark no-underline">
-            플랜 보기 ›
-          </Link>
-        </div>
-      </div>
+        )}
+        <Link href="/subscription" className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline">
+          플랜 보기 ›
+        </Link>
+      </p>
     </section>
   );
 }

@@ -7121,3 +7121,360 @@ body.nz-consent-open .back-to-top {
   opacity: 1;
   cursor: default;
 }
+
+/* [1021 · 단지 분석 /analysis/ai] 단지 분석 4종(종합 진단·시세 예측·임장 동선·매수 타이밍) — 시안(mock8) 뼈대.
+   append-only 블록. 색은 토큰만, 반경은 눈금(--radius-*), 굵기 700 까지. 나머지는 Tailwind 유틸이 한다. */
+/* 단지 고르기 전 — 대표 그림의 빈 틀을 카드 바닥에 흐리게 깐다(값 없음·라벨 없음) */
+.cxw-empty {
+  min-height: 300px;
+}
+.cxw-frame {
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  opacity: 0.55;
+}
+.cxw-frame-svg {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  max-height: 260px;
+}
+/* 종합 진단 — 레이더를 크게: 기존 ScoreRadar(300×214 viewBox)를 칸 폭까지 늘린다(글자도 같이 커진다 — 11px 하한 위) */
+.cxw-radar svg {
+  width: 100%;
+  max-width: 380px;
+  height: auto;
+}
+/* 큰 점수 — 시안 40px. 폰은 t-display 와 같은 32px */
+.cxw-score {
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+@media (min-width: 768px) {
+  .cxw-score {
+    font-size: 2.5rem;
+  }
+}
+
+/* [1021 · 지역 시세 price·timing] 면적대별 실거래가(/analysis/price) · 시세·타이밍(/analysis/timing) — 시안(mock8) 뼈대.
+   append-only 블록. 색은 토큰만, 반경은 눈금(--radius-*), 굵기 700 까지. 나머지는 Tailwind 유틸이 한다. */
+/* 머리 — 아이콘 칩 + 제목 + 사실 한 줄 | 오른쪽 칩·선택기. 폰은 세로로 쌓인다 */
+.pxs-head {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+@media (min-width: 1024px) {
+  .pxs-head {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+}
+/* 통계 타일 — 폰 2열 · md 3열 · lg 5열(시안). 칸은 .kpi */
+.pxs-stat {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+/* 타이밍 타일 4칸 — 폰 2열 · md 4열 */
+.pxs-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (min-width: 768px) {
+  .pxs-stat {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .pxs-tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1024px) {
+  .pxs-stat {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+/* 면적 선반 — 폰: 가로 스크롤 레일(스냅, 칸 150px) · lg: 5칸 격자 */
+.pxs-shelf {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+.pxs-shelf::-webkit-scrollbar {
+  display: none;
+}
+.pxs-band {
+  flex: 0 0 150px;
+  scroll-snap-align: start;
+  min-height: 40px;
+  gap: 2px;
+  cursor: pointer;
+}
+@media (min-width: 1024px) {
+  .pxs-shelf {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    overflow: visible;
+  }
+  .pxs-band {
+    flex: initial;
+  }
+}
+/* 고른 칸 — 남색 2px 테두리(채움 없음 · 파랑 면은 막대에만) */
+.pxs-band-on {
+  box-shadow: inset 0 0 0 2px var(--primary);
+  border-color: var(--primary);
+}
+.pxs-band:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+/* 칸 안 막대 — 높이 = 거래 건수 비율(최다 칸 100%) */
+.pxs-bar {
+  display: flex;
+  align-items: flex-end;
+  height: 64px;
+  margin: 8px 0 6px;
+}
+.pxs-bar > i {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius-sm);
+  transition: height var(--dur-sm) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pxs-bar > i {
+    transition: none;
+  }
+}
+/* 타이밍 대표 그림 — 훑기 판(ScrubLine 과 같은 정책: 세로 스크롤은 막지 않는다) */
+.tmo-plot {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: crosshair;
+}
+.tmo-plot:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.tmo-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: var(--fs-caption);
+  color: var(--text-3);
+}
+.tmo-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.tmo-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+/* [1021 · 지역 시세 temperature·gap] 지역별 시장 온도(/analysis/temperature) · 전세가율·갭 스크리너(/analysis/gap) — 시안(mock8) 뼈대.
+   append-only 블록. 색은 토큰만, 반경은 눈금(--radius-*), 굵기 700 까지. 머리(.pxs-head)·타일(.kpi)은 기존 클래스를 그대로 쓴다. */
+/* 온도 타일 5칸 — 폰 2열 · md+ 는 칸 수에 맞춰(내 관심 지역이 없으면 4칸) */
+.tmp-stat {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (min-width: 768px) {
+  .tmp-stat {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+}
+/* 온도 타일 지도 — 한 칸 = 그 지역 기록 링크. 색 구간(temp-map-model tempBand)은 data-band 로:
+   hot(80+) --brand-red · warm(65~79) --brand-red-on-dark · mild(55~64) 주홍 24% 섞은 옅은 면 · neutral(45~54) --border · cool(~44) --primary-soft.
+   진한 두 면은 흰 글자(--on-dark), 옅은 면은 잉크. 폰 4열이라 칸 폭이 좁다 — 글자 11px 하한, 이름은 두 줄까지 */
+.tmp-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 58px;
+  padding: 8px 8px 6px;
+  border-radius: var(--radius-lg);
+  color: var(--ink);
+  background: var(--border);
+  transition: filter var(--dur-xs) var(--ease-out);
+}
+.tmp-tile[data-band="hot"] {
+  background: var(--brand-red);
+  color: var(--on-dark);
+}
+.tmp-tile[data-band="warm"] {
+  background: var(--brand-red-on-dark);
+  color: var(--on-dark);
+}
+.tmp-tile[data-band="mild"] {
+  background: color-mix(in srgb, var(--brand-red) 24%, var(--surface));
+}
+.tmp-tile[data-band="neutral"] {
+  background: var(--border);
+}
+.tmp-tile[data-band="cool"] {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tmp-tile:hover {
+    filter: brightness(0.96);
+  }
+}
+.tmp-tile:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.tmp-tile-v {
+  font-size: var(--fs-title);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.tmp-tile-k {
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.tmp-tile-d {
+  font-size: var(--fs-caption);
+  line-height: 1.2;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+/* 범례 — 타일과 같은 data-band 색 */
+.tmp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  font-size: var(--fs-caption);
+  color: var(--text-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tmp-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.tmp-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--border);
+}
+.tmp-legend i[data-band="hot"] {
+  background: var(--brand-red);
+}
+.tmp-legend i[data-band="warm"] {
+  background: var(--brand-red-on-dark);
+}
+.tmp-legend i[data-band="mild"] {
+  background: color-mix(in srgb, var(--brand-red) 24%, var(--surface));
+}
+.tmp-legend i[data-band="cool"] {
+  background: var(--primary-soft);
+}
+/* 갭 스크리너 — 타일 4칸: 폰 2열 · md 4열 */
+.gap-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (min-width: 768px) {
+  .gap-tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+/* 조건 패널 한 줄 — 라벨 | 선택(시안 .inp: 34px 높이 테두리 상자). 폰 조작 하한 40px */
+.gap-inp {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 40px;
+  margin-top: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  font-size: var(--fs-sub);
+  font-weight: 700;
+  color: var(--ink);
+}
+.gap-inp > span:first-child {
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.gap-inp select,
+.gap-inp input {
+  min-height: 38px;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: right;
+}
+.gap-inp select {
+  cursor: pointer;
+}
+.gap-inp:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-soft);
+}
+/* 결과 표 전세가율 막대 — 시안 90×10 초록 채움(값 = 최고 대비 비율) */
+.gap-bar {
+  display: inline-block;
+  width: 72px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.gap-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--success);
+}
+@media (min-width: 768px) {
+  .gap-bar {
+    width: 90px;
+    height: 10px;
+  }
+}

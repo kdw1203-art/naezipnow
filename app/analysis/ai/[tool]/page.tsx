@@ -1,4 +1,7 @@
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
+/* [1021 · 단지 분석 /analysis/ai] 단지 분석 4종(진단·예측·동선·타이밍)은 시안(mock8)대로 — 네이비/흰 히어로 카드 대신
+   머리 한 줄(아이콘 칩 · 제목 · identity.useCase · 기준 시점 칩)을 WorkbenchClient 가 그린다(칩은 결과가 선 뒤 값이라 클라이언트).
+   페르소나 전제문(persona.premise)은 넣지 않는다(1015 규칙). 나머지 8종은 예전 머리 그대로. 캐시·메타·면책은 그대로. */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -12,6 +15,7 @@ import { tuningFields } from "@/lib/ai/tool-tuning-fields";
 import { isAnthropicConfigured, isOpenAiConfigured } from "@/lib/ai/env-keys";
 import { getActiveComplexes } from "@/lib/ai/popular-complexes";
 import { WorkbenchClient } from "./WorkbenchClient";
+import { isFrameTool } from "./frame-tools";
 
 /* [AI-31·32] 통합 AI 워크벤치 — 12종 도구의 단일 실행 표면.
    [1008 · W] ① 단지 고르기 → (공공데이터 자동 계산 결과가 바로 선다: 결과 요약·숫자 타일·그래프)
@@ -78,6 +82,10 @@ export default async function AiToolPage({
   /* [1008 · W] 첫 방문 빠른 선택 — 거래 많은 단지(실데이터, 6시간 캐시). 비어 있으면 줄을 안 그린다.
      단지 하나 스코프가 아닌 경제 모니터·계약 점검에는 필요 없다. */
   const quickPicks = tid === "ai-economy" || tid === "contract-risk" ? [] : await getActiveComplexes(6);
+  /* [1021] 단지 분석 4종 — 머리는 클라이언트가 그린다(아이콘은 서버가 그린 글리프를 넘긴다) */
+  const complexHeader = isFrameTool(tid)
+    ? { icon: <ToolGlyph id={WORKBENCH_GLYPH[tid] ?? "radar"} size={26} />, useCase: identity.useCase, crumb: TIERS.complex.label }
+    : null;
 
   return (
     <PageShell breadcrumb={`AI 분석 › ${identity.title}`}>
@@ -91,6 +99,7 @@ export default async function AiToolPage({
             [1011] "넣는 것 · 자동으로 불러오는 것 · 보여 주는 것" 3칸을 걷었다(소유자 지시).
             이 서비스가 어떻게 만들어지는지는 쓰는 사람이 알 필요가 없는 층의 이야기다 —
             무엇을 해 주는 화면인지는 제목과 바로 아래 한 줄이 이미 말한다. */}
+        {!complexHeader && (
         <section className="hub-hero rise-in flex flex-col gap-4 p-5 max-md:p-4 md:p-6">
           <div className="flex items-start gap-4">
             {/* [980] 글리프 칸에 도구 색 띠 — 네이비 위 글자색은 on-dark 토큰 그대로(대비) */}
@@ -118,6 +127,7 @@ export default async function AiToolPage({
             </div>
           </div>
         </section>
+        )}
 
         <WorkbenchClient
           tool={tid}
@@ -128,6 +138,7 @@ export default async function AiToolPage({
           llmAvailable={isOpenAiConfigured() || isAnthropicConfigured()}
           quickPicks={quickPicks}
           resultKind={RESULT_KIND[tid]}
+          header={complexHeader}
         />
 
         {/* 면책 — check-ai-compliance.mjs 가 이 마커의 존재를 검사한다 */}

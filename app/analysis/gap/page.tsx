@@ -9,14 +9,18 @@ import {
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { logger } from "@/lib/log";
 import { ErrorState } from "@/app/components/ui";
-import { ToolHero, type HeroKpi } from "@/app/components/analysis/ToolHero";
-import { Bars } from "@/app/components/viz/Bars";
-import { RankBars } from "@/app/components/viz/RankBars";
+import { Icon } from "@/app/components/Icon";
 import { faqJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { Explain } from "@/app/components/explain/Explain";
-import { RankTable, type Row } from "./RankTable";
+import { OTHER_SIDO_LABEL, sidoOfRegionName } from "@/lib/market/sido-group";
+import { GAP_HOW, type Row } from "./RankTable";
+import { GapScreener } from "./GapScreener";
 
-
+/* [1021 · 지역 시세 gap] 시안(mock8/gap)대로 — 네이비/히스토그램 히어로(ToolHero)·상위 15/하위 10·시도별 세 표 대신
+   머리(아이콘 칩·제목·사실 한 줄 | 오른쪽 "N곳" 칩) → `lg:grid-cols-[280px_minmax(0,1fr)]` 조건 패널 + 타일 4칸 + 결과 표(GapScreener).
+   조건은 URL 쿼리에 남기되 서버는 searchParams 를 읽지 않는다(ISR 캐시 정책 유지) — 전체 목록을 내려 주고 클라이언트가 거른다.
+   데이터 로딩·revalidate·metadata·FAQ(JSON-LD)·출처 줄은 그대로. 시/도는 lib/market/sido-group(기존 함수)로 — 예전의
+   "구로 끝나면 서울" 규칙은 사상구·광주 북구를 서울·경기로 묶었다. */
 
 /* [3차 · AI 분석 확충] 전세가율·갭 스크리너.
  *
@@ -62,11 +66,7 @@ export default async function GapScreenerPage() {
           s.saleChangeMonthly !== undefined && Number.isFinite(s.saleChangeMonthly)
             ? s.saleChangeMonthly
             : undefined,
-        group: regionId.startsWith("incheon-")
-          ? "인천"
-          : /^[^\s]+구$/.test(s.regionName.trim())
-            ? "서울"
-            : "경기",
+        group: sidoOfRegionName(s.regionName) ?? OTHER_SIDO_LABEL,
       });
     }
   } catch (e) {
@@ -108,184 +108,72 @@ export default async function GapScreenerPage() {
   }
 
   rows = rows.sort((a, b) => b.ratio - a.ratio);
-  const top = rows.slice(0, 15);
-  const bottom = [...rows].reverse().slice(0, 10);
   const median =
     rows.length > 0 ? rows[Math.floor(rows.length / 2)].ratio : null;
-  const maxRatio = rows.length > 0 ? rows[0].ratio : 0;
-
-  /* 분포 히스토그램 — 표만 보면 "내 지역이 높은 편인가"를 알 수 없다.
-     5%p 구간으로 세어 전국이 어디 몰려 있는지를 먼저 보인다. */
-  const BIN = 5;
-  const binned = new Map<number, number>();
-  for (const r of rows) {
-    const b = Math.floor(r.ratio / BIN) * BIN;
-    binned.set(b, (binned.get(b) ?? 0) + 1);
-  }
-  const binKeys = [...binned.keys()].sort((a, b) => a - b);
-  const histValues = binKeys.map((k) => binned.get(k) ?? 0);
-  const histLabels = binKeys.map((k) => `${k}%`);
-
   const measured = rows.filter((r) => r.measuredGap !== undefined).length;
-  const kpis: HeroKpi[] = [];
-  if (rows.length > 0) {
-    kpis.push({ label: "집계 지역", value: `${rows.length}곳`, note: "서울·경기·인천" });
-    if (median !== null) {
-      kpis.push({
-        label: "전세가율 중앙값",
-        value: `${median.toFixed(1)}%`,
-        note: "절반이 이 값보다 높다",
-        aside: <Explain term="jeonse-garyul" how="공표 지역 통계(한국부동산원·KB)의 매매가 대비 전세가 비율. 집계 지역을 줄 세운 가운데 값." size={12} />,
-      });
-    }
-    kpis.push({
-      label: "가장 높은 곳",
-      value: `${rows[0].ratio.toFixed(1)}%`,
-      note: `${rows[0].name} · 갭이 가장 작다`,
-    });
-    kpis.push({
-      label: "가장 낮은 곳",
-      value: `${rows[rows.length - 1].ratio.toFixed(1)}%`,
-      note: `${rows[rows.length - 1].name} · 갭이 가장 크다`,
-    });
-    if (measured > 0) {
-      kpis.push({
-        label: "실측 갭 지역",
-        value: `${measured}곳`,
-        note: "전세 신고 30건 이상 · 나머지는 비율 환산 추정",
-      });
-    }
-  }
 
   return (
     <PageShell breadcrumb="분석 › 전세가율·갭" toolScope={personaVars(TOOL_PERSONAS["market:gap"])}>
-      {/* [1015 · 규칙 B·C] 제목 위 부연·성격 배지·기능 설명(lead)은 걷었다 */}
-      <ToolHero
-        personaId="market:gap"
-        icon="landmark"
-        title="전세가율·갭 스크리너"
-        toneClass="text-success"
-        kpis={kpis}
-        chart={
-          histValues.length > 1 ? (
-            <div className="rounded-lg border border-line bg-surface px-2 pb-1 pt-2 text-success">
-              <span className="t-caption block px-1 pb-1 text-text-3">
-                전세가율 분포 · {BIN}%p 구간별 지역 수
-              </span>
-              <Bars
-                values={histValues}
-                labels={histLabels}
-                height={78}
-                valueSuffix="곳"
-                ariaLabel="전세가율 분포 히스토그램"
+      {/* 머리 — 아이콘 칩 · 제목 · 사실 한 줄(정의·계산은 ⓘ) | 집계 지역 수 칩 */}
+      <header className="pxs-head">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="tile-ico flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+            <Icon name="landmark" size={18} />
+          </span>
+          <div className="min-w-0">
+            <h1 className="t-display text-ink">전세가율·갭 스크리너</h1>
+            <p className="t-sub inline-flex flex-wrap items-center gap-0.5 text-text-3">
+              한국부동산원·KB 공표 전세가율 + 평균 매매가 · 갭 = 평균 매매가 − 전세 신고 중앙값(최근 3개월) · 전세 30건 미만은 비율 환산 추정
+              <Explain
+                term="jeonse-garyul"
+                title="전세가율과 갭"
+                body="전세가율은 매매가 대비 전세가의 비율이고, 높을수록 갭이 작다."
+                how={GAP_HOW}
+                source="한국부동산원(REB)·KB 공표 지역 통계 · 국토교통부 전월세 실거래 신고"
               />
-            </div>
-          ) : null
-        }
-        source="한국부동산원(REB)·KB 공표 지역 통계 · 지역·출처별 공표 주기가 달라 기준 시점이 지역마다 다름(표의 기준 열)"
-      />
-
-      {/* [1015 · 규칙 B] 정의·계산 문단은 ⓘ 하나로 접었다(표 머리의 ⓘ 와 같은 말) */}
-      <p className="mb-4 mt-4 inline-flex items-center gap-0.5 t-sub text-text-3 max-md:mb-3 max-md:mt-3">
-        갭 = 평균 매매가 − 전세 신고 중앙값(최근 3개월) · 전세 30건 미만은 비율 환산 추정
-        <Explain
-          term="jeonse-garyul"
-          title="전세가율과 갭"
-          body="전세가율은 매매가 대비 전세가의 비율이고, 높을수록 갭이 작다."
-          how={[
-            "갭은 평균 매매가 − 전세 신고 중앙값(최근 3개월)의 실측을 우선 표시하고, 전세 표본이 30건 미만인 지역만 비율 환산 추정(평균 매매가 × (1 − 전세가율))으로 대신한다.",
-            "전월세 신고는 갱신·신규 계약이 구분되지 않아 실측값에도 그 한계가 섞여 있고, 단지·면적에 따라 실제 갭은 크게 다르다.",
-          ]}
-          source="한국부동산원(REB)·KB 공표 지역 통계 · 국토교통부 전월세 실거래 신고"
-        />
-      </p>
+            </p>
+          </div>
+        </div>
+        {rows.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="chip chip-soft chip-pad t-sub">{rows.length}곳</span>
+            {measured > 0 && (
+              <span className="chip chip-pad t-sub border border-line text-text-2">실측 갭 {measured}곳</span>
+            )}
+          </div>
+        )}
+      </header>
 
       {loadFailed ? (
-        <ErrorState
-          title="지역 시세를 지금 불러오지 못했어요"
-          desc="조회가 실패했습니다. 잠시 후 다시 열어 주세요."
-        />
+        <div className="mt-3">
+          <ErrorState
+            title="지역 시세를 지금 불러오지 못했어요"
+            desc="조회가 실패했습니다. 잠시 후 다시 열어 주세요."
+          />
+        </div>
       ) : rows.length === 0 ? (
-        <ErrorState
-          title="전세가율 데이터가 아직 없어요"
-          desc="공표 통계 적재(매일) 뒤 표시."
-          action={{ href: "/analysis", label: "다른 분석 도구 보기" }}
-        />
+        <div className="mt-3">
+          <ErrorState
+            title="전세가율 데이터가 아직 없어요"
+            desc="공표 통계 적재(매일) 뒤 표시."
+            action={{ href: "/analysis", label: "다른 분석 도구 보기" }}
+          />
+        </div>
       ) : (
-        <>
+        <div className="mt-3">
           {yieldFailed && (
-            <div className="mb-4 rounded-lg border border-line bg-warning-soft px-3.5 py-2.5">
+            <div className="mb-3 rounded-lg border border-line bg-warning-soft px-3.5 py-2.5">
               <p className="t-sub text-ink">
                 월세 환산 수익률·실측 갭 열을 지금 불러오지 못했어요(조회 실패). 전세가율은 그대로 실측값.
               </p>
             </div>
           )}
-          <section className="mb-6 max-md:mb-3" data-reveal="">
-            <h2 className="mb-2 t-title text-ink">
-              전세가율 상위 · 갭이 작은 지역 {top.length}곳
-            </h2>
-            {/* 막대가 먼저, 표는 그 아래. 순위는 길이로 읽고 세부는 표에서 읽는다 */}
-            <div className="card mb-2 rounded-lg p-3 text-success">
-              <RankBars
-                rows={top.map((r) => ({
-                  key: r.regionId,
-                  label: r.name,
-                  value: r.ratio,
-                  href: `/region/${r.regionId}`,
-                }))}
-                suffix="%"
-                max={maxRatio}
-              />
-            </div>
-            <RankTable rows={top} tone="high" maxRatio={maxRatio} yieldFailed={yieldFailed} />
-            {/* [1015 · 규칙 B·D] 해설 세 문장 → 주의 한 줄 */}
-            <p className="mt-2 t-caption text-text-3">갭이 작은 지역은 역전세·매매가·전세가 역전 위험도 함께 큼 · 안전하다는 뜻 아님</p>
-          </section>
-
-          <section className="mb-6 max-md:mb-3" data-reveal="">
-            <h2 className="mb-2 t-title text-ink">
-              전세가율 하위 · 갭이 큰 지역 {bottom.length}곳
-            </h2>
-            <div className="card mb-2 rounded-lg p-3 text-warning">
-              <RankBars
-                rows={bottom.map((r) => ({
-                  key: r.regionId,
-                  label: r.name,
-                  value: r.ratio,
-                  href: `/region/${r.regionId}`,
-                }))}
-                suffix="%"
-                max={maxRatio}
-              />
-            </div>
-            <RankTable rows={bottom} tone="low" maxRatio={maxRatio} yieldFailed={yieldFailed} />
-          </section>
-
-          {/* [#78 v2] 시도별 전체 표 — 앵커 점프로 필터를 대신한다(파라미터 없는 ISR 유지) */}
-          <div className="mb-3 flex flex-wrap gap-2" data-reveal="">
-            {(["서울", "경기", "인천"] as const).map((g) => (
-              <a
-                key={g}
-                href={`#sido-${g}`}
-                className="chip press t-sub border border-line bg-surface px-3.5 py-1.5 font-bold text-primary no-underline transition-colors hover:bg-primary-soft"
-              >
-                {g} 전체 ({rows.filter((r) => r.group === g).length})
-              </a>
-            ))}
-          </div>
-          {(["서울", "경기", "인천"] as const).map((g) => {
-            const groupRows = rows.filter((r) => r.group === g);
-            if (groupRows.length === 0) return null;
-            return (
-              <section key={g} id={`sido-${g}`} className="mb-6 scroll-mt-20">
-                <h2 className="mb-2 t-title text-ink">
-                  {g} 전체 · 전세가율 순 {groupRows.length}개 지역
-                </h2>
-                <RankTable rows={groupRows} tone="high" maxRatio={maxRatio} yieldFailed={yieldFailed} />
-              </section>
-            );
-          })}
-        </>
+          <GapScreener rows={rows} median={median} yieldFailed={yieldFailed} />
+          {/* 출처 줄 — 표 바로 아래(시안). 문구는 그대로 */}
+          <p className="mt-2 t-caption text-text-3">
+            출처 한국부동산원(REB)·KB 공표 지역 통계 · 지역·출처별 공표 주기 기준(각 행의 기준 열) · 공표 통계의 산술 정리이며 투자 권유가 아님 · 판단과 책임은 이용자에게 있음
+          </p>
+        </div>
       )}
 
       {/* [#55] FAQ — 화면에 실제로 보이는 문답과 같은 배열로만 JSON-LD 생성 (허위 표기 금지 규칙) */}
@@ -327,9 +215,6 @@ export default async function GapScreenerPage() {
         );
       })()}
 
-      <p className="mt-6 t-caption text-text-3">
-        출처 한국부동산원(REB)·KB 공표 지역 통계 · 지역·출처별 공표 주기 기준(각 행의 기준 열) · 공표 통계의 산술 정리이며 투자 권유가 아님 · 판단과 책임은 이용자에게 있음
-      </p>
     </PageShell>
   );
 }

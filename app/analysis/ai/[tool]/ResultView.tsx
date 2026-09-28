@@ -1,5 +1,8 @@
 "use client";
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
+/* [1021 · 단지 분석 /analysis/ai] 단지 분석 4종(진단·예측·동선·타이밍)은 variant="complex" — 시안(mock8)대로
+   대표 그림(signature-cards.tsx) → 타일 4칸 → (예측: 해마다·가정) → 실거래 흐름 → 근거·출처 → AI 해설 → 자세히 보기.
+   노트·관심·비교 버튼은 오른쪽 레일(ResultRail.tsx)로 옮겼다. 나머지 8종은 예전 순서 그대로. */
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -19,15 +22,15 @@ import { hasSession } from "@/lib/client/has-session";
 import { freeQuotaLabel, weeklyPassCheckoutHref } from "@/lib/payments/paywall-links";
 import { useCopy } from "@/lib/ui/use-copy";
 import { PriceHistoryChart } from "@/app/components/viz/PriceHistoryChart";
-import { ScoreRadar } from "@/app/components/viz/ScoreRadar";
 import { Icon } from "@/app/components/Icon";
 import { Explain } from "@/app/components/explain/Explain";
 import { Delta } from "@/app/components/num/Delta";
 import { useToast } from "@/app/components/toast/ToastProvider";
-import { VerdictCard, ymLabel } from "./VerdictCard";
+import { VerdictCard, VerdictTiles, ymLabel } from "./VerdictCard";
 import { MyNotesChip } from "./VerdictBoard";
-import { tileDisplay } from "./verdict-display";
+import { tileDisplay, verdictSources } from "./verdict-display";
 import { metricExplain, tileExplain } from "./verdict-explain";
+import { DiagnosisSignature, InspectionSignature, PredictionSignature, ScenarioTables, TimingSignature } from "./signature-cards";
 import type { Ctx, Footnote, Insight, PickedLite, RunResult, Similar } from "./workbench-types";
 
 /* ============================================================
@@ -96,35 +99,6 @@ function Card({ title, sub, children, id }: { title: string; sub?: ReactNode; ch
 
 /* ── 도구별 주인공 그림 ─────────────────────────────────────────────── */
 
-const LIGHT_WORD = { green: "사는 쪽에 유리", yellow: "보통", red: "파는 쪽에 유리", na: "자료 없음" } as const;
-const LIGHT_BG = { green: "bg-success", yellow: "bg-warning", red: "bg-danger" } as const;
-
-/** 매수 타이밍 — 신호등 3개(빨강·노랑·초록 중 켜진 것) + 왜 한 줄 */
-function SignalLights({ signals }: { signals: Insight["signals"] }) {
-  return (
-    <ul className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-      {signals.map((s) => (
-        <li key={s.key} className="flex flex-col gap-1.5 rounded-lg bg-bg px-3 py-3">
-          <div className="flex items-center justify-between gap-2">
-            <span className="t-body font-bold text-ink">{s.label}</span>
-            <span className="flex items-center gap-1 rounded-full bg-surface px-1.5 py-1" aria-hidden="true">
-              {(["red", "yellow", "green"] as const).map((c) => (
-                <span key={c} className={`h-3 w-3 rounded-full ${LIGHT_BG[c]} ${s.state === c ? "" : "opacity-20"}`} />
-              ))}
-            </span>
-          </div>
-          <span
-            className={`t-sub font-bold ${s.state === "green" ? "text-success" : s.state === "red" ? "text-danger" : s.state === "yellow" ? "text-warning" : "text-text-3"}`}
-          >
-            {LIGHT_WORD[s.state]}
-          </span>
-          <span className="t-sub text-text-2">{s.basis}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 const CHECK_META = {
   pass: { icon: "check", cls: "text-success", word: "통과" },
   warn: { icon: "warning", cls: "text-danger", word: "주의" },
@@ -157,31 +131,6 @@ function RiskChecklist({ checks }: { checks: NonNullable<Insight["checks"]> }) {
         );
       })}
     </ul>
-  );
-}
-
-/** 종합 진단 — 레이더 + 항목별 막대와 한 줄 이유 */
-function ScoreBreakdown({ radar }: { radar: Insight["radar"] }) {
-  return (
-    <div className="grid grid-cols-1 items-center gap-3 md:grid-cols-[300px_minmax(0,1fr)]">
-      <ScoreRadar items={radar} />
-      <ul className="flex flex-col gap-2.5">
-        {radar.map((a) => (
-          <li key={a.key} className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className="w-[68px] shrink-0 t-sub font-bold text-text-1">{a.label}</span>
-              <span className="h-2 flex-1 overflow-hidden rounded-full bg-line" aria-hidden="true">
-                {a.score != null && <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.max(3, a.score)}%` }} />}
-              </span>
-              <span className="w-[52px] shrink-0 text-right t-sub font-bold tabular-nums text-ink">
-                {a.score != null ? `${a.score}점` : "—"}
-              </span>
-            </div>
-            <span className="pl-[76px] t-caption text-text-3">{a.basis}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }
 
@@ -590,13 +539,16 @@ function PriceFlowCard({
 
 /* ── 다음 할 일(최대 3개) ─────────────────────────────────────────── */
 
-function NextActions({
+export function NextActions({
   tool,
   coreTool,
   picked,
   verdict,
   fallback,
   checklistItems,
+  stack = false,
+  noteClass,
+  noteLabel,
 }: {
   tool: AiAnalysisToolId;
   coreTool: boolean;
@@ -607,6 +559,12 @@ function NextActions({
   /** 투자 체크리스트 — 결과 목록을 노트 고려사항으로 옮긴다 */
   /** [1008 · 리뷰 A-3] 투자 체크리스트 — 아직 체크하지 않은 항목(노트 고려사항으로 옮긴다) */
   checklistItems?: string[] | null;
+  /** [1021] 레일(300px) 세로 쌓기 — 버튼 3개를 한 열로, 설명 줄 없이(같은 버튼·같은 동작) */
+  stack?: boolean;
+  /** [1021] 노트 버튼 클래스(기본 tool-fill) — 임장 동선은 채움 파랑 1개(btn-primary), 나머지는 btn-soft */
+  noteClass?: string;
+  /** [1021] 노트 버튼 글자(기본 "이 단지 임장노트 쓰기") */
+  noteLabel?: string;
 }) {
   const [watch, setWatch] = useState<"idle" | "busy" | "done" | "login" | "fail">("idle");
   const { showToast } = useToast();
@@ -654,9 +612,10 @@ function NextActions({
     return `/notes/new?${qs.toString()}`;
   })();
   const loginHref = `/login?callbackUrl=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : "/analysis")}`;
+  const noteCls = noteClass ?? "tool-fill";
   return (
-    <div className="flex flex-col gap-2" aria-label="다음 할 일">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+    <div className="flex flex-col gap-2" aria-label={stack ? "이 결과로" : "다음 할 일"}>
+      <div className={stack ? "flex flex-col gap-1.5" : "grid grid-cols-1 gap-2 sm:grid-cols-3"}>
         {tool === "my-checklist" && checklistItems && checklistItems.length > 0 ? (
           <Link
             href={`${noteHref}&fromChecklist=1`}
@@ -669,13 +628,13 @@ function NextActions({
                 /* 저장 실패해도 이동은 그대로 */
               }
             }}
-            className="tool-fill press btn-md gap-1.5 no-underline"
+            className={`${noteCls} press btn-md gap-1.5 no-underline`}
           >
             <Icon name="notebook-pen" size={16} /> 체크리스트로 노트 시작
           </Link>
         ) : (
-          <Link href={noteHref} className="tool-fill press btn-md gap-1.5 no-underline">
-            <Icon name="notebook-pen" size={16} /> 이 단지 임장노트 쓰기
+          <Link href={noteHref} className={`${noteCls} press btn-md gap-1.5 no-underline`}>
+            <Icon name="notebook-pen" size={16} /> {noteLabel ?? "이 단지 임장노트 쓰기"}
           </Link>
         )}
         {watch === "login" ? (
@@ -721,7 +680,7 @@ function NextActions({
         </Link>
       </div>
       {/* 예전엔 노트 버튼의 title= 말풍선(마우스를 올려야만 보임)에만 있던 설명 — 휴대폰에도 보이게 */}
-      <p className="t-caption text-text-3">임장노트에는 이 결과의 결론과 핵심 숫자가 메모 초안으로 들어가요.</p>
+      {!stack && <p className="t-caption text-text-3">임장노트에는 이 결과의 결론과 핵심 숫자가 메모 초안으로 들어가요.</p>}
     </div>
   );
 }
@@ -736,6 +695,7 @@ function Details({
   counters,
   ctx,
   result,
+  hideEvidence = false,
 }: {
   tool: AiAnalysisToolId;
   picked: PickedLite | null;
@@ -744,6 +704,8 @@ function Details({
   counters: string[];
   ctx: Ctx;
   result: RunResult | null;
+  /** [1021] 단지 분석 4종은 "근거 · 출처" 카드가 위에 따로 선다 — 여기서는 되풀이하지 않는다 */
+  hideEvidence?: boolean;
 }) {
   const [feedback, setFeedback] = useState<"idle" | "busy" | "sent">("idle");
   const [note, setNote] = useState("");
@@ -824,10 +786,12 @@ function Details({
     <details className="card group rounded-2xl p-4">
       <summary className="flex min-h-[40px] cursor-pointer items-center justify-between gap-2 t-body font-bold text-ink">
         자세히 보기
-        <span className="t-caption font-bold text-text-3">데이터 출처 {evidence.length}곳 · 결과가 달라지는 경우 · 공유</span>
+        <span className="t-caption font-bold text-text-3">
+          {hideEvidence ? "" : `데이터 출처 ${evidence.length}곳 · `}결과가 달라지는 경우 · 공유
+        </span>
       </summary>
       <div className="mt-3 flex flex-col gap-4">
-        <div>
+        <div className={hideEvidence ? "hidden" : ""}>
           <h3 className="t-sub font-bold text-text-1">데이터 출처</h3>
           <ul className="mt-1.5 flex flex-col gap-1.5">
             {evidence.map((e) => (
@@ -978,6 +942,53 @@ function Details({
   );
 }
 
+/* ── [1021] 근거 · 출처 카드(단지 분석 4종) — evidence 행 + 내 임장노트 칩 + 다음 행동 한 줄(next-action-routing) ── */
+
+const CONF_WORD: Record<string, string> = { thin: "거래 적음 · 참고용", insufficient: "자료 부족", stale: "오래된 자료" };
+
+function EvidenceCard({ tool, picked, verdict, footnotes }: { tool: AiAnalysisToolId; picked: PickedLite | null; verdict: Verdict | null; footnotes: Footnote[] }) {
+  const evidence = verdict?.evidence?.length
+    ? verdict.evidence.map((e) => ({ label: e.label, source: e.source, asOf: e.asOf, confidence: e.confidence, href: e.href }))
+    : footnotes.map((f) => ({ label: f.label, source: f.source, asOf: f.asOf, confidence: "ok" as const, href: f.href }));
+  const next = picked ? verdictNextActions({ tool, verdict, complexId: picked.id, complexName: picked.name, region: picked.region }).secondary : null;
+  return (
+    <section className="card rounded-2xl p-4 md:p-5" aria-label="근거 · 출처">
+      <h2 className="t-body font-bold text-ink">근거 · 출처</h2>
+      {evidence.length > 0 ? (
+        <ul className="mt-1 flex flex-col divide-y divide-line" data-tone="plain">
+          {evidence.map((e) => (
+            <li key={e.label} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-2 t-sub">
+              <span className="min-w-0 font-bold text-ink break-words">{e.label}</span>
+              <span className="flex flex-wrap items-baseline gap-x-1.5 t-caption text-text-3">
+                <span className="break-words">{e.source}</span>
+                {ymLabel(e.asOf) && <span>· {ymLabel(e.asOf)}</span>}
+                {e.confidence !== "ok" && CONF_WORD[e.confidence] && <span className="font-bold text-warning">· {CONF_WORD[e.confidence]}</span>}
+                {e.href && (
+                  <Link href={e.href} className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline">
+                    원본 ›
+                  </Link>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-1 t-sub text-text-3">데이터 출처가 아직 없어요.</p>
+      )}
+      {(picked || next) && (
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-2">
+          <span className="flex flex-wrap gap-1.5">{picked && <MyNotesChip complexId={picked.id} />}</span>
+          {next && (
+            <Link href={next.href} className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary no-underline">
+              {next.label} ›
+            </Link>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 /* ── 본체 ─────────────────────────────────────────────────────────── */
 
 export function ResultView({
@@ -997,6 +1008,9 @@ export function ResultView({
   character,
   fallbackAction,
   onPickSimilar,
+  variant,
+  onHorizon,
+  phoneCondition,
 }: {
   tool: AiAnalysisToolId;
   coreTool: boolean;
@@ -1018,6 +1032,12 @@ export function ResultView({
   character: string;
   fallbackAction: { label: string; href: string };
   onPickSimilar: (s: Similar) => void;
+  /** [1021] 단지 분석 4종 — 시안 구조(대표 그림 → 타일 → 근거·출처). 없으면 예전 순서 */
+  variant?: "complex";
+  /** [1021] 시세 예측 기간 칩 → TuningForm 의 horizonMonths 를 바꾸고 다시 계산(기존 입력·기존 실행) */
+  onHorizon?: ((months: string) => void) | null;
+  /** [1021] 폰 한 열 순서(타일 → 내 조건 → 근거)를 위해 타일 아래에 놓는 "내 조건" 카드(lg 에서는 레일이 그린다) */
+  phoneCondition?: ReactNode;
 }) {
   const external = Boolean(result?.ok && result.source && result.source !== "internal" && result.source !== "stub");
   const hasComplex = Boolean(picked && ctx.complex);
@@ -1027,6 +1047,150 @@ export function ResultView({
     tool === "my-checklist" && verdict?.checklist
       ? verdict.checklist.flatMap((g) => g.items).filter((i) => !checklist.checked.has(i.id)).map((i) => i.label)
       : null;
+
+  const failure = result && !result.ok && (
+    <div className="card flex flex-col gap-2.5 rounded-2xl p-4" role="status">
+      {result.code === "QUOTA_EXCEEDED" ? (
+        <>
+          <p className="t-section font-bold text-ink">{result.error ?? "무료 AI 해설을 모두 사용했어요."}</p>
+          <p className="t-body text-text-2">
+            {/* [1004 · 리뷰] "한도 없이"는 사실이 아니다 — 주간권은 plan=pro 라 AI 분석 월 50회(access.ts ai_analysis) */}
+            플러스 주간권은 <b className="text-ink">1,100원으로 7일 동안</b> 이 도구 12종을 월 50회까지 쓸 수 있어요. 자동 갱신
+            없는 1회 결제예요.
+          </p>
+          <Link
+            href={weeklyPassCheckoutHref(typeof window !== "undefined" ? window.location.pathname + window.location.search : null)}
+            className="btn-primary btn-md no-underline"
+          >
+            주간권 1,100원으로 계속하기
+          </Link>
+          <Link href="/subscription" className="inline-flex min-h-[24px] items-center self-center t-sub font-bold text-text-3 no-underline">
+            월간 2,900원 · 다른 플랜 보기 ›
+          </Link>
+        </>
+      ) : result.code === "LOGIN_REQUIRED" ? (
+        <p className="t-body font-bold text-text-1">
+          AI 해설은 로그인하면 받을 수 있어요.{" "}
+          <Link
+            href={`/login?callbackUrl=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : "/analysis")}`}
+            className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline"
+          >
+            로그인 ›
+          </Link>
+        </p>
+      ) : (
+        <p className="t-body font-bold text-danger">{result.error ?? "실행하지 못했어요 — 잠시 뒤 다시 눌러 주세요."}</p>
+      )}
+    </div>
+  );
+
+  const narrative = (
+    <>
+      {running && askedLlm && (
+        <Card title="AI 해설" id="ai-narrative">
+          <p className="flex items-center gap-2 t-sub text-text-2" aria-live="polite">
+            <span className="njn-dot njn-dot--breathe" aria-hidden="true" />
+            {character} 결과를 문장으로 정리하는 중이에요…
+          </p>
+        </Card>
+      )}
+      {!running && external && result?.markdown && (
+        <Card title="AI 해설" sub="[AI 서술] · 외부 AI 모델이 쓴 문장" id="ai-narrative">
+          <MdLite text={result.markdown} />
+          <p className="t-caption text-text-3">숫자의 기준은 위 결과 요약·데이터 출처 · AI 문장은 틀릴 수 있음</p>
+        </Card>
+      )}
+      {!running && result?.ok && result.askedLlm && !external && (
+        <p className="rounded-lg bg-bg px-3.5 py-2.5 t-sub text-text-2">
+          AI 해설을 지금 받지 못해 공공데이터 자동 계산 결과만 표시. 잠시 뒤 다시 눌러 주세요.
+        </p>
+      )}
+    </>
+  );
+
+  /* ── [1021] 단지 분석 4종 — 시안 구조 ─────────────────────────────────────── */
+  if (variant === "complex") {
+    const tiles = verdict?.tiles ?? [];
+    const sources = verdict ? verdictSources(verdict) : null;
+    const asOf = ymLabel(verdict?.metric?.asOf ?? tiles.find((t) => t.asOf)?.asOf ?? null);
+    const scenario = tool === "ai-prediction" ? (verdict?.scenario ?? null) : null;
+    return (
+      <div className="flex flex-col gap-3">
+        {failure}
+        {/* ① 대표 그림 */}
+        {tool === "ai-diagnosis" && (
+          <DiagnosisSignature
+            verdict={verdict}
+            radar={insight.radar}
+            metricAside={(() => {
+              const c = verdict ? metricExplain(verdict) : null;
+              return c ? <Explain {...c} /> : null;
+            })()}
+          />
+        )}
+        {tool === "ai-prediction" && <PredictionSignature verdict={verdict} scenario={scenario} onHorizon={onHorizon} />}
+        {tool === "ai-timing" && <TimingSignature verdict={verdict} signals={insight.signals} series={series} />}
+        {tool === "ai-inspection" && picked && (
+          <InspectionSignature picked={picked} similar={similar} recent6={series?.recent6 ?? null} onPick={onPickSimilar} />
+        )}
+        {!verdict && <p className="card rounded-2xl p-4 t-body text-text-2">결과를 만들 자료가 아직 없어요.</p>}
+
+        {/* ② 타일 4칸 + 출처·기준 한 줄 */}
+        {tiles.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <VerdictTiles
+              tiles={tiles}
+              tileAside={(t) => {
+                const c = tileExplain(t);
+                return c ? <Explain {...c} size={12} /> : null;
+              }}
+            />
+            <p className="t-caption text-text-3 break-words">
+              {sources ? `출처 ${sources} · ` : ""}공공데이터 자동 계산{asOf ? ` · 기준 ${asOf}` : ""}
+              {result?.ok && at && (result.appliedCalc || external)
+                ? ` · ${result.appliedCalc ? "내 조건 반영 · " : ""}${at.getHours()}:${String(at.getMinutes()).padStart(2, "0")} 계산`
+                : ""}
+            </p>
+          </div>
+        )}
+
+        {/* 폰 한 열: 타일 → 내 조건(접이식) → 근거 */}
+        {phoneCondition && <div className="lg:hidden">{phoneCondition}</div>}
+
+        {/* 시세 예측 — 해마다 표 · 가정 */}
+        {scenario && <ScenarioTables scenario={scenario} startLabel={series?.label ?? ctx.complex?.price?.bandLabel ?? null} />}
+
+        {/* 이 단지 실거래 흐름(예측은 위 부채꼴이 시나리오라 여기선 과거만) */}
+        {hasComplex && (
+          <PriceFlowCard
+            tool={tool === "ai-prediction" ? "ai-diagnosis" : tool}
+            series={series}
+            verdict={verdict}
+            hasPrice={Boolean(ctx.complex?.price)}
+            failed={Boolean(ctx.unavailable?.includes("실거래가"))}
+          />
+        )}
+
+        {/* ③ 근거 · 출처 + 다음 행동 한 줄 */}
+        <EvidenceCard tool={tool} picked={hasComplex ? picked : null} verdict={verdict} footnotes={footnotes} />
+
+        {/* ④ AI 해설 */}
+        {narrative}
+
+        {/* ⑤ 자세히 보기 — 출처는 위 카드가 말했다 */}
+        <Details
+          tool={tool}
+          picked={hasComplex ? picked : null}
+          verdict={verdict}
+          footnotes={footnotes}
+          counters={verdict?.counters?.length ? verdict.counters : insight.counters}
+          ctx={ctx}
+          result={result}
+          hideEvidence
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -1059,53 +1223,10 @@ export function ResultView({
       </div>
 
       {/* 실행 실패 — 결제·로그인 안내는 방금 결과를 본 이 자리에서 */}
-      {result && !result.ok && (
-        <div className="card flex flex-col gap-2.5 rounded-2xl p-4" role="status">
-          {result.code === "QUOTA_EXCEEDED" ? (
-            <>
-              <p className="t-section font-bold text-ink">{result.error ?? "무료 AI 해설을 모두 사용했어요."}</p>
-              <p className="t-body text-text-2">
-                {/* [1004 · 리뷰] "한도 없이"는 사실이 아니다 — 주간권은 plan=pro 라 AI 분석 월 50회(access.ts ai_analysis) */}
-                플러스 주간권은 <b className="text-ink">1,100원으로 7일 동안</b> 이 도구 12종을 월 50회까지 쓸 수 있어요. 자동 갱신
-                없는 1회 결제예요.
-              </p>
-              <Link
-                href={weeklyPassCheckoutHref(typeof window !== "undefined" ? window.location.pathname + window.location.search : null)}
-                className="btn-primary btn-md no-underline"
-              >
-                주간권 1,100원으로 계속하기
-              </Link>
-              <Link href="/subscription" className="inline-flex min-h-[24px] items-center self-center t-sub font-bold text-text-3 no-underline">
-                월간 2,900원 · 다른 플랜 보기 ›
-              </Link>
-            </>
-          ) : result.code === "LOGIN_REQUIRED" ? (
-            <p className="t-body font-bold text-text-1">
-              AI 해설은 로그인하면 받을 수 있어요.{" "}
-              <Link
-                href={`/login?callbackUrl=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : "/analysis")}`}
-                className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline"
-              >
-                로그인 ›
-              </Link>
-            </p>
-          ) : (
-            <p className="t-body font-bold text-danger">{result.error ?? "실행하지 못했어요 — 잠시 뒤 다시 눌러 주세요."}</p>
-          )}
-        </div>
-      )}
+      {failure}
 
       {/* ② 도구의 주인공 그림 */}
-      {tool === "ai-diagnosis" && insight.radar.length > 0 && (
-        <Card title="5가지 항목 점수" sub="0~100점 · 높을수록 좋아요">
-          <ScoreBreakdown radar={insight.radar} />
-        </Card>
-      )}
-      {tool === "ai-timing" && (
-        <Card title="지금 사도 될까 — 신호등 3개" sub="지역 단위 흐름 · 매수자 입장">
-          <SignalLights signals={insight.signals} />
-        </Card>
-      )}
+      {/* [1021] 종합 진단·매수 타이밍·임장 동선의 주인공 그림은 variant="complex"(위) — signature-cards.tsx */}
       {tool === "ai-risk" && insight.checks && insight.checks.length > 0 && (
         <Card title="위험 신호 5가지" sub="걸리면 주의 · 자료 없음은 '위험 없음'이 아니에요">
           <RiskChecklist checks={insight.checks} />
@@ -1118,18 +1239,6 @@ export function ResultView({
       )}
       {tool === "ai-compare" && compareTray && compareTray.length >= 2 && (
         <CompareTable tray={compareTray} currentId={picked?.id ?? null} currentVerdict={verdict} />
-      )}
-      {tool === "ai-inspection" && picked && (
-        <Card title="하루 임장 순서" sub="같은 지역 · 최근 6개월 거래 많은 순">
-          {similar.length > 0 ? (
-            <RouteList picked={picked} similar={similar} onPick={onPickSimilar} />
-          ) : (
-            <p className="t-sub text-text-2">같은 지역에 함께 볼 거래 많은 단지가 아직 없어요.</p>
-          )}
-          <Link href={`/map?complexId=${encodeURIComponent(picked.id)}`} className="inline-flex min-h-[24px] items-center self-start t-sub font-bold text-primary no-underline">
-            지도에서 위치 보기 ›
-          </Link>
-        </Card>
       )}
       {tool === "ai-compare" && similar.length > 0 && picked && (
         <Card title="함께 비교해 볼 단지" sub="같은 지역 · 최근 6개월 거래 많은 순 · 누르면 비교에 담아요(최대 3곳)">
@@ -1159,25 +1268,7 @@ export function ResultView({
       />
 
       {/* ④ AI 해설 — 외부 모델 서술만 */}
-      {running && askedLlm && (
-        <Card title="AI 해설" id="ai-narrative">
-          <p className="flex items-center gap-2 t-sub text-text-2" aria-live="polite">
-            <span className="njn-dot njn-dot--breathe" aria-hidden="true" />
-            {character} 결과를 문장으로 정리하는 중이에요…
-          </p>
-        </Card>
-      )}
-      {!running && external && result?.markdown && (
-        <Card title="AI 해설" sub="[AI 서술] · 외부 AI 모델이 쓴 문장" id="ai-narrative">
-          <MdLite text={result.markdown} />
-          <p className="t-caption text-text-3">숫자의 기준은 위 결과 요약·데이터 출처 · AI 문장은 틀릴 수 있음</p>
-        </Card>
-      )}
-      {!running && result?.ok && result.askedLlm && !external && (
-        <p className="rounded-lg bg-bg px-3.5 py-2.5 t-sub text-text-2">
-          AI 해설을 지금 받지 못해 공공데이터 자동 계산 결과만 표시. 잠시 뒤 다시 눌러 주세요.
-        </p>
-      )}
+      {narrative}
 
       {/* ⑤ 자세히 보기 */}
       <Details

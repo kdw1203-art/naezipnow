@@ -2,6 +2,7 @@
  * [1008 · W] 단지 실거래 흐름 그래프 — 좌표 계산(순수). 렌더(PriceHistoryChart.tsx)와 나눈 이유:
  * "거래가 적으면 선을 잇지 않는다" 같은 정직성 규칙과 축 눈금을 단위테스트로 잠그기 위해서다
  * (node --test 는 .tsx 를 못 읽는다). 좌표는 픽셀 — 렌더가 컨테이너 폭을 재서 넘긴다(글자가 늘어나지 않게).
+ * [1021 · 단지 분석 /analysis/ai] layoutScenarioFan — 시세 예측 대표 그림(부채꼴만)이 같은 규칙을 쓴다(아래).
  */
 
 import { formatEokMan } from "@/lib/format/eok-man";
@@ -216,6 +217,24 @@ export function layoutPriceChart(input: {
     lineBottom,
     sparse,
   };
+}
+
+/**
+ * [1021 · 단지 분석 /analysis/ai] 시세 예측 대표 그림 — 시나리오 부채꼴만(과거 달 없이 "지금 → N년 뒤").
+ * 위 layoutPriceChart 를 **출발점 한 달**로 불러 같은 좌표 규칙(눈금·끝 라벨 14px 밀어내기·연차 솎기)을 그대로 쓴다.
+ * 막대 영역(barH)은 0 — 실거래 막대가 없는 그림이다. 재료(시나리오)가 없으면 null.
+ */
+export function layoutScenarioFan(input: {
+  scenario: { startKrw: number; path: readonly ChartScenarioPoint[] } | null | undefined;
+  box: Omit<ChartBox, "barH">;
+}): PriceChartLayout | null {
+  const s = input.scenario;
+  if (!s || !(s.startKrw > 0) || s.path.length < 2) return null;
+  return layoutPriceChart({
+    months: [{ ym: "", avgMan: s.startKrw / 10_000, n: 0, nAll: 0 }],
+    scenario: s,
+    box: { ...input.box, barH: 0 },
+  });
 }
 
 /** 연차 라벨 솎기 — 마지막 해는 늘 남기고, 앞 라벨·최근 달 라벨과 40px 안쪽이면 뺀다 */

@@ -9,7 +9,8 @@ import { Explain } from "@/app/components/explain/Explain";
 
 /** ⓘ — 계산은 tx_band_landing/complex 뷰(국토교통부 실거래)와 페이지의 topPercentOf 그대로 */
 export const PYEONG_HOW = ["면적대마다 실거래 금액 ÷ 전용면적 평(3.3㎡)의 평균이에요 — 평균이라 한 건의 값과는 달라요."];
-const RANK_HOW = ["내집나우에 수록된 지역들 중 같은 면적대 평단가를 줄 세운 순위예요(수록 지역 8곳 이상일 때만)."];
+/** [1021] BandShelf(면적 선반)가 같은 ⓘ 문구를 쓴다 — export */
+export const RANK_HOW = ["내집나우에 수록된 지역들 중 같은 면적대 평단가를 줄 세운 순위예요(수록 지역 8곳 이상일 때만)."];
 
 /** [970 · B-31] 원 → "8.5억"(0.1 단위) — 같은 화면의 지역 카드가 "short"(28.8억). 중앙값(요약)에 쓴다 */
 function eok(won: number): string {

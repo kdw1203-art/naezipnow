@@ -1,7 +1,12 @@
 "use client";
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
+/* [1021 · 단지 분석 /analysis/ai] 단지 분석 4종(진단·예측·동선·타이밍)은 시안(mock8)대로 새 뼈대 —
+   머리(아이콘 칩·제목·useCase 한 줄·기준 시점 칩) → `grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px]`
+   왼쪽: 단지 줄 → 대표 그림 → 타일 → 근거 → 행동(ResultView variant="complex") · 오른쪽 레일: 내 조건·이 결과로·이어서 보기(ResultRail).
+   단지를 고르기 전에는 "이렇게 써요" 카드 대신 대표 그림의 빈 틀(empty-frames.tsx) 위에 단지 고르기.
+   데이터 로딩·재계산·저장·노트·비교·게이트는 전부 예전 로직 그대로다. 나머지 8종 도구는 예전 화면. */
 
-import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { ComplexPicker, type PickedComplex } from "@/app/analysis/ComplexPicker";
@@ -20,6 +25,8 @@ import { buildTuningInput, type TuningField } from "@/lib/ai/tool-tuning";
 import { applyPriceAutofill, EMPTY_AUTOFILL, priceManString, type AutofillState } from "@/lib/ai/tuning-autofill";
 import { formatKrwWon } from "@/lib/format/krw";
 import type { PortfolioItem, ReadyState, RunResult, Similar } from "./workbench-types";
+import { EmptyFrame } from "./empty-frames";
+import { isFrameTool } from "./frame-tools";
 
 /* ============================================================
    [AI-31~38·42~43·46] 통합 워크벤치 클라이언트 — 입력과 흐름만 한다.
@@ -46,6 +53,8 @@ const ResultViewLazy = dynamic(() => import("./ResultView").then((m) => m.Result
 const VerdictBoardLazy = dynamic(() => import("./VerdictBoard").then((m) => m.VerdictBoard), { ssr: false });
 /* [1008 · 리뷰 A-3] 내 자산 구성 진단 — 관심 단지를 불러왔을 때만 */
 const PortfolioMixLazy = dynamic(() => import("./PortfolioMix").then((m) => m.PortfolioMix), { ssr: false });
+/* [1021] 단지 분석 4종의 오른쪽 레일(내 조건·이 결과로·이어서 보기) — 결과가 선 뒤에만 */
+const ResultRailLazy = dynamic(() => import("./ResultRail").then((m) => m.ResultRail), { ssr: false });
 
 function ResultSkeleton() {
   return (
@@ -74,8 +83,11 @@ export function WorkbenchClient({
   llmAvailable = false,
   quickPicks = [],
   resultKind,
+  header = null,
 }: {
   tool: AiAnalysisToolId;
+  /** [1021] 단지 분석 4종의 머리 — 아이콘(서버가 그린 글리프)·useCase 한 줄·빵부스러기. 넘기면 새 뼈대로 그린다 */
+  header?: { icon: ReactNode; useCase: string; crumb: string } | null;
   /** 도구 이름 — 지도 서랍 제목("시세 예측")에 쓴다 */
   title: string;
   tips: string[];
@@ -134,6 +146,8 @@ export function WorkbenchClient({
     flashTimer.current = window.setTimeout(() => setRunFlash(null), 1600);
   }, []);
   const [signedIn, setSignedIn] = useState(false);
+  /* [1021] 단지 분석 4종 — 단지 줄의 "단지 바꾸기"를 누르면 고르기 카드를 다시 편다 */
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const isCompare = tool === "ai-compare";
   const isPortfolio = tool === "ai-portfolio";
@@ -389,8 +403,10 @@ export function WorkbenchClient({
   const shownResult = result && result.forKey === activeKey ? result : null;
   const shownVerdict = shownResult?.ok && shownResult.verdict ? shownResult.verdict : (ready?.verdict ?? null);
 
-  const run = useCallback(async () => {
+  const run = useCallback(async (override?: Record<string, string | boolean>) => {
     if (running || !ready) return;
+    /* [1021] 시세 예측 기간 칩 — 방금 바꾼 입력으로 바로 계산(상태 갱신을 기다리지 않는다) */
+    const tuningNow = override ?? tuning;
     /* 계산이 없는 도구는 실행이 곧 AI 해설 요청이다 */
     const askLlm = aiMode;
     const forKey = ready.key;
@@ -398,7 +414,7 @@ export function WorkbenchClient({
        실거래가를 쓰고, 결과도 "내가 넣은 기준 가격"이 아니라 "최근 실거래가"에서 출발했다고 말한다 */
     const auto = autofillRef.current.values;
     const effective: Record<string, string | boolean> = {};
-    for (const [k, v] of Object.entries(tuning)) if (!(typeof v === "string" && auto[k] != null && auto[k] === v)) effective[k] = v;
+    for (const [k, v] of Object.entries(tuningNow)) if (!(typeof v === "string" && auto[k] != null && auto[k] === v)) effective[k] = v;
     const calcInput = buildTuningInput(calcFields, effective);
     const appliedCalc = Object.keys(calcInput).length > 0;
     if (askLlm && !(await hasSession())) {
@@ -491,6 +507,276 @@ export function WorkbenchClient({
       void loadContext(key);
     }
   };
+
+  /* ── [1021] 단지 분석 4종 — 시안 뼈대 ─────────────────────────────────────────────── */
+  if (header && isFrameTool(tool)) {
+    const condNode: ReactNode =
+      ready && (visibleFields.length > 0 || showRun) ? (
+        <div className="flex flex-col gap-2">
+          {visibleFields.length > 0 && (
+            <TuningFormLazy fields={visibleFields} value={tuning} onChange={setTuning} autoValues={autofillRef.current.values} />
+          )}
+          {showRun && (
+            <>
+              {hasCalc && llmAvailable && (
+                <label className="flex min-h-[40px] items-center gap-2 t-sub font-bold text-text-1">
+                  <input type="checkbox" className="h-5 w-5" checked={useLlm} onChange={(e) => setUseLlm(e.target.checked)} />
+                  AI 해설도 받기 <span className="font-medium text-text-3">(로그인 필요 · 외부 AI 모델)</span>
+                </label>
+              )}
+              <ActionButton
+                state={runState}
+                onClick={() => void run()}
+                disabled={!ready}
+                busyLabel={runningLlm ? "AI 해설 쓰는 중" : "계산하는 중"}
+                doneLabel={runningLlm || aiMode ? "결과를 새로 받았어요" : "다시 계산했어요"}
+                errorLabel={runErrCode === "QUOTA_EXCEEDED" ? "무료 해설을 다 썼어요" : runErrCode === "LOGIN_REQUIRED" ? "로그인이 필요해요" : "다시 눌러 주세요"}
+                className="btn-md w-full"
+              >
+                {hasCalc ? (aiMode ? "다시 계산 · AI 해설 받기" : "내 조건으로 다시 계산") : signedIn ? "AI 해설 받기" : "로그인하고 AI 해설 받기"}
+              </ActionButton>
+              {signedIn && (
+                <Link href="/my/analyses" className="inline-flex min-h-[24px] items-center self-start t-sub font-bold text-text-3 no-underline">
+                  내 분석 기록 ›
+                </Link>
+              )}
+            </>
+          )}
+        </div>
+      ) : null;
+    /* 기준 시점 칩 — 있을 때만(도구마다 기준이 다르다) */
+    const headChip = (() => {
+      if (!ready || !ctx) return null;
+      const v = shownVerdict;
+      if (tool === "ai-prediction") {
+        const ym = ctx.complex?.price?.latestYm;
+        return ym ? `${ym.slice(0, 4)}.${ym.slice(4)} 실거래 기준` : null;
+      }
+      if (tool === "ai-timing") {
+        const period = ctx.region?.snapshot?.period;
+        const region = (ctx.region?.name ?? "").trim().split(/\s+/).pop();
+        return region && period && /^\d{6}$/.test(period) ? `${region} · ${period.slice(0, 4)}.${period.slice(4)}` : null;
+      }
+      if (tool === "ai-inspection") return picked?.regionLabel || picked?.region || null;
+      if (!v?.computedAt) return null;
+      const d = new Date(v.computedAt);
+      if (Number.isNaN(d.getTime())) return null;
+      const ymd = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" })
+        .formatToParts(d)
+        .filter((x) => x.type === "year" || x.type === "month" || x.type === "day")
+        .map((x) => x.value)
+        .join(".");
+      return `${ymd} 기준`;
+    })();
+    const price = ctx?.complex?.price ?? null;
+    const showPickCard = !picked || pickerOpen;
+    const railProps = {
+      tool,
+      coreTool,
+      picked: picked && ctx?.complex ? { id: picked.id, name: picked.name, region: picked.region } : null,
+      verdict: shownVerdict,
+      result: shownResult,
+      fallbackAction: persona.nextAction,
+    };
+    return (
+      <>
+        {mapNode}
+        {/* 머리 — 아이콘 칩 + 제목 + 사실 한 줄 + 기준 시점 칩(있을 때만) */}
+        <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary" aria-hidden="true">
+              {header.icon}
+            </span>
+            <div className="min-w-0">
+              <nav className="t-caption text-text-3">
+                <Link href="/analysis" className="inline-flex min-h-[24px] items-center text-text-3 no-underline hover:underline">
+                  AI 분석
+                </Link>{" "}
+                › {header.crumb}
+              </nav>
+              <h1 className="t-title text-ink">{title}</h1>
+              <p className="t-sub text-text-2">{header.useCase}</p>
+            </div>
+          </div>
+          {headChip && (
+            <span className="chip inline-flex min-h-[32px] items-center self-center border border-line bg-surface px-3 t-sub font-bold tabular-nums text-text-1">
+              {headChip}
+            </span>
+          )}
+        </header>
+
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-6">
+          {/* ── 왼쪽: 단지 줄 → 대표 그림 → 타일 → 근거 → 행동 ── */}
+          <div id="ai-result" className="flex min-w-0 scroll-mt-20 flex-col gap-3">
+            {picked && (
+              <section className="card flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4" aria-label="고른 단지">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-hanji t-body font-bold text-brand-hanji-ink" aria-hidden="true">
+                    {picked.name.slice(0, 1)}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-baseline gap-x-2">
+                      <b className="break-words t-body font-bold text-ink">{picked.name}</b>
+                      <span className="t-caption text-text-3">{picked.regionLabel || picked.region}</span>
+                    </div>
+                    <span className="t-caption text-text-3">
+                      {ctxState.phase === "loading"
+                        ? "실거래·전월세·입주 예정·지역 통계를 불러오는 중…"
+                        : price
+                          ? `${price.bandLabel} 최근 ${price.sample ?? ""}건 평균 ${formatKrwWon(price.priceKrw, { style: "short" })} · 최근 거래 ${price.latestYm.slice(0, 4)}.${price.latestYm.slice(4)}`
+                          : ready
+                            ? ctx?.unavailable?.includes("실거래가")
+                              ? "실거래가를 지금 불러오지 못했어요"
+                              : "최근 매매 실거래가 적어 대표 가격이 없어요"
+                            : ""}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex shrink-0 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setPickerOpen((v) => !v)}
+                    aria-expanded={pickerOpen}
+                    className="chip press inline-flex min-h-[40px] items-center border border-line bg-surface px-3 t-sub font-bold text-text-1"
+                  >
+                    단지 바꾸기
+                  </button>
+                  <button type="button" onClick={openMap} className="chip press inline-flex min-h-[40px] items-center border border-line bg-surface px-3 t-sub font-bold text-text-1">
+                    지도에서
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {showPickCard && (
+              <section className="card cxw-empty relative overflow-hidden rounded-2xl p-4 md:p-5" aria-label="단지 고르기">
+                {!picked && (
+                  <div className="cxw-frame pointer-events-none absolute inset-0" aria-hidden="true">
+                    <EmptyFrame tool={tool} />
+                  </div>
+                )}
+                <div className="relative flex flex-col gap-3">
+                  <ComplexPicker
+                    onSelect={(c) => {
+                      setPickerOpen(false);
+                      onPick(c);
+                    }}
+                    label=""
+                    onMapClick={openMap}
+                    showChip={false}
+                    clearOnSelect
+                    initialComplexId={null}
+                    initialApt={null}
+                    placeholder="단지 이름"
+                  />
+                  {presets.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="t-sub font-bold text-text-3">즐겨 쓰는 단지</span>
+                      {presets.map((p) => (
+                        <button key={p.id} type="button" onClick={() => { setPickerOpen(false); applyPreset(p); }} className="chip press min-h-[40px] border border-line bg-surface px-2.5 t-sub font-bold text-text-1">
+                          {p.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {quickPicks.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <span className="t-sub font-bold text-text-1">최근 6개월 거래가 많은 단지 {quickPicks.length}곳</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {quickPicks.map((q) => (
+                          <button
+                            key={q.id}
+                            type="button"
+                            onClick={() => {
+                              setPickerOpen(false);
+                              onPick({ id: q.id, name: q.name, region: q.region, regionId: null, regionLabel: q.region, priceLabel: null } as PickedComplex);
+                            }}
+                            className="chip press flex min-h-[40px] flex-col items-start border border-line bg-surface px-3 py-1.5 text-left"
+                          >
+                            <span className="t-sub font-bold text-ink">{q.name}</span>
+                            <span className="t-caption text-text-3">
+                              {q.region} · 최근 6개월 {q.recentTrades.toLocaleString("ko-KR")}건
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {ctxState.phase === "loading" && <ResultSkeleton />}
+            {ctxState.phase === "error" && (
+              <div className="card flex flex-col items-start gap-2 rounded-2xl p-4" role="status">
+                <p className="t-body font-bold text-warning">자료를 불러오지 못했어요 — 자료가 없는 것과는 달라요.</p>
+                <button type="button" onClick={retry} className="btn-secondary btn-md px-4 t-sub">
+                  다시 불러오기
+                </button>
+              </div>
+            )}
+            {ready && ctx && (
+              <ResultViewLazy
+                tool={tool}
+                coreTool={coreTool}
+                picked={picked ? { id: picked.id, name: picked.name, region: picked.region } : null}
+                ctx={ctx}
+                verdict={shownVerdict}
+                insight={ready.insight}
+                footnotes={ready.footnotes}
+                series={ready.series}
+                similar={ready.similar}
+                result={shownResult}
+                compareTray={null}
+                running={running}
+                askedLlm={runningLlm}
+                character={persona.character}
+                fallbackAction={persona.nextAction}
+                onPickSimilar={(s: Similar) =>
+                  onPick({ id: s.id, name: s.name, region: picked?.region ?? "", regionId: null, regionLabel: picked?.regionLabel ?? picked?.region ?? null, priceLabel: null } as PickedComplex)
+                }
+                variant="complex"
+                onHorizon={
+                  tool === "ai-prediction" && fieldKeys.includes("horizonMonths")
+                    ? (months: string) => {
+                        const next = { ...tuningRef.current, horizonMonths: months };
+                        setTuning(next);
+                        void run(next);
+                      }
+                    : null
+                }
+                phoneCondition={
+                  condNode ? (
+                    <details className="card rounded-2xl">
+                      <summary className="flex min-h-[48px] cursor-pointer items-center justify-between gap-2 px-4 t-body font-bold text-ink">
+                        내 조건 <span className="t-sub font-bold text-text-3">(선택)</span>
+                      </summary>
+                      <div className="border-t border-line px-4 pb-4 pt-1">{condNode}</div>
+                    </details>
+                  ) : undefined
+                }
+              />
+            )}
+            {/* [996] 다른 도구로 본 이 단지 */}
+            {picked && ready && (
+              <VerdictBoardLazy tool={tool} complexId={picked.id} complexName={picked.name} region={picked.region} verdict={shownVerdict} />
+            )}
+            {/* 폰 한 열의 꼬리 — 행동(이 결과로 · 이어서 보기). 내 조건은 위(타일 아래)에 있다 */}
+            {ready && ctx && (
+              <div className="flex flex-col gap-3 lg:hidden">
+                <ResultRailLazy {...railProps} />
+              </div>
+            )}
+          </div>
+
+          {/* ── 오른쪽 레일(lg+) ── */}
+          <aside className="hidden lg:flex lg:flex-col lg:gap-3 lg:sticky lg:top-[76px] lg:self-start" aria-label="내 조건과 다음 행동">
+            {ready && ctx ? <ResultRailLazy {...railProps} condition={condNode} /> : null}
+          </aside>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

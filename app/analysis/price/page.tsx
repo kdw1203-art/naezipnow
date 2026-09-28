@@ -2,9 +2,8 @@ import Link from "next/link";
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import { PageShell } from "../../components/PageShell";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
-import { ToolHero, type HeroKpi } from "@/app/components/analysis/ToolHero";
-import { Bars } from "@/app/components/viz/Bars";
-import { RankBars } from "@/app/components/viz/RankBars";
+import { Icon } from "@/app/components/Icon";
+import type { HeroKpi } from "@/app/components/analysis/ToolHero";
 import { findTemperatureRegionIdByName } from "@/lib/market/temperature";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import {
@@ -18,11 +17,17 @@ import { complexHrefFromNames } from "@/lib/seo/complex-slug";
 import { pickRegionByAnyName } from "@/lib/regions/param";
 import { findCatalogRegionById } from "@/lib/region/catalog";
 import { formatKrwWon } from "@/lib/format/krw";
-import { formatEokMan } from "@/lib/format/eok-man";
 import { Explain } from "@/app/components/explain/Explain";
-import { BandTable, PYEONG_HOW, manPerPyeong } from "./BandTable";
+import { PYEONG_HOW, manPerPyeong } from "./BandTable";
+import { BandShelf } from "./BandShelf";
+import type { ShelfBand } from "./band-shelf-model";
 
-/* 면적대별 **실거래** 시세 분석 — 예전엔 이 경로가 손으로 적은 "적정가 산정 예시"
+/* [1021 · 지역 시세 price·timing] 시안(mock8/price)대로 — 머리(아이콘·제목·"국토교통부 신고 · 기간 · 지역 N건" + 지역 칩·
+   지역 바꾸기(기존 RegionSelect)·연도) → 통계 타일 5칸(지금 값 + 최근 달) → 면적 선반 5칸(BandShelf: 누르면 상위 단지가
+   그 면적대로) → 상위 단지 목록 / 레일(범위 카드 · 이어서 칩). 예전 ToolHero·BandTable·평단가 곡선 카드는 선반이 대신한다
+   (표의 ⓘ 문구는 선반 머리로). 분포 히스토그램은 분포 데이터가 없어 생략. 데이터 로딩·revalidate·noIndex 는 그대로.
+
+   면적대별 **실거래** 시세 분석 — 예전엔 이 경로가 손으로 적은 "적정가 산정 예시"
    (수치 전부 하드코딩)였다. 이제 tx_band_landing/complex 뷰(국토교통부 실거래)
    위에서 지역×면적대 평단가·중앙값·건수·단지수를 읽고, 같은 면적대의 지역 분위와
    면적 프리미엄(소형/대형 평단가 역전)을 계산한다. /tx 지역 랜딩과 색인 경쟁을
@@ -133,12 +138,12 @@ export default async function PricePage({
 
   const cells = target.areaCells; // 면적 순서(좁은 → 넓은)로 이미 정렬됨
 
-  // 가장 거래 많은 면적대 → 대표 단지
+  // 가장 거래 많은 면적대(선반의 처음 선택 칸)
   const busiest = [...cells].sort((a, b) => b.txCount - a.txCount)[0] ?? null;
-  let topComplexes: BandComplex[] = [];
-  if (busiest) {
-    topComplexes = await listBandComplexes(target.name, "area", busiest.bandSlug, 8).catch(() => []);
-  }
+  /* [1021] 선반 칸을 누르면 상위 단지가 바뀌므로 면적대마다 미리 읽는다(하루 1회 재생성 · 실패한 칸은 빈 목록) */
+  const complexesByBand: BandComplex[][] = await Promise.all(
+    cells.map((c) => listBandComplexes(target.name, "area", c.bandSlug, 8).catch(() => [])),
+  );
 
   // 면적 프리미엄 — 평단가 최고/최저 면적대
   const withPer = cells.filter((c): c is BandCell & { avgPerPyeongKrw: number } =>
@@ -162,27 +167,26 @@ export default async function PricePage({
       : "대형"
     : null;
 
-  /* 첫 화면에 세울 숫자 — 값이 없으면 그 칸을 만들지 않는다. */
-  const perValues = cells.map((c) => Math.round((c.avgPerPyeongKrw ?? 0) / 10_000));
+  /* 통계 타일 5칸 — 값이 없으면 그 칸을 만들지 않는다. */
   const heroKpis: HeroKpi[] = [
     {
       label: "수집 실거래",
       value: `${target.txCount.toLocaleString("ko-KR")}건`,
-      note: `${target.complexCount.toLocaleString("ko-KR")}개 단지 · ${ymLabel(target.firstYm)}~${ymLabel(target.latestYm)}`,
+      note: `${target.complexCount.toLocaleString("ko-KR")}개 단지`,
     },
   ];
   if (busiest) {
     heroKpis.push({
-      label: "거래가 가장 많은 면적대",
+      label: "거래 최다 면적대",
       value: busiest.bandLabel,
       note: `${busiest.txCount.toLocaleString("ko-KR")}건 · 중앙값 ${eok(busiest.medianKrw)}`,
     });
   }
   if (hiBand) {
     heroKpis.push({
-      label: "평단가 최고 면적대",
+      label: "평단가 최고",
       value: manPerPyeong(hiBand.avgPerPyeongKrw),
-      note: `${hiBand.bandLabel} 평균${premiumKind ? ` · ${premiumKind} 프리미엄` : ""}`,
+      note: `${hiBand.bandLabel}${premiumKind ? ` · ${premiumKind} 프리미엄` : ""}`,
       aside: <Explain term="pyeongdanga" how={PYEONG_HOW} size={12} />,
     });
   }
@@ -191,7 +195,18 @@ export default async function PricePage({
       label: "면적 프리미엄",
       value: `${premiumRatio.toFixed(2)}배`,
       note: `${hiBand.bandLabel} ÷ ${loBand.bandLabel} 평단가`,
+      aside: (
+        <Explain
+          title="면적 프리미엄"
+          how="면적대별 평단가(거래금액 ÷ 전용면적 × 3.3058)의 최고 ÷ 최저."
+          source="국토교통부 실거래가"
+          size={12}
+        />
+      ),
     });
+  }
+  if (target.latestYm) {
+    heroKpis.push({ label: "최근 달", value: ymLabel(target.latestYm), note: "신고 기준" });
   }
 
   const selectRegions = areaRegions.map((r) => ({
@@ -200,9 +215,40 @@ export default async function PricePage({
     txCount: r.txCount,
   }));
 
+  /* 선반 데이터 — 표시 문자열은 여기서 만든다(클라이언트에 포맷 라이브러리를 보내지 않는다) */
+  const bands: ShelfBand[] = cells.map((c, i) => {
+    const rows = complexesByBand[i] ?? [];
+    return {
+      slug: c.bandSlug,
+      label: c.bandLabel,
+      txCount: c.txCount,
+      complexCount: c.complexCount,
+      medianText: eok(c.medianKrw),
+      avgText: eok(c.avgKrw),
+      minText: eok(c.minKrw),
+      maxText: eok(c.maxKrw),
+      perText: c.avgPerPyeongKrw && c.avgPerPyeongKrw > 0 ? manPerPyeong(c.avgPerPyeongKrw) : null,
+      top: c.avgPerPyeongKrw ? topPercentOf(c.bandSlug, c.avgPerPyeongKrw) : null,
+      rows: rows.map((x, k) => ({
+        key: `${x.name}-${k}`,
+        label: x.name,
+        value: x.txCount,
+        href: complexHrefFromNames(target.name, x.name),
+      })),
+      avgRows: rows.slice(0, 3).map((x) => ({ name: x.name, avgText: eok(x.avgKrw) })),
+    };
+  });
+
+  /* 연도 칩 — 기간이 한 해 안일 때만(두 해에 걸치면 한 해로 적지 않는다) */
+  const yearChip =
+    target.firstYm && target.latestYm && target.firstYm.slice(0, 4) === target.latestYm.slice(0, 4)
+      ? `${target.latestYm.slice(0, 4)}년`
+      : null;
+  const timingRegionId = findTemperatureRegionIdByName(target.name);
+
   return (
     <PageShell breadcrumb="분석 · 면적대별 실거래가">
-      <div className="mx-auto w-full max-w-[900px]">
+      <div className="mx-auto w-full max-w-[1200px]">
         {/* [D62] 넘겨받은 지역을 못 찾았으면 **그 사실을 말한다.**
             예전에는 조용히 첫 지역으로 갈아탔다 — 화면에는 다른 동네의 숫자가
             아무 표시 없이 떠 있었고, 사용자는 그게 자기가 고른 지역인 줄 알았다. */}
@@ -211,181 +257,65 @@ export default async function PricePage({
             “{wanted}”는 실거래 집계에 아직 없는 지역. 대신 <b>{target.name}</b> 표시.
           </div>
         )}
-        {/* [1015 · 규칙 B·C] 제목 위 부연(eyebrow)·성격 배지(personaId)·기능 설명(lead)은 걷었다 — 출처는 source 한 줄 */}
-        <ToolHero
-          personaId="market:price"
-          icon="bar"
-          title="면적대별 실거래가"
-          toneClass="text-success"
-          kpis={heroKpis}
-          chart={
-            perValues.some((v) => v > 0) ? (
-              <div className="rounded-lg border border-line bg-surface px-2 pb-1 pt-2 text-success">
-                <span className="t-caption block px-1 pb-1 text-text-3">
-                  면적대별 평단가 (만원/평)
-                </span>
-                <Bars
-                  values={perValues}
-                  labels={cells.map((c) => c.bandLabel)}
-                  height={78}
-                  valueSuffix="만"
-                  ariaLabel="면적대별 평단가 막대"
-                />
-              </div>
-            ) : null
-          }
-          actions={<RegionSelect regions={selectRegions} current={target.slug} />}
-          /* [974] 히어로 아래 한 줄에서 지역 이름과 "실거래 N건 · N개 단지" 를 뺐다.
-             한 화면에 "남양주시" 가 다섯 번(설명·선택기·이 줄·오른쪽 해설·아래 링크),
-             건수·단지수는 바로 위 KPI 칸에 이미 큰 글씨로 있었다. 이 줄이 할 일은
-             **무엇을 근거로 셌는지** 하나다. */
-          source={`${ymLabel(target.firstYm)}~${ymLabel(target.latestYm)} · 국토교통부 신고 매매가 기준`}
-        />
 
-        <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
-          {/* 좌: 면적대 표 + 평단가 곡선 */}
-          <div className="flex flex-col gap-4 max-md:gap-3">
-            <BandTable
-              cells={cells}
-              hiBandSlug={premiumKind ? (hiBand?.bandSlug ?? null) : null}
-              topByBand={Object.fromEntries(
-                cells.map((c) => [c.bandSlug, c.avgPerPyeongKrw ? topPercentOf(c.bandSlug, c.avgPerPyeongKrw) : null]),
-              )}
+        {/* 머리 — 아이콘 칩 · 제목 · 사실 한 줄 | 지역 칩 · 지역 바꾸기 · 연도 */}
+        <header className="pxs-head">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="tile-ico flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+              <Icon name="bar" size={18} />
+            </span>
+            <div className="min-w-0">
+              <h1 className="t-display text-ink">면적대별 실거래가</h1>
+              <p className="t-sub text-text-3">
+                국토교통부 신고 · {ymLabel(target.firstYm)}~{ymLabel(target.latestYm)} · {target.name}{" "}
+                {target.txCount.toLocaleString("ko-KR")}건
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="chip chip-soft chip-pad t-sub">{target.name}</span>
+            <RegionSelect regions={selectRegions} current={target.slug} />
+            {yearChip && <span className="chip chip-pad t-sub border border-line text-text-2">{yearChip}</span>}
+          </div>
+        </header>
+
+        {/* 통계 타일 5칸 */}
+        <div className="pxs-stat mt-3">
+          {heroKpis.map((k) => (
+            <div key={k.label} className="kpi">
+              <span className="kpi-k inline-flex items-center gap-0.5">
+                {k.label}
+                {k.aside}
+              </span>
+              <span className="kpi-v">{k.value}</span>
+              {k.note && <span className="kpi-d">{k.note}</span>}
+            </div>
+          ))}
+        </div>
+
+        {/* 면적 선반 + 상위 단지 + 레일 */}
+        <BandShelf
+          bands={bands}
+          busiestSlug={busiest?.bandSlug ?? null}
+          hiSlug={premiumKind ? (hiBand?.bandSlug ?? null) : null}
+          regionName={target.name}
+          regionSlug={target.slug}
+          rail={
+            /* #411 — 도구 간 이어가기: 보던 지역 그대로 타이밍·시나리오·지도로 */
+            <AnalysisCrossLinks
+              current="price"
+              regionLabel={target.name}
+              regionFor={{
+                map: target.name,
+                ...(timingRegionId ? { timing: timingRegionId, scenario: timingRegionId } : {}),
+              }}
+              note={{
+                label: "이 지역 노트 쓰기",
+                href: `/notes/new?region=${encodeURIComponent(target.name)}`,
+              }}
             />
-
-            {/* 평단가 곡선 — 예전엔 div 높이 %에 색을 #1d4fd8/#a9bde8 로 박아
-                그렸다(다크에서 토큰을 안 타고, 값 라벨이 막대마다 겹쳤다). */}
-            <div className="chart-card text-success" data-reveal="">
-              <div className="chart-head">
-                <span className="t-section text-ink">면적대별 평단가 곡선</span>
-                <span className="t-caption ml-auto text-text-3">만원/평 · 가장 진한 막대가 최고</span>
-              </div>
-              <Bars
-                values={perValues}
-                labels={cells.map((c) => c.bandLabel)}
-                height={150}
-                valueSuffix="만"
-                ariaLabel="면적대별 평단가"
-              />
-            </div>
-
-            {/* 대표 단지 — 예전엔 이름·건수·가격 3열 텍스트 목록이라
-                "어디가 얼마나 많이 거래됐나"가 숫자를 다 읽어야 보였다. */}
-            {busiest && topComplexes.length > 0 && (
-              <div className="chart-card text-primary" data-reveal="">
-                <div className="chart-head">
-                  <span className="t-section text-ink">
-                    {busiest.bandLabel} 실거래 상위 단지
-                  </span>
-                  <span className="t-caption ml-auto text-text-3">거래 많은 순</span>
-                </div>
-                <RankBars
-                  rows={topComplexes.map((c, i) => ({
-                    key: `${c.name}-${i}`,
-                    label: c.name,
-                    value: c.txCount,
-                    href: complexHrefFromNames(target.name, c.name),
-                  }))}
-                  suffix="건"
-                />
-                <div className="flex flex-col gap-1">
-                  {topComplexes.slice(0, 3).map((c, i) => (
-                    <div key={`avg-${i}`} className="flex justify-between gap-2">
-                      <span className="t-sub truncate text-text-3">{c.name} 평균</span>
-                      <span className="t-sub t-num text-ink">{eok(c.avgKrw)}</span>
-                    </div>
-                  ))}
-                </div>
-                <Link
-                  href={`/tx/${encodeURIComponent(target.slug)}`}
-                  className="btn-soft btn-md mt-auto no-underline"
-                >
-                  {target.name} 전체 실거래·단지 보기
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* 우: 인사이트 */}
-          <div className="flex flex-col gap-3.5">
-            {hiBand && premiumKind && premiumRatio && (
-              <div className="card tile flex flex-col gap-2 rounded-lg p-4 max-md:p-3.5" data-reveal="">
-                {/* [1015 · 규칙 B·D] 해설 문장은 ⓘ 로, 본문은 사실 한 줄(숫자) */}
-                <div className="inline-flex items-center gap-0.5 t-section text-ink">
-                  면적 프리미엄
-                  <Explain
-                    title="면적 프리미엄"
-                    body={
-                      premiumKind === "소형"
-                        ? "소형 평단가가 높으면 실수요·임대수요가 두텁거나 재건축 기대가 반영된 경우가 많다."
-                        : "대형 평단가가 높으면 학군·조망 등 프리미엄이 큰 평형에 몰린 지역일 수 있다."
-                    }
-                    how="면적대별 평단가(거래금액 ÷ 전용면적 × 3.3058)의 최고 ÷ 최저."
-                    source="국토교통부 실거래가"
-                  />
-                </div>
-                <div className="t-body text-text-2">
-                  평단가 최고 면적대 <b className="text-primary">{hiBand.bandLabel}</b>
-                  {premiumKind === "소형" ? " (소형 프리미엄)" : " (대형 프리미엄)"}
-                  {loBand && loBand.bandSlug !== hiBand.bandSlug && (
-                    <>
-                      {" · "}최저 <b>{loBand.bandLabel}</b> 대비 <b className="text-ink">{premiumRatio.toFixed(2)}배</b>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="card tile flex flex-col gap-2 rounded-lg p-4 max-md:p-3.5" data-reveal="">
-              <div className="t-section text-ink">거래가 가장 많은 면적대</div>
-              {busiest ? (
-                <>
-                  <div className="t-num text-[19px] text-ink">{busiest.bandLabel}</div>
-                  <div className="t-sub text-text-3">
-                    최근 실거래 {busiest.txCount.toLocaleString("ko-KR")}건 · 중앙값{" "}
-                    {eok(busiest.medianKrw)} · 평단가 {manPerPyeong(busiest.avgPerPyeongKrw)}
-                  </div>
-                  {/* [1015 · 규칙 B] 해설("환금성이 좋아 …")은 걷었다 */}
-                </>
-              ) : (
-                <div className="t-sub text-text-3">자료 부족</div>
-              )}
-            </div>
-
-            <div className="card tile flex flex-col gap-2 rounded-lg p-4 max-md:p-3.5" data-reveal="">
-              {/* [1011] "이 데이터로 할 수 있는 것" 사용법 해설을 걷었다(소유자 지시) —
-                  표를 보면 알 수 있는 것을 다시 풀어 쓴 문단이었다. 아래 링크는 남긴다. */}
-              <div className="t-section text-ink">이 지역 실거래 더 보기</div>
-              <Link
-                href={`/tx/${encodeURIComponent(target.slug)}`}
-                className="tile-go t-sub font-bold text-primary no-underline"
-              >
-                {target.name} 실거래 상세 ›
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4">
-          {/* #411 — 도구 간 이어가기: 보던 지역 그대로 타이밍·시나리오·지도로 */}
-          <AnalysisCrossLinks
-            current="price"
-            regionLabel={target.name}
-            regionFor={{
-              map: target.name,
-              ...(findTemperatureRegionIdByName(target.name)
-                ? {
-                    timing: findTemperatureRegionIdByName(target.name)!,
-                    scenario: findTemperatureRegionIdByName(target.name)!,
-                  }
-                : {}),
-            }}
-            note={{
-              label: "이 지역 노트 쓰기",
-              href: `/notes/new?region=${encodeURIComponent(target.name)}`,
-            }}
-          />
-        </div>
+          }
+        />
       </div>
     </PageShell>
   );
