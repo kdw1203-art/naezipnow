@@ -41,6 +41,14 @@ import { updateJourney, useJourney } from "@/lib/journey/client-store";
 
    [리뷰 C] 입력칸(날짜 넷·매매가)과 체크·지우기는 계정 진행을 불러오는 동안(ready=false) 막는다 — 불러오는 사이
    적은 값이 계정의 계약일·잔금일·체크를 지우던 경쟁을 입구에서 막는다(저장소도 따로 막는다, lib/journey/sync.ts).
+
+   [1020 · 담당 B] 소유자 지시 "시안(contract-d/m.png)대로 좀더 고도화" — "입력 한 판 + 날짜가 박힌 타임라인".
+    · 데스크톱 2열 `lg:grid-cols-[340px_minmax(0,1fr)]`: 왼쪽(sticky) 입력 카드(날짜 2×2 · 금액 2×2 + 잔금(자동) 칸 ·
+      비율 막대 · 경고 · 버튼 · 저장 위치) + 작은 "진행" 카드(체크 N/M + 막대). 폰은 같은 카드가 위에 한 열.
+    · 오른쪽: 다음 마감 띠(네이비 jr-summary → 흰 카드 + 주홍 왼쪽 선 · 큰 D-day · "할 일 보기" = 그 그룹으로 스크롤만) +
+      핀 있는 세로선 타임라인(ol.jr-timeline — 핀: 완료 ✓ 초록 · 오늘/지남 주홍 "!" · 법정 노랑 "!" · 돈 나가는 날 파랑 "$").
+    · allChecked 이거나 지난(비법정) 그룹은 머리 줄만("N개 체크") — 누르면 펼침. 인쇄는 전부 펼침(print:block).
+    · 채움 파랑(btn-primary)은 입력 카드의 캘린더 버튼 하나. 날짜·금액은 저장된 값만 — 시안의 예시 숫자·취득세 추정은 넣지 않는다.
    ============================================================ */
 
 const EMPTY_PLAN: ContractPlan = {
@@ -55,12 +63,16 @@ const EMPTY_PLAN: ContractPlan = {
 
 type DateKey = "contractDate" | "midDate" | "balanceDate" | "moveInDate";
 
-const DATE_FIELDS: { key: DateKey; label: string; hint: string }[] = [
-  { key: "contractDate", label: "계약일", hint: "계약서에 서명하는 날" },
-  { key: "balanceDate", label: "잔금일", hint: "잔금을 보내고 집을 넘겨받는 날" },
+/* [1020] 라벨 옆 짧은 사실만(설명문 없음) — 2×2 칸에 들어가야 한다 */
+const DATE_FIELDS: { key: DateKey; label: string; hint: string | null }[] = [
+  { key: "contractDate", label: "계약일", hint: null },
+  { key: "balanceDate", label: "잔금일", hint: null },
   { key: "midDate", label: "중도금일", hint: "있을 때만" },
-  { key: "moveInDate", label: "입주일", hint: "잔금일과 다를 때만" },
+  { key: "moveInDate", label: "입주일", hint: "없으면 잔금일" },
 ];
+
+/** 돈이 나가는 날 — 계약일·중도금일·잔금일(핀 "$") */
+const MONEY_PHASES: ReadonlySet<ContractPhase> = new Set(["contractDay", "mid", "balanceDay"]);
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -91,6 +103,26 @@ function ddaySpeech(g: TimelineGroup, st: string): string {
   return `기한까지 ${g.daysLeft}일 남았어요`;
 }
 
+/** [1020] 핀 종류 — 완료 > 오늘·지난 법정 > 법정(예정) > 돈 나가는 날 > 그 밖(회색, 글자 없음) */
+type PinKind = "done" | "now" | "legal" | "money" | "plain";
+function pinKind(g: TimelineGroup, st: string): PinKind {
+  if (g.allChecked) return "done";
+  if (st === "overdue" || st === "today") return "now";
+  if (g.meta.legal) return "legal";
+  if (MONEY_PHASES.has(g.phase)) return "money";
+  return "plain";
+}
+const PIN_GLYPH: Record<PinKind, string> = { done: "", now: "!", legal: "!", money: "$", plain: "" };
+
+/** [1020] D-day 글자 색 — 오늘·7일 안·지난 법정은 주홍, 법정(예정)은 노랑, 완료 초록, 지남 회색 */
+function ddayTone(g: TimelineGroup, st: string): string {
+  if (g.allChecked) return "text-success";
+  if (st === "past") return "text-text-3";
+  if (st === "overdue" || st === "today" || st === "soon") return "text-brand-red";
+  if (g.meta.legal) return "text-warning";
+  return "text-text-2";
+}
+
 function GroupBadge({ g }: { g: TimelineGroup }) {
   if (g.meta.legal) return <span className="jr-badge jr-badge--legal">법정 기한</span>;
   if (g.meta.suggested) return <span className="jr-badge jr-badge--soft">권장</span>;
@@ -113,7 +145,7 @@ function DateField({
   onCommit,
 }: {
   label: string;
-  hint: string;
+  hint: string | null;
   value: string | null;
   disabled: boolean;
   onCommit: (v: string | null) => void;
@@ -125,9 +157,9 @@ function DateField({
   }, [value]);
   return (
     <label className="flex min-w-0 flex-col gap-1">
-      <span className="flex flex-col">
+      <span className="flex flex-wrap items-baseline gap-x-1.5">
         <span className="t-sub font-bold text-text-1">{label}</span>
-        <span className="t-caption font-semibold text-text-3">{hint}</span>
+        {hint && <span className="t-caption font-semibold text-text-3">{hint}</span>}
       </span>
       <input
         type="date"
@@ -155,7 +187,8 @@ function DateField({
 
 /**
  * [1009 · T] 금액 칸 하나(만원) — 칸에 보이는 글(draft)과 저장값을 따로 둔다(DateField 와 같은 약속).
- * 오른쪽에 넣은 금액을 "8억 5,000만원"으로 읽어 준다 — 0 이 네 개 붙은 숫자를 세지 않게.
+ * 칸 아래에 넣은 금액을 "8억 5,000만원"으로 읽어 준다 — 0 이 네 개 붙은 숫자를 세지 않게.
+ * [1020] 2×2 칸에 맞춰 세로로(라벨 · 칸 · 읽기/보조). 칸은 셀 전폭.
  */
 function MoneyField({
   id,
@@ -168,7 +201,7 @@ function MoneyField({
 }: {
   id: string;
   label: string;
-  hint: string;
+  hint: string | null;
   value: number | null;
   disabled: boolean;
   onCommit: (v: number | null) => void;
@@ -180,34 +213,37 @@ function MoneyField({
   }, [value]);
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <label htmlFor={id} className="t-sub font-bold text-text-1">
-        {label} <span className="font-semibold text-text-3">· {hint}</span>
+      <label htmlFor={id} className="flex flex-wrap items-baseline gap-x-1.5 t-sub font-bold text-text-1">
+        {label}
+        {hint && <span className="t-caption font-semibold text-text-3">{hint}</span>}
       </label>
-      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-        <div className="relative w-full max-w-[200px]">
-          <input
-            id={id}
-            type="text"
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder=""
-            value={draft}
-            disabled={disabled}
-            onChange={(e) => {
-              const digits = e.target.value.replace(/[^\d]/g, "").slice(0, 8);
-              setDraft(digits);
-              const n = digits ? Number(digits) : null;
-              onCommit(n !== null && Number.isInteger(n) && n > 0 && n <= PRICE_MANWON_MAX ? n : null);
-            }}
-            className="jr-input w-full pr-12"
-          />
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 t-sub font-bold text-text-3">
-            만원
-          </span>
-        </div>
-        {value != null && <Won manwon={value} className="t-body text-text-1" />}
-        {extra}
+      <div className="relative w-full">
+        <input
+          id={id}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder=""
+          value={draft}
+          disabled={disabled}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/[^\d]/g, "").slice(0, 8);
+            setDraft(digits);
+            const n = digits ? Number(digits) : null;
+            onCommit(n !== null && Number.isInteger(n) && n > 0 && n <= PRICE_MANWON_MAX ? n : null);
+          }}
+          className="jr-input w-full pr-11"
+        />
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 t-caption font-bold text-text-3">
+          만원
+        </span>
       </div>
+      {(value != null || extra) && (
+        <div className="flex min-h-[20px] flex-wrap items-center gap-x-2 gap-y-0.5">
+          {value != null && <Won manwon={value} className="t-caption font-bold text-text-2" />}
+          {extra}
+        </div>
+      )}
     </div>
   );
 }
@@ -224,7 +260,7 @@ function PaymentBar({ split }: { split: PaymentSplit }) {
   /* [1009 · T 리뷰] 비율 글자는 합이 정확히 100% 가 되게(최대 잔여법) — 계산기 구성 막대와 같은 함수 */
   const shares = shareTexts(parts.map((x) => x.manwon));
   return (
-    <div className="flex flex-col gap-1.5 rounded-xl bg-bg p-3">
+    <div className="flex flex-col gap-1.5 rounded-lg bg-bg p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
         <span className="t-sub font-bold text-text-1">
           잔금 <TweenMoney value={split.balanceManwon} className="text-ink" />
@@ -266,18 +302,22 @@ function phaseAmount(phase: ContractPhase, split: PaymentSplit | null): { label:
   return null;
 }
 
-/** 요약 줄의 큰 D-day 색(네이비 면 위) — 오늘·7일 안은 호박색, 지난 법정 기한은 주홍 */
-const BIG_DDAY_TONE: Record<string, string> = {
-  today: "text-on-navy-amber",
-  soon: "text-on-navy-amber",
-  overdue: "text-brand-red-dark",
-};
+/** [1020] 다음 마감 띠의 큰 D-day 색(흰 카드 위) — 오늘·7일 안·지난 법정은 주홍, 법정(예정)은 노랑 */
+function bigDdayTone(g: TimelineGroup, st: string): string {
+  if (st === "overdue" || st === "today" || st === "soon") return "text-brand-red";
+  if (g.meta.legal) return "text-warning";
+  return "text-ink";
+}
+
+const groupDomId = (phase: ContractPhase) => `jr-g-${phase}`;
 
 export function ContractPlanner() {
   const { state, ready, sync } = useJourney();
   const { showToast } = useToast();
   const plan = state.contract ?? EMPTY_PLAN;
   const [today, setToday] = useState<string | null>(null);
+  /* [1020] 접힘/펼침 — 사용자가 누른 그룹만 기억(기본값은 allChecked·지남이면 접힘). 인쇄는 CSS 가 전부 펼친다 */
+  const [openOverride, setOpenOverride] = useState<Partial<Record<ContractPhase, boolean>>>({});
 
   useEffect(() => {
     setToday(kstToday());
@@ -356,6 +396,13 @@ export function ContractPlanner() {
       showToast("캘린더 파일을 만들지 못했어요. 인쇄로 저장해 주세요");
     }
   };
+  /* [1020] 다음 마감 띠의 "할 일 보기" — 체크하지 않는다. 그 그룹을 펼치고 거기로 스크롤만 */
+  const goToGroup = (phase: ContractPhase) => {
+    setOpenOverride((o) => ({ ...o, [phase]: true }));
+    window.requestAnimationFrame(() => {
+      document.getElementById(groupDomId(phase))?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   const saveNote =
     !ready || sync === "loading"
@@ -368,307 +415,390 @@ export function ContractPlanner() {
 
   const calcHref = plan.priceManwon ? `/calculator?price=${plan.priceManwon}` : "/calculator";
   const nextState = next ? stateClass(next) : null;
+  const hasAnyInput =
+    hasDates || plan.checked.length > 0 || plan.priceManwon != null || plan.depositManwon != null || plan.midManwon != null;
 
   return (
-    <div className="flex flex-col gap-4 max-md:gap-3">
-      {/* ── 입력 ── */}
-      <section className="card rounded-2xl p-4 max-md:p-3.5 md:p-5" aria-labelledby="jr-plan-inputs">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="jr-plan-inputs" className="m-0 t-section text-ink">
-            날짜·금액
-          </h2>
-          <span className="t-caption font-bold text-text-3" aria-live="polite">
-            {saveNote}
-          </span>
-        </div>
-        {/* 모바일도 두 칸 — 날짜칸 넷이 한 줄씩 쌓이면 입력 카드만 세로 500px 이었다 */}
-        <div className="mt-3 grid grid-cols-2 gap-x-2.5 gap-y-3 lg:grid-cols-4 lg:gap-x-3">
-          {DATE_FIELDS.map((f) => (
-            <DateField
-              key={f.key}
-              label={f.label}
-              hint={f.hint}
-              value={plan[f.key]}
-              disabled={!ready}
-              onCommit={(v) => setDate(f.key, v)}
-            />
-          ))}
-        </div>
+    <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start lg:gap-6">
+      {/* ── 왼쪽 레일(lg: sticky) — 입력 카드 + 진행 카드. 폰은 같은 카드가 위에 한 열 ── */}
+      {/* 레일이 화면보다 길면(경고 줄·막대까지) 안에서 스크롤 — sticky 아래쪽이 닿지 않는 일이 없게 */}
+      <aside
+        className="jr-rail flex flex-col gap-3 lg:sticky lg:top-[76px] lg:max-h-[calc(100dvh-92px)] lg:self-start lg:overflow-y-auto"
+        aria-label="날짜·금액 입력"
+      >
+        <section className="card rounded-2xl p-4 max-md:p-3.5" aria-labelledby="jr-plan-inputs">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="jr-plan-inputs" className="m-0 t-section text-ink">
+              날짜·금액
+            </h2>
+            <span className="t-caption font-bold text-text-3" aria-live="polite">
+              {saveNote}
+            </span>
+          </div>
+          {/* 날짜 넷 2×2 — 폰도 두 칸(한 줄씩 쌓이면 입력 카드만 세로 500px 이었다) */}
+          <div className="mt-3 grid grid-cols-2 gap-x-2.5 gap-y-3">
+            {DATE_FIELDS.map((f) => (
+              <DateField
+                key={f.key}
+                label={f.label}
+                hint={f.hint}
+                value={plan[f.key]}
+                disabled={!ready}
+                onCommit={(v) => setDate(f.key, v)}
+              />
+            ))}
+          </div>
 
-        {/* [1009 · T] 금액(선택) — 매매가 · 계약금 · 중도금 → 잔금. 넣으면 계약일·중도금일·잔금일 칸에 금액이 붙는다. */}
-        <div className="mt-4 flex flex-col gap-3 border-t border-divider pt-4">
-          <MoneyField
-            id="jr-price"
-            label="매매가"
-            hint="선택 · 잔금·취득세·대출 계산에 사용"
-            value={plan.priceManwon}
-            disabled={!ready}
-            onCommit={(v) => setAmount("priceManwon", v)}
-            extra={
-              <Link
-                href={calcHref}
-                className="jr-noprint inline-flex min-h-[40px] items-center t-sub font-bold text-primary no-underline hover:underline"
-              >
-                취득세·대출 계산 ›
-              </Link>
-            }
-          />
-          <MoneyField
-            id="jr-deposit"
-            label="계약금"
-            hint="계약일에 보내는 돈"
-            value={plan.depositManwon ?? null}
-            disabled={!ready}
-            onCommit={(v) => setAmount("depositManwon", v)}
-            extra={
-              plan.priceManwon != null && plan.depositManwon == null ? (
-                <button
-                  type="button"
-                  disabled={!ready}
-                  onClick={() => setAmount("depositManwon", depositAtTenPercent(plan.priceManwon as number))}
-                  className="jr-noprint chip press inline-flex min-h-[40px] items-center border border-line bg-surface px-3 t-sub font-bold text-text-2"
-                >
-                  매매가의 10%로 넣기
-                </button>
-              ) : plan.priceManwon != null && plan.depositManwon != null ? (
-                <span className="t-sub t-num font-semibold text-text-3">
-                  매매가의 {shareText(plan.depositManwon / plan.priceManwon)}
+          {/* [1009 · T] 금액(선택) — 매매가 · 계약금 · 중도금 → 잔금(자동). 넣으면 계약일·중도금일·잔금일 줄에 금액이 붙는다. */}
+          <div className="mt-4 flex flex-col gap-3 border-t border-divider pt-4">
+            <div className="grid grid-cols-2 gap-x-2.5 gap-y-3">
+              <MoneyField
+                id="jr-price"
+                label="매매가"
+                hint="선택"
+                value={plan.priceManwon}
+                disabled={!ready}
+                onCommit={(v) => setAmount("priceManwon", v)}
+              />
+              <MoneyField
+                id="jr-deposit"
+                label="계약금"
+                hint={null}
+                value={plan.depositManwon ?? null}
+                disabled={!ready}
+                onCommit={(v) => setAmount("depositManwon", v)}
+                extra={
+                  plan.priceManwon != null && plan.depositManwon == null ? (
+                    <button
+                      type="button"
+                      disabled={!ready}
+                      onClick={() => setAmount("depositManwon", depositAtTenPercent(plan.priceManwon as number))}
+                      className="jr-noprint inline-flex min-h-[24px] items-center t-caption font-bold text-primary underline-offset-2 hover:underline"
+                    >
+                      매매가의 10%로 넣기
+                    </button>
+                  ) : plan.priceManwon != null && plan.depositManwon != null ? (
+                    <span className="t-caption t-num font-semibold text-text-3">
+                      매매가의 {shareText(plan.depositManwon / plan.priceManwon)}
+                    </span>
+                  ) : null
+                }
+              />
+              <MoneyField
+                id="jr-mid"
+                label="중도금"
+                hint="있을 때만"
+                value={plan.midManwon ?? null}
+                disabled={!ready}
+                onCommit={(v) => setAmount("midManwon", v)}
+              />
+              {/* [1020] 잔금(자동) — 읽기 전용. 매매가와 계약금을 넣었을 때만 값(paymentSplit) */}
+              <div className="flex min-w-0 flex-col gap-1">
+                <span id="jr-balance-label" className="flex flex-wrap items-baseline gap-x-1.5 t-sub font-bold text-text-1">
+                  잔금
+                  <span className="t-caption font-semibold text-text-3">자동</span>
                 </span>
-              ) : null
-            }
-          />
-          <MoneyField
-            id="jr-mid"
-            label="중도금"
-            hint="있을 때만 · 여러 번이면 합계"
-            value={plan.midManwon ?? null}
-            disabled={!ready}
-            onCommit={(v) => setAmount("midManwon", v)}
-          />
-          {split?.over && (
-            <p className="m-0 flex items-start gap-1.5 rounded-xl bg-warning-soft p-3 t-sub font-bold text-warning" role="status">
-              <Icon name="warning" size={14} className="mt-0.5 shrink-0" />
-              계약금과 중도금을 더한 금액이 매매가보다 커요. 금액을 확인해 주세요.
+                <output
+                  htmlFor="jr-price jr-deposit jr-mid"
+                  aria-labelledby="jr-balance-label"
+                  className="jr-input jr-input--auto relative flex w-full items-center pr-11"
+                >
+                  <span className="t-num">{split?.balanceManwon != null ? split.balanceManwon.toLocaleString("ko-KR") : ""}</span>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 t-caption font-bold text-text-3">
+                    만원
+                  </span>
+                </output>
+                {split?.balanceManwon != null && (
+                  <div className="flex min-h-[20px] items-center">
+                    <Won manwon={split.balanceManwon} className="t-caption font-bold text-text-2" />
+                  </div>
+                )}
+              </div>
+            </div>
+            {split?.over && (
+              <p className="m-0 flex items-start gap-1.5 rounded-lg bg-warning-soft p-3 t-sub font-bold text-warning" role="status">
+                <Icon name="warning" size={14} className="mt-0.5 shrink-0" />
+                계약금과 중도금을 더한 금액이 매매가보다 커요. 금액을 확인해 주세요.
+              </p>
+            )}
+            {split && split.balanceManwon !== null && <PaymentBar split={split} />}
+            {/* 취득세·대출은 계산기가 맡는다 — 여기서 추정치를 만들지 않는다(링크만) */}
+            <Link
+              href={calcHref}
+              className="jr-noprint inline-flex min-h-[24px] w-fit items-center t-sub font-bold text-primary no-underline hover:underline"
+            >
+              취득세·대출 계산 ›
+            </Link>
+          </div>
+
+          {warnings.length > 0 && (
+            <ul className="m-0 mt-3 flex list-none flex-col gap-1 rounded-lg bg-warning-soft p-3" role="status">
+              {warnings.map((w) => (
+                <li key={w} className="flex items-start gap-1.5 t-sub font-bold text-warning">
+                  <Icon name="warning" size={14} className="mt-0.5 shrink-0" />
+                  {w}
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="jr-noprint mt-4 flex flex-wrap items-center gap-2">
+            <button type="button" onClick={downloadIcs} disabled={!canCalendar} className="btn-primary btn-md gap-1.5">
+              <Icon name="calendar" size={16} />
+              캘린더에 추가(.ics)
+            </button>
+            <button type="button" onClick={() => window.print()} className="btn-soft btn-md gap-1.5">
+              <Icon name="file-text" size={16} />
+              인쇄·PDF
+            </button>
+            {hasAnyInput && (
+              <button
+                type="button"
+                onClick={clearAll}
+                disabled={!ready}
+                className="inline-flex min-h-[40px] items-center px-2 t-sub font-bold text-text-3 underline-offset-2 hover:underline disabled:opacity-50"
+              >
+                모두 지우기
+              </button>
+            )}
+          </div>
+          {/* [1015 · 규칙 B·D] 캘린더 사용법 두 문장 삭제 — 비활성 이유 한 줄만 */}
+          {!canCalendar && (
+            <p className="jr-noprint m-0 mt-2 t-caption text-text-3">
+              {anyDated ? "남은 기한 없음. 지난 날·체크한 일은 캘린더에 넣지 않음" : "계약일 또는 잔금일 입력 뒤 캘린더 저장 가능"}
             </p>
           )}
-          {split && split.balanceManwon !== null && <PaymentBar split={split} />}
-          {/* [1015 · 규칙 B] "계약금을 넣으면 잔금을 계산해 …" 사용법 문장 삭제 — 넣으면 막대가 나타난다 */}
-        </div>
+        </section>
 
-        {warnings.length > 0 && (
-          <ul className="m-0 mt-3 flex list-none flex-col gap-1 rounded-xl bg-warning-soft p-3" role="status">
-            {warnings.map((w) => (
-              <li key={w} className="flex items-start gap-1.5 t-sub font-bold text-warning">
-                <Icon name="warning" size={14} className="mt-0.5 shrink-0" />
-                {w}
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="jr-noprint mt-4 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={downloadIcs}
-            disabled={!canCalendar}
-            className="btn-primary btn-md gap-1.5"
+        {/* [1020] 진행 — 체크 N/M + 막대(흰 카드 위 jr-bar--light) */}
+        <section className="card rounded-2xl p-4 max-md:p-3.5" aria-label="진행">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="t-sub font-bold text-ink">진행</span>
+            <span className="t-sub t-num font-bold text-text-1">
+              체크 {doneItems} / {totalItems}
+            </span>
+          </div>
+          <div className="jr-bar jr-bar--light mt-2" aria-hidden="true">
+            <i style={{ transform: `scaleX(${totalItems ? doneItems / totalItems : 0})` }} />
+          </div>
+        </section>
+      </aside>
+
+      <div className="flex min-w-0 flex-col gap-4 max-md:gap-3">
+        {/* ── 다음 마감 띠 — 흰 카드 + 주홍 왼쪽 선 · 큰 D-day · 할 일 보기(스크롤만) ── */}
+        {hasDates && (
+          <section
+            className="jr-next card flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border-l-4 border-l-brand-red p-4 max-md:p-3.5"
+            aria-label="다음 마감"
           >
-            <Icon name="calendar" size={16} />
-            캘린더에 추가(.ics)
-          </button>
-          <button type="button" onClick={() => window.print()} className="btn-soft btn-md gap-1.5">
-            <Icon name="file-text" size={16} />
-            인쇄·PDF로 저장
-          </button>
-          {(hasDates || plan.checked.length > 0 || plan.priceManwon != null || plan.depositManwon != null || plan.midManwon != null) && (
-            <button
-              type="button"
-              onClick={clearAll}
-              disabled={!ready}
-              className="inline-flex min-h-[40px] items-center px-2 t-sub font-bold text-text-3 underline-offset-2 hover:underline disabled:opacity-50"
-            >
-              모두 지우기
-            </button>
-          )}
-        </div>
-        {/* [1015 · 규칙 B·D] 캘린더 사용법 두 문장 삭제 — 비활성 이유 한 줄만 */}
-        {!canCalendar && (
-          <p className="jr-noprint m-0 mt-2 t-caption text-text-3">
-            {anyDated ? "남은 기한 없음. 지난 날·체크한 일은 캘린더에 넣지 않음" : "계약일 또는 잔금일 입력 뒤 캘린더 저장 가능"}
-          </p>
-        )}
-      </section>
-
-      {/* ── 요약 — 다음 할 일 · 남은 날(크게) · 진행 막대 ── */}
-      {hasDates && (
-        <section className="jr-summary flex flex-col gap-3 rounded-2xl p-4" aria-label="다음 할 일">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="t-caption font-bold tracking-wider text-on-dark-muted">다음 할 일</span>
+            <div className="flex shrink-0 flex-col gap-0.5">
+              <span className="t-caption font-bold tracking-wider text-text-3">다음 마감</span>
+              {/* [1009 · T] D-day 를 크게 — 요약에서 가장 먼저 읽혀야 하는 숫자 */}
+              {next && next.daysLeft !== null && nextState ? (
+                <span className={`t-display t-num leading-none ${bigDdayTone(next, nextState)}`}>
+                  {/* [1009 · T 리뷰] 역할 없는 span 의 aria-label 은 스크린리더가 읽지 않는다 — 보이는 "D-5"는 숨기고 말로 읽힌다 */}
+                  <span aria-hidden="true">{ddayText(next, nextState)}</span>
+                  <span className="sr-only">{ddaySpeech(next, nextState)}</span>
+                </span>
+              ) : (
+                <span className="t-display t-num leading-none text-text-3" aria-hidden="true">
+                  —
+                </span>
+              )}
+            </div>
+            <div className="flex min-w-0 flex-1 basis-[200px] flex-col gap-0.5">
               {next && next.due ? (
                 <>
-                  <span className="t-section break-words text-on-dark">{next.meta.title}</span>
-                  <span className="t-sub text-on-dark-muted">
+                  <span className="flex flex-wrap items-center gap-1.5 t-section text-ink">
+                    {next.meta.title}
+                    <GroupBadge g={next} />
+                  </span>
+                  <span className="t-sub text-text-2">
                     {formatKoreanDay(next.due)}
                     {(next.meta.legal || next.meta.suggested) && ` · ${next.meta.dueText}`}
                   </span>
                 </>
               ) : (
-                <span className="t-section text-on-dark">{noNextText}</span>
+                <span className="t-section text-ink">{noNextText}</span>
               )}
               {/* 다가오는 기한이 있어도 지난 법정 기한을 체크하지 않았으면 함께 말한다 — 요약만 보고 넘어가지 않게 */}
               {next && overdue > 0 && (
-                <span className="t-caption font-bold text-on-dark-muted">지난 법정 기한에 체크하지 않은 일 {overdue}개</span>
+                <span className="t-caption font-bold text-brand-red">지난 법정 기한에 체크하지 않은 일 {overdue}개</span>
               )}
             </div>
-            {/* [1009 · T] D-day 를 크게 — 요약에서 가장 먼저 읽혀야 하는 숫자(예전엔 제목 옆 작은 알약이었다) */}
-            {next && next.daysLeft !== null && nextState && (
-              <span className={`t-display t-num shrink-0 leading-none ${BIG_DDAY_TONE[nextState] ?? "text-on-dark"}`}>
-                {/* [1009 · T 리뷰] 역할 없는 span 의 aria-label 은 스크린리더가 읽지 않는다 — 보이는 "D-5"는 숨기고 말로 읽힌다 */}
-                <span aria-hidden="true">{ddayText(next, nextState)}</span>
-                <span className="sr-only">{ddaySpeech(next, nextState)}</span>
-              </span>
+            {next && (
+              <button type="button" onClick={() => goToGroup(next.phase)} className="jr-noprint btn-soft btn-md shrink-0">
+                할 일 보기
+              </button>
             )}
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="jr-bar flex-1" aria-hidden="true">
-              <i style={{ transform: `scaleX(${totalItems ? doneItems / totalItems : 0})` }} />
-            </div>
-            <span className="t-sub t-num shrink-0 font-bold text-on-dark">
-              체크 {doneItems}/{totalItems}
-            </span>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
 
-      {/* ── 날짜순 할 일 ── */}
-      <ol className="jr-timeline m-0 flex list-none flex-col gap-3 p-0 max-md:gap-2" aria-label="계약·잔금 할 일">
-        {groups.map((g) => {
-          const st = stateClass(g);
-          const money = phaseAmount(g.phase, split);
-          return (
-            <li key={g.phase} className="jr-group card rounded-2xl p-4 max-md:p-3.5 md:p-5" data-state={st}>
-              {/* 줄바꿈 없이 — 쉬는 날 설명 한 줄이 붙어도 D-day 는 오른쪽 위에 남는다(390px 에서 아래 줄로 떨어졌다) */}
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="t-caption font-bold tracking-wide text-text-3">
-                    {g.due ? formatKoreanDay(g.due) : "날짜 미입력"}
-                  </span>
-                  <h3 className="m-0 flex flex-wrap items-center gap-1.5 t-section text-ink">
-                    {g.meta.title}
+        {/* ── 타임라인 — 핀 있는 세로선. 그룹 = 카드(머리 줄 버튼 + 항목 목록) ── */}
+        <ol className="jr-timeline m-0 flex list-none flex-col gap-3 p-0 max-md:gap-2" aria-label="계약·잔금 할 일">
+          {groups.map((g) => {
+            const st = stateClass(g);
+            const money = phaseAmount(g.phase, split);
+            const kind = pinKind(g, st);
+            const checkedCount = g.items.filter((i) => i.checked).length;
+            /* [1020] allChecked 이거나 지남(비법정)이면 접힘 — 사용자가 누른 값이 우선 */
+            const open = openOverride[g.phase] ?? !(g.allChecked || st === "past");
+            const bodyId = `${groupDomId(g.phase)}-body`;
+            return (
+              <li
+                key={g.phase}
+                id={groupDomId(g.phase)}
+                className="jr-ev jr-group card scroll-mt-24 rounded-2xl p-0"
+                data-state={st}
+                data-open={open ? "true" : "false"}
+              >
+                <span className="jr-pin" data-kind={kind} aria-hidden="true">
+                  {kind === "done" ? <Icon name="check" size={13} strokeWidth={3} /> : PIN_GLYPH[kind]}
+                </span>
+                {/* 머리 줄 — 날짜(굵게) · 제목(펼침 버튼, ::after 로 줄 전체가 눌린다) · 배지(법정/권장/금액) · 오른쪽 D-day */}
+                <div className="jr-ev__hd">
+                  <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="t-sub t-num font-bold text-ink">{g.due ? formatKoreanDay(g.due) : "날짜 미입력"}</span>
+                    <h3 className="m-0 t-section text-ink">
+                      <button
+                        type="button"
+                        className="jr-ev__toggle"
+                        aria-expanded={open}
+                        aria-controls={bodyId}
+                        onClick={() => setOpenOverride((o) => ({ ...o, [g.phase]: !open }))}
+                      >
+                        {g.meta.title}
+                      </button>
+                    </h3>
                     <GroupBadge g={g} />
-                  </h3>
-                  {/* 기한 설명은 제목이 말하지 않는 것만(법정·권장) — "계약일 / 계약하는 날" 같은 되풀이는 뺀다 */}
-                  {(g.meta.legal || g.meta.suggested) && <span className="t-sub text-text-2">{g.meta.dueText}</span>}
-                  {/* 마지막 날이 쉬는 날이라 미뤄진 기한 — 왜 날짜가 "30일째"가 아닌지 말한다 */}
-                  {restDayNote(g) && <span className="t-caption font-semibold text-text-3">{restDayNote(g)}</span>}
-                  {/* [1009 · T] 그날 나가는 돈 — 넣은 금액으로만(정밀 표기) */}
-                  {money && (
-                    <span className="t-sub text-text-2">
-                      {money.label} <Won manwon={money.manwon} className="t-body text-ink" />
-                    </span>
-                  )}
-                </div>
-                {g.daysLeft !== null && (
-                  <span className="jr-dday" data-state={st}>
-                    {ddayText(g, st)}
-                  </span>
-                )}
-              </div>
-              <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0">
-                {g.items.map(({ item, checked }) => (
-                  <li key={item.id} className="jr-item" data-checked={checked ? "true" : "false"}>
-                    <button
-                      type="button"
-                      role="checkbox"
-                      aria-checked={checked}
-                      aria-label={item.title}
-                      onClick={() => toggleItem(item.id)}
-                      disabled={!ready}
-                      className="jr-check"
-                    >
-                      <span className="jr-check__box" aria-hidden="true">
-                        {checked && <Icon name="check" size={14} strokeWidth={3} className="njn-pop-once" />}
+                    {/* [1009 · T] 그날 나가는 돈 — 넣은 금액으로만 */}
+                    {money && (
+                      <span className="jr-badge jr-badge--active t-num">
+                        {money.label} {manwonText(money.manwon, "만")}
                       </span>
-                    </button>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="jr-item__title t-body font-bold text-ink">{item.title}</span>
-                        {item.required && <span className="jr-badge jr-badge--legal">계약 전 필수</span>}
-                      </div>
-                      <p className="m-0 mt-0.5 t-sub leading-[1.65] text-text-2">{item.desc}</p>
-                      {(item.laws?.length || item.links?.length || item.more) && (
-                        <div className="jr-refs mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 t-caption">
-                          {item.laws?.map((l) => (
-                            <a
-                              key={l.href}
-                              href={l.href}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex min-h-[24px] items-center gap-1 font-bold text-text-2 underline-offset-2 hover:underline"
-                            >
-                              <Icon name="scale" size={12} className="shrink-0" />
-                              {l.label}
-                            </a>
-                          ))}
-                          {item.links?.map((l) => (
-                            <a
-                              key={l.href}
-                              href={l.href}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex min-h-[24px] items-center gap-1 font-bold text-primary underline-offset-2 hover:underline"
-                            >
-                              <Icon name="link" size={12} className="shrink-0" />
-                              {l.label}
-                            </a>
-                          ))}
-                          {item.more && (
-                            <Link
-                              href={item.more.href === "/calculator" ? calcHref : item.more.href}
-                              className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline hover:underline"
-                            >
-                              {item.more.label} ›
-                            </Link>
+                    )}
+                    {!open && (
+                      <span className="t-caption font-semibold text-text-3">
+                        {checkedCount}개 체크
+                      </span>
+                    )}
+                  </span>
+                  {g.daysLeft !== null && (
+                    <span className={`jr-ev__dd t-sub t-num shrink-0 font-bold ${ddayTone(g, st)}`}>{ddayText(g, st)}</span>
+                  )}
+                  {/* chevron — Icon 표에 없어 인라인 SVG */}
+                  <span className="jr-ev__chev jr-noprint shrink-0 text-text-3" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </span>
+                </div>
+                {/* 본문 — 접히면 숨기고 인쇄에서는 언제나 펼친다 */}
+                <div id={bodyId} className={`jr-ev__body ${open ? "" : "hidden"} print:block`}>
+                  {/* 기한 설명은 제목이 말하지 않는 것만(법정·권장) — "계약일 / 계약하는 날" 같은 되풀이는 뺀다 */}
+                  {((g.meta.legal || g.meta.suggested) || restDayNote(g)) && (
+                    <div className="flex flex-col gap-0.5 px-4 max-md:px-3.5">
+                      {(g.meta.legal || g.meta.suggested) && <span className="t-sub text-text-2">{g.meta.dueText}</span>}
+                      {/* 마지막 날이 쉬는 날이라 미뤄진 기한 — 왜 날짜가 "30일째"가 아닌지 말한다 */}
+                      {restDayNote(g) && <span className="t-caption font-semibold text-text-3">{restDayNote(g)}</span>}
+                    </div>
+                  )}
+                  <ul className="m-0 flex list-none flex-col gap-2 p-4 pt-2 max-md:p-3.5 max-md:pt-2">
+                    {g.items.map(({ item, checked }) => (
+                      <li key={item.id} className="jr-item" data-checked={checked ? "true" : "false"}>
+                        <button
+                          type="button"
+                          role="checkbox"
+                          aria-checked={checked}
+                          aria-label={item.title}
+                          onClick={() => toggleItem(item.id)}
+                          disabled={!ready}
+                          className="jr-check"
+                        >
+                          <span className="jr-check__box" aria-hidden="true">
+                            {checked && <Icon name="check" size={14} strokeWidth={3} className="njn-pop-once" />}
+                          </span>
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="jr-item__title t-body font-bold text-ink">{item.title}</span>
+                            {item.required && <span className="jr-badge jr-badge--legal">계약 전 필수</span>}
+                          </div>
+                          <p className="m-0 mt-0.5 t-sub leading-[1.65] text-text-2">{item.desc}</p>
+                          {(item.laws?.length || item.links?.length || item.more) && (
+                            <div className="jr-refs mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 t-caption">
+                              {item.laws?.map((l) => (
+                                <a
+                                  key={l.href}
+                                  href={l.href}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex min-h-[24px] items-center gap-1 font-bold text-text-2 underline-offset-2 hover:underline"
+                                >
+                                  <Icon name="scale" size={12} className="shrink-0" />
+                                  {l.label}
+                                </a>
+                              ))}
+                              {item.links?.map((l) => (
+                                <a
+                                  key={l.href}
+                                  href={l.href}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex min-h-[24px] items-center gap-1 font-bold text-primary underline-offset-2 hover:underline"
+                                >
+                                  <Icon name="link" size={12} className="shrink-0" />
+                                  {l.label}
+                                </a>
+                              ))}
+                              {item.more && (
+                                <Link
+                                  href={item.more.href === "/calculator" ? calcHref : item.more.href}
+                                  className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline hover:underline"
+                                >
+                                  {item.more.label} ›
+                                </Link>
+                              )}
+                            </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </li>
-          );
-        })}
-      </ol>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
 
-      {/* ── 고지 ── */}
-      <aside className="flex flex-col gap-1.5 rounded-2xl border border-line bg-bg p-4 max-md:p-3.5" aria-label="안내">
-        <p className="m-0 flex items-start gap-1.5 t-sub font-bold text-text-1">
-          <Icon name="shield" size={15} className="mt-0.5 shrink-0 text-text-3" />
-          일반 정보이며 법률·세무 자문이 아닙니다.
-        </p>
-        {/* [1015 · 규칙 D] 고지 문단 — "~했어요/~하세요" 대화체 → 사실 문장. 내용(확인일·근거 법령·공휴일 범위)은 그대로 */}
-        <p className="m-0 t-caption leading-[1.7] text-text-3">
-          법정 기한은 {LAW_CHECKED_ON} 국가법령정보센터(law.go.kr) 원문 기준. 기한 날짜는 기준일 다음 날부터 계산(민법
-          제157조), {REST_DAY_RULE}. 공휴일은 {HOLIDAY_YEARS.join("·")}년 월력요항(우주항공청)과 공휴일 법령 기준이며 그 밖의
-          해는 토·일만 반영. 규제지역·토지거래허가구역·대출 기준은 계약 전 공식 안내와 거래 은행·중개사무소에서 확인.
-          넣은 날짜·금액은 이 기기에, 로그인하면 내 계정에만 저장.
-        </p>
-        <p className="jr-refs m-0 flex flex-wrap items-center gap-x-3 t-caption">
-          {REST_DAY_LAWS.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-[24px] items-center gap-1 font-bold text-text-2 underline-offset-2 hover:underline"
-            >
-              <Icon name="scale" size={12} className="shrink-0" />
-              {l.label}
-            </a>
-          ))}
-        </p>
-      </aside>
+        {/* ── 고지 ── */}
+        <aside className="flex flex-col gap-1.5 rounded-2xl border border-line bg-bg p-4 max-md:p-3.5" aria-label="안내">
+          <p className="m-0 flex items-start gap-1.5 t-sub font-bold text-text-1">
+            <Icon name="shield" size={15} className="mt-0.5 shrink-0 text-text-3" />
+            일반 정보이며 법률·세무 자문이 아닙니다.
+          </p>
+          {/* [1015 · 규칙 D] 고지 문단 — "~했어요/~하세요" 대화체 → 사실 문장. 내용(확인일·근거 법령·공휴일 범위)은 그대로 */}
+          <p className="m-0 t-caption leading-[1.7] text-text-3">
+            법정 기한은 {LAW_CHECKED_ON} 국가법령정보센터(law.go.kr) 원문 기준. 기한 날짜는 기준일 다음 날부터 계산(민법
+            제157조), {REST_DAY_RULE}. 공휴일은 {HOLIDAY_YEARS.join("·")}년 월력요항(우주항공청)과 공휴일 법령 기준이며 그 밖의
+            해는 토·일만 반영. 규제지역·토지거래허가구역·대출 기준은 계약 전 공식 안내와 거래 은행·중개사무소에서 확인.
+            넣은 날짜·금액은 이 기기에, 로그인하면 내 계정에만 저장.
+          </p>
+          <p className="jr-refs m-0 flex flex-wrap items-center gap-x-3 t-caption">
+            {REST_DAY_LAWS.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-[24px] items-center gap-1 font-bold text-text-2 underline-offset-2 hover:underline"
+              >
+                <Icon name="scale" size={12} className="shrink-0" />
+                {l.label}
+              </a>
+            ))}
+          </p>
+        </aside>
+      </div>
     </div>
   );
 }

@@ -839,7 +839,7 @@ export function NotesFeedClient({
       {/* [1005] 안쪽 폭 1240 — 홈·PageShell 과 같은 컨테이너(예전 1120 은 이 화면만 좁았다). */}
       {/* [1016] 데스크톱(lg+)은 페이스북 3단 — 왼쪽 바로가기 240 · 가운데 피드(최대 640) · 오른쪽 최근 임장 300.
           폰·태블릿은 전과 같은 한 열(스토리 줄 + 격자/피드). */}
-      <div className="mx-auto w-full max-w-[1240px] lg:grid lg:grid-cols-[240px_minmax(0,1fr)_300px] lg:items-start lg:gap-6">
+      <div className="mx-auto grid w-full max-w-[1240px] grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_300px] lg:items-start lg:gap-6">
       <LeftRail
         loggedIn={loggedIn}
         mine={mine}

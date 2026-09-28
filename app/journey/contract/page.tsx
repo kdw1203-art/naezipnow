@@ -14,6 +14,9 @@ import { ContractPlanner } from "./ContractPlanner";
 
    정적 페이지(force-static) — 입력·계산·저장은 전부 브라우저(ContractPlanner). 서버는 세션·쿠키를 읽지 않는다.
    HowTo 는 화면이 처음 그리는 것과 같은 일정표(날짜 없는 상태)에서 만든다 — 화면에 없는 단계를 스키마에 넣지 않는다.
+
+   [1020 · 담당 B] 소유자 지시 "시안(contract-d/m.png)대로 좀더 고도화" — 본문이 2열(입력 340px + 타임라인)이 되어
+   폭 880 → 1120. 제목 줄 오른쪽 버튼(ics·인쇄)은 넣지 않는다(입력 카드 안 하나로 충분 — 채움 파랑 화면당 1개). 부제 한 줄 유지.
    ============================================================ */
 
 export const dynamic = "force-static";
@@ -54,7 +57,7 @@ export default function ContractSchedulePage() {
   return (
     <PageShell>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript([crumbs, howTo]) }} />
-      <div className="mx-auto flex w-full max-w-[880px] flex-col gap-4 max-md:gap-3">
+      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4 max-md:gap-3">
         {/* <header> 가 아니라 <div> — 전역 인쇄 규칙(globals.css @media print)이 header 를 숨겨 제목이 종이에서 빠졌다 */}
         {/* [1015 · 규칙 B] 사용법 문단("계약일과 잔금일을 넣으면 … 인쇄할 수 있어요") → 사실 한 줄 */}
         <div className="flex flex-col gap-1.5">

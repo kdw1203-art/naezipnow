@@ -516,6 +516,69 @@ test("/journey · /journey/contract — force-static, 서버 개인화 읽기 �
   assert.match(llms, /naezipnow\.com\/journey\/contract/);
 });
 
+/* [1020] /journey 화면 뼈대 — 시안대로 "노선도 + 지금 단계 하나". 네이비 히어로(.hub-hero) 없음 · 3열 그리드(base grid-cols-1) ·
+   왼쪽 노선도(jr-line) · 접힘 행(jr-fold) · 오른쪽 마감(buildContractTimeline) · 흰 카드 안 목록은 data-tone="plain" ·
+   채움 파랑(btn-primary) 리터럴 1개 · 완료 버튼 문구 "이 단계 완료 → 다음: <short>". 기존 토스트·되돌리기·완주 장면은 그대로. */
+test("[1020] /journey 뼈대 — 히어로 없음 · 3열 · 노선도 · 접힘 행 · 마감 레일 · 채움 파랑 1개", () => {
+  const src = stripComments(read("app/journey/JourneyBoard.tsx"));
+  assert.doesNotMatch(src, /hub-hero|brand-navy-card/);
+  assert.match(src, /grid grid-cols-1 [^"]*lg:grid-cols-\[250px_minmax\(0,1fr\)_300px\]/);
+  assert.match(src, /className="jr-line hidden lg:block"/);
+  assert.match(src, /className="jr-fold"/);
+  assert.match(src, /buildContractTimeline\(dates, new Set\(plan\?\.checked \?\? \[\]\), today\)/);
+  assert.match(src, /data-tone="plain"/);
+  assert.equal((src.match(/\bbtn-primary\b/g) ?? []).length, 1);
+  assert.match(src, /`이 단계 완료 → 다음: \$\{nextStage\.short\}`/);
+  assert.match(src, /"이 단계 완료"/);
+  /* 시안의 예시 숫자("1 / 3" 할 일 체크 수 · "내 기록")는 저장된 값이 없으니 그리지 않는다 */
+  assert.doesNotMatch(src, /내 기록|게임 연속|관심 단지<\/div>/);
+  assert.match(src, /showMoment\(\{[\s\S]*kind: "celebrate"/);
+  assert.match(src, /label: "되돌리기"/);
+  assert.match(src, /체크 모두 지우기/);
+  const css = read("app/globals.css");
+  assert.match(css, /\/\* =+\n\s+\[1020 · 여정 \/journey\]/);
+  for (const cls of [".jr-ring--light", ".jr-line::before", ".jr-st[data-state=\"now\"]", ".jr-fold", ".jr-li--now"]) {
+    assert.ok(css.includes(cls), cls);
+  }
+});
+
+/* [1020 · 담당 B] /journey/contract 화면 뼈대 — 시안대로 "입력 한 판 + 날짜가 박힌 타임라인". 2열 그리드(base grid-cols-1 ·
+   lg 340px + minmax) · 네이비 요약(jr-summary) 없음 · 다음 마감 띠는 흰 카드 + 주홍 왼쪽 선("할 일 보기"는 스크롤만, 체크하지 않는다) ·
+   타임라인 핀(jr-pin: done/now/legal/money) · 접힘 본문은 인쇄에서 펼침(print:block) · 잔금(자동) 칸은 paymentSplit 값만 ·
+   채움 파랑(btn-primary) 리터럴 1개 · 제목 줄에는 버튼 없음. 시안의 예시 숫자(취득세 "약 880만")는 계산 함수가 없으니 넣지 않는다. */
+test("[1020] /journey/contract 뼈대 — 2열 · 네이비 요약 없음 · 다음 마감 띠 · 핀 타임라인 · 접힘/인쇄 · 채움 파랑 1개", () => {
+  const src = stripComments(read("app/journey/contract/ContractPlanner.tsx"));
+  assert.match(src, /grid grid-cols-1 [^"]*lg:grid-cols-\[340px_minmax\(0,1fr\)\]/);
+  assert.doesNotMatch(src, /jr-summary|hub-hero|brand-navy-card|text-on-navy-amber/);
+  assert.match(src, /jr-next card [^"]*border-l-4 border-l-brand-red/);
+  assert.match(src, /할 일 보기/);
+  /* "할 일 보기"는 그 그룹으로 스크롤만 — toggleItem 을 부르지 않는다 */
+  const goTo = src.slice(src.indexOf("const goToGroup"), src.indexOf("const saveNote"));
+  assert.match(goTo, /scrollIntoView/);
+  assert.doesNotMatch(goTo, /toggleItem|withContractPlan/);
+  assert.match(src, /className="jr-pin" data-kind=\{kind\}/);
+  for (const k of ['"done"', '"now"', '"legal"', '"money"', '"plain"']) assert.ok(src.includes(k), k);
+  assert.match(src, /openOverride\[g\.phase\] \?\? !\(g\.allChecked \|\| st === "past"\)/);
+  assert.match(src, /jr-ev__body \$\{open \? "" : "hidden"\} print:block/);
+  assert.match(src, /split\?\.balanceManwon != null \? split\.balanceManwon\.toLocaleString\("ko-KR"\) : ""/);
+  assert.doesNotMatch(src, /880만|취득세\(1주택/);
+  assert.equal((src.match(/\bbtn-primary\b/g) ?? []).length, 1);
+  /* 기존 저장·되돌리기·요약 문구는 그대로 */
+  assert.match(src, /label: "되돌리기"/);
+  assert.match(src, /모두 지우기/);
+  const page = stripComments(read("app/journey/contract/page.tsx"));
+  assert.doesNotMatch(page, /btn-primary|btn-soft|window\.print/);
+  assert.match(page, /max-w-\[1120px\]/);
+  const css = read("app/globals.css");
+  assert.match(css, /\/\* =+\n\s+\[1020 · 일정표 \/journey\/contract\]/);
+  for (const cls of [".jr-input--auto", ".jr-bar--light", ".jr-timeline::before", '.jr-pin[data-kind="now"]', ".jr-ev__toggle::after"]) {
+    assert.ok(css.includes(cls), cls);
+  }
+  /* 인쇄 — 레일 고정 풀고 접힌 본문을 전부 펼친다 */
+  const printBlock = css.slice(css.indexOf("[1020 · 일정표 /journey/contract]"));
+  assert.match(printBlock, /@media print \{[\s\S]*\.jr-rail \{\s*position: static !important;[\s\S]*\.jr-ev__body \{\s*display: block !important;/);
+});
+
 test("신호 — 최근 본 단지·실거래가 게임 키가 원본과 같다", () => {
   const rc = read("app/components/RecentComplexes.tsx");
   const key = /const KEY = "([^"]+)"/.exec(rc)?.[1];

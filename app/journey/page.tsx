@@ -15,6 +15,9 @@ import { JourneyBoard } from "./JourneyBoard";
    (lib/http/cache-policy.ts 공개 캐시 목록, tests/unit/journey-1008.test.ts 가 잠근다). 진행 체크는
    브라우저(이 기기) 또는 로그인한 사람만 /api/me/journey 에서 읽는다.
    JSON-LD HowTo 는 화면에 그리는 같은 배열(JOURNEY_STAGES)에서 만든다.
+
+   [1020] 소유자: 시안(journey-d/m.png) "좀더 고도화 시켜줘" — 화면 뼈대는 JourneyBoard 가 3열(노선도 · 단계 · 마감)로
+   다시 그렸다. 이 파일은 그대로(정적 · 메타 · JSON-LD). 제목 h1 은 JourneyBoard 의 왼쪽 레일(폰은 머리)에 있다.
    ============================================================ */
 
 export const dynamic = "force-static";

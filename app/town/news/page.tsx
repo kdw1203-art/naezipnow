@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { PageShell } from "../../components/PageShell";
+import { TownCategoryNav } from "@/app/town/TownCategoryNav";
 import { readTownPosts } from "@/lib/newui/board-posts";
 import { Icon } from "@/app/components/Icon";
 import { getWeeklyDigest, type WeeklyDigest } from "@/lib/newui/digest";
@@ -119,7 +120,7 @@ export default async function TownNewsPage() {
   const mostRead = [...rows].filter((r) => r.views > 0).sort((a, b) => b.views - a.views).slice(0, 5);
 
   return (
-    <PageShell breadcrumb="뉴스룸" wide>
+    <PageShell breadcrumb="동네이야기 › 뉴스룸" wide>
       {/* [1015 · 규칙 C] 한지 마스트헤드(튀는 색면) → 흰 머리. 부연("매일 아침 자동 수집 · 출처·발행 시각 명시")·설명 문장 삭제.
           숫자는 손에 든 목록만 센다. */}
       <header className="rise-in mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-line pb-4">
@@ -160,6 +161,8 @@ export default async function TownNewsPage() {
           </Link>
         </div>
       </header>
+      {/* [1018] 소유자: "뉴스룸을 누르면 (카테고리 줄이 사라지는데) 목록은 나오도록 유지" — 다른 동네 카테고리와 같은 카테고리 줄 */}
+      <TownCategoryNav stick />
 
       {/* [1015 · 네이버 뉴스 방식] 데스크톱 2단 — 왼쪽 헤드라인 목록(사진 + 제목 + 요약 + 매체·시각), 오른쪽 레일(많이 본 뉴스 ·
           주간 다이제스트 · 키워드 알림 · 주제 · 광고 1). 폰은 한 열 — 목록 뒤에 레일 순서 그대로. */}

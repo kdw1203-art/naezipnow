@@ -686,7 +686,7 @@ main .lq-panel,
   /* [1013] --line 은 없는 토큰이었다(선 색 토큰은 --border) — 없는 변수를 섞은 color-mix 는 통째로 무효가 돼
      판 테두리는 사라지고 행 사이 선은 글자색(짙은 남회색)으로 그려졌다. */
   border: 1px solid color-mix(in srgb, var(--lq-tint) 22%, var(--border));
-  background: color-mix(in srgb, var(--lq-tint) 9%, var(--surface));
+  background: var(--lq-fill, color-mix(in srgb, var(--lq-tint) 9%, var(--surface)));
   box-shadow:
     inset 0 1px 0 var(--lq-edge),
     0 1px 2px rgba(16, 28, 54, 0.04);
@@ -722,6 +722,14 @@ main :where(:is(section, article):nth-of-type(4n + 4)) :where([class~="divide-y"
 :is(main, .lq-scope) [data-tone="sand"] {
   --lq-tint: var(--lq-sand);
   --lq-ink: var(--lq-sand-ink);
+}
+/* [1018] 소유자(청약 센터 캡처): "노란색으로 되어 있는 걸 다시 다른 색상처럼 흰색으로" — 한지·모래 톤 판은 색면이 노랗게 읽혔다.
+   두 톤은 판 채움을 흰색으로(테두리·행 선·숫자색·온점은 톤 그대로). 파랑·민트는 9% 채움이 거의 흰색이라 그대로. */
+main :where(:is(section, article):nth-of-type(4n + 2)) :where([class~="divide-y"], .lq-panel):not([data-tone]),
+main :where(:is(section, article):nth-of-type(4n + 4)) :where([class~="divide-y"], .lq-panel):not([data-tone]),
+:is(main, .lq-scope) [data-tone="hanji"],
+:is(main, .lq-scope) [data-tone="sand"] {
+  --lq-fill: var(--surface);
 }
 /* [1015] plain — 흰 카드 **안**에 놓인 목록(홈·동네 홈의 뉴스 칸). 소유자: "뉴스룸 카드색상처럼 튀게 하지말고
    테마에 어울리도록". 카드 안에 색판이 또 들어가면 액자가 둘이라, 이 톤은 판을 걷고 행 사이 선만 남긴다. */
@@ -5762,8 +5770,9 @@ body.nz-consent-open .back-to-top {
    다른 재질(기사)"임을 한 눈에 보인다. */
 /* 카테고리 카드 중 "뉴스" 칸 — 뉴스룸으로 가는 입구임이 보이게 한지 면·네이비 아이콘
    ([1014] 개편 전 동네 카테고리 카드가 돌아오며 다시 쓴다) */
+/* [1018] 소유자: "뉴스룸도 색상 흰색으로" — 한지 면을 걷고 다른 칸과 같은 흰 카드. 아이콘 칸만 네이비로 남겨 입구임을 표시 */
 .news-entry-card {
-  background: var(--brand-hanji);
+  background: var(--surface);
   border-color: var(--border);
 }
 .news-entry-card .tile-ico {
@@ -6606,4 +6615,509 @@ body.nz-consent-open .back-to-top {
   font-weight: 700;
   white-space: nowrap;
   pointer-events: none;
+}
+
+/* ============================================================
+   [1020 · 여정 /journey] 시안(journey-d/m.png)대로 — 네이비 히어로 없이 흰 카드 위 "노선도 + 지금 단계 하나".
+   기존 jr-* 규칙은 그대로 두고, 흰 면 위 변형(--light)·노선도(jr-line/jr-st)·접힘 행(jr-fold)·
+   단계 카드 묶음(jr-li)만 더한다. 토큰만 쓴다(새 색 없음). 반경은 8·16 눈금.
+   ============================================================ */
+
+/* 진행 링 — 흰 카드 위: 트랙은 선 색, 호는 나우블루(네이비 위 주홍 → 흰 면 위 파랑) */
+.jr-ring--light .jr-ring__track {
+  stroke: var(--border);
+}
+.jr-ring--light .jr-ring__arc {
+  stroke: var(--primary);
+}
+
+/* 왼쪽 레일 — 폰·태블릿은 머리(카드 없음), lg 부터 흰 카드 + sticky */
+.jr-rail-card {
+  display: flex;
+  flex-direction: column;
+}
+@media (min-width: 1024px) {
+  .jr-rail-card {
+    padding: 16px 14px 12px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface);
+  }
+  .jr-rail-title {
+    font-size: var(--fs-section);
+    line-height: 1.4;
+  }
+}
+
+/* 단계 칩 가로 레일(폰) — 네이비용 .jr-step 을 흰 면 위 색으로. 칩은 줄지 않는다(가로 스크롤). */
+.jr-steps--light {
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.jr-steps--light::-webkit-scrollbar {
+  display: none;
+}
+.jr-steps--light .jr-step {
+  flex: none;
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.jr-steps--light .jr-step__n {
+  background: var(--bg);
+  color: var(--text-3);
+}
+.jr-steps--light .jr-step[data-state="done"] {
+  color: var(--success);
+}
+.jr-steps--light .jr-step[data-state="done"] .jr-step__n {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.jr-steps--light .jr-step[data-state="current"] {
+  border-color: var(--brand-navy);
+  background: var(--brand-navy);
+  color: var(--on-dark);
+}
+.jr-steps--light .jr-step[data-state="current"] .jr-step__n {
+  background: var(--on-dark);
+  color: var(--brand-navy);
+}
+@media (hover: hover) and (pointer: fine) {
+  .jr-steps--light .jr-step:hover {
+    background: var(--bg);
+  }
+  .jr-steps--light .jr-step[data-state="current"]:hover {
+    background: var(--brand-navy);
+  }
+}
+
+/* 세로 노선도 — 6역. 역 점 22px, 역 사이 세로선 2px(점 중심 x = 6 + 11 = 17px) */
+.jr-line {
+  position: relative;
+  margin: 0;
+  padding: 2px 0 0;
+  list-style: none;
+}
+.jr-line::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  top: 24px;
+  bottom: 24px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+.jr-st {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 8px 4px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.jr-st[data-state="now"] {
+  background: var(--primary-soft);
+}
+@media (hover: hover) and (pointer: fine) {
+  .jr-st:hover {
+    background: color-mix(in srgb, var(--primary) 6%, transparent);
+  }
+  .jr-st[data-state="now"]:hover {
+    background: var(--primary-soft);
+  }
+}
+.jr-st__dot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-3);
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.jr-st[data-state="done"] .jr-st__dot {
+  border-color: var(--success-fill);
+  background: var(--success-fill);
+  color: var(--on-dark);
+}
+.jr-st[data-state="now"] .jr-st__dot {
+  border-color: var(--brand-red);
+  color: var(--brand-red);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-red) 16%, transparent);
+}
+.jr-st__lbl {
+  font-size: var(--fs-sub);
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+.jr-st[data-state="now"] .jr-st__lbl {
+  color: var(--ink);
+}
+.jr-st[data-state="done"] .jr-st__lbl {
+  color: var(--text-3);
+  text-decoration: line-through;
+  text-decoration-color: var(--border-strong);
+}
+
+/* 단계 목록 — 접힌 행끼리는 한 카드로 붙고(선 하나), 펼친 카드는 위아래 8px 띄운다 */
+.jr-list {
+  gap: 0;
+}
+.jr-li {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.jr-li--fold + .jr-li--fold {
+  margin-top: -1px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.jr-li--fold:has(+ .jr-li--fold) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.jr-li--open + .jr-li,
+.jr-li + .jr-li--open {
+  margin-top: 8px;
+}
+/* 지금 단계 = 네이비 2px 테두리. 완료 = 초록 테두리 */
+.jr-li--now {
+  border: 2px solid var(--brand-navy);
+}
+.jr-li--done {
+  border-color: var(--success-border);
+}
+.jr-li--now .jr-stage__num {
+  background: var(--brand-navy);
+  color: var(--on-dark);
+}
+.jr-li--done .jr-stage__num {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.jr-li--open {
+  transition: border-color var(--dur-sm) var(--ease-out);
+}
+/* 접힘 행 — 한 줄(번호 · 제목 · 할 일 이름 · 펼치기). 완료 행은 옅게 */
+.jr-fold {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-xs) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .jr-fold:hover {
+    background: color-mix(in srgb, var(--primary) 5%, transparent);
+  }
+}
+.jr-fold[data-state="done"] {
+  opacity: 0.7;
+}
+.jr-fold__n {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  color: var(--text-3);
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.jr-fold[data-state="done"] .jr-fold__n {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.jr-fold[data-state="now"] .jr-fold__n {
+  background: var(--brand-navy);
+  color: var(--on-dark);
+}
+@media (prefers-reduced-motion: reduce) {
+  .jr-li--open,
+  .jr-fold {
+    transition: none;
+  }
+}
+
+/* ============================================================
+   [1020 · 일정표 /journey/contract] 시안(contract-d/m.png)대로 — "입력 한 판 + 날짜가 박힌 타임라인".
+   기존 jr-* 규칙은 그대로 두고, 잔금(자동) 칸(jr-input--auto)·흰 면 위 진행 막대(jr-bar--light)·
+   핀 있는 세로선(jr-timeline/jr-pin)·그룹 머리 줄(jr-ev__hd/jr-ev__toggle)·인쇄 규칙만 더한다. 토큰만 쓴다.
+   ============================================================ */
+
+/* 잔금(자동) — 읽기 전용 칸은 면 색을 낮춰 "내가 치는 칸"과 구별 */
+.jr-input--auto {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+/* 진행 막대 — 흰 카드 위(네이비용 jr-bar 는 그대로): 전폭, 트랙은 선 색, 채움은 초록 */
+.jr-bar--light {
+  width: 100%;
+  background: var(--border);
+}
+.jr-bar--light i {
+  background: var(--success-fill);
+}
+
+/* 타임라인 — 세로선(2px)은 핀 중심(x = 11px)을 지난다. 그룹 카드는 34px 안쪽에서 시작 */
+.jr-timeline {
+  position: relative;
+  padding-left: 34px;
+}
+.jr-timeline::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 14px;
+  bottom: 14px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+.jr-ev {
+  position: relative;
+}
+/* 핀 24px — 기본 회색(글자 없음). done 초록 채움 ✓ · now(오늘·지난 법정) 주홍 "!" + 옅은 링 · legal 노랑 "!" · money 파랑 "$" */
+.jr-pin {
+  position: absolute;
+  left: -34px;
+  top: 12px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-3);
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  line-height: 1;
+}
+.jr-pin[data-kind="done"] {
+  border-color: var(--success-fill);
+  background: var(--success-fill);
+  color: var(--on-dark);
+}
+.jr-pin[data-kind="now"] {
+  border-color: var(--brand-red);
+  color: var(--brand-red);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-red) 16%, transparent);
+}
+.jr-pin[data-kind="legal"] {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+.jr-pin[data-kind="money"] {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* 그룹 머리 줄 — 제목 버튼의 ::after 가 줄 전체를 덮어 어디를 눌러도 접힘/펼침. 본문 링크는 머리 줄 밖이라 겹치지 않는다 */
+.jr-ev__hd {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 12px 16px;
+  transition: background var(--dur-xs) var(--ease-out);
+}
+@media (max-width: 767px) {
+  .jr-ev__hd {
+    padding: 10px 14px;
+  }
+}
+.jr-ev[data-open="true"] .jr-ev__hd {
+  padding-bottom: 6px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .jr-ev__hd:hover {
+    background: color-mix(in srgb, var(--primary) 4%, transparent);
+  }
+}
+.jr-ev__toggle {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  min-height: 24px; /* 촘촘 조작 하한(check-mobile-tap) — 줄 전체 클릭은 ::after 가 맡는다 */
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+.jr-ev__toggle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+}
+.jr-ev__toggle:focus-visible {
+  outline: none;
+}
+.jr-ev__toggle:focus-visible::after {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+.jr-ev__chev {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  transition: transform var(--dur-xs) var(--ease-out);
+}
+.jr-ev[data-open="true"] .jr-ev__chev {
+  transform: rotate(180deg);
+}
+/* 완료·지남 그룹은 옅게(머리 줄만 보이는 상태) */
+.jr-ev[data-open="false"][data-state="done"] .jr-ev__hd,
+.jr-ev[data-open="false"][data-state="past"] .jr-ev__hd {
+  opacity: 0.75;
+}
+@media (prefers-reduced-motion: reduce) {
+  .jr-ev__hd,
+  .jr-ev__chev {
+    transition: none;
+  }
+}
+
+/* 인쇄 — 레일 고정 풀고, 접힌 그룹도 전부 펼친다(본문은 print:block 유틸). 핀·선·다음 마감 띠는 검정 선으로 */
+@media print {
+  .jr-rail {
+    position: static !important;
+  }
+  .jr-ev__body {
+    display: block !important;
+  }
+  .jr-ev__hd {
+    opacity: 1 !important;
+  }
+  .jr-timeline::before {
+    background: #999 !important;
+  }
+  .jr-pin {
+    border-color: #000 !important;
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+  }
+  .jr-next {
+    border-color: #999 !important;
+    border-left-color: #000 !important;
+  }
+  .jr-input--auto {
+    background: #fff !important;
+  }
+}
+
+/* ============================================================
+   [1020 · 게임 /quiz] 시안(quiz-d/m.png)대로 — "좌우 대결판 + 답 뒤에 배우는 칸".
+   대결판 가운데 VS 칸(세로선 + 네이비 코인 · 폰은 가로선) · 공개 카드의 가격 막대 · 고른 답 버튼 테두리.
+   토큰만 쓴다(새 색 없음). 반경은 4·8 눈금.
+   ============================================================ */
+
+/* VS 칸 — md+ 는 56px 세로 트랙: 가운데 1px 세로선 위에 34px 네이비 코인. 폰은 36px 가로 띠 + 가로선 */
+.qz-vs {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 36px;
+}
+.qz-vs::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 50%;
+  height: 1px;
+  background: var(--border);
+}
+.qz-vs b {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--brand-navy);
+  color: var(--on-dark);
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+@media (min-width: 768px) {
+  .qz-vs {
+    height: auto;
+  }
+  .qz-vs::before {
+    left: 50%;
+    right: auto;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    height: auto;
+  }
+}
+
+/* 공개 카드 — 가격 막대(큰 쪽 100%): 트랙은 구분선 색, 채움은 A 파랑 / B 주홍(유틸 클래스). 0 에서 자라 올라온다 */
+.qz-bar {
+  display: block;
+  height: 16px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--divider);
+}
+.qz-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  transition: width 520ms var(--njn-out, ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .qz-bar i {
+    transition: none;
+  }
+}
+
+/* 답 줄 — 공개 뒤 고른 쪽만 안쪽 2px 테두리(현재 글자색). 나머지는 그대로(불투명도 안 쓴다) */
+.qz-ans--picked {
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+.qz-ans--picked:disabled {
+  opacity: 1;
+  cursor: default;
 }
