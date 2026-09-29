@@ -12,6 +12,8 @@ export const CALCULATORS = [
   { href: "/calculator/jeonse-monthly", label: "전월세 전환 계산기" },
   { href: "/calculator/gap", label: "갭·전세가율 계산기" },
   { href: "/calculator/rental-yield", label: "임대수익률 계산기" },
+  /* [1025 · 담당 S] 살까·빌릴까 — 매매·전세·월세 총비용(app/calculator/rent-vs-buy) */
+  { href: "/calculator/rent-vs-buy", label: "살까·빌릴까 계산기" },
 ] as const;
 
 export function CalculatorNav({ current }: { current: string }) {

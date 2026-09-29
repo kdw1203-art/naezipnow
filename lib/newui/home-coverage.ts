@@ -31,6 +31,7 @@ async function loadCoverageUncached(): Promise<HomeCoverage> {
     sb
       .from("market_transactions")
       .select("id", { count: "exact", head: true })
+      .eq("property_type", "apartment") // [1025 · #12] 홈 "아파트 실거래 N건" — 비아파트 행 제외
       .eq("is_cancelled", false),
     sb.rpc("trade_complex_total"),
     sb.rpc("market_region_names"),

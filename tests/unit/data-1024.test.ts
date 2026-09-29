@@ -96,8 +96,8 @@ test("[1024 · Q1] 이력 백필 커서 — 상한만큼 봤으면 머물고, �
   assert.equal(isBackfillDone("202101"), false);
   assert.equal(HISTORY_BACKFILL_START_YM, "202512");
   assert.equal(HISTORY_BACKFILL_FLOOR_YM, "202101");
-  /* 일일 한도 10,000 — 1회 시군구 × (유형 2 × 최대 3페이지) 가 300회를 넘지 않는다 */
-  assert.ok(HISTORY_MAX_REGIONS_PER_RUN * 6 <= 300);
+  /* 일일 한도 10,000 — 1회 시군구 × (유형 2 × 최대 3페이지). [1025] 40 → 160(≤ 960회) · 하루 2회 — data-1025 가 합계를 잠근다 */
+  assert.ok(HISTORY_MAX_REGIONS_PER_RUN * 6 <= 960);
 });
 
 test("[1024 · Q2] 수도권 판정 · 비아파트 유형 상수", () => {
@@ -243,8 +243,8 @@ test("[1024 · Q3] 관리비 적재 — 키 없음이면 0행·no-key, 병합 RP
   assert.match(src, /\.from\("complex_mgmt_fee"\)\.upsert\(chunk, \{ onConflict: "kapt_code,ym" \}\)/);
   assert.match(src, /shiftYm\(cur, -2\)/);
   assert.match(src, /MGMT_FEE_BATCH = 200/);
-  /* 미검증 표식 — API 문서로 확인 전 */
-  assert.match(read("lib/national-data/kapt-mgmt-fee-api.ts"), /\[1024\] 미검증: data\.go\.kr 문서로 확인 필요/);
+  /* [1025] 미검증 표식은 걷혔다 — 실제 오퍼레이션(V3 · 22개)으로 확인. data-1025 가 목록을 잠근다 */
+  assert.match(read("lib/national-data/kapt-mgmt-fee-api.ts"), /\[1025\] K-apt 공동주택 관리비 API/);
 });
 
 /* ── 5. 신고가·신저가(순수) ─────────────────────────────────────────────── */
@@ -379,7 +379,7 @@ test("[1024 · Q4] summarizeNonAptRent — 월세·전세 분리, 중앙값, 동
 
 /* ── 7. 크론 라우트·vercel.json ─────────────────────────────────────────── */
 
-test("[1024 · Q1~3] 새 크론 셋 — authorizeCron·withBudget·logIngest, vercel.json 에 02:40/02:50/03:10 UTC", () => {
+test("[1024 · Q1~3] 새 크론 셋 — authorizeCron·withBudget·logIngest, vercel.json 에 02:40(+14:40 [1025])/02:50/03:10 UTC", () => {
   for (const r of ["molit-history-backfill", "molit-nonapt-ingest", "kapt-mgmt-fee-ingest"]) {
     const p = `app/api/cron/${r}/route.ts`;
     assert.ok(existsSync(p), p);
@@ -393,7 +393,7 @@ test("[1024 · Q1~3] 새 크론 셋 — authorizeCron·withBudget·logIngest, ve
   }
   const vercel = JSON.parse(read("vercel.json")) as { crons: { path: string; schedule: string }[] };
   const by = new Map(vercel.crons.map((c) => [c.path, c.schedule]));
-  assert.equal(by.get("/api/cron/molit-history-backfill"), "40 2 * * *");
+  assert.equal(by.get("/api/cron/molit-history-backfill"), "40 2,14 * * *"); // [1025] 하루 2회
   assert.equal(by.get("/api/cron/molit-nonapt-ingest"), "50 2 * * *");
   assert.equal(by.get("/api/cron/kapt-mgmt-fee-ingest"), "10 3 * * *");
   /* 백필·비아파트는 raw 미저장 · 아파트 일일 크론은 keepRaw 를 안 건드린다(예전과 같다) */

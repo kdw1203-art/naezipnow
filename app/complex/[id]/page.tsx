@@ -1385,6 +1385,14 @@ export default async function ComplexHubPage({
   const rentHist = await withSectionBudget(loadRentHistory(region, v.name)).catch(() => null);
   const dealsForV2: HubDeal[] = dealsKnown ?? [];
   const recentRows = recentDealRows(dealsForV2, 10);
+  /* [1025 · #8] 최근 실거래 **표**만 해제 신고 행을 같이 본다(취소선 + "해제" 배지 — recentDealRows 가 신고가에서 뺀다).
+     대표가·추이·머리 사실 줄(recentRows[0])은 기본 경로(해제 제외) 그대로. 해제 행 조회가 실패·예산 초과면 해제 없는 표. */
+  const recentRowsWithCancelled = dealsKnown
+    ? await withSectionBudget(getComplexDeals(rowForFacts?.canonical_id ?? complexId, { includeCancelled: true })).then(
+        (d) => recentDealRows(d, 10),
+        () => recentRows,
+      )
+    : recentRows;
   /* 이번 달(KST) — 못 구하면(이론상) 가장 최근 계약월로 대신한다(빈 문자열로 달 산술을 하지 않는다) */
   const nowYmV2 = nowYmForSummary || recentRows[0]?.ym || "";
   const trend = txFailed ? null : buildTxTrendData(dealsForV2, rentHist?.months ?? null, nowYmV2);
@@ -1582,7 +1590,7 @@ export default async function ComplexHubPage({
 
           {/* [1024] 최근 실거래 표 — 신고가 배지 · 해제 취소선. "전체 N건"은 실거래 탭(?tab=price) */}
           <RecentDealsTable
-            rows={recentRows}
+            rows={recentRowsWithCancelled}
             total={txFailed ? null : dealsForV2.length}
             allHref={`${rowForFacts ? complexCanonicalPath(rowForFacts) : `/complex/${encodeURIComponent(complexId)}`}?tab=price`}
             failed={txFailed}

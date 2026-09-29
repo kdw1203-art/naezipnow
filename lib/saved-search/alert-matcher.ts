@@ -59,6 +59,7 @@ export async function countSavedSearchMatches(
         .from("market_transactions")
         .select("id", { count: "exact", head: true })
         .eq("transaction_type", "trade")
+        .eq("property_type", "apartment") // [1025 · #12] 비아파트 행 섞임 방지
         .eq("is_cancelled", false)
         .or(`complex_name.ilike.${p},region_name.ilike.${p},address.ilike.${p}`);
       return error ? null : count ?? 0;

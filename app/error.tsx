@@ -16,6 +16,22 @@ export default function AppError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  /* [1025 · #30] 배포 직후 옛 청크를 든 탭은 "Loading chunk … failed" 로 이 화면을 본다(2026-09-28 프로덕션 2회 관측).
+     코드 문제가 아니라 파일이 바뀐 것이므로 한 번만 새로고침한다 — 같은 세션에서 두 번째면 그대로 보여 준다(무한 새로고침 방지). */
+  useEffect(() => {
+    try {
+      const msg = String(error?.message ?? "");
+      const chunkFail = /Loading chunk [\w-]+ failed|ChunkLoadError|Failed to fetch dynamically imported module/i.test(msg);
+      if (!chunkFail) return;
+      const key = "nz:chunk-reload:" + window.location.pathname;
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, String(Date.now()));
+      window.location.reload();
+    } catch {
+      /* noop */
+    }
+  }, [error]);
+
   useEffect(() => {
     // 서버 모니터링 싱크로 전달(실패해도 무시 — 에러 화면이 또 깨지면 안 된다)
     try {
@@ -45,7 +61,7 @@ export default function AppError({
         retryLabel="다시 시도"
         className="w-full"
       />
-      <div className="flex gap-2 text-[13px]">
+      <div className="flex gap-2 t-body">
         <Link href="/" className="font-bold text-primary">
           홈으로
         </Link>

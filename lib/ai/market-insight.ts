@@ -11,8 +11,8 @@ import { callLlmChat, type LlmMessage } from "@/lib/ai/llm-provider";
 import { defaultModelIdFromEnv, getModelOption } from "@/lib/ai/llm-models";
 import { formatKrwWon } from "@/lib/format/krw";
 
-export const AI_DISCLAIMER =
-  "본 분석은 참고용이며 투자 판단의 책임은 이용자에게 있습니다";
+/* [1025] 단일 출처는 lib/ai/disclaimer.ts(클라이언트 안전) — 여기서는 다시 내보내기만 */
+export { AI_DISCLAIMER } from "@/lib/ai/disclaimer";
 
 /** JSON 직렬화 안전한 지역 실시세 요약 */
 export type AnalysisRegionSnapshot = {

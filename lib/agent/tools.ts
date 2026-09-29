@@ -186,6 +186,7 @@ async function runGetComplexStats(complexId: string): Promise<ToolResult> {
     .eq("complex_name", dec.name)
     .eq("region_name", dec.region)
     .eq("transaction_type", "trade")
+    .eq("property_type", "apartment") // [1025 · #12] 비아파트 행 섞임 방지
     .eq("is_cancelled", false)
     .gt("deal_amount_krw", 0)
     .gte("contract_ym", ago(12))

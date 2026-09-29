@@ -55,6 +55,7 @@ export async function loadAskingTrades(id: string, nowMs: number): Promise<Askin
     .eq("region_name", names.region)
     .eq("complex_name", names.name)
     .eq("transaction_type", "trade")
+    .eq("property_type", "apartment") // [1025 · #12] 비아파트 행 섞임 방지
     .eq("is_cancelled", false)
     .gt("deal_amount_krw", 0)
     .gte("contract_ym", fromYm)

@@ -4,6 +4,7 @@ import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { breadcrumbJsonLd, howToJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { buildContractTimeline, CONTRACT_PHASES } from "@/lib/journey/contract";
 import { ContractPlanner } from "./ContractPlanner";
+import { PreContractCheck } from "./PreContractCheck";
 
 /* ============================================================
    [1008 · J] /journey/contract — 계약·잔금 일정표(체크리스트 + D-day + 캘린더 .ics + 인쇄).
@@ -74,6 +75,8 @@ export default function ContractSchedulePage() {
           </p>
         </div>
         <ContractPlanner />
+        {/* [1025 · 담당 S] 계약 전 자동 확인 — 건축물대장(건축HUB) 조회 + 등기소·자가진단 링크. 일정표 아래 카드 하나 */}
+        <PreContractCheck />
       </div>
     </PageShell>
   );

@@ -140,7 +140,8 @@ async function buildPromo(dayIndex: number) {
       count: async () => {
         const { count, error } = await sb
           .from("market_transactions")
-          .select("id", { count: "exact", head: true });
+          .select("id", { count: "exact", head: true })
+          .eq("property_type", "apartment"); // [1025 · #12] 비아파트 행 제외
         if (error || count == null) throw new Error(`실거래 집계 실패: ${error?.message ?? "count null"}`);
         return `${Math.floor(count / 10_000)}만+ 건`;
       },

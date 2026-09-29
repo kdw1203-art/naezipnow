@@ -1,6 +1,10 @@
 import "server-only";
 /**
- * [1024] K-apt 관리비 → `complex_mgmt_fee(kapt_code, ym, common_krw, individual_krw, total_krw, per_m2_krw)` 적재.
+ * [1025] K-apt 관리비 → `complex_mgmt_fee(kapt_code, ym, common_krw, individual_krw, total_krw, per_m2_krw, items)` 적재.
+ *
+ * [1025] 첫 실행(2026-09-29) "처리=200 적재=0 실패=200 · HTTP 400" 의 원인은 오퍼레이션명이었다(kapt-mgmt-fee-api.ts 머리).
+ * 이제 단지당 22회(공용 17 + 개별 5) — 200곳 = 4,400회/일. 항목별 금액은 jsonb `items` 로 같이 쓴다. 마이그레이션
+ * (`_1025_mgmt_fee_items`)이 아직 안 붙어 items 열이 없으면 그 열만 빼고 다시 쓴다(총액 적재가 열 하나 때문에 멈추지 않게).
  *
  * 후보 고르기(1회 200곳): 수도권(11·41·28) 대장(source_key='k-apt-basic') 중 **실거래가 있는 단지 우선**.
  *   · 뷰 `kapt_mgmt_fee_candidates`(마이그레이션 20260928125309) — has_tx(complex_master_link 에 kapt_code 가
@@ -152,7 +156,7 @@ export async function ingestKaptMgmtFeeBatch(opts: { ym?: string; limit?: number
     try {
       const fee = await fetchKaptMgmtFee(c.kapt_code, ym);
       await new Promise((r) => setTimeout(r, DELAY_MS));
-      const row = toMgmtFeeRow(c.kapt_code, ym, fee.commonKrw, fee.individualKrw, c.manage_area_m2, fetchedAt);
+      const row = toMgmtFeeRow(c.kapt_code, ym, fee.commonKrw, fee.individualKrw, c.manage_area_m2, fetchedAt, fee.items);
       return row ? { kind: "ok" as const, c, row } : { kind: "miss" as const, c };
     } catch (e) {
       await new Promise((r) => setTimeout(r, DELAY_MS));
@@ -174,9 +178,18 @@ export async function ingestKaptMgmtFeeBatch(opts: { ym?: string; limit?: number
   }
 
   let inserted = 0;
+  /* [1025] items 열이 아직 없으면(마이그레이션 미적용 — PostgREST "Could not find the 'items' column") 그 열만 빼고 다시 */
+  let itemsColumnMissing = false;
+  const withoutItems = (chunk: MgmtFeeRow[]) => chunk.map(({ items: _items, ...rest }) => rest);
   for (let i = 0; i < rows.length; i += UPSERT_CHUNK) {
-    const chunk = rows.slice(i, i + UPSERT_CHUNK);
-    const { error } = await sb.from("complex_mgmt_fee").upsert(chunk, { onConflict: "kapt_code,ym" });
+    let chunk: MgmtFeeRow[] = rows.slice(i, i + UPSERT_CHUNK);
+    if (itemsColumnMissing) chunk = withoutItems(chunk);
+    let { error } = await sb.from("complex_mgmt_fee").upsert(chunk, { onConflict: "kapt_code,ym" });
+    if (error && !itemsColumnMissing && /items/.test(error.message) && /column/i.test(error.message)) {
+      itemsColumnMissing = true;
+      if (errors.length < 3) errors.push("complex_mgmt_fee.items 열 없음(마이그레이션 미적용) — 항목별 금액 없이 적재");
+      ({ error } = await sb.from("complex_mgmt_fee").upsert(withoutItems(chunk), { onConflict: "kapt_code,ym" }));
+    }
     if (error) {
       failed += chunk.length;
       if (errors.length < 3) errors.push(`complex_mgmt_fee upsert: ${error.message}`);

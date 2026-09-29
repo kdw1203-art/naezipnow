@@ -41,6 +41,10 @@ const LEGAL_LINKS = [
   { label: "내 집 마련 여정", href: "/journey", bold: false },
   { label: "계약·잔금 일정표", href: "/journey/contract", bold: false },
   { label: "월간 리포트", href: "/reports", bold: false },
+  /* [1025] 시장 12가지 반영 — 결정 카드(⑨)·살까 빌릴까(⑪)·중개사·임대인(③⑫) 입구를 모든 페이지에서 닿게 */
+  { label: "결정 카드", href: "/decide", bold: false },
+  { label: "살까, 빌릴까", href: "/calculator/rent-vs-buy", bold: false },
+  { label: "중개사·임대인", href: "/pro", bold: false },
   /* N20 — 공개 집계 API 문서. 링크가 없으면 크롤러도 사람도 도달하지 못한다. */
   { label: "공개 API", href: "/developers", bold: false },
 ] as const;

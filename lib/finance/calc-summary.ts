@@ -226,3 +226,25 @@ export const ACQ_TAX_HOW: readonly string[] = [
 
 /** 취득세 근거 — 화면 각주·ⓘ 출처 */
 export const ACQ_TAX_BASIS = "지방세법 제11조·제13조의2 · 지방세특례제한법 제36조의3 · 2026.09 확인";
+
+/* ── [1025 · 담당 S] 공시 금리표 → 대표 금리 ─────────────────────────────── */
+
+function parseRateRange(s: string): { min: number; max: number } | null {
+  const nums = s.match(/\d+(?:\.\d+)?/g)?.map(Number).filter(Number.isFinite);
+  if (!nums || nums.length === 0) return null;
+  return { min: Math.min(...nums), max: Math.max(...nums) };
+}
+
+/**
+ * 은행별 변동금리(없으면 고정) "3.62~5.13%" 범위 중간값의 평균(소수 둘째 자리) — 못 만들면 null.
+ * /calculator(calculator-client deriveAverageRate)와 같은 식 · 살까·빌릴까 계산기(/calculator/rent-vs-buy)가 서버에서 쓴다.
+ */
+export function representativeRate(rates: ReadonlyArray<{ variable: string; fixed: string }>): number | null {
+  const mids: number[] = [];
+  for (const r of rates) {
+    const range = parseRateRange(r.variable) ?? parseRateRange(r.fixed);
+    if (range) mids.push((range.min + range.max) / 2);
+  }
+  if (mids.length === 0) return null;
+  return Math.round((mids.reduce((a, b) => a + b, 0) / mids.length) * 100) / 100;
+}

@@ -1,3 +1,4 @@
+/* [1025 · 결정·비서] 마이 화면에 /decide · /my/assistant 진입 링크(게스트 메뉴 1줄 + 로그인 허브 아래 카드 2줄). */
 import Link from "next/link";
 import { isPaidPlan } from "@/lib/subscriptions/labels";
 import { PageShell } from "@/app/components/PageShell";
@@ -137,6 +138,8 @@ async function loadMyPurchasedReports(
 /* ── 비로그인 안내 — 공용 GuestGate(h1 포함) ── */
 function GuestView() {
   const menu = [
+    /* [1025 · 결정·비서] 결정 카드는 게스트도 쓴다(이 기기 저장) */
+    { label: "결정 카드", href: "/decide" },
     { label: "포인트 상점", href: "/points/shop" },
     { label: "구독 · 멤버십", href: "/subscription" },
     { label: "고객센터", href: "/support" },
@@ -332,6 +335,25 @@ export default async function MyPage() {
   return (
     <PageShell title="마이">
       <MyHubView data={data} />
+      {/* [1025 · 결정·비서] 진입 링크 두 줄 — 헤더는 통합자 영역이라 여기(마이)에만 */}
+      <section className="card mt-4 max-md:mt-3 rounded-lg px-4 py-0.5" aria-label="결정 카드 · AI 비서">
+        <ul className="m-0 flex list-none flex-col divide-y p-0" data-tone="plain">
+          {[
+            { label: "결정 카드", sub: "후보 3곳 · 내 기준 · 결정 저장", href: "/decide" },
+            { label: "AI 비서", sub: "이번 주 자동 알림 · 임장 일정 · 감시 목록", href: "/my/assistant" },
+          ].map((m) => (
+            <li key={m.href}>
+              <Link href={m.href} className="flex min-h-10 items-center justify-between gap-3 py-[13px] no-underline">
+                <span>
+                  <span className="block t-body font-semibold text-text-1">{m.label}</span>
+                  <span className="block t-caption text-text-3">{m.sub}</span>
+                </span>
+                <span className="text-text-3">›</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
     </PageShell>
   );
 }

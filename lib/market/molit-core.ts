@@ -1,4 +1,5 @@
 /**
+ * [1025] 이력 백필 상한 40 → 160곳/실행(HISTORY_MAX_REGIONS_PER_RUN) · 수동 상한 200(HISTORY_MAX_REGIONS_CAP)
  * [1024] 국토부 실거래 적재의 **순수 도우미** — server-only 사슬 밖.
  *
  * molit-transactions.ts 는 supabase/service(server-only)를 물고 있어 node:test 가 직접 부르지 못한다
@@ -82,10 +83,15 @@ export const HISTORY_BACKFILL_START_YM = "202512";
 /** 하한 — 이 달보다 과거는 받지 않는다 */
 export const HISTORY_BACKFILL_FLOOR_YM = "202101";
 /**
- * 1회 실행 시군구 상한. data.go.kr 일일 한도 10,000 회 안에서 다른 크론(아파트 일일 ≈32 · 비아파트 ≈250 ·
- * 관리비 ≈400)과 나눠 쓴다. 시군구 1곳 = 유형 2종 × 최대 3페이지 = 최대 6회 → 40곳 ≤ 240회.
+ * 1회 실행 시군구 상한. data.go.kr 일일 한도 10,000 회 안에서 다른 크론과 나눠 쓴다.
+ * 시군구 1곳 = 유형 2종 × 최대 3페이지 = 최대 6회.
+ * [1025] 40 → 160(≤ 960회/실행) · 크론 하루 2회(02:40·14:40 UTC) → ≤ 1,920회/일. 40곳·1회로는 수도권 ≈80곳 × 60개월이
+ * 넉 달 걸렸다. 하루 합계: 관리비 200곳 × 22회 = 4,400 · 백필 ≤ 1,920 · 비아파트 ≈250 · 아파트 일일 ≈32 · apt-master/
+ * detail ≈400 → ≈ 7,000 < 10,000.
  */
-export const HISTORY_MAX_REGIONS_PER_RUN = 40;
+export const HISTORY_MAX_REGIONS_PER_RUN = 160;
+/** [1025] 수동 ?regions= 상한 — 이 위로는 크론 예산(240초) 안에 못 끝난다 */
+export const HISTORY_MAX_REGIONS_CAP = 200;
 /** 1회 실행에서 넘길 수 있는 최대 월 수 — 빈 달 판정(HEAD 카운트 ≈80회/월)이 예산을 먹지 않게 */
 export const HISTORY_MAX_MONTHS_PER_RUN = 3;
 /** public_data_cache.cache_key */

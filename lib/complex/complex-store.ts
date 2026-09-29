@@ -1,4 +1,6 @@
 /**
+ * [1025] getComplexDeals 에 includeCancelled 옵션(기본 false) — 단지 상세 최근 실거래 표만 해제 신고 행을 취소선으로 보인다.
+ *        매매 조회 4곳(대표 행·목록·공용 행·해제 행)에 property_type='apartment' — 동명 오피스텔이 섞이지 않게.
  * 단지(complex) 데이터 — 실거래(market_transactions) 기반.
  *
  * 배경(사실 우선): 과거엔 `complexes`/`complex_transactions` 테이블을 가정했으나
@@ -451,6 +453,7 @@ export async function getComplexBaseById(
     .eq("complex_name", dec.name)
     .eq("region_name", dec.region)
     .eq("transaction_type", "trade")
+    .eq("property_type", "apartment")
     .eq("is_cancelled", false)
     .order("build_year", { ascending: false, nullsFirst: false })
     .limit(1);
@@ -929,6 +932,7 @@ async function searchComplexesByDistrictOnly(
     .from("market_transactions")
     .select("complex_name, region_name, address, build_year")
     .eq("transaction_type", "trade")
+    .eq("property_type", "apartment")
     .eq("is_cancelled", false)
     .not("complex_name", "is", null);
   if (dist) {
@@ -1279,10 +1283,36 @@ const loadTradeRowsShared = cache(async (region: string, name: string): Promise<
     .eq("complex_name", name)
     .eq("region_name", region)
     .eq("transaction_type", "trade")
+    /* [1025] 인덱스 mt_trade_complex_cov2_idx 의 INCLUDE 에 property_type 이 있어(release-1007 V19) 조건을 더해도 Index Only Scan */
+    .eq("property_type", "apartment")
     .eq("is_cancelled", false)
     .gt("deal_amount_krw", 0)
     .order("contract_ym", { ascending: false });
   if (error) throw dbError(`market_transactions (단지 실거래 ${name})`, error);
+  return (data as TradeRowLite[] | null) ?? [];
+});
+
+/**
+ * [1025] 해제 신고된 매매 행만 — getComplexDeals({ includeCancelled: true }) 가 공용 행에 덧붙인다.
+ * 공용 행(위)은 그대로 둔다: 부분 인덱스·1,000행 상한·대표가·신고가 계산이 전부 그 행 위에 서 있고, 해제분이
+ * 거기 섞이면 상한을 해제 행이 먹는다. 해제 행은 단지당 소수(실측 전체 12,725건)라 따로 한 번 더 읽는다(렌더당 1회).
+ */
+const loadCancelledTradeRowsShared = cache(async (region: string, name: string): Promise<TradeRowLite[]> => {
+  const sb = getServiceSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from("market_transactions")
+    .select("contract_ym, deal_amount_krw, area_m2, contract_day, floor")
+    .eq("complex_name", name)
+    .eq("region_name", region)
+    // tx-filters-allow: 해제 신고 행 자체를 취소선으로 보이는 표(단지 상세 최근 실거래)용 — 시세 계산에는 쓰지 않는다
+    .eq("transaction_type", "trade")
+    .eq("property_type", "apartment")
+    .eq("is_cancelled", true)
+    .gt("deal_amount_krw", 0)
+    .order("contract_ym", { ascending: false })
+    .limit(200);
+  if (error) throw dbError(`market_transactions (단지 해제 실거래 ${name})`, error);
   return (data as TradeRowLite[] | null) ?? [];
 });
 
@@ -1380,27 +1410,49 @@ export async function getTransactionHistoryWithBands(
  * 읽고 있어 **추가 질의가 없다**. 조건도 같다(매매 · 해제 신고 제외 · 금액>0, 최신 계약월부터). 조회 실패는 던진다
  * (빈 배열은 "거래 없음"이라는 강한 주장이다 — 위장하지 않는다). kapt id 는 조회 키가 아니다(canonical_id 를 넘긴다).
  */
-export async function getComplexDeals(complexId: string): Promise<HubDeal[]> {
+/** [1025] 해제 신고 표식 — includeCancelled 로 부를 때만 채워진다(기본 경로는 예전과 같은 HubDeal) */
+export type HubDealMaybeCancelled = HubDeal & { cancelled?: boolean };
+
+function toHubDeal(r: TradeRowLite): HubDeal | null {
+  const ym = String(r.contract_ym ?? "");
+  const krw = Number(r.deal_amount_krw);
+  if (!/^\d{6}$/.test(ym) || !Number.isFinite(krw) || krw <= 0) return null;
+  const area = r.area_m2 == null ? null : Number(r.area_m2);
+  const day = r.contract_day == null ? null : Number(r.contract_day);
+  const floor = r.floor == null ? null : Number(r.floor);
+  return {
+    ym,
+    day: day != null && Number.isFinite(day) && day >= 1 && day <= 31 ? day : null,
+    man: Math.round(krw / 10_000),
+    area: area != null && Number.isFinite(area) && area > 0 ? area : null,
+    /* 지하층(음수)은 그대로 둔다 — 0 만 "모름" */
+    floor: floor != null && Number.isFinite(floor) && floor !== 0 ? floor : null,
+  };
+}
+
+/**
+ * [1025] opts.includeCancelled(기본 false) — true 면 해제 신고 행을 `cancelled: true` 로 덧붙여 최신 계약월순으로 섞어
+ * 돌려준다. 단지 상세 **최근 실거래 표**만 이 옵션을 켠다(취소선 + "해제" 배지). 대표가·신고가·추이·비교·임베드는
+ * 기본(false)이라 예전과 같다 — 해제분은 시세가 아니다(#150). 신고가/신저가는 complex-v2-model.recentDealRows 가
+ * `!d.cancelled` 로 다시 거른다.
+ */
+export async function getComplexDeals(complexId: string, opts?: { includeCancelled?: boolean }): Promise<HubDealMaybeCancelled[]> {
   const dec = decodeComplexIdForQuery(complexId, "getComplexDeals");
   if (!dec) return [];
   const rows = await loadTradeRowsShared(dec.region, dec.name);
-  const out: HubDeal[] = [];
+  const out: HubDealMaybeCancelled[] = [];
   for (const r of rows) {
-    const ym = String(r.contract_ym ?? "");
-    const krw = Number(r.deal_amount_krw);
-    if (!/^\d{6}$/.test(ym) || !Number.isFinite(krw) || krw <= 0) continue;
-    const area = r.area_m2 == null ? null : Number(r.area_m2);
-    const day = r.contract_day == null ? null : Number(r.contract_day);
-    const floor = r.floor == null ? null : Number(r.floor);
-    out.push({
-      ym,
-      day: day != null && Number.isFinite(day) && day >= 1 && day <= 31 ? day : null,
-      man: Math.round(krw / 10_000),
-      area: area != null && Number.isFinite(area) && area > 0 ? area : null,
-      /* 지하층(음수)은 그대로 둔다 — 0 만 "모름" */
-      floor: floor != null && Number.isFinite(floor) && floor !== 0 ? floor : null,
-    });
+    const d = toHubDeal(r);
+    if (d) out.push(d);
   }
+  if (!opts?.includeCancelled) return out;
+  const cancelledRows = await loadCancelledTradeRowsShared(dec.region, dec.name);
+  for (const r of cancelledRows) {
+    const d = toHubDeal(r);
+    if (d) out.push({ ...d, cancelled: true });
+  }
+  /* 공용 행과 같은 순서(최신 계약월 먼저) — 같은 달 안은 계약일 내림차순 */
+  out.sort((a, b) => b.ym.localeCompare(a.ym) || (b.day ?? -1) - (a.day ?? -1));
   return out;
 }
 

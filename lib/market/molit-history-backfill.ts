@@ -1,16 +1,17 @@
 /**
+ * [1025] 1회 40곳 → 160곳(호출 ≤ 960) · 크론 하루 2회(vercel.json 02:40·14:40 UTC). 상한 상수는 molit-core.
  * [1024] 수도권 아파트 실거래 **이력 백필** — 2025-12 부터 달을 거꾸로 돌며 빈 (시군구, 계약월)만 채운다.
  *
  * 실측(2026-09-28): market_transactions 는 계약월 2026-01~09 뿐이다. 단지 상세의 3년·5년 기간 칩이
  * 비어 있는 이유가 이것이다. 국토부 API 는 과거 월을 그대로 돌려주므로, 수도권(서울 11·경기 41·인천 28)
- * 시군구 ≈80곳 × 60개월을 하루 40곳씩 채우면 넉 달 안에 2021-01 까지 닿는다.
+ * 시군구 ≈80곳 × 60개월을 하루 40곳씩 채우면 넉 달 — [1025] 160곳 × 2회/일이면 보름 안에 2021-01 까지 닿는다.
  *
  * 규칙
  *  · 대상 시군구 = listCapitalSigungu() ∩ lawd_region_map(실거래가 이미 있는 코드) — map 을 못 읽으면 정적 목록.
  *  · (구, 월, 아파트) 에 행이 0 인 조합만(findCoverageGaps) — 이미 있는 달은 건드리지 않는다(이중 계상 없음).
  *  · raw 미저장(keepRaw:false) — 해제 판정은 적재 시 계산돼 is_cancelled 에 남는다.
  *  · 커서(public_data_cache) 는 "지금 보는 달" 하나. 넘길지 여부는 shouldAdvanceMonth(순수) 가 정한다.
- *  · 상한: 1회 40곳(HISTORY_MAX_REGIONS_PER_RUN) · 3개월 · 유형·구당 3페이지(1,000행 × 3).
+ *  · 상한: 1회 160곳(HISTORY_MAX_REGIONS_PER_RUN) · 3개월 · 유형·구당 3페이지(1,000행 × 3).
  */
 import { getServiceSupabase } from "@/lib/supabase/service";
 import type { SigunguInfo } from "@/lib/national-data/region-codes";
@@ -20,6 +21,7 @@ import {
   HISTORY_BACKFILL_START_YM,
   HISTORY_CURSOR_KEY,
   HISTORY_MAX_MONTHS_PER_RUN,
+  HISTORY_MAX_REGIONS_CAP,
   HISTORY_MAX_REGIONS_PER_RUN,
   isBackfillDone,
   isYm,
@@ -74,7 +76,7 @@ export async function backfillMolitHistory(opts: {
   now?: Date;
 } = {}): Promise<HistoryBackfillResult> {
   const now = opts.now ?? new Date();
-  const maxRegions = Math.max(1, Math.min(60, opts.maxRegions ?? HISTORY_MAX_REGIONS_PER_RUN));
+  const maxRegions = Math.max(1, Math.min(HISTORY_MAX_REGIONS_CAP, opts.maxRegions ?? HISTORY_MAX_REGIONS_PER_RUN));
   const maxMonths = Math.max(1, Math.min(12, opts.maxMonths ?? HISTORY_MAX_MONTHS_PER_RUN));
 
   const cursor = await readCursor<HistoryCursor>(HISTORY_CURSOR_KEY);

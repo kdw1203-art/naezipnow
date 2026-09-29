@@ -99,7 +99,11 @@ const STATIC_ROUTES: Array<{ path: string; priority: number }> = [
   { path: "/calculator/jeonse-monthly", priority: 0.6 },
   { path: "/calculator/gap", priority: 0.6 },
   { path: "/calculator/rental-yield", priority: 0.6 },
+  /* [1025 · 담당 S] 살까·빌릴까 — 매매·전세·월세 총비용(app/calculator/rent-vs-buy) */
+  { path: "/calculator/rent-vs-buy", priority: 0.6 },
   { path: "/widget", priority: 0.5 }, // N17 — 시세 위젯 배포 안내
+  /* [1025 · 브리핑] 중개사·임대인 소개 화면(정적). /complex/[id]/brief 는 noindex 라 싣지 않는다 */
+  { path: "/pro", priority: 0.5 },
   // 가이드 (규제·세금 안내 · 계약 체크리스트)
   { path: "/guides", priority: 0.6 },
   { path: "/data-sources", priority: 0.5 },

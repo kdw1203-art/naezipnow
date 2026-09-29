@@ -273,6 +273,7 @@ async function fetchJeonseByComplex(
       .from("market_transactions")
       .select("region_name,complex_name,deposit_krw,monthly_rent_krw,contract_ym")
       .eq("transaction_type", "rent")
+      .eq("property_type", "apartment") // [1025 · #12] 동명 오피스텔 전세가 아파트 전세가율에 섞이지 않게
       .eq("is_cancelled", false)
       .gt("deposit_krw", 0)
       .gte("contract_ym", rentCutoffYm())

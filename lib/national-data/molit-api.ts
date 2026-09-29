@@ -1,4 +1,6 @@
-/* [1024] 연립다세대 전월세(RTMSDataSvcRHRent) 매핑 추가 · 페이징(maxPages) — 이력 백필·비아파트 수집용 */
+/* [1025] 오류 XML 의 resultCode·resultMsg(또는 returnReasonCode·returnAuthMsg)·HTTP 상태를 `detail` 로 돌려준다 — 적재 로그가
+   "국토부 API 응답 실패(네트워크·5xx·오류 XML)" 대신 "30 SERVICE_KEY_IS_NOT_REGISTERED_ERROR" 처럼 사유를 적게.
+   [1024] 연립다세대 전월세(RTMSDataSvcRHRent) 매핑 추가 · 페이징(maxPages) — 이력 백필·비아파트 수집용 */
 import { encodingKeyForUrl } from "@/lib/public-data/data-go-kr-keys";
 import { resolveSigunguCd } from "@/lib/national-data/region-codes";
 
@@ -55,6 +57,24 @@ export function parseMolitTotalCount(text: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/** 정상 코드 — 국토부는 "00"(가끔 "0"·"000") */
+const OK_RESULT_CODE = /^0+$/;
+
+/**
+ * [1025] 오류 XML 의 사유 — "<코드> <메시지>". 국토부 봉투(resultCode·resultMsg)와 공공데이터포털 게이트웨이 봉투
+ * (returnReasonCode·returnAuthMsg — 키 미등록·한도 초과가 이 모양으로 온다) 둘 다 본다. 정상 코드(00)면 null.
+ * 순수 함수 — 테스트가 문자열로 부른다.
+ */
+export function parseMolitErrorDetail(text: string): string | null {
+  const code = (text.match(/<returnReasonCode>\s*([^<]*?)\s*<\/returnReasonCode>/)?.[1] ??
+    text.match(/<resultCode>\s*([^<]*?)\s*<\/resultCode>/)?.[1])?.trim();
+  const msg = (text.match(/<returnAuthMsg>\s*([^<]*?)\s*<\/returnAuthMsg>/)?.[1] ??
+    text.match(/<resultMsg>\s*([^<]*?)\s*<\/resultMsg>/)?.[1])?.trim();
+  if (code && OK_RESULT_CODE.test(code)) return null;
+  if (!code && !msg) return null;
+  return [code, msg].filter(Boolean).join(" ").slice(0, 160);
+}
+
 async function fetchMolitRtms(
   path: string,
   params: { district?: string; lawdCd?: string; yyyymm?: string; numOfRows?: number; pageNo?: number },
@@ -64,6 +84,8 @@ async function fetchMolitRtms(
   reason?: MolitUnavailableReason;
   /** [1024] 서버가 알려 준 전체 건수(페이징용). 못 읽으면 null */
   totalCount: number | null;
+  /** [1025] fetch-failed 의 사유 — "HTTP 500" · "30 SERVICE_KEY_IS_NOT_REGISTERED_ERROR" · 예외 메시지 */
+  detail?: string;
 }> {
   const key = molitKey();
   if (!key) return { rows: [], mode: "mock", reason: "not-configured", totalCount: null };
@@ -83,7 +105,12 @@ async function fetchMolitRtms(
 
   try {
     const res = await fetch(url.toString(), { next: { revalidate: 3600 } });
-    if (!res.ok) return { rows: [], mode: "mock", reason: "fetch-failed", totalCount: null };
+    if (!res.ok) {
+      /* [1025] 4xx/5xx 본문에도 오류 XML 이 실릴 수 있다 — 있으면 코드·메시지, 없으면 HTTP 상태 */
+      const body = await res.text().catch(() => "");
+      const detail = parseMolitErrorDetail(body) ?? `HTTP ${res.status}`;
+      return { rows: [], mode: "mock", reason: "fetch-failed", totalCount: null, detail };
+    }
     const text = await res.text();
     const items = parseMolitXmlItems(text);
     const totalCount = parseMolitTotalCount(text);
@@ -92,9 +119,13 @@ async function fetchMolitRtms(
        응답이 오류 XML 이다. 후자를 구분해 둔다: 국토부는 실패도 200 으로
        돌려주면서 resultCode 를 00 이 아닌 값으로 준다. */
     const okCode = /<resultCode>\s*0*0\s*<\/resultCode>/.test(text);
-    return { rows: [], mode: "mock", reason: okCode ? "empty" : "fetch-failed", totalCount };
-  } catch {
-    return { rows: [], mode: "mock", reason: "fetch-failed", totalCount: null };
+    if (okCode) return { rows: [], mode: "mock", reason: "empty", totalCount };
+    /* [1025] 사유를 같이 돌려준다 — resultCode 자체가 없으면(HTML 오류 페이지 등) 본문 머리 60자 */
+    const detail = parseMolitErrorDetail(text) ?? `오류 XML(코드 없음): ${text.replace(/\s+/g, " ").trim().slice(0, 60)}`;
+    return { rows: [], mode: "mock", reason: "fetch-failed", totalCount, detail };
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : String(e);
+    return { rows: [], mode: "mock", reason: "fetch-failed", totalCount: null, detail: detail.slice(0, 160) };
   }
 }
 
@@ -228,7 +259,13 @@ export async function fetchMolitDeals(
      */
     maxPages?: number;
   },
-): Promise<{ deals: MolitDeal[]; mode: "live" | "mock"; reason?: MolitUnavailableReason }> {
+): Promise<{
+  deals: MolitDeal[];
+  mode: "live" | "mock";
+  reason?: MolitUnavailableReason;
+  /** [1025] reason=fetch-failed 일 때 사유("HTTP 500" · "30 SERVICE_KEY_IS_NOT_REGISTERED_ERROR" …) — 로그용 */
+  detail?: string;
+}> {
   const cfg = RTMS_TYPES[type];
   const path = `${cfg.service}/get${cfg.service}`;
   const maxPages = Math.max(1, Math.min(10, Math.floor(params.maxPages ?? 1)));
@@ -243,7 +280,12 @@ export async function fetchMolitDeals(
       rows.push(...next.rows);
     }
   }
-  return { deals: rows.map((r) => normalizeDeal(cfg, r)), mode: first.mode, reason: first.reason };
+  return {
+    deals: rows.map((r) => normalizeDeal(cfg, r)),
+    mode: first.mode,
+    reason: first.reason,
+    ...(first.detail ? { detail: `${cfg.service} ${first.detail}` } : {}),
+  };
 }
 
 /** 거래 목록 요약(건수·평균 매매가/㎡·평균 보증금). */

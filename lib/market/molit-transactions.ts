@@ -1,4 +1,5 @@
 /**
+ * [1025] 응답 실패 사유(molit-api detail)를 첫오류 로그에 · sliceSize 상한 60 → 200(이력 백필 160곳)
  * 국토교통부 실거래가(RTMS) → `market_transactions` 적재.
  *
  * 배경(사실 우선): 기존 `molit-transactions-ingest` 크론은 운영 DB에 존재하지 않는
@@ -463,7 +464,8 @@ export async function ingestMolitTransactions(opts: {
   const now = opts.now ?? new Date();
   const yyyymm = (opts.yyyymm ?? autoTargetMonth(now)).replace(/[^0-9]/g, "").slice(0, 6);
   const all = listMolitSigungu();
-  const sliceSize = Math.max(1, Math.min(60, opts.sliceSize ?? 16));
+  /* [1025] 상한 60 → 200 — 이력 백필이 1회 160곳을 넘긴다(gapsFirst 경로). 일일 크론 기본 16 은 그대로 */
+  const sliceSize = Math.max(1, Math.min(200, opts.sliceSize ?? 16));
   const keepRaw = opts.keepRaw ?? true;
   const maxPages = Math.max(1, Math.min(10, opts.maxPages ?? 1));
   /* 수집 유형은 실행마다 환경변수로 정해진다(기본 아파트). 왜 스위치로 뒀는지는
@@ -600,6 +602,9 @@ export async function ingestMolitTransactions(opts: {
          "0건"으로 읽으면 그 (구, 월)이 빈 채로 넘어간다. */
       let notConfigured = false;
       let fetchFailed = false;
+      /* [1025] 첫 실패의 사유(molit-api detail — "RTMSDataSvcOffiRent 30 SERVICE_KEY_IS_NOT_REGISTERED_ERROR" 등).
+         2026-09-29 비아파트 42건이 "응답 실패(네트워크·5xx·오류 XML)" 로만 남아 원인을 못 짚었다. */
+      let fetchDetail: string | null = null;
       for (const t of targetTypes) {
         const res = await fetchMolitDeals(t.type, {
           lawdCd: info.sigunguCd, // 이름 매칭 금지 — 동명이구 오적재 방지 (아래 커밋 메시지 참고)
@@ -611,6 +616,7 @@ export async function ingestMolitTransactions(opts: {
         if (res.mode === "live") mode = "live";
         else if (res.reason === "not-configured") notConfigured = true;
         else if (res.reason === "fetch-failed") fetchFailed = true;
+        if (res.reason === "fetch-failed") fetchDetail ??= res.detail ?? null;
         for (const deal of res.deals) {
           const row = toRow(deal, {
             info,
@@ -637,7 +643,8 @@ export async function ingestMolitTransactions(opts: {
            "채워짐"이 되어 나머지 절반은 영영 안 온다. DB 오류가 아니므로 연속 오류 차단기는 건드리지 않는다. */
         result.errors += 1;
         result.regions.push({ code: info.sigunguCd, name: regionName, rows: 0, status: "error" });
-        firstError ??= `${info.sigunguCd}: 국토부 API 응답 실패(네트워크·5xx·오류 XML)`;
+        firstError ??= `${info.sigunguCd}: 국토부 API 응답 실패(${fetchDetail ?? "네트워크·5xx·오류 XML"})`;
+        logger.warn("[molit-tx]", info.sigunguCd, yyyymm, "국토부 API 응답 실패", fetchDetail ?? "(사유 없음)");
         continue;
       }
       if (mode !== "live" || rows.length === 0) {

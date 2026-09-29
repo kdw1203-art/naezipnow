@@ -220,7 +220,7 @@ const REDIRECT_GROUPS: readonly RedirectGroup[] = [
       ["/note/new", "/notes/new"],
       ["/note", "/notes"],
       ["/membership", "/subscription"],
-      ["/pro", "/town/experts"],
+      /* [1025] "/pro" 는 이제 실제 화면(중개사·임대인 입구 app/pro)이라 규칙에서 뺐다 — 옛 프로토타입 경로 흡수 목적은 끝났다. */
       ["/meetup", "/town/groups"],
       ["/faq", "/support"],
       ["/partnership", "/support"],

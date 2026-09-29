@@ -9,11 +9,23 @@ import { useState } from "react";
 
 const TOPICS = ["사무소 홈페이지에 위젯 넣기", "블로그·카페 활용 방법", "여러 단지 위젯 일괄 발급", "기타 문의"] as const;
 
-export function OfficeLeadForm() {
+/* [1025 · 브리핑] /pro 가 같은 폼을 쓴다 — 제목 접두사·문의 유형·꼬리 문장만 인자로 받는다(기본값은 예전 그대로 → /widget 은 안 바뀐다). */
+export function OfficeLeadForm({
+  subjectPrefix = "[중개사 위젯]",
+  topics = TOPICS,
+  footnote = "입력하신 정보는 문의 답변에만 사용됩니다. 위젯 자체는 지금도 무료·무신청으로 위 생성기에서 바로 발급됩니다.",
+}: {
+  /** 관리자 인박스 제목 접두사 — 어느 화면에서 온 문의인지 */
+  subjectPrefix?: string;
+  /** 문의 유형 목록(첫 항목이 기본) */
+  topics?: readonly string[];
+  /** 폼 아래 사실 한 줄 */
+  footnote?: string;
+} = {}) {
   const [office, setOffice] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [topic, setTopic] = useState<(typeof TOPICS)[number]>(TOPICS[0]);
+  const [topic, setTopic] = useState<string>(topics[0] ?? TOPICS[0]);
   const [note, setNote] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -45,7 +57,7 @@ export function OfficeLeadForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           category: "일반 문의",
-          subject: `[중개사 위젯] ${office.trim()}`,
+          subject: `${subjectPrefix} ${office.trim()}`,
           message,
           email: email.trim(),
         }),
@@ -112,10 +124,10 @@ export function OfficeLeadForm() {
           <span className="text-[12px] font-bold text-text-2">문의 유형</span>
           <select
             value={topic}
-            onChange={(e) => setTopic(e.target.value as (typeof TOPICS)[number])}
+            onChange={(e) => setTopic(e.target.value)}
             className="rounded-lg border border-line bg-bg px-3 py-2.5 text-[13px] font-semibold text-ink outline-none focus:border-primary"
           >
-            {TOPICS.map((t) => (
+            {topics.map((t) => (
               <option key={t} value={t}>
                 {t}
               </option>
@@ -143,10 +155,7 @@ export function OfficeLeadForm() {
       >
         {state === "sending" ? "접수 중…" : "문의 보내기"}
       </button>
-      <p className="text-[12px] leading-[1.6] text-text-3">
-        입력하신 정보는 문의 답변에만 사용됩니다. 위젯 자체는 지금도 무료·무신청으로
-        위 생성기에서 바로 발급됩니다.
-      </p>
+      <p className="text-[12px] leading-[1.6] text-text-3">{footnote}</p>
     </div>
   );
 }
