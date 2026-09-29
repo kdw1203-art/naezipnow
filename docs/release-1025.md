@@ -59,3 +59,6 @@
 - **/pro**: 머리 "브리핑 만들기" 채움 1 · 결론 "단지 이름 하나로 A4 한 장 · 인쇄까지 3단계" + 1·2·3 · 브리핑 견본 SVG 문서(공작아파트 실측값, "견본" 라벨, md+ 만 — 폰은 축소 글자 10px 아래라 숨김) · 3칸 카드 결과 문장.
 - 의존성: `qrcode ^1.5.4`(dependencies) · `@types/qrcode`(dev). 클라이언트 번들 미유입(테스트 잠금). 새 경로 첫 로드 137~151KB.
 검증: build 통과(테스트 1,533) · 모바일 조작 검사 6경로 · 로컬 캡처(살까 빌릴까 결과: 5,704만 원 · 손익분기 2.0% — 시안과 일치).
+
+### 1025d — 배포 빌드 번들 예산 수리
+Vercel 빌드(fe5f793f)가 `check-bundle-budget` 에서 멈췄다: `/journey/contract` 496KB > 미등재 상한 495KB(계약 전 자동 확인 카드의 ComplexPicker 가 첫 로드에 실림). 예산은 올리지 않고 카드를 `PreContractCheckLazy`(next/dynamic, ssr:false, 같은 높이 자리 틀)로 뗐다 → 479KB. 일정표(ContractPlanner) 첫 화면은 그대로.
