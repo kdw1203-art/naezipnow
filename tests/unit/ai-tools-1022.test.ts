@@ -180,12 +180,13 @@ test("[1022] 신호 흐름선 — 최근 12개월 창 · 가격은 거래 없는
 });
 
 /* ── 셋 다: 한 줄 요약 세 토막 ──────────────────────────────────────────────────── */
-test("[1022] 한 줄 요약 세 토막(SummaryLine: headline · bandReason · 기준 시점)이 진단·예측·타이밍 카드 맨 위에 같은 부품으로", () => {
+test("[1022→1026] 한 줄 요약(SummaryLine → 결론 히어로: headline · bandReason · 기준 시점)이 네 카드 맨 위에 같은 부품으로", () => {
   assert.match(sig, /export function SummaryLine\(/);
-  assert.match(sig, /cxw-sum-h t-body font-bold text-ink/);
-  assert.match(sig, /cxw-sum-r t-sub text-text-2/);
-  assert.match(sig, /cxw-sum-t t-caption tabular-nums text-text-3/);
-  assert.equal((sig.match(/<SummaryLine /g) ?? []).length, 4, "진단 1 · 예측 2(자료 없음 분기 포함) · 타이밍 1");
+  /* [1026] 결론은 t-title(1025 표준) · 근거 한 줄은 bandReason · 기준 시점을 한 줄로 */
+  assert.match(sig, /cxw-sum-h min-w-0 flex-1 t-title font-bold text-ink/);
+  assert.match(sig, /cxw-sum-r t-sub tabular-nums text-text-2/);
+  assert.match(sig, /asOf \? `기준 \$\{asOf\}` : null/);
+  assert.equal((sig.match(/<SummaryLine\s/g) ?? []).length, 5, "진단 1 · 예측 2(자료 없음 분기 포함) · 타이밍 1 · [1026] 임장 동선 1");
   /* 세 카드 모두 asOf 를 받는다 */
   for (const c of ["DiagnosisSignature", "PredictionSignature", "TimingSignature"]) {
     assert.match(resultView, new RegExp(`<${c}[\\s\\S]*?asOf=\\{asOf\\}`), c);

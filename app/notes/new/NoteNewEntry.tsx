@@ -1,4 +1,5 @@
 "use client";
+/* [1026b · 노트 쓰기] fetchRevisit 을 내보낸다 — 1단계 "지난 체크 불러오기"(ComplexGlance, 지연 조각)가 ?revisit= 과 같은 로더를 쓴다. */
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -62,7 +63,7 @@ async function fetchTemplate(id: string): Promise<NoteFormTemplate | null> {
 }
 
 /** 소유자의 이전 노트 → 회차 프리필. 아닌 경우는 전부 null(조용히 일반 작성) */
-async function fetchRevisit(id: string): Promise<RevisitPrefill | null> {
+export async function fetchRevisit(id: string): Promise<RevisitPrefill | null> {
   try {
     const r = await fetch(`/api/inspection/notes/${encodeURIComponent(id)}`, { cache: "no-store" });
     if (!r.ok) return null;

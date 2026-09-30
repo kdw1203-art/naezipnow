@@ -1,10 +1,15 @@
 "use client";
+/* [1026b · 노트 쓰기] ① 폰 "5축 점수" 한 줄 막대 5개(현장 체크 카드 바로 아래 · 체크하면 바로 · 미입력 축 회색 "—" · lg 숨김 — 레일 레이더가 있다)
+   ② "메모에서 찾은 점검 제안"은 메모에서 바로 뽑는다(lib/notes/form-extras memoHintsFor — 3단계 메모 아래와 같은 값). */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
-import type { Dispatch, SetStateAction } from "react";
+import { Fragment, type Dispatch, type SetStateAction } from "react";
 import { Icon } from "@/app/components/Icon";
 import type { ChecklistGroupDef } from "@/lib/inspection/checklist";
 import type { TagDef, TodoItem } from "./NoteForm";
+import type { NoteScores } from "@/lib/notes/note-scores";
+import { axisBars, noteTotalScore } from "@/lib/notes/note-preview";
+import { memoHintsFor } from "@/lib/notes/form-extras";
 
 /* ============================================================
    [996 · 4] 2단계 "더 자세히 적기" — 체크리스트(34)·메모 힌트·태그(16)·고려사항.
@@ -24,8 +29,10 @@ export type NoteDetailFieldsProps = {
   openGroups: Record<string, boolean>;
   setOpenGroups: Dispatch<SetStateAction<Record<string, boolean>>>;
   templateSuggestedIds: Set<string>;
-  memoHints: Array<{ id: string; label: string }>;
-  setMemoHints: Dispatch<SetStateAction<Array<{ id: string; label: string }>>>;
+  /** [1026b] 메모 — 제안은 여기서 뽑는다(3단계와 같은 값) */
+  memo: string;
+  /** [1026b] 폰 5축 막대 재료(composeScoresFromChecks 결과) — null 이면 그리지 않는다(데스크톱 레일 화면) */
+  axisScores: NoteScores | null;
   /** visit["목적"] — 체크리스트 제목의 "목적(실거주)" */
   visitPurpose: string | undefined;
   tags: string[];
@@ -55,8 +62,8 @@ export function NoteDetailFields({
   openGroups,
   setOpenGroups,
   templateSuggestedIds,
-  memoHints,
-  setMemoHints,
+  memo,
+  axisScores,
   visitPurpose,
   tags,
   tagDefs,
@@ -77,10 +84,35 @@ export function NoteDetailFields({
   submitTodo,
   todoMax,
 }: NoteDetailFieldsProps) {
+  const memoHints = memoHintsFor(memo, checklistGroups, groupChecked);
+  const total = axisScores ? noteTotalScore(axisScores) : null;
   return (
-    /* [993] 2단계의 나머지 — 체크리스트(34)·태그(16)·고려사항(5)은 "같은 질문의 다른 형식"
+    <Fragment>
+    {axisScores && (
+      /* [1026b] 폰 5축 한 줄 — 레이더(레일)와 같은 값. 미입력 축은 빈 막대 + 회색 "—" */
+      <section aria-label="5축 점수" className="card rounded-2xl p-4 max-md:p-3.5 lg:hidden">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="t-body font-bold text-ink">5축 점수</span>
+          <span className="t-caption t-num text-text-3">{total != null ? `점수 ${total} / 100` : "현장 체크 미입력"}</span>
+        </div>
+        <ul className="m-0 mt-2 grid list-none grid-cols-5 gap-2 p-0">
+          {axisBars(axisScores).map((b) => (
+            <li key={b.key} className="min-w-0">
+              <span className="block truncate t-caption text-text-2">{b.label}</span>
+              <span className="mt-1 flex items-center gap-1">
+                <span aria-hidden="true" className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-divider">
+                  {b.pct != null && <span className="block h-full rounded-full bg-primary" style={{ width: `${b.pct}%` }} />}
+                </span>
+                <span className={`shrink-0 t-caption t-num ${b.pct != null ? "font-bold text-ink" : "text-text-3"}`}>{b.text}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+    {/* [993] 2단계의 나머지 — 체크리스트(34)·태그(16)·고려사항(5)은 "같은 질문의 다른 형식"
        이라 기본 화면에서 접는다. 필수는 위치 하나이고, 현장 체크 9칸 + 만족도만으로도
-       5축 점수·판단 카드가 만들어진다(lib/notes/note-scores). 열면 예전 그대로다. */
+       5축 점수·판단 카드가 만들어진다(lib/notes/note-scores). 열면 예전 그대로다. */}
     <details
       className="rise-in-3 card p-4"
       open={
@@ -119,8 +151,8 @@ export function NoteDetailFields({
                     key={h.id}
                     type="button"
                     onClick={() => {
+                      /* 담으면 제안에서 빠진다(체크한 항목은 memoHintsFor 가 뺀다) */
                       setGroupChecked((prev) => ({ ...prev, [h.id]: true }));
-                      setMemoHints((prev) => prev.filter((x) => x.id !== h.id));
                       const group = checklistGroups.find((g) =>
                         g.items.some((it) => it.id === h.id),
                       );
@@ -128,7 +160,7 @@ export function NoteDetailFields({
                         setOpenGroups((prev) => ({ ...prev, [group.id]: true }));
                       }
                     }}
-                    className="rounded-full border border-primary/30 bg-surface px-2.5 py-1 t-sub font-bold text-primary"
+                    className="rounded-full border border-primary/30 bg-surface px-2.5 py-1 t-sub font-bold text-primary max-md:min-h-10"
                   >
                     ＋ {h.label}
                   </button>
@@ -394,5 +426,6 @@ export function NoteDetailFields({
         </div>
       </div>
     </details>
+    </Fragment>
   );
 }

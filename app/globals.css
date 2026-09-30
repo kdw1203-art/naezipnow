@@ -8068,3 +8068,17 @@ main .pro-lay details > summary > .t-section::before {
     print-color-adjust: exact;
   }
 }
+
+/* [1026 · 노트 쓰기] 작성 화면(/notes/new · /notes/[id]/edit)은 PageShell(<main>) 밖이라 섹션 제목 온점 규칙
+   (main :is(section, article) > h2.t-section::before)이 닿지 않는다. 데스크톱 레일 "미리보기"(NotePreviewRail)의 섹션 제목에
+   같은 모양의 파란 점 하나를 단다 — 1025 표준 8 "섹션 제목 t-section + 파란 점 하나". 폼 카드 제목(t-body)은 그대로다. */
+.note-form :is(section, article) > :is(h2, h3).t-section::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 9999px;
+  background: var(--lq-blue);
+  vertical-align: 2px;
+}

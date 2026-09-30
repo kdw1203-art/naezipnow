@@ -1,3 +1,4 @@
+/* [1026b · AI 분석 8종] 새 틀에는 "② 내 조건" 번호 카드가 없다 — "② 에서 … 넣으면" 을 "내 조건에서 … 넣으면" 으로(절차 한 줄의 둘째 칸 이름과 같다). 계산은 그대로. */
 /**
  * [993] 판단 카드(Verdict) — AI 분석 결과의 **결과값**을 한 형식으로 조립한다.
  * [1008 · W] 화면 이름은 "결과 요약"이다(소유자: "무슨 말인지 모르겠다" — 판단 카드·규칙 계산·갈림·
@@ -262,7 +263,7 @@ function tilePool(
             key: "price",
             label: "기준 가격",
             value: formatKrwWon(loan.priceKrw, { style: "short" }),
-            note: "② 에 넣은 값",
+            note: "내 조건에 넣은 값",
             asOf: null,
             source: "입력값",
             confidence: "ok",
@@ -424,7 +425,7 @@ function tilePool(
           confidence: "ok",
           display: { kind: "won", manwon: loan.loanKrw / 10_000 },
         }
-      : none("loanAmount", "대출액", "입력값 계산", "② 에서 대출 비율·금리를 넣으면 계산"),
+      : none("loanAmount", "대출액", "입력값 계산", "내 조건에서 대출 비율·금리를 넣으면 계산"),
     loanInterest: loan
       ? {
           key: "loanInterest",
@@ -764,8 +765,8 @@ function toolMetric(
           loan: null,
           metric: null,
           headline: p
-            ? `${name}: 기준 가격 ${formatKrwWon(p, { style: "short" })} — ② 에서 대출 비율·금리를 넣으면 월 상환액과 이자를 계산해요.`
-            : `${name}: 최근 실거래가가 없어요 — ② 에서 기준 가격·대출 비율·금리를 넣으면 계산해요.`,
+            ? `${name}: 기준 가격 ${formatKrwWon(p, { style: "short" })} — 내 조건에서 대출 비율·금리를 넣으면 월 상환액과 이자를 계산해요.`
+            : `${name}: 최근 실거래가가 없어요 — 내 조건에서 기준 가격·대출 비율·금리를 넣으면 계산해요.`,
         };
       }
       /* 보유 기간을 넣었으면 시세 예측과 같은 시나리오 가격에 판다고 가정한 연 수익률까지 — 도구 이름이 약속하는 것 */

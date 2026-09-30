@@ -1,3 +1,5 @@
+/* [1026 · 노트 쓰기] 저장 직후(?saved=1 · 작성자) "저장 완료" 카드(app/notes/new/NoteSavedCard) — 판단 카드 아래 "다음 행동" 자리 한 곳만.
+   그 밖의 구조·조회·캐시·SEO 는 그대로다. */
 /* [1023 · 임장노트] docs/review-1022.md 1장 — ① RelatedNotes 에 aptName 을 넘겨 같은 단지를 앞줄로 · ② 댓글 조회 실패 자리에 "다시 시도"
    (CommentsRetry — 서버 조회를 router.refresh 로 다시 돌린다) · ③ 지역·단지 칩 마지막 칩의 네이비 채움 → 테두리 칩 + 굵기(화면당 채움 1개 규칙).
    [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
@@ -71,6 +73,10 @@ import { isAdmin } from "@/lib/auth/is-admin";
 import { decisionFromMetadata } from "@/lib/inspection/decision";
 import { buildRevisitDelta, revisitOfId, type RevisitDelta } from "@/lib/inspection/revisit";
 import { resolveNoteCover } from "@/lib/notes/cover/resolve";
+/* [1026 · 노트 쓰기] 저장 직후(?saved=1 · 작성자) "저장 완료" 카드 — 이 파일은 그 카드를 놓는 자리만 바뀐다 */
+import { NoteSavedCard } from "../new/NoteSavedCard";
+import { isSavedFlag } from "@/lib/notes/form-progress";
+import { sameComplexLink, savedCardView } from "@/lib/notes/note-preview";
 
 /* 시안 6c(노트 상세 + AI) + 10f(AI 노트 분석) + 20a(공개 임장노트 표준 11항목) + 20b(SEO)
    실데이터: inspection_notes → getNote(id) — 공개 노트만 index, 비공개·목업은 noindex */
@@ -511,10 +517,10 @@ export default async function NoteDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ ai?: string; quota?: string }>;
+  searchParams: Promise<{ ai?: string; quota?: string; saved?: string }>;
 }) {
   const { id } = await params;
-  const { ai: aiStatusRaw, quota: quotaRaw } = await searchParams;
+  const { ai: aiStatusRaw, quota: quotaRaw, saved: savedRaw } = await searchParams;
   /* [1005 · A4] `?ai=` 는 작성 화면이 남기는 단계 표시다 — pending(방금 요청) · ok · rule · fail.
      화이트리스트 밖은 null(일반 열람). 실제 상태는 아래에서 저장된 분석과 합쳐 판정한다. */
   const aiQuery = readAiQuery(aiStatusRaw);
@@ -1011,8 +1017,33 @@ export default async function NoteDetailPage({
                   : { label: "지도에서 이 지역 보기", href: mapCompareHref }
             }
           />
-          {/* [1005 · A4] 저장 직후에만 — 히어로 다음, 본문 앞. pending 동안은 안 그린다. */}
-          {nextActionCard}
+          {/* [1005 · A4] 저장 직후에만 — 히어로 다음, 본문 앞. pending 동안은 안 그린다.
+              [1026 · 노트 쓰기] 작성 화면이 단 ?saved=1(작성자)이면 같은 자리에 "저장 완료" 카드 — 결론 한 줄 + 공유(공개일 때) ·
+              결정 카드에 담기 · 같은 단지 다른 노트. 이 카드가 있으면 다음 행동 카드는 그리지 않는다(같은 순간의 카드 두 장). */}
+          {isOwner && isSavedFlag(savedRaw) ? (
+            <NoteSavedCard
+              noteId={realNote.id}
+              {...savedCardView({
+                aptName: realNote.aptName,
+                title: realNote.title,
+                totalScore: v.totalScore,
+                decision: noteDecision?.choice ?? null,
+                visitDate: realNote.visitDate,
+                checklistDone: v.checklistDone,
+                checklistTotal: v.checklistTotal,
+                photoCount: realNote.photos.length,
+              })}
+              isPublic={realNote.isPublic}
+              complex={
+                visitComplexId || complexIdFromHref
+                  ? { id: visitComplexId || (complexIdFromHref as string), name: visitApt || realNote.title, region: realNote.region }
+                  : null
+              }
+              sameComplex={sameComplexLink({ noteId: realNote.id, visitCount: v.visits.length, complexHref })}
+            />
+          ) : (
+            nextActionCard
+          )}
           {/* 노트 카드 — 20a 표준 11항목 */}
           <div className="rise-in card flex flex-col gap-3.5 rounded-3xl p-6 max-md:gap-3 max-md:p-3.5">
             {/* ① 지역·단지 칩 */}

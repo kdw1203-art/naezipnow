@@ -1,4 +1,6 @@
 "use client";
+/* [1026b · 노트 쓰기] 판단 제안에 구 단위 조회 응답의 market(전월비 · 전세가율 · 지역명)을 넘긴다 — suggestDecision 이 이미 받는 인자.
+   값은 lib/notes/form-extras decisionMarketFromContext 가 응답에서 그대로 옮긴다(없으면 예전과 같다). */
 
 import { useMemo } from "react";
 import {
@@ -10,6 +12,7 @@ import {
   type DecisionChoice,
 } from "@/lib/inspection/decision";
 import { composeScoresFromChecks, type NoteLevel } from "@/lib/notes/note-scores";
+import { decisionMarketFromContext } from "@/lib/notes/form-extras";
 
 /* ============================================================
    [996 · 4] 3단계 맨 위 "판단" 카드 — 살까 · 보류 · 패스 · 다시 보기.
@@ -33,6 +36,8 @@ export type DecisionStepProps = {
   reasons: string[] | null;
   onChoice: (c: DecisionChoice) => void;
   onReasons: (r: string[] | null) => void;
+  /** [1026b] 위치를 고르면 이미 받아 둔 /api/inspection/public-data-context 응답(NoteForm fieldContext) */
+  context?: unknown;
 };
 
 export function DecisionStep({
@@ -43,6 +48,7 @@ export function DecisionStep({
   reasons,
   onChoice,
   onReasons,
+  context,
 }: DecisionStepProps) {
   const suggestion = useMemo(
     () =>
@@ -51,8 +57,9 @@ export function DecisionStep({
         scores: composeScoresFromChecks(checks),
         checklistDoneCount,
         checklistTotal,
+        market: decisionMarketFromContext(context),
       }),
-    [checks, checklistDoneCount, checklistTotal],
+    [checks, checklistDoneCount, checklistTotal, context],
   );
   const shown = reasons ?? suggestion.reasons;
   /* 3칸 고정 — 빈 칸은 저장 때 빠진다 */

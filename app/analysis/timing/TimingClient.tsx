@@ -1,13 +1,19 @@
 "use client";
-/* [1023 · AI 분석] 머리 통일 — h1 t-display 손 마크업(.pxs-head) → 공용 PageHead(t-title). 본문은 그대로. */
+/* [1026 · 지역 시세] 1025 표준 — 머리 아래 절차 한 줄(지역 · {지역} → 신호 · 지수·거래량·온도 → 판단 · {온도 문구} → 다음 행동) ·
+   결론 한 줄(t-title "{지역} 지수 ±x.xx% · 온도 N" + 판정 칩 = 온도 문구, 65+·35 미만은 주의) · 근거 t-sub(지수 pt · 대비 · 누적 · 추세) ·
+   숫자 칸 4개(폰은 결론과 겹치지 않는 기간 누적 · 거래량 2칸) → 대표 그림(지수+거래량) → 온도 · 거래량 카드.
+   본문 | 레일 340(다음 행동 카드: 지수 흐름 스파크 + 채움 파랑 "이 지역 알림 받기"(예전 "알림 설정" 흐린 버튼 — 같은 /notifications) +
+   지도 · 노트 쓰기 · 결정 카드 텍스트 링크 · 이어서 분석). 폰은 같은 채움 파랑을 하단 바(MobilePrimaryBar)로. 이어서 칩의 파란
+   "노트 쓰기"는 텍스트 링크로 옮겨 채움 파랑은 화면에 하나. 문장은 lib/market/region-conclusion(새 계산 없음). 지역 전환·캐시·신고 기한 규칙 그대로.
+   [1023 · AI 분석] 머리 통일 — h1 t-display 손 마크업(.pxs-head) → 공용 PageHead(t-title). 본문은 그대로. */
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 // 서버 전용 체인이 있는 모듈들 — 타입만 가져온다(컴파일에서 소거).
 import type { TrendResult, MarketTemp } from "@/lib/market/temperature";
 import type { RegionMonthlyVolumeRow } from "@/lib/market/store";
-import { Icon } from "@/app/components/Icon";
 import { PageHead } from "@/app/components/PageHead";
+import { StepLine } from "@/app/components/StepLine";
 import type { HeroKpi } from "@/app/components/analysis/ToolHero";
 import { Gauge } from "@/app/components/viz/Gauge";
 import { Spark } from "@/app/components/viz/Spark";
@@ -23,6 +29,11 @@ import { TimingComplexPicker } from "./complex-picker";
 import { TimingOverlayChart } from "./TimingOverlayChart";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
 import { pickRegionByAnyName } from "@/lib/regions/param";
+import { regionActionLinks, timingConclusion, timingSteps } from "@/lib/market/region-conclusion";
+import { RegionActionCard, RegionPrimaryBar, VerdictCard } from "./region-verdict";
+
+/** [1026] 숫자 칸 — phone 이 false 면 폰에서 숨긴다(결론 한 줄과 같은 값) */
+type TimingKpi = HeroKpi & { phone: boolean };
 
 /**
  * [1021 · 지역 시세 price·timing] 시안(mock8/timing)대로 — 머리(아이콘·제목·출처 한 줄 + 지역 선택) → 타일 4칸(지금 값) →
@@ -209,17 +220,19 @@ export function TimingClient({
 
   /* 첫 화면이 "제목 → 빈 카드"였다. 이 도구가 내는 숫자를 먼저 세운다.
      값이 없으면 그 칸은 **아예 만들지 않는다**(빈 칸을 "—"로 채우지 않는다). */
-  const kpis: HeroKpi[] = [];
+  const kpis: TimingKpi[] = [];
   if (trend) {
     kpis.push({
       label: weekly ? "지난주 대비" : "지난달 대비",
       value: <DeltaCount pct={trend.latestChangePct} decimals={2} />,
       note: `매매가격지수 · ${trend.points.length}구간 기준`,
+      phone: false,
     });
     kpis.push({
       label: "기간 누적",
       value: <DeltaCount pct={trend.cumulativePct} decimals={1} />,
       note: `${idxLabels[0] ?? ""} 대비 ${idxLabels[idxLabels.length - 1] ?? ""}`,
+      phone: true,
     });
   }
   if (temp) {
@@ -228,6 +241,7 @@ export function TimingClient({
       value: `${temp.score}/100`,
       note: temp.headline,
       aside: <Explain {...TEMPERATURE_EXPLAIN} size={12} />,
+      phone: false,
     });
   }
   if (vc.closedLast) {
@@ -236,12 +250,14 @@ export function TimingClient({
       value: <CountUp value={vc.closedLast.count} suffix="건" />,
       delta: vc.closedDeltaPct === null || !vc.closedPrev ? null : { pct: vc.closedDeltaPct, label: monthWord(vc.closedPrev.month) },
       note: openUntil ? `${openWords}은 집계 중 · ${openUntil}까지 신고` : "신고 기한이 지난 달끼리 비교",
+      phone: true,
     });
   } else if (lastVol) {
     kpis.push({
       label: `${monthWord(lastVol.month)} 거래량`,
       value: <CountUp value={lastVol.count} suffix="건" />,
       note: openUntil ? `집계 중 · ${openUntil}까지 신고` : "",
+      phone: true,
     });
   }
 
@@ -250,38 +266,48 @@ export function TimingClient({
     : "한국부동산원 지수 · 국토교통부 실거래 집계";
   const latestIdx = idxValues.length ? idxValues[idxValues.length - 1] : null;
 
+  /* [1026] 절차 · 결론 — 화면이 이미 가진 값(trend · temp · 마지막 지수)만 문장으로 */
+  const conclusionInput = {
+    regionLabel: selected.label,
+    latestChangePct: trend ? trend.latestChangePct : null,
+    cumulativePct: trend ? trend.cumulativePct : null,
+    weekly: Boolean(weekly),
+    verdict: trend?.verdict ?? null,
+    latestIndex: latestIdx !== null ? Math.round(latestIdx * 10) / 10 : null,
+    tempScore: temp?.score ?? null,
+    tempHeadline: temp?.headline ?? null,
+  };
+  const conclusion = timingConclusion(conclusionInput);
+  const plan = timingSteps(conclusionInput, { index: Boolean(trend), volume: volume.length > 0, temp: Boolean(temp) });
+  const mapRegion = selected.label.split(" ").pop() ?? selected.label;
+
   /* 레일 — 데스크톱은 오른쪽 고정, 폰은 본문 아래 한 열(같은 내용을 두 자리 중 한 곳에만 보인다) */
   const rail = (
     <>
-      <div className="card tile flex flex-col gap-2 rounded-lg p-4" data-reveal="">
-        <span className="tile-ico flex h-9 w-9 items-center justify-center rounded-lg bg-primary-soft text-primary">
-          <Icon name="bell" size={17} />
-        </span>
-        <span className="t-section text-ink">이 지역 알림</span>
-        <p className="t-sub text-text-2">{selected.label} 실거래 등록·지수 변동</p>
-        {trend && (
-          <span
-            className={`mt-1 ${
-              deltaDir(trend.cumulativePct) === "up" ? "text-up" : deltaDir(trend.cumulativePct) === "down" ? "text-down" : "text-text-3"
-            }`}
-          >
-            <Spark values={idxValues} width={140} height={26} smooth />
-          </span>
-        )}
-        <Link href="/notifications" className="btn-soft btn-md mt-auto no-underline">
-          알림 설정
-        </Link>
-      </div>
-      {/* #411 — 도구 간 이어가기: 화면의 **현재 선택 지역** 그대로. */}
+      {/* [1026] 다음 행동 — 예전 "이 지역 알림" 카드(스파크 · /notifications)를 채움 파랑 + 텍스트 링크 3개로 */}
+      <RegionActionCard
+        regionLabel={selected.label}
+        links={regionActionLinks(mapRegion, selected.label)}
+        extra={
+          trend ? (
+            <span
+              className={
+                deltaDir(trend.cumulativePct) === "up" ? "text-up" : deltaDir(trend.cumulativePct) === "down" ? "text-down" : "text-text-3"
+              }
+            >
+              <Spark values={idxValues} width={140} height={26} smooth />
+            </span>
+          ) : null
+        }
+      />
+      {/* #411 — 도구 간 이어가기: 화면의 **현재 선택 지역** 그대로. [1026] 파란 "노트 쓰기" 칩은 다음 행동 카드의 텍스트 링크로 */}
       <AnalysisCrossLinks
         current="timing"
         regionLabel={selected.label}
         regionFor={{
           scenario: selected.id,
-          map: selected.label.split(" ").pop() ?? selected.label,
+          map: mapRegion,
         }}
-        /* [1021] 알림은 바로 위 카드가 맡는다 — 강조 칩은 시안대로 지역 노트 쓰기(면적대별 화면과 같은 링크) */
-        note={{ label: "이 지역 노트 쓰기", href: `/notes/new?region=${encodeURIComponent(selected.label)}` }}
       />
     </>
   );
@@ -314,41 +340,13 @@ export function TimingClient({
         }
       />
 
-      {/* 타일 4칸 — 값이 있는 칸만 */}
-      {kpis.length > 0 && (
-        <div className="pxs-tiles mt-3">
-          {kpis.map((k) => (
-            <div key={k.label} className="kpi">
-              <span className="kpi-k inline-flex items-center gap-0.5">
-                {k.label}
-                {k.aside}
-              </span>
-              <span className="kpi-v flex flex-wrap items-baseline gap-1.5">
-                {k.value}
-                {k.delta && (
-                  <span className={`delta ${DELTA_CLASS[deltaDir(k.delta.pct) ?? "flat"]} ${DELTA_BADGE_CLASS[deltaDir(k.delta.pct) ?? "flat"]}`}>
-                    {k.delta.label ? `${k.delta.label} 대비 ` : ""}
-                    {(deltaDir(k.delta.pct) ?? "flat") === "flat" ? (
-                      "보합"
-                    ) : (
-                      <>
-                        <span aria-hidden="true">{DELTA_ARROW[deltaDir(k.delta.pct)!]}</span>
-                        <span className="sr-only">{DELTA_WORD[deltaDir(k.delta.pct)!]}</span> {absPctText(k.delta.pct)}
-                      </>
-                    )}
-                  </span>
-                )}
-              </span>
-              {k.note && <span className="kpi-d">{k.note}</span>}
-            </div>
-          ))}
-        </div>
-      )}
+      {/* [1026] 절차 한 줄 — 화면당 한 번 */}
+      <StepLine className="mt-3" steps={plan.steps} current={plan.current} />
 
       {status === "error" ? (
         /* 조회 실패 — "데이터 없음"과 다른 사실이다. 캐시 API 실패는 no-store 라
            재시도가 의미 있다. */
-        <div className="card mt-5 flex flex-col items-center gap-2 rounded-lg p-8 text-center">
+        <div className="card mt-3 flex flex-col items-center gap-2 rounded-2xl p-8 text-center">
           <p className="t-section text-ink">{selected.label} 분석을 불러오지 못했어요</p>
           <p className="t-sub text-text-3">조회 실패. 잠시 뒤 다시 시도해 주세요.</p>
           <button
@@ -363,10 +361,46 @@ export function TimingClient({
           </button>
         </div>
       ) : (
-        <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-6">
+        <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
           <div className="flex min-w-0 flex-col gap-3">
+            {/* [1026] 결론 한 줄 — 불러오는 동안은 이전 지역 값이 섞이지 않게 자리만 */}
+            {loading ? <SkBlock h={76} /> : conclusion && <VerdictCard conclusion={conclusion} />}
+
+            {/* 숫자 칸 4개 — 값이 있는 칸만. [1026] 폰은 결론과 겹치지 않는 칸만 */}
+            {kpis.length > 0 && (
+              <div className="pxs-tiles">
+                {kpis.map((k) => (
+                  <div key={k.label} className={k.phone ? "min-w-0" : "min-w-0 max-md:hidden"}>
+                    <div className="kpi h-full">
+                      <span className="kpi-k inline-flex items-center gap-0.5">
+                        {k.label}
+                        {k.aside}
+                      </span>
+                      <span className="kpi-v flex flex-wrap items-baseline gap-1.5">
+                        {k.value}
+                        {k.delta && (
+                          <span className={`delta ${DELTA_CLASS[deltaDir(k.delta.pct) ?? "flat"]} ${DELTA_BADGE_CLASS[deltaDir(k.delta.pct) ?? "flat"]}`}>
+                            {k.delta.label ? `${k.delta.label} 대비 ` : ""}
+                            {(deltaDir(k.delta.pct) ?? "flat") === "flat" ? (
+                              "보합"
+                            ) : (
+                              <>
+                                <span aria-hidden="true">{DELTA_ARROW[deltaDir(k.delta.pct)!]}</span>
+                                <span className="sr-only">{DELTA_WORD[deltaDir(k.delta.pct)!]}</span> {absPctText(k.delta.pct)}
+                              </>
+                            )}
+                          </span>
+                        )}
+                      </span>
+                      {k.note && <span className="kpi-d">{k.note}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* ── 대표 그림: 지수(선) + 월 거래량(막대) ── */}
-            <div className="chart-card" data-reveal="">
+            <div className="card flex flex-col gap-2.5 rounded-2xl p-4 max-md:p-3.5" data-reveal="">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
                   <span className="t-caption text-text-3">
@@ -423,22 +457,26 @@ export function TimingClient({
                   </p>
                 </>
               ) : (
-                <div className="rounded-lg bg-bg px-3 py-3">
-                  <p className="t-sub text-text-3">
-                    {selected.label}의 지수 시계열이 아직 없어요. 다른 지역을 고르거나 수집이 쌓인 뒤 다시 확인해 주세요.
-                  </p>
+                /* [1026] 빈 상태 — 회색 견본(선 + 막대 윤곽) + 한 문장 */
+                <div className="flex flex-col items-center gap-2 py-3">
+                  <div aria-hidden="true" className="flex h-[88px] w-full max-w-[360px] items-end gap-2 border-b border-dashed border-line-strong">
+                    {[30, 45, 38, 60, 52, 70, 48, 40].map((h, i) => (
+                      <span key={i} className="block flex-1 rounded-sm border border-dashed border-line-strong" style={{ height: `${h}%` }} />
+                    ))}
+                  </div>
+                  <p className="t-sub text-text-3">{selected.label} 지수·거래량 기록 아직 없음</p>
                 </div>
               )}
             </div>
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {/* ── 시장 온도 — 흰 카드(예전 네이비 ai-panel) ── */}
-              <div className="card flex flex-col gap-3 rounded-lg p-4" data-reveal="">
+              <section className="card flex flex-col gap-3 rounded-2xl p-4 max-md:p-3.5" data-reveal="">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-0.5 t-section text-ink">
+                  <h2 className="inline-flex items-center gap-0.5 t-section text-ink">
                     시장 온도
                     <Explain {...TEMPERATURE_EXPLAIN} size={12} />
-                  </span>
+                  </h2>
                   <span className="t-caption rounded border border-line px-1.5 py-px font-bold text-text-3">규칙 기반 · 실데이터 입력</span>
                 </div>
                 {loading ? (
@@ -473,12 +511,12 @@ export function TimingClient({
                 ) : (
                   <p className="t-sub text-text-3">이 지역은 지수 시계열이 아직 없어 온도를 계산할 수 없어요.</p>
                 )}
-              </div>
+              </section>
 
               {/* ── 월 거래량 사실 — 신고 기한 규칙(1009 리뷰) 그대로 ── */}
-              <div className="card flex flex-col gap-2 rounded-lg p-4" data-reveal="">
+              <section className="card flex flex-col gap-2 rounded-2xl p-4 max-md:p-3.5" data-reveal="">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="t-section text-ink">월 거래량</span>
+                  <h2 className="t-section text-ink">월 거래량</h2>
                   <span className="t-caption rounded border border-line px-1.5 py-px font-bold text-text-3">국토교통부 실거래</span>
                 </div>
                 {loading ? (
@@ -524,7 +562,7 @@ export function TimingClient({
                 ) : (
                   <p className="t-sub text-text-3">월별 거래량 집계 아직 없음</p>
                 )}
-              </div>
+              </section>
             </div>
 
             {/* 폰 — 레일 내용을 본문 아래 한 열로 */}
@@ -534,6 +572,9 @@ export function TimingClient({
           <aside className="hidden lg:flex lg:flex-col lg:gap-3 lg:sticky lg:top-[76px] lg:self-start">{rail}</aside>
         </div>
       )}
+
+      {/* [1026] 폰 하단 바 — 레일의 채움 파랑과 같은 요소(화면에 한 번 · 조회 실패여도 알림은 받을 수 있다) */}
+      <RegionPrimaryBar />
     </>
   );
 }

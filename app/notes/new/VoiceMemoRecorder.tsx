@@ -1,6 +1,9 @@
 "use client";
+/* [1026b · 노트 쓰기] 비회원 — 녹음 버튼 자리에 로그인 링크(callbackUrl = 지금 주소, 녹음 전에 말한다). 로그인 여부를 몰랐다가
+   업로드가 401 이면 "저장에 실패했어요" 가 아니라 같은 로그인 안내로 바꾼다(녹음 뒤 실패로 알리지 않는다). */
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
 
 /* [#133] 음성 메모 — 현장 30초 녹음. MediaRecorder → /api/upload(audio/webm).
@@ -15,11 +18,14 @@ export function VoiceMemoRecorder({
   memos,
   onChange,
   onTranscript,
+  guest = false,
 }: {
   memos: string[];
   onChange: (urls: string[]) => void;
   /** 전사 결과를 받을 곳(메모란 append) — 없으면 전사 버튼을 그리지 않는다 */
   onTranscript?: (text: string) => void;
+  /** [1026b] 비회원 확정(NoteForm isGuest === true) — 녹음 대신 로그인 링크 */
+  guest?: boolean;
 }) {
   /* url → 전사 상태. done 은 같은 녹음의 중복 전사(중복 비용)를 막는다 */
   const [txState, setTxState] = useState<Record<string, "busy" | "done" | "error" | "unavailable">>({});
@@ -51,8 +57,13 @@ export function VoiceMemoRecorder({
     }
   }
   const [state, setState] = useState<
-    "idle" | "recording" | "uploading" | "unsupported" | "denied" | "error"
+    "idle" | "recording" | "uploading" | "unsupported" | "denied" | "error" | "login"
   >("idle");
+  /* [1026b] 로그인 뒤 돌아올 곳 = 지금 주소(쿼리 포함). ssr:false 조각이라 첫 렌더가 곧 브라우저다 */
+  const loginHref = `/login?callbackUrl=${encodeURIComponent(
+    typeof window === "undefined" ? "/notes/new" : window.location.pathname + window.location.search,
+  )}`;
+  const needLogin = guest || state === "login";
   const [sec, setSec] = useState(0);
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -108,7 +119,8 @@ export function VoiceMemoRecorder({
             onChange([...memos, String(json.url)].slice(0, MAX_MEMOS));
             setState("idle");
           } else {
-            setState("error");
+            /* [1026b] 401 = 비회원 — 실패가 아니라 로그인 안내 */
+            setState(res.status === 401 ? "login" : "error");
           }
         } catch {
           setState("error");
@@ -135,7 +147,14 @@ export function VoiceMemoRecorder({
         <span className="t-body font-bold text-ink">
           음성 메모 <span className="font-medium text-text-3">(선택 · 최대 {MAX_MEMOS}개)</span>
         </span>
-        {state === "recording" ? (
+        {needLogin && state !== "recording" ? (
+          <Link
+            href={loginHref}
+            className="inline-flex min-h-[40px] shrink-0 items-center rounded-lg border border-line-strong bg-bg px-3 py-1.5 t-sub font-bold text-primary"
+          >
+            로그인 ›
+          </Link>
+        ) : state === "recording" ? (
           <button
             type="button"
             onClick={stop}
@@ -206,6 +225,7 @@ export function VoiceMemoRecorder({
       {state === "error" && (
         <p className="t-sub font-bold text-warning">저장에 실패했어요. 다시 시도해 주세요.</p>
       )}
+      {needLogin && <p className="t-sub text-text-2">음성 메모는 로그인 후 녹음</p>}
       {/* [1015 · 규칙 B] 권유 문장은 뺐다 — 공개 범위 사실만 */}
       <p className="t-caption text-text-3">녹음은 노트에 첨부 · 공개 노트에서는 다른 사람도 들을 수 있음</p>
     </div>

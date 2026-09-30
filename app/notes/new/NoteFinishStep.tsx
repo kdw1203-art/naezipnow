@@ -1,16 +1,23 @@
 "use client";
+/* [1026b · 노트 쓰기] 메모 아래 "메모에서 찾은 점검 제안"(2단계와 같은 값 — lib/notes/form-extras memoHintsFor, 누르면 체크리스트에 담기 + 토스트) ·
+   미리보기 카드·요약 줄에 목적·시간대·날씨·만족도(입력했을 때)·태그 최대 3(summary 에 실려 온 폼 상태 그대로). */
+/* [1026 · 노트 쓰기] 저장 전 요약 → 폰 "미리보기" 접힘(<details> 닫힘 · 노트 카드 미리보기 + 요약 줄 · 제목 옆 완성도 한 줄). 데스크톱은 레일이 대신(lg:hidden). */
 /* [1023 · 임장노트] docs/review-1022.md 1장 ① — 3단계 끝(저장 버튼 위)에 "저장 전 요약" 카드: 단지 · 방문일 · 점수 5축 · 체크 N/M · 사진 N ·
    판단 · 메모 첫 줄. 폼 상태만 줄로 만든다(lib/notes/finish-summary) — 새 데이터 없음. summary prop 은 선택(없으면 안 그린다).
    [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { Icon } from "@/app/components/Icon";
 import { Switch } from "@/app/components/ui/Switch";
 import { CharCount } from "@/app/components/ui/CharCount";
 import { NotePhotoStrip, NoteUploadProgress } from "./NotePhotoBlocks";
+import { NotePreviewCard } from "./NotePreviewCard";
 import type { UploadItem } from "./NoteForm";
 import { finishSummaryRows, type FinishSummaryInput } from "@/lib/notes/finish-summary";
 import { decisionLabel, type DecisionChoice } from "@/lib/inspection/decision";
+import type { ChecklistGroupDef } from "@/lib/inspection/checklist";
+import { memoHintsFor } from "@/lib/notes/form-extras";
+import { useToast } from "@/app/components/toast/ToastProvider";
 
 /* [1006] 3단계 "무엇을 남길까"의 본문 — 메모 · 사진 줄 · 사진 추가/촬영 · 공개 스위치 ·
    소셜 소재 동의. NoteForm 에서 분리해 next/dynamic 으로 받는다(DecisionStep·NoteDetailFields
@@ -23,8 +30,10 @@ export function NoteFinishStep(p: {
   memo: string;
   memoMax: number;
   onMemoChange: (v: string) => void;
-  /** 메모에서 체크리스트 힌트를 뽑는다(NoteForm 이 groupChecked 와 대조) */
-  onMemoBlur: (memo: string) => void;
+  /** [1026b] 메모 제안 재료 — 지금 목적의 체크리스트 · 체크 상태(NoteForm 상태). 누르면 체크리스트에 담는다 */
+  checklistGroups: ChecklistGroupDef[];
+  groupChecked: Record<string, boolean>;
+  setGroupChecked: Dispatch<SetStateAction<Record<string, boolean>>>;
   photos: string[];
   maxPhotos: number;
   uploading: boolean;
@@ -46,10 +55,15 @@ export function NoteFinishStep(p: {
   /** [1023] 저장 전 요약 재료 — NoteForm 의 상태 그대로(판단은 choice 로 받아 여기서 라벨로 — 초기 번들에 decision 모듈을 넣지 않는다).
       생략하면 요약 카드를 그리지 않는다 */
   summary?: Omit<FinishSummaryInput, "decisionLabel"> & { decision: DecisionChoice | null };
+  /** [1026] 폰 "미리보기" 접힘의 재료 — 방문 유형 · 완성도 한 줄("완성도 60% · 체크 12/30"). 생략하면 카드 없이 요약 줄만 */
+  preview?: { propertyType: string; line: string };
 }) {
   /* [967 · 8] 본문 자동 높이 — 내용만큼 자라고(4줄 최소) 40vh 에서 멈춰 안에서 스크롤.
      height 대신 min-height 를 밀어 사용자가 손잡이로 키운 높이는 지킨다. */
   const memoRef = useRef<HTMLTextAreaElement>(null);
+  const { showToast } = useToast();
+  /* [1026b] 2단계 "더 자세히 적기" 안의 제안과 같은 값 — 메모(퀵모드 한 줄 · 음성 전사 포함)에서 뽑고 이미 체크한 것은 뺀다 */
+  const memoHints = memoHintsFor(p.memo, p.checklistGroups, p.groupChecked);
   useEffect(() => {
     const el = memoRef.current;
     if (!el) return;
@@ -70,7 +84,6 @@ export function NoteFinishStep(p: {
           ref={memoRef}
           value={p.memo}
           onChange={(e) => p.onMemoChange(e.target.value.slice(0, p.memoMax))}
-          onBlur={() => p.onMemoBlur(p.memo)}
           rows={4}
           maxLength={p.memoMax}
           className="w-full resize-y overflow-y-auto rounded-xl bg-bg p-3.5 t-body leading-[1.55] text-text-1 outline-none placeholder:text-text-3"
@@ -80,6 +93,26 @@ export function NoteFinishStep(p: {
         <div className="-mt-1.5 flex justify-end">
           <CharCount value={p.memo} max={p.memoMax} />
         </div>
+        {memoHints.length > 0 && (
+          <div className="flex flex-col gap-1.5 rounded-xl border border-primary/20 bg-primary-soft/40 px-3 py-2.5">
+            <div className="t-sub font-bold text-primary">메모에서 찾은 점검 제안</div>
+            <div className="flex flex-wrap gap-1.5">
+              {memoHints.map((h) => (
+                <button
+                  key={h.id}
+                  type="button"
+                  onClick={() => {
+                    p.setGroupChecked((prev) => ({ ...prev, [h.id]: true }));
+                    showToast(`체크리스트에 담았어요 · ${h.label}`);
+                  }}
+                  className="rounded-full border border-primary/30 bg-surface px-2.5 py-1 t-sub font-bold text-primary max-md:min-h-10"
+                >
+                  ＋ {h.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <NotePhotoStrip
           photos={p.photos}
@@ -168,21 +201,44 @@ export function NoteFinishStep(p: {
         </label>
       )}
 
-      {/* [1023 · 임장노트 ①] 저장 전 요약 — 저장 버튼 바로 위. 없는 값은 "—"(지어내지 않는다) */}
+      {/* [1023 · 임장노트 ①] 저장 전 요약 — 저장 버튼 바로 위. 없는 값은 "—"(지어내지 않는다)
+          [1026 · 노트 쓰기] 폰 = "미리보기" 접힘(<details>, 닫힘) — 노트 카드 미리보기(NotePreviewCard) + 요약 줄. 요약 줄
+          제목에 완성도 한 줄을 단다. 데스크톱(lg+)은 오른쪽 레일(NotePreviewRail)이 같은 것을 늘 보여 주므로 여기선 숨긴다. */}
       {p.summary && (
-        <section className="rise-in-6 card flex flex-col gap-2 p-4" aria-label="저장 전 요약">
-          <div className="t-body font-bold text-ink">저장 전 요약</div>
-          <dl className="m-0 flex flex-col divide-y divide-line" data-tone="plain">
-            {finishSummaryRows({
-              ...p.summary,
-              decisionLabel: p.summary.decision ? decisionLabel(p.summary.decision) : null,
-            }).map((r) => (
-              <div key={r.label} className="flex min-h-[32px] items-baseline gap-3 py-1.5">
-                <dt className="w-14 shrink-0 t-sub text-text-3">{r.label}</dt>
-                <dd className="m-0 min-w-0 flex-1 break-words t-sub text-ink">{r.value}</dd>
-              </div>
-            ))}
-          </dl>
+        <section className="rise-in-6 card flex flex-col p-4 max-md:p-3.5 lg:hidden" aria-label="저장 전 요약">
+          <details>
+            <summary className="min-h-10 cursor-pointer py-2 t-body font-bold text-ink">
+              미리보기
+              {p.preview && (
+                <span className="ml-1.5 t-sub font-normal text-text-3">{p.preview.line}</span>
+              )}
+            </summary>
+            <div className="mt-1 flex flex-col gap-2">
+              {p.preview && (
+                <NotePreviewCard
+                  aptName={p.summary.aptName}
+                  region={p.summary.region}
+                  visitDate={p.summary.visitDate}
+                  propertyType={p.preview.propertyType}
+                  photos={p.photos}
+                  decision={p.summary.decision}
+                  isPublic={p.isPublic}
+                  facts={p.summary}
+                />
+              )}
+              <dl className="m-0 flex flex-col divide-y divide-line" data-tone="plain">
+                {finishSummaryRows({
+                  ...p.summary,
+                  decisionLabel: p.summary.decision ? decisionLabel(p.summary.decision) : null,
+                }).map((r) => (
+                  <div key={r.label} className="flex min-h-[32px] items-baseline gap-3 py-1.5">
+                    <dt className="w-14 shrink-0 t-sub text-text-3">{r.label}</dt>
+                    <dd className="m-0 min-w-0 flex-1 break-words t-sub text-ink">{r.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          </details>
         </section>
       )}
     </>

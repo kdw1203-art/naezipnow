@@ -1,4 +1,9 @@
 "use client";
+/* [1026b · AI 분석 8종] 맨 아래 보드(VerdictBoard — 도구 색 칸 · 예전 8종만 쓰던 것)를 걷었다: 12종 모두 결론 히어로 아래 칩 줄(VerdictChips)
+   하나(비교·자산 구성은 대상이 여럿이라 세우지 않는다). 불러오기 훅·내 임장노트 칩은 그대로. */
+/* [1026 · 단지 분석 4종] "다른 도구로 본 이 단지"를 결론 바로 아래 **칩 한 줄**로 올린다(VerdictChips — 도구 · 판정 배지).
+   불러오기(사람 게이트 · 5분 캐시 · 세 도구 병렬)는 보드와 같은 훅(useBoardTiles) 하나. 칩 줄 끝에 임장 동선(판정 없음)도 붙어
+   예전 레일의 "이어서 보기" 칩을 대신한다. 판정 배지 색은 1025 표준(lib/ai/conclusion-next BAND_CHIP_CLASS). 나머지 8종은 예전 보드 그대로. */
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useEffect, useRef, useState } from "react";
@@ -8,16 +13,14 @@ import type { Verdict } from "@/lib/ai/verdict";
 import {
   BOARD_TOOLS,
   BOARD_TOOL_LABEL,
-  boardConsensus,
   isBoardToolId,
   summarizeForBoard,
-  type BoardItem,
   type BoardSummary,
   type BoardToolId,
 } from "@/lib/ai/verdict-board";
 import { hasSession } from "@/lib/client/has-session";
 import { useHumanGate } from "@/lib/client/human-gate";
-import { SkBlock } from "@/app/components/ui/Skeleton";
+import { BAND_CHIP_CLASS } from "@/lib/ai/conclusion-next";
 
 /* ============================================================
    [996] 결과 곁의 조각 — 전부 이 파일에 두고 next/dynamic(ssr:false)으로 받는다(워크벤치 예산 480KB).
@@ -37,20 +40,17 @@ type Tile = { status: "loading" } | { status: "ok"; item: BoardSummary } | { sta
    같은 도구·단지를 다시 받지 않는다. */
 const TILE_TTL_MS = 5 * 60 * 1000;
 
-export function VerdictBoard({
-  tool,
-  complexId,
-  complexName,
-  region,
-  verdict,
-}: {
+type BoardProps = {
   tool: AiAnalysisToolId;
   complexId: string;
   complexName?: string | null;
   region?: string | null;
   /** 현재 도구의 판단 카드 — 다시 받지 않고 그대로 쓴다(없으면 로딩 칸) */
   verdict: Verdict | null;
-}) {
+};
+
+/** [1026] 보드·칩 줄 공용 — 사람이 보거나 만진 뒤에만 나머지 도구 판정을 받는다 */
+function useBoardTiles({ tool, complexId, complexName, region, verdict }: BoardProps) {
   const cacheRef = useRef(new Map<string, { at: number; item: BoardSummary }>());
   const [tiles, setTiles] = useState<Partial<Record<BoardToolId, Tile>>>({});
   /* [1007 · V2a-4] 보드는 판단 카드 **아래**에 있다 — 마운트 즉시 도구 3종을 부르지 않고, 봇이 아닌
@@ -103,94 +103,49 @@ export function VerdictBoard({
       : { status: "loading" }
     : null;
   const tileOf = (t: BoardToolId): Tile => (t === tool && own ? own : (tiles[t] ?? { status: "loading" }));
+  return { sectionRef, tileOf };
+}
 
-  const resolved: BoardItem[] = BOARD_TOOLS.flatMap((t) => {
-    const x = tileOf(t);
-    return x.status === "ok" ? [{ tool: t, band: x.item.band, bandLabel: x.item.bandLabel }] : [];
-  });
-  const consensus = boardConsensus(resolved);
-
+/* ── [1026] 칩 한 줄 — 결론 히어로 아래(단지 분석 4종). 칸 = 도구 이름 + 판정 배지, 지금 도구는 표식(링크 아님) ───────── */
+export function VerdictChips(props: BoardProps) {
+  const { tool, complexId } = props;
+  const { sectionRef, tileOf } = useBoardTiles(props);
+  const chip = "chip inline-flex min-h-[40px] items-center gap-1.5 border px-3 t-sub font-bold no-underline";
+  const q = `?complexId=${encodeURIComponent(complexId)}`;
   return (
-    <section ref={sectionRef} className="card flex flex-col gap-2 rounded-2xl p-4" aria-label="다른 도구로 본 이 단지">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-        <h2 className="t-section font-bold text-ink">다른 도구로 본 이 단지</h2>
-        <span className="t-caption text-text-3">칸을 누르면 그 도구로 이어서 봐요</span>
-      </div>
-      {/* 합의 한 줄 — 둘 이상 도착했을 때만. 한 도구로 "합의"를 말하지 않는다. */}
-      {consensus && (
-        <p className="t-sub font-bold text-text-2" aria-live="polite">
-          {consensus.line}
-        </p>
-      )}
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        {BOARD_TOOLS.map((t) => {
-          const x = tileOf(t);
-          const current = t === tool;
-          if (x.status === "loading") return <SkBlock key={t} h={76} className="rounded-lg" />;
-          if (x.status === "fail")
-            return (
-              <div key={t} className="flex min-h-10 flex-col justify-center rounded-lg border border-dashed border-line px-3 py-2.5">
-                <span className="t-caption font-bold text-text-3">{BOARD_TOOL_LABEL[t]}</span>
-                <span className="t-sub text-text-3">지금은 불러오지 못했어요</span>
-              </div>
-            );
-          /* [1011] 칸 한 장이 말하는 것을 하나로 줄인다(소유자 지시 — "직관적이지 않다").
-             예전 구성은 ① 판정 배지 ② 결론 문장(truncate) ③ 대표 수치 셋이었는데,
-             - 결론 문장이 `truncate` 라 "거래 활발은 좋고 …" 처럼 **문장 가운데가 잘려** 읽히지 않았다.
-             - 배지("보통")와 수치("위험 수준 보통")가 같은 말을 두 번 했다.
-             이제는 **대표 수치 한 개**를 칸의 주인공으로 두고(무엇을 잰 값인지 이름을 위에),
-             수치가 없거나 그 값이 배지와 같은 말이면 그때만 결론 문장을 두 줄까지 보여 준다.
-             문장 전체는 칸을 눌러 그 도구로 가면 읽을 수 있다(머리 오른쪽에 그렇게 적혀 있다). */
-          const metric = x.item.metric;
-          /* "위험 수준 = 보통" 처럼 배지와 같은 말을 반복하는 수치는 주인공이 될 수 없다 */
-          const metricEchoesBand = metric != null && `${metric.value}`.trim() === x.item.bandLabel.trim();
-          const showMetric = metric != null && !metricEchoesBand;
-          const body = (
-            <>
-              <span className="flex items-center justify-between gap-1">
-                <span className="t-caption font-bold text-text-3">{BOARD_TOOL_LABEL[t]}</span>
-                <span className="verdict-band shrink-0 rounded-md px-1.5 py-px t-caption font-bold" data-band={x.item.band}>
-                  {x.item.bandLabel}
-                </span>
-              </span>
-              {showMetric ? (
-                <>
-                  <span className="truncate t-caption text-text-3">{metric.label}</span>
-                  <span className="t-section t-fit font-bold tabular-nums leading-tight text-ink">
-                    {metric.value}
-                    {metric.unit ?? ""}
-                  </span>
-                </>
-              ) : (
-                /* 잘라내지 않는다 — 두 줄까지 자연스럽게 흐르고, 넘치면 줄 끝에서 접힌다 */
-                <span className="line-clamp-2 t-sub font-bold leading-snug text-ink">{x.item.headline}</span>
-              )}
-            </>
-          );
-          /* 현재 도구 칸은 자기 자신으로 가는 링크가 아니라 표식이다 */
-          return current ? (
-            <div
-              key={t}
-              aria-current="page"
-              className="tool-soft-bg flex min-h-10 flex-col gap-1 rounded-lg border-2 px-3 py-2.5"
-              style={{ borderColor: "var(--tool-accent)" }}
-            >
-              {body}
-              {/* [1011] 테두리 색만으로는 이 칸이 왜 다른지 알 수 없었다 — 한 마디로 말한다 */}
-              <span className="t-caption font-bold text-text-3">지금 보는 도구</span>
-            </div>
+    <nav ref={sectionRef} aria-label="다른 도구로 본 이 단지" className="scroll-x-hidden-bar -mx-1 flex gap-1.5 overflow-x-auto px-1 pt-1 md:flex-wrap md:overflow-visible">
+      {BOARD_TOOLS.map((t) => {
+        const x = tileOf(t);
+        const badge =
+          x.status === "ok" ? (
+            <span className={`rounded-full px-1.5 t-caption font-bold ${BAND_CHIP_CLASS[x.item.band]}`}>{x.item.bandLabel}</span>
+          ) : x.status === "loading" ? (
+            <span className="h-3 w-7 rounded-full bg-line" aria-hidden="true" />
           ) : (
-            <Link
-              key={t}
-              href={`/analysis/ai/${t}?complexId=${encodeURIComponent(complexId)}`}
-              className="press flex min-h-10 flex-col gap-1 rounded-lg border border-line bg-surface px-3 py-2.5 no-underline"
-            >
-              {body}
-            </Link>
+            <span className="t-caption text-text-3">—</span>
           );
-        })}
-      </div>
-    </section>
+        return t === tool ? (
+          <span key={t} aria-current="page" className={`${chip} shrink-0 border-primary bg-primary-soft text-primary`}>
+            {BOARD_TOOL_LABEL[t]}
+            {badge}
+          </span>
+        ) : (
+          <Link key={t} href={`/analysis/ai/${t}${q}`} className={`${chip} press shrink-0 border-line bg-surface text-text-1`}>
+            {BOARD_TOOL_LABEL[t]}
+            {badge}
+          </Link>
+        );
+      })}
+      {tool === "ai-inspection" ? (
+        <span aria-current="page" className={`${chip} shrink-0 border-primary bg-primary-soft text-primary`}>
+          임장 동선
+        </span>
+      ) : (
+        <Link href={`/analysis/ai/ai-inspection${q}`} className={`${chip} press shrink-0 border-line bg-surface text-text-1`}>
+          임장 동선
+        </Link>
+      )}
+    </nav>
   );
 }
 

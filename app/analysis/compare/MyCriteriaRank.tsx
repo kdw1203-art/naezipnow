@@ -1,4 +1,6 @@
 "use client";
+/* [1026b · 시나리오·비교] 카드 한 모양(rounded-2xl p-4 · 폰 p-3.5) · 섹션 점은 화면의 파랑 하나(.nz-dot-blue — 목록 톤 hanji 표식 걷음).
+   지연 조각(CompareLazy.tsx)으로 싣는다. 계산·문구는 그대로. */
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useEffect, useMemo, useState } from "react";
@@ -58,7 +60,7 @@ export function MyCriteriaRank({ items }: { items: CriteriaInput[] }) {
   const inputById = new Map(items.map((i) => [i.id, i]));
 
   return (
-    <section aria-labelledby="my-criteria-title" className="card flex flex-col gap-3 rounded-lg p-4">
+    <section aria-labelledby="my-criteria-title" className="card flex flex-col gap-3 rounded-2xl p-4 max-md:p-3.5">
       <div>
         <h2 id="my-criteria-title" className="t-section text-ink">
           내 기준으로 줄 세우기
@@ -69,7 +71,7 @@ export function MyCriteriaRank({ items }: { items: CriteriaInput[] }) {
         </p>
       </div>
 
-      <div data-tone="hanji" className="flex flex-col divide-y divide-divider">
+      <div className="flex flex-col divide-y divide-divider">
         {CRITERIA.map((c) => {
           const why = dropped.get(c.key);
           return (

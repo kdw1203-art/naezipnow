@@ -1,3 +1,4 @@
+/* [1026b · AI 분석 8종] "② 에 넣은 값" → "내 조건에 넣은 값"(새 틀의 절차 한 줄 둘째 칸 이름). 설명·출처는 그대로. */
 /**
  * [1009 · A] 결과 요약 숫자 옆 ⓘ 설명 — "이 화면은 이렇게 계산했어요" 문장(순수 데이터).
  *
@@ -37,7 +38,7 @@ export function tileExplain(t: VerdictTile): ExplainContent | null {
   switch (t.key) {
     case "price":
       if (t.source === "입력값") {
-        return { title: "기준 가격", body: "② 내 조건에 넣은 가격이에요. 대출·수익률 계산이 이 값에서 출발해요.", source: "입력값" };
+        return { title: "기준 가격", body: "내 조건에 넣은 가격이에요. 대출·수익률 계산이 이 값에서 출발해요.", source: "입력값" };
       }
       return {
         term: "silgeoraega",
@@ -126,7 +127,7 @@ export function tileExplain(t: VerdictTile): ExplainContent | null {
     case "baseRate":
       return { title: "기준금리", body: "한국은행이 정하는 정책 금리예요. 대출 금리는 여기에 은행 가산금리가 더해져요.", source };
     case "loanAmount":
-      return { term: "ltv", title: "대출액", how: ["기준 가격 × 대출 비율(② 에 넣은 값)이에요."], source: "입력값 계산" };
+      return { term: "ltv", title: "대출액", how: ["기준 가격 × 대출 비율(내 조건에 넣은 값)이에요."], source: "입력값 계산" };
     case "loanMonthly":
       return {
         term: "wonligeum-gyundeung",
@@ -190,7 +191,7 @@ export function metricExplain(v: Verdict): ExplainContent | null {
         title: m.label,
         body: "예측이 아니라 공개한 규칙으로 낸 가정 계산이에요. 3개월 적중률을 공개한 규칙(예측 적중률 화면)과는 다른 계산이라 섞어 보지 마세요.",
         how: [
-          "출발점: 이 단지 최근 실거래가(가장 많이 거래된 평형의 최근 거래 평균) 또는 ② 에 넣은 기준 가격",
+          "출발점: 이 단지 최근 실거래가(가장 많이 거래된 평형의 최근 거래 평균) 또는 내 조건에 넣은 기준 가격",
           `기본: 지역 매매지수 지난 1년 변화의 ${SCENARIO_RULE.baseShare * 100}% 속도가 해마다 이어진다고 가정(연 ±${SCENARIO_RULE.baseCapPct}% 안으로 자름) — 1년 변화가 없으면 최근 한 달 변화 × 12`,
           `낙관·비관: 기본에서 연 ${SCENARIO_RULE.spreadPct}%p 위·아래, 해마다 복리로 이어 붙여요`,
         ],

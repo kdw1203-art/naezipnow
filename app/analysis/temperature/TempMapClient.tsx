@@ -1,5 +1,10 @@
 "use client";
-/* [1023 · AI 분석] 머리 통일 — h1 t-display 손 마크업(.pxs-head) → 공용 PageHead(t-title). 본문은 그대로. */
+/* [1026 · 지역 시세] 1025 표준 — 머리 아래 절차 한 줄(주 · {이번 주} → 시·도(전국이면 현재 · N곳 기록) → 지역(시·도를 고르면 현재) → 다음 행동) ·
+   결론 한 줄(t-title "이번 주 가장 뜨거운 곳 {지역} {점수} · 가장 차가운 곳 {지역} {점수}" + 판정 칩 "평균 N" — 65+·35 미만은 주의) ·
+   근거 t-sub(기록 지역 수 · 직전 주보다 오른 곳·내린 곳) → 숫자 칸(폰은 결론과 겹치는 가장 뜨거운·차가운 칸을 숨긴다) → 대표 그림(온도 지도).
+   주 칩·시/도 선택(손잡이)이 결론을 바로 바꾼다(같은 weekStats). 본문 | 레일 340(온도 높은 순 · page.tsx 가 넘긴 다음 행동 카드 · 이어서 분석).
+   문장은 lib/market/region-conclusion(새 계산 없음). 채움 파랑 리터럴은 여기 없다(다음 행동 카드 한 곳).
+   [1023 · AI 분석] 머리 통일 — h1 t-display 손 마크업(.pxs-head) → 공용 PageHead(t-title). 본문은 그대로. */
 
 /* [1022 · 온도 지도] 지시 1 — 타일 지도를 우리나라 지도 모양으로.
    1단계 전국: 시/도 17개를 한반도 모양 격자(6열)에 놓은 타일(버튼 ≥40px · 이름·평균 온도·기록 지역 수). 기록 없는 시/도는 회색 "기록 없음"(누를 수 없음).
@@ -14,6 +19,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { PageHead } from "@/app/components/PageHead";
+import { StepLine } from "@/app/components/StepLine";
+import { temperatureConclusion, temperatureSteps } from "@/lib/market/region-conclusion";
+import { VerdictCard } from "../timing/region-verdict";
 import { Explain } from "@/app/components/explain/Explain";
 import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
 import type { TemperatureLatest } from "@/lib/market/temperature-archive";
@@ -133,7 +141,7 @@ export function TempMapClient({
 }: {
   weeks: WeekView[];
   history: HistoryView | null;
-  /** 레일 아래 "이어서" 칩(서버가 만든 AnalysisCrossLinks) */
+  /** 레일 아래 — 다음 행동 카드 · "이어서" 칩(서버가 만든 RegionActionCard · AnalysisCrossLinks) */
   rail: ReactNode;
   /** 이번 주 기록 지역 수(제목 줄) */
   totalCount: number;
@@ -180,12 +188,26 @@ export function TempMapClient({
     if (s && sidos.includes(s)) setSido(s);
   }, [sidos]);
 
+  /* [1026] 절차 · 결론 — 지금 보는 주·시/도의 weekStats 그대로 */
+  const plan = temperatureSteps(chipLabel, sido, rows.length, nation.filter((t) => t.count > 0).length);
+  const conclusion = temperatureConclusion({
+    weekWord: chipLabel,
+    sido,
+    count: stats.count,
+    avg: stats.avg,
+    hottest: stats.hottest ? { label: stats.hottest.current.regionLabel, score: stats.hottest.current.score } : null,
+    coldest: stats.coldest ? { label: stats.coldest.current.regionLabel, score: stats.coldest.current.score } : null,
+    rising: stats.rising,
+    falling: stats.falling,
+    compared: stats.compared,
+  });
+
   const railList = (
-    <div className="card rounded-2xl p-3.5">
-      <div className="t-sub font-bold text-text-3">
+    <section className="card rounded-2xl p-4 max-md:p-3.5">
+      <h2 className="t-section text-ink">
         온도 높은 순 · {rows.length}곳
         {sido ? ` · ${sido}` : ""}
-      </div>
+      </h2>
       <ol className="lq-panel mt-1 divide-y" data-tone="plain">
         {rows.slice(0, RAIL_COUNT).map((r) => {
           const band = tempBand(r.current.score);
@@ -220,7 +242,7 @@ export function TempMapClient({
           {rows.length}곳 전체 ›
         </a>
       )}
-    </div>
+    </section>
   );
 
   return (
@@ -256,74 +278,84 @@ export function TempMapClient({
         }
       />
 
-      {/* 타일 — 평균 · 가장 뜨거운 · 가장 차가운 · 지난주 대비 · 내 관심 지역(있을 때만) */}
-      <div className="tmp-stat mt-3">
-        {stats.avg !== null && (
-          <div className="kpi">
-            <span className="kpi-k">평균 온도</span>
-            <span className="kpi-v">{stats.avg}</span>
-            <span className="kpi-d">
-              {stats.count}곳 · {chipLabel}
-              {sido ? ` · ${sido}` : ""}
-            </span>
-          </div>
-        )}
-        {stats.hottest && (
-          <div className="kpi">
-            <span className="kpi-k">가장 뜨거운 곳</span>
-            <span className="kpi-v truncate">
-              {stats.hottest.current.regionLabel} {stats.hottest.current.score}
-            </span>
-            <span className="kpi-d truncate">{stats.hottest.current.headline}</span>
-          </div>
-        )}
-        {stats.coldest && (
-          <div className="kpi">
-            <span className="kpi-k">가장 차가운 곳</span>
-            <span className="kpi-v truncate">
-              {stats.coldest.current.regionLabel} {stats.coldest.current.score}
-            </span>
-            <span className="kpi-d truncate">{stats.coldest.current.headline}</span>
-          </div>
-        )}
-        {stats.compared > 0 && (
-          <div className="kpi">
-            <span className="kpi-k">지난주 대비</span>
-            <span className="kpi-v inline-flex items-baseline gap-1.5">
-              <span className="delta-up">
-                <span aria-hidden="true">▲</span>
-                <span className="sr-only">오른 곳</span>
-                {stats.rising}
-              </span>
-              <span aria-hidden="true" className="text-text-3">
-                ·
-              </span>
-              <span className="delta-down">
-                <span aria-hidden="true">▼</span>
-                <span className="sr-only">내린 곳</span>
-                {stats.falling}
-              </span>
-            </span>
-            <span className="kpi-d">비교 가능한 {stats.compared}곳 중 오른 곳 · 내린 곳</span>
-          </div>
-        )}
-        {mine && (
-          <Link href={`${PATH}/${encodeURIComponent(mine.current.regionId)}`} className="kpi tile no-underline">
-            <span className="kpi-k">내 관심 지역</span>
-            <span className="kpi-v truncate">
-              {mine.current.regionLabel} {mine.current.score}
-            </span>
-            <span className="kpi-d inline-flex items-center gap-1">
-              {mine.previous ? <DiffBadge diff={mine.current.score - mine.previous.score} /> : mine.current.headline}
-            </span>
-          </Link>
-        )}
-      </div>
+      {/* [1026] 절차 한 줄 — 화면당 한 번 */}
+      <StepLine className="mt-3" steps={plan.steps} current={plan.current} />
 
-      <div className="mt-3 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-6">
-        <main className="min-w-0">
-          {/* 온도 타일 지도 */}
-          <section id="temp-map" className="card scroll-mt-20 rounded-2xl p-4" data-reveal="">
+      <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
+        <div className="flex min-w-0 flex-col gap-3">
+          {/* [1026] 결론 한 줄 — 주 칩·시/도 선택을 따라 바뀐다 */}
+          {conclusion && <VerdictCard conclusion={conclusion} />}
+
+          {/* 타일 — 평균 · 가장 뜨거운 · 가장 차가운 · 지난주 대비 · 내 관심 지역(있을 때만). [1026] 폰은 결론과 겹치는 두 칸을 숨긴다 */}
+          <div className="tmp-stat">
+            {stats.avg !== null && (
+              <div className="kpi">
+                <span className="kpi-k">평균 온도</span>
+                <span className="kpi-v">{stats.avg}</span>
+                <span className="kpi-d">
+                  {stats.count}곳 · {chipLabel}
+                  {sido ? ` · ${sido}` : ""}
+                </span>
+              </div>
+            )}
+            {stats.hottest && (
+              <div className="min-w-0 max-md:hidden">
+                <div className="kpi h-full">
+                  <span className="kpi-k">가장 뜨거운 곳</span>
+                  <span className="kpi-v truncate">
+                    {stats.hottest.current.regionLabel} {stats.hottest.current.score}
+                  </span>
+                  <span className="kpi-d truncate">{stats.hottest.current.headline}</span>
+                </div>
+              </div>
+            )}
+            {stats.coldest && (
+              <div className="min-w-0 max-md:hidden">
+                <div className="kpi h-full">
+                  <span className="kpi-k">가장 차가운 곳</span>
+                  <span className="kpi-v truncate">
+                    {stats.coldest.current.regionLabel} {stats.coldest.current.score}
+                  </span>
+                  <span className="kpi-d truncate">{stats.coldest.current.headline}</span>
+                </div>
+              </div>
+            )}
+            {stats.compared > 0 && (
+              <div className="kpi">
+                <span className="kpi-k">지난주 대비</span>
+                <span className="kpi-v inline-flex items-baseline gap-1.5">
+                  <span className="delta-up">
+                    <span aria-hidden="true">▲</span>
+                    <span className="sr-only">오른 곳</span>
+                    {stats.rising}
+                  </span>
+                  <span aria-hidden="true" className="text-text-3">
+                    ·
+                  </span>
+                  <span className="delta-down">
+                    <span aria-hidden="true">▼</span>
+                    <span className="sr-only">내린 곳</span>
+                    {stats.falling}
+                  </span>
+                </span>
+                <span className="kpi-d">비교 가능한 {stats.compared}곳 중 오른 곳 · 내린 곳</span>
+              </div>
+            )}
+            {mine && (
+              <Link href={`${PATH}/${encodeURIComponent(mine.current.regionId)}`} className="kpi tile no-underline">
+                <span className="kpi-k">내 관심 지역</span>
+                <span className="kpi-v truncate">
+                  {mine.current.regionLabel} {mine.current.score}
+                </span>
+                <span className="kpi-d inline-flex items-center gap-1">
+                  {mine.previous ? <DiffBadge diff={mine.current.score - mine.previous.score} /> : mine.current.headline}
+                </span>
+              </Link>
+            )}
+          </div>
+
+          {/* 대표 그림 — 온도 타일 지도 */}
+          <section id="temp-map" className="card scroll-mt-20 rounded-2xl p-4 max-md:p-3.5" data-reveal="">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="t-section inline-flex items-center gap-0.5 text-ink">
                 온도 지도 · {weekKorean} 주
@@ -465,7 +497,7 @@ export function TempMapClient({
 
           {/* 12주 온도 — 주간 기록이 있을 때만(1위 지역) */}
           {history && history.slots.length >= 2 && (
-            <section className="card mt-3 rounded-2xl p-4" data-reveal="">
+            <section className="card rounded-2xl p-4 max-md:p-3.5" data-reveal="">
               <h2 className="t-section text-ink">
                 {history.regionLabel} · 최근 {history.slots.filter((s) => s.score !== null).length}주 온도
               </h2>
@@ -496,11 +528,11 @@ export function TempMapClient({
           )}
 
           {/* 폰 — 레일 내용을 본문 아래 한 열로(같은 내용을 두 자리 중 한 곳에만) */}
-          <div className="mt-3 flex flex-col gap-3 lg:hidden">
+          <div className="flex flex-col gap-3 lg:hidden">
             {railList}
             {rail}
           </div>
-        </main>
+        </div>
 
         <aside className="hidden lg:flex lg:flex-col lg:gap-3 lg:sticky lg:top-[76px] lg:self-start">
           {railList}

@@ -1,56 +1,48 @@
 "use client";
-/* [1023 · AI 분석] "실데이터 기준" 부연 라벨 2곳 제거 · AI 코멘트 판 네이비(.ai-panel + on-dark 토큰) → 흰 카드·잉크 토큰. 계산·문구 불변. */
+/* [1026b · 시나리오·비교] 1025 표준 — 머리(PageHead) 아래 절차 한 줄(조건 · {대상} · 대출 N% → 시나리오 · 금리 · 시세 · 보유 → 결과 · 월 상환 →
+   다음 행동) · 결론 한 줄(t-title "월 상환 164만원 · 금리 +1%p 시 184만원" + 판정 칩 "소득 대비 28% 적정" · 근거 = 지금 대비 · N년 보유 이자 ·
+   잔여 원금) · 대표 그림(금리 스트레스 곡선)을 결론 바로 아래 · 손잡이(조건 · 시나리오 두 카드)는 데스크톱 레일 / 폰 결론·그림 아래 접이식
+   (자리 하나만 마운트 — useDesktop) · 세부(결과 세 칸 · 월 부담 비교 · 보유 현황 · AI 코멘트) · 다음 행동 카드(채움 파랑 "살까, 빌릴까 계산"
+   + 결정 카드 · 이 지역 알림 · 지도) · 폰 하단 바(같은 요소). 이어서 칩의 파란 "이 조건 계산기로 정밀 계산"은 걷었다(채움 파랑 하나).
+   번들: 손잡이·세부는 next/dynamic(ScenarioLazy.tsx) — 494KB → 첫 묶음에서 단지 검색 · 지역 목록 · ⓘ 사전 · 등락 표기 · Segmented ·
+   TweenNumber 가 빠진다. 계산은 lib/market/scenario-calc(예전 useMemo 본문 그대로) · 문장은 lib/market/scenario-conclusion(새 계산 없음).
+   [1023 · AI 분석] "실데이터 기준" 부연 라벨 2곳 제거 · AI 코멘트 판 네이비 → 흰 카드·잉크 토큰. */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
-import { TweenNumber } from "@/app/components/motion/TweenNumber";
-import { burdenLabel } from "@/lib/finance/calc-summary";
-import { Segmented } from "@/app/components/ui/Segmented";
-import { Explain } from "@/app/components/explain/Explain";
-import { Delta } from "@/app/components/num/Delta";
-import { DELTA_ARROW, DELTA_CLASS, DELTA_WORD, deltaDir, pctChange } from "@/lib/format/delta";
-import { formatEokMan } from "@/lib/format/eok-man";
+import { StepLine } from "@/app/components/StepLine";
+import { PageHead } from "@/app/components/PageHead";
+import { Icon } from "@/app/components/Icon";
+import { MobilePrimaryBar } from "@/app/components/MobilePrimaryBar";
 import { PageShell } from "../../components/PageShell";
 import { SimulationNotice } from "../../components/ExampleBadge";
-import { ComplexPicker, type PickedComplex } from "../ComplexPicker";
-import { useMapPick } from "../use-map-pick";
+import type { PickedComplex } from "../ComplexPicker";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
-import {
-  SEOUL_DISTRICTS,
-  METRO_EXPLORE_DISTRICTS,
-} from "@/lib/map/seoul-districts";
-import { pickRegionByAnyName } from "@/lib/regions/param";
+import { VerdictCard } from "../timing/region-verdict";
 import { useCopy } from "@/lib/ui/use-copy";
+import { EXAMPLE_PRICE_WON, computeScenario } from "@/lib/market/scenario-calc";
+import {
+  SCENARIO_PRIMARY,
+  scenarioActionLinks,
+  scenarioConclusion,
+  scenarioConditionLine,
+  scenarioSteps,
+  scenarioWon,
+} from "@/lib/market/scenario-conclusion";
+import { ControlsShell, ScenarioControlsLazy, ScenarioDetailsLazy } from "./ScenarioLazy";
+import { useDesktop } from "./use-desktop";
 
 /* ============================================================
    시장·대출 시나리오 — 기준 시세를 지역 실데이터(스냅샷 평균가)로 프리필.
    지역 미선택/데이터 미보유 시 기존 예시 수치로 동작 (graceful).
-   계산은 전부 클라이언트 (30년 원리금균등 상환 기준).
+   계산은 전부 클라이언트 (30년 원리금균등 상환 기준 · lib/market/scenario-calc).
 
-   [1009 · A] 토스 계산기 관례로 다듬었다(2026-09-22 실측).
-    · 결과 숫자 9곳이 슬라이더를 움직이면 **순간 교체** — 무엇이 얼마나 바뀌었는지 눈이 못 따라갔다 → TweenNumber
-      (이전 값 → 새 값 320ms, 모션 최소화면 즉시).
-    · 색 뜻이 뒤섞였다 — "금리 +1%p 시" 금액을 오류색(text-danger), 시세 상승 자산을 테마색(text-primary), 소득 대비
-      "적정"을 테마색으로. 이제 변동은 ▲ 빨강·▼ 파랑(등락 관례 + 비교 기준), 부담 판정은 상태색(적정 초록·주의 주황·위험 빨강).
-    · 금액 표기: 계산 결과는 "3억 3,600만원"(표준 — 짧은 "3.36억"은 계산 결과를 뭉갠다). 억 미전환 없음.
-    · 금리 스트레스 곡선은 누르고 끌면 그 금리의 월 상환액(ScrubLine — 늘어나던 TrendChart 대신).
-    · 소득 대비(DSR 성격)·대출 비율(LTV) 옆 ⓘ — 이 화면 계산과 같은 말로.
+   [1009 · A] 토스 계산기 관례로 다듬었다(2026-09-22 실측) — 결과 숫자 TweenNumber · 등락 ▲ 빨강 ▼ 파랑 · 부담 판정 상태색 ·
+   금액 "3억 3,600만원" 표준 · 금리 스트레스 곡선 ScrubLine · 소득 대비·대출 비율 ⓘ. (세부 카드는 ScenarioDetails · 손잡이는 ScenarioControls)
    ============================================================ */
 
-/** 소득 대비 부담 "위험" 경계(40%) — burdenLabel(계산기)과 같은 값. 곡선의 "넘는 첫 금리"가 쓴다 */
-const BURDEN_LIMIT = 0.4;
-
-const REGION_OPTIONS = [
-  ...SEOUL_DISTRICTS.map((d) => ({ id: d.id, label: `서울 ${d.name}` })),
-  /* [999] 폐지 구(인천 서구·중구, 2026-07)는 선택지에서 뺀다 — 후속 구가 있다 */
-  ...METRO_EXPLORE_DISTRICTS.filter((d) => !d.retired).map((d) => ({
-    id: d.id,
-    label: `${d.city ?? "서울"} ${d.name}`,
-  })),
-];
-
 /* 기준금리 기본값 — 고정 사실이 아니라 사용자가 자기 조건으로 바꾸는 입력값.
-   (예전엔 4.19%가 하드코딩돼 "지금 금리"처럼 읽혔다. 금리는 사람·시점마다 다르다.)
    서버가 시중 주담대 실공시(금감원)를 넘겨주면 그 중앙값을 기본값으로 쓰고,
    못 받으면 이 정적 가정값으로 떨어진다 — 지어낸 값이 아니라 "조정하라"는 출발점. */
 const FALLBACK_BASE_RATE = 4.19;
@@ -64,27 +56,6 @@ export type RateContext = {
   mortgageSource: string | null;
   mortgageAsOf: string | null;
 };
-const RATE_OFFSETS: { label: string; offset: number }[] = [
-  { label: "기준", offset: 0 },
-  { label: "-1.0%p", offset: -1 },
-  { label: "-0.5%p", offset: -0.5 },
-  { label: "+0.5%p", offset: 0.5 },
-  { label: "+1.0%p", offset: 1 },
-  { label: "+2.0%p", offset: 2 },
-];
-const PRICE_CHIPS: { label: string; pct: number }[] = [
-  { label: "▲ +10% 급등", pct: 10 },
-  { label: "▲ +5%", pct: 5 },
-  { label: "보합", pct: 0 },
-  { label: "▼ -5%", pct: -5 },
-  { label: "▼ -10%", pct: -10 },
-  { label: "▼ -20% 급락", pct: -20 },
-];
-const PERIOD_CHIPS = ["3년", "5년", "10년"];
-
-/** 예시 기본값(데모) — 특정 단지명 없음 · 8.4억 */
-const EXAMPLE_PRICE_WON = 840_000_000;
-const LOAN_MONTHS = 360; // 30년 원리금균등
 
 type Baseline = {
   regionName: string;
@@ -95,64 +66,8 @@ type Baseline = {
   jeonseRatio: number | null;
 };
 
-function monthlyPayment(principalWon: number, annualRatePct: number): number {
-  const r = annualRatePct / 100 / 12;
-  if (r <= 0) return principalWon / LOAN_MONTHS;
-  const pow = Math.pow(1 + r, LOAN_MONTHS);
-  return (principalWon * r * pow) / (pow - 1);
-}
-
-/** [1009 · A] 원 → "312만원" · "1억 2,000만원" — 계산 결과 표준(formatEokMan). 0 이하는 "0원" */
-function wonText(won: number): string {
-  return won > 0 ? formatEokMan(won / 10_000, { unit: "만원" }) : "0원";
-}
-
-
-/** "202607" | "20260701" → "2026.07". 형식이 다르면 원문 그대로. */
-function fmtCycle(cycle: string): string {
-  const m = /^(\d{4})(\d{2})/.exec(cycle);
-  return m ? `${m[1]}.${m[2]}` : cycle;
-}
-
-/* [1009 · A] 날것 rgba(bg-[rgba(29,79,216,.1)]) → 토큰(bg-primary-soft), 선택 상태를 스크린리더에도(aria-pressed),
-   눌림(press). 시세 칩의 ▲▼ 는 등락색으로 — 화살표만 있고 색이 없었다. */
-function Chip({
-  label,
-  active,
-  onClick,
-  className = "",
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  className?: string;
-}) {
-  const m = /^([▲▼])\s?(.*)$/.exec(label);
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={`press min-h-[40px] rounded-lg px-3 py-2 text-xs ${
-        active
-          ? "border-[1.5px] border-primary bg-primary-soft font-bold text-primary"
-          : "border border-line bg-surface text-text-2"
-      } ${className}`}
-    >
-      {m ? (
-        <>
-          <span aria-hidden="true" className={m[1] === "▲" ? "delta-up" : "delta-down"}>
-            {m[1]}
-          </span>{" "}
-          <span className="sr-only">{m[1] === "▲" ? "상승" : "하락"} </span>
-          {m[2]}
-        </>
-      ) : (
-        label
-      )}
-    </button>
-  );
-}
+/** 지역 목록(seoul-districts)은 첫 묶음에 싣지 않는다 — 필요할 때 한 번 받아 둔다 */
+const loadRegions = () => import("./scenario-regions");
 
 export default function ScenarioClient({ rates }: { rates: RateContext }) {
   /* 기본 금리: 시중 주담대 변동 중앙값(실공시) > 정적 가정값 순.
@@ -161,41 +76,41 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
   const [rateOffset, setRateOffset] = useState(0);
   const [pricePct, setPricePct] = useState(0);
   const [period, setPeriod] = useState("5년");
-  /* 실입력 3종 — 예전엔 소득 7,000만·LTV 40%가 고정이었고 슬라이더는 그림이었다.
-     내 조건을 넣을 수 없는 시뮬레이터는 결과도 남의 결과다. */
+  /* 실입력 3종 — 예전엔 소득 7,000만·LTV 40%가 고정이었고 슬라이더는 그림이었다. */
   const [incomeManwon, setIncomeManwon] = useState(7000);
   const [ltvPct, setLtvPct] = useState(40);
   const [baseRate, setBaseRate] = useState(defaultRate);
   const [regionId, setRegionId] = useState("");
+  /** 고른 지역의 표기("서울 강남구") — 지역 목록을 지연으로 읽어 채운다 */
+  const [regionLabel, setRegionLabel] = useState<string | null>(null);
   const [pickedName, setPickedName] = useState<string | null>(null);
   const [baseline, setBaseline] = useState<Baseline | null>(null);
   const [loadingBaseline, setLoadingBaseline] = useState(false);
+  /* [1026b] 폰 손잡이 접이식 · 손잡이를 그릴 자리(데스크톱 레일 / 폰 접이식 중 하나만) */
+  const [panelOpen, setPanelOpen] = useState(false);
+  const desktop = useDesktop();
 
-  /* [975] 단지 선택은 검색·지도 두 길이 같은 함수로 모인다 — 어느 쪽으로 골라도
-     기준가 프리필과 지역 전환이 똑같이 일어나야 한다. */
+  /* [975] 단지 선택은 검색·지도 두 길이 같은 함수로 모인다(ScenarioControls 안의 검색·지도 모두 이 함수). */
   const onComplex = useCallback((c: PickedComplex) => {
     setPickedName(c.name);
     if (c.regionId) setRegionId(c.regionId);
   }, []);
-  const { openMap, mapNode } = useMapPick(onComplex, "시장·대출 시나리오");
 
   // 딥링크 ?region=·?ltv=·?income=·?rate= 초기 반영 (?complexId=/?apt= 는 ComplexPicker가 처리)
   // ltv/income/rate 는 /calculator "이 조건으로 시나리오 보기"가 현재 조건을 넘겨주는 통로.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
-    /* [D62] 지역은 어느 말로 와도 받는다 — 지도·홈은 "서울 강남구", 실거래
-       화면은 "서울-강남구", 여기 목록은 "gangnam". 예전에는 받은 문자열을
-       그대로 id 로 넣어, 다른 화면에서 온 링크가 조용히 기본 지역으로 떨어졌다. */
+    /* [D62] 지역은 어느 말로 와도 받는다 — 지도·홈은 "서울 강남구", 실거래 화면은 "서울-강남구", 여기 목록은 "gangnam".
+       [1026b] 목록은 지연으로 읽는다 — 그 사이 단지 딥링크가 지역을 먼저 정했으면 덮지 않는다. */
     const r = sp.get("region");
     if (r) {
-      const hit = pickRegionByAnyName(r, REGION_OPTIONS);
-      if (hit) setRegionId(hit.id);
+      void loadRegions().then((m) => {
+        const id = m.regionIdFromParam(r);
+        if (id) setRegionId((prev) => prev || id);
+      });
     }
-    /* 파라미터가 **없을 때** 0 으로 읽히던 버그 수리 (2026-08-27 실측).
-       Number(null) === 0 이라, 파라미터 없이 /analysis/scenario 를 열면
-       `ltv >= 0` 가드를 통과해 대출 비율이 40% → **0%** 로 덮였다.
-       대출 계산기가 "대출 0원 · 필요 현금 8.4억"으로 열리고 있었다.
+    /* 파라미터가 **없을 때** 0 으로 읽히던 버그 수리 (2026-08-27 실측) — Number(null) === 0 이라 대출 비율이 40% → 0% 로 덮였다.
        숫자로 바꾸기 전에 "값이 실제로 왔는지"를 먼저 본다. */
     const num = (key: string): number | null => {
       const raw = sp.get(key);
@@ -204,11 +119,9 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
       return Number.isFinite(n) ? n : null;
     };
     const ltv = num("ltv");
-    if (ltv !== null && ltv >= 0 && ltv <= 100)
-      setLtvPct(Math.min(70, Math.round(ltv / 5) * 5)); // 슬라이더 step=5에 맞춰 반올림
+    if (ltv !== null && ltv >= 0 && ltv <= 100) setLtvPct(Math.min(70, Math.round(ltv / 5) * 5)); // 슬라이더 step=5에 맞춰 반올림
     const income = num("income");
-    if (income !== null && income >= 100 && income <= 100_000)
-      setIncomeManwon(Math.round(income));
+    if (income !== null && income >= 100 && income <= 100_000) setIncomeManwon(Math.round(income));
     const rate = num("rate");
     if (rate !== null && rate >= 0.5 && rate <= 15) setBaseRate(rate);
     /* [AI-27] 공유 링크 복원 — price(가격 변동%)·offset(금리 오프셋) */
@@ -218,8 +131,23 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
     if (offset !== null && offset >= -3 && offset <= 3) setRateOffset(offset);
   }, []);
 
+  /* 지역 표기(이어서 분석 · 지도 링크) — 목록을 지연으로 읽어 채운다 */
+  useEffect(() => {
+    if (!regionId) {
+      setRegionLabel(null);
+      return;
+    }
+    let cancelled = false;
+    void loadRegions().then((m) => {
+      if (!cancelled) setRegionLabel(m.regionLabelOf(regionId));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [regionId]);
+
   /* [AI-27] 시나리오 공유 — 현재 입력 세트를 URL로. 열람은 로그인 불필요.
-     [966] 복사·토스트·"복사됨" 지속 시간은 useCopy(공용) — 화면마다 다르던 2.5s 를 없앤다. */
+     [966] 복사·토스트·"복사됨" 지속 시간은 useCopy(공용). */
   const { copy: copyLink, copied: shareCopied } = useCopy("링크를 복사했어요");
   const copyShareLink = () => {
     const sp = new URLSearchParams();
@@ -241,12 +169,8 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
     setLoadingBaseline(true);
     void (async () => {
       try {
-        const res = await fetch(
-          `/api/ai/market-baseline?regionId=${encodeURIComponent(regionId)}`,
-        );
-        const data = (await res.json().catch(() => null)) as
-          | ({ available?: boolean } & Baseline)
-          | null;
+        const res = await fetch(`/api/ai/market-baseline?regionId=${encodeURIComponent(regionId)}`);
+        const data = (await res.json().catch(() => null)) as ({ available?: boolean } & Baseline) | null;
         if (cancelled) return;
         setBaseline(
           data?.available && data.avgSaleWon > 0
@@ -277,510 +201,196 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
   const loanWon = priceWon * (ltvPct / 100);
   const cashWon = priceWon - loanWon;
 
-  const calc = useMemo(() => {
-    const rate = Math.max(0.1, baseRate) + rateOffset;
-    const pay = monthlyPayment(loanWon, rate);
-    const payStress = monthlyPayment(loanWon, rate + 1);
-    const dsr = (pay * 12) / incomeWon;
-    const dsrStress = (payStress * 12) / incomeWon;
-    const priceDeltaWon = (priceWon * pricePct) / 100;
-    const newPrice = priceWon + priceDeltaWon;
-    const ltvAfter = newPrice > 0 ? (loanWon / newPrice) * 100 : 0;
-    const bars = [
-      /* [975] 막대 위에는 흰 글씨가 얹힌다 — 그래서 **채움 전용 토큰**만 쓴다.
-         본문용 --primary/--danger 는 다크에서 밝은 색으로 뒤집히고,
-         --ai-accent 는 애초에 어두운 패널용이라 밝은 카드 위 흰 글씨가
-         2.27:1 이었다(실측). 색의 뜻도 이제 맞다: 붉음=부담 증가, 초록=감소. */
-      { label: `기준 ${rate.toFixed(2)}%`, pay, color: "var(--primary-fill)" },
-      { label: "+1.0%p", pay: payStress, color: "var(--danger-fill)" },
-      { label: "-0.5%p", pay: monthlyPayment(loanWon, Math.max(0.5, rate - 0.5)), color: "var(--success-fill)" },
-    ];
-    const maxPay = Math.max(...bars.map((b) => b.pay));
+  const calc = useMemo(
+    () => computeScenario({ loanWon, priceWon, rateOffset, pricePct, incomeWon, baseRate, period }),
+    [loanWon, priceWon, rateOffset, pricePct, incomeWon, baseRate, period],
+  );
 
-    /* 보유기간 배선 — 예전엔 3·5·10년 칩이 어느 계산에도 연결돼 있지 않았다.
-       k개월 후 잔여 원금 B = P·((1+r)^n − (1+r)^k)/((1+r)^n − 1) (원리금균등). */
-    const years = parseInt(period, 10) || 5;
-    const k = Math.min(LOAN_MONTHS, years * 12);
-    const r = rate / 100 / 12;
-    const pow = Math.pow(1 + r, LOAN_MONTHS);
-    const balance =
-      r <= 0
-        ? loanWon * (1 - k / LOAN_MONTHS)
-        : (loanWon * (pow - Math.pow(1 + r, k))) / (pow - 1);
-    const paidTotal = pay * k;
-    const principalPaid = loanWon - balance;
-    const interestPaid = Math.max(0, paidTotal - principalPaid);
+  /* [1026b] 절차 · 결론 · 다음 행동 — 화면이 이미 가진 값만(lib/market/scenario-conclusion) */
+  const target = pickedName ?? (isReal ? baseline.regionName : "예시 8.4억");
+  const plan = scenarioSteps({ target, ltvPct, rateOffset, pricePct, period, pay: calc.pay });
+  const conclusion = scenarioConclusion(calc, pricePct);
+  const mapRegion = regionLabel ? (regionLabel.split(" ").pop() ?? null) : null;
+  const links = scenarioActionLinks(mapRegion);
 
-    /* 금리 스트레스 곡선 — 막대 3개(기준·+1%p·-0.5%p)로는 "어디서부터
-       버거워지는가"가 안 보인다. -1.0%p ~ +3.0%p 를 0.25%p 간격으로 훑어
-       월 상환액이 어떻게 휘는지를 선으로 그린다. 슬라이더를 움직이면
-       이 곡선이 그 자리에서 다시 그려진다(이 화면의 유일한 실시간 반응). */
-    const curve: { rate: number; pay: number }[] = [];
-    for (let d = -1; d <= 3.0001; d += 0.25) {
-      const rr = Math.max(0.5, rate + d);
-      curve.push({ rate: Math.round(rr * 100) / 100, pay: monthlyPayment(loanWon, rr) });
-    }
-    /* 소득 대비 40%(통상 부담 한계 — 계산기와 같은 "위험" 경계)를 넘는 첫 금리 — 없으면 null */
-    const breachRate =
-      curve.find((c) => (c.pay * 12) / incomeWon > BURDEN_LIMIT)?.rate ?? null;
+  /* 손잡이 — 자리 하나만(데스크톱 레일 / 폰 접이식). 대상·출처 줄은 예전 표기 그대로 */
+  const controls = (
+    <ScenarioControlsLazy
+      rates={rates}
+      regionId={regionId}
+      onRegion={setRegionId}
+      onComplex={onComplex}
+      loadingBaseline={loadingBaseline}
+      isReal={isReal}
+      targetText={
+        isReal
+          ? `${pickedName ? `${pickedName} · ` : ""}${baseline.regionName} 평균 · ${baseline.avgSaleLabel}`
+          : `${pickedName ? `${pickedName} · ` : "예시 시세 · "}8.4억`
+      }
+      sourceText={
+        isReal
+          ? `${baseline.source.toUpperCase()} · ${baseline.period} 기준${baseline.jeonseRatio !== null ? ` · 전세가율 ${baseline.jeonseRatio.toFixed(0)}%` : ""}`
+          : null
+      }
+      ltvPct={ltvPct}
+      setLtvPct={setLtvPct}
+      incomeManwon={incomeManwon}
+      setIncomeManwon={setIncomeManwon}
+      baseRate={baseRate}
+      setBaseRate={setBaseRate}
+      cashWon={cashWon}
+      rateOffset={rateOffset}
+      setRateOffset={setRateOffset}
+      pricePct={pricePct}
+      setPricePct={setPricePct}
+      period={period}
+      setPeriod={setPeriod}
+    />
+  );
 
-    return {
-      rate, pay, payStress, dsr, dsrStress, priceDeltaWon, ltvAfter, bars, maxPay,
-      holdYears: years, holdBalance: balance, holdInterest: interestPaid, holdPrincipal: principalPaid,
-      curve, breachRate,
-    };
-  }, [loanWon, priceWon, rateOffset, pricePct, incomeWon, baseRate, period]);
+  /* 채움 파랑 — 화면의 주 행동 하나. 데스크톱 레일 카드(lg+)와 폰 하단 바가 이 요소를 나눠 그린다 */
+  const primary = (
+    <Link href={SCENARIO_PRIMARY.href} className="btn-primary btn-md press w-full gap-1.5 no-underline">
+      <Icon name="calculator" size={16} />
+      {SCENARIO_PRIMARY.label}
+    </Link>
+  );
 
-  /* [1009 · A] 부담 판정은 상태색 — 예전엔 "적정"이 테마색(text-primary), 주의·위험이 같은 빨강이라 구분이 안 됐다.
-     [리뷰] 경계는 대출 계산기와 하나로(lib/finance/calc-summary burdenLabel: 30% 이하 적정 · 40% 이하 주의 · 그 위 위험) —
-     예전엔 35% 부터 "위험"이라면서 같은 화면 곡선·문장은 "40% 통상 부담 한계"라고 했다. */
-  const dsrTone = (v: number) => {
-    const label = burdenLabel(v * 100) ?? "위험";
-    return { label, cls: label === "적정" ? "text-success" : label === "주의" ? "text-warning" : "text-danger" };
-  };
-
-  const aiComment = useMemo(() => {
-    const stress = dsrTone(calc.dsrStress);
-    const head = isReal
-      ? `${baseline.regionName} 평균 매매가 ${baseline.avgSaleLabel}(${baseline.period} 기준) 실데이터와 입력하신 조건(연 소득 ${incomeManwon.toLocaleString("ko-KR")}만원 · 대출 ${ltvPct}%)으로 계산했습니다.`
-      : `예시 시세(8.4억)와 입력하신 조건(연 소득 ${incomeManwon.toLocaleString("ko-KR")}만원 · 대출 ${ltvPct}%) 기준입니다. 지역을 선택하면 실제 평균가로 다시 계산합니다.`;
-    const body =
-      stress.label !== "위험"
-        ? `금리 1%p 상승 시에도 월 ${wonText(calc.payStress)}(소득 대비 ${(calc.dsrStress * 100).toFixed(0)}%)로 ${stress.label} 범위입니다.`
-        : `금리 1%p 상승 시 월 ${wonText(calc.payStress)}(소득 대비 ${(calc.dsrStress * 100).toFixed(0)}%)로 부담이 커집니다. 대출 비율을 낮추거나 예산을 재조정하세요.`;
-    const hold = ` ${calc.holdYears}년 보유 시 누적 이자는 약 ${wonText(calc.holdInterest)}, 잔여 원금은 ${wonText(calc.holdBalance)}입니다.`;
-    const tail =
-      pricePct < 0
-        ? ` 시세 ${pricePct}% 시나리오에서 LTV는 ${calc.ltvAfter.toFixed(0)}%로 ${calc.ltvAfter < 60 ? "안전권" : "주의 구간"}입니다.`
-        : "";
-    return `${head} ${body}${hold}${tail}`;
-  }, [baseline, calc, isReal, pricePct, incomeManwon, ltvPct]);
+  /* 다음 행동 카드 — 데스크톱 레일 · 폰 본문 끝(채움 파랑은 하단 바가 맡아 카드 안에서는 lg 에서만) */
+  const actionCard = (
+    <section className="card flex flex-col gap-2 rounded-2xl p-4 max-md:p-3.5" aria-label="다음 행동">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+        <h2 className="t-section text-ink">다음 행동</h2>
+        <span className="min-w-0 t-caption tabular-nums text-text-3">
+          월 {scenarioWon(calc.pay)} · 필요 현금 {scenarioWon(cashWon)}
+        </span>
+      </div>
+      <div className="hidden lg:block">{primary}</div>
+      <ul className="m-0 flex list-none flex-col divide-y p-0" data-tone="plain" aria-label="이어서 할 일">
+        {links.map((l) => (
+          <li key={l.label}>
+            <Link href={l.href} className="flex min-h-10 items-center justify-between gap-2 t-sub font-bold text-primary no-underline">
+              {l.label}
+              <span aria-hidden="true">›</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 
   return (
     <PageShell breadcrumb="분석 › 시장·대출 시나리오">
-      {/* [975] 지도에서 단지 고르기 — 열기 전에는 내려받지 않는다 */}
-      {mapNode}
-      <div className="mb-2 flex items-center justify-between">
-        <h1 className="rise-in t-title text-ink">시장·대출 시나리오</h1>
-        {/* [AI-27] 현재 조건 세트를 URL로 공유 — 커뮤니티 글감·상담 공유용 */}
-        <button
-          type="button"
-          onClick={copyShareLink}
-          className="press rise-in min-h-[40px] rounded-lg border border-line-strong bg-surface px-3 py-1.5 t-sub font-bold text-text-1"
-        >
-          {shareCopied ? "링크 복사됨 ✓" : "이 조건 공유"}
-        </button>
-      </div>
-      {!isReal && (
-        <div className="rise-in mb-3">
-          <SimulationNotice />
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-5 max-md:gap-3 lg:grid-cols-[380px_minmax(0,1fr)]">
-        {/* 조건 설정 */}
-        <div className="rise-in-1 card flex flex-col gap-3.5 rounded-3xl p-[22px] max-md:p-3.5">
-          <div className="t-section text-ink">조건 설정</div>
-
-          {/* 단지 선택 → 그 단지 지역의 실시세로 기준가 프리필 */}
-          <ComplexPicker
-            label="단지로 기준가 채우기"
-            onSelect={onComplex}
-            /* [975] 이름을 몰라도 지도에서 눌러 고른다 */
-            onMapClick={openMap}
-          />
-
-          {/* 지역 실시세 프리필 */}
-          <label className="flex flex-col gap-1">
-            <span className="t-sub font-bold text-text-2">기준 지역 (실시세)</span>
-            <select
-              value={regionId}
-              onChange={(e) => setRegionId(e.target.value)}
-              className="w-full rounded-lg border border-line bg-surface px-2.5 py-2 text-xs font-bold text-ink"
+      <div className="nz-dot-blue mx-auto w-full max-w-[1200px]">
+        <PageHead
+          icon="calculator"
+          title="시장·대출 시나리오"
+          sub={`30년 원리금균등 · ${isReal ? `${baseline.regionName} 평균 매매가 ${baseline.avgSaleLabel}` : "예시 시세 8.4억"}`}
+          actions={
+            /* [AI-27] 현재 조건 세트를 URL로 공유 */
+            <button
+              type="button"
+              onClick={copyShareLink}
+              className="press min-h-[40px] rounded-lg border border-line-strong bg-surface px-3 py-1.5 t-sub font-bold text-text-1"
             >
-              <option value="">예시 시세로 계산 (8.4억)</option>
-              {REGION_OPTIONS.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-            {regionId && !loadingBaseline && !isReal && (
-              <span className="t-sub text-text-3">이 지역은 실시세 자료가 없어 예시 시세로 계산</span>
-            )}
-          </label>
-
-          <div className="flex flex-col gap-2.5">
-            <div className="flex justify-between t-body">
-              <span className="text-text-2">대상</span>
-              <span className="text-right font-bold text-ink">
-                {isReal
-                  ? `${pickedName ? `${pickedName} · ` : ""}${baseline.regionName} 평균 · ${baseline.avgSaleLabel}`
-                  : `${pickedName ? `${pickedName} · ` : "예시 시세 · "}8.4억`}
-                {/* [1023] "실데이터 기준" 부연 라벨은 걷었다 — 바로 아래 출처 줄이 사실을 말한다 */}
-              </span>
-            </div>
-            {isReal && (
-              <div className="flex justify-between t-sub text-text-3">
-                <span>출처</span>
-                <span>
-                  {baseline.source.toUpperCase()} · {baseline.period} 기준
-                  {baseline.jeonseRatio !== null
-                    ? ` · 전세가율 ${baseline.jeonseRatio.toFixed(0)}%`
-                    : ""}
-                </span>
-              </div>
-            )}
-            {/* 대출 비율 — 예전 슬라이더는 40%에 고정된 그림이었다. 실제 입력으로 교체. */}
-            <div className="flex justify-between t-body">
-              <span className="inline-flex items-center gap-0.5 text-text-2">
-                대출 비율
-                <Explain
-                  term="ltv"
-                  how={[
-                    "대출액 = 기준 시세 × 대출 비율 · 필요 현금 = 기준 시세 − 대출액",
-                    "실제 한도는 지역(규제지역 여부)·보유 주택 수·가격대에 따라 다르다. 계산기에서 내 조건으로 확인.",
-                  ]}
-                />
-              </span>
-              <span className="font-bold tabular-nums text-ink">
-                <TweenNumber value={ltvPct} format="int" suffix="%" />
-              </span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={70}
-              step={5}
-              value={ltvPct}
-              onChange={(e) => setLtvPct(Number(e.target.value))}
-              aria-label="대출 비율 (%)"
-              className="h-9 w-full cursor-pointer accent-primary max-md:h-11"
-            />
-            <label className="flex items-center justify-between gap-2 t-body">
-              <span className="text-text-2">연 소득</span>
-              <span className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min={100}
-                  max={100_000}
-                  step={100}
-                  value={incomeManwon}
-                  onChange={(e) => setIncomeManwon(Math.max(0, Number(e.target.value)))}
-                  aria-label="연 소득 (만원)"
-                  className="w-[90px] rounded-lg border border-line bg-surface px-2 py-1 text-right t-body font-bold text-ink"
-                />
-                <span className="font-bold text-text-2">만원</span>
-              </span>
-            </label>
-            {/* [D68] 금리는 이 화면에서 **가장 많이 만지는 값**인데 숫자 입력칸
-                하나뿐이었다 — 0.05씩 올려 보려면 화살표를 스무 번 눌러야 한다.
-                대출 비율은 이미 슬라이더인데 금리만 아닌 건 일관성 문제이기도 하다.
-                슬라이더를 더하되 숫자칸은 남긴다: 슬라이더는 "훑어보기",
-                숫자칸은 "내 대출 금리 정확히 넣기" — 둘은 다른 용도다.
-                DSR 은 입력이 아니라 결과다(소득·상환액에서 계산된다) — 만질 수
-                있는 것처럼 보이게 하지 않고, 슬라이더를 움직이는 즉시 아래에서
-                다시 계산돼 보인다. */}
-            <div className="flex justify-between t-body">
-              <span className="text-text-2">기준 금리</span>
-              <span className="font-bold text-ink">{baseRate.toFixed(2)}%</span>
-            </div>
-            <input
-              type="range"
-              min={2}
-              max={9}
-              step={0.05}
-              value={Math.min(9, Math.max(2, baseRate))}
-              onChange={(e) => setBaseRate(Number(e.target.value))}
-              aria-label="기준 금리 (연 %) 슬라이더"
-              className="h-9 w-full cursor-pointer accent-primary max-md:h-11"
-            />
-            <label className="flex items-center justify-between gap-2 t-body">
-              <span className="text-text-2">직접 입력</span>
-              <span className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min={0.5}
-                  max={15}
-                  step={0.05}
-                  value={baseRate}
-                  onChange={(e) => setBaseRate(Number(e.target.value))}
-                  aria-label="기준 금리 (연 %)"
-                  className="w-[70px] rounded-lg border border-line bg-surface px-2 py-1 text-right t-body font-bold text-ink"
-                />
-                <span className="font-bold text-text-2">%</span>
-              </span>
-            </label>
-
-            {/* 지금 금리 참고 — 서버가 넘긴 실공시(한국은행 기준금리·금감원 주담대).
-                정책금리는 대출금리가 아니라 참고용, 주담대 중앙값은 '적용' 버튼으로 채운다.
-                값이 없으면(키 미설정) 블록 자체를 감춰 지어낸 숫자를 만들지 않는다. */}
-            {(rates.policy || rates.mortgageMedian != null) && (
-              <div className="rounded-lg border border-line bg-bg px-3 py-2 t-sub">
-                <div className="font-bold text-text-2">지금 금리 참고</div>
-                {rates.policy && (
-                  <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="text-text-3">한국은행 기준금리(정책)</span>
-                    <span className="font-bold text-ink">
-                      {rates.policy.label}
-                      {rates.policy.cycle ? (
-                        <span className="ml-1 font-semibold text-text-3">
-                          {fmtCycle(rates.policy.cycle)}
-                        </span>
-                      ) : null}
-                    </span>
-                  </div>
-                )}
-                {rates.mortgageMedian != null && (
-                  <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="text-text-3">
-                      시중 주담대 변동 중앙값
-                      {rates.mortgageAsOf ? (
-                        <span className="ml-0.5 text-text-3">({rates.mortgageAsOf})</span>
-                      ) : null}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setBaseRate(Number(rates.mortgageMedian!.toFixed(2)))}
-                      className="shrink-0 rounded-lg border-[1.5px] border-primary px-2 py-0.5 t-sub font-bold text-primary"
-                    >
-                      {rates.mortgageMedian.toFixed(2)}% 적용
-                    </button>
-                  </div>
-                )}
-                <div className="mt-1.5 t-caption text-text-3">
-                  실제 대출 금리 = 기준금리 + 가산금리(신용·LTV·상품별) · 위 값은 참고용
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-between gap-2 t-body">
-              <span className="text-text-2">필요 현금 (시세−대출)</span>
-              <TweenNumber value={cashWon / 10_000} format="eokmanwon" className="text-right font-bold text-ink" />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 border-t border-divider pt-3">
-            <div className="t-body font-bold text-ink">금리 시나리오</div>
-            <div className="flex flex-wrap gap-1.5">
-              {RATE_OFFSETS.map((c) => (
-                <Chip
-                  key={c.label}
-                  label={c.offset === 0 ? `기준 ${baseRate}%` : c.label}
-                  active={rateOffset === c.offset}
-                  onClick={() => setRateOffset(c.offset)}
-                />
-              ))}
-            </div>
-            <div className="mt-1 t-body font-bold text-ink">시세 시나리오</div>
-            <div className="flex flex-wrap gap-1.5">
-              {PRICE_CHIPS.map((c) => (
-                <Chip
-                  key={c.label}
-                  label={c.label}
-                  active={pricePct === c.pct}
-                  onClick={() => setPricePct(c.pct)}
-                />
-              ))}
-            </div>
-            <div className="mt-1 t-body font-bold text-ink">보유 기간</div>
-            {/* [1009 · A] 세 가지 중 하나 — 같은 화면 상태 전환이라 공용 Segmented(선택 표시가 미끄러진다) */}
-            <Segmented
-              options={PERIOD_CHIPS.map((c) => ({ value: c, label: c }))}
-              value={period}
-              onChange={setPeriod}
-              ariaLabel="보유 기간"
-              className="self-start"
-            />
-          </div>
-
-          <div className="rounded-lg bg-bg p-3 text-center text-xs font-semibold text-text-3">
-            {isReal
-              ? "지역 평균 실시세 기준 · 30년 원리금균등 상환으로 자동 계산돼요"
-              : "예시 시세 기준 · 지역을 선택하면 실제 평균가로 계산돼요"}
-          </div>
-        </div>
-
-        {/* 결과 */}
-        <div className="flex flex-col gap-4">
-          <div className="rise-in-2 grid grid-cols-1 gap-3.5 md:grid-cols-3">
-            <div className="card rounded-2xl p-[18px]">
-              <div className="text-xs text-text-3">
-                월 원리금 ({calc.rate.toFixed(2)}%)
-              </div>
-              <TweenNumber value={calc.pay / 10_000} format="eokmanwon" className="mt-1 block t-title text-ink" />
-              <div className={`mt-0.5 inline-flex flex-wrap items-center gap-0.5 t-sub font-bold ${dsrTone(calc.dsr).cls}`}>
-                소득 대비 {(calc.dsr * 100).toFixed(0)}% · {dsrTone(calc.dsr).label}
-                <Explain
-                  term="dsr"
-                  title="소득 대비 상환 부담"
-                  body="이 화면의 '소득 대비'는 이 대출 하나만 넣은 값이라 실제 DSR(모든 대출 합산)보다 낮게 나와요."
-                  how={[
-                    "소득 대비 = 이 대출의 1년 원리금(월 상환액 × 12) ÷ 연 소득",
-                    "30% 이하 적정 · 40% 이하 주의 · 40% 넘으면 위험(대출 계산기와 같은 참고 기준)",
-                    "30년 원리금균등 상환, 금리는 위에서 고른 값 그대로",
-                  ]}
-                />
-              </div>
-            </div>
-            <div className="card rounded-2xl p-[18px]">
-              <div className="text-xs text-text-3">금리 +1.0%p 시 월 원리금</div>
-              <TweenNumber value={calc.payStress / 10_000} format="eokmanwon" className="mt-1 block t-title text-ink" />
-              {/* [1009 · A] 오류색(text-danger)으로 칠하던 금액 → "지금 대비 ▲ 얼마" 로 무엇이 늘었는지 말한다 */}
-              <div className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 t-sub">
-                <Delta pct={pctChange(calc.payStress, calc.pay)} diffManwon={(calc.payStress - calc.pay) / 10_000} srContext="지금보다" />
-                <span className="t-caption text-text-3">지금 대비</span>
-              </div>
-              <div className={`mt-0.5 t-sub font-bold ${dsrTone(calc.dsrStress).cls}`}>
-                소득 대비 {(calc.dsrStress * 100).toFixed(0)}% · {dsrTone(calc.dsrStress).label}
-              </div>
-            </div>
-            <div className="card rounded-2xl p-[18px]">
-              <div className="text-xs text-text-3">
-                시세 {pricePct === 0 ? "보합" : `${pricePct > 0 ? "+" : ""}${pricePct}%`} 시 자산 변화
-              </div>
-              {(() => {
-                /* 등락 관례 — 오르면 빨강 ▲, 내리면 파랑 ▼(예전엔 오름을 테마색, 내림을 무색으로 칠했다) */
-                const dir = deltaDir(pricePct);
-                if (!dir || dir === "flat") return <div className="mt-1 t-title delta-flat">보합 · 0원</div>;
-                return (
-                  <div className={`mt-1 t-title ${DELTA_CLASS[dir]}`}>
-                    <span aria-hidden="true">{DELTA_ARROW[dir]} </span>
-                    <span className="sr-only">{DELTA_WORD[dir]} </span>
-                    <TweenNumber value={Math.abs(calc.priceDeltaWon) / 10_000} format="eokmanwon" />
-                  </div>
-                );
-              })()}
-              <div className="mt-0.5 t-sub text-text-3">
-                LTV {calc.ltvAfter.toFixed(0)}%로 {pricePct < 0 ? "상승" : "변동"} ·{" "}
-                {calc.ltvAfter < 60 ? "안전권" : "주의"}
-              </div>
-            </div>
-          </div>
-
-          {/* 금리 스트레스 곡선 — 슬라이더에 실시간 반응하는 그림.
-              [1009 · A] 누르고 끌면(마우스는 올리기만 해도) 그 금리의 월 상환액이 말풍선에 — 늘어나던 TrendChart 는
-              390px 에서 축 글자가 찌그러졌고 값을 읽을 길이 없었다. */}
-          <div className="chart-card text-primary" data-reveal="">
-            <div className="chart-head">
-              <span className="t-section text-ink">금리 스트레스 곡선</span>
-              <span className="t-sub t-num text-primary">
-                지금 {calc.rate.toFixed(2)}% · 월 <TweenNumber value={calc.pay / 10_000} format="eokmanwon" />
-              </span>
-              <span className="t-caption ml-auto text-text-3">
-                −1.0%p ~ +3.0%p · 0.25%p 간격
-              </span>
-            </div>
-            <ScrubLineLazy
-              values={calc.curve.map((c) => Math.round(c.pay / 10_000))}
-              labels={calc.curve.map((c) => `${c.rate.toFixed(2)}%`)}
-              fullLabels={calc.curve.map((c) => `금리 ${c.rate.toFixed(2)}%`)}
-              format="int"
-              suffix="만원"
-              height={150}
-              tone="primary"
-              ariaLabel="금리별 월 상환액 곡선"
-            />
-            <p className="t-sub text-text-2">
-              {calc.breachRate === null ? (
-                <>
-                  +3.0%p 까지 올라도 소득 대비 40%를 넘지 않습니다(현재 조건 기준).
-                </>
-              ) : (
-                <>
-                  금리가 <b className="text-ink">{calc.breachRate.toFixed(2)}%</b> 를
-                  넘어서면 소득 대비 40%(통상 부담 한계)를 지나갑니다. 지금은{" "}
-                  {calc.rate.toFixed(2)}% 입니다.
-                </>
-              )}{" "}
-              세로축 월 상환액 · 가로축 연 금리 · 곡선을 누른 채 좌우로 움직이면 그 금리의 월 상환액 표시.
-            </p>
-          </div>
-
-          <div className="card flex flex-col gap-3 rounded-lg p-4" data-reveal="">
-            <div className="t-section text-ink">시나리오별 월 부담 비교</div>
-            <div className="flex flex-col gap-2.5">
-              {calc.bars.map((b) => (
-                <div key={b.label} className="flex items-center gap-3">
-                  <span className="w-[90px] shrink-0 text-xs text-text-2">{b.label}</span>
-                  <div className="relative h-[22px] flex-1 rounded-md bg-bg">
-                    <div
-                      className="absolute left-0 flex h-[22px] items-center justify-end rounded-md pr-2 t-sub font-bold text-white transition-[width] duration-200 ease-out motion-reduce:transition-none"
-                      style={{
-                        width: `${Math.max(18, Math.round((b.pay / calc.maxPay) * 92))}%`,
-                        background: b.color,
-                      }}
-                    >
-                      {wonText(b.pay)}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 보유기간 결과 — 3·5·10년 칩이 실제로 계산에 연결된 유일한 화면.
-              (예전엔 칩을 눌러도 아무 숫자도 바뀌지 않았다.) */}
-          <div className="rise-in-3 card flex flex-col gap-3 rounded-3xl p-[22px]">
-            <div className="t-section text-ink">
-              {calc.holdYears}년 보유 시 상환 현황
-              <span className="ml-2 t-sub font-semibold text-text-3">
-                30년 원리금균등 · 금리 {calc.rate.toFixed(2)}% 고정 가정
-              </span>
-            </div>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              {/* [1009 · A] 입력이 바뀌면 이전 값에서 굴러간다 · 계산 결과는 "1억 2,000만원" 표준 표기 */}
-              <div className="rounded-lg bg-bg px-2 py-3">
-                <div className="t-sub text-text-3">갚은 원금</div>
-                <TweenNumber value={calc.holdPrincipal / 10_000} format="eokmanwon" className="mt-1 block t-section break-words text-ink" />
-              </div>
-              <div className="rounded-lg bg-bg px-2 py-3">
-                <div className="t-sub text-text-3">낸 이자 (누적)</div>
-                <TweenNumber value={calc.holdInterest / 10_000} format="eokmanwon" className="mt-1 block t-section break-words text-ink" />
-              </div>
-              <div className="rounded-lg bg-bg px-2 py-3">
-                <div className="t-sub text-text-3">잔여 원금</div>
-                <TweenNumber value={calc.holdBalance / 10_000} format="eokmanwon" className="mt-1 block t-section break-words text-ink" />
-              </div>
-            </div>
-          </div>
-
-          {/* [1023] 흰 카드 위 잉크 토큰 — 예전 네이비 .ai-panel(큰 그림자 포함) */}
-          <div className="rise-in-4 flex flex-col gap-2 rounded-3xl border border-line bg-bg p-5">
-            <div className="flex items-start gap-3">
-              <span className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-lg border border-line t-caption font-bold text-ink">AI</span>
-              <div className="flex-1 t-body text-text-1">{aiComment}</div>
-              <span className="shrink-0 rounded border border-line px-1.5 py-px t-caption font-bold text-text-3">
-                규칙 기반 요약
-              </span>
-            </div>
-            <div className="t-caption text-text-3">
-              본 분석은 참고용이며 투자 판단의 책임은 이용자에게 있습니다.
-            </div>
-          </div>
-        </div>
-
-        {/* #411 — 도구 간 이어가기: 선택한 기준 지역 그대로 (미선택이면 링크만) */}
-        <AnalysisCrossLinks
-          current="scenario"
-          regionLabel={
-            regionId
-              ? (REGION_OPTIONS.find((r) => r.id === regionId)?.label ?? null)
-              : null
+              {shareCopied ? "링크 복사됨 ✓" : "이 조건 공유"}
+            </button>
           }
-          regionFor={
-            regionId
-              ? {
-                  timing: regionId,
-                  map:
-                    REGION_OPTIONS.find((r) => r.id === regionId)
-                      ?.label.split(" ")
-                      .pop() ?? undefined,
-                }
-              : undefined
-          }
-          note={{ label: "이 조건 계산기로 정밀 계산", href: "/calculator" }}
         />
+        {!isReal && (
+          <div className="mt-2">
+            <SimulationNotice />
+          </div>
+        )}
+
+        {/* [1026b] 절차 한 줄 — 화면당 한 번 */}
+        <StepLine className="mt-3" steps={plan.steps} current={plan.current} />
+
+        <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
+          <div className="flex min-w-0 flex-col gap-3">
+            {/* [1026b] 결론 한 줄 — 조건·시나리오를 바꾸면 바로 바뀐다 */}
+            <VerdictCard conclusion={conclusion} />
+
+            {/* 대표 그림 — 금리 스트레스 곡선(누르고 끌면 그 금리의 월 상환액) */}
+            <section className="card flex flex-col gap-2.5 rounded-2xl p-4 text-primary max-md:p-3.5" aria-label="금리 스트레스 곡선">
+              <div className="chart-head">
+                <h2 className="t-section text-ink">금리 스트레스 곡선</h2>
+                <span className="t-sub t-num text-primary">
+                  지금 {calc.rate.toFixed(2)}% · 월 {scenarioWon(calc.pay)}
+                </span>
+                <span className="t-caption ml-auto text-text-3">−1.0%p ~ +3.0%p · 0.25%p 간격</span>
+              </div>
+              <ScrubLineLazy
+                values={calc.curve.map((c) => Math.round(c.pay / 10_000))}
+                labels={calc.curve.map((c) => `${c.rate.toFixed(2)}%`)}
+                fullLabels={calc.curve.map((c) => `금리 ${c.rate.toFixed(2)}%`)}
+                format="int"
+                suffix="만원"
+                height={150}
+                tone="primary"
+                ariaLabel="금리별 월 상환액 곡선"
+              />
+              <p className="m-0 t-sub text-text-2">
+                {calc.breachRate === null ? (
+                  <>+3.0%p 까지 올라도 소득 대비 40%를 넘지 않습니다(현재 조건 기준).</>
+                ) : (
+                  <>
+                    금리가 <b className="text-ink">{calc.breachRate.toFixed(2)}%</b> 를 넘어서면 소득 대비 40%(통상 부담 한계)를 지나갑니다. 지금은{" "}
+                    {calc.rate.toFixed(2)}% 입니다.
+                  </>
+                )}
+              </p>
+            </section>
+
+            {/* 손잡이(폰) — 결론·그림 아래 접이식. lg 는 오른쪽 레일 */}
+            <div className="lg:hidden">
+              <button
+                type="button"
+                onClick={() => setPanelOpen(!panelOpen)}
+                aria-expanded={panelOpen}
+                aria-controls="scenario-panel"
+                className="card flex min-h-10 w-full items-center justify-between gap-2 rounded-2xl px-3.5 py-2 text-left"
+              >
+                <span className="min-w-0 t-sub font-bold text-ink">
+                  조건 · 시나리오
+                  <span className="ml-1 font-medium text-text-3">{scenarioConditionLine({ ltvPct, incomeManwon, baseRate })}</span>
+                </span>
+                <span aria-hidden="true" className={`shrink-0 text-text-3 transition-transform ${panelOpen ? "rotate-90" : ""}`}>
+                  ›
+                </span>
+              </button>
+              <div id="scenario-panel" className={panelOpen ? "mt-3 flex flex-col gap-3" : "hidden"}>
+                {desktop === false && controls}
+              </div>
+            </div>
+
+            {/* 세부 — 결과 세 칸 · 월 부담 비교 · 보유 현황 · AI 코멘트(면책) */}
+            <ScenarioDetailsLazy
+              calc={calc}
+              pricePct={pricePct}
+              baseline={baseline}
+              incomeManwon={incomeManwon}
+              ltvPct={ltvPct}
+            />
+
+            {/* 폰 — 다음 행동 카드는 본문 끝(레일은 lg 부터) */}
+            <div className="lg:hidden">{actionCard}</div>
+            {/* #411 — 도구 간 이어가기: 선택한 기준 지역 그대로 (미선택이면 링크만). [1026b] 파란 "계산기" 칩은 걷었다(채움 파랑 하나).
+                데스크톱에서도 본문 끝 — 레일(조건 · 시나리오 · 다음 행동)이 이미 길다 */}
+            <AnalysisCrossLinks
+              current="scenario"
+              regionLabel={regionLabel}
+              regionFor={regionId ? { timing: regionId, map: mapRegion ?? undefined } : undefined}
+            />
+          </div>
+          {/* 레일(lg+) — 손잡이(조건 · 시나리오) + 다음 행동. 손잡이가 길어 sticky 는 걸지 않는다(아래 카드가 화면 밖에 갇히지 않게) */}
+          <aside className="hidden lg:flex lg:flex-col lg:gap-3" aria-label="조건과 다음 행동">
+            {desktop === true ? controls : desktop === null ? <ControlsShell /> : null}
+            {actionCard}
+          </aside>
+        </div>
+        {/* [1026b] 폰 하단 바 — 레일의 채움 파랑과 같은 요소(화면에 한 번) */}
+        <MobilePrimaryBar label={SCENARIO_PRIMARY.label}>{primary}</MobilePrimaryBar>
       </div>
     </PageShell>
   );

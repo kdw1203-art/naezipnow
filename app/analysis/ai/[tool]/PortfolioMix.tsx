@@ -1,4 +1,5 @@
 "use client";
+/* [1026b · AI 분석 8종] 도구 색 띠(.tool-rail — .tool-scope 의 --tool-accent 를 읽는다)를 걷었다(12종 전역 파랑) · 카드 여백 1025 표준. 셈은 그대로. */
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { PRICE_BANDS } from "@/lib/market/bands";
@@ -67,7 +68,7 @@ export function PortfolioMix({
   );
   const topRegion = regions[0];
   return (
-    <section className="card tool-rail flex flex-col gap-3 rounded-2xl p-4" aria-label="관심 단지 구성">
+    <section className="card flex flex-col gap-3 rounded-2xl p-4 max-md:p-3.5" aria-label="관심 단지 구성">
       <div className="flex flex-col gap-1">
         <h2 className="t-section font-bold text-ink">관심 단지 {total}곳의 구성</h2>
         <p className="t-body text-text-1">

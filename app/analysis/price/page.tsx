@@ -1,4 +1,9 @@
-/* [1023 · AI 분석] 머리 통일 — h1 t-display 손 마크업(.pxs-head) → 공용 PageHead(아이콘 칩 40 · h1.t-title · 사실 한 줄 | 오른쪽 칩·지역 검색). 본문은 그대로. */
+/* [1026 · 지역 시세] 1025 표준 — 머리 아래 절차 한 줄(지역 → 면적대 → 실거래 범위 → 다음 행동) · 결론 한 줄(t-title
+   "남양주시 60~85㎡ 거래 최다 3,852건 · 중앙 5.5억" + 판정 칩 · 선반이 고른 칸을 따라 바뀐다) · 대표 그림(면적 선반)을 결론 바로 아래 ·
+   레일 340(실거래 범위 · 다음 행동 카드 · 이어서 분석) · 폰 하단 바(이 지역 알림 받기). 통계 타일 5칸은 결론 아래 숫자 줄로 —
+   폰에서는 결론과 겹치지 않는 2칸(평단가 최고 · 면적 프리미엄)만. 채움 파랑은 다음 행동 하나(이어서 칩의 파란 "노트 쓰기"는 텍스트 링크로).
+   빈 상태는 카드 하나 + 회색 선반 견본 + 한 문장. 데이터 로딩·revalidate·noIndex 는 그대로. 문장은 lib/market/region-conclusion.
+   [1023 · AI 분석] 머리 통일 — h1 t-display 손 마크업(.pxs-head) → 공용 PageHead(아이콘 칩 40 · h1.t-title · 사실 한 줄 | 오른쪽 칩·지역 검색). 본문은 그대로. */
 import Link from "next/link";
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import { PageShell } from "../../components/PageShell";
@@ -24,6 +29,11 @@ import { BandShelf } from "./BandShelf";
 import type { ShelfBand } from "./band-shelf-model";
 import { CompareComplexes } from "./CompareComplexes";
 import { AREA_BANDS } from "@/lib/market/bands";
+import { regionActionLinks } from "@/lib/market/region-conclusion";
+import { RegionActionCard, RegionPrimaryBar } from "../timing/region-verdict";
+
+/** [1026] 통계 칸 — phone 이 false 면 폰에서 숨긴다(결론 한 줄·머리 사실 줄과 겹치는 칸) */
+type PriceKpi = HeroKpi & { phone: boolean };
 
 /* [1022 · 면적대별 검색·비교] 지시 2 — "검색기능이 추가되어 쉽게쉽게 검색하고, 타단지 비교까지".
    ① 머리의 지역 바꾸기(RegionSelect)가 셀렉트 → 검색형 입력(타이핑 → 시군구 자동완성, 같은 배열·같은 이동 규칙).
@@ -68,12 +78,17 @@ function ymLabel(ym: string | null): string {
   return `${ym.slice(0, 4)}.${ym.slice(4, 6)}`;
 }
 
+/* [1026] 빈 상태 — 카드 하나 + 회색 견본(면적 선반 5칸 윤곽) + 한 문장 */
 function EmptyState({ msg }: { msg: string }) {
   return (
-    <div className="card mx-auto mt-8 max-w-[560px] rounded-2xl px-5 py-10 text-center">
-      <p className="text-[13px] font-bold text-ink">실거래가를 불러오지 못했어요</p>
-      <p className="mt-1 text-[12px] leading-relaxed text-text-3">{msg}</p>
-      <Link href="/tx" className="btn-soft btn-sm mt-4 inline-block no-underline">
+    <div className="card mx-auto mt-8 max-w-[560px] rounded-2xl p-4 text-center max-md:p-3.5">
+      <div className="mx-auto flex max-w-[320px] items-end justify-center gap-2" aria-hidden="true">
+        {[40, 88, 28, 52, 20].map((h, i) => (
+          <span key={i} className="block w-full rounded-sm border border-dashed border-line-strong" style={{ height: `${h}px` }} />
+        ))}
+      </div>
+      <p className="mt-3 t-body font-bold text-ink">{msg}</p>
+      <Link href="/tx" className="btn-soft btn-sm mt-3 inline-block no-underline">
         지역별 실거래 보기
       </Link>
     </div>
@@ -176,12 +191,13 @@ export default async function PricePage({
       : "대형"
     : null;
 
-  /* 통계 타일 5칸 — 값이 없으면 그 칸을 만들지 않는다. */
-  const heroKpis: HeroKpi[] = [
+  /* 통계 타일 5칸 — 값이 없으면 그 칸을 만들지 않는다. [1026] 결론 한 줄 아래 숫자 줄 — 폰은 phone 칸(2칸)만 */
+  const heroKpis: PriceKpi[] = [
     {
       label: "수집 실거래",
       value: `${target.txCount.toLocaleString("ko-KR")}건`,
       note: `${target.complexCount.toLocaleString("ko-KR")}개 단지`,
+      phone: false,
     },
   ];
   if (busiest) {
@@ -189,6 +205,7 @@ export default async function PricePage({
       label: "거래 최다 면적대",
       value: busiest.bandLabel,
       note: `${busiest.txCount.toLocaleString("ko-KR")}건 · 중앙값 ${eok(busiest.medianKrw)}`,
+      phone: false,
     });
   }
   if (hiBand) {
@@ -197,6 +214,7 @@ export default async function PricePage({
       value: manPerPyeong(hiBand.avgPerPyeongKrw),
       note: `${hiBand.bandLabel}${premiumKind ? ` · ${premiumKind} 프리미엄` : ""}`,
       aside: <Explain term="pyeongdanga" how={PYEONG_HOW} size={12} />,
+      phone: true,
     });
   }
   if (premiumRatio && loBand && hiBand && loBand.bandSlug !== hiBand.bandSlug) {
@@ -212,10 +230,16 @@ export default async function PricePage({
           size={12}
         />
       ),
+      phone: true,
     });
   }
   if (target.latestYm) {
-    heroKpis.push({ label: "최근 달", value: ymLabel(target.latestYm), note: "신고 기준" });
+    heroKpis.push({ label: "최근 달", value: ymLabel(target.latestYm), note: "신고 기준", phone: false });
+  }
+  /* 폰에 보일 칸이 둘 미만이면(평단가 칸이 없는 지역) 앞에서부터 채워 2칸은 남긴다 */
+  for (const k of heroKpis) {
+    if (heroKpis.filter((x) => x.phone).length >= 2) break;
+    k.phone = true;
   }
 
   const selectRegions = areaRegions.map((r) => ({
@@ -257,9 +281,27 @@ export default async function PricePage({
   /* [1022] 비교 표의 기준 행 — 면적대 5칸(AREA_BANDS 순서) 중앙값 문자열, 이 지역에 없는 칸은 null */
   const referenceMedians = AREA_BANDS.map((b) => bands.find((x) => x.slug === b.slug)?.medianText ?? null);
 
+  /* [1026] 결론 아래 숫자 줄(서버 마크업 — 선반 본문이 결론 카드 바로 아래에 꽂는다) */
+  const facts = (
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
+      {heroKpis.map((k) => (
+        <div key={k.label} className={k.phone ? "min-w-0" : "min-w-0 max-md:hidden"}>
+          <div className="kpi h-full">
+            <span className="kpi-k inline-flex items-center gap-0.5">
+              {k.label}
+              {k.aside}
+            </span>
+            <span className="kpi-v">{k.value}</span>
+            {k.note && <span className="kpi-d">{k.note}</span>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <PageShell breadcrumb="분석 · 면적대별 실거래가">
-      <div className="mx-auto w-full max-w-[1200px]">
+      <div className="nz-dot-blue mx-auto w-full max-w-[1200px]">
         {/* [D62] 넘겨받은 지역을 못 찾았으면 **그 사실을 말한다.**
             예전에는 조용히 첫 지역으로 갈아탔다 — 화면에는 다른 동네의 숫자가
             아무 표시 없이 떠 있었고, 사용자는 그게 자기가 고른 지역인 줄 알았다. */}
@@ -289,44 +331,33 @@ export default async function PricePage({
           }
         />
 
-        {/* 통계 타일 5칸 */}
-        <div className="pxs-stat mt-3">
-          {heroKpis.map((k) => (
-            <div key={k.label} className="kpi">
-              <span className="kpi-k inline-flex items-center gap-0.5">
-                {k.label}
-                {k.aside}
-              </span>
-              <span className="kpi-v">{k.value}</span>
-              {k.note && <span className="kpi-d">{k.note}</span>}
-            </div>
-          ))}
-        </div>
-
-        {/* 면적 선반 + 상위 단지 + 레일 */}
+        {/* 절차 · 결론(+숫자 줄) · 면적 선반 · 상위 단지 · 비교 | 레일 — [1026] 선반이 고른 칸을 절차·결론이 따라가므로 BandShelf 안에서 그린다 */}
         <BandShelf
           bands={bands}
           busiestSlug={busiest?.bandSlug ?? null}
           hiSlug={premiumKind ? (hiBand?.bandSlug ?? null) : null}
           regionName={target.name}
           regionSlug={target.slug}
+          facts={facts}
           below={<CompareComplexes regionName={target.name} reference={referenceMedians} />}
           rail={
-            /* #411 — 도구 간 이어가기: 보던 지역 그대로 타이밍·시나리오·지도로 */
-            <AnalysisCrossLinks
-              current="price"
-              regionLabel={target.name}
-              regionFor={{
-                map: target.name,
-                ...(timingRegionId ? { timing: timingRegionId, scenario: timingRegionId } : {}),
-              }}
-              note={{
-                label: "이 지역 노트 쓰기",
-                href: `/notes/new?region=${encodeURIComponent(target.name)}`,
-              }}
-            />
+            <>
+              {/* [1026] 다음 행동 — 채움 파랑 "이 지역 알림 받기"(레일) + 지도 · 노트 쓰기 · 결정 카드 */}
+              <RegionActionCard regionLabel={target.name} links={regionActionLinks(target.name, target.name)} />
+              {/* #411 — 도구 간 이어가기: 보던 지역 그대로 타이밍·시나리오·지도로. [1026] 파란 "노트 쓰기" 칩은 다음 행동 카드의 텍스트 링크로 */}
+              <AnalysisCrossLinks
+                current="price"
+                regionLabel={target.name}
+                regionFor={{
+                  map: target.name,
+                  ...(timingRegionId ? { timing: timingRegionId, scenario: timingRegionId } : {}),
+                }}
+              />
+            </>
           }
         />
+        {/* [1026] 폰 하단 바 — 레일의 채움 파랑과 같은 요소(화면에 한 번) */}
+        <RegionPrimaryBar />
       </div>
     </PageShell>
   );

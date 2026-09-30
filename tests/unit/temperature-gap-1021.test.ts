@@ -180,7 +180,8 @@ test("온도 허브 — ToolHero/게이지 없음 · 주 선택은 클라이언�
   /* [1022] 타일 지도는 고정 4/6/9열 격자 → 우리나라 지도 모양(전국 시/도 6열 · 시/도 안 lat/lng 8열/폰 5열, tests/unit/temperature-1022.test.ts) */
   assert.ok(client.includes("tm-grid") && !client.includes("lg:grid-cols-9"), "타일 지도는 지도 모양 격자(고정 열 격자 아님)");
   assert.ok(client.includes("hidden lg:flex lg:flex-col lg:gap-3 lg:sticky lg:top-[76px] lg:self-start"), "레일 클래스");
-  assert.ok(client.includes("grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px]"), "본문 그리드(base grid-cols-1)");
+  /* [1026] 레일 300 → 340(1025 표준 "본문 | 레일 340" — tests/unit/market-1026.test.ts) */
+  assert.ok(client.includes("grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px]"), "본문 그리드(base grid-cols-1)");
   assert.ok(client.includes("TempRegionCard"), "예전 목록은 목록 보기 토글로 남긴다");
   assert.ok(client.includes('data-tone="plain"'), "흰 카드 안 목록은 plain");
   assert.ok(!/60\s*%|40\s*%|가중/.test(client), "온도 공식 가중치를 화면에 새로 적지 않는다 — 설명은 TEMPERATURE_EXPLAIN ⓘ");
@@ -205,7 +206,8 @@ test("갭 스크리너 — 서버는 searchParams 를 안 읽고 전체 목록�
   assert.ok(client.includes('"use client"'));
   assert.ok(client.includes("window.history.replaceState"), "조건은 주소에(replaceState)");
   assert.ok(!client.includes("useSearchParams") && !client.includes("router.push"), "라우터 이동 없음(서버 재렌더 없음)");
-  assert.ok(client.includes("lg:grid-cols-[280px_minmax(0,1fr)]"), "조건 패널 280px | 본문");
+  /* [1026] 왼쪽 조건 패널 280 → 본문 | 오른쪽 레일 340(조건 · 내 예산 · 다음 행동 — 1025 표준 "레일 = 손잡이 + 액션") */
+  assert.ok(client.includes("lg:grid-cols-[minmax(0,1fr)_340px]"), "본문 | 레일 340(조건 패널)");
   assert.ok(client.includes("grid grid-cols-1"), "base grid-cols-1");
   assert.ok(!client.includes("btn-primary"), "채움 파랑 없음(결과는 즉시 반영이라 '보기' 버튼이 필요 없다)");
   assert.ok(client.includes("aria-expanded"), "폰 조건 패널 접이식");

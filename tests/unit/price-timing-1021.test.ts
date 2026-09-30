@@ -111,7 +111,8 @@ test("소스 구조 — 시세·타이밍: 네이비 온도 카드 없음 · 한
   assert.ok(s.includes("<TimingOverlayChart"), "지수+거래량 한 그림");
   assert.ok(!s.includes("<ScrubLineLazy") && !s.includes("<Bars"), "따로 그리던 두 차트는 걷었다");
   assert.ok(s.includes('className="hidden lg:flex lg:flex-col lg:gap-3 lg:sticky lg:top-[76px] lg:self-start"'), "레일 클래스");
-  assert.ok(s.includes("lg:grid-cols-[minmax(0,1fr)_300px]") && s.includes("grid grid-cols-1"), "본문 그리드");
+  /* [1026] 레일 300 → 340(1025 표준 "본문 | 레일 340" — tests/unit/market-1026.test.ts) */
+  assert.ok(s.includes("lg:grid-cols-[minmax(0,1fr)_340px]") && s.includes("grid grid-cols-1"), "본문 그리드");
   assert.ok(!s.includes("다른 지역과 나란히") && !s.includes("숨 고르기"), "시안의 비교 지역·국면 띠 값은 쓰지 않는다");
   assert.ok(s.includes("trend.verdict"), "국면은 기존 판정(verdict)만");
   assert.ok(!s.includes("50점 기준에 더한 값입니다"), "설명문은 ⓘ(TEMPERATURE_EXPLAIN)로");

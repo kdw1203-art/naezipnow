@@ -1,4 +1,9 @@
 "use client";
+/* [1026 · 단지 분석 4종] 1025 표준 — 카드 첫 줄이 **결론 히어로**(SummaryLine): t-title 결론(headline, 실제 숫자 포함) + 판정 칩 하나
+   (좋음 초록 · 보통 파랑 · 주의 주황 — lib/ai/conclusion-next BAND_CHIP_CLASS) · 근거 t-sub 한 줄(bandReason · 기준 시점) ·
+   "다음 행동 한 줄"(가장 약한 축/신호 → 이어서 볼 도구, conclusionNext) · 다른 도구 칩 줄(VerdictChips — ResultView 가 넘긴다).
+   판정 칩은 히어로 하나뿐 — 종합 진단 점수 옆·매수 타이밍 종합 결론 오른쪽의 알약은 걷었다. 임장 동선도 같은 히어로를 단다.
+   대표 그림(레이더·부채꼴·동선·신호)은 히어로 바로 아래 그대로. 이 단지 보기 버튼은 테두리(btn-outline) 그대로 — 채움 없음. */
 /* [1022 · 단지 분석 고도화] 지시 3 "종합진단·시세예측·매수타이밍은 좀 더 고도화" — 있는 데이터로만 깊이를 더한다.
    · 셋 다: 카드 맨 위 한 줄 요약 세 토막(SummaryLine — verdict.headline · bandReason · 기준 시점) 같은 자리·같은 글자.
    · 종합 진단: 축별 행에 "이어서 볼 도구 ›"(lib/ai/next-action-routing radarAxisFollowUp — 50점 미만일 때만) ·
@@ -19,6 +24,7 @@ import type { ComplexTradeSeries } from "@/lib/ai/result-series";
 import { SCENARIO_RULE, scenarioAssumptionLine, signedPct, type PriceScenario, type ScenarioKey } from "@/lib/ai/price-scenarios";
 import type { ScenarioBreakEven } from "@/lib/ai/scenario-breakeven";
 import { radarAxisFollowUp } from "@/lib/ai/next-action-routing";
+import { BAND_CHIP_CLASS, type ConclusionNext } from "@/lib/ai/conclusion-next";
 import { formatKrwWon } from "@/lib/format/krw";
 import { pctChange } from "@/lib/format/delta";
 import { ScoreRadar } from "@/app/components/viz/ScoreRadar";
@@ -29,8 +35,6 @@ import { Explain } from "@/app/components/explain/Explain";
 import { ymLabel } from "./VerdictCard";
 import type { Insight, PickedLite, Similar } from "./workbench-types";
 
-const BAND_TEXT: Record<string, string> = { strong: "좋음", mixed: "보통", weak: "주의", thin: "자료 부족" };
-
 export function SigCard({ children, label, className = "" }: { children: ReactNode; label: string; className?: string }) {
   return (
     <section className={`card cxw-sig rounded-2xl p-4 md:p-5 ${className}`} aria-label={label}>
@@ -39,22 +43,65 @@ export function SigCard({ children, label, className = "" }: { children: ReactNo
   );
 }
 
-/* ── [1022] 한 줄 요약 세 토막 — 결론(headline) · 이유(bandReason) · 기준 시점. 세 카드가 같은 자리·같은 글자 ─────── */
+/* ── [1026] 결론 히어로 — 결론(t-title) + 판정 칩 하나 · 근거 한 줄(bandReason · 기준 시점) · 다음 행동 한 줄 · 다른 도구 칩 줄 ──
+   [1022] 한 줄 요약 세 토막(headline · bandReason · 기준 시점)을 1025 표준의 결론 한 줄로 키웠다 — 네 카드가 같은 자리·같은 글자. */
 
-export function SummaryLine({ verdict, asOf, fallback }: { verdict: Verdict | null; asOf: string | null; fallback: string }) {
+export type HeroExtras = {
+  /** 가장 약한 축/신호 → 이어서 볼 도구(lib/ai/conclusion-next) — 없으면 줄을 그리지 않는다 */
+  next?: ConclusionNext | null;
+  /** 다른 도구로 본 이 단지 — 칩 한 줄(VerdictChips) */
+  tools?: ReactNode;
+};
+
+export function SummaryLine({
+  verdict,
+  asOf,
+  fallback,
+  next = null,
+  tools = null,
+  lead = null,
+}: {
+  verdict: Verdict | null;
+  asOf: string | null;
+  fallback: string;
+  /** 결론 왼쪽 앞머리(매수 타이밍 점 3개) */
+  lead?: ReactNode;
+} & HeroExtras) {
   const headline = verdict?.headline ?? fallback;
+  const reason = [verdict?.bandReason ?? null, asOf ? `기준 ${asOf}` : null].filter(Boolean).join(" · ");
   return (
-    <p className="cxw-sum" data-testid="cxw-summary">
-      <span className="cxw-sum-h t-body font-bold text-ink break-words" style={{ textWrap: "balance" }}>
-        {headline}
-      </span>
-      {verdict?.bandReason && <span className="cxw-sum-r t-sub text-text-2 break-words">{verdict.bandReason}</span>}
-      {asOf && <span className="cxw-sum-t t-caption tabular-nums text-text-3">기준 {asOf}</span>}
-    </p>
+    <div className="flex flex-col gap-1.5" data-testid="cxw-summary">
+      <div className="flex items-start gap-3">
+        {lead}
+        <h2 className="cxw-sum-h min-w-0 flex-1 t-title font-bold text-ink break-words" style={{ textWrap: "balance" }}>
+          {headline}
+        </h2>
+        {verdict && (
+          <span className={`mt-0.5 inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 t-sub font-bold ${BAND_CHIP_CLASS[verdict.band]}`} data-band={verdict.band}>
+            {verdict.bandLabel}
+          </span>
+        )}
+      </div>
+      {reason && <p className="cxw-sum-r t-sub tabular-nums text-text-2 break-words">{reason}</p>}
+      {next && (
+        <p className="t-sub text-text-2 break-words">
+          {next.lead && (
+            <>
+              <b className="font-bold text-ink">{next.lead}</b>
+              <span aria-hidden="true"> → </span>
+            </>
+          )}
+          <Link href={next.href} className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline">
+            {next.label} ›
+          </Link>
+        </p>
+      )}
+      {tools}
+    </div>
   );
 }
 
-/* ── 종합 진단 — 레이더(크게) + 큰 점수 + 결론 알약 + 축별 점수 행 ───────────────────────── */
+/* ── 종합 진단 — 레이더(크게) + 큰 점수 + 축별 점수 행([1026] 판정 칩은 히어로 하나) ───────────────── */
 
 function scoreTone(score: number): string {
   return score >= 70 ? "text-success" : score < 50 ? "text-warning" : "text-ink";
@@ -67,6 +114,8 @@ export function DiagnosisSignature({
   asOf,
   complexId,
   historyLine,
+  next,
+  tools,
 }: {
   verdict: Verdict | null;
   radar: Insight["radar"];
@@ -77,11 +126,11 @@ export function DiagnosisSignature({
   complexId?: string | null;
   /** [1022] "지난번 N점(날짜) → 지금 M점" — history-store 에 이전 실행이 있을 때만 */
   historyLine?: string | null;
-}) {
+} & HeroExtras) {
   const m = verdict?.metric ?? null;
   return (
     <SigCard label="5가지 항목 점수">
-      <SummaryLine verdict={verdict} asOf={asOf ?? null} fallback="점수를 낼 자료가 아직 부족해요." />
+      <SummaryLine verdict={verdict} asOf={asOf ?? null} fallback="점수를 낼 자료가 아직 부족해요." next={next} tools={tools} />
       <div className="mt-3 grid grid-cols-1 items-center gap-4 md:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
         <div className="cxw-radar">{radar.length >= 3 ? <ScoreRadar items={radar} /> : null}</div>
         <div className="flex min-w-0 flex-col gap-2">
@@ -93,11 +142,6 @@ export function DiagnosisSignature({
                 {metricAside}
               </span>
             ) : null}
-            {verdict && (
-              <span className="verdict-band inline-flex items-center rounded-full px-2.5 py-0.5 t-sub font-bold" data-band={verdict.band}>
-                {BAND_TEXT[verdict.band] ?? verdict.bandLabel}
-              </span>
-            )}
           </div>
           {historyLine && <p className="t-caption tabular-nums text-text-3">{historyLine}</p>}
           {radar.length > 0 && (
@@ -151,6 +195,8 @@ export function PredictionSignature({
   focus = null,
   onFocus,
   breakEven = null,
+  next,
+  tools,
 }: {
   verdict: Verdict | null;
   scenario: PriceScenario | null;
@@ -163,11 +209,11 @@ export function PredictionSignature({
   onFocus?: ((k: ScenarioKey | null) => void) | null;
   /** [1022] 비용 포함 손익분기(lib/ai/scenario-breakeven) — 내 조건에 대출 비율·금리가 있을 때만 */
   breakEven?: ScenarioBreakEven | null;
-}) {
+} & HeroExtras) {
   if (!scenario) {
     return (
       <SigCard label="시나리오">
-        <SummaryLine verdict={verdict} asOf={asOf ?? null} fallback="시나리오를 그릴 자료가 없어요." />
+        <SummaryLine verdict={verdict} asOf={asOf ?? null} fallback="시나리오를 그릴 자료가 없어요." next={next} tools={tools} />
       </SigCard>
     );
   }
@@ -176,14 +222,15 @@ export function PredictionSignature({
   const short = (n: number) => formatKrwWon(n, { style: "short" });
   return (
     <SigCard label={`앞으로 ${scenario.years}년, 세 가지 시나리오`}>
-      <SummaryLine verdict={verdict} asOf={asOf ?? null} fallback="시나리오를 그릴 자료가 없어요." />
+      <SummaryLine verdict={verdict} asOf={asOf ?? null} fallback="시나리오를 그릴 자료가 없어요." next={next} tools={tools} />
       <div className="mt-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
           <span className="t-caption text-text-3">기본 시나리오 · {scenario.years}년 뒤 · 가정 계산</span>
           <div className="flex flex-wrap items-center gap-2">
             <Won manwon={last.base / 10_000} unit="만" className="t-display text-ink" />
             {vs != null && (
-              <span className="rounded-full bg-primary-soft px-2.5 py-0.5 t-sub font-bold tabular-nums text-primary">지금 대비 {signedPct(vs, 1)}</span>
+              /* [1026] 판정 칩과 헷갈리지 않게 면 없는 글자로(칩은 히어로 하나) */
+              <span className="t-sub font-bold tabular-nums text-text-1">지금 대비 {signedPct(vs, 1)}</span>
             )}
             <span className="t-sub tabular-nums text-text-2">연평균 {signedPct(scenario.annual.base)}</span>
           </div>
@@ -320,20 +367,28 @@ export function InspectionSignature({
   similar,
   recent6,
   onPick,
+  verdict = null,
+  asOf = null,
+  next,
+  tools,
 }: {
   picked: PickedLite;
   similar: Similar[];
   /** 이 단지 최근 6개월 거래(result-series) — 없으면 줄을 비운다 */
   recent6: ComplexTradeSeries["recent6"] | null;
   onPick: (s: Similar) => void;
-}) {
+  /** [1026] 결론 히어로 — 다른 세 도구와 같은 자리·같은 글자 */
+  verdict?: Verdict | null;
+  asOf?: string | null;
+} & HeroExtras) {
   const total = similar.length + 1;
   return (
     <SigCard label="하루 임장 순서">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+      <SummaryLine verdict={verdict} asOf={asOf} fallback={`${picked.name} 포함 ${total}곳 · 같은 지역 · 최근 6개월 거래 많은 순`} next={next} tools={tools} />
+      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <div>
           <span className="t-caption text-text-3">오늘 코스</span>
-          <div className="t-section font-bold text-ink">{total}곳 · 같은 지역 · 최근 6개월 거래 많은 순</div>
+          <div className="t-body font-bold text-ink">{total}곳 · 같은 지역 · 최근 6개월 거래 많은 순</div>
         </div>
         <Link href={`/map?complexId=${encodeURIComponent(picked.id)}`} className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary no-underline">
           지도에서 위치 보기 ›
@@ -367,7 +422,7 @@ export function InspectionSignature({
   );
 }
 
-/* ── 매수 타이밍 — 종합 결론(점 3개 + headline + 알약) + 신호등 3개 카드 ────────────────────── */
+/* ── 매수 타이밍 — 종합 결론(점 3개 + 결론 히어로 · [1026] 판정 칩은 히어로 하나) + 신호등 3개 카드 ────────────── */
 
 type SignalState = Insight["signals"][number]["state"];
 const SIG_WORD: Record<SignalState, string> = { green: "좋음", yellow: "보통", red: "주의", na: "자료 없음" };
@@ -411,6 +466,8 @@ export function TimingSignature({
   series,
   asOf,
   historyLine,
+  next,
+  tools,
 }: {
   verdict: Verdict | null;
   signals: Insight["signals"];
@@ -419,26 +476,26 @@ export function TimingSignature({
   asOf?: string | null;
   /** [1022] "지난번 좋음 2 : 주의 1(날짜)" — 같은 지역 이전 실행이 있을 때만 */
   historyLine?: string | null;
-}) {
+} & HeroExtras) {
   return (
     <div className="flex flex-col gap-3">
       <SigCard label="종합 결론">
-        <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
-          <span className="flex shrink-0 gap-1.5 pt-1" aria-hidden="true">
-            {signals.map((s) => (
-              <i key={s.key} className={`block h-5 w-5 rounded-full ${SIG_DOT[s.state]}`} />
-            ))}
-          </span>
-          <div className="min-w-0 flex-1">
-            <SummaryLine verdict={verdict} asOf={asOf ?? null} fallback="타이밍을 볼 자료가 아직 부족해요." />
-            {historyLine && <p className="mt-1 t-caption tabular-nums text-text-3">{historyLine}</p>}
-          </div>
-          {verdict && (
-            <span className="verdict-band inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 t-sub font-bold" data-band={verdict.band}>
-              {BAND_TEXT[verdict.band] ?? verdict.bandLabel}
+        <SummaryLine
+          verdict={verdict}
+          asOf={asOf ?? null}
+          fallback="타이밍을 볼 자료가 아직 부족해요."
+          next={next}
+          tools={tools}
+          lead={
+            /* 폰에서는 결론 글자 폭을 먼저 — 점 3개는 아래 신호 카드 3장이 같은 말을 한다 */
+            <span className="flex shrink-0 gap-1 pt-1.5 max-sm:hidden" aria-hidden="true">
+              {signals.map((s) => (
+                <i key={s.key} className={`block h-4 w-4 rounded-full ${SIG_DOT[s.state]}`} />
+              ))}
             </span>
-          )}
-        </div>
+          }
+        />
+        {historyLine && <p className="mt-1 t-caption tabular-nums text-text-3">{historyLine}</p>}
       </SigCard>
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="신호등 3개">
         {signals.map((s) => {

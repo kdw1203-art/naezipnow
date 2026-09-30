@@ -1,4 +1,6 @@
 "use client";
+/* [1026 · 지역 시세] 한 모양 — 카드 = card rounded-2xl p-4(폰 p-3.5) · 섹션 제목 = section > h2.t-section(파란 점 하나, page.tsx 의 .nz-dot-blue).
+   동작·데이터·저장 규칙은 그대로. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -44,7 +46,7 @@ export function CompareComplexes({
   const [ids, setIds] = useState<string[]>([]);
   const [rows, setRows] = useState<Record<string, RowState>>({});
   const [notice, setNotice] = useState<string | null>(null);
-  const cardRef = useRef<HTMLDivElement | null>(null);
+  const cardRef = useRef<HTMLElement | null>(null);
   const human = useHumanGate(cardRef);
   const namesRef = useRef<Record<string, string>>({});
   const abortRef = useRef<Record<string, AbortController>>({});
@@ -157,9 +159,9 @@ export function CompareComplexes({
   const hasReference = reference.some(Boolean);
 
   return (
-    <div ref={cardRef} className="chart-card" data-reveal="">
+    <section ref={cardRef} className="card flex flex-col gap-2.5 rounded-2xl p-4 max-md:p-3.5" data-reveal="">
       <div className="chart-head">
-        <span className="t-section text-ink">타 단지 비교</span>
+        <h2 className="t-section text-ink">타 단지 비교</h2>
         <span className="t-caption ml-auto t-num text-text-3">
           {ids.length}/{COMPARE_MAX}곳 · 면적대별 최근 실거래가
         </span>
@@ -299,6 +301,6 @@ export function CompareComplexes({
           </table>
         </div>
       )}
-    </div>
+    </section>
   );
 }

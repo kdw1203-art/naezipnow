@@ -1,4 +1,13 @@
 "use client";
+/* [1026b · 노트 쓰기] 보강 — 1단계 "이 단지 한눈에"·"내 지난 노트"(ComplexGlance, 지연 조각 · 자기 조회) · 레일 "이 단지" · 판단 제안에
+   구 단위 market · 브리핑 칩 → 고려사항 담기 · 메모 제안은 메모에서 바로(2·3단계 같은 값, 첫 로드에서 키워드 모듈을 뺐다) ·
+   CTA 아래 거짓 문구("체크 항목은 다음 임장에도 유지") 삭제 · 음성 메모 비회원 로그인 안내 · 미리보기·요약에 목적·시간대·날씨·
+   만족도·태그 · 폰 5축 막대(2단계 조각 안) · 만족도 미입력 슬라이더 흐리게(회색). 추가 로직은 전부 지연 조각·lib 쪽이다. */
+/* [1026 · 노트 쓰기] 1025 표준 적용(브리프 담당 R) — ① 단계 탭 → StepLine 모양 절차 한 줄(현재 파랑 칩 · 채운 단계 체크 ·
+   단계 옆 내용 "공작아파트"·"체크 12/30"·"사진 3", 버튼 그대로) · 진행 막대 제거(절차는 한 번) ② 폰 머리 "완성도 60% · 체크 12/30"
+   (lib/notes/form-progress — 예전 progressItems 와 같은 7항목) ③ 데스크톱(lg+) 2열: 폼(최대 680) | sticky 레일 360 "미리보기"
+   (NotePreviewRail — next/dynamic ssr:false, lg 에서만 마운트 → 폰 번들 0) · 레일이 있으면 채움 파랑은 레일의 저장 하나
+   (아래 CTA 의 "다음 단계"는 outline, 저장 바는 숨김) ④ 저장 뒤 주소에 saved=1 — 상세 첫머리 "저장 완료" 카드. */
 /* [1023 · 임장노트] docs/review-1022.md 1장 — ① 3단계 NoteFinishStep 에 저장 전 요약 재료(summary) 전달(폼 상태 그대로, 새 데이터 없음)
    · ③ 오프라인 배너 경고색 면 → 흰 카드 + 아이콘만 경고색(같은 화면의 다른 고지와 통일). 뒤로가기 보호(beforeunload)는 useUnsavedGuard 로 이미 있다. */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
@@ -11,7 +20,7 @@ import { readAuthedHint } from "@/lib/auth/authed-hint";
 import { Switch } from "@/app/components/ui/Switch";
 import { useToast } from "@/app/components/toast/ToastProvider";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
@@ -41,7 +50,6 @@ import {
   getChecklistForIntent,
   type InspectionChecklistIntent,
 } from "@/lib/inspection/checklist";
-import { checklistHintsFromVoice } from "@/lib/inspection/voice-checklist-keywords";
 /* [1005 · A3] 초안 스키마·파싱·비교는 lib/notes/draft-summary(순수·테스트) — 폼은 부르기만 */
 import {
   clockLabel,
@@ -80,7 +88,16 @@ import { previousCheckChips } from "@/lib/inspection/revisit-chips";
 import type { DecisionChoice } from "@/lib/inspection/decision";
 /* [1006] 설정(표시·기록 기본값) — /api/me/preferences 의 uiPrefs 를 작성기 기본값으로 읽는 순수 파서 */
 import { readWriterPrefs, type WriterPrefs } from "@/lib/notes/writer-prefs";
+/* [1026] 완성도 · 단계 옆 내용 · 저장 뒤 주소(순수 · 작게) */
+import {
+  completenessLine,
+  noteCompleteness,
+  savedLandingHref,
+  stepFillOf,
+  stepNotes,
+} from "@/lib/notes/form-progress";
 import type { VisitVerified } from "./VisitVerifyCard";
+import type { RevisitFormState } from "@/lib/notes/form-extras";
 /* [OPT-27] 음성 녹음기는 새 노트에서만 쓰인다 — 폼 첫 로드 번들에서 분리 */
 import nextDynamic from "next/dynamic";
 const VoiceMemoRecorder = nextDynamic(
@@ -134,6 +151,29 @@ const VisitVerifyCard = nextDynamic(
   () => import("./VisitVerifyCard").then((m) => m.VisitVerifyCard),
   { ssr: false },
 );
+/* [1026] 데스크톱 레일 "미리보기"(노트 카드 · 완성도 링 · 5축 레이더 · 저장) — lg 에서만 마운트한다(아래 useIsDesktop).
+   폰은 이 조각을 내려받지 않는다. 레이더·판단 라벨·미리보기 카드는 전부 이 조각 안에 있다. */
+const NotePreviewRail = nextDynamic(
+  () => import("./NotePreviewRail").then((m) => m.NotePreviewRail),
+  { ssr: false, loading: () => <div className="h-[560px] animate-pulse rounded-2xl bg-surface" /> },
+);
+
+/* [1026b] 1단계 "이 단지 한눈에" + "내 지난 노트" 띠 — 단지 id 가 있을 때만. 조회(단지 사실 · 내 노트)·판정·UI 가 전부 이 조각 안 */
+const ComplexGlance = nextDynamic(() => import("./ComplexGlance").then((m) => m.ComplexGlance), { ssr: false });
+
+/* [1026] lg(1024px) 이상인가 — useSyncExternalStore 로 읽는다. /notes/new 는 클라이언트에서만 그려져(NoteNewEntry)
+   첫 렌더부터 실제 값이라 레이아웃이 뛰지 않고, 서버가 그리는 /notes/[id]/edit 은 하이드레이션 동안 false(서버 값) →
+   직후 실제 값으로 한 번 바뀐다(불일치 경고 없음). */
+const DESKTOP_MQ = "(min-width: 1024px)";
+function subscribeDesktop(cb: () => void) {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return () => {};
+  const mq = window.matchMedia(DESKTOP_MQ);
+  /* 옛 사파리(13)는 addEventListener 가 없다 — 없으면 폭 변화만 못 따라갈 뿐 폼은 그대로 */
+  mq.addEventListener?.("change", cb);
+  return () => mq.removeEventListener?.("change", cb);
+}
+const readDesktop = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(DESKTOP_MQ).matches;
+const readDesktopServer = () => false;
 
 /* 임장노트 작성/수정 공용 폼 (시안 6b·6r)
    - 작성: POST /api/inspection/notes → /api/inspection/ai(AI 정리) → 상세 이동
@@ -522,8 +562,10 @@ export function NoteForm({
   /* [995 · 3] 회차 프리필은 작성 모드에서만 — 수정 모드에 오면 무시한다.
      revisitActive 는 "비우기"로 꺼진다: 그 뒤로는 저장 메타에 회차를 적지 않는다
      (이어받은 게 없는데 2회차라고 적으면 비교 화면이 없는 관계를 그린다). */
-  const revisitSeed = !initialNote && revisitOf ? revisitOf : null;
+  /* [1026b] 상태 — 1단계 "지난 체크 불러오기"(ComplexGlance)가 같은 프리필을 나중에 넣는다. revisitBeforeRef = 불러오기 전 값("비우기"가 되돌린다) */
+  const [revisitSeed, setRevisitSeed] = useState(!initialNote && revisitOf ? revisitOf : null);
   const [revisitActive, setRevisitActive] = useState(Boolean(revisitSeed));
+  const revisitBeforeRef = useRef<RevisitFormState | null>(null);
 
   /** welcome 루프면 지도로, 아니면 노트 상세로.
       [1005 · A4] 계약: `?ai=pending` = "AI 정리를 방금 요청했다". 결과(ok·rule·fail·한도)는
@@ -548,8 +590,9 @@ export function NoteForm({
       return `/map?${mapQs.toString()}`;
     }
     /* [1012 · 썸네일] 새 노트는 저장 뒤 "썸네일 고르기"(후보 3장)로 — 수정은 상세로 바로. 고르기 화면의
-       "나중에 고르기"·저장 모두 상세(?ai=pending)로 돌아간다. */
-    return isEdit ? `/notes/${noteId}?ai=${AI_PENDING}` : `/notes/${noteId}/cover?ai=${AI_PENDING}`;
+       "나중에 고르기"·저장 모두 상세(?ai=pending)로 돌아간다.
+       [1026] 두 길 모두 `saved=1` 을 단다 — 상세 첫머리 "저장 완료" 카드(공유 · 결정 카드 · 같은 단지)의 표시 */
+    return savedLandingHref(noteId, isEdit);
   };
 
   /* 위치(단지·주소) — 기본은 빈 값(placeholder). 프리필: ?apt=&region=&complexId=&lat=&lng= */
@@ -747,9 +790,6 @@ export function NoteForm({
   const [templateSuggestedIds, setTemplateSuggestedIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const [memoHints, setMemoHints] = useState<Array<{ id: string; label: string }>>(
-    [],
-  );
   const timeSlotTouchedRef = useRef(Boolean(isEdit));
 
   const checklistGroups = useMemo(
@@ -859,6 +899,9 @@ export function NoteForm({
      끄면 3단계가 그대로 드러난다(이동 없음 — 상태만 바뀌고 입력은 남는다).
      저장 페이로드는 같다: 안 채운 칸은 일반 흐름의 기본값과 동일하다. */
   const [quickMode, setQuickMode] = useState(quickStart && !isEdit);
+  /* [1026] 데스크톱(lg+) 레일 — 퀵모드(현장 한 화면)는 레일 없이 가운데 한 열 그대로 */
+  const isDesktop = useSyncExternalStore(subscribeDesktop, readDesktop, readDesktopServer);
+  const showRail = isDesktop && !quickMode;
 
   /* ── [984 · 01] 3단계 ────────────────────────────────────────────────
      예전엔 위치부터 공개 설정까지 **한 화면 3,000px** 이 이어졌다. 현장에서
@@ -917,7 +960,9 @@ export function NoteForm({
      화면 아래쪽뿐인데 단계 이동 탭은 맨 위에 있다. 켜면 단계 이동을 **화면
      아래 고정 바**로 내리고 조작을 48px 로 키운다(989에서 정한 40px 보다 한
      단계 위 — 한 손 엄지는 두 손보다 부정확하다). 기기에 기억한다. */
-  const [oneHand, setOneHand] = useState(false);
+  const [oneHandPref, setOneHand] = useState(false);
+  /* [1026] 데스크톱(레일 화면)에는 엄지 문제가 없다 — 기기에 켜 둔 값이 있어도 lg 에서는 끈 것으로 그린다 */
+  const oneHand = oneHandPref && !isDesktop;
   useEffect(() => {
     try {
       setOneHand(readOneHand(localStorage.getItem(ONE_HAND_KEY)));
@@ -927,7 +972,7 @@ export function NoteForm({
   }, []);
   /* [1009 · T] 무엇이 바뀌는지는 title= 말풍선(휴대폰에선 안 보임) 대신 누른 뒤 토스트로 말한다 */
   const toggleOneHand = () => {
-    const next = !oneHand;
+    const next = !oneHandPref;
     setOneHand(next);
     try {
       localStorage.setItem(ONE_HAND_KEY, serializeOneHand(next));
@@ -1332,7 +1377,23 @@ export function NoteForm({
 
   /* [995 · 3] "비우기" — 이어받은 칸을 전부 초기값으로. 이미 새로 적은 메모·사진은
      건드리지 않는다(이어받은 게 아니다). 이 뒤로는 회차 메타도 붙지 않는다. */
+  /* [1026b] 지금 폼 위에 합치거나(불러오기) 되돌린다(비우기) — 유형·목적 · 태그 · 고려사항 · 체크리스트 */
+  const applyForm = (m: RevisitFormState) => {
+    setVisit(m.visit);
+    setTags(m.tags);
+    setTagDefs(m.tagDefs);
+    setTodoItems(m.todoItems);
+    setGroupChecked(m.groupChecked);
+  };
   const clearRevisitSeed = () => {
+    /* [1026b] 1단계에서 불러온 경우 — 불러오기 전으로(위치·새로 적은 것은 그대로) */
+    const before = revisitBeforeRef.current;
+    if (before) {
+      revisitBeforeRef.current = null;
+      applyForm(before);
+      setRevisitActive(false);
+      return;
+    }
     setLoc({ aptName: "", region: "", complexId: null, lat: null, lng: null });
     setTags([]);
     setTagDefs([...TAG_CANDIDATES]);
@@ -1838,10 +1899,8 @@ export function NoteForm({
   const uploadFailureText = uploading ? null : uploadFailureLabel(uploads.length, uploadFailed);
   /* 진행 블록의 요약 줄 — NoteUploadProgress(지연 로드)에 문자열로 넘긴다 */
   const uploadSummary = uploadProgressText ?? uploadFailureText ?? "업로드 완료";
-  /* [1006] 메모 blur → 체크리스트 힌트(2단계 "메모에서 찾은 항목") — 3단계 본문이 지연 로드라 콜백으로 */
-  const onMemoBlur = (text: string) => {
-    setMemoHints(checklistHintsFromVoice(text).filter((h) => !groupChecked[h.id]));
-  };
+  /* [1026b] 메모 제안은 2·3단계 조각이 메모에서 바로 뽑는다(lib/notes/form-extras memoHintsFor) — blur 를 기다리지 않아
+     퀵모드 한 줄·음성 전사로 붙인 글에도 같은 값이 나온다 */
   /* [967 · 8] 본문 자동 높이 효과는 NoteFinishStep(3단계 본문)으로 옮겼다 — textarea 가 거기 있다 */
 
   /* [967 · 4] 하단 고정 저장 바 — 원래 CTA 가 화면에 없을 때만 보인다(두 번 보이지
@@ -1863,7 +1922,8 @@ export function NoteForm({
     return () => io.disconnect();
     /* [1005 · B5] 퀵모드 ↔ 3단계를 오가면 CTA 블록이 다른 요소다 — 다시 관찰한다 */
   }, [quickMode]);
-  const showSaveBar = !ctaInView;
+  /* [1026] 레일이 있으면(lg) 저장은 sticky 레일이 늘 들고 있다 — 고정 저장 바를 또 띄우지 않는다 */
+  const showSaveBar = !ctaInView && !showRail;
 
   /* [970 · B-11] 위치 카드 — 검증 오류 때 여기로 스크롤한다(오류 문구는 3,000px 아래
      CTA 블록에만 있었고, 저장 바에서 누른 사람은 아무 변화도 못 봤다) */
@@ -2220,45 +2280,48 @@ export function NoteForm({
      단일 화면이고 1·3 단계로 갈 곳도 없었으며, 아무리 채워 넣어도 바가 움직이지 않았다.
      이제 사용자가 실제로 넣은 것만 센다. [970 · B-10] 현장 체크·만족도는 기본값이 사라져
      (빈 상태에서 시작) 이제 "고른 것"만 세므로 진행도에 넣어도 거짓이 아니다. */
-  const progressItems = [
-    { label: "위치", done: Boolean(loc.aptName.trim() && loc.region.trim()) },
-    { label: "현장 체크", done: countCheckedItems(checks) > 0 || satisfaction !== null },
-    { label: "메모", done: memo.trim().length > 0 },
-    { label: "태그", done: tags.length > 0 },
-    {
-      label: "체크리스트",
-      done:
-        checklistGroups.some((g) => g.items.some((it) => groupChecked[it.id])) ||
-        doneTodos.length > 0,
-    },
-    { label: "사진", done: photos.length > 0 },
-    /* [996 · 4] 고른 판단만 센다 — 제안은 입력이 아니다 */
-    { label: "판단", done: decisionChoice !== null },
-  ];
-  const progressDone = progressItems.filter((i) => i.done).length;
-  /* [1005 · B4] 7항목 중 6개가 선택인데 "1/7 항목 입력"은 실패처럼 읽혔다(위치만
-     있으면 완전한 노트다). 상단 바는 **단계**를 말하고, 항목 수는 2개 이상 채웠을
-     때만 "잘 채워지고 있어요"로 — 필수처럼 보이게 하지 않는다. */
-  const fillPill = progressDone >= 2 ? `입력 ${progressDone}/${progressItems.length}` : null;
-  /* [984] 단계 완료 표시 — 위 progressItems 와 **같은 값**을 본다. 두 곳에서 따로
-     세면 한쪽만 고쳐져 진행 바와 탭이 다른 말을 하게 된다. */
-  const doneByStep = stepDone({
-    located: progressItems[0].done,
-    judged: progressItems[1].done || progressItems[3].done || progressItems[4].done,
-    wrote: progressItems[2].done || progressItems[5].done || progressItems[6].done,
-  });
   /* [996 · 4] 판단 제안의 체크리스트 재료 — 저장 페이로드(categoryChecklist + todo)와 같은 셈 */
   const checklistDoneCount =
     checklistGroups.reduce((n, g) => n + g.items.filter((it) => groupChecked[it.id]).length, 0) +
     doneTodos.length;
   const checklistTotal =
     checklistGroups.reduce((n, g) => n + g.items.length, 0) + todoItems.length;
+  /* [1026] 완성도 — 예전 progressItems(7항목: 위치 · 현장 체크 · 메모 · 태그 · 체크리스트 · 사진 · 판단)와 같은 판정을
+     lib/notes/form-progress 한 곳에서. 필수는 위치 하나 — 나머지는 "권장"이라 적는다(필수처럼 보이게 하지 않는다, 1005 · B4).
+     절차 한 줄의 체크 · 폰 머리 한 줄 · 레일 링이 모두 이 값을 본다(따로 세면 한쪽만 고쳐진다). */
+  const checkedItemCount = countCheckedItems(checks);
+  const completeness = noteCompleteness({
+    located: Boolean(loc.aptName.trim() && loc.region.trim()),
+    checkedItems: checkedItemCount,
+    satisfactionSet: satisfaction !== null,
+    memo,
+    tagCount: tags.length,
+    checklistDone: checklistDoneCount,
+    photoCount: photos.length,
+    /* [996 · 4] 고른 판단만 센다 — 제안은 입력이 아니다 */
+    decided: decisionChoice !== null,
+  });
+  /* [984] 단계 완료 표시 — 완성도와 **같은 값**을 본다 */
+  const doneByStep = stepDone(stepFillOf(completeness));
+  /* [1026] 단계 옆 내용 — "공작아파트" · "체크 12/30" · "사진 3"(채운 것만) */
+  const notesByStep = stepNotes({
+    aptName: loc.aptName,
+    checklistDone: checklistDoneCount,
+    checklistTotal,
+    checkedItems: checkedItemCount,
+    photoCount: photos.length,
+    memo,
+  });
+  const fillLine = completenessLine(completeness, checklistDoneCount, checklistTotal);
+  /* [1026b] 미리보기·저장 전 요약 — 목적 · 시간대 · 날씨 · 만족도 · 태그(입력한 것만 줄이 된다, lib/notes/finish-summary) */
+  const facts = { purpose: visit["목적"], timeSlot: visit["시간대"], weather, satisfaction, tags };
 
   return (
     /* [967 · 4] 저장 바가 떠 있는 동안 아래 여백을 더 준다 — 마지막 입력을 바가 덮지 않게 */
+    /* [1026] 레일이 있으면(lg) 폭 1104 = 폼 680 + 간격 24 + 레일 360 + 좌우 여백 — 없으면 예전 가운데 600 한 열 */
     <div
       data-one-hand={oneHand ? "on" : undefined}
-      className={`note-form mx-auto flex w-full max-w-[600px] flex-col px-5 ${
+      className={`note-form mx-auto flex w-full flex-col px-5 ${showRail ? "max-w-[1104px]" : "max-w-[600px]"} ${
         showSaveBar ? "pb-28" : "pb-10"
       } ${oneHand ? "pb-40" : ""}`}
     >
@@ -2333,22 +2396,9 @@ export function NoteForm({
         </div>
       )}
 
-      {/* [1005 · B4] 단계 진행 바 — 항목 수가 아니라 단계(1/3·2/3·3/3). 퀵모드는 단계가 없다 */}
-      {!quickMode && (
-        <div
-          className="relative mt-2.5 h-1 rounded-sm bg-bg"
-          role="progressbar"
-          aria-valuemin={1}
-          aria-valuemax={NOTE_STEPS.length}
-          aria-valuenow={step}
-          aria-label={`작성 단계 ${step}/${NOTE_STEPS.length} · ${STEP_TITLE[step]}`}
-        >
-          <div
-            className="absolute left-0 top-0 h-1 rounded-sm bg-primary transition-[width] duration-300"
-            style={{ width: `${Math.round((step / NOTE_STEPS.length) * 100)}%` }}
-          />
-        </div>
-      )}
+      {/* [1026] 2열(lg + 레일) — 폼(최대 680) | sticky 레일 360. 레일이 없으면 이 틀은 그냥 블록이다(폰·태블릿·퀵모드). */}
+      <div className={showRail ? "grid grid-cols-[minmax(0,680px)_360px] items-start justify-center gap-6" : undefined}>
+      <div className="flex min-w-0 flex-col">
 
       {/* ── [984 · 01] 단계 표시 ─────────────────────────────────────────
           탭(role="tab")이 아니라 **단계**다 — 같은 내용을 다른 각도로 보는 게
@@ -2358,50 +2408,48 @@ export function NoteForm({
       {/* scroll-mt-24 — 위 상단 바가 sticky(top-3.5, 높이 ~72px)라, 단계를 옮길 때
           이 줄의 top 으로 스크롤하면 탭이 그 바 밑으로 들어가 버린다(실측). */}
       {/* [1005 · B5] 퀵모드 — 단계 표시 없이 한 화면. 이 <nav> 는 일반 흐름에서만 */}
+      {/* [1026] 3칸 탭 + 4px 진행 막대 → StepLine(app/components/StepLine) 모양의 절차 한 줄(UI-10 · 화면당 한 번).
+          현재 = 파랑 칩, 입력이 있는 단계 = 체크, 없는 단계 = 번호. 단계 옆 내용(단지명 · 체크 d/t · 사진 n)은 채운 것만.
+          StepLine 은 글자 줄이라 단계 이동을 못 하므로 같은 토큰으로 버튼을 그린다(누르면 그 단계로 — 예전 탭과 같다).
+          체크 표시는 "다 됐다"가 아니라 "여기에 입력이 있다"는 뜻이다 — 필수는 위치 하나뿐이다. */}
       {!quickMode && (
       <nav aria-label="작성 단계" ref={stepTopRef} className="mt-3 scroll-mt-24">
-        <ol className="grid grid-cols-3 gap-1 rounded-lg bg-bg p-1">
-          {NOTE_STEPS.map((st) => {
+        <ol className="scroll-x-hidden-bar m-0 flex list-none items-center gap-1.5 overflow-x-auto p-0 max-md:-mx-5 max-md:px-5">
+          {NOTE_STEPS.map((st, i) => {
             const active = step === st.n;
+            const filled = doneByStep[st.n];
+            const note = notesByStep[st.n];
             return (
-              <li key={st.n} className="min-w-0">
+              <li key={st.n} className="flex shrink-0 items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => goStep(st.n)}
                   aria-current={active ? "step" : undefined}
-                  aria-label={`${st.n}단계 ${STEP_TITLE[st.n]}${doneByStep[st.n] ? " · 입력함" : ""}`}
-                  className={`note-step-btn flex min-h-[44px] w-full items-center justify-center gap-1 rounded-lg px-1 t-sub font-bold transition-colors ${
+                  aria-label={`${st.n}단계 ${STEP_TITLE[st.n]}${note ? ` · ${note}` : ""}${filled ? " · 입력함" : ""}`}
+                  className={`note-step-btn inline-flex min-h-10 items-center gap-1 rounded-full border px-3 t-sub font-bold transition-colors ${
                     active
-                      ? "bg-surface text-ink"
-                      : "text-text-3"
+                      ? "border-primary bg-primary-soft text-primary"
+                      : filled
+                        ? "border-line bg-surface text-text-2"
+                        : "border-line bg-surface text-text-3"
                   }`}
                 >
-                  <span className="truncate">
-                    {st.n}. {st.short}
-                  </span>
-                  {/* 완료 표시는 "다 됐다"가 아니라 "여기에 입력이 있다"는 뜻이다 —
-                      필수는 위치 하나뿐이라 나머지는 비워도 저장된다. */}
-                  {doneByStep[st.n] && (
-                    <span aria-hidden="true" className="text-primary">
-                      ✓
-                    </span>
-                  )}
+                  {filled && !active ? <Icon name="check" size={12} /> : <span className="t-num">{st.n}</span>}
+                  {st.short}
+                  {note && <span className="max-w-[8rem] truncate font-normal text-text-3">· {note}</span>}
                 </button>
+                {i < NOTE_STEPS.length - 1 && (
+                  <span aria-hidden="true" className="t-caption text-text-3">
+                    ›
+                  </span>
+                )}
               </li>
             );
           })}
         </ol>
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <span className="t-body font-bold text-ink">{STEP_TITLE[step]}</span>{" "}
-            <span className="t-sub text-text-3">{NOTE_STEPS[step - 1].hint}</span>
-            {/* [1005 · B4] 기록 완성도 — 2개 이상 채웠을 때만. 필수가 아니다. [1015] 문구는 숫자만("입력 3/7") */}
-            {fillPill && (
-              <span className="ml-1.5 inline-block rounded-full bg-primary-soft px-2 py-0.5 t-caption font-bold text-primary">
-                {fillPill}
-              </span>
-            )}
-          </div>
+        {/* [1026] 폰 머리 한 줄 — "완성도 60% · 체크 12/30"(필수는 위치 하나 · 나머지는 권장). 데스크톱은 레일의 링이 같은 값을 그린다 */}
+        <div className="mt-2 flex items-center justify-between gap-2 lg:hidden">
+          <p className="min-w-0 truncate t-sub text-text-2 t-num">{fillLine}</p>
           <button
             type="button"
             onClick={toggleOneHand}
@@ -2740,6 +2788,28 @@ export function NoteForm({
           <NoteLocationSearch value={loc} onChange={setLoc} />
         </div>
 
+        {/* [1026b] 이 단지 한눈에 + 내 지난 노트 — 응답에 있는 값만, 실패하면 없음. 좌표가 비었으면 응답 좌표로(새 노트만 → 방문 인증 카드) */}
+        {loc.complexId && (
+          <ComplexGlance
+            id={loc.complexId}
+            aptName={loc.aptName}
+            editId={editId}
+            linked={revisitLinked}
+            form={{ visit, tags, tagDefs, todoItems, groupChecked }}
+            onCoords={
+              isEdit || typeof loc.lat === "number"
+                ? undefined
+                : (lat, lng) => setLoc((p) => (p.lat == null ? { ...p, lat, lng } : p))
+            }
+            onRevisit={(seed, merged, before) => {
+              revisitBeforeRef.current = before;
+              setRevisitSeed(seed);
+              setRevisitActive(true);
+              applyForm(merged);
+            }}
+          />
+        )}
+
         {/* [#71] 방문 인증(선택) — 단지 좌표가 있을 때만. 원 좌표는 저장하지 않는다.
             [1006] 본체는 VisitVerifyCard(지연 로드) — 좌표가 잡힌 뒤에만 내려온다. */}
         {!isEdit && typeof loc.lat === "number" && typeof loc.lng === "number" && (
@@ -2848,6 +2918,7 @@ export function NoteForm({
                     <VoiceMemoRecorder
                       memos={voiceMemos}
                       onChange={setVoiceMemos}
+                      guest={isGuest === true}
                       onTranscript={(text) =>
                         setMemo((prev) =>
                           /* [1012] 규칙 4 — 본문에 남는 🎙 접두를 글자 "(음성)" 로 */
@@ -2857,7 +2928,7 @@ export function NoteForm({
                     />
                   )}
                   {helperTab === "brief" && fieldContext !== null && (
-                    <FieldBriefCard context={fieldContext} />
+                    <FieldBriefCard context={fieldContext} todoItems={todoItems} setTodoItems={setTodoItems} />
                   )}
                   {/* 카드가 비면 빈 상자 대신 이유를 적는다 — "조회했는데 없다"(briefCount 0)와
                       "아직 안 골랐다/못 받았다"(fieldContext null)는 다른 사실이다.
@@ -3107,7 +3178,8 @@ export function NoteForm({
               value={satisfaction ?? 5}
               onChange={(e) => setSatisfaction(Number(e.target.value))}
               /* [989] 슬라이더도 모바일에서 44px — 손잡이를 잡는 조작이라 세로가 좁으면 놓친다 */
-              className={`h-9 w-full cursor-pointer accent-primary max-md:h-11 ${satisfaction === null ? "opacity-50" : ""}`}
+              /* [1026b] 미입력 = 회색 손잡이·채움 없는 막대(흐리게) — 가운데 5 에 파란 채움이 있으면 값을 고른 것처럼 읽혔다. 움직이면 보통 모양 */
+              className={`h-9 w-full cursor-pointer max-md:h-11 ${satisfaction === null ? "accent-line-strong opacity-40" : "accent-primary"}`}
               aria-label="종합 만족도"
               aria-valuetext={satisfaction === null ? "미입력" : `${satisfaction.toFixed(1)} / 10`}
             />
@@ -3127,8 +3199,8 @@ export function NoteForm({
             openGroups={openGroups}
             setOpenGroups={setOpenGroups}
             templateSuggestedIds={templateSuggestedIds}
-            memoHints={memoHints}
-            setMemoHints={setMemoHints}
+            memo={memo}
+            axisScores={showRail ? null : composeScoresFromChecks(checks)}
             visitPurpose={visit["목적"]}
             tags={tags}
             tagDefs={tagDefs}
@@ -3167,6 +3239,7 @@ export function NoteForm({
               reasons={decisionReasons}
               onChoice={setDecisionChoice}
               onReasons={setDecisionReasons}
+              context={fieldContext}
             />
           )}
         </div>
@@ -3176,7 +3249,9 @@ export function NoteForm({
             memo={memo}
             memoMax={MEMO_MAX}
             onMemoChange={setMemo}
-            onMemoBlur={onMemoBlur}
+            checklistGroups={checklistGroups}
+            groupChecked={groupChecked}
+            setGroupChecked={setGroupChecked}
             photos={photos}
             maxPhotos={MAX_PHOTOS}
             uploading={uploading}
@@ -3205,7 +3280,10 @@ export function NoteForm({
               photoCount: photos.length,
               memo,
               decision: decisionChoice,
+              ...facts,
             }}
+            /* [1026] 폰 "미리보기" 접힘 — 방문 유형 + 완성도 한 줄(레일이 있는 lg 에서는 그 카드가 숨는다) */
+            preview={{ propertyType: visit["유형"] ?? "", line: fillLine }}
           />
         )}
         </div>
@@ -3260,9 +3338,11 @@ export function NoteForm({
       {/* 하단 CTA — [967 · 4] 이 블록이 화면에 보이면 고정 저장 바는 숨는다.
           [1005 · B1] 매 단계 보인다: 1·2단계는 "다음 단계 →"(주) + "여기까지 저장"(보조),
           3단계는 기록 완료. AI 처리 고지는 저장 버튼이 있는 곳마다 같이 있다. */}
+      {/* [1026] 레일이 있으면(lg) 저장·로그인 안내·오류·AI 처리 고지는 레일의 저장 카드가 든다 — 여기는 이전·다음만
+          (다음은 outline: 채움 파랑은 레일의 저장 하나). 폰·태블릿은 예전 그대로다. */}
       {!quickMode && (
       <div ref={ctaRef} className="mt-4 flex flex-col gap-2">
-        {needLogin && (
+        {needLogin && !showRail && (
           <div className="card rounded-lg px-4 py-3 text-center t-body text-primary">
             저장에는 로그인이 필요해요. 작성한 내용은 유지돼요.{" "}
             <Link href={loginHref} className="inline-block py-[5px] font-bold underline underline-offset-2">
@@ -3270,13 +3350,13 @@ export function NoteForm({
             </Link>
           </div>
         )}
-        {saveError && (
+        {saveError && !showRail && (
           <div className="rounded-lg border border-[color:var(--danger-border)] bg-danger-soft px-4 py-3 text-center t-body font-semibold text-danger">
             {saveError}
           </div>
         )}
         {/* AI 처리 고지 — 버튼을 누르기 전에 알린다 (몰래 보내지 않는다) */}
-        <FieldCaptureConsentNotice />
+        {!showRail && <FieldCaptureConsentNotice />}
         {step < NOTE_STEPS.length ? (
           <div className="flex items-stretch gap-2">
             {!oneHand && (
@@ -3290,19 +3370,21 @@ export function NoteForm({
               </button>
             )}
             {/* [984 · 02] 1·2단계에서 누르면 **거기까지가 그대로 저장된다** — 필수는 위치 하나뿐 */}
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="btn-soft btn-md min-w-0 flex-1 whitespace-nowrap"
-            >
-              {saving ? "저장 중…" : "여기까지 저장"}
-            </button>
+            {!showRail && (
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="btn-soft btn-md min-w-0 flex-1 whitespace-nowrap"
+              >
+                {saving ? "저장 중…" : "여기까지 저장"}
+              </button>
+            )}
             {!oneHand && (
               <button
                 type="button"
                 onClick={() => goStep((step + 1) as NoteStep)}
-                className="note-step-btn btn-primary btn-md min-w-0 flex-1 whitespace-nowrap"
+                className={`note-step-btn ${showRail ? "btn-outline" : "btn-primary"} btn-md min-w-0 flex-1 whitespace-nowrap`}
               >
                 다음 단계 →
               </button>
@@ -3322,22 +3404,56 @@ export function NoteForm({
             {/* [961] 4상태 버튼 — 진행(흐린 블루 + 링) → 실패(주홍 흔들림). 완료는 화면이
                 바뀌며 환영 장면(showMoment)이 맡는다. [1005 · A4] AI 는 기다리지 않으므로
                 진행 문구는 "저장 중" 하나다. */}
-            <ActionButton
-              state={saving ? "busy" : saveError ? "error" : "idle"}
-              onClick={handleSave}
-              busyLabel="저장 중"
-              errorLabel="다시 시도해 주세요"
-              className="btn-cta min-w-0 flex-1 rounded-2xl p-[15px] text-center t-section"
-            >
-              {isEdit ? "수정 완료 → AI 정리 받기" : "기록 완료 → AI 정리 받기"}
-            </ActionButton>
+            {!showRail && (
+              <ActionButton
+                state={saving ? "busy" : saveError ? "error" : "idle"}
+                onClick={handleSave}
+                busyLabel="저장 중"
+                errorLabel="다시 시도해 주세요"
+                className="btn-cta min-w-0 flex-1 rounded-2xl p-[15px] text-center t-section"
+              >
+                {isEdit ? "수정 완료 → AI 정리 받기" : "기록 완료 → AI 정리 받기"}
+              </ActionButton>
+            )}
           </div>
         )}
-        <div className="text-center t-sub text-text-3">
-          저장할 때만 로그인 · 체크 항목은 다음 임장에도 유지
-        </div>
+        {/* [1026b] "체크 항목은 다음 임장에도 유지"는 사실이 아니다(새 노트 체크는 빈 값에서 시작) — 지웠다. 로그인한 사람에겐 줄 자체가 없다 */}
+        {isGuest !== false && <div className="text-center t-sub text-text-3">저장할 때만 로그인</div>}
       </div>
       )}
+      </div>
+
+      {/* [1026] 데스크톱 레일 "미리보기" — lg 에서만 마운트(폰 번들 0). 상단 바(sticky ~78px) 아래에 붙고, 한 화면보다 길면
+          레일 안에서 스크롤한다(저장 카드는 그 안에서 바닥에 붙는다). 값은 전부 이 폼의 상태 그대로다. */}
+      {showRail && (
+        <aside aria-label="미리보기" className="sticky top-22 mt-3 max-h-[calc(100dvh-6.5rem)] overflow-y-auto">
+          <NotePreviewRail
+            aptName={loc.aptName}
+            region={loc.region}
+            visitDate={visitDate}
+            propertyType={visit["유형"] ?? ""}
+            photos={photos}
+            decision={decisionChoice}
+            isPublic={isPublic}
+            scores={composeScoresFromChecks(checks)}
+            completeness={completeness}
+            checklistDone={checklistDoneCount}
+            checklistTotal={checklistTotal}
+            step={step}
+            nextStepShort={step < NOTE_STEPS.length ? NOTE_STEPS[step].short : null}
+            isEdit={isEdit}
+            saving={saving}
+            saveError={saveError}
+            needLogin={needLogin}
+            loginHref={loginHref}
+            statusLine={`${isPublic ? "공개 노트" : "비공개 노트"} · ${uploading ? "사진 올리는 중" : autosaveShort}`}
+            onSave={handleSave}
+            onGoStep={goStep}
+            facts={facts}
+          />
+        </aside>
+      )}
+      </div>
 
       {/* [967 · 4] 하단 고정 저장 바 — 긴 폼의 중간에서도 저장·상태가 손에 닿게.
           탭바 위(--nz-tabbar-offset), 인쇄 제외, 원래 CTA 가 보이면 숨김. 같은

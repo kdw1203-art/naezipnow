@@ -1,4 +1,5 @@
-/* 임장노트 썸네일 고르기 — /notes/[id]/cover (작성자 본인만).
+/* [1026 · 노트 쓰기] 저장 직후 표시 saved=1 을 상세로 넘긴다(doneHref = lib/notes/form-progress coverDoneHref) — 그 밖은 그대로.
+ * 임장노트 썸네일 고르기 — /notes/[id]/cover (작성자 본인만).
  *
  * 노트를 저장한 뒤(NoteForm 이 여기로 보낸다) 또는 상세의 "썸네일 바꾸기"에서 온다. 후보 3장은 화면이 열리면
  * 후보 API(AI 문구 + 숫자 검증 + 규칙 채움)로 받고, 그 API 가 실패해도 고를 수 있게 서버가 규칙 후보 3장을
@@ -14,6 +15,7 @@ import { composeCandidates, coverPhotoOf } from "@/lib/notes/cover/rules";
 import { coverPreviewPath } from "@/lib/notes/cover/preview";
 import { regionGroupOf } from "@/lib/notes/region-match";
 import { CoverPicker, type CoverCandidate } from "./CoverPicker";
+import { coverDoneHref, isSavedFlag } from "@/lib/notes/form-progress";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +34,8 @@ export default async function NoteCoverPage({
   const { id } = await params;
   const sp = await searchParams;
   const aiPending = sp.ai === "pending";
+  /* [1026 · 노트 쓰기] 작성 화면이 단 saved=1 을 상세까지 넘긴다 — 상세 첫머리 "저장 완료" 카드의 표시(lib/notes/form-progress) */
+  const saved = isSavedFlag(sp.saved);
   const session = await safeAuth();
   const email = session?.user?.email?.trim().toLowerCase();
   if (!email) {
@@ -42,7 +46,7 @@ export default async function NoteCoverPage({
   const note = await getNote(id);
   if (!note || note.authorEmail.toLowerCase() !== email) notFound();
 
-  const doneHref = aiPending ? `/notes/${id}?ai=pending` : `/notes/${id}`;
+  const doneHref = coverDoneHref(id, aiPending, saved);
   const photo = coverPhotoOf(note);
   const fallback: CoverCandidate[] = composeCandidates(note).map((d) => ({
     ...d,

@@ -25,8 +25,15 @@ import { logger } from "@/lib/log";
 import { weekSlots } from "./week-slots";
 import { pairWeeks } from "./temp-map-model";
 import { TempMapClient, type HistoryView, type WeekView } from "./TempMapClient";
+import { OpenOnDesktop } from "./OpenOnDesktop";
+import { regionActionLinks } from "@/lib/market/region-conclusion";
+import { RegionActionCard, RegionPrimaryBar } from "../timing/region-verdict";
 
-/* [1022 · 온도 지도] 지시 1 — 타일 지도를 우리나라 지도 모양으로(TempMapClient): 전국 시/도 타일 → 시/도 안 lat/lng 배치.
+/* [1026 · 지역 시세] 1025 표준 — 절차 한 줄 · 결론 한 줄 · 대표 그림(온도 지도)은 TempMapClient(주 칩·시/도가 결론을 바꾼다).
+   여기서는 서버 마크업만 얹는다: 레일의 다음 행동 카드(채움 파랑 "이 지역 알림 받기" — 이번 주 가장 뜨거운 지역, 이어서 칩과 같은 주인공 ·
+   지도 · 노트 쓰기 · 결정 카드) · 폰 하단 바 · 인용 안내와 Q&A 는 폰에서 닫힌 <details>(OpenOnDesktop — 데스크톱은 펼침, JSON-LD 그대로) ·
+   빈 상태는 카드 하나 + 회색 타일 견본 + 한 문장. 섹션 점은 파랑 하나(.nz-dot-blue). 캐시 정책·SEO·Q&A·인용 문장 그대로.
+   [1022 · 온도 지도] 지시 1 — 타일 지도를 우리나라 지도 모양으로(TempMapClient): 전국 시/도 타일 → 시/도 안 lat/lng 배치.
    서버는 그대로다 — 같은 주간 기록을 내리고, 시/도 선택은 클라이언트 상태(?sido= 는 replaceState 로만 · 서버는 쿼리를 읽지 않는다).
    권역 select 는 시/도 선택과 겹쳐 없앴다. 캐시 정책·SEO·Q&A·인용 그대로.
    [1021 · 지역 시세 temperature] 시안(mock8/temp)대로 — 네이비/게이지 히어로(ToolHero) 대신
@@ -200,70 +207,86 @@ export default async function TemperatureHubPage() {
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
       />
 
-      {loadFailed ? (
-        <section className="card mb-6 p-[var(--pad-card)]" data-reveal="">
-          <p className="t-body py-8 text-center text-text-3">
-            <strong className="text-ink">{LOAD_FAILED_LINE}</strong>
-            <br />
-            주간 기록이 없다는 뜻이 아니라, 조회가 제때 끝나지 않았거나 실패했다는 뜻입니다.
-          </p>
-        </section>
-      ) : rows.length === 0 ? (
-        <section className="card mb-6 p-[var(--pad-card)]" data-reveal="">
-          <p className="t-body py-8 text-center text-text-3">
-            아직 쌓인 주가 없습니다.
-            <br />
-            <Link href="/analysis/timing" className="inline-block py-[5px] font-bold text-primary underline">
-              지금 이 순간의 시장 온도 보기
+      <div className="nz-dot-blue">
+        {loadFailed ? (
+          <section className="card mb-6 rounded-2xl p-4 max-md:p-3.5" data-reveal="">
+            <p className="t-body py-8 text-center text-text-3">
+              <strong className="text-ink">{LOAD_FAILED_LINE}</strong>
+              <br />
+              주간 기록이 없다는 뜻이 아니라, 조회가 제때 끝나지 않았거나 실패했다는 뜻입니다.
+            </p>
+          </section>
+        ) : rows.length === 0 ? (
+          /* [1026] 빈 상태 — 카드 하나 + 회색 견본(온도 타일 윤곽) + 한 문장 */
+          <section className="card mb-6 rounded-2xl p-4 text-center max-md:p-3.5" data-reveal="">
+            <div className="mx-auto grid max-w-[360px] grid-cols-6 gap-1.5" aria-hidden="true">
+              {Array.from({ length: 12 }, (_, i) => (
+                <span key={i} className="block h-8 rounded-lg border border-dashed border-line-strong" />
+              ))}
+            </div>
+            <p className="mt-3 t-body text-text-2">아직 쌓인 주가 없습니다.</p>
+            <Link href="/analysis/timing" className="inline-flex min-h-10 items-center t-sub font-bold text-primary no-underline">
+              지금 이 순간의 시장 온도 보기 ›
             </Link>
-          </p>
-        </section>
-      ) : (
-        /* [1021] 시안(mock8/temp) 본문 — 머리·타일·타일 지도·12주 선·레일. 주 칩은 기록이 있는 주만(loadHub 가 이번 주→지난주→4주 전 순으로 담는다) */
-        <div className="mb-6 max-md:mb-3">
-          <TempMapClient
-            weeks={weeks}
-            history={historyView}
-            totalCount={rows.length}
-            rail={
-              /* #411 — 도구 간 이어가기. [D62·D55] 이 화면의 주인공은 이번 주 가장 뜨거운 지역 — 그 지역을 실어 보낸다 */
-              <AnalysisCrossLinks
-                current="temperature"
-                regionLabel={hottest?.current.regionLabel ?? null}
-                regionFor={
-                  hottest
-                    ? {
-                        price: hottest.current.regionLabel,
-                        timing: hottest.current.regionId,
-                        scenario: hottest.current.regionId,
-                        map: hottest.current.regionLabel,
-                      }
-                    : undefined
-                }
-              />
-            }
-          />
-        </div>
-      )}
+          </section>
+        ) : (
+          /* [1021] 시안(mock8/temp) 본문 — 머리·타일·타일 지도·12주 선·레일. 주 칩은 기록이 있는 주만(loadHub 가 이번 주→지난주→4주 전 순으로 담는다) */
+          <div className="mb-6 max-md:mb-3">
+            <TempMapClient
+              weeks={weeks}
+              history={historyView}
+              totalCount={rows.length}
+              rail={
+                <>
+                  {/* [1026] 다음 행동 — 채움 파랑 "이 지역 알림 받기"(레일) + 지도 · 노트 쓰기 · 결정 카드. 지역 = 이번 주 가장 뜨거운 곳(아래 이어서 칩과 같다) */}
+                  <RegionActionCard
+                    regionLabel={hottest?.current.regionLabel ?? null}
+                    links={regionActionLinks(hottest?.current.regionLabel, hottest?.current.regionLabel)}
+                  />
+                  {/* #411 — 도구 간 이어가기. [D62·D55] 이 화면의 주인공은 이번 주 가장 뜨거운 지역 — 그 지역을 실어 보낸다 */}
+                  <AnalysisCrossLinks
+                    current="temperature"
+                    regionLabel={hottest?.current.regionLabel ?? null}
+                    regionFor={
+                      hottest
+                        ? {
+                            price: hottest.current.regionLabel,
+                            timing: hottest.current.regionId,
+                            scenario: hottest.current.regionId,
+                            map: hottest.current.regionLabel,
+                          }
+                        : undefined
+                    }
+                  />
+                </>
+              }
+            />
+            {/* [1026] 폰 하단 바 — 레일의 채움 파랑과 같은 요소(화면에 한 번) */}
+            <RegionPrimaryBar />
+          </div>
+        )}
 
-      {hottest && coldest && weekLabel && rows.length >= 2 && (
-        <CitationBlock
-          sentence={`내집나우(naezipnow.com) 집계에 따르면, ${weekLabel}이 속한 주의 시장 온도는 ${hottest.current.regionLabel}가 ${hottest.current.score}점으로 가장 높고 ${coldest.current.regionLabel}가 ${coldest.current.score}점으로 가장 낮다 (0~100 눈금, 50이 중립. 한국부동산원 매매가격지수 모멘텀과 국토교통부 실거래 거래량 추이 기반, 그 주에 마지막으로 관측한 값).`}
-        />
-      )}
+        {/* [1026] 인용 안내 · Q&A — 폰은 닫힌 <details>, 데스크톱은 펼침(내용·JSON-LD 는 늘 DOM 에) */}
+        <OpenOnDesktop summary="시장 온도 Q&A · 인용 안내" note={`${qa.length}문항`}>
+          {hottest && coldest && weekLabel && rows.length >= 2 && (
+            <CitationBlock
+              sentence={`내집나우(naezipnow.com) 집계에 따르면, ${weekLabel}이 속한 주의 시장 온도는 ${hottest.current.regionLabel}가 ${hottest.current.score}점으로 가장 높고 ${coldest.current.regionLabel}가 ${coldest.current.score}점으로 가장 낮다 (0~100 눈금, 50이 중립. 한국부동산원 매매가격지수 모멘텀과 국토교통부 실거래 거래량 추이 기반, 그 주에 마지막으로 관측한 값).`}
+            />
+          )}
+          <QaBlock title="시장 온도 Q&A" items={qa} />
+        </OpenOnDesktop>
 
-      <QaBlock title="시장 온도 Q&A" items={qa} />
-
-      {/* [1015 · 규칙 B] "이 기록을 읽는 법" 문단 → 위 ⓘ 로. 안내문("~에서 확인하실 수 있습니다") → 링크 칩 */}
-      {/* [998] mb-8 제거 — 본문 pb-16 + 푸터 pt-6 과 겹쳐 데스크톱에서 빈 띠(빈 공간 게이트). 도구 간 이어가기 칩은 [1021] 레일로 */}
-      <nav aria-label="관련 화면" className="flex flex-wrap gap-1.5">
-        <Link href="/analysis/timing" className="chip chip-soft t-sub px-3 py-1.5 no-underline">
-          시세·타이밍 분석 ›
-        </Link>
-        <Link href="/methodology" className="chip chip-soft t-sub px-3 py-1.5 no-underline">
-          데이터 방법론 ›
-        </Link>
-      </nav>
+        {/* [1015 · 규칙 B] "이 기록을 읽는 법" 문단 → 위 ⓘ 로. 안내문("~에서 확인하실 수 있습니다") → 링크 칩 */}
+        {/* [998] mb-8 제거 — 본문 pb-16 + 푸터 pt-6 과 겹쳐 데스크톱에서 빈 띠(빈 공간 게이트). 도구 간 이어가기 칩은 [1021] 레일로 */}
+        <nav aria-label="관련 화면" className="flex flex-wrap gap-1.5">
+          <Link href="/analysis/timing" className="chip chip-soft t-sub px-3 py-1.5 no-underline">
+            시세·타이밍 분석 ›
+          </Link>
+          <Link href="/methodology" className="chip chip-soft t-sub px-3 py-1.5 no-underline">
+            데이터 방법론 ›
+          </Link>
+        </nav>
+      </div>
     </PageShell>
   );
 }

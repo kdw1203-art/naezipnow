@@ -1,3 +1,9 @@
+/* [1026b · AI 분석 8종] 나머지 8종(리스크 점검·비교·수익률 계산·갭·경제지표·자산 구성·체크리스트·계약 점검)도 1026 틀 — 도구 색 래퍼
+   (.tool-scope + personaVars: 리스크 빨강·수익률 초록 …)를 12종 모두에서 걷고 전역 파랑 하나. 빈 상태 한 문장(EMPTY_LINE)은 12종 모두
+   서버가 넘긴다(클라이언트 번들 0). 8종 머리는 흰 PageHead(premise 한 줄) 그대로 · 4종 머리는 WorkbenchClient. 면책·캐시·메타 그대로. */
+/* [1026 · 단지 분석 4종] 1025 표준 "채움 파랑 하나 · 초록·주황 채움 금지" — 단지 분석 4종(진단·예측·동선·타이밍)은 도구 색 래퍼
+   (.tool-scope + personaVars — 안쪽 --primary 를 도구 색으로 갈아 끼운다: 임장 동선 초록 · 매수 타이밍 주황)를 걷고 전역 파랑을 쓴다.
+   나머지 8종은 예전 도구 색 그대로. 머리·면책·캐시·메타는 그대로. */
 /* [1023 · AI 분석] 나머지 8종의 단지 고르기 전 머리 — 네이비 면(hub-hero + 한지 글리프 칸) → 흰 PageHead(아이콘 칩 40 · h1.t-title · premise 한 줄).
    브레드크럼은 PageShell 이 이미 그린다. 4종(frame) 머리·면책·캐시·메타는 그대로. */
 /* [1022 · 단지 분석 고도화] 지시 3 — 시세 예측의 내 조건에 대출 비율·금리·상환 기간(prediction-cost-fields.ts)을 붙여
@@ -14,7 +20,7 @@ import { ToolGlyph, WORKBENCH_GLYPH } from "../../ToolGlyph";
 import { TIERS, WORKBENCH_ICONS } from "../../tool-catalog";
 import { AI_TOOL_IDS, isAiAnalysisToolId, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
-import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
+import { TOOL_PERSONAS } from "@/lib/ai/tool-persona";
 import { tuningFields } from "@/lib/ai/tool-tuning-fields";
 import { isAnthropicConfigured, isOpenAiConfigured } from "@/lib/ai/env-keys";
 import { getActiveComplexes } from "@/lib/ai/popular-complexes";
@@ -27,22 +33,23 @@ import { PREDICTION_COST_FIELDS } from "./prediction-cost-fields";
    → ② 내 조건(선택) → ③ 분석 실행(내 조건 반영 + 원하면 AI 해설). 결과에는 데이터 출처(AI-01)·기준 시점
    (AI-17)·자료 부족 표시(AI-03)·결과가 달라지는 경우(AI-04)·다음 할 일 3개(AI-38)·피드백(AI-46)이 붙는다. */
 
-/* [1008 · W] 도구마다 "보여 주는 것" — 머리와 첫 방문 안내 3단계가 같은 말을 한다 */
-const RESULT_KIND: Record<AiAnalysisToolId, string> = {
-  "ai-diagnosis": "5가지 항목 점수·레이더와 이 단지 실거래가 그래프",
-  "ai-prediction": "1~5년 뒤 가격 시나리오(낙관·기본·비관) 그래프",
-  "ai-timing": "가격 흐름·거래 열기·입주 물량 신호등 3개",
-  "ai-inspection": "함께 볼 단지와 하루 임장 순서",
-  "ai-risk": "위험 신호 5가지 체크리스트",
-  "ai-compare": "담은 단지 2~3곳의 같은 숫자 칸 비교표",
-  "my-checklist": "임장·계약 전에 확인할 항목 체크리스트(체크는 이 기기에 저장)",
-  "ai-portfolio": "관심 단지가 어느 지역·가격대에 몰렸는지",
-  "ai-simulator": "대출액·월 상환액·이자(원리금균등 계산)",
-  "ai-gap": "갭 비율과 지역 전세가율·월세 비중",
-  "ai-economy": "기준금리·미분양 같은 지표 숫자",
-  "contract-risk": "전세가율로 본 위험도와 계약 전에 확인할 것·특약 문장",
-};
 
+
+/* [1026] 단지 분석 4종 빈 상태 한 문장 — 단지를 고르면 무엇이 바로 나오는지(값 없음). 서버가 넘긴다(클라이언트 번들 0)
+   [1026b] 나머지 8종도 같은 자리에 한 문장(경제지표 모니터는 단지를 고르지 않아 빈 상태가 없다) */
+const EMPTY_LINE: Partial<Record<AiAnalysisToolId, string>> = {
+  "ai-diagnosis": "단지를 고르면 5가지 항목 점수가 레이더로 바로 나와요",
+  "ai-prediction": "단지를 고르면 1·3·5년 뒤 낙관·기본·비관 가격이 바로 나와요",
+  "ai-inspection": "단지를 고르면 같은 지역에서 함께 볼 단지와 하루 순서가 바로 나와요",
+  "ai-timing": "단지를 고르면 가격 흐름·거래 열기·입주 물량 신호 3개가 바로 나와요",
+  "ai-risk": "단지를 고르면 위험 신호 5가지가 바로 나와요",
+  "ai-compare": "단지를 2곳 이상 담으면 같은 숫자 칸 비교표가 바로 나와요",
+  "ai-simulator": "단지를 고르면 최근 실거래가가 기준 가격으로 채워져요",
+  "ai-gap": "단지를 고르면 갭 비율과 지역 전세가율이 바로 나와요",
+  "ai-portfolio": "관심 단지를 불러오면 지역·가격대 구성이 바로 나와요",
+  "my-checklist": "단지를 고르면 임장·계약 전에 확인할 항목이 바로 나와요",
+  "contract-risk": "단지를 고르면 전세가율로 본 위험도와 계약 전에 확인할 것이 바로 나와요",
+};
 
 /* [1010] 1h → 1일. 실측(2026-09-20~22) 하루 1,512 렌더 — 도구 12개짜리 라우트가
    그만큼 돌았다는 건 크롤러 방문마다 다시 그렸다는 뜻이다. 서버 렌더에 들어가는
@@ -95,9 +102,9 @@ export default async function AiToolPage({
   return (
     <PageShell breadcrumb={`AI 분석 › ${identity.title}`}>
       <div
-        /* [993] 880 → 1240: 데스크톱은 입력 좌·결과 우 2열이라 폭이 필요하다(계산기·시나리오와 동일) */
-        className="tool-scope mx-auto flex w-full max-w-[1240px] flex-col gap-4"
-        style={personaVars(persona)}
+        /* [993] 880 → 1240: 데스크톱은 입력 좌·결과 우 2열이라 폭이 필요하다(계산기·시나리오와 동일)
+           [1026 → 1026b] 12종 모두 도구 색을 걷는다(버튼·그래프·칩이 전역 파랑 하나) */
+        className="mx-auto flex w-full max-w-[1240px] flex-col gap-4"
         data-tool={tid}
       >
         {/* [958→1011→1023] 도구 머리 — 예전 네이비 면 + 한지 글리프 칸을 걷고 허브·지역 도구와 같은 흰 PageHead
@@ -115,13 +122,12 @@ export default async function AiToolPage({
         <WorkbenchClient
           tool={tid}
           title={identity.title}
-          tips={identity.tips}
           persona={persona}
           fields={tid === "ai-prediction" ? [...tuningFields(tid), ...PREDICTION_COST_FIELDS] : tuningFields(tid)}
           llmAvailable={isOpenAiConfigured() || isAnthropicConfigured()}
           quickPicks={quickPicks}
-          resultKind={RESULT_KIND[tid]}
           header={complexHeader}
+          emptyLine={EMPTY_LINE[tid] ?? null}
         />
 
         {/* 면책 — check-ai-compliance.mjs 가 이 마커의 존재를 검사한다 */}

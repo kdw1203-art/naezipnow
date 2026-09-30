@@ -1,3 +1,4 @@
+/* [1026b · AI 분석 8종] 값 하나 그리기(ShownValue)를 내보낸다 — 8종 결론 히어로(tool-signature.tsx)의 대표 수치가 같은 표기를 쓴다. 그 밖은 그대로. */
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -51,7 +52,7 @@ function tilesOf(v: Verdict): VerdictTile[] {
 }
 
 /** 표시 방법대로 값 하나 — 가격은 <Won>, 등락은 <Delta>(▲ 빨강·▼ 파랑·보합), 그 밖은 숫자·단위 나눠 */
-function ShownValue({
+export function ShownValue({
   value,
   display,
   size,

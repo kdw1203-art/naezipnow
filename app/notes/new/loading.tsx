@@ -11,9 +11,11 @@ import { Skeleton } from "@/components/Skeleton";
    → CTA 블록(고지 + 버튼 ≈ 96). 높이는 실제 카드 기준(모바일 타입 램프)으로 고정한다.
    서버 컴포넌트 — 클라이언트 JS 를 싣지 않는다. 스켈레톤은 "불러오는 중" 만 말한다. */
 
+/* [1026 · 노트 쓰기] 폼이 절차 한 줄(StepLine 모양 칩 3개)과 데스크톱 2열(폼 680 | 레일 360)로 바뀌어 골격도 같이 —
+   3칸 탭 + 4px 진행 막대 → 칩 3개 + 완성도 한 줄, lg 에서 오른쪽 레일 골격(미리보기 · 완성도 · 저장). 서버 컴포넌트 그대로. */
 export default function NoteNewLoading() {
   return (
-    <div className="mx-auto flex w-full max-w-[600px] flex-col px-5 pb-10">
+    <div className="mx-auto flex w-full max-w-[600px] flex-col px-5 pb-10 lg:max-w-[1104px]">
       {/* 상단 바 — 닫기 · 제목/단계 문구 · 임시저장 */}
       <div
         aria-hidden
@@ -30,17 +32,16 @@ export default function NoteNewLoading() {
         </div>
       </div>
 
-      {/* 단계 진행 바 */}
-      <div aria-hidden className="mt-2.5 h-1 rounded-sm bg-bg" />
-
-      {/* 3단계 탭 + 단계 제목 줄 */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,680px)_360px] lg:items-start lg:justify-center lg:gap-6">
+      <div className="flex min-w-0 flex-col">
+      {/* [1026] 절차 한 줄(칩 3개) + 폰 완성도 한 줄 */}
       <div aria-hidden className="mt-3">
-        <div className="grid h-[52px] grid-cols-3 gap-1 rounded-lg bg-bg p-1">
-          <Skeleton className="h-11 rounded-lg" />
-          <div className="h-11" />
-          <div className="h-11" />
+        <div className="flex h-10 items-center gap-1.5">
+          <Skeleton className="h-10 w-24 rounded-full" />
+          <Skeleton className="h-10 w-20 rounded-full" />
+          <Skeleton className="h-10 w-20 rounded-full" />
         </div>
-        <div className="mt-2 flex h-7 items-center justify-between gap-2">
+        <div className="mt-2 flex h-7 items-center justify-between gap-2 lg:hidden">
           <Skeleton className="h-4 w-44 rounded" />
           <Skeleton className="h-6 w-24 rounded-full" />
         </div>
@@ -93,6 +94,28 @@ export default function NoteNewLoading() {
           <Skeleton className="h-10 flex-1 rounded-xl" />
         </div>
         <Skeleton className="mx-auto h-3 w-52 rounded" />
+      </div>
+      </div>
+
+      {/* [1026] 데스크톱 레일 골격 — 미리보기 · 완성도 · 저장(폰에서는 없음) */}
+      <div aria-hidden className="mt-3 hidden flex-col gap-3 lg:flex">
+        <div className="card flex flex-col gap-2 rounded-2xl p-4">
+          <Skeleton className="h-4 w-16 rounded" />
+          <Skeleton className="h-[150px] w-full rounded-xl" />
+        </div>
+        <div className="card flex flex-col gap-2 rounded-2xl p-4">
+          <Skeleton className="h-4 w-16 rounded" />
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-[60px] w-[60px] rounded-full" />
+            <Skeleton className="h-4 w-40 rounded" />
+          </div>
+          <Skeleton className="h-[214px] w-full rounded-xl" />
+        </div>
+        <div className="card flex flex-col gap-2 rounded-2xl p-4">
+          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="h-3 w-40 rounded" />
+        </div>
+      </div>
       </div>
     </div>
   );

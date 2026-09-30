@@ -1,4 +1,7 @@
-/* [1023 · AI 분석] 머리 통일 — h1 t-display 손 마크업(.pxs-head) → 공용 PageHead(t-title). 본문은 그대로. */
+/* [1026 · 지역 시세] 1025 표준 — 절차 · 결론 한 줄 · 본문 | 레일 340(조건 · 내 예산 · 다음 행동) · 폰 카드 목록 · 폰 하단 바는 GapScreener
+   (조건이 클라이언트 상태라 결론도 거기서 바뀐다). 여기서는 섹션 점을 파랑 하나로(.nz-dot-blue)만 감싼다. 데이터 로딩·revalidate·
+   searchParams 안 읽음·FAQ(JSON-LD)·출처 줄(면책)은 그대로.
+   [1023 · AI 분석] 머리 통일 — h1 t-display 손 마크업(.pxs-head) → 공용 PageHead(t-title). 본문은 그대로. */
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import { PageShell } from "@/app/components/PageShell";
 import { PageHead } from "@/app/components/PageHead";
@@ -18,7 +21,7 @@ import { GAP_HOW, type Row } from "./RankTable";
 import { GapScreener } from "./GapScreener";
 
 /* [1021 · 지역 시세 gap] 시안(mock8/gap)대로 — 네이비/히스토그램 히어로(ToolHero)·상위 15/하위 10·시도별 세 표 대신
-   머리(아이콘 칩·제목·사실 한 줄 | 오른쪽 "N곳" 칩) → `lg:grid-cols-[280px_minmax(0,1fr)]` 조건 패널 + 타일 4칸 + 결과 표(GapScreener).
+   머리(아이콘 칩·제목·사실 한 줄 | 오른쪽 "N곳" 칩) → 조건 패널(당시 280px 왼쪽 열 — [1026] 오른쪽 레일 340) + 타일 4칸 + 결과 표(GapScreener).
    조건은 URL 쿼리에 남기되 서버는 searchParams 를 읽지 않는다(ISR 캐시 정책 유지) — 전체 목록을 내려 주고 클라이언트가 거른다.
    데이터 로딩·revalidate·metadata·FAQ(JSON-LD)·출처 줄은 그대로. 시/도는 lib/market/sido-group(기존 함수)로 — 예전의
    "구로 끝나면 서울" 규칙은 사상구·광주 북구를 서울·경기로 묶었다. */
@@ -160,7 +163,7 @@ export default async function GapScreenerPage() {
           />
         </div>
       ) : (
-        <div className="mt-3">
+        <div className="nz-dot-blue mt-3">
           {yieldFailed && (
             <div className="mb-3 rounded-lg border border-line bg-warning-soft px-3.5 py-2.5">
               <p className="t-sub text-ink">

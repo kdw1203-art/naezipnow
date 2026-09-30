@@ -1,3 +1,5 @@
+/* [1026b · 노트 쓰기] DecisionMarket.area — 작성 폼이 구 단위 조회의 market 을 넘길 때 "어느 지역 값인지"를 근거 줄 앞에 붙인다
+   (단지 값처럼 읽히지 않게). 없으면 예전과 같은 문장. */
 /**
  * [996 · 4] 임장노트 "판단" — 살까 · 보류 · 패스 · 다시 보기. 순수 모듈.
  *
@@ -52,6 +54,8 @@ export type DecisionMarket = {
   momPct?: number | null;
   /** 전세가율 % */
   jeonseRatio?: number | null;
+  /** [1026b] 값의 범위(예 "동안구") — 있으면 근거 줄 앞에 붙는다 */
+  area?: string | null;
 };
 
 export type DecisionInput = {
@@ -116,7 +120,9 @@ function marketReason(m: DecisionMarket | null | undefined): string | null {
   if (typeof m.jeonseRatio === "number" && Number.isFinite(m.jeonseRatio)) {
     parts.push(`전세가율 ${Math.round(m.jeonseRatio)}%`);
   }
-  return parts.length ? parts.join(" · ") : null;
+  if (!parts.length) return null;
+  const area = typeof m.area === "string" ? m.area.trim() : "";
+  return area ? `${area} ${parts.join(" · ")}` : parts.join(" · ");
 }
 
 /**

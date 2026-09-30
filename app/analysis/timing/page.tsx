@@ -1,3 +1,5 @@
+/* [1026 · 지역 시세] 본문(TimingClient)을 .nz-dot-blue 로 감싼다 — 섹션 제목 점은 파랑 하나(1025 표준 "한 모양").
+   절차·결론·다음 행동·폰 하단 바는 TimingClient(지역 전환이 클라이언트 상태라 결론도 거기서 바뀐다). ISR·캐시 그대로. */
 import { PageShell } from "../../components/PageShell";
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import {
@@ -60,13 +62,15 @@ export default async function TimingPage() {
 
   return (
     <PageShell breadcrumb="분석 › 시세·타이밍" toolScope={personaVars(TOOL_PERSONAS["market:timing"])}>
-      <TimingClient
-        regions={REGION_OPTIONS.map((r) => ({ id: r.id, label: r.label }))}
-        defaultRegionId={defaultRegion.id}
-        initialData={{ trend, volume, temp }}
-        builtYyyymm={currentYyyymm()}
-        builtAt={Date.now()}
-      />
+      <div className="nz-dot-blue">
+        <TimingClient
+          regions={REGION_OPTIONS.map((r) => ({ id: r.id, label: r.label }))}
+          defaultRegionId={defaultRegion.id}
+          initialData={{ trend, volume, temp }}
+          builtYyyymm={currentYyyymm()}
+          builtAt={Date.now()}
+        />
+      </div>
 
       {/* 15h-44 분석→행동 카드는 TimingClient 안의 AnalysisCrossLinks 로 이동
           (#411) — 지역 전환이 클라이언트 상태라, 서버 카드로는 "보던 지역

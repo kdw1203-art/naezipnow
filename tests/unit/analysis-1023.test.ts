@@ -188,7 +188,11 @@ test("[1023] AI 도구 나머지 8종의 단지 고르기 전 머리 — 네이�
 test("[1023] \"실데이터 기준\" 부연 라벨 4곳 제거 · 노트 AI 결과 판과 AI 코멘트 판은 흰 카드(on-dark·ai-panel 없음) · [region] 임의 px 없음", () => {
   for (const p of [
     "app/analysis/compare/page.tsx",
+    /* [1026b] 비교표 · 스냅샷 · 시나리오 세부 카드는 지연 조각 파일로 옮겼다 — 같은 규칙으로 함께 본다 */
+    "app/analysis/compare/CompareTable.tsx",
+    "app/analysis/compare/RegionMarketSummary.tsx",
     "app/analysis/scenario/ScenarioClient.tsx",
+    "app/analysis/scenario/ScenarioDetails.tsx",
     "app/search/ComplexPickerList.tsx",
     "app/analysis/ai-note-analysis.tsx",
   ]) {
@@ -204,9 +208,9 @@ test("[1023] \"실데이터 기준\" 부연 라벨 4곳 제거 · 노트 AI 결�
   assert.match(note, /총평<\/b> · \{state\.result\.verdict\}/);
   assert.match(note, /\{state\.result\.disclaimer\}\./);
   assert.equal((note.match(/btn-primary/g) ?? []).length, 1, "채움 파랑 1개");
-  /* 시나리오·비교의 AI 코멘트 판 면책 문구는 그대로 */
-  assert.match(code("app/analysis/scenario/ScenarioClient.tsx"), /본 분석은 참고용이며 투자 판단의 책임은 이용자에게 있습니다\./);
-  assert.match(code("app/analysis/compare/page.tsx"), /\{state\.disclaimer\}\./);
+  /* 시나리오·비교의 AI 코멘트 판 면책 문구는 그대로 — [1026b] AI 코멘트 판은 세부 지연 조각(ScenarioDetails · RegionMarketSummary)으로 옮겼다 */
+  assert.match(code("app/analysis/scenario/ScenarioDetails.tsx"), /본 분석은 참고용이며 투자 판단의 책임은 이용자에게 있습니다\./);
+  assert.match(code("app/analysis/compare/RegionMarketSummary.tsx"), /\{state\.disclaimer\}\./);
 
   const region = code("app/analysis/temperature/[region]/page.tsx");
   assert.ok(!/(?<![\w-])text-\[\d+(?:\.\d+)?px\]/.test(region), "임의 px 17곳 → 램프");
