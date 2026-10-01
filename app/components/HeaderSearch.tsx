@@ -1,4 +1,7 @@
 "use client";
+/* [1026e · 연관 검색어] 띄어 쓰면 다음 낱말("마포 " → 마포 신축 23 · 마포 아현동 16 · 마포 래미안 20), 덜 친 낱말은 완성 —
+   맨 위 검색어 줄 · 누르면 입력이 바뀌고 이어서 고른다 · 음영 자동완성도 띄어 쓴 뒤 잇는다. */
+/* [1026d · 검색] 검색 범위 줄 · 지역 줄 · 음영 주소 줄 · 연관 검색(패널) + 입력칸 음영 자동완성(Tab/→) */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
@@ -7,8 +10,19 @@ import { useRouter } from "next/navigation";
 import { pushRecentSearch, readRecentSearches } from "@/lib/search/recent-searches";
 import { useSettledSearchQuery } from "@/lib/search/settle";
 import { useShellActive } from "@/lib/client/viewport-shell";
-import { complexItem, flattenUnified, type FlatItem, type UnifiedJson } from "@/app/search/unified-suggest";
+import {
+  complexItem,
+  flattenUnified,
+  ghostCandidates,
+  keywordItem,
+  type FlatItem,
+  type IntentJson,
+  type NextWordJson,
+  type RelatedJson,
+  type UnifiedJson,
+} from "@/app/search/unified-suggest";
 import { QUERY_TOO_LONG, SEARCH_QUERY_MAX, badRequestNotice } from "@/lib/search/complex-preview";
+import { ghostRest, keywordPhrases } from "@/lib/search/ghost";
 
 /* P2-14: 데스크탑 GNB 검색 — input + 통합 자동완성.
    /api/search/unified?q= (대기 규칙은 lib/search/settle) · 단지·매물·노트·뉴스 그룹 제안.
@@ -24,6 +38,9 @@ const LISTBOX_ID = "hs-listbox";
 const optionId = (i: number) => `hs-opt-${i}`;
 const loadPanel = () => import("@/app/search/UnifiedSuggestPanel");
 const Panel = dynamic(loadPanel, { ssr: false });
+/* [1026d · 검색] 입력칸 음영 자동완성(첫 후보의 나머지 · Tab/→ 로 채움) — 그리는 부분은 동적 청크 */
+const loadGhost = () => import("@/app/search/GhostText");
+const Ghost = dynamic(loadGhost, { ssr: false });
 
 export function HeaderSearch() {
   const router = useRouter();
@@ -37,6 +54,12 @@ export function HeaderSearch() {
   /** [1008 · 리뷰 B] 장애도 결과 없음도 아닌 안내(검색어 80자 초과) */
   const [notice, setNotice] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  /* [1026d] 검색 범위(지역·조건 칩·단지 수) · 연관 검색 */
+  const [intent, setIntent] = useState<IntentJson | null>(null);
+  const [related, setRelated] = useState<RelatedJson[]>([]);
+  /* [1026e] 연관 검색어 — 띄어 쓴 뒤 붙일 낱말 · 마지막 낱말 완성 */
+  const [nextWords, setNextWords] = useState<NextWordJson[]>([]);
+  const [completeWords, setCompleteWords] = useState<NextWordJson[]>([]);
   /* 항목 12 — 빈 입력 포커스 시 보여줄 최근 검색어 (/search 와 같은 저장소) */
   const [recents, setRecents] = useState<string[]>([]);
   /* [966] 키보드로 가리키는 항목 — -1 은 없음(Enter 가 통합 검색으로 간다) */
@@ -55,11 +78,20 @@ export function HeaderSearch() {
   const showRecents = open && !hasQuery && recents.length > 0;
   const showResults = open && hasQuery && !!searched;
   /* 한 번에 한 목록만 보이므로 옵션도 하나 — 최근 검색어 · 제안 · (0건이면) 비슷한 이름 */
-  const options: FlatItem[] = notice ? [] : items.length ? items : similar;
+  /* [1026e] 연관 검색어 줄(맨 위) — 띄어 썼으면 다음 낱말, 아니면 마지막 낱말 완성 */
+  const kw = showResults && !notice ? keywordPhrases(q, searched, nextWords, completeWords) : [];
+  /* 연관 검색어가 있으면 '비슷한 이름'(오타 추정) 단지는 뺀다 — 확실한 다음 말이 있는데 추측을 섞으면 소음이다("잠실 30") */
+  const shownItems: FlatItem[] = kw.length ? [...kw.map(keywordItem), ...items.filter((it) => !it.fuzzy)] : items;
+  const options: FlatItem[] = notice ? [] : shownItems.length ? shownItems : similar;
   const optionCount = showRecents ? recents.length : showResults ? options.length : 0;
+  /* [1026d] 음영 자동완성 — 목록이 열려 있고 첫 후보가 친 글자로 시작할 때만(연관 검색어가 먼저) */
+  const ghost = showResults && !notice ? ghostRest(q, [...kw.map((k) => k.q), ...ghostCandidates(items)]) : "";
+  const acceptGhost = () => {
+    if (ghost) setQ(q + ghost);
+  };
 
   /* 목록이 바뀌면 가리키던 자리는 의미를 잃는다 */
-  useEffect(() => setActive(-1), [items, similar, recents, open, hasQuery]);
+  useEffect(() => setActive(-1), [items, similar, recents, open, hasQuery, kw.length]);
 
   /* 항목 12 — `/` 단축키로 검색 진입. 입력 중(폼 요소·contentEditable)에는
      끼어들지 않는다. 헤더 인풋이 화면에 없는 뷰포트(lg 미만)에서는 /search 로. */
@@ -98,6 +130,10 @@ export function HeaderSearch() {
     if (!query) {
       setItems([]);
       setSimilar([]);
+      setIntent(null);
+      setRelated([]);
+      setNextWords([]);
+      setCompleteWords([]);
       setSearched("");
       setFailed(false);
       setNotice(null);
@@ -109,6 +145,8 @@ export function HeaderSearch() {
     const showNotice = (n: string) => {
       setItems([]);
       setSimilar([]);
+      setIntent(null);
+      setRelated([]);
       setFailed(false);
       setNotice(n);
       setSearched(query);
@@ -133,6 +171,10 @@ export function HeaderSearch() {
         const json = (await res.json()) as UnifiedJson;
         setItems(flattenUnified(json));
         setSimilar((json.suggestions ?? []).map(complexItem));
+        setIntent(json.intent ?? null);
+        setRelated(json.related ?? []);
+        setNextWords(json.next ?? []);
+        setCompleteWords(json.complete ?? []);
         /* 조회가 실패한 그룹이 있으면 "일치하는 결과가 없어요"를 쓰지 않는다. */
         setFailed(Array.isArray(json.failed) && json.failed.length > 0);
         setNotice(null);
@@ -142,6 +184,10 @@ export function HeaderSearch() {
         if (!ac.signal.aborted) {
           setItems([]);
           setSimilar([]);
+          setIntent(null);
+          setRelated([]);
+          setNextWords([]);
+          setCompleteWords([]);
           setFailed(true);
           setNotice(null);
           setSearched(query);
@@ -191,6 +237,7 @@ export function HeaderSearch() {
   /** 포커스·↓ 로 목록을 연다 — 검색어가 있으면 제안, 비어 있으면 최근 검색어 */
   function openForCurrent() {
     void loadPanel();
+    void loadGhost();
     if (hasQuery) {
       if (searched) setOpen(true);
       return;
@@ -199,6 +246,12 @@ export function HeaderSearch() {
     const r = readRecentSearches();
     setRecents(r);
     if (r.length > 0) setOpen(true);
+  }
+
+  /** [1026e] 연관 검색어 — 입력을 그 말로 바꾸고(뒤에 한 칸) 목록을 이어서 보여 준다(이동하지 않는다) */
+  function pickKeyword(k: string) {
+    setQ(`${k} `);
+    inputRef.current?.focus();
   }
 
   /** 활성 항목을 연다 — 없으면 false (호출부가 통합 검색으로 넘긴다) */
@@ -212,12 +265,22 @@ export function HeaderSearch() {
     }
     const it = options[active];
     if (!it) return false;
+    if (it.keyword) {
+      pickKeyword(it.keyword);
+      return true;
+    }
     picked();
     router.push(it.href);
     return true;
   }
 
   function onInputKeyDown(e: ReactKeyboardEvent<HTMLInputElement>) {
+    /* [1026d] 음영 자동완성 채우기 — Tab(조합 중이어도) · →(글자 끝에서) */
+    if (ghost && (e.key === "Tab" || (e.key === "ArrowRight" && !e.nativeEvent.isComposing && e.currentTarget.selectionStart === q.length))) {
+      e.preventDefault();
+      acceptGhost();
+      return;
+    }
     /* 한글 조합 중 방향키·Enter 는 IME 몫 — 가로채지 않는다 */
     if (e.nativeEvent.isComposing) return;
     switch (e.key) {
@@ -270,6 +333,7 @@ export function HeaderSearch() {
           들어가는 폭으로 넓히고, 그래도 좁아지는 상황은 말줄임(…)으로 접는다. */}
       <div className="field-focus flex w-[232px] items-center gap-2 rounded-xl bg-[var(--glass-bg)] px-3.5 py-2 t-body text-text-3 xl:w-[252px]">
         <span aria-hidden>⌕</span>
+        <span className="relative min-w-0 flex-1">
         <input
           ref={inputRef}
           type="search"
@@ -288,6 +352,8 @@ export function HeaderSearch() {
           autoComplete="off"
           className="w-full text-ellipsis bg-transparent t-body text-ink outline-none placeholder:text-text-3"
         />
+        {ghost && <Ghost inputRef={inputRef} value={q} rest={ghost} onAccept={acceptGhost} />}
+        </span>
         {/* 항목 12 — 단축키 발견성. 장식이므로 스크린리더에서는 숨긴다(aria-label 에 명시). */}
         <kbd
           aria-hidden
@@ -304,8 +370,11 @@ export function HeaderSearch() {
           listId={LISTBOX_ID}
           optionId={optionId}
           query={searched}
+          intent={intent}
+          related={related}
           recents={showRecents ? recents : undefined}
-          items={items}
+          items={shownItems}
+          onKeyword={pickKeyword}
           similar={similar}
           active={active}
           failed={failed}

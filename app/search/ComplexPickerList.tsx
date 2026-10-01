@@ -6,6 +6,7 @@
 import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
 import { FuzzyBadge, Hl, complexMetaLine } from "./complex-hit";
+import { ComplexShade } from "./SearchScope";
 import {
   NO_MATCH_EXAMPLE,
   NO_MATCH_HINT,
@@ -127,7 +128,14 @@ export default function ComplexPickerList({
               </span>
               {s.fuzzy && !empty && <FuzzyBadge />}
             </span>
-            <span className="break-words t-caption text-text-3">{complexMetaLine(s) || s.dong}</span>
+            {/* [1026d · 검색] 음영 두 줄 — 도로명 (동 번지) / 준공·세대·6개월 거래 */}
+            {s.address || s.roadAddress ? (
+              <span className="block w-full min-w-0">
+                <ComplexShade p={s} />
+              </span>
+            ) : (
+              <span className="break-words t-caption text-text-3">{complexMetaLine(s) || s.dong}</span>
+            )}
           </button>
         ))}
       </div>

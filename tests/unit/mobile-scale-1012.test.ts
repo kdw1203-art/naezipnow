@@ -9,7 +9,8 @@ const css = readFileSync("app/globals.css", "utf8");
 const tabbar = readFileSync("app/components/TabBar.tsx", "utf8");
 
 test("폰만 — 짧은 변 600px 미만에서만 배율을 건다(태블릿·데스크톱은 그대로)", () => {
-  assert.match(layout, /const MOBILE_SCALE = 0\.75;/);
+  /* [1026c] 배율 0.75 → 1(네이버 90%) — 장치(폰 판정·메타 되돌리기·data-mscale)는 그대로 */
+  assert.match(layout, /const MOBILE_SCALE = 1;/);
   assert.match(layout, /Math\.min\(screen\.width,screen\.height\);if\(!\(n>0&&n<600\)\)return;/);
 });
 

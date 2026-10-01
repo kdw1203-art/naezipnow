@@ -91,6 +91,8 @@ test("세션 관문 — getSessionLite 는 힌트를 먼저 보고, 벨·최근 
   assert.ok(bell.indexOf("readAuthedHint()") < bell.indexOf('fetch("/api/notifications/unread-count"'));
   const recents = read("app/components/RecentComplexes.tsx");
   assert.equal((recents.match(/readAuthedHint\(\)/g) ?? []).length >= 2, true, "POST·DELETE 둘 다 힌트를 봐야 한다");
+  /* [1026c] 방문 기록 POST 는 RecentComplexRecorder 로 옮겼다 — 거기서도 힌트를 본다 */
+  assert.match(read("app/components/RecentComplexRecorder.tsx"), /if \(!readAuthedHint\(\)\) return;/);
 });
 
 /* ── 2. 봇 판정 ──────────────────────────────────────────────────────────── */

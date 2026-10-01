@@ -1,3 +1,4 @@
+/* [1026c · 폰 배율 1] 문장 속 링크 24px 하한(py-[5px]) — 전 경로 폰 조작 검사에서 지적된 자리. */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 /* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-bold/black 4곳을 font-bold(700)로 바꿨다. */
 import type { Metadata } from "next";
@@ -175,7 +176,7 @@ export default async function NotesMarketPage() {
         <p className="t-body text-text-2">
           기준(사진 {MIN_PHOTOS}장+ · 본문 {MIN_TEXT.toLocaleString("ko-KR")}자+)을 넘긴 공개 노트는
           자동으로 진열.{" "}
-          <Link href="/notes/new" className="font-bold text-primary no-underline">
+          <Link href="/notes/new" className="inline-block py-[5px] font-bold text-primary no-underline">
             임장노트 쓰기 ›
           </Link>
         </p>

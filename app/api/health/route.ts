@@ -16,6 +16,8 @@ import { classifyIngestRun, type IngestOutcome } from "@/lib/market/ingest-outco
 /* [968 · T5] 토스 구성 진단 — 접두사 판정(boolean·enum)만, 키 값은 어디에도 싣지 않는다 */
 import { checkTossKeyPair } from "@/lib/payments/toss-keys";
 import { tossDiagnostics } from "@/lib/payments/toss-diagnostics";
+import { probeWidgetUi } from "@/lib/payments/toss-widget-probe";
+import { tossWidgetVariant } from "@/lib/payments/toss-variant";
 import { isTossBillingEnabled } from "@/lib/payments/toss-billing";
 import { DEFAULT_DESKTOP_ORIGIN } from "@/lib/platform-shell";
 
@@ -387,6 +389,12 @@ export async function GET(req: Request) {
 
   const authUrl = process.env.AUTH_URL?.trim() || null;
 
+  /* [1026c · 결제] 결제위젯 결제 UI 존재 — 토큰 게이트 안(상세)에서만. enum 만 싣는다(키·본문 없음). */
+  const tossWidgetUi = await probeWidgetUi(
+    process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY,
+    tossWidgetVariant(),
+  );
+
   const supabaseService = check(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
   const openai = check(process.env.OPENAI_API_KEY);
@@ -459,6 +467,7 @@ export async function GET(req: Request) {
       billingEnabled: isTossBillingEnabled(),
       siteOrigin: DEFAULT_DESKTOP_ORIGIN,
     }),
+    tossWidgetUi,
 
     push: { vapid },
 

@@ -32,7 +32,8 @@ export type NoteLocation = {
   lng?: number | null;
 };
 
-type Suggestion = { id: string; name: string; region: string; dong?: string; address?: string };
+/* [1026d · 검색] roadAddress — 줄 아래 음영 주소(도로명 → 지번 → 시군구 순으로 있는 것) */
+type Suggestion = { id: string; name: string; region: string; dong?: string; address?: string; roadAddress?: string | null };
 type Place = { name: string; address: string; lat: number; lng: number };
 
 export function NoteLocationSearch({
@@ -229,7 +230,9 @@ export function NoteLocationSearch({
                           <span className="block truncate t-body font-semibold text-ink">
                             {s.name}
                           </span>
-                          <span className="block truncate t-sub text-text-3">{s.region}</span>
+                          <span className="block truncate t-sub text-text-3">
+                            {s.roadAddress || (s.address ? `${s.region.split(" ")[0]} ${s.address}`.replace(/^(\S+) \1 /, "$1 ") : s.region)}
+                          </span>
                         </span>
                       </button>
                     ))}

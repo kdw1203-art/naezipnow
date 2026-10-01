@@ -3,8 +3,10 @@
 /* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 
 import Link from "next/link";
+import { Icon } from "@/app/components/Icon";
 import { FuzzyBadge, Hl } from "./complex-hit";
-import type { FlatItem } from "./unified-suggest";
+import { ComplexShade, RelatedChips, ScopeBar, areaDetail, hasScope, nameHighlightQuery } from "./SearchScope";
+import type { FlatItem, IntentJson, RelatedJson } from "./unified-suggest";
 import { NO_MATCH_EXAMPLE, NO_MATCH_HINT, noMatchTitle } from "@/lib/search/complex-preview";
 
 /* ============================================================
@@ -17,9 +19,19 @@ import { NO_MATCH_EXAMPLE, NO_MATCH_HINT, noMatchTitle } from "@/lib/search/comp
    - [1008 · 리뷰 B] listbox 안에는 option 만 둔다(제목·안내·단추는 밖) — 목록이 비어도 listbox 는 그려
      입력창의 aria-controls·aria-expanded 가 가리키는 대상이 늘 있다. 안내 문구는 role=status 로 읽힌다.
      notice(예: "검색어는 80자까지예요")가 오면 장애·결과 없음 문구 대신 그것을 쓴다.
+   [1026d · 검색] 맨 위 "검색 범위" 줄(지역·조건 칩·단지 수 — 음영 칩) · 지역 줄(누르면 그 지역 검색) ·
+   단지 줄은 음영 두 줄(도로명 (동 번지) / 준공·세대·6개월 거래) · 아래 "연관 검색" 칩(지역만 쳤을 때).
+   조건 검색이 0건이면 "조건에 맞는 단지가 없어요"(비슷한 이름 대신 — 조건을 빼 보라는 뜻).
+   [1026e · 연관 검색어] 맨 위 검색어 줄(돋보기 · 친 말 + 굵은 다음 낱말 · 오른쪽 음영 "단지 23곳 · 조건") — 누르면
+   입력이 그 말로 바뀌고 이어서 고른다. 검색어 줄이 있으면 아래 "연관 검색" 칩은 숨긴다(같은 내용).
    ============================================================ */
 
 type Props = {
+  /** [1026e] 연관 검색어 줄을 눌렀을 때(입력을 그 말로 바꾼다 — 이동하지 않는다) */
+  onKeyword?: (q: string) => void;
+  /** [1026d] 검색 범위 · 연관 검색 */
+  intent?: IntentJson | null;
+  related?: RelatedJson[];
   variant: "header" | "hero";
   listId: string;
   optionId: (i: number) => string;
@@ -52,10 +64,10 @@ export default function UnifiedSuggestPanel(p: Props) {
     }`;
   const shell = hero
     ? "absolute inset-x-0 top-[calc(100%+8px)] z-40"
-    : "absolute left-0 top-[calc(100%+8px)] z-50 w-[340px]";
+    : "absolute left-0 top-[calc(100%+8px)] z-50 w-[400px]";
   const card = hero
-    ? "overflow-hidden rounded-lg border border-line bg-surface p-1.5 [box-shadow:var(--shadow-md)] [animation:riseIn_160ms_var(--ease-out)_backwards]"
-    : "overflow-hidden rounded-lg border border-line bg-surface p-1.5 [box-shadow:var(--shadow-md)] [animation:riseIn_180ms_var(--ease-out)_backwards]";
+    ? "max-h-[min(72vh,680px)] overflow-y-auto rounded-lg border border-line bg-surface p-1.5 [box-shadow:var(--shadow-md)] [animation:riseIn_160ms_var(--ease-out)_backwards]"
+    : "max-h-[min(78vh,720px)] overflow-y-auto rounded-lg border border-line bg-surface p-1.5 [box-shadow:var(--shadow-md)] [animation:riseIn_180ms_var(--ease-out)_backwards]";
 
   if (p.recents) {
     return (
@@ -92,10 +104,20 @@ export default function UnifiedSuggestPanel(p: Props) {
   const empty = p.items.length === 0;
   const opts = p.notice ? [] : empty ? p.similar : p.items;
   const similarHead = `${p.listId}-similar`;
+  /* [1026d] 조건·지역 검색이 0건 — 이름이 틀린 게 아니라 조건이 좁다 */
+  const filterEmpty = empty && !!p.intent && p.intent.mode !== "name" && !p.failed && !p.notice;
   return (
     <div className={shell}>
       <div className={card}>
-        {p.notice ? (
+        {!p.notice && hasScope(p.intent) && (
+          <ScopeBar intent={p.intent} className="border-b border-divider px-2.5 pb-2 pt-1.5" />
+        )}
+        {filterEmpty ? (
+          <div role="status" className="flex flex-col gap-1 px-3 pb-1 pt-2.5">
+            <p className="t-sub font-bold text-ink">조건에 맞는 단지가 없어요</p>
+            <p className="t-caption text-text-3">조건을 하나씩 빼 보세요</p>
+          </div>
+        ) : p.notice ? (
           <div role="status" className="px-3 py-3 text-center text-[12px] font-bold text-text-2">
             {p.notice}
           </div>
@@ -133,7 +155,31 @@ export default function UnifiedSuggestPanel(p: Props) {
           id={p.listId}
           {...(empty && opts.length > 0 ? { "aria-labelledby": similarHead } : { "aria-label": "검색 제안" })}
         >
-          {opts.map((it, i) => (
+          {opts.map((it, i) =>
+            it.keyword ? (
+              <button
+                key={it.key}
+                type="button"
+                role="option"
+                id={p.optionId(i)}
+                aria-selected={p.active === i}
+                tabIndex={-1}
+                onMouseEnter={() => p.onHover(i)}
+                onClick={() => p.onKeyword?.(it.keyword as string)}
+                className={rowClass(i)}
+              >
+                <span className="grid h-6 w-6 shrink-0 place-items-center text-text-3">
+                  <Icon name="search" size={14} />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[13px] text-text-2">
+                  {it.title.slice(0, it.title.length - (it.kwWord ?? "").length)}
+                  <b className="font-bold text-ink">{it.kwWord}</b>
+                </span>
+                <span className="shrink-0 t-caption text-text-3">
+                  단지 {(it.kwCount ?? 0).toLocaleString("ko-KR")}곳 · {it.label}
+                </span>
+              </button>
+            ) : (
             <Link
               key={it.key}
               href={it.href}
@@ -146,17 +192,27 @@ export default function UnifiedSuggestPanel(p: Props) {
               onClick={() => p.onPick(it)}
               className={rowClass(i)}
             >
-              <span className="shrink-0 rounded bg-primary-soft px-1.5 py-px t-caption font-bold text-primary">
-                {it.label}
-              </span>
+              {it.area ? (
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded bg-bg text-text-2">
+                  <Icon name="pin" size={14} />
+                </span>
+              ) : (
+                <span className="shrink-0 rounded bg-primary-soft px-1.5 py-px t-caption font-bold text-primary">
+                  {it.label}
+                </span>
+              )}
               <span className="min-w-0 flex-1">
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span className="min-w-0 truncate text-[13px] font-semibold text-text-1">
-                    {it.complex ? <Hl text={it.title} q={q} /> : it.title}
+                    {it.area ? <Hl text={it.title} q={q} /> : it.complex ? <Hl text={it.title} q={nameHighlightQuery(q, p.intent)} /> : it.title}
                   </span>
                   {it.fuzzy && !empty && <FuzzyBadge />}
                 </span>
-                {it.complex && (it.meta || it.facts) ? (
+                {it.area ? (
+                  <span className="block truncate t-caption text-text-3">{areaDetail(it.area)}</span>
+                ) : it.complex && it.preview ? (
+                  <ComplexShade p={it.preview} />
+                ) : it.complex && (it.meta || it.facts) ? (
                   <span className="block truncate text-[12px] text-text-3">
                     {[it.meta, it.facts].filter(Boolean).join(" · ")}
                   </span>
@@ -166,8 +222,16 @@ export default function UnifiedSuggestPanel(p: Props) {
                 <span className="max-w-[96px] shrink-0 truncate text-[12px] text-text-3">{it.meta}</span>
               )}
             </Link>
-          ))}
+            ),
+          )}
         </div>
+        {!p.notice && p.related && p.related.length > 0 && !p.items.some((it) => it.keyword) && (
+          <RelatedChips
+            related={p.related}
+            hrefFor={(rq) => `/search?q=${encodeURIComponent(rq)}`}
+            className="border-t border-divider px-2.5 py-2"
+          />
+        )}
         <button
           type="button"
           onClick={p.onSubmit}

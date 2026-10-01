@@ -1,4 +1,5 @@
 "use client";
+/* [1026c · 폰 배율 1] 동의 체크박스 — 폰 간격 단위(3px)에서 h-5 가 15px 이었다. 20px 고정 + 40px 손끝 칸(span)으로 감싼다(옆 글자가 탭을 가져가지 않게). */
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
@@ -490,12 +491,14 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
         {/* [991] 동의 행 = 탭 대상. 체크박스 16px 만 목표였는데(989 게이트 지적) 행 전체를
             40px 높이 + 좌우 10px 여백으로 키운다 — label 이 토글하므로 행 어디를 눌러도 된다. */}
         <label className="-mx-2.5 flex min-h-[40px] items-center gap-3 rounded-lg px-2.5 py-1 text-xs text-text-2">
-          <input
-            type="checkbox"
-            checked={agree}
-            onChange={(e) => setAgree(e.target.checked)}
-            className="h-5 w-5 shrink-0 accent-[#1d4fd8]"
-          />
+          <span className="-ml-[10px] -mr-[4px] grid h-[40px] w-[40px] shrink-0 place-items-center">
+            <input
+              type="checkbox"
+              checked={agree}
+              onChange={(e) => setAgree(e.target.checked)}
+              className="h-[20px] w-[20px] shrink-0 accent-[#1d4fd8]"
+            />
+          </span>
           {/* [970 · A-13] 동의 대상 문서를 그 자리에서 열 수 있게 — 링크 없는 동의는 형식뿐이다.
               <label> 안의 <a> 는 HTML 활성화 규칙상 체크박스를 토글하지 않는다(대화형 자손).
               새 탭으로 열어 작성 중인 폼을 잃지 않게 한다. */}
@@ -522,23 +525,27 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
           </span>
         </label>
         <label className="-mx-2.5 flex min-h-[40px] items-center gap-3 rounded-lg px-2.5 py-1 text-xs text-text-2">
-          <input
-            type="checkbox"
-            checked={agreeMarketing}
-            onChange={(e) => setAgreeMarketing(e.target.checked)}
-            className="h-5 w-5 shrink-0 accent-[#1d4fd8]"
-          />
+          <span className="-ml-[10px] -mr-[4px] grid h-[40px] w-[40px] shrink-0 place-items-center">
+            <input
+              type="checkbox"
+              checked={agreeMarketing}
+              onChange={(e) => setAgreeMarketing(e.target.checked)}
+              className="h-[20px] w-[20px] shrink-0 accent-[#1d4fd8]"
+            />
+          </span>
           <span>
             (선택) 혜택·소식 이메일 수신 — 언제든 설정에서 철회할 수 있어요
           </span>
         </label>
         <label className="-mx-2.5 flex min-h-[40px] items-center gap-3 rounded-lg px-2.5 py-1 text-xs text-text-2">
-          <input
-            type="checkbox"
-            checked={agreeLocation}
-            onChange={(e) => setAgreeLocation(e.target.checked)}
-            className="h-5 w-5 shrink-0 accent-[#1d4fd8]"
-          />
+          <span className="-ml-[10px] -mr-[4px] grid h-[40px] w-[40px] shrink-0 place-items-center">
+            <input
+              type="checkbox"
+              checked={agreeLocation}
+              onChange={(e) => setAgreeLocation(e.target.checked)}
+              className="h-[20px] w-[20px] shrink-0 accent-[#1d4fd8]"
+            />
+          </span>
           <span>
             (선택) 위치정보 이용(주변 단지·지도 편의) — 설정에서 언제든 철회
           </span>

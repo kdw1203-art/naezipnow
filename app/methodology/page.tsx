@@ -1,3 +1,4 @@
+/* [1026c · 폰 배율 1] 문장 속 링크 24px 하한(py-[5px]) — 전 경로 폰 조작 검사에서 지적된 자리. */
 import Link from "next/link";
 import { PageShell } from "../components/PageShell";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
@@ -167,7 +168,7 @@ export default function MethodologyPage() {
           본 문서의 방식은 서비스 개선에 따라 바뀔 수 있으며, 바뀌면 이 페이지를
           갱신합니다. 집계·분석 결과는 참고용 정보이며 투자 판단의 책임은 이용자
           본인에게 있습니다. 문의:{" "}
-          <Link href="/support" className="font-bold text-primary">
+          <Link href="/support" className="inline-block py-[5px] font-bold text-primary">
             고객센터
           </Link>
         </div>

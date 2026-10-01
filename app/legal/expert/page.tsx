@@ -1,3 +1,4 @@
+/* [1026c · 폰 배율 1] 본문 속 외부 링크 24px 하한(inline-block py-[5px]) — 전 경로 폰 조작 검사 지적. */
 import Link from "next/link";
 import {
   EXPERT_FRAUD_RULES,
@@ -27,7 +28,7 @@ export default function ExpertLegalPolicyPage() {
         <p className="mt-3 text-[15px] leading-relaxed text-text-2">
           우리동네이야기(내집나우 운영사) 전문가 프로그램은 <strong>자격·소속·서류를 검증한 전문가</strong>만
           상담·리포트 서비스를 제공하도록 설계되어 있습니다. 본 정책은 이용약관·
-          <Link href="/legal/privacy" className="text-primary hover:underline">
+          <Link href="/legal/privacy" className="inline-block py-[5px] text-primary hover:underline">
             개인정보처리방침
           </Link>
           과 함께 적용됩니다.
@@ -71,7 +72,7 @@ export default function ExpertLegalPolicyPage() {
                 href={s.verificationUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="break-all text-primary hover:underline"
+                className="inline-block break-all py-[5px] text-primary hover:underline"
               >
                 {s.verificationUrl}
               </a>
@@ -158,7 +159,7 @@ export default function ExpertLegalPolicyPage() {
         <H2>7. 개인정보</H2>
         <p className="mt-2">
           전문가 인증 과정에서 수집하는 자격증 번호, 소속 기관, 인증 서류 이미지 등은{" "}
-          <Link href="/legal/privacy" className="text-primary hover:underline">
+          <Link href="/legal/privacy" className="inline-block py-[5px] text-primary hover:underline">
             개인정보처리방침
           </Link>
           「전문가 인증」 항목에 따릅니다. 인증 철회·탈퇴 시 관련 서류는 지체 없이 파기합니다.
@@ -173,7 +174,7 @@ export default function ExpertLegalPolicyPage() {
 
         <p className="mt-8 border-t border-line pt-4 text-[13px] text-text-3">
           시행일: 2026년 6월 19일 · 개정: 2026년 9월 3일(후기·견적 제안 조항 신설) · 문의:{" "}
-          <Link href="/support" className="text-primary hover:underline">
+          <Link href="/support" className="inline-block py-[5px] text-primary hover:underline">
             고객센터
           </Link>
         </p>

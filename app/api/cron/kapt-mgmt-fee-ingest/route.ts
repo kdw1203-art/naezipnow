@@ -49,7 +49,7 @@ async function handle(req: Request) {
 
   const r = run.value;
   const status =
-    r.skipped === "no-key" || r.skipped === "no-service"
+    r.skipped === "no-key" || r.skipped === "no-service" || r.skipped === "not-registered"
       ? "skipped"
       : r.failed > 0
         ? "error"
@@ -61,6 +61,8 @@ async function handle(req: Request) {
       ? "data.go.kr 인증키 미설정"
       : r.skipped === "no-service"
         ? "Supabase 미설정"
+        : r.skipped === "not-registered"
+          ? `${r.ym} ${r.errors[0] ?? "data.go.kr 활용신청 필요(HTTP 403)"}`
         : r.skipped === "no-rows"
           ? `${r.ym} 대상 단지 없음(전부 시도됨 · 후보=${r.candidateSource})`
           : `${r.ym} 후보=${r.candidateSource} 처리=${r.processed} 적재=${r.inserted} 없음=${r.miss} 실패=${r.failed} 스탬프=${r.stamped}` +

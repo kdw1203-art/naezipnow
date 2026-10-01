@@ -8082,3 +8082,30 @@ main .pro-lay details > summary > .t-section::before {
   background: var(--lq-blue);
   vertical-align: 2px;
 }
+
+/* ============================================================
+   [1026c · 폰 글자·상자 90%] 소유자(2026-09-30): "모바일 버전이 다 좋은데 네이버랑 비교해서 글씨 크기나 박스 크기가 조금 작은 것
+   같아 네이버의 90% 수준으로 조정". 폰 배율을 0.75 → 1(app/layout.tsx MOBILE_SCALE)로 돌려 상자·아이콘·간격은 화면에서 ×1.33,
+   글자 단계는 아래처럼 맞춘다 — 같은 폰(402pt)에서 잰 글자 높이가 네이버의 약 90%:
+     · 목록 제목(본문 14) 12.7~14.3pt ↔ 네이버 14.3 · 보조(13 · 캡션 12.5) 11.0~11.3pt ↔ 12.3 · 카드 제목(15.5) 13.7pt ↔ 15.5
+     · 화면 제목(16) 14.7pt · 홈 헤드라인(16.5) 15.0pt ↔ 네이버 머리 15.3~15.7 — 배율 1 에서 제목은 오히려 커져 한 단계 내린다.
+   폰(data-mscale)에서만 — 태블릿·데스크톱은 이 블록을 받지 않는다. 탭바는 화면에서 90%(예전 85%), 위 오프셋도 같은 비율(68 × 0.9).
+   ============================================================ */
+html[data-mscale] {
+  --fs-display: 16.5px;
+  --fs-title: 16px;
+  --fs-section: 15.5px;
+  --fs-body: 14px;
+  --fs-sub: 13px;
+  --fs-caption: 12.5px;
+  --nz-tabbar-offset: calc(61px + env(safe-area-inset-bottom, 0px));
+}
+html[data-mscale] .tabbar-row {
+  zoom: 0.9;
+}
+/* [1026c · 폰 글자·상자 90%] 한 줄 규칙(li 안 t-sub·t-caption 말줄임)의 예외 — 끝까지 읽혀야 하는 설명(계약 가이드 단계 등)은 .nz-wrap 으로 접힌다 */
+html[data-mscale] li :is(p, div).nz-wrap:is(.t-sub, .t-caption) {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}

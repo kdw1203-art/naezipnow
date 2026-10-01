@@ -8,6 +8,11 @@ import { useRecentComplexes } from "@/app/components/RecentComplexes";
 import { useSettledSearchQuery } from "@/lib/search/settle";
 import { formatKrwManwon } from "@/lib/format/krw";
 import { FuzzyBadge, Hl } from "@/app/search/complex-hit";
+import { RelatedChips, ScopeBar, areaDetail, hasScope, nameHighlightQuery } from "@/app/search/SearchScope";
+import type { AreaJson, IntentJson, NextWordJson, RelatedJson } from "@/app/search/unified-suggest";
+import GhostText from "@/app/search/GhostText";
+import { ghostRest, keywordPhrases } from "@/lib/search/ghost";
+import { complexAddressLine } from "@/lib/search/complex-address";
 import {
   NO_MATCH_EXAMPLE,
   NO_MATCH_HINT,
@@ -33,7 +38,11 @@ import {
    · 지도에서 직접 찾기(목록을 닫아 지도를 보이게). 이 파일은 지도 동적 청크 안이라 첫 묶음 예산과 무관하다.
    [1008 · 리뷰 B] suggest 의 failed:true·실패 응답은 "지금 검색이 안 돼요"(없음과 다르게) · 80자 넘는 검색어는
    보내지 않고 "검색어는 80자까지예요" · listbox 안에는 option(과 그 묶음 group)만 — 안내·단추는 밖 ·
-   목록을 여는 동안(0건 안내 포함) aria-expanded=true · Enter 는 '비슷한 이름' 을 저절로 고르지 않는다. */
+   목록을 여는 동안(0건 안내 포함) aria-expanded=true · Enter 는 '비슷한 이름' 을 저절로 고르지 않는다.
+   [1026d · 검색] 검색 범위 줄(지역·조건 칩·단지 N곳) · 지역 줄(누르면 그 지역 가운데로 이동) · 단지 둘째 줄은
+   음영 주소(도로명 (동 번지)) · 연관 검색 칩(누르면 그 말로 다시 찾는다) · 입력칸 음영 자동완성(Tab/→/누르기).
+   "마포구 신축" · "잠실 30평대" 처럼 조건을 치면 조건에 맞는 단지가 거래 많은 순으로 나온다.
+   [1026e · 연관 검색어] 맨 위 검색어 줄 — 띄어 쓰면 다음 낱말("마포 " → 마포 신축 · 마포 아현동), 덜 친 낱말은 완성. */
 
 interface SuggestItem {
   id: string;
@@ -54,6 +63,9 @@ interface SuggestItem {
   households?: number | null;
   lat?: number | null;
   lng?: number | null;
+  /** [1026d] 도로명 주소 · 면적 조건일 때 그 면적 평균 매매가 */
+  roadAddress?: string | null;
+  bandPriceManwon?: number | null;
 }
 
 /** 만원 → "12억" / "8.0억" / "8,200만". 없으면 null (호출부가 자리를 비운다)
@@ -128,6 +140,14 @@ export function MapSearchBox({
   const listId = useId();
   const [places, setPlaces] = useState<PlaceItem[]>([]);
   const [address, setAddress] = useState<GeocodeItem | null>(null);
+  /* [1026d] 검색 범위 · 지역 줄 · 연관 검색 */
+  const [intent, setIntent] = useState<IntentJson | null>(null);
+  const [areas, setAreas] = useState<AreaJson[]>([]);
+  const [related, setRelated] = useState<RelatedJson[]>([]);
+  /* [1026e] 연관 검색어 — 띄어 쓴 뒤 붙일 낱말 · 마지막 낱말 완성 */
+  const [nextWords, setNextWords] = useState<NextWordJson[]>([]);
+  const [completeWords, setCompleteWords] = useState<NextWordJson[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const { query: settledQuery, compositionProps } = useSettledSearchQuery(query);
@@ -148,6 +168,9 @@ export function MapSearchBox({
     const q = settledQuery;
     if (q.length < 1) {
       abortRef.current?.abort();
+      setIntent(null);
+      setAreas([]);
+      setRelated([]);
       setComplexes([]);
       setSimilar([]);
       setPlaces([]);
@@ -180,6 +203,11 @@ export function MapSearchBox({
         places?: PlaceItem[];
         similar?: SuggestItem[];
         failed?: boolean;
+        intent?: IntentJson | null;
+        areas?: AreaJson[];
+        related?: RelatedJson[];
+        next?: NextWordJson[];
+        complete?: NextWordJson[];
       };
       const suggestP: Promise<{ j: SuggestJson | null; notice: string | null; failed: boolean }> = fetch(
         `/api/search/suggest?q=${encodeURIComponent(q)}`,
@@ -211,6 +239,11 @@ export function MapSearchBox({
         if (controller.signal.aborted) return;
         setComplexes(sug.j?.suggestions ?? []);
         setSimilar(sug.j?.similar ?? []);
+        setIntent(sug.j?.intent ?? null);
+        setAreas(sug.j?.areas ?? []);
+        setRelated(sug.j?.related ?? []);
+        setNextWords(sug.j?.next ?? []);
+        setCompleteWords(sug.j?.complete ?? []);
         setActive(-1);
         setPlaces(sug.j?.places ?? []);
         setAddress(geo);
@@ -245,6 +278,9 @@ export function MapSearchBox({
 
   const clear = useCallback(() => {
     setQuery("");
+    setIntent(null);
+    setAreas([]);
+    setRelated([]);
     setComplexes([]);
     setSimilar([]);
     setPlaces([]);
@@ -283,19 +319,55 @@ export function MapSearchBox({
     [onSelectAddress],
   );
 
+  /* [1026d] 지역 줄 — 좌표가 있으면 그 지역 가운데로, 없으면 그 지역 이름으로 다시 찾는다 */
+  const pickArea = useCallback(
+    (a: AreaJson) => {
+      if (a.lat != null && a.lng != null) {
+        onSelectAddress({ address: a.label, lat: a.lat, lng: a.lng });
+        setQuery(a.q);
+        setOpen(false);
+      } else setQuery(a.q);
+    },
+    [onSelectAddress],
+  );
+
   /* [1008 · S] 결과가 0건이면 "비슷한 이름" 을 단지 자리에 보여 준다(고를 수 있게). 키보드 순서는 화면 순서
-     그대로 — 주소 이동 → 단지(또는 비슷한 이름) → 지도 장소. */
-  const shown = complexes.length ? complexes : busy ? [] : similar;
+     그대로 — 주소 이동 → [1026d] 지역 → 단지(또는 비슷한 이름) → 지도 장소. */
+  const shownAll = complexes.length ? complexes : busy ? [] : similar;
+  const shownAreas = notice ? [] : areas.slice(0, 3);
+  /* [1026e] 연관 검색어 줄(맨 위) — 띄어 썼으면 다음 낱말, 아니면 마지막 낱말 완성. 누르면 입력이 바뀐다 */
+  const kw = open && !busy && !notice ? keywordPhrases(query, settledQuery, nextWords, completeWords, 4) : [];
+  /* 연관 검색어가 있으면 '비슷한 이름'(오타 추정) 단지는 뺀다(확실한 다음 말 옆의 추측은 소음) */
+  const shown = kw.length ? shownAll.filter((c) => !c.fuzzy) : shownAll;
+  const pickKeyword = (k: string) => {
+    setQuery(`${k} `);
+    inputRef.current?.focus();
+  };
   type Opt = { key: string; pick: () => void };
   const options: Opt[] = [
+    ...kw.map((k) => ({ key: `k-${k.q}`, pick: () => pickKeyword(k.q) })),
     ...(address ? [{ key: "addr", pick: () => pickAddress(address) }] : []),
+    ...shownAreas.map((a) => ({ key: `a-${a.key}`, pick: () => pickArea(a) })),
     ...shown.map((c) => ({ key: `c-${c.id}`, pick: () => pickComplex(c) })),
     ...places.map((p, i) => ({ key: `p-${i}`, pick: () => pickPlace(p) })),
   ];
   const optIndex = (key: string) => options.findIndex((o) => o.key === key);
   const optId = (key: string) => `${listId}-${optIndex(key)}`;
 
+  /* [1026d] 음영 자동완성 — 지역(다시 찾을 말) · 단지 이름 순 */
+  const ghost =
+    open && !busy && !notice
+      ? ghostRest(query, [...kw.map((k) => k.q), ...shownAreas.map((a) => a.q), ...complexes.map((c) => c.name)])
+      : "";
+  const acceptGhost = () => {
+    if (ghost) setQuery(query + ghost);
+  };
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (ghost && (e.key === "Tab" || (e.key === "ArrowRight" && !e.nativeEvent.isComposing && e.currentTarget.selectionStart === query.length))) {
+      e.preventDefault();
+      acceptGhost();
+      return;
+    }
     if (e.nativeEvent.isComposing) return;
     if (e.key === "Escape") {
       if (open) setOpen(false);
@@ -322,7 +394,7 @@ export function MapSearchBox({
     }
   };
 
-  const hasResults = complexes.length > 0 || address !== null || places.length > 0;
+  const hasResults = complexes.length > 0 || address !== null || places.length > 0 || shownAreas.length > 0;
   const shellClass =
     variant === "floating"
       ? /* [1008] 세로 패딩 0 + 최소 44px — 터치 기기에서는 전역 규칙([989] input min-height 44px)이 입력칸을
@@ -342,15 +414,17 @@ export function MapSearchBox({
   return (
     <div ref={rootRef} className={`relative ${className}`}>
       <div className={shellClass}>
-        <span aria-hidden="true" className="t-body text-text-3">
-          ⌕
-        </span>
         {/* [968 · 26] 모바일 글자 크기는 여기서 키우지 않는다 — 16px 은 타입 램프 밖이다.
             globals.css [968 · 28] 의 전역 규칙(767px 이하 input { font-size: 1rem },
             특이성 (0,3,1))이 이 t-body 유틸리티(0,1,0)를 이기므로 iOS 포커스 확대가
             나지 않는다. enterKeyHint 는 키보드 확인 키를 "검색"으로, 자동완성·자동교정은
-            단지명(고유명사)에 방해라 끈다. */}
+            단지명(고유명사)에 방해라 끈다. [1026d] 입력은 음영 자동완성 겹침 칸(relative) 안에 둔다. */}
+        <span aria-hidden="true" className="t-body text-text-3">
+          ⌕
+        </span>
+        <span className="relative min-w-0 flex-1">
         <input
+          ref={inputRef}
           type="search"
           value={query}
           autoFocus={autoFocus}
@@ -372,8 +446,10 @@ export function MapSearchBox({
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
-          className="min-w-0 flex-1 bg-transparent t-body text-text-1 outline-none placeholder:text-text-3"
+          className="w-full min-w-0 bg-transparent t-body text-text-1 outline-none placeholder:text-text-3"
         />
+        {ghost && <GhostText inputRef={inputRef} value={query} rest={ghost} onAccept={acceptGhost} />}
+        </span>
         {query && (
           <button
             type="button"
@@ -417,6 +493,9 @@ export function MapSearchBox({
 
       {panelOpen && (
         <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-[60vh] overflow-y-auto rounded-2xl border border-[rgba(255,255,255,.9)] bg-[var(--glass-bg-strong)] p-1.5 shadow-[0_16px_40px_rgba(16,28,54,.2)]">
+          {!notice && hasScope(intent) && (
+            <ScopeBar intent={intent} className="border-b border-[rgba(16,28,54,.06)] px-2 pb-2 pt-1" />
+          )}
           {/* 안내(검색 중·80자·조회 실패·결과 없음)는 listbox 밖 — role=status 로 읽힌다 */}
           {busy && !hasResults && (
             <div role="status" className="px-3 py-3 t-sub text-text-3">
@@ -437,10 +516,19 @@ export function MapSearchBox({
             /* [1008 · S] 결과 없음 — 사실(없음) · 다음 할 일(띄어 쓰는 요령 · 지도에서 직접 찾기) */
             <div className="flex flex-col gap-1 px-3 pb-1 pt-2.5">
               <div role="status" className="flex flex-col gap-1">
-                <p className="break-words t-sub font-bold text-ink">{noMatchTitle(q || query.trim())}</p>
-                <p className="break-words t-caption text-text-3">
-                  {NO_MATCH_HINT} · {NO_MATCH_EXAMPLE}
-                </p>
+                {intent && intent.mode !== "name" ? (
+                  <>
+                    <p className="break-words t-sub font-bold text-ink">조건에 맞는 단지가 없어요</p>
+                    <p className="break-words t-caption text-text-3">조건을 하나씩 빼 보세요</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="break-words t-sub font-bold text-ink">{noMatchTitle(q || query.trim())}</p>
+                    <p className="break-words t-caption text-text-3">
+                      {NO_MATCH_HINT} · {NO_MATCH_EXAMPLE}
+                    </p>
+                  </>
+                )}
               </div>
               <button
                 type="button"
@@ -452,6 +540,35 @@ export function MapSearchBox({
             </div>
           )}
           <div id={listId} role="listbox" aria-label="단지·주소 검색 결과">
+            {kw.length > 0 && (
+              <div role="group" aria-label="연관 검색어">
+                {kw.map((k) => {
+                  const key = `k-${k.q}`;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      role="option"
+                      id={optId(key)}
+                      aria-selected={active === optIndex(key)}
+                      tabIndex={-1}
+                      onMouseEnter={() => setActive(optIndex(key))}
+                      onClick={() => pickKeyword(k.q)}
+                      className={rowClass(key)}
+                    >
+                      <Icon name="search" size={16} className="shrink-0" />
+                      <span className="min-w-0 flex-1 truncate t-body text-text-2">
+                        {k.q.slice(0, k.q.length - k.word.length)}
+                        <b className="font-bold text-ink">{k.word}</b>
+                      </span>
+                      <span className="shrink-0 t-caption text-text-3">
+                        단지 {k.count.toLocaleString("ko-KR")}곳 · {k.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             {!notice && address && (
               <button
                 type="button"
@@ -470,6 +587,35 @@ export function MapSearchBox({
                 </span>
               </button>
             )}
+            {shownAreas.length > 0 && (
+              <div role="group" aria-label="지역">
+                {shownAreas.map((a) => {
+                  const key = `a-${a.key}`;
+                  return (
+                    <button
+                      key={a.key}
+                      type="button"
+                      role="option"
+                      id={optId(key)}
+                      aria-selected={active === optIndex(key)}
+                      tabIndex={-1}
+                      onMouseEnter={() => setActive(optIndex(key))}
+                      onClick={() => pickArea(a)}
+                      className={rowClass(key)}
+                    >
+                      <Icon name="pin" size={16} className="shrink-0" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate t-body font-bold text-ink">
+                          <Hl text={a.label} q={q} />
+                        </span>
+                        <span className="block truncate t-sub text-text-3">{areaDetail(a)}</span>
+                      </span>
+                      <span className="shrink-0 t-sub font-bold text-primary">이동 ›</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             {!notice && shown.length > 0 && (
               <div
                 role="group"
@@ -487,10 +633,10 @@ export function MapSearchBox({
                 {shown.map((c) => {
                   /* 미리보기 — 있는 값만 점으로 잇는다. 없는 항목은 자리를 비우고 "0"이나 "—"로 채우지 않는다.
                      [1008 · S] 둘째 줄 = 시군구 읍면동(같은 이름 가르기), 셋째 줄 = 세대수 · 6개월 거래 · 평균 실거래가 · 준공 */
-                  const price = priceLabel(c.avgPriceManwon);
+                  const price = priceLabel(c.bandPriceManwon ?? c.avgPriceManwon);
                   const bits = [
                     ...complexFacts(c),
-                    price ? `평균 실거래 ${price}` : null,
+                    price ? `${c.bandPriceManwon != null ? "그 면적 평균" : "평균 실거래"} ${price}` : null,
                     c.buildYear ? `${c.buildYear}년` : null,
                   ].filter(Boolean) as string[];
                   const key = `c-${c.id}`;
@@ -510,11 +656,16 @@ export function MapSearchBox({
                       <span className="min-w-0 flex-1">
                         <span className="flex min-w-0 items-center gap-1.5">
                           <span className="min-w-0 truncate t-body font-bold text-ink">
-                            <Hl text={c.name} q={q} />
+                            <Hl text={c.name} q={nameHighlightQuery(q, intent)} />
                           </span>
                           {c.fuzzy && complexes.length > 0 && <FuzzyBadge />}
                         </span>
-                        {c.region && <span className="block truncate t-sub text-text-3">{complexPlace(c)}</span>}
+                        {c.region && (
+                          <span className="block truncate t-sub text-text-3">
+                            {complexAddressLine({ region: c.region, address: c.address ?? null, roadAddress: c.roadAddress ?? null }) ||
+                              complexPlace(c)}
+                          </span>
+                        )}
                         {bits.length > 0 && (
                           <span className="mt-0.5 block truncate t-sub text-text-2">{bits.join(" · ")}</span>
                         )}
@@ -561,6 +712,13 @@ export function MapSearchBox({
               </div>
             )}
           </div>
+          {!notice && related.length > 0 && kw.length === 0 && (
+            <RelatedChips
+              related={related}
+              onPick={(rq) => setQuery(rq)}
+              className="mt-1 border-t border-[rgba(16,28,54,.06)] px-2 pb-1 pt-2"
+            />
+          )}
         </div>
       )}
     </div>

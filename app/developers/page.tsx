@@ -1,3 +1,4 @@
+/* [1026c · 폰 배율 1] 문장 속 링크 24px 하한(py-[5px]) — 전 경로 폰 조작 검사에서 지적된 자리. */
 import Link from "next/link";
 import { PageShell } from "../components/PageShell";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
@@ -236,7 +237,7 @@ export default function DevelopersPage() {
           </div>
           <p className="mt-3 text-[12px] leading-[1.7] text-text-3">
             집계 방식과 한계는{" "}
-            <Link href="/methodology" className="font-bold text-primary">
+            <Link href="/methodology" className="inline-block py-[5px] font-bold text-primary">
               데이터 방법론
             </Link>
             에 적혀 있습니다. 평균은 면적·층을 가중하지 않은 단순 평균이며, 최근 1~2개월

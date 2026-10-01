@@ -580,8 +580,9 @@ test("[1020] /journey/contract 뼈대 — 2열 · 네이비 요약 없음 · 다
 });
 
 test("신호 — 최근 본 단지·실거래가 게임 키가 원본과 같다", () => {
-  const rc = read("app/components/RecentComplexes.tsx");
-  const key = /const KEY = "([^"]+)"/.exec(rc)?.[1];
+  /* [1026c] 저장 키는 lib/recent-complexes/storage 로 옮겼다(단지 상세 번들 다이어트) — 같은 값을 그 자리에서 대조 */
+  const rc = read("lib/recent-complexes/storage.ts");
+  const key = /export const RECENT_KEY = "([^"]+)"/.exec(rc)?.[1];
   assert.equal(key, "nz_recent_complexes");
   const signals = read("lib/journey/signals.ts");
   assert.match(signals, new RegExp(`RECENT_COMPLEXES_KEY = "${key}"`));

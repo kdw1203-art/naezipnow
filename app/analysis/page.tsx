@@ -1,3 +1,4 @@
+/* [1026c · 폰 글자·상자 90%] 도구 수 링크("2종")가 폭 19px — 탭 하한 24px 로 받친다(min-w). */
 /* [1023 · AI 분석] 검토(docs/review-1022.md 3장) 적용 — 최근 실행 결과 3건(hub-recent) · 실행 4칸 "마지막 실행 N일 전" · 시장 카드 티저 지역 고정 해제
    (loadHubTeasersByRegion → ToolCard teaserByRegion) · 계열 "N종" 배지 → 그 계열 앵커 · 기록 시작 카드 게스트/로그인 같은 최소 높이(.hub-start). */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
@@ -110,7 +111,7 @@ function TierHead({ id, count }: { id: TierId; count: number }) {
             [1023] 배지는 그 계열 앵커 링크(24px 하한) — 위 계열 칩과 같은 목적지 */}
         <a
           href={`#tier-${id}`}
-          className="t-caption ml-auto inline-flex min-h-[24px] shrink-0 items-center text-text-3 tabular-nums no-underline hover:underline"
+          className="t-caption ml-auto inline-flex min-h-[24px] min-w-[24px] shrink-0 items-center justify-end text-text-3 tabular-nums no-underline hover:underline"
         >
           {count}종
         </a>

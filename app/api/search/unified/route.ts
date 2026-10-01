@@ -11,6 +11,14 @@ import { dbUnavailable } from "@/lib/api/db-unavailable";
 import { logger } from "@/lib/log";
 import { expandComplexAlias, normalizeSearchQuery } from "@/lib/search/normalize-query";
 import { isStoryPost } from "@/lib/town/post-href";
+import {
+  intentInfo,
+  loadChildren,
+  loadSuggestWords,
+  planSearch,
+  preParse,
+  runFilteredSearch,
+} from "@/lib/search/intent-server";
 
 /* 통합 검색 API — 단지 + 매물 + 임장노트 + 이야기 + 뉴스를 한 번에.
    그룹별 상위 ~5건, 각 소스 실패 시 해당 그룹만 [] (부분 실패 허용).
@@ -30,7 +38,13 @@ import { isStoryPost } from "@/lib/town/post-href";
    2026-09-21 실측 /search 검색 11건 중 9건(82%)이 결과 없음("E편한세상 사천"×3 · "사천 스카이" ·
    "한가람삼성" · "그린타운우성" · "벽절골롯데"). 미리보기 값(읍면동·세대수·6개월 거래)도 함께 내려
    같은 이름 단지를 고를 수 있게 한다. RPC 가 실패했거나 '비슷한 이름' 만 줬으면 searchComplexes(같은 순위
-   규칙의 집계표 경로)가 한 번 더 본다. */
+   규칙의 집계표 경로)가 한 번 더 본다.
+
+   [1026d · 검색] 단지 그룹은 검색어를 먼저 읽는다(lib/search/intent-server) — 조건("신축"·"30평대"·"10억 이하")이나
+   지역 이름만("마포구"·"대치동") 쳤으면 search_complexes_filtered 로 그 범위·조건의 단지를 거래 많은 순으로(총 개수 포함),
+   그 밖은 예전 그대로 이름으로 찾는다. 응답에 intent · areas(지역 줄) · related(연관 검색)를 싣는다.
+   ?cx=N(최대 20) — /search 화면이 단지 그룹을 더 많이 받을 때. 다른 그룹 검색어는 원문 그대로다.
+   [1026e] next · complete · related — 연관 검색어 엔진(lib/search/intent-server loadSuggestWords). */
 
 export const runtime = "nodejs";
 
@@ -50,6 +64,8 @@ function complexRowToUnified(c: ComplexRow): UnifiedComplex {
     name: c.name,
     region: c.city === c.district ? c.city : `${c.city} ${c.district}`.trim(),
     area: parseDong(c.address),
+    address: c.address || null,
+    roadAddress: c.road_address || null,
     households: c.households,
     buildYear: c.build_year,
   };
@@ -155,20 +171,56 @@ export async function GET(req: Request) {
   const sb = getServiceSupabase();
   const pattern = ilikePattern(q);
   let complexPartial = false;
+  /* [1026d] 단지 그룹 줄 수 — /search 는 더 받는다(최대 20) */
+  const cxRaw = Number(searchParams.get("cx"));
+  const complexCap = Number.isFinite(cxRaw) && cxRaw > GROUP_CAP ? Math.min(20, Math.floor(cxRaw)) : GROUP_CAP;
+  /* [1026d] 검색어 읽기(지역·조건·이름) — 다른 그룹과 나란히 돈다 */
+  const planP = planSearch(rawQ);
+  /* [1026e] 연관 검색어 엔진 — 다음 낱말 · 낱말 완성 · /search 칩 */
+  const wordsP = planP.then(loadSuggestWords).catch(() => ({ next: [], complete: [], related: [] }));
+  /* [보강] 동네로 좁히기 — /search 만 묻는다(?kids=1) */
+  const childrenP = searchParams.get("kids") === "1" ? planP.then((p) => loadChildren(p)).catch(() => []) : Promise.resolve([]);
+  /* [보강] 조건이 없으면 이름 검색을 지역 해석과 나란히 먼저 시작한다(지역 검색이면 버린다) */
+  const pre = preParse(rawQ);
+  const earlyHits = pre.filtered ? null : searchComplexPreviews(pre.nameQuery, complexCap).catch(() => null);
+  let complexTotal: number | null = null;
 
   const [complexes, listings, notes, storyPosts, board] = await Promise.all([
     // 단지 — [1008 · S] search_complexes_preview(v2 순위 + 미리보기 값) 먼저, 실패하면 searchComplexes.
     safe<UnifiedComplex>("단지", async () => {
-      const hits = await searchComplexPreviews(complexQ, GROUP_CAP);
-      /* [1008 · 리뷰 B] RPC 를 못 물어봤으면 집계표 경로의 답은 불완전하다 — 캐시하지 않고, 0건이어도 무결과로
-         기록하지 않는다(아래 search_zero_results). */
-      if (hits === null) complexPartial = true;
-      const fromHits = () =>
-        (hits ?? []).slice(0, GROUP_CAP).map((h) => ({
+      const plan = await planP;
+      if (plan.areasFailed) complexPartial = true;
+      if (plan.filter) {
+        const res = await runFilteredSearch(plan.filter, complexCap);
+        if (!res) throw new Error("search_complexes_filtered 실패");
+        complexTotal = res.total;
+        return res.hits.map((h) => ({
           id: h.id,
           name: h.name,
           region: h.region,
           area: h.area ?? null,
+          address: h.address ?? null,
+          roadAddress: h.roadAddress ?? null,
+          households: h.households ?? null,
+          recentTradeCount: h.recentTradeCount ?? null,
+          avgPriceManwon: h.avgPriceManwon ?? null,
+          bandPriceManwon: h.bandPriceManwon ?? null,
+          buildYear: h.buildYear ?? null,
+        }));
+      }
+      const nameQ = plan.nameQuery || complexQ;
+      const hits = earlyHits && nameQ === pre.nameQuery ? await earlyHits : await searchComplexPreviews(nameQ, complexCap);
+      /* [1008 · 리뷰 B] RPC 를 못 물어봤으면 집계표 경로의 답은 불완전하다 — 캐시하지 않고, 0건이어도 무결과로
+         기록하지 않는다(아래 search_zero_results). */
+      if (hits === null) complexPartial = true;
+      const fromHits = () =>
+        (hits ?? []).slice(0, complexCap).map((h) => ({
+          id: h.id,
+          name: h.name,
+          region: h.region,
+          area: h.area ?? null,
+          address: h.address ?? null,
+          roadAddress: h.roadAddress ?? null,
           households: h.households ?? null,
           recentTradeCount: h.recentTradeCount ?? null,
           avgPriceManwon: h.avgPriceManwon ?? null,
@@ -181,14 +233,14 @@ export async function GET(req: Request) {
          거기서도 없으면 RPC 의 비슷한 이름 후보를 배지와 함께 둔다. RPC 는 다시 부르지 않는다(skipRpc). */
       let rows: ComplexRow[] = [];
       try {
-        rows = await searchComplexes(complexQ, undefined, GROUP_CAP, undefined, { skipRpc: true });
+        rows = await searchComplexes(nameQ, undefined, complexCap, undefined, { skipRpc: true });
       } catch (e) {
         if (!hits || hits.length === 0) throw e;
         /* 비슷한 이름 후보는 있다 — 보여 주되 불완전한 답이라 캐시하지 않는다(아래 Cache-Control) */
         complexPartial = true;
         logger.warn("[search] 통합 검색 단지 집계표 경로 실패 — 비슷한 이름 후보만 보냅니다", e);
       }
-      return rows.length > 0 ? rows.slice(0, GROUP_CAP).map(complexRowToUnified) : fromHits();
+      return rows.length > 0 ? rows.slice(0, complexCap).map(complexRowToUnified) : fromHits();
     }),
     // 매물 — 승인 매물에서 단지명·지역·설명을 DB단 ilike 매칭
     safe<UnifiedListing>("매물", async () => {
@@ -362,10 +414,12 @@ export async function GET(req: Request) {
     notes.rows.length === 0 &&
     stories.rows.length === 0 &&
     news.rows.length === 0;
-  const suggested = allEmpty
+  const plan = await planP;
+  /* [1026d] 조건·지역 검색이 0건이면 "이름이 비슷한 단지" 는 엉뚱하다 — 화면이 조건 칩을 지우라고 안내한다 */
+  const suggested = allEmpty && !plan.filter
     ? await safe<UnifiedComplex>("대안 제안", async () => {
         /* [1008 · S] 토큰 기준 "비슷한 이름"(lib/complex/complex-store suggestComplexes 주석) */
-        const rows = await suggestComplexes(complexQ, 6);
+        const rows = await suggestComplexes(plan.nameQuery || complexQ, 6);
         return rows.map(complexRowToUnified);
       })
     : { rows: [] as UnifiedComplex[], failed: false };
@@ -406,6 +460,11 @@ export async function GET(req: Request) {
       /* 클라이언트는 이 목록을 "없음"이 아니라 "지금 못 불러왔음"으로 그린다. */
       failed,
       query: rawQ,
+      /* [1026d] 검색 범위·조건 칩 · 지역 줄 · 연관 검색 */
+      intent: intentInfo(plan, complexTotal),
+      areas: plan.areas,
+      ...(await wordsP),
+      children: await childrenP,
     },
     {
       headers: {

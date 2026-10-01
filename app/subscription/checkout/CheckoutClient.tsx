@@ -1,4 +1,12 @@
 "use client";
+/* [1026c · 결제] 토스 도메인 변경 3차 반려(2026-09-26 "홈페이지 내 결제수단 신용/체크카드가 확인되지 않습니다") 원인 실측:
+   운영의 결제위젯 키(live_gck)로 renderPaymentMethods 를 부르면 토스가 404 {"code":"4015","message":"존재하지 않는 위젯입니다."}
+   (GET /v1/payment-widget/widget-groups/keys?variantKey=DEFAULT) 를 돌려준다 — 상점관리자 "결제 UI 설정"의 라이브 결제 UI 가
+   없어서 결제수단 목록(카드)이 한 번도 그려지지 않았다. 그 뒤 "카드로 결제하기" 대체 버튼은 같은 위젯 키로 payment() 를 불러
+   SDK 가 NOT_SUPPORTED_WIDGET_KEY("API 개별 연동 키의 클라이언트 키로 SDK를 연동해주세요")로 거절한다 — 심사자는 오류만 봤다.
+   ① 위젯 키에서 위젯이 실패하면 반드시 실패하는 대체 경로(payment())를 내보이지 않는다 — 원인 한 줄 + "다시 불러오기".
+   ② 실패 코드는 모니터링으로 보낸다(scope toss-widget) — 다음 반려 전에 로그로 먼저 안다.
+   ③ 결제창형(API 개별 연동 키 ck)은 위젯 없이 카드 결제창을 연다 — 그 경로는 그대로다. */
 
 import { useEffect, useRef, useState } from "react";
 import { planLabel } from "@/lib/subscriptions/labels";
@@ -25,6 +33,7 @@ import {
   tossClientKey,
   type TossWidgets,
 } from "../toss-rail";
+import { tossWidgetVariant } from "@/lib/payments/toss-variant";
 
 /* ============================================================
    결제위젯 주문서형 클라이언트.
@@ -73,7 +82,10 @@ type Phase =
       /* [1001] 주간권(단건)은 계정 없이도 결제할 수 있다 — 이메일만 받고 카드 결제창을 연다 */
       guestPay: boolean;
     }
-  | { kind: "error"; msg: string };
+  | { kind: "error"; msg: string; retry?: boolean };
+
+/** [1026c] 결제수단 위젯을 못 그렸을 때 — 원인과 다음 행동(다시 불러오기)만 */
+const WIDGET_FAIL_MSG = "결제 수단(신용·체크카드) 화면을 불러오지 못했어요. 잠시 뒤 다시 불러와 주세요.";
 
 /* 플랜명은 단일 출처 — lib/subscriptions/labels.planLabel (게이트: check:plan-labels) */
 
@@ -271,6 +283,18 @@ function WidgetSkeletonOverlay({ msg }: { msg: string }) {
 /* [968 · T1] 비로그인 안내 — 위젯 위, 요약 카드 바로 아래. 무엇이 필요한지와
    로그인 뒤 어디로 돌아오는지를 한 카드에서 말한다. */
 function GuestNotice({ widget, guestPay }: { widget: "shown" | "none" | "failed"; guestPay: boolean }) {
+  /* [1026c] 위젯을 못 그렸으면 로그인도 대체 결제창도 해결책이 아니다 — 원인 한 줄과 다시 불러오기만 */
+  if (widget === "failed") {
+    return (
+      <div role="alert" className="card flex flex-col items-start gap-2 rounded-2xl px-4 py-3.5">
+        <p className="t-body font-bold text-ink">결제 수단을 불러오지 못했어요</p>
+        <p className="t-sub text-text-2">{WIDGET_FAIL_MSG}</p>
+        <button type="button" onClick={() => window.location.reload()} className="btn-outline btn-md">
+          다시 불러오기
+        </button>
+      </div>
+    );
+  }
   return (
     <div role="status" className="card flex flex-col gap-1 rounded-2xl px-4 py-3.5">
       <p className="t-body font-bold text-ink">
@@ -307,15 +331,24 @@ function GuestNotice({ widget, guestPay }: { widget: "shown" | "none" | "failed"
           </Link>
         </p>
       )}
-      {widget === "failed" && (
-        <p role="alert" className="t-sub font-bold text-danger">
-          {guestPay
-            ? "결제수단 목록을 불러오지 못했어요. 아래 버튼으로 카드 결제창을 바로 열 수 있어요."
-            : "결제 수단 화면을 불러오지 못했어요. 로그인한 뒤 다시 시도해 주세요."}
-        </p>
-      )}
     </div>
   );
+}
+
+/** [1026c] 위젯 실패 원인 — 토스 SDK 오류 코드·메시지를 모니터링으로(키·주문 정보 없음). 화면 흐름과 무관하게 조용히 실패한다. */
+function reportWidgetFailure(e: unknown) {
+  try {
+    const code = e && typeof e === "object" && "code" in e ? String((e as { code: unknown }).code) : "";
+    const msg = e instanceof Error ? e.message : String(e ?? "");
+    void fetch("/api/monitoring/client-error", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: `toss widget render failed ${code} ${msg}`.trim().slice(0, 480), scope: "toss-widget", path: window.location.pathname }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    /* 계측 실패는 무시 */
+  }
 }
 
 export function CheckoutClient() {
@@ -366,13 +399,30 @@ export function CheckoutClient() {
          variantKey 로 지정한다. 계약 후 어드민에서 UI 를 만들면 Vercel 에
          NEXT_PUBLIC_TOSS_WIDGET_VARIANT_KEY 만 넣으면 된다 — 코드 수정 없이
          운영(소개서의 "유지보수 5분" 경로). 미설정이면 기본 UI. */
-      const variantKey = process.env.NEXT_PUBLIC_TOSS_WIDGET_VARIANT_KEY?.trim();
+      /* [1026f] 상점관리자에 만든 라이브 결제 UI(베리언트 키 naezipnow — lib/payments/toss-variant)를 결제수단·약관 둘 다에 넘긴다.
+         ("DEFAULT" 로는 이름을 바꿀 수 없게 돼 있다 — 소유자 확인 2026-10-01.) 그 UI 를 못 찾으면(이름이 바뀌었을 때) 결제수단은
+         기본 UI(DEFAULT)로, 약관은 키 없이 한 번 더 그려 본다 — 그래도 안 되면 "결제 수단을 불러오지 못했어요" + 다시 불러오기. */
+      const variantKey = tossWidgetVariant();
+      const tryEach = async (render: (v?: string) => Promise<unknown>, keys: Array<string | undefined>) => {
+        let last: unknown;
+        for (const v of keys) {
+          try {
+            return await render(v);
+          } catch (e) {
+            last = e;
+          }
+        }
+        throw last;
+      };
       await Promise.all([
-        widgets.renderPaymentMethods({
-          selector: "#toss-payment-methods",
-          ...(variantKey ? { variantKey } : {}),
-        }),
-        widgets.renderAgreement({ selector: "#toss-agreement" }),
+        tryEach(
+          (v) => widgets.renderPaymentMethods({ selector: "#toss-payment-methods", ...(v ? { variantKey: v } : {}) }),
+          variantKey === "DEFAULT" ? ["DEFAULT"] : [variantKey, "DEFAULT"],
+        ),
+        tryEach(
+          (v) => widgets.renderAgreement({ selector: "#toss-agreement", ...(v ? { variantKey: v } : {}) }),
+          [variantKey, undefined],
+        ),
       ]);
       return widgets;
     }
@@ -410,9 +460,11 @@ export function CheckoutClient() {
         /* 게스트도 위젯을 들고 있는다 — 주문이 만들어진 뒤에만 requestPayment 를 부른다(guestPay) */
         if (guestPay) widgetsRef.current = w;
         setPhase({ kind: "preview", amount, widget: "shown", loginHref, guestPay });
-      } catch {
-        /* 실패를 숨기지 않는다 — 안내 카드가 "불러오지 못했어요"를 말한다. */
-        setPhase({ kind: "preview", amount, widget: "failed", loginHref, guestPay });
+      } catch (e) {
+        /* 실패를 숨기지 않는다 — 안내 카드가 "불러오지 못했어요"를 말한다.
+           [1026c] 위젯 키(gck)로는 payment() 결제창을 열 수 없다(SDK NOT_SUPPORTED_WIDGET_KEY) — 대체 결제 버튼을 내지 않는다. */
+        reportWidgetFailure(e);
+        setPhase({ kind: "preview", amount, widget: "failed", loginHref, guestPay: false });
       }
     }
 
@@ -513,11 +565,11 @@ export function CheckoutClient() {
       try {
         widgetsRef.current = await renderWidgets(amount);
         setPhase({ kind: "ready", orderId, amount });
-      } catch {
-        /* 위젯 렌더 실패 → 결제창형으로 후퇴. 주문은 이미 만들어져 있으므로
-           빈 화면 대신 "카드 결제창 열기" 경로를 준다 — 실패를 숨기는 게
-           아니라 같은 주문의 대체 결제 경로다(결제창도 실패하면 그때 오류 표시). */
-        setPhase({ kind: "window-ready", orderId, amount });
+      } catch (e) {
+        /* [1026c] 예전엔 결제창형(window-ready)으로 후퇴했지만, 위젯 키(gck)로는 payment() 가 SDK 에서 거절된다
+           (NOT_SUPPORTED_WIDGET_KEY) — 누르면 반드시 실패하는 버튼이었다. 원인을 말하고 다시 불러오게 한다. */
+        reportWidgetFailure(e);
+        setPhase({ kind: "error", msg: WIDGET_FAIL_MSG, retry: true });
       }
     })();
   }, []);
@@ -725,6 +777,11 @@ export function CheckoutClient() {
         <div className="card flex flex-col items-center gap-2.5 rounded-2xl px-4 py-8 text-center">
           <p className="t-section text-ink">결제를 시작하지 못했어요</p>
           <p className="t-sub text-text-3">{phase.msg}</p>
+          {phase.retry && (
+            <button type="button" onClick={() => window.location.reload()} className="btn-outline btn-md">
+              다시 불러오기
+            </button>
+          )}
           <Link href="/subscription" className="btn-soft btn-sm no-underline">
             구독 페이지로 돌아가기
           </Link>
@@ -825,7 +882,7 @@ export function CheckoutClient() {
           </div>
         )}
         {/* [968 · T1] 정기(월간·연간)의 게스트 1차 행동 — 로그인 뒤 카드 등록 화면으로 */}
-        {phase.kind === "preview" && !phase.guestPay && (
+        {phase.kind === "preview" && !phase.guestPay && phase.widget !== "failed" && (
           <>
             <Link
               href={phase.loginHref}

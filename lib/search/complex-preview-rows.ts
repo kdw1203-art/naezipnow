@@ -27,6 +27,8 @@ export type PreviewRow = {
   sim: number | null;
   /** v2: 이름·토큰으로 맞음(false = 비슷한 이름 · 오타 추정). 직전 정의(v1)에서는 "앞글자 일치" 였다. */
   exact: boolean | null;
+  /** [1026d] search_complexes_preview_addr 만 싣는다(도로명 주소) */
+  road_address?: string | null;
 };
 
 export interface ComplexSearchHit extends ComplexPreview {
@@ -52,6 +54,7 @@ export function previewRowToHit(r: PreviewRow, fuzzy: boolean): ComplexSearchHit
     region,
     area: parseDong(r.address),
     address: r.address?.trim() || null,
+    roadAddress: r.road_address?.trim() || null,
     households: num(r.households),
     recentTradeCount: num(r.recent_trade_count),
     tradeCount: num(r.trade_count),

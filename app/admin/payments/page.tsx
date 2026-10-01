@@ -1,3 +1,5 @@
+import { probeWidgetUi, WIDGET_UI_NOTE } from "@/lib/payments/toss-widget-probe";
+import { tossWidgetVariant } from "@/lib/payments/toss-variant";
 import { billingLabel } from "@/lib/subscriptions/labels";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -106,6 +108,12 @@ export default async function AdminPaymentsPage({
   );
   const secretEnv = keyEnv(process.env.TOSS_SECRET_KEY, "test_", "live_");
   const paired = generalPair.ok;
+  /* [1026c · 결제] 결제위젯 "결제 UI"가 토스에 있는가 — 브라우저 SDK 와 같은 요청을 서버에서 한 번(공개 클라이언트 키).
+     2026-09-26 도메인 변경 반려의 원인이 이것(404 · 4015 존재하지 않는 위젯)이었다. */
+  const widgetUi = await probeWidgetUi(
+    process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY,
+    tossWidgetVariant(),
+  );
 
   let payments: PaymentRecord[] = [];
   let paymentsFailed = false;
@@ -194,6 +202,11 @@ export default async function AdminPaymentsPage({
       label: "일반결제 키 세트",
       env: generalPair.ok ? (generalPair.mode === "live" ? "live" : "test") : "missing",
       note: generalPair.reason,
+    },
+    {
+      label: "결제위젯 결제 UI (카드 목록)",
+      env: widgetUi === "ok" ? (clientEnv === "live" ? "live" : "test") : widgetUi === "not-widget-key" ? clientEnv : "missing",
+      note: WIDGET_UI_NOTE[widgetUi],
     },
     {
       label: "자동결제 키 세트 (MID 별도)",
@@ -300,8 +313,8 @@ export default async function AdminPaymentsPage({
             >
               상점관리자 결제위젯
             </a>
-            에서 결제수단·UI·약관을 코드 수정 없이 관리. 별도 UI 를 만들면
-            variantKey 를 체크아웃 코드에 지정.
+            에서 결제수단·UI·약관을 코드 수정 없이 관리. 체크아웃이 부르는 결제 UI 베리언트 키{" "}
+            <code>{tossWidgetVariant()}</code> — 이름을 바꾸면 Vercel <code>NEXT_PUBLIC_TOSS_WIDGET_VARIANT_KEY</code> + 재배포.
           </li>
           <li>
             <b className="text-ink">라이브 전환</b> — 클라이언트·시크릿은 반드시{" "}

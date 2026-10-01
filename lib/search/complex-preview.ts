@@ -22,6 +22,12 @@ export interface ComplexPreview {
   buildYear?: number | null;
   /** 이름·토큰으로 맞은 게 아니라 이름이 비슷한 후보(오타 추정) — "비슷한 이름" 으로 표시한다 */
   fuzzy?: boolean;
+  /** [1026d] 대표 지번 주소("마포구 아현동 777") — 음영 주소 줄 */
+  address?: string | null;
+  /** [1026d] 도로명 주소("서울특별시 송파구 송파대로 345") — 대장과 맞은 단지만(약 44%) */
+  roadAddress?: string | null;
+  /** [1026d] 면적 조건 검색일 때 그 면적 거래의 평균 매매가(만원) */
+  bandPriceManwon?: number | null;
 }
 
 /** "안양 동안구 관양동" — 읍면동을 알면 붙인다 */

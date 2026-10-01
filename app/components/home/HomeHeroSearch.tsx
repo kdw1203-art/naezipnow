@@ -1,4 +1,6 @@
 "use client";
+/* [1026d · 검색] 검색 범위 줄 · 지역 줄 · 음영 주소 줄 · 연관 검색(패널) + 입력칸 음영 자동완성 · 예시 문구에 조건 검색 */
+/* [1026e · 연관 검색어] 띄어 쓰면 다음 낱말 · 덜 친 낱말은 완성(맨 위 검색어 줄 · 누르면 입력이 바뀌고 이어서 고른다) */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
@@ -11,8 +13,19 @@ import { useSettledSearchQuery } from "@/lib/search/settle";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { useShellActive, type Shell } from "@/lib/client/viewport-shell";
 import { useReducedData } from "@/lib/client/network-hints";
-import { complexItem, flattenUnified, type FlatItem, type UnifiedJson } from "@/app/search/unified-suggest";
+import {
+  complexItem,
+  flattenUnified,
+  ghostCandidates,
+  keywordItem,
+  type FlatItem,
+  type IntentJson,
+  type NextWordJson,
+  type RelatedJson,
+  type UnifiedJson,
+} from "@/app/search/unified-suggest";
 import { QUERY_TOO_LONG, SEARCH_QUERY_MAX, badRequestNotice } from "@/lib/search/complex-preview";
+import { ghostRest, keywordPhrases } from "@/lib/search/ghost";
 
 /* 홈 리디자인(#408) 시안 B — 화면 정중앙 대형 검색.
  *
@@ -36,6 +49,9 @@ import { QUERY_TOO_LONG, SEARCH_QUERY_MAX, badRequestNotice } from "@/lib/search
    6개월 거래 · 0건이면 띄어 쓰는 요령·지도에서 찾기·비슷한 이름 + 전체 검색·수요 남기기. */
 const loadPanel = () => import("@/app/search/UnifiedSuggestPanel");
 const Panel = dynamic(loadPanel, { ssr: false });
+/* [1026d · 검색] 입력칸 음영 자동완성 — 그리는 부분은 동적 청크(헤더와 같은 것) */
+const loadGhost = () => import("@/app/search/GhostText");
+const Ghost = dynamic(loadGhost, { ssr: false });
 const LIST_ID = "hero-suggest";
 const optionId = (i: number) => `hero-opt-${i}`;
 /** 홈 패널에 그리는 줄 수 — 키보드 순환도 이 수만큼(리뷰 B: ↓가 그리지 않은 8번째 줄로 가 Enter 로 안 보이던 곳에 갔다) */
@@ -53,9 +69,9 @@ export interface HeroRegionChip {
  *  실제 존재하는 단지·지역만 적는다(헬리오시티: 서울 송파구 실거래 다수). */
 const PLACEHOLDERS = [
   "단지명 — 예: 헬리오시티",
-  "지역명 — 예: 마포구 신축",
-  "동네 + 임장노트 — 예: 잠실 임장노트",
-  "뉴스·재건축 — 예: 목동 재건축",
+  "지역 + 조건 — 예: 마포구 신축",
+  "동네 + 평형 — 예: 잠실 30평대",
+  "조건만 — 예: 분당 10억 이하 대단지",
 ];
 
 const searchHref = (k: string) => `/search?q=${encodeURIComponent(k)}`;
@@ -99,6 +115,13 @@ export function HomeHeroSearch({
   const [notice, setNotice] = useState<string | null>(null);
   const [activeIdx, setActiveIdx] = useState(-1);
   const [open, setOpen] = useState(false);
+  /* [1026d] 검색 범위 · 연관 검색 */
+  const [intent, setIntent] = useState<IntentJson | null>(null);
+  const [related, setRelated] = useState<RelatedJson[]>([]);
+  /* [1026e] 연관 검색어 — 띄어 쓴 뒤 붙일 낱말 · 마지막 낱말 완성 */
+  const [nextWords, setNextWords] = useState<NextWordJson[]>([]);
+  const [completeWords, setCompleteWords] = useState<NextWordJson[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [recents, setRecents] = useState<string[]>([]);
   /* [968 · 8] 최근 본 단지(로컬 + 서버 병합)도 보이는 벌만 읽는다 */
   const { items: recentComplexes } = useRecentComplexes(active);
@@ -118,6 +141,10 @@ export function HomeHeroSearch({
     if (query.length < 2) {
       setItems([]);
       setSimilar([]);
+      setIntent(null);
+      setRelated([]);
+      setNextWords([]);
+      setCompleteWords([]);
       setSearched("");
       setNotice(null);
       return;
@@ -144,6 +171,10 @@ export function HomeHeroSearch({
         if (ac.signal.aborted) return;
         setItems(r ? flattenUnified(r) : []);
         setSimilar((r?.suggestions ?? []).map(complexItem));
+        setIntent(r?.intent ?? null);
+        setRelated(r?.related ?? []);
+        setNextWords(r?.next ?? []);
+        setCompleteWords(r?.complete ?? []);
         setFailed(!n && (!r || (r.failed?.length ?? 0) > 0));
         setNotice(n);
         setSearched(query);
@@ -153,10 +184,15 @@ export function HomeHeroSearch({
     return () => ac.abort();
   }, [settledQuery]);
 
+  /* [1026e] 연관 검색어 줄(맨 위, 최대 4) — 띄어 썼으면 다음 낱말, 아니면 마지막 낱말 완성 */
+  const kw = open && !notice && searched ? keywordPhrases(q, searched, nextWords, completeWords, 4) : [];
   /* 목록이 바뀌면 가리키던 자리는 의미를 잃는다 */
-  useEffect(() => setActiveIdx(-1), [items, similar, open]);
+  useEffect(() => setActiveIdx(-1), [items, similar, open, kw.length]);
   /* 그리는 줄 = 키보드가 도는 줄(한 목록을 두 곳이 쓴다) */
-  const shown = items.slice(0, HERO_MAX);
+  /* 연관 검색어가 있으면 '비슷한 이름'(오타 추정) 단지는 뺀다(확실한 다음 말 옆의 추측은 소음) */
+  const shown = kw.length
+    ? [...kw.map(keywordItem), ...items.filter((it) => !it.fuzzy)].slice(0, HERO_MAX + kw.length)
+    : items.slice(0, HERO_MAX);
   const options = notice ? [] : shown.length ? shown : similar;
 
   /* 바깥 클릭 → 닫기. [968 · 8] 문서 리스너도 보이는 벌 하나만 단다. */
@@ -182,11 +218,27 @@ export function HomeHeroSearch({
     setOpen(false);
     setQ("");
   }
+  /* [1026e] 연관 검색어 — 입력을 그 말로 바꾸고(뒤에 한 칸) 이어서 고른다 */
+  function pickKeyword(k: string) {
+    setQ(`${k} `);
+    setOpen(true);
+    inputRef.current?.focus();
+  }
 
   /* [1008 · S] 콤보박스 키보드 — ↑↓ 순환 · Enter 는 활성 항목(없으면 폼 제출 = 전체 검색) · Esc 목록만 닫기.
      한글 조합 중 방향키·Enter 는 IME 몫이라 가로채지 않는다. */
   const showPanel = open && q.trim().length >= 2 && !!searched;
+  /* [1026d] 음영 자동완성 — Tab(조합 중이어도) · →(글자 끝) · 음영 글자 누르기 */
+  const ghost = showPanel && !notice ? ghostRest(q, [...kw.map((k) => k.q), ...ghostCandidates(items)]) : "";
+  const acceptGhost = () => {
+    if (ghost) setQ(q + ghost);
+  };
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (ghost && (e.key === "Tab" || (e.key === "ArrowRight" && !e.nativeEvent.isComposing && e.currentTarget.selectionStart === q.length))) {
+      e.preventDefault();
+      acceptGhost();
+      return;
+    }
     if (e.nativeEvent.isComposing) return;
     const n = showPanel ? options.length : 0;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -199,6 +251,7 @@ export function HomeHeroSearch({
     } else if (e.key === "Enter" && activeIdx >= 0 && options[activeIdx]) {
       e.preventDefault();
       const it = options[activeIdx];
+      if (it.keyword) return pickKeyword(it.keyword);
       onPickSuggestion();
       router.push(it.href);
     } else if (e.key === "Escape") {
@@ -231,7 +284,9 @@ export function HomeHeroSearch({
           className="home-search flex items-center gap-2.5 rounded-full border border-line bg-surface py-2 pl-5 pr-2 transition-[box-shadow,border-color] duration-200 focus-within:border-primary md:py-2.5"
         >
           <Icon name="search" size={19} className="shrink-0 text-text-3" />
+          <span className="relative min-w-0 flex-1">
           <input
+            ref={inputRef}
             type="search"
             enterKeyHint="search"
             value={q}
@@ -240,6 +295,7 @@ export function HomeHeroSearch({
             onFocus={() => {
               setFocused(true);
               void loadPanel();
+              void loadGhost();
               if (q.trim() && searched) setOpen(true);
             }}
             onBlur={() => setFocused(false)}
@@ -254,6 +310,8 @@ export function HomeHeroSearch({
             autoComplete="off"
             className="w-full min-w-0 bg-transparent t-section text-ink outline-none placeholder:font-normal placeholder:text-text-3"
           />
+          {ghost && <Ghost inputRef={inputRef} value={q} rest={ghost} onAccept={acceptGhost} />}
+          </span>
           <button
             type="submit"
             className="btn-primary press h-10 shrink-0 rounded-full px-5 t-body"
@@ -272,6 +330,8 @@ export function HomeHeroSearch({
             listId={LIST_ID}
             optionId={optionId}
             query={searched}
+            intent={intent}
+            related={related}
             items={shown}
             similar={similar}
             active={activeIdx}
@@ -279,6 +339,7 @@ export function HomeHeroSearch({
             notice={notice}
             onHover={setActiveIdx}
             onPick={onPickSuggestion}
+            onKeyword={pickKeyword}
             onSubmit={submit}
             submitLabel={
               items.length ? `‘${q.trim()}’ 전체 검색 ›` : `‘${q.trim()}’ 전체 검색·수요 남기기 ›`

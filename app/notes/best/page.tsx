@@ -1,3 +1,4 @@
+/* [1026c · 폰 배율 1] 문장 속 링크 24px 하한(py-[5px]) — 전 경로 폰 조작 검사에서 지적된 자리. */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -142,7 +143,7 @@ export default async function BestNotesIndexPage() {
             아직 기준을 채운 달이 없습니다. 한 달에 {MIN_SCORE}점 이상 노트가{" "}
             {MIN_NOTES_PER_MONTH}편 모이면 만들어집니다.
             <br />
-            <Link href="/notes/new" className="mt-2 inline-block font-bold text-primary underline">
+            <Link href="/notes/new" className="mt-2 inline-flex min-h-[24px] items-center font-bold text-primary underline">
               임장노트 쓰기
             </Link>
           </div>

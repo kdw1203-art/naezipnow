@@ -1,3 +1,4 @@
+/* [1026c · 번들] 방문 기록기(RecentComplexRecorder)·거리뷰 버튼(RoadviewButtonLazy)만 첫 로드에서 가볍게 — 배포 빌드 479/480KB 여유. */
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import { cache } from "react";
 import { loanRegionFromRegionName } from "@/lib/finance/loan-rules";
@@ -106,7 +107,7 @@ import { pureIdFromParam, complexHrefFromId} from "@/lib/seo/complex-slug";
 import { geocodeAndCache } from "@/lib/map/complex-geocode";
 import { settle, startDeadline, SIDE_SECTION_BUDGET_MS } from "@/lib/data/section-budget";
 import { getMarketFreshnessDateLabel } from "@/lib/newui/freshness";
-import { RecentComplexRecorder } from "../../components/RecentComplexes";
+import { RecentComplexRecorder } from "../../components/RecentComplexRecorder";
 import { MarketFreshnessLine } from "../../components/MarketFreshnessLine";
 /* [1015 · 규칙 J] Q&A(QaBlock)·퍼가기(EmbedSnippet) 카드는 페이지 맨 끝 "데이터 출처" 접힘(ComplexFactsCard) 안으로 */
 import { AdZone } from "@/app/components/ads/AdZone";
@@ -138,7 +139,7 @@ import {
   AI_SUMMARY_SELECTOR,
 } from "@/lib/seo/citable-summary";
 import { seoAlternates } from "@/lib/seo/alternates";
-import { RoadviewButton } from "@/components/map/RoadviewButton";
+import { RoadviewButtonLazy as RoadviewButton } from "@/components/map/RoadviewButtonLazy";
 import {
   listApprovedListings,
   LISTING_TYPE_LABEL,

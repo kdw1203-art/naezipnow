@@ -1,3 +1,4 @@
+/* [1026c · 폰 배율 1] 문장 속 링크 24px 하한(py-[5px]) — 전 경로 폰 조작 검사에서 지적된 자리. */
 /* [1023 · 동네 ③] 소개 카드의 3칸 통계 중 머리(TownHero)와 겹치는 두 칸 삭제 — 평균 후기 평점만 한 줄(있을 때만). CountUp 은 더 쓰지 않는다. */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import Link from "next/link";
@@ -210,7 +211,7 @@ export default async function TownExpertsPage() {
             <p className="mt-3 t-caption text-text-3">
               인증 대상: {EXPERT_TYPES.filter((t) => t.id !== "other").map((t) => t.label).join("·")} 및 서류·인터뷰 심사를 거친 기타 전문가.
               법률 서비스는 정책상 유료 입점 불가. 절차·검증 기준은{" "}
-              <Link href="/legal/expert" className="font-bold text-primary underline underline-offset-2">
+              <Link href="/legal/expert" className="inline-block py-[5px] font-bold text-primary underline underline-offset-2">
                 전문가 운영정책
               </Link>
               에 있습니다.

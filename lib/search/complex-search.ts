@@ -29,7 +29,9 @@ export async function searchComplexPreviews(
   if (!q) return [];
   const sb = getReadOnlySupabase();
   if (!sb) return null;
-  const { data, error } = await sb.rpc("search_complexes_preview", { p_q: q, p_limit: limit });
+  /* [1026d] 도로명 주소까지 싣는 감싼 판(같은 순서)을 먼저 — 아직 없으면(배포 순서) 원래 판으로 */
+  let { data, error } = await sb.rpc("search_complexes_preview_addr", { p_q: q, p_limit: limit });
+  if (error) ({ data, error } = await sb.rpc("search_complexes_preview", { p_q: q, p_limit: limit }));
   if (error) {
     logger.warn("[search] search_complexes_preview 실패 — 옛 경로로 물러섭니다", {
       message: error.message,

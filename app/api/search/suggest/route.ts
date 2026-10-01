@@ -5,6 +5,17 @@ import { expandComplexAlias } from "@/lib/search/normalize-query";
 import { searchComplexPreviews, type ComplexSearchHit } from "@/lib/search/complex-search";
 import { isPlaceSearchConfigured, searchPlaces } from "@/lib/search/place-search";
 import { logger } from "@/lib/log";
+import {
+  intentInfo,
+  loadSuggestWords,
+  planSearch,
+  preParse,
+  runFilteredSearch,
+  type AreaItem,
+  type NextWord,
+  type RelatedQuery,
+  type SearchIntentInfo,
+} from "@/lib/search/intent-server";
 
 /* 검색 자동완성(#48) — 단지명 서제스트.
    search_complexes_preview RPC(v2 — 정규화·토큰·동네+단지명·오타, lib/search/complex-search) 상위 8건.
@@ -15,7 +26,13 @@ import { logger } from "@/lib/log";
    [1008 · S] 결과가 0건이면 similar[](토큰 기준 "비슷한 이름" 제안)를 붙인다 — 단지 선택기·지도 검색이
    "없어요" 로 끝나지 않게. 제안은 결과가 아니다(suggestions 에 섞지 않는다 — 지도 ?q= 자동 선택이
    첫 결과를 고르는데, 제안을 고르면 엉뚱한 단지로 이동한다).
-   CDN 캐시 s-maxage=3600 (인기 프리픽스 재활용). */
+   CDN 캐시 s-maxage=3600 (인기 프리픽스 재활용).
+   [1026d · 검색] 검색어를 먼저 읽는다(lib/search/intent-server planSearch) — "마포 신축" · "잠실 30평대" 처럼
+   조건이 있거나 지역 이름만 쳤으면 search_complexes_filtered(거래 많은 순 + 총 개수)로 단지를 고르고,
+   그 밖(단지 이름)은 예전 그대로다. 응답에 intent(검색 범위·조건 칩) · areas(지역 줄) · related(연관 검색)를 싣는다.
+   단지 줄에는 roadAddress(도로명)도 — 화면이 "도로명 (동 번지)" 음영 줄을 그린다.
+   [1026e · 연관 검색어] next(띄어 쓴 뒤 붙일 낱말 + 단지 수) · complete(마지막 낱말 완성) · related(검색어 + 낱말) —
+   lib/search/intent-server loadSuggestWords(search_next_words). */
 
 export const runtime = "nodejs";
 
@@ -46,6 +63,10 @@ export interface SuggestItem {
   lng?: number | null;
   /** [1008 · S] 이름·토큰으로 맞은 게 아니라 이름이 비슷한 후보(오타 추정) */
   fuzzy?: boolean;
+  /** [1026d] 도로명 주소 — 모르면 null */
+  roadAddress?: string | null;
+  /** [1026d] 면적 조건 검색일 때 그 면적의 평균 매매가(만원) */
+  bandPriceManwon?: number | null;
 }
 
 /** 외부(지도) 장소검색 폴백 항목 — 클릭 시 지도 이동에 필요한 좌표 포함. */
@@ -79,6 +100,8 @@ function hitToItem(h: ComplexSearchHit): SuggestItem {
     lat: h.lat,
     lng: h.lng,
     fuzzy: h.fuzzy === true,
+    roadAddress: h.roadAddress ?? null,
+    bandPriceManwon: h.bandPriceManwon ?? null,
   };
 }
 
@@ -91,6 +114,7 @@ function rowToItem(c: ComplexRow): SuggestItem {
     dong: c.district || c.city || "",
     area: parseDong(c.address),
     address: c.road_address || c.address || `${region} ${c.name}`.trim(),
+    roadAddress: c.road_address || null,
     buildYear: c.build_year,
     households: c.households,
     lat: c.lat,
@@ -102,7 +126,8 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   /* [1008 · S] 약칭만 펼치고 '아파트' 꼬리는 떼지 않는다 — 순위가 원문 일치("공작아파트")를 먼저 본 뒤
      꼬리 뗀 형("공작")을 다룬다(lib/search/normalize-query expandComplexAlias 주석). */
-  const q = expandComplexAlias(searchParams.get("q") ?? "");
+  const rawQ = (searchParams.get("q") ?? "").replace(/\s+/g, " ").trim();
+  const q = expandComplexAlias(rawQ);
 
   if (!q) {
     return NextResponse.json(
@@ -125,8 +150,49 @@ export async function GET(req: Request) {
      "검색 결과 없음"을 한 시간 동안 굳혀버린다. 실패한 응답은 캐시하지 않는다. */
   let lookupFailed = false;
   let partial = false;
+  /* [1026d] 검색어 읽기 — 지역·조건·이름. 지역 해석이 실패하면 이름 검색으로 물러서고 캐시하지 않는다 */
+  /* [보강] 조건이 없으면 이름 검색을 지역 해석과 나란히 먼저 시작한다(왕복 한 번 줄임 — 지역 검색이면 버린다) */
+  const pre = preParse(rawQ);
+  const earlyHits: Promise<ComplexSearchHit[] | null> | null = pre.filtered
+    ? null
+    : searchComplexPreviews(pre.nameQuery, LIMIT).catch(() => null);
+  const plan = await planSearch(rawQ);
+  if (plan.areasFailed) partial = true;
+  /* [1026e] 연관 검색어 엔진 — 다음 낱말 · 낱말 완성(실패해도 결과는 막지 않는다) */
+  const wordsP: Promise<{ next: NextWord[]; complete: NextWord[]; related: RelatedQuery[] }> = loadSuggestWords(
+    plan,
+  ).catch(() => ({ next: [], complete: [], related: [] }));
+  let total: number | null = null;
+  if (plan.filter) {
+    /* [보강] 조건·지역 검색은 쪽 넘김을 받는다(/search 의 "더 보기") — limit ≤ 30 · offset ≤ 300 */
+    const lim = Math.min(30, Math.max(1, Number(searchParams.get("limit")) || LIMIT));
+    const off = Math.min(300, Math.max(0, Number(searchParams.get("offset")) || 0));
+    const res = await runFilteredSearch(plan.filter, lim, off).catch(() => null);
+    const words = await wordsP;
+    if (!res) lookupFailed = true;
+    else total = res.total;
+    return NextResponse.json(
+      {
+        suggestions: (res?.hits ?? []).map(hitToItem),
+        places: [] as PlaceItem[],
+        similar: [] as SuggestItem[],
+        query: q,
+        failed: lookupFailed,
+        intent: intentInfo(plan, total) satisfies SearchIntentInfo,
+        areas: plan.areas satisfies AreaItem[],
+        ...words,
+      },
+      {
+        headers: {
+          "Cache-Control":
+            lookupFailed || partial ? "no-store" : "public, s-maxage=3600, stale-while-revalidate=86400",
+        },
+      },
+    );
+  }
   try {
-    const hits = await searchComplexPreviews(q, LIMIT);
+    const hits =
+      earlyHits && plan.nameQuery === pre.nameQuery ? await earlyHits : await searchComplexPreviews(plan.nameQuery, LIMIT);
     /* [1008 · 리뷰 B] RPC 를 못 물어봤으면(null) 아래 집계표 경로의 답은 오타 추정이 빠진 불완전한 답이다 —
        비어 있어도·차 있어도 CDN 에 한 시간 얹지 않는다(예전엔 실패 + 집계표 0건이 "없어요" 로 굳었다). */
     if (hits === null) partial = true;
@@ -141,17 +207,17 @@ export async function GET(req: Request) {
          "벽절골롯데"→벽적골롯데 같은 오타가 이 길로 온다). RPC 는 다시 부르지 않는다(skipRpc). */
       let rows: ComplexRow[] = [];
       try {
-        rows = await searchComplexes(q, undefined, LIMIT, undefined, { skipRpc: true });
+        rows = await searchComplexes(plan.nameQuery, undefined, LIMIT, undefined, { skipRpc: true });
       } catch (e) {
         if (!hits || hits.length === 0) throw e;
         /* 비슷한 이름 후보는 있다 — 보여 주되, 물러서는 길을 못 본 불완전한 답이라 캐시하지 않는다 */
         partial = true;
-        logger.warn(`[search/suggest] 집계표 경로 실패 — 비슷한 이름 후보만 보냅니다 (q=${q})`, e);
+        logger.warn(`[search/suggest] 집계표 경로 실패 — 비슷한 이름 후보만 보냅니다 (q=${plan.nameQuery})`, e);
       }
       suggestions = rows.length > 0 ? rows.slice(0, LIMIT).map(rowToItem) : (hits ?? []).map(hitToItem);
     }
     if (suggestions.length === 0) {
-      similar = (await suggestComplexes(q, 5)).map(rowToItem);
+      similar = (await suggestComplexes(plan.nameQuery, 5)).map(rowToItem);
     }
   } catch (e) {
     // env 미설정·조회 실패 시 빈 목록 (클라이언트는 드롭다운 미표시)
@@ -166,7 +232,7 @@ export async function GET(req: Request) {
   if (suggestions.length < 3 && isPlaceSearchConfigured()) {
     try {
       const seen = new Set(suggestions.map((s) => s.name.trim()));
-      const results = await searchPlaces(q, PLACES_CAP);
+      const results = await searchPlaces(plan.nameQuery, PLACES_CAP);
       for (const p of results) {
         const name = p.name.trim();
         if (!name || seen.has(name)) continue; // 내부 단지명과 중복 제거
@@ -180,8 +246,19 @@ export async function GET(req: Request) {
     }
   }
 
+  const words = await wordsP;
   return NextResponse.json(
-    { suggestions, places, similar, query: q, failed: lookupFailed },
+    {
+      suggestions,
+      places,
+      similar,
+      query: q,
+      failed: lookupFailed,
+      intent: intentInfo(plan, total),
+      areas: plan.areas,
+      /* [1026e] next(띄어 쓴 뒤) · complete(마지막 낱말 완성) · related(검색어 + 낱말) */
+      ...words,
+    },
     {
       headers: {
         "Cache-Control": lookupFailed || partial

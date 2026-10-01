@@ -1,3 +1,4 @@
+/* [1026c · 폰 배율 1] 단계 설명은 끝까지 읽혀야 한다 — 한 줄 규칙 예외(nz-wrap) + 칸 min-w-0 (폰에서 가로 424px 넘침). */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
@@ -161,9 +162,9 @@ const StepDiagram = () => (
               <span className="w-px flex-1 bg-line" aria-hidden="true" />
             )}
           </div>
-          <div className={i < STAGES.length - 1 ? "pb-4 max-md:pb-3" : ""}>
+          <div className={`min-w-0 flex-1 ${i < STAGES.length - 1 ? "pb-4 max-md:pb-3" : ""}`}>
             <div className="t-body font-bold text-ink">{s.name}</div>
-            <div className="mt-0.5 t-sub leading-[1.7] text-text-2">
+            <div className="nz-wrap mt-0.5 t-sub leading-[1.7] text-text-2">
               {s.desc}
             </div>
           </div>

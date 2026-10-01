@@ -1,4 +1,5 @@
 import "server-only";
+/* [1026c] 서비스 미신청(403)이면 첫 단지 한 곳에서 멈춘다 — 아래 ingestKaptMgmtFeeBatch 주석. */
 /**
  * [1025] K-apt 관리비 → `complex_mgmt_fee(kapt_code, ym, common_krw, individual_krw, total_krw, per_m2_krw, items)` 적재.
  *
@@ -46,7 +47,8 @@ export interface MgmtFeeIngestResult {
   miss: number;
   failed: number;
   stamped: number;
-  skipped?: "no-service" | "no-key" | "no-rows";
+  /** [1026c] not-registered = data.go.kr 서비스 활용신청 전(HTTP 403) — 첫 단지 한 곳으로 확인하고 나머지는 부르지 않는다 */
+  skipped?: "no-service" | "no-key" | "no-rows" | "not-registered";
   candidateSource: "view" | "table" | "none";
   errors: string[];
 }
@@ -150,6 +152,24 @@ export async function ingestKaptMgmtFeeBatch(opts: { ym?: string; limit?: number
   base.candidateSource = picked.source;
   if (picked.error) return { ...base, failed: limit, errors: [picked.error] };
   if (picked.rows.length === 0) return { ...base, skipped: "no-rows" };
+
+  /* [1026c] 서비스 미신청 확인 — 2026-09-30 실행이 200곳 전부 "AptCmnuseManageCostServiceV3 HTTP 403"(활용신청 전)으로 실패했다.
+     같은 403 을 200번 부를 이유가 없다: 첫 단지 한 곳으로 보고 403 이면 바로 멈추고 무엇을 신청해야 하는지 로그에 남긴다. */
+  try {
+    await fetchKaptMgmtFee(picked.rows[0].kapt_code, ym);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/HTTP 403/.test(msg)) {
+      const svc = (msg.match(/Apt[A-Za-z]+ServiceV3/) ?? [])[0] ?? "관리비 서비스";
+      return {
+        ...base,
+        processed: 1,
+        failed: 1,
+        skipped: "not-registered",
+        errors: [`data.go.kr ${svc} 활용신청 필요(HTTP 403) — 신청·승인 뒤 다음 실행부터 적재`],
+      };
+    }
+  }
 
   const fetchedAt = now.toISOString();
   const outcomes = await mapWithConcurrency(picked.rows, CONCURRENCY, async (c) => {

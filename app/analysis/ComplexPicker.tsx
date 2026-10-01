@@ -435,9 +435,11 @@ export function ComplexPicker({
           aria-autocomplete="list"
           autoComplete="off"
           enterKeyHint="search"
+          /* [1026c] w-0 — 입력칸의 고유 폭(약 20자)이 부모 최소 폭으로 올라가 폰(390)에서 "지도로 찾기"가 화면 밖(15px 넘침)으로
+             밀렸다(폰 배율 1). 폭 0 + flex-1 로 남는 칸을 다 쓴다 — 보이는 크기는 같다. */
           placeholder={placeholder}
           aria-label={label || "단지 검색"}
-          className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-bold text-ink outline-none focus:border-primary"
+          className="w-0 min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-bold text-ink outline-none focus:border-primary"
         />
         {/* [975] 지도 단추 — 부르는 쪽이 서랍을 갖고 있으면 화면을 떠나지 않는다.
             (예전엔 무조건 /map 으로 나갔다가 다시 ?complexId= 로 돌아와야 했다.) */}

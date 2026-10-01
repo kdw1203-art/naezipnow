@@ -8,7 +8,6 @@ import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { PageShell } from "@/app/components/PageShell";
 import { useToast } from "@/app/components/toast/ToastProvider";
-import { PushSubscribe } from "@/components/PushSubscribe";
 import { DELETE_CONFIRM_WORD, DELETE_GRACE_DAYS } from "@/lib/account/deletion";
 import { useUnsavedGuard } from "@/lib/client/use-unsaved-guard";
 import { hasSession } from "@/lib/client/has-session";
@@ -16,7 +15,17 @@ import { ProfileEditSheet } from "../ProfileEditSheet";
 import type { ProfileInitial } from "../profile-fields";
 import { shouldShowSaveToast } from "./save-toast";
 import { formatKstDate } from "@/lib/format/kst";
-import { RecordPrefsTab } from "./RecordPrefsTab";
+/* [1026c · 번들] 표시·기록 탭과 푸시 구독은 그 탭을 열 때만 필요하다 — 첫 로드에서 뗀다
+   (배포 빌드 /my/settings 496KB > 미등재 상한 495KB 로 1026b 배포가 멈췄다. 예산은 올리지 않는다). */
+import nextDynamic from "next/dynamic";
+const RecordPrefsTab = nextDynamic(() => import("./RecordPrefsTab").then((m) => m.RecordPrefsTab), {
+  ssr: false,
+  loading: () => <div aria-busy="true" className="card h-40 rounded-2xl" />,
+});
+const PushSubscribe = nextDynamic(() => import("@/components/PushSubscribe").then((m) => m.PushSubscribe), {
+  ssr: false,
+  loading: () => <div aria-busy="true" className="h-10" />,
+});
 import { AccountFactsCards } from "./AccountFacts";
 import { trackNewsletterOptIn } from "@/lib/analytics/events";
 

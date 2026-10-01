@@ -1,3 +1,4 @@
+/* [1026c · 폰 배율 1] 본문 속 외부 링크 24px 하한(inline-block py-[5px]) — 전 경로 폰 조작 검사 지적. */
 import { getBusinessInfo } from "@/lib/brand/business-info";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { ExternalLink } from "@/app/components/ui/ExternalLink";
@@ -278,7 +279,7 @@ export default function PrivacyPage() {
                 • 개인정보 침해 신고센터:{" "}
                 <ExternalLink
                   href="https://privacy.kisa.or.kr"
-                  className="text-primary hover:underline"
+                  className="inline-block py-[5px] text-primary hover:underline"
                 >
                   privacy.kisa.or.kr
                 </ExternalLink>{" "}
@@ -288,7 +289,7 @@ export default function PrivacyPage() {
                 • 개인정보 분쟁조정위원회:{" "}
                 <ExternalLink
                   href="https://www.kopico.go.kr"
-                  className="text-primary hover:underline"
+                  className="inline-block py-[5px] text-primary hover:underline"
                 >
                   www.kopico.go.kr
                 </ExternalLink>{" "}
@@ -298,7 +299,7 @@ export default function PrivacyPage() {
                 • 대검찰청 사이버범죄수사단:{" "}
                 <ExternalLink
                   href="https://www.spo.go.kr"
-                  className="text-primary hover:underline"
+                  className="inline-block py-[5px] text-primary hover:underline"
                 >
                   www.spo.go.kr
                 </ExternalLink>{" "}
@@ -308,7 +309,7 @@ export default function PrivacyPage() {
                 • 경찰청 사이버안전국:{" "}
                 <ExternalLink
                   href="https://cyberbureau.police.go.kr"
-                  className="text-primary hover:underline"
+                  className="inline-block py-[5px] text-primary hover:underline"
                 >
                   cyberbureau.police.go.kr
                 </ExternalLink>{" "}
