@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { isTossPaymentsConfigured } from "@/lib/payments/toss-config";
+import { parseTossClientKey } from "@/lib/payments/toss-keys";
 import {
   hasCardRail,
   paymentRails,
@@ -40,7 +41,12 @@ export const metadata: Metadata = {
 
 export default function PaymentMethodsPage() {
   /* [992] 레일은 토스 하나 — 목록도 그 사실에서 파생된다 */
-  const flags: PaymentRailFlags = { toss: isTossPaymentsConfigured() };
+  /* [1026g] 주문서형(gck) 키면 주간권 결제 화면에 계좌이체·간편결제도 보인다(상점관리자 결제 UI) — 목록에도 적는다 */
+  const clientKey = parseTossClientKey(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY);
+  const flags: PaymentRailFlags = {
+    toss: isTossPaymentsConfigured(),
+    widget: clientKey.state === "ok" && clientKey.kind === "widget",
+  };
   const rails = paymentRails(flags);
   const cardOpen = hasCardRail(flags);
   const biz = getBusinessInfo();

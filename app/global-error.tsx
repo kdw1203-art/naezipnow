@@ -14,6 +14,22 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  /* [1026g] app/error.tsx 와 같은 한 번 새로고침 — 루트 레이아웃이 쓰는 청크를 못 받아도 여기로 온다
+     (2026-10-01 운영 결제 화면 캡처 1회 관측, 같은 조건 6회 재시도는 정상). 같은 세션 두 번째면 이 화면을 그대로 둔다. */
+  useEffect(() => {
+    try {
+      const msg = String(error?.message ?? "");
+      const chunkFail = /Loading chunk [\w-]+ failed|ChunkLoadError|Failed to fetch dynamically imported module/i.test(msg);
+      if (!chunkFail) return;
+      const key = "nz:chunk-reload:" + window.location.pathname;
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, String(Date.now()));
+      window.location.reload();
+    } catch {
+      /* noop */
+    }
+  }, [error]);
+
   useEffect(() => {
     try {
       void fetch("/api/monitoring/client-error", {

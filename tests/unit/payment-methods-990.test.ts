@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
 import {
   hasCardRail,
   paymentRails,
@@ -26,6 +27,26 @@ test("토스가 열리면 신용/체크카드 한 줄이 나온다", () => {
   assert.match(rails[0]?.name ?? "", /체크카드/);
   assert.equal(rails[0]?.provider, "토스페이먼츠");
   assert.equal(hasCardRail({ toss: true }), true);
+});
+
+/* [1026g] 주문서형(gck) 키 — 운영 결제 UI 가 계좌이체·간편결제를 함께 보여 준다(2026-10-01 운영 확인).
+   카드가 여전히 첫 줄이고, 정기결제는 카드만이라는 사실이 함께 적혀야 한다. */
+test("위젯 키면 카드 다음에 계좌이체·간편결제가 붙는다", () => {
+  const rails = paymentRails({ toss: true, widget: true });
+  assert.deepEqual(rails.map((r) => r.id), ["toss-card", "toss-transfer", "toss-easypay"]);
+  assert.match(rails[0]?.name ?? "", /신용카드/);
+  assert.ok(rails.every((r) => r.provider === "토스페이먼츠"));
+  assert.match(rails[2]?.detail ?? "", /정기결제는[^.]*신용카드 · 체크카드만/);
+  assert.deepEqual(paymentRails({ toss: false, widget: true }), []);
+  assert.equal(paymentRails({ toss: true, widget: false }).length, 1);
+});
+
+test("체크아웃 문구는 위젯이 보일 때 '카드로 결제하기'라고 쓰지 않는다", () => {
+  const src = readFileSync("app/subscription/checkout/CheckoutClient.tsx", "utf8");
+  assert.match(src, /phase\.widget === "shown" \? "결제하기" : "카드로 결제하기"/);
+  assert.match(src, /WIDGET_OTHER_METHODS_LABEL/);
+  const ge = readFileSync("app/global-error.tsx", "utf8");
+  assert.match(ge, /nz:chunk-reload:/);
 });
 
 test("심사용 경로 상수는 비로그인에서 위젯이 그려지는 주간권 주문서다", () => {

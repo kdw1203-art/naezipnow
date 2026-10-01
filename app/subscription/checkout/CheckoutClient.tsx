@@ -24,7 +24,7 @@ import {
   previewAmount,
   previewBillingLabel,
 } from "@/lib/payments/checkout-preview";
-import { PAYMENT_METHODS_PATH } from "@/lib/payments/payment-methods";
+import { PAYMENT_METHODS_PATH, WIDGET_OTHER_METHODS_LABEL } from "@/lib/payments/payment-methods";
 import { isGuestCheckoutAllowed, normalizeGuestEmail, readGuestEmailInput } from "@/lib/payments/guest-order";
 import {
   isTossTestEnv,
@@ -301,8 +301,11 @@ function GuestNotice({ widget, guestPay }: { widget: "shown" | "none" | "failed"
         {guestPay ? "로그인 없이 결제할 수 있어요" : "결제하려면 로그인이 필요해요"}
       </p>
       <p className="t-sub text-text-2">
+        {/* [1026g] 위젯(결제 UI)이 보이면 손님이 수단을 고른다 — 처음 선택은 실시간 계좌이체라 "카드 결제창"이라고 적으면 틀린다 */}
         {guestPay
-          ? "아래 결제 버튼을 누르면 주문번호가 발급되고 바로 신용/체크카드 결제창이 열려요. 가입도, 이메일 입력도 필요 없어요."
+          ? widget === "shown"
+            ? "아래에서 결제 방법을 고르고 결제 버튼을 누르면 주문번호가 발급되고 바로 결제창이 열려요. 가입도, 이메일 입력도 필요 없어요."
+            : "아래 결제 버튼을 누르면 주문번호가 발급되고 바로 신용/체크카드 결제창이 열려요. 가입도, 이메일 입력도 필요 없어요."
           : "로그인하면 이 화면으로 돌아와 그대로 결제할 수 있어요. 주문번호는 로그인 뒤 발급돼요."}
       </p>
       {widget === "shown" && (
@@ -311,8 +314,8 @@ function GuestNotice({ widget, guestPay }: { widget: "shown" | "none" | "failed"
            본 것도 그 상태다. 결제수단을 글로도 적고, 전체 목록은 안내 페이지로
            잇는다(취급 수단은 서버 설정에서 파생 — lib/payments/payment-methods). */
         <p className="t-sub text-text-2">
-          아래에서 <span className="font-bold text-ink">신용카드 · 체크카드</span>로
-          결제합니다 (토스페이먼츠 결제창) ·{" "}
+          결제 방법: <span className="font-bold text-ink">신용카드 · 체크카드</span> ·{" "}
+          {WIDGET_OTHER_METHODS_LABEL} (토스페이먼츠) ·{" "}
           <Link
             href={PAYMENT_METHODS_PATH}
             className="font-bold text-primary underline"
@@ -831,17 +834,27 @@ export function CheckoutClient() {
         {phase.kind === "preview" && phase.guestPay && (
           <div className="card flex flex-col gap-2.5 rounded-2xl px-4 py-4">
             <p className="t-body font-bold text-ink">계정 없이 바로 결제하기</p>
-            <p className="t-sub text-text-2">
-              <span className="font-bold text-ink">신용카드 · 체크카드</span>(토스페이먼츠 결제창)로
-              결제합니다. 카드번호는 결제창에서만 입력하고 내집나우 서버에는 남지 않아요.
-            </p>
+            {phase.widget === "shown" ? (
+              <p className="t-sub text-text-2">
+                위 <span className="font-bold text-ink">결제 방법</span>에서 고른 수단으로 결제합니다(토스페이먼츠
+                결제창). 카드번호·계좌 정보는 결제창에서만 입력하고 내집나우 서버에는 남지 않아요.
+              </p>
+            ) : (
+              <p className="t-sub text-text-2">
+                <span className="font-bold text-ink">신용카드 · 체크카드</span>(토스페이먼츠 결제창)로
+                결제합니다. 카드번호는 결제창에서만 입력하고 내집나우 서버에는 남지 않아요.
+              </p>
+            )}
             <button
               type="button"
               onClick={() => void guestPay()}
               disabled={paying}
               className="btn-primary btn-cta rounded-lg p-[14px] text-center t-body font-bold disabled:opacity-60"
             >
-              {paying ? "결제창 여는 중…" : `${phase.amount.toLocaleString("ko-KR")}원 카드로 결제하기`}
+              {/* [1026g] 위젯에서 고른 수단으로 결제된다(requestPayment) — "카드로"는 결제창형(ck)일 때만 */}
+              {paying
+                ? "결제창 여는 중…"
+                : `${phase.amount.toLocaleString("ko-KR")}원 ${phase.widget === "shown" ? "결제하기" : "카드로 결제하기"}`}
             </button>
             {guestErr && (
               <p role="alert" className="t-sub font-bold text-danger">

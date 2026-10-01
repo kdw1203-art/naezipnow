@@ -12,7 +12,7 @@
  * 에서만 나온다 — 설정되지 않은 수단을 적으면 이 페이지가 거짓이 된다.
  */
 
-export type PaymentRailId = "toss-card";
+export type PaymentRailId = "toss-card" | "toss-transfer" | "toss-easypay";
 
 export type PaymentRail = {
   id: PaymentRailId;
@@ -26,7 +26,15 @@ export type PaymentRail = {
 
 export type PaymentRailFlags = {
   toss: boolean;
+  /** [1026g] 주문서형(결제위젯, gck) 키인가 — 이때 주간권(단건) 결제 화면은 상점관리자 "결제 UI"가 고른 수단을 함께 보여 준다. */
+  widget?: boolean;
 };
+
+/* [1026g] 운영 결제 화면(결제 UI "naezipnow")에서 실제로 보인 수단 — 2026-10-01 운영 방문 확인
+   (PC: 실시간 계좌이체 · 신용·체크카드 · 카카오페이 · 토스페이 · PAYCO · 삼성페이 / 아이폰: 삼성페이 없음).
+   이 목록은 서버 설정이 아니라 토스 상점관리자 결제 UI 설정에서 정해진다 — 그쪽에서 수단을 빼거나 더하면 여기도 고친다.
+   정기결제(월간·연간)는 카드 등록형(빌링)이라 위젯 수단과 무관하게 신용·체크카드뿐이다. */
+export const WIDGET_OTHER_METHODS_LABEL = "실시간 계좌이체 · 간편결제";
 
 /** 열린 결제수단 목록. 신용/체크카드가 첫 줄 — 심사가 찾는 것부터. */
 export function paymentRails(flags: PaymentRailFlags): PaymentRail[] {
@@ -39,6 +47,24 @@ export function paymentRails(flags: PaymentRailFlags): PaymentRail[] {
       detail:
         "국내 카드사 신용카드와 체크카드로 결제합니다. 결제창에서 카드번호를 입력하며, 카드 정보는 토스페이먼츠가 처리하고 내집나우 서버에 저장되지 않습니다.",
     });
+    if (flags.widget) {
+      rails.push(
+        {
+          id: "toss-transfer",
+          name: "실시간 계좌이체",
+          provider: "토스페이먼츠",
+          detail:
+            "주간권(단건) 결제 화면에서 고를 수 있습니다. 은행 계좌에서 바로 결제되며, 계좌 정보는 토스페이먼츠가 처리하고 내집나우 서버에 저장되지 않습니다.",
+        },
+        {
+          id: "toss-easypay",
+          name: "간편결제",
+          provider: "토스페이먼츠",
+          detail:
+            "카카오페이 · 토스페이 · PAYCO 등 결제 화면에 표시되는 간편결제로 주간권(단건)을 결제할 수 있습니다. 월간·연간 정기결제는 카드를 등록하는 방식이라 신용카드 · 체크카드만 쓸 수 있습니다.",
+        },
+      );
+    }
   }
   return rails;
 }
