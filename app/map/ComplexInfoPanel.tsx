@@ -277,9 +277,9 @@ function PriceTrend({ tx, name }: { tx: TxRow[]; name: string }) {
           term="silgeoraega"
           title="실거래가 추이"
           how={[
-            "그 달 신고된 매매 거래의 평균. 평형을 나누지 않은 평균이라 그 달 팔린 평형 구성에 따라 출렁일 수 있다. 평형별 추이는 전체 화면에.",
-            "거래가 1~2건인 달은 속 빈 점. 거래가 없는 달은 비워 두고 점선으로 건너뛴다.",
-            "해제 신고된 거래는 제외.",
+            "그 달 신고된 매매 거래의 평균이에요. 평형을 나누지 않은 평균이라 그 달 팔린 평형 구성에 따라 출렁일 수 있어요. 평형별 추이는 단지 홈에 있어요.",
+            "거래가 1~2건인 달은 속 빈 점이에요. 거래가 없는 달은 비워 두고 점선으로 건너뛰어요.",
+            "해제 신고된 거래는 제외해요.",
           ]}
           source="국토교통부 실거래가"
         />
@@ -385,15 +385,15 @@ function WatchlistToggle({
       }
       const j = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
       if (target && handleUpgradeResponse(res.status, j)) {
-        showToast(j.error ?? "관심 단지 한도를 초과했어요 — 다른 단지를 빼면 담을 수 있어요");
+        showToast(j.error ?? "관심 단지 한도를 초과했어요. 다른 단지를 빼면 담을 수 있어요.");
         return;
       }
       if (!res.ok) {
         showToast(
           j.error ??
             (target
-              ? "관심 단지에 담지 못했어요 — 잠시 후 다시 눌러 주세요"
-              : "관심 단지에서 빼지 못했어요 — 잠시 후 다시 눌러 주세요"),
+              ? "관심 단지에 담지 못했어요. 잠시 후 다시 시도해 주세요."
+              : "관심 단지에서 빼지 못했어요. 잠시 후 다시 시도해 주세요."),
         );
         return;
       }
@@ -410,7 +410,7 @@ function WatchlistToggle({
         });
       }
     } catch {
-      showToast("네트워크 오류로 저장하지 못했어요 — 연결을 확인하고 다시 눌러 주세요");
+      showToast("네트워크 오류로 저장하지 못했어요. 연결을 확인하고 다시 시도해 주세요.");
     } finally {
       busyRef.current = false;
       setBusy(false);
@@ -647,7 +647,7 @@ export function ComplexInfoPanel({
         muted: false,
       };
     }
-    return { value: `${tradeSummary.count}건`, sub: "표본 3건 미만 — 중앙값 생략", muted: true };
+    return { value: `${tradeSummary.count}건`, sub: "표본 3건 미만 · 중앙값 생략", muted: true };
   })();
 
   const rentKpi = (() => {
@@ -659,7 +659,7 @@ export function ComplexInfoPanel({
       return { value: wonLabel(rent.jeonseMedianKrw) ?? "—", sub: `전세 ${rent.jeonseCount}건`, muted: false };
     }
     if (rent.jeonseCount > 0) {
-      return { value: `전세 ${rent.jeonseCount}건`, sub: "표본 3건 미만 — 중앙값 생략", muted: true };
+      return { value: `전세 ${rent.jeonseCount}건`, sub: "표본 3건 미만 · 중앙값 생략", muted: true };
     }
     return {
       value: "12개월 전세 없음",
@@ -808,8 +808,8 @@ export function ComplexInfoPanel({
                   <Explain
                     title="매매 중앙값 · 12개월"
                     how={[
-                      "최근 12개월 매매 실거래 중 거래가 가장 많은 면적대의 가운데 값(중앙값). 한두 건의 특이 거래에 평균보다 덜 끌려간다.",
-                      "그 면적대가 3건이 안 되면 면적을 섞은 전체 중앙값을, 전체도 3건이 안 되면 건수만 적는다.",
+                      "최근 12개월 매매 실거래 중 거래가 가장 많은 면적대의 가운데 값(중앙값)이에요. 한두 건의 특이 거래에 평균보다 덜 끌려가요.",
+                      "그 면적대가 3건이 안 되면 면적을 섞은 전체 중앙값을, 전체도 3건이 안 되면 건수만 적어요.",
                     ]}
                     source="국토교통부 실거래가"
                   />
@@ -854,13 +854,13 @@ export function ComplexInfoPanel({
 
           {failed && (
             <div className="rounded-lg border border-line bg-surface px-3.5 py-2.5 t-sub text-text-2">
-              단지 상세를 불러오지 못했어요. 전체 화면에서 다시 확인해 주세요.
+              단지 상세를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
             </div>
           )}
 
           {data?.mode === "not_found" && !failed && (
             <div className="rounded-xl bg-bg px-3.5 py-2.5 t-sub text-text-2">
-              단지 마스터와 아직 연결되지 않음 · 아래는 실거래·이야기
+              단지 기본정보가 아직 없음 · 아래는 실거래·이야기
             </div>
           )}
 
@@ -1006,7 +1006,7 @@ export function ComplexInfoPanel({
               />
               {rentFailed ? (
                 <p className="rounded-lg border border-line bg-surface px-3 py-2 t-sub text-text-2">
-                  전월세 실거래를 지금 불러오지 못했어요. 잠시 후 다시 열어 주세요.
+                  전월세 실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
                 </p>
               ) : rent ? (
                 <>
@@ -1053,7 +1053,7 @@ export function ComplexInfoPanel({
                           term="jeonse-garyul"
                           how={[
                             "최근 6개월 전세 보증금 중앙값 ÷ 같은 기간 매매 거래가 중앙값 × 100.",
-                            "전세·매매가 각각 3건 이상일 때만 계산. 면적 미가중.",
+                            "전세·매매가 각각 3건 이상일 때만 계산해요. 면적 가중은 하지 않아요.",
                           ]}
                           source="국토교통부 매매·전월세 실거래 신고"
                         />
@@ -1132,7 +1132,7 @@ export function ComplexInfoPanel({
               />
               {notesFailed ? (
                 <p className="rounded-lg border border-line bg-surface px-3 py-2 t-sub text-text-2">
-                  임장노트를 지금 불러오지 못했어요. 잠시 후 다시 열어 주세요.
+                  임장노트를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
                 </p>
               ) : notes?.latest ? (
                 <Link
@@ -1154,7 +1154,7 @@ export function ComplexInfoPanel({
                     <div className="truncate t-sub font-bold text-ink">{notes.latest.title}</div>
                     <div className="mt-0.5 t-caption text-text-3">
                       최신 노트{notes.latest.visitDate ? ` · 방문 ${notes.latest.visitDate}` : ""}
-                      {notes.count > 1 ? ` · 외 ${(notes.count - 1).toLocaleString("ko-KR")}건은 전체 화면에서` : ""}
+                      {notes.count > 1 ? ` · 외 ${(notes.count - 1).toLocaleString("ko-KR")}건은 단지 홈에서` : ""}
                     </div>
                   </div>
                   {notes.latest.decision ? (
@@ -1291,7 +1291,7 @@ export function ComplexInfoPanel({
               [1022 · 정렬·글씨·테마] 경고색 면(bg-warning-soft) → 흰 카드 + 본문색 — /notes 조회 실패 카드와 같은 모양(이 패널의 실패 고지 4곳 동일). */}
           {failedSections.length > 0 && (
             <div className="rounded-lg border border-line bg-surface px-3.5 py-2.5 t-sub text-text-2">
-              {failedSections.join(" · ")} 정보를 지금 불러오지 못했어요. 잠시 후 다시 열어 주세요.
+              {failedSections.join(" · ")} 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
             </div>
           )}
 
@@ -1364,7 +1364,7 @@ export function ComplexInfoPanel({
             href={detailHref}
             className="btn-primary btn-cta block rounded-xl p-3 text-center t-body font-bold text-white"
           >
-            전체 화면으로 더 자세히 보기 ›
+            단지 홈 보기 ›
           </Link>
         </div>
       </aside>

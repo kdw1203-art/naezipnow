@@ -108,8 +108,8 @@ export default async function QnaListPage() {
           <div className="mt-4 flex flex-col gap-4">
             <AskForm />
             <ErrorState
-              title="질문 목록을 지금 불러오지 못했어요"
-              desc="등록된 질문이 0개인 게 아니라 조회가 실패했어요. 잠시 후 새로고침해 주세요. 질문 등록은 위에서 그대로 할 수 있어요."
+              title="질문 목록을 불러오지 못했어요"
+              desc="잠시 후 다시 시도해 주세요. 질문 등록은 위에서 그대로 할 수 있어요."
             />
           </div>
         ) : (
@@ -131,7 +131,7 @@ export default async function QnaListPage() {
                         href: "/map",
                         icon: "map",
                         label: "지도에서 단지 찾기",
-                        desc: "단지 허브 · 실거래 · 지도",
+                        desc: "단지 정보 · 실거래 · 지도",
                       },
                       {
                         href: "/notes",

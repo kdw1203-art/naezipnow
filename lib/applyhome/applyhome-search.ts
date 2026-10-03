@@ -266,7 +266,7 @@ export async function searchApplyhome(options?: {
       detailAvailable: false,
       /* [970 · C-44] env 변수명은 개발자용 — 화면에 그대로 나갔다. 사용자 문구로. */
       detailNotice:
-        "청약홈 연동 준비 중이에요. 연동되면 경쟁률·특별공급 실데이터가 이 자리에 표시돼요.",
+        "청약홈 자료를 준비 중이에요. 준비되면 경쟁률·특별공급이 이 자리에 표시돼요.",
       filters: { region, q },
       totalCount: 0,
       items: [],

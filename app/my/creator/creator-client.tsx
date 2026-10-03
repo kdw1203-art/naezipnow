@@ -60,7 +60,7 @@ function PerformanceTab({ stats }: { stats: CreatorStats }) {
 
       {/* 협찬 라벨 원칙 */}
       <div className="rise-in-3 rounded-lg bg-primary-soft px-4 py-[10px] t-sub font-bold text-primary">
-        협찬·제공 받은 임장은 반드시 &quot;광고&quot; 라벨을 켜야 해요 — 미표시
+        협찬·제공 받은 임장은 반드시 &quot;광고&quot; 라벨을 켜야 해요. 미표시
         확인 시 노출 제한
       </div>
     </div>
@@ -130,7 +130,7 @@ function SellReportForm({
       {noteOptions.length > 0 && (
         <label className="flex flex-col gap-1">
           <span className="t-sub font-bold text-text-3">
-            판매할 내 노트 (필수) — 구매자가 이 노트를 열람해요
+            판매할 내 노트 (필수) · 구매자가 이 노트를 열람해요
           </span>
           <select
             className="input w-full"
@@ -255,7 +255,7 @@ function MonetizationTab({
           {sales.available && (
             <>
               {" "}
-              — 현재 누적{" "}
+              · 현재 누적{" "}
               <b className="text-ai-accent">{fmt(sales.netPoints)}P</b>
             </>
           )}

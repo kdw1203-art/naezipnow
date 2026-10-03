@@ -146,10 +146,10 @@ function LoadFailed({ what }: { what: string }) {
   return (
     <p className="py-6 text-center t-body text-text-3">
       {/* [1011] "— 이 화면은 최대 1시간 저장되므로" 를 걷었다(소유자 지시) — 캐시가 얼마나 남는지는
-          내부 사정이다. "새로고침해 주세요"라고 쓰지 않는 이유(위 주석)는 그대로 지킨다: 여기서도
-          새로고침이 아니라 "잠시 뒤에 다시 방문"이라고 적는다. */}
-      {what}을 지금 불러오지 못했습니다. 데이터가 없다는 뜻이 아니라 조회에 실패했다는
-      뜻입니다. 잠시 뒤에 다시 방문해 주세요.
+          내부 사정이다. "새로고침해 주세요"라고 쓰지 않는 이유(위 주석)는 그대로 지킨다.
+          [1028 · 제안 3] 오류 문구 표준 — "○○을(를) 불러오지 못했어요" + "잠시 후 다시 시도해 주세요."
+          조사(을/를)는 호출부가 붙여 넘긴다(예전엔 "최근 실거래을"처럼 틀렸다). */}
+      {what} 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
     </p>
   );
 }
@@ -801,7 +801,7 @@ export default async function RegionHubPage({
         <section className="card mb-6 p-[var(--pad-card)]">
           <h2 className="t-section text-ink">{name} 시세 흐름</h2>
           {!seriesR.ok || !volumeR.ok ? (
-            <LoadFailed what="시세 흐름" />
+            <LoadFailed what="시세 흐름을" />
           ) : (
             <p className="py-6 text-center t-body text-text-3">
               이 지역의 매매가격지수·월별 거래량이 아직 두 달 치 이상 모이지 않았어요.
@@ -851,7 +851,7 @@ export default async function RegionHubPage({
           </span>
         </h2>
         {!transactionsR.ok ? (
-          <LoadFailed what="최근 실거래" />
+          <LoadFailed what="최근 실거래를" />
         ) : transactions.length === 0 ? (
           <p className="py-6 text-center t-body text-text-3">
             이 지역에서 수집된 아파트 매매 실거래가 아직 없습니다.
@@ -922,7 +922,7 @@ export default async function RegionHubPage({
               href={`/complex/browse?district=${encodeURIComponent(`서울 ${txRegion.name}`)}`}
               className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary"
             >
-              서울 전체 단지 브라우즈 →
+              서울 전체 단지 보기 →
             </Link>
           </div>
         )}
@@ -997,7 +997,7 @@ export default async function RegionHubPage({
           <p className="mt-3 t-sub text-text-3">
             국토교통부 전월세 신고 기준.
             {rentOpen.length > 0
-              ? ` ${rentOpen.map((m) => `${ymMonth(m.month)} ${m.count.toLocaleString("ko-KR")}건`).join("·")}은 신고 기한(계약 후 30일) 안이라 더 늘 수 있어 그래프에서 뺐다.`
+              ? ` ${rentOpen.map((m) => `${ymMonth(m.month)} ${m.count.toLocaleString("ko-KR")}건`).join("·")}은 신고 기한(계약 후 30일) 안이라 더 늘 수 있어 그래프에서 뺐습니다.`
               : ""}{" "}
             신고분에는 갱신·신규 계약이 섞여 있어 체감 시세와 다를 수 있습니다. 중앙값은 지역 전체
             기준이라 단지별 편차가 큽니다.
@@ -1065,10 +1065,10 @@ export default async function RegionHubPage({
             <Explain
               term="ipju-mulryang"
               how={[
-                "주소에 이 지역이 들어간 단지를 이번 달 이후 입주월 순으로 최대 24곳 읽는다. 목록은 앞의 6곳, 연도 합계는 24곳 전부.",
-                "연도 막대는 세대수가 공개된 단지만 더한다. 세대수 미상은 뺀 건수를 따로 적는다.",
-                "입주월의 달이 비었거나 잘못 적힌 단지는 “월 미정”. 같은 단지가 두 입주월로 올라 있으면 연도 합계에 두 번 들어갈 수 있다(원자료 그대로).",
-                "사업 진행에 따라 입주 일정은 바뀔 수 있다.",
+                "주소에 이 지역이 들어간 단지를 이번 달 이후 입주월 순으로 최대 24곳 읽습니다. 목록은 앞의 6곳, 연도 합계는 24곳 전부.",
+                "연도 막대는 세대수가 공개된 단지만 더합니다. 세대수 미상은 뺀 건수를 따로 적습니다.",
+                "입주월의 달이 비었거나 잘못 적힌 단지는 “월 미정”. 같은 단지가 두 입주월로 올라 있으면 연도 합계에 두 번 들어갈 수 있습니다(원자료 그대로).",
+                "사업 진행에 따라 입주 일정은 바뀔 수 있습니다.",
               ]}
               source="청약홈 분양공고(매일 자동) · 공공데이터 입주예정물량(2026년 2월 수동)"
             />
@@ -1205,7 +1205,7 @@ export default async function RegionHubPage({
           {name} 공개 임장노트
         </h2>
         {!notesR.ok ? (
-          <LoadFailed what="공개 임장노트" />
+          <LoadFailed what="공개 임장노트를" />
         ) : notes.length === 0 ? (
           /* [1012 · 규칙 6] "첫 노트를 남겨보세요"(권유) → 어디서·무엇이 없는지 사실만 */
           <p className="py-6 text-center t-body text-text-3">
@@ -1302,7 +1302,7 @@ export default async function RegionHubPage({
           kind="region"
           id={id}
           heading={`${name} 시세 카드 퍼가기`}
-          desc={`iframe 한 줄 · 평균 매매가·전세가율·지수 변동 · 갱신되면 붙여 둔 카드도 함께 바뀐다`}
+          desc={`iframe 한 줄 · 평균 매매가·전세가율·지수 변동 · 갱신되면 붙여 둔 카드도 함께 바뀝니다`}
           className="rise-in-3 mb-4"
         />
       )}

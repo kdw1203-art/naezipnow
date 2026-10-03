@@ -331,7 +331,7 @@ function usePrefs() {
         }
       } catch {
         setPrefs((p) => (p ? { ...p, [key]: prev } : p));
-        setSaveError("저장하지 못했어요 — 잠시 후 다시 눌러 주세요.");
+        setSaveError("저장하지 못했어요. 잠시 후 다시 눌러 주세요.");
       }
     },
     [prefs, showToast],

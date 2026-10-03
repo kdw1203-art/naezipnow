@@ -37,7 +37,7 @@ function doneLabel(name: string, content: string | null | undefined): string {
 
 /**
  * 시장 온도 톤 — temperatureHeadline(lib/market/temperature) 의 경계 그대로:
- * 65 이상 "가격·거래 모두 달아오르는 구간" · 35 미만 "가격·거래 모두 식은 구간" 은 주의, 그 사이는 보통.
+ * 65 이상 "뜨거움" · 35 미만 "차가움" 은 주의, 그 사이는 보통.
  * 점수가 높다고 좋음이 아니다(Q&A "점수가 높으면 지금 사야 한다는 뜻인가요? — 아닙니다").
  */
 export function temperatureTone(score: number | null | undefined): VerdictTone {

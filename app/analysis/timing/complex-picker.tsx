@@ -34,8 +34,8 @@ export function TimingComplexPicker({
       {mapNode}
       <ComplexPicker
         label="단지로 지역 찾기"
-        /* [975] 이 선택기는 네이비 히어로 위에 앉는다 — 기본 회색 라벨은 2.8:1 이었다 */
-        labelClassName="text-on-dark-muted"
+        /* [1028] 라벨 색은 기본값(회색)을 쓴다. [975]에서 네이비 히어로 위에 앉아 밝은 색(text-on-dark-muted)을 줬는데,
+           [1023]에 머리가 흰 PageHead 로 바뀐 뒤로는 흰 바탕에 밝은 글자라 라벨이 거의 보이지 않았다. */
         placeholder="단지명 검색"
         showChip={false}
         initialComplexId={initialComplexId}

@@ -124,8 +124,8 @@ export default async function QnaDetailPage({
         <TownCategoryNav stick />
         <div className={QNA_THEME_CLASS}>
           <ErrorState
-            title="질문을 지금 불러오지 못했어요"
-            desc="질문이 없는 게 아니라 조회가 실패했어요. 잠시 후 새로고침해 주세요."
+            title="질문을 불러오지 못했어요"
+            desc="잠시 후 다시 시도해 주세요."
             action={{ href: "/qna", label: "목록으로 돌아가기" }}
           />
         </div>
@@ -185,7 +185,7 @@ export default async function QnaDetailPage({
           <div className="flex flex-wrap items-center gap-1.5">
             {question.complexName &&
               (complexIdHref ? (
-                <Link href={complexIdHref} className={badgeLinkCls} aria-label={`${question.complexName} 단지 허브`}>
+                <Link href={complexIdHref} className={badgeLinkCls} aria-label={`${question.complexName} 단지 보기`}>
                   {question.complexName}
                 </Link>
               ) : (
@@ -278,7 +278,7 @@ export default async function QnaDetailPage({
     related.push({
       href: complexHref,
       icon: "building",
-      label: `${linkedName} 단지 허브`,
+      label: `${linkedName} 단지 보기`,
       desc: "실거래 · 지도 · 임장노트",
     });
   }

@@ -206,7 +206,7 @@ export function VoiceMemoRecorder({
               </div>
               {txState[u] === "error" && (
                 <p className="t-caption font-semibold text-warning">
-                  전사에 실패했어요. 잠시 후 다시 눌러 주세요.
+                  전사에 실패했어요. 잠시 후 다시 시도해 주세요.
                 </p>
               )}
               {txState[u] === "unavailable" && (

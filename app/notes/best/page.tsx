@@ -94,11 +94,11 @@ export default async function BestNotesIndexPage() {
             <Explain
               title="선정 규칙"
               body={[
-                `${MIN_SCORE}점 미만은 후보로 세지 않는다. 자격 노트가 ${MIN_NOTES_PER_MONTH}편 미만인 달은 만들지 않는다.`,
+                `${MIN_SCORE}점 미만은 후보로 세지 않습니다. 자격 노트가 ${MIN_NOTES_PER_MONTH}편 미만인 달은 만들지 않습니다.`,
                 `한 달 최대 ${MAX_NOTES_PER_MONTH}편, 같은 작성자 최대 ${MAX_PER_AUTHOR}편.`,
-                "점수는 기록의 충실도만 잰다. 단지의 좋고 나쁨, 값의 적정성과 무관하며, 노트에 적힌 입지·학군 점수가 높아도 가산점은 없다.",
+                "점수는 기록의 충실도만 잽니다. 단지의 좋고 나쁨, 값의 적정성과 무관하며, 노트에 적힌 입지·학군 점수가 높아도 가산점은 없습니다.",
               ]}
-              source="lib/inspection/best-notes 계산식 · 사람이 고르지 않음"
+              source="아래 계산식 · 사람이 고르지 않음"
               size={12}
             />
           </h2>
@@ -117,9 +117,6 @@ export default async function BestNotesIndexPage() {
         {loadFailed ? (
           <div className="mt-6 card rounded-2xl px-5 py-8 text-center t-body text-text-3">
             <strong className="text-ink">{LOAD_FAILED_LINE}</strong>
-            <br />
-            공개 임장노트가 없다는 뜻이 아니라, 조회가 제때 끝나지 않았거나 실패했다는
-            뜻입니다.
           </div>
         ) : months.length > 0 ? (
           <div className="mt-6 flex flex-col gap-3 max-md:mt-4 max-md:gap-2">
@@ -204,7 +201,7 @@ async function FieldVerifiedLeaderboard() {
         <Explain
           title="현장 인증 순위"
           body="이번 달 공개 노트 중 단지 반경 2km 위치 확인을 통과한 노트를 작성자별로 센 수. 매월 1일 리셋."
-          how="인증은 노트를 쓸 때 선택이며 위치 좌표는 저장되지 않는다(50m 단위 거리만)."
+          how="인증은 노트를 쓸 때 선택이며 위치 좌표는 저장되지 않습니다(50m 단위 거리만)."
           size={12}
         />
       </h2>

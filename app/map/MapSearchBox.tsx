@@ -509,7 +509,7 @@ export function MapSearchBox({
           )}
           {!busy && !notice && failed && !hasResults && (
             <div role="status" className="px-3 py-3 t-sub text-text-3">
-              지금은 단지 검색이 되지 않아요 (결과 없음이 아니에요)
+              단지 검색 결과를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
             </div>
           )}
           {!busy && !notice && !failed && !hasResults && (
@@ -519,7 +519,7 @@ export function MapSearchBox({
                 {intent && intent.mode !== "name" ? (
                   <>
                     <p className="break-words t-sub font-bold text-ink">조건에 맞는 단지가 없어요</p>
-                    <p className="break-words t-caption text-text-3">조건을 하나씩 빼 보세요</p>
+                    <p className="break-words t-caption text-text-3">조건을 줄이면 결과가 나올 수 있어요</p>
                   </>
                 ) : (
                   <>

@@ -40,8 +40,8 @@ export default async function ListingNewPage() {
             {/* [992 · A1] 전문가 인증 신청(/town/experts)은 보관(비노출) — 문의처만 안내 */}
             <p className="max-w-[420px] text-[13px] leading-[1.7] text-text-3">
               허위·과장 매물을 막기 위해 매물 등록은 개업공인중개사 인증을 마친
-              회원에게만 열려 있어요. 인증 신청은 지금 받지 않아요 — 필요하시면
-              고객센터로 문의해 주세요.
+              회원에게만 열려 있어요. 인증 신청은 지금 받지 않아요. 문의는 고객센터에서
+              받아요.
             </p>
             <Link href="/support" className="btn-soft btn-md mt-1 no-underline">
               고객센터 문의

@@ -108,8 +108,8 @@ export function AiPendingCard({
           <p className="t-sub text-ai-muted">
             노트는 저장돼 있어요. 서버가 바쁘거나 요청이 전달되지 않았을 수 있어요.{" "}
             {canRetry
-              ? "아래에서 다시 요청하거나, 나중에 이 노트를 다시 열어 확인해 주세요."
-              : "나중에 이 노트를 다시 열어 확인해 주세요."}
+              ? "아래에서 다시 요청할 수 있어요. 정리가 끝나면 이 노트를 다시 열 때 보여요."
+              : "정리가 끝나면 이 노트를 다시 열 때 보여요."}
           </p>
           {canRetry && <AiRetryButton noteId={noteId} defaultIntent={defaultIntent} />}
           <button

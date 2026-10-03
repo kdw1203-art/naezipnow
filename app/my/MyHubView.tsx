@@ -246,7 +246,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
             <Link
               key={s.key}
               href={s.href}
-              aria-label={s.failed ? `${s.label} — 지금 불러오지 못했어요` : undefined}
+              aria-label={s.failed ? `${s.label} 불러오지 못했어요` : undefined}
               className={`press flex min-w-0 flex-col items-center gap-0.5 px-1 py-2.5 text-center no-underline ${
                 i > 0 ? "border-l border-divider" : ""
               }`}
@@ -259,19 +259,20 @@ export function MyHubView({ data }: { data: MyHubData }) {
             </Link>
           ))}
         </nav>
-        {/* [1009 · T] 불러오지 못한 칸의 설명을 title= 말풍선(휴대폰에선 안 보임) 대신 한 줄 글로 — "—"가 0 이 아니라는 것 */}
+        {/* [1009 · T] 불러오지 못한 칸의 설명을 title= 말풍선(휴대폰에선 안 보임) 대신 한 줄 글로 — "—"가 0 이 아니라는 것
+            [1028 · 제안 3] 오류 문구 표준 — "A 가 아니라 B" 대비 구문을 걷고 못 불러온 칸 이름만 말한다 */}
         {summary.some((x) => x.failed) && (
           <span className="t-caption text-text-3">
             {summary
               .filter((x) => x.failed)
               .map((x) => x.label)
               .join("·")}
-            {" "}칸의 &lsquo;—&rsquo;는 0 이 아니라 지금 불러오지 못했다는 뜻이에요.
+            {" "}칸을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
           </span>
         )}
         {!ledger.ok && !summary.some((x) => x.failed) && (
           <span className="t-caption text-text-3">
-            포인트 잔액을 지금 불러오지 못했어요. 0 P 가 아니라 조회 실패입니다.
+            포인트 잔액을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
           </span>
         )}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -340,7 +341,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
           <section className="flex flex-col gap-2.5">
             <SectionHead title="최근 본 단지" href="/map" hrefLabel="지도" />
             {recent.kind === "error" ? (
-              <OneLine text="최근 본 단지를 지금 불러오지 못했어요" tone="error" />
+              <OneLine text="최근 본 단지를 불러오지 못했어요. 잠시 후 다시 시도해 주세요." tone="error" />
             ) : recent.kind === "empty" ? (
               <OneLine text="아직 본 단지가 없어요" href="/map" label="지도에서 둘러보기" />
             ) : (
@@ -368,7 +369,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
             />
             {notes.kind === "error" ? (
               <OneLine
-                text="내 노트를 지금 불러오지 못했어요. 없는 게 아니라 조회 실패입니다."
+                text="내 노트를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
                 tone="error"
               />
             ) : notes.kind === "empty" ? (
@@ -447,7 +448,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
                   <span className="t-caption font-bold text-text-3">관심 단지</span>
                   <span className="t-body font-bold text-ink">
                     {!watchlistCount.ok
-                      ? "지금 불러오지 못했어요"
+                      ? "불러오지 못했어요"
                       : watchlistCount.value === 0
                         ? "아직 담은 단지가 없어요"
                         : `${watchlistCount.value.toLocaleString("ko-KR")}개`}
@@ -471,7 +472,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
                     {savedNotes.kind !== "items" && (
                       <span className="t-body font-bold text-ink">
                         {savedNotes.kind === "error"
-                          ? "지금 불러오지 못했어요"
+                          ? "불러오지 못했어요"
                           : "저장한 공개 노트가 없어요"}
                       </span>
                     )}
@@ -501,7 +502,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
                     <span className="t-caption font-bold text-text-3">지역 · 급매 알림</span>
                     {alerts.kind !== "items" && (
                       <span className="t-body font-bold text-ink">
-                        {alerts.kind === "error" ? "지금 불러오지 못했어요" : "구독한 알림이 없어요"}
+                        {alerts.kind === "error" ? "불러오지 못했어요" : "구독한 알림이 없어요"}
                       </span>
                     )}
                   </span>
@@ -535,7 +536,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
               <SectionHead title="구매한 리포트" />
               {purchased.kind === "error" ? (
                 <OneLine
-                  text="구매 내역을 지금 불러오지 못했어요. 내역이 없는 게 아니라 조회 실패입니다."
+                  text="구매 내역을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
                   tone="error"
                 />
               ) : purchased.kind === "empty" ? null : (

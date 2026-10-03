@@ -46,7 +46,7 @@ import { Delta } from "@/app/components/num/Delta";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { VerdictTiles, ymLabel } from "./VerdictCard";
 import { MyNotesChip, VerdictChips } from "./VerdictBoard";
-import { tileDisplay, verdictSources } from "./verdict-display";
+import { tileDisplay, tilesBesideMetric, verdictSources } from "./verdict-display";
 import { metricExplain, tileExplain } from "./verdict-explain";
 import { DiagnosisSignature, InspectionSignature, PredictionSignature, ScenarioTables, TimingSignature } from "./signature-cards";
 import { SigFigure, ToolSignature } from "./tool-signature";
@@ -197,7 +197,7 @@ const ISSUE_META = {
 
 function ContractCard({ contract }: { contract: ContractCheck }) {
   return (
-    <SigFigure title="계약 전에 확인할 것" sub={contract.ratioSource === "region" ? "전세가율은 지역 평균 — 이 집 값을 넣으면 다시 계산" : "내 조건에 넣은 값으로 계산"}>
+    <SigFigure title="계약 전에 확인할 것" sub={contract.ratioSource === "region" ? "전세가율은 지역 평균 · 이 집 값을 넣으면 다시 계산" : "내 조건에 넣은 값으로 계산"}>
       {contract.issues.length > 0 ? (
         <ul className="flex flex-col gap-2">
           {contract.issues.map((it, i) => (
@@ -293,7 +293,7 @@ function LoanCard({ loan }: { loan: LoanCalc | null }) {
       </dl>
       {loan.yields && loan.holdingYears != null ? (
         <div className="flex flex-col gap-1.5 rounded-lg bg-bg px-3 py-3">
-          <h4 className="t-sub font-bold text-text-1">{loan.holdingYears}년 뒤 팔면 — 넣은 돈 대비 연 수익률(가정)</h4>
+          <h4 className="t-sub font-bold text-text-1">{loan.holdingYears}년 뒤 팔면 넣은 돈 대비 연 수익률(가정)</h4>
           <ul className="flex flex-col gap-1">
             {loan.yields.map((y) => {
               /* [1009 · A] 이익 = 빨강 ▲ · 손실 = 파랑 ▼(등락 관례). 예전엔 손실만 오류색(text-danger)이라
@@ -323,7 +323,7 @@ function LoanCard({ loan }: { loan: LoanCalc | null }) {
         <p className="t-sub text-text-2">내 조건에 보유 기간을 넣으면 그 기간 뒤 팔았을 때의 연 수익률(가정)도 계산.</p>
       )}
       <p className="t-caption text-text-3">
-        {loan.termAssumed ? "상환 기간을 비워 30년으로 계산했어요. " : ""}취득세·중개보수·보유세·임대료는 넣지 않았어요 — 실제 부담은 더 커요.
+        {loan.termAssumed ? "상환 기간을 비워 30년으로 계산했어요. " : ""}취득세·중개보수·보유세·임대료는 넣지 않았어요. 실제 부담은 더 커요.
       </p>
     </SigFigure>
   );
@@ -559,8 +559,8 @@ function PriceFlowCard({
      (390px 실측 — 문단 3개 11줄). 읽는 법은 ⓘ 시트로 옮기고, 화면에는 결론을 바꾸는 사실(거래가 적다 · 시나리오는
      가정이다)과 출처 한 줄만 남긴다. */
   const readHow = [
-    `선: ${series?.label ?? "대표 평형"} 월평균이에요. 이 단지에서 가장 많이 거래된 ${unitWord} 하나만 이었어요 — ${unitWord}마다 가격이 달라 섞으면 그 달 팔린 구성에 따라 선이 출렁여요.`,
-    `막대: 그 달 전체 매매 건수 — 진한 부분이 선과 같은 ${unitWord}이에요.`,
+    `선: ${series?.label ?? "대표 평형"} 월평균이에요. 이 단지에서 가장 많이 거래된 ${unitWord} 하나만 이었어요. ${unitWord}마다 가격이 달라 섞으면 그 달 팔린 구성에 따라 선이 출렁여요.`,
+    `막대: 그 달 전체 매매 건수예요. 진한 부분이 선과 같은 ${unitWord}이에요.`,
     "속 빈 점: 거래가 1~2건뿐인 달이에요. 한두 건 값이 흐름처럼 보이지 않게 선에서 뺐어요.",
     "점선: 거래가 없거나 적은 달을 건너뛴 자리(빈 달을 지어내 잇지 않는다).",
     ...(scenario ? [`시나리오: ${scenarioAssumptionLine(scenario)}`] : []),
@@ -585,14 +585,14 @@ function PriceFlowCard({
           />
           {series?.sparse && (
             <p className="rounded-lg bg-bg px-3 py-2 t-sub text-text-2">
-              거래가 적어 추이를 그리기 어려워요 — 거래가 있었던 달만 점으로 찍었어요.
+              거래가 적어 추이를 그리기 어려워요. 거래가 있었던 달만 점으로 찍었어요.
             </p>
           )}
           {scenario && (
             <p className="t-sub text-text-2">
               시나리오는{" "}
               {scenario.startKind === "input" ? "내가 넣은 기준 가격" : `최근 실거래 평균(${series?.label ?? "대표 평형"})`}{" "}
-              <b className="text-ink">{formatKrwWon(scenario.startKrw, { style: "short" })}</b>에서 출발한 <b className="text-ink">가정 계산</b>이에요 — 예측이
+              <b className="text-ink">{formatKrwWon(scenario.startKrw, { style: "short" })}</b>에서 출발한 <b className="text-ink">가정 계산</b>이에요. 예측이
               아니에요. 규칙은 &lsquo;읽는 법&rsquo;에 있어요.
             </p>
           )}
@@ -604,7 +604,7 @@ function PriceFlowCard({
       ) : (
         <p className="rounded-lg bg-bg px-3 py-3 t-sub text-text-2">
           {failed || hasPrice
-            ? "그래프 자료를 지금은 불러오지 못했어요. 잠시 뒤 다시 열어 주세요."
+            ? "그래프 자료를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
             : "이 단지는 최근 매매 실거래가 없어 그래프를 그리지 않았어요."}
         </p>
       )}
@@ -660,7 +660,7 @@ export function useWatchAdd(picked: PickedLite | null): { watch: WatchState; add
       else if (next === "fail") showToast("담지 못했어요. 연결을 확인하고 다시 눌러 주세요");
     } catch {
       setWatch("fail");
-      showToast("담지 못했어요 — 인터넷 연결을 확인하고 다시 눌러 주세요");
+      showToast("담지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요");
     }
   }, [picked, watch, showToast]);
   return { watch, addWatch };
@@ -717,13 +717,13 @@ function Details({
       });
       if (res.ok) {
         setFeedback("sent");
-        showToast(rating === "up" ? "의견 고마워요 — 도움이 된 결과로 기록했어요" : "의견 고마워요 — 아쉬운 점을 다음 판에 반영할게요");
+        showToast(rating === "up" ? "의견 고마워요. 도움이 된 결과로 기록했어요" : "의견 고마워요. 아쉬운 점을 다음 판에 반영할게요");
         return;
       }
       setFeedback("idle");
       if (res.status === 401) showToast("로그인이 끝나 의견을 못 보냈어요", { label: "로그인", href: loginHref() });
-      else if (res.status === 429) showToast("의견을 너무 자주 보냈어요 — 잠시 뒤 다시 눌러 주세요");
-      else showToast("의견을 보내지 못했어요 — 잠시 뒤 다시 눌러 주세요");
+      else if (res.status === 429) showToast("의견을 너무 자주 보냈어요. 잠시 후 다시 시도해 주세요");
+      else showToast("의견을 보내지 못했어요. 잠시 후 다시 시도해 주세요");
     } catch {
       setFeedback("idle");
       showToast("의견을 못 보냈어요 · 인터넷 연결을 확인해 주세요");
@@ -754,8 +754,8 @@ function Details({
         res.ok
           ? `즐겨 쓰는 단지에 저장했어요 · ${picked.name}`
           : res.status === 401
-            ? "로그인이 끝나 저장하지 못했어요 — 다시 로그인해 주세요"
-            : "저장하지 못했어요 — 잠시 뒤 다시 눌러 주세요",
+            ? "로그인이 끝나 저장하지 못했어요. 다시 로그인해 주세요"
+            : "저장하지 못했어요. 잠시 후 다시 시도해 주세요",
       );
     } catch {
       setPreset("idle");
@@ -897,7 +897,7 @@ function Details({
           </div>
           <div className="flex flex-wrap items-center gap-2 t-sub text-text-2">
             {feedback === "sent" ? (
-              "의견 고마워요 — 다음 판에 반영할게요."
+              "의견 고마워요. 다음 판에 반영할게요."
             ) : (
               <>
                 <span className="font-bold">이 결과가 도움이 됐나요?</span>
@@ -1077,7 +1077,7 @@ export function ResultView({
           </Link>
         </p>
       ) : (
-        <p className="t-body font-bold text-danger">{result.error ?? "실행하지 못했어요 — 잠시 뒤 다시 눌러 주세요."}</p>
+        <p className="t-body font-bold text-danger">{result.error ?? "실행하지 못했어요. 잠시 후 다시 시도해 주세요."}</p>
       )}
     </div>
   );
@@ -1100,7 +1100,7 @@ export function ResultView({
       )}
       {!running && result?.ok && result.askedLlm && !external && (
         <p className="rounded-lg bg-bg px-3.5 py-2.5 t-sub text-text-2">
-          AI 해설을 지금 받지 못해 공공데이터 자동 계산 결과만 표시. 잠시 뒤 다시 눌러 주세요.
+          AI 해설을 받지 못해 공공데이터 자동 계산 결과만 표시해요. 잠시 후 다시 시도해 주세요.
         </p>
       )}
     </>
@@ -1109,7 +1109,8 @@ export function ResultView({
   /* ── [1021 → 1026 → 1026b] 12종 한 순서 ─────────────────────────────────────── */
   /* [1026] 결론 히어로(대표 그림 카드 첫 줄) → 그림 → KPI 4칸 → (폰) 내 조건 → 세부(접힘). 다음 행동은 레일 액션 카드·폰 하단 바
      [1026b] 나머지 8종 히어로 = ToolSignature(결론 + 판정 칩 + 대표 수치 + 대표 그림) · 비교의 함께 볼 단지는 손잡이 자리 */
-  const tiles = verdict?.tiles ?? [];
+  /* [1028] 대표 수치와 같은 숫자인 칸(경제지표 모니터의 기준금리)은 칸 줄에서 뺀다 — 출처 줄은 뺀 칸도 센다(verdict 그대로) */
+  const tiles = verdict ? tilesBesideMetric(verdict, verdict.tiles ?? []) : [];
   const sources = verdict ? verdictSources(verdict) : null;
   const asOf = ymLabel(verdict?.metric?.asOf ?? tiles.find((t) => t.asOf)?.asOf ?? null);
   const scenario = tool === "ai-prediction" ? (verdict?.scenario ?? null) : null;

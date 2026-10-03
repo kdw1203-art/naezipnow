@@ -17,10 +17,10 @@ import type { Verdict, VerdictTile } from "@/lib/ai/verdict";
 export const AXIS_MIN_SCORED = 3;
 
 /** lib/ai/verdict.ts tilePool 의 조회 실패 표시와 같은 문자열 */
-const FAILED_NOTE = "지금 불러오지 못했어요";
+const FAILED_NOTE = "불러오지 못했어요";
 
-export const EMPTY_TILES_LINE = "아직 신고된 매매 실거래가 없어요 — 계약 후 30일 안에 신고";
-export const FAILED_TILES_LINE = "실거래·지역 자료를 지금 불러오지 못했어요 — 잠시 뒤 다시 열어 주세요";
+export const EMPTY_TILES_LINE = "아직 신고된 매매 실거래가 없어요 · 신고 기한은 계약 후 30일";
+export const FAILED_TILES_LINE = "실거래·지역 자료를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.";
 
 export type AxisSummary = {
   total: number;
@@ -42,7 +42,7 @@ export function summarizeAxes(radar: readonly RadarAxis[]): AxisSummary {
  * (VerdictCard ⑤ — evidence 원천, 접힘 밖에 늘 보임)이 말한다.
  */
 export function thinHeadline(s: Pick<AxisSummary, "total" | "measured">): string {
-  return `자료 부족 — ${s.total}개 항목 중 ${s.measured}개만 확인됨`;
+  return `자료 부족 · ${s.total}개 항목 중 ${s.measured}개만 확인됨`;
 }
 
 /** "확인된 항목: 금리 환경(기준금리 2.5%)" — 확인된 축이 없으면 null */

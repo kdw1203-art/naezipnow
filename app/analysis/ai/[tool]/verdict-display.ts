@@ -74,6 +74,18 @@ export function evidenceSources(evidence: readonly { source: string }[]): string
   return seen.length ? seen.join(" · ") : null;
 }
 
+/**
+ * [1028] 칸 줄에 세울 칸 — 대표 수치와 같은 숫자를 한 번 더 말하는 칸은 뺀다.
+ * 경제지표 모니터는 "기준금리 3%" 가 결론 문장·알약 이유 줄·대표 수치·첫 칸에 네 번 섰다 — 결론 1 + 대표 수치 1 만 남긴다
+ * (이유 줄은 lib/ai/verdict.ts 가 점수만 적는다). 대표 수치가 없을 때(금리를 못 읽음)는 "기준금리 — 자료 없음" 칸을 그대로 둔다.
+ * verdict.tiles 자체는 건드리지 않는다: 출처 한 줄(verdictSources)과 메모·저장 요약(numbers)은 뺀 칸도 센다 —
+ * 칸을 데이터에서 지우면 출처 줄에서 "한국은행"이 사라지고 기준일(한국은행 날짜)만 남는다.
+ */
+export function tilesBesideMetric(v: Pick<Verdict, "tool" | "metric">, tiles: readonly VerdictTile[]): VerdictTile[] {
+  if (v.tool === "ai-economy" && v.metric) return tiles.filter((t) => t.key !== "baseRate");
+  return [...tiles];
+}
+
 /** 칸 아래 작은 설명 — 값이 있으면 "설명 · 기준 달", 없으면 "자료 없음 · 이유"(출처는 카드 아래 한 줄로) */
 export function tileCaption(t: VerdictTile, when: string | null): string {
   if (t.value == null) return t.note ? `자료 없음 · ${t.note}` : "자료 없음";

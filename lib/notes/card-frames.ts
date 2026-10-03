@@ -133,7 +133,7 @@ export const CARD_FRAMES: readonly CardFrame[] = [
   },
   {
     id: "score-ring",
-    label: "종합 점수",
+    label: "기록 점수",
     category: "점수",
     available: (s) => averageScore(s) !== null,
     build: (s) => {

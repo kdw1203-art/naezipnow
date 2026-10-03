@@ -79,7 +79,7 @@ export const CALCULATOR_TOOLS: readonly CalculatorTool[] = [
     intro: (
       <>
         <b className="text-ink">갭(실투자금)</b> = 매매가 − 전세가 · <b className="text-ink">전세가율</b> = 전세가 ÷ 매매가.
-        갭이 작을수록 진입은 쉽지만 전세가가 빠지면 그만큼 돌려줄 돈이 필요하다.
+        갭이 작을수록 초기 자금은 적게 들지만, 전세가가 내리면 그만큼 돌려줄 돈이 필요합니다.
       </>
     ),
     render: () => <GapRatio />,

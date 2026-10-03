@@ -77,13 +77,13 @@ export function judgeTrend(
     detail = `최근 3개${unit} 평균 +${recent.toFixed(2)}%로 직전(${prior >= 0 ? "+" : ""}${prior.toFixed(2)}%)보다 강한 상승 흐름이에요.`;
   } else if (recent > th && recent < prior) {
     verdict = "상승 둔화";
-    detail = `상승세가 이어지지만 폭이 ${prior.toFixed(2)}% → ${recent.toFixed(2)}%로 줄었어요. 고점 추격은 신중히.`;
+    detail = `상승세가 이어지지만 폭이 ${prior.toFixed(2)}% → ${recent.toFixed(2)}%로 줄었어요.`;
   } else if (recent < -th && recent <= prior) {
     verdict = "하락 지속";
-    detail = `최근 3개${unit} 평균 ${recent.toFixed(2)}%로 조정이 이어지고 있어요. 급매 중심으로 관찰할 시기예요.`;
+    detail = `최근 3개${unit} 평균 ${recent.toFixed(2)}%로 직전(${prior >= 0 ? "+" : ""}${prior.toFixed(2)}%)보다 하락 폭이 커졌어요.`;
   } else if (recent < -th && recent > prior) {
     verdict = "하락 둔화";
-    detail = `하락 폭이 ${prior.toFixed(2)}% → ${recent.toFixed(2)}%로 줄었어요. 바닥 다지기 가능성을 지켜보세요.`;
+    detail = `하락 폭이 ${prior.toFixed(2)}% → ${recent.toFixed(2)}%로 줄었어요.`;
   } else if (prior < -th && recent >= -th) {
     verdict = "반등 조짐";
     detail = `직전 조정(${prior.toFixed(2)}%) 이후 최근 흐름이 보합권(${recent >= 0 ? "+" : ""}${recent.toFixed(2)}%)으로 돌아섰어요.`;
@@ -131,6 +131,8 @@ export function currentYyyymm(): string {
 export type MarketTemp = {
   score: number;
   headline: string;
+  /** [1028] 점수의 두 성분 한 줄("지수 +12 · 거래량 −25") — temperatureParts */
+  parts: string | null;
   inputs: { label: string; value: string; accent: boolean }[];
   volumeNote: string | null;
   raw: {
@@ -226,6 +228,7 @@ export function computeMarketTemp(
   return {
     score,
     headline,
+    parts: temperatureParts({ momentumPoints: momPts, volumePoints: volPts, volumeWindowMonths }),
     inputs,
     volumeNote,
     raw: {
@@ -245,17 +248,39 @@ export function computeMarketTemp(
   };
 }
 
-/** 점수 → 한 줄 요약. 아카이브가 저장된 점수로 같은 문장을 되살릴 수 있게 분리했다. */
+/**
+ * 점수 → 구간 이름. 아카이브가 저장된 점수로 같은 말을 되살릴 수 있게 분리했다.
+ *
+ * [1028] 예전 이름("가격·거래 모두 달아오르는 구간" · "완만한 회복 흐름" · "방향성 탐색 구간" · "조정 흐름 지속" ·
+ * "가격·거래 모두 식은 구간")은 점수 하나로 가격과 거래의 방향까지 말했다. 점수는 지수 모멘텀(±25)과 거래량(±25)의
+ * 합이라, 둘이 엇갈리면 이름이 화면의 다른 숫자와 반대로 읽혔다 — 운영 실측(2026-10-03 서울 강남구): 지수 최근
+ * 3개월 +0.47%(추세 "상승 지속")인데 거래량이 −71%라 37점 "조정 흐름 지속". 이제 이름은 눈금의 구간만 말하고
+ * (경계 65·55·45·35 는 그대로), 가격·거래가 각각 몇 점을 더하고 뺐는지는 temperatureParts 가 따로 적는다.
+ */
 export function temperatureHeadline(score: number): string {
-  return score >= 65
-    ? "가격·거래 모두 달아오르는 구간"
-    : score >= 55
-      ? "완만한 회복 흐름"
-      : score >= 45
-        ? "방향성 탐색 구간"
-        : score >= 35
-          ? "조정 흐름 지속"
-          : "가격·거래 모두 식은 구간";
+  return score >= 65 ? "뜨거움" : score >= 55 ? "따뜻함" : score >= 45 ? "중립" : score >= 35 ? "서늘함" : "차가움";
+}
+
+/**
+ * [1028] 점수의 두 성분을 한 줄로 — "지수 +12 · 거래량 −25"(중립 50에서 더하고 뺀 점수, 반올림).
+ * 거래량을 반영하지 못한 점수(완결월 부족)는 지수만 적는다. 값이 없으면 null.
+ */
+export function temperatureParts(raw: {
+  momentumPoints: number | null | undefined;
+  volumePoints: number | null | undefined;
+  /** 거래량 비교에 쓴 완결월 수 — null 이면 거래량 미반영 */
+  volumeWindowMonths?: number | null;
+}): string | null {
+  const signed = (v: number) => {
+    const r = Math.round(v);
+    return r > 0 ? `+${r}` : r < 0 ? `−${Math.abs(r)}` : "0";
+  };
+  const m = raw.momentumPoints;
+  if (typeof m !== "number" || !Number.isFinite(m)) return null;
+  const parts = [`지수 ${signed(m)}`];
+  const v = raw.volumePoints;
+  if (raw.volumeWindowMonths != null && typeof v === "number" && Number.isFinite(v)) parts.push(`거래량 ${signed(v)}`);
+  return parts.join(" · ");
 }
 
 /* ── 지역 목록 ─────────────────────────────────────────────────────────

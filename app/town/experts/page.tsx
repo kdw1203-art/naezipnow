@@ -161,7 +161,7 @@ export default async function TownExpertsPage() {
             </div>
             <p className="t-body font-bold text-ink">전문가 목록을 불러오지 못했어요</p>
             <p className="max-w-xs t-sub text-text-3">
-              등록된 전문가가 없는 게 아니라, 지금 목록을 읽지 못한 상태예요. 잠시 뒤 새로고침해 주세요.
+              잠시 후 다시 시도해 주세요.
             </p>
             <Link href="/town/experts" className="btn-soft btn-sm no-underline">
               다시 불러오기

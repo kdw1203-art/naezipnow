@@ -13,8 +13,9 @@ export default function Error({
   return (
     <AreaError
       area="my"
-      title="마이 화면에 문제가 생겼어요"
-      desc="계정 정보는 안전해요. 다시 시도하거나 설정으로 이동해 주세요."
+      /* [1028 · 제안 3] 오류 문구 표준 — "불러오지 못했어요" + "잠시 후 다시 시도해 주세요." + 도움이 되는 사실 한 줄 */
+      title="마이 화면을 불러오지 못했어요"
+      desc="잠시 후 다시 시도해 주세요. 계정 정보는 안전해요."
       error={error}
       reset={reset}
       links={[{ href: "/my", label: "마이" }, { href: "/my/settings", label: "설정" }, { href: "/", label: "홈" }]}

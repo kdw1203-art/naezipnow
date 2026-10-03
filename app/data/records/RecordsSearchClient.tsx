@@ -118,8 +118,7 @@ export function RecordsSearchClient() {
 
       {status === "error" && (
         <div className="mt-4 rounded-lg border border-line bg-surface px-4 py-8 text-center text-[13px] text-text-2">
-          &ldquo;{query}&rdquo; 조회에 실패했어요 — 자료가 없는 게 아니라 지금 읽지
-          못한 상태예요. 잠시 뒤{" "}
+          &ldquo;{query}&rdquo; 자료를 불러오지 못했어요. 잠시 후{" "}
           <button
             type="button"
             onClick={() => run(query)}

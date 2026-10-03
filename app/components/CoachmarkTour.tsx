@@ -265,19 +265,24 @@ export function CoachmarkTour({
             : { top: bubbleTop, left: bubbleLeft }
         }
       >
-        <div className="mb-1 t-sub font-bold text-primary">
-          {index + 1} / {visibleSteps.length}
-        </div>
+        {/* [1028] 한 장짜리 안내는 "1 / 1"·건너뛰기 없이 확인 하나 — 넘길 장이 없다 */}
+        {visibleSteps.length > 1 && (
+          <div className="mb-1 t-sub font-bold text-primary">
+            {index + 1} / {visibleSteps.length}
+          </div>
+        )}
         <div className="t-section font-bold text-ink">{step.title}</div>
         <p className="mt-1.5 t-body leading-relaxed text-text-2">{step.body}</p>
-        <div className="mt-3.5 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => finish("skip")}
-            className="t-sub font-semibold text-text-3 underline-offset-2 hover:underline"
-          >
-            건너뛰기
-          </button>
+        <div className={`mt-3.5 flex items-center ${visibleSteps.length > 1 ? "justify-between" : "justify-end"}`}>
+          {visibleSteps.length > 1 && (
+            <button
+              type="button"
+              onClick={() => finish("skip")}
+              className="t-sub font-semibold text-text-3 underline-offset-2 hover:underline"
+            >
+              건너뛰기
+            </button>
+          )}
           <div className="flex items-center gap-1.5">
             {index > 0 && (
               <button
@@ -294,7 +299,7 @@ export function CoachmarkTour({
               className="btn-primary rounded-lg px-3.5 py-1.5 t-sub"
             >
               {/* [1012 · 규칙 5] "시작하기"(금지 문구) → 마지막 단계는 투어를 끝내는 행동 그대로 */}
-              {isLast ? "둘러보기 마치기" : "다음"}
+              {visibleSteps.length === 1 ? "확인" : isLast ? "둘러보기 마치기" : "다음"}
             </button>
           </div>
         </div>

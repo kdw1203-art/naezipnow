@@ -45,7 +45,7 @@ export function AccountFactsCards({ onGoPrivacy }: { onGoPrivacy: () => void }) 
           <div className="py-4 t-sub text-text-3">불러오는 중…</div>
         ) : phase === "error" || !facts ? (
           <div className="py-4 t-sub text-text-3">
-            로그인 연결 상태를 지금 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.
+            로그인 연결 상태를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
           </div>
         ) : (
           facts.logins.map((l, i) => (
@@ -87,7 +87,7 @@ export function AccountFactsCards({ onGoPrivacy }: { onGoPrivacy: () => void }) 
           <div className="py-4 t-sub text-text-3">불러오는 중…</div>
         ) : phase === "error" || !facts ? (
           <div className="py-4 t-sub text-text-3">
-            계정 정보를 지금 불러오지 못했어요.
+            계정 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
           </div>
         ) : (
           <>

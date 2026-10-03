@@ -216,7 +216,7 @@ export async function GET() {
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", fontSize: "22px", color: "#71829f" }}>
-            한국부동산원·KB 공표 통계 · 청약홈 — {asOf} 기준 · 투자 권유 아님
+            한국부동산원 공표 통계 · 청약홈 · {asOf} 기준 · 투자 권유 아님
           </div>
           <div style={{ display: "flex", fontSize: "26px", color: "#9db4dd", fontWeight: 700 }}>
             naezipnow.com

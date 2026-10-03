@@ -159,7 +159,7 @@ export async function GET(req: Request) {
   if (failedSources.length > 0 && failedSources.length === attemptedSources.length) {
     return NextResponse.json(
       {
-        error: "검색 소스를 지금 읽지 못했어요. 결과가 없는 게 아니라 조회에 실패한 상태입니다.",
+        error: "검색 결과를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
         query: q,
         failedSources,
       },

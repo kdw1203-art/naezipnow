@@ -89,7 +89,8 @@ export function PostActions({
         promptSignup({
           action: "bookmark_post",
           title: "저장하려면 로그인이 필요해요",
-          benefit: "로그인한 계정에만 저장 목록이 남아요. 나중에 마이페이지에서 다시 볼 수 있어요.",
+          /* [1028 · 제안 5] 짧은 사실 한 줄. "마이페이지에서 다시 볼 수 있어요"는 뺐다 — 저장한 글을 모아 보는 화면이 마이에 없다 */
+          benefit: "저장한 글은 계정에 남아요.",
         });
         return;
       }
@@ -184,7 +185,8 @@ export function LikeButton({
         promptSignup({
           action: "post_like",
           title: "공감하려면 로그인이 필요해요",
-          benefit: "로그인하면 공감이 계정에 남아 중복·어뷰징을 줄일 수 있어요.",
+          /* [1028 · 제안 5] 내부 용어("어뷰징") → 일반 말, 짧은 사실 한 줄 */
+          benefit: "공감은 계정에 남아 중복·도배를 막아요.",
         });
         return;
       }
@@ -261,7 +263,8 @@ export function CommentForm({
         promptSignup({
           action: "community_comment",
           title: "댓글을 남기려면 로그인이 필요해요",
-          benefit: "로그인하면 댓글이 계정에 남아 신고·차단 대응이 가능해요.",
+          /* [1028 · 제안 5] 짧은 사실 한 줄 */
+          benefit: "댓글은 계정에 남아 신고·차단을 처리할 수 있어요.",
         });
         return;
       }
@@ -314,7 +317,7 @@ export function CommentForm({
       )}
       {earned > 0 && (
         <p className="px-1 t-sub font-bold text-success">
-          댓글 적립 +{earned}P — 포인트 내역에서 확인할 수 있어요
+          댓글 적립 +{earned}P · 포인트 내역에서 확인할 수 있어요
         </p>
       )}
       {!compact && (

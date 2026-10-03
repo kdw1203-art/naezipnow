@@ -104,8 +104,8 @@ export default async function ApplyWeekPage({
           />
         ) : result.state === "error" ? (
           <ErrorState
-            title="청약 일정을 지금 불러오지 못했어요"
-            desc="일정이 없는 게 아니라 조회 자체가 실패했습니다. 잠시 후 다시 시도해 주세요."
+            title="청약 일정을 불러오지 못했어요"
+            desc="잠시 후 다시 시도해 주세요."
             cause={result.cause}
             action={{ label: "청약 센터로 이동", href: "/apply" }}
           />

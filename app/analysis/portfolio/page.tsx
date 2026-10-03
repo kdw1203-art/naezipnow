@@ -56,7 +56,7 @@ export default function PortfolioPage() {
             icon="wallet"
             title="등록된 자산 없음"
             /* [1015 · 규칙 B·D] 긴 권유문 → 사실 한 줄(예시 자산으로 채우지 않는다는 원칙은 그대로) */
-            desc="자산 등록(저장·시세 연동)이 아직 열리지 않아 예시 자산으로 채우지 않고 비워 둔다."
+            desc="자산 등록은 아직 제공하지 않아요. 예시 자산으로 채우지 않고 비워 둬요."
             action={{ label: "관심 단지 대시보드", href: "/my/watchlist" }}
           />
         </div>

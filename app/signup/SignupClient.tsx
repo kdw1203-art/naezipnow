@@ -401,12 +401,10 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
       </div>
 
       {/* [1015 · 규칙 D] 마케팅 제목("30초면 시작할 수 있어요")·"만들어 드려요" 부제 → 명사 제목 + 사실 한 줄 */}
+      {/* [1028 · 제안 5] 부제("가입 후 관심 지역·목표 선택 화면으로 이어집니다")를 지웠다 — 다음 화면 설명은 다음 화면이 한다 */}
       <h1 className="rise-in text-[21px] font-bold leading-[1.35] text-ink">
         회원가입
       </h1>
-      <p className="rise-in-1 -mt-2 text-[13px] text-text-2">
-        가입 후 관심 지역·목표 선택 화면으로 이어집니다
-      </p>
 
       {social.length > 0 && (
         <div className="rise-in-2 flex flex-col gap-2.5">
@@ -431,11 +429,9 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
 
       {/* [개선 #9] 목표 3택·관심지역 검색 블록 제거 — /welcome 온보딩이 수집한다.
           실측에서 이 두 블록 앞에서 거의 전원이 이탈했다(30일 44→1). */}
+      {/* [1028 · 제안 5] 폼 머리 "계정 만들기 · 이메일로 가입"을 뺐다 — 바로 위 구분선이 "또는 이메일로 가입"이라 같은 말이 겹쳤다
+          (소셜 수단이 없으면 제목 "회원가입" 아래 바로 폼) */}
       <form onSubmit={onSubmit} className="rise-in-5 flex flex-col gap-2">
-        <div className="text-[13px] font-bold text-ink">
-          계정 만들기{" "}
-          <span className="text-[12px] font-medium text-text-3">이메일로 가입</span>
-        </div>
         {/* 항목 47 — sr-only 라벨 + id (placeholder 는 접근 가능한 이름이 아니다) */}
         <label htmlFor="signup-name" className="sr-only">
           이름 (선택)
@@ -546,7 +542,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
             />
           </span>
           <span>
-            (선택) 혜택·소식 이메일 수신 — 언제든 설정에서 철회할 수 있어요
+            (선택) 혜택·소식 이메일 수신 · 언제든 설정에서 철회할 수 있어요
           </span>
         </label>
         <label className="-mx-2.5 flex min-h-[40px] items-center gap-3 rounded-lg px-2.5 py-1 text-xs text-text-2">
@@ -559,7 +555,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
             />
           </span>
           <span>
-            (선택) 위치정보 이용(주변 단지·지도 편의) — 설정에서 언제든 철회
+            (선택) 위치정보 이용(주변 단지·지도 편의) · 설정에서 언제든 철회
           </span>
         </label>
 

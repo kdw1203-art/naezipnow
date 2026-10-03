@@ -60,11 +60,11 @@ export function HubPriceHero({
           {eyebrow}최근 실거래가
         </div>
         <p className="mt-1 t-section text-on-dark">
-          {txFailed ? "실거래를 지금 불러오지 못했어요" : "아직 신고된 매매 실거래가 없어요"}
+          {txFailed ? "실거래를 불러오지 못했어요" : "아직 신고된 매매 실거래가 없어요"}
         </p>
         {/* [1015 · 규칙 D] 대시 잇기 없이 한 줄 */}
         <p className="mt-0.5 t-sub text-on-dark-muted">
-          {txFailed ? "조회 실패이지 거래가 없다는 뜻은 아닙니다. 잠시 후 새로고침해 주세요." : "계약 후 30일 안에 신고 · 신고가 들어오면 가장 최근 거래 표시"}
+          {txFailed ? "잠시 후 다시 시도해 주세요." : "계약 후 30일 안에 신고 · 신고가 들어오면 가장 최근 거래 표시"}
         </p>
       </div>
     );

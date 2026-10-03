@@ -156,7 +156,7 @@ function CompareTable({ model, covers }: { model: VisitCompareModel; covers: (st
           className="grid items-center gap-2 py-[9px] t-sub"
           style={gridStyle}
         >
-          <span className="text-text-2">종합 점수</span>
+          <span className="text-text-2">기록 점수</span>
           {model.scores.map((s, i) => (
             <span key={i} className={`text-center font-bold ${s.cls}`}>
               {s.value}

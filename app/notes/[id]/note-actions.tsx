@@ -46,14 +46,14 @@ export function NoteDetailActions({
         return;
       }
       if (!res.ok) {
-        showToast("삭제하지 못했어요. 다시 눌러 주세요");
+        showToast("삭제하지 못했어요. 다시 시도해 주세요");
         return;
       }
       showToast("노트를 삭제했어요");
       router.push("/notes");
       router.refresh();
     } catch {
-      showToast("연결이 끊겼어요. 다시 눌러 주세요");
+      showToast("연결이 끊겼어요. 다시 시도해 주세요");
     } finally {
       setDeleting(false);
     }
@@ -83,7 +83,7 @@ export function NoteDetailActions({
         return;
       }
       if (!res.ok) {
-        showToast("전환하지 못했어요. 다시 눌러 주세요");
+        showToast("전환하지 못했어요. 다시 시도해 주세요");
         return;
       }
       setIsPublic(nextPublic);
@@ -97,7 +97,7 @@ export function NoteDetailActions({
       }
       router.refresh();
     } catch {
-      showToast("연결이 끊겼어요. 다시 눌러 주세요");
+      showToast("연결이 끊겼어요. 다시 시도해 주세요");
     } finally {
       busyRef.current = false;
       setBusy(false);

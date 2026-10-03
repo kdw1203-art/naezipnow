@@ -13,6 +13,18 @@
  */
 
 import type { AdPlacement } from "@/lib/ads/adsense-policy";
+import { PLAN_FEATURE_MATRIX } from "@/lib/subscriptions/plans";
+
+/** 요금제 비교표(PLAN_FEATURE_MATRIX)의 무료 칸 — 카드가 표와 다른 숫자를 말하지 않게 표에서 읽는다 */
+function freeLimitLine(features: readonly string[]): string {
+  return features
+    .map((f) => {
+      const v = PLAN_FEATURE_MATRIX.find((r) => r.feature === f)?.free;
+      return v ? `${f} ${v}` : null;
+    })
+    .filter((x): x is string => x !== null)
+    .join(" · ");
+}
 
 export type HouseAd = {
   id: string;
@@ -29,18 +41,21 @@ export type HouseAd = {
 
 /**
  * 문구 근거
- *  - 임장노트: app/notes/new 존재. "3분 기록"은 홈 카피와 동일한 제품 약속.
+ *  - 임장노트: app/notes/new 존재. 항목별 점수(현장 체크) · 사진 · 메모는 작성 화면의 실제 입력 칸.
  *  - 지도 실거래: 지도 금액은 국토부 실거래가 기준 (C8 가격 표기 범례와 같은 기준).
- *  - 구독: FEATURE_RULES(access.ts) ai_chat 무료 월 3회가 근거 — 요금표(PLAN_FEATURE_MATRIX
- *    "동네 분석 요약 = 무료 월 3회" 행)와 같은 단일 출처다.
+ *  [1028 · 제안 1] 세 장 모두 사실 한 줄로 — 물음·권유("기억나세요?"·"비교해 보세요")를 걷었다.
+ *    카드 머리는 "내집나우 안내 · {eyebrow}" 라 eyebrow 에 "내집나우"를 또 적지 않는다.
+ *  - 구독: 요금제 비교표(PLAN_FEATURE_MATRIX)의 무료 칸을 그대로 읽는다(freeLimitLine).
+ *    [1028 · 제안 11] 예전 문구 "AI 동네 분석 요약 월 3회"는 틀린 설명이었다 — 그 한도는 실제로 걸리지 않아
+ *    [1004]에 비교표에서 빠졌는데(/api/ai/chat 에는 요금제 문이 없고 전 요금제 시간당 10회뿐) 이 카드에만 남아 있었다.
  *  - 전문가: app/town/experts 존재, 상담 신청 → 답변 흐름 구현됨.
  */
 export const HOUSE_ADS: HouseAd[] = [
   {
     id: "house_note_start",
-    eyebrow: "내집나우",
-    title: "본 집, 기억나세요?",
-    body: "다녀온 집은 사흘이면 섞입니다. 임장노트에 남겨두면 나중에 비교할 근거가 됩니다.",
+    eyebrow: "임장노트",
+    title: "다녀온 집 기록",
+    body: "항목별 점수 · 사진 · 메모를 단지별로 저장해요.",
     ctaLabel: "임장노트 쓰기",
     href: "/notes/new",
     showWhenSignedIn: true,
@@ -48,20 +63,20 @@ export const HOUSE_ADS: HouseAd[] = [
   {
     id: "house_map_real_price",
     eyebrow: "지도",
-    title: "호가 말고 실거래가로 보기",
-    body: "지도에 찍히는 금액은 국토교통부 실거래가입니다. 중개사 호가와 섞이지 않습니다.",
-    ctaLabel: "지도에서 확인",
+    title: "실거래가 지도",
+    body: "지도 금액은 국토교통부 실거래가 평균이에요. 호가는 들어 있지 않아요.",
+    ctaLabel: "지도 열기",
     href: "/map",
     showWhenSignedIn: true,
   },
   {
     id: "house_subscription",
-    eyebrow: "플랜",
+    eyebrow: "요금제",
     /* [970 · B-29] /analysis 허브의 "단지 분석 월 2회"(AI 임장노트 자동정리)와 다른 한도라
        어느 기능의 숫자인지 적는다 — 둘 다 PLAN_FEATURE_MATRIX(plans.ts)의 실제 값이다. */
-    title: "AI 동네 분석 요약이 월 3회로 부족하다면",
-    body: "무료 플랜은 AI 동네 분석 요약(채팅)을 월 3회, AI 임장노트 자동정리를 월 2회 만들 수 있어요. 플랜별로 무엇이 달라지는지 표로 비교해 보세요.",
-    ctaLabel: "플랜 비교하기",
+    title: "무료 요금제 한도",
+    body: freeLimitLine(["AI 분석 도구", "AI 임장노트 자동정리"]),
+    ctaLabel: "요금제 비교",
     href: "/subscription",
     showWhenSignedIn: true,
   },

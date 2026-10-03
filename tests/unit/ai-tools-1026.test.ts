@@ -51,9 +51,9 @@ const RADAR = [
   { key: "macro", label: "금리 환경", score: 60, basis: "기준금리 3%" },
 ];
 const SIGNALS = [
-  { key: "price", label: "가격 흐름", state: "red" as const, basis: "지역 시세 한 달 +1.03% — 빠르게 오르는 중이라 따라 사기 조심" },
-  { key: "volume", label: "거래 열기", state: "red" as const, basis: "지역 한 달 거래 448건 — 거래가 몰려 파는 쪽이 유리해요" },
-  { key: "supply", label: "입주 물량", state: "green" as const, basis: "앞으로 입주 4,169세대 — 입주 무렵 매물이 늘어 고르기 쉬워질 수 있어요" },
+  { key: "price", label: "가격 흐름", state: "red" as const, basis: "지역 시세 한 달 +1.03%. 빠르게 오르는 중이라 파는 쪽이 유리해요." },
+  { key: "volume", label: "거래 열기", state: "red" as const, basis: "지역 한 달 거래 448건. 거래가 몰려 파는 쪽이 유리해요." },
+  { key: "supply", label: "입주 물량", state: "green" as const, basis: "앞으로 입주 4,169세대. 입주 무렵 매물이 늘어 고르기 쉬워질 수 있어요." },
 ];
 
 /* ── 결론 히어로의 다음 행동 한 줄 — 순수 함수 ─────────────────────────────────────── */
@@ -97,7 +97,10 @@ test("[1026] 다음 행동 한 줄 — 매수 타이밍은 주의 신호 먼저(
   for (const t of ["ai-risk", "ai-compare", "ai-simulator", "ai-gap", "ai-economy", "contract-risk", "my-checklist", "ai-portfolio"] as const) {
     assert.equal(conclusionNext({ tool: t, complexId: "c1", radar: RADAR, signals: SIGNALS }), null, t);
   }
-  /* 근거 사실 토막 — " — " 앞만, 자료 없음 문장은 버린다 */
+  /* 근거 사실 토막 — [1028] 첫 마침표(뒤가 빈칸) 앞만(소수점은 끊지 않는다) · 예전 꼴(" — ")도 그대로 읽는다 · 자료 없음 문장은 버린다 */
+  assert.equal(basisFact("지역 한 달 거래 448건. 거래가 몰려 파는 쪽이 유리해요."), "지역 한 달 거래 448건");
+  assert.equal(basisFact("지역 시세 한 달 +1.03%. 빠르게 오르는 중이라 파는 쪽이 유리해요."), "지역 시세 한 달 +1.03%");
+  assert.equal(basisFact("이웃 임장노트 4건 평균 3.75점(5점 만점)"), "이웃 임장노트 4건 평균 3.75점(5점 만점)");
   assert.equal(basisFact("지역 한 달 거래 448건 — 거래가 몰려 파는 쪽이 유리해요"), "지역 한 달 거래 448건");
   assert.equal(basisFact("지역 시세 자료가 없어요"), null);
   assert.equal(basisFact("공개 임장노트 없음"), null);
@@ -236,7 +239,8 @@ test("[1026] 빈 상태 — 카드 하나 + 회색 견본(제자리 · 흐린 �
   assert.match(frameBranch, /최근 6개월 거래가 많은 단지 \{quickPicks\.length\}곳/);
   /* 문장은 서버 페이지(page.tsx)에만 — 첫 로드 번들에 싣지 않는다 */
   assert.match(page, /emptyLine=\{EMPTY_LINE\[tid\] \?\? null\}/);
-  for (const t of FRAME_TOOLS) assert.match(page, new RegExp(`"${t}": "단지를 고르면 [^"]+바로 나와요"`), t);
+  /* [1028] 도구마다 달랐던 문장 → 공통 한 줄(무엇이 나오는지는 머리 한 줄이 말한다) */
+  for (const t of FRAME_TOOLS) assert.ok(page.includes(`"${t}": "단지를 고르면 결과가 나와요."`), t);
   assert.doesNotMatch(frames, /<text/);
 });
 

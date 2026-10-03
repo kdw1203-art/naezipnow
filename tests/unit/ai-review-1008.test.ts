@@ -9,6 +9,8 @@ import { buildVerdict } from "../../lib/ai/verdict.ts";
 import { tuningFields } from "../../lib/ai/tool-tuning-fields.ts";
 import type { LiveToolContext } from "../../lib/ai/live-context.ts";
 import { cleanAiLine, cleanAiMarkdown } from "../../lib/ai/ai-tail.ts";
+import { readFileSync } from "node:fs";
+import { tilesBesideMetric, verdictSources } from "../../app/analysis/ai/[tool]/verdict-display.ts";
 
 /* [1008 · 리뷰 A] AI 분석 결과 화면 리뷰 수정 — 숫자는 전부 이 파일 안의 테스트용 값이다(운영 데이터 아님). */
 
@@ -132,8 +134,8 @@ test("[A-3] 체크리스트는 실제 항목을 싣고, 비교는 담은 수만�
   const total = (ck.checklist ?? []).reduce((a, g) => a + g.items.length, 0);
   assert.ok(total >= 30, `항목 ${total}개`);
   assert.equal(ck.metric?.value, String(total));
-  assert.match(buildVerdict({ tool: "ai-compare", ctx, footnotes: [] }).headline, /2곳 이상 담아/);
-  assert.match(buildVerdict({ tool: "ai-compare", ctx, footnotes: [], input: { compareCount: 3 } }).headline, /3곳을 같은 숫자 칸으로 나란히/);
+  assert.equal(buildVerdict({ tool: "ai-compare", ctx, footnotes: [] }).headline, "단지를 2곳 이상 담으면 같은 숫자 칸으로 비교해요.");
+  assert.equal(buildVerdict({ tool: "ai-compare", ctx, footnotes: [], input: { compareCount: 3 } }).headline, "3곳을 같은 숫자 칸으로 나란히 놓았어요.");
 });
 
 test("[A-3] 결과 숫자가 쓰는 입력(calc)만 '내 조건'이다 — AI 해설에만 쓰는 칸은 calc 가 아니다", () => {
@@ -172,7 +174,7 @@ test("[A-6] 리스크 점검 — 한 가지만 재고 '좋음·낮음' 이라 �
   const w4 = buildVerdict({ tool: "ai-risk", ctx: fourWarn, footnotes: [] });
   assert.equal(w4.band, "mixed");
   assert.equal(w4.bandReason, "잰 4가지 중 1가지 걸림(1가지 자료 없음)");
-  assert.match(w4.headline, /잰 4가지 위험 신호 중 1가지가 걸렸어요\(1가지는 자료 없음\)/);
+  assert.match(w4.headline, /잰 4가지 위험 신호 중 1가지가 걸렸어요\(1가지는 자료 없음\): 입주 물량이 많아요\.$/);
 });
 
 /* ── A-4 · A-9 · A-20 · A-23 컨텍스트 칸 ──────────────────────────────── */
@@ -189,8 +191,8 @@ test("[A-4·9·20·23] 최근 6개월 거래는 컨텍스트 값으로, 실패�
   });
   const d = buildVerdict({ tool: "ai-diagnosis", ctx, footnotes: [] });
   assert.equal(d.tiles?.find((t) => t.key === "trades6m")?.value, "42건");
-  assert.equal(d.tiles?.find((t) => t.key === "price")?.note, "지금 불러오지 못했어요");
-  assert.equal(d.tiles?.find((t) => t.key === "regionYoy")?.note, "지금 불러오지 못했어요");
+  assert.equal(d.tiles?.find((t) => t.key === "price")?.note, "불러오지 못했어요");
+  assert.equal(d.tiles?.find((t) => t.key === "regionYoy")?.note, "불러오지 못했어요");
   const t = buildVerdict({ tool: "ai-timing", ctx, footnotes: [] });
   assert.equal(t.tiles?.find((x) => x.key === "regionTrades")?.asOf, "202607");
   const e = buildVerdict({ tool: "ai-economy", ctx, footnotes: [] });
@@ -226,4 +228,136 @@ test("[A-18] 예전 기록의 꼬리 줄 — 밑줄 기울임 문자와 내부 �
   assert.doesNotMatch(out, /\[규칙\]|각주|^_|_$/m);
   /* 줄 가운데 밑줄(변수명 같은 것)은 건드리지 않는다 */
   assert.equal(cleanAiLine("snake_case 는 그대로"), "snake_case 는 그대로");
+});
+
+/* ── [1028] 결론 문장은 숫자와 사실 — 권유·명령·줄표 연결 없음 ─────────────────────── */
+function fullCtx1028(): LiveToolContext {
+  return ctxOf({
+    complex: {
+      id: "c",
+      name: "테스트",
+      region: "안양 동안구",
+      price: { priceKrw: 500_000_000, bandLabel: "전용 59㎡", latestYm: "202608", ...meta },
+      recent6: { count: 57, fromYm: "202603", toYm: "202608", span: 6 },
+    },
+    region: {
+      id: null,
+      name: "안양 동안구",
+      snapshot: { avgSale: 1, jeonseRatio: 55.3, saleChangeMonthly: 1.03, tradeCount: 448, period: "202608", ...meta },
+      demographics: { population: 1, households: 1, unsoldUnits: 620, period: "202607", ...meta },
+    },
+    supply: { upcomingHouseholds: 4169, upcomingComplexes: 5, items: [], ...meta },
+    rent: { wolseSharePct: 60, jeonseCount: 40, wolseCount: 60, medianMonthlyKrw: null, months: 3, ...meta },
+    macro: { baseRatePct: 3, source: "한국은행 ECOS", asOf: "2026-10-02" },
+  } as Partial<LiveToolContext>);
+}
+
+test("[1028 · 제안 2] 결론·이유·설명 문장 — 12종 어디에도 줄표 연결·권유(~세요)·'A가 아니라 B'가 없다", () => {
+  const ADVICE = /—|[가-힣]세요|아니라/;
+  const inputs: Record<string, Record<string, unknown>[]> = {
+    "ai-gap": [{}, { maeMan: 150_000, jeonMan: 30_000 }],
+    "contract-risk": [{}, { marketRatioPct: 92, jeonseMan: 250_000 }, { marketRatioPct: 85 }, { marketRatioPct: 60 }],
+    "ai-inspection": [{ similarCount: 3 }, { similarCount: 0 }],
+    "ai-compare": [{ compareCount: 3 }, { compareCount: 1 }],
+    "ai-simulator": [{}, { ltvPct: 60, mortgageRatePct: 4.2 }, { ltvPct: 60, mortgageRatePct: 4.2, holdingYears: 5 }],
+  };
+  const tools = ["ai-diagnosis", "ai-prediction", "ai-risk", "ai-compare", "ai-inspection", "my-checklist", "ai-portfolio", "ai-timing", "ai-simulator", "ai-gap", "ai-economy", "contract-risk"] as const;
+  const empty = ctxOf({ complex: { id: "c", name: "테스트", region: "x", price: null } });
+  for (const tool of tools) {
+    for (const ctx of [fullCtx1028(), empty]) {
+      for (const input of inputs[tool] ?? [{}]) {
+        const v = buildVerdict({ tool, ctx, footnotes: [], input });
+        const lines = [
+          v.headline,
+          v.bandReason ?? "",
+          v.metric?.note ?? "",
+          ...(v.tiles ?? []).map((t) => t.note ?? ""),
+          ...(v.contract?.issues.map((i) => i.text) ?? []),
+          ...v.counters,
+        ];
+        for (const line of lines) assert.doesNotMatch(line, ADVICE, `${tool} ${JSON.stringify(input)}: ${line}`);
+      }
+    }
+  }
+});
+
+test("[1028 · 제안 2] 결론 문장 — 도구별로 정한 사실 문장 그대로(숫자는 계산값)", () => {
+  const ctx = fullCtx1028();
+  const h = (tool: Parameters<typeof buildVerdict>[0]["tool"], input: Record<string, unknown> = {}) => buildVerdict({ tool, ctx, footnotes: [], input }).headline;
+  /* 매수 타이밍 — 가격 +1.03%(불리) · 거래 448건(불리) · 입주 4,169세대(유리) */
+  assert.equal(h("ai-timing"), "테스트: 신호 3개 중 2개가 파는 쪽에 유리해요.");
+  /* 리스크 — 입주 물량·미분양 2가지 걸림(월세 비중 60% 는 참고) */
+  assert.equal(h("ai-risk"), "테스트: 5가지 위험 신호 중 2가지가 걸렸어요: 입주 물량이 많아요, 미분양이 쌓였어요.");
+  assert.equal(h("ai-gap", { maeMan: 150_000, jeonMan: 30_000 }), "테스트: 갭 12억원 · 매매가의 80%예요.");
+  assert.equal(h("ai-gap"), "테스트: 지역 전세가율 55.3%로 추정한 갭은 매매가의 약 44.7%예요.");
+  assert.equal(h("contract-risk"), "지역 평균 전세가율 55.3%예요. 이 계약의 위험도는 이 집 보증금·매매가를 넣으면 계산해요.");
+  assert.equal(h("contract-risk", { marketRatioPct: 92 }), "전세가율 92% · 위험 구간(90% 이상)이에요. 보증금이 매매가에 가까워요.");
+  assert.equal(h("contract-risk", { marketRatioPct: 85 }), "전세가율 85% · 주의 구간(80% 이상)이에요. 집값이 내리면 보증금 회수가 어려울 수 있어요.");
+  assert.equal(h("contract-risk", { marketRatioPct: 60 }), "전세가율 60% · 80% 미만이에요. 등기부 근저당은 이 숫자에 들어 있지 않아요.");
+  assert.equal(h("ai-inspection", { similarCount: 3 }), "테스트 포함 4곳 · 최근 6개월 거래 많은 순이에요.");
+  assert.equal(h("ai-inspection"), "테스트: 같은 지역에 함께 볼 거래 많은 단지가 아직 없어요.");
+  assert.equal(h("ai-portfolio"), "테스트: 관심 단지 중 이 단지의 숫자와 흐름이에요.");
+  assert.match(h("my-checklist"), /^테스트: 임장·계약 전에 확인할 항목 \d+개예요\.$/);
+  /* 수익률 계산 — 5억 · 60% · 4.2% · 30년: 월 147만원, 금리 +1%p 면 월 18만원 늘어난다 */
+  assert.equal(
+    h("ai-simulator", { ltvPct: 60, mortgageRatePct: 4.2 }),
+    "테스트: 5억에 3억을 빌리면 월 147만원이에요. 금리가 1%p 오르면 월 18만원 늘어요. 보유 기간을 넣으면 수익률도 계산해요.",
+  );
+  assert.match(
+    h("ai-simulator", { ltvPct: 60, mortgageRatePct: 4.2, holdingYears: 5 }),
+    /^테스트: 3억을 빌려 5년 보유하면 기본 시나리오로 넣은 돈 대비 연 [+−]\d+(\.\d)?%예요\. 월 상환액은 147만원이에요\.$/,
+  );
+  assert.match(h("ai-prediction"), /^테스트: 1년 뒤 기본 [\d.,]+[억만] 안팎이에요\. 낙관 [\d.,]+[억만], 비관 [\d.,]+[억만]이에요\.$/);
+  /* 계약 점검의 알약 이유 — 지역 평균이 80% 이상이면 그 사실만("부터" 같은 강조 없음) */
+  const hot = ctxOf({ region: { id: null, name: "x", snapshot: { avgSale: 1, jeonseRatio: 85, saleChangeMonthly: 0, tradeCount: 50, period: "202608", ...meta }, demographics: null } });
+  const region = buildVerdict({ tool: "contract-risk", ctx: hot, footnotes: [] });
+  assert.equal(region.band, "weak");
+  assert.equal(region.bandReason, "지역 평균 전세가율 85% · 80% 이상");
+  assert.equal(buildVerdict({ tool: "contract-risk", ctx, footnotes: [] }).bandReason, "지역 평균으로 본 참고값");
+});
+
+test("[1028 · 제안 10] 경제지표 모니터 — '기준금리 N%' 는 결론과 대표 수치 두 곳에만(이유 줄·핵심 숫자 칸에서 뺐다)", () => {
+  const e = buildVerdict({ tool: "ai-economy", ctx: fullCtx1028(), footnotes: [] });
+  assert.equal(e.headline, "기준금리 3%예요.");
+  assert.deepEqual(
+    { label: e.metric?.label, value: e.metric?.value, unit: e.metric?.unit, note: e.metric?.note, asOf: e.metric?.asOf },
+    { label: "기준금리", value: "3", unit: "%", note: "한국은행", asOf: "2026-10-02" },
+  );
+  /* 이유 줄은 점수만 — 금리 3% → 60점, 미분양 500호 초과로 −10 */
+  assert.equal(e.bandReason, "금리 환경 50점");
+  assert.doesNotMatch(e.bandReason ?? "", /기준금리/);
+  /* 핵심 숫자 칸 — 화면은 대표 수치와 같은 기준금리 칸을 빼고 그린다(나머지 세 칸은 그대로).
+     데이터(verdict.tiles 4칸 · numbers)는 그대로라 출처 한 줄에 "한국은행"이 남는다 */
+  assert.deepEqual(e.tiles?.map((t) => t.key), ["baseRate", "unsold", "regionMom", "regionYoy"]);
+  assert.deepEqual(tilesBesideMetric(e, e.tiles ?? []).map((t) => t.key), ["unsold", "regionMom", "regionYoy"]);
+  assert.match(verdictSources(e) ?? "", /^한국은행/);
+  /* 금리를 못 읽으면 예전 그대로 — 대표 수치가 없으니 "기준금리 — 자료 없음" 칸도 남긴다 */
+  const none = buildVerdict({ tool: "ai-economy", ctx: ctxOf({}), footnotes: [] });
+  assert.equal(none.headline, "금리 자료를 아직 못 읽었어요.");
+  assert.equal(none.bandReason, "금리 자료가 없어요");
+  assert.equal(none.metric, null);
+  assert.deepEqual(tilesBesideMetric(none, none.tiles ?? []).map((t) => t.key), ["baseRate", "unsold", "regionMom", "regionYoy"]);
+  /* 다른 도구의 칸은 건드리지 않는다 */
+  for (const tool of ["ai-diagnosis", "ai-simulator", "contract-risk"] as const) {
+    const v = buildVerdict({ tool, ctx: fullCtx1028(), footnotes: [], input: { ltvPct: 60, mortgageRatePct: 4.2 } });
+    assert.deepEqual(tilesBesideMetric(v, v.tiles ?? []), v.tiles, tool);
+  }
+  /* 화면 두 곳(결과 화면 · 결과 요약 카드)이 같은 함수로 칸 줄을 그린다 */
+  const read = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
+  assert.match(read("app/analysis/ai/[tool]/ResultView.tsx"), /const tiles = verdict \? tilesBesideMetric\(verdict, verdict\.tiles \?\? \[\]\) : \[\];/);
+  assert.match(read("app/analysis/ai/[tool]/VerdictCard.tsx"), /const tiles = tilesBesideMetric\(verdict, tilesOf\(verdict\)\);/);
+});
+
+test("[1028 · 제안 2] 계약 점검 목록 — '꼭 보세요·확인하세요' 대신 확인 항목이 무엇인지, 문장은 마침표로 끊는다", () => {
+  const all = contractCheck({ marketRatioPct: 92, jeonseMan: 250_000 }, 55).issues.map((i) => i.text);
+  assert.deepEqual(all, [
+    "전세가율 92%예요. 90% 이상이면 집값이 조금만 내려도 보증금을 돌려받기 어려울 수 있어요(깡통전세 위험).",
+    "등기부등본에서 근저당·가압류·가처분 확인",
+    "전세보증보험(HUG·HF) 가입 가능 여부 확인",
+    "보증금 20억 원 초과 · 계약 해제·보증금 반환 특약 확인",
+  ]);
+  assert.equal(
+    contractCheck({ hasRegistrationCheck: true, hasInsurance: true }, 85).issues[0].text,
+    "지역 평균 전세가율 85%예요. 80% 이상이면 시세가 내릴 때 보증금을 못 돌려받을 수 있어요.",
+  );
 });

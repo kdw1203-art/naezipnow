@@ -55,7 +55,7 @@ const loadReportsIndex = cache(async (): Promise<ReportsIndexData> => {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     logger.error(
-      "[/reports] 월간 집계를 읽지 못했습니다 — 리포트가 없는 것이 아니라 조회가 실패했습니다:",
+      "[/reports] 월간 집계를 읽지 못했습니다 (조회 실패):",
       message,
     );
     return { months: [], seasons: [], loadError: message };
@@ -124,14 +124,15 @@ export default async function ReportsIndexPage() {
       <div className="mx-auto max-w-[1100px]">
         <h1 className="rise-in t-title text-ink">월간 아파트 실거래 리포트</h1>
         {/* [1011] "매월 자동으로 만들어지는" 파이프라인 설명을 걷었다(소유자 지시).
-            "사람이 쓰는 시황 글이 아니다"는 남긴다 — 글의 성격을 오해하지 않게 하는 정직성 문구다.
-            [1015 · 규칙 B] 사실 한 줄: 최신 달 · 지역 수 · 건수(실데이터) */}
+            [1015 · 규칙 B] 사실 한 줄: 최신 달 · 지역 수 · 건수(실데이터)
+            [1028 · 제안 12] 해요체 두 문장 — 무엇을 집계했는지 + 계산 방식은 데이터 방법론 링크.
+            대비 구문("사람이 쓰는 시황 글이 아니며")은 걷었다. */}
         <p className="rise-in-1 mt-1.5 t-sub text-text-2">
-          국토교통부 실거래 신고를 달마다 모은 데이터 요약. 사람이 쓰는 시황 글이 아니며 수치는{" "}
+          국토교통부 실거래 신고를 달마다 집계한 요약이에요. 계산 방식은{" "}
           <Link href="/methodology" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
-            공개된 방법론
+            데이터 방법론
           </Link>
-          을 따릅니다.
+          에 있어요.
           {latest && (
             <>
               {" "}
@@ -144,9 +145,9 @@ export default async function ReportsIndexPage() {
           <div className="flex min-w-0 flex-col gap-5 max-md:gap-3">
             {loadError ? (
               <div className="card rounded-2xl px-5 py-8 text-center t-body text-text-3 max-md:py-5">
-                월간 집계를 <strong className="text-ink">불러오지 못했습니다</strong>.
+                월간 집계를 <strong className="text-ink">불러오지 못했어요</strong>.
                 <br />
-                리포트가 없다는 뜻이 아니라 조회 자체가 실패했다는 뜻입니다. 잠시 후 다시 확인해 주세요.
+                잠시 후 다시 시도해 주세요.
               </div>
             ) : months.length > 0 ? (
               years.map((y) => (
@@ -182,7 +183,7 @@ export default async function ReportsIndexPage() {
               ))
             ) : (
               <div className="card rounded-2xl px-5 py-8 text-center t-body text-text-3 max-md:py-5">
-                아직 집계된 월이 없어요. 실거래 수집이 쌓이면 생성됩니다.
+                아직 집계된 월이 없어요. 실거래 신고가 집계되면 표시돼요.
               </div>
             )}
 

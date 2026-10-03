@@ -98,9 +98,10 @@ export function RegionMarketSummary({ regions }: { regions: string[] }) {
   };
 
   return (
-    <section className="card flex flex-col gap-3 rounded-2xl p-4 max-md:p-3.5" aria-label="후보 지역 실시세 스냅샷">
+    <section className="card flex flex-col gap-3 rounded-2xl p-4 max-md:p-3.5" aria-label="후보 지역 통계">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="t-section text-ink">후보 지역 실시세 스냅샷</h2>
+        {/* [1028] "실시세 스냅샷"(내부 말) → "후보 지역 통계" — 한국부동산원 지역 통계(평균 매매가·전월 대비·전세가율) */}
+        <h2 className="t-section text-ink">후보 지역 통계</h2>
         {/* 보조 버튼 — 진행(링) · 실패는 아래 문구(채움 색으로 알리지 않는다) */}
         <button
           type="button"
@@ -127,7 +128,7 @@ export function RegionMarketSummary({ regions }: { regions: string[] }) {
       ) : state.kind === "loading" ? (
         <div className="t-sub text-text-3">지역 시세를 불러오는 중…</div>
       ) : state.kind === "empty" ? (
-        <div className="t-sub text-text-3">담은 후보 지역의 실시세 데이터가 아직 없어요. 시세 수집 후 다시 시도해 주세요.</div>
+        <div className="t-sub text-text-3">담은 후보 지역의 시세 통계가 아직 없어요.</div>
       ) : state.kind === "limited" || state.kind === "error" ? (
         <div className="rounded-lg bg-danger-soft px-3 py-2.5 t-sub font-bold text-danger">{state.message}</div>
       ) : (
@@ -166,9 +167,12 @@ export function RegionMarketSummary({ regions }: { regions: string[] }) {
             /* [1023] 흰 카드 위 잉크 토큰 — 예전 네이비 .ai-panel */
             <div className="flex flex-col gap-2 rounded-2xl border border-line bg-bg p-4 max-md:p-3.5">
               <div className="flex items-start gap-3">
-                <span className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-lg border border-line t-caption font-bold text-ink">
-                  AI
-                </span>
+                {/* [1028] "AI" 표시는 AI 모델이 쓴 요약일 때만 — 규칙 요약에는 붙이지 않는다 */}
+                {state.mode === "llm" && (
+                  <span className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-lg border border-line t-caption font-bold text-ink">
+                    AI
+                  </span>
+                )}
                 <div className="flex-1 t-sub text-text-1">{state.comment}</div>
                 <span className="shrink-0 rounded border border-line px-1.5 py-px t-caption font-bold text-text-3">
                   {state.mode === "llm" ? "AI 생성" : "규칙 기반 요약"}

@@ -147,7 +147,7 @@ export default async function TownNewsPage() {
             )}
             {rows.length > 0 && rows.length < newsCount && (
               <span>
-                같은 사건 접어 <b className="t-num text-ink">{rows.length.toLocaleString("ko-KR")}</b>행
+                같은 사건 묶어 <b className="t-num text-ink">{rows.length.toLocaleString("ko-KR")}</b>건
               </span>
             )}
           </>
@@ -201,7 +201,7 @@ export default async function TownNewsPage() {
             <div className="rise-in mb-5">
               <ErrorState
                 title="뉴스를 불러오지 못했어요"
-                desc="조회가 실패했습니다. 수집된 뉴스가 없다는 뜻은 아닙니다. 잠시 후 다시 열어 주세요."
+                desc="잠시 후 다시 시도해 주세요."
                 action={{ label: "동네이야기 보기", href: "/town" }}
               />
             </div>

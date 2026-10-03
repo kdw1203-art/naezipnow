@@ -31,7 +31,7 @@ export function WelcomeHandoff() {
       promptUpgrade({
         title: "AI 월간 한도 도달",
         message:
-          "노트는 저장됐고 지도 비교로 이어졌어요. AI LLM 정리는 구독에서 이어서 쓸 수 있어요.",
+          "노트는 저장됐고 지도 비교로 이어졌어요. AI 정리는 구독에서 이어서 쓸 수 있어요.",
         ctaLabel: "구독하고 AI 이어서 쓰기",
       });
     }
@@ -50,7 +50,7 @@ export function WelcomeHandoff() {
       <div className="card flex flex-col gap-2 rounded-2xl px-3.5 py-3 shadow-lg">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <div className="t-body font-bold text-ink">온보딩 루프 완료</div>
+            <div className="t-body font-bold text-ink">가입을 마쳤어요</div>
             <p className="mt-0.5 t-sub text-text-2">
               {aiLabel} · 같은 생활권 후보 지도 비교
             </p>

@@ -204,3 +204,23 @@ test("어느 아키타입이든 블록 네 개가 정확히 한 번씩 나온다
     assert.deepEqual([...o].sort(), ["body", "counters", "headline", "widget"], `${k}: 블록 구성이 다르다`);
   }
 });
+
+/* [1028 · 제안 9] 허브 카드 설명·도구 머리 한 줄(premise)은 명사형 사실 — "한눈에 보여 줘요·그려요·짜요·봐요" 설명조를 걷었다 */
+test("[1028] premise 16종 — 명사형 사실 한 줄: 해요체·합니다체 어미, 줄표, '아니', 권유가 없다", () => {
+  for (const id of PERSONA_IDS) {
+    const line = TOOL_PERSONAS[id].premise;
+    assert.ok(line.trim().length >= 8, `${id}: 너무 짧다 "${line}"`);
+    assert.doesNotMatch(line, /(요|다|죠)\.?$/, `${id}: 설명조 어미 "${line}"`);
+    assert.doesNotMatch(line, /—|아니|세요|한눈에/, `${id}: "${line}"`);
+  }
+  assert.equal(new Set(PERSONA_IDS.map((id) => TOOL_PERSONAS[id].premise)).size, 16, "설명이 겹친다");
+  /* 1028 작업 지시에 적힌 문장 그대로 */
+  assert.equal(TOOL_PERSONAS["ai-diagnosis"].premise, "가격 흐름 · 거래 · 공급 · 이웃 평가 · 금리 5가지 점수");
+  assert.equal(TOOL_PERSONAS["ai-prediction"].premise, "1~5년 뒤 가격을 낙관 · 기본 · 비관 3가지로 계산");
+  assert.equal(TOOL_PERSONAS["ai-inspection"].premise, "같은 지역 거래 많은 단지로 하루 임장 순서");
+  assert.equal(TOOL_PERSONAS["ai-timing"].premise, "가격 흐름 · 거래 열기 · 입주 물량 신호 3개");
+  assert.equal(TOOL_PERSONAS["market:price"].premise, "면적대별 실거래가 · 호가 제외");
+  assert.equal(TOOL_PERSONAS["market:timing"].premise, "12개월 매매가격지수 · 거래량 흐름");
+  assert.equal(TOOL_PERSONAS["market:temperature"].premise, "매주 기록한 0~100점 추세");
+  assert.equal(TOOL_PERSONAS["market:gap"].premise, "시군구별 전세가율 · 갭 순위");
+});

@@ -267,7 +267,7 @@ export default async function TownRegionHomePage({
           </div>
           {postsFailed ? (
             <div className="card rounded-2xl px-5 py-6 t-body text-text-2 max-md:px-3.5 max-md:py-4">
-              글을 지금 불러오지 못했어요. 잠시 후 다시 열어봐 주세요.
+              이웃 글을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
             </div>
           ) : communityPosts.length === 0 ? (
             <div className="story-card flex flex-col items-start gap-2 px-5 py-6 max-md:px-3.5 max-md:py-4">

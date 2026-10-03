@@ -31,7 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "공공 부동산 자료 현황 | 내집나우",
     description:
-      "KB 시세·공시가격·실거래·신고이력 등 공공·공개 부동산 자료의 연동 현황과 단지별 조회.",
+      "KB 시세·공시가격·실거래·신고이력 등 공공·공개 부동산 자료의 제공 상태와 단지별 조회.",
     /* 검색 제외는 **읽어서 0건임을 확인했을 때만**. 못 읽은 날에 0건으로 치면 자료가 있는데도 하루 동안 색인에서 빠진다 */
     ...(ok && totalRows === 0 ? { robots: { index: false, follow: true } } : {}),
     // N7 — 필터·정렬 파라미터 조합이 별개 URL 로 색인되지 않도록 canonical 고정
@@ -49,17 +49,19 @@ export default async function DataRecordsPage() {
       title="공공 부동산 자료 현황"
     >
       <p className="rise-in mb-5 text-[13px] leading-[1.6] text-text-2">
-        KB 시세·국토부 실거래·부동산 공시가격·신고이력 등 공공·공개 자료를 단지 단위로
-        모읍니다. 출처별 자료(일사편리·부동산공시가격알리미·KB·국토부 등) 기준.
+        준비 중인 공공 자료 목록이에요. 지금 쓰는 자료는 &lsquo;데이터 출처&rsquo;에 있어요.
       </p>
 
-      {/* 데이터셋 연동 현황 */}
+      {/* 자료별 제공 상태 — [1028 · 제안 8] 내부 말("데이터셋 연동 현황·적재") → 일반 말. 합계는 1건 이상일 때만 */}
       <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
         <h2 className="text-[15px] font-bold text-ink">
-          데이터셋 연동 현황{" "}
-          <span className="text-[12px] font-medium text-text-3">
-            총 {totalRows.toLocaleString()}건 적재
-          </span>
+          자료별 제공 상태
+          {totalRows > 0 && (
+            <span className="text-[12px] font-medium text-text-3">
+              {" "}
+              총 {totalRows.toLocaleString()}건
+            </span>
+          )}
         </h2>
         <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
           {CODEF_PRODUCTS.map((p) => {
@@ -83,7 +85,7 @@ export default async function DataRecordsPage() {
                     </span>
                   ) : (
                     <span className="rounded-full bg-bg chip-pad t-caption font-semibold text-text-3">
-                      연동 대기
+                      준비 중
                     </span>
                   )}
                 </div>
@@ -93,9 +95,10 @@ export default async function DataRecordsPage() {
         </div>
         {/* [1011] "‘연동 대기’ 자료는 CODEF(codef.io) 자격 증명 설정 후 자동 적재됩니다" 를 걷었다
             (소유자 지시) — 어떤 중계사와 어떤 자격 증명으로 자료를 끌어오는지는 쓰는 사람이 알 필요가
-            없다. 칸마다 붙은 "연동 대기" 배지가 아직 못 보여 준다는 사실을 이미 말한다. */}
+            없다. 칸마다 붙은 "준비 중" 배지([1028] 옛 "연동 대기")가 아직 못 보여 준다는 사실을 이미 말한다. */}
         <p className="mt-3 text-[12px] leading-[1.6] text-text-3">
-          실거래·시세 지도는 국토교통부·KB 공개 데이터로 운영 중이에요.
+          {/* [1028 · 제안 11] "KB"를 뺐다 — 지역 통계는 전부 한국부동산원 자료다(2026-10-03 운영: market_region_price 109개 지역 source=reb, market_price_indices REB·BOK, KB 수집 기록 0건). KB 자료가 실제로 들어오면 되살린다. */}
+          실거래 지도는 국토교통부 실거래가, 지역 통계는 한국부동산원 자료로 운영 중이에요.
         </p>
       </section>
 

@@ -178,12 +178,19 @@ export function EmptyState({
   );
 }
 
+/** [1028] 원인 원문을 화면에 낼지 — 관리자 화면은 늘, 방문자 화면은 "오류 코드 …"만.
+ *  예전에는 fetch 실패 원문("Failed to fetch")·DB 오류 문장이 방문자 화면의 회색 칸에 그대로 나갔다. */
+export function visibleCause(cause: string, tone: StateTone): boolean {
+  return tone === "admin" || /^오류 코드 /.test(cause);
+}
+
 export type ErrorStateProps = {
   /** 무엇이 안 됐는지. 기본값은 조회 실패. */
   title?: string;
   /** 이용자가 다음에 뭘 하면 되는지. */
   desc?: string;
-  /** 원인 원문(에러 메시지 등). 있으면 그대로 보여줍니다 — 추측해 지어내지 않습니다. */
+  /** 원인 원문(에러 메시지 등). [1028] 관리자 화면(tone="admin")에서만 그대로 보인다 — 방문자 화면에는
+   *  "오류 코드 …"로 시작하는 짧은 코드(문의할 때 쓰는 값)만 보이고, 영문 오류·DB 메시지 원문은 보이지 않는다. */
   cause?: string;
   action?: EmptyStateAction;
   /** 클라이언트 컴포넌트에서만 — 다시 시도 버튼. */
@@ -218,7 +225,7 @@ export function ErrorState({
       </div>
       <p className={TITLE[tone]}>{title}</p>
       {desc && <p className={DESC[tone]}>{desc}</p>}
-      {cause && <p className={CAUSE[tone]}>{cause}</p>}
+      {cause && visibleCause(cause, tone) && <p className={CAUSE[tone]}>{cause}</p>}
       {(onRetry || action) && (
         <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
           {onRetry &&

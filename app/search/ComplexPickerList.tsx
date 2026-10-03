@@ -70,7 +70,7 @@ export default function ComplexPickerList({
         </div>
       ) : failed ? (
         <div role="status" className="px-3 py-3 t-sub text-text-3">
-          지금은 단지 검색이 되지 않아요 (결과 없음이 아니에요)
+          단지 검색 결과를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
         </div>
       ) : empty ? (
         <div className="flex flex-col gap-1 px-3 pb-2 pt-3">

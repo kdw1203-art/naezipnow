@@ -120,11 +120,11 @@ export default async function NewsTagPage({
 
       {failed ? (
         <div className="card mt-4 rounded-2xl px-5 py-6 t-body text-text-2">
-          뉴스를 지금 불러오지 못했어요 — 잠시 후 다시 열어봐 주세요.
+          뉴스를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
         </div>
       ) : clusters.length === 0 ? (
         <div className="card mt-4 rounded-2xl px-5 py-6 t-body leading-[1.7] text-text-2">
-          최근 수집분에 {tag.label} 보도가 없어요. 수집은 매일 이어지니 다시 들러 주세요.
+          최근 수집분에 {tag.label} 보도가 없어요. 기사는 매일 수집해요.
         </div>
       ) : (
         /* [1006] 뉴스룸과 같은 행 재질(.news-row) — 분류 태그 · 출처 · 날짜 · 제목 */

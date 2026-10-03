@@ -229,8 +229,7 @@ export function ProjectDetailPanel({
             ))}
           </ul>
           <p className="mt-2 t-caption text-text-3">
-            위 항목은 법정 일반 절차에 대한 설명이에요. 이 구역에 대해 저희가 확인한 결과가 아니라,
-            직접 확인하실 목록이에요.
+            법정 일반 절차 기준의 확인 목록이에요. 이 구역을 내집나우가 확인한 결과는 아니에요.
           </p>
         </div>
       ) : null}

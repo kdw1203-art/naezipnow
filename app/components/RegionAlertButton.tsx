@@ -84,10 +84,10 @@ export function RegionAlertButton({
       }
       const body = (await res.json().catch(() => null)) as { error?: string } | null;
       setPhase("error");
-      showToast(body?.error || "알림을 설정하지 못했어요 — 다시 눌러 주세요");
+      showToast(body?.error || "알림을 설정하지 못했어요. 다시 눌러 주세요");
     } catch {
       setPhase("error");
-      showToast("연결이 끊겼어요 — 다시 눌러 주세요");
+      showToast("연결이 끊겼어요. 다시 눌러 주세요");
     }
   }
 

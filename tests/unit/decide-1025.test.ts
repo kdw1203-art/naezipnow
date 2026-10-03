@@ -253,7 +253,7 @@ test("배선 — /decide · /my/assistant · API · 마이 링크 · 면책 · �
   assert.ok(decide.includes("/api/decide/school"));
   /* [1025b] 빈 상태는 카드 하나 · 레일·하단 바는 후보 2곳의 값이 있을 때만(ready) · 세그먼트는 chip-active(네이비 채움 없음) ·
      폰의 유일한 행동은 MobilePrimaryBar · 섹션 점은 파랑 하나 · 내부 용어(비교 트레이·POI) 없음 */
-  assert.ok(decide.includes("후보를 담으면 내 기준으로 순위가 나옵니다"));
+  assert.ok(decide.includes("후보를 담으면 내 기준으로 순위가 나와요"));
   assert.ok(decide.includes("{ready && (\n          <aside"), "레일은 ready 일 때만");
   assert.ok(decide.includes('{ready && <MobilePrimaryBar label="결정 저장">{saveButton}</MobilePrimaryBar>}'));
   assert.ok(decide.includes('className="nz-dot-blue"'));

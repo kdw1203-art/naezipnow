@@ -160,8 +160,8 @@ export function WatchlistButton({
         showToast(
           j.error ??
             (target
-              ? "관심 단지에 담지 못했어요 — 잠시 후 다시 눌러 주세요"
-              : "관심 단지에서 빼지 못했어요 — 잠시 후 다시 눌러 주세요"),
+              ? "관심 단지에 담지 못했어요. 잠시 후 다시 시도해 주세요."
+              : "관심 단지에서 빼지 못했어요. 잠시 후 다시 시도해 주세요."),
         );
         return;
       }
@@ -198,7 +198,7 @@ export function WatchlistButton({
         showToast("관심 단지에 담았어요 · 실거래가 변동을 알려 드려요");
       }
     } catch {
-      showToast("네트워크 오류로 저장하지 못했어요 — 연결을 확인하고 다시 눌러 주세요");
+      showToast("네트워크 오류로 저장하지 못했어요. 연결을 확인하고 다시 시도해 주세요.");
     } finally {
       busyRef.current = false;
       setBusy(false);
@@ -501,7 +501,7 @@ export function ComplexHubTabs({
           ) : (
             <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
               {dealsFailed
-                ? "실거래를 지금 불러오지 못했어요. 잠시 후 새로고침해 주세요."
+                ? "실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
                 : "아직 신고된 국토교통부 실거래가 없어요"}
             </div>
           )}
@@ -534,7 +534,7 @@ export function ComplexHubTabs({
             <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
               {notesFailed ? (
                 /* [1015 · 규칙 D] 오류 한 줄 */
-                "이야기를 지금 불러오지 못했어요. 잠시 후 다시 열어 주세요."
+                "이야기를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
               ) : (
                 /* [970 · B-17] 이 목록은 동네이야기 글 — "임장노트가 없다"고 적으면 아래
                    임장노트 섹션과 어긋난다 */

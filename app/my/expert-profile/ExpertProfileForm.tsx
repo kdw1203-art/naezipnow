@@ -166,7 +166,7 @@ export function ExpertProfileForm({ expert }: { expert: ExpertEditable }) {
       });
       setDirty(false);
       settle("done");
-      showToast("프로필이 저장됐어요 — 목록·상세에 바로 반영돼요");
+      showToast("프로필이 저장됐어요. 목록·상세에 바로 반영돼요");
     } catch {
       showToast("네트워크 오류가 발생했어요");
       settle("error");
@@ -275,7 +275,7 @@ export function ExpertProfileForm({ expert }: { expert: ExpertEditable }) {
             value={extra}
             onChange={(e) => mark(setExtra)(e.target.value)}
             maxLength={60}
-            placeholder="그 밖의 분야 (쉼표로 구분 · 예: 상가, 토지) — 저장 시 추가돼요"
+            placeholder="그 밖의 분야 (쉼표로 구분 · 예: 상가, 토지) · 저장 시 추가돼요"
             className={inputCls}
           />
         </div>

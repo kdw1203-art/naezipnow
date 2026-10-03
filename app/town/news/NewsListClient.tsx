@@ -191,7 +191,7 @@ export function NewsListClient({
       });
       setMore(Boolean(j.hasMore));
     } catch {
-      setMoreError("더 불러오지 못했어요. 잠시 후 다시 눌러 주세요.");
+      setMoreError("더 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       setMoreLoading(false);
     }
@@ -316,11 +316,11 @@ export function NewsListClient({
 
       {/* 무엇을 세고 있는지 — 필터가 걸리면 "받은 것 중 이 조건" 으로 모수를 밝힌다 */}
       <p className="mb-1 t-sub text-text-3" role="status">
-        {/* 여기서 세는 건 **행**(같은 사건을 접은 뒤)이다 — 마스트헤드의 "최근 수집분 n건"(기사 수)과
-            다른 수이므로 단위도 다르게 부른다 */}
+        {/* 여기서 세는 건 같은 사건을 묶은 뒤의 수다 — 머리의 "최근 n건"(기사 수)과 다른 수라
+            "같은 사건은 한 건으로 묶음"을 함께 적는다. [1028 · 제안 8] 단위 "행"(내부 말) → "건" */}
         {anyFilter
-          ? `지금까지 받은 ${allRows.length.toLocaleString("ko-KR")}행 중 이 조건 ${list.length.toLocaleString("ko-KR")}행`
-          : `${allRows.length.toLocaleString("ko-KR")} / ${total.toLocaleString("ko-KR")}행 · 같은 사건은 한 행으로 접었어요`}
+          ? `지금까지 받은 ${allRows.length.toLocaleString("ko-KR")}건 중 이 조건 ${list.length.toLocaleString("ko-KR")}건`
+          : `${allRows.length.toLocaleString("ko-KR")} / ${total.toLocaleString("ko-KR")}건 · 같은 사건은 한 건으로 묶음`}
       </p>
 
       {/* 행 목록 — 첫 행은 톱기사(제목 크게 · 요약 두 줄) */}
@@ -384,7 +384,7 @@ export function NewsListClient({
             </button>
           ) : (
             <p role="status" className="t-sub text-text-3">
-              접힌 {total.toLocaleString("ko-KR")}행을 다 봤어요 · 더 오래된 기사는{" "}
+              {total.toLocaleString("ko-KR")}건을 다 봤어요 · 더 오래된 기사는{" "}
               <Link href="/digest" className="inline-flex min-h-[24px] items-center font-bold text-primary">
                 주간 다이제스트
               </Link>

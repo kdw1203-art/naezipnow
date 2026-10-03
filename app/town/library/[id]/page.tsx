@@ -64,8 +64,8 @@ export default async function ReportDetailPage({
       <PageShell breadcrumb="동네이야기 › 자료실">
         <div className="mx-auto w-full max-w-[680px]">
           <ErrorState
-            title="리포트를 지금 불러올 수 없어요"
-            desc="리포트가 없는 게 아니라 조회 자체가 실패했어요. 잠시 후 새로고침해 주세요."
+            title="리포트를 불러오지 못했어요"
+            desc="잠시 후 다시 시도해 주세요."
             action={{ label: "자료실로 이동", href: "/town/library" }}
           />
         </div>
@@ -191,8 +191,8 @@ export default async function ReportDetailPage({
               /* 구매 이력 확인 실패 — 결제 버튼을 그리면 이미 산 사람이 또 사게
                  될 수 있다. "모르겠다"는 상태 그대로 보여주고 재시도를 권한다. */
               <p className="rounded-xl bg-danger-soft px-4 py-3 text-center t-sub leading-[1.7] text-ink">
-                구매 이력을 지금 확인하지 못했어요. 이미 구매하셨다면 잠시 후
-                새로고침해 주세요. 확인 없이 결제 버튼을 보여드리지 않아요.
+                구매 이력을 확인하지 못했어요. 잠시 후 다시 시도해 주세요. 확인 전에는 결제
+                버튼이 나오지 않아요.
               </p>
             ) : noteHref && isPaid ? (
               <BuyReportButton reportId={r.id} price={r.price} title={r.title} />

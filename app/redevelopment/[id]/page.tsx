@@ -235,7 +235,7 @@ export default async function RedevelopmentZonePage({
             </p>
             {complexes.failed ? (
               <p className="mt-3 rounded-lg bg-danger-soft px-3 py-2 t-sub text-ink">
-                주변 단지를 불러오지 못했어요(조회 실패). 거래 단지가 없다는 뜻은 아니에요.
+                주변 단지를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
               </p>
             ) : complexes.items.length === 0 ? (
               <p className="mt-3 t-sub text-text-3">반경 안에 매매 실거래가 있는 아파트가 없어요.</p>
@@ -306,7 +306,7 @@ export default async function RedevelopmentZonePage({
               반경 약 {(ZONE_NEARBY_ZONE_RADIUS_M / 1000).toFixed(0)}km · 가까운 구간 순
             </p>
             {zones.failed ? (
-              <p className="mt-2 t-sub text-text-3">불러오지 못했어요(조회 실패).</p>
+              <p className="mt-2 t-sub text-text-3">가까운 구역을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
             ) : zones.items.length === 0 ? (
               <p className="mt-2 t-sub text-text-3">이 지도에 실린 구역 가운데 반경 안에 다른 구역이 없어요.</p>
             ) : (

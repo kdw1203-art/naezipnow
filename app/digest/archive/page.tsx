@@ -82,8 +82,6 @@ export default async function DigestArchivePage() {
         {loadFailed ? (
           <div className="mt-6 card rounded-2xl px-5 py-8 text-center t-body text-text-3">
             <strong className="text-ink">{LOAD_FAILED_LINE}</strong>
-            <br />
-            기록이 없다는 뜻이 아니라, 조회가 제때 끝나지 않았거나 실패했다는 뜻입니다.
           </div>
         ) : weeks.length > 0 ? (
           <div className="mt-6 flex flex-col gap-3">

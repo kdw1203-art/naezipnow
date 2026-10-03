@@ -288,7 +288,7 @@ export default async function TxRegionPage({
             {region.name} 임장 가이드 <span aria-hidden="true" className="text-text-3">›</span>
           </Link>
           <Link href="/complex/browse" className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline">
-            단지별 실거래 브라우즈 <span aria-hidden="true" className="text-text-3">›</span>
+            단지별 실거래 보기 <span aria-hidden="true" className="text-text-3">›</span>
           </Link>
           <Link href="/tx" className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline">
             다른 지역 <span aria-hidden="true" className="text-text-3">›</span>

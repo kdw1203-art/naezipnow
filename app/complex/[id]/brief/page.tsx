@@ -303,7 +303,7 @@ export default async function ComplexBriefPage({ params }: { params: Promise<{ i
             />
             {typeRows.length === 0 ? (
               <p className="mt-2 rounded-lg bg-bg px-3 py-4 text-center t-body text-text-3">
-                {dealsFailed ? "실거래를 지금 불러오지 못했습니다. 잠시 후 새로고침해 주세요." : "아직 신고된 매매 실거래 없음"}
+                {dealsFailed ? "실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요." : "아직 신고된 매매 실거래 없음"}
               </p>
             ) : (
               <div className="-mx-1 mt-1 overflow-x-auto px-1">

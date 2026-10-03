@@ -139,8 +139,11 @@ test("[1023] 허브 — 계열 머리 \"N종\" 배지는 그 계열 앵커 링�
   assert.match(chips, /최근 사용 · \{last\.title\} ›/);
   /* 예시 계산 고지 한 줄은 배지가 아니라 details 안 첫 줄 */
   const sim = page.slice(page.indexOf('<details className="hub-sim'), page.indexOf("</details>"));
-  assert.ok(sim.indexOf("</summary>") < sim.indexOf("의사결정 근거로 쓰지 않는다"));
-  assert.match(sim, /실데이터 아님 · \{SIM_TOOLS\.length\}종/);
+  /* [1028] "실연동 전 도구 · … · 의사결정 근거로 쓰지 않는다" → "예시 수치로 계산 · 실데이터 아님"(내부 말·평어체 걷기) */
+  assert.ok(sim.indexOf("</summary>") < sim.indexOf(">예시 수치로 계산</p>"));
+  assert.ok(!page.includes("실연동"), "내부 말(실연동)이 화면·설명문에 남았다");
+  assert.match(sim, /실제 자료 아님 · \{SIM_TOOLS\.length\}종/);
+  assert.ok(!/>\s*실데이터 아님/.test(sim), "배지에 내부 말(실데이터)이 남았다");
 });
 
 /* ── ③ 도구 머리 통일 ──────────────────────────────────────────────────────── */
@@ -203,7 +206,9 @@ test("[1023] \"실데이터 기준\" 부연 라벨 4곳 제거 · 노트 AI 결�
   }
   /* 노트 AI 결과 판 — 문구·구조는 그대로(다시 시도 40px · 총평 · 면책) */
   const note = code("app/analysis/ai-note-analysis.tsx");
-  assert.match(note, /규칙 기반 요약 · LLM 아님/);
+  /* [1028] 라벨에서 내부 말(LLM)을 걷었다 — AI 모델이 쓴 결과만 "AI", 규칙으로 정리한 결과는 "규칙 정리" */
+  assert.match(note, /state\.result\.mode === "llm" \? "AI 정리" : "규칙 정리"/);
+  assert.doesNotMatch(note, /LLM/);
   assert.match(note, /min-h-10[^"]*"\s*>\s*다시 시도/);
   assert.match(note, /총평<\/b> · \{state\.result\.verdict\}/);
   assert.match(note, /\{state\.result\.disclaimer\}\./);
@@ -217,4 +222,68 @@ test("[1023] \"실데이터 기준\" 부연 라벨 4곳 제거 · 노트 AI 결�
   assert.match(region, /className="t-section text-ink">\s*주별 기록/);
   assert.match(region, /min-w-\[460px\] text-left t-body/);
   assert.match(region, /export const revalidate = 86_400;/);
+});
+
+/* ── ⑤ [1028] 문구 정리 — 허브 머리 · 예시 계산 고지 · 계산 요약 · 오류 문구 · 규칙 요약 ─────────────── */
+test("[1028] 허브 머리 — 실거래 건수·단지 수를 못 읽으면(null) 그 조각을 통째로 뺀다('실거래 —건' 없음)", () => {
+  const hero = code("app/analysis/hub-hero.tsx");
+  assert.match(hero, /\{coverage\.txCount !== null && \(\s*<>\s*\{" "\}· 실거래 <b className="t-num text-ink"><Num n=\{coverage\.txCount\} \/><\/b>건\s*<\/>\s*\)\}/);
+  assert.match(hero, /\{coverage\.complexCount !== null && \(\s*<>\s*\{" "\}· 단지 <b className="t-num text-ink"><Num n=\{coverage\.complexCount\} \/><\/b>곳\s*<\/>\s*\)\}/);
+  /* 도구 수는 늘 있다(코드 상수) */
+  assert.match(hero, /\{" "\}· 도구 <b className="t-num text-ink"><CountUp value=\{toolCount\} \/><\/b>개/);
+});
+
+test("[1028] 허브 설명문·예시 계산 고지 — 줄표 연결·내부 말(실연동)·평어체 없음", () => {
+  const page = code("app/analysis/page.tsx");
+  const meta = page.slice(page.indexOf("export const metadata"), page.indexOf('path: "/analysis"'));
+  assert.ok(meta.includes("'예시 계산'으로 따로 표시합니다."), "예시 계산 고지는 설명문에 남는다");
+  assert.doesNotMatch(meta, /—|실연동/);
+  assert.match(page, /<p className="t-sub mt-2 text-text-3">예시 수치로 계산<\/p>/);
+  assert.ok(!page.includes("쓰지 않는다"), "평어체 고지가 남았다");
+});
+
+test("[1028] 시나리오 계산 요약 — 'AI' 칩 없음 · 이름표는 '계산 요약' · 권유 없이 해요체 · 면책은 그대로", () => {
+  const d = code("app/analysis/scenario/ScenarioDetails.tsx");
+  assert.doesNotMatch(d, />\s*AI\s*</, "규칙 계산 요약에 AI 칩이 붙어 있다");
+  assert.match(d, /t-caption font-bold text-text-3">계산 요약<\/span>/);
+  assert.ok(!d.includes("규칙 기반 요약"));
+  for (const s of ["재조정하세요", "계산했습니다", "기준입니다", "범위입니다", "커집니다"]) assert.ok(!d.includes(s), s);
+  assert.ok(d.includes("으로 계산했어요.") && d.includes("범위예요.") && d.includes("위험 범위예요."));
+  assert.match(d, /본 분석은 참고용이며 투자 판단의 책임은 이용자에게 있습니다\./);
+  /* 같은 화면의 금리 스트레스 곡선 설명도 해요체 — 계산 요약과 말끝을 섞지 않는다(면책 문장은 예외) */
+  const c = code("app/analysis/scenario/ScenarioClient.tsx");
+  assert.ok(c.includes("+3.0%p 까지 올라도 소득 대비 40%를 넘지 않아요(현재 조건 기준)."));
+  assert.ok(c.includes("를 넘어서면 소득 대비 40%(통상 부담 한계)를 지나가요. 지금은"));
+  assert.match(c, /\{calc\.rate\.toFixed\(2\)\}% 예요\./);
+  for (const s of ["넘지 않습니다", "지나갑니다", "% 입니다"]) assert.ok(!c.includes(s), s);
+});
+
+test("[1028] 오류 문구 표준 — '○○을 불러오지 못했어요' + '잠시 후 다시 시도해 주세요.'('없는 것과는 달라요'·'조회가 실패했습니다' 없음)", () => {
+  const wb = code("app/analysis/ai/[tool]/WorkbenchClient.tsx");
+  assert.match(wb, /<p className="t-body font-bold text-warning">자료를 불러오지 못했어요\. 잠시 후 다시 시도해 주세요\.<\/p>/);
+  assert.ok(!wb.includes("없는 것과는 달라요"));
+  const gap = code("app/analysis/gap/page.tsx");
+  assert.match(gap, /title="지역 시세를 불러오지 못했어요"\s+desc="잠시 후 다시 시도해 주세요\."/);
+  assert.ok(!gap.includes("조회가 실패했습니다") && !gap.includes("(조회 실패)"));
+  assert.ok(gap.includes("월세 환산 수익률·실측 갭 열을 불러오지 못했어요. 전세가율 열은 그대로 볼 수 있어요."));
+});
+
+test("[1028] 후보 지역 규칙 요약(compare-summary) — 숫자와 사실, 해요체 · 권유(협상 여지·추격 매수·좁혀 보세요) 없음", () => {
+  const route = code("app/api/ai/compare-summary/route.ts");
+  const rule = route.slice(route.indexOf("function ruleComment"), route.indexOf("export async function POST"));
+  for (const s of ["협상 여지", "추격 매수", "좁혀 보세요", "큽니다", "작습니다", "고려하세요", "확인해 주세요"]) assert.ok(!rule.includes(s), s);
+  assert.ok(rule.includes("% 내렸어요`") && rule.includes("% 올랐어요`"));
+  assert.ok(rule.includes("%가 가장 높고 갭 비율이 가장 작아요`"));
+  assert.ok(rule.includes('"비교 지역: " +'));
+  /* 고르는 규칙은 그대로 — 가장 많이 내린 곳 · 가장 많이 오른 곳 · 전세가율이 가장 높은 곳 */
+  assert.ok(rule.includes("(softest.saleChangeMonthly ?? 0) < 0") && rule.includes("hottest !== softest && (hottest.saleChangeMonthly ?? 0) > 0"));
+});
+
+test("[1028] 매수 타이밍 머리 한 줄(useCase)은 명사형 사실 — 빈 상태 문장과 같은 말을 되풀이하지 않는다", () => {
+  const src = code("lib/ai/tool-identity.ts");
+  assert.ok(src.includes('useCase: "가격·거래·입주 물량 신호 3개"'));
+  assert.ok(!src.includes("지금 사기 좋은지 신호등 3개로 확인"));
+  /* 폰에서 기준 시점 칩과 한 줄에 서야 한다 — 예전 문장(20자)보다 길어지면 칩이 다음 줄로 밀린다 */
+  const m = /useCase: "(가격·거래·입주 물량 신호 3개)"/.exec(src);
+  assert.ok(m && m[1].length <= 20);
 });

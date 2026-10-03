@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     logger.error("[api/qna] 질문 목록 조회 실패", e);
     return NextResponse.json(
-      { error: "질문 목록을 지금 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." },
+      { error: "질문 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요." },
       { status: 503 },
     );
   }

@@ -21,9 +21,12 @@ import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
+/* [1028] 규칙 요약은 숫자와 사실만 — "협상 여지가 큽니다"·"추격 매수 부담을 고려하세요"·"좁혀 보세요" 같은 권유를 걷고,
+   화면(후보 지역 실시세 스냅샷)의 다른 문장과 같은 해요체로 맞췄다. 고르는 규칙(가장 많이 내린 곳 · 가장 많이 오른 곳 ·
+   전세가율이 가장 높은 곳)과 숫자는 그대로다. */
 function ruleComment(snaps: AnalysisRegionSnapshot[]): string {
   if (snaps.length === 0) {
-    return "비교 대상 지역의 실시세 데이터가 아직 없어요. 시세 수집 후 다시 확인해 주세요.";
+    return "비교할 지역의 통계가 아직 없어요."; // [1028] "실시세 데이터"(내부 말) → "통계"(한국부동산원 지역 통계)
   }
   const parts: string[] = [];
   const withChange = snaps.filter((s) => s.saleChangeMonthly !== null);
@@ -36,12 +39,12 @@ function ruleComment(snaps: AnalysisRegionSnapshot[]): string {
     )[0];
     if ((softest.saleChangeMonthly ?? 0) < 0) {
       parts.push(
-        `${softest.regionName}는 전월 대비 ${Math.abs(softest.saleChangeMonthly ?? 0).toFixed(1)}% 조정 중이라 가격 협상 여지가 상대적으로 큽니다`,
+        `${softest.regionName}는 전월 대비 ${Math.abs(softest.saleChangeMonthly ?? 0).toFixed(1)}% 내렸어요`,
       );
     }
     if (hottest !== softest && (hottest.saleChangeMonthly ?? 0) > 0) {
       parts.push(
-        `${hottest.regionName}는 ${((hottest.saleChangeMonthly ?? 0)).toFixed(1)}% 상승 흐름이라 추격 매수 부담을 함께 고려하세요`,
+        `${hottest.regionName}는 전월 대비 ${((hottest.saleChangeMonthly ?? 0)).toFixed(1)}% 올랐어요`,
       );
     }
   }
@@ -49,18 +52,19 @@ function ruleComment(snaps: AnalysisRegionSnapshot[]): string {
   if (withJr.length > 0) {
     const best = [...withJr].sort((a, b) => (b.jeonseRatio ?? 0) - (a.jeonseRatio ?? 0))[0];
     parts.push(
-      `전세가율은 ${best.regionName} ${((best.jeonseRatio ?? 0)).toFixed(0)}%가 가장 높아 갭 부담이 가장 작습니다`,
+      `전세가율은 ${best.regionName} ${((best.jeonseRatio ?? 0)).toFixed(0)}%가 가장 높고 갭 비율이 가장 작아요`,
     );
   }
   if (parts.length === 0) {
     parts.push(
-      snaps
-        .map((s) =>
-          s.avgSaleWon
-            ? `${s.regionName} 평균 ${formatEokWon(s.avgSaleWon)}`
-            : s.regionName,
-        )
-        .join(", ") + " 기준으로 예산 대비 후보를 좁혀 보세요",
+      "비교 지역: " +
+        snaps
+          .map((s) =>
+            s.avgSaleWon
+              ? `${s.regionName} 평균 ${formatEokWon(s.avgSaleWon)}`
+              : s.regionName,
+          )
+          .join(", "),
     );
   }
   return parts.join(". ") + ".";

@@ -72,11 +72,11 @@ test("[1026] 시세·타이밍 — 결론 '서울 강남구 지수 -0.42% · 온
     verdict: "상승 지속",
     latestIndex: 100.1,
     tempScore: 37,
-    tempHeadline: "조정 흐름 지속",
+    tempHeadline: "서늘함",
   };
   const c = timingConclusion(input)!;
   assert.equal(c.title, "서울 강남구 지수 -0.42% · 온도 37");
-  assert.deepEqual(c.chip, { label: "조정 흐름 지속", tone: "neutral" });
+  assert.deepEqual(c.chip, { label: "서늘함", tone: "neutral" });
   assert.equal(c.sub, "매매가격지수 100.1pt · 지난달 대비 -0.42% · 기간 누적 +5.2% · 추세 상승 지속");
   assert.equal(timingConclusion({ ...input, latestChangePct: 0.02 })!.title, "서울 강남구 지수 보합 · 온도 37", "±0.05% 미만은 보합");
   assert.ok(timingConclusion({ ...input, weekly: true })!.sub!.includes("지난주 대비"));
@@ -92,7 +92,7 @@ test("[1026] 시세·타이밍 — 결론 '서울 강남구 지수 -0.42% · 온
   const plan = timingSteps(input, { index: true, volume: true, temp: true });
   assert.deepEqual(plan.steps.map((s) => s.label), ["지역 · 서울 강남구", "신호 · 지수·거래량·온도", "판단", "다음 행동"]);
   assert.equal(plan.current, 2);
-  assert.equal(plan.steps[2].note, "조정 흐름 지속");
+  assert.equal(plan.steps[2].note, "서늘함");
   assert.equal(timingSteps(input, { index: false, volume: false, temp: false }).steps[1].label, "신호");
 });
 

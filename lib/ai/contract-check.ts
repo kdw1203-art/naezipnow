@@ -64,19 +64,21 @@ export function contractCheck(
 
   const issues: ContractIssue[] = [];
   const whose = ratioSource === "region" ? "지역 평균 전세가율" : "전세가율";
+  /* [1028] 문장을 줄표로 잇지 않는다. 확인 항목은 카드 제목("계약 전에 확인할 것") 아래 **할 일 한 줄**(명사형)로 적는다 —
+     "꼭 보세요·확인하세요"(명령)도, "확인 전이에요. 확인 항목은 …이에요"(설명조)도 아니다. 아직 안 한 일이라는 것은 줄 앞의 빈 동그라미가 말한다. */
   if (ratioPct != null && ratioPct >= CONTRACT_RULE.dangerPct) {
-    issues.push({ text: `${whose} ${ratioPct}% — 90% 이상이면 집값이 조금만 내려도 보증금을 돌려받기 어려울 수 있어요(깡통전세 위험).`, tone: "danger" });
+    issues.push({ text: `${whose} ${ratioPct}%예요. 90% 이상이면 집값이 조금만 내려도 보증금을 돌려받기 어려울 수 있어요(깡통전세 위험).`, tone: "danger" });
   } else if (ratioPct != null && ratioPct >= CONTRACT_RULE.cautionPct) {
-    issues.push({ text: `${whose} ${ratioPct}% — 80% 이상이면 시세가 내릴 때 보증금을 못 돌려받을 수 있어요.`, tone: "warning" });
+    issues.push({ text: `${whose} ${ratioPct}%예요. 80% 이상이면 시세가 내릴 때 보증금을 못 돌려받을 수 있어요.`, tone: "warning" });
   }
   if (!registryChecked) {
-    issues.push({ text: "등기부등본 확인 전 — 근저당·가압류·가처분이 있는지 계약 전에 꼭 보세요.", tone: "todo" });
+    issues.push({ text: "등기부등본에서 근저당·가압류·가처분 확인", tone: "todo" });
   }
   if (!insured) {
-    issues.push({ text: "전세보증보험 가입 전 — HUG·HF 가입이 되는 집인지 계약 전에 확인하세요.", tone: "todo" });
+    issues.push({ text: "전세보증보험(HUG·HF) 가입 가능 여부 확인", tone: "todo" });
   }
   if (jeonseMan != null && jeonseMan > CONTRACT_RULE.highDepositMan) {
-    issues.push({ text: "보증금이 20억 원을 넘어요 — 계약 해제·보증금 반환 특약을 더 꼼꼼히 보세요.", tone: "warning" });
+    issues.push({ text: "보증금 20억 원 초과 · 계약 해제·보증금 반환 특약 확인", tone: "warning" });
   }
 
   const clauses = [

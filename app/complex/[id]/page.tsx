@@ -19,6 +19,8 @@ import {
   getTransactionHistoryWithBands,
   getComplexPosts,
   getComplexDeals,
+  getComplexDealMarks,
+  applyDealMarks,
   listComplexesInDistrict,
   listComplexesInDong,
   COMPLEX_DEALS_ROW_CAP,
@@ -400,6 +402,8 @@ const loadTradeWindow = cache((canonicalId: string) => getTradeWindowSamples(can
    loadTxHistory 가 이미 읽은 공용 행(complex-store loadTradeRowsShared, React cache)을 그대로 쓴다 — 추가 질의 0.
    키는 canonical_id(name-id) — kapt URL 로 열린 단지도 같은 행이다. */
 const loadDeals = cache((canonicalId: string) => getComplexDeals(canonicalId));
+/* [1028] 직거래·등기 표식 — 단지 상세의 추이 머리·최근 실거래 표만 쓴다(렌더당 1회) */
+const loadDealMarks = cache((canonicalId: string) => getComplexDealMarks(canonicalId));
 
 /**
  * [1007 · P2] 허브의 facts 재료 — 전부 **이미 띄운** 로더에서 받는다(전월세 원표본·임장노트는
@@ -792,7 +796,7 @@ function toView(
     aiTitle: `요약 · ${row.name}`,
     /* [1015 · 규칙 D] 대시(—)로 잇던 문장을 마침표로, "~드려요"를 사실 한 줄로 */
     aiBody: txFailed
-      ? "실거래를 지금 불러오지 못했습니다. 조회 실패이지 거래가 없다는 뜻은 아닙니다. 잠시 후 새로고침해 주세요."
+      ? "실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
       : latest
         ? [
             /* [1009 · C 리뷰] 대표가를 못 세웠을 때만 쓰는 폴백 — 무엇의 평균인지 적고 혼합 전월비는 싣지 않는다 */
@@ -808,7 +812,7 @@ function toView(
             .join(" · ")
         : "아직 신고된 매매 실거래 없음. 신고가 들어오면 요약이 생긴다.",
     listingsLabel: listingsFailed
-      ? "매물 정보를 지금 불러오지 못했습니다. 등록된 매물이 없다는 뜻은 아닙니다."
+      ? "매물 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
       : hubListings.length > 0
         ? `등록 실매물 ${hubListings.length}건 · 국토부 실거래가 비교 기준`
         : "등록된 실매물 없음",
@@ -868,7 +872,10 @@ async function loadView(id: string): Promise<HubView | null> {
      쓰면 안 된다. 축 요약 키(kapt 형태일 수 있는 id)는 enrich 가 끝나는 순간 띄운다. */
   const rowP = loadComplexRow(id);
   void rowP.then((r) => {
-    if (r) prefetchAxisSummary({ rowId: r.id, city: r.city, district: r.district });
+    /* [1028] 축 요약의 키는 canonical_id(name-id). 예전에는 r.id 를 넘겼는데 K-apt 대장에 연결된 단지는 그 값이
+       `kapt.A…` 라 실거래 조회 키로 풀리지 않았다 — "이 단지 결과 요약"의 최근 실거래가·최근 6개월 거래 칸이
+       거래가 수백 건인 단지에서도 "자료 없음"으로 나갔다(운영 실측: 래미안안양메가트리아 704건). */
+    if (r) prefetchAxisSummary({ rowId: r.canonical_id, city: r.city, district: r.district });
   }).catch(() => undefined);
   const row: ComplexRow = base; // name·district·canonical_id·address 는 enrich 가 바꾸지 않는다
   /* [995] 읍면동 — address 문자열에서만 얻을 수 있다(대표행에 컬럼이 없다). 메타데이터도
@@ -1384,13 +1391,17 @@ export default async function ComplexHubPage({
      · 관리비는 MgmtFeeCard 가 kapt 코드로 따로 읽는다(없으면 카드 생략) */
   const region = sectionRegionLabel(v.city, v.dong);
   const rentHist = await withSectionBudget(loadRentHistory(region, v.name)).catch(() => null);
-  const dealsForV2: HubDeal[] = dealsKnown ?? [];
+  /* [1028] 직거래·등기 표식 — 못 읽으면(실패·예산 초과) 표식 없이 예전 그대로 그린다 */
+  const dealMarks = dealsKnown
+    ? await withSectionBudget(loadDealMarks(rowForFacts?.canonical_id ?? complexId)).catch(() => null)
+    : null;
+  const dealsForV2: HubDeal[] = applyDealMarks(dealsKnown ?? [], dealMarks);
   const recentRows = recentDealRows(dealsForV2, 10);
   /* [1025 · #8] 최근 실거래 **표**만 해제 신고 행을 같이 본다(취소선 + "해제" 배지 — recentDealRows 가 신고가에서 뺀다).
      대표가·추이·머리 사실 줄(recentRows[0])은 기본 경로(해제 제외) 그대로. 해제 행 조회가 실패·예산 초과면 해제 없는 표. */
   const recentRowsWithCancelled = dealsKnown
     ? await withSectionBudget(getComplexDeals(rowForFacts?.canonical_id ?? complexId, { includeCancelled: true })).then(
-        (d) => recentDealRows(d, 10),
+        (d) => recentDealRows(applyDealMarks(d, dealMarks), 10),
         () => recentRows,
       )
     : recentRows;
@@ -1434,7 +1445,7 @@ export default async function ComplexHubPage({
     railStats.push({ key: "year", label: `${thisYear} 거래`, value: `${dealsThisYear.toLocaleString("ko-KR")}건`, sub: "매매 · 해제 제외" });
   }
   const headFacts = [
-    txFailed ? "실거래 지금 불러오지 못함" : trend?.firstYm ? `국토교통부 실거래 ${ymDash(trend.firstYm)} 부터` : "신고된 실거래 없음",
+    txFailed ? "실거래를 불러오지 못함" : trend?.firstYm ? `국토교통부 실거래 ${ymDash(trend.firstYm)} 부터` : "신고된 실거래 없음",
     !txFailed && (dealsForV2.length > 0 || (rentHist?.totalCount ?? 0) > 0)
       ? `매매 ${dealsForV2.length.toLocaleString("ko-KR")}건${rentHist ? ` · 전월세 ${rentHist.totalCount.toLocaleString("ko-KR")}건` : ""}`
       : null,
@@ -1555,7 +1566,10 @@ export default async function ComplexHubPage({
         />
 
         {/* [1024] 개요 스트립 8칸 — K-apt(세대·동·준공·주차/세대·승강기·난방·건설사·관리). 없는 값은 "—" */}
-        <ComplexOverviewStrip row={rowForFacts ?? { households: v.households, building_count: null, build_year: v.buildYear, parking_per_hh: null, heating: null, builder_name: null }} />
+        <ComplexOverviewStrip
+          row={rowForFacts ?? { households: v.households, building_count: null, build_year: v.buildYear, parking_per_hh: null, heating: null, builder_name: null }}
+          nowYear={nowKst?.year}
+        />
 
         {/* [1006 · E] 인용 가능한 요약(GEO) — 서버 HTML 에 "어디의 무엇이 언제 기준 얼마"가 완결 문장으로 있어야 AI 검색이
             이 페이지를 출처로 댈 수 있다. data-ai-summary 는 위 WebPage JSON-LD 의 speakable.cssSelector 가 가리키는 자리.
@@ -1570,7 +1584,7 @@ export default async function ComplexHubPage({
             <p className="t-body text-text-1">{citable.text}</p>
             {/* [1015 · 규칙 D] 사실 한 줄(가운뎃점 나열) */}
             <p className="mt-1.5 t-caption text-text-3">
-              국토교통부 실거래 단순 평균 · 매물 호가 아님 · 최근 1~2개월은 신고 지연(계약 후 30일)으로 늘 수 있음
+              국토교통부 실거래 단순 평균 · 매물 호가 아님
             </p>
           </section>
         )}
@@ -1585,7 +1599,7 @@ export default async function ComplexHubPage({
             <TxTrendLazy data={trend} complexName={v.name} />
           ) : (
             <div className="card rounded-2xl px-4 py-6 text-center t-body text-text-3">
-              {txFailed ? "실거래를 지금 불러오지 못했습니다. 잠시 후 새로고침해 주세요." : `${v.name} · 신고된 매매·전월세 실거래 없음`}
+              {txFailed ? "실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요." : `${v.name} · 신고된 매매·전월세 실거래 없음`}
             </div>
           )}
 
@@ -1653,7 +1667,7 @@ export default async function ComplexHubPage({
           <MarketFreshnessLine label={freshness} className="rise-in-1 mt-1.5" />
 
           {/* [OPT-48] 허브 2.0 — AI 워크벤치와 같은 라이브 컨텍스트 요약(1.2초 예산·자체 생략) */}
-          <ComplexAxisSummary complexId={v.id} regionName={axisRegionName(v.city, v.dong)} />
+          <ComplexAxisSummary complexId={rowForFacts?.canonical_id ?? v.id} regionName={axisRegionName(v.city, v.dong)} />
 
           {/* 요약·이야기·매물·실거래·내 기록 탭 — [1024] 그래프·최근 실거래 목록은 위 본문이 맡는다(priceChart null · summaryDeals false).
               실거래 탭(면적대 필터·정렬·월별 표·계산기)은 그대로. */}

@@ -93,7 +93,7 @@ export function NoteDetailFields({
       <section aria-label="5축 점수" className="card rounded-2xl p-4 max-md:p-3.5 lg:hidden">
         <div className="flex items-baseline justify-between gap-2">
           <span className="t-body font-bold text-ink">5축 점수</span>
-          <span className="t-caption t-num text-text-3">{total != null ? `점수 ${total} / 100` : "현장 체크 미입력"}</span>
+          <span className="t-caption t-num text-text-3">{total != null ? `기록 점수 ${total} / 100` : "현장 체크 미입력"}</span>
         </div>
         <ul className="m-0 mt-2 grid list-none grid-cols-5 gap-2 p-0">
           {axisBars(axisScores).map((b) => (

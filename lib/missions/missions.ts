@@ -134,7 +134,7 @@ export async function buildMissionBoard(email: string): Promise<MissionBoard> {
   start.push({
     key: "first_ai",
     label: "첫 AI 분석 1회",
-    desc: "단지 하나 고르면 실거래·전월세·공급 실데이터로 1분 진단.",
+    desc: "단지 하나 고르면 실거래·전월세·공급 자료로 1분 진단.",
     href: "/analysis",
     target: 1,
     progress: Math.min(1, n(aiRunsAll)),

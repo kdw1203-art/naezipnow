@@ -122,7 +122,7 @@ export function HomeTodayLine({
     if (temp)
       out.push({
         key: "temp",
-        text: `이번 주 시장 온도는 ${temp.score}점이에요. ${temp.headline}`,
+        text: `이번 주 시장 온도는 ${temp.score}점(${temp.headline})이에요.`,
         href: "/analysis/temperature",
       });
     /* [1009 · H 리뷰] 건수의 실제 달·원천으로만(today-line.ts) — 카드 기준월을 붙이면 다른 달 건수를 그 달 것처럼 말한다 */
@@ -136,7 +136,7 @@ export function HomeTodayLine({
     if (saleIndex && saleIndex !== "—")
       out.push({
         key: "index",
-        text: `서울 매매지수는 ${saleIndex}입니다. 12개월 흐름을 볼까요?`,
+        text: `서울 매매지수 ${saleIndex}`,
         href: "/analysis/timing",
       });
     if (baseRate && baseRate !== "—")
@@ -148,7 +148,7 @@ export function HomeTodayLine({
     if (typeof publicNotes === "number" && publicNotes > 0)
       out.push({
         key: "notes",
-        text: `지금까지 공개된 임장노트가 ${publicNotes.toLocaleString("ko-KR")}건 쌓였어요.`,
+        text: `공개 임장노트는 ${publicNotes.toLocaleString("ko-KR")}편이에요.`,
         href: "/notes",
       });
     return out;

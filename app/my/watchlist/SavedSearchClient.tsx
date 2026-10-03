@@ -128,13 +128,13 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
             .then(async (r) => {
               if (!r.ok) {
                 const d = (await r.json().catch(() => ({}))) as { error?: string };
-                showToast(d.error ? `되돌리지 못했어요 — ${d.error}` : "되돌리지 못했어요 — 위에서 다시 저장해 주세요");
+                showToast(d.error ? `되돌리지 못했어요. ${d.error}` : "되돌리지 못했어요. 위에서 다시 저장해 주세요");
                 return;
               }
               showToast("검색을 되돌렸어요");
               await refresh();
             })
-            .catch(() => showToast("되돌리지 못했어요 — 연결을 확인하고 다시 저장해 주세요"));
+            .catch(() => showToast("되돌리지 못했어요. 연결을 확인하고 다시 저장해 주세요"));
         },
       });
     } catch (err) {

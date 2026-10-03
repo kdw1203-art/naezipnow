@@ -318,7 +318,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
     "최대 대출 = min(LTV × 매매가, 가격 구간 한도)",
     ...ltvTableLines(),
     priceTierLine(),
-    "실제 한도는 DSR·소득·신용·은행 심사로 더 낮을 수 있다.",
+    "실제 한도는 DSR·소득·신용·은행 심사로 더 낮을 수 있음.",
   ];
   const cashHow = [
     "필요 현금 = 매매가 − 대출 + 취득세 + 중개보수(법정 상한)",
@@ -339,8 +339,8 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
     "이 화면의 부담률 = (월 상환액 + 기존 대출 월 상환액) × 12 ÷ 연 소득",
     "30% 이하 적정 · 40% 이하 주의 · 그 위는 위험(이 화면의 구분).",
     stressFloor !== null
-      ? `은행 DSR 심사는 금리에 스트레스 금리(하한 ${stressFloor}%)를 더해 따로 본다. 한도가 더 줄 수 있다.`
-      : "은행 DSR 심사는 이 계산과 별개. 한도가 더 줄 수 있다.",
+      ? `은행 DSR 심사는 금리에 스트레스 금리(하한 ${stressFloor}%)를 더해 따로 계산. 한도가 더 줄 수 있음.`
+      : "은행 DSR 심사는 이 계산과 별개. 한도가 더 줄 수 있음.",
   ];
 
   /* CTA 조건 전달 — 임장노트 메모 프리셋 · 시나리오 딥링크 파라미터 */
@@ -939,7 +939,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                 )}
                 {stressFloor !== null && (
                   <li>
-                    은행 DSR(소득 대비 원리금) 심사는 금리에 스트레스 금리(하한 {stressFloor}%)를 더한다. 소득에 따라 한도가 더 줄 수 있음.
+                    은행 DSR(소득 대비 원리금) 심사는 금리에 스트레스 금리(하한 {stressFloor}%)를 더해 계산. 소득에 따라 한도가 더 줄 수 있음.
                   </li>
                 )}
                 <li>정책대출(보금자리론·디딤돌)은 자체 한도·자격이 별도. 한국주택금융공사 확인.</li>
@@ -1009,11 +1009,11 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
             <div className="rise-in-4 card flex flex-col gap-1 overflow-x-auto rounded-3xl px-5 py-[18px] max-md:p-3.5">
               <div className="mb-1.5 flex flex-col">
                 <span className="t-body font-bold text-ink">은행별 금리 비교</span>
-                <span className="t-caption text-text-3">
-                  {mortgage.live
-                    ? `주담대 공시 금리${mortgage.asOf ? ` · ${mortgage.asOf} 기준` : ""}`
-                    : "공시 미연동"}
-                </span>
+                {mortgage.live && (
+                  <span className="t-caption text-text-3">
+                    {`주담대 공시 금리${mortgage.asOf ? ` · ${mortgage.asOf} 기준` : ""}`}
+                  </span>
+                )}
               </div>
               {mortgage.live ? (
                 <div className="min-w-[540px]">
@@ -1061,10 +1061,10 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
               ) : (
                 <EmptyState
                   icon="bar"
-                  title="은행별 공시 금리를 아직 불러올 수 없어요"
-                  desc="금융감독원 공시 연동 전이라 은행별 금리를 표시하지 않습니다. 위 계산은 직접 정한 가정 금리 기준입니다."
+                  title="은행별 공시 금리는 아직 제공하지 않아요"
+                  desc="위 계산은 직접 넣은 가정 금리 기준이에요."
                   action={{
-                    label: "금융상품 한눈에에서 비교하기",
+                    label: "금융감독원 ‘금융상품 한눈에’에서 비교 ↗",
                     href: "https://finlife.fss.or.kr",
                   }}
                 />

@@ -204,7 +204,7 @@ function fullCtx(): LiveToolContext {
 
 const THIN_FOOTNOTES: Footnote[] = [{ n: 1, label: "기준금리", source: "한국은행", asOf: "2026-09-10", sample: null, href: null }];
 
-test("[1012 · R2 · complex A6] 5개 항목 중 3개 미만이면 점수를 그리지 않는다 — '자료 부족 — 5개 항목 중 1개만 확인됨' + 확인된 축만", () => {
+test("[1012 · R2 · complex A6] 5개 항목 중 3개 미만이면 점수를 그리지 않는다 — '자료 부족 · 5개 항목 중 1개만 확인됨' + 확인된 축만", () => {
   const ctx = thinCtx();
   const raw = buildVerdict({ tool: "ai-diagnosis", ctx, footnotes: THIN_FOOTNOTES, now: R2_NOW });
   /* lib/ai/verdict.ts 계약(워크벤치)은 항목 1개부터 평균을 낸다 — 허브 요약이 그것을 큰 숫자로 그리던 것이 문제였다 */
@@ -219,7 +219,7 @@ test("[1012 · R2 · complex A6] 5개 항목 중 3개 미만이면 점수를 그
   assert.equal(verdict.metric, null, "점수(대표 수치)가 지워져야 한다");
   assert.equal(verdict.band, "thin");
   assert.equal(verdict.bandLabel, "자료 부족");
-  assert.equal(verdict.headline, "자료 부족 — 5개 항목 중 1개만 확인됨");
+  assert.equal(verdict.headline, "자료 부족 · 5개 항목 중 1개만 확인됨");
   assert.ok(!/\d+점/.test(verdict.headline), "결론 문장에 점수가 남아 있다");
   const line = confirmedAxesLine(axes);
   assert.ok(line && line.startsWith("확인된 항목: 금리 환경(기준금리 2.5%)"), line ?? "null");
@@ -243,7 +243,7 @@ test("[1012 · R2 · complex A6] 지표 칸 4개가 전부 '—' 면 격자 대�
   assert.equal(raw.tiles?.length, 4);
   assert.ok(raw.tiles?.every((t) => t.value == null), "표본은 칸 4개가 전부 값 없음이어야 한다");
   assert.equal(emptyTilesLine(raw.tiles), EMPTY_TILES_LINE);
-  assert.equal(EMPTY_TILES_LINE, "아직 신고된 매매 실거래가 없어요 — 계약 후 30일 안에 신고");
+  assert.equal(EMPTY_TILES_LINE, "아직 신고된 매매 실거래가 없어요 · 신고 기한은 계약 후 30일");
   /* 실거래 조회가 실패한 컨텍스트 — "없어요"라고 하면 거짓이다 */
   const failed = buildVerdict({ tool: "ai-diagnosis", ctx: thinCtx({ unavailable: ["실거래가"] }), footnotes: THIN_FOOTNOTES, now: R2_NOW });
   assert.equal(emptyTilesLine(failed.tiles), FAILED_TILES_LINE);

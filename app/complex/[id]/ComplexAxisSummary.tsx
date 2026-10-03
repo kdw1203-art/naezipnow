@@ -65,7 +65,7 @@ export async function ComplexAxisSummary({
           카드 아래 한 줄("출처 … · 기준 …")과 "데이터 출처" 접힘으로 모았다. 그 자리를 가리키게 고쳤다.
           [1012 · R2] 그 한 줄은 이제 값이 없을 때도 출처(데이터 출처의 원천)를 적는다 — 접힘 밖에 늘 보인다. */}
       {/* [1015 · 규칙 D] 세 문장 나열 → 사실 한 줄(면책은 남긴다) */}
-      <p className="mt-2 t-caption text-text-3">참고용 요약 · 투자 권유 아님 · 출처와 기준일은 카드 맨 아래 한 줄</p>
+      <p className="mt-2 t-caption text-text-3">참고용 요약 · 투자 권유 아님</p>
     </section>
   );
 }

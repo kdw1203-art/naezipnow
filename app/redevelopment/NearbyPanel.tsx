@@ -81,9 +81,7 @@ export function NearbyPanel({
   /* 실패했을 때 두 칸에 공통으로 쓰는 문구. "없어요" 라고 말하지 않는다. */
   const failureNote = (
     <div className="rounded-lg border border-line bg-surface px-3 py-4 text-center t-sub text-text-3">
-      지금은 불러오지 못했어요 · 잠시 후 다시 시도해 주세요.
-      <br />
-      <span className="t-sub">없다는 뜻은 아니에요.</span>
+      불러오지 못했어요. 잠시 후 다시 시도해 주세요.
     </div>
   );
 

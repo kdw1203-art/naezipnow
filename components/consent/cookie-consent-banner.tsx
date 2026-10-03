@@ -62,7 +62,7 @@ export function CookieConsentBanner() {
       <div className="mx-auto flex max-w-[560px] flex-col gap-2 rounded-2xl border border-line bg-surface p-3 shadow-[var(--shadow-md)] md:max-w-[360px] md:p-3.5">
         <p className="text-[12px] leading-[1.5] text-text-1">
           내집나우는 서비스 운영에 필요한 필수 쿠키를 사용해요. 이용 통계 분석 쿠키는{" "}
-          <b>동의하신 경우에만</b> 사용합니다.{" "}
+          <b>동의하신 경우에만</b> 사용해요.{" "}
           {/* [970 · A-19] 셸 링크 — 프리페치 없음 */}
           {/* [989] 문단 속 단독 링크 — 인라인 세로 패딩은 줄 높이를 바꾸지 않으면서
               히트만 24px 로 넓힌다(이 문단에 다른 링크가 없어 겹칠 상대가 없다) */}

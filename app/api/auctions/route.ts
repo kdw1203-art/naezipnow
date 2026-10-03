@@ -68,14 +68,21 @@ export async function GET(req: NextRequest) {
     ? usageRaw
     : undefined;
   const gu = /^[가-힣]{1,10}( [가-힣]{1,10})?$/.test(guRaw) ? guRaw : undefined; // [941] 공백 1칸 허용
+  /* [1028] 시도 원문("대전광역시") — 시군구 이름이 도시마다 겹쳐(동구·중구·강서구 …) 지역 요약 칸이 시도를 같이 보낸다.
+     한글 2~10자만(캐시 조합 폭주·이상 입력 차단). 없으면 예전처럼 시군구 이름으로만 거른다(옛 링크 호환). */
+  const sidoRaw = (sp.get("sido") ?? "").trim();
+  const sido = /^[가-힣]{2,10}$/.test(sidoRaw) ? sidoRaw : undefined;
+  const filtered = Boolean(usage || gu || sido);
 
   try {
-    const [items, activeTotal] = await Promise.all([
-      getAuctions({ usage, sigungu: gu, limit: 200 }),
+    const [items, activeTotal, matchTotal] = await Promise.all([
+      getAuctions({ usage, sigungu: gu, sido, limit: 200 }),
       getActiveAuctionCount(),
+      /* 목록은 200건까지만 읽는다 — "현재 조건 N건"은 받은 줄 수가 아니라 DB 가 센 값이다 */
+      filtered ? getActiveAuctionCount({ usage, sigungu: gu, sido }) : Promise.resolve(null),
     ]);
     return NextResponse.json(
-      { ok: true as const, items: items.map(slim), activeTotal },
+      { ok: true as const, items: items.map(slim), activeTotal, matchTotal: matchTotal ?? activeTotal },
       { headers: { "Cache-Control": CACHE } },
     );
   } catch (e) {

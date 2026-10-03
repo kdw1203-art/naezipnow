@@ -101,7 +101,7 @@ async function loadProjects(): Promise<ProjectsData> {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     logger.error(
-      "[/redevelopment] 정비사업 구역을 읽지 못했습니다 — 구역이 없는 것이 아니라 조회가 실패했습니다:",
+      "[/redevelopment] 정비사업 구역을 읽지 못했습니다 (조회 실패):",
       message,
     );
     return { projects: [], loadError: message };
@@ -127,7 +127,6 @@ export default async function RedevelopmentPage() {
       <TownHero
         href="/redevelopment"
         stats={[{ label: "지도에 실린 구역", value: projects.length, unit: "곳" }]}
-        note="지금 이 지도에 실린 구역 기준"
       />
       <TownCategoryNav stick />
       <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-6 max-md:gap-3">
@@ -139,8 +138,8 @@ export default async function RedevelopmentPage() {
             /* 실패를 "구역 없음"으로 바꿔 그리지 않는다 — 둘은 다른 사실이다.
                원인 원문(cause)도 감추지 않고 그대로 보여 준다. */
             <ErrorState
-              title="정비사업 구역을 불러오지 못했습니다"
-              desc="구역이 없다는 뜻이 아니라 조회 자체가 실패했다는 뜻이에요. 잠시 후 다시 확인해 주세요."
+              title="정비사업 구역을 불러오지 못했어요"
+              desc="잠시 후 다시 시도해 주세요."
               cause={loadError}
               className="rounded-2xl"
             />
@@ -284,7 +283,7 @@ export default async function RedevelopmentPage() {
             (newsFailed ? (
               /* 색은 배경이 지고, 문장은 text-ink 로 읽는다 — 11px 본문에서 가장 확실하다. */
               <div className="rounded-lg bg-danger-soft px-3 py-2 text-center t-sub text-ink">
-                뉴스를 불러오지 못했어요 (조회 실패). 관련 기사가 없다는 뜻은 아니에요.
+                뉴스를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
               </div>
             ) : (
               <div className="py-3 text-center t-sub text-text-3">

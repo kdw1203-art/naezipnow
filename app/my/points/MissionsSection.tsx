@@ -35,7 +35,7 @@ export async function MissionsSection({ email }: { email: string }) {
 
       {!board ? (
         <div className="card mt-4 rounded-2xl px-5 py-6 t-body text-text-2">
-          진행도를 지금 불러오지 못했어요 — 잠시 후 다시 열어봐 주세요.
+          진행도를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
         </div>
       ) : (
         <>
@@ -75,7 +75,7 @@ export async function MissionsSection({ email }: { email: string }) {
               ))}
             </div>
             <p className="t-caption mt-1.5 px-1 text-text-3">
-              3가지를 모두 마치면 온보딩 완주 보너스 200P를 받을 수 있어요 (1회).
+              3가지를 모두 마치면 완주 보너스 200P를 받을 수 있어요 (1회).
             </p>
           </section>
 

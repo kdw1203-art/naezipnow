@@ -49,7 +49,7 @@ export function ProposeQuote({
   if (status === "done") {
     return (
       <span className="rounded-lg bg-success-soft px-3 py-1.5 t-sub font-bold text-success">
-        ✓ 제안 보냄 — 의뢰자 상담함과 알림으로 전달됐어요
+        ✓ 제안 보냄 · 의뢰자 상담함과 알림으로 전달됐어요
       </span>
     );
   }

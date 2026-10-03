@@ -225,7 +225,7 @@ export default async function MyConsultationsPage() {
                     </div>
                   ) : c.status === "pending" ? (
                     <p className="t-sub text-text-3">
-                      전문가가 확인하면 답변이 여기에 도착해요. 보통 1~2일 안에 답이 와요 — 3일이 지나도 없으면 다른 전문가에게 다시 물어보세요.
+                      전문가가 확인하면 답변이 여기에 도착해요. 보통 1~2일 안에 답이 와요. 3일이 지나도 없으면 다른 전문가에게 다시 물어볼 수 있어요.
                     </p>
                   ) : null}
 
@@ -434,7 +434,7 @@ export default async function MyConsultationsPage() {
           </div>
           {boardFailed ? (
             <div className="card rounded-2xl px-4 py-6 text-center t-sub text-text-3">
-              견적 요청을 지금 불러오지 못했어요 — 요청이 없는 게 아니라 조회가 실패했습니다.
+              견적 요청을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
             </div>
           ) : board.length === 0 ? (
             <div className="card rounded-2xl px-4 py-6 text-center t-sub text-text-3">

@@ -127,12 +127,12 @@ export function SupportContactForm({ supportEmail }: { supportEmail: string }) {
         ticketNo?: string | null;
       };
       if (!res.ok || !data.ok) {
-        setError(data.error ?? "접수에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+        setError(data.error ?? "접수하지 못했어요. 잠시 후 다시 시도해 주세요.");
         return;
       }
       setDone({ ticketNo: data.ticketNo ?? null });
     } catch {
-      setError("네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+      setError("네트워크 오류가 발생했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       setBusy(false);
     }
@@ -147,14 +147,15 @@ export function SupportContactForm({ supportEmail }: { supportEmail: string }) {
         >
           ✓
         </span>
-        <div className="t-section text-ink">문의가 접수되었습니다</div>
+        {/* [1028 · 제안 8·12] 접수 완료 안내가 합니다체("접수되었습니다"·"답변 드립니다")와 해요체로 섞여 있었다 → 해요체, 줄표 → 가운뎃점 */}
+        <div className="t-section text-ink">문의를 접수했어요</div>
         {done.ticketNo ? (
           <div className="lg-pill tabular-nums">접수번호 {done.ticketNo}</div>
         ) : (
           <div className="t-sub text-text-3">접수번호는 이메일 답변에서 확인할 수 있어요</div>
         )}
         <div className="t-sub leading-[1.6] text-text-2">
-          {RESPONSE_TIME} — 입력하신 이메일로 답변 드립니다.
+          {RESPONSE_TIME} · 입력한 이메일로 보내 드려요.
           {loggedIn && " 알림함에도 접수 확인이 남았어요."}
         </div>
         <div className="mt-1 flex flex-wrap items-center justify-center gap-2">

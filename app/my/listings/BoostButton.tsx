@@ -27,8 +27,9 @@ export function BoostButton({ listingId, active }: { listingId: string; active: 
       if (res.status === 401) {
         promptSignup({
           action: "listing_boost",
-          title: "부스트하려면 로그인",
-          benefit: "가입하면 포인트로 매물 상단 노출을 신청할 수 있어요.",
+          /* [1028 · 제안 5] 다른 가입 안내와 같은 꼴 — "~하려면 로그인이 필요해요" + 짧은 사실 한 줄(값은 아래 버튼과 같다: 500P·7일) */
+          title: "부스트하려면 로그인이 필요해요",
+          benefit: "매물 상단 노출 7일 · 포인트 500P",
           callbackUrl: "/my/listings",
         });
         setPhase("idle");

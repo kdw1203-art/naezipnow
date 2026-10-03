@@ -55,6 +55,7 @@ const ENV_NOISE = [
   /Failed to fetch/i,
   /TypeError: Load failed/i,
   /oapi\.map\.naver\.com|nrbe\.pstatic\.net/i,
+  /\[NaverMap\]/, // [1028] 지도 SDK 를 못 받은 환경에서 지도 부품이 한 번 남기는 경고(개발자용 안내 — 화면에는 일반 문구만)
   /googletagmanager|google-analytics|doubleclick|adsbygoogle|pagead2/i,
   /the server responded with a status of 5\d\d/i,
   /* `/_vercel/insights/script.js` 는 Vercel 이 엣지에서 붙여 주는 경로다.

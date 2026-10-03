@@ -77,7 +77,7 @@ export const metadata: Metadata = {
    데이터가 없으면 없다고 말하고, 채우는 행동(CTA)으로 안내한다. */
 
 const LAB_NOTES_CAPTION =
-  "Lab 데이터 노트는 실거래·통계로 편집부가 정리한 노트예요. 이웃이 직접 다녀와 쓴 노트가 올라오면 여기에 함께 보입니다.";
+  "Lab 노트는 편집부가 실거래·통계로 정리해요. 이웃 노트는 올라오는 대로 함께 보여요.";
 
 function HomeAiGateway({
   briefing,
@@ -98,14 +98,14 @@ function HomeAiGateway({
           [989] 카드 안에 단독으로 서는 링크 — 위아래 6px 로 31px. */}
       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
         <Link href="/analysis" className="w-fit py-1.5 text-[12px] font-bold text-ai-accent no-underline">
-          AI 분석 도구 4종 ›
+          AI 분석 도구 보기 ›
         </Link>
         {exampleNoteId && (
           <Link
             href={`/notes/${exampleNoteId}`}
             className="w-fit py-1.5 text-[12px] font-bold text-ai-accent no-underline"
           >
-            실제 정리된 공개 노트 보기 ›
+            정리된 공개 노트 보기 ›
           </Link>
         )}
       </div>
@@ -124,7 +124,7 @@ function HomeAiGateway({
           </div>
         ) : (
           <div className="t-body t-fit">
-            오늘 브리핑을 아직 만들지 못했어요. 실거래 데이터가 갱신되면 표시됩니다.
+            오늘 브리핑을 아직 만들지 못했어요. 매매가격지수가 갱신되면 표시돼요.
           </div>
         )}
       </div>
@@ -246,12 +246,13 @@ export default async function Home() {
                   <Explain
                     title="처음 오신 분께"
                     body={[
-                      "실거래가 게임: 실거래가를 맞혀 보며 시세 감을 잡는 곳(/quiz).",
-                      "단지 종합 진단: 후보 단지 이름을 넣으면 실거래·전월세·공급·뉴스를 한 화면에(/analysis).",
-                      "계약·잔금 일정표: 계약을 앞두고 법정 기한을 날짜로(/journey/contract).",
-                      "내 집 마련 여정: 처음부터 6단계로(/journey).",
+                      "실거래가 게임: 두 단지 중 실거래가가 더 비싼 쪽 맞히기",
+                      "단지 종합 진단: 단지 이름으로 실거래·전월세·공급·뉴스를 한 화면에",
+                      "계약·잔금 일정표: 계약일·잔금일로 할 일과 법정 기한을 날짜순으로",
+                      "내 집 마련 여정: 시장 파악부터 계약·입주까지 6단계",
+                      "단지 종합 진단은 메뉴 AI 분석, 나머지 셋은 메뉴 임장노트에 있어요.",
                     ]}
-                    source={[coverageLine, "예산으로 찾기는 지도(/map)의 가격 필터"].filter(Boolean).join(" · ")}
+                    source={[coverageLine, "예산으로 찾기는 지도의 가격 필터"].filter(Boolean).join(" · ")}
                   />
                 </span>
               }
@@ -300,13 +301,13 @@ export default async function Home() {
                         lib/inspection/store-db.ts inspectionAverageScore 그대로. */}
                     {notes.length > 0 && (
                       <span className="inline-flex items-center t-caption text-text-3">
-                        임장 점수
+                        기록 점수
                         <Explain
-                          title="임장 점수"
-                          body="노트 작성자가 매긴 항목 점수를 100점 만점으로 바꾼 숫자예요. 같은 단지라도 쓴 사람·시점마다 달라요."
+                          title="기록 점수"
+                          body="작성자가 매긴 항목 평점(5점 만점)을 100점 만점으로 바꾼 숫자예요. 같은 단지라도 쓴 사람·시점마다 달라요."
                           how={[
-                            "입지·학군·교통·시설·미래가치 5개 항목(항목마다 5점 만점) 중 점수를 매긴 항목만 평균해요.",
-                            "그 평균 × 20 을 반올림해 100점 만점으로 적어요.",
+                            "항목 평점: 입지·학군·교통·시설·미래가치 5개 항목(항목마다 5점 만점) 중 점수를 매긴 항목만 평균해요.",
+                            "기록 점수: 항목 평점 × 20 을 반올림해요.",
                             "75점 이상은 파란 배지로 표시해요.",
                           ]}
                           source="공개 임장노트 · 작성자 입력"
@@ -323,12 +324,12 @@ export default async function Home() {
                 </div>
                 {notes.length === 0 ? (
                   failed.notes ? (
-                    <p className="t-sub text-text-3">목록을 지금 불러오지 못했어요.</p>
+                    <p className="t-sub text-text-3">공개 임장노트를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
                   ) : (
                     <EmptyState
                       icon="notebook-pen"
                       title="아직 공개된 임장노트가 없어요"
-                      desc="첫 노트를 남기면 여기에 소개됩니다."
+                      desc="공개로 저장한 노트가 여기에 보여요."
                       action={{ label: "첫 공개 노트 남기기", href: "/notes/new" }}
                     />
                   )
@@ -366,7 +367,7 @@ export default async function Home() {
                           n.hot ? "bg-primary-soft text-primary" : "bg-bg text-text-3"
                         }`}
                       >
-                        <span className="sr-only">임장 점수 </span>
+                        <span className="sr-only">기록 점수 </span>
                         {n.score}
                       </span>
                     </Link>
@@ -397,15 +398,15 @@ export default async function Home() {
                 {regions.length === 0 ? (
                   failed.regions ? (
                     <ErrorState
-                      title="지역 동향을 지금 불러오지 못했어요"
-                      desc="데이터가 없는 게 아니라 조회가 실패했어요. 잠시 후 다시 열어 주세요."
+                      title="지역 동향을 불러오지 못했어요"
+                      desc="잠시 후 다시 시도해 주세요."
                       action={{ label: "지도에서 찾아보기", href: "/map" }}
                     />
                   ) : (
                     <EmptyState
                       icon="map"
-                      title="지역 동향을 아직 불러오지 못했어요"
-                      desc="실거래 스냅샷이 준비되면 여기에 표시됩니다."
+                      title="지역 동향이 아직 없어요"
+                      desc="지역 집계가 준비되면 여기에 표시돼요."
                       action={{ label: "지도에서 찾아보기", href: "/map" }}
                     />
                   )
@@ -423,7 +424,7 @@ export default async function Home() {
                         와 같은 말). 실패를 "준비 중"으로도, 오래된 값을 "지금"으로도 위장하지 않는다. */}
                     {data.regionsStale && (
                       <p className="m-0 t-caption text-text-3">
-                        실시간 집계를 지금 불러오지 못해 마지막 월 집계를 보여드려요.
+                        실시간 집계를 불러오지 못해 마지막 월 집계를 표시해요.
                       </p>
                     )}
                   </>

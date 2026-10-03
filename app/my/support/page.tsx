@@ -35,8 +35,9 @@ export default async function MySupportPage() {
     return (
       <PageShell breadcrumb="마이 › 내 문의">
         <GuestGate
-          title="로그인하고 내 문의를 확인하세요"
-          desc="고객센터에 남긴 1:1 문의와 운영진 답변이 여기에 모여요."
+          /* [1028 · 제안 5] 권유 제목·설명 → "로그인이 필요해요" + 이 화면에 있는 것 명사 한 줄 */
+          title="로그인이 필요해요"
+          desc="1:1 문의 내역 · 운영진 답변"
           pathname="/my/support"
         >
           <Link

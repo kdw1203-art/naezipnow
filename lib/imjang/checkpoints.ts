@@ -50,6 +50,6 @@ export const IMJANG_CHECKPOINTS: ImjangCheckpoint[] = [
   },
   {
     title: "동네의 저녁, 사람들의 동선과 분위기",
-    why: "퇴근 시간 상가와 놀이터의 풍경이 그 동네의 실제 얼굴. 데이터가 끝나는 지점에서 임장이 시작된다.",
+    why: "퇴근 시간 상가와 놀이터의 풍경이 그 동네의 실제 얼굴.",
   },
 ];

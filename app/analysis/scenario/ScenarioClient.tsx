@@ -332,11 +332,11 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
               />
               <p className="m-0 t-sub text-text-2">
                 {calc.breachRate === null ? (
-                  <>+3.0%p 까지 올라도 소득 대비 40%를 넘지 않습니다(현재 조건 기준).</>
+                  <>+3.0%p 까지 올라도 소득 대비 40%를 넘지 않아요(현재 조건 기준).</>
                 ) : (
                   <>
-                    금리가 <b className="text-ink">{calc.breachRate.toFixed(2)}%</b> 를 넘어서면 소득 대비 40%(통상 부담 한계)를 지나갑니다. 지금은{" "}
-                    {calc.rate.toFixed(2)}% 입니다.
+                    금리가 <b className="text-ink">{calc.breachRate.toFixed(2)}%</b> 를 넘어서면 소득 대비 40%(통상 부담 한계)를 지나가요. 지금은{" "}
+                    {calc.rate.toFixed(2)}% 예요.
                   </>
                 )}
               </p>

@@ -27,7 +27,7 @@ export async function GET(
     t = await getTemplate(tplId);
   } catch {
     return NextResponse.json(
-      { error: "템플릿을 지금 불러오지 못했습니다." },
+      { error: "템플릿을 불러오지 못했어요. 잠시 후 다시 시도해 주세요." },
       { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "60" } },
     );
   }

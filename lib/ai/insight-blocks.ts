@@ -151,7 +151,7 @@ export function riskFlags(ctx: LiveToolContext): RiskFlag[] {
       key: "liquidity",
       level: "warn",
       title: "거래가 드물어요",
-      detail: `지역 한 달 거래 ${snap.tradeCount}건 — 팔고 싶을 때 바로 못 팔 수 있어요.`,
+      detail: `지역 한 달 거래 ${snap.tradeCount}건이에요. 팔고 싶을 때 바로 못 팔 수 있어요.`,
     });
   }
   if (
@@ -162,7 +162,7 @@ export function riskFlags(ctx: LiveToolContext): RiskFlag[] {
       key: "wolse",
       level: "info",
       title: "월세 계약이 많아요",
-      detail: `신고 기준 월세 비중 ${ctx.rent.wolseSharePct}% — 전세를 끼고 사는 계산이 빠듯해질 수 있어요.`,
+      detail: `신고 기준 월세 비중 ${ctx.rent.wolseSharePct}%예요. 전세를 끼고 사는 계산이 빠듯해질 수 있어요.`,
     });
   }
   if (ctx.supply && ctx.supply.upcomingHouseholds >= RISK_THRESHOLDS.supplyHeavy) {
@@ -170,7 +170,7 @@ export function riskFlags(ctx: LiveToolContext): RiskFlag[] {
       key: "supply",
       level: "warn",
       title: "입주 물량이 많아요",
-      detail: `앞으로 입주 ${ctx.supply.upcomingHouseholds.toLocaleString("ko-KR")}세대 — 입주 무렵 전세·매매 가격이 흔들릴 수 있어요.`,
+      detail: `앞으로 입주 ${ctx.supply.upcomingHouseholds.toLocaleString("ko-KR")}세대예요. 입주 무렵 전세·매매 가격이 흔들릴 수 있어요.`,
     });
   }
   const unsold = ctx.region?.demographics?.unsoldUnits;
@@ -179,7 +179,7 @@ export function riskFlags(ctx: LiveToolContext): RiskFlag[] {
       key: "unsold",
       level: "warn",
       title: "미분양이 쌓였어요",
-      detail: `미분양 ${unsold.toLocaleString("ko-KR")}호 — 새 아파트가 잘 안 팔리는 지역이에요.`,
+      detail: `미분양 ${unsold.toLocaleString("ko-KR")}호예요. 새 아파트가 잘 안 팔리는 지역이에요.`,
     });
   }
   if (
@@ -190,7 +190,7 @@ export function riskFlags(ctx: LiveToolContext): RiskFlag[] {
       key: "gapRisk",
       level: "warn",
       title: "전세가율이 높아요",
-      detail: `전세가율 ${snap.jeonseRatio}% — 집값이 조금만 내려도 전세금 돌려주기가 어려워질 수 있어요.`,
+      detail: `전세가율 ${snap.jeonseRatio}%예요. 집값이 조금만 내려도 전세금 돌려주기가 어려워질 수 있어요.`,
     });
   }
   return flags;
@@ -309,7 +309,9 @@ export function timingSignals(ctx: LiveToolContext): TimingSignal[] {
         ? "yellow"
         : "red";
 
-  /* [1008 · W] 신호마다 "왜" 한 줄을 쉬운 말로 — 매수자 입장에서 유리(초록)·보통(노랑)·불리(빨강) */
+  /* [1008 · W] 신호마다 "왜" 한 줄을 쉬운 말로 — 매수자 입장에서 유리(초록)·보통(노랑)·불리(빨강)
+     [1028] "숫자 사실. 뜻 한 문장." 꼴 — 줄표로 잇지 않고, 권유("값을 깎을 여지"·"따라 사기 조심"·"급매를 노려볼 만")는
+     어느 쪽이 유리한지로 바꿨다. 앞 토막(마침표 앞)은 결론 아래 "다음 행동 한 줄"이 그대로 떼어 쓴다(conclusion-next basisFact). */
   return [
     {
       key: "price",
@@ -317,7 +319,7 @@ export function timingSignals(ctx: LiveToolContext): TimingSignal[] {
       state: priceState,
       basis:
         snap?.saleChangeMonthly != null
-          ? `지역 시세 한 달 ${pctText(snap.saleChangeMonthly)} — ${priceState === "green" ? "내리는 중이라 값을 깎을 여지가 있어요" : priceState === "red" ? "빠르게 오르는 중이라 따라 사기 조심" : "크게 움직이지 않아요"}`
+          ? `지역 시세 한 달 ${pctText(snap.saleChangeMonthly)}. ${priceState === "green" ? "내리는 중이라 사는 쪽이 유리해요." : priceState === "red" ? "빠르게 오르는 중이라 파는 쪽이 유리해요." : "크게 움직이지 않아요."}`
           : "지역 시세 자료가 없어요",
     },
     {
@@ -326,7 +328,7 @@ export function timingSignals(ctx: LiveToolContext): TimingSignal[] {
       state: volState,
       basis:
         snap?.tradeCount != null
-          ? `지역 한 달 거래 ${snap.tradeCount.toLocaleString("ko-KR")}건 — ${volState === "green" ? "한산해서 급매를 노려볼 만해요" : volState === "red" ? "거래가 몰려 파는 쪽이 유리해요" : "보통 수준이에요"}`
+          ? `지역 한 달 거래 ${snap.tradeCount.toLocaleString("ko-KR")}건. ${volState === "green" ? "한산해서 사는 쪽이 유리해요." : volState === "red" ? "거래가 몰려 파는 쪽이 유리해요." : "보통 수준이에요."}`
           : "거래량 자료가 없어요",
     },
     {
@@ -334,7 +336,7 @@ export function timingSignals(ctx: LiveToolContext): TimingSignal[] {
       label: "입주 물량",
       state: supState,
       basis: ctx.supply
-        ? `앞으로 입주 ${ctx.supply.upcomingHouseholds.toLocaleString("ko-KR")}세대 — ${supState === "green" ? "입주 무렵 매물이 늘어 고르기 쉬워질 수 있어요" : "새 물량이 많지 않아 매물이 늘 요인은 약해요"}`
+        ? `앞으로 입주 ${ctx.supply.upcomingHouseholds.toLocaleString("ko-KR")}세대. ${supState === "green" ? "입주 무렵 매물이 늘어 고르기 쉬워질 수 있어요." : "새 물량이 많지 않아 매물이 늘 요인은 약해요."}`
         : "입주 예정 자료가 없어요",
     },
   ];
@@ -357,7 +359,7 @@ export function counterScenarios(ctx: LiveToolContext): string[] {
   const snap = ctx.region?.snapshot;
   if (snap?.saleChangeMonthly != null && snap.saleChangeMonthly > 0) {
     out.push(
-      "최근 상승이 몇 건의 신고가 거래 때문이라면 흐름이 아니라 일시적인 착시일 수 있어요.",
+      "최근 상승이 몇 건의 신고가 거래 때문이라면 일시적인 착시일 수 있어요.",
     );
   }
   if (out.length === 0) {

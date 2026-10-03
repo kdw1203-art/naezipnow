@@ -27,9 +27,11 @@ import { ComplianceNotice } from "@/app/components/ComplianceNotice";
 export const revalidate = 21_600;
 
 export const metadata: Metadata = {
-  title: "수도권 공매 물건 (온비드) | 내집나우",
+  /* [1028] "수도권"·"서울·경기·인천"은 [945] 전국 확장(5대 광역시) 전의 말이었다 — 지금 목록의 절반 가까이가 광역시 물건이다
+     (2026-10-03 운영 진행 8,132건: 서울 2,465 · 경기 1,123 · 대구 1,071 · 부산 1,060 · 인천 957 · 울산 865 · 대전 591). */
+  title: "공매 물건 (온비드) | 내집나우",
   description:
-    "한국자산관리공사 온비드 공매 부동산 — 서울·경기·인천 아파트·오피스텔·빌라 감정가·최저입찰가·입찰일정. 공공 데이터 기반.",
+    "한국자산관리공사 온비드 공매 부동산. 서울·경기·인천과 5대 광역시의 아파트·오피스텔·빌라 감정가·최저입찰가·입찰일정. 공공 데이터 기반.",
   robots: { index: true, follow: true },
   // N7 — 필터·정렬 파라미터 조합이 별개 URL 로 색인되지 않도록 canonical 고정
   alternates: seoAlternates("/auctions"),
@@ -63,8 +65,8 @@ export default async function AuctionsPage() {
         <TownCategoryNav stick />
         <div className="theme-auction">
           <ErrorState
-            title="공매 물건을 지금 불러오지 못했어요"
-            desc="진행 중인 물건이 0건인 게 아니라 조회 자체가 실패했습니다. 잠시 후 새로고침해 주세요."
+            title="공매 물건을 불러오지 못했어요"
+            desc="잠시 후 다시 시도해 주세요."
             action={{ href: "https://www.onbid.co.kr", label: "온비드 바로가기" }}
           />
         </div>

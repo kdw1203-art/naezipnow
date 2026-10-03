@@ -212,8 +212,6 @@ export default async function TemperatureHubPage() {
           <section className="card mb-6 rounded-2xl p-4 max-md:p-3.5" data-reveal="">
             <p className="t-body py-8 text-center text-text-3">
               <strong className="text-ink">{LOAD_FAILED_LINE}</strong>
-              <br />
-              주간 기록이 없다는 뜻이 아니라, 조회가 제때 끝나지 않았거나 실패했다는 뜻입니다.
             </p>
           </section>
         ) : rows.length === 0 ? (

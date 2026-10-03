@@ -27,11 +27,12 @@ function GuestView() {
     <div className="mx-auto flex max-w-[720px] flex-col gap-3">
       <div className="rise-in ai-panel flex flex-col items-center gap-2 rounded-3xl px-5 py-8 text-center">
         <div className="text-2xl"><Icon name="shopping-bag" size={24} /></div>
+        {/* [1028 · 제안 5] 권유 제목("교환하세요")·설명 부제 → "~하려면 로그인이 필요해요" + 교환 품목 명사 한 줄(아래 목록과 같은 품목) */}
         <div className="mt-1 text-[15px] font-bold text-white">
-          로그인하고 포인트를 교환하세요
+          교환하려면 로그인이 필요해요
         </div>
         <div className="text-xs leading-[1.6] text-ai-muted">
-          쌓인 포인트로 매물 상단 노출·닉네임 꾸미기 같은 내부 혜택을 받을 수 있어요
+          매물 상단 노출 · 동네이야기 추천글 · 닉네임 효과
         </div>
         <Link
           href="/login?callbackUrl=/points/shop"
@@ -96,8 +97,9 @@ export default async function PointsShopPage() {
       <PageShell breadcrumb="포인트 상점">
         <div className="mx-auto w-full max-w-[720px]">
           <ErrorState
-            title="포인트 상점을 지금 열 수 없어요"
-            desc="보유 포인트를 확인하지 못했습니다. 잔액이 0이라는 뜻이 아니라 조회 자체가 실패했어요. 잠시 후 다시 시도해 주세요."
+            /* [1028 · 제안 3] 오류 문구 표준 — 실패한 것(보유 포인트 조회)만 말한다 */
+            title="보유 포인트를 불러오지 못했어요"
+            desc="잠시 후 다시 시도해 주세요."
             cause={loaded.cause}
             action={{ label: "포인트 안내로 이동", href: "/points" }}
           />

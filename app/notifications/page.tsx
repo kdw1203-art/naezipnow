@@ -108,7 +108,7 @@ const EMPTY: Record<TabKey, string> = {
   관심지역: "관심 지역 새 매물 알림이 아직 없어요.",
   활동: "댓글·좋아요 알림이 아직 없어요.",
   포인트: "포인트 적립·소비 내역이 아직 없어요.",
-  운영: "점검 경보가 없습니다.",
+  운영: "점검 경보가 없어요.",
 };
 
 /* ---------- 유틸 ---------- */
@@ -707,19 +707,21 @@ export default function NotificationsPage() {
           <div className="rise-in-1 mt-3">
             <GuestGate
               as="h2"
-              title="로그인하면 알림을 모아볼 수 있어요"
-              desc="매물 승인·관심 지역 새 매물·댓글·포인트 소식이 이곳에 쌓여요."
+              /* [1028 · 제안 5] 설명형 제목·부제 → "로그인이 필요해요" + 받는 알림 명사 한 줄 */
+              title="로그인이 필요해요"
+              desc="관심 지역 새 매물 · 댓글 · 포인트 알림"
               pathname="/notifications"
             />
           </div>
         )}
 
-        {/* 조회 실패 — "알림이 없다" 가 아니라 "못 읽었다" 고 쓴다 */}
+        {/* 조회 실패 — "알림이 없다" 가 아니라 "못 읽었다" 고 쓴다
+            [1028 · 제안 3] 오류 문구 표준 — "불러오지 못했어요" + "잠시 후 다시 시도해 주세요." */}
         {mode === "error" && (
           <div className="rise-in-1 card mt-3 flex flex-col items-center gap-2.5 rounded-lg px-[15px] py-10 text-center">
-            <div className="t-section text-ink">알림을 지금 불러오지 못했어요</div>
+            <div className="t-section text-ink">알림을 불러오지 못했어요</div>
             <p className="max-w-[320px] t-body text-text-3">
-              알림이 없는 게 아니라 조회 자체가 실패했습니다. 잠시 후 다시 시도해 주세요.
+              잠시 후 다시 시도해 주세요.
             </p>
             {errorCause && (
               <code className="max-w-[320px] break-all rounded-lg border border-line bg-surface px-2.5 py-1.5 font-mono t-caption text-text-3">

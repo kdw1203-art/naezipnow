@@ -55,7 +55,7 @@ export function ReviewForm({
         return;
       }
       setDone(true);
-      showToast("후기를 남겼어요 — 전문가 프로필에 반영됐어요");
+      showToast("후기를 남겼어요. 전문가 프로필에 반영됐어요");
       router.refresh();
     } catch {
       setError("네트워크 오류가 발생했어요.");

@@ -89,7 +89,7 @@ export async function publishWeeklyMarketPost(): Promise<WeeklyPostResult> {
         );
       }
       if (lines.length > 0) {
-        sections.push(["■ 매매지수 흐름 (한국부동산원·KB, 전월 대비)", ...lines].join("\n"));
+        sections.push(["■ 매매지수 흐름 (한국부동산원, 전월 대비)", ...lines].join("\n"));
       }
     }
   } catch (e) {

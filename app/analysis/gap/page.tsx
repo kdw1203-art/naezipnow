@@ -37,7 +37,7 @@ import { GapScreener } from "./GapScreener";
 export const metadata = buildPageMetadata({
   title: "전세가율·갭 스크리너 · 지역별 랭킹",
   description:
-    "전국 시군구 전세가율 상·하위 랭킹과 평균 매매가 기준 추정 갭. 한국부동산원·KB 공표 통계 기반.",
+    "전국 시군구 전세가율 상·하위 랭킹과 평균 매매가 기준 추정 갭. 한국부동산원 공표 통계 기반.",
   path: "/analysis/gap",
   og: { badge: "분석", sub: "전세가율 랭킹 · 추정 갭 · 공표 통계 기반" },
 });
@@ -124,13 +124,13 @@ export default async function GapScreenerPage() {
         title="전세가율·갭 스크리너"
         sub={
           <>
-            한국부동산원·KB 공표 전세가율 + 평균 매매가 · 갭 = 평균 매매가 − 전세 신고 중앙값(최근 3개월) · 전세 30건 미만은 비율 환산 추정
+            한국부동산원 공표 전세가율 + 평균 매매가 · 갭 = 평균 매매가 − 전세 신고 중앙값(최근 3개월) · 전세 30건 미만은 비율 환산 추정
             <Explain
               term="jeonse-garyul"
               title="전세가율과 갭"
               body="전세가율은 매매가 대비 전세가의 비율이고, 높을수록 갭이 작다."
               how={GAP_HOW}
-              source="한국부동산원(REB)·KB 공표 지역 통계 · 국토교통부 전월세 실거래 신고"
+              source="한국부동산원(REB) 공표 지역 통계 · 국토교통부 전월세 실거래 신고"
             />
           </>
         }
@@ -150,8 +150,8 @@ export default async function GapScreenerPage() {
       {loadFailed ? (
         <div className="mt-3">
           <ErrorState
-            title="지역 시세를 지금 불러오지 못했어요"
-            desc="조회가 실패했습니다. 잠시 후 다시 열어 주세요."
+            title="지역 시세를 불러오지 못했어요"
+            desc="잠시 후 다시 시도해 주세요."
           />
         </div>
       ) : rows.length === 0 ? (
@@ -167,14 +167,14 @@ export default async function GapScreenerPage() {
           {yieldFailed && (
             <div className="mb-3 rounded-lg border border-line bg-warning-soft px-3.5 py-2.5">
               <p className="t-sub text-ink">
-                월세 환산 수익률·실측 갭 열을 지금 불러오지 못했어요(조회 실패). 전세가율은 그대로 실측값.
+                월세 환산 수익률·실측 갭 열을 불러오지 못했어요. 전세가율 열은 그대로 볼 수 있어요.
               </p>
             </div>
           )}
           <GapScreener rows={rows} median={median} yieldFailed={yieldFailed} />
           {/* 출처 줄 — 표 바로 아래(시안). 문구는 그대로 */}
           <p className="mt-2 t-caption text-text-3">
-            출처 한국부동산원(REB)·KB 공표 지역 통계 · 지역·출처별 공표 주기 기준(각 행의 기준 열) · 공표 통계의 산술 정리이며 투자 권유가 아님 · 판단과 책임은 이용자에게 있음
+            출처 한국부동산원(REB) 공표 지역 통계 · 지역·출처별 공표 주기 기준(각 행의 기준 열) · 공표 통계의 산술 정리이며 투자 권유가 아님 · 판단과 책임은 이용자에게 있음
           </p>
         </div>
       )}

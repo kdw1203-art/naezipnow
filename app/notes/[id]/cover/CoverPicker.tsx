@@ -70,14 +70,14 @@ export function CoverPicker({
         }),
       });
       if (!res.ok) {
-        setError(res.status === 401 ? "로그인이 끊겼어요 — 다시 로그인해 주세요" : "저장하지 못했어요 — 다시 눌러 주세요");
+        setError(res.status === 401 ? "로그인이 끊겼어요. 다시 로그인이 필요해요" : "저장하지 못했어요. 다시 시도해 주세요");
         setSaving(false);
         return;
       }
       router.push(doneHref);
       router.refresh();
     } catch {
-      setError("연결이 끊겼어요 — 다시 눌러 주세요");
+      setError("연결이 끊겼어요. 다시 시도해 주세요");
       setSaving(false);
     }
   };

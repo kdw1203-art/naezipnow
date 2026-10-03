@@ -63,7 +63,7 @@ export const CODEF_PRODUCTS: CodefProduct[] = [
     path: "/v1/kr/real-estate/kb/quotation/complex-serial",
     authLevel: "public",
     bulk: true,
-    description: "단지명 → KB 단지 일련번호 매핑 (시세 조회 키).",
+    description: "단지 이름으로 KB 단지 번호를 찾는 자료.", // [1028] "매핑 (시세 조회 키)" 는 만드는 쪽 말
     sourceFile: "단지 일련번호 조회_20260717.xlsx",
   },
   {
@@ -74,7 +74,7 @@ export const CODEF_PRODUCTS: CodefProduct[] = [
     path: "/v1/kr/public/lt/molit-apt/basis-info",
     authLevel: "public",
     bulk: true,
-    description: "공동주택관리정보시스템(K-apt) 단지 기본정보 — 주 1회 갱신.",
+    description: "공동주택관리정보시스템(K-apt) 단지 기본정보 · 주 1회 갱신.",
     sourceFile: "20260717_단지_기본정보.xlsx",
   },
   {
@@ -85,7 +85,7 @@ export const CODEF_PRODUCTS: CodefProduct[] = [
     path: "/v1/kr/real-estate/general/real-transaction-price/building",
     authLevel: "public",
     bulk: true,
-    description: "국토부 실거래 매매·전월세 — 계약일·전용면적·거래금액(만원)·층·건축년도.",
+    description: "국토부 실거래 매매·전월세 · 계약일·전용면적·거래금액(만원)·층·건축년도.",
     sourceFile: "실거래가 조회(아파트,연립다세대,오피스텔)_20260717.xlsx",
   },
   {
@@ -107,7 +107,7 @@ export const CODEF_PRODUCTS: CodefProduct[] = [
     path: "/v1/kr/public/lt/rtms-real-estate/apt-price",
     authLevel: "secure",
     bulk: true,
-    description: "부동산 공시가격 알리미 — 공동주택(아파트) 공시가격.",
+    description: "부동산 공시가격 알리미 · 공동주택(아파트) 공시가격.",
     sourceFile: "부동산 공시가격 알리미 공동주택 공시가격_20260717.xlsx",
   },
   {
@@ -118,7 +118,7 @@ export const CODEF_PRODUCTS: CodefProduct[] = [
     path: "/v1/kr/public/lt/rtms-real-estate/house-price",
     authLevel: "secure",
     bulk: true,
-    description: "부동산 공시가격 알리미 — 개별(단독)주택 공시가격.",
+    description: "부동산 공시가격 알리미 · 개별(단독)주택 공시가격.",
     sourceFile: "부동산 공시가격 알리미 개별주택 가격_20260717.xlsx",
   },
   {
@@ -140,7 +140,7 @@ export const CODEF_PRODUCTS: CodefProduct[] = [
     path: "/v1/kr/public/lt/rtms-real-estate/lease-declaration",
     authLevel: "cert",
     bulk: false,
-    description: "부동산거래관리시스템 임대차 신고이력 — 공동인증서 필요(본인 물건).",
+    description: "부동산거래관리시스템 임대차 신고이력 · 공동인증서 필요(본인 물건).",
     sourceFile: "부동산거래관리시스템 임대차신고이력_20260717.xlsx",
   },
   {
@@ -151,7 +151,7 @@ export const CODEF_PRODUCTS: CodefProduct[] = [
     path: "/v1/kr/public/lt/rtms-real-estate/declaration",
     authLevel: "cert",
     bulk: false,
-    description: "부동산거래관리시스템 신고이력·자금조달계획 — 공동인증서 필요(본인 물건).",
+    description: "부동산거래관리시스템 신고이력·자금조달계획 · 공동인증서 필요(본인 물건).",
     sourceFile: "부동산거래관리시스템 신고이력_20260717.xlsx",
   },
 ];

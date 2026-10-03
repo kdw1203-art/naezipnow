@@ -115,7 +115,7 @@ export default async function MyListingsPage() {
                 약속하지 않고, 인증 회원 전용이라는 사실과 문의처만 말한다. */}
             <p className="max-w-[420px] t-body text-text-3">
               매물 등록·검수·노출 관리는 개업공인중개사 인증을 마친 회원에게만 열려 있어요.
-              인증 신청은 지금 받지 않아요 — 필요하시면 고객센터로 문의해 주세요.
+              인증 신청은 지금 받지 않아요.
             </p>
             <Link href="/support" className="btn-soft btn-md mt-1 no-underline">
               고객센터 문의

@@ -182,7 +182,7 @@ function CandidateCard({
       {loading ? (
         <p className="mt-2 t-sub text-text-3">불러오는 중</p>
       ) : c.status === "failed" ? (
-        <p className="mt-2 t-sub text-text-3">실거래를 불러오지 못했어요 · 잠시 후 다시</p>
+        <p className="mt-2 t-sub text-text-3">실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
       ) : c.status === "not_found" ? (
         <p className="mt-2 t-sub text-text-3">실거래 자료 없음</p>
       ) : (
@@ -344,7 +344,7 @@ function VizCard({
     <section className="card p-[var(--pad-card)]" aria-labelledby="decide-viz-title">
       <div className="flex items-center justify-between gap-2">
         <h2 id="decide-viz-title" className="t-section text-ink">
-          후보 {scorable.length}곳 한눈에
+          후보 {scorable.length}곳 비교
         </h2>
         <span className="t-caption text-text-3">
           {axesN}축{schoolOff ? ` · 학교 ${schoolPending ? "조회 중" : "자료 없음"}` : ""}
@@ -671,7 +671,7 @@ export function DecideClient({ signedIn, initialWeights }: { signedIn: boolean; 
         const j = (await res.json().catch(() => null)) as { item?: unknown; error?: string } | null;
         const rec = res.ok && j?.item ? parseDecisionRecord(j.item) : null;
         if (!rec) {
-          showToast(j?.error ?? "결정을 저장하지 못했어요 · 잠시 후 다시");
+          showToast(j?.error ?? "결정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
           return;
         }
         setPast((prev) => [rec, ...(prev ?? [])]);
@@ -695,7 +695,7 @@ export function DecideClient({ signedIn, initialWeights }: { signedIn: boolean; 
       setMemo("");
       showToast(`${VERDICT_LABEL[verdict]} · 저장했어요`);
     } catch {
-      showToast("결정을 저장하지 못했어요 · 잠시 후 다시");
+      showToast("결정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       setSaving(false);
     }
@@ -714,12 +714,12 @@ export function DecideClient({ signedIn, initialWeights }: { signedIn: boolean; 
       {selected.length === 0 && <RadarGhost />}
       <p className="t-body font-bold text-ink">
         {selected.length === 0
-          ? "후보를 담으면 내 기준으로 순위가 나옵니다"
+          ? "후보를 담으면 내 기준으로 순위가 나와요"
           : selected.length === 1
             ? "한 곳 더 담으면 비교"
             : `후보 ${selected.length}곳 · 최대 ${DECIDE_MAX_CANDIDATES}곳`}
       </p>
-      {selected.length === 0 && <p className="mt-0.5 t-caption text-text-3">후보 3곳의 가격·전세가율·거래량이 이 자리에 겹쳐 그려집니다</p>}
+      {selected.length === 0 && <p className="mt-0.5 t-caption text-text-3">후보 3곳의 가격·전세가율·거래량을 이 자리에 겹쳐 그려요</p>}
       <div className="mt-2">
         <ComplexPicker label="단지 검색" placeholder="단지명 검색" clearOnSelect showChip={false} onSelect={addPicked} onMapClick={null} />
       </div>
@@ -823,7 +823,7 @@ export function DecideClient({ signedIn, initialWeights }: { signedIn: boolean; 
                   {WEIGHT_MIN}~{WEIGHT_MAX} · 기본 5
                 </span>
               </div>
-              <p className="mt-1 t-caption text-text-3">움직이면 레이더·막대·점수·1순위가 바로 바뀝니다</p>
+              <p className="mt-1 t-caption text-text-3">움직이면 레이더·막대·점수·1순위에 바로 반영</p>
               <div className="mt-1 flex flex-col divide-y" data-tone="plain">
                 {DECIDE_AXES.map((a) => {
                   const id = `decide-w-${a.key}`;
@@ -878,7 +878,7 @@ export function DecideClient({ signedIn, initialWeights }: { signedIn: boolean; 
                   {signedIn ? "내 계정" : "이 기기"}</span>
               </div>
               {pastFailed && pastList.length === 0 ? (
-                <p className="mt-2 t-sub text-text-3">지난 결정을 불러오지 못했어요 · 잠시 후 다시</p>
+                <p className="mt-2 t-sub text-text-3">지난 결정을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
               ) : pastList.length === 0 ? (
                 /* 회색 견본 — 결정을 저장하면 이 모양으로 쌓인다 */
                 <ul className="m-0 mt-2 flex list-none flex-col p-0">
@@ -892,7 +892,7 @@ export function DecideClient({ signedIn, initialWeights }: { signedIn: boolean; 
                     <div className="t-caption">{weightsLine(weights)}</div>
                   </TimelineItem>
                   <TimelineItem tone="ghost" last>
-                    <p className="t-sub">결정을 저장하면 여기에 쌓입니다 · 날짜 · 단지 · 결정</p>
+                    <p className="t-sub">저장한 결정이 여기에 쌓여요 · 날짜 · 단지 · 결정</p>
                   </TimelineItem>
                 </ul>
               ) : (

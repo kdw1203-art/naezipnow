@@ -392,10 +392,10 @@ export function computeJeonseRatio(
       ratio: null,
       reason:
         trades == null && rents == null
-          ? "매매·전세 실거래를 지금 불러오지 못해 계산하지 않음"
+          ? "매매·전세 실거래를 불러오지 못해 계산하지 않음"
           : trades == null
-            ? "매매 실거래를 지금 불러오지 못해 계산하지 않음"
-            : "전세 실거래를 지금 불러오지 못해 계산하지 않음",
+            ? "매매 실거래를 불러오지 못해 계산하지 않음"
+            : "전세 실거래를 불러오지 못해 계산하지 않음",
     };
   }
   const fromYm = ymMonthsBefore(nowYm, RATIO_WINDOW_MONTHS - 1);
@@ -477,15 +477,15 @@ export function buildCompleteness(input: {
   }
 
   const ts = input.tradeSummary;
-  if (ts == null) gap("trades", "fetch_failed", "매매 실거래를 지금 불러오지 못함");
+  if (ts == null) gap("trades", "fetch_failed", "매매 실거래를 불러오지 못함");
   else if (ts.count > 0) have.push("trades");
   else gap("trades", "no_trade_12m", "최근 12개월 매매 신고 없음");
 
-  if (input.rents == null) gap("rent", "fetch_failed", "전월세 실거래를 지금 불러오지 못함");
+  if (input.rents == null) gap("rent", "fetch_failed", "전월세 실거래를 불러오지 못함");
   else if (input.rents.length > 0) have.push("rent");
   else gap("rent", "no_rent_24m", "최근 24개월 전월세 신고 없음");
 
-  if (input.notes == null) gap("notes", "fetch_failed", "임장노트를 지금 불러오지 못함");
+  if (input.notes == null) gap("notes", "fetch_failed", "임장노트를 불러오지 못함");
   else if (input.notes.count > 0) have.push("notes");
   else gap("notes", "no_notes", "아직 이 단지 임장노트 없음");
 

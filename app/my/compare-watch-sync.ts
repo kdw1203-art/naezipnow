@@ -110,7 +110,7 @@ export function removeWithWatch(
       const back = restoreAt(item, item.index);
       const full = `비교함은 ${COMPARE_TRAY_MAX}개까지 담겨요`;
       if (!removed) {
-        showToast(back ? "비교함에 다시 담았어요" : `${full} — 다시 담지 못했어요`);
+        showToast(back ? "비교함에 다시 담았어요" : `${full}. 다시 담지 못했어요`);
         return;
       }
       void enqueue(() => postWatch(item.id, item.name, watch)).then((ok) =>
@@ -118,10 +118,10 @@ export function removeWithWatch(
           back
             ? ok
               ? "비교함과 관심 단지에 다시 담았어요"
-              : "비교함에 다시 담았어요 — 관심 단지에는 다시 넣지 못했어요"
+              : "비교함에 다시 담았어요. 관심 단지에는 다시 넣지 못했어요"
             : ok
-              ? `관심 단지에 다시 넣었어요 — ${full}`
-              : "다시 담지 못했어요 — 잠시 후 다시 눌러 주세요",
+              ? `관심 단지에 다시 넣었어요. ${full}`
+              : "다시 담지 못했어요. 잠시 후 다시 눌러 주세요",
         ),
       );
     };
@@ -129,7 +129,7 @@ export function removeWithWatch(
       removed
         ? "비교함과 관심 단지에서 뺐어요"
         : failed
-          ? "비교함에서 뺐어요 — 관심 단지에서는 빼지 못했어요"
+          ? "비교함에서 뺐어요. 관심 단지에서는 빼지 못했어요"
           : "비교함에서 뺐어요",
       { label: "되돌리기", onClick: undo },
     );

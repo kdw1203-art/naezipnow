@@ -171,8 +171,8 @@ test("computeJeonseRatio — 6개월 창, 둘 다 3건 이상일 때만 숫자, 
   assert.equal(withWolse.ratio, null);
 
   /* 조회 실패(null)는 "표본 부족"과 다른 문장 */
-  assert.match(computeJeonseRatio(null, j, NOW).reason ?? "", /매매 실거래를 지금 불러오지 못해/);
-  assert.match(computeJeonseRatio(t, null, NOW).reason ?? "", /전세 실거래를 지금 불러오지 못해/);
+  assert.match(computeJeonseRatio(null, j, NOW).reason ?? "", /매매 실거래를 불러오지 못해/);
+  assert.match(computeJeonseRatio(t, null, NOW).reason ?? "", /전세 실거래를 불러오지 못해/);
   assert.match(computeJeonseRatio(null, null, NOW).reason ?? "", /매매·전세/);
 });
 

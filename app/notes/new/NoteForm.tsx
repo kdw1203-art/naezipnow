@@ -2175,12 +2175,12 @@ export function NoteForm({
       const offline = typeof navigator !== "undefined" && navigator.onLine === false;
       setSaveError(
         offline
-          ? "오프라인이에요. 작성 내용은 이 기기에 초안으로 보관 중입니다. 연결이 돌아오면 저장을 다시 눌러 주세요."
+          ? "오프라인이에요. 작성 내용은 이 기기에 초안으로 보관 중이에요. 연결이 돌아오면 저장을 다시 누르면 돼요."
           : "네트워크 오류로 저장하지 못했어요. 작성 내용은 초안으로 보관 중이니 연결을 확인한 뒤 다시 시도해 주세요.",
       );
       if (offline && typeof window !== "undefined") {
         const onBack = () => {
-          setSaveError("연결이 돌아왔어요. 저장을 다시 누르면 이어서 제출됩니다.");
+          setSaveError("연결이 돌아왔어요. 저장을 다시 누르면 이어서 제출돼요.");
           window.removeEventListener("online", onBack);
         };
         window.addEventListener("online", onBack);
@@ -2480,7 +2480,7 @@ export function NoteForm({
                 할 수 있는 일을 안 한다. */}
             <p className="t-sub leading-[1.6] text-text-2">
               <b className="text-ink">오프라인.</b> 입력과 사진은 이 기기에 보관 중. 연결이 돌아오면 사진은 자동
-              업로드, 저장은 한 번 더 누르면 됩니다.
+              업로드, 저장은 한 번 더 누르면 돼요.
             </p>
           </div>
         )}

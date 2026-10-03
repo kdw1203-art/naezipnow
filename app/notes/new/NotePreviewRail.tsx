@@ -151,7 +151,7 @@ export function NotePreviewRail(p: NotePreviewRailProps) {
         <div className="mt-3 border-t border-line pt-3">
           <div className="flex items-baseline justify-between gap-2">
             <h3 className="t-sub font-bold text-ink">5축 점수</h3>
-            <span className="t-caption text-text-3 t-num">{total != null ? `점수 ${total} / 100` : "현장 체크 미입력"}</span>
+            <span className="t-caption text-text-3 t-num">{total != null ? `기록 점수 ${total} / 100` : "현장 체크 미입력"}</span>
           </div>
           <ScoreRadar items={previewRadarItems(p.scores)} />
         </div>

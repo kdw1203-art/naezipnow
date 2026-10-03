@@ -30,7 +30,7 @@ function shareLine(note: InspectionNote, source: NoteCardSource): string {
     ? Math.round(inspectionAverageScore(note.scores) * 20)
     : null;
   const verdict = (source.verdict ?? source.summary ?? "").split(/\r?\n/)[0]?.trim() ?? "";
-  const parts = [total !== null ? `종합 ${total}점` : "", verdict].filter(Boolean);
+  const parts = [total !== null ? `기록 ${total}점` : "", verdict].filter(Boolean);
   const line = parts.length > 0 ? parts.join(" · ") : `${note.region} 직접 다녀온 임장 기록`;
   return line.length > 80 ? `${line.slice(0, 79)}…` : line;
 }
@@ -174,8 +174,7 @@ export default async function NoteCardPage({
 
         {!saved && isOwner && (
           <p className="mt-3 text-center t-sub text-text-3">
-            AI가 기록을 바탕으로 카드를 자동으로 구성했어요. 색상·장을 바꾼 뒤 저장하면
-            나만의 카드가 완성돼요.
+            노트 내용으로 자동 구성한 카드예요. 색상·장을 바꿔 저장할 수 있어요.
           </p>
         )}
       </div>

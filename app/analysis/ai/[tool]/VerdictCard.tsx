@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import type { Verdict, VerdictDisplay, VerdictTile } from "@/lib/ai/verdict";
 import { Won } from "@/app/components/num/Won";
 import { Delta } from "@/app/components/num/Delta";
-import { evidenceSources, metricDisplay, tileCaption, tileDisplay, verdictSources } from "./verdict-display";
+import { evidenceSources, metricDisplay, tileCaption, tileDisplay, tilesBesideMetric, verdictSources } from "./verdict-display";
 
 /* ============================================================
    [993] 판단 카드 → [1008 · W] **결과 요약** — AI 분석의 결과값을 한 형식으로.
@@ -148,7 +148,8 @@ export function VerdictCard({
 }) {
   const m = verdict.metric;
   const asOf = ymLabel(m?.asOf ?? verdict.tiles?.find((t) => t.asOf)?.asOf ?? null);
-  const tiles = tilesOf(verdict);
+  /* [1028] 대표 수치와 같은 숫자인 칸(경제지표 모니터의 기준금리)은 칸 줄에서 뺀다 — 출처 줄은 뺀 칸도 센다(verdict 그대로) */
+  const tiles = tilesBesideMetric(verdict, tilesOf(verdict));
   const md = metricDisplay(m);
   /* [1012 · R2 · complex A6] 값 있는 칸이 없으면 데이터 출처(evidence)의 원천으로 — 출처 한 줄이 접힘 밖에 늘 보이게 */
   const sources = verdictSources(verdict) ?? evidenceSources(verdict.evidence ?? []);

@@ -284,6 +284,14 @@ export function NaverMap({
   useEffect(() => {
     onFallbackChange?.(error !== "");
   }, [error, onFallbackChange]);
+  /* [1028] 실패 원인(등록 주소·키 설정 등)은 개발자가 볼 내용이다 — 화면에는 방문자용 한 줄만 내고,
+     원인은 콘솔에 한 번만 남긴다(인증 실패 뒤 "SDK 로드 실패"가 덮어써도 처음 것만). */
+  const warnedRef = useRef(false);
+  useEffect(() => {
+    if (!error || warnedRef.current) return;
+    warnedRef.current = true;
+    console.warn(`[NaverMap] ${error}`);
+  }, [error]);
   const [geoLoading, setGeoLoading] = useState(false);
   const mapRef = useRef<NaverMapInstance | null>(null);
   const onIdleRef = useRef(onIdle);
@@ -1068,8 +1076,8 @@ export function NaverMap({
           loading="lazy"
         />
         <div className="absolute inset-x-0 bottom-0 z-10 bg-amber-50/95 px-3 py-2 text-[12px] leading-snug text-amber-900 backdrop-blur">
-          <span className="font-bold">대체 지도(OSM)</span> — 네이버 지도를 불러오지 못했어요.{" "}
-          {error}
+          <span className="font-bold">대체 지도(OSM)</span> ·{" "}
+          지도를 불러오지 못했어요. 잠시 후 새로고침해 주세요.
         </div>
       </div>
     );
@@ -1085,11 +1093,9 @@ export function NaverMap({
           <Icon name="🗺" size={24} />
         </p>
         <p className="text-[13px] font-semibold text-slate-700">지도 미리보기</p>
+        {/* [1028] 키 설정 안내(환경변수 이름)는 개발자용 — 화면에는 방문자용 한 줄만. 원인은 위 error 경로의 콘솔 경고에 남는다 */}
         <p className="text-xs text-slate-500 text-center px-4">
-          네이버 지도 API Client ID가 필요합니다.
-          <br />
-          <code className="bg-slate-100 px-1 rounded">NEXT_PUBLIC_NAVER_MAP_CLIENT_ID</code>를
-          .env.local에 추가하세요.
+          지도를 불러오지 못했어요. 잠시 후 새로고침해 주세요.
         </p>
       </div>
     );

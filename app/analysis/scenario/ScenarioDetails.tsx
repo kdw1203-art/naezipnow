@@ -38,17 +38,18 @@ export function ScenarioDetails({
 }) {
   const aiComment = useMemo(() => {
     const stress = dsrTone(calc.dsrStress);
+    /* [1028] 숫자와 사실만, 해요체로 — "대출 비율을 낮추거나 예산을 재조정하세요" 권유는 걷고 판정(위험 범위)만 적는다. 계산·숫자는 그대로 */
     const head = baseline
-      ? `${baseline.regionName} 평균 매매가 ${baseline.avgSaleLabel}(${baseline.period} 기준) 실데이터와 입력하신 조건(연 소득 ${incomeManwon.toLocaleString("ko-KR")}만원 · 대출 ${ltvPct}%)으로 계산했습니다.`
-      : `예시 시세(8.4억)와 입력하신 조건(연 소득 ${incomeManwon.toLocaleString("ko-KR")}만원 · 대출 ${ltvPct}%) 기준입니다. 지역을 선택하면 실제 평균가로 다시 계산합니다.`;
+      ? `${baseline.regionName} 평균 매매가 ${baseline.avgSaleLabel}(${baseline.period} 기준)와 입력한 조건(연 소득 ${incomeManwon.toLocaleString("ko-KR")}만원 · 대출 ${ltvPct}%)으로 계산했어요.`
+      : `예시 시세(8.4억)와 입력한 조건(연 소득 ${incomeManwon.toLocaleString("ko-KR")}만원 · 대출 ${ltvPct}%)으로 계산했어요. 지역을 고르면 실제 평균가로 다시 계산해요.`;
     const body =
       stress.label !== "위험"
-        ? `금리 1%p 상승 시에도 월 ${scenarioWon(calc.payStress)}(소득 대비 ${(calc.dsrStress * 100).toFixed(0)}%)로 ${stress.label} 범위입니다.`
-        : `금리 1%p 상승 시 월 ${scenarioWon(calc.payStress)}(소득 대비 ${(calc.dsrStress * 100).toFixed(0)}%)로 부담이 커집니다. 대출 비율을 낮추거나 예산을 재조정하세요.`;
-    const hold = ` ${calc.holdYears}년 보유 시 누적 이자는 약 ${scenarioWon(calc.holdInterest)}, 잔여 원금은 ${scenarioWon(calc.holdBalance)}입니다.`;
+        ? `금리가 1%p 올라도 월 ${scenarioWon(calc.payStress)}(소득 대비 ${(calc.dsrStress * 100).toFixed(0)}%)로 ${stress.label} 범위예요.`
+        : `금리가 1%p 오르면 월 ${scenarioWon(calc.payStress)}(소득 대비 ${(calc.dsrStress * 100).toFixed(0)}%)로 위험 범위예요.`;
+    const hold = ` ${calc.holdYears}년 보유하면 누적 이자는 약 ${scenarioWon(calc.holdInterest)}, 잔여 원금은 ${scenarioWon(calc.holdBalance)}이에요.`;
     const tail =
       pricePct < 0
-        ? ` 시세 ${pricePct}% 시나리오에서 LTV는 ${calc.ltvAfter.toFixed(0)}%로 ${calc.ltvAfter < 60 ? "안전권" : "주의 구간"}입니다.`
+        ? ` 시세 ${pricePct}% 시나리오에서 LTV는 ${calc.ltvAfter.toFixed(0)}%로 ${calc.ltvAfter < 60 ? "안전권" : "주의 구간"}이에요.`
         : "";
     return `${head} ${body}${hold}${tail}`;
   }, [baseline, calc, pricePct, incomeManwon, ltvPct]);
@@ -149,12 +150,12 @@ export function ScenarioDetails({
         </div>
       </section>
 
-      {/* [1023] 흰 카드 위 잉크 토큰 — 예전 네이비 .ai-panel */}
+      {/* [1023] 흰 카드 위 잉크 토큰 — 예전 네이비 .ai-panel
+          [1028] "AI" 칩을 뺐다 — 이 문단은 AI 모델이 아니라 화면 계산을 문장으로 옮긴 것이다. 이름표는 "계산 요약" */}
       <div className="flex flex-col gap-2 rounded-2xl border border-line bg-bg p-4 max-md:p-3.5">
         <div className="flex items-start gap-3">
-          <span className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-lg border border-line t-caption font-bold text-ink">AI</span>
           <div className="flex-1 t-body text-text-1">{aiComment}</div>
-          <span className="shrink-0 rounded border border-line px-1.5 py-px t-caption font-bold text-text-3">규칙 기반 요약</span>
+          <span className="shrink-0 rounded border border-line px-1.5 py-px t-caption font-bold text-text-3">계산 요약</span>
         </div>
         <div className="t-caption text-text-3">본 분석은 참고용이며 투자 판단의 책임은 이용자에게 있습니다.</div>
       </div>

@@ -3,13 +3,16 @@
    globals.css `.cx-strip`(nth-child 규칙은 유틸로 못 적는다). */
 import { overviewStripCells, type OverviewStripSource } from "./complex-v2-model";
 
-export function ComplexOverviewStrip({ row }: { row: OverviewStripSource }) {
-  const cells = overviewStripCells(row);
+export function ComplexOverviewStrip({ row, nowYear }: { row: OverviewStripSource; /** [1028] 한국 시간의 올해 — 준공 칸에 입주 연차를 적는다 */ nowYear?: number }) {
+  const cells = overviewStripCells(row, { nowYear });
   return (
     <dl className="cx-strip card rise-in-1 mt-3 grid grid-cols-4 rounded-2xl md:grid-cols-8" aria-label="단지 개요">
       {cells.map((c) => (
         <div key={c.key} className="flex min-w-0 flex-col gap-0.5 px-2.5 py-2">
-          <dt className="t-caption text-text-3">{c.label}</dt>
+          <dt className="t-caption text-text-3">
+            {c.label}
+            {c.note ? <span className="tabular-nums"> · {c.note}</span> : null}
+          </dt>
           <dd className={`m-0 truncate t-section text-ink ${c.num ? "tabular-nums" : ""}`}>{c.value}</dd>
         </div>
       ))}

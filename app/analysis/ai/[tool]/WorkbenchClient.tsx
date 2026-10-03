@@ -479,10 +479,10 @@ export function WorkbenchClient({
           markdown: "",
           error:
             res.status === 504
-              ? "계산이 너무 오래 걸려 멈췄어요 — 잠시 뒤 다시 눌러 주세요."
+              ? "계산이 너무 오래 걸려 멈췄어요. 잠시 후 다시 시도해 주세요."
               : res.status === 429
-                ? "너무 자주 눌렀어요 — 1분쯤 뒤에 다시 눌러 주세요."
-                : `서버가 답하지 못했어요(${res.status}) — 잠시 뒤 다시 눌러 주세요.`,
+                ? "너무 자주 눌렀어요. 1분쯤 뒤에 다시 눌러 주세요."
+                : `서버가 답하지 못했어요(${res.status}). 잠시 후 다시 시도해 주세요.`,
         } as RunResult);
       const ok = res.ok && json.ok !== false;
       /* [OPT-50] 결과 렌더는 무거운 갱신 — 전환으로 미뤄 입력 반응성(INP)을 지킨다 */
@@ -726,7 +726,7 @@ export function WorkbenchClient({
                           ? `${price.bandLabel} 최근 ${price.sample ?? ""}건 평균 ${formatKrwWon(price.priceKrw, { style: "short" })} · 최근 거래 ${price.latestYm.slice(0, 4)}.${price.latestYm.slice(4)}`
                           : ready
                             ? ctx?.unavailable?.includes("실거래가")
-                              ? "실거래가를 지금 불러오지 못했어요"
+                              ? "실거래가를 불러오지 못했어요"
                               : "최근 매매 실거래가 적어 대표 가격이 없어요"
                             : ""}
                     </span>
@@ -838,7 +838,7 @@ export function WorkbenchClient({
           {ctxState.phase === "loading" && <ResultSkeleton />}
           {ctxState.phase === "error" && (
             <div className="card flex flex-col items-start gap-2 rounded-2xl p-4" role="status">
-              <p className="t-body font-bold text-warning">자료를 불러오지 못했어요 — 자료가 없는 것과는 달라요.</p>
+              <p className="t-body font-bold text-warning">자료를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
               {ctxState.key !== ECONOMY_KEY && (
                 <button type="button" onClick={retry} className="btn-secondary btn-md px-4 t-sub">
                   다시 불러오기

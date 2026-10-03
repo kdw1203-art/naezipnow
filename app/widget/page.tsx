@@ -77,7 +77,7 @@ export default function WidgetPage() {
         <section className="rise-in-2 mt-6">
           <h2 className="text-[15px] font-bold text-ink">단지 주소 찾기</h2>
           <p className="mt-2 text-[13px] leading-[1.8] text-text-1">
-            단지 브라우즈에서 구를 고르면 단지 목록이 나옵니다. 원하는 단지를 눌러
+            단지 목록에서 구를 고르면 단지가 나옵니다. 원하는 단지를 눌러
             단지 페이지로 들어간 뒤, 브라우저 주소창의 주소를 그대로 복사해 위에
             붙여넣으면 됩니다.
           </p>

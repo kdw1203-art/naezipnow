@@ -34,7 +34,7 @@ async function loadIndex(): Promise<IndexData> {
     return { regions: await listImjangRegions(48), loadError: null };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    logger.error("[/imjang] 지역 목록 조회 실패 — 지역이 없는 것이 아니라 조회가 실패했습니다:", message);
+    logger.error("[/imjang] 지역 목록 조회 실패 (조회 실패):", message);
     return { regions: [], loadError: message };
   }
 }
@@ -79,8 +79,8 @@ export default async function ImjangIndexPage() {
         </h2>
         {loadError ? (
           <div className="card rounded-2xl px-4 py-4">
-            <p className="t-body font-bold text-ink">지역 목록을 지금 불러오지 못했어요</p>
-            <p className="mt-1 t-sub leading-[1.6] text-text-2">지역이 없다는 뜻이 아니라 조회가 실패했다는 뜻이에요.</p>
+            <p className="t-body font-bold text-ink">지역 목록을 불러오지 못했어요</p>
+            <p className="mt-1 t-sub leading-[1.6] text-text-2">잠시 후 다시 시도해 주세요.</p>
           </div>
         ) : regions.length === 0 ? (
           <div className="card rounded-2xl px-4 py-4 t-body text-text-2">

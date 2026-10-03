@@ -89,7 +89,7 @@ export function RegionRelativeView({ r, compact = false }: { r: RegionRelativeDa
               전월 대비
               <Explain
                 term="maemae-gagyeok-jisu"
-                how={`한국부동산원이 매달 발표하는 ${r.district} 아파트 매매가격 변동률(전월 대비). 이 단지가 아니라 ${r.district} 전체의 흐름.`}
+                how={`한국부동산원이 매달 발표하는 ${r.district} 아파트 매매가격 변동률(전월 대비). ${r.district} 전체의 흐름(이 단지 값 아님).`}
                 source={`한국부동산원${period ? ` · ${period}` : ""}`}
               />
             </span>
@@ -126,7 +126,7 @@ export async function RegionRelative({
     return (
       <section className={wrap}>
         <h2 className="mb-1.5 px-0.5 t-section text-ink">이 동네 대비</h2>
-        <p className="card rounded-2xl px-4 py-3.5 t-body text-text-3">동네 평균을 지금 불러오지 못했어요. 잠시 후 새로고침해 주세요.</p>
+        <p className="card rounded-2xl px-4 py-3.5 t-body text-text-3">동네 평균을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
       </section>
     );
   }

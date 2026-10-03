@@ -36,19 +36,21 @@ import { PREDICTION_COST_FIELDS } from "./prediction-cost-fields";
 
 
 /* [1026] 단지 분석 4종 빈 상태 한 문장 — 단지를 고르면 무엇이 바로 나오는지(값 없음). 서버가 넘긴다(클라이언트 번들 0)
-   [1026b] 나머지 8종도 같은 자리에 한 문장(경제지표 모니터는 단지를 고르지 않아 빈 상태가 없다) */
+   [1026b] 나머지 8종도 같은 자리에 한 문장(경제지표 모니터는 단지를 고르지 않아 빈 상태가 없다)
+   [1028] 도구마다 달랐던 문장("단지를 고르면 … 바로 나와요")은 바로 위 머리 한 줄(useCase · premise)과 같은 말이었다 —
+   무엇이 나오는지는 머리가 말하고, 빈 상태는 11종 공통 한 줄. */
 const EMPTY_LINE: Partial<Record<AiAnalysisToolId, string>> = {
-  "ai-diagnosis": "단지를 고르면 5가지 항목 점수가 레이더로 바로 나와요",
-  "ai-prediction": "단지를 고르면 1·3·5년 뒤 낙관·기본·비관 가격이 바로 나와요",
-  "ai-inspection": "단지를 고르면 같은 지역에서 함께 볼 단지와 하루 순서가 바로 나와요",
-  "ai-timing": "단지를 고르면 가격 흐름·거래 열기·입주 물량 신호 3개가 바로 나와요",
-  "ai-risk": "단지를 고르면 위험 신호 5가지가 바로 나와요",
-  "ai-compare": "단지를 2곳 이상 담으면 같은 숫자 칸 비교표가 바로 나와요",
-  "ai-simulator": "단지를 고르면 최근 실거래가가 기준 가격으로 채워져요",
-  "ai-gap": "단지를 고르면 갭 비율과 지역 전세가율이 바로 나와요",
-  "ai-portfolio": "관심 단지를 불러오면 지역·가격대 구성이 바로 나와요",
-  "my-checklist": "단지를 고르면 임장·계약 전에 확인할 항목이 바로 나와요",
-  "contract-risk": "단지를 고르면 전세가율로 본 위험도와 계약 전에 확인할 것이 바로 나와요",
+  "ai-diagnosis": "단지를 고르면 결과가 나와요.",
+  "ai-prediction": "단지를 고르면 결과가 나와요.",
+  "ai-inspection": "단지를 고르면 결과가 나와요.",
+  "ai-timing": "단지를 고르면 결과가 나와요.",
+  "ai-risk": "단지를 고르면 결과가 나와요.",
+  "ai-compare": "단지를 고르면 결과가 나와요.",
+  "ai-simulator": "단지를 고르면 결과가 나와요.",
+  "ai-gap": "단지를 고르면 결과가 나와요.",
+  "ai-portfolio": "단지를 고르면 결과가 나와요.",
+  "my-checklist": "단지를 고르면 결과가 나와요.",
+  "contract-risk": "단지를 고르면 결과가 나와요.",
 };
 
 /* [1010] 1h → 1일. 실측(2026-09-20~22) 하루 1,512 렌더 — 도구 12개짜리 라우트가
@@ -74,7 +76,7 @@ export async function generateMetadata({
   const id = TOOL_IDENTITIES[tool as AiAnalysisToolId];
   return {
     title: `${id.title} — AI 분석 도구 | 내집나우`,
-    description: `${id.tagline}. 국토교통부 실거래·전월세 신고·입주 예정·이웃 임장노트 실데이터로 계산하고, 모든 수치에 출처를 표기합니다.`,
+    description: `${id.tagline}. 국토교통부 실거래·전월세 신고·입주 예정·이웃 임장노트로 계산하고, 모든 수치에 출처를 표기합니다.`,
     alternates: { canonical: `/analysis/ai/${tool}` },
   };
 }

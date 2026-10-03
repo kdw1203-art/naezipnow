@@ -214,7 +214,7 @@ export default async function ImjangRegionPage({
       <section className="mb-6 max-md:mb-4">
         <h2 className="mb-2 t-section text-ink">이 지역을 다녀온 기록</h2>
         {notesFailed ? (
-          <p className="t-body text-text-2">공개 노트를 지금 불러오지 못했어요. 없는 게 아니라 조회가 실패했다는 뜻이에요.</p>
+          <p className="t-body text-text-2">공개 노트를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
         ) : regionNotes.length === 0 ? (
           <p className="t-body leading-[1.65] text-text-2">
             아직 이 지역의 공개 임장노트가 없어요.{" "}
@@ -246,7 +246,7 @@ export default async function ImjangRegionPage({
                     </span>
                   </span>
                   {avg > 0 && (
-                    <span className="t-num shrink-0 rounded-lg bg-primary-soft px-2 py-1 t-sub font-bold text-primary">
+                    <span role="img" aria-label={`항목 평점 ${avg.toFixed(1)}`} className="t-num shrink-0 rounded-lg bg-primary-soft px-2 py-1 t-sub font-bold text-primary">
                       {avg.toFixed(1)}
                     </span>
                   )}

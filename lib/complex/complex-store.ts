@@ -37,6 +37,8 @@ import { decoratedParam } from "@/lib/seo/complex-slug";
 /* [967 · 16] 월별 접기(면적대 분할 포함) — getTransactionHistoryWithBands 가 쓴다 */
 import { foldTradesByMonth, type TxMonthBandSlice } from "@/lib/complex/tx-month-fold";
 import { latestTradeRow, type HubDeal } from "@/lib/complex/hub-price";
+import { dealMarkKey, type DealMarks } from "@/lib/complex/deal-marks";
+export { applyDealMarks, dealMarkKey, type DealMarks } from "@/lib/complex/deal-marks";
 
 /**
  * 조회 실패는 던진다 — "없음"으로 답하지 않는다.
@@ -1454,6 +1456,74 @@ export async function getComplexDeals(complexId: string, opts?: { includeCancell
   /* 공용 행과 같은 순서(최신 계약월 먼저) — 같은 달 안은 계약일 내림차순 */
   out.sort((a, b) => b.ym.localeCompare(a.ym) || (b.day ?? -1) - (a.day ?? -1));
   return out;
+}
+
+/* ── [1028] 거래 표식(직거래 · 등기) ─────────────────────────────────────────────────────────────
+   국토교통부 실거래 원문에는 거래유형(dealingGbn: 중개거래·직거래)과 등기일자(rgstDate)가 있다. 2026년 계약분부터
+   raw 에 실려 있고(운영 실측 2026-10-03: 매매 354,763행 전부 · 직거래 25,617행), 2025년 채우기분에는 없다.
+   직거래는 당사자끼리 맺은 계약이라 값이 주변 거래와 크게 다를 수 있다(가족 간 거래 등) — 화면이 그 사실을 적는다.
+   공용 행(loadTradeRowsShared)은 건드리지 않는다: 부분 인덱스만 읽는 질의라(Index Only Scan) raw 를 더하면 힙을 읽는다.
+   표식은 단지 상세만 쓰므로 여기서 따로, 작게 읽는다 — ① 직거래 행 전부(단지당 소수) ② 최근 40행의 등기일(최근 실거래 표용). */
+type TradeMarkRow = TradeRowLite & { dealing?: string | null; rgst?: string | null };
+
+const loadTradeMarkRowsShared = cache(
+  async (region: string, name: string): Promise<{ direct: TradeMarkRow[]; recent: TradeMarkRow[] }> => {
+    const sb = getServiceSupabase();
+    if (!sb) return { direct: [], recent: [] };
+    const cols = "contract_ym, deal_amount_krw, area_m2, contract_day, floor, dealing:raw->>dealingGbn, rgst:raw->>rgstDate";
+    const [direct, recent] = await Promise.all([
+      sb
+        .from("market_transactions")
+        .select(cols)
+        .eq("complex_name", name)
+        .eq("region_name", region)
+        .eq("transaction_type", "trade")
+        .eq("property_type", "apartment")
+        .eq("is_cancelled", false)
+        .gt("deal_amount_krw", 0)
+        .eq("raw->>dealingGbn", "직거래")
+        .order("contract_ym", { ascending: false })
+        .limit(300),
+      sb
+        .from("market_transactions")
+        .select(cols)
+        .eq("complex_name", name)
+        .eq("region_name", region)
+        .eq("transaction_type", "trade")
+        .eq("property_type", "apartment")
+        .eq("is_cancelled", false)
+        .gt("deal_amount_krw", 0)
+        .order("contract_ym", { ascending: false })
+        .order("contract_day", { ascending: false, nullsFirst: false })
+        .limit(40),
+    ]);
+    if (direct.error) throw dbError(`market_transactions (단지 직거래 표식 ${name})`, direct.error);
+    if (recent.error) throw dbError(`market_transactions (단지 등기 표식 ${name})`, recent.error);
+    return {
+      direct: (direct.data as TradeMarkRow[] | null) ?? [],
+      recent: (recent.data as TradeMarkRow[] | null) ?? [],
+    };
+  },
+);
+
+/** [1028] 단지 매매 거래의 직거래·등기 표식 — 못 읽으면 던진다(부르는 쪽이 표식 없이 그린다) */
+export async function getComplexDealMarks(complexId: string): Promise<DealMarks> {
+  const dec = decodeComplexIdForQuery(complexId, "getComplexDealMarks");
+  const marks: DealMarks = { direct: new Set(), registered: new Map() };
+  if (!dec) return marks;
+  const rows = await loadTradeMarkRowsShared(dec.region, dec.name);
+  for (const r of rows.direct) {
+    const d = toHubDeal(r);
+    if (d) marks.direct.add(dealMarkKey(d));
+  }
+  for (const r of rows.recent) {
+    const d = toHubDeal(r);
+    if (!d) continue;
+    if ((r.dealing ?? "").trim() === "직거래") marks.direct.add(dealMarkKey(d));
+    const rgst = (r.rgst ?? "").trim();
+    if (rgst) marks.registered.set(dealMarkKey(d), rgst);
+  }
+  return marks;
 }
 
 /** 공용 행이 PostgREST 기본 상한(1,000행)에 닿았는가 — 닿았으면 가장 이른 달은 일부만 읽혔을 수 있다 */

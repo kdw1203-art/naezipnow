@@ -111,7 +111,8 @@ export function ScenarioControls(p: ScenarioControlsProps) {
 
         {/* 지역 실시세 프리필 */}
         <label className="flex flex-col gap-1">
-          <span className="t-sub font-bold text-text-2">기준 지역 (실시세)</span>
+          {/* [1028] "실시세"(내부 말) → "지역 평균가" — 고르면 그 지역의 평균 매매가(한국부동산원 통계)로 계산한다 */}
+          <span className="t-sub font-bold text-text-2">기준 지역 (지역 평균가)</span>
           <select
             value={p.regionId}
             onChange={(e) => p.onRegion(e.target.value)}
@@ -125,7 +126,7 @@ export function ScenarioControls(p: ScenarioControlsProps) {
             ))}
           </select>
           {p.regionId && !p.loadingBaseline && !p.isReal && (
-            <span className="t-sub text-text-3">이 지역은 실시세 자료가 없어 예시 시세로 계산</span>
+            <span className="t-sub text-text-3">이 지역은 평균가 자료가 없어 예시 시세로 계산</span>
           )}
         </label>
 
@@ -254,7 +255,7 @@ export function ScenarioControls(p: ScenarioControlsProps) {
           <span className="text-text-2">필요 현금 (시세−대출)</span>
           <TweenNumber value={p.cashWon / 10_000} format="eokmanwon" className="text-right font-bold text-ink" />
         </div>
-        <p className="m-0 t-caption text-text-3">{p.isReal ? "지역 평균 실시세 · 30년 원리금균등 상환" : "예시 시세 · 30년 원리금균등 상환"}</p>
+        <p className="m-0 t-caption text-text-3">{p.isReal ? "지역 평균가 · 30년 원리금균등 상환" : "예시 시세 · 30년 원리금균등 상환"}</p>
       </section>
 
       <section className={CARD} aria-label="시나리오">

@@ -96,7 +96,7 @@ export function WatchlistRows({ initial, max }: { initial: WatchRow[]; max: numb
       onDeleteFailed: (r) => {
         if (mounted.current) {
           insertAt(r.item, r.index);
-          showToast("빼지 못했어요 — 연결을 확인하고 다시 눌러 주세요");
+          showToast("빼지 못했어요. 연결을 확인하고 다시 눌러 주세요");
         } else {
           /* 토스트는 한 줄(말줄임)이라 390px 에서 다 보이는 길이로 — 관심 단지 화면에 돌아오면 그 행이 그대로 있다 */
           showToast("관심 단지를 빼지 못했어요 · 연결을 확인해 주세요");
@@ -115,7 +115,7 @@ export function WatchlistRows({ initial, max }: { initial: WatchRow[]; max: numb
         showToast("다시 담았어요 · 알림 기준가는 새로 잡혀요");
       },
       onRestoreFailed: (_r, error) => {
-        showToast(error ? `되돌리지 못했어요 — ${error}` : "되돌리지 못했어요 — 단지 화면에서 다시 담아 주세요");
+        showToast(error ? `되돌리지 못했어요. ${error}` : "되돌리지 못했어요. 단지 화면에서 다시 담아 주세요");
       },
     });
   }
@@ -164,7 +164,7 @@ export function WatchlistRows({ initial, max }: { initial: WatchRow[]; max: numb
       {/* [1015 · 규칙 D] "알림을 보내드려요" → 사실 한 줄 */}
       <p className="mb-2 t-body text-text-3">
         관심 단지 <span className="tabular-nums">{rows.length}</span>곳
-        {initial.length >= max && ` (최근 ${max}곳 표시)`} · 시세 ±1% 변동 시 알림
+        {initial.length >= max && ` (최근 ${max}곳 표시)`} · 현재가 ±1% 변동 시 알림
       </p>
       {/* [1015 · 규칙 I] 관심 단지·실거래 = blue 톤 리퀴드 판(카드 안 행 목록 → lq-panel) */}
       <div className="lq-panel py-1" data-tone="blue">
@@ -176,7 +176,7 @@ export function WatchlistRows({ initial, max }: { initial: WatchRow[]; max: numb
               title="현재가 · 기준가 대비"
               body="관심 단지의 지금 가격이 지난번 점검 때보다 얼마나 움직였는지예요."
               how={[
-                "현재가 = 거래가 가장 많은 전용면적 구간의 최근 최대 6건 평균(최소 3건, 해제 신고 제외) — 시세 변동 알림과 같은 계산이에요.",
+                "현재가 = 거래가 가장 많은 전용면적 구간의 최근 최대 6건 평균(최소 3건, 해제 신고 제외). 가격 알림과 같은 계산이에요.",
                 "기준가 = 가격 알림 점검이 마지막으로 본 값이에요. 대표 면적대가 바뀐 단지는 비교하지 않아요.",
                 "기준가 대비 = (현재가 − 기준가) ÷ 기준가 × 100",
                 "새 노트 = 최근 30일 공개 임장노트 수",

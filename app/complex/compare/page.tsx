@@ -216,9 +216,6 @@ export default async function ComplexComparePage() {
         <section className="rise-in-1 card p-[var(--pad-card)]">
           <p className="py-8 text-center t-body text-text-3">
             <strong className="text-ink">{LOAD_FAILED_LINE}</strong>
-            <br />
-            비교할 단지가 없다는 뜻이 아니라, 조회가 제때 끝나지 않았거나 실패했다는
-            뜻입니다.
           </p>
         </section>
       ) : pairs.length === 0 ? (
@@ -273,7 +270,7 @@ export default async function ComplexComparePage() {
       {/* [1015 · 규칙 B] "조합을 고른 기준" 문단 → 위 ⓘ 로 접었다. 안내문("~을 이용하세요")은 링크 칩 세 개로 */}
       <nav aria-label="관련 화면" className="mb-8 flex flex-wrap gap-1.5 max-md:mb-4">
         <Link href="/complex/browse" className="chip chip-soft t-sub px-3 py-1.5 no-underline">
-          단지 실거래 브라우즈 ›
+          단지 실거래 보기 ›
         </Link>
         <Link href="/tx" className="chip chip-soft t-sub px-3 py-1.5 no-underline">
           면적대·가격대 실거래 ›

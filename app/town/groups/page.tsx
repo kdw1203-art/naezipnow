@@ -138,8 +138,7 @@ export default async function TownGroupsPage() {
           <p className="t-body font-bold text-ink">모임 목록을 불러오지 못했어요</p>
           {/* [970 · C-20] 합니다체 → 해요체 통일 */}
           <p className="max-w-xs t-sub leading-[1.6] text-text-3">
-            일시적인 오류예요. 모임이 없는 게 아니라, 지금 목록을 읽지 못한
-            상태예요. 잠시 뒤 새로고침해 주세요.
+            잠시 후 다시 시도해 주세요.
           </p>
           <Link href="/town/groups" className="btn-soft rounded-lg px-4 py-2 t-sub no-underline">
             다시 불러오기

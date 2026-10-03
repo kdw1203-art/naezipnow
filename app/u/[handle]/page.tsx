@@ -206,9 +206,8 @@ export default async function PublicProfilePage({
       <PageShell breadcrumb={`발견 › @${displayName}`}>
         <div className="mx-auto max-w-[640px] py-10">
           <ErrorState
-            title="지금은 프로필을 불러올 수 없어요"
-            desc="이 사용자가 없다는 뜻이 아니라, 조회 자체가 실패했다는 뜻입니다."
-            cause="잠시 후 새로고침해 주세요."
+            title="프로필을 불러오지 못했어요"
+            desc="잠시 후 다시 시도해 주세요."
           />
         </div>
       </PageShell>

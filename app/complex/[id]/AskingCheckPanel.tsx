@@ -135,7 +135,7 @@ export function AskingCheckPanel({ apiId }: { apiId: string }) {
     return (
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-danger-soft px-3 py-2.5">
         <p className="t-sub font-bold text-danger">
-          실거래를 불러오지 못했어요. 거래가 없는 게 아니라 조회에 실패한 거예요.
+          실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
         </p>
         <button
           type="button"
@@ -150,7 +150,7 @@ export function AskingCheckPanel({ apiId }: { apiId: string }) {
   if (options.length === 0) {
     return (
       <p className="mt-3 rounded-xl bg-bg px-3 py-3 t-sub text-text-2">
-        최근 24개월에 이 단지의 매매 실거래 신고가 없어요 — 비교할 거래가 없어 위치를 말할 수 없어요.
+        최근 24개월에 이 단지의 매매 실거래 신고가 없어요. 비교할 거래가 없어 위치를 말할 수 없어요.
       </p>
     );
   }
@@ -198,8 +198,8 @@ export function AskingCheckPanel({ apiId }: { apiId: string }) {
             : read.reason === "empty"
               ? "억·만원 모두 알아들어요(숫자만 적으면 1,000 미만은 억, 그 이상은 만원)."
               : read.reason === "after-eok"
-                ? "억 뒤 숫자가 천 단위인지 만 단위인지 모호해요 — 12억 5천처럼 적어 주세요."
-                : "숫자로 적어 주세요 — 예: 12억 5천, 125000"}
+                ? "억 뒤 숫자가 천 단위인지 만 단위인지 모호해요. 12억 5천처럼 적어 주세요."
+                : "숫자로 적어 주세요. 예: 12억 5천, 125000"}
         </p>
       </div>
 
@@ -207,7 +207,7 @@ export function AskingCheckPanel({ apiId }: { apiId: string }) {
         <div className="rounded-xl bg-bg px-3 py-3">
           <p className="t-body font-bold text-ink">거래가 적어 비교하기 어려워요</p>
           <p className="mt-0.5 t-sub text-text-3">
-            최근 {win.months}개월 이 면적대 실거래 {win.trades.length}건 — {ASKING_MIN_TRADES}건은 있어야 위치를 말할 수
+            최근 {win.months}개월 이 면적대 실거래 {win.trades.length}건이에요. {ASKING_MIN_TRADES}건은 있어야 위치를 말할 수
             있어요.
           </p>
           {win.trades.length > 0 && (
@@ -236,7 +236,7 @@ export function AskingCheckPanel({ apiId }: { apiId: string }) {
             </p>
           ) : (
             <p className="t-body font-bold text-ink">
-              최근 {win.months}개월 이 면적대 실거래 {stats.n}건 — 호가를 넣으면 이 사이 어디쯤인지 보여 드려요
+              최근 {win.months}개월 이 면적대 실거래 {stats.n}건 · 호가를 넣으면 이 사이 어디쯤인지 보여 드려요
             </p>
           )}
           <DistributionBar prices={prices} asking={pos ? asking : null} />
@@ -276,7 +276,7 @@ export function AskingCheckPanel({ apiId }: { apiId: string }) {
           )}
           <p className="mt-2 t-caption leading-relaxed text-text-3">
             {ymDot(win.trades[win.trades.length - 1].ym)}~{ymDot(win.trades[0].ym)} 계약 {win.trades.length}건 · 국토교통부
-            실거래(해제 신고 제외) · 적정가나 목표가가 아니라 지난 거래 사이에서의 위치예요. 층·향·수리 상태는 반영되지
+            실거래(해제 신고 제외) · 지난 거래 사이에서의 위치예요(적정가·목표가 아님). 층·향·수리 상태는 반영되지
             않아요.
           </p>
         </div>

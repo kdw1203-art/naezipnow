@@ -321,7 +321,7 @@ export function prefetchComplexSections(args: {
   swallow(loadRelatedNews(args.name, dong));
 }
 
-/** 축 요약은 enrich 가 끝난 뒤의 id(kapt 매칭 시 kapt 형태)를 키로 쓴다 — 따로 띄운다. */
+/** 축 요약은 canonical_id(name-id)를 키로 쓴다 — [1028] kapt 형태 id 는 실거래 조회 키로 풀리지 않는다. */
 export function prefetchAxisSummary(args: {
   rowId: string;
   city: string | null;

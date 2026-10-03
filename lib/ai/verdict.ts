@@ -234,7 +234,7 @@ function tilePool(
   const area = opts.areaLabel ?? regionShort(ctx.region?.name ?? ctx.complex?.region);
   /* [1008 · 리뷰 A-9] 조회가 실패한 칸은 "자료 없음"이 아니라 "지금 불러오지 못했어요" */
   const failed = new Set(ctx.unavailable ?? []);
-  const FAILED_NOTE = "지금 불러오지 못했어요";
+  const FAILED_NOTE = "불러오지 못했어요";
   const fieldAsOf = snap?.fieldAsOf ?? null;
   const loan = opts.loan ?? null;
   /* 건수 자체가 값인 칸은 오래됨만 본다. 대표가는 규칙상 최근 거래 3~6건 평균이라 "거래 적음" 을
@@ -465,6 +465,9 @@ const TILE_KEYS: Record<AiAnalysisToolId, readonly string[]> = {
   "ai-gap": ["price", "jeonseRatio", "wolse", "regionYoy"],
   "contract-risk": ["jeonseRatio", "wolse", "regionMom", "price"],
   "ai-simulator": ["price", "loanAmount", "loanMonthly", "loanInterest"],
+  /* [1028] 경제지표 모니터의 기준금리 칸은 대표 수치(기준금리 N% · 한국은행)와 같은 숫자다 — 화면은 칸 줄에서 이 칸을 빼고 그린다
+     (app/analysis/ai/[tool]/verdict-display.ts tilesBesideMetric). 여기서 빼지 않는 이유: 출처 한 줄이 칸의 출처를 모으므로
+     칸을 지우면 "한국은행"이 출처 줄에서 사라지고 기준일(한국은행 날짜)만 남는다. 데이터(4칸 · numbers)는 그대로 둔다. */
   "ai-economy": ["baseRate", "unsold", "regionMom", "regionYoy"],
   "ai-compare": ["price", "trades6m", "regionYoy", "jeonseRatio"],
   "ai-portfolio": ["price", "trades6m", "regionYoy", "jeonseRatio"],
@@ -535,12 +538,12 @@ function toolMetric(
         },
         headline:
           band === "strong"
-            ? `${name}: ${r.measured}개 항목이 고르게 좋아요 — 특히 ${r.strongest.label}(${r.strongest.score}점).`
+            ? `${name}: ${r.measured}개 항목이 고르게 좋아요. ${r.strongest.label} ${r.strongest.score}점이 가장 높아요.`
             : band === "weak"
-              ? `${name}: 평균 ${r.avg}점 — ${subjJosa(r.weakest.label)} 약해요(${r.weakest.score}점).`
+              ? `${name}: 평균 ${r.avg}점이에요. ${subjJosa(r.weakest.label)} 약해요(${r.weakest.score}점).`
               : r.strongest.key === r.weakest.key
-                ? `${name}: 평균 ${r.avg}점 — ${r.strongest.label} 한 가지로만 본 점수예요.`
-                : `${name}: 평균 ${r.avg}점 — ${topicJosa(r.strongest.label)} 좋고 ${topicJosa(r.weakest.label)} 약해요.`,
+                ? `${name}: 평균 ${r.avg}점이에요. ${r.strongest.label} 한 가지로만 본 점수예요.`
+                : `${name}: 평균 ${r.avg}점이에요. ${topicJosa(r.strongest.label)} 좋고 ${topicJosa(r.weakest.label)} 약해요.`,
       };
     }
     case "ai-prediction": {
@@ -566,7 +569,7 @@ function toolMetric(
             note: `낙관 ${fmt(at.opt)} · 비관 ${fmt(at.pess)} · 가정 계산`,
             asOf: ctx.region?.trend?.asOf ?? snap?.period ?? null,
           },
-          headline: `${name}: ${scenario.years}년 뒤 기본 ${fmt(at.base)} 안팎 — 낙관 ${fmt(at.opt)}, 비관 ${fmt(at.pess)}.`,
+          headline: `${name}: ${scenario.years}년 뒤 기본 ${fmt(at.base)} 안팎이에요. 낙관 ${fmt(at.opt)}, 비관 ${fmt(at.pess)}이에요.`,
         };
       }
       return {
@@ -574,7 +577,7 @@ function toolMetric(
         metric: null,
         headline: startKrw
           ? `${name}: 지역 가격 흐름 자료가 없어 앞으로의 시나리오를 그리지 않았어요.`
-          : `${name}: 최근 실거래가 모자라 출발 가격을 잡지 못했어요 — 기준 가격을 넣으면 계산해요.`,
+          : `${name}: 최근 실거래가 모자라 출발 가격을 잡지 못했어요. 기준 가격을 넣으면 계산해요.`,
       };
     }
     case "ai-timing": {
@@ -595,10 +598,10 @@ function toolMetric(
         },
         headline:
           verdictWord === "협상 유리"
-            ? `${name}: 신호 ${live.length}개 중 ${green}개가 사는 쪽에 유리해요 — 값을 깎아 볼 여지가 있어요.`
+            ? `${name}: 신호 ${live.length}개 중 ${green}개가 사는 쪽에 유리해요.`
             : verdictWord === "추격 매수 주의"
-              ? `${name}: 신호 ${live.length}개 중 ${red}개가 파는 쪽에 유리해요 — 지금 호가를 따라가지 마세요.`
-              : `${name}: 신호가 엇갈려요 — 서두를 이유도, 미룰 이유도 뚜렷하지 않아요.`,
+              ? `${name}: 신호 ${live.length}개 중 ${red}개가 파는 쪽에 유리해요.`
+              : `${name}: 신호 ${live.length}개가 엇갈려요.`,
       };
     }
     case "ai-risk": {
@@ -608,7 +611,7 @@ function toolMetric(
       if (measured < RISK_MIN_MEASURED) {
         return {
           metric: null,
-          headline: `${name}: 5가지 위험 신호 중 ${measured}가지만 잴 수 있어 위험 수준을 매기지 않았어요 — 아래 항목별로 보세요.`,
+          headline: `${name}: 위험 신호 5가지 중 ${measured}가지만 잴 수 있어 위험 수준을 매기지 않았어요.`,
         };
       }
       const grade = warn.length >= 2 ? "높음" : warn.length === 1 ? "보통" : "낮음";
@@ -632,8 +635,8 @@ function toolMetric(
               ? `${name}: 잰 ${measured}가지 위험 신호 중 걸린 게 없어요(${unmeasured}가지는 자료 없음).`
               : `${name}: 살펴본 5가지 위험 신호 중 걸린 게 없어요.`
             : unmeasured > 0
-              ? `${name}: 잰 ${measured}가지 위험 신호 중 ${warn.length}가지가 걸렸어요(${unmeasured}가지는 자료 없음) — ${warn.map((f) => f.title).join(", ")}.`
-              : `${name}: 5가지 위험 신호 중 ${warn.length}가지가 걸렸어요 — ${warn.map((f) => f.title).join(", ")}.`,
+              ? `${name}: 잰 ${measured}가지 위험 신호 중 ${warn.length}가지가 걸렸어요(${unmeasured}가지는 자료 없음): ${warn.map((f) => f.title).join(", ")}.`
+              : `${name}: 5가지 위험 신호 중 ${warn.length}가지가 걸렸어요: ${warn.map((f) => f.title).join(", ")}.`,
       };
     }
     case "ai-gap": {
@@ -653,7 +656,7 @@ function toolMetric(
             note: `갭 ${formatEokMan(gap, { unit: "만원" })} = 매매 ${formatEokMan(mae, { unit: "만원" })} − 전세 ${formatEokMan(jeon, { unit: "만원" })}`,
             asOf: null,
           },
-          headline: `${name}: 갭 ${formatEokMan(gap, { unit: "만원" })}(매매가의 ${rate}%) — ${rate <= 15 ? "적은 돈으로 들어가지만 전세가가 내리면 위험해요." : "필요한 돈은 크지만 전세가가 내려도 버틸 여유가 있어요."}`,
+          headline: `${name}: 갭 ${formatEokMan(gap, { unit: "만원" })} · 매매가의 ${rate}%예요.`,
         };
       }
       if (price && snap?.jeonseRatio != null) {
@@ -663,10 +666,10 @@ function toolMetric(
             label: "갭 비율 (지역 전세가율로 추정)",
             value: `${rate.toLocaleString("ko-KR")}`,
             unit: "%",
-            note: `최근 실거래가 × (100 − 전세가율 ${snap.jeonseRatio}%) — 매매·전세가를 넣으면 정확해져요`,
+            note: `최근 실거래가 × (100 − 전세가율 ${snap.jeonseRatio}%) · 매매·전세가를 넣으면 정확해져요`,
             asOf: snap.period || null,
           },
-          headline: `${name}: 지역 전세가율 ${snap.jeonseRatio}%로 추정하면 갭은 매매가의 약 ${rate}% — 이 단지 전세 실거래로 다시 확인하세요.`,
+          headline: `${name}: 지역 전세가율 ${snap.jeonseRatio}%로 추정한 갭은 매매가의 약 ${rate}%예요.`,
         };
       }
       return { metric: null, headline: `${name}: 매매가·전세가를 넣으면 갭을 계산해요.` };
@@ -690,10 +693,8 @@ function toolMetric(
             note: `${src} · 이 집 전세가율을 넣으면 이 계약 기준으로 다시 계산해요`,
             asOf: snap?.fieldAsOf?.jeonse ?? (snap?.period || null),
           },
-          headline:
-            ratio >= 80
-              ? `지역 평균 전세가율부터 ${ratio}%예요 — 이 집 보증금·매매가로 전세가율을 꼭 계산해 보세요.`
-              : `지역 평균 전세가율 ${ratio}% — 지역 평균으로는 여유가 있어요. 이 집 전세가율을 넣어야 이 계약의 위험을 볼 수 있어요.`,
+          /* [1028] 80 이상·미만 같은 문장 — 지역 평균은 사실만 적고, 이 계약의 위험도는 입력이 있어야 계산한다(구간은 알약이 말한다) */
+          headline: `지역 평균 전세가율 ${ratio}%예요. 이 계약의 위험도는 이 집 보증금·매매가를 넣으면 계산해요.`,
         };
       }
       const level = contract.level ?? "안전";
@@ -708,10 +709,10 @@ function toolMetric(
         },
         headline:
           level === "위험"
-            ? `전세가율 ${ratio}% — 보증금이 매매가에 가까워요. 보증보험·등기부 확인 없이는 계약하지 마세요.`
+            ? `전세가율 ${ratio}% · 위험 구간(90% 이상)이에요. 보증금이 매매가에 가까워요.`
             : level === "주의"
-              ? `전세가율 ${ratio}% — 집값이 내리면 보증금을 돌려받기 어려울 수 있어요. 등기부·보증보험을 먼저 확인하세요.`
-              : `전세가율 ${ratio}% — 숫자로는 여유가 있어요. 그래도 등기부의 근저당은 직접 보세요.`,
+              ? `전세가율 ${ratio}% · 주의 구간(80% 이상)이에요. 집값이 내리면 보증금 회수가 어려울 수 있어요.`
+              : `전세가율 ${ratio}% · 80% 미만이에요. 등기부 근저당은 이 숫자에 들어 있지 않아요.`,
       };
     }
     case "ai-inspection": {
@@ -720,8 +721,8 @@ function toolMetric(
         metric: n > 0 ? { label: "함께 볼 단지", value: String(n), unit: "곳", note: "같은 지역 최근 6개월 거래 많은 순", asOf: null } : null,
         headline:
           n > 0
-            ? `${name} 포함 ${n + 1}곳을 하루 동선으로 — 거래가 많은 곳부터 둘러보세요.`
-            : `${name}: 같은 지역에 함께 볼 거래 많은 단지가 아직 없어요 — 이 단지에 집중해 보세요.`,
+            ? `${name} 포함 ${n + 1}곳 · 최근 6개월 거래 많은 순이에요.`
+            : `${name}: 같은 지역에 함께 볼 거래 많은 단지가 아직 없어요.`,
       };
     }
     case "ai-compare": {
@@ -732,8 +733,8 @@ function toolMetric(
         metric: n >= 2 ? { label: "비교 대상", value: String(n), unit: "곳", note: "같은 숫자 칸(가격·거래·지역 흐름·전세가율)으로 나란히", asOf: null } : null,
         headline:
           n >= 2
-            ? `${n}곳을 같은 숫자 칸으로 나란히 놓았어요 — 아래 비교표에서 칸마다 견줘 보세요.`
-            : "비교하려면 단지를 2곳 이상 담아 주세요 — 담으면 같은 숫자 칸으로 나란히 놓아요.",
+            ? `${n}곳을 같은 숫자 칸으로 나란히 놓았어요.`
+            : "단지를 2곳 이상 담으면 같은 숫자 칸으로 비교해요.",
       };
     }
     case "ai-economy": {
@@ -744,7 +745,7 @@ function toolMetric(
             : null,
         headline:
           ctx.macro && ctx.macro.baseRatePct != null
-            ? `기준금리 ${ctx.macro.baseRatePct}% — 대출 이자 부담이 어느 쪽으로 움직이는지 아래 숫자로 보세요.`
+            ? `기준금리 ${ctx.macro.baseRatePct}%예요.`
             : "금리 자료를 아직 못 읽었어요.",
       };
     }
@@ -765,8 +766,8 @@ function toolMetric(
           loan: null,
           metric: null,
           headline: p
-            ? `${name}: 기준 가격 ${formatKrwWon(p, { style: "short" })} — 내 조건에서 대출 비율·금리를 넣으면 월 상환액과 이자를 계산해요.`
-            : `${name}: 최근 실거래가가 없어요 — 내 조건에서 기준 가격·대출 비율·금리를 넣으면 계산해요.`,
+            ? `${name}: 기준 가격은 ${formatKrwWon(p, { style: "short" })}이에요. 내 조건에서 대출 비율·금리를 넣으면 월 상환액과 이자를 계산해요.`
+            : `${name}: 최근 실거래가가 없어요. 내 조건에서 기준 가격·대출 비율·금리를 넣으면 계산해요.`,
         };
       }
       /* 보유 기간을 넣었으면 시세 예측과 같은 시나리오 가격에 판다고 가정한 연 수익률까지 — 도구 이름이 약속하는 것 */
@@ -794,7 +795,7 @@ function toolMetric(
             asOf: null,
             display: { kind: "delta", pct: base.annualPct, digits: 1, base: "넣은 돈 대비" },
           },
-          headline: `${name}: ${formatKrwWon(loan.loanKrw, { style: "short" })}을 빌려 ${loan.holdingYears}년 보유하면 기본 시나리오로 넣은 돈 대비 연 ${signedPct(base.annualPct, 1)} — 월 상환액은 ${manWon(loan.monthlyKrw)}이에요.`,
+          headline: `${name}: ${formatKrwWon(loan.loanKrw, { style: "short" })}을 빌려 ${loan.holdingYears}년 보유하면 기본 시나리오로 넣은 돈 대비 연 ${signedPct(base.annualPct, 1)}예요. 월 상환액은 ${manWon(loan.monthlyKrw)}이에요.`,
         };
       }
       return {
@@ -807,7 +808,7 @@ function toolMetric(
           note: `대출 ${formatKrwWon(loan.loanKrw, { style: "short" })}(${loan.ltvPct}%) · 금리 ${loan.ratePct}% · ${loan.termYears}년 원리금균등${loan.termAssumed ? "(기간 비워 30년)" : ""}`,
           asOf: null,
         },
-        headline: `${name}: ${formatKrwWon(loan.priceKrw, { style: "short" })}에 ${formatKrwWon(loan.loanKrw, { style: "short" })}을 빌리면 월 ${manWon(loan.monthlyKrw)} — 금리가 1%p 오르면 월 ${manWon(loan.monthlyPlus1ppKrw - loan.monthlyKrw)} 더 내요.${loan.holdingYears == null ? " 보유 기간을 넣으면 수익률도 계산해요." : ""}`,
+        headline: `${name}: ${formatKrwWon(loan.priceKrw, { style: "short" })}에 ${formatKrwWon(loan.loanKrw, { style: "short" })}을 빌리면 월 ${manWon(loan.monthlyKrw)}이에요. 금리가 1%p 오르면 월 ${manWon(loan.monthlyPlus1ppKrw - loan.monthlyKrw)} 늘어요.${loan.holdingYears == null ? " 보유 기간을 넣으면 수익률도 계산해요." : ""}`,
       };
     }
     case "ai-portfolio":
@@ -815,7 +816,7 @@ function toolMetric(
          여기 결론은 고른 한 단지의 것이다 */
       return {
         metric: null,
-        headline: `${name}: 관심 단지 중 이 단지의 숫자와 흐름이에요 — 전체 구성(지역·가격대)은 위 카드에서 봐요.`,
+        headline: `${name}: 관심 단지 중 이 단지의 숫자와 흐름이에요.`,
       };
     case "my-checklist": {
       const checklist = CHECKLIST_FULL.map((c) => ({ title: c.title, items: c.items.map((i) => ({ id: i.id, label: i.label })) }));
@@ -823,7 +824,7 @@ function toolMetric(
       return {
         checklist,
         metric: { label: "확인할 항목", value: String(total), unit: "개", note: `${checklist.length}개 분야 · 체크하면 이 기기에 저장돼요`, asOf: null },
-        headline: `${name}: 임장·계약 전에 확인할 ${total}개 항목이에요 — 현장에서 하나씩 체크해 보세요.`,
+        headline: `${name}: 임장·계약 전에 확인할 항목 ${total}개예요.`,
       };
     }
     default:
@@ -919,7 +920,7 @@ function toolBand(
       }
       return {
         band: scoreBand(insight.radar),
-        reason: `${r.measured}개 항목 평균 ${r.avg}점 — 65점 이상 좋음 · 45점 미만 주의`,
+        reason: `${r.measured}개 항목 평균 ${r.avg}점 · 65점 이상 좋음 · 45점 미만 주의`,
         basis: "tool",
       };
     }
@@ -947,23 +948,24 @@ function toolBand(
       const regionRatio = ctx.region?.snapshot?.jeonseRatio ?? null;
       if (inputRatio != null && inputRatio > 0) {
         return inputRatio >= 90
-          ? { band: "weak", reason: `전세가율 ${inputRatio}% — 90% 이상`, basis: "tool" }
+          ? { band: "weak", reason: `전세가율 ${inputRatio}% · 90% 이상`, basis: "tool" }
           : inputRatio >= 80
-            ? { band: "weak", reason: `전세가율 ${inputRatio}% — 80% 이상`, basis: "tool" }
-            : { band: "strong", reason: `전세가율 ${inputRatio}% — 80% 미만`, basis: "tool" };
+            ? { band: "weak", reason: `전세가율 ${inputRatio}% · 80% 이상`, basis: "tool" }
+            : { band: "strong", reason: `전세가율 ${inputRatio}% · 80% 미만`, basis: "tool" };
       }
       /* [1008 · 리뷰 A-7] 입력 없이 지역 평균만 — "좋음·안전"이라 하지 않는다(이 계약이 아니라 지역 평균) */
       if (regionRatio == null) return { band: "thin", reason: "전세가율 자료가 없어요", basis: "tool" };
       return regionRatio >= 80
-        ? { band: "weak", reason: `지역 평균 전세가율부터 ${regionRatio}%`, basis: "tool" }
-        : { band: "mixed", reason: "지역 평균으로 본 참고값 — 이 집 전세가율을 넣으면 정확해져요", basis: "tool" };
+        ? { band: "weak", reason: `지역 평균 전세가율 ${regionRatio}% · 80% 이상`, basis: "tool" }
+        : { band: "mixed", reason: "지역 평균으로 본 참고값", basis: "tool" };
     }
     case "ai-economy": {
       const macro = insight.radar.find((a) => a.key === "macro");
       if (!macro || typeof macro.score !== "number") return { band: "thin", reason: "금리 자료가 없어요", basis: "tool" };
+      /* [1028] 이유 줄은 점수만 — "기준금리 N%" 는 결론 문장과 대표 숫자가 이미 말한다(같은 말 네 번 → 두 번) */
       return {
         band: macro.score >= 65 ? "strong" : macro.score < 45 ? "weak" : "mixed",
-        reason: `${macro.basis} — 금리 환경 ${macro.score}점`,
+        reason: `금리 환경 ${macro.score}점`,
         basis: "tool",
       };
     }

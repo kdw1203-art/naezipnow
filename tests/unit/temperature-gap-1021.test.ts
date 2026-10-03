@@ -202,7 +202,7 @@ test("갭 스크리너 — 서버는 searchParams 를 안 읽고 전체 목록�
   assert.ok(page.includes("export const revalidate = 86_400"));
   assert.ok(!page.includes("<ToolHero") && !page.includes("<RankBars"), "히어로·상하위 막대 없음");
   assert.ok(page.includes("sidoOfRegionName"), "시/도는 lib/market/sido-group");
-  assert.ok(page.includes("faqJsonLd(faq)") && page.includes("출처 한국부동산원(REB)·KB 공표 지역 통계"), "FAQ JSON-LD · 출처 줄 유지");
+  assert.ok(page.includes("faqJsonLd(faq)") && page.includes("출처 한국부동산원(REB) 공표 지역 통계"), "FAQ JSON-LD · 출처 줄 유지");
   assert.ok(client.includes('"use client"'));
   assert.ok(client.includes("window.history.replaceState"), "조건은 주소에(replaceState)");
   assert.ok(!client.includes("useSearchParams") && !client.includes("router.push"), "라우터 이동 없음(서버 재렌더 없음)");

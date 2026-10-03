@@ -96,7 +96,7 @@ export default async function DigestWeekPage({
   const leadSentence = `${data.rangeLabel}(한국시간 월~일) 한 주 동안 내집나우에 수집된 부동산 뉴스는 ${data.newsCount}건, 이웃이 올린 글은 ${data.communityCount}건입니다.${
     data.temperature.length > 0
       ? ` 같은 주 시장 온도 기록은 ${data.temperature.length}개 지역에 남아 있습니다.`
-      : " 같은 주 시장 온도 스냅샷은 남아 있지 않습니다."
+      : " 같은 주 시장 온도 기록은 남아 있지 않습니다."
   }`;
 
   const faq: FaqItem[] = [

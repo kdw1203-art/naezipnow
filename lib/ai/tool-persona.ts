@@ -124,7 +124,7 @@ export type ToolPersona = {
   id: ToolPersonaId;
   /** 한 낱말 성격 — 화면 머리의 눈썹 라벨로 뜬다 */
   character: string;
-  /** 이 화면이 하는 일을 도구의 말로 한 문장 */
+  /** 이 화면이 내놓는 것 — 명사형 사실 한 줄(허브 카드 설명 · 도구 머리 한 줄). [1028] "~해요/~봐요" 설명조를 걷었다 */
   premise: string;
   composition: CompositionArchetype;
   palette: PersonaPalette;
@@ -167,10 +167,11 @@ function p(accent: string, accentDark: string, soft: string, softDark: string): 
 export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   /* ── AI 도구 12종 ───────────────────────────────────────────────────── */
   /* [1012 · 규칙 6] 지역·시장 4종의 premise 를 "~습니다" → "~해요" 체로(AI 12종과 같은 말투) */
+  /* [1028] premise 16종을 명사형 사실로 — "한눈에 보여 줘요·그려요·짜요·봐요" 같은 설명조 대신 무엇이 나오는지(항목·개수·기준)만 */
   "ai-diagnosis": {
     id: "ai-diagnosis",
     character: "점수",
-    premise: "가격 흐름·거래·공급·이웃 평가·금리 5가지를 점수로 매겨 한눈에 보여 줘요",
+    premise: "가격 흐름 · 거래 · 공급 · 이웃 평가 · 금리 5가지 점수",
     composition: "dossier",
     palette: p("#1D4ED8", "#93B4FF", "#EEF3FF", "rgba(147,180,255,.14)"),
     runMotion: "tick",
@@ -192,7 +193,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "ai-prediction": {
     id: "ai-prediction",
     character: "시나리오",
-    premise: "최근 실거래가에서 출발해 1~5년 뒤 가격을 낙관·기본·비관 세 가지로 그려요",
+    premise: "1~5년 뒤 가격을 낙관 · 기본 · 비관 3가지로 계산",
     composition: "trajectory",
     palette: p("#1D4FD8", "#88AAFF", "#EDF2FE", "rgba(136,170,255,.14)"),
     runMotion: "draw",
@@ -214,7 +215,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "ai-risk": {
     id: "ai-risk",
     character: "점검",
-    premise: "거래량·전세가율·입주 물량·미분양·월세 비중 5가지 위험 신호를 하나씩 확인해요",
+    premise: "거래량 · 전세가율 · 입주 물량 · 미분양 · 월세 비중 5가지 위험 신호",
     composition: "ledger",
     palette: p("#B91C1C", "#FF9E93", "#FEF0EF", "rgba(255,158,147,.14)"),
     runMotion: "scan",
@@ -236,7 +237,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "ai-compare": {
     id: "ai-compare",
     character: "비교",
-    premise: "담은 단지 2~3곳의 가격·거래·지역 흐름을 같은 칸으로 나란히 놓아요",
+    premise: "담은 단지 2~3곳의 가격 · 거래 · 지역 흐름을 같은 칸으로 비교",
     composition: "matrix",
     palette: p("#0F766E", "#4FD8C4", "#E8F7F5", "rgba(79,216,196,.14)"),
     runMotion: "sweep",
@@ -258,7 +259,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "ai-inspection": {
     id: "ai-inspection",
     character: "동선",
-    premise: "같은 지역에서 함께 볼 단지를 골라 하루 임장 순서를 짜요",
+    premise: "같은 지역 거래 많은 단지로 하루 임장 순서",
     composition: "route",
     palette: p("#15803D", "#5FDD92", "#EAF7EF", "rgba(95,221,146,.14)"),
     runMotion: "draw",
@@ -280,7 +281,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "my-checklist": {
     id: "my-checklist",
     character: "체크",
-    premise: "임장·매수 전에 확인할 항목을 빠짐없이 챙겨요",
+    premise: "임장·매수 전 확인 항목 목록",
     composition: "workbook",
     palette: p("#0369A1", "#6DCBF5", "#E9F5FD", "rgba(109,203,245,.14)"),
     runMotion: "tick",
@@ -302,7 +303,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "ai-portfolio": {
     id: "ai-portfolio",
     character: "배분",
-    premise: "관심 단지를 한데 모아 어디에 쏠렸는지 봐요",
+    premise: "관심 단지의 지역 · 가격대 구성",
     composition: "allocation",
     palette: p("#A16207", "#E8B93A", "#FDF4E3", "rgba(232,185,58,.14)"),
     runMotion: "stack",
@@ -324,7 +325,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "ai-timing": {
     id: "ai-timing",
     character: "신호",
-    premise: "가격 흐름·거래 열기·입주 물량 신호 3개로 지금 사기 좋은지 봐요",
+    premise: "가격 흐름 · 거래 열기 · 입주 물량 신호 3개",
     composition: "gauge",
     palette: p("#C2410C", "#FFA470", "#FEF1EA", "rgba(255,164,112,.14)"),
     runMotion: "pulse",
@@ -346,7 +347,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "ai-simulator": {
     id: "ai-simulator",
     character: "계산",
-    premise: "대출 비율·금리로 월 상환액·이자를, 보유 기간을 넣으면 시나리오별 수익률을 계산해요",
+    premise: "대출 비율 · 금리로 월 상환액 · 이자, 보유 기간으로 시나리오별 수익률 계산",
     composition: "calculator",
     palette: p("#047857", "#3FD79B", "#E7F7F0", "rgba(63,215,155,.14)"),
     runMotion: "roll",
@@ -368,7 +369,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "ai-gap": {
     id: "ai-gap",
     character: "갭",
-    premise: "매매가와 전세가 차이(갭)가 얼마인지, 그 차이가 위험한지 봐요",
+    premise: "매매가와 전세가 차이(갭) · 매매가 대비 갭 비율",
     composition: "gauge",
     palette: p("#1D4FD8", "#88AAFF", "#EDF2FE", "rgba(136,170,255,.14)"),
     runMotion: "roll",
@@ -390,7 +391,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "ai-economy": {
     id: "ai-economy",
     character: "지표",
-    premise: "금리·미분양 같은 큰 지표가 집값에 주는 신호를 모아 봐요",
+    premise: "기준금리 · 미분양 · 지역 매매가 변화",
     composition: "console",
     palette: p("#1D4FD8", "#88AAFF", "#EDF2FE", "rgba(136,170,255,.14)"),
     runMotion: "pulse",
@@ -414,7 +415,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "contract-risk": {
     id: "contract-risk",
     character: "계약",
-    premise: "전세가율·등기부·보증보험으로 전세 계약 위험을 점검해요",
+    premise: "전세가율로 본 위험도 · 계약 전 확인 항목 · 특약 문장",
     composition: "ledger",
     palette: p("#9F1239", "#FB9CBB", "#FDEFF3", "rgba(251,156,187,.14)"),
     runMotion: "scan",
@@ -441,7 +442,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "market:price": {
     id: "market:price",
     character: "실측",
-    premise: "면적대별로 실제 체결된 값을 늘어놓아요 — 호가가 아니에요",
+    premise: "면적대별 실거래가 · 호가 제외",
     composition: "atlas",
     palette: p("#0E7490", "#54D3EC", "#E7F6FA", "rgba(84,211,236,.14)"),
     runMotion: "stack",
@@ -463,7 +464,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "market:timing": {
     id: "market:timing",
     character: "흐름",
-    premise: "12개월 지수와 모멘텀으로 지역이 어느 쪽으로 가는지 봐요",
+    premise: "12개월 매매가격지수 · 거래량 흐름",
     composition: "trajectory",
     palette: p("#1D4FD8", "#88AAFF", "#EDF2FE", "rgba(136,170,255,.14)"),
     runMotion: "draw",
@@ -485,7 +486,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "market:temperature": {
     id: "market:temperature",
     character: "체온",
-    premise: "매주 잰 기록을 이어 붙여 지금이 아니라 추세를 보여 줘요",
+    premise: "매주 기록한 0~100점 추세",
     composition: "atlas",
     palette: p("#B45309", "#F0AC4E", "#FDF3E5", "rgba(240,172,78,.14)"),
     runMotion: "pulse",
@@ -507,7 +508,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
   "market:gap": {
     id: "market:gap",
     character: "순위",
-    premise: "시군구를 전세가율로 줄 세우고 실측 갭을 먼저 보여 줘요",
+    premise: "시군구별 전세가율 · 갭 순위",
     composition: "atlas",
     palette: p("#1D4FD8", "#88AAFF", "#EDF2FE", "rgba(136,170,255,.14)"),
     runMotion: "sweep",

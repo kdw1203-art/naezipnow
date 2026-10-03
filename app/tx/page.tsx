@@ -65,7 +65,7 @@ async function loadTxIndex(): Promise<TxIndexData> {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     logger.error(
-      "[/tx] 실거래 구간 집계를 읽지 못했습니다 — 거래가 없는 것이 아니라 조회가 실패했습니다:",
+      "[/tx] 실거래 구간 집계를 읽지 못했습니다 (조회 실패):",
       message,
     );
     return { regions: [], coverage: null, loadError: message };
@@ -171,13 +171,13 @@ export default async function TxIndexPage() {
         <Explain
           title="이 숫자를 읽는 법"
           body={[
-            "실거래 신고가. 매물 호가·중개사 제시가가 아니며, 계약 후 신고까지 시차가 있어 최근 달은 건수가 더 늘어날 수 있다.",
-            "면적은 전용면적 기준. 분양면적(공급면적)으로 부르는 평수와 다르다.",
-            "구간 평균은 그 구간에 신고된 거래만의 평균. 지역 전체나 특정 단지의 현재 가격이 아니다.",
-            `거래 ${MIN_BAND_TX}건 미만 구간은 평균이 한두 건에 흔들려 페이지를 만들지 않고, 그 거래는 위 합계에도 넣지 않았다.`,
+            "실거래 신고가. 매물 호가·중개사 제시가가 아니며, 계약 후 신고까지 시차가 있어 최근 달은 건수가 더 늘어날 수 있습니다.",
+            "면적은 전용면적 기준. 분양면적(공급면적)으로 부르는 평수와 다릅니다.",
+            "구간 평균은 그 구간에 신고된 거래만의 평균. 지역 전체나 특정 단지의 현재 가격이 아닙니다.",
+            `거래 ${MIN_BAND_TX}건 미만 구간은 평균이 한두 건에 흔들려 페이지를 만들지 않고, 그 거래는 위 합계에도 넣지 않았습니다.`,
             ...(uncovered > 0 && coverage
               ? [
-                  `같은 기간 면적이 확인된 신고분 ${coverage.totalTx.toLocaleString("ko-KR")}건 가운데 구간당 ${MIN_BAND_TX}건에 못 미친 ${uncovered.toLocaleString("ko-KR")}건은 위 숫자에서 빠져 있다.`,
+                  `같은 기간 면적이 확인된 신고분 ${coverage.totalTx.toLocaleString("ko-KR")}건 가운데 구간당 ${MIN_BAND_TX}건에 못 미친 ${uncovered.toLocaleString("ko-KR")}건은 위 숫자에서 빠져 있습니다.`,
                 ]
               : []),
           ]}
@@ -193,10 +193,9 @@ export default async function TxIndexPage() {
           {/* 모바일 실측 18 — py-8 은 세 줄 문구에 화면의 40% 를 차지했다. 문구는
               그대로(정직성 유지), 여백만 줄인다. */}
           <p className="py-4 text-center t-body text-text-3 md:py-8">
-            실거래 집계를 <strong className="text-ink">불러오지 못했습니다</strong>.
+            실거래 집계를 <strong className="text-ink">불러오지 못했어요</strong>.
             <br />
-            거래가 없다는 뜻이 아니라 조회 자체가 실패했다는 뜻입니다. 잠시 후 다시
-            확인해 주세요.
+            잠시 후 다시 시도해 주세요.
           </p>
         </section>
       ) : regions.length === 0 ? (
@@ -307,7 +306,7 @@ export default async function TxIndexPage() {
         <nav aria-label="관련 화면" data-tone="blue" className="lq-panel flex flex-col divide-y">
           {/* /analysis/price 는 robots Disallow(데모 수치) — 색인 허브에서 차단 경로로 링크하지 않는다(항목 46c). timing 은 색인 허용이다. */}
           {[
-            ["/complex/browse", "단지 실거래 브라우즈"],
+            ["/complex/browse", "단지 실거래 보기"],
             ["/complex/compare", "단지 vs 단지 비교"],
             ["/analysis/timing", "지역 거래 흐름 · 타이밍 분석"],
             ["/imjang", "임장 가이드"],

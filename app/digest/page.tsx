@@ -66,7 +66,7 @@ export default async function DigestPage() {
           <h1 className="mt-2 t-section text-ink">주간 다이제스트</h1>
           <ErrorState
             title="주간 요약을 불러오지 못했어요"
-            desc="데이터 조회가 실패했습니다. 이번 주에 소식이 없다는 뜻은 아니에요. 잠시 후 다시 열어봐 주세요."
+            desc="잠시 후 다시 시도해 주세요."
             cause={cause ?? undefined}
             action={{ label: "동네이야기 보기", href: "/town" }}
           />
@@ -85,7 +85,7 @@ export default async function DigestPage() {
   /* 일부가 조회 실패면 "0건"이라고 말하지 않는다 — 그건 사실이 아니다. */
   const previewLine =
     previewParts.length > 0
-      ? `이번 주 ${previewParts.join(" · ")}${anyFailed ? " (일부 조회 실패)" : ""}`
+      ? `이번 주 ${previewParts.join(" · ")}${anyFailed ? " · 일부는 불러오지 못했어요" : ""}`
       : anyFailed
         ? "이번 주 요약을 일부 불러오지 못했어요"
         : "이번 주 새로 모인 소식이 아직 없어요";
@@ -149,7 +149,7 @@ export default async function DigestPage() {
           {news.length === 0 &&
             (failed.news ? (
               <div className="rounded-lg bg-danger-soft px-3 py-2 t-sub text-ink">
-                뉴스를 불러오지 못했어요 (조회 실패). 수집된 뉴스가 없다는 뜻은 아니에요.
+                뉴스를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
               </div>
             ) : (
               <div className="t-sub text-text-3">
@@ -197,7 +197,7 @@ export default async function DigestPage() {
           {market.length === 0 &&
             (failed.market ? (
               <div className="rounded-lg bg-danger-soft px-3 py-2 t-sub text-ink">
-                시세를 불러오지 못했어요 (조회 실패).
+                시세를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
               </div>
             ) : (
               <div className="t-sub text-text-3">
@@ -238,7 +238,7 @@ export default async function DigestPage() {
           </div>
           {failed.community ? (
             <div className="rounded-lg bg-danger-soft px-3 py-2 t-sub text-ink">
-              이웃 글을 불러오지 못했어요 (조회 실패). 글이 없다는 뜻은 아니에요.
+              이웃 글을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
             </div>
           ) : community.count === 0 ? (
             <div className="t-sub text-text-3">이번 주 새 이웃 글이 아직 없어요.</div>

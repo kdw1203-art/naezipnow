@@ -162,10 +162,19 @@ export function HubHero({
         sub={
           <>
             단지 하나로 종합 진단 · 시세 예측 · 임장 동선 · 매수 타이밍
+            {/* [1028] 실거래 건수·단지 수를 못 읽었으면(null) 그 조각을 통째로 뺀다 — "실거래 —건" 으로 그리지 않는다 */}
             <span className="max-md:hidden">
-              {" "}· 실거래 <b className="t-num text-ink"><Num n={coverage.txCount} /></b>건 · 단지{" "}
-              <b className="t-num text-ink"><Num n={coverage.complexCount} /></b>곳 · 도구{" "}
-              <b className="t-num text-ink"><CountUp value={toolCount} /></b>개
+              {coverage.txCount !== null && (
+                <>
+                  {" "}· 실거래 <b className="t-num text-ink"><Num n={coverage.txCount} /></b>건
+                </>
+              )}
+              {coverage.complexCount !== null && (
+                <>
+                  {" "}· 단지 <b className="t-num text-ink"><Num n={coverage.complexCount} /></b>곳
+                </>
+              )}
+              {" "}· 도구 <b className="t-num text-ink"><CountUp value={toolCount} /></b>개
             </span>
           </>
         }
@@ -279,7 +288,7 @@ export function HubHero({
           </span>
         )}
         <Link href="/subscription" className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline">
-          플랜 보기 ›
+          요금제 보기 ›
         </Link>
       </p>
     </section>

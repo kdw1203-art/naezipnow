@@ -156,7 +156,7 @@ export async function buildAiPublicContext(
   return {
     districts,
     plans,
-    disclaimer: "공공데이터·통계는 참고용이며 실시간·완전성을 보장하지 않습니다. (시세: 한국부동산원·KB)",
+    disclaimer: "공공데이터·통계는 참고용이며 실시간·완전성을 보장하지 않습니다. (시세: 한국부동산원)",
     fetchedAt: new Date().toISOString(),
   };
 }

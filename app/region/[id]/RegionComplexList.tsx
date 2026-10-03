@@ -30,7 +30,7 @@ export function RegionComplexList({
 }) {
   if (failed) {
     return (
-      <p className="py-6 text-center t-body text-text-3">단지별 실거래를 지금 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.</p>
+      <p className="py-6 text-center t-body text-text-3">단지별 실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
     );
   }
   if (summaries.length === 0) {

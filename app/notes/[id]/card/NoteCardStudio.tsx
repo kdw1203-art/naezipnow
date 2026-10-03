@@ -170,7 +170,7 @@ export function NoteCardStudio({
       track(EV_CARD_EXPORT, {});
       showToast("이미지를 내려받았어요");
     } catch {
-      showToast("이미지를 만들지 못했어요 — 다시 눌러 주세요");
+      showToast("이미지를 만들지 못했어요. 다시 시도해 주세요");
     } finally {
       setShooting(false);
     }
@@ -209,7 +209,7 @@ export function NoteCardStudio({
       track(EV_CARD_SHARE, { channel: "download" satisfies ShareChannel });
       showToast("이미지를 내려받았어요");
     } catch {
-      showToast("이미지를 만들지 못했어요 — 다시 눌러 주세요");
+      showToast("이미지를 만들지 못했어요. 다시 시도해 주세요");
     } finally {
       setShooting(false);
     }
@@ -223,7 +223,7 @@ export function NoteCardStudio({
   const shareKakao = useCallback(async () => {
     const kakao = await loadKakaoSdk();
     if (!kakao?.Share?.sendDefault) {
-      showToast("카카오톡을 열지 못했어요 — 링크 복사로 보내 주세요");
+      showToast("카카오톡을 열지 못했어요. 링크 복사는 그대로 쓸 수 있어요");
       return;
     }
     try {
@@ -238,7 +238,7 @@ export function NoteCardStudio({
       );
       track(EV_CARD_SHARE, { channel: "kakao" satisfies ShareChannel });
     } catch {
-      showToast("카카오톡을 열지 못했어요 — 링크 복사로 보내 주세요");
+      showToast("카카오톡을 열지 못했어요. 링크 복사는 그대로 쓸 수 있어요");
     }
   }, [showToast, shareTitle, shareText, shareUrl, kakaoImageUrl, track]);
 
@@ -360,7 +360,7 @@ export function NoteCardStudio({
           </div>
         ) : (
           <p className="mt-3 text-center t-sub text-text-3">
-            비공개 노트예요 — 공개로 전환하면 링크·이미지로 공유할 수 있어요
+            비공개 노트예요. 공개로 전환하면 링크·이미지로 공유할 수 있어요
           </p>
         )}
       </div>
@@ -390,7 +390,7 @@ export function NoteCardStudio({
                       setActive(0);
                       setMsg(
                         usable.length < p.frameIds.length
-                          ? `${p.label} 적용 — 재료가 없는 장 ${p.frameIds.length - usable.length}개는 빠졌어요`
+                          ? `${p.label} 적용 · 재료가 없는 장 ${p.frameIds.length - usable.length}개는 빠졌어요`
                           : `${p.label} 적용`,
                       );
                     }}

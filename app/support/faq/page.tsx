@@ -26,7 +26,7 @@ import { FaqAnchorOpen } from "./FaqAnchorOpen";
 export const metadata = buildPageMetadata({
   title: "자주 묻는 질문 — 데이터·임장노트·구독·AI",
   description:
-    "내집나우 시세 데이터의 출처와 집계 기준, 임장노트 공개 범위와 사진 위치정보 처리, 구독 요금·해지·환불, AI 분석의 근거를 질문별로 답했습니다.",
+    "내집나우 실거래가 데이터의 출처와 집계 기준, 임장노트 공개 범위와 사진 위치정보 처리, 구독 요금·해지·환불, AI 분석의 근거를 질문별로 답했습니다.",
   path: "/support/faq",
 });
 
@@ -41,7 +41,7 @@ export default function SupportFaqPage() {
   }));
 
   return (
-    <PageShell breadcrumb="고객지원 › 자주 묻는 질문">
+    <PageShell breadcrumb="고객센터 › 자주 묻는 질문">
       {/* 화면에 보이는 답 그대로 FAQPage 로 낸다 — 숨겨진 FAQ 를 만들지 않는다. */}
       <script
         type="application/ld+json"
@@ -55,7 +55,7 @@ export default function SupportFaqPage() {
           __html: jsonLdScript(
             breadcrumbJsonLd([
               { name: "홈", url: "https://naezipnow.com/" },
-              { name: "고객지원", url: "https://naezipnow.com/support" },
+              { name: "고객센터", url: "https://naezipnow.com/support" },
               { name: "자주 묻는 질문", url: "https://naezipnow.com/support/faq" },
             ]),
           ),
@@ -134,7 +134,7 @@ export default function SupportFaqPage() {
         <div className="mt-6 flex flex-col gap-2 rounded-lg bg-bg p-4 t-sub leading-[1.7] text-text-2">
           <span className="t-body font-bold text-ink">여기에 없는 질문이라면</span>
           <span>
-            고객지원의 1:1 문의로 남겨 주세요({RESPONSE_TIME}). 데이터 수치가 이상하다는 제보는 원천
+            고객센터의 1:1 문의로 남겨 주세요({RESPONSE_TIME}). 데이터 수치가 이상하다는 제보는 원천
             데이터와 대조해 확인하고, 실제로 고친 건은{" "}
             <Link href="/methodology#corrections" className="inline-block py-[5px] font-bold text-primary">
               정정 이력

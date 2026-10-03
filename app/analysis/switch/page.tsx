@@ -49,8 +49,8 @@ export default function SwitchPage() {
             icon="compass"
             title="갈아타기 추천 준비 중"
             /* [1015 · 규칙 B·D] 긴 설명 → 사실 한 줄(적합도·순위를 지어내지 않는다는 원칙은 그대로) */
-            desc="자산 등록과 추천 계산이 아직 열리지 않아 적합도·추천 순위를 지어내지 않고 비워 둔다."
-            action={{ label: "실데이터 시세·타이밍 보기", href: "/analysis/timing" }}
+            desc="자산 등록과 추천 계산은 아직 제공하지 않아요. 적합도·추천 순위는 비워 둬요."
+            action={{ label: "시세·타이밍 분석 보기", href: "/analysis/timing" }}
           />
         </div>
 

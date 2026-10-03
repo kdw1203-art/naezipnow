@@ -83,11 +83,11 @@ export function KeywordAlertButton({
         showToast(`‘${q}’ 새 소식 알림을 설정했어요`, manage);
       } else {
         setPhase("error");
-        showToast("알림을 설정하지 못했어요 — 다시 눌러 주세요");
+        showToast("알림을 설정하지 못했어요. 다시 눌러 주세요");
       }
     } catch {
       setPhase("error");
-      showToast("연결이 끊겼어요 — 다시 눌러 주세요");
+      showToast("연결이 끊겼어요. 다시 눌러 주세요");
     }
   }
 

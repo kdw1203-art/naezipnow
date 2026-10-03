@@ -158,7 +158,7 @@ function buildSummary(notes: InspectionNote[], scores: CompareScore[]): string {
   }
 
   const parts = [
-    `${notes.length}회 방문 · 종합 ${first}→${last} (${deltaLabel}).`,
+    `${notes.length}회 방문 · 기록 점수 ${first}→${last} (${deltaLabel}).`,
   ];
   if (strong.length) parts.push(`최근 강점: ${strong.slice(0, 3).join("·")}.`);
   if (weak.length) parts.push(`최근 약점: ${weak.slice(0, 3).join("·")}.`);

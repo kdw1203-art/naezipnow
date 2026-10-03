@@ -74,8 +74,8 @@ export default async function ListingsPage() {
       {items === null ? (
         <ErrorState
           className="rise-in-1"
-          title="매물 목록을 지금 불러올 수 없어요"
-          desc="매물이 없는 게 아니라, 목록을 읽어 오지 못했어요. 잠시 후 새로고침해 주세요."
+          title="매물 목록을 불러오지 못했어요"
+          desc="잠시 후 다시 시도해 주세요."
           action={{ href: "/listings/new", label: "매물 등록하기" }}
         />
       ) : (

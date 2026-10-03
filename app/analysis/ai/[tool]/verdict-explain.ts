@@ -25,7 +25,7 @@ import { PRICE_MIN, PRICE_SAMPLE, PRICE_WINDOW } from "@/lib/ai/result-series";
 
 /** 수익률(가정) 연환산 문장 — lib/ai/loan-calc.ts scenarioYields 의 annualPct = (비율^(1/햇수) − 1)×100 과 같은 말(테스트로 잠금) */
 export const YIELD_FORMULA_LINE =
-  "연 수익률 = (받는 돈 ÷ 넣은 돈)^(1 ÷ 보유 햇수) − 1 — 해마다 같은 비율로 불었다고 보고(복리) 1년치로 바꾼 값";
+  "연 수익률 = (받는 돈 ÷ 넣은 돈)^(1 ÷ 보유 햇수) − 1. 해마다 같은 비율로 불었다고 보고(복리) 1년치로 바꾼 값";
 
 const ymDot = (ym: string | null | undefined): string | null =>
   ym && /^\d{6}$/.test(ym) ? `${ym.slice(0, 4)}.${ym.slice(4)}` : (ym ?? null);
@@ -55,10 +55,10 @@ export function tileExplain(t: VerdictTile): ExplainContent | null {
         term: "geoRae-ryang",
         title: "최근 6개월 거래",
         how: [
-          "이 단지 매매 신고를 모든 평형 합쳐 셌어요 — 기준 달을 포함한 달력 6개월이에요.",
+          "이 단지 매매 신고를 모든 평형 합쳐 셌어요. 기준 달을 포함한 달력 6개월이에요.",
           /* [1009 · A · 리뷰] 코드(lib/ai/result-series.ts)는 max(마지막 거래 달, 지난달) — 이번 달에 신고된 거래가
              있으면 이번 달까지 센다. 예전 문장("이번 달은 빼요")은 사실과 달랐다(운영에 이번 달 계약이 이미 있다) */
-          "기준 달은 이 단지 마지막 거래 달과 지난달 중 늦은 달이에요 — 이번 달에 이미 신고된 거래가 있으면 이번 달까지 세요.",
+          "기준 달은 이 단지 마지막 거래 달과 지난달 중 늦은 달이에요. 이번 달에 이미 신고된 거래가 있으면 이번 달까지 세요.",
           "계약 후 30일 안에 신고하므로 이번 달·지난달은 아직 덜 잡혔을 수 있어요(나중에 늘어요).",
         ],
         source,
@@ -68,7 +68,7 @@ export function tileExplain(t: VerdictTile): ExplainContent | null {
         term: "maemae-gagyeok-jisu",
         title: "지역 1년 변화",
         how: [
-          "지역 월간 아파트 매매가격지수의 최근 달 값을 1년 전 같은 달 값과 비교한 변동률이에요 — 이 단지가 아니라 지역 전체의 흐름이에요.",
+          "지역 월간 아파트 매매가격지수의 최근 달 값을 1년 전 같은 달 값과 비교한 변동률이에요. 지역 전체의 흐름이에요(이 단지 값 아님).",
           "그 사이 한 달에 5% 넘게 튄 달(지수 기준이 바뀐 흔적)이 있으면 1년 변화를 적지 않아요.",
         ],
         source,
@@ -94,7 +94,7 @@ export function tileExplain(t: VerdictTile): ExplainContent | null {
       return {
         term: "jeonse-garyul",
         title: "지역 전세가율",
-        how: ["지역 아파트의 매매가 대비 전세가 비율(공표 통계)이에요 — 이 단지 값이 아니라 지역 평균이에요."],
+        how: ["지역 아파트의 매매가 대비 전세가 비율(공표 통계)이에요. 지역 평균이에요(이 단지 값 아님)."],
         source,
       };
     case "supply":
@@ -132,7 +132,7 @@ export function tileExplain(t: VerdictTile): ExplainContent | null {
       return {
         term: "wonligeum-gyundeung",
         title: "월 상환액",
-        how: ["원리금균등 상환 — 매달 같은 금액으로 원금과 이자를 함께 갚는 방식으로 계산했어요.", "상환 기간을 비우면 30년으로 계산해요."],
+        how: ["원리금균등 상환(매달 같은 금액으로 원금과 이자를 함께 갚는 방식)으로 계산했어요.", "상환 기간을 비우면 30년으로 계산해요."],
         source: "입력값 계산",
       };
     case "loanInterest":
@@ -177,7 +177,7 @@ export function metricExplain(v: Verdict): ExplainContent | null {
     case "ai-risk":
       return {
         title: "위험 수준",
-        body: "다섯 가지 위험 신호 중 '주의'에 걸린 개수로 정해요 — 2개 이상 높음 · 1개 보통 · 0개 낮음. 5가지 중 3가지도 잴 수 없으면 수준을 매기지 않아요.",
+        body: "다섯 가지 위험 신호 중 '주의'에 걸린 개수로 정해요: 2개 이상 높음 · 1개 보통 · 0개 낮음. 5가지 중 3가지도 잴 수 없으면 수준을 매기지 않아요.",
         how: [
           `거래량: 지역 한 달 ${n(RISK_THRESHOLDS.tradeDrop)}건 미만이면 주의`,
           `전세가율: ${RISK_THRESHOLDS.jeonseRatioHigh}% 이상이면 주의`,
@@ -189,10 +189,11 @@ export function metricExplain(v: Verdict): ExplainContent | null {
     case "ai-prediction":
       return {
         title: m.label,
-        body: "예측이 아니라 공개한 규칙으로 낸 가정 계산이에요. 3개월 적중률을 공개한 규칙(예측 적중률 화면)과는 다른 계산이라 섞어 보지 마세요.",
+        /* [1028] "섞어 보지 마세요"(명령) → 다른 계산이라는 사실만. 앞 문장(가정 계산 고지)은 그대로 */
+        body: "예측이 아니라 공개한 규칙으로 낸 가정 계산이에요. 3개월 적중률을 공개한 규칙(예측 적중률 화면)과는 다른 계산이에요.",
         how: [
           "출발점: 이 단지 최근 실거래가(가장 많이 거래된 평형의 최근 거래 평균) 또는 내 조건에 넣은 기준 가격",
-          `기본: 지역 매매지수 지난 1년 변화의 ${SCENARIO_RULE.baseShare * 100}% 속도가 해마다 이어진다고 가정(연 ±${SCENARIO_RULE.baseCapPct}% 안으로 자름) — 1년 변화가 없으면 최근 한 달 변화 × 12`,
+          `기본: 지역 매매지수 지난 1년 변화의 ${SCENARIO_RULE.baseShare * 100}% 속도가 해마다 이어진다고 가정(연 ±${SCENARIO_RULE.baseCapPct}% 안으로 자름). 1년 변화가 없으면 최근 한 달 변화 × 12`,
           `낙관·비관: 기본에서 연 ${SCENARIO_RULE.spreadPct}%p 위·아래, 해마다 복리로 이어 붙여요`,
         ],
       };
@@ -212,7 +213,7 @@ export function metricExplain(v: Verdict): ExplainContent | null {
         title: m.label,
         how: [
           "전세가율 = 보증금 ÷ 매매가",
-          `${CONTRACT_RULE.dangerPct}% 이상 위험 · ${CONTRACT_RULE.cautionPct}% 이상 주의 · 그 아래는 숫자로는 안전 — 등기부·보증보험은 따로 확인해야 해요.`,
+          `${CONTRACT_RULE.dangerPct}% 이상 위험 · ${CONTRACT_RULE.cautionPct}% 이상 주의 · 그 아래는 숫자로는 안전. 등기부·보증보험은 이 숫자에 들어 있지 않아요.`,
           "이 집 전세가율을 넣지 않으면 지역 평균 전세가율을 참고값으로만 보여 줘요.",
         ],
       };

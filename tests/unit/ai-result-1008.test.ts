@@ -289,7 +289,7 @@ test("[1008] 타이밍·리스크의 알약은 결론과 같은 말 — 신호�
   const contract = buildVerdict({ tool: "contract-risk", ctx: hot, footnotes: [], input: { marketRatioPct: 50 } });
   assert.equal(contract.metric?.value, "안전");
   assert.equal(contract.band, "strong");
-  assert.equal(contract.bandReason, "전세가율 50% — 80% 미만");
+  assert.equal(contract.bandReason, "전세가율 50% · 80% 미만");
   assert.equal(buildVerdict({ tool: "contract-risk", ctx: hot, footnotes: [], input: { marketRatioPct: 85 } }).band, "weak");
   const regionOnly = buildVerdict({ tool: "contract-risk", ctx: hot, footnotes: [] });
   assert.equal(regionOnly.band, "mixed");
@@ -301,7 +301,7 @@ test("[1008] 타이밍·리스크의 알약은 결론과 같은 말 — 신호�
   assert.equal(route.band, diag.band);
   assert.match(route.bandReason ?? "", /종합 점수 \d+점\(종합 진단 기준\)/);
   assert.doesNotMatch(route.bandReason ?? "", /파는 쪽/);
-  assert.match(diag.bandReason ?? "", /항목 평균 \d+점 — 65점 이상 좋음 · 45점 미만 주의/);
+  assert.match(diag.bandReason ?? "", /항목 평균 \d+점 · 65점 이상 좋음 · 45점 미만 주의/);
   assert.equal(diag.bandBasis, "tool");
   /* 한 항목만 잰 점수는 "종합"이 아니다 — 입주 물량 하나(0점)로 "주의"를 달지 않는다 */
   const one = ctxOf({ supply: { upcomingHouseholds: 4169, upcomingComplexes: 5, items: [], ...meta } });

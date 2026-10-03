@@ -10,11 +10,14 @@ export function AIPanel({
   className = "",
   disclaimer = true,
   cta,
+  ai = true,
 }: {
   title: string;
   children: React.ReactNode;
   className?: string;
   disclaimer?: boolean;
+  /** [1028] "AI" 배지 — AI 모델이 만든 결과일 때만(기본). 규칙 계산 요약(공매·입주 물량 요약 등)은 false 로 배지를 뺀다. */
+  ai?: boolean;
   /** 시작 행동 — 시장 브리핑만 두고 끝내지 않을 때 */
   cta?: { href: string; label: string };
 }) {
@@ -24,9 +27,11 @@ export function AIPanel({
         {/* [1012-R2 · 규칙 9 · 채점 C] "AI" 배지: 파랑 채움(.ai-chip) → 어두운 면 위 규칙 — 한지 글자(text-on-dark) +
             한지 45% 외곽선(border-on-dark-faint), 채움 없음. 홈의 채움 파랑은 검색 CTA 하나여야 하고, 네이비 위 파랑 면은
             브랜드 면 규칙("나우블루는 CTA·링크 전용")에도 어긋난다. 반경 4px(rounded-sm)·20px·10px/700 = 배지 규격. */}
-        <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border border-on-dark-faint t-caption font-bold text-on-dark">
-          AI
-        </span>
+        {ai && (
+          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border border-on-dark-faint t-caption font-bold text-on-dark">
+            AI
+          </span>
+        )}
         <span className="t-body font-bold text-white">{title}</span>
       </div>
       {/* [964] .fit — AI 패널 본문은 사이드바(340px)에도, 본문 전폭(1,200px)에도 들어간다.

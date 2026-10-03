@@ -34,12 +34,21 @@ export interface OverviewCell {
   value: string;
   /** 숫자 칸(tabular-nums) */
   num: boolean;
+  /** [1028] 이름표 옆 곁말 — 준공 칸의 입주 연차("11년차") */
+  note?: string;
 }
 
 export const OVERVIEW_EMPTY = "—";
 
 /** 시안 8칸 순서 그대로 — 값이 없어도 칸은 남는다(스트립은 고정 격자) */
-export function overviewStripCells(row: OverviewStripSource): OverviewCell[] {
+/** [1028] 입주 연차 — 준공 해를 1년차로 센다(2016년 준공 → 2026년에 11년차). 준공 해가 올해보다 뒤면 null */
+export function builtYearsLabel(buildYear: number | null | undefined, nowYear: number): string | null {
+  if (typeof buildYear !== "number" || !Number.isFinite(buildYear) || buildYear < 1900) return null;
+  if (!Number.isFinite(nowYear) || buildYear > nowYear) return null;
+  return `${nowYear - buildYear + 1}년차`;
+}
+
+export function overviewStripCells(row: OverviewStripSource, opts?: { nowYear?: number }): OverviewCell[] {
   const pos = (n: number | null | undefined) => (typeof n === "number" && Number.isFinite(n) && n > 0 ? n : null);
   const text = (s: string | null | undefined) => (typeof s === "string" && s.trim() ? s.trim() : null);
   const hh = pos(row.households);
@@ -50,7 +59,14 @@ export function overviewStripCells(row: OverviewStripSource): OverviewCell[] {
   return [
     { key: "households", label: "세대", value: hh ? hh.toLocaleString("ko-KR") : OVERVIEW_EMPTY, num: true },
     { key: "buildings", label: "동", value: dong ? dong.toLocaleString("ko-KR") : OVERVIEW_EMPTY, num: true },
-    { key: "buildYear", label: "준공", value: year ? String(year) : OVERVIEW_EMPTY, num: true },
+    {
+      key: "buildYear",
+      label: "준공",
+      value: year ? String(year) : OVERVIEW_EMPTY,
+      num: true,
+      /* [1028] 연차는 올해를 받았을 때만(화면이 한국 시간의 올해를 넘긴다 — 여기서 시계를 읽지 않는다) */
+      ...(year && opts?.nowYear ? (builtYearsLabel(year, opts.nowYear) ? { note: builtYearsLabel(year, opts.nowYear)! } : {}) : {}),
+    },
     { key: "parking", label: "주차/세대", value: parking ? parking.toFixed(2) : OVERVIEW_EMPTY, num: true },
     { key: "elevator", label: "승강기", value: elev ? elev.toLocaleString("ko-KR") : OVERVIEW_EMPTY, num: true },
     { key: "heating", label: "난방", value: text(row.heating) ?? OVERVIEW_EMPTY, num: false },
@@ -226,6 +242,19 @@ export interface ExtremePoint {
   day: number | null;
   man: number;
   floor: number | null;
+  /** [1028] 직거래(국토교통부 거래유형) — 표식이 있을 때만 */
+  direct?: boolean;
+}
+
+/** [1028] 표식이 붙은 거래(complex-store applyDealMarks) — 표식이 없으면 HubDeal 그대로 */
+export type MarkedDeal = HubDeal & { cancelled?: boolean; direct?: boolean; rgst?: string };
+
+/** [1028] 최근 실거래가 신고가보다 몇 % 낮은가(음수) — 같거나 높으면·재료가 없으면 null */
+export function belowHighPct(latestMan: number | null | undefined, highMan: number | null | undefined): number | null {
+  if (latestMan == null || highMan == null) return null;
+  if (!Number.isFinite(latestMan) || !Number.isFinite(highMan) || latestMan <= 0 || highMan <= 0) return null;
+  if (latestMan >= highMan) return null;
+  return ((latestMan - highMan) / highMan) * 100;
 }
 
 export interface TrendTypeSeries {
@@ -270,9 +299,9 @@ export interface RentMonthInput {
   wolseMedianMonthlyKrw: number | null;
 }
 
-function toPoint(d: HubDeal | null): ExtremePoint | null {
+function toPoint(d: MarkedDeal | null): ExtremePoint | null {
   if (!d) return null;
-  return { ym: d.ym, day: d.day ?? null, man: d.man, floor: d.floor ?? null };
+  return { ym: d.ym, day: d.day ?? null, man: d.man, floor: d.floor ?? null, ...(d.direct ? { direct: true } : {}) };
 }
 
 function latestOf(deals: readonly HubDeal[]): HubDeal | null {
@@ -379,11 +408,15 @@ export interface RecentDealRow {
   high: boolean;
   /** 해제 신고 — 취소선(getComplexDeals 는 해제분을 읽지 않으므로 지금은 언제나 false, 규칙만 잠근다) */
   cancelled: boolean;
+  /** [1028] 직거래(국토교통부 거래유형) */
+  direct: boolean;
+  /** [1028] 등기 완료 — 등기일 원문("26.09.18"), 없으면 null */
+  rgst: string | null;
 }
 
 /** 최신순 n건 + 타입별 신고가 배지 */
 export function recentDealRows(
-  deals: readonly (HubDeal & { cancelled?: boolean })[],
+  deals: readonly MarkedDeal[],
   n = 10,
 ): RecentDealRow[] {
   const valid = deals.filter((d) => isYm(d.ym) && Number.isFinite(d.man) && d.man > 0);
@@ -406,6 +439,8 @@ export function recentDealRows(
         floor: d.floor ?? null,
         high: Boolean(e && !e.single && e.high === d && !d.cancelled),
         cancelled: Boolean(d.cancelled),
+        direct: Boolean(d.direct),
+        rgst: d.rgst ? d.rgst : null,
       };
     });
 }

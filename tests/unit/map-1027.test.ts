@@ -169,9 +169,12 @@ test("안내창 — 글자는 이스케이프, 출처는 http(s) 만, 구역 상
 const mapClient = readFileSync("app/map/map-client.tsx", "utf8");
 const redevMap = readFileSync("app/redevelopment/RedevelopmentMap.tsx", "utf8");
 
-test("map-client — 첫 화면은 홈 화면(목록 좌표 평균을 쓰지 않는다) · 줌 캡션의 숫자는 실제 줌", () => {
+test("map-client — 첫 화면은 홈 화면(목록 좌표 평균을 쓰지 않는다) · 줌 캡션은 탭이 켜는 내용만(축척 숫자 없음)", () => {
   assert.ok(mapClient.includes('if (initialLevel == null) return hasEntryFocus ? "danji" : MAP_HOME_VIEW.tab;'));
-  assert.ok(mapClient.includes("return `줌 레벨 ${Math.round(21 - level)} · ${ZOOM_CAPTION_TEXT[tab]}`;"));
+  /* [1028] "줌 레벨 N · " 접두는 개발 용어라 화면에 내지 않는다 — 탭이 켜는 내용만 돌려준다 */
+  assert.ok(mapClient.includes("return ZOOM_CAPTION_TEXT[tab];"));
+  assert.ok(mapClient.includes('city: "시·군·구별 평균",') && mapClient.includes('dong: "동별 평균 · 거래량",') && mapClient.includes('danji: "단지별 실거래",'));
+  assert.ok(!mapClient.includes("`줌 레벨 ${"), "축척 숫자를 문구에 넣지 않는다");
   assert.ok(!/줌 레벨 (9|12|15) ·/.test(mapClient), "탭마다 박아 둔 숫자 없음");
   assert.ok(mapClient.includes('import { MAP_HOME_VIEW, initialMapLevel, nearestZoomTab } from "@/lib/map/home-view";'));
   assert.ok(mapClient.includes("return { lat: MAP_HOME_VIEW.lat, lng: MAP_HOME_VIEW.lng };"));

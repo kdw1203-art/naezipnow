@@ -83,7 +83,8 @@ function skipLabel(r: Extract<ComplexPriceResult, { ok: false }>["reason"]): str
     case "unresolvable-id":
       return "단지 식별 불가";
     default:
-      return "시세 조회 실패";
+      /* [1028] 이 칸의 값은 실거래 평균이다 — "시세" 대신 "실거래" */
+      return "실거래 조회 실패";
   }
 }
 
@@ -178,9 +179,9 @@ export default async function WatchlistDashboardPage({
 
       {listFailed ? (
         <ErrorState
-          title="관심 단지를 지금 불러오지 못했어요"
-          /* [970 · C-20] 해요체 통일 */
-          desc="담아 둔 단지가 0곳인 게 아니라 조회가 실패했어요. 잠시 후 새로고침해 주세요."
+          title="관심 단지를 불러오지 못했어요"
+          /* [970 · C-20] 해요체 통일 · [1028 · 제안 3] 오류 문구 표준("0곳인 게 아니라 조회 실패" 구문 제거) */
+          desc="잠시 후 다시 시도해 주세요."
         />
       ) : items.length === 0 ? (
         /* [966] 빈 상태 정본화 · [1009 · H] 무엇을 하면 채워지는지 + 채우면 무엇을 받는지 */
@@ -196,7 +197,7 @@ export default async function WatchlistDashboardPage({
         <>
           {!notesR.ok && (
             <p className="mb-3 rounded-xl border border-line bg-bg px-3 py-2 t-sub text-text-2">
-              새 노트 수를 지금 불러오지 못했어요. 노트가 없는 게 아니라 조회 실패입니다.
+              새 노트 수를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
             </p>
           )}
           <div className="rise-in">

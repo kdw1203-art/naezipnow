@@ -63,7 +63,7 @@ export function ReportButton({
       }
       setState("done");
       setOpen(false);
-      showToast("신고를 접수했어요 — 운영팀이 확인해요");
+      showToast("신고를 접수했어요. 운영팀이 확인해요");
     } catch {
       setState("error");
     } finally {
@@ -121,7 +121,7 @@ export function ReportButton({
       </button>
       {state === "error" && (
         <span role="alert" className="t-sub font-bold text-danger">
-          접수하지 못했어요 — 잠시 후 다시 눌러 주세요
+          접수하지 못했어요. 잠시 후 다시 눌러 주세요
         </span>
       )}
     </span>

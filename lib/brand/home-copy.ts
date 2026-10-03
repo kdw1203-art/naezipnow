@@ -48,7 +48,7 @@ export const HOME_CTA_NOTE = { label: "임장노트 쓰기", href: "/notes/new" 
 export const HOME_CTA_MAP = { label: "지도에서 비교", href: "/map" } as const;
 /** 내 노트 작성 → AI 정리로 이어지는 노트 바운드 CTA (도구 허브 아님) */
 export const HOME_CTA_AI = {
-  label: "노트로 AI 정리 시작",
+  label: "임장노트 쓰고 AI 정리 받기",
   href: "/notes/new?intent=ai",
 } as const;
 
@@ -59,7 +59,7 @@ export const HOME_HERO_SUBLINE_SHORT =
 
 export const HOME_AI_GATEWAY_TITLE = "임장노트 AI 정리";
 /** [950] 예시로 결과의 형태를 보여 준다 — 수치 창작 없음, 형식 안내([1008] 두 칸 → 한 줄 HOME_AI_EXAMPLE_LINE) */
-export const HOME_AI_GATEWAY_LEAD = "현장 메모 저장 → 장단점 · 리스크 · 확인 항목으로 정리. 로그인은 저장할 때만.";
+export const HOME_AI_GATEWAY_LEAD = "현장 메모를 장단점 · 리스크 · 확인 항목으로 정리 · 저장할 때만 로그인";
 /* 예시는 지표가 아니라 형태를 보여 준다(수치 창작 아님) — "AI"라는 단어만으로는
    무엇이 좋아지는지 전달되지 않는다는 홈 비판 대응.
    [1008 · J] 홈에서는 두 칸(입력 → 정리, 옛 HOME_AI_EXAMPLE_INPUT/OUTPUT) 대신 이 한 줄로 줄였다 — 검색 아래
@@ -71,7 +71,7 @@ export const HOME_AI_GATEWAY_LEAD = "현장 메모 저장 → 장단점 · 리�
 export const HOME_AI_EXAMPLE_LINE =
   "예: “복도 결로 흔적, 밤 주차 빡빡, 초등학교 도보 7분” → 리스크 2건 · 장점 1건 · 다음 방문 때 확인할 것";
 /* [958] HOME_AI_GATEWAY_BODY 는 아무도 import 하지 않아 지웠다(죽은 카피는 표류한다) */
-export const HOME_AI_BRIEFING_LABEL = "오늘의 시장 브리핑 (참고)";
+export const HOME_AI_BRIEFING_LABEL = "오늘의 시장 브리핑";
 
 /**
  * [1008 · J] 홈 검색 바로 아래 "어디서부터 시작할까요?" — 문 네 개.

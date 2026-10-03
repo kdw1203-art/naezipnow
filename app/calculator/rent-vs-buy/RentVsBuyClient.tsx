@@ -502,7 +502,7 @@ export function RentVsBuyClient({ rateDefault }: { rateDefault: RateDefault }) {
                   value={draft.rate}
                   onChange={set("rate")}
                   inputMode="decimal"
-                  hint={rateDefault.pct !== null ? `${rateDefault.source}${rateDefault.asOf ? ` · ${rateDefault.asOf}` : ""} 공시` : "공시 미연동 · 직접 입력"}
+                  hint={rateDefault.pct !== null ? `${rateDefault.source}${rateDefault.asOf ? ` · ${rateDefault.asOf}` : ""} 공시` : "공시 금리 없음 · 직접 입력"}
                 />
                 <Field id="rb-years" label="보유 기간" unit="년" value={draft.years} onChange={set("years")} hint={`${YEARS_MIN}~${YEARS_MAX}년`} />
                 <Field id="rb-growth" label="기대 상승률 · 연" unit="%" value={draft.growth} onChange={set("growth")} inputMode="decimal" hint="결과 위 슬라이더와 같은 값" />
@@ -596,7 +596,7 @@ export function RentVsBuyClient({ rateDefault }: { rateDefault: RateDefault }) {
                   <span className="t-caption t-num text-text-3">{pctText(GROWTH_MAX)}</span>
                 </div>
                 <p className="m-0 mt-1 t-caption text-text-3">
-                  움직이면 막대·결론이 바로 바뀝니다
+                  움직이면 막대·결론에 바로 반영
                   {result.breakEven.kind === "in" && beTickPct !== null && ` · 빨간 눈금은 손익분기 ${result.breakEven.pct.toFixed(1)}%`}
                 </p>
               </div>
@@ -664,13 +664,13 @@ export function RentVsBuyClient({ rateDefault }: { rateDefault: RateDefault }) {
                         <BreakEvenSvg layout={beChart} />
                       </div>
                       <p className="m-0 mt-1 t-caption text-text-3">
-                        파란 선이 초록 선 아래로 내려가는 지점부터 매매 유리 · 상승분 = {price !== null ? manwonText(price) : "매매가"} × ((1+g)^{years} − 1)
+                        파란 선이 초록 선 아래인 구간은 매매 유리 · 상승분 = {price !== null ? manwonText(price) : "매매가"} × ((1+g)^{years} − 1)
                         {growth < 0 && ` · 지금 ${pctText(growth)}는 그래프 범위(0~8%) 밖`}
                       </p>
                     </>
                   ) : (
                     <p className="m-0 mt-2 t-body text-text-3">
-                      {result.buy.missing.length > 0 ? `${result.buy.missing.join(" · ")} 입력 뒤 곡선을 그립니다` : "전세 또는 월세 입력 뒤 곡선을 그립니다"}
+                      {result.buy.missing.length > 0 ? `${result.buy.missing.join(" · ")} 입력 뒤 곡선 표시` : "전세 또는 월세 입력 뒤 곡선 표시"}
                     </p>
                   )}
                 </section>

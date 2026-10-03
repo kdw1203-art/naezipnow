@@ -311,6 +311,8 @@ export default async function TemperatureRegionPage({
               <Explain {...TEMPERATURE_EXPLAIN} title="시장 온도" />
             </div>
             <div className="mt-0.5 t-sub text-text-3">
+              {/* [1028] 점수의 두 성분(50점에서 더하고 뺀 값) */}
+              {latest.parts ? <span className="tabular-nums">50 기준 · {latest.parts} · </span> : null}
               {formatWeekKorean(latest.weekStart)}이 속한 주
               {diff !== null && (
                 <>
@@ -375,7 +377,8 @@ export default async function TemperatureRegionPage({
                 <th className="py-2 text-right font-medium">온도</th>
                 <th className="py-2 text-right font-medium">지수 최근 평균</th>
                 <th className="py-2 text-right font-medium">거래량(최근/직전)</th>
-                <th className="py-2 font-medium">요약</th>
+                {/* [1028] 앞 칸(오른쪽 맞춤 숫자)과 붙어 "292 / 992건서늘함"으로 읽히던 것 — 왼쪽 여백을 준다 */}
+                <th className="py-2 pl-4 font-medium">요약</th>
               </tr>
             </thead>
             <tbody>
@@ -399,7 +402,7 @@ export default async function TemperatureRegionPage({
                         ? `${h.volumeRecentCount.toLocaleString("ko-KR")} / ${h.volumePriorCount.toLocaleString("ko-KR")}건`
                         : "미반영"}
                     </td>
-                    <td className="py-2.5 t-sub text-text-2">{h.headline}</td>
+                    <td className="py-2.5 pl-4 t-sub text-text-2">{h.headline}</td>
                   </tr>
                 );
               })}

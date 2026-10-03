@@ -94,7 +94,7 @@ test("[1026b] 채움 파랑(주 행동) — 리스크·갭·수익률 = 임장�
 
 test("[1026b] 노트 링크 — 리스크·갭·수익률도 4종과 같은 규칙(결론·핵심 숫자가 메모 초안으로 · apt·region·complexId)", () => {
   const verdict = {
-    headline: "공작아파트: 잰 4가지 위험 신호 중 1가지가 걸렸어요(1가지는 자료 없음) — 입주 물량이 많아요.",
+    headline: "공작아파트: 잰 4가지 위험 신호 중 1가지가 걸렸어요(1가지는 자료 없음): 입주 물량이 많아요.",
     numbers: [{ key: "price", label: "최근 실거래가", value: "5억 800만", asOf: "202608", source: "국토부 실거래", confidence: "ok" as const }],
     metric: { label: "위험 수준", value: "보통", unit: null, note: null, asOf: null },
     computedAt: "2026-09-29T03:00:00Z",
@@ -199,11 +199,12 @@ test("[1026b] 빈 상태 — 카드 하나 + 회색 견본(12종 모두 윤곽 �
   assert.match(frames, /export function EmptyFrame\(\{ tool \}: \{ tool: AiAnalysisToolId \}\)/);
   for (const f of ["ListFrame", "TableFrame", "BarsFrame"]) assert.match(frames, new RegExp(`function ${f}\\(`), f);
   assert.doesNotMatch(frames, /<text|#[0-9a-fA-F]{3,6}\b/);
-  /* 한 문장은 서버 페이지에만 — 경제지표(단지를 고르지 않는다)를 뺀 11종 */
+  /* 한 문장은 서버 페이지에만 — 경제지표(단지를 고르지 않는다)를 뺀 11종 · [1028] 11종 공통 한 줄(도구별 문장은 머리 한 줄과 같은 말이었다) */
   for (const t of AI_TOOL_IDS) {
     if (t === "ai-economy") assert.doesNotMatch(page, /"ai-economy": "/);
-    else assert.match(page, new RegExp(`"${t}": "[^"]+(나와요|채워져요)"`), t);
+    else assert.ok(page.includes(`"${t}": "단지를 고르면 결과가 나와요."`), t);
   }
+  assert.doesNotMatch(page, /바로 나와요|채워져요/, "도구별 빈 상태 문장이 남았다");
   assert.match(page, /emptyLine=\{EMPTY_LINE\[tid\] \?\? null\}/);
 });
 
@@ -315,4 +316,18 @@ test("[1026b] 말·모양 — 램프 유틸만 · raw hex·굵기 800·임의 px
   ]) {
     assert.ok(read(p).slice(0, 300).includes("[1026b · AI 분석 8종]"), `${p} 상단 [1026b · AI 분석 8종] 표식`);
   }
+});
+
+/* ── [1028 · 제안 2] 결과 카드의 결론·근거 문장 — 줄표로 잇지 않고, 명령하지 않는다 ─────────────────── */
+test("[1028] 결과 카드 문장 — 자산 구성 결론 · 계약 점검 기준 줄 · 대출 계산 제목·각주 · 거래 적음 안내는 마침표·가운뎃점으로, 시세 예측 ⓘ 는 사실만", () => {
+  assert.ok(mix.includes("이 몰려 있어요. 같은 지역 흐름에 함께 흔들려요.`"));
+  assert.ok(mix.includes("`한 지역에 절반 넘게 몰리지 않았어요. 가장 많은 곳은 "));
+  assert.doesNotMatch(mix, /어요 — /);
+  assert.ok(resultView.includes('"전세가율은 지역 평균 · 이 집 값을 넣으면 다시 계산"'));
+  assert.ok(resultView.includes("{loan.holdingYears}년 뒤 팔면 넣은 돈 대비 연 수익률(가정)</h4>"));
+  assert.ok(resultView.includes("취득세·중개보수·보유세·임대료는 넣지 않았어요. 실제 부담은 더 커요."));
+  assert.ok(resultView.includes("거래가 적어 추이를 그리기 어려워요. 거래가 있었던 달만 점으로 찍었어요."));
+  const explain = visible(`${DIR}/verdict-explain.ts`);
+  assert.ok(explain.includes("예측이 아니라 공개한 규칙으로 낸 가정 계산이에요. 3개월 적중률을 공개한 규칙(예측 적중률 화면)과는 다른 계산이에요."));
+  assert.doesNotMatch(explain, /마세요/);
 });

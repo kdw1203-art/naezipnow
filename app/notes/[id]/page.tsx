@@ -278,10 +278,10 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
   );
   const aiEngine = typeof ai?.engine === "string" ? ai.engine : "";
   const ruleInline = scored
-    ? `입력 ${scoredAxisCount}개 축 평균 ${avg.toFixed(1)}/5점. ${
+    ? `항목 평점 ${avg.toFixed(1)}/5 · 입력 ${scoredAxisCount}개 축. ${
         weakest ? `${weakest[0]} 축(${weakest[1]}/5)이 감점 요인.` : "축별 점수 참고."
       }`
-    : "현장 축 점수 미입력. 종합 점수 없음.";
+    : "축 점수 미입력. 기록 점수 없음.";
   const aiBadge = storedAiText
     ? aiEngine.startsWith("rule-based")
       ? "규칙 기반 분석"
@@ -311,7 +311,7 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
               id: n.id,
               label: `1차 · ${n.visitDate}`,
               summary: scored
-                ? `평점 ${avg.toFixed(1)}/5 · 체크 ${doneCount}/${n.checklist.length}`
+                ? `항목 평점 ${avg.toFixed(1)}/5 · 체크 ${doneCount}/${n.checklist.length}`
                 : `점수 미입력 · 체크 ${doneCount}/${n.checklist.length}`,
               latest: true,
             },
@@ -324,14 +324,14 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
     aiInline: storedAiText ?? ruleInline,
     aiBadge,
     aiSummary: scored
-      ? `${n.region} ${displayTitle} 방문 기록 기준 입력 축 평균 ${avg.toFixed(1)}점. ${
+      ? `${n.region} ${displayTitle} 방문 기록 기준 항목 평점 ${avg.toFixed(1)}/5. ${
           goodPoints[0] && goodPoints[0] !== "기록 없음" ? `강점 ${goodPoints[0]}, ` : ""
         }${
           cautionPoints[0] && cautionPoints[0] !== "기록 없음"
             ? `약점 ${cautionPoints[0]}.`
             : "축별 점수 참고."
         }`
-      : `${n.region} ${displayTitle} 방문 기록. 축 점수가 없어 종합 점수는 없음.`,
+      : `${n.region} ${displayTitle} 방문 기록. 축 점수가 없어 기록 점수는 없음.`,
     totalScore: total,
     scoredAxisCount,
     weakestAxis: weakest ? { label: weakest[0], score: weakest[1] } : null,
@@ -541,7 +541,7 @@ export default async function NoteDetailPage({
       <PageShell breadcrumb="임장노트">
         <ErrorState
           title="노트를 불러오지 못했어요"
-          desc="일시적인 조회 오류예요. 잠시 뒤 새로고침하면 대부분 정상으로 돌아옵니다."
+          desc="잠시 후 다시 시도해 주세요."
           cause={loaded.message}
           action={{ label: "임장노트 목록", href: "/notes" }}
         />
@@ -712,7 +712,7 @@ export default async function NoteDetailPage({
         return {
           id: x.id,
           label: `${i + 1}차 · ${x.visitDate}`,
-          summary: scored ? `평점 ${avg.toFixed(1)}/5 · 체크 ${checks}` : `점수 미입력 · 체크 ${checks}`,
+          summary: scored ? `항목 평점 ${avg.toFixed(1)}/5 · 체크 ${checks}` : `점수 미입력 · 체크 ${checks}`,
           latest: x.id === realNote.id,
         };
       });
@@ -894,7 +894,8 @@ export default async function NoteDetailPage({
   /* [1005 · A4] AI 요약 패널 — pending 이면 이 자리에 폴링 카드가 서고, 이 패널은 "나중에 볼게요"
      뒤의 폴백이 된다(규칙 기반 요약 + 재시도). 결과가 오면 폴링 카드가 ?ai=ok 로 다시 렌더한다. */
   const aiSummaryPanel = (
-    <AIPanel title="AI 요약">
+    /* [1028] 규칙으로 만든 요약에는 "AI"를 붙이지 않는다(제목·배지) — AI 모델이 쓴 요약일 때만 "AI 요약" */
+    <AIPanel title={v.aiBadge.startsWith("규칙") ? "요약" : "AI 요약"} ai={!v.aiBadge.startsWith("규칙")}>
       <span
         className={`mb-1.5 inline-flex items-center rounded px-1.5 py-0.5 t-caption font-bold ${
           v.aiBadge.startsWith("규칙")
@@ -903,7 +904,6 @@ export default async function NoteDetailPage({
         }`}
       >
         {v.aiBadge}
-        {v.aiBadge.startsWith("규칙") ? " · LLM 아님" : " · LLM"}
       </span>
       <p className="t-body">{v.aiInline}</p>
       {isOwner && !hasLlmAi && (
@@ -942,7 +942,7 @@ export default async function NoteDetailPage({
           가격과 함께. 가격은 billing-periods 단일 출처. */}
       {isOwner && quotaHit && (
         <div className="rise-in card mb-3 rounded-2xl px-4 py-3 t-body text-text-1">
-          이번 달 AI 정리 한도 도달. 노트는 AI 정리 없이 저장됐습니다.{" "}
+          이번 달 AI 정리 한도 도달. 노트는 AI 정리 없이 저장됐어요.{" "}
           <Link href="/subscription" className="font-bold text-primary">
             PRO(월 {monthlyPrice("pro").toLocaleString("ko-KR")}원) 보기 ›
           </Link>
@@ -1011,7 +1011,7 @@ export default async function NoteDetailPage({
                   }
                 : realNote.aptName?.trim()
                   ? {
-                      label: `${realNote.aptName.trim()} 실데이터로 AI 진단`,
+                      label: `${realNote.aptName.trim()} AI 종합 진단 받기`,
                       href: `/analysis/ai/ai-diagnosis?apt=${encodeURIComponent(realNote.aptName.trim())}&region=${encodeURIComponent(realNote.region)}`,
                     }
                   : { label: "지도에서 이 지역 보기", href: mapCompareHref }
@@ -1099,11 +1099,11 @@ export default async function NoteDetailPage({
                   </span>
                   <Explain
                     title="현장 인증"
-                    body="노트를 쓸 때 작성자 기기의 위치로 브라우저가 단지 근처라고 판정한 표시. 서버가 위치를 다시 확인하지 않으며, 적힌 내용의 사실 여부를 보증하는 표시도 아니다."
+                    body="노트를 쓸 때 작성자 기기의 위치로 브라우저가 단지 근처라고 판정한 표시예요. 서버가 위치를 다시 확인하지 않고, 적힌 내용의 사실 여부를 보증하지 않아요."
                     how={[
-                      "노트를 쓸 때 ‘현재 위치로 인증하기’를 누르면 그 기기의 현재 위치와 단지 좌표 사이 거리를 브라우저 안에서 계산한다.",
-                      "거리가 2km 안이면 인증 표시가 붙는다.",
-                      "위치 좌표는 저장하지 않는다. 50m 단위로 뭉갠 거리와 확인 시각만 남는다.",
+                      "노트를 쓸 때 ‘현재 위치로 인증하기’를 누르면 그 기기의 현재 위치와 단지 좌표 사이 거리를 브라우저 안에서 계산해요.",
+                      "거리가 2km 안이면 인증 표시가 붙어요.",
+                      "위치 좌표는 저장하지 않아요. 50m 단위로 뭉갠 거리와 확인 시각만 남아요.",
                     ]}
                     size={12}
                   />
@@ -1125,8 +1125,8 @@ export default async function NoteDetailPage({
                 {v.axes.length > 0 && (
                   <Explain
                     title="항목 평가"
-                    body="다녀온 사람이 현장에서 느낀 인상(좋음·보통·아쉬움)을 상·중·하로 적은 것. 측정값이 아니다."
-                    how="작성 화면의 현장 체크에서 고른 값을 먼저 쓰고, 없으면 좋았던 점·주의할 점 글의 낱말, 그것도 없으면 축 점수(4 이상 상 · 2 이하 하)로 정한다. 입력이 없는 축은 뺀다."
+                    body="다녀온 사람이 현장에서 느낀 인상(좋음·보통·아쉬움)을 상·중·하로 적은 값이에요. 측정한 값은 아니에요."
+                    how="작성 화면의 현장 체크에서 고른 값을 먼저 쓰고, 없으면 좋았던 점·주의할 점 글의 낱말, 그것도 없으면 축 점수(4 이상 상 · 2 이하 하)로 정해요. 입력이 없는 축은 빼요."
                     size={12}
                   />
                 )}
@@ -1462,7 +1462,7 @@ export default async function NoteDetailPage({
             <div className="flex items-center justify-center gap-1 text-center t-sub text-text-2">
               {v.totalScore != null ? (
                 <span>
-                  입력 {v.scoredAxisCount}개 축 평균 <b className="text-primary">{v.totalScore}점</b>
+                  기록 점수 <b className="text-primary">{v.totalScore}점</b> · 입력 {v.scoredAxisCount}개 축
                 </span>
               ) : (
                 <span>축 점수 미입력</span>
@@ -1470,7 +1470,7 @@ export default async function NoteDetailPage({
               {/* [1015 · 규칙 B] 카드 맨 아래 계산 설명 문장 → ⓘ(데스크톱 hover 미리보기 · 폰 탭 시트) */}
               <Explain
                 title="기록 점수"
-                body="입력된 축(입지·학군·교통·시설·미래가치)만 평균 × 20. 미입력 축은 평균과 막대에서 뺀다."
+                body="항목 평점(입지·학군·교통·시설·미래가치 중 입력한 축의 평균, 5점 만점) × 20 이에요. 미입력 축은 평균과 막대에서 빼요."
                 source="작성자 직접 방문 기록"
                 size={12}
               />
@@ -1597,7 +1597,7 @@ export default async function NoteDetailPage({
                   { label: "지도에서 비교", href: mapCompareHref },
                 ]),
             ...(complexHref
-              ? [{ label: "단지 허브 보기", href: complexHref }]
+              ? [{ label: "단지 보기", href: complexHref }]
               : []),
             /* [993] "이 단지 Q&A"(/qna) 제거 — Q&A 는 보관(비노출, 992) */
           ]}

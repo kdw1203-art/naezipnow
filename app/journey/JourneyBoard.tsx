@@ -197,7 +197,7 @@ function DeadlineCard({
         <p className="m-0 px-3.5 pb-3 t-caption text-text-3">날짜 계산 중</p>
       ) : !dated ? (
         <p className="m-0 px-3.5 pb-3 t-caption text-text-3">
-          계약잔금 일정표에 날짜를 넣으면 마감이 여기 보입니다{" "}
+          계약·잔금 일정표에 날짜를 넣으면 마감이 여기 보여요{" "}
           <Link
             href="/journey/contract"
             className="inline-flex min-h-[24px] items-center font-bold text-primary underline-offset-2 hover:underline"

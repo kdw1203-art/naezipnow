@@ -121,9 +121,8 @@ export default async function TownLibraryPage() {
 
         {reportsFailed ? (
           <ErrorState
-            title="리포트 목록을 지금 불러오지 못했어요"
-            desc="리포트가 없다는 뜻이 아니라, 목록 조회 자체가 실패했다는 뜻이에요."
-            cause="잠시 후 새로고침해 주세요."
+            title="리포트 목록을 불러오지 못했어요"
+            desc="잠시 후 다시 시도해 주세요."
           />
         ) : reports.length === 0 ? (
           <div className="card rise-in-1 px-4 py-5">
@@ -195,9 +194,8 @@ export default async function TownLibraryPage() {
 
         {loadFailed ? (
           <ErrorState
-            title="공개 임장노트를 지금 불러오지 못했어요"
-            desc="공개된 노트가 없다는 뜻이 아니라, 목록 조회 자체가 실패했다는 뜻이에요."
-            cause="잠시 후 새로고침해 주세요."
+            title="공개 임장노트를 불러오지 못했어요"
+            desc="잠시 후 다시 시도해 주세요."
           />
         ) : notes.length === 0 ? (
           <div className="card flex flex-col items-center gap-2 px-6 py-12 text-center">

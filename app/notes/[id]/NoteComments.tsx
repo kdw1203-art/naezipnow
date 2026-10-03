@@ -74,14 +74,14 @@ export function NoteComments({
       }
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(data?.error ?? "삭제하지 못했어요. 잠시 후 다시 눌러 주세요");
+        setError(data?.error ?? "삭제하지 못했어요. 잠시 후 다시 시도해 주세요");
         return;
       }
       setConfirmId(null);
       showToast("댓글을 삭제했어요");
       router.refresh();
     } catch {
-      setError("인터넷 연결을 확인하고 다시 눌러 주세요");
+      setError("연결이 끊겼어요. 다시 시도해 주세요");
     } finally {
       setBusyId(null);
     }
@@ -294,7 +294,7 @@ function NoteCommentForm({
       }
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(data?.error ?? "댓글을 남기지 못했어요. 잠시 후 다시 눌러 주세요");
+        setError(data?.error ?? "댓글을 남기지 못했어요. 잠시 후 다시 시도해 주세요");
         return;
       }
       setBody("");
@@ -303,7 +303,7 @@ function NoteCommentForm({
       showToast(parentId ? "답글을 남겼어요" : "댓글을 남겼어요");
       router.refresh();
     } catch {
-      setError("인터넷 연결을 확인하고 다시 눌러 주세요");
+      setError("연결이 끊겼어요. 다시 시도해 주세요");
     } finally {
       setBusy(false);
     }

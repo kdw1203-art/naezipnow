@@ -21,6 +21,9 @@
  *     함께 올려 다시 안내한다.
  *   - "데이터가 곧 채워집니다" 같은 약속은 하지 않는다. 확인 안 된 값은 — 로
  *     비워 둔다는 사실만 말한다.
+ *   - [1028 · 제안 6] 띠를 한 줄로 줄였다("베타 운영 중 · 확인 안 된 값은 —로 표시 · 의견 보내기").
+ *     출시 시점 문장은 뺐다 — 다시 넣을 때는 위 원칙대로. 덜어낸 것이라 STORAGE_KEY 는 그대로다
+ *     (이미 닫은 사람에게 다시 띄우지 않는다).
  *
  * 표시 규칙:
  *   - 쿠키 동의가 결정되기 전에는 그리지 않는다(동의 배너와 같은 화면에 두 안내가
@@ -99,13 +102,13 @@ export function BetaNoticeModal() {
   return (
     <div
       role="status"
-      aria-label="클로즈 베타 안내"
+      aria-label="베타 안내"
       data-noprint
       className="mb-2.5 flex items-center gap-2 rounded-xl border border-line bg-primary-soft px-3 py-2 t-sub leading-[1.45] text-text-1"
     >
       <p className="m-0 min-w-0 flex-1">
-        <b className="text-primary">클로즈 베타예요.</b> 정식 출시(올해 하반기)까지 화면이 바뀔 수
-        있고, 확인 안 된 값은 <b className="text-ink">—</b> 로 비워 둬요.{" "}
+        <b className="text-primary">베타 운영 중</b> · 확인 안 된 값은{" "}
+        <b className="text-ink">—</b>로 표시 ·{" "}
         <Link
           href="/support"
           onClick={close}

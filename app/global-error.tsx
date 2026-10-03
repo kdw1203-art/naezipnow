@@ -62,8 +62,10 @@ export default function GlobalError({
             textAlign: "center",
           }}
         >
+          {/* [1028 · 제안 3·12] 제목은 해요체인데 아래 설명은 합니다체("로드되지 않았습니다")였다 —
+              오류 문구 표준 한 벌("불러오지 못했어요" + "잠시 후 다시 시도해 주세요.")로 맞춘다 */}
           <div style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.5 }}>
-            페이지를 열 수 없어요
+            페이지를 불러오지 못했어요
           </div>
           {/* global-error 는 루트 레이아웃을 대체하므로 globals.css 도 토큰도 없다.
               색을 직접 적을 수밖에 없는데, 그러면 토큰을 고쳐도 여기만 남는다.
@@ -76,9 +78,7 @@ export default function GlobalError({
               color: "#656f7c",
             }}
           >
-            일시적인 오류로 화면이 로드되지 않았습니다.
-            <br />
-            새로고침해도 같으면 잠시 뒤에 다시 방문해 주세요.
+            잠시 후 다시 시도해 주세요.
           </p>
           {error.digest && (
             <p

@@ -24,6 +24,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AIPanel } from "@/app/components/AIPanel";
 import { Explain } from "@/app/components/explain/Explain";
 import type { AuctionApiItem } from "@/app/api/auctions/route";
+import { sidoShort, sigunguDistribution } from "@/lib/onbid/region-summary";
 
 /* ── lib/onbid/store 는 server-only(supabase) 를 끌고 와 값 import 불가.
       아래 둘은 원본(lib/onbid/store.ts)에서 복제 — 의미 변경 금지. ── */
@@ -100,21 +101,6 @@ function usageDistribution(
     .filter((c) => c.count > 0)
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
-}
-
-function sigunguDistribution(
-  items: { sigungu: string | null }[],
-): { name: string; count: number }[] {
-  const map = new Map<string, number>();
-  for (const it of items) {
-    const s = it.sigungu?.trim();
-    if (!s) continue;
-    map.set(s, (map.get(s) ?? 0) + 1);
-  }
-  return [...map.entries()]
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 6);
 }
 
 type CalCell = { day: number; muted: boolean; mark: boolean };
@@ -196,7 +182,7 @@ function onbidToCard(a: AuctionApiItem, now: Date): AuctionCardData {
 /* [개선 #23] SourceTabs·CourtAuctionPlaceholder 제거 — 경매 탭 폐지(위 주석). */
 
 /* 필터 상태 — source 필드는 구 딥링크 호환용으로 남긴다(값은 이제 "onbid" 고정) */
-type Filter = { usage: string | null; gu: string | null; source: "onbid" | "court" };
+type Filter = { usage: string | null; gu: string | null; sido: string | null; source: "onbid" | "court" };
 
 function pushFilterUrl(f: Filter) {
   const url = new URL(window.location.href);
@@ -205,6 +191,8 @@ function pushFilterUrl(f: Filter) {
   else sp.delete("usage");
   if (f.gu) sp.set("gu", f.gu);
   else sp.delete("gu");
+  if (f.gu && f.sido) sp.set("sido", f.sido);
+  else sp.delete("sido");
   sp.delete("source"); // 경매 탭 폐지(#23) — 구 파라미터는 지운다
   window.history.pushState(null, "", url);
 }
@@ -212,7 +200,7 @@ function pushFilterUrl(f: Filter) {
 type Fetched =
   | { state: "idle" }
   | { state: "loading" }
-  | { state: "ok"; items: AuctionApiItem[]; activeTotal: number }
+  | { state: "ok"; items: AuctionApiItem[]; activeTotal: number; matchTotal: number }
   | { state: "error" };
 
 export function AuctionsClient({
@@ -228,7 +216,7 @@ export function AuctionsClient({
   /** 서버 조각 — AdSlot 은 server-only 의존이라 여기서 못 그린다 */
   adSlot: ReactNode;
 }) {
-  const [f, setF] = useState<Filter>({ usage: null, gu: null, source: "onbid" });
+  const [f, setF] = useState<Filter>({ usage: null, gu: null, sido: null, source: "onbid" });
   const [fetched, setFetched] = useState<Fetched>({ state: "idle" });
   const [nowMs, setNowMs] = useState(builtAtMs);
   /* 표 표시 상한(2026-08-22) — "실데이터 1,130건" 헤더 아래 24행에서 뚝 끊기고
@@ -242,9 +230,12 @@ export function AuctionsClient({
       const p = new URLSearchParams(window.location.search);
       const u = (p.get("usage") ?? "").trim();
       const g = (p.get("gu") ?? "").trim();
+      const sd = (p.get("sido") ?? "").trim();
+      const gu = /^[가-힣]{1,10}( [가-힣]{1,10})?$/.test(g) ? g : null; // [941] "성남시 분당구" 공백 1칸 허용
       setF({
         usage: AUCTION_USAGE_FILTERS.some((x) => x.key === u) ? u : null,
-        gu: /^[가-힣]{1,10}( [가-힣]{1,10})?$/.test(g) ? g : null, // [941] "성남시 분당구" 공백 1칸 허용
+        gu,
+        sido: gu && /^[가-힣]{2,10}$/.test(sd) ? sd : null, // [1028] 시도는 시군구와 함께일 때만
         source: "onbid", // 경매 탭 폐지(#23)
       });
     };
@@ -254,7 +245,7 @@ export function AuctionsClient({
   }, []);
 
   /* 필터가 걸리면 DB 필터 결과를 API 로 받아온다(전체 1,130건 대상 — 축소 없음) */
-  const filterKey = f.usage || f.gu ? `${f.usage ?? ""}|${f.gu ?? ""}` : null;
+  const filterKey = f.usage || f.gu ? `${f.usage ?? ""}|${f.gu ?? ""}|${f.gu ? (f.sido ?? "") : ""}` : null;
   useEffect(() => {
     if (!filterKey) {
       setFetched({ state: "idle" });
@@ -263,15 +254,16 @@ export function AuctionsClient({
     let alive = true;
     setFetched({ state: "loading" });
     const sp = new URLSearchParams();
-    const [u, g] = filterKey.split("|");
+    const [u, g, sd] = filterKey.split("|");
     if (u) sp.set("usage", u);
     if (g) sp.set("gu", g);
+    if (sd) sp.set("sido", sd);
     fetch(`/api/auctions?${sp.toString()}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((d: { ok: boolean; items?: AuctionApiItem[]; activeTotal?: number }) => {
+      .then((d: { ok: boolean; items?: AuctionApiItem[]; activeTotal?: number; matchTotal?: number }) => {
         if (!alive) return;
         if (d.ok && Array.isArray(d.items)) {
-          setFetched({ state: "ok", items: d.items, activeTotal: d.activeTotal ?? 0 });
+          setFetched({ state: "ok", items: d.items, activeTotal: d.activeTotal ?? 0, matchTotal: d.matchTotal ?? d.items.length });
           setNowMs(Date.now());
         } else setFetched({ state: "error" });
       })
@@ -293,6 +285,8 @@ export function AuctionsClient({
   const usingFetched = filterKey !== null && fetched.state === "ok";
   const items = usingFetched ? fetched.items : initialItems;
   const activeTotal = usingFetched ? fetched.activeTotal : initialActiveTotal;
+  /* [1028] 조건에 맞는 진행·예정 건수(DB 집계) — 목록은 마감 임박순 200건까지만 온다 */
+  const matchTotal = usingFetched ? fetched.matchTotal : null;
   const fetchFailed = filterKey !== null && fetched.state === "error";
   const fetchLoading = filterKey !== null && (fetched.state === "loading" || fetched.state === "idle");
 
@@ -316,6 +310,9 @@ export function AuctionsClient({
   }, [items, nowMs]);
 
   const { cards, pastCards, dist, guDist, max, imminent, ongoing, monthLabel, cells } = derived;
+  /* [1028] 요약 칸(지역별·용도별)의 기준 — 받은 목록이 전체(또는 조건 전체)보다 적을 때만 적는다 */
+  const listTotal = f.usage || f.gu ? matchTotal : activeTotal;
+  const basisNote = listTotal != null && cards.length > 0 && cards.length < listTotal ? `표시 중 ${cards.length.toLocaleString()}건 기준` : null;
   const weekdays = ["월", "화", "수", "목", "금", "토", "일"];
 
   const chip = (on: boolean) =>
@@ -404,16 +401,14 @@ export function AuctionsClient({
         /* 필터 조회 실패 — "0건"이 아니라 실패라고 말한다 */
         <div className="rise-in-1 card p-[var(--pad-card)]">
           <div className="rounded-lg border border-line bg-surface px-4 py-12 text-center t-body text-text-3 max-md:py-6">
-            이 조건의 목록을 지금 불러오지 못했어요. 물건이 0건인 게 아니라 조회가
-            실패했습니다. 잠시 후 다시 시도하거나{" "}
+            이 조건의 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.{" "}
             <button
               type="button"
-              onClick={() => set({ usage: null, gu: null })}
+              onClick={() => set({ usage: null, gu: null, sido: null })}
               className="font-bold text-primary underline"
             >
-              전체 목록으로 돌아가세요
+              전체 목록 보기
             </button>
-            .
           </div>
         </div>
       ) : fetchLoading ? (
@@ -467,8 +462,9 @@ export function AuctionsClient({
             {/* b) 진행 중 물건 */}
             {ongoing.length > 0 && (
               <>
+                {/* [1028] 괄호 건수를 뺐다 — 이 묶음에 보이는 카드 수(최대 6)라 전체 건수(위 "입찰 중·예정 N건")와 다르게 읽혔다 */}
                 <div className="rise-in-2 px-1 text-xs font-bold text-primary">
-                  진행 중 물건 ({ongoing.length}건)
+                  진행 중 물건
                 </div>
                 {ongoing.map((c) => (
                   <div
@@ -526,7 +522,7 @@ export function AuctionsClient({
             {imminent.length > 0 && (
               <>
                 <div className="rise-in-3 px-1 pt-1.5 text-xs font-bold text-danger">
-                  마감 임박 / 예정 ({imminent.length}건)
+                  마감 임박 · D-3 이내
                 </div>
                 {imminent.map((c) => (
                   <div
@@ -566,8 +562,17 @@ export function AuctionsClient({
 
             {/* d) 진행·예정 물건 표 */}
             <div className="rise-in-4 px-1 pt-1.5 text-xs font-bold text-text-3">
-              진행·예정 물건 · 온비드 실데이터 {activeTotal.toLocaleString()}건
-              {(f.usage || f.gu) && <> · 현재 조건 {cards.length.toLocaleString()}건</>}
+              {/* [1028] 목록은 마감이 가까운 순으로 최대 200건만 읽는다 — 전체 건수와 지금 보이는 건수를 같이 적는다 */}
+              진행·예정 물건 {activeTotal.toLocaleString()}건
+              {f.usage || f.gu ? (
+                <>
+                  {" "}
+                  · 현재 조건 {(matchTotal ?? cards.length).toLocaleString()}건
+                  {matchTotal != null && cards.length < matchTotal ? <> · 마감 임박순 {cards.length.toLocaleString()}건 표시</> : null}
+                </>
+              ) : cards.length < activeTotal ? (
+                <> · 마감 임박순 {cards.length.toLocaleString()}건 표시</>
+              ) : null}
             </div>
             {cards.length === 0 ? (
               <div className="rise-in-4 card p-[var(--pad-card)]">
@@ -680,7 +685,8 @@ export function AuctionsClient({
           {/* 우측 사이드 */}
           <aside className="flex flex-col gap-3.5 max-md:gap-3">
             <div className="rise-in-2">
-              <AIPanel title="공매 인사이트" className="rounded-3xl">
+              {/* [1028] 건수·최다 용도를 센 값이다(AI 결과 아님) — "AI" 배지와 "인사이트"를 뗐다 */}
+              <AIPanel title="공매 요약" ai={false} className="rounded-3xl">
                 <div className="mb-1.5 flex justify-between rounded-lg bg-[rgba(255,255,255,.07)] px-3 py-2 text-xs">
                   <span className="text-ai-muted">입찰 중·예정</span>
                   <span className="font-bold text-white">
@@ -713,15 +719,19 @@ export function AuctionsClient({
 
             {/* 지역(자치구)별 요약 — 버튼이 gu 필터를 세팅한다 */}
             <div className="rise-in-3 card flex flex-col gap-2 p-[18px]">
-              <div className="flex items-center justify-between t-body font-bold text-ink">
-                지역별 요약
+              <div className="flex items-center justify-between gap-2 t-body font-bold text-ink">
+                <span>
+                  지역별 요약
+                  {/* [1028] 아래 건수는 지금 받은 목록(마감 임박순 최대 200건)에서 센 값이다 — 전체 건수로 읽히지 않게 기준을 적는다 */}
+                  {basisNote && <span className="ml-1.5 t-caption font-medium text-text-3 tabular-nums">{basisNote}</span>}
+                </span>
                 {f.gu && (
                   <button
                     type="button"
-                    onClick={() => set({ gu: null })}
-                    className="t-sub font-bold text-primary"
+                    onClick={() => set({ gu: null, sido: null })}
+                    className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary"
                   >
-                    {f.gu} 해제 ×
+                    {[sidoShort(f.sido), f.gu].filter(Boolean).join(" ")} 해제 ×
                   </button>
                 )}
               </div>
@@ -729,20 +739,24 @@ export function AuctionsClient({
                   "지역을 선택하면 …볼 수 있어요" 사용법 문장은 걷었다(규칙 B). */}
               {guDist.length > 0 ? (
                 <div className="lq-panel flex flex-col" data-tone="blue">
-                  {guDist.map((g) => (
+                  {guDist.map((g) => {
+                    /* 옛 링크(?gu=동구 — 시도 없음)는 이름이 같은 줄을 모두 고른 것으로 본다 */
+                    const on = f.gu === g.gu && (f.sido == null || f.sido === g.sido);
+                    return (
                     <button
-                      key={g.name}
+                      key={`${g.sido ?? ""}|${g.gu}`}
                       type="button"
-                      onClick={() => set({ gu: f.gu === g.name ? null : g.name })}
-                      aria-current={f.gu === g.name ? "page" : undefined}
+                      onClick={() => set(on ? { gu: null, sido: null } : { gu: g.gu, sido: g.sido })}
+                      aria-current={on ? "page" : undefined}
                       className={`press flex min-h-10 items-center justify-between border-b py-2 text-xs last:border-b-0 ${
-                        f.gu === g.name ? "font-bold" : ""
+                        on ? "font-bold" : ""
                       }`}
                     >
                       <span className="font-bold text-ink">{g.name}</span>
                       <span className="t-num text-text-2">{g.count}건</span>
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="t-caption text-text-3">표시할 지역 분포가 아직 없어요.</p>
@@ -753,6 +767,7 @@ export function AuctionsClient({
             <div className="rise-in-3 card flex flex-col gap-2 p-[18px]">
               <div className="flex items-center gap-1.5 t-body font-bold text-ink">
                 용도별 요약
+                {basisNote && <span className="t-caption font-medium text-text-3 tabular-nums">{basisNote}</span>}
               </div>
               {dist.length > 0 ? (
                 dist.map((d) => (

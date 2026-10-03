@@ -123,7 +123,7 @@ export async function RelatedNotes({
                     {n.aptName?.trim() ? ` · ${n.aptName.trim()}` : ""}
                   </span>
                   {rating > 0 && (
-                    <span className="shrink-0 font-bold text-ink">★ {rating.toFixed(1)}</span>
+                    <span role="img" aria-label={`항목 평점 ${rating.toFixed(1)}`} className="shrink-0 font-bold text-ink">★ {rating.toFixed(1)}</span>
                   )}
                 </span>
               </span>

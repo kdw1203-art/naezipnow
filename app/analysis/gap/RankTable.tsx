@@ -82,7 +82,7 @@ export function RankTable({
               <th className="py-2 pr-3 font-semibold">
                 <span className="inline-flex items-center gap-0.5">
                   전세가율
-                  <Explain term="jeonse-garyul" how="공표 지역 통계(한국부동산원·KB)의 매매가 대비 전세가 비율." size={12} />
+                  <Explain term="jeonse-garyul" how="공표 지역 통계(한국부동산원)의 매매가 대비 전세가 비율." size={12} />
                 </span>
               </th>
               <th className="py-2 pr-3 text-right font-semibold">평균 매매가</th>

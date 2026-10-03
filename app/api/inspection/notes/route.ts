@@ -159,7 +159,7 @@ export async function GET(req: Request) {
     } catch (e) {
       return NextResponse.json(
         {
-          error: "공개 임장노트를 조회하지 못했습니다. 노트가 없는 것이 아니라 조회가 실패했습니다.",
+          error: "공개 임장노트를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
           detail: e instanceof Error ? e.message : String(e),
         },
         { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "300" } },
@@ -198,7 +198,7 @@ export async function GET(req: Request) {
     } catch (e) {
       return NextResponse.json(
         {
-          error: "공개 임장노트를 조회하지 못했습니다. 노트가 없는 것이 아니라 조회가 실패했습니다.",
+          error: "공개 임장노트를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
           detail: e instanceof Error ? e.message : String(e),
         },
         { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "300" } },

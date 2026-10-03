@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { SUPPLY_WINDOW_MONTHS, inSupplyWindow, shownMonths, supplyWindow, validYm, type SupplyWindow } from "@/lib/supply/window";
 import { Bars } from "@/app/components/viz/Bars";
 // server-only 체인이 있는 모듈이라 값 import 는 불가 — 타입은 컴파일에서 소거되므로 안전.
 import type { SupplyItem } from "@/lib/market/supply";
@@ -38,12 +39,6 @@ type Group = {
 
 /** [1009 · H] 입주월이 실제 달(01~12)인가 — 적재분에 "202700"(월 00)이 섞여 있어 화면에 "2027.00"·
     "2027년 0분기 입주 예정"이 나왔다(로컬 실측: 2곳 331세대). 형식만 보던 /^\d{6}$/ 검사를 달 범위까지 본다. */
-function validYm(ym: string): boolean {
-  if (!/^\d{6}$/.test(ym)) return false;
-  const m = Number(ym.slice(4, 6));
-  return m >= 1 && m <= 12;
-}
-
 function fmtYm(ym: string): string {
   if (/^\d{6}$/.test(ym) && !validYm(ym)) return `${ym.slice(0, 4)}년 월 미정`;
   if (!ym) return "월 미정";
@@ -64,13 +59,17 @@ function regionKey(s: SupplyItem): string {
 /** 예전 lib getSupplyRegions 와 동일: 지역별 집계, 세대수 내림차순 */
 function deriveRegions(
   items: SupplyItem[],
+  /** [1028] 주면 그 창 안의 물량만 더한다 — 지역 줄 자체는 모두 남긴다(창 안 물량이 0인 지역도 고를 수 있어야 한다) */
+  w: SupplyWindow | null = null,
 ): { region: string; count: number; households: number }[] {
   const map = new Map<string, { count: number; households: number }>();
   for (const s of items) {
     const key = regionKey(s);
     const e = map.get(key) ?? { count: 0, households: 0 };
-    e.count += 1;
-    e.households += Number(s.households ?? 0) || 0;
+    if (!w || inSupplyWindow(s.moveInYm, w)) {
+      e.count += 1;
+      e.households += Number(s.households ?? 0) || 0;
+    }
     map.set(key, e);
   }
   return [...map.entries()]
@@ -119,6 +118,12 @@ function groupByQuarter(list: SupplyItem[]): Group[] {
     g.households += s.households ?? 0;
   }
   return groups;
+}
+
+/** [1028] 한국 시간의 이번 달 "YYYYMM" — 월별 그래프의 시작 달 */
+function kstYm(ms: number): string {
+  const d = new Date(ms + 9 * 60 * 60 * 1000);
+  return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 function quarterKey(d: Date): string {
@@ -173,16 +178,15 @@ export function SupplyClient({
   };
 
   // ── 파생 (675행 규모라 렌더마다 계산해도 무시할 수준) ──────────────────────
-  const regions = deriveRegions(items); // 항상 전량 기준 (예전 getSupplyRegions() 와 동일)
+  /* [1028] 지역별 요약도 그래프·합계와 같은 창(이번 달부터 24개월)에서 센다. 예전처럼 전량으로 세면 합계(24개월)와
+     지역 줄(전 기간)이 다른 기준이라 "전국 합계 38만 세대"인데 "경기 27만 세대"처럼 어긋난다. 창 안 자료가 전국에 하나도 없으면 전량. */
+  const win = supplyWindow(kstYm(nowMs));
+  const regionsWindowed = items.some((s) => inSupplyWindow(s.moveInYm, win));
+  const regions = deriveRegions(items, regionsWindowed ? win : null);
   const filtered = region ? items.filter((s) => regionKey(s) === region) : items;
   const monthly = deriveMonthly(filtered);
   const list = filtered; // 서버 정렬(move_in_ym asc)이 필터로 보존됨
 
-  const totalHouseholds = monthly.reduce((s, m) => s + m.households, 0);
-  const peak =
-    monthly.length > 0
-      ? monthly.reduce((a, b) => (b.households > a.households ? b : a))
-      : null;
   const groups = groupByQuarter(list);
   const scope = region ? `${region} ` : "전국 ";
 
@@ -205,7 +209,23 @@ export function SupplyClient({
   const upcomingShown = upcomingItems.slice(0, 6);
   const upcomingMore = Math.max(0, upcomingItems.length - upcomingShown.length);
 
-  const monthlyShown = monthly.slice(-24);
+  /* [1028] 그래프·합계는 **이번 달부터 24개월**(달력 기준 · lib/supply/window.ts). 예전에는 입주월 순 "마지막 24개월"(slice(-24))이라,
+     자료가 2032년까지 늘어난 뒤로는 2029.04~2032.03 만 그려졌다(오늘 기준 3년 뒤부터). 합계·가장 많은 달은 전체 달로 세어,
+     "24개월"이라 적힌 합계가 전체 합(71만 세대)이었고 가장 많은 달(2027.12)은 그래프에 없었다. 이제 그래프 · 합계 · 가장 많은 달 ·
+     단지 수 · 지역별 요약이 모두 같은 창에서 센다. 고른 지역의 물량이 전부 창 밖이면 가진 달의 마지막 24개를 보이고 "24개월"이라 적지 않는다. */
+  const { months: monthlyShown, windowed } = shownMonths(monthly, win);
+  /* 창 안이면 "24개월", 아니면(그 지역 물량이 전부 창 밖) 실제 범위만 적는다 */
+  const spanLabel = windowed ? `${SUPPLY_WINDOW_MONTHS}개월` : "";
+  const totalHouseholds = monthlyShown.reduce((s, m) => s + m.households, 0);
+  const shownCount = monthlyShown.reduce((s, m) => s + m.count, 0);
+  const peak =
+    monthlyShown.length > 0
+      ? monthlyShown.reduce((a, b) => (b.households > a.households ? b : a))
+      : null;
+  const shownRange =
+    monthlyShown.length > 0
+      ? `${fmtYm(monthlyShown[0].ym)}~${fmtYm(monthlyShown[monthlyShown.length - 1].ym)}`
+      : "";
   /* [1009 · H] 입주월이 없거나 달이 잘못 적힌 단지 — 월별 합계에서 빠진다는 사실을 적는다(숨기지 않는다) */
   const noMonth = filtered.filter((s) => !validYm(s.moveInYm));
   const noMonthHouseholds = noMonth.reduce((a, s) => a + (Number(s.households ?? 0) || 0), 0);
@@ -248,7 +268,7 @@ export function SupplyClient({
                 term="ipju-mulryang"
                 body="청약홈 분양공고의 입주예정월(매일 갱신)과 2026년 2월에 받은 공공데이터 입주예정물량을 합친 자료입니다. 사업 진행·일정 변경에 따라 실제와 다를 수 있습니다."
                 how={[
-                  "두 원천의 단지별 세대수를 입주월로 묶어 더합니다(입주월 순 마지막 24개월 표시).",
+                  "두 원천의 단지별 세대수를 입주월로 묶어 더합니다(이번 달부터 24개월 표시).",
                   "입주는 월 단위로만 공개되어 날짜는 없습니다. 세대수가 빈 단지는 0으로 더합니다.",
                   "지역을 고르면 그 시·도 단지만 더합니다.",
                 ]}
@@ -277,7 +297,7 @@ export function SupplyClient({
               <div className="kpi">
                 <span className="kpi-k">합계</span>
                 <span className="kpi-v">{totalHouseholds.toLocaleString("ko-KR")}세대</span>
-                <span className="kpi-d">{scope}· {monthlyShown.length}개월</span>
+                <span className="kpi-d">{scope}· {shownRange}</span>
               </div>
               {peak && (
                 <div className="kpi">
@@ -290,8 +310,8 @@ export function SupplyClient({
               )}
               <div className="kpi">
                 <span className="kpi-k">단지 수</span>
-                <span className="kpi-v">{list.length.toLocaleString("ko-KR")}곳</span>
-                <span className="kpi-d">현재 필터 기준</span>
+                <span className="kpi-v">{shownCount.toLocaleString("ko-KR")}곳</span>
+                <span className="kpi-d">{windowed ? `${spanLabel} 안 입주` : shownRange}</span>
               </div>
             </div>
           )}
@@ -516,7 +536,8 @@ export function SupplyClient({
         <div className="rise-in-2 max-md:hidden">
           {/* [1015] 위 KPI 줄(합계·가장 많은 달)과 같은 숫자를 다시 적던 두 칸과 "…유리할 수 있어요" 조언 문장을 걷고
               사실 한 줄만(브리프 규칙 D·J — 같은 사실 두 곳 금지). */}
-          <AIPanel title="입주 물량 인사이트" className="rounded-3xl">
+          {/* [1028] 월별 합계를 센 값이다(AI 결과 아님) — "AI" 배지와 "인사이트"를 뗐다 */}
+          <AIPanel title="입주 물량 요약" ai={false} className="rounded-3xl">
             {monthly.length === 0 ? (
               <>표시할 입주 물량 데이터가 없어요.</>
             ) : (
@@ -524,7 +545,7 @@ export function SupplyClient({
                 {scope}기준 최다 입주 <b className="text-ai-accent">{peak ? fmtYm(peak.ym) : "—"}</b>
                 {peak ? ` · ${peak.households.toLocaleString()}세대 · ${peak.count}곳` : ""}
                 {" · "}
-                {monthlyShown.length}개월 합계 {totalHouseholds.toLocaleString()}세대
+                {windowed ? spanLabel : shownRange} 합계 {totalHouseholds.toLocaleString()}세대
               </>
             )}
           </AIPanel>
@@ -536,6 +557,10 @@ export function SupplyClient({
         <div className="rise-in-3 card flex flex-col gap-1 p-[18px]">
           <h2 className="mb-1 t-body font-bold text-ink">
             지역별 입주 요약
+            {/* [1028] 아래 세대수의 기준 — 그래프·합계와 같은 창 */}
+            {regionsWindowed && (
+              <span className="ml-1.5 t-caption font-medium text-text-3">이번 달부터 {SUPPLY_WINDOW_MONTHS}개월</span>
+            )}
           </h2>
           {regions.length === 0 ? (
             <p className="t-caption text-text-3">

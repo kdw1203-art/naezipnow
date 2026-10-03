@@ -31,8 +31,9 @@ export default async function ExpertProfilePage() {
     return (
       <PageShell breadcrumb="마이 › 전문가 프로필">
         <GuestGate
-          title="전문가 프로필은 로그인 후 관리할 수 있어요"
-          desc="인증된 전문가 계정으로 로그인하면 소개·전문 분야·상담료·연락처를 여기서 직접 고칠 수 있어요."
+          /* [1028 · 제안 5] 설명형 제목·부제 → "로그인이 필요해요" + 이 화면에서 고치는 것 명사 한 줄 */
+          title="로그인이 필요해요"
+          desc="전문가 소개 · 전문 분야 · 상담료 · 연락처 수정"
           pathname="/my/expert-profile"
           className="mt-8"
         />
@@ -138,7 +139,7 @@ function ApplicationStatusCard({
         </p>
         {application.reviewNote && (
           <div className="mt-3 rounded-lg bg-bg px-4 py-3 t-sub text-text-1">
-            <span className="font-bold text-ink">반려 사유</span> — {application.reviewNote}
+            <span className="font-bold text-ink">반려 사유</span> · {application.reviewNote}
           </div>
         )}
         <p className="mt-3 t-sub text-text-3">

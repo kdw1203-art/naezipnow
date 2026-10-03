@@ -182,10 +182,12 @@ export function SoftSignupProvider({ children }: { children: ReactNode }) {
               onClick={dismiss}
               className="mt-2 w-full rounded-xl px-4 py-2.5 text-center t-body font-semibold text-text-3"
             >
-              지금은 그냥 둘러볼게요
+              {/* [1028 · 제안 5] 1인칭 말투("지금은 그냥 둘러볼게요") → 동사 + 대상 */}
+              로그인 없이 계속 보기
             </button>
+            {/* [1028 · 제안 5] 합니다체 한 문장 → 짧은 사실 두 줄(해요체) */}
             <p className="mt-2 text-center t-sub text-text-3">
-              가입은 무료이고, 지금 보던 화면으로 돌아옵니다.
+              가입은 무료예요. 보던 화면으로 돌아와요.
             </p>
           </div>
         </div>

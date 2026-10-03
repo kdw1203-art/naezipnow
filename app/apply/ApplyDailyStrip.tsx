@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { buildApplyCalendar } from "@/lib/applyhome/calendar";
 import { listRecentCompetition } from "@/lib/applyhome/store";
+import { houseTypeLabel } from "@/lib/applyhome/normalize";
 
 /* ============================================================
    [994 · D4] 오늘의 청약 — 매일 적재된 저장소에서 서버가 그린다.
@@ -62,7 +63,7 @@ export async function ApplyDailyStrip() {
         </div>
         {upcoming.length === 0 ? (
           <p className="t-sub text-text-3">
-            {ok ? "이번 주 접수 시작·마감 공고가 없어요." : "청약 일정을 지금 불러오지 못했어요. 일정이 없다는 뜻은 아니에요."}
+            {ok ? "앞으로 7일 안에 접수 시작·마감 공고가 없어요." : "청약 일정을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."}
           </p>
         ) : (
           <ul className="lq-panel flex flex-col" data-tone="sand">
@@ -99,7 +100,7 @@ export async function ApplyDailyStrip() {
                 </span>
                 <span className="truncate font-bold text-ink">{c.house_nm ?? "단지명 미제공"}</span>
                 <span className="shrink-0 text-text-3">
-                  {c.region ?? "—"} · {c.house_ty}
+                  {c.region ?? "—"} · {houseTypeLabel(c.house_ty)}
                 </span>
               </li>
             ))}

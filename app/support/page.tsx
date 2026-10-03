@@ -24,15 +24,16 @@ import { postHref } from "@/lib/town/post-href";
    서버에서 세션을 읽지 않는다. 로그인 여부(이메일 프리필·접수 뒤 "내 문의 내역" 링크)는
    SupportContactForm 이 헤더와 같은 getSessionLite 로 클라이언트에서 붙인다. */
 
+/* [1028 · 제안 8] 화면 이름은 "고객센터" 하나 — 메뉴·푸터가 이미 그렇게 부른다(탭 제목 "고객지원" · 머리 "고객지원 허브" · 옆 메뉴 "지원 허브" 가 섞여 있었다) */
 export const metadata = buildPageMetadata({
-  title: "고객지원",
+  title: "고객센터",
   description:
     "공지사항, 자주 묻는 질문, 오류 신고와 제휴 문의를 한곳에서 처리합니다.",
   path: "/support",
 });
 
 const SIDE_MENU: { label: string; href: string }[] = [
-  { label: "지원 허브", href: "/support" },
+  { label: "고객센터", href: "/support" },
   { label: "내 문의 내역", href: "/my/support" },
   { label: "자주 묻는 질문", href: "/support/faq" },
   { label: "공지사항", href: "#notices" },
@@ -77,7 +78,7 @@ async function loadNotices(): Promise<NoticesData> {
 /* FAQ 분류 타일의 아이콘 — 라벨·개수는 lib/support/faq.ts 에서 온다. 실제 분류를 그대로
    쓰고 /support/faq 의 해당 섹션 앵커로 보낸다(예전엔 눌리지 않는 <div> 였다). */
 const FAQ_CATEGORY_ICON: Record<string, string> = {
-  "데이터·시세": "bar",
+  "데이터·실거래": "bar",
   "임장노트·공개": "clipboard",
   "구독·결제": "wallet",
   "AI 분석": "bot",
@@ -85,10 +86,11 @@ const FAQ_CATEGORY_ICON: Record<string, string> = {
 };
 
 /* [970 · A-17] 예시 티켓·예시 답변 블록을 없앴다(없는 기능의 약속이었다).
-   [1000] 이제 문의 내역 화면(/my/support)이 있으므로 실제 흐름을 그대로 적는다. */
+   [1000] 이제 문의 내역 화면(/my/support)이 있으므로 실제 흐름을 그대로 적는다.
+   [1028 · 제안 8] 응답 시간은 머리 한 줄에만 — 답변 단계에서 되풀이하던 것(줄표로 이은 문장)을 뺐다. */
 const CONTACT_FLOW: { step: string; desc: string }[] = [
-  { step: "접수", desc: "아래 1:1 문의 폼 또는 메일로 보내 주세요. 접수번호가 발급되고, 로그인 상태면 알림함에 접수 확인이 남아요." },
-  { step: "답변", desc: `${RESPONSE_TIME} — 입력하신 이메일과 내 문의 내역에 답변을 드려요.` },
+  { step: "접수", desc: "아래 1:1 문의 폼이나 메일로 접수해요. 접수번호가 발급되고, 로그인 상태면 알림함에 접수 확인이 남아요." },
+  { step: "답변", desc: "입력한 이메일과 내 문의 내역으로 답변을 드려요." },
   { step: "추가 문의", desc: "받으신 답변 메일에 회신하거나, 내 문의 내역에서 같은 건으로 이어서 남길 수 있어요." },
 ];
 
@@ -123,15 +125,17 @@ export default async function SupportPage() {
   const showNotices = notices.length > 0 || noticesFailed;
   const sideMenu = SIDE_MENU.filter((m) => showNotices || m.href !== "#notices");
 
+  /* [1028 · 제안 8] "평일 10-18시 · 영업일 기준 24~72시간 이내 답변"은 머리(히어로) 한 줄에만 둔다 — 1:1 문의 칸·문의 폼 머리·ⓘ 출처에서
+     같은 말을 되풀이했다. 1:1 문의 칸은 접수하면 받는 것(접수번호·이메일 답변)을 적는다. 내부 용어("크롤링") → 일반 말. */
   const QUICK: { title: string; desc: string; href: string; icon: string; primary?: boolean }[] = [
-    { title: "1:1 문의", desc: `${SUPPORT_HOURS} · ${RESPONSE_TIME}`, href: "#contact", icon: "mail", primary: true },
+    { title: "1:1 문의", desc: "접수번호 발급 · 이메일 답변", href: "#contact", icon: "mail", primary: true },
     { title: "자주 묻는 질문", desc: `전체 ${faqAll.length}개`, href: "/support/faq", icon: "help" },
-    { title: "오류 · 데이터 신고", desc: "시세·크롤링 데이터 오류 제보", href: "#contact", icon: "warning" },
+    { title: "오류 · 데이터 신고", desc: "실거래·단지 정보 오류 신고", href: "#contact", icon: "warning" },
     { title: "내 문의 내역", desc: "로그인 필요", href: "/my/support", icon: "file-text" },
   ];
 
   return (
-    <PageShell breadcrumb="고객지원" title="고객지원 허브" wide>
+    <PageShell title="고객센터" wide>
       {/* ── 히어로 — 유리판: 응답 시간 + FAQ 검색(실제 입력·필터) ── */}
       <section
         aria-labelledby="support-hero-title"
@@ -147,11 +151,8 @@ export default async function SupportPage() {
               {SUPPORT_HOURS} · {RESPONSE_TIME} · 답변은 이메일과 내 문의 내역으로
             </span>
           </div>
+          {/* [1028 · 제안 8] 응답 시간 알약("영업일 기준 24~72시간")은 바로 옆 한 줄과 같은 말이라 뺐다 — 메일 주소만 남긴다 */}
           <div className="flex flex-wrap gap-1.5">
-            <span className="lg-pill">
-              <Icon name="clock" size={13} />
-              {RESPONSE_TIME.replace(" 이내 답변", "")}
-            </span>
             <span className="lg-pill">
               <Icon name="mail" size={13} />
               {supportEmail}
@@ -181,7 +182,7 @@ export default async function SupportPage() {
       {/* [998 · A5] md → lg: 태블릿은 위 카테고리 타일 + 1열, 좌측 메뉴는 lg 부터(둘은 짝). */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
         {/* 좌측 메뉴 — 서버 컴포넌트라 pathname 을 모른다: 이 화면(/support)만 활성 */}
-        <nav aria-label="고객지원 메뉴" className="rise-in-1 card hidden h-fit flex-col rounded-3xl py-2 lg:flex">
+        <nav aria-label="고객센터 메뉴" className="rise-in-1 card hidden h-fit flex-col rounded-3xl py-2 lg:flex">
           {sideMenu.map((m) => {
             const active = m.href === "/support";
             const cls = `px-5 py-3 t-body no-underline ${
@@ -241,9 +242,7 @@ export default async function SupportPage() {
               <Explain
                 title="문의 처리"
                 body={CONTACT_FLOW.map((f, i) => `${i + 1}. ${f.step}: ${f.desc}`)}
-                source={`${SUPPORT_HOURS} · ${RESPONSE_TIME}`}
               />
-              <span className="ml-auto t-sub text-text-3">{RESPONSE_TIME}</span>
             </div>
             <SupportContactForm supportEmail={supportEmail} />
           </section>
@@ -266,8 +265,7 @@ export default async function SupportPage() {
               {noticesFailed ? (
                 /* 색은 배경이 지고, 문장은 text-ink 로 읽는다 — 작은 본문에서 가장 확실하다. */
                 <div className="rounded-lg bg-danger-soft px-3 py-3 text-center t-sub leading-[1.6] text-ink">
-                  공지사항을 불러오지 못했습니다 (조회 실패). 공지가 없다는 뜻은
-                  아닙니다.
+                  공지사항을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
                 </div>
               ) : (
                 notices.map((n, i, arr) => (
@@ -327,7 +325,7 @@ export default async function SupportPage() {
             <section id="partner" aria-labelledby="partner-title" className="ai-panel flex scroll-mt-24 flex-col gap-2 rounded-2xl p-5">
               <h2 id="partner-title" className="t-body font-bold text-white">투자 · 제휴 문의</h2>
               <div className="t-sub leading-[1.6] text-ai-text">
-                IR 자료 요청, 데이터 제휴, 금융사 연동 제안은 별도 채널로 받고 있습니다.
+                IR 자료 · 데이터 제휴 · 금융사 제휴 제안은 메일로 받습니다.
               </div>
               {/* partner@ · ad@ 는 받는 사람이 없는 주소였다. 실제로 운영진이 읽는 주소 한 곳
                   (business-info)으로 모으고 용건 구분은 제목 프리필로 한다. */}
@@ -341,8 +339,7 @@ export default async function SupportPage() {
             <section id="ads" aria-labelledby="ads-title" className="card flex scroll-mt-24 flex-col gap-2 rounded-2xl p-5">
               <h2 id="ads-title" className="t-body font-bold text-ink">광고 문의</h2>
               <div className="t-sub leading-[1.6] text-text-2">
-                지면 소개서(AD 슬롯 위치·단가)를 보내드립니다. 커뮤니티 어뷰징성 광고는 게재하지
-                않습니다.
+                광고 지면 소개서(위치·단가)를 메일로 보내드립니다. 도배·낚시성 광고는 싣지 않습니다.
               </div>
               {/* 내려줄 미디어킷 파일이 없다 — 실제 동작인 "메일로 요청"에 맞춘다. */}
               <a

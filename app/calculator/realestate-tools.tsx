@@ -190,7 +190,7 @@ export function JeonseWolse() {
       how={[
         "전세 → 월세: 월세 = (전세보증금 − 월세보증금) × 전환율 ÷ 12",
         "월세 → 전세: 전세보증금 = 월세보증금 + 월세 × 12 ÷ 전환율",
-        "계약 중에 보증금을 월세로 바꿀 때는 법이 정한 상한(연 10%와 한국은행 기준금리 + 2%p 중 낮은 쪽)을 넘을 수 없다.",
+        "계약 중에 보증금을 월세로 바꿀 때는 법이 정한 상한(연 10%와 한국은행 기준금리 + 2%p 중 낮은 쪽)을 넘을 수 없음.",
       ]}
       source="주택임대차보호법 제7조의2 · 같은 법 시행령 제9조"
       size={12}
@@ -293,7 +293,7 @@ export function GapRatio() {
           </>
         }
         primaryValue={<TweenMoney value={gap} />}
-        note="갭 = 매매가 − 전세가(갭투자 실투자금). 전세가율(전세 ÷ 매매)이 높을수록 갭이 작다. 취득세·중개보수 제외."
+        note="갭 = 매매가 − 전세가(갭투자 실투자금). 전세가율(전세 ÷ 매매)이 높을수록 갭이 작음. 취득세·중개보수 제외."
       >
         <div className="flex items-baseline justify-between gap-2 t-sub">
           <span className="flex items-center gap-0.5 text-ai-muted">

@@ -52,6 +52,32 @@ export function competitionRateNumber(raw: string | null | undefined): number | 
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * [1028] 주택형 원문 → 화면 표기. 청약홈은 전용면적을 소수 넷째 자리까지 붙여 준다("084.9890A" · "114.8419").
+ * 화면은 단지 화면의 타입 표기와 같은 꼴로 적는다("84㎡A" · "114㎡"). 꼴이 다르면 원문 그대로 돌려준다.
+ */
+export function houseTypeLabel(raw: string | null | undefined): string {
+  const t = (raw ?? "").trim();
+  if (!t) return "—";
+  const m = /^0*(\d{1,3})\.\d+([A-Za-z0-9-]*)$/.exec(t);
+  if (!m) return t;
+  return `${Number(m[1])}㎡${m[2] ?? ""}`;
+}
+
+/**
+ * [1028] 경쟁률 원문 → 화면 표기. "3.60" → "3.6 : 1" · "(△1)" → "미달 1세대"(청약홈의 미달 세대수 표기) ·
+ * "-"·빈 값 → "—". 꼴이 다르면 원문 그대로.
+ */
+export function competitionLabel(raw: string | null | undefined): string {
+  const t = (raw ?? "").trim();
+  if (!t || t === "-" || t === "—") return "—";
+  const short = /^\(\s*△\s*([\d,]+)\s*\)$/.exec(t);
+  if (short) return `미달 ${short[1]}세대`;
+  const n = competitionRateNumber(t.replace(/,/g, ""));
+  if (n != null) return `${n.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} : 1`;
+  return t;
+}
+
 /** 상세 행 → 저장 행. 단지명·키가 없으면 null(적재하지 않는다). */
 export function announcementFromDetail(r: AptDetailRow): AnnouncementUpsert | null {
   const hm = r.HOUSE_MANAGE_NO?.trim();

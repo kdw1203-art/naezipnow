@@ -105,7 +105,7 @@ export async function ComplexAreaBands({
     return (
       <section className={wrap}>
         <h2 className="mb-1.5 px-0.5 t-section text-ink">면적대별 실거래가</h2>
-        <p className="card rounded-2xl px-4 py-3.5 t-body text-text-3">면적대별 실거래가를 지금 불러오지 못했어요. 잠시 후 새로고침해 주세요.</p>
+        <p className="card rounded-2xl px-4 py-3.5 t-body text-text-3">면적대별 실거래가를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
       </section>
     );
   }

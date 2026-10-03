@@ -52,14 +52,14 @@ export function NoteSavedCard(p: {
         return;
       }
       if (!res.ok) {
-        showToast("전환하지 못했어요. 다시 눌러 주세요");
+        showToast("전환하지 못했어요. 다시 시도해 주세요");
         return;
       }
       setIsPublic(true);
       showToast("공개 노트로 전환했어요");
       router.refresh();
     } catch {
-      showToast("연결이 끊겼어요. 다시 눌러 주세요");
+      showToast("연결이 끊겼어요. 다시 시도해 주세요");
     } finally {
       setBusy(false);
     }

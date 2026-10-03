@@ -118,7 +118,12 @@ export function TxTrendChart({
     : `이 기간 ${valueLabel} 거래 없음`;
 
   /* x 라벨 — 칸 폭에 맞춰 솎는다(40px 간격). 첫 달은 연도 포함("26.01"), 나머지는 같은 규칙 */
-  const labelEvery = layout ? Math.max(1, Math.ceil(40 / Math.max(1, (layout.points[1]?.x ?? width) - (layout.points[0]?.x ?? 0)))) : 1;
+  const stepX = layout ? Math.max(1, (layout.points[1]?.x ?? width) - (layout.points[0]?.x ?? 0)) : 1;
+  const labelEvery = layout ? Math.max(1, Math.ceil(40 / stepX)) : 1;
+  /* [1028] 마지막 달 표시는 늘 그린다(오른쪽 끝 맞춤). 그 바로 앞 표시가 42px 안에 있으면 글자가 겹쳐
+     폰에서 "26.09"와 "26.10"이 한 덩어리("262610")로 보였다 — 그때는 앞의 것을 건너뛴다. */
+  const lastIdx = layout ? layout.points.length - 1 : 0;
+  const showXLabel = (i: number) => i === lastIdx || (i % labelEvery === 0 && (lastIdx - i) * stepX >= 42);
 
   const placeTip = (x: number) => (el: HTMLSpanElement | null) => {
     if (!el) return;
@@ -224,7 +229,7 @@ export function TxTrendChart({
               </g>
             )}
             {layout.points.map((p, i) =>
-              i % labelEvery === 0 || i === layout.points.length - 1 ? (
+              showXLabel(i) ? (
                 <text
                   key={`l${p.ym}`}
                   x={p.x}

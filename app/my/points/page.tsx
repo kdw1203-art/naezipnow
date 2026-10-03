@@ -157,8 +157,9 @@ function EarnGuide() {
 function GuestView() {
   return (
     <GuestGate
-      title="로그인하고 내 포인트를 확인하세요"
-      desc="매물 등록 · 임장노트 공개 · 출석으로 포인트가 쌓이고, 상점에서 매물 상단 노출·닉네임 꾸미기로 교환할 수 있어요."
+      /* [1028 · 제안 5] 권유 제목·설명 → "로그인이 필요해요" + 이 화면에 있는 것 명사 한 줄(적립 방법은 아래 표가 말한다) */
+      title="로그인이 필요해요"
+      desc="포인트 잔액 · 내역 · 미션 · 친구 초대"
       pathname="/my/points"
     >
       {/* [1015] 색면 카드 + 권유 부제("미리 살펴보세요") → 흰 카드 한 줄 링크 */}
@@ -367,9 +368,9 @@ export default async function PointsWalletPage({
       <PageShell title="포인트 지갑" breadcrumb="포인트 지갑">
         <div className="mx-auto w-full max-w-[640px]">
           <ErrorState
-            title="포인트 지갑을 지금 불러올 수 없어요"
-            /* [970 · C-20] 해요체 통일 */
-            desc="포인트 내역이 없는 게 아니라 조회가 실패했어요. 잠시 후 새로고침해 주세요."
+            title="포인트 지갑을 불러오지 못했어요"
+            /* [970 · C-20] 해요체 통일 · [1028 · 제안 3] 오류 문구 표준("없는 게 아니라 조회 실패" 구문 제거) */
+            desc="잠시 후 다시 시도해 주세요."
             action={{ label: "마이로 이동", href: "/my" }}
           />
         </div>

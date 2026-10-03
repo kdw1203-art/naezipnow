@@ -61,7 +61,7 @@ export const JOURNEY_STAGES: readonly JourneyStage[] = [
     n: 2,
     title: "예산 정하기",
     short: "예산",
-    why: "대출·세금까지 넣은 ‘실제로 쓸 수 있는 돈’이 헛걸음을 줄인다.",
+    why: "대출·세금까지 넣어 실제로 쓸 수 있는 돈을 계산해요.",
     icon: "wallet",
     tasks: [
       {
@@ -78,7 +78,7 @@ export const JOURNEY_STAGES: readonly JourneyStage[] = [
     n: 3,
     title: "후보 좁히기",
     short: "후보",
-    why: "후보를 3~5곳으로 줄여야 현장 확인과 비교에 시간을 쓸 수 있다.",
+    why: "후보를 3~5곳으로 줄이면 현장 확인과 비교에 시간을 쓸 수 있어요.",
     icon: "target",
     tasks: [
       { label: "단지 종합 진단", desc: "단지 하나를 항목별로 따진 종합 점수", href: "/analysis/ai/ai-diagnosis" },
@@ -96,7 +96,7 @@ export const JOURNEY_STAGES: readonly JourneyStage[] = [
     n: 4,
     title: "현장 확인(임장)",
     short: "임장",
-    why: "사진과 숫자로는 안 보이는 소음·경사·주차·관리 상태는 현장에서만 확인된다.",
+    why: "사진과 숫자로는 안 보이는 소음·경사·주차·관리 상태를 현장에서 확인해요.",
     icon: "footprints",
     tasks: [
       { label: "임장 동선 짜기", desc: "하루에 돌 단지 순서를 지도 위에", href: "/analysis/ai/ai-inspection" },
@@ -109,7 +109,7 @@ export const JOURNEY_STAGES: readonly JourneyStage[] = [
     n: 5,
     title: "비교·결정",
     short: "비교",
-    why: "같은 기준으로 나란히 놓아야 느낌이 아니라 근거로 고른다.",
+    why: "후보를 같은 기준으로 나란히 놓고 근거로 골라요.",
     icon: "scale",
     tasks: [
       { label: "비교함에서 나란히 보기", desc: "후보 2곳 이상을 한 표에서", href: "/analysis/compare" },
@@ -122,7 +122,7 @@ export const JOURNEY_STAGES: readonly JourneyStage[] = [
     n: 6,
     title: "계약·잔금·입주",
     short: "계약",
-    why: "계약 뒤에도 신고·대출·등기·세금·전입신고까지 기한이 정해진 일이 이어진다.",
+    why: "계약 뒤에도 신고·대출·등기·세금·전입신고까지 기한이 정해진 일이 이어져요.",
     icon: "key",
     tasks: [
       {

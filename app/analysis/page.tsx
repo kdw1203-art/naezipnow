@@ -81,11 +81,12 @@ function pickPublicAiPreview(notes: InspectionNote[]): {
 
 /* 설명문은 이 화면이 실제로 하는 일만 적는다. SIM_TOOLS 는 아직 실연동이
    아니므로 "예시 계산"이라는 사실을 description 에도 남긴다 — 검색 결과만
-   보고 실측 분석을 기대하고 들어오면 그게 곧 거짓말이 된다. */
+   보고 실측 분석을 기대하고 들어오면 그게 곧 거짓말이 된다.
+   [1028] 줄표로 잇던 문장을 끊고 내부 말("실연동 전 도구")을 "예시 수치로 계산하는 도구"로 — 뜻은 그대로. */
 export const metadata = buildPageMetadata({
   title: "분석 도구",
   description:
-    "단지 하나를 깊게, 지역 시장 흐름을, 내 임장노트를 — 국토교통부 실거래 기반 분석 도구를 한곳에서. 실연동 전 도구는 '예시 계산'으로 따로 표시합니다.",
+    "단지 분석, 지역 시세, 내 임장노트 분석 도구를 한곳에 모았습니다. 국토교통부 실거래 기반이며, 예시 수치로 계산하는 도구는 '예시 계산'으로 따로 표시합니다.",
   path: "/analysis",
 });
 
@@ -333,7 +334,7 @@ export default async function AnalysisHubPage() {
               {/* [1015 · 규칙 D] "먼저 감 잡기" → 명사 */}
               <span className="t-section text-ink">예시 계산</span>
               <span className="t-caption rounded border border-line px-1.5 py-px font-bold text-text-3">
-                실데이터 아님 · {SIM_TOOLS.length}종
+                실제 자료 아님 · {SIM_TOOLS.length}종
               </span>
               <span className="t-sub ml-auto font-bold text-primary">
                 <span className="hub-sim-closed">펼치기</span>
@@ -343,7 +344,8 @@ export default async function AnalysisHubPage() {
                 </span>
               </span>
             </summary>
-            <p className="t-sub mt-2 text-text-3">실연동 전 도구 · 예시 수치로 계산 · 의사결정 근거로 쓰지 않는다</p>
+            {/* [1028] "실제 자료 아님"은 위 배지가 이미 말한다 — 한 번만("실데이터"는 내부 말이라 "실제 자료"로) */}
+            <p className="t-sub mt-2 text-text-3">예시 수치로 계산</p>
             <div className="mt-3 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
               {SIM_TOOLS.map((t) => (
                 <ToolCard

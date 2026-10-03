@@ -64,7 +64,7 @@ export const EARN_RULES: Record<string, EarnRule> = {
   referral: { key: "referral", label: "친구 추천 가입", points: 300, dailyCap: 5 },
   onboarding_complete: {
     key: "onboarding_complete",
-    label: "온보딩 완주 보너스",
+    label: "완주 보너스",
     points: 200,
     once: true,
   },

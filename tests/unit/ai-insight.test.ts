@@ -205,3 +205,38 @@ test("수치 가드: 근거 없는 숫자는 위반으로 잡는다", () => {
   assert.equal(r.ok, false);
   assert.ok(r.violations.includes("18.7"));
 });
+
+/* ── [1028] 문장 — 숫자 사실 + 뜻 한 문장, 줄표 연결·권유 없음 ── */
+test("[1028 · 제안 2] 신호 근거·위험 설명·반대 조건 문장에 줄표 연결·권유(~세요·조심·노려볼)·'A가 아니라 B'가 없다", () => {
+  const BAD = /—|[가-힣]세요|아니라|조심|노려볼|깎을 여지/;
+  const region = (saleChangeMonthly: number, tradeCount: number, jeonseRatio = 50) => ({
+    id: null,
+    name: "강남구",
+    snapshot: { avgSale: 1, jeonseRatio, saleChangeMonthly, tradeCount, period: "202608", ...meta },
+    demographics: { population: 1, households: 1, unsoldUnits: 600, period: "202607", ...meta },
+  });
+  const cases = [
+    ctx({ region: region(-0.6, 8, 85), supply: { upcomingHouseholds: 1600, upcomingComplexes: 2, items: [], ...meta }, rent: { wolseSharePct: 60, jeonseCount: 40, wolseCount: 60, medianMonthlyKrw: null, months: 3, ...meta }, macro: { baseRatePct: 3, ...meta } }),
+    ctx({ region: region(0.2, 50), supply: { upcomingHouseholds: 100, upcomingComplexes: 1, items: [], ...meta } }),
+    ctx({ region: region(1.03, 448), supply: { upcomingHouseholds: 0, upcomingComplexes: 0, items: [], ...meta } }),
+    ctx({}),
+  ];
+  for (const c of cases) {
+    for (const s of timingSignals(c)) assert.doesNotMatch(s.basis, BAD, s.basis);
+    for (const f of riskFlags(c)) assert.doesNotMatch(f.detail, BAD, f.detail);
+    for (const line of counterScenarios(c)) assert.doesNotMatch(line, BAD, line);
+  }
+  /* 꼴 — "숫자 사실. 뜻 한 문장." (앞 토막은 결론 아래 '다음 행동 한 줄'이 떼어 쓴다) */
+  const [price, volume, supply] = timingSignals(cases[0]);
+  assert.equal(price.basis, "지역 시세 한 달 −0.6%. 내리는 중이라 사는 쪽이 유리해요.");
+  assert.equal(volume.basis, "지역 한 달 거래 8건. 한산해서 사는 쪽이 유리해요.");
+  assert.equal(supply.basis, "앞으로 입주 1,600세대. 입주 무렵 매물이 늘어 고르기 쉬워질 수 있어요.");
+  assert.equal(timingSignals(cases[2])[0].basis, "지역 시세 한 달 +1.03%. 빠르게 오르는 중이라 파는 쪽이 유리해요.");
+  assert.equal(timingSignals(cases[3])[0].basis, "지역 시세 자료가 없어요");
+  const flags = Object.fromEntries(riskFlags(cases[0]).map((f) => [f.key, f.detail]));
+  assert.equal(flags.liquidity, "지역 한 달 거래 8건이에요. 팔고 싶을 때 바로 못 팔 수 있어요.");
+  assert.equal(flags.gapRisk, "전세가율 85%예요. 집값이 조금만 내려도 전세금 돌려주기가 어려워질 수 있어요.");
+  assert.equal(flags.supply, "앞으로 입주 1,600세대예요. 입주 무렵 전세·매매 가격이 흔들릴 수 있어요.");
+  assert.equal(flags.unsold, "미분양 600호예요. 새 아파트가 잘 안 팔리는 지역이에요.");
+  assert.equal(flags.wolse, "신고 기준 월세 비중 60%예요. 전세를 끼고 사는 계산이 빠듯해질 수 있어요.");
+});

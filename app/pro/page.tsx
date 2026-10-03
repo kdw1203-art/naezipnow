@@ -110,7 +110,7 @@ export default async function ProPage() {
       <PageHead
         icon="briefcase"
         title={TITLE}
-        sub="브리핑 리포트 · 홈페이지 위젯 · 관심 단지 알림 — 국토교통부 실거래 기준 · 무료 · 베타 · 로그인 없이 브리핑 인쇄"
+        sub="브리핑 리포트 · 홈페이지 위젯 · 관심 단지 알림. 국토교통부 실거래 기준 · 무료 · 베타 · 로그인 없이 브리핑 인쇄"
         subOnPhone
         actions={<div className="max-lg:hidden">{cta}</div>}
       />
@@ -123,7 +123,7 @@ export default async function ProPage() {
           <h2 id="pro-how" className="t-title text-ink">
             {PRO_CONCLUSION}
           </h2>
-          <p className="m-0 mt-1 t-sub text-text-2">개요 8칸 · 타입별 12개월 미니 차트 · 최근 실거래 표 · 전세가율 · 주의 · QR — 사무소명은 이 기기에만</p>
+          <p className="m-0 mt-1 t-sub text-text-2">개요 8칸 · 타입별 12개월 미니 차트 · 최근 실거래 표 · 전세가율 · 주의 · QR. 사무소명은 이 기기에만 저장</p>
           <StepLine className="mt-3" current={0} steps={PRO_STEPS} />
           <div id={SEARCH_ID} className="mt-3 scroll-mt-20">
             <ProBriefPicker />
@@ -157,7 +157,7 @@ export default async function ProPage() {
           </section>
           <section aria-labelledby="pro-watch" className={CARD}>
             <CardHead id="pro-watch" icon="bell" title="관심 단지 알림" />
-            <p className="m-0 mt-1 t-body text-text-1">담당 단지를 관심 등록하면 새 실거래·가격 변동을 수신함으로 받는다</p>
+            <p className="m-0 mt-1 t-body text-text-1">담당 단지를 관심 등록하면 새 실거래·가격 변동을 수신함으로 받아요</p>
             <ResultLine text={PRO_RESULT_LINES.watch} />
             <p className="m-0 mt-1 t-caption text-text-3">로그인 필요 · 무료</p>
             <Link href="/login?callbackUrl=%2Fmy" className="btn-secondary btn-md press mt-2 w-full no-underline">

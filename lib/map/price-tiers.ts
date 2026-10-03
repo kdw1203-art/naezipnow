@@ -38,7 +38,7 @@ export type PriceTier = {
 /** 실거래가 없는 칸 — 색 대신 중립 회색 */
 export const NO_DATA_COLOR = "#8b95a1";
 export const NO_DATA_TEXT_COLOR = "#ffffff";
-export const NO_DATA_LABEL = "데이터 없음";
+export const NO_DATA_LABEL = "실거래 없음";
 
 /**
  * 낮은 값 → 높은 값 순. ColorBrewer YlOrRd 계열(명도가 단조 감소해

@@ -65,7 +65,7 @@ function subscriptionFaq(recurringOpen: boolean): FaqItem[] {
 export const metadata = buildPageMetadata({
   title: "요금제",
   description:
-    "무료·프로·전문가 플랜의 기능 차이와 월간/연간 가격을 비교합니다.",
+    "무료·플러스·프로 요금제의 기능 차이와 월간/연간 가격을 비교합니다.",
   path: "/subscription",
 });
 

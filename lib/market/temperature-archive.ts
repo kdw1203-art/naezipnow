@@ -7,6 +7,8 @@ import {
   TEMPERATURE_REGIONS,
   computeRegionTemperature,
   kstWeekStart,
+  temperatureHeadline,
+  temperatureParts,
   type TemperatureRegion,
 } from "@/lib/market/temperature";
 
@@ -34,6 +36,8 @@ export type TemperatureSnapshot = {
   weekStart: string;
   score: number;
   headline: string;
+  /** [1028] 점수의 두 성분 한 줄("지수 +12 · 거래량 −25") — 저장된 성분 점수로 만든다 */
+  parts: string | null;
   periodType: "monthly" | "weekly";
   momentumPct: number | null;
   priorPct: number | null;
@@ -59,7 +63,14 @@ function toSnapshot(r: Row): TemperatureSnapshot {
     regionLabel: String(r.region_label ?? ""),
     weekStart: String(r.week_start ?? ""),
     score: Number(r.score ?? 0),
-    headline: String(r.headline ?? ""),
+    /* [1028] 구간 이름은 저장된 글이 아니라 점수에서 다시 만든다 — 이름을 바꾼 뒤에도 지난 주 기록이 같은 말로 읽힌다
+       (저장된 headline 열은 그대로 둔다. 경계는 같다 — temperatureHeadline). */
+    headline: temperatureHeadline(Number(r.score ?? 0)),
+    parts: temperatureParts({
+      momentumPoints: num(r.momentum_points),
+      volumePoints: num(r.volume_points),
+      volumeWindowMonths: num(r.volume_window_months),
+    }),
     periodType: r.period_type === "weekly" ? "weekly" : "monthly",
     momentumPct: num(r.momentum_pct),
     priorPct: num(r.prior_pct),
@@ -81,7 +92,7 @@ function asRows(data: unknown): Row[] {
 }
 
 const SELECT =
-  "region_id,region_label,week_start,score,headline,period_type,momentum_pct,prior_pct," +
+  "region_id,region_label,week_start,score,headline,period_type,momentum_pct,prior_pct,momentum_points,volume_points,volume_window_months," +
   "volume_recent_count,volume_prior_count,volume_delta_pct,index_latest,formula_version,observed_at";
 
 /**

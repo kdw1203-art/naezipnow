@@ -92,7 +92,7 @@ export default async function ComplexBrowsePage({
   }
 
   return (
-    <PageShell breadcrumb="홈 › 단지 실거래 › 서울 단지 브라우즈" title="서울 단지별 실거래 현황">
+    <PageShell breadcrumb="홈 › 단지 실거래 › 서울 단지 목록" title="서울 단지별 실거래 현황">
       {/* [1015 · 규칙 B·D] 사용법 문장("구를 선택해 … 확인하세요")은 걷고 출처 한 줄만 */}
       <p className="rise-in mb-4 t-caption text-text-3 max-md:mb-2">국토교통부 실거래가 기준 · 매물 호가 아님</p>
 

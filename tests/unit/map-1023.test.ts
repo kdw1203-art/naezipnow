@@ -104,7 +104,7 @@ test("검색 입력 전 — 최근 본 단지 줄(RecentComplexes 저장소 재�
 });
 
 test("문구·정렬 — 미연결 고지는 사실 한 줄 · 패널 섹션 머리 baseline", () => {
-  assert.ok(panel.includes("단지 마스터와 아직 연결되지 않음 · 아래는 실거래·이야기"));
+  assert.ok(panel.includes("단지 기본정보가 아직 없음 · 아래는 실거래·이야기"));
   assert.ok(!panel.includes("아래를 참고해 주세요"));
   assert.ok(panel.includes('<div className="mb-2 flex items-baseline justify-between gap-2">'));
 });

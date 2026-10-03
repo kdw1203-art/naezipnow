@@ -12,7 +12,8 @@ import { fetchMyNotesShared } from "./hub-viewer";
    임장노트 AI 분석 카드 — 내 노트 선택 → POST /api/inspection/ai (noteId)
    결과: 노트 점수·텍스트 + 지역 실시세 스냅샷을 합친
    강점/약점/확인 필요/총평 을 .ai-panel 로 표시.
-   라벨: LLM 성공 시 "AI 생성", 폴백 시 "규칙 기반 요약".
+   라벨: AI 모델이 쓴 결과면 "AI 정리", 규칙으로 정리한 결과면 "규칙 정리"
+   ([1028] 화면 글자에서 내부 말 "LLM"·"LLM 아님"을 걷었다 — mode 값 "llm"|"rule" 은 그대로).
    401 → 로그인 안내 · 429 → 사용량 안내 (10회/시간)
    ============================================================ */
 
@@ -291,7 +292,7 @@ export function AiNoteAnalysisCard({
                 state.result.mode === "llm" ? "text-success" : "text-text-3"
               }`}
             >
-              {state.result.mode === "llm" ? "AI 생성 · LLM" : "규칙 기반 요약 · LLM 아님"}
+              {state.result.mode === "llm" ? "AI 정리" : "규칙 정리"}
             </span>
           </div>
           {state.result.cached && (
@@ -315,7 +316,7 @@ export function AiNoteAnalysisCard({
           )}
           {state.result.marketSummary && (
             <div className="rounded-lg bg-surface px-2.5 py-1.5 t-caption font-bold text-primary">
-              실시세 {state.result.marketSummary}
+              지역 통계 {state.result.marketSummary}
             </div>
           )}
           {state.result.strengths.length > 0 && (

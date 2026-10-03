@@ -158,8 +158,8 @@ export function toFeedNote(
     title: n.aptName ? `${n.aptName}` : n.title,
     excerpt,
     tags: deriveTags(n),
+    /* [1028] "자가체크 2.4/5" 를 뺐다 — 카드 머리의 "기록 48점"과 같은 값(평점 × 20)을 다른 눈금으로 한 번 더 적던 것 */
     footer: [
-      `자가체크 ${avg.toFixed(1)}/5`,
       `방문 ${n.visitDate}`,
       `체크 ${n.checklist.filter((c) => c.done).length}/${n.checklist.length}`,
     ],

@@ -348,7 +348,7 @@ export function TimingClient({
            재시도가 의미 있다. */
         <div className="card mt-3 flex flex-col items-center gap-2 rounded-2xl p-8 text-center">
           <p className="t-section text-ink">{selected.label} 분석을 불러오지 못했어요</p>
-          <p className="t-sub text-text-3">조회 실패. 잠시 뒤 다시 시도해 주세요.</p>
+          <p className="t-sub text-text-3">잠시 후 다시 시도해 주세요.</p>
           <button
             type="button"
             onClick={() => {
@@ -477,7 +477,7 @@ export function TimingClient({
                     시장 온도
                     <Explain {...TEMPERATURE_EXPLAIN} size={12} />
                   </h2>
-                  <span className="t-caption rounded border border-line px-1.5 py-px font-bold text-text-3">규칙 기반 · 실데이터 입력</span>
+                  <span className="t-caption rounded border border-line px-1.5 py-px font-bold text-text-3">규칙 계산 · 공공데이터</span>
                 </div>
                 {loading ? (
                   <SkBlock h={120} />
@@ -485,7 +485,11 @@ export function TimingClient({
                   <>
                     <div className="flex items-center gap-3 text-primary">
                       <Gauge value={temp.score} label={String(temp.score)} caption="100점 중 · 50이 중립" size={116} className="shrink-0" />
-                      <p className="t-sub min-w-0 flex-1 font-bold text-ink">{temp.headline}</p>
+                      {/* [1028] 구간 이름 + 두 성분(50점에서 더하고 뺀 값) — 지수와 거래량이 엇갈릴 때 어느 쪽이 점수를 움직였는지 보인다 */}
+                      <p className="t-sub min-w-0 flex-1 font-bold text-ink">
+                        {temp.headline}
+                        {temp.parts ? <span className="block t-caption font-normal text-text-3 tabular-nums">50 기준 · {temp.parts}</span> : null}
+                      </p>
                     </div>
                     <div className="flex flex-col gap-1">
                       {temp.inputs.map((s) => (

@@ -81,7 +81,6 @@ const CoachmarkTour = dynamic(
 );
 import {
   NO_DATA_COLOR,
-  NO_DATA_LABEL,
   PRICE_TIERS,
   pyeongPriceLabel,
   tierColor,
@@ -95,23 +94,18 @@ import { formatKrwManwon, formatKrwWon } from "@/lib/format/krw";
 /** [968 · 25] 모바일 목록 뷰 한 번에 그리는 카드 수 — "더 보기" 마다 이만큼 더 */
 const MAP_LIST_PAGE_SIZE = 40;
 
-/** A1 — 지도 첫 방문 3스텝 안내. 대상이 화면에 없으면 그 스텝은 자동 생략된다. */
+/** [1028] 실거래가 없는 칸의 글자 — 회색 알약(마커)과 범례가 같은 말을 쓴다.
+    lib/map/price-tiers 의 NO_DATA_LABEL("데이터 없음")은 뜻(실거래 없음)을 범례가 괄호로 풀어야 했다. */
+const NO_PRICE_LABEL = "실거래 없음";
+
+/** A1 — 지도 첫 방문 안내 1장(금액 기준). 필터·노트 버튼은 화면에 이름이 있어 따로 안내하지 않는다([1028]).
+    대상이 화면에 없어도 가운데 카드로 뜬다(keepIfMissing). */
 const MAP_TOUR_STEPS: CoachmarkStep[] = [
   {
     target: "map-price-panel",
     keepIfMissing: true,
-    title: "가격은 실거래 기준이에요",
-    body: "지도와 목록의 금액은 국토부 실거래가 평균입니다. 중개사가 올린 매물 호가와는 다른 값이니, 두 숫자를 섞어서 보지 마세요.",
-  },
-  {
-    target: "map-filter",
-    title: "조건으로 후보 좁히기",
-    body: "면적·준공연도·거래유형·매물 조건으로 임장 후보를 걸러낼 수 있어요. 반경 그리기도 여기 있습니다.",
-  },
-  {
-    target: "map-note-cta",
-    title: "본 곳은 바로 임장노트로",
-    body: "관심 단지를 찾았다면 노트를 남기세요. 저장 후 AI 정리 → 지도에서 후보를 나란히 비교하는 흐름으로 이어집니다.",
+    title: "금액은 실거래가 평균",
+    body: "지도와 목록의 금액은 국토교통부 실거래가 평균이에요. 매물 호가와 다른 값이에요.",
   },
 ];
 
@@ -186,15 +180,15 @@ function ZoomTabButtons({ zoom, onSelect }: { zoom: Zoom; onSelect: (k: Zoom) =>
   );
 }
 
-/* [1027] 숫자는 지금 지도의 실제 줌(21 − level)을 적는다. 예전에는 탭마다 9·12·15 를 글자로 박아 두어,
-   탭과 다른 축척(홈 화면 level 10 · 끌어서 확대한 뒤)에서 틀린 숫자가 나갔다. 뒤의 풀이는 탭이 켜는 내용 그대로. */
+/* [1028] 탭이 켜는 내용만 한 줄로 말한다. 축척 숫자("줌 레벨 N")는 개발 용어라 화면에 내지 않는다
+   ([1027] 까지는 실제 줌(21 − level)을 앞에 적었다). */
 const ZOOM_CAPTION_TEXT: Record<Zoom, string> = {
-  city: "지역 집계 버블",
-  dong: "동별 시세 + 활동량",
-  danji: "단지/매물 표시",
+  city: "시·군·구별 평균",
+  dong: "동별 평균 · 거래량",
+  danji: "단지별 실거래",
 };
-function zoomCaption(tab: Zoom, level: number): string {
-  return `줌 레벨 ${Math.round(21 - level)} · ${ZOOM_CAPTION_TEXT[tab]}`;
+function zoomCaption(tab: Zoom, _level: number): string {
+  return ZOOM_CAPTION_TEXT[tab];
 }
 
 /** 내부 level(1~14) — naver zoom = 21 - level (city 9 / dong 12 / danji 15) */
@@ -1704,7 +1698,7 @@ export function MapClient({
         })
         .catch((e: unknown) => {
           if (e instanceof DOMException && e.name === "AbortError") return;
-          setRouteError("경로 조회에 실패했어요");
+          setRouteError("경로를 불러오지 못했어요");
         })
         .finally(() => setRouteLoading(false));
     }, 280);
@@ -2026,8 +2020,8 @@ export function MapClient({
             step={10}
             note={
               facets.total > 0 && facets.households.n < facets.total
-                ? `화면 안 단지의 ${Math.round((facets.households.n / facets.total) * 100)}%만 세대수를 알아요 — K-apt 대장에 연결된 단지만 값이 있고, 의무관리 대상이 아닌 소규모 단지는 대장이 없어 비어 있어요.`
-                : "세대수는 K-apt 대장에 연결된 단지만 알아요 — 의무관리 대상이 아닌 소규모 단지는 대장이 없어 비어 있어요."
+                ? `화면 안 단지의 ${Math.round((facets.households.n / facets.total) * 100)}%만 세대수가 있어요. K-apt 대장이 없는 소규모 단지는 비어 있어요.`
+                : "세대수는 K-apt 대장이 있는 단지만 나와요. 대장이 없는 소규모 단지는 비어 있어요."
             }
           />
         </>
@@ -2035,7 +2029,7 @@ export function MapClient({
         <div className="py-2 t-sub text-text-3">이 지역 분포를 불러오는 중…</div>
       )}
       <FilterChipGroup
-        label={`거래유형 (매물${showListings ? "" : " · 선택 시 매물 레이어 권장"})`}
+        label="거래유형 (매물)"
         options={LISTING_TRADE_OPTIONS}
         valueKey={listingTradeKey}
         onSelect={(key) => {
@@ -2084,8 +2078,8 @@ export function MapClient({
         }}
       />
       <p className="t-caption text-text-3">
-        방·화장실·주차·건물유형은 <b className="text-text-2">등록 매물</b> 기준입니다. 값이
-        없는 매물은 해당 필터에서 제외돼요. 국토부 실거래(단지 마커)는 아파트 시세입니다.
+        방·화장실·주차·건물 유형은 <b className="text-text-2">등록 매물</b> 기준. 값이 없는
+        매물은 제외. 단지 마커는 국토부 아파트 실거래가.
         {showListings &&
           listingFetchStatus === "ok" &&
           listingItems.length === 0 &&
@@ -2093,7 +2087,7 @@ export function MapClient({
             <>
               {" "}
               <b className="text-text-2">
-                이 화면에는 아직 승인된 등록 매물이 없어요 — 필터가 고장 난 것이 아닙니다.
+                이 화면에는 승인된 등록 매물이 아직 없어요.
               </b>
             </>
           )}
@@ -2112,8 +2106,7 @@ export function MapClient({
           <>
             {" "}
             <b className="text-warning">
-              지금 서버는 상세 필터 컬럼이 없어 유형·방·화장실·주차 조건이 정확하지 않을 수
-              있어요.
+              지금은 유형·방·화장실·주차 조건이 정확하지 않을 수 있어요.
             </b>
           </>
         )}
@@ -2177,7 +2170,7 @@ export function MapClient({
                 : "bg-[var(--glass-bg)] text-text-2"
             }`}
           >
-            <Icon name="tag" size={14} className="inline align-middle" /> 시세 색상
+            <Icon name="tag" size={14} className="inline align-middle" /> 실거래가 색상
           </button>
           {/* 정비사업 레이어 토글 — 재개발·재건축 사업장을 사업종류별 색상 마커로 */}
           <button
@@ -2415,7 +2408,7 @@ export function MapClient({
         {/* [940] 구 버블 지표 전환 — 넓은 줌의 구 단위 버블에 어떤 숫자를 띄울지.
             단지 줌·전세 모드에서는 구 버블 자체가 숨으므로 비활성으로 보여 준다. */}
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="t-caption font-bold text-text-3">구 버블</span>
+          <span className="t-caption font-bold text-text-3">구 표시</span>
           {(
             [
               ["avg", "평균가"],
@@ -2440,17 +2433,17 @@ export function MapClient({
             </button>
           ))}
           {txType === "rent" && (
-            <span className="t-caption text-text-3">전세 모드에선 구 버블이 숨어요</span>
+            <span className="t-caption text-text-3">전세 모드에선 구 표시가 숨어요</span>
           )}
         </div>
         <div className="t-caption text-text-3">
-          정비사업은 공개 자료 기준 참고값 · 실제 추진 단계는 관할 구청 고시
+          정비사업은 공개 자료 기준 참고값 · 실제 추진 단계는 관할 구청 고시.
           {showSupply && supplyItems.length > 0 && (
             <>
               {" "}
               입주 예정 {supplyItems.length}곳 표시
-              {supplyUncoordinated > 0 ? ` · 좌표 준비 중 ${supplyUncoordinated}곳` : ""} —
-              입주월은 청약홈 공고 기준이에요.
+              {supplyUncoordinated > 0 ? ` · 좌표 준비 중 ${supplyUncoordinated}곳` : ""}. 입주월은
+              청약홈 공고 기준이에요.
             </>
           )}
           {showAuctions && auctionItems.length > 0 && (
@@ -2512,7 +2505,7 @@ export function MapClient({
         {commuteError && <div className="t-caption text-danger">{commuteError}</div>}
         {!commuteError && commuteOfficeResolved && commuteBasis === "haversine" && (
           <div className="t-caption text-text-3">
-            직선거리 기준(정확 소요시간은 연동 시)
+            직선거리 기준 추정 소요시간
           </div>
         )}
         {!commuteError && commuteOfficeResolved && commuteBasis === "directions" && (
@@ -3327,7 +3320,7 @@ export function MapClient({
         lng: a.lng,
         label: `${a.name} 공매 ${a.count}건`,
         pinColor: "#7c3aed",
-        infoHtml: `<div style="min-width:190px;max-width:240px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(a.name)}</p><p style="font-size:13px;margin:3px 0 0;color:#333">공매 진행 <b>${a.count}건</b>${minBid ? ` · 최저입찰 ${minBid}~` : ""}</p>${topHtml}<p style="font-size:11px;color:#888;margin:4px 0 0">온비드(한국자산관리공사) · 구 단위 집계 — 위치는 구 중심 표시${a.top?.length ? " · 굵은 날짜는 입찰 마감일" : ""}</p><a href="/auctions?gu=${encodeURIComponent(a.name)}" style="font-size:11px;color:var(--primary);font-weight:700">물건 목록 보기 →</a></div>`,
+        infoHtml: `<div style="min-width:190px;max-width:240px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(a.name)}</p><p style="font-size:13px;margin:3px 0 0;color:#333">공매 진행 <b>${a.count}건</b>${minBid ? ` · 최저입찰 ${minBid}~` : ""}</p>${topHtml}<p style="font-size:11px;color:#888;margin:4px 0 0">온비드(한국자산관리공사) · 구 단위 집계 · 위치는 구 중심 표시${a.top?.length ? " · 굵은 날짜는 입찰 마감일" : ""}</p><a href="/auctions?gu=${encodeURIComponent(a.name)}" style="font-size:11px;color:var(--primary);font-weight:700">물건 목록 보기 →</a></div>`,
       };
     });
   }, [showAuctions, auctionItems]);
@@ -3496,11 +3489,11 @@ export function MapClient({
         if (!showPriceOverlay || txType === "rent") {
           return { ...common, pinColor: "rgba(29,79,216,.85)" };
         }
-        // ON — "N개 · 4,020만/평" 알약. 실거래가 없는 셀은 회색 + "데이터 없음"이라
-        // 색이 없는 사실을 색으로 메우지 않는다.
+        // ON — "N개 · 4,020만/평" 알약. 실거래가 없는 셀은 회색 + "실거래 없음"이라
+        // 색이 없는 사실을 색으로 메우지 않는다. ([1028] 범례와 같은 말 — 예전 "데이터 없음")
         return {
           ...common,
-          priceLabel: pyeongPriceLabel(c.pyeongManwon) ?? NO_DATA_LABEL,
+          priceLabel: pyeongPriceLabel(c.pyeongManwon) ?? NO_PRICE_LABEL,
           pinColor: tierColor(c.pyeongManwon),
           pinTextColor: tierTextColor(c.pyeongManwon),
         };
@@ -3970,10 +3963,7 @@ export function MapClient({
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 overflow-hidden bg-bg px-8 text-center">
       <Icon name="map" size={34} />
       <div className="t-section text-ink">지도를 불러오지 못했어요</div>
-      <p className="max-w-[300px] t-sub text-text-2">
-        지도 타일을 받지 못했습니다. 단지가 없는 게 아니라 지도만 못 그린 상태라,
-        시세·실거래는 그대로 볼 수 있어요.
-      </p>
+      <p className="max-w-[300px] t-sub text-text-2">단지 목록은 그대로 볼 수 있어요.</p>
       {/* 막다른 길로 두지 않는다 — 지도 없이도 갈 수 있는 곳을 준다 */}
       <div className="flex flex-wrap items-center justify-center gap-1.5">
         <button
@@ -4022,8 +4012,8 @@ export function MapClient({
       key: "cluster",
       text:
         clusterFetchStatus === "error"
-          ? "일시적 오류로 단지 정보를 불러오지 못했어요 — 잠시 후 다시 시도해 주세요"
-          : "관심 단지를 고르면 임장노트·AI 정리·지도 비교로 이어져요 — 이 지역 좌표는 순차 확충 중",
+          ? "단지 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
+          : "이 화면에 표시할 단지가 아직 없어요 · 이 지역 좌표 준비 중",
       retry:
         clusterFetchStatus === "error"
           ? () => {
@@ -4042,8 +4032,8 @@ export function MapClient({
       key: "truncated",
       text:
         clusterMode === "points"
-          ? "거래량 상위 300개 단지만 표시 중 — 더 확대하면 나머지 단지도 보여요"
-          : "화면이 넓어 단지 수가 일부만 집계됐어요 — 확대하면 정확해져요",
+          ? "거래량 상위 300개 단지만 표시 중이에요. 확대하면 나머지도 보여요."
+          : "화면이 넓어 단지 수가 일부만 집계됐어요. 확대하면 정확해져요.",
     });
   }
   /* 정비사업 조회 실패 — 마커가 없는 것과 구분해서 말한다. 이걸 안 그리면
@@ -4053,7 +4043,7 @@ export function MapClient({
   if (showRedevelopment && redevFailed) {
     mapNotices.push({
       key: "redev-failed",
-      text: "정비사업을 불러오지 못했어요 — 잠시 후 다시 시도해 주세요. 사업장이 없다는 뜻은 아니에요",
+      text: "정비사업을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
       retry: () => retryLayer("redev"),
     });
   }
@@ -4062,7 +4052,7 @@ export function MapClient({
   if (showRedevelopment && redevCountsReady && redevFilterActive && redevItems.length > 0 && redevShown.length === 0) {
     mapNotices.push({
       key: "redev-filtered-out",
-      text: `정비사업 조건에 맞는 구역이 이 화면에 없어요 — 조건을 풀면 ${redevItems.length.toLocaleString("ko-KR")}곳`,
+      text: `정비사업 조건에 맞는 구역이 이 화면에 없어요 · 조건을 풀면 ${redevItems.length.toLocaleString("ko-KR")}곳`,
       retry: () => {
         setRedevGroups(new Set());
         setRedevStages(new Set());
@@ -4076,11 +4066,11 @@ export function MapClient({
   } else if (showMyNotes && myNotesState === "failed") {
     mapNotices.push({
       key: "mynotes-failed",
-      text: "내 노트를 불러오지 못했어요 — 잠시 후 다시 시도해 주세요",
+      text: "내 노트를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
       retry: () => retryLayer("mynotes"),
     });
   } else if (showMyNotes && myNotesState === "idle" && myNotesLoaded && myNotes.length === 0 && myNotesManualRef.current) {
-    mapNotices.push({ key: "mynotes-empty", text: "좌표가 담긴 내 노트가 아직 없어요 — 작성 시 단지를 검색해 선택하면 지도에 찍혀요" });
+    mapNotices.push({ key: "mynotes-empty", text: "좌표가 담긴 내 노트가 아직 없어요. 단지를 검색해 고른 노트가 지도에 표시돼요." });
   }
 
   /* [1023 · 지도] 관심 단지 — 로그인·실패·0건·좌표 못 붙인 수를 구분해 말한다(내 노트와 같은 규칙) */
@@ -4089,7 +4079,7 @@ export function MapClient({
   } else if (showWatchlist && watchState === "failed") {
     mapNotices.push({
       key: "watch-failed",
-      text: "관심 단지를 불러오지 못했어요 — 잠시 후 다시 시도해 주세요",
+      text: "관심 단지를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
       retry: () => retryLayer("watch"),
     });
   } else if (showWatchlist && watchState === "idle" && watchLoaded && watchItems.length === 0 && watchManualRef.current) {
@@ -4105,7 +4095,7 @@ export function MapClient({
   if (showRentShare && rentShareFailed) {
     mapNotices.push({
       key: "rentshare-failed",
-      text: "월세 비중을 불러오지 못했어요 — 잠시 후 다시 시도해 주세요",
+      text: "월세 비중을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
       retry: () => retryLayer("rentshare"),
     });
   }
@@ -4114,7 +4104,7 @@ export function MapClient({
   if (showAuctions && auctionsFailed) {
     mapNotices.push({
       key: "auctions-failed",
-      text: "공매 물건을 불러오지 못했어요 — 잠시 후 다시 시도해 주세요. 물건이 없다는 뜻은 아니에요",
+      text: "공매 물건을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
       retry: () => retryLayer("auctions"),
     });
   } else if (showAuctions && auctionsLoaded && auctionItems.length === 0) {
@@ -4129,7 +4119,7 @@ export function MapClient({
   if ((showSchools || showStations) && poiFailed) {
     mapNotices.push({
       key: "poi-failed",
-      text: "학교·지하철 정보를 불러오지 못했어요 — 잠시 후 다시 시도해 주세요",
+      text: "학교·지하철 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
       retry: () => retryLayer("poi"),
     });
   } else if ((showSchools || showStations) && poiData) {
@@ -4155,7 +4145,7 @@ export function MapClient({
   if (showSupply && supplyFailed) {
     mapNotices.push({
       key: "supply-failed",
-      text: "입주 예정 물량을 불러오지 못했어요 — 잠시 후 다시 시도해 주세요. 물량이 없다는 뜻은 아니에요",
+      text: "입주 예정 물량을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
       retry: () => retryLayer("supply"),
     });
   }
@@ -4325,7 +4315,6 @@ export function MapClient({
               </div>
             </div>
           </div>
-          <div className="mt-2 t-caption text-text-3">클릭하면 자세히 봅니다</div>
         </div>
       )}
 
@@ -4369,7 +4358,7 @@ export function MapClient({
           {listingNoticeKind === "error" && (
             <div className="glass pointer-events-auto max-w-full rounded-xl px-3.5 py-2.5">
               <div className="t-sub font-bold text-ink">매물을 불러오지 못했어요</div>
-              <div className="mt-0.5 t-sub text-text-3">일시적 오류. 잠시 후 지도를 조금 옮기거나 다시 시도해 주세요.</div>
+              <div className="mt-0.5 t-sub text-text-3">잠시 후 다시 시도해 주세요. 지도를 움직이면 다시 불러와요.</div>
             </div>
           )}
 
@@ -4586,7 +4575,7 @@ export function MapClient({
               <p className="t-sub text-text-3">
                 {radiusCenter
                   ? "중심·크기 핸들을 드래그하거나, 지도를 클릭해 중심을 옮겨요."
-                  : "지도를 클릭해 중심을 찍으세요. 안 찍으면 화면 중앙 기준입니다."}
+                  : "지도를 클릭하면 중심이 찍혀요. 안 찍으면 화면 중앙 기준이에요."}
               </p>
               <div className="rounded-lg bg-[rgba(29,79,216,.07)] px-2.5 py-2 t-sub font-bold text-primary">
                 반경 {radiusM >= 1000 ? `${radiusM / 1000}km` : `${radiusM}m`} 안 단지 표시
@@ -4679,7 +4668,7 @@ export function MapClient({
                   )}
                   {!routeLoading && !routeResult?.driving && measurePoints.length >= 2 && (
                     <div className="rounded-lg bg-bg px-2.5 py-2 t-caption text-text-3">
-                      차량 경로 API 미연동 또는 조회 불가 — 직선만 표시
+                      차량 경로 없음 · 직선만 표시
                     </div>
                   )}
                   {routeResult?.walking && (
@@ -4888,18 +4877,16 @@ export function MapClient({
             </div>
           )}
           <div className="px-5 pb-2.5 t-sub text-text-3">
-            {popularScope === "viewport"
-              ? "지도를 움직이면 보이는 지역 기준으로 바뀝니다"
-              : "지도를 확대하면 그 지역 기준으로 바뀝니다"}
+            {popularScope === "viewport" ? "보이는 지도 범위 기준" : "확대하면 지도 범위 기준"}
           </div>
           {popularFailed && (
             <div className="mx-3 mb-2 rounded-lg border border-line bg-surface px-3.5 py-3">
               <div className="t-sub font-bold text-ink">
-                인기 단지를 지금 불러오지 못했어요
+                인기 단지를 불러오지 못했어요
               </div>
-              <p className="mt-1 t-sub text-text-3">
-                이 지역에 단지가 없는 게 아니라 조회가 실패했습니다. 지도는 그대로 쓸 수 있어요.
-              </p>
+              {/* [1028] "지도는 그대로 쓸 수 있어요" 꼬리를 뺐다 — 지도까지 못 불러온 날엔 바로 옆 "지도를 불러오지 못했어요"와 어긋나고,
+                  평소엔 눈앞에 보이는 것을 되풀이하는 말이다 */}
+              <p className="mt-1 t-sub text-text-3">잠시 후 다시 시도해 주세요.</p>
             </div>
           )}
           {danjiLoadFailed && (
@@ -4907,28 +4894,22 @@ export function MapClient({
               {/* [970 · B-38] 실패한 건 지도 마커용 목록이다 — 바로 아래 인기 단지는 멀쩡히
                   나오는데 "단지 목록을 못 불러왔다"고 하면 화면이 스스로를 부정한다 */}
               <div className="t-sub font-bold text-ink">
-                지도 마커용 단지 목록을 지금 불러오지 못했어요
+                지도에 표시할 단지를 불러오지 못했어요
               </div>
-              <p className="mt-1 t-sub text-text-3">
-                이 지역에 단지가 0개인 게 아니라 마커용 조회가 실패했습니다.{" "}
-                {popular.length > 0 ? "아래 인기 단지와 지도는" : "지도는"} 그대로 쓸 수
-                있어요 — 잠시 후 새로고침해 주세요.
-              </p>
+              <p className="mt-1 t-sub text-text-3">잠시 후 다시 시도해 주세요.</p>
             </div>
           )}
           {!danjiLoadFailed && regionMarkersLoadFailed && (
             <div className="mx-3 mb-2 rounded-lg border border-line bg-surface px-3.5 py-3">
               <div className="t-sub font-bold text-ink">
-                지역 시세 말풍선을 불러오지 못했어요
+                시·군·구별 평균을 불러오지 못했어요
               </div>
-              <p className="mt-1 t-sub text-text-3">
-                거래가 없는 게 아니라 조회가 실패했습니다. 단지 목록과 지도는 그대로 쓸 수 있어요.
-              </p>
+              <p className="mt-1 t-sub text-text-3">잠시 후 다시 시도해 주세요.</p>
             </div>
           )}
           {txType === "rent" && (
             <div className="px-5 pb-1.5 t-caption text-text-3">
-              목록 가격은 매매 실거래 평균이에요 — 전세 보증금은 지도 마커에서 확인
+              목록 가격은 매매 실거래 평균이에요. 전세 보증금은 지도 마커에 표시돼요.
             </div>
           )}
           {!danjiLoadFailed && (rangeActive || commuteActive) && filteredDanji.length === 0 && (
@@ -4944,10 +4925,10 @@ export function MapClient({
             </div>
           )}
           <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-3">
-            {(rangeActive || commuteActive) && popular.length > 0 && (
-              <div className="px-2 pb-1 t-caption text-text-3">
-                인기 순위는 지도 영역 기준이에요 — 상세 필터(가격·면적 등)와는 무관합니다.
-              </div>
+            {/* [1028] 가격·면적·준공·세대수 범위는 인기 목록 조회에 그대로 실린다(/api/map/popular) — "상세 필터와 무관"은
+                틀린 말이었다. 반영되지 않는 것은 출퇴근 조건뿐이라 그때만 적는다. */}
+            {commuteActive && popular.length > 0 && (
+              <div className="px-2 pb-1 t-caption text-text-3">출퇴근 조건은 인기 순위에 반영되지 않아요.</div>
             )}
             {!popularFailed && !popularLoading && popular.length === 0 && (
               <div className="px-2 py-6 text-center t-sub text-text-3">
@@ -5044,7 +5025,7 @@ export function MapClient({
                   라고 안내했다 — 수집이 안 된 것과 못 읽은 것은 전혀 다른 사건이다. */}
               <div className="t-sub text-text-2">
                 {danjiLoadFailed
-                  ? "단지 목록을 지금 불러오지 못했어요. 단지가 0개인 게 아니라 조회가 실패했습니다."
+                  ? "단지 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
                   : rangeActive || commuteActive
                     ? "조건에 맞는 단지가 없어요."
                     : "이 지역 단지 목록을 준비 중이에요."}
@@ -5142,7 +5123,7 @@ export function MapClient({
            예전에는 좌측에 460px 세로 패널로 붙였다. 폭이 좁아 표·그래프가 다
            눌렸고, 같은 자리를 쓰는 필터·인기 단지 패널과 계속 부딪혔다(소유자 지적).
            화면 가운데 큰 팝업으로 띄우면 두 문제가 같이 사라진다. 더 깊이 보고
-           싶으면 아래 "전체 화면으로 자세히 보기"로 단지 홈 페이지로 넘어간다. */}
+           싶으면 아래 "단지 홈 보기"로 단지 홈 페이지로 넘어간다. */}
       {selected && (
         <div
           className="absolute inset-0 z-[48] flex items-center justify-center px-4 py-6"
@@ -5187,7 +5168,7 @@ export function MapClient({
                 href={complexHrefFromId(selected.id)}
                 className="btn-primary btn-cta hidden rounded-xl px-3.5 py-2 t-sub font-bold text-white md:inline-flex"
               >
-                전체 화면으로 자세히 보기 ›
+                단지 홈 보기 ›
               </Link>
               <button
                 type="button"
@@ -5253,7 +5234,7 @@ export function MapClient({
                   className="flex items-center justify-between rounded-lg border border-line bg-surface px-[15px] py-[13px] text-left"
                 >
                   <span className="t-body font-bold text-ink">
-                    단지 홈에서 실거래 이력·노트 보기
+                    실거래 이력·노트 보기
                   </span>
                   <span className="t-sub font-bold text-primary">›</span>
                 </Link>
@@ -5386,7 +5367,7 @@ export function MapClient({
                 )}
                 {complexNotesStatus === "error" && (
                   <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
-                    일시적 오류로 노트를 불러오지 못했어요
+                    노트를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
                   </div>
                 )}
                 {complexNotesStatus === "ok" && complexNotes.length > 0 && (
@@ -5457,7 +5438,7 @@ export function MapClient({
               href={complexHrefFromId(selected.id)}
               className="btn-primary btn-cta block rounded-xl p-3 text-center t-body font-bold text-white"
             >
-              전체 화면으로 자세히 보기 ›
+              단지 홈 보기 ›
             </Link>
           </div>
           </aside>
@@ -5619,7 +5600,7 @@ export function MapClient({
                   className="h-[9px] w-[9px] shrink-0 rounded-full"
                   style={{ background: JEONSE_MARKER_COLOR }}
                 />
-                전세 평균 보증금 (단지 줌)
+                전세 평균 보증금 (확대 시)
               </div>
             ) : (
               showPriceOverlay && (
@@ -5692,7 +5673,7 @@ export function MapClient({
                   className="h-[9px] w-[9px] shrink-0 rounded-full"
                   style={{ background: JEONSE_MARKER_COLOR }}
                 />
-                <span>단지 줌에서 평균 보증금 표시</span>
+                <span>확대하면 단지별 보증금 표시</span>
               </div>
               <div className="t-caption text-text-3">
                 국토교통부 전월세 실거래 중 전세 계약 기준 · 월세 계약 제외
@@ -5734,7 +5715,7 @@ export function MapClient({
                   className="h-[9px] w-[9px] shrink-0 rounded-sm"
                   style={{ background: NO_DATA_COLOR }}
                 />
-                <span>{NO_DATA_LABEL} (실거래 없음)</span>
+                <span>{NO_PRICE_LABEL}</span>
               </div>
               <div className="t-caption text-text-3">
                 국토교통부 실거래가(매매) 기준 · 매물 호가 아님

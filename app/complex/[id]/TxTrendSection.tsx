@@ -14,7 +14,8 @@ import { formatEokMan } from "@/lib/format/eok-man";
 import { TxTrendChart, type TxTrendMark } from "@/app/components/viz/TxTrendChart";
 import type { ChartMonth } from "@/app/components/viz/price-chart-geometry";
 import { dealDateLabel, floorLabel } from "@/lib/complex/deal-format";
-import { periodStart, ymDash, type ExtremePoint, type TxTrendData } from "./complex-v2-model";
+import { belowHighPct, periodStart, ymDash, type ExtremePoint, type TxTrendData } from "./complex-v2-model";
+import { Delta } from "@/app/components/num/Delta";
 import { useAreaUnit, unitAreaLabel } from "./AreaText";
 
 type Mode = "trade" | "jeonse" | "wolse";
@@ -24,8 +25,11 @@ const MODES: { value: Mode; label: string }[] = [
   { value: "wolse", label: "월세" },
 ];
 
+/* [1028] 직거래면 날짜·층 뒤에 적는다 — 당사자끼리 맺은 계약이라 값이 주변 거래와 다를 수 있다 */
 function pointSub(p: ExtremePoint): string {
-  return [dealDateLabel(p.ym, p.day), p.floor != null ? floorLabel(p.floor) : null].filter(Boolean).join(" · ");
+  return [dealDateLabel(p.ym, p.day), p.floor != null ? floorLabel(p.floor) : null, p.direct ? "직거래" : null]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 export function TxTrendSection({ data, complexName }: { data: TxTrendData; complexName: string }) {
@@ -69,6 +73,7 @@ export function TxTrendSection({ data, complexName }: { data: TxTrendData; compl
     return out;
   }, [mode, type, yms]);
 
+  const belowPct = mode === "trade" && type ? belowHighPct(type.latest?.man, type.high?.man) : null;
   const typeLabel = type ? unitAreaLabel(type.areaM2, unit) : "전 타입";
   const modeLabel = MODES.find((m) => m.value === mode)?.label ?? "매매";
   const what = mode === "trade" ? `${typeLabel} 매매` : `${modeLabel} · 전 타입(면적 구분 없음)`;
@@ -145,7 +150,9 @@ export function TxTrendSection({ data, complexName }: { data: TxTrendData; compl
         </div>
         <p className="t-caption text-text-3">
           {what}
-          {data.firstYm ? ` · ${ymDash(data.firstYm)} 부터` : ""} · {yms.length}개월{data.caption ? ` · ${data.caption}` : ""}
+          {/* [1028] "2025-01 부터 · 12개월 · 5년·전체는 2025-01 부터"처럼 같은 달이 두 번 나오던 줄 — 꺼진 기간이 있으면 그 설명만 */}
+          {` · ${yms.length}개월`}
+          {data.caption ? ` · ${data.caption}` : data.firstYm ? ` · ${ymDash(data.firstYm)} 부터` : ""}
         </p>
 
         {mode === "trade" && type && (
@@ -154,6 +161,13 @@ export function TxTrendSection({ data, complexName }: { data: TxTrendData; compl
               <div className="flex min-w-0 flex-col gap-0.5">
                 <span className="t-caption text-text-3">최근 실거래 · {pointSub(type.latest)}</span>
                 <span className="t-title t-num text-ink">{formatEokMan(type.latest.man)}</span>
+                {/* [1028] 신고가 대비 — 최근 실거래가 이 타입의 기간 내 신고가보다 낮을 때만 */}
+                {belowPct != null && (
+                  <span className="flex flex-wrap items-baseline gap-x-1 t-sub">
+                    <Delta pct={belowPct} srContext="신고가 대비" />
+                    <span className="t-caption text-text-3">신고가 대비</span>
+                  </span>
+                )}
               </div>
             )}
             {(type.high || type.low) && (

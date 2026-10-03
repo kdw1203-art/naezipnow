@@ -7,7 +7,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
     <AreaError
       area="rent"
       title="실거래 자료를 불러오지 못했어요"
-      desc="오피스텔·연립·단독 전월세 신고 자료를 읽는 중에 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요."
+      desc="잠시 후 다시 시도해 주세요."
       error={error}
       reset={reset}
       links={[

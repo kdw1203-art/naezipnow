@@ -100,7 +100,11 @@ function GeneratedCover({ card }: { card: FeedCard }) {
       </span>
       <span className="clamp-2 t-section leading-snug">{big}</span>
       {typeof card.rating === "number" && card.rating > 0 && (
-        <span className={`mt-1 t-caption font-bold ${dark ? "text-brand-red-dark" : "text-brand-red"}`}>
+        <span
+          role="img"
+          aria-label={`항목 평점 ${card.rating.toFixed(1)}`}
+          className={`mt-1 t-caption font-bold ${dark ? "text-brand-red-dark" : "text-brand-red"}`}
+        >
           ★ {card.rating.toFixed(1)}
         </span>
       )}
@@ -340,7 +344,11 @@ function FeedCardView({ card, delay }: { card: FeedCard; delay: number }) {
           <div className="flex items-center justify-between t-sub text-text-3">
             <span className="min-w-0 truncate">{card.author}</span>
             {typeof card.rating === "number" && card.rating > 0 ? (
-              <span className="inline-flex shrink-0 items-center gap-1">
+              <span
+                role="img"
+                aria-label={`항목 평점 ${card.rating.toFixed(1)}`}
+                className="inline-flex shrink-0 items-center gap-1"
+              >
                 ★ {card.rating.toFixed(1)}
               </span>
             ) : typeof card.saves === "number" ? (
@@ -544,9 +552,9 @@ export function TownFeed({
       /* 한쪽 소스가 실패한 장은 "마지막"이 아니라 "일부를 못 받았다"고 말하고,
          버튼을 남겨 다시 누를 수 있게 한다 */
       setMore(j.hasMore || j.loadFailed);
-      if (j.loadFailed) setMoreError("일부 글을 불러오지 못했어요. 잠시 후 다시 눌러 주세요.");
+      if (j.loadFailed) setMoreError("일부 글을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
     } catch {
-      setMoreError("더 불러오지 못했어요. 잠시 후 다시 눌러 주세요.");
+      setMoreError("더 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       setMoreLoading(false);
     }
@@ -717,7 +725,7 @@ export function TownFeed({
         <Explain
           title="정렬 기준"
           body={[
-            sort === "reco" ? "추천순: 최신 글이 먼저, 노트 평점·저장 수만큼 위로." : "최신순: 최근에 올린 글부터.",
+            sort === "reco" ? "추천순: 최신 글이 먼저, 노트 항목 평점·저장 수만큼 위로." : "최신순: 최근에 올린 글부터.",
             ...(kind !== "post" && counts.note > 0 && noteSplit.lab > 0
               ? [`임장노트 ${counts.note}건 = 사람이 다녀온 노트 ${noteSplit.human} · 내집나우 Lab 데이터 카드 ${noteSplit.lab}`]
               : []),

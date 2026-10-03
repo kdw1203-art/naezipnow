@@ -73,8 +73,8 @@ export function PortfolioMix({
         <h2 className="t-section font-bold text-ink">관심 단지 {total}곳의 구성</h2>
         <p className="t-body text-text-1">
           {topRegion && topRegion.n >= 2 && topRegion.n / total >= 0.5
-            ? `${topRegion.key}에 ${topRegion.n}곳(${Math.round((topRegion.n / total) * 100)}%)이 몰려 있어요 — 같은 지역 흐름에 함께 흔들려요.`
-            : `한 지역에 절반 넘게 몰리지 않았어요 — 가장 많은 곳은 ${topRegion?.key ?? "—"} ${topRegion?.n ?? 0}곳이에요.`}
+            ? `${topRegion.key}에 ${topRegion.n}곳(${Math.round((topRegion.n / total) * 100)}%)이 몰려 있어요. 같은 지역 흐름에 함께 흔들려요.`
+            : `한 지역에 절반 넘게 몰리지 않았어요. 가장 많은 곳은 ${topRegion?.key ?? "—"} ${topRegion?.n ?? 0}곳이에요.`}
         </p>
       </div>
       <div className="flex flex-col gap-1.5">

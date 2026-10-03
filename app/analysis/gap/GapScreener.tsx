@@ -312,7 +312,7 @@ export function GapScreener({
                     전세가율 중앙값
                     <Explain
                       term="jeonse-garyul"
-                      how="공표 지역 통계(한국부동산원·KB)의 매매가 대비 전세가 비율. 집계 지역을 줄 세운 가운데 값."
+                      how="공표 지역 통계(한국부동산원)의 매매가 대비 전세가 비율. 집계 지역을 줄 세운 가운데 값."
                       size={12}
                     />
                   </span>

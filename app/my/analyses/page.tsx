@@ -33,13 +33,13 @@ export default async function MyAnalysesPage() {
         <div className="rise-in flex items-baseline justify-between">
           <h1 className="t-title text-ink">내 AI 분석 기록</h1>
           <Link href="/analysis" className="t-body font-bold text-primary no-underline">
-            분석 도구 허브 ›
+            분석 허브 ›
           </Link>
         </div>
 
         {failed ? (
           <div className="card rounded-2xl px-5 py-8 text-center t-body font-bold text-text-3">
-            기록을 불러오지 못했어요 — 없는 게 아니라 조회가 실패했습니다. 잠시 후 다시 시도해 주세요.
+            분석 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
           </div>
         ) : runs.length === 0 ? (
           <div className="card rounded-2xl px-5 py-8 text-center">

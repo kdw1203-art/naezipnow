@@ -266,7 +266,7 @@ export default async function SeasonReportPage({
               ±{SEASON_LIFT_THRESHOLD_PCT}% 안은 &ldquo;차이 없음&rdquo;으로 판정
               <Explain
                 title="계절 판정"
-                body="이사철 통념을 실거래 신고 건수로 확인한다. 판정 문턱은 결론에 맞춰 고르지 않도록 코드에 고정."
+                body="이사철 통념을 실거래 신고 건수로 확인. 판정 문턱은 결과를 보기 전에 정해 둔 고정값."
                 how={[
                   `${def.monthsLabel}의 월평균 거래와 같은 해 나머지 달의 월평균 거래를 비교`,
                   "비교 대상 달에 모두 등장하는 공통 지역만 합산(달마다 집계 지역 수가 달라 생기는 착시 제거)",

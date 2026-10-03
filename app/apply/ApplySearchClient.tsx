@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { EmptyState, ErrorState } from "@/app/components/ui/EmptyState";
 import { APPLYHOME_REGIONS } from "@/lib/applyhome/regions";
+import { competitionLabel, houseTypeLabel } from "@/lib/applyhome/normalize";
 import type {
   ApplyhomeListingItem,
   ApplyhomeSearchPayload,
@@ -193,7 +194,7 @@ export function ApplySearchClient({ initial }: Props) {
   const [error, setError] = useState<ErrState>(
     initial.ok
       ? null
-      : { message: "청약홈 데이터를 지금 불러오지 못했어요.", cause: initial.cause },
+      : { message: "청약 공고를 불러오지 못했어요", cause: initial.cause },
   );
   /* 정렬은 '표시 중인 행'만 다시 세운다(서버 전체가 아니라). 확장 행은 청약 일정·
      시행사·원문(경쟁률 탭) 또는 8개 특공 유형별 물량·접수(특별공급 탭)를 편다 —
@@ -243,7 +244,7 @@ export function ApplySearchClient({ initial }: Props) {
       }));
     } catch (err) {
       setError({
-        message: "청약홈 데이터를 지금 불러오지 못했어요.",
+        message: "청약 공고를 불러오지 못했어요",
         cause: err instanceof Error ? err.message : String(err),
       });
     } finally {
@@ -397,7 +398,7 @@ export function ApplySearchClient({ initial }: Props) {
         <div role="alert" className="rise-in-2">
           <ErrorState
             title={error.message}
-            desc="공고가 없는 게 아니라 조회 자체가 실패했습니다. 잠시 후 다시 시도해 주세요."
+            desc="잠시 후 다시 시도해 주세요."
             cause={error.cause}
             onRetry={() => void load({ page: 1 })}
           />
@@ -428,7 +429,7 @@ export function ApplySearchClient({ initial }: Props) {
               title="지역·단지명 필터를 지금 사용할 수 없어요"
               /* [1011] "분양정보(상세) API 연동이 준비되지 않아" 를 걷었다(소유자 지시) — 970·C-44 에서
                  env 변수명을 걷어낸 것과 같은 줄기다. 남길 사실은 "지금은 못 쓴다"와 "0건이 아니다" 둘. */
-              desc="지역·단지명으로 걸러 보는 기능이 아직 준비 중이에요. 공고가 없다는 뜻이 아니라, ‘전체’로 돌아가면 전국 공고가 보여요."
+              desc="지역·단지명으로 걸러 보는 기능은 준비 중이에요. ‘전체’에서는 전국 공고가 보여요."
               action={{ href: "/apply", label: "전체 공고 보기" }}
             />
           ) : (
@@ -508,17 +509,21 @@ export function ApplySearchClient({ initial }: Props) {
                             <span className="ml-1 t-caption font-medium text-text-3">
                               {item.region}
                               {item.resideLabel ? ` · ${item.resideLabel}` : ""}
+                              {/* [1028] 같은 타입이 순위별로 두 줄 나온다 — 줄마다 순위를 적는다(예전에는 펼쳐야 보였다) */}
+                              {item.rankCode ? ` · ${item.rankCode}순위` : ""}
                             </span>
                           </span>
-                          <span className="text-center font-bold text-text-1">{item.houseType}</span>
+                          <span className="text-center font-bold text-text-1" title={item.houseType}>
+                            {houseTypeLabel(item.houseType)}
+                          </span>
                           <span className="text-center font-bold text-text-1">
                             {item.supplyCount.toLocaleString()}
                           </span>
                           <span className="text-center font-bold text-text-1">
                             {item.requestCount ?? "—"}
                           </span>
-                          <span className="text-center font-bold text-danger">
-                            {item.competitionRate ?? "—"}
+                          <span className="text-center font-bold text-danger" title={item.competitionRate ?? undefined}>
+                            {competitionLabel(item.competitionRate)}
                           </span>
                         </button>
                         {open && hasDetail && (
@@ -593,7 +598,9 @@ export function ApplySearchClient({ initial }: Props) {
                               {item.region}
                             </span>
                           </span>
-                          <span className="text-center font-bold text-text-1">{item.houseType}</span>
+                          <span className="text-center font-bold text-text-1" title={item.houseType}>
+                            {houseTypeLabel(item.houseType)}
+                          </span>
                           <span className="text-center font-bold text-text-1">
                             {(item.specialSupplyTotal ?? item.supplyCount).toLocaleString()}
                           </span>

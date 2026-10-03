@@ -45,12 +45,12 @@ export default async function CreatorDashboardPage() {
         <div className="mx-auto max-w-[520px]">
           <div className="rise-in card flex flex-col items-center gap-2 px-5 py-12 text-center">
             <div className="t-title">✍️</div>
+            {/* [1028 · 제안 5] 설명형 제목·부제 → "로그인이 필요해요" + 이 화면에 있는 것 명사 한 줄 */}
             <div className="t-section text-ink">
-              로그인하면 내 콘텐츠 성과를 볼 수 있어요
+              로그인이 필요해요
             </div>
             <div className="t-sub text-text-3">
-              공개 노트 수·저장 수와 탑 임장러 현황은
-              <br />내 계정 기준으로 집계돼요
+              공개 노트 수 · 저장 수 · 탑 임장러 현황
             </div>
             <Link href="/login" className="btn-primary btn-md mt-2">
               로그인하고 내 노트 성과 보기

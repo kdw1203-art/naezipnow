@@ -268,7 +268,7 @@ test("23. /billing/success redirects to /payment/success?provider=stripe (query 
 
 test("24. /support and /safety render", async ({ page }) => {
   await page.goto("/support");
-  await expect(page.getByRole("heading", { level: 1, name: /고객지원 허브/ })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /고객센터/ })).toBeVisible();
   await page.goto("/safety");
   await expect(page.getByRole("button", { name: "안전 진단" })).toBeVisible();
 });

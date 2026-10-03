@@ -825,9 +825,9 @@ export function SearchClient() {
       {hasQuery && !busy && !notice && failed.length > 0 && (
         <div className="mt-8 flex flex-col items-center gap-2 text-center">
           <div className="t-section text-ink">
-            지금은 {failed.join("·")} 검색이 되지 않아요
+            {failed.join("·")} 검색 결과를 불러오지 못했어요
           </div>
-          <div className="t-sub text-text-3">조회 실패. 잠시 후 다시 시도해 주세요.</div>
+          <div className="t-sub text-text-3">잠시 후 다시 시도해 주세요.</div>
         </div>
       )}
 
@@ -839,7 +839,7 @@ export function SearchClient() {
           {filterMode ? (
             <>
               <div className="break-words t-section text-ink">조건에 맞는 단지가 없어요</div>
-              <div className="break-words t-sub text-text-3">위 조건 칩을 하나씩 빼 보세요</div>
+              <div className="break-words t-sub text-text-3">조건 칩을 줄이면 결과가 나올 수 있어요</div>
             </>
           ) : (
             <>

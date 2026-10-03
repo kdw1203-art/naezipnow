@@ -78,9 +78,9 @@ export async function WishlistSection({ email }: { email: string }) {
 
       {!loaded.ok ? (
         <ErrorState
-          title="관심 매물을 지금 불러오지 못했어요"
-          /* [970 · C-20] 해요체 통일 */
-          desc="저장한 매물이 0개인 게 아니라 조회가 실패했어요. 잠시 후 새로고침해 주세요."
+          title="관심 매물을 불러오지 못했어요"
+          /* [970 · C-20] 해요체 통일 · [1028 · 제안 3] 오류 문구 표준("0개인 게 아니라 조회 실패" 구문 제거) */
+          desc="잠시 후 다시 시도해 주세요."
         />
       ) : items.length === 0 ? (
         /* [966] 빈 상태 정본화 */
@@ -95,8 +95,7 @@ export async function WishlistSection({ email }: { email: string }) {
         <>
           {loaded.ok && loaded.failedCount > 0 && (
             <p className="mb-3 rounded-xl border border-line bg-bg px-3 py-2 t-sub text-text-2">
-              저장한 매물 중 {loaded.failedCount}건은 지금 불러오지 못했어요. 삭제된 게
-              아니라 조회가 실패한 것일 수 있습니다. 잠시 후 새로고침해 주세요.
+              저장한 매물 중 {loaded.failedCount}건을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
             </p>
           )}
           <div className="rise-in grid grid-cols-1 gap-3 md:grid-cols-2">

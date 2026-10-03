@@ -57,7 +57,7 @@ export default async function NotePrintPage({
           {note.region}
           {note.aptName ? ` · ${note.aptName}` : ""}
           {note.visitDate ? ` · ${note.visitDate} 방문` : ""}
-          {avg > 0 ? ` · 평점 ${avg.toFixed(1)}/5` : ""}
+          {avg > 0 ? ` · 항목 평점 ${avg.toFixed(1)}/5` : ""}
         </p>
       </header>
 

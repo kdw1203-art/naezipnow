@@ -240,7 +240,7 @@ function TownWriteForm() {
             promptSignup({
               action: "community_post",
               title: "사진을 올리려면 로그인이 필요해요",
-              benefit: "로그인하면 사진과 함께 동네 이야기를 남길 수 있어요.",
+              benefit: "사진은 글과 함께 계정에 남아요.",
             });
             break;
           }
@@ -326,7 +326,7 @@ function TownWriteForm() {
         promptSignup({
           action: "community_post",
           title: "글을 올리려면 로그인이 필요해요",
-          benefit: "로그인하면 동네 이야기가 내 계정에 남고, 나중에 수정·신고 대응이 가능해요.",
+          benefit: "글은 계정에 남아 신고·차단을 처리할 수 있어요.",
         });
         return;
       }

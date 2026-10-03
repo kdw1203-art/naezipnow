@@ -47,10 +47,10 @@ export function EconomyWatch({ currentRate }: { currentRate: number }) {
           res.status === 400
             ? (json.error ?? "알림을 걸지 못했어요. 숫자를 확인하고 다시 눌러 주세요.")
             : res.status === 429
-              ? "너무 자주 눌렀어요 — 1분쯤 뒤에 다시 눌러 주세요."
+              ? "너무 자주 눌렀어요. 1분쯤 뒤에 다시 눌러 주세요."
               : json.error
-                ? `알림을 걸지 못했어요 — ${json.error}`
-                : `알림을 걸지 못했어요 — 서버가 답하지 못했어요(${res.status}). 잠시 뒤 다시 눌러 주세요.`,
+                ? `알림을 걸지 못했어요. ${json.error}`
+                : `알림을 걸지 못했어요(${res.status}). 잠시 후 다시 시도해 주세요.`,
         );
       }
     } catch {

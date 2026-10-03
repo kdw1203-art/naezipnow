@@ -21,7 +21,7 @@ export async function GET() {
     return NextResponse.json(
       {
         error:
-          "모임 목록을 지금 불러오지 못했어요. 모임이 없는 게 아니라 조회에 실패한 상태입니다.",
+          "모임 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
       },
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );

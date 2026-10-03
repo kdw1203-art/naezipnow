@@ -96,7 +96,7 @@ export function InquiryForm({
       <input
         value={contact}
         onChange={(e) => setContact(e.target.value.slice(0, 120))}
-        placeholder="회신받을 연락처(선택) — 전화·카톡 등"
+        placeholder="회신받을 연락처(선택) · 전화·카톡 등"
         className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[13px] text-ink outline-none focus:border-primary"
       />
       <div className="flex items-center justify-between gap-2">

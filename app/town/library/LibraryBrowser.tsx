@@ -240,7 +240,7 @@ export function NotesBrowser({ notes }: { notes: NoteCardDto[] }) {
           최신순
         </button>
         <button type="button" onClick={() => setSort("score")} className={chip(sort === "score")}>
-          평점순
+          점수순
         </button>
       </div>
 

@@ -146,8 +146,9 @@ function GuestView() {
   ];
   return (
     <GuestGate
-      title="로그인하고 내 활동을 한곳에서 관리하세요"
-      desc="임장노트 · 포인트 · 관심 지역 · 구독이 마이 화면에 모여요."
+      /* [1028 · 제안 5] 권유 제목·설명 → "로그인이 필요해요" + 이 화면에 있는 것 명사 한 줄 */
+      title="로그인이 필요해요"
+      desc="임장노트 · 관심 단지 · 포인트 · 구독 관리"
       pathname="/my"
     >
       <div className="rise-in-1 card flex flex-col rounded-lg px-4 py-0.5">

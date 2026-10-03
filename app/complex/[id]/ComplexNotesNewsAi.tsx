@@ -79,7 +79,7 @@ export async function ComplexNotesNewsAi({
 
         {notesFailed ? (
           <p className="mt-3 t-sub text-text-3">
-            노트를 지금 불러오지 못했어요. 잠시 후 새로고침해 주세요.
+            노트를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
           </p>
         ) : notes.length === 0 ? (
           /* [1012 · 규칙 6] 권유("남겨 주세요") → 어디서(단지명) 사실만 — 쓰기 입구는 위 행동 줄이 맡는다 */

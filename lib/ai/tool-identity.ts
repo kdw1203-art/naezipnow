@@ -204,7 +204,9 @@ export const TOOL_IDENTITIES: Record<AiAnalysisToolId, ToolIdentity> = {
     icon: Clock,
     metricLabel: "매수 시그널",
     metricUnit: "",
-    useCase: "지금 사기 좋은지 신호등 3개로 확인",
+    /* [1028] 머리 한 줄은 명사형 사실 — "지금 사기 좋은지 … 확인"(설명조) 대신 무엇이 나오는지.
+       폰(390)에서 기준 시점 칩("만안구 · 2026.08")과 한 줄에 서야 한다 — 예전 문장(20자)보다 길면 칩이 다음 줄로 밀린다. */
+    useCase: "가격·거래·입주 물량 신호 3개",
     signatureWidget: "signalGauge",
     tips: [
       "신호등은 지역 단위 흐름이에요 — 단지 사정은 임장으로 확인하세요.",

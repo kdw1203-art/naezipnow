@@ -96,14 +96,15 @@ export function validateTicketInput(input: TicketInput): TicketInputResult {
   const message = typeof input.message === "string" ? input.message.trim() : "";
   const email = typeof input.email === "string" ? input.email.trim() : "";
 
+  /* [1028 · 제안 8·12] 문의 폼의 오류 한 줄 — 같은 폼의 다른 안내(해요체)와 말끝을 맞춘다. 규칙·숫자는 그대로. */
   if (!isTicketCategory(category)) {
-    errors.category = "유효하지 않은 카테고리입니다.";
+    errors.category = "유효하지 않은 문의 유형이에요.";
   }
   if (subject.length < TICKET_SUBJECT_MIN || subject.length > TICKET_SUBJECT_MAX) {
-    errors.subject = `제목은 ${TICKET_SUBJECT_MIN}~${TICKET_SUBJECT_MAX}자 사이여야 합니다.`;
+    errors.subject = `제목은 ${TICKET_SUBJECT_MIN}~${TICKET_SUBJECT_MAX}자 사이여야 해요.`;
   }
   if (message.length < TICKET_MESSAGE_MIN || message.length > TICKET_MESSAGE_MAX) {
-    errors.message = `내용은 ${TICKET_MESSAGE_MIN}~${TICKET_MESSAGE_MAX}자 사이여야 합니다.`;
+    errors.message = `내용은 ${TICKET_MESSAGE_MIN}~${TICKET_MESSAGE_MAX}자 사이여야 해요.`;
   }
   if (!email || !EMAIL_RE.test(email)) {
     errors.email = "답변 받을 이메일 주소를 정확히 입력해 주세요.";

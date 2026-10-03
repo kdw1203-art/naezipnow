@@ -66,7 +66,7 @@ export function RefreshButton({
       </button>
       {phase === "error" && (
         <span className="text-[12px] font-bold text-danger">
-          갱신 실패 — 잠시 후 다시 시도해 주세요
+          갱신하지 못했어요. 잠시 후 다시 시도해 주세요.
         </span>
       )}
     </div>

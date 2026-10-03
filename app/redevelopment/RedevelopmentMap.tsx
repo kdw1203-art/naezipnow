@@ -332,11 +332,11 @@ export function RedevelopmentMap({
               ))}
             </div>
             <p className="t-caption text-text-3">
-              지역 칩의 숫자 = 현재 사업종류·진행단계 조건의 구역 수
+              {/* [1028] 칩 숫자 설명 한 줄 — 예전에는 괄호와 "전체 데이터에는 …" 문장까지 세 토막이었다 */}
+              칩 숫자 = 조건에 맞는 구역 수
               {regionCounts.length > topSigungu.length
-                ? ` (구역이 많은 순 12개 · 조건에 맞는 시군구 ${regionCounts.length}곳 중)`
+                ? ` · 구역 많은 순 ${topSigungu.length}곳(전체 ${totalSigunguCount.toLocaleString("ko-KR")}곳)`
                 : ""}
-              . 전체 데이터에는 시군구 {totalSigunguCount.toLocaleString("ko-KR")}곳이 있어요.
             </p>
           </>
         ) : null}
@@ -500,7 +500,7 @@ export function RedevelopmentMap({
             {summary.householdsMissing > 0 ? (
               <p className="mt-2 t-caption text-text-3">
                 {summary.householdsMissing.toLocaleString("ko-KR")}곳은 공개 자료에 세대수가
-                없어 합계에서 빠졌어요. 0세대가 아니라 값을 확보하지 못한 것입니다.
+                없어 합계에서 뺐어요.
               </p>
             ) : null}
           </section>
@@ -617,8 +617,7 @@ export function RedevelopmentMap({
       <p className="flex gap-1.5 rounded-lg bg-primary-soft px-3 py-2 t-caption text-primary">
         <Icon name="landmark" size={13} className="mt-px shrink-0" />
         <span>
-          구역·진행단계는 {asOfLabel ? `${asOfLabel} ` : ""}공개자료 기준 참고값이며 좌표는 구역
-          대표점 근사값입니다. 최신 고시·단계와 다를 수 있습니다.
+          구역·진행단계는 {asOfLabel ? `${asOfLabel} ` : ""}공개자료 기준 참고값 · 좌표는 구역 대표점 근사값
         </span>
       </p>
     </div>

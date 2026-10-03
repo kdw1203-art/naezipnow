@@ -111,7 +111,7 @@ export function RegionHero({
                     `${avgPrice.ym ? ymLong(avgPrice.ym) : "그 달"}에 계약해 국토교통부에 신고된 이 지역 아파트 매매 ${
                       avgPrice.trades?.toLocaleString("ko-KR") ?? ""
                     }건의 가격을 단순 평균했어요(해제 신고 제외).`,
-                    "어떤 평형이 많이 팔렸는지에 따라 달마다 크게 움직인다. 추세는 위 시세 지수로.",
+                    "어떤 평형이 많이 팔렸는지에 따라 달마다 크게 움직여요. 추세는 위 시세 지수로 봐요.",
                   ]
             }
             source={

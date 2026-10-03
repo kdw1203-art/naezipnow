@@ -70,7 +70,7 @@ export default async function RegionReportIndexPage({
             <div className="t-section text-ink tabular-nums">
               {s.replace("-", "년 ")}월
             </div>
-            <div className="mt-0.5 t-sub text-text-3">월간 시장 스냅샷 →</div>
+            <div className="mt-0.5 t-sub text-text-3">월간 시장 요약 →</div>
           </Link>
         ))}
       </div>

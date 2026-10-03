@@ -20,11 +20,13 @@ export function FollowButton({ handle }: { handle: string }) {
   const [state, setState] = useState<"loading" | "anon" | "off" | "on">("loading");
   const [busy, setBusy] = useState(false);
 
+  /* [1028 · 제안 5] 물음형 제목 → "~하려면 로그인이 필요해요", 혜택 문장 → 짧은 사실 한 줄.
+     "피드에서 먼저 볼 수 있어요"는 뺐다 — 팔로우한 사람의 노트를 모아 보여 주는 화면이 지금 없다(팔로우 기록·팔로워 수만 있다). */
   const askSignup = () =>
     promptSignup({
       action: "follow_user",
-      title: "이 임장러를 팔로우할까요?",
-      benefit: "가입하면 이 사람이 새 임장노트를 공개할 때 피드에서 먼저 볼 수 있어요.",
+      title: "팔로우하려면 로그인이 필요해요",
+      benefit: "팔로우는 계정에 남아요.",
       callbackUrl: pathname ?? "/",
     });
 
@@ -78,7 +80,7 @@ export function FollowButton({ handle }: { handle: string }) {
         return;
       }
       if (!res.ok) {
-        showToast(follow ? "팔로우하지 못했어요 — 다시 눌러 주세요" : "취소하지 못했어요 — 다시 눌러 주세요");
+        showToast(follow ? "팔로우하지 못했어요. 다시 눌러 주세요" : "취소하지 못했어요. 다시 눌러 주세요");
         return;
       }
       setState(follow ? "on" : "off");
@@ -87,7 +89,7 @@ export function FollowButton({ handle }: { handle: string }) {
       else if (follow) showToast("팔로우했어요");
       else showToast("팔로우를 취소했어요", { label: "되돌리기", onClick: () => void send(true, true) });
     } catch {
-      showToast("연결이 끊겼어요 — 다시 눌러 주세요");
+      showToast("연결이 끊겼어요. 다시 눌러 주세요");
     } finally {
       busyRef.current = false;
       setBusy(false);

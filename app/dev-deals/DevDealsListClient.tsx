@@ -279,7 +279,7 @@ export function DevDealsListClient({
         </div>
         <div className="text-[12px] text-text-3">
           {loadFailed ? (
-            <>등록 물건 수를 지금 불러오지 못했어요</>
+            <>등록 물건 수를 불러오지 못했어요</>
           ) : (
           <>
           등록 물건 <strong className="text-ink">{all.length.toLocaleString()}건</strong>
@@ -358,11 +358,10 @@ export function DevDealsListClient({
                DB 원문(cause)은 싣지 않는다(에러 노출 마감 정책). */
             <div className="card rounded-2xl p-[var(--pad-card)] text-center">
               <div className="text-[13px] font-bold text-ink">
-                개발물건 목록을 지금 불러오지 못했어요
+                개발물건 목록을 불러오지 못했어요
               </div>
               <p className="mx-auto mt-1 max-w-md text-[12px] leading-[1.6] text-text-3">
-                등록된 개발물건이 0건인 게 아니라 조회 자체가 실패했습니다. 잠시 후
-                새로고침해 주세요.
+                잠시 후 다시 시도해 주세요.
               </p>
             </div>
           ) : deals.length === 0 ? (

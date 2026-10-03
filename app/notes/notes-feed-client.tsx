@@ -424,7 +424,7 @@ function PostCard({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
             className="flex min-h-[40px] flex-1 items-center justify-center gap-1.5 border-l border-line t-sub font-bold text-text-2 no-underline hover:bg-bg"
           >
             <Icon name="building" size={15} />
-            단지 허브
+            단지 보기
           </Link>
         )}
       </div>
@@ -975,8 +975,7 @@ export function NotesFeedClient({
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface px-3.5 py-3 t-sub text-text-2">
             <span>
               {mine ? "내 임장노트를" : "공개 임장노트를"}{" "}
-              <strong className="text-ink">불러오지 못했습니다</strong>. 노트가 없는 것이 아니라 조회가
-              실패한 것입니다.
+              <strong className="text-ink">불러오지 못했어요</strong>. 잠시 후 다시 시도해 주세요.
             </span>
             {/* [1023 · 임장노트 ②] 내 노트 조회 실패 — 같은 자리에서 다시 시도(loadMine 재호출). 공개 피드는 서버 렌더라 손잡이 없음 */}
             {mine && (

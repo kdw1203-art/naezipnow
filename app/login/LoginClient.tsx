@@ -40,7 +40,8 @@ function resolveCallbackUrl(): string {
  * 그래서 지어낸 노트 카드를 걷어내고, callbackUrl 이 실제로 가리키는 경로에서만
  * 문구를 고른다. 맞는 경로가 없으면 일반 문구로 간다. 노트 문구는 정말 노트
  * 작성 중에 로그인 벽을 만난 사람에게만 나간다. */
-type LoginContext = { line1: string; line2: string; sub: string };
+/* [1028 · 제안 5] 제목은 한 줄(line1). 둘째 줄(line2)을 없앴고, 부제(sub)는 사실 명사 한 줄이 있을 때만 그린다. */
+type LoginContext = { line1: string; sub: string };
 
 /* 문구도 **실제로 켜져 있는 로그인 수단**만 말한다.
    "카카오·네이버·구글" 을 고정 문자열로 박아 두면, 그 셋 중 하나도 설정돼
@@ -67,98 +68,59 @@ const SOCIAL_BUTTON: Record<SocialProvider, { label: string; className: string }
   },
 };
 
-function genericContext(social: SocialProvider[]): LoginContext {
-  return {
-    line1: "내집나우 계정으로",
-    line2: "임장 기록을 이어가세요",
-    sub: social.length
-      ? `${social.map((p) => SOCIAL_LABEL[p]).join("·")} 계정으로 3초면 시작할 수 있어요`
-      : "이메일 계정으로 임장 기록을 이어서 저장할 수 있어요",
-  };
+/* [1028 · 제안 5] 권유 제목("임장 기록을 이어가세요")과 "3초면 시작" 부제를 걷고 "로그인" 한 줄만.
+   켜진 로그인 수단은 바로 아래 버튼이 말한다. */
+function genericContext(): LoginContext {
+  return { line1: "로그인", sub: "" };
 }
 
 /* 앞에서부터 순서대로 검사한다 — 더 구체적인 경로를 위에 둔다.
-   여기 적힌 경로는 전부 실제로 /login?callbackUrl= 을 만드는 자리에서 가져왔다. */
+   여기 적힌 경로는 전부 실제로 /login?callbackUrl= 을 만드는 자리에서 가져왔다.
+   [1028 · 제안 5] 제목은 "○○하려면 로그인이 필요해요" 한 줄. "로그인하면 보던 화면으로 돌아갑니다" 류 설명 부제는 지웠다
+   (노트만 사실 한 줄 — 작성·수정 화면은 쓰던 내용을 1초마다 이 기기에 임시저장한다: app/notes/new/NoteForm.tsx). */
 const CONTEXT_RULES: { prefix: string; ctx: LoginContext }[] = [
   {
     prefix: "/notes",
     ctx: {
-      line1: "방금 쓴 노트,",
-      line2: "잃어버리지 않게 저장할게요",
-      sub: "로그인하면 작성하던 내용 그대로 이어서 저장돼요",
+      line1: "노트를 저장하려면 로그인이 필요해요",
+      sub: "작성 중인 노트는 이 기기에 임시저장",
     },
   },
   {
     prefix: "/subscription",
-    ctx: {
-      line1: "플랜을 고르려면",
-      line2: "먼저 로그인이 필요해요",
-      sub: "로그인하면 보던 구독 화면으로 그대로 돌아갑니다",
-    },
+    ctx: { line1: "요금제를 고르려면 로그인이 필요해요", sub: "" },
   },
   {
     prefix: "/listings",
-    ctx: {
-      line1: "매물 문의·등록은",
-      line2: "로그인 후 이용할 수 있어요",
-      sub: "로그인하면 보던 매물 화면으로 그대로 돌아갑니다",
-    },
+    ctx: { line1: "매물을 문의·등록하려면 로그인이 필요해요", sub: "" },
   },
   {
     prefix: "/dev-deals",
-    ctx: {
-      line1: "분양·개발 정보 문의는",
-      line2: "로그인 후 이용할 수 있어요",
-      sub: "로그인하면 보던 화면으로 그대로 돌아갑니다",
-    },
+    ctx: { line1: "분양·개발 정보를 문의하려면 로그인이 필요해요", sub: "" },
   },
   {
     prefix: "/town/groups",
-    ctx: {
-      line1: "임장 모임 참여는",
-      line2: "로그인 후 이용할 수 있어요",
-      sub: "로그인하면 보던 모임 화면으로 그대로 돌아갑니다",
-    },
+    ctx: { line1: "임장 모임에 참여하려면 로그인이 필요해요", sub: "" },
   },
   {
     prefix: "/qna",
-    ctx: {
-      line1: "단지 Q&A 질문·답변은",
-      line2: "로그인 후 남길 수 있어요",
-      sub: "로그인하면 보던 질문 화면으로 그대로 돌아갑니다",
-    },
+    ctx: { line1: "질문·답변을 남기려면 로그인이 필요해요", sub: "" },
   },
   {
     prefix: "/notifications",
-    ctx: {
-      line1: "알림함은",
-      line2: "로그인 후 볼 수 있어요",
-      sub: "로그인하면 알림함으로 바로 이동합니다",
-    },
+    ctx: { line1: "알림을 보려면 로그인이 필요해요", sub: "" },
   },
   {
     prefix: "/my",
-    ctx: {
-      line1: "내 정보는",
-      line2: "로그인 후 볼 수 있어요",
-      sub: "로그인하면 보던 화면으로 그대로 돌아갑니다",
-    },
+    ctx: { line1: "내 정보를 보려면 로그인이 필요해요", sub: "" },
   },
   {
     prefix: "/points",
-    ctx: {
-      line1: "포인트 사용은",
-      line2: "로그인 후 이용할 수 있어요",
-      sub: "로그인하면 보던 화면으로 그대로 돌아갑니다",
-    },
+    ctx: { line1: "포인트를 쓰려면 로그인이 필요해요", sub: "" },
   },
   {
     prefix: "/recommend",
-    ctx: {
-      line1: "맞춤 추천은",
-      line2: "로그인 후 받아볼 수 있어요",
-      sub: "로그인하면 추천 화면으로 바로 이동합니다",
-    },
+    ctx: { line1: "맞춤 추천을 받으려면 로그인이 필요해요", sub: "" },
   },
 ];
 
@@ -179,7 +141,7 @@ const AUTH_ERROR_COPY: Record<string, string> = {
   OAuthCallback: "소셜 로그인 응답을 확인하지 못했어요. 다시 시도해 주세요.",
   OAuthCreateAccount: "소셜 계정으로 회원을 만들지 못했어요. 잠시 후 다시 시도해 주세요.",
   Callback: "로그인 처리 중 문제가 생겼어요. 다시 시도해 주세요.",
-  CredentialsSignin: "이메일 또는 비밀번호가 올바르지 않습니다.",
+  CredentialsSignin: "이메일 또는 비밀번호가 맞지 않아요.",
   SessionRequired: "이 화면은 로그인 후 볼 수 있어요.",
   Verification: "인증 링크가 만료됐거나 이미 사용됐어요. 다시 요청해 주세요.",
 };
@@ -187,7 +149,7 @@ const AUTH_ERROR_COPY: Record<string, string> = {
 function authErrorCopy(code: string | null, subCode: string | null): string | null {
   if (!code) return null;
   if (code === "verify_failed") {
-    return "이메일 인증에 실패했습니다. 메일의 링크를 다시 눌러 주세요.";
+    return "이메일 인증에 실패했어요. 메일의 링크를 다시 눌러 주세요.";
   }
   if (code === "config") {
     return "로그인 설정을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.";
@@ -244,7 +206,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
   /* callbackUrl 은 window 에만 있다. 서버 렌더 결과와 첫 클라이언트 렌더가
      달라지면 하이드레이션이 깨지므로, 일반 문구로 시작해서 마운트 후에만
      구체 문구로 바꾼다. (useSearchParams 를 쓰면 Suspense 경계가 필요하다) */
-  const generic = useMemo(() => genericContext(social), [social]);
+  const generic = useMemo(() => genericContext(), []);
   const [ctx, setCtx] = useState<LoginContext>(generic);
   /* [970 · A-14] 가입 링크 — callbackUrl 이 홈이 아니면 그대로 싣는다(마운트 후, 같은 이유) */
   const [signupHref, setSignupHref] = useState("/signup");
@@ -299,7 +261,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
       // OAuth는 리다이렉트 플로우 — 성공 시 callbackUrl(기본 /) 로 돌아옵니다.
       await signIn(provider, { callbackUrl: resolveCallbackUrl() });
     } catch {
-      setError("로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+      setError("로그인에 실패했어요. 잠시 후 다시 시도해 주세요.");
       setBusy(null);
     }
   }
@@ -336,7 +298,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
       setResendNote(data.message ?? "인증 메일을 다시 보냈어요. 메일함의 새 링크를 눌러 주세요.");
     } catch {
       setResendState("failed");
-      setResendNote("네트워크 오류가 발생했습니다.");
+      setResendNote("네트워크 오류가 발생했어요.");
     }
   }
 
@@ -396,9 +358,9 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
         router.refresh();
         return;
       }
-      setError("로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+      setError("로그인에 실패했어요. 잠시 후 다시 시도해 주세요.");
     } catch {
-      setError("네트워크 오류가 발생했습니다.");
+      setError("네트워크 오류가 발생했어요.");
     } finally {
       setBusy(null);
     }
@@ -424,10 +386,8 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
         </div>
         <h1 className="rise-in-1 text-[21px] font-bold leading-[1.35] text-ink">
           {ctx.line1}
-          <br />
-          {ctx.line2}
         </h1>
-        <p className="rise-in-2 text-[13px] text-text-2">{ctx.sub}</p>
+        {ctx.sub && <p className="rise-in-2 text-[13px] text-text-2">{ctx.sub}</p>}
 
         {verifiedNotice && (
           <div
@@ -456,7 +416,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
               <div className="mt-2 text-[12px] font-semibold text-text-2">
                 {social.includes(failHint.provider)
                   ? `아래 "${SOCIAL_BUTTON[failHint.provider].label}" 버튼으로 로그인해 주세요.`
-                  : `${SOCIAL_LABEL[failHint.provider]} 로그인이 지금 이 화면에 없어요 — 고객센터로 알려 주시면 계정을 이어 드릴게요.`}
+                  : `${SOCIAL_LABEL[failHint.provider]} 로그인이 지금 이 화면에 없어요. 고객센터로 알려 주시면 계정을 이어 드릴게요.`}
               </div>
             )}
             {failHint?.kind === "no_account" && (
@@ -599,7 +559,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
         </div>
         {/* [970 · A-13] 동의 문구에 약관·방침 실링크 — 동의 대상 문서를 열 수 없었다 */}
         <p className="text-center text-[12px] leading-[1.6] text-text-3">
-          시작하면{" "}
+          로그인하면{" "}
           <Link href="/legal/terms" className="underline underline-offset-2">
             이용약관
           </Link>

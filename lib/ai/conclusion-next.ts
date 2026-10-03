@@ -35,9 +35,11 @@ export type ConclusionNext = {
 type Axis = { key: string; label: string; score: number | null; basis: string };
 type Signal = { key: string; label: string; state: "green" | "yellow" | "red" | "na"; basis: string };
 
-/** "지역 시세 한 달 +1.03% — 빠르게 오르는 중…" → "지역 시세 한 달 +1.03%"(사실 토막만). 자료 없음 문장은 null */
+/** "지역 시세 한 달 +1.03%. 빠르게 오르는 중…" → "지역 시세 한 달 +1.03%"(사실 토막만). 자료 없음 문장은 null
+ *  [1028] 근거 문장이 "숫자 사실. 뜻 한 문장." 꼴이 됐다(insight-blocks timingSignals) — 첫 마침표(뒤가 빈칸) 앞까지가 사실 토막.
+ *  소수점("+1.03%")은 뒤가 숫자라 끊기지 않는다. 예전 꼴(" — " 로 이은 문장)도 그대로 읽는다. */
 export function basisFact(basis: string | null | undefined): string | null {
-  const head = (basis ?? "").split(" — ")[0].trim();
+  const head = (basis ?? "").split(/ — |\. /)[0].trim();
   if (!head || /없(음|어요)$/.test(head)) return null;
   return head;
 }

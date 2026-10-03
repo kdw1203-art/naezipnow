@@ -299,7 +299,7 @@ export function MapPickDrawer({
                 : mapDown
                   ? "지도를 불러오지 못했어요. 위 검색창에 단지명을 넣어 주세요."
                   : failed
-                    ? "단지 목록을 지금 불러오지 못했어요. 지도를 조금 움직여 주세요."
+                    ? "단지 목록을 불러오지 못했어요. 지도를 조금 움직여 주세요."
                     : loading
                       ? "이 화면의 단지를 찾는 중…"
                       : view.mode === "clusters"
