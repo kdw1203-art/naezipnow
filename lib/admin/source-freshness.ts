@@ -74,11 +74,11 @@ const SOURCES: SourceDef[] = [
   },
   {
     key: "redevelopment",
-    label: "정비사업",
-    pipeline: "etl.yml → /api/cron/redevelopment-ingest (SEOUL_OPENAPI_KEY 필요)",
-    table: "redevelopment_projects",
-    column: "updated_at",
-    thresholdHours: 24 * 45,
+    label: "서울 도시계획 조서",
+    pipeline: "etl.yml → /api/cron/redevelopment-ingest (SEOUL_DATA_API_KEY) · [1029] 서울 UPIS 결정 조서",
+    table: "seoul_upis_records",
+    column: "fetched_at",
+    thresholdHours: 48,
   },
   {
     key: "market_index",

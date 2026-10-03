@@ -49,7 +49,7 @@ function ShareTemplateForm({ onDone }: { onDone: () => void }) {
       }
       const json: { id?: string; error?: string } = await res.json().catch(() => ({}));
       if (!res.ok || !json.id) {
-        setError(json.error ?? "저장에 실패했어요.");
+        setError(json.error ?? "저장 실패");
         return;
       }
       setTitle("");

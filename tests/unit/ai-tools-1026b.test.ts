@@ -202,7 +202,7 @@ test("[1026b] 빈 상태 — 카드 하나 + 회색 견본(12종 모두 윤곽 �
   /* 한 문장은 서버 페이지에만 — 경제지표(단지를 고르지 않는다)를 뺀 11종 · [1028] 11종 공통 한 줄(도구별 문장은 머리 한 줄과 같은 말이었다) */
   for (const t of AI_TOOL_IDS) {
     if (t === "ai-economy") assert.doesNotMatch(page, /"ai-economy": "/);
-    else assert.ok(page.includes(`"${t}": "단지를 고르면 결과가 나와요."`), t);
+    else assert.ok(page.includes(`"${t}": "단지 선택 → 결과"`), t);
   }
   assert.doesNotMatch(page, /바로 나와요|채워져요/, "도구별 빈 상태 문장이 남았다");
   assert.match(page, /emptyLine=\{EMPTY_LINE\[tid\] \?\? null\}/);

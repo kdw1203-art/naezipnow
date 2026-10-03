@@ -28,15 +28,16 @@ export type SeoulDatasetMeta = {
 export const SEOUL_DATASET_CATALOG: SeoulDatasetMeta[] = [
   {
     id: "upis-rebuild",
-    title: "정비사업(재개발·재건축)",
+    title: "도시계획 결정 조서 — 정비사업(재개발·재건축)",
     serviceName: "upisRebuild",
-    oaUrl: "https://data.seoul.go.kr/",
+    oaUrl: "https://data.seoul.go.kr/dataList/OA-20281/S/1/datasetView.do",
     provider: "서울 열린데이터광장",
     phase: 1,
     envKey: "SEOUL_DATA_API_KEY",
-    ttlHours: 168,
-    license: "공공누리 1유형",
-    usage: "/info/redevelopment, 지도 레이어, 임장 리스크",
+    ttlHours: 24,
+    /* [1029] 광장 표기: 저작자표시 + 비영리 + 변경금지 — 원문 그대로 · 출처 한 줄. (upisUrbanDev · upisDistUnitPlan · upisAnnouncement 도 같은 조건) */
+    license: "저작자표시·비영리·변경금지",
+    usage: "/redevelopment 결정 조서 · /redevelopment/[id] 결정 이력 · /region/[id] 건수 · 임장 리포트 정비사업 축",
   },
   {
     id: "rtms-sale",

@@ -206,7 +206,7 @@ export default async function PublicProfilePage({
       <PageShell breadcrumb={`발견 › @${displayName}`}>
         <div className="mx-auto max-w-[640px] py-10">
           <ErrorState
-            title="프로필을 불러오지 못했어요"
+            title="프로필 불러오기 실패"
             desc="잠시 후 다시 시도해 주세요."
           />
         </div>
@@ -368,7 +368,7 @@ export default async function PublicProfilePage({
           {grid.length === 0 && (
             /* [1012] 규칙 6 — 누가 */
             <div className="card px-5 py-8 text-center t-sub text-text-3">
-              {displayName}님이 공개한 임장노트가 아직 없어요
+{displayName}님이 공개한 임장노트 없음
             </div>
           )}
           <div className="grid grid-cols-3 gap-[6px]">

@@ -44,7 +44,7 @@ export function AttendanceButton() {
         error?: string;
       };
       if (!res.ok) {
-        setMsg({ text: data.error ?? "출석 체크에 실패했어요.", tone: "error" });
+        setMsg({ text: data.error ?? "출석 체크 실패", tone: "error" });
         return;
       }
       if (typeof data.streak === "number") setStreak(data.streak);

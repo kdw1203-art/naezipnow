@@ -150,14 +150,14 @@ export default async function GapScreenerPage() {
       {loadFailed ? (
         <div className="mt-3">
           <ErrorState
-            title="지역 시세를 불러오지 못했어요"
+            title="지역 시세 불러오기 실패"
             desc="잠시 후 다시 시도해 주세요."
           />
         </div>
       ) : rows.length === 0 ? (
         <div className="mt-3">
           <ErrorState
-            title="전세가율 데이터가 아직 없어요"
+            title="전세가율 데이터 없음"
             desc="공표 통계 적재(매일) 뒤 표시."
             action={{ href: "/analysis", label: "다른 분석 도구 보기" }}
           />
@@ -167,7 +167,7 @@ export default async function GapScreenerPage() {
           {yieldFailed && (
             <div className="mb-3 rounded-lg border border-line bg-warning-soft px-3.5 py-2.5">
               <p className="t-sub text-ink">
-                월세 환산 수익률·실측 갭 열을 불러오지 못했어요. 전세가율 열은 그대로 볼 수 있어요.
+월세 환산 수익률·실측 갭 열 불러오기 실패 · 전세가율 열은 그대로 볼 수 있어요.
               </p>
             </div>
           )}

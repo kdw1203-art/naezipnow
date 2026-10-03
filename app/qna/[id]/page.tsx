@@ -74,7 +74,7 @@ export async function generateMetadata({
   const loaded = await loadQuestion(id);
   /* 못 읽은 것은 없는 것이 아니다 — 색인만 막고 제목은 실패라고 정확히 쓴다. */
   if (!loaded.ok) {
-    return { title: "질문을 불러오지 못했어요 | 내집나우", robots: { index: false, follow: false } };
+    return { title: "질문 불러오기 실패 | 내집나우", robots: { index: false, follow: false } };
   }
   if (!loaded.data) {
     return { title: "질문을 찾을 수 없어요 | 내집나우", robots: { index: false, follow: false } };
@@ -124,7 +124,7 @@ export default async function QnaDetailPage({
         <TownCategoryNav stick />
         <div className={QNA_THEME_CLASS}>
           <ErrorState
-            title="질문을 불러오지 못했어요"
+            title="질문 불러오기 실패"
             desc="잠시 후 다시 시도해 주세요."
             action={{ href: "/qna", label: "목록으로 돌아가기" }}
           />
@@ -247,7 +247,7 @@ export default async function QnaDetailPage({
         {answers.length === 0 ? (
           <div className="card t-body text-text-3">
             {/* [1012] 규칙 6 — 권유 대신 사실 · [1015] 한 줄로 */}
-            이 질문에 달린 답변이 아직 없어요.
+이 질문에 달린 답변 없음
           </div>
         ) : (
           <div className="flex flex-col gap-3">

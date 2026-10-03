@@ -117,7 +117,7 @@ export default async function PricePage({
   if (areaRegions.length === 0) {
     return (
       <PageShell breadcrumb="분석 · 면적대별 실거래가" toolScope={personaVars(TOOL_PERSONAS["market:price"])}>
-        <EmptyState msg="아직 면적대별로 정리된 실거래가 없어요." />
+        <EmptyState msg="면적대별로 정리된 실거래 없음" />
       </PageShell>
     );
   }

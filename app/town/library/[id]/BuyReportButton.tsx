@@ -39,7 +39,7 @@ export function BuyReportButton({
       }
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setError(data.error ?? "구매에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data.error ?? "구매 실패 · 잠시 후 다시");
         setBusy(false);
         return;
       }

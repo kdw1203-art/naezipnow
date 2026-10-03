@@ -347,7 +347,7 @@ export function TimingClient({
         /* 조회 실패 — "데이터 없음"과 다른 사실이다. 캐시 API 실패는 no-store 라
            재시도가 의미 있다. */
         <div className="card mt-3 flex flex-col items-center gap-2 rounded-2xl p-8 text-center">
-          <p className="t-section text-ink">{selected.label} 분석을 불러오지 못했어요</p>
+          <p className="t-section text-ink">{selected.label}분석 불러오기 실패</p>
           <p className="t-sub text-text-3">잠시 후 다시 시도해 주세요.</p>
           <button
             type="button"

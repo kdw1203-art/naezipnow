@@ -82,45 +82,45 @@ const CONTEXT_RULES: { prefix: string; ctx: LoginContext }[] = [
   {
     prefix: "/notes",
     ctx: {
-      line1: "노트를 저장하려면 로그인이 필요해요",
+      line1: "로그인 필요 · 노트 저장",
       sub: "작성 중인 노트는 이 기기에 임시저장",
     },
   },
   {
     prefix: "/subscription",
-    ctx: { line1: "요금제를 고르려면 로그인이 필요해요", sub: "" },
+    ctx: { line1: "로그인 필요 · 요금제 선택", sub: "" },
   },
   {
     prefix: "/listings",
-    ctx: { line1: "매물을 문의·등록하려면 로그인이 필요해요", sub: "" },
+    ctx: { line1: "로그인 필요 · 매물 문의·등록", sub: "" },
   },
   {
     prefix: "/dev-deals",
-    ctx: { line1: "분양·개발 정보를 문의하려면 로그인이 필요해요", sub: "" },
+    ctx: { line1: "로그인 필요 · 분양·개발 문의", sub: "" },
   },
   {
     prefix: "/town/groups",
-    ctx: { line1: "임장 모임에 참여하려면 로그인이 필요해요", sub: "" },
+    ctx: { line1: "로그인 필요 · 임장 모임 참여", sub: "" },
   },
   {
     prefix: "/qna",
-    ctx: { line1: "질문·답변을 남기려면 로그인이 필요해요", sub: "" },
+    ctx: { line1: "로그인 필요 · 질문·답변", sub: "" },
   },
   {
     prefix: "/notifications",
-    ctx: { line1: "알림을 보려면 로그인이 필요해요", sub: "" },
+    ctx: { line1: "로그인 필요 · 알림", sub: "" },
   },
   {
     prefix: "/my",
-    ctx: { line1: "내 정보를 보려면 로그인이 필요해요", sub: "" },
+    ctx: { line1: "로그인 필요 · 내 정보", sub: "" },
   },
   {
     prefix: "/points",
-    ctx: { line1: "포인트를 쓰려면 로그인이 필요해요", sub: "" },
+    ctx: { line1: "로그인 필요 · 포인트 사용", sub: "" },
   },
   {
     prefix: "/recommend",
-    ctx: { line1: "맞춤 추천을 받으려면 로그인이 필요해요", sub: "" },
+    ctx: { line1: "로그인 필요 · 맞춤 추천", sub: "" },
   },
 ];
 
@@ -142,22 +142,22 @@ const AUTH_ERROR_COPY: Record<string, string> = {
   OAuthCreateAccount: "소셜 계정으로 회원을 만들지 못했어요. 잠시 후 다시 시도해 주세요.",
   Callback: "로그인 처리 중 문제가 생겼어요. 다시 시도해 주세요.",
   CredentialsSignin: "이메일 또는 비밀번호가 맞지 않아요.",
-  SessionRequired: "이 화면은 로그인 후 볼 수 있어요.",
+  SessionRequired: "이 화면 · 로그인 필요",
   Verification: "인증 링크가 만료됐거나 이미 사용됐어요. 다시 요청해 주세요.",
 };
 
 function authErrorCopy(code: string | null, subCode: string | null): string | null {
   if (!code) return null;
   if (code === "verify_failed") {
-    return "이메일 인증에 실패했어요. 메일의 링크를 다시 눌러 주세요.";
+    return "이메일 인증 실패 · 메일의 링크를 다시 눌러 주세요.";
   }
   if (code === "config") {
-    return "로그인 설정을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.";
+    return "로그인 설정 불러오기 실패 · 잠시 후 다시";
   }
   if ((subCode ?? "").toLowerCase() === "email_not_confirmed") {
     return EMAIL_NOT_CONFIRMED_COPY;
   }
-  return AUTH_ERROR_COPY[code] ?? "로그인에 실패했어요. 잠시 후 다시 시도해 주세요.";
+  return AUTH_ERROR_COPY[code] ?? "로그인 실패 · 잠시 후 다시";
 }
 
 const EMAIL_NOT_CONFIRMED_COPY =
@@ -261,7 +261,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
       // OAuth는 리다이렉트 플로우 — 성공 시 callbackUrl(기본 /) 로 돌아옵니다.
       await signIn(provider, { callbackUrl: resolveCallbackUrl() });
     } catch {
-      setError("로그인에 실패했어요. 잠시 후 다시 시도해 주세요.");
+      setError("로그인 실패 · 잠시 후 다시");
       setBusy(null);
     }
   }
@@ -336,7 +336,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
           setError(`이 이메일은 ${SOCIAL_LABEL[hint.provider]} 계정으로 가입돼 있어요.`);
           setFailHint(hint);
         } else if (hint.kind === "no_account") {
-          setError("이 이메일로 가입된 계정이 없어요.");
+          setError("이 이메일로 가입된 계정 없음");
           setFailHint(hint);
         } else {
           setError("비밀번호가 맞지 않아요.");
@@ -358,7 +358,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
         router.refresh();
         return;
       }
-      setError("로그인에 실패했어요. 잠시 후 다시 시도해 주세요.");
+      setError("로그인 실패 · 잠시 후 다시");
     } catch {
       setError("네트워크 오류가 발생했어요.");
     } finally {

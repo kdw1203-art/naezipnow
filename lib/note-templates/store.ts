@@ -934,7 +934,7 @@ export async function createUserTemplate(input: CreateTemplateInput): Promise<st
     .select("id", { count: "exact", head: true })
     .eq("author_email", input.authorEmail)
     .gte("created_at", dayStart.toISOString());
-  if (cntErr) throw new Error("공유 한도 확인에 실패했어요. 잠시 후 다시 시도해 주세요.");
+  if (cntErr) throw new Error("공유 한도 확인 실패 · 잠시 후 다시");
   if ((count ?? 0) >= 3) throw new Error("하루에 체크리스트 3개까지 공유할 수 있어요.");
 
   const { data, error } = await sb
@@ -954,7 +954,7 @@ export async function createUserTemplate(input: CreateTemplateInput): Promise<st
     .single();
   if (error || !data) {
     logger.error("[note-templates] 사용자 템플릿 저장 실패", error);
-    throw new Error("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
+    throw new Error("저장 실패 · 잠시 후 다시");
   }
   return String(data.id);
 }

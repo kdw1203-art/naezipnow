@@ -55,7 +55,7 @@ export const HOUSE_ADS: HouseAd[] = [
     id: "house_note_start",
     eyebrow: "임장노트",
     title: "다녀온 집 기록",
-    body: "항목별 점수 · 사진 · 메모를 단지별로 저장해요.",
+    body: "단지별 저장 · 항목 점수 · 사진 · 메모", /* [1029 · 3] 낱말 꼴 */
     ctaLabel: "임장노트 쓰기",
     href: "/notes/new",
     showWhenSignedIn: true,
@@ -64,7 +64,7 @@ export const HOUSE_ADS: HouseAd[] = [
     id: "house_map_real_price",
     eyebrow: "지도",
     title: "실거래가 지도",
-    body: "지도 금액은 국토교통부 실거래가 평균이에요. 호가는 들어 있지 않아요.",
+    body: "국토교통부 실거래가 평균 · 호가 제외", /* [1029 · 3] 낱말 꼴 */
     ctaLabel: "지도 열기",
     href: "/map",
     showWhenSignedIn: true,

@@ -96,7 +96,7 @@ async function loadPlanExpiresAt(email: string): Promise<string | null> {
 }
 
 /** 북마크 target_id 를 임장노트로 해석 (노트가 아니면 null → 자연 필터). 최대 10개만 조회.
-    조회 실패를 빈 배열로 누르면 "저장한 노트가 없어요"가 된다 — ok:false 로 구분한다. */
+    조회 실패를 빈 배열로 누르면 "저장한 노트 없음"가 된다 — ok:false 로 구분한다. */
 async function loadSavedNotes(email: string): Promise<Loaded<InspectionNote[]>> {
   try {
     const bms = await listBookmarks(email);
@@ -147,7 +147,7 @@ function GuestView() {
   return (
     <GuestGate
       /* [1028 · 제안 5] 권유 제목·설명 → "로그인이 필요해요" + 이 화면에 있는 것 명사 한 줄 */
-      title="로그인이 필요해요"
+      title="로그인 필요"
       desc="임장노트 · 관심 단지 · 포인트 · 구독 관리"
       pathname="/my"
     >

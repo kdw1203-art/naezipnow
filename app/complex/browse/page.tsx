@@ -42,7 +42,7 @@ export async function generateMetadata({
   const region = resolveRegion(sp.district);
   const label = regionDisplayName(region);
   const title = `${label} 아파트 단지별 실거래 현황 | 내집나우`;
-  const description = `${label} 아파트 단지별 최근 실거래가·평단가·12개월 거래량 — 국토교통부 실거래가 기반(매물 호가 아님). 서울 25개 구 단지 현황을 한 화면에서 확인하세요.`;
+  const description = `${label} 아파트 단지별 최근 실거래가 · 평단가 · 12개월 거래량 · 국토교통부 실거래가 기준 · 매물 호가 아님 · 서울 25개 구`; /* [1029 · 20] 낱말 꼴 */
   return {
     title,
     description,

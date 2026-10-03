@@ -46,7 +46,7 @@ function FallbackCard({ name }: { name: string }) {
       <div className="text-[15px] font-bold text-[#1c2433]">{name || "지역"} 시세</div>
       {/* [1012 · 규칙 5·6] "~됩니다" → "~돼요" · 링크 = 동사 + 대상 */}
       <p className="text-[12px] text-[#6b7686]">
-        시세를 불러오지 못했어요. 잠시 후 새로고침하면 표시돼요.
+시세 불러오기 실패 · 잠시 후 새로고침하면 표시돼요.
       </p>
       <a
         href="https://naezipnow.com"

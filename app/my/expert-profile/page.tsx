@@ -32,7 +32,7 @@ export default async function ExpertProfilePage() {
       <PageShell breadcrumb="마이 › 전문가 프로필">
         <GuestGate
           /* [1028 · 제안 5] 설명형 제목·부제 → "로그인이 필요해요" + 이 화면에서 고치는 것 명사 한 줄 */
-          title="로그인이 필요해요"
+          title="로그인 필요"
           desc="전문가 소개 · 전문 분야 · 상담료 · 연락처 수정"
           pathname="/my/expert-profile"
           className="mt-8"
@@ -54,7 +54,7 @@ export default async function ExpertProfilePage() {
         ) : (
           <div className="card mx-auto mt-8 max-w-[560px] rounded-2xl px-5 py-8 text-center">
             <p className="t-section text-ink">
-              아직 전문가 프로필이 없어요
+전문가 프로필 없음
             </p>
             <p className="mx-auto mt-1.5 max-w-[420px] t-sub text-text-3">
               전문가 인증을 신청하고 승인되면 프로필이 만들어져요. 인증 후 이

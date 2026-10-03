@@ -42,6 +42,8 @@ import { formatEokMan } from "@/lib/format/eok-man";
 import { findTxRegionForMarketRegion, type TxRegionSummary } from "@/lib/market/tx-bands";
 import { BAND_KIND_LABEL } from "@/lib/market/bands";
 import { listDbProjects } from "@/lib/redevelopment/store";
+import { countUpisForGu } from "@/lib/seoul/upis-store";
+import type { UpisGuSummary } from "@/lib/seoul/upis";
 import {
   labelForType,
   stageLabel,
@@ -147,9 +149,9 @@ function LoadFailed({ what }: { what: string }) {
     <p className="py-6 text-center t-body text-text-3">
       {/* [1011] "— 이 화면은 최대 1시간 저장되므로" 를 걷었다(소유자 지시) — 캐시가 얼마나 남는지는
           내부 사정이다. "새로고침해 주세요"라고 쓰지 않는 이유(위 주석)는 그대로 지킨다.
-          [1028 · 제안 3] 오류 문구 표준 — "○○을(를) 불러오지 못했어요" + "잠시 후 다시 시도해 주세요."
+          [1028 · 제안 3] 오류 문구 표준 — "○○을(를) 불러오기 실패" + "잠시 후 다시 시도해 주세요."
           조사(을/를)는 호출부가 붙여 넘긴다(예전엔 "최근 실거래을"처럼 틀렸다). */}
-      {what} 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+      {what}불러오기 실패 · 잠시 후 다시
     </p>
   );
 }
@@ -250,7 +252,8 @@ export async function generateMetadata({
   /* [#102] title CTR 실험 — id 해시로 A/B 결정적 배정(요청 간 불변). 배정표는
      /admin/seo, 판정 기준은 lib/seo/title-experiment.ts 주석. */
   const { title } = regionTitle(id, name);
-  const description = `${name} 아파트 ${price}${period ? ` (${period} 기준)` : ""} — 시세 추이, 최근 실거래, 월별 거래량, 입주 예정 물량, 정비사업, 이웃 임장노트를 한 화면에서 확인하세요.`;
+  /* [1029 · 20] 낱말 꼴 */
+  const description = `${name} 아파트 ${price}${period ? ` (${period} 기준)` : ""} · 시세 추이 · 최근 실거래 · 월별 거래량 · 입주 예정 물량 · 정비사업 · 이웃 임장노트`;
   const alternates = seoAlternates(`/region/${id}`);
   return {
     title,
@@ -348,6 +351,7 @@ export default async function RegionHubPage({
     areaBands,
     freshness,
     jeonseSeries,
+    upisGu,
   ] =
     await Promise.all([
       /* 항목 25: budget.signal 로 예산 초과 시 PostgREST 요청 자체를 끊는다.
@@ -421,6 +425,13 @@ export default async function RegionHubPage({
           return [];
         },
       ),
+      /* [1029] 서울시 도시계획 결정 조서(UPIS) 건수 — 서울 자치구만. 뷰 한 번(작다). 실패·0건이면 칸이 빠질 뿐이라 중단 판정에 넣지 않는다. */
+      sido === "서울"
+        ? countUpisForGu(shortName).catch((e: unknown): UpisGuSummary | null => {
+            logger.error(`[/region/${id}] 도시계획 조서 건수 조회 실패 — 칸 생략:`, e instanceof Error ? e.message : String(e));
+            return null;
+          })
+        : Promise.resolve<UpisGuSummary | null>(null),
     ]);
   budget.done();
 
@@ -994,13 +1005,13 @@ export default async function RegionHubPage({
               ariaLabel={`${name} 아파트 전월세 월별 신고 건수`}
             />
           )}
+          {/* [1029 · 5] 낱말 꼴 각주 — 문장 셋을 "사실 · 사실 · 사실"로 */}
           <p className="mt-3 t-sub text-text-3">
-            국토교통부 전월세 신고 기준.
+            국토교통부 전월세 신고 기준
             {rentOpen.length > 0
-              ? ` ${rentOpen.map((m) => `${ymMonth(m.month)} ${m.count.toLocaleString("ko-KR")}건`).join("·")}은 신고 기한(계약 후 30일) 안이라 더 늘 수 있어 그래프에서 뺐습니다.`
-              : ""}{" "}
-            신고분에는 갱신·신규 계약이 섞여 있어 체감 시세와 다를 수 있습니다. 중앙값은 지역 전체
-            기준이라 단지별 편차가 큽니다.
+              ? ` · ${rentOpen.map((m) => `${ymMonth(m.month)} ${m.count.toLocaleString("ko-KR")}건`).join("·")} = 신고 기한 내(계약 후 30일) · 그래프 제외`
+              : ""}
+            {" · "}갱신·신규 계약 혼합 · 지역 전체 중앙값 · 단지별 편차 큼
           </p>
         </section>
       )}
@@ -1044,10 +1055,7 @@ export default async function RegionHubPage({
               </tbody>
             </table>
           </div>
-          <p className="mt-2 t-sub text-text-3">
-            표본 5건 미만 면적대는 표시하지 않습니다. 중앙값 기준이라 단지·층·연식에 따라
-            실제 가격은 다릅니다.
-          </p>
+          <p className="mt-2 t-sub text-text-3">표본 5건 미만 면적대 제외 · 중앙값 기준 · 단지·층·연식별 차이 있음</p>
         </section>
       )}
 
@@ -1111,8 +1119,7 @@ export default async function RegionHubPage({
                 ))}
                 <p className="t-caption text-text-3">
                   조회분 {supply.length}건 중 세대수 확인분 합계
-                  {unknown > 0 && ` (세대수 미상 ${unknown}건 제외)`} · 일정은 변동될 수
-                  있습니다
+                  {unknown > 0 && ` (세대수 미상 ${unknown}건 제외)`} · 일정 변동 가능
                 </p>
               </div>
             );
@@ -1196,6 +1203,37 @@ export default async function RegionHubPage({
         </section>
       )}
 
+      {/* [1029] 서울시 도시계획 결정 조서 — 열린데이터광장 UPIS(정비·도시개발·지구단위계획). 서울 자치구 · 1건 이상일 때만. */}
+      {upisGu && upisGu.total > 0 && (
+        <section className="rise-in-3 card mb-6 p-[var(--pad-card)]">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <h2 className="t-section text-ink">
+              {shortName} 도시계획 결정 조서{" "}
+              <span className="t-sub font-medium text-text-3">서울시 {upisGu.total.toLocaleString("ko-KR")}건</span>
+            </h2>
+            <Link
+              href={`/redevelopment?gu=${encodeURIComponent(shortName)}#seoul-plan`}
+              className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary"
+            >
+              조서 보기 ›
+            </Link>
+          </div>
+          <dl className="mt-2 grid grid-cols-3 gap-2">
+            {[
+              ["정비사업", upisGu.rebuild],
+              ["도시개발", upisGu.urbanDev],
+              ["지구단위계획", upisGu.distUnitPlan],
+            ].map(([label, n]) => (
+              <div key={String(label)} className="rounded-lg bg-bg px-3 py-2">
+                <dt className="t-caption text-text-3">{label}</dt>
+                <dd className="t-body t-num font-bold text-ink">{Number(n).toLocaleString("ko-KR")}건</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-2 t-caption text-text-3">열린데이터광장 원문 · 참고용(법적 효력 없음)</p>
+        </section>
+      )}
+
       </div>
       {/* ── 오른쪽 레일(데스크톱) · 폰은 한 열 그대로 — 임장노트 · 면적대·가격대 · Q&A · 퍼가기 · CTA · 광고 */}
       <aside className="min-w-0">
@@ -1209,7 +1247,7 @@ export default async function RegionHubPage({
         ) : notes.length === 0 ? (
           /* [1012 · 규칙 6] "첫 노트를 남겨보세요"(권유) → 어디서·무엇이 없는지 사실만 */
           <p className="py-6 text-center t-body text-text-3">
-            {name}에 공개된 임장노트가 아직 없어요.
+{name}에 공개된 임장노트 없음
           </p>
         ) : (
           /* [1015 · 규칙 H·I] 행 목록(hanji 판) + 왼쪽 40px 정사각 썸네일. 카드 목록(PublicNoteCard)에는 아직 cover 가 없어

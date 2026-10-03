@@ -68,7 +68,7 @@ export function AiBriefingCard({
         body: JSON.stringify({ regionName: region, aptName, complexId }),
       });
       if (res.status === 401) {
-        setErrorMsg("예습 브리핑은 로그인 후 이용할 수 있어요.");
+        setErrorMsg("예습 브리핑 · 로그인 필요");
         setState("error");
         return;
       }

@@ -67,7 +67,7 @@ export async function createDeal(input: CreateDealInput): Promise<WriteResult> {
       .single();
     if (error || !data) {
       logger.warn("[dev-deals] createDeal", error);
-      return { ok: false, error: "개발물건 등록에 실패했어요." };
+      return { ok: false, error: "개발물건 등록 실패" };
     }
     return { ok: true, id: String(data.id) };
   } catch (e) {
@@ -114,7 +114,7 @@ export async function createPartner(input: CreatePartnerInput): Promise<WriteRes
       .single();
     if (error || !data) {
       logger.warn("[dev-deals] createPartner", error);
-      return { ok: false, error: "협력업체 등록에 실패했어요." };
+      return { ok: false, error: "협력업체 등록 실패" };
     }
     return { ok: true, id: String(data.id) };
   } catch (e) {
@@ -152,7 +152,7 @@ export async function createInquiry(input: CreateInquiryInput): Promise<WriteRes
       .single();
     if (error || !data) {
       logger.warn("[dev-deals] createInquiry", error);
-      return { ok: false, error: "참여 문의 접수에 실패했어요." };
+      return { ok: false, error: "참여 문의 접수 실패" };
     }
     // inquiry_count +1 (best-effort, 실패 무시)
     try {

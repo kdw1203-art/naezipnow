@@ -60,7 +60,7 @@ export function NoteLocationSearch({
   /* 대기 규칙은 lib/search/settle 한 군데에서만 정한다. */
   const { query: settled, compositionProps } = useSettledSearchQuery(q);
   /* 아직 굳지 않은 입력 = "아직 안 물어본 상태"다. 이걸 로딩으로 안 치면
-     치는 도중에 "검색 결과가 없어요"가 떴다 사라진다 — 확인한 적 없는 사실을
+     치는 도중에 "검색 결과 없음"가 떴다 사라진다 — 확인한 적 없는 사실을
      화면에 쓰는 셈이다. */
   const pending = q.trim().length >= 2 && q.trim() !== settled;
 

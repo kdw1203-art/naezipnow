@@ -15,7 +15,7 @@ export default function Error({
     <AreaError
       area="map"
       title="지도를 그리는 중 문제가 생겼어요"
-      desc="지도 데이터나 위치 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
+      desc="지도 데이터나 위치 정보 불러오기 실패 · 잠시 후 다시"
       error={error}
       reset={reset}
       links={[{ href: "/map", label: "지도 다시 열기" }, { href: "/search", label: "단지 검색" }, { href: "/", label: "홈" }]}

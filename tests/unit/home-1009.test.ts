@@ -90,24 +90,24 @@ function kr(over: Partial<KpiRegion>): KpiRegion {
   return { name: "가나구", price: "8.5억", delta: "▲ 1.9%", tone: "up", tradeLabel: null, href: "/map", periodLabel: "8월", ...over };
 }
 
-test("[1009·H] 오늘의 한 줄 — 변동 미상은 비교를 쓰지 않고, 지수/평균 기준을 가른다", () => {
+test("[1009·H · 1029·1] 오늘의 한 줄 — 낱말 꼴 · 변동 미상은 비교를 쓰지 않고, 지수/평균 기준을 가른다", () => {
   assert.equal(
     todayRegionSentence(kr({ changePct: 1.91, changeBasis: "index" })),
-    "가나구 8월 아파트 평균은 8.5억, 시세 지수는 전월보다 1.9% 올랐어요.",
+    "가나구 8월 · 아파트 평균 8.5억 · 시세 지수 전월 대비 ▲1.9%",
   );
   assert.equal(
     todayRegionSentence(kr({ changePct: -6.88, changeBasis: "avg", delta: "▼ 6.9%", tone: "down" })),
-    "가나구 8월 아파트 평균은 8.5억, 평당가는 전월보다 6.9% 내렸어요.",
+    "가나구 8월 · 아파트 평균 8.5억 · 평당가 전월 대비 ▼6.9%",
   );
   /* 예전엔 "…전월과 비슷해요" — 모르는 것을 보합이라고 말했다 */
   assert.equal(
     todayRegionSentence(kr({ changePct: null, delta: "변동 미상", tone: "flat" })),
-    "가나구 8월 아파트 평균은 8.5억이에요.",
+    "가나구 8월 · 아파트 평균 8.5억",
   );
-  assert.equal(todayRegionSentence(kr({ changePct: 0.02, changeBasis: "avg" })), "가나구 8월 아파트 평균은 8.5억, 평당가는 전월보다 거의 그대로예요.");
+  assert.equal(todayRegionSentence(kr({ changePct: 0.02, changeBasis: "avg" })), "가나구 8월 · 아파트 평균 8.5억 · 평당가 전월 대비 보합");
   /* 옛 응답(changePct 없음) — delta 문자열에서 읽는다 */
-  assert.equal(todayRegionSentence(kr({ delta: "▼ 0.8%", tone: "down" })), "가나구 8월 아파트 평균이 8.5억, 전월보다 0.8% 내렸어요.");
-  assert.equal(todayRegionSentence(kr({ delta: "변동 미상", periodLabel: null })), "가나구 아파트 평균은 8.5억이에요.");
+  assert.equal(todayRegionSentence(kr({ delta: "▼ 0.8%", tone: "down" })), "가나구 8월 · 아파트 평균 8.5억 · 전월 대비 ▼0.8%");
+  assert.equal(todayRegionSentence(kr({ delta: "변동 미상", periodLabel: null })), "가나구 · 아파트 평균 8.5억");
 });
 
 import { briefingFromDeltas, briefingFromIndexRows } from "../../lib/newui/home-briefing.ts";
@@ -212,22 +212,22 @@ test("[1009·H 리뷰] 곁값 적용 — 월 집계 카드는 등락을 지수�
 test("[1009·H 리뷰] 오늘의 한 줄 — 거래 문장은 건수의 제 달·원천으로, 가격 원천·등락의 달을 적는다", () => {
   assert.equal(
     todayTradeSentence(kr({ name: "남양주", tradeLabel: "2,646건", tradesYm: "202607", tradesSource: "reb" })),
-    "남양주 7월 아파트 매매 거래는 2,646건이에요(한국부동산원 집계).",
+    "남양주 7월 · 아파트 매매 2,646건 · 한국부동산원 집계",
   );
   assert.equal(
     todayTradeSentence(kr({ name: "강남구", tradeLabel: "189건", tradesYm: "202607", tradesSource: "molit" })),
-    "강남구 7월 계약 아파트 매매 189건이 신고됐어요.",
+    "강남구 7월 계약 · 아파트 매매 189건 신고",
   );
   /* 달을 모르면 "최근" — 카드 기준월을 붙이지 않는다 */
-  assert.equal(todayTradeSentence(kr({ tradeLabel: "37건" })), "가나구 최근 아파트 매매 37건이 신고됐어요.");
+  assert.equal(todayTradeSentence(kr({ tradeLabel: "37건" })), "가나구 · 최근 아파트 매매 37건 신고");
   assert.equal(todayTradeSentence(kr({ tradeLabel: null })), null);
   assert.equal(
     todayRegionSentence(kr({ periodLabel: "7월", priceKind: "molit", changePct: 0.6, changeBasis: "index", changeYm: "202607" })),
-    "가나구 7월 아파트 실거래 평균은 8.5억, 시세 지수는 전월보다 0.6% 올랐어요.",
+    "가나구 7월 · 아파트 실거래 평균 8.5억 · 시세 지수 전월 대비 ▲0.6%",
   );
   /* 등락의 달이 가격의 달과 다르면 그 달을 적는다 */
   assert.equal(
     todayRegionSentence(kr({ periodLabel: "7월", priceKind: "molit", changePct: 0.6, changeBasis: "index", changeYm: "202608" })),
-    "가나구 7월 아파트 실거래 평균은 8.5억, 8월 시세 지수는 전월보다 0.6% 올랐어요.",
+    "가나구 7월 · 아파트 실거래 평균 8.5억 · 8월 시세 지수 전월 대비 ▲0.6%",
   );
 });

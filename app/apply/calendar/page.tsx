@@ -68,7 +68,7 @@ export default async function ApplyCalendarPage() {
           />
         ) : cal.state === "error" ? (
           <ErrorState
-            title="청약 일정을 불러오지 못했어요"
+            title="청약 일정 불러오기 실패"
             desc="잠시 후 다시 시도해 주세요."
             cause={cal.cause}
             action={{ label: "청약 센터로 이동", href: "/apply" }}
@@ -76,7 +76,7 @@ export default async function ApplyCalendarPage() {
         ) : cal.days.length === 0 ? (
           <EmptyState
             icon="calendar"
-            title="앞으로 5주 안에 잡힌 접수 일정이 없어요"
+            title="앞으로 5주 안에 잡힌 접수 일정 없음"
             desc="새 모집공고가 올라오면 이 캘린더에 실립니다."
             action={{ href: "/apply", label: "전체 공고 보기" }}
           />

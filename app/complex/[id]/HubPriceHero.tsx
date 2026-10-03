@@ -1,7 +1,7 @@
 import { Won } from "@/app/components/num/Won";
 import { Delta } from "@/app/components/num/Delta";
 import { ExplainLazy as Explain } from "./ExplainLazy";
-import { changeSentence, pctChange } from "@/lib/format/delta";
+import { changeLabel, pctChange } from "@/lib/format/delta";
 import { formatEokMan } from "@/lib/format/eok-man";
 import { dealDateLabel, floorLabel } from "@/lib/complex/deal-format";
 import { baseSince, type HubHeadline } from "@/lib/complex/hub-price";
@@ -60,7 +60,7 @@ export function HubPriceHero({
           {eyebrow}최근 실거래가
         </div>
         <p className="mt-1 t-section text-on-dark">
-          {txFailed ? "실거래를 불러오지 못했어요" : "아직 신고된 매매 실거래가 없어요"}
+          {txFailed ? "실거래 불러오기 실패" : "신고된 매매 실거래 없음"}
         </p>
         {/* [1015 · 규칙 D] 대시 잇기 없이 한 줄 */}
         <p className="mt-0.5 t-sub text-on-dark-muted">
@@ -110,8 +110,9 @@ export function HubPriceHero({
   const base = h.base;
   const pct = base ? pctChange(h.priceManwon, base.avgManwon) : null;
   const since = base ? baseSince(base) : "";
+  /* [1029 · 4] 낱말 꼴 — "25.01 거래 6건 평균 대비 ▲3억 2,800만(48%)" (예전 "…평균보다 3억 2,800만(48%) 올랐어요") */
   const sentence = base
-    ? changeSentence({ curr: h.priceManwon, base: base.avgManwon, since, unit: "manwon" })
+    ? changeLabel({ curr: h.priceManwon, base: base.avgManwon, since: since.replace(/보다$/, " 대비"), unit: "manwon" })
     : null;
   const what = h.basis === "band" ? h.bandLabel : null;
 

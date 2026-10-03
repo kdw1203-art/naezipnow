@@ -206,7 +206,7 @@ export function SearchClient() {
   const abortRef = useRef<AbortController | null>(null);
   const { query: settledQuery, compositionProps } = useSettledSearchQuery(q);
   /* 아직 굳지 않은 입력은 "아직 안 물어본 상태"다. 이걸 대기로 안 치면 치는
-     도중에 "검색 결과가 없어요"가 떴다 사라진다 — 확인한 적 없는 사실을
+     도중에 "검색 결과 없음"가 떴다 사라진다 — 확인한 적 없는 사실을
      화면에 쓰는 셈이다. */
   const busy = loading || (q.trim() !== "" && q.trim() !== settledQuery);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -825,7 +825,7 @@ export function SearchClient() {
       {hasQuery && !busy && !notice && failed.length > 0 && (
         <div className="mt-8 flex flex-col items-center gap-2 text-center">
           <div className="t-section text-ink">
-            {failed.join("·")} 검색 결과를 불러오지 못했어요
+            {failed.join("·")}검색 결과 불러오기 실패
           </div>
           <div className="t-sub text-text-3">잠시 후 다시 시도해 주세요.</div>
         </div>
@@ -838,7 +838,7 @@ export function SearchClient() {
               무엇을 바꿔 쳐야 하는지 말해 주지 않았다 — 결과 없음 82% 의 대부분이 띄어쓰기·괄호 차이였다. */}
           {filterMode ? (
             <>
-              <div className="break-words t-section text-ink">조건에 맞는 단지가 없어요</div>
+              <div className="break-words t-section text-ink">조건에 맞는 단지 없음</div>
               <div className="break-words t-sub text-text-3">조건 칩을 줄이면 결과가 나올 수 있어요</div>
             </>
           ) : (

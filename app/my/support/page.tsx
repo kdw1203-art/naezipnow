@@ -36,7 +36,7 @@ export default async function MySupportPage() {
       <PageShell breadcrumb="마이 › 내 문의">
         <GuestGate
           /* [1028 · 제안 5] 권유 제목·설명 → "로그인이 필요해요" + 이 화면에 있는 것 명사 한 줄 */
-          title="로그인이 필요해요"
+          title="로그인 필요"
           desc="1:1 문의 내역 · 운영진 답변"
           pathname="/my/support"
         >
@@ -83,7 +83,7 @@ export default async function MySupportPage() {
               <span className="t-section text-ink">
                 {tickets.length > 0
                   ? `문의 ${tickets.length}건 · ${TICKET_STATUS_LABEL.open} ${waiting} · ${TICKET_STATUS_LABEL.answered} ${answered}`
-                  : "남긴 문의가 없어요"}
+                  : "남긴 문의 없음"}
               </span>
               <span className="t-sub text-text-2">
                 {SUPPORT_HOURS} · {RESPONSE_TIME} · 답변은 여기와 이메일({email})로

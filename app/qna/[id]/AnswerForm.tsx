@@ -42,14 +42,14 @@ export function AnswerForm({
       if (res.status === 401) {
         promptSignup({
           action: "qna_answer",
-          title: "답변하려면 로그인이 필요해요",
+          title: "로그인 필요 · 답변",
           benefit: "로그인하면 답변이 계정에 남아 신뢰·신고 대응이 가능해요.",
         });
         return;
       }
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(data?.error ?? "답변 등록에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data?.error ?? "답변 등록 실패 · 잠시 후 다시");
         return;
       }
 

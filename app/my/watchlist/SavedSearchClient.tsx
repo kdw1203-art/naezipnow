@@ -31,7 +31,7 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
   async function refresh(): Promise<void> {
     try {
       const res = await fetch("/api/saved-searches", { cache: "no-store" });
-      if (!res.ok) throw new Error("목록을 불러오지 못했어요.");
+      if (!res.ok) throw new Error("목록 불러오기 실패");
       const data = (await res.json()) as { items?: SavedSearch[] };
       setItems(Array.isArray(data.items) ? data.items : []);
     } catch {
@@ -61,7 +61,7 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data.error ?? "저장에 실패했어요.");
+        throw new Error(data.error ?? "저장 실패");
       }
       setLabel("");
       setQuery("");
@@ -69,7 +69,7 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
       await refresh();
       showToast("검색을 저장했어요");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "저장에 실패했어요.");
+      setError(err instanceof Error ? err.message : "저장 실패");
     } finally {
       setCreating(false);
     }
@@ -86,12 +86,12 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data.error ?? "변경에 실패했어요.");
+        throw new Error(data.error ?? "변경 실패");
       }
       await refresh();
       showToast(item.alertEnabled ? "알림을 껐어요" : "알림을 켰어요");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "변경에 실패했어요.");
+      setError(err instanceof Error ? err.message : "변경 실패");
     } finally {
       setBusyId(null);
     }
@@ -106,7 +106,7 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data.error ?? "삭제에 실패했어요.");
+        throw new Error(data.error ?? "삭제 실패");
       }
       await refresh();
       /* [961] 되돌리기 토스트 — 파괴적 동작에 확인 모달 대신 흐름을 끊지 않고 되돌릴 길을 준다.
@@ -138,7 +138,7 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
         },
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "삭제에 실패했어요.");
+      setError(err instanceof Error ? err.message : "삭제 실패");
     } finally {
       setBusyId(null);
     }
@@ -219,7 +219,7 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
           <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-soft text-primary">
             <Icon name="search" size={20} />
           </span>
-          <p className="t-body font-bold text-ink">아직 저장한 검색이 없어요.</p>
+          <p className="t-body font-bold text-ink">저장한 검색 없음</p>
           <p className="t-sub text-text-3">
             위에서 관심 조건을 저장하면 여기에 모아 볼 수 있어요.
           </p>

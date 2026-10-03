@@ -121,7 +121,7 @@ export function ComplexGlance(p: ComplexGlanceProps) {
     setBusy(false);
     if (now.id !== askedFor) return;
     if (!seed) {
-      showToast("지난 노트를 불러오지 못했어요");
+      showToast("지난 노트 불러오기 실패");
       return;
     }
     const before = now.form;

@@ -166,7 +166,7 @@ export function NotePreviewRail(p: NotePreviewRailProps) {
         )}
         {p.needLogin && (
           <p className="t-sub text-primary">
-            저장에는 로그인이 필요해요. 작성한 내용은 유지돼요.{" "}
+            저장 · 로그인 필요 · 작성 내용 유지{" "}
             <Link href={p.loginHref} className="inline-block py-[5px] font-bold underline underline-offset-2">
               로그인하기 ›
             </Link>

@@ -540,7 +540,7 @@ export default async function NoteDetailPage({
     return (
       <PageShell breadcrumb="임장노트">
         <ErrorState
-          title="노트를 불러오지 못했어요"
+          title="노트 불러오기 실패"
           desc="잠시 후 다시 시도해 주세요."
           cause={loaded.message}
           action={{ label: "임장노트 목록", href: "/notes" }}
@@ -1554,7 +1554,7 @@ export default async function NoteDetailPage({
             /* 조회 실패를 "댓글 없음" 으로 그리지 않는다. [1023 · 임장노트 ②] 같은 자리에 다시 시도(서버 조회를 다시 돌린다) */
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p role="alert" className="t-body text-text-2">
-                댓글을 불러오지 못했어요.
+댓글 불러오기 실패
               </p>
               <CommentsRetry />
             </div>

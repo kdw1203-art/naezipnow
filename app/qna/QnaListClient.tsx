@@ -355,9 +355,9 @@ export function QnaListClient({
               /* [1012] 규칙 5·6 — "남겨보세요" 권유 대신 사실(모수 100건·조건) + 동사+대상 CTA */
               title={
                 f.q
-                  ? `최근 질문 ${all.length}건에 ‘${f.q}’ 질문이 없어요`
+                  ? `최근 질문 ${all.length}건에 ‘${f.q}’ 질문 없음`
                   : all.length === 0
-                    ? "단지 Q&A에 등록된 질문이 아직 없어요"
+                    ? "단지 Q&A에 등록된 질문 없음"
                     : `이 조건의 질문이 0건이에요 · 전체 ${all.length}건`
               }
               desc={

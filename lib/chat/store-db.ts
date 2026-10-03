@@ -278,7 +278,7 @@ export async function listChatRoomsForUser(
   }
 
   /* 아래 다섯 조회 중 하나라도 실패하면 목록 전체를 던진다. 일부만 읽고 그리면
-     "대화방이 없어요"(멤버 조회 실패)나 안 읽은 수가 0 인 방 목록이 나오는데,
+     "대화방 없음"(멤버 조회 실패)나 안 읽은 수가 0 인 방 목록이 나오는데,
      둘 다 사용자가 사실로 믿고 넘어가는 화면이다. */
   const { data: members, error: memberError } = await sb
     .from("chat_room_members")

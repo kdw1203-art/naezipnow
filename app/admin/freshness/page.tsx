@@ -158,7 +158,7 @@ export default async function AdminFreshnessPage() {
 
       <p className="text-[12px] leading-[1.7] text-text-3">
         빨간 소스를 발견하면: 갱신 경로 열의 크론·워크플로를 먼저 확인하고, 키 미설정
-        (정비사업 SEOUL_OPENAPI_KEY 등)이면 키 발급이 해법입니다. 이 표는 요청 시점
+        (서울 조서 SEOUL_DATA_API_KEY 등)이면 키 발급이 해법입니다. 이 표는 요청 시점
         실측이라 새로고침이 곧 재검사예요.
       </p>
     </div>

@@ -20,7 +20,7 @@ export function LogoutClient() {
     <main className="mx-auto flex min-h-screen w-full max-w-[440px] flex-col items-center justify-center gap-3 px-7">
       <Logo size={34} />
       <p role="status" className="t-body font-bold text-text-1">
-        {failed ? "로그아웃에 실패했어요. 다시 시도해 주세요." : "로그아웃하는 중…"}
+        {failed ? "로그아웃 실패 · 다시 시도해 주세요." : "로그아웃하는 중…"}
       </p>
       {failed && (
         <button

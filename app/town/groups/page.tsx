@@ -94,7 +94,7 @@ const MEETINGS_FETCH_CAP = 200;
 export default async function TownGroupsPage() {
   let meetings: UserMeeting[] = [];
   /* 목록을 **못 읽은 것**과 목록이 **비어 있는 것**은 다른 사실이다.
-     실패를 빈 배열로 삼키면 "모임이 없어요"가 ISR 캐시에 눌러앉는다.
+     실패를 빈 배열로 삼키면 "모임 없음"가 ISR 캐시에 눌러앉는다.
      (페이지 자체는 200 — 목록을 못 읽었다고 URL 이 사라진 건 아니다.) */
   let loadFailed = false;
   try {
@@ -135,7 +135,7 @@ export default async function TownGroupsPage() {
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
             <Icon name="warning" size={22} />
           </div>
-          <p className="t-body font-bold text-ink">모임 목록을 불러오지 못했어요</p>
+          <p className="t-body font-bold text-ink">모임 목록 불러오기 실패</p>
           {/* [970 · C-20] 합니다체 → 해요체 통일 */}
           <p className="max-w-xs t-sub leading-[1.6] text-text-3">
             잠시 후 다시 시도해 주세요.

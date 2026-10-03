@@ -67,10 +67,10 @@ export function NoteAudioTools({
       const json: { text?: string; error?: string } = await res.json().catch(() => ({}));
       setTranscripts((p) => ({
         ...p,
-        [url]: res.ok && json.text ? json.text : "전사에 실패했어요. 잠시 후 다시 시도해 주세요.",
+        [url]: res.ok && json.text ? json.text : "전사 실패 · 잠시 후 다시",
       }));
     } catch {
-      setTranscripts((p) => ({ ...p, [url]: "전사에 실패했어요. 네트워크를 확인해 주세요." }));
+      setTranscripts((p) => ({ ...p, [url]: "전사 실패 · 네트워크를 확인해 주세요." }));
     } finally {
       setBusyUrl(null);
     }

@@ -86,7 +86,7 @@ function pickPublicAiPreview(notes: InspectionNote[]): {
 export const metadata = buildPageMetadata({
   title: "분석 도구",
   description:
-    "단지 분석, 지역 시세, 내 임장노트 분석 도구를 한곳에 모았습니다. 국토교통부 실거래 기반이며, 예시 수치로 계산하는 도구는 '예시 계산'으로 따로 표시합니다.",
+    "AI 분석 · 단지 종합 진단 · 시세 예측 · 매수 타이밍 · 임장 동선 · 지역 시세 · 임장노트 분석 · 국토교통부 실거래 기준 · 예시 수치 도구는 '예시 계산' 표시", /* [1029 · 20] 낱말 꼴 */
   path: "/analysis",
 });
 

@@ -209,7 +209,7 @@ export default async function MyListingsPage() {
         <EmptyState
           icon="building2"
           className="rise-in"
-          title="아직 등록한 매물이 없어요"
+          title="등록한 매물 없음"
           desc="승인된 매물은 실매물 목록에 실리고 포인트가 지급돼요."
           action={{ label: "첫 매물 등록하기", href: "/listings/new" }}
         />

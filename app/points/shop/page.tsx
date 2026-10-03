@@ -29,7 +29,7 @@ function GuestView() {
         <div className="text-2xl"><Icon name="shopping-bag" size={24} /></div>
         {/* [1028 · 제안 5] 권유 제목("교환하세요")·설명 부제 → "~하려면 로그인이 필요해요" + 교환 품목 명사 한 줄(아래 목록과 같은 품목) */}
         <div className="mt-1 text-[15px] font-bold text-white">
-          교환하려면 로그인이 필요해요
+          로그인 필요 · 교환
         </div>
         <div className="text-xs leading-[1.6] text-ai-muted">
           매물 상단 노출 · 동네이야기 추천글 · 닉네임 효과
@@ -98,7 +98,7 @@ export default async function PointsShopPage() {
         <div className="mx-auto w-full max-w-[720px]">
           <ErrorState
             /* [1028 · 제안 3] 오류 문구 표준 — 실패한 것(보유 포인트 조회)만 말한다 */
-            title="보유 포인트를 불러오지 못했어요"
+            title="보유 포인트 불러오기 실패"
             desc="잠시 후 다시 시도해 주세요."
             cause={loaded.cause}
             action={{ label: "포인트 안내로 이동", href: "/points" }}

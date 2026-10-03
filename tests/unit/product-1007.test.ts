@@ -109,8 +109,8 @@ test("홈 — HomeTownBlock 이 .story-card 재질 + 흰 뉴스 카드(원문 �
   assert.match(block, /storyHref\(p\.id\)/);
   assert.match(block, /newsHref\(n\.id\)/);
   /* 0건·실패를 다르게 말한다 */
-  assert.match(block, /이웃 글을 불러오지 못했어요/);
-  assert.match(block, /아직 이웃이 쓴 이야기가 없어요/);
+  assert.match(block, /이웃 글 불러오기 실패/);
+  assert.match(block, /이웃이 쓴 이야기 없음/);
   const page = read("app/page.tsx");
   assert.match(page, /<HomeTownBlock stories=\{data\.stories\} news=\{data\.news\} failed=\{failed\.town\}/);
   const data = read("lib/newui/home-data.ts");

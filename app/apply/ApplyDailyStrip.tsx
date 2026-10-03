@@ -63,7 +63,7 @@ export async function ApplyDailyStrip() {
         </div>
         {upcoming.length === 0 ? (
           <p className="t-sub text-text-3">
-            {ok ? "앞으로 7일 안에 접수 시작·마감 공고가 없어요." : "청약 일정을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."}
+            {ok ? "7일 내 접수 시작·마감 공고 없음" : "청약 일정 불러오기 실패 · 잠시 후 다시"}
           </p>
         ) : (
           <ul className="lq-panel flex flex-col" data-tone="sand">
@@ -90,7 +90,7 @@ export async function ApplyDailyStrip() {
         </div>
         {comp.length === 0 ? (
           /* [1011] "첫 적재 뒤 표시돼요" 를 걷었다(소유자 지시) — 적재는 내부 말이다 */
-          <p className="t-sub text-text-3">발표된 경쟁률이 아직 없어요.</p>
+          <p className="t-sub text-text-3">발표된 경쟁률 없음</p>
         ) : (
           <ul className="lq-panel flex flex-col" data-tone="sand">
             {comp.map((c) => (

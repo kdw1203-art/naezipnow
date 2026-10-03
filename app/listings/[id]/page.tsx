@@ -271,7 +271,7 @@ export default async function ListingDetailPage({
             </div>
           ) : (
             <div className="flex h-[200px] w-full items-center justify-center rounded-2xl bg-[rgba(0,0,0,.03)] text-[13px] text-text-3">
-              등록된 사진이 없어요
+등록된 사진 없음
             </div>
           )}
 
@@ -494,7 +494,7 @@ export default async function ListingDetailPage({
                 <div className="text-[13px] font-bold text-ink break-all">{listing.contact}</div>
               ) : (
                 <div className="text-[13px] text-text-3">
-                  등록된 연락처가 없어요. 등록자에게 직접 문의가 어려울 수 있어요.
+등록된 연락처 없음 · 등록자에게 직접 문의가 어려울 수 있어요.
                 </div>
               )
             ) : (

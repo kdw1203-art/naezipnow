@@ -78,7 +78,7 @@ export function RegionMarketSummary({ regions }: { regions: string[] }) {
         return;
       }
       if (!res.ok) {
-        setState({ kind: "error", message: data?.error ?? "요약 생성에 실패했어요. 잠시 후 다시 시도해 주세요." });
+        setState({ kind: "error", message: data?.error ?? "요약 생성 실패 · 잠시 후 다시" });
         return;
       }
       if (!data || !Array.isArray(data.items) || data.items.length === 0) {
@@ -128,7 +128,7 @@ export function RegionMarketSummary({ regions }: { regions: string[] }) {
       ) : state.kind === "loading" ? (
         <div className="t-sub text-text-3">지역 시세를 불러오는 중…</div>
       ) : state.kind === "empty" ? (
-        <div className="t-sub text-text-3">담은 후보 지역의 시세 통계가 아직 없어요.</div>
+        <div className="t-sub text-text-3">담은 후보 지역의 시세 통계 없음</div>
       ) : state.kind === "limited" || state.kind === "error" ? (
         <div className="rounded-lg bg-danger-soft px-3 py-2.5 t-sub font-bold text-danger">{state.message}</div>
       ) : (

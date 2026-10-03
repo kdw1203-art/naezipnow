@@ -165,7 +165,7 @@ export async function createOwnerVerificationRequest(input: {
 
   if (error || !data) {
     logger.warn("[owner-verification] insert failed", error?.message ?? "no row");
-    return { ok: false, error: "신청 저장에 실패했어요. 잠시 후 다시 시도해 주세요." };
+    return { ok: false, error: "신청 저장 실패 · 잠시 후 다시" };
   }
   return { ok: true, id: String((data as { id: string }).id) };
 }
@@ -261,7 +261,7 @@ export async function reviewOwnerVerification(input: {
     .eq("status", "pending");
   if (updErr) {
     logger.warn("[owner-verification] update failed", updErr.message);
-    return { ok: false, error: "심사 저장에 실패했어요." };
+    return { ok: false, error: "심사 저장 실패" };
   }
 
   const listingId = current.listing_id ? String(current.listing_id) : null;
@@ -275,7 +275,7 @@ export async function reviewOwnerVerification(input: {
       .eq("id", listingId);
     if (flagErr) {
       logger.warn("[owner-verification] listing flag failed", flagErr.message);
-      return { ok: false, error: "매물 인증 표시에 실패했어요." };
+      return { ok: false, error: "매물 인증 표시 실패" };
     }
     if (applicant) {
       // refId=listingId → 재승인 시 중복 지급 방지(멱등)

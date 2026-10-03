@@ -42,7 +42,7 @@ export const metadata: Metadata = {
 export default async function ListingsPage() {
   /* listApprovedListings 는 조회 실패를 던진다. 여기서 잡아 ErrorState 를 그리는
      이유는, 그냥 올려 보내면 Next 의 일반 오류 화면이 떠서 필터·등록 버튼까지
-     사라지기 때문이다. "매물이 없어요"라고 말하지 않는 것이 핵심이고, 화면은
+     사라지기 때문이다. "매물 없음"라고 말하지 않는 것이 핵심이고, 화면은
      남겨 둔 채 "지금 못 읽었다"만 정확히 알린다. */
   let items: Awaited<ReturnType<typeof listApprovedListings>> | null = null;
   try {
@@ -74,7 +74,7 @@ export default async function ListingsPage() {
       {items === null ? (
         <ErrorState
           className="rise-in-1"
-          title="매물 목록을 불러오지 못했어요"
+          title="매물 목록 불러오기 실패"
           desc="잠시 후 다시 시도해 주세요."
           action={{ href: "/listings/new", label: "매물 등록하기" }}
         />

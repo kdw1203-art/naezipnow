@@ -130,17 +130,17 @@ export function AgentChat({ models }: { models: AgentModelChoice[] }) {
         if (res.status === 401) {
           promptSignup({
             action: "agent_chat",
-            title: "AI 에이전트는 로그인 후 이용해요",
+            title: "로그인 필요 · AI 에이전트",
             benefit: "로그인하면 내 임장노트·관심 단지를 바탕으로 답할 수 있어요.",
           });
-          setError("로그인이 필요해요.");
+          setError("로그인 필요");
           return;
         }
         if (handleUpgradeResponse(res.status, data)) {
           setError(data?.error ?? "이번 달 에이전트 한도를 모두 썼어요.");
           return;
         }
-        setError(data?.error ?? "에이전트 응답에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data?.error ?? "에이전트 응답 실패 · 잠시 후 다시");
         return;
       }
       setMessages((cur) => [

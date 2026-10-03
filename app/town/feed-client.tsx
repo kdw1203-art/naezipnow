@@ -552,9 +552,9 @@ export function TownFeed({
       /* 한쪽 소스가 실패한 장은 "마지막"이 아니라 "일부를 못 받았다"고 말하고,
          버튼을 남겨 다시 누를 수 있게 한다 */
       setMore(j.hasMore || j.loadFailed);
-      if (j.loadFailed) setMoreError("일부 글을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
+      if (j.loadFailed) setMoreError("일부 글 불러오기 실패 · 잠시 후 다시");
     } catch {
-      setMoreError("더 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
+      setMoreError("더 불러오기 실패 · 잠시 후 다시");
     } finally {
       setMoreLoading(false);
     }
@@ -763,15 +763,15 @@ export function TownFeed({
               "지금까지 받은 것에는 없다"고 말하고 더 보기로 잇는다. */}
           <div className="t-section text-ink">
             {failed
-              ? "글을 불러오지 못했어요"
+              ? "글 불러오기 실패"
               : kind === "post" && !onlyMine && !more
                 ? /* [1006] 이야기 탭 0건 — 지금 운영 실측(사람 글 0건)이 그대로 보이는 자리다. 지어내지 않는다 */
-                  "아직 이웃 글이 없어요"
+                  "이웃 글 없음"
                 : more
-                  ? "지금까지 받은 글에는 이 조건이 없어요"
+                  ? "지금까지 받은 글에는 이 조건 없음"
                   : onlyMine
-                    ? "내 관심지역 글이 아직 없어요"
-                    : "이 조건의 글이 아직 없어요"}
+                    ? "내 관심지역 글 없음"
+                    : "이 조건의 글 없음"}
           </div>
           {/* [1023 · 동네 ③] 설명문 꼬리("…남기면 바로 보여요"·"…가장 먼저 노출돼요") → 사실 한 줄.
               무엇을 셌는지(유형 · 관심지역)와 0건, 더 받을 장이 있으면 지금 손에 든 수. */}

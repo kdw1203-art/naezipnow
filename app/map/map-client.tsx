@@ -1672,7 +1672,7 @@ export function MapClient({
         .then((r) => (r.ok ? r.json() : null))
         .then((j) => {
           if (!j) {
-            setRouteError("경로를 불러오지 못했어요");
+            setRouteError("경로 불러오기 실패");
             setRouteResult(null);
             return;
           }
@@ -1698,7 +1698,7 @@ export function MapClient({
         })
         .catch((e: unknown) => {
           if (e instanceof DOMException && e.name === "AbortError") return;
-          setRouteError("경로를 불러오지 못했어요");
+          setRouteError("경로 불러오기 실패");
         })
         .finally(() => setRouteLoading(false));
     }, 280);
@@ -2020,8 +2020,8 @@ export function MapClient({
             step={10}
             note={
               facets.total > 0 && facets.households.n < facets.total
-                ? `화면 안 단지의 ${Math.round((facets.households.n / facets.total) * 100)}%만 세대수가 있어요. K-apt 대장이 없는 소규모 단지는 비어 있어요.`
-                : "세대수는 K-apt 대장이 있는 단지만 나와요. 대장이 없는 소규모 단지는 비어 있어요."
+                ? `세대수 있음 · 화면 안 단지의 ${Math.round((facets.households.n / facets.total) * 100)}% · K-apt 대장 없는 소규모 단지 공란`
+                : "세대수 · K-apt 대장 단지만 · 대장 없는 소규모 단지 공란"
             }
           />
         </>
@@ -2087,7 +2087,7 @@ export function MapClient({
             <>
               {" "}
               <b className="text-text-2">
-                이 화면에는 승인된 등록 매물이 아직 없어요.
+이 화면에는 승인된 등록 매물 없음
               </b>
             </>
           )}
@@ -2309,7 +2309,7 @@ export function MapClient({
               {/* 받아 오기 전·실패는 숫자로 말하지 않는다 — "0곳"은 다 받은 뒤에만 사실이다 */}
               <span className="t-caption tabular-nums text-text-3" role="status">
                 {redevFailed
-                  ? "불러오지 못했어요"
+                  ? "불러오기 실패"
                   : !redevLoaded
                     ? "불러오는 중"
                     : redevFilterActive
@@ -2433,7 +2433,7 @@ export function MapClient({
             </button>
           ))}
           {txType === "rent" && (
-            <span className="t-caption text-text-3">전세 모드에선 구 표시가 숨어요</span>
+            <span className="t-caption text-text-3">전세 모드 · 구 표시 숨김</span>
           )}
         </div>
         <div className="t-caption text-text-3">
@@ -2978,7 +2978,7 @@ export function MapClient({
         setCommuteError(null);
       })
       .catch(() => {
-        if (!controller.signal.aborted) setCommuteError("소요시간을 불러오지 못했어요.");
+        if (!controller.signal.aborted) setCommuteError("소요시간 불러오기 실패");
       })
       .finally(() => {
         if (!controller.signal.aborted) setCommuteLoading(false);
@@ -3962,7 +3962,7 @@ export function MapClient({
   const gradientFallback = (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 overflow-hidden bg-bg px-8 text-center">
       <Icon name="map" size={34} />
-      <div className="t-section text-ink">지도를 불러오지 못했어요</div>
+      <div className="t-section text-ink">지도 불러오기 실패</div>
       <p className="max-w-[300px] t-sub text-text-2">단지 목록은 그대로 볼 수 있어요.</p>
       {/* 막다른 길로 두지 않는다 — 지도 없이도 갈 수 있는 곳을 준다 */}
       <div className="flex flex-wrap items-center justify-center gap-1.5">
@@ -4012,8 +4012,8 @@ export function MapClient({
       key: "cluster",
       text:
         clusterFetchStatus === "error"
-          ? "단지 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
-          : "이 화면에 표시할 단지가 아직 없어요 · 이 지역 좌표 준비 중",
+          ? "단지 정보 불러오기 실패 · 잠시 후 다시"
+          : "이 화면 표시 단지 없음 · 이 지역 좌표 준비 중",
       retry:
         clusterFetchStatus === "error"
           ? () => {
@@ -4032,8 +4032,8 @@ export function MapClient({
       key: "truncated",
       text:
         clusterMode === "points"
-          ? "거래량 상위 300개 단지만 표시 중이에요. 확대하면 나머지도 보여요."
-          : "화면이 넓어 단지 수가 일부만 집계됐어요. 확대하면 정확해져요.",
+          ? "거래량 상위 300개 단지만 표시 · 확대 시 전체"
+          : "넓은 화면 · 단지 수 일부 집계 · 확대 시 정확",
     });
   }
   /* 정비사업 조회 실패 — 마커가 없는 것과 구분해서 말한다. 이걸 안 그리면
@@ -4043,7 +4043,7 @@ export function MapClient({
   if (showRedevelopment && redevFailed) {
     mapNotices.push({
       key: "redev-failed",
-      text: "정비사업을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
+      text: "정비사업 불러오기 실패 · 잠시 후 다시",
       retry: () => retryLayer("redev"),
     });
   }
@@ -4052,7 +4052,7 @@ export function MapClient({
   if (showRedevelopment && redevCountsReady && redevFilterActive && redevItems.length > 0 && redevShown.length === 0) {
     mapNotices.push({
       key: "redev-filtered-out",
-      text: `정비사업 조건에 맞는 구역이 이 화면에 없어요 · 조건을 풀면 ${redevItems.length.toLocaleString("ko-KR")}곳`,
+      text: `이 화면 · 조건에 맞는 정비사업 구역 없음 · 조건 해제 시 ${redevItems.length.toLocaleString("ko-KR")}곳`,
       retry: () => {
         setRedevGroups(new Set());
         setRedevStages(new Set());
@@ -4062,28 +4062,28 @@ export function MapClient({
   }
   /* [#130] 내 노트 — 로그인·실패·0건을 구분해 말한다 */
   if (showMyNotes && myNotesState === "unauth" && myNotesManualRef.current) {
-    mapNotices.push({ key: "mynotes-auth", text: "내 노트 레이어는 로그인 후 볼 수 있어요" });
+    mapNotices.push({ key: "mynotes-auth", text: "내 노트 레이어 · 로그인 필요" });
   } else if (showMyNotes && myNotesState === "failed") {
     mapNotices.push({
       key: "mynotes-failed",
-      text: "내 노트를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
+      text: "내 노트 불러오기 실패 · 잠시 후 다시",
       retry: () => retryLayer("mynotes"),
     });
   } else if (showMyNotes && myNotesState === "idle" && myNotesLoaded && myNotes.length === 0 && myNotesManualRef.current) {
-    mapNotices.push({ key: "mynotes-empty", text: "좌표가 담긴 내 노트가 아직 없어요. 단지를 검색해 고른 노트가 지도에 표시돼요." });
+    mapNotices.push({ key: "mynotes-empty", text: "좌표 있는 내 노트 없음 · 단지 검색으로 고른 노트만 지도 표시" });
   }
 
   /* [1023 · 지도] 관심 단지 — 로그인·실패·0건·좌표 못 붙인 수를 구분해 말한다(내 노트와 같은 규칙) */
   if (showWatchlist && watchState === "unauth" && watchManualRef.current) {
-    mapNotices.push({ key: "watch-auth", text: "관심 단지 레이어는 로그인 후 볼 수 있어요" });
+    mapNotices.push({ key: "watch-auth", text: "관심 단지 레이어 · 로그인 필요" });
   } else if (showWatchlist && watchState === "failed") {
     mapNotices.push({
       key: "watch-failed",
-      text: "관심 단지를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
+      text: "관심 단지 불러오기 실패 · 잠시 후 다시",
       retry: () => retryLayer("watch"),
     });
   } else if (showWatchlist && watchState === "idle" && watchLoaded && watchItems.length === 0 && watchManualRef.current) {
-    mapNotices.push({ key: "watch-empty", text: "관심 단지가 아직 없어요" });
+    mapNotices.push({ key: "watch-empty", text: "관심 단지 없음" });
   } else if (showWatchlist && watchLoaded && watchPlacement.unplaced > 0) {
     mapNotices.push({
       key: "watch-unplaced",
@@ -4095,7 +4095,7 @@ export function MapClient({
   if (showRentShare && rentShareFailed) {
     mapNotices.push({
       key: "rentshare-failed",
-      text: "월세 비중을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
+      text: "월세 비중 불러오기 실패 · 잠시 후 다시",
       retry: () => retryLayer("rentshare"),
     });
   }
@@ -4104,13 +4104,13 @@ export function MapClient({
   if (showAuctions && auctionsFailed) {
     mapNotices.push({
       key: "auctions-failed",
-      text: "공매 물건을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
+      text: "공매 물건 불러오기 실패 · 잠시 후 다시",
       retry: () => retryLayer("auctions"),
     });
   } else if (showAuctions && auctionsLoaded && auctionItems.length === 0) {
     mapNotices.push({
       key: "auctions-empty",
-      text: "지금 진행 중인 공매 물건이 지도 권역에 없어요",
+      text: "이 권역 · 진행 중 공매 없음",
     });
   }
 
@@ -4119,14 +4119,14 @@ export function MapClient({
   if ((showSchools || showStations) && poiFailed) {
     mapNotices.push({
       key: "poi-failed",
-      text: "학교·지하철 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
+      text: "학교·지하철 불러오기 실패 · 잠시 후 다시",
       retry: () => retryLayer("poi"),
     });
   } else if ((showSchools || showStations) && poiData) {
     if (poiData.tooWide) {
       mapNotices.push({
         key: "poi-zoom",
-        text: "학교·지하철은 지도를 더 확대하면 표시돼요",
+        text: "학교·지하철 · 확대 시 표시",
       });
     } else if (
       (showSchools && !poiData.schoolsReady) ||
@@ -4136,7 +4136,7 @@ export function MapClient({
         key: "poi-not-ready",
         /* [1011] "— 공공데이터 활용신청 승인 후 자동으로 채워집니다" 를 걷었다(소유자 지시) —
            활용신청·승인은 운영 쪽 사정이고, 방문자가 알아야 할 사실은 "아직 없다" 하나다. */
-        text: "학교·지하철 데이터가 아직 준비 중이에요",
+        text: "학교·지하철 · 준비 중",
       });
     }
   }
@@ -4145,12 +4145,12 @@ export function MapClient({
   if (showSupply && supplyFailed) {
     mapNotices.push({
       key: "supply-failed",
-      text: "입주 예정 물량을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
+      text: "입주 예정 물량 불러오기 실패 · 잠시 후 다시",
       retry: () => retryLayer("supply"),
     });
   }
   if (geoApplied) {
-    mapNotices.push({ key: "geo", text: "현재 위치 기준으로 지도를 맞췄어요" });
+    mapNotices.push({ key: "geo", text: "현재 위치 기준" });
   }
 
   /* 매물 레이어 안내(실패 / 빈 인벤토리)는 버튼이 달려 있어 같은 열에 카드로
@@ -4357,7 +4357,7 @@ export function MapClient({
 
           {listingNoticeKind === "error" && (
             <div className="glass pointer-events-auto max-w-full rounded-xl px-3.5 py-2.5">
-              <div className="t-sub font-bold text-ink">매물을 불러오지 못했어요</div>
+              <div className="t-sub font-bold text-ink">매물 불러오기 실패</div>
               <div className="mt-0.5 t-sub text-text-3">잠시 후 다시 시도해 주세요. 지도를 움직이면 다시 불러와요.</div>
             </div>
           )}
@@ -4366,8 +4366,8 @@ export function MapClient({
             <div className="glass pointer-events-auto max-w-full rounded-xl px-3.5 py-2.5">
               <div className="t-sub font-bold text-ink">
                 {listingFilterNarrowed
-                  ? "조건에 맞는 등록 매물이 없어요"
-                  : "이 화면에 등록 매물이 아직 없어요"}
+                  ? "조건에 맞는 등록 매물 없음"
+                  : "이 화면에 등록 매물 없음"}
               </div>
               <div className="mt-0.5 t-sub text-text-3">
                 {/* [1015 · 규칙 D] 빈 화면 한 줄 */}
@@ -4882,7 +4882,7 @@ export function MapClient({
           {popularFailed && (
             <div className="mx-3 mb-2 rounded-lg border border-line bg-surface px-3.5 py-3">
               <div className="t-sub font-bold text-ink">
-                인기 단지를 불러오지 못했어요
+인기 단지 불러오기 실패
               </div>
               {/* [1028] "지도는 그대로 쓸 수 있어요" 꼬리를 뺐다 — 지도까지 못 불러온 날엔 바로 옆 "지도를 불러오지 못했어요"와 어긋나고,
                   평소엔 눈앞에 보이는 것을 되풀이하는 말이다 */}
@@ -4894,7 +4894,7 @@ export function MapClient({
               {/* [970 · B-38] 실패한 건 지도 마커용 목록이다 — 바로 아래 인기 단지는 멀쩡히
                   나오는데 "단지 목록을 못 불러왔다"고 하면 화면이 스스로를 부정한다 */}
               <div className="t-sub font-bold text-ink">
-                지도에 표시할 단지를 불러오지 못했어요
+지도에 표시할 단지 불러오기 실패
               </div>
               <p className="mt-1 t-sub text-text-3">잠시 후 다시 시도해 주세요.</p>
             </div>
@@ -4902,7 +4902,7 @@ export function MapClient({
           {!danjiLoadFailed && regionMarkersLoadFailed && (
             <div className="mx-3 mb-2 rounded-lg border border-line bg-surface px-3.5 py-3">
               <div className="t-sub font-bold text-ink">
-                시·군·구별 평균을 불러오지 못했어요
+시·군·구별 평균 불러오기 실패
               </div>
               <p className="mt-1 t-sub text-text-3">잠시 후 다시 시도해 주세요.</p>
             </div>
@@ -4914,7 +4914,7 @@ export function MapClient({
           )}
           {!danjiLoadFailed && (rangeActive || commuteActive) && filteredDanji.length === 0 && (
             <div className="flex flex-col items-center gap-2 px-5 py-6 text-center">
-              <div className="t-sub text-text-2">조건에 맞는 단지가 없어요.</div>
+              <div className="t-sub text-text-2">조건에 맞는 단지 없음</div>
               <button
                 type="button"
                 onClick={resetFilters}
@@ -4932,7 +4932,7 @@ export function MapClient({
             )}
             {!popularFailed && !popularLoading && popular.length === 0 && (
               <div className="px-2 py-6 text-center t-sub text-text-3">
-                이 영역에는 실거래가 기록된 단지가 없어요.
+이 영역에는 실거래가 기록된 단지 없음
               </div>
             )}
             {/* 목록이 채워지기 전에는 빈 칸이었다 — 결과가 통째로 튀어나오며
@@ -5025,9 +5025,9 @@ export function MapClient({
                   라고 안내했다 — 수집이 안 된 것과 못 읽은 것은 전혀 다른 사건이다. */}
               <div className="t-sub text-text-2">
                 {danjiLoadFailed
-                  ? "단지 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
+                  ? "단지 목록 불러오기 실패 · 잠시 후 다시"
                   : rangeActive || commuteActive
-                    ? "조건에 맞는 단지가 없어요."
+                    ? "조건에 맞는 단지 없음"
                     : "이 지역 단지 목록을 준비 중이에요."}
               </div>
               {!danjiLoadFailed && (rangeActive || commuteActive) && (
@@ -5274,7 +5274,7 @@ export function MapClient({
                     남의 매물을 없다고 말하는 셈이 된다. */}
                 {complexListingsStatus === "error" && (
                   <div className="card rounded-lg px-[15px] py-6 text-center">
-                    <div className="t-body font-bold text-ink">매물을 불러오지 못했어요</div>
+                    <div className="t-body font-bold text-ink">매물 불러오기 실패</div>
                     <div className="mt-1 t-sub text-text-3">
                       잠시 후 다시 시도해 주세요.
                     </div>
@@ -5312,7 +5312,7 @@ export function MapClient({
                 {complexListingsStatus === "ok" && complexListings.length === 0 && (
                   <div className="card rounded-lg px-[15px] py-6 text-center">
                     <div className="t-body font-bold text-ink">
-                      이 단지에 등록된 매물이 아직 없어요
+이 단지에 등록된 매물 없음
                     </div>
                     <div className="mt-1 t-sub text-text-3">
                       지도 상단의 “매물” 레이어를 켜면 주변 단지의 등록 매물을 볼 수 있어요.
@@ -5351,7 +5351,7 @@ export function MapClient({
                   </div>
                 ) : (
                   <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
-                    아직 수집된 국토교통부 실거래가 없어요
+수집된 국토교통부 실거래 없음
                   </div>
                 )}
               </>
@@ -5367,7 +5367,7 @@ export function MapClient({
                 )}
                 {complexNotesStatus === "error" && (
                   <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
-                    노트를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+노트 불러오기 실패 · 잠시 후 다시
                   </div>
                 )}
                 {complexNotesStatus === "ok" && complexNotes.length > 0 && (
@@ -5401,7 +5401,7 @@ export function MapClient({
                   </div>
                 )}
                 {complexNotesStatus === "ok" && complexNotes.length === 0 && (
-                  <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">아직 이 단지의 임장노트가 없어요</div>
+                  <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">이 단지의 임장노트 없음</div>
                 )}
                 <div className="flex gap-2">
                   <Link

@@ -61,13 +61,13 @@ export function ConsultButton({
       }
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setError(data.error ?? "상담 신청에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data.error ?? "상담 신청 실패 · 잠시 후 다시");
         setStatus("idle");
         return;
       }
       setStatus("done");
     } catch {
-      setError("상담 신청에 실패했어요. 네트워크를 확인해 주세요.");
+      setError("상담 신청 실패 · 네트워크를 확인해 주세요.");
       setStatus("idle");
     }
   };

@@ -35,7 +35,7 @@ export function ProposeQuote({
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setError(data.error ?? "전송에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data.error ?? "전송 실패 · 잠시 후 다시");
         setStatus("idle");
         return;
       }

@@ -172,7 +172,7 @@ export function RegionPicker({
 
   const list = results ?? [];
   /* 아직 굳지 않은 입력은 "아직 안 물어본 상태"다. 이걸 대기로 안 치면 치는
-     도중에 "일치하는 시·군·구가 없어요"가 떴다 사라진다 — 확인한 적 없는
+     도중에 "일치하는 시·군·구 없음"가 떴다 사라진다 — 확인한 적 없는
      사실을 화면에 쓰는 셈이다. */
   const pending = query.trim() !== "" && query.trim() !== settledQuery;
   const busy = loading || pending;
@@ -232,12 +232,12 @@ export function RegionPicker({
             )}
             {!busy && failed && (
               <div className="px-4 py-3 t-sub text-text-3">
-                지역을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+지역 불러오기 실패 · 잠시 후 다시
               </div>
             )}
             {!busy && !failed && list.length === 0 && (
               <div className="px-4 py-3 t-sub text-text-3">
-                일치하는 시·군·구가 없어요. 구 이름(예: 마포구)으로 다시 찾으면 돼요.
+일치하는 시·군·구 없음 · 구 이름(예: 마포구)으로 다시 찾으면 돼요.
               </div>
             )}
             {list.map((it, i) => {

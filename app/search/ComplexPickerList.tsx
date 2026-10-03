@@ -20,7 +20,7 @@ import {
 
    한 줄: 이름(검색어 강조) + [비슷한 이름] · 둘째 줄: 시군구 읍면동 · 세대수 · 6개월 거래
    — 같은 이름 단지가 여럿일 때(은마 3곳·공작 3곳·롯데캐슬 수십 곳) 고를 근거.
-   결과가 없으면: "“{q}” 와 일치하는 단지가 없어요" + 띄어 쓰는 요령 + 지도에서 찾기 + 비슷한 이름.
+   결과가 없으면: "“{q}” 와 일치하는 단지 없음" + 띄어 쓰는 요령 + 지도에서 찾기 + 비슷한 이름.
    포커스는 입력창에 남고 활성 항목은 aria-activedescendant 로만 가리킨다(계속 타이핑해 좁힐 수 있게).
    활성·호버 배경은 bg-bg(중립) — AI 도구 화면(.tool-scope)은 --primary-soft 를 도구 색으로 갈아 끼우는데
    다크에서 밝은 연보라가 그대로 남아 글자(text-ink)가 사라졌다(2026-09-21 다크 스크린샷).
@@ -70,7 +70,7 @@ export default function ComplexPickerList({
         </div>
       ) : failed ? (
         <div role="status" className="px-3 py-3 t-sub text-text-3">
-          단지 검색 결과를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+단지 검색 결과 불러오기 실패 · 잠시 후 다시
         </div>
       ) : empty ? (
         <div className="flex flex-col gap-1 px-3 pb-2 pt-3">

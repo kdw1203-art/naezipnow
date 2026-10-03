@@ -191,8 +191,8 @@ test("[A-4·9·20·23] 최근 6개월 거래는 컨텍스트 값으로, 실패�
   });
   const d = buildVerdict({ tool: "ai-diagnosis", ctx, footnotes: [] });
   assert.equal(d.tiles?.find((t) => t.key === "trades6m")?.value, "42건");
-  assert.equal(d.tiles?.find((t) => t.key === "price")?.note, "불러오지 못했어요");
-  assert.equal(d.tiles?.find((t) => t.key === "regionYoy")?.note, "불러오지 못했어요");
+  assert.equal(d.tiles?.find((t) => t.key === "price")?.note, "불러오기 실패");
+  assert.equal(d.tiles?.find((t) => t.key === "regionYoy")?.note, "불러오기 실패");
   const t = buildVerdict({ tool: "ai-timing", ctx, footnotes: [] });
   assert.equal(t.tiles?.find((x) => x.key === "regionTrades")?.asOf, "202607");
   const e = buildVerdict({ tool: "ai-economy", ctx, footnotes: [] });
@@ -295,7 +295,7 @@ test("[1028 · 제안 2] 결론 문장 — 도구별로 정한 사실 문장 그
   assert.equal(h("contract-risk", { marketRatioPct: 85 }), "전세가율 85% · 주의 구간(80% 이상)이에요. 집값이 내리면 보증금 회수가 어려울 수 있어요.");
   assert.equal(h("contract-risk", { marketRatioPct: 60 }), "전세가율 60% · 80% 미만이에요. 등기부 근저당은 이 숫자에 들어 있지 않아요.");
   assert.equal(h("ai-inspection", { similarCount: 3 }), "테스트 포함 4곳 · 최근 6개월 거래 많은 순이에요.");
-  assert.equal(h("ai-inspection"), "테스트: 같은 지역에 함께 볼 거래 많은 단지가 아직 없어요.");
+  assert.equal(h("ai-inspection"), "테스트: 같은 지역에 함께 볼 거래 많은 단지 없음");
   assert.equal(h("ai-portfolio"), "테스트: 관심 단지 중 이 단지의 숫자와 흐름이에요.");
   assert.match(h("my-checklist"), /^테스트: 임장·계약 전에 확인할 항목 \d+개예요\.$/);
   /* 수익률 계산 — 5억 · 60% · 4.2% · 30년: 월 147만원, 금리 +1%p 면 월 18만원 늘어난다 */
@@ -334,7 +334,7 @@ test("[1028 · 제안 10] 경제지표 모니터 — '기준금리 N%' 는 결�
   /* 금리를 못 읽으면 예전 그대로 — 대표 수치가 없으니 "기준금리 — 자료 없음" 칸도 남긴다 */
   const none = buildVerdict({ tool: "ai-economy", ctx: ctxOf({}), footnotes: [] });
   assert.equal(none.headline, "금리 자료를 아직 못 읽었어요.");
-  assert.equal(none.bandReason, "금리 자료가 없어요");
+  assert.equal(none.bandReason, "금리 자료 없음");
   assert.equal(none.metric, null);
   assert.deepEqual(tilesBesideMetric(none, none.tiles ?? []).map((t) => t.key), ["baseRate", "unsold", "regionMom", "regionYoy"]);
   /* 다른 도구의 칸은 건드리지 않는다 */

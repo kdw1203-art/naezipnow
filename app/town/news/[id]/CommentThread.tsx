@@ -96,7 +96,7 @@ export function CommentThread({
           error?: string;
         } | null;
         setError(
-          data?.error ?? "채택에 실패했어요. 잠시 후 다시 시도해 주세요.",
+          data?.error ?? "채택 실패 · 잠시 후 다시",
         );
         return;
       }
@@ -129,7 +129,7 @@ export function CommentThread({
           error?: string;
         } | null;
         setError(
-          data?.error ?? "삭제에 실패했어요. 잠시 후 다시 시도해 주세요.",
+          data?.error ?? "삭제 실패 · 잠시 후 다시",
         );
         return;
       }

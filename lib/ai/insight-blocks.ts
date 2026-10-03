@@ -233,7 +233,7 @@ export function riskChecklist(ctx: LiveToolContext): RiskCheck[] {
       label: "거래량",
       status: status("liquidity", trade != null),
       value: trade != null ? `월 ${trade.toLocaleString("ko-KR")}건` : null,
-      detail: flags.get("liquidity")?.detail ?? (trade != null ? "거래가 꾸준해 팔 때 살 사람을 찾기 어렵지 않은 편이에요." : "지역 거래량 자료가 없어요."),
+      detail: flags.get("liquidity")?.detail ?? (trade != null ? "거래가 꾸준해 팔 때 살 사람을 찾기 어렵지 않은 편이에요." : "지역 거래량 자료 없음"),
       rule: `지역 한 달 거래 ${RISK_THRESHOLDS.tradeDrop}건 미만이면 주의`,
     },
     {
@@ -241,7 +241,7 @@ export function riskChecklist(ctx: LiveToolContext): RiskCheck[] {
       label: "전세가율",
       status: status("gapRisk", jr != null),
       value: jr != null ? `${jr}%` : null,
-      detail: flags.get("gapRisk")?.detail ?? (jr != null ? "매매가 대비 전세금 비율이 높지 않아 역전세 걱정이 덜한 편이에요." : "지역 전세가율 자료가 없어요."),
+      detail: flags.get("gapRisk")?.detail ?? (jr != null ? "매매가 대비 전세금 비율이 높지 않아 역전세 걱정이 덜한 편이에요." : "지역 전세가율 자료 없음"),
       rule: `${RISK_THRESHOLDS.jeonseRatioHigh}% 이상이면 주의`,
     },
     {
@@ -249,7 +249,7 @@ export function riskChecklist(ctx: LiveToolContext): RiskCheck[] {
       label: "입주 물량",
       status: status("supply", supply != null),
       value: supply != null ? `${supply.toLocaleString("ko-KR")}세대` : null,
-      detail: flags.get("supply")?.detail ?? (supply != null ? "앞으로 들어올 새 아파트가 많지 않아요." : "이 지역 입주 예정 자료가 없어요."),
+      detail: flags.get("supply")?.detail ?? (supply != null ? "앞으로 들어올 새 아파트가 많지 않아요." : "이 지역 입주 예정 자료 없음"),
       rule: `앞으로 ${RISK_THRESHOLDS.supplyHeavy.toLocaleString("ko-KR")}세대 이상이면 주의`,
     },
     {
@@ -257,7 +257,7 @@ export function riskChecklist(ctx: LiveToolContext): RiskCheck[] {
       label: "미분양",
       status: status("unsold", unsold != null),
       value: unsold != null ? `${unsold.toLocaleString("ko-KR")}호` : null,
-      detail: flags.get("unsold")?.detail ?? (unsold != null ? "팔리지 않고 남은 새 아파트가 많지 않아요." : "미분양 자료가 없어요."),
+      detail: flags.get("unsold")?.detail ?? (unsold != null ? "팔리지 않고 남은 새 아파트가 많지 않아요." : "미분양 자료 없음"),
       rule: `${RISK_THRESHOLDS.unsoldHigh}호 이상이면 주의`,
     },
     {
@@ -265,7 +265,7 @@ export function riskChecklist(ctx: LiveToolContext): RiskCheck[] {
       label: "월세 비중",
       status: status("wolse", wolse != null),
       value: wolse != null ? `${wolse}%` : null,
-      detail: flags.get("wolse")?.detail ?? (wolse != null ? "전세 계약이 아직 많은 지역이에요." : "전월세 신고 자료가 없어요."),
+      detail: flags.get("wolse")?.detail ?? (wolse != null ? "전세 계약이 아직 많은 지역이에요." : "전월세 신고 자료 없음"),
       rule: `${RISK_THRESHOLDS.wolseShareHigh}% 이상이면 참고`,
     },
   ];
@@ -320,7 +320,7 @@ export function timingSignals(ctx: LiveToolContext): TimingSignal[] {
       basis:
         snap?.saleChangeMonthly != null
           ? `지역 시세 한 달 ${pctText(snap.saleChangeMonthly)}. ${priceState === "green" ? "내리는 중이라 사는 쪽이 유리해요." : priceState === "red" ? "빠르게 오르는 중이라 파는 쪽이 유리해요." : "크게 움직이지 않아요."}`
-          : "지역 시세 자료가 없어요",
+          : "지역 시세 자료 없음",
     },
     {
       key: "volume",
@@ -329,7 +329,7 @@ export function timingSignals(ctx: LiveToolContext): TimingSignal[] {
       basis:
         snap?.tradeCount != null
           ? `지역 한 달 거래 ${snap.tradeCount.toLocaleString("ko-KR")}건. ${volState === "green" ? "한산해서 사는 쪽이 유리해요." : volState === "red" ? "거래가 몰려 파는 쪽이 유리해요." : "보통 수준이에요."}`
-          : "거래량 자료가 없어요",
+          : "거래량 자료 없음",
     },
     {
       key: "supply",
@@ -337,33 +337,28 @@ export function timingSignals(ctx: LiveToolContext): TimingSignal[] {
       state: supState,
       basis: ctx.supply
         ? `앞으로 입주 ${ctx.supply.upcomingHouseholds.toLocaleString("ko-KR")}세대. ${supState === "green" ? "입주 무렵 매물이 늘어 고르기 쉬워질 수 있어요." : "새 물량이 많지 않아 매물이 늘 요인은 약해요."}`
-        : "입주 예정 자료가 없어요",
+        : "입주 예정 자료 없음",
     },
   ];
 }
 
 /* ── [AI-04] 반대 시나리오 — 결론이 틀리는 조건 ─────────────────────── */
 
+/* [1029 · 7] 낱말 꼴 — "조건 → 결과"(예전엔 "~하면 ~할 수 있어요" 문장) */
 export function counterScenarios(ctx: LiveToolContext): string[] {
   const out: string[] = [];
   if (ctx.supply && ctx.supply.upcomingHouseholds > 0) {
-    out.push(
-      `앞으로 입주할 ${ctx.supply.upcomingHouseholds.toLocaleString("ko-KR")}세대가 예정대로 들어오면 전세·매매 가격이 잠시 눌릴 수 있어요.`,
-    );
+    out.push(`입주 예정 ${ctx.supply.upcomingHouseholds.toLocaleString("ko-KR")}세대 실제 입주 → 전세·매매 가격 단기 하락 압력`);
   }
   if (ctx.macro?.baseRatePct != null) {
-    out.push(
-      `기준금리가 지금 ${ctx.macro.baseRatePct}%에서 0.5%p 넘게 오르면 이자 부담이 커져 계산을 다시 해야 해요.`,
-    );
+    out.push(`기준금리 ${ctx.macro.baseRatePct}% → +0.5%p 이상 → 이자 부담 증가 · 계산 다시`);
   }
   const snap = ctx.region?.snapshot;
   if (snap?.saleChangeMonthly != null && snap.saleChangeMonthly > 0) {
-    out.push(
-      "최근 상승이 몇 건의 신고가 거래 때문이라면 일시적인 착시일 수 있어요.",
-    );
+    out.push("최근 상승 = 소수 신고가 거래 영향 → 일시적 착시 가능");
   }
   if (out.length === 0) {
-    out.push("입주 물량·금리·거래량 중 자료가 없는 항목은 그 항목이 바뀌면 결과도 바뀔 수 있어요.");
+    out.push("입주 물량·금리·거래량 자료 없음 → 그 항목 변동 시 결과 변동");
   }
   return out.slice(0, 3);
 }

@@ -270,11 +270,11 @@ export default async function NotesComparePage({
 
   const emptyTitle =
     result.kind === "need_login"
-      ? "로그인이 필요해요"
+      ? "로그인 필요"
       : result.kind === "forbidden"
         ? "내 노트만 비교할 수 있어요"
         : result.kind === "error"
-          ? "회차 비교를 불러오지 못했어요"
+          ? "회차 비교 불러오기 실패"
           : result.kind === "need_more"
             ? `${result.aptName} 방문이 ${result.count}회예요`
             : "비교할 노트를 골라 주세요";

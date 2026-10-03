@@ -604,7 +604,7 @@ function PriceFlowCard({
       ) : (
         <p className="rounded-lg bg-bg px-3 py-3 t-sub text-text-2">
           {failed || hasPrice
-            ? "그래프 자료를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
+            ? "그래프 자료 불러오기 실패 · 잠시 후 다시"
             : "이 단지는 최근 매매 실거래가 없어 그래프를 그리지 않았어요."}
         </p>
       )}
@@ -960,7 +960,7 @@ function EvidenceCard({ tool, picked, verdict, footnotes }: { tool: AiAnalysisTo
           ))}
         </ul>
       ) : (
-        <p className="mt-2 t-sub text-text-3">데이터 출처가 아직 없어요.</p>
+        <p className="mt-2 t-sub text-text-3">데이터 출처 없음</p>
       )}
       {(picked || next) && (
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-2">
@@ -1221,7 +1221,7 @@ export function ResultView({
           {figure}
         </ToolSignature>
       )}
-      {!verdict && <p className="card rounded-2xl p-4 t-body text-text-2">결과를 만들 자료가 아직 없어요.</p>}
+      {!verdict && <p className="card rounded-2xl p-4 t-body text-text-2">결과를 만들 자료 없음</p>}
 
       {/* ② KPI 4칸(한 줄) + 출처·기준 한 줄 */}
       {tiles.length > 0 && (

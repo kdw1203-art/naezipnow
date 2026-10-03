@@ -242,7 +242,7 @@ export function ComplexReviews({
         setSubmitState("idle");
         promptSignup({
           action: "complex_review_create",
-          title: "후기를 남기려면 로그인이 필요해요",
+          title: "로그인 필요 · 후기",
           benefit:
             "후기는 로그인한 계정으로만 남길 수 있어요. 같은 사람이 반복해서 올리는 걸 막기 위해서입니다. 등록하면 30P가 적립돼요.",
           callbackUrl: pathname ?? "/",
@@ -251,7 +251,7 @@ export function ComplexReviews({
       }
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setError(data.error ?? "후기 등록에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data.error ?? "후기 등록 실패 · 잠시 후 다시");
         setSubmitState("idle");
         return;
       }
@@ -263,7 +263,7 @@ export function ComplexReviews({
       setResidentPeriod("");
       await load();
     } catch {
-      setError("후기 등록에 실패했어요. 네트워크를 확인해 주세요.");
+      setError("후기 등록 실패 · 네트워크를 확인해 주세요.");
       setSubmitState("idle");
     }
   };
@@ -410,14 +410,14 @@ export function ComplexReviews({
       )}
       {loadState === "error" && (
         <div className="mt-3 py-6 text-center t-sub text-text-3">
-          후기를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+후기 불러오기 실패 · 잠시 후 다시
         </div>
       )}
       {loadState === "ready" && reviews.length === 0 && (
         <div className="mt-3 flex flex-col items-center gap-1 py-6 text-center">
           {/* [1012 · 규칙 6] 권유 → 어디서(단지명)·무엇이 없는지 사실만 — 쓰기 입구는 위 버튼 */}
           <div className="t-body font-bold text-ink">
-            {complexName} 거주민 후기가 아직 없어요
+{complexName} 거주민 후기 없음
           </div>
           <div className="t-sub text-text-3">
             직접 살아봤거나 임장에서 확인한 내용만 받아요

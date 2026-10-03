@@ -14,14 +14,14 @@ import { NO_MATCH_EXAMPLE, NO_MATCH_HINT, noMatchTitle } from "@/lib/search/comp
    HeaderSearch 는 전 페이지 첫 묶음에 실린다(/complex/[id] 479/480KB) — 여기로 옮겨 첫 묶음을 줄였다.
 
    - 단지 줄: 이름(검색어 강조 — 괄호·띄어쓰기 건너뜀) + [비슷한 이름] · 시군구 읍면동 · 세대수 · 6개월 거래
-   - 결과 없음: "“{q}” 와 일치하는 단지가 없어요" · 띄어 쓰는 요령 · 지도에서 찾기 · 비슷한 이름
+   - 결과 없음: "“{q}” 와 일치하는 단지 없음" · 띄어 쓰는 요령 · 지도에서 찾기 · 비슷한 이름
    - 포커스는 입력창에 남는다 — 활성 항목은 aria-activedescendant(optionId)로만 가리킨다.
    - [1008 · 리뷰 B] listbox 안에는 option 만 둔다(제목·안내·단추는 밖) — 목록이 비어도 listbox 는 그려
      입력창의 aria-controls·aria-expanded 가 가리키는 대상이 늘 있다. 안내 문구는 role=status 로 읽힌다.
      notice(예: "검색어는 80자까지예요")가 오면 장애·결과 없음 문구 대신 그것을 쓴다.
    [1026d · 검색] 맨 위 "검색 범위" 줄(지역·조건 칩·단지 수 — 음영 칩) · 지역 줄(누르면 그 지역 검색) ·
    단지 줄은 음영 두 줄(도로명 (동 번지) / 준공·세대·6개월 거래) · 아래 "연관 검색" 칩(지역만 쳤을 때).
-   조건 검색이 0건이면 "조건에 맞는 단지가 없어요"(비슷한 이름 대신 — 조건을 빼 보라는 뜻).
+   조건 검색이 0건이면 "조건에 맞는 단지 없음"(비슷한 이름 대신 — 조건을 빼 보라는 뜻).
    [1026e · 연관 검색어] 맨 위 검색어 줄(돋보기 · 친 말 + 굵은 다음 낱말 · 오른쪽 음영 "단지 23곳 · 조건") — 누르면
    입력이 그 말로 바뀌고 이어서 고른다. 검색어 줄이 있으면 아래 "연관 검색" 칩은 숨긴다(같은 내용).
    ============================================================ */
@@ -114,7 +114,7 @@ export default function UnifiedSuggestPanel(p: Props) {
         )}
         {filterEmpty ? (
           <div role="status" className="flex flex-col gap-1 px-3 pb-1 pt-2.5">
-            <p className="t-sub font-bold text-ink">조건에 맞는 단지가 없어요</p>
+            <p className="t-sub font-bold text-ink">조건에 맞는 단지 없음</p>
             <p className="t-caption text-text-3">조건을 줄이면 결과가 나올 수 있어요</p>
           </div>
         ) : p.notice ? (
@@ -123,7 +123,7 @@ export default function UnifiedSuggestPanel(p: Props) {
           </div>
         ) : p.failed && empty ? (
           <div role="status" className="px-3 py-3 text-center text-[12px] text-text-3">
-            검색 결과를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+검색 결과 불러오기 실패 · 잠시 후 다시
           </div>
         ) : empty ? (
           <div className="flex flex-col gap-1 px-3 pb-1 pt-2.5">

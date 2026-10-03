@@ -13,7 +13,7 @@ export default function Error({
   return (
     <AreaError
       area="quiz"
-      title="오늘의 문제를 불러오지 못했어요"
+      title="오늘의 문제 불러오기 실패"
       desc="잠시 후 다시 시도해 주세요."
       error={error}
       reset={reset}

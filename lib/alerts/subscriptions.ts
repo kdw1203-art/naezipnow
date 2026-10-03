@@ -141,10 +141,10 @@ export async function addAlertSubscription(
     .select("id, complex_id, complex_name, created_at")
     .single();
   if (error || !data) {
-    return { ok: false, status: 500, error: "구독 저장에 실패했어요. 잠시 후 다시 시도해 주세요." };
+    return { ok: false, status: 500, error: "구독 저장 실패 · 잠시 후 다시" };
   }
   const item = rowToSubscription(data as Record<string, unknown>);
-  if (!item) return { ok: false, status: 500, error: "구독 저장에 실패했어요." };
+  if (!item) return { ok: false, status: 500, error: "구독 저장 실패" };
   return { ok: true, item };
 }
 
@@ -170,7 +170,7 @@ export async function removeAlertSubscription(
     .eq("user_email", normEmail(userEmail))
     .like("complex_id", `${ALERT_PREFIX}%`);
   if (error) {
-    return { ok: false, status: 500, error: "구독 해지에 실패했어요." };
+    return { ok: false, status: 500, error: "구독 해지 실패" };
   }
   return { ok: true };
 }

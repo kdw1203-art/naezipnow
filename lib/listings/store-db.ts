@@ -459,7 +459,7 @@ export async function listListingsInBounds(
 /** 검수 대기(pending) 목록 — 어드민 전용. */
 export async function listPendingListings(): Promise<AdminListing[]> {
   /* 2026-07-26: 실패를 `[]` 로 삼켰다. 그러면 /admin/listings 는 "대기 0건 ·
-     검수 대기 중인 매물이 없어요" 라고 말한다 — 올라온 매물이 며칠씩 검수 없이
+검수 대기 중인 매물 없음" 라고 말한다 — 올라온 매물이 며칠씩 검수 없이
      묶여 있어도 아무도 모른다. 실패는 던진다. */
   const sb = getServiceSupabase();
   if (!sb) {
@@ -649,7 +649,7 @@ export async function createListing(input: {
   }
   if (error || !data) {
     logger.warn("[listings] createListing", error);
-    throw new Error("매물 등록에 실패했어요. 잠시 후 다시 시도해 주세요.");
+    throw new Error("매물 등록 실패 · 잠시 후 다시");
   }
   const id = String(data.id);
 
@@ -887,7 +887,7 @@ export async function updateListing(
     const { error } = await sb.from("listings").update(body).eq("id", id);
     if (error) {
       logger.warn("[listings] updateListing", error);
-      return { ok: false, error: "수정에 실패했어요. 잠시 후 다시 시도해 주세요." };
+      return { ok: false, error: "수정 실패 · 잠시 후 다시" };
     }
     return { ok: true, status: nextStatus };
   } catch (e) {
@@ -928,7 +928,7 @@ export async function deleteListing(
       .eq("id", id);
     if (error) {
       logger.warn("[listings] deleteListing", error);
-      return { ok: false, error: "삭제에 실패했어요. 잠시 후 다시 시도해 주세요." };
+      return { ok: false, error: "삭제 실패 · 잠시 후 다시" };
     }
     return { ok: true };
   } catch (e) {

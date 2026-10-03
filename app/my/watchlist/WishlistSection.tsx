@@ -35,7 +35,7 @@ type SavedListingsResult =
 
 /* 실패를 빈 배열로 누르면 "아직 저장한 매물이 없어요"가 된다 — 조회 실패와
    "없음"은 다른 사실이다. 목록 전체 실패는 ok:false 로, 개별 매물 해석 실패는
-   failedCount 로 세어 화면이 "N건은 불러오지 못했어요"를 말할 수 있게 한다.
+   failedCount 로 세어 화면이 "N건은 불러오기 실패"를 말할 수 있게 한다.
    (개별 실패에서 숨김·삭제 매물의 정상 null 과 조회 오류를 구분한다.) */
 async function loadSavedListings(email: string): Promise<SavedListingsResult> {
   let bms;
@@ -78,7 +78,7 @@ export async function WishlistSection({ email }: { email: string }) {
 
       {!loaded.ok ? (
         <ErrorState
-          title="관심 매물을 불러오지 못했어요"
+          title="관심 매물 불러오기 실패"
           /* [970 · C-20] 해요체 통일 · [1028 · 제안 3] 오류 문구 표준("0개인 게 아니라 조회 실패" 구문 제거) */
           desc="잠시 후 다시 시도해 주세요."
         />
@@ -87,7 +87,7 @@ export async function WishlistSection({ email }: { email: string }) {
         <EmptyState
           icon="heart"
           className="rise-in"
-          title="아직 저장한 매물이 없어요"
+          title="저장한 매물 없음"
           desc="매물의 관심(♥) 버튼으로 저장한 매물이 여기에 모여요."
           action={{ label: "매물 둘러보기", href: "/listings" }}
         />
@@ -95,7 +95,7 @@ export async function WishlistSection({ email }: { email: string }) {
         <>
           {loaded.ok && loaded.failedCount > 0 && (
             <p className="mb-3 rounded-xl border border-line bg-bg px-3 py-2 t-sub text-text-2">
-              저장한 매물 중 {loaded.failedCount}건을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+              저장한 매물 중 {loaded.failedCount}건 불러오기 실패 · 잠시 후 다시
             </p>
           )}
           <div className="rise-in grid grid-cols-1 gap-3 md:grid-cols-2">

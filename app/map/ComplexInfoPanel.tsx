@@ -854,7 +854,7 @@ export function ComplexInfoPanel({
 
           {failed && (
             <div className="rounded-lg border border-line bg-surface px-3.5 py-2.5 t-sub text-text-2">
-              단지 상세를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+단지 상세 불러오기 실패 · 잠시 후 다시
             </div>
           )}
 
@@ -992,7 +992,7 @@ export function ComplexInfoPanel({
 
           {!loading && recent.length === 0 && !failed && (
             <div className="rounded-xl bg-bg px-3.5 py-2.5 t-sub text-text-3">
-              최근 실거래 데이터가 아직 없어요.
+최근 실거래 데이터 없음
             </div>
           )}
 
@@ -1006,7 +1006,7 @@ export function ComplexInfoPanel({
               />
               {rentFailed ? (
                 <p className="rounded-lg border border-line bg-surface px-3 py-2 t-sub text-text-2">
-                  전월세 실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+전월세 실거래 불러오기 실패 · 잠시 후 다시
                 </p>
               ) : rent ? (
                 <>
@@ -1072,9 +1072,7 @@ export function ComplexInfoPanel({
                       {ratio ? `${ratio.pct}%` : "미산출"}
                     </div>
                   </div>
-                  <p className="mt-1.5 t-caption text-text-3">
-                    최근 1~2개월은 신고 지연으로 적게 잡힐 수 있고, 갱신·신규 계약이 섞여 있어요.
-                  </p>
+                  <p className="mt-1.5 t-caption text-text-3">최근 1~2개월 신고 지연(과소 집계 가능) · 갱신·신규 계약 혼합</p>
                 </>
               ) : null}
             </div>
@@ -1132,7 +1130,7 @@ export function ComplexInfoPanel({
               />
               {notesFailed ? (
                 <p className="rounded-lg border border-line bg-surface px-3 py-2 t-sub text-text-2">
-                  임장노트를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+임장노트 불러오기 실패 · 잠시 후 다시
                 </p>
               ) : notes?.latest ? (
                 <Link
@@ -1168,7 +1166,7 @@ export function ComplexInfoPanel({
                   )}
                 </Link>
               ) : (
-                <p className="rounded-xl bg-bg px-3 py-2 t-sub text-text-2">아직 이 단지 공개 임장노트가 없어요.</p>
+                <p className="rounded-xl bg-bg px-3 py-2 t-sub text-text-2">이 단지 공개 임장노트 없음</p>
               )}
             </div>
           )}
@@ -1291,7 +1289,7 @@ export function ComplexInfoPanel({
               [1022 · 정렬·글씨·테마] 경고색 면(bg-warning-soft) → 흰 카드 + 본문색 — /notes 조회 실패 카드와 같은 모양(이 패널의 실패 고지 4곳 동일). */}
           {failedSections.length > 0 && (
             <div className="rounded-lg border border-line bg-surface px-3.5 py-2.5 t-sub text-text-2">
-              {failedSections.join(" · ")} 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+              {failedSections.join(" · ")}정보 불러오기 실패 · 잠시 후 다시
             </div>
           )}
 

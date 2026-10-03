@@ -30,11 +30,11 @@ export function RegionComplexList({
 }) {
   if (failed) {
     return (
-      <p className="py-6 text-center t-body text-text-3">단지별 실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+      <p className="py-6 text-center t-body text-text-3">단지별 실거래 불러오기 실패 · 잠시 후 다시</p>
     );
   }
   if (summaries.length === 0) {
-    return <p className="py-6 text-center t-body text-text-3">이 지역에서 수집된 단지별 매매 실거래가 아직 없어요.</p>;
+    return <p className="py-6 text-center t-body text-text-3">이 지역에서 수집된 단지별 매매 실거래 없음</p>;
   }
   return (
     /* [1015 · 규칙 I] 단지별 실거래 목록 = blue 리퀴드 판 */

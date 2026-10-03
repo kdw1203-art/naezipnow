@@ -303,7 +303,7 @@ export default async function ExpertDetailPage({
         {/* ---------- 후기 ---------- */}
         <Section title={e.reviews > 0 ? `후기 ${e.reviews}건` : "후기"} delay={2}>
           {reviews.length === 0 ? (
-            <p className="t-sub text-text-3">아직 후기가 없어요. 답변이 완료된 상담의 의뢰자만 남길 수 있어요.</p>
+            <p className="t-sub text-text-3">후기 없음 · 답변이 완료된 상담의 의뢰자만 남길 수 있어요.</p>
           ) : (
             <div className="flex flex-col divide-y divide-line" data-tone="hanji">
               {reviews.map((r) => (

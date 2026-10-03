@@ -50,8 +50,8 @@ export function NearbyPanel({
   const [loading, setLoading] = useState(true);
   /* 조회 실패와 "정말 0건"은 화면에서 똑같이 보인다 — 둘 다 목록이 비어 있다.
      예전에는 `r.ok ? r.json() : null` 로 실패를 data=null 에 합쳐 버려서,
-     서버가 죽어 있어도 사용자는 "최근 실거래 정보가 없어요 / 등록된 인근
-     매물이 없어요" 를 읽었다. 장애가 사실로 둔갑하는 자리다. */
+     서버가 죽어 있어도 사용자는 "최근 실거래 정보 없음 / 등록된 인근
+매물 없음" 를 읽었다. 장애가 사실로 둔갑하는 자리다. */
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export function NearbyPanel({
   /* 실패했을 때 두 칸에 공통으로 쓰는 문구. "없어요" 라고 말하지 않는다. */
   const failureNote = (
     <div className="rounded-lg border border-line bg-surface px-3 py-4 text-center t-sub text-text-3">
-      불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+불러오기 실패 · 잠시 후 다시
     </div>
   );
 
@@ -127,7 +127,7 @@ export function NearbyPanel({
               failureNote
             ) : (
               <div className="rounded-lg border border-line bg-surface px-3 py-4 text-center t-sub text-text-3">
-                최근 실거래 정보가 없어요.
+최근 실거래 정보 없음
               </div>
             )}
           </div>
@@ -167,7 +167,7 @@ export function NearbyPanel({
               failureNote
             ) : (
               <div className="rounded-lg border border-line bg-surface px-3 py-4 text-center t-sub text-text-3">
-                등록된 인근 매물이 없어요.
+등록된 인근 매물 없음
               </div>
             )}
           </div>

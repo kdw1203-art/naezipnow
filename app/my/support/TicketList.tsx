@@ -103,7 +103,7 @@ export function TicketList({ initial }: { initial: TicketView[] }) {
   if (tickets.length === 0) {
     return (
       <EmptyState
-        title="아직 남긴 문의가 없어요"
+        title="남긴 문의 없음"
         desc={`궁금한 점은 1:1 문의로 남겨 주세요. ${RESPONSE_TIME}.`}
         action={{ label: "새 문의 남기기", href: "/support#contact" }}
       />

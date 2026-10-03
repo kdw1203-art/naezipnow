@@ -69,7 +69,7 @@ export function AiDraftPanel({
         }),
       });
       if (res.status === 401) {
-        setErrorMsg("초안 생성은 로그인 후 이용할 수 있어요.");
+        setErrorMsg("AI 초안 · 로그인 필요");
         setState("error");
         onLoginNeeded?.();
         return;

@@ -1,6 +1,6 @@
 "use client";
 /* [1026b · 노트 쓰기] 비회원 — 녹음 버튼 자리에 로그인 링크(callbackUrl = 지금 주소, 녹음 전에 말한다). 로그인 여부를 몰랐다가
-   업로드가 401 이면 "저장에 실패했어요" 가 아니라 같은 로그인 안내로 바꾼다(녹음 뒤 실패로 알리지 않는다). */
+   업로드가 401 이면 "저장 실패" 가 아니라 같은 로그인 안내로 바꾼다(녹음 뒤 실패로 알리지 않는다). */
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -206,7 +206,7 @@ export function VoiceMemoRecorder({
               </div>
               {txState[u] === "error" && (
                 <p className="t-caption font-semibold text-warning">
-                  전사에 실패했어요. 잠시 후 다시 시도해 주세요.
+전사 실패 · 잠시 후 다시
                 </p>
               )}
               {txState[u] === "unavailable" && (
@@ -223,7 +223,7 @@ export function VoiceMemoRecorder({
         <p className="t-sub font-bold text-text-3">이 브라우저는 녹음을 지원하지 않아요.</p>
       )}
       {state === "error" && (
-        <p className="t-sub font-bold text-warning">저장에 실패했어요. 다시 시도해 주세요.</p>
+        <p className="t-sub font-bold text-warning">저장 실패 · 다시 시도해 주세요.</p>
       )}
       {needLogin && <p className="t-sub text-text-2">음성 메모는 로그인 후 녹음</p>}
       {/* [1015 · 규칙 B] 권유 문장은 뺐다 — 공개 범위 사실만 */}

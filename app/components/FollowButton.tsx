@@ -25,7 +25,7 @@ export function FollowButton({ handle }: { handle: string }) {
   const askSignup = () =>
     promptSignup({
       action: "follow_user",
-      title: "팔로우하려면 로그인이 필요해요",
+      title: "로그인 필요 · 팔로우",
       benefit: "팔로우는 계정에 남아요.",
       callbackUrl: pathname ?? "/",
     });

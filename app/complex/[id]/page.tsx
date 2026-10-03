@@ -37,7 +37,7 @@ import {
   type HubDeal,
   type HubHeadline,
 } from "@/lib/complex/hub-price";
-import { changeSentence } from "@/lib/format/delta";
+import { changeLabel } from "@/lib/format/delta";
 import { hubFaqPriceAnswer, hubMetaPrice } from "@/lib/complex/hub-meta";
 /* [1009 · C 리뷰] 월별 줄 등락의 기준 달(전월/빈 달 다음은 그 달) — 요약 탭 미리보기 줄은 서버에서 센다 */
 import { monthDeltaView, ymRangeShort, type MonthDeltaView } from "@/lib/complex/month-delta";
@@ -796,7 +796,7 @@ function toView(
     aiTitle: `요약 · ${row.name}`,
     /* [1015 · 규칙 D] 대시(—)로 잇던 문장을 마침표로, "~드려요"를 사실 한 줄로 */
     aiBody: txFailed
-      ? "실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
+      ? "실거래 불러오기 실패 · 잠시 후 다시"
       : latest
         ? [
             /* [1009 · C 리뷰] 대표가를 못 세웠을 때만 쓰는 폴백 — 무엇의 평균인지 적고 혼합 전월비는 싣지 않는다 */
@@ -812,7 +812,7 @@ function toView(
             .join(" · ")
         : "아직 신고된 매매 실거래 없음. 신고가 들어오면 요약이 생긴다.",
     listingsLabel: listingsFailed
-      ? "매물 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
+      ? "매물 정보 불러오기 실패 · 잠시 후 다시"
       : hubListings.length > 0
         ? `등록 실매물 ${hubListings.length}건 · 국토부 실거래가 비교 기준`
         : "등록된 실매물 없음",
@@ -1130,7 +1130,7 @@ export async function generateMetadata({
       ]
         .filter(Boolean)
         .join(" · ") + "."
-    : `${placeLabel} ${name} 단지 홈 — 실거래 시세, 매물, 이웃 임장노트, 안전 진단을 한 화면에서 확인하세요.`;
+    : `${placeLabel} ${name} 단지 홈 · 실거래가 · 매물 · 이웃 임장노트 · 안전 진단`; /* [1029 · 20] 낱말 꼴 · "실거래 시세" 바로잡음 */
   // 동적 OG 이미지 — 실데이터 값 URL 인코딩 (metadataBase 기준 절대화)
   // [995] 지역 줄에 읍면동까지("서울 송파구 잠실동") — 카드 템플릿은 그대로다.
   const ogQuery = new URLSearchParams({ name, price: ogPrice ?? price, region: placeLabel });
@@ -1247,31 +1247,32 @@ export default async function ComplexHubPage({
   /* 요약 탭 첫 카드 — 예전엔 "AI 요약"이라 적힌 칸에 규칙으로 이은 문장(면적 혼합 월평균·전월비)이 있었다.
      AI 가 쓴 글이 아니고, 첫 화면 대표가와 다른 숫자를 말했다. 지도 단지 패널과 같은 한 줄(facts.summaryLine —
      있는 숫자만)에 대표가 문장을 앞세운다. 둘 다 없으면 예전 문장. */
+  /* [1029 · 4] 낱말 꼴 — "최근 실거래가 10억 1,167만원 · 전용 59㎡ 최근 6건 평균 · 25.01 거래 6건 평균 대비 ▲3억 2,800만(48%)" */
   const headlineLine =
     headline?.kind === "rep"
       ? [
-          `최근 실거래가 ${formatEokMan(headline.priceManwon, { unit: "만원" })}(${
+          `최근 실거래가 ${formatEokMan(headline.priceManwon, { unit: "만원" })} · ${
             headline.basis === "band" ? headline.bandLabel : `전용 ${headline.unitM2}㎡`
-          } 최근 ${headline.sampleSize}건 평균)`,
+          } 최근 ${headline.sampleSize}건 평균`,
           headline.base
-            ? changeSentence({
+            ? changeLabel({
                 curr: headline.priceManwon,
                 base: headline.base.avgManwon,
-                since: baseSince(headline.base),
+                since: baseSince(headline.base).replace(/보다$/, " 대비"),
                 unit: "manwon",
               })
             : null,
         ]
           .filter(Boolean)
-          .join(". ")
+          .join(" · ")
       : headline?.kind === "single"
-        ? `최근 실거래 ${formatEokMan(headline.priceManwon, { unit: "만원" })}(한 건)`
+        ? `최근 실거래 ${formatEokMan(headline.priceManwon, { unit: "만원" })} · 한 건`
         : null;
-  /* [1015 · 규칙 D] 대시(—) 잇기 대신 마침표 */
+  /* [1015 · 규칙 D] 대시(—) 잇기 금지 · [1029 · 4] 조각은 가운뎃점으로 */
   const summaryBody =
     facts.summaryLine || headlineLine
-      ? [headlineLine, facts.summaryLine].filter(Boolean).join(". ") +
-        ". 국토교통부 실거래·공공데이터 기준. 투자 권유가 아니며 현장 확인 후 판단."
+      ? [headlineLine, facts.summaryLine].filter(Boolean).join(" · ") +
+        " · 국토교통부 실거래·공공데이터 기준 · 투자 권유 아님 · 현장 확인 후 판단"
       : v.aiBody;
   /* 계산기 프리필 — 첫 화면 대표가와 같은 숫자(없으면 최근 달 평균) */
   const calcManwon =
@@ -1379,7 +1380,7 @@ export default async function ComplexHubPage({
   const analysisHref = `/analysis?complexId=${encodeURIComponent(complexId)}`;
 
   /* [1008 · Q] 호가 점검 — 실거래가 있거나(없음이 확인되지 않았거나) 할 때만 입구를 둔다.
-     거래가 한 건도 없는 단지에 "호가 점검"을 걸면 누른 뒤 "비교할 거래가 없어요"만 남는다. */
+     거래가 한 건도 없는 단지에 "호가 점검"을 걸면 누른 뒤 "비교할 거래 없음"만 남는다. */
   const showAsking = v.priceSeries.length > 0 || v.loadFailures.includes("실거래");
   /* 호가 점검 API 키 — 실거래 조회 키는 name-id(canonical_id). kapt URL 로 열린 단지도 같은 키로 */
   const askingApiId = rowForFacts?.canonical_id ?? complexId;
@@ -1599,7 +1600,7 @@ export default async function ComplexHubPage({
             <TxTrendLazy data={trend} complexName={v.name} />
           ) : (
             <div className="card rounded-2xl px-4 py-6 text-center t-body text-text-3">
-              {txFailed ? "실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요." : `${v.name} · 신고된 매매·전월세 실거래 없음`}
+              {txFailed ? "실거래 불러오기 실패 · 잠시 후 다시" : `${v.name} · 신고된 매매·전월세 실거래 없음`}
             </div>
           )}
 

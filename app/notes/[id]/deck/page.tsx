@@ -69,7 +69,7 @@ export default async function NoteDeckPage({ params }: { params: Promise<{ id: s
       <PageShell breadcrumb="임장노트 › 카드">
         <ErrorState
           title="카드를 만들지 못했어요"
-          desc="노트를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
+          desc="노트 불러오기 실패 · 잠시 후 다시"
           cause={loaded.message}
           action={{ label: "임장노트 목록", href: "/notes" }}
         />

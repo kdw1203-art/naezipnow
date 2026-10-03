@@ -201,7 +201,7 @@ export function AiNoteAnalysisCard({
       if (!res.ok || !data?.report) {
         setState({
           kind: "error",
-          message: data?.error ?? "분석에 실패했어요. 잠시 후 다시 시도해 주세요.",
+          message: data?.error ?? "분석 실패 · 잠시 후 다시",
         });
         return;
       }
@@ -270,7 +270,7 @@ export function AiNoteAnalysisCard({
       {loggedIn && notesLoaded && notes.length === 0 && state.kind !== "login" && (
         <div className="flex items-center justify-between rounded-lg bg-primary-soft px-3 py-2.5">
           <span className="t-sub font-bold text-primary">
-            분석할 임장노트가 아직 없어요
+분석할 임장노트 없음
           </span>
           <Link href="/notes/new" className="shrink-0 t-sub font-bold text-primary">
             첫 노트 쓰기 ›
@@ -360,9 +360,7 @@ export function AiNoteAnalysisCard({
         </div>
       ) : state.kind === "login" ? (
         <div className="flex items-center justify-between rounded-lg bg-primary-soft px-3 py-2.5">
-          <span className="t-sub font-bold text-primary">
-            AI 분석은 로그인 후 이용할 수 있어요
-          </span>
+          <span className="t-sub font-bold text-primary">AI 분석 · 로그인 필요</span>
           <Link href="/login" className="inline-flex min-h-[24px] shrink-0 items-center t-sub font-bold text-primary">
             로그인 ›
           </Link>

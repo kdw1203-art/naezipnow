@@ -66,7 +66,7 @@ const pipelineKeys = [
   ["ONBID_SERVICE_KEY", "공매(onbid-sync)"],
   ["DATA_GO_KR_SERVICE_KEY", "청약홈·입주물량(supply-ingest)"],
   [["DATA_GO_KR_ENCODING_KEY", "MOLIT_SERVICE_KEY"], "국토부 실거래·단지(apis.data.go.kr)"],
-  [["SEOUL_OPENAPI_KEY", "SEOUL_OPENAPI_SERVICE"], "서울 정비사업(redevelopment-ingest)"],
+  ["SEOUL_DATA_API_KEY", "서울 도시계획 결정 조서(redevelopment-ingest) · 서울 시설·실거래 보조"],
   [["POI_SCHOOLS_API_PATH", "POI_STATIONS_API_PATH"], "학교·역(poi-ingest)"],
   ["NAVER_MAP_CLIENT_SECRET", "단지 좌표(geocode-complexes)"],
   ["RESEND_API_KEY", "경보 메일(alert-email)"],

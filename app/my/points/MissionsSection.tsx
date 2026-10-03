@@ -35,7 +35,7 @@ export async function MissionsSection({ email }: { email: string }) {
 
       {!board ? (
         <div className="card mt-4 rounded-2xl px-5 py-6 t-body text-text-2">
-          진행도를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+진행도 불러오기 실패 · 잠시 후 다시
         </div>
       ) : (
         <>

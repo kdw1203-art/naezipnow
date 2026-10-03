@@ -130,7 +130,7 @@ export default async function TownPage() {
   /* 실데이터: 공개 임장노트(사진 우선) + 커뮤니티 글(비자동 posts). 뉴스(자동수집)는 /town/news로 분리.
      이 페이지는 revalidate 가 있어 `next build` 가 프리렌더한다 — 여기서 던지면
      DB 가 잠깐 흔들린 것만으로 배포가 깨진다. 그래서 잡되, **삼키지는 않는다**:
-     실패는 loadFailed 로 화면까지 들고 가서 "글이 없어요"와 다르게 말한다. */
+     실패는 loadFailed 로 화면까지 들고 가서 "글 없음"와 다르게 말한다. */
   const [{ cards, loadFailed, notesMaybeMore }, newsRows] = await Promise.all([
     loadTownFeed(TOWN_FEED_FIRST_PAGE),
     loadNewsRows(),

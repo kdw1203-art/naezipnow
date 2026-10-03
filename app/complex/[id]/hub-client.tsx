@@ -501,8 +501,8 @@ export function ComplexHubTabs({
           ) : (
             <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
               {dealsFailed
-                ? "실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
-                : "아직 신고된 국토교통부 실거래가 없어요"}
+                ? "실거래 불러오기 실패 · 잠시 후 다시"
+                : "신고된 국토교통부 실거래 없음"}
             </div>
           )}
           {notes.length > 0 && (
@@ -534,12 +534,12 @@ export function ComplexHubTabs({
             <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
               {notesFailed ? (
                 /* [1015 · 규칙 D] 오류 한 줄 */
-                "이야기를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
+                "이야기 불러오기 실패 · 잠시 후 다시"
               ) : (
                 /* [970 · B-17] 이 목록은 동네이야기 글 — "임장노트가 없다"고 적으면 아래
                    임장노트 섹션과 어긋난다 */
                 /* [1012 · 규칙 6] 어디서(단지명) */
-                `${complexName ?? "이 단지"} 이야기가 아직 없어요`
+                `${complexName ?? "이 단지"} 이야기 없음`
               )}
             </div>
           )}
@@ -579,7 +579,7 @@ export function ComplexHubTabs({
           {listings.length === 0 && (
             /* [1012 · 규칙 6] "확인해 보세요" → 사실만(다음 행동은 아래 버튼) */
             <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
-              {complexName ?? "이 단지"}에 등록된 실매물이 아직 없어요
+              {complexName ?? "이 단지"}에 등록된 실매물 없음
             </div>
           )}
           {listings.map((l) => (

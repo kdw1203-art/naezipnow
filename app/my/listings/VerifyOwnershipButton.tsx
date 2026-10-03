@@ -32,7 +32,7 @@ export function VerifyOwnershipButton({ listingId }: { listingId: string }) {
       };
       if (!up.ok || !upData.url) {
         setPhase("error");
-        setMsg(upData.error ?? "증빙 업로드에 실패했어요. 다시 시도해 주세요.");
+        setMsg(upData.error ?? "증빙 업로드 실패 · 다시 시도해 주세요.");
         return;
       }
       setPhase("submitting");
@@ -53,7 +53,7 @@ export function VerifyOwnershipButton({ listingId }: { listingId: string }) {
       };
       if (!res.ok || !data.ok) {
         setPhase("error");
-        setMsg(data.error ?? "소유확인 신청에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setMsg(data.error ?? "소유확인 신청 실패 · 잠시 후 다시");
         return;
       }
       setPhase("done");

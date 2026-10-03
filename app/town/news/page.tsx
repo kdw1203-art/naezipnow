@@ -94,7 +94,7 @@ export default async function TownNewsPage() {
 
   /* 이 페이지는 revalidate 가 있어 프리렌더 대상이다 — 던지면 배포가 깨지므로
      잡는다. 다만 실패를 빈 목록으로 뭉개지 않는다: newsFailed 로 들고 가서
-     "아직 수집된 기사가 없어요"와 다르게 말한다. */
+     "수집된 기사 없음"와 다르게 말한다. */
   let rows: NewsRow[] = [];
   let newsCount = 0;
   let newsFailed = false;
@@ -200,7 +200,7 @@ export default async function TownNewsPage() {
           ) : newsFailed ? (
             <div className="rise-in mb-5">
               <ErrorState
-                title="뉴스를 불러오지 못했어요"
+                title="뉴스 불러오기 실패"
                 desc="잠시 후 다시 시도해 주세요."
                 action={{ label: "동네이야기 보기", href: "/town" }}
               />

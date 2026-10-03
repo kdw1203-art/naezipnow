@@ -52,11 +52,11 @@ export function HomeTownBlock({
           </Link>
         </div>
         {failed ? (
-          <p className="m-0 t-sub text-text-3">이웃 글을 불러오지 못했어요.</p>
+          <p className="m-0 t-sub text-text-3">이웃 글 불러오기 실패</p>
         ) : stories.length === 0 ? (
           /* 0건 — 빈 방을 뉴스로 채우지 않는다(뉴스는 옆 칸의 다른 재질). 첫 글로 안내한다. */
           <div className="flex flex-col gap-2">
-            <p className="m-0 t-sub text-text-3">아직 이웃이 쓴 이야기가 없어요.</p>
+            <p className="m-0 t-sub text-text-3">이웃이 쓴 이야기 없음</p>
             <Link
               href="/town/write"
               className="btn-secondary inline-flex min-h-10 w-fit items-center gap-1.5 rounded-xl px-3.5 t-sub font-bold no-underline"
@@ -121,7 +121,7 @@ export function HomeTownBlock({
           </Link>
         </div>
         {failed ? (
-          <p className="m-0 t-sub text-text-3">뉴스를 불러오지 못했어요.</p>
+          <p className="m-0 t-sub text-text-3">뉴스 불러오기 실패</p>
         ) : news.length === 0 ? (
           <p className="m-0 t-sub text-text-3">최근 기사 없음</p>
         ) : (

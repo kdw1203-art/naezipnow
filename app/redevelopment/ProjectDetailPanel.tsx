@@ -158,10 +158,9 @@ export function ProjectDetailPanel({
             );
           })}
         </ol>
+        {/* [1029 · 15] 낱말 꼴 */}
         <p className="mt-1.5 t-caption text-text-3">
-          공개 자료에서 확인한 값은 <b className="text-text-2">현재 단계</b> 하나입니다. 각 단계의
-          통과 날짜(인가일 등)는 확보하지 못해 표시하지 않습니다. 날짜는 지자체 고시·조합
-          공고 기준입니다.
+          공개 자료 확인값 = <b className="text-text-2">현재 단계</b> 하나 · 단계별 통과 날짜(인가일 등) 미확보 · 날짜 기준 = 지자체 고시·조합 공고
         </p>
       </div>
 
@@ -228,9 +227,7 @@ export function ProjectDetailPanel({
               </li>
             ))}
           </ul>
-          <p className="mt-2 t-caption text-text-3">
-            법정 일반 절차 기준의 확인 목록이에요. 이 구역을 내집나우가 확인한 결과는 아니에요.
-          </p>
+          <p className="mt-2 t-caption text-text-3">법정 일반 절차 기준 목록 · 이 구역의 내집나우 확인 결과 아님</p>
         </div>
       ) : null}
     </section>

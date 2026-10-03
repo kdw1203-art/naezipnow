@@ -288,8 +288,8 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
           </div>
           <p className="t-body font-bold text-ink">
             {!filtersActive
-              ? "인증 전문가가 아직 없어요"
-              : `조건에 맞는 전문가가 아직 없어요`}
+              ? "인증 전문가 없음"
+              : `조건에 맞는 전문가 없음`}
           </p>
           {/* [1015] 빈 화면은 한 줄(브리프 규칙 D) */}
           <p className="max-w-xs t-sub text-text-3">
@@ -329,7 +329,7 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-navy text-on-dark">
                   <Icon name="shield" size={22} />
                 </div>
-                <div className="t-body font-bold text-text-1">아직 인증된 전문가가 없어요</div>
+                <div className="t-body font-bold text-text-1">인증된 전문가 없음</div>
                 <div className="max-w-xs t-sub text-text-3">아래 심사 중 프로필은 상담을 받지 않아요.</div>
               </div>
             )}

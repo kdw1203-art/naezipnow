@@ -48,7 +48,7 @@ export function complexFacts(p: ComplexPreview): string[] {
 }
 
 /* ── 결과 없음 문구(소유자 지시 1008 — 단지 선택기·헤더·홈·지도·/search 가 같은 말을 쓴다) ── */
-export const noMatchTitle = (q: string): string => `“${q}” 와 일치하는 단지가 없어요`;
+export const noMatchTitle = (q: string): string => `“${q}” 와 일치하는 단지 없음`;
 export const NO_MATCH_HINT = "띄어쓰기 없이, 또는 동 이름 + 단지명으로 찾아보세요";
 /** 예시 — 운영 DB 에서 이 형태로 1위가 나오는 것을 확인한 질의(tests/unit/complex-search-1008) */
 export const NO_MATCH_EXAMPLE = "예: 목동 7단지 · 동탄 롯데캐슬";

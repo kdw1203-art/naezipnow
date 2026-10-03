@@ -159,7 +159,7 @@ export default async function TownExpertsPage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-danger-soft text-danger">
               <Icon name="warning" size={22} />
             </div>
-            <p className="t-body font-bold text-ink">전문가 목록을 불러오지 못했어요</p>
+            <p className="t-body font-bold text-ink">전문가 목록 불러오기 실패</p>
             <p className="max-w-xs t-sub text-text-3">
               잠시 후 다시 시도해 주세요.
             </p>

@@ -39,7 +39,7 @@ export default async function AccuracyPage() {
 
         {bt.total === 0 ? (
           <div className="card rounded-2xl px-5 py-8 text-center t-body font-bold text-text-3">
-            아직 계산 가능한 표본이 없어요.
+계산 가능한 표본 없음
           </div>
         ) : (
           <>

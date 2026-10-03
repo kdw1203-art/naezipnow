@@ -31,6 +31,7 @@ import { formatKrwShort, formatYmRange } from "@/lib/market/format";
 import { krwPerPyeongToManwon } from "@/lib/map/price-tiers";
 import { logger } from "@/lib/log";
 import { ProjectDetailPanel } from "../ProjectDetailPanel";
+import { ZoneDecisionHistory } from "../ZoneDecisionHistory";
 
 /* ============================================================
    [1027] 정비사업 구역 상세 — /redevelopment/[id]
@@ -226,6 +227,9 @@ export default async function RedevelopmentZonePage({
           {/* ===== 진행 상황 · 현황 자료 · 이 단계에서 확인할 것 (목록 화면과 같은 패널) ===== */}
           <ProjectDetailPanel project={project} hideHeader />
 
+          {/* [1029] 서울시 도시계획 결정 이력(UPIS 정비사업 조서) — 서울 구역이고 이름이 맞는 조서가 있을 때만 */}
+          <ZoneDecisionHistory name={project.name} sido={project.sido} sigungu={project.sigungu} />
+
           {/* ===== 주변 아파트 실거래 ===== */}
           <section className="rise-in-1 card p-[var(--pad-card)]">
             <h2 className="t-section text-ink">주변 아파트 실거래</h2>
@@ -235,10 +239,10 @@ export default async function RedevelopmentZonePage({
             </p>
             {complexes.failed ? (
               <p className="mt-3 rounded-lg bg-danger-soft px-3 py-2 t-sub text-ink">
-                주변 단지를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+주변 단지 불러오기 실패 · 잠시 후 다시
               </p>
             ) : complexes.items.length === 0 ? (
-              <p className="mt-3 t-sub text-text-3">반경 안에 매매 실거래가 있는 아파트가 없어요.</p>
+              <p className="mt-3 t-sub text-text-3">반경 안에 매매 실거래가 있는 아파트 없음</p>
             ) : (
               /* 폰은 세 칸(단지 · 평단가 · 거래)만 — 다섯 칸을 가로로 밀면 평균 거래가가 잘려 보인다. 나머지 두 칸은 단지 화면에 있다 */
               <div data-tone="blue" className="lq-panel mt-3 overflow-x-auto max-md:mt-2">
@@ -261,7 +265,7 @@ export default async function RedevelopmentZonePage({
                             <Link
                               prefetch={false}
                               href={complexHrefFromNames(c.regionName, c.complexName)}
-                              className="inline-flex min-h-[24px] items-center font-bold text-primary underline"
+                              className="inline-flex min-h-[24px] min-w-[24px] items-center font-bold text-primary underline"
                             >
                               {c.complexName}
                             </Link>
@@ -306,9 +310,9 @@ export default async function RedevelopmentZonePage({
               반경 약 {(ZONE_NEARBY_ZONE_RADIUS_M / 1000).toFixed(0)}km · 가까운 구간 순
             </p>
             {zones.failed ? (
-              <p className="mt-2 t-sub text-text-3">가까운 구역을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+              <p className="mt-2 t-sub text-text-3">가까운 구역 불러오기 실패 · 잠시 후 다시</p>
             ) : zones.items.length === 0 ? (
-              <p className="mt-2 t-sub text-text-3">이 지도에 실린 구역 가운데 반경 안에 다른 구역이 없어요.</p>
+              <p className="mt-2 t-sub text-text-3">반경 내 다른 구역 없음 · 이 지도에 실린 구역 기준</p>
             ) : (
               <ul className="mt-2 flex flex-col divide-y divide-border">
                 {zones.items.map(({ project: z, distanceM }) => (

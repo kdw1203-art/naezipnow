@@ -145,7 +145,7 @@ export default async function ReportsIndexPage() {
           <div className="flex min-w-0 flex-col gap-5 max-md:gap-3">
             {loadError ? (
               <div className="card rounded-2xl px-5 py-8 text-center t-body text-text-3 max-md:py-5">
-                월간 집계를 <strong className="text-ink">불러오지 못했어요</strong>.
+                월간 집계를 <strong className="text-ink">불러오기 실패</strong>.
                 <br />
                 잠시 후 다시 시도해 주세요.
               </div>
@@ -183,7 +183,7 @@ export default async function ReportsIndexPage() {
               ))
             ) : (
               <div className="card rounded-2xl px-5 py-8 text-center t-body text-text-3 max-md:py-5">
-                아직 집계된 월이 없어요. 실거래 신고가 집계되면 표시돼요.
+집계된 월 없음 · 실거래 신고가 집계되면 표시돼요.
               </div>
             )}
 

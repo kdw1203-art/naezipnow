@@ -130,7 +130,7 @@ export function ChatRoom({
         if (!cancelled) setPhase("ready");
       } catch {
         if (!cancelled) {
-          setErrorMsg("채팅방 연결에 실패했어요. 잠시 후 다시 시도해 주세요.");
+          setErrorMsg("채팅방 연결 실패 · 잠시 후 다시");
           setPhase("error");
         }
       }
@@ -185,10 +185,10 @@ export function ChatRoom({
         const data = (await res.json().catch(() => ({}))) as {
           error?: { message?: string };
         };
-        setErrorMsg(data.error?.message ?? "전송에 실패했어요.");
+        setErrorMsg(data.error?.message ?? "전송 실패");
       }
     } catch {
-      setErrorMsg("전송에 실패했어요. 네트워크를 확인해 주세요.");
+      setErrorMsg("전송 실패 · 네트워크를 확인해 주세요.");
     } finally {
       setSending(false);
     }
@@ -233,10 +233,10 @@ export function ChatRoom({
         const data = (await res.json().catch(() => ({}))) as {
           error?: { message?: string };
         };
-        showNotice(data.error?.message ?? "신고 접수에 실패했어요.");
+        showNotice(data.error?.message ?? "신고 접수 실패");
       }
     } catch {
-      showNotice("신고 접수에 실패했어요. 네트워크를 확인해 주세요.");
+      showNotice("신고 접수 실패 · 네트워크를 확인해 주세요.");
     } finally {
       setActionBusy(false);
     }
@@ -264,10 +264,10 @@ export function ChatRoom({
         const data = (await res.json().catch(() => ({}))) as {
           error?: { message?: string };
         };
-        showNotice(data.error?.message ?? "차단 처리에 실패했어요.");
+        showNotice(data.error?.message ?? "차단 처리 실패");
       }
     } catch {
-      showNotice("차단 처리에 실패했어요. 네트워크를 확인해 주세요.");
+      showNotice("차단 처리 실패 · 네트워크를 확인해 주세요.");
     } finally {
       setActionBusy(false);
     }
@@ -288,9 +288,9 @@ export function ChatRoom({
       const data = (await res.json().catch(() => ({}))) as {
         error?: { message?: string };
       };
-      showNotice(data.error?.message ?? "나가기에 실패했어요.");
+      showNotice(data.error?.message ?? "나가기 실패");
     } catch {
-      showNotice("나가기에 실패했어요. 네트워크를 확인해 주세요.");
+      showNotice("나가기 실패 · 네트워크를 확인해 주세요.");
     } finally {
       setLeaving(false);
     }
@@ -361,11 +361,11 @@ export function ChatRoom({
         {phase === "ready" && messages.length === 0 && (
           <div className="mt-8 flex flex-col items-center gap-1.5 self-center text-center">
             <div className="t-body font-bold text-ink">
-              아직 메시지가 없어요
+메시지 없음
             </div>
             <p className="t-sub text-text-2">
               {/* [1012] 규칙 6 — 권유 대신 사실 */}
-              이 모임 채팅방에 올라온 메시지가 아직 없어요 — 아래 칸에 쓴 메시지가 첫 메시지예요
+이 모임 채팅방에 올라온 메시지 없음 — 아래 칸에 쓴 메시지가 첫 메시지예요
             </p>
           </div>
         )}

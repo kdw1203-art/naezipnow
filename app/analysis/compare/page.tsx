@@ -300,7 +300,7 @@ export default function ComparePage() {
               ))}
             </div>
             {/* 비교함을 읽기 전(서버 렌더)에는 문장을 쓰지 않는다 — 담은 사람에게 "없어요"가 먼저 보이지 않게 */}
-            {tray !== null && <p className="m-0 t-body font-bold text-ink">담은 단지가 없어요 · 최대 {COMPARE_TRAY_MAX}곳</p>}
+            {tray !== null && <p className="m-0 t-body font-bold text-ink">담은 단지 없음 · 최대 {COMPARE_TRAY_MAX}곳</p>}
             {picker}
           </section>
         ) : (

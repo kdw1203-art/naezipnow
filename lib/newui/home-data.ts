@@ -790,7 +790,7 @@ async function loadNewHomeDataInternal(): Promise<NewHomeData> {
   /* 스냅샷 0건은 "데이터 준비 중"이 아니라 조회 이상이다(키 부재·ETL 재적재
      창 — 운영에서 이 표가 정말로 빈 적은 없다). 예전엔 이 경우 EmptyState
      ("준비되면 표시됩니다")로 나가 실패가 준비 중으로 위장됐다(2026-08-04
-     소유자 캡처). 실패로 분류해 "지금 불러오지 못했어요"로 말한다. */
+     소유자 캡처). 실패로 분류해 "지금 불러오기 실패"로 말한다. */
   if (!regionsFailed && snapshots.size === 0) regionsFailed = true;
   let regions = buildRegionCards(snapshots);
   /* [1002] 스냅샷 실패 → 월 집계 폴백. 카드가 1장이라도 나오면 그건 실패가 아니라

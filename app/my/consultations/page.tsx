@@ -188,7 +188,7 @@ export default async function MyConsultationsPage() {
         <SectionHead id="sent" title="보낸 상담" count={sent.length} hint="답변이 오면 알림과 여기에 함께 도착해요" />
         {sent.length === 0 ? (
           <EmptyCard
-            title="아직 보낸 상담이 없어요"
+            title="보낸 상담 없음"
             body="전문가 프로필에서 '상담 신청'을 누르면 여기에 쌓여요. 임장노트 링크를 함께 붙이면 더 정확한 답을 받을 수 있어요."
             cta={{ href: "/town/experts", label: "전문가 찾아보기" }}
           />
@@ -255,7 +255,7 @@ export default async function MyConsultationsPage() {
         <SectionHead id="requests" title="내 견적 요청" count={myRequests.length} hint="전문가 제안은 요청 아래에 모여요" />
         {myRequests.length === 0 ? (
           <EmptyCard
-            title="보낸 견적 요청이 없어요"
+            title="보낸 견적 요청 없음"
             body="어떤 전문가가 필요한지 모르겠다면 전문가 목록의 '견적 요청'에 필요한 내용을 남겨 보세요. 인증 전문가가 제안을 보내면 여기서 비교할 수 있어요."
             cta={{ href: "/town/experts", label: "견적 요청하러 가기" }}
           />
@@ -282,7 +282,7 @@ export default async function MyConsultationsPage() {
 
                   {proposals.length === 0 ? (
                     <p className="rounded-xl bg-bg px-3.5 py-2.5 t-sub text-text-3">
-                      아직 제안이 없어요. 인증 전문가가 요청을 보고 제안을 보내면 여기에 표시되고 알림도 함께 가요.
+제안 없음 · 인증 전문가가 요청을 보고 제안을 보내면 여기에 표시되고 알림도 함께 가요.
                     </p>
                   ) : (
                     <div className="flex flex-col gap-2">
@@ -370,7 +370,7 @@ export default async function MyConsultationsPage() {
 
           {received.length === 0 ? (
             <EmptyCard
-              title="아직 받은 상담이 없어요"
+              title="받은 상담 없음"
               body="이용자가 상담을 신청하면 여기로 도착해요. 소개·전문 분야·활동 지역을 채우고 응답 시간을 적어 두면 신청이 늘어요."
               cta={{ href: "/my/expert-profile", label: "프로필 채우기" }}
             />
@@ -434,11 +434,11 @@ export default async function MyConsultationsPage() {
           </div>
           {boardFailed ? (
             <div className="card rounded-2xl px-4 py-6 text-center t-sub text-text-3">
-              견적 요청을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+견적 요청 불러오기 실패 · 잠시 후 다시
             </div>
           ) : board.length === 0 ? (
             <div className="card rounded-2xl px-4 py-6 text-center t-sub text-text-3">
-              아직 열린 견적 요청이 없어요. 새 요청이 올라오면 여기에 표시됩니다.
+열린 견적 요청 없음 · 새 요청이 올라오면 여기에 표시됩니다.
             </div>
           ) : (
             <div className="flex flex-col gap-2.5">

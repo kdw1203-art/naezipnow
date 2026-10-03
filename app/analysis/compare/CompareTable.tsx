@@ -56,7 +56,7 @@ function latestText(it: CompareItem): string {
 
 /** [1008 · Q] 조회 실패와 거래 없음을 가른다(리뷰 C) */
 function noDataText(it: CompareItem): string {
-  return it.failed ? "실거래를 불러오지 못했어요 · 잠시 후 다시" : "최근 12개월 실거래 없음";
+  return it.failed ? "실거래 불러오기 실패 · 잠시 후 다시" : "최근 12개월 실거래 없음";
 }
 
 const RADAR_TONES = ["text-primary", "text-success", "text-warning"] as const;
@@ -272,7 +272,7 @@ export function CompareTable({
           </p>
         </>
       ) : (
-        <p className="m-0 t-sub text-text-3">집계에 실패했어요. 잠시 후 다시 시도해 주세요.</p>
+        <p className="m-0 t-sub text-text-3">집계 실패 · 잠시 후 다시</p>
       )}
     </section>
   );

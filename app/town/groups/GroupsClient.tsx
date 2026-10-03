@@ -404,7 +404,7 @@ export function GroupsClient({
             <Icon name="search" size={22} />
           </div>
           <p className="t-body font-bold text-ink">
-            {filtersActive ? "이 조건에 맞는 임장 모임이 0개예요" : "모집 중인 임장 모임이 아직 없어요"}
+            {filtersActive ? "이 조건에 맞는 임장 모임이 0개예요" : "모집 중인 임장 모임 없음"}
           </p>
           {/* [1012] 규칙 6 — "모아보세요" 권유 → 사실 */}
           <p className="max-w-xs t-sub leading-[1.6] text-text-3">
@@ -446,7 +446,7 @@ export function GroupsClient({
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
                   <Icon name="users" size={22} />
                 </div>
-                <div className="t-body font-bold text-text-1">모집 중인 임장 모임이 없어요</div>
+                <div className="t-body font-bold text-text-1">모집 중인 임장 모임 없음</div>
                 <div className="max-w-xs t-sub leading-[1.6] text-text-3">
                   여기서 만든 모임이 이 자리에 실려요 — 만들면 채팅방이 함께 열려요.
                 </div>

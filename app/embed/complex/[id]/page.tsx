@@ -91,7 +91,7 @@ function UnavailableCard({ reason }: { reason: "notfound" | "error" }) {
       <Wordmark />
       <div className="pr-16">
         <div className="t-section leading-tight text-ink">
-          {reason === "notfound" ? "단지 정보를 찾을 수 없어요" : "실거래가를 불러오지 못했어요"}
+          {reason === "notfound" ? "단지 정보를 찾을 수 없어요" : "실거래가 불러오기 실패"}
         </div>
         <div className="mt-1 text-xs leading-[1.6] text-text-2">
           {reason === "notfound"
@@ -134,7 +134,7 @@ function EmbedPrice({ view }: { view: EmbedView }) {
       <div className="mt-3">
         <div className="t-caption font-semibold text-text-3">최근 실거래가</div>
         <div className="mt-0.5 t-body font-bold text-ink">
-          {view.txFailed ? "실거래를 불러오지 못했어요" : "아직 신고된 매매 실거래가 없어요"}
+          {view.txFailed ? "실거래 불러오기 실패" : "신고된 매매 실거래 없음"}
         </div>
         <div className="t-caption text-text-3">
           {view.txFailed ? "잠시 후 다시 시도해 주세요" : "신고가 들어오면 여기에 보여요"}

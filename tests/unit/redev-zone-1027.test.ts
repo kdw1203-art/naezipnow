@@ -128,8 +128,8 @@ test("구역 상세 — ISR · 없는 구역만 404 · 실패와 0건을 다르�
   assert.match(page, /export function generateStaticParams\(\): \{ id: string \}\[\] \{\s*return \[\];/);
   assert.ok(page.includes("if (!project) notFound();"));
   assert.ok(!/getProject\([^)]*\)\.catch/.test(page), "조회 실패를 404 로 바꾸지 않는다");
-  assert.ok(page.includes("주변 단지를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."));
-  assert.ok(page.includes("반경 안에 매매 실거래가 있는 아파트가 없어요."));
+  assert.ok(page.includes("주변 단지 불러오기 실패 · 잠시 후 다시"));
+  assert.ok(page.includes("반경 안에 매매 실거래가 있는 아파트 없음"));
   assert.ok(page.includes("<ProjectDetailPanel project={project} hideHeader />"));
   assert.ok(page.includes("buildPageMetadata({"));
   assert.ok(page.includes('breadcrumbJsonLd(['));

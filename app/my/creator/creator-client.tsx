@@ -275,7 +275,7 @@ function MonetizationTab({
           </div>
         ) : sales.reports.length === 0 ? (
           <div className="mt-3 rounded-lg bg-bg px-4 py-6 text-center t-sub text-text-3">
-            아직 등록한 유료 리포트가 없어요.
+등록한 유료 리포트 없음
           </div>
         ) : (
           <div className="mt-2 flex flex-col gap-[6px]">

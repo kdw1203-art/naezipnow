@@ -39,11 +39,11 @@ export default async function MyAnalysesPage() {
 
         {failed ? (
           <div className="card rounded-2xl px-5 py-8 text-center t-body font-bold text-text-3">
-            분석 기록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+분석 기록 불러오기 실패 · 잠시 후 다시
           </div>
         ) : runs.length === 0 ? (
           <div className="card rounded-2xl px-5 py-8 text-center">
-            <p className="t-body font-bold text-text-2">아직 실행한 분석이 없어요.</p>
+            <p className="t-body font-bold text-text-2">실행한 분석 없음</p>
             <Link href="/analysis" className="btn-primary mt-3 inline-block rounded-lg px-4 py-2 t-body font-bold no-underline">
               첫 분석 실행하기 ›
             </Link>

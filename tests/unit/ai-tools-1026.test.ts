@@ -240,7 +240,7 @@ test("[1026] 빈 상태 — 카드 하나 + 회색 견본(제자리 · 흐린 �
   /* 문장은 서버 페이지(page.tsx)에만 — 첫 로드 번들에 싣지 않는다 */
   assert.match(page, /emptyLine=\{EMPTY_LINE\[tid\] \?\? null\}/);
   /* [1028] 도구마다 달랐던 문장 → 공통 한 줄(무엇이 나오는지는 머리 한 줄이 말한다) */
-  for (const t of FRAME_TOOLS) assert.ok(page.includes(`"${t}": "단지를 고르면 결과가 나와요."`), t);
+  for (const t of FRAME_TOOLS) assert.ok(page.includes(`"${t}": "단지 선택 → 결과"`), t);
   assert.doesNotMatch(frames, /<text/);
 });
 

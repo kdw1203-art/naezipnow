@@ -1527,7 +1527,7 @@ export function NoteForm({
             status: xhr.status,
             error:
               json.error ??
-              (xhr.status === 401 ? "로그인이 필요해요." : "사진 업로드에 실패했어요."),
+              (xhr.status === 401 ? "로그인이 필요해요." : "사진 업로드 실패"),
           });
         }
       };
@@ -2092,7 +2092,7 @@ export function NoteForm({
         .catch(() => ({}));
       const noteId = editId ?? json.note?.id;
       if (!res.ok || !noteId) {
-        setSaveError(json.error ?? "저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setSaveError(json.error ?? "저장 실패 · 잠시 후 다시");
         return;
       }
       /* 정식 저장 완료 — 임시저장본 제거. [967 · 9] 수정 모드도 노트별 키를 지운다
@@ -2593,7 +2593,7 @@ export function NoteForm({
         {/* [970 · B-12] 로그인 안내도 상단에 — 저장 바(B-11)에서 401 을 받은 사람은 폼 중간에 있다 */}
         {needLogin && (
           <div className="card rounded-lg px-4 py-3 text-center t-body text-primary">
-            저장에는 로그인이 필요해요. 작성한 내용은 유지돼요.{" "}
+            저장 · 로그인 필요 · 작성 내용 유지{" "}
             <Link href={loginHref} className="inline-block py-[5px] font-bold underline underline-offset-2">
               로그인하기 ›
             </Link>
@@ -2906,7 +2906,7 @@ export function NoteForm({
                       onLoginNeeded={() =>
                         promptSignup({
                           action: "note_ai_draft",
-                          title: "AI 초안은 로그인 후 받을 수 있어요",
+                          title: "로그인 필요 · AI 초안",
                           benefit: "로그인하면 실거래·시세 데이터로 초안이 채워져요. 적은 내용은 그대로 남아요.",
                           callbackUrl: window.location.pathname + window.location.search,
                         })
@@ -3344,7 +3344,7 @@ export function NoteForm({
       <div ref={ctaRef} className="mt-4 flex flex-col gap-2">
         {needLogin && !showRail && (
           <div className="card rounded-lg px-4 py-3 text-center t-body text-primary">
-            저장에는 로그인이 필요해요. 작성한 내용은 유지돼요.{" "}
+            저장 · 로그인 필요 · 작성 내용 유지{" "}
             <Link href={loginHref} className="inline-block py-[5px] font-bold underline underline-offset-2">
               로그인하기 ›
             </Link>
@@ -3474,7 +3474,7 @@ export function NoteForm({
                 </div>
               ) : needLogin ? (
                 <div role="status" className="truncate t-caption font-bold text-primary">
-                  저장에는 로그인이 필요해요. 작성한 내용은 유지돼요
+                  저장 · 로그인 필요 · 작성 내용 유지
                 </div>
               ) : (
                 <div role="status" className="truncate t-caption text-text-3">

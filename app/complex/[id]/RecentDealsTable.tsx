@@ -38,7 +38,7 @@ export function RecentDealsTable({
       </div>
       {rows.length === 0 ? (
         <p className="mt-2 rounded-lg bg-bg px-3 py-4 text-center t-body text-text-3">
-          {failed ? "실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요." : "아직 신고된 매매 실거래 없음"}
+          {failed ? "실거래 불러오기 실패 · 잠시 후 다시" : "아직 신고된 매매 실거래 없음"}
         </p>
       ) : (
         <div className="-mx-1 mt-2 overflow-x-auto px-1">

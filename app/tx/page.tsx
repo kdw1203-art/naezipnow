@@ -193,7 +193,7 @@ export default async function TxIndexPage() {
           {/* 모바일 실측 18 — py-8 은 세 줄 문구에 화면의 40% 를 차지했다. 문구는
               그대로(정직성 유지), 여백만 줄인다. */}
           <p className="py-4 text-center t-body text-text-3 md:py-8">
-            실거래 집계를 <strong className="text-ink">불러오지 못했어요</strong>.
+            실거래 집계를 <strong className="text-ink">불러오기 실패</strong>.
             <br />
             잠시 후 다시 시도해 주세요.
           </p>

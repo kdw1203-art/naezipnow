@@ -70,9 +70,9 @@ test("[1009·H] 서울 구처럼 스냅샷이 비어도 시계열로 숫자와 �
     ],
     now: NOW,
   });
-  assert.equal(o.headline, "시세 지수가 전월보다 0.6% 올랐어요");
+  assert.equal(o.headline, "매매가격지수 · 전월 대비 ▲0.6%");
   assert.equal(o.headlineCaption, "가나구 · 2026년 7월 · 한국부동산원 매매가격지수");
-  assert.equal(o.subline, "1년 전보다 6.3% 올랐어요");
+  assert.equal(o.subline, "1년 전 대비 ▲6.3%");
   assert.equal(o.index?.ym, "202607");
   assert.ok(Math.abs((o.index?.momPct ?? 0) - 0.6) < 1e-9);
   assert.ok(Math.abs((o.jeonse?.ppChange ?? 0) - 0.1) < 1e-9);
@@ -97,7 +97,7 @@ test("[1009·H] 부동산원 스냅샷 값이 있으면 평균가는 스냅샷, 
     volume: [],
     now: NOW,
   });
-  assert.equal(o.headline, "시세 지수가 전월보다 1.9% 올랐어요");
+  assert.equal(o.headline, "매매가격지수 · 전월 대비 ▲1.9%");
   assert.equal(o.subline, null);
   assert.deepEqual(o.avgPrice, { krw: 854_000_000, ym: "202608", basis: "reb", trades: null });
   assert.deepEqual(o.jeonse, { value: 61.6, ym: "202608", ppChange: null });
@@ -113,7 +113,7 @@ test("[1009·H] 지수 시계열이 없으면 스냅샷 변동률 → 그것도 
     volume: [],
     now: NOW,
   });
-  assert.equal(a.headline, "시세 지수가 전월보다 거의 그대로예요");
+  assert.equal(a.headline, "매매가격지수 · 전월 대비 보합");
   const b = buildRegionOverview({
     name: "사아구",
     snapshot: null,
@@ -126,7 +126,7 @@ test("[1009·H] 지수 시계열이 없으면 스냅샷 변동률 → 그것도 
     ],
     now: NOW,
   });
-  assert.equal(b.headline, "아파트 매매 신고가 전월보다 10건(20.0%) 줄었어요");
+  assert.equal(b.headline, "아파트 매매 신고 · 전월 대비 ▼10건(20.0%)");
   assert.equal(b.headlineCaption, "사아구 · 2026년 7월 · 국토교통부 실거래 신고");
   assert.equal(b.hasReb, false);
   const c = buildRegionOverview({ name: "자차구", snapshot: null, indexSeries: [], jeonseSeries: [], volume: [], now: NOW });
@@ -156,9 +156,10 @@ test("[1009·H] 달이 비어 있으면(직전 달 없음) 전월 대비를 지�
 });
 
 test("[1009·H] pctSentence · 추세 데이터 · 기간 탭", () => {
-  assert.equal(pctSentence(1.91, "전월보다"), "전월보다 1.9% 올랐어요");
-  assert.equal(pctSentence(-0.8, "전월보다"), "전월보다 0.8% 내렸어요");
-  assert.equal(pctSentence(null, "전월보다"), null);
+  assert.equal(pctSentence(1.91, "전월 대비"), "전월 대비 ▲1.9%");
+  assert.equal(pctSentence(-0.8, "전월 대비"), "전월 대비 ▼0.8%");
+  assert.equal(pctSentence(0.02, "전월 대비"), "전월 대비 보합");
+  assert.equal(pctSentence(null, "전월 대비"), null);
   const t = seriesToTrend("index", "시세 지수", idx);
   assert.deepEqual(t?.labels, ["25.07", "25.08", "26.06", "26.07"]);
   assert.deepEqual(t?.fullLabels[0], "2025년 7월");

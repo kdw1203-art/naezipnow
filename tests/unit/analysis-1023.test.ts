@@ -236,7 +236,7 @@ test("[1028] 허브 머리 — 실거래 건수·단지 수를 못 읽으면(nul
 test("[1028] 허브 설명문·예시 계산 고지 — 줄표 연결·내부 말(실연동)·평어체 없음", () => {
   const page = code("app/analysis/page.tsx");
   const meta = page.slice(page.indexOf("export const metadata"), page.indexOf('path: "/analysis"'));
-  assert.ok(meta.includes("'예시 계산'으로 따로 표시합니다."), "예시 계산 고지는 설명문에 남는다");
+  assert.ok(meta.includes("'예시 계산' 표시"), "예시 계산 고지는 설명문에 남는다([1029 · 20] 낱말 꼴)");
   assert.doesNotMatch(meta, /—|실연동/);
   assert.match(page, /<p className="t-sub mt-2 text-text-3">예시 수치로 계산<\/p>/);
   assert.ok(!page.includes("쓰지 않는다"), "평어체 고지가 남았다");
@@ -258,14 +258,14 @@ test("[1028] 시나리오 계산 요약 — 'AI' 칩 없음 · 이름표는 '계
   for (const s of ["넘지 않습니다", "지나갑니다", "% 입니다"]) assert.ok(!c.includes(s), s);
 });
 
-test("[1028] 오류 문구 표준 — '○○을 불러오지 못했어요' + '잠시 후 다시 시도해 주세요.'('없는 것과는 달라요'·'조회가 실패했습니다' 없음)", () => {
+test("[1028 · 1029·19] 오류 문구 표준 — '○○ 불러오기 실패 · 잠시 후 다시'('없는 것과는 달라요'·'조회가 실패했습니다' 없음)", () => {
   const wb = code("app/analysis/ai/[tool]/WorkbenchClient.tsx");
-  assert.match(wb, /<p className="t-body font-bold text-warning">자료를 불러오지 못했어요\. 잠시 후 다시 시도해 주세요\.<\/p>/);
+  assert.match(wb, /<p className="t-body font-bold text-warning">자료 불러오기 실패 · 잠시 후 다시<\/p>/);
   assert.ok(!wb.includes("없는 것과는 달라요"));
   const gap = code("app/analysis/gap/page.tsx");
-  assert.match(gap, /title="지역 시세를 불러오지 못했어요"\s+desc="잠시 후 다시 시도해 주세요\."/);
+  assert.match(gap, /title="지역 시세 불러오기 실패"\s+desc="잠시 후 다시 시도해 주세요\."/);
   assert.ok(!gap.includes("조회가 실패했습니다") && !gap.includes("(조회 실패)"));
-  assert.ok(gap.includes("월세 환산 수익률·실측 갭 열을 불러오지 못했어요. 전세가율 열은 그대로 볼 수 있어요."));
+  assert.ok(gap.includes("월세 환산 수익률·실측 갭 열 불러오기 실패 · 전세가율 열은 그대로 볼 수 있어요."));
 });
 
 test("[1028] 후보 지역 규칙 요약(compare-summary) — 숫자와 사실, 해요체 · 권유(협상 여지·추격 매수·좁혀 보세요) 없음", () => {

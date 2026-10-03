@@ -103,12 +103,12 @@ const UNREAD_STYLE: Record<Category, { bg: string; color: string; border: string
 
 /* [1015 · 규칙 B] 빈 화면은 한 줄 — 권유 꼬리("구독하면 … 받아볼 수 있어요")를 뺐다(구독 폼이 바로 위에 있다) */
 const EMPTY: Record<TabKey, string> = {
-  전체: "아직 알림이 없어요.",
-  매물: "매물 승인·소유확인 알림이 아직 없어요.",
-  관심지역: "관심 지역 새 매물 알림이 아직 없어요.",
-  활동: "댓글·좋아요 알림이 아직 없어요.",
-  포인트: "포인트 적립·소비 내역이 아직 없어요.",
-  운영: "점검 경보가 없어요.",
+  전체: "알림 없음",
+  매물: "매물 승인·소유확인 알림 없음",
+  관심지역: "관심 지역 새 매물 알림 없음",
+  활동: "댓글·좋아요 알림 없음",
+  포인트: "포인트 적립·소비 내역 없음",
+  운영: "점검 경보 없음",
 };
 
 /* ---------- 유틸 ---------- */
@@ -248,7 +248,7 @@ function AlertSubscriptionSection() {
       | { error?: string };
     if (!res.ok) {
       throw new Error(
-        ("error" in data && data.error) || "구독 추가에 실패했어요.",
+        ("error" in data && data.error) || "구독 추가 실패",
       );
     }
     const item = data as AlertSubscription;
@@ -272,7 +272,7 @@ function AlertSubscriptionSection() {
       setKeyword("");
       showToast("구독을 추가했어요");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "구독 추가에 실패했어요.");
+      setError(e instanceof Error ? e.message : "구독 추가 실패");
     } finally {
       setBusy(false);
     }
@@ -289,7 +289,7 @@ function AlertSubscriptionSection() {
       showToast("구독을 해지했어요");
     } catch {
       setSubs(prev);
-      setError("구독 해지에 실패했어요. 잠시 후 다시 시도해 주세요.");
+      setError("구독 해지 실패 · 잠시 후 다시");
     }
   };
 
@@ -303,7 +303,7 @@ function AlertSubscriptionSection() {
 
       {/* 현재 구독 칩 */}
       {loaded && subs.length === 0 && (
-        <div className="t-sub text-text-3">아직 구독한 지역·키워드가 없어요.</div>
+        <div className="t-sub text-text-3">구독한 지역·키워드 없음</div>
       )}
       {subs.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -708,7 +708,7 @@ export default function NotificationsPage() {
             <GuestGate
               as="h2"
               /* [1028 · 제안 5] 설명형 제목·부제 → "로그인이 필요해요" + 받는 알림 명사 한 줄 */
-              title="로그인이 필요해요"
+              title="로그인 필요"
               desc="관심 지역 새 매물 · 댓글 · 포인트 알림"
               pathname="/notifications"
             />
@@ -716,10 +716,10 @@ export default function NotificationsPage() {
         )}
 
         {/* 조회 실패 — "알림이 없다" 가 아니라 "못 읽었다" 고 쓴다
-            [1028 · 제안 3] 오류 문구 표준 — "불러오지 못했어요" + "잠시 후 다시 시도해 주세요." */}
+            [1028 · 제안 3] 오류 문구 표준 — "불러오기 실패" + "잠시 후 다시 시도해 주세요." */}
         {mode === "error" && (
           <div className="rise-in-1 card mt-3 flex flex-col items-center gap-2.5 rounded-lg px-[15px] py-10 text-center">
-            <div className="t-section text-ink">알림을 불러오지 못했어요</div>
+            <div className="t-section text-ink">알림 불러오기 실패</div>
             <p className="max-w-[320px] t-body text-text-3">
               잠시 후 다시 시도해 주세요.
             </p>

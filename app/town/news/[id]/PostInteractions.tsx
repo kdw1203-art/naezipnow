@@ -88,7 +88,7 @@ export function PostActions({
         revert();
         promptSignup({
           action: "bookmark_post",
-          title: "저장하려면 로그인이 필요해요",
+          title: "로그인 필요 · 저장",
           /* [1028 · 제안 5] 짧은 사실 한 줄. "마이페이지에서 다시 볼 수 있어요"는 뺐다 — 저장한 글을 모아 보는 화면이 마이에 없다 */
           benefit: "저장한 글은 계정에 남아요.",
         });
@@ -184,7 +184,7 @@ export function LikeButton({
         revert();
         promptSignup({
           action: "post_like",
-          title: "공감하려면 로그인이 필요해요",
+          title: "로그인 필요 · 공감",
           /* [1028 · 제안 5] 내부 용어("어뷰징") → 일반 말, 짧은 사실 한 줄 */
           benefit: "공감은 계정에 남아 중복·도배를 막아요.",
         });
@@ -262,7 +262,7 @@ export function CommentForm({
       if (res.status === 401) {
         promptSignup({
           action: "community_comment",
-          title: "댓글을 남기려면 로그인이 필요해요",
+          title: "로그인 필요 · 댓글",
           /* [1028 · 제안 5] 짧은 사실 한 줄 */
           benefit: "댓글은 계정에 남아 신고·차단을 처리할 수 있어요.",
         });
@@ -272,7 +272,7 @@ export function CommentForm({
         const data = (await res.json().catch(() => null)) as {
           error?: string;
         } | null;
-        setError(data?.error ?? "댓글 등록에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data?.error ?? "댓글 등록 실패 · 잠시 후 다시");
         return;
       }
       const data = (await res.json().catch(() => null)) as {

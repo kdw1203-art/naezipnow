@@ -11,7 +11,7 @@
  *    이미 신고가 끝났고 8월분만 들어오는 중이다. 달마다 **신고 기한이 지났는지**로 가른다(reportingClosed).
  *  · 결론 문장은 실제 값의 변화로만 만든다(lib/format/delta changeSentence) — 값이 없으면 null(문장을 쓰지 않는다).
  */
-import { absPctText, changeSentence, deltaDir, deltaVerb, pctChange } from "@/lib/format/delta";
+import { changeLabel, pctChange, pctLabel } from "@/lib/format/delta";
 import { reportingClosed, splitByReporting } from "@/lib/newui/reporting-window";
 
 export type SeriesPoint = { period: string; value: number };
@@ -55,12 +55,9 @@ export function shiftYm(ym: string, n: number): string {
 /* 신고 기한 판정은 lib/newui/reporting-window.ts(홈 지역 카드와 같은 규칙) — 여기서도 그대로 내보낸다 */
 export { reportingClosed, splitByReporting };
 
-/** % 변동 → "전월보다 1.9% 올랐어요" (값이 없으면 null) — 곡선의 두 점 없이 변동률만 있을 때 */
+/** % 변동 → "전월 대비 ▲1.9%" (값이 없으면 null) — 곡선의 두 점 없이 변동률만 있을 때. [1029 · 4] 낱말 꼴 */
 export function pctSentence(pct: number | null | undefined, since: string): string | null {
-  const dir = deltaDir(pct);
-  if (dir === null) return null;
-  if (dir === "flat") return `${since} ${deltaVerb("flat")}`;
-  return `${since} ${absPctText(pct as number)} ${deltaVerb(dir)}`;
+  return pctLabel(pct, since);
 }
 
 export type RegionOverviewInput = {
@@ -90,11 +87,11 @@ export type RegionOverview = {
   volumeOpen: Array<{ ym: string; count: number }>;
   /** 평균 매매가(원) — reb: 부동산원 스냅샷 · tx: 국토부 신고 월평균(신고가 끝난 달) */
   avgPrice: { krw: number; ym: string | null; basis: "reb" | "tx"; trades: number | null } | null;
-  /** 결론 한 줄 — "시세 지수가 전월보다 0.6% 올랐어요". 만들 값이 없으면 null */
+  /** 결론 한 줄 — "매매가격지수 · 전월 대비 ▲0.6%"([1029 · 4] 낱말 꼴). 만들 값이 없으면 null */
   headline: string | null;
   /** 결론의 출처·시점 — "강남구 · 2026년 7월 · 한국부동산원 매매가격지수" */
   headlineCaption: string | null;
-  /** 둘째 줄 — "1년 전보다 6.3% 올랐어요" */
+  /** 둘째 줄 — "1년 전 대비 ▲6.3%" */
   subline: string | null;
   /** 부동산원 수치(지수·전세가율·평균가 중 하나라도)가 있는가 */
   hasReb: boolean;
@@ -179,29 +176,29 @@ export function buildRegionOverview(input: RegionOverviewInput): RegionOverview 
   let subline: string | null = null;
   if (index && idx.length >= 2) {
     const prev = idx.find((p) => p.ym === shiftYm(index.ym, 1));
-    const s = prev ? changeSentence({ curr: index.value, base: prev.value, since: "전월보다", unit: "index" }) : null;
+    const s = prev ? changeLabel({ curr: index.value, base: prev.value, since: "전월 대비", unit: "index" }) : null;
     if (s) {
-      headline = `시세 지수가 ${s}`;
+      headline = `매매가격지수 · ${s}`;
       headlineCaption = `${input.name} · ${ymLong(index.ym)} · 한국부동산원 매매가격지수`;
       const yearAgo = idx.find((p) => p.ym === shiftYm(index.ym, 12));
       subline = yearAgo
-        ? changeSentence({ curr: index.value, base: yearAgo.value, since: "1년 전보다", unit: "index" })
+        ? changeLabel({ curr: index.value, base: yearAgo.value, since: "1년 전 대비", unit: "index" })
         : null;
     }
   }
   if (!headline && snap && finite(snap.saleChangeMonthly) && toYm(snap.period)) {
-    const s = pctSentence(snap.saleChangeMonthly, "전월보다");
+    const s = pctSentence(snap.saleChangeMonthly, "전월 대비");
     if (s) {
-      headline = `시세 지수가 ${s}`;
+      headline = `매매가격지수 · ${s}`;
       headlineCaption = `${input.name} · ${ymLong(toYm(snap.period) as string)} · 한국부동산원`;
     }
   }
   if (!headline && closed.length >= 2) {
     const last = closed[closed.length - 1];
     const prev = closed.find((v) => v.month === shiftYm(last.month, 1));
-    const s = prev ? changeSentence({ curr: last.count, base: prev.count, since: "전월보다", unit: "count" }) : null;
+    const s = prev ? changeLabel({ curr: last.count, base: prev.count, since: "전월 대비", unit: "count" }) : null;
     if (s) {
-      headline = `아파트 매매 신고가 ${s}`;
+      headline = `아파트 매매 신고 · ${s}`;
       headlineCaption = `${input.name} · ${ymLong(last.month)} · 국토교통부 실거래 신고`;
     }
   }

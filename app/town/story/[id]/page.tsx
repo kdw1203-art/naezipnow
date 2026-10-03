@@ -284,7 +284,7 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
               댓글 {post.commentCount}
             </div>
             {activeComments.length === 0 && (
-              <p className="t-sub text-text-3">아직 댓글이 없어요.</p>
+              <p className="t-sub text-text-3">댓글 없음</p>
             )}
             {/* [#65·#66] 채택·대댓글 스레드 — 상대시각은 서버에서 계산해 넘긴다(하이드레이션 불일치 방지) */}
             <CommentThread
@@ -335,7 +335,7 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
           <div className="rise-in-3 card flex flex-col gap-1 p-[18px] max-md:p-3.5">
             <div className="mb-1.5 t-body font-bold text-ink">다른 이웃 글</div>
             {others.length === 0 ? (
-              <p className="t-sub text-text-3">아직 다른 이웃 글이 없어요.</p>
+              <p className="t-sub text-text-3">다른 이웃 글 없음</p>
             ) : (
               /* [1015] 행 목록 = 리퀴드 판(hanji — 사람이 쓴 글, 브리프 규칙 I) */
               <div className="lq-panel flex flex-col" data-tone="hanji">

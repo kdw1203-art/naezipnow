@@ -64,7 +64,7 @@ export default async function ReportDetailPage({
       <PageShell breadcrumb="동네이야기 › 자료실">
         <div className="mx-auto w-full max-w-[680px]">
           <ErrorState
-            title="리포트를 불러오지 못했어요"
+            title="리포트 불러오기 실패"
             desc="잠시 후 다시 시도해 주세요."
             action={{ label: "자료실로 이동", href: "/town/library" }}
           />

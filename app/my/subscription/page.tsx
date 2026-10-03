@@ -113,7 +113,7 @@ export default async function MySubscriptionPage() {
       <PageShell breadcrumb="마이 › 구독 관리">
         <GuestGate
           /* [1028 · 제안 5] 권유 제목·설명 → "로그인이 필요해요" + 이 화면에 있는 것 명사 한 줄(영수증은 결제 내역 안에 있다) */
-          title="로그인이 필요해요"
+          title="로그인 필요"
           desc="현재 플랜 · 자동결제 · 결제 내역 · 해지"
           pathname="/my/subscription"
         >

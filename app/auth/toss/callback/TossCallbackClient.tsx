@@ -61,7 +61,7 @@ export function TossCallbackClient() {
         {failed ? (
           <>
             <p className="text-[15px] font-bold text-ink">
-              토스 로그인에 실패했어요
+토스 로그인 실패
             </p>
             <p className="mt-2 text-[12px] leading-[1.7] text-text-3">
               인증이 취소됐거나 코드가 만료됐을 수 있어요. 다시 시도해 주세요.

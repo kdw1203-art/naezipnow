@@ -68,8 +68,8 @@ test("관심 단지 레이어 — 기존 읽기 API(/api/me/watchlist)만 · 토
   assert.ok(mapClient.includes('fetch("/api/me/watchlist"'), "기존 API 재사용");
   assert.ok(!mapClient.includes("/api/bookmarks"), "없는 API 를 부르지 않는다");
   assert.ok(mapClient.indexOf("> 내 노트\n") < mapClient.indexOf("> 관심 단지\n"), "내 노트 다음 자리");
-  assert.ok(mapClient.includes("관심 단지 레이어는 로그인 후 볼 수 있어요"));
-  assert.ok(mapClient.includes("내 노트 레이어는 로그인 후 볼 수 있어요"));
+  assert.ok(mapClient.includes("관심 단지 레이어 · 로그인 필요"));
+  assert.ok(mapClient.includes("내 노트 레이어 · 로그인 필요"));
   assert.ok(mapClient.includes('showWatchlist ? "watchlist" : null'), "주소창 layers 토큰");
   assert.ok(mapClient.includes('on.has("watchlist")'), "공유 링크 복원");
   assert.ok(mapClient.includes("placeWatchItems(watchItems, [...danji, ...viewportDanji, ...extraPoints])"), "좌표는 지도가 가진 데이터에서만");

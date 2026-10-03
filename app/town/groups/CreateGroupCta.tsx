@@ -17,7 +17,7 @@ import { hasSession } from "@/lib/client/has-session";
 /** 로그인 유도 문구 — 열 때·401 때 같은 말 */
 const SIGNUP_INTENT = {
   action: "group_create",
-  title: "모임을 만들려면 로그인이 필요해요",
+  title: "로그인 필요 · 모임 만들기",
   benefit: "로그인하면 모임이 내 계정에 남고, 참여자와 채팅방에서 일정을 나눌 수 있어요.",
   callbackUrl: "/town/groups",
 } as const;

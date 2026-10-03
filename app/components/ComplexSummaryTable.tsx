@@ -37,7 +37,7 @@ export function ComplexSummaryTable({
   if (failed) {
     return (
       <p className="py-6 text-center t-body leading-[1.7] text-text-3">
-        단지별 실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+단지별 실거래 불러오기 실패 · 잠시 후 다시
       </p>
     );
   }

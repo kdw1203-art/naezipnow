@@ -31,7 +31,7 @@ export function PartnerForm() {
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setError(data.error ?? "접수에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data.error ?? "접수 실패 · 잠시 후 다시");
         return;
       }
       setDone(true);

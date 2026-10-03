@@ -134,11 +134,11 @@ test("[1027 · 3] 정비사업 — 면적÷85㎡ '예상 세대수'와 '가장 �
   assert.match(ds, /expectedUnits: null,/);
   assert.doesNotMatch(ds, /\/ ?85\b/);
   assert.match(code("lib/inspection/session-public-context.ts"), /\[정비사업\] \$\{/);
-  /* 구 이름의 끝 "구"만 떼고 두 글자 이상일 때만 구역명에서 찾는다 — "구로구" → "로구"(종로구가 걸린다) 가 아니다 */
+  /* [1029] 구는 조서 코드 앞 5자리 → 지자체 → 위치명·지역명(lib/seoul/upis.upisSigungu)으로 읽는다 — 이름 줄기 검색이 아니다 */
   const upis = code("lib/seoul/adapters/upis-rebuild.ts");
-  assert.match(upis, /const stem = district\.replace\(\/구\$\/, ""\);/);
-  assert.match(upis, /\(stem\.length >= 2 && p\.zoneName\.includes\(stem\)\)/);
-  assert.doesNotMatch(upis, /district\.replace\("구", ""\)/);
+  assert.match(upis, /import \{ upisSigungu \} from "\.\.\/upis";/);
+  assert.match(upis, /return gu === district\.trim\(\);/);
+  assert.doesNotMatch(upis, /district\.replace\("구", ""\)|zoneName\.includes\(stem\)/);
   /* 캐시(7일)에 남은 옛 응답에서도 지운 칸을 뺀다 */
   const pub = code("lib/public-data/index.ts");
   assert.match(pub, /data: dropRetiredFields\(source, cached\) as T,/);

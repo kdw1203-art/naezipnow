@@ -180,7 +180,7 @@ export function pushResultMessage(result: PushSubscribeResult): string | null {
     case "denied":
       return "브라우저에서 알림이 차단돼 있어요 · 사이트 설정에서 허용할 수 있어요";
     case "error":
-      return "푸시 설정에 실패했어요 · 잠시 후 다시 시도해 주세요";
+      return "푸시 설정 실패 · 잠시 후 다시 시도해 주세요";
     case "dismissed":
     case "unsupported":
       return null;

@@ -129,3 +129,46 @@ export function changeSentence(input: {
   }
   return `${since} ${absPctText(pct, digits)} ${deltaVerb(dir)}`;
 }
+
+/**
+ * [1029 · 4] 등락 낱말 꼴 — changeSentence 의 문장("전월보다 0.4% 내렸어요")을 접은 것.
+ *   index/pct : "전월 대비 ▼0.4%" · "1년 전 대비 ▲5.2%" · %p 는 "▲1.2%p"
+ *   manwon    : "25.01 거래 6건 평균 대비 ▲3억 2,800만(48%)"
+ *   count     : "전월 대비 ▼10건(20.0%)"
+ *   보합      : "전월 대비 보합" · 모르면 null(지어내지 않는다)
+ * since 는 "… 대비" 꼴로 받는다(기호 앞에 그대로 붙인다).
+ */
+export function changeLabel(input: {
+  curr: number | null | undefined;
+  base: number | null | undefined;
+  since: string;
+  unit: "manwon" | "pct" | "count" | "index";
+  digits?: number;
+}): string | null {
+  const { curr, base, since } = input;
+  if (!finite(curr) || !finite(base)) return null;
+  const digits = input.digits ?? 1;
+  const lead = since ? `${since} ` : "";
+  if (input.unit === "pct") {
+    const d = curr - base;
+    const dir = diffDir(d, 0.05);
+    if (!dir) return null;
+    if (dir === "flat") return `${lead}보합`;
+    return `${lead}${DELTA_ARROW[dir]}${fixed(Math.abs(d), digits)}%p`;
+  }
+  const pct = pctChange(curr, base);
+  const dir = deltaDir(pct);
+  if (pct === null || !dir) return null;
+  if (dir === "flat") return `${lead}보합`;
+  if (input.unit === "manwon") return `${lead}${DELTA_ARROW[dir]}${absManwonText(curr - base)}(${absPctText(pct, digits)})`;
+  if (input.unit === "count") return `${lead}${DELTA_ARROW[dir]}${Math.abs(Math.round(curr - base)).toLocaleString("ko-KR")}건(${absPctText(pct, digits)})`;
+  return `${lead}${DELTA_ARROW[dir]}${absPctText(pct, digits)}`;
+}
+
+/** [1029 · 4] 변동률(%)만 있을 때의 낱말 꼴 — "전월 대비 ▲1.9%" · 보합 · 모르면 null */
+export function pctLabel(pct: number | null | undefined, since: string, digits = 1): string | null {
+  const dir = deltaDir(pct);
+  if (dir === null) return null;
+  const lead = since ? `${since} ` : "";
+  return dir === "flat" ? `${lead}보합` : `${lead}${DELTA_ARROW[dir]}${absPctText(pct as number, digits)}`;
+}

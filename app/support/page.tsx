@@ -265,7 +265,7 @@ export default async function SupportPage() {
               {noticesFailed ? (
                 /* 색은 배경이 지고, 문장은 text-ink 로 읽는다 — 작은 본문에서 가장 확실하다. */
                 <div className="rounded-lg bg-danger-soft px-3 py-3 text-center t-sub leading-[1.6] text-ink">
-                  공지사항을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+공지사항 불러오기 실패 · 잠시 후 다시
                 </div>
               ) : (
                 notices.map((n, i, arr) => (

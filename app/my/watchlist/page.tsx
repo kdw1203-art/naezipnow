@@ -179,7 +179,7 @@ export default async function WatchlistDashboardPage({
 
       {listFailed ? (
         <ErrorState
-          title="관심 단지를 불러오지 못했어요"
+          title="관심 단지 불러오기 실패"
           /* [970 · C-20] 해요체 통일 · [1028 · 제안 3] 오류 문구 표준("0곳인 게 아니라 조회 실패" 구문 제거) */
           desc="잠시 후 다시 시도해 주세요."
         />
@@ -188,7 +188,7 @@ export default async function WatchlistDashboardPage({
         <EmptyState
           icon="pin"
           className="rise-in"
-          title="아직 담아 둔 단지가 없어요"
+          title="담아 둔 단지 없음"
           /* [1015 · 규칙 B] 빈 화면의 긴 권유문(사용법 두 문장) → 한 줄 */
           desc="단지 화면의 “단지 팔로우”나 지도의 “관심 단지 담기”로 담은 단지가 여기에 모여요."
           action={{ label: "지도에서 단지 찾기", href: "/map" }}
@@ -197,7 +197,7 @@ export default async function WatchlistDashboardPage({
         <>
           {!notesR.ok && (
             <p className="mb-3 rounded-xl border border-line bg-bg px-3 py-2 t-sub text-text-2">
-              새 노트 수를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+새 노트 수 불러오기 실패 · 잠시 후 다시
             </p>
           )}
           <div className="rise-in">

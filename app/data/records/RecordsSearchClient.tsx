@@ -118,7 +118,7 @@ export function RecordsSearchClient() {
 
       {status === "error" && (
         <div className="mt-4 rounded-lg border border-line bg-surface px-4 py-8 text-center text-[13px] text-text-2">
-          &ldquo;{query}&rdquo; 자료를 불러오지 못했어요. 잠시 후{" "}
+          &ldquo;{query}&rdquo;자료 불러오기 실패 · 잠시 후{" "}
           <button
             type="button"
             onClick={() => run(query)}
@@ -133,7 +133,7 @@ export function RecordsSearchClient() {
       {status === "ok" && records.length === 0 && (
         <div className="mt-4 rounded-lg border border-line bg-surface px-4 py-8 text-center text-[13px] text-text-3">
           {/* [1012] 규칙 5 — "확인해 보세요" → 동사+대상 링크 */}
-          &ldquo;{query}&rdquo; 관련 공개 자료가 아직 없어요 · 실거래는{" "}
+&ldquo;{query}&rdquo; 관련 공개 자료 없음 · 실거래는{" "}
           <Link
             href={`/complex/browse`}
             className="font-bold text-primary underline-offset-2 hover:underline"

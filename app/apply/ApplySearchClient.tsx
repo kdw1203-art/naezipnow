@@ -194,7 +194,7 @@ export function ApplySearchClient({ initial }: Props) {
   const [error, setError] = useState<ErrState>(
     initial.ok
       ? null
-      : { message: "청약 공고를 불러오지 못했어요", cause: initial.cause },
+      : { message: "청약 공고 불러오기 실패", cause: initial.cause },
   );
   /* 정렬은 '표시 중인 행'만 다시 세운다(서버 전체가 아니라). 확장 행은 청약 일정·
      시행사·원문(경쟁률 탭) 또는 8개 특공 유형별 물량·접수(특별공급 탭)를 편다 —
@@ -244,7 +244,7 @@ export function ApplySearchClient({ initial }: Props) {
       }));
     } catch (err) {
       setError({
-        message: "청약 공고를 불러오지 못했어요",
+        message: "청약 공고 불러오기 실패",
         cause: err instanceof Error ? err.message : String(err),
       });
     } finally {
@@ -435,7 +435,7 @@ export function ApplySearchClient({ initial }: Props) {
           ) : (
             <EmptyState
               icon="search"
-              title="이 조건에 맞는 공고가 없어요"
+              title="이 조건에 맞는 공고 없음"
               desc={`${state.region === "전체" ? "전국" : state.region}${
                 state.q ? ` · ‘${state.q}’` : ""
               } 조건으로는 조회 결과가 0건이었어요. 지역이나 검색어를 바꿔 보세요.`}

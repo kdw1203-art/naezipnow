@@ -76,8 +76,8 @@ export const metadata: Metadata = {
 /* G10 / 사실 우선: 예시 폴백(가짜 시세·노트·글·모임·리포트)은 쓰지 않는다.
    데이터가 없으면 없다고 말하고, 채우는 행동(CTA)으로 안내한다. */
 
-const LAB_NOTES_CAPTION =
-  "Lab 노트는 편집부가 실거래·통계로 정리해요. 이웃 노트는 올라오는 대로 함께 보여요.";
+/* [1029 · 2] 낱말 꼴 — 문장 둘을 "무엇 = 누가·어떻게"로 접었다 */
+const LAB_NOTES_CAPTION = "Lab 노트 = 편집부 정리(실거래·통계) · 이웃 노트 = 올라온 순";
 
 function HomeAiGateway({
   briefing,
@@ -324,11 +324,11 @@ export default async function Home() {
                 </div>
                 {notes.length === 0 ? (
                   failed.notes ? (
-                    <p className="t-sub text-text-3">공개 임장노트를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+                    <p className="t-sub text-text-3">공개 임장노트 불러오기 실패 · 잠시 후 다시</p>
                   ) : (
                     <EmptyState
                       icon="notebook-pen"
-                      title="아직 공개된 임장노트가 없어요"
+                      title="공개된 임장노트 없음"
                       desc="공개로 저장한 노트가 여기에 보여요."
                       action={{ label: "첫 공개 노트 남기기", href: "/notes/new" }}
                     />
@@ -398,14 +398,14 @@ export default async function Home() {
                 {regions.length === 0 ? (
                   failed.regions ? (
                     <ErrorState
-                      title="지역 동향을 불러오지 못했어요"
+                      title="지역 동향 불러오기 실패"
                       desc="잠시 후 다시 시도해 주세요."
                       action={{ label: "지도에서 찾아보기", href: "/map" }}
                     />
                   ) : (
                     <EmptyState
                       icon="map"
-                      title="지역 동향이 아직 없어요"
+                      title="지역 동향 없음"
                       desc="지역 집계가 준비되면 여기에 표시돼요."
                       action={{ label: "지도에서 찾아보기", href: "/map" }}
                     />

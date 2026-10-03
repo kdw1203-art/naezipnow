@@ -1,4 +1,5 @@
-import { fetchAllSeoulRows, matchesDistrict } from "../openapi-client";
+import { fetchAllSeoulRows } from "../openapi-client";
+import { upisSigungu } from "../upis";
 
 export type UpisRebuildProject = {
   id: string;
@@ -46,24 +47,25 @@ function isActiveProject(p: UpisRebuildProject): boolean {
 
 export async function fetchUpisRebuild(
   params: { city?: string; district?: string },
-  maxPages = 3,
+  /* [1029] 조서가 6,581건(2026-10)이라 3쪽(3,000건)으로는 뒷 구역이 빠졌다 — 7쪽까지. 7일 캐시라 구마다 주 1회다. */
+  maxPages = 7,
 ): Promise<UpisRebuildPayload> {
   const district = params.district ?? "";
-  /* [1027] 구 이름의 **끝** "구"만 떼고, 두 글자 이상일 때만 구역명에서 찾는다. 예전에는 첫 "구"를 지워
-     "구로구" → "로구"(종로구 구역이 걸린다) · "중구" → "중"(아무 구역이나 걸린다)이 돼, 임장 리포트의
-     "진행 N건 · 계획 M건"이 다른 구의 구역까지 세었다. */
-  const stem = district.replace(/구$/, "");
+  /* [1029] 구는 조서 코드 앞 5자리(11680 = 강남구) → 지자체 → 위치명·지역명 순으로 읽는다(lib/seoul/upis.upisSigungu).
+     예전엔 구역명에 구 이름 줄기가 들어가면 걸려서 "관악구 강남아파트 재건축"이 강남구 건수에 섞였다. */
   const batch = await fetchAllSeoulRows("upisRebuild", { maxPages, pageSize: 1000 });
   const projects = batch.rows
-    .map(mapRow)
-    .filter((p) => {
+    .filter((row) => {
       if (!district) return true;
-      return (
-        matchesDistrict(district, p.zoneName) ||
-        matchesDistrict(district, p.position) ||
-        (stem.length >= 2 && p.zoneName.includes(stem))
-      );
-    });
+      const gu = upisSigungu({
+        rptMngCd: String(row.RPT_MNG_CD ?? ""),
+        logvm: String(row.LOGVM ?? ""),
+        pstnNm: String(row.PSTN_NM ?? ""),
+        rgnNm: String(row.RGN_NM ?? ""),
+      });
+      return gu === district.trim();
+    })
+    .map(mapRow);
 
   const active = projects.filter(isActiveProject);
   const planned = projects.filter((p) => !isActiveProject(p));

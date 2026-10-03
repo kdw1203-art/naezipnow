@@ -72,7 +72,7 @@ export function InquiryForm({
       });
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!res.ok || !json.ok) {
-        setError(json.error ?? "문의 접수에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setError(json.error ?? "문의 접수 실패 · 잠시 후 다시");
         setPhase("idle");
         return;
       }

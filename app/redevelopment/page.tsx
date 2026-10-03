@@ -13,6 +13,7 @@ import { logger } from "@/lib/log";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
 import { TownHero } from "@/app/town/TownHero";
 import { RedevelopmentMap } from "./RedevelopmentMap";
+import { SeoulPlanSection } from "./SeoulPlanSection";
 import { STAGE_GUIDES, REDEV_GLOSSARY } from "@/lib/redevelopment/stage-guide";
 
 /* ============================================================
@@ -33,7 +34,7 @@ export const revalidate = 86_400;
 export const metadata = {
   title: "정비사업 지도 | 내집나우",
   description:
-    "재개발·재건축·소규모 정비사업을 사업종류별 컬러 마커로 보는 정비사업 지도. 사업종류·진행단계로 필터링하고, 7단계 진행 절차와 최신 정비사업 뉴스를 한곳에서 확인하세요.",
+    "재개발·재건축·소규모 정비사업 지도 · 서울시 도시계획 결정 조서(정비사업·도시개발·지구단위계획) · 7단계 절차 · 정비사업 뉴스.",
 };
 
 const NEWS_KEYWORD_RE = /재건축|재개발|정비사업/;
@@ -138,7 +139,7 @@ export default async function RedevelopmentPage() {
             /* 실패를 "구역 없음"으로 바꿔 그리지 않는다 — 둘은 다른 사실이다.
                원인 원문(cause)도 감추지 않고 그대로 보여 준다. */
             <ErrorState
-              title="정비사업 구역을 불러오지 못했어요"
+              title="정비사업 구역 불러오기 실패"
               desc="잠시 후 다시 시도해 주세요."
               cause={loadError}
               className="rounded-2xl"
@@ -151,6 +152,9 @@ export default async function RedevelopmentPage() {
             />
           )}
         </section>
+
+        {/* [1029] 서울시 도시계획 결정 조서(열린데이터광장 UPIS) — 지도 바로 아래 전폭. 표가 비어 있으면 안 그린다. */}
+        <SeoulPlanSection />
 
         {/* ===== 아래: 진행단계 가이드 + 뉴스(기존 콘텐츠 보존) =====
             [1015] 데스크톱은 2단 — 왼쪽 7단계 가이드, 오른쪽 340px 레일(정비사업 뉴스 · 용어 · 저장 검색 · 광고 1).
@@ -283,11 +287,11 @@ export default async function RedevelopmentPage() {
             (newsFailed ? (
               /* 색은 배경이 지고, 문장은 text-ink 로 읽는다 — 11px 본문에서 가장 확실하다. */
               <div className="rounded-lg bg-danger-soft px-3 py-2 text-center t-sub text-ink">
-                뉴스를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+뉴스 불러오기 실패 · 잠시 후 다시
               </div>
             ) : (
               <div className="py-3 text-center t-sub text-text-3">
-                최근 수집된 재건축·재개발 관련 기사가 아직 없어요.
+최근 수집된 재건축·재개발 관련 기사 없음
               </div>
             ))}
           {news.map((n) => (
@@ -331,9 +335,7 @@ export default async function RedevelopmentPage() {
             <div className="t-body font-bold text-ink">
               관심 지역 검색조건 저장하기
             </div>
-            <div className="mt-0.5 t-sub text-text-2">
-              저장 조건에 맞는 새 매물 알림. 정비사업 단계 변경 알림은 아직 제공하지 않습니다.
-            </div>
+            <div className="mt-0.5 t-sub text-text-2">새 매물 알림 · 저장 조건 기준 · 단계 변경 알림 미제공</div>
           </div>
           <span className="shrink-0 rounded-lg bg-primary-soft px-3.5 py-2 text-xs font-bold text-primary">
             저장 검색 ›

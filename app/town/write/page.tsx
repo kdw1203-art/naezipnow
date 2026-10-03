@@ -239,7 +239,7 @@ function TownWriteForm() {
           if (res.status === 401) {
             promptSignup({
               action: "community_post",
-              title: "사진을 올리려면 로그인이 필요해요",
+              title: "로그인 필요 · 사진 올리기",
               benefit: "사진은 글과 함께 계정에 남아요.",
             });
             break;
@@ -249,7 +249,7 @@ function TownWriteForm() {
             | null;
           if (!res.ok || !data?.url) {
             /* 실패를 조용히 넘기면 "올라간 줄 알았는데 없는" 사진이 생긴다 */
-            setUploadError(data?.error ?? "사진 업로드에 실패했어요. 다시 시도해 주세요.");
+            setUploadError(data?.error ?? "사진 업로드 실패 · 다시 시도해 주세요.");
             continue;
           }
           setImages((prev) =>
@@ -325,7 +325,7 @@ function TownWriteForm() {
       if (res.status === 401) {
         promptSignup({
           action: "community_post",
-          title: "글을 올리려면 로그인이 필요해요",
+          title: "로그인 필요 · 글 올리기",
           benefit: "글은 계정에 남아 신고·차단을 처리할 수 있어요.",
         });
         return;
@@ -339,7 +339,7 @@ function TownWriteForm() {
         } | null;
         if (data?.blockedWord) setBlockedWord(data.blockedWord);
         setError(
-          data?.error ?? "게시글 등록에 실패했어요. 잠시 후 다시 시도해 주세요.",
+          data?.error ?? "게시글 등록 실패 · 잠시 후 다시",
         );
         return;
       }

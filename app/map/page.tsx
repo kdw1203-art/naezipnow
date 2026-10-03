@@ -33,7 +33,7 @@ export const revalidate = 21_600;
 export const metadata = {
   title: "지도에서 비교 | 내집나우",
   description:
-    "임장노트에 남긴 단지를 실거래 시세와 함께 지도에서 비교하세요. 기록 → AI 정리 → 지도 비교 흐름의 비교 단계입니다.",
+    "실거래가 지도 · 임장한 단지 비교 · 국토교통부 실거래가 평균 · 호가 제외 · 기록 → AI 정리 → 지도 비교", /* [1029 · 20] 낱말 꼴 · "실거래 시세"(시세 낱말 규칙) 바로잡음 */
   alternates: seoAlternates("/map"),
 };
 

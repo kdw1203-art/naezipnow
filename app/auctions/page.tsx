@@ -65,7 +65,7 @@ export default async function AuctionsPage() {
         <TownCategoryNav stick />
         <div className="theme-auction">
           <ErrorState
-            title="공매 물건을 불러오지 못했어요"
+            title="공매 물건 불러오기 실패"
             desc="잠시 후 다시 시도해 주세요."
             action={{ href: "https://www.onbid.co.kr", label: "온비드 바로가기" }}
           />

@@ -141,7 +141,7 @@ export function HistogramRangeSlider({
       <div className="flex flex-col gap-1">
         <div className="t-sub font-bold text-text-3">{label}</div>
         <div className="t-sub text-text-3">
-          이 지역에는 아직 값이 있는 단지가 없어요
+이 지역에는 아직 값이 있는 단지 없음
         </div>
         {note ? <div className="t-caption text-text-3">{note}</div> : null}
       </div>

@@ -135,7 +135,8 @@ jobs:
           echo
           # [993] court-auction 호출 제거 — lib/court-auction/sync.ts 가 아직 스텁(fetch 없음)이라
           # 매일 "skipped" 만 남기고 신선도 표는 시드 표본 때문에 건강해 보였다. 소스가 구현되면 다시 넣는다.
-          # redevelopment: 서울 정비사업 — 키 없으면 mock/no-op (소프트)
+          # [1029] redevelopment: 서울 도시계획 결정 조서(UPIS 4종 · 열린데이터광장 SEOUL_DATA_API_KEY) — 키 없으면 no-op (소프트)
+          #   1회 90초 예산 안에서 1,000건씩 받고 다음 시작 번호를 seoul_upis_sync 에 남긴다(며칠에 걸쳐 완주)
           echo "== redevelopment (soft) =="
           curl -sS --max-time 120 -H "x-cron-secret: $CRS" "${SITE}/api/cron/redevelopment-ingest" | head -c 500 || true
           echo

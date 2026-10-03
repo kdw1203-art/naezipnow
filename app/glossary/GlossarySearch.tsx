@@ -82,7 +82,7 @@ export function GlossarySearch({ groups }: { groups: GlossaryGroupData[] }) {
       <div className="mt-5 flex flex-col gap-6 max-md:mt-4 max-md:gap-4">
         {filtered.length === 0 ? (
           <div className="card rounded-2xl px-4 py-8 text-center t-body text-text-3 max-md:py-5">
-            일치하는 용어가 없어요.
+일치하는 용어 없음
           </div>
         ) : (
           filtered.map((g, gi) => (

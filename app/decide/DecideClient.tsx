@@ -182,7 +182,7 @@ function CandidateCard({
       {loading ? (
         <p className="mt-2 t-sub text-text-3">불러오는 중</p>
       ) : c.status === "failed" ? (
-        <p className="mt-2 t-sub text-text-3">실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+        <p className="mt-2 t-sub text-text-3">실거래 불러오기 실패 · 잠시 후 다시</p>
       ) : c.status === "not_found" ? (
         <p className="mt-2 t-sub text-text-3">실거래 자료 없음</p>
       ) : (
@@ -878,7 +878,7 @@ export function DecideClient({ signedIn, initialWeights }: { signedIn: boolean; 
                   {signedIn ? "내 계정" : "이 기기"}</span>
               </div>
               {pastFailed && pastList.length === 0 ? (
-                <p className="mt-2 t-sub text-text-3">지난 결정을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+                <p className="mt-2 t-sub text-text-3">지난 결정 불러오기 실패 · 잠시 후 다시</p>
               ) : pastList.length === 0 ? (
                 /* 회색 견본 — 결정을 저장하면 이 모양으로 쌓인다 */
                 <ul className="m-0 mt-2 flex list-none flex-col p-0">

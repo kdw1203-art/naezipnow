@@ -158,7 +158,7 @@ function GuestView() {
   return (
     <GuestGate
       /* [1028 · 제안 5] 권유 제목·설명 → "로그인이 필요해요" + 이 화면에 있는 것 명사 한 줄(적립 방법은 아래 표가 말한다) */
-      title="로그인이 필요해요"
+      title="로그인 필요"
       desc="포인트 잔액 · 내역 · 미션 · 친구 초대"
       pathname="/my/points"
     >
@@ -264,7 +264,7 @@ function WalletView({
         {history.length === 0 ? (
           <div className="flex flex-col items-center gap-1.5 py-8 text-center max-md:py-5">
             <div className="t-body font-bold text-ink">
-              아직 포인트 내역이 없어요
+포인트 내역 없음
             </div>
           </div>
         ) : (
@@ -348,7 +348,7 @@ export default async function PointsWalletPage({
   }
 
   /* 2026-07-26: 내역 조회가 실패하면 예전에는 빈 배열이 내려와서 "아직 포인트
-     내역이 없어요" 라고 썼다 — 적립한 적 없는 사람과 원장을 못 읽은 사람이
+내역 없음" 라고 썼다 — 적립한 적 없는 사람과 원장을 못 읽은 사람이
      구분되지 않았다. 실패는 실패라고 쓴다. */
   const [loaded, nickEffect] = await Promise.all([
     Promise.all([getBalance(email), getHistory(email, 50)]).then(
@@ -368,7 +368,7 @@ export default async function PointsWalletPage({
       <PageShell title="포인트 지갑" breadcrumb="포인트 지갑">
         <div className="mx-auto w-full max-w-[640px]">
           <ErrorState
-            title="포인트 지갑을 불러오지 못했어요"
+            title="포인트 지갑 불러오기 실패"
             /* [970 · C-20] 해요체 통일 · [1028 · 제안 3] 오류 문구 표준("없는 게 아니라 조회 실패" 구문 제거) */
             desc="잠시 후 다시 시도해 주세요."
             action={{ label: "마이로 이동", href: "/my" }}

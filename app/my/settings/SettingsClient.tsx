@@ -184,7 +184,7 @@ function SmsAlertCard({
       }
       return true;
     } catch {
-      showToast("저장에 실패했어요. 잠시 후 다시 시도해 주세요");
+      showToast("저장 실패 · 잠시 후 다시");
       return false;
     } finally {
       setBusy(false);
@@ -395,7 +395,7 @@ function NotificationTab({ channels }: { channels: NotifyChannels }) {
       {phase === "guest" && <GuestCard />}
       {phase === "error" && (
         <div className="card rounded-2xl px-4 py-8 text-center t-body text-text-3">
-          설정을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.
+설정 불러오기 실패 · 새로고침 후 다시 시도해 주세요.
         </div>
       )}
 
@@ -546,7 +546,7 @@ function PrivacyTab() {
           <div className="py-6 text-center t-body text-text-3">불러오는 중…</div>
         ) : phase === "error" || !prefs || consents.phase === "error" ? (
           <div className="py-6 text-center t-body text-text-3">
-            불러오지 못했어요. 새로고침 후 다시 시도해 주세요.
+불러오기 실패 · 새로고침 후 다시 시도해 주세요.
           </div>
         ) : (
           <>
@@ -594,7 +594,7 @@ function PrivacyTab() {
               변경 즉시 저장
               {consents.updatedAt
                 ? ` · 마지막 갱신 ${formatKstDate(consents.updatedAt)}`
-                : " · 아직 바꾼 기록이 없어요"}
+                : "· 아직 바꾼 기록 없음"}
             </div>
           </>
         )}
@@ -728,7 +728,7 @@ function ProfileRows() {
         <div className="py-4 text-center t-sub text-text-3">프로필을 불러오는 중…</div>
       ) : phase === "error" || !profile ? (
         <div className="py-4 text-center t-sub text-text-3">
-          프로필을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.
+프로필 불러오기 실패 · 새로고침 후 다시 시도해 주세요.
         </div>
       ) : (
         <>

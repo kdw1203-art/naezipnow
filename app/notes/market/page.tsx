@@ -89,12 +89,12 @@ export default async function NotesMarketPage() {
       {/* 목록 */}
       {loadFailed ? (
         <div className="rounded-lg border border-line bg-surface px-5 py-8 text-center t-body font-bold text-text-3">
-          목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+목록 불러오기 실패 · 잠시 후 다시
         </div>
       ) : qualified.length === 0 ? (
         <div className="rounded-lg border border-line bg-surface px-5 py-8 text-center">
           <p className="t-body font-bold text-text-2">
-            아직 기준을 충족한 노트가 없어요.
+기준을 충족한 노트 없음
           </p>
           <p className="mt-1 t-body text-text-3">
             사진 {MIN_PHOTOS}장·본문 {MIN_TEXT.toLocaleString("ko-KR")}자를 넘긴 첫

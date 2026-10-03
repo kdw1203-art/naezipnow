@@ -41,9 +41,7 @@ export function DataSourceCard({
         </table>
       </div>
 
-      <p className="mt-2 t-caption text-text-3">
-        공개 자료를 취합·정리한 참고 정보입니다. 원문·최신 고시는 각 출처가 우선합니다.
-      </p>
+      <p className="mt-2 t-caption text-text-3">공개 자료 취합 · 참고용 · 원문·최신 고시 우선</p>
     </section>
   );
 }

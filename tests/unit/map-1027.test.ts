@@ -211,7 +211,7 @@ test("map-client — 정비사업 마커·범례·패널이 걸러 본 목록 �
   /* 0곳인 칩은 비활성(켜 둔 것은 끌 수 있어야 한다) — 단, 다 받아 온 뒤에만. 받기 전의 0 은 "없다"가 아니다 */
   assert.equal(mapClient.split("disabled={redevCountsReady && n === 0 && !on}").length - 1, 2);
   assert.ok(mapClient.includes("const redevCountsReady = redevLoaded && !redevFailed;"));
-  assert.ok(mapClient.includes('? "불러오지 못했어요"') && mapClient.includes('? "불러오는 중"'), "받기 전·실패는 숫자로 말하지 않는다");
+  assert.ok(mapClient.includes('? "불러오기 실패"') && mapClient.includes('? "불러오는 중"'), "받기 전·실패는 숫자로 말하지 않는다");
   /* 전체 초기화가 정비사업 조건도 푼다 · 조건에 맞는 구역이 없으면 지도 위에서 말한다(손잡이 "조건 풀기") */
   const reset = mapClient.slice(mapClient.indexOf("const resetFilters = useCallback("), mapClient.indexOf("}, []);", mapClient.indexOf("const resetFilters = useCallback(")));
   assert.ok(reset.includes("setRedevGroups(new Set());") && reset.includes("setRedevStages(new Set());"));

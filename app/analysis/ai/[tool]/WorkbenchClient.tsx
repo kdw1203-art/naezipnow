@@ -564,7 +564,7 @@ export function WorkbenchClient({
           ? runErrCode === "QUOTA_EXCEEDED"
             ? "무료 해설을 다 썼어요"
             : runErrCode === "LOGIN_REQUIRED"
-              ? "로그인이 필요해요"
+              ? "로그인 필요"
               : "다시 눌러 주세요"
           : aiMode
             ? "다시 계산 · AI 해설 받기"
@@ -726,8 +726,8 @@ export function WorkbenchClient({
                           ? `${price.bandLabel} 최근 ${price.sample ?? ""}건 평균 ${formatKrwWon(price.priceKrw, { style: "short" })} · 최근 거래 ${price.latestYm.slice(0, 4)}.${price.latestYm.slice(4)}`
                           : ready
                             ? ctx?.unavailable?.includes("실거래가")
-                              ? "실거래가를 불러오지 못했어요"
-                              : "최근 매매 실거래가 적어 대표 가격이 없어요"
+                              ? "실거래가 불러오기 실패"
+                              : "최근 매매 실거래가 적어 대표 가격 없음"
                             : ""}
                     </span>
                   </div>
@@ -768,7 +768,7 @@ export function WorkbenchClient({
                       </button>
                       {portfolio && (
                         <span className="t-sub text-text-3">
-                          {portfolio.length > 0 ? `${portfolio.length}곳 불러옴` : "관심 단지가 없어요(로그인·담기 필요)"}
+                          {portfolio.length > 0 ? `${portfolio.length}곳 불러옴` : "관심 단지 없음(로그인·담기 필요)"}
                         </span>
                       )}
                     </div>
@@ -838,7 +838,7 @@ export function WorkbenchClient({
           {ctxState.phase === "loading" && <ResultSkeleton />}
           {ctxState.phase === "error" && (
             <div className="card flex flex-col items-start gap-2 rounded-2xl p-4" role="status">
-              <p className="t-body font-bold text-warning">자료를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+              <p className="t-body font-bold text-warning">자료 불러오기 실패 · 잠시 후 다시</p>
               {ctxState.key !== ECONOMY_KEY && (
                 <button type="button" onClick={retry} className="btn-secondary btn-md px-4 t-sub">
                   다시 불러오기

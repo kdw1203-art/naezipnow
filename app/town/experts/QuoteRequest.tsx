@@ -124,14 +124,14 @@ export function QuoteRequestModal({
       }
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setError(data.error ?? "견적 요청에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data.error ?? "견적 요청 실패 · 잠시 후 다시");
         setStatus("idle");
         return;
       }
       setStatus("done");
       setContent("");
     } catch {
-      setError("견적 요청에 실패했어요. 네트워크를 확인해 주세요.");
+      setError("견적 요청 실패 · 네트워크를 확인해 주세요.");
       setStatus("idle");
     }
   };
@@ -244,7 +244,7 @@ export function QuoteRequestModal({
                 </Link>
               </div>
               {myRequests.length === 0 ? (
-                <p className="py-2 t-sub text-text-3">아직 보낸 견적 요청이 없어요.</p>
+                <p className="py-2 t-sub text-text-3">보낸 견적 요청 없음</p>
               ) : (
                 <ul data-tone="sand" className="flex flex-col divide-y divide-line">
                   {myRequests.slice(0, 5).map((r) => (

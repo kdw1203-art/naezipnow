@@ -181,7 +181,7 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
           {isFailed ? (
             <div className="flex flex-col items-center gap-1 px-6 text-center">
               <span className="t-body font-bold text-[var(--brand-hanji)]">
-                사진을 불러오지 못했어요
+사진 불러오기 실패
               </span>
               <span className="t-sub text-[rgba(246,241,231,.6)]">
                 {idx + 1}번째 사진 · 원본 주소에 접근하지 못했습니다

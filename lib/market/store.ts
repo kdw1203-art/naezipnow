@@ -333,7 +333,7 @@ export async function getAllRegionSnapshots(): Promise<Map<string, RegionMarketS
   const sb = getServiceSupabase();
   if (!sb) {
     /* 키 부재도 캐시하지 않는다 — 2026-08-04 소유자 캡처: 홈 "지역 시세를
-       아직 불러오지 못했어요" + 미니지도 마커 전멸이 1시간 단위로 굳어
+아직 불러오기 실패" + 미니지도 마커 전멸이 1시간 단위로 굳어
        있었다. 빈 성공을 캐시하면 일시 결함이 1시간짜리 "시세 없음"이 된다. */
     return map;
   }

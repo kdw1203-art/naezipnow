@@ -214,10 +214,10 @@ export default async function ImjangRegionPage({
       <section className="mb-6 max-md:mb-4">
         <h2 className="mb-2 t-section text-ink">이 지역을 다녀온 기록</h2>
         {notesFailed ? (
-          <p className="t-body text-text-2">공개 노트를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+          <p className="t-body text-text-2">공개 노트 불러오기 실패 · 잠시 후 다시</p>
         ) : regionNotes.length === 0 ? (
           <p className="t-body leading-[1.65] text-text-2">
-            아직 이 지역의 공개 임장노트가 없어요.{" "}
+이 지역의 공개 임장노트 없음{" "}
             <Link href="/notes/new" className="font-bold text-primary underline">
               첫 임장노트 쓰기
             </Link>

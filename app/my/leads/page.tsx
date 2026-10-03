@@ -95,7 +95,7 @@ export default async function MyLeadsPage() {
         <EmptyState
           icon="mail"
           className="rise-in"
-          title="아직 받은 문의가 없어요"
+          title="받은 문의 없음"
           desc="노출 중인 매물에 관심 있는 이용자가 문의를 남기면 여기로 도착해요. 매물 정보와 사진을 충실히 채우면 문의가 늘어나요."
           action={{ label: "내 매물 보기", href: "/my/listings" }}
         />

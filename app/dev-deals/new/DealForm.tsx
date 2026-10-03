@@ -69,7 +69,7 @@ export function DealForm() {
       }
       const data = (await res.json().catch(() => ({}))) as { error?: string; id?: string };
       if (!res.ok) {
-        setError(data.error ?? "등록에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data.error ?? "등록 실패 · 잠시 후 다시");
         return;
       }
       setDoneId(data.id ?? null);
@@ -342,7 +342,7 @@ export function DealForm() {
 
       {needLogin && (
         <div className="rounded-xl bg-danger-soft px-4 py-3 text-[13px] leading-[1.7] text-danger">
-          등록은 로그인 후 이용할 수 있어요.{" "}
+          등록 · 로그인 필요{" · "}
           <Link
             href="/login?callbackUrl=/dev-deals/new"
             className="font-bold underline"

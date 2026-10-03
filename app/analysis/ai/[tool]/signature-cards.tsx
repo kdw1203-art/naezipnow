@@ -213,7 +213,7 @@ export function PredictionSignature({
   if (!scenario) {
     return (
       <SigCard label="시나리오">
-        <SummaryLine verdict={verdict} asOf={asOf ?? null} fallback="시나리오를 그릴 자료가 없어요." next={next} tools={tools} />
+        <SummaryLine verdict={verdict} asOf={asOf ?? null} fallback="시나리오를 그릴 자료 없음" next={next} tools={tools} />
       </SigCard>
     );
   }
@@ -222,7 +222,7 @@ export function PredictionSignature({
   const short = (n: number) => formatKrwWon(n, { style: "short" });
   return (
     <SigCard label={`앞으로 ${scenario.years}년, 세 가지 시나리오`}>
-      <SummaryLine verdict={verdict} asOf={asOf ?? null} fallback="시나리오를 그릴 자료가 없어요." next={next} tools={tools} />
+      <SummaryLine verdict={verdict} asOf={asOf ?? null} fallback="시나리오를 그릴 자료 없음" next={next} tools={tools} />
       <div className="mt-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
           <span className="t-caption text-text-3">기본 시나리오 · {scenario.years}년 뒤 · 가정 계산</span>
@@ -417,7 +417,7 @@ export function InspectionSignature({
           </li>
         ))}
       </ol>
-      {similar.length === 0 && <p className="mt-2 t-sub text-text-2">같은 지역에 함께 볼 거래 많은 단지가 아직 없어요.</p>}
+      {similar.length === 0 && <p className="mt-2 t-sub text-text-2">같은 지역에 함께 볼 거래 많은 단지 없음</p>}
     </SigCard>
   );
 }

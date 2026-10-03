@@ -82,14 +82,14 @@ export function AskForm() {
       if (res.status === 401) {
         promptSignup({
           action: "qna_ask",
-          title: "질문을 올리려면 로그인이 필요해요",
+          title: "로그인 필요 · 질문",
           benefit: "로그인하면 질문이 계정에 남아 답변 알림을 받을 수 있어요.",
         });
         return;
       }
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(data?.error ?? "질문 등록에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data?.error ?? "질문 등록 실패 · 잠시 후 다시");
         return;
       }
 

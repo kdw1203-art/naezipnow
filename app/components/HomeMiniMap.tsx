@@ -307,7 +307,7 @@ export function HomeMiniMap({
     /* [1012 · 규칙 3·10] 폴백 그라데이션 → 회색 단면(--divider). 지도가 없는 자리는 회색 면이다. */
     <div className="relative flex h-full w-full flex-col items-center justify-center gap-1.5 bg-divider px-4">
       <p className="flex items-center gap-1.5 t-body font-bold text-text-1">
-        <Icon name="map" size={16} /> 지도를 불러오지 못했어요
+        <Icon name="map" size={16} />지도 불러오기 실패
       </p>
       <div className="mt-0.5 flex items-center gap-2">
         <Link href="/welcome" className="btn-soft px-3 py-1.5 t-sub">
@@ -411,7 +411,7 @@ export function HomeMiniMap({
             할 일만 시켰다. 지금 이 지도에 실제로 무엇이 찍혀 있는지 말한다. */}
         <span className="t-body font-semibold text-text-2">
           {markers.length === 0
-            ? "지도에 표시할 지역 시세가 아직 없어요"
+            ? "지도에 표시할 지역 시세 없음"
             : focus.regionLabel
               ? markers.length > 1
                 ? `${focus.regionLabel} 외 ${markers.length - 1}곳 평균 시세`

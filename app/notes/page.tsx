@@ -24,7 +24,7 @@ import { AdZone } from "@/app/components/ads/AdZone";
 export const metadata = buildPageMetadata({
   title: "임장노트",
   description:
-    "직접 다녀온 사람이 남긴 공개 임장노트. 단지별 항목 점수와 현장 메모를 모아 봅니다.",
+    "공개 임장노트 · 직접 다녀온 기록 · 단지별 항목 점수 · 현장 메모 · 사진", /* [1029 · 20] 낱말 꼴 */
   path: "/notes",
   og: { badge: "임장노트", sub: "직접 걸어본 사람들의 공개 기록" },
 });

@@ -115,7 +115,7 @@ export function MyRecordsTab({
     return (
       <div className="flex flex-col gap-2.5">
         <EmptyState
-          title="아직 이 단지 임장노트가 없어요"
+          title="이 단지 임장노트 없음"
           desc="직접 방문해 기록하면 회차별 점수·판정이 여기에 쌓여요"
           action={{ label: `${complexName} 임장노트 쓰기`, href: noteHref }}
         />

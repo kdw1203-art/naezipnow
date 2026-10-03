@@ -89,7 +89,7 @@ export function ListingManageActions(props: {
         error?: string;
       };
       if (!res.ok || !json.ok) {
-        showToast(json.error ?? "수정에 실패했어요");
+        showToast(json.error ?? "수정 실패");
         setMode("edit");
         return;
       }
@@ -121,7 +121,7 @@ export function ListingManageActions(props: {
         error?: string;
       };
       if (!res.ok || !json.ok) {
-        showToast(json.error ?? "마감에 실패했어요");
+        showToast(json.error ?? "마감 실패");
         setSoldBusy(false);
         setMode("idle");
         return;
@@ -148,7 +148,7 @@ export function ListingManageActions(props: {
       const res = await fetch(`/api/listings/${props.listingId}`, { method: "DELETE" });
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!res.ok || !json.ok) {
-        showToast(json.error ?? "삭제에 실패했어요");
+        showToast(json.error ?? "삭제 실패");
         setRemoveBusy(false);
         setMode("idle");
         return;

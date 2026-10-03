@@ -109,7 +109,7 @@ export default async function SupplyPage() {
              ok 로 구별한다. 이 화면도 revalidate 주기 동안은 캐시되지만,
              빈 데이터를 "정상 0건" 처럼 눌러앉히는 것보다는 정직하다. */
           <div className="card rounded-2xl px-4 py-10 text-center t-body text-text-2">
-            입주 물량을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+입주 물량 불러오기 실패 · 잠시 후 다시
           </div>
         )}
 

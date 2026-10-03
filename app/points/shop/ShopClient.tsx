@@ -47,7 +47,7 @@ export function ShopClient({ initialBalance }: { initialBalance: number }) {
       } else {
         setItem(item.key, {
           status: "error",
-          message: data.error ?? "교환에 실패했어요. 잠시 후 다시 시도해 주세요.",
+          message: data.error ?? "교환 실패 · 잠시 후 다시",
         });
       }
     } catch {

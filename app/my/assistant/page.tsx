@@ -188,7 +188,7 @@ export default async function AssistantPage() {
                   {line ? (
                     <p className="t-title text-ink">{line}</p>
                   ) : (
-                    <p className="t-title text-text-3">이번 주 알림을 불러오지 못했어요 · 잠시 후 다시</p>
+                    <p className="t-title text-text-3">이번 주 알림 불러오기 실패 · 잠시 후 다시</p>
                   )}
                   <p className="mt-1 t-caption text-text-3">규칙으로 만든 한 줄 · 실거래·알림 기록만 · 매일 15:00 점검</p>
                 </div>
@@ -221,7 +221,7 @@ export default async function AssistantPage() {
                       </li>
                     ))}
                   </ol>
-                  <p className="mt-2 t-sub text-text-3">최근 7일 알림을 불러오지 못했어요 · 잠시 후 다시</p>
+                  <p className="mt-2 t-sub text-text-3">최근 7일 알림 불러오기 실패 · 잠시 후 다시</p>
                 </>
               )}
               {counts && counts.total > 0 && (
@@ -243,7 +243,7 @@ export default async function AssistantPage() {
                 <span className="t-caption text-text-3">마지막 거래가 · 30일 새 거래 수</span>
               </div>
               {rows === null ? (
-                <p className="mt-2 t-sub text-text-3">관심 단지를 불러오지 못했어요 · 잠시 후 다시</p>
+                <p className="mt-2 t-sub text-text-3">관심 단지 불러오기 실패 · 잠시 후 다시</p>
               ) : rows.length === 0 ? (
                 <>
                   <ul className="m-0 mt-1 flex list-none flex-col divide-y p-0" data-tone="plain" aria-hidden="true">

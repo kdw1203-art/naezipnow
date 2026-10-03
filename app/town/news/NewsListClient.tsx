@@ -191,7 +191,7 @@ export function NewsListClient({
       });
       setMore(Boolean(j.hasMore));
     } catch {
-      setMoreError("더 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
+      setMoreError("더 불러오기 실패 · 잠시 후 다시");
     } finally {
       setMoreLoading(false);
     }

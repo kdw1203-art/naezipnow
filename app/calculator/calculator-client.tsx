@@ -1061,8 +1061,8 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
               ) : (
                 <EmptyState
                   icon="bar"
-                  title="은행별 공시 금리는 아직 제공하지 않아요"
-                  desc="위 계산은 직접 넣은 가정 금리 기준이에요."
+                  title="은행별 공시 금리 미제공"
+                  desc="위 계산 = 직접 입력한 가정 금리 기준"
                   action={{
                     label: "금융감독원 ‘금융상품 한눈에’에서 비교 ↗",
                     href: "https://finlife.fss.or.kr",

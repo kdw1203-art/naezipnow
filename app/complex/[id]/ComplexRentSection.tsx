@@ -161,10 +161,9 @@ export function RentView({ hist, name }: { hist: ComplexRentHistory; name: strin
           </tbody>
         </table>
       </div>
+      {/* [1029 · 6] 낱말 꼴 각주 */}
       <p className="t-caption mt-1.5 px-1 text-text-3">
-        출처 국토교통부 전월세 신고. 최근 1~2개월은 신고 지연으로 실제보다 적게 잡힐 수
-        있고, 신고분에는 갱신·신규 계약이 섞여 있어 체감과 다를 수 있어요. 중앙값은
-        면적을 가중하지 않은 값이에요.
+        출처 국토교통부 전월세 신고 · 최근 1~2개월 신고 지연(과소 집계 가능) · 갱신·신규 계약 혼합 · 중앙값 = 면적 미가중
       </p>
     </section>
   );

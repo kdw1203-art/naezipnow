@@ -297,16 +297,16 @@ export function MapPickDrawer({
               {resolving
                 ? "단지를 불러오는 중…"
                 : mapDown
-                  ? "지도를 불러오지 못했어요. 위 검색창에 단지명을 넣어 주세요."
+                  ? "지도 불러오기 실패 · 위 검색창에 단지명을 넣어 주세요."
                   : failed
-                    ? "단지 목록을 불러오지 못했어요. 지도를 조금 움직여 주세요."
+                    ? "단지 목록 불러오기 실패 · 지도를 조금 움직여 주세요."
                     : loading
                       ? "이 화면의 단지를 찾는 중…"
                       : view.mode === "clusters"
                         ? "묶음을 누르면 그 자리로 확대돼요"
                         : view.points.length > 0
                           ? `이 화면에 ${view.points.length.toLocaleString("ko-KR")}곳 · 마커를 누르면 선택`
-                          : "이 화면에는 실거래가 있는 단지가 없어요"}
+                          : "이 화면에는 실거래가 있는 단지 없음"}
             </span>
           </div>
         </div>

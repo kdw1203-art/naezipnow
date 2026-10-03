@@ -27,7 +27,7 @@ export default async function NoteTemplatesPage() {
       {/* [1012] 규칙 5·6 — "검증된 체크리스트로 시작하세요"(금지 문구) → 언제·어디서 + 실제 템플릿 수.
           [1015 · 규칙 B·D] 사용법 문장("~고르면 그 항목이 채워진 노트가 열려요")은 걷고 숫자 한 줄만. 0건이면 숫자 없이. */}
       <p className="rise-in mb-5 t-body text-text-2 max-md:mb-3">
-        {items.length > 0 ? `임장 전날 고르는 체크리스트 ${items.length}개` : "체크리스트가 아직 없어요."}
+        {items.length > 0 ? `임장 전날 고르는 체크리스트 ${items.length}개` : "체크리스트 없음"}
       </p>
       <TemplateBrowser initial={items} />
     </PageShell>

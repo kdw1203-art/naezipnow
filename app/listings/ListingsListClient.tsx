@@ -192,8 +192,8 @@ export function ListingsListClient({
         <div className="rise-in-1 card card-pad-sm flex flex-col items-center gap-3 py-14 text-center">
           <div className="text-[15px] font-bold text-ink">
             {filtersActive
-              ? "이 조건에 맞는 매물이 아직 없어요"
-              : "검수를 통과한 매물이 아직 없어요"}
+              ? "이 조건에 맞는 매물 없음"
+              : "검수를 통과한 매물 없음"}
           </div>
           {/* [1015 · 규칙 B] 빈 화면의 긴 권유문(베타·집주인·중개사무소·임장노트 세 문장) → 사실 한 줄 */}
           <p className="max-w-[420px] text-[13px] leading-[1.7] text-text-3">

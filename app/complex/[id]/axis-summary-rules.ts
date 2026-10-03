@@ -17,10 +17,10 @@ import type { Verdict, VerdictTile } from "@/lib/ai/verdict";
 export const AXIS_MIN_SCORED = 3;
 
 /** lib/ai/verdict.ts tilePool 의 조회 실패 표시와 같은 문자열 */
-const FAILED_NOTE = "불러오지 못했어요";
+const FAILED_NOTE = "불러오기 실패";
 
-export const EMPTY_TILES_LINE = "아직 신고된 매매 실거래가 없어요 · 신고 기한은 계약 후 30일";
-export const FAILED_TILES_LINE = "실거래·지역 자료를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.";
+export const EMPTY_TILES_LINE = "신고된 매매 실거래 없음 · 신고 기한은 계약 후 30일";
+export const FAILED_TILES_LINE = "실거래·지역 자료 불러오기 실패 · 잠시 후 다시";
 
 export type AxisSummary = {
   total: number;

@@ -349,13 +349,13 @@ export function SupplyClient({
             </div>
           ) : (
             <div className="rounded-lg border border-line bg-surface px-4 py-8 text-center t-body text-text-3">
-              표시할 월별 입주 물량 데이터가 없어요.
+표시할 월별 입주 물량 데이터 없음
             </div>
           )}
+          {/* [1029 · 13] 낱말 꼴 */}
           {noMonth.length > 0 && (
             <p className="m-0 t-caption text-text-3">
-              입주월이 비었거나 달이 잘못 적힌 {noMonth.length.toLocaleString("ko-KR")}곳(
-              {noMonthHouseholds.toLocaleString("ko-KR")}세대)은 월별 합계에서 뺐어요. 아래 표에는 “월 미정”으로 있어요.
+              월 미정 {noMonth.length.toLocaleString("ko-KR")}곳({noMonthHouseholds.toLocaleString("ko-KR")}세대) · 월별 합계 제외 · 아래 표 “월 미정”
             </p>
           )}
         </div>
@@ -411,7 +411,7 @@ export function SupplyClient({
             ))}
             {featuredMore > 0 && (
               <p className="rise-in-2 px-1 t-sub text-text-3">
-                외 {featuredMore.toLocaleString()}곳은 아래 표에 있습니다.
+                외 {featuredMore.toLocaleString()}곳 · 아래 표
               </p>
             )}
           </>
@@ -457,8 +457,8 @@ export function SupplyClient({
             {/* [1015] 설명문("…추려 보여드려요 — …확인하세요") → 숫자 한 줄(브리프 규칙 D) */}
             <p className="rise-in-3 px-1 t-sub text-text-3">
               {upcomingMore > 0
-                ? `대표 ${upcomingShown.length}곳 · 예정 외 ${upcomingMore.toLocaleString()}곳은 아래 표에 있습니다.`
-                : `대표 ${upcomingShown.length}곳 · 전체 목록은 아래 표에 있습니다.`}
+                ? `대표 ${upcomingShown.length}곳 · 나머지 ${upcomingMore.toLocaleString()}곳 아래 표`
+                : `대표 ${upcomingShown.length}곳 · 전체 목록 아래 표`}
             </p>
           </>
         )}
@@ -472,7 +472,7 @@ export function SupplyClient({
         </h2>
         {list.length === 0 ? (
           <div className="rise-in-4 card rounded-2xl px-4 py-8 text-center t-body text-text-3">
-            해당 지역 입주 예정 물량 데이터가 없어요.
+해당 지역 입주 예정 물량 데이터 없음
           </div>
         ) : (
           /* [1015] 표 껍데기 = 리퀴드 판(sand — 입주 일정 톤, 브리프 규칙 I) */
@@ -539,7 +539,7 @@ export function SupplyClient({
           {/* [1028] 월별 합계를 센 값이다(AI 결과 아님) — "AI" 배지와 "인사이트"를 뗐다 */}
           <AIPanel title="입주 물량 요약" ai={false} className="rounded-3xl">
             {monthly.length === 0 ? (
-              <>표시할 입주 물량 데이터가 없어요.</>
+              <>표시할 입주 물량 데이터 없음</>
             ) : (
               <>
                 {scope}기준 최다 입주 <b className="text-ai-accent">{peak ? fmtYm(peak.ym) : "—"}</b>
@@ -564,7 +564,7 @@ export function SupplyClient({
           </h2>
           {regions.length === 0 ? (
             <p className="t-caption text-text-3">
-              표시할 지역 데이터가 없어요.
+표시할 지역 데이터 없음
             </p>
           ) : (
             <>

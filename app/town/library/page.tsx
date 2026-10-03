@@ -121,12 +121,12 @@ export default async function TownLibraryPage() {
 
         {reportsFailed ? (
           <ErrorState
-            title="리포트 목록을 불러오지 못했어요"
+            title="리포트 목록 불러오기 실패"
             desc="잠시 후 다시 시도해 주세요."
           />
         ) : reports.length === 0 ? (
           <div className="card rise-in-1 px-4 py-5">
-            <p className="t-body font-bold text-ink">자료실에 올라온 리포트가 아직 없어요</p>
+            <p className="t-body font-bold text-ink">자료실에 올라온 리포트 없음</p>
             {/* [970 · C-20] 해요체 통일 · [1012] 규칙 6 — 무엇이 있는지(공개 노트 n편) 숫자로 */}
             {notes.length > 0 && (
               <p className="mt-1 t-sub text-text-2">아래 공개 임장노트 {notes.length}편은 열람할 수 있어요.</p>
@@ -194,7 +194,7 @@ export default async function TownLibraryPage() {
 
         {loadFailed ? (
           <ErrorState
-            title="공개 임장노트를 불러오지 못했어요"
+            title="공개 임장노트 불러오기 실패"
             desc="잠시 후 다시 시도해 주세요."
           />
         ) : notes.length === 0 ? (
@@ -203,7 +203,7 @@ export default async function TownLibraryPage() {
               <Icon name="folder" size={22} />
             </div>
             <div className="t-body font-bold text-text-1">
-              자료실에 공개된 임장노트가 아직 없어요
+자료실에 공개된 임장노트 없음
             </div>
             <div className="max-w-xs t-sub leading-[1.6] text-text-3">
               공개로 저장한 첫 노트가 이 자리에 실려요

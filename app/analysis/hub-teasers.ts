@@ -281,7 +281,7 @@ export async function loadHubTeasers(regionId: string = HUB_REGION_ID): Promise<
   if (baseRes.status === "fulfilled" && baseRes.value?.label) {
     out.baseRate = {
       value: baseRes.value.label,
-      caption: "한국은행 기준금리가 계산에 그대로 들어가요",
+      caption: "한국은행 기준금리 적용 · 실제 값", /* [1029 · 9] 낱말 꼴 */
       series: [],
     };
   }

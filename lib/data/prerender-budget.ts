@@ -55,7 +55,7 @@ export const PRERENDER_LOAD_BUDGET_MS = 45_000;
  * 다섯 페이지가 같은 문장을 쓰는 이유: "없다"와 "못 읽었다"의 구분은
  * 페이지마다 다르게 적으면 흐려진다. 빈 상태 문구와는 절대 섞지 않는다.
  */
-export const LOAD_FAILED_LINE = "불러오지 못했어요. 잠시 후 다시 시도해 주세요.";
+export const LOAD_FAILED_LINE = "불러오기 실패 · 잠시 후 다시";
 
 export type PrerenderLoad<T> =
   | { ok: true; data: T }

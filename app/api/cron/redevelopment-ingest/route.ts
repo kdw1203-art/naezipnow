@@ -1,13 +1,16 @@
 /**
- * 정비사업장 공공 API 적재 크론 (서울 열린데이터광장).
- * 보호: lib/cron/authorize.ts (CRON_SECRET 헤더 · 관리자 세션)
- * SEOUL_OPENAPI_KEY 미설정 시 no-op(mode:"mock", reason:"no-key"),
- * 키는 있어도 실 데이터셋 서비스명(SEOUL_OPENAPI_SERVICE) 미지정 시
- * no-op(reason:"source-not-configured") — 둘 다 시드/DB 유지.
+ * [1029] 서울 도시계획 결정 조서(UPIS) 적재 크론 — 서울 열린데이터광장 Open API.
+ *   정비사업(upisRebuild) · 도시개발(upisUrbanDev) · 지구단위계획(upisDistUnitPlan) · 결정고시(upisAnnouncement)
+ *   → seoul_upis_records · seoul_upis_announcements (lib/seoul/upis-ingest.ts)
+ * 보호: lib/cron/authorize.ts (CRON_SECRET 헤더 · 관리자 세션). 호출: .github/workflows/etl.yml(매일).
+ * 키: SEOUL_DATA_API_KEY(열린데이터광장 일반 인증키 — 다른 서울시 자료와 같은 키). 없으면 no-op(reason:"no-key").
+ * 예전(~1028)에는 종료된 데이터셋(OA-2253 정비사업 현황)을 SEOUL_OPENAPI_KEY + SEOUL_OPENAPI_SERVICE 로 기다리던
+ * 자리였다 — 그 두 환경변수는 더 쓰지 않는다.
+ * 쿼리: ?services=upisRebuild,upisAnnouncement (일부만) · ?budget=60000 (ms)
  */
 import { NextResponse } from "next/server";
 import { authorizeCron } from "@/lib/cron/authorize";
-import { ingestSeoulRedevelopment, isRedevIngestConfigured } from "@/lib/redevelopment/ingest";
+import { ingestSeoulUpis } from "@/lib/seoul/upis-ingest";
 import { ingestErrorMessage, logIngest } from "@/lib/market/store";
 
 export const runtime = "nodejs";
@@ -19,31 +22,33 @@ async function handle(req: Request) {
   if (!authorized) {
     return NextResponse.json({ error: "권한이 필요합니다." }, { status: 403 });
   }
+  const sp = new URL(req.url).searchParams;
+  const servicesRaw = (sp.get("services") ?? "").trim();
+  const services = servicesRaw ? servicesRaw.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
+  const budgetRaw = Number(sp.get("budget"));
+  const budgetMs = Number.isFinite(budgetRaw) && budgetRaw >= 5_000 && budgetRaw <= 100_000 ? budgetRaw : 90_000;
 
-  const configured = isRedevIngestConfigured();
-  // F3(#147) — 던져서 끝나면 로그가 비어 "안 돌았다"와 구분되지 않으므로 예외도 기록한다.
   try {
-    const result = await ingestSeoulRedevelopment();
+    const result = await ingestSeoulUpis({ budgetMs, services });
+    const upserted = result.services.reduce((a, s) => a + s.upserted, 0);
+    const failed = result.services.filter((s) => s.error);
+    const summary = result.services
+      .map((s) => `${s.service}=${s.upserted}${s.completed ? "✓" : ""}${s.error ? "✗" : ""}`)
+      .join(" ");
     await logIngest({
       source: "redevelopment",
-      dataset: "서울 정비사업 현황",
+      dataset: "서울 UPIS 결정 조서",
       origin: "cron-fetch",
-      rows: result.upserted,
-      status: !configured ? "skipped" : result.upserted > 0 ? "ok" : "skipped",
-      message:
-        result.reason ??
-        `조회=${result.fetched} 좌표없음제외=${result.skippedNoGeo}`,
+      rows: upserted,
+      status: !result.configured ? "skipped" : failed.length > 0 && upserted === 0 ? "error" : "ok",
+      message: result.reason ?? `${summary}${result.budgetExhausted ? " · 예산 소진(다음 실행이 이어서)" : ""}`,
     });
-    return NextResponse.json({
-      ok: true,
-      mode: configured ? "live" : "mock",
-      ...result,
-    });
+    return NextResponse.json({ ok: true, ...result });
   } catch (err) {
-    const message = ingestErrorMessage(err, "정비사업 적재 실패");
+    const message = ingestErrorMessage(err, "UPIS 적재 실패");
     await logIngest({
       source: "redevelopment",
-      dataset: "서울 정비사업 현황",
+      dataset: "서울 UPIS 결정 조서",
       origin: "cron-fetch",
       rows: 0,
       status: "error",

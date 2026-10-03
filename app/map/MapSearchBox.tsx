@@ -34,7 +34,7 @@ import {
    - 선택 시 상위(map-client)로 위임: 단지→recenter+하이라이트, 주소·장소→지도 이동.
    자체 fetch·아웃사이드 클릭·키보드(↑↓ Enter Esc)만 담당하는 프레젠테이션 컴포넌트.
    [1008 · S] 단지 줄: 검색어 강조(괄호·띄어쓰기 건너뜀) · 시군구 읍면동 · 세대수 · 6개월 거래 · 평균 실거래가 ·
-   [비슷한 이름]. 0건이면 "“{q}” 와 일치하는 단지가 없어요" · 띄어 쓰는 요령 · 비슷한 이름(suggest 의 similar)
+   [비슷한 이름]. 0건이면 "“{q}” 와 일치하는 단지 없음" · 띄어 쓰는 요령 · 비슷한 이름(suggest 의 similar)
    · 지도에서 직접 찾기(목록을 닫아 지도를 보이게). 이 파일은 지도 동적 청크 안이라 첫 묶음 예산과 무관하다.
    [1008 · 리뷰 B] suggest 의 failed:true·실패 응답은 "지금 검색이 안 돼요"(없음과 다르게) · 80자 넘는 검색어는
    보내지 않고 "검색어는 80자까지예요" · listbox 안에는 option(과 그 묶음 group)만 — 안내·단추는 밖 ·
@@ -155,7 +155,7 @@ export function MapSearchBox({
   const [recentOpen, setRecentOpen] = useState(false);
   const { items: recents } = useRecentComplexes();
   /* 아직 굳지 않은 입력은 "아직 안 물어본 상태"다. 이걸 대기로 안 치면 치는
-     도중에 "일치하는 단지가 없어요"가 떴다 사라진다 — 확인한 적 없는 사실을
+     도중에 "일치하는 단지 없음"가 떴다 사라진다 — 확인한 적 없는 사실을
      화면에 쓰는 셈이다. */
   const busy = loading || (query.trim() !== "" && query.trim() !== settledQuery);
 
@@ -509,7 +509,7 @@ export function MapSearchBox({
           )}
           {!busy && !notice && failed && !hasResults && (
             <div role="status" className="px-3 py-3 t-sub text-text-3">
-              단지 검색 결과를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+단지 검색 결과 불러오기 실패 · 잠시 후 다시
             </div>
           )}
           {!busy && !notice && !failed && !hasResults && (
@@ -518,7 +518,7 @@ export function MapSearchBox({
               <div role="status" className="flex flex-col gap-1">
                 {intent && intent.mode !== "name" ? (
                   <>
-                    <p className="break-words t-sub font-bold text-ink">조건에 맞는 단지가 없어요</p>
+                    <p className="break-words t-sub font-bold text-ink">조건에 맞는 단지 없음</p>
                     <p className="break-words t-caption text-text-3">조건을 줄이면 결과가 나올 수 있어요</p>
                   </>
                 ) : (

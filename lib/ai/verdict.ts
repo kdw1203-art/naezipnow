@@ -234,7 +234,7 @@ function tilePool(
   const area = opts.areaLabel ?? regionShort(ctx.region?.name ?? ctx.complex?.region);
   /* [1008 · 리뷰 A-9] 조회가 실패한 칸은 "자료 없음"이 아니라 "지금 불러오지 못했어요" */
   const failed = new Set(ctx.unavailable ?? []);
-  const FAILED_NOTE = "불러오지 못했어요";
+  const FAILED_NOTE = "불러오기 실패";
   const fieldAsOf = snap?.fieldAsOf ?? null;
   const loan = opts.loan ?? null;
   /* 건수 자체가 값인 칸은 오래됨만 본다. 대표가는 규칙상 최근 거래 3~6건 평균이라 "거래 적음" 을
@@ -492,17 +492,7 @@ function radarSummary(radar: RadarAxis[]) {
   return { avg, measured: scored.length, total: radar.length, weakest, strongest };
 }
 
-/** "가격 흐름은" / "공급 여유는" — 받침에 맞는 조사 */
-function topicJosa(word: string): string {
-  const last = word.charCodeAt(word.length - 1);
-  if (last < 0xac00 || last > 0xd7a3) return `${word}은`;
-  return (last - 0xac00) % 28 === 0 ? `${word}는` : `${word}은`;
-}
-function subjJosa(word: string): string {
-  const last = word.charCodeAt(word.length - 1);
-  if (last < 0xac00 || last > 0xd7a3) return `${word}이`;
-  return (last - 0xac00) % 28 === 0 ? `${word}가` : `${word}이`;
-}
+/* [1029 · 8] 조사 붙이기(topicJosa·subjJosa)는 결론이 낱말 꼴이 되면서 쓰지 않는다 */
 
 function toolMetric(
   tool: AiAnalysisToolId,
@@ -526,7 +516,7 @@ function toolMetric(
     case "ai-diagnosis": {
       const r = radarSummary(insight.radar);
       if (!r) {
-        return { metric: null, headline: `${name}: 점수를 낼 자료가 아직 부족해요.` };
+        return { metric: null, headline: `${name}: 점수 산출 자료 부족` };
       }
       return {
         metric: {
@@ -536,14 +526,15 @@ function toolMetric(
           note: `${r.total}개 항목 중 ${r.measured}개로 낸 평균`,
           asOf: snap?.period || price?.latestYm || null,
         },
+        /* [1029 · 8] 낱말 꼴 — "{단지}: 4개 항목 고름 · 최고 거래 활발 99점"(머리 "{단지}: " 는 verdict-board 가 뗀다) */
         headline:
           band === "strong"
-            ? `${name}: ${r.measured}개 항목이 고르게 좋아요. ${r.strongest.label} ${r.strongest.score}점이 가장 높아요.`
+            ? `${name}: ${r.measured}개 항목 고름 · 최고 ${r.strongest.label} ${r.strongest.score}점`
             : band === "weak"
-              ? `${name}: 평균 ${r.avg}점이에요. ${subjJosa(r.weakest.label)} 약해요(${r.weakest.score}점).`
+              ? `${name}: 평균 ${r.avg}점 · 약점 ${r.weakest.label} ${r.weakest.score}점`
               : r.strongest.key === r.weakest.key
-                ? `${name}: 평균 ${r.avg}점이에요. ${r.strongest.label} 한 가지로만 본 점수예요.`
-                : `${name}: 평균 ${r.avg}점이에요. ${topicJosa(r.strongest.label)} 좋고 ${topicJosa(r.weakest.label)} 약해요.`,
+                ? `${name}: 평균 ${r.avg}점 · ${r.strongest.label} 한 항목 기준`
+                : `${name}: 평균 ${r.avg}점 · 강점 ${r.strongest.label} · 약점 ${r.weakest.label}`,
       };
     }
     case "ai-prediction": {
@@ -722,7 +713,7 @@ function toolMetric(
         headline:
           n > 0
             ? `${name} 포함 ${n + 1}곳 · 최근 6개월 거래 많은 순이에요.`
-            : `${name}: 같은 지역에 함께 볼 거래 많은 단지가 아직 없어요.`,
+            : `${name}: 같은 지역에 함께 볼 거래 많은 단지 없음`,
       };
     }
     case "ai-compare": {
@@ -767,7 +758,7 @@ function toolMetric(
           metric: null,
           headline: p
             ? `${name}: 기준 가격은 ${formatKrwWon(p, { style: "short" })}이에요. 내 조건에서 대출 비율·금리를 넣으면 월 상환액과 이자를 계산해요.`
-            : `${name}: 최근 실거래가가 없어요. 내 조건에서 기준 가격·대출 비율·금리를 넣으면 계산해요.`,
+            : `${name}: 최근 실거래가 없음 · 내 조건에서 기준 가격·대출 비율·금리를 넣으면 계산해요.`,
         };
       }
       /* 보유 기간을 넣었으면 시세 예측과 같은 시나리오 가격에 판다고 가정한 연 수익률까지 — 도구 이름이 약속하는 것 */
@@ -929,7 +920,7 @@ function toolBand(
         const hasStart = Boolean(ctx.complex?.price) || (num(input.basePriceMan) ?? 0) > 0;
         return {
           band: "thin",
-          reason: hasStart ? "지역 가격 흐름 자료가 없어요" : "최근 실거래가 모자라 출발 가격이 없어요",
+          reason: hasStart ? "지역 가격 흐름 자료 없음" : "최근 실거래가 모자라 출발 가격 없음",
           basis: "tool",
         };
       }
@@ -954,14 +945,14 @@ function toolBand(
             : { band: "strong", reason: `전세가율 ${inputRatio}% · 80% 미만`, basis: "tool" };
       }
       /* [1008 · 리뷰 A-7] 입력 없이 지역 평균만 — "좋음·안전"이라 하지 않는다(이 계약이 아니라 지역 평균) */
-      if (regionRatio == null) return { band: "thin", reason: "전세가율 자료가 없어요", basis: "tool" };
+      if (regionRatio == null) return { band: "thin", reason: "전세가율 자료 없음", basis: "tool" };
       return regionRatio >= 80
         ? { band: "weak", reason: `지역 평균 전세가율 ${regionRatio}% · 80% 이상`, basis: "tool" }
         : { band: "mixed", reason: "지역 평균으로 본 참고값", basis: "tool" };
     }
     case "ai-economy": {
       const macro = insight.radar.find((a) => a.key === "macro");
-      if (!macro || typeof macro.score !== "number") return { band: "thin", reason: "금리 자료가 없어요", basis: "tool" };
+      if (!macro || typeof macro.score !== "number") return { band: "thin", reason: "금리 자료 없음", basis: "tool" };
       /* [1028] 이유 줄은 점수만 — "기준금리 N%" 는 결론 문장과 대표 숫자가 이미 말한다(같은 말 네 번 → 두 번) */
       return {
         band: macro.score >= 65 ? "strong" : macro.score < 45 ? "weak" : "mixed",

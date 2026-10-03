@@ -86,7 +86,7 @@ export function PortfolioMix({
         {priced.length > 0 ? (
           <Bars rows={bands} total={priced.length} />
         ) : (
-          <p className="t-sub text-text-2">아직 가격 기준가가 잡힌 관심 단지가 없어요.</p>
+          <p className="t-sub text-text-2">가격 기준가가 잡힌 관심 단지 없음</p>
         )}
         <p className="t-caption text-text-3">
           가격은 관심 단지 가격 알림의 기준가(대표 면적대 최근 6건 평균)예요

@@ -108,7 +108,7 @@ export default async function QnaListPage() {
           <div className="mt-4 flex flex-col gap-4">
             <AskForm />
             <ErrorState
-              title="질문 목록을 불러오지 못했어요"
+              title="질문 목록 불러오기 실패"
               desc="잠시 후 다시 시도해 주세요. 질문 등록은 위에서 그대로 할 수 있어요."
             />
           </div>

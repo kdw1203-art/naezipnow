@@ -243,7 +243,7 @@ test("[1012 · R2 · complex A6] 지표 칸 4개가 전부 '—' 면 격자 대�
   assert.equal(raw.tiles?.length, 4);
   assert.ok(raw.tiles?.every((t) => t.value == null), "표본은 칸 4개가 전부 값 없음이어야 한다");
   assert.equal(emptyTilesLine(raw.tiles), EMPTY_TILES_LINE);
-  assert.equal(EMPTY_TILES_LINE, "아직 신고된 매매 실거래가 없어요 · 신고 기한은 계약 후 30일");
+  assert.equal(EMPTY_TILES_LINE, "신고된 매매 실거래 없음 · 신고 기한은 계약 후 30일");
   /* 실거래 조회가 실패한 컨텍스트 — "없어요"라고 하면 거짓이다 */
   const failed = buildVerdict({ tool: "ai-diagnosis", ctx: thinCtx({ unavailable: ["실거래가"] }), footnotes: THIN_FOOTNOTES, now: R2_NOW });
   assert.equal(emptyTilesLine(failed.tiles), FAILED_TILES_LINE);

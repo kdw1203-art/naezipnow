@@ -150,7 +150,7 @@ export function ExpertProfileForm({ expert }: { expert: ExpertEditable }) {
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; expert?: { specialties?: string[] } };
       if (!res.ok) {
-        showToast(data.error ?? "저장에 실패했어요. 잠시 후 다시 시도해 주세요");
+        showToast(data.error ?? "저장 실패 · 잠시 후 다시");
         settle("error");
         return;
       }

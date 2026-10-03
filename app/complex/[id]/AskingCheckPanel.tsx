@@ -135,7 +135,7 @@ export function AskingCheckPanel({ apiId }: { apiId: string }) {
     return (
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-danger-soft px-3 py-2.5">
         <p className="t-sub font-bold text-danger">
-          실거래를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+실거래 불러오기 실패 · 잠시 후 다시
         </p>
         <button
           type="button"
@@ -150,7 +150,7 @@ export function AskingCheckPanel({ apiId }: { apiId: string }) {
   if (options.length === 0) {
     return (
       <p className="mt-3 rounded-xl bg-bg px-3 py-3 t-sub text-text-2">
-        최근 24개월에 이 단지의 매매 실거래 신고가 없어요. 비교할 거래가 없어 위치를 말할 수 없어요.
+최근 24개월에 이 단지의 매매 실거래 신고 없음 · 비교할 거래가 없어 위치를 말할 수 없어요.
       </p>
     );
   }

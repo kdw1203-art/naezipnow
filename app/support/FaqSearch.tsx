@@ -84,7 +84,7 @@ export function FaqSearch({
         {showPanel && results.length === 0 ? (
           <div className="rounded-xl bg-bg px-3.5 py-3 t-sub leading-[1.6] text-text-2">
             {/* [1028 · 제안 8·12] 줄표로 이은 권유문 → 사실 한 줄 + 링크 라벨(동사 + 대상) */}
-            &ldquo;{query.trim()}&rdquo; 에 맞는 질문이 없어요.{" "}
+&ldquo;{query.trim()}&rdquo; 에 맞는 질문 없음{" "}
             <a href={contactHref} className="inline-block py-[5px] font-bold text-primary">
               1:1 문의 남기기
             </a>

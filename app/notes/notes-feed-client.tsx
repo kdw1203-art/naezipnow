@@ -1,6 +1,6 @@
 "use client";
 /* [1023 · 임장노트] docs/review-1022.md 1장 — ① 필터 칩 줄 왼쪽 검색칸(제목·지역·단지명 클라이언트 필터, 지역 칩과 AND,
-   0건은 "검색어에 맞는 노트가 없어요" + 지우기) · ① 내 노트 회차 묶기(같은 aptName 2건 이상 → 접힌 묶음 카드 + 회차 비교 링크)
+   0건은 "검색어에 맞는 노트 없음" + 지우기) · ① 내 노트 회차 묶기(같은 aptName 2건 이상 → 접힌 묶음 카드 + 회차 비교 링크)
    · ② "더 보기" 실패는 같은 버튼이 "다시 시도" · ② 내 노트 조회 실패 카드에 다시 시도(loadMine) · ② 폰 격자 타일은 판단 배지 하나만.
    [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 
@@ -892,7 +892,7 @@ export function NotesFeedClient({
       const qs = new URLSearchParams({ public: "1", before: cursor, limit: String(pageSize) });
       const res = await fetch(`/api/inspection/notes?${qs.toString()}`, { cache: "no-store" });
       if (!res.ok) {
-        setMoreError("더 불러오지 못했어요. 잠시 후 다시 시도해 주세요");
+        setMoreError("더 불러오기 실패 · 잠시 후 다시");
         return;
       }
       const data = (await res.json().catch(() => null)) as {
@@ -975,7 +975,7 @@ export function NotesFeedClient({
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface px-3.5 py-3 t-sub text-text-2">
             <span>
               {mine ? "내 임장노트를" : "공개 임장노트를"}{" "}
-              <strong className="text-ink">불러오지 못했어요</strong>. 잠시 후 다시 시도해 주세요.
+              <strong className="text-ink">불러오기 실패</strong>. 잠시 후 다시 시도해 주세요.
             </span>
             {/* [1023 · 임장노트 ②] 내 노트 조회 실패 — 같은 자리에서 다시 시도(loadMine 재호출). 공개 피드는 서버 렌더라 손잡이 없음 */}
             {mine && (
@@ -1111,7 +1111,7 @@ export function NotesFeedClient({
               <div className="flex flex-col items-center gap-2">
                 <EmptyState
                   icon="search"
-                  title="검색어에 맞는 노트가 없어요"
+                  title="검색어에 맞는 노트 없음"
                   desc={`노트 ${allNotes.length}건 중 0건 · "${query.trim()}"${regionPick ? ` · 지역 ${regionPick}` : ""}`}
                   className="w-full"
                 />
@@ -1128,7 +1128,7 @@ export function NotesFeedClient({
               <div className="flex flex-col items-center gap-2">
                 <EmptyState
                   icon="file-text"
-                  title="이 조건에 맞는 내 노트가 없어요"
+                  title="이 조건에 맞는 내 노트 없음"
                   desc={`내 노트 ${allNotes.length}건 중 0건.`}
                   className="w-full"
                 />
@@ -1146,7 +1146,7 @@ export function NotesFeedClient({
               title={
                 activeFilter === "내 관심 지역"
                   ? "구독한 지역의 노트는 아직 없어요"
-                  : "해당 필터에 맞는 노트가 아직 없어요"
+                  : "해당 필터에 맞는 노트 없음"
               }
               desc={
                 activeFilter === "내 관심 지역"
@@ -1161,8 +1161,8 @@ export function NotesFeedClient({
               icon="file-text"
               title={
                 mine
-                  ? "아직 작성한 임장노트가 없어요"
-                  : "아직 공개된 임장노트가 없어요"
+                  ? "작성한 임장노트 없음"
+                  : "공개된 임장노트 없음"
               }
               desc={
                 mine

@@ -195,7 +195,7 @@ export function PriceTab({
         </>
       ) : (
         <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
-          아직 수집된 국토교통부 실거래가 없어요
+수집된 국토교통부 실거래 없음
         </div>
       )}
       {/* [D69] 계산기로 **이 단지의 실거래가를 들고** 간다.

@@ -87,7 +87,7 @@ export function RecordPrefsTab({ onGoNotification }: { onGoNotification: () => v
         setSaveError(
           e instanceof Error && e.message !== "저장 실패"
             ? e.message
-            : "저장에 실패했어요. 잠시 후 다시 시도해 주세요.",
+            : "저장 실패 · 잠시 후 다시",
         );
       } finally {
         setBusyKey(null);
@@ -119,7 +119,7 @@ export function RecordPrefsTab({ onGoNotification }: { onGoNotification: () => v
   if (phase === "error") {
     return (
       <div className="card rounded-lg p-4 t-body text-text-3">
-        기본값을 불러오지 못했어요. 새로고침 후 다시 시도해 주세요.
+기본값 불러오기 실패 · 새로고침 후 다시 시도해 주세요.
       </div>
     );
   }

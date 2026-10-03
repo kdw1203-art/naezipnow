@@ -97,7 +97,7 @@ export default async function PromptThreadPage({
         {posts.length === 0 ? (
           <EmptyState
             icon="messages-square"
-            title="아직 이 질문에 달린 답변이 없어요"
+            title="이 질문에 달린 답변 없음"
             desc="첫 답변이 이 페이지의 시작이 됩니다."
             action={{
               href: `/town/write?topic=${encodeURIComponent(question)}&pi=${i}`,

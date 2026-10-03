@@ -144,7 +144,7 @@ export function ExpertApplyCta({
         if (data.code === "application_pending") {
           setError("이미 심사 중인 신청이 있어요. 진행 상태는 마이 › 전문가 프로필에서 볼 수 있어요.");
         } else {
-          setError(data.error ?? "접수에 실패했어요. 잠시 후 다시 시도해 주세요.");
+          setError(data.error ?? "접수 실패 · 잠시 후 다시");
         }
         setPhase("idle");
         return;
@@ -156,7 +156,7 @@ export function ExpertApplyCta({
         subtitle: "심사 결과를 알림으로 보내드릴게요",
       });
     } catch {
-      setError("접수에 실패했어요. 네트워크를 확인해 주세요.");
+      setError("접수 실패 · 네트워크를 확인해 주세요.");
       setPhase("idle");
     }
   };

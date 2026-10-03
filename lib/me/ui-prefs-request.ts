@@ -57,7 +57,7 @@ export function parseUiPrefsPatch(body: unknown): UiPrefsPatchResult {
     patch.investorRoleDefault = v as UiPrefs["investorRoleDefault"];
   }
   if (Object.keys(patch).length === 0) {
-    return { ok: false, error: "변경할 항목이 없어요." };
+    return { ok: false, error: "변경할 항목 없음" };
   }
   return { ok: true, patch };
 }

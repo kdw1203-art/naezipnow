@@ -101,7 +101,7 @@ export function NoteComments({
         </p>
       )}
       {topLevel.length === 0 ? (
-        <p className="py-1 t-body text-text-3">아직 댓글이 없어요</p>
+        <p className="py-1 t-body text-text-3">댓글 없음</p>
       ) : (
         topLevel.map((c) => (
           <div key={c.id} className="flex flex-col gap-2">
@@ -265,7 +265,7 @@ function NoteCommentForm({
   const askLogin = () =>
     promptSignup({
       action: "note_comment",
-      title: "댓글을 남기려면 로그인이 필요해요",
+      title: "로그인 필요 · 댓글",
       benefit: "로그인하면 댓글이 계정에 남아 노트 작성자에게 알림이 가요.",
     });
 

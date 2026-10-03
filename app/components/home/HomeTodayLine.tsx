@@ -122,7 +122,7 @@ export function HomeTodayLine({
     if (temp)
       out.push({
         key: "temp",
-        text: `이번 주 시장 온도는 ${temp.score}점(${temp.headline})이에요.`,
+        text: `이번 주 시장 온도 ${temp.score}점 · ${temp.headline}`,
         href: "/analysis/temperature",
       });
     /* [1009 · H 리뷰] 건수의 실제 달·원천으로만(today-line.ts) — 카드 기준월을 붙이면 다른 달 건수를 그 달 것처럼 말한다 */

@@ -252,13 +252,13 @@ const SPECS: Spec[] = [
      다시 붙을 때 이 행도 같이 돌아온다(expectedDays 는 그때 정한다). */
   {
     key: "redevelopment",
-    label: "정비사업 현황",
+    label: "서울 도시계획 결정 조서",
     source: "서울 열린데이터광장",
-    table: "redevelopment_projects",
-    writeCol: "updated_at",
-    insertCol: "created_at",
-    expectedDays: 30,
-    hasSample: true,
+    table: "seoul_upis_records",
+    writeCol: "fetched_at",
+    insertCol: "fetched_at",
+    expectedDays: 2,
+    hasSample: false,
     logSources: ["redevelopment"],
   },
 ];

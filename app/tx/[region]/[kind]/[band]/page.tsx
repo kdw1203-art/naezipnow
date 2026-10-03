@@ -226,7 +226,7 @@ export default async function TxBandPage({ params }: { params: Promise<Params> }
         <p className="mt-0.5 t-caption text-text-3">거래 많은 순 · 상위 {Math.min(complexes.length, 40)}곳</p>
         {complexesFailed ? (
           <p className="py-6 text-center t-body text-text-3 max-md:py-4">
-            단지별 내역을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+단지별 내역 불러오기 실패 · 잠시 후 다시
           </p>
         ) : complexes.length === 0 ? (
           <p className="py-6 text-center t-body text-text-3 max-md:py-4">

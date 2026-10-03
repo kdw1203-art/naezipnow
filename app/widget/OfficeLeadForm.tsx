@@ -64,13 +64,13 @@ export function OfficeLeadForm({
       });
       if (!res.ok) {
         const j: { error?: string } = await res.json().catch(() => ({}));
-        setErrorMsg(j.error ?? "접수에 실패했어요 — 잠시 후 다시 시도해 주세요.");
+        setErrorMsg(j.error ?? "접수 실패 — 잠시 후 다시 시도해 주세요.");
         setState("error");
         return;
       }
       setState("done");
     } catch {
-      setErrorMsg("접수에 실패했어요 — 잠시 후 다시 시도해 주세요.");
+      setErrorMsg("접수 실패 — 잠시 후 다시 시도해 주세요.");
       setState("error");
     }
   };

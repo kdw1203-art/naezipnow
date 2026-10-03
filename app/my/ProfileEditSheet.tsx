@@ -93,7 +93,7 @@ export function ProfileEditSheet({ initial, variant = "hero", onSaved }: Profile
         profile?: { name?: string | null; primaryRegion?: string | null };
       };
       if (!res.ok) {
-        setError(data.error ?? "저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data.error ?? "저장 실패 · 잠시 후 다시");
         return;
       }
       const next: ProfileInitial = {

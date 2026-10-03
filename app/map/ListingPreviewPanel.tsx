@@ -77,7 +77,7 @@ export function ListingPreviewPanel({
             {state === "loading" ? (
               <div className="py-3 t-sub text-text-3">매물 정보를 불러오는 중…</div>
             ) : state === "error" || !data ? (
-              <div className="py-3 t-sub text-text-3">매물 정보를 불러오지 못했어요.</div>
+              <div className="py-3 t-sub text-text-3">매물 정보 불러오기 실패</div>
             ) : (
               <>
                 <div className="flex items-center gap-1.5">

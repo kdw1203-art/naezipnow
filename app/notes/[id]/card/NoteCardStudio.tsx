@@ -263,7 +263,7 @@ export function NoteCardStudio({
         setMsg("카드를 저장했어요");
       } else {
         setSaved("err");
-        setMsg(j.error ?? "저장에 실패했어요");
+        setMsg(j.error ?? "저장 실패");
       }
     } catch {
       setSaved("err");

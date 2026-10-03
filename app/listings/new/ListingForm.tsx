@@ -116,7 +116,7 @@ export function ListingForm() {
       const data = (await res.json().catch(() => ({}))) as { items?: GeocodeItem[] };
       const hit = data.items?.[0];
       if (!hit) {
-        setGeoMsg("검색 결과가 없어요. 도로명·지번 주소로 다시 시도해 주세요.");
+        setGeoMsg("검색 결과 없음 · 도로명·지번 주소로 다시 시도해 주세요.");
         return;
       }
       setCenter({ lat: hit.lat, lng: hit.lng });
@@ -181,7 +181,7 @@ export function ListingForm() {
             error?: string;
           };
           if (!res.ok || !data.url) {
-            setPhotoError(data.error ?? "사진 업로드에 실패했어요. 다시 시도해 주세요.");
+            setPhotoError(data.error ?? "사진 업로드 실패 · 다시 시도해 주세요.");
             continue;
           }
           const url = data.url;
@@ -250,7 +250,7 @@ export function ListingForm() {
         detailFieldsSaved?: boolean;
       };
       if (!res.ok) {
-        setError(data.error ?? "등록에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data.error ?? "등록 실패 · 잠시 후 다시");
         return;
       }
       setDetailFieldsSaved(data.detailFieldsSaved !== false);

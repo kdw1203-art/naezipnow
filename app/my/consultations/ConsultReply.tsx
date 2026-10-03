@@ -42,7 +42,7 @@ export function ConsultReply({
       });
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!res.ok || !json.ok) {
-        setError(json.error ?? "답변 등록에 실패했어요.");
+        setError(json.error ?? "답변 등록 실패");
         setBusy(false);
         return;
       }

@@ -171,7 +171,7 @@ export default async function TownGroupDetailPage({
             )}
 
             <p className="whitespace-pre-wrap rounded-xl bg-bg px-4 py-3.5 t-body leading-[1.7] text-text-2">
-              {meeting.description || "모임 소개가 아직 없어요."}
+              {meeting.description || "모임 소개 없음"}
             </p>
           </div>
 

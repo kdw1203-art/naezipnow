@@ -28,7 +28,7 @@ export function BoostButton({ listingId, active }: { listingId: string; active: 
         promptSignup({
           action: "listing_boost",
           /* [1028 · 제안 5] 다른 가입 안내와 같은 꼴 — "~하려면 로그인이 필요해요" + 짧은 사실 한 줄(값은 아래 버튼과 같다: 500P·7일) */
-          title: "부스트하려면 로그인이 필요해요",
+          title: "로그인 필요 · 부스트",
           benefit: "매물 상단 노출 7일 · 포인트 500P",
           callbackUrl: "/my/listings",
         });
@@ -46,7 +46,7 @@ export function BoostButton({ listingId, active }: { listingId: string; active: 
         return;
       }
       if (!res.ok || !json.ok) {
-        showToast(json.error ?? "부스트에 실패했어요");
+        showToast(json.error ?? "부스트 실패");
         setPhase("idle");
         return;
       }

@@ -267,12 +267,12 @@ export default async function TownRegionHomePage({
           </div>
           {postsFailed ? (
             <div className="card rounded-2xl px-5 py-6 t-body text-text-2 max-md:px-3.5 max-md:py-4">
-              이웃 글을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+이웃 글 불러오기 실패 · 잠시 후 다시
             </div>
           ) : communityPosts.length === 0 ? (
             <div className="story-card flex flex-col items-start gap-2 px-5 py-6 max-md:px-3.5 max-md:py-4">
               {/* [970 · C-20] 해요체 통일 · [1006] 0건은 0건이라고 — 지어낸 글 없음 · [1015] 한 줄로 */}
-              <p className="t-body text-text-2">아직 {region.name} 이웃 글이 없어요.</p>
+              <p className="t-body text-text-2">{region.name} 이웃 글 없음</p>
               <Link
                 href={`/town/write?region=${encodeURIComponent(region.name)}`}
                 className="btn-soft rounded-lg px-3.5 py-2 t-sub font-bold"
@@ -344,7 +344,7 @@ export default async function TownRegionHomePage({
           {newsRows.length === 0 ? (
             /* [1015] 한지 면(.news-strip) → 흰 카드 + 1px 선(브리프 규칙 C) · 빈 화면은 한 줄 */
             <div className="card rounded-2xl px-5 py-6 t-body text-text-2 max-md:px-3.5 max-md:py-4">
-              최근 수집된 {region.name} 기사가 없어요.
+최근 수집된 {region.name} 기사 없음
             </div>
           ) : (
             <TownNewsStrip
@@ -377,7 +377,7 @@ export default async function TownRegionHomePage({
         {notes.length === 0 ? (
           <div className="card flex flex-col items-start gap-2 rounded-2xl px-5 py-6 max-md:px-3.5 max-md:py-4">
             {/* [970 · C-20] 해요체 통일 · [1015] 한 줄로 */}
-            <p className="t-body text-text-2">아직 {region.name} 공개 임장노트가 없어요.</p>
+            <p className="t-body text-text-2">{region.name} 공개 임장노트 없음</p>
             <Link
               href={`/notes/new?region=${encodeURIComponent(region.name)}`}
               className="btn-soft rounded-lg px-3.5 py-2 t-sub font-bold"

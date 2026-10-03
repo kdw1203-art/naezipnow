@@ -126,7 +126,7 @@ export async function RegionRelative({
     return (
       <section className={wrap}>
         <h2 className="mb-1.5 px-0.5 t-section text-ink">이 동네 대비</h2>
-        <p className="card rounded-2xl px-4 py-3.5 t-body text-text-3">동네 평균을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+        <p className="card rounded-2xl px-4 py-3.5 t-body text-text-3">동네 평균 불러오기 실패 · 잠시 후 다시</p>
       </section>
     );
   }

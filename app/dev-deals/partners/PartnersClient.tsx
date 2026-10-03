@@ -152,7 +152,7 @@ export function PartnersClient({
       {shown.length === 0 ? (
         <section className="rise-in-2 card p-[var(--pad-card)]">
           <div className="rounded-lg border border-line bg-surface px-4 py-10 text-center text-[13px] text-text-3">
-            해당 유형의 협력업체가 아직 없어요.{" "}
+해당 유형의 협력업체 없음{" "}
             <Link
               href="/dev-deals/partners/new"
               className="font-bold text-primary underline"

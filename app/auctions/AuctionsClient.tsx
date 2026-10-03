@@ -401,7 +401,7 @@ export function AuctionsClient({
         /* 필터 조회 실패 — "0건"이 아니라 실패라고 말한다 */
         <div className="rise-in-1 card p-[var(--pad-card)]">
           <div className="rounded-lg border border-line bg-surface px-4 py-12 text-center t-body text-text-3 max-md:py-6">
-            이 조건의 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.{" "}
+이 조건의 목록 불러오기 실패 · 잠시 후 다시{" "}
             <button
               type="button"
               onClick={() => set({ usage: null, gu: null, sido: null })}
@@ -577,7 +577,7 @@ export function AuctionsClient({
             {cards.length === 0 ? (
               <div className="rise-in-4 card p-[var(--pad-card)]">
                 <div className="rounded-lg border border-line bg-surface px-4 py-12 text-center t-body text-text-3 max-md:py-6">
-                  현재 조건의 진행·예정 공매 물건이 없어요.
+현재 조건의 진행·예정 공매 물건 없음
                 </div>
               </div>
             ) : (
@@ -705,7 +705,7 @@ export function AuctionsClient({
                     현재 목록 최다 용도 <b className="text-ai-accent">{dist[0].label}</b> {dist[0].count}건.
                   </>
                 ) : (
-                  <>현재 조건에 표시할 물건이 없어요.</>
+                  <>현재 조건에 표시할 물건 없음</>
                 )}
                 <Link
                   href="/my/watchlist?tab=searches"
@@ -759,7 +759,7 @@ export function AuctionsClient({
                   })}
                 </div>
               ) : (
-                <p className="t-caption text-text-3">표시할 지역 분포가 아직 없어요.</p>
+                <p className="t-caption text-text-3">표시할 지역 분포 없음</p>
               )}
             </div>
 
@@ -785,7 +785,7 @@ export function AuctionsClient({
                   </div>
                 ))
               ) : (
-                <p className="t-caption text-text-3">표시할 용도 분포가 아직 없어요.</p>
+                <p className="t-caption text-text-3">표시할 용도 분포 없음</p>
               )}
               <a
                 href="https://www.onbid.co.kr"

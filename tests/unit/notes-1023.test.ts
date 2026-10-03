@@ -170,7 +170,7 @@ test("[1023] 피드 — 검색칸(40px · 지우기 ×) · 0건 문구 · 회차
   assert.ok(src.includes('aria-label="노트 검색"') && src.includes('type="search"'), "검색 입력");
   assert.ok(src.includes('aria-label="검색어 지우기"'), "지우기 ×");
   assert.ok(src.includes("filterNotesByQuery(regionFiltered, query)"), "지역 칩과 AND");
-  assert.ok(src.includes('title="검색어에 맞는 노트가 없어요"'), "0건 문구");
+  assert.ok(src.includes('title="검색어에 맞는 노트 없음"'), "0건 문구");
   assert.ok(src.includes("groupNoteRounds(visible)") && src.includes("function RoundGroupCard"), "회차 묶기");
   assert.ok(src.includes("/notes/compare?noteId=${encodeURIComponent(latest.id)}"), "묶음 머리 → 회차 비교(있는 화면)");
   assert.ok(src.includes('moreError ? "다시 시도" : "더 보기"'), "더 보기 실패 = 다시 시도");

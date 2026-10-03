@@ -125,7 +125,7 @@ export function NotePhotoLightbox({
         </div>
         <div className="relative flex min-h-0 flex-1 items-center justify-center px-2 pb-3">
           {failed ? (
-            <span className="t-body text-[var(--brand-hanji)]">사진을 불러오지 못했어요</span>
+            <span className="t-body text-[var(--brand-hanji)]">사진 불러오기 실패</span>
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img

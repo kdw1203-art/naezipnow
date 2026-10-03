@@ -195,7 +195,7 @@ export async function ReferralSection({ email }: { email: string }) {
           </div>
           {stats.invitedCount === null && (
             <div className="col-span-2 text-center t-sub text-text-3">
-              지금은 초대 성과를 불러오지 못했어요. 초대 링크는 그대로 쓸 수 있고,
+지금은 초대 성과 불러오기 실패 · 초대 링크는 그대로 쓸 수 있고,
               적립은 잠시 후 다시 열면 반영돼요.
             </div>
           )}

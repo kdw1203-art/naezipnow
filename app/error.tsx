@@ -43,7 +43,7 @@ export default function AppError({
     <main className="mx-auto flex min-h-[60vh] w-full max-w-[520px] flex-col items-center justify-center gap-4 px-6">
       <ErrorState
         /* [1028 · 제안 3·12] 오류 문구 표준 — "불러오지 못했어요" + "잠시 후 다시 시도해 주세요." */
-        title="화면을 불러오지 못했어요"
+        title="화면 불러오기 실패"
         desc="잠시 후 다시 시도해 주세요."
         cause={error.digest ? `오류 코드 ${error.digest}` : undefined}
         onRetry={reset}

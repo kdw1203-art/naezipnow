@@ -399,7 +399,7 @@ export function RedevelopmentMap({
       {view === "list" ? (
         filtered.length === 0 ? (
           <div className="card rounded-2xl px-5 py-8 text-center t-sub text-text-3">
-            선택한 조건에 해당하는 정비사업장이 없어요.
+선택한 조건에 해당하는 정비사업장 없음
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

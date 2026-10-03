@@ -232,7 +232,7 @@ test("[1028 · 제안 2] 신호 근거·위험 설명·반대 조건 문장에 �
   assert.equal(volume.basis, "지역 한 달 거래 8건. 한산해서 사는 쪽이 유리해요.");
   assert.equal(supply.basis, "앞으로 입주 1,600세대. 입주 무렵 매물이 늘어 고르기 쉬워질 수 있어요.");
   assert.equal(timingSignals(cases[2])[0].basis, "지역 시세 한 달 +1.03%. 빠르게 오르는 중이라 파는 쪽이 유리해요.");
-  assert.equal(timingSignals(cases[3])[0].basis, "지역 시세 자료가 없어요");
+  assert.equal(timingSignals(cases[3])[0].basis, "지역 시세 자료 없음");
   const flags = Object.fromEntries(riskFlags(cases[0]).map((f) => [f.key, f.detail]));
   assert.equal(flags.liquidity, "지역 한 달 거래 8건이에요. 팔고 싶을 때 바로 못 팔 수 있어요.");
   assert.equal(flags.gapRisk, "전세가율 85%예요. 집값이 조금만 내려도 전세금 돌려주기가 어려워질 수 있어요.");

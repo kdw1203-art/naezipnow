@@ -226,7 +226,7 @@ export async function getQuestion(
     .eq("question_id", id)
     .order("created_at", { ascending: true });
   /* 답변 조회 오류를 통째로 무시하고 있었다(`const { data: aRows }`). 그러면
-     답변이 달려 있는 질문에 "답변 0 / 아직 답변이 없어요" 가 뜬다 — 답변을 쓴
+     답변이 달려 있는 질문에 "답변 0 / 아직 답변 없음" 가 뜬다 — 답변을 쓴
      사람에게는 자기 답변이 지워진 화면이다. 여기서도 실패는 던진다. */
   if (aErr) {
     logger.error(`[qna] 답변 조회 실패 (${id})`, aErr);
@@ -295,7 +295,7 @@ export async function createQuestion(input: {
     const newId = inserted?.id;
     if (error || !newId) {
       logger.error("[qna] createQuestion insert", error);
-      return { ok: false, error: "질문 등록에 실패했어요. 잠시 후 다시 시도해 주세요." };
+      return { ok: false, error: "질문 등록 실패 · 잠시 후 다시" };
     }
     return { ok: true, id: String(newId) };
   } catch (e) {
@@ -347,7 +347,7 @@ export async function createAnswer(input: {
     const newId = inserted?.id;
     if (error || !newId) {
       logger.error("[qna] createAnswer insert", error);
-      return { ok: false, error: "답변 등록에 실패했어요. 잠시 후 다시 시도해 주세요." };
+      return { ok: false, error: "답변 등록 실패 · 잠시 후 다시" };
     }
 
     // answer_count +1 & status 갱신 — best-effort

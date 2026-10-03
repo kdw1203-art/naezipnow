@@ -46,9 +46,7 @@ export default async function CreatorDashboardPage() {
           <div className="rise-in card flex flex-col items-center gap-2 px-5 py-12 text-center">
             <div className="t-title">✍️</div>
             {/* [1028 · 제안 5] 설명형 제목·부제 → "로그인이 필요해요" + 이 화면에 있는 것 명사 한 줄 */}
-            <div className="t-section text-ink">
-              로그인이 필요해요
-            </div>
+            <div className="t-section text-ink">로그인 필요</div>
             <div className="t-sub text-text-3">
               공개 노트 수 · 저장 수 · 탑 임장러 현황
             </div>

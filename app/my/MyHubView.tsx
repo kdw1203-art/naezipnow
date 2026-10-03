@@ -246,7 +246,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
             <Link
               key={s.key}
               href={s.href}
-              aria-label={s.failed ? `${s.label} 불러오지 못했어요` : undefined}
+              aria-label={s.failed ? `${s.label}불러오기 실패` : undefined}
               className={`press flex min-w-0 flex-col items-center gap-0.5 px-1 py-2.5 text-center no-underline ${
                 i > 0 ? "border-l border-divider" : ""
               }`}
@@ -267,12 +267,12 @@ export function MyHubView({ data }: { data: MyHubData }) {
               .filter((x) => x.failed)
               .map((x) => x.label)
               .join("·")}
-            {" "}칸을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+            {" "}칸 불러오기 실패 · 잠시 후 다시
           </span>
         )}
         {!ledger.ok && !summary.some((x) => x.failed) && (
           <span className="t-caption text-text-3">
-            포인트 잔액을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+포인트 잔액 불러오기 실패 · 잠시 후 다시
           </span>
         )}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -341,9 +341,9 @@ export function MyHubView({ data }: { data: MyHubData }) {
           <section className="flex flex-col gap-2.5">
             <SectionHead title="최근 본 단지" href="/map" hrefLabel="지도" />
             {recent.kind === "error" ? (
-              <OneLine text="최근 본 단지를 불러오지 못했어요. 잠시 후 다시 시도해 주세요." tone="error" />
+              <OneLine text="최근 본 단지 불러오기 실패 · 잠시 후 다시" tone="error" />
             ) : recent.kind === "empty" ? (
-              <OneLine text="아직 본 단지가 없어요" href="/map" label="지도에서 둘러보기" />
+              <OneLine text="본 단지 없음" href="/map" label="지도에서 둘러보기" />
             ) : (
               <div className="flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible">
                 {recent.items.map((c) => (
@@ -369,13 +369,13 @@ export function MyHubView({ data }: { data: MyHubData }) {
             />
             {notes.kind === "error" ? (
               <OneLine
-                text="내 노트를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
+                text="내 노트 불러오기 실패 · 잠시 후 다시"
                 tone="error"
               />
             ) : notes.kind === "empty" ? (
               <EmptyState
                 icon="notebook-pen"
-                title="아직 임장노트가 없어요"
+                title="임장노트 없음"
                 desc="현장 기록을 남기면 여기에 모여요"
                 action={{ label: "첫 노트 쓰기", href: "/notes/new" }}
               />
@@ -448,9 +448,9 @@ export function MyHubView({ data }: { data: MyHubData }) {
                   <span className="t-caption font-bold text-text-3">관심 단지</span>
                   <span className="t-body font-bold text-ink">
                     {!watchlistCount.ok
-                      ? "불러오지 못했어요"
+                      ? "불러오기 실패"
                       : watchlistCount.value === 0
-                        ? "아직 담은 단지가 없어요"
+                        ? "담은 단지 없음"
                         : `${watchlistCount.value.toLocaleString("ko-KR")}개`}
                   </span>
                 </span>
@@ -472,8 +472,8 @@ export function MyHubView({ data }: { data: MyHubData }) {
                     {savedNotes.kind !== "items" && (
                       <span className="t-body font-bold text-ink">
                         {savedNotes.kind === "error"
-                          ? "불러오지 못했어요"
-                          : "저장한 공개 노트가 없어요"}
+                          ? "불러오기 실패"
+                          : "저장한 공개 노트 없음"}
                       </span>
                     )}
                   </span>
@@ -502,7 +502,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
                     <span className="t-caption font-bold text-text-3">지역 · 급매 알림</span>
                     {alerts.kind !== "items" && (
                       <span className="t-body font-bold text-ink">
-                        {alerts.kind === "error" ? "불러오지 못했어요" : "구독한 알림이 없어요"}
+                        {alerts.kind === "error" ? "불러오기 실패" : "구독한 알림 없음"}
                       </span>
                     )}
                   </span>
@@ -536,7 +536,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
               <SectionHead title="구매한 리포트" />
               {purchased.kind === "error" ? (
                 <OneLine
-                  text="구매 내역을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
+                  text="구매 내역 불러오기 실패 · 잠시 후 다시"
                   tone="error"
                 />
               ) : purchased.kind === "empty" ? null : (

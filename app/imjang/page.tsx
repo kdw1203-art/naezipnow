@@ -79,7 +79,7 @@ export default async function ImjangIndexPage() {
         </h2>
         {loadError ? (
           <div className="card rounded-2xl px-4 py-4">
-            <p className="t-body font-bold text-ink">지역 목록을 불러오지 못했어요</p>
+            <p className="t-body font-bold text-ink">지역 목록 불러오기 실패</p>
             <p className="mt-1 t-sub leading-[1.6] text-text-2">잠시 후 다시 시도해 주세요.</p>
           </div>
         ) : regions.length === 0 ? (

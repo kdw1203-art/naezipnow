@@ -51,7 +51,7 @@ export function InquiryForm({
       }
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setError(data.error ?? "문의 접수에 실패했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data.error ?? "문의 접수 실패 · 잠시 후 다시");
         return;
       }
       setDone(true);
@@ -151,7 +151,7 @@ export function InquiryForm({
 
       {needLogin && (
         <div className="rounded-xl bg-danger-soft px-4 py-3 text-[13px] leading-[1.7] text-danger">
-          문의는 로그인 후 이용할 수 있어요.{" "}
+          문의 · 로그인 필요{" · "}
           <Link
             href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`}
             className="font-bold underline"

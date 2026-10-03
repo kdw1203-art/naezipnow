@@ -475,7 +475,7 @@ export async function approveExpertVerification(
     } catch (e) {
       return {
         ok: false,
-        error: e instanceof Error ? e.message : "프로필 생성에 실패했어요.",
+        error: e instanceof Error ? e.message : "프로필 생성 실패",
       };
     }
   } else {
@@ -521,7 +521,7 @@ export async function approveExpertVerification(
        "승인했는데 배지가 없다" 를 바로 안다. 예전엔 null 을 무시하고 성공으로 답했다. */
     return {
       ok: false,
-      error: "신청은 승인됐지만 프로필 인증 표시에 실패했어요. 다시 승인을 눌러 주세요.",
+      error: "신청은 승인됐지만 프로필 인증 표시 실패 · 다시 승인을 눌러 주세요.",
     };
   }
 
@@ -560,7 +560,7 @@ export async function rejectExpertVerification(
     .eq("id", requestId)
     .select("applicant_email, display_name, status")
     .maybeSingle();
-  if (error || !data) return { ok: false, error: "반려 처리에 실패했어요." };
+  if (error || !data) return { ok: false, error: "반려 처리 실패" };
 
   return {
     ok: true,
