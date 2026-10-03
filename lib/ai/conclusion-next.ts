@@ -1,6 +1,6 @@
 /* [1026b · AI 분석 8종] 나머지 8종도 같은 틀 — 다음 행동 카드의 채움 파랑(주 행동)을 도구마다 하나로 정한다(RAIL_PRIMARY):
    단지 분석 4종 + 리스크 점검·갭투자 진단·수익률 계산 = "임장노트에 담기"(같은 노트 링크 규칙) · 다른 단지와 비교 = "결정 카드에 담기"
-   (비교함 → /decide) · 경제지표 모니터 = "이 지역 알림 받기"(/notifications) · 내 자산 구성 진단·계약 리스크 점검·투자 체크리스트 =
+   (비교함 → /decide) · 경제지표 모니터 = "기준금리 알림 걸기"(레일의 기준금리 알림 패널 · 1027) · 내 자산 구성 진단·계약 리스크 점검·투자 체크리스트 =
    그 도구의 기존 다음 행동 첫째(이 단지 임장노트 쓰기 · 체크리스트로 노트 시작). 체크리스트 → 노트 고려사항 이관 목록(checklistHandoffItems)
    은 예전 ResultView NextActions 규칙 그대로(아직 체크하지 않은 항목 · 4~60자 · 최대 10개). 새 계산·새 조회 없음. */
 /* [1026 · 단지 분석 4종] 결론 히어로의 "다음 행동 한 줄" + 판정 칩 색 — 순수 함수(화면이 이미 가진 값만 쓴다).
@@ -139,7 +139,8 @@ export const RAIL_PRIMARY: Record<AiAnalysisToolId, { kind: RailPrimaryKind; lab
   "ai-gap": { kind: "note", label: "임장노트에 담기" },
   "ai-simulator": { kind: "note", label: "임장노트에 담기" },
   "ai-compare": { kind: "decide", label: "결정 카드에 담기" },
-  "ai-economy": { kind: "alert", label: "이 지역 알림 받기" },
+  /* [1027] "이 지역 알림 받기" → "기준금리 알림 걸기" — 이 도구에는 지역이 없고, 실제 알림은 기준금리 알림 패널이다 */
+  "ai-economy": { kind: "alert", label: "기준금리 알림 걸기" },
   "ai-portfolio": { kind: "note", label: "이 단지 임장노트 쓰기" },
   "contract-risk": { kind: "note", label: "이 단지 임장노트 쓰기" },
   "my-checklist": { kind: "checklist", label: "체크리스트로 노트 시작" },

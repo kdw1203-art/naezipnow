@@ -12,6 +12,7 @@ import { isPostHidden } from "@/lib/moderation/reports-store";
 import type { Post } from "@/lib/types/post";
 import { logger } from "@/lib/log";
 import { hostOf, newsImageUrl } from "../../shared";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 import { LocationMap } from "../../LocationMap";
 import { regionIdForName } from "@/lib/region/catalog";
 import {
@@ -154,7 +155,9 @@ export async function generateMetadata({
       url: canonical,
       siteName: "내집나우",
       locale: "ko_KR",
-      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+      /* [1027 · 제안 20] 사진이 없는 기사도 공유 카드가 비지 않게 — 화면이 openGraph 를 직접 적으면 루트의 기본 그림이
+         사라지므로, 기사 사진이 없을 때는 기본 공유 카드를 명시한다. 사진이 있는 기사는 예전 그대로다. */
+      images: ogImage ? [{ url: ogImage }] : DEFAULT_OG_IMAGES,
       ...(post.sourcePublishedAt ? { publishedTime: post.sourcePublishedAt } : {}),
       ...(post.category ? { section: post.category } : {}),
       ...(keywords.length ? { tags: keywords } : {}),

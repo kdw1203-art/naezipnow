@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { ErrorState } from "@/app/components/ui/EmptyState";
+import { reportClientError } from "@/lib/client/error-report";
 
 /**
  * G10: 라우트 세그먼트 에러 바운더리 — 지금까지 없어서, 렌더 중 예외가 나면
@@ -34,21 +35,8 @@ export default function AppError({
 
   useEffect(() => {
     // 서버 모니터링 싱크로 전달(실패해도 무시 — 에러 화면이 또 깨지면 안 된다)
-    try {
-      void fetch("/api/monitoring/client-error", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          message: error.message || "unknown client error",
-          digest: error.digest,
-          path: typeof window !== "undefined" ? window.location.pathname : null,
-          scope: "route",
-        }),
-        keepalive: true,
-      }).catch(() => {});
-    } catch {
-      /* noop */
-    }
+    // [1027 · 제안 28] 브라우저 스택·오류 이름·빌드 표식을 같이 싣는다(lib/client/error-report)
+    reportClientError(error, "route");
   }, [error]);
 
   return (

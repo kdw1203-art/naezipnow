@@ -3,10 +3,18 @@ import "server-only";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { regionIdForName } from "@/lib/region/catalog";
 import { logger } from "@/lib/log";
-import { formatKrwWon } from "@/lib/format/krw";
+import { priceHighCopy, priorWindowLabel, type PriceHighRow } from "./price-record-copy";
 
-/* [#81] 신고가 자동 소식 — 매일 들어오는 실거래에서 "3년 최고가를 3%+ 경신한
+export type { PriceHighRow };
+
+/* [#81] 신고가 자동 소식 — 매일 들어오는 실거래에서 "앞선 최고가(최대 3년)를 3%+ 경신한
  * 당월·전월 계약"을 골라 하루 1건의 자동 글로 발행한다.
+ *
+ * [1027] 글이 "직전 3년 최고가"라고 적었는데, 우리가 가진 실거래는 3년에 못 미친다
+ * (운영 2026-10-03: 매매 계약월 2025.01~ · 이력 채우기 진행 중). RPC 는 "직전 3년"을
+ * 훑지만 3년치가 없으면 가진 만큼만 본다 — 그걸 3년이라 적으면 거짓이다. 이제 줄마다
+ * **그 단지·면적대 이력이 실제로 시작하는 달**을 읽어 "2025.01 이후 최고"처럼 적고,
+ * 이력이 3년을 덮을 때만 "직전 3년"이라 쓴다(priorWindowLabel). 읽지 못하면 "수집 기간".
  *
  * 스팸 방지 3중 장치:
  *  1) RPC 필터(당월·전월 계약 + 사전 이력 10건+ + 3% 마진) — 백필 유입 오탐 차단
@@ -15,32 +23,12 @@ import { formatKrwWon } from "@/lib/format/krw";
  *  3) external_key(price-high:YYYYMMDD) 멱등 — 크론 중복 실행에도 1건.
  * 사실 규율: 국토부 신고 기준·취소 가능성을 본문에 명기. 수치는 RPC 결과 그대로. */
 
-export type PriceHighRow = {
-  complex_name: string;
-  region_name: string;
-  area: number;
-  deal_amount_krw: number;
-  prior_max: number;
-  prior_n: number;
-  contract_ym: string;
-  contract_day: number | null;
-};
-
 export type PriceRecordResult = {
   detected: number;
   posted: boolean;
   reason?: string;
   postId?: string;
 };
-
-/** [967 · 31] "8.40억" — 뒤 0 을 지우지 않는 신고가 알림 얼굴. 본체는 lib/format/krw.ts */
-function krwEok(v: number): string {
-  return formatKrwWon(v, { style: "eok", below: "eok", empty: false, trimZeros: false });
-}
-
-function pyeong(area: number): string {
-  return `${Math.round(area / 3.305785)}평형`;
-}
 
 export async function runPriceRecordWatch(): Promise<PriceRecordResult> {
   const sb = getServiceSupabase();
@@ -96,25 +84,38 @@ export async function runPriceRecordWatch(): Promise<PriceRecordResult> {
   }
 
   const top = items[0];
-  const dateLabel = `${kst.getMonth() + 1}월 ${kst.getDate()}일`;
-  const title = `오늘의 신고가 — ${top.complex_name} ${pyeong(top.area)} ${krwEok(top.deal_amount_krw)} 등 ${items.length}건`;
+  /* UTC 로 읽는다 — kst 는 9시간을 더해 둔 시각이라 getMonth()/getDate() 는 서버 시간대에 따라 하루 어긋난다 */
+  const dateLabel = `${kst.getUTCMonth() + 1}월 ${kst.getUTCDate()}일`;
 
-  const lines = items.map((r) => {
-    const pct = ((r.deal_amount_krw / r.prior_max - 1) * 100).toFixed(1);
-    const rid = regionIdForName(r.region_name);
-    const regionLink = rid ? ` → 지역 시세: naezipnow.com/region/${rid}` : "";
-    return `· ${r.region_name} ${r.complex_name} ${r.area}㎡(${pyeong(r.area)}) — ${krwEok(
-      r.deal_amount_krw,
-    )} 신고 (직전 3년 최고 ${krwEok(r.prior_max)} 대비 +${pct}%, 비교 표본 ${r.prior_n}건)${regionLink}`;
-  });
-
-  const content = [
-    `${dateLabel} 국토교통부 실거래 신고분에서 직전 3년 최고가를 넘긴 계약 ${items.length}건이 확인됐습니다.`,
-    "",
-    ...lines,
-    "",
-    "기준: 같은 단지·비슷한 면적(±2㎡)의 직전 3년 신고가와 비교했고, 비교 표본이 10건 이상인 경우만 담았습니다. 실거래 신고는 계약 후 30일 이내에 이뤄지며, 신고 취소·정정으로 값이 바뀔 수 있습니다.",
-  ].join("\n");
+  /* [1027] 줄마다 비교 구간 — 그 단지·면적대(±2㎡, RPC 와 같은 묶음) 매매 이력의 첫 달.
+     최대 5건이라 조회 5번. 못 읽으면 null → "수집 기간"(지어내지 않는다). */
+  const now = new Date();
+  const windows = await Promise.all(
+    items.map(async (r) => {
+      try {
+        const { data: first, error: firstErr } = await sb
+          .from("market_transactions")
+          .select("contract_ym")
+          .eq("complex_name", r.complex_name)
+          .eq("region_name", r.region_name)
+          .eq("transaction_type", "trade")
+          .eq("is_cancelled", false)
+          .gte("area_m2", r.area - 2.5)
+          .lt("area_m2", r.area + 2.5)
+          .order("contract_ym", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (firstErr) {
+          logger.warn("[price-record] 비교 구간 조회 실패", { message: firstErr.message });
+          return priorWindowLabel(null, now);
+        }
+        return priorWindowLabel(first?.contract_ym != null ? String(first.contract_ym) : null, now);
+      } catch {
+        return priorWindowLabel(null, now);
+      }
+    }),
+  );
+  const { title, content, aiSummary } = priceHighCopy({ dateLabel, items, windows });
 
   const { data: inserted, error: insErr } = await sb
     .from("board_posts")
@@ -126,7 +127,7 @@ export async function runPriceRecordWatch(): Promise<PriceRecordResult> {
       title,
       content,
       tags: ["신고가", "실거래"],
-      ai_summary: `${dateLabel} 실거래 신고분 중 3년 최고가 경신 ${items.length}건 — 최고가는 ${top.complex_name} ${krwEok(top.deal_amount_krw)}입니다.`,
+      ai_summary: aiSummary,
       ai_keywords: ["신고가", top.complex_name, top.region_name],
       source_name: "국토교통부 실거래가",
       external_key: externalKey,

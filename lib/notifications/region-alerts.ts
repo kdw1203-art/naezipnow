@@ -3,7 +3,8 @@
  * `user_watchlist` 의 알림 구독 행(alert: 접두)을 조회해 구독자 인박스로 알린다.
  *
  * 스키마 변경 없음 · best-effort(실패해도 상위 흐름에 영향 없음).
- *   - 지역 구독: complex_id = `alert:region:<region_name>` 및 region_name 안의 구/시/군 토큰.
+ *   - 지역 구독: complex_id = `alert:region:<값>` — 값 후보는 listingRegionKeys(매물 region_name)
+ *     (적힌 그대로 · 구/시/군 낱말 · 실거래 표기 · 그 시/도).
  *   - 키워드 구독: complex_id like `alert:keyword:%` 중 키워드가 단지명/지역명에 포함될 때.
  * 작성자 본인은 제외하고, 이메일을 중복 제거해 최대 ~200명에게만 발송한다.
  */
@@ -12,6 +13,7 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { appendInboxNotification } from "@/lib/notifications/inbox";
 import { sendPush, type PushPayload } from "@/lib/push/vapid";
 import { ALERT_PREFIX } from "@/lib/alerts/subscriptions";
+import { listingRegionKeys } from "@/lib/alerts/region-value";
 import { logger } from "@/lib/log";
 
 const MAX_RECIPIENTS = 200;
@@ -29,15 +31,10 @@ function normEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-/** region_name 에서 매칭 후보 집합 — 전체 값 + 포함된 구/시/군 토큰. */
-function regionCandidates(regionName: string): string[] {
-  const set = new Set<string>();
-  const full = regionName.trim();
-  if (full) set.add(full);
-  const tokens = full.match(/[가-힣]+(?:구|시|군)/g);
-  if (tokens) for (const t of tokens) set.add(t);
-  return [...set];
-}
+/* [1027] 매칭 후보는 lib/alerts/region-value.ts 의 listingRegionKeys 가 만든다(순수 · 단위 테스트).
+   예전 규칙은 "적힌 그대로 + 구/시/군 낱말"뿐이라, 매물 등록 화면이 적는 "강남구"와 구독 값 "서울 강남구"가
+   한 번도 맞지 않았다 — 지역을 구독해도 새 매물 알림은 오지 않았다. 이제 매물 쪽 이름을 구독과 같은 표기로
+   바꿔 같이 찾고, 그 시/도 전체를 구독한 사람("서울")도 포함한다. */
 
 /**
  * 승인된 매물에 대해 관심 지역/키워드 구독자에게 인박스 알림을 보낸다.
@@ -64,7 +61,7 @@ export async function notifyNewListingSubscribers(
   try {
     // 1) 지역 구독자 — complex_id IN (alert:region:<후보>…)
     if (regionName) {
-      const keys = regionCandidates(regionName).map((v) => `${ALERT_PREFIX}region:${v}`);
+      const keys = listingRegionKeys(regionName).map((v) => `${ALERT_PREFIX}region:${v}`);
       if (keys.length > 0) {
         const { data, error } = await sb
           .from("user_watchlist")

@@ -344,6 +344,28 @@ export function NaverMap({
     if (typeof window === "undefined") return;
 
     let cancelled = false;
+    /* [1027] 인증에 실패하면 SDK 가 이미 만들어 둔 지도·마커의 안쪽을 비운다. 그 뒤로는 marker.setMap(null) 같은
+       정리 호출도 던지고("Cannot read properties of null"), 그 예외가 효과 정리 중에 나면 화면 전체가 오류 화면이 된다
+       — 정비사업 지도에서 "목록" 탭을 누르는 순간, 지도에서 다른 화면으로 나가는 순간(인증이 안 되는 주소에서 재현 2026-10-03).
+       못 쓰게 된 객체는 SDK 를 부르지 않고 참조만 놓는다. 아래 효과들은 mapRef 가 없으면 아무것도 하지 않고,
+       이 상태의 화면은 폴백(error)이라 지도 상자도 그려져 있지 않다. */
+    const dropSdkRefs = () => {
+      markerMapRef.current.clear();
+      prevIdKeyRef.current = "";
+      infoWindowRef.current = null;
+      trafficLayerRef.current = null;
+      cadastralLayerRef.current = null;
+      bicycleLayerRef.current = null;
+      circleRef.current = null;
+      measureLineRef.current = null;
+      measureMarkersRef.current = [];
+      routeLinesRef.current = [];
+      radiusCenterMarkerRef.current = null;
+      radiusEdgeMarkerRef.current = null;
+      appliedViewRef.current = null;
+      lastIdleViewRef.current = null;
+      mapRef.current = null;
+    };
     // 런타임 Client ID 우선 — 빌드 시 env 마스킹("[SENSITIVE]")으로 번들에
     // 폴백 상수가 박혀도, 서버 런타임의 실값(/api/map/sdk-config)으로 로드한다.
     const resolveRuntimeClientId = async (): Promise<string> => {
@@ -368,6 +390,7 @@ export function NaverMap({
       return loadNaverMapsScript(clientId, {
       onAuthFailure: () => {
         if (cancelled) return;
+        dropSdkRefs();
         // 인증 실패의 가장 흔한 원인은 "현재 접속 origin 미등록"이라 실제 origin을 노출한다.
         let detail = NAVER_MAP_AUTH_FAILURE_MESSAGE;
         if (typeof window !== "undefined") {
@@ -436,13 +459,22 @@ export function NaverMap({
   // 언마운트 시 오버레이·맵 정리(메모리 누수/중복 방지)
   useEffect(() => {
     return () => {
-      for (const [, entry] of markerMapRef.current) entry.marker.setMap(null);
+      /* [1027] 정리 중의 예외는 화면을 통째로 오류 화면으로 보낸다 — SDK 호출을 하나씩 감싼다
+         (인증 실패는 dropSdkRefs 가 먼저 막지만, SDK 안쪽이 비는 경로가 그것만이라는 보장은 없다). */
+      const quiet = (fn: () => void) => {
+        try {
+          fn();
+        } catch {
+          /* SDK 안쪽 상태가 이미 비었다 — 더 정리할 것이 없다 */
+        }
+      };
+      for (const [, entry] of markerMapRef.current) quiet(() => entry.marker.setMap(null));
       markerMapRef.current.clear();
-      infoWindowRef.current?.close();
-      trafficLayerRef.current?.setMap(null);
-      cadastralLayerRef.current?.setMap(null);
-      bicycleLayerRef.current?.setMap(null);
-      mapRef.current?.destroy?.();
+      quiet(() => infoWindowRef.current?.close());
+      quiet(() => trafficLayerRef.current?.setMap(null));
+      quiet(() => cadastralLayerRef.current?.setMap(null));
+      quiet(() => bicycleLayerRef.current?.setMap(null));
+      quiet(() => mapRef.current?.destroy?.());
       mapRef.current = null;
     };
   }, []);
@@ -453,7 +485,13 @@ export function NaverMap({
     const el = containerRef.current;
 
     const ro = new ResizeObserver(() => {
-      map.refresh?.();
+      /* [1027] 인증 실패로 놓은 지도는 건드리지 않는다 — 폴백 화면으로 바뀌며 상자가 사라질 때도 이 알림이 한 번 온다 */
+      if (mapRef.current !== map) return;
+      try {
+        map.refresh?.();
+      } catch {
+        /* SDK 안쪽 상태가 비었다 */
+      }
     });
     ro.observe(el);
     return () => ro.disconnect();

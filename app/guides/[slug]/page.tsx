@@ -6,6 +6,7 @@ import { PageShell } from "@/app/components/PageShell";
 import { GUIDES, GUIDE_BY_SLUG } from "@/lib/guides/catalog";
 import { breadcrumbJsonLd, faqJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* [945 · 실사용50 #25] 검색 유입용 가이드 — 카탈로그(lib/guides/catalog.ts) 렌더러.
    전 편이 정적(순수 상수)이라 dynamicParams=false 로 빌드에 굳힌다.
@@ -38,6 +39,7 @@ export async function generateMetadata({
       siteName: "내집나우",
       locale: "ko_KR",
       type: "article",
+      images: DEFAULT_OG_IMAGES,
     },
   };
 }

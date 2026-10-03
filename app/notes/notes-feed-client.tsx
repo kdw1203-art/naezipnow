@@ -545,10 +545,8 @@ function LeftRail({
           <Icon name="scale" size={17} />
           노트 비교
         </Link>
-        <Link href="/notes/templates" className={RAIL_LINK}>
-          <Icon name="clipboard" size={17} />
-          노트 템플릿
-        </Link>
+        {/* [1027] "노트 템플릿"(/notes/templates) 링크는 내렸다 — 992 에서 보관한 경로다(입구를 닫고 noindex · lib/seo/archived-routes).
+            보관 경로로 가는 입구가 이 레일에만 남아 있었다. */}
         <Link href="/imjang" className={RAIL_LINK}>
           <Icon name="compass" size={17} />
           임장 가이드

@@ -16,6 +16,7 @@ import { QuoteRequestLink } from "../QuoteRequest";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { DEFAULT_DESKTOP_ORIGIN } from "@/lib/platform-shell";
 import { formatKstDate } from "@/lib/format/kst";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* 전문가 상세 (953 개편).
    공유·색인되는 유일한 전문가 주소. 인증 전문가만 index, 심사 중은 noindex.
@@ -54,7 +55,7 @@ export async function generateMetadata({
     description,
     alternates: seoAlternates(`/town/experts/${e.id}`),
     robots: e.isVerified ? { index: true, follow: true } : { index: false, follow: false },
-    openGraph: { title, description, url: `${BASE_URL}/town/experts/${e.id}`, siteName: "내집나우", locale: "ko_KR", type: "profile" },
+    openGraph: { title, description, url: `${BASE_URL}/town/experts/${e.id}`, siteName: "내집나우", locale: "ko_KR", type: "profile", images: DEFAULT_OG_IMAGES },
   };
 }
 

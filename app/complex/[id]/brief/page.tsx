@@ -54,6 +54,7 @@ import { BriefPublisherForm } from "./BriefPublisherForm";
 import { BriefHighlightBridge } from "./BriefHighlightBridge";
 import { BriefMiniChart } from "./BriefMiniChart";
 import { BriefRatioRing } from "./BriefRatioRing";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* 단지 상세와 같은 캐시 정책 — 주소 하나에 HTML 한 벌(searchParams·쿠키·세션 없음). 빈 generateStaticParams 가 ISR 분류를 만든다
    (app/complex/[id]/page.tsx 의 2026-07-28 사고 메모). */
@@ -87,7 +88,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     description: `${row.name} 개요·타입별 최근 실거래·전세가율·주의 사항 — 국토교통부 실거래 기준, A4 1장 인쇄용.`,
     /* 고객에게 건네는 문서 — 색인하지 않는다(단지 화면이 정규 랜딩). 링크는 따라가도 된다. */
     robots: { index: false, follow: true },
-    openGraph: { title, siteName: "내집나우", locale: "ko_KR", type: "website" },
+    openGraph: { title, siteName: "내집나우", locale: "ko_KR", type: "website", images: DEFAULT_OG_IMAGES },
   };
 }
 

@@ -1,4 +1,5 @@
 /**
+ * [1027] 이력 백필 상한 160 → 45곳/실행 · 수동 상한 200 → 45(예산 240초 안에 끝나는 크기 — 아래 상수의 실측 주석)
  * [1025] 이력 백필 상한 40 → 160곳/실행(HISTORY_MAX_REGIONS_PER_RUN) · 수동 상한 200(HISTORY_MAX_REGIONS_CAP)
  * [1024] 국토부 실거래 적재의 **순수 도우미** — server-only 사슬 밖.
  *
@@ -6,6 +7,27 @@
  * (region-catalog-998 테스트가 그래서 문자열 대조로 우회했다). 월 계산·raw 축약·커서 판정처럼
  * 규칙이 곧 사실인 함수는 여기 두고 테스트가 실제 코드를 부르게 한다. DB·fetch 는 없다.
  */
+
+import type { SigunguInfo } from "@/lib/national-data/region-codes";
+
+/**
+ * 시군구 정보 → market_transactions.region_name 표기.
+ * "서울특별시"+"종로구" → "서울 종로구" · "수원시 영통구" → "수원 영통구" · "광명시" → "광명시"
+ * (기존 적재 데이터의 표기 규칙과 동일하게 맞춘다)
+ * [1027] molit-transactions.ts 에서 옮겨 왔다(그 파일이 다시 내보낸다) — 규칙은 한 글자도 바꾸지 않았다.
+ */
+export function molitRegionLabel(info: Pick<SigunguInfo, "sido" | "sigungu">): string {
+  const sigungu = info.sigungu.trim();
+  if (sigungu.includes(" ")) return sigungu.replace(/시\s/, " ");
+  /* [996] 전남광주통합특별시(12) — 구는 "광주 동구", 시·군은 "목포시"(다른 도와 같은 규칙) */
+  if (info.sido === "전남광주통합특별시") {
+    return sigungu.endsWith("구") ? `광주 ${sigungu}` : sigungu;
+  }
+  if (/(특별시|광역시)$/.test(info.sido)) {
+    return `${info.sido.replace(/(특별시|광역시)$/, "")} ${sigungu}`;
+  }
+  return sigungu;
+}
 
 /** 수도권 시도 코드 앞 두 자리 — 서울 11 · 경기 41 · 인천 28 */
 export const CAPITAL_AREA_PREFIXES = ["11", "41", "28"] as const;
@@ -88,10 +110,15 @@ export const HISTORY_BACKFILL_FLOOR_YM = "202101";
  * [1025] 40 → 160(≤ 960회/실행) · 크론 하루 2회(02:40·14:40 UTC) → ≤ 1,920회/일. 40곳·1회로는 수도권 ≈80곳 × 60개월이
  * 넉 달 걸렸다. 하루 합계: 관리비 200곳 × 22회 = 4,400 · 백필 ≤ 1,920 · 비아파트 ≈250 · 아파트 일일 ≈32 · apt-master/
  * detail ≈400 → ≈ 7,000 < 10,000.
+ * [1027] 160 → 45 · 크론 하루 2회 → 6회(02·06·10·14·18·22시 40분 UTC) → ≤ 1,620회/일(1025 때의 하루 총량 1,920 아래).
+ * 160곳은 크론 예산 240초 안에 끝나지 않았다. 운영 기록(market_ingest_log, 2026-09-29~10-03): 시군구 1곳에
+ * 1.5~4.5초 — 160곳 실행은 4~12분이 걸려 "시간 초과로 중단" 오류가 7회 중 4회 남았고(일이 뒤에서 끝난 날도,
+ * 함수째 끊겨 커서를 못 넘긴 날도 있었다), 그 오류가 운영 알림으로 갔다. 가장 느린 4.5초로 쳐도 45곳은 203초 —
+ * 빈 달 판정(달마다 HEAD 카운트 ≈80회)까지 넣어도 예산 안이다. 속도: 270곳·월/일 → 수도권 ≈80곳 × 남은 48개월 ≈ 2주.
  */
-export const HISTORY_MAX_REGIONS_PER_RUN = 160;
-/** [1025] 수동 ?regions= 상한 — 이 위로는 크론 예산(240초) 안에 못 끝난다 */
-export const HISTORY_MAX_REGIONS_CAP = 200;
+export const HISTORY_MAX_REGIONS_PER_RUN = 45;
+/** 수동 ?regions= 상한. [1027] 200 → 45 — 그 위는 크론 예산(240초) 안에 못 끝난다(위 실측). 수동으로는 줄이기만 한다 */
+export const HISTORY_MAX_REGIONS_CAP = 45;
 /** 1회 실행에서 넘길 수 있는 최대 월 수 — 빈 달 판정(HEAD 카운트 ≈80회/월)이 예산을 먹지 않게 */
 export const HISTORY_MAX_MONTHS_PER_RUN = 3;
 /** public_data_cache.cache_key */

@@ -50,7 +50,8 @@ export const JEONSE_RATIO_CAUTION = 80;
 
 /* ── 다음 행동(액션 카드) ─────────────────────────────────────────────── */
 
-/** 채움 파랑 "이 지역 알림 받기"의 목적지 — 시세·타이밍 레일의 "이 지역 알림" 카드가 쓰던 기존 알림함 경로 그대로 */
+/** 알림 구독을 관리하는 곳(알림함). [1027] 채움 파랑 "이 지역 알림 받기"는 이제 이 주소를 여는 링크가 아니라
+ *  누르면 그 지역을 구독하는 버튼이다(app/components/RegionAlertButton) — 이 주소는 설정 뒤 "관리" 링크의 목적지로 남는다. */
 export const REGION_ALERT_HREF = "/notifications";
 
 export type ActionLink = { href: string; label: string };

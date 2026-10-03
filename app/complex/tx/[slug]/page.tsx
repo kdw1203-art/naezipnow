@@ -18,6 +18,7 @@ import { encodeComplexId } from "@/lib/complex/complex-store";
 import { getPublicRecordsForComplex } from "@/lib/market/public-records";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { formatKrwShort } from "@/lib/market/format";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
    단지 실거래 상세 — /complex/tx/[slug]
@@ -133,6 +134,7 @@ export async function generateMetadata({
       siteName: "내집나우",
       locale: "ko_KR",
       type: "website",
+      images: DEFAULT_OG_IMAGES,
     },
   };
 }

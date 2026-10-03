@@ -78,11 +78,12 @@ test("[1026b] 절차 한 줄 — 단지 도구는 '단지 · {단지명} → 내
 });
 
 /* ── 다음 행동 — 도구별 채움 파랑 하나 ─────────────────────────────────────────────── */
-test("[1026b] 채움 파랑(주 행동) — 리스크·갭·수익률 = 임장노트에 담기 · 비교 = 결정 카드에 담기 · 경제지표 = 이 지역 알림 받기 · 자산 구성·계약·체크리스트 = 기존 첫 행동", () => {
+test("[1026b] 채움 파랑(주 행동) — 리스크·갭·수익률 = 임장노트에 담기 · 비교 = 결정 카드에 담기 · 경제지표 = 기준금리 알림 걸기(1027) · 자산 구성·계약·체크리스트 = 기존 첫 행동", () => {
   assert.deepEqual(Object.keys(RAIL_PRIMARY).sort(), [...AI_TOOL_IDS].sort());
   for (const t of ["ai-risk", "ai-gap", "ai-simulator", ...FRAME_TOOLS] as const) assert.deepEqual(RAIL_PRIMARY[t], { kind: "note", label: "임장노트에 담기" }, t);
   assert.deepEqual(RAIL_PRIMARY["ai-compare"], { kind: "decide", label: "결정 카드에 담기" });
-  assert.deepEqual(RAIL_PRIMARY["ai-economy"], { kind: "alert", label: "이 지역 알림 받기" });
+  /* [1027] 경제지표에는 지역이 없다 — 실제 알림(기준금리 알림 패널)의 이름으로 */
+  assert.deepEqual(RAIL_PRIMARY["ai-economy"], { kind: "alert", label: "기준금리 알림 걸기" });
   /* 기존 다음 행동 첫째 — 예전 NextActions 의 첫 버튼 글자 그대로(새 기능 없음) */
   assert.deepEqual(RAIL_PRIMARY["ai-portfolio"], { kind: "note", label: "이 단지 임장노트 쓰기" });
   assert.deepEqual(RAIL_PRIMARY["contract-risk"], { kind: "note", label: "이 단지 임장노트 쓰기" });
@@ -134,14 +135,18 @@ test("[1026b] 체크리스트 → 노트 고려사항 — 안 한 항목 · 4~60
   assert.match(resultView, /export function checklistKey\(complexId: string \| null\)/);
 });
 
-test("[1026b] 레일 — 채움 파랑 리터럴 1(데스크톱 카드 + 폰 하단 바가 같은 요소) · 비교는 담은 단지 전부 → /decide · 경제지표 알림은 /notifications · 텍스트 링크", () => {
+test("[1026b] 레일 — 채움 파랑 리터럴 1(데스크톱 카드 + 폰 하단 바가 같은 요소) · 비교는 담은 단지 전부 → /decide · 경제지표 알림은 기준금리 알림 패널(1027) · 텍스트 링크", () => {
   assert.equal((rail.match(/\bbtn-primary\b/g) ?? []).length, 1);
   assert.match(rail, /<div className="max-lg:hidden">\{primary\}<\/div>/);
-  assert.match(rail, /<MobilePrimaryBar label=\{spec\.label\}>\{primary\}<\/MobilePrimaryBar>/);
+  assert.match(rail, /<MobilePrimaryBar label=\{primaryLabel\}>\{primary\}<\/MobilePrimaryBar>/);
   assert.match(rail, /const spec = RAIL_PRIMARY\[tool\]/);
   assert.match(rail, /\{ href: "\/decide", icon: "clipboard", onClick: \(\) => addDecide\(decideItems\) \}/);
   assert.match(rail, /const decideItems = compareTray && compareTray\.length > 0 \? compareTray : picked \? \[picked\] : \[\]/);
-  assert.match(rail, /\{ href: "\/notifications", icon: "bell" \}/);
+  /* [1027] 경제지표 주 행동 — 기준금리 알림 패널로(#economy-watch). 패널이 없을 때만 알림함 + 글자 "알림함 열기" */
+  assert.match(rail, /\? \{ href: "#economy-watch", icon: "bell", onClick: focusEconomyWatch \}\s*: \{ href: "\/notifications", icon: "bell" \}/);
+  /* 데스크톱은 패널이 같은 레일 바로 아래 — 주소의 # 만으로는 움직임이 없어 패널을 가운데로 올리고 초점을 준다 */
+  assert.match(rail, /panel\?\.scrollIntoView\(\{ block: "center" \}\);\s*panel\?\.querySelector<HTMLElement>\("select"\)\?\.focus\(\{ preventScroll: true \}\);/);
+  assert.match(rail, /const primaryLabel = spec\.kind === "alert" && economyRate == null \? "알림함 열기" : spec\.label/);
   /* 결정 카드 텍스트 링크는 주 행동이 결정 카드가 아닐 때만(같은 행동 두 번 없음) */
   assert.match(rail, /picked && spec\.kind !== "decide" && \(/);
   /* 도구 색 채움·옛 버튼 줄 없음 */

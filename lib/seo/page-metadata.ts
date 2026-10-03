@@ -25,6 +25,15 @@ export const SITE_DEFAULT = {
     "지도·시세·임장노트·동네 커뮤니티를 한 곳에서. 살고 싶은 곳을 기록하고 비교하세요.",
 } as const;
 
+/**
+ * [1027] 기본 공유 카드(/og-image · 1200×630). 페이지가 `openGraph` 를 직접 적으면 Next 는 루트 레이아웃의
+ * openGraph 를 **통째로** 바꾼다 — images 를 빠뜨리면 기본 카드까지 사라져 og:image 가 없는 쪽이 된다
+ * (운영 2026-10-01: 실거래 구간·단지 비교·임장 가이드·시장 온도·월간 리포트 등 사이트맵 3,300여 쪽).
+ * 그런 페이지는 이 상수를 `images` 에 넣는다. 제목이 박힌 카드(/api/og)는 주소마다 그림을 새로 만들어
+ * 함수 호출이 쪽 수만큼 늘기 때문에(lib/og/cache.ts 실측) 쪽 수가 많은 표면에는 쓰지 않는다.
+ */
+export const DEFAULT_OG_IMAGES = [{ url: "/og-image", width: 1200, height: 630, alt: SITE_NAME }];
+
 type PageMetaInput = {
   /** 페이지 고유 제목. `| 내집나우`(SITE_NAME)은 자동 부착 — 이미 포함 시 생략. */
   title: string;

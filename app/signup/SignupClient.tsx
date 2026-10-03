@@ -11,6 +11,8 @@ import { stashSignupHandoff } from "@/lib/onboarding/signup-handoff";
 import { useMoment } from "@/app/components/motion/MomentProvider";
 import { safeInternalPath } from "@/lib/safe-path";
 import type { SocialProvider } from "@/lib/auth/configured-social";
+import { markOncePerSession, useFirstInteraction } from "@/lib/client/human-gate";
+import { browserFamily, deviceClass } from "@/lib/client/browser-family";
 
 /** [970 · A-14] 가입 뒤 목적지 — 온보딩(/welcome)을 거치되, 로그인 벽에서 넘어온
     callbackUrl 이 있으면 `?next=` 로 실어 온보딩 마지막 CTA 가 그리로 보낸다(WelcomeClient).
@@ -87,7 +89,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
   }, []);
 
   /* #44 가입 퍼널 계측 — /api/platform/event 로 fire-and-forget POST (실패해도 UI 무영향).
-     step_1: 페이지 진입 · step_2: 목표 선택 · step_3: 기본정보/관심지역 첫 선택 ·
+     step_1: 가입 화면에서 처음 움직임(1027 — 예전: 페이지 진입) · step_2: 목표 선택 · step_3: 기본정보/관심지역 첫 선택 ·
      step_4: 계정 폼 제출 시도 · signup_complete: 가입 성공. 스텝당 1회만 전송. */
   const firedSteps = useRef<Set<string>>(new Set());
   const trackStep = useCallback(
@@ -114,11 +116,21 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
     } catch {
       signupViaRef.current = null;
     }
-    trackStep(
-      "signup_step_1",
-      signupViaRef.current ? { via: signupViaRef.current } : undefined,
-    );
-  }, [trackStep]);
+  }, []);
+  /* [1027 · 제안 29] "가입 1단계"는 화면이 열릴 때가 아니라 **사람이 처음 움직인 뒤**, 세션당 한 번만 찍는다.
+     운영 실측(2026-09-11~10-01): 451건이 찍혔는데 실제 가입은 2명 — 전부 신원 없는 PC 접속이었고
+     화면만 열고 떠났다(상태 점검·화면 캡처로 보인다). 브라우저 계열·기기를 같이 남겨 다음에는 무엇이 찍었는지 보이게 한다.
+     뒤 단계(step_4 · signup_complete)는 폼 제출에서 찍히므로 그대로다. */
+  const moved = useFirstInteraction();
+  useEffect(() => {
+    if (!moved) return;
+    if (!markOncePerSession("nz_evt_signup_step_1")) return;
+    trackStep("signup_step_1", {
+      ...(signupViaRef.current ? { via: signupViaRef.current } : {}),
+      browser: browserFamily(navigator.userAgent),
+      device: deviceClass(navigator.userAgent),
+    });
+  }, [moved, trackStep]);
 
   /* 관심 지역·목표·인구통계는 전부 온보딩(/welcome)이 수집한다(개선 #9). */
   useEffect(() => {

@@ -23,6 +23,7 @@ import { Explain } from "@/app/components/explain/Explain";
 import { TEMPERATURE_EXPLAIN } from "../../temperature-explain";
 import { weekSlots } from "../week-slots";
 import { ScoreDiff } from "../score-diff";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
    N11 — 지역별 시장 온도 주간 기록 · /analysis/temperature/[region]
@@ -144,6 +145,7 @@ export async function generateMetadata({
       description,
       url: `https://naezipnow.com${path}`,
       type: "website",
+      images: DEFAULT_OG_IMAGES,
     },
   };
 }

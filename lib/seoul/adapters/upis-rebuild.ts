@@ -18,8 +18,9 @@ export type UpisRebuildPayload = {
   projects: UpisRebuildProject[];
   activeProjects: number;
   plannedProjects: number;
-  estimatedUnits: number;
-  nearestCompletionYear: number;
+  /* [1027] estimatedUnits · nearestCompletionYear 를 지웠다. 앞의 것은 "구역 면적 합계 ÷ 85㎡",
+     뒤의 것은 "올해 + 3년"이었다 — 원천(upisRebuild)에 세대수도 준공 예정도 없는데 계산으로 만들어
+     임장 리포트 근거 줄("추정 세대 … · 최근 준공 …")에 실어 보냈다. 모르는 값은 싣지 않는다. */
   mode: "live" | "mock";
 };
 
@@ -48,6 +49,10 @@ export async function fetchUpisRebuild(
   maxPages = 3,
 ): Promise<UpisRebuildPayload> {
   const district = params.district ?? "";
+  /* [1027] 구 이름의 **끝** "구"만 떼고, 두 글자 이상일 때만 구역명에서 찾는다. 예전에는 첫 "구"를 지워
+     "구로구" → "로구"(종로구 구역이 걸린다) · "중구" → "중"(아무 구역이나 걸린다)이 돼, 임장 리포트의
+     "진행 N건 · 계획 M건"이 다른 구의 구역까지 세었다. */
+  const stem = district.replace(/구$/, "");
   const batch = await fetchAllSeoulRows("upisRebuild", { maxPages, pageSize: 1000 });
   const projects = batch.rows
     .map(mapRow)
@@ -56,13 +61,12 @@ export async function fetchUpisRebuild(
       return (
         matchesDistrict(district, p.zoneName) ||
         matchesDistrict(district, p.position) ||
-        p.zoneName.includes(district.replace("구", ""))
+        (stem.length >= 2 && p.zoneName.includes(stem))
       );
     });
 
   const active = projects.filter(isActiveProject);
   const planned = projects.filter((p) => !isActiveProject(p));
-  const totalArea = projects.reduce((sum, p) => sum + p.areaSqm, 0);
 
   return {
     district: district || "전체",
@@ -70,8 +74,6 @@ export async function fetchUpisRebuild(
     projects: projects.slice(0, 200),
     activeProjects: active.length,
     plannedProjects: planned.length,
-    estimatedUnits: Math.round(totalArea / 85),
-    nearestCompletionYear: new Date().getFullYear() + 3,
     mode: "live",
   };
 }

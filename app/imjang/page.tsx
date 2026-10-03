@@ -7,6 +7,7 @@ import type { TxRegionSummary } from "@/lib/market/tx-bands";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { logger } from "@/lib/log";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
    임장 가이드 인덱스 — /imjang (전략 정본 §4-2)
@@ -50,7 +51,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description,
     alternates: seoAlternates(PATH),
     ...(loadError ? { robots: { index: false, follow: true } } : {}),
-    openGraph: { title, description, url: `https://naezipnow.com${PATH}`, type: "website" },
+    openGraph: { title, description, url: `https://naezipnow.com${PATH}`, type: "website", images: DEFAULT_OG_IMAGES },
   };
 }
 

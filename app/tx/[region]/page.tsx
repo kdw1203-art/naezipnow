@@ -15,6 +15,7 @@ import { breadcrumbJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { QaBlock } from "@/app/components/QaBlock";
 import { CitationBlock } from "@/app/components/CitationBlock";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
    지역 실거래 구간 허브 — /tx/[region]
@@ -72,7 +73,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: seoAlternates(path),
-    openGraph: { title, description, url: `https://naezipnow.com${path}`, type: "website" },
+    openGraph: { title, description, url: `https://naezipnow.com${path}`, type: "website", images: DEFAULT_OG_IMAGES },
   };
 }
 

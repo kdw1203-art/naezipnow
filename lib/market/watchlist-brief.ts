@@ -118,9 +118,10 @@ async function buildRegionBrief(
   if (!regionName) return null;
 
   try {
-    const { regionIdForName } = await import("@/lib/region/catalog");
+    /* [1027] 정확 일치로만 — "대구 달서구"가 "서구"에 걸려 인천 서구 숫자로 나오던 것을 막는다(lib/alerts/region-value.ts) */
+    const { alertRegionCatalogId } = await import("@/lib/alerts/region-value");
     const { getRegionSnapshot } = await import("@/lib/market/store");
-    const regionId = regionIdForName(regionName);
+    const regionId = alertRegionCatalogId(regionName);
     if (!regionId) return null;
     const snap = await getRegionSnapshot(regionId).catch(() => null);
     if (!snap || snap.avgSale == null || snap.avgSale <= 0) return null;

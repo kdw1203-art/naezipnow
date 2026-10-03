@@ -3,9 +3,12 @@
  * 골든셋(tests/ai-insight.test.ts) diff 와 함께 "무엇을 바꿔서 무엇이 달라졌나"에 답한다.
  *
  * CHANGELOG
+ * - v3 (2026-10-03): 참고 데이터에서 예시 표 3종(리스크 점수·지역 타이밍 신호·경제지표)을 뺐다 — 코드에 박힌
+ *   고정값이 "서버에서 조회한 데이터"로 모델에 들어가고 있었다(lib/ai/analysis-engine.ts). 입력·컨텍스트에 없는
+ *   수치는 쓰지 말라는 한 줄을 사용자 메시지에 더했다.
  * - v2 (2026-08-23): 버전 체계 도입. 워크벤치 통합(Wave 9) 기준 프롬프트.
  * - v1 (~2026-08-22): 버전 표기 이전. */
-export const AI_PROMPT_VERSION = "v2";
+export const AI_PROMPT_VERSION = "v3";
 
 /** 내집나우 AI 동네 도우미 역할 정의 (제품 브랜드 — 법인 상호와 분리) */
 export const NUGUZIP_AI_SYSTEM = `당신은 한국 부동산·임장 플랫폼 「내집나우」의 AI 동네길잡이입니다.

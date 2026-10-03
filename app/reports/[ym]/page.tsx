@@ -16,6 +16,7 @@ import { Explain } from "@/app/components/explain/Explain";
 import { reportingClosed, reportingDeadlineLabel } from "@/lib/newui/reporting-window";
 import { logger } from "@/lib/log";
 import { commonRegionCompare, reportSummary, type CommonCompare } from "./report-compare";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
    S11/G7/G8/G14 — 월간 실거래 리포트 상세.
@@ -83,7 +84,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: seoAlternates(path),
-    openGraph: { title, description, url: `https://naezipnow.com${path}`, type: "article" },
+    openGraph: { title, description, url: `https://naezipnow.com${path}`, type: "article", images: DEFAULT_OG_IMAGES },
   };
 }
 

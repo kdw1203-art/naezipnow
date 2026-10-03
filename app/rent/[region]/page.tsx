@@ -28,6 +28,7 @@ import {
 import { getRentCountsCached, getRentSnapshotCached } from "@/lib/rent/region-counts";
 import { RentDongChips, RentTypeAreaFilters } from "./RentFilters";
 import { RentScatter } from "./RentScatter";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
    왜 searchParams 를 읽는가(형제 /region·/tx 는 안 읽는다): 유형·동·면적대는 **서버 조회 조건**이라
@@ -63,7 +64,7 @@ export async function generateMetadata({
     /* 필터 조합이 아니라 지역 주소 하나만 색인한다(check-param-canonical) · 0행이면 색인하지 않는다 */
     alternates: seoAlternates(`/rent/${id}`),
     ...(rentNoindex(counts) ? { robots: { index: false, follow: true } } : {}),
-    openGraph: { title, description, type: "website" },
+    openGraph: { title, description, type: "website", images: DEFAULT_OG_IMAGES },
   };
 }
 

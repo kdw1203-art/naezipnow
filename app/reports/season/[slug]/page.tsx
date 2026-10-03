@@ -19,6 +19,7 @@ import { formatKrwWon } from "@/lib/format/krw";
 import { absPctText } from "@/lib/format/delta";
 import { Delta } from "@/app/components/num/Delta";
 import { Explain } from "@/app/components/explain/Explain";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
    N12 — 계절(이사철) 리포트.
@@ -101,7 +102,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: seoAlternates(path),
-    openGraph: { title, description, url: `https://naezipnow.com${path}`, type: "article" },
+    openGraph: { title, description, url: `https://naezipnow.com${path}`, type: "article", images: DEFAULT_OG_IMAGES },
   };
 }
 

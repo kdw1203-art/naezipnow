@@ -26,6 +26,7 @@ import { NavigationProgress } from "./components/motion/NavigationProgress";
 import { PageTransition } from "./components/motion/PageTransition";
 import { RevealOnScroll } from "./components/motion/RevealOnScroll";
 import { Analytics } from "@vercel/analytics/next";
+import { BUILD_MARK } from "@/lib/monitoring/build-mark";
 
 export const metadata: Metadata = {
   metadataBase: new URL(DEFAULT_DESKTOP_ORIGIN), /* [947] 도메인 단일 소스 */
@@ -141,6 +142,10 @@ export const maxDuration = 120;
    슬로건 세리프(Noto Serif KR)는 globals.css 끝의 @font-face 로 옮겨 여기서 링크할
    CSS 가 없다 — 예전 BRAND_SERIF_CSS(fonts.googleapis.com text= 서브셋) 상수는 삭제. */
 const PRETENDARD_CSS = "/fonts/pretendard/pretendardvariable-dynamic-subset.css";
+
+/* [1027 · 제안 28] 이 HTML 을 만든 빌드의 표식(BUILD_MARK — 빌드 때 박힌 커밋 해시 앞 7자)을 메타로 심는다.
+   오류 경계가 보고에 실어 보낸다(lib/client/error-report). 배포 뒤에도 옛 화면을 들고 있던 탭의 오류인지
+   가릴 때 쓴다. 값이 없으면(로컬) 메타를 그리지 않는다. */
 
 export default function RootLayout({
   children,
@@ -273,6 +278,7 @@ export default function RootLayout({
             소유라 웹 페이지가 그릴 수 없다. 그 경로는 IosInstallHint 가 안내한다. */}
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="내집나우" />
+        {BUILD_MARK ? <meta name="nz-build" content={BUILD_MARK} /> : null}
       </head>
       <body className="min-h-full flex flex-col">
         {/* #18 a11y — 본문 바로가기 (키보드 첫 Tab). sr-only 로만 두면 포커스가

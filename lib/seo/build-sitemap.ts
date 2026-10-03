@@ -115,8 +115,8 @@ const STATIC_ROUTES: Array<{ path: string; priority: number }> = [
   { path: "/digest", priority: 0.6 },
   // 정비사업 추적 라이트 — 단계 안내 + 정비사업 뉴스
   { path: "/redevelopment", priority: 0.6 },
-  // 공공 부동산 자료 현황 (KB 시세·공시가격·실거래 연동)
-  { path: "/data/records", priority: 0.5 },
+  /* [1027] /data/records(공공 부동산 자료 현황)를 뺐다 — 11개 자료가 전부 "연동 대기"·0건이라 페이지도
+     noindex 다(app/data/records/page.tsx generateMetadata). 자료가 들어오면 여기 다시 넣는다. */
   // 아파트 입주 예정 물량(공급 캘린더)
   { path: "/supply", priority: 0.7 },
   // 온비드 서울 공매 + 법원경매 물건
@@ -593,6 +593,29 @@ export async function loadStoryEntries(): Promise<MetadataRoute.Sitemap> {
           url: `${BASE_URL}/town/story/${p.id}`,
           ...(Number.isNaN(at.getTime()) ? {} : { lastModified: at }),
           priority: 0.6,
+        };
+      });
+  });
+}
+
+/**
+ * [1027] 정비사업 구역 상세 — /redevelopment/[id].
+ * 구역 표(DB)가 정본이고 예시 데이터(is_sample)는 싣지 않는다. lastModified 는 행의 updated_at
+ * (자료를 정리한 시점)이라 사실이다. 조회 실패는 section() 이 위로 던진다(없어진 것으로 광고하지 않는다).
+ */
+export async function loadRedevelopmentEntries(): Promise<MetadataRoute.Sitemap> {
+  return section("정비사업 구역", async () => {
+    const { listDbProjects } = await import("@/lib/redevelopment/store");
+    const { redevDetailHref } = await import("@/lib/redevelopment/map-layer");
+    const projects = await listDbProjects({ limit: 3000 });
+    return projects
+      .filter((p) => !p.isSample && p.id)
+      .map((p) => {
+        const at = p.updatedAt ? new Date(p.updatedAt) : null;
+        return {
+          url: `${BASE_URL}${redevDetailHref(p.id)}`,
+          ...(at && !Number.isNaN(at.getTime()) ? { lastModified: at } : {}),
+          priority: 0.5,
         };
       });
   });

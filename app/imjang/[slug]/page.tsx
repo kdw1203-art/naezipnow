@@ -18,6 +18,7 @@ import { CoverImage } from "@/app/components/CoverImage";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 import { seedGradient } from "@/lib/town/shared";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
    지역 임장 가이드 — /imjang/[slug] (전략 정본 §4-2 프로그래매틱 임장 랜딩)
@@ -75,7 +76,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: seoAlternates(path),
-    openGraph: { title, description, url: `https://naezipnow.com${path}`, type: "website" },
+    openGraph: { title, description, url: `https://naezipnow.com${path}`, type: "website", images: DEFAULT_OG_IMAGES },
   };
 }
 

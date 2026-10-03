@@ -9,6 +9,7 @@ import { ShareButton } from "./ShareButton";
 import { LocationMap } from "../../LocationMap";
 import { Icon } from "@/app/components/Icon";
 import { formatKstLongDate } from "@/lib/format/kst";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 /* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-bold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 시안 8o(모임 상세) 고도화 — 모임 정보 카드(일정·장소·정원·참여자) + 공유 +
@@ -46,7 +47,7 @@ export async function generateMetadata({
   return {
     title,
     description: desc,
-    openGraph: { title, description: desc },
+    openGraph: { title, description: desc, images: DEFAULT_OG_IMAGES },
   };
 }
 

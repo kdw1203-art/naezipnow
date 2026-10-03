@@ -69,3 +69,56 @@ export function useHumanGate(
 
   return armed;
 }
+
+/**
+ * [1027 · 제안 29] 첫 상호작용 게이트 — 사람이 **실제로 움직인 뒤에만** true.
+ *
+ * useHumanGate 는 지켜볼 요소가 없으면 마운트 직후 켜진다(딥링크로 온 사람을 기다리게 하지 않으려는 것).
+ * 지표는 반대다: 화면만 열고 아무것도 하지 않는 방문(상태 점검기 · 화면 캡처 · 미리 불러오기)이 사람으로
+ * 세이면 숫자가 거짓이 된다. 운영 실측: "가입 1단계" 451건 가운데 실제 가입은 2명이었다.
+ *  · 봇(UA 표식 · navigator.webdriver)은 영원히 false.
+ *  · 브라우저가 만든 진짜 입력(event.isTrusted)만 센다 — 스크립트가 dispatchEvent 로 만든 것은 아니다.
+ *  · 포인터·키·터치·휠 가운데 처음 하나. **스크롤은 세지 않는다** — 브라우저가 스스로 일으킨 스크롤(위치 복원 ·
+ *    화면 전체 캡처 도구)도 "진짜 입력"(isTrusted)으로 온다. 켜지면 꺼지지 않는다(래치).
+ */
+const FIRST_INPUT_EVENTS = ["pointerdown", "keydown", "touchstart", "wheel"] as const;
+
+export function useFirstInteraction(): boolean {
+  const [moved, setMoved] = useState(false);
+
+  useEffect(() => {
+    if (moved) return;
+    if (isBotBrowser()) return;
+    const cleanups: Array<() => void> = [];
+    let done = false;
+    const handler = (e: Event) => {
+      if (done || !e.isTrusted) return;
+      done = true;
+      cleanups.forEach((fn) => fn());
+      setMoved(true);
+    };
+    for (const type of FIRST_INPUT_EVENTS) {
+      window.addEventListener(type, handler, { passive: true });
+      cleanups.push(() => window.removeEventListener(type, handler));
+    }
+    return () => {
+      cleanups.forEach((fn) => fn());
+    };
+  }, [moved]);
+
+  return moved;
+}
+
+/**
+ * [1027 · 제안 29] 세션당 한 번 — 처음이면 표식을 남기고 true, 이미 있으면 false.
+ * 저장소가 막힌 브라우저(사파리 비공개 등)는 true(막지 않는다 — 호출부가 화면당 한 번은 이미 지킨다).
+ */
+export function markOncePerSession(key: string): boolean {
+  try {
+    if (window.sessionStorage.getItem(key)) return false;
+    window.sessionStorage.setItem(key, "1");
+    return true;
+  } catch {
+    return true;
+  }
+}

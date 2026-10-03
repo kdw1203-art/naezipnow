@@ -4,6 +4,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { ErrorState } from "@/app/components/ui/EmptyState";
+import { reloadOnceOnChunkFailure, reportClientError } from "@/lib/client/error-report";
 
 /**
  * [992 · A7] 영역별 오류 경계의 공통 몸체.
@@ -12,6 +13,10 @@ import { ErrorState } from "@/app/components/ui/EmptyState";
  * 같은 "화면을 그리는 중 문제가 생겼어요"로 떨어졌고, 결제 화면이 깨지면 방금 낸 돈이
  * 어떻게 됐는지 아무 말도 없었다. 영역마다 **무엇이 안 됐고 어디로 가면 되는지**가 다르다.
  * 계측(/api/monitoring/client-error)은 루트와 같은 싱크, scope 에 영역 이름을 싣는다.
+ *
+ * [1027 · 제안 27] 배포 직후 옛 화면 파일을 든 탭 — 루트 오류 화면처럼 한 번만 새로고침한다(같은 세션·같은 화면
+ * 두 번째면 그대로 둔다). 이 몸체를 쓰는 여덟 구역(지도·노트·분석·마이·결제·구독·퀴즈·전월세)에 같이 적용된다.
+ * [1027 · 제안 28] 보고에 브라우저 스택·오류 이름·빌드 표식을 싣는다(lib/client/error-report).
  */
 export function AreaError({
   area,
@@ -30,21 +35,11 @@ export function AreaError({
   links: { href: string; label: string }[];
 }) {
   useEffect(() => {
-    try {
-      void fetch("/api/monitoring/client-error", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          message: error.message || "unknown client error",
-          digest: error.digest,
-          path: typeof window !== "undefined" ? window.location.pathname : null,
-          scope: `route:${area}`,
-        }),
-        keepalive: true,
-      }).catch(() => {});
-    } catch {
-      /* noop */
-    }
+    reloadOnceOnChunkFailure(error);
+  }, [error]);
+
+  useEffect(() => {
+    reportClientError(error, `route:${area}`);
   }, [error, area]);
 
   return (

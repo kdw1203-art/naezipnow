@@ -393,7 +393,7 @@ test("[1024 · Q1~3] 새 크론 셋 — authorizeCron·withBudget·logIngest, ve
   }
   const vercel = JSON.parse(read("vercel.json")) as { crons: { path: string; schedule: string }[] };
   const by = new Map(vercel.crons.map((c) => [c.path, c.schedule]));
-  assert.equal(by.get("/api/cron/molit-history-backfill"), "40 2,14 * * *"); // [1025] 하루 2회
+  assert.equal(by.get("/api/cron/molit-history-backfill"), "40 2,6,10,14,18,22 * * *"); // [1025] 하루 2회 → [1027] 6회(1회 45곳)
   assert.equal(by.get("/api/cron/molit-nonapt-ingest"), "50 2 * * *");
   assert.equal(by.get("/api/cron/kapt-mgmt-fee-ingest"), "10 3 * * *");
   /* 백필·비아파트는 raw 미저장 · 아파트 일일 크론은 keepRaw 를 안 건드린다(예전과 같다) */

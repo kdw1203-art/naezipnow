@@ -210,11 +210,30 @@ test("[1026] 네 화면 — StepLine 한 번 · 결론 카드 · 폰 하단 바 
   assert.ok(raw("app/analysis/gap/page.tsx").includes('className="nz-dot-blue'));
 });
 
-test("[1026] region-verdict — 채움 파랑 리터럴 1개(레일 · 폰 바가 같은 요소) · 레일에서만 보이고 폰은 하단 바 · 알림함 경로 · 칩 토큰 3색", () => {
+test("[1026] region-verdict — 채움 파랑은 공용 버튼 하나(레일 · 폰 바가 같은 요소) · 레일에서만 보이고 폰은 하단 바 · [1027] 누르면 그 지역 구독 · 칩 토큰 3색", () => {
   const v = code(VERDICT);
-  assert.equal(count(v, "btn-primary"), 1, "채움 파랑 리터럴 하나");
-  assert.ok(v.includes('href="/notifications"'), "기존 알림함 경로(시세·타이밍 '이 지역 알림' 카드와 같다)");
-  assert.ok(v.includes("이 지역 알림 받기"));
+  /* [1027] 알림함을 열기만 하던 링크 → 누르면 구독되는 공용 버튼(app/components/RegionAlertButton 의 primary 모양).
+     채움 파랑 리터럴은 그 공용 파일에 하나, 이 파일에는 없다. "실거래 등록·지수 변동 알림"(없는 알림) 문구는 내렸다. */
+  assert.equal(count(v, "btn-primary"), 0, "채움 파랑 리터럴은 공용 버튼 파일에");
+  const btn = code("app/components/RegionAlertButton.tsx");
+  assert.equal(count(btn, "btn-primary"), 1, "공용 버튼의 채움 파랑 리터럴 하나");
+  /* 글자는 대상 지역을 적는다("{지역} 알림 받기") — 전세가율(결과 첫 줄)·온도(가장 뜨거운 곳)는 "이 지역"이 모호하다 */
+  assert.ok(btn.includes("`${label} 알림 받기`") && btn.includes('fetch("/api/me/alerts"'), "누르면 지역 구독(기존 구독 API)");
+  assert.ok(v.includes('<RegionAlertButton key={regionLabel ?? ""} variant="primary" region={regionLabel}'), "레일·폰 바가 같은 버튼 · 지역이 바뀌면 상태도 처음으로");
+  assert.ok(!v.includes('href="/notifications"') && !v.includes("실거래 등록·지수 변동"), "알림함 링크·없는 알림 문구 없음");
+  assert.ok(v.includes('export const REGION_ALERT_KINDS = "청약 공고(시·도 전체)·새 등록 매물 알림"'), "카드 한 줄 = 지역 구독이 실제로 보내는 것(청약은 시/도 전체)");
+  for (const [name, files] of Object.entries(SCREENS)) {
+    assert.ok(/<RegionPrimaryBar regionLabel=\{[^}]+\} \/>/.test(files.map(code).join("\n")), `${name} 폰 하단 바에 지역`);
+  }
+  /* 시장 온도 — 알림 대상은 화면의 결론이 말하는 곳(고른 주·시/도에서 가장 뜨거운 곳). 서버가 전국 1위로 굳혀 넘기지 않는다 */
+  const temp = code("app/analysis/temperature/TempMapClient.tsx");
+  assert.ok(temp.includes("const actionRegion = stats.hottest?.current.regionLabel ?? null;"));
+  assert.ok(temp.includes("<RegionPrimaryBar regionLabel={actionRegion} />") && temp.includes("<RegionActionCard regionLabel={actionRegion}"));
+  assert.ok(!code("app/analysis/temperature/page.tsx").includes("<RegionActionCard"), "서버 페이지는 다음 행동 카드를 만들지 않는다");
+  /* 전세가율 — 시/도를 붙인 이름으로 구독(카탈로그의 "중구"는 서울 중구) */
+  const gap = code("app/analysis/gap/GapScreener.tsx");
+  assert.ok(gap.includes("SIDO_NAME_RE.test(lead.group) && !lead.name.startsWith(`${lead.group} `) ? `${lead.group} ${lead.name}` : lead.name"));
+  assert.ok(gap.includes("<RegionPrimaryBar regionLabel={leadRegion} />"));
   assert.ok(v.includes('<div className="hidden lg:block">'), "카드 안 채움 파랑은 lg+ 레일에서만");
   assert.ok(v.includes("<MobilePrimaryBar"), "폰은 공용 하단 바");
   assert.ok(v.includes("bg-success-soft text-success") && v.includes("bg-primary-soft text-primary") && v.includes("bg-warning-soft text-warning"), "판정 칩 토큰");

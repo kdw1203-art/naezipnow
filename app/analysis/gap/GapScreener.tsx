@@ -73,6 +73,9 @@ function conditionLine(f: GapFilter): string {
 
 const SELECT_CLS = "gap-inp";
 
+/* [1027] 행의 group 이 시/도 이름인가("그 밖의 지역"이면 붙이지 않는다) — lib/market/sido-group 을 이 클라이언트 묶음에 싣지 않으려 글자로 본다 */
+const SIDO_NAME_RE = /^(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)$/;
+
 export function GapScreener({
   rows,
   median,
@@ -135,8 +138,11 @@ export function GapScreener({
       ? { name: lead.name, ratio: lead.ratio, avgSale: lead.avgSale, gap: effectiveGap(lead), measured: lead.measuredGap !== undefined }
       : null,
   });
+  /* [1027] 알림 구독은 시/도를 붙인 이름으로 — 이 표의 이름은 카탈로그 표기라 "중구"가 서울 중구다.
+     시/도를 붙여 보내면 다른 시의 중구로 읽힐 여지가 없고, 버튼에도 어느 지역인지 그대로 적힌다. */
+  const leadRegion = lead ? (SIDO_NAME_RE.test(lead.group) && !lead.name.startsWith(`${lead.group} `) ? `${lead.group} ${lead.name}` : lead.name) : null;
   const actionCard = (
-    <RegionActionCard regionLabel={lead?.name ?? null} links={regionActionLinks(lead?.name ?? null, lead?.name ?? null)} />
+    <RegionActionCard regionLabel={leadRegion} links={regionActionLinks(lead?.name ?? null, lead?.name ?? null)} />
   );
 
   const panel = (
@@ -403,7 +409,7 @@ export function GapScreener({
       </div>
 
       {/* [1026] 폰 하단 바 — 레일의 채움 파랑과 같은 요소(화면에 한 번) */}
-      <RegionPrimaryBar />
+      <RegionPrimaryBar regionLabel={leadRegion} />
     </>
   );
 }

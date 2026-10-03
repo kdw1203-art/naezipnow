@@ -3,7 +3,7 @@ import { authorizeCron } from "@/lib/cron/authorize";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { appendInboxNotification } from "@/lib/notifications/inbox";
 import { listAnnouncementEvents, type AnnouncementRow } from "@/lib/applyhome/store";
-import { normalizeApplyhomeRegion } from "@/lib/applyhome/regions";
+import { alertRegionTarget, matchAnnouncementRegion, type AlertRegionTarget } from "@/lib/alerts/region-value";
 import { ALERT_PREFIX } from "@/lib/alerts/subscriptions";
 import { logIngest } from "@/lib/market/store";
 import { logger } from "@/lib/log";
@@ -20,6 +20,9 @@ export const maxDuration = 120;
  * 지역 매칭: 구독값은 "서울 강남구" 처럼 시군구까지지만 청약홈 공급지역은 시/도("서울")다.
  * 시/도로 정규화해 맞춘다 — 시군구는 공고 주소 문자열에 포함되면 우선 표시할 뿐 필터하지 않는다
  * (놓치는 것보다 한 건 더 알리는 쪽이 낫다; 하루 한 번, 지역당 최대 5건).
+ * [1027] 시/도는 값 안의 글자가 아니라 시군구 코드 표에서 읽는다(lib/alerts/region-value.ts).
+ * 예전 규칙은 값에 "서울"·"경기" 글자가 있어야 해서, 지역 선택기가 넣는 "성남 분당구"·"과천시"
+ * 구독자에게는 청약 알림이 가지 않았고 경기 "광주시"는 광주광역시 공고를 받았다.
  * 중복 방지: 같은 사용자에게 같은 공고·같은 종류를 7일 안에 다시 보내지 않는다(body 대조).
  *
  * 보호: lib/cron/authorize.ts. 스케줄: .github/workflows/etl.yml alerts 잡(매일 06:00 UTC).
@@ -27,7 +30,7 @@ export const maxDuration = 120;
 
 const MAX_PER_USER = 5;
 
-type Sub = { email: string; value: string; sido: string };
+type Sub = AlertRegionTarget & { email: string };
 
 async function listRegionSubscriptions(): Promise<Sub[]> {
   const sb = getServiceSupabase();
@@ -41,19 +44,15 @@ async function listRegionSubscriptions(): Promise<Sub[]> {
   const out: Sub[] = [];
   for (const r of data as Array<{ user_email: string; complex_id: string }>) {
     const value = String(r.complex_id).slice(`${ALERT_PREFIX}region:`.length).trim();
-    const sido = normalizeApplyhomeRegion(value);
-    if (!value || sido === "전체") continue;
-    out.push({ email: String(r.user_email).trim().toLowerCase(), value, sido });
+    const target = value ? alertRegionTarget(value) : null;
+    if (!target) continue;
+    out.push({ ...target, email: String(r.user_email).trim().toLowerCase() });
   }
   return out;
 }
 
 function matches(a: AnnouncementRow, sub: Sub): { hit: boolean; strong: boolean } {
-  const region = a.region ?? "";
-  const hit = region === sub.sido || region.includes(sub.sido);
-  const gu = sub.value.split(/\s+/)[1] ?? "";
-  const strong = hit && gu.length > 0 && Boolean(a.address?.includes(gu));
-  return { hit, strong };
+  return matchAnnouncementRegion(sub, a);
 }
 
 async function alreadySent(email: string, marker: string): Promise<boolean> {

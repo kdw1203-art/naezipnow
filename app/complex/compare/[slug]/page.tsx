@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cache } from "react";
-import { notFound, permanentRedirect } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
 import { QaBlock } from "@/app/components/QaBlock";
 import { AREA_BANDS } from "@/lib/market/bands";
@@ -24,6 +24,8 @@ import {
 import { breadcrumbJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { formatKrwShort } from "@/lib/market/format";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
+import { complexHrefFromNames } from "@/lib/seo/complex-slug";
 
 /* ============================================================
    N10 — 단지 vs 단지 비교 랜딩 · /complex/compare/[slug]
@@ -233,6 +235,29 @@ const loadPageData = cache(async (slug: string): Promise<PageData | null> => {
   };
 });
 
+/**
+ * [1027 · 제안 23] 화이트리스트에서 빠진 조합의 주소 — 404 대신 그 단지 화면으로 보낸다.
+ *
+ * 조합은 하루 한 번 다시 뽑힌다(같은 동 거래 상위 3개 단지 · 양쪽 12개월 20건 이상). 거래가 줄어
+ * 조합이 빠지면 어제까지 색인돼 있던 주소가 그대로 404 가 됐다. 두 단지는 그대로 있으므로
+ * 첫 단지(없으면 둘째 단지)의 단지 화면으로 보낸다. 단지에도 거래가 한 건도 없으면 예전처럼 404.
+ * **임시 이동(307)** 이다 — 20건 경계에 걸친 조합은 다음 날 다시 돌아올 수 있어서, 영구 이동(308)으로 굳히면
+ * 돌아온 비교 화면이 브라우저·검색엔진에 한동안 가려진다. 계속 빠져 있으면 검색엔진이 알아서 옮긴다.
+ * 슬러그를 못 읽거나 지역을 모르면 여기까지 오지 않는다(null → 404). 조회 실패는 던진다(listComplexTransactions).
+ */
+const loadGoneTarget = cache(async (slug: string): Promise<string | null> => {
+  const parsed = parseComplexPairSlug(slug);
+  if (!parsed) return null;
+  const region = findComplexTxRegionById(parsed.regionId);
+  if (!region) return null;
+  for (const name of [parsed.first, parsed.second]) {
+    const rows = await listComplexTransactions(name, region, 1);
+    const regionName = rows[0]?.regionName;
+    if (regionName) return complexHrefFromNames(regionName, name);
+  }
+  return null;
+});
+
 /* ---------- 메타데이터 ---------- */
 
 export async function generateMetadata({
@@ -263,6 +288,7 @@ export async function generateMetadata({
       siteName: "내집나우",
       locale: "ko_KR",
       type: "website",
+      images: DEFAULT_OG_IMAGES,
     },
   };
 }
@@ -301,7 +327,11 @@ export default async function ComplexComparePage({
 }) {
   const { slug } = await params;
   const data = await loadPageData(slug);
-  if (!data) notFound();
+  if (!data) {
+    const goneTarget = await loadGoneTarget(slug);
+    if (goneTarget) redirect(goneTarget);
+    notFound();
+  }
   const { pair, region, canonicalSlug, needsRedirect, a, b, windowStartYm, months } = data;
   if (needsRedirect) permanentRedirect(`/complex/compare/${canonicalSlug}`);
 
@@ -310,8 +340,16 @@ export default async function ComplexComparePage({
   const partial = !a.covered || !b.covered;
   const countSuffix = partial ? "건 이상" : "건";
 
-  const pathA = `/complex/tx/${buildComplexTxSlug(a.name, region.id)}`;
-  const pathB = `/complex/tx/${buildComplexTxSlug(b.name, region.id)}`;
+  /* [1027 · 제안 23] 단지 링크는 정본(/complex/{id})으로 — /complex/tx/… 는 같은 단지를 그리는 두 번째 주소라
+     canonical 이 /complex/{id} 를 가리킨다(app/complex/tx/[slug]). 정본이 아닌 주소로 내부 링크를 걸면
+     크롤러가 두 주소를 다 돈다. id 는 최근 거래 행의 실제 region_name 으로 조립한다(추측 없음) —
+     region_name 이 비어 있는 예외만 예전 주소로. */
+  const hubPath = (side: SideStats) =>
+    side.latest?.regionName
+      ? complexHrefFromNames(side.latest.regionName, side.name)
+      : `/complex/tx/${buildComplexTxSlug(side.name, region.id)}`;
+  const pathA = hubPath(a);
+  const pathB = hubPath(b);
 
   /* 면적대 — 어느 한쪽이라도 거래가 있는 구간만, 정의된 순서대로 */
   const sharedBands = AREA_BANDS.filter(

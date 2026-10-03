@@ -9,6 +9,7 @@
  */
 import "server-only";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { ALERT_REGION_MAX_CHARS, canonicalAlertRegion } from "@/lib/alerts/region-value";
 
 export const ALERT_PREFIX = "alert:";
 export const MAX_ALERT_SUBSCRIPTIONS = 20;
@@ -88,7 +89,15 @@ export async function addAlertSubscription(
   type: AlertSubscriptionType,
   rawValue: string,
 ): Promise<AddAlertResult> {
-  const value = normalizeAlertValue(rawValue);
+  /* [1027] 지역은 한 가지 표기(실거래 region_name — 지역 선택기가 넣던 그 표기)로 맞춰 저장한다.
+     화면마다 표기가 달라("경기 안양시 만안구"·"안양시 만안구"·"안양 만안구") 같은 지역이 세 건으로 쌓이고,
+     청약·새 매물 알림이 서로 다른 표기를 기대해 한쪽이 안 가던 것을 막는다(lib/alerts/region-value.ts). */
+  const normalized = normalizeAlertValue(rawValue);
+  /* 표기 맞추기 전에 길이부터 — 긴 "서울 서울 서울 …" 을 표에 넣고 돌릴 이유가 없다(긴 시/도 이름은 맞춘 뒤 30자 안에 든다) */
+  if (normalized.length > ALERT_REGION_MAX_CHARS) {
+    return { ok: false, status: 400, error: `${MAX_ALERT_VALUE_LENGTH}자 이내로 입력해 주세요.` };
+  }
+  const value = type === "region" ? canonicalAlertRegion(normalized) : normalized;
   if (!value) return { ok: false, status: 400, error: "구독할 지역 또는 키워드를 입력해 주세요." };
   if (value.length > MAX_ALERT_VALUE_LENGTH) {
     return { ok: false, status: 400, error: `${MAX_ALERT_VALUE_LENGTH}자 이내로 입력해 주세요.` };
@@ -97,6 +106,17 @@ export async function addAlertSubscription(
   if (!sb) return { ok: false, status: 503, error: "일시적으로 구독을 저장할 수 없어요." };
 
   const email = normEmail(userEmail);
+  /* [1027] 이미 구독한 값이면 그 행을 그대로 돌려준다 — 화면의 "알림 받기" 버튼은 같은 지역을 몇 번이고 누를 수 있다.
+     예전에는 개수 상한을 먼저 봐서, 20개를 채운 사람이 이미 구독한 지역을 다시 누르면 "최대 20개" 오류가 났다. */
+  const { data: existing } = await sb
+    .from("user_watchlist")
+    .select("id, complex_id, complex_name, created_at")
+    .eq("user_email", email)
+    .eq("complex_id", keyOf(type, value))
+    .maybeSingle();
+  const already = existing ? rowToSubscription(existing as Record<string, unknown>) : null;
+  if (already) return { ok: true, item: already };
+
   const { count } = await sb
     .from("user_watchlist")
     .select("id", { count: "exact", head: true })

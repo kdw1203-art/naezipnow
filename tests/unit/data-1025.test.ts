@@ -15,6 +15,7 @@ import {
   toMgmtFeeRow,
 } from "@/lib/national-data/kapt-mgmt-fee-api";
 import { parseMolitErrorDetail } from "@/lib/national-data/molit-api";
+import { CRON_WORK_BUDGET_MS } from "@/lib/async/with-budget";
 import {
   HISTORY_MAX_MONTHS_PER_RUN,
   HISTORY_MAX_REGIONS_CAP,
@@ -173,18 +174,25 @@ test("[1025 · Q2] 적재 로그 — 응답 실패의 첫오류에 사유(detail
 
 /* ── 3. 백필 속도 ───────────────────────────────────────────────────────── */
 
-test("[1025 · Q3] 이력 백필 — 1회 160곳(≤ 960회) · 상한 200 · 하루 2회(02:40·14:40 UTC) · 일일 합계 < 10,000", () => {
-  assert.equal(HISTORY_MAX_REGIONS_PER_RUN, 160);
-  assert.ok(HISTORY_MAX_REGIONS_PER_RUN * 6 <= 960);
-  assert.equal(HISTORY_MAX_REGIONS_CAP, 200);
+/* [1027] 1회 160곳·하루 2회 → 45곳·하루 6회. 160곳 실행은 크론 예산 240초 안에 끝나지 않았다(운영 기록 — molit-core 주석).
+   하루 총량(≤ 1,920회)은 넘지 않는다. */
+test("[1025 · Q3 → 1027] 이력 백필 — 1회 45곳(≤ 270회) · 수동 상한도 45 · 하루 6회 · 일일 합계 < 10,000", () => {
+  assert.equal(HISTORY_MAX_REGIONS_PER_RUN, 45);
+  assert.ok(HISTORY_MAX_REGIONS_PER_RUN * 6 <= 300, "1회 호출 ≤ 300");
+  /* 가장 느리던 속도(시군구 1곳 4.5초)로도 크론 예산 안 — 빈 달 판정 몫 30초를 남긴다 */
+  assert.ok(HISTORY_MAX_REGIONS_PER_RUN * 4.5 * 1000 + 30_000 <= CRON_WORK_BUDGET_MS, "45곳 × 4.5초 + 30초 ≤ 예산");
+  /* 수동 상한이 기본값보다 크면 그 실행이 예산을 넘긴다(160곳이 그랬다) */
+  assert.equal(HISTORY_MAX_REGIONS_CAP, HISTORY_MAX_REGIONS_PER_RUN);
   assert.equal(HISTORY_MAX_MONTHS_PER_RUN, 3);
   const vercel = JSON.parse(read("vercel.json")) as { crons: { path: string; schedule: string }[] };
   const by = new Map(vercel.crons.map((c) => [c.path, c.schedule]));
-  assert.equal(by.get("/api/cron/molit-history-backfill"), "40 2,14 * * *");
+  assert.equal(by.get("/api/cron/molit-history-backfill"), "40 2,6,10,14,18,22 * * *");
   assert.equal(by.get("/api/cron/kapt-mgmt-fee-ingest"), "10 3 * * *", "관리비는 하루 1회 그대로");
   assert.equal(by.get("/api/cron/molit-nonapt-ingest"), "50 2 * * *");
-  /* 호출량 — 관리비 200×22 · 백필 960×2 · 비아파트 (12+30)×6 · 아파트 일일 16×2 · apt-master/detail ≈400 */
+  /* 호출량 — 관리비 200×22 · 백필 270×6 · 비아파트 (12+30)×6 · 아파트 일일 16×2 · apt-master/detail ≈400 */
   const backfillRuns = (by.get("/api/cron/molit-history-backfill") ?? "").split(" ")[1].split(",").length;
+  assert.equal(backfillRuns, 6);
+  assert.ok(HISTORY_MAX_REGIONS_PER_RUN * 6 * backfillRuns <= 1_920, "하루 총량은 1025 때(960 × 2)를 넘지 않는다");
   const daily =
     MGMT_FEE_BATCH * KAPT_MGMT_FEE_CALLS_PER_COMPLEX +
     HISTORY_MAX_REGIONS_PER_RUN * 6 * backfillRuns +
@@ -192,7 +200,7 @@ test("[1025 · Q3] 이력 백필 — 1회 160곳(≤ 960회) · 상한 200 · �
     16 * 2 +
     400;
   assert.ok(daily < 10_000, `일일 호출 ${daily}`);
-  /* 클램프 — 백필은 CAP, ingestMolitTransactions 의 sliceSize 는 200 까지(60 이면 160 이 잘린다) */
+  /* 클램프 — 백필은 CAP, ingestMolitTransactions 의 sliceSize 는 200 까지(수동 ?regions=200 이 잘리지 않게) */
   assert.match(code("lib/market/molit-history-backfill.ts"), /Math\.min\(HISTORY_MAX_REGIONS_CAP, opts\.maxRegions \?\? HISTORY_MAX_REGIONS_PER_RUN\)/);
   assert.match(code("lib/market/molit-transactions.ts"), /const sliceSize = Math\.max\(1, Math\.min\(200, opts\.sliceSize \?\? 16\)\)/);
   assert.match(code("lib/market/molit-history-backfill.ts"), /keepRaw: false/);

@@ -17,6 +17,7 @@ import { reportingClosed, reportingDeadlineLabel } from "@/lib/newui/reporting-w
 import { seoAlternates } from "@/lib/seo/alternates";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { logger } from "@/lib/log";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
    [#79] 월간 지역 리포트 — /region/[id]/report/2026-07
@@ -75,7 +76,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: seoAlternates(`/region/${id}/report/${slug}`),
-    openGraph: { title, description, type: "article" },
+    openGraph: { title, description, type: "article", images: DEFAULT_OG_IMAGES },
   };
 }
 

@@ -20,8 +20,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { PageHead } from "@/app/components/PageHead";
 import { StepLine } from "@/app/components/StepLine";
-import { temperatureConclusion, temperatureSteps } from "@/lib/market/region-conclusion";
-import { VerdictCard } from "../timing/region-verdict";
+import { regionActionLinks, temperatureConclusion, temperatureSteps } from "@/lib/market/region-conclusion";
+import { RegionActionCard, RegionPrimaryBar, VerdictCard } from "../timing/region-verdict";
 import { Explain } from "@/app/components/explain/Explain";
 import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
 import type { TemperatureLatest } from "@/lib/market/temperature-archive";
@@ -141,7 +141,7 @@ export function TempMapClient({
 }: {
   weeks: WeekView[];
   history: HistoryView | null;
-  /** 레일 아래 — 다음 행동 카드 · "이어서" 칩(서버가 만든 RegionActionCard · AnalysisCrossLinks) */
+  /** 레일 아래 — "이어서" 칩(서버가 만든 AnalysisCrossLinks). [1027] 다음 행동 카드는 이 컴포넌트가 그린다(아래 actionCard) */
   rail: ReactNode;
   /** 이번 주 기록 지역 수(제목 줄) */
   totalCount: number;
@@ -201,6 +201,12 @@ export function TempMapClient({
     falling: stats.falling,
     compared: stats.compared,
   });
+
+  /* [1027] 다음 행동(알림 구독 · 지도 · 노트)의 지역 = **지금 화면의 결론이 말하는 곳**(고른 주·시/도에서 가장 뜨거운 곳).
+     예전에는 서버가 "이번 주 전국 1위"로 고정해 넘겼다 — 부산을 골라 "가장 뜨거운 곳 부산 …"을 읽고 누르면
+     서울의 다른 구가 구독됐다. 결론(위 conclusion)과 같은 stats.hottest 를 쓴다. */
+  const actionRegion = stats.hottest?.current.regionLabel ?? null;
+  const actionCard = <RegionActionCard regionLabel={actionRegion} links={regionActionLinks(actionRegion, actionRegion)} />;
 
   const railList = (
     <section className="card rounded-2xl p-4 max-md:p-3.5">
@@ -530,15 +536,19 @@ export function TempMapClient({
           {/* 폰 — 레일 내용을 본문 아래 한 열로(같은 내용을 두 자리 중 한 곳에만) */}
           <div className="flex flex-col gap-3 lg:hidden">
             {railList}
+            {actionCard}
             {rail}
           </div>
         </div>
 
         <aside className="hidden lg:flex lg:flex-col lg:gap-3 lg:sticky lg:top-[76px] lg:self-start">
           {railList}
+          {actionCard}
           {rail}
         </aside>
       </div>
+      {/* [1026] 폰 하단 바 — 레일의 채움 파랑과 같은 요소(화면에 한 번). [1027] 지역은 위 actionCard 와 같은 값 */}
+      <RegionPrimaryBar regionLabel={actionRegion} />
     </>
   );
 }

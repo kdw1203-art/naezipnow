@@ -13,6 +13,7 @@ import { postAttachments } from "@/lib/community/attachments";
 import { townHandoff } from "@/lib/town/handoff";
 import { regionIdForName } from "@/lib/region/catalog";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { formatKstDateTime } from "@/lib/format/kst";
 import { relativeTime } from "../../shared";
@@ -124,7 +125,8 @@ export async function generateMetadata({
       locale: "ko_KR",
       publishedTime: post.createdAt,
       ...(post.updatedAt ? { modifiedTime: post.updatedAt } : {}),
-      ...(photos.length ? { images: photos.slice(0, 1).map((url) => ({ url })) } : {}),
+      /* [1027 · 제안 20] 사진 없는 글도 공유 카드가 비지 않게 — 화면이 openGraph 를 적으면 루트의 기본 그림이 사라진다 */
+      images: photos.length ? photos.slice(0, 1).map((url) => ({ url })) : DEFAULT_OG_IMAGES,
     },
     twitter: {
       card: photos.length ? "summary_large_image" : "summary",

@@ -4,14 +4,18 @@ import type { WorkbenchComplex } from "@/lib/ai/workbench-constants";
 import {
   CHECKLIST_FULL,
   DISTRICT_OPTIONS,
-  ECONOMY_FULL,
-  RISK_BLOCKS,
-  TIMING_FULL,
   WORKBENCH_COMPLEXES,
   complexById,
   compositeScore,
   jeonseRatio,
 } from "@/lib/ai/workbench-constants";
+
+/* [1027] 예시 표 세 개(RISK_BLOCKS · TIMING_FULL · ECONOMY_FULL)를 이 엔진에서 걷었다.
+   셋 다 코드에 박아 둔 고정값이었다 — "기준금리 3.00% · 주담대 3.85% · 전국 미분양 68,247호",
+   "강남구 매수 강도 82", "입주 물량 높음(2026 수도권 다소 집중)". 그런데 buildAnalysisMessages 가
+   이 표를 "서버에서 계산·조회한 참고 데이터"로 외부 AI 모델에 넘겼고, 자체 엔진 본문은 오늘 날짜를
+   기준일로 달아 그대로 적었다. 실제 값(기준금리·미분양·지역 변동률·전세가율)은 화면이 보낸 입력의
+   live 묶음과 공공데이터 컨텍스트에 따로 실려 온다 — 이제 모델은 그것만 본다. */
 
 function kstDateLabel(): string {
   return new Intl.DateTimeFormat("ko-KR", {
@@ -233,29 +237,10 @@ export function buildInternalAnalysisMarkdown(
         .join("\n");
     }
     case "ai-risk": {
-      const s = snap as {
-        blocks: {
-          title: string;
-          score: number;
-          summary: string;
-          factors: { name: string; level: string; note: string }[];
-        }[];
-        region?: string;
-      };
-      const high = s.blocks.filter((b) => b.score >= 42);
+      const s = snap as { region?: string };
       return [
         "## 요약 (자체 엔진·리스크)",
-        `${s.region ? `입력 지역(${s.region})을 포함해` : "입력 조건 기준으로"} 확인한 결과, 주요 리스크 항목 ${high.length}개가 우선 관리 대상입니다.`,
-        "",
-        "## 우선 점검 항목",
-        ...s.blocks
-          .slice(0, 4)
-          .map((b) => `- **${b.title}** · 리스크 점수 ${b.score} · ${b.summary}`),
-        "",
-        "## 세부 팩터",
-        ...s.blocks
-          .slice(0, 2)
-          .flatMap((b) => b.factors.slice(0, 2).map((f) => `- ${f.name}: ${f.level} (${f.note})`)),
+        `${s.region ? `입력 지역(${s.region}) 기준 ` : ""}위험 항목별 판정은 공공데이터 자동 계산(결과 요약)이 맡습니다. 이 본문에는 점수를 싣지 않습니다.`,
         "",
         "## 대응 가이드",
         "- 거래·금리·공급 이슈는 동일 생활권 내 대체 단지와 함께 비교하세요.",
@@ -268,7 +253,6 @@ export function buildInternalAnalysisMarkdown(
     }
     case "ai-timing": {
       const s = snap as {
-        rows: { region: string; strength: number; signal: string; note: string; catalyst?: string }[];
         userTiming?: {
           horizonMonths?: number;
           urgency?: string;
@@ -276,16 +260,9 @@ export function buildInternalAnalysisMarkdown(
           watchList?: string;
         };
       };
-      const top = [...s.rows].sort((a, b) => b.strength - a.strength).slice(0, 5);
       return [
         "## 요약 (자체 엔진·매수 타이밍)",
-        `현재 필터에서 진입 점수가 높은 상위 지역 ${top.length}개를 우선 후보로 제시합니다.`,
-        "",
-        "## 상위 후보",
-        ...top.map(
-          (r, i) =>
-            `- ${i + 1}. **${r.region}** · 시그널 ${r.signal} · 강도 ${r.strength} · ${r.catalyst ?? r.note}`,
-        ),
+        "지역의 가격·거래 신호는 공공데이터 자동 계산(결과 요약)이 맡습니다. 이 본문에는 지역 순위를 싣지 않습니다.",
         "",
         "## 사용자 조건 반영",
         `- 목표 기간: ${s.userTiming?.horizonMonths ?? 12}개월`,
@@ -305,17 +282,9 @@ export function buildInternalAnalysisMarkdown(
         .join("\n");
     }
     case "ai-economy": {
-      const s = snap as {
-        rows: { name: string; value: string; change: string; trend: string; impact: string; desc: string }[];
-      };
       return [
         "## 요약 (자체 엔진·경제지표)",
-        `핵심 지표 ${s.rows.length}개를 기준으로 현재 국면을 요약했습니다.`,
-        "",
-        "## 지표 스냅샷",
-        ...s.rows.map(
-          (r) => `- **${r.name}**: ${r.value} (${r.change}) · 추세 ${r.trend} · ${r.impact} · ${r.desc}`,
-        ),
+        "기준금리·미분양·지역 가격 변동 값은 공공데이터 자동 계산(결과 요약)이 맡습니다. 이 본문에는 지표 값을 싣지 않습니다.",
         "",
         "## 해석 가이드",
         "- 금리·거래량·공급 지표를 한 세트로 보되, 단기 변동에 과민 반응하지 마세요.",
@@ -542,12 +511,22 @@ export function flattenAnalysisInput(input: Record<string, unknown>): Record<str
   return { ...input };
 }
 
+/**
+ * [1027] 외부 모델에 "서버에서 계산·조회한 참고 데이터"로 넘기는 묶음 — buildAnalysisMessages 가 싣는 것과 같은 값.
+ * 수치 검증(guardLlmNumbers)의 허용 목록이 이 묶음도 읽는다: 프롬프트는 참고 데이터의 수치를 써도 된다고 하는데
+ * 허용 목록에는 입력과 공공데이터만 있어, 서버가 계산해 준 값(금리 ±1%p 월 상환액 등)을 모델이 인용하면
+ * "근거가 확인되지 않은 숫자"라는 경고가 붙었다.
+ */
+export function analysisReferenceData(tool: AiAnalysisToolId, input: Record<string, unknown>): unknown {
+  return snapshotForLlm(tool, buildDataSnapshot(tool, input));
+}
+
 export function buildAnalysisMessages(
   tool: AiAnalysisToolId,
   input: Record<string, unknown>,
   publicContext?: Record<string, unknown> | null,
 ): LlmMessage[] {
-  const snapshot = buildDataSnapshot(tool, input);
+  const snapshot = analysisReferenceData(tool, input);
   const basis = kstDateLabel();
   const user = [
     `도구: ${tool}`,
@@ -559,6 +538,7 @@ export function buildAnalysisMessages(
     "",
     "서버에서 계산·조회한 참고 데이터(수치는 참고용 샘플일 수 있음):",
     safeStr(snapshot, 6000),
+    "위 입력·참고 데이터·공공데이터 컨텍스트에 없는 수치(금리·지수·거래량·순위·점수 등)는 쓰지 마세요. 값이 없으면 '자료 없음'이라고 적습니다.",
     publicContext
       ? `\n공공데이터 LIVE·부분 연동 컨텍스트(출처·기준일 포함, 반드시 인용):\n${safeStr(publicContext, 6000)}`
       : "",
@@ -580,13 +560,60 @@ export function buildAnalysisMessages(
   ];
 }
 
+/**
+ * [1027] 외부 모델에 싣는 실단지 — **아는 값만**. liveComplexFromInput 은 자체 엔진 템플릿이 쓰는 모양
+ * (WorkbenchComplex)을 맞추느라 모르는 칸을 0·등급 "B" 로 채운다(템플릿은 0 을 "표기 생략"으로 읽는다).
+ * 그 객체를 그대로 "서버에서 조회한 참고 데이터"로 넘기면 모델이 "AI 등급 B"·"교통 점수 0"·"세대수 0"을
+ * 사실처럼 인용할 수 있다. 전세 보증금은 지역 전세가율로 곱해 얻은 값이라 이름에 그렇게 적는다.
+ */
+function liveComplexFacts(c: WorkbenchComplex) {
+  return {
+    id: c.id,
+    name: c.name,
+    region: c.districtLabel || null,
+    priceSaleMan: c.priceSaleMan > 0 ? c.priceSaleMan : null,
+    jeonseDepositManFromRegionRatio: c.priceJeonMan > 0 ? c.priceJeonMan : null,
+  };
+}
+
+/**
+ * [1027] 외부 모델에 넘기기 직전의 손질 — 투자 진단·시세 예측의 단지 묶음.
+ *  · 실단지: 아는 값만(liveComplexFacts). 전세가율은 매매·전세 값이 둘 다 있을 때만.
+ *  · 샘플 단지(c1…): id 를 **명시해 보냈을 때만** 그대로. 예전에는 id 가 없어도 "c1"(은마)로 읽어, 단지를 고르지 않은
+ *    요청에도 은마의 예시 숫자(25억 · 4,386세대 · 5년 +28%)가 "서버에서 조회한 참고 데이터"로 실렸다.
+ *  · 단지를 모르면 null — 예시를 끼워 넣지 않는다.
+ * 자체 엔진 본문(buildInternalAnalysisMarkdown)은 buildDataSnapshot 의 원래 모양을 그대로 읽는다(샘플 경로 유지).
+ */
+function snapshotForLlm(tool: AiAnalysisToolId, snap: unknown): unknown {
+  if (tool !== "ai-diagnosis" && tool !== "ai-prediction") return snap;
+  const s = snap as Record<string, unknown> & {
+    complex: WorkbenchComplex;
+    complexIsLive: boolean;
+    complexIsSample: boolean;
+    compositeScore: number | null;
+    jeonseRatioPct: number;
+  };
+  const { complex: c, complexIsLive, complexIsSample, compositeScore: score, jeonseRatioPct, ...rest } = s;
+  return {
+    complex: complexIsLive ? liveComplexFacts(c) : complexIsSample ? c : null,
+    complexIsLive,
+    ...(complexIsSample ? { complexIsSample: true } : {}),
+    compositeScore: complexIsSample ? score : null,
+    jeonseRatioPct:
+      complexIsSample || (complexIsLive && c.priceSaleMan > 0 && c.priceJeonMan > 0) ? jeonseRatioPct : null,
+    ...rest,
+  };
+}
+
 function buildDataSnapshot(tool: AiAnalysisToolId, input: Record<string, unknown>) {
   const in_ = flattenAnalysisInput(input);
+  const sampleExplicit = in_.complexId != null && String(in_.complexId).trim() !== "";
   const complexId = String(in_.complexId ?? "c1");
   const sampleComplex = complexById(complexId);
   const liveComplex = sampleComplex ? null : liveComplexFromInput(in_);
   const c = sampleComplex ?? liveComplex ?? WORKBENCH_COMPLEXES[0];
   const complexIsLive = liveComplex != null;
+  const complexIsSample = sampleComplex != null && sampleExplicit;
   const districtLabel =
     DISTRICT_OPTIONS.find((d) => d.id === in_.regionDistrictId)?.label ??
     in_.regionFreeText ??
@@ -635,6 +662,8 @@ function buildDataSnapshot(tool: AiAnalysisToolId, input: Record<string, unknown
       return {
         complex: c,
         complexIsLive,
+        /* [1027] 샘플 단지 id 를 명시해 보냈는가 — 외부 모델에 넘길 때 쓴다(snapshotForLlm) */
+        complexIsSample,
         compositeScore: complexIsLive ? null : compositeScore(c),
         jeonseRatioPct: Math.round(jeonseRatio(c)),
         sliders: {
@@ -697,31 +726,18 @@ function buildDataSnapshot(tool: AiAnalysisToolId, input: Record<string, unknown
       };
     }
     case "ai-risk":
+      /* [1027] 예시 리스크 표(RISK_BLOCKS)를 싣지 않는다 — 고른 단지·지역과 무관한 고정 점수였다 */
       return {
-        blocks: RISK_BLOCKS,
         region: in_.region,
         subjectiveMemo: input.subjectiveMemo,
       };
     case "ai-timing": {
-      const q = String(in_.districtQuery ?? "")
-        .trim()
-        .toLowerCase();
       const chipIds = Array.isArray(in_.timingDistrictIds)
         ? (in_.timingDistrictIds as unknown[]).map(String).filter(Boolean)
         : [];
-      let rows = TIMING_FULL;
-      if (chipIds.length) {
-        rows = rows.filter((r) => chipIds.includes(r.districtId));
-      }
-      if (q) {
-        rows = rows.filter(
-          (r) =>
-            r.region.toLowerCase().includes(q) || r.districtId.toLowerCase().includes(q),
-        );
-      }
-      if (!rows.length) rows = TIMING_FULL;
+      /* [1027] 예시 지역 신호 표(TIMING_FULL — "강남구 BUY 강도 82")를 싣지 않는다.
+         사용자가 고른 지역·조건만 넘긴다(지역의 실제 신호는 입력의 live 묶음과 공공데이터 컨텍스트에 있다). */
       return {
-        rows: rows.slice(0, 24),
         filterApplied: { districtQuery: in_.districtQuery, timingDistrictIds: chipIds },
         userTiming: {
           horizonMonths: in_.horizonMonths,
@@ -739,7 +755,8 @@ function buildDataSnapshot(tool: AiAnalysisToolId, input: Record<string, unknown
       };
     }
     case "ai-economy":
-      return { rows: ECONOMY_FULL.slice(0, 8) };
+      /* [1027] 예시 지표 표(ECONOMY_FULL)를 싣지 않는다 — 기준금리·미분양 등 실제 값은 입력의 live 묶음에 있다 */
+      return {};
     case "my-checklist":
       return {
         categories: CHECKLIST_FULL.map((cat) => ({ title: cat.title, n: cat.items.length })),

@@ -28,6 +28,7 @@ import { NaverMap, type MapIdleInfo, type MapMarkerData } from "@/components/map
 /* [1009 · C] 호버 말풍선 등락 표기 — 사이트 공통 규칙(상승 ▲ 빨강 · 하락 ▼ 파랑 · 보합) */
 import { DELTA_CLASS, deltaDir, deltaText } from "@/lib/format/delta";
 import { stepLevel, syncCenterState, syncLevelState } from "@/lib/map/viewport-sync";
+import { MAP_HOME_VIEW, initialMapLevel, nearestZoomTab } from "@/lib/map/home-view";
 import {
   MapSearchBox,
   type MapSearchSelectAddress,
@@ -53,11 +54,25 @@ const ListingPreviewPanel = dynamic(
   { ssr: false },
 );
 import {
+  PROJECT_GROUPS,
+  STAGES,
   colorForType,
   labelForType,
-  stageLabel,
+  type ProjectGroupKey,
   type RedevelopmentProject,
+  type StageKey,
 } from "@/lib/redevelopment/types";
+import {
+  REDEV_LABEL_MODES,
+  buildRedevInfoHtml,
+  escapeHtml,
+  filterRedevProjects,
+  isRedevLabelMode,
+  redevGroupCounts,
+  redevMarkerLabel,
+  redevStageCounts,
+  type RedevLabelMode,
+} from "@/lib/redevelopment/map-layer";
 import { Icon } from "@/app/components/Icon";
 import type { CoachmarkStep } from "@/app/components/CoachmarkTour";
 const CoachmarkTour = dynamic(
@@ -171,11 +186,16 @@ function ZoomTabButtons({ zoom, onSelect }: { zoom: Zoom; onSelect: (k: Zoom) =>
   );
 }
 
-const ZOOM_CAPTION: Record<Zoom, string> = {
-  city: "줌 레벨 9 · 지역 집계 버블",
-  dong: "줌 레벨 12 · 동별 시세 + 활동량",
-  danji: "줌 레벨 15 · 단지/매물 표시",
+/* [1027] 숫자는 지금 지도의 실제 줌(21 − level)을 적는다. 예전에는 탭마다 9·12·15 를 글자로 박아 두어,
+   탭과 다른 축척(홈 화면 level 10 · 끌어서 확대한 뒤)에서 틀린 숫자가 나갔다. 뒤의 풀이는 탭이 켜는 내용 그대로. */
+const ZOOM_CAPTION_TEXT: Record<Zoom, string> = {
+  city: "지역 집계 버블",
+  dong: "동별 시세 + 활동량",
+  danji: "단지/매물 표시",
 };
+function zoomCaption(tab: Zoom, level: number): string {
+  return `줌 레벨 ${Math.round(21 - level)} · ${ZOOM_CAPTION_TEXT[tab]}`;
+}
 
 /** 내부 level(1~14) — naver zoom = 21 - level (city 9 / dong 12 / danji 15) */
 const LEVEL_BY_ZOOM: Record<Zoom, number> = { city: 12, dong: 9, danji: 6 };
@@ -331,7 +351,7 @@ interface MapClientProps {
    * 이름을 legal_regions 좌표로 풀어 서버에서 넘긴다.
    */
   initialFocus?: { name: string; lat: number; lng: number } | null;
-  /** ?z= 공유 줌 레벨 (6~19) — 없으면 기존 규칙(진입 포커스 여부)으로 */
+  /** 공유 주소의 축척 — ?z=(네이버 줌 6~19)를 내부 level(21 − 줌)로 바꾼 값(lib/map/entry-params). 없으면 진입 포커스 규칙으로 */
   initialLevel?: number | null;
   /** 노트→지도 핸드오프 — 단지 패널을 바로 연다 */
   initialComplexFocus?: {
@@ -701,17 +721,17 @@ export function MapClient({
   /* 좌표 단독 공유 URL 은 name 이 "" 다 — 라벨은 기본값으로 폴백(|| 가 의도) */
   const focusedRegion = initialFocus?.name || null;
   const hasEntryFocus = Boolean(initialFocus || initialComplexFocus);
+  /* [1027] 첫 화면 축척 — 목적지가 없으면 홈 화면(서울시청 · level 10). 예전엔 단지 목록만 있으면
+     단지 줌이었고 중심은 그 목록 좌표의 평균이라, 전국 인기 단지 30곳의 평균인 충북 진천 산속이
+     단지 줌으로 열렸다(운영 실측 — lib/map/home-view.ts). 홈 화면의 탭은 "시·군·구" — 그 축척에서 지도가
+     그리는 것이 구 평균 버블이다(탭은 표시만이 아니라 무엇을 그릴지도 정한다). */
   const [zoom, setZoom] = useState<Zoom>(() => {
-    if (initialLevel != null) {
-      // 공유 URL 의 숫자 레벨 → 가장 가까운 탭으로 표시 동기화
-      const entries = Object.entries(LEVEL_BY_ZOOM) as [Zoom, number][];
-      entries.sort((a, b) => Math.abs(a[1] - initialLevel) - Math.abs(b[1] - initialLevel));
-      return entries[0][0];
-    }
-    return hasEntryFocus || danji.length > 0 ? "danji" : "city";
+    if (initialLevel == null) return hasEntryFocus ? "danji" : MAP_HOME_VIEW.tab;
+    // 공유 URL 의 축척(?z) → 가장 가까운 탭으로 표시 동기화
+    return nearestZoomTab(initialLevel, LEVEL_BY_ZOOM);
   });
-  const [level, setLevel] = useState<number>(
-    initialLevel ?? (hasEntryFocus || danji.length > 0 ? LEVEL_BY_ZOOM.danji : LEVEL_BY_ZOOM.city),
+  const [level, setLevel] = useState<number>(() =>
+    initialMapLevel({ initialLevel, hasEntryFocus, focusLevel: LEVEL_BY_ZOOM.danji }),
   );
   const [panelOpen, setPanelOpen] = useState(true);
   /* 모바일 지도↔목록 전환 — 데스크탑은 좌측 목록 패널이 항상 있지만 모바일은
@@ -739,13 +759,8 @@ export function MapClient({
       ? danji.find((d) => d.id === initialComplexFocus.id)
       : null;
     if (focusDanji) return { lat: focusDanji.lat, lng: focusDanji.lng };
-    if (danji.length > 0) {
-      const lat = danji.reduce((s, d) => s + d.lat, 0) / danji.length;
-      const lng = danji.reduce((s, d) => s + d.lng, 0) / danji.length;
-      return { lat, lng };
-    }
-    // 단지 좌표가 없으면 지역 시세 마커 중심(수도권) — 서울 시청 근방
-    return { lat: 37.5665, lng: 126.978 };
+    /* [1027] 목적지 없는 진입 — 단지 목록 좌표의 평균을 쓰지 않는다(전국 목록의 평균은 아무 데도 아니다) */
+    return { lat: MAP_HOME_VIEW.lat, lng: MAP_HOME_VIEW.lng };
   });
 
   /* ===== 지도 진입 시 현재 위치로 맞추기 =====
@@ -1087,6 +1102,16 @@ export function MapClient({
 
   /* ===== 정비사업 레이어 — 재개발·재건축 사업장 (공개 자료). 토글 ON 시 1회 로드 ===== */
   const [showRedevelopment, setShowRedevelopment] = useState(false);
+  /* [1027] 정비사업 걸러 보기 — 사업종류 묶음(민간·공공·소규모·기타) · 진행단계 7 · 이름표 값.
+     빈 집합 = 그 축은 걸지 않음. 뷰포트로 받아 온 목록(redevItems)에서만 거른다 — 새 조회 없음. */
+  const [redevGroups, setRedevGroups] = useState<Set<ProjectGroupKey>>(() => new Set());
+  const [redevStages, setRedevStages] = useState<Set<StageKey>>(() => new Set());
+  const [redevLabelMode, setRedevLabelMode] = useState<RedevLabelMode>("name");
+
+  /* ===== [1027] 바탕 지도 — 일반/위성 + 지적편집도. NaverMap 이 이미 받던 props(mapType ·
+     nativeLayers.cadastral)인데 /map 만 넘기지 않았다. 지적편집도는 일반·위성 어느 쪽 위에도 얹힌다. */
+  const [baseMap, setBaseMap] = useState<"normal" | "satellite">("normal");
+  const [showCadastral, setShowCadastral] = useState(false);
 
   /* ===== [#74] 입주 예정 레이어 — 자동 수집 입주물량(좌표 캐시분) ===== */
   const [showSupply, setShowSupply] = useState(false);
@@ -1213,8 +1238,19 @@ export function MapClient({
         setShowAuctions(on.has("auctions"));
         setShowSchools(on.has("schools"));
         setShowStations(on.has("stations"));
+        /* [1027] 지적편집도는 layers 토큰, 위성은 base=sat — 받은 사람이 같은 바탕으로 본다 */
+        setShowCadastral(on.has("cadastral"));
+        setBaseMap(sp.get("base") === "sat" ? "satellite" : "normal");
         const m = sp.get("metric");
         if (m === "avg" || m === "perM2" || m === "jeonse" || m === "temp") setRegionMetric(m);
+        /* [1027] 주소에 싣지 않는 값(정비사업 이름표)은 저장값에서 — 이 화면은 늘 layers= 를 주소에 써 두므로,
+           여기서 건너뛰면 새로고침할 때마다 이름표가 "구역명"으로 돌아가고 저장값까지 덮였다. */
+        try {
+          const saved = JSON.parse(window.localStorage.getItem("nz_map_prefs") ?? "null") as { redevLabel?: unknown } | null;
+          if (saved && isRedevLabelMode(saved.redevLabel)) setRedevLabelMode(saved.redevLabel);
+        } catch {
+          /* 저장값을 못 읽으면 기본 이름표 */
+        }
         return;
       }
     } catch {
@@ -1236,6 +1272,9 @@ export function MapClient({
         stations?: boolean;
         regionMetric?: string;
         tx?: "trade" | "rent";
+        base?: string;
+        cadastral?: boolean;
+        redevLabel?: string;
       };
       if (typeof p.overlay === "boolean") setShowPriceOverlay(p.overlay);
       // URL 로 매물이 켜진 진입(?type=)은 사용자의 명시 의도 — 저장값이 끄지 않는다
@@ -1248,6 +1287,9 @@ export function MapClient({
       if (typeof p.auctions === "boolean") setShowAuctions(p.auctions);
       if (typeof p.schools === "boolean") setShowSchools(p.schools);
       if (typeof p.stations === "boolean") setShowStations(p.stations);
+      if (p.base === "satellite" || p.base === "normal") setBaseMap(p.base);
+      if (typeof p.cadastral === "boolean") setShowCadastral(p.cadastral);
+      if (isRedevLabelMode(p.redevLabel)) setRedevLabelMode(p.redevLabel);
       if (
         p.regionMetric === "avg" || p.regionMetric === "perM2" ||
         p.regionMetric === "jeonse" || p.regionMetric === "temp"
@@ -1278,6 +1320,9 @@ export function MapClient({
           stations: showStations,
           regionMetric,
           tx: txType,
+          base: baseMap,
+          cadastral: showCadastral,
+          redevLabel: redevLabelMode,
         }),
       );
     } catch {
@@ -1299,19 +1344,50 @@ export function MapClient({
         showAuctions ? "auctions" : null,
         showSchools ? "schools" : null,
         showStations ? "stations" : null,
+        showCadastral ? "cadastral" : null,
       ].filter(Boolean);
       url.searchParams.set("layers", tokens.join(","));
       if (regionMetric !== "avg") url.searchParams.set("metric", regionMetric);
       else url.searchParams.delete("metric");
+      if (baseMap === "satellite") url.searchParams.set("base", "sat");
+      else url.searchParams.delete("base");
       window.history.replaceState(null, "", url.toString());
     } catch {
       /* 주소창 동기화 실패 — 지도 동작과 무관 */
     }
-  }, [showPriceOverlay, showListings, showRedevelopment, showSupply, showMyNotes, showWatchlist, showRentShare, showAuctions, regionMetric, txType]);
+  }, [showPriceOverlay, showListings, showRedevelopment, showSupply, showMyNotes, showWatchlist, showRentShare, showAuctions, regionMetric, txType, baseMap, showCadastral, redevLabelMode]);
   const [redevItems, setRedevItems] = useState<RedevelopmentProject[]>([]);
   /* 조회 실패와 "정말 0건"은 지도에서 똑같이 보인다 — 둘 다 마커가 없다.
      그래서 실패는 따로 들고 있다가 말로 알린다. */
   const [redevFailed, setRedevFailed] = useState(false);
+  /* [1027] 한 번이라도 받아 왔는가 — 받기 전의 "0곳"은 없다는 뜻이 아니라 아직 모른다는 뜻이다 */
+  const [redevLoaded, setRedevLoaded] = useState(false);
+  /* [1027] 걸러 본 결과·칩 숫자 — 마커·범례·패널이 전부 이 값 하나를 본다(화면 안에서 숫자가 어긋나지 않게) */
+  const redevFilterActive = redevGroups.size > 0 || redevStages.size > 0;
+  const redevShown = useMemo(
+    () => filterRedevProjects(redevItems, redevGroups, redevStages),
+    [redevItems, redevGroups, redevStages],
+  );
+  /* 칩의 수·비활성은 다 받아 온 뒤에만 — 그 전에는 전부 0 이라 고를 수 없는 것처럼 보인다 */
+  const redevCountsReady = redevLoaded && !redevFailed;
+  const redevGroupCount = useMemo(() => redevGroupCounts(redevItems, redevStages), [redevItems, redevStages]);
+  const redevStageCount = useMemo(() => redevStageCounts(redevItems, redevGroups), [redevItems, redevGroups]);
+  const toggleRedevGroup = useCallback((key: ProjectGroupKey) => {
+    setRedevGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+  const toggleRedevStage = useCallback((key: StageKey) => {
+    setRedevStages((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
 
   /* ===== 매물 미리보기 패널 — 매물 마커 클릭 시 하단 시트로 미리보기(이탈 없이) ===== */
   const [listingPreviewId, setListingPreviewId] = useState<string | null>(null);
@@ -1360,6 +1436,7 @@ export function MapClient({
     showAuctions,
     showSchools,
     showStations,
+    showCadastral,
   ].filter(Boolean).length;
 
   /* [967 · 23] 접힌 필터 바에 적을 요약 토막 — 토막 수는 activeCount 와 같다 */
@@ -1385,6 +1462,9 @@ export function MapClient({
     setBathroomsKey("all");
     setParkingKey("all");
     setCommuteKey("off");
+    /* [1027] 정비사업 걸러 보기도 같이 푼다 — "전체 초기화" 뒤에 마커가 여전히 안 보이면 없는 줄 안다 */
+    setRedevGroups(new Set());
+    setRedevStages(new Set());
   }, []);
 
   /* 범위 슬라이더를 적용한 단지 (출퇴근 추정 요청·비교의 기준 집합).
@@ -1458,8 +1538,11 @@ export function MapClient({
   const mapWrapRef = useRef<HTMLDivElement>(null);
 
   const handleMarkerHover = useCallback((m: MapMarkerData | null) => {
-    setHoverMarker(m);
-    if (!m) setHoverPos(null);
+    /* [1027] 정비사업 마커에는 단지용 호버 카드(세대수·준공·평균 전용)를 띄우지 않는다 — 칸이 전부 "—"이고,
+       이름표를 진행단계·세대수로 바꾸면 카드 제목까지 그 글자가 된다. 구역 정보는 눌렀을 때의 안내창이 맡는다. */
+    const next = m && String(m.id).startsWith("redev:") ? null : m;
+    setHoverMarker(next);
+    if (!next) setHoverPos(null);
   }, []);
 
   useEffect(() => {
@@ -2043,6 +2126,45 @@ export function MapClient({
         className="flex flex-col gap-1.5 border-t border-[rgba(16,28,54,.08)] pt-2.5"
       >
         <div className="t-sub font-bold text-text-3">지도 레이어</div>
+        {/* [1027] 바탕 지도 — 일반/위성은 둘 중 하나, 지적편집도는 그 위에 얹는 선(따로 켜고 끈다).
+            지도를 못 그린 폴백 화면에서는 바꿀 바탕이 없어 비활성. */}
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="바탕 지도">
+          <span className="t-caption font-bold text-text-3">바탕 지도</span>
+          {(
+            [
+              ["normal", "일반"],
+              ["satellite", "위성"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={baseMap === key}
+              disabled={mapFallback}
+              onClick={() => setBaseMap(key)}
+              className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors disabled:opacity-40 ${
+                baseMap === key
+                  ? "bg-primary-soft font-bold text-primary"
+                  : "bg-[var(--glass-bg)] text-text-2"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          <button
+            type="button"
+            aria-pressed={showCadastral}
+            disabled={mapFallback}
+            onClick={() => setShowCadastral((v) => !v)}
+            className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors disabled:opacity-40 ${
+              showCadastral
+                ? "bg-primary-soft font-bold text-primary"
+                : "bg-[var(--glass-bg)] text-text-2"
+            }`}
+          >
+            지적편집도
+          </button>
+        </div>
         <div className="flex flex-wrap gap-1.5">
           {/* C1 시세 색상 오버레이 토글 — 실거래 평단가 구간별 색 */}
           <button
@@ -2185,6 +2307,111 @@ export function MapClient({
             <Icon name="train" size={14} className="inline align-middle" /> 지하철
           </button>
         </div>
+        {/* [1027] 정비사업 걸러 보기 — 레이어가 켜져 있을 때만. 칩의 수는 "눌렀을 때 보이는 수"
+            (다른 축 조건을 건 뒤 센다 — lib/redevelopment/map-layer). 0곳인 칩은 고를 게 없어 비활성. */}
+        {showRedevelopment && (
+          <div className="flex flex-col gap-1.5 rounded-xl bg-[rgba(16,28,54,.04)] px-2.5 py-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="t-caption font-bold text-text-2">정비사업</span>
+              {/* 받아 오기 전·실패는 숫자로 말하지 않는다 — "0곳"은 다 받은 뒤에만 사실이다 */}
+              <span className="t-caption tabular-nums text-text-3" role="status">
+                {redevFailed
+                  ? "불러오지 못했어요"
+                  : !redevLoaded
+                    ? "불러오는 중"
+                    : redevFilterActive
+                      ? `화면 안 ${redevItems.length.toLocaleString("ko-KR")}곳 중 ${redevShown.length.toLocaleString("ko-KR")}곳`
+                      : `화면 안 ${redevItems.length.toLocaleString("ko-KR")}곳`}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="사업종류">
+              <span className="t-caption font-bold text-text-3">사업종류</span>
+              <button
+                type="button"
+                aria-pressed={redevGroups.size === 0}
+                onClick={() => setRedevGroups(new Set())}
+                className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors ${
+                  redevGroups.size === 0
+                    ? "bg-primary-soft font-bold text-primary"
+                    : "bg-[var(--glass-bg)] text-text-2"
+                }`}
+              >
+                전체
+              </button>
+              {PROJECT_GROUPS.map((g) => {
+                const on = redevGroups.has(g.key);
+                const n = redevGroupCount[g.key];
+                return (
+                  <button
+                    key={g.key}
+                    type="button"
+                    aria-pressed={on}
+                    disabled={redevCountsReady && n === 0 && !on}
+                    onClick={() => toggleRedevGroup(g.key)}
+                    className={`chip whitespace-nowrap px-2 py-1 t-caption tabular-nums transition-colors disabled:opacity-40 ${
+                      on ? "bg-primary-soft font-bold text-primary" : "bg-[var(--glass-bg)] text-text-2"
+                    }`}
+                  >
+                    {g.label}
+                    {redevCountsReady ? ` ${n.toLocaleString("ko-KR")}` : ""}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="진행단계">
+              <span className="t-caption font-bold text-text-3">진행단계</span>
+              <button
+                type="button"
+                aria-pressed={redevStages.size === 0}
+                onClick={() => setRedevStages(new Set())}
+                className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors ${
+                  redevStages.size === 0
+                    ? "bg-primary-soft font-bold text-primary"
+                    : "bg-[var(--glass-bg)] text-text-2"
+                }`}
+              >
+                전체
+              </button>
+              {STAGES.map((st) => {
+                const on = redevStages.has(st.key);
+                const n = redevStageCount[st.key];
+                return (
+                  <button
+                    key={st.key}
+                    type="button"
+                    aria-pressed={on}
+                    disabled={redevCountsReady && n === 0 && !on}
+                    onClick={() => toggleRedevStage(st.key)}
+                    className={`chip whitespace-nowrap px-2 py-1 t-caption tabular-nums transition-colors disabled:opacity-40 ${
+                      on ? "bg-primary-soft font-bold text-primary" : "bg-[var(--glass-bg)] text-text-2"
+                    }`}
+                  >
+                    {st.label}
+                    {redevCountsReady ? ` ${n.toLocaleString("ko-KR")}` : ""}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="이름표">
+              <span className="t-caption font-bold text-text-3">이름표</span>
+              {REDEV_LABEL_MODES.map((m) => (
+                <button
+                  key={m.key}
+                  type="button"
+                  aria-pressed={redevLabelMode === m.key}
+                  onClick={() => setRedevLabelMode(m.key)}
+                  className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors ${
+                    redevLabelMode === m.key
+                      ? "bg-primary-soft font-bold text-primary"
+                      : "bg-[var(--glass-bg)] text-text-2"
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {/* [940] 구 버블 지표 전환 — 넓은 줌의 구 단위 버블에 어떤 숫자를 띄울지.
             단지 줌·전세 모드에서는 구 버블 자체가 숨으므로 비활성으로 보여 준다. */}
         <div className="flex flex-wrap items-center gap-1.5">
@@ -2811,6 +3038,7 @@ export function MapClient({
           if (controller.signal.aborted) return;
           setRedevItems(Array.isArray(json.items) ? json.items : []);
           setRedevFailed(false);
+          setRedevLoaded(true);
         })
         .catch((e) => {
           if (controller.signal.aborted || (e as Error)?.name === "AbortError") return;
@@ -2894,7 +3122,7 @@ export function MapClient({
       label: n.title,
       /* [961] 내 임장노트 = 브랜드 핀(처마+온점). 노트가 쌓일수록 지도 위에 심볼이 퍼진다 */
       brandPin: true,
-      infoHtml: `<div style="min-width:160px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${n.title}</p><p style="font-size:11px;color:#888;margin:3px 0 0">${n.visitDate ?? "내 임장 기록"}${n.avgScore ? ` · 평점 ${n.avgScore}/5` : ""}</p><a href="/notes/${n.id}" style="font-size:11px;color:var(--primary);font-weight:700">노트 열기 →</a></div>`,
+      infoHtml: `<div style="min-width:160px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(n.title)}</p><p style="font-size:11px;color:#888;margin:3px 0 0">${escapeHtml(n.visitDate ?? "내 임장 기록")}${n.avgScore ? ` · 평점 ${n.avgScore}/5` : ""}</p><a href="/notes/${encodeURIComponent(n.id)}" style="font-size:11px;color:var(--primary);font-weight:700">노트 열기 →</a></div>`,
     }));
   }, [showMyNotes, myNotes]);
 
@@ -2989,7 +3217,7 @@ export function MapClient({
       lng: r.lng,
       label: `${r.name} 월세 ${r.wolseShare}%`,
       pinColor: color(r.wolseShare),
-      infoHtml: `<div style="min-width:170px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${r.name}</p><p style="font-size:12px;margin:3px 0 0;color:#333">월세 비중 <b>${r.wolseShare}%</b> · 표본 ${r.sample.toLocaleString()}건</p>${manwon(r.monthlyMedianKrw) ? `<p style=\"font-size:11px;color:#888;margin:2px 0 0\">월세 중앙값 ${manwon(r.monthlyMedianKrw)}</p>` : ""}<p style="font-size:10px;color:#aaa;margin:3px 0 0">최근 3개월 신고 · 갱신·신규 미구분</p></div>`,
+      infoHtml: `<div style="min-width:170px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(r.name)}</p><p style="font-size:12px;margin:3px 0 0;color:#333">월세 비중 <b>${r.wolseShare}%</b> · 표본 ${r.sample.toLocaleString()}건</p>${manwon(r.monthlyMedianKrw) ? `<p style=\"font-size:11px;color:#888;margin:2px 0 0\">월세 중앙값 ${manwon(r.monthlyMedianKrw)}</p>` : ""}<p style="font-size:10px;color:#aaa;margin:3px 0 0">최근 3개월 신고 · 갱신·신규 미구분</p></div>`,
     }));
   }, [showRentShare, rentShareItems]);
 
@@ -3052,7 +3280,7 @@ export function MapClient({
       lng: s.lng,
       label: s.name,
       pinColor: "#2e7d32",
-      infoHtml: `<div style="min-width:140px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${s.name}</p><p style="font-size:11px;color:#555;margin:2px 0 0">${s.category ?? "학교"}</p><p style="font-size:11px;color:#aaa;margin:2px 0 0">전국초중등학교위치 표준데이터</p></div>`,
+      infoHtml: `<div style="min-width:140px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(s.name)}</p><p style="font-size:11px;color:#555;margin:2px 0 0">${escapeHtml(s.category ?? "학교")}</p><p style="font-size:11px;color:#aaa;margin:2px 0 0">전국초중등학교위치 표준데이터</p></div>`,
     }));
   }, [showSchools, poiData]);
 
@@ -3064,7 +3292,7 @@ export function MapClient({
       lng: s.lng,
       label: s.line ? `${s.name} (${s.line})` : s.name,
       pinColor: "#00579b",
-      infoHtml: `<div style="min-width:140px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${s.name}</p><p style="font-size:11px;color:#555;margin:2px 0 0">${s.line ?? "도시철도"}</p><p style="font-size:11px;color:#aaa;margin:2px 0 0">전국도시철도역사 표준데이터</p></div>`,
+      infoHtml: `<div style="min-width:140px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(s.name)}</p><p style="font-size:11px;color:#555;margin:2px 0 0">${escapeHtml(s.line ?? "도시철도")}</p><p style="font-size:11px;color:#aaa;margin:2px 0 0">전국도시철도역사 표준데이터</p></div>`,
     }));
   }, [showStations, poiData]);
 
@@ -3076,7 +3304,7 @@ export function MapClient({
           ? `${(v / 100_000_000).toFixed(v >= 1_000_000_000 ? 0 : 1)}억`
           : `${Math.round(v / 10_000).toLocaleString("ko-KR")}만`
         : null;
-    const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+    /* [1027] 안내창에 들어가는 글자는 공용 escapeHtml 로(lib/redevelopment/map-layer) — 예전 esc 는 & 와 < 만 바꿨다 */
     return auctionItems.map((a) => {
       const minBid = eok(a.minBidKrw);
       /* [940] 마감 임박 상위 3건 미리보기 — 목록으로 나가기 전에 지도 안에서
@@ -3087,8 +3315,8 @@ export function MapClient({
               .map(
                 (t) =>
                   `<p style="font-size:11px;margin:2px 0 0;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px">${
-                    t.endYmd ? `<b style="color:#7c3aed">${t.endYmd}</b> ` : ""
-                  }${esc(t.name)}${eok(t.minBidKrw) ? ` <span style="color:#888">${eok(t.minBidKrw)}~</span>` : ""}</p>`,
+                    t.endYmd ? `<b style="color:#7c3aed">${escapeHtml(t.endYmd)}</b> ` : ""
+                  }${escapeHtml(t.name)}${eok(t.minBidKrw) ? ` <span style="color:#888">${eok(t.minBidKrw)}~</span>` : ""}</p>`,
               )
               .join("")}</div>`
           : "";
@@ -3099,7 +3327,7 @@ export function MapClient({
         lng: a.lng,
         label: `${a.name} 공매 ${a.count}건`,
         pinColor: "#7c3aed",
-        infoHtml: `<div style="min-width:190px;max-width:240px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${a.name}</p><p style="font-size:13px;margin:3px 0 0;color:#333">공매 진행 <b>${a.count}건</b>${minBid ? ` · 최저입찰 ${minBid}~` : ""}</p>${topHtml}<p style="font-size:11px;color:#888;margin:4px 0 0">온비드(한국자산관리공사) · 구 단위 집계 — 위치는 구 중심 표시${a.top?.length ? " · 굵은 날짜는 입찰 마감일" : ""}</p><a href="/auctions?gu=${encodeURIComponent(a.name)}" style="font-size:11px;color:var(--primary);font-weight:700">물건 목록 보기 →</a></div>`,
+        infoHtml: `<div style="min-width:190px;max-width:240px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(a.name)}</p><p style="font-size:13px;margin:3px 0 0;color:#333">공매 진행 <b>${a.count}건</b>${minBid ? ` · 최저입찰 ${minBid}~` : ""}</p>${topHtml}<p style="font-size:11px;color:#888;margin:4px 0 0">온비드(한국자산관리공사) · 구 단위 집계 — 위치는 구 중심 표시${a.top?.length ? " · 굵은 날짜는 입찰 마감일" : ""}</p><a href="/auctions?gu=${encodeURIComponent(a.name)}" style="font-size:11px;color:var(--primary);font-weight:700">물건 목록 보기 →</a></div>`,
       };
     });
   }, [showAuctions, auctionItems]);
@@ -3113,9 +3341,9 @@ export function MapClient({
         ? `<p style="font-size:11px;color:#888;margin:2px 0 0">${s.households.toLocaleString()}세대</p>`
         : "";
       const infoHtml = `<div style="min-width:170px;max-width:230px">
-        <p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${s.name}</p>
-        <p style="font-size:12px;margin:3px 0 0;color:#0d9488;font-weight:700">${ymLabel} 입주 예정</p>
-        <p style="font-size:11px;color:#888;margin:3px 0 0">${s.region} · 청약홈 공고 기준</p>
+        <p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(s.name)}</p>
+        <p style="font-size:12px;margin:3px 0 0;color:#0d9488;font-weight:700">${escapeHtml(ymLabel)} 입주 예정</p>
+        <p style="font-size:11px;color:#888;margin:3px 0 0">${escapeHtml(s.region)} · 청약홈 공고 기준</p>
         ${hh}
       </div>`;
       return {
@@ -3129,44 +3357,26 @@ export function MapClient({
     });
   }, [showSupply, supplyItems]);
 
+  /* [1027] 걸러 본 구역(redevShown)만 찍는다 · 이름표는 고른 값(구역명/진행단계/세대수) ·
+     안내창은 /redevelopment 와 같은 것(lib/redevelopment/map-layer — 글자 이스케이프 · http(s) 출처만 ·
+     구역 상세 링크). 예전 안내창은 구역명·주소·출처 주소를 이스케이프 없이 innerHTML 에 넣었다. */
   const redevelopmentMarkers = useMemo<MapMarkerData[]>(() => {
     if (!showRedevelopment) return [];
-    return redevItems.map((p) => {
-      const color = colorForType(p.typeKey);
-      const src = p.sourceUrl
-        ? `<a href="${p.sourceUrl}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:var(--primary)">출처 ↗</a>`
-        : "";
-      const hh = p.households
-        ? `<p style="font-size:11px;color:#888;margin:2px 0 0">예정 ${p.households.toLocaleString()}세대</p>`
-        : "";
-      const infoHtml = `<div style="min-width:180px;max-width:230px">
-        <p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${p.name}</p>
-        <p style="font-size:12px;margin:3px 0 0;display:flex;align-items:center;gap:5px">
-          <span style="display:inline-block;width:9px;height:9px;border-radius:9999px;background:${color}"></span>
-          <span style="color:#333;font-weight:600">${labelForType(p.typeKey)}</span>
-          <span style="color:#aaa">·</span>
-          <span style="color:#555">${stageLabel(p.stageKey)}</span>
-        </p>
-        <p style="font-size:11px;color:#888;margin:3px 0 0">${p.sigungu}${p.address ? " · " + p.address : ""}</p>
-        ${hh}
-        <div style="margin-top:5px">${src}</div>
-      </div>`;
-      return {
-        id: `redev:${p.id}`,
-        lat: p.lat,
-        lng: p.lng,
-        label: p.name,
-        pinColor: color,
-        infoHtml,
-      };
-    });
-  }, [showRedevelopment, redevItems]);
+    return redevShown.map((p) => ({
+      id: `redev:${p.id}`,
+      lat: p.lat,
+      lng: p.lng,
+      label: redevMarkerLabel(p, redevLabelMode),
+      pinColor: colorForType(p.typeKey),
+      infoHtml: buildRedevInfoHtml(p),
+    }));
+  }, [showRedevelopment, redevShown, redevLabelMode]);
 
   // 정비사업 레이어 범례 (#20) — 화면에 실제 존재하는 사업종류만 색상칩으로 노출
   const redevLegend = useMemo<{ color: string; label: string }[]>(() => {
     if (!showRedevelopment) return [];
     const seen = new Map<string, { color: string; label: string }>();
-    for (const p of redevItems) {
+    for (const p of redevShown) {
       if (!seen.has(p.typeKey)) {
         seen.set(p.typeKey, {
           color: colorForType(p.typeKey),
@@ -3175,7 +3385,7 @@ export function MapClient({
       }
     }
     return Array.from(seen.values());
-  }, [showRedevelopment, redevItems]);
+  }, [showRedevelopment, redevShown]);
 
   // 지역(구/시) 실시세 마커 — 한국부동산원(REB) 실데이터. 시·군·구/동 줌에서만 노출.
   const regionMarketMarkers = useMemo<MapMarkerData[]>(() => {
@@ -3204,7 +3414,7 @@ export function MapClient({
           ? `<p style="font-size:11px;margin:2px 0 0;color:var(--text-2)">시장 온도 <b style="color:${tempTok}">${Math.round(t)}</b><span style="color:var(--text-3)">/100${r.tempWeek ? ` · ${r.tempWeek.slice(5).replace("-", ".")}주` : ""}</span></p>`
           : "";
       const infoHtml = `<div style="padding:10px 14px;min-width:150px;font-family:sans-serif;background:var(--surface);color:var(--ink)">
-        <p style="font-weight:700;font-size:13px;margin:0;color:var(--ink)">${r.name}</p>
+        <p style="font-weight:700;font-size:13px;margin:0;color:var(--ink)">${escapeHtml(r.name)}</p>
         <p style="font-size:12px;margin:3px 0 0;color:var(--text-2)">평균 매매 <b style="color:var(--ink)">${price}</b> ${chgHtml}</p>
         ${tempHtml}
         <p style="font-size:11px;color:var(--text-3);margin:2px 0 0">거래 ${r.tradeCount.toLocaleString("ko-KR")}건${r.jeonseRatio != null ? ` · 전세가율 ${Math.round(r.jeonseRatio)}%` : ""}</p>
@@ -3806,7 +4016,7 @@ export function MapClient({
    * 고민할 일이 없다.
    */
   /* [1023 · 지도] 실패 고지에는 그 레이어를 다시 조회하는 손잡이(retry)를 단다 — 문구만 있고 손잡이가 없던 7종. */
-  const mapNotices: { key: string; text: string; retry?: () => void }[] = [];
+  const mapNotices: { key: string; text: string; retry?: () => void; retryLabel?: string }[] = [];
   if (viewportEmpty || clusterFetchStatus === "error") {
     mapNotices.push({
       key: "cluster",
@@ -3845,6 +4055,19 @@ export function MapClient({
       key: "redev-failed",
       text: "정비사업을 불러오지 못했어요 — 잠시 후 다시 시도해 주세요. 사업장이 없다는 뜻은 아니에요",
       retry: () => retryLayer("redev"),
+    });
+  }
+  /* [1027] 정비사업 조건에 맞는 구역이 화면에 하나도 없다 — 패널을 닫으면 조건이 안 보여서, 말해 주지 않으면
+     "여긴 정비사업이 없구나"로 읽힌다. 조건을 푸는 손잡이를 같이 단다. */
+  if (showRedevelopment && redevCountsReady && redevFilterActive && redevItems.length > 0 && redevShown.length === 0) {
+    mapNotices.push({
+      key: "redev-filtered-out",
+      text: `정비사업 조건에 맞는 구역이 이 화면에 없어요 — 조건을 풀면 ${redevItems.length.toLocaleString("ko-KR")}곳`,
+      retry: () => {
+        setRedevGroups(new Set());
+        setRedevStages(new Set());
+      },
+      retryLabel: "조건 풀기",
     });
   }
   /* [#130] 내 노트 — 로그인·실패·0건을 구분해 말한다 */
@@ -3969,6 +4192,8 @@ export function MapClient({
     </span>
   );
 
+  const nativeMapLayers = useMemo(() => ({ cadastral: showCadastral }), [showCadastral]);
+
   const mdSidebarOpen = !selected && !infoComplex && panelOpen;
   const mdLeftLegendX = mdSidebarOpen
     ? "md:left-[356px] md:max-w-[calc(100vw_-_356px_-_var(--nz-map-right-lane))]"
@@ -4003,6 +4228,9 @@ export function MapClient({
         level={level}
         rounded={false}
         showControls={false}
+        /* [1027] 바탕 지도 — 일반/위성 · 지적편집도(패널 "지도 레이어" 절에서 고른다) */
+        mapType={baseMap}
+        nativeLayers={nativeMapLayers}
         ncpKeyId={ncpKeyId}
         onInteractionStart={handleMapInteractionStart}
         /* 모바일22 — 지도 화면에 현재 위치 버튼이 아예 없었다(매물 등록 폼에만
@@ -4111,8 +4339,9 @@ export function MapClient({
           className="pointer-events-none absolute bottom-[var(--nz-notice-bottom)] left-4 right-[68px] z-40 flex flex-col items-start gap-1.5 md:bottom-auto md:left-auto md:right-5 md:top-[calc(env(safe-area-inset-top,0px)+176px)] md:w-[320px] md:items-stretch"
           style={
             {
+              /* [1027] 폰 범례에 정비사업 종류 줄이 생겼다(두 개씩 한 줄 ≈ 24px) — 그만큼 안내를 올린다 */
               "--nz-notice-bottom": mobileLegendOpen
-                ? "calc(env(safe-area-inset-bottom, 0px) + 226px)"
+                ? `calc(env(safe-area-inset-bottom, 0px) + ${226 + (showRedevelopment ? Math.ceil(redevLegend.length / 2) * 24 : 0)}px)`
                 : "calc(env(safe-area-inset-bottom, 0px) + 142px)",
             } as CSSProperties
           }
@@ -4131,7 +4360,7 @@ export function MapClient({
                   onClick={n.retry}
                   className="map-notice-retry ml-2 inline-flex min-h-[24px] items-center align-middle t-sub font-bold"
                 >
-                  다시 시도
+                  {n.retryLabel ?? "다시 시도"}
                 </button>
               )}
             </div>
@@ -4203,11 +4432,11 @@ export function MapClient({
         {/* 줌 단계 탭 (xl+) — 지도 위에 떠서 우측 마커 라벨(과천제이드자이류 가격
             알약)을 덮던 것을, 이 폭에서는 비어 있던 헤더 가운데로 올린다.
             1024~1279 는 filterBar 까지 넣으면 1180 폭이 모자라 플로팅 판을 유지.
-            줌 레벨 설명(ZOOM_CAPTION)은 title 로 남긴다 — 캡션 상자까지 올리면
+            줌 레벨 설명(zoomCaption)은 title 로 남긴다 — 캡션 상자까지 올리면
             헤더가 두 줄이 된다. */}
         <div
           className="hidden shrink-0 items-center gap-0.5 rounded-full bg-[rgba(16,28,54,.05)] p-1 xl:flex"
-          title={ZOOM_CAPTION[zoom]}
+          title={zoomCaption(zoom, level)}
         >
           <ZoomTabButtons zoom={zoom} onSelect={handleZoomTab} />
         </div>
@@ -4625,7 +4854,7 @@ export function MapClient({
         <ZoomTabButtons zoom={zoom} onSelect={handleZoomTab} />
       </div>
       <div className="absolute right-5 top-[92px] z-30 hidden translate-y-[76px] rounded-lg bg-[var(--glass-bg)] px-2.5 py-[5px] t-sub text-text-3 md:block xl:hidden">
-        {ZOOM_CAPTION[zoom]}
+        {zoomCaption(zoom, level)}
       </div>
 
       {/* 줌별 하단 정보 오버레이(보는 사람 수·전문가 수·조회수·급매 등)는
@@ -5322,26 +5551,30 @@ export function MapClient({
            이 열의 아래 36px 를 덮었다(834폭 실측 54×36px).
            md 에서 상세 필터 패널(364~664)과 이 열(564~764)은 가로로 겹칠 수밖에
            없어, 패널이 열려 있는 동안은 lg 에서만 보인다. 덮인 채로 두면 읽을 수
-           없고, 읽을 수 없는 범례는 없는 것과 같다. */}
+           없고, 읽을 수 없는 범례는 없는 것과 같다.
+           [1027] 높이 상한 180px 는 "매물 등록 버튼(220~) 아래에 머문다"는 위 가정과 맞지 않았다 —
+           이 열의 바닥은 20 이 아니라 --nz-map-bottom-lane(1440폭 실측 80px)이라 위끝이 260 까지 올라가
+           정비사업 종류가 5개만 돼도 매물 등록 버튼의 왼쪽 42×40px 을 덮었다(운영 2026-10-03 캡처).
+           상한을 버튼 아래끝(220) − 여백 8 − 레인 으로 계산해 넘기고, 종류는 한 줄에 여럿 흐르게 접는다. */}
       <div
-        className={`absolute bottom-[var(--nz-map-bottom-lane)] right-[70px] z-30 hidden w-[200px] max-h-[180px] flex-col items-stretch gap-2 ${
+        className={`absolute bottom-[var(--nz-map-bottom-lane)] right-[70px] z-30 hidden w-[200px] max-h-[calc(212px_-_var(--nz-map-bottom-lane))] flex-col items-stretch gap-2 ${
           filtersExpanded ? "lg:flex" : "md:flex"
         }`}
       >
         {showRedevelopment && redevLegend.length > 0 && (
-          <div className="glass flex min-h-0 flex-col gap-1.5 overflow-y-auto rounded-xl px-3 py-2.5">
-            <div className="t-sub font-bold text-ink">정비사업 종류</div>
-            <div className="flex flex-col gap-1">
+          <div className="glass flex min-h-0 flex-col gap-1 overflow-y-auto rounded-xl px-3 py-2.5">
+            <div className="t-caption font-bold text-ink">정비사업 종류</div>
+            <div className="flex flex-wrap gap-x-2 gap-y-1">
               {redevLegend.map((it) => (
                 <div
                   key={it.label}
-                  className="flex items-center gap-1.5 t-sub text-text-1"
+                  className="flex items-center gap-1 t-caption text-text-1"
                 >
                   <span
-                    className="h-[9px] w-[9px] shrink-0 rounded-full"
+                    className="h-[8px] w-[8px] shrink-0 rounded-full"
                     style={{ background: it.color }}
                   />
-                  <span className="truncate">{it.label}</span>
+                  <span className="whitespace-nowrap">{it.label}</span>
                 </div>
               ))}
             </div>
@@ -5402,7 +5635,21 @@ export function MapClient({
                 </div>
               )
             )}
-            <div className="t-caption text-text-3">{ZOOM_CAPTION[zoom]}</div>
+            {/* [1027] 정비사업 종류 — md 이상 우하단 범례에만 있던 색 풀이를 폰 범례에도 */}
+            {showRedevelopment && redevLegend.length > 0 && (
+              <div className="flex flex-wrap gap-x-2.5 gap-y-1">
+                {redevLegend.map((it) => (
+                  <div key={it.label} className="flex items-center gap-1.5 t-sub text-text-1">
+                    <span
+                      className="h-[9px] w-[9px] shrink-0 rounded-full"
+                      style={{ background: it.color }}
+                    />
+                    <span className="whitespace-nowrap">{it.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="t-caption text-text-3">{zoomCaption(zoom, level)}</div>
           </div>
         )}
         <button

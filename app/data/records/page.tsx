@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { PageShell } from "../../components/PageShell";
-import { getPublicRecordDatasetStats } from "@/lib/market/public-records";
+import { getPublicRecordDatasetStatsResult } from "@/lib/market/public-records";
 import { RecordsSearchClient } from "./RecordsSearchClient";
 import { CODEF_PRODUCTS } from "@/lib/codef/endpoints";
 import { seoAlternates } from "@/lib/seo/alternates";
@@ -18,17 +19,28 @@ import { seoAlternates } from "@/lib/seo/alternates";
    (검색어별 CDN 600초)라 이 TTL 과 무관하다. */
 export const revalidate = 86_400;
 
-export const metadata: Metadata = {
-  title: "공공 부동산 자료 현황 | 내집나우",
-  description:
-    "KB 시세·공시가격·실거래·신고이력 등 공공·공개 부동산 자료의 연동 현황과 단지별 조회.",
-  robots: { index: true, follow: true },
-  // N7 — 필터·정렬 파라미터 조합이 별개 URL 로 색인되지 않도록 canonical 고정
-  alternates: seoAlternates("/data/records"),
-};
+/* 메타데이터와 본문이 같은 통계를 한 번만 읽는다 */
+const loadStats = cache(getPublicRecordDatasetStatsResult);
+
+/* [1027] 적재가 0건인 동안은 색인하지 않는다. 운영 2026-10-03: 11개 자료 전부 "연동 대기"·"총 0건 적재"인데
+   robots 는 index 였고 사이트맵에도 실려 있었다 — 내용 없는 쪽을 검색엔진에 내는 셈이다. 자료가 한 건이라도
+   들어오면 저절로 색인이 열린다(사이트맵 정적 목록에는 그때 다시 넣는다 — lib/seo/build-sitemap.ts). */
+export async function generateMetadata(): Promise<Metadata> {
+  const { ok, stats } = await loadStats();
+  const totalRows = stats.reduce((s, d) => s + d.rows, 0);
+  return {
+    title: "공공 부동산 자료 현황 | 내집나우",
+    description:
+      "KB 시세·공시가격·실거래·신고이력 등 공공·공개 부동산 자료의 연동 현황과 단지별 조회.",
+    /* 검색 제외는 **읽어서 0건임을 확인했을 때만**. 못 읽은 날에 0건으로 치면 자료가 있는데도 하루 동안 색인에서 빠진다 */
+    ...(ok && totalRows === 0 ? { robots: { index: false, follow: true } } : {}),
+    // N7 — 필터·정렬 파라미터 조합이 별개 URL 로 색인되지 않도록 canonical 고정
+    alternates: seoAlternates("/data/records"),
+  };
+}
 
 export default async function DataRecordsPage() {
-  const stats = await getPublicRecordDatasetStats();
+  const { stats } = await loadStats();
   const totalRows = stats.reduce((s, d) => s + d.rows, 0);
 
   return (

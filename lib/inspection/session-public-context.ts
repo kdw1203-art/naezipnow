@@ -7,8 +7,6 @@ type RedevPayload = {
   district?: string;
   activeProjects?: number;
   plannedProjects?: number;
-  estimatedUnits?: number;
-  nearestCompletionYear?: number;
   projects?: Array<{ name?: string; stage?: string; type?: string }>;
   mode?: string;
   unavailableReason?: string;
@@ -75,8 +73,10 @@ export async function fetchSessionPublicSummary(session: InspectionSession): Pro
         parts.push(redevUnavailableLine(d?.unavailableReason));
         checklistHints.push("정비사업 단계·고시 문서 미확인");
       } else {
+        /* [1027] "추정 세대 N · 최근 준공 YYYY" 를 뺐다 — 면적÷85㎡ 와 올해+3년으로 만든 숫자였다
+           (lib/seoul/adapters/upis-rebuild.ts). 원천에 있는 건 사업장 수뿐이다. */
         parts.push(
-          `[정비사업] ${district} 진행 ${d.activeProjects ?? 0}건 · 계획 ${d.plannedProjects ?? 0}건 · 추정 세대 ${d.estimatedUnits ?? "?"} · 최근 준공 ${d.nearestCompletionYear ?? "?"}`,
+          `[정비사업] ${district} 진행 ${d.activeProjects ?? 0}건 · 계획 ${d.plannedProjects ?? 0}건`,
         );
         checklistHints.push(
           "정비사업 — 조합설립·정비계획 고시·관리처분 단계 문서 확인",
@@ -87,8 +87,6 @@ export async function fetchSessionPublicSummary(session: InspectionSession): Pro
           district,
           activeProjects: d.activeProjects,
           plannedProjects: d.plannedProjects,
-          estimatedUnits: d.estimatedUnits,
-          nearestCompletionYear: d.nearestCompletionYear,
           projects: projects.map((p) => ({
             name: p.name,
             stage: p.stage,

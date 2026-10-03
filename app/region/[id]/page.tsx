@@ -54,6 +54,7 @@ import { buildMarketRead } from "@/lib/region/market-read";
 import { getRegionRentSnapshot, type RegionRentSnapshot } from "@/lib/market/rent";
 import { getRegionTradeAreaBands, type RegionAreaBands } from "@/lib/market/area-bands-lite";
 import { KeywordAlertButton } from "@/app/components/KeywordAlertButton";
+import { RegionAlertButton } from "@/app/components/RegionAlertButton";
 import { EmbedSnippet } from "@/app/components/EmbedSnippet";
 import {
   breadcrumbJsonLd,
@@ -1320,12 +1321,8 @@ export default async function RegionHubPage({
         >
           {name} 지도에서 보기
         </Link>
-        <Link
-          href="/notifications"
-          className="card tile px-5 py-3 t-body font-bold text-ink"
-        >
-          {name} 시세 알림 받기
-        </Link>
+        {/* [1027] "시세 알림 받기"는 알림함만 열던 링크였다(그런 알림도 없다) — 실제 지역 구독(청약·새 매물)으로 */}
+        <RegionAlertButton region={mapRegion} name={name} />
       </section>
       {/* [1015 · 규칙 G] 오른쪽 레일 광고 1 — 데스크톱만(폰은 아래 페이지 끝 한 곳) */}
       <div className="hidden lg:block">

@@ -99,7 +99,8 @@ const EVENT_LABEL: Record<string, string> = {
   [FUNNEL_EVENT.REPORT_PURCHASE]: "리포트 구매",
   viewport_group_change: "뷰포트 그룹 변경(계측)",
   pwa_install_prompt_view: "PWA 프롬프트 노출",
-  signup_step_1: "가입 1단계",
+  /* [1027] 화면이 열릴 때가 아니라 사람이 처음 움직인 뒤 세션당 한 번(app/signup/SignupClient) */
+  signup_step_1: "가입 1단계(처음 움직임)",
   onboarding_tour_skip: "온보딩 투어 건너뜀",
   onboarding_tour_complete: "온보딩 투어 완료",
 };

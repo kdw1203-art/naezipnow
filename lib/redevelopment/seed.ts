@@ -22,14 +22,18 @@ type Seed = Omit<RedevelopmentProject, "isSample" | "source" | "sourceUrl" | "up
   stageKey: StageKey;
 };
 
+/* [1027] 구역이 곧 아파트 단지 하나인 4곳(은마 · 잠실주공5단지 · 여의도 시범 · 목동신시가지 6단지)은 근사값 대신
+   그 단지의 실제 좌표를 쓴다(지도가 쓰는 단지 좌표 — 국토부 실거래 지번의 지오코딩). 예전 근사값은 단지에서
+   0.5~1km 떨어져 있어 마커가 다른 블록에 찍히고, 구역 상세의 "주변 아파트 실거래"(반경 1km)가 엉뚱한 단지를 모았다.
+   운영 DB 도 같은 값으로 고쳤다(supabase/migrations/20261003051021_1027_redev_zone_coords_from_complex_geocode.sql). */
 const RAW: Seed[] = [
   // ── 재건축(아파트) ──
-  { id: "seed-eunma", name: "은마아파트", typeKey: "recon_apt", stageKey: "union", sido: "서울", sigungu: "강남구", address: "강남구 대치동", lat: 37.4995, lng: 127.0602, households: 5778, summary: "대치동 대표 재건축 단지" },
-  { id: "seed-jamsil5", name: "잠실주공5단지", typeKey: "recon_apt", stageKey: "plan_approved", sido: "서울", sigungu: "송파구", address: "송파구 잠실동", lat: 37.5106, lng: 127.0857, households: 3930, summary: "잠실 대표 재건축" },
+  { id: "seed-eunma", name: "은마아파트", typeKey: "recon_apt", stageKey: "union", sido: "서울", sigungu: "강남구", address: "강남구 대치동", lat: 37.4974142, lng: 127.0653097, households: 5778, summary: "대치동 대표 재건축 단지" },
+  { id: "seed-jamsil5", name: "잠실주공5단지", typeKey: "recon_apt", stageKey: "plan_approved", sido: "서울", sigungu: "송파구", address: "송파구 잠실동", lat: 37.5153365, lng: 127.0929752, households: 3930, summary: "잠실 대표 재건축" },
   { id: "seed-apgujeong3", name: "압구정3구역", typeKey: "recon_apt", stageKey: "union", sido: "서울", sigungu: "강남구", address: "강남구 압구정동", lat: 37.5273, lng: 127.0286, households: null, summary: "압구정 현대아파트 일대" },
   { id: "seed-banpo1", name: "반포주공1단지(1·2·4주구)", typeKey: "recon_apt", stageKey: "moving", sido: "서울", sigungu: "서초구", address: "서초구 반포동", lat: 37.5045, lng: 126.996, households: 5388, summary: "반포 대표 재건축" },
-  { id: "seed-yeouido-sibeom", name: "여의도 시범아파트", typeKey: "recon_apt", stageKey: "plan_approved", sido: "서울", sigungu: "영등포구", address: "영등포구 여의도동", lat: 37.5205, lng: 126.9256, households: null, summary: "여의도 신속통합기획 재건축" },
-  { id: "seed-mokdong6", name: "목동신시가지(6단지)", typeKey: "recon_apt", stageKey: "designated", sido: "서울", sigungu: "양천구", address: "양천구 목동", lat: 37.534, lng: 126.875, households: null, summary: "목동 재건축 벨트" },
+  { id: "seed-yeouido-sibeom", name: "여의도 시범아파트", typeKey: "recon_apt", stageKey: "plan_approved", sido: "서울", sigungu: "영등포구", address: "영등포구 여의도동", lat: 37.5206991, lng: 126.937101, households: null, summary: "여의도 신속통합기획 재건축" },
+  { id: "seed-mokdong6", name: "목동신시가지(6단지)", typeKey: "recon_apt", stageKey: "designated", sido: "서울", sigungu: "양천구", address: "양천구 목동", lat: 37.534648, lng: 126.8848191, households: null, summary: "목동 재건축 벨트" },
 
   // ── 재개발(뉴타운) ──
   { id: "seed-hannam3", name: "한남3구역", typeKey: "redev", stageKey: "moving", sido: "서울", sigungu: "용산구", address: "용산구 한남동", lat: 37.536, lng: 126.9995, households: 5816, summary: "한남뉴타운 최대 구역" },

@@ -4,10 +4,14 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
 import { getAllRegionSnapshots } from "@/lib/market/store";
 import type { RegionMarketSnapshot } from "@/lib/market/types";
-import { regionIdForName } from "@/lib/region/catalog";
 import { decodeComplexId } from "@/lib/complex/complex-store";
 import { listAnnouncementsInWindow, type AnnouncementRow } from "@/lib/applyhome/store";
-import { normalizeApplyhomeRegion } from "@/lib/applyhome/regions";
+import {
+  alertRegionCatalogId,
+  alertRegionTarget,
+  matchAnnouncementRegion,
+  type AlertRegionTarget,
+} from "@/lib/alerts/region-value";
 import { weekLabelOf } from "@/lib/newui/digest";
 import type {
   PersonalDigest,
@@ -296,7 +300,9 @@ async function buildInner(
   const regions: PersonalDigestRegion[] = [];
   if (shared.snapshots) {
     for (const name of regionNames) {
-      const regionId = regionIdForName(name);
+      /* [1027] 정확 일치로만 찾는다 — 예전 regionIdForName 은 못 찾으면 "글자가 들어 있는" 첫 지역을 돌려줘
+         "대구 달서구"에 인천 서구, "양주시"에 남양주 숫자가 실렸다. 못 찾으면 그 지역은 싣지 않는다. */
+      const regionId = alertRegionCatalogId(name);
       const snap = regionId ? shared.snapshots.get(regionId) : undefined;
       const won = snap?.avgSale ?? snap?.medianSale;
       if (!snap || typeof won !== "number" || won <= 0) continue;
@@ -385,19 +391,20 @@ async function buildInner(
   /* (d) apply — 관심 지역을 시/도로 정규화해 접수 시작 공고와 맞춘다(applyhome-alerts 와 같은 규칙) */
   let apply: PersonalDigest["apply"];
   if (shared.upcomingApply && shared.upcomingApply.length > 0 && regionNames.length > 0) {
-    const sidos = regionNames
-      .map((name) => ({ sido: normalizeApplyhomeRegion(name), gu: name.split(/\s+/)[1] ?? "" }))
-      .filter((s) => s.sido !== "전체");
+    /* [1027] 시/도는 시군구 코드 표에서 — applyhome-alerts 와 한 함수(lib/alerts/region-value.ts) */
+    const targets = regionNames
+      .map((name) => alertRegionTarget(name))
+      .filter((t): t is AlertRegionTarget => t !== null);
     const hits: Array<{ a: AnnouncementRow; strong: boolean }> = [];
     const seen = new Set<string>();
     for (const a of shared.upcomingApply) {
       const key = `${a.house_manage_no}:${a.pblanc_no}`;
       if (seen.has(key)) continue;
-      const region = a.region ?? "";
-      for (const s of sidos) {
-        if (region !== s.sido && !region.includes(s.sido)) continue;
+      for (const t of targets) {
+        const m = matchAnnouncementRegion(t, a);
+        if (!m.hit) continue;
         seen.add(key);
-        hits.push({ a, strong: s.gu.length > 0 && Boolean(a.address?.includes(s.gu)) });
+        hits.push({ a, strong: m.strong });
         break;
       }
     }

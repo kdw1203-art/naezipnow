@@ -36,6 +36,9 @@ export const SITEMAP_SECTION_SLUGS = [
   /* [1006] 이웃 글(이야기) 상세 /town/story/[id] — 뉴스와 라우트를 갈랐다(사람 글 전용).
      지금은 0건이 사실이라 optional. 글이 생기는 즉시 실린다. */
   "story",
+  /* [1027] 정비사업 구역 상세 /redevelopment/[id] — 구역 표(redevelopment_projects)의 행마다 한 쪽.
+     표가 비면 0개가 사실이라 optional(허브 /redevelopment 한 줄이 대신 실린다). */
+  "redevelopment",
 ] as const;
 
 export type SitemapSectionSlug = (typeof SITEMAP_SECTION_SLUGS)[number];

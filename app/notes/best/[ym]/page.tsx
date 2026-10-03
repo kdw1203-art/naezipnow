@@ -24,6 +24,7 @@ import { CoverImage } from "@/app/components/CoverImage";
 import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 import { seedGradient } from "@/lib/town/shared";
 import { topBreakdownAxes } from "@/lib/notes/best-axes";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
    N13 — 이달의 공개 임장노트(월별 상세).
@@ -80,7 +81,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: seoAlternates(path),
-    openGraph: { title, description, url: `https://naezipnow.com${path}`, type: "article" },
+    openGraph: { title, description, url: `https://naezipnow.com${path}`, type: "article", images: DEFAULT_OG_IMAGES },
   };
 }
 

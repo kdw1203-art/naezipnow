@@ -14,6 +14,7 @@ import {
 } from "@/lib/digest/archive";
 import { breadcrumbJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
    N23 — 주간 다이제스트 웹 아카이브(한 주).
@@ -76,7 +77,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: seoAlternates(path),
-    openGraph: { title, description, url: `https://naezipnow.com${path}`, type: "article" },
+    openGraph: { title, description, url: `https://naezipnow.com${path}`, type: "article", images: DEFAULT_OG_IMAGES },
   };
 }
 

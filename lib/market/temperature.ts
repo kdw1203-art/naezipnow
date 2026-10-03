@@ -265,11 +265,12 @@ export type TemperatureRegion = { id: string; label: string; name: string };
 
 export const TEMPERATURE_REGIONS: readonly TemperatureRegion[] = [
   ...SEOUL_DISTRICTS.map((d) => ({ id: d.id, label: `서울 ${d.name}`, name: d.name })),
-  ...METRO_EXPLORE_DISTRICTS.map((d) => ({
-    id: d.id,
-    label: `${d.city ?? "서울"} ${d.name}`,
-    name: d.name,
-  })),
+  /* [1027] 이름에 이미 시/도가 붙은 항목("인천 중구" — 정규화 키 충돌을 막으려 접두한 것)은 다시 붙이지 않는다.
+     예전에는 라벨이 "인천 인천 중구"로 나갔다(시세·타이밍 지역 선택 · 온도 순위). */
+  ...METRO_EXPLORE_DISTRICTS.map((d) => {
+    const city = d.city ?? "서울";
+    return { id: d.id, label: d.name.startsWith(`${city} `) ? d.name : `${city} ${d.name}`, name: d.name };
+  }),
 ];
 
 export function findTemperatureRegion(regionId: string): TemperatureRegion | null {

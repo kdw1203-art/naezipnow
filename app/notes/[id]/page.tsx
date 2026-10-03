@@ -1623,7 +1623,7 @@ export default async function NoteDetailPage({
             href={`/login?callbackUrl=${encodeURIComponent(complexHref)}`}
             className="btn-outline btn-md mt-3 inline-block no-underline"
           >
-            로그인하고 시세 알림 받기
+            로그인하고 실거래 알림 받기
           </Link>
         </div>
       )}

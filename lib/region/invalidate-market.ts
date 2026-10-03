@@ -231,7 +231,9 @@ export function invalidateMarketAnalysisRoutes(): InvalidateStats {
   ];
   const stats = invalidatePathList(paths, { label: "market-analysis" });
   /* 동적 세그먼트는 라우트 전체 비움. 실패는 삼킨다(요청 밖 호출에서 던질 수 있다). */
-  for (const route of ["/analysis/ai/[tool]", "/reports/season/[slug]"]) {
+  /* [1027] /redevelopment/[id] — 구역 상세의 "주변 아파트 실거래"는 지도 시세 색상과 같은 집계 뷰를 읽는다.
+     그 뷰는 적재 직후가 아니라 이 집계 갱신(market-aggregates-refresh)이 끝나야 새 값이 되므로 여기서 비운다. */
+  for (const route of ["/analysis/ai/[tool]", "/reports/season/[slug]", "/redevelopment/[id]"]) {
     try {
       revalidatePath(route, "page");
     } catch (e) {

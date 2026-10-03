@@ -11,6 +11,7 @@ import {
   loadImjangEntries,
   loadNewsEntries,
   loadStoryEntries,
+  loadRedevelopmentEntries,
   loadNoteEntries,
   loadPairEntries,
   loadRegionEntries,
@@ -161,6 +162,8 @@ export const SITEMAP_SECTIONS: readonly SitemapSection[] = [
   /* [1006] 이야기(이웃 글) — 사람 글은 지금 0건이 사실(2026-09-20 실측 posts 0행). required 로
      두면 503 이 "지금은 못 준다"는 거짓이 된다. 글이 생기면 자동으로 실린다. */
   { slug: "story", label: "이웃 이야기", required: false, load: loadStoryEntries, hub: "/town" },
+  /* [1027] 정비사업 구역 상세 — 구역 표가 비어 있을 수 있어(공공 API 적재 전환기) optional. */
+  { slug: "redevelopment", label: "정비사업 구역", required: false, load: loadRedevelopmentEntries, hub: "/redevelopment" },
   /* [992 · A1] 전문가·Q&A 섹션 삭제 — 보관(비노출) 영역(lib/seo/archived-routes.ts).
      X-Robots-Tag noindex 와 사이트맵 제외를 같은 목록에서 맞춘다. */
 ];

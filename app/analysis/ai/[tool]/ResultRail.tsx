@@ -1,7 +1,7 @@
 "use client";
 /* [1026b · AI 분석 8종] 레일을 12종이 같이 쓴다 — 다음 행동 카드의 채움 파랑(주 행동)은 도구마다 하나(lib/ai/conclusion-next RAIL_PRIMARY):
    단지 분석 4종·리스크 점검·갭투자 진단·수익률 계산 "임장노트에 담기"(같은 노트 링크 규칙 — verdictNextActions noteHandoff) ·
-   다른 단지와 비교 "결정 카드에 담기"(담은 단지 전부 → 비교함 → /decide) · 경제지표 모니터 "이 지역 알림 받기"(/notifications) ·
+   다른 단지와 비교 "결정 카드에 담기"(담은 단지 전부 → 비교함 → /decide) · 경제지표 모니터 "기준금리 알림 걸기"(#economy-watch · 1027) ·
    내 자산 구성 진단·계약 리스크 점검 "이 단지 임장노트 쓰기" · 투자 체크리스트 "체크리스트로 노트 시작"(안 한 항목 → 노트 고려사항, 예전 규칙).
    예전 8종의 도구 색 채움(리스크 빨강 "이 단지 임장노트 쓰기" · 수익률 초록 …)과 "로그인하고 AI 해설 받기"(채움)는 이 카드의 한 요소 +
    텍스트 링크로. 경제지표의 기준금리 알림 패널(EconomyWatch — 보조 버튼)도 이 청크. btn-primary 리터럴은 이 파일에 하나. */
@@ -15,6 +15,12 @@
    next/dynamic(ssr:false) — 워크벤치 본체 번들(480KB)에 싣지 않는다(MobilePrimaryBar 도 이 청크). */
 /* [1022 · 단지 분석 고도화] 지시 3 — 매수 타이밍 레일에 "이 지역 알림" 카드(기존 알림함 /notifications 링크만 — /analysis/timing 의
    같은 카드와 같은 문구·같은 링크, 새 알림 기능 없음). */
+/* [1027] 알림 두 자리를 실제로 오는 알림에 맞췄다(제안 5번).
+   · 매수 타이밍 "이 지역 알림" 카드 — "실거래 등록·지수 변동"(그런 알림은 없다) + 알림함 링크 →
+     지역 구독이 실제로 보내는 것(청약 공고 · 새 등록 매물)을 적고, 누르면 그 지역이 구독된다(공용 RegionAlertButton).
+   · 경제지표 모니터의 채움 파랑 "이 지역 알림 받기"(알림함 링크) — 이 도구에는 지역이 없다. 이 화면의 진짜 알림은
+     레일의 기준금리 알림 패널(EconomyWatch · /api/me/economy-watch)이므로 "기준금리 알림 걸기"로 그 패널(#economy-watch)에 간다.
+     기준금리를 못 읽어 패널이 없을 때만 알림함을 연다(글자도 "알림함 열기"). */
 /* [1021 · 단지 분석 /analysis/ai] 오른쪽 레일(단지 분석 4종) — ① 내 조건(TuningForm · 다시 계산, 기존 로직) ② 이 결과로 ③ 이어서 보기. */
 
 import Link from "next/link";
@@ -27,6 +33,7 @@ import { addToCompareTray } from "@/lib/newui/compare-tray";
 import { useCopy } from "@/lib/ui/use-copy";
 import { Icon } from "@/app/components/Icon";
 import { MobilePrimaryBar } from "@/app/components/MobilePrimaryBar";
+import { RegionAlertButton } from "@/app/components/RegionAlertButton";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { checklistKey, useWatchAdd } from "./ResultView";
 import { EconomyWatch } from "./EconomyWatch";
@@ -115,19 +122,32 @@ export function ResultRail({
       /* 저장 실패해도 이동은 그대로 */
     }
   };
+  /* [1027] 기준금리 알림 패널로 — 데스크톱은 패널이 바로 아래(같은 레일)라 주소의 #만으로는 움직임이 없다.
+     패널을 화면 가운데로 올리고 조건 칸에 초점을 준다(폰에서 자판이 뜨지 않게 숫자 칸이 아니라 고르는 칸). */
+  const focusEconomyWatch = () => {
+    window.requestAnimationFrame(() => {
+      const panel = document.getElementById("economy-watch");
+      panel?.scrollIntoView({ block: "center" });
+      panel?.querySelector<HTMLElement>("select")?.focus({ preventScroll: true });
+    });
+  };
   const decideItems = compareTray && compareTray.length > 0 ? compareTray : picked ? [picked] : [];
   const target: { href: string; icon: string; onClick?: () => void } =
     spec.kind === "decide"
       ? { href: "/decide", icon: "clipboard", onClick: () => addDecide(decideItems) }
       : spec.kind === "alert"
-        ? { href: "/notifications", icon: "bell" }
+        ? economyRate != null
+          ? { href: "#economy-watch", icon: "bell", onClick: focusEconomyWatch }
+          : { href: "/notifications", icon: "bell" }
         : spec.kind === "checklist"
           ? { href: `${noteHref}${noteHref.includes("?") ? "&" : "?"}fromChecklist=1`, icon: "notebook-pen", onClick: handoffChecklist }
           : { href: noteHref, icon: "notebook-pen" };
+  /* 알림 패널이 없으면(기준금리 조회 실패) 글자도 목적지와 같게 */
+  const primaryLabel = spec.kind === "alert" && economyRate == null ? "알림함 열기" : spec.label;
   /* 채움 파랑 — 이 화면에 하나. 데스크톱은 아래 카드, 폰은 하단 바(같은 요소) */
   const primary = (
     <Link href={target.href} onClick={target.onClick} className="btn-primary btn-md w-full gap-1.5 no-underline">
-      <Icon name={target.icon} size={16} /> {spec.label}
+      <Icon name={target.icon} size={16} /> {primaryLabel}
     </Link>
   );
   /* 결론 요약 한 줄 — 대상(단지 · 비교는 N곳) · 판정 · 대표 수치(숫자일 때만) */
@@ -216,14 +236,12 @@ export function ResultRail({
       </section>
       {tool === "ai-timing" && picked && (
         <RailCard title="이 지역 알림">
-          <p className="t-sub text-text-2 break-words">{picked.region} 실거래 등록·지수 변동</p>
-          <Link href="/notifications" className={`${TEXT_LINK} self-start`}>
-            <Icon name="bell" size={16} /> 알림 설정 ›
-          </Link>
+          <p className="t-sub text-text-2 break-words">{picked.region} · 청약 공고(시·도 전체)·새 등록 매물</p>
+          <RegionAlertButton key={picked.region} variant="link" region={picked.region} name={picked.region} className="self-start" />
         </RailCard>
       )}
       {tool === "ai-economy" && economyRate != null && <EconomyWatch currentRate={economyRate} />}
-      <MobilePrimaryBar label={spec.label}>{primary}</MobilePrimaryBar>
+      <MobilePrimaryBar label={primaryLabel}>{primary}</MobilePrimaryBar>
     </>
   );
 }

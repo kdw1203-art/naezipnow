@@ -56,7 +56,16 @@ function supabaseImagePatterns() {
 const HTML_LIMITED_BOTS =
   /[\w-]+-Google|Google-[\w-]+|Googlebot|Chrome-Lighthouse|Slurp|DuckDuckBot|baiduspider|yandex|sogou|bitlybot|tumblr|vkShare|quora link preview|redditbot|ia_archiver|Bingbot|BingPreview|applebot|facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|Yeti|googleweblight|NaverBot|Daumoa|GPTBot|OAI-SearchBot|ChatGPT-User|ClaudeBot|Claude-User|Claude-SearchBot|anthropic-ai|PerplexityBot|Perplexity-User|CCBot|Amazonbot|Bytespider|meta-externalagent|cohere-ai|Diffbot|Timpibot|omgili/i;
 
+/* [1027 · 제안 28] 빌드 표식 — 이 빌드의 커밋 해시 앞 7자. **빌드 때 한 번** 정해 서버 코드에 박는다(env 인라인).
+   런타임 환경변수로 읽으면 미리 그려 둔 HTML(빌드 때)과 요청 때 그린 HTML·오류 수신부의 값이 서로 달라질 수 있다.
+   운영 배포는 Vercel 이 저장소에서 직접 빌드한다(배포 기록 source = git, 2026-10-03 확인) — 그때는
+   VERCEL_GIT_COMMIT_SHA 가 있다(/api/health 의 deployId 가 값이 있으니 시스템 변수는 켜져 있다). GitHub Actions 에서
+   빌드할 때는 GITHUB_SHA. 둘 다 없으면(로컬) 빈 값 — 표식 없이 동작한다.
+   서버 코드(app/layout · /api/monitoring/client-error)만 읽으므로 브라우저 묶음의 해시는 배포마다 바뀌지 않는다. */
+const NZ_BUILD_MARK = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || "").trim().slice(0, 7);
+
 const nextConfig: NextConfig = {
+  env: { NZ_BUILD_MARK },
   reactStrictMode: true,
   /* [1006] 로컬 검증 전용 — 운영 빌드(.next)를 남겨 둔 채 같은 저장소에서 개발 서버를
      띄우려면 산출물 디렉터리를 갈라야 한다(`next dev` 는 .next 를 비운다 — 검증 서버가

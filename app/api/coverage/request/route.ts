@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
-import {
-  countRegionDemand,
-  recordRegionDemand,
-  sanitizeDemandEmail,
-} from "@/lib/coverage/store-db";
+import { countRegionDemand, recordRegionDemand } from "@/lib/coverage/store-db";
 import { logger } from "@/lib/log";
 
-/* POST /api/coverage/request — 검색 무결과에서 "열리면 알려주세요" 수집(#413).
+/* POST /api/coverage/request — 검색 무결과에서 "이 단지가 빠져 있다" 제보 수집(#413).
+ *
+ * [1027] 이메일은 받지 않는다. 예전 카드는 "열리면 알려드릴게요"라며 주소를 받았지만 이 서비스는 아직 메일을
+ * 보내지 못한다(발송 키 미설정). 화면에서 칸을 내렸고(app/search/CoverageRequestCard), 배포 전에 받아 둔 옛 화면이
+ * 주소를 보내와도 저장하지 않는다 — 지킬 수 없는 약속으로 받은 주소를 쌓지 않는다.
  *
  * 무인증 허용(가입 전 방문자의 수요가 핵심이라 로그인 강제는 목적 훼손).
  * 보호: IP 슬라이딩 윈도(10회/시간) + 길이 캡 + (query_norm, day) 유니크로
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   const rl = rateLimit(`coverage:${ip}`, { limit: 10, windowMs: 60 * 60 * 1000 });
   if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
 
-  let body: { query?: unknown; email?: unknown; source?: unknown };
+  let body: { query?: unknown; source?: unknown };
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -37,10 +37,9 @@ export async function POST(req: Request) {
   }
   const source =
     typeof body.source === "string" && body.source.trim() ? body.source.trim() : "search";
-  const email = sanitizeDemandEmail(body.email);
 
   try {
-    await recordRegionDemand({ query, source, email });
+    await recordRegionDemand({ query, source, email: null });
     /* 자동화 로드맵 3 — 수요 임계 경보 1차(로그 표면화). 같은 검색어 30일 합이
        임계에 "도달하는 순간"에만 warn 을 남긴다 — 매 요청 재경보의 소음 없이,
        P3 헬스 점검·주간 브리핑이 줍는다. RESEND 개통 후 이메일 경보로 승격.

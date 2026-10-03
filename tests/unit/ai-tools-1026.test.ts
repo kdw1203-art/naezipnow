@@ -198,8 +198,9 @@ test("[1026] 레일 340 · 한 번만 — 내 조건(lg · 다시 계산은 보�
   /* 채움 파랑은 레일 파일의 한 리터럴 — 데스크톱 카드(lg)와 폰 하단 바가 같은 요소(primary)를 나눠 그린다 */
   assert.equal((rail.match(/\bbtn-primary\b/g) ?? []).length, 1);
   assert.match(rail, /<div className="max-lg:hidden">\{primary\}<\/div>/);
-  /* [1026b] 주 행동 글자는 도구별 표(RAIL_PRIMARY) — 4종은 "임장노트에 담기" 그대로 */
-  assert.match(rail, /<MobilePrimaryBar label=\{spec\.label\}>\{primary\}<\/MobilePrimaryBar>/);
+  /* [1026b] 주 행동 글자는 도구별 표(RAIL_PRIMARY) — 4종은 "임장노트에 담기" 그대로
+     [1027] 글자는 primaryLabel(= spec.label · 경제지표에서 알림 패널이 없을 때만 "알림함 열기") */
+  assert.match(rail, /<MobilePrimaryBar label=\{primaryLabel\}>\{primary\}<\/MobilePrimaryBar>/);
   for (const t of FRAME_TOOLS) assert.deepEqual(RAIL_PRIMARY[t], { kind: "note", label: "임장노트에 담기" }, t);
   assert.match(rail, /verdictNextActions\(\{ tool, verdict, complexId: picked\.id, complexName: picked\.name, region: picked\.region, noteHandoff: true \}\)\.primary\.href/);
   /* 텍스트 링크 — 결정 카드(비교함 → /decide 후보) · 관심 단지(같은 훅) · AI 해설(게스트는 로그인) · 결과 링크 */

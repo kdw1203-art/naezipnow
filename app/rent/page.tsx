@@ -11,6 +11,7 @@ import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { logger } from "@/lib/log";
 import { isSudogwonRegion } from "@/lib/rent/params";
 import { getSudogwonRentCounts, type RentRegionCount } from "@/lib/rent/region-counts";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 export const revalidate = 21_600;
 
@@ -27,7 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: seoAlternates("/rent"),
     /* 행이 하나도 없으면(수집 전) 목록도 색인하지 않는다 — 링크 전부가 noindex 페이지다 */
     ...(any ? {} : { robots: { index: false, follow: true } }),
-    openGraph: { title, description, type: "website" },
+    openGraph: { title, description, type: "website", images: DEFAULT_OG_IMAGES },
   };
 }
 

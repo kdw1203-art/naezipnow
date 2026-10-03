@@ -62,7 +62,7 @@
     },
     {
       "path": "/api/cron/molit-history-backfill",
-      "schedule": "40 2,14 * * *"
+      "schedule": "40 2,6,10,14,18,22 * * *"
     },
     {
       "path": "/api/cron/molit-nonapt-ingest",

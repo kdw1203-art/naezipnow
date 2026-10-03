@@ -159,7 +159,8 @@ export default async function RedevelopmentPage() {
         <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex min-w-0 flex-col gap-4 max-md:gap-3">
           {/* ===== 진행단계 개요 스트립 ===== */}
-        <section className="rise-in card rounded-2xl px-5 py-4 max-md:px-3.5 max-md:py-3">
+        {/* [1027] id — 구역 상세(/redevelopment/[id])의 "정비사업 7단계" 링크가 여기로 온다. 고정 헤더만큼 띄운다. */}
+        <section id="stage-guide" className="rise-in card scroll-mt-24 rounded-2xl px-5 py-4 max-md:px-3.5 max-md:py-3">
           <div className="flex items-baseline justify-between">
             {/* [1015] 물음·설명형 제목("…이렇게 7단계로 진행돼요") → 명사(브리프 규칙 D) */}
             <h2 className="text-[13px] font-bold text-ink">정비사업 7단계</h2>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { readBuildMark, reportClientError } from "@/lib/client/error-report";
 
 /**
  * G10: 루트 레이아웃까지 깨졌을 때의 최후 바운더리.
@@ -30,22 +31,12 @@ export default function GlobalError({
     }
   }, [error]);
 
+  /* [1027 · 제안 28] 빌드 표식은 **그리기 전에** 읽어 둔다 — 이 화면은 문서(<html>)를 통째로 갈아 끼우므로,
+     effect 가 돌 때는 루트 레이아웃이 심은 <meta name="nz-build"> 가 이미 없을 수 있다. */
+  useState(() => readBuildMark());
   useEffect(() => {
-    try {
-      void fetch("/api/monitoring/client-error", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          message: error.message || "unknown global error",
-          digest: error.digest,
-          path: typeof window !== "undefined" ? window.location.pathname : null,
-          scope: "global",
-        }),
-        keepalive: true,
-      }).catch(() => {});
-    } catch {
-      /* noop */
-    }
+    /* [1027 · 제안 28] 브라우저 스택·오류 이름·빌드 표식을 같이 싣는다(lib/client/error-report — 스타일 의존 없음) */
+    reportClientError(error, "global", "unknown global error");
   }, [error]);
 
   return (

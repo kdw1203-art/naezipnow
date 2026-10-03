@@ -14,6 +14,7 @@ import {
   type RedevelopmentProject,
   type StageKey,
 } from "@/lib/redevelopment/types";
+import { buildRedevInfoHtml, redevDetailHref } from "@/lib/redevelopment/map-layer";
 import { Icon } from "@/app/components/Icon";
 import { TypeFilterPanel } from "./TypeFilterPanel";
 import { DataSourceCard } from "./DataSourceCard";
@@ -32,54 +33,8 @@ const VIEWS: { key: ViewKey; label: string; icon: string }[] = [
   { key: "content", label: "내용", icon: "file-text" },
 ];
 
-function esc(s: string): string {
-  const map: Record<string, string> = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-  };
-  return s.replace(/[&<>"]/g, (c) => map[c] ?? c);
-}
-
 function householdsLabel(n: number | null): string {
   return n != null ? `${n.toLocaleString("ko-KR")}세대` : "";
-}
-
-/** 마커 클릭 시 뜨는 인포윈도우 카드(HTML) — 우리 데이터라 인라인 스타일. */
-function buildInfoHtml(p: RedevelopmentProject): string {
-  const color = colorForType(p.typeKey);
-  const typeLabel = labelForType(p.typeKey);
-  const stage = stageLabel(p.stageKey);
-  const loc = locationLabel({ sigungu: p.sigungu, address: p.address });
-  const households = householdsLabel(p.households);
-  const asOfLine = p.asOf
-    ? `<div style="font-size:10px;color:#9ca3af;margin-top:4px">${esc(p.asOf)} 공개자료 기준 · 최신 단계와 다를 수 있음</div>`
-    : "";
-  /* 스킴 검증(2026-08-22) — 이 문자열은 지도 인포윈도 innerHTML 로 들어간다.
-     이스케이프는 하고 있었지만 href 스킴은 안 봤다: javascript: 값이 오면 클릭
-     시 실행된다. 쓰기 경로가 service-role 뿐이라 위험은 낮지만, http(s) 외에는
-     링크를 그리지 않는 것이 층 하나 더 싼 방어다. */
-  const safeSourceUrl =
-    p.sourceUrl != null && /^https?:\/\//i.test(p.sourceUrl.trim()) ? p.sourceUrl.trim() : null;
-  const source =
-    safeSourceUrl != null
-      ? `<a href="${esc(safeSourceUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:2px;font-size:11px;font-weight:700;color:#1d4fd8;text-decoration:none">출처 ›</a>`
-      : "";
-  return `
-  <div style="padding:10px 12px;min-width:184px;max-width:220px;font-family:sans-serif;line-height:1.5">
-    <div style="font-weight:700;font-size:13px;color:#111827;margin:0 0 6px">${esc(p.name)}</div>
-    <div style="display:flex;align-items:center;gap:5px;margin:0 0 3px">
-      <span style="display:inline-block;width:9px;height:9px;border-radius:9999px;background:${color}"></span>
-      <span style="font-size:12px;font-weight:700;color:${color}">${esc(typeLabel)}</span>
-      <span style="font-size:11px;color:#9ca3af">·</span>
-      <span style="font-size:11px;font-weight:600;color:#4b5563">${esc(stage)}</span>
-    </div>
-    ${loc ? `<div style="font-size:11px;color:#6b7280;margin:0 0 2px">${esc(loc)}</div>` : ""}
-    ${households ? `<div style="font-size:11px;color:#374151">예정 ${esc(households)}</div>` : ""}
-    ${asOfLine}
-    ${source}
-  </div>`;
 }
 
 export function RedevelopmentMap({
@@ -203,7 +158,8 @@ export function RedevelopmentMap({
         lng: p.lng,
         label: p.name,
         pinColor: colorForType(p.typeKey),
-        infoHtml: buildInfoHtml(p),
+        /* [1027] /map 정비사업 레이어와 같은 안내창(이스케이프 · http(s) 출처만 · 구역 상세 링크) */
+        infoHtml: buildRedevInfoHtml(p),
         selected: p.id === selectedId,
       })),
     [filtered, selectedId],
@@ -430,7 +386,11 @@ export function RedevelopmentMap({
       {/* ===== 선택 구역: 진행 상황 + 현황 자료 ===== */}
       {selectedProject ? (
         <>
-          <ProjectDetailPanel project={selectedProject} onClose={() => setSelectedId(null)} />
+          <ProjectDetailPanel
+            project={selectedProject}
+            onClose={() => setSelectedId(null)}
+            detailHref={redevDetailHref(selectedProject.id)}
+          />
           <NearbyPanel projectId={selectedProject.id} projectName={selectedProject.name} />
         </>
       ) : null}

@@ -209,8 +209,6 @@ const MOCK_BUILDERS: Record<DataSourceId, (p: LocationRef) => unknown> = {
     unavailable(p, {
       activeProjects: null,
       plannedProjects: null,
-      estimatedUnits: null,
-      nearestCompletionYear: null,
       projects: [],
     }),
   "ex-congestion": (p) => unavailable(p, { routeNo: null, zoneQuery: p.district ?? "" }),
@@ -355,8 +353,6 @@ async function fetchFromApi(
           district: r.district,
           activeProjects: r.activeProjects,
           plannedProjects: r.plannedProjects,
-          estimatedUnits: r.estimatedUnits,
-          nearestCompletionYear: r.nearestCompletionYear,
           projects: r.projects,
           mode: "live" as const,
         };
@@ -381,6 +377,17 @@ async function fetchFromApi(
   }
 }
 
+/* [1027] 지운 칸이 캐시에 남아 있다 — 정비사업 응답의 추정 세대수(면적 ÷ 85㎡)·가장 가까운 준공 연도.
+   새 응답은 그 칸을 만들지 않지만 캐시(7일)는 옛 모양 그대로 돌려준다. 캐시 행을 지우는 대신 읽을 때 뺀다
+   (7일 뒤에는 옛 행이 사라져 이 함수가 하는 일이 없어진다). */
+function dropRetiredFields(source: DataSourceId, data: unknown): unknown {
+  if (source !== "redevelopment" || !data || typeof data !== "object" || Array.isArray(data)) return data;
+  const copy = { ...(data as Record<string, unknown>) };
+  delete copy.estimatedUnits;
+  delete copy.nearestCompletionYear;
+  return copy;
+}
+
 // ── 공개 API ─────────────────────────────────────────────────────
 export async function fetchPublicData<T = unknown>(
   source: DataSourceId,
@@ -396,7 +403,7 @@ export async function fetchPublicData<T = unknown>(
       source,
       fromCache: true,
       fetchedAt: new Date().toISOString(),
-      data: cached as T,
+      data: dropRetiredFields(source, cached) as T,
     };
   }
 

@@ -30,6 +30,7 @@ import { BRIEF_SAMPLE, PRO_CONCLUSION, PRO_RESULT_LINES, PRO_STEPS } from "@/lib
 import { OfficeLeadForm } from "@/app/widget/OfficeLeadForm";
 import { ProBriefPicker } from "./ProBriefPicker";
 import { BriefSample } from "./BriefSample";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 const TITLE = "중개사·임대인을 위한 내집나우";
 
@@ -37,7 +38,7 @@ export const metadata: Metadata = {
   title: `${TITLE} | 내집나우`,
   description: "고객 브리핑 리포트(A4 1장 인쇄) · 사무소 홈페이지 실거래 위젯 · 관심 단지 알림 — 국토교통부 실거래 기준, 무료 · 베타.",
   alternates: seoAlternates("/pro"),
-  openGraph: { title: `${TITLE} | 내집나우`, description: "고객 브리핑 리포트 · 실거래 위젯 · 관심 단지 알림", type: "website" },
+  openGraph: { title: `${TITLE} | 내집나우`, description: "고객 브리핑 리포트 · 실거래 위젯 · 관심 단지 알림", type: "website", images: DEFAULT_OG_IMAGES },
 };
 
 const PRO_TOPICS = ["브리핑 리포트", "사무소 홈페이지에 위젯 넣기", "여러 단지 자료 일괄", "기타 문의"] as const;

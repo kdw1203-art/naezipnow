@@ -32,6 +32,7 @@ import { Icon } from "@/app/components/Icon";
 import { TownNewsStrip } from "../TownNewsStrip";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { isSudogwonRegion } from "@/lib/rent/params";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
    [#64] 동네 홈 — /town/{regionId}
@@ -78,7 +79,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: seoAlternates(`/town/${id}`),
-    openGraph: { title, description, type: "website" },
+    openGraph: { title, description, type: "website", images: DEFAULT_OG_IMAGES },
   };
 }
 

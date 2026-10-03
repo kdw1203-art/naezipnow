@@ -1,4 +1,5 @@
 /**
+ * [1027] 1회 160곳 → 45곳 · 크론 하루 6회 — 160곳은 예산 240초를 넘겼다(근거는 molit-core HISTORY_MAX_REGIONS_PER_RUN).
  * [1025] 1회 40곳 → 160곳(호출 ≤ 960) · 크론 하루 2회(vercel.json 02:40·14:40 UTC). 상한 상수는 molit-core.
  * [1024] 수도권 아파트 실거래 **이력 백필** — 2025-12 부터 달을 거꾸로 돌며 빈 (시군구, 계약월)만 채운다.
  *
@@ -11,7 +12,7 @@
  *  · (구, 월, 아파트) 에 행이 0 인 조합만(findCoverageGaps) — 이미 있는 달은 건드리지 않는다(이중 계상 없음).
  *  · raw 미저장(keepRaw:false) — 해제 판정은 적재 시 계산돼 is_cancelled 에 남는다.
  *  · 커서(public_data_cache) 는 "지금 보는 달" 하나. 넘길지 여부는 shouldAdvanceMonth(순수) 가 정한다.
- *  · 상한: 1회 160곳(HISTORY_MAX_REGIONS_PER_RUN) · 3개월 · 유형·구당 3페이지(1,000행 × 3).
+ *  · 상한: 1회 45곳(HISTORY_MAX_REGIONS_PER_RUN — 1027) · 3개월 · 유형·구당 3페이지(1,000행 × 3).
  */
 import { getServiceSupabase } from "@/lib/supabase/service";
 import type { SigunguInfo } from "@/lib/national-data/region-codes";

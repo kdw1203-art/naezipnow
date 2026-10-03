@@ -20,7 +20,8 @@ export type RedevelopmentProject = {
   stage: RedevelopmentStage;
   developer: string;
   hasUnion: boolean;
-  expectedUnits: number;
+  /** [1027] 원천(upisRebuild)에 세대수가 없다 — 예전엔 max(100, 면적÷85㎡) 로 만들어 냈다. 모르면 null. */
+  expectedUnits: number | null;
   startedYear: number | null;
 };
 
@@ -80,7 +81,7 @@ export async function getRedevelopmentSummary(
           stage,
           developer: p.midCategory || "—",
           hasUnion: /조합|재건축/.test(stageText),
-          expectedUnits: Math.max(100, Math.round(p.areaSqm / 85)),
+          expectedUnits: null,
           startedYear: null,
         };
       });

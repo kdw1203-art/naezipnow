@@ -574,7 +574,7 @@ export function TimingClient({
       )}
 
       {/* [1026] 폰 하단 바 — 레일의 채움 파랑과 같은 요소(화면에 한 번 · 조회 실패여도 알림은 받을 수 있다) */}
-      <RegionPrimaryBar />
+      <RegionPrimaryBar regionLabel={selected.label} />
     </>
   );
 }

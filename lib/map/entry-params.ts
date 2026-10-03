@@ -58,9 +58,15 @@ export function parseEokParam(raw: string | null): number | null {
 export function parseMapEntryParams(search: string | URLSearchParams): MapEntryParams {
   const sp = typeof search === "string" ? new URLSearchParams(search) : search;
   const typeParam = firstParam(sp.get("type"));
-  /* ?z= — 지도 상태 공유용 줌 레벨. 클라이언트가 idle 마다 URL 에 lat/lng/z 를 써 두므로
-     (공유·뒤로가기), 열 때 같은 배율로 복원한다. 범위 밖은 무시. */
+  /* ?z= — 지도 상태 공유용 줌. 클라이언트가 idle 마다 URL 에 lat/lng/z 를 써 두므로
+     (공유·뒤로가기), 열 때 같은 배율로 복원한다. 범위 밖은 무시.
+     [1027] z 는 **네이버 줌**(6~19)이다 — 지도가 써 두는 값(map-client syncUrl 의 info.zoom)도, 노트의
+     "지도에서 보기"(lib/notes/note-coords NOTE_MAP_ZOOM = 16)도 그 단위다. 그런데 여기서는 그 숫자를 내부
+     level(= 21 − 줌)로 그대로 넘겨 배율이 **뒤집혔다**: 동네(z=16)가 전국 축척으로 열렸고, 확대한 지도를
+     새로고침·공유하면 멀리 빠진 화면이 나왔다(운영 2026-10-03 — /map?lat=37.4974&lng=127.0653&z=16 이
+     한반도 전체로 열림). 여기서 한 번만 level 로 바꾼다. */
   const zRaw = Number(firstParam(sp.get("z")));
+  const zoomOk = Number.isFinite(zRaw) && zRaw >= 6 && zRaw <= 19;
   return {
     region: firstParam(sp.get("region")),
     district: firstParam(sp.get("district")),
@@ -73,7 +79,7 @@ export function parseMapEntryParams(search: string | URLSearchParams): MapEntryP
     priceMinEok: parseEokParam(firstParam(sp.get("priceMin"))),
     priceMaxEok: parseEokParam(firstParam(sp.get("priceMax"))),
     coordFocus: parseCoordFocus(firstParam(sp.get("lat")), firstParam(sp.get("lng"))),
-    initialLevel: Number.isFinite(zRaw) && zRaw >= 6 && zRaw <= 19 ? Math.round(zRaw) : null,
+    initialLevel: zoomOk ? 21 - Math.round(zRaw) : null,
   };
 }
 

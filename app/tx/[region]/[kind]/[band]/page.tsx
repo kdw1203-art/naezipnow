@@ -16,6 +16,7 @@ import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { logger } from "@/lib/log";
 import { complexHrefFromNames } from "@/lib/seo/complex-slug";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
    지역 × 구간 실거래 랜딩 — /tx/[region]/[kind]/[band]
@@ -111,7 +112,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: seoAlternates(path),
-    openGraph: { title, description, url: `https://naezipnow.com${path}`, type: "website" },
+    openGraph: { title, description, url: `https://naezipnow.com${path}`, type: "website", images: DEFAULT_OG_IMAGES },
   };
 }
 

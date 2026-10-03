@@ -357,7 +357,7 @@ export default async function PricePage({
           }
         />
         {/* [1026] 폰 하단 바 — 레일의 채움 파랑과 같은 요소(화면에 한 번) */}
-        <RegionPrimaryBar />
+        <RegionPrimaryBar regionLabel={target.name} />
       </div>
     </PageShell>
   );

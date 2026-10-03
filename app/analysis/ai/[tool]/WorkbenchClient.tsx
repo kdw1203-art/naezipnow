@@ -442,7 +442,7 @@ export function WorkbenchClient({
         /* [981] 도구별 보정 입력 — 비운 칸은 키 자체가 빠진다. AI 칸은 AI 해설을 부를 때만 */
         ...(askLlm ? buildTuningInput(aiFields, effective) : {}),
         ...calcInput,
-        _promptVersion: "v2",
+        /* [1027] _promptVersion 은 서버(app/api/ai/analysis)가 찍는다 — 여기 글자로 박아 두면 버전을 올려도 안 바뀐다 */
         /* [AI-02] 실행 시점 컨텍스트 요약을 입력 스냅샷에 고정 — 재현 근거 */
         live: ctx
           ? {

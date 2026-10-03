@@ -160,7 +160,7 @@ test("[1022] 이전 실행 기록 — 같은 날 같은 값은 다시 저장하�
 });
 
 /* ── 매수 타이밍 ① 흐름선 더 길게 + 마지막 값 · ③ 이 지역 알림 ─────────────────────────────── */
-test("[1022] 신호 흐름선 — 최근 12개월 창 · 가격은 거래 없는 달을 건너뛰고 2개 미만이면 없음 · 마지막 값 라벨 · 레일에 이 지역 알림(링크만)", () => {
+test("[1022] 신호 흐름선 — 최근 12개월 창 · 가격은 거래 없는 달을 건너뛰고 2개 미만이면 없음 · 마지막 값 라벨 · 레일에 이 지역 알림(1027: 누르면 구독)", () => {
   assert.match(sig, /export const SIGNAL_FLOW_MONTHS = 12/);
   assert.match(sig, /series\.months\.slice\(-SIGNAL_FLOW_MONTHS\)/);
   assert.match(sig, /months\.filter\(\(m\) => m\.avgMan != null\)/);
@@ -173,10 +173,14 @@ test("[1022] 신호 흐름선 — 최근 12개월 창 · 가격은 거래 없는
   assert.match(sig, /return null;\n\}/);
   assert.match(rail, /tool === "ai-timing" && picked && \(/);
   assert.match(rail, /<RailCard title="이 지역 알림">/);
-  assert.match(rail, /href="\/notifications"/);
-  assert.match(rail, /<Icon name="bell"/);
-  /* 새 알림 API 를 만들지 않았다 */
+  /* [1027] 알림함 링크 → 누르면 그 지역이 구독되는 버튼(공용 RegionAlertButton — 기존 구독 API /api/me/alerts) ·
+     문구는 지역 구독이 실제로 보내는 것(청약 공고 · 새 등록 매물). "실거래 등록·지수 변동" 알림은 없다 */
+  assert.match(rail, /<RegionAlertButton key=\{picked\.region\} variant="link" region=\{picked\.region\} name=\{picked\.region\}/);
+  assert.match(rail, /\{picked\.region\} · 청약 공고\(시·도 전체\)·새 등록 매물/);
+  assert.doesNotMatch(rail, /실거래 등록·지수 변동/);
+  /* 새 알림 API 를 만들지 않았다 — 구독은 공용 버튼이 기존 /api/me/alerts 로 보낸다 */
   assert.doesNotMatch(rail, /fetch\(/);
+  assert.match(read("app/components/RegionAlertButton.tsx"), /fetch\("\/api\/me\/alerts", \{\s*method: "POST"/);
 });
 
 /* ── 셋 다: 한 줄 요약 세 토막 ──────────────────────────────────────────────────── */

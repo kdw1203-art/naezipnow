@@ -17,6 +17,7 @@ import {
   loadWithinPrerenderBudget,
 } from "@/lib/data/prerender-budget";
 import { cache } from "react";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
    N10 — 단지 vs 단지 비교 허브 (/complex/compare)
@@ -145,6 +146,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       url: `https://naezipnow.com${PATH}`,
       type: "website",
+      images: DEFAULT_OG_IMAGES,
     },
   };
 }

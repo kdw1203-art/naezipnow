@@ -50,7 +50,9 @@ const SOURCE_MAP: Record<string, { tags: string[]; paths: string[]; pageRoutes?:
       "/reports",
       "/digest",
     ],
-    pageRoutes: ["/analysis/ai/[tool]", "/reports/season/[slug]"],
+    /* [1027] 구역 상세의 "주변 아파트 실거래"가 실거래 집계를 읽는다(지도 시세 색상과 같은 뷰). 그 뷰가 실제로 새 값이
+       되는 것은 집계 갱신 뒤라, 그때도 한 번 더 비운다(lib/region/invalidate-market.ts invalidateMarketAnalysisRoutes). */
+    pageRoutes: ["/analysis/ai/[tool]", "/reports/season/[slug]", "/redevelopment/[id]"],
   },
   reb: { tags: [CACHE_TAGS.market], paths: ["/analysis"] },
   kb: { tags: [CACHE_TAGS.market], paths: [] },
@@ -72,7 +74,8 @@ const SOURCE_MAP: Record<string, { tags: string[]; paths: string[]; pageRoutes?:
   news: {
     tags: [],
     paths: [...TOWN_NEWS_PATHS, ...TOWN_FEED_PATHS, "/redevelopment", "/digest", "/digest/archive"],
-    pageRoutes: [TOWN_REGION_ROUTE],
+    /* [1027] 구역 상세의 "관련 기사"도 같은 적재를 읽는다 */
+    pageRoutes: [TOWN_REGION_ROUTE, "/redevelopment/[id]"],
   },
   /* [1010] 공매 적재 — /auctions 한 장. 크론이 직접 경로를 부르던 것을 창구로 모은다. */
   onbid: { tags: [], paths: ["/auctions"] },

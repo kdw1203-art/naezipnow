@@ -1,4 +1,5 @@
 /**
+ * [1027] 1회 45곳 · 하루 6회(예산 240초 안에 끝나게) — 근거는 lib/market/molit-core.ts HISTORY_MAX_REGIONS_PER_RUN
  * [1025] 1회 160곳 · 하루 2회 — 상한 상수는 lib/market/molit-core.ts
  * [1024] GET/POST /api/cron/molit-history-backfill
  *
@@ -7,7 +8,7 @@
  *
  * 파라미터
  *   ?ym=202412     이 달부터(커서 무시 — 수동 재시작)
- *   ?regions=160   1회 시군구 상한(1~200, 기본 160 = ≤960회 · [1025] 크론 하루 2회 02:40·14:40 UTC)
+ *   ?regions=45    1회 시군구 상한(1~45, 기본 45 = ≤270회 · [1027] 크론 하루 6회 02·06·10·14·18·22시 40분 UTC)
  *   ?months=3      1회 최대 월 수(1~12)
  *
  * 보호: lib/cron/authorize.ts. MOLIT 인증키 미설정이면 0행·skipped(가짜 데이터 없음).

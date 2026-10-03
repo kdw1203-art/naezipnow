@@ -38,6 +38,7 @@ import {
   isCapitalAreaCode,
   isRecentMonth,
   molitDatasetLabel,
+  molitRegionLabel,
 } from "@/lib/market/molit-core";
 export {
   CAPITAL_AREA_PREFIXES,
@@ -45,6 +46,7 @@ export {
   isCapitalAreaCode,
   isRecentMonth,
   molitDatasetLabel,
+  molitRegionLabel,
   NONAPT_PROPERTY_TYPES,
   RECENT_MONTHS,
   shiftYm,
@@ -153,23 +155,8 @@ export function resolveTargetTypes(explicit?: readonly string[]): TargetType[] {
   return out.length > 0 ? out : ALL_TARGET_TYPES.apartment;
 }
 
-/**
- * 시군구 정보 → market_transactions.region_name 표기.
- * "서울특별시"+"종로구" → "서울 종로구" · "수원시 영통구" → "수원 영통구" · "광명시" → "광명시"
- * (기존 적재 데이터의 표기 규칙과 동일하게 맞춘다)
- */
-export function molitRegionLabel(info: SigunguInfo): string {
-  const sigungu = info.sigungu.trim();
-  if (sigungu.includes(" ")) return sigungu.replace(/시\s/, " ");
-  /* [996] 전남광주통합특별시(12) — 구는 "광주 동구", 시·군은 "목포시"(다른 도와 같은 규칙) */
-  if (info.sido === "전남광주통합특별시") {
-    return sigungu.endsWith("구") ? `광주 ${sigungu}` : sigungu;
-  }
-  if (/(특별시|광역시)$/.test(info.sido)) {
-    return `${info.sido.replace(/(특별시|광역시)$/, "")} ${sigungu}`;
-  }
-  return sigungu;
-}
+/* [1027] molitRegionLabel(시군구 정보 → region_name 표기)은 순수 함수라 molit-core.ts 로 옮겼다 —
+   지역 알림 구독 값 정리(lib/alerts/region-value.ts)와 그 단위 테스트가 실제 함수를 부른다. 여기서 다시 내보낸다. */
 
 /**
  * 구(區)를 가진 시의 **상위 코드** — RTMS 가 한 번도 응답한 적이 없다.

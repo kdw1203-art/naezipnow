@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
 import {
   STAGES,
@@ -11,6 +12,7 @@ import {
   type RedevelopmentProject,
 } from "@/lib/redevelopment/types";
 import { STAGE_GUIDE_BY_KEY } from "@/lib/redevelopment/stage-guide";
+import { kstDateLabel } from "@/lib/redevelopment/zone-detail";
 
 /**
  * 선택한 구역의 "진행 상황 + 현황 자료" 패널 (#226).
@@ -23,13 +25,9 @@ import { STAGE_GUIDE_BY_KEY } from "@/lib/redevelopment/stage-guide";
  *   · 체크리스트·유의점은 법정 일반 절차 설명이지 이 구역에 대한 확인 결과가 아니다.
  */
 
-function formatDate(iso: string | null): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}`;
-}
+/* [1027] 날짜는 한국 날짜로 고정(kstDateLabel) — 이 패널이 구역 상세에서 서버 렌더되므로, 브라우저 시간대로 적으면
+   서버 HTML·화면 머리의 날짜와 어긋난다(예전: getFullYear/getMonth/getDate = 보는 사람의 시간대). */
+const formatDate = kstDateLabel;
 
 function Fact({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
@@ -45,18 +43,27 @@ function Fact({ label, value, muted }: { label: string; value: string; muted?: b
 export function ProjectDetailPanel({
   project,
   onClose,
+  hideHeader = false,
+  detailHref,
 }: {
   project: RedevelopmentProject;
   onClose?: () => void;
+  /** [1027] 구역 상세 페이지(/redevelopment/[id])는 이름·종류·단계를 페이지 머리(h1)에 이미 적는다 */
+  hideHeader?: boolean;
+  /** [1027] 목록 화면에서 펼친 패널 → 이 구역의 고유 주소 */
+  detailHref?: string;
 }) {
   const color = colorForType(project.typeKey);
   const guide = STAGE_GUIDE_BY_KEY[project.stageKey];
   const current = stageOrder(project.stageKey);
   const asOfLabel = project.asOf ?? formatDate(project.updatedAt);
+  /* [1027] 구역 상세 페이지에서는 페이지 h1 바로 아래 묶음이라 h2, 목록 화면에서 펼친 패널에서는 구역명(h3) 아래라 h4 */
+  const H = hideHeader ? "h2" : "h4";
 
   return (
     <section className="card flex flex-col gap-3 rounded-2xl px-5 py-4">
       {/* 헤더 */}
+      {hideHeader ? null : (
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -83,6 +90,15 @@ export function ProjectDetailPanel({
             </span>
           </div>
         </div>
+        {detailHref ? (
+          <Link
+            href={detailHref}
+            prefetch={false}
+            className="inline-flex min-h-[40px] shrink-0 items-center rounded-full bg-primary-soft px-3 t-sub font-bold text-primary no-underline"
+          >
+            구역 상세 ›
+          </Link>
+        ) : null}
         {onClose ? (
           <button
             type="button"
@@ -94,11 +110,12 @@ export function ProjectDetailPanel({
           </button>
         ) : null}
       </div>
+      )}
 
       {/* ===== 진행 상황 ===== */}
       <div>
         <div className="flex items-baseline justify-between">
-          <h4 className="t-body font-bold text-ink">진행 상황</h4>
+          <H className="t-body font-bold text-ink">진행 상황</H>
           <span className="t-caption text-text-3">도시정비법 일반 절차 기준 7단계</span>
         </div>
         <ol className="mt-2 -mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
@@ -150,7 +167,7 @@ export function ProjectDetailPanel({
 
       {/* ===== 현황 자료 ===== */}
       <div>
-        <h4 className="t-body font-bold text-ink">현황 자료</h4>
+        <H className="t-body font-bold text-ink">현황 자료</H>
         <dl className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Fact
             label="소재지"
@@ -192,9 +209,9 @@ export function ProjectDetailPanel({
       {/* ===== 이 단계에서 확인할 것 ===== */}
       {guide ? (
         <div>
-          <h4 className="t-body font-bold text-ink">
+          <H className="t-body font-bold text-ink">
             {guide.longLabel} 단계에서 확인할 것
-          </h4>
+          </H>
           <p className="mt-1 t-sub text-text-2">{guide.desc}</p>
           <div className="mt-2 flex gap-1.5 rounded-lg bg-warning-soft px-2.5 py-2">
             <Icon name="warning" size={13} className="mt-px shrink-0 text-warning" />

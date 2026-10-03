@@ -26,8 +26,7 @@ import { weekSlots } from "./week-slots";
 import { pairWeeks } from "./temp-map-model";
 import { TempMapClient, type HistoryView, type WeekView } from "./TempMapClient";
 import { OpenOnDesktop } from "./OpenOnDesktop";
-import { regionActionLinks } from "@/lib/market/region-conclusion";
-import { RegionActionCard, RegionPrimaryBar } from "../timing/region-verdict";
+import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* [1026 · 지역 시세] 1025 표준 — 절차 한 줄 · 결론 한 줄 · 대표 그림(온도 지도)은 TempMapClient(주 칩·시/도가 결론을 바꾼다).
    여기서는 서버 마크업만 얹는다: 레일의 다음 행동 카드(채움 파랑 "이 지역 알림 받기" — 이번 주 가장 뜨거운 지역, 이어서 칩과 같은 주인공 ·
@@ -150,6 +149,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       url: `https://naezipnow.com${PATH}`,
       type: "website",
+      images: DEFAULT_OG_IMAGES,
     },
   };
 }
@@ -238,11 +238,8 @@ export default async function TemperatureHubPage() {
               totalCount={rows.length}
               rail={
                 <>
-                  {/* [1026] 다음 행동 — 채움 파랑 "이 지역 알림 받기"(레일) + 지도 · 노트 쓰기 · 결정 카드. 지역 = 이번 주 가장 뜨거운 곳(아래 이어서 칩과 같다) */}
-                  <RegionActionCard
-                    regionLabel={hottest?.current.regionLabel ?? null}
-                    links={regionActionLinks(hottest?.current.regionLabel, hottest?.current.regionLabel)}
-                  />
+                  {/* [1026] 다음 행동 카드(채움 파랑 + 지도 · 노트 쓰기 · 결정 카드)와 폰 하단 바는 [1027] TempMapClient 가 그린다 —
+                      지역이 화면에서 고른 주·시/도를 따라가야 해서다(여기서 만들면 "이번 주 전국 1위"로 굳는다). */}
                   {/* #411 — 도구 간 이어가기. [D62·D55] 이 화면의 주인공은 이번 주 가장 뜨거운 지역 — 그 지역을 실어 보낸다 */}
                   <AnalysisCrossLinks
                     current="temperature"
@@ -261,8 +258,6 @@ export default async function TemperatureHubPage() {
                 </>
               }
             />
-            {/* [1026] 폰 하단 바 — 레일의 채움 파랑과 같은 요소(화면에 한 번) */}
-            <RegionPrimaryBar />
           </div>
         )}
 

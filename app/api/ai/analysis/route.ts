@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { isAiAnalysisToolId, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import { detectShellFromUserAgent } from "@/lib/platform-shell";
 import {
+  analysisReferenceData,
   buildAnalysisMessages,
   buildInternalAnalysisMarkdown,
   buildStubMarkdown,
@@ -169,6 +170,9 @@ export async function POST(req: Request) {
     rawInput && typeof rawInput === "object" && !Array.isArray(rawInput)
       ? (normalizeInputValue(rawInput) as Record<string, unknown>)
       : {};
+
+  /* [1027] 프롬프트 버전은 서버가 찍는다 — 화면이 "v2" 를 글자로 박아 보내던 것(버전을 올려도 기록은 v2 로 남는다) */
+  input._promptVersion = AI_PROMPT_VERSION;
 
   const raw = JSON.stringify(input);
   if (raw.length > MAX_INPUT) {
@@ -407,8 +411,10 @@ export async function POST(req: Request) {
       /* [AI-05] 문장 출처 라벨 — LLM 서술 전체를 명시 섹션으로 감싼다.
          [AI-08] 수치 환각 가드 — 입력·공공 컨텍스트에 없던 숫자를 검출해
          본문 위에 경고로 밝힌다(몰래 지우지 않고 드러낸다 — 정직 우선). */
+      /* [1027] 허용 목록 = 프롬프트가 "써도 된다"고 한 세 묶음 그대로(입력 · 서버 참고 데이터 · 공공데이터) */
       const whitelist = buildNumberWhitelist([
         input,
+        analysisReferenceData(tid, input),
         publicContext as unknown,
       ]);
       const guard = guardLlmNumbers(result.text, whitelist);

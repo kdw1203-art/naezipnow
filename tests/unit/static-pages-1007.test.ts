@@ -267,7 +267,9 @@ test("map 진입값 — 좌표 범위·억 범위·줌·유형·지역 우선순
   assert.equal(p.priceMinEok, null);
   assert.equal(p.priceMaxEok, 9);
   assert.deepEqual(p.coordFocus, { lat: 37.55, lng: 126.9 });
-  assert.equal(p.initialLevel, 15);
+  /* [1027] ?z 는 네이버 줌 — 내부 level 은 21 − 줌(15.4 → 줌 15 → level 6 = 단지 축척).
+     예전에는 줌 숫자를 level 로 그대로 써서 배율이 뒤집혔다(tests/unit/map-1027.test.ts). */
+  assert.equal(p.initialLevel, 6);
   const b = budgetFromEntry(p);
   assert.deepEqual(b, { type: "jeonse", minEok: null, maxEok: 9, label: null });
   assert.equal(listingTypeFromEntry(p, b), "jeonse");

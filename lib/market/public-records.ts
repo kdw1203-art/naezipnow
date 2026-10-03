@@ -111,25 +111,39 @@ export async function searchPublicRecords(
   }
 }
 
+export type PublicRecordDatasetStat = {
+  dataset: string;
+  label: string;
+  rows: number;
+  complexes: number;
+  latest: string | null;
+};
+
 /** 데이터셋별 적재 현황(건수·대상 단지 수·최신 기준일) — /data/records 요약 */
-export async function getPublicRecordDatasetStats(): Promise<
-  { dataset: string; label: string; rows: number; complexes: number; latest: string | null }[]
-> {
+export async function getPublicRecordDatasetStats(): Promise<PublicRecordDatasetStat[]> {
+  return (await getPublicRecordDatasetStatsResult()).stats;
+}
+
+/**
+ * [1027] 같은 현황 + **읽었는가**(ok). 못 읽은 것과 0건은 다른 사실이다 — /data/records 는 0건일 때 검색 제외로
+ * 두는데, 조회 실패를 0건으로 읽으면 자료가 있는 날에도 하루 동안(ISR) 색인에서 빠진다.
+ */
+export async function getPublicRecordDatasetStatsResult(): Promise<{ ok: boolean; stats: PublicRecordDatasetStat[] }> {
   const sb = getReadOnlySupabase();
-  const base = CODEF_PRODUCTS.map((p) => ({
+  const base: PublicRecordDatasetStat[] = CODEF_PRODUCTS.map((p) => ({
     dataset: p.dataset,
     label: p.label,
     rows: 0,
     complexes: 0,
     latest: null as string | null,
   }));
-  if (!sb) return base;
+  if (!sb) return { ok: false, stats: base };
   try {
     const { data, error } = await sb
       .from("public_property_records")
       .select("dataset, complex_name, record_date")
       .limit(20000);
-    if (error || !Array.isArray(data)) return base;
+    if (error || !Array.isArray(data)) return { ok: false, stats: base };
     const byDataset = new Map<
       string,
       { rows: number; complexes: Set<string>; latest: string | null }
@@ -144,14 +158,17 @@ export async function getPublicRecordDatasetStats(): Promise<
       if (d && (!entry.latest || d > entry.latest)) entry.latest = d;
       byDataset.set(ds, entry);
     }
-    return base.map((b) => {
-      const e = byDataset.get(b.dataset);
-      return e
-        ? { ...b, rows: e.rows, complexes: e.complexes.size, latest: e.latest }
-        : b;
-    });
+    return {
+      ok: true,
+      stats: base.map((b) => {
+        const e = byDataset.get(b.dataset);
+        return e
+          ? { ...b, rows: e.rows, complexes: e.complexes.size, latest: e.latest }
+          : b;
+      }),
+    };
   } catch (e) {
     logger.error("[getPublicRecordDatasetStats]", e);
-    return base;
+    return { ok: false, stats: base };
   }
 }
