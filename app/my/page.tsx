@@ -54,7 +54,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "마이 | 내집나우",
   description:
-    "내 활동 요약·임장노트·관심 단지·저장한 노트·알림 구독·구독 상태·포인트를 한곳에서 확인하고 관리해요.",
+    "내집나우 마이페이지 · 내 활동 요약 · 임장노트 · 관심 단지 · 저장한 노트 · 알림 구독 · 구독 상태 · 포인트",
 };
 
 /* ── 표시 헬퍼 ── */

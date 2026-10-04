@@ -21,11 +21,11 @@ export const metadata: Metadata = buildPageMetadata({
 const BENEFITS = [
   {
     title: "매물 노출",
-    desc: "보유 매물을 실매물 목록에 등록하고 단지 실거래가 페이지와 연결해 노출해요.",
+    desc: "보유 매물 → 실매물 목록 등록 · 단지 실거래가 페이지에 연결 노출",
   },
   {
     title: "전문가 프로필",
-    desc: "중개사무소·대표 소개와 전문 분야를 담은 프로필로 신뢰를 쌓을 수 있어요.",
+    desc: "중개사무소·대표 소개 · 전문 분야 프로필",
   },
   {
     title: "상담 연결",
@@ -43,17 +43,16 @@ export default function PartnersPage() {
           동네 매물, 내집나우에서 더 많은 이웃에게
         </h1>
         <p className="mt-2 text-[13px] leading-[1.7] text-text-2">
-          내집나우는 국토부 실거래가 데이터를 보는 이웃들이 모이는 곳이에요. 제휴
-          중개사무소가 되면 실거래가를 확인하던 이웃에게 보유 매물을 바로 보여줄 수
-          있어요. 중개 행위는 제휴 중개사가 직접 수행하고, 내집나우는 광고 매체로서
-          매물 정보를 게재합니다.
+          {/* [1030 · 2차] 해요체 → 낱말 */}
+          내집나우 = 국토부 실거래가를 보는 이웃이 모이는 곳 · 제휴 중개사무소 = 그 이웃에게 보유 매물
+          노출 · 중개 행위는 제휴 중개사가 직접 수행 · 내집나우는 광고 매체로서 매물 정보 게재
         </p>
         <p className="mt-2 text-[13px] leading-[1.7] text-text-3">
           상담·리포트 판매용 전문가 인증(세무사·감정평가사 포함)은{" "}
           <Link href="/town/experts" className="font-bold text-primary underline underline-offset-2">
             전문가 페이지
           </Link>
-          에서 신청해 주세요.
+          에서 신청
         </p>
       </div>
 

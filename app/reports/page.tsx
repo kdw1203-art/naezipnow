@@ -128,11 +128,11 @@ export default async function ReportsIndexPage() {
             [1028 · 제안 12] 해요체 두 문장 — 무엇을 집계했는지 + 계산 방식은 데이터 방법론 링크.
             대비 구문("사람이 쓰는 시황 글이 아니며")은 걷었다. */}
         <p className="rise-in-1 mt-1.5 t-sub text-text-2">
-          국토교통부 실거래 신고를 달마다 집계한 요약이에요. 계산 방식은{" "}
+          {/* [1030 · G1] 해요체 → 낱말 */}
+          국토교통부 실거래 신고 · 월별 집계 요약 · 계산 방식{" "}
           <Link href="/methodology" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
             데이터 방법론
           </Link>
-          에 있어요.
           {latest && (
             <>
               {" "}

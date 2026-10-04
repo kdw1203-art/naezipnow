@@ -8,7 +8,6 @@ import { AdZone } from "@/app/components/ads/AdZone";
 import { searchApplyhome } from "@/lib/applyhome/applyhome-search";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
 import { TownHero } from "@/app/town/TownHero";
-import { THEME_APPLY } from "@/lib/theme/presets";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { logger } from "@/lib/log";
 import { ApplySearchClient } from "./ApplySearchClient";
@@ -109,7 +108,10 @@ export default async function ApplyPage() {
       <TownHero href="/apply" />
       <TownCategoryNav stick />
 
-      <div style={THEME_APPLY}>
+      {/* [1030 · 3차] 예전 THEME_APPLY 인라인 style(--primary #1d4fd8 · --primary-soft #edf2fe 인라인 고정)를 뺐다 — 값은 전역 라이트 토큰과
+          같아 라이트에선 차이가 없고, 다크에선 .dark 토큰(#5b8bff · #1a2540)을 덮어 "날짜별 캘린더 ›"·칩 글자가 어두운 파랑(대비 2.6:1),
+          관련 데이터 아이콘 상자가 흰 하늘색으로 떴다(2026-10-04 운영 다크 캡처 · axe color-contrast 3곳). */}
+      <div>
         {/* 상단 CTA — 예전의 정적 탭(전체·예정·접수 중·지난 청약)은 클릭해도 아무
             동작이 없는 장식이라 제거했다. 실동작 탭(경쟁률/특별공급)은 아래 검색 영역에 있다. */}
         {/* [1015] 제목 옆 "청약홈 실데이터" 부연 라벨과 아래 안내 띠("…예요. …확인하세요. 예측치는 만들지
@@ -132,13 +134,8 @@ export default async function ApplyPage() {
             />
           </h2>
           <div className="flex-1" />
-          {/* [개선 #17] 접수 일정 캘린더 — 접수 시작·마감을 날짜별로 */}
-          <Link
-            href="/apply/calendar"
-            className="glass press rounded-full px-3.5 py-2 text-xs font-bold text-primary no-underline"
-          >
-            청약 캘린더
-          </Link>
+          {/* [1030 · 4차 · 57] "청약 캘린더" 알약은 뺐다 — 머리글 오른쪽 버튼(TownHero heroCta)과 같은 행동이 한 화면 250px 안에 두 번 있었다
+              (폰 실측). 접수 띠의 "날짜별 캘린더 ›"도 같은 곳으로 간다. */}
           <a
             href={APPLYHOME_URL}
             target="_blank"

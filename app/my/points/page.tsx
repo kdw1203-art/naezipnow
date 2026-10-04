@@ -49,7 +49,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "포인트 | 내집나우",
   description:
-    "사용 가능한 포인트와 이번 달 적립·사용, 적립·소비 내역, 미션, 친구 초대를 한 화면에서 확인해요. 포인트는 현금 전환이 안 되는 무상 리워드예요.",
+    "포인트 잔액 · 이번 달 적립·사용 · 내역 · 미션 · 친구 초대 · 현금 전환 불가 무상 리워드",
   robots: { index: false, follow: false },
 };
 

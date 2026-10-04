@@ -15,11 +15,12 @@ export function CitationBlock({ sentence }: { sentence: string }) {
         {sentence}
       </blockquote>
       <p className="mt-2 t-sub leading-[1.6] text-text-3">
-        출처 표기와 기준월을 함께 인용해 주세요 · 집계 방식은{" "}
+        {/* [1030 · G1] 권유문 → 낱말 */}
+        인용 시 출처 표기 · 기준월 함께 · 집계 방식{" "}
         <a href="/methodology" className="inline-block py-[5px] font-bold text-primary underline">
           데이터 방법론
         </a>
-        에 공개돼 있습니다 · 국토교통부 실거래 신고 기반, 참고용 정보입니다
+        {" "}공개 · 국토교통부 실거래 신고 기반 · 참고용
       </p>
     </section>
   );

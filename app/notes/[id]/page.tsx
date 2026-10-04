@@ -3,6 +3,7 @@
 /* [1023 · 임장노트] docs/review-1022.md 1장 — ① RelatedNotes 에 aptName 을 넘겨 같은 단지를 앞줄로 · ② 댓글 조회 실패 자리에 "다시 시도"
    (CommentsRetry — 서버 조회를 router.refresh 로 다시 돌린다) · ③ 지역·단지 칩 마지막 칩의 네이비 채움 → 테두리 칩 + 굵기(화면당 채움 1개 규칙).
    [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
+import { areaBandDisplayLabel } from "@/lib/complex/area-band-label";
 import Link from "next/link";
 import { CommentsRetry } from "./comments-retry";
 import { displayAuthorLabel, isLabAuthor } from "@/lib/notes/author-label";
@@ -292,7 +293,8 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
     breadcrumb: `공개 임장노트 › ${displayTitle}`,
     chips,
     oneLiner: n.title,
-    directVisit: Boolean(n.visitDate),
+    /* [1030 · 2차] Lab(자료 조사) 노트는 방문일이 있어도 "직접 방문" 도장을 찍지 않는다 — 데스크 리서치다(동네 피드 [959] 와 같은 규칙) */
+    directVisit: Boolean(n.visitDate) && !isLabAuthor(n.authorLabel),
     /* [#71] 현장 인증 — 작성 시점 위치 확인(거리 버킷만 저장) 통과 여부 */
     fieldVerified: Boolean(n.metadata?.visitVerified),
     visitMeta: meta.join(" · "),
@@ -347,7 +349,7 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
     checklistTotal: n.checklist.length,
     // 이 화면의 수치는 전부 작성자가 직접 남긴 방문 기록에서 나온다 —
     // 실거래가를 근거로 쓰지 않으므로 출처에 적지 않는다.
-    sourceLabel: "작성자 직접 방문 기록",
+    sourceLabel: isLabAuthor(n.authorLabel) ? "내집나우 Lab 자료 조사(실거래·통계·언론 원문)" : "작성자 직접 방문 기록",
     baseDate: formatDate(n.updatedAt) || n.visitDate,
     regionLabel: n.region,
     complexLabel: displayTitle,
@@ -382,7 +384,7 @@ export async function generateMetadata({
   const description = (
     note.summary?.trim() ||
     note.sections.memo?.trim() ||
-    `${note.region} ${displayTitle} 직접 방문 임장 기록. 채광·소음·주차·교통 평가와 좋았던 점·주의할 점.`
+    `${note.region} ${displayTitle} ${isLabAuthor(note.authorLabel) ? "자료 조사 기록(실거래·통계)" : "직접 방문 임장 기록"}. 채광·소음·주차·교통 평가와 좋았던 점·주의할 점.`
   ).slice(0, 150);
   const canonical = `${BASE_URL}/notes/${note.id}`;
 
@@ -450,7 +452,7 @@ function articleJsonLd(note: InspectionNote): Record<string, unknown> {
     headline: note.title,
     description:
       note.summary?.trim() ||
-      `${note.region} ${displayTitle} 직접 방문 임장 기록`,
+      `${note.region} ${displayTitle} ${isLabAuthor(note.authorLabel) ? "자료 조사 기록" : "직접 방문 임장 기록"}`,
     datePublished: note.createdAt,
     dateModified: note.updatedAt,
     author: {
@@ -768,7 +770,7 @@ export default async function NoteDetailPage({
           r.ok
             ? {
                 priceKrw: r.price.priceKrw,
-                bandLabel: r.price.bandLabel,
+                bandLabel: areaBandDisplayLabel(r.price.bandLabel),
                 /* [1006] 평 표기도 같이 — 설정(면적 단위)이 평인 사람은 클라이언트 섬이 이걸 고른다 */
                 bandLabelPyeong: areaBandLabels(r.price.bandSlug, r.price.bandLabel).pyeong,
                 latestYm: r.price.latestYm,
@@ -1160,7 +1162,7 @@ export default async function NoteDetailPage({
             {v.body.trim() && (
               <div className="note-paper t-body">
                 <div className="mb-1.5 t-caption font-bold opacity-70">
-                  현장에서 적은 것
+                  {v.lab ? "본문 · 자료 조사" : "현장에서 적은 것"}
                 </div>
                 <p className="whitespace-pre-wrap">{v.body}</p>
               </div>
@@ -1365,7 +1367,8 @@ export default async function NoteDetailPage({
             </div>
           )}
 
-          {/* 방문 기록 비교 */}
+          {/* 방문 기록 비교 — [1030 · 2차] Lab 노트는 회차(방문)가 없으므로 그리지 않는다 */}
+          {!v.lab && (
           <div className="rise-in-1 card flex flex-col gap-3 rounded-3xl p-6 max-md:p-3.5">
             <div className="flex items-center justify-between">
               <h2 className="t-section text-ink">방문 기록 비교</h2>
@@ -1414,6 +1417,7 @@ export default async function NoteDetailPage({
               })}
             </div>
           </div>
+          )}
 
           {/* [993] "좋았던 점 · 주의할 점 상세" 카드 삭제 — 위 ⑤⑥ 과 같은 내용을 두 번 그렸다.
               "다음 단계 제안"(재방문 기록) 링크는 맨 위 판단 카드의 다음 행동으로 옮겼다. */}
@@ -1471,7 +1475,7 @@ export default async function NoteDetailPage({
               <Explain
                 title="기록 점수"
                 body="항목 평점(입지·학군·교통·시설·미래가치 중 입력한 축의 평균, 5점 만점) × 20 이에요. 미입력 축은 평균과 막대에서 빼요."
-                source="작성자 직접 방문 기록"
+                source={v.lab ? "내집나우 Lab 자료 조사" : "작성자 직접 방문 기록"}
                 size={12}
               />
             </div>

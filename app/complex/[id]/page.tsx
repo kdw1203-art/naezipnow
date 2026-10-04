@@ -1022,8 +1022,8 @@ export async function generateMetadata({
        noindex 가 색인 유입을 막고 있으므로 당장의 방어는 유효하다. 진짜 404 를
        원하면 loading 경계 위에서 존재 확인이 필요하다(구조 변경 — 워크오더). */
     return {
-      title: "단지를 찾을 수 없습니다 | 내집나우",
-      description: "요청하신 단지 정보를 찾을 수 없습니다.",
+      title: "단지 없음 | 내집나우",
+      description: "없는 단지 · 주소 확인 · 단지 찾기",
       robots: { index: false, follow: false },
     };
   }

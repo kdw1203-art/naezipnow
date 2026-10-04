@@ -124,7 +124,7 @@ function coverLabel(card: FeedCard): string {
     : "이야기";
 }
 
-function Cover({ card }: { card: FeedCard }) {
+function Cover({ card, now }: { card: FeedCard; now: number }) {
   const label = coverLabel(card);
   /* [970 · C-06] Lab 배지 text-brand-navy — 다크에서 반투명 흰 칩(bg-surface/90) 위에
      네이비가 그대로라 안 읽혔다. 잉크 토큰(다크에서 뒤집힘)으로. */
@@ -173,7 +173,7 @@ function Cover({ card }: { card: FeedCard }) {
       </span>
       {/* [945-G] 24시간 내 새 글 — "지금 살아 있는 피드"의 실측 신호.
           점멸은 reduced-motion 에서 정지(badge-new 등록). */}
-      {Date.now() - card.createdAt < 24 * 3600_000 && !card.isExample && (
+      {now - card.createdAt < 24 * 3600_000 && !card.isExample && (
         <span className="badge-new absolute right-2 top-2 z-10 t-caption max-md:right-1 max-md:top-1">NEW</span>
       )}
       {card.isExample && (
@@ -221,10 +221,10 @@ function RegionChip({ region, className }: { region: string; className: string }
    노트는 사진·데이터가 먼저 오는 커버 카드지만, 이야기는 **사람이 먼저** 온다: 작성자
    머리글자·이름 → 제목 → 동네 배지 → 댓글·사진 수. 사진이 없으면 커버를 지어내지 않고
    (그라디언트·단지명 커버는 노트의 것) 글 카드로 선다. 규칙은 globals.css .story-card. */
-function StoryCardView({ card, delay }: { card: FeedCard; delay: number }) {
+function StoryCardView({ card, delay, now }: { card: FeedCard; delay: number; now: number }) {
   const author = card.author.trim() || "이웃";
   const initial = author.slice(0, 1);
-  const isNew = Date.now() - card.createdAt < 24 * 3600_000;
+  const isNew = now - card.createdAt < 24 * 3600_000;
   const comments = Math.max(0, card.comments ?? 0);
   const photos = Math.max(0, card.photos ?? 0);
   return (
@@ -298,8 +298,8 @@ function StoryCardView({ card, delay }: { card: FeedCard; delay: number }) {
   );
 }
 
-function FeedCardView({ card, delay }: { card: FeedCard; delay: number }) {
-  if (card.kind === "post") return <StoryCardView card={card} delay={delay} />;
+function FeedCardView({ card, delay, now }: { card: FeedCard; delay: number; now: number }) {
+  if (card.kind === "post") return <StoryCardView card={card} delay={delay} now={now} />;
   return (
     <div className={`mb-3 break-inside-avoid rise-in-${Math.min(delay, 6)}`}>
       {/* [1016] 소유자: "모바일에서 이 부분은 각 카드가 가로 정렬이 되도록" — 폰은 사진(왼쪽 118px) + 글(오른쪽) 한 줄,
@@ -309,7 +309,7 @@ function FeedCardView({ card, delay }: { card: FeedCard; delay: number }) {
         className="card tile card-zoom group block overflow-hidden rounded-lg no-underline max-md:flex max-md:items-center max-md:gap-2.5 max-md:p-2.5"
       >
         <div className="max-md:w-[118px] max-md:shrink-0 md:contents">
-          <Cover card={card} />
+          <Cover card={card} now={now} />
         </div>
         {/* [961] 호버 — 커버 아래 주홍 밑줄이 왼쪽에서 차오른다(인터랙션 라이브러리 04) */}
         <span className="njn-card-bar max-md:hidden" aria-hidden="true" />
@@ -432,8 +432,13 @@ export function TownFeed({
   hasMore = false,
   loadFailed = false,
   ad = null,
+  now = Date.now(),
 }: {
   cards: FeedCard[];
+  /** [1030 · 3차] 서버가 렌더한 시각 — "NEW"(24시간) 판정의 기준. 이 페이지는 revalidate 86,400 의 ISR 이라 서버 HTML 은
+      최대 하루 전 것이다: 카드마다 Date.now() 로 판정하면 서버(렌더 때 NEW)와 클라이언트(지금은 24시간 지남)가 달라
+      하이드레이션 불일치(React #418 · 2026-10-04 운영 실측 데스크톱·폰)로 피드 전체를 다시 그렸다. HomeTownBlock 과 같은 규칙. */
+  now?: number;
   /** [967 · 19] 서버가 준 첫 장 너머에 카드가 더 있는가 — "더 보기" 버튼의 첫 상태 */
   hasMore?: boolean;
   /**
@@ -804,7 +809,7 @@ export function TownFeed({
           <div className="flex flex-col md:block md:columns-3 md:gap-3 lg:columns-4">
             {visible.map((card, i) => (
               <Fragment key={card.id}>
-                <FeedCardView card={card} delay={(i % 6) + 1} />
+                <FeedCardView card={card} delay={(i % 6) + 1} now={now} />
                 {ad && i === AD_AFTER_INDEX && (
                   <div className="mb-3 break-inside-avoid">{ad}</div>
                 )}
@@ -840,7 +845,7 @@ export function TownFeed({
             </button>
           ) : (
             <p role="status" className="t-sub text-text-3">
-              마지막이에요 · 이 조건 {visible.length.toLocaleString("ko-KR")} / 전체{" "}
+              목록 끝 · 이 조건 {visible.length.toLocaleString("ko-KR")} / 전체{" "}
               {allCards.length.toLocaleString("ko-KR")}개
             </p>
           )}

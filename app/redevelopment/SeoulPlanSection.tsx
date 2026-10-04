@@ -35,7 +35,7 @@ export async function SeoulPlanSection() {
       <SeoulPlanBrowser initialItems={items} summary={summary} />
       <p className="mt-3 t-caption text-text-3">
         출처{" "}
-        <a href={UPIS_SOURCE_URL} target="_blank" rel="noopener noreferrer" className="font-bold text-primary">
+        <a href={UPIS_SOURCE_URL} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[24px] items-center font-bold text-primary">
           서울 열린데이터광장 · 도시계획 결정 조서
         </a>{" "}
         · 매일 갱신 · 원문 그대로 · 참고용(법적 효력 없음) · 결정일 = 고시 코드 기준

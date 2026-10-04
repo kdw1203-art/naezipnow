@@ -21,6 +21,8 @@ export function StepLine({
   return (
     <ol
       aria-label={label}
+      /* [1030 · 3차] 가로 스크롤 영역에 키보드 초점 — 안에 누를 것이 없어 Tab 으로는 못 넘기던 단계 줄(axe scrollable-region-focusable) */
+      tabIndex={0}
       className={`scroll-x-hidden-bar m-0 flex list-none items-center gap-1.5 overflow-x-auto p-0 max-md:-mx-3.5 max-md:px-3.5 ${className}`}
     >
       {steps.map((s, i) => {

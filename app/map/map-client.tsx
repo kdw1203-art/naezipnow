@@ -2471,7 +2471,7 @@ export function MapClient({
           }}
           placeholder="회사 주소"
           aria-label="회사 주소"
-          className="w-full rounded-lg border border-line bg-[var(--glass-bg-strong)] px-2.5 py-1.5 t-sub text-text-1 outline-none placeholder:text-text-3"
+          className="w-full rounded-lg border border-line bg-[var(--glass-bg-strong)] px-2.5 py-1.5 t-sub text-text-1 placeholder:text-text-3"
         />
         <div className="flex flex-wrap items-center gap-1.5">
           <button
@@ -3355,6 +3355,8 @@ export function MapClient({
      구역 상세 링크). 예전 안내창은 구역명·주소·출처 주소를 이스케이프 없이 innerHTML 에 넣었다. */
   const redevelopmentMarkers = useMemo<MapMarkerData[]>(() => {
     if (!showRedevelopment) return [];
+    /* [1030 · G5] 이름표는 시세 핀에 양보한다(priority −1 → 겹치면 구역이 색 점으로 접히고 시세 핀이 남는다).
+       예전엔 동점(0)이라 id 사전순("redev:" < "region:")으로 구역 이름표가 이기고 구 시세 핀이 회색 점이 됐다. */
     return redevShown.map((p) => ({
       id: `redev:${p.id}`,
       lat: p.lat,
@@ -3362,6 +3364,7 @@ export function MapClient({
       label: redevMarkerLabel(p, redevLabelMode),
       pinColor: colorForType(p.typeKey),
       infoHtml: buildRedevInfoHtml(p),
+      priority: -1,
     }));
   }, [showRedevelopment, redevShown, redevLabelMode]);
 
@@ -5028,7 +5031,7 @@ export function MapClient({
                   ? "단지 목록 불러오기 실패 · 잠시 후 다시"
                   : rangeActive || commuteActive
                     ? "조건에 맞는 단지 없음"
-                    : "이 지역 단지 목록을 준비 중이에요."}
+                    : "이 지역 단지 목록 준비 중"}
               </div>
               {!danjiLoadFailed && (rangeActive || commuteActive) && (
                 <button

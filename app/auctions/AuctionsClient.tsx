@@ -24,7 +24,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AIPanel } from "@/app/components/AIPanel";
 import { Explain } from "@/app/components/explain/Explain";
 import type { AuctionApiItem } from "@/app/api/auctions/route";
-import { sidoShort, sigunguDistribution } from "@/lib/onbid/region-summary";
+import { sigunguDistribution } from "@/lib/onbid/region-summary";
 
 /* ── lib/onbid/store 는 server-only(supabase) 를 끌고 와 값 import 불가.
       아래 둘은 원본(lib/onbid/store.ts)에서 복제 — 의미 변경 금지. ── */
@@ -181,6 +181,17 @@ function onbidToCard(a: AuctionApiItem, now: Date): AuctionCardData {
 
 /* [개선 #23] SourceTabs·CourtAuctionPlaceholder 제거 — 경매 탭 폐지(위 주석). */
 
+/* [1030 · G6] 시도 칩 — 값은 온비드 소재지 시도 원문(DB sido 열과 같은 글자). 2026-10-04 진행 물건이 있는 시도 7곳. */
+const AUCTION_SIDO_CHIPS: readonly { value: string; label: string }[] = [
+  { value: "서울특별시", label: "서울" },
+  { value: "경기도", label: "경기" },
+  { value: "인천광역시", label: "인천" },
+  { value: "부산광역시", label: "부산" },
+  { value: "대구광역시", label: "대구" },
+  { value: "울산광역시", label: "울산" },
+  { value: "대전광역시", label: "대전" },
+];
+
 /* 필터 상태 — source 필드는 구 딥링크 호환용으로 남긴다(값은 이제 "onbid" 고정) */
 type Filter = { usage: string | null; gu: string | null; sido: string | null; source: "onbid" | "court" };
 
@@ -191,7 +202,8 @@ function pushFilterUrl(f: Filter) {
   else sp.delete("usage");
   if (f.gu) sp.set("gu", f.gu);
   else sp.delete("gu");
-  if (f.gu && f.sido) sp.set("sido", f.sido);
+  /* [1030 · G6] 시도는 시군구 없이도 선다(시도 칩 줄) */
+  if (f.sido) sp.set("sido", f.sido);
   else sp.delete("sido");
   sp.delete("source"); // 경매 탭 폐지(#23) — 구 파라미터는 지운다
   window.history.pushState(null, "", url);
@@ -235,7 +247,7 @@ export function AuctionsClient({
       setF({
         usage: AUCTION_USAGE_FILTERS.some((x) => x.key === u) ? u : null,
         gu,
-        sido: gu && /^[가-힣]{2,10}$/.test(sd) ? sd : null, // [1028] 시도는 시군구와 함께일 때만
+        sido: /^[가-힣]{2,10}$/.test(sd) ? sd : null, // [1028] 한글 2~10자 · [1030] 시군구 없이도 받는다(시도 칩)
         source: "onbid", // 경매 탭 폐지(#23)
       });
     };
@@ -245,7 +257,7 @@ export function AuctionsClient({
   }, []);
 
   /* 필터가 걸리면 DB 필터 결과를 API 로 받아온다(전체 1,130건 대상 — 축소 없음) */
-  const filterKey = f.usage || f.gu ? `${f.usage ?? ""}|${f.gu ?? ""}|${f.gu ? (f.sido ?? "") : ""}` : null;
+  const filterKey = f.usage || f.gu || f.sido ? `${f.usage ?? ""}|${f.gu ?? ""}|${f.sido ?? ""}` : null;
   useEffect(() => {
     if (!filterKey) {
       setFetched({ state: "idle" });
@@ -311,7 +323,7 @@ export function AuctionsClient({
 
   const { cards, pastCards, dist, guDist, max, imminent, ongoing, monthLabel, cells } = derived;
   /* [1028] 요약 칸(지역별·용도별)의 기준 — 받은 목록이 전체(또는 조건 전체)보다 적을 때만 적는다 */
-  const listTotal = f.usage || f.gu ? matchTotal : activeTotal;
+  const listTotal = f.usage || f.gu || f.sido ? matchTotal : activeTotal;
   const basisNote = listTotal != null && cards.length > 0 && cards.length < listTotal ? `표시 중 ${cards.length.toLocaleString()}건 기준` : null;
   const weekdays = ["월", "화", "수", "목", "금", "토", "일"];
 
@@ -328,6 +340,28 @@ export function AuctionsClient({
      구 딥링크(?source=court)는 온비드 화면으로 자연 수렴한다. */
   return (
     <>
+      {/* [1030 · G6] 시도 칩 줄 — 기본 목록(마감 임박순 200건)이 전부 대전·대구라 서울·경기 이용자에게 보이는 물건이
+          없었다(2026-10-04 운영 실측 · 진행 8,351건 중 서울 2,465). 시도만 고르면 /api/auctions?sido= 로 그 시도 전체에서
+          마감 임박순 200건 · 지역별 요약도 그 시도 기준. 시군구를 고르면 시도는 그대로 두고 좁힌다. */}
+      <div className="rise-in mb-2 flex flex-wrap items-center gap-1.5" role="group" aria-label="시도">
+        <button
+          type="button"
+          onClick={() => set({ sido: null, gu: null })}
+          className={chip(!f.sido)}
+        >
+          전국
+        </button>
+        {AUCTION_SIDO_CHIPS.map((x) => (
+          <button
+            key={x.value}
+            type="button"
+            onClick={() => set({ sido: f.sido === x.value ? null : x.value, gu: null })}
+            className={chip(f.sido === x.value)}
+          >
+            {x.label}
+          </button>
+        ))}
+      </div>
       {/* 상단 필 행: 용도 필터 + CTA */}
       <div className="rise-in mb-4 flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap gap-1.5">
@@ -350,7 +384,7 @@ export function AuctionsClient({
               key={x.key}
               type="button"
               onClick={() => set({ usage: f.usage === x.key ? null : x.key })}
-              style={f.usage === x.key ? { color: "#fff" } : undefined}
+              /* [1030 · G6] 인라인 흰 글자 삭제 — chip-active 는 한지(크림) 바탕이라 고른 용도 칩 글자가 안 보였다("전체" 칩은 [975]에서 이미 뺐다) */
               className={chip(f.usage === x.key)}
             >
               {x.label}
@@ -728,10 +762,11 @@ export function AuctionsClient({
                 {f.gu && (
                   <button
                     type="button"
-                    onClick={() => set({ gu: null, sido: null })}
+                    onClick={() => set({ gu: null })}
                     className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary"
                   >
-                    {[sidoShort(f.sido), f.gu].filter(Boolean).join(" ")} 해제 ×
+                    {/* [1030] 시군구만 푼다 — 시도 칩은 그대로(시도 전체 목록으로 돌아간다) */}
+                    {f.gu} 해제 ×
                   </button>
                 )}
               </div>
@@ -746,7 +781,7 @@ export function AuctionsClient({
                     <button
                       key={`${g.sido ?? ""}|${g.gu}`}
                       type="button"
-                      onClick={() => set(on ? { gu: null, sido: null } : { gu: g.gu, sido: g.sido })}
+                      onClick={() => set(on ? { gu: null } : { gu: g.gu, sido: g.sido })}
                       aria-current={on ? "page" : undefined}
                       className={`press flex min-h-10 items-center justify-between border-b py-2 text-xs last:border-b-0 ${
                         on ? "font-bold" : ""

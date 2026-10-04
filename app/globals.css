@@ -8109,3 +8109,51 @@ html[data-mscale] li :is(p, div).nz-wrap:is(.t-sub, .t-caption) {
   overflow: visible;
   text-overflow: clip;
 }
+
+/* ===== [1030 · G2] 폰 한 줄 규칙의 예외 — 본문인데 목록(li) 안에 있어 잘리던 글 =====
+   정비사업 7단계의 단계 설명·유의점(app/redevelopment/page.tsx)은 목록 행의 보조 줄이 아니라 읽어야 하는 본문인데,
+   li 안의 p.t-sub 라 [1012 · 폰 배율] 한 줄 규칙에 걸려 "…"로 잘렸다(2026-10-04 운영 폰 실측). 이 클래스가 붙은 글만 접는다. */
+html[data-mscale] li p.t-sub.mscale-wrap,
+html[data-mscale] li div.t-sub.mscale-wrap {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* ---------- [1030 · 4차 · 디자인] ---------- */
+/* 55 · 굵기 600 → 700. 규칙 8(굵기 400·500·700 세 단계)인데 운영 실측(2026-10-04 데스크톱 43경로)에서 글자 요소 13,711개 중
+   2,096개가 600(font-semibold 429곳 + 아래 CSS 5종)이었다. 1012 채점 때 "남은 문제: 굵기 600"으로 적혔고 v4 가 걷어냈다가
+   1014 철회로 되돌아온 것. Tailwind 의 font-semibold 는 이 토큰을 읽으므로 한 줄로 전부 700 이 된다. 칩·표 머리·등락 보조는 500/700 으로 명시. */
+:root {
+  --font-weight-semibold: 700;
+}
+.chip,
+.chip-tag {
+  font-weight: 500;
+}
+.chip-active {
+  font-weight: 700; /* 위 .chip 500 보다 뒤에 와야 활성 칩이 700 을 지킨다 */
+}
+.delta-arrow,
+.delta-sub,
+.pxc-th {
+  font-weight: 700;
+}
+/* 56 · 면적대 선반 막대 — 세로 64px 통짜(선택 칸이 파란 덩어리로 읽힘) → 가로 6px 얇은 막대(같은 화면의 "실거래 상위 단지" 막대와 같은 꼴) */
+.pxs-bar {
+  height: 6px;
+  align-items: stretch;
+  margin: 10px 0 8px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.pxs-bar > i {
+  height: 100%;
+  width: auto;
+  transition: width var(--dur-sm) var(--ease-out);
+}
+/* 61 · 긴 문단 줄 길이 — 데스크톱에서 90~117자/행(푸터 고지 117 · 시장 온도 설명 95 · 요금제 안내 90)이던 본문에 72자 상한 */
+.measure {
+  max-width: 72ch;
+}

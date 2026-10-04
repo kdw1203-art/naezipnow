@@ -45,6 +45,12 @@ export interface MapMarkerData {
   infoHtml?: string;
   /** 마커 핀 색 (HTML 마커) */
   pinColor?: string;
+  /**
+   * [1030 · G5] 겹침 정리 우선순위 보정(기본 0). 음수면 같은 자리의 다른 라벨에 먼저 양보한다 —
+   * 정비구역 이름표(걸러 보기 층)가 시세 핀(기본 층)을 점으로 접던 것을 뒤집는다(2026-10-04 운영 실측:
+   * 구 시세 핀이 회색 점, 그 위에 구역 이름표).
+   */
+  priority?: number;
   /** [961] 브랜드 핀 — 핀 안에 처마와 온점(마스터 가이드 v2.1 §07). 임장노트·모임 장소처럼
    *  "사람이 찍은 자리"에 쓴다. 선택되면 온점이 한 번 파문을 그린다(.njn-pin.is-selected). */
   brandPin?: boolean;
@@ -888,7 +894,7 @@ export function NaverMap({
         height: box.height,
         anchor: isPrice || d.brandPin ? "bottom-center" : "center",
         priority:
-          (d.selected ? 1e9 : 0) + (d.favorite ? 1e8 : 0) + Math.min(1e7, d.households ?? 0),
+          (d.selected ? 1e9 : 0) + (d.favorite ? 1e8 : 0) + Math.min(1e7, d.households ?? 0) + (d.priority ?? 0),
       });
     }
     const res = declutterMarkers(

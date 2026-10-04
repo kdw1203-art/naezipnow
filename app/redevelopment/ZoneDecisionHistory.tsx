@@ -56,7 +56,7 @@ export async function ZoneDecisionHistory({ name, sido, sigungu }: { name: strin
       </ol>
       <p className="mt-2 t-caption text-text-3">
         출처{" "}
-        <a href={UPIS_SOURCE_URL} target="_blank" rel="noopener noreferrer" className="font-bold text-primary">
+        <a href={UPIS_SOURCE_URL} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[24px] items-center font-bold text-primary">
           서울 열린데이터광장 · 도시계획 결정 조서
         </a>{" "}
         · 원문 그대로 · 참고용(법적 효력 없음) · 이름이 같은 다른 구역이 섞일 수 있음

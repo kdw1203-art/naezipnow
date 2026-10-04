@@ -4,6 +4,7 @@
    폰에서는 결론과 겹치지 않는 2칸(평단가 최고 · 면적 프리미엄)만. 채움 파랑은 다음 행동 하나(이어서 칩의 파란 "노트 쓰기"는 텍스트 링크로).
    빈 상태는 카드 하나 + 회색 선반 견본 + 한 문장. 데이터 로딩·revalidate·noIndex 는 그대로. 문장은 lib/market/region-conclusion.
    [1023 · AI 분석] 머리 통일 — h1 t-display 손 마크업(.pxs-head) → 공용 PageHead(아이콘 칩 40 · h1.t-title · 사실 한 줄 | 오른쪽 칩·지역 검색). 본문은 그대로. */
+import { areaBandDisplayLabel } from "@/lib/complex/area-band-label";
 import Link from "next/link";
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import { PageShell } from "../../components/PageShell";
@@ -253,7 +254,7 @@ export default async function PricePage({
     const rows = complexesByBand[i] ?? [];
     return {
       slug: c.bandSlug,
-      label: c.bandLabel,
+      label: areaBandDisplayLabel(c.bandLabel), // [1030 · G3] "~59㎡" → "60㎡ 미만"
       txCount: c.txCount,
       complexCount: c.complexCount,
       medianText: eok(c.medianKrw),

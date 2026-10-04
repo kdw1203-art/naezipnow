@@ -80,7 +80,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const id = pureIdFromParam(decodeURIComponent(rawId));
   const row = await loadBriefRow(id);
   if (!row) {
-    return { title: "단지를 찾을 수 없습니다 | 내집나우", robots: { index: false, follow: false } };
+    return { title: "단지 없음 | 내집나우", robots: { index: false, follow: false } };
   }
   const title = `${row.name} 브리핑 리포트 | 내집나우`;
   return {

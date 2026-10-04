@@ -158,7 +158,8 @@ export function ListingsListClient({
         ))}
       </div>
 
-      {/* 서울 구 필터 */}
+      {/* 서울 구 필터 — [1030 · 2차] 등록 매물이 0건이면 구 칩 26개는 고를 것이 없다(운영 실측: 0건 위에 칩 줄만) → 숨긴다 */}
+      {items.length > 0 && (
       <div className="rise-in-1 mb-5 flex gap-1.5 overflow-x-auto pb-1 text-[12px] max-md:mb-3 md:flex-wrap md:overflow-visible">
         <button
           type="button"
@@ -184,6 +185,7 @@ export function ListingsListClient({
           </button>
         ))}
       </div>
+      )}
 
       {list.length === 0 ? (
         /* [970 · C-39] 필터 때문에 0건인지, 등록 매물 자체가 0건인지를 가른다 —

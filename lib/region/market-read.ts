@@ -75,18 +75,19 @@ export function buildMarketRead(input: {
     const dirWord = Math.abs(chg) < 0.05 ? "보합" : chg > 0 ? "상승" : "하락";
     /* [1009 · 리뷰 RC] "12개월 동안"을 고정으로 적었는데 12칸 지역(종로)은 11개월 변화였다 — 실제 달 수로 */
     const span = monthsBetween(first.period, last.period);
-    const sentences = [
-      `${name} 아파트 매매가격지수는 ${ym(first.period)} 이후 ${span !== null ? `${span}개월` : "이 기간"} 동안 ${
-        dirWord === "보합" ? "사실상 보합" : `${Math.abs(chg).toFixed(1)}% ${dirWord}`
-      }했습니다(한국부동산원 지수 기준).`,
+    /* [1030 · G2] 해설 문장 → 사실 낱말 한 줄("매매가격지수 · 2025년 8월 이후 12개월 ▲5.2% · 최고 2026년 7월 · 최저 2025년 8월 ·
+       최근 3개월 등락 혼재"). FAQ 는 검색 구조화 데이터라 완결 문장을 유지한다. */
+    const facts = [
+      `매매가격지수 · ${ym(first.period)} 이후 ${span !== null ? `${span}개월` : "이 기간"} ${
+        dirWord === "보합" ? "사실상 보합" : `${chg > 0 ? "▲" : "▼"}${Math.abs(chg).toFixed(1)}%`
+      }`,
     ];
     if (peak.period !== trough.period) {
-      sentences.push(
-        `이 기간 지수가 가장 높았던 달은 ${ym(peak.period)}, 가장 낮았던 달은 ${ym(trough.period)}입니다.`,
-      );
+      facts.push(`최고 ${ym(peak.period)} · 최저 ${ym(trough.period)}`);
     }
-    if (tailDir) sentences.push(`최근 석 달은 ${tailDir}입니다.`);
-    paragraphs.push(sentences.join(" "));
+    if (tailDir) facts.push(`최근 3개월 ${tailDir === "등락이 섞인 흐름" ? "등락 혼재" : tailDir}`);
+    facts.push("한국부동산원 지수 기준");
+    paragraphs.push(facts.join(" · "));
 
     faq.push({
       q: `${name} 아파트값은 1년 새 얼마나 움직였나요?`,
@@ -101,26 +102,27 @@ export function buildMarketRead(input: {
     const latest = volume[volume.length - 1];
     const prev = volume[volume.length - 2];
     const avg = volume.reduce((a, v) => a + v.count, 0) / volume.length;
-    const sentences: string[] = [];
+    const facts: string[] = [];
     if (prev.count > 0) {
       const vchg = pct(latest.count, prev.count);
-      sentences.push(
-        `거래는 ${ym(latest.month)} ${latest.count.toLocaleString("ko-KR")}건으로 전월(${prev.count.toLocaleString(
+      facts.push(
+        `매매 신고 ${ym(latest.month)} ${latest.count.toLocaleString("ko-KR")}건 · 전월 ${prev.count.toLocaleString(
           "ko-KR",
-        )}건) 대비 ${Math.abs(vchg) < 1 ? "비슷한 수준" : `${Math.abs(vchg).toFixed(0)}% ${vchg > 0 ? "늘었" : "줄었"}습니다`}.`,
+        )}건 대비 ${Math.abs(vchg) < 1 ? "비슷" : `${vchg > 0 ? "▲" : "▼"}${Math.abs(vchg).toFixed(0)}%`}`,
       );
     } else {
-      sentences.push(`거래는 ${ym(latest.month)} ${latest.count.toLocaleString("ko-KR")}건입니다.`);
+      facts.push(`매매 신고 ${ym(latest.month)} ${latest.count.toLocaleString("ko-KR")}건`);
     }
     if (avg > 0) {
       const rel = latest.count / avg;
-      sentences.push(
-        `최근 ${volume.length}개월 월평균(${Math.round(avg).toLocaleString("ko-KR")}건)과 견주면 ${
-          rel >= 1.3 ? "활발한" : rel <= 0.7 ? "한산한" : "평균 언저리의"
-        } 달이었습니다(국토교통부 신고 기준, 신고 지연분은 이후 반영될 수 있음).`,
+      facts.push(
+        `최근 ${volume.length}개월 월평균 ${Math.round(avg).toLocaleString("ko-KR")}건 · ${
+          rel >= 1.3 ? "활발" : rel <= 0.7 ? "한산" : "평균 언저리"
+        }`,
       );
     }
-    paragraphs.push(sentences.join(" "));
+    facts.push("국토교통부 신고 기준 · 신고 지연분 이후 반영");
+    paragraphs.push(facts.join(" · "));
 
     faq.push({
       q: `요즘 ${name} 아파트 거래는 활발한가요?`,
@@ -133,9 +135,7 @@ export function buildMarketRead(input: {
   /* ── 3. 전세가율 ── */
   if (input.jeonseRatio !== undefined && Number.isFinite(input.jeonseRatio)) {
     const r = input.jeonseRatio;
-    paragraphs.push(
-      `전세가율은 ${r.toFixed(1)}%입니다. 전세가율은 매매가 대비 전세가의 비율로, 높을수록 매매가와 전세가의 차이(갭)가 작다는 뜻입니다.`,
-    );
+    paragraphs.push(`전세가율 ${r.toFixed(1)}% · 전세가 ÷ 매매가 · 높을수록 갭 작음`);
   }
 
   /* ── 4. 입주 예정 공급 ── */
@@ -145,9 +145,9 @@ export function buildMarketRead(input: {
   if (withHouseholds.length > 0) {
     const total = withHouseholds.reduce((a, s) => a + s.households, 0);
     paragraphs.push(
-      `입주 예정 물량은 확인된 단지 ${input.supply.length}${input.supplyCapped ? "곳 이상" : "곳"}, 세대수가 공개된 단지 기준 합계 ${total.toLocaleString(
+      `입주 예정 단지 ${input.supply.length}${input.supplyCapped ? "곳 이상" : "곳"} · 세대수 공개분 합계 ${total.toLocaleString(
         "ko-KR",
-      )}세대입니다. 입주가 몰리는 시기에는 전세 공급이 늘어 가격에 영향을 줄 수 있습니다.`,
+      )}세대 · 입주 집중 시기 = 전세 공급 증가`,
     );
     faq.push({
       q: `${name} 입주 예정 물량은 어느 정도인가요?`,

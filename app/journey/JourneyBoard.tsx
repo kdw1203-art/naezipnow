@@ -178,17 +178,21 @@ function DeadlineCard({
   ready,
   today,
   groups,
+  slot,
 }: {
   ready: boolean;
   today: string | null;
   groups: readonly TimelineGroup[];
+  /** [1030 · 3차] 폰·데스크톱 자리에 한 장씩 그려 id 가 겹쳤다(aria-labelledby 가 첫 장만 가리킴) — 자리 이름으로 가른다 */
+  slot: "phone" | "desk";
 }) {
   const dated = groups.some((g) => g.due !== null);
   const upcoming = upcomingDeadlines(groups);
+  const titleId = `jr-deadline-title-${slot}`;
   return (
-    <section className="card flex flex-col" aria-labelledby="jr-deadline-title">
+    <section className="card flex flex-col" aria-labelledby={titleId}>
       <div className="flex flex-wrap items-baseline gap-x-1.5 px-3.5 pt-3 pb-1.5">
-        <h2 id="jr-deadline-title" className="m-0 t-sub font-bold text-ink">
+        <h2 id={titleId} className="m-0 t-sub font-bold text-ink">
           다가오는 마감
         </h2>
         <span className="t-caption text-text-3">계약·잔금 일정표 기준</span>
@@ -197,7 +201,7 @@ function DeadlineCard({
         <p className="m-0 px-3.5 pb-3 t-caption text-text-3">날짜 계산 중</p>
       ) : !dated ? (
         <p className="m-0 px-3.5 pb-3 t-caption text-text-3">
-          계약·잔금 일정표에 날짜를 넣으면 마감이 여기 보여요{" "}
+          계약·잔금 일정표 날짜 입력 → 마감 여기 표시{" "}
           <Link
             href="/journey/contract"
             className="inline-flex min-h-[24px] items-center font-bold text-primary underline-offset-2 hover:underline"
@@ -554,7 +558,7 @@ export function JourneyBoard() {
 
         {/* 폰·태블릿 — 레일 내용 중 꼭 필요한 것만 본문 아래 */}
         <div className="flex flex-col gap-3 lg:hidden">
-          <DeadlineCard ready={ready} today={today} groups={groups} />
+          <DeadlineCard ready={ready} today={today} groups={groups} slot="phone" />
           <Link href="/journey/contract" className="btn-soft btn-md w-full no-underline">
             계약·잔금 일정표
           </Link>
@@ -578,7 +582,7 @@ export function JourneyBoard() {
 
       {/* ── 오른쪽 레일(데스크톱): 다가오는 마감 · 진행 중 신호 · 일정표 입구 ── */}
       <aside className="hidden lg:flex lg:flex-col lg:gap-3 lg:sticky lg:top-[76px] lg:self-start" aria-label="마감과 신호">
-        <DeadlineCard ready={ready} today={today} groups={groups} />
+        <DeadlineCard ready={ready} today={today} groups={groups} slot="desk" />
         {signalRows.length > 0 && (
           <section className="card flex flex-col" aria-labelledby="jr-signal-title">
             <h2 id="jr-signal-title" className="m-0 px-3.5 pt-3 pb-1.5 t-sub font-bold text-ink">

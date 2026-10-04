@@ -170,7 +170,7 @@ export default async function RedevelopmentPage() {
             <span className="t-caption text-text-3">도시정비법 일반 절차 기준</span>
           </div>
           {/* 가로 스텝 오버뷰 — 좁은 화면은 가로 스크롤 */}
-          <div className="mt-3 -mx-1 overflow-x-auto px-1 pb-1">
+          <div className="mt-3 -mx-1 overflow-x-auto px-1 pb-1" tabIndex={0}>
             <ol className="flex min-w-max items-center gap-1">
               {STAGE_GUIDES.map((s, i) => (
                 <li key={s.key} className="flex items-center gap-1">
@@ -223,7 +223,8 @@ export default async function RedevelopmentPage() {
                     </span>
                   </div>
 
-                  <p className="mt-1 t-sub text-text-1">{s.desc}</p>
+                  {/* [1030 · G2] 단계 설명·유의점은 목록 메타가 아니라 본문 — 폰 한 줄 규칙에서 뺀다(.mscale-wrap) */}
+                  <p className="mscale-wrap mt-1 t-sub text-text-1">{s.desc}</p>
 
                   {/* 유의점 */}
                   <div className="mt-2 flex gap-1.5 rounded-lg bg-warning-soft px-2.5 py-2">
@@ -232,7 +233,7 @@ export default async function RedevelopmentPage() {
                       size={13}
                       className="mt-px shrink-0 text-warning"
                     />
-                    <p className="t-sub text-warning">
+                    <p className="mscale-wrap t-sub text-warning">
                       <span className="font-bold">유의점 </span>
                       {s.caution}
                     </p>

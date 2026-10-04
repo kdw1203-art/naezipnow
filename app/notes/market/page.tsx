@@ -52,7 +52,7 @@ export default async function NotesMarketPage() {
     );
 
   return (
-    <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 px-4 py-6 max-md:gap-3 max-md:py-4">
+    <main id="main-content" className="mx-auto flex w-full max-w-[980px] flex-col gap-5 px-4 py-6 max-md:gap-3 max-md:py-4">
       {/* 헤더 */}
       <div className="flex flex-col gap-2">
         <nav className="t-sub font-semibold text-text-3">
@@ -110,7 +110,8 @@ export default async function NotesMarketPage() {
                 key={note.id}
                 className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface"
               >
-                <div className="relative h-[150px] w-full overflow-hidden bg-bg">
+                {/* [1030 · 2차] 고정 150px 높이가 넓은 커버(1200×630)의 아래를 잘라 제목 글자가 끊겼다 → 커버 비율 그대로 */}
+                <div className="relative aspect-[1200/630] w-full overflow-hidden bg-bg">
                   {/* [1015 · 규칙 H] 커버 주소는 lib/notes/cover/resolve 한 곳 — 이 자리는 넓은 커버(150px 가로) → 통합자가 wide 판으로 바꾼다(보고서) */}
                   <CoverImage
                     src={noteCoverUrl(note, "wide")}
@@ -184,6 +185,6 @@ export default async function NotesMarketPage() {
           가격·정산은 결제 오픈 후 작성자가 정함 · 오픈 전 결제 없음
         </p>
       </div>
-    </div>
+    </main>
   );
 }

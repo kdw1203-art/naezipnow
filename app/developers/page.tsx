@@ -150,7 +150,7 @@ export default function DevelopersPage() {
         <section className="rise-in-2 card mt-6 rounded-3xl p-6 max-md:mt-4 max-md:p-4">
           <h2 className="t-section text-ink">첫 호출</h2>
           <p className="mt-2 t-body leading-[1.75] text-text-1">키 발급·등록 없음. 아래 한 줄로 최신 월 집계.</p>
-          <pre className="mt-3 overflow-x-auto rounded-lg bg-bg p-3 text-[12px] leading-[1.6] text-text-1">
+          <pre tabIndex={0} className="mt-3 overflow-x-auto rounded-lg bg-bg p-3 text-[12px] leading-[1.6] text-text-1">
             <code>{`curl "${BASE}/regions/monthly?limit=5"`}</code>
           </pre>
           <p className="mt-2 text-[12px] leading-[1.7] text-text-3">
@@ -181,7 +181,7 @@ export default function DevelopersPage() {
                     ))}
                   </ul>
                 ) : null}
-                <pre className="mt-3 overflow-x-auto rounded-lg bg-bg p-3 text-[12px] leading-[1.6] text-text-1">
+                <pre tabIndex={0} className="mt-3 overflow-x-auto rounded-lg bg-bg p-3 text-[12px] leading-[1.6] text-text-1">
                   <code>{e.example}</code>
                 </pre>
               </div>
@@ -214,8 +214,7 @@ export default function DevelopersPage() {
               틀렸는지 error.message 와 error.hint 에 적습니다.
             </li>
             <li>
-              <code className="font-bold text-ink">429</code>: 호출 한도 초과. Retry-After 를
-              참고해 다시 시도해 주세요.
+              <code className="font-bold text-ink">429</code>: 호출 한도 초과 · Retry-After 뒤 재시도
             </li>
             <li>
               <code className="font-bold text-ink">503</code>: 저희가 조회에 실패했습니다.
@@ -241,7 +240,7 @@ export default function DevelopersPage() {
               데이터 방법론
             </Link>
             에 적혀 있습니다. 평균은 면적·층을 가중하지 않은 단순 평균이며, 최근 1~2개월
-            수치는 신고 지연으로 계속 늘어납니다. 인용할 때 함께 밝혀 주세요.
+            수치는 신고 지연으로 계속 늘어납니다. 인용 시 함께 표기.
           </p>
         </section>
 

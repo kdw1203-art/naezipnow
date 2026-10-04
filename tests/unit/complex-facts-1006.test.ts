@@ -288,8 +288,8 @@ test("buildComplexFacts — 조회 실패(null)와 0건([])을 다르게 적는�
 test("areaBandLabelByUnit — ㎡ 라벨의 숫자만 평으로, m2 는 그대로", () => {
   assert.equal(areaBandLabelByUnit("60~85㎡", "m2"), "60~85㎡");
   assert.equal(areaBandLabelByUnit("60~85㎡", "pyeong"), "18.1~25.7평");
-  assert.equal(areaBandLabelByUnit("~59㎡", "pyeong"), "~17.8평");
-  assert.equal(areaBandLabelByUnit("135㎡~", "pyeong"), "40.8평~");
+  assert.equal(areaBandLabelByUnit("~59㎡", "pyeong"), "18.1평 미만"); // [1030 · G3] 열린 구간 화면 이름
+  assert.equal(areaBandLabelByUnit("135㎡~", "pyeong"), "40.8평 이상");
   /* ㎡ 가 없는 문자열(이미 평·건수 라벨)은 손대지 않는다 */
   assert.equal(areaBandLabelByUnit("3건", "pyeong"), "3건");
 });

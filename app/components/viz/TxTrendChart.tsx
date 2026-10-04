@@ -90,10 +90,18 @@ export function TxTrendChart({
     const r = el.getBoundingClientRect();
     setActive(nearestSlot(slots, clientX - r.left));
   };
+  /* [1030 · G3] 끝에 붙은 빈 달(최대 2칸) = 신고 기한(계약 후 30일) 안의 달 — "거래 없음"이 아니라 아직 신고가 안 모인 달이다.
+     지역 화면의 "9월 958건 = 신고 기한 내 · 그래프 제외"와 같은 구분. 날짜 계산 없이 끝 두 칸만 본다(시리즈는 이번 달까지 온다). */
+  const pendingYms = new Set<string>();
+  for (let i = months.length - 1; i >= 0 && i >= months.length - 2; i -= 1) {
+    if (months[i].nAll > 0 || months[i].avgMan != null) break;
+    pendingYms.add(months[i].ym);
+  }
+  const emptyLabel = (ym: string) => (pendingYms.has(ym) ? "신고 집계 중" : "거래 없음");
   const srText = (i: number) => {
     const s = slots[i];
     if (!s || s.kind !== "month") return "";
-    return s.avgMan != null ? `${ymLabel(s.ym)} ${valueLabel} ${tick(s.avgMan)} · ${countLabel} ${s.nAll}건` : `${ymLabel(s.ym)} 거래 없음`;
+    return s.avgMan != null ? `${ymLabel(s.ym)} ${valueLabel} ${tick(s.avgMan)} · ${countLabel} ${s.nAll}건` : `${ymLabel(s.ym)} ${emptyLabel(s.ym)}`;
   };
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     let next: number | null = null;
@@ -252,7 +260,7 @@ export function TxTrendChart({
             style={{ left: Math.max(0, act.x - 60), top: act.y != null && act.y < layout.plotTop + 40 ? Math.max(0, layout.lineBottom - 34) : 0 }}
           >
             <span>{ymLabel(act.ym)}</span>
-            <span className="font-semibold opacity-80">{act.avgMan != null ? tick(act.avgMan) : "거래 없음"}</span>
+            <span className="font-semibold opacity-80">{act.avgMan != null ? tick(act.avgMan) : emptyLabel(act.ym)}</span>
             <span className="font-semibold opacity-80">
               {countLabel} {act.nAll}건
             </span>
@@ -276,7 +284,7 @@ export function TxTrendChart({
             {months.map((m) => (
               <tr key={m.ym}>
                 <td>{ymLabel(m.ym)}</td>
-                <td>{m.avgMan != null ? tick(m.avgMan) : "거래 없음"}</td>
+                <td>{m.avgMan != null ? tick(m.avgMan) : emptyLabel(m.ym)}</td>
                 <td>{m.nAll}건</td>
               </tr>
             ))}

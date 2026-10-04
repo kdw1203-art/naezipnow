@@ -86,3 +86,21 @@ export function upisDateLabel(iso: string | null): string {
 
 /** 구별 요약 한 줄 — 서비스별 건수 */
 export type UpisGuSummary = { sigungu: string; rebuild: number; urbanDev: number; distUnitPlan: number; total: number };
+
+/** [1029b] 조서 검색어 정리 — 구역 이름·동·위치를 찾는 글자. PostgREST or/ilike 에 들어가므로 %, _, 쉼표, 괄호, 따옴표를
+ *  걷고 공백은 하나로. 낱말 3개까지(모두 들어 있는 행만). 남는 글자가 없으면 null. */
+export const UPIS_QUERY_MAX = 40;
+export function normalizeUpisQuery(raw: string | null | undefined): string | null {
+  const cleaned = (raw ?? "")
+    .replace(/[%_,()'"`\\]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, UPIS_QUERY_MAX);
+  if (!cleaned || !/[가-힣A-Za-z0-9]/.test(cleaned)) return null;
+  return cleaned;
+}
+export function upisQueryTokens(q: string | null | undefined): string[] {
+  const n = normalizeUpisQuery(q);
+  if (!n) return [];
+  return n.split(" ").filter((t) => t.length >= 1).slice(0, 3);
+}

@@ -211,10 +211,10 @@ export function ProjectDetailPanel({
           <H className="t-body font-bold text-ink">
             {guide.longLabel} 단계에서 확인할 것
           </H>
-          <p className="mt-1 t-sub text-text-2">{guide.desc}</p>
+          <p className="mscale-wrap mt-1 t-sub text-text-2">{guide.desc}</p>
           <div className="mt-2 flex gap-1.5 rounded-lg bg-warning-soft px-2.5 py-2">
             <Icon name="warning" size={13} className="mt-px shrink-0 text-warning" />
-            <p className="t-sub text-warning">
+            <p className="mscale-wrap t-sub text-warning">
               <span className="font-bold">유의점 </span>
               {guide.caution}
             </p>

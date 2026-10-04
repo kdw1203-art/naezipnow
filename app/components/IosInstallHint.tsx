@@ -157,9 +157,9 @@ export function IosInstallHint() {
         <div className="min-w-0 flex-1">
           <div className="t-body font-bold text-ink">주소창 없이 앱처럼 쓰기</div>
           <p className="mt-1 t-sub leading-relaxed text-text-2">
-            사파리 <span className="font-semibold text-text-1">공유</span> 버튼을 누르고 목록에서{" "}
-            <span className="font-semibold text-text-1">홈 화면에 추가</span>를 고르면 돼요. 위아래
-            브라우저 막대가 사라져 화면을 더 넓게 써요.
+            {/* [1030 · 2차] 해요체 설명 → 낱말 */}
+            사파리 <span className="font-semibold text-text-1">공유</span> →{" "}
+            <span className="font-semibold text-text-1">홈 화면에 추가</span> · 주소창·탭바 없는 전체 화면
           </p>
         </div>
       </div>

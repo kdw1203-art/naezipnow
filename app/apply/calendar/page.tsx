@@ -62,8 +62,8 @@ export default async function ApplyCalendarPage() {
              보면 되는지(아래 청약홈 링크)만 남긴다. */
           <EmptyState
             icon="lock"
-            title="접수 일정을 아직 보여드릴 수 없어요"
-            desc="준비되면 이 자리에 접수 일정이 실려요."
+            title="접수 일정 아직 없음"
+            desc="준비되면 이 자리에 접수 일정 표시"
             action={{ href: "https://www.applyhome.co.kr", label: "청약홈에서 직접 보기 ↗" }}
           />
         ) : cal.state === "error" ? (

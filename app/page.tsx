@@ -234,7 +234,8 @@ export default async function Home() {
           {/* [1022] 소유자: "검색창 있는 부분을 좀더 심플하고 요즘 트렌드에 맞게" — 부제 삭제, 검색 알약 하나 + 칩 한 줄,
               커버리지 숫자는 ⓘ 안으로(처음이라면 ⓘ 와 합침). */}
           <div className="flex flex-col gap-3 pb-3 pt-2 md:gap-4 md:py-7">
-            <p className="t-display text-center text-ink">어느 단지가 궁금하세요?</p>
+            {/* [1030 · G1] 질문문("어느 단지가 궁금하세요?") → 낱말. 예시는 검색칸 placeholder 가 든다. */}
+            <p className="t-display text-center text-ink">단지 · 동네 검색</p>
             {/* [1015 · 규칙 B] "예산으로 찾기" 칩 줄과 "어디서부터 시작할까요?" 문 4개는 뺐다(소유자: "필요 없는 부분 —
                 물음표 칸으로 마우스를 올리면 보이는 정도로"). 네 입구는 ⓘ 하나(hover 미리보기·탭 시트)로 접었다.
                 [1024] 소유자(캡처): "이런건 한줄로 바꿔줘" — "처음이라면 ⓘ" 를 칩 행의 coverage 슬롯으로 넘겨 칩과 같은 줄에 둔다. */}

@@ -78,6 +78,15 @@ export function TxTrendSection({ data, complexName }: { data: TxTrendData; compl
   const modeLabel = MODES.find((m) => m.value === mode)?.label ?? "매매";
   const what = mode === "trade" ? `${typeLabel} 매매` : `${modeLabel} · 전 타입(면적 구분 없음)`;
   const valued = months.filter((m) => m.avgMan != null).length;
+  /* [1030 · G3] 끝 두 칸이 비면 신고 기한(계약 후 30일) 안의 달 — 범례에 그 사실을 적는다(그래프 안 "거래 없음"도 같은 말로 바뀐다) */
+  const pendingTail = (() => {
+    const out: string[] = [];
+    for (let i = months.length - 1; i >= 0 && i >= months.length - 2; i -= 1) {
+      if (months[i].nAll > 0 || months[i].avgMan != null) break;
+      out.unshift(months[i].ym);
+    }
+    return out;
+  })();
   const rentOff = !data.rent;
 
   return (
@@ -228,6 +237,11 @@ export function TxTrendSection({ data, complexName }: { data: TxTrendData; compl
             <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full border border-primary bg-surface" />
             거래 1~2건 달
           </span>
+          {pendingTail.length > 0 && (
+            <span>
+              {pendingTail.map((ym) => `${ym.slice(2, 4)}.${ym.slice(4)}`).join("·")} 신고 집계 중 · 계약 후 30일 내 신고
+            </span>
+          )}
         </div>
       </section>
     </div>

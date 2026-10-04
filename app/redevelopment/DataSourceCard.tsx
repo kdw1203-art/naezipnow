@@ -18,7 +18,18 @@ export function DataSourceCard({
         <h2 className="text-[13px] font-bold text-ink">데이터 출처</h2>
       </div>
 
-      <div className="mt-3 overflow-hidden rounded-xl border border-line">
+      {/* [1030 · G6] 폰(md 미만)은 3열 표가 낱말마다 줄바꿈되고 주기 칸이 "…"로 잘렸다(2026-10-04 운영 실측) →
+          폰은 종류별 묶음(종류 제목 + 출처 + 주기 두 줄), 데스크톱은 예전 3열 표 그대로. 글자는 둘이 같다. */}
+      <dl className="mt-3 flex flex-col divide-y divide-line rounded-xl border border-line md:hidden">
+        {sources.map((s) => (
+          <div key={s.kind} className="flex flex-col gap-0.5 px-3 py-2.5">
+            <dt className="t-sub font-semibold text-ink">{s.kind}</dt>
+            <dd className="m-0 t-sub text-text-2">{s.source}</dd>
+            <dd className="m-0 t-caption text-text-3">갱신 · {s.cycle}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="mt-3 hidden overflow-hidden rounded-xl border border-line md:block">
         <table className="w-full border-collapse text-left">
           <thead>
             <tr className="bg-primary-soft t-sub font-bold text-primary">

@@ -44,7 +44,7 @@ export function ComplexSummaryTable({
   if (summaries.length === 0) {
     return (
       <p className="py-6 text-center t-body text-text-3">
-        이 지역의 단지별 실거래 데이터를 준비 중이에요.
+        이 지역 단지별 실거래 데이터 준비 중
       </p>
     );
   }

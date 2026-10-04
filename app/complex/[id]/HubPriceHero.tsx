@@ -1,3 +1,4 @@
+import { areaBandDisplayLabel } from "@/lib/complex/area-band-label";
 import { Won } from "@/app/components/num/Won";
 import { Delta } from "@/app/components/num/Delta";
 import { ExplainLazy as Explain } from "./ExplainLazy";
@@ -114,7 +115,7 @@ export function HubPriceHero({
   const sentence = base
     ? changeLabel({ curr: h.priceManwon, base: base.avgManwon, since: since.replace(/보다$/, " 대비"), unit: "manwon" })
     : null;
-  const what = h.basis === "band" ? h.bandLabel : null;
+  const what = h.basis === "band" ? areaBandDisplayLabel(h.bandLabel) : null;
 
   return (
     <div className={scope}>

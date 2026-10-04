@@ -141,27 +141,29 @@ export function buildComplexCitableSummary(input: ComplexCitableInput): CitableS
   );
 
   const f = input.fragments ?? null;
+  /* [1030 · G2] 첫 문장(인용 문장)만 완결 문장으로 남기고, 2~4번째는 사실 낱말로 접는다 — 같은 숫자가
+     "요약" 탭에 한 번 더 나오던 문단(폰 9줄)을 반으로. 값·기준·출처는 그대로. */
   if (f) {
-    /* [1007] 조각 = 패널 한 줄 요약과 같은 문자열. 문장 꼬리만 여기서 붙인다. */
+    /* [1007] 조각 = 패널 한 줄 요약과 같은 문자열. 꼬리(기준)만 낱말로 붙인다. */
     if (f.trades) {
-      sentences.push(`이 단지는 ${f.trades}입니다(매매 신고 기준, 중앙값은 면적 미가중).`);
+      sentences.push(`${f.trades} · 매매 신고 기준 · 중앙값 면적 미가중`);
     }
     const rent = [f.jeonse, f.jeonseRatio].filter((v): v is string => Boolean(v));
     if (rent.length > 0) {
       sentences.push(
-        `전월세 신고 기준 ${rent.join(" · ")}입니다` +
+        `전월세 신고 기준 · ${rent.join(" · ")}` +
           (f.jeonseRatio
-            ? "(전세가율 = 최근 6개월 전세 보증금 중앙값 ÷ 같은 기간 매매 중앙값, 각 표본 3건 이상일 때만)."
-            : "."),
+            ? " · 전세가율 = 최근 6개월 전세 보증금 중앙값 ÷ 같은 기간 매매 중앙값 · 각 표본 3건 이상일 때만"
+            : ""),
       );
     }
     const specs = [f.households, f.buildYear].filter((v): v is string => Boolean(v));
     if (specs.length > 0) {
-      sentences.push(`${name}는 ${specs.join(", ")} 단지입니다(공동주택 공공데이터 기준).`);
+      sentences.push(`${specs.join(" · ")} · 공동주택 공공데이터 기준`);
     }
   } else {
     if (typeof input.deals12m === "number" && input.deals12m > 0) {
-      sentences.push(`최근 12개월에 신고된 이 단지의 매매 거래는 ${count(input.deals12m)}건입니다.`);
+      sentences.push(`최근 12개월 매매 신고 ${count(input.deals12m)}건`);
     }
 
     const specs: string[] = [];
@@ -172,7 +174,7 @@ export function buildComplexCitableSummary(input: ComplexCitableInput): CitableS
       specs.push(`${input.buildYear}년 준공`);
     }
     if (specs.length > 0) {
-      sentences.push(`${name}는 ${specs.join(", ")} 단지입니다(공동주택 공공데이터 기준).`);
+      sentences.push(`${specs.join(" · ")} · 공동주택 공공데이터 기준`);
     }
   }
 

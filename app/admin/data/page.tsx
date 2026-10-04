@@ -120,6 +120,12 @@ function relDays(lagDays: number | null): string {
   return `${fmt(lagDays)}일 전`;
 }
 
+/** 로그 message 의 " — " 뒤 사유(있을 때만) — "활용신청 필요 — RTMSDataSvcRHRent: …" 같은 다음 행동 */
+function reasonOf(message: string | null | undefined): string | null {
+  const m = String(message ?? "").split(" — ");
+  return m.length > 1 ? m.slice(1).join(" — ").slice(0, 240) : null;
+}
+
 /** 마지막 수집 한 줄 요약 — 행 수와 조각 집계 중 실제로 있는 것만 붙인다. */
 function runDetail(run: NonNullable<FreshnessRow["ingest"]>): string {
   const parts = [`${fmt(run.rows)}행`];
@@ -242,6 +248,8 @@ export default async function AdminDataPage() {
                 <code className="text-[#fb923c]">{r.source}</code> {r.dataset} —{" "}
                 {OUTCOME_LABEL[r.outcome]} · {fmt(r.rows)}행 적재
                 {tallyText(r.tally) ? ` · ${tallyText(r.tally)}` : ""}
+                {/* [1030 · 5차] 사유 — 로그 message 의 " — " 뒤(활용신청 필요 · 시간 초과 등). 없으면 조용히 */}
+                {reasonOf(r.message) ? <div className="text-[10px] text-[#9aa6b8]">{reasonOf(r.message)}</div> : null}
               </li>
             ))}
           </ul>

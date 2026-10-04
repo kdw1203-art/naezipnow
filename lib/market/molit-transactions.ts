@@ -23,6 +23,7 @@ import { getSigunguInfo, listLeafSigungu, type SigunguInfo } from "@/lib/nationa
 import { logIngest } from "@/lib/market/store";
 import type { RefreshAggregatesResult } from "@/lib/market/refresh-aggregates";
 import { logger } from "@/lib/log";
+import { isServiceNotRegistered } from "@/lib/market/ingest-outcome";
 /* [1010] "이번 적재가 실제로 바꾼 단지" 수집기 — 순수 모듈(단위 테스트가 규칙을 고정한다) */
 import {
   createTouchedComplexSink,
@@ -536,6 +537,10 @@ export async function ingestMolitTransactions(opts: {
   const DB_ERROR_ABORT_THRESHOLD = 5;
   let consecutiveDbErrors = 0;
   let aborted = false;
+  /* [1030 · 5차] 국토부 쪽이 "등록되지 않은 서비스키"(resultCode 30)로 답하면 그 서비스는 이 키로 **활용신청이 안 된 것**이라
+     남은 시군구·다음 유형도 전부 같은 답이다. 2026-10-03·04 실측: 비아파트 수집이 매일 42회를 두드려 42회 실패하고
+     "실패 · 0행"으로만 남았다. 첫 응답에서 멈추고 무엇을 신청해야 하는지 적는다 — 승인되면 다음 실행이 그대로 이어진다. */
+  let notRegistered: string | null = null;
 
   /** DB 오류 1건 기록. 차단 임계에 닿으면 true(= 루프를 끊어라)를 돌려준다. */
   async function noteDbFailure(info: SigunguInfo, regionName: string, msg: string): Promise<boolean> {
@@ -604,6 +609,10 @@ export async function ingestMolitTransactions(opts: {
         else if (res.reason === "not-configured") notConfigured = true;
         else if (res.reason === "fetch-failed") fetchFailed = true;
         if (res.reason === "fetch-failed") fetchDetail ??= res.detail ?? null;
+        if (res.reason === "fetch-failed" && res.detail && isServiceNotRegistered(res.detail)) {
+          notRegistered ??= res.detail.split(/\s+/)[0] || res.detail;
+          break;
+        }
         for (const deal of res.deals) {
           const row = toRow(deal, {
             info,
@@ -632,6 +641,10 @@ export async function ingestMolitTransactions(opts: {
         result.regions.push({ code: info.sigunguCd, name: regionName, rows: 0, status: "error" });
         firstError ??= `${info.sigunguCd}: 국토부 API 응답 실패(${fetchDetail ?? "네트워크·5xx·오류 XML"})`;
         logger.warn("[molit-tx]", info.sigunguCd, yyyymm, "국토부 API 응답 실패", fetchDetail ?? "(사유 없음)");
+        if (notRegistered) {
+          aborted = true;
+          break;
+        }
         continue;
       }
       if (mode !== "live" || rows.length === 0) {
@@ -679,7 +692,12 @@ export async function ingestMolitTransactions(opts: {
      무효화 상한에 걸려 잘려도 "먼저 적재된 시군구부터" 라는 뜻이 유지된다. */
   result.touchedComplexes = touched.list();
   result.touchedTruncated = touched.truncated();
-  if (aborted) {
+  if (aborted && notRegistered) {
+    result.reason =
+      `활용신청 필요 — ${notRegistered}: 공공데이터포털(data.go.kr)에서 이 서비스를 활용신청하고 승인되면 다음 실행이 이어서 받는다. ` +
+      `남은 시군구 ${Math.max(0, targets.length - result.regions.length)}곳은 시도하지 않음(같은 답).` +
+      (firstError ? ` 첫오류=${firstError.slice(0, 160)}` : "");
+  } else if (aborted) {
     /* "슬라이스를 다 봤다" 와 구분되게 이유를 남긴다 — 남은 시군구는 미확인이다. */
     result.reason =
       `데이터베이스 오류가 ${DB_ERROR_ABORT_THRESHOLD}회 연속이라 중단했습니다. ` +

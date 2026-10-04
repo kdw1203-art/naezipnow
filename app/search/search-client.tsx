@@ -982,12 +982,13 @@ export function SearchClient() {
                       <Link
                         href={`/map?q=${encodeURIComponent(q.trim())}`}
                         onClick={() => saveRecent(q)}
-                        className="t-sub font-bold text-primary"
+                        className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary"
                       >
                         지도 ›
                       </Link>
                     )}
-                    <Link href={g.more} className="t-sub font-bold text-primary">
+                    {/* [1030 · 2차] 폰 조작 검사: 43×20 → 세로 24px */}
+                    <Link href={g.more} className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary">
                       더 보기 ›
                     </Link>
                   </div>

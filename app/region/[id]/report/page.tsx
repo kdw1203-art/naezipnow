@@ -31,7 +31,7 @@ export async function generateMetadata({
   const { id } = await params;
   const region = findCatalogRegionById(id);
   if (!region) {
-    return { title: "지역을 찾을 수 없습니다 | 내집나우", robots: { index: false, follow: false } };
+    return { title: "지역 없음 | 내집나우", robots: { index: false, follow: false } };
   }
   /* [970 · C-25] 접미 없던 제목에 `| 내집나우`(폴백 제목과 동일 접미) */
   const title = `${region.name} 월간 아파트 시장 리포트 아카이브 | 내집나우`;

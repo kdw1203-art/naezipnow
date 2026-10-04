@@ -24,7 +24,8 @@ export function QaBlock({ title = "자주 묻는 질문", items }: { title?: str
         {items.map((it) => (
           <div key={it.q} className="border-b border-border pb-3 last:border-b-0 last:pb-0">
             <dt className="t-body font-bold text-ink">{it.q}</dt>
-            <dd className="mt-1 t-body leading-[1.7] text-text-2">{it.a}</dd>
+            {/* [1030 · 4차 · 61] measure — 데스크톱 전폭에서 답이 95자/행까지 늘어났다(시장 온도 Q&A 실측). 72자 상한 */}
+            <dd className="measure mt-1 t-body leading-[1.7] text-text-2">{it.a}</dd>
           </div>
         ))}
       </dl>

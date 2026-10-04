@@ -53,17 +53,18 @@ export function ComplianceNotice({
 }) {
   return (
     <div
+      /* [1030 · 4차 · 61] 안쪽 문단에 measure — 고지가 데스크톱에서 117자/행이었다(청약·공매·개발물건·매물 실측). 72자 상한(상자는 전폭) */
       className={`rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 t-sub leading-[1.7] text-text-3 ${className}`}
     >
-      <p>{NO_PROFIT_GUARANTEE_TEXT}</p>
+      <p className="measure">{NO_PROFIT_GUARANTEE_TEXT}</p>
       {variant === "payment" && (
-        <p className="mt-1.5">
+        <p className="measure mt-1.5">
           {recurringOpen ? MIXED_SERVICE_PERIOD_TEXT : SUBSCRIPTION_SERVICE_PERIOD_TEXT}
         </p>
       )}
-      {variant === "billing" && <p className="mt-1.5">{BILLING_SERVICE_PERIOD_TEXT}</p>}
+      {variant === "billing" && <p className="measure mt-1.5">{BILLING_SERVICE_PERIOD_TEXT}</p>}
       {variant === "market" && (
-        <p className="mt-1.5">
+        <p className="measure mt-1.5">
           게시된 매물·물건 정보의 정확성 책임은 등록자에게 있으며, 내집나우는 거래
           당사자 간 계약·수익·자금 정산을 보장하거나 관여하지 않습니다.
         </p>

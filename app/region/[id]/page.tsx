@@ -550,45 +550,39 @@ export default async function RegionHubPage({
     statSnapshot && statSnapshot.saleChangeMonthly !== undefined && Number.isFinite(statSnapshot.saleChangeMonthly)
       ? statSnapshot.saleChangeMonthly
       : idxNow?.momPct ?? null;
+  /* [1030 · G2] 첫 문장(인용 문장)만 완결 문장으로 두고, 뒤 문장 5~6개는 사실 낱말 한 줄로 접는다 — 같은 숫자가
+     "시장 흐름 읽기"·FAQ 에 한 번 더 나오던 문단. 값·기준·출처는 그대로. 등락 낱말은 1029 규칙(▲·▼·보합). */
+  const leadFacts: string[] = [];
   if (monthlyChange !== null) {
-    leadSentences.push(
+    leadFacts.push(
       Math.abs(monthlyChange) < 0.05
-        ? "매매가격지수는 전월 대비 보합입니다."
-        : `매매가격지수는 전월 대비 ${Math.abs(monthlyChange).toFixed(2)}% ${monthlyChange > 0 ? "올랐습니다" : "내렸습니다"}.`,
+        ? "매매가격지수 · 전월 대비 보합"
+        : `매매가격지수 · 전월 대비 ${monthlyChange > 0 ? "▲" : "▼"}${Math.abs(monthlyChange).toFixed(2)}%`,
     );
   }
   if (latestVolume !== null) {
     const openTail =
       volumeOpen.length > 0
-        ? `(${volumeOpen.map((v) => formatYm(v.month)).join("·")}분은 신고 기한 안이라 집계 중)`
+        ? `(${volumeOpen.map((v) => formatYm(v.month)).join("·")}분 신고 기한 내 · 집계 중)`
         : "";
-    leadSentences.push(
-      `국토교통부에 신고된 아파트 매매는 ${formatYm(latestVolume.month)}에 ${latestVolume.count.toLocaleString(
+    leadFacts.push(
+      `국토교통부 신고 아파트 매매 ${formatYm(latestVolume.month)} ${latestVolume.count.toLocaleString(
         "ko-KR",
-      )}건${openTail}이며, 최근 ${volume.length}개월 합계는 ${volumeTotal.toLocaleString("ko-KR")}건입니다.`,
+      )}건${openTail} · 최근 ${volume.length}개월 합계 ${volumeTotal.toLocaleString("ko-KR")}건`,
     );
   }
   if (projectsShown.length > 0) {
-    leadSentences.push(
-      `공개 자료로 확인된 ${shortName} 정비사업 구역은 ${projects.length.toLocaleString(
-        "ko-KR",
-      )}곳입니다.`,
-    );
+    leadFacts.push(`공개 자료 확인 ${shortName} 정비사업 구역 ${projects.length.toLocaleString("ko-KR")}곳`);
   }
   if (supply.length > 0) {
     /* limit 24 조회라 24곳이면 "이상"일 수 있다 — 상한에 걸린 경우 표현을 바꾼다 */
-    leadSentences.push(
-      supply.length >= 24
-        ? `입주 예정 물량으로 잡힌 단지는 24곳 이상입니다.`
-        : `입주 예정 물량으로 잡힌 단지는 ${supply.length}곳입니다.`,
-    );
+    leadFacts.push(supply.length >= 24 ? "입주 예정 단지 24곳 이상" : `입주 예정 단지 ${supply.length}곳`);
   }
   if (notes.length > 0) {
-    leadSentences.push(`이웃이 공개한 임장노트는 ${notes.length}편 있습니다.`);
+    leadFacts.push(`이웃 공개 임장노트 ${notes.length}편`);
   }
-  leadSentences.push(
-    "모두 공공 실거래·공표 통계에서 계산한 값이며, 중개 매물의 호가는 포함하지 않습니다.",
-  );
+  leadFacts.push("공공 실거래·공표 통계 계산값 · 중개 매물 호가 제외");
+  leadSentences.push(leadFacts.join(" · "));
   const lead = leadSentences.join(" ");
 
   /* [개선 #7] 시장 흐름 읽기 — 추가 조회 없이 위에서 읽은 값의 산술 서술 */
@@ -1027,7 +1021,7 @@ export default async function RegionHubPage({
               {areaBands.truncated ? " 표본" : ""} 기준
             </span>
           </h2>
-          <div className="mt-3 overflow-x-auto">
+          <div className="mt-3 overflow-x-auto" tabIndex={0}>
             <table className="w-full min-w-[420px] t-body">
               <thead>
                 <tr className="border-b border-line text-left t-sub text-text-3">

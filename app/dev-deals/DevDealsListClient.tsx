@@ -88,7 +88,7 @@ function DealCard({ d }: { d: DevDeal }) {
 
       <div>
         {d.isSample ? (
-          <span className="line-clamp-2 block text-[15px] font-bold leading-[1.4] text-ink">
+          <span className="line-clamp-2 text-[15px] font-bold leading-[1.4] text-ink">
             {d.title}
           </span>
         ) : (

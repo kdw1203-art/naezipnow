@@ -13,6 +13,7 @@ import {
   isUpisService,
   mapUpisAnnouncement,
   mapUpisRecord,
+  normalizeUpisQuery,
   summarizeByGu,
   upisAnnouncementToRecord,
   upisAreaLabel,
@@ -20,6 +21,7 @@ import {
   upisDateLabel,
   upisEmd,
   upisKind,
+  upisQueryTokens,
   upisRowToRecord,
   upisSigungu,
   zoneNamePattern,
@@ -277,4 +279,213 @@ test("[1029] 카탈로그·운영 — 자료 출처 안내·공개 데이터 목
   assert.ok(fresh.includes("seoul_upis_records"));
   const fresh2 = code("lib/admin/source-freshness.ts");
   assert.ok(fresh2.includes("seoul_upis_records"));
+});
+
+/* ── [1029b] 검색 ─────────────────────────────────────────────────────── */
+
+test("[1029b] 검색어 정리 — ilike·or 를 깨는 글자는 걷고, 낱말 3개까지, 빈 글자는 null", () => {
+  assert.equal(normalizeUpisQuery("  은마 "), "은마");
+  assert.equal(normalizeUpisQuery("개포동%_,()'\"`\\ 189"), "개포동 189");
+  assert.equal(normalizeUpisQuery("%%%"), null);
+  assert.equal(normalizeUpisQuery(""), null);
+  assert.equal(normalizeUpisQuery(null), null);
+  assert.equal(normalizeUpisQuery("가".repeat(60))!.length, 40, "40자까지");
+  assert.deepEqual(upisQueryTokens("개포 주공 4단지 재건축"), ["개포", "주공", "4단지"], "낱말 3개까지");
+  assert.deepEqual(upisQueryTokens("   "), []);
+});
+
+test("[1029b] 검색 — API 는 q 를 정리해 넘기고, 저장은 낱말마다 구역 이름·위치명 or 조건, 화면에는 검색칸(40px)과 건수", () => {
+  const api = code("app/api/seoul/upis/route.ts");
+  assert.ok(api.includes('normalizeUpisQuery(sp.get("q"))'));
+  assert.ok(api.includes("listUpisRecords({ sigungu: gu, service, q, limit })"));
+  const store = code("lib/seoul/upis-store.ts");
+  assert.ok(store.includes("for (const tok of upisQueryTokens(opts.q)) q = q.or(`rgn_nm.ilike.%${tok}%,pstn_nm.ilike.%${tok}%`);"), "낱말마다 AND, 안에서 이름/위치 OR");
+  const browser = code("app/redevelopment/SeoulPlanBrowser.tsx");
+  assert.ok(browser.includes('role="search"'));
+  assert.ok(browser.includes('placeholder="구역·동·위치 검색 · 예: 은마, 개포동"'));
+  assert.ok(browser.includes('inputMode="search"') && browser.includes("h-10 w-full"), "입력칸 40px · 브라우저 기본 지우기 단추 없이 우리 × 하나");
+  assert.ok(browser.includes('if (query) qs.set("q", query);'), "칩과 함께 걸린다");
+  assert.ok(browser.includes("조서 없음 · 구 이름이나 동 이름으로 다시"), "검색 0건은 검색어와 함께");
+  assert.ok(!/검색해 보세요|검색하세요/.test(browser), "권유 없음");
+});
+
+
+/* ── [1030] 추가 개선 — 코드 모양 확인 ─────────────────────────────────────── */
+import { readFileSync as rf1030 } from "node:fs";
+import { execSync as execSync1030 } from "node:child_process";
+import { areaBandDisplayLabel } from "@/lib/complex/area-band-label";
+const src1030 = (p: string) => rf1030(p, "utf8");
+
+test("[1030 · G3] 열린 면적 구간의 화면 이름 — ~59㎡ → 60㎡ 미만 · 135㎡~ → 135㎡ 이상 · 나머지 그대로", () => {
+  assert.equal(areaBandDisplayLabel("~59㎡"), "60㎡ 미만");
+  assert.equal(areaBandDisplayLabel("135㎡~"), "135㎡ 이상");
+  assert.equal(areaBandDisplayLabel("60~85㎡"), "60~85㎡");
+  assert.equal(areaBandDisplayLabel(null), null);
+});
+
+test("[1030 · G3] 단지 추이 그래프 — 끝에 붙은 빈 달은 '거래 없음'이 아니라 '신고 집계 중'", () => {
+  const s = src1030("app/components/viz/TxTrendChart.tsx");
+  assert.ok(s.includes('pendingYms.has(ym) ? "신고 집계 중" : "거래 없음"'));
+  assert.ok(src1030("app/complex/[id]/TxTrendSection.tsx").includes("신고 집계 중 · 계약 후 30일 내 신고"));
+});
+
+test("[1030 · G6] 공매 — 시도 칩 7개 · 시도만으로 API 조건 · 시군구 해제는 시도를 남긴다", () => {
+  const s = src1030("app/auctions/AuctionsClient.tsx");
+  for (const v of ["서울특별시", "경기도", "인천광역시", "부산광역시", "대구광역시", "울산광역시", "대전광역시"]) assert.ok(s.includes(`value: "${v}"`), v);
+  assert.ok(s.includes("const filterKey = f.usage || f.gu || f.sido ?"));
+  assert.ok(s.includes('if (f.sido) sp.set("sido", f.sido);'));
+});
+
+test("[1030 · G7] 공개 노트 카드 — metadata 전체 대신 cover 만 읽는다", () => {
+  const s = src1030("lib/inspection/store-db.ts");
+  assert.ok(s.includes("weather,cover:metadata->cover,photos"));
+  assert.ok(!s.includes("weather,metadata,photos"));
+  assert.ok(s.includes("metadata: r.cover == null ? null : { cover: r.cover }"));
+});
+
+test("[1030 · G5] 지도 — 정비구역 이름표는 시세 핀에 양보(priority −1) · /redevelopment 지도도 겹침 정리", () => {
+  assert.ok(src1030("app/map/map-client.tsx").includes("priority: -1,"));
+  assert.ok(src1030("components/map/NaverMap.tsx").includes("+ (d.priority ?? 0)"));
+  assert.ok(/fitToMarkers\s+declutter/.test(src1030("app/redevelopment/RedevelopmentMap.tsx")));
+});
+
+test("[1030 · G2] 정비사업 단계 설명 — 해요체 없음 · 폰 한 줄 규칙 예외 클래스", () => {
+  const g = src1030("lib/redevelopment/stage-guide.ts");
+  assert.ok(!/(해요|예요|에요|세요|어요|아요|돼요)["”.]/.test(g), "해요체 잔여");
+  assert.ok(src1030("app/redevelopment/page.tsx").includes('className="mscale-wrap mt-1 t-sub text-text-1"'));
+  assert.ok(src1030("app/globals.css").includes("html[data-mscale] li p.t-sub.mscale-wrap"));
+});
+
+test("[1030 · G4] 동네 카드 제목 = 노트 제목 · 홈 동네이야기 0건은 한 줄 띠 · 퍼가기 칸은 접힘", () => {
+  assert.ok(src1030("lib/town/feed.ts").includes('const oneLiner = n.title?.trim() || n.summary?.trim() || n.sections.pros?.trim() || "";'));
+  assert.ok(src1030("app/components/home/HomeTownBlock.tsx").includes("const storiesEmpty = !failed && stories.length === 0;"));
+  assert.ok(src1030("app/components/EmbedSnippet.tsx").includes("<details className={`group rounded-lg border border-line bg-surface ${className}`}>"));
+});
+
+/* ── [1030 · 2차] 추가 검토 ─────────────────────────────────────────────── */
+test("[1030 · 2차] Lab 노트 상세 — 직접 방문 도장 없음 · 출처 '자료 조사' · 방문 기록 비교 숨김", () => {
+  const s = src1030("app/notes/[id]/page.tsx");
+  assert.ok(s.includes("directVisit: Boolean(n.visitDate) && !isLabAuthor(n.authorLabel),"));
+  assert.ok(s.includes('isLabAuthor(n.authorLabel) ? "내집나우 Lab 자료 조사(실거래·통계·언론 원문)" : "작성자 직접 방문 기록"'));
+  assert.ok(s.includes('{v.lab ? "본문 · 자료 조사" : "현장에서 적은 것"}'));
+  assert.ok(s.includes("{!v.lab && (\n          <div className=\"rise-in-1 card flex flex-col gap-3 rounded-3xl p-6 max-md:p-3.5\">"));
+});
+
+test("[1030 · 2차] line-clamp 와 block 을 같이 쓰지 않는다(block 이 -webkit-box 를 덮어 자르기가 안 됐다)", () => {
+  const hits = execSync1030("grep -rnE 'line-clamp-[0-9] block|block line-clamp-[0-9]' app --include=*.tsx || true", { encoding: "utf8" }).trim();
+  assert.equal(hits, "", hits);
+});
+
+test("[1030 · 2차] 단지 비교 목록 — 지역 바로가기 + 첫 지역만 펼침(details) · 리포트 진열대 커버 비율 1200:630", () => {
+  const c = src1030("app/complex/compare/page.tsx");
+  assert.ok(c.includes('aria-label="지역 바로가기"'));
+  assert.ok(c.includes("open={gi === 0}"));
+  assert.ok(src1030("app/notes/market/page.tsx").includes('className="relative aspect-[1200/630] w-full overflow-hidden bg-bg"'));
+});
+
+test("[1030 · 2차] 열린 면적 구간 화면 이름 — /tx 셀·면적대별 실거래가 선반·노트 상세도 같은 함수", () => {
+  assert.ok(src1030("lib/market/tx-bands.ts").includes("bandLabel: areaBandDisplayLabel(label),"));
+  assert.ok(src1030("app/analysis/price/page.tsx").includes("label: areaBandDisplayLabel(c.bandLabel),"));
+  assert.ok(src1030("app/notes/[id]/page.tsx").includes("bandLabel: areaBandDisplayLabel(r.price.bandLabel),"));
+});
+
+/* ── [1030 · 3차] 추가 검토 ─────────────────────────────────────────────── */
+test("[1030 · 3차] CSP — 애드센스가 같이 부르는 fundingchoicesmessages.google.com 허용(script·connect)", () => {
+  const s = src1030("lib/security/content-security-policy.ts");
+  const script = s.match(/const googleAdsScript =\s*"([^"]+)"/)?.[1] ?? "";
+  const connect = s.match(/const googleAdsConnect =\s*"([^"]+)"/)?.[1] ?? "";
+  assert.ok(script.includes("https://fundingchoicesmessages.google.com"));
+  assert.ok(connect.includes("https://fundingchoicesmessages.google.com"));
+});
+
+test("[1030 · 3차] 동네 피드 NEW 배지 — 서버 렌더 시각(now) 기준(ISR 하루 캐시 · 하이드레이션 불일치 방지)", () => {
+  const f = src1030("app/town/feed-client.tsx");
+  assert.ok(!/Date\.now\(\) - card\.createdAt/.test(f), "카드 판정에 Date.now() 가 남아 있다");
+  assert.ok(f.includes("const isNew = now - card.createdAt < 24 * 3600_000;"));
+  assert.ok(src1030("app/town/page.tsx").includes("now={now}"));
+});
+
+test("[1030 · 3차] 청약 화면 — 라이트 토큰 인라인 고정(THEME_APPLY) 제거 · presets 파일 삭제", () => {
+  assert.ok(!src1030("app/apply/page.tsx").includes("style={THEME_APPLY}"));
+  assert.ok(!existsSync(join(process.cwd(), "lib/theme/presets.ts")));
+});
+
+test("[1030 · 3차] 키보드 — 가로 스크롤 영역 tabIndex · 본문 바로가기 목적지 · main 랜드마크 · 여정 id 중복 없음", () => {
+  assert.ok(src1030("app/components/StepLine.tsx").includes("tabIndex={0}"));
+  assert.ok((src1030("app/map/MapSearchBox.tsx").match(/"[^"]*\bfield-focus\b[^"]*"/g) ?? []).length >= 2);
+  assert.ok(src1030("app/region/[id]/page.tsx").includes('<div className="mt-3 overflow-x-auto" tabIndex={0}>'));
+  assert.ok(src1030("app/redevelopment/page.tsx").includes('<div className="mt-3 -mx-1 overflow-x-auto px-1 pb-1" tabIndex={0}>'));
+  assert.equal((src1030("app/developers/page.tsx").match(/<pre tabIndex=\{0\}/g) ?? []).length, 2);
+  assert.ok(src1030("app/not-found.tsx").includes('<main id="main-content"'));
+  assert.ok(src1030("app/login/LoginClient.tsx").includes('id="main-content"'));
+  assert.ok(src1030("app/notes/market/page.tsx").includes('<main id="main-content"'));
+  assert.ok(src1030("app/notes/new/NoteForm.tsx").includes('id="main-content"'));
+  const j = src1030("app/journey/JourneyBoard.tsx");
+  assert.ok(j.includes("const titleId = `jr-deadline-title-${slot}`;") && j.includes('slot="phone"') && j.includes('slot="desk"'));
+});
+
+test("[1030 · 3차] 없는 글 메타 — '찾을 수 없습니다/없어요' 설명문 없음(보관 경로 제외)", () => {
+  const hits = execSync1030(
+    "grep -rnE '\"[^\"]*찾을 수 없(습니다|어요)[^\"]*\"' app --include=*.tsx --include=*.ts | grep -vE 'app/(api|town/groups)/' | grep -vE ':\\s*(//|/\\*|\\*|[가-힣 ]+\\s*\")' || true",
+    { encoding: "utf8" },
+  ).trim();
+  assert.equal(hits, "", hits);
+});
+
+test("[1030 · 3차] 커버리지 수치 — 미리 센 표(coverage_totals · 48시간)를 먼저 읽고 없으면 직접 센다", () => {
+  const s = src1030("lib/newui/home-coverage.ts");
+  assert.ok(s.includes('.from("coverage_totals")'));
+  assert.ok(s.includes("const TOTALS_MAX_AGE_MS = 48 * 3600_000;"));
+  assert.ok(s.includes("const pre = await readPrecountedTotals(sb);\n  if (pre) return pre;"));
+});
+
+/* ── [1030 · 4차 · 디자인] ─────────────────────────────────────────────── */
+test("[1030 · 4차] 헤더 '노트 쓰기'는 outline — 채움 파랑은 화면의 행동 하나에만", () => {
+  const h = src1030("app/components/Header.tsx");
+  assert.ok(h.includes('className="btn-outline btn-cta press hidden px-4 py-[9px] t-body'));
+  assert.ok(!h.includes("btn-primary"));
+});
+
+test("[1030 · 4차] 굵기 600 없음 — semibold 토큰 700 · 칩 500 · 활성 칩 700 (globals 끝)", () => {
+  const css = src1030("app/globals.css");
+  const tail = css.slice(css.indexOf("[1030 · 4차 · 디자인]"));
+  assert.ok(tail.includes("--font-weight-semibold: 700;"));
+  assert.ok(tail.indexOf(".chip,\n.chip-tag {\n  font-weight: 500;") < tail.indexOf(".chip-active {\n  font-weight: 700;"));
+});
+
+test("[1030 · 4차] 면적대 선반 막대는 가로(width) · 정비사업 탭 활성은 chip-active · 청약 캘린더 알약 제거 · measure", () => {
+  assert.ok(src1030("app/analysis/price/BandShelf.tsx").includes("style={{ width: `${c.barPct}%` }}"));
+  const r = src1030("app/redevelopment/RedevelopmentMap.tsx");
+  assert.ok(r.includes('active ? "chip-active" : "text-text-2"') && !r.includes('style={active ? { color: "#fff" } : undefined}'));
+  assert.equal((src1030("app/apply/page.tsx").match(/청약 캘린더\n/g) ?? []).length, 0);
+  assert.ok(src1030("app/components/QaBlock.tsx").includes('className="measure mt-1 t-body'));
+  assert.ok(src1030("app/globals.css").includes(".measure {\n  max-width: 72ch;\n}"));
+});
+
+/* ── [1030 · 5차] 관리자 화면 지적 — 비아파트 수집 실패 ───────────────────── */
+import { isServiceNotRegistered as isSNR1030, parseRunTally as parseRunTally1030, tallyText as tallyText1030 } from "@/lib/market/ingest-outcome";
+test("[1030 · 5차] 국토부 resultCode 30(등록되지 않은 서비스키) 판별 — 활용신청 문제만", () => {
+  assert.equal(isSNR1030("RTMSDataSvcRHRent 30 등록되지 않은 서비스키"), true);
+  assert.equal(isSNR1030("RTMSDataSvcOffiRent 30 SERVICE_KEY_IS_NOT_REGISTERED_ERROR"), true);
+  assert.equal(isSNR1030("HTTP 500"), false);
+  assert.equal(isSNR1030("RTMSDataSvcRHRent 22 LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR"), false);
+  assert.equal(isSNR1030("A1130 등록되지 않은 서비스키"), false);
+});
+test("[1030 · 5차] 비아파트 로그 시도= 는 실행 전체 — '12곳 중 42곳 실패'가 아니라 '42곳 중 42곳 실패'", () => {
+  const msg = "유형=officetel,rowhouse,house 시도=42 최근월 202610 slice=3(12곳) 최근시도=12 적재=0 빈달=202608:시도30/적재0 커서=202608 오류=42 raw=미저장 — 활용신청 필요 — RTMSDataSvcRHRent";
+  const t = parseRunTally1030(msg);
+  assert.equal(t.attempted, 42);
+  assert.equal(t.failed, 42);
+  assert.equal(tallyText1030(t), "42곳 중 42곳 실패");
+  assert.ok(src1030("lib/market/molit-nonapt.ts").includes("시도=${result.attempted}"));
+  assert.ok(src1030("app/admin/data/page.tsx").includes("function reasonOf("));
+});
+test("[1030 · 5차] K-apt 테스트 행 이름은 대장에 넣지 않는다", () => {
+  const s = src1030("lib/national-data/apartment-ingest.ts");
+  const m = s.match(/export const KAPT_TEST_NAME_RE = (\/.+\/i);/);
+  assert.ok(m);
+  const re = new Function(`return ${m![1]}`)() as RegExp;
+  for (const n of ["test", "test001", "테스트", "테스트002", "테스트단지", "테스트단지2", "한국감정원", "한국감정원1", "한국부동산원테스트1"]) assert.equal(re.test(n), true, n);
+  for (const n of ["래미안안양메가트리아", "테스트빌라", "은마아파트", "testing"]) assert.equal(re.test(n), false, n);
+  assert.ok(s.includes("if (KAPT_TEST_NAME_RE.test(name)) return null;"));
 });

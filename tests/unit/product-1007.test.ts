@@ -204,7 +204,7 @@ test("buildComplexCitableSummary — fragments 를 주면 2~4번째 문장이 �
   assert.match(s.sentences[1], /최근 12개월 매매 3건, 60~85㎡ 중앙 30\.9억/);
   assert.match(s.sentences[2], /전세 중앙 12\.1억 · 전세가율 39\.2%\(6개월\)/);
   assert.match(s.sentences[2], /각 표본 3건 이상일 때만/);
-  assert.match(s.sentences[3], /헬리오시티는 9,510세대, 2018년 준공 단지입니다/);
+  assert.match(s.sentences[3], /^9,510세대 · 2018년 준공 · 공동주택 공공데이터 기준$/); // [1030 · G2] 낱말형
   assert.doesNotMatch(s.text, /999|undefined|null|NaN/);
 
   /* 조각이 비면(실거래 창·대장 없음) 첫 문장만 — 껍데기 문장 없음 */
@@ -230,7 +230,7 @@ test("buildComplexCitableSummary — fragments 를 주면 2~4번째 문장이 �
   });
   assert.ok(legacy);
   assert.match(legacy.sentences[1], /최근 12개월.*120건/);
-  assert.match(legacy.sentences[2], /총 5,678세대, 2008년 준공/);
+  assert.match(legacy.sentences[2], /총 5,678세대 · 2008년 준공/); // [1030 · G2] 낱말형
 });
 
 test("단지 허브 — buildComplexFacts 재료를 이미 띄운 로더로 채우고, 인용 요약에 같은 조각을 넘긴다", () => {

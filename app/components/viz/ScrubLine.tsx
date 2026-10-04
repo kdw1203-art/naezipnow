@@ -349,7 +349,7 @@ export function ScrubLine({
         className={`scrub-plot ${toneCls}`}
         style={{ height }}
         role="group"
-        aria-label={`${ariaLabel} — 좌우 화살표 키로 칸마다 값을 볼 수 있어요`}
+        aria-label={`${ariaLabel} · 좌우 화살표 키 · 칸별 값 읽기`}
         tabIndex={0}
         data-draw={draw}
         onKeyDown={onKeyDown}

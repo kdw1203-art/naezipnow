@@ -87,7 +87,8 @@ test("[1028 · 17] 공매 조건 — 목록 · 지난 공고 · 건수가 같은
   assert.ok(api.includes("const sido = /^[가-힣]{2,10}$/.test(sidoRaw) ? sidoRaw : undefined;"), "시도 값은 한글 2~10자만");
   assert.ok(api.includes("filtered ? getActiveAuctionCount({ usage, sigungu: gu, sido }) : Promise.resolve(null)"), "조건 건수는 DB 집계");
   const ui = code("app/auctions/AuctionsClient.tsx");
-  assert.ok(ui.includes("onClick={() => set(on ? { gu: null, sido: null } : { gu: g.gu, sido: g.sido })}"), "지역 요약 칸은 시도를 같이 보낸다");
+  /* [1030 · G6] 시도 칩이 생겨 시군구 해제는 시도를 남긴다 — 고를 때는 여전히 시도를 같이 보낸다 */
+  assert.ok(ui.includes("onClick={() => set(on ? { gu: null } : { gu: g.gu, sido: g.sido })}"), "지역 요약 칸은 시도를 같이 보낸다");
   assert.ok(ui.includes("표시 중 ${cards.length.toLocaleString()}건 기준"), "요약 칸은 받은 목록 기준임을 적는다");
   assert.ok(!code("app/auctions/page.tsx").includes('title: "수도권 공매 물건'), "5대 광역시가 들어온 뒤의 제목");
 });

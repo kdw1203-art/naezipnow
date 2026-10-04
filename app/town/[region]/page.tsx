@@ -71,7 +71,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { region: id } = await params;
   const region = findCatalogRegionById(id);
-  if (!region) return { title: "동네를 찾을 수 없습니다 | 내집나우" };
+  if (!region) return { title: "동네 없음 | 내집나우" };
   /* [970 · C-25] 접미 없던 제목에 `| 내집나우`(폴백 제목과 동일 접미) */
   const title = `${region.name} 동네 홈 · 이웃 글 · 뉴스 · 시장 요약 | 내집나우`;
   const description = `${region.name} 이웃 글과 공개 임장노트, 오늘의 ${region.name} 부동산 뉴스, 아파트 시장 요약. 키워드 알림 지원.`;
@@ -411,8 +411,9 @@ export default async function TownRegionHomePage({
                       {n.aptName && <span className="truncate">{n.aptName}</span>}
                       <span className="shrink-0">{maskNoteAuthor(n.authorLabel, n.authorEmail)}</span>
                     </span>
+                    {/* [1030 · 2차] `block` 이 line-clamp 의 display:-webkit-box 를 덮어 두 줄 자르기가 안 됐다(본문 10여 줄이 그대로 — 운영 실측) */}
                     {n.summary && (
-                      <span className="mt-1 block line-clamp-2 t-sub text-text-2">{n.summary}</span>
+                      <span className="mt-1 line-clamp-2 t-sub text-text-2">{n.summary}</span>
                     )}
                   </span>
                 </Link>

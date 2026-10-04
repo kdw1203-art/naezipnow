@@ -357,10 +357,10 @@ export function RedevelopmentMap({
               role="tab"
               aria-selected={active}
               onClick={() => setView(v.key)}
-              className={`press flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-bold ${
-                active ? "bg-primary text-white" : "text-text-2"
+              /* [1030 · 4차] 활성 탭 = 한지 + 남색(.chip-active) — 채움 파랑 알약은 화면의 유일 파랑(지역 노트 쓰기 등)과 겹쳤다(규칙 9 · 칩 활성색 규칙) */
+              className={`press flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-full border border-transparent px-3 py-2 text-[13px] font-bold ${
+                active ? "chip-active" : "text-text-2"
               }`}
-              style={active ? { color: "#fff" } : undefined}
             >
               <Icon name={v.icon} size={14} />
               {v.label}
@@ -372,11 +372,14 @@ export function RedevelopmentMap({
       {/* ===== 지도 뷰 ===== */}
       {view === "map" ? (
         <div className="card overflow-hidden rounded-2xl p-1.5">
+          {/* [1030 · G5] 겹침 정리 — 40곳 이름표가 서울 중심에 포개졌다(한남2·압구정3·반포주공1·잠실주공5 …). 겹치는 구역은
+              색 점으로 접히고 확대하면 이름이 돌아온다(/map 과 같은 declutterMarkers). */}
           <NaverMap
             markers={markers}
             center={center}
             level={level}
             fitToMarkers
+            declutter
             className="h-[440px] md:h-[560px]"
             onMarkerClick={handleMarkerClick}
           />

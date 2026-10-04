@@ -6,6 +6,7 @@ import {
   isUpisService,
   mapUpisAnnouncement,
   mapUpisRecord,
+  upisQueryTokens,
   zoneNamePattern,
   type UpisAnnouncement,
   type UpisGuSummary,
@@ -23,6 +24,8 @@ export type UpisListOpts = {
   sigungu?: string | null;
   service?: UpisService | null;
   emd?: string | null;
+  /** [1029b] 검색어 — 구역 이름(rgn_nm) 또는 위치명(pstn_nm)에 낱말이 모두 들어 있는 행 */
+  q?: string | null;
   limit?: number;
 };
 
@@ -33,6 +36,7 @@ export async function listUpisRecords(opts: UpisListOpts = {}): Promise<UpisReco
   if (opts.sigungu) q = q.eq("sigungu", opts.sigungu);
   if (opts.service && isUpisService(opts.service)) q = q.eq("service", opts.service);
   if (opts.emd) q = q.eq("emd", opts.emd);
+  for (const tok of upisQueryTokens(opts.q)) q = q.or(`rgn_nm.ilike.%${tok}%,pstn_nm.ilike.%${tok}%`);
   q = q.order("code_date", { ascending: false, nullsFirst: false }).order("rpt_mng_cd", { ascending: false }).limit(Math.min(500, opts.limit ?? 50));
   const { data, error } = await q;
   if (error) throw new Error(`seoul_upis_records: ${error.message}`);

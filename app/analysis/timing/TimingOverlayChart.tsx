@@ -116,7 +116,7 @@ export function TimingOverlayChart({
         className="tmo-plot"
         style={{ height }}
         role="group"
-        aria-label={`${ariaLabel} — 좌우 화살표 키로 칸마다 값을 볼 수 있어요`}
+        aria-label={`${ariaLabel} · 좌우 화살표 키 · 칸별 값 읽기`}
         tabIndex={0}
         onKeyDown={(e) => {
           const n = layout.points.length || layout.bars.length;

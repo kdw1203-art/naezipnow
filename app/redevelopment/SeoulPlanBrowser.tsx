@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  UPIS_QUERY_MAX,
   UPIS_SERVICES,
   UPIS_SERVICE_META,
+  normalizeUpisQuery,
   upisAreaLabel,
   upisDateLabel,
   upisKind,
@@ -11,10 +13,12 @@ import {
   type UpisRecord,
   type UpisService,
 } from "@/lib/seoul/upis-display";
+import { Icon } from "@/app/components/Icon";
 
 /* [1029] 서울시 도시계획 결정 조서 — 구·종류 칩으로 거르고 표로 본다. 첫 목록은 서버가 넘긴다(전체 최근 순).
    칩을 바꾸면 /api/seoul/upis(CDN 하루 캐시)에서 읽는다. 조회 실패는 실패라고 적는다(0건과 다른 사실).
-   /region/[id] 에서 "?gu=강남구#seoul-plan" 으로 들어오면 그 구를 먼저 고른다(정적 화면이라 주소는 클라이언트가 읽는다). */
+   /region/[id] 에서 "?gu=강남구#seoul-plan" 으로 들어오면 그 구를 먼저 고른다(정적 화면이라 주소는 클라이언트가 읽는다).
+   [1029b] 검색칸 — 구역 이름·동·위치 글자로 찾는다(소유자 지시 "검색기능이 빠져 있어"). 칩과 함께 걸린다(AND). 낱말 3개까지. */
 
 type Props = {
   initialItems: UpisRecord[];
@@ -30,6 +34,8 @@ export function SeoulPlanBrowser({ initialItems, summary }: Props) {
   const [service, setService] = useState<UpisService | null>(null);
   const [state, setState] = useState<State>({ items: initialItems, status: "ok" });
   const [touched, setTouched] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [query, setQuery] = useState<string | null>(null);
 
   /* 주소의 ?gu= — 지역 화면에서 온 경우 */
   useEffect(() => {
@@ -51,6 +57,7 @@ export function SeoulPlanBrowser({ initialItems, summary }: Props) {
     const qs = new URLSearchParams();
     if (gu) qs.set("gu", gu);
     if (service) qs.set("service", service);
+    if (query) qs.set("q", query);
     qs.set("limit", "60");
     fetch(`/api/seoul/upis?${qs.toString()}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
@@ -65,7 +72,7 @@ export function SeoulPlanBrowser({ initialItems, summary }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [gu, service, touched]);
+  }, [gu, service, query, touched]);
 
   const guChips = useMemo(() => summary.filter((s) => s.sigungu !== "구 미상"), [summary]);
   const chip = (on: boolean) =>
@@ -79,8 +86,61 @@ export function SeoulPlanBrowser({ initialItems, summary }: Props) {
 
   const counts = gu ? guChips.find((g) => g.sigungu === gu) : null;
 
+  const submitSearch = () => {
+    const q = normalizeUpisQuery(draft);
+    setTouched(true);
+    setQuery(q);
+  };
+  const clearSearch = () => {
+    setDraft("");
+    if (query) {
+      setTouched(true);
+      setQuery(null);
+    }
+  };
+
   return (
     <div className="mt-3 flex flex-col gap-3">
+      {/* [1029b] 검색칸 — 구역 이름·동·위치 */}
+      <form
+        role="search"
+        className="flex items-center gap-1.5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submitSearch();
+        }}
+      >
+        <label htmlFor="seoul-plan-q" className="sr-only">
+          구역·동·위치 검색
+        </label>
+        <div className="relative min-w-0 flex-1">
+          <input
+            id="seoul-plan-q"
+            type="text"
+            inputMode="search"
+            value={draft}
+            maxLength={UPIS_QUERY_MAX}
+            enterKeyHint="search"
+            autoComplete="off"
+            placeholder="구역·동·위치 검색 · 예: 은마, 개포동"
+            onChange={(e) => setDraft(e.target.value)}
+            className="h-10 w-full rounded-xl border border-line bg-surface pl-3 pr-9 t-sub text-ink placeholder:text-text-3"
+          />
+          {draft && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              aria-label="검색어 지우기"
+              className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-text-3"
+            >
+              <Icon name="x" size={16} />
+            </button>
+          )}
+        </div>
+        <button type="submit" className="btn-soft h-10 shrink-0 rounded-xl px-3.5 t-sub font-bold">
+          검색
+        </button>
+      </form>
       {/* 종류 칩 */}
       <div className="flex flex-wrap gap-1.5">
         <button type="button" onClick={() => pick({ service: null })} className={chip(!service)} aria-pressed={!service}>
@@ -107,16 +167,27 @@ export function SeoulPlanBrowser({ initialItems, summary }: Props) {
           </div>
         </div>
       )}
-      {counts && (
-        <div className="t-caption text-text-3 tabular-nums">
-          {counts.sigungu} · 정비 {counts.rebuild.toLocaleString("ko-KR")} · 도시개발 {counts.urbanDev.toLocaleString("ko-KR")} · 지구단위 {counts.distUnitPlan.toLocaleString("ko-KR")}
+      {(counts || query) && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 t-caption text-text-3 tabular-nums">
+          {query && state.status !== "error" && (
+            <span className="text-ink">
+              ‘{query}’ · {state.status === "loading" ? "찾는 중…" : `${state.items.length.toLocaleString("ko-KR")}건${state.items.length >= 60 ? " 이상" : ""}`}
+            </span>
+          )}
+          {counts && (
+            <span>
+              {counts.sigungu} · 정비 {counts.rebuild.toLocaleString("ko-KR")} · 도시개발 {counts.urbanDev.toLocaleString("ko-KR")} · 지구단위 {counts.distUnitPlan.toLocaleString("ko-KR")}
+            </span>
+          )}
         </div>
       )}
 
       {state.status === "error" ? (
         <div className="rounded-lg bg-danger-soft px-3 py-2 text-center t-sub text-ink">조서 불러오기 실패 · 잠시 후 다시</div>
       ) : state.items.length === 0 ? (
-        <div className="rounded-lg bg-bg px-3 py-4 text-center t-sub text-text-3">{state.status === "loading" ? "불러오는 중…" : "조서 없음"}</div>
+        <div className="rounded-lg bg-bg px-3 py-4 text-center t-sub text-text-3">
+          {state.status === "loading" ? "불러오는 중…" : query ? `‘${query}’ 조서 없음 · 구 이름이나 동 이름으로 다시` : "조서 없음"}
+        </div>
       ) : (
         <div className={`-mx-1 overflow-x-auto px-1 ${state.status === "loading" ? "opacity-60" : ""}`} aria-busy={state.status === "loading"}>
           <table className="w-full min-w-[560px] border-collapse t-sub">

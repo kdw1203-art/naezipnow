@@ -72,24 +72,26 @@ export function judgeTrend(
 
   let verdict: string;
   let detail: string;
+  /* [1030 · G1] 해요체 문장 → 사실 낱말("최근 3개월 평균 +0.47% · 직전 -0.12% · 상승 흐름 강화"). 숫자·판정 규칙은 그대로. */
+  const pct = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
   if (recent > th && recent >= prior) {
     verdict = "상승 지속";
-    detail = `최근 3개${unit} 평균 +${recent.toFixed(2)}%로 직전(${prior >= 0 ? "+" : ""}${prior.toFixed(2)}%)보다 강한 상승 흐름이에요.`;
+    detail = `최근 3개${unit} 평균 ${pct(recent)} · 직전 ${pct(prior)} · 상승 흐름 강화`;
   } else if (recent > th && recent < prior) {
     verdict = "상승 둔화";
-    detail = `상승세가 이어지지만 폭이 ${prior.toFixed(2)}% → ${recent.toFixed(2)}%로 줄었어요.`;
+    detail = `상승 지속 · 폭 축소 ${pct(prior)} → ${pct(recent)}`;
   } else if (recent < -th && recent <= prior) {
     verdict = "하락 지속";
-    detail = `최근 3개${unit} 평균 ${recent.toFixed(2)}%로 직전(${prior >= 0 ? "+" : ""}${prior.toFixed(2)}%)보다 하락 폭이 커졌어요.`;
+    detail = `최근 3개${unit} 평균 ${pct(recent)} · 직전 ${pct(prior)} · 하락 폭 확대`;
   } else if (recent < -th && recent > prior) {
     verdict = "하락 둔화";
-    detail = `하락 폭이 ${prior.toFixed(2)}% → ${recent.toFixed(2)}%로 줄었어요.`;
+    detail = `하락 폭 축소 ${pct(prior)} → ${pct(recent)}`;
   } else if (prior < -th && recent >= -th) {
     verdict = "반등 조짐";
-    detail = `직전 조정(${prior.toFixed(2)}%) 이후 최근 흐름이 보합권(${recent >= 0 ? "+" : ""}${recent.toFixed(2)}%)으로 돌아섰어요.`;
+    detail = `직전 조정 ${pct(prior)} → 최근 보합권 ${pct(recent)}`;
   } else {
     verdict = "보합권";
-    detail = `최근 3개${unit} 평균 변동이 ${recent >= 0 ? "+" : ""}${recent.toFixed(2)}%로 뚜렷한 방향성 없음`;
+    detail = `최근 3개${unit} 평균 변동 ${pct(recent)} · 뚜렷한 방향성 없음`;
   }
   return {
     verdict,

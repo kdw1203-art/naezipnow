@@ -1,3 +1,4 @@
+import { areaBandDisplayLabel } from "@/lib/complex/area-band-label";
 import "server-only";
 
 import { getReadOnlySupabase } from "@/lib/newui/supabase-read";
@@ -263,7 +264,7 @@ async function loadAllCellsUncached(): Promise<BandCell[]> {
       regionSlug: regionToSlug(region),
       kind,
       bandSlug: key,
-      bandLabel: label,
+      bandLabel: areaBandDisplayLabel(label), // [1030 · G3] 열린 면적 구간은 화면 이름("60㎡ 미만" · "135㎡ 이상") — 가격 구간은 그대로
       txCount: num(row.tx_count),
       complexCount: num(row.complex_count),
       avgKrw: num(row.avg_krw),

@@ -101,8 +101,8 @@ export async function generateMetadata({
   const post = await getStoryPost(id);
   if (!post) {
     return {
-      title: "이야기를 찾을 수 없습니다 | 내집나우",
-      description: "요청하신 이웃 글을 찾을 수 없습니다.",
+      title: "이야기 없음 | 내집나우",
+      description: "없는 이웃 글 · 삭제됐거나 주소가 바뀜",
       robots: { index: false, follow: false },
     };
   }

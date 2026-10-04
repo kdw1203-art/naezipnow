@@ -157,7 +157,7 @@ export default async function ProPage() {
           </section>
           <section aria-labelledby="pro-watch" className={CARD}>
             <CardHead id="pro-watch" icon="bell" title="관심 단지 알림" />
-            <p className="m-0 mt-1 t-body text-text-1">담당 단지를 관심 등록하면 새 실거래·가격 변동을 수신함으로 받아요</p>
+            <p className="m-0 mt-1 t-body text-text-1">담당 단지 관심 등록 → 새 실거래·가격 변동 수신함 알림</p>
             <ResultLine text={PRO_RESULT_LINES.watch} />
             <p className="m-0 mt-1 t-caption text-text-3">로그인 필요 · 무료</p>
             <Link href="/login?callbackUrl=%2Fmy" className="btn-secondary btn-md press mt-2 w-full no-underline">

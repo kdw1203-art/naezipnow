@@ -179,8 +179,9 @@ async function logNonApt(result: NonAptIngestResult, types: string[]): Promise<v
     rows: result.inserted,
     status: !result.configured ? "skipped" : result.errors > 0 ? "error" : result.inserted > 0 ? "ok" : "skipped",
     message:
-      `유형=${types.join(",")} ` +
-      (a ? `최근월 ${a.ym} slice=${a.slice}(${a.regions}곳) 시도=${a.attempted} 적재=${a.inserted} ` : "") +
+      /* [1030 · 5차] "시도=" 는 실행 전체(최근월 + 빈달) — 예전엔 최근월 조각만 적어 관리자 화면이 "12곳 중 42곳 실패"로 읽었다 */
+      `유형=${types.join(",")} 시도=${result.attempted} ` +
+      (a ? `최근월 ${a.ym} slice=${a.slice}(${a.regions}곳) 최근시도=${a.attempted} 적재=${a.inserted} ` : "") +
       `빈달=${result.gaps.map((g) => `${g.ym}:시도${g.attempted}/적재${g.inserted}${g.advanced ? "/넘김" : ""}`).join(" ") || "없음"} ` +
       `커서=${result.cursorYm ?? "유지"} 오류=${result.errors} raw=미저장` +
       (result.reason ? ` — ${result.reason.slice(0, 200)}` : ""),

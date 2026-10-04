@@ -400,8 +400,9 @@ export function MapSearchBox({
       ? /* [1008] 세로 패딩 0 + 최소 44px — 터치 기기에서는 전역 규칙([989] input min-height 44px)이 입력칸을
            44px 로 올려 py-2.5 와 합쳐 66px 이 됐고, 82px 에서 시작하는 이 카드가 128px 레인의 줌 탭(시군구·동·단지)
            위쪽 20px 을 덮었다(1008 · M 가짜 SDK 캡처·실측 82→148px). 이제 82→126px. */
-        "glass-strong flex min-h-[44px] items-center gap-2 rounded-2xl px-3.5 py-0"
-      : "flex w-full items-center gap-2 rounded-xl border border-[rgba(255,255,255,.9)] bg-[var(--glass-bg)] px-3.5 py-2";
+        /* [1030 · 3차] field-focus — 입력칸이 outline-none 이라 키보드 초점이 어디에도 안 보였다(35경로 Tab 검사 · 지도 검색칸). 껍데기가 링을 그린다. */
+        "glass-strong field-focus flex min-h-[44px] items-center gap-2 rounded-2xl px-3.5 py-0"
+      : "field-focus flex w-full items-center gap-2 rounded-xl border border-[rgba(255,255,255,.9)] bg-[var(--glass-bg)] px-3.5 py-2";
   const rowClass = (key: string) =>
     `flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left hover:bg-bg ${
       active >= 0 && active === optIndex(key) ? "bg-bg" : ""

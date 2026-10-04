@@ -86,7 +86,7 @@ export default async function NoteCardPage({
     return (
       <PageShell breadcrumb="임장노트 · 카드">
         <div className="card mx-auto mt-8 max-w-[520px] rounded-2xl px-5 py-8 text-center">
-          <p className="t-section text-ink">노트를 찾을 수 없어요</p>
+          <p className="t-section text-ink">노트 없음</p>
           <Link href="/notes" className="btn-soft btn-sm mt-3 inline-block no-underline">
             공개 임장노트 보기
           </Link>

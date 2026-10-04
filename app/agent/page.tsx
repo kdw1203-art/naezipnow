@@ -27,8 +27,8 @@ export default async function AgentPage() {
       <div className="mb-4">
         <h1 className="rise-in t-title text-ink">내집나우 AI 에이전트</h1>
         <p className="rise-in-1 mt-1 max-w-xl t-body text-text-2">
-          내 임장노트와 국토교통부 실거래 데이터를 <b>직접 조회해서</b> 답해요.
-          기억이나 추정으로 시세를 말하지 않고, 조회한 데이터 목록을 답변과 함께 보여줍니다.
+          {/* [1030 · 2차] 해요체 → 낱말 */}
+          내 임장노트 · 국토교통부 실거래 <b>직접 조회</b> 후 답변 · 기억·추정 시세 없음 · 조회한 데이터 목록을 답변과 함께 표시
         </p>
         <p className="rise-in-1 mt-1.5 max-w-xl t-sub text-text-3">
           AI 분석은 단지·노트 1건을 깊게, 에이전트는 여러 데이터를 검색·조합해
@@ -46,8 +46,8 @@ export default async function AgentPage() {
         <div className="rise-in-2">
           <GuestGate
             as="h2"
-            title="로그인하면 에이전트를 쓸 수 있어요"
-            desc="에이전트는 회원님의 임장노트를 읽어 답하기 때문에 로그인이 필요해요."
+            title="로그인 필요 · 에이전트"
+            desc="에이전트 = 내 임장노트를 읽고 답변 · 로그인 계정 기준"
             pathname="/agent"
           />
         </div>

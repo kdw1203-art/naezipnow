@@ -368,6 +368,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
 
   return (
     <main
+      id="main-content"
       /* [968 · 31] min-h-screen(100vh) → min-h-dvh: iOS 주소창이 보일 때 100vh 는 실제
          화면보다 커서 아래 링크가 주소창 뒤로 밀렸다 */
       className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col px-7 pb-8"

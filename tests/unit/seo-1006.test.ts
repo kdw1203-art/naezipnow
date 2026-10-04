@@ -49,7 +49,7 @@ test("단지 인용 요약 — 값·기준월·출처가 한 문장에, 선택 �
   assert.equal(s.sentences.length, 3);
   assert.match(s.sentences[0], /^서울 송파구 잠실동 잠실엘스의 2026년 8월 아파트 매매 실거래 평균은 24\.5억입니다\(해당 월 신고 12건, 국토교통부/);
   assert.match(s.sentences[1], /최근 12개월.*120건/);
-  assert.match(s.sentences[2], /총 5,678세대, 2008년 준공/);
+  assert.match(s.sentences[2], /총 5,678세대 · 2008년 준공/); // [1030 · G2] 낱말형
   assert.equal(s.basisMonth, "2026-08");
   assert.match(s.citation, /^내집나우\(naezipnow\.com\) 집계에 따르면, 서울 송파구 잠실동 잠실엘스의 2026년 8월/);
   assert.match(s.citation, /24\.5억이다\(2026년 8월 기준, 국토교통부 실거래 기반\)\.$/);

@@ -91,7 +91,7 @@ function UnavailableCard({ reason }: { reason: "notfound" | "error" }) {
       <Wordmark />
       <div className="pr-16">
         <div className="t-section leading-tight text-ink">
-          {reason === "notfound" ? "단지 정보를 찾을 수 없어요" : "실거래가 불러오기 실패"}
+          {reason === "notfound" ? "단지 정보 없음" : "실거래가 불러오기 실패"}
         </div>
         <div className="mt-1 text-xs leading-[1.6] text-text-2">
           {reason === "notfound"

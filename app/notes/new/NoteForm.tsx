@@ -2319,7 +2319,8 @@ export function NoteForm({
   return (
     /* [967 · 4] 저장 바가 떠 있는 동안 아래 여백을 더 준다 — 마지막 입력을 바가 덮지 않게 */
     /* [1026] 레일이 있으면(lg) 폭 1104 = 폼 680 + 간격 24 + 레일 360 + 좌우 여백 — 없으면 예전 가운데 600 한 열 */
-    <div
+    <main
+      id="main-content"
       data-one-hand={oneHand ? "on" : undefined}
       className={`note-form mx-auto flex w-full flex-col px-5 ${showRail ? "max-w-[1104px]" : "max-w-[600px]"} ${
         showSaveBar ? "pb-28" : "pb-10"
@@ -3503,6 +3504,6 @@ export function NoteForm({
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }

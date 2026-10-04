@@ -39,7 +39,9 @@ export const TOWN_FEED_PAGE = 30;
 const NOTE_SCAN_CAP = 400;
 
 export function noteToCard(n: InspectionNote): FeedCard {
-  const oneLiner = n.summary?.trim() || n.sections.pros?.trim() || n.title;
+  /* [1030 · G4] 카드 제목 = 노트 제목("관악푸르지오 +3.3억 대출 0원(Lab #36)" — 홈 공개 노트 목록과 같은 글자).
+     예전엔 본문 첫 문장 40자("서울 관악구 봉천동 관악푸르지오(2004년 준공, 2,104세대, 임대 …")라 제목이 주소로 보였다. 제목이 비면 예전대로. */
+  const oneLiner = n.title?.trim() || n.summary?.trim() || n.sections.pros?.trim() || "";
   const lab = isLabNoteLabel(n.authorLabel);
   const tags: string[] = [];
   if (n.aptName?.trim()) tags.push(n.aptName.trim());

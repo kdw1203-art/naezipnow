@@ -26,8 +26,8 @@ import { buildPageMetadata } from "@/lib/seo/page-metadata";
    동네이야기·공개 노트)를 40px 칩으로 둔다. "실거래 시세"·"내 임장노트" 라벨은 사실과 달랐다
    (/tx 는 실거래만 있고, /notes 는 공개 노트 피드) — 하는 일 그대로 쓴다. */
 export const metadata = buildPageMetadata({
-  title: "페이지를 찾을 수 없어요",
-  description: "주소가 바뀌었거나 삭제된 페이지입니다.",
+  title: "페이지 없음 · 404",
+  description: "주소가 바뀌었거나 삭제된 페이지 · 단지 찾기 · 지역 실거래 · 뉴스룸 · 통합 검색",
 });
 
 /** 봇·옛 링크가 가장 많이 닿는 목적지 — 라벨은 그 화면이 실제로 하는 일 */
@@ -41,7 +41,7 @@ const POPULAR_PATHS = [
 
 export default function NotFound() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-[480px] flex-col items-center justify-center gap-3.5 px-4 py-10 text-center">
+    <main id="main-content" className="mx-auto flex min-h-screen w-full max-w-[480px] flex-col items-center justify-center gap-3.5 px-4 py-10 text-center">
       {/* [962] 404 = 빈 화면의 브랜드 순간 — 처마 아래 온점이 조용히 숨쉬고, 슬로건이 마침표를 찍는다 */}
       <svg className="rise-in" width="64" height="59" viewBox="0 0 120 120" aria-hidden="true">
         <path d="M52 28 L68 28" fill="none" stroke="var(--brand-symbol-ink)" strokeWidth="7" strokeLinecap="round" />

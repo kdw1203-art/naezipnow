@@ -18,6 +18,7 @@
  * 싣지 않는다(워크벤치 라우트 예산 480KB) — 클라이언트는 결과만 그린다.
  */
 
+import { areaBandDisplayLabel } from "@/lib/complex/area-band-label";
 import type { AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import type { LiveToolContext, Footnote } from "@/lib/ai/live-context";
 import {
@@ -274,7 +275,7 @@ function tilePool(
           key: "price",
           label: "최근 실거래가",
           value: formatKrwWon(price.priceKrw, { style: "short" }),
-          note: `${price.bandLabel} 최근 ${price.sample ?? "몇"}건 평균`,
+          note: `${areaBandDisplayLabel(price.bandLabel)} 최근 ${price.sample ?? "몇"}건 평균`,
           asOf: price.latestYm,
           source: "국토부 실거래",
           confidence: ageConf(price.latestYm),

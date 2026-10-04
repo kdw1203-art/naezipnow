@@ -469,7 +469,10 @@ export async function listPublicNoteCards(
        컬럼 목록을 타입 수준에서 못 읽어 data 가 GenericStringError[] 로 떨어진다. */
     /* [1015] 썸네일 판정 재료(metadata.cover · 숫자 검증용 본문 · photos)까지 읽는다. jsonb 를 카드에 싣지는 않고
        cover 주소 한 줄로 접는다. 이 목록을 읽는 화면은 전부 ISR(1일) 이라 요청당 비용이 아니라 재생성당 비용이다. */
-    .select("id,title,region,apt_name,visit_date,summary,created_at,author_label,score_location,score_school,score_transport,score_facility,score_future,sections,checklist,transportation,weather,metadata,photos")
+    /* [1030 · G7] metadata 전체(50행 306KB — claim_vs_measured·hypothesis·prior_reviews·seo…) 대신 커버 규격만(6KB):
+       카드가 metadata 에서 읽는 것은 cover 뿐이다. 7일간 /complex/browse·/analysis/price·/listings/new 에서
+       "inspection_notes 조회 실패 … TimeoutError"(곁다리 예산 안에 못 받음)가 났다 — 전송량 451KB → 약 150KB. */
+    .select("id,title,region,apt_name,visit_date,summary,created_at,author_label,score_location,score_school,score_transport,score_facility,score_future,sections,checklist,transportation,weather,cover:metadata->cover,photos")
     .eq("is_public", true)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -500,7 +503,7 @@ export async function listPublicNoteCards(
       transportation: (r.transportation as string | null) ?? null,
       weather: (r.weather as string | null) ?? null,
       scores,
-      metadata: r.metadata,
+      metadata: r.cover == null ? null : { cover: r.cover },
       photos: r.photos,
       authorLabel: (r.author_label as string | null) ?? null,
     });

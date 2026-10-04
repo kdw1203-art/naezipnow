@@ -151,7 +151,7 @@ function Side({
           ) : (
             <span className="t-title tracking-wide text-text-3">
               <span aria-hidden="true">?억 ?,???만</span>
-              <span className="sr-only">가격은 답한 뒤 공개돼요</span>
+              <span className="sr-only">가격은 답한 뒤 공개</span>
             </span>
           )}
         </p>

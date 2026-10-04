@@ -120,7 +120,7 @@ export function BandShelf({
                       ) : null}
                     </span>
                     <span className="pxs-bar" aria-hidden="true">
-                      <i className={c.busiest ? "bg-primary" : "bg-primary-soft"} style={{ height: `${c.barPct}%` }} />
+                      <i className={c.busiest ? "bg-primary" : "bg-primary-soft"} style={{ width: `${c.barPct}%` }} />
                     </span>
                     <span className="t-num t-title text-ink">{b.medianText}</span>
                     <span className="t-caption text-text-3">중앙값 · {b.txCount.toLocaleString("ko-KR")}건</span>

@@ -31,28 +31,36 @@ export function EmbedSnippet({
     kind === "complex"
       ? `/embed/complex/${encodeURIComponent(id)}`
       : `/embed/region/${encodeURIComponent(id)}`;
+  /* [1030 · G4] 접힌 <details> — 일반 이용자 사이드에 iframe 코드 상자가 늘 펼쳐져 있었다(지역 화면 실측).
+     제목 줄(40px)만 보이고, 중개사·블로거가 열면 예전 그대로. 서버 컴포넌트·JS 없음은 그대로. */
   return (
-    <div className={`flex flex-col gap-1 rounded-lg border border-line bg-surface p-4 ${className}`}>
-      <span className="t-body font-bold text-ink">{heading}</span>
-      <span className="t-sub text-text-2">{desc}</span>
-      <pre
-        className="mt-2 max-w-full overflow-x-auto rounded-lg bg-bg px-3 py-2.5 t-sub leading-[1.6] text-text-1 [user-select:all]"
-        tabIndex={0}
-        aria-label="위젯 삽입 코드"
-      >
-        <code>{code}</code>
-      </pre>
-      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 t-sub text-text-3">
-        <span>탭하면 전체 선택 · 무료 · 출처 표기 포함</span>
-        <Link
-          href={previewHref}
-          target="_blank"
-          rel="noopener"
-          className="inline-block py-[5px] font-bold text-primary no-underline"
+    <details className={`group rounded-lg border border-line bg-surface ${className}`}>
+      <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 [&::-webkit-details-marker]:hidden">
+        <span className="t-body font-bold text-ink">{heading}</span>
+        <span className="t-sub text-text-3 group-open:hidden">열기</span>
+        <span className="hidden t-sub text-text-3 group-open:inline">닫기</span>
+      </summary>
+      <div className="flex flex-col gap-1 px-4 pb-4">
+        <span className="t-sub text-text-2">{desc}</span>
+        <pre
+          className="mt-2 max-w-full overflow-x-auto rounded-lg bg-bg px-3 py-2.5 t-sub leading-[1.6] text-text-1 [user-select:all]"
+          tabIndex={0}
+          aria-label="위젯 삽입 코드"
         >
-          위젯 미리보기 ›
-        </Link>
+          <code>{code}</code>
+        </pre>
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 t-sub text-text-3">
+          <span>탭하면 전체 선택 · 무료 · 출처 표기 포함</span>
+          <Link
+            href={previewHref}
+            target="_blank"
+            rel="noopener"
+            className="inline-block py-[5px] font-bold text-primary no-underline"
+          >
+            위젯 미리보기 ›
+          </Link>
+        </div>
       </div>
-    </div>
+    </details>
   );
 }

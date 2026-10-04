@@ -24,9 +24,37 @@ export interface HomeCoverage {
   regionCount: number | null;
 }
 
+/* [1030 · 3차] 미리 센 수치 표(public.coverage_totals · 하루 한 번 cron) — 아래 세 질의는 전수 count 라
+   pg_stat_statements 실측(8/4~10/4) 평균 6.7초 + 1.1초 + 0.3초였고, 7일 캐시가 "market" 태그로 비워지는
+   매일 수집 뒤 첫 홈·분석·자료 출처·여정 렌더가 그만큼 기다렸다. 표가 있고 48시간 안이면 그 값을 쓰고,
+   없거나 오래됐으면(표가 아직 안 만들어진 배포 포함) 예전처럼 직접 센다 — 값은 같은 세 질의로 만든다. */
+const TOTALS_MAX_AGE_MS = 48 * 3600_000;
+
+async function readPrecountedTotals(sb: NonNullable<ReturnType<typeof getServiceSupabase>>): Promise<HomeCoverage | null> {
+  try {
+    const { data, error } = await sb
+      .from("coverage_totals")
+      .select("tx_count,complex_count,region_count,refreshed_at")
+      .eq("id", 1)
+      .maybeSingle();
+    if (error || !data) return null;
+    const age = Date.now() - Date.parse(String(data.refreshed_at ?? ""));
+    if (!Number.isFinite(age) || age > TOTALS_MAX_AGE_MS) return null;
+    const tx = Number(data.tx_count);
+    const complex = Number(data.complex_count);
+    const region = Number(data.region_count);
+    if (!(tx > 0) || !(complex > 0) || !(region > 0)) return null;
+    return { txCount: tx, complexCount: complex, regionCount: region };
+  } catch {
+    return null;
+  }
+}
+
 async function loadCoverageUncached(): Promise<HomeCoverage> {
   const sb = getServiceSupabase();
   if (!sb) return { txCount: null, complexCount: null, regionCount: null };
+  const pre = await readPrecountedTotals(sb);
+  if (pre) return pre;
   const [txR, complexR, regionR] = await Promise.allSettled([
     sb
       .from("market_transactions")

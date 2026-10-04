@@ -64,7 +64,7 @@ function digestSummaryLine(d: WeeklyDigest): string {
   if (d.news.length > 0) parts.push(`뉴스 ${d.news.length}건`);
   if (d.market.length > 0) parts.push(`주요 지역 시세 ${d.market.length}곳`);
   if (d.community.count > 0) parts.push(`이웃 글 ${d.community.count}건`);
-  return parts.length > 0 ? `이번 주 ${parts.join(" · ")}` : "이번 주 요약을 준비 중이에요";
+  return parts.length > 0 ? `이번 주 ${parts.join(" · ")}` : "이번 주 요약 준비 중";
 }
 
 /* 다이제스트 티저 — 최신 뉴스 제목(없으면 시장 요약) */

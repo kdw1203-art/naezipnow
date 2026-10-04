@@ -416,8 +416,8 @@ export function ApplySearchClient({ initial }: Props) {
               /* [1011] "청약홈 연동 준비 중" · "공공데이터가 연결되지 않아" 를 걷었다(소유자 지시) —
                  970·C-44 에서 env 변수명을 걷어낸 것과 같은 줄기로, 연동 상태는 운영 쪽 말이다.
                  지어내지 않는다는 약속(정직성)은 그대로 남긴다. */
-              title="청약 공고를 아직 보여드릴 수 없어요"
-              desc="실제 공고 자료를 아직 불러오지 못해요. 지어낸 수치로 표를 채우지는 않아요."
+              title="청약 공고 아직 없음"
+              desc="실제 공고 자료 미수신 · 지어낸 수치로 채우지 않음"
               action={{ href: "https://www.applyhome.co.kr", label: "청약홈에서 직접 보기 ↗" }}
             />
           ) : filteredMode && !state.detailAvailable ? (
@@ -426,10 +426,10 @@ export function ApplySearchClient({ initial }: Props) {
                없어요"라고 말하면 있는 공고를 없다고 말하는 셈이라 구분한다. */
             <EmptyState
               icon="lock"
-              title="지역·단지명 필터를 지금 사용할 수 없어요"
+              title="지역·단지명 필터 지금 사용 불가"
               /* [1011] "분양정보(상세) API 연동이 준비되지 않아" 를 걷었다(소유자 지시) — 970·C-44 에서
                  env 변수명을 걷어낸 것과 같은 줄기다. 남길 사실은 "지금은 못 쓴다"와 "0건이 아니다" 둘. */
-              desc="지역·단지명으로 걸러 보는 기능은 준비 중이에요. ‘전체’에서는 전국 공고가 보여요."
+              desc="지역·단지명 필터 준비 중 · ‘전체’ = 전국 공고"
               action={{ href: "/apply", label: "전체 공고 보기" }}
             />
           ) : (
@@ -438,7 +438,7 @@ export function ApplySearchClient({ initial }: Props) {
               title="이 조건에 맞는 공고 없음"
               desc={`${state.region === "전체" ? "전국" : state.region}${
                 state.q ? ` · ‘${state.q}’` : ""
-              } 조건으로는 조회 결과가 0건이었어요. 지역이나 검색어를 바꿔 보세요.`}
+              } 조건 조회 결과 0건 · 지역·검색어 다시`}
               action={{ href: "/apply", label: "전체 공고 다시 보기" }}
             />
           )}
@@ -478,6 +478,10 @@ export function ApplySearchClient({ initial }: Props) {
                   </div>
                   {displayItems.map((item, i, arr) => {
                     const open = expanded.has(item.id);
+                    /* [1030 · G6] 단지별 묶음 — 한 공고가 타입×순위별 여러 행이라 8행 중 6행이 같은 단지명이었다(2026-10-04 운영 실측).
+                       같은 단지가 바로 위 행과 이어지면 이름·지역은 적지 않고 "↳ 타입 · 순위"만 적는다(정렬을 바꾸면 끊긴 자리마다 이름이 다시 선다). */
+                    const prev = i > 0 ? arr[i - 1] : null;
+                    const continues = Boolean(prev && prev.houseName === item.houseName && prev.region === item.region);
                     const hasDetail = Boolean(
                       item.rankCode ||
                         item.subscriptionPeriod ||
@@ -498,21 +502,35 @@ export function ApplySearchClient({ initial }: Props) {
                             hasDetail ? "press" : "cursor-default"
                           }`}
                         >
-                          <span className="font-bold text-ink">
-                            {hasDetail && (
-                              <span className="mr-1 inline-block w-2.5 text-center t-sub font-bold text-text-3">
-                                {open ? "−" : "+"}
-                              </span>
-                            )}
-                            {item.houseName}
-                            <StatusChip period={item.subscriptionPeriod} />
-                            <span className="ml-1 t-caption font-medium text-text-3">
-                              {item.region}
-                              {item.resideLabel ? ` · ${item.resideLabel}` : ""}
-                              {/* [1028] 같은 타입이 순위별로 두 줄 나온다 — 줄마다 순위를 적는다(예전에는 펼쳐야 보였다) */}
-                              {item.rankCode ? ` · ${item.rankCode}순위` : ""}
+                          {continues ? (
+                            <span className="t-caption font-medium text-text-3">
+                              {hasDetail && (
+                                <span className="mr-1 inline-block w-2.5 text-center t-sub font-bold text-text-3">
+                                  {open ? "−" : "+"}
+                                </span>
+                              )}
+                              <span aria-hidden="true">↳ </span>
+                              <span className="sr-only">{item.houseName} · </span>
+                              {item.resideLabel ? `${item.resideLabel} · ` : ""}
+                              {item.rankCode ? `${item.rankCode}순위` : houseTypeLabel(item.houseType)}
                             </span>
-                          </span>
+                          ) : (
+                            <span className="font-bold text-ink">
+                              {hasDetail && (
+                                <span className="mr-1 inline-block w-2.5 text-center t-sub font-bold text-text-3">
+                                  {open ? "−" : "+"}
+                                </span>
+                              )}
+                              {item.houseName}
+                              <StatusChip period={item.subscriptionPeriod} />
+                              <span className="ml-1 t-caption font-medium text-text-3">
+                                {item.region}
+                                {item.resideLabel ? ` · ${item.resideLabel}` : ""}
+                                {/* [1028] 같은 타입이 순위별로 두 줄 나온다 — 줄마다 순위를 적는다(예전에는 펼쳐야 보였다) */}
+                                {item.rankCode ? ` · ${item.rankCode}순위` : ""}
+                              </span>
+                            </span>
+                          )}
                           <span className="text-center font-bold text-text-1" title={item.houseType}>
                             {houseTypeLabel(item.houseType)}
                           </span>

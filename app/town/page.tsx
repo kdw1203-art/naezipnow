@@ -285,6 +285,7 @@ export default async function TownPage() {
         cards={firstPage}
         hasMore={hasMore}
         loadFailed={loadFailed}
+        now={now}
         ad={<AdZone placement="community_feed" seed={0} plan={null} />}
       />
 

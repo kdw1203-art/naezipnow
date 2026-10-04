@@ -118,8 +118,8 @@ export async function generateMetadata({
   }
   if (!post) {
     return {
-      title: "기사를 찾을 수 없습니다 | 내집나우",
-      description: "요청하신 기사를 찾을 수 없습니다.",
+      title: "기사 없음 | 내집나우",
+      description: "없는 기사 · 삭제됐거나 주소가 바뀜",
       robots: { index: false, follow: false },
     };
   }

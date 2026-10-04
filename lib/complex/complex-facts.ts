@@ -19,6 +19,7 @@
  * 없고, 여기 있는 숫자는 전부 국토부 **실거래** 신고분이다.
  */
 import { areaBandOf } from "@/lib/market/bands";
+import { areaBandDisplayLabel } from "@/lib/complex/area-band-label";
 import { formatKrwWon } from "@/lib/format/krw";
 import { kstParts } from "@/lib/format/kst";
 
@@ -511,7 +512,8 @@ export function buildSummaryFragments(input: {
   const ts = input.tradeSummary;
   if (ts && ts.count > 0) {
     let s = `최근 ${ts.windowMonths}개월 매매 ${ts.count.toLocaleString("ko-KR")}건`;
-    if (ts.band) s += `, ${ts.band.label} 중앙 ${eok(ts.band.medianKrw)}`;
+    /* [1030 · G3] 열린 구간은 화면 이름("60㎡ 미만")으로 — 요약 문장·지도 패널 한 줄도 같은 말 */
+    if (ts.band) s += `, ${areaBandDisplayLabel(ts.band.label)} 중앙 ${eok(ts.band.medianKrw)}`;
     else if (ts.medianKrw != null) s += `, 중앙 ${eok(ts.medianKrw)}`;
     out.trades = s;
   }

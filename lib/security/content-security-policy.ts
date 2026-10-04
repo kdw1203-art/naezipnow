@@ -28,10 +28,13 @@ export function buildContentSecurityPolicy(
   /* googleadservices.com — 구글 광고(AW 태그) 전환 핑 도메인. 광고 전환
      추적(ga4-gtag-loader)이 켜졌을 때 여기가 막혀 있으면 전환만 조용히
      유실된다(화면 오류 없음 — 그래서 미리 열어 둔다). */
+  /* [1030 · 3차] fundingchoicesmessages.google.com — 애드센스 스크립트(pagead2)가 광고 차단 복구·동의 메시지용으로
+     같이 불러오는 구글 도메인. 막혀 있어 **모든 화면**에서 콘솔 오류 1건 + CSP 위반 리포트 1건(7일 739건 =
+     /api/security/csp-report 함수 호출 739회 · 2026-10-04 Vercel 로그, 리포트 전부 이 도메인)이 났다. */
   const googleAdsScript =
-    "https://www.googletagmanager.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://www.googleadservices.com https://www.gstatic.com https://www.google.com";
+    "https://www.googletagmanager.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://www.googleadservices.com https://www.gstatic.com https://www.google.com https://fundingchoicesmessages.google.com";
   const googleAdsConnect =
-    "https://*.googlesyndication.com https://*.doubleclick.net https://www.googleadservices.com https://www.google.com https://www.gstatic.com";
+    "https://*.googlesyndication.com https://*.doubleclick.net https://www.googleadservices.com https://www.google.com https://www.gstatic.com https://fundingchoicesmessages.google.com";
   const googleAdsFrame =
     "https://googleads.g.doubleclick.net https://*.googlesyndication.com https://tpc.googlesyndication.com";
 

@@ -31,7 +31,7 @@ export default function MessagesPage() {
             <Icon name="mail" size={22} />
           </div>
           <div className="text-[15px] font-bold text-ink">
-            쪽지 기능 준비 중이에요
+            쪽지 기능 준비 중
           </div>
           {/* [992 · A1] 임장 모임 채팅(/town/groups)은 보관(비노출) — 안내 링크를 뺐다.
               이 화면 자체도 보관 목록(lib/seo/archived-routes.ts)에 있다. */}

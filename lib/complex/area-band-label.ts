@@ -11,7 +11,20 @@
 import type { AreaUnit } from "@/lib/prefs/ui-prefs";
 import { m2ToPyeong } from "@/lib/prefs/area-unit";
 
-export function areaBandLabelByUnit(label: string, unit: AreaUnit): string {
+/**
+ * [1030 · G3] 열린 구간의 화면 이름 — "~59㎡" → "60㎡ 미만", "135㎡~" → "135㎡ 이상".
+ * "~59㎡ 평균 6.9억 · 최저 2억 9,600만"이 59㎡ 타입(월 중앙 8~10억)으로 읽혔다(2026-10-04 운영 실측) —
+ * 실제는 60㎡ 미만(39㎡ 포함). 지역 화면 평형대 표("60㎡ 미만 (~24평)")와 같은 말로 맞춘다.
+ * 데이터 라벨(AREA_BANDS·슬러그·OG 칩·정렬)은 그대로 — 화면에 그릴 때만 바꾼다.
+ */
+export function areaBandDisplayLabel<T extends string | null | undefined>(label: T): T {
+  if (label === "~59㎡") return "60㎡ 미만" as T;
+  if (label === "135㎡~") return "135㎡ 이상" as T;
+  return label;
+}
+
+export function areaBandLabelByUnit(rawLabel: string, unit: AreaUnit): string {
+  const label = areaBandDisplayLabel(rawLabel);
   if (unit !== "pyeong" || !label.includes("㎡")) return label;
   return label
     .replace(/\d+(?:\.\d+)?/g, (n) => {

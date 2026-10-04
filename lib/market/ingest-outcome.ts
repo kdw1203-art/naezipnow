@@ -150,3 +150,8 @@ export function tallyText(tally: RunTally): string | null {
 export function isHardFailure(outcome: IngestOutcome): boolean {
   return outcome === "failed";
 }
+
+/** [1030 · 5차] 국토부 응답의 resultCode 30 = SERVICE_KEY_IS_NOT_REGISTERED_ERROR("등록되지 않은 서비스키") — 키가 아니라 그 서비스의 활용신청 문제 */
+export function isServiceNotRegistered(detail: string): boolean {
+  return /(^|\s)30(\s|$)/.test(detail) && /SERVICE_KEY_IS_NOT_REGISTERED|등록되지 않은 서비스키/.test(detail);
+}

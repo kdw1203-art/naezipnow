@@ -25,7 +25,7 @@ export async function generateMetadata({
   const { id } = await params;
   const tpl = await getTemplate(id);
   if (!tpl) {
-    return { title: "템플릿을 찾을 수 없어요 | 내집나우" };
+    return { title: "템플릿 없음 | 내집나우" };
   }
   return {
     title: `${tpl.title} | 임장 노트 템플릿 | 내집나우`,
@@ -46,7 +46,7 @@ export default async function NoteTemplateDetailPage({
 
   if (!tpl) {
     return (
-      <PageShell breadcrumb="홈 › 임장노트 › 템플릿" title="템플릿을 찾을 수 없어요">
+      <PageShell breadcrumb="홈 › 임장노트 › 템플릿" title="템플릿 없음">
         <div className="card rise-in flex flex-col items-center gap-4 rounded-lg p-8 text-center">
           <Icon name="file-text" size={28} className="text-text-3" />
           <p className="t-body text-text-2">

@@ -127,10 +127,15 @@ function compact(o: Record<string, unknown>): Record<string, unknown> {
  * 맞다 — 틀린 수를 적어 두면 사용자는 그걸 확인된 값으로 읽는다.
  * (이미 저장된 잘못된 값은 마이그레이션 20260728120000 에서 격리했다.)
  */
+/** [1030 · 5차] K-apt 원천의 테스트 행 — 'test'·'test001'·'테스트'·'테스트단지2'·'한국감정원1'·'한국부동산원테스트1'(2026-10-04 대장 13행 실측).
+    실제 단지가 아니므로 대장에 넣지 않는다. 이미 들어간 13행은 docs/sql/1030_kapt_test_rows.sql(소유자 실행)로 격리한다. */
+export const KAPT_TEST_NAME_RE = /^(test\d*|테스트(단지)?\d*|한국감정원\d*|한국부동산원테스트\d*)$/i;
+
 function toRpcRow(c: AptComplex, fallbackLawdCd: string): Record<string, unknown> | null {
   const kaptCode = clean(c.kaptCode);
   const name = clean(c.kaptName);
   if (!kaptCode || !name) return null;
+  if (KAPT_TEST_NAME_RE.test(name)) return null;
 
   const sido = clean(c.as1);
   const sigunguRaw = clean(c.as2);

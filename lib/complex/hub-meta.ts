@@ -9,6 +9,7 @@
    표기: 평균은 짧은 표기("29.7억" — 표기 표준: 평균·요약은 eok1, "평균"을 적는다), 한 건은 정밀 표기
    ("6억 1,000만"). 비교는 대표가 표본과 겹치지 않는 같은 평형의 기간 첫 거래들(hubHeadline.base) — 없으면 쓰지 않는다.
    ============================================================ */
+import { areaBandDisplayLabel } from "@/lib/complex/area-band-label";
 import { deltaDir, deltaText, pctChange } from "@/lib/format/delta";
 import { formatEokMan } from "@/lib/format/eok-man";
 import { formatManwon } from "@/lib/complex/hub-trades";
@@ -52,7 +53,7 @@ export function ymSpanDot(firstYm: string, latestYm: string): string {
 
 export function hubMetaPrice(head: HubHeadline): HubMetaPrice {
   const area =
-    head.basis === "band" ? head.bandLabel : head.unitM2 != null ? `${head.unitM2}㎡` : null;
+    head.basis === "band" ? areaBandDisplayLabel(head.bandLabel) : head.unitM2 != null ? `${head.unitM2}㎡` : null;
   const monthLabel = ymShortLabel(head.latestYm);
   if (head.kind === "single") {
     return {
@@ -95,6 +96,6 @@ export function hubFaqPriceAnswer(name: string, head: HubHeadline): string {
     const area = head.unitM2 != null ? `전용 ${head.unitM2}㎡ ` : "";
     return `${name}의 최근 실거래는 ${when} 계약 ${area}${formatEokMan(head.priceManwon, { unit: "만원" })} 한 건입니다. 같은 평형·면적대 거래가 3건이 안 돼 평균을 내지 않았습니다. ${tail}`;
   }
-  const what = head.basis === "band" ? `${head.bandLabel} 면적대` : `전용 ${head.unitM2}㎡`;
+  const what = head.basis === "band" ? `${areaBandDisplayLabel(head.bandLabel)} 면적대` : `전용 ${head.unitM2}㎡`;
   return `${name}의 최근 실거래가는 ${what} ${ymSpanDot(head.firstYm, head.latestYm)} 계약 ${head.sampleSize}건 평균 ${formatEokMan(head.priceManwon, { unit: "만원" })}입니다(최근 거래가 가장 많은 ${head.basis === "band" ? "면적대" : "평형"}). ${tail}`;
 }

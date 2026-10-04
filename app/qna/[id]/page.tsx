@@ -77,7 +77,7 @@ export async function generateMetadata({
     return { title: "질문 불러오기 실패 | 내집나우", robots: { index: false, follow: false } };
   }
   if (!loaded.data) {
-    return { title: "질문을 찾을 수 없어요 | 내집나우", robots: { index: false, follow: false } };
+    return { title: "질문 없음 | 내집나우", robots: { index: false, follow: false } };
   }
   const { title, body } = loaded.data.question;
   return {
@@ -135,7 +135,7 @@ export default async function QnaDetailPage({
 
   if (!loaded.data) {
     return (
-      <PageShell breadcrumb="동네이야기 › 단지 Q&A" title="질문을 찾을 수 없어요" wide>
+      <PageShell breadcrumb="동네이야기 › 단지 Q&A" title="질문 없음" wide>
         <TownCategoryNav stick />
         <div className={`${QNA_THEME_CLASS} card rise-in flex flex-col items-start gap-3`}>
           <p className="t-body text-text-2">

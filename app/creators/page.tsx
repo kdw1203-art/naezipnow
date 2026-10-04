@@ -81,7 +81,8 @@ export default function CreatorsPage() {
       {/* 히어로 — 수익 보장·전망 없이, 구조만 말한다 */}
       <div className="mb-7 max-w-[720px]">
         <h1 className="rise-in text-[24px] font-bold leading-[1.35] text-ink">
-          임장 콘텐츠, 조회수로 끝내지 마세요
+          {/* [1030 · 2차] 권유문 → 낱말 */}
+          임장 콘텐츠 · 자료실 리포트 판매
         </h1>
         <p className="mt-2 text-[13px] leading-[1.7] text-text-2">
           발로 뛰어 만든 지역 분석과 임장 기록을 내집나우 자료실에서 리포트로

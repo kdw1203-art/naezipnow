@@ -542,7 +542,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
             />
           </span>
           <span>
-            (선택) 혜택·소식 이메일 수신 · 언제든 설정에서 철회할 수 있어요
+            (선택) 혜택·소식 이메일 수신 · 설정에서 언제든 철회
           </span>
         </label>
         <label className="-mx-2.5 flex min-h-[40px] items-center gap-3 rounded-lg px-2.5 py-1 text-xs text-text-2">
