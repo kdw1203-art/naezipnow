@@ -8198,3 +8198,13 @@ html[data-mscale] li div.t-sub.mscale-wrap {
 .fold-lead {
   margin: 0;
 }
+
+/* ---------- [1039 · 회원가입] 떠오르는 라벨 칸의 오류 테두리 ---------- */
+/* 가입 폼이 칸마다 오류를 세운다(aria-invalid) — 어느 칸인지 색으로도 보이게. 라벨도 같은 색 */
+.njn-field input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.njn-field input[aria-invalid="true"] + label {
+  color: var(--danger);
+}
+

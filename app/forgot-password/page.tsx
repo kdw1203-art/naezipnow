@@ -1,5 +1,6 @@
 "use client";
 
+import { takeAuthEmail } from "@/lib/auth/signup-form";
 import { ActionButton } from "@/app/components/ui/ActionButton";
 
 import { useEffect, useState, type FormEvent } from "react";
@@ -15,7 +16,8 @@ export default function ForgotPasswordPage() {
      (서버·첫 렌더 불일치 방지). */
   useEffect(() => {
     try {
-      const q = new URLSearchParams(window.location.search).get("email");
+      /* [1039] 로그인·가입 화면이 탭 저장소로 넘긴 이메일을 먼저(주소에 싣지 않는 길) */
+      const q = takeAuthEmail() ?? new URLSearchParams(window.location.search).get("email");
       if (q && q.includes("@")) setEmail(q);
     } catch {
       /* ignore */

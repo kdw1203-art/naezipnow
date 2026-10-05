@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isBotUserAgent } from "@/lib/client/is-bot-ua";
 import { safeAuth } from "@/lib/safe-auth";
 import { detectShellFromUserAgent } from "@/lib/platform-shell";
 import { recordPlatformEvent } from "@/lib/platform-events";
@@ -22,7 +23,8 @@ export async function POST(req: Request) {
      UA 는 지표가 아니라 소음이므로 성공 응답으로 조용히 접는다 — 도구가
      재시도하게 만들 이유가 없다. */
   const ua = req.headers.get("user-agent") ?? "";
-  if (/HeadlessChrome|Chrome-Lighthouse|Lighthouse|PageSpeed|Playwright|Puppeteer|Googlebot|bingbot|Yeti|spider|crawler/i.test(ua)) {
+  /* [1039] 화면 쪽과 같은 판별(isBotUserAgent)도 같이 쓴다 — 서버 정규식이 더 좁아 일부 수집기가 가입 퍼널에 섞였다 */
+  if (/HeadlessChrome|Chrome-Lighthouse|Lighthouse|PageSpeed|Playwright|Puppeteer|Googlebot|bingbot|Yeti|spider|crawler/i.test(ua) || isBotUserAgent(ua)) {
     return NextResponse.json({ ok: true, skipped: "automation" });
   }
   const session = await safeAuth();

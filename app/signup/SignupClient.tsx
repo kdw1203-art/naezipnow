@@ -13,6 +13,20 @@ import { safeInternalPath } from "@/lib/safe-path";
 import type { SocialProvider } from "@/lib/auth/configured-social";
 import { markOncePerSession, useFirstInteraction } from "@/lib/client/human-gate";
 import { browserFamily, deviceClass } from "@/lib/client/browser-family";
+import {
+  EMAIL_RE,
+  NAME_MAX,
+  PASSWORD_MIN,
+  RESEND_COOLDOWN_SEC,
+  emailProblem,
+  emailTypoFix,
+  mailboxFor,
+  normalizeEmail,
+  passwordProblem,
+  scorePassword,
+  stashAuthEmail,
+  takeAuthEmail,
+} from "@/lib/auth/signup-form";
 
 /** [970 · A-14] 가입 뒤 목적지 — 온보딩(/welcome)을 거치되, 로그인 벽에서 넘어온
     callbackUrl 이 있으면 `?next=` 로 실어 온보딩 마지막 CTA 가 그리로 보낸다(WelcomeClient).
@@ -65,14 +79,25 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
   /* [개선 #9] 비밀번호 확인칸 제거 — 표시 토글로 오타를 눈으로 확인한다
      (칸 하나가 줄고, 모바일에서 두 번 입력하는 마찰이 사라진다). */
   const [showPw, setShowPw] = useState(false);
+  /* [1039] 필수 동의 한 칸(약관·방침·만 14세) — 그 위에 "전체 동의"(선택 2개 포함)를 둔다 */
   const [agree, setAgree] = useState(false);
   const [agreeMarketing, setAgreeMarketing] = useState(false);
   const [agreeLocation, setAgreeLocation] = useState(false);
   const [busy, setBusy] = useState(false);
   const [resendBusy, setResendBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<"done" | "confirm" | null>(null);
+  /* [1039] 칸마다 오류 — 제출 때 한꺼번에 세우고, 고치면 그 칸만 지운다. 칸을 떠났을 때(touched)도 그 칸만 본다 */
+  const [fieldErr, setFieldErr] = useState<{ email?: string; password?: string; consent?: string }>({});
+  const [touched, setTouched] = useState<{ email?: boolean }>({});
+  /* [1039] 이미 가입된 이메일 — 문장 대신 다음 행동 두 개(로그인 · 비밀번호 찾기) */
+  const [dupEmail, setDupEmail] = useState<string | null>(null);
+  /* [1039] 자동 입력 봇 덫 — 사람 눈에 안 보이는 칸. 채워져 오면 서버가 거절한다 */
+  const [hp, setHp] = useState("");
+  /* [1039] 인증 메일 안내 화면 — 예전 "done" 분기("가입이 완료됐어요")는 도달할 수 없는 코드였다(자동 로그인 뒤 /welcome 으로 떠난다) */
+  const [done, setDone] = useState(false);
   const [confirmHint, setConfirmHint] = useState<string | null>(null);
+  const [resendWait, setResendWait] = useState(0);
+  const doneTitleRef = useRef<HTMLHeadingElement | null>(null);
   /* [970 · A-14] 가입 뒤 목적지(/welcome 또는 /welcome?next=…) — 서버 렌더는 /welcome */
   const [welcomeHref, setWelcomeHref] = useState("/welcome");
   /* 로그인으로 되돌아가는 링크(뒤로·이미 계정이 있나요)도 같은 callbackUrl 을 유지한다 */
@@ -83,6 +108,9 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
       setWelcomeHref(welcomeHrefFor(cb));
       const safe = safeInternalPath(cb, "/");
       if (safe !== "/") setLoginHref(`/login?callbackUrl=${encodeURIComponent(safe)}`);
+      /* [1039] 로그인 화면 "이 이메일로 가입하기"가 넘긴 주소 — 탭 저장소로 받는다(주소에 싣지 않는다) */
+      const carried = takeAuthEmail();
+      if (carried) setEmail(carried);
     } catch {
       /* 주소 파싱 실패 — 기본 /welcome · /login */
     }
@@ -137,15 +165,31 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
     stashSignupHandoff({ regions: [], profile: {}, purpose: null });
   }, []);
 
-  const progressDone = [
-    email.trim().includes("@"),
-    password.length >= 8,
-    agree,
-  ].filter(Boolean).length;
+  const emailOk = EMAIL_RE.test(normalizeEmail(email));
+  const progressDone = [emailOk, password.length >= PASSWORD_MIN, agree].filter(Boolean).length;
   const progressPct = Math.round((progressDone / 3) * 100);
+  const pw = scorePassword(password);
+  const typoFix = emailTypoFix(email);
+  const allAgreed = agree && agreeMarketing && agreeLocation;
+  /* 칸을 떠난 뒤에만 그 칸 오류를 보인다(치는 중에는 조용히) — 제출 오류가 있으면 그것이 먼저 */
+  const emailErr = fieldErr.email ?? (touched.email && email ? emailProblem(email) ?? undefined : undefined);
+  /* 비밀번호는 치는 동안 강도 줄("5/8자")이 같은 말을 하므로, 오류 줄은 제출했을 때만 세운다(같은 말 두 줄 금지) */
+  const passwordErr = fieldErr.password;
+
+  /* 인증 메일 안내 화면으로 바뀌면 제목으로 초점 — 화면 낭독기가 바뀐 화면을 읽는다 */
+  useEffect(() => {
+    if (done) doneTitleRef.current?.focus();
+  }, [done]);
+  /* 재발송 대기 — 1초씩 줄인다 */
+  useEffect(() => {
+    if (resendWait <= 0) return;
+    const t = window.setTimeout(() => setResendWait((n) => n - 1), 1000);
+    return () => window.clearTimeout(t);
+  }, [resendWait]);
 
   async function socialSignIn(provider: SocialProvider) {
     setError(null);
+    setDupEmail(null);
     setSocialBusy(provider);
     stashSignupHandoff({ regions: [], profile: {}, purpose: null });
     trackStep("signup_step_4", { method: provider });
@@ -158,7 +202,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
     try {
       await signIn(provider, { callbackUrl: welcomeHref });
     } catch {
-      setError("소셜 가입에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+      setError("소셜 가입 실패 · 잠시 후 다시");
       setSocialBusy(null);
     }
   }
@@ -166,18 +210,19 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setDupEmail(null);
     trackStep("signup_step_4");
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail.includes("@")) {
-      setError("올바른 이메일을 입력해 주세요.");
-      return;
-    }
-    if (password.length < 8) {
-      setError("비밀번호는 8자 이상이어야 합니다.");
-      return;
-    }
-    if (!agree) {
-      setError("이용약관·개인정보처리방침·만 14세 이상에 동의해 주세요.");
+    const normalizedEmail = normalizeEmail(email);
+    /* [1039] 세 칸을 한 번에 검사해 칸마다 표시하고, 첫 오류 칸으로 초점을 옮긴다(예전: 오류 한 줄 · 초점 그대로) */
+    const errs = {
+      email: emailProblem(email) ?? undefined,
+      password: passwordProblem(password) ?? undefined,
+      consent: agree ? undefined : "필수 동의 필요",
+    };
+    setFieldErr(errs);
+    const firstBad = errs.email ? "signup-email" : errs.password ? "signup-password" : errs.consent ? "signup-agree" : null;
+    if (firstBad) {
+      document.getElementById(firstBad)?.focus();
       return;
     }
     setBusy(true);
@@ -189,9 +234,12 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
         body: JSON.stringify({
           email: normalizedEmail,
           password,
-          name: name.trim(),
+          name: name.trim().slice(0, NAME_MAX),
           source: signupViaRef.current ? "soft_signup" : "onboarding_signup",
           campaign: signupViaRef.current?.replace(/^soft:/, "") || "default",
+          /* [1039] 인증 메일 링크를 누른 뒤에도 목적지(/welcome[?next])를 잃지 않게 서버로 보낸다 */
+          next: welcomeHref,
+          website: hp,
           consent: {
             terms: true,
             privacy: true,
@@ -210,19 +258,21 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
       }
       if (!res.ok) {
         if (res.status === 409 || data.code === "already_registered") {
-          setError(
-            "이미 가입된 이메일입니다. 로그인하거나, 인증 전이라면 같은 정보로 다시 가입하면 인증 메일을 다시 받을 수 있어요.",
-          );
+          setDupEmail(normalizedEmail);
           return;
         }
-        const detail = data.detail ? ` (${data.detail})` : "";
-        setError(`${data.error ?? "가입에 실패했습니다."}${detail}`);
+        /* [1039] 서버 원문(영문 DB·인증 메시지)은 화면에 붙이지 않는다 — 한글로 풀어 준 설명만 */
+        const detail = data.detail && /[가-힣]/.test(data.detail) ? ` · ${data.detail}` : "";
+        setError(`${data.error ?? "가입 실패 · 잠시 후 다시"}${detail}`);
         return;
       }
-      trackStep("signup_complete", {
-        emailConfirmationRequired: Boolean(data.emailConfirmationRequired),
-        ...(signupViaRef.current ? { via: signupViaRef.current } : {}),
-      });
+      /* [1039] 재발송(이미 만든 미인증 계정)은 새 가입이 아니다 — 완료로 세지 않는다 */
+      if (!data.resent) {
+        trackStep("signup_complete", {
+          emailConfirmationRequired: Boolean(data.emailConfirmationRequired),
+          ...(signupViaRef.current ? { via: signupViaRef.current } : {}),
+        });
+      }
       /* 귀속 소진 — 같은 탭의 다음 가입 시도에 새 프롬프트 없이 딸려가지 않게 */
       try {
         window.sessionStorage.removeItem("nz_signup_via");
@@ -230,13 +280,9 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
         /* ignore */
       }
       if (data.emailConfirmationRequired) {
-        setConfirmHint(
-          data.message ??
-            (data.resent
-              ? "인증 메일을 다시 보냈습니다. 메일함의 새 링크를 확인해 주세요."
-              : null),
-        );
-        setDone("confirm");
+        setConfirmHint(data.resent ? "인증 메일 다시 보냄 · 새 링크 확인" : null);
+        setResendWait(RESEND_COOLDOWN_SEC);
+        setDone(true);
         return;
       }
       // 가입 직후 자동 로그인 → /welcome 온보딩으로 이동
@@ -258,9 +304,8 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
       }
       if (!signedIn) {
         /* [970 · A-14] 로그인 화면을 거쳐도 목적지(welcomeHref)는 유지 */
-        router.replace(
-          `/login?callbackUrl=${encodeURIComponent(welcomeHref)}&email=${encodeURIComponent(normalizedEmail)}&notice=signup_done`,
-        );
+        stashAuthEmail(normalizedEmail);
+        router.replace(`/login?callbackUrl=${encodeURIComponent(welcomeHref)}&notice=signup_done`);
         return;
       }
       showMoment({
@@ -271,113 +316,131 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
       router.replace(welcomeHref);
       router.refresh();
     } catch {
-      setError("네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+      setError("네트워크 오류 · 잠시 후 다시");
     } finally {
       setBusy(false);
     }
   }
 
+  async function resendConfirm() {
+    if (resendBusy || resendWait > 0) return;
+    setResendBusy(true);
+    setConfirmHint(null);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizeEmail(email), resendConfirmation: true, next: welcomeHref }),
+      });
+      const data = (await res.json().catch(() => ({}))) as RegisterResponse;
+      if (!res.ok) {
+        setConfirmHint(data.error ?? "재발송 실패 · 잠시 후 다시");
+        return;
+      }
+      setConfirmHint("인증 메일 다시 보냄 · 새 링크 확인");
+      setResendWait(RESEND_COOLDOWN_SEC);
+    } catch {
+      setConfirmHint("네트워크 오류 · 잠시 후 다시");
+    } finally {
+      setResendBusy(false);
+    }
+  }
+
   if (done) {
+    const sentTo = normalizeEmail(email);
+    const mailbox = mailboxFor(sentTo);
+    const loginAfter = `/login?callbackUrl=${encodeURIComponent(welcomeHref)}`;
     return (
       <main
+        id="main-content"
         /* [968 · 31] 100vh → dvh: iOS 주소창이 보일 때 세로 가운데 정렬이 아래로 밀렸다 */
         className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col justify-center gap-4 px-7 pb-8"
         style={{ paddingTop: "max(20px, env(safe-area-inset-top, 0px))" }}
       >
         <div className="rise-in card flex flex-col items-center gap-3 rounded-3xl p-7 text-center">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-[21px]">
-            {done === "confirm" ? <Icon name="✉" size={24} /> : "✓"}
+            <Icon name="✉" size={24} />
           </span>
-          <h1 className="text-[19px] font-bold text-ink">
-            {done === "confirm" ? "인증 메일을 보냈어요" : "가입이 완료됐어요"}
+          <h1 ref={doneTitleRef} tabIndex={-1} className="text-[19px] font-bold text-ink outline-none">
+            인증 메일을 보냈어요
           </h1>
-          <p className="text-[13px] leading-[1.6] text-text-2">
-            {done === "confirm" ? (
-              <>
-                <b className="text-ink">{email.trim().toLowerCase()}</b>로 인증 메일을 보냈습니다.
-                <br />
-                메일의 링크를 확인한 뒤 로그인해 주세요.
-                {confirmHint ? (
-                  <>
-                    <br />
-                    <span className="mt-1 block font-bold text-primary">{confirmHint}</span>
-                  </>
-                ) : null}
-              </>
-            ) : (
-              <>이제 방금 만든 계정으로 로그인하면 맞춤 지표와 체크리스트가 준비됩니다.</>
-            )}
+          {/* [1039] 다음에 할 일 세 칸 — 문장 두 줄 대신 순서(메일 열기 → 링크 누르기 → 로그인) */}
+          <p className="break-all text-[13px] font-bold text-ink">{sentTo}</p>
+          <ol className="m-0 flex w-full list-none items-start justify-between gap-1 p-0 t-caption text-text-3">
+            {["메일함 열기", "인증 링크 누르기", "로그인"].map((step, i) => (
+              <li key={step} className="flex flex-1 flex-col items-center gap-1">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-soft font-bold text-primary">{i + 1}</span>
+                {step}
+              </li>
+            ))}
+          </ol>
+          <p aria-live="polite" className="min-h-[18px] t-sub font-bold text-primary">
+            {confirmHint}
           </p>
-          {done === "confirm" ? (
-            <button
-              type="button"
-              disabled={resendBusy}
-              onClick={async () => {
-                setResendBusy(true);
-                setConfirmHint(null);
-                try {
-                  const res = await fetch("/api/auth/register", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      email: email.trim().toLowerCase(),
-                      password,
-                      name: name.trim(),
-                      resendConfirmation: true,
-                    }),
-                  });
-                  const data = (await res.json().catch(() => ({}))) as RegisterResponse;
-                  if (!res.ok) {
-                    setConfirmHint(data.error ?? "재발송에 실패했습니다. 잠시 후 다시 시도해 주세요.");
-                    return;
-                  }
-                  setConfirmHint(
-                    data.message ?? "인증 메일을 다시 보냈습니다. 메일함의 새 링크를 확인해 주세요.",
-                  );
-                } catch {
-                  setConfirmHint("네트워크 오류가 발생했습니다.");
-                } finally {
-                  setResendBusy(false);
-                }
-              }}
-              className="w-full rounded-2xl border border-line bg-surface p-[15px] text-center text-[15px] font-bold text-ink disabled:opacity-60"
-            >
-              {resendBusy ? "보내는 중…" : "인증 메일 다시 보내기"}
-            </button>
-          ) : null}
+          {/* 주요 행동 하나 — 아는 메일이면 메일함, 아니면 로그인 */}
           <Link
-            href={`/login?callbackUrl=${encodeURIComponent(welcomeHref)}`}
-            className="btn-primary btn-cta mt-1 w-full rounded-2xl p-[15px] text-center text-[15px]"
+            href={mailbox ? mailbox.href : loginAfter}
+            {...(mailbox ? { target: "_blank", rel: "noreferrer" } : {})}
+            onClick={() => {
+              if (!mailbox) stashAuthEmail(sentTo);
+            }}
+            className="btn-primary btn-cta w-full rounded-2xl p-[15px] text-center text-[15px]"
           >
-            로그인하러 가기
+            {mailbox ? `${mailbox.label} 열기` : "로그인하러 가기"}
           </Link>
+          {mailbox && (
+            <Link
+              href={loginAfter}
+              onClick={() => stashAuthEmail(sentTo)}
+              className="w-full rounded-2xl border border-line bg-surface p-[15px] text-center text-[15px] font-bold text-ink no-underline"
+            >
+              인증 뒤 로그인하러 가기
+            </Link>
+          )}
           <button
             type="button"
-            className="text-xs font-bold text-primary"
-            onClick={() => {
-              setDone(null);
-              setConfirmHint(null);
-              setError(null);
-            }}
+            disabled={resendBusy || resendWait > 0}
+            onClick={resendConfirm}
+            className="inline-flex min-h-10 items-center px-3 text-[13px] font-bold text-primary disabled:text-text-3"
           >
-            다른 이메일로 다시 가입
+            {resendBusy ? "보내는 중…" : resendWait > 0 ? `인증 메일 다시 보내기 · ${resendWait}초` : "인증 메일 다시 보내기"}
           </button>
-          <Link href="/" className="text-xs text-text-3">
-            나중에 할게요 · 홈으로
-          </Link>
+          <p className="t-caption text-text-3">스팸함 확인 · 메일이 오기까지 1~2분</p>
+          <div className="flex flex-wrap items-center justify-center gap-x-2">
+            <button
+              type="button"
+              className="inline-flex min-h-10 items-center px-2 text-xs font-bold text-text-2"
+              onClick={() => {
+                setDone(false);
+                setConfirmHint(null);
+                setError(null);
+              }}
+            >
+              다른 이메일로 다시 가입
+            </button>
+            <Link href="/" className="inline-flex min-h-10 items-center px-2 text-xs text-text-3">
+              홈으로
+            </Link>
+          </div>
         </div>
       </main>
     );
   }
 
+  const consentRow = "-mx-2.5 flex min-h-[40px] items-center gap-3 rounded-lg px-2.5 py-1 text-xs text-text-2";
+  const consentBox = "h-[20px] w-[20px] shrink-0 accent-[#1d4fd8]";
+  const consentHit = "-ml-[10px] -mr-[4px] grid h-[40px] w-[40px] shrink-0 place-items-center";
+
   return (
     <main
+      id="main-content"
       /* [968 · 31] 100vh → dvh (위 완료 화면과 같은 이유) */
       className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col gap-4 px-7 pb-8"
       style={{ paddingTop: "max(20px, env(safe-area-inset-top, 0px))" }}
     >
       <div className="flex items-center justify-between">
-        <Link href={loginHref} className="text-[15px] text-text-1" aria-label="뒤로">
+        {/* [1039] 뒤로 · 건너뛰기 — 글자만 있던 조작에 40px 손끝 칸 */}
+        <Link href={loginHref} className="-ml-3 inline-flex h-10 w-10 items-center justify-center text-[15px] text-text-1" aria-label="뒤로">
           ‹
         </Link>
         {/* 진행 막대 — 예전엔 w-1/2 하드코딩이라 페이지를 열자마자 50%,
@@ -395,7 +458,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
             style={{ width: `${progressPct}%` }}
           />
         </div>
-        <Link href="/" className="text-[13px] text-text-3">
+        <Link href="/" className="-mr-2 inline-flex min-h-10 items-center px-2 text-[13px] text-text-3">
           건너뛰기
         </Link>
       </div>
@@ -419,6 +482,18 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
               {socialBusy === provider ? "연결 중…" : SOCIAL_BUTTON[provider].label}
             </button>
           ))}
+          {/* [1039] 소셜 가입에도 동의 대상을 밝힌다 — 로그인 화면과 같은 한 줄(예전: 체크 없이 통과 · 문구 없음) */}
+          <p className="text-center text-[12px] leading-[1.6] text-text-3">
+            소셜 가입 ={" "}
+            <Link href="/legal/terms" target="_blank" rel="noreferrer" className="underline underline-offset-2">
+              이용약관
+            </Link>
+            ·
+            <Link href="/legal/privacy" target="_blank" rel="noreferrer" className="underline underline-offset-2">
+              개인정보처리방침
+            </Link>{" "}
+            동의 · 만 14세 이상
+          </p>
           <div className="flex items-center gap-3 text-[12px] text-text-3">
             <span className="h-px flex-1 bg-bg" />
             또는 이메일로 가입
@@ -431,134 +506,224 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
           실측에서 이 두 블록 앞에서 거의 전원이 이탈했다(30일 44→1). */}
       {/* [1028 · 제안 5] 폼 머리 "계정 만들기 · 이메일로 가입"을 뺐다 — 바로 위 구분선이 "또는 이메일로 가입"이라 같은 말이 겹쳤다
           (소셜 수단이 없으면 제목 "회원가입" 아래 바로 폼) */}
-      <form onSubmit={onSubmit} className="rise-in-5 flex flex-col gap-2">
-        {/* 항목 47 — sr-only 라벨 + id (placeholder 는 접근 가능한 이름이 아니다) */}
-        <label htmlFor="signup-name" className="sr-only">
-          이름 (선택)
-        </label>
-        {/* [968 · 29] 키보드 힌트 — 이름·이메일은 "다음"(Enter 로 다음 칸), 비밀번호는 "완료".
-            힌트만 붙이면 Enter 가 폼을 바로 제출하므로 앞 두 칸의 Enter 는 포커스 이동으로. */}
-        <input
-          id="signup-name"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="이름 (선택)"
-          autoComplete="name"
-          enterKeyHint="next"
-          onKeyDown={(e) => {
-            if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
-            e.preventDefault();
-            document.getElementById("signup-email")?.focus();
-          }}
-          className="rounded-lg border border-line bg-surface px-4 py-3 text-[13px] text-ink outline-none focus:border-primary"
-        />
-        <label htmlFor="signup-email" className="sr-only">
-          이메일
-        </label>
-        <input
-          id="signup-email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="이메일"
-          autoComplete="email"
-          inputMode="email"
-          enterKeyHint="next"
-          onKeyDown={(e) => {
-            if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
-            e.preventDefault();
-            document.getElementById("signup-password")?.focus();
-          }}
-          className="rounded-lg border border-line bg-surface px-4 py-3 text-[13px] text-ink outline-none focus:border-primary"
-        />
-        <label htmlFor="signup-password" className="sr-only">
-          비밀번호 (8자 이상)
-        </label>
-        <div className="relative">
+      {/* [1039] noValidate — 브라우저 말풍선과 화면 오류가 섞이지 않게 검증은 화면이 한다(칸마다 표시 · 첫 오류 칸으로 초점) */}
+      <form onSubmit={onSubmit} noValidate className="rise-in-5 flex flex-col gap-2">
+        {/* [1039] 떠오르는 라벨(.njn-field · 로그인과 같은 꼴) — placeholder 를 이름표로 쓰던 것을 실제 보이는 <label> 로.
+            [968 · 29] 키보드 힌트 — 이름·이메일은 "다음"(Enter 로 다음 칸), 비밀번호는 "완료". */}
+        <div className="njn-field">
+          <input
+            id="signup-name"
+            name="name"
+            type="text"
+            value={name}
+            maxLength={NAME_MAX}
+            onChange={(e) => setName(e.target.value)}
+            placeholder=" "
+            autoComplete="name"
+            enterKeyHint="next"
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+              e.preventDefault();
+              document.getElementById("signup-email")?.focus();
+            }}
+          />
+          <label htmlFor="signup-name">이름 (선택)</label>
+        </div>
+        <div className="njn-field">
+          <input
+            id="signup-email"
+            name="email"
+            type="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (fieldErr.email) setFieldErr((f) => ({ ...f, email: undefined }));
+              if (dupEmail) setDupEmail(null);
+            }}
+            onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+            placeholder=" "
+            autoComplete="email"
+            inputMode="email"
+            enterKeyHint="next"
+            aria-required="true"
+            aria-invalid={emailErr ? true : undefined}
+            aria-describedby={emailErr ? "signup-email-err" : undefined}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+              e.preventDefault();
+              document.getElementById("signup-password")?.focus();
+            }}
+          />
+          <label htmlFor="signup-email">이메일</label>
+        </div>
+        {emailErr && (
+          <p id="signup-email-err" className="-mt-1 px-1 t-caption font-bold text-danger">
+            {emailErr}
+          </p>
+        )}
+        {/* [1039] 흔한 도메인 오타(gmial.com · naver.con …) — 한 번 눌러 고친다(인증 메일이 닿지 않는 가입을 막는다) */}
+        {typoFix && !emailErr && (
+          <button
+            type="button"
+            onClick={() => setEmail(typoFix)}
+            className="-mt-1 inline-flex min-h-10 items-center self-start px-1 t-sub font-bold text-primary"
+          >
+            {typoFix} 로 고치기
+          </button>
+        )}
+        <div className="njn-field relative">
           <input
             id="signup-password"
+            name="password"
             type={showPw ? "text" : "password"}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="비밀번호 (8자 이상)"
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (fieldErr.password) setFieldErr((f) => ({ ...f, password: undefined }));
+            }}
+            placeholder=" "
             autoComplete="new-password"
             enterKeyHint="done"
-            className="w-full rounded-lg border border-line bg-surface px-4 py-3 pr-14 text-[13px] text-ink outline-none focus:border-primary"
+            aria-required="true"
+            aria-invalid={passwordErr ? true : undefined}
+            aria-describedby={passwordErr ? "signup-password-err" : "signup-password-meter"}
+            style={{ paddingRight: 64 }}
           />
+          <label htmlFor="signup-password">비밀번호 ({PASSWORD_MIN}자 이상)</label>
           <button
             type="button"
             onClick={() => setShowPw((v) => !v)}
             aria-pressed={showPw}
             aria-label={showPw ? "비밀번호 숨기기" : "비밀번호 표시"}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-[12px] font-bold text-text-3"
+            className="absolute right-1 top-1/2 inline-flex h-10 min-w-10 -translate-y-1/2 items-center justify-center rounded-lg px-2 text-[12px] font-bold text-text-3"
           >
             {showPw ? "숨김" : "표시"}
           </button>
         </div>
-        {/* [991] 동의 행 = 탭 대상. 체크박스 16px 만 목표였는데(989 게이트 지적) 행 전체를
-            40px 높이 + 좌우 10px 여백으로 키운다 — label 이 토글하므로 행 어디를 눌러도 된다. */}
-        <label className="-mx-2.5 flex min-h-[40px] items-center gap-3 rounded-lg px-2.5 py-1 text-xs text-text-2">
-          <span className="-ml-[10px] -mr-[4px] grid h-[40px] w-[40px] shrink-0 place-items-center">
-            <input
-              type="checkbox"
-              checked={agree}
-              onChange={(e) => setAgree(e.target.checked)}
-              className="h-[20px] w-[20px] shrink-0 accent-[#1d4fd8]"
-            />
-          </span>
-          {/* [970 · A-13] 동의 대상 문서를 그 자리에서 열 수 있게 — 링크 없는 동의는 형식뿐이다.
-              <label> 안의 <a> 는 HTML 활성화 규칙상 체크박스를 토글하지 않는다(대화형 자손).
-              새 탭으로 열어 작성 중인 폼을 잃지 않게 한다. */}
-          <span>
-            <b className="text-ink">(필수)</b>{" "}
-            <Link
-              href="/legal/terms"
-              target="_blank"
-              rel="noreferrer"
-              className="underline underline-offset-2"
-            >
-              이용약관
-            </Link>
-            ·
-            <Link
-              href="/legal/privacy"
-              target="_blank"
-              rel="noreferrer"
-              className="underline underline-offset-2"
-            >
-              개인정보처리방침
-            </Link>
-            에 동의하며 만 14세 이상입니다
-          </span>
-        </label>
-        <label className="-mx-2.5 flex min-h-[40px] items-center gap-3 rounded-lg px-2.5 py-1 text-xs text-text-2">
-          <span className="-ml-[10px] -mr-[4px] grid h-[40px] w-[40px] shrink-0 place-items-center">
-            <input
-              type="checkbox"
-              checked={agreeMarketing}
-              onChange={(e) => setAgreeMarketing(e.target.checked)}
-              className="h-[20px] w-[20px] shrink-0 accent-[#1d4fd8]"
-            />
-          </span>
-          <span>
-            (선택) 혜택·소식 이메일 수신 · 설정에서 언제든 철회
-          </span>
-        </label>
-        <label className="-mx-2.5 flex min-h-[40px] items-center gap-3 rounded-lg px-2.5 py-1 text-xs text-text-2">
-          <span className="-ml-[10px] -mr-[4px] grid h-[40px] w-[40px] shrink-0 place-items-center">
-            <input
-              type="checkbox"
-              checked={agreeLocation}
-              onChange={(e) => setAgreeLocation(e.target.checked)}
-              className="h-[20px] w-[20px] shrink-0 accent-[#1d4fd8]"
-            />
-          </span>
-          <span>
-            (선택) 위치정보 이용(주변 단지·지도 편의) · 설정에서 언제든 철회
-          </span>
-        </label>
+        {/* [1039] 비밀번호 강도 — 서버가 거절(유출·흔한 비밀번호)하기 전에 화면에서 먼저 보인다. 막대 4칸 + 낱말 */}
+        {password.length > 0 && !passwordErr && (
+          <div id="signup-password-meter" className="-mt-1 flex items-center gap-2 px-1">
+            <span className="flex flex-1 gap-1" aria-hidden="true">
+              {[1, 2, 3, 4].map((k) => (
+                <i
+                  key={k}
+                  className={`h-1 flex-1 rounded-sm ${
+                    k <= pw.score ? (pw.score <= 1 ? "bg-danger" : pw.score === 2 ? "bg-warning" : "bg-success") : "bg-line"
+                  }`}
+                />
+              ))}
+            </span>
+            <span className={`t-caption font-bold ${pw.score <= 1 ? "text-danger" : pw.score === 2 ? "text-warning" : "text-success"}`}>
+              {password.length < PASSWORD_MIN ? `${password.length}/${PASSWORD_MIN}자` : pw.hint}
+            </span>
+          </div>
+        )}
+        {passwordErr && (
+          <p id="signup-password-err" className="-mt-1 px-1 t-caption font-bold text-danger">
+            {passwordErr}
+          </p>
+        )}
 
+        {/* [1039] 봇 덫 — 화면 밖 · 탭 순서 밖 · 낭독기 밖. 사람은 채울 수 없다 */}
+        <div aria-hidden="true" className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden">
+          <input type="text" name="website" tabIndex={-1} autoComplete="off" value={hp} onChange={(e) => setHp(e.target.value)} />
+        </div>
+
+        {/* [1039] 전체 동의 — 세 칸을 한 번에(선택 2개 포함임을 같은 줄에 적는다). 아래 칸은 따로도 고를 수 있다 */}
+        <div className={`mt-1 rounded-lg border px-3 py-1 ${fieldErr.consent ? "border-danger" : "border-line"}`}>
+          <label className={`${consentRow} font-bold text-ink`}>
+            <span className={consentHit}>
+              <input
+                type="checkbox"
+                checked={allAgreed}
+                onChange={(e) => {
+                  setAgree(e.target.checked);
+                  setAgreeMarketing(e.target.checked);
+                  setAgreeLocation(e.target.checked);
+                  if (e.target.checked && fieldErr.consent) setFieldErr((f) => ({ ...f, consent: undefined }));
+                }}
+                className={consentBox}
+              />
+            </span>
+            <span>
+              전체 동의 <span className="font-medium text-text-3">· 선택 2개 포함</span>
+            </span>
+          </label>
+          <div className="border-t border-divider" />
+          {/* [991] 동의 행 = 탭 대상. 체크박스 16px 만 목표였는데(989 게이트 지적) 행 전체를
+              40px 높이 + 좌우 10px 여백으로 키운다 — label 이 토글하므로 행 어디를 눌러도 된다. */}
+          <label className={consentRow}>
+            <span className={consentHit}>
+              <input
+                id="signup-agree"
+                type="checkbox"
+                checked={agree}
+                onChange={(e) => {
+                  setAgree(e.target.checked);
+                  if (e.target.checked && fieldErr.consent) setFieldErr((f) => ({ ...f, consent: undefined }));
+                }}
+                aria-required="true"
+                aria-invalid={fieldErr.consent ? true : undefined}
+                aria-describedby={fieldErr.consent ? "signup-consent-err" : undefined}
+                className={consentBox}
+              />
+            </span>
+            {/* [970 · A-13] 동의 대상 문서를 그 자리에서 열 수 있게 — 링크 없는 동의는 형식뿐이다.
+                <label> 안의 <a> 는 HTML 활성화 규칙상 체크박스를 토글하지 않는다(대화형 자손).
+                새 탭으로 열어 작성 중인 폼을 잃지 않게 한다. */}
+            <span>
+              <b className="text-ink">(필수)</b>{" "}
+              <Link href="/legal/terms" target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                이용약관
+              </Link>
+              ·
+              <Link href="/legal/privacy" target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                개인정보처리방침
+              </Link>{" "}
+              동의 · 만 14세 이상
+            </span>
+          </label>
+          <label className={consentRow}>
+            <span className={consentHit}>
+              <input type="checkbox" checked={agreeMarketing} onChange={(e) => setAgreeMarketing(e.target.checked)} className={consentBox} />
+            </span>
+            <span>(선택) 혜택·소식 이메일 수신 · 설정에서 언제든 철회</span>
+          </label>
+          <label className={consentRow}>
+            <span className={consentHit}>
+              <input type="checkbox" checked={agreeLocation} onChange={(e) => setAgreeLocation(e.target.checked)} className={consentBox} />
+            </span>
+            <span>(선택) 위치정보 이용(주변 단지·지도 편의) · 설정에서 언제든 철회</span>
+          </label>
+        </div>
+        {fieldErr.consent && (
+          <p id="signup-consent-err" className="-mt-1 px-1 t-caption font-bold text-danger">
+            필수 동의 필요 · 이용약관 · 개인정보처리방침 · 만 14세 이상
+          </p>
+        )}
+
+        {/* [1039] 이미 가입된 이메일 — 다음 행동 두 개를 바로 잇는다(예전: 서로 어긋나는 안내 한 문장 · 링크 없음) */}
+        {dupEmail && (
+          <div role="alert" className="rounded-lg bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger">
+            이미 가입된 이메일
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Link
+                href={loginHref}
+                onClick={() => stashAuthEmail(dupEmail)}
+                className="inline-flex min-h-10 items-center rounded-lg border border-danger/40 bg-surface px-3 text-[12px] font-bold text-danger no-underline"
+              >
+                이 이메일로 로그인 ›
+              </Link>
+              <Link
+                href="/forgot-password"
+                onClick={() => stashAuthEmail(dupEmail)}
+                className="inline-flex min-h-10 items-center rounded-lg border border-danger/40 bg-surface px-3 text-[12px] font-bold text-danger no-underline"
+              >
+                비밀번호 찾기 ›
+              </Link>
+            </div>
+          </div>
+        )}
         {error && (
           <div
             role="alert"
@@ -570,14 +735,14 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
 
         <button
           type="submit"
-          disabled={busy}
+          disabled={busy || socialBusy !== null}
           className="btn-primary btn-cta rounded-2xl p-[15px] text-center text-[15px] disabled:opacity-60"
         >
           {busy ? "가입 중…" : "가입하고 노트 쓰기"}
         </button>
         <div className="text-center text-xs text-text-3">
           이미 계정이 있다면{" "}
-          <Link href={loginHref} className="font-bold text-primary">
+          <Link href={loginHref} className="inline-block py-[5px] font-bold text-primary">
             로그인
           </Link>
         </div>

@@ -159,8 +159,10 @@ export function SoftSignupProvider({ children }: { children: ReactNode }) {
               {intent.title}
             </div>
             <p className="mt-2 t-body leading-relaxed text-text-2">{intent.benefit}</p>
+            {/* [1039] "가입하고 이어하기"는 가입 화면으로 — 예전엔 로그인 화면으로 보내 계정 없는 사람이 한 번 더 눌러야 했다.
+                가입 화면은 callbackUrl 을 /welcome?next= 로 잇고, 아래 줄이 계정 있는 사람의 로그인 길이다 */}
             <a
-              href={loginHref(callback)}
+              href={`/signup?callbackUrl=${encodeURIComponent(callback)}`}
               onClick={() => {
                 track("soft_signup_prompt_click", { action: intent.action }, tagRef.current);
                 /* [945 #11] 수락 → 실제 가입 완료 귀속. 가입 화면(/signup)이 이 키를
@@ -187,7 +189,10 @@ export function SoftSignupProvider({ children }: { children: ReactNode }) {
             </button>
             {/* [1028 · 제안 5] 합니다체 한 문장 → 짧은 사실 두 줄(해요체) */}
             <p className="mt-2 text-center t-sub text-text-3">
-              가입은 무료예요. 보던 화면으로 돌아와요.
+              가입은 무료예요. 보던 화면으로 돌아와요.{" "}
+              <a href={loginHref(callback)} className="inline-block py-[5px] font-bold text-primary no-underline">
+                로그인 ›
+              </a>
             </p>
           </div>
         </div>

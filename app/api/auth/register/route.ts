@@ -16,6 +16,8 @@ import { logger } from "@/lib/log";
 import { maskEmailPublic } from "@/lib/privacy/mask-email";
 import { mapSignUpRejection } from "@/lib/auth/signup-error";
 import { findAuthUserByEmail } from "@/lib/auth/find-auth-user";
+import { EMAIL_RE, NAME_MAX } from "@/lib/auth/signup-form";
+import { safeInternalPath } from "@/lib/safe-path";
 
 export const runtime = "nodejs";
 
@@ -390,7 +392,18 @@ export async function POST(req: NextRequest) {
     .trim()
     .toLowerCase();
   const password = String(b.password ?? "");
-  const name = String(b.name ?? "").trim() || email.split("@")[0] || "회원";
+  /* [1039] 이름 길이 상한 — 화면(maxLength)과 같은 값. 예전엔 상한이 없었다 */
+  const name = (String(b.name ?? "").trim() || email.split("@")[0] || "회원").slice(0, NAME_MAX);
+  /* [1039] 인증 메일 링크를 누른 뒤의 목적지 — 가입 화면이 보낸 /welcome[?next=…]. 내부 경로만(열린 리다이렉트 금지) */
+  const afterVerify = safeInternalPath(typeof b.next === "string" ? b.next : null, "/");
+  const verifyNext =
+    `/login?verified=1&email=${encodeURIComponent(email)}` +
+    (afterVerify !== "/" ? `&callbackUrl=${encodeURIComponent(afterVerify)}` : "");
+  /* [1039] 봇 덫 — 화면 밖 숨은 칸(website)이 채워져 오면 사람이 아니다. 계정을 만들지 않는다 */
+  if (typeof b.website === "string" && b.website.trim() !== "") {
+    logger.warn("[auth/register] 숨은 칸이 채워진 요청 거절");
+    return NextResponse.json({ error: "가입 요청 처리 불가 · 새로고침 후 다시" }, { status: 400 });
+  }
   const source = String(b.source ?? "auth_signup").trim().slice(0, 80) || "auth_signup";
   const campaign = String(b.campaign ?? "default").trim().slice(0, 80) || "default";
   const resendOnly = Boolean(b.resendConfirmation);
@@ -411,7 +424,8 @@ export async function POST(req: NextRequest) {
      이 컬럼을 쓸 수 있는 유일한 곳은 PASS/NICE 결과를 서버에서 검증하는
      /api/auth/identity/verify 다 (lib/auth/identity-verification/). */
 
-  if (!email.includes("@")) {
+  /* [1039] 화면과 같은 형식 검사(EMAIL_RE) — 예전엔 "@" 포함 여부만 봤다 */
+  if (!EMAIL_RE.test(email)) {
     return NextResponse.json({ error: "올바른 이메일을 입력해 주세요." }, { status: 400 });
   }
   /* [965] 재발송(resendOnly)은 비밀번호가 필요 없다 — 로그인 화면의
@@ -441,7 +455,7 @@ export async function POST(req: NextRequest) {
     if (!resendOnly) await recordConsent(sb, email, consent, ip, ua);
     /* /auth/confirm 은 PKCE·token_hash·해시 토큰을 모두 처리한다.
        Site URL 이 옛 my-project 호스트여도 브릿지가 여기로 모은다. */
-    const verifyRedirect = `${canonicalOrigin(req)}/auth/confirm?next=${encodeURIComponent(`/login?verified=1&email=${encodeURIComponent(email)}`)}`;
+    const verifyRedirect = `${canonicalOrigin(req)}/auth/confirm?next=${encodeURIComponent(verifyNext)}`;
     return signUpWithSupabaseAuth(
       supabaseUrl,
       supabasePublicKey,
@@ -460,7 +474,7 @@ export async function POST(req: NextRequest) {
   if (!sb && supabaseUrl && supabasePublicKey) {
     await recordConsent(sb, email, consent, ip, ua);
     const verifyRedirect = emailConfirmationEnabled()
-      ? `${canonicalOrigin(req)}/auth/confirm?next=${encodeURIComponent(`/login?verified=1&email=${encodeURIComponent(email)}`)}`
+      ? `${canonicalOrigin(req)}/auth/confirm?next=${encodeURIComponent(verifyNext)}`
       : undefined;
     return signUpWithSupabaseAuth(
       supabaseUrl,
@@ -531,7 +545,7 @@ export async function POST(req: NextRequest) {
       // 운영 DB 스키마/권한 편차가 있으면 Supabase Auth 기본 경로로 자동 우회
       await recordConsent(sb, email, consent, ip, ua);
       const verifyRedirect = emailConfirmationEnabled()
-        ? `${canonicalOrigin(req)}/auth/confirm?next=${encodeURIComponent(`/login?verified=1&email=${encodeURIComponent(email)}`)}`
+        ? `${canonicalOrigin(req)}/auth/confirm?next=${encodeURIComponent(verifyNext)}`
         : undefined;
       return signUpWithSupabaseAuth(
         supabaseUrl,
@@ -561,10 +575,8 @@ export async function POST(req: NextRequest) {
       email: maskEmailPublic(email),
     });
     return NextResponse.json(
-      {
-        error: "가입 처리 중 오류가 발생했습니다.",
-        detail: finalError.message,
-      },
+      /* [1039] DB 원문 메시지는 응답에 싣지 않는다(위에서 로그로 남긴다) */
+      { error: "가입 처리 중 오류가 발생했습니다." },
       { status: 500 },
     );
   }

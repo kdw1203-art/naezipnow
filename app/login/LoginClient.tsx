@@ -1,5 +1,6 @@
 "use client";
 
+import { stashAuthEmail, takeAuthEmail } from "@/lib/auth/signup-form";
 import { ActionButton } from "@/app/components/ui/ActionButton";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -197,6 +198,8 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
   const [signupDoneNotice, setSignupDoneNotice] = useState(false);
   /* [965] 미인증 계정 — 오류 문구 옆에 "인증 메일 다시 보내기" 를 붙인다 */
   const [needsConfirm, setNeedsConfirm] = useState(false);
+  const [showPw, setShowPw] = useState(false);
+  const [shake, setShake] = useState(false);
   /* [991] 실패 사유별 다음 행동 — 소셜 전용 계정이면 그 버튼을, 계정이 없으면 가입을,
      비밀번호가 틀렸으면 찾기를 바로 잇는다. 30일 실패 8건이 전부 한 문구였다. */
   const [failHint, setFailHint] = useState<LoginFailHint | null>(null);
@@ -206,6 +209,10 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
   /* callbackUrl 은 window 에만 있다. 서버 렌더 결과와 첫 클라이언트 렌더가
      달라지면 하이드레이션이 깨지므로, 일반 문구로 시작해서 마운트 후에만
      구체 문구로 바꾼다. (useSearchParams 를 쓰면 Suspense 경계가 필요하다) */
+  /* [1039] 오류가 새로 서면 한 번 흔든다(제출 때 error 가 null 로 갔다가 다시 서므로 같은 문구도 다시 흔들린다) */
+  useEffect(() => {
+    if (error) setShake(true);
+  }, [error]);
   const generic = useMemo(() => genericContext(), []);
   const [ctx, setCtx] = useState<LoginContext>(generic);
   /* [970 · A-14] 가입 링크 — callbackUrl 이 홈이 아니면 그대로 싣는다(마운트 후, 같은 이유) */
@@ -218,7 +225,8 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
     if (params.get("verified") === "1") setVerifiedNotice(true);
     /* [965] 가입은 됐는데 자동 로그인이 안 된 경우(SignupClient) */
     if (params.get("notice") === "signup_done") setSignupDoneNotice(true);
-    const prefill = params.get("email");
+    /* [1039] 가입 화면이 탭 저장소로 넘긴 이메일(주소에 싣지 않는 길)을 먼저, 없으면 예전처럼 ?email= */
+    const prefill = takeAuthEmail() ?? params.get("email");
     if (prefill?.includes("@")) setEmail(prefill);
     const errParam = params.get("error");
     const codeParam = params.get("code");
@@ -423,6 +431,8 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
             {failHint?.kind === "no_account" && (
               <Link
                 href={signupHref}
+                /* [1039] 방금 친 이메일을 가입 화면이 이어받는다(다시 치지 않게) */
+                onClick={() => stashAuthEmail(email)}
                 className="mt-2 inline-block rounded-lg border border-danger/40 bg-surface px-3 py-1.5 text-[12px] font-bold text-danger no-underline"
               >
                 이 이메일로 가입하기 ›
@@ -488,9 +498,11 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
 
         <form
           onSubmit={passwordSignIn}
-          /* [961] 실패하면 폼이 좌우로 흔들린다(420ms) — key 를 바꿔 매번 다시 재생 */
-          key={error ? `err-${error}` : "form"}
-          className={`rise-in-3 flex flex-col gap-2 ${error ? "njn-shake" : ""}`}
+          /* [961] 실패하면 폼이 좌우로 흔들린다(420ms).
+             [1039] 예전엔 key 를 바꿔 다시 재생했는데, 그러면 입력 칸이 통째로 새로 만들어져 실패할 때마다
+             초점이 사라지고 폰 자판이 닫혔다. 흔들림은 상태(shake)로 켜고 끝나면 끈다 — 칸은 그대로 남는다. */
+          onAnimationEnd={() => setShake(false)}
+          className={`rise-in-3 flex flex-col gap-2 ${shake ? "njn-shake" : ""}`}
         >
           {/* [961] 떠오르는 라벨(인터랙션 라이브러리 03) — placeholder 가 아니라 실제 <label>
               이라 접근 가능한 이름이 그대로 남고(항목 47), 입력이 시작되면 위로 올라간다. */}
@@ -516,17 +528,28 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
             />
             <label htmlFor="login-email">이메일</label>
           </div>
-          <div className="njn-field">
+          <div className="njn-field relative">
             <input
               id="login-password"
-              type="password"
+              type={showPw ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder=" "
               autoComplete="current-password"
               enterKeyHint="done"
+              style={{ paddingRight: 64 }}
             />
             <label htmlFor="login-password">비밀번호</label>
+            {/* [1039] 비밀번호 표시 — 가입 화면에만 있던 토글(오타를 눈으로 확인) */}
+            <button
+              type="button"
+              onClick={() => setShowPw((v) => !v)}
+              aria-pressed={showPw}
+              aria-label={showPw ? "비밀번호 숨기기" : "비밀번호 표시"}
+              className="absolute right-1 top-1/2 inline-flex h-10 min-w-10 -translate-y-1/2 items-center justify-center rounded-lg px-2 text-[12px] font-bold text-text-3"
+            >
+              {showPw ? "숨김" : "표시"}
+            </button>
           </div>
           <ActionButton
             type="submit"
@@ -539,7 +562,12 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
             이메일로 로그인
           </ActionButton>
           <div className="text-center">
-            <Link href="/forgot-password" className="text-xs font-bold text-text-2">
+            {/* [1039] 친 이메일을 찾기 화면이 이어받는다 · 글자뿐이던 링크에 40px 손끝 칸 */}
+            <Link
+              href="/forgot-password"
+              onClick={() => stashAuthEmail(email)}
+              className="inline-flex min-h-10 items-center px-3 text-xs font-bold text-text-2"
+            >
               비밀번호 찾기
             </Link>
           </div>

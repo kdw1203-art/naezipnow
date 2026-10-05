@@ -454,6 +454,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (typeof user?.email === "string" && user.email) {
         const email = user.email;
         const name = typeof user.name === "string" ? user.name : null;
+        /* [1039] 구글·카카오로 처음 들어온 계정에 app_users 행을 만든다 — 예전엔 비밀번호 가입·토스만 만들어서
+           소셜 가입자는 환영 메일이 안 가고(행이 전제), 온보딩·프로필 저장이 조용히 0행 갱신으로 끝났다.
+           이미 있으면 읽기 한 번으로 끝난다. 실패해도 로그인은 막지 않는다(ensureAppUserRow 가 삼킨다).
+           환영 메일보다 먼저 기다린다 — 메일 발송이 이 행의 welcomed_at 을 선점하기 때문. */
+        if (account?.provider === "google" || account?.provider === "kakao") {
+          try {
+            const { ensureAppUserRow } = await import("@/lib/auth/ensure-app-user");
+            await ensureAppUserRow({ email, name });
+          } catch {
+            /* 로그인은 그대로 */
+          }
+        }
         void import("@/lib/auth/welcome-email")
           .then(({ maybeSendWelcomeEmail }) => maybeSendWelcomeEmail(email, name))
           .catch(() => {});

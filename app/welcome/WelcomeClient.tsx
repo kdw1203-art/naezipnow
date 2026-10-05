@@ -9,6 +9,7 @@ import { RegionPicker } from "@/app/components/RegionPicker";
 import { takeSignupHandoff } from "@/lib/onboarding/signup-handoff";
 import { HOME_CTA_NOTE } from "@/lib/brand/home-copy";
 import { safeInternalPath } from "@/lib/safe-path";
+import { trackPlatformEvent } from "@/lib/platform-events-client";
 
 /* ============================================================
    [991] 온보딩 — 한 화면(관심 지역)만 묻는다.
@@ -63,7 +64,11 @@ export function WelcomeClient() {
       } catch {
         /* 네트워크 오류 시에도 온보딩 UI는 보여준다 */
       }
-      if (!cancelled) setReady(true);
+      if (!cancelled) {
+        setReady(true);
+        /* [1039] 온보딩 관측 — 화면이 열린 수(로그인 확인 뒤 1회). 완료·건너뛰기와 견줘 이탈을 본다 */
+        trackPlatformEvent({ eventName: "welcome_view", source: "welcome", campaign: "funnel", metadata: { funnel: "signup" } });
+      }
     })();
     return () => {
       cancelled = true;
@@ -81,6 +86,7 @@ export function WelcomeClient() {
   const finish = useCallback(async () => {
     if (busy || regions.length === 0) return;
     setBusy(true);
+    trackPlatformEvent({ eventName: "welcome_finish", source: "welcome", campaign: "funnel", metadata: { funnel: "signup", regions: regions.length } });
     /* 퍼널 관측(fire-and-forget) — wizardSteps 로만 쌓인다 */
     fetch("/api/me/onboarding", {
       method: "PATCH",
@@ -139,7 +145,8 @@ export function WelcomeClient() {
         {/* [970 · A-14] 건너뛰기도 next 가 있으면 그리로 */}
         <Link
           href={next ?? `${HOME_CTA_NOTE.href}?from=welcome&intent=ai`}
-          className="inline-block py-[5px] text-[13px] text-text-3"
+          onClick={() => trackPlatformEvent({ eventName: "welcome_skip", source: "welcome", campaign: "funnel", metadata: { funnel: "signup" } })}
+          className="inline-flex min-h-10 items-center px-2 text-[13px] text-text-3"
         >
           {next ? "건너뛰고 하던 화면으로" : "건너뛰고 노트 쓰기"}
         </Link>
