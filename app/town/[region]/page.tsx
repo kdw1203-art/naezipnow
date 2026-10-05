@@ -15,7 +15,9 @@ import { readTownPosts } from "@/lib/newui/board-posts";
 import { listPublicNotes, type InspectionNote } from "@/lib/inspection/store-db";
 import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 import { maskNoteAuthor, seedGradient } from "@/lib/town/shared";
-import { getRegionSnapshot } from "@/lib/market/store";
+import { getAllRegionSnapshots, getRegionSeries, getRegionSnapshot } from "@/lib/market/store";
+import { Spark } from "@/app/components/viz/Spark";
+import { Fineprint } from "@/app/components/Fineprint";
 import type { RegionMarketSnapshot } from "@/lib/market/types";
 import type { Post } from "@/lib/types/post";
 import { formatKrwShort } from "@/lib/market/format";
@@ -119,10 +121,13 @@ export default async function TownRegionHomePage({
   /* [1015] listPublicNoteCards → listPublicNotes: 노트 행의 썸네일(noteCoverUrl — metadata.cover·photos 를 읽는다)을
      그리려면 카드 전용 컬럼만으로는 부족하다(브리프 규칙 H). 공개 노트는 34편 남짓이고 이 화면은 7일 ISR 이라
      무게는 감당된다(프로필 /u/[handle] 과 같은 호출). */
-  const [postsR, notesR, snapR] = await Promise.allSettled([
+  /* [1038 · 11·18] 16주 매매지수(스파크라인) · 같은 시·도 지역 스냅샷(인근 비교 막대) — 실패하면 그 조각만 뺀다 */
+  const [postsR, notesR, snapR, seriesR, allSnapR] = await Promise.allSettled([
     readTownPosts(),
     listPublicNotes(100),
     getRegionSnapshot(id),
+    getRegionSeries(id, "sale_index", "weekly", 16),
+    getAllRegionSnapshots(),
   ]);
   if (postsR.status === "rejected") logger.error(`[town/${id}] 글 조회 실패`, postsR.reason);
   if (notesR.status === "rejected") logger.error(`[town/${id}] 노트 조회 실패`, notesR.reason);
@@ -145,6 +150,26 @@ export default async function TownRegionHomePage({
   const recentNotes = regionNotes.slice(0, 3);
   const snapshot: RegionMarketSnapshot | null =
     snapR.status === "fulfilled" ? snapR.value : null;
+  const spark: number[] = seriesR.status === "fulfilled" ? seriesR.value.map((r) => r.value) : [];
+  const sparkDelta = spark.length >= 2 ? ((spark[spark.length - 1] - spark[0]) / spark[0]) * 100 : null;
+  /* [1038 · 18] 인근 지역 평균 매매가 — 같은 시·도 카탈로그 지역 중 값 있는 곳 상위 5(자기 지역 포함) */
+  const allSnaps = allSnapR.status === "fulfilled" ? allSnapR.value : null;
+  const ownCityForBars = cityOfRegion(id);
+  const nearby = allSnaps
+    ? groupRegionsByCity(undefined, null)
+        .find((g) => g.city === ownCityForBars)
+        ?.items.map((r) => ({ id: r.id, name: r.name, avg: allSnaps.get(r.id)?.avgSale ?? 0 }))
+        .filter((r) => r.avg > 0)
+        .sort((a, b) => b.avg - a.avg) ?? []
+    : [];
+  const nearbyTop = (() => {
+    if (nearby.length === 0) return [];
+    const idx = nearby.findIndex((r) => r.id === id);
+    if (idx < 0) return nearby.slice(0, 5);
+    const start = Math.max(0, Math.min(idx - 2, nearby.length - 5));
+    return nearby.slice(start, start + 5);
+  })();
+  const nearbyMax = nearbyTop.reduce((m, r) => Math.max(m, r.avg), 0);
   const postsFailed = postsR.status === "rejected";
   /* [970 · C-17] "다른 동네" 접기에서 기본으로 펼칠 시·도 = 지금 보는 동네의 시·도 */
   const ownCity = cityOfRegion(id);
@@ -223,33 +248,66 @@ export default async function TownRegionHomePage({
         }
       />
 
-      {/* 시세 요약 스트립 — /region 페이지의 축약판 + 상호 링크 */}
+      {/* 시세 요약 스트립 — /region 페이지의 축약판 + 상호 링크.
+          [1038 · 11] 글줄 → 타일 3개(평균 매매가 · 전세가율 · 거래) + 16주 지수 스파크라인 */}
       {snapshot && (
         <Link
           href={`/region/${id}`}
-          className="rise-in-1 card tile mb-5 flex flex-wrap items-center justify-between gap-3 px-5 py-4 no-underline max-md:mb-3 max-md:px-3.5 max-md:py-3"
+          className="rise-in-1 card tile mb-5 flex flex-wrap items-stretch gap-2 px-3 py-3 no-underline max-md:mb-3 max-md:px-2.5 max-md:py-2.5"
         >
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            {snapshot.avgSale && snapshot.avgSale > 0 && (
-              <div>
-                <div className="t-caption text-text-3">평균 매매가</div>
-                <div className="t-section text-ink tabular-nums">
-                  {formatKrwShort(snapshot.avgSale)}
+          {snapshot.avgSale && snapshot.avgSale > 0 && (
+            <div className="min-w-[120px] flex-1 rounded-lg bg-bg px-3 py-2.5">
+              <div className="t-caption text-text-3">평균 매매가</div>
+              <div className="t-section t-num text-ink">{formatKrwShort(snapshot.avgSale)}</div>
+              {typeof snapshot.saleChangeMonthly === "number" && Number.isFinite(snapshot.saleChangeMonthly) && (
+                <div className={`t-caption t-num ${snapshot.saleChangeMonthly > 0 ? "text-up" : snapshot.saleChangeMonthly < 0 ? "text-down" : "text-text-3"}`}>
+                  {snapshot.saleChangeMonthly > 0 ? "▲" : snapshot.saleChangeMonthly < 0 ? "▼" : ""} {Math.abs(snapshot.saleChangeMonthly).toFixed(1)}% · 지수 전월 대비
                 </div>
-              </div>
-            )}
-            {snapshot.jeonseRatio !== undefined && Number.isFinite(snapshot.jeonseRatio) && (
-              <div>
-                <div className="t-caption text-text-3">전세가율</div>
-                <div className="t-section text-ink tabular-nums">
-                  {snapshot.jeonseRatio.toFixed(1)}%
-                </div>
-              </div>
-            )}
-            <div className="t-sub text-text-3">지수 추이 · 실거래 · 입주 물량</div>
-          </div>
-          <span className="shrink-0 t-body font-bold text-primary">시장 데이터 →</span>
+              )}
+            </div>
+          )}
+          {snapshot.jeonseRatio !== undefined && Number.isFinite(snapshot.jeonseRatio) && (
+            <div className="min-w-[110px] flex-1 rounded-lg bg-bg px-3 py-2.5">
+              <div className="t-caption text-text-3">전세가율</div>
+              <div className="t-section t-num text-ink">{snapshot.jeonseRatio.toFixed(1)}%</div>
+            </div>
+          )}
+          {typeof snapshot.tradeCount === "number" && snapshot.tradeCount > 0 && (
+            <div className="min-w-[100px] flex-1 rounded-lg bg-bg px-3 py-2.5">
+              <div className="t-caption text-text-3">거래</div>
+              <div className="t-section t-num text-ink">{snapshot.tradeCount.toLocaleString("ko-KR")}건</div>
+            </div>
+          )}
+          {spark.length >= 4 && (
+            <div className={`min-w-[150px] flex-1 rounded-lg bg-bg px-3 py-2.5 ${sparkDelta != null && sparkDelta < 0 ? "text-down" : "text-up"}`}>
+              <div className="t-caption text-text-3">{spark.length}주 매매지수</div>
+              <Spark values={spark} width={150} height={34} smooth className="mt-1 block w-full" />
+            </div>
+          )}
+          <span className="flex shrink-0 items-center px-2 t-body font-bold text-primary">시장 데이터 →</span>
         </Link>
+      )}
+
+      {/* [1038 · 18] 인근 지역 평균 매매가 — 같은 시·도 지역 5곳 막대(자기 지역 파랑) */}
+      {nearbyTop.length >= 2 && (
+        <section aria-label="인근 지역 평균 매매가" className="rise-in-1 card mb-5 px-4 py-3.5 max-md:mb-3 max-md:px-3.5">
+          <div className="mb-2 flex items-baseline justify-between gap-2">
+            <h2 className="t-section text-ink">인근 지역 평균 매매가</h2>
+            <span className="t-caption text-text-3">{snapshot?.period ? `${snapshot.period.slice(0, 4)}.${snapshot.period.slice(4, 6)}` : ""} · 한국부동산원</span>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {nearbyTop.map((r) => (
+              <Link key={r.id} href={`/town/${r.id}`} className="flex items-center gap-2 no-underline">
+                <span className={`w-20 shrink-0 truncate t-sub ${r.id === id ? "font-bold text-ink" : "text-text-2"}`}>{r.name}</span>
+                <div className="relative h-2.5 flex-1 rounded bg-bg">
+                  <div className={`absolute left-0 h-2.5 rounded ${r.id === id ? "bg-primary" : "bg-primary opacity-35"}`} style={{ width: `${Math.max(3, Math.round((r.avg / nearbyMax) * 100))}%` }} />
+                </div>
+                <b className={`w-16 shrink-0 text-right t-sub t-num ${r.id === id ? "text-primary" : "text-ink"}`}>{formatKrwShort(r.avg)}</b>
+              </Link>
+            ))}
+          </div>
+          <Fineprint>월간 평균 매매가 · 같은 시·도 안 지역 · 값 있는 곳만</Fineprint>
+        </section>
       )}
 
       <div className="grid grid-cols-1 gap-6 max-md:gap-3 lg:grid-cols-2">

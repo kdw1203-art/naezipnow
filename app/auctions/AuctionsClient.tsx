@@ -151,6 +151,8 @@ type AuctionCardData = {
   dday: { label: string; urgent: boolean } | null;
   minBidValue: string;
   appraisalValue: string;
+  /** [1038 · 19] 최저입찰가 ÷ 감정가(%) — 둘 다 있을 때만 */
+  bidRatio: number | null;
   dateValue: string;
 };
 
@@ -175,6 +177,7 @@ function onbidToCard(a: AuctionApiItem, now: Date): AuctionCardData {
     dday: ddayFrom(a.bidEnd, now),
     minBidValue: fmtKrw(a.minBidKrw),
     appraisalValue: fmtKrw(a.appraisalKrw),
+    bidRatio: a.minBidKrw && a.appraisalKrw && a.appraisalKrw > 0 ? Math.round((a.minBidKrw / a.appraisalKrw) * 100) : null,
     dateValue: fmtDt(a.bidEnd),
   };
 }
@@ -529,6 +532,18 @@ export function AuctionsClient({
                       </div>
                     </div>
                     <div className="flex items-center gap-3.5">
+                      {/* [1038 · 19] 감정가 대비 최저입찰가 % 막대 — 짧을수록 유찰이 쌓인 물건 */}
+                      {c.bidRatio != null && (
+                        <div className="hidden w-32 flex-col gap-1 md:flex" aria-label={`감정가 대비 최저입찰가 ${c.bidRatio}%`}>
+                          <div className="flex items-baseline justify-between t-caption text-text-3">
+                            <span>감정가 대비</span>
+                            <b className={`t-num ${c.bidRatio < 70 ? "text-danger" : c.bidRatio < 90 ? "text-warning" : "text-ink"}`}>{c.bidRatio}%</b>
+                          </div>
+                          <div className="relative h-2 rounded bg-bg">
+                            <div className={`absolute left-0 h-2 rounded ${c.bidRatio < 70 ? "bg-danger" : c.bidRatio < 90 ? "bg-warning" : "bg-primary"}`} style={{ width: `${Math.min(100, c.bidRatio)}%` }} />
+                          </div>
+                        </div>
+                      )}
                       <div className="text-right">
                         <div className="t-sub text-text-3">감정가</div>
                         <div className="t-body font-bold text-ink">{c.appraisalValue}</div>
@@ -642,7 +657,18 @@ export function AuctionsClient({
                         {c.usage ?? "—"}
                       </span>
                       <span className="text-center font-bold text-text-1">{c.appraisalValue}</span>
-                      <span className="text-center font-bold text-primary">{c.minBidValue}</span>
+                      {/* [1038 · 19] 최저가 아래 감정가 대비 % 막대 — 짧을수록 유찰이 쌓인 물건(70% 미만 빨강 · 90% 미만 노랑) */}
+                      <span className="flex flex-col items-stretch gap-0.5 text-center font-bold text-primary">
+                        {c.minBidValue}
+                        {c.bidRatio != null && (
+                          <span className="flex items-center gap-1" aria-label={`감정가 대비 ${c.bidRatio}%`}>
+                            <span className="relative h-1.5 flex-1 rounded bg-bg">
+                              <span className={`absolute left-0 h-1.5 rounded ${c.bidRatio < 70 ? "bg-danger" : c.bidRatio < 90 ? "bg-warning" : "bg-primary"}`} style={{ width: `${Math.min(100, c.bidRatio)}%` }} />
+                            </span>
+                            <span className={`t-caption t-num font-medium ${c.bidRatio < 70 ? "text-danger" : c.bidRatio < 90 ? "text-warning" : "text-text-3"}`}>{c.bidRatio}%</span>
+                          </span>
+                        )}
+                      </span>
                       <span className="text-center font-bold text-text-1">{c.dateValue}</span>
                     </div>
                   ))}

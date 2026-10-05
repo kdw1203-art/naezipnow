@@ -5,6 +5,8 @@ import { diagnosisRadar } from "@/lib/ai/insight-blocks";
 import { buildVerdict } from "@/lib/ai/verdict";
 import { VerdictCard } from "@/app/analysis/ai/[tool]/VerdictCard";
 import { applyAxisRule, confirmedAxesLine, emptyTilesLine } from "./axis-summary-rules";
+import { ScoreRing } from "@/app/components/viz/ScoreRing";
+import { ScoreRadar } from "@/app/components/viz/ScoreRadar";
 
 /* [OPT-48] 단지 허브 2.0 — 워크벤치와 같은 근거(라이브 컨텍스트)를 허브에도 요약.
    원칙(이 페이지의 예산 규율을 따른다):
@@ -38,7 +40,11 @@ export async function ComplexAxisSummary({
   if (!raw.metric && raw.numbers.length === 0) return null;
 
   /* [1012 · R2] 같은 컨텍스트에서 5축을 다시 읽어(새 계산 없음 — verdict 도 이 함수를 쓴다) 축 수로 거른다 */
-  const { verdict, axes } = applyAxisRule(raw, diagnosisRadar(ctx));
+  const radar = diagnosisRadar(ctx);
+  const { verdict, axes } = applyAxisRule(raw, radar);
+  /* [1038 · 21] 투자 점수(대표 수치)가 있으면 링 + 5축 레이더 한 장 — 숫자는 verdict 그대로(새 계산 없음) */
+  const score = verdict.metric && verdict.metric.label === "투자 점수" ? Number.parseInt(verdict.metric.value, 10) : NaN;
+  const showViz = Number.isFinite(score) && !axes.thin;
 
   return (
     <section aria-label="이 단지 결과 요약" className="mt-4 rounded-2xl border border-line bg-surface p-4 max-md:mt-3 max-md:p-3.5">
@@ -53,6 +59,14 @@ export async function ComplexAxisSummary({
           이 단지 AI 종합 진단 받기 ›
         </Link>
       </div>
+      {showViz && (
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 rounded-lg bg-bg px-2 py-2 md:justify-start md:gap-6">
+          <ScoreRing score={score} size={96} label="투자 점수" />
+          <div className="min-w-0 max-w-full">
+            <ScoreRadar items={radar.map((a) => ({ key: a.key, label: a.label, score: a.score }))} />
+          </div>
+        </div>
+      )}
       <div className="mt-3">
         <VerdictCard
           verdict={verdict}
@@ -60,6 +74,7 @@ export async function ComplexAxisSummary({
           toneLine={axes.thin ? confirmedAxesLine(axes) : null}
           emptyTilesLine={emptyTilesLine(verdict.tiles)}
           fold
+          hideMetric={showViz}
         />
       </div>
       {/* [1009 · C 리뷰] "숫자마다 기준일·출처 표기"는 이제 사실이 아니다 — 결과 카드(VerdictCard)가 칸마다 되풀이하던 출처를

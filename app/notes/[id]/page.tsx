@@ -59,6 +59,8 @@ import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { NoteMiniMap } from "./NoteMiniMap";
 import { NoteVerdictCard } from "./NoteVerdictCard";
+import { ScoreRing } from "@/app/components/viz/ScoreRing";
+import type { RadarItem } from "@/app/components/viz/ScoreRadar";
 import { resolveComplexPrice } from "@/lib/market/complex-price";
 import { noteCoordsFromMetadata } from "@/lib/notes/note-coords";
 import { NoteComments, type NoteCommentView } from "./NoteComments";
@@ -119,6 +121,10 @@ type NoteView = {
   /** 입력 축이 없으면 null — 0점을 "종합 점수"로 보여 주지 않는다 */
   totalScore: number | null;
   scoreBars: ScoreBar[];
+  /** [1038] 레이더용 5축 — 미입력 축은 null(꼭짓점 없음) */
+  radar: RadarItem[];
+  /** [1038] 항목 평점 평균(5점 만점) — 규칙 요약 게이지·칩 */
+  avgScore: number | null;
   scoredAxisCount: number;
   /** [993] 판단 카드용 — 입력된 축 중 가장 낮은 것(없으면 null) */
   weakestAxis: { label: string; score: number } | null;
@@ -348,6 +354,8 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
         value: Math.round(v * 20),
         bad: v <= 2,
       })),
+    radar: scoreEntries.map(([label, v], i) => ({ key: ["location", "school", "transport", "facility", "future"][i], label, score: v > 0 ? Math.round(v * 20) : null })),
+    avgScore: scored ? Math.round(avg * 10) / 10 : null,
     checklistDone: doneCount,
     checklistTotal: n.checklist.length,
     // 이 화면의 수치는 전부 작성자가 직접 남긴 방문 기록에서 나온다 —
@@ -910,7 +918,24 @@ export default async function NoteDetailPage({
       >
         {v.aiBadge}
       </span>
-      <p className="t-body">{v.aiInline}</p>
+      {/* [1038 · 5] 규칙 요약은 문장 대신 링 + 칩 3개 + 한 줄(같은 숫자) — AI 모델 글은 그대로 문장 */}
+      {v.aiBadge.startsWith("규칙") && v.totalScore != null ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <ScoreRing score={v.totalScore} size={72} label="/ 100" className="text-white" />
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
+              <span className="rounded-md border border-on-dark-faint px-1.5 py-0.5 t-caption font-bold text-on-dark">항목 평균 {v.avgScore}/5</span>
+              <span className="rounded-md border border-on-dark-faint px-1.5 py-0.5 t-caption font-bold text-on-dark">입력 {v.scoredAxisCount}개 축</span>
+              {v.weakestAxis && (
+                <span className="rounded-md border border-on-dark-faint px-1.5 py-0.5 t-caption font-bold text-on-dark">{v.weakestAxis.label} {v.weakestAxis.score}/5 감점</span>
+              )}
+            </div>
+            {v.weakestAxis && <p className="m-0 t-body">{v.weakestAxis.label} 축이 점수를 낮춘 요인</p>}
+          </div>
+        </div>
+      ) : (
+        <p className="t-body">{v.aiInline}</p>
+      )}
       {isOwner && !hasLlmAi && (
         <AiRetryButton noteId={id} defaultIntent={retryDefaultIntent(realNote)} />
       )}
@@ -998,6 +1023,9 @@ export default async function NoteDetailPage({
             totalScore={v.totalScore}
             scoredAxisCount={v.scoredAxisCount}
             weakestAxis={v.weakestAxis}
+            radar={v.radar}
+            goodCount={v.goodPoints.filter((g) => g !== "기록 없음").length}
+            cautionCount={v.cautionPoints.filter((c) => c !== "기록 없음").length}
             visitDate={realNote.visitDate}
             checklistDone={v.checklistDone}
             checklistTotal={v.checklistTotal}
@@ -1145,7 +1173,13 @@ export default async function NoteDetailPage({
                     <span className="inline-flex items-center gap-1">
                       <Icon name={a.icon} size={16} /> {a.label}
                     </span>
-                    <b className={`font-bold ${axisToneClass(a.level)}`}>
+                    {/* [1038 · 2] 상·중·하 글자 앞에 점 3개(●●○) — 색은 글자와 같은 토큰(bg-current) */}
+                    <b className={`inline-flex items-center gap-1.5 font-bold ${axisToneClass(a.level)}`}>
+                      <span aria-hidden="true" className="inline-flex items-center gap-0.5">
+                        {[1, 2, 3].map((k) => (
+                          <i key={k} className={`inline-block h-2 w-2 rounded-full ${k <= (a.level === "상" ? 3 : a.level === "중" ? 2 : 1) ? "bg-current" : "bg-line"}`} />
+                        ))}
+                      </span>
                       {a.level}
                     </b>
                   </div>
@@ -1157,17 +1191,37 @@ export default async function NoteDetailPage({
                 둘 다 비면 블록 자체가 없다. 타입은 그 단지 실거래 전용면적에서 고른 값이라 "타입"이라 부르되 평면도는 사진(역할)로만 */}
             {(() => {
               const u = unitSummary(unitFromMetadata(realNote.metadata));
-              const lines = fieldDetailLines(fieldDetailFromMetadata(realNote.metadata));
+              const fd = fieldDetailFromMetadata(realNote.metadata);
+              const lines = fieldDetailLines(fd);
               const roles = photoRolesFromMetadata(realNote.metadata);
+              /* [1038 · 9] 도보 분은 막대로(역·학교 · 최대 30분 기준) — 글줄에서는 뺀다 */
+              const walks = [
+                typeof fd.subwayWalkMin === "number" ? { label: fd.nearestStation ? `지하철 · ${fd.nearestStation}` : "지하철", min: fd.subwayWalkMin } : null,
+                typeof fd.schoolWalkMin === "number" ? { label: "학교", min: fd.schoolWalkMin } : null,
+              ].filter((w): w is { label: string; min: number } => w != null);
+              const lineRows = walks.length > 0 ? lines.filter(([k]) => !/^(지하철|학교) 도보/.test(k)) : lines;
               const planN = v.photos.filter((p) => roles[p] === "floorplan").length;
               if (!u && lines.length === 0 && planN === 0) return null;
               return (
                 <div className="flex flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5">
                   <div className="t-sub font-bold text-text-3">임장한 타입 · 세부 기록</div>
                   {u && <p className="t-body font-bold t-num text-ink">{u}</p>}
-                  {lines.length > 0 && (
+                  {walks.length > 0 && (
+                    <div className="flex flex-col gap-1.5">
+                      {walks.map((w) => (
+                        <div key={w.label} className="flex items-center gap-2 t-sub">
+                          <span className="w-28 shrink-0 truncate text-text-3">{w.label}</span>
+                          <div className="relative h-2 flex-1 rounded bg-bg">
+                            <div className={`absolute left-0 h-2 rounded ${w.min <= 10 ? "bg-success" : w.min <= 20 ? "bg-primary" : "bg-danger"}`} style={{ width: `${Math.min(100, Math.round((w.min / 30) * 100))}%` }} />
+                          </div>
+                          <b className="w-12 shrink-0 text-right t-num text-ink">도보 {w.min}분</b>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {lineRows.length > 0 && (
                     <dl className="m-0 grid grid-cols-1 gap-x-4 gap-y-1 md:grid-cols-2">
-                      {lines.map(([k, val]) => (
+                      {lineRows.map(([k, val]) => (
                         <div key={k} className="flex gap-2 t-sub">
                           <dt className="w-24 shrink-0 text-text-3">{k}</dt>
                           <dd className="m-0 min-w-0 t-num text-text-1">{val}</dd>
@@ -1200,14 +1254,23 @@ export default async function NoteDetailPage({
 
             {/* ⑤⑥ 좋았던 점 · 주의할 점 */}
             {/* [1015 · 규칙 D] 대시 잇기 → 제목 칸 / 내용 칸 */}
-            <div className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-3.5 t-sub leading-[1.7] text-text-1">
-              <div className="flex gap-2">
-                <b className="w-14 shrink-0 text-success">좋았던 점</b>
-                <span className="min-w-0">{v.goodPoints.join(" · ")}</span>
+            {/* [1038 · 4] 한 줄 나열 → 두 칸 카드(색 띠 · 항목마다 한 줄) */}
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <div className="rounded-lg border-l-4 border-success bg-bg px-3.5 py-3 t-sub leading-[1.6] text-text-1">
+                <b className="text-success">좋았던 점{v.goodPoints[0] !== "기록 없음" ? ` ${v.goodPoints.length}` : ""}</b>
+                <ul className="m-0 mt-1 flex list-none flex-col gap-0.5 p-0">
+                  {v.goodPoints.map((g) => (
+                    <li key={g} className={g === "기록 없음" ? "text-text-3" : ""}>{g}</li>
+                  ))}
+                </ul>
               </div>
-              <div className="flex gap-2">
-                <b className="w-14 shrink-0 text-danger">주의할 점</b>
-                <span className="min-w-0">{v.cautionPoints.join(" · ")}</span>
+              <div className="rounded-lg border-l-4 border-danger bg-bg px-3.5 py-3 t-sub leading-[1.6] text-text-1">
+                <b className="text-danger">주의할 점{v.cautionPoints[0] !== "기록 없음" ? ` ${v.cautionPoints.length}` : ""}</b>
+                <ul className="m-0 mt-1 flex list-none flex-col gap-0.5 p-0">
+                  {v.cautionPoints.map((c) => (
+                    <li key={c} className={c === "기록 없음" ? "text-text-3" : ""}>{c}</li>
+                  ))}
+                </ul>
               </div>
             </div>
 
@@ -1379,16 +1442,28 @@ export default async function NoteDetailPage({
                 <p className="t-body font-bold text-ink">{revisitDelta.decisionLine}</p>
               )}
               {revisitDelta.changes.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {revisitDelta.changes.map((c) => (
-                    <span
-                      key={c}
-                      className="rounded-full bg-primary-soft px-3 py-1.5 t-sub font-bold text-primary"
-                    >
-                      {c}
-                    </span>
-                  ))}
-                </div>
+                /* [1038 · 8] "입지 3→4" 칩 나열 → 항목 · 이전 · 이번 표(화살표 없는 변화는 칩 그대로) */
+                <table className="w-full border-collapse t-sub">
+                  <thead>
+                    <tr className="text-left t-caption text-text-3">
+                      <th className="border-b border-line py-1 pr-2 font-semibold">항목</th>
+                      <th className="border-b border-line py-1 pr-2 font-semibold">이전</th>
+                      <th className="border-b border-line py-1 font-semibold">이번</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {revisitDelta.changes.map((c) => {
+                      const m = /^(.+?)\s(\S+?)→(\S+)$/.exec(c);
+                      return (
+                        <tr key={c}>
+                          <td className="border-b border-divider py-1.5 pr-2 text-text-2">{m ? m[1] : c}</td>
+                          <td className="border-b border-divider py-1.5 pr-2 text-text-3">{m ? m[2] : "—"}</td>
+                          <td className="border-b border-divider py-1.5 font-bold text-primary">{m ? m[3] : "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               ) : revisitDelta.decisionLine ? null : (
                 <p className="t-body text-text-2">
                   비교한 {revisitDelta.comparable}개 항목 모두 직전 회차와 같음.
@@ -1473,20 +1548,8 @@ export default async function NoteDetailPage({
               축 막대만 남긴다. 데스크톱(오른쪽 레일)은 그대로. */}
           <div className="rise-in-2 card flex flex-col items-center gap-3 rounded-3xl p-6 max-md:gap-2 max-md:p-3.5">
             {v.totalScore != null ? (
-              <div
-                className="relative h-[110px] w-[110px] rounded-full max-md:hidden"
-                style={{
-                  /* [1005] 링 색은 토큰 — 손으로 적은 브랜드 블루 hex 는 다크·테마 변형에서 그대로 남았다 */
-                  background: `conic-gradient(var(--primary) 0% ${v.totalScore}%, var(--primary-soft) ${v.totalScore}% 100%)`,
-                }}
-              >
-                <div className="absolute inset-[9px] flex flex-col items-center justify-center rounded-full bg-surface">
-                  <span className="t-title leading-none text-primary">
-                    {v.totalScore}
-                  </span>
-                  <span className="t-caption text-text-3">/ 100</span>
-                </div>
-              </div>
+              /* [1038 · 1] CSS 원뿔 그라데이션 링 → SVG ScoreRing(판단 카드와 같은 부품) */
+              <ScoreRing score={v.totalScore} size={110} className="max-md:hidden" />
             ) : (
               <div className="flex h-[110px] w-[110px] flex-col items-center justify-center rounded-full bg-bg max-md:hidden">
                 <span className="t-section text-text-3">—</span>

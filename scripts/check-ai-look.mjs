@@ -47,7 +47,6 @@ const GRADIENT_ALLOW = [
   ["app/admin/", "관리자 화면"],
   ["app/map/MapClientLazy.tsx", "지도 로딩 스켈레톤(연회색 두 톤)"],
   ["app/map/map-client.tsx", "지도 로딩 폴백 스켈레톤"],
-  ["app/notes/[id]/page.tsx", "기록 점수 링(conic-gradient) — 장식이 아니라 값을 그리는 도넛 차트"],
 ];
 const EMOJI_ALLOW = [
   ["app/components/Icon.tsx", "이모지 → 선 아이콘 매핑표(렌더되는 건 아이콘)"],

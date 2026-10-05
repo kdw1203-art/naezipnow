@@ -204,23 +204,23 @@ export default async function DigestPage() {
 주요 지역 시세로 표시할 최신 스냅샷 없음
               </div>
             ))}
-          {/* [1015] 가격·등락 행 목록 = 리퀴드 판(blue — 시세 톤, 브리프 규칙 I) */}
+          {/* [1015] 가격·등락 행 목록 = 리퀴드 판(blue — 시세 톤, 브리프 규칙 I)
+              [1038 · 14] 행 6줄 → 숫자 타일 격자(지역 · 가격 · 등락 색) — 한눈에 어디가 오르고 내렸는지 */}
           {market.length > 0 && (
-          <div className="lq-panel flex flex-col" data-tone="blue">
+          <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3">
           {market.map((m) => (
-            <div key={m.regionId} className="flex items-center justify-between border-b py-1.5 last:border-b-0 t-sub">
-              <span className="text-text-2">
-                <b className="font-bold text-ink">{m.name}</b>
-                <span className="ml-1 text-text-3">{m.city}</span>
-              </span>
-              <span className="flex items-baseline gap-1.5 tabular-nums text-text-1">
-                {m.price}
+            <div key={m.regionId} className="rounded-lg bg-bg px-3 py-2.5">
+              <div className="truncate t-caption text-text-3">
+                <b className="font-bold text-ink">{m.name}</b> {m.city}
+              </div>
+              <div className="t-section t-num text-ink">{m.price}</div>
+              <span className="flex items-baseline gap-1 t-sub">
                 <Delta
                   pct={m.changePct}
                   srContext={m.changeBasis === "weekly" ? "매매지수 전주보다" : "매매지수 전월보다"}
                   className="text-[12px]"
                 />
-                {m.changeBasis === "weekly" ? <span className="t-caption text-text-3">전주 대비</span> : null}
+                <span className="t-caption text-text-3">{m.changeBasis === "weekly" ? "전주 대비" : "전월 대비"}</span>
               </span>
             </div>
           ))}

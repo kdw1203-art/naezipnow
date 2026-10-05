@@ -3,6 +3,8 @@ import { formatKrwWon } from "@/lib/format/krw";
 import { formatYm } from "@/lib/market/format";
 import { decisionBand, decisionLabel, type NoteDecision } from "@/lib/inspection/decision";
 import { AreaBandText } from "./AreaBandText";
+import { ScoreRing } from "@/app/components/viz/ScoreRing";
+import { ScoreRadar, type RadarItem } from "@/app/components/viz/ScoreRadar";
 
 /* ============================================================
    [993] 임장노트 판단 카드 — 상세 첫 화면.
@@ -24,6 +26,11 @@ import { AreaBandText } from "./AreaBandText";
    ============================================================ */
 
 export type NoteVerdictProps = {
+  /** [1038 · 1] 5축(미입력 null) — 점수가 있을 때 링 + 레이더 한 장 */
+  radar?: readonly RadarItem[];
+  /** [1038 · 10] 좋았던 점 · 주의할 점 수(기록 없음 제외) — 결과 미리보기 칩 */
+  goodCount?: number;
+  cautionCount?: number;
   /** LLM 결론(inspectionReport.verdict) 또는 규칙 요약 */
   verdict: string;
   /** 결론의 출처 라벨 — "AI 생성" / "규칙 기반 …" */
@@ -127,6 +134,16 @@ export function NoteVerdictCard(p: NoteVerdictProps) {
         </p>
       )}
 
+      {/* [1038 · 1] 점수·축을 글 대신 링 + 레이더 — 입력 축이 3개 이상일 때만 모양이 된다(ScoreRadar 규칙) */}
+      {p.totalScore != null && p.radar && p.radar.filter((r) => r.score != null).length >= 3 && (
+        <div className="flex flex-wrap items-center justify-center gap-3 rounded-lg bg-bg px-2 py-2 md:justify-start md:gap-6">
+          <ScoreRing score={p.totalScore} size={96} />
+          <div className="min-w-0 max-w-full">
+            <ScoreRadar items={p.radar} />
+          </div>
+        </div>
+      )}
+
       {/* [1015 · 규칙 J] 실거래 매칭이 없으면 "매칭 없음" 빈 타일을 그리지 않는다(2칸). 방문 칸의 설명 캡션도 뺐다 */}
       <div className={`grid gap-2 ${p.price ? "grid-cols-3" : "grid-cols-2"}`}>
         <div className="rounded-lg bg-bg px-3 py-2.5">
@@ -171,12 +188,24 @@ export function NoteVerdictCard(p: NoteVerdictProps) {
         ) : null}
       </div>
 
-      <Link
-        href={p.next.href}
-        className="btn-primary btn-cta self-start rounded-lg px-4 py-2.5 t-body font-bold no-underline"
-      >
-        {p.next.label} ›
-      </Link>
+      {/* [1038 · 10] 다음 행동 단추 옆 사실 칩 — 장점 n · 주의 n · 미확인 n(체크 미완료). 0 이면 칩을 안 그린다 */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Link
+          href={p.next.href}
+          className="btn-primary btn-cta self-start rounded-lg px-4 py-2.5 t-body font-bold no-underline"
+        >
+          {p.next.label} ›
+        </Link>
+        {(p.goodCount ?? 0) > 0 && (
+          <span className="rounded-md bg-success-soft px-2 py-1 t-caption font-bold text-success">좋았던 점 {p.goodCount}</span>
+        )}
+        {(p.cautionCount ?? 0) > 0 && (
+          <span className="rounded-md bg-danger-soft px-2 py-1 t-caption font-bold text-danger">주의할 점 {p.cautionCount}</span>
+        )}
+        {p.checklistTotal - p.checklistDone > 0 && (
+          <span className="rounded-md bg-primary-soft px-2 py-1 t-caption font-bold text-primary">미확인 {p.checklistTotal - p.checklistDone}</span>
+        )}
+      </div>
     </section>
   );
 }

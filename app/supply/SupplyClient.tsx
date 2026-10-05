@@ -373,42 +373,45 @@ export function SupplyClient({
                 </span>
               )}
             </div>
-            {featured.map((s, i) => (
-              <div
-                key={`now-${s.aptName ?? "미정"}-${i}`}
-                className="rise-in-2 flex flex-col gap-3 rounded-2xl border-[1.5px] border-primary bg-surface px-[18px] py-3.5 md:flex-row md:items-center md:justify-between"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="shrink-0 rounded-md bg-primary chip-pad t-sub font-bold text-white">
-                    {monthLabel(s.moveInYm)}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 text-[13px] font-bold text-ink">
-                      <span className="truncate">{s.aptName ?? "미정"}</span>
-                      {s.bizType && (
-                        <span className="shrink-0 rounded bg-primary-soft px-[7px] py-0.5 t-caption font-bold text-primary">
-                          {s.bizType}
-                        </span>
-                      )}
-                    </div>
-                    <div className="truncate t-sub text-text-3">
-                      {s.households
-                        ? `${s.households.toLocaleString()}세대 · `
-                        : ""}
-                      {s.address ?? s.region}
-                    </div>
-                  </div>
+            {/* [1038 · 17] 단지마다 3줄 카드 → 한 줄 표(입주월 · 단지 · 세대 막대) — 같은 값, 높이 1/3 */}
+            {featured.length > 0 && (() => {
+              const maxHh = featured.reduce((m, s) => Math.max(m, s.households ?? 0), 0);
+              return (
+                <div className="rise-in-2 overflow-x-auto rounded-2xl border-[1.5px] border-primary bg-surface px-3 py-2">
+                  <table className="w-full min-w-[320px] border-collapse t-sub">
+                    <thead>
+                      <tr className="text-left t-caption text-text-3">
+                        <th className="border-b border-line py-1.5 pr-2 font-semibold">입주</th>
+                        <th className="border-b border-line py-1.5 pr-2 font-semibold">단지</th>
+                        <th className="border-b border-line py-1.5 font-semibold">세대</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {featured.map((s, i) => (
+                        <tr key={`now-${s.aptName ?? "미정"}-${i}`}>
+                          <td className="whitespace-nowrap border-b border-divider py-2 pr-2 t-num font-bold text-primary">{fmtYm(s.moveInYm)}</td>
+                          <td className="min-w-0 border-b border-divider py-2 pr-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className="truncate font-bold text-ink">{s.aptName ?? "미정"}</span>
+                              {s.bizType && <span className="shrink-0 rounded bg-primary-soft px-[7px] py-0.5 t-caption font-bold text-primary">{s.bizType}</span>}
+                            </div>
+                            <div className="truncate t-caption text-text-3">{s.address ?? s.region}</div>
+                          </td>
+                          <td className="w-[38%] border-b border-divider py-2">
+                            <div className="flex items-center gap-2">
+                              <div className="relative h-2 flex-1 rounded bg-bg">
+                                {s.households ? <div className="absolute left-0 h-2 rounded bg-primary" style={{ width: `${Math.max(3, Math.round(((s.households ?? 0) / Math.max(1, maxHh)) * 100))}%` }} /> : null}
+                              </div>
+                              <b className="w-14 shrink-0 text-right t-num text-ink">{s.households ? s.households.toLocaleString() : "—"}</b>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="flex shrink-0 items-center gap-3.5">
-                  <div className="text-right">
-                    <div className="t-sub text-text-3">입주 예정</div>
-                    <div className="t-body font-bold text-primary">
-                      {fmtYm(s.moveInYm)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })()}
             {featuredMore > 0 && (
               <p className="rise-in-2 px-1 t-sub text-text-3">
                 외 {featuredMore.toLocaleString()}곳 · 아래 표

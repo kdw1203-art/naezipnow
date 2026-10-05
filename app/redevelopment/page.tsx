@@ -8,6 +8,7 @@ import { readBoardPosts } from "@/lib/newui/board-posts";
 import type { Post } from "@/lib/types/post";
 import { postHref } from "@/lib/town/post-href";
 import { listProjects, countBySigunguFrom } from "@/lib/redevelopment/store";
+import { redevStageCounts } from "@/lib/redevelopment/map-layer";
 import type { RedevelopmentProject } from "@/lib/redevelopment/types";
 import { SEED_SOURCES } from "@/lib/redevelopment/seed";
 import { logger } from "@/lib/log";
@@ -118,6 +119,9 @@ export default async function RedevelopmentPage() {
     loadProjects(),
   ]);
   const sigunguCounts = countBySigunguFrom(projects);
+  /* [1038 · 16] 단계별 구역 수 — 지도에 실린 구역(projects)만 센다. 0곳이면 막대를 그리지 않는다 */
+  const stageCounts = projects.length > 0 ? redevStageCounts(projects, new Set()) : null;
+  const stageMax = stageCounts ? Math.max(...Object.values(stageCounts)) : 0;
 
   return (
     /* [972] 형제 8칸과 머리가 달랐다 — PageShell 의 title 을 쓰면 h1 이 **카테고리 줄
@@ -172,17 +176,26 @@ export default async function RedevelopmentPage() {
             <h2 className="text-[13px] font-bold text-ink">정비사업 7단계</h2>
             <span className="t-caption text-text-3">도시정비법 일반 절차 기준</span>
           </div>
-          {/* 가로 스텝 오버뷰 — 좁은 화면은 가로 스크롤 */}
+          {/* 가로 스텝 오버뷰 — 좁은 화면은 가로 스크롤.
+              [1038 · 16] 단계 칩 아래 "지도에 실린 구역 수"를 막대로 — 어느 단계에 구역이 몰려 있는지 한 줄로 */}
           <div className="mt-3 -mx-1 overflow-x-auto px-1 pb-1" tabIndex={0}>
             <ol className="flex min-w-max items-center gap-1">
               {STAGE_GUIDES.map((s, i) => (
                 <li key={s.key} className="flex items-center gap-1">
-                  <span className="chip chip-soft flex items-center gap-1 px-2.5 py-1 t-sub">
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary t-caption font-bold text-white">
-                      {i + 1}
+                  <span className="chip chip-soft flex flex-col items-stretch gap-1 px-2.5 py-1 t-sub" style={{ whiteSpace: "normal" }}>
+                    <span className="flex items-center gap-1">
+                      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary t-caption font-bold text-white">
+                        {i + 1}
+                      </span>
+                      <Icon name={s.icon} size={13} />
+                      {s.longLabel}
+                      {stageCounts && <b className="ml-1 t-caption t-num text-primary">{stageCounts[s.key].toLocaleString("ko-KR")}</b>}
                     </span>
-                    <Icon name={s.icon} size={13} />
-                    {s.longLabel}
+                    {stageCounts && stageMax > 0 && (
+                      <span className="relative block h-1 rounded bg-bg" aria-hidden="true">
+                        <span className="absolute left-0 h-1 rounded bg-primary" style={{ width: `${Math.max(2, Math.round((stageCounts[s.key] / stageMax) * 100))}%` }} />
+                      </span>
+                    )}
                   </span>
                   {i < STAGE_GUIDES.length - 1 && (
                     <span className="shrink-0 t-sub text-text-3" aria-hidden="true">

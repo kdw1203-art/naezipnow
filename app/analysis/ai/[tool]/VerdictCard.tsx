@@ -127,6 +127,7 @@ export function VerdictCard({
   extraChips,
   bare = false,
   fold = false,
+  hideMetric = false,
   metricAside,
   tileAside,
   emptyTilesLine = null,
@@ -149,6 +150,8 @@ export function VerdictCard({
   emptyTilesLine?: string | null;
   /** [1036 · 밀도] 출처 한 줄 + "데이터 출처" + "달라지는 경우"를 접힘 하나(기준 · 출처)로 — 단지 허브처럼 결과가 곁가지인 자리 */
   fold?: boolean;
+  /** [1038 · 21] 대표 수치 칸을 그리지 않는다 — 부르는 쪽이 같은 숫자를 링으로 그릴 때(같은 숫자 두 번 금지) */
+  hideMetric?: boolean;
 }) {
   const m = verdict.metric;
   const asOf = ymLabel(m?.asOf ?? verdict.tiles?.find((t) => t.asOf)?.asOf ?? null);
@@ -175,7 +178,7 @@ export function VerdictCard({
       {toneLine && !compact && <p className="t-sub text-text-2">{toneLine}</p>}
 
       {/* ③ 대표 수치 */}
-      {m && (
+      {m && !hideMetric && (
         <div className="verdict-metric flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-lg px-3.5 py-3">
           <span className="flex items-center gap-0.5 t-sub font-bold text-text-2">
             {m.label}
