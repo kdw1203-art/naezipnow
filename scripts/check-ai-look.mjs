@@ -68,6 +68,7 @@ const SHADOW_ALLOW = [
   ["app/listings/new/ListingForm.tsx", "하단 고정 저장 바"],
   ["app/map/", "지도 위 플로팅 패널(매물 미리보기·안내)"],
   ["app/notes/new/NoteLocationSearch.tsx", "주소 검색 드롭다운"],
+  ["app/notes/new/NoteLocationDropdown.tsx", "주소 검색 드롭다운(1032 · 지연 조각으로 분리)"],
 ];
 const PHRASE_ALLOW = [
   ["app/admin/", "관리자 화면"],

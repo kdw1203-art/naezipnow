@@ -1,3 +1,5 @@
+import { fieldDetailFromMetadata } from "@/lib/notes/unit-detail";
+import { fieldDetailLines } from "@/lib/notes/unit-detail-lines";
 import type { InspectionNote } from "@/lib/inspection/store-db";
 import { decisionFromMetadata, decisionLabel } from "@/lib/inspection/decision";
 
@@ -104,6 +106,18 @@ export function buildRevisitDelta(
   if (ps !== null && cs !== null) {
     comparable += 1;
     if (ps !== cs) changes.push(`만족도 ${ps}→${cs}`);
+  }
+
+  /* [1033] 세부 기록(측정값·선택지) — 양쪽에 같은 키가 있을 때만 비교 항목. "방문 시각 주차 만차→여유" · "지하철 도보 7분→9분" */
+  const pfd = fieldDetailLines(fieldDetailFromMetadata(prev.metadata));
+  const cfd = fieldDetailLines(fieldDetailFromMetadata(curr.metadata));
+  const prevByLabel = new Map(pfd);
+  for (const [label, val] of cfd) {
+    if (label === "들은 말") continue; // 자유 글은 비교 항목이 아니다
+    const before = prevByLabel.get(label);
+    if (before == null) continue;
+    comparable += 1;
+    if (before !== val) changes.push(`${label} ${before}→${val}`);
   }
 
   /* 체크 완료 수 */

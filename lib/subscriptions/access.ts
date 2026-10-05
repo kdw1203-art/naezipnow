@@ -59,7 +59,15 @@ export type FeatureKey =
   | "report_sell"         // 리포트 판매
   | "compare_tray"        // 비교 트레이
   | "ai_agent"            // AI 에이전트(질의 라운드)
-  | "ai_note_draft";      // [944] AI 임장노트 초안·예습 브리핑 (방문 전 자동 작성)
+  | "ai_note_draft"       // [944] AI 임장노트 초안·예습 브리핑 (방문 전 자동 작성)
+  /* [1035] 친구 기능 — 수락한 양방향 관계 위의 네 동작. 친구 수·단체방 수 같은 "현재 보유 상한"은 월 한도가 아니라
+     lib/friends/plan.ts(FRIEND_PLAN)가 들고, 여기는 최소 플랜과 월 횟수만 둔다(한도 숫자는 두 표를 나눠 적지 않는다:
+     월 횟수 = 이 표, 보유 상한 = FRIEND_PLAN). 요금제 화면 행은 친구 1단계가 배포될 때 넣는다 — 코드가 막지 않는
+     한도를 먼저 광고하지 않는다([1004] 원칙). */
+  | "friend_add"          // 친구 요청(상한은 FRIEND_PLAN.friendsMax)
+  | "friend_message"      // 친구 쪽지(1:1) — 월 횟수
+  | "friend_group"        // 친구 단체방 개설 — 플러스 이상(개수 상한은 FRIEND_PLAN.groupsMax)
+  | "friend_together";    // 같이 임장(동선 공유) — 월 횟수
 
 type FeatureRule = {
   minTier: PlanTier;
@@ -140,6 +148,18 @@ export const FEATURE_RULES: Record<FeatureKey, FeatureRule> = {
     monthlyLimit: { pro: 10, expert: null, enterprise: null },
   },
   expert_register:      { minTier: "expert" },
+  /* [1035] 친구 — 관계 맺기와 친구 공개 노트는 전 플랜. 쪽지는 무료 월 30건(스팸이 아니라 가벼운 대화면 충분한 수),
+     단체방은 플러스부터, 같이 임장은 무료 월 2회. 숫자의 근거는 docs/friends-plan.md. */
+  friend_add:           { minTier: "basic" },
+  friend_message: {
+    minTier: "basic",
+    monthlyLimit: { basic: 30, pro: null, expert: null, enterprise: null },
+  },
+  friend_group:         { minTier: "pro" },
+  friend_together: {
+    minTier: "basic",
+    monthlyLimit: { basic: 2, pro: null, expert: null, enterprise: null },
+  },
 };
 
 export type AccessResult =

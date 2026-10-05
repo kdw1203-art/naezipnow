@@ -1,3 +1,5 @@
+import { fieldDetailFromMetadata, unitFromMetadata, unitSummary } from "@/lib/notes/unit-detail";
+import { fieldDetailLines } from "@/lib/notes/unit-detail-lines";
 import type { InspectionNote, InspectionScores, InspectionSections } from "@/lib/inspection/store-db";
 
 export type InspectionAiIntent = "실거주" | "투자" | "전월세";
@@ -50,6 +52,10 @@ type PromptInput = {
   sections: InspectionSections;
   photosCount: number;
   scores: InspectionScores;
+  /** [1033] 임장한 타입 한 줄("84㎡ · 103동 · 12층 · 남향") — 없으면 키 없음 */
+  unit?: string;
+  /** [1033] 세부 기록(측정값·선택지 · 라벨 → 값) — 없으면 키 없음 */
+  fieldDetail?: Record<string, string>;
 };
 
 function toText(value: unknown, maxLength = 240): string {
@@ -147,7 +153,11 @@ function sectionText(note: InspectionNote, maxLength = 1200): string {
 
 export function buildInspectionAiPromptInput(note: InspectionNote, options: ReportOptions = {}): PromptInput {
   const labels = checkLabels(note);
+  const unit = unitSummary(unitFromMetadata(note.metadata));
+  const detailLines = fieldDetailLines(fieldDetailFromMetadata(note.metadata));
   return {
+    ...(unit ? { unit } : {}),
+    ...(detailLines.length ? { fieldDetail: Object.fromEntries(detailLines.map(([k, v]) => [k, toText(v, 200)])) } : {}),
     intent: noteIntent(note, options.intent),
     region: toText(note.region, 80),
     aptName: toText(note.aptName, 120),

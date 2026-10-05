@@ -219,6 +219,7 @@ test("buildAdSenseBootScript — 실행 흐름: 제외 경로면 태그를 넣�
     const doc = {
       readyState: "loading",
       getElementById: () => null,
+      querySelector: () => null, // [1031] data-nz-noads 표식 확인
       createElement: (): Created => {
         const el: Created = { attrs: {}, setAttribute: (k, v) => { el.attrs[k] = v; } };
         return el;

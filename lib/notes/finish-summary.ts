@@ -6,6 +6,7 @@
  * 폼 상태(단지 · 방문일 · 점수 5축 · 체크 N/M · 사진 N · 메모 첫 줄 · 판단)만 줄로 만든다.
  * 없는 값은 "—" 로 적고 지어내지 않는다(0점 축은 미입력이다 — 서버 규약과 같다). 순수 모듈. */
 
+import { unitSummary, type NoteUnit } from "@/lib/notes/unit-core";
 import type { NoteScores } from "@/lib/notes/note-scores";
 
 export type FinishSummaryInput = {
@@ -31,6 +32,8 @@ export type VisitFacts = {
   /** 종합 만족도 0~10 — null 은 미입력 */
   satisfaction?: number | null;
   tags?: readonly string[] | null;
+  /** [1033] 임장한 타입(전용면적·동·층·향) — 줄은 unitSummary 가 만든다("84㎡ · 103동 · 12층 · 남향") · 비면 줄 없음 */
+  unit?: NoteUnit | null;
 };
 
 const clean = (v: string | null | undefined) => (typeof v === "string" ? v.trim() : "");
@@ -96,6 +99,7 @@ export function finishSummaryRows(input: FinishSummaryInput): FinishSummaryRow[]
   const optional = (label: string, value: string): FinishSummaryRow[] => (value ? [{ label, value }] : []);
   return [
     { label: "단지", value: place },
+    ...optional("타입", input.unit ? (unitSummary(input.unit) ?? "") : ""),
     { label: "방문일", value: input.visitDate.trim() ? visitLine : EMPTY },
     ...optional("목적", purpose),
     { label: "점수", value: scoresLine(input.scores) },

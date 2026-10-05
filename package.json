@@ -37,6 +37,8 @@
     "check:sensitive-policy": "node ./scripts/check-sensitive-policy.mjs",
     "check:rls-shape": "node ./scripts/check-rls-shape.mjs",
     "check:responsive-qa": "node ./scripts/check-responsive-qa.mjs",
+    "review:prod": "bash scripts/review/run.sh",
+    "review:report": "node scripts/review/report.mjs",
     "check:final-release": "node ./scripts/check-final-release.mjs",
     "check:cache-policy": "node ./scripts/check-cache-policy.mjs",
     "check:jsonld": "node ./scripts/check-jsonld.mjs",

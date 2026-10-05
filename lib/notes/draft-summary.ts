@@ -10,6 +10,9 @@
 
 import { isNoteLevel, type NoteLevel } from "@/lib/notes/note-scores";
 import type { DecisionChoice } from "@/lib/inspection/decision";
+/* [1032] 임장한 타입 · 세부 기록 · 사진 역할 — 타입만 가져온다(런타임 의존 없음: 이 모듈은 홈 "이어서 보기"에도 실린다).
+   초안은 모양 검사 없이 객체를 그대로 보관하고, 복원할 때 NoteForm 이 unit-detail 의 파서(저장 metadata 와 같은 규칙)로 거른다. */
+import type { FieldDetail, NoteUnit, PhotoRole } from "@/lib/notes/unit-detail";
 
 export const NOTE_DRAFT_KEY = "nz_note_draft";
 
@@ -102,6 +105,12 @@ export type NoteDraft = {
   decision?: NoteDraftDecision;
   /** [1005 · A3] 고려사항 목록(직접 추가한 것 포함) — 없으면 폼 기본값 유지 */
   todoItems?: NoteDraftTodo[];
+  /** [1032] 임장한 타입(전용면적·동·층·향) — 비면 없음 */
+  unit?: NoteUnit;
+  /** [1032] 세부 기록(측정값·선택지) — 비면 없음 */
+  fieldDetail?: FieldDetail;
+  /** [1032] 사진 역할(url → "floorplan") — 비면 없음 */
+  photoRoles?: Record<string, PhotoRole>;
 };
 
 export function isStringArray(v: unknown): v is string[] {
@@ -147,6 +156,11 @@ function boolMap(v: unknown): Record<string, boolean> {
 }
 
 /** localStorage 문자열 → 초안. 형식이 어긋나면 null(복원 배너를 띄우지 않는다). */
+/** [1032] 비어 있지 않은 평범한 객체만(배열·null 제외) — 내용 검사는 복원 쪽(NoteForm · unit-detail) */
+function plainObject(v: unknown): Record<string, unknown> | undefined {
+  return v && typeof v === "object" && !Array.isArray(v) && Object.keys(v as object).length > 0 ? (v as Record<string, unknown>) : undefined;
+}
+
 export function parseDraft(raw: string | null): NoteDraft | null {
   if (!raw) return null;
   try {
@@ -209,6 +223,9 @@ export function parseDraft(raw: string | null): NoteDraft | null {
           : undefined,
       decision: parseDecision(o.decision),
       todoItems: parseTodoItems(o.todoItems),
+      unit: plainObject(o.unit) as NoteUnit | undefined,
+      fieldDetail: plainObject(o.fieldDetail) as FieldDetail | undefined,
+      photoRoles: plainObject(o.photoRoles) as Record<string, PhotoRole> | undefined,
     };
   } catch {
     return null;
@@ -240,6 +257,10 @@ export function draftComparable(d: DraftComparable): string {
     visitDate: d.visitDate ?? "",
     decision: d.decision ?? null,
     todoItems: d.todoItems ?? [],
+    /* [1032] 초안이 든 그대로(NoteForm 이 저장형과 같은 정규형으로 넣는다 — 빈 키 없음) */
+    unit: d.unit ?? null,
+    fieldDetail: d.fieldDetail ?? null,
+    photoRoles: d.photoRoles ?? null,
   });
 }
 

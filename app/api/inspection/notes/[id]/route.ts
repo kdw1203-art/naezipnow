@@ -1,3 +1,4 @@
+import { sanitizeUnitMeta } from "@/lib/notes/unit-detail";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { invalidateHomeData, invalidateTownFeed, invalidateRegionCodes } from "@/lib/cache/invalidate";
@@ -97,6 +98,8 @@ export async function PATCH(
       if (parsed) meta.decision = parsed;
       else delete meta.decision;
     }
+    /* [1033] 타입·세부 기록·사진 역할 — POST 와 같은 정리. 폼이 null 로 보낸 키(비움)는 여기서 지워져 예전 값이 되살아나지 않는다 */
+    sanitizeUnitMeta(meta);
   }
   /* [#131] 수정 이력 1단계 — 저장 직전 본문 1벌을 metadata.lastRevision 에 보관.
      내용 필드가 실제로 바뀔 때만(메타데이터-only 패치로 이력이 덮이지 않게). */

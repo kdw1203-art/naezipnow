@@ -1,3 +1,4 @@
+import { sanitizeUnitMeta } from "@/lib/notes/unit-detail";
 import { NextResponse, after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { invalidateHomeData, invalidateTownFeed, invalidateRegionCodes } from "@/lib/cache/invalidate";
@@ -53,6 +54,8 @@ function sanitizeDecisionMeta(meta: unknown): Record<string, unknown> | undefine
     if (parsed) out.decision = parsed;
     else delete out.decision;
   }
+  /* [1033] 임장한 타입·세부 기록·사진 역할 — 폼과 같은 파서(길이·선택지) · 빈 값은 키 삭제 */
+  sanitizeUnitMeta(out);
   return out;
 }
 

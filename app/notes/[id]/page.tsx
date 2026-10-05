@@ -72,6 +72,9 @@ import {
 import { relativeTime } from "@/lib/notes/feed-note";
 import { isAdmin } from "@/lib/auth/is-admin";
 import { decisionFromMetadata } from "@/lib/inspection/decision";
+/* [1032] 임장한 타입 · 세부 기록 · 평면도 사진 — 작성 폼이 metadata.unit/fieldDetail/photoRoles 에 남긴 값(없으면 블록 없음) */
+import { fieldDetailFromMetadata, photoRolesFromMetadata, unitFromMetadata, unitSummary } from "@/lib/notes/unit-detail";
+import { fieldDetailLines } from "@/lib/notes/unit-detail-lines";
 import { buildRevisitDelta, revisitOfId, type RevisitDelta } from "@/lib/inspection/revisit";
 import { resolveNoteCover } from "@/lib/notes/cover/resolve";
 /* [1026 · 노트 쓰기] 저장 직후(?saved=1 · 작성자) "저장 완료" 카드 — 이 파일은 그 카드를 놓는 자리만 바뀐다 */
@@ -1150,11 +1153,38 @@ export default async function NoteDetailPage({
               </div>
             </div>
 
+            {/* [1032] 임장한 타입 · 세부 기록 — 작성 폼의 1단계(타입·동·층·향)·2단계(측정값)가 적은 값. 없는 칸은 빠지고,
+                둘 다 비면 블록 자체가 없다. 타입은 그 단지 실거래 전용면적에서 고른 값이라 "타입"이라 부르되 평면도는 사진(역할)로만 */}
+            {(() => {
+              const u = unitSummary(unitFromMetadata(realNote.metadata));
+              const lines = fieldDetailLines(fieldDetailFromMetadata(realNote.metadata));
+              const roles = photoRolesFromMetadata(realNote.metadata);
+              const planN = v.photos.filter((p) => roles[p] === "floorplan").length;
+              if (!u && lines.length === 0 && planN === 0) return null;
+              return (
+                <div className="flex flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5">
+                  <div className="t-sub font-bold text-text-3">임장한 타입 · 세부 기록</div>
+                  {u && <p className="t-body font-bold t-num text-ink">{u}</p>}
+                  {lines.length > 0 && (
+                    <dl className="m-0 grid grid-cols-1 gap-x-4 gap-y-1 md:grid-cols-2">
+                      {lines.map(([k, val]) => (
+                        <div key={k} className="flex gap-2 t-sub">
+                          <dt className="w-24 shrink-0 text-text-3">{k}</dt>
+                          <dd className="m-0 min-w-0 t-num text-text-1">{val}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                  {planN > 0 && <p className="t-caption text-text-3">평면도 사진 {planN}장 · 현장 사진에 포함</p>}
+                </div>
+              );
+            })()}
+
             {/* 현장 사진 — 큰 무대 + 좌우 클릭 전환. 예전에는 110×78 썸네일을
                 가로로 늘어놓기만 해서 차트가 섞인 사진을 읽을 수 없었다.
                 본문 글은 사진 아래로 내린다(요청). slice(0,10) 로 조용히 잘라
                 내던 것도 없앴다 — 캐러셀은 장수에 상관없이 다 보여 준다. */}
-            {v.photos.length > 0 && <NotePhotoCarousel photos={v.photos} />}
+            {v.photos.length > 0 && <NotePhotoCarousel photos={v.photos} roles={photoRolesFromMetadata(realNote.metadata)} />}
 
             {/* [987 · 26] 다녀온 사람이 쓴 글 — 종이 면 위에 둔다. 이 화면에서 제일
                 귀한 글인데 예전에는 카드 안의 맨 <p> 였다(AI 요약만 제 면을 갖고

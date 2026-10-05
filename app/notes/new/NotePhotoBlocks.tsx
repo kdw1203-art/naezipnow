@@ -120,11 +120,16 @@ export function NotePhotoStrip({
   onRemove,
   onShift,
   onCover,
+  roles,
+  onToggleFloorplan,
 }: {
   photos: string[];
   onRemove: (url: string) => void;
   onShift: (index: number, dir: -1 | 1) => void;
   onCover: (index: number) => void;
+  /** [1032] 사진 역할(url → "floorplan") — 평면도 표식. 없으면 토글을 그리지 않는다(구 호출부 호환) */
+  roles?: Record<string, "floorplan">;
+  onToggleFloorplan?: (url: string) => void;
 }) {
   if (photos.length === 0) return null;
   return (
@@ -132,6 +137,7 @@ export function NotePhotoStrip({
       {photos.map((p, i) => {
         const isCover = i === 0;
         const isLast = i === photos.length - 1;
+        const isPlan = roles?.[p] === "floorplan";
         return (
           <li key={p} className="w-[132px] shrink-0">
             <div className="relative">
@@ -140,12 +146,17 @@ export function NotePhotoStrip({
                 loading="lazy"
                 decoding="async"
                 src={p}
-                alt={isCover ? `대표 사진 (${i + 1}번째)` : `현장 사진 ${i + 1}번째`}
+                alt={isPlan ? `평면도 사진 (${i + 1}번째)` : isCover ? `대표 사진 (${i + 1}번째)` : `현장 사진 ${i + 1}번째`}
                 className="h-[88px] w-[132px] rounded-lg object-cover"
               />
-              {isCover && (
-                <span className="pointer-events-none absolute left-1.5 top-1.5 rounded-md bg-brand-navy px-1.5 py-0.5 t-caption font-bold text-on-dark">
-                  대표
+              {(isCover || isPlan) && (
+                <span className="pointer-events-none absolute left-1.5 top-1.5 flex gap-1">
+                  {isCover && (
+                    <span className="rounded-md bg-brand-navy px-1.5 py-0.5 t-caption font-bold text-on-dark">대표</span>
+                  )}
+                  {isPlan && (
+                    <span className="rounded-md bg-surface px-1.5 py-0.5 t-caption font-bold text-ink">평면도</span>
+                  )}
                 </span>
               )}
               <button
@@ -189,6 +200,19 @@ export function NotePhotoStrip({
                 ▶
               </button>
             </div>
+            {/* [1032] 평면도 표식 — 현장 안내판·카탈로그를 찍은 장을 노트가 "평면도"로 보관한다(공공 데이터에 평면도는 없다) */}
+            {onToggleFloorplan && (
+              <button
+                type="button"
+                aria-pressed={isPlan}
+                onClick={() => onToggleFloorplan(p)}
+                className={`tap mt-1.5 h-7 w-full rounded-lg px-2 t-caption font-bold ${
+                  isPlan ? "chip-active" : "border border-line bg-surface text-text-2"
+                }`}
+              >
+                {isPlan ? "평면도 ✓" : "평면도로 표시"}
+              </button>
+            )}
           </li>
         );
       })}

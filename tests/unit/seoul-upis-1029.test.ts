@@ -489,3 +489,26 @@ test("[1030 · 5차] K-apt 테스트 행 이름은 대장에 넣지 않는다", 
   for (const n of ["래미안안양메가트리아", "테스트빌라", "은마아파트", "testing"]) assert.equal(re.test(n), false, n);
   assert.ok(s.includes("if (KAPT_TEST_NAME_RE.test(name)) return null;"));
 });
+
+/* ── [1031] 애드센스 "저품질 콘텐츠" 대응 · 운영 루프 스크립트 ───────────────── */
+import { ADSENSE_EXCLUDED_PATH_PREFIXES as ADS_EX_1031 } from "@/lib/ads/adsense-policy";
+import { buildAdSenseBootScript as bootScript1031, pathExcluded as pathExcluded1031 } from "@/lib/ads/adsense-boot";
+test("[1031] 본문 없는 화면엔 광고 스크립트 없음 — 로그인·검색·비교·알림 제외 · 404 는 data-nz-noads", () => {
+  for (const p of ["/login", "/signup", "/search", "/complex/compare", "/analysis/compare", "/notifications", "/messages", "/quiz"]) assert.equal(pathExcluded1031(p, ADS_EX_1031), true, p);
+  for (const p of ["/", "/guides/x", "/notes/abc", "/region/gangnam", "/town/news/1"]) assert.equal(pathExcluded1031(p, ADS_EX_1031), false, p);
+  const js = bootScript1031("ca-pub-test", ADS_EX_1031);
+  assert.ok(js.includes('document.querySelector("[data-nz-noads]")'));
+  assert.ok(src1030("app/not-found.tsx").includes('data-nz-noads=""'));
+});
+test("[1031] 운영 루프 스크립트 — routes.json · probe-prod · design-probe · report · run.sh · pack.sh · 주간 액션", () => {
+  for (const f of ["scripts/review/routes.json", "scripts/review/probe-prod.mjs", "scripts/review/design-probe.mjs", "scripts/review/report.mjs", "scripts/review/run.sh", "scripts/review/pack.sh", "scripts/review/apply-template.ps1", ".github/workflows/weekly-review.yml", "docs/ops/review-loop.md"]) assert.ok(existsSync(join(process.cwd(), f)), f);
+  const routes = JSON.parse(src1030("scripts/review/routes.json"));
+  assert.ok(routes.routes.length >= 40 && routes.routes.includes("/"));
+  assert.ok(src1030("package.json").includes('"review:prod": "bash scripts/review/run.sh"'));
+});
+test("[1031 · 성능·운영] 동네 피드 첫 3장 커버 eager · 검색 결과 영역 min-h · /redevelopment canonical", () => {
+  const f = src1030("app/town/feed-client.tsx");
+  assert.ok(f.includes("priority={i < 3}") && f.includes("priority={priority}"));
+  assert.ok(src1030("app/search/search-client.tsx").includes('<div className="flex min-h-[70vh] flex-col gap-4">'));
+  assert.ok(src1030("app/redevelopment/page.tsx").includes('alternates: seoAlternates("/redevelopment")'));
+});

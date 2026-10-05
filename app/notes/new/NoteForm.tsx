@@ -60,6 +60,21 @@ import {
   type NoteDraft,
   type NoteDraftTodo,
 } from "@/lib/notes/draft-summary";
+/* [1032] 임장한 타입 · 세부 기록 · 사진 역할(평면도) — [1033] 폼은 핵심 모듈(unit-core)만 정적으로: 선택지 목록·실거래 타입은 지연 조각,
+   세부 기록은 느슨하게 들고(fieldDetailLoose) 저장 때 서버(sanitizeUnitMeta)가 같은 파서로 거른다 — /notes/new 예산 470KB */
+import {
+  EMPTY_UNIT,
+  fieldDetailLoose,
+  fieldDetailLooseForSave,
+  isEmptyUnit,
+  photoRolesForSave,
+  photoRolesFromMetadata,
+  unitForSave,
+  unitFromMetadata,
+  type FieldDetailLoose,
+  type NoteUnit,
+  type PhotoRole,
+} from "@/lib/notes/unit-core";
 import {
   localDateIso,
   makeCoverPhoto,
@@ -160,6 +175,18 @@ const NotePreviewRail = nextDynamic(
 
 /* [1026b] 1단계 "이 단지 한눈에" + "내 지난 노트" 띠 — 단지 id 가 있을 때만. 조회(단지 사실 · 내 노트)·판정·UI 가 전부 이 조각 안 */
 const ComplexGlance = nextDynamic(() => import("./ComplexGlance").then((m) => m.ComplexGlance), { ssr: false });
+
+/* [1032 · 임장노트 1단계] 지도에서 고르기(1단계 위치 카드 아래) · 임장한 타입(단지 자료 아래, 단지 id 있을 때) ·
+   세부 기록(2단계) — 셋 다 지연 조각. 지도 SDK 는 NaverMapLazy 가 다시 지연한다. 상태(unit·fieldDetail·photoRoles)는 여기(NoteForm). */
+const NoteMapPick = nextDynamic(() => import("./NoteMapPick").then((m) => m.NoteMapPick), {
+  ssr: false,
+  loading: () => <div className="h-[46px] animate-pulse rounded-lg bg-surface" />,
+});
+const NoteUnitPick = nextDynamic(() => import("./NoteUnitPick").then((m) => m.NoteUnitPick), { ssr: false });
+const NoteFieldDetail = nextDynamic(() => import("./NoteFieldDetail").then((m) => m.NoteFieldDetail), {
+  ssr: false,
+  loading: () => <div className="card p-4 t-sub text-text-3">불러오는 중…</div>,
+});
 
 /* [1026] lg(1024px) 이상인가 — useSyncExternalStore 로 읽는다. /notes/new 는 클라이언트에서만 그려져(NoteNewEntry)
    첫 렌더부터 실제 값이라 레이아웃이 뛰지 않고, 서버가 그리는 /notes/[id]/edit 은 하이드레이션 동안 false(서버 값) →
@@ -310,6 +337,8 @@ export type UploadItem = {
   error?: string;
   /** 401 이면 로그인 안내로 이어진다 */
   httpStatus?: number;
+  /** [1032] 올라가면 붙일 사진 역할("평면도 사진 담기"로 고른 장) */
+  role?: PhotoRole;
 };
 
 export type NoteFormTemplate = {
@@ -869,6 +898,35 @@ export function NoteForm({
   );
   const [photos, setPhotos] = useState<string[]>(initialNote?.photos ?? []);
 
+  /* [1032] 임장한 타입(전용면적·동·층·향) · 세부 기록(측정값) · 사진 역할(평면도) — 수정 모드는 저장된 metadata 에서 되읽는다.
+     pendingRoleRef = "평면도 사진 담기"로 사진 고르기를 열었을 때 다음 선택 묶음에 붙일 역할(한 번 쓰고 비운다). */
+  const [unit, setUnit] = useState<NoteUnit>(() =>
+    initialNote
+      ? unitFromMetadata(initialNote.metadata)
+      : /* [1033] ?revisit= 프리필 — 지난 노트의 타입(같은 집을 다시 본다)을 잇는다. 폼 파서로 거른 값만 */
+        revisitSeed?.unit
+        ? unitFromMetadata({ unit: revisitSeed.unit })
+        : EMPTY_UNIT,
+  );
+  const [fieldDetail, setFieldDetail] = useState<FieldDetailLoose>(() => (initialNote ? fieldDetailLoose(initialNote.metadata) : {}));
+  const [photoRoles, setPhotoRoles] = useState<Record<string, PhotoRole>>(() =>
+    initialNote ? photoRolesFromMetadata(initialNote.metadata) : {},
+  );
+  const pendingRoleRef = useRef<PhotoRole | null>(null);
+  /** 사진 고르기를 연다 — 역할을 적어 두고(보통 사진은 null: 취소한 "평면도 담기"의 역할이 남지 않게) 같은 input 을 쓴다 */
+  const openPicker = (role: PhotoRole | null, capture = false) => {
+    pendingRoleRef.current = role;
+    (capture ? captureRef : fileRef).current?.click();
+  };
+  const toggleFloorplan = (url: string) =>
+    setPhotoRoles((prev) => {
+      const next = { ...prev };
+      if (next[url] === "floorplan") delete next[url];
+      else next[url] = "floorplan";
+      return next;
+    });
+  const floorplanCount = photos.filter((p) => photoRoles[p] === "floorplan").length;
+
   /* [#134] 사진 EXIF 촬영 시각 — 가장 이른 1개 (방문 시간 배지 재료, 장식 신호) */
   const [photoTakenAt, setPhotoTakenAt] = useState<string | null>(null);
 
@@ -988,6 +1046,11 @@ export function NoteForm({
      남겨 두고 새 노트 첫 화면에서 한 번에 이어받는다(로그인 없이 쓰는 사람도
      써야 하므로 서버가 아니라 localStorage). 14일이 지나면 제안하지 않는다. */
   const [carryOver, setCarryOver] = useState<CarryOverComplex | null>(null);
+  /* [1033] 지도 첫 자리 — 직전에 이 기기에서 쓴 단지 좌표(있을 때만) */
+  const carryOverCenter =
+    carryOver && typeof carryOver.lat === "number" && typeof carryOver.lng === "number" && carryOver.lat !== 0
+      ? { lat: carryOver.lat, lng: carryOver.lng }
+      : null;
   const [carryOverUsed, setCarryOverUsed] = useState(false);
   useEffect(() => {
     if (isEdit) return;
@@ -1230,6 +1293,10 @@ export function NoteForm({
     visitDate,
     decision: decisionChoice ? { choice: decisionChoice, reasons: decisionReasons ?? [] } : undefined,
     todoItems,
+    /* [1032] 임장한 타입 · 세부 기록 · 사진 역할 — 비면 키 없음(저장 페이로드와 같은 정규형) */
+    unit: unitForSave(unit) as NoteUnit | undefined,
+    fieldDetail: fieldDetailLooseForSave(fieldDetail),
+    photoRoles: photoRolesForSave(photoRoles, photos),
   });
 
   const writeDraft = () => {
@@ -1286,6 +1353,9 @@ export function NoteForm({
     decisionChoice,
     decisionReasons,
     todoItems,
+    unit,
+    fieldDetail,
+    photoRoles,
   ]);
 
   const restoreDraft = () => {
@@ -1337,6 +1407,10 @@ export function NoteForm({
     /* [1005 · A3] 고려사항 목록 — 직접 추가한 항목이 여기 있다. 구버전 초안(키 없음)은
        기본값 유지, 명시적 빈 목록([])은 그대로 비운다 */
     if (pendingDraft.todoItems) setTodoItems(pendingDraft.todoItems);
+    /* [1032] 임장한 타입 · 세부 기록 · 사진 역할 — 초안에 있으면 그대로(없으면 지금 값 유지) */
+    if (pendingDraft.unit) setUnit(unitFromMetadata({ unit: pendingDraft.unit }));
+    if (pendingDraft.fieldDetail) setFieldDetail(fieldDetailLoose({ fieldDetail: pendingDraft.fieldDetail }));
+    if (pendingDraft.photoRoles) setPhotoRoles((prev) => ({ ...prev, ...photoRolesFromMetadata({ photoRoles: pendingDraft.photoRoles }) }));
     setPendingDraft(null);
   };
 
@@ -1551,6 +1625,8 @@ export function NoteForm({
       if (r.ok) {
         /* 성공한 순간 붙인다 — 뒤 파일이 실패해도 이 사진은 이미 노트에 있다 */
         setPhotos((prev) => mergeUploadedPhotos(prev, [r.url], MAX_PHOTOS));
+        /* [1032] "평면도 사진 담기"로 고른 장은 올라온 URL 에 역할을 붙인다 */
+        if (item.role) setPhotoRoles((prev) => ({ ...prev, [r.url]: item.role as PhotoRole }));
         patchUpload(item.id, { status: "done", pct: 100 });
       } else {
         if (r.status === 401) unauthorized.push(item);
@@ -1792,6 +1868,9 @@ export function NoteForm({
   }, [isGuest, queuedPhotos]);
 
   const onPickFiles = async (files: FileList | null) => {
+    /* [1032] 이번 묶음의 사진 역할 — 열 때 적어 둔 값을 한 번만 쓴다(취소해도 비운다) */
+    const role = pendingRoleRef.current;
+    pendingRoleRef.current = null;
     if (!files || files.length === 0) return;
     const inFlight = uploads.filter((u) => u.status === "uploading").length;
     /* [1005] 이 기기에 담아 둔 장수도 센다 — 비회원이 한도 넘게 담아 두지 않게 */
@@ -1857,6 +1936,7 @@ export function NoteForm({
         status: "uploading",
         file,
         preview: makePreview(file),
+        role: role ?? undefined,
       };
     });
     /* 이전 배치의 성공분은 치우고 실패분은 남긴다(아직 재시도할 수 있게) */
@@ -2064,6 +2144,11 @@ export function NoteForm({
                 decidedAt: new Date().toISOString(),
               }
             : undefined,
+          /* [1032] 임장한 타입(전용면적·동·층·향) · 세부 기록(측정값) · 사진 역할(평면도) — 비면 키 없음.
+             타입은 그 단지 실거래에 신고된 전용면적에서 고른 값(또는 직접 적은 값)이다. */
+          unit: unitForSave(unit) ?? null,
+          fieldDetail: fieldDetailLooseForSave(fieldDetail) ?? null,
+          photoRoles: photoRolesForSave(photoRoles, savePhotos) ?? null,
         },
         isPublic,
       };
@@ -2224,9 +2309,28 @@ export function NoteForm({
     ) : null;
 
   /* [1005 · B5] 사진 줄 — 3단계 카드와 퀵모드 한 화면이 같은 줄을 그린다. [1006] 본체는 NotePhotoBlocks */
+  /* [1033] 임장한 타입 카드 — 1단계와 퀵모드가 같은 것을 그린다(위치가 정해지면). 단지 id 없는 위치도 면적·동·층·향·평면도는 적는다 */
+  const renderUnitPick = () =>
+    loc.aptName.trim() ? (
+      <NoteUnitPick
+        complexId={loc.complexId ?? null}
+        unit={unit}
+        onUnit={setUnit}
+        floorplanCount={floorplanCount}
+        onAddFloorplan={uploading || photos.length >= MAX_PHOTOS ? undefined : () => openPicker("floorplan")}
+      />
+    ) : null;
+
   const renderPhotoStrip = () =>
     photos.length > 0 ? (
-      <NotePhotoStrip photos={photos} onRemove={removePhoto} onShift={shiftPhoto} onCover={setCoverPhoto} />
+      <NotePhotoStrip
+        photos={photos}
+        onRemove={removePhoto}
+        onShift={shiftPhoto}
+        onCover={setCoverPhoto}
+        roles={photoRoles}
+        onToggleFloorplan={toggleFloorplan}
+      />
     ) : null;
 
   /* [1005 · B5] 사진 담기·촬영 버튼 — 1단계와 퀵모드 한 화면이 같은 버튼을 쓴다 */
@@ -2235,7 +2339,7 @@ export function NoteForm({
       <button
         key="pick"
         type="button"
-        onClick={() => fileRef.current?.click()}
+        onClick={() => openPicker(null)}
         disabled={uploading || photos.length >= MAX_PHOTOS}
         className="flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border-[1.5px] border-dashed border-line-strong bg-surface px-4 py-2.5 t-body font-bold text-text-2 disabled:opacity-60"
       >
@@ -2254,7 +2358,7 @@ export function NoteForm({
       <button
         key="capture"
         type="button"
-        onClick={() => captureRef.current?.click()}
+        onClick={() => openPicker(null, true)}
         disabled={uploading || photos.length >= MAX_PHOTOS}
         aria-label="카메라로 촬영해 사진 추가"
         className="flex min-h-[44px] shrink-0 items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-line-strong bg-surface px-4 py-2.5 t-body font-bold text-text-1 disabled:opacity-60 pointer-fine:hidden"
@@ -2300,6 +2404,8 @@ export function NoteForm({
     photoCount: photos.length,
     /* [996 · 4] 고른 판단만 센다 — 제안은 입력이 아니다 */
     decided: decisionChoice !== null,
+    /* [1033] 임장한 타입 — 전용면적·동·층·향 중 하나라도 적었으면 */
+    unitSet: !isEmptyUnit(unit),
   });
   /* [984] 단계 완료 표시 — 완성도와 **같은 값**을 본다 */
   const doneByStep = stepDone(stepFillOf(completeness));
@@ -2314,7 +2420,8 @@ export function NoteForm({
   });
   const fillLine = completenessLine(completeness, checklistDoneCount, checklistTotal);
   /* [1026b] 미리보기·저장 전 요약 — 목적 · 시간대 · 날씨 · 만족도 · 태그(입력한 것만 줄이 된다, lib/notes/finish-summary) */
-  const facts = { purpose: visit["목적"], timeSlot: visit["시간대"], weather, satisfaction, tags };
+  /* [1033] unit — 3단계 요약 "타입" 줄 · 레일 미리보기 카드(지연 조각이 unitSummary 로 줄을 만든다 · 비면 줄 없음) */
+  const facts = { purpose: visit["목적"], timeSlot: visit["시간대"], weather, satisfaction, tags, unit };
 
   return (
     /* [967 · 4] 저장 바가 떠 있는 동안 아래 여백을 더 준다 — 마지막 입력을 바가 덮지 않게 */
@@ -2608,6 +2715,9 @@ export function NoteForm({
             <div ref={locationRef} className="scroll-mt-24">
               <NoteLocationSearch value={loc} onChange={setLoc} />
             </div>
+            {/* [1033] 퀵모드(현장)에도 지도·임장한 타입 — 현장에서는 지금 서 있는 자리가 곧 단지이고, "어느 집"이 첫 사실이다 */}
+            <NoteMapPick value={loc} onPick={setLoc} fallbackCenter={carryOverCenter} />
+            {renderUnitPick()}
             {renderPhotoPickers()}
             {renderPhotoStrip()}
             <div className="card flex flex-col gap-2 p-4">
@@ -2704,7 +2814,7 @@ export function NoteForm({
                   기록 불러옴
                 </div>
                 <div className="t-caption text-text-3">
-                  위치·태그·체크 이어받음 · 사진·메모는 새로 ·{" "}
+                  {revisitSeed.unit ? "위치·타입·태그·체크 이어받음" : "위치·태그·체크 이어받음"} · 사진·메모는 새로 ·{" "}
                   {revisitLinked
                     ? `${revisitSeed.round}회차 · 저장 후 노트에서 지난 기록과 비교`
                     : "다른 단지 · 회차로 묶지 않음"}
@@ -2789,6 +2899,10 @@ export function NoteForm({
           <NoteLocationSearch value={loc} onChange={setLoc} />
         </div>
 
+        {/* [1032] 지도에서 고르기 — 검색과 같은 결과(NoteLocation). 1단계에 있을 때만 마운트(지연 조각 + 지도 SDK 지연).
+            [1033] 위치가 비었으면 직전에 쓴 단지 자리에서 시작(없으면 서울시청 · 위치 권한 준 기기는 내 위치) */}
+        {step === 1 && <NoteMapPick value={loc} onPick={setLoc} fallbackCenter={carryOverCenter} />}
+
         {/* [1026b] 이 단지 한눈에 + 내 지난 노트 — 응답에 있는 값만, 실패하면 없음. 좌표가 비었으면 응답 좌표로(새 노트만 → 방문 인증 카드) */}
         {loc.complexId && (
           <ComplexGlance
@@ -2807,9 +2921,14 @@ export function NoteForm({
               setRevisitSeed(seed);
               setRevisitActive(true);
               applyForm(merged);
+              /* [1033] 타입은 비어 있을 때만 잇는다 — 이번에 이미 고른 집을 지난 값으로 덮지 않는다 */
+              if (seed.unit) setUnit((cur) => (isEmptyUnit(cur) ? unitFromMetadata({ unit: seed.unit }) : cur));
             }}
           />
         )}
+        {/* [1032] 임장한 타입 — 단지 자료(동수·층·주차…) · 실거래 전용면적 칩 · 동·층·향 · 평면도(사진 역할).
+            [1033] 단지 id 가 없는 위치(빌라·오피스텔·직접 입력)도 면적·동·층·향·평면도는 적을 수 있다 — 위치가 정해지면 보인다 */}
+        {renderUnitPick()}
 
         {/* [#71] 방문 인증(선택) — 단지 좌표가 있을 때만. 원 좌표는 저장하지 않는다.
             [1006] 본체는 VisitVerifyCard(지연 로드) — 좌표가 잡힌 뒤에만 내려온다. */}
@@ -3223,6 +3342,8 @@ export function NoteForm({
             todoMax={TODO_MAX}
           />
         )}
+        {/* [1032] 세부 기록 — 측정값·선택지(도로 소음·주차·채광·도보 분·호가·들은 말). 2단계에 있을 때만(지연 조각) */}
+        {step === 2 && <NoteFieldDetail value={fieldDetail} onChange={setFieldDetail} />}
 
         </div>
 
@@ -3263,8 +3384,8 @@ export function NoteForm({
             uploadSummary={uploadSummary}
             onRetryUploads={retryFailedUploads}
             onDismissUploads={() => dropUploads((u) => u.status !== "uploading")}
-            onPick={() => fileRef.current?.click()}
-            onCapture={() => captureRef.current?.click()}
+            onPick={() => openPicker(null)}
+            onCapture={() => openPicker(null, true)}
             isPublic={isPublic}
             onTogglePublic={togglePublic}
             visibilityFromPrefs={visibilityFromPrefs}

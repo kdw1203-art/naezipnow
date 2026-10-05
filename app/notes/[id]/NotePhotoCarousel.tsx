@@ -23,6 +23,8 @@ import { horizontalSwipeDelta } from "@/lib/client/swipe-gesture";
 import { buildImageSrcSet, canOptimizeImage } from "@/lib/images/srcset";
 
 type Props = {
+  /** [1033] 사진 역할 — url → "floorplan"(평면도). 있으면 그 장에 "평면도" 표식 */
+  roles?: Record<string, "floorplan">;
   photos: string[];
   /** 스크린리더용 이름 (예: "현장 사진") */
   label?: string;
@@ -42,7 +44,7 @@ const NotePhotoLightbox = nextDynamic(
   { ssr: false },
 );
 
-export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
+export function NotePhotoCarousel({ photos, label = "현장 사진", roles }: Props) {
   const total = photos.length;
   const [idx, setIdx] = useState(0);
   const [zoom, setZoom] = useState(false);
@@ -247,6 +249,12 @@ export function NotePhotoCarousel({ photos, label = "현장 사진" }: Props) {
         >
           {idx + 1} / {total}
         </span>
+        {/* [1033] 평면도 표식 — 작성자가 "평면도"로 표시한 장(사진 역할) */}
+        {roles?.[photos[idx]] === "floorplan" && (
+          <span className="brand-photo-chip pointer-events-none absolute bottom-2 left-2 z-10 rounded-full px-2.5 py-1 t-sub font-bold">
+            평면도
+          </span>
+        )}
 
         {!isFailed && (
           <button

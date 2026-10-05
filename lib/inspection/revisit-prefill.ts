@@ -60,6 +60,8 @@ export type RevisitPrefill = {
   round: number;
   /** 이번 방문일 — 호출부가 준 오늘 */
   visitDate: string;
+  /** [1033] 지난 노트의 임장한 타입(metadata.unit 그대로 — 폼이 unit-detail 파서로 거른다). 같은 집을 다시 보는 일이 재방문이다. 없으면 null */
+  unit: Record<string, unknown> | null;
   /** 새로 적는 것들 — 계약을 눈에 보이게 비워 둔다 */
   memo: string;
   photos: string[];
@@ -179,6 +181,7 @@ export function buildRevisitPrefill(prev: RevisitSourceNote, todayIso: string): 
     previousRound,
     round: previousRound + 1,
     visitDate: todayIso,
+    unit: meta?.unit && typeof meta.unit === "object" && !Array.isArray(meta.unit) && Object.keys(meta.unit as object).length > 0 ? ({ ...(meta.unit as Record<string, unknown>) }) : null,
     memo: "",
     photos: [],
   };

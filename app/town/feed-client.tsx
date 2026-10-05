@@ -124,7 +124,7 @@ function coverLabel(card: FeedCard): string {
     : "이야기";
 }
 
-function Cover({ card, now }: { card: FeedCard; now: number }) {
+function Cover({ card, now, priority = false }: { card: FeedCard; now: number; priority?: boolean }) {
   const label = coverLabel(card);
   /* [970 · C-06] Lab 배지 text-brand-navy — 다크에서 반투명 흰 칩(bg-surface/90) 위에
      네이비가 그대로라 안 읽혔다. 잉크 토큰(다크에서 뒤집힘)으로. */
@@ -150,6 +150,8 @@ function Cover({ card, now }: { card: FeedCard; now: number }) {
         <CoverImage
           src={card.cover}
           alt={`${card.title} 커버 사진`}
+          /* [1031 · 성능] 첫 3장은 eager + fetchpriority=high — /town LCP 요소가 이 커버였고 lazy 라 요청이 1.5초 늦게 나갔다(실측 p75 5,912ms) */
+          priority={priority}
           imgClassName={`absolute inset-0 h-full w-full object-cover ${card.coverTemplate ? "" : "object-top"}`}
         />
       ) : (
@@ -298,7 +300,7 @@ function StoryCardView({ card, delay, now }: { card: FeedCard; delay: number; no
   );
 }
 
-function FeedCardView({ card, delay, now }: { card: FeedCard; delay: number; now: number }) {
+function FeedCardView({ card, delay, now, priority = false }: { card: FeedCard; delay: number; now: number; priority?: boolean }) {
   if (card.kind === "post") return <StoryCardView card={card} delay={delay} now={now} />;
   return (
     <div className={`mb-3 break-inside-avoid rise-in-${Math.min(delay, 6)}`}>
@@ -309,7 +311,7 @@ function FeedCardView({ card, delay, now }: { card: FeedCard; delay: number; now
         className="card tile card-zoom group block overflow-hidden rounded-lg no-underline max-md:flex max-md:items-center max-md:gap-2.5 max-md:p-2.5"
       >
         <div className="max-md:w-[118px] max-md:shrink-0 md:contents">
-          <Cover card={card} now={now} />
+          <Cover card={card} now={now} priority={priority} />
         </div>
         {/* [961] 호버 — 커버 아래 주홍 밑줄이 왼쪽에서 차오른다(인터랙션 라이브러리 04) */}
         <span className="njn-card-bar max-md:hidden" aria-hidden="true" />
@@ -809,7 +811,7 @@ export function TownFeed({
           <div className="flex flex-col md:block md:columns-3 md:gap-3 lg:columns-4">
             {visible.map((card, i) => (
               <Fragment key={card.id}>
-                <FeedCardView card={card} delay={(i % 6) + 1} now={now} />
+                <FeedCardView card={card} delay={(i % 6) + 1} now={now} priority={i < 3} />
                 {ad && i === AD_AFTER_INDEX && (
                   <div className="mb-3 break-inside-avoid">{ad}</div>
                 )}

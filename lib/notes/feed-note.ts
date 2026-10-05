@@ -6,6 +6,7 @@ import { isLabAuthor, displayAuthorLabel } from "@/lib/notes/author-label";
 import { complexHrefKey, resolveComplexHrefs } from "@/lib/newui/complex-link";
 import { matchesInterest, regionGroupOf } from "@/lib/notes/region-match";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
+import { unitFromMetadata, unitSummary } from "@/lib/notes/unit-detail";
 import { decisionFromMetadata, decisionLabel, type DecisionChoice } from "@/lib/inspection/decision";
 import { listAiState, noteAiIntent, type ListAiState } from "@/lib/notes/ai-status";
 import { noteContentHash, storedContentHash } from "@/lib/notes/content-hash";
@@ -159,7 +160,9 @@ export function toFeedNote(
     excerpt,
     tags: deriveTags(n),
     /* [1028] "자가체크 2.4/5" 를 뺐다 — 카드 머리의 "기록 48점"과 같은 값(평점 × 20)을 다른 눈금으로 한 번 더 적던 것 */
+    /* [1033] 임장한 타입(84㎡ · 12층 · 남향)이 있으면 바닥줄 맨 앞 — 같은 단지 노트를 집 단위로 가른다 */
     footer: [
+      ...(unitSummary(unitFromMetadata(n.metadata)) ? [unitSummary(unitFromMetadata(n.metadata)) as string] : []),
       `방문 ${n.visitDate}`,
       `체크 ${n.checklist.filter((c) => c.done).length}/${n.checklist.length}`,
     ],

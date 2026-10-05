@@ -545,7 +545,9 @@ export function SearchClient() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    /* [1031 · 성능] min-h — 서버 HTML 은 빈 상태, 마운트 뒤 ?q= 를 읽어 결과로 바뀐다. 아래 영역 높이를 미리 잡아
+       푸터가 튀지 않게(CLS p75 0.816 → 실측 뒤 재확인). 결과가 더 길면 그대로 늘어난다. */
+    <div className="flex min-h-[70vh] flex-col gap-4">
       {/* 큰 검색 입력 */}
       <div className="rise-in flex w-full max-w-[560px] items-center gap-2.5 rounded-2xl border-[1.5px] border-primary bg-surface px-4 py-3 text-ink shadow-[0_8px_28px_rgba(16,28,54,.08)]">
         <span aria-hidden className="text-[19px] text-text-3">

@@ -61,7 +61,17 @@ export function noteContentHash(note: InspectionNote, intent: InspectionAiIntent
     sections: note.sections,
     checklist: note.checklist,
     photos: note.photos,
+    /* [1033] 임장한 타입·세부 기록도 분석 입력이다 — 있을 때만 키를 넣어(없는 노트의 해시는 그대로) 기존 분석을 묵은 것으로 만들지 않는다 */
+    ...unitHashPart(note.metadata),
   });
+}
+
+function unitHashPart(meta: unknown): { unit?: unknown; fieldDetail?: unknown } {
+  const m = meta && typeof meta === "object" ? (meta as { unit?: unknown; fieldDetail?: unknown }) : null;
+  const out: { unit?: unknown; fieldDetail?: unknown } = {};
+  if (m?.unit && typeof m.unit === "object" && Object.keys(m.unit as object).length > 0) out.unit = m.unit;
+  if (m?.fieldDetail && typeof m.fieldDetail === "object" && Object.keys(m.fieldDetail as object).length > 0) out.fieldDetail = m.fieldDetail;
+  return out;
 }
 
 /** 저장된 분석이 어느 내용의 것인지 — metadata.aiContentHash(없으면 null) */

@@ -41,7 +41,7 @@ const POPULAR_PATHS = [
 
 export default function NotFound() {
   return (
-    <main id="main-content" className="mx-auto flex min-h-screen w-full max-w-[480px] flex-col items-center justify-center gap-3.5 px-4 py-10 text-center">
+    <main id="main-content" data-nz-noads="" className="mx-auto flex min-h-screen w-full max-w-[480px] flex-col items-center justify-center gap-3.5 px-4 py-10 text-center">
       {/* [962] 404 = 빈 화면의 브랜드 순간 — 처마 아래 온점이 조용히 숨쉬고, 슬로건이 마침표를 찍는다 */}
       <svg className="rise-in" width="64" height="59" viewBox="0 0 120 120" aria-hidden="true">
         <path d="M52 28 L68 28" fill="none" stroke="var(--brand-symbol-ink)" strokeWidth="7" strokeLinecap="round" />

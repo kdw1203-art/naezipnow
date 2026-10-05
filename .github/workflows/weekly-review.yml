@@ -1,0 +1,53 @@
+# [1030 · 운영 루프] 주간 운영 실측 — 월요일 00:10 UTC(09:10 KST) 운영 43경로를 데스크톱·폰·다크로 재고
+# 통과선(scripts/review/report.mjs)과 대조한 report.md 를 아티팩트로 남기고, 위반이 있으면 이슈 하나(같은 제목 open 이면 갱신).
+# 사람 손 없이 돈다. 이슈의 report.md 가 다음 묶음의 "후보 추리기" 입력이다.
+name: Weekly production review
+
+on:
+  schedule:
+    - cron: "10 0 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Probe production
+        id: probe
+        run: |
+          set +e
+          npm run review:prod
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+          echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: review-${{ steps.probe.outputs.week }}
+          path: reports/review/
+          retention-days: 90
+      - name: Open or update issue
+        if: steps.probe.outputs.exit != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WEEK: ${{ steps.probe.outputs.week }}
+        run: |
+          TITLE="주간 운영 실측 위반: $WEEK"
+          BODY_FILE="reports/review/$WEEK/report.md"
+          EXISTING=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body-file "$BODY_FILE"
+          else
+            gh issue create --title "$TITLE" --body-file "$BODY_FILE"
+          fi

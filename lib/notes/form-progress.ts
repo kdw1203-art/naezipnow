@@ -28,9 +28,11 @@ export type CompletenessInput = {
   photoCount: number;
   /** 판단을 **골랐다**(제안은 입력이 아니다) */
   decided: boolean;
+  /** [1033] 임장한 타입(전용면적·동·층·향 중 하나라도) — 넘기면 8번째 항목이 된다(안 넘기면 예전 7항목 그대로) */
+  unitSet?: boolean;
 };
 
-export type CompletenessKey = "location" | "field" | "memo" | "tags" | "checklist" | "photos" | "decision";
+export type CompletenessKey = "location" | "unit" | "field" | "memo" | "tags" | "checklist" | "photos" | "decision";
 
 export type CompletenessItem = {
   key: CompletenessKey;
@@ -54,10 +56,11 @@ export type Completeness = {
   optionalTotal: number;
 };
 
-/** 7항목 — 예전 progressItems 와 같은 순서·같은 판정 */
+/** 7항목 — 예전 progressItems 와 같은 순서·같은 판정. [1033] unitSet 을 넘기면 "타입"(1단계)이 위치 다음에 끼어 8항목 */
 export function noteCompleteness(i: CompletenessInput): Completeness {
   const items: CompletenessItem[] = [
     { key: "location", label: "위치", done: i.located, required: true, step: 1 },
+    ...(typeof i.unitSet === "boolean" ? [{ key: "unit" as const, label: "타입", done: i.unitSet, required: false, step: 1 as NoteStep }] : []),
     { key: "field", label: "현장 체크", done: i.checkedItems > 0 || i.satisfactionSet, required: false, step: 2 },
     { key: "memo", label: "메모", done: i.memo.trim().length > 0, required: false, step: 3 },
     { key: "tags", label: "태그", done: i.tagCount > 0, required: false, step: 2 },

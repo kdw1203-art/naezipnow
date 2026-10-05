@@ -1,3 +1,4 @@
+import { seoAlternates } from "@/lib/seo/alternates";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { ErrorState } from "@/app/components/ui";
@@ -35,6 +36,8 @@ export const metadata = {
   title: "정비사업 지도 | 내집나우",
   description:
     "재개발·재건축·소규모 정비사업 지도 · 서울시 도시계획 결정 조서(정비사업·도시개발·지구단위계획) · 7단계 절차 · 정비사업 뉴스.",
+  /* [1031 · 운영 경보 seo.asset] 사이트맵 제출 페이지인데 canonical 이 없었다 — ?zone=·#id 변형 URL 로 색인이 갈라진다 */
+  alternates: seoAlternates("/redevelopment"),
 };
 
 const NEWS_KEYWORD_RE = /재건축|재개발|정비사업/;

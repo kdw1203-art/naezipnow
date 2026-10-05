@@ -45,6 +45,22 @@ export const ADSENSE_EXCLUDED_PATH_PREFIXES = [
   /* AI 에이전트 채팅 — 대화에 본인 임장노트 내용이 표시되는 개인 화면.
      결제·개인 허브와 같은 이유로 광고 스크립트를 아예 싣지 않는다. */
   "/agent",
+  /* [1031 · 애드센스 "저품질 콘텐츠" 거절 대응] 게시자 콘텐츠가 없거나 얇은 화면에는 광고 스크립트 자체를 싣지 않는다 —
+     로그인·가입·비밀번호 · 검색 결과(질의마다 다른 얇은 목록) · 알림·쪽지 · 비교 도구(빈 상태가 기본) · 퀴즈 · 오프라인.
+     404 는 경로로 알 수 없어 app/not-found.tsx 의 main 이 data-nz-noads 로 표시한다(adsense-boot). */
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+  "/search",
+  "/notifications",
+  "/messages",
+  "/complex/compare",
+  "/analysis/compare",
+  "/quiz",
+  "/offline",
+  "/welcome",
+  "/invite",
 ] as const;
 
 const PLACEMENT_ENV: Record<AdPlacement, string> = {

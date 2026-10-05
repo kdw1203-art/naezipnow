@@ -50,6 +50,10 @@ export function buildAdSenseBootScript(client: string, excludedPrefixes: readonl
     'for(i=0;i<ex.length;i++){if(p===ex[i]||p.indexOf(ex[i]+"/")===0)return;}' +
     "function add(){" +
     `if(document.getElementById(${id}))return;` +
+    /* [1031 · 애드센스 저품질] 본문이 없는 화면(404)은 광고 스크립트를 싣지 않는다 — 정책 "게시자 콘텐츠 없는 화면의 광고".
+       화면이 <main data-nz-noads> 로 표시하면 폰(load 뒤 idle 삽입)과 화면 전환(AdSenseLoader)에서 멈춘다. 데스크톱 첫 진입은
+       head 파싱 중 즉시 넣으므로 본문 표식을 못 본다 — 경로로 아는 화면은 ADSENSE_EXCLUDED_PATH_PREFIXES 가 막는다. */
+    'if(document.querySelector("[data-nz-noads]"))return;' +
     'var s=document.createElement("script");' +
     `s.id=${id};s.async=true;s.src=${src};s.crossOrigin="anonymous";s.setAttribute("fetchpriority","low");` +
     "document.head.appendChild(s);}" +
@@ -81,6 +85,8 @@ function appendScript(client: string) {
 export function ensureAdSenseScript(client: string): void {
   if (typeof document === "undefined") return;
   if (document.getElementById(ADSENSE_SCRIPT_ID)) return;
+  /* [1031] 본문 없는 화면 표식 — 404 로 클라이언트 이동한 경우 */
+  if (document.querySelector("[data-nz-noads]")) return;
   const desktop =
     typeof window.matchMedia === "function" && window.matchMedia(ADSENSE_DESKTOP_MEDIA).matches;
   if (desktop) {

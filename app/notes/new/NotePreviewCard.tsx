@@ -6,6 +6,7 @@
 import { decisionLabel, type DecisionChoice } from "@/lib/inspection/decision";
 import { decisionTone, type PreviewTone } from "@/lib/notes/note-preview";
 import { tagsLine, visitFactParts, type VisitFacts } from "@/lib/notes/finish-summary";
+import { unitSummary } from "@/lib/notes/unit-core";
 
 export const TONE_CHIP: Record<PreviewTone, string> = {
   good: "bg-success-soft text-success",
@@ -32,6 +33,7 @@ export function NotePreviewCard(p: NotePreviewCardProps) {
   const meta = [p.region.trim(), p.visitDate.trim(), p.propertyType.trim()].filter(Boolean).join(" · ");
   const visitLine = p.facts ? visitFactParts(p.facts).join(" · ") : "";
   const tagLine = p.facts ? tagsLine(p.facts.tags) : "";
+  const unitLine = p.facts?.unit ? unitSummary(p.facts.unit) : null;
   return (
     <article aria-label="노트 카드 미리보기" className="rounded-xl border border-line bg-surface p-3">
       <div className="grid grid-cols-3 gap-1.5">
@@ -54,6 +56,8 @@ export function NotePreviewCard(p: NotePreviewCardProps) {
         <div className="min-w-0">
           <div className={`truncate t-body font-bold ${apt ? "text-ink" : "text-text-3"}`}>{apt || "단지 미선택"}</div>
           {meta && <div className="truncate t-caption text-text-3">{meta}</div>}
+          {/* [1033] 임장한 타입 — 단지 아래 한 줄(목록 카드와 같은 자리) */}
+          {unitLine && <div className="truncate t-caption t-num text-text-2">{unitLine}</div>}
         </div>
         {p.decision && (
           <span className={`shrink-0 rounded-full px-2 py-0.5 t-caption font-bold ${TONE_CHIP[decisionTone(p.decision)]}`}>
