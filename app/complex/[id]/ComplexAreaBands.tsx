@@ -1,4 +1,5 @@
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
+import { Fineprint } from "@/app/components/Fineprint";
 import { ExplainLazy as Explain } from "./ExplainLazy";
 import { formatKrwManwon } from "@/lib/format/krw";
 import { formatEokMan } from "@/lib/format/eok-man";
@@ -68,18 +69,21 @@ export function AreaBandsView({ bands, compact = false }: { bands: readonly Area
           </li>
         ))}
       </ul>
-      <p className="mt-1.5 flex flex-wrap items-center gap-x-1 px-1 t-caption text-text-3">
-        <span className="inline-flex items-center">
-          전용면적
-          <Explain term="jeonyongmyeonjeok" />
+      {/* [1036 · 밀도] 두 줄 기준 설명 → 접힘(ⓘ 두 개는 접힘 안에 그대로) */}
+      <Fineprint className="mt-1 px-1">
+        <span className="flex flex-wrap items-center gap-x-1">
+          <span className="inline-flex items-center">
+            전용면적
+            <Explain term="jeonyongmyeonjeok" />
+          </span>
+          구간 · {period} 계약분 {totalCount.toLocaleString("ko-KR")}건 기준 ·
+          <span className="inline-flex items-center">
+            해제 신고
+            <Explain term="haejegeorae" how="해제 신고된 거래는 이 표의 건수·평균·최저·최고에서 모두 제외." />
+          </span>
+          제외 · 평균은 표본 기간 전체 거래의 산술평균
         </span>
-        구간 · {period} 계약분 {totalCount.toLocaleString("ko-KR")}건 기준 ·
-        <span className="inline-flex items-center">
-          해제 신고
-          <Explain term="haejegeorae" how="해제 신고된 거래는 이 표의 건수·평균·최저·최고에서 모두 제외." />
-        </span>
-        제외 · 평균은 표본 기간 전체 거래의 산술평균
-      </p>
+      </Fineprint>
     </section>
   );
 }

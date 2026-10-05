@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CountUp } from "@/app/components/motion/CountUp";
-import { Icon } from "@/app/components/Icon";
+import { Fineprint } from "@/app/components/Fineprint";
 import { PageHead } from "@/app/components/PageHead";
 import { ComplexPicker } from "./ComplexPicker";
 import { ToolGlyph, WORKBENCH_GLYPH } from "./ToolGlyph";
@@ -271,11 +271,9 @@ export function HubHero({
         </div>
       )}
 
-      {/* 한도 — 실행 전에 미리, 캡션 한 줄 */}
-      <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 px-1 t-caption text-text-3">
-        <span className="inline-flex items-center gap-1">
-          <Icon name="lock" size={12} /> 단지 분석 한도
-        </span>
+      {/* 한도 — 실행 전에 미리. [1036 · 밀도] 캡션 한 줄 → 접힘(라벨만 보임) */}
+      <Fineprint className="px-1" label="단지 분석 한도">
+      <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1">
         <span>
           무료 <b className="text-ink">{quota.freeLifetime ? `누적 ${quota.free}회` : `월 ${quota.free}회`}</b>
         </span>
@@ -291,6 +289,7 @@ export function HubHero({
           요금제 보기 ›
         </Link>
       </p>
+      </Fineprint>
     </section>
   );
 }

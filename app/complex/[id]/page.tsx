@@ -105,6 +105,7 @@ import {
 import type { PricePoint } from "./PriceTrendChart";
 import { complexCanonicalPath, decodeComplexId } from "@/lib/complex/complex-store";
 import { ComplexAxisSummary } from "./ComplexAxisSummary";
+import { Fineprint } from "@/app/components/Fineprint";
 import { pureIdFromParam, complexHrefFromId} from "@/lib/seo/complex-slug";
 import { geocodeAndCache } from "@/lib/map/complex-geocode";
 import { settle, startDeadline, SIDE_SECTION_BUDGET_MS } from "@/lib/data/section-budget";
@@ -1452,13 +1453,12 @@ export default async function ComplexHubPage({
       : null,
     latestDeal ? `최근 계약 ${dealDateLabel(latestDeal.ym, latestDeal.day).replace(/\./g, "-")}` : null,
   ].filter((x): x is string => Boolean(x));
-  const headSub = [
-    v.spec.address?.trim() || null,
-    v.spec.roadAddress?.trim() && v.spec.roadAddress.trim() !== v.spec.address?.trim() ? v.spec.roadAddress.trim() : null,
-    v.spec.kaptCode ? `K-apt ${v.spec.kaptCode}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  /* [1036 · 밀도] 머리글 부제 = 주소 하나(도로명 우선). 지번 주소·K-apt 코드는 아래 "데이터 출처" 접힘(ComplexFactsCard)에 */
+  const headSub = [v.spec.roadAddress?.trim() || v.spec.address?.trim() || null].filter(Boolean).join(" · ");
+  const jibunExtra =
+    v.spec.roadAddress?.trim() && v.spec.address?.trim() && v.spec.roadAddress.trim() !== v.spec.address.trim()
+      ? `지번 ${v.spec.address.trim()}`
+      : null;
 
   const cta = (
     <div className="flex flex-col gap-2">
@@ -1582,11 +1582,13 @@ export default async function ComplexHubPage({
             aria-label={`${v.name} 실거래 요약`}
             className="rise-in-1 card mt-3 rounded-2xl px-4 py-3 max-md:px-3.5 max-md:py-2.5"
           >
-            <p className="t-body text-text-1">{citable.text}</p>
-            {/* [1015 · 규칙 D] 사실 한 줄(가운뎃점 나열) */}
-            <p className="mt-1.5 t-caption text-text-3">
-              국토교통부 실거래 단순 평균 · 매물 호가 아님
-            </p>
+            {/* [1036 · 밀도] 첫 문장(인용 문장)만 본문으로 — 2~4번째 사실 낱말·기준은 Fineprint 로 접는다.
+                글은 전부 DOM 에 남아 speakable·JSON-LD description(citable.text)과 같은 내용이다. */}
+            <p className="fold-lead t-body text-text-1">{citable.sentences[0]}</p>
+            <Fineprint className="mt-1" label="기준 · 출처">
+              {citable.sentences.slice(1).join(" ")}
+              {citable.sentences.length > 1 ? " · " : ""}국토교통부 실거래 단순 평균 · 매물 호가 아님
+            </Fineprint>
           </section>
         )}
       </div>
@@ -1759,7 +1761,9 @@ export default async function ComplexHubPage({
             const sources = [
               ...(v.priceSeries.length > 0 || txFailed ? ["국토교통부 아파트 매매 실거래가 신고(해제 신고 제외)"] : []),
               ...(facts.completeness.have.includes("rent") ? ["국토교통부 전월세 실거래 신고"] : []),
-              ...(v.households || v.spec.kaptCode ? ["공동주택 단지 정보(K-apt) · 공공데이터포털"] : []),
+              ...(v.households || v.spec.kaptCode ? [`공동주택 단지 정보(K-apt) · 공공데이터포털${v.spec.kaptCode ? ` · ${v.spec.kaptCode}` : ""}`] : []),
+              /* [1036 · 밀도] 머리글에서 내려온 지번 주소 */
+              ...(jibunExtra ? [`${jibunExtra} · 국토교통부 실거래 신고 주소`] : []),
               ...(v.buildYear ? ["준공연도 · 국토교통부 실거래 신고분"] : []),
             ];
             return (

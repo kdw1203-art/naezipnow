@@ -1,6 +1,7 @@
 "use client";
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
+import { Fineprint } from "@/app/components/Fineprint";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import nextDynamic from "next/dynamic";
@@ -357,6 +358,10 @@ export function ComplexHubTabs({
   /** [1024] 요약 탭의 최근 실거래 목록 — 본문(최근 실거래 표)이 같은 목록을 이미 보여 주면 false(같은 사실 두 곳 금지). 실거래 탭은 그대로 */
   summaryDeals?: boolean;
 }) {
+  /* [1036 · 밀도] 요약 글 = 첫 문장 + 나머지(접힘). 문장 경계는 첫 ". "(마침표 + 공백 — "9.9억" 같은 소수점은 공백이 없다) */
+  const aiCut = aiBody.indexOf(". ");
+  const aiLead = aiCut > 0 ? aiBody.slice(0, aiCut + 1) : aiBody;
+  const aiRest = aiCut > 0 ? aiBody.slice(aiCut + 1).trim() : "";
   /* SSR·첫 하이드레이션은 언제나 기본 탭 — 프리렌더 HTML 과 정확히 일치해야 한다.
      주소의 ?tab= 은 마운트 뒤에 읽는다([967 · 14]). useSearchParams 를 쓰지 않는 이유:
      프리렌더 페이지에서는 가장 가까운 Suspense 경계까지 서버 HTML 을 비운다
@@ -445,7 +450,9 @@ export function ComplexHubTabs({
               <span className="t-body font-bold text-ink">{aiTitle}</span>
               <span className="shrink-0 t-caption text-text-3">공공데이터 자동 계산</span>
             </div>
-            <p className="break-words t-body leading-[1.6] text-text-1">{aiBody}</p>
+            {/* [1036 · 밀도] 첫 문장만 본문 — 나머지 사실 낱말은 접힘(위 data-ai-summary 와 같은 글이라 폰에서 두 번 읽히던 6줄) */}
+            <p className="break-words t-body leading-[1.6] text-text-1">{aiLead}</p>
+            {aiRest && <Fineprint label="기준 · 출처">{aiRest}</Fineprint>}
           </div>
           {priceChart}
           {myRecordCard}

@@ -9,6 +9,7 @@
  *   · 전세·월세는 **전 타입** 값이다 — 전월세 원표본(complex-rent)에 면적이 없다. 캡션에 그렇게 적는다.
  *   · 신고가·신저가는 기간 안 최고·최저 실거래 그 자체(tx-extremes). 한 건뿐인 타입은 표시하지 않는다.
  *   · 값이 없는 달은 비운다(선을 잇지 않는다 — price-chart-geometry 규칙). */
+import { Fineprint } from "@/app/components/Fineprint";
 import { useMemo, useState } from "react";
 import { formatEokMan } from "@/lib/format/eok-man";
 import { TxTrendChart, type TxTrendMark } from "@/app/components/viz/TxTrendChart";
@@ -215,7 +216,9 @@ export function TxTrendSection({ data, complexName }: { data: TxTrendData; compl
           <p className="rounded-lg bg-bg px-3 py-4 text-center t-body text-text-3">이 기간 {what} 신고 없음</p>
         )}
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 t-caption text-text-3">
+        {/* [1036 · 밀도] 범례·집계 중 안내는 접는다 — 차트 아래 두 줄 글이 숫자를 밀어내던 자리 */}
+        <Fineprint label="범례 · 기준">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="inline-flex items-center gap-1">
             <span aria-hidden="true" className="inline-block h-[3px] w-3 rounded bg-primary" />월 중앙값
           </span>
@@ -243,6 +246,7 @@ export function TxTrendSection({ data, complexName }: { data: TxTrendData; compl
             </span>
           )}
         </div>
+        </Fineprint>
       </section>
     </div>
   );

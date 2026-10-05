@@ -6,6 +6,7 @@
    서버 조각. 행 재료는 complex-v2-model.recentDealRows(타입별 신고가 = tx-extremes, 한 건뿐인 타입은 배지 없음).
    해제 신고 행은 취소선 + "해제" 배지 규칙만 둔다 — getComplexDeals 는 해제분(is_cancelled)을 읽지 않아 지금은 오지 않는다.
    면적은 ㎡ 로 그리고 붙은 뒤 설정(평)이면 바뀐다(AreaTextLazy). */
+import { Fineprint } from "@/app/components/Fineprint";
 import Link from "next/link";
 import { formatEokMan } from "@/lib/format/eok-man";
 import { dealDateLabel, floorLabel } from "@/lib/complex/deal-format";
@@ -56,7 +57,11 @@ export function RecentDealsTable({
               {rows.map((r, i) => {
                 const muted = r.cancelled ? "text-text-3" : "text-text-1";
                 return (
-                  <tr key={`${r.ym}-${r.day ?? 0}-${r.man}-${r.typeM2 ?? 0}-${r.floor ?? 0}-${i}`} className="border-b border-divider last:border-0">
+                  <tr
+                    key={`${r.ym}-${r.day ?? 0}-${r.man}-${r.typeM2 ?? 0}-${r.floor ?? 0}-${i}`}
+                    /* [1036 · 밀도] 폰은 6줄까지 — 나머지는 "전체 N건"으로(데스크톱 10줄 그대로) */
+                    className={`border-b border-divider last:border-0${i >= 6 ? " max-md:hidden" : ""}`}
+                  >
                     <td className={`whitespace-nowrap py-2 pr-2 tabular-nums ${muted}`}>{dealDateLabel(r.ym, r.day)}</td>
                     <td className={`whitespace-nowrap py-2 pr-2 tabular-nums ${muted}`}>
                       {r.typeM2 != null ? <AreaText unitM2={r.typeM2} /> : "—"}
@@ -102,7 +107,8 @@ export function RecentDealsTable({
           <Link href={allHref} className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary">
             전체{total != null ? ` ${total.toLocaleString("ko-KR")}건` : ""} ›
           </Link>
-          <span className="t-caption text-text-3">국토교통부 실거래가 · 신고가 = 타입별 기간 내 최고가 · 직거래·등기는 2026년 계약분부터 표시</span>
+          {/* [1036 · 밀도] 기준 한 줄은 접는다(글은 그대로) */}
+          <Fineprint>국토교통부 실거래가 · 신고가 = 타입별 기간 내 최고가 · 직거래·등기는 2026년 계약분부터 표시</Fineprint>
         </div>
       )}
     </section>

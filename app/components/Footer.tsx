@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Fineprint } from "./Fineprint";
 import { Logo } from "@/app/components/Logo";
 import { getBusinessInfo } from "@/lib/brand/business-info";
 import { CookieSettingsLink } from "@/components/consent/cookie-settings-link";
@@ -158,10 +159,11 @@ export function Footer() {
             페이지 끝에서 이 마지막 줄의 오른쪽 글자를 덮었다(소유자 캡처 하단 표시).
             FAB 는 fixed 라 스크롤로 피할 수 없으므로, 마지막 문단만 그 폭을 비워 둔다.
             md+ 는 FAB 가 본문 밖에 있어 원래 폭. */}
-        <div className="pe-[68px] md:pe-0">
+        {/* [1036 · 밀도] 설명 문단은 접는다(글은 그대로) — 사업자 고지·수익 보장 미기재 문구는 법·심사 요건이라 그대로 보인다 */}
+        <Fineprint className="pe-[68px] md:pe-0" label="출처 · 운영 주체">
           실거래가는 국토교통부 공개 데이터 기준입니다. 내집나우는 {biz.legalName}(사업자)가
           운영하는 서비스 이름이고, {biz.domain} 은 현재 주소입니다.
-        </div>
+        </Fineprint>
       </div>
     </footer>
   );

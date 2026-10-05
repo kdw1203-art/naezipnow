@@ -107,8 +107,7 @@ export function BetaNoticeModal() {
       className="mb-2.5 flex items-center gap-2 rounded-xl border border-line bg-primary-soft px-3 py-2 t-sub leading-[1.45] text-text-1"
     >
       <p className="m-0 min-w-0 flex-1">
-        <b className="text-primary">베타 운영 중</b> · 확인 안 된 값은{" "}
-        <b className="text-ink">—</b>로 표시 ·{" "}
+        <b className="text-primary">베타</b> · 확인 안 된 값은 <b className="text-ink">—</b> ·{" "}
         <Link
           href="/support"
           onClick={close}

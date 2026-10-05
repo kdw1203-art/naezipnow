@@ -1,6 +1,7 @@
 /* [1024 · 단지 상세] 관리비 카드 — K-apt 공동주택 관리비(complex_mgmt_fee 최근 12개월). 시안 mock1024/complex-d.
    getComplexMgmtFeeSummary 가 null(표 없음·조회 실패·0행)이면 **카드 자체를 그리지 않는다** — 지어내지 않는다.
    kapt 코드가 없는 단지(대장 매칭 없음)도 없다. 서버 비동기 조각 — 3초 섹션 예산(withSectionBudget). */
+import { Fineprint } from "@/app/components/Fineprint";
 import { getComplexMgmtFeeSummary, type ComplexMgmtFeeSummary } from "@/lib/complex/mgmt-fee";
 import { withSectionBudget } from "./section-loaders";
 
@@ -39,9 +40,10 @@ export function MgmtFeeView({ s }: { s: ComplexMgmtFeeSummary }) {
           <span className="t-caption text-text-3">{s.yoyBaseYm ? `같은 달(${ymDot(s.yoyBaseYm)}) 총액 기준` : "전년 같은 달 자료 없음"}</span>
         </div>
       </div>
-      <p className="mt-2 t-caption text-text-3">
+      {/* [1036 · 밀도] 내역·출처 줄은 접힘 */}
+      <Fineprint className="mt-1.5" label="내역 · 출처">
         공동관리비 {won(s.latest.commonKrw)} · 개별사용료 {won(s.latest.individualKrw)} · 총액 {won(s.latest.totalKrw)} ({ymDot(s.latest.ym)}) · 출처 공동주택관리정보시스템(K-apt)
-      </p>
+      </Fineprint>
     </section>
   );
 }

@@ -8157,3 +8157,44 @@ html[data-mscale] li div.t-sub.mscale-wrap {
 .measure {
   max-width: 72ch;
 }
+
+/* ---------- [1036 · 밀도] 기준·출처 접기(app/components/Fineprint.tsx) ---------- */
+/* 소유자 지시 "글씨가 너무 많고 복잡해 보인다"(10-05). 카드 아래 두세 줄 설명(출처·집계 기준·범례)을 한 줄 토글 뒤로.
+   글은 그대로 DOM 에 있다(JSON-LD·검사·사실 표기). 데스크톱 24px 한 줄 · 폰 40px 탭 면(check:mobile-tap 의 summary = 주요). */
+.fineprint > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.fineprint > summary::-webkit-details-marker {
+  display: none;
+}
+.fineprint > summary::after {
+  content: "▾";
+  opacity: 0.7;
+  transition: transform var(--dur-sm) var(--ease-out);
+}
+.fineprint[open] > summary::after {
+  transform: rotate(180deg);
+}
+.fineprint-body {
+  padding-top: 4px;
+  line-height: 1.55;
+  max-width: 72ch;
+}
+.fineprint-body .explain-btn {
+  vertical-align: middle;
+}
+@media (max-width: 767px) {
+  .fineprint > summary {
+    min-height: 40px;
+  }
+}
+/* 접힌 설명문(단지 요약 2~4문장) — 첫 문장만 본문, 나머지는 fineprint 로 */
+.fold-lead {
+  margin: 0;
+}

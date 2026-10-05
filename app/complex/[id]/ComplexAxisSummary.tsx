@@ -59,13 +59,14 @@ export async function ComplexAxisSummary({
           /* 축이 모자랄 때만 — 확인된 축의 이름·근거("금리 환경(기준금리 2.5%)")를 결론 아래 한 줄로 */
           toneLine={axes.thin ? confirmedAxesLine(axes) : null}
           emptyTilesLine={emptyTilesLine(verdict.tiles)}
+          fold
         />
       </div>
       {/* [1009 · C 리뷰] "숫자마다 기준일·출처 표기"는 이제 사실이 아니다 — 결과 카드(VerdictCard)가 칸마다 되풀이하던 출처를
           카드 아래 한 줄("출처 … · 기준 …")과 "데이터 출처" 접힘으로 모았다. 그 자리를 가리키게 고쳤다.
           [1012 · R2] 그 한 줄은 이제 값이 없을 때도 출처(데이터 출처의 원천)를 적는다 — 접힘 밖에 늘 보인다. */}
       {/* [1015 · 규칙 D] 세 문장 나열 → 사실 한 줄(면책은 남긴다) */}
-      <p className="mt-2 t-caption text-text-3">참고용 요약 · 투자 권유 아님</p>
+      <p className="mt-1.5 t-caption text-text-3">참고용 요약 · 투자 권유 아님</p>
     </section>
   );
 }

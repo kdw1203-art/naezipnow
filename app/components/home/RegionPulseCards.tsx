@@ -224,7 +224,8 @@ export function RegionPulseCards({ regions }: { regions: HomeRegionCard[] }) {
                 뷰포트에 들어오면 그리기 애니메이션만 시작한다(페인트 변화만). */}
             <Sparkline values={r.spark} animate={seen} />
             <span className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 t-caption text-text-3">
-              <span>{r.spark.length >= 4 ? `선 · ${r.spark.length}주 시세 지수` : r.stale ? "국토부 실거래" : "한국부동산원"}</span>
+              {/* [1036 · 밀도] 범례("선 · N주 시세 지수")는 뺐다 — 선이 지수인 것은 섹션 아래 한 줄(page.tsx Fineprint)로. 지수 없는 카드만 출처 */}
+              <span>{r.spark.length >= 4 ? "" : r.stale ? "국토부 실거래" : "한국부동산원"}</span>
               {typeof r.trades === "number" && r.trades > 0 ? (
                 <span className="tabular-nums">
                   {tradesMonth ? `${tradesMonth} ` : ""}거래 {r.trades.toLocaleString("ko-KR")}건

@@ -3,6 +3,7 @@ import { Header } from "./components/Header";
 import { DesktopSideNav } from "./components/DesktopSideNav";
 import { TabBar } from "./components/TabBar";
 import { AIPanel } from "./components/AIPanel";
+import { Fineprint } from "./components/Fineprint";
 import { ResumeDraftPopup } from "./components/home/ResumeDraftPopup";
 import { EmptyState, ErrorState } from "./components/ui/EmptyState";
 import { BetaNoticeModal } from "./components/BetaNoticeModal";
@@ -110,8 +111,10 @@ function HomeAiGateway({
         )}
       </div>
       <div className="fit mt-2 border-t border-white/15 pt-2">
-        <div className="mb-1 t-caption font-bold text-ai-muted">
+        {/* [1036 · 밀도] 기준 설명(briefing.basis)은 라벨 옆 ⓘ 로 — 설명은 ⓘ(design-system) */}
+        <div className="mb-1 flex items-center gap-1 t-caption font-bold text-ai-muted">
           {HOME_AI_BRIEFING_LABEL}
+          {briefing && <Explain title={HOME_AI_BRIEFING_LABEL} body={briefing.basis} size={12} />}
         </div>
         {briefing ? (
           <div className="t-body t-fit">
@@ -119,8 +122,6 @@ function HomeAiGateway({
             <span className="ml-1.5 inline-flex items-center rounded border border-white/20 px-1 py-px align-middle text-[10px] font-semibold text-ai-muted">
               {briefing.asOfLabel}
             </span>
-            {/* [950] 무엇을 잰 값인지 — 티커의 지역 평균과 같은 기준임을 한 줄로 */}
-            <div className="mt-0.5 t-caption t-fit text-ai-muted">{briefing.basis}</div>
           </div>
         ) : (
           <div className="t-body t-fit">
@@ -377,7 +378,7 @@ export default async function Home() {
                     ))}
                   />
                 )}
-                {allLabNotes && <p className="m-0 t-caption text-text-3">{LAB_NOTES_CAPTION}</p>}
+                {allLabNotes && <Fineprint label="표시 기준">{LAB_NOTES_CAPTION}</Fineprint>}
               </section>
 
               {/* [1015 · 규칙 G] 폰 광고 자리 = 첫 본문 섹션(공개 임장노트) 뒤 1곳(데스크톱은 오른쪽 레일) */}
@@ -428,6 +429,10 @@ export default async function Home() {
                         실시간 집계를 불러오지 못해 마지막 월 집계를 표시해요.
                       </p>
                     )}
+                    {/* [1036 · 밀도] 카드마다 붙던 범례("선 · 16주 시세 지수")를 섹션 아래 한 번, 접어서 */}
+                    <Fineprint label="기준 · 출처">
+                      선 = 최근 주간 매매가격지수(한국부동산원) · 등락 = 지수 전월 대비 · 거래 = 그 달 신고 건수(국토교통부)
+                    </Fineprint>
                   </>
                 )}
               </section>

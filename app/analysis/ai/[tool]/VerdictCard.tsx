@@ -1,5 +1,6 @@
 /* [1026b · AI 분석 8종] 값 하나 그리기(ShownValue)를 내보낸다 — 8종 결론 히어로(tool-signature.tsx)의 대표 수치가 같은 표기를 쓴다. 그 밖은 그대로. */
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
+import { Fineprint } from "@/app/components/Fineprint";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Verdict, VerdictDisplay, VerdictTile } from "@/lib/ai/verdict";
@@ -125,6 +126,7 @@ export function VerdictCard({
   compact = false,
   extraChips,
   bare = false,
+  fold = false,
   metricAside,
   tileAside,
   emptyTilesLine = null,
@@ -145,6 +147,8 @@ export function VerdictCard({
   /** [1012 · R2 · complex A6] 핵심 숫자 칸이 **전부** 값 없음("—")일 때 칸 격자 대신 그릴 한 줄
    *  ("아직 신고된 매매 실거래가 없어요 — 계약 후 30일 안에 신고"). 안 넘기면 예전처럼 "—" 칸 4개. */
   emptyTilesLine?: string | null;
+  /** [1036 · 밀도] 출처 한 줄 + "데이터 출처" + "달라지는 경우"를 접힘 하나(기준 · 출처)로 — 단지 허브처럼 결과가 곁가지인 자리 */
+  fold?: boolean;
 }) {
   const m = verdict.metric;
   const asOf = ymLabel(m?.asOf ?? verdict.tiles?.find((t) => t.asOf)?.asOf ?? null);
@@ -198,14 +202,41 @@ export function VerdictCard({
           <VerdictTiles tiles={tiles} tileAside={tileAside} />
         ))}
 
+      {/* [1036 · 밀도] fold — 출처·근거·반례를 접힘 하나로 */}
+      {fold && !compact && (
+        <Fineprint label="출처 · 기준">
+          <p className="m-0 break-words">
+            {sources ? `출처 ${sources} · ` : ""}공공데이터 자동 계산{asOf ? ` · 기준 ${asOf}` : ""}
+          </p>
+          {verdict.evidence.length > 0 && (
+            <ul className="mt-1.5 flex flex-col gap-1">
+              {verdict.evidence.map((e) => (
+                <li key={e.label} className="flex flex-wrap items-baseline gap-x-2">
+                  <b className="font-bold text-text-2">{e.label}</b>
+                  <span>{e.source}</span>
+                  {ymLabel(e.asOf) && <span>{ymLabel(e.asOf)}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+          {verdict.counters.length > 0 && (
+            <ul className="mt-1.5 flex flex-col gap-1">
+              {verdict.counters.map((c, i) => (
+                <li key={i}>· {c}</li>
+              ))}
+            </ul>
+          )}
+          {extraChips && <div className="mt-2 flex flex-wrap gap-1.5">{extraChips}</div>}
+        </Fineprint>
+      )}
       {/* ⑤ 출처·기준 한 줄 — 칸마다 되풀이하던 출처를 여기 모은다 */}
-      {!compact && (
+      {!compact && !fold && (
         <p className="t-caption text-text-3 break-words">
           {sources ? `출처 ${sources} · ` : ""}공공데이터 자동 계산{asOf ? ` · 기준 ${asOf}` : ""}
         </p>
       )}
 
-      {!compact && !bare && (verdict.evidence.length > 0 || extraChips) && (
+      {!compact && !bare && !fold && (verdict.evidence.length > 0 || extraChips) && (
         <details className="rounded-lg bg-bg px-3.5 py-2.5">
           <summary className="cursor-pointer t-sub font-bold text-text-2">데이터 출처 {verdict.evidence.length}곳</summary>
           <ul className="mt-2 flex flex-col gap-1.5">
@@ -229,7 +260,7 @@ export function VerdictCard({
         </details>
       )}
 
-      {!compact && !bare && verdict.counters.length > 0 && (
+      {!compact && !bare && !fold && verdict.counters.length > 0 && (
         <details className="rounded-lg bg-bg px-3.5 py-2.5">
           <summary className="cursor-pointer t-sub font-bold text-text-2">
             결과가 달라지는 경우 {verdict.counters.length}가지
