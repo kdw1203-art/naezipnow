@@ -40,6 +40,8 @@ type PageMetaInput = {
   description: string;
   path?: string;
   noIndex?: boolean;
+  /** [1040] 보관 화면(lib/seo/archived-routes) — noindex, follow. 미들웨어의 X-Robots-Tag 와 같은 신호를 메타에도 낸다 */
+  archived?: boolean;
   /** [개선 #4] 동적 공유 카드(/api/og) — 지정하면 기본 정적 카드 대신 제목이
       박힌 카드를 만든다. badge 는 카드 우상단 칩(예: "계산기"). */
   og?: { badge?: string; sub?: string };
@@ -86,6 +88,8 @@ export function buildPageMetadata(input: PageMetaInput): Metadata {
     },
     ...(input.noIndex
       ? { robots: { index: false, follow: false } }
-      : {}),
+      : input.archived
+        ? { robots: { index: false, follow: true } }
+        : {}),
   };
 }

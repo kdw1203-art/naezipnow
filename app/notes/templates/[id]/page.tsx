@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { Icon } from "@/app/components/Icon";
 import { getTemplate } from "@/lib/note-templates/store";
+import { ARCHIVED_ROBOTS } from "@/lib/seo/archived-routes";
 
 /* 비용 실측(2026-08-10): force-dynamic 이라 익명·크롤러 요청마다 오리진 함수가
    돌았다(x-vercel-cache: MISS, cache-control: private,no-store 실측). 이 화면의
@@ -32,7 +33,7 @@ export async function generateMetadata({
     description:
       tpl.description ||
       `${tpl.category} 임장 체크리스트. ${tpl.sections.length}개 섹션의 점검 항목이 채워진 임장 노트.`,
-    robots: { index: !tpl.isSample, follow: true },
+    robots: ARCHIVED_ROBOTS /* [1040] 보관 화면 — 예시 여부와 무관하게 색인 제외 */,
   };
 }
 

@@ -117,8 +117,8 @@ function secretEquals(provided: string, expected: string): boolean {
  *
  * 키는 제출된 이메일 + (닿으면) IP 다. 이메일만 쓰면 한 공격자가 계정을 갈아 가며
  * 무제한으로 시도할 수 있고, IP 만 쓰면 공유 IP 뒤의 정상 사용자가 같이 막힌다.
- * 막혔을 때는 null(= 인증 실패)을 돌려준다 — NextAuth 의 authorize 계약이 그렇고,
- * "제한에 걸렸다"와 "비밀번호가 틀렸다"를 밖에서 구분하지 못하게 하는 편이 낫다.
+ * 막혔는지(true/false)만 돌려준다. 호출부가 응답을 정한다 —
+ * [1040] 비밀번호 로그인은 `rate_limited_<초>` 코드로 알리고(LoginRateLimitedError), 비상 토큰은 예전처럼 null.
  */
 async function credentialThrottleBlocked(
   scope: string,
@@ -219,12 +219,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             async authorize(credentials, request) {
               const email = String(credentials?.email ?? "").trim();
               if (!email) return null;
-              if (await credentialThrottleBlocked("password", email, request)) {
-                return null;
-              }
-              const { authorizeWithPassword } = await import(
+              const { authorizeWithPassword, LoginRateLimitedError } = await import(
                 "@/lib/auth/password-login"
               );
+              /* [1040] 한도에 걸리면 code=rate_limited_<초> 로 알린다 — 맞는 비밀번호를 넣고도 "틀렸다"는 말을
+                 듣던 자리(LoginRateLimitedError 주석). 창(5분)이 곧 최대 대기다. */
+              if (await credentialThrottleBlocked("password", email, request)) {
+                throw new LoginRateLimitedError(Math.ceil((AUTH_RATE_LIMIT.windowMs ?? 300_000) / 1000));
+              }
               /* [965] EmailNotConfirmedError(CredentialsSignin 하위) 는 그대로
                  던진다 — Auth.js 가 `code: "email_not_confirmed"` 로 화면에
                  전달한다. 다른 예외는 CallbackRouteError 로 감싸이므로 여기서
@@ -461,7 +463,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (account?.provider === "google" || account?.provider === "kakao") {
           try {
             const { ensureAppUserRow } = await import("@/lib/auth/ensure-app-user");
-            await ensureAppUserRow({ email, name });
+            const created = await ensureAppUserRow({ email, name });
+            /* [1040] 방금 생긴 소셜 계정 — 화면에 적어 둔 필수 동의(약관·개인정보·만 14세)를 기록으로 남긴다 */
+            if (created) {
+              const { recordSocialSignupConsent } = await import("@/lib/auth/social-consent");
+              await recordSocialSignupConsent(email);
+            }
           } catch {
             /* 로그인은 그대로 */
           }

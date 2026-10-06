@@ -116,6 +116,22 @@ export function findCatalogRegionByName(
   });
 }
 
+/**
+ * [1040] 구/시명 → 카탈로그 항목, **부분 일치 없이**(정확 → 항목 별칭 → 통용 지명 → 시 접미 보정).
+ * 뉴스 제목·태그처럼 사람이 고르지 않은 글자에서 지역을 읽을 때 쓴다 — findCatalogRegionByName 의 부분 일치는
+ * "서울"·"경기" 같은 넓은 낱말을 아무 구에나 붙일 수 있다(틀린 연결은 미연결보다 나쁘다).
+ */
+export function findCatalogRegionStrict(query: string): SeoulDistrictInfo | undefined {
+  const key = normalizeRegionKey(query.trim());
+  if (!key) return undefined;
+  const exact = CATALOG_BY_KEY.get(key) ?? CATALOG_BY_ALIAS_KEY.get(key);
+  if (exact) return exact;
+  const aliasId = REGION_ALIASES[key];
+  if (aliasId) return CATALOG_BY_ID.get(aliasId);
+  const cityKey = citySuffixedRegionKey(query);
+  return cityKey ? CATALOG_BY_KEY.get(cityKey) ?? CATALOG_BY_ALIAS_KEY.get(cityKey) : undefined;
+}
+
 /** 카탈로그 id로 조회. */
 export function findCatalogRegionById(
   id: string,

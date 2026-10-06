@@ -30,6 +30,14 @@ export const ARCHIVED_PREFIXES: readonly string[] = [
   "/messages",
 ];
 
+/**
+ * [1040 · 운영 경보 seo.indexable_unsubmitted] 보관 화면의 메타 robots.
+ * 미들웨어가 응답 머리에 `X-Robots-Tag: noindex, follow` 를 붙이는데, 화면의 <meta name="robots"> 는 `index, follow` 로
+ * 남아 있어 두 신호가 어긋났다(검색엔진은 더 엄한 쪽을 따르지만, 색인 점검은 메타만 읽어 "색인 대상인데 사이트맵에 없음"으로
+ * 세었다). 보관 화면의 metadata.robots 는 이 상수를 쓴다 — 보관을 풀 때는 ARCHIVED_PREFIXES 에서 빼고 이 줄도 같이 뺀다.
+ */
+export const ARCHIVED_ROBOTS = { index: false, follow: true } as const;
+
 /** /notes/<id>/deck · /notes/<id>/print — 노트 출력 3종 중 card 만 남긴다 */
 const ARCHIVED_PATTERNS: readonly RegExp[] = [/^\/notes\/[^/]+\/(deck|print)(\/|$)/];
 

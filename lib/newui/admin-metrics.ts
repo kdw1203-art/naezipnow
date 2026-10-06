@@ -388,6 +388,8 @@ export interface AdminEtlRow {
   name: string;
   status: string;
   color: string;
+  /** [1040] 실패 사유 한 줄(로그의 첫오류) — 정상·빈 실행이면 null */
+  reason: string | null;
 }
 
 export interface AdminOpsPanels {
@@ -518,8 +520,17 @@ async function loadSignupTrend(days = 14): Promise<AdminSignupDay[]> {
 async function loadEtlStatus(limit = 3): Promise<AdminEtlRow[]> {
   try {
     const { listIngestLog } = await import("@/lib/market/store");
-    const { classifyIngestRun, parseRunTally, tallyText, OUTCOME_LABEL, OUTCOME_COLOR, OUTCOME_MARK } =
-      await import("@/lib/market/ingest-outcome");
+    const {
+      classifyIngestRun,
+      parseRunTally,
+      tallyText,
+      firstErrorOf,
+      failureReasonLabel,
+      needsServiceApproval,
+      OUTCOME_LABEL,
+      OUTCOME_COLOR,
+      OUTCOME_MARK,
+    } = await import("@/lib/market/ingest-outcome");
     const rows = await listIngestLog(limit);
     return rows.map((r) => {
       const outcome = classifyIngestRun(r.status, r.rows);
@@ -531,6 +542,13 @@ async function loadEtlStatus(limit = 3): Promise<AdminEtlRow[]> {
           "ko-KR",
         )}행 · ${relativeLabel(r.createdAt)}${showDetail ? ` · ${detail}` : ""}`,
         color: OUTCOME_COLOR[outcome],
+        /* [1040] 집계("22곳 중 1곳 실패") 옆에 사유를 붙인다 — 원인을 보려고 DB 를 열지 않게 */
+        reason:
+          outcome === "partial" || outcome === "failed"
+            ? failureReasonLabel(firstErrorOf(r.message) ?? (tallyText(parseRunTally(r.message)) ? null : r.message))
+            : outcome === "skipped" && needsServiceApproval(r.message)
+              ? "공공데이터포털 활용신청 필요"
+              : null,
       };
     });
   } catch (e) {

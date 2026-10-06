@@ -266,7 +266,8 @@ export default async function AdminTrafficPage() {
     : [];
 
   return (
-    <div className="flex flex-col gap-5">
+    /* [1040 · 관리 화면] 이 화면은 밝은 테마 토큰(text-ink · .card)으로 짜였는데 관리 틀은 어두운 바탕이라 제목·설명이 바탕에 묻혀 안 보였다(실측 캡처). 화면 전체를 밝은 종이(bg-bg) 한 장 위에 올린다 — 글자색을 하나하나 바꾸지 않고 설계된 테마 그대로 읽힌다. */
+    <div className="flex flex-col gap-5 rounded-2xl bg-bg p-4 md:p-5">
       <div>
         <h1 className="text-[19px] font-bold text-ink">트래픽</h1>
         <p className="mt-1 text-[13px] leading-[1.6] text-text-2">

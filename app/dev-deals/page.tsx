@@ -7,6 +7,7 @@ import { DevDealsListClient } from "./DevDealsListClient";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
 import { Explain } from "@/app/components/explain/Explain";
 import { AdZone } from "@/app/components/ads/AdZone";
+import { ARCHIVED_ROBOTS } from "@/lib/seo/archived-routes";
 
 /* [2026-08-10 저녁 재전환] 필터는 DevDealsListClient(클라이언트), DB 왕복 1회.
    낮에 ISR 로 갔다가 되돌렸었다 — 프로덕션 서비스롤 키가 유실돼(Pro 재임포트)
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
   title: "개발물건 중개 | 내집나우",
   description:
     "시행사·부동산사업자가 개발물건(정비사업·신축·부지)을 등록하면 시공사·설계사·신탁·PF 등 협력업체가 참여 문의를 보내는 B2B 디벨로퍼 매칭. 내집나우는 소개·중개(매칭)만 담당합니다.",
-  robots: { index: true, follow: true },
+  robots: ARCHIVED_ROBOTS /* [1040] 보관 화면 — 머리(X-Robots-Tag)와 같은 신호 */,
   // N7 — 필터·정렬 파라미터 조합이 별개 URL 로 색인되지 않도록 canonical 고정
   alternates: seoAlternates("/dev-deals"),
 };

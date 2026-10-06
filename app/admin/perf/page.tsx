@@ -58,7 +58,7 @@ async function load() {
 export default async function AdminPerfPage() {
   const rows = await load();
   if (!rows) {
-    return <main className="p-6 text-[13px] text-text-2">web_vitals 조회 실패 — DB 상태를 확인하세요.</main>;
+    return <div className="rounded-2xl bg-bg p-6 text-[13px] text-text-2">web_vitals 조회 실패 — DB 상태를 확인하세요.</div>;
   }
 
   /* [979] 화면 귀속이 어긋난 옛 표본과, 지표에 맞지 않는 단위의 줄을 걸러낸다.
@@ -99,7 +99,9 @@ export default async function AdminPerfPage() {
     v == null ? "—" : metric === "CLS" ? v.toFixed(3) : `${Math.round(v)}ms`;
 
   return (
-    <main className="space-y-6 p-4 md:p-6">
+    /* [1040 · 관리 화면] 이 화면은 밝은 테마 토큰(text-ink · .card)으로 짜였는데 관리 틀은 어두운 바탕이라 제목·설명이 바탕에 묻혀 안 보였다(실측 캡처). 화면 전체를 밝은 종이(bg-bg) 한 장 위에 올린다 — 글자색을 하나하나 바꾸지 않고 설계된 테마 그대로 읽힌다. */
+    /* 바깥 틀(layout)이 이미 <main> 이라 여기는 div — main 안의 main 이었다 */
+    <div className="space-y-6 rounded-2xl bg-bg p-4 md:p-5">
       <header>
         <h1 className="text-[19px] font-bold text-ink">성능 매트릭스 — 최근 7일 p75</h1>
         {/* [1010] 2026-09-25 이후 수집분은 **세션 단위 표본 추출**이다(리포터가 세션마다 한 번
@@ -172,6 +174,6 @@ export default async function AdminPerfPage() {
           </ul>
         )}
       </section>
-    </main>
+    </div>
   );
 }

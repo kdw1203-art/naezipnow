@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PageShell } from "@/app/components/PageShell";
 import { listTemplates } from "@/lib/note-templates/store";
 import { TemplateBrowser } from "./TemplateBrowser";
+import { ARCHIVED_ROBOTS } from "@/lib/seo/archived-routes";
 
 /* 비용 실측(2026-08-10): force-dynamic 이라 익명·크롤러 요청마다 오리진 함수가
    돌았다(x-vercel-cache: MISS, cache-control: private,no-store 실측). 이 화면의
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
   title: "임장 노트 템플릿 | 내집나우",
   description:
     "입지·채광·소음·주차·하자부터 분양권·전월세·재건축까지, 임장 가기 전날 고르는 체크리스트 템플릿. 고르면 그 항목이 채워진 임장 노트가 열려요.",
-  robots: { index: true, follow: true },
+  robots: ARCHIVED_ROBOTS /* [1040] 보관 화면 — 머리(X-Robots-Tag)와 같은 신호 */,
 };
 
 export default async function NoteTemplatesPage() {

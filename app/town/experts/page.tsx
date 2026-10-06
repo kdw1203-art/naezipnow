@@ -34,6 +34,7 @@ export const metadata = buildPageMetadata({
   description:
     "자격을 확인한 부동산 전문가에게 글로 묻고 답을 받습니다. 인증 배지, 답변 완료 수, 실제 의뢰자 후기로 고르고, 견적 요청으로 제안을 받아 비교하세요.",
   path: "/town/experts",
+  archived: true /* [1040] 보관 화면 — 메타 robots 를 머리(X-Robots-Tag)와 맞춘다 */,
 });
 
 /** 공개 필드만 깎아 클라이언트로 — ownerEmail·userId 는 넘기지 않는다 */

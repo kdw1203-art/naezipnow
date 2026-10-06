@@ -1,5 +1,6 @@
 "use client";
 
+import { SignupSteps } from "@/app/components/auth/SignupSteps";
 import { BrandSloganBand } from "@/app/components/BrandSloganBand";
 
 import { useCallback, useEffect, useState } from "react";
@@ -140,7 +141,8 @@ export function WelcomeClient() {
       className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col gap-4 px-7 pb-8"
       style={{ paddingTop: "max(20px, env(safe-area-inset-top, 0px))" }}
     >
-      {/* 헤더 — 한 화면이라 단계 표시가 없다. 건너뛰기만 (항상 노출). */}
+      {/* 헤더 — 건너뛰기(항상 노출). [1040] 가입 3단계의 마지막 칸(관심 지역) — 가입 폼·인증 메일 안내와 같은 띠 */}
+      <SignupSteps current={2} className="rise-in" />
       <div className="flex items-center justify-end">
         {/* [970 · A-14] 건너뛰기도 next 가 있으면 그리로 */}
         <Link

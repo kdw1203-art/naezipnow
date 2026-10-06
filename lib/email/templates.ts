@@ -99,6 +99,51 @@ export function passwordResetEmail(params: { resetUrl: string; expiresMinutes?: 
   return { subject: "[내집나우] 비밀번호 재설정 안내", html, text };
 }
 
+/**
+ * [1040] 비밀번호 변경 알림 — 재설정 링크·설정 화면에서 비밀번호가 바뀐 직후 보낸다.
+ * 본인이 한 변경이 아니면 바로 알아채고 다시 재설정할 수 있게(링크는 비밀번호 찾기 화면).
+ */
+export function passwordChangedEmail(params: { via: "reset" | "settings"; at: Date }) {
+  const when = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(params.at);
+  const how = params.via === "reset" ? "재설정 링크" : "설정 화면";
+  const forgotUrl = "https://naezipnow.com/forgot-password";
+  const html = layout(`
+      <h1 style="margin:0 0 12px;font-size:18px;color:#0B2545;">비밀번호 변경 알림</h1>
+      <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#3d4657;">
+        내집나우 계정의 비밀번호가 변경되었습니다.
+      </p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 20px;font-size:13px;color:#3d4657;">
+        <tr><td style="padding:6px 0;color:#8a94a6;width:88px;">변경 시각</td><td style="padding:6px 0;font-weight:700;">${escapeHtml(when)} (한국 시간)</td></tr>
+        <tr><td style="padding:6px 0;color:#8a94a6;">변경 경로</td><td style="padding:6px 0;font-weight:700;">${escapeHtml(how)}</td></tr>
+      </table>
+      <p style="margin:0 0 16px;font-size:13px;line-height:1.7;color:#3d4657;">
+        직접 변경하셨다면 이 메일은 확인만 하시면 됩니다.<br />
+        변경한 적이 없다면 아래에서 비밀번호를 다시 설정해 주세요.
+      </p>
+      <a href="${forgotUrl}"
+         style="display:inline-block;background-color:${ACCENT};color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 24px;border-radius:8px;">
+        비밀번호 다시 설정
+      </a>`);
+  const text = [
+    "내집나우 비밀번호 변경 알림",
+    "",
+    `변경 시각: ${when} (한국 시간)`,
+    `변경 경로: ${how}`,
+    "",
+    "직접 변경하셨다면 확인만 하시면 됩니다.",
+    `변경한 적이 없다면 비밀번호를 다시 설정해 주세요: ${forgotUrl}`,
+  ].join("\n");
+  return { subject: "[내집나우] 비밀번호 변경 알림", html, text };
+}
+
 /** 고객 문의 접수 알림 메일 (운영팀 수신용) */
 export function supportInquiryEmail(params: {
   category: string;

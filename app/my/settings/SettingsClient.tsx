@@ -22,6 +22,17 @@ const RecordPrefsTab = nextDynamic(() => import("./RecordPrefsTab").then((m) => 
   ssr: false,
   loading: () => <div aria-busy="true" className="card h-40 rounded-2xl" />,
 });
+/* [1040] 비밀번호 변경 줄 — 펼치기 전에는 글자 한 줄이면 되므로 폼(강도 규칙·Caps Lock)을 뒤로 미룬다.
+   이 화면은 번들 상한(미등재 495KB) 바로 아래라 정적 import 하면 넘는다(499KB 실측). 받아 오는 동안은 같은 모양의 줄. */
+const PasswordChangeRow = nextDynamic(() => import("./PasswordChange").then((m) => m.PasswordChangeRow), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-between border-b border-divider py-3 t-body font-semibold text-text-1">
+      <span>비밀번호 변경</span>
+      <span className="t-sub text-text-3">›</span>
+    </div>
+  ),
+});
 const PushSubscribe = nextDynamic(() => import("@/components/PushSubscribe").then((m) => m.PushSubscribe), {
   ssr: false,
   loading: () => <div aria-busy="true" className="h-10" />,
@@ -773,13 +784,8 @@ function AccountTab({ guest, onGoPrivacy }: { guest: boolean; onGoPrivacy: () =>
       {/* 계정 관리 */}
       <div className="card flex flex-col rounded-2xl px-4 py-1">
         <div className="pb-1 pt-3 t-sub font-bold text-text-3">계정</div>
-        <Link
-          href="/forgot-password"
-          className="flex items-center justify-between border-b border-divider py-3 t-body font-semibold text-text-1 no-underline"
-        >
-          <span>비밀번호 변경</span>
-          <span className="text-text-3">›</span>
-        </Link>
+        {/* [1040] 비밀번호 찾기(메일 링크)로 보내던 줄 → 이 자리에서 바꾼다(지금 비밀번호 확인 · POST /api/me/password) */}
+        <PasswordChangeRow />
         <ThemeRow />
         {/* [1000] 구독 관리는 /my/subscription(현재 플랜·자동결제·해지·결제 내역) */}
         <Link

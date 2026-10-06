@@ -7,6 +7,7 @@ import { ViewPing } from "./ViewPing";
 import { estimateCommission, COMMISSION_BASIS_LABEL } from "@/lib/dev-deals/commission";
 import { formatKrwEok, formatAreaM2 } from "@/lib/dev-deals/types";
 import { InquiryForm } from "./InquiryForm";
+import { ARCHIVED_ROBOTS } from "@/lib/seo/archived-routes";
 
 /* 비용 실측(2026-08-10): 크롤 1회 = 함수 호출 1회이던 것을 ISR 로.
    렌더 중 유일한 부작용(조회수 +1)은 ViewPing 클라이언트 핑으로 이전. */
@@ -40,7 +41,7 @@ export async function generateMetadata({
     description:
       deal.summary ??
       `${deal.dealType} · ${deal.region ?? ""} · 사업규모 ${formatKrwEok(deal.totalCostKrw)}`,
-    robots: { index: !deal.isSample, follow: true },
+    robots: ARCHIVED_ROBOTS /* [1040] 보관 화면 — 예시 여부와 무관하게 색인 제외 */,
   };
 }
 

@@ -15,6 +15,8 @@ export const metadata = buildPageMetadata({
   title: "결정 카드",
   description: "비교함·관심 단지에서 고른 후보 최대 3곳을 가격·전세가율·거래량·학교 기준 가중치로 줄 세우고 결정(살까·보류·패스·다시 보기)을 남깁니다. 국토교통부 실거래 기준.",
   path: "/decide",
+  /* [1040 · seo.indexable_unsubmitted] 이 기기의 비교함(localStorage)으로 그리는 개인 화면 — /notes/compare 와 같이 색인하지 않는다 */
+  noIndex: true,
 });
 
 export default async function DecidePage() {

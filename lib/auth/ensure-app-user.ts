@@ -10,12 +10,14 @@ export async function ensureAppUserRow(input: {
   email: string;
   name?: string | null;
   authUserId?: string | null;
-}): Promise<void> {
+}): Promise<boolean> {
+  /* [1040] 반환값 = 이번 호출이 행을 **새로 만들었는가**. 소셜 첫 로그인의 약관 동의 기록(lib/auth/social-consent)이
+     "방금 생긴 계정"에만 남도록 쓴다. 이미 있거나 만들지 못했으면 false. */
   const email = input.email.trim().toLowerCase();
-  if (!email.includes("@")) return;
+  if (!email.includes("@")) return false;
 
   const sb = getServiceSupabase();
-  if (!sb) return;
+  if (!sb) return false;
 
   try {
     const { data: existing, error: readErr } = await sb
@@ -25,12 +27,12 @@ export async function ensureAppUserRow(input: {
       .maybeSingle();
     if (readErr) {
       logger.warn("[ensure-app-user] read", readErr.message);
-      return;
+      return false;
     }
     if (existing?.id) {
       /* [1001] 이미 있는 계정으로 로그인 — 비회원으로 결제한 이용권이 대기 중이면 여기서 붙인다 */
       await claimGuestPayments(email).catch(() => 0);
-      return;
+      return false;
     }
 
     const name =
@@ -58,15 +60,17 @@ export async function ensureAppUserRow(input: {
       });
       if (fallback.error) {
         logger.warn("[ensure-app-user] insert", fallback.error.message);
-        return;
+        return false;
       }
     }
     /* [1001] 새 계정 — 이 이메일로 비회원 결제한 이용권이 있으면 가입 즉시 연결된다 */
     await claimGuestPayments(email).catch(() => 0);
+    return true;
   } catch (e) {
     logger.warn(
       "[ensure-app-user]",
       e instanceof Error ? e.message : String(e),
     );
+    return false;
   }
 }

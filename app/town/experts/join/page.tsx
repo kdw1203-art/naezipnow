@@ -37,6 +37,7 @@ export const metadata = buildPageMetadata({
   description:
     "자격을 확인한 전문가로 내집나우에 참여하세요. 프로필 노출, 상담 수신·답변, 견적 제안, 의뢰자 후기. 가입 심사비 무료, 서류·협회 조회로 인증합니다.",
   path: "/town/experts/join",
+  archived: true /* [1040] 보관 화면 — 메타 robots 를 머리(X-Robots-Tag)와 맞춘다 */,
 });
 
 const OPENS: readonly { icon: string; title: string; desc: string }[] = [

@@ -58,12 +58,16 @@ export type ComplexSitemapEntry = {
   lastModified?: Date;
   /** 매매 실거래 건수 — 상한 초과 시 무엇을 남길지 정하는 기준 */
   tradeCount: number;
+  /** [1040] 마지막 계약월(yyyymm) — 사이트맵 기준(최근 12개월 거래)에 쓴다. 값이 없으면 null,
+   *  원천 뷰에 그 열이 없어 못 읽었으면 undefined(= 모른다 — 호출부가 최근 거래 기준을 적용하지 않는다) */
+  lastContractYm: string | null | undefined;
 };
 
 type SourceRow = {
   region_name: string | null;
   complex_name: string | null;
   last_data_at: string | null;
+  last_contract_ym: string | null;
   trade_count: number | null;
 };
 
@@ -100,15 +104,30 @@ export async function listComplexSitemapEntries(
   // 페이지 수 상한 — 서버가 예상 밖으로 적게 돌려줘도 무한 루프로 가지 않게 한다.
   const maxPages = Math.ceil(max / PAGE_SIZE) + 5;
 
+  /* [1040] last_contract_ym 은 저장소의 뷰 정의(20260727150000)에 있지만 운영 뷰가 원장 밖에서 바뀌었을 수 있다.
+     그 열이 없다는 오류(42703)면 예전 열만으로 다시 읽고 "모른다"(undefined)로 둔다 — 열 하나 때문에 단지 사이트맵
+     전체가 503 이 되면 안 된다. */
+  let withYm = true;
   for (let page = 0; page < maxPages && from < max; page += 1) {
     const to = Math.min(from + PAGE_SIZE, max) - 1;
-    const { data, error } = await sb
-      .from("complex_sitemap_source")
-      .select("region_name, complex_name, last_data_at, trade_count")
-      .order("trade_count", { ascending: false })
-      .order("region_name", { ascending: true })
-      .order("complex_name", { ascending: true })
-      .range(from, to);
+    const run = (cols: string) =>
+      sb
+        .from("complex_sitemap_source")
+        .select(cols)
+        .order("trade_count", { ascending: false })
+        .order("region_name", { ascending: true })
+        .order("complex_name", { ascending: true })
+        .range(from, to);
+    let { data, error } = await run(
+      withYm
+        ? "region_name, complex_name, last_data_at, last_contract_ym, trade_count"
+        : "region_name, complex_name, last_data_at, trade_count",
+    );
+    if (error && withYm && page === 0 && (error.code === "42703" || /last_contract_ym/.test(error.message))) {
+      logger.warn("[sitemap] complex_sitemap_source 에 last_contract_ym 열 없음 — 최근 거래 기준 없이 싣는다", error.message);
+      withYm = false;
+      ({ data, error } = await run("region_name, complex_name, last_data_at, trade_count"));
+    }
 
     if (error) {
       throw new Error(
@@ -116,7 +135,7 @@ export async function listComplexSitemapEntries(
           `${error.message}${error.code ? ` [${error.code}]` : ""}`,
       );
     }
-    const rows = (data ?? []) as SourceRow[];
+    const rows = (data ?? []) as unknown as SourceRow[];
     if (rows.length === 0) break;
 
     for (const row of rows) {
@@ -128,6 +147,7 @@ export async function listComplexSitemapEntries(
         complexName: row.complex_name,
         lastModified: at && !Number.isNaN(at.getTime()) ? at : undefined,
         tradeCount: Number(row.trade_count ?? 0),
+        lastContractYm: withYm ? (row.last_contract_ym ? String(row.last_contract_ym) : null) : undefined,
       });
     }
 

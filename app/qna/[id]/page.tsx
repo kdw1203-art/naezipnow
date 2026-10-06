@@ -16,6 +16,7 @@ import type { QnaAnswer } from "@/lib/qna/types";
 import { topicsOf, QNA_TOPIC_BY_KEY } from "@/lib/qna/topics";
 import { AnswerForm } from "./AnswerForm";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
+import { ARCHIVED_ROBOTS } from "@/lib/seo/archived-routes";
 
 /* 비용 실측(2026-08-10): force-dynamic 이라 크롤 1회 = 함수 호출 1회였다.
    렌더에 auth·cookies·쿼리 파라미터·쓰기 부작용 0건(check-cache-policy 감시).
@@ -83,7 +84,7 @@ export async function generateMetadata({
   return {
     title: `${title} | 단지 Q&A | 내집나우`,
     description: (body || title).slice(0, 150),
-    robots: { index: true, follow: true },
+    robots: ARCHIVED_ROBOTS /* [1040] 보관 화면 — 머리(X-Robots-Tag)와 같은 신호 */,
   };
 }
 

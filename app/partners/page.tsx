@@ -16,6 +16,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "개업공인중개사를 위한 내집나우 제휴 프로그램 — 매물 노출, 전문가 프로필, 상담 연결까지.",
   path: "/partners",
+  archived: true /* [1040] 보관 화면 — 메타 robots 를 머리(X-Robots-Tag)와 맞춘다 */,
 });
 
 const BENEFITS = [

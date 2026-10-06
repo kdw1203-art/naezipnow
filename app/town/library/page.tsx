@@ -34,6 +34,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "동네이야기 자료실. 리포트 선반과 이웃들이 직접 다녀와 공개한 임장노트를 한곳에서 열람해요.",
   path: "/town/library",
+  archived: true /* [1040] 보관 화면 — 메타 robots 를 머리(X-Robots-Tag)와 맞춘다 */,
 });
 
 /* 자료(#8) — 리포트 + 공개 임장노트 공유.

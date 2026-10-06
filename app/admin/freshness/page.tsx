@@ -33,7 +33,8 @@ export default async function AdminFreshnessPage() {
     linkage && linkage.total > 0 ? Math.round((linkage.linked / linkage.total) * 100) : null;
 
   return (
-    <div className="flex flex-col gap-4">
+    /* [1040 · 관리 화면] 이 화면은 밝은 테마 토큰(text-ink · .card)으로 짜였는데 관리 틀은 어두운 바탕이라 제목·설명이 바탕에 묻혀 안 보였다(실측 캡처). 화면 전체를 밝은 종이(bg-bg) 한 장 위에 올린다 — 글자색을 하나하나 바꾸지 않고 설계된 테마 그대로 읽힌다. */
+    <div className="flex flex-col gap-4 rounded-2xl bg-bg p-4 md:p-5">
       <div>
         <h1 className="text-[19px] font-bold text-ink">데이터 신선도</h1>
         <p className="mt-1 text-[13px] text-text-2">
@@ -83,34 +84,33 @@ export default async function AdminFreshnessPage() {
         </table>
       </div>
 
-      {/* [개선 #19] 뉴스→지역 연결률 — 자동수집 글의 region 이 지역 허브로 풀리는 비율.
-          미매핑 상위 값은 카탈로그 보강 또는 수집 단계 region 정규화의 작업 목록이 된다. */}
+      {/* [개선 #19 · 1040] 뉴스→지역 연결 — 자동수집 글이 시·군·구 허브로 풀리는 수.
+          1040: region 열(시·도)만 대조하던 것을 뉴스 상세와 같은 해석기(geo·태그·제목)로 바꿨다.
+          시·도만 있는 기사 · 지역 표기가 없는 기사는 허브가 시·군·구 단위라 연결 대상이 아니다 — 실패로 세지 않고 따로 적는다. */}
       {linkage && linkPct !== null && (
         <div className="card rounded-2xl px-4 py-3.5">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="text-[13px] font-bold text-ink">뉴스→지역 연결률</span>
-            <span
-              className={`text-[19px] font-bold tabular-nums ${
-                linkPct >= 80 ? "text-success" : linkPct >= 50 ? "text-ink" : "text-danger"
-              }`}
-            >
-              {linkPct}%
-            </span>
+            <span className="text-[19px] font-bold tabular-nums text-ink">{linkPct}%</span>
             <span className="text-[12px] text-text-3">
               자동수집 {linkage.total.toLocaleString("ko-KR")}건 중{" "}
-              {linkage.linked.toLocaleString("ko-KR")}건이 지역 허브로 연결
+              {linkage.linked.toLocaleString("ko-KR")}건 시·군·구 허브 연결
             </span>
           </div>
-          {linkage.topUnlinked.length > 0 && (
-            <p className="mt-1.5 text-[12px] leading-[1.7] text-text-3">
-              미매핑 상위:{" "}
-              {linkage.topUnlinked
-                .map((u) => `${u.region} ${u.count.toLocaleString("ko-KR")}건`)
-                .join(" · ")}{" "}
-              — 지역 카탈로그에 없는 표기입니다. 수집 단계에서 region 값을 시군구
-              표기로 정규화하거나 카탈로그를 보강하면 연결률이 오릅니다.
-            </p>
-          )}
+          {/* 한눈 막대 — 연결 · 시·도만 · 지역 없음 */}
+          <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-divider" role="img" aria-label="뉴스 지역 구성">
+            <span className="bg-primary" style={{ width: `${(linkage.linked / linkage.total) * 100}%` }} />
+            <span className="bg-text-3" style={{ width: `${(linkage.sidoOnly / linkage.total) * 100}%` }} />
+          </div>
+          <p className="mt-1.5 text-[12px] leading-[1.7] text-text-3 tabular-nums">
+            시·도만 {linkage.sidoOnly.toLocaleString("ko-KR")}건 · 지역 표기 없음{" "}
+            {linkage.noRegion.toLocaleString("ko-KR")}건 — 허브가 시·군·구 단위라 연결 대상 아님
+          </p>
+          <p className="text-[12px] leading-[1.7] text-text-3 tabular-nums">
+            읽은 자리: 수집 값 {linkage.via.region.toLocaleString("ko-KR")} · 시군구{" "}
+            {linkage.via.sigungu.toLocaleString("ko-KR")} · 장소 {linkage.via.place.toLocaleString("ko-KR")} · 태그{" "}
+            {linkage.via.tag.toLocaleString("ko-KR")} · 제목 {linkage.via.title.toLocaleString("ko-KR")}
+          </p>
         </div>
       )}
 

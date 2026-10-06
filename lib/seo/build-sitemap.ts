@@ -14,6 +14,8 @@ import { complexCanonicalPathFromNames } from "@/lib/complex/complex-store";
 import { isArchivedPath } from "@/lib/seo/archived-routes";
 import { weekSlugFor } from "@/lib/applyhome/calendar";
 import { REGION_CATALOG } from "@/lib/region/catalog";
+import { AI_TOOL_IDS } from "@/lib/ai/ai-tools";
+import { complexIndexTier, kstYm, tierInSitemap } from "@/lib/seo/complex-index-policy";
 import { NEWS_TAGS } from "@/lib/news/tags";
 import { GUIDES } from "@/lib/guides/catalog";
 
@@ -224,6 +226,11 @@ export function loadStaticEntries(): MetadataRoute.Sitemap {
     url: `${BASE_URL}${r.path}`,
     priority: r.priority,
   }));
+  /* [1040 · seo.indexable_unsubmitted] AI 분석 도구 화면(/analysis/ai/<도구>) — 색인 대상(canonical 있음)인데 실려 있지
+     않았다. 도구 목록 상수(AI_TOOL_IDS)에서 나오므로 조회가 없고, 도구가 늘면 같이 실린다. */
+  for (const tool of AI_TOOL_IDS) {
+    entries.push({ url: `${BASE_URL}/analysis/ai/${tool}`, priority: 0.6 });
+  }
   /* [#53] 주간 청약 아카이브 — 최근 6주 슬러그(순수 날짜 계산, 조회 0회).
      주가 바뀌면 목록이 한 칸 굴러가고, 오래된 주 URL 은 페이지가 빈 상태를
      정직하게 그리므로 죽은 링크가 아니다. */
@@ -303,12 +310,22 @@ export async function loadNoteEntries(): Promise<MetadataRoute.Sitemap> {
 export async function loadComplexEntries(): Promise<MetadataRoute.Sitemap> {
   return section("단지", async () => {
     const complexes = await listComplexSitemapEntries();
-    const eligible = complexes.filter((c) => c.tradeCount >= SITEMAP_MIN_TRADE_COUNT);
+    /* [1040 · seo.thin_content] 전 기간 3건 이상 + 최근 12개월 거래가 있는 단지만 싣는다(lib/seo/complex-index-policy).
+       예전 기준은 "전 기간 1건 이상" 하나라, 이력 백필로 옛 거래가 들어올수록 지금은 거래가 끊긴 단지가 계속 실렸다
+       (경보: 32,153곳 중 35.6%가 최근 12개월 3건 미만). 페이지의 색인 조건은 이 기준보다 넓다 — 사이트맵 ⊂ 색인. */
+    const nowYm = kstYm();
+    const tiers = { full: 0, stale: 0, sparse: 0, none: 0 };
+    const eligible = complexes.filter((c) => {
+      /* 마지막 계약월을 못 읽었으면(undefined) 최근 거래 기준은 적용하지 않는다 — 건수 기준만 */
+      const tier = complexIndexTier(c.tradeCount, c.lastContractYm === undefined ? nowYm : c.lastContractYm, nowYm);
+      tiers[tier] += 1;
+      return tierInSitemap(tier) && c.tradeCount >= SITEMAP_MIN_TRADE_COUNT;
+    });
     const dropped = complexes.length - eligible.length;
     if (dropped > 0) {
       /* 조용히 자르지 않는다. "전부 실었다"로 읽히면 색인률 해석이 틀어진다. */
       logger.info(
-        `[sitemap] 단지 ${complexes.length}개 중 거래 ${SITEMAP_MIN_TRADE_COUNT}건 미만 ${dropped}개 제외 — ${eligible.length}개 제출`,
+        `[sitemap] 단지 ${complexes.length}개 중 ${dropped}개 제외(최근 12개월 거래 없음 ${tiers.stale} · 전 기간 3건 미만 ${tiers.sparse + tiers.none}) — ${eligible.length}개 제출`,
       );
     }
     return eligible.map((c) => ({
@@ -600,8 +617,16 @@ export async function loadStoryEntries(): Promise<MetadataRoute.Sitemap> {
 
 /**
  * [1027] 정비사업 구역 상세 — /redevelopment/[id].
- * 구역 표(DB)가 정본이고 예시 데이터(is_sample)는 싣지 않는다. lastModified 는 행의 updated_at
- * (자료를 정리한 시점)이라 사실이다. 조회 실패는 section() 이 위로 던진다(없어진 것으로 광고하지 않는다).
+ * 구역 표(DB)가 정본이고 예시 데이터(is_sample)는 싣지 않는다. 조회 실패는 section() 이 위로 던진다(없어진 것으로 광고하지 않는다).
+ *
+ * [1040 · 운영 경보 seo.asset] lastModified 를 적지 않는다.
+ * 예전엔 행의 updated_at(구역 자료를 정리한 시점 — 지금 40곳 전부 2026-07-22)을 적었다. 1027 때는 화면이 그 행 하나로
+ * 그려졌으니 사실이었지만, 1029 부터 구역 상세는 **서울시 결정 조서 이력(매일 적재)** 과 시군구 실거래를 함께 그린다 —
+ * 행의 정리 시점은 더는 "이 화면이 마지막으로 바뀐 때"가 아니다(화면은 조서가 고시될 때마다 바뀐다). 맞는 날짜를 한 값으로
+ * 말할 수 없으니, 정적 화면·용어 사전과 같은 규칙으로 생략한다(추측한 날짜보다 없는 편이 정확하다).
+ * 색인 점검(ops.seo_asset_check)은 lastmod 모양으로 주기를 추정해, 직접 정리한 구역 40곳을 "매일 바뀌는 자산"으로 읽고
+ * 75일째 critical 을 냈다. 조서 적재가 멈췄는지는 적재 신선도(redevelopment · /admin/freshness)가 따로 본다.
+ * 구역 자료의 기준 시점은 화면이 직접 적는다("2026.07 공개자료 기준").
  */
 export async function loadRedevelopmentEntries(): Promise<MetadataRoute.Sitemap> {
   return section("정비사업 구역", async () => {
@@ -610,14 +635,10 @@ export async function loadRedevelopmentEntries(): Promise<MetadataRoute.Sitemap>
     const projects = await listDbProjects({ limit: 3000 });
     return projects
       .filter((p) => !p.isSample && p.id)
-      .map((p) => {
-        const at = p.updatedAt ? new Date(p.updatedAt) : null;
-        return {
-          url: `${BASE_URL}${redevDetailHref(p.id)}`,
-          ...(at && !Number.isNaN(at.getTime()) ? { lastModified: at } : {}),
-          priority: 0.5,
-        };
-      });
+      .map((p) => ({
+        url: `${BASE_URL}${redevDetailHref(p.id)}`,
+        priority: 0.5,
+      }));
   });
 }
 

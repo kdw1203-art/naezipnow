@@ -13,6 +13,7 @@ import { logger } from "@/lib/log";
 import { AskForm } from "./AskForm";
 import { QnaListClient, type QnaRow } from "./QnaListClient";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
+import { ARCHIVED_ROBOTS } from "@/lib/seo/archived-routes";
 
 /* 비용 실측(2026-08-10): 서버는 원래도 100건을 한 번 받아 메모리에서 걸렀다 —
    ?status/sort/topic/q 를 읽는 것만이 이 라우트를 영구 동적으로 만들고 있었다.
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
   description:
     /* [1012] 규칙 5 — "받아보세요·확인하세요" 제거 */
     "아파트 단지·동네 질문에 이웃·실거주자가 답하는 단지 Q&A. 재건축·학군·주차·교통 주제별 질문과 답변 완료 수.",
-  robots: { index: true, follow: true },
+  robots: ARCHIVED_ROBOTS /* [1040] 보관 화면 — 머리(X-Robots-Tag)와 같은 신호 */,
   alternates: seoAlternates("/qna"),
 };
 

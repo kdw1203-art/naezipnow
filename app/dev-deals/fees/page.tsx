@@ -6,6 +6,7 @@ import {
   COMMISSION_TIERS,
   COMMISSION_BASIS_LABEL,
 } from "@/lib/dev-deals/commission";
+import { ARCHIVED_ROBOTS } from "@/lib/seo/archived-routes";
 
 /* 비용 실측(2026-08-10): force-dynamic 이라 익명·크롤러 요청마다 오리진 함수가
    돌았다(x-vercel-cache: MISS, cache-control: private,no-store 실측). 이 화면의
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
   title: "중개 수수료 안내 — 개발물건 중개 | 내집나우",
   description:
     "개발물건 매칭 중개 수수료 안내 — 소개·문의는 무료, 성사 시에만 사업규모(사업비)에 따른 기준 수수료가 부과됩니다. 실제 수수료는 협의 가능합니다.",
-  robots: { index: true, follow: true },
+  robots: ARCHIVED_ROBOTS /* [1040] 보관 화면 — 머리(X-Robots-Tag)와 같은 신호 */,
 };
 
 const STEPS = [

@@ -1,6 +1,17 @@
 "use client";
 
-import { stashAuthEmail, takeAuthEmail } from "@/lib/auth/signup-form";
+import { RESEND_COOLDOWN_SEC, stashAuthEmail, takeAuthEmail } from "@/lib/auth/signup-form";
+import {
+  capsLockOn,
+  forgetLoginMethod,
+  forgotHrefWithNext,
+  recallLoginMethod,
+  rememberLoginMethod,
+  waitLabel,
+  type LoginMethod,
+} from "@/lib/auth/auth-ux";
+import { readAuthedHint } from "@/lib/auth/authed-hint";
+import { CapsLockNote } from "@/app/components/auth/CapsLockNote";
 import { ActionButton } from "@/app/components/ui/ActionButton";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -205,6 +216,35 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
   const [failHint, setFailHint] = useState<LoginFailHint | null>(null);
   const [resendState, setResendState] = useState<"idle" | "busy" | "sent" | "failed">("idle");
   const [resendNote, setResendNote] = useState<string | null>(null);
+  /* [1040] 로그인 기능 추가 ─────────────────────────────────────────────
+     caps        비밀번호 칸에서 Caps Lock 이 켜져 있다
+     lastMethod  이 기기에서 마지막으로 쓴 수단(단추에 "최근 사용")
+     authed      이미 로그인된 브라우저(힌트 쿠키) — 폼 위에 "계속" 길을 준다
+     waitUntil   시도 한도 — 이 시각까지 제출을 막고 남은 시간을 센다
+     resendUntil 인증 메일 재발송 대기(30초)
+     forgotHref  비밀번호 찾기 — 가려던 곳(callbackUrl)을 이어 간다 */
+  const [caps, setCaps] = useState(false);
+  const [lastMethod, setLastMethod] = useState<LoginMethod | null>(null);
+  const [authed, setAuthed] = useState(false);
+  const [continueHref, setContinueHref] = useState("/");
+  const [waitUntil, setWaitUntil] = useState(0);
+  const [resendUntil, setResendUntil] = useState(0);
+  const [nowMs, setNowMs] = useState(0);
+  const [forgotHref, setForgotHref] = useState("/forgot-password");
+  const waitLeft = waitUntil > nowMs ? Math.ceil((waitUntil - nowMs) / 1000) : 0;
+  const resendLeft = resendUntil > nowMs ? Math.ceil((resendUntil - nowMs) / 1000) : 0;
+  /* 초 단위 눈금 — 기다릴 것이 있을 때만 돈다 */
+  useEffect(() => {
+    const until = Math.max(waitUntil, resendUntil);
+    if (until <= Date.now()) return;
+    setNowMs(Date.now());
+    const t = window.setInterval(() => {
+      const now = Date.now();
+      setNowMs(now);
+      if (now >= until) window.clearInterval(t);
+    }, 1000);
+    return () => window.clearInterval(t);
+  }, [waitUntil, resendUntil]);
 
   /* callbackUrl 은 window 에만 있다. 서버 렌더 결과와 첫 클라이언트 렌더가
      달라지면 하이드레이션이 깨지므로, 일반 문구로 시작해서 마운트 후에만
@@ -221,6 +261,11 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
     setCtx(contextForCallback(resolveCallbackUrl(), generic));
     const cb = resolveCallbackUrl();
     if (cb !== "/") setSignupHref(`/signup?callbackUrl=${encodeURIComponent(cb)}`);
+    /* [1040] 비밀번호 찾기도 같은 곳으로 돌아오게 · 이미 로그인된 브라우저면 "계속" 길 · 최근 사용 수단 */
+    setForgotHref(forgotHrefWithNext(cb));
+    setContinueHref(cb);
+    setAuthed(readAuthedHint());
+    setLastMethod(recallLoginMethod());
     const params = new URLSearchParams(window.location.search);
     if (params.get("verified") === "1") setVerifiedNotice(true);
     /* [965] 가입은 됐는데 자동 로그인이 안 된 경우(SignupClient) */
@@ -244,6 +289,9 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
         (c) => oauthErr === c || oauthErr.toLowerCase().includes(c.toLowerCase()),
       )
     ) {
+      /* [1040] 소셜 단추를 누르며 적어 둔 "최근 사용"은 성공했을 때만 사실이다 — 실패로 돌아왔으면 지운다 */
+      forgetLoginMethod();
+      setLastMethod(null);
       trackPlatformEvent({
         eventName: "auth_login_fail",
         source: "auth",
@@ -259,6 +307,8 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
   async function socialSignIn(provider: SocialProvider) {
     setError(null);
     setBusy(provider);
+    /* [1040] 다음 방문에 이 단추에 "최근 사용"을 붙인다(돌아오지 못하는 흐름이라 누를 때 적고, 실패로 돌아오면 지운다) */
+    rememberLoginMethod(provider);
     // 토스는 NextAuth OAuth 가 아니라 자체 리다이렉트 시작점을 쓴다 —
     // 인가 후 /auth/toss/callback 에서 세션이 만들어진다.
     if (provider === "toss") {
@@ -304,6 +354,8 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
       }
       setResendState("sent");
       setResendNote(data.message ?? "인증 메일을 다시 보냈어요. 메일함의 새 링크를 눌러 주세요.");
+      /* [1040] 30초 뒤 다시 보낼 수 있다(서버 한도 IP당 10분 5회를 화면에서 먼저 지킨다) */
+      setResendUntil(Date.now() + RESEND_COOLDOWN_SEC * 1000);
     } catch {
       setResendState("failed");
       setResendNote("네트워크 오류가 발생했어요.");
@@ -335,7 +387,12 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
       });
       if (res?.error) {
         const hint = loginFailHint(`${res.error} ${res.code ?? ""}`);
-        if (hint.kind === "email_not_confirmed") {
+        if (hint.kind === "rate_limited") {
+          /* [1040] 시도 한도 — "비밀번호가 맞지 않아요"가 아니다. 남은 시간을 세고 그동안 제출을 막는다 */
+          setError("로그인 시도 한도 초과");
+          setFailHint(hint);
+          if (hint.seconds > 0) setWaitUntil(Date.now() + hint.seconds * 1000);
+        } else if (hint.kind === "email_not_confirmed") {
           setError(EMAIL_NOT_CONFIRMED_COPY);
           setNeedsConfirm(true);
         } else if (hint.kind === "social") {
@@ -353,6 +410,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
         return;
       }
       if (res?.ok) {
+        rememberLoginMethod("password");
         /* 이동보다 먼저 부른다. Provider 가 루트에 있어서 화면이 바뀌어도
            장면은 이어진다 — 오히려 그 편이 전환을 덮어 준다. */
         /* [961] 환영 장면 — 네이비 면에 온점 도장 + 슬로건(인터랙션 라이브러리 03).
@@ -415,12 +473,32 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
           </div>
         )}
 
+        {/* [1040] 이미 로그인된 브라우저 — 다시 입력하게 두지 않고 가려던 곳으로 잇는다(다른 계정이면 아래 폼 그대로) */}
+        {authed && !error && (
+          <div role="status" className="rise-in flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg border border-line bg-surface px-4 py-2">
+            <span className="t-sub font-bold text-ink">로그인 상태</span>
+            <span className="flex items-center gap-1">
+              <Link href={continueHref} className="inline-flex min-h-10 items-center px-2 t-sub font-bold text-primary no-underline">
+                계속 ›
+              </Link>
+              <Link href="/logout" className="inline-flex min-h-10 items-center px-2 t-sub text-text-2 no-underline">
+                로그아웃
+              </Link>
+            </span>
+          </div>
+        )}
+
         {error && (
           <div
             role="alert"
             className="rise-in rounded-lg bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger"
           >
             {error}
+            {failHint?.kind === "rate_limited" && (
+              <div className="mt-1.5 t-caption font-bold text-text-2 t-num" aria-live="polite">
+                {waitLeft > 0 ? `${waitLabel(waitLeft)} 뒤 다시` : "잠시 뒤 다시"} · 5분 안 10회 넘음
+              </div>
+            )}
             {failHint?.kind === "social" && (
               <div className="mt-2 text-[12px] font-semibold text-text-2">
                 {social.includes(failHint.provider)
@@ -440,7 +518,9 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
             )}
             {failHint?.kind === "bad_password" && (
               <Link
-                href={`/forgot-password${email.includes("@") ? `?email=${encodeURIComponent(email.trim())}` : ""}`}
+                /* [1040] 이메일은 주소(쿼리)가 아니라 탭 저장소로 · 가려던 곳(callbackUrl)은 이어 간다 */
+                href={forgotHref}
+                onClick={() => stashAuthEmail(email)}
                 className="mt-2 inline-block rounded-lg border border-danger/40 bg-surface px-3 py-1.5 text-[12px] font-bold text-danger no-underline"
               >
                 비밀번호 찾기 ›
@@ -451,14 +531,16 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
                 <button
                   type="button"
                   onClick={resendConfirmation}
-                  disabled={resendState === "busy" || resendState === "sent"}
+                  disabled={resendState === "busy" || resendLeft > 0}
                   className="w-fit rounded-lg border border-danger/40 bg-surface px-3 py-1.5 text-[12px] font-bold text-danger disabled:opacity-60"
                 >
                   {resendState === "busy"
                     ? "보내는 중…"
-                    : resendState === "sent"
-                      ? "인증 메일을 다시 보냈어요"
-                      : "인증 메일 다시 보내기"}
+                    : resendLeft > 0
+                      ? `다시 보내기 · ${resendLeft}초`
+                      : resendState === "sent"
+                        ? "인증 메일 한 번 더 보내기"
+                        : "인증 메일 다시 보내기"}
                 </button>
                 {resendNote && (
                   <span
@@ -483,14 +565,21 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
                 type="button"
                 onClick={() => socialSignIn(provider)}
                 disabled={busy !== null}
-                className={`rounded-lg p-3.5 text-center text-[15px] font-bold disabled:opacity-60 ${SOCIAL_BUTTON[provider].className}`}
+                className={`relative rounded-lg p-3.5 text-center text-[15px] font-bold disabled:opacity-60 ${SOCIAL_BUTTON[provider].className}`}
               >
                 {SOCIAL_BUTTON[provider].label}
+                {/* [1040] 이 기기에서 마지막으로 쓴 수단 — 어느 단추였는지 다시 고르지 않게 */}
+                {lastMethod === provider && (
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-surface px-2 py-0.5 t-caption font-bold text-ink">
+                    최근 사용
+                  </span>
+                )}
               </button>
             ))}
             <div className="flex items-center gap-3 text-[12px] text-text-3">
               <span className="h-px flex-1 bg-bg" />
               또는 이메일로
+              {lastMethod === "password" && <span className="font-bold text-ink">· 최근 사용</span>}
               <span className="h-px flex-1 bg-bg" />
             </div>
           </div>
@@ -538,6 +627,10 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
               autoComplete="current-password"
               enterKeyHint="done"
               style={{ paddingRight: 64 }}
+              /* [1040] Caps Lock — 누를 때·뗄 때 둘 다 본다(Caps Lock 키 자체를 누른 순간도 잡힌다) */
+              onKeyDown={(e) => setCaps(capsLockOn(e))}
+              onKeyUp={(e) => setCaps(capsLockOn(e))}
+              onBlur={() => setCaps(false)}
             />
             <label htmlFor="login-password">비밀번호</label>
             {/* [1039] 비밀번호 표시 — 가입 화면에만 있던 토글(오타를 눈으로 확인) */}
@@ -551,20 +644,22 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
               {showPw ? "숨김" : "표시"}
             </button>
           </div>
+          <CapsLockNote on={caps} />
           <ActionButton
             type="submit"
-            state={busy === "password" ? "busy" : error ? "error" : "idle"}
-            disabled={busy !== null && busy !== "password"}
+            /* [1040] 시도 한도 대기 중에는 제출을 막고 단추가 남은 시간을 말한다(눌러도 같은 답 — 한도만 더 쓴다) */
+            state={busy === "password" ? "busy" : waitLeft > 0 ? "idle" : error ? "error" : "idle"}
+            disabled={(busy !== null && busy !== "password") || waitLeft > 0}
             busyLabel="로그인 중"
             errorLabel="정보를 확인해 주세요"
             className="rounded-lg p-3 text-center text-[13px] font-bold"
           >
-            이메일로 로그인
+            {waitLeft > 0 ? `${waitLabel(waitLeft)} 뒤 다시` : "이메일로 로그인"}
           </ActionButton>
           <div className="text-center">
             {/* [1039] 친 이메일을 찾기 화면이 이어받는다 · 글자뿐이던 링크에 40px 손끝 칸 */}
             <Link
-              href="/forgot-password"
+              href={forgotHref}
               onClick={() => stashAuthEmail(email)}
               className="inline-flex min-h-10 items-center px-3 text-xs font-bold text-text-2"
             >
@@ -596,7 +691,7 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
           <Link href="/legal/privacy" className="underline underline-offset-2">
             개인정보처리방침
           </Link>
-          에 동의하게 됩니다
+          에 동의하게 됩니다 · 만 14세 이상
         </p>
       </div>
     </main>

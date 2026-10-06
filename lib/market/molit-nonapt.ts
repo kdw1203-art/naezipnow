@@ -12,6 +12,7 @@
  * 집계 오염 없음: 집계 뷰·RPC·rent.ts 는 property_type='apartment' 조건을 이미 갖는다(tests/unit/data-1024 가 잠근다).
  * 호출량: A 12곳×6 + B 30곳×6 ≈ 250회/일.
  */
+import { needsServiceApproval } from "@/lib/market/ingest-outcome";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import {
   autoTargetMonth,
@@ -177,7 +178,16 @@ async function logNonApt(result: NonAptIngestResult, types: string[]): Promise<v
     dataset: "비아파트 실거래(수도권 · 오피스텔·연립다세대·단독다가구)",
     origin: "cron-fetch",
     rows: result.inserted,
-    status: !result.configured ? "skipped" : result.errors > 0 ? "error" : result.inserted > 0 ? "ok" : "skipped",
+    /* [1040] 활용신청 대기(국토부 30번 응답)는 skipped — 승인 전까지 매일 "수집 실패"로 켜지지 않게(needsServiceApproval) */
+    status: !result.configured
+      ? "skipped"
+      : needsServiceApproval(result.reason) && result.inserted === 0
+        ? "skipped"
+        : result.errors > 0
+          ? "error"
+          : result.inserted > 0
+            ? "ok"
+            : "skipped",
     message:
       /* [1030 · 5차] "시도=" 는 실행 전체(최근월 + 빈달) — 예전엔 최근월 조각만 적어 관리자 화면이 "12곳 중 42곳 실패"로 읽었다 */
       `유형=${types.join(",")} 시도=${result.attempted} ` +

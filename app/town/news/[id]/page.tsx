@@ -14,7 +14,8 @@ import { logger } from "@/lib/log";
 import { hostOf, newsImageUrl } from "../../shared";
 import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 import { LocationMap } from "../../LocationMap";
-import { regionIdForName } from "@/lib/region/catalog";
+import { findCatalogRegionById, regionIdForName } from "@/lib/region/catalog";
+import { resolveNewsRegion } from "@/lib/news/region-link";
 import {
   complexHrefKey,
   resolveComplexHref,
@@ -321,9 +322,17 @@ export default async function TownNewsDetailPage({
     return { label: t, href: null, kind: "plain" as const };
   });
 
+  /* [1040] 지역 허브 링크 — region 열은 시·도("서울")라 그것만으로는 풀리지 않는다. 수집 메타(geo.sigungu·places)·
+     태그·제목에서 시·군·구를 읽는다(lib/news/region-link — 부분 일치 없음 · 관리 화면 연결률과 같은 해석기). */
   const regionId =
-    regionIdForName([post.city, post.district].filter(Boolean).join(" ")) ??
-    (post.district ? regionIdForName(post.district) : null);
+    resolveNewsRegion({
+      region: [post.city, post.district].filter(Boolean).join(" "),
+      geo,
+      tags: postTags,
+      title: post.title,
+    }).id ?? (post.district ? regionIdForName(post.district) : null);
+  /* 링크 글자는 풀린 시·군·구 이름 — region 열("서울")을 그대로 쓰면 "서울 시세 보기"가 강남구 허브로 간다 */
+  const regionLinkName = regionId ? (findCatalogRegionById(regionId)?.name ?? null) : null;
 
   return (
     <PageShell breadcrumb={`뉴스룸 › ${category} › ${region}`}>
@@ -353,7 +362,7 @@ export default async function TownNewsDetailPage({
                   href={`/region/${regionId}`}
                   className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline"
                 >
-                  {region} 시세 보기 ›
+                  {regionLinkName ?? region} 시세 보기 ›
                 </Link>
               )}
             </div>

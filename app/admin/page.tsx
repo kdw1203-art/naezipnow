@@ -231,16 +231,22 @@ export default async function AdminDashboardPage() {
             ops.etl.map((p, i, arr) => (
               <div
                 key={`${i}-${p.name}`}
-                className={`flex items-center justify-between gap-3 py-2 text-xs ${
+                className={`flex flex-col gap-1 py-2 text-xs ${
                   i < arr.length - 1
                     ? "border-b border-[rgba(255,255,255,.06)]"
                     : ""
                 }`}
               >
-                <span className="min-w-0 truncate text-[#c9d2e0]">{p.name}</span>
-                <span className="shrink-0 font-bold" style={{ color: p.color }}>
-                  {p.status}
-                </span>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="min-w-0 truncate text-[#c9d2e0]">{p.name}</span>
+                  <span className="shrink-0 font-bold" style={{ color: p.color }}>
+                    {p.status}
+                  </span>
+                </div>
+                {/* [1040] 실패 사유 — 로그의 첫오류를 한 줄로(집계만으로는 원인을 알 수 없었다) */}
+                {p.reason && (
+                  <div className="t-caption text-[#9aa6b8]">사유 · {p.reason}</div>
+                )}
               </div>
             ))
           )}

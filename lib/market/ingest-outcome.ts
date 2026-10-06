@@ -155,3 +155,35 @@ export function isHardFailure(outcome: IngestOutcome): boolean {
 export function isServiceNotRegistered(detail: string): boolean {
   return /(^|\s)30(\s|$)/.test(detail) && /SERVICE_KEY_IS_NOT_REGISTERED|등록되지 않은 서비스키/.test(detail);
 }
+
+/**
+ * [1040] 로그 message 의 "첫오류=…" — 실패한 조각이 **왜** 실패했는지. 화면은 집계("22곳 중 1곳 실패")만 보여 주고
+ * 이 문장은 버리고 있었다(관리자가 원인을 보려면 DB 를 열어야 했다). 없으면 null.
+ * 시군구 코드 접두("41390: ")는 그대로 둔다 — 어느 구인지가 곧 단서다.
+ */
+export function firstErrorOf(message: string | null | undefined): string | null {
+  const m = String(message ?? "").match(/첫오류=(.+)$/);
+  const text = m?.[1]?.trim();
+  return text ? text : null;
+}
+
+/** [1040] 흔한 실패 사유를 한 줄 낱말로 — 모르는 사유는 원문 앞 80자 */
+export function failureReasonLabel(detail: string | null | undefined): string | null {
+  const t = String(detail ?? "").trim();
+  if (!t) return null;
+  if (/statement timeout|57014/i.test(t)) return "DB 시간 제한(8초) · 다음 실행 자동 재시도";
+  if (isServiceNotRegistered(t) || /등록되지 않은 서비스키/.test(t)) return "공공데이터포털 활용신청 필요";
+  if (/LIMITED_NUMBER_OF_SERVICE_REQUESTS|(^|\s)22(\s|$)/.test(t)) return "공공데이터 일일 호출 한도 초과";
+  if (/fetch failed|ETIMEDOUT|ECONNRESET|timeout|네트워크/i.test(t)) return "원천 응답 지연 · 다음 실행 자동 재시도";
+  return t.slice(0, 80);
+}
+
+/**
+ * [1040] 실행 사유가 "공공데이터포털 활용신청 필요"인가 — 우리 쪽 고장이 아니라 **바깥 승인이 아직 없는 것**이다.
+ * 이런 실행은 status 를 error 가 아니라 skipped 로 적는다(인증키 미설정과 같은 부류). error 로 적으면 승인이 날 때까지
+ * 매일 "수집 실패"(app.etl_troubled)가 켜졌다 꺼졌다 한다 — 승인 여부는 ingest.no_success(한 번도 성공한 적 없음)가 한 번 말한다.
+ */
+export function needsServiceApproval(reason: string | null | undefined): boolean {
+  const t = String(reason ?? "");
+  return /활용신청 필요/.test(t) || isServiceNotRegistered(t) || /등록되지 않은 서비스키/.test(t);
+}

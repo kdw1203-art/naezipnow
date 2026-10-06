@@ -1,4 +1,5 @@
 /**
+ * [1040] 저장 조각(chunkRows · isStatementTimeout) · 덜 들어간 (구, 월) 다시 받기 명단(redo*) — 아래 "저장 조각" 절
  * [1027] 이력 백필 상한 160 → 45곳/실행 · 수동 상한 200 → 45(예산 240초 안에 끝나는 크기 — 아래 상수의 실측 주석)
  * [1025] 이력 백필 상한 40 → 160곳/실행(HISTORY_MAX_REGIONS_PER_RUN) · 수동 상한 200(HISTORY_MAX_REGIONS_CAP)
  * [1024] 국토부 실거래 적재의 **순수 도우미** — server-only 사슬 밖.
@@ -202,4 +203,74 @@ export function nextNonAptGapYm(current: string | null, window: string[]): strin
   const idx = gapMonths.indexOf(current);
   if (idx < 0 || idx + 1 >= gapMonths.length) return gapMonths[0];
   return gapMonths[idx + 1];
+}
+
+/* ── [1040] 저장 조각 ─────────────────────────────────────────────────────── */
+
+/**
+ * upsert 한 문장에 싣는 행 상한.
+ * 운영 기록(2026-10-06 06:40 UTC 이력 백필): 시흥시(41390) 한 달치를 한 문장으로 넣다가
+ * "canceling statement due to statement timeout"(PostgREST 8초)으로 그 구가 통째로 빠졌고,
+ * 실행 전체가 "부분 실패 · 22곳 중 1곳 실패"로 남았다. 백필은 유형 2종 × 최대 3쪽 = 한 구에 최대 6,000행이다 —
+ * 인덱스가 여럿인 표에 그만큼을 한 문장으로 넣으면 8초를 넘긴다. 500행씩 나눠 넣는다.
+ */
+export const UPSERT_CHUNK_ROWS = 500;
+/** 시간 제한에 걸린 조각을 반으로 쪼개 다시 넣을 때의 하한 — 이보다 작으면 쪼개지 않고 실패로 센다 */
+export const UPSERT_MIN_CHUNK_ROWS = 100;
+
+export function chunkRows<T>(rows: readonly T[], size: number = UPSERT_CHUNK_ROWS): T[][] {
+  const n = Math.max(1, Math.floor(size));
+  const out: T[][] = [];
+  for (let i = 0; i < rows.length; i += n) out.push(rows.slice(i, i + n));
+  return out;
+}
+
+/** Postgres 57014(문장 시간 제한) — 나눠서 다시 넣으면 되는 오류다 */
+export function isStatementTimeout(message: string | null | undefined): boolean {
+  return /statement timeout|57014/i.test(String(message ?? ""));
+}
+
+/**
+ * 덜 들어간 (구, 월) 명단 — public_data_cache.cache_key.
+ * 조각으로 나누면 "앞 조각은 들어가고 뒤 조각은 실패"가 생길 수 있다. 과거 달은 행이 하나라도 있으면 "채워짐"으로
+ * 건너뛰므로, 그대로 두면 뒤 조각은 영영 안 온다. 그래서 그 (구, 월, 유형)을 적어 두고 다음 실행이 먼저 다시 받는다.
+ */
+export const MOLIT_REDO_KEY = "molit-ingest:redo";
+export const MOLIT_REDO_CAP = 200;
+
+export interface RedoEntry {
+  code: string;
+  ym: string;
+  /** 유형 묶음 키 — propertyTypes 정렬·쉼표 */
+  types: string;
+}
+
+export function redoTypesKey(propertyTypes: readonly string[]): string {
+  return [...new Set(propertyTypes)].sort().join(",");
+}
+
+function sameRedo(a: RedoEntry, b: RedoEntry): boolean {
+  return a.code === b.code && a.ym === b.ym && a.types === b.types;
+}
+
+/** 명단에서 remove 를 빼고 add 를 더한다(중복 없음 · 오래된 것부터 상한까지) */
+export function mergeRedo(
+  list: readonly RedoEntry[],
+  add: readonly RedoEntry[],
+  remove: readonly RedoEntry[],
+  cap: number = MOLIT_REDO_CAP,
+): RedoEntry[] {
+  const out: RedoEntry[] = [];
+  for (const e of [...list, ...add]) {
+    if (!e || !/^\d{5}$/.test(e.code) || !isYm(e.ym)) continue;
+    if (remove.some((r) => sameRedo(r, e)) && !add.some((a) => sameRedo(a, e))) continue;
+    if (out.some((o) => sameRedo(o, e))) continue;
+    out.push({ code: e.code, ym: e.ym, types: e.types });
+  }
+  return out.slice(-Math.max(1, cap));
+}
+
+/** 이번 실행(월·유형)에 해당하는 다시 받기 코드 */
+export function redoCodesFor(list: readonly RedoEntry[], ym: string, types: string): string[] {
+  return list.filter((e) => e.ym === ym && e.types === types).map((e) => e.code);
 }

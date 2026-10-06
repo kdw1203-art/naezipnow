@@ -35,12 +35,22 @@ export { createTouchedComplexSink, TOUCHED_COMPLEX_CAP };
 export type { TouchedComplexSink } from "@/lib/market/touched-complexes";
 /* [1024] 순수 도우미는 molit-core.ts 에 둔다(server-only 사슬 밖 → node:test 가 직접 부른다). 여기서 다시 내보낸다. */
 import {
+  chunkRows,
   compactRaw,
   isCapitalAreaCode,
   isRecentMonth,
+  isStatementTimeout,
+  mergeRedo,
   molitDatasetLabel,
   molitRegionLabel,
+  MOLIT_REDO_KEY,
+  redoCodesFor,
+  redoTypesKey,
+  UPSERT_CHUNK_ROWS,
+  UPSERT_MIN_CHUNK_ROWS,
+  type RedoEntry,
 } from "@/lib/market/molit-core";
+import { readCursor, writeCursor } from "@/lib/market/molit-cursor";
 export {
   CAPITAL_AREA_PREFIXES,
   compactRaw,
@@ -211,6 +221,35 @@ export function listCapitalSigungu(): SigunguInfo[] {
  * @param propertyTypes [1024] 이 유형들만 세어 "빈 곳"을 판정한다(비우면 유형 무관). 아파트 92만 행이
  *   이미 있는 (구, 월)에 오피스텔을 넣으려면 아파트 행을 세면 안 된다 — 전부 "채워짐"이 된다.
  */
+/**
+ * [1040] 조각 upsert — 한 문장에 UPSERT_CHUNK_ROWS 행까지. 문장 시간 제한(57014)에 걸린 조각은 반으로 쪼개 한 번 더 넣는다.
+ * written 은 실제로 들어간 행 수다(뒤 조각이 실패해도 앞 조각은 들어갔다 — 호출부가 그 (구, 월)을 다시 받기 명단에 올린다).
+ */
+export async function upsertInChunks(
+  sb: SupabaseClient,
+  payload: Record<string, unknown>[],
+): Promise<{ written: number; error: string | null; statements: number }> {
+  const queue = chunkRows(payload, UPSERT_CHUNK_ROWS);
+  let written = 0;
+  let statements = 0;
+  while (queue.length > 0) {
+    const chunk = queue.shift() as Record<string, unknown>[];
+    statements += 1;
+    const { error } = await sb.from("market_transactions").upsert(chunk, { onConflict: "external_key" });
+    if (!error) {
+      written += chunk.length;
+      continue;
+    }
+    if (isStatementTimeout(error.message) && chunk.length > UPSERT_MIN_CHUNK_ROWS) {
+      const half = Math.ceil(chunk.length / 2);
+      queue.unshift(chunk.slice(0, half), chunk.slice(half));
+      continue;
+    }
+    return { written, error: error.message, statements };
+  }
+  return { written, error: null, statements };
+}
+
 export async function findCoverageGaps(
   sb: SupabaseClient,
   yyyymm: string,
@@ -487,6 +526,21 @@ export async function ingestMolitTransactions(opts: {
     return { ...base, ok: false, configured: false, reason: "Supabase 미설정" };
   }
 
+  /* [1040] 덜 들어간 (구, 월) — 지난 실행에서 앞 조각만 들어간 곳. 빈 곳 찾기(gapsFirst)는 행이 하나라도 있으면
+     건너뛰므로, 명단에 있는 구는 맨 앞에 세우고 "채워짐" 판정도 건너뛴다. 명단을 못 읽으면 빈 명단으로 간다. */
+  const typesKey = redoTypesKey(propertyTypes);
+  const redoStore = await readCursor<{ items?: RedoEntry[] }>(MOLIT_REDO_KEY);
+  const redoList: RedoEntry[] = Array.isArray(redoStore?.items) ? (redoStore?.items as RedoEntry[]) : [];
+  const redoCodes = new Set(redoCodesFor(redoList, yyyymm, typesKey));
+  const redoAdd: RedoEntry[] = [];
+  const redoDone: RedoEntry[] = [];
+  const withRedoFirst = (candidates: SigunguInfo[], gaps: SigunguInfo[]): SigunguInfo[] => {
+    if (redoCodes.size === 0) return gaps;
+    const first = candidates.filter((i) => redoCodes.has(i.sigunguCd));
+    const rest = gaps.filter((i) => !redoCodes.has(i.sigunguCd));
+    return [...first, ...rest].slice(0, Math.max(sliceSize, first.length));
+  };
+
   let targets: SigunguInfo[];
   let sliceIdx = 0;
   if (opts.codes?.length) {
@@ -495,7 +549,7 @@ export async function ingestMolitTransactions(opts: {
       .filter((i): i is SigunguInfo => Boolean(i));
     if (opts.gapsFirst) {
       /* [1024] 주어진 코드 집합 안에서 빈 (시군구, 계약월, 유형)만 — 수도권 이력 백필이 쓴다. 상한은 sliceSize. */
-      targets = await findCoverageGaps(sb, yyyymm, infos, sliceSize, propertyTypes);
+      targets = withRedoFirst(infos, await findCoverageGaps(sb, yyyymm, infos, sliceSize, propertyTypes));
       sliceIdx = -1;
     } else {
       targets = infos.slice(0, 60);
@@ -503,7 +557,7 @@ export async function ingestMolitTransactions(opts: {
   } else if (opts.gapsFirst) {
     /* [997] 빈 (시군구, 계약월) 먼저 — (region_code, contract_ym) 인덱스로 HEAD 카운트만 돈다(코드당 1왕복,
        전국 ~260개 ≈ 수 초). 빈 곳이 없으면 targets 가 비어 루프가 바로 끝난다(= 로그 "시도=0"). */
-    targets = await findCoverageGaps(sb, yyyymm, all, sliceSize, propertyTypes);
+    targets = withRedoFirst(all, await findCoverageGaps(sb, yyyymm, all, sliceSize, propertyTypes));
     sliceIdx = -1;
   } else {
     const windows = Math.max(1, Math.ceil(all.length / sliceSize));
@@ -579,7 +633,7 @@ export async function ingestMolitTransactions(opts: {
       consecutiveDbErrors = 0;
       /* 최근 달(신고지연 흡수 구간)은 행이 있어도 다시 받는다 — external_key upsert 라 이중 계상 없음 */
       const isRecent = isRecentMonth(yyyymm, now);
-      if (!isRecent && (count ?? 0) > 0) {
+      if (!isRecent && (count ?? 0) > 0 && !redoCodes.has(info.sigunguCd)) {
         result.alreadyCovered += 1;
         result.regions.push({ code: info.sigunguCd, name: regionName, rows: count ?? 0, status: "covered" });
         continue;
@@ -649,6 +703,7 @@ export async function ingestMolitTransactions(opts: {
       }
       if (mode !== "live" || rows.length === 0) {
         /* 정상 응답인데 0건 — 그 달 그 구에 신고된 거래가 없다(사실) */
+        if (redoCodes.has(info.sigunguCd)) redoDone.push({ code: info.sigunguCd, ym: yyyymm, types: typesKey });
         result.empty += 1;
         result.regions.push({ code: info.sigunguCd, name: regionName, rows: 0, status: "empty" });
         continue;
@@ -659,16 +714,23 @@ export async function ingestMolitTransactions(opts: {
       for (const r of rows) dedup.set(String(r.external_key), r);
       const payload = [...dedup.values()];
 
-      const { error } = await sb
-        .from("market_transactions")
-        .upsert(payload, { onConflict: "external_key" });
-      if (error) {
-        if (await noteDbFailure(info, regionName, error.message)) {
+      /* [1040] 500행씩 나눠 넣는다 — 한 구 한 달치(백필은 최대 6,000행)를 한 문장으로 넣으면 문장 시간 제한(8초)에
+         걸린다(2026-10-06 시흥시). 시간 제한에 걸린 조각은 반으로 쪼개 다시 넣는다(upsertInChunks). */
+      const redoEntry: RedoEntry = { code: info.sigunguCd, ym: yyyymm, types: typesKey };
+      const up = await upsertInChunks(sb, payload);
+      if (up.error) {
+        /* 앞 조각은 들어갔다(사실) — 행 수에 세고, 이 (구, 월)을 다음 실행이 먼저 다시 받게 적어 둔다 */
+        if (up.written > 0) {
+          result.inserted += up.written;
+          redoAdd.push(redoEntry);
+        }
+        if (await noteDbFailure(info, regionName, `${up.error}(${up.written}/${payload.length}행 저장)`)) {
           aborted = true;
           break;
         }
         continue;
       }
+      if (redoCodes.has(info.sigunguCd)) redoDone.push(redoEntry);
       consecutiveDbErrors = 0;
       result.inserted += payload.length;
       /* [1010] upsert 가 성공한 뒤에만 센다 — 실패한 구의 단지를 비우면 "바뀌었다"는 거짓말이다. */
@@ -684,6 +746,11 @@ export async function ingestMolitTransactions(opts: {
 
     // data.go.kr rate limit 여유
     await new Promise((r) => setTimeout(r, 150));
+  }
+
+  /* [1040] 다시 받기 명단 갱신 — 바뀐 게 있을 때만 쓴다. 쓰기 실패는 경고뿐(writeCursor) — 적재 결과는 사실이다. */
+  if (redoAdd.length > 0 || redoDone.length > 0) {
+    await writeCursor(MOLIT_REDO_KEY, { items: mergeRedo(redoList, redoAdd, redoDone), updatedAt: now.toISOString() });
   }
 
   result.aborted = aborted;
@@ -730,11 +797,25 @@ export async function ingestMolitTransactions(opts: {
     dataset: `${molitDatasetLabel(propertyTypes)} ${yyyymm}`,
     origin: "cron-fetch",
     rows: result.inserted,
-    status: result.errors > 0 ? "error" : result.inserted > 0 ? "ok" : "skipped",
+    /* [1040] 활용신청이 안 된 서비스(국토부 30번 응답)는 고장이 아니라 바깥 승인 대기 — 한 행도 못 넣었으면 skipped
+       (needsServiceApproval 주석). 그 밖의 오류는 예전대로 error. */
+    status:
+      aborted && notRegistered && result.inserted === 0
+        ? "skipped"
+        : result.errors > 0
+          ? "error"
+          : result.inserted > 0
+            ? "ok"
+            : "skipped",
     message:
       `slice=${result.slice} 시도=${result.attempted} 기존커버=${result.alreadyCovered} 빈응답=${result.empty} 오류=${result.errors}` +
       (keepRaw ? "" : " raw=미저장") +
-      (aborted ? ` 중단=DB오류${DB_ERROR_ABORT_THRESHOLD}회연속(남은 시군구 미확인)` : "") +
+      /* [1040] 중단 사유를 가른다 — 활용신청 중단에도 "DB오류 5회 연속"이라고 적혀 원인을 잘못 짚게 했다 */
+      (aborted
+        ? notRegistered
+          ? ` 중단=활용신청 필요(${notRegistered} · 남은 시군구 미시도)`
+          : ` 중단=DB오류${DB_ERROR_ABORT_THRESHOLD}회연속(남은 시군구 미확인)`
+        : "") +
       (firstError ? ` 첫오류=${firstError.slice(0, 300)}` : ""),
   });
 

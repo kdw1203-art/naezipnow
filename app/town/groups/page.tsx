@@ -39,6 +39,7 @@ export const metadata = buildPageMetadata({
   description:
     "지역·일정별 임장 모임을 찾고, 직접 모임을 만들어 함께 다녀올 사람을 모읍니다. 등록된 모임이 없으면 없다고 표시합니다.",
   path: "/town/groups",
+  archived: true /* [1040] 보관 화면 — 메타 robots 를 머리(X-Robots-Tag)와 맞춘다 */,
 });
 
 /* ---------- 헬퍼 ---------- */

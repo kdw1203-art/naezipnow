@@ -7,6 +7,8 @@ import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 import { isEmailConfigured, sendEmail } from "@/lib/email/send";
 import { passwordResetEmail } from "@/lib/email/templates";
 import { logger } from "@/lib/log";
+import { resetLinkNextSuffix, safeNextPath } from "@/lib/auth/auth-ux";
+import { EMAIL_RE } from "@/lib/auth/signup-form";
 
 const TOKEN_TTL_MINUTES = 60;
 
@@ -15,7 +17,7 @@ const TOKEN_TTL_MINUTES = 60;
  * (app_users 사용자 대상 — /reset-password?token= 에서 /api/auth/reset-password 로 검증·변경)
  * 성공적으로 메일을 보냈을 때만 true 반환. 실패 시 Supabase Auth 경로로 폴백.
  */
-async function trySendSelfTokenEmail(email: string, baseUrl: string): Promise<boolean> {
+async function trySendSelfTokenEmail(email: string, baseUrl: string, next: string | null): Promise<boolean> {
   const sb = getServiceSupabase();
   if (!sb) return false;
 
@@ -44,7 +46,8 @@ async function trySendSelfTokenEmail(email: string, baseUrl: string): Promise<bo
       return false;
     }
 
-    const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
+    /* [1040] 가려던 곳(next)을 링크에 싣는다 — 재설정 화면이 읽어 로그인 화면의 callbackUrl 로 넘긴다(내부 경로만) */
+    const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}${resetLinkNextSuffix(next)}`;
     const result = await sendEmail({
       to: email,
       ...passwordResetEmail({ resetUrl, expiresMinutes: TOKEN_TTL_MINUTES }),
@@ -68,14 +71,17 @@ export async function POST(req: NextRequest) {
   if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
 
   let email: string;
+  let next: string | null = null;
   try {
-    const body = await req.json() as { email?: unknown };
+    const body = await req.json() as { email?: unknown; next?: unknown };
     email = String(body.email ?? "").trim().toLowerCase();
+    /* [1040] 가려던 곳 — 내부 경로만 받는다(외부 주소·인증 화면 자신은 버린다) */
+    next = safeNextPath(body.next);
   } catch {
     return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
   }
 
-  if (!email.includes("@")) {
+  if (!EMAIL_RE.test(email)) {
     return NextResponse.json({ error: "올바른 이메일 주소를 입력해 주세요." }, { status: 400 });
   }
 
@@ -86,7 +92,7 @@ export async function POST(req: NextRequest) {
 
   // 1) 이메일 프로바이더(Resend)가 설정돼 있으면 자체 토큰 메일 발송 우선
   if (isEmailConfigured()) {
-    const sent = await trySendSelfTokenEmail(email, baseUrl);
+    const sent = await trySendSelfTokenEmail(email, baseUrl, next);
     if (sent) {
       // 이메일 존재 여부를 노출하지 않기 위해 항상 성공 응답 반환
       return NextResponse.json({ ok: true });
@@ -107,7 +113,8 @@ export async function POST(req: NextRequest) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const redirectTo = `${baseUrl}/auth/confirm?next=${encodeURIComponent("/reset-password")}`;
+  const resetPath = next ? `/reset-password?next=${encodeURIComponent(next)}` : "/reset-password";
+  const redirectTo = `${baseUrl}/auth/confirm?next=${encodeURIComponent(resetPath)}`;
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo,
   });

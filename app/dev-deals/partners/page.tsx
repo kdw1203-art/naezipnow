@@ -5,6 +5,7 @@ import { listPartnersAll } from "@/lib/dev-deals/store";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { PartnersClient } from "./PartnersClient";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
+import { ARCHIVED_ROBOTS } from "@/lib/seo/archived-routes";
 
 /* ── ISR 전환 (사용량 절감 10차, 2026-08-10) ────────────────────────────────
    예전에는 force-dynamic + ?type= 서버 필터(요청마다 함수 실행 + DB 쿼리)였다.
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
   title: "협력업체 디렉터리 — 개발물건 중개 | 내집나우",
   description:
     "시공사·설계사·신탁·PF·마케팅·감리 등 개발사업 협력업체를 찾고, 우리 회사를 등록해 개발물건 매칭을 받아 보세요.",
-  robots: { index: true, follow: true },
+  robots: ARCHIVED_ROBOTS /* [1040] 보관 화면 — 머리(X-Robots-Tag)와 같은 신호 */,
   // N7 — 필터·정렬 파라미터 조합이 별개 URL 로 색인되지 않도록 canonical 고정
   alternates: seoAlternates("/dev-deals/partners"),
 };

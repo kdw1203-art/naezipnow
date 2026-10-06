@@ -1,6 +1,9 @@
 "use client";
 /* [1026c · 폰 배율 1] 동의 체크박스 — 폰 간격 단위(3px)에서 h-5 가 15px 이었다. 20px 고정 + 40px 손끝 칸(span)으로 감싼다(옆 글자가 탭을 가져가지 않게). */
 
+import { capsLockOn } from "@/lib/auth/auth-ux";
+import { CapsLockNote } from "@/app/components/auth/CapsLockNote";
+import { SignupSteps } from "@/app/components/auth/SignupSteps";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,7 +17,6 @@ import type { SocialProvider } from "@/lib/auth/configured-social";
 import { markOncePerSession, useFirstInteraction } from "@/lib/client/human-gate";
 import { browserFamily, deviceClass } from "@/lib/client/browser-family";
 import {
-  EMAIL_RE,
   NAME_MAX,
   PASSWORD_MIN,
   RESEND_COOLDOWN_SEC,
@@ -85,6 +87,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
   const [agreeLocation, setAgreeLocation] = useState(false);
   const [busy, setBusy] = useState(false);
   const [resendBusy, setResendBusy] = useState(false);
+  const [caps, setCaps] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /* [1039] 칸마다 오류 — 제출 때 한꺼번에 세우고, 고치면 그 칸만 지운다. 칸을 떠났을 때(touched)도 그 칸만 본다 */
   const [fieldErr, setFieldErr] = useState<{ email?: string; password?: string; consent?: string }>({});
@@ -165,9 +168,6 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
     stashSignupHandoff({ regions: [], profile: {}, purpose: null });
   }, []);
 
-  const emailOk = EMAIL_RE.test(normalizeEmail(email));
-  const progressDone = [emailOk, password.length >= PASSWORD_MIN, agree].filter(Boolean).length;
-  const progressPct = Math.round((progressDone / 3) * 100);
   const pw = scorePassword(password);
   const typoFix = emailTypoFix(email);
   const allAgreed = agree && agreeMarketing && agreeLocation;
@@ -357,6 +357,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
         className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col justify-center gap-4 px-7 pb-8"
         style={{ paddingTop: "max(20px, env(safe-area-inset-top, 0px))" }}
       >
+        <SignupSteps current={1} className="rise-in" />
         <div className="rise-in card flex flex-col items-center gap-3 rounded-3xl p-7 text-center">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-[21px]">
             <Icon name="✉" size={24} />
@@ -366,14 +367,8 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
           </h1>
           {/* [1039] 다음에 할 일 세 칸 — 문장 두 줄 대신 순서(메일 열기 → 링크 누르기 → 로그인) */}
           <p className="break-all text-[13px] font-bold text-ink">{sentTo}</p>
-          <ol className="m-0 flex w-full list-none items-start justify-between gap-1 p-0 t-caption text-text-3">
-            {["메일함 열기", "인증 링크 누르기", "로그인"].map((step, i) => (
-              <li key={step} className="flex flex-1 flex-col items-center gap-1">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-soft font-bold text-primary">{i + 1}</span>
-                {step}
-              </li>
-            ))}
-          </ol>
+          {/* [1040] 번호 동그라미 3개 → 한 줄. 위의 가입 3단계 띠와 "1·2·3"이 두 벌이 되지 않게 */}
+          <p className="t-caption text-text-3">메일함 열기 › 인증 링크 누르기 › 로그인</p>
           <p aria-live="polite" className="min-h-[18px] t-sub font-bold text-primary">
             {confirmHint}
           </p>
@@ -416,7 +411,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
                 setError(null);
               }}
             >
-              다른 이메일로 다시 가입
+              이메일 고치기
             </button>
             <Link href="/" className="inline-flex min-h-10 items-center px-2 text-xs text-text-3">
               홈으로
@@ -443,21 +438,6 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
         <Link href={loginHref} className="-ml-3 inline-flex h-10 w-10 items-center justify-center text-[15px] text-text-1" aria-label="뒤로">
           ‹
         </Link>
-        {/* 진행 막대 — 예전엔 w-1/2 하드코딩이라 페이지를 열자마자 50%,
-            제출 직전에도 50% 였다. 실제로 채운 항목 비율로 그린다. */}
-        <div
-          className="relative h-1 w-[120px] rounded-sm bg-bg"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={progressPct}
-          aria-label="가입 진행률"
-        >
-          <div
-            className="absolute left-0 top-0 h-1 rounded-sm bg-primary transition-all"
-            style={{ width: `${progressPct}%` }}
-          />
-        </div>
         <Link href="/" className="-mr-2 inline-flex min-h-10 items-center px-2 text-[13px] text-text-3">
           건너뛰기
         </Link>
@@ -468,6 +448,9 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
       <h1 className="rise-in text-[21px] font-bold leading-[1.35] text-ink">
         회원가입
       </h1>
+      {/* [1040] 가입 3단계 — 계정 → 메일 인증 → 관심 지역. 머리의 채움 막대(칸을 채운 비율)를 대신한다:
+          "이 화면 다음에 무엇이 남았나"를 인증 메일 안내·환영 화면과 같은 띠로 잇는다 */}
+      <SignupSteps current={0} className="rise-in" />
 
       {social.length > 0 && (
         <div className="rise-in-2 flex flex-col gap-2.5">
@@ -588,6 +571,10 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
             aria-invalid={passwordErr ? true : undefined}
             aria-describedby={passwordErr ? "signup-password-err" : "signup-password-meter"}
             style={{ paddingRight: 64 }}
+            /* [1040] Caps Lock 표시 */
+            onKeyDown={(e) => setCaps(capsLockOn(e))}
+            onKeyUp={(e) => setCaps(capsLockOn(e))}
+            onBlur={() => setCaps(false)}
           />
           <label htmlFor="signup-password">비밀번호 ({PASSWORD_MIN}자 이상)</label>
           <button
@@ -623,6 +610,7 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
             {passwordErr}
           </p>
         )}
+        <CapsLockNote on={caps} />
 
         {/* [1039] 봇 덫 — 화면 밖 · 탭 순서 밖 · 낭독기 밖. 사람은 채울 수 없다 */}
         <div aria-hidden="true" className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden">

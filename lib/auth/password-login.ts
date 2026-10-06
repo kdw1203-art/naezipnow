@@ -1,3 +1,4 @@
+import { rateLimitedCode } from "@/lib/auth/auth-ux";
 import bcrypt from "bcryptjs";
 import { createClient } from "@supabase/supabase-js";
 import { CredentialsSignin } from "next-auth";
@@ -44,6 +45,21 @@ export class SocialOnlyAccountError extends CredentialsSignin {
 
 export class NoAccountError extends CredentialsSignin {
   code = "no_account";
+}
+
+/**
+ * [1040] 시도 한도 — 화면이 "비밀번호가 맞지 않아요" 대신 "시도 한도 · N분 뒤 다시"를 말하게 한다.
+ * 예전엔 한도에 걸려도 null(= 비밀번호 오류와 같은 응답)을 돌려줬다. 그러면 **맞는 비밀번호를 넣은 사람**도
+ * "틀렸다"는 말을 듣고 비밀번호 재설정으로 간다(재설정해도 한도는 그대로라 또 막힌다). 한도에 걸렸다는 사실은
+ * 응답 시간·429 로 어차피 드러나므로 숨겨서 얻는 것이 없다. 계정이 있는지는 여전히 말하지 않는다(진단은 비밀번호가
+ * 실제로 대조된 뒤에만 한다).
+ */
+export class LoginRateLimitedError extends CredentialsSignin {
+  code: string;
+  constructor(retryAfterSec?: number | null) {
+    super();
+    this.code = rateLimitedCode(retryAfterSec);
+  }
 }
 
 /** 비밀번호 로그인 대신 어느 버튼을 눌러야 하는지 — app_users 의 sentinel 해시가 말해 준다 */
@@ -237,7 +253,8 @@ export async function authorizeWithPassword(
       provider: "password",
       reason: "rate_limited",
     });
-    return null;
+    /* [1040] 한도임을 화면에 알린다(LoginRateLimitedError 주석) */
+    throw new LoginRateLimitedError(rl.retryAfterSec);
   }
 
   const fromDb = await tryAppUsersBcrypt(email, password);
@@ -295,4 +312,30 @@ export async function authorizeWithPassword(
     });
     return null;
   }
+}
+
+/**
+ * [1040] 설정 화면의 비밀번호 변경 — 지금 비밀번호가 맞는지만 본다(세션 발급 없음 · 로그인 계측 없음).
+ *  ok           맞다
+ *  wrong        틀렸다
+ *  no_password  비밀번호가 없는 계정(카카오·토스·구글로만 가입) — 메일 링크로 설정하는 길을 안내한다
+ * 호출부(/api/me/password)가 시도 한도를 건다.
+ */
+export async function verifyCurrentPassword(
+  emailRaw: string,
+  password: string,
+): Promise<"ok" | "wrong" | "no_password"> {
+  const email = emailRaw.trim().toLowerCase();
+  if (!email.includes("@")) return "wrong";
+  if (password) {
+    if (await tryAppUsersBcrypt(email, password)) return "ok";
+    try {
+      if (await trySupabaseAuthPassword(email, password)) return "ok";
+    } catch (e) {
+      /* GoTrue 는 비밀번호를 확인한 뒤에야 "미인증"을 말한다 — 이 사람은 이미 로그인해 있으므로 맞는 것으로 본다 */
+      if (e instanceof EmailNotConfirmedError) return "ok";
+    }
+  }
+  const diag = await diagnoseBadCredentials(email);
+  return diag instanceof SocialOnlyAccountError ? "no_password" : "wrong";
 }

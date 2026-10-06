@@ -114,6 +114,7 @@ import { RecentComplexRecorder } from "../../components/RecentComplexRecorder";
 import { MarketFreshnessLine } from "../../components/MarketFreshnessLine";
 /* [1015 · 규칙 J] Q&A(QaBlock)·퍼가기(EmbedSnippet) 카드는 페이지 맨 끝 "데이터 출처" 접힘(ComplexFactsCard) 안으로 */
 import { AdZone } from "@/app/components/ads/AdZone";
+import { complexPageIndexable, complexShowsAds } from "@/lib/seo/complex-index-policy";
 import type { FaqItem } from "@/lib/seo/jsonld";
 /* [968 · 3 · 4] 후기 섹션은 뷰포트 근처에서 청크·데이터를 함께 받는 래퍼로 */
 import { ComplexReviewsLazy } from "./ComplexReviewsLazy";
@@ -1157,7 +1158,11 @@ export async function generateMetadata({
      follow 는 유지해서 내부 링크는 계속 따라가게 둔다.
      tx 는 위에서 이미 읽었으므로 추가 조회가 없다. 거래가 들어오는 순간
      자동으로 색인 대상이 된다 — 별도 배치가 필요 없다. */
-  const hasSubstance = tx.length > 0;
+  /* [1040 · seo.thin_content] "한 건이라도" → 최근 12개월에 1건 이상이거나 창(24개월) 안에 3건 이상.
+     옛 거래 1~2건만 남은 단지는 그래프·평형별 표가 서지 않는 얇은 화면이다. 사이트맵 기준(전 기간 3건 + 최근 12개월 거래)은
+     이 조건보다 좁다 — 사이트맵에 실린 단지가 noindex 로 나가는 일은 없다(lib/seo/complex-index-policy). */
+  const windowDeals = tx.reduce((s, r) => s + (r.deal_count || 0), 0);
+  const hasSubstance = tx.length > 0 && complexPageIndexable(windowDeals, n12);
 
   return {
     title,
@@ -1799,7 +1804,10 @@ export default async function ComplexHubPage({
       </div>
 
       {/* [1015 · 규칙 G] 페이지 끝 광고 1 */}
-      <AdZone placement="page_bottom" seed={1} plan={null} className="mt-6 max-md:mt-3" />
+      {/* [1040] 거래 3건 미만(창 24개월)인 얇은 화면에는 광고 칸을 두지 않는다 — 건수를 못 읽었으면 예전대로 */}
+      {complexShowsAds(v.dealCount) && (
+        <AdZone placement="page_bottom" seed={1} plan={null} className="mt-6 max-md:mt-3" />
+      )}
 
       {/* [967 · 17] 모바일 하단 액션 바 — 관심·노트 쓰기·호가 점검·AI 분석. 하단 CTA 블록이 화면에 있으면 숨긴다 */}
       <MobileActionBarLazy

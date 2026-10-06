@@ -9,6 +9,7 @@ import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 import { CoverImage } from "@/app/components/CoverImage";
 import { Icon } from "@/app/components/Icon";
 import { PageHead } from "@/app/components/PageHead";
+import { ARCHIVED_ROBOTS } from "@/lib/seo/archived-routes";
 
 /* [#143] 유료 리포트 진열대 — 잠금 상태(#70 선행분).
    기준을 넘는 공개 노트를 "판매 예정 리포트"로 미리 진열한다. 결제 버튼은
@@ -25,6 +26,7 @@ export const metadata: Metadata = {
   description:
     "기준을 충족한 임장노트가 유료 리포트로 판매될 예정입니다. 사진 5장 이상, 본문 2,000자 이상의 검증된 현장 기록.",
   alternates: { canonical: "/notes/market" },
+  robots: ARCHIVED_ROBOTS /* [1040] 보관 화면 */,
 };
 
 const MIN_PHOTOS = 5;
