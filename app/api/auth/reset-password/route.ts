@@ -65,9 +65,10 @@ export async function POST(req: NextRequest) {
   await sb.from("password_reset_tokens").update({ used: true }).eq("id", row.id);
 
   /* [1040] 변경 알림 메일 — 본인이 아닌 재설정을 알아챌 수 있게(실패해도 변경은 유효) */
-  await sendPasswordChangedNotice(row.user_email, "reset");
+  const noticeSent = await sendPasswordChangedNotice(row.user_email, "reset");
 
-  return NextResponse.json({ ok: true, email: row.user_email });
+  /* [1041] noticeSent — 화면이 "알림 메일 발송"을 실제로 보냈을 때만 적는다 */
+  return NextResponse.json({ ok: true, email: row.user_email, noticeSent });
 }
 
 /** GET /api/auth/reset-password?token=xxx — 토큰 유효성만 확인 */

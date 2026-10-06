@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Logo } from "@/app/components/Logo";
 import { Icon } from "@/app/components/Icon";
 import { PASSWORD_MIN, passwordProblem, scorePassword, stashAuthEmail } from "@/lib/auth/signup-form";
-import { capsLockOn, forgotHrefWithNext, loginHrefWithNext, safeNextPath } from "@/lib/auth/auth-ux";
+import { capsLockOn, forgotHrefWithNext, loginHrefWithNext, passwordChangedLine, safeNextPath } from "@/lib/auth/auth-ux";
 import { CapsLockNote } from "@/app/components/auth/CapsLockNote";
 /* 최적화 19 — supabase-js 는 **필요할 때** 불러온다.
    정적 import 이던 시절 이 페이지의 First Load JS 는 181kB 였고, 그중 약 66kB가
@@ -50,6 +50,8 @@ export default function ResetPasswordPage() {
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  /* [1041] 변경 알림 메일을 서버가 실제로 보냈는가 — 보냈을 때만 완료 화면이 그 말을 한다 */
+  const [noticeSent, setNoticeSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [caps, setCaps] = useState(false);
   /* 가려던 곳 — 마운트 후에만 읽는다(서버·첫 렌더 불일치 방지) */
@@ -141,13 +143,14 @@ export default function ResetPasswordPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token, password }),
         });
-        const data = (await res.json().catch(() => ({}))) as { error?: string; email?: string };
+        const data = (await res.json().catch(() => ({}))) as { error?: string; email?: string; noticeSent?: boolean };
         if (!res.ok) {
           setError(data.error ?? "비밀번호 변경에 실패했습니다.");
           return;
         }
         /* [1040] 로그인 화면이 이메일을 채워 둔다(주소가 아니라 탭 저장소로) */
         if (data.email) stashAuthEmail(data.email);
+        setNoticeSent(data.noticeSent === true);
       } else {
         const sb = await loadSupabase().catch(() => null);
         if (!sb) {
@@ -220,7 +223,7 @@ export default function ResetPasswordPage() {
           <div className="rise-in card flex flex-col gap-2.5 rounded-2xl px-5 py-6 text-center">
             <Icon name="✅" size={28} />
             <div className="text-[15px] font-bold text-ink">비밀번호 변경 완료</div>
-            <p className="text-[13px] text-text-2" aria-live="polite">3초 뒤 로그인 화면 · 변경 알림 메일 발송</p>
+            <p className="text-[13px] text-text-2" aria-live="polite">{passwordChangedLine("reset", noticeSent)}</p>
             <Link
               href={loginHref}
               className="btn-primary mt-2 rounded-lg p-3 text-center text-[13px] font-bold"
@@ -337,7 +340,7 @@ export default function ResetPasswordPage() {
                 {busy ? "변경 중…" : "비밀번호 변경"}
               </button>
             </form>
-            <p className="rise-in-4 t-caption text-text-3">변경 즉시 적용 · 알림 메일 발송</p>
+            <p className="rise-in-4 t-caption text-text-3">변경 즉시 적용</p>
           </>
         )}
 

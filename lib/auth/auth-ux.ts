@@ -113,6 +113,15 @@ export function resetLinkNextSuffix(next: string | null | undefined): string {
   return n ? `&next=${encodeURIComponent(n)}` : "";
 }
 
+/* [1041] 비밀번호를 바꾼 뒤의 한 줄 — "알림 메일 발송"은 서버가 **실제로 보냈을 때만** 적는다.
+ * 1040 은 늘 적었다. 운영에는 발송 키가 없어 한 통도 나가지 않는데 화면은 보냈다고 했다(없는 일을 적은 것).
+ * noticeSent 는 서버 응답의 값이고, 값이 없으면(Supabase 복구 링크 길 · 옛 응답) 보내지 않은 것으로 본다. */
+export function passwordChangedLine(place: "reset" | "settings", noticeSent: unknown): string {
+  const sent = noticeSent === true;
+  if (place === "reset") return sent ? "3초 뒤 로그인 화면 · 변경 알림 메일 발송" : "3초 뒤 로그인 화면";
+  return sent ? "변경 완료 · 알림 메일 발송" : "변경 완료 · 즉시 적용";
+}
+
 /* ── 가입 단계 ───────────────────────────────────────────────────────────── */
 
 export const SIGNUP_STEPS = ["계정", "메일 인증", "관심 지역"] as const;

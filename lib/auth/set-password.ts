@@ -59,14 +59,19 @@ export async function setAccountPassword(
 /**
  * 비밀번호가 바뀌었다는 알림 메일 — 본인이 아닌 변경을 알아챌 수 있게.
  * 발송 실패는 변경을 되돌리지 않는다(경고만). 메일 미설정이면 조용히 건너뛴다.
+ *
+ * [1041] 돌려주는 값 = **실제로 보냈는가**. 1040 은 값을 돌려주지 않았고 화면은 늘 "알림 메일 발송"이라고 적었다 —
+ * 운영에는 발송 키(RESEND_API_KEY)가 없어 한 통도 나가지 않는데도. 화면은 이 값이 true 일 때만 그 말을 한다.
  */
-export async function sendPasswordChangedNotice(emailRaw: string, via: "reset" | "settings"): Promise<void> {
+export async function sendPasswordChangedNotice(emailRaw: string, via: "reset" | "settings"): Promise<boolean> {
   const email = emailRaw.trim().toLowerCase();
-  if (!email.includes("@") || !isEmailConfigured()) return;
+  if (!email.includes("@") || !isEmailConfigured()) return false;
   try {
     const result = await sendEmail({ to: email, ...passwordChangedEmail({ via, at: new Date() }) });
     if (!result.sent) logger.warn("[set-password] 변경 알림 메일 발송 실패", result.reason);
+    return result.sent;
   } catch (e) {
     logger.warn("[set-password] 변경 알림 메일 오류", e);
+    return false;
   }
 }

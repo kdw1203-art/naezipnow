@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
   const changed = await setAccountPassword(email, next);
   if (!changed.ok) return NextResponse.json({ error: changed.error }, { status: changed.status });
 
-  await sendPasswordChangedNotice(email, "settings");
-  return NextResponse.json({ ok: true });
+  const noticeSent = await sendPasswordChangedNotice(email, "settings");
+  /* [1041] noticeSent — 화면이 "알림 메일 발송"을 실제로 보냈을 때만 적는다 */
+  return NextResponse.json({ ok: true, noticeSent });
 }

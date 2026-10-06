@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { PASSWORD_MIN, passwordProblem, scorePassword } from "@/lib/auth/signup-form";
-import { capsLockOn } from "@/lib/auth/auth-ux";
+import { capsLockOn, passwordChangedLine } from "@/lib/auth/auth-ux";
 import { CapsLockNote } from "@/app/components/auth/CapsLockNote";
 
 /* [1040 · 로그인·가입 기능] 설정 › 계정 — 비밀번호 변경(로그인 상태에서 바로).
@@ -12,7 +12,7 @@ import { CapsLockNote } from "@/app/components/auth/CapsLockNote";
  * 지금 비밀번호를 한 번 확인하고 이 자리에서 바꾼다(POST /api/me/password). 줄을 누르면 아래로 펼쳐진다.
  *  · 비밀번호가 없는 계정(카카오·구글·토스로만 가입) → 서버가 409 로 알린다 → "메일 링크로 설정" 길을 준다
  *  · 새 비밀번호: 가입 화면과 같은 강도 막대 · Caps Lock 표시 · 확인 칸 일치 표시
- *  · 변경 뒤 알림 메일이 간다(서버) */
+ *  · 변경 뒤 알림 메일(서버) — [1041] 서버가 실제로 보냈을 때만 "알림 메일 발송"을 적는다 */
 type Phase = "closed" | "open" | "done" | "no_password";
 
 export function PasswordChangeRow() {
@@ -23,6 +23,7 @@ export function PasswordChangeRow() {
   const [showPw, setShowPw] = useState(false);
   const [caps, setCaps] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [noticeSent, setNoticeSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [field, setField] = useState<"current" | "next" | "next2" | null>(null);
 
@@ -51,7 +52,7 @@ export function PasswordChangeRow() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ current, next }),
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string; field?: string; code?: string };
+      const data = (await res.json().catch(() => ({}))) as { error?: string; field?: string; code?: string; noticeSent?: boolean };
       if (res.status === 409 && data.code === "no_password") {
         setPhase("no_password");
         return;
@@ -63,6 +64,7 @@ export function PasswordChangeRow() {
       setCurrent("");
       setNext("");
       setNext2("");
+      setNoticeSent(data.noticeSent === true);
       setPhase("done");
     } catch {
       fail("네트워크 오류 · 잠시 후 다시", null);
@@ -96,7 +98,7 @@ export function PasswordChangeRow() {
 
       {phase === "done" && (
         <p role="status" className="pb-3 t-sub font-bold text-success">
-          변경 완료 · 알림 메일 발송
+          {passwordChangedLine("settings", noticeSent)}
         </p>
       )}
 
