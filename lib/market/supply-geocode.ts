@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { geocodeAndCache } from "@/lib/map/complex-geocode";
+import { GEOCODE_RULES_SINCE } from "@/lib/map/geocode-query";
 import {
   chunk,
   pgErrorText,
@@ -13,7 +14,9 @@ import { logger } from "@/lib/log";
 
 /* [#74] 입주 예정 단지 좌표 채우기 — 기존 complex_geocode 파이프라인 재사용.
  * 수집 크론(supply-ingest) 끝에 하루 상한(기본 25건)만큼 점진 백필한다.
- * notfound 로 굳은 키는 다시 시도하지 않는다(geocodeAndCache 캐시 정책 그대로).
+ * [1043] 못 찾음(notfound)으로 굳은 키도 7일 뒤 다시 묻는다 — 예전엔 한 번 못 찾으면 영영 "좌표 준비 중"이었다
+ * (분양 공고 주소의 "번지 일원" 꼬리 때문에 못 찾던 348건이 그렇게 남아 있었다. 꼬리는 이제 떼고 묻는다 —
+ * lib/map/geocode-query.ts cleanLotAddress).
  *
  * [1003 · 2026-09-17] 이 함수가 매일 ETL 을 죽이고 있었다. "이미 시도한 키"를
  * 한 번의 `.in()` 로 물었는데, 실측 582개(한글 9,140자)면 GET URL 이 ~82KB 라
@@ -33,6 +36,9 @@ function currentYm(): string {
   const d = new Date();
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
+
+/** 못 찾음 재시도 주기 — 단지 백필(complexes_needing_geocode)과 같은 7일 */
+const SUPPLY_RETRY_MS = 7 * 86_400_000;
 
 export async function backfillSupplyGeocode(cap = 25): Promise<SupplyGeocodeResult> {
   const sb = getServiceSupabase();
@@ -62,15 +68,15 @@ export async function backfillSupplyGeocode(cap = 25): Promise<SupplyGeocodeResu
   }
   if (rows.length === 0) return empty;
 
-  /* 이미 시도한 키(성공·notfound 불문)는 후보에서 뺀다 — cap 은 실제 API 시도 수.
-     필요한 건 "어떤 짝이 이미 있나" 하나뿐이라, 나눠 물어도 답은 같다(합집합). */
+  /* 이미 좌표가 있는 키와 **최근 7일 안에** 못 찾은 키는 후보에서 뺀다 — cap 은 실제 API 시도 수.
+     필요한 건 "어떤 짝이 끝났나" 하나뿐이라, 나눠 물어도 답은 같다(합집합). */
   const byName = regionsByName(rows);
   const done = new Set<string>();
   for (const namePart of chunk([...byName.keys()], NAME_IN_CHUNK)) {
     const regionPart = [...new Set(namePart.flatMap((n) => byName.get(n) ?? []))];
     let q = sb
       .from("complex_geocode")
-      .select("region_name, complex_name")
+      .select("region_name, complex_name, status, geocoded_at")
       .in("complex_name", namePart);
     /* 지역은 이 조각에 실린 이름들의 것만(실측 17곳). PK(region_name,
        complex_name) 인덱스를 계속 타기 위해서다. 그래도 많으면 빼는데 결과는
@@ -82,7 +88,12 @@ export async function backfillSupplyGeocode(cap = 25): Promise<SupplyGeocodeResu
       throw new Error(`complex_geocode 조회 실패: ${pgErrorText(exErr, namePart.length)}`);
     }
     for (const r of existing ?? []) {
-      done.add(`${r.region_name}${r.complex_name}`);
+      const at = r.geocoded_at ? Date.parse(String(r.geocoded_at)) : NaN;
+      /* 규칙이 바뀌기 전(GEOCODE_RULES_SINCE)에 못 찾은 행은 7일을 기다리지 않고 한 번 다시 묻는다 */
+      const stale =
+        r.status === "notfound" &&
+        (!Number.isFinite(at) || Date.now() - at >= SUPPLY_RETRY_MS || at < Date.parse(GEOCODE_RULES_SINCE));
+      if (!stale) done.add(`${r.region_name}${r.complex_name}`);
     }
   }
   const todo = rows.filter((r) => !done.has(`${r.region}${r.name}`));
@@ -96,11 +107,9 @@ export async function backfillSupplyGeocode(cap = 25): Promise<SupplyGeocodeResu
   for (const r of todo.slice(0, cap)) {
     result.attempted += 1;
     try {
-      const coord = await geocodeAndCache(
-        r.region,
-        r.name,
-        r.address ? r.address : undefined,
-      );
+      const coord = await geocodeAndCache(r.region, r.name, r.address ? r.address : undefined, {
+        retryNotfound: true,
+      });
       if (coord) result.ok += 1;
       else result.notfound += 1;
     } catch (e) {

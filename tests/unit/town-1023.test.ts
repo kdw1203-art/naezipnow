@@ -65,8 +65,9 @@ test("[1023 · 동네 ②] 피드 실패 고지 — 흰 카드(bg-danger-soft �
   assert.ok(!c.includes("bg-danger-soft"), "위험색 면 없음");
   assert.match(c, /const fetchPage = useCallback\(/, "한 장 fetch 를 공유");
   assert.match(c, /const retryFeed = useCallback\(/);
-  assert.match(c, /await fetchPage\(Date\.now\(\), 0\)/, "다시 시도는 첫 장(경계 = 지금)");
-  assert.match(c, /await fetchPage\(oldest, allCards\.length\)/, "더 보기는 예전 경계 그대로");
+  /* [1043] 피드가 이웃 글만이라 노트 스캔 창(seen)이 없어졌다 — 경계만 넘긴다 */
+  assert.match(c, /await fetchPage\(Date\.now\(\)\)/, "다시 시도는 첫 장(경계 = 지금)");
+  assert.match(c, /await fetchPage\(oldest\)/, "더 보기는 예전 경계 그대로");
   assert.equal((c.match(/\/api\/town\/feed\?before=/g) ?? []).length, 1, "API 주소는 한 곳");
   assert.equal((c.match(/onClick=\{retryFeed\}/g) ?? []).length, 2, "고지·빈 상태 둘 다 다시 시도");
   assert.match(c, /"다시 시도"/);
@@ -86,14 +87,15 @@ test("[1023 · 동네 ③] 피드 빈 상태 — 설명문 꼬리 삭제, 사실
 
 /* ── 뉴스룸 주제 칩 줄 ─────────────────────────────────────────────────────── */
 
-test("[1023 · 동네 ①] 뉴스룸 — 주제 칩 줄이 머리 바로 아래(카테고리 줄 앞), 레일의 같은 칩은 없다", () => {
+test("[1023 · 동네 ①] 뉴스룸 — 주제 칩 줄이 첫 화면에 선다, 레일의 같은 칩은 없다", () => {
   const src = read("app/town/news/page.tsx");
   assert.match(src, /^\/\* \[1023/m);
   const c = code("app/town/news/page.tsx");
-  const head = c.indexOf("<PageHead");
+  /* [1044] 뉴스는 동네의 한 칸이 아니다 — 머리(NewsHead) → 주제 칩(본문 첫 줄). 동네 카테고리 줄은 없다 */
+  const head = c.indexOf("<NewsHead />");
   const chips = c.indexOf("NEWS_TAGS.map(");
-  const nav = c.indexOf("<TownCategoryNav stick />");
-  assert.ok(head > 0 && chips > head && nav > chips, "PageHead → 주제 칩 → 카테고리 줄 순서");
+  assert.ok(head > 0 && chips > head, "머리 → 주제 칩 순서");
+  assert.ok(!c.includes("TownCategoryNav") && !c.includes("TownHero"), "동네 카테고리 줄·머리 없음");
   assert.equal((c.match(/NEWS_TAGS\./g) ?? []).length, 1, "주제 칩은 한 번만 그린다");
   assert.match(c, /aria-label="주제별 뉴스"/);
   assert.ok(c.includes("min-h-[24px]"), "칩 24px 하한");

@@ -58,13 +58,15 @@ test("[1022] 머리 한 모양 — 허브·동네 9칸·동네 홈·임장노트
     "app/notes/best/[ym]/page.tsx",
     "app/notes/compare/page.tsx",
     "app/notes/market/page.tsx",
-    "app/town/news/page.tsx",
     "app/town/news/tag/[tag]/page.tsx",
     "app/town/[region]/page.tsx",
     "app/town/write/page.tsx",
   ]) {
     assert.match(read(p), /components\/PageHead"/, `${p} 가 PageHead 를 쓴다`);
   }
+  /* [1043] 뉴스룸은 PageHead 를 직접 쓰지 않는다 · [1044] 동네에서 떨어져 나와 TownHero 대신 NewsHead(안에서 PageHead) */
+  assert.match(read("app/town/news/page.tsx"), /<NewsHead \/>/, "뉴스룸 머리 = NewsHead");
+  assert.match(read("app/town/news/NewsHead.tsx"), /components\/PageHead"/, "NewsHead 가 PageHead 를 쓴다");
   /* 화면 제목은 t-title 하나 — 뉴스룸의 t-display 머리는 걷었다 */
   assert.ok(!code("app/town/news/page.tsx").includes("t-display"), "뉴스룸 머리 t-display 없음");
   /* TownHero 호출부(청약·입주·공매·정비사업·Q&A)는 그대로 — API 불변 */

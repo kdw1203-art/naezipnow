@@ -468,7 +468,8 @@ test("홈 입구 — 문 넷은 ⓘ 로 접혔고, 목적지 넷은 실재 화�
    주소(/journey · /journey/contract · /quiz)는 그대로라 색인·공유 링크는 손대지 않았다 —
    이 테스트가 그 계약(주소는 그대로, 자리만 이동)을 잠근다. */
 test("내비 — '내 집 마련' 세 줄이 임장노트 하위에, 주소는 그대로 · 푸터 링크", () => {
-  assert.equal(NAV.length, 5);
+  /* [1044] 대분류 5 → 6: "뉴스"가 동네에서 떨어져 나왔다(소유자 지시 2026-10-06). "내 집 마련"은 여전히 대분류가 아니다 */
+  assert.equal(NAV.length, 6);
   assert.equal(NAV[0].label, "임장노트");
   assert.equal(NAV[0].href, "/notes");
   const kids = (NAV[0].children ?? []).map((c) => c.href);

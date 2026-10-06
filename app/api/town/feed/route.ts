@@ -16,7 +16,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { applyRateLimit, READ_RATE_LIMIT } from "@/lib/rate-limit";
-import { pageTownFeed, TOWN_FEED_FIRST_PAGE, TOWN_FEED_PAGE } from "@/lib/town/feed";
+import { pageTownFeed, TOWN_FEED_PAGE } from "@/lib/town/feed";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,10 +39,8 @@ export async function GET(req: NextRequest) {
   }
   const limitRaw = Number(sp.get("limit"));
   const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(100, limitRaw) : TOWN_FEED_PAGE;
-  const seenRaw = Number(sp.get("seen"));
-  const seen = Number.isFinite(seenRaw) && seenRaw >= 0 ? seenRaw : TOWN_FEED_FIRST_PAGE;
-
-  const page = await pageTownFeed({ before, limit, seen });
+  /* [1043] 피드는 이웃 글만 — 노트 스캔 창 계산에 쓰던 seen 은 더 읽지 않는다(보내도 무시) */
+  const page = await pageTownFeed({ before, limit });
   return NextResponse.json(page, {
     /* 공개 피드라 짧은 공유 캐시 — 페이지(revalidate 120)와 같은 호흡 */
     headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300" },

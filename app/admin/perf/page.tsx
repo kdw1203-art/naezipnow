@@ -1,3 +1,4 @@
+import { isLegacyProbeSample } from "@/lib/client/probe";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 /* [OPT-41] 성능 매트릭스 — 경로×지표 p75(7일) + LCP 범인 목록.
@@ -23,6 +24,8 @@ type Row = {
   element: string | null;
   attr_url: string | null;
   scope: string | null;
+  user_agent: string | null;
+  created_at: string | null;
 };
 
 /* [979] 지표별로 어느 단위 줄을 읽는가.
@@ -48,7 +51,7 @@ async function load() {
   const since = new Date(Date.now() - 7 * 86_400_000).toISOString();
   const { data, error } = await sb
     .from("web_vitals")
-    .select("metric,path,value,element,attr_url,scope")
+    .select("metric,path,value,element,attr_url,scope,user_agent,created_at")
     .gte("created_at", since)
     .limit(20000);
   if (error || !Array.isArray(data)) return null;
@@ -64,8 +67,13 @@ export default async function AdminPerfPage() {
   /* [979] 화면 귀속이 어긋난 옛 표본과, 지표에 맞지 않는 단위의 줄을 걸러낸다.
      "몇 건을 왜 뺐는지"는 화면에 적는다 — 조용히 빼면 표본 수가 줄어든 이유를
      아무도 모른다. */
-  const legacy = rows.filter((r) => r.scope === null).length;
-  const usable = rows.filter((r) => r.scope !== null && r.scope === SCOPE_FOR[r.metric]);
+  /* [1043] 점검 로봇 표본을 먼저 뺀다 — 2026-10-06 실측: 7일 450행 중 126행이 운영 화면을 캡처하던 자동 브라우저였다
+     (캐시가 빈 채 매번 처음 여는 세션 — /my CLS 0.246 · /search CLS 0.816 · /town LCP 5.9초가 전부 그 표본). lib/client/probe.ts.
+     몇 건을 뺐는지는 아래 머리줄에 적는다. */
+  const probeRows = rows.filter((r) => isLegacyProbeSample(r.user_agent, r.created_at)).length;
+  const humanRows = rows.filter((r) => !isLegacyProbeSample(r.user_agent, r.created_at));
+  const legacy = humanRows.filter((r) => r.scope === null).length;
+  const usable = humanRows.filter((r) => r.scope !== null && r.scope === SCOPE_FOR[r.metric]);
 
   /* 경로×지표 매트릭스 (표본 3건 미만 경로는 접기) */
   const byPath = new Map<string, Map<string, number[]>>();
@@ -115,6 +123,11 @@ export default async function AdminPerfPage() {
         <p className="mt-1 text-xs text-text-3">
           표본 {usable.length.toLocaleString()}건 · 기준 초과 셀은 강조 · LCP 범인은 attribution 수집분부터 채워집니다
         </p>
+        {probeRows > 0 && (
+          <p className="mt-1.5 rounded-lg bg-warning-soft px-3 py-2 t-sub leading-[1.6] text-warning">
+            <b>점검 로봇 표본 {probeRows.toLocaleString()}건 제외(1043).</b> 운영 화면을 캡처·점검하던 자동 브라우저의 표본 — 사람 방문 아님
+          </p>
+        )}
         {legacy > 0 && (
           <p className="mt-1.5 rounded-lg bg-warning-soft px-3 py-2 text-xs leading-[1.6] text-warning">
             <b>옛 표본 {legacy.toLocaleString()}건을 뺐습니다(979).</b> 2026-09-09 이전 수집분은 한 방문에서 쌓인

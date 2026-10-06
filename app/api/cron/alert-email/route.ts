@@ -75,7 +75,7 @@ async function handle(req: Request) {
       ok: true,
       criticals: rows.length,
       sent: false,
-      reason: !to ? "ALERT_EMAIL_TO 미설정" : "RESEND_API_KEY 미설정",
+      reason: !to ? "ALERT_EMAIL_TO 미설정" : "메일 발송 미설정",
     });
   }
 

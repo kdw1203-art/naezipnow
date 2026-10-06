@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "./Icon";
 import { useTabBarCompact } from "@/lib/client/use-scroll-state";
-import { tabBarActive, TOWN_TAB_EXTRA_PREFIXES } from "@/lib/client/shell-gates";
+import { tabBarActive, TOWN_TAB_EXCEPT_PREFIXES, TOWN_TAB_EXTRA_PREFIXES } from "@/lib/client/shell-gates";
 
 /** 균형 5슬롯(2-＋-2) — ＋가 정중앙에 오도록 재배치(2026-07-21 리디자인).
  *  홈·지도·기록(＋)·동네·마이. 통일 라인 아이콘 사용.
@@ -25,6 +25,8 @@ const TABS: Array<{
   center?: boolean;
   /** 이 탭을 함께 켜는 다른 경로 — 세그먼트 prefix */
   extra?: readonly string[];
+  /** [1044] 이 탭 prefix 아래지만 켜지 않는 경로 */
+  except?: readonly string[];
 }> = [
   { label: "홈", icon: "house", href: "/" },
   { label: "지도", icon: "map", href: "/map" },
@@ -32,8 +34,9 @@ const TABS: Array<{
   { label: "기록", icon: "plus", href: "/notes/new", center: true },
   /* [1003] 동네이야기 카테고리 다섯 칸 중 넷은 라우트가 app/town 밖이다
      (/apply·/auctions·/supply·/redevelopment — lib/town/category-links). 거기서도
-     같은 탭이 켜져야 길을 잃지 않는다. /town/news 는 /town prefix 가 덮는다. */
-  { label: "동네", icon: "messages-square", href: "/town", extra: TOWN_TAB_EXTRA_PREFIXES },
+     같은 탭이 켜져야 길을 잃지 않는다.
+     [1044] 뉴스(/town/news)는 동네에서 떨어져 나온 대분류라 이 탭을 켜지 않는다(except) — 탭 다섯에 뉴스 자리는 없다. */
+  { label: "동네", icon: "messages-square", href: "/town", extra: TOWN_TAB_EXTRA_PREFIXES, except: TOWN_TAB_EXCEPT_PREFIXES },
   { label: "마이", icon: "user", href: "/my" },
 ];
 
@@ -44,7 +47,7 @@ const TABS: Array<{
  * 내리고 반투명하게 접고, 위로 스크롤(=이동 의도)하면 즉시 복원한다. */
 export function TabBar() {
   const pathname = usePathname();
-  const isActive = (tab: (typeof TABS)[number]) => tabBarActive(tab.href, pathname, tab.extra);
+  const isActive = (tab: (typeof TABS)[number]) => tabBarActive(tab.href, pathname, tab.extra, tab.except);
 
   /* [968 · 12] 접기 판정은 공용 스크롤 상태(리스너 하나·rAF)에서 받는다 — 규칙(아래로
      8px 이상 + 160px 아래면 접고, 위로 8px 이상이면 즉시 펼침)은 lib/client/

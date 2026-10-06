@@ -258,6 +258,9 @@ function pickAddress(row: GeocodeAddress): string {
 export async function naverGeocode(
   query: string,
   limit = 5,
+  /* [1043] fresh — 백필(크론)은 데이터 캐시를 쓰지 않는다. 7일 캐시는 "결과 없음"도 7일 붙잡는다: 못 찾음 재시도 주기가
+     같은 7일이라, 주소가 새로 등록돼도 재시도가 옛 빈 답을 받아 14일 뒤에야 잡혔다. 화면 경로(검색·통근)는 예전 그대로 캐시한다. */
+  opts: { fresh?: boolean } = {},
 ): Promise<NaverGeocodeItem[]> {
   if (!isNaverMapsRestConfigured()) {
     throw new Error("NAVER Maps REST API credentials not configured");
@@ -272,7 +275,7 @@ export async function naverGeocode(
      이 값이 낮으면 **이 fetch 를 실행하는 라우트의 revalidate 까지 같이 끌어내린다** —
      Next 는 세그먼트 값과 fetch revalidate 중 작은 쪽을 쓰기 때문이다. 실제로 이 3600 이
      /complex/[id] 의 7일 TTL 을 1시간으로 누르고 있었다(하루 11,523 렌더의 진짜 원인 중 하나). */
-  const res = await fetch(url, { headers, next: { revalidate: 604_800 } });
+  const res = await fetch(url, opts.fresh ? { headers, cache: "no-store" } : { headers, next: { revalidate: 604_800 } });
   if (!res.ok) {
     const mode = isSignatureMode() ? "iam-signature" : "api-key";
     throw new Error(`Geocoding failed (${res.status}, auth=${mode})`);

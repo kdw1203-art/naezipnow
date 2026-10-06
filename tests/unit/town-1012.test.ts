@@ -118,12 +118,10 @@ test("[1012] 자료실 — 커버 면 prop 은 face 이고 값은 단색 토큰"
 test("[1012 · R2] buildTownCategorySubs — 실집계가 있는 칸만 짧은 숫자 부제, null·0 은 비운다", () => {
   const subs = buildTownCategorySubs({
     counts: { applyOpen: 12, onbidActive: 1130, supplyMonth: 7, supplyYm: "202609", redevZones: 214 },
-    todayNews: 4,
     weekPosts: 3,
   });
   assert.deepEqual(subs, {
     "/town": "이번 주 새 글 3",
-    "/town/news": "오늘 기사 4건",
     "/apply": "접수 중 12건",
     "/auctions": "진행 1,130건",
     "/supply": "9월 입주 7곳",
@@ -136,7 +134,6 @@ test("[1012 · R2] buildTownCategorySubs — 실집계가 있는 칸만 짧은 �
   assert.deepEqual(
     buildTownCategorySubs({
       counts: { applyOpen: 0, onbidActive: null, supplyMonth: 3, supplyYm: null, redevZones: NaN },
-      todayNews: 0,
       weekPosts: -1,
     }),
     {},

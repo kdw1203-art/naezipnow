@@ -236,28 +236,28 @@ test("withNewsArticleDefaults — DB 노드가 이기고, 빠진 필드만 채�
   assert.equal(merged["@graph"][1]["@type"], "FAQPage", "다른 노드는 손대지 않는다");
 });
 
-test("[1006] 카테고리 '뉴스' 칸은 뉴스룸 입구(entry)이고 라벨·경로가 내비와 같다", () => {
-  const news = TOWN_CATEGORY_LINKS.find((l) => l.href === "/town/news");
-  assert.ok(news);
-  assert.equal(news.entry, "newsroom");
-  assert.equal(TOWN_CATEGORY_LINKS.filter((l) => l.entry === "newsroom").length, 1, "뉴스룸 입구는 하나");
+test("[1006 → 1044] 뉴스룸은 동네 카테고리의 한 칸이 아니다 — 내비의 제 대분류에 선다", () => {
+  /* 1006 은 뉴스 칸을 "다른 재질의 입구"로 동네 카테고리 줄에 세웠다. 1044(소유자 지시 "뉴스랑 동네글을 분리해줘")
+     부터 그 칸은 없고, 동네 하위는 동네이야기 · 청약 · 정비사업 셋이다. */
+  assert.equal(TOWN_CATEGORY_LINKS.find((l) => l.href === "/town/news"), undefined);
   const town = NAV.find((g) => g.label === "동네");
   assert.ok(town);
   const children = town.children ?? [];
-  /* 소유자 지시 순서: 동네이야기 · 뉴스 · 청약 · 정비사업 */
   assert.deepEqual(
     children.map((c) => c.href),
-    ["/town", "/town/news", "/apply", "/redevelopment"],
+    ["/town", "/apply", "/redevelopment"],
   );
   assert.equal(children[0].label, "동네이야기");
-  assert.equal(children[1].label, news.label);
+  const news = NAV.find((g) => g.label === "뉴스");
+  assert.ok(news);
+  assert.equal(news.href, "/town/news");
 });
 
 test("[1006] 이웃 글 카드의 href 는 /town/story — 뉴스 주소(/town/news)를 쓰지 않는다", async () => {
   const { readFileSync } = await import("node:fs");
   const strip = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
   const feed = strip(readFileSync(new URL("../../lib/town/feed.ts", import.meta.url), "utf8"));
-  const postToCard = feed.slice(feed.indexOf("export function postToCard"), feed.indexOf("type NoteSlice"));
+  const postToCard = feed.slice(feed.indexOf("export function postToCard"), feed.indexOf("type PostSlice"));
   assert.match(postToCard, /href: `\/town\/story\/\$\{p\.id\}`/);
   assert.doesNotMatch(postToCard, /\/town\/news\//);
   /* 글쓰기 성공 후 이동도 이야기 상세로 */

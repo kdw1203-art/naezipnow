@@ -67,8 +67,9 @@ export function noteCommentsCacheTags(id: string): string[] {
  *  metadata  목록·관련 노트에 안 보이는 소유자용 부가 정보(AI 분석 결과·카드 구성)
  *  delete    노트 삭제
  *  comment   댓글 작성·삭제
+ *  rating    [1043] 독자 평가(별점) — 목록 카드의 "독자 평가 4.3 · 12명"이 바뀐다
  */
-export type NoteMutation = "content" | "metadata" | "delete" | "comment";
+export type NoteMutation = "content" | "metadata" | "delete" | "comment" | "rating";
 
 /** 변경 종류별로 비워야 할 태그 — 중복 없이, 순서 고정(테스트가 그대로 비교한다) */
 export function tagsToRevalidate(id: string, mutation: NoteMutation): string[] {
@@ -82,7 +83,11 @@ export function tagsToRevalidate(id: string, mutation: NoteMutation): string[] {
     case "comment":
       /* 댓글 변경에 note:<id> 까지 비우는 것은 요청 사양(항목 20) — 댓글 수를 노트 행 쪽에
          싣게 되는 날 빠뜨리지 않도록. 행 캐시 한 건 다시 채우는 비용은 조회 1회다. */
-      return [noteCommentsTag(id), noteTag(id)];
+      /* [1043] 목록 카드가 댓글 수를 적게 됐다 — 목록 태그도 비운다(맨 뒤에 붙여 앞 두 개의 순서는 그대로) */
+      return [noteCommentsTag(id), noteTag(id), PUBLIC_NOTES_LIST_TAG];
+    case "rating":
+      /* 상세는 요청마다 실조회라 비울 것이 없다 — 목록(공개 노트 카드)만 */
+      return [PUBLIC_NOTES_LIST_TAG];
   }
 }
 

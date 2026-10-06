@@ -44,14 +44,17 @@ export async function GET(req: Request) {
     const errCount = result.errors ?? 0;
     // status: 좌표 성공이 있으면 ok. 성공 0 + 오류가 있으면 error(원인 표기) — 예전엔
     // 전부 "skipped" 로 뭉개져 NAVER 키·API 오류가 조용히 묻혔다.
-    const status = okCount > 0 ? "ok" : errCount > 0 ? "error" : "skipped";
+    /* [1043] 대상이 있었고 오류 없이 끝났으면(전부 "주소 없음"이어도) ok 다 — 예전엔 그 실행이 "skipped"(안 돌았다)로 적혔다.
+       오류가 성공보다 많으면 error 로 적는다(성공 1 · 오류 199 를 ok 라고 부르지 않는다). */
+    const status =
+      errCount > okCount ? "error" : okCount > 0 || processed > 0 ? "ok" : "skipped";
     await logIngest({
       source: "geocode",
       dataset: "단지 좌표 지오코딩",
       origin: "cron-fetch",
       rows: okCount,
       status,
-      message: `처리=${processed} 성공=${okCount} 오류=${errCount}${
+      message: `처리=${processed} 성공=${okCount}(거래 단서 ${result.hinted ?? 0}) 못찾음=${Math.max(0, processed - okCount - errCount)} 오류=${errCount}${
         result.errorSample ? ` · ${result.errorSample}` : ""
       }`,
     });

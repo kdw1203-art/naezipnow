@@ -1,3 +1,5 @@
+import { getNoteCommentCounts, getNoteRatingSummaries } from "@/lib/inspection/note-ratings";
+import { ratingFact } from "@/lib/inspection/note-rating-math";
 import {
   inspectionAverageScore,
   type InspectionNote,
@@ -216,7 +218,27 @@ export async function buildFeedNotes(
   const hrefs = await resolveComplexHrefs(
     rows.map((n) => ({ name: n.aptName, region: n.region })),
   );
-  return rows.map((n) =>
+  const cards = rows.map((n) =>
     toFeedNote(n, hrefs.get(complexHrefKey(n.aptName, n.region)) ?? null, opts),
   );
+  /* [1043 · 임장노트 참여] 바닥줄에 독자 평가·댓글 수 — **있을 때만** 덧붙인다(0 이면 카드는 예전 그대로).
+     공개 노트만 묻는다. 조회 실패는 바닥줄을 그대로 둔다(카드가 먼저다). */
+  const publicIds = rows.filter((n) => n.isPublic).map((n) => n.id);
+  if (publicIds.length > 0) {
+    try {
+      const [ratings, comments] = await Promise.all([
+        getNoteRatingSummaries(publicIds),
+        getNoteCommentCounts(publicIds),
+      ]);
+      for (const c of cards) {
+        const fact = ratingFact(ratings.get(c.id));
+        const n = comments.get(c.id) ?? 0;
+        if (fact) c.footer.push(fact);
+        if (n > 0) c.footer.push(`댓글 ${n.toLocaleString("ko-KR")}`);
+      }
+    } catch (e) {
+      console.warn("[feed-note] 독자 평가·댓글 수 조회 실패 — 바닥줄 생략", e instanceof Error ? e.message : e);
+    }
+  }
+  return cards;
 }

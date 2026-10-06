@@ -8,7 +8,7 @@ import { HeaderAuth } from "./HeaderAuth";
 import { HeaderSearch } from "./HeaderSearch";
 import { MobileMenu } from "./MobileMenu";
 import { NotificationBell } from "./NotificationBell";
-import { NAV } from "./nav-data";
+import { NAV, navGroupOf } from "./nav-data";
 import { Icon } from "./Icon";
 import { useScrolledPast } from "@/lib/client/use-scroll-state";
 
@@ -18,8 +18,9 @@ import { useScrolledPast } from "@/lib/client/use-scroll-state";
 /** 글래스 플로팅 GNB — 데스크탑은 메뉴+검색+CTA, 모바일은 로고+아이콘 */
 export function Header() {
   const pathname = usePathname();
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+  /* [1044] 대분류 활성은 "가장 긴 접두 하나"(nav-data navGroupOf) — 뉴스(/town/news)가 동네(/town)에서 떨어져 나와
+     예전 startsWith 로는 뉴스 화면에서 동네·뉴스가 둘 다 켜진다. */
+  const activeLabel = navGroupOf(pathname)?.label ?? null;
 
   /* [968 · 12] 스크롤 인지 — 공용 스크롤 상태(리스너 하나·rAF)에서 8px 경계만 받는다.
      예전엔 이 컴포넌트가 scroll 이벤트마다 setState 했다(터치는 프레임당 여러 번). */
@@ -65,7 +66,7 @@ export function Header() {
         {/* 데스크탑 메뉴 — 9m 호버 드롭다운 + 언더라인 인디케이터 */}
         <nav className="hidden shrink-0 gap-0.5 t-body font-semibold text-text-1 md:flex">
           {NAV.map((item) => {
-            const active = isActive(item.href);
+            const active = activeLabel === item.label;
             return (
               <div
                 key={item.label}

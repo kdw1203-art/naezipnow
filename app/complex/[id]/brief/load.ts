@@ -18,7 +18,7 @@ import { getTradeWindowSamples } from "@/lib/complex/complex-trade-window";
 import { buildComplexFacts, type ComplexFacts, type RentSample, type TradeSample } from "@/lib/complex/complex-facts";
 import { getComplexMgmtFeeSummary, type ComplexMgmtFeeSummary } from "@/lib/complex/mgmt-fee";
 import { getNearbyPoi, type NearbyPoi } from "@/lib/poi/store";
-import { geocodeAndCache } from "@/lib/map/complex-geocode";
+import { getCachedCoord } from "@/lib/map/complex-geocode";
 import { getMarketFreshnessDateLabel } from "@/lib/newui/freshness";
 import { settle, startDeadline } from "@/lib/data/section-budget";
 import { loadRentHistory, sectionRegionLabel } from "../section-loaders";
@@ -75,7 +75,8 @@ async function loadCoords(row: ComplexRow): Promise<{ lat: number; lng: number }
   if (typeof row.lat === "number" && typeof row.lng === "number") return { lat: row.lat, lng: row.lng };
   const dec = decodeComplexId(row.canonical_id);
   if (!dec) return null;
-  const c = await geocodeAndCache(dec.region, dec.name, row.address ?? undefined);
+  /* [1043] 캐시만 — 화면을 그리는 길에서 외부 지오코더를 부르지 않는다(좌표는 백필 크론이 채운다) */
+  const c = await getCachedCoord(dec.region, dec.name);
   return c ? { lat: c.lat, lng: c.lng } : null;
 }
 

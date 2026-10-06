@@ -5,18 +5,10 @@
  * 옮겼다. 이유는 하나다: 페이지(첫 장)와 /api/town/feed(다음 장)가 **같은 코드**로
  * 카드를 만들어야 "더 보기"로 붙는 카드가 첫 장과 한 글자도 다르지 않다.
  *
- * 노트 커서 페이지네이션에 대해:
- *   lib/inspection/store-db 의 listPublicNotes(limit) 는 "최신 N건"만 준다(before
- *   커서가 없다). 그 파일은 이 릴리스에서 다른 작업자가 손대고 있어 여기서는
- *   건드리지 않는다. 대신 클라이언트가 **이미 받은 카드 수(seen)** 를 함께 보내면
- *   listPublicNotes(seen + limit) 로 창을 넓혀 읽고 커서보다 오래된 것만 남긴다 —
- *   받은 카드 중 노트는 seen 개를 넘을 수 없으니, 창 안에 다음 limit 개의 오래된
- *   노트가 있으면 반드시 들어온다. 창이 가득 찼는데도 오래된 노트가 모자라면
- *   창을 두 배로 넓혀 다시 읽는다(상한 NOTE_SCAN_CAP). 글(readTownPosts)은 원래
- *   전량(상한 300)을 읽으므로 커서 필터만 한다.
+ * [1043] 피드는 이웃 글만 싣는다(공개 임장노트는 /notes) — 노트 스캔 창(seen · NOTE_SCAN_CAP)은 없어졌다.
+ *   글(readTownPosts)은 원래 전량(상한 300)을 읽으므로 "더 보기"는 커서 필터만 한다.
  */
 import {
-  listPublicNotes,
   inspectionAverageScore,
   isLabNoteLabel,
   type InspectionNote,
@@ -35,8 +27,6 @@ import { noteCoverUrl, resolveNoteCover } from "@/lib/notes/cover/resolve";
 export const TOWN_FEED_FIRST_PAGE = 40;
 /** "더 보기" 한 번에 붙는 카드 수 */
 export const TOWN_FEED_PAGE = 30;
-/** 노트 스캔 창 상한 — 행마다 jsonb 다섯 개가 실리므로 무한정 넓히지 않는다 */
-const NOTE_SCAN_CAP = 400;
 
 export function noteToCard(n: InspectionNote): FeedCard {
   /* [1030 · G4] 카드 제목 = 노트 제목("관악푸르지오 +3.3억 대출 0원(Lab #36)" — 홈 공개 노트 목록과 같은 글자).
@@ -104,22 +94,10 @@ export function postToCard(p: Post): FeedCard {
   };
 }
 
-type NoteSlice = { cards: FeedCard[]; failed: boolean; full: boolean };
 type PostSlice = { cards: FeedCard[]; failed: boolean };
 
 /* 실패는 잡되 삼키지 않는다 — 프리렌더(revalidate)에서 던지면 배포가 깨지고,
    빈 배열로 눌러 버리면 화면이 "글이 없다"고 거짓말한다. failed 로 들고 간다. */
-async function loadNoteCards(limit: number): Promise<NoteSlice> {
-  const capped = Math.max(1, Math.min(NOTE_SCAN_CAP, Math.floor(limit)));
-  try {
-    const notes: InspectionNote[] = await listPublicNotes(capped);
-    return { cards: notes.map(noteToCard), failed: false, full: notes.length >= capped };
-  } catch (e) {
-    logger.error("[townFeed] 임장노트 조회 실패", e);
-    return { cards: [], failed: true, full: false };
-  }
-}
-
 async function loadPostCards(): Promise<PostSlice> {
   let posts: Post[];
   try {
@@ -141,28 +119,25 @@ async function loadPostCards(): Promise<PostSlice> {
   };
 }
 
-/** 노트·글을 섞어 최신순 — 클라이언트가 추천/최신/유형별로 다시 세운다 */
-function mergeCards(notes: FeedCard[], posts: FeedCard[]): FeedCard[] {
-  return [...notes, ...posts].sort((a, b) => b.createdAt - a.createdAt);
+/* [1043] 동네이야기 피드는 **이웃 글만** 싣는다(소유자 지시 2026-10-06: "임장노트는 분리 — 이미 임장노트에 공개노트가
+   있으니 동네이야기에는 필요 없다. 동네이야기만 나오도록"). 공개 임장노트는 /notes 가 맡는다.
+   예전엔 공개 노트(최신 40건) + 이웃 글을 한 피드로 섞었고, 노트 스캔 창(seen·NOTE_SCAN_CAP)이 "더 보기"에 필요했다.
+   noteToCard 는 남겨 둔다(순수 변환기 — 동네 홈 등 다른 화면이 노트 카드를 그릴 때 같은 모양을 쓴다). */
+function newestFirst(cards: FeedCard[]): FeedCard[] {
+  return [...cards].sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export type TownFeedSource = {
-  /** 노트·글을 섞어 최신순으로 정렬한 전체 카드 */
+  /** 이웃 글 카드 — 최신순 */
   cards: FeedCard[];
-  /** 한쪽이라도 조회가 **실패**했는가 — "없음"과 다르게 말하기 위한 플래그 */
+  /** 조회가 **실패**했는가 — "없음"과 다르게 말하기 위한 플래그 */
   loadFailed: boolean;
-  /** 노트 창(noteLimit)이 가득 찼는가 = 더 오래된 노트가 남아 있을 수 있다 */
-  notesMaybeMore: boolean;
 };
 
-/** 공개 노트(최신 noteLimit 건) + 커뮤니티 글(비자동, 숨김 제외)을 한 피드로. */
-export async function loadTownFeed(noteLimit: number): Promise<TownFeedSource> {
-  const [notes, posts] = await Promise.all([loadNoteCards(noteLimit), loadPostCards()]);
-  return {
-    cards: mergeCards(notes.cards, posts.cards),
-    loadFailed: notes.failed || posts.failed,
-    notesMaybeMore: notes.full,
-  };
+/** 이웃 글(비자동, 숨김 제외) — 첫 장은 limit 장까지만 HTML 에 싣고 나머지는 "더 보기"가 잇는다. */
+export async function loadTownFeed(): Promise<TownFeedSource> {
+  const posts = await loadPostCards();
+  return { cards: newestFirst(posts.cards), loadFailed: posts.failed };
 }
 
 export type TownFeedPage = {
@@ -171,36 +146,10 @@ export type TownFeedPage = {
   loadFailed: boolean;
 };
 
-/**
- * "더 보기" 한 장 — `before`(epoch ms) 보다 오래된 카드를 최신순으로 limit 개.
- * seen = 클라이언트가 이미 들고 있는 카드 수(노트 스캔 창 계산용, 위 헤더 참고).
- */
-export async function pageTownFeed(opts: {
-  before: number;
-  limit: number;
-  seen: number;
-}): Promise<TownFeedPage> {
+/** "더 보기" 한 장 — `before`(epoch ms) 보다 오래된 이웃 글을 최신순으로 limit 개. */
+export async function pageTownFeed(opts: { before: number; limit: number }): Promise<TownFeedPage> {
   const limit = Math.max(1, Math.min(100, Math.floor(opts.limit)));
-  const seen = Math.max(0, Math.floor(opts.seen));
-  const isOlder = (c: FeedCard) => c.createdAt > 0 && c.createdAt < opts.before;
-
-  const postsP = loadPostCards();
-  let window = Math.min(NOTE_SCAN_CAP, seen + limit);
-  let notes = await loadNoteCards(window);
-  /* 창이 가득 찼는데 커서보다 오래된 노트가 limit 개를 못 채우면 창을 넓힌다 —
-     그러지 않으면 0건이 돌아오면서 "더 있다"고 답하는 제자리걸음이 생긴다. */
-  while (notes.full && notes.cards.filter(isOlder).length <= limit && window < NOTE_SCAN_CAP) {
-    window = Math.min(NOTE_SCAN_CAP, window * 2);
-    notes = await loadNoteCards(window);
-  }
-  const posts = await postsP;
-
-  const older = mergeCards(notes.cards, posts.cards).filter(isOlder);
-  /* 창 상한(NOTE_SCAN_CAP)까지 갔는데도 모자라면 거기서 끝이라고 말한다 —
-     그 너머는 listPublicNotes 로는 못 읽는다(커서 조회가 생기면 풀린다). */
-  return {
-    items: older.slice(0, limit),
-    hasMore: older.length > limit,
-    loadFailed: notes.failed || posts.failed,
-  };
+  const posts = await loadPostCards();
+  const older = newestFirst(posts.cards).filter((c) => c.createdAt > 0 && c.createdAt < opts.before);
+  return { items: older.slice(0, limit), hasMore: older.length > limit, loadFailed: posts.failed };
 }

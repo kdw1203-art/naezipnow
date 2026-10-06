@@ -184,6 +184,13 @@ export default async function TownNewsDetailPage({
 
   /* posts + board_posts 단건(요청당 1회 캐시) — 없음은 null, 실패는 던져 5xx(404 로 위장하지
      않는다: lib/newui/board-posts.ts getBoardPost 주석). */
+  /* [1043 · 성능] 글과 무관하게 시작할 수 있는 두 조회(숨김 여부 · 관련글 목록)를 글 조회와 함께 띄운다 —
+     예전엔 글 → 숨김 → 관련글이 줄을 섰다(처음 열리는 기사의 TTFB 0.9~1.1초의 한 몫). 결과를 쓰는 자리와 뜻은 그대로다. */
+  const hiddenP = isPostHidden(uuid).catch(() => false);
+  const relatedP = readRelatedTownPosts().then(
+    (rows) => ({ ok: true as const, rows }),
+    (error: unknown) => ({ ok: false as const, error }),
+  );
   const post: Post | null = await getTownPost(uuid);
   if (!post) notFound();
   /* [1006] 사람 글(isStoryPost — 피드·동네 홈과 같은 판정)이면 이야기 상세로 — 308. 예전 링크
@@ -191,7 +198,7 @@ export default async function TownNewsDetailPage({
      SEO 영향은 없다. */
   if (isStoryPost(post)) permanentRedirect(`/town/story/${uuid}`);
   // 신고 누적/처리로 숨김된 글도 상세 노출 차단(#7)
-  if (await isPostHidden(uuid).catch(() => false)) notFound();
+  if (await hiddenP) notFound();
 
   let similarPosts: { id: string | null; title: string; meta: string }[] = [];
   /* [#67] 같은 사건을 다룬 다른 매체 보도 — 제목 유사도 클러스터(lib/news/cluster) */
@@ -206,7 +213,9 @@ export default async function TownNewsDetailPage({
 
   try {
     /* 관련글은 제목·분류·출처·시각만 쓴다 — 본문·automation_meta 는 안 읽는다. */
-    const all = (await readRelatedTownPosts()).filter((p) => p.isAutomated);
+    const related = await relatedP;
+    if (!related.ok) throw related.error;
+    const all = related.rows.filter((p) => p.isAutomated);
 
     const pool = all
       .filter((p) => p.id)
@@ -282,9 +291,10 @@ export default async function TownNewsDetailPage({
   );
 
   /* 고도화 26 — 연관 단지가 실제 단지로 리졸브되면 시세 페이지로 잇는다(죽은 링크 금지). */
-  const relatedSiteHref = post.relatedSite
-    ? await resolveComplexHref(post.relatedSite, post.district || post.city).catch(() => null)
-    : null;
+  /* [1043 · 성능] 연관 단지 링크와 태그 단지 링크는 서로 무관하다 — 함께 띄우고 아래에서 받는다 */
+  const relatedSiteHrefP = post.relatedSite
+    ? resolveComplexHref(post.relatedSite, post.district || post.city).catch(() => null)
+    : Promise.resolve(null);
 
   /* [B35·B36] 지도·노트로 넘어갈 때 지금 보던 동네를 들고 간다(lib/town/handoff.ts). */
   const { region: regionQuery, mapHref, noteNewHref } = townHandoff({
@@ -297,11 +307,14 @@ export default async function TownNewsDetailPage({
     .map((t) => String(t ?? "").trim())
     .filter(Boolean)
     .slice(0, 8);
-  const tagComplexHrefs = postTags.length
-    ? await resolveComplexHrefs(
-        postTags.map((t) => ({ name: t, region: post.district || post.city })),
-      ).catch(() => new Map<string, string | null>())
-    : new Map<string, string | null>();
+  const [relatedSiteHref, tagComplexHrefs] = await Promise.all([
+    relatedSiteHrefP,
+    postTags.length
+      ? resolveComplexHrefs(
+          postTags.map((t) => ({ name: t, region: post.district || post.city })),
+        ).catch(() => new Map<string, string | null>())
+      : Promise.resolve(new Map<string, string | null>()),
+  ]);
   const tagLinks = postTags.map((t) => {
     const complexHref = tagComplexHrefs.get(complexHrefKey(t, post.district || post.city));
     if (complexHref) return { label: t, href: complexHref, kind: "complex" as const };
@@ -624,7 +637,8 @@ export default async function TownNewsDetailPage({
             <div className="t-body font-bold text-ink">{regionQuery || "이 지역"} 임장노트</div>
             {/* [1022 · 정렬·글씨·테마] 권유문("…공유해 보세요") → 사실 한 줄 */}
             <p className="t-sub leading-relaxed text-text-3">
-              현장 기록 · 공개 노트는 동네이야기 피드에 실림
+              {/* [1044] "공개 노트는 동네이야기 피드에 실림"은 1043 부터 사실이 아니다(피드 = 이웃 글만) — 공개 노트는 임장노트 메뉴에 */}
+              현장 기록 · 공개 노트는 임장노트에 실림
               {regionQuery ? ` · 지역 ${regionQuery} 자동 입력` : ""}
             </p>
             <div className="flex gap-2">

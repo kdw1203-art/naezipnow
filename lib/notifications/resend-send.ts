@@ -1,4 +1,4 @@
-import { EMAIL_FROM } from "@/lib/email/send";
+import { EMAIL_FROM, sendEmail as sendViaProvider } from "@/lib/email/send";
 
 /** 범용 이메일 발송 함수 (Resend 래퍼) */
 export async function sendEmail(input: {
@@ -24,7 +24,9 @@ export async function trySendViaResend(input: {
      수신함에서 다른 서비스처럼 보이고 스팸 평판도 갈라진다. */
   const from = process.env.RESEND_FROM_EMAIL?.trim() || EMAIL_FROM;
   if (!key) {
-    return { ok: false, error: "RESEND_API_KEY 없음" };
+    /* [1042] Resend 키가 없으면 공용 발송기로 — SMTP 가 설정돼 있으면 그 길로 나가고, 아무것도 없으면 "미설정" */
+    const r = await sendViaProvider(input);
+    return r.sent ? { ok: true } : { ok: false, error: r.reason };
   }
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",

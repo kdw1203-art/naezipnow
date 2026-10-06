@@ -12,7 +12,7 @@ import {
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { NAV } from "./nav-data";
+import { NAV, navGroupOf } from "./nav-data";
 import { ThemeToggle } from "./ThemeToggle";
 import { PushSubscribe } from "@/components/PushSubscribe";
 import { Icon } from "./Icon";
@@ -43,6 +43,7 @@ const CAT_ICON: Record<string, string> = {
   지도: "map",
   "AI 분석": "sparkles",
   동네: "messages-square",
+  뉴스: "newspaper",
   요금제: "credit-card",
 };
 
@@ -226,6 +227,8 @@ export function MobileMenu() {
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
+  /* [1044] 대분류는 "가장 긴 접두 하나"만 켠다(nav-data navGroupOf) — 뉴스 화면에서 동네·뉴스가 같이 켜지지 않게 */
+  const activeNavLabel = navGroupOf(pathname)?.label ?? null;
 
   const rowClass = (href: string) =>
     isActive(href)
@@ -334,7 +337,7 @@ export function MobileMenu() {
                     prefetch={false}
                       href={item.href}
                       className={
-                        isActive(item.href)
+                        activeNavLabel === item.label
                           ? "flex items-center gap-2 rounded-xl bg-primary-soft px-3 py-2 t-section font-bold text-primary"
                           : "flex items-center gap-2 rounded-xl px-3 py-2 t-section font-bold text-ink transition-colors active:bg-[rgba(29,79,216,.07)]"
                       }

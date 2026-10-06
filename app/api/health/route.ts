@@ -400,6 +400,8 @@ export async function GET(req: Request) {
   const openai = check(process.env.OPENAI_API_KEY);
 
   const resend = check(process.env.RESEND_API_KEY);
+  /* [1042] SMTP 로도 메일이 나간다 — 호스트 유무만(값은 싣지 않는다) */
+  const smtp = check(process.env.SMTP_HOST);
 
   const vapid = check(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) && check(process.env.VAPID_PRIVATE_KEY);
 
@@ -450,7 +452,7 @@ export async function GET(req: Request) {
 
     ai: { openai },
 
-    email: { resend },
+    email: { resend, smtp },
 
     /* [992] 레일은 토스 하나 — stripe 필드 삭제 */
     payment: { toss: tossSecret, tossClient },

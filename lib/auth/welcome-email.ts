@@ -18,7 +18,21 @@ import { maskEmailPublic } from "@/lib/privacy/mask-email";
  *
  * app_users 행이 없는 계정(OAuth 등)은 건너뛴다 — 선점할 자리가 없으면
  * 중복을 막을 수 없고, 없는 행을 여기서 만들면 가입 경로가 두 개가 된다.
+ *
+ * [1042] 가입한 지 WELCOME_WINDOW_DAYS 일이 넘은 계정에는 보내지 않는다(선점만 한다).
+ * 메일 발송이 처음 켜지는 날, 몇 달 전에 가입한 회원이 다음 로그인에서 "가입을 환영합니다"를 받게 되기 때문이다
+ * (2026-10-06 운영: app_users 5행 전부 welcomed_at 없음 · 가장 오래된 가입 7월).
  */
+export const WELCOME_WINDOW_DAYS = 14;
+
+/** 가입 시각이 환영 메일을 보낼 만큼 최근인가 — 시각을 못 읽으면 보내지 않는다 */
+export function isRecentSignup(createdAt: unknown, now: number = Date.now()): boolean {
+  if (typeof createdAt !== "string" || !createdAt) return false;
+  const t = new Date(createdAt).getTime();
+  if (!Number.isFinite(t)) return false;
+  return now - t <= WELCOME_WINDOW_DAYS * 86_400_000;
+}
+
 export async function maybeSendWelcomeEmail(
   email: string,
   name?: string | null,
@@ -37,7 +51,7 @@ export async function maybeSendWelcomeEmail(
       .update({ welcomed_at: new Date().toISOString() })
       .eq("email", normalized)
       .is("welcomed_at", null)
-      .select("email, name")
+      .select("email, name, created_at")
       .maybeSingle();
     if (error) {
       /* welcomed_at 컬럼 미적용 배포 등 — 환영 메일은 필수 경로가 아니다 */
@@ -47,6 +61,8 @@ export async function maybeSendWelcomeEmail(
       return;
     }
     if (!data) return; // 이미 발송했거나 app_users 행이 없다
+    /* [1042] 오래된 가입 — 선점은 끝났다(다시 묻지 않는다) · 메일은 보내지 않는다 */
+    if (!isRecentSignup((data as { created_at?: unknown }).created_at)) return;
 
     const displayName =
       (typeof data.name === "string" && data.name.trim()) ||

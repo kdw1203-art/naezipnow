@@ -7,6 +7,8 @@ import { loadRecentErrors } from "@/lib/admin/error-log";
 import { loadRecentHealthAlerts } from "@/lib/admin/health-alerts";
 import { formatKstDateTime } from "@/lib/format/kst";
 import { listAuditLog, type AuditRow } from "@/lib/admin/audit";
+import { mailStatus } from "@/lib/email/send";
+import { MailTestPanel } from "./MailTestPanel";
 import {
   STAFF_ROLE_LABEL,
   canAccessAdminSection,
@@ -147,9 +149,11 @@ export default async function AdminOpsPage() {
         공지·배너 스케줄러 · 운영 지표 · 권한(RBAC) · 약관 버전 관리
       </div>
 
+      <MailTestPanel {...mailStatus()} />
+
       {/* 운영 경보 — 이 판이 생기기 전까지 경보는 ops.health_alert_log 에만
           쌓이고 아무도 읽지 않았다(7일 critical 169건 · db.query_load 매일).
-          메일 발송은 키가 아직 없어 닫혀 있고, 그 전까지 여기가 유일한 눈이다. */}
+          [1042] 메일은 SMTP(또는 Resend)로 나간다 — 아래 "메일 발송" 줄이 수단과 발신 주소를 보여 주고 시험 메일을 보낸다. */}
       {alerts.length > 0 && (
         <div className="rise-in-1 flex flex-col gap-2.5 rounded-3xl border border-[rgba(255,255,255,.08)] bg-[rgba(255,255,255,.03)] p-5">
           <div className="flex flex-wrap items-center gap-2">

@@ -123,6 +123,14 @@ self.addEventListener("activate", (event) => {
         keys.filter((k) => !KEEP_CACHES.includes(k)).map((k) => caches.delete(k)),
       );
       await pruneStaticCache();
+      /* [1043 · 성능] 내비게이션 프리로드 — 페이지 이동 요청을 서비스워커가 깨어나는 동안 브라우저가 먼저 보낸다.
+         예전엔 재방문의 모든 페이지 이동이 "워커 부팅 → 그 뒤에 fetch" 순서라 부팅 시간(수십~수백 ms)이 TTFB 에 그대로 얹혔다.
+         정책은 그대로(네트워크 우선 · 완전 실패 때만 /offline). 지원하지 않는 브라우저는 예전 길로 간다. */
+      try {
+        if (self.registration.navigationPreload) await self.registration.navigationPreload.enable();
+      } catch (e) {
+        // 프리로드를 못 켜도 동작은 같다(fetch 로 간다)
+      }
       await self.clients.claim();
     })(),
   );
@@ -136,8 +144,11 @@ self.addEventListener("activate", (event) => {
  * 값처럼 보여주는 건 안 보여주는 것보다 나쁘다. 그래서 GET 이 아니거나, 페이지
  * 이동도 정적 자산도 아니거나, 서버가 에러라도 응답을 준 경우엔 그대로 통과시킨다.
  */
-async function navigateNetworkFirst(req) {
+async function navigateNetworkFirst(req, preloadResponse) {
   try {
+    /* [1043 · 성능] 브라우저가 먼저 보낸 응답(내비게이션 프리로드)이 있으면 그것을 쓴다 — 같은 요청을 두 번 보내지 않는다 */
+    const preloaded = preloadResponse ? await preloadResponse : undefined;
+    if (preloaded) return preloaded;
     /* 서버가 4xx/5xx 를 주더라도 그건 "연결은 됐다"는 뜻이므로 그대로 전달한다.
        오프라인 화면으로 바꿔치기하면 진짜 원인을 감추게 된다. */
     return await fetch(req);
@@ -183,7 +194,7 @@ self.addEventListener("fetch", (event) => {
 
   // 페이지 이동 — 네트워크 우선, 완전 실패 때만 오프라인 폴백 (정책 그대로)
   if (req.mode === "navigate") {
-    event.respondWith(navigateNetworkFirst(req));
+    event.respondWith(navigateNetworkFirst(req, event.preloadResponse));
     return;
   }
 

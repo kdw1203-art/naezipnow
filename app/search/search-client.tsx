@@ -547,7 +547,9 @@ export function SearchClient() {
   return (
     /* [1031 · 성능] min-h — 서버 HTML 은 빈 상태, 마운트 뒤 ?q= 를 읽어 결과로 바뀐다. 아래 영역 높이를 미리 잡아
        푸터가 튀지 않게(CLS p75 0.816 → 실측 뒤 재확인). 결과가 더 길면 그대로 늘어난다. */
-    <div className="flex min-h-[70vh] flex-col gap-4">
+    /* [1043 · 성능] 70vh → 100dvh. 70vh 로는 데스크톱(높이 768~900)에서 푸터 윗부분이 첫 화면에 걸려 있다가 결과가 오면 밀려났다
+       (머리 190px + 70vh < 화면 높이). 한 화면 높이를 잡으면 푸터는 처음부터 화면 밖이라 결과가 와도 보이는 것이 움직이지 않는다. */
+    <div className="flex min-h-[100dvh] flex-col gap-4">
       {/* 큰 검색 입력 */}
       <div className="rise-in flex w-full max-w-[560px] items-center gap-2.5 rounded-2xl border-[1.5px] border-primary bg-surface px-4 py-3 text-ink shadow-[0_8px_28px_rgba(16,28,54,.08)]">
         <span aria-hidden className="text-[19px] text-text-3">

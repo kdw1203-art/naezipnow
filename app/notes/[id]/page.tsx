@@ -64,6 +64,9 @@ import type { RadarItem } from "@/app/components/viz/ScoreRadar";
 import { resolveComplexPrice } from "@/lib/market/complex-price";
 import { noteCoordsFromMetadata } from "@/lib/notes/note-coords";
 import { NoteComments, type NoteCommentView } from "./NoteComments";
+import { NoteRatingLazy } from "./NoteRatingLazy";
+import { getNoteRating } from "@/lib/inspection/note-ratings";
+import { ratingFact } from "@/lib/inspection/note-rating-math";
 import { listNoteCommentsForViewer, type NoteComment } from "@/lib/inspection/note-comments";
 import {
   getPublicNoteCached,
@@ -627,7 +630,10 @@ export default async function NoteDetailPage({
      캐시 로더는 공개 노트가 아니면 던지므로(assertPublic) 조건을 여기서 먼저 건다. */
   const useCachedVisits = realNote.isPublic && !isOwner;
   const useCachedComments = realNote.isPublic && !isOwner && !viewerEmail;
-  const [purchasedAccess, complexHref, groupedR, nearbyRowsR, commentsR] = await Promise.all([
+  /* [1043 · 임장노트 참여] 독자 평가(별점) — 공개 노트에만. 요약(인원·평균)과 보는 사람의 점수를 한 번에 읽는다.
+     실패는 평가 칸만 접는다(노트 본문·댓글이 우선) — "평가 없음"으로 그리지 않는다. */
+  const wantsRating = realNote.isPublic;
+  const [purchasedAccess, complexHref, groupedR, nearbyRowsR, commentsR, ratingR] = await Promise.all([
     (async () => {
       if (realNote.isPublic || isOwner || !viewerEmail) return false;
       const reportId = await findPaidReportIdByNote(realNote.id);
@@ -667,6 +673,15 @@ export default async function NoteDetailPage({
           (r) => ({ ok: true as const, ...r }),
           (e: unknown) => {
             console.error("[/notes/[id]] 댓글 조회 실패:", e);
+            return { ok: false as const };
+          },
+        )
+      : Promise.resolve({ ok: false as const }),
+    wantsRating
+      ? getNoteRating(realNote.id, viewerEmail).then(
+          (r) => ({ ok: true as const, ...r }),
+          (e: unknown) => {
+            console.error("[/notes/[id]] 독자 평가 조회 실패:", e);
             return { ok: false as const };
           },
         )
@@ -1113,6 +1128,17 @@ export default async function NoteDetailPage({
                 <span className="rounded-md bg-bg chip-pad t-sub font-bold text-text-3">
                   자료 조사
                 </span>
+              )}
+              {/* [1043 · 임장노트 참여] 독자 평가·댓글 수 — 있을 때만, 누르면 아래 평가·댓글 칸으로 */}
+              {ratingR.ok && ratingFact(ratingR) && (
+                <a href="#rating" className="rounded-md bg-bg chip-pad t-sub font-bold text-text-2 no-underline">
+                  {ratingFact(ratingR)}
+                </a>
+              )}
+              {commentViews.filter((c) => !c.deleted).length > 0 && (
+                <a href="#comments" className="rounded-md bg-bg chip-pad t-sub font-bold text-text-2 no-underline">
+                  댓글 {commentViews.filter((c) => !c.deleted).length}
+                </a>
               )}
               {/* [#134] 사진 촬영 시각 — EXIF 기반 방문 시간(장식 신호, 사실 판정 아님) */}
               {realNote.metadata?.photoTakenAt && (
@@ -1638,6 +1664,18 @@ export default async function NoteDetailPage({
           id="comments"
           className="rise-in-2 card mt-5 flex scroll-mt-24 flex-col gap-3 rounded-3xl p-6"
         >
+          {/* [1043 · 임장노트 참여] 독자 평가 — 댓글과 한 카드. id="rating" 은 평가 알림(/notes/[id]#rating)의 착지점 */}
+          {wantsRating && ratingR.ok && (
+            <div className="border-b border-line pb-4">
+              <NoteRatingLazy
+                noteId={realNote.id}
+                initial={{ count: ratingR.count, average: ratingR.average }}
+                initialMine={ratingR.mine}
+                loggedIn={Boolean(viewerEmail)}
+                isOwner={isOwner}
+              />
+            </div>
+          )}
           {commentsR.ok ? (
             <NoteComments
               noteId={realNote.id}

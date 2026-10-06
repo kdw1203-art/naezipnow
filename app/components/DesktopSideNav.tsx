@@ -29,6 +29,7 @@ const CAT_ICON: Record<string, string> = {
   지도: "map",
   "AI 분석": "sparkles",
   동네: "messages-square",
+  뉴스: "newspaper",
   요금제: "credit-card",
 };
 

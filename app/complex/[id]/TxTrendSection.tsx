@@ -10,7 +10,7 @@
  *   · 신고가·신저가는 기간 안 최고·최저 실거래 그 자체(tx-extremes). 한 건뿐인 타입은 표시하지 않는다.
  *   · 값이 없는 달은 비운다(선을 잇지 않는다 — price-chart-geometry 규칙). */
 import { Fineprint } from "@/app/components/Fineprint";
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { formatEokMan } from "@/lib/format/eok-man";
 import { TxTrendChart, type TxTrendMark } from "@/app/components/viz/TxTrendChart";
 import type { ChartMonth } from "@/app/components/viz/price-chart-geometry";
@@ -42,7 +42,12 @@ export function TxTrendSection({ data, complexName }: { data: TxTrendData; compl
   );
   const [period, setPeriod] = useState<string>("1y");
 
-  const type = data.types.find((t) => t.key === typeKey) ?? data.types[0] ?? null;
+  /* [1043 · 성능] 타입 탭을 누르면 **단추 표시가 먼저** 바뀌고 그래프·표는 뒤따라 그린다(useDeferredValue).
+     실사용 INP(안드로이드): 이 단추에서 320~328ms — 한 번의 누름이 그래프 전체(월 수십 칸 · 표식 · 요약)를 같은 프레임에 다시 그렸다.
+     누른 값(typeKey)은 단추가 바로 쓰고, 그래프는 한 박자 늦은 값(shownKey)으로 그린다 — 값이 같아지면 같은 화면이다. */
+  const shownKey = useDeferredValue(typeKey);
+  const type = data.types.find((t) => t.key === shownKey) ?? data.types[0] ?? null;
+  const pressedKey = data.types.some((t) => t.key === typeKey) ? typeKey : (data.types[0]?.key ?? null);
   const chip = data.chips.find((c) => c.key === period && c.enabled) ?? data.chips[0];
   const start = periodStart(data.yms.length, chip.last);
   const yms = data.yms.slice(start);
@@ -99,7 +104,7 @@ export function TxTrendSection({ data, complexName }: { data: TxTrendData; compl
           className="sticky top-[56px] z-30 -mx-3.5 flex gap-1.5 overflow-x-auto bg-bg px-3.5 pb-1 pt-2 [scrollbar-width:none] md:static md:mx-0 md:px-0 md:pt-0 [&::-webkit-scrollbar]:hidden"
         >
           {data.types.map((t) => {
-            const on = type?.key === t.key;
+            const on = pressedKey === t.key;
             return (
               <button
                 key={t.key}

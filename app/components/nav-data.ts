@@ -1,4 +1,4 @@
-/** 9m GNB — 6 대분류 공유 데이터 (데스크탑 GNB · 모바일 전체 메뉴 · 좌측 내비 공용)
+/** 9m GNB — 대분류 공유 데이터 (데스크탑 GNB · 모바일 전체 메뉴 · 좌측 내비 공용)
  *  대통합 IA(2026-07): 지도는 탐색·실거래·실매물·등록 통합(/map 단일),
  *  대출·비용 계산기는 임장노트로, 입주물량·공매·청약은 동네이야기로 편입.
  *  [1003] 다섯째로 "요금제" 추가 — 사유는 아래 그 항목 주석.
@@ -6,6 +6,8 @@
 export type NavItem = {
   label: string;
   href: string;
+  /** [1044] 이 대분류를 함께 켜는 다른 경로(세그먼트 접두) — 주소가 대분류 href 아래에 있지 않은 하위 화면용 */
+  also?: readonly string[];
   children?: {
     label: string;
     href: string;
@@ -74,11 +76,25 @@ export const NAV: NavItem[] = [
     /* [996] 소유자 지시 — 하위 메뉴에 뉴스·청약만 보여 동네이야기(허브)·정비사업이 안 보였다.
        넷을 나란히. [1006] 순서를 화면과 맞춘다: 동네이야기(사람의 기록, 허브)가 먼저,
        뉴스(뉴스룸)는 그다음 — 동네이야기와 뉴스는 다른 재질의 두 화면이다. */
+    /* [1044] 뉴스룸을 뺐다(소유자 지시 2026-10-06: "뉴스랑 동네글을 분리해줘" — 메뉴까지). 동네 = 사람이 쓴 글과
+       동네 단위 공공데이터(청약·정비사업), 뉴스 = 자동수집 기사. 뉴스는 바로 아래 제 대분류에 선다. */
     children: [
       { label: "동네이야기", href: "/town" },
-      { label: "뉴스룸", href: "/town/news" }, // [1007 · P2] 카테고리 카드(lib/town/category-links)와 같은 라벨
       { label: "청약", href: "/apply" },
       { label: "정비사업", href: "/redevelopment" },
+    ],
+  },
+  /* [1044] 뉴스 — 동네에서 떼어 낸 대분류(5 → 6). 주소는 그대로다(/town/news · /digest — 색인·공유 링크 손해 0).
+     주소가 /town 아래라 활성 판정은 "가장 긴 접두가 이긴다"(navItemActive) — /town/news 에서는 뉴스만 켜지고 동네는 꺼진다.
+     주간 다이제스트(/digest)는 뉴스 하위 화면이라 also 로 함께 켠다.
+     하위 라벨 "뉴스룸"은 화면 제목·다른 화면의 링크("뉴스룸 전체 ›")와 같은 이름이다([1007 · P2]). */
+  {
+    label: "뉴스",
+    href: "/town/news",
+    also: ["/digest"],
+    children: [
+      { label: "뉴스룸", href: "/town/news" },
+      { label: "주간 다이제스트", href: "/digest" },
     ],
   },
   /* [1003] 요금제 — GNB 에 결제 진입로가 **하나도 없었다**(푸터 한 줄이 전부).
@@ -103,3 +119,37 @@ export const NAV: NavItem[] = [
     ],
   },
 ];
+
+/** 세그먼트 접두 — "/map" 이 "/mapping" 을 켜지 않게 */
+function underNav(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(prefix.endsWith("/") ? prefix : `${prefix}/`);
+}
+
+/**
+ * [1044] 이 경로가 속한 대분류 — **가장 긴 접두가 이긴다**.
+ *
+ * 예전 판정은 표면마다 `pathname.startsWith(item.href)` 였다. 뉴스(/town/news)가 동네(/town)에서 떨어져 나오면
+ * 그 규칙으로는 뉴스 화면에서 동네와 뉴스가 **둘 다** 켜진다. 대분류 href 와 also 를 한데 놓고 가장 긴 접두 하나만
+ * 고른다(좌측 내비 groupOf 와 같은 규칙) — 데스크탑 GNB · 모바일 전체 메뉴가 이 함수를 같이 쓴다.
+ * 하위 메뉴 href 는 보지 않는다: /journey(임장노트 하위)에서 임장노트가 켜지지 않던 예전 동작을 그대로 둔다.
+ */
+export function navGroupOf(pathname: string, items: readonly NavItem[] = NAV): NavItem | null {
+  let best: NavItem | null = null;
+  let bestLen = -1;
+  for (const item of items) {
+    for (const h of [item.href, ...(item.also ?? [])]) {
+      if (h === "/" ? pathname === "/" : underNav(pathname, h)) {
+        if (h.length > bestLen) {
+          best = item;
+          bestLen = h.length;
+        }
+      }
+    }
+  }
+  return best;
+}
+
+/** 대분류 활성 판정 — navGroupOf 가 고른 하나만 참 */
+export function navItemActive(item: NavItem, pathname: string, items: readonly NavItem[] = NAV): boolean {
+  return navGroupOf(pathname, items)?.label === item.label;
+}

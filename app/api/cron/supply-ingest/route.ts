@@ -57,11 +57,12 @@ async function handle(req: Request) {
        드물게(공고가 있는 날에만) 도는 비용이라 감당할 만하다. */
     const supplyChanged = result.upserted + result.migrated > 0;
     if (supplyChanged) invalidateAllRegionPages();
-    /* [#74] 좌표 점진 백필(일 25건) — 지도 레이어용. 실패해도 인제스트 성공은 유지. */
+    /* [#74] 좌표 점진 백필 — 지도 레이어용. 실패해도 인제스트 성공은 유지.
+       [1043] 하루 25 → 60건(주소 꼬리를 떼고 다시 묻게 된 못 찾음 348건을 엿새 안에 돈다 · 한 건 ≈ 0.5초라 30초 남짓). */
     let geocode: Awaited<ReturnType<typeof backfillSupplyGeocode>> | { error: string } | null =
       null;
     try {
-      geocode = await backfillSupplyGeocode(25);
+      geocode = await backfillSupplyGeocode(60);
     } catch (e) {
       geocode = { error: e instanceof Error ? e.message : "지오코딩 실패" };
     }

@@ -18,7 +18,7 @@ for (const path of routes) {
   const mobile = MODE === "m";
   const vp = mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 };
   const ctx = await b.newContext({ viewport: vp, userAgent: mobile ? UA_M : UA_D, serviceWorkers: "block", locale: "ko-KR", deviceScaleFactor: 1, isMobile: mobile, hasTouch: mobile, colorScheme: DARK ? "dark" : "light" });
-  await ctx.addInitScript((dark) => { Object.defineProperty(navigator, "webdriver", { get: () => false }); try { localStorage.setItem("nz_cookie_consent", JSON.stringify({ analytics: false, decidedAt: "2026-10-03T00:00:00.000Z" })); localStorage.setItem("nz_tour_map", "1"); localStorage.setItem("nz_seen_auction_layer", "1"); localStorage.setItem("theme", dark ? "dark" : "light"); } catch {} }, DARK);
+  await ctx.addInitScript((dark) => { Object.defineProperty(navigator, "webdriver", { get: () => false }); try { localStorage.setItem("nz_probe", "1"); /* [1043] 점검 로봇 표식 — 실사용 지표에 섞이지 않게(lib/client/probe.ts) */ localStorage.setItem("nz_cookie_consent", JSON.stringify({ analytics: false, decidedAt: "2026-10-03T00:00:00.000Z" })); localStorage.setItem("nz_tour_map", "1"); localStorage.setItem("nz_seen_auction_layer", "1"); localStorage.setItem("theme", dark ? "dark" : "light"); } catch {} }, DARK);
   await ctx.route("**/*", (r) => (BLOCK.test(r.request().url()) ? r.abort() : r.continue()));
   const pg = await ctx.newPage();
   const rec = { path, mode: MODE, dark: DARK, status: null, pageErrors: [], consoleErrors: [], consoleWarns: [], failed: [], meta: {}, a11y: {}, overflow: {}, focus: [], axe: null };

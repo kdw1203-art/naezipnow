@@ -31,6 +31,7 @@
    가른다 — 지표마다 굴리면 한 방문의 LCP 만 남고 CLS·INP 는 빠져 분포가 깨진다.
    비율과 근거는 lib/metrics/vitals-sample.ts 한 곳에만 둔다(서버도 같은 상수를 본다).
    보내는 줄에는 `sampleRate` 를 실어 집계가 개수를 비율로 되돌릴 수 있게 한다. */
+import { isProbeSession } from "@/lib/client/probe";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import {
@@ -139,6 +140,8 @@ function sendQueued() {
   if (queue.length === 0) return;
   const batch = queue;
   queue = [];
+  /* [1043] 점검 로봇 세션(localStorage nz_probe = "1")의 표본은 보내지 않는다 — lib/client/probe.ts */
+  if (isProbeSession()) return;
   try {
     const body = JSON.stringify(batch.map(toWire));
     const url = "/api/metrics/web-vitals";

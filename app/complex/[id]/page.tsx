@@ -107,7 +107,7 @@ import { complexCanonicalPath, decodeComplexId } from "@/lib/complex/complex-sto
 import { ComplexAxisSummary } from "./ComplexAxisSummary";
 import { Fineprint } from "@/app/components/Fineprint";
 import { pureIdFromParam, complexHrefFromId} from "@/lib/seo/complex-slug";
-import { geocodeAndCache } from "@/lib/map/complex-geocode";
+import { getCachedCoord } from "@/lib/map/complex-geocode";
 import { settle, startDeadline, SIDE_SECTION_BUDGET_MS } from "@/lib/data/section-budget";
 import { getMarketFreshnessDateLabel } from "@/lib/newui/freshness";
 import { RecentComplexRecorder } from "../../components/RecentComplexRecorder";
@@ -919,11 +919,13 @@ async function loadView(id: string): Promise<HubView | null> {
           ok: true as const,
           data: { rows: [] as ComplexRow[], scope: "district" as NearbyScope },
         }),
-    // 좌표 지연 지오코딩(캐시) — 거리뷰·JSON-LD geo 용. 실패 시 좌표 없이 진행.
+    // 좌표(캐시만) — 거리뷰·JSON-LD geo 용. 없으면 좌표 없이 진행.
+    // [1043] 예전엔 캐시에 없으면 이 자리에서 외부 지오코더를 불렀다(최대 3회 직렬 — 처음 열리는 단지의 TTFB 1초대).
+    //        좌표를 채우는 일은 백필 크론이 맡는다 — 화면은 있는 값만 읽는다.
     dec
       ? settle(
           `${row.name} 좌표`,
-          geocodeAndCache(dec.region, dec.name, row.address ?? undefined),
+          getCachedCoord(dec.region, dec.name),
           budget.expired,
         )
       : Promise.resolve({ ok: true as const, data: null }),
@@ -1399,18 +1401,24 @@ export default async function ComplexHubPage({
   const region = sectionRegionLabel(v.city, v.dong);
   const rentHist = await withSectionBudget(loadRentHistory(region, v.name)).catch(() => null);
   /* [1028] 직거래·등기 표식 — 못 읽으면(실패·예산 초과) 표식 없이 예전 그대로 그린다 */
-  const dealMarks = dealsKnown
-    ? await withSectionBudget(loadDealMarks(rowForFacts?.canonical_id ?? complexId)).catch(() => null)
-    : null;
+  /* [1043 · 성능] 표식 조회와 해제 행 조회를 함께 띄운다 — 서로 무관한 두 조회가 줄을 서 있었다(처음 열리는 단지의 직렬 왕복 하나).
+     실패·예산 초과의 뜻은 그대로다: 표식 없음(null) · 해제 없는 표(null → recentRows). */
+  const dealKey = rowForFacts?.canonical_id ?? complexId;
+  const [dealMarks, dealsWithCancelled] = dealsKnown
+    ? await Promise.all([
+        withSectionBudget(loadDealMarks(dealKey)).catch(() => null),
+        withSectionBudget(getComplexDeals(dealKey, { includeCancelled: true })).then(
+          (d): HubDeal[] | null => d,
+          (): HubDeal[] | null => null,
+        ),
+      ])
+    : [null, null];
   const dealsForV2: HubDeal[] = applyDealMarks(dealsKnown ?? [], dealMarks);
   const recentRows = recentDealRows(dealsForV2, 10);
   /* [1025 · #8] 최근 실거래 **표**만 해제 신고 행을 같이 본다(취소선 + "해제" 배지 — recentDealRows 가 신고가에서 뺀다).
      대표가·추이·머리 사실 줄(recentRows[0])은 기본 경로(해제 제외) 그대로. 해제 행 조회가 실패·예산 초과면 해제 없는 표. */
-  const recentRowsWithCancelled = dealsKnown
-    ? await withSectionBudget(getComplexDeals(rowForFacts?.canonical_id ?? complexId, { includeCancelled: true })).then(
-        (d) => recentDealRows(applyDealMarks(d, dealMarks), 10),
-        () => recentRows,
-      )
+  const recentRowsWithCancelled = dealsWithCancelled
+    ? recentDealRows(applyDealMarks(dealsWithCancelled, dealMarks), 10)
     : recentRows;
   /* 이번 달(KST) — 못 구하면(이론상) 가장 최근 계약월로 대신한다(빈 문자열로 달 산술을 하지 않는다) */
   const nowYmV2 = nowYmForSummary || recentRows[0]?.ym || "";

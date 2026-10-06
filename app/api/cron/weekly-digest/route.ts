@@ -389,7 +389,7 @@ async function run(dryRun: boolean): Promise<RunSummary> {
   return {
     ...counters,
     optedIn,
-    ...(emailReady ? {} : { emailSkipped: "RESEND_API_KEY 미설정" }),
+    ...(emailReady ? {} : { emailSkipped: "메일 발송 미설정" }),
     ...(remaining > 0 ? { remaining } : {}),
     ...(dryRun ? { wouldNotify, previews, skipped: "dry-run" } : {}),
     ...(nothing ? { skipped: siteFailed ? "digest-read-failed" : "empty" } : {}),

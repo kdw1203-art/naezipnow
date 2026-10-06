@@ -25,7 +25,8 @@ test("withSidoPrefix — 보탤 게 없으면 빈 문자열", () => {
   assert.equal(withSidoPrefix("울산 남구", "   "), "");
 });
 
-test("buildGeocodeQueries — 도로명 → 보정 지번 → 원본 지번 → 지역+이름 → 이름", () => {
+/* [1043] 단지명 후보(지역+이름 · 이름)는 없앴다 — 이름이 다른 도시의 지명으로 읽혀 300km 밖에 찍힌 6건이 "성공"으로 굳어 있었다 */
+test("buildGeocodeQueries — 도로명 → 보정 지번 → 원본 지번(단지명으로는 묻지 않는다)", () => {
   assert.deepEqual(
     buildGeocodeQueries({
       region: "울산 남구",
@@ -33,25 +34,19 @@ test("buildGeocodeQueries — 도로명 → 보정 지번 → 원본 지번 → 
       address: "남구 신정동 산107-50",
       roadAddress: "울산광역시 남구 대학로 100",
     }),
-    [
-      "울산광역시 남구 대학로 100",
-      "울산 남구 신정동 산107-50",
-      "남구 신정동 산107-50",
-      "울산 남구 드림펠리스",
-      "드림펠리스",
-    ],
+    ["울산광역시 남구 대학로 100", "울산 남구 신정동 산107-50", "남구 신정동 산107-50"],
   );
 });
 
 test("buildGeocodeQueries — 도로명이 없으면 그 자리를 비우고 나머지 순서는 그대로", () => {
   assert.deepEqual(
     buildGeocodeQueries({ region: "가평군", name: "가평자이", address: "가평군 가평읍 대곡리 695" }),
-    ["가평군 가평읍 대곡리 695", "가평군 가평자이", "가평자이"],
+    ["가평군 가평읍 대곡리 695"],
   );
 });
 
-test("buildGeocodeQueries — 빈 값·중복 후보는 지운다(예산이 후보 수로 잡힌다)", () => {
-  const qs = buildGeocodeQueries({ region: "김포시", name: "김포시", address: "김포시" });
-  assert.deepEqual(qs, ["김포시", "김포시 김포시"]);
-  assert.equal(new Set(qs).size, qs.length);
+test("buildGeocodeQueries — 지번이 아닌 주소(숫자 없음 · 블록 자리)는 후보가 없다", () => {
+  assert.deepEqual(buildGeocodeQueries({ region: "김포시", name: "김포시", address: "김포시" }), []);
+  assert.deepEqual(buildGeocodeQueries({ region: "평택시", name: "지제역더샵센트럴시티", address: "평택시 지제동 가-" }), []);
+  assert.deepEqual(buildGeocodeQueries({ region: "용인 수지구", name: "동천센트럴자이", address: "용인 수지구 동천동 BL-" }), []);
 });

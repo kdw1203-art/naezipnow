@@ -101,8 +101,8 @@ export function loginReturnHref(pathname: string, search = ""): string {
  * [1003] 탭바 "동네" 탭을 함께 켜는, `/town` **밖**의 경로 — 세그먼트 prefix.
  *
  * 동네이야기 카테고리 다섯 칸 중 넷(`/apply`·`/auctions`·`/supply`·`/redevelopment`)은
- * 라우트가 `app/town/` 밖에 있다(lib/town/category-links.ts 의 주의 주석). `/town/news`
- * 는 `/town` prefix 가 이미 덮는다. 목록을 여기 둔 이유: 탭바는 루트 셸(PageShell)의
+ * 라우트가 `app/town/` 밖에 있다(lib/town/category-links.ts 의 주의 주석).
+ * ([1044] `/town/news` 는 더 이상 동네 탭을 켜지 않는다 — 아래 TOWN_TAB_EXCEPT_PREFIXES.) 목록을 여기 둔 이유: 탭바는 루트 셸(PageShell)의
  * 클라이언트 컴포넌트라 모든 라우트의 공용 청크에 들어간다 — 카테고리 카탈로그
  * (아이콘·설명·히어로 문구까지 든 배열)를 통째로 끌고 들어가지 않기 위해 prefix 만
  * 복제하고, 원본과 어긋나지 않는지는 tests/unit/nav-1003.test.ts 가 검사한다.
@@ -113,6 +113,16 @@ export const TOWN_TAB_EXTRA_PREFIXES: readonly string[] = [
   "/supply",
   "/redevelopment",
 ];
+
+/**
+ * [1044] 탭바 "동네" 탭을 **끄는** `/town` 아래 경로 — 세그먼트 prefix.
+ *
+ * 뉴스(/town/news)는 동네에서 떨어져 나온 대분류다(소유자 지시 2026-10-06 "뉴스랑 동네글을 분리해줘" — nav-data.ts).
+ * 주소는 색인·공유 링크 때문에 /town 아래 그대로라, prefix 만 보면 뉴스 화면에서 동네 탭이 켜진다.
+ * 탭 다섯(홈·지도·기록·동네·마이)에 뉴스 자리는 없으므로 뉴스 화면에서는 어느 탭도 켜지지 않는다
+ * (AI 분석·요금제 화면과 같다). nav-data 의 뉴스 href 와 어긋나지 않는지는 tests/unit/news-1044.test.ts 가 본다.
+ */
+export const TOWN_TAB_EXCEPT_PREFIXES: readonly string[] = ["/town/news"];
 
 /**
  * [970 · C-29] 탭바 활성 판정 — "동네" 탭은 동네이야기 카테고리(lib/town/category-links)에
@@ -130,8 +140,11 @@ export function tabBarActive(
   tabHref: string,
   pathname: string,
   extraPrefixes: readonly string[] = [],
+  /** [1044] 이 탭 prefix 아래에 있어도 켜지 않는 경로(다른 대분류로 떨어져 나간 화면) */
+  exceptPrefixes: readonly string[] = [],
 ): boolean {
   if (tabHref === "/") return pathname === "/";
+  if (exceptPrefixes.some((h) => underPrefix(pathname, h))) return false;
   if (underPrefix(pathname, tabHref)) return true;
   return extraPrefixes.some((h) => underPrefix(pathname, h));
 }

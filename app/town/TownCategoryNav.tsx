@@ -70,7 +70,10 @@ export function TownCategoryNav({
       /* 모바일 실측 11 — 스크롤바를 숨겨 두어 "더 있다"는 힌트가 우연히 잘린
          카드뿐이었다. 우측 가장자리 페이드(mask)로 이어짐을 암시한다(md+ 는
          전체가 보이므로 불필요 — 해제). */
-      className={`rise-in mb-5 flex w-full gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)] md:[mask-image:none] ${
+      /* [1043] 고정 모드에서 w-full 을 뺐다 — w-full(=100%) 에 음수 좌우 여백을 주면 폭은 그대로인 채 왼쪽으로만 밀려
+         오른쪽 끝이 본문보다 20px(폰 14px) 짧았다(청약·뉴스룸 등 하위 화면의 카드 줄이 본문 카드와 어긋나 보이던 이유).
+         폭을 auto 로 두면 음수 여백만큼 양쪽으로 넓어져 안쪽 패딩과 상쇄된다. */
+      className={`rise-in mb-5 flex gap-2 overflow-x-auto pb-1 ${stick ? "" : "w-full"} [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)] md:[mask-image:none] ${
         stick
           ? /* 헤더는 sticky top-0 이고 스크롤 시 높이가 56px(패딩 8 + h-12)로 줄어든다.
                그 아래에 붙이고 z-40(헤더 z-50 미만)으로 두어 헤더가 항상 위에 오게 한다.
@@ -103,8 +106,8 @@ export function TownCategoryNav({
             className={`press relative flex w-[96px] shrink-0 flex-col items-center justify-center rounded-2xl border px-2 text-center no-underline transition-all duration-300 ease-out md:w-auto md:min-w-0 md:flex-1 md:basis-0 ${
               pinned
                 ? "h-[68px] border-primary bg-primary-soft shadow-[var(--shadow-md)] md:h-[76px]"
-                : /* [1006] 뉴스룸 입구는 한지 면 — 나머지 흰 카드와 재질이 다르다(lib/town/category-links entry) */
-                  `card tile h-[80px] border-transparent md:h-[96px] ${l.entry === "newsroom" ? "news-entry-card" : ""}`
+                : /* [1044] 뉴스룸 입구 칸(한지 면)은 없어졌다 — 뉴스는 제 대분류(nav-data "뉴스") */
+                  "card tile h-[80px] border-transparent md:h-[96px]"
             }`}
           >
             {/* 아이콘 칩 — 9칸이 전부 같은 잉크색이라 목록이 평평했다.

@@ -10,23 +10,25 @@ import { logger } from "@/lib/log";
 
 export type GeocodeCoverage = { complexes: number; geocoded: number; pct: number };
 
+/* [1043] 예전 조회는 complex_geocode 에 없는 열(complex_id)을 세어 늘 실패 → null → 카드가 한 번도 그려지지 않았다.
+   모집단도 달랐다(K-apt 대장 행 수 ÷ 좌표 행 전체). 관리 › 데이터의 진행률과 같은 함수(public.geocode_coverage)에서 읽는다 —
+   분모 = 거래가 있는 아파트 단지, 분자 = 그 가운데 좌표가 있는 단지. */
 export async function loadGeocodeCoverage(): Promise<GeocodeCoverage | null> {
   const sb = getServiceSupabase();
   if (!sb) return null;
   try {
-    const [c1, c2] = await Promise.all([
-      sb.from("apartment_complexes").select("id", { count: "exact", head: true }),
-      sb.from("complex_geocode").select("complex_id", { count: "exact", head: true }),
-    ]);
-    if (c1.error || c2.error || typeof c1.count !== "number" || typeof c2.count !== "number") {
-      logger.error("[data-health] 지오코딩 커버리지 조회 실패", c1.error ?? c2.error);
+    const { data, error } = await sb.rpc("geocode_coverage");
+    const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
+    const complexes = Number(row?.complexes);
+    const geocoded = Number(row?.with_coord);
+    if (error || !Number.isFinite(complexes) || !Number.isFinite(geocoded)) {
+      logger.error("[data-health] 지오코딩 커버리지 조회 실패", error);
       return null;
     }
-    if (c1.count === 0) return { complexes: 0, geocoded: c2.count, pct: 0 };
     return {
-      complexes: c1.count,
-      geocoded: c2.count,
-      pct: Math.round((Math.min(c2.count, c1.count) / c1.count) * 1000) / 10,
+      complexes,
+      geocoded,
+      pct: complexes > 0 ? Math.floor((Math.min(geocoded, complexes) / complexes) * 1000) / 10 : 0,
     };
   } catch (e) {
     logger.error("[data-health] 지오코딩 커버리지", e);

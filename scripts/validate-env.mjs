@@ -69,7 +69,8 @@ const pipelineKeys = [
   ["SEOUL_DATA_API_KEY", "서울 도시계획 결정 조서(redevelopment-ingest) · 서울 시설·실거래 보조"],
   [["POI_SCHOOLS_API_PATH", "POI_STATIONS_API_PATH"], "학교·역(poi-ingest)"],
   ["NAVER_MAP_CLIENT_SECRET", "단지 좌표(geocode-complexes)"],
-  ["RESEND_API_KEY", "경보 메일(alert-email)"],
+  /* [1042] 메일은 Resend 키 또는 SMTP 호스트 중 하나면 나간다 — 둘 다 없을 때만 꺼진 것으로 적는다 */
+  [{ anyOf: ["RESEND_API_KEY", "SMTP_HOST"] }, "메일 발송(환영·영수증·경보)"],
 ];
 
 const businessDisclosureKeys = [
@@ -111,8 +112,8 @@ if (isProduction && missingOptional.length > 0) {
 
 if (isProduction) {
   const off = pipelineKeys
-    .filter(([k]) => (Array.isArray(k) ? k.some(isMissing) : isMissing(k)))
-    .map(([k, what]) => `${Array.isArray(k) ? k.join("+") : k} (${what})`);
+    .filter(([k]) => (Array.isArray(k) ? k.some(isMissing) : k?.anyOf ? k.anyOf.every(isMissing) : isMissing(k)))
+    .map(([k, what]) => `${Array.isArray(k) ? k.join("+") : k?.anyOf ? k.anyOf.join(" or ") : k} (${what})`);
   if (off.length > 0) {
     console.warn(`[env-check] daily pipelines OFF for lack of keys — ${off.length}: ${off.join(" · ")}`);
   } else {

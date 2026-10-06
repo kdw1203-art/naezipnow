@@ -23,8 +23,8 @@ import {
    공개 임장노트(사진 우선) + 커뮤니티 글을 한 피드로 섞어 보여준다.
    서버에서 카드 배열을 만들어 내려주고, 여기선 필터 탭만 클라이언트로 처리.
    [1006] 이 피드는 **사람의 기록**만 싣는다(kind: note | post). 자동수집 뉴스는 여기
-   들어오지 않는다 — 뉴스는 /town/news(뉴스룸)이고, /town 은 "오늘의 뉴스" 스트립으로
-   그쪽을 가리킬 뿐이다. */
+   들어오지 않는다 — 뉴스는 /town/news(뉴스룸)다. [1044] /town 의 "오늘의 뉴스" 스트립도 없어졌다
+   (뉴스는 제 대분류 — app/components/nav-data.ts). */
 
 export type FeedCard = {
   id: string;
@@ -57,16 +57,9 @@ export type FeedCard = {
   photos?: number;
 };
 
-/* [B19] 유형(무엇을 보나)과 정렬(어떤 순서로 보나)은 서로 다른 축인데
-   한 세그먼트에 4칸으로 섞여 있었다. 그래서 "임장노트를 최신순으로" 가
-   **표현 불가능**했고(둘 다 같은 칸을 차지한다), "추천 20 · 최신 20" 처럼
-   같은 수가 두 번 적혀 고장난 것처럼 보였다. 두 줄로 가른다. */
-const KINDS = [
-  { id: "all", label: "전체" },
-  { id: "note", label: "임장노트" },
-  { id: "post", label: "이야기" },
-] as const;
-type KindId = (typeof KINDS)[number]["id"];
+/* [1043] 유형 축(전체·임장노트·이야기)은 없어졌다 — 피드가 이웃 글만 싣는다. 필터 모양(lib/town/feed-filters)은 그대로라
+   kind 는 늘 "all" 이다. 정렬 축만 남는다. */
+type KindId = "all" | "note" | "post";
 
 const SORTS = [
   { id: "reco", label: "추천순" },
@@ -451,7 +444,9 @@ export function TownFeed({
   /** 서버에서 렌더한 광고 슬롯(없으면 null) */
   ad?: ReactNode;
 }) {
-  const [kind, setKind] = useState<KindId>("all");
+  /* [1043] 피드는 이웃 글만 싣는다(소유자 지시 — 임장노트는 /notes 로 분리). 유형 칸(전체·임장노트·이야기)이 없어졌고
+     주소의 ?kind= 는 읽지 않는다(예전 링크 ?kind=note 로 들어와도 같은 목록 · 주소에서 kind 는 지워진다). */
+  const kind: KindId = "all";
   const [sort, setSort] = useState<SortId>("reco");
   /* 내 관심지역 — 로그인 사용자만. 홈에서 정한 지역이 여기서 초기화되던 문제(B21).
      null = 아직 모름 / [] = 설정 안 함 → 칩을 그리지 않는다. */
@@ -468,7 +463,6 @@ export function TownFeed({
   useEffect(() => {
     const apply = () => {
       const f = parseTownFeedFilters(window.location.search);
-      setKind(f.kind);
       setSort(f.sort);
       setOnlyMine(f.mine);
     };
@@ -478,7 +472,7 @@ export function TownFeed({
     window.addEventListener("popstate", apply);
     return () => window.removeEventListener("popstate", apply);
   }, []);
-  const filters: TownFeedFilters = useMemo(() => ({ kind, sort, mine: onlyMine }), [kind, sort, onlyMine]);
+  const filters: TownFeedFilters = useMemo(() => ({ kind, sort, mine: onlyMine }), [sort, onlyMine]);
   useEffect(() => {
     if (!urlRead) return; // URL 을 읽기 전에 기본값으로 덮어쓰면 딥링크가 지워진다
     try {
@@ -527,10 +521,10 @@ export function TownFeed({
 
   /** /api/town/feed 한 장 — 더 보기(경계 = 가장 오래된 카드)와 다시 시도(경계 = 지금)가 같이 쓴다 */
   const fetchPage = useCallback(
-    async (beforeMs: number, seen: number) => {
+    async (beforeMs: number) => {
       const before = new Date(beforeMs).toISOString();
       const r = await fetch(
-        `/api/town/feed?before=${encodeURIComponent(before)}&limit=${PAGE_SIZE}&seen=${seen}`,
+        `/api/town/feed?before=${encodeURIComponent(before)}&limit=${PAGE_SIZE}`,
         { cache: "no-store" },
       );
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -555,7 +549,7 @@ export function TownFeed({
     setMoreLoading(true);
     setMoreError(null);
     try {
-      const j = await fetchPage(oldest, allCards.length);
+      const j = await fetchPage(oldest);
       /* 한쪽 소스가 실패한 장은 "마지막"이 아니라 "일부를 못 받았다"고 말하고,
          버튼을 남겨 다시 누를 수 있게 한다 */
       setMore(j.hasMore || j.loadFailed);
@@ -573,7 +567,7 @@ export function TownFeed({
     if (retrying) return;
     setRetrying(true);
     try {
-      const j = await fetchPage(Date.now(), 0);
+      const j = await fetchPage(Date.now());
       setFailed(j.loadFailed);
       if (j.hasMore) setMore(true);
     } catch {
@@ -627,24 +621,6 @@ export function TownFeed({
     [myRegions],
   );
 
-  /* 각 칸의 실제 개수 — 눌러 보기 전에 결과 크기를 알 수 있게 한다.
-     개수는 **유형**에만 붙인다(정렬은 같은 목록을 다시 세우는 것이라 수가 같다). */
-  const counts = useMemo<Record<KindId, number>>(
-    () => ({
-      all: allCards.length,
-      note: allCards.filter((c) => c.kind === "note").length,
-      post: allCards.filter((c) => c.kind === "post").length,
-    }),
-    [allCards],
-  );
-  /* [1006] "임장노트 30" 안에는 사람이 다녀온 노트와 Lab 데이터 카드가 섞여 있다 —
-     둘을 같은 수로 부르면 "사람 30명이 다녀왔다"로 읽힌다. 탭 아래 한 줄로 가른다. */
-  const noteSplit = useMemo(() => {
-    const notes = allCards.filter((c) => c.kind === "note");
-    const lab = notes.filter((c) => c.lab).length;
-    return { human: notes.length - lab, lab };
-  }, [allCards]);
-
   const mineCount = useMemo(
     () => (myRegions && myRegions.length > 0 ? allCards.filter(matchesMine).length : 0),
     [allCards, myRegions, matchesMine],
@@ -652,32 +628,17 @@ export function TownFeed({
 
   const visible = useMemo(() => {
     let list = onlyMine ? allCards.filter(matchesMine) : allCards;
-    if (kind !== "all") list = list.filter((c) => c.kind === kind);
     /* 포인트 추천글은 정렬과 무관하게 맨 앞 — 배지('추천글')로 이유를 밝힌다 */
     const byBoost = (a: FeedCard, b: FeedCard) => Number(b.boosted ?? false) - Number(a.boosted ?? false);
     if (sort === "latest")
       return [...list].sort((a, b) => byBoost(a, b) || b.createdAt - a.createdAt);
     return [...list].sort((a, b) => byBoost(a, b) || recommendScore(b) - recommendScore(a));
-  }, [allCards, kind, sort, onlyMine, matchesMine]);
+  }, [allCards, sort, onlyMine, matchesMine]);
 
   return (
     <>
-      {/* 유형(무엇) · 정렬(순서)를 두 줄로 가른다 — 한 줄에 섞여 있으면
-          "임장노트를 최신순으로" 를 표현할 수 없다(B19). */}
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <div className="seg" role="group" aria-label="글 유형">
-          {KINDS.map((k) => (
-            <button
-              key={k.id}
-              type="button"
-              aria-pressed={kind === k.id}
-              onClick={() => setKind(k.id)}
-            >
-              {k.label}
-              <span className="t-num ml-1 font-normal">{counts[k.id]}</span>
-            </button>
-          ))}
-        </div>
+      {/* [1043] 유형 칸(전체·임장노트·이야기)은 없어졌다 — 피드가 이웃 글 하나뿐이다. 관심지역 칩·글쓰기 링크는 있을 때만 */}
+      <div className="mb-2 flex flex-wrap items-center gap-2 empty:hidden">
         {/* 홈에서 정한 관심지역을 여기서도 쓴다 (B21) — 없으면 그리지 않는다.
             "0개"가 나오는 칩을 만들어 두면 눌러 보고 실망하게 된다. */}
         {myRegions && myRegions.length > 0 && mineCount > 0 && (
@@ -705,6 +666,8 @@ export function TownFeed({
         )}
       </div>
 
+      {/* [1043] 글이 한 건도 없으면 정렬 줄을 그리지 않는다("추천순 · 0개 표시 중"은 세울 것이 없는 목록의 정렬이다) */}
+      {allCards.length > 0 && (
       <div className="mb-3 flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <div className="seg" role="group" aria-label="정렬">
@@ -731,14 +694,10 @@ export function TownFeed({
         {/* [1015 · 규칙 B·C] 정렬 설명 문장·"임장노트 N = 사람 노트 · Lab 데이터 카드" 부연은 ⓘ 하나로 접었다(소유자 지시) */}
         <Explain
           title="정렬 기준"
-          body={[
-            sort === "reco" ? "추천순: 최신 글이 먼저, 노트 항목 평점·저장 수만큼 위로." : "최신순: 최근에 올린 글부터.",
-            ...(kind !== "post" && counts.note > 0 && noteSplit.lab > 0
-              ? [`임장노트 ${counts.note}건 = 사람이 다녀온 노트 ${noteSplit.human} · 내집나우 Lab 데이터 카드 ${noteSplit.lab}`]
-              : []),
-          ]}
+          body={[sort === "reco" ? "추천순: 최신 글이 먼저, 저장 수만큼 위로." : "최신순: 최근에 올린 글부터."]}
         />
       </div>
+      )}
 
       {failed && (
         /* [1023 · 동네 ②④] 위험색 면(bg-danger-soft) → 흰 카드 + "다시 시도"(40px). 문장은 사실만 —
@@ -771,8 +730,8 @@ export function TownFeed({
           <div className="t-section text-ink">
             {failed
               ? "글 불러오기 실패"
-              : kind === "post" && !onlyMine && !more
-                ? /* [1006] 이야기 탭 0건 — 지금 운영 실측(사람 글 0건)이 그대로 보이는 자리다. 지어내지 않는다 */
+              : !onlyMine && !more
+                ? /* [1006] 이웃 글 0건 — 지금 운영 실측(사람 글 0건)이 그대로 보이는 자리다. 지어내지 않는다 */
                   "이웃 글 없음"
                 : more
                   ? "지금까지 받은 글에는 이 조건 없음"
@@ -784,7 +743,7 @@ export function TownFeed({
               무엇을 셌는지(유형 · 관심지역)와 0건, 더 받을 장이 있으면 지금 손에 든 수. */}
           <div className="t-sub text-text-3">
             이 피드 · {onlyMine ? "내 관심지역 " : ""}
-            {kind === "post" ? "이웃 글" : kind === "note" ? "임장노트" : "글"} 0건
+            이웃 글 0건
             {more && allCards.length > 0 ? ` · 받은 글 ${allCards.length.toLocaleString("ko-KR")}건` : ""}
           </div>
           {/* [1023 · 동네 ②] 실패면 "다시 시도" 가 먼저(위 고지와 같은 함수). 글쓰기는 채움 파랑을 쓰지 않는다 —
@@ -801,7 +760,7 @@ export function TownFeed({
             </button>
           ) : (
             <Link href="/town/write" className="btn-soft btn-md mt-2 rounded-xl no-underline">
-              {kind === "post" ? "첫 이야기 쓰기" : "글쓰기"}
+              {allCards.length === 0 ? "첫 이야기 쓰기" : "글쓰기"}
             </Link>
           )}
         </div>

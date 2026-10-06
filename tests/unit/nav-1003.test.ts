@@ -5,7 +5,11 @@ import {
   PAYMENT_METHODS_PATH,
   REVIEW_CHECKOUT_PATH,
 } from "../../lib/payments/payment-methods.ts";
-import { TOWN_TAB_EXTRA_PREFIXES, tabBarActive } from "../../lib/client/shell-gates.ts";
+import {
+  TOWN_TAB_EXCEPT_PREFIXES,
+  TOWN_TAB_EXTRA_PREFIXES,
+  tabBarActive,
+} from "../../lib/client/shell-gates.ts";
 import { TOWN_CATEGORY_LINKS } from "../../lib/town/category-links.ts";
 
 /* [1003] 결제 진입로 + 동네 메뉴 — 셸 내비의 **사실**을 잠근다.
@@ -73,8 +77,10 @@ test("[1003] 동네 대분류에 동네이야기(/town)가 남아 있다", () =>
   const story = children.find((c) => c.href === "/town");
   assert.ok(story, "동네 하위에 /town(동네이야기)이 없습니다");
   assert.equal(story.label, "동네이야기");
-  /* 996 에서 나란히 둔 넷 — 하나라도 빠지면 그 카테고리는 메뉴에서 사라진다 */
-  for (const href of ["/town/news", "/town", "/apply", "/redevelopment"]) {
+  /* 996 에서 나란히 둔 넷 중 셋 — 하나라도 빠지면 그 카테고리는 메뉴에서 사라진다.
+     [1044] 뉴스룸(/town/news)은 제 대분류 "뉴스"로 옮겨 갔다(아래 news-1044 테스트가 잠근다) */
+  assert.ok(!children.some((c) => c.href === "/town/news"), "뉴스룸은 동네 하위가 아니다");
+  for (const href of ["/town", "/apply", "/redevelopment"]) {
     assert.ok(
       children.some((c) => c.href === href),
       `동네 하위에 ${href} 가 없습니다`,
@@ -114,10 +120,11 @@ test("[1003] 탭바 '동네' 탭의 추가 경로는 동네이야기 카테고�
 });
 
 test("[1003] 동네 탭은 /town 과 카테고리 경로에서 켜지고, 남의 경로에서는 안 켜진다", () => {
-  const on = (p: string) => tabBarActive("/town", p, TOWN_TAB_EXTRA_PREFIXES);
+  const on = (p: string) => tabBarActive("/town", p, TOWN_TAB_EXTRA_PREFIXES, TOWN_TAB_EXCEPT_PREFIXES);
   for (const p of [
     "/town",
-    "/town/news",
+    "/town/gangnam",
+    "/town/story/abc",
     "/apply",
     "/apply/calendar",
     "/auctions",
@@ -126,7 +133,8 @@ test("[1003] 동네 탭은 /town 과 카테고리 경로에서 켜지고, 남의
   ]) {
     assert.equal(on(p), true, `${p} 에서 동네 탭이 켜져야 한다`);
   }
-  for (const p of ["/", "/analysis", "/map", "/townhouse", "/applyhome"]) {
+  /* [1044] 뉴스 화면(/town/news…)은 주소가 /town 아래여도 동네 탭을 켜지 않는다 — 뉴스는 다른 대분류다 */
+  for (const p of ["/", "/analysis", "/map", "/townhouse", "/applyhome", "/town/news", "/town/news/abc", "/town/news/tag/jaegeonchug", "/digest"]) {
     assert.equal(on(p), false, `${p} 에서 동네 탭이 켜지면 안 된다(prefix 는 세그먼트 단위)`);
   }
 });

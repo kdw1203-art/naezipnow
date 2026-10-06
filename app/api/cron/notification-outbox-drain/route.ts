@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isAdminApiRequest } from "@/lib/admin/api-auth";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { trySendViaResend } from "@/lib/notifications/resend-send";
+import { isEmailConfigured } from "@/lib/email/send";
 import { emailLayout, escapeHtml } from "@/lib/email/templates";
 import { ingestErrorMessage, logIngest } from "@/lib/market/store";
 import { logger } from "@/lib/log";
@@ -43,16 +44,16 @@ export async function GET(req: Request) {
   const sb = getServiceSupabase();
   if (!sb) return NextResponse.json({ ok: true, sent: 0, note: "Supabase 미설정" });
 
-  const resendReady = Boolean(
-    process.env.RESEND_API_KEY?.trim() && process.env.RESEND_FROM_EMAIL?.trim(),
-  );
+  /* [1042] 발송 수단이 하나라도 있으면 큐를 비운다 — 예전엔 Resend 키와 RESEND_FROM_EMAIL 둘 다 있어야 했다
+     (SMTP 로 나가는 지금은 그 둘이 없어도 보낼 수 있다). trySendViaResend 는 키가 없으면 공용 발송기로 넘긴다. */
+  const resendReady = isEmailConfigured();
   if (!resendReady) {
     /* 시도하지 않은 것을 실패로 기록하지 않는다 — 큐는 그대로 두고 사실을 남긴다. */
     return NextResponse.json({
       ok: true,
       sent: 0,
       skipped: "resend-not-configured",
-      note: "RESEND_API_KEY / RESEND_FROM_EMAIL 미설정 — 큐를 건드리지 않았습니다.",
+      note: "메일 발송 미설정(RESEND_API_KEY 또는 SMTP_HOST) — 큐를 건드리지 않았습니다.",
     });
   }
 

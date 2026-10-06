@@ -1,10 +1,9 @@
-/* [1023 · 동네 ①] 주제(NEWS_TAGS) 칩 줄을 머리 바로 아래로 — 오른쪽 레일 끝의 같은 칩은 걷었다(레일엔 정비사업·입주 물량 링크만). */
+/* [1023 · 동네 ①] 주제(NEWS_TAGS) 칩 줄 — 오른쪽 레일 끝의 같은 칩은 걷었다(레일엔 정비사업·입주 물량 링크만). [1044] 머리는 NewsHead · 동네 카테고리 줄 없음 · 칩 줄은 머리 아래. */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import Link from "next/link";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { PageShell } from "../../components/PageShell";
-import { PageHead } from "@/app/components/PageHead";
-import { TownCategoryNav } from "@/app/town/TownCategoryNav";
+import { NewsHead } from "./NewsHead";
 import { readTownPosts } from "@/lib/newui/board-posts";
 import { Icon } from "@/app/components/Icon";
 import { getWeeklyDigest, type WeeklyDigest } from "@/lib/newui/digest";
@@ -18,14 +17,12 @@ import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { buildNewsRegionChips } from "@/lib/town/news-regions";
 import {
   buildNewsRows,
-  countTodayKst,
   NEWS_LIST_FIRST_PAGE,
   newsCategoryTabs,
   pageNewsRows,
   sortNewsPosts,
   type NewsRow,
 } from "@/lib/town/news-list";
-import { formatKstLongDate } from "@/lib/format/kst";
 
 /* ============================================================
    [1006] 뉴스룸 — /town/news
@@ -110,71 +107,28 @@ export default async function TownNewsPage() {
     rows = [];
     newsFailed = true;
   }
-  /* [978] 마스트헤드 숫자 — 이미 읽어 둔 목록만 센다(추가 조회 없음). "오늘"은 KST. */
-  const todayCount = countTodayKst(rows);
   /* 지역 칩·분류 탭은 **전체 목록**에서 센다 — 첫 장(40행)만 보면 뒤에 오는 분류가 탭에서 빠진다 */
   const regions = buildNewsRegionChips(cities);
   const categories = newsCategoryTabs(rows);
   const firstPage = pageNewsRows(rows, 0, NEWS_LIST_FIRST_PAGE);
   const isEmpty = newsCount === 0 && !newsFailed;
-  const dateLabel = formatKstLongDate(Date.now(), { weekday: true });
 
   /* [1015 · 네이버 뉴스 방식] 오른쪽 레일 "많이 본 뉴스" — 손에 든 목록에서 조회 수 상위 5(0 은 뺀다). 추가 조회 없음 */
   const mostRead = [...rows].filter((r) => r.views > 0).sort((a, b) => b.views - a.views).slice(0, 5);
 
   return (
-    <PageShell breadcrumb="동네이야기 › 뉴스룸" wide>
-      {/* [1015 · 규칙 C] 한지 마스트헤드(튀는 색면) → 흰 머리. 부연("매일 아침 자동 수집 · 출처·발행 시각 명시")·설명 문장 삭제.
-          숫자는 손에 든 목록만 센다. */}
-      {/* [1022 · 정렬·글씨·테마] t-display 머리 → 공용 PageHead(t-title) — 다른 동네 카테고리 머리와 같은 크기·정렬 */}
-      <PageHead
-        icon="newspaper"
-        title="부동산 뉴스"
-        sub={dateLabel}
-        subOnPhone
-        className="mb-4 border-b border-line pb-4"
-        facts={
-          <>
-            {todayCount > 0 && (
-              <span>
-                오늘 <b className="t-num text-ink">{todayCount}</b>건
-              </span>
-            )}
-            {newsCount > 0 && (
-              <span>
-                최근 <b className="t-num text-ink">{newsCount.toLocaleString("ko-KR")}</b>건
-              </span>
-            )}
-            {rows.length > 0 && rows.length < newsCount && (
-              <span>
-                같은 사건 묶어 <b className="t-num text-ink">{rows.length.toLocaleString("ko-KR")}</b>건
-              </span>
-            )}
-          </>
-        }
-        actions={
-          <>
-          <Link
-            href="/town"
-            className="btn-secondary inline-flex min-h-[40px] items-center gap-1 rounded-xl px-4 py-2 t-body font-bold no-underline"
-          >
-            <Icon name="messages-square" size={14} />
-            동네이야기
-          </Link>
-          <Link
-            href="/digest"
-            className="btn-primary btn-cta inline-flex min-h-[40px] items-center rounded-xl px-4 py-2 t-body no-underline"
-          >
-            주간 다이제스트
-          </Link>
-          </>
-        }
-      />
-      {/* [1023 · 동네 ①] 주제 칩 줄 — 머리 바로 아래. /town/news/tag/[tag] 에서만 보이던 다른 주제 칩이 첫 화면에도 선다.
+    <PageShell wide>
+      {/* [1044] 소유자 지시(2026-10-06): "뉴스랑 동네글을 분리해줘"(메뉴까지). 뉴스는 동네의 한 칸이 아니라 제 대분류다 —
+          빵부스러기("동네이야기 › 뉴스룸")와 머리 아래 동네 카테고리 줄(동네이야기·청약·공매·입주·정비)을 걷었다.
+          빵부스러기는 아예 두지 않는다 — 대분류의 첫 화면이라 "뉴스룸" 한 낱말이 제목 바로 위에 한 번 더 설 뿐이다(동네이야기 · 임장노트 첫 화면과 같다).
+          머리 모양은 1043 그대로(공용 PageHead — 아이콘 칩 · 제목 · 사실 한 줄 · 버튼 하나), 문구만 NewsHead 가 든다.
+          숫자("오늘 n건 · 최근 n건")는 1043 에서 내린 그대로다 — 목록 위 "40 / 254건 · 같은 사건은 한 건으로 묶음"이 말한다. */}
+      <NewsHead />
+      {/* [1023 · 동네 ①] 주제 칩 줄 — /town/news/tag/[tag] 에서만 보이던 다른 주제 칩이 첫 화면에도 선다. [1044] 머리 바로 아래(본문 첫 줄).
           NEWS_TAGS 정적 목록(추가 조회 없음) · 폰은 가로 스크롤 · 칩 높이 ≥24px. */}
       <nav
         aria-label="주제별 뉴스"
-        className="-mt-1 mb-3 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="mb-3 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {NEWS_TAGS.map((t) => (
           <Link
@@ -186,8 +140,6 @@ export default async function TownNewsPage() {
           </Link>
         ))}
       </nav>
-      {/* [1018] 소유자: "뉴스룸을 누르면 (카테고리 줄이 사라지는데) 목록은 나오도록 유지" — 다른 동네 카테고리와 같은 카테고리 줄 */}
-      <TownCategoryNav stick />
 
       {/* [1015 · 네이버 뉴스 방식] 데스크톱 2단 — 왼쪽 헤드라인 목록(사진 + 제목 + 요약 + 매체·시각), 오른쪽 레일(많이 본 뉴스 ·
           주간 다이제스트 · 키워드 알림 · 주제 · 광고 1). 폰은 한 열 — 목록 뒤에 레일 순서 그대로. */}
@@ -202,7 +154,7 @@ export default async function TownNewsPage() {
               <ErrorState
                 title="뉴스 불러오기 실패"
                 desc="잠시 후 다시 시도해 주세요."
-                action={{ label: "동네이야기 보기", href: "/town" }}
+                action={{ label: "주간 다이제스트", href: "/digest" }}
               />
             </div>
           ) : (

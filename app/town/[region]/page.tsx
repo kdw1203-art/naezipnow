@@ -27,11 +27,9 @@ import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { logger } from "@/lib/log";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
 import { cityOfRegion, groupRegionsByCity } from "@/lib/town/region-groups";
-import { buildNewsRows } from "@/lib/town/news-list";
 import { isStoryPost } from "@/lib/town/story";
 import { postAttachments } from "@/lib/community/attachments";
 import { Icon } from "@/app/components/Icon";
-import { TownNewsStrip } from "../TownNewsStrip";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { isSudogwonRegion } from "@/lib/rent/params";
 import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
@@ -39,10 +37,12 @@ import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 /* ============================================================
    [#64] 동네 홈 — /town/{regionId}
    /town?region= 쿼리 필터를 "우리 동네 상주 공간"으로 승격한 정식 페이지.
-   그 지역의 이웃 글 · 자동수집 뉴스 · 시세 요약 · 공개 임장노트 · 키워드 알림을
+   그 지역의 이웃 글 · 시세 요약 · 공개 임장노트 · 키워드 알림을
    한 화면에 모으고, 시장 데이터 페이지(/region/[id])와 상호 링크한다.
+   [1044] "이 동네 뉴스" 칸을 걷었다(소유자 지시 2026-10-06: "뉴스랑 동네글을 분리해줘") — 뉴스는 뉴스 메뉴
+   (뉴스룸 /town/news, 지역 칩으로 좁힌다)에만 선다. 아래 [1006] 문단의 뉴스 스트립 설명은 그 전 이야기다.
 
-   구분: /region/[id] = 시장 데이터(숫자), /town/[id] = 동네 생활(글·뉴스).
+   구분: /region/[id] = 시장 데이터(숫자), /town/[id] = 동네 생활(이웃 글 · 공개 임장노트).
    [1006] 사람 기록(이웃 글 · 임장노트)과 "이 동네 뉴스"는 **시각적으로 다른 블록**이다 —
    이웃 글은 작성자 머리글자가 앞에 오는 이야기 카드(.story-*), 뉴스는 한지 면 스트립
    (.news-strip, 출처·시각)으로 뉴스룸을 가리킨다. 이웃 글 상세는 /town/story/[id].
@@ -75,8 +75,9 @@ export async function generateMetadata({
   const region = findCatalogRegionById(id);
   if (!region) return { title: "동네 없음 | 내집나우" };
   /* [970 · C-25] 접미 없던 제목에 `| 내집나우`(폴백 제목과 동일 접미) */
-  const title = `${region.name} 동네 홈 · 이웃 글 · 뉴스 · 시장 요약 | 내집나우`;
-  const description = `${region.name} 이웃 글과 공개 임장노트, 오늘의 ${region.name} 부동산 뉴스, 아파트 시장 요약. 키워드 알림 지원.`;
+  /* [1044] 제목·설명에서 뉴스를 뺐다 — 이 화면은 더 이상 기사를 싣지 않는다(없는 것을 제목에 적지 않는다) */
+  const title = `${region.name} 동네 홈 · 이웃 글 · 시장 요약 | 내집나우`;
+  const description = `${region.name} 이웃 글과 공개 임장노트, 아파트 시장 요약. 키워드 알림 지원.`;
   return {
     title,
     description,
@@ -139,8 +140,6 @@ export default async function TownRegionHomePage({
   const communityPosts = regionPosts
     .filter((p) => isStoryPost(p) && p.visibility !== "link_only")
     .slice(0, 8);
-  /* [1006] 이 동네 뉴스 — 뉴스룸과 같은 조립기(같은 사건 접기·요약·출처)로 행을 만든다 */
-  const newsRows = buildNewsRows(regionPosts.filter((p) => p.isAutomated)).slice(0, 6);
   /* [1023 · 동네 ①] 지역 일치 노트 전량(읽어 온 100편 안에서)을 먼저 들고, 목록은 6편만 그린다.
      머리 캡션의 N 은 전량 쪽 — 목록 6편을 "N편" 이라 부르면 실제보다 적게 말한다. */
   const regionNotes: InspectionNote[] =
@@ -199,7 +198,7 @@ export default async function TownRegionHomePage({
             <Link href="/town" className="inline-flex min-h-[24px] items-center text-text-2 no-underline hover:underline">
               동네이야기
             </Link>
-            {" › 동네 홈 · 이웃 글 · 뉴스 · 시세 · 공개 임장노트"}
+            {" › 동네 홈 · 이웃 글 · 시세 · 공개 임장노트"}
             {/* [1024 · 원룸·오피스텔] 수도권(비아파트 수집 범위)만 — 동네 실거래 전월세 화면으로 한 줄 */}
             {isSudogwonRegion(region) && (
               <>
@@ -310,7 +309,8 @@ export default async function TownRegionHomePage({
         </section>
       )}
 
-      <div className="grid grid-cols-1 gap-6 max-md:gap-3 lg:grid-cols-2">
+      {/* [1044] 2단(이웃 글 | 이 동네 뉴스) → 이웃 글 한 단. 뉴스 칸이 빠져 격자가 필요 없다 */}
+      <div>
         {/* 이웃 글 — 사람의 기록. 이야기 카드 규칙(.story-*): 작성자가 먼저, 그다음 제목·댓글·사진
             [1015] 제목 옆 "사람의 기록"·"뉴스룸" 부연 라벨을 걷었다(소유자 지시 4 · 브리프 규칙 C). 행 목록은
             리퀴드 판 hanji(사람이 쓴 글). 행 메타는 당근 동네 글 카드 순서(작성자 · N시간 전 · 공감 · 댓글 · 사진). */}
@@ -319,7 +319,8 @@ export default async function TownRegionHomePage({
             <h2 id="region-stories-title" className="t-section text-ink">
               이웃 글
             </h2>
-            <Link href="/town?kind=post" className="inline-block py-[5px] t-sub font-bold text-primary">
+            {/* [1044] ?kind=post 를 뗐다 — 1043 부터 피드는 이웃 글뿐이라 유형 필터가 없다 */}
+            <Link href="/town" className="inline-block py-[5px] t-sub font-bold text-primary">
               이야기 피드 ›
             </Link>
           </div>
@@ -386,34 +387,6 @@ export default async function TownRegionHomePage({
           )}
         </section>
 
-        {/* 이 동네 뉴스 — 다른 재질(뉴스룸 스트립). 출처·시각이 앞에 서고 뉴스룸으로 보낸다 */}
-        <section className="rise-in-2" aria-labelledby="region-news-title">
-          <div className="mb-2 flex items-baseline justify-between px-1">
-            <h2 id="region-news-title" className="t-section text-ink">
-              {region.name} 뉴스
-            </h2>
-            <Link
-              href={`/town/news?region=${encodeURIComponent(region.name)}`}
-              className="inline-block py-[5px] t-sub font-bold text-primary"
-            >
-              뉴스룸 ›
-            </Link>
-          </div>
-          {newsRows.length === 0 ? (
-            /* [1015] 한지 면(.news-strip) → 흰 카드 + 1px 선(브리프 규칙 C) · 빈 화면은 한 줄 */
-            <div className="card rounded-2xl px-5 py-6 t-body text-text-2 max-md:px-3.5 max-md:py-4">
-최근 수집된 {region.name} 기사 없음
-            </div>
-          ) : (
-            <TownNewsStrip
-              rows={newsRows}
-              title={`${region.name} 뉴스`}
-              href={`/town/news?region=${encodeURIComponent(region.name)}`}
-              max={6}
-              showHeader={false}
-            />
-          )}
-        </section>
       </div>
 
       {/* 공개 임장노트

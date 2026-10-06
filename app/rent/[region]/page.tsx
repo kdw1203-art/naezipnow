@@ -324,7 +324,8 @@ export default async function RentRegionPage({
             </div>
           </section>
           <section className="card p-[var(--pad-card)]">
-            <h2 className="t-section text-ink">동네이야기 · {region.name}</h2>
+            {/* [1044] 제목 "동네이야기 · {동네}" → "{동네} 관련 화면" — 줄에 뉴스룸·시장 데이터가 같이 있어 동네이야기 묶음이 아니다(뉴스는 제 대분류) */}
+            <h2 className="t-section text-ink">{region.name} 관련 화면</h2>
             <ul data-tone="plain" className="lq-panel mt-1 flex flex-col">
               {[
                 { href: `/town/${id}`, label: "동네 홈" },

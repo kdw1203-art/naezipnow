@@ -53,7 +53,10 @@ test("tagsToRevalidate — 변경 종류마다 캐시에 붙인 태그가 빠짐
     PUBLIC_NOTES_LIST_TAG,
   ]);
   /* 댓글: note-comments:<id> 와 note:<id> (요청 사양) */
-  assert.deepEqual(tagsToRevalidate(ID, "comment"), [`note-comments:${ID}`, `note:${ID}`]);
+  /* [1043] 목록 카드가 댓글 수를 적는다 — 목록 태그가 맨 뒤에 붙었다 */
+  assert.deepEqual(tagsToRevalidate(ID, "comment"), [`note-comments:${ID}`, `note:${ID}`, PUBLIC_NOTES_LIST_TAG]);
+  /* [1043] 독자 평가: 목록만(상세는 요청마다 실조회) */
+  assert.deepEqual(tagsToRevalidate(ID, "rating"), [PUBLIC_NOTES_LIST_TAG]);
 });
 
 test("tagsToRevalidate — 어떤 변경이든 캐시된 태그를 덮는다(누락 검사)", () => {

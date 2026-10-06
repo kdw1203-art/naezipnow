@@ -509,6 +509,7 @@ test("[1031] 운영 루프 스크립트 — routes.json · probe-prod · design-
 test("[1031 · 성능·운영] 동네 피드 첫 3장 커버 eager · 검색 결과 영역 min-h · /redevelopment canonical", () => {
   const f = src1030("app/town/feed-client.tsx");
   assert.ok(f.includes("priority={i < 3}") && f.includes("priority={priority}"));
-  assert.ok(src1030("app/search/search-client.tsx").includes('<div className="flex min-h-[70vh] flex-col gap-4">'));
+  /* [1043] 70vh → 100dvh — 푸터가 첫 화면 밖에서 시작한다 */
+  assert.ok(src1030("app/search/search-client.tsx").includes('<div className="flex min-h-[100dvh] flex-col gap-4">'));
   assert.ok(src1030("app/redevelopment/page.tsx").includes('alternates: seoAlternates("/redevelopment")'));
 });

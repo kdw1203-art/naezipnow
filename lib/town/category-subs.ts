@@ -43,20 +43,17 @@ const positive = (v: number | null | undefined): v is number =>
   typeof v === "number" && Number.isFinite(v) && v > 0;
 
 /**
- * 카드 여섯 장의 부제. 타일 폭이 96px(모바일)이라 **짧게** — "접수 중 12건" · "진행 1,130건" ·
- * "9월 입주 12곳" · "구역 214곳" · "오늘 기사 4건" · "이번 주 새 글 3".
+ * 카드 다섯 장의 부제. 타일 폭이 96px(모바일)이라 **짧게** — "접수 중 12건" · "진행 1,130건" ·
+ * "9월 입주 12곳" · "구역 214곳" · "이번 주 새 글 3". ([1044] 뉴스룸 칸은 없어졌다 — 뉴스는 제 대분류)
  */
 export function buildTownCategorySubs(input: {
   counts: TownCategoryCounts | null;
-  /** 오늘 기사 수(뉴스룸 칸) — 화면이 손에 든 뉴스 목록에서 센 값 */
-  todayNews?: number;
   /** 이번 주 새 글·노트 수(허브 칸) — 이 피드에 실린 카드 기준 */
   weekPosts?: number;
 }): TownCategorySubs {
   const out: Partial<Record<string, string>> = {};
   const c = input.counts;
   if (positive(input.weekPosts)) out["/town"] = `이번 주 새 글 ${n(input.weekPosts)}`;
-  if (positive(input.todayNews)) out["/town/news"] = `오늘 기사 ${n(input.todayNews)}건`;
   if (c) {
     if (positive(c.applyOpen)) out["/apply"] = `접수 중 ${n(c.applyOpen)}건`;
     if (positive(c.onbidActive)) out["/auctions"] = `진행 ${n(c.onbidActive)}건`;

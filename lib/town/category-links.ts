@@ -58,16 +58,9 @@ export type TownCategoryLink = {
    * 클라이언트 조각이 필요한 칸(모임 만들기)은 페이지가 action 으로 덮어쓴다.
    */
   heroCta: readonly { label: string; href: string; primary?: boolean }[];
-  /**
-   * [1006] 이 칸이 **다른 재질**(뉴스룸)로 가는 입구인가. 카테고리 카드가 이 값을 보고
-   * 한지 면·네이비 아이콘(globals.css .news-entry-card)으로 그린다 — 나머지 넷(공공데이터)과
-   * 같은 흰 카드로 서 있으면 "뉴스도 동네이야기의 한 칸"으로 읽힌다. 뉴스룸은 히어로도
-   * 목록도 다른 화면이므로 입구부터 다르게 보여야 한다.
-   */
-  entry?: "newsroom";
 };
 
-/** 브레드크럼 한 줄 — 9칸 전부 "동네이야기 › {라벨}". 로딩 스켈레톤도 이걸 쓴다. */
+/** 브레드크럼 한 줄 — 모든 칸이 "동네이야기 › {라벨}". 로딩 스켈레톤도 이걸 쓴다. */
 export function townBreadcrumb(href: string): string {
   const l = TOWN_CATEGORY_LINKS.find((x) => x.href === href);
   return l ? `동네이야기 › ${l.label}` : "동네이야기";
@@ -80,21 +73,17 @@ export function townBreadcrumb(href: string): string {
    눌린 것을 구분할 수 없었고 누르면 빈 화면이었다. Q&A·전문가는 그래도 두 번째 줄
    첫머리에 둔다 — 질문·상담은 비어 있어도 시작점이 되기 때문이다. */
 /* [992 · A1] Q&A·전문가·모임·자료 네 칸을 뺐다 — 보관(비노출) 영역(lib/seo/archived-routes.ts).
-   남은 다섯 칸은 전부 공공데이터·뉴스(사람이 채우지 않아도 비지 않는 칸)다. */
+   [1044] 뉴스룸 칸도 뺐다 — 지금은 허브(동네이야기) + 공공데이터 넷(청약·공매·입주·정비사업). */
 export const TOWN_CATEGORY_LINKS: TownCategoryLink[] = [
   /* [1011] 동네이야기(허브) 자신을 첫 칸으로 넣는다(소유자 지시 — "동네이야기가 하단 카드에 없어").
      예전에는 허브만 빠져 있어서 ① GNB 드롭다운(동네이야기·뉴스룸·청약·정비사업)과 카드 줄의
      구성이 서로 달랐고 ② 뉴스룸·청약 같은 하위 화면에서 이 줄만 보고는 허브로 돌아갈 칸이
      없었다(빵부스러기를 찾아야 했다). 지금 보고 있는 화면의 칸은 링크가 아니라 고정 표식으로
      그려지므로(TownCategoryNav 의 aria-current), /town 에서 자기 자신을 누르는 일은 없다. */
-  { href: "/town", label: "동네이야기", icon: "messages-square", desc: "이웃 글 · 공개 노트", tone: "bg-primary-soft text-primary", headSub: "이웃 글과 공개 임장노트, 지역별 최신순", heroTitle: ["다녀온 사람의 기록이 ", "지금", " 동네를 말합니다"], heroTone: "text-on-navy-amber", heroCta: [] },
-  /* 모바일 실측(2026-08-02): "뉴스·다이제스트"는 카드 폭(104px)에서 "뉴스·다이제…"
-     로 잘렸다. 라벨은 짧게, 다이제스트는 부제로. */
-  /* [1006] 뉴스 칸은 뉴스룸(/town/news)으로 가는 **입구**다 — entry: "newsroom". 히어로 문장은
-     뉴스룸 마스트헤드가 같은 것을 쓴다(app/town/news/page.tsx). */
-  /* [1007 · P2] 라벨 "뉴스" → "뉴스룸": 카드·GNB·하위 화면("뉴스룸 전체 ›")이 같은 이름으로
-     같은 곳(/town/news)을 가리킨다. 이야기와 다른 재질의 **장소** 이름이라 "뉴스"보다 분명하다. */
-  { href: "/town/news", label: "뉴스룸", icon: "newspaper", desc: "기사 요약 · 다이제스트", tone: "bg-warning-soft text-warning", headSub: "매일 아침 모은 부동산 기사 요약과 주간 다이제스트", heroTitle: ["오늘 부동산은 ", "이렇게", " 움직였습니다"], heroTone: "text-on-navy-amber", heroCta: [{ label: "주간 다이제스트", href: "/digest" }], entry: "newsroom" },
+  { href: "/town", label: "동네이야기", icon: "messages-square", desc: "이웃 글 · 동네 홈", tone: "bg-primary-soft text-primary", headSub: "이웃 글 · 지역별 최신순", heroTitle: ["다녀온 사람의 기록이 ", "지금", " 동네를 말합니다"], heroTone: "text-on-navy-amber", heroCta: [] },
+  /* [1044] 뉴스룸 칸을 뺐다(소유자 지시 2026-10-06: "뉴스랑 동네글을 분리해줘" — 메뉴까지 분리).
+     뉴스는 동네의 한 칸이 아니라 제 대분류다(app/components/nav-data.ts "뉴스"). 뉴스 화면의 머리·줄은
+     app/town/news/NewsHead.tsx 가 맡고, 이 목록은 동네(사람 글 + 동네 단위 공공데이터) 다섯 칸만 든다. */
   { href: "/apply", label: "청약 센터", icon: "ticket", desc: "분양·경쟁률", tone: "bg-success-soft text-success", headSub: "청약홈 공공데이터 · 경쟁률 · 특별공급 · 접수 일정", heroTitle: ["이번 달 청약, ", "경쟁률", "까지 보고 정합니다"], heroTone: "text-on-navy-green", heroCta: [{ label: "청약 캘린더", href: "/apply/calendar" }] },
   { href: "/auctions", label: "공매 물건", icon: "hammer", desc: "온비드 공매", tone: "bg-success-soft text-success", headSub: "온비드 진행·예정 물건 · 감정가 · 최저입찰가 · 입찰일", heroTitle: ["감정가보다 싼 물건이 ", "지금", " 입찰 중입니다"], heroTone: "text-on-navy-green", heroCta: [] },
   { href: "/supply", label: "입주 물량", icon: "construction", desc: "공급 일정", tone: "bg-success-soft text-success", headSub: "지역·시기별 아파트 입주 예정, 청약홈 공고 기준", heroTitle: ["언제 어디에 ", "얼마나", " 들어오는지 봅니다"], heroTone: "text-on-navy-green", heroCta: [] },

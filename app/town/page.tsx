@@ -9,27 +9,22 @@ import { loadTownFeed, TOWN_FEED_FIRST_PAGE } from "@/lib/town/feed";
 import { TownFeed, type FeedCard } from "./feed-client";
 import { AdZone } from "../components/ads/AdZone";
 import { TownCategoryNav } from "./TownCategoryNav";
-import { TownNewsStrip } from "./TownNewsStrip";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { groupRegionsByCity } from "@/lib/town/region-groups";
-import { TOWN_CATEGORY_LINKS } from "@/lib/town/category-links";
-import { readTownPosts } from "@/lib/newui/board-posts";
-import { buildNewsRows, countTodayKst, type NewsRow } from "@/lib/town/news-list";
-import { logger } from "@/lib/log";
 
 export const metadata = buildPageMetadata({
   title: "동네이야기",
   description:
-    "이웃 글과 공개 임장노트를 한 피드에서. 사진과 판단으로 먼저 보고 관심 단지로 이어집니다.",
+    "이웃이 쓴 동네 글 피드 · 지역별 동네 홈.",
   path: "/town",
-  og: { badge: "동네이야기", sub: "이웃 글 · 공개 임장노트 피드" },
+  og: { badge: "동네이야기", sub: "이웃 글 · 동네 단위" },
 });
 
 /* 동네이야기 통합 피드(#5) — 기존 피드 + 발견 피드를 하나로 합친 사진 우선 카드 그리드.
-   공개 임장노트(사진 우선) + 커뮤니티 글을 섞어 오늘의집/인스타그램형으로 노출.
+   [1043] 지금은 **이웃 글만** 싣는다(공개 임장노트는 /notes). 예전엔 공개 임장노트 + 커뮤니티 글을 섞었다.
    상단엔 동네이야기 하위 영역 + 입주/공매/청약을 카테고리 카드로 통합.
-   [1006] 이 화면은 **사람의 기록**(이웃 글 + 임장노트)이다. 뉴스(자동수집)는 피드에
-   섞지 않고 "오늘의 뉴스" 스트립(다른 재질) 한 줄로 뉴스룸(/town/news)을 가리킨다. */
+   [1006] 이 화면은 **사람의 기록**(이웃 글)이다. 뉴스(자동수집)는 피드에 섞지 않는다.
+   [1044] "오늘의 뉴스" 스트립도 걷었다 — 뉴스는 제 대분류(뉴스 › 뉴스룸 /town/news)에만 선다. */
 
 /* [1007] 120초 → 600초. 사람 트래픽은 7일 120뷰인데 이 피드는 2분마다 다시 구워졌다(HTML 305KB +
    RSC 99KB = ISR Write 한 번에 ~400KB). 내용이 바뀌는 지점(이웃 글·댓글·공감·공개 노트 저장·
@@ -40,20 +35,6 @@ export const metadata = buildPageMetadata({
    invalidateTownFeed()(이웃 글·댓글·공감·채택·공개 노트) · invalidateAfterIngest("news")
    (뉴스 적재). 시간 TTL 은 그 비움을 놓쳤을 때의 안전망이다. */
 export const revalidate = 86_400;
-
-/* [1006] 오늘의 뉴스 — readTownPosts 는 요청당 1회 캐시라 피드(loadTownFeed →
-   loadPostCards)가 이미 읽은 같은 배열을 다시 쓴다(추가 DB 왕복 0). 실패하면 스트립을
-   접는다 — 피드 쪽 실패 표시(loadFailed)가 따로 있으니 여기서 또 말하지 않는다.
-   **전체 행**을 돌려준다 — "오늘 기사 n건"은 전체에서 세고, 스트립만 앞 몇 줄을 자른다
-   (예전엔 여기서 6줄로 잘라 오늘 기사 수가 최대 6에서 멈췄다). */
-async function loadNewsRows(): Promise<NewsRow[]> {
-  try {
-    return buildNewsRows(await readTownPosts());
-  } catch (e) {
-    logger.error("[town] 오늘의 뉴스 스트립 조회 실패", e);
-    return [];
-  }
-}
 
 /* [#64] 동네 홈 바로가기 — 노트·글이 실제로 있는 지역 위주 8곳 (수동 선정).
    [970 · C-17] 나머지 전체는 아래 "전체 지역" 인덱스(시·도별 접기)에서 닿는다. */
@@ -70,7 +51,7 @@ const TOWN_HOME_SHORTCUTS = [
 
 /* [B25] 동네별 활동량 — 8개 칩이 전부 같은 모양이라 "어디에 사람이 있는지"가
    안 보였다. 눌러 봐야 빈 동네인 걸 알게 되는 순서가 반복된다.
-   여기서 세는 모수는 **이 피드에 실린 글**(공개 노트 40건 + 커뮤니티 글)이지
+   여기서 세는 모수는 **이 피드에 실린 글**(커뮤니티 글)이지
    그 동네의 전체 글이 아니다 — 그래서 화면에도 "최근 글 기준"이라고 적는다.
    숫자를 정확히 부르지 못할 바엔 무엇을 센 건지 밝히는 편이 낫다. */
 function shortcutActivity(cards: FeedCard[], name: string): number {
@@ -127,20 +108,20 @@ function TownIndex() {
 }
 
 export default async function TownPage() {
-  /* 실데이터: 공개 임장노트(사진 우선) + 커뮤니티 글(비자동 posts). 뉴스(자동수집)는 /town/news로 분리.
+  /* 실데이터: 커뮤니티 글(비자동 posts). 뉴스(자동수집)는 뉴스 메뉴(/town/news), 공개 임장노트는 /notes 로 분리.
      이 페이지는 revalidate 가 있어 `next build` 가 프리렌더한다 — 여기서 던지면
      DB 가 잠깐 흔들린 것만으로 배포가 깨진다. 그래서 잡되, **삼키지는 않는다**:
      실패는 loadFailed 로 화면까지 들고 가서 "글 없음"와 다르게 말한다. */
-  const [{ cards, loadFailed, notesMaybeMore }, newsRows] = await Promise.all([
-    loadTownFeed(TOWN_FEED_FIRST_PAGE),
-    loadNewsRows(),
-  ]);
+  /* [1043] 소유자 지시(2026-10-06): "동네이야기와 임장노트가 1개의 동네이야기 카테고리에서 나오고 있어 … 동네이야기만 나오도록".
+     피드는 **이웃 글만** 읽는다 — 공개 임장노트는 /notes(공개 노트)가 맡는다. */
+  /* [1044] 소유자 지시(2026-10-06): "뉴스랑 동네글을 분리해줘". 이 화면은 뉴스를 읽지 않는다 —
+     "오늘의 뉴스" 스트립(기사 6줄)을 걷었고, 뉴스는 뉴스 메뉴(뉴스룸 /town/news)에만 선다. */
+  const { cards, loadFailed } = await loadTownFeed();
   /* [967 · 19] 첫 장은 40장까지만 HTML 에 싣고 나머지는 "더 보기"가 /api/town/feed 로
      이어받는다. 예전엔 커뮤니티 글은 전량(최대 300)이 한 번에 내려갔다.
-     hasMore 는 "지금 손에 든 것 너머가 있는가" — 노트 창(40)이 가득 찼으면 글이
-     40장 안 되더라도 더 오래된 노트가 남아 있을 수 있어 참으로 둔다. */
+     hasMore 는 "지금 손에 든 것 너머가 있는가" — 글이 첫 장(40)보다 많을 때만 참이다. */
   const firstPage: FeedCard[] = cards.slice(0, TOWN_FEED_FIRST_PAGE);
-  const hasMore = cards.length > TOWN_FEED_FIRST_PAGE || notesMaybeMore;
+  const hasMore = cards.length > TOWN_FEED_FIRST_PAGE;
 
   /* [B25] 활동이 있는 동네를 앞으로. 같은 수면 원래 순서를 지킨다(임의 재배열 금지). */
   const shortcuts = TOWN_HOME_SHORTCUTS.map((r, i) => ({
@@ -157,19 +138,7 @@ export default async function TownPage() {
   const todayCount = cards.filter((c) => now - c.createdAt < 24 * 3600_000).length;
   const weekCount = cards.filter((c) => now - c.createdAt < 7 * 24 * 3600_000).length;
   const hottest = shortcuts[0]?.count > 0 ? shortcuts[0] : null;
-  /* [1006] 히어로 통계에 "무엇의 기록인지"를 가른다 — 이웃 글 n · 임장노트 n(사람·Lab) */
-  const storyCount = cards.filter((c) => c.kind === "post").length;
-  const noteCards = cards.filter((c) => c.kind === "note");
-  const humanNoteCount = noteCards.filter((c) => !c.lab).length;
-  const labNoteCount = noteCards.length - humanNoteCount;
-  /* [1006] 카테고리 카드의 "뉴스" 칸 — 손에 든 뉴스 목록 **전체**로 오늘 기사 수를 적는다
-     (추가 조회 없음). 0 이면 숫자 없이 입구 설명만. */
-  const todayNews = countTodayKst(newsRows, now);
-  /** 스트립에 실을 줄 수 — 카운트와 무관하게 여기서만 자른다 */
-  const NEWS_STRIP_ROWS = 6;
-  const categoryItems = TOWN_CATEGORY_LINKS.map((l) =>
-    l.entry === "newsroom" && todayNews > 0 ? { ...l, desc: `뉴스룸 · 오늘 기사 ${todayNews}건` } : l,
-  );
+  /* [1043] 피드가 이웃 글만이라 "이웃 글 n · 임장노트 n · Lab 노트 n" 가름은 없어졌다 — 이 피드 n건이 곧 이웃 글 수다 */
 
   return (
     <PageShell wide>
@@ -179,59 +148,47 @@ export default async function TownPage() {
       <PageHead
         icon="messages-square"
         title="동네이야기"
-        sub="이웃 글과 공개 임장노트 · 동네 단위"
+        sub="이웃 글 · 동네 단위"
         className="mb-3 md:mb-4"
         actions={
           <>
             <Link href="/town/write" className="btn-primary btn-md rounded-xl no-underline">
               이야기 쓰기
             </Link>
-            <Link href="/notes/new" className="btn-outline btn-md rounded-xl no-underline">
-              임장노트 쓰기
-            </Link>
+            {/* [1043] "임장노트 쓰기"는 뺐다 — 임장노트는 제 메뉴(임장노트 · 노트 쓰기)에서 */}
           </>
         }
         facts={
-          <>
-            {/* [970 · C-30] "오늘 새 글 0" 은 살아 있다는 신호가 아니라 비었다는 고백이다 — 0이면 숨긴다 */}
-            {todayCount > 0 && (
+          /* [1043] 글이 한 건도 없으면 숫자 줄을 그리지 않는다("이번 주 0 · 이 피드 0건"은 사실이지만 머리에 둘 말이 아니다 — 빈 상태가 말한다) */
+          cards.length > 0 ? (
+            <>
+              {/* [970 · C-30] "오늘 새 글 0" 은 살아 있다는 신호가 아니라 비었다는 고백이다 — 0이면 숨긴다 */}
+              {todayCount > 0 && (
+                <span>
+                  오늘 새 글 <b className="t-num text-ink"><CountUp value={todayCount} /></b>
+                </span>
+              )}
+              {weekCount > 0 && (
+                <span>
+                  이번 주 <b className="t-num text-ink"><CountUp value={weekCount} /></b>
+                </span>
+              )}
               <span>
-                오늘 새 글 <b className="t-num text-ink"><CountUp value={todayCount} /></b>
+                이웃 글 <b className="t-num text-ink"><CountUp value={cards.length} /></b>건
               </span>
-            )}
-            <span>
-              이번 주 <b className="t-num text-ink"><CountUp value={weekCount} /></b>
-            </span>
-            <span>
-              이 피드 <b className="t-num text-ink"><CountUp value={cards.length} /></b>건
-            </span>
-            {storyCount > 0 && (
-              <span>
-                이웃 글 <b className="t-num text-ink">{storyCount}</b>
-              </span>
-            )}
-            {humanNoteCount > 0 && (
-              <span>
-                임장노트 <b className="t-num text-ink">{humanNoteCount}</b>
-              </span>
-            )}
-            {labNoteCount > 0 && (
-              <span>
-                Lab 노트 <b className="t-num text-ink">{labNoteCount}</b>
-              </span>
-            )}
-            {hottest && (
-              <Link href={`/town/${hottest.id}`} className="no-underline">
-                가장 활발한 동네 <b className="text-brand-red">{hottest.name} ›</b>
-              </Link>
-            )}
-          </>
+              {hottest && (
+                <Link href={`/town/${hottest.id}`} className="no-underline">
+                  가장 활발한 동네 <b className="text-brand-red">{hottest.name} ›</b>
+                </Link>
+              )}
+            </>
+          ) : undefined
         }
       />
 
-      {/* 동네이야기 카테고리 — 청약·입주·공매 + 뉴스룸 입구 (인터랙티브).
+      {/* 동네이야기 카테고리 — 동네이야기 · 청약 · 공매 · 입주 · 정비사업 다섯 칸([1044] 뉴스룸 칸 없음 — 뉴스는 제 대분류).
           목록은 lib/town/category-links.ts 단일 소스. 하위 페이지도 같은 것을 쓴다. */}
-      <TownCategoryNav items={categoryItems} />
+      <TownCategoryNav />
 
       {/* [#64] 동네 홈 진입 — ?region= 필터 대신 지역별 정식 페이지로 */}
       {/* 지역 칩 — 줄바꿈으로 두 줄이 되면 카테고리 격자와 붙어 경계가 흐려진다.
@@ -239,8 +196,8 @@ export default async function TownPage() {
       <div className="mb-4 flex items-center gap-2" data-reveal="">
         <span className="shrink-0">
           <span className="t-sub font-bold text-text-3">우리 동네 홈</span>
-          {/* [970 · C-11] 칩 숫자는 이 피드의 노트+글을 센 값 — 무엇을 센 건지 그대로 적는다 */}
-          <span className="ml-1 t-caption text-text-3">최근 노트·글 기준</span>
+          {/* [970 · C-11] 칩 숫자는 이 피드의 글을 센 값 — 무엇을 센 건지 그대로 적는다. [1043] 글이 없으면 기준 줄도 없다(셀 것이 없다) */}
+          {cards.length > 0 && <span className="ml-1 t-caption text-text-3">최근 글 기준</span>}
         </span>
         <div className="rail-x -mx-1 px-1 py-0.5">
           {shortcuts.map((r, i) => (
@@ -266,11 +223,6 @@ export default async function TownPage() {
           </a>
         </div>
       </div>
-
-      {/* [1006] 오늘의 뉴스 — 피드에 섞지 않는다. 뉴스룸(/town/news)을 가리키는 한 줄 스트립. 0건이면 그리지 않는다.
-          [1017] 소유자: "폰 동네피드에서는 (카테고리·지역 칩이) 더 위에 있어야" — 카테고리 줄 · 지역 칩 **아래**로 내렸다.
-          유형·정렬 칩은 목록(TownFeed) 안에 붙어 있어 그대로 목록 바로 위다. */}
-      <TownNewsStrip rows={newsRows.slice(0, NEWS_STRIP_ROWS)} className="mb-4" />
 
       {/* [992 · A1] 오늘의 글감(TownPromptCard)·전문가 띠(TownExpertBand) 제거 — 글감 스레드와
           전문가는 보관(비노출) 영역이다(사람 글 0건·전문가 0명, lib/seo/archived-routes.ts).

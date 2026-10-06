@@ -452,7 +452,12 @@ async function mergeTownPosts(boardPromise: Promise<Post[]>): Promise<Post[]> {
  * 요청당 1회로 접는다 — 같은 요청에서 generateMetadata 와 본문이 각각 부른다.
  */
 export const getTownPost = cache(async (id: string): Promise<Post | null> => {
+  /* [1043 · 성능] 두 조회를 함께 띄운다 — 뉴스(자동수집)는 늘 posts 에 없고 board_posts 에 있어, 예전엔 헛 조회가 끝난 뒤에야
+     진짜 조회가 시작됐다(기사 상세의 직렬 왕복 하나). 뜻은 그대로다: posts 에 있으면 그것(board 쪽 결과·실패는 보지 않는다),
+     없으면 board 결과 — board 실패는 그때 던져진다. */
+  const boardP = getBoardPost(id);
+  boardP.catch(() => {}); // posts 에서 찾으면 이 결과를 쓰지 않는다 — 처리되지 않은 거절로 남기지 않는다
   const fromStore = await getPost(id);
   if (fromStore) return fromStore;
-  return getBoardPost(id);
+  return boardP;
 });

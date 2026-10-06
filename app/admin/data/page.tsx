@@ -162,7 +162,8 @@ export default async function AdminDataPage() {
 
   const ok = geo?.ok ?? 0;
   const total = geo?.total ?? 0;
-  const pct = total > 0 ? Math.min(100, Math.round((ok / total) * 100)) : 0;
+  /* [1043] 소수 첫째 자리까지 — 99.2% 와 100% 는 다른 말이다(남은 300곳이 거래 많은 신축이다) */
+  const pct = total > 0 ? Math.min(100, Math.floor((ok / total) * 1000) / 10) : 0;
 
   const counts = freshness.reduce<Record<FreshnessStatus, number>>(
     (acc, r) => {
@@ -396,17 +397,35 @@ export default async function AdminDataPage() {
           <div className="h-2 w-full overflow-hidden rounded-full bg-[rgba(255,255,255,.08)]">
             <span className="block h-full rounded-full bg-ai-accent" style={{ width: `${pct}%` }} />
           </div>
-          <div className="flex gap-4 text-[12px] text-[#9aa6b8]">
-            <span>
-              성공 <b className="text-ai-success">{fmt(ok)}</b>
-            </span>
-            <span>
-              실패 <b className="text-[#f2c94c]">{fmt(geo?.notfound ?? 0)}</b>
-            </span>
-            <span>
-              남음 <b className="text-white">{fmt(Math.max(0, total - (geo?.cached ?? 0)))}</b>
-            </span>
-          </div>
+          {/* [1043] 같은 모집단(거래가 있는 아파트 단지)에서 센다 — 좌표 있음 + 못 찾음 + 미시도 = 전체.
+              분양·입주 단지(집계 밖)는 아래 줄에 따로. 조회 실패면 숫자 대신 실패라고 적는다(0/0 으로 그리지 않는다) */}
+          {geo ? (
+            <>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 t-sub text-[#9aa6b8]">
+                <span>
+                  좌표 있음 <b className="text-ai-success">{fmt(ok)}</b>
+                </span>
+                <span>
+                  못 찾음 <b className="text-[#f2c94c]">{fmt(geo.notfound)}</b>
+                </span>
+                <span>
+                  미시도 <b className="text-white">{fmt(geo.untried)}</b>
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 t-sub text-[#9aa6b8]">
+                <span>
+                  분양·입주 단지 좌표 있음 <b className="text-ai-success">{fmt(geo.otherOk)}</b>
+                </span>
+                <span>
+                  못 찾음 <b className="text-[#f2c94c]">{fmt(geo.otherNotfound)}</b>
+                </span>
+              </div>
+            </>
+          ) : (
+            <p role="alert" className="t-sub font-bold text-ai-danger">
+              진행률 불러오기 실패 · 잠시 후 다시
+            </p>
+          )}
 
           <GeocodeRunButton configured={geo?.configured ?? false} />
         </div>

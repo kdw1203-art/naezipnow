@@ -308,12 +308,12 @@ test("404 — JS 없는 검색 폼(/search?q=)·인기 경로 5곳·홈 링크, 
 
 /* ---------- 9. 뉴스룸 라벨 통일 ---------- */
 
-test("뉴스룸 — 카테고리 카드·GNB·하위 화면 링크의 라벨이 '뉴스룸'이고 목적지는 /town/news 하나", () => {
-  const news = TOWN_CATEGORY_LINKS.find((l) => l.href === "/town/news");
-  assert.ok(news);
-  assert.equal(news.label, "뉴스룸");
-  const town = NAV.find((g) => g.label === "동네");
-  assert.equal(town?.children?.find((c) => c.href === "/town/news")?.label, "뉴스룸");
+test("뉴스룸 — GNB·화면 머리·하위 화면 링크의 라벨이 '뉴스룸'이고 목적지는 /town/news 하나", () => {
+  /* [1044] 카테고리 카드(동네 줄)의 뉴스룸 칸은 없어졌다 — 같은 이름은 뉴스 대분류의 하위와 화면 머리가 든다 */
+  assert.equal(TOWN_CATEGORY_LINKS.find((l) => l.href === "/town/news"), undefined);
+  const newsGroup = NAV.find((g) => g.label === "뉴스");
+  assert.equal(newsGroup?.children?.find((c) => c.href === "/town/news")?.label, "뉴스룸");
+  assert.match(read("app/town/news/NewsHead.tsx"), /title: "뉴스룸"/);
   assert.match(read("app/redevelopment/page.tsx"), /뉴스룸 전체 ›/);
   assert.match(read("app/digest/page.tsx"), /뉴스룸 전체 ›/);
   assert.doesNotMatch(read("app/redevelopment/page.tsx"), /전체 뉴스 ›/);
