@@ -43,6 +43,7 @@ import { findTxRegionForMarketRegion, type TxRegionSummary } from "@/lib/market/
 import { BAND_KIND_LABEL } from "@/lib/market/bands";
 import { listDbProjects } from "@/lib/redevelopment/store";
 import { countUpisForGu } from "@/lib/seoul/upis-store";
+import { seoulGuByName, seoulGuHref } from "@/lib/seoul/upis-gu";
 import type { UpisGuSummary } from "@/lib/seoul/upis";
 import {
   labelForType,
@@ -1205,8 +1206,9 @@ export default async function RegionHubPage({
               {shortName} 도시계획 결정 조서{" "}
               <span className="t-sub font-medium text-text-3">서울시 {upisGu.total.toLocaleString("ko-KR")}건</span>
             </h2>
+            {/* [1045] 검색 칸(?gu=)이 아니라 그 구의 조서 화면으로 — 최근 결정 · 사업별 · 동별이 한 주소에 선다 */}
             <Link
-              href={`/redevelopment?gu=${encodeURIComponent(shortName)}#seoul-plan`}
+              href={seoulGuByName(shortName) ? seoulGuHref(seoulGuByName(shortName)!.slug) : `/redevelopment?gu=${encodeURIComponent(shortName)}#seoul-plan`}
               className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary"
             >
               조서 보기 ›

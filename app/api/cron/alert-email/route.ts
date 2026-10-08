@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { foldHealthAlerts } from "@/lib/admin/health-alerts-fold";
 import { authorizeCron } from "@/lib/cron/authorize";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { sendEmail, isEmailConfigured } from "@/lib/email/send";
@@ -50,9 +51,15 @@ async function handle(req: Request) {
     logger.error("[alert-email] 경보 조회 실패", error);
     return NextResponse.json({ ok: false, reason: "query-failed" }, { status: 500 });
   }
-  const rows = ((alerts ?? []) as Array<Record<string, unknown>>)
-    .filter((r) => String(r.severity ?? "") === "critical")
-    .slice(0, 200);
+  /* [1045] 지금 울리고 있는 critical 만 보낸다 — 관리 화면 배너와 같은 판정(lib/admin/health-alerts-fold).
+     예전엔 24시간 안의 critical 줄을 전부 실어, 7분 뒤 회복 기록(ok)이 남은 경보도 "심각"으로 메일에 올랐다. */
+  const active = foldHealthAlerts((alerts ?? []) as Array<Record<string, unknown>>, new Date(), 200).filter(
+    (a) => a.severity === "critical" && a.active,
+  );
+  /* 아래 요약이 쓰는 모양(줄 = 발생 1회)으로 편다 — 발생 횟수는 접힌 묶음의 count */
+  const rows = active.flatMap((a) =>
+    Array.from({ length: a.count }, (): Record<string, unknown> => ({ check_name: a.checkName, detail: a.detail })),
+  );
   if (rows.length === 0) {
     return NextResponse.json({ ok: true, criticals: 0, sent: false, reason: "무경보" });
   }

@@ -102,16 +102,33 @@ export function upisRowToRecord(service: UpisService, row: Record<string, unknow
   };
 }
 
-/** 결정고시 원문 row → DB 행. 고시일자 "20221205" · "2022-12-05" 둘 다 받는다. */
+/**
+ * 고시일자 → "YYYY-MM-DD". 받는 꼴: "20221205" · "2022-12-05" · "2022.12.05" · **"2026-07-24T09:00:00.000"**(시각이 붙은 꼴) · "20260724090000".
+ *
+ * [1045] 예전 규칙은 숫자만 남겨 여덟 자리일 때만 받았다. 그런데 운영 API 가 내려 주는 값은 전부 시각이 붙은 꼴이라
+ * 숫자가 열일곱 자리가 되어 **43,586건 전부** 고시일자가 비어 있었다(2026-10-07 실측: ancmnt_ymd null 43,586 / 43,586).
+ * 구역 상세의 "결정 이력"이 공식 고시일 대신 코드에 박힌 날짜를 쓰고 있던 이유다. 앞의 날짜 토막만 읽는다.
+ * 달·일이 범위를 벗어나면 null(지어내지 않는다).
+ */
+export function upisYmd(raw: string | null | undefined): string | null {
+  const s = (raw ?? "").trim();
+  if (!s) return null;
+  /* 날짜 뒤에는 아무것도 없거나 · 숫자가 아닌 글자(T · 공백)거나 · 붙여 쓴 시각(HHMMSS · HHMMSSmmm)만 온다 */
+  const m = s.match(/^(\d{4})[-./]?(\d{2})[-./]?(\d{2})(?:$|\D|\d{6}$|\d{9}$)/);
+  if (!m) return null;
+  const [, y, mo, d] = m;
+  const yy = Number(y);
+  const mm = Number(mo);
+  const dd = Number(d);
+  if (yy < 1960 || yy > 2100 || mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
+  return `${y}-${mo}-${d}`;
+}
+
+/** 결정고시 원문 row → DB 행. 고시일자는 upisYmd 가 읽는다. */
 export function upisAnnouncementToRecord(row: Record<string, unknown>): Record<string, unknown> | null {
   const cd = str(row.ANCMNT_MNG_CD);
   if (!cd) return null;
-  const ymdRaw = str(row.ANCMNT_YMD);
-  let ymd: string | null = null;
-  if (ymdRaw) {
-    const digits = ymdRaw.replace(/\D/g, "");
-    if (/^\d{8}$/.test(digits)) ymd = `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
-  }
+  const ymd = upisYmd(str(row.ANCMNT_YMD));
   return {
     ancmnt_mng_cd: cd,
     prjc_cd: str(row.PRJC_CD),

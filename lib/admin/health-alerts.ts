@@ -19,6 +19,7 @@ import { logger } from "@/lib/log";
  * 보여 줬다(소유자 화면: critical 7종 중 진행 중은 2종). 검사마다 마지막 발생 시각과
  * 그 검사의 발생 주기(로그 간격에서 도출)를 보고 **진행 중 / 해소** 를 가른다 —
  * 시간 단위 검사는 마지막 발생이 3시간 안이면 진행 중, 일 단위 검사는 27시간.
+ * [1045] 점검이 남기는 회복 기록(ok)을 읽는다 — 같은 검사·같은 대상의 더 새로운 ok 가 있으면 해소(health-alerts-fold.ts).
  */
 
 export type { HealthAlertRow } from "./health-alerts-fold";

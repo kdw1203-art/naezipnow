@@ -616,29 +616,64 @@ export async function loadStoryEntries(): Promise<MetadataRoute.Sitemap> {
 }
 
 /**
- * [1027] 정비사업 구역 상세 — /redevelopment/[id].
- * 구역 표(DB)가 정본이고 예시 데이터(is_sample)는 싣지 않는다. 조회 실패는 section() 이 위로 던진다(없어진 것으로 광고하지 않는다).
+ * 정비사업 사이트맵 — ① 서울 자치구별 결정 조서 화면(/redevelopment/seoul · /redevelopment/seoul/[gu] 25곳)
+ *                    ② 손으로 정리한 구역 상세(/redevelopment/[id] 40곳).
+ * 조회 실패는 section() 이 위로 던진다(없어진 것으로 광고하지 않는다). 예시 데이터(is_sample)는 싣지 않는다.
  *
- * [1040 · 운영 경보 seo.asset] lastModified 를 적지 않는다.
- * 예전엔 행의 updated_at(구역 자료를 정리한 시점 — 지금 40곳 전부 2026-07-22)을 적었다. 1027 때는 화면이 그 행 하나로
- * 그려졌으니 사실이었지만, 1029 부터 구역 상세는 **서울시 결정 조서 이력(매일 적재)** 과 시군구 실거래를 함께 그린다 —
- * 행의 정리 시점은 더는 "이 화면이 마지막으로 바뀐 때"가 아니다(화면은 조서가 고시될 때마다 바뀐다). 맞는 날짜를 한 값으로
- * 말할 수 없으니, 정적 화면·용어 사전과 같은 규칙으로 생략한다(추측한 날짜보다 없는 편이 정확하다).
- * 색인 점검(ops.seo_asset_check)은 lastmod 모양으로 주기를 추정해, 직접 정리한 구역 40곳을 "매일 바뀌는 자산"으로 읽고
- * 75일째 critical 을 냈다. 조서 적재가 멈췄는지는 적재 신선도(redevelopment · /admin/freshness)가 따로 본다.
- * 구역 자료의 기준 시점은 화면이 직접 적는다("2026.07 공개자료 기준").
+ * [1045 · 운영 경보 seo.sitemap_source] 이 사이트맵은 1027 부터 구역 40곳(redevelopment_projects · 2026-07-22 정리 뒤 갱신 없음)만
+ * 실었다. 운영 점검이 두 가지를 짚었다:
+ *   dead_source    — URL 40건이 갱신이 멈춘 표와 건수가 같고, 매일 적재되는 조서(seoul_upis_records 11,302행)는 색인에 한 건도 없다.
+ *   lastmod_vanish — 1040 이 <lastmod> 를 뺐다. 75일째 울리던 "lastmod 가 낡았다" 경보가 **수리 없이** 꺼졌다.
+ * 둘 다 맞는 지적이다. 1040 의 판단(구역 화면은 조서 이력도 함께 그리니 행의 정리 시점이 화면의 마지막 변경 시각이 아니다)은
+ * 틀리지 않았지만, 날짜를 빼는 것은 고친 게 아니라 감시를 끈 것이었다. 이번에 한 일:
+ *   ① 살아 있는 원천을 색인에 싣는다 — 자치구 화면 25곳 + 목차. <lastmod> = 그 구의 가장 최근 결정일(lib/seoul/upis-gu guLastmod).
+ *      적재 시각을 적지 않는다(매일 전량을 다시 읽으므로 "오늘 바뀌었다"는 거짓말이 된다).
+ *   ② 구역 40곳은 <lastmod> 를 다시 적는다 — 행의 updated_at(구역 자료를 정리한 시점). 화면이 그 뒤 조서로 달라졌을 수는 있어도
+ *      "이 시점 이후로는 정리하지 않았다"는 사실 그대로다. 화면도 같은 시점을 적는다("2026.07 공개자료 기준").
+ * 원천(서울시 결정 고시)은 월 단위로 몰려 공개된다(2026-03~09 월별 113 · 22 · 81 · 14 · 44 · 27 · 1건). 일 주기 임계로는 원천이
+ * 조용한 달마다 상시 경보가 되므로, 점검 쪽에 이 사이트맵의 주기를 적었다(ops.sitemap_lastmod_cadence · 1045 마이그레이션).
  */
 export async function loadRedevelopmentEntries(): Promise<MetadataRoute.Sitemap> {
   return section("정비사업 구역", async () => {
     const { listDbProjects } = await import("@/lib/redevelopment/store");
     const { redevDetailHref } = await import("@/lib/redevelopment/map-layer");
-    const projects = await listDbProjects({ limit: 3000 });
-    return projects
+    const { listUpisGuLastDates } = await import("@/lib/seoul/upis-store");
+    const { SEOUL_GU, SEOUL_GU_INDEX_HREF, guLastmod, seoulGuHref } = await import("@/lib/seoul/upis-gu");
+    const [projects, lastDates] = await Promise.all([
+      listDbProjects({ limit: 3000 }),
+      listUpisGuLastDates(SEOUL_GU.map((g) => g.name)),
+    ]);
+
+    /* 자치구 화면 — 조서가 한 건도 없는 구는 싣지 않는다(빈 화면을 색인에 내지 않는다) */
+    const guEntries: MetadataRoute.Sitemap = [];
+    let newest: Date | null = null;
+    for (const g of SEOUL_GU) {
+      const at = guLastmod(lastDates.get(g.name));
+      if (!lastDates.has(g.name)) continue;
+      if (at && (!newest || at > newest)) newest = at;
+      guEntries.push({
+        url: `${BASE_URL}${seoulGuHref(g.slug)}`,
+        ...(at ? { lastModified: at } : {}),
+        priority: 0.6,
+      });
+    }
+    const indexEntry: MetadataRoute.Sitemap =
+      guEntries.length > 0
+        ? [{ url: `${BASE_URL}${SEOUL_GU_INDEX_HREF}`, ...(newest ? { lastModified: newest } : {}), priority: 0.6 }]
+        : [];
+
+    const zoneEntries: MetadataRoute.Sitemap = projects
       .filter((p) => !p.isSample && p.id)
-      .map((p) => ({
-        url: `${BASE_URL}${redevDetailHref(p.id)}`,
-        priority: 0.5,
-      }));
+      .map((p) => {
+        const at = p.updatedAt ? new Date(p.updatedAt) : null;
+        return {
+          url: `${BASE_URL}${redevDetailHref(p.id)}`,
+          ...(at && !Number.isNaN(at.getTime()) ? { lastModified: at } : {}),
+          priority: 0.5,
+        };
+      });
+
+    return [...indexEntry, ...guEntries, ...zoneEntries];
   });
 }
 

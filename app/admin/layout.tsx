@@ -5,6 +5,7 @@ import { safeAuth } from "@/lib/safe-auth";
 import { canAccessAdminConsole } from "@/lib/auth/staff-roles";
 import { AdminNav } from "./AdminNav";
 import { loadCriticalAlerts24h } from "@/lib/admin/health-alerts";
+import { criticalAlertNames } from "@/lib/admin/health-alerts-fold";
 
 export const metadata: Metadata = {
   /* [970 · C-25] 제목 접미 통일 — 사이트 전체 `| 내집나우`(`·`·`—` 혼용 제거) */
@@ -32,6 +33,7 @@ export default async function AdminLayout({
      들어가야만 보였다 — 대시보드에 살면서도 장애를 모를 수 있었다.
      [999] 지금 울리는 것만 센다 — 그친 경보는 운영 콘솔 판에 "해소"로 남는다. */
   const criticals = await loadCriticalAlerts24h().catch(() => []);
+  const criticalNames = criticalAlertNames(criticals);
   return (
     <div className="flex min-h-screen flex-col bg-[#12161f] md:flex-row">
       {/* 사이드바 (모바일: 상단 바) */}
@@ -66,11 +68,9 @@ export default async function AdminLayout({
             className="block rounded-xl border border-[#7a2a2a] bg-[#2a1616] px-4 py-3 text-[13px] leading-relaxed !text-[#ffb4a8] no-underline hover:bg-[#331a1a]"
           >
             <b>🔴 심각 경보 {criticals.length}건 진행 중</b> —{" "}
-            {criticals
-              .slice(0, 3)
-              .map((c) => c.checkName)
-              .join(" · ")}
-            {criticals.length > 3 ? " 외" : ""} · 운영 콘솔에서 확인 →
+            {/* [1045] 경보는 검사·대상 단위로 접힌다 — 한 검사에 문제가 둘이면 이름이 두 번 나오므로 이름은 한 번만, 건수를 붙인다 */}
+            {criticalNames.slice(0, 3).join(" · ")}
+            {criticalNames.length > 3 ? " 외" : ""} · 운영 콘솔에서 확인 →
           </a>
         )}
         {children}

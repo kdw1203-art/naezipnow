@@ -171,13 +171,13 @@ export default async function AdminOpsPage() {
               진행 중 {activeAlerts.length} · 해소 {resolvedAlerts.length}
             </span>
             <span className="ml-auto text-[12px] text-ai-muted">
-              ops.health_alert_log · 같은 검사끼리 접음 · 마지막 발생이 검사 주기 안이면 진행 중
+              ops.health_alert_log · 같은 검사·대상끼리 접음 · 회복 기록이 뒤따르면 해소 · 없으면 마지막 발생이 검사 주기 안일 때 진행 중
             </span>
           </div>
           <div className="flex flex-col">
             {alerts.map((a) => (
               <div
-                key={`${a.checkName}-${a.severity}`}
+                key={`${a.checkName}-${a.severity}-${a.target}`}
                 className={`flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-[rgba(255,255,255,.06)] py-2 last:border-0 ${
                   a.active ? "" : "opacity-55"
                 }`}
@@ -201,7 +201,10 @@ export default async function AdminOpsPage() {
                   </span>
                 ) : (
                   <span className="rounded px-1.5 py-px text-[10px] font-bold bg-[rgba(76,175,130,.14)] text-[#4caf82]">
-                    해소 · {a.sinceLastHours >= 48 ? `${Math.round(a.sinceLastHours / 24)}일 전` : `${Math.round(a.sinceLastHours)}h 전`}
+                    {/* [1045] 회복 기록(ok)이 남은 경보는 그 시각을 적는다 — 시간이 지나 꺼진 것과 조건이 풀린 것은 다르다 */}
+                    {a.recoveredAt
+                      ? `해소 · 회복 확인 ${formatKstDateTime(a.recoveredAt)}`
+                      : `해소 · ${a.sinceLastHours >= 48 ? `${Math.round(a.sinceLastHours / 24)}일 전` : `${Math.round(a.sinceLastHours)}h 전`}`}
                   </span>
                 )}
                 <span className="text-[12px] text-ai-muted">{a.count}회</span>

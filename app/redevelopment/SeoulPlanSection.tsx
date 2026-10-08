@@ -1,6 +1,8 @@
 import { logger } from "@/lib/log";
 import { listUpisGuSummary, listUpisRecords, totalsOf } from "@/lib/seoul/upis-store";
 import { UPIS_SOURCE_URL } from "@/lib/seoul/upis";
+import Link from "next/link";
+import { SEOUL_GU, SEOUL_GU_INDEX_HREF, seoulGuHref } from "@/lib/seoul/upis-gu";
 import { SeoulPlanBrowser } from "./SeoulPlanBrowser";
 
 /* [1029] 서울시 도시계획 결정 조서 — /redevelopment 의 한 칸. 서버 조각: 구별 건수(뷰)와 최근 조서 20건을 읽어 넘긴다.
@@ -33,6 +35,21 @@ export async function SeoulPlanSection() {
         </span>
       </div>
       <SeoulPlanBrowser initialItems={items} summary={summary} />
+      {/* [1045] 자치구별 화면 — 조서가 고유 주소를 갖는 곳(/redevelopment/seoul/[gu]). 여기 검색 칸은 주소가 없어 색인에 실리지 않았다 */}
+      <nav aria-label="자치구별 결정 조서" className="mt-3 flex flex-wrap items-center gap-1.5">
+        <Link href={SEOUL_GU_INDEX_HREF} className="inline-flex min-h-[24px] items-center pr-1 t-sub font-bold text-primary no-underline">
+          자치구별 ›
+        </Link>
+        {SEOUL_GU.map((g) => (
+          <Link
+            key={g.slug}
+            href={seoulGuHref(g.slug)}
+            className="chip inline-flex min-h-[24px] items-center border border-line bg-surface px-2.5 py-1 t-caption font-bold text-text-2 no-underline"
+          >
+            {g.name}
+          </Link>
+        ))}
+      </nav>
       <p className="mt-3 t-caption text-text-3">
         출처{" "}
         <a href={UPIS_SOURCE_URL} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[24px] items-center font-bold text-primary">

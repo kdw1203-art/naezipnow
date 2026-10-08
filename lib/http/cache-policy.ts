@@ -174,6 +174,9 @@ export const PUBLIC_CACHE_RULES: readonly PublicCacheRule[] = [
   { path: "/calculator", sMaxAge: 86_400, swr: 86400 },
   { path: "/widget", ...STATIC_DOC },
   { path: "/redevelopment", sMaxAge: 86_400, swr: 86400 },
+  /* [1045] 서울 자치구별 결정 조서 목차 — 아래 /redevelopment/[id] 패턴에 가려지는 실제 화면이라 제 이름으로 올린다
+     (하루 ISR · auth·cookies·searchParams 없음). */
+  { path: "/redevelopment/seoul", sMaxAge: 86_400, swr: 86400 },
   { path: "/safety", ...STATIC_DOC },
   { path: "/methodology", ...STATIC_DOC },
   { path: "/glossary", ...STATIC_DOC },
@@ -288,6 +291,9 @@ export const PUBLIC_CACHE_PATTERN_RULES: readonly PublicCachePatternRule[] = [
      오리진 함수가 그린다(2026-07-28 함수 호출 소진 사고와 같은 꼴). 실거래 적재·뉴스 적재가 이 라우트를 비운다
      (lib/cache/invalidate.ts SOURCE_MAP). */
   { route: "/redevelopment/[id]", test: /^\/redevelopment\/[^/]+$/, sMaxAge: 86_400, swr: 86400 },
+  /* [1045] 서울 자치구 결정 조서 — 공개 조서(seoul_upis_records)만 그린다(auth·cookies·searchParams 없음 · ISR 86_400).
+     사이트맵에 25곳이 실린다 — 이 줄이 없으면 크롤러가 올 때마다 오리진 함수가 그린다(위 [1027] 과 같은 사유). */
+  { route: "/redevelopment/seoul/[gu]", test: /^\/redevelopment\/seoul\/[^/]+$/, sMaxAge: 86_400, swr: 86400 },
   { route: "/digest/archive", test: /^\/digest\/archive$/, sMaxAge: 86_400, swr: 86400 },
   { route: "/digest/[week]", test: /^\/digest\/[^/]+$/, sMaxAge: 86_400, swr: 86400 },
   /* 용어 개별 페이지는 코드 상수라 조회조차 없다 — 가장 오래 캐시해도 되는 축. */

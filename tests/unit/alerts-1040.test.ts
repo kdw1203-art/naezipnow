@@ -210,12 +210,15 @@ test("사이트맵 ⊂ 색인 — 사이트맵에 실린 단지는 페이지 색
   assert.match(read("lib/seo/sitemap-entries.ts"), /error\.code === "42703"/);
 });
 
-test("정비사업 구역 사이트맵 — lastmod 를 적지 않는다(seo.asset)", () => {
+test("정비사업 구역 사이트맵 — [1040] lastmod 생략은 [1045] 에서 되돌렸다(감시를 끈 것이었다)", () => {
+  /* 1040 은 낡은 lastmod(2026-07-22) 경보를 없애려고 <lastmod> 자체를 뺐다. 운영 점검(seo.sitemap_source · lastmod_vanish)이
+     "수리 없이 꺼진 경보"라고 짚었고, 맞는 말이다. 1045 는 살아 있는 원천을 싣고 날짜를 사실대로 다시 적는다
+     (자세한 고정은 tests/unit/alerts-1045.test.ts). 여기서는 되돌려졌다는 사실만 남긴다. */
   const build = read("lib/seo/build-sitemap.ts");
   const at = build.indexOf("export async function loadRedevelopmentEntries()");
   const body = build.slice(at, build.indexOf("/** N14", at));
   assert.ok(at > 0);
-  assert.doesNotMatch(body, /lastModified/);
+  assert.match(body, /lastModified/);
   assert.match(body, /priority: 0\.5/);
 });
 

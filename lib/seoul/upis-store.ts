@@ -119,3 +119,60 @@ export async function countUpisForGu(sigungu: string): Promise<UpisGuSummary | n
   const all = await listUpisGuSummary();
   return all.find((g) => g.sigungu === sigungu) ?? null;
 }
+
+/* ── [1045] 자치구 화면(/redevelopment/seoul/[gu]) · 사이트맵 ─────────────────────────────────────────── */
+
+const GU_PAGE = 1000;
+const GU_MAX_PAGES = 3;
+
+/**
+ * 한 구의 조서 전량(서비스 셋) — 최근 결정 순. 가장 많은 구가 725건(2026-10-07 중구)이라 한 번에 들어오지만,
+ * PostgREST 한 응답 상한(1,000행)에 걸리면 이어서 읽는다(최대 3,000행). 실패는 던진다.
+ */
+export async function listUpisRecordsForGu(sigungu: string): Promise<UpisRecord[]> {
+  const sb = getReadOnlySupabase();
+  if (!sb) throw new Error("Supabase 미설정");
+  const out: UpisRecord[] = [];
+  for (let page = 0; page < GU_MAX_PAGES; page += 1) {
+    const from = page * GU_PAGE;
+    const { data, error } = await sb
+      .from("seoul_upis_records")
+      .select(RECORD_COLUMNS)
+      .eq("sigungu", sigungu)
+      .order("code_date", { ascending: false, nullsFirst: false })
+      .order("rpt_mng_cd", { ascending: false })
+      .range(from, from + GU_PAGE - 1);
+    if (error) throw new Error(`seoul_upis_records(gu): ${error.message}`);
+    const rows = ((data ?? []) as Record<string, unknown>[]).map(mapUpisRecord).filter((x): x is UpisRecord => x != null);
+    out.push(...rows);
+    if ((data ?? []).length < GU_PAGE) break;
+  }
+  return out;
+}
+
+/**
+ * 구별 가장 최근 결정일(YYYY-MM-DD) — 사이트맵 <lastmod> 용. 구마다 맨 위 한 행만 읽는다(25번 · 병렬).
+ * 한 구라도 실패하면 던진다 — 일부만 날짜가 붙은 사이트맵을 "정상"으로 내보내지 않는다.
+ */
+export async function listUpisGuLastDates(names: readonly string[]): Promise<Map<string, string>> {
+  const sb = getReadOnlySupabase();
+  if (!sb) throw new Error("Supabase 미설정");
+  const out = new Map<string, string>();
+  const results = await Promise.all(
+    names.map(async (name) => {
+      const { data, error } = await sb
+        .from("seoul_upis_records")
+        .select("code_date")
+        .eq("sigungu", name)
+        .not("code_date", "is", null)
+        .order("code_date", { ascending: false })
+        .limit(1);
+      if (error) throw new Error(`seoul_upis_records(last ${name}): ${error.message}`);
+      const d = (data ?? [])[0]?.code_date;
+      return [name, d ? String(d).slice(0, 10) : null] as const;
+    }),
+  );
+  for (const [name, d] of results) if (d) out.set(name, d);
+  return out;
+}
+
