@@ -13,7 +13,6 @@ import { ToolGlyph, WORKBENCH_GLYPH } from "./ToolGlyph";
 import {
   TIERS,
   WORKBENCH_CORE,
-  workbenchCard,
   type TierId,
 } from "./tool-catalog";
 import { useHubPicked } from "./hub-context";
@@ -105,12 +104,15 @@ export function HubHero({
   coverage,
   quota,
   toolCount,
+  toolTitles = {},
 }: {
   initialComplexId?: string | null;
   initialApt?: string | null;
   coverage: HubCoverage;
   quota: HubQuota;
   toolCount: number;
+  /** [1050 · 번들] 도구 id → 이름(서버 workbenchCardData) — tool-identity 를 브라우저 번들에 싣지 않는다 */
+  toolTitles?: Readonly<Record<string, string>>;
 }) {
   const { picked, setPicked, query: q, openMap } = useHubPicked();
   /* [970 · B-28] 좁은 화면 판정 — 서버·첫 렌더는 false(긴 placeholder)라 하이드레이션이 안 어긋난다 */
@@ -205,7 +207,7 @@ export function HubHero({
       </div>
 
       {/* [1023] 최근 실행 결과 3건 — 기록이 있을 때만(마운트 뒤) */}
-      <HubRecentRuns />
+      <HubRecentRuns titles={toolTitles} />
 
       {/* 고른 즉시 실행 지점을 띄운다 — 다시 아래로 찾아 내려갈 필요가 없다 */}
       {picked && (
@@ -224,18 +226,18 @@ export function HubHero({
 
           <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4">
             {WORKBENCH_CORE.map((id) => {
-              const c = workbenchCard(id);
+              const title = toolTitles[id] ?? id;
               return (
                 <Link
                   key={id}
-                  href={`${c.href}${q}`}
+                  href={`/analysis/ai/${id}${q}`}
                   className="tile card flex min-h-[40px] items-center gap-2 rounded-lg px-2.5 py-2 no-underline"
                 >
                   <span className="tile-ico flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
                     <ToolGlyph id={WORKBENCH_GLYPH[id] ?? "radar"} size={22} />
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="t-sub truncate font-bold text-ink">{c.title}</span>
+                    <span className="t-sub truncate font-bold text-ink">{title}</span>
                     {/* [1023] 같은 단지로 실행한 기록이 있을 때만 */}
                     {lastRun[id] && (
                       <span className="t-caption truncate text-text-3">

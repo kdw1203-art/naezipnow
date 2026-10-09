@@ -18,7 +18,9 @@ import { HomeTodayLine } from "./components/home/HomeTodayLine";
 import { RegionPulseCards } from "./components/home/RegionPulseCards";
 import { RollingPanel } from "./components/home/RollingPanel";
 import { chunkPages } from "./components/home/chunk-pages";
+import { HomeSeoulMoves } from "./components/home/HomeSeoulMoves";
 import { HomeTownBlock } from "./components/home/HomeTownBlock";
+import { HomeTalkSection } from "./components/home/HomeTalkSection";
 import { loadLatestTemperatures } from "./components/MarketTempWidget";
 import { loadNewHomeData } from "@/lib/newui/home-data";
 import { loadHomeCoverage } from "@/lib/newui/home-coverage";
@@ -429,6 +431,9 @@ export default async function Home() {
                         실시간 집계를 불러오지 못해 마지막 월 집계를 표시해요.
                       </p>
                     )}
+                    {/* [1050 · 중복 검토] 1049 의 "서울 25개 구" 칸은 위 AI 브리핑 한 줄 · 이 카드들과 같은 숫자를 따로 한 칸 더
+                        말했다(소유자: "홈에서는 중복되지 않을까?"). 따로 칸을 없애고 이 칸의 접힘 하나로 — 펼치면 구별 막대 */}
+                    <HomeSeoulMoves data={data.seoulMoves} />
                     {/* [1036 · 밀도] 카드마다 붙던 범례("선 · 16주 시세 지수")를 섹션 아래 한 번, 접어서 */}
                     <Fineprint label="기준 · 출처">
                       선 = 최근 주간 매매가격지수(한국부동산원) · 등락 = 지수 전월 대비 · 거래 = 그 달 신고 건수(국토교통부)
@@ -444,6 +449,8 @@ export default async function Home() {
               <HomeTownBlock stories={data.stories} news={data.news} failed={failed.town} now={renderedAt} />
             </div>
           </div>
+          {/* [1051] 홈 맨 아래 — 실시간 토론(지역 · 단지 한 줄). 전폭. 판은 화면 가까이 오면 받는다 */}
+          <HomeTalkSection />
         </div>
       </main>
 

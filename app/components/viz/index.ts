@@ -6,3 +6,7 @@ export { RankBars } from "./RankBars";
 export type { RankRow } from "./RankBars";
 export { Radar } from "./Radar";
 export { Donut } from "./Donut";
+export { DivergingBars } from "./DivergingBars";
+export type { DivergingRow } from "./DivergingBars";
+export { ColumnBars } from "./ColumnBars";
+export type { ColumnItem } from "./ColumnBars";

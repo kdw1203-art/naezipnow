@@ -7,9 +7,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { isAiAnalysisToolId } from "@/lib/ai/ai-tools";
 import { daysSinceRun, listRecentHistory, type HistoryEntry } from "@/lib/ai/history-store";
-import { workbenchCard } from "./tool-catalog";
 
 /** 지역 이름을 키로 저장하는 도구 — ResultView historyKey 규칙과 같다 */
 const REGION_KEYED = new Set(["ai-timing"]);
@@ -26,11 +24,9 @@ export function recentRunWhen(createdAt: string, now?: number): string | null {
   return d === 0 ? "오늘" : `${d}일 전`;
 }
 
-function toolTitle(tool: string): string {
-  return isAiAnalysisToolId(tool) ? workbenchCard(tool).title : tool;
-}
-
-export function HubRecentRuns({ limit = 3 }: { limit?: number }) {
+/* [1050 · 번들] 도구 이름은 서버가 넘긴다(titles) — 예전엔 tool-catalog workbenchCard → tool-identity(12종 설명 · 아이콘)가
+   통째로 /analysis 브라우저 번들에 실렸다(약 14KB). 모르는 도구 id 는 id 그대로(예전과 같다). */
+export function HubRecentRuns({ limit = 3, titles = {} }: { limit?: number; titles?: Readonly<Record<string, string>> }) {
   const [items, setItems] = useState<HistoryEntry[]>([]);
   useEffect(() => {
     try {
@@ -52,7 +48,7 @@ export function HubRecentRuns({ limit = 3 }: { limit?: number }) {
                 href={recentRunHref(e)}
                 className="flex min-h-10 items-center gap-2 no-underline"
               >
-                <span className="t-sub shrink-0 font-bold text-ink">{toolTitle(e.tool)}</span>
+                <span className="t-sub shrink-0 font-bold text-ink">{titles[e.tool] ?? e.tool}</span>
                 <span className="t-sub min-w-0 flex-1 truncate text-text-2">
                   {e.headline ?? e.groupKey}
                 </span>

@@ -18,6 +18,8 @@ import type {
 } from "@/lib/me/my-hub";
 import { seedGradient } from "@/lib/town/shared";
 import { AttendanceButton } from "./points/AttendanceButton";
+import { ColumnBars } from "@/app/components/viz/ColumnBars";
+import type { MyActivity } from "@/lib/me/my-activity";
 import { ProfileEditSheet } from "./ProfileEditSheet";
 
 /**
@@ -77,7 +79,66 @@ export type MyHubData = {
     relinkHref: string | null;
   };
   aiUsage: { lifetime: boolean; used: number; limit: number | null } | null;
+  /** [1049] 사용량 표(AI 분석 · 북마크 · 관심 단지) — 못 읽으면 null(AI 칸만 있으면 aiUsage 로 한 줄) */
+  usage?: { key: string; label: string; used: number; limit: number | null; lifetime?: boolean }[] | null;
+  /** [1049] 내 임장노트 월별 기록 수(6개월) · 평균 기록 점수 — 노트 0건 · 조회 실패면 null */
+  activity?: MyActivity | null;
 };
+
+/* [1049 · 표] 사용량 한 줄 — 사용/한도 · 막대 · 남음. 한도 없음은 "무제한" */
+function UsageTable({ rows }: { rows: NonNullable<MyHubData["usage"]> }) {
+  return (
+    <table className="w-full border-collapse">
+      <thead>
+        <tr className="border-b border-line text-left t-caption text-text-3">
+          <th scope="col" className="py-1.5 pr-2 font-bold">항목</th>
+          <th scope="col" className="py-1.5 pr-2 font-bold">사용</th>
+          <th scope="col" className="w-[38%] py-1.5 font-bold">
+            <span className="sr-only">사용 비율</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => {
+          const unlimited = r.limit == null;
+          const limit = r.limit ?? 0;
+          const pct = unlimited ? 0 : Math.min(100, Math.round((r.used / Math.max(1, limit)) * 100));
+          const atLimit = !unlimited && r.used >= limit;
+          return (
+            <tr key={r.key} className="border-b border-line last:border-b-0">
+              <th scope="row" className="py-2 pr-2 text-left t-sub font-bold text-ink">
+                {r.label}
+                {r.lifetime ? <span className="t-caption font-normal text-text-3"> (누적)</span> : null}
+              </th>
+              <td className="py-2 pr-2 t-sub tabular-nums">
+                {unlimited ? (
+                  <b className="text-primary">{r.used.toLocaleString("ko-KR")} · 무제한</b>
+                ) : (
+                  <>
+                    <b className={atLimit ? "text-danger" : "text-ink"}>{r.used.toLocaleString("ko-KR")}</b>
+                    <span className="text-text-3"> / {limit.toLocaleString("ko-KR")}</span>
+                  </>
+                )}
+              </td>
+              <td className="py-2">
+                {unlimited ? (
+                  <span className="t-caption text-text-3">한도 없음</span>
+                ) : (
+                  <span className="flex items-center gap-1.5">
+                    <span className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-line" aria-hidden="true">
+                      <span className={`absolute inset-y-0 left-0 rounded-full ${atLimit ? "bg-danger" : "bg-primary"}`} style={{ width: `${pct}%` }} />
+                    </span>
+                    <span className="w-12 shrink-0 text-right t-caption tabular-nums text-text-3">{Math.max(0, limit - r.used)} 남음</span>
+                  </span>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
 
 /* 메뉴 행 묶음 — [1015 · 규칙 I] 리퀴드 판 한 장(lq-panel) + 톤(포인트 = mint · 도구 메뉴 = blue) */
 function MenuRows({
@@ -195,6 +256,8 @@ export function MyHubView({ data }: { data: MyHubData }) {
     expert,
     subscription,
     aiUsage,
+    usage,
+    activity,
   } = data;
   const initial = name.slice(0, 1).toUpperCase();
   const levels = noteRegions.length > 0 ? computeRegionLevels(noteRegions.map((region) => ({ region }))) : [];
@@ -385,11 +448,41 @@ export function MyHubView({ data }: { data: MyHubData }) {
                 action={{ label: "첫 노트 쓰기", href: "/notes/new" }}
               />
             ) : (
-              <div className="lq-panel flex flex-col" data-tone="hanji">
-                {notes.items.map((n, i, arr) => (
-                  <NoteRow key={n.id} n={n} last={i === arr.length - 1} />
-                ))}
-              </div>
+              <>
+                {/* [1049 · 그래프] 최근 6개월 월별 기록 수 + 평균 기록 점수 · 공개 수 — 목록 위 한 장 */}
+                {activity && (
+                  <div className="card flex flex-col gap-3 rounded-2xl p-4 max-md:p-3.5 sm:flex-row sm:items-end sm:gap-5">
+                    <div className="flex shrink-0 gap-5 sm:flex-col sm:gap-2">
+                      <div className="flex flex-col">
+                        <span className="t-caption text-text-3">최근 6개월</span>
+                        <span className="t-section t-num text-ink">{activity.recentTotal}건</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="t-caption text-text-3">평균 기록 점수</span>
+                        <span className="t-section t-num text-ink">{activity.avgScore != null ? `${activity.avgScore}점` : "—"}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="t-caption text-text-3">공개</span>
+                        <span className="t-section t-num text-ink">
+                          {activity.publicCount}
+                          <span className="t-caption font-normal text-text-3"> / {activity.total}</span>
+                        </span>
+                      </div>
+                    </div>
+                    <ColumnBars
+                      className="min-w-0 flex-1"
+                      items={activity.months.map((m) => ({ key: m.ym, label: m.label, value: m.count }))}
+                      suffix="건"
+                      ariaLabel={`월별 임장노트 수 — ${activity.months.map((m) => `${m.label} ${m.count}건`).join(", ")}`}
+                    />
+                  </div>
+                )}
+                <div className="lq-panel flex flex-col" data-tone="hanji">
+                  {notes.items.map((n, i, arr) => (
+                    <NoteRow key={n.id} n={n} last={i === arr.length - 1} />
+                  ))}
+                </div>
+              </>
             )}
           </section>
 
@@ -658,8 +751,15 @@ export function MyHubView({ data }: { data: MyHubData }) {
               </div>
             </div>
 
+            {/* [1049 · 표] 사용량 — AI 분석 · 북마크 · 관심 단지를 한 표로(사용/한도 · 막대 · 남음). 표를 못 만들면 아래 AI 칸 그대로 */}
+            {usage && usage.length > 0 && (
+              <div className="card flex flex-col gap-1.5 rounded-2xl p-4 max-md:p-3.5">
+                <span className="t-sub font-bold text-ink">{usage.some((u) => u.lifetime) ? "사용량" : "이번 달 사용량"}</span>
+                <UsageTable rows={usage} />
+              </div>
+            )}
             {/* 무료 가치 카운터 — AI 분석 사용량 */}
-            {aiUsage &&
+            {!(usage && usage.length > 0) && aiUsage &&
               (() => {
                 const unlimited = aiUsage.limit == null;
                 const limit = aiUsage.limit ?? 0;

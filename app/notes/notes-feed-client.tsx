@@ -4,7 +4,7 @@
    · ② "더 보기" 실패는 같은 버튼이 "다시 시도" · ② 내 노트 조회 실패 카드에 다시 시도(loadMine) · ② 폰 격자 타일은 판단 배지 하나만.
    [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { ExpertBadge } from "@/app/components/ExpertBadge";
 import { seedGradient as seedFace } from "@/lib/town/shared";
 import Link from "next/link";
@@ -52,11 +52,40 @@ const TAB_OPTIONS: ReadonlyArray<{ value: NotesTab; label: string }> = [
    없으므로, 없는 인기를 만들어 내는 대신 라벨을 실제 정렬 기준에 맞췄다. */
 const FILTERS = ["최신", "점수순", "내 관심 지역"] as const;
 type Filter = (typeof FILTERS)[number];
-type ViewMode = "grid" | "feed";
+type ViewMode = "grid" | "feed" | "table";
+/** [1049] 데스크톱 보기 — 표(기본) · 피드. 폰은 ViewMode(격자 기본) */
+type DeskView = "table" | "feed";
+const DESK_VIEW_KEY = "nz_notes_desk_view";
 
 /** 예시 카드는 존재하지 않는 id로 상세를 열지 않는다 — 작성 CTA로 보낸다 */
 function noteHref(n: FeedNote): string {
   return n.isExample ? "/notes/new" : `/notes/${n.id}`;
+}
+
+/* [1050 · 펼침] 소유자 지시(2026-10-09): "임장노트는 해당 노트를 누르면 펼쳐지기가 되어서 기존 피드의 카드 형태가 먼저 보이고
+   한 번 더 누르면 노트를 볼 수 있도록". 표(데스크톱 기본 · 폰 목록)와 폰 격자에서 — 첫 누름 = 그 자리에 피드 카드(PostCard),
+   같은 노트를 다시 누름 = 링크 그대로(노트 열기). 링크는 그대로 두고 첫 누름만 가로챈다 —
+   새 탭(가운데 단추 · Ctrl/⌘ · Shift)은 가로채지 않는다. 펼침은 한 번에 하나(다른 노트를 누르면 옮겨 간다). */
+function firstTapExpands(e: MouseEvent<HTMLElement>, isOpen: boolean, open: () => void): void {
+  if (isOpen || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  e.preventDefault();
+  open();
+}
+
+/* [1050 · 펼침] 펼친 피드 카드 아래 "접기" — 펼침을 닫는 길(노트를 열지 않고) */
+function FoldButton({ onClose, label }: { onClose: () => void; label: string }) {
+  return (
+    <div className="mt-1.5 flex justify-center">
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label={`${label} 접기`}
+        className="inline-flex min-h-10 items-center gap-1 rounded-full px-4 t-sub font-bold text-text-2 hover:bg-surface"
+      >
+        접기 ▴
+      </button>
+    </div>
+  );
 }
 
 /* [996 · 4] 판단·회차 배지 — 상세 판단 카드와 같은 색 규칙(살까 success · 보류 primary ·
@@ -194,13 +223,29 @@ function StoryRail({ notes }: { notes: FeedNote[] }) {
 
 /* ── 그리드 타일 (탐색·프로필 그리드) ── */
 /* [968 · 17] priority — 목록 첫 타일(LCP 후보)만 true. lazy 를 풀고 선점 요청한다. */
-function GridTile({ n, priority = false }: { n: FeedNote; priority?: boolean }) {
+/* [1050 · 펼침] open/onOpen — 폰 격자: 첫 누름은 이 줄 아래 피드 카드를 펼치고, 펼친 타일을 다시 누르면 노트(링크 그대로) */
+function GridTile({
+  n,
+  priority = false,
+  open = false,
+  onOpen,
+}: {
+  n: FeedNote;
+  priority?: boolean;
+  open?: boolean;
+  onOpen?: () => void;
+}) {
   return (
     <Link
       href={noteHref(n)}
-      aria-label={n.isExample ? "예시 · 임장노트 쓰기" : `${n.title} 노트 보기`}
+      aria-label={n.isExample ? (open ? "예시 · 임장노트 쓰기" : "예시 카드 펼치기") : open ? `${n.title} 노트 보기` : `${n.title} 펼치기`}
+      aria-expanded={onOpen ? open : undefined}
+      aria-controls={onOpen && open ? `grid-open-${n.id}` : undefined}
+      onClick={onOpen ? (e) => firstTapExpands(e, open, onOpen) : undefined}
       /* [1009 · T] press — 누르는 순간 살짝 눌린다(터치 기기의 피드백 · 들림 호버는 md 이상 마우스만) */
-      className="press group relative block aspect-square overflow-hidden bg-bg md:rounded-2xl md:shadow-[0_1px_2px_rgba(16,28,54,.05),0_8px_20px_rgba(16,28,54,.06)] md:transition-transform md:duration-200 md:hover:-translate-y-1"
+      className={`press group relative block aspect-square overflow-hidden bg-bg md:rounded-2xl md:shadow-[0_1px_2px_rgba(16,28,54,.05),0_8px_20px_rgba(16,28,54,.06)] md:transition-transform md:duration-200 md:hover:-translate-y-1 ${
+        open ? "outline-3 -outline-offset-3 outline-primary" : ""
+      }`}
     >
       <CoverImage
         src={n.coverUrl}
@@ -219,8 +264,13 @@ function GridTile({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
       />
       {/* 점수 배지 (인스타 조회수/캐러셀 인디케이터 위치) */}
       {/* [962] 검정 반투명 → 네이비(어두운 면 = 네이비) + 한지 글자 */}
-      <span className="absolute right-1.5 top-1.5 rounded-md bg-brand-navy/80 chip-pad-tight t-caption font-bold text-on-dark backdrop-blur-sm md:right-2.5 md:top-2.5">
-        {n.score > 0 ? `기록 ${n.score}점` : "점수 없음"}
+      {/* [1050 · 펼침] 펼친 타일은 점수 자리에 다음 동작(점수는 아래 펼친 카드 머리에 있다) */}
+      <span
+        className={`absolute right-1.5 top-1.5 rounded-md chip-pad-tight t-caption font-bold backdrop-blur-sm md:right-2.5 md:top-2.5 ${
+          open ? "bg-primary text-white" : "bg-brand-navy/80 text-on-dark"
+        }`}
+      >
+        {open ? "노트 열기 ›" : n.score > 0 ? `기록 ${n.score}점` : "점수 없음"}
       </span>
       {n.isExample && (
         <span className="absolute left-1.5 top-1.5 rounded bg-black/45 px-1.5 py-0.5 t-caption font-bold text-white backdrop-blur-sm">
@@ -496,6 +546,138 @@ function RoundGroupCard({
 
 /* ── [1016] 데스크톱 왼쪽 레일(페이스북 왼쪽 바로가기) — 쓰기 버튼 · 바로가기 · 지역 ── */
 const RAIL_LINK = "flex min-h-[40px] items-center gap-2.5 rounded-lg px-2.5 t-body font-bold text-ink no-underline hover:bg-bg";
+/* ── [1049] 표 보기 — 소유자 지시(2026-10-09): "임장노트 디자인 개선과 간결화 · 그래프 · 표 적극 도입" ·
+   답 "기능 유지, 배치만 정리"(긴 사진 카드 목록 → 표). 데스크톱 기본 보기 · 폰은 보기 전환의 "목록".
+   한 줄 = 썸네일 · 제목 · 작성(작성자 · 시각 · 지역) · 기록 점수(막대) · 판단 · 사진 수. 값은 카드와 같은 FeedNote 그대로.
+   피드(사진 카드)는 전환 단추로 그대로 남는다. */
+/* [1050 · 펼침] 줄을 누르면 그 줄 아래에 피드 카드(PostCard)가 펼쳐지고, 펼친 줄을 다시 누르면 노트를 연다.
+   제목 칸은 링크 그대로(첫 누름만 가로챔 · 새 탭은 그대로) · 점수 칸 등 링크 밖을 눌러도 같은 순서. 펼침은 한 번에 하나. */
+function NotesTable({ notes }: { notes: FeedNote[] }) {
+  const router = useRouter();
+  /* 판단 칸은 판단을 남긴 노트가 하나라도 있을 때만 — 전부 "—" 인 칸은 소음이다 */
+  const hasDecision = notes.some((n) => n.decision);
+  const [openId, setOpenId] = useState<string | null>(null);
+  /* 펼친 칸은 머리의 칸 수만큼(숨은 칸 포함) 가로지른다 */
+  const span = hasDecision ? 4 : 3;
+  return (
+    <div className="card overflow-hidden rounded-2xl">
+      <table className="w-full table-fixed border-collapse">
+        <thead>
+          <tr className="border-b border-line bg-bg text-left t-caption text-text-3">
+            <th scope="col" className="px-3 py-2 font-bold">노트</th>
+            <th scope="col" className="w-[132px] px-2 py-2 font-bold max-md:w-[64px]">
+              <span className="max-md:hidden">기록 </span>점수
+            </th>
+            {/* [1050 · 펼침] 좁은 화면에서 감추는 칸은 display:none 이 아니라 폭 0 — 펼친 줄(colSpan)이 칸 수를 늘려
+                고정 표(table-fixed)가 남은 폭을 빈 칸에 나눠 주던 것(폰 목록에서 제목이 "까치…"로 눌림)을 막는다 */}
+            {hasDecision && (
+              <th scope="col" className="w-[84px] overflow-hidden px-2 py-2 font-bold max-xl:w-0 max-xl:p-0">
+                <span className="max-xl:hidden">판단</span>
+              </th>
+            )}
+            <th scope="col" className="w-[56px] overflow-hidden px-3 py-2 text-right font-bold max-md:w-0 max-md:p-0">
+              <span className="max-md:hidden">사진</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {notes.map((n) => {
+            const href = noteHref(n);
+            const isOpen = openId === n.id;
+            const panelId = `note-open-${n.id}`;
+            return (
+              <Fragment key={n.id}>
+              <tr
+                className={`cursor-pointer border-b border-line last:border-b-0 ${isOpen ? "bg-primary-soft" : "hover:bg-bg"}`}
+                onClick={(e) => {
+                  /* 링크 밖(점수 · 판단 · 사진 칸)을 눌러도 같은 순서 — 링크 안은 링크가 처리한다 */
+                  if ((e.target as HTMLElement).closest("a,button")) return;
+                  if (isOpen) router.push(href);
+                  else setOpenId(n.id);
+                }}
+              >
+                <td className="px-3 py-2">
+                  <Link
+                    href={href}
+                    aria-expanded={isOpen}
+                    aria-controls={isOpen ? panelId : undefined}
+                    onClick={(e) => firstTapExpands(e, isOpen, () => setOpenId(n.id))}
+                    className="press flex min-h-[48px] min-w-0 items-center gap-2.5 no-underline"
+                  >
+                    <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-bg">
+                      <CoverImage
+                        src={n.coverUrl}
+                        alt=""
+                        sizes="44px"
+                        imgClassName="absolute inset-0 h-full w-full object-cover"
+                        fallback={<span className="absolute inset-0" style={{ background: seedGradient(n.id) }} />}
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex min-w-0 items-center gap-1">
+                        <span className="truncate t-body font-bold text-ink">{n.title}</span>
+                        {n.isExample && <ExampleBadge />}
+                      </span>
+                      <span className="flex min-w-0 items-center gap-1 t-caption text-text-3">
+                        <span className="truncate">
+                          {n.author}
+                          {n.meta ? ` · ${n.meta}` : ""}
+                        </span>
+                        <ExpertBadge badge={n.authorBadge} />
+                      </span>
+                    </span>
+                    {isOpen ? (
+                      <span className="shrink-0 t-caption font-bold text-primary">노트 열기 ›</span>
+                    ) : (
+                      <span className="shrink-0 rotate-90 text-text-3" aria-hidden="true">
+                        <Chevron dir="right" />
+                      </span>
+                    )}
+                  </Link>
+                </td>
+                <td className="px-2 py-2 align-middle">
+                  {n.score > 0 ? (
+                    <span className="flex items-center gap-2">
+                      <span className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-bg max-md:hidden" aria-hidden="true">
+                        <span
+                          className={`absolute inset-y-0 left-0 rounded-full ${n.score >= 75 ? "bg-primary" : n.score < 50 ? "bg-down" : "bg-primary/70"}`}
+                          style={{ width: `${Math.min(100, n.score)}%` }}
+                        />
+                      </span>
+                      <span className="shrink-0 t-sub font-bold tabular-nums text-ink">{n.score}점</span>
+                    </span>
+                  ) : (
+                    <span className="t-caption text-text-3">점수 없음</span>
+                  )}
+                </td>
+                {hasDecision && (
+                  <td className="overflow-hidden px-2 py-2 max-xl:p-0">
+                    <span className="max-xl:hidden">
+                      {n.decision ? <NoteBadges n={n} only="decision" /> : <span className="t-caption text-text-3">—</span>}
+                    </span>
+                  </td>
+                )}
+                <td className="overflow-hidden px-3 py-2 text-right t-sub tabular-nums text-text-2 max-md:p-0">
+                  <span className="max-md:hidden">{(n.photoCount ?? 0) > 0 ? `${n.photoCount}장` : "—"}</span>
+                </td>
+              </tr>
+              {isOpen && (
+                <tr id={panelId} className="border-b border-line last:border-b-0">
+                  <td colSpan={span} className="bg-bg p-2 md:p-3">
+                    <PostCard n={n} />
+                    <FoldButton onClose={() => setOpenId(null)} label={n.title} />
+                  </td>
+                </tr>
+              )}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function LeftRail({
   loggedIn,
   mine,
@@ -564,18 +746,25 @@ function LeftRail({
           >
             전체
           </button>
-          {regions.map((r) => (
-            <button
-              key={r.label}
-              type="button"
-              onClick={() => onRegion(regionPick === r.label ? null : r.label)}
-              aria-pressed={regionPick === r.label}
-              className={`${RAIL_LINK} min-h-[36px] justify-between t-sub ${regionPick === r.label ? "bg-primary-soft text-primary" : "text-text-2"}`}
-            >
-              <span className="truncate">{r.label}</span>
-              <span className="t-caption tabular-nums text-text-3">{r.count}</span>
-            </button>
-          ))}
+          {/* [1049] 지역별 노트 수를 막대로 — 숫자만 있던 줄에 길이를 더했다(가장 많은 지역 = 가득) */}
+          {regions.map((r) => {
+            const top = Math.max(...regions.map((x) => x.count), 1);
+            return (
+              <button
+                key={r.label}
+                type="button"
+                onClick={() => onRegion(regionPick === r.label ? null : r.label)}
+                aria-pressed={regionPick === r.label}
+                className={`${RAIL_LINK} min-h-[36px] w-full gap-2 t-sub ${regionPick === r.label ? "bg-primary-soft text-primary" : "text-text-2"}`}
+              >
+                <span className="w-16 shrink-0 truncate text-left">{r.label}</span>
+                <span className="relative h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-bg" aria-hidden="true">
+                  <span className="absolute inset-y-0 left-0 rounded-full bg-primary/60" style={{ width: `${(r.count / top) * 100}%` }} />
+                </span>
+                <span className="w-5 shrink-0 text-right t-caption tabular-nums text-text-3">{r.count}</span>
+              </button>
+            );
+          })}
         </div>
       )}
     </aside>
@@ -659,6 +848,16 @@ function FeedGlyph({ active }: { active: boolean }) {
   );
 }
 
+function ListGlyph({ active }: { active: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      {[4, 10.5, 17].map((y) => (
+        <rect key={y} x="3" y={y} width="18" height="3" rx="1" fill={active ? "currentColor" : "var(--border-strong)"} />
+      ))}
+    </svg>
+  );
+}
+
 /** [1007] URL 의 내 노트 탭 판정 — ?tab=mine(세그먼트) 또는 ?mine=1(/my 진입로) */
 function wantsMineTab(search: string): boolean {
   try {
@@ -707,6 +906,26 @@ export function NotesFeedClient({
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("최신");
   const [view, setView] = useState<ViewMode>("grid");
+  /* [1050 · 펼침] 폰 격자에서 펼친 노트(한 번에 하나) */
+  const [gridOpen, setGridOpen] = useState<string | null>(null);
+  /* [1049] 데스크톱 보기(표 기본) — 고른 보기는 이 브라우저에만 기억(저장소가 막혀도 표로 그린다) */
+  const [deskView, setDeskViewState] = useState<DeskView>("table");
+  useEffect(() => {
+    try {
+      const v = window.localStorage.getItem(DESK_VIEW_KEY);
+      if (v === "feed" || v === "table") setDeskViewState(v);
+    } catch {
+      /* 저장소 차단 — 기본(표) */
+    }
+  }, []);
+  const setDeskView = (v: DeskView) => {
+    setDeskViewState(v);
+    try {
+      window.localStorage.setItem(DESK_VIEW_KEY, v);
+    } catch {
+      /* 저장소 차단 — 이번 화면만 */
+    }
+  };
   /* [1016] 데스크톱 왼쪽 레일의 지역 — 지금 목록에 있는 지역(구·동 짧은 라벨)만, 많은 순 8개 */
   const [regionPick, setRegionPick] = useState<string | null>(null);
   /* [1023 · 임장노트 ①] 검색칸 — 제목·지역·단지명 클라이언트 필터(lib/notes/feed-search). 추가 조회 없음.
@@ -1074,6 +1293,35 @@ export function NotesFeedClient({
             >
               <FeedGlyph active={view === "feed"} />
             </button>
+            {/* [1049] 목록(표) — 사진 없이 한 줄씩 */}
+            <button
+              type="button"
+              aria-label="목록 보기"
+              aria-pressed={view === "table"}
+              onClick={() => setView("table")}
+              className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                view === "table" ? "bg-primary-soft text-primary" : "text-text-3"
+              }`}
+            >
+              <ListGlyph active={view === "table"} />
+            </button>
+          </div>
+          {/* [1049] 데스크톱 보기 전환 — 표(기본) · 피드(사진 카드) */}
+          <div className="hidden shrink-0 items-center gap-1 rounded-full bg-bg p-0.5 md:flex" role="group" aria-label="보기">
+            {(["table", "feed"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={deskView === v}
+                onClick={() => setDeskView(v)}
+                className={`inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 t-sub font-bold ${
+                  deskView === v ? "bg-surface text-ink shadow-sm" : "text-text-3"
+                }`}
+              >
+                {v === "table" ? <ListGlyph active={deskView === v} /> : <FeedGlyph active={deskView === v} />}
+                {v === "table" ? "표" : "피드"}
+              </button>
+            ))}
           </div>
           </div>
         </div>
@@ -1178,16 +1426,29 @@ export function NotesFeedClient({
           <>
             {/* 폰 격자 보기: 가장자리까지 붙는 촘촘한 3열(인스타 앱). md+ 에서는 그리지 않는다(아래 피드가 항상) */}
             {view === "grid" && (
-              <div className="-mx-3.5 grid grid-cols-3 gap-0.5 md:hidden">
+              <div className="-mx-3.5 grid grid-flow-row-dense grid-cols-3 gap-0.5 md:hidden">
                 {/* [968 · 17] 첫 타일만 priority — 폰 격자 첫 칸(LCP 후보) */}
+                {/* [1050 · 펼침] 누른 타일 줄 바로 아래 피드 카드 — 같은 줄의 나머지 타일은 dense 로 제 줄에 남는다 */}
                 {visible.map((n, i) => (
-                  <GridTile key={n.id} n={n} priority={i === 0} />
+                  <Fragment key={n.id}>
+                    <GridTile n={n} priority={i === 0} open={gridOpen === n.id} onOpen={() => setGridOpen(n.id)} />
+                    {gridOpen === n.id && (
+                      <div id={`grid-open-${n.id}`} className="col-span-3 bg-bg px-2 pb-1 pt-2">
+                        <PostCard n={n} />
+                        <FoldButton onClose={() => setGridOpen(null)} label={n.title} />
+                      </div>
+                    )}
+                  </Fragment>
                 ))}
               </div>
             )}
-            {/* [1016] 게시물 피드 — 폰은 피드 보기일 때, md+ 는 항상(페이스북 구성). 폰 격자일 때 md+ 전용이라
+            {/* [1049] 표 — 폰은 목록 보기일 때, md+ 는 데스크톱 보기가 표일 때(기본) */}
+            <div className={`${view === "table" ? "block" : "hidden"} ${deskView === "table" ? "md:block" : "md:hidden"}`}>
+              <NotesTable notes={visible} />
+            </div>
+            {/* [1016] 게시물 피드 — 폰은 피드 보기일 때, md+ 는 데스크톱 보기가 피드일 때.
                 숨긴 사진은 lazy 라 내려받지 않는다(priority 는 격자 첫 칸이 맡는다). */}
-            <div className={`flex flex-col gap-4 md:gap-4 ${view === "grid" ? "hidden md:flex" : ""}`}>
+            <div className={`flex-col gap-4 md:gap-4 ${view === "feed" ? "flex" : "hidden"} ${deskView === "feed" ? "md:flex" : "md:hidden"}`}>
               {mineGroups
                 ? /* [1023 · 임장노트 ①] 내 노트 — 같은 단지 2건 이상은 묶음 카드(접힘), 나머지는 낱장 */
                   mineGroups.map((g, i) =>

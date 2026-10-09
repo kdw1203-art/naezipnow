@@ -41,6 +41,7 @@ import {
   type Loaded,
 } from "@/lib/me/my-hub";
 import { noteCoverUrl } from "@/lib/notes/cover/resolve";
+import { buildMyActivity } from "@/lib/me/my-activity";
 import { MyHubView, type MyHubData, type MyHubNote } from "./MyHubView";
 
 /* 마이 허브 — 프로필·활동 요약·임장노트·관심·구독·포인트를 한 화면에.
@@ -339,6 +340,19 @@ export default async function MyPage() {
       relinkHref,
     },
     aiUsage: aiUsage ? { lifetime: Boolean(aiUsage.lifetime), used: aiUsage.used, limit: aiUsage.limit } : null,
+    /* [1049] 사용량 표 · 월별 기록 막대 — 이미 읽은 값으로만(추가 조회 0) */
+    usage: usage
+      ? usage.items.map((i) => ({ key: String(i.key), label: i.label, used: i.used, limit: i.limit, ...(i.lifetime ? { lifetime: true } : {}) }))
+      : null,
+    activity: notesLoaded.ok
+      ? buildMyActivity(
+          notes.map((n) => {
+            const avg = inspectionAverageScore(n.scores);
+            return { date: n.visitDate || n.createdAt, score100: avg > 0 ? Math.round(avg * 20) : null, isPublic: n.isPublic };
+          }),
+          new Date().toISOString(),
+        )
+      : null,
   };
 
   return (

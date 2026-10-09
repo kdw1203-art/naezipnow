@@ -8,7 +8,7 @@
  * 규칙(인라인 부트 스크립트와 클라이언트 주입기가 **같은 상수**를 쓴다):
  *  - 제외 경로(adsense-policy 의 prefix 목록)면 태그 자체를 넣지 않는다.
  *  - 뷰포트 ≥ 1024px: 지금처럼 즉시 — 단 fetchpriority="low" 로 LCP 자원에 밀린다.
- *  - 뷰포트 < 1024px: `load` 뒤 requestIdleCallback(상한 4s)에 넣는다. AdZoneUnit 이
+ *  - 뷰포트 < 1024px: `load` 뒤 첫 입력(스크롤·터치·키) 또는 6초([1051]) → requestIdleCallback(상한 4s)에 넣는다. AdZoneUnit 이
  *    그 전에 `adsbygoogle.push({})` 를 해도 배열 큐에 쌓였다가 스크립트가 붙으면
  *    처리되므로 피드·본문 광고는 그대로 나온다(시점만 늦다).
  *  - 클라이언트 내비게이션으로 제외 경로 → 일반 경로로 들어오면 AdSenseLoader 가
@@ -23,6 +23,15 @@ export const ADSENSE_SCRIPT_ID = "adsbygoogle-js";
 export const ADSENSE_DESKTOP_MEDIA = "(min-width: 1024px)";
 /** 모바일에서 idle 콜백이 안 와도 이 안에는 넣는다 */
 export const ADSENSE_IDLE_TIMEOUT_MS = 4000;
+/**
+ * [1051 · 속도] 폰 첫 진입: `load` 뒤 이만큼 기다렸다가(또는 그 전에 첫 스크롤·터치·키 입력이 오면 그때) idle 에 넣는다.
+ * 운영 실측(2026-10-09 · Lighthouse 모바일 · 홈): 광고 스크립트를 막으면 TBT 4,510ms → 3,180ms
+ * (Google FundingChoices 724ms + DoubleClick 577ms 가 첫 화면 직후 주 스레드를 잡았다 · 전송 ≈300KB).
+ * 폰 광고 칸은 첫 화면 아래(피드 사이)라 첫 입력 뒤에 붙어도 보이는 시점은 같다.
+ */
+export const ADSENSE_MOBILE_DELAY_MS = 6000;
+/** 기다림을 끝내는 첫 입력 */
+export const ADSENSE_WAKE_EVENTS = ["scroll", "pointerdown", "keydown", "touchstart"] as const;
 
 export function adSenseScriptSrc(client: string): string {
   return `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(client)}`;
@@ -58,8 +67,14 @@ export function buildAdSenseBootScript(client: string, excludedPrefixes: readonl
     `s.id=${id};s.async=true;s.src=${src};s.crossOrigin="anonymous";s.setAttribute("fetchpriority","low");` +
     "document.head.appendChild(s);}" +
     `if(window.matchMedia&&window.matchMedia(${media}).matches){add();return;}` +
-    `function idle(){if(window.requestIdleCallback)window.requestIdleCallback(add,{timeout:${ADSENSE_IDLE_TIMEOUT_MS}});else setTimeout(add,1500);}` +
-    'if(document.readyState==="complete")idle();else window.addEventListener("load",idle,{once:true});' +
+    /* [1051] 폰: load → (첫 입력 또는 ADSENSE_MOBILE_DELAY_MS) → idle → 삽입. 둘 중 먼저 온 쪽 한 번만 */
+    `var ev=${JSON.stringify(ADSENSE_WAKE_EVENTS)},done=false,j;` +
+    "function go(){if(done)return;done=true;" +
+    "if(window.removeEventListener){for(j=0;j<ev.length;j++)window.removeEventListener(ev[j],wake);}" +
+    `if(window.requestIdleCallback)window.requestIdleCallback(add,{timeout:${ADSENSE_IDLE_TIMEOUT_MS}});else setTimeout(add,1500);}` +
+    "function wake(){go();}" +
+    `function later(){for(j=0;j<ev.length;j++)window.addEventListener(ev[j],wake,{passive:true});setTimeout(go,${ADSENSE_MOBILE_DELAY_MS});}` +
+    'if(document.readyState==="complete")later();else window.addEventListener("load",later,{once:true});' +
     "})();"
   );
 }

@@ -118,7 +118,9 @@ export function HomeTodayLine({
 
   const slides = useMemo<Slide[]>(() => {
     const out: Slide[] = [];
-    if (shown) out.push({ key: "region", text: todayRegionSentence(shown), href: shown.href });
+    /* [1050 · 중복 검토] 관심 지역이 없는 사람에게 첫 지역(지역 동향 첫 카드와 같은 지역·같은 숫자)을 다시 말하지 않는다 —
+       바로 아래 지역 동향 카드가 같은 가격·등락·거래를 보인다. 관심 지역 문장(내 지역)은 그대로 */
+    if (shown && personalized) out.push({ key: "region", text: todayRegionSentence(shown), href: shown.href });
     if (temp)
       out.push({
         key: "temp",
@@ -126,7 +128,7 @@ export function HomeTodayLine({
         href: "/analysis/temperature",
       });
     /* [1009 · H 리뷰] 건수의 실제 달·원천으로만(today-line.ts) — 카드 기준월을 붙이면 다른 달 건수를 그 달 것처럼 말한다 */
-    const tradeText = shown ? todayTradeSentence(shown) : null;
+    const tradeText = shown && personalized ? todayTradeSentence(shown) : null;
     if (tradeText)
       out.push({
         key: "trade",
@@ -152,7 +154,7 @@ export function HomeTodayLine({
         href: "/notes",
       });
     return out;
-  }, [shown, temp, saleIndex, baseRate, loanRate, publicNotes]);
+  }, [shown, personalized, temp, saleIndex, baseRate, loanRate, publicNotes]);
 
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -261,14 +263,11 @@ export function HomeTodayLine({
           오늘의 한 줄
         </h2>
         {/* 근거 배지 — 이 지역이 어디서 왔는지 밝힌다. 없으면 사용자는
-            자기 지역이라고 오해하거나 "왜 강남?" 에서 멈춘다. */}
-        <span
-          className={`rounded-md bg-on-dark-panel px-1.5 py-px t-caption font-bold ${
-            personalized ? "text-on-dark" : "text-on-dark-muted"
-          }`}
-        >
-          {personalized ? "내 관심지역" : "대표 지역"}
-        </span>
+            자기 지역이라고 오해하거나 "왜 강남?" 에서 멈춘다.
+            [1050 · 중복 검토] 관심 지역이 없으면 지역 문장을 그리지 않으므로(아래 지역 동향 첫 카드와 같은 말) "대표 지역" 배지도 없다 */}
+        {personalized && (
+          <span className="rounded-md bg-on-dark-panel px-1.5 py-px t-caption font-bold text-on-dark">내 관심지역</span>
+        )}
         {!personalized && (
           <Link
             href="/my/settings#region"

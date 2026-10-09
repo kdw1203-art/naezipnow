@@ -83,7 +83,8 @@ test("[1023] 허브 — 최근 실행 결과 3건은 history-store 를 마운트
   /* 지역 이름 키(매수 타이밍)는 도구 화면만 — 단지 없는 딥링크를 만들지 않는다 */
   assert.match(recent, /REGION_KEYED = new Set\(\["ai-timing"\]\)/);
   const hero = code("app/analysis/hub-hero.tsx");
-  assert.match(hero, /<HubRecentRuns \/>/);
+  /* [1050 · 번들] 도구 이름은 서버가 넘긴다(titles) — tool-identity 를 브라우저 번들에 싣지 않는다 */
+  assert.match(hero, /<HubRecentRuns titles=\{toolTitles\} \/>/);
   /* 실행 4칸 "마지막 실행 N일 전" — 고른 단지 id 로 조회, 기록이 있는 칸만 */
   assert.match(hero, /findLastRun\(id, pickedId\)/);
   assert.match(hero, /lastRun\[id\] && \(/);

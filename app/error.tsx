@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { startTransition, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ErrorState } from "@/app/components/ui/EmptyState";
 import { reportClientError } from "@/lib/client/error-report";
 
@@ -33,6 +34,33 @@ export default function AppError({
     }
   }, [error]);
 
+  /* [1051 · 단지 화면 시간 초과] 운영 실측(10-02~10-08): /complex/[id] "단지 정보 조회 시간 초과(4초)" 25회 · 같은 순간
+     /region/[id] 곁다리 조회 동시 실패 — 원인은 화면이 아니라 몇 초짜리 DB 포화다(평시 15ms 조회). 사람이 "다시 시도"를
+     누르기 전에 한 번만 저절로 다시 받는다(2.5초 뒤 · 같은 주소 2분에 한 번 · 서버 렌더 오류만). 두 번째 실패면 이 화면 그대로. */
+  const router = useRouter();
+  const [retrying, setRetrying] = useState(false);
+  useEffect(() => {
+    try {
+      if (!error?.digest) return;
+      const path = window.location.pathname;
+      if (!/^\/(complex|region)\//.test(path)) return;
+      const key = "nz:auto-retry:" + path;
+      const last = Number(sessionStorage.getItem(key) || 0);
+      if (Date.now() - last < 120_000) return;
+      sessionStorage.setItem(key, String(Date.now()));
+      setRetrying(true);
+      const t = window.setTimeout(() => {
+        startTransition(() => {
+          router.refresh();
+          reset();
+        });
+      }, 2500);
+      return () => window.clearTimeout(t);
+    } catch {
+      /* noop */
+    }
+  }, [error, reset, router]);
+
   useEffect(() => {
     // 서버 모니터링 싱크로 전달(실패해도 무시 — 에러 화면이 또 깨지면 안 된다)
     // [1027 · 제안 28] 브라우저 스택·오류 이름·빌드 표식을 같이 싣는다(lib/client/error-report)
@@ -43,8 +71,8 @@ export default function AppError({
     <main className="mx-auto flex min-h-[60vh] w-full max-w-[520px] flex-col items-center justify-center gap-4 px-6">
       <ErrorState
         /* [1028 · 제안 3·12] 오류 문구 표준 — "불러오지 못했어요" + "잠시 후 다시 시도해 주세요." */
-        title="화면 불러오기 실패"
-        desc="잠시 후 다시 시도해 주세요."
+        title={retrying ? "다시 불러오는 중" : "화면 불러오기 실패"}
+        desc={retrying ? "잠시만 · 자동으로 한 번 더" : "잠시 후 다시 시도해 주세요."}
         cause={error.digest ? `오류 코드 ${error.digest}` : undefined}
         onRetry={reset}
         retryLabel="다시 시도"

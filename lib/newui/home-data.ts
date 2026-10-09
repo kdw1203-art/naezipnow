@@ -49,7 +49,7 @@ import {
   type CardSeries,
   type MonthlyRow,
 } from "@/lib/newui/home-region-fallback";
-import { briefingFromDeltas, briefingFromIndexRows } from "@/lib/newui/home-briefing";
+import { briefingFromDeltas, briefingFromIndexRows, districtMovesFromIndexRows } from "@/lib/newui/home-briefing";
 
 export type DeltaTone = "up" | "down" | "flat";
 
@@ -204,6 +204,11 @@ export interface NewHomeData {
   activityToday: number | null;
   regions: HomeRegionCard[];
   /**
+   * [1049] 서울 25개 구 매매가격지수 전월비(한국부동산원 월간) — 홈 막대 그래프. 브리핑과 같은 기준월·같은 계산
+   * (lib/newui/home-briefing districtMovesFromIndexRows). 지수 시계열을 못 읽으면 null(그래프를 그리지 않는다).
+   */
+  seoulMoves: { period: string; rows: { id: string; name: string; pct: number }[] } | null;
+  /**
    * [1002] regions 가 스냅샷이 아니라 마지막 월 집계 폴백일 때 true. 이때
    * `failed.regions` 는 false 다 — 데이터는 진짜고 시점만 오래됐다. 폴백까지
    * 실패하면 regionsStale=false · failed.regions=true 로 예전 그대로 실패를 말한다.
@@ -243,6 +248,7 @@ export const EMPTY_NEW_HOME_DATA: NewHomeData = {
   briefing: null,
   activityToday: null,
   regions: [],
+  seoulMoves: null,
   regionsStale: false,
   notes: [],
   posts: [],
@@ -485,6 +491,20 @@ function briefingFromCardSeries(series: CardSeries | null): HomeBriefing | null 
     series.index.filter((r) => r.region_id && SEOUL_DISTRICT_IDS.has(String(r.region_id))),
     { basis: "한국부동산원 월간 매매가격지수 · 구별 전월비의 단순 평균(지역 카드 등락과 같은 기준)" },
   );
+}
+
+/** [1049] 서울 25개 구 전월비 — 브리핑과 같은 행 · 같은 기준월. 이름은 SEOUL_DISTRICTS 그대로 */
+function seoulMovesFromCardSeries(series: CardSeries | null): NewHomeData["seoulMoves"] {
+  if (!series) return null;
+  const r = districtMovesFromIndexRows(
+    series.index.filter((x) => x.region_id && SEOUL_DISTRICT_IDS.has(String(x.region_id))),
+  );
+  if (!r) return null;
+  const names = new Map(SEOUL_DISTRICTS.map((d) => [d.id, d.name]));
+  const rows = r.moves
+    .map((m) => ({ id: m.id, name: names.get(m.id) ?? m.id, pct: Math.round(m.pct * 100) / 100 }))
+    .sort((a, b) => b.pct - a.pct);
+  return rows.length >= 5 ? { period: r.period, rows } : null;
 }
 
 const loadBriefingCached = unstable_cache(
@@ -834,6 +854,8 @@ async function loadNewHomeDataInternal(): Promise<NewHomeData> {
   /* [950] 브리핑은 지역 카드와 같은 스냅샷에서 센다 — 한 화면 한 기준.
      [1009 · H] 스냅샷이 비어 못 세면 같은 부동산원 지수의 월간 시계열로(위 카드 곁값 캐시 · briefingFromCardSeries) */
   const briefing = briefingFromSnapshots(snapshots) ?? briefingFromCardSeries(cardSeries);
+  /* [1049] 서울 구별 전월비 막대 — 위 카드 곁값 캐시의 월간 지수(③)를 그대로(추가 조회 0) */
+  const seoulMoves = seoulMovesFromCardSeries(cardSeries);
   const news: HomeNewsItem[] = newsPosts
     .filter((p) => !isStoryPost(p)) // 뉴스만 — 사람 글은 아래 stories 가 맡는다(같은 판정의 반대)
     .slice(0, 3)
@@ -918,6 +940,7 @@ async function loadNewHomeDataInternal(): Promise<NewHomeData> {
     briefing,
     activityToday,
     regions,
+    seoulMoves,
     regionsStale,
     notes,
     posts,

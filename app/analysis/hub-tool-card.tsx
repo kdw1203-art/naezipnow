@@ -50,7 +50,7 @@ export function ToolCard({
       title={t.title}
       withPicked={ACCEPTS_COMPLEX.has(t.href)}
       className={`tile card ai-glow flex flex-col gap-2 rounded-lg p-4 no-underline${
-        persona ? " tool-scope tool-rail" : ""
+        persona ? " tool-scope" : ""
       }`}
       style={persona ? personaVars(persona) : undefined}
     >

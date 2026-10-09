@@ -75,6 +75,11 @@ console.log(lines.join("\n"));
  * 등재일이다. */
 const MAX_UNLISTED_KB = Math.max(...Object.values(BUDGETS_KB));
 const unlistedOver = [];
+/* [1051 · 배포 막힘] 로컬 실측과 Vercel 실측은 같지 않다 — Vercel 에는 로컬(.env.production)에 없는 NEXT_PUBLIC_* 값이 여럿 있어
+   번들에 문자열로 들어간다. 1047·1048 은 로컬 495.2KB(반올림 495 → 통과)였던 /notes/[id] 가 Vercel 에서 496KB 로 실패해
+   운영 배포가 두 번 막혔다. 상한까지 NEAR_KB 안쪽인 라우트는 실패가 아니라 "여유 부족" 경고로 적는다(소수점 실측 그대로). */
+const NEAR_KB = 2.5;
+const near = [];
 for (const [route, files] of Object.entries(pages)) {
   if (route in BUDGETS_KB) continue;
   if (!Array.isArray(files)) continue;
@@ -89,6 +94,24 @@ for (const [route, files] of Object.entries(pages)) {
   }
   const kb = Math.round(bytes / 1024);
   if (kb > MAX_UNLISTED_KB) unlistedOver.push(`✗ ${route}: ${kb}KB (미등재 상한 ${MAX_UNLISTED_KB}KB)`);
+  else if (bytes / 1024 > MAX_UNLISTED_KB - NEAR_KB) near.push(`  ${route}: ${(bytes / 1024).toFixed(1)}KB (미등재 상한 ${MAX_UNLISTED_KB}KB)`);
+}
+for (const [route, budgetKb] of Object.entries(BUDGETS_KB)) {
+  const files = pages[route];
+  if (!Array.isArray(files)) continue;
+  let bytes = 0;
+  for (const f of new Set(files)) {
+    if (!f.endsWith(".js")) continue;
+    try {
+      bytes += statSync(path.join(ROOT, ".next", f)).size;
+    } catch {
+      /* 파일 없음 — 무시 */
+    }
+  }
+  if (bytes / 1024 <= budgetKb && bytes / 1024 > budgetKb - NEAR_KB) near.push(`  ${route}: ${(bytes / 1024).toFixed(1)}KB (예산 ${budgetKb}KB)`);
+}
+if (near.length > 0) {
+  console.log(`⚠ 여유 ${NEAR_KB}KB 미만 — Vercel 빌드는 로컬보다 조금 크다(공개 설정값). 다음 기능을 얹기 전에 줄일 것:\n${near.join("\n")}`);
 }
 if (unlistedOver.length > 0) {
   failed = true;

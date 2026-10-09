@@ -99,3 +99,30 @@ export function indexMoMByRegion(rows: readonly IndexRow[]): Map<string, { ym: s
   }
   return out;
 }
+
+/**
+ * [1049 · 홈 그래프] 구별 전월비 목록 — 브리핑 문장과 **같은 기준월**(가장 많은 구가 가진 최신 달)과 같은 계산.
+ * 그 달과 바로 전 달이 둘 다 있는 구만(빠진 달을 건너뛰지 않는다). 오름차순 정렬은 화면이 정한다.
+ * 브리핑 "서울 25개 구 중 23곳 상승"을 막대 25줄로 그대로 보여 주는 재료.
+ */
+export function districtMovesFromIndexRows(
+  rows: readonly IndexRow[],
+): { period: string; moves: { id: string; pct: number }[] } | null {
+  const byRegion = groupIndexRows(rows);
+  const latestCount = new Map<string, number>();
+  for (const m of byRegion.values()) {
+    const latest = [...m.keys()].sort().pop();
+    if (latest) latestCount.set(latest, (latestCount.get(latest) ?? 0) + 1);
+  }
+  const period = [...latestCount.entries()].sort((a, b) => b[1] - a[1] || b[0].localeCompare(a[0]))[0]?.[0];
+  if (!period) return null;
+  const prev = prevYmOf(period);
+  const moves: { id: string; pct: number }[] = [];
+  for (const [id, m] of byRegion) {
+    const cur = m.get(period);
+    const base = m.get(prev);
+    if (cur === undefined || base === undefined || base <= 0) continue;
+    moves.push({ id, pct: ((cur - base) / base) * 100 });
+  }
+  return moves.length > 0 ? { period, moves } : null;
+}

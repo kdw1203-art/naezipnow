@@ -227,13 +227,20 @@ test("buildAdSenseBootScript — 실행 흐름: 제외 경로면 태그를 넣�
       head: { appendChild: (el: Created) => appended.push(el) },
     };
     const loadListeners: Array<() => void> = [];
+    const wakeListeners: Array<() => void> = [];
+    const timers: Array<() => void> = [];
     const win = {
       matchMedia: (q: string) => ({ matches: desktop && q === ADSENSE_DESKTOP_MEDIA }),
-      addEventListener: (type: string, fn: () => void) => { if (type === "load") loadListeners.push(fn); },
+      addEventListener: (type: string, fn: () => void) => {
+        if (type === "load") loadListeners.push(fn);
+        else wakeListeners.push(fn);
+      },
+      removeEventListener: () => undefined,
       requestIdleCallback: (cb: () => void) => { cb(); return 1; },
     };
-    new Function("window", "document", "location", "setTimeout", js)(win, doc, { pathname }, () => 0);
-    return { appended, loadListeners };
+    /* [1051] 폰은 load 뒤 지연 타이머(또는 첫 입력) — 타이머는 모아 두었다가 시험이 직접 부른다 */
+    new Function("window", "document", "location", "setTimeout", js)(win, doc, { pathname }, (fn: () => void) => { timers.push(fn); return 0; });
+    return { appended, loadListeners, wakeListeners, timers };
   }
   assert.equal(run("/map", true).appended.length, 0, "제외 경로: 데스크톱이어도 생략");
   const desktop = run("/", true);
@@ -245,5 +252,14 @@ test("buildAdSenseBootScript — 실행 흐름: 제외 경로면 태그를 넣�
   assert.equal(mobile.appended.length, 0, "모바일: load 전에는 없음");
   assert.equal(mobile.loadListeners.length, 1);
   mobile.loadListeners[0]!();
-  assert.equal(mobile.appended.length, 1, "load → idle → 삽입");
+  assert.equal(mobile.appended.length, 0, "[1051] load 직후에도 아직 없음(첫 입력 또는 지연 뒤)");
+  assert.equal(mobile.wakeListeners.length, 4, "스크롤·터치·키·포인터");
+  mobile.timers[0]!();
+  assert.equal(mobile.appended.length, 1, "지연 → idle → 삽입");
+  mobile.wakeListeners[0]!();
+  assert.equal(mobile.appended.length, 1, "한 번만");
+  const touched = run("/", false);
+  touched.loadListeners[0]!();
+  touched.wakeListeners[1]!();
+  assert.equal(touched.appended.length, 1, "첫 입력이 먼저 오면 그때");
 });

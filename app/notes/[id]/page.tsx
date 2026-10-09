@@ -24,7 +24,7 @@ import {
   type InspectionNote,
 } from "@/lib/inspection/store-db";
 import { NotePhotoCarousel } from "./NotePhotoCarousel";
-import { NoteAudioTools } from "./NoteAudioTools";
+import { NoteAudioToolsLazy as NoteAudioTools, NoteCommentsLazy as NoteComments, NoteSoftWallLazy as NoteSoftWall } from "./NoteLazyParts";
 import { safeAuth } from "@/lib/safe-auth";
 import { findPaidReportIdByNote } from "@/lib/reports/store-db";
 import { hasPurchased } from "@/lib/report-purchases/store-db";
@@ -52,7 +52,6 @@ import { Icon } from "@/app/components/Icon";
 import { Explain } from "@/app/components/explain/Explain";
 import { JsonLd } from "@/app/components/JsonLd";
 import { publisherRef } from "@/lib/seo/jsonld";
-import { NoteSoftWall } from "./NoteSoftWall";
 import { RelatedNotes } from "./RelatedNotes";
 import { CompareTrayButton } from "@/app/components/CompareTrayButton";
 import { listComplexesInDistrict } from "@/lib/complex/complex-store";
@@ -64,7 +63,7 @@ import { ScoreRing } from "@/app/components/viz/ScoreRing";
 import type { RadarItem } from "@/app/components/viz/ScoreRadar";
 import { resolveComplexPrice } from "@/lib/market/complex-price";
 import { noteCoordsFromMetadata } from "@/lib/notes/note-coords";
-import { NoteComments, type NoteCommentView } from "./NoteComments";
+import type { NoteCommentView } from "./NoteComments";
 import { NoteRatingLazy } from "./NoteRatingLazy";
 import { getNoteRating } from "@/lib/inspection/note-ratings";
 import { ratingFact } from "@/lib/inspection/note-rating-math";

@@ -17,7 +17,8 @@ import { isTierOnSale } from "@/lib/subscriptions/sell-config";
 import { HubPickedProvider } from "./hub-context";
 import { HubHero } from "./hub-hero";
 import { WorkbenchGrid } from "./hub-tiers";
-import { workbenchCardData } from "./workbench-cards";
+import { workbenchCardData, workbenchSteps, WORKBENCH_SIGNAL_LABELS } from "./workbench-cards";
+import { ToolDetailBody } from "./hub-tool-detail";
 import { HubNoteAnalysis } from "./hub-picker";
 import { HubMyNoteTeaser, HubRecordStart } from "./hub-record-start";
 import { CompareTrayCount } from "./tool-cards-client";
@@ -176,6 +177,7 @@ export default async function AnalysisHubPage() {
             coverage={coverage}
             quota={quota}
             toolCount={AI_TOOL_COUNT + MARKET_LIVE.length + RECORD_LIVE.length}
+            toolTitles={Object.fromEntries([...workbenchCards.core, ...workbenchCards.more].map((c) => [c.id, c.title]))}
           />
 
           {/* ── 계열 1 · 단지 하나를 깊게 (UI-01·03) ── */}
@@ -184,7 +186,16 @@ export default async function AnalysisHubPage() {
             className="rise-in-1 flex scroll-mt-24 flex-col gap-3"
           >
             <TierHead id="complex" count={AI_TOOL_COUNT} />
-            <WorkbenchGrid core={workbenchCards.core} more={workbenchCards.more} />
+            <WorkbenchGrid
+              core={workbenchCards.core}
+              more={workbenchCards.more}
+              details={Object.fromEntries(
+                [...workbenchCards.core.map((c) => [c, true] as const), ...workbenchCards.more.map((c) => [c, false] as const)].map(([c, fromTable]) => [
+                  c.id,
+                  <ToolDetailBody key={c.id} c={c} steps={workbenchSteps(c.id)} signalLabels={WORKBENCH_SIGNAL_LABELS} fromTable={fromTable} />,
+                ]),
+              )}
+            />
           </section>
 
           {/* ── 계열 2 · 지역·시장 흐름 (UI-09 실측 티저 + 추세선) ── */}

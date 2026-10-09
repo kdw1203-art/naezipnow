@@ -18,6 +18,8 @@ import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import { WORKBENCH_CORE, WORKBENCH_MORE, WORKBENCH_ICONS } from "./tool-catalog";
 import { WORKBENCH_GLYPH, type ToolGlyphId } from "./ToolGlyph";
+import { SIGNAL_FACTOR_META } from "@/lib/signals/engine";
+import { stageStep } from "@/lib/ai/tool-stage-steps";
 
 export type WorkbenchCardDto = {
   id: AiAnalysisToolId;
@@ -34,6 +36,16 @@ export type WorkbenchCardDto = {
   /** 도구 색 네 개 — 카드 래퍼에 style 로 꽂는다 */
   vars: Record<string, string>;
 };
+
+/** [1050 · 펼침] 펼치면 보이는 분석 순서 4단계 — 실행 중 문구(tool-persona runStages)를 단계 이름으로(stageStep).
+    로딩 화면과 같은 순서 · 같은 점검이다(없는 단계를 지어내지 않는다). 서버 조각(hub-tool-detail)이 그린다 */
+export function workbenchSteps(id: AiAnalysisToolId): string[] {
+  return TOOL_PERSONAS[id].runStages.map(stageStep).filter(Boolean);
+}
+
+/** [1050 · 펼침] 함께 보는 시장 신호(1048 다요인 신호 8가지) — 단지·지역이 있는 실행에 붙는다(app/api/ai/analysis signalsForInput) */
+export const WORKBENCH_SIGNAL_LABELS: readonly string[] = Object.values(SIGNAL_FACTOR_META).map((m) => m.label);
+
 
 function build(id: AiAnalysisToolId): WorkbenchCardDto {
   const idn = TOOL_IDENTITIES[id];
