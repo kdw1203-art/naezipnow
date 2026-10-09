@@ -48,8 +48,8 @@ export const maxDuration = 120;
  *       "요약이 왔어요"라고 알리는 것은 그 자체로 거짓이다.
  *
  * 채널: 인앱 수신함(항상) + 웹푸시(구독이 있을 때만) + 이메일.
- *       이메일은 RESEND_API_KEY 가 있고 **email_marketing = true(명시 옵트인)** 인
- *       사람에게만 — prefs 행이 없는 사람에게는 메일이 가지 않는다. 건너뛴 수는
+ *       이메일은 메일 발송이 준비돼 있고 **마케팅 수신 동의(user_consents.marketing_agreed = true)** 인
+ *       사람에게만([1046] 동의 기록이 정본 — 가입 화면의 동의도 여기 남는다). 건너뛴 수는
  *       emailSkippedNoConsent 로 응답에 남는다(안 보낸 걸 보냈다고 착각하지 않게).
  *
  * 주기: `.github/workflows/etl.yml` 의 `alerts` 잡이 월요일에만 호출한다(주 1회).
@@ -160,6 +160,24 @@ async function prefsEmailSet(sb: Sb, column: "push_weekly_digest" | "email_marke
   return new Set(rows.map((r) => String((r as { user_email?: unknown }).user_email ?? "").trim().toLowerCase()).filter(Boolean));
 }
 
+/** [1046] 메일 동의 명단 — 동의 기록(user_consents.marketing_agreed)이 정본이다.
+    예전엔 발송 스위치(notification_preferences.email_marketing)만 봤는데, 가입 화면의 마케팅 동의 체크는
+    동의 기록만 남겨서 가입 때 동의한 사람이 설정에서 한 번 더 켜기 전까지 주간 요약 메일을 못 받았다.
+    설정 화면도 [1000] 부터 동의 기록 하나만 보고 그리며(끄면 둘 다 꺼진다), 재방문 알림(reengage)도 이 기록을 본다. */
+async function consentEmailSet(sb: Sb): Promise<Set<string>> {
+  const { data, error } = await sb
+    .from("user_consents")
+    .select("user_email")
+    .eq("marketing_agreed", true)
+    .limit(PREFS_LIMIT);
+  if (error) throw new Error(`user_consents 조회 실패: ${error.message}`);
+  const rows = data ?? [];
+  if (rows.length >= PREFS_LIMIT) {
+    logger.error(`[cron/weekly-digest] user_consents.marketing_agreed 가 상한(${PREFS_LIMIT})에 닿음 — 잘렸을 수 있다`);
+  }
+  return new Set(rows.map((r) => String((r as { user_email?: unknown }).user_email ?? "").trim().toLowerCase()).filter(Boolean));
+}
+
 /** [995] app_users 한 페이지(BATCH) — 이메일 순, 프로필(관심 지역)까지 함께 읽어 사용자당 왕복을 하나 줄인다 */
 async function readUsersPage(sb: Sb, page: number): Promise<Recipient[]> {
   const from = page * BATCH;
@@ -255,7 +273,7 @@ async function run(dryRun: boolean): Promise<RunSummary> {
   try {
     [optOut, emailConsent] = await Promise.all([
       prefsEmailSet(sb, "push_weekly_digest", false),
-      prefsEmailSet(sb, "email_marketing", true),
+      consentEmailSet(sb),
     ]);
   } catch (e) {
     return { ...counters, ok: false, skipped: e instanceof Error ? e.message : String(e) };

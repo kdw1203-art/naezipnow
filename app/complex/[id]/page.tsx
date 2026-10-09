@@ -1565,7 +1565,10 @@ export default async function ComplexHubPage({
             <>
               <WatchlistButton complexId={v.id} complexName={v.name} />
               {/* 관심 버튼(WatchlistButton 기본형)과 같은 알약 — 아이콘 + "공유" */}
+              {/* [1046] 공유 링크에 출처 표시 — 관리자 트래픽의 '공유 유입'과 가입 채널('공유 링크')이 이 값을 센다.
+                  지금 화면 경로는 그대로 두고 쿼리만 바꾼다(정규 URL 은 canonical 이 지킨다). */}
               <ShareLinkButton
+                url="?utm_source=share&utm_medium=complex"
                 title={`${v.name} 실거래가·임장노트`}
                 className="press inline-flex min-h-10 shrink-0 items-center gap-1 rounded-full border border-line bg-surface px-3 text-xs font-bold text-text-1"
               />

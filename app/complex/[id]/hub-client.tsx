@@ -16,6 +16,8 @@ import type { MonthDeltaView } from "@/lib/complex/month-delta";
 import { DealListLazy as DealList } from "./DealListLazy";
 import { primeWatching, readWatching } from "./watchlist-status";
 import { canOfferPush, pushResultMessage, subscribeToPush } from "@/lib/push/subscribe-client";
+import { hasPendingWatch, savePendingWatch, takePendingWatch } from "@/lib/client/pending-watch";
+import { getSessionLite } from "@/lib/client/session-lite";
 
 /* [968 · 4] 기본 탭(요약)이 아닌 탭의 본문은 서버 HTML 에 없고 탭을 열 때만 필요하다.
    정적 import 는 첫 로드 JS 에 그대로 실리므로 next/dynamic 으로 뗀다. ssr:false 인
@@ -101,6 +103,8 @@ export function WatchlistButton({
   /* 켤 때마다 1씩 — 하트를 감싼 span 의 key 라 바뀌면 애니메이션이 처음부터 다시 붙는다 */
   const [pop, setPop] = useState(0);
   const busyRef = useRef(false);
+  /* [1046] 가입 뒤 관심 등록 마저 담기 — 비동기 콜백에서 최신 apply 를 부르기 위한 손잡이 */
+  const applyRef = useRef<((target: boolean, opts?: { undo?: boolean; replay?: boolean }) => Promise<void>) | null>(null);
 
   /* [968 · 3] 세션이 비면 요청 없이 false, 있으면 단지별 공유 프라미스(30초) —
      히어로 버튼과 하단 바가 같은 왕복 하나를 나눠 받고, 하단 바가 스크롤마다
@@ -108,7 +112,15 @@ export function WatchlistButton({
   useEffect(() => {
     let cancelled = false;
     readWatching(complexId).then((w) => {
-      if (!cancelled) setWatching(w);
+      if (cancelled) return;
+      setWatching(w);
+      /* [1046] 가입 전에 이 단지에서 관심 등록을 눌렀고(lib/client/pending-watch), 지금 로그인돼 있으면 한 번만 담는다 */
+      if (!w && hasPendingWatch(complexId)) {
+        void getSessionLite().then((s) => {
+          if (cancelled || !s?.user?.email) return;
+          if (takePendingWatch(complexId)) void applyRef.current?.(true, { replay: true });
+        });
+      }
     });
     return () => {
       cancelled = true;
@@ -126,7 +138,7 @@ export function WatchlistButton({
   }, [complexId]);
 
   /** 서버를 target 상태로 맞춘다 — 버튼과 토스트의 "되돌리기"가 같은 길을 탄다 */
-  async function apply(target: boolean, opts: { undo?: boolean } = {}) {
+  async function apply(target: boolean, opts: { undo?: boolean; replay?: boolean } = {}) {
     if (busyRef.current) return;
     busyRef.current = true;
     setBusy(true);
@@ -141,10 +153,15 @@ export function WatchlistButton({
             method: "DELETE",
           });
       if (res.status === 401) {
+        /* [1046] 다시 담기 중 세션이 끊겼으면 가입 창을 또 띄우지 않는다 */
+        if (opts.replay) return;
+        /* [1046] 가입을 마치고 이 단지로 돌아오면 마저 담는다 */
+        if (target) savePendingWatch(complexId, complexName);
         promptSignup({
           action: "watchlist_add",
           title: "관심 단지로 저장할까요?",
-          benefit: "가입하면 이 단지의 실거래·임장 기록을 모아볼 수 있어요.",
+          /* [1046] 가입 이유를 한 문장으로 — 관심 단지 새 실거래 메일(watchlist-new-tx, 기본 켜짐)이 실제로 하는 일 */
+          benefit: "가입하면 이 단지에 새 실거래가 올라올 때 메일로 알려 드려요. 임장 기록도 한곳에 모여요.",
           callbackUrl: `/complex/${complexId}`,
         });
         return;
@@ -181,7 +198,9 @@ export function WatchlistButton({
         return;
       }
       setPop((n) => n + 1);
-      if (opts.undo) {
+      if (opts.replay) {
+        showToast("가입 전에 누른 관심 등록을 마쳤어요 · 새 실거래가 올라오면 알려 드려요");
+      } else if (opts.undo) {
         showToast("다시 관심 단지에 담았어요");
       } else if (canOfferPush()) {
         /* [968 · 46] 관심 등록의 뜻이 "시세 변동 알림"인데 그 자리에서 푸시를 권하지 않았다. 아직 묻지 않은
@@ -205,6 +224,10 @@ export function WatchlistButton({
       setBusy(false);
     }
   }
+
+  useEffect(() => {
+    applyRef.current = apply;
+  });
 
   const heart = (size: number) => (
     <span key={pop} className={`inline-flex ${pop > 0 ? "njn-pop-once" : ""}`} aria-hidden="true">

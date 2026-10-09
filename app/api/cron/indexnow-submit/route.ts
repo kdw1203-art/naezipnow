@@ -5,6 +5,9 @@
  *   1) 이번 달·직전 달 월간 리포트 — 실거래 신고가 매일 들어와 수치가 계속 변한다.
  *   2) 최근 7일 안에 갱신된 공개 임장노트 — 새 URL 이 생기는 유일한 사용자 경로.
  *   3) 데이터가 매일 갱신되는 허브 3개(/reports·/tx·/).
+ *   4) [1046] 지난 하루 사이 최근 계약월(당월·전월) 거래가 새로 들어온 단지 페이지 — 최대 900개.
+ *      유입의 46%가 단지 페이지로 착지하는데 여기서 한 번도 알리지 않았다. 고르는 규칙은
+ *      lib/seo/indexnow-pick.ts(옛 연도 이력 백필은 고르지 않는다 — "바뀐 것만" 원칙 그대로).
  *
  * 왜 전체를 안 보내는가: 안 바뀐 URL 을 매일 밀어 넣는 건 프로토콜 남용이고,
  * 스팸으로 분류되면 도메인 단위로 무시당한다. 사이트 전체 색인은 사이트맵의 일이다.
@@ -18,6 +21,7 @@ import { submitIndexNow } from "@/lib/seo/indexnow";
 import { listReportMonths } from "@/lib/reports/monthly";
 import { listPublicNotes } from "@/lib/inspection/store-db";
 import { withBudget } from "@/lib/async/with-budget";
+import { listFreshComplexPaths } from "@/lib/seo/indexnow-complexes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,18 +49,22 @@ type Collected = {
 
 async function collectUrls(): Promise<Collected> {
   const urls: string[] = DAILY_HUBS.map((p) => `${BASE}${p}`);
-  const detail: Record<string, number> = { hubs: DAILY_HUBS.length, reports: 0, notes: 0 };
+  const detail: Record<string, number> = { hubs: DAILY_HUBS.length, reports: 0, notes: 0, complexes: 0 };
   const missing: string[] = [];
 
   /* 둘을 나란히 돌린다 — 순차로 돌리면 예산이 두 배로 쌓여 25초 상한이 50초가
      되고, maxDuration=60 안에 제출까지 끝낼 여유가 없어진다. */
-  const [monthsRun, notesRun] = await Promise.all([
+  const [monthsRun, notesRun, complexRun] = await Promise.all([
     withBudget(
       Promise.resolve().then(() => listReportMonths()),
       COLLECT_BUDGET_MS,
     ),
     withBudget(
       Promise.resolve().then(() => listPublicNotes(200)),
+      COLLECT_BUDGET_MS,
+    ),
+    withBudget(
+      Promise.resolve().then(() => listFreshComplexPaths()),
       COLLECT_BUDGET_MS,
     ),
   ]);
@@ -84,6 +92,15 @@ async function collectUrls(): Promise<Collected> {
     detail.notes = fresh.length;
   } else {
     missing.push(notesRun.state === "timeout" ? "notes(시간 초과)" : "notes(조회 실패)");
+  }
+
+  /* [1046] 새 거래가 들어온 단지 — 허브·리포트·노트 뒤에 붙인다(제출 상한 1,000 에서 잘려도 앞의 것은 남는다) */
+  if (complexRun.state === "ok") {
+    for (const p of complexRun.value.paths) urls.push(`${BASE}${p}`);
+    detail.complexes = complexRun.value.paths.length;
+    detail.complexRows = complexRun.value.rows;
+  } else {
+    missing.push(complexRun.state === "timeout" ? "complexes(시간 초과)" : "complexes(조회 실패)");
   }
 
   return { urls, detail, missing };

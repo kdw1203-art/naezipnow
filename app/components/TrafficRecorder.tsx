@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useCookieConsent } from "@/components/consent/use-cookie-consent";
+import { getSessionLite } from "@/lib/client/session-lite";
 
 /* ============================================================
    1st-party 페이지뷰·체류 기록기 (어드민 트래픽 대시보드용).
@@ -26,6 +27,8 @@ const SESSION_STORAGE_KEY = "nz_traffic_session";
    똑같이 분석 동의 뒤에서만 만들어지고 전송된다. 동의를 거부로 바꾸면
    지운다(아래 effect). */
 const VISITOR_STORAGE_KEY = "nz_traffic_visitor";
+/* [1046] 가입 경로 잇기를 이 브라우저에서 마쳤는가 */
+const ATTR_DONE_KEY = "nz_attr_done";
 
 function randomHex(): string {
   const bytes = new Uint8Array(16);
@@ -93,6 +96,37 @@ export function TrafficRecorder() {
       }
     }
   }, [state]);
+
+  /* [1046 · 성장] 가입 경로 잇기 — "어디서 온 사람이 가입했나"를 알 길이 없었다(가입 기록에 출처가 없음).
+     분석 동의한 방문자가 로그인 상태가 되면, 이 브라우저의 방문자 키를 한 번만 서버에 건넨다. 서버는
+     그 키의 첫 착지(유입 호스트·UTM·첫 화면)를 가입 기록에 붙인다 — 가입 14일 안의 계정만(app/api/me/attribution).
+     동의 전·거부면 아무것도 보내지 않는다(위 페이지뷰와 같은 게이트). 끝나면 다시 묻지 않는다. */
+  useEffect(() => {
+    if (!consented) return;
+    try {
+      if (window.localStorage.getItem(ATTR_DONE_KEY) === "1") return;
+    } catch {
+      return;
+    }
+    const visitorKey = getVisitorKey();
+    if (!visitorKey) return;
+    let cancelled = false;
+    void getSessionLite().then((s) => {
+      if (cancelled || !s?.user?.email) return;
+      void fetch("/api/me/attribution", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visitorKey }),
+      })
+        .then((r) => {
+          if (r.ok) window.localStorage.setItem(ATTR_DONE_KEY, "1");
+        })
+        .catch(() => {});
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [consented, pathname]);
 
   /** 진행 중인 view — leave 1회 보장용 */
   const current = useRef<{ viewId: string; startedAt: number; closed: boolean } | null>(null);

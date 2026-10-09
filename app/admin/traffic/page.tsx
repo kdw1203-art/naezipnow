@@ -13,6 +13,7 @@ import {
   type RegionDemandRow,
 } from "@/lib/coverage/store-db";
 import { loadShareInflow, type ShareInflow } from "@/lib/admin/share-inflow";
+import { GrowthWeekly } from "./GrowthWeekly";
 
 export const metadata: Metadata = {
   title: "트래픽 | 내집나우 관리자",
@@ -284,6 +285,9 @@ export default async function AdminTrafficPage() {
           것입니다. 새로고침해 주세요.
         </p>
       )}
+
+      {/* [1046] 성장 주간표 — 1년 1만 회원 계획의 매주 볼 숫자(가입 · 전환 · 채널). 페이지뷰 목표보다 먼저 */}
+      <GrowthWeekly />
 
       {/* [G006] 주간 목표 대비 — 이 페이지의 첫 문장은 "이번 주 어땠나"여야 한다 */}
       {daily.length > 0 && (
