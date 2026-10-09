@@ -2,6 +2,7 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { useState, type FormEvent } from "react";
+import { ExpertBadge, type ExpertBadgeData } from "@/app/components/ExpertBadge";
 import { useRouter } from "next/navigation";
 import { ReportButton } from "@/app/components/ReportButton";
 import { CharCount } from "@/app/components/ui/CharCount";
@@ -28,6 +29,8 @@ export type NoteCommentView = {
   createdAt: string;
   parentId: string | null;
   deleted: boolean;
+  /** [1047] 인증 전문가 마크 — 서버(lib/inspection/note-comments)가 채운다 */
+  expertBadge?: ExpertBadgeData | null;
 };
 
 const MAX_LEN = 1000;
@@ -185,6 +188,7 @@ function CommentRow({
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="t-sub font-bold text-ink">{c.authorLabel}</span>
+          <ExpertBadge badge={c.expertBadge} />
           <span className="t-caption text-text-3">{label}</span>
         </div>
         <p

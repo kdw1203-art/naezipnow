@@ -476,7 +476,7 @@ export default async function MyConsultationsPage() {
           <p className="t-sub text-brand-hanji-ink">
             자격 인증을 마치면 이 화면에서 상담 신청을 받고 답변하며, 견적 요청 보드에 제안을 보낼 수 있어요.
           </p>
-          <Link href="/town/experts#apply" className="btn-primary btn-md mt-1 no-underline">
+          <Link href="/town/experts/apply" className="btn-primary btn-md mt-1 no-underline">
             전문가 인증 신청
           </Link>
         </div>

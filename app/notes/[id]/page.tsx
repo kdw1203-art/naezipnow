@@ -86,6 +86,8 @@ import { resolveNoteCover } from "@/lib/notes/cover/resolve";
 import { NoteSavedCard } from "../new/NoteSavedCard";
 import { isSavedFlag } from "@/lib/notes/form-progress";
 import { sameComplexLink, savedCardView } from "@/lib/notes/note-preview";
+import { loadExpertBadges } from "@/lib/experts/badges";
+import { ExpertBadge } from "@/app/components/ExpertBadge";
 
 /* 시안 6c(노트 상세 + AI) + 10f(AI 노트 분석) + 20a(공개 임장노트 표준 11항목) + 20b(SEO)
    실데이터: inspection_notes → getNote(id) — 공개 노트만 index, 비공개·목업은 noindex */
@@ -763,6 +765,10 @@ export default async function NoteDetailPage({
   const noteDecision = decisionFromMetadata(realNote.metadata);
 
   const v = toView(realNote, visits);
+  /* [1047] 작성자가 인증 전문가면 메타 줄 끝(작성자 이름) 옆에 마크 — Lab 노트는 사람 작성자가 아니라 붙이지 않는다 */
+  const authorExpertBadge = v.lab
+    ? null
+    : ((await loadExpertBadges([realNote.authorEmail])).get(realNote.authorEmail.trim().toLowerCase()) ?? null);
   const hasLlmAi = v.aiBadge === "AI 생성";
   /* [967 · 11] 미니맵 좌표 — metadata.lat/lng (NoteForm 이 저장, OG 이미지도 같은 값을 쓴다) */
   const noteCoords = noteCoordsFromMetadata(
@@ -1169,6 +1175,7 @@ export default async function NoteDetailPage({
                 </span>
               )}
               <span className="text-text-3">{v.visitMeta}</span>
+              <ExpertBadge badge={authorExpertBadge} />
               {/* [1015 · 규칙 C] "운영진 예시" 설명 배지는 뺐다 — visitMeta 끝의 작성자 이름이 이미
                   "내집나우 Lab"(displayAuthorLabel)이라 메타 줄의 이름만으로 구분된다. */}
             </div>

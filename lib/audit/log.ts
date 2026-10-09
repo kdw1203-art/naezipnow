@@ -16,6 +16,8 @@ export type AuditAction =
   | "report.resolve"
   | "expert.verify"
   | "expert.reject"
+  /* [1047] 관리자가 전문가 신청 첨부(면허증·사업자등록증)를 연 기록 */
+  | "expert.doc_view"
   | "admin.login"
   | "admin.settings_change"
   | "payment.refund"

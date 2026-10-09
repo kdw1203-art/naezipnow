@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       {
         error: "전문가 프로필은 인증 신청 → 승인으로만 만들어져요. /town/experts 에서 인증을 신청해 주세요.",
         code: "use_verification",
-        applyUrl: "/town/experts#apply",
+        applyUrl: "/town/experts/apply",
       },
       { status: 403 },
     );

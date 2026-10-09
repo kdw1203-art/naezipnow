@@ -82,6 +82,8 @@ export const NAV: NavItem[] = [
       { label: "동네이야기", href: "/town" },
       { label: "청약", href: "/apply" },
       { label: "정비사업", href: "/redevelopment" },
+      /* [1047] 전문가 — 보관 해제(소유자 지시 2026-10-09 "전문가 등록 · 카테고리 · 숨고처럼 홍보"). 주소가 /town 아래라 동네가 켜진다 */
+      { label: "전문가 찾기", href: "/town/experts" },
     ],
   },
   /* [1044] 뉴스 — 동네에서 떼어 낸 대분류(5 → 6). 주소는 그대로다(/town/news · /digest — 색인·공유 링크 손해 0).

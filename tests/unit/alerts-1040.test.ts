@@ -232,9 +232,7 @@ test("보관 화면 — 메타 robots 가 머리(X-Robots-Tag)와 같은 noindex
     "app/notes/templates/page.tsx",
     "app/notes/templates/[id]/page.tsx",
     "app/notes/market/page.tsx",
-    "app/town/experts/page.tsx",
-    "app/town/experts/[id]/page.tsx",
-    "app/town/experts/join/page.tsx",
+    /* [1047] 전문가 세 화면은 보관 해제(소유자 지시 2026-10-09) — 목록에서 뺐다 */
     "app/town/groups/page.tsx",
     "app/town/library/page.tsx",
     "app/town/library/[id]/page.tsx",

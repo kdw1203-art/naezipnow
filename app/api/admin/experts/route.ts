@@ -6,7 +6,7 @@
  * 관리자 게이트: isAdminApiRequest. 결과는 신청자 인박스 알림 + 감사로그(best-effort).
  */
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { isAdminApiRequest } from "@/lib/admin/api-auth";
 import { safeAuth } from "@/lib/safe-auth";
@@ -16,6 +16,7 @@ import {
 } from "@/lib/experts/verification-store";
 import { appendInboxNotification } from "@/lib/notifications/inbox";
 import { writeAuditLog } from "@/lib/audit/log";
+import { EXPERT_TYPES } from "@/lib/experts/taxonomy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,7 +54,7 @@ export async function PATCH(req: NextRequest) {
       void appendInboxNotification({
         userEmail: res.applicantEmail,
         title: "전문가 인증이 승인되었어요",
-        body: "인증이 완료되어 전문가 배지가 표시됩니다. 프로필 화면에서 소개·상담료·연락처를 채워 주세요.",
+        body: "승인됐어요. 이름 옆과 글 머리에 인증 마크가 붙고 분야별 전문가 목록에 실려요. 프로필 화면에서 소개·연락처·홍보 링크를 확인해 주세요.",
         actionUrl: "/my/expert-profile",
       });
     }
@@ -69,6 +70,10 @@ export async function PATCH(req: NextRequest) {
        "승인이 안 됐다"는 문의가 온다. */
     revalidatePath("/town/experts");
     if (res.expertId) revalidatePath(`/town/experts/${res.expertId}`);
+    /* [1047] 분야별 목록(정적 8장)도 — 승인된 사람이 어느 분야로 갔는지 몰라도 다 비운다(8장뿐이다) */
+    for (const t of EXPERT_TYPES) revalidatePath(`/town/experts/c/${t.id}`);
+    /* [1047] 단지 화면 "이 지역 인증 전문가"의 한 시간 캐시(lib/experts/nearby) */
+    revalidateTag("verified-experts");
     return NextResponse.json({ ok: true, expertId: res.expertId });
   }
 

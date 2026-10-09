@@ -13,6 +13,8 @@
  * 정책 경계(변경 금지): 법률 서비스(법무사·변호사) 유형은 토스페이먼츠 상점 심사
  * 정책상 유료 입점 불가라 2026-08-12 에 제거됐다. 이 파일에도 넣지 않는다 —
  * scripts/check-toss-review-freeze.mjs 가 신청 폼에서 재유입을 막는다.
+ * [1047] 소유자 지시(2026-10-09)로 직업군을 넓혔다 — 회계사 · 시공사 추가, 건축사를 설계사무소까지(라벨 "건축사·설계").
+ * 개인 · 개인사업자 · 법인 모두 받는다(BUSINESS_FORMS). 변호사는 소유자 선택으로 계속 받지 않는다.
  */
 
 /* ---------- 전문가 유형(자격) ---------- */
@@ -20,9 +22,11 @@
 export type ExpertTypeId =
   | "broker"
   | "tax"
+  | "accountant"
   | "appraiser"
-  | "loan"
   | "architect"
+  | "builder"
+  | "loan"
   | "other";
 
 export type ExpertType = {
@@ -68,6 +72,18 @@ export const EXPERT_TYPES: readonly ExpertType[] = [
     extraScope: null,
   },
   {
+    id: "accountant",
+    label: "회계사",
+    desc: "임대사업·법인 회계, 상속·증여 재무 검토",
+    source: {
+      label: "한국공인회계사회",
+      authority: "KICPA",
+      verificationUrl: "https://www.kicpa.or.kr",
+      searchHint: "공인회계사 등록번호·성명 조회",
+    },
+    extraScope: null,
+  },
+  {
     id: "appraiser",
     label: "감정평가사",
     desc: "감정가·담보가치·시장 분석 리포트",
@@ -94,8 +110,9 @@ export const EXPERT_TYPES: readonly ExpertType[] = [
   },
   {
     id: "architect",
-    label: "건축사",
-    desc: "리모델링·증축·용도변경 가능성 검토",
+    /* [1047] 설계사무소까지 — 예전 라벨 "건축사"(저장된 값)는 findExpertType 의 부분 일치로 계속 찾힌다 */
+    label: "건축사·설계",
+    desc: "신축·리모델링·증축·용도변경 설계와 인허가 검토",
     source: {
       label: "대한건축사협회",
       authority: "KIRA",
@@ -105,9 +122,21 @@ export const EXPERT_TYPES: readonly ExpertType[] = [
     extraScope: null,
   },
   {
+    id: "builder",
+    label: "시공사",
+    desc: "종합·전문건설, 인테리어 시공 — 리모델링·수리 범위와 견적",
+    source: {
+      label: "건설산업지식정보시스템",
+      authority: "KISCON / 국토교통부",
+      verificationUrl: "https://www.kiscon.net",
+      searchHint: "건설업 등록번호·상호 조회(소규모 인테리어는 사업자등록증으로 확인)",
+    },
+    extraScope: null,
+  },
+  {
     id: "other",
     label: "기타 전문가",
-    desc: "인테리어·임장 동행 등 (서류·인터뷰 심사)",
+    desc: "인테리어 디자인·이사·임장 동행 등 (서류·인터뷰 심사)",
     source: null,
     extraScope: null,
   },
@@ -139,7 +168,9 @@ export type SpecialtyId =
   | "remodel"
   | "loan"
   | "escort"
-  | "interior";
+  | "interior"
+  | "account"
+  | "design";
 
 export type Specialty = {
   id: SpecialtyId;
@@ -215,7 +246,24 @@ export const SPECIALTIES: readonly Specialty[] = [
     label: "인테리어",
     match: ["인테리어", "리모델링", "시공", "수리"],
     desc: "입주 전 수리·시공 범위와 견적",
-    types: ["architect", "other"],
+    types: ["builder", "architect", "other"],
+    quotable: true,
+  },
+  /* [1047] 회계사 · 설계 직업군의 분야 */
+  {
+    id: "account",
+    label: "회계/재무",
+    match: ["회계", "재무", "기장", "임대사업", "법인"],
+    desc: "임대사업·법인 장부, 상속·증여 재무 검토",
+    types: ["accountant", "tax"],
+    quotable: true,
+  },
+  {
+    id: "design",
+    label: "설계/인허가",
+    match: ["설계", "인허가", "신축", "증축", "용도변경", "건축"],
+    desc: "신축·증축·용도변경 설계와 인허가 가능성",
+    types: ["architect", "builder"],
     quotable: true,
   },
 ] as const;
@@ -266,3 +314,66 @@ export const RESPONSE_TIME_OPTIONS = [
   "보통 1~2일",
   "보통 3일 내",
 ] as const;
+
+/* ---------- [1047] 사업 형태 · 첨부 서류 ---------- */
+
+export type BusinessFormId = "individual" | "sole" | "corporation";
+
+export const BUSINESS_FORMS: readonly { id: BusinessFormId; label: string; desc: string }[] = [
+  { id: "individual", label: "개인", desc: "자격 보유자 · 사무소·법인 소속 포함" },
+  { id: "sole", label: "개인사업자", desc: "사업자등록증이 있는 개인 사무소·업체" },
+  { id: "corporation", label: "법인", desc: "법인 사업자(주식회사 등)" },
+] as const;
+
+export function findBusinessForm(v: string | null | undefined): (typeof BUSINESS_FORMS)[number] | null {
+  const s = (v ?? "").trim();
+  return BUSINESS_FORMS.find((f) => f.id === s || f.label === s) ?? null;
+}
+
+export type DocKind = "license" | "business_reg" | "other";
+
+export const DOC_KINDS: readonly { id: DocKind; label: string; hint: string }[] = [
+  { id: "license", label: "자격증·면허·등록증", hint: "예: 중개사무소 개설등록증, 세무사·회계사·감정평가사 등록증, 건축사 자격증, 건설업 등록증" },
+  { id: "business_reg", label: "사업자등록증", hint: "개인사업자·법인은 필수" },
+  { id: "other", label: "기타 증빙", hint: "경력·재직 증명, 포트폴리오 등" },
+] as const;
+
+export function docKindLabel(kind: string): string {
+  return DOC_KINDS.find((d) => d.id === kind)?.label ?? "첨부";
+}
+
+/** 시공사는 사업자로만 받는다(공사 계약 주체) */
+export function allowedBusinessForms(typeId: ExpertTypeId): BusinessFormId[] {
+  return typeId === "builder" ? ["sole", "corporation"] : ["individual", "sole", "corporation"];
+}
+
+/**
+ * 이 유형·형태에서 꼭 내야 하는 서류.
+ *  · 자격 조회처가 있는 유형(시공사 제외)은 자격증·등록증
+ *  · 개인사업자·법인 · 시공사는 사업자등록증(소규모 인테리어처럼 건설업 등록이 없는 시공사는 사업자등록증만)
+ *  · 기타 전문가는 어느 서류든 하나 이상
+ */
+export function requiredDocKinds(typeId: ExpertTypeId, form: BusinessFormId): DocKind[] {
+  const out: DocKind[] = [];
+  const t = EXPERT_TYPES.find((x) => x.id === typeId);
+  if (t?.source && typeId !== "builder") out.push("license");
+  if (form !== "individual" || typeId === "builder") out.push("business_reg");
+  return out;
+}
+
+/** 첨부 목록이 요건을 채우는가 — 모자라면 사람이 읽는 한 문장, 채우면 null */
+export function missingDocsMessage(typeId: ExpertTypeId, form: BusinessFormId, kinds: string[]): string | null {
+  if (!allowedBusinessForms(typeId).includes(form)) {
+    return "시공사는 개인사업자 또는 법인으로 신청해 주세요.";
+  }
+  const need = requiredDocKinds(typeId, form).filter((k) => !kinds.includes(k));
+  if (need.length > 0) return `${need.map(docKindLabel).join(" · ")} 사진이나 PDF 를 첨부해 주세요.`;
+  if (kinds.length === 0) return "자격이나 사업을 확인할 서류를 하나 이상 첨부해 주세요.";
+  return null;
+}
+
+/** [1047] 인증 마크 문구 — 이름 옆·글 머리에 붙는 짧은 말 */
+export function expertBadgeText(category: string | null | undefined): string {
+  const t = findExpertType(category);
+  return t && t.id !== "other" ? `인증 ${t.label}` : "인증 전문가";
+}

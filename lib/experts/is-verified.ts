@@ -12,6 +12,8 @@ export type ExpertStatus = {
   isBroker: boolean;
   category: string | null;
   brokerNo: string | null;
+  /** [1047] 프로필 id(홍보 링크 · 인증 마크) — 프로필이 없으면 null */
+  expertId?: string | null;
 };
 
 export async function getExpertStatus(email: string | null | undefined): Promise<ExpertStatus> {
@@ -23,7 +25,7 @@ export async function getExpertStatus(email: string | null | undefined): Promise
   try {
     const { data, error } = await sb
       .from("expert_profiles")
-      .select("is_verified, category, broker_registration_no")
+      .select("id, is_verified, category, broker_registration_no")
       .ilike("owner_email", e)
       .order("is_verified", { ascending: false })
       .limit(1)
@@ -38,6 +40,7 @@ export async function getExpertStatus(email: string | null | undefined): Promise
       isBroker: verified && (Boolean(brokerNo) || (category?.includes("중개") ?? false)),
       category,
       brokerNo,
+      expertId: data.id ? String(data.id) : null,
     };
   } catch (err) {
     logger.error("[getExpertStatus]", err);

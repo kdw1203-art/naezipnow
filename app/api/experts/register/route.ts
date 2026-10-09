@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
-import { EXPERT_TYPE_LABELS, isExpertTypeLabel, normalizeSpecialties } from "@/lib/experts/taxonomy";
+import {
+  EXPERT_TYPE_LABELS,
+  findBusinessForm,
+  findExpertType,
+  isExpertTypeLabel,
+  missingDocsMessage,
+  normalizeSpecialties,
+} from "@/lib/experts/taxonomy";
+import { parseDocFiles } from "@/lib/experts/document-rules";
 import { auth } from "@/auth";
 import { appendInboxNotification } from "@/lib/notifications/inbox";
 import {
@@ -76,6 +84,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: docs.error, code: "invalid_document_urls" }, { status: 400 });
   }
 
+  /* [1047] 사업 형태 · 상호 · 첨부 서류(면허증·사업자등록증) — 요건을 못 채우면 접수하지 않는다(관리자 승인 전 단계).
+     첨부는 이 계정 폴더(expert-docs)에 올린 경로만 받는다(lib/experts/document-rules). */
+  const form = findBusinessForm(String(body.applicantKind ?? "individual"));
+  if (!form) {
+    return NextResponse.json({ error: "사업 형태(개인·개인사업자·법인)를 골라 주세요." }, { status: 400 });
+  }
+  const businessName = String(body.businessName ?? "").trim().slice(0, 60);
+  if (form.id === "corporation" && businessName.length < 2) {
+    return NextResponse.json({ error: "법인명을 입력해 주세요." }, { status: 400 });
+  }
+  const bizNo = String(body.businessRegNo ?? "").replace(/\s+/g, "");
+  if (form.id !== "individual" && !/^\d{3}-?\d{2}-?\d{5}$/.test(bizNo)) {
+    return NextResponse.json({ error: "사업자등록번호 10자리를 입력해 주세요. (예: 123-45-67890)" }, { status: 400 });
+  }
+  const files = parseDocFiles(body.documents, session.user.email);
+  if (!files.ok) {
+    return NextResponse.json({ error: files.error, code: "invalid_documents" }, { status: 400 });
+  }
+  const typeDef = findExpertType(expertType)!;
+  const docGap = missingDocsMessage(typeDef.id, form.id, files.files.map((f) => f.kind));
+  if (docGap) {
+    return NextResponse.json({ error: docGap, code: "documents_required" }, { status: 400 });
+  }
+
   try {
     const { request, auto } = await submitExpertApplication(
       session.user.email,
@@ -91,7 +123,10 @@ export async function POST(req: Request) {
         phone: body.phone ? String(body.phone) : null,
         organization: body.organization ? String(body.organization) : null,
         documentUrls: docs.urls,
-        businessRegNo: body.businessRegNo ? String(body.businessRegNo) : null,
+        applicantKind: form.id,
+        businessName: businessName || null,
+        documentFiles: files.files,
+        businessRegNo: form.id !== "individual" ? bizNo : null,
         payoutAccountHolder: body.payoutAccountHolder
           ? String(body.payoutAccountHolder)
           : null,

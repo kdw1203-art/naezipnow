@@ -6,6 +6,7 @@ import { CompareTrayButton } from "@/app/components/CompareTrayButton";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { AiBriefingLazy } from "./AiBriefingLazy";
+import { ComplexAreaMapLazy } from "./ComplexAreaMapLazy";
 
 export interface RailStat {
   key: string;
@@ -24,6 +25,7 @@ export function ComplexRail({
   nearby,
   nearbyLabel,
   briefingRegion,
+  location,
 }: {
   stats: readonly RailStat[];
   complexId: string;
@@ -35,9 +37,14 @@ export function ComplexRail({
   nearby: readonly { id: string; name: string; meta: string }[];
   nearbyLabel: string;
   briefingRegion: string;
+  /** [1047] 단지 좌표 — 있으면 레일 맨 위에 위치·주변 지도(소유자 지시: 오른쪽 레일 노란 자리) */
+  location?: { lat: number; lng: number; buildYear: number | null } | null;
 }) {
   return (
     <aside className="hidden flex-col gap-3 lg:flex" aria-label="단지 요약·행동">
+      {location && (
+        <ComplexAreaMapLazy lat={location.lat} lng={location.lng} name={name} buildYear={location.buildYear} media="desktop" />
+      )}
       <section className="card rise-in-2 flex flex-col gap-3 rounded-2xl px-4 py-3.5" aria-label="요약">
         {stats.length > 0 && (
           <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">

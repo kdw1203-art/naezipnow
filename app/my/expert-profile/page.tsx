@@ -7,6 +7,10 @@ import { EXPERT_VERIFICATION_PIPELINE } from "@/lib/experts/verification-policy"
 import { ExpertProfileForm } from "./ExpertProfileForm";
 import { GuestGate } from "@/app/components/GuestGate";
 import { formatKstDate, formatKstLongDate } from "@/lib/format/kst";
+import { ExpertBadge } from "@/app/components/ExpertBadge";
+import { ShareLinkButton } from "@/app/components/ShareLinkButton";
+import { expertBadgeText, findExpertType } from "@/lib/experts/taxonomy";
+import { DEFAULT_DESKTOP_ORIGIN } from "@/lib/platform-shell";
 
 /* 전문가 프로필 수정 — 승인 후 프로필을 본인이 관리하는 유일한 화면.
    PATCH /api/experts/[id] 는 예전부터 완성돼 있었지만(권한 검사 포함) 부르는
@@ -57,11 +61,11 @@ export default async function ExpertProfilePage() {
 전문가 프로필 없음
             </p>
             <p className="mx-auto mt-1.5 max-w-[420px] t-sub text-text-3">
-              전문가 인증을 신청하고 승인되면 프로필이 만들어져요. 인증 후 이
-              화면에서 소개·전문 분야·상담료·연락처를 직접 관리할 수 있습니다.
+              면허·사업자 서류를 첨부해 등록을 신청하고 관리자가 승인하면 프로필이 만들어져요. 승인 뒤 이
+              화면에서 소개·전문 분야·상담료·연락처와 홍보 링크를 관리합니다.
             </p>
-            <Link href="/town/experts#apply" className="btn-primary btn-md mt-4 inline-block no-underline">
-              전문가 인증 신청하기
+            <Link href="/town/experts/apply" className="btn-primary btn-md mt-4 inline-block no-underline">
+              전문가 등록하기
             </Link>
           </div>
         )}
@@ -86,6 +90,34 @@ export default async function ExpertProfilePage() {
             상담함 ›
           </Link>
         </div>
+        {/* [1047] 홍보 — 인증 전문가의 공개 프로필 주소(출처 표시 붙음) · 분야별 목록 · 인증 마크 미리보기.
+            명함 · 블로그 · 카카오톡 · 사무소 홈페이지에 이 주소를 걸면 유입이 출처별로 집계된다(관리 › 트래픽). */}
+        {expert.isVerified && (
+          <section className="card mb-4 flex flex-col gap-2.5 rounded-2xl p-4">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="t-body font-bold text-ink">홍보 링크</span>
+              <ExpertBadge badge={{ expertId: expert.id, text: expertBadgeText(expert.category) }} link={false} />
+            </div>
+            <p className="break-all rounded-lg bg-bg px-3 py-2 t-sub text-text-2">{`${DEFAULT_DESKTOP_ORIGIN}/town/experts/${expert.id}`}</p>
+            <div className="flex flex-wrap gap-2">
+              <ShareLinkButton
+                url={`/town/experts/${expert.id}?utm_source=expert&utm_medium=profile`}
+                title={`${expert.name} ${expertBadgeText(expert.category)} | 내집나우`}
+                label="링크 공유"
+                className="btn-soft btn-md"
+              />
+              <Link href={`/town/experts/${expert.id}`} className="btn-outline btn-md no-underline">
+                내 프로필 보기
+              </Link>
+              {findExpertType(expert.category) && (
+                <Link href={`/town/experts/c/${findExpertType(expert.category)!.id}`} className="btn-outline btn-md no-underline">
+                  분야별 목록
+                </Link>
+              )}
+            </div>
+            <p className="t-caption text-text-3">인증 마크는 동네이야기 글 · 댓글 · 공개 임장노트의 이름 옆에 붙고, 누르면 이 프로필로 와요.</p>
+          </section>
+        )}
         <ExpertProfileForm
           expert={{
             id: expert.id,
@@ -143,9 +175,9 @@ function ApplicationStatusCard({
           </div>
         )}
         <p className="mt-3 t-sub text-text-3">
-          사유를 보완해 같은 유형으로 다시 신청할 수 있어요. 등록·자격번호와 증빙 링크를 다시 확인해 주세요.
+          사유를 보완해 같은 유형으로 다시 신청할 수 있어요. 등록·자격번호와 첨부 서류(면허·사업자등록증)를 다시 확인해 주세요.
         </p>
-        <Link href="/town/experts#apply" className="btn-primary btn-md mt-4 inline-block no-underline">
+        <Link href="/town/experts/apply" className="btn-primary btn-md mt-4 inline-block no-underline">
           다시 신청하기
         </Link>
       </div>

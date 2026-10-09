@@ -78,7 +78,8 @@ const STATIC_ROUTES: Array<{ path: string; priority: number }> = [
   { path: "/town", priority: 0.8 },
   { path: "/town/news", priority: 0.7 },
   { path: "/town/library", priority: 0.7 },
-  { path: "/town/experts", priority: 0.6 },
+  /* [1047] /town/experts 는 여기서 뺐다 — 인증 전문가가 0명인 동안 목록은 noindex 라 정적 목록에 두면 "제출했는데 noindex"
+     (seo.asset)가 된다. 인증 전문가가 생기면 loadExpertEntries 가 목록 · 분야 · 프로필을 함께 싣는다. */
   { path: "/town/groups", priority: 0.6 },
   // 단지 Q&A (커뮤니티 질문·답변)
   { path: "/qna", priority: 0.6 },
@@ -675,6 +676,31 @@ export async function loadRedevelopmentEntries(): Promise<MetadataRoute.Sitemap>
 
     return [...indexEntry, ...guEntries, ...zoneEntries];
   });
+}
+
+/**
+ * [1047] 전문가 — 인증(관리자 승인) 전문가가 있을 때만: 목록(/town/experts) · 그 사람이 있는 분야(/town/experts/c/[type]) ·
+ * 프로필(/town/experts/[id]). 페이지의 색인 조건(인증 0명이면 noindex)과 같은 판단이다 — 사이트맵 ⊂ 색인.
+ * 모집 랜딩(/town/experts/join) · 등록(/town/experts/apply)은 늘 색인이라 늘 싣는다. lastmod 는 적지 않는다.
+ */
+export async function loadExpertEntries(): Promise<MetadataRoute.Sitemap> {
+  const always: MetadataRoute.Sitemap = [
+    { url: `${BASE_URL}/town/experts/join`, priority: 0.5 },
+    { url: `${BASE_URL}/town/experts/apply`, priority: 0.5 },
+  ];
+  const { listExpertsAll } = await import("@/lib/experts/store-db");
+  const { findExpertType } = await import("@/lib/experts/taxonomy");
+  const loaded = await listExpertsAll();
+  if (!loaded.ok) throw new Error("전문가 목록 조회 실패");
+  const verified = loaded.items.filter((e) => e.isVerified);
+  if (verified.length === 0) return always;
+  const types = new Set(verified.map((e) => findExpertType(e.category)?.id).filter((x): x is NonNullable<typeof x> => Boolean(x)));
+  return [
+    { url: `${BASE_URL}/town/experts`, priority: 0.6 },
+    ...[...types].map((t) => ({ url: `${BASE_URL}/town/experts/c/${t}`, priority: 0.5 })),
+    ...verified.map((e) => ({ url: `${BASE_URL}/town/experts/${e.id}`, priority: 0.5 })),
+    ...always,
+  ];
 }
 
 /** N14 — 용어 개별 페이지. 코드 상수에서 나오므로 DB 조회도, 실패 경로도 없다.

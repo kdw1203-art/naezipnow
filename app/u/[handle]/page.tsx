@@ -15,6 +15,8 @@ import { followCounts } from "@/lib/follows/store-db";
 import { logger } from "@/lib/log";
 import { FollowButton } from "../../components/FollowButton";
 import { ErrorState } from "../../components/ui/EmptyState";
+import { loadExpertBadges } from "@/lib/experts/badges";
+import { ExpertBadge } from "@/app/components/ExpertBadge";
 
 /* 공개 프로필 · 팔로우 (/@닉네임 · ProfilePage 구조화 데이터 대상)
    실데이터(스키마 변경 없음, 읽기 전용):
@@ -179,6 +181,10 @@ export default async function PublicProfilePage({
   const lookup = await findProfile(input);
   const profile = lookup.profile;
   const displayName = profile?.name ?? resolveDisplayName(input);
+  /* [1047] 인증 전문가 마크 — 프로필 주인이 승인된 전문가면 이름 옆에 */
+  const expertBadge = profile?.email
+    ? ((await loadExpertBadges([profile.email])).get(profile.email.trim().toLowerCase()) ?? null)
+    : null;
   let loadFailed = !lookup.ok;
 
   // 프로필 매칭 시 그 사용자의 공개 노트 · 미매칭 시 공개 노트 작성자 라벨 매칭 시도
@@ -296,6 +302,7 @@ export default async function PublicProfilePage({
                 <h1 className="t-section font-bold text-ink">
                   {displayName}
                 </h1>
+                <ExpertBadge badge={expertBadge} />
               </div>
               {/* [970 · C-10] 표시 주소가 "naezipnow.com/@닉네임" 이었는데 /@… 라우트는 없어 404 —
                   실제 경로(/u/{handle})로 적는다. */}

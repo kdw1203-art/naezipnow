@@ -306,8 +306,9 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
             <Link href="/notes" className="btn-soft btn-sm no-underline">
               공개 임장노트 보기
             </Link>
-            <Link href="/qna" className="btn-soft btn-sm no-underline">
-              단지 Q&A에 질문하기
+            {/* [1047] 보관 화면(/qna) 대신 등록 입구 — 빈 목록을 채우는 길은 전문가 등록이다 */}
+            <Link href="/town/experts/apply" className="btn-soft btn-sm no-underline">
+              전문가 등록하기
             </Link>
           </div>
         </div>

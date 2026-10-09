@@ -107,6 +107,10 @@ export type ExpertEvidence = {
   yearsExperience: number;
   specialties: string[];
   documentUrls: string[];
+  /** [1047] */
+  applicantKind: string | null;
+  businessName: string | null;
+  documentFiles: { kind: string; name: string; size: number; mime: string }[];
   sourceVerificationUrl: string | null;
   workflowStage: string | null;
   fraudFlags: { ruleId: string; severity: string; message: string }[];
@@ -140,7 +144,7 @@ export async function loadPendingVerificationQueue(
     sb
       .from("expert_verification_requests")
       .select(
-        "id, display_name, applicant_email, specialty, regions, created_at, intro, organization, phone, cert_number, business_reg_no, years_experience, specialties, document_urls, source_verification_url, workflow_stage, fraud_flags",
+        "id, display_name, applicant_email, specialty, regions, created_at, intro, organization, phone, cert_number, business_reg_no, years_experience, specialties, document_urls, source_verification_url, workflow_stage, fraud_flags, applicant_kind, business_name, document_files",
       )
       .eq("status", "pending")
       .order("created_at", { ascending: true })
@@ -184,6 +188,15 @@ export async function loadPendingVerificationQueue(
       yearsExperience: Number(r.years_experience ?? 0),
       specialties: Array.isArray(r.specialties) ? (r.specialties as string[]).map(String) : [],
       documentUrls: Array.isArray(r.document_urls) ? (r.document_urls as string[]).map(String) : [],
+      /* [1047] 사업 형태 · 상호/법인명 · 첨부 파일(경로는 넘기지 않는다 — 열기는 /api/admin/experts/document?id=&i=) */
+      applicantKind: r.applicant_kind ? String(r.applicant_kind) : null,
+      businessName: r.business_name ? String(r.business_name) : null,
+      documentFiles: (Array.isArray(r.document_files) ? (r.document_files as Record<string, unknown>[]) : []).map((f) => ({
+        kind: String(f.kind ?? "other"),
+        name: String(f.name ?? "첨부"),
+        size: Number(f.size ?? 0),
+        mime: String(f.mime ?? ""),
+      })),
       sourceVerificationUrl: r.source_verification_url ? String(r.source_verification_url) : null,
       workflowStage: r.workflow_stage ? String(r.workflow_stage) : null,
       fraudFlags: flagsRaw.map((f) => ({

@@ -7,6 +7,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/app/components/toast/ToastProvider";
+import { docKindLabel, findBusinessForm } from "@/lib/experts/taxonomy";
+import { formatDocSize } from "@/lib/experts/doc-limits";
 
 export type QueueItem = {
   id: string;
@@ -24,6 +26,10 @@ export type QueueItem = {
     yearsExperience: number;
     specialties: string[];
     documentUrls: string[];
+    /** [1047] 사업 형태 · 상호/법인명 · 첨부(열기는 관리자 전용 5분 주소) */
+    applicantKind: string | null;
+    businessName: string | null;
+    documentFiles: { kind: string; name: string; size: number; mime: string }[];
     sourceVerificationUrl: string | null;
     workflowStage: string | null;
     fraudFlags: { ruleId: string; severity: string; message: string }[];
@@ -148,6 +154,8 @@ function ExpertRow({ item }: { item: QueueItem }) {
               ))}
             </div>
           )}
+          {ev.applicantKind && <Fact k="사업 형태" v={findBusinessForm(ev.applicantKind)?.label ?? ev.applicantKind} />}
+          {ev.businessName && <Fact k="상호/법인명" v={ev.businessName} />}
           {ev.certNumber && <Fact k="등록/자격번호" v={ev.certNumber} />}
           {ev.businessRegNo && ev.businessRegNo !== ev.certNumber && (
             <Fact k="사업자번호" v={ev.businessRegNo} />
@@ -161,6 +169,25 @@ function ExpertRow({ item }: { item: QueueItem }) {
             <p className="rounded bg-bg px-2 py-1.5 text-[10px] leading-[1.6] text-text-1">
               {ev.intro}
             </p>
+          )}
+          {/* [1047] 첨부 서류 — 누를 때마다 5분짜리 열람 주소(감사 기록). 첨부가 없으면 그렇다고 적는다 */}
+          {ev.documentFiles.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {ev.documentFiles.map((f, i) => (
+                <a
+                  key={`${item.id}-doc-${i}`}
+                  href={`/api/admin/experts/document?id=${encodeURIComponent(item.id)}&i=${i}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg bg-primary-soft px-2 py-0.5 text-[10px] font-bold text-primary no-underline"
+                  title={`${f.name} · ${formatDocSize(f.size)}`}
+                >
+                  {docKindLabel(f.kind)} ↗
+                </a>
+              ))}
+            </div>
+          ) : (
+            <Fact k="첨부 서류" v="없음" />
           )}
           {(ev.documentUrls.length > 0 || ev.sourceVerificationUrl) && (
             <div className="flex flex-wrap gap-1.5">

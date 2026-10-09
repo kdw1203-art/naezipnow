@@ -43,14 +43,15 @@ test("뉴스는 제 대분류 — 동네 다음, 요금제 앞 · 주소는 그�
   const town = NAV.find((g) => g.label === "동네");
   assert.deepEqual(
     (town?.children ?? []).map((c) => c.href),
-    ["/town", "/apply", "/redevelopment"],
+    /* [1047] 전문가 찾기 — 보관 해제(소유자 지시 2026-10-09) */
+    ["/town", "/apply", "/redevelopment", "/town/experts"],
   );
 });
 
-test("동네 카테고리 줄은 다섯 칸 — 뉴스룸 칸 없음", () => {
+test("동네 카테고리 줄 — 뉴스룸 칸 없음 · [1047] 전문가 칸이 맨 끝", () => {
   assert.deepEqual(
     TOWN_CATEGORY_LINKS.map((l) => l.href),
-    ["/town", "/apply", "/auctions", "/supply", "/redevelopment"],
+    ["/town", "/apply", "/auctions", "/supply", "/redevelopment", "/town/experts"],
   );
   assert.ok(!code("lib/town/category-links.ts").includes("newsroom"), "입구 표식(entry) 없음");
   assert.ok(!code("app/town/TownCategoryNav.tsx").includes("news-entry-card"));

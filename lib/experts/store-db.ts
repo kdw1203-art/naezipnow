@@ -26,6 +26,8 @@ export type UserExpertProfile = {
   gradient?: string | null;
   /** 상호(사무소명) — 인증 신청서의 organization 을 승인 시 복사 */
   organization: string | null;
+  /** [1047] 사업 형태 individual · sole(개인사업자) · corporation(법인) — 신청서에서 승인 시 복사 */
+  businessForm: string | null;
   /** 공개 연락처 — 본인이 프로필 수정에서 직접 채울 때만 노출(자동 공개 금지) */
   contactPhone: string | null;
   contactKakao: string | null;
@@ -166,6 +168,7 @@ export async function createExpert(input: {
   reportFee?: number;
   experience?: string;
   organization?: string | null;
+  businessForm?: string | null;
   userId?: string | null;
   ownerEmail?: string | null;
 }): Promise<UserExpertProfile> {
@@ -192,6 +195,7 @@ export async function createExpert(input: {
     isVerified: false,
     isPremium: false,
     organization: input.organization?.trim() || null,
+    businessForm: input.businessForm ?? null,
     contactPhone: null,
     contactKakao: null,
     badge: null,
@@ -218,6 +222,7 @@ export async function createExpert(input: {
       report_fee: input.reportFee ?? 0,
       experience: input.experience ?? null,
       organization: input.organization?.trim() || null,
+      business_form: input.businessForm ?? null,
     })
     .select()
     .single();
@@ -239,6 +244,7 @@ export async function updateExpert(
     experience: string;
     responseTime: string;
     organization: string | null;
+    businessForm: string | null;
     contactPhone: string | null;
     contactKakao: string | null;
   }>,
@@ -262,6 +268,7 @@ export async function updateExpert(
   if (patch.experience !== undefined) body.experience = patch.experience;
   if (patch.responseTime !== undefined) body.response_time = patch.responseTime;
   if (patch.organization !== undefined) body.organization = patch.organization;
+  if (patch.businessForm !== undefined) body.business_form = patch.businessForm;
   if (patch.contactPhone !== undefined) body.contact_phone = patch.contactPhone;
   if (patch.contactKakao !== undefined) body.contact_kakao = patch.contactKakao;
   const { data, error } = await sb
@@ -382,6 +389,7 @@ function mapRow(r: Record<string, unknown>): UserExpertProfile {
     isVerified: Boolean(r.is_verified),
     isPremium: Boolean(r.is_premium),
     organization: (r.organization as string | null) ?? null,
+    businessForm: (r.business_form as string | null) ?? null,
     contactPhone: (r.contact_phone as string | null) ?? null,
     contactKakao: (r.contact_kakao as string | null) ?? null,
     badge: (r.badge as string | null) ?? null,

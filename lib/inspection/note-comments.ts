@@ -1,4 +1,5 @@
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { loadExpertBadges, type ExpertBadgeInfo } from "@/lib/experts/badges";
 import {
   canDeleteComment,
   softDeleteCommentBody,
@@ -24,6 +25,8 @@ export type NoteComment = {
   parentId: string | null;
   /** soft-delete 된 댓글 — 본문·이름은 이미 가려져 있다 */
   deleted: boolean;
+  /** [1047] 작성자가 인증 전문가면 마크(문구·프로필 id) — 이메일은 싣지 않는다 */
+  expertBadge?: ExpertBadgeInfo | null;
 };
 
 type Row = {
@@ -71,10 +74,21 @@ async function readRows(noteId: string): Promise<Row[]> {
   return (data ?? []) as Row[];
 }
 
+/** [1047] 지워지지 않은 댓글에 인증 전문가 마크를 붙인다(조회 실패는 마크 없음) */
+async function withBadges(rows: Row[]): Promise<NoteComment[]> {
+  const live = rows.filter((r) => !r.deleted_at);
+  const badges = live.length > 0 ? await loadExpertBadges(live.map((r) => r.author_email)) : new Map();
+  return rows.map((r) => {
+    const c = toPublic(r);
+    const b = r.deleted_at ? null : badges.get(String(r.author_email ?? "").trim().toLowerCase());
+    return b ? { ...c, expertBadge: b } : c;
+  });
+}
+
 /** 공개 응답용 목록(오래된 순). 지워진 댓글은 마스킹된 채 자리만 남는다. */
 export async function listNoteComments(noteId: string): Promise<NoteComment[]> {
   const rows = await readRows(noteId);
-  return rows.map(toPublic);
+  return withBadges(rows);
 }
 
 /**
@@ -88,7 +102,7 @@ export async function listNoteCommentsForViewer(
   const rows = await readRows(noteId);
   const me = viewerEmail?.trim().toLowerCase() ?? "";
   return {
-    comments: rows.map(toPublic),
+    comments: await withBadges(rows),
     ownCommentIds: me
       ? rows
           .filter((r) => !r.deleted_at && String(r.author_email).toLowerCase() === me)

@@ -121,6 +121,8 @@ import { ComplexReviewsLazy } from "./ComplexReviewsLazy";
 import { ComplexAreaBands } from "./ComplexAreaBands";
 import { RegionRelative } from "./RegionRelative";
 import { NearbyRedevelopment } from "./NearbyRedevelopment";
+import { NearbyExperts } from "./NearbyExperts";
+import { ComplexAreaMapLazy } from "./ComplexAreaMapLazy";
 import { UpcomingSupply } from "./UpcomingSupply";
 import { ComplexRentSection } from "./ComplexRentSection";
 import { ComplexNearbyPoi } from "./ComplexNearbyPoi";
@@ -1753,9 +1755,18 @@ export default async function ComplexHubPage({
           {/* [#94 잔여] 전월세 실거래 이력(월별 표) */}
           <ComplexRentSection region={region} name={v.name} />
 
+          {/* [1047] 위치 · 주변 지도 — 폰·태블릿(데스크톱은 오른쪽 레일 맨 위). 숨은 쪽은 지도를 만들지 않는다(media) */}
+          {typeof v.lat === "number" && typeof v.lng === "number" && (
+            <div className="mt-6 max-md:mt-3 lg:hidden">
+              <ComplexAreaMapLazy lat={v.lat} lng={v.lng} name={v.name} buildYear={v.buildYear ?? null} media="mobile" />
+            </div>
+          )}
+
           {/* D3 정비사업 · D4 입주물량 */}
           <NearbyRedevelopment sigungu={v.dong} city={v.city} />
           <UpcomingSupply area={v.dong} city={v.city} />
+          {/* [1047] 이 지역 인증 전문가 — 승인된 사람이 없으면 그리지 않는다 */}
+          <NearbyExperts sigungu={v.dong} city={v.city} />
 
           {/* [1015 · 규칙 J] 페이지 맨 끝 "데이터 출처" 접힘 하나 */}
           {(() => {
@@ -1811,6 +1822,7 @@ export default async function ComplexHubPage({
           nearby={v.nearby}
           nearbyLabel={v.emd && v.nearbyLabel.startsWith(v.emd) ? v.emd : v.dong}
           briefingRegion={v.dong ?? v.city ?? ""}
+          location={typeof v.lat === "number" && typeof v.lng === "number" ? { lat: v.lat, lng: v.lng, buildYear: v.buildYear ?? null } : null}
         />
       </div>
 

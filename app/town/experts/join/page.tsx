@@ -32,12 +32,12 @@ import { TownCategoryNav } from "../../TownCategoryNav";
     · 인증 전문가 수·후기 같은 실측은 목록 히어로가 보여 주므로 여기서 지어내지 않는다.
    ============================================================ */
 
+/* [1047] 보관 해제 — 전문가 모집 랜딩(명함·SNS·검색으로 보내는 주소). 직업군은 분류 체계에서 읽는다. */
 export const metadata = buildPageMetadata({
-  title: "전문가로 참여하기 — 공인중개사·세무사·감정평가사·대출상담사·건축사 모집",
+  title: `전문가로 참여하기 — ${EXPERT_TYPES.filter((t) => t.id !== "other").map((t) => t.label).join("·")} 모집`,
   description:
-    "자격을 확인한 전문가로 내집나우에 참여하세요. 프로필 노출, 상담 수신·답변, 견적 제안, 의뢰자 후기. 가입 심사비 무료, 서류·협회 조회로 인증합니다.",
+    "개인·개인사업자·법인 전문가 모집. 면허증·사업자등록증 심사 뒤 관리자 승인 · 인증 마크 · 분야별 목록과 단지 화면 무료 노출 · 상담 수신·견적 제안·의뢰자 후기. 심사비 무료.",
   path: "/town/experts/join",
-  archived: true /* [1040] 보관 화면 — 메타 robots 를 머리(X-Robots-Tag)와 맞춘다 */,
 });
 
 const OPENS: readonly { icon: string; title: string; desc: string }[] = [
@@ -54,7 +54,7 @@ const OPENS: readonly { icon: string; title: string; desc: string }[] = [
   {
     icon: "clipboard",
     title: "견적 요청에 제안",
-    desc: "세무·대출·임장 동행·인테리어 요청 보드에 요청당 1건 제안을 보내면 의뢰자가 비교해 찾아옵니다.",
+    desc: "세무·회계·대출·설계·인테리어·임장 동행 요청 보드에 요청당 1건 제안을 보내면 의뢰자가 비교해 찾아옵니다.",
   },
   {
     icon: "star",

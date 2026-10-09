@@ -17,6 +17,7 @@ import {
   loadRegionEntries,
   loadReportEntries,
   loadStaticEntries,
+  loadExpertEntries,
   loadTemperatureEntries,
   serializeSitemap,
 } from "@/lib/seo/build-sitemap";
@@ -117,8 +118,14 @@ export const EXTRA_PAGE_ROUTES: ReadonlyArray<{ path: string; priority: number }
   { path: "/quiz", priority: 0.5 },
 ];
 
-function loadPagesEntries(): MetadataRoute.Sitemap {
+async function loadPagesEntries(): Promise<MetadataRoute.Sitemap> {
   const entries = loadStaticEntries();
+  /* [1047] 전문가(인증된 사람이 있을 때만 목록·분야·프로필) — 실패는 이 묶음만 빼고 정적 페이지는 그대로 낸다 */
+  try {
+    entries.push(...(await loadExpertEntries()));
+  } catch (e) {
+    logger.warn("[sitemap] 전문가 묶음 조회 실패 — 정적 페이지만 냅니다", e);
+  }
   const seen = new Set(entries.map((e) => e.url));
   for (const r of EXTRA_PAGE_ROUTES) {
     const url = `${DEFAULT_DESKTOP_ORIGIN}${r.path}`;

@@ -21,6 +21,7 @@ import { isStoryPost } from "@/lib/town/story";
 import type { FeedCard } from "@/app/town/feed-client";
 import type { Post } from "@/lib/types/post";
 import { logger } from "@/lib/log";
+import { loadPostAuthorBadges } from "@/lib/experts/badges";
 import { noteCoverUrl, resolveNoteCover } from "@/lib/notes/cover/resolve";
 
 /** 첫 장(서버 렌더) 카드 수 — 예전 listPublicNotes(40) 상한과 같은 수 */
@@ -113,8 +114,11 @@ async function loadPostCards(): Promise<PostSlice> {
   const hiddenIds = await listHiddenPostIds(communityPosts.map((p) => p.id)).catch(
     () => new Set<string>(),
   );
+  const visible = communityPosts.filter((p) => !hiddenIds.has(p.id));
+  /* [1047] 인증 전문가 마크 — 작성자 이메일은 서버 안에서만 읽는다(실패는 마크 없음) */
+  const badges = await loadPostAuthorBadges(visible.map((p) => p.id));
   return {
-    cards: communityPosts.filter((p) => !hiddenIds.has(p.id)).map(postToCard),
+    cards: visible.map((p) => ({ ...postToCard(p), authorBadge: badges.get(p.id) ?? null })),
     failed: false,
   };
 }

@@ -20,6 +20,8 @@ import { relativeTime } from "../../shared";
 import { LocationMap } from "../../LocationMap";
 import { PostActions, CommentForm, LikeButton } from "../../news/[id]/PostInteractions";
 import { CommentThread } from "../../news/[id]/CommentThread";
+import { loadExpertBadges } from "@/lib/experts/badges";
+import { ExpertBadge } from "@/app/components/ExpertBadge";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
 import type { Post } from "@/lib/types/post";
@@ -51,15 +53,31 @@ export function generateStaticParams() {
     **만료 전일 때만** 종류를 돌려준다. rowToPost 는 author_email 을 지우므로(피드에
     이메일이 새지 않게) 서비스 키로 id→author_email→profiles.settings 를 직접 잇는다.
     조회 실패는 효과 없음으로 조용히 처리한다 — 장식이 본문 렌더를 막으면 안 된다. */
+/** [1047] 글·댓글 작성자 이메일 — 인증 전문가 마크 조회용. 화면으로는 내보내지 않는다(서버 안에서만 쓴다). */
+async function readStoryEmails(postId: string): Promise<{ author: string; comments: Record<string, string> }> {
+  const none = { author: "", comments: {} };
+  try {
+    const sb = getServiceSupabase();
+    if (!sb) return none;
+    const { data: row } = await sb.from("posts").select("author_email, comments").eq("id", postId).maybeSingle();
+    const author = typeof row?.author_email === "string" ? row.author_email.trim().toLowerCase() : "";
+    const comments: Record<string, string> = {};
+    for (const c of Array.isArray(row?.comments) ? (row.comments as Array<{ id?: unknown; authorEmail?: unknown }>) : []) {
+      if (typeof c?.id === "string" && typeof c.authorEmail === "string") comments[c.id] = c.authorEmail.trim().toLowerCase();
+    }
+    return { author, comments };
+  } catch {
+    return none;
+  }
+}
+
 async function readAuthorNicknameEffect(
-  postId: string,
+  email: string,
 ): Promise<{ nick: "aurora" | "sunset" | null; badge: boolean }> {
   const none = { nick: null, badge: false } as const;
   try {
     const sb = getServiceSupabase();
     if (!sb) return none;
-    const { data: row } = await sb.from("posts").select("author_email").eq("id", postId).maybeSingle();
-    const email = typeof row?.author_email === "string" ? row.author_email : "";
     if (!email) return none;
     const { data: prof } = await sb.from("profiles").select("settings").eq("email", email).maybeSingle();
     const settings = prof?.settings as {
@@ -150,7 +168,11 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
   const photos = postAttachments(post);
   const bodyParas = paragraphs(post.body);
   const activeComments = post.comments.filter((c) => !c.deletedAt);
-  const nickEffect = await readAuthorNicknameEffect(post.id);
+  /* [1047] 작성자·댓글 이메일 한 번 읽고 → 닉네임 효과 · 인증 전문가 마크 */
+  const emails = await readStoryEmails(post.id);
+  const nickEffect = await readAuthorNicknameEffect(emails.author);
+  const expertBadges = await loadExpertBadges([emails.author, ...Object.values(emails.comments)]);
+  const authorBadge = expertBadges.get(emails.author) ?? null;
   const { region: regionQuery, mapHref, noteNewHref } = townHandoff({
     city: post.city,
     district: post.district,
@@ -203,6 +225,7 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
                   >
                     {author}
                   </span>
+                  <ExpertBadge badge={authorBadge} />
                   {nickEffect.badge && (
                     <span title="가을 산책 배지 — 포인트 상점" aria-label="가을 산책 배지">
                       <Icon name="sprout" size={14} className="inline align-middle" />
@@ -296,6 +319,8 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
                 createdAt: c.createdAt,
                 parentId: c.parentId ?? null,
                 adopted: c.adopted === true,
+                /* [1047] 인증 전문가 댓글 마크 — 이메일 대신 마크 문구·프로필 id 만 넘긴다 */
+                expertBadge: expertBadges.get(emails.comments[c.id] ?? "") ?? null,
               }))}
               relativeLabels={Object.fromEntries(activeComments.map((c) => [c.id, relativeTime(c.createdAt)]))}
             />

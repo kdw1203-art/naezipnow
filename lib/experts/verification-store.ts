@@ -18,6 +18,7 @@ import {
 import { primarySourceForExpertType } from "@/lib/experts/verification-sources";
 import { isIdentityVerificationConfigured } from "@/lib/auth/identity-verification";
 import { findExpertType } from "@/lib/experts/taxonomy";
+import type { ExpertDocFile } from "@/lib/experts/document-rules";
 
 export type ExpertVerificationRequest = {
   id: string;
@@ -38,6 +39,10 @@ export type ExpertVerificationRequest = {
   certNumber: string | null;
   certNumberNormalized: string | null;
   documentUrls: string[];
+  /** [1047] 사업 형태(individual · sole · corporation) · 상호/법인명 · 첨부 파일(expert-docs 버킷 경로) */
+  applicantKind: string | null;
+  businessName: string | null;
+  documentFiles: ExpertDocFile[];
   businessRegNo: string | null;
   payoutAccountHolder: string | null;
   payoutAccountLast4: string | null;
@@ -80,6 +85,9 @@ function mapRow(r: Record<string, unknown>): ExpertVerificationRequest {
       ? String(r.cert_number_normalized)
       : null,
     documentUrls: Array.isArray(r.document_urls) ? (r.document_urls as string[]) : [],
+    applicantKind: r.applicant_kind ? String(r.applicant_kind) : null,
+    businessName: r.business_name ? String(r.business_name) : null,
+    documentFiles: Array.isArray(r.document_files) ? (r.document_files as ExpertDocFile[]) : [],
     businessRegNo: r.business_reg_no ? String(r.business_reg_no) : null,
     payoutAccountHolder: r.payout_account_holder
       ? String(r.payout_account_holder)
@@ -123,6 +131,10 @@ export type SubmitExpertApplicationInput = {
   phone?: string | null;
   organization?: string | null;
   documentUrls?: string[];
+  /** [1047] */
+  applicantKind?: string | null;
+  businessName?: string | null;
+  documentFiles?: ExpertDocFile[];
   businessRegNo?: string | null;
   payoutAccountHolder?: string | null;
   payoutAccountLast4?: string | null;
@@ -347,6 +359,9 @@ export async function submitExpertApplication(
     cert_number: input.certNumber?.trim() || null,
     cert_number_normalized: certNorm || null,
     document_urls: input.documentUrls ?? [],
+    applicant_kind: input.applicantKind ?? null,
+    business_name: input.businessName?.trim() || null,
+    document_files: input.documentFiles ?? [],
     business_reg_no: input.businessRegNo?.trim() || null,
     payout_account_holder: input.payoutAccountHolder?.trim() || null,
     payout_account_last4: input.payoutAccountLast4?.trim() || null,
@@ -468,7 +483,9 @@ export async function approveExpertVerification(
         specialties: req.specialties,
         introduction: req.intro ?? "",
         experience: req.yearsExperience ? `${req.yearsExperience}년` : "",
-        organization: req.organization,
+        /* [1047] 상호 칸이 비었으면 신청서의 상호/법인명 · 사업 형태도 옮긴다 */
+        organization: req.organization ?? req.businessName,
+        businessForm: req.applicantKind,
         userId,
         ownerEmail: applicantEmail,
       });
@@ -485,7 +502,11 @@ export async function approveExpertVerification(
     if (!profile.introduction?.trim() && req.intro) fill.introduction = req.intro;
     if (!profile.specialties?.length && req.specialties.length) fill.specialties = req.specialties;
     if (!profile.regions?.length && req.regions.length) fill.regions = req.regions;
-    if (!profile.organization && req.organization) fill.organization = req.organization;
+    if (!profile.organization && (req.organization || req.businessName)) {
+      fill.organization = req.organization ?? req.businessName;
+    }
+    /* [1047] 사업 형태는 최신 신청서가 정본(법인 전환 등) */
+    if (req.applicantKind && profile.businessForm !== req.applicantKind) fill.businessForm = req.applicantKind;
     if (!profile.experience && req.yearsExperience) fill.experience = `${req.yearsExperience}년`;
     if (!profile.category && (req.expertType || req.specialty)) {
       fill.category = req.expertType || req.specialty;

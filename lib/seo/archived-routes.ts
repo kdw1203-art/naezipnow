@@ -12,7 +12,8 @@
  * "/town/expertsx" 는 덮지 않는다. 미들웨어(엣지)에서도 읽으므로 순수 상수만 둔다.
  */
 export const ARCHIVED_PREFIXES: readonly string[] = [
-  "/town/experts",
+  /* [1047] "/town/experts" · "/my/expert-profile" · "/my/consultations" 보관 해제 — 소유자 지시(2026-10-09)
+     "전문가 등록하기 · 전문가 카테고리 · 숨고처럼 전문가 홍보". 받은 문의(/my/leads)·제휴(/partners)·쪽지(/messages)는 그대로 보관. */
   "/town/groups",
   "/town/library",
   "/town/prompt",
@@ -22,8 +23,6 @@ export const ARCHIVED_PREFIXES: readonly string[] = [
   "/notes/market",
   "/notes/templates",
   /* [1000] /my/assets 는 보관이 아니라 삭제 — 예시 숫자만 그리던 목업 화면이었다 */
-  "/my/expert-profile",
-  "/my/consultations",
   "/my/leads",
   "/widget",
   "/partners",

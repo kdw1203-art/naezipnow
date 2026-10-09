@@ -1,6 +1,7 @@
 /* [1026c · 폰 배율 1] 문장 속 링크 24px 하한(py-[5px]) — 전 경로 폰 조작 검사에서 지적된 자리. */
 /* [1023 · 동네 ③] 소개 카드의 3칸 통계 중 머리(TownHero)와 겹치는 두 칸 삭제 — 평균 후기 평점만 한 줄(있을 때만). CountUp 은 더 쓰지 않는다. */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
+import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "../../components/PageShell";
 import { ExpertApplyCta } from "./ExpertApplyCta";
@@ -29,13 +30,20 @@ import { ComplianceNotice } from "@/app/components/ComplianceNotice";
    실측 expert_profiles 0행이라 지금은 빈 목록이지만, 5분 눈금은 크롤 1회당 오리진 1회였다. */
 export const revalidate = 86_400;
 
-export const metadata = buildPageMetadata({
-  title: "전문가 상담 — 공인중개사·세무사·감정평가사·대출상담사",
-  description:
-    "자격을 확인한 부동산 전문가에게 글로 묻고 답을 받습니다. 인증 배지, 답변 완료 수, 실제 의뢰자 후기로 고르고, 견적 요청으로 제안을 받아 비교하세요.",
-  path: "/town/experts",
-  archived: true /* [1040] 보관 화면 — 메타 robots 를 머리(X-Robots-Tag)와 맞춘다 */,
-});
+/* [1047] 보관 해제(소유자 지시 2026-10-09). 인증 전문가가 0명인 동안은 목록이 빈 화면이라 noindex(follow 유지) —
+   첫 승인이 나면(승인 라우트가 이 경로를 비운다) 색인 대상이 된다. */
+const EXPERT_TYPE_LIST = EXPERT_TYPES.filter((t) => t.id !== "other").map((t) => t.label).join("·");
+export async function generateMetadata(): Promise<Metadata> {
+  const base = buildPageMetadata({
+    title: `전문가 찾기 — ${EXPERT_TYPE_LIST}`,
+    description:
+      "자격과 사업자를 확인한 부동산 전문가를 분야별로 찾습니다. 세무·회계·설계·시공·감정평가·중개 · 인증 마크, 답변 완료 수, 실제 의뢰자 후기 · 견적 요청으로 여러 제안 비교.",
+    path: "/town/experts",
+  });
+  const loaded = await listExpertsAll().catch(() => null);
+  const verified = loaded?.items.filter((e) => e.isVerified).length ?? 0;
+  return verified > 0 ? base : { ...base, robots: { index: false, follow: true } };
+}
 
 /** 공개 필드만 깎아 클라이언트로 — ownerEmail·userId 는 넘기지 않는다 */
 function toPublicRow(e: UserExpertProfile): ExpertPublicRow {
@@ -107,8 +115,9 @@ export default async function TownExpertsPage() {
             {/* [1012] 규칙 5 — "지금 물어보기" 슬로건 → 명사형 사실
                 [1015] 대시 잇기·설명 두 문장("…상담함으로 와요. …비교할 수 있어요")을 명사 줄로(브리프 규칙 D) */}
             <p className="t-section text-ink">
-              인증 전문가 상담 · 공인중개사 · 세무사 · 감정평가사 · 대출상담사 · 건축사
+              인증 전문가 · {EXPERT_TYPES.filter((t) => t.id !== "other").map((t) => t.label).join(" · ")}
             </p>
+            <p className="mt-1 t-sub text-text-2">개인 · 개인사업자 · 법인 모두 · 면허·사업자 서류 심사 뒤 관리자 승인</p>
             <p className="mt-2 t-body text-text-2">
               글 상담 · 상담함 답변 · 견적 요청 1건으로 여러 전문가 제안 비교
             </p>
@@ -179,14 +188,14 @@ export default async function TownExpertsPage() {
       {/* ---------- 자격별 안내 ---------- */}
       <section className="mb-6 max-md:mb-4">
         {/* [1015] 물음형 제목("어떤 전문가에게 무엇을 물을까") → 명사(브리프 규칙 D) */}
-        <h2 className="mb-3 t-section text-ink">자격별 상담 범위</h2>
+        <h2 className="mb-3 t-section text-ink">분야별 전문가</h2>
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {typeCounts
             .filter((t) => t.id !== "other")
             .map((t) => (
               <Link
                 key={t.id}
-                href={`/town/experts?type=${t.id}`}
+                href={`/town/experts/c/${t.id}`}
                 className="card tile flex flex-col gap-1 rounded-2xl p-4 no-underline"
               >
                 <div className="flex items-center justify-between gap-2">
@@ -207,8 +216,8 @@ export default async function TownExpertsPage() {
       <section id="apply" className="card mb-6 scroll-mt-24 rounded-2xl px-5 py-5 md:px-7 max-md:mb-4 max-md:px-3.5 max-md:py-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="max-w-[560px]">
-            <h2 className="t-section text-ink">전문가 참여</h2>
-            <p className="mt-1 t-sub text-text-2">자격 인증 · 상담 수신 · 견적 요청 제안 · 의뢰자 후기</p>
+            <h2 className="t-section text-ink">전문가 등록</h2>
+            <p className="mt-1 t-sub text-text-2">면허·사업자 서류 심사 · 관리자 승인 · 인증 마크 · 분야별 목록과 단지 화면 무료 노출</p>
             <p className="mt-3 t-caption text-text-3">
               인증 대상: {EXPERT_TYPES.filter((t) => t.id !== "other").map((t) => t.label).join("·")} 및 서류·인터뷰 심사를 거친 기타 전문가.
               법률 서비스는 정책상 유료 입점 불가. 절차·검증 기준은{" "}

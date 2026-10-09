@@ -88,4 +88,7 @@ export const TOWN_CATEGORY_LINKS: TownCategoryLink[] = [
   { href: "/auctions", label: "공매 물건", icon: "hammer", desc: "온비드 공매", tone: "bg-success-soft text-success", headSub: "온비드 진행·예정 물건 · 감정가 · 최저입찰가 · 입찰일", heroTitle: ["감정가보다 싼 물건이 ", "지금", " 입찰 중입니다"], heroTone: "text-on-navy-green", heroCta: [] },
   { href: "/supply", label: "입주 물량", icon: "construction", desc: "공급 일정", tone: "bg-success-soft text-success", headSub: "지역·시기별 아파트 입주 예정, 청약홈 공고 기준", heroTitle: ["언제 어디에 ", "얼마나", " 들어오는지 봅니다"], heroTone: "text-on-navy-green", heroCta: [] },
   { href: "/redevelopment", label: "정비사업 지도", icon: "map", desc: "재개발·재건축", tone: "bg-success-soft text-success", headSub: "재개발 · 재건축 · 소규모 정비사업, 사업종류별 마커", heroTitle: ["우리 동네 재개발이 ", "어디까지", " 왔는지 봅니다"], heroTone: "text-on-navy-green", heroCta: [] },
+  /* [1047] 전문가 — 보관 해제(소유자 지시 2026-10-09 "전문가 등록 · 카테고리 · 숨고처럼 홍보"). 맨 끝 칸: 사람이 채우는 칸이라
+     공공데이터 칸들 뒤에 둔다([959] 순서 원칙). 머리 버튼은 등록(/town/experts/apply). */
+  { href: "/town/experts", label: "전문가", icon: "shield", desc: "세무·설계·시공·중개", tone: "bg-primary-soft text-primary", headSub: "면허·사업자 서류 심사 뒤 승인된 전문가 · 분야별 찾기 · 견적 요청", heroTitle: ["서류로 확인한 ", "전문가", "에게 묻습니다"], heroTone: "text-on-navy-amber", heroCta: [{ label: "전문가 등록", href: "/town/experts/apply" }] },
         ];

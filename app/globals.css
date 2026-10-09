@@ -8208,3 +8208,18 @@ html[data-mscale] li div.t-sub.mscale-wrap {
   color: var(--danger);
 }
 
+
+/* [1047 · 앵글 맞춤] 소유자 지시(2026-10-09, 홈 검색창 캡처): "검색 버튼의 모서리가 흰 검색창과 같은 앵글이 되도록 ·
+   이런 디테일을 사이트 전반에". 원인은 한 줄이었다 — 버튼 클래스(.btn-primary 등, 레이어 밖)의 `border-radius: 8px` 가
+   Tailwind 유틸리티(@layer utilities)를 늘 이겨서, 호출부가 적은 `rounded-full`(알약 검색창 안 알약 단추 · 원형 보내기 단추 ·
+   지도 떠 있는 단추)이 전부 8px 네모로 그려졌다. 사이트 전체(버튼 7곳)에서 호출부가 적은 모서리를 따르게 한다.
+   rounded-lg · xl · 2xl 은 이 디자인에서 모두 8px(--radius-*) 라 지금 모양 그대로다. */
+:is(.btn-primary, .btn-secondary, .btn-soft, .btn-outline, .btn-ghost, .btn-cta).rounded-full {
+  border-radius: var(--radius-pill);
+}
+:is(.btn-primary, .btn-secondary, .btn-soft, .btn-outline, .btn-ghost, .btn-cta).rounded-md {
+  border-radius: var(--radius-md);
+}
+:is(.btn-primary, .btn-secondary, .btn-soft, .btn-outline, .btn-ghost, .btn-cta).rounded-3xl {
+  border-radius: var(--radius-3xl);
+}

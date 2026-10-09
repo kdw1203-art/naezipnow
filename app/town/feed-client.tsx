@@ -3,6 +3,7 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { ExpertBadge, type ExpertBadgeData } from "@/app/components/ExpertBadge";
 import { regionIdForName } from "@/lib/region/catalog";
 import { Explain } from "@/app/components/explain/Explain";
 import { usePathname, useRouter } from "next/navigation";
@@ -55,6 +56,8 @@ export type FeedCard = {
   comments?: number;
   /** [1006] 이야기 카드 — 첨부 사진 장수(커버 외 몇 장이 더 있는지 알리는 용도). */
   photos?: number;
+  /** [1047] 작성자가 인증 전문가면 마크(문구·프로필 id) — 서버(lib/town/feed)가 채운다 */
+  authorBadge?: ExpertBadgeData | null;
 };
 
 /* [1043] 유형 축(전체·임장노트·이야기)은 없어졌다 — 피드가 이웃 글만 싣는다. 필터 모양(lib/town/feed-filters)은 그대로라
@@ -246,7 +249,11 @@ function StoryCardView({ card, delay, now }: { card: FeedCard; delay: number; no
             <span className="story-avatar" aria-hidden="true">
               {initial}
             </span>
-            <span className="min-w-0 flex-1 truncate t-sub font-bold text-ink">{author}</span>
+            <span className="flex min-w-0 flex-1 items-center gap-1">
+              <span className="min-w-0 truncate t-sub font-bold text-ink">{author}</span>
+              {/* [1047] 카드 전체가 링크라 마크는 링크 없이(중첩 링크 금지) */}
+              <ExpertBadge badge={card.authorBadge} link={false} />
+            </span>
             <span className="story-kind t-caption">이야기</span>
             {isNew && <span className="badge-new t-caption">NEW</span>}
           </div>

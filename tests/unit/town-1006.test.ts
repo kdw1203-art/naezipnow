@@ -245,7 +245,8 @@ test("[1006 → 1044] 뉴스룸은 동네 카테고리의 한 칸이 아니다 �
   const children = town.children ?? [];
   assert.deepEqual(
     children.map((c) => c.href),
-    ["/town", "/apply", "/redevelopment"],
+    /* [1047] 전문가 찾기 — 보관 해제(소유자 지시 2026-10-09) */
+    ["/town", "/apply", "/redevelopment", "/town/experts"],
   );
   assert.equal(children[0].label, "동네이야기");
   const news = NAV.find((g) => g.label === "뉴스");

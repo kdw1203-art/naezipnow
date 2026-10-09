@@ -8,7 +8,8 @@ import { Icon } from "@/app/components/Icon";
 import { getExpert, listExpertsAll } from "@/lib/experts/store-db";
 import { listPublicReviews } from "@/lib/experts/reviews-store";
 import { responseStats, responseTimeLabel } from "@/lib/experts/review-rules";
-import { findExpertType, findSpecialty } from "@/lib/experts/taxonomy";
+import { expertBadgeText, findBusinessForm, findExpertType, findSpecialty } from "@/lib/experts/taxonomy";
+import { ShareLinkButton } from "@/app/components/ShareLinkButton";
 import { listConsultationsForExpert } from "@/lib/expert-consultations/store-db";
 import { ConsultButton } from "../ConsultButton";
 import { Stars } from "../ExpertCard";
@@ -17,7 +18,6 @@ import { seoAlternates } from "@/lib/seo/alternates";
 import { DEFAULT_DESKTOP_ORIGIN } from "@/lib/platform-shell";
 import { formatKstDate } from "@/lib/format/kst";
 import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
-import { ARCHIVED_ROBOTS } from "@/lib/seo/archived-routes";
 
 /* 전문가 상세 (953 개편).
    공유·색인되는 유일한 전문가 주소. 인증 전문가만 index, 심사 중은 noindex.
@@ -55,7 +55,8 @@ export async function generateMetadata({
     title,
     description,
     alternates: seoAlternates(`/town/experts/${e.id}`),
-    robots: e.isVerified ? ARCHIVED_ROBOTS /* [1040] 보관 화면 */ : { index: false, follow: false },
+    /* [1047] 보관 해제 — 인증 전문가 프로필은 색인(전문가 홍보의 본체), 심사 중·미인증은 그대로 noindex */
+    robots: e.isVerified ? { index: true, follow: true } : { index: false, follow: false },
     openGraph: { title, description, url: `${BASE_URL}/town/experts/${e.id}`, siteName: "내집나우", locale: "ko_KR", type: "profile", images: DEFAULT_OG_IMAGES },
   };
 }
@@ -163,7 +164,8 @@ export default async function ExpertDetailPage({
                 <h1 className="t-title text-ink">{e.name}</h1>
                 {e.isVerified ? (
                   <span className="inline-flex items-center gap-1 rounded-md bg-primary-soft chip-pad t-caption font-bold text-primary">
-                    <Icon name="shield" size={11} /> 인증 전문가
+                    {/* [1047] 마크 문구를 이름 옆 마크(ExpertBadge)와 같게 — "인증 세무사" */}
+                    <Icon name="shield" size={11} /> {expertBadgeText(e.category)}
                   </span>
                 ) : (
                   <span className="rounded-md border border-line chip-pad t-caption font-semibold text-text-2">인증 심사 중</span>
@@ -189,7 +191,24 @@ export default async function ExpertDetailPage({
                     <Icon name="building" size={12} /> {e.organization}
                   </span>
                 )}
+                {e.isVerified && e.businessForm && (
+                  <span className="inline-flex items-center gap-1">{findBusinessForm(e.businessForm)?.label}</span>
+                )}
               </div>
+              {/* [1047] 홍보 — 이 프로필 주소 공유(출처 표시 붙음) · 같은 분야 목록 */}
+              {e.isVerified && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <ShareLinkButton
+                    url={`/town/experts/${e.id}?utm_source=expert&utm_medium=share`}
+                    title={`${e.name} ${expertBadgeText(e.category)} | 내집나우`}
+                  />
+                  {type && (
+                    <Link href={`/town/experts/c/${type.id}`} className="tap-line t-sub font-bold text-primary no-underline">
+                      {type.label} 전체 ›
+                    </Link>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

@@ -162,7 +162,8 @@ export default function ExpertLegalPolicyPage() {
           <Link href="/legal/privacy" className="inline-block py-[5px] text-primary hover:underline">
             개인정보처리방침
           </Link>
-          「전문가 인증」 항목에 따릅니다. 인증 철회·탈퇴 시 관련 서류는 지체 없이 파기합니다.
+          「전문가 인증」 항목에 따릅니다. 첨부 서류(면허증·등록증·사업자등록증)는 공개되지 않는 별도 저장소에 보관하고,
+          심사하는 운영자만 5분짜리 열람 주소로 열며 열람은 기록됩니다. 인증 철회·탈퇴 시 관련 서류는 지체 없이 파기합니다.
         </p>
 
         <H2>8. 법무 고지 체크리스트</H2>

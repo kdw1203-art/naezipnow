@@ -6,10 +6,16 @@ import { embedSnippet, embedSrc } from "../../lib/embed/snippet";
 /* [992 · A1] 보관(비노출) 목록과 위젯 스니펫 — 브라우저 없이 확인 가능한 사실 */
 
 test("[992] isArchivedPath — 세그먼트 prefix 로만 덮는다", () => {
-  assert.equal(isArchivedPath("/town/experts"), true);
-  assert.equal(isArchivedPath("/town/experts/abc"), true);
-  assert.equal(isArchivedPath("/town/experts/"), true);
-  assert.equal(isArchivedPath("/town/expertsx"), false);
+  assert.equal(isArchivedPath("/town/groups"), true);
+  assert.equal(isArchivedPath("/town/groups/abc"), true);
+  assert.equal(isArchivedPath("/town/groups/"), true);
+  assert.equal(isArchivedPath("/town/groupsx"), false);
+  /* [1047] 전문가 보관 해제(소유자 지시 2026-10-09) — 목록 · 등록 · 프로필 관리 · 상담함은 살아 있고, 받은 문의는 그대로 보관 */
+  assert.equal(isArchivedPath("/town/experts"), false);
+  assert.equal(isArchivedPath("/town/experts/apply"), false);
+  assert.equal(isArchivedPath("/my/expert-profile"), false);
+  assert.equal(isArchivedPath("/my/consultations"), false);
+  assert.equal(isArchivedPath("/my/leads"), true);
   assert.equal(isArchivedPath("/town"), false);
   assert.equal(isArchivedPath("/town/news"), false);
   /* 노트 출력 3종 중 card 만 남긴다 */

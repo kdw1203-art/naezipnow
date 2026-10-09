@@ -121,6 +121,9 @@ export const PUBLIC_CACHE_RULES: readonly PublicCacheRule[] = [
      전량(상한 200) 메모리 필터였고 실측 0행. 클라이언트에는 슬림 DTO 만
      (ownerEmail·userId 는 공개 캐시 금지) */
   { path: "/town/experts", sMaxAge: 86_400, swr: 86400 },
+  /* [1047] 전문가 등록(정적 양식 — 로그인은 파일을 올릴 때 묻는다) · 모집 랜딩. 보관 해제와 함께 사이트맵에 실린다 */
+  { path: "/town/experts/apply", sMaxAge: 86_400, swr: 86400 },
+  { path: "/town/experts/join", sMaxAge: 86_400, swr: 86400 },
   /* 2026-08-10 ISR — region/status/sort 필터는 GroupsClient(클라이언트).
      statusKey(시각 파생)는 builtAtMs 로 하이드레이션 후 재계산. 실측 0행 */
   { path: "/town/groups", sMaxAge: 86_400, swr: 86400 },
@@ -294,6 +297,10 @@ export const PUBLIC_CACHE_PATTERN_RULES: readonly PublicCachePatternRule[] = [
   /* [1045] 서울 자치구 결정 조서 — 공개 조서(seoul_upis_records)만 그린다(auth·cookies·searchParams 없음 · ISR 86_400).
      사이트맵에 25곳이 실린다 — 이 줄이 없으면 크롤러가 올 때마다 오리진 함수가 그린다(위 [1027] 과 같은 사유). */
   { route: "/redevelopment/seoul/[gu]", test: /^\/redevelopment\/seoul\/[^/]+$/, sMaxAge: 86_400, swr: 86400 },
+  /* [1047] 전문가 분야(정적 8장 · ISR 86_400) · 프로필(ISR 86_400 — 승인·수정·후기 지점이 비운다). 인증 프로필은 사이트맵에 실린다.
+     프로필 패턴은 같은 층의 정적 화면(apply · join)과 분야 묶음(c)을 비켜 간다. */
+  { route: "/town/experts/c/[type]", test: /^\/town\/experts\/c\/[^/]+$/, sMaxAge: 86_400, swr: 86400 },
+  { route: "/town/experts/[id]", test: /^\/town\/experts\/(?!apply$|join$|c$)[^/]+$/, sMaxAge: 86_400, swr: 86400 },
   { route: "/digest/archive", test: /^\/digest\/archive$/, sMaxAge: 86_400, swr: 86400 },
   { route: "/digest/[week]", test: /^\/digest\/[^/]+$/, sMaxAge: 86_400, swr: 86400 },
   /* 용어 개별 페이지는 코드 상수라 조회조차 없다 — 가장 오래 캐시해도 되는 축. */

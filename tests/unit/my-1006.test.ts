@@ -115,7 +115,8 @@ test("빈 상태 그림(EmptyState)은 마이 화면에서 한 번만 쓴다", (
 });
 
 test("보관(비노출) 경로로 가는 입구를 다시 만들지 않는다", () => {
-  for (const p of ["/my/expert-profile", "/my/consultations", "/my/leads"]) {
+  /* [1047] 전문가 프로필 · 상담함은 보관 해제(소유자 지시 2026-10-09) — 받은 문의만 그대로 보관 */
+  for (const p of ["/my/leads"]) {
     assert.equal(VIEW.includes(`href="${p}"`), false, p);
     assert.equal(VIEW.includes(`href: "${p}"`), false, p);
   }

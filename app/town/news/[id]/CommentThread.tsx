@@ -2,6 +2,7 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
 import { hasSession } from "@/lib/client/has-session";
+import { ExpertBadge, type ExpertBadgeData } from "@/app/components/ExpertBadge";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CommentForm } from "./PostInteractions";
@@ -29,6 +30,8 @@ export type ThreadComment = {
   createdAt: string;
   parentId?: string | null;
   adopted?: boolean;
+  /** [1047] 인증 전문가 마크(작성자 이메일 대신 문구·프로필 id) — 서버가 채운다 */
+  expertBadge?: ExpertBadgeData | null;
 };
 
 export function CommentThread({
@@ -268,6 +271,7 @@ function CommentRow({
           <span className="t-sub font-bold text-ink">
             {c.authorLabel}
           </span>
+          <ExpertBadge badge={c.expertBadge} />
           {c.adopted && (
             <span className="rounded-md bg-success-soft px-1.5 py-0.5 t-caption font-bold text-success">
               ✓ 채택된 답변

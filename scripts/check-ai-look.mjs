@@ -103,7 +103,6 @@ const PRIMARY_ALLOW = [
   ["app/subscription/checkout/CheckoutClient.tsx", 4, "상태 분기 — guestPay / preview / ready / window-ready, 각 1개"],
   ["app/support/SupportContactForm.tsx", 2, "상태 분기 — 접수 완료(로그인 시 내역 링크) / 제출"],
   ["app/town/experts/ConsultButton.tsx", 3, "기본 className 인자 + 열림 버튼 + 모달 제출(트리거+모달)"],
-  ["app/town/experts/ExpertApplyCta.tsx", 2, "기본 className 인자 + 모달 닫기(트리거+모달)"],
   ["app/town/experts/QuoteRequest.tsx", 2, "트리거+모달 — 견적 요청 → 제출"],
   ["app/town/groups/CreateGroupCta.tsx", 2, "트리거+모달 — 모임 만들기 → 제출"],
   ["app/town/groups/GroupsClient.tsx", 2, "목록 행 삼항(joinable ? primary : soft) + 만들기 폼 제출 — 동시 가능(담당: town)"],

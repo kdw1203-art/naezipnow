@@ -113,6 +113,18 @@ const FORBIDDEN = [
     mustNot: ["법무사", "변호사"],
     why: "법률 서비스는 토스 입점 불가 — 전문가 유형에 되살아나면 심사 반려",
   },
+  /* [1047] 등록 양식이 모달(ExpertApplyCta)에서 한 화면(ApplyForm)으로 옮겨 갔다 — 같은 금지를 새 양식과 분류 체계에도 건다
+     (분류 체계 주석의 정책 설명은 stripComments 로 빠진다). 소유자 선택(2026-10-09): 변호사는 계속 받지 않는다. */
+  {
+    file: "app/town/experts/apply/ApplyForm.tsx",
+    mustNot: ["법무사", "변호사"],
+    why: "법률 서비스는 토스 입점 불가 — 등록 양식에 되살아나면 심사 반려",
+  },
+  {
+    file: "lib/experts/taxonomy.ts",
+    mustNot: ['"법무사"', '"변호사"', '"법률'],
+    why: "직업군 단일 출처 — 법률 서비스 유형이 들어오면 등록 양식·목록 전체에 퍼진다",
+  },
   {
     file: "lib/subcategories.ts",
     mustNot: ['"법무/계약 검토"'],

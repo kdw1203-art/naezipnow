@@ -6,6 +6,7 @@ import { safeAuth } from "@/lib/safe-auth";
 import { claimGuestPayments } from "@/lib/payments/guest-claim";
 import { loadMeProfile } from "@/lib/me/profile";
 import { getExpertStatus } from "@/lib/experts/is-verified";
+import { expertBadgeText } from "@/lib/experts/taxonomy";
 import { getBalance } from "@/lib/points/ledger";
 import {
   listNotes,
@@ -316,7 +317,14 @@ export default async function MyPage() {
     /* 정상 조회 + 0건이면 섹션 자체를 그리지 않는다(구매는 드문 일이라 빈 줄이 소음) */
     purchased:
       purchasedLoaded.ok && purchasedLoaded.value.length === 0 ? null : sectionState(purchasedLoaded),
-    expert: { isVerified: expert.isVerified, isBroker: expert.isBroker, brokerNo: expert.brokerNo ?? null },
+    expert: {
+      isVerified: expert.isVerified,
+      isBroker: expert.isBroker,
+      brokerNo: expert.brokerNo ?? null,
+      /* [1047] 인증 마크 문구 · 프로필 링크 */
+      badgeText: expert.isVerified ? expertBadgeText(expert.category) : null,
+      expertId: expert.expertId ?? null,
+    },
     subscription: {
       line: subscriptionLine,
       lastPayment: lastPaymentLoaded

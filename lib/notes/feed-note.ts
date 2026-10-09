@@ -1,4 +1,5 @@
 import { getNoteCommentCounts, getNoteRatingSummaries } from "@/lib/inspection/note-ratings";
+import { loadExpertBadges } from "@/lib/experts/badges";
 import { ratingFact } from "@/lib/inspection/note-rating-math";
 import {
   inspectionAverageScore,
@@ -30,6 +31,8 @@ export type TagTone = "pos" | "neg";
 export type FeedNote = {
   id: string;
   author: string;
+  /** [1047] 작성자가 인증 전문가면 마크(문구·프로필 id) — 이메일은 싣지 않는다 */
+  authorBadge?: { expertId: string; text: string } | null;
   meta: string;
   score: number; // 0~100
   scoreTone: "primary" | "muted";
@@ -221,6 +224,12 @@ export async function buildFeedNotes(
   const cards = rows.map((n) =>
     toFeedNote(n, hrefs.get(complexHrefKey(n.aptName, n.region)) ?? null, opts),
   );
+  /* [1047] 인증 전문가 마크 — Lab(운영진) 노트는 빼고 작성자 이메일로 한 번에 묻는다(실패는 마크 없음) */
+  const badges = await loadExpertBadges(rows.filter((n) => !isLabAuthor(n.authorLabel)).map((n) => n.authorEmail));
+  rows.forEach((n, i) => {
+    const b = isLabAuthor(n.authorLabel) ? null : badges.get((n.authorEmail ?? "").trim().toLowerCase());
+    if (b && cards[i]) cards[i].authorBadge = b;
+  });
   /* [1043 · 임장노트 참여] 바닥줄에 독자 평가·댓글 수 — **있을 때만** 덧붙인다(0 이면 카드는 예전 그대로).
      공개 노트만 묻는다. 조회 실패는 바닥줄을 그대로 둔다(카드가 먼저다). */
   const publicIds = rows.filter((n) => n.isPublic).map((n) => n.id);

@@ -5,6 +5,7 @@
    [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { ExpertBadge } from "@/app/components/ExpertBadge";
 import { seedGradient as seedFace } from "@/lib/town/shared";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -369,6 +370,7 @@ function PostCard({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1 t-body font-bold text-ink">
             <span className="truncate">{n.author}</span>
+            <ExpertBadge badge={n.authorBadge} />
             {n.isExample && <ExampleBadge />}
           </div>
           <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 t-caption text-text-3">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExpertBadge } from "@/app/components/ExpertBadge";
 import { Icon } from "@/app/components/Icon";
 import { EmptyState } from "@/app/components/ui/EmptyState";
 import { SectionHead } from "@/app/components/ui/SectionHead";
@@ -69,7 +70,7 @@ export type MyHubData = {
   alerts: SectionState<MyHubAlert>;
   /** null 이면 섹션을 그리지 않는다(정상 조회 + 0건) */
   purchased: SectionState<MyHubPurchase> | null;
-  expert: { isVerified: boolean; isBroker: boolean; brokerNo: string | null };
+  expert: { isVerified: boolean; isBroker: boolean; brokerNo: string | null; badgeText?: string | null; expertId?: string | null };
   subscription: {
     line: string;
     lastPayment: { at: string; amount: string } | null;
@@ -225,6 +226,10 @@ export function MyHubView({ data }: { data: MyHubData }) {
             <div className="flex min-w-0 flex-col gap-1.5">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="truncate t-section text-ink">{name}님</span>
+                {/* [1047] 인증 전문가 마크 — 승인된 전문가 계정의 이름 옆 */}
+                {expert.isVerified && expert.expertId && expert.badgeText && (
+                  <ExpertBadge badge={{ expertId: expert.expertId, text: expert.badgeText }} />
+                )}
                 <Link href="/my/subscription" className="lg-pill no-underline">
                   <Icon name={isAdminViewer ? "shield" : paid ? "crown" : "user"} size={14} />
                   {isAdminViewer ? "관리자" : planLabel(plan)}
@@ -559,8 +564,38 @@ export function MyHubView({ data }: { data: MyHubData }) {
             </section>
           )}
 
-          {/* ── 중개 — 공인중개사 인증 회원에게만. 상담함·전문가 프로필·받은 문의는 보관(비노출)
-              영역이라 [1006] 입구를 그리지 않는다(lib/seo/archived-routes.ts). 살아 있는 건 내 매물뿐. ── */}
+          {/* ── [1047] 전문가 — 보관 해제(소유자 지시 2026-10-09). 인증 전문가는 프로필 관리 · 상담함, 아니면 등록 입구 하나. ── */}
+          <section className="flex flex-col gap-2.5">
+            <SectionHead title="전문가" />
+            <div className="card flex flex-col gap-3 rounded-2xl p-5 max-md:p-3.5 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="t-body font-bold text-ink">{expert.isVerified ? "전문가 프로필 · 홍보 링크" : "전문가 등록"}</div>
+                <div className="mt-0.5 t-sub text-text-3">
+                  {expert.isVerified
+                    ? "프로필 · 상담함 · 분야별 목록 노출"
+                    : "세무·회계·설계·시공·감정평가·중개 · 서류 심사 뒤 인증 마크"}
+                </div>
+              </div>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                {expert.isVerified ? (
+                  <>
+                    <Link href="/my/expert-profile" className="btn-soft btn-md no-underline">
+                      프로필 관리
+                    </Link>
+                    <Link href="/my/consultations" className="btn-outline btn-md no-underline">
+                      상담함
+                    </Link>
+                  </>
+                ) : (
+                  <Link href="/town/experts/apply" className="btn-outline btn-md no-underline">
+                    전문가 등록하기
+                  </Link>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* ── 중개 — 공인중개사 인증 회원에게만. 받은 문의(/my/leads)는 보관(비노출) 영역이라 입구를 그리지 않는다. ── */}
           {expert.isVerified && expert.isBroker && (
             <section className="flex flex-col gap-2.5">
               {/* [1015 · 규칙 C] 제목 옆 부연("공인중개사 인증 완료") 제거 — 이 섹션은 인증 회원에게만 보인다 */}
