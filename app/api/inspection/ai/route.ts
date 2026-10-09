@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import {
   computeAiSummary,
   getNote,
+  inspectionAverageScore,
   updateNote,
   type InspectionNoteMetadata,
   type InspectionScores,
@@ -37,6 +38,9 @@ import {
   marketBulletsFromSnapshot,
 } from "@/lib/ai/market-insight";
 import { collectNoteGrounding } from "@/lib/inspection/note-grounding";
+import { loadSignalReport } from "@/lib/signals/load";
+import { signalPromptLines, type SignalReport } from "@/lib/signals/engine";
+import { noteSignalRegion } from "@/lib/signals/regions";
 import { FUNNEL_EVENT, recordFunnelEvent } from "@/lib/platform-funnel-events";
 import { buildNoteDeepDive, filledAxisCount } from "@/lib/inspection/deep-dive";
 import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
@@ -193,6 +197,19 @@ export async function POST(req: Request) {
        수집이 통째로 실패해도 분석 자체는 계속 간다 — 축은 "확인하지 못함"으로
        남는다(빈 값이 아니라 사유가 붙는다). */
     let grounding: Awaited<ReturnType<typeof collectNoteGrounding>> | null = null;
+    /* [1048] 다요인 시장 신호 — 근거 수집과 함께 띄운다. 이 노트의 기록 점수를 현장 값으로 옆에 싣는다(시장 점수와 섞지 않음) */
+    const noteAvg = inspectionAverageScore(note.scores);
+    const signalsP: Promise<SignalReport | null> = loadSignalReport({
+      scope: "note",
+      regionName: noteSignalRegion(
+        note.region,
+        typeof note.metadata?.complexId === "string" ? note.metadata.complexId : null,
+      ),
+      field: noteAvg > 0 ? { score100: Math.round(noteAvg * 20), label: "이 노트 기록 점수", source: "작성자 직접 방문 기록" } : null,
+    }).catch((e) => {
+      logger.warn("[inspection/ai] 다요인 신호 실패 — 없이 진행", e);
+      return null;
+    });
     try {
       grounding = await collectNoteGrounding({
         region: note.region,
@@ -202,6 +219,7 @@ export async function POST(req: Request) {
     } catch (e) {
       logger.error("[inspection/ai] grounding failed", e);
     }
+    const signals = await signalsP;
     const marketSnapshot = grounding?.regionSnapshot.value ?? null;
     const deepDive = grounding ? buildNoteDeepDive(note, grounding) : null;
 
@@ -218,6 +236,7 @@ export async function POST(req: Request) {
               "당신은 naezipnow.com의 한국어 임장노트 분석 보조 AI입니다.",
               "제공되는 marketSnapshot(지역 실시세: 평균 매매가·전월 대비 변동률·전세가율)이 있으면 강점/리스크/확인 항목·총평에 반드시 반영하세요.",
               "deepDive 는 이미 확정된 사실입니다. 그 안의 숫자를 고치거나 새 숫자를 더하지 말고, 해석만 붙이세요.",
+              "marketSignals(다요인 시장 신호: 심리·뉴스·관심도·거래량·1년 추이·단기 추세·매물·공급·금리)가 있으면 총평과 리스크·확인 항목에 함께 반영하세요. 시장 신호와 현장 기록 점수가 엇갈리면 그 사실을 적으세요. 숫자는 고치지 말고, 매수·매도를 권하지 마세요.",
               inspectionAiReportJsonInstruction(),
             ].join("\n\n"),
           },
@@ -228,6 +247,7 @@ export async function POST(req: Request) {
                 ...promptInput,
                 marketSnapshot: marketSnapshot ?? undefined,
                 deepDive: deepDive ? deepDivePromptSlice(deepDive) : undefined,
+                marketSignals: signals ? signalPromptLines(signals) : undefined,
               },
               null,
               2,
@@ -274,7 +294,29 @@ export async function POST(req: Request) {
       };
     }
 
+    /* [1048] 규칙 폴백에도 다요인 신호 한 줄 — 확인 항목 맨 앞(사실 낱말만) */
+    if (signals && signals.index !== null && report.source === "fallback") {
+      report = {
+        ...report,
+        followUps: [
+          `시장 신호 ${signals.index}/100 · ${signals.headline} — 현장 기록과 함께 보기`,
+          ...report.followUps,
+        ].slice(0, 6),
+      };
+    }
+
     const analysis = mergeInspectionReportIntoAnalysis(baseAnalysis, report);
+    /* [1048] 분석 시점의 신호 요약을 함께 남긴다(공식 버전 포함) — 나중에 "그때 시장 신호"를 되짚을 수 있게 */
+    if (signals) {
+      (analysis as Record<string, unknown>).marketSignals = {
+        version: signals.version,
+        index: signals.index,
+        band: signals.band,
+        headline: signals.headline,
+        coverage: signals.coverage,
+        generatedAt: signals.generatedAt,
+      };
+    }
     /* 읽는 쪽(노트 상세·카드 덱)이 metadata 와 ai_analysis 두 군데를 뒤지지
        않도록 분석 객체에도 같이 싣는다. metadata 쪽은 캐시 적중 응답용이다. */
     if (deepDive) analysis.deepDive = deepDive as unknown as Record<string, unknown>;

@@ -7,7 +7,7 @@ import {
 } from "@/lib/market/store";
 import type { MarketSeriesRow } from "@/lib/market/types";
 import { REB_STATS } from "./stat-codes";
-import { fetchRebStat, isRebConfigured, SIDO_SEOUL_ID } from "./client";
+import { fetchRebStat, isRebConfigured, SIDO_ID_PREFIX, SIDO_SEOUL_ID } from "./client";
 import { buildRegionPriceRows, type MonthlyPoint, type PriceAccEntry } from "./price-rows";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
@@ -53,6 +53,26 @@ export async function ingestReb(
     for (const r of rows) {
       /* [938] 광역 서울 행 — 홈 티커가 읽는 서울 공식 지수의 유일한 적재 통로.
          (이 표를 쓰던 외부 적재가 07-17 이후 끊겨 홈이 5월 지수를 띄우고 있었다) */
+      /* [1048] 시도 광역 행 — 매수우위·전세수급(시도·권역 단위로만 나오는 표)만 시계열에 싣는다(level "sido").
+         가격 스냅샷(monthlyByKey · priceAcc)에는 넣지 않는다 — 시군구 지도·표에 시도 행이 섞이지 않게. */
+      if (
+        r.region.id.startsWith(SIDO_ID_PREFIX) &&
+        stat.propertyType === "apt" &&
+        (stat.metric === "buy_superiority" || stat.metric === "jeonse_supply")
+      ) {
+        allSeries.push({
+          source: "reb",
+          regionId: r.region.id,
+          regionName: r.region.name,
+          level: "sido",
+          propertyType: stat.propertyType,
+          metric: stat.metric,
+          periodType: stat.periodType,
+          period: r.period,
+          value: r.value,
+        });
+        continue;
+      }
       if (r.region.id === SIDO_SEOUL_ID) {
         if (
           stat.periodType === "monthly" &&
@@ -65,6 +85,7 @@ export async function ingestReb(
         }
         continue; // 광역 행은 구 단위 시계열·가격 스냅샷에 넣지 않는다
       }
+      if (r.region.id.startsWith(SIDO_ID_PREFIX)) continue; // [1048] 다른 지표의 시도 행은 싣지 않는다
       if (stat.metric) {
         allSeries.push({
           source: "reb",

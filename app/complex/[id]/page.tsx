@@ -105,6 +105,7 @@ import {
 import type { PricePoint } from "./PriceTrendChart";
 import { complexCanonicalPath, decodeComplexId } from "@/lib/complex/complex-store";
 import { ComplexAxisSummary } from "./ComplexAxisSummary";
+import { ComplexSignals } from "./ComplexSignals";
 import { Fineprint } from "@/app/components/Fineprint";
 import { pureIdFromParam, complexHrefFromId} from "@/lib/seo/complex-slug";
 import { getCachedCoord } from "@/lib/map/complex-geocode";
@@ -1689,6 +1690,14 @@ export default async function ComplexHubPage({
 
           {/* [OPT-48] 허브 2.0 — AI 워크벤치와 같은 라이브 컨텍스트 요약(1.2초 예산·자체 생략) */}
           <ComplexAxisSummary complexId={rowForFacts?.canonical_id ?? v.id} regionName={axisRegionName(v.city, v.dong)} />
+
+          {/* [1048] AI 다요인 분석 — 심리 · 뉴스 · 관심도 · 거래량 · 1년 추이 · 단기 추세 · 매물·공급 · 금리(같은 라이브 컨텍스트 + 지역 캐시).
+              이 단지 월별 건수 · 주력 평형 월 중위는 위 거래 그래프 값을 그대로 넘긴다(새 조회 0). */}
+          <ComplexSignals
+            complexId={rowForFacts?.canonical_id ?? v.id}
+            regionName={axisRegionName(v.city, v.dong)}
+            series={trend ? { yms: trend.yms, counts: trend.all.counts, mainValues: trend.types[0]?.values } : null}
+          />
 
           {/* 요약·이야기·매물·실거래·내 기록 탭 — [1024] 그래프·최근 실거래 목록은 위 본문이 맡는다(priceChart null · summaryDeals false).
               실거래 탭(면적대 필터·정렬·월별 표·계산기)은 그대로. */}

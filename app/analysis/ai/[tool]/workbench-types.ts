@@ -1,5 +1,6 @@
 /* [1008 · W] 워크벤치 ↔ 결과 청크(ResultView) 공용 타입 — 타입만 있다(런타임 0바이트).
    /api/ai/context · /api/ai/analysis 응답 모양. 수치는 서버가 만들고 화면은 그리기만 한다. */
+import type { SignalReport } from "@/lib/signals/engine";
 import type { Verdict } from "@/lib/ai/verdict";
 import type { RiskCheck } from "@/lib/ai/insight-blocks";
 import type { ComplexTradeSeries } from "@/lib/ai/result-series";
@@ -95,6 +96,8 @@ export type RunResult = {
   askedLlm?: boolean;
   /** [1008 · 리뷰 A-3] 결과 숫자가 쓰는 입력(calc)이 이번 실행에 들어갔나 — "내 조건 반영"은 이때만 */
   appliedCalc?: boolean;
+  /** [1048] 다요인 시장 신호(심리·뉴스·관심도·거래량·추이·추세·매물·공급·금리) — 단지·지역이 있는 실행만 */
+  signals?: SignalReport | null;
 };
 
 export type PickedLite = { id: string; name: string; region: string };

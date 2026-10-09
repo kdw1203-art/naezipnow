@@ -1,6 +1,7 @@
 /** 한국부동산원(R-ONE) Open API 클라이언트 (서버 전용). */
 import { logger } from "@/lib/log";
 import { matchRegionFromClsFullNm, type RegionMatch } from "@/lib/market/region-code";
+import { sidoFromClsFullNm } from "@/lib/region/sido";
 import type { RebStat } from "./stat-codes";
 
 const BASE = "https://www.reb.or.kr/r-one/openapi";
@@ -235,6 +236,22 @@ export function matchSeoulCitywide(clsFullNm: string | null | undefined): Region
   return { id: SIDO_SEOUL_ID, name: "서울", city: "서울" };
 }
 
+/** [1048] 시도 광역 행 id 접두 — 매수우위·전세수급 두 지표만 시계열에 싣는다(lib/reb/ingest.ts) */
+export const SIDO_ID_PREFIX = "sido-";
+
+/**
+ * [1048] R-ONE 시도 광역 행("경기" · "전국>수도권>인천" · "지방권>강원") → "sido-<영문>".
+ *
+ * 왜(운영 실측 2026-10-09): 매매수급동향(매수우위) 표는 시도·권역 단위로만 나오는데, 매처가 시군구만 알아
+ * 시계열에 남은 지역이 세종 하나뿐이었다. 다요인 분석의 심리 요인이 지역 매수우위를 읽도록 시도 행을 받는다.
+ * 서울은 matchSeoulCitywide 가 먼저 잡는다(같은 id). 세종은 시군구 별칭으로 이미 잡힌다.
+ */
+export function matchSidoRow(clsFullNm: string | null | undefined): RegionMatch | null {
+  const s = sidoFromClsFullNm(clsFullNm);
+  if (!s || !s.id.startsWith(SIDO_ID_PREFIX)) return null;
+  return { id: s.id, name: s.short, city: s.short };
+}
+
 /**
  * 한 통계표의 "최신" 데이터를 내부 지역으로 매핑해 반환.
  * R-ONE 응답은 기간 오름차순 → 마지막 페이지(들)이 최신. START/END 필터는 일부 표에서
@@ -267,7 +284,8 @@ export async function fetchRebStat(
       if (stat.itmExcludes && (r.ITM_NM ?? "").includes(stat.itmExcludes)) continue;
       const region =
         matchRegionFromClsFullNm(r.CLS_FULLNM ?? r.CLS_NM) ??
-        matchSeoulCitywide(r.CLS_FULLNM ?? r.CLS_NM);
+        matchSeoulCitywide(r.CLS_FULLNM ?? r.CLS_NM) ??
+        matchSidoRow(r.CLS_FULLNM ?? r.CLS_NM);
       if (!region) continue;
       const value = typeof r.DTA_VAL === "string" ? Number(r.DTA_VAL) : r.DTA_VAL;
       if (value == null || !Number.isFinite(value)) continue;

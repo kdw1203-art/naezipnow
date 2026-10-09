@@ -5,6 +5,8 @@ import { getModelOption, defaultModelIdFromEnv } from "@/lib/ai/llm-models";
 import { getOpenAiApiKey } from "@/lib/ai/env-keys";
 import { withComplianceClause } from "@/lib/ai/compliance";
 import { logger } from "@/lib/log";
+import { loadSignalReport } from "@/lib/signals/load";
+import { signalPromptLines, type SignalReport } from "@/lib/signals/engine";
 import {
   ruleDraft,
   DRAFT_CHECK_AXES,
@@ -23,6 +25,24 @@ export async function generateNoteDraft(input: NoteDraftInput): Promise<NoteDraf
     regionName: input.regionName,
   });
   const fallback = ruleDraft(input, ctx);
+  /* [1048] 다요인 시장 신호(심리·뉴스·관심도·거래량·추이·추세·매물·공급·금리) — 같은 컨텍스트 위에서. 실패해도 초안은 간다 */
+  let signals: SignalReport | null = null;
+  try {
+    signals = await loadSignalReport({
+      scope: input.complexId ? "complex" : "region",
+      regionName: input.regionName,
+      complexId: input.complexId ?? null,
+      ctx,
+    });
+  } catch (e) {
+    logger.warn("[note-draft] 다요인 신호 실패 — 없이 진행", e);
+  }
+  if (signals && signals.index !== null) {
+    fallback.evidence = [
+      ...fallback.evidence,
+      `다요인 시장 신호 ${signals.index}/100 · ${signals.headline} (${signals.coverage.used}/${signals.coverage.total}개 요인)`,
+    ];
+  }
 
   /* 구조화 출력은 OpenAI 경로만 — 키가 없으면 rule 초안이 곧 결과다. */
   const modelOpt = getModelOption(defaultModelIdFromEnv());
@@ -51,6 +71,7 @@ export async function generateNoteDraft(input: NoteDraftInput): Promise<NoteDraf
     "",
     "[데이터 조건부 확인 포인트(포함 권장)]",
     ...fallback.todo.map((t) => `- ${t}`),
+    ...(signals ? ["", ...signalPromptLines(signals)] : []),
   ]
     .filter((v) => v !== null)
     .join("\n");

@@ -7,7 +7,7 @@ import { areaBandDisplayLabel } from "@/lib/complex/area-band-label";
 import Link from "next/link";
 import { CommentsRetry } from "./comments-retry";
 import { displayAuthorLabel, isLabAuthor } from "@/lib/notes/author-label";
-import { cache } from "react";
+import { cache, Suspense } from "react";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -47,6 +47,7 @@ import { noteContentHash, storedContentHash } from "@/lib/notes/content-hash";
 import { NoteToolsRow } from "./NoteToolsRow";
 import { AiFeedbackButtons } from "@/app/components/AiFeedbackButtons";
 import DeepDivePanel from "./DeepDivePanel";
+import { NoteSignals } from "./NoteSignals";
 import { Icon } from "@/app/components/Icon";
 import { Explain } from "@/app/components/explain/Explain";
 import { JsonLd } from "@/app/components/JsonLd";
@@ -1630,6 +1631,16 @@ export default async function NoteDetailPage({
               ))}
             </div>
           </div>
+
+          {/* [1048] AI 다요인 분석 — 이 노트 지역의 시장 신호 8요인 + 이 노트 기록 점수(현장). 늦으면 그리지 않는다(스트리밍). */}
+          <Suspense fallback={null}>
+            <NoteSignals
+              region={realNote.region}
+              complexParam={complexIdFromHref ?? (visitComplexId || null)}
+              totalScore={v.totalScore ?? null}
+              lab={Boolean(v.lab)}
+            />
+          </Suspense>
 
           {/* 기록 완성도 (10f).
               [1015 · 규칙 E] 체크 N/N 은 판단 카드에도 있어 폰에서는 카드째 숨긴다(데스크톱 레일만).

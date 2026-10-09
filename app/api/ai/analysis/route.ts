@@ -23,6 +23,9 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { FUNNEL_EVENT, recordFunnelEvent } from "@/lib/platform-funnel-events";
 import { buildNumberWhitelist, guardLlmNumbers } from "@/lib/ai/insight-blocks";
 import { buildLiveToolContextCached, contextFootnotes } from "@/lib/ai/live-context";
+import { loadSignalReport } from "@/lib/signals/load";
+import { signalPromptLines, type SignalReport } from "@/lib/signals/engine";
+import { noteSignalRegion } from "@/lib/signals/regions";
 import { buildVerdict, verdictToSummary, type Verdict } from "@/lib/ai/verdict";
 import { AI_PROMPT_VERSION } from "@/lib/ai/system-prompt";
 
@@ -235,7 +238,11 @@ export async function POST(req: Request) {
   }
 
   if (skipExternalLlm) {
-    const publicContext = await buildAiPublicContext(tid, input);
+    /* [1048] 다요인 시장 신호 — 자체 계산 실행에도(결과 화면 판 · 실행 기록 스냅샷) */
+    const [publicContextBase, signals] = await Promise.all([buildAiPublicContext(tid, input), signalsForInput(input)]);
+    const publicContext = signals
+      ? ({ ...(publicContextBase ?? {}), marketSignals: signalPromptLines(signals) } as typeof publicContextBase)
+      : publicContextBase;
     const evidence_refs = evidenceRefsFromPublicContext(publicContext);
     let markdown = buildInternalAnalysisMarkdown(tid, input);
     if (publicContext?.plans?.length) {
@@ -250,6 +257,7 @@ export async function POST(req: Request) {
         publicContext.disclaimer,
       ].join("\n");
     }
+    if (signals) markdown += `\n\n${signalsMarkdown(signals)}`;
     const requested = typeof body.modelId === "string" ? body.modelId.trim() : "";
     const modelId = requested || "internal";
     const verdict = await buildVerdictSafe(tid, input);
@@ -298,6 +306,7 @@ export async function POST(req: Request) {
       markdown,
       runId,
       usage,
+      signals,
     });
   }
 
@@ -355,9 +364,17 @@ export async function POST(req: Request) {
     });
   }
 
-  const publicContext = await buildAiPublicContext(tid, input);
+  /* [1048] 다요인 시장 신호 — 지역·단지가 있는 실행이면 공공데이터 컨텍스트에 근거 줄로 싣는다
+     (프롬프트 "반드시 인용" 묶음 · 수치 가드 허용 목록 · 실행 기록 스냅샷이 같은 객체를 본다) */
+  const [publicContextBase, signals] = await Promise.all([
+    buildAiPublicContext(tid, input),
+    signalsForInput(input),
+  ]);
+  const publicContext = signals
+    ? ({ ...(publicContextBase ?? {}), marketSignals: signalPromptLines(signals) } as typeof publicContextBase)
+    : publicContextBase;
   const evidence_refs = evidenceRefsFromPublicContext(publicContext);
-  const messages = buildAnalysisMessages(tid, input, publicContext);
+  const messages = buildAnalysisMessages(tid, input, publicContext as Record<string, unknown> | null);
 
   const hasOpenAI = isOpenAiConfigured();
   const hasAnthropic = isAnthropicConfigured();
@@ -434,6 +451,8 @@ export async function POST(req: Request) {
           ? "ANTHROPIC_KEY_MISSING"
           : "LLM_PROVIDER_ERROR"
       : null;
+  /* [1048] 결과 본문 끝에 다요인 신호 표(규칙 계산 · 사실 줄) — LLM 서술이든 규칙 결과든 같은 근거를 붙인다 */
+  if (signals) markdown = `${markdown}\n\n${signalsMarkdown(signals)}`;
   const verdict = await buildVerdictSafe(tid, input);
   const structuredSummary = buildStructuredSummary(markdown, input, verdict);
   let runId: string | null = null;
@@ -482,7 +501,41 @@ export async function POST(req: Request) {
     markdown,
     runId,
     usage,
+    /* [1048] 다요인 시장 신호 — 화면이 판(SignalBoard)을 그릴 수 있게 전체 보고서 */
+    signals,
   });
+}
+
+/* [1048] 입력의 단지·지역 → 다요인 시장 신호. 둘 다 없거나 실패면 null(실행은 막지 않는다) */
+async function signalsForInput(input: Record<string, unknown>): Promise<SignalReport | null> {
+  const complexId = typeof input.complexId === "string" ? input.complexId : null;
+  const region = typeof input.region === "string" ? input.region : null;
+  if (!complexId && !region) return null;
+  const regionName = noteSignalRegion(region, complexId);
+  if (!regionName) return null;
+  try {
+    return await loadSignalReport({ scope: complexId ? "complex" : "region", regionName, complexId });
+  } catch (e) {
+    logger.warn("[ai/analysis] 다요인 신호 실패 — 없이 진행", e);
+    return null;
+  }
+}
+
+/** [1048] 다요인 신호 → 결과 본문 끝 목록(사실 줄 · 규칙 계산 표시) — 결과 화면의 경량 렌더(MdLite)는 표를 그리지 않아 글머리로 */
+function signalsMarkdown(r: SignalReport): string {
+  const head =
+    r.index === null
+      ? `자료 부족 · ${r.coverage.used}/${r.coverage.total}개 요인`
+      : `종합 ${r.index}/100 · ${r.headline}`;
+  const rows = r.factors.map(
+    (f) => `- **${f.label}** ${f.score === null ? "미반영" : `${f.score > 0 ? "+" : ""}${f.score.toFixed(1)}`} · ${f.value}`,
+  );
+  return [
+    `## 다요인 시장 신호 (규칙 계산 · ${r.regionLabel})`,
+    head,
+    ...rows,
+    "요인 점수 −2~+2 가중 평균 → 0~100(50 중립) · 매수·매도 권유 아님",
+  ].join("\n");
 }
 
 /* [AI-48] 이번 달 외부 LLM 실행 수 — source 가 벤더명인 run 만 센다 */

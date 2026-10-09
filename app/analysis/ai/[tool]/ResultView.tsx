@@ -52,6 +52,7 @@ import { DiagnosisSignature, InspectionSignature, PredictionSignature, ScenarioT
 import { SigFigure, ToolSignature } from "./tool-signature";
 import { isFrameTool } from "./frame-tools";
 import type { Ctx, Footnote, Insight, PickedLite, RunResult, Similar } from "./workbench-types";
+import { SignalBoard } from "@/app/components/signals/SignalBoard";
 
 /* ============================================================
    [1008 · W] AI 분석 결과 화면 — 처음 온 사람이 5초 안에 "무엇을 봐야 하는지" 알게.
@@ -1257,6 +1258,9 @@ export function ResultView({
 
       {/* ③ AI 해설(받았을 때만) */}
       {narrative}
+
+      {/* [1048] AI 다요인 분석 — 이번 실행이 서버에서 받은 시장 신호 8요인(실행 결과가 이 단지·지역의 것일 때만) */}
+      {!running && result?.ok && result.signals && <SignalBoard report={result.signals} idPrefix={`tool-${tool}`} />}
 
       {/* ④ 이 단지 실거래 흐름 — 데스크톱 펼침·폰 닫힘 · 임장 동선: 닫힘(예측은 위 부채꼴이 시나리오라 여기선 과거만) · 체크리스트는 없음 */}
       {hasComplex && tool !== "my-checklist" && (

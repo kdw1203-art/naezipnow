@@ -6,6 +6,7 @@ import { listQuestionsForComplex } from "@/lib/qna/store";
 import { listProjects } from "@/lib/redevelopment/store";
 import { getAreaBands, getRegionRelative } from "@/lib/complex/complex-store";
 import { getSupplyForAreaStrict } from "@/lib/market/supply";
+import { prefetchSignalParts } from "@/lib/signals/load";
 import { buildLiveToolContextCached } from "@/lib/ai/live-context";
 import { unstable_cache } from "next/cache";
 import { getServiceSupabase } from "@/lib/supabase/service";
@@ -329,4 +330,6 @@ export function prefetchAxisSummary(args: {
 }): void {
   const dong = args.district || args.city || "지역";
   swallow(loadAxisContext(args.rowId, axisRegionName(args.city, dong)));
+  /* [1048] 다요인 분석 판(ComplexSignals)의 지역 · 한국은행 · 관심 묶음 — 같은 base 시점에 띄운다 */
+  swallow(prefetchSignalParts(axisRegionName(args.city, dong), true));
 }
