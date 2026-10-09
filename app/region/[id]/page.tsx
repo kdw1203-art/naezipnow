@@ -79,6 +79,7 @@ import { seoAlternates } from "@/lib/seo/alternates";
 import { regionTitle } from "@/lib/seo/title-experiment";
 import { formatKrwShort } from "@/lib/market/format";
 import { noteMatchesRegion } from "@/lib/region/changed-region-paths";
+import { talkRegionById } from "@/lib/talk/regions";
 
 /* ============================================================
    N9 — 지역 종합 가이드 (/region/[id])
@@ -1281,6 +1282,23 @@ export default async function RegionHubPage({
           </ul>
         )}
       </section>
+
+      {/* [1052] 이 지역 실시간 토론(1051 · 수도권 67곳) — 링크 한 줄. 글은 토론 화면이 받는다(이 화면은 캐시되는 화면이라
+          글 목록을 박아 두면 오래된 글이 '실시간'으로 보인다 · 클라이언트 JS 0) */}
+      {talkRegionById(id) && (
+        <Link
+          href={`/talk?region=${encodeURIComponent(id)}`}
+          className="press rise-in-3 card mb-6 flex min-h-12 items-center gap-3 p-[var(--pad-card)] no-underline max-md:mb-3"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block t-body font-bold text-ink">{name} 실시간 토론</span>
+            <span className="mt-0.5 block t-sub text-text-3">한 줄 이야기 · 지수 · 거래 · 뉴스 소식</span>
+          </span>
+          <span aria-hidden="true" className="t-body text-text-3">
+            ›
+          </span>
+        </Link>
+      )}
 
       {/* A5 — 면적대·가격대별 실거래 랜딩 내부 링크 */}
       {txBandRegion && (

@@ -6,7 +6,12 @@
    왼쪽: 탭(토론 많은 · 상승 · 하락 · 거래량)별 수도권 지역 순위(/api/talk/board — 지수 전월비 · 매매 거래량 · 최근 7일 글 수).
    오른쪽: 고른 지역의 사람 글(최신 순, 위) + 자동 소식('소식' 표시 · 지수 · 거래 · 뉴스 · 임장노트, 아래).
    아래: 한 줄 쓰기(로그인) — 단지는 선택(그 지역 단지만). 보이는 동안 30초마다 새 글을 받는다.
-   숫자는 적재된 것만 — 없는 값은 그 탭에서 빠진다(0 으로 세우지 않는다). 사람 글이 없을 때 지어낸 글로 채우지 않는다. */
+   숫자는 적재된 것만 — 없는 값은 그 탭에서 빠진다(0 으로 세우지 않는다). 사람 글이 없을 때 지어낸 글로 채우지 않는다.
+
+   [1052 손질] 지역을 빨리 바꿀 때 늦게 온 앞 지역 응답이 화면을 덮던 것(요청 표 · 취소) · 지역 찾기 칸 · 고른 지역이 이 탭
+   순위 밖이면 맨 위에 고정 줄 · 마지막 본 지역 기억(이 브라우저) · 왼쪽 순위도 보이는 동안만 다시 받기 · 올린 즉시 글 수 +1 ·
+   아래로 내려 읽는 중 새 글이 오면 "새 글 N개 ↑" · 지우기·신고는 한 번 더 확인 · 폰 40px 누름 면 · 글자 수 180자부터 경고(글자 기준
+   자르기) · 단지 찾기 칸 자동 초점·Esc · 화면 읽기 알림은 새 글 수만(목록 전체를 다시 읽지 않게) · 실패 칸에 다시 불러오기. */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
@@ -14,14 +19,20 @@ import { getSessionLite } from "@/lib/client/session-lite";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { Icon } from "@/app/components/Icon";
 import {
+  TALK_LAST_REGION_KEY,
   TALK_MAX_LEN,
   TALK_POLL_MS,
   TALK_TABS,
+  bumpBoardTalk,
+  clipTalkInput,
   complexInRegion,
+  countFreshPosts,
   defaultTalkTab,
+  filterTalkRegions,
   mergeIncomingPosts,
   rankTalkBoard,
   signedPct,
+  talkCountTone,
   talkTimeLabel,
   ymMonthLabel,
   type TalkBoard,
@@ -69,17 +80,60 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
   const [complexQ, setComplexQ] = useState("");
   const [complexHits, setComplexHits] = useState<ComplexHit[] | null>(null);
   const [visible, setVisible] = useState(true);
-
-  /* 토론 화면(/talk?region=…)은 주소의 지역으로 시작하고, 고른 지역을 주소에 적는다(공유 · 뒤로 가기) */
+  const [q, setQ] = useState("");
+  const [fresh, setFresh] = useState(0);
+  const [announce, setAnnounce] = useState("");
+  const [confirm, setConfirm] = useState<{ id: string; kind: "remove" | "report" } | null>(null);
+  const feedScrollRef = useRef<HTMLDivElement | null>(null);
+  const feedBoxRef = useRef<HTMLDivElement | null>(null);
+  /* 가장 최근에 부탁한 지역 — 늦게 온 앞 지역 응답은 버린다 */
+  const wantRef = useRef<string | null>(null);
+  const feedAbortRef = useRef<AbortController | null>(null);
+  /* 지금 화면의 글 목록(새 글 수 셈용) — setState 갱신 함수 안에서 세면 React 가 나중에 불러 0 이 된다 */
+  const feedNowRef = useRef<FeedState>({ status: "idle" });
   useEffect(() => {
-    if (variant !== "page") return;
-    try {
-      const q = new URLSearchParams(window.location.search).get("region");
-      if (q) setRegionId(q);
-    } catch {
-      /* 주소 읽기 실패 — 1위 지역 */
+    feedNowRef.current = feed;
+  }, [feed]);
+
+  /* 토론 화면(/talk?region=…)은 주소의 지역으로 시작하고, 고른 지역을 주소에 적는다(공유 · 뒤로 가기).
+     주소에 없으면(홈 포함) 이 브라우저에서 마지막으로 본 지역 — 없으면 탭 1위 */
+  useEffect(() => {
+    if (initialRegion) return;
+    let fromUrl: string | null = null;
+    if (variant === "page") {
+      try {
+        fromUrl = new URLSearchParams(window.location.search).get("region");
+      } catch {
+        /* 주소 읽기 실패 */
+      }
     }
-  }, [variant]);
+    if (fromUrl) {
+      setRegionId(fromUrl);
+      return;
+    }
+    try {
+      const last = window.localStorage.getItem(TALK_LAST_REGION_KEY);
+      if (last) setRegionId(last);
+    } catch {
+      /* 저장소 막힘 — 1위 지역 */
+    }
+  }, [variant, initialRegion]);
+
+  const pickRegion = useCallback((id: string) => {
+    setRegionId(id);
+    setConfirm(null);
+    try {
+      window.localStorage.setItem(TALK_LAST_REGION_KEY, id);
+    } catch {
+      /* 저장소 막힘 — 기억만 못 한다 */
+    }
+    /* 폰(한 줄 배치)은 순위 아래에 글 칸이 있다 — 고르면 글 칸으로 */
+    try {
+      if (window.matchMedia("(max-width: 767px)").matches) feedBoxRef.current?.scrollIntoView({ block: "start" });
+    } catch {
+      /* 스크롤 실패 무시 */
+    }
+  }, []);
 
   const loadBoard = useCallback(async () => {
     try {
@@ -96,8 +150,6 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
 
   useEffect(() => {
     void loadBoard();
-    const t = window.setInterval(() => void loadBoard(), 120_000);
-    return () => window.clearInterval(t);
   }, [loadBoard]);
 
   useEffect(() => {
@@ -123,22 +175,52 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
   const byId = useMemo(() => new Map((board?.regions ?? []).map((r) => [r.id, r])), [board]);
   /* 고른 지역이 없으면 이 탭의 1위 */
   const selected = (regionId ? byId.get(regionId) : undefined) ?? ranked[0] ?? null;
+  /* 지역 찾기 — 찾는 중이면 이 탭 순위에 없는 지역도(순위 있는 것 먼저) */
+  const shown = useMemo(() => {
+    if (!board || !q.trim()) return ranked.map((r, i) => ({ r, rank: i + 1 as number | null }));
+    const rankOf = new Map(ranked.map((r, i) => [r.id, i + 1]));
+    return filterTalkRegions(board.regions, q)
+      .map((r) => ({ r, rank: rankOf.get(r.id) ?? null }))
+      .sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9) || a.r.name.localeCompare(b.r.name, "ko"));
+  }, [board, ranked, q]);
 
   const loadFeed = useCallback(async (id: string, quiet: boolean) => {
-    if (!quiet) setFeed({ status: "loading" });
+    wantRef.current = id;
+    if (!quiet) {
+      feedAbortRef.current?.abort();
+      setFeed({ status: "loading" });
+    }
+    const ac = new AbortController();
+    if (!quiet) feedAbortRef.current = ac;
     try {
-      const r = await fetch(`/api/talk?region=${encodeURIComponent(id)}`, { cache: "no-store" });
+      const r = await fetch(`/api/talk?region=${encodeURIComponent(id)}`, { cache: "no-store", signal: ac.signal });
       if (!r.ok) throw new Error(String(r.status));
       const j = (await r.json()) as { regionId: string; posts: TalkPost[]; facts: TalkFact[]; factsFailed?: boolean };
-      setFeed((cur) => ({
-        status: "ok",
-        regionId: j.regionId,
-        posts: cur.status === "ok" && cur.regionId === j.regionId ? mergeIncomingPosts(cur.posts, j.posts) : j.posts,
-        facts: j.facts,
-        factsFailed: Boolean(j.factsFailed),
-      }));
+      /* 그 사이 다른 지역을 골랐으면 버린다 — 늦게 온 앞 지역 글이 새 지역 칸을 덮지 않게 */
+      if (wantRef.current !== j.regionId) return;
+      const before = feedNowRef.current;
+      const added =
+        quiet && before.status === "ok" && before.regionId === j.regionId
+          ? countFreshPosts(new Set(before.posts.map((p) => p.id)), j.posts)
+          : 0;
+      setFeed((cur) => {
+        const same = cur.status === "ok" && cur.regionId === j.regionId;
+        return {
+          status: "ok",
+          regionId: j.regionId,
+          posts: same ? mergeIncomingPosts(cur.posts, j.posts) : j.posts,
+          facts: j.facts,
+          factsFailed: Boolean(j.factsFailed),
+        };
+      });
+      if (added > 0) {
+        setAnnounce(`새 글 ${added}개`);
+        /* 위에서 읽는 중이면 그대로 맨 위에 보인다 — 아래로 내려 읽는 중일 때만 알림 단추 */
+        if ((feedScrollRef.current?.scrollTop ?? 0) > 40) setFresh((n) => n + added);
+      }
       setNow(Date.now());
     } catch {
+      if (ac.signal.aborted || wantRef.current !== id) return;
       if (!quiet) setFeed({ status: "error" });
     }
   }, []);
@@ -156,36 +238,52 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
     }
   }, [selectedId, loadFeed, variant]);
 
+  /* 보이는 동안만 — 글은 30초, 왼쪽 순위는 2분마다. 다른 탭에서 돌아오면 바로 한 번 */
   useEffect(() => {
     if (!selectedId || !visible) return;
     const t = window.setInterval(() => {
       if (document.visibilityState === "visible") void loadFeed(selectedId, true);
     }, TALK_POLL_MS);
-    return () => window.clearInterval(t);
-  }, [selectedId, visible, loadFeed]);
+    const tb = window.setInterval(() => {
+      if (document.visibilityState === "visible") void loadBoard();
+    }, 120_000);
+    const onVis = () => {
+      if (document.visibilityState === "visible") void loadFeed(selectedId, true);
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.clearInterval(t);
+      window.clearInterval(tb);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [selectedId, visible, loadFeed, loadBoard]);
 
   /* 지역을 바꾸면 붙인 단지는 뗀다(다른 지역 단지) */
   useEffect(() => {
     setComplex(null);
     setComplexOpen(false);
     setComplexHits(null);
+    setComplexQ("");
     setFormError(null);
+    setFresh(0);
   }, [selectedId]);
 
-  /* 단지 붙이기 — 기존 검색 제안(/api/search/suggest) 중 이 지역 단지만 */
+  /* 단지 붙이기 — 기존 검색 제안(/api/search/suggest) 중 이 지역 단지만.
+     지역 객체가 아니라 실거래 이름에 걸어 둔다(판을 다시 받을 때마다 객체가 바뀌어 같은 검색을 되풀이했다) */
+  const selectedTx = selected?.txName ?? null;
   useEffect(() => {
-    if (!complexOpen || !selected) return;
-    const q = complexQ.trim();
-    if (q.length < 2) {
+    if (!complexOpen || !selectedTx) return;
+    const cq = complexQ.trim();
+    if (cq.length < 2) {
       setComplexHits(null);
       return;
     }
     const ac = new AbortController();
     const t = window.setTimeout(async () => {
       try {
-        const r = await fetch(`/api/search/suggest?q=${encodeURIComponent(q)}`, { signal: ac.signal });
+        const r = await fetch(`/api/search/suggest?q=${encodeURIComponent(cq)}`, { signal: ac.signal });
         const j = (await r.json()) as { suggestions?: ComplexHit[] };
-        const list = (j.suggestions ?? []).filter((s) => s && s.id && complexInRegion(s.region, selected.txName));
+        const list = (j.suggestions ?? []).filter((s) => s && s.id && complexInRegion(s.region, selectedTx));
         setComplexHits(list.slice(0, 5));
       } catch {
         if (!ac.signal.aborted) setComplexHits([]);
@@ -195,13 +293,13 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
       ac.abort();
       window.clearTimeout(t);
     };
-  }, [complexOpen, complexQ, selected]);
+  }, [complexOpen, complexQ, selectedTx]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!selected || posting) return;
     const body = text.trim();
-    if (body.length < 2) {
+    if ([...body].length < 2) {
       setFormError("2자 이상");
       return;
     }
@@ -228,7 +326,9 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
           : cur,
       );
       setNow(Date.now());
-      void loadBoard();
+      /* 판 응답은 CDN 30초 캐시 — 다시 받으면 옛 수가 온다. 이 화면에서 바로 +1 */
+      setBoard((b) => (b ? bumpBoardTalk(b, selected.id, post.createdAt) : b));
+      feedScrollRef.current?.scrollTo({ top: 0 });
     } catch {
       setFormError("글 저장 실패 · 잠시 후 다시");
     } finally {
@@ -237,6 +337,7 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
   }
 
   async function remove(id: string) {
+    setConfirm(null);
     const r = await fetch("/api/talk", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -251,6 +352,7 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
   }
 
   async function report(id: string) {
+    setConfirm(null);
     const r = await fetch("/api/talk/report", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -269,6 +371,35 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
   const feedMax = variant === "page" ? "max-h-[640px]" : "max-h-[460px]";
   const posts = feed.status === "ok" && feed.regionId === selectedId ? feed.posts : [];
   const facts = feed.status === "ok" && feed.regionId === selectedId ? feed.facts : [];
+  const len = [...text].length;
+  const tone = talkCountTone(len);
+  /* 고른 지역이 지금 순위(찾기 결과)에 없으면 맨 위에 고정 줄 */
+  const pinned = selected && !shown.some((x) => x.r.id === selected.id) ? selected : null;
+  const loginBack = variant === "page" && selected ? `/talk?region=${encodeURIComponent(selected.id)}` : variant === "page" ? "/talk" : "/#talk";
+  const smallBtn = "inline-flex min-h-[40px] items-center px-1.5 t-caption md:min-h-6";
+
+  function regionRow(r: TalkBoardRegion, rank: number | null, pin: boolean) {
+    if (!tab) return null;
+    const v = valueOf(r, tab);
+    const on = r.id === selectedId;
+    return (
+      <li key={pin ? `pin-${r.id}` : r.id} className={pin ? "border-b border-line pb-1" : undefined}>
+        <button
+          type="button"
+          aria-pressed={on}
+          onClick={() => pickRegion(r.id)}
+          className={`flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left ${on ? "bg-primary-soft" : "hover:bg-bg"}`}
+        >
+          <span className="w-5 shrink-0 text-center t-sub font-bold tabular-nums text-text-3">{rank ?? "·"}</span>
+          <span className="min-w-0 flex-1 truncate t-sub font-bold text-ink">
+            {r.name}
+            <span className="ml-1 t-caption font-normal text-text-3">{pin ? `${r.sido} · ${q.trim() ? "고른 지역" : "이 순위 밖"}` : r.sido}</span>
+          </span>
+          <span className={`shrink-0 t-sub font-bold tabular-nums ${v.cls}`}>{v.text}</span>
+        </button>
+      </li>
+    );
+  }
 
   return (
     <div ref={rootRef} className="flex flex-col gap-3">
@@ -297,47 +428,45 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
             <span>지역</span>
             <span>{tab ? valueHead(tab, board) : ""}</span>
           </div>
+          {board && (
+            <div className="border-b border-line p-1.5">
+              <input
+                type="search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="지역 찾기 · 송파 · 분당"
+                aria-label="지역 찾기"
+                className="min-h-10 w-full rounded-lg border border-line bg-bg px-3 t-sub text-ink"
+              />
+            </div>
+          )}
           {boardFailed && !board ? (
-            <p className="m-0 px-3 py-6 text-center t-sub text-text-3">지역 순위 불러오기 실패 · 잠시 후 다시</p>
+            <div className="flex flex-col items-center gap-2 px-3 py-6 text-center">
+              <p className="m-0 t-sub text-text-3">지역 순위 불러오기 실패 · 잠시 후 다시</p>
+              <button type="button" onClick={() => void loadBoard()} className="btn-soft inline-flex min-h-10 items-center px-4 t-sub font-bold">
+                다시 불러오기
+              </button>
+            </div>
           ) : !board || !tab ? (
             <div className="flex flex-col gap-1 p-2" aria-busy="true">
               {[0, 1, 2, 3, 4].map((i) => (
                 <div key={i} className="skeleton h-10 w-full rounded-lg" />
               ))}
             </div>
-          ) : ranked.length === 0 ? (
+          ) : shown.length === 0 && !pinned ? (
             <p className="m-0 px-3 py-6 text-center t-sub text-text-3">
-              {tab === "hot" ? "최근 7일 토론글 없음" : "이 기준의 지역 없음"}
+              {q.trim() ? `'${q.trim()}' 지역 없음` : tab === "hot" ? "최근 7일 토론글 없음" : "이 기준의 지역 없음"}
             </p>
           ) : (
             <ol className={`m-0 list-none overflow-y-auto p-1 ${listMax}`}>
-              {ranked.map((r, i) => {
-                const v = valueOf(r, tab);
-                const on = r.id === selectedId;
-                return (
-                  <li key={r.id}>
-                    <button
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => setRegionId(r.id)}
-                      className={`flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left ${on ? "bg-primary-soft" : "hover:bg-bg"}`}
-                    >
-                      <span className="w-5 shrink-0 text-center t-sub font-bold tabular-nums text-text-3">{i + 1}</span>
-                      <span className="min-w-0 flex-1 truncate t-sub font-bold text-ink">
-                        {r.name}
-                        <span className="ml-1 t-caption font-normal text-text-3">{r.sido}</span>
-                      </span>
-                      <span className={`shrink-0 t-sub font-bold tabular-nums ${v.cls}`}>{v.text}</span>
-                    </button>
-                  </li>
-                );
-              })}
+              {pinned && regionRow(pinned, null, true)}
+              {shown.map((x) => regionRow(x.r, x.rank, false))}
             </ol>
           )}
         </div>
 
         {/* 오른쪽 — 고른 지역의 글 */}
-        <div className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-line bg-surface">
+        <div ref={feedBoxRef} className="flex min-w-0 scroll-mt-20 flex-col overflow-hidden rounded-xl border border-line bg-surface">
           <div className="flex items-center justify-between gap-2 border-b border-line px-3.5 py-2">
             <span className="min-w-0 truncate t-body font-bold text-ink">{selected ? `${selected.name} 토론` : "지역 토론"}</span>
             {selected && (
@@ -347,9 +476,41 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
             )}
           </div>
 
-          <div className={`min-h-[160px] flex-1 overflow-y-auto ${feedMax}`} aria-live="polite">
-            {feed.status === "error" ? (
-              <p className="m-0 px-3.5 py-8 text-center t-sub text-text-3">토론 불러오기 실패 · 잠시 후 다시</p>
+          <p className="sr-only" aria-live="polite">
+            {announce}
+          </p>
+          <div
+            ref={feedScrollRef}
+            onScroll={(e) => {
+              if (fresh > 0 && e.currentTarget.scrollTop <= 40) setFresh(0);
+            }}
+            className={`relative min-h-[160px] flex-1 overflow-y-auto ${feedMax}`}
+          >
+            {fresh > 0 && (
+              <div className="sticky top-1.5 z-10 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFresh(0);
+                    feedScrollRef.current?.scrollTo({ top: 0 });
+                  }}
+                  className="inline-flex min-h-[40px] items-center rounded-full border border-line bg-surface px-3.5 t-sub font-bold text-primary shadow-sm md:min-h-8"
+                >
+                  새 글 {fresh}개 ↑
+                </button>
+              </div>
+            )}
+            {!selected && board ? (
+              <p className="m-0 px-3.5 py-8 text-center t-sub text-text-3">지역 선택 없음 · 순위에서 고르기</p>
+            ) : feed.status === "error" ? (
+              <div className="flex flex-col items-center gap-2 px-3.5 py-8 text-center">
+                <p className="m-0 t-sub text-text-3">토론 불러오기 실패 · 잠시 후 다시</p>
+                {selectedId && (
+                  <button type="button" onClick={() => void loadFeed(selectedId, false)} className="btn-soft inline-flex min-h-10 items-center px-4 t-sub font-bold">
+                    다시 불러오기
+                  </button>
+                )}
+              </div>
             ) : feed.status !== "ok" || feed.regionId !== selectedId ? (
               <div className="flex flex-col gap-2 p-3.5" aria-busy="true">
                 {[0, 1, 2].map((i) => (
@@ -371,19 +532,33 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
                       {p.complexId && p.complexName && (
                         <Link
                           href={`/complex/${encodeURIComponent(p.complexId)}`}
-                          className="inline-flex items-center gap-0.5 rounded bg-bg px-1.5 py-px t-caption font-bold text-text-2 no-underline"
+                          className="inline-flex min-h-6 items-center gap-0.5 rounded bg-bg px-1.5 t-caption font-bold text-text-2 no-underline"
                         >
                           <Icon name="building" size={12} />
                           {p.complexName}
                         </Link>
                       )}
                       <span className="ml-auto flex items-center gap-1">
-                        {p.mine ? (
-                          <button type="button" onClick={() => void remove(p.id)} className="inline-flex min-h-6 items-center px-1 t-caption text-text-3 hover:text-ink">
+                        {confirm?.id === p.id ? (
+                          <>
+                            <span className="t-caption font-bold text-ink">{confirm.kind === "remove" ? "지울까요?" : "신고할까요?"}</span>
+                            <button
+                              type="button"
+                              onClick={() => void (confirm.kind === "remove" ? remove(p.id) : report(p.id))}
+                              className={`${smallBtn} font-bold text-danger`}
+                            >
+                              {confirm.kind === "remove" ? "지우기" : "신고"}
+                            </button>
+                            <button type="button" onClick={() => setConfirm(null)} className={`${smallBtn} text-text-3 hover:text-ink`}>
+                              그만두기
+                            </button>
+                          </>
+                        ) : p.mine ? (
+                          <button type="button" onClick={() => setConfirm({ id: p.id, kind: "remove" })} className={`${smallBtn} text-text-3 hover:text-ink`}>
                             지우기
                           </button>
                         ) : loggedIn ? (
-                          <button type="button" onClick={() => void report(p.id)} className="inline-flex min-h-6 items-center px-1 t-caption text-text-3 hover:text-ink">
+                          <button type="button" onClick={() => setConfirm({ id: p.id, kind: "report" })} className={`${smallBtn} text-text-3 hover:text-ink`}>
                             신고
                           </button>
                         ) : null}
@@ -415,7 +590,9 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
                     )}
                   </li>
                 ))}
-                {feed.factsFailed && <li className="px-3.5 py-2 t-caption text-text-3">소식 불러오기 실패 · 잠시 후 다시</li>}
+                {feed.factsFailed && (
+                  <li className="px-3.5 py-2 t-caption text-text-3">{facts.length > 0 ? "일부 소식 불러오기 실패 · 잠시 후 다시" : "소식 불러오기 실패 · 잠시 후 다시"}</li>
+                )}
               </ul>
             )}
           </div>
@@ -425,7 +602,7 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
             {loggedIn === false ? (
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="t-sub text-text-3">{selected ? `${selected.name} 이야기 한 줄 · 로그인 후 쓰기` : "로그인 후 쓰기"}</span>
-                <Link href={`/login?callbackUrl=${encodeURIComponent(variant === "page" ? "/talk" : "/#talk")}`} className="btn-soft inline-flex min-h-10 items-center px-4 t-sub font-bold no-underline">
+                <Link href={`/login?callbackUrl=${encodeURIComponent(loginBack)}`} className="btn-soft inline-flex min-h-10 items-center px-4 t-sub font-bold no-underline">
                   로그인
                 </Link>
               </div>
@@ -436,10 +613,22 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
                     <input
                       value={complexQ}
                       onChange={(e) => setComplexQ(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          setComplexOpen(false);
+                          setComplexQ("");
+                          setComplexHits(null);
+                        }
+                      }}
+                      autoFocus
                       placeholder={selected ? `${selected.name} 단지 이름` : "단지 이름"}
                       aria-label="붙일 단지 검색"
                       className="min-h-10 w-full rounded-lg border border-line bg-surface px-3 t-sub text-ink"
                     />
+                    {!complexHits && complexQ.trim().length < 2 && (
+                      <span className="px-1 t-caption text-text-3">2자 이상 · 이 지역 단지만 · Esc 닫기</span>
+                    )}
                     {complexHits && (
                       <ul className="m-0 list-none rounded-lg border border-line bg-surface p-1">
                         {complexHits.length === 0 ? (
@@ -492,8 +681,7 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
                   )}
                   <input
                     value={text}
-                    onChange={(e) => setText(e.target.value.slice(0, TALK_MAX_LEN))}
-                    maxLength={TALK_MAX_LEN}
+                    onChange={(e) => setText(clipTalkInput(e.target.value))}
                     disabled={!selected || loggedIn === null}
                     placeholder={selected ? `${selected.name} 이야기 한 줄` : "지역을 고르면 쓰기"}
                     aria-label="토론 한 줄"
@@ -507,8 +695,8 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
                   <span role={formError ? "alert" : undefined} className={formError ? "font-bold text-danger" : ""}>
                     {formError ?? "새 글은 30초마다"}
                   </span>
-                  <span className="tabular-nums">
-                    {[...text].length}/{TALK_MAX_LEN}
+                  <span className={`tabular-nums ${tone === "full" ? "font-bold text-danger" : tone === "warn" ? "font-bold text-warning" : ""}`}>
+                    {tone === "ok" ? `${len}/${TALK_MAX_LEN}` : `${TALK_MAX_LEN - len}자 남음`}
                   </span>
                 </div>
               </form>

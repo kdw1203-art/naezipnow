@@ -325,15 +325,19 @@ export async function loadSignalReport(opts: LoadSignalOptions): Promise<SignalR
   else {
     const housingCsi = csiRaw ? { ...csiRaw, group: csiGroupUsed } : null;
     const buySuperiority = bs === "failed" ? null : bs;
-    sentiment = buySuperiority || housingCsi ? { buySuperiority, housingCsi } : null;
+    /* [1052] 한쪽을 못 읽었고 다른 쪽이 비었으면 "없음"이 아니라 실패 */
+    sentiment = buySuperiority || housingCsi ? { buySuperiority, housingCsi } : bs === "failed" || ecos === "failed" ? "failed" : null;
   }
 
   /* 뉴스 · 관심 */
   const newsItems = region ? region.news : "failed";
   const news: SignalInputs["news"] = newsItems === "failed" ? "failed" : { items: newsItems, windowDays: NEWS_WINDOW_DAYS };
   const nowMs = Date.parse(now);
-  const recent30 = newsItems === "failed" ? 0 : newsItems.filter((n) => Date.parse(n.at) >= nowMs - 30 * DAY_MS).length;
-  const prior30 = newsItems === "failed" ? 0 : newsItems.length - recent30;
+  /* [1052] 기사를 못 읽었으면 0건이 아니라 모름(null) — 엔진이 "불러오기 실패"로 적는다 */
+  const newsFailed = newsItems === "failed";
+  const recent30 = newsItems === "failed" ? null : newsItems.filter((n) => Date.parse(n.at) >= nowMs - 30 * DAY_MS).length;
+  const prior30 = newsItems === "failed" || recent30 === null ? null : newsItems.length - recent30;
+  const siteFailed = opts.scope === "complex" && Boolean(opts.complexId) && interest === "failed";
   let siteViews30: number | null = null;
   let siteViewsPrior30: number | null = null;
   let watchers: number | null = null;
@@ -347,7 +351,7 @@ export async function loadSignalReport(opts: LoadSignalOptions): Promise<SignalR
   const interestInput: SignalInputs["interest"] =
     newsItems === "failed" && (interest === "failed" || interest === null)
       ? "failed"
-      : { newsRecent30: recent30, newsPrior30: prior30, siteViews30, siteViewsPrior30, watchers };
+      : { newsRecent30: recent30, newsPrior30: prior30, newsFailed, siteViews30, siteViewsPrior30, watchers, siteFailed };
 
   /* 거래량 */
   const vol = region ? region.volume : "failed";
@@ -376,8 +380,9 @@ export async function loadSignalReport(opts: LoadSignalOptions): Promise<SignalR
   /* 매물·공급 */
   const supply: SignalInputs["supply"] = ctx
     ? {
-        /* 지역 축이 있는데 입주 예정이 비었으면 0세대(공공데이터 기준) — 지역 축이 없으면 모름 */
-        upcomingHouseholds: ctx.supply ? ctx.supply.upcomingHouseholds : ctx.region ? 0 : null,
+        /* [1052] 입주 예정 축이 비었으면 모름(null) — 예전엔 지역 축이 있으면 0세대로 채웠는데, 입주 물량 조회 실패도
+           빈 축이 되므로(live-context settledVal → []) 0 은 지어낸 값이었다. 엔진은 null · 0 모두 점수를 내지 않는다 */
+        upcomingHouseholds: ctx.supply ? ctx.supply.upcomingHouseholds : null,
         regionHouseholds: ctx.region?.demographics?.households ?? null,
         firstYm: ctx.supply?.firstYm ?? null,
         lastYm: ctx.supply?.lastYm ?? null,

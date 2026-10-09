@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { canManageExpertProfile, sanitizeExpertForPublic } from "@/lib/experts/access";
 import { deleteExpert, getExpert, updateExpert } from "@/lib/experts/store-db";
 import { sanitizeExpertProfilePatch } from "@/lib/experts/profile-input";
+import { LEGAL_DENY_MESSAGE, hasLegalServiceText } from "@/lib/experts/legal-deny";
 import { revalidatePath } from "next/cache";
 import { invalidateExpertRoutes } from "@/lib/town/invalidate-town";
 
@@ -35,6 +36,12 @@ export async function PATCH(
   const { patch, errors } = sanitizeExpertProfilePatch(body);
   if (errors.length > 0) {
     return NextResponse.json({ error: errors[0], errors }, { status: 400 });
+  }
+  /* [1052] 법률 서비스(LEGAL_DENY) — 유형(category)은 이 경로로 바뀌지 않지만, 직함 · 전문 분야 · 상호 같은
+     자유 입력으로 유형처럼 실리는 길을 서버에서 막는다(화면 검증만 믿지 않는다). */
+  const rawCategory = (body as Record<string, unknown> | null)?.category;
+  if (hasLegalServiceText(rawCategory, patch.title, patch.specialties, patch.organization)) {
+    return NextResponse.json({ error: LEGAL_DENY_MESSAGE, code: "legal_service_denied" }, { status: 400 });
   }
   const updated = await updateExpert(id, patch);
   if (!updated) return NextResponse.json({ error: "없음" }, { status: 404 });

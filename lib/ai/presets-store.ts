@@ -1,6 +1,7 @@
 import { getServiceSupabase } from "@/lib/supabase/service";
 import type { AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import type { PlatformShell } from "@/lib/platform-shell";
+import { kstMonthStart } from "@/lib/subscriptions/usage-period";
 
 export type AiAnalysisPreset = {
   id: string;
@@ -482,10 +483,9 @@ export async function countRunsThisMonth(
   opts: { externalOnly?: boolean } = {},
 ): Promise<number> {
   const em = authorEmail.trim().toLowerCase();
-  const start = new Date();
-  start.setDate(1);
-  start.setHours(0, 0, 0, 0);
-  const since = start.toISOString();
+  /* [1052] "이번 달" = 한국 시간 달(1일 0시 KST = 전달 말일 15시 UTC). 예전엔 서버 시간대(UTC) 1일 0시라
+     매달 1일 0~9시(한국)엔 지난달 한도가 남았고, 마이 화면의 초기화 날짜와 어긋났다(lib/subscriptions/usage-period) */
+  const since = kstMonthStart().toISOString();
   const sb = getServiceSupabase();
   if (!sb) {
     return memRuns.filter(

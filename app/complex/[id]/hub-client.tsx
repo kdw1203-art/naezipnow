@@ -16,7 +16,7 @@ import type { MonthDeltaView } from "@/lib/complex/month-delta";
 import { DealListLazy as DealList } from "./DealListLazy";
 import { primeWatching, readWatching } from "./watchlist-status";
 import { canOfferPush, pushResultMessage, subscribeToPush } from "@/lib/push/subscribe-client";
-import { hasPendingWatch, savePendingWatch, takePendingWatch } from "@/lib/client/pending-watch";
+import { clearPendingWatch, hasPendingWatch, savePendingWatch, takePendingWatch } from "@/lib/client/pending-watch";
 import { getSessionLite } from "@/lib/client/session-lite";
 
 /* [968 · 4] 기본 탭(요약)이 아닌 탭의 본문은 서버 HTML 에 없고 탭을 열 때만 필요하다.
@@ -163,6 +163,8 @@ export function WatchlistButton({
           /* [1046] 가입 이유를 한 문장으로 — 관심 단지 새 실거래 메일(watchlist-new-tx, 기본 켜짐)이 실제로 하는 일 */
           benefit: "가입하면 이 단지에 새 실거래가 올라올 때 메일로 알려 드려요. 임장 기록도 한곳에 모여요.",
           callbackUrl: `/complex/${complexId}`,
+          /* [1052] 창을 닫으면(가입 거절) 마저 담기 기록도 버린다 */
+          onDismiss: () => clearPendingWatch(),
         });
         return;
       }

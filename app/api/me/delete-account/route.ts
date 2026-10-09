@@ -163,6 +163,20 @@ export async function POST(req: NextRequest) {
   } catch {
     hidden.listings = "error";
   }
+  /* [1052] 실시간 토론 한 줄(1051 region_talks) — 접수 즉시 숨김(hidden_at). 지우지 않는다: 취소하면 운영자가 되살리고,
+     30일 뒤 파기는 SOP 4항(개인 식별 컬럼 표 전부)에서 author_email 로 함께 지운다 */
+  try {
+    const { data } = await sb
+      .from("region_talks")
+      .update({ hidden_at: new Date().toISOString() })
+      .eq("author_email", email)
+      .is("deleted_at", null)
+      .is("hidden_at", null)
+      .select("id");
+    hidden.region_talks = data?.length ?? 0;
+  } catch {
+    hidden.region_talks = "error";
+  }
 
   /* 접수 회신 메일 — 취소 방법과 파기 예정일을 알린다(SOP 1항) */
   if (isEmailConfigured()) {
@@ -179,7 +193,7 @@ export async function POST(req: NextRequest) {
       html: emailLayout(`
         <h1 style="margin:0 0 12px;font-size:18px;color:#0B2545;">회원탈퇴 요청을 접수했어요</h1>
         <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:#333;">
-          지금부터 로그인이 막히고 공개했던 임장노트·매물은 비공개로 바뀝니다.<br/>
+          지금부터 로그인이 막히고 공개했던 임장노트·매물·토론 글은 비공개로 바뀝니다.<br/>
           개인정보는 <b>${escapeHtml(purgeDate)}</b> 이후 파기됩니다(법령상 보존 의무가 있는
           결제·환불 기록 등은 가명 처리해 보존).
         </p>

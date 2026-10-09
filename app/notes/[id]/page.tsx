@@ -267,9 +267,11 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
     return fallbackScore > 0 ? levelFromScore(fallbackScore) : null;
   };
   const axisCandidates: { icon: string; label: string; level: AxisLevel | null }[] = [
-    { icon: "sun", label: "채광", level: axisOrNull("채광", ["채광", "햇빛", "일조", "남향"], s.facility) },
-    { icon: "volume", label: "소음", level: axisOrNull("소음", ["소음", "시끄", "조용"], s.location) },
-    { icon: "pin", label: "주차", level: axisOrNull("주차", ["주차", "이중주차"], s.facility) },
+    /* [1052] 축 점수로 메우는 것은 교통(= 교통 점수)만. 채광·주차를 '시설' 점수로, 소음을 '입지' 점수로 메우면
+       작성자가 매기지 않은 감각 항목을 지어낸다(시설 5점 → "채광 상"). 현장 체크·글 낱말이 없으면 뺀다 */
+    { icon: "sun", label: "채광", level: axisOrNull("채광", ["채광", "햇빛", "일조", "남향"], 0) },
+    { icon: "volume", label: "소음", level: axisOrNull("소음", ["소음", "시끄", "조용"], 0) },
+    { icon: "pin", label: "주차", level: axisOrNull("주차", ["주차", "이중주차"], 0) },
     { icon: "train", label: "교통", level: axisOrNull("교통", [], s.transport) },
   ];
   const axes: Axis[] = axisCandidates.filter((a): a is Axis => a.level !== null);
@@ -1192,7 +1194,7 @@ export default async function NoteDetailPage({
                   <Explain
                     title="항목 평가"
                     body="다녀온 사람이 현장에서 느낀 인상(좋음·보통·아쉬움)을 상·중·하로 적은 값이에요. 측정한 값은 아니에요."
-                    how="작성 화면의 현장 체크에서 고른 값을 먼저 쓰고, 없으면 좋았던 점·주의할 점 글의 낱말, 그것도 없으면 축 점수(4 이상 상 · 2 이하 하)로 정해요. 입력이 없는 축은 빼요."
+                    how="작성 화면의 현장 체크에서 고른 값을 먼저 쓰고, 없으면 좋았던 점·주의할 점 글의 낱말로 정해요. 교통만 교통 점수(4 이상 상 · 2 이하 하)로도 정해요. 입력이 없는 축은 빼요."
                     size={12}
                   />
                 )}
@@ -1567,6 +1569,7 @@ export default async function NoteDetailPage({
               aptName={realNote.aptName ?? ""}
               region={realNote.region}
               noteId={id}
+              complexId={complexIdFromHref ?? (visitComplexId || null)}
             />
           )}
           {/* [1005 · A4] 근처 비교 후보 — 본문·도구 다음, 댓글 앞(저장 직후 소유자만) */}

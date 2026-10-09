@@ -128,7 +128,8 @@ test("가입 경로 잇기 — 분석 동의 뒤 · 로그인한 뒤 · 끝나�
   assert.ok(i > 0);
   const effect = src.slice(src.lastIndexOf("useEffect(", i), i);
   assert.match(effect, /if \(!consented\) return;/);
-  assert.match(effect, /ATTR_DONE_KEY\) === "1"\) return;/);
+  /* [1052] 계정별(이메일 해시) 완료 표시 · 탭당 재시도 1회 — claimAttributionAttempt */
+  assert.match(effect, /if \(!claimAttributionAttempt\(marker, local, session\)\) return;/);
   assert.match(effect, /s\?\.user\?\.email/);
   const route = code("app/api/me/attribution/route.ts");
   assert.match(route, /status: 401/);

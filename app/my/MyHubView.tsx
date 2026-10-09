@@ -21,6 +21,7 @@ import { AttendanceButton } from "./points/AttendanceButton";
 import { ColumnBars } from "@/app/components/viz/ColumnBars";
 import type { MyActivity } from "@/lib/me/my-activity";
 import { ProfileEditSheet } from "./ProfileEditSheet";
+import { usagePeriodFor, usagePeriodNote, type UsagePeriod } from "@/lib/subscriptions/usage-period";
 
 /**
  * [1006] 마이 허브 화면 — 데이터는 전부 props(평범한 JSON). DB·세션을 모른다.
@@ -79,13 +80,24 @@ export type MyHubData = {
     relinkHref: string | null;
   };
   aiUsage: { lifetime: boolean; used: number; limit: number | null } | null;
-  /** [1049] 사용량 표(AI 분석 · 북마크 · 관심 단지) — 못 읽으면 null(AI 칸만 있으면 aiUsage 로 한 줄) */
-  usage?: { key: string; label: string; used: number; limit: number | null; lifetime?: boolean }[] | null;
+  /** [1049] 사용량 표(AI 분석 · 북마크 · 관심 단지) — 못 읽으면 null(AI 칸만 있으면 aiUsage 로 한 줄)
+   *  [1052] period: 줄마다 센 기간(이번 달 · 누적 · 보유) · resetsAt: 이번 달 줄의 초기화 시각(ISO) */
+  usage?: {
+    key: string;
+    label: string;
+    used: number;
+    limit: number | null;
+    lifetime?: boolean;
+    period?: UsagePeriod;
+    resetsAt?: string;
+  }[] | null;
   /** [1049] 내 임장노트 월별 기록 수(6개월) · 평균 기록 점수 — 노트 0건 · 조회 실패면 null */
   activity?: MyActivity | null;
 };
 
-/* [1049 · 표] 사용량 한 줄 — 사용/한도 · 막대 · 남음. 한도 없음은 "무제한" */
+/* [1049 · 표] 사용량 한 줄 — 사용/한도 · 막대 · 남음. 한도 없음은 "무제한"
+   [1052] 항목 아래에 그 줄이 센 기간 — "이번 달 · 11월 1일 초기화" / "누적 · 초기화 없음" / "보유".
+   예전엔 표 제목 하나("이번 달 사용량")가 세 줄을 다 덮어, 지금 담아 둔 북마크·관심 단지 개수도 이번 달 숫자로 읽혔다. */
 function UsageTable({ rows }: { rows: NonNullable<MyHubData["usage"]> }) {
   return (
     <table className="w-full border-collapse">
@@ -104,11 +116,12 @@ function UsageTable({ rows }: { rows: NonNullable<MyHubData["usage"]> }) {
           const limit = r.limit ?? 0;
           const pct = unlimited ? 0 : Math.min(100, Math.round((r.used / Math.max(1, limit)) * 100));
           const atLimit = !unlimited && r.used >= limit;
+          const period = r.period ?? usagePeriodFor(r.key, Boolean(r.lifetime));
           return (
             <tr key={r.key} className="border-b border-line last:border-b-0">
               <th scope="row" className="py-2 pr-2 text-left t-sub font-bold text-ink">
                 {r.label}
-                {r.lifetime ? <span className="t-caption font-normal text-text-3"> (누적)</span> : null}
+                <span className="block t-caption font-normal text-text-3">{usagePeriodNote(period, r.resetsAt)}</span>
               </th>
               <td className="py-2 pr-2 t-sub tabular-nums">
                 {unlimited ? (
@@ -754,7 +767,8 @@ export function MyHubView({ data }: { data: MyHubData }) {
             {/* [1049 · 표] 사용량 — AI 분석 · 북마크 · 관심 단지를 한 표로(사용/한도 · 막대 · 남음). 표를 못 만들면 아래 AI 칸 그대로 */}
             {usage && usage.length > 0 && (
               <div className="card flex flex-col gap-1.5 rounded-2xl p-4 max-md:p-3.5">
-                <span className="t-sub font-bold text-ink">{usage.some((u) => u.lifetime) ? "사용량" : "이번 달 사용량"}</span>
+                {/* [1052] 기간은 줄마다 적는다(이번 달 · 누적 · 보유가 섞여 있다) — 제목은 "사용량" 하나 */}
+                <span className="t-sub font-bold text-ink">사용량</span>
                 <UsageTable rows={usage} />
               </div>
             )}

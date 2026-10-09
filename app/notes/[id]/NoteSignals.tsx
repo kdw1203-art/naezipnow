@@ -4,7 +4,8 @@
    · 같은 엔진(lib/signals) — 단지 화면과 같은 8요인 · 같은 공식. 이 노트의 기록 점수를 "현장"으로 옆에 적는다
      (시장 점수에 섞지 않는다 — 시장은 지역 사실, 현장은 작성자의 방문 평가).
    · 지역: 노트에 단지가 이어져 있으면 그 단지 id 의 실거래 지역 이름, 아니면 노트 지역 표기를 실거래 표기로.
-   · 이 화면은 동적이라 벽시계 2.5초 — 넘기면 판을 그리지 않는다(노트 본문을 늦추지 않기). */
+   · 이 화면은 동적이라 벽시계 2.5초 — 넘기면 판을 그리지 않는다(노트 본문을 늦추지 않기).
+   · [1052] 제목에 "AI" 를 붙이지 않는다 — 정해진 규칙 계산이다(판 머리에 "규칙 계산 · 공식 vN"). */
 import { SignalBoard } from "@/app/components/signals/SignalBoard";
 import { loadSignalReport } from "@/lib/signals/load";
 import { noteSignalRegion } from "@/lib/signals/regions";
@@ -38,7 +39,7 @@ export async function NoteSignals({
     new Promise<null>((r) => setTimeout(() => r(null), NOTE_SIGNALS_BUDGET_MS)),
   ]);
   if (!report || report.coverage.used === 0) return null;
-  return <SignalBoard report={report} idPrefix="note" title="AI 다요인 분석 · 이 노트 지역" className="rise-in-2 rounded-3xl" />;
+  return <SignalBoard report={report} idPrefix="note" title="다요인 분석 · 이 노트 지역" className="rise-in-2 rounded-3xl" />;
 }
 
 export default NoteSignals;

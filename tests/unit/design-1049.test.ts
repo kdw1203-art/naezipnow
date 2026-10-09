@@ -55,7 +55,8 @@ test("임장노트 목록 — 표(데스크톱 기본) · 피드는 전환 · �
   assert.match(f, /type ViewMode = "grid" \| "feed" \| "table"/);
   assert.match(f, /useState<DeskView>\("table"\)/);
   assert.match(f, /useState<ViewMode>\("grid"\)/, "폰 기본은 격자 그대로");
-  assert.match(f, /<NotesTable notes=\{visible\} \/>/);
+  /* [1052] 점수 머리 정렬 props 가 붙었다 */
+  assert.match(f, /<NotesTable\s+notes=\{visible\}/);
   assert.match(f, /deskView === "feed" \? "md:flex" : "md:hidden"/, "피드 카드는 전환으로 남는다");
   assert.match(f, /aria-label="목록 보기"/);
   assert.match(f, /\{v === "table" \? "표" : "피드"\}/);

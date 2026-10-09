@@ -27,7 +27,8 @@
 - `account_deletion_requests` 에 행 생성(`purge_after` = 접수 + 30일).
 - `app_users.is_banned = true, ban_reason = 'account_deletion_requested'` → 로그인
   차단(965부터 로그인·세션 갱신이 `is_banned` 를 실제로 본다).
-- 임장노트 `is_public=false`, 매물 `is_hidden=true` (게시글·질문은 SOP 2 항대로 수동).
+- 임장노트 `is_public=false`, 매물 `is_hidden=true`, 실시간 토론 `region_talks.hidden_at`(1052) (게시글·질문은 SOP 2 항대로 수동).
+- 탈퇴 취소 때 토론 글을 되살리려면 `region_talks` 에서 그 작성자의 `hidden_at` 을 비운다(신고로 숨긴 글은 `region_talk_reports` 가 있는 것 — 그건 두고).
 - 접수 회신 메일(Resend 설정 시) — 파기 예정일·취소 방법(가입 메일로 고객센터).
 - 자동결제(`billing_subscriptions.active`)가 있으면 접수를 거절하고 먼저 해지하게 한다.
 
@@ -46,7 +47,7 @@ select user_email, requested_at, purge_after, cancelled_at, purged_at
 
 1. 접수 회신: "접수했고 30일 뒤 파기됩니다. 그 사이 취소하려면 같은 메일로 알려 주세요."
 2. 즉시: 로그인 차단(플랜 해지·세션 무효화)과 공개 콘텐츠 비공개 전환
-   (임장노트 `is_public=false`, 게시글·질문·매물 숨김).
+   (임장노트 `is_public=false`, 게시글·질문·매물·실시간 토론 숨김).
 3. 유료 구독이 살아 있으면 먼저 해지(환불 여부는 sop-refunds.md 기준).
 4. 30일 뒤: 개인 식별 컬럼을 가진 표를 전부 파기. 표 목록은 추측하지 말고 아래 조회로
    **그때그때** 뽑는다(표가 늘어난다):

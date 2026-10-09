@@ -129,10 +129,30 @@ export function parseOverpass(
   };
 }
 
-/** Overpass 질의문 — 반경 안의 역 · 관공서 점(길·건물은 가운데 점) */
+/**
+ * Overpass 질의문 — 반경 안의 역 · 관공서 점(길·건물은 가운데 점).
+ * [1052] 서버 쪽 시간 한도 4초 — 우리 쪽 한 곳 대기(area-load 4.5초)보다 짧게 둬서, 바쁜 서버는 끊기기 전에
+ * "시간 초과" 표시(remark)를 돌려준다. 응답은 80개로 자른다(out center 80 — 역 6 · 관공서 8 만 쓴다).
+ */
 export function overpassQuery(lat: number, lng: number, radiusM = AREA_RADIUS_M): string {
   const a = `(around:${radiusM},${lat},${lng})`;
-  return `[out:json][timeout:8];(node["railway"="station"]${a};node["station"="subway"]${a};nwr["amenity"~"^(townhall|police|fire_station|post_office|courthouse|library)$"]${a};nwr["office"="government"]${a};);out center 80;`;
+  return `[out:json][timeout:4];(node["railway"="station"]${a};node["station"="subway"]${a};nwr["amenity"~"^(townhall|police|fire_station|post_office|courthouse|library)$"]${a};nwr["office"="government"]${a};);out center 80;`;
+}
+
+/**
+ * [1052] Overpass 가 HTTP 200 으로 돌려준 "실패" — 있으면 이유, 정상이면 null.
+ * 서버가 시간 초과·메모리 부족으로 질의를 멈추면 200 + remark("runtime error: Query timed out …") 에
+ * 빈(또는 일부) elements 를 준다. 예전엔 이것을 "주변에 역·관공서 0곳"으로 받아 30일 캐시에 넣었다.
+ * elements 배열이 없는 응답도 실패다 — "없음"과 "못 읽음"을 섞지 않는다.
+ */
+export function overpassFailure(json: unknown): string | null {
+  if (!json || typeof json !== "object") return "Overpass 응답 형식 아님";
+  const j = json as { remark?: unknown; elements?: unknown };
+  if (typeof j.remark === "string" && /runtime error|timed out|timeout|out of memory|rate.?limit/i.test(j.remark)) {
+    return `Overpass ${j.remark.slice(0, 120)}`;
+  }
+  if (!Array.isArray(j.elements)) return "Overpass 응답에 elements 없음";
+  return null;
 }
 
 /* ── 유사 단지 ─────────────────────────────────────────────────────────── */
@@ -199,4 +219,68 @@ export function pickSimilarComplexes(
 export function formatDistance(m: number): string {
   if (m >= 1000) return m % 1000 === 0 ? `${m / 1000}km` : `${(m / 1000).toFixed(1)}km`;
   return `${Math.round(m)}m`;
+}
+
+/* ── [1052] 화면 표기 규칙(정직한 이름표) ─────────────────────────────── */
+
+/** 거리는 전부 두 점 사이의 직선 거리다(길 따라 잰 것이 아니다) — 숫자 앞에 그렇게 적는다 */
+export function formatStraightDistance(m: number): string {
+  return `직선 ${formatDistance(m)}`;
+}
+
+/** 직선 거리로 셈한 걷는 시간은 실제보다 짧다(길은 돌아간다) — "이상"으로 적는다. 분당 80m */
+export function walkMinutesAtLeast(m: number): string {
+  return `도보 ${Math.max(1, Math.round(m / 80))}분 이상`;
+}
+
+/** 이보다 덜 닮았으면 "유사 단지"라고 부르지 않는다(0 = 다름 · 1 = 같음) */
+export const SIMILARITY_MIN = 0.3;
+
+export type SimilarBasis = "similar" | "nearest";
+
+/**
+ * 유사 단지 목록을 화면에 올릴 때의 이름과 항목.
+ *  · 닮음 점수가 하나라도 있으면(이 단지 시세를 안다) "similar" — 점수 SIMILARITY_MIN 미만 · 점수 없는 단지는 뺀다.
+ *  · 점수가 하나도 없으면(이 단지 시세를 모른다) "nearest" — 닮은 순이 아니라 가까운 순이므로 그렇게 부른다.
+ */
+export function similarView(list: AreaComplex[]): { basis: SimilarBasis; items: AreaComplex[] } {
+  const scored = list.some((c) => c.similarity !== null);
+  if (!scored) return { basis: "nearest", items: list };
+  return { basis: "similar", items: list.filter((c) => c.similarity !== null && c.similarity >= SIMILARITY_MIN) };
+}
+
+/** 겹 이름 — 가까운 순이면 "주변 단지"(닮았다고 말하지 않는다) */
+export function similarLayerLabel(basis: SimilarBasis): string {
+  return basis === "similar" ? "유사 단지" : "주변 단지";
+}
+
+export type AreaLayer = "similar" | "stations" | "offices";
+
+/**
+ * 겹 단추 옆 숫자. 아직 읽는 중이면 null(숫자 없음) · 그 원천을 못 읽었으면 "—".
+ * 못 읽은 것을 0 으로 적으면 "주변에 하나도 없다"로 읽힌다.
+ */
+export function areaLayerCount(data: AreaData | null, layer: AreaLayer, radiusM: number): string | null {
+  if (!data) return null;
+  if (data.missing.includes(layer === "similar" ? "similar" : "osm")) return "—";
+  const list = layer === "similar" ? similarView(data.similar).items : layer === "stations" ? data.stations : data.offices;
+  return String(list.filter((x) => x.distanceM <= radiusM).length);
+}
+
+/**
+ * 다시 불러온 응답을 합친다 — 원천별로 읽은 쪽을 남긴다.
+ * 예전 자동 재시도는 역·관공서만 보고 응답 전체를 바꿔 끼워, 처음엔 읽었던 유사 단지가 재시도에서
+ * 실패하면 사라졌다.
+ */
+export function mergeAreaData(prev: AreaData | null, next: AreaData): AreaData {
+  if (!prev) return next;
+  const has = (d: AreaData, src: string) => !d.missing.includes(src);
+  const sim = has(next, "similar") || !has(prev, "similar") ? next : prev;
+  const osm = has(next, "osm") || !has(prev, "osm") ? next : prev;
+  const missing = [
+    ...(has(sim, "similar") ? [] : ["similar"]),
+    ...(has(osm, "osm") ? [] : ["osm"]),
+    ...next.missing.filter((m) => m !== "similar" && m !== "osm"),
+  ];
+  return { ...next, similar: sim.similar, stations: osm.stations, offices: osm.offices, missing };
 }

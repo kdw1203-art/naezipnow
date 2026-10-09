@@ -144,13 +144,14 @@ export function HomeTodayLine({
     if (baseRate && baseRate !== "—")
       out.push({
         key: "rate",
-        text: `기준금리는 ${baseRate}${loanRate ? `, 주담대 변동은 ${loanRate}` : ""}예요.`,
+        /* [1052] 문장(~예요) → 사실 낱말 — 다른 슬라이드("서울 매매지수 …")와 같은 꼴 */
+        text: `기준금리 ${baseRate}${loanRate ? ` · 주담대 변동 ${loanRate}` : ""}`,
         href: "/analysis/scenario",
       });
     if (typeof publicNotes === "number" && publicNotes > 0)
       out.push({
         key: "notes",
-        text: `공개 임장노트는 ${publicNotes.toLocaleString("ko-KR")}편이에요.`,
+        text: `공개 임장노트 ${publicNotes.toLocaleString("ko-KR")}편`,
         href: "/notes",
       });
     return out;
@@ -215,6 +216,17 @@ export function HomeTodayLine({
     },
     [slides.length],
   );
+  /* [1052] 탭 목록 키보드 — 화살표·Home·End 로 옮기고 포커스도 따라간다(탭은 지금 것 하나만 Tab 으로 들어온다 · roving tabindex) */
+  const tabsRef = useRef<HTMLDivElement | null>(null);
+  const goFocus = useCallback(
+    (next: number) => {
+      if (slides.length === 0) return;
+      const n = ((next % slides.length) + slides.length) % slides.length;
+      setI(n);
+      window.requestAnimationFrame(() => tabsRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[n]?.focus());
+    },
+    [slides.length],
+  );
 
   if (slides.length === 0) return null;
   const cur = slides[Math.min(i, slides.length - 1)];
@@ -236,8 +248,17 @@ export function HomeTodayLine({
       onFocusCapture={hold}
       onBlurCapture={release}
       onKeyDown={(e) => {
-        if (e.key === "ArrowRight") go(i + 1);
-        if (e.key === "ArrowLeft") go(i - 1);
+        const onTab = (e.target as HTMLElement).getAttribute?.("role") === "tab";
+        const move = onTab ? goFocus : go;
+        if (e.key === "ArrowRight") move(i + 1);
+        else if (e.key === "ArrowLeft") move(i - 1);
+        else if (onTab && e.key === "Home") {
+          e.preventDefault();
+          move(0);
+        } else if (onTab && e.key === "End") {
+          e.preventDefault();
+          move(slides.length - 1);
+        }
       }}
     >
       {/* 심볼 워터마크 — 처마+온점 한지색, 장식(aria-hidden).
@@ -280,6 +301,7 @@ export function HomeTodayLine({
       </div>
 
       {/* 문장 — 높이를 두 줄로 잡아 두어 넘길 때 아래가 밀리지 않는다(CLS) */}
+      <div id="home-today-slide" role="tabpanel" aria-label={`${Math.min(i, slides.length - 1) + 1}번째 소식`}>
       <Link
         key={cur.key}
         href={cur.href}
@@ -290,19 +312,22 @@ export function HomeTodayLine({
       >
         {cur.text}
       </Link>
+      </div>
 
       {/* [989] 점 자체가 버튼이라 히트가 8×8 이었다. 44px 히트를 얹어 봐야 점 사이가
           6px 이라 셋이 통째로 겹쳐 한 점만 눌린다 — 넓히는 게 아니라 **버튼을 키운다**.
           점(그림)은 안쪽 span 으로 내리고 버튼은 24px 정사각으로. 줄이 위아래로
           8px 씩 자라는 만큼 -my-2 로 되돌려 배치는 그대로 둔다. */}
       {slides.length > 1 && (
-        <div role="tablist" aria-label="오늘의 한 줄 넘기기" className="-my-2 mt-0.5 flex items-center gap-1.5">
+        <div ref={tabsRef} role="tablist" aria-label="오늘의 한 줄 넘기기" className="-my-2 mt-0.5 flex items-center gap-1.5">
           {slides.map((s, n) => (
             <button
               key={s.key}
               type="button"
               role="tab"
               aria-selected={n === i}
+              aria-controls="home-today-slide"
+              tabIndex={n === i ? 0 : -1}
               aria-label={`${n + 1}번째 소식`}
               onClick={() => go(n)}
               className="flex min-h-[24px] min-w-[24px] items-center justify-center p-2 transition-opacity duration-200 hover:opacity-80"

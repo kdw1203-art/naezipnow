@@ -99,6 +99,8 @@ async function collectUrls(): Promise<Collected> {
     for (const p of complexRun.value.paths) urls.push(`${BASE}${p}`);
     detail.complexes = complexRun.value.paths.length;
     detail.complexRows = complexRun.value.rows;
+    /* [1052] 행 상한에 닿으면 표시(최신 순이라 잘린 것은 오래된 단지) */
+    detail.complexTruncated = complexRun.value.truncated ? 1 : 0;
   } else {
     missing.push(complexRun.state === "timeout" ? "complexes(시간 초과)" : "complexes(조회 실패)");
   }

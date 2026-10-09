@@ -12,18 +12,33 @@
  * 규칙
  *  ① 요인 점수는 −2(내림 쪽) ~ +2(오름 쪽). 매수·매도 권유가 아니라 "가격·수요가 어느 쪽으로 기우는 신호인가"다.
  *  ② 값이 없으면 점수를 만들지 않는다(status none) · 못 읽었으면 failed · 표본이 작으면 thin(가중치 절반, 점수 없으면 미반영).
+ *     [1052 · v2] 빈 값을 중립 0 으로 세지 않는다 — 방향 낱말 없는 뉴스 · 입주 예정 자료 없음(또는 0세대)인 매물·공급은
+ *     점수 null(반영 수에서 빠짐). 관심도는 일부를 못 읽으면 "표본 적음"이 아니라 failed 로 적는다.
  *  ③ 종합(0~100, 50 중립)은 점수가 있는 요인이 3개 이상일 때만. 가중 평균 × 22.5 + 50.
  *  ④ 현장(임장 기록 점수)은 시장 신호에 섞지 않고 옆에 따로 적는다 — 성격이 다른 숫자다.
  *  ⑤ 공식을 바꾸면 SIGNAL_FORMULA_VERSION 을 올린다(AI 분석 기록에 버전이 함께 남는다).
+ *  ⑥ 오름 쪽 · 내림 쪽 경계는 SIGNAL_LEAN 하나 — 끌어올림/누름 요인과 판의 낱말·색이 같은 값을 쓴다.
+ *  ⑦ 이 계산은 정해진 규칙이다(AI 가 만든 판단이 아님) — 화면 이름도 "다요인 분석 · 규칙 계산".
  *
  * 순수 함수 — 서버 · 클라이언트 · 단위 시험 공용. DB 를 모른다(읽기는 lib/signals/load.ts).
  */
 import { summarizeNewsTone } from "@/lib/signals/news-tone";
-import { scoreWord, ymLabel } from "@/lib/signals/display";
+import {
+  SIGNAL_LEAN,
+  asOfKey,
+  coverageBreakdown,
+  factorStateWord,
+  latestAsOf,
+  scoreLean,
+  scoreWord,
+  unscoredReason,
+  ymLabel,
+} from "@/lib/signals/display";
 
-export { scoreWord, ymLabel };
+export { SIGNAL_LEAN, asOfKey, coverageBreakdown, factorStateWord, latestAsOf, scoreLean, scoreWord, unscoredReason, ymLabel };
 
-export const SIGNAL_FORMULA_VERSION = 1;
+/** v2(1052) — 빈 값 0점 금지(뉴스 방향 낱말 없음 · 입주 예정 없음/0세대 → 미반영) · 관심도 일부 실패 구분 · 쪽 경계 SIGNAL_LEAN */
+export const SIGNAL_FORMULA_VERSION = 2;
 
 export type SignalFactorKey = "sentiment" | "news" | "interest" | "volume" | "trend" | "momentum" | "supply" | "rate";
 export type SignalStatus = "ok" | "thin" | "none" | "failed";
@@ -113,13 +128,18 @@ export interface SignalInputs {
     windowDays: number;
   }>;
   interest: Input<{
-    newsRecent30: number;
-    newsPrior30: number;
+    /** 지역 기사 최근 30일 · 직전 30일 — 기사를 못 읽었으면 null(newsFailed) */
+    newsRecent30: number | null;
+    newsPrior30: number | null;
+    /** 지역 기사를 못 읽음 — 0건과 다르다 */
+    newsFailed?: boolean;
     /** 내집나우 이 단지 화면 조회(동의한 방문의 표본) — 단지 화면이 아니면 null */
     siteViews30: number | null;
     siteViewsPrior30: number | null;
     /** 이 단지 관심 등록 수 */
     watchers: number | null;
+    /** 단지 화면인데 조회·관심 표본을 못 읽음 — "표본 적음"과 다르다 */
+    siteFailed?: boolean;
   }>;
   volume: Input<{
     /** 지역 월별 매매 신고 건수(오름차순, yyyymm) — 이번 달·지난달은 신고 기한(30일)이 안 지나 엔진이 뺀다 */
@@ -260,20 +280,16 @@ export function newsFactor(input: SignalInputs["news"]): SignalFactor {
   if (items.length === 0) return blank("news", "none", `최근 ${days}일 이 지역 기사 없음`, src);
   const tone = summarizeNewsTone(items.map((i) => i.title));
   const toned = tone.upCount + tone.downCount;
-  const score = toned === 0 ? 0 : (2 * (tone.upCount - tone.downCount)) / Math.max(toned, 3);
   const words = tone.topWords.length ? ` · 많이 나온 낱말 ${tone.topWords.join("·")}` : "";
-  const status: SignalStatus = items.length < 3 ? "thin" : "ok";
   const sortedAt = items.map((i) => i.at).sort();
   const latest = sortedAt.length ? sortedAt[sortedAt.length - 1] : null;
-  return made(
-    "news",
-    score,
-    status,
-    `기사 ${items.length}건 · 오름 ${tone.upCount} · 내림 ${tone.downCount}${words}`,
-    src,
-    latest ? latest.slice(0, 10) : null,
-    toned === 0 ? "방향 낱말이 있는 제목 없음" : null,
-  );
+  const value = `기사 ${items.length}건 · 오름 ${tone.upCount} · 내림 ${tone.downCount}${words}`;
+  const asOf = latest ? latest.slice(0, 10) : null;
+  /* [1052] 방향 낱말이 하나도 없으면 "중립 0점"이 아니라 미반영 — 기사가 있다는 것만으로 방향을 말할 수 없다 */
+  if (toned === 0) return made("news", null, "thin", value, src, asOf, "방향 낱말 있는 제목 없음 · 점수 미반영");
+  const score = (2 * (tone.upCount - tone.downCount)) / Math.max(toned, 3);
+  const status: SignalStatus = items.length < 3 ? "thin" : "ok";
+  return made("news", score, status, value, src, asOf, status === "thin" ? "기사 3건 미만 · 가중치 절반" : null);
 }
 
 export function interestFactor(input: SignalInputs["interest"]): SignalFactor {
@@ -282,20 +298,34 @@ export function interestFactor(input: SignalInputs["interest"]): SignalFactor {
   if (!input) return blank("interest", "none", "관심 자료 없음", src);
   const parts: number[] = [];
   const text: string[] = [];
-  const newsTotal = input.newsRecent30 + input.newsPrior30;
-  text.push(`지역 기사 30일 ${input.newsRecent30}건(직전 ${input.newsPrior30}건)`);
-  if (newsTotal >= 3) parts.push(Math.max(-1.5, Math.min(1.5, (input.newsRecent30 - input.newsPrior30) / Math.max(input.newsPrior30, 2))));
-  const v30 = input.siteViews30;
-  const vp = input.siteViewsPrior30;
-  if (v30 !== null && vp !== null) {
+  const nr = input.newsFailed ? null : input.newsRecent30;
+  const np = input.newsFailed ? null : input.newsPrior30;
+  const newsTotal = nr !== null && np !== null ? nr + np : 0;
+  if (input.newsFailed) text.push("지역 기사 불러오기 실패");
+  else if (nr !== null && np !== null) {
+    text.push(`지역 기사 30일 ${nr}건(직전 ${np}건)`);
+    if (newsTotal >= 3) parts.push(Math.max(-1.5, Math.min(1.5, (nr - np) / Math.max(np, 2))));
+  }
+  const v30 = input.siteFailed ? null : input.siteViews30;
+  const vp = input.siteFailed ? null : input.siteViewsPrior30;
+  if (input.siteFailed) text.push("단지 조회·관심 불러오기 실패");
+  else if (v30 !== null && vp !== null) {
     text.push(`이 단지 조회 ${v30}회(직전 ${vp}회)`);
     if (v30 + vp >= 10) parts.push(Math.max(-1, Math.min(1, (v30 - vp) / Math.max(vp, 5))));
   }
-  if (input.watchers !== null) text.push(`관심 등록 ${input.watchers}명`);
-  if (parts.length === 0) return made("interest", null, "thin", text.join(" · "), src, null, "표본 적음 · 점수 미반영");
+  if (!input.siteFailed && input.watchers !== null) text.push(`관심 등록 ${input.watchers}명`);
+  const anyFailed = Boolean(input.newsFailed || input.siteFailed);
+  if (text.length === 0) return blank("interest", "none", "관심 자료 없음", src);
+  /* [1052] 일부를 못 읽어 점수가 없으면 "표본 적음"이 아니라 실패로 — 읽었으면 표본이 찼을 수도 있다 */
+  if (parts.length === 0) {
+    return anyFailed
+      ? made("interest", null, "failed", text.join(" · "), src, null, "일부 불러오기 실패 · 점수 미반영")
+      : made("interest", null, "thin", text.join(" · "), src, null, "표본 적음 · 점수 미반영");
+  }
   const score = parts.reduce((a, b) => a + b, 0) / parts.length;
   const thin = newsTotal < 6 && (v30 ?? 0) + (vp ?? 0) < 20;
-  return made("interest", score, thin ? "thin" : "ok", text.join(" · "), src, null, thin ? "표본 적음 · 가중치 절반" : null);
+  const notes = [thin ? "표본 적음 · 가중치 절반" : null, anyFailed ? "일부 불러오기 실패" : null].filter(Boolean);
+  return made("interest", score, thin ? "thin" : "ok", text.join(" · "), src, null, notes.length ? notes.join(" · ") : null);
 }
 
 export function volumeFactor(input: SignalInputs["volume"], nowIso: string): SignalFactor {
@@ -401,9 +431,14 @@ export function supplyFactor(
   const text: string[] = [];
   const up = input?.upcomingHouseholds ?? null;
   const hh = input?.regionHouseholds ?? null;
-  /* 입주 예정 0세대는 "정말 없음"과 "공공데이터에 아직 안 실림"을 가를 수 없다 — 표본 적음으로 */
-  const zeroSupply = up === 0;
-  if (up !== null) {
+  /* [1052 · v2] 점수는 입주 예정 물량에 잣대(세대수 · 연 거래)가 있을 때만 낸다. 입주 예정 자료가 없거나 0세대
+     ("정말 없음"과 "공공데이터에 아직 안 실림"을 가를 수 없다)거나 잣대가 없으면 미반영 — 기사 매물 단서만으로는
+     점수를 만들지 않는다(같은 제목을 뉴스 요인이 이미 센다). 단서는 사실 줄에 그대로 적는다. */
+  let unscored: string | null = up === null ? "입주 예정 자료 없음" : null;
+  if (up === 0) {
+    text.push("입주 예정 0세대(공공데이터 기준)");
+    unscored = "0세대는 아직 안 실린 자료와 구분 불가";
+  } else if (up !== null) {
     const span = input?.firstYm && input?.lastYm ? `(${ymLabel(input.firstYm)}~${ymLabel(input.lastYm)})` : "";
     const trades = input?.annualTrades ?? null;
     const spanMonths = input?.firstYm && input?.lastYm ? monthsBetween(input.firstYm, input.lastYm) + 1 : null;
@@ -421,6 +456,7 @@ export function supplyFactor(
       text.push(`입주 예정 ${n0(up)}세대${span} · 연 환산 ${n0(perYear)}세대 = 연 매매 ${n0(trades)}건의 ${Math.round(ratio * 100)}%`);
     } else {
       text.push(`입주 예정 ${n0(up)}세대${span}`);
+      unscored = "세대수·연 거래 잣대 없음";
     }
   }
   if (newsInput && newsInput !== "failed" && newsInput.items.length > 0) {
@@ -433,9 +469,11 @@ export function supplyFactor(
   }
   const note = "매물 수 원천 없음 · 기사 제목 단서로 대신";
   if (text.length === 0) return blank("supply", "none", "입주 예정 · 매물 단서 없음", src, note);
-  if (parts.length === 0) return made("supply", null, "thin", text.join(" · "), src, null, note);
+  if (unscored !== null || parts.length === 0) {
+    return made("supply", null, "thin", text.join(" · "), src, null, `${unscored ?? "표본 적음"} · 점수 미반영`);
+  }
   const score = parts.reduce((a, b) => a + b, 0) / parts.length;
-  return made("supply", score, zeroSupply ? "thin" : "ok", text.join(" · "), src, null, note);
+  return made("supply", score, "ok", text.join(" · "), src, null, note);
 }
 
 export function rateFactor(input: SignalInputs["rate"]): SignalFactor {
@@ -510,8 +548,8 @@ export function computeSignals(inputs: SignalInputs): SignalReport {
       : null;
   const band = index === null ? null : signalBand(index);
   const drivers = {
-    up: scored.filter((f) => (f.score as number) >= 0.5).sort((a, b) => (b.score as number) - (a.score as number)).map((f) => f.label),
-    down: scored.filter((f) => (f.score as number) <= -0.5).sort((a, b) => (a.score as number) - (b.score as number)).map((f) => f.label),
+    up: scored.filter((f) => (f.score as number) >= SIGNAL_LEAN.lean).sort((a, b) => (b.score as number) - (a.score as number)).map((f) => f.label),
+    down: scored.filter((f) => (f.score as number) <= -SIGNAL_LEAN.lean).sort((a, b) => (a.score as number) - (b.score as number)).map((f) => f.label),
   };
   const field = inputs.field ?? null;
   return {
@@ -558,7 +596,7 @@ export function signalPromptLines(r: SignalReport): string[] {
       : `[다요인 시장 신호 v${r.version} · ${r.regionLabel}] 종합 ${r.index}/100 · ${r.band} · 반영 ${r.coverage.used}/${r.coverage.total}개 요인`;
   const lines = [head];
   for (const f of r.factors) {
-    const s = f.score === null ? "미반영" : `${signed(f.score, 1)}(${scoreWord(f.score)})`;
+    const s = f.score === null ? `미반영(${unscoredReason(f) ?? "표본 적음"})` : `${signed(f.score, 1)}(${scoreWord(f.score)})`;
     lines.push(`- ${f.label}: ${s} · ${f.value}${f.asOf ? ` · 기준 ${ymLabel(f.asOf) ?? f.asOf}` : ""}`);
   }
   if (r.field) lines.push(`- 현장(${r.field.label}): ${Math.round(r.field.score100)}/100`);

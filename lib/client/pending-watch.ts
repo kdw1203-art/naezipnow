@@ -13,6 +13,8 @@
 
 export const PENDING_WATCH_KEY = "nz_pending_watch";
 export const PENDING_WATCH_TTL_MS = 24 * 60 * 60 * 1000;
+/** [1052] 이 기록을 남기는 가입 창의 행동 이름(hub-client 의 promptSignup action) — 그 창을 닫으면 기록도 지운다 */
+export const PENDING_WATCH_ACTION = "watchlist_add";
 
 export type PendingWatch = { complexId: string; complexName: string; at: number };
 
@@ -62,6 +64,19 @@ export function hasPendingWatch(
   if (!storage) return false;
   const v = read(storage);
   return !!v && v.complexId === complexId && now - v.at >= 0 && now - v.at < PENDING_WATCH_TTL_MS;
+}
+
+/**
+ * [1052] 기록을 버린다 — 가입 창에서 "로그인 없이 계속 보기"(닫기 · 바깥 누르기 · Esc)를 고른 때.
+ * 예전엔 기록이 24시간 남아, 가입을 거절한 사람이 나중에 다른 길로 로그인해 그 단지에 오면 묻지 않고 담겼다.
+ */
+export function clearPendingWatch(storage: StorageLike | null = defaultStorage()): void {
+  if (!storage) return;
+  try {
+    storage.removeItem(PENDING_WATCH_KEY);
+  } catch {
+    /* 저장소 접근 불가 — 지울 것도 없다 */
+  }
 }
 
 /**

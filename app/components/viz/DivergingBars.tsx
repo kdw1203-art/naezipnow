@@ -62,7 +62,8 @@ export function DivergingBars({
         return (
           <li key={r.key}>
             {r.href ? (
-              <Link href={r.href} className="press flex min-h-8 items-center gap-2.5 rounded-md no-underline">
+              /* [1052] 폰 누름 면 40px(데스크톱 32px 그대로) — 25개 구 줄이 각각 링크다 */
+              <Link href={r.href} className="press flex min-h-[40px] items-center gap-2.5 rounded-md no-underline md:min-h-8">
                 {body}
               </Link>
             ) : (

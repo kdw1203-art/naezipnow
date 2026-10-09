@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ExpertCard, type ExpertCardData } from "./ExpertCard";
 import { EXPERT_SUBCATEGORIES, findSub, matchSubcategory } from "@/lib/subcategories";
 import { EXPERT_TYPES, findExpertType } from "@/lib/experts/taxonomy";
+import { countExpertTypes } from "@/lib/experts/type-counts";
 import { responseTimeLabel } from "@/lib/experts/review-rules";
 import { Icon } from "@/app/components/Icon";
 
@@ -173,15 +174,12 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
 
   const sub = findSub(EXPERT_SUBCATEGORIES, filter.sub);
 
-  /* 유형·지역 칩은 전량 기준 빈도순 — 실제 전문가가 있는 값만 칩이 된다 */
-  const typeCounts = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const e of items) {
-      const t = findExpertType(e.category)?.id ?? "other";
-      m.set(t, (m.get(t) ?? 0) + 1);
-    }
-    return m;
-  }, [items]);
+  /* 유형·지역 칩은 전량 기준 빈도순 — 실제 전문가가 있는 값만 칩이 된다.
+     [1052] 자격 칩도 0명이면 그리지 않는다(누르면 빈 목록뿐인 칩). 세는 규칙은 아래 목록 필터와 같은
+     findExpertType — 예전 저장값("건축사")도 "건축사·설계"로 센다. 주소(?type=)로 고른 칩은 0명이어도 남긴다
+     (눌린 상태가 사라지면 무엇으로 걸렀는지 안 보인다). */
+  const typeCounts = useMemo(() => countExpertTypes(items), [items]);
+  const typeChips = EXPERT_TYPES.filter((t) => (typeCounts.get(t.id) ?? 0) > 0 || filter.type === t.id);
   const regionKeys = useMemo(() => {
     const freq = new Map<string, number>();
     for (const e of items) {
@@ -213,7 +211,7 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
           <button type="button" onClick={() => apply({ type: "all" })} aria-pressed={filter.type === "all"} className={chipCls(filter.type === "all")}>
             모든 자격
           </button>
-          {EXPERT_TYPES.map((t) => (
+          {typeChips.map((t) => (
             <button
               key={t.id}
               type="button"
@@ -307,7 +305,7 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
               공개 임장노트 보기
             </Link>
             {/* [1047] 보관 화면(/qna) 대신 등록 입구 — 빈 목록을 채우는 길은 전문가 등록이다 */}
-            <Link href="/town/experts/apply" className="btn-soft btn-sm no-underline">
+            <Link href={filter.type !== "all" ? `/town/experts/apply?type=${filter.type}` : "/town/experts/apply"} className="btn-soft btn-sm no-underline">
               전문가 등록하기
             </Link>
           </div>

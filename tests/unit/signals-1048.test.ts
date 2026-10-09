@@ -165,8 +165,15 @@ test("뉴스 — 제목 낱말만 · 우리 자동 글 제외 · 매물 단서�
   assert.equal(newsFactor({ items: [], windowDays: 60 }).status, "none");
   const sup = supplyFactor(null, { items: [{ title: "평촌 매물 쌓이고 급매", at: "2026-10-01" }], windowDays: 60 });
   assert.match(sup.value, /매물 기사 늘어남 1 · 줄어듦 0/);
-  assert.ok((sup.score ?? 0) < 0);
-  assert.equal(sup.note, "매물 수 원천 없음 · 기사 제목 단서로 대신");
+  /* [1052 · v2] 입주 예정 자료가 없으면 기사 단서만으로 점수를 만들지 않는다(같은 제목을 뉴스 요인이 이미 센다) */
+  assert.equal(sup.score, null);
+  assert.equal(sup.note, "입주 예정 자료 없음 · 점수 미반영");
+  const supWith = supplyFactor(
+    { upcomingHouseholds: 4200, regionHouseholds: 140000, firstYm: "202611", lastYm: "202806" },
+    { items: [{ title: "평촌 매물 쌓이고 급매", at: "2026-10-01" }], windowDays: 60 },
+  );
+  assert.equal(supWith.score, -0.75, "입주 예정이 있으면 매물 단서를 함께 평균");
+  assert.equal(supWith.note, "매물 수 원천 없음 · 기사 제목 단서로 대신");
 });
 
 test("매물·공급 — 입주 예정 ÷ 지역 세대 · 0세대는 표본 적음", () => {
@@ -201,7 +208,7 @@ test("현장(임장 기록 점수)은 시장 점수에 섞지 않는다", () => 
 
 test("프롬프트 줄 — 버전 · 요인 8줄 · 숫자를 고치지 말라는 규칙 · 권유 아님", () => {
   const lines = signalPromptLines(computeSignals(BASE));
-  assert.match(lines[0], /^\[다요인 시장 신호 v1 · 안양 동안구\] 종합 \d+\/100/);
+  assert.match(lines[0], /^\[다요인 시장 신호 v2 · 안양 동안구\] 종합 \d+\/100/);
   assert.equal(lines.filter((l) => l.startsWith("- ")).length, 8);
   assert.match(lines[lines.length - 1], /고치거나 새 숫자를 만들지 말 것.*매수·매도 권유가 아니다/);
 });

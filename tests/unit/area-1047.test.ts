@@ -118,7 +118,8 @@ test("지도 카드 — 레일 맨 위(데스크톱) · 본문(폰) · 확대·�
   assert.match(page, /location=\{typeof v\.lat === "number"/);
   const map = code("app/complex/[id]/ComplexAreaMap.tsx");
   assert.match(map, /showControls/);
-  assert.match(map, /circle=\{\{ lat, lng, radiusM: radius \}\}/);
+  /* [1052] 원 도형은 useMemo 로 — circle={circle} */
+  assert.match(map, /circle=\{circle\}/);
   assert.match(map, /© OpenStreetMap 기여자/);
   assert.match(map, /window\.matchMedia\("\(min-width: 1024px\)"\)/);
   assert.match(code("app/complex/[id]/ComplexAreaMapLazy.tsx"), /ssr: false/);

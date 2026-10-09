@@ -100,13 +100,13 @@ function HomeAiGateway({
           미리보기"([1002])는 검색 아래 문 ② "후보가 있어요 → 단지 종합 진단"이 같은 화면으로 간다(중복 제거).
           [989] 카드 안에 단독으로 서는 링크 — 위아래 6px 로 31px. */}
       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
-        <Link href="/analysis" className="w-fit py-1.5 text-[12px] font-bold text-ai-accent no-underline">
+        <Link href="/analysis" className="w-fit py-1.5 t-sub font-bold text-ai-accent no-underline">
           AI 분석 도구 보기 ›
         </Link>
         {exampleNoteId && (
           <Link
             href={`/notes/${exampleNoteId}`}
-            className="w-fit py-1.5 text-[12px] font-bold text-ai-accent no-underline"
+            className="w-fit py-1.5 t-sub font-bold text-ai-accent no-underline"
           >
             정리된 공개 노트 보기 ›
           </Link>
@@ -127,7 +127,8 @@ function HomeAiGateway({
           </div>
         ) : (
           <div className="t-body t-fit">
-            오늘 브리핑을 아직 만들지 못했어요. 매매가격지수가 갱신되면 표시돼요.
+            {/* [1052] 문장형 안내 → 사실 낱말("○○ 없음 · 언제") */}
+            오늘 브리핑 없음 · 매매가격지수 갱신 뒤 표시
           </div>
         )}
       </div>
@@ -320,7 +321,7 @@ export default async function Home() {
                     )}
                     <Link
                       href="/notes"
-                      className="inline-block py-[5px] text-[12px] text-text-3 transition-colors hover:text-primary"
+                      className="inline-block py-[5px] t-sub text-text-3 transition-colors hover:text-primary"
                     >
                       더보기
                     </Link>
@@ -403,7 +404,7 @@ export default async function Home() {
                   failed.regions ? (
                     <ErrorState
                       title="지역 동향 불러오기 실패"
-                      desc="잠시 후 다시 시도해 주세요."
+                      desc="잠시 후 다시"
                       action={{ label: "지도에서 찾아보기", href: "/map" }}
                     />
                   ) : (
@@ -435,8 +436,9 @@ export default async function Home() {
                         말했다(소유자: "홈에서는 중복되지 않을까?"). 따로 칸을 없애고 이 칸의 접힘 하나로 — 펼치면 구별 막대 */}
                     <HomeSeoulMoves data={data.seoulMoves} />
                     {/* [1036 · 밀도] 카드마다 붙던 범례("선 · 16주 시세 지수")를 섹션 아래 한 번, 접어서 */}
+                    {/* [1052] 거래 건수 원천은 카드마다 다르다(부동산원 월간 · 없으면 국토부 신고 월 집계) — 카드 끝에 원천을 적으니 여기서 한쪽으로 단정하지 않는다 */}
                     <Fineprint label="기준 · 출처">
-                      선 = 최근 주간 매매가격지수(한국부동산원) · 등락 = 지수 전월 대비 · 거래 = 그 달 신고 건수(국토교통부)
+                      선 = 최근 주간 매매가격지수(한국부동산원) · 등락 = 지수 전월 대비 · 거래 = 그 달 아파트 매매 건수(카드 끝 표기 · 한국부동산원 월간 또는 국토교통부 신고)
                     </Fineprint>
                   </>
                 )}

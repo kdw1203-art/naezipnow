@@ -8,8 +8,11 @@ import {
   listExperts,
 } from "@/lib/experts/store-db";
 import { sanitizeExpertForPublic } from "@/lib/experts/access";
+import { LEGAL_DENY_MESSAGE, hasLegalServiceText } from "@/lib/experts/legal-deny";
 import { invalidateExpertRoutes } from "@/lib/town/invalidate-town";
 
+/* [1052] 공개 목록 — sanitizeExpertForPublic 은 명시 화이트리스트(lib/experts/public-dto):
+   검수 메모 같은 내부 칸은 싣지 않고, 미인증 프로필의 상호·연락처·등록번호는 null 로 비운다. */
 export async function GET() {
   const items = (await listExperts()).map(sanitizeExpertForPublic);
   return NextResponse.json({ items });
@@ -44,6 +47,10 @@ export async function POST(req: Request) {
       { error: "성명·타이틀·카테고리는 필수입니다." },
       { status: 400 },
     );
+  }
+  /* [1052] 법률 서비스(LEGAL_DENY)는 관리자 생성으로도 받지 않는다 — 정책 경계는 경로를 가리지 않는다 */
+  if (hasLegalServiceText(body.category, body.title, body.specialties, body.organization)) {
+    return NextResponse.json({ error: LEGAL_DENY_MESSAGE, code: "legal_service_denied" }, { status: 400 });
   }
   const ownerEmail = session.user.email.trim().toLowerCase();
   const existing = await getExpertByOwnerEmail(ownerEmail);

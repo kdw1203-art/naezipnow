@@ -44,7 +44,8 @@ test("임장노트 — 표 · 폰 격자: 첫 누름 펼침(피드 카드) · �
   assert.match(f, /if \(isOpen \|\| e\.defaultPrevented \|\| e\.button !== 0 \|\| e\.metaKey \|\| e\.ctrlKey \|\| e\.shiftKey \|\| e\.altKey\) return;/);
   assert.match(f, /const \[openId, setOpenId\] = useState<string \| null>\(null\)/, "표 — 펼침 하나");
   assert.match(f, /onClick=\{\(e\) => firstTapExpands\(e, isOpen, \(\) => setOpenId\(n\.id\)\)\}/);
-  assert.match(f, /<td colSpan=\{span\} className="bg-bg p-2 md:p-3">\s*<PostCard n=\{n\} \/>/, "펼친 줄 = 피드 카드 그대로");
+  /* [1052] 펼친 칸에 role=region · Esc 접기가 붙었다 */
+  assert.match(f, /<td\s+colSpan=\{span\}\s+className="bg-bg p-2 md:p-3"[\s\S]{0,500}?<PostCard n=\{n\} \/>/, "펼친 줄 = 피드 카드 그대로");
   assert.match(f, /if \(isOpen\) router\.push\(href\);/, "링크 밖을 다시 눌러도 노트");
   assert.match(f, /grid grid-flow-row-dense grid-cols-3/, "격자 — 누른 줄 아래에 펼침");
   assert.match(f, /<GridTile n=\{n\} priority=\{i === 0\} open=\{gridOpen === n\.id\} onOpen=\{\(\) => setGridOpen\(n\.id\)\} \/>/);
@@ -64,7 +65,8 @@ test("AI 분석 — 첫 누름 내용 · 다시 누름 예전 동작 · 내용�
   assert.match(d, /steps\.map\(/, "분석 순서 4단계");
   assert.match(d, /분석 순서/);
   assert.match(d, /시장 신호/);
-  assert.match(t, /\{c\.title\} 열기 ›/);
+  /* [1052] 단추가 할 일을 말한다 — 고른 단지 이름 · 없으면 "단지 고르고" */
+  assert.match(t, /\$\{c\.title\} 열기 ›/);
   assert.match(t, /grid-flow-row-dense grid-cols-2/, "그 밖의 8종 — 누른 줄 아래");
   assert.match(t, /<td colSpan=\{4\}/);
   assert.doesNotMatch(t, /from "@\/lib\/ai\/tool-persona"|from "@\/lib\/ai\/tool-identity"|from "@\/lib\/signals\//, "번들 — 서버에서 조립");

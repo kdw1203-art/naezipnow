@@ -198,10 +198,47 @@ async function readNoteFacts(r: TalkRegion): Promise<TalkFact[]> {
   });
 }
 
-async function readRegionFacts(regionId: string): Promise<TalkFact[]> {
+/* [1052] 조각마다 따로 캐시 — 예전엔 셋을 한 번에(Promise.all) 묶어 뉴스 하나가 실패하면 지수·거래·노트 소식까지 통째로
+   비었다. 이제 실패한 조각만 빠지고(캐시에 굳히지 않음 — 던지면 unstable_cache 가 저장하지 않는다) 나머지는 그대로 */
+const readNewsFactsCached = unstable_cache(
+  async (regionId: string) => {
+    const r = talkRegionById(regionId);
+    return r ? readNewsFacts(r) : [];
+  },
+  ["talk-region-news-v2"],
+  { revalidate: 600 },
+);
+const readNoteFactsCached = unstable_cache(
+  async (regionId: string) => {
+    const r = talkRegionById(regionId);
+    return r ? readNoteFacts(r) : [];
+  },
+  ["talk-region-notes-v2"],
+  { revalidate: 600 },
+);
+
+export type RegionFacts = {
+  facts: TalkFact[];
+  /** 실패한 조각(지수·거래 · 뉴스 · 임장노트) — 비어 있으면 전부 받음 */
+  failed: ("market" | "news" | "notes")[];
+};
+
+/** 오른쪽 자동 소식 — 지수 · 거래(위) + 뉴스 · 임장노트(최신 순). 조각 실패는 그 조각만 뺀다 */
+export async function loadRegionFacts(regionId: string): Promise<RegionFacts> {
   const r = talkRegionById(regionId);
-  if (!r) return [];
-  const [market, news, notes] = await Promise.all([readMarketPartCached(), readNewsFacts(r), readNoteFacts(r)]);
+  if (!r) return { facts: [], failed: [] };
+  const [marketR, newsR, notesR] = await Promise.allSettled([
+    readMarketPartCached(),
+    readNewsFactsCached(r.id),
+    readNoteFactsCached(r.id),
+  ]);
+  const failed: RegionFacts["failed"] = [];
+  if (marketR.status === "rejected") failed.push("market");
+  if (newsR.status === "rejected") failed.push("news");
+  if (notesR.status === "rejected") failed.push("notes");
+  const market: MarketPart = marketR.status === "fulfilled" ? marketR.value : { indexYm: null, tradesYm: null, byId: {} };
+  const news = newsR.status === "fulfilled" ? newsR.value : [];
+  const notes = notesR.status === "fulfilled" ? notesR.value : [];
   const out: TalkFact[] = [];
   const m = market.byId[r.id];
   if (m && m.pct !== null && market.indexYm) {
@@ -229,7 +266,5 @@ async function readRegionFacts(regionId: string): Promise<TalkFact[]> {
     });
   }
   const timed = [...news, ...notes].sort((a, b) => String(b.at ?? "").localeCompare(String(a.at ?? "")));
-  return [...out, ...timed];
+  return { facts: [...out, ...timed], failed };
 }
-
-export const loadRegionFacts = unstable_cache(readRegionFacts, ["talk-region-facts-v1"], { revalidate: 600 });

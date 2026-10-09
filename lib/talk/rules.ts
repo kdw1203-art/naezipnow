@@ -212,14 +212,82 @@ export function talkTimeLabel(iso: string, nowMs: number): string {
   return `${k.getUTCMonth() + 1}.${k.getUTCDate()}`;
 }
 
-/** 단지 붙이기 검색 결과가 이 지역 단지인가 — 실거래 지역 이름이 같거나("서울 송파구"), 같은 구 이름으로 끝난다 */
+/* [1052] 시·도 짧은 이름 — "서울특별시"·"경기도"·"부산광역시"도 짧은 이름으로 */
+const SIDO_SHORT = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
+const SIDO_LONG: Record<string, string> = {
+  충청북도: "충북", 충청남도: "충남", 전라북도: "전북", 전북특별자치도: "전북", 전라남도: "전남",
+  경상북도: "경북", 경상남도: "경남", 강원도: "강원", 강원특별자치도: "강원", 제주도: "제주", 제주특별자치도: "제주",
+};
+
+/** 첫 낱말이 시·도면 짧은 이름, 아니면 null("오산시"·"분당구"처럼 시·도 없이 시작) */
+export function talkSidoOf(regionText: string | null | undefined): string | null {
+  const first = String(regionText ?? "").trim().split(/\s+/)[0] ?? "";
+  if (!first) return null;
+  if (SIDO_LONG[first]) return SIDO_LONG[first];
+  for (const s of SIDO_SHORT) {
+    /* "광주시"는 경기 광주시라 시·도가 아니다 — 맨 "시"는 "서울시"만 */
+    if (first === s || (first === "서울시" && s === "서울") || (first.startsWith(s) && /^(?:특별시|광역시|특별자치시|도)$/.test(first.slice(s.length)))) return s;
+  }
+  return null;
+}
+
+/** 단지 붙이기 검색 결과가 이 지역 단지인가 — 실거래 지역 이름이 같거나("서울 송파구"), 같은 구 이름으로 끝난다.
+ *  [1052] 둘 다 시·도가 적혀 있으면 시·도도 같아야 — "부산 강서구" ≠ "서울 강서구"(긴 구 이름도 겹친다) */
 export function complexInRegion(complexRegion: string | null | undefined, txName: string): boolean {
   const a = String(complexRegion ?? "").replace(/\s+/g, " ").trim();
   const b = String(txName ?? "").replace(/\s+/g, " ").trim();
   if (!a || !b) return false;
   if (a === b) return true;
+  const sa = talkSidoOf(a);
+  const sb = talkSidoOf(b);
+  if (sa && sb && sa !== sb) return false;
   const tail = b.split(" ").slice(-1)[0] ?? "";
   /* "중구"·"서구"·"남구"처럼 짧은 구는 시·도까지 같아야 — 서울 중구 ≠ 부산 중구 */
   if (tail.length <= 2) return a === b;
   return a.endsWith(` ${tail}`) || a === tail;
 }
+
+/* ── [1052] 판 손질 — 순수 규칙(단위 시험) ───────────────────────────── */
+
+/** 지역 찾기 — "송파" · "분당" · "경기 수원" · "인천" 모두. 공백·대소문자 무시 */
+export function filterTalkRegions(regions: readonly TalkBoardRegion[], q: string): TalkBoardRegion[] {
+  const needle = String(q ?? "").replace(/\s+/g, "").toLowerCase();
+  if (!needle) return [...regions];
+  return regions.filter((r) => {
+    const hay = `${r.sido}${r.name}${r.txName}`.replace(/\s+/g, "").toLowerCase();
+    return hay.includes(needle);
+  });
+}
+
+/** 입력 자르기 — 글자(코드 포인트) 기준. UTF-16 단위로 자르면 이모지·한자 확장이 반쪽으로 남는다 */
+export function clipTalkInput(v: string): string {
+  const cps = [...String(v ?? "")];
+  return cps.length > TALK_MAX_LEN ? cps.slice(0, TALK_MAX_LEN).join("") : String(v ?? "");
+}
+
+/** 남은 글자 표시 — 180자부터 경고, 200자에서 끝 */
+export const TALK_WARN_LEN = 180;
+export function talkCountTone(len: number): "ok" | "warn" | "full" {
+  if (len >= TALK_MAX_LEN) return "full";
+  if (len >= TALK_WARN_LEN) return "warn";
+  return "ok";
+}
+
+/** 새로 받은 글 중 처음 보는 글 수(내 글 제외) — "새 글 N개" 알림 */
+export function countFreshPosts(seen: ReadonlySet<string>, incoming: readonly TalkPost[]): number {
+  return incoming.filter((p) => !p.mine && !seen.has(p.id)).length;
+}
+
+/** 올린 직후 왼쪽 순위의 글 수를 바로 +1(판 응답은 CDN 30초 캐시라 다시 받아도 늦다) */
+export function bumpBoardTalk(board: TalkBoard, regionId: string, atIso: string): TalkBoard {
+  let hit = false;
+  const regions = board.regions.map((r) => {
+    if (r.id !== regionId) return r;
+    hit = true;
+    return { ...r, talks: r.talks + 1, lastTalkAt: atIso };
+  });
+  return hit ? { ...board, regions, totalTalks: board.totalTalks + 1 } : board;
+}
+
+/** 마지막으로 본 지역(홈·토론 화면 공용 · 이 브라우저에만) */
+export const TALK_LAST_REGION_KEY = "talk:last-region";

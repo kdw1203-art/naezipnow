@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
 import { ActionButton } from "@/app/components/ui/ActionButton";
@@ -20,25 +20,51 @@ import {
 } from "@/lib/experts/taxonomy";
 import { EXPERT_DOC_MAX_BYTES, EXPERT_DOC_MAX_FILES, formatDocSize, type ExpertDocFile } from "@/lib/experts/doc-limits";
 import { CITY_OPTIONS, DISTRICTS } from "@/lib/regions";
+import {
+  APPLY_DRAFT_KEY,
+  CERT_NUMBER_ERROR,
+  expertTypeFromQuery,
+  isBlankApplyDraft,
+  isValidCertNumber,
+  normalizeCertInput,
+  parseApplyDraft,
+  serializeApplyDraft,
+  type ApplyDraft,
+} from "@/lib/experts/apply-rules";
 
 /* [1047] 전문가 등록 — 소유자 지시(2026-10-09): 개인·법인 등 다양한 직업군 · 면허증·사업자등록증 첨부 → 관리자 승인만 등록.
    예전 등록은 모달 안의 짧은 양식이었고 증빙은 "https 주소"만 받았다(서류를 어디에 올려 주소를 만들지 신청자가 알아서).
    이제 한 화면 양식 + 파일 첨부. 첨부는 고르는 즉시 비공개 저장소(expert-docs)의 내 폴더로 올라가고, 신청서에는 경로만 붙는다.
-   직업군 · 사업 형태 · 필요 서류는 lib/experts/taxonomy 한 곳이 정한다(서버도 같은 규칙으로 다시 본다). */
+   직업군 · 사업 형태 · 필요 서류는 lib/experts/taxonomy 한 곳이 정한다(서버도 같은 규칙으로 다시 본다).
+   [1052] · 등록·자격번호 형식은 lib/experts/apply-rules(서버와 같은 규칙) — 숫자만인 번호("12345")도 받는다.
+          · 임시 저장(sessionStorage · 탭을 닫으면 사라짐) — 새로고침 · 로그인 왕복에도 적던 값이 남는다. 동의 칸은
+            싣지 않는다. 접수가 끝나면 지운다. 저장소 접근은 전부 try/catch(사생활 보호 모드 · 차단된 저장소).
+          · ?type=<id> 로 직업군을 미리 고른다(분야별 목록 /town/experts/c/[type] 의 등록 버튼).
+          · 라벨은 htmlFor + useId 로 입력과 묶고, 칩 묶음은 role="group" + aria-labelledby, 오류는 role="alert". */
 
 type Phase = "idle" | "sending" | "done";
 
-const CERT_NUMBER_RE = /^제?[0-9A-Za-z가-힣]{1,12}(-[0-9A-Za-z가-힣]{1,12}){1,3}호?$/;
 const BIZ_NO_RE = /^\d{3}-?\d{2}-?\d{5}$/;
 
 const inputCls =
   "w-full rounded-xl border border-line bg-bg p-3 t-body text-ink outline-none placeholder:text-text-3 focus:border-primary";
 
-function Label({ children, hint }: { children: React.ReactNode; hint?: string }) {
-  return (
-    <div className="mb-1.5 t-sub font-bold text-text-2">
+/** htmlFor 가 있으면 <label>(입력과 묶임), 없으면 칩 묶음의 이름표(id 로 aria-labelledby 가 가리킨다) */
+function Label({ children, hint, htmlFor, id }: { children: React.ReactNode; hint?: string; htmlFor?: string; id?: string }) {
+  const cls = "mb-1.5 block t-sub font-bold text-text-2";
+  const inner = (
+    <>
       {children}
       {hint && <span className="ml-1 font-normal text-text-3">{hint}</span>}
+    </>
+  );
+  return htmlFor ? (
+    <label htmlFor={htmlFor} id={id} className={cls}>
+      {inner}
+    </label>
+  ) : (
+    <div id={id} className={cls}>
+      {inner}
     </div>
   );
 }
@@ -73,6 +99,80 @@ export function ApplyForm() {
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingKind = useRef<DocKind>("license");
+  const [restored, setRestored] = useState(false);
+  const uid = useId();
+  const ids = {
+    type: `${uid}-type`,
+    form: `${uid}-form`,
+    name: `${uid}-name`,
+    business: `${uid}-business`,
+    bizNo: `${uid}-bizno`,
+    cert: `${uid}-cert`,
+    years: `${uid}-years`,
+    region: `${uid}-region`,
+    city: `${uid}-city`,
+    district: `${uid}-district`,
+    customCity: `${uid}-custom-city`,
+    specialties: `${uid}-specialties`,
+    bio: `${uid}-bio`,
+  };
+
+  /* 임시 저장 복원 → 주소의 ?type= 가 직업군을 덮는다(분야별 목록에서 들어온 뜻이 더 새롭다). 마운트 뒤 한 번. */
+  useEffect(() => {
+    let draft: ApplyDraft | null = null;
+    try {
+      draft = parseApplyDraft(window.sessionStorage.getItem(APPLY_DRAFT_KEY));
+    } catch {
+      draft = null;
+    }
+    if (draft) {
+      setTypeId(draft.typeId);
+      setFormId(draft.formId);
+      setName(draft.name);
+      setBusinessName(draft.businessName);
+      setBizNo(draft.bizNo);
+      setCertNumber(draft.certNumber);
+      setCity(draft.city);
+      setDistrict(draft.district);
+      setCustomCity(draft.customCity);
+      setSpecialties(draft.specialties);
+      setYearsExp(draft.yearsExp);
+      setBio(draft.bio);
+      setDocs(draft.docs);
+    }
+    let preset: ExpertTypeId | null = null;
+    try {
+      preset = expertTypeFromQuery(window.location.search);
+    } catch {
+      preset = null;
+    }
+    if (preset) setTypeId(preset);
+    setRestored(true);
+  }, []);
+
+  const draft = useMemo<ApplyDraft>(
+    () => ({ typeId, formId, name, businessName, bizNo, certNumber, city, district, customCity, specialties, yearsExp, bio, docs }),
+    [typeId, formId, name, businessName, bizNo, certNumber, city, district, customCity, specialties, yearsExp, bio, docs],
+  );
+
+  /* 적는 대로 저장 — 복원 전(기본값)에는 쓰지 않는다. 접수 완료 뒤에도 쓰지 않는다(지운 것을 되살리지 않게). */
+  useEffect(() => {
+    if (!restored || phase === "done") return;
+    try {
+      if (isBlankApplyDraft(draft)) window.sessionStorage.removeItem(APPLY_DRAFT_KEY);
+      else window.sessionStorage.setItem(APPLY_DRAFT_KEY, serializeApplyDraft(draft));
+    } catch {
+      /* 저장소 차단 · 용량 초과 — 양식 동작과 무관 */
+    }
+  }, [draft, restored, phase]);
+
+  const clearDraft = () => {
+    try {
+      window.sessionStorage.removeItem(APPLY_DRAFT_KEY);
+    } catch {
+      /* 저장소 차단 — 탭을 닫으면 어차피 사라진다 */
+    }
+  };
 
   const type = EXPERT_TYPES.find((t) => t.id === typeId)!;
   const forms = allowedBusinessForms(typeId);
@@ -93,7 +193,7 @@ export function ApplyForm() {
       action: "expert_register",
       title: "전문가 등록",
       benefit: "등록 신청과 서류는 계정에 연결해서 받아요. 심사 결과는 알림으로 보내 드려요.",
-      callbackUrl: "/town/experts/apply",
+      callbackUrl: `/town/experts/apply?type=${typeId}`,
     });
 
   const pickFile = (kind: DocKind) => {
@@ -143,8 +243,8 @@ export function ApplyForm() {
     if (effectiveForm !== "individual" && !BIZ_NO_RE.test(bizNo.replace(/\s+/g, ""))) {
       return setError("사업자등록번호 10자리를 입력해 주세요. (예: 123-45-67890)");
     }
-    const cert = certNumber.trim().replace(/\s+/g, "");
-    if (cert && !CERT_NUMBER_RE.test(cert)) return setError("등록·자격번호 형식을 확인해 주세요. (예: 제11-1234호)");
+    const cert = normalizeCertInput(certNumber);
+    if (cert && !isValidCertNumber(cert)) return setError(CERT_NUMBER_ERROR);
     if (type.source && typeId !== "builder" && !cert) {
       return setError(`${type.label}는 ${type.source.label} 조회를 위해 등록·자격번호가 필요해요.`);
     }
@@ -191,6 +291,7 @@ export function ApplyForm() {
         setPhase("idle");
         return;
       }
+      clearDraft();
       setPhase("done");
     } catch {
       setError("접수 실패 · 네트워크를 확인해 주세요.");
@@ -231,8 +332,8 @@ export function ApplyForm() {
 
       <Section title="1. 직업군과 사업 형태">
         <div>
-          <Label>직업군</Label>
-          <div className="flex flex-wrap gap-1.5">
+          <Label id={ids.type}>직업군</Label>
+          <div role="group" aria-labelledby={ids.type} className="flex flex-wrap gap-1.5">
             {EXPERT_TYPES.map((t) => (
               <button
                 key={t.id}
@@ -251,8 +352,8 @@ export function ApplyForm() {
           </p>
         </div>
         <div>
-          <Label>사업 형태</Label>
-          <div className="flex flex-wrap gap-1.5">
+          <Label id={ids.form}>사업 형태</Label>
+          <div role="group" aria-labelledby={ids.form} className="flex flex-wrap gap-1.5">
             {BUSINESS_FORMS.filter((f) => forms.includes(f.id)).map((f) => (
               <button
                 key={f.id}
@@ -272,32 +373,33 @@ export function ApplyForm() {
       <Section title="2. 기본 정보">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <div>
-            <Label>대표자명 (실명)</Label>
-            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="홍길동" className={inputCls} />
+            <Label htmlFor={ids.name}>대표자명 (실명)</Label>
+            <input id={ids.name} value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="홍길동" className={inputCls} />
           </div>
           <div>
-            <Label hint={effectiveForm === "corporation" ? "" : "(선택)"}>{effectiveForm === "corporation" ? "법인명" : "상호 · 사무소명"}</Label>
-            <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} maxLength={60} placeholder={effectiveForm === "corporation" ? "예: 주식회사 내집건설" : "예: 관양세무회계"} className={inputCls} />
+            <Label htmlFor={ids.business} hint={effectiveForm === "corporation" ? "" : "(선택)"}>{effectiveForm === "corporation" ? "법인명" : "상호 · 사무소명"}</Label>
+            <input id={ids.business} value={businessName} onChange={(e) => setBusinessName(e.target.value)} maxLength={60} placeholder={effectiveForm === "corporation" ? "예: 주식회사 내집건설" : "예: 관양세무회계"} className={inputCls} />
           </div>
           {effectiveForm !== "individual" && (
             <div>
-              <Label>사업자등록번호</Label>
-              <input value={bizNo} onChange={(e) => setBizNo(e.target.value.replace(/[^0-9-]/g, ""))} maxLength={12} inputMode="numeric" placeholder="123-45-67890" className={inputCls} />
+              <Label htmlFor={ids.bizNo}>사업자등록번호</Label>
+              <input id={ids.bizNo} value={bizNo} onChange={(e) => setBizNo(e.target.value.replace(/[^0-9-]/g, ""))} maxLength={12} inputMode="numeric" placeholder="123-45-67890" className={inputCls} />
             </div>
           )}
           <div>
-            <Label hint={type.source && typeId !== "builder" ? "" : "(선택)"}>{typeId === "builder" ? "건설업 등록번호" : "등록 · 자격번호"}</Label>
-            <input value={certNumber} onChange={(e) => setCertNumber(e.target.value)} maxLength={40} placeholder="예: 제11-1234호" className={inputCls} />
+            <Label htmlFor={ids.cert} hint={type.source && typeId !== "builder" ? "" : "(선택)"}>{typeId === "builder" ? "건설업 등록번호" : "등록 · 자격번호"}</Label>
+            <input id={ids.cert} value={certNumber} onChange={(e) => setCertNumber(e.target.value)} maxLength={40} placeholder="예: 제2024-12345호" className={inputCls} />
           </div>
           <div>
-            <Label>경력 (년)</Label>
-            <input value={yearsExp} onChange={(e) => setYearsExp(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" maxLength={2} placeholder="예: 8" aria-label="경력 (년)" className={inputCls} />
+            <Label htmlFor={ids.years}>경력 (년)</Label>
+            <input id={ids.years} value={yearsExp} onChange={(e) => setYearsExp(e.target.value.replace(/[^0-9]/g, ""))} inputMode="numeric" maxLength={2} placeholder="예: 8" className={inputCls} />
           </div>
         </div>
         <div>
-          <Label>주 활동 지역</Label>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <Label id={ids.region}>주 활동 지역</Label>
+          <div role="group" aria-labelledby={ids.region} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <select
+              id={ids.city}
               value={city}
               onChange={(e) => {
                 setCity(e.target.value);
@@ -313,9 +415,9 @@ export function ApplyForm() {
               ))}
             </select>
             {isOtherCity ? (
-              <input value={customCity} onChange={(e) => setCustomCity(e.target.value)} maxLength={20} placeholder="시/도 (예: 대전광역시)" className={inputCls} />
+              <input id={ids.customCity} value={customCity} onChange={(e) => setCustomCity(e.target.value)} maxLength={20} placeholder="시/도 (예: 대전광역시)" aria-label="시/도 직접 입력" className={inputCls} />
             ) : (
-              <select value={district} onChange={(e) => setDistrict(e.target.value)} aria-label="시·군·구" className={inputCls}>
+              <select id={ids.district} value={district} onChange={(e) => setDistrict(e.target.value)} aria-label="시·군·구" className={inputCls}>
                 <option value="">시·군·구 (선택)</option>
                 {districts.map((d) => (
                   <option key={d} value={d}>
@@ -327,8 +429,8 @@ export function ApplyForm() {
           </div>
         </div>
         <div>
-          <Label hint="최대 6개">전문 분야</Label>
-          <div className="flex flex-wrap gap-1.5">
+          <Label id={ids.specialties} hint="최대 6개">전문 분야</Label>
+          <div role="group" aria-labelledby={ids.specialties} className="flex flex-wrap gap-1.5">
             {suggested.map((s) => {
               const on = specialties.includes(s.label);
               return (
@@ -346,8 +448,9 @@ export function ApplyForm() {
           </div>
         </div>
         <div>
-          <Label hint="20자 이상 · 프로필 소개가 돼요">소개</Label>
+          <Label htmlFor={ids.bio} hint="20자 이상 · 프로필 소개가 돼요">소개</Label>
           <textarea
+            id={ids.bio}
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={4}
@@ -419,7 +522,11 @@ export function ApplyForm() {
         </span>
       </label>
 
-      {error && <div className="t-sub font-semibold text-danger">{error}</div>}
+      {error && (
+        <div role="alert" className="t-sub font-semibold text-danger">
+          {error}
+        </div>
+      )}
 
       <ActionButton
         state={phase === "sending" ? "busy" : error ? "error" : "idle"}

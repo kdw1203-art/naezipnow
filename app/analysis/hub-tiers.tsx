@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ToolGlyph } from "./ToolGlyph";
@@ -39,6 +39,18 @@ export function WorkbenchGrid({
      함께 보는 시장 신호)이 펼쳐진다. 같은 도구를 다시 누름(또는 펼친 칸의 "도구 열기") = 예전 동작 그대로
      (단지를 골랐으면 그 도구 · 안 골랐으면 지도 서랍). 새 탭·가운데 클릭은 가로채지 않는다. 펼침은 한 번에 하나. */
   const [openId, setOpenId] = useState<string | null>(null);
+  /* [1052] 펼친 칸이 화면 안에 들어오게 · 접으면 그 도구 줄로 초점(키보드로 접은 뒤 위치를 잃지 않게) */
+  const lastOpenRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (openId) {
+      lastOpenRef.current = openId;
+      window.requestAnimationFrame(() => document.getElementById(`tool-open-${openId}`)?.scrollIntoView({ block: "nearest" }));
+    } else if (lastOpenRef.current) {
+      const id = lastOpenRef.current;
+      lastOpenRef.current = null;
+      window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`a[data-tool="${CSS.escape(id)}"]`)?.focus({ preventScroll: true }));
+    }
+  }, [openId]);
 
   /* [980] 카드 내용은 서버가 조립해 준다(app/analysis/workbench-cards.ts).
      여기서 tool-identity·tool-persona 를 직접 import 하면 두 모듈이 통째로
@@ -68,11 +80,24 @@ export function WorkbenchGrid({
   };
   /* 펼친 칸 — 내용은 서버 조각(details), 여기는 "열기"(예전 동작)와 "접기"만 */
   const detail = (c: WorkbenchCardDto) => (
-    <div id={`tool-open-${c.id}`} className="tool-scope flex flex-col gap-2.5" style={c.vars}>
+    <div
+      id={`tool-open-${c.id}`}
+      role="region"
+      aria-label={`${c.title} 내용`}
+      className="tool-scope flex flex-col gap-2.5"
+      style={c.vars}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.stopPropagation();
+          setOpenId(null);
+        }
+      }}
+    >
       {details[c.id]}
       <div className="flex items-center gap-1">
+        {/* [1052] 누르면 무엇이 일어나는지 단추에 — 단지를 골랐으면 그 단지로, 안 골랐으면 지도에서 단지부터 */}
         <Link href={`${c.href}${query}`} onClick={open(c)} className="btn-soft inline-flex min-h-10 items-center px-4 t-sub font-bold no-underline">
-          {c.title} 열기 ›
+          {picked ? `${picked.name} ${c.title} 열기 ›` : `단지 고르고 ${c.title} 열기 ›`}
         </Link>
         <button
           type="button"

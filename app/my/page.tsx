@@ -342,7 +342,16 @@ export default async function MyPage() {
     aiUsage: aiUsage ? { lifetime: Boolean(aiUsage.lifetime), used: aiUsage.used, limit: aiUsage.limit } : null,
     /* [1049] 사용량 표 · 월별 기록 막대 — 이미 읽은 값으로만(추가 조회 0) */
     usage: usage
-      ? usage.items.map((i) => ({ key: String(i.key), label: i.label, used: i.used, limit: i.limit, ...(i.lifetime ? { lifetime: true } : {}) }))
+      ? usage.items.map((i) => ({
+          key: String(i.key),
+          label: i.label,
+          used: i.used,
+          limit: i.limit,
+          ...(i.lifetime ? { lifetime: true } : {}),
+          /* [1052] 줄마다 기간(이번 달 · 누적 · 보유)과 월 초기화 날짜 */
+          ...(i.period ? { period: i.period } : {}),
+          ...(i.resetsAt ? { resetsAt: i.resetsAt } : {}),
+        }))
       : null,
     activity: notesLoaded.ok
       ? buildMyActivity(

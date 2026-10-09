@@ -781,7 +781,9 @@ export function NaverMap({
     }
   }, [loaded, routeOverlays]);
 
-  /* 반경 중심·가장자리 드래그 핸들 */
+  /* 반경 중심·가장자리 드래그 핸들 — [1052] 끌어서 바꿀 곳(드래그 콜백)이 있을 때만. 단지 화면 주변 지도처럼
+     원만 보여 주는 곳에서는 "중심"·"크기" 손잡이가 끌려도 아무 일도 없었다(죽은 조작) */
+  const radiusDraggable = Boolean(onRadiusCenterDragEnd || onRadiusEdgeDragEnd);
   useEffect(() => {
     if (!loaded || !mapRef.current) return;
     const maps = getNaverMapsWindow().naver?.maps;
@@ -795,7 +797,7 @@ export function NaverMap({
       radiusEdgeMarkerRef.current = null;
     };
 
-    if (!circle) {
+    if (!circle || !radiusDraggable) {
       clearHandles();
       return;
     }
@@ -860,7 +862,7 @@ export function NaverMap({
       });
       radiusEdgeMarkerRef.current = edgeMarker;
     }
-  }, [loaded, circle]);
+  }, [loaded, circle, radiusDraggable]);
 
   /**
    * 겹침 정리 결과. bounds·컨테이너 크기·마커 목록이 모두 갖춰졌을 때만 계산하고,

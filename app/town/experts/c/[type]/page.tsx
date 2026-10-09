@@ -59,7 +59,8 @@ export default async function ExpertCategoryPage({ params }: { params: Promise<{
         title={t.id === "other" ? "기타 전문가" : t.label}
         sub={`${t.desc} · 서류 심사 뒤 승인된 사람만`}
         actions={
-          <Link href="/town/experts/apply" className="btn-outline btn-md no-underline">
+          /* [1052] 이 분야로 미리 고른 등록 양식(ApplyForm 이 ?type= 을 읽는다) */
+          <Link href={`/town/experts/apply?type=${t.id}`} className="btn-outline btn-md no-underline">
             {t.label} 등록
           </Link>
         }

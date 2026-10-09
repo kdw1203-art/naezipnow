@@ -4,6 +4,8 @@ import { MODERATION_PIPELINE } from "@/lib/admin/moderation-policy";
 import { ErrorState } from "@/app/components/ui/EmptyState";
 import { logger } from "@/lib/log";
 import { ModerationQueue } from "./ModerationQueue";
+import { listFlaggedTalks } from "@/lib/talk/store";
+import { TalkFlagged } from "./TalkFlagged";
 
 /*
  * 신고 · 모더레이션 — 전부 실데이터(content_reports · chat_reports).
@@ -61,6 +63,14 @@ export default async function AdminModerationPage() {
 
   const items = loaded.items;
   const stats = summarizeQueue(items);
+  /* [1052] 실시간 토론 신고·숨김 — 따로 표(region_talks.report_count · hidden_at). 실패는 실패로 적는다 */
+  const talks = await listFlaggedTalks().then(
+    (rows) => ({ ok: true as const, rows }),
+    (err: unknown) => {
+      logger.error("[admin/moderation] 토론 신고 조회 실패", err);
+      return { ok: false as const, cause: err instanceof Error ? err.message : String(err) };
+    },
+  );
 
   const cards = [
     { label: "미처리", value: `${stats.open}건`, color: stats.open > 0 ? "#f2c94c" : "#ffffff" },
@@ -164,6 +174,19 @@ export default async function AdminModerationPage() {
             </Link>
           </div>
         </div>
+      </div>
+
+      {/* [1052] 실시간 토론 — 신고 1건 이상 · 숨김(신고 3건 자동 · 탈퇴 접수) */}
+      <div className={`rise-in-2 ${card}`}>
+        <div className="flex items-center justify-between">
+          <span className="text-[15px] font-bold text-white">실시간 토론 · 신고·숨김</span>
+          <span className="text-[12px] text-[#9aa6b8]">신고 3건이면 자동 숨김 · 최신순</span>
+        </div>
+        {talks.ok ? (
+          <TalkFlagged items={talks.rows} />
+        ) : (
+          <ErrorState tone="admin" title="토론 신고 불러오기 실패" desc="잠시 후 다시" cause={talks.cause} />
+        )}
       </div>
     </>
   );

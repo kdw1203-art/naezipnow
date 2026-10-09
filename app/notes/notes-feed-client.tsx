@@ -4,7 +4,7 @@
    · ② "더 보기" 실패는 같은 버튼이 "다시 시도" · ② 내 노트 조회 실패 카드에 다시 시도(loadMine) · ② 폰 격자 타일은 판단 배지 하나만.
    [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 
-import { Fragment, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { ExpertBadge } from "@/app/components/ExpertBadge";
 import { seedGradient as seedFace } from "@/lib/town/shared";
 import Link from "next/link";
@@ -28,9 +28,10 @@ import {
   mineFilterOptions,
   type MineFilters,
 } from "@/lib/notes/mine-filters";
-import { MineFilterBar } from "./mine-filter-bar";
+import nextDynamic from "next/dynamic";
 import { filterNotesByQuery } from "@/lib/notes/feed-search";
 import { groupNoteRounds } from "@/lib/notes/round-groups";
+import { noteScoreBarClass } from "@/lib/notes/score-band";
 
 /* 공개 임장노트 — 인스타그램형(스토리 줄 + 3열 그리드 ⇄ 피드 전환) */
 
@@ -55,7 +56,15 @@ type Filter = (typeof FILTERS)[number];
 type ViewMode = "grid" | "feed" | "table";
 /** [1049] 데스크톱 보기 — 표(기본) · 피드. 폰은 ViewMode(격자 기본) */
 type DeskView = "table" | "feed";
+/* [1052 · 번들] 내 노트 필터 줄은 '내 노트' 탭에서만 그린다(탭은 클라이언트 상태 — 서버 HTML 에 없다) → 따로 받는 청크.
+   /notes 가 미등재 상한 495KB 에 2.5KB 안쪽(493.2KB)이 되어 뗐다 */
+const MineFilterBar = nextDynamic(() => import("./mine-filter-bar").then((m) => m.MineFilterBar), {
+  ssr: false,
+  loading: () => <div aria-hidden className="h-10" />,
+});
 const DESK_VIEW_KEY = "nz_notes_desk_view";
+/* [1052] 폰 보기(격자 · 피드 · 목록)도 이 브라우저에 기억 — 목록을 고른 사람이 다시 올 때마다 격자로 돌아가던 것 */
+const PHONE_VIEW_KEY = "nz_notes_phone_view";
 
 /** 예시 카드는 존재하지 않는 id로 상세를 열지 않는다 — 작성 CTA로 보낸다 */
 function noteHref(n: FeedNote): string {
@@ -552,11 +561,37 @@ const RAIL_LINK = "flex min-h-[40px] items-center gap-2.5 rounded-lg px-2.5 t-bo
    피드(사진 카드)는 전환 단추로 그대로 남는다. */
 /* [1050 · 펼침] 줄을 누르면 그 줄 아래에 피드 카드(PostCard)가 펼쳐지고, 펼친 줄을 다시 누르면 노트를 연다.
    제목 칸은 링크 그대로(첫 누름만 가로챔 · 새 탭은 그대로) · 점수 칸 등 링크 밖을 눌러도 같은 순서. 펼침은 한 번에 하나. */
-function NotesTable({ notes }: { notes: FeedNote[] }) {
+function NotesTable({
+  notes,
+  scoreSorted = false,
+  onScoreSort,
+}: {
+  notes: FeedNote[];
+  /** [1052] 점수 칸 머리로 정렬(공개 노트의 "점수순" 칩과 같은 상태) — 내 노트 화면은 자기 정렬이 있어 없음 */
+  scoreSorted?: boolean;
+  onScoreSort?: () => void;
+}) {
   const router = useRouter();
   /* 판단 칸은 판단을 남긴 노트가 하나라도 있을 때만 — 전부 "—" 인 칸은 소음이다 */
   const hasDecision = notes.some((n) => n.decision);
   const [openId, setOpenId] = useState<string | null>(null);
+  /* [1052] 필터·정렬·검색으로 목록이 바뀌면 펼침을 닫는다 — 펼친 줄이 다른 자리로 튀거나 사라진 줄이 열린 채 남지 않게 */
+  const idsKey = notes.map((n) => n.id).join(",");
+  useEffect(() => {
+    setOpenId(null);
+  }, [idsKey]);
+  /* [1052] 펼치면 펼친 칸이 화면 안에 들어오게(아래쪽 줄을 펼치면 카드가 화면 밖에 열리던 것) · 닫으면 그 줄로 초점 */
+  const lastOpenRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (openId) {
+      lastOpenRef.current = openId;
+      window.requestAnimationFrame(() => document.getElementById(`note-open-${openId}`)?.scrollIntoView({ block: "nearest" }));
+    } else if (lastOpenRef.current) {
+      const id = lastOpenRef.current;
+      lastOpenRef.current = null;
+      window.requestAnimationFrame(() => document.getElementById(`note-row-${id}`)?.focus({ preventScroll: true }));
+    }
+  }, [openId]);
   /* 펼친 칸은 머리의 칸 수만큼(숨은 칸 포함) 가로지른다 */
   const span = hasDecision ? 4 : 3;
   return (
@@ -565,8 +600,21 @@ function NotesTable({ notes }: { notes: FeedNote[] }) {
         <thead>
           <tr className="border-b border-line bg-bg text-left t-caption text-text-3">
             <th scope="col" className="px-3 py-2 font-bold">노트</th>
-            <th scope="col" className="w-[132px] px-2 py-2 font-bold max-md:w-[64px]">
-              <span className="max-md:hidden">기록 </span>점수
+            <th scope="col" aria-sort={onScoreSort ? (scoreSorted ? "descending" : "none") : undefined} className="w-[132px] px-2 py-2 font-bold max-md:w-[64px]">
+              {onScoreSort ? (
+                <button
+                  type="button"
+                  onClick={onScoreSort}
+                  aria-label={scoreSorted ? "최신 순으로" : "기록 점수 높은 순으로"}
+                  className={`-my-1 inline-flex min-h-[40px] items-center gap-0.5 md:min-h-6 ${scoreSorted ? "text-primary" : "hover:text-ink"}`}
+                >
+                  <span className="max-md:hidden">기록 </span>점수{scoreSorted ? " ↓" : ""}
+                </button>
+              ) : (
+                <>
+                  <span className="max-md:hidden">기록 </span>점수
+                </>
+              )}
             </th>
             {/* [1050 · 펼침] 좁은 화면에서 감추는 칸은 display:none 이 아니라 폭 0 — 펼친 줄(colSpan)이 칸 수를 늘려
                 고정 표(table-fixed)가 남은 폭을 빈 칸에 나눠 주던 것(폰 목록에서 제목이 "까치…"로 눌림)을 막는다 */}
@@ -598,6 +646,7 @@ function NotesTable({ notes }: { notes: FeedNote[] }) {
               >
                 <td className="px-3 py-2">
                   <Link
+                    id={`note-row-${n.id}`}
                     href={href}
                     aria-expanded={isOpen}
                     aria-controls={isOpen ? panelId : undefined}
@@ -640,7 +689,7 @@ function NotesTable({ notes }: { notes: FeedNote[] }) {
                     <span className="flex items-center gap-2">
                       <span className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-bg max-md:hidden" aria-hidden="true">
                         <span
-                          className={`absolute inset-y-0 left-0 rounded-full ${n.score >= 75 ? "bg-primary" : n.score < 50 ? "bg-down" : "bg-primary/70"}`}
+                          className={`absolute inset-y-0 left-0 rounded-full ${noteScoreBarClass(n.score)}`}
                           style={{ width: `${Math.min(100, n.score)}%` }}
                         />
                       </span>
@@ -663,7 +712,19 @@ function NotesTable({ notes }: { notes: FeedNote[] }) {
               </tr>
               {isOpen && (
                 <tr id={panelId} className="border-b border-line last:border-b-0">
-                  <td colSpan={span} className="bg-bg p-2 md:p-3">
+                  <td
+                    colSpan={span}
+                    className="bg-bg p-2 md:p-3"
+                    role="region"
+                    aria-label={`${n.title} 펼침`}
+                    onKeyDown={(e) => {
+                      /* [1052] Esc 로 접기 */
+                      if (e.key === "Escape") {
+                        e.stopPropagation();
+                        setOpenId(null);
+                      }
+                    }}
+                  >
                     <PostCard n={n} />
                     <FoldButton onClose={() => setOpenId(null)} label={n.title} />
                   </td>
@@ -747,8 +808,8 @@ function LeftRail({
             전체
           </button>
           {/* [1049] 지역별 노트 수를 막대로 — 숫자만 있던 줄에 길이를 더했다(가장 많은 지역 = 가득) */}
-          {regions.map((r) => {
-            const top = Math.max(...regions.map((x) => x.count), 1);
+          {regions.map((r, _i, all) => {
+            const top = Math.max(all[0]?.count ?? 1, 1);
             return (
               <button
                 key={r.label}
@@ -918,6 +979,22 @@ export function NotesFeedClient({
       /* 저장소 차단 — 기본(표) */
     }
   }, []);
+  useEffect(() => {
+    try {
+      const v = window.localStorage.getItem(PHONE_VIEW_KEY);
+      if (v === "grid" || v === "feed" || v === "table") setView(v);
+    } catch {
+      /* 저장소 차단 — 기본(격자) */
+    }
+  }, []);
+  const pickView = (v: ViewMode) => {
+    setView(v);
+    try {
+      window.localStorage.setItem(PHONE_VIEW_KEY, v);
+    } catch {
+      /* 저장소 차단 — 이번 화면만 */
+    }
+  };
   const setDeskView = (v: DeskView) => {
     setDeskViewState(v);
     try {
@@ -1051,22 +1128,38 @@ export function NotesFeedClient({
   const mineOptions = useMemo(() => (mine ? mineFilterOptions(allNotes) : null), [mine, allNotes]);
   const mineActive = mine && hasActiveMineFilter(mineFilters);
 
-  const sorted = mine
-    ? applyMineFilters(allNotes, mineFilters)
-    : activeFilter === "점수순"
-      ? [...allNotes].sort((a, b) => b.score - a.score)
-      : activeFilter === "내 관심 지역"
-        ? allNotes.filter((n) => n.interested)
-        : allNotes;
+  const sorted = useMemo(
+    () =>
+      mine
+        ? applyMineFilters(allNotes, mineFilters)
+        : activeFilter === "점수순"
+          ? [...allNotes].sort((a, b) => b.score - a.score)
+          : activeFilter === "내 관심 지역"
+            ? allNotes.filter((n) => n.interested)
+            : allNotes,
+    [mine, allNotes, mineFilters, activeFilter],
+  );
   const regionFiltered = regionPick ? sorted.filter((n) => shortLabel(n) === regionPick) : sorted;
   /* [1023 · 임장노트 ①] 검색어는 지역 칩 뒤에 AND 로 — 둘 다 걸린 카드만 */
   const queryActive = query.trim().length > 0;
   const visible = queryActive ? filterNotesByQuery(regionFiltered, query) : regionFiltered;
+  /* [1052] 폰 격자 펼침 — 목록이 바뀌면 닫고, 펼치면 펼친 카드가 화면 안에 들어오게 */
+  const visibleKey = visible.map((n) => n.id).join(",");
+  useEffect(() => {
+    setGridOpen(null);
+  }, [visibleKey]);
+  useEffect(() => {
+    if (!gridOpen) return;
+    window.requestAnimationFrame(() => document.getElementById(`grid-open-${gridOpen}`)?.scrollIntoView({ block: "nearest" }));
+  }, [gridOpen]);
   /* [1023 · 임장노트 ①] 내 노트 회차 묶기 — 같은 단지 2건 이상이면 묶음(피드 카드 배열에서만 · 폰 격자는 낱장) */
   const mineGroups = useMemo(() => (mine ? groupNoteRounds(visible) : null), [mine, visible]);
+  /* [1052] 지역 막대는 지금 칩(최신·점수순·관심 지역 · 내 노트 필터)을 건 목록에서 센다 — 예전엔 전체에서 세어
+     "내 관심 지역" 칩을 켜도 막대 수가 그대로였다. 지역이 비어 있는 노트는 뺀다(제목 앞 6자가 '지역'으로 섞이던 것) */
   const railRegions = useMemo(() => {
     const m = new Map<string, number>();
-    for (const n of allNotes) {
+    for (const n of sorted) {
+      if (!(n.region ?? "").trim()) continue;
       const k = shortLabel(n);
       if (k) m.set(k, (m.get(k) ?? 0) + 1);
     }
@@ -1074,7 +1167,7 @@ export function NotesFeedClient({
       .map(([label, count]) => ({ label, count }))
       .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "ko"))
       .slice(0, 8);
-  }, [allNotes]);
+  }, [sorted]);
 
   /* [967 · 20] 세그먼트 → URL(?tab=mine). [1007] 내 노트는 /api/inspection/notes/mine 으로 받고,
      URL 은 history.replaceState 로만 바꾼다(페이지는 ISR — 서버 렌더를 다시 받을 것이 없다).
@@ -1195,8 +1288,8 @@ export function NotesFeedClient({
         {activeLoadError && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface px-3.5 py-3 t-sub text-text-2">
             <span>
-              {mine ? "내 임장노트를" : "공개 임장노트를"}{" "}
-              <strong className="text-ink">불러오기 실패</strong>. 잠시 후 다시 시도해 주세요.
+              {/* [1052] 오류 문구 꼴 "○○ 불러오기 실패 · 잠시 후 다시" */}
+              {mine ? "내 임장노트" : "공개 임장노트"} <strong className="text-ink">불러오기 실패</strong> · 잠시 후 다시
             </span>
             {/* [1023 · 임장노트 ②] 내 노트 조회 실패 — 같은 자리에서 다시 시도(loadMine 재호출). 공개 피드는 서버 렌더라 손잡이 없음 */}
             {mine && (
@@ -1275,7 +1368,7 @@ export function NotesFeedClient({
               type="button"
               aria-label="그리드 보기"
               aria-pressed={view === "grid"}
-              onClick={() => setView("grid")}
+              onClick={() => pickView("grid")}
               className={`flex h-10 w-10 items-center justify-center rounded-lg ${
                 view === "grid" ? "bg-primary-soft text-primary" : "text-text-3"
               }`}
@@ -1286,7 +1379,7 @@ export function NotesFeedClient({
               type="button"
               aria-label="피드 보기"
               aria-pressed={view === "feed"}
-              onClick={() => setView("feed")}
+              onClick={() => pickView("feed")}
               className={`flex h-10 w-10 items-center justify-center rounded-lg ${
                 view === "feed" ? "bg-primary-soft text-primary" : "text-text-3"
               }`}
@@ -1298,7 +1391,7 @@ export function NotesFeedClient({
               type="button"
               aria-label="목록 보기"
               aria-pressed={view === "table"}
-              onClick={() => setView("table")}
+              onClick={() => pickView("table")}
               className={`flex h-10 w-10 items-center justify-center rounded-lg ${
                 view === "table" ? "bg-primary-soft text-primary" : "text-text-3"
               }`}
@@ -1395,13 +1488,13 @@ export function NotesFeedClient({
               icon="file-text"
               title={
                 activeFilter === "내 관심 지역"
-                  ? "구독한 지역의 노트는 아직 없어요"
+                  ? "구독 지역 노트 없음"
                   : "해당 필터에 맞는 노트 없음"
               }
               desc={
                 activeFilter === "내 관심 지역"
-                  ? `노트 ${allNotes.length}건 중 구독 지역과 겹치는 건 0건. '최신' 칩에서 전체를 볼 수 있어요.`
-                  : "다른 칩을 고르면 전체를 볼 수 있어요."
+                  ? `노트 ${allNotes.length}건 중 구독 지역 0건 · '최신' 칩 = 전체`
+                  : "다른 칩 = 전체 노트"
               }
               action={{ label: "임장노트 쓰기", href: "/notes/new" }}
             />
@@ -1416,8 +1509,8 @@ export function NotesFeedClient({
               }
               desc={
                 mine
-                  ? "첫 노트를 쓰면 비공개 노트까지 여기에 모여요."
-                  : "샘플로 채우지 않아요. 첫 노트를 쓰거나 지도에서 단지를 먼저 볼 수 있어요."
+                  ? "비공개 노트까지 여기에 모임"
+                  : "예시로 채우지 않음 · 첫 노트 쓰기 또는 지도에서 단지 보기"
               }
               action={{ label: "임장노트 쓰기", href: "/notes/new" }}
             />
@@ -1444,7 +1537,12 @@ export function NotesFeedClient({
             )}
             {/* [1049] 표 — 폰은 목록 보기일 때, md+ 는 데스크톱 보기가 표일 때(기본) */}
             <div className={`${view === "table" ? "block" : "hidden"} ${deskView === "table" ? "md:block" : "md:hidden"}`}>
-              <NotesTable notes={visible} />
+              {/* [1052] 점수 칸 머리 = 공개 노트의 "점수순" 칩과 같은 정렬(내 노트는 자기 정렬 막대가 있어 머리 정렬 없음) */}
+              <NotesTable
+                notes={visible}
+                scoreSorted={!mine && activeFilter === "점수순"}
+                onScoreSort={mine ? undefined : () => setFilter(activeFilter === "점수순" ? "최신" : "점수순")}
+              />
             </div>
             {/* [1016] 게시물 피드 — 폰은 피드 보기일 때, md+ 는 데스크톱 보기가 피드일 때.
                 숨긴 사진은 lazy 라 내려받지 않는다(priority 는 격자 첫 칸이 맡는다). */}

@@ -21,10 +21,13 @@ export function NoteToolsRow({
   aptName,
   region,
   noteId,
+  complexId = null,
 }: {
   aptName: string;
   region: string;
   noteId: string;
+  /** [1052] 노트에 이어진 단지 id(단지 화면 주소 · metadata.complexId) — 있으면 도구가 이 단지로 바로 연다 */
+  complexId?: string | null;
 }) {
   const apt = aptName.trim();
   const reg = region.trim();
@@ -37,7 +40,11 @@ export function NoteToolsRow({
      지어내지 않는다. 단지명이 없으면 지역으로 묻는다. */
   const subject = apt || reg;
   const agentQuestion = `${subject} 임장노트에 적은 내용과 지금 실거래를 비교해 줘`;
+  /* [1052] 단지 id 가 있으면 그것을 먼저 — 워크벤치는 complexId 를 그대로 쓰고, 없을 때만 apt+region 으로 id 를 지어낸다.
+     노트 지역 표기("서울 송파구 잠실동")는 실거래 지역 이름("서울 송파구")과 달라 지어낸 id 가 단지를 못 찾던 경우가 있었다 */
+  const cid = (complexId ?? "").trim();
   const query = new URLSearchParams({
+    ...(cid ? { complexId: cid } : {}),
     ...(apt ? { apt } : {}),
     ...(reg ? { region: reg } : {}),
   }).toString();

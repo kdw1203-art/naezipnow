@@ -206,3 +206,68 @@ export async function reportRegionTalk(id: string, reporterEmail: string, reason
     ? (v as ReportResult)
     : "reported";
 }
+
+/* ── [1052] 관리자 — 신고·숨김 글 ─────────────────────────────────── */
+
+export type FlaggedTalk = {
+  id: string;
+  regionId: string;
+  regionName: string;
+  complexName: string | null;
+  author: string;
+  body: string;
+  reportCount: number;
+  hiddenAt: string | null;
+  createdAt: string;
+};
+
+/** 신고가 하나라도 있거나 숨김(신고 3건 · 탈퇴 접수) 상태인 글 — 최신 순. 지운 글은 뺀다 */
+export async function listFlaggedTalks(limit = 50): Promise<FlaggedTalk[]> {
+  const sb = getServiceSupabase();
+  const map = (r: Row & { report_count?: number | null; hidden_at?: string | null }): FlaggedTalk => ({
+    id: String(r.id),
+    regionId: String(r.region_id),
+    regionName: String(r.region_name ?? ""),
+    complexName: r.complex_name ? String(r.complex_name) : null,
+    author: String(r.author_label ?? ""),
+    body: String(r.body ?? ""),
+    reportCount: Number(r.report_count ?? 0) || 0,
+    hiddenAt: r.hidden_at ? String(r.hidden_at) : null,
+    createdAt: String(r.created_at ?? ""),
+  });
+  if (!sb) {
+    return memory
+      .filter((r) => !r.deleted_at && r.hidden_at)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limit)
+      .map((r) => map(r));
+  }
+  const { data, error } = await sb
+    .from("region_talks")
+    .select(`${SELECT},report_count,hidden_at`)
+    .is("deleted_at", null)
+    .or("report_count.gt.0,hidden_at.not.is.null")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(`region_talks(신고·숨김) 조회 실패: ${error.message}`);
+  return ((data ?? []) as (Row & { report_count: number | null; hidden_at: string | null })[]).map(map);
+}
+
+/** 관리자 되살리기 — 숨김을 풀고 누적 수를 0 으로(이미 신고한 사람은 다시 신고하지 못한다 · 새 신고는 다시 센다) */
+export async function restoreRegionTalk(id: string): Promise<boolean> {
+  const sb = getServiceSupabase();
+  if (!sb) {
+    const r = memory.find((x) => x.id === id && !x.deleted_at);
+    if (!r) return false;
+    r.hidden_at = null;
+    return true;
+  }
+  const { data, error } = await sb
+    .from("region_talks")
+    .update({ hidden_at: null, report_count: 0 })
+    .eq("id", id)
+    .is("deleted_at", null)
+    .select("id");
+  if (error) throw new Error(`region_talks 되살리기 실패: ${error.message}`);
+  return (data ?? []).length > 0;
+}

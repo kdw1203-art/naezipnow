@@ -30,6 +30,7 @@ import { buildVerdict, verdictToSummary, type Verdict } from "@/lib/ai/verdict";
 import { AI_PROMPT_VERSION } from "@/lib/ai/system-prompt";
 
 import { dbUnavailable } from "@/lib/api/db-unavailable";
+import { kstMonthStart } from "@/lib/subscriptions/usage-period";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -542,9 +543,8 @@ function signalsMarkdown(r: SignalReport): string {
 async function countLlmRunsThisMonth(): Promise<number> {
   const sb = getServiceSupabase();
   if (!sb) return 0;
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  monthStart.setHours(0, 0, 0, 0);
+  /* [1052] 달의 시작은 한국 시간(서버는 UTC — 예전엔 매달 1일 0~9시 KST 실행이 지난달로 셌다) */
+  const monthStart = kstMonthStart();
   const { count, error } = await sb
     .from("ai_analysis_runs")
     .select("*", { count: "exact", head: true })

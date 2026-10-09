@@ -13,6 +13,7 @@ import {
 import type { ProfilePlanTier } from "@/lib/subscriptions/labels";
 import { loadMeProfile } from "@/lib/me/profile";
 import { withUserQuotaLock } from "@/lib/subscriptions/quota-lock";
+import { kstNextMonthStart, usagePeriodFor, type UsagePeriod } from "@/lib/subscriptions/usage-period";
 
 export type UsageItem = {
   key: FeatureKey | "watchlist";
@@ -21,7 +22,21 @@ export type UsageItem = {
   limit: number | null;
   /** [992] "누적" 한도면 true — 화면이 "이번 달" 대신 "무료 누적" 이라고 적는다 */
   lifetime?: boolean;
+  /** [1052] 이 줄이 세는 기간 — 이번 달 · 누적 · 보유(지금 담아 둔 개수). 규칙은 usage-period */
+  period?: UsagePeriod;
+  /** [1052] 이번 달 줄만 — 한도가 다시 열리는 때(한국 시간 다음 달 1일 0시, ISO) */
+  resetsAt?: string;
 };
+
+/** [1052] 줄마다 기간 · 초기화 시각을 붙인다(한도 검사와 같은 셈 — countRunsThisMonth 도 한국 시간 달) */
+function withPeriod(item: Omit<UsageItem, "period" | "resetsAt">, now: Date): UsageItem {
+  const period = usagePeriodFor(String(item.key), Boolean(item.lifetime));
+  return {
+    ...item,
+    period,
+    ...(period === "month" && item.limit != null ? { resetsAt: kstNextMonthStart(now).toISOString() } : {}),
+  };
+}
 
 /** [992] 이 플랜에 누적 한도가 걸려 있는가(무료 AI 분석 3회) */
 function lifetimeLimitFor(accessTier: AccessTier, feature: FeatureKey): number | null {
@@ -70,26 +85,27 @@ export async function getUsageSummary(
     countWatchlist(email),
   ]);
 
+  const now = new Date();
   const items: UsageItem[] = [
-    {
+    withPeriod({
       key: "ai_analysis",
       label: "AI 분석 실행",
       used: aiUsed,
       limit: aiLifetime ?? limitFor(accessTier, "ai_analysis"),
       ...(aiLifetime != null ? { lifetime: true } : {}),
-    },
-    {
+    }, now),
+    withPeriod({
       key: "bookmark",
       label: "북마크",
       used: bookmarkCount,
       limit: limitFor(accessTier, "bookmark"),
-    },
-    {
+    }, now),
+    withPeriod({
       key: "interest_complex",
       label: "관심 단지",
       used: watchlistCount,
       limit: limitFor(accessTier, "interest_complex"),
-    },
+    }, now),
     /* [1005] "전문가 상담" 미터 제거 — 전문가 마켓은 [992] 부터 보관(비노출)이고 공급이 0이다.
        요금제·마이 화면의 사용량 칸에 "0 / 무제한"으로 남아 있으면 없는 기능을 파는 셈이다.
        checkExpertConsultQuota(아래)는 API 게이트가 아직 부르므로 그대로 둔다 — 화면에서만 빼고,

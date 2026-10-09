@@ -34,13 +34,16 @@ export async function GET(req: NextRequest) {
   if (postsR.status === "rejected") return dbUnavailable("region-talks", postsR.reason);
   /* 소식 실패는 글 목록을 막지 않는다 — 소식 칸만 비고 화면이 "소식 불러오기 실패"를 적는다 */
   if (factsR.status === "rejected") logger.warn("[talk] 자동 소식 실패 — 글만", { region: region.id, message: String(factsR.reason) });
+  /* [1052] 조각 실패(뉴스만 · 노트만)는 그 조각만 빠진다 — factsFailed 는 하나라도 빠졌을 때 */
+  const facts = factsR.status === "fulfilled" ? factsR.value : null;
+  if (facts && facts.failed.length > 0) logger.warn("[talk] 자동 소식 일부 실패", { region: region.id, failed: facts.failed.join(",") });
   return NextResponse.json(
     {
       regionId: region.id,
       regionName: region.name,
       posts: postsR.value,
-      facts: factsR.status === "fulfilled" ? factsR.value : [],
-      factsFailed: factsR.status === "rejected",
+      facts: facts?.facts ?? [],
+      factsFailed: !facts || facts.failed.length > 0,
     },
     { headers: { "Cache-Control": "no-store" } },
   );

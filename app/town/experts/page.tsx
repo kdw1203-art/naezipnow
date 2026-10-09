@@ -9,6 +9,7 @@ import { QuoteRequestBanner } from "./QuoteRequest";
 import { ExpertsClient, type ExpertPublicRow } from "./ExpertsClient";
 import { listExpertsAll, type UserExpertProfile } from "@/lib/experts/store-db";
 import { EXPERT_TYPES } from "@/lib/experts/taxonomy";
+import { countExpertTypes } from "@/lib/experts/type-counts";
 import { EXPERT_FAQ } from "@/lib/experts/faq";
 import { Icon } from "@/app/components/Icon";
 import { JsonLd } from "@/app/components/JsonLd";
@@ -82,9 +83,12 @@ export default async function TownExpertsPage() {
     reviewed.length > 0
       ? reviewed.reduce((n, e) => n + e.rating * e.reviews, 0) / reviewed.reduce((n, e) => n + e.reviews, 0)
       : null;
+  /* [1052] 인원은 findExpertType 으로 센다(countExpertTypes) — 예전 `category.includes(label)` 은
+     예전 저장값 "건축사"를 "건축사·설계" 칸에서 0명으로 셌다. 분야별 목록(/town/experts/c/[type])과 같은 규칙. */
+  const verifiedByType = countExpertTypes(verified);
   const typeCounts = EXPERT_TYPES.map((t) => ({
     ...t,
-    count: verified.filter((e) => e.category === t.label || e.category.includes(t.label)).length,
+    count: verifiedByType.get(t.id) ?? 0,
   }));
 
   return (

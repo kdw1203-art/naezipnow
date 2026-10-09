@@ -19,6 +19,8 @@ import {
 import { dbUnavailable } from "@/lib/api/db-unavailable";
 import { validateDocumentUrls } from "@/lib/experts/fraud-guards";
 import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { LEGAL_DENY_MESSAGE, hasLegalServiceText } from "@/lib/experts/legal-deny";
+import { CERT_NUMBER_ERROR, isValidCertNumber, normalizeCertInput } from "@/lib/experts/apply-rules";
 
 export const runtime = "nodejs";
 
@@ -58,6 +60,11 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
+  /* [1052] 법률 서비스(LEGAL_DENY) — 분류 체계에 없어서 아래 라벨 검사로도 떨어지지만, 정책 경계라 이름을 붙여
+     먼저 막는다(분류 체계가 바뀌어도 이 줄은 남는다). 자유 입력(전문 분야 · 상호)으로 들어오는 길도 같이. */
+  if (hasLegalServiceText(expertType, specialties, body.organization, body.businessName)) {
+    return NextResponse.json({ error: LEGAL_DENY_MESSAGE, code: "legal_service_denied" }, { status: 400 });
+  }
   /* [953] 유형은 분류 체계(lib/experts/taxonomy.ts)에 있는 것만 — 법률 서비스 등
      정책상 받지 않는 유형이 자유 입력으로 들어오는 길을 막는다. */
   if (!isExpertTypeLabel(expertType)) {
@@ -77,6 +84,11 @@ export async function POST(req: Request) {
       { error: "전문가 운영정책 및 약관에 동의해 주세요." },
       { status: 400 },
     );
+  }
+  /* [1052] 등록·자격번호 형식 — 화면(ApplyForm)과 같은 규칙(lib/experts/apply-rules). 비어 있으면 넘어간다. */
+  const certNumber = normalizeCertInput(body.certNumber);
+  if (certNumber && !isValidCertNumber(certNumber)) {
+    return NextResponse.json({ error: CERT_NUMBER_ERROR, code: "invalid_cert_number" }, { status: 400 });
   }
   /* [965] 첨부 서류 링크 서버 검증(https·5개·공개 주소) — 화면 검증만 믿지 않는다 */
   const docs = validateDocumentUrls(body.documentUrls);
@@ -117,7 +129,7 @@ export async function POST(req: Request) {
         city,
         district,
         bio,
-        certNumber: body.certNumber ? String(body.certNumber) : null,
+        certNumber: certNumber || null,
         yearsExp,
         specialties,
         phone: body.phone ? String(body.phone) : null,

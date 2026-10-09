@@ -16,6 +16,7 @@
  * 기존 목업 값으로 폴백한다. DB 쓰기 없음.
  */
 import "server-only";
+import { NOTE_SCORE_HIGH } from "@/lib/notes/score-band";
 import { newsImageUrl } from "@/lib/town/shared";
 import { unstable_cache } from "next/cache";
 import { loadHomeData, type HomeData, EMPTY_HOME_DATA } from "@/lib/landing/data";
@@ -843,7 +844,7 @@ async function loadNewHomeDataInternal(): Promise<NewHomeData> {
         /* [1015 · 규칙 D] 단지명은 메타 줄(region)에 — 제목에 "단지 — 제목" 으로 잇지 않는다 */
         title: n.title,
         score: `${score}점`,
-        hot: score >= 75,
+        hot: score >= NOTE_SCORE_HIGH,
         kind: (isLabNoteLabel(n.authorLabel) ? "lab" : "user") as HomeNoteItem["kind"],
         cover: n.cover,
         region: [n.region, n.aptName && !n.title.includes(n.aptName) ? n.aptName : null].filter(Boolean).join(" · "),

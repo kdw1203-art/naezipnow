@@ -38,6 +38,9 @@ export type SoftSignupIntent = {
   benefit: string;
   /** 로그인 후 돌아올 경로. 생략 시 현재 경로. */
   callbackUrl?: string;
+  /** [1052] 창을 닫았을 때(가입 거절) 부르는 쪽이 치울 일 — 관심 등록은 "가입 뒤 마저 담기" 기록을 지운다.
+   *  이 Provider 는 모든 화면 레이아웃에 있어 기능별 모듈(pending-watch 등)을 직접 import 하면 모든 화면 번들이 는다 */
+  onDismiss?: () => void;
 };
 
 type SoftSignupContextValue = {
@@ -121,7 +124,12 @@ export function SoftSignupProvider({ children }: { children: ReactNode }) {
 
   const dismiss = useCallback(() => {
     setIntent((cur) => {
-      if (cur) track("soft_signup_prompt_dismiss", { action: cur.action }, tagRef.current);
+      if (cur) {
+        track("soft_signup_prompt_dismiss", { action: cur.action }, tagRef.current);
+        /* [1052] 가입 창을 닫았으면(가입 거절) 부르는 쪽의 뒷정리 — 관심 등록은 가입 뒤 마저 담기 기록을 버린다
+           (나중에 다른 길로 로그인해 그 단지에 와도 묻지 않고 담기지 않게 · lib/client/pending-watch) */
+        cur.onDismiss?.();
+      }
       return null;
     });
   }, []);

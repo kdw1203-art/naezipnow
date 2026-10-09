@@ -162,7 +162,29 @@ export const SUMMARY_HEAD_CHARS = 160;
  */
 export function isRegionNews(post: NewsCandidate, tokens: readonly string[]): boolean {
   const title = post.title ?? "";
-  return tokens.some((t) => t && title.includes(t));
+  return tokens.some((t) => t && tokenHitsTitle(title, t));
+}
+
+/**
+ * [1052] 지역 낱말이 지명이 아닌 낱말 속에 든 경우 — "성수기"(성수) · "경상수지·수지타산"(수지) · "1분당"(분당) ·
+ * "여의도 정가"(정치 기사). 실시간 토론 소식 · 시장 신호 뉴스 · AI 지역 뉴스가 같은 규칙을 쓴다.
+ * 낱말 앞뒤 몇 글자 창에서 본다 — 다른 자리에 지명으로 한 번이라도 나오면 그 지역 기사다.
+ */
+const TOKEN_FALSE_HITS: Record<string, RegExp> = {
+  성수: /성수(?:기|품)/,
+  수지: /(?:경상|무역|재정|국제|소득|상품|서비스|여행|관리재정|본원)\s?수지|수지\s?(?:타산|균형|흑자|적자|개선|악화|맞|가 맞|를 맞)/,
+  분당: /(?:\d|초|시간|1인)\s?분당/,
+  여의도: /여의도\s?(?:정가|정치|정치권|국회|문법|화법)/,
+};
+
+function tokenHitsTitle(title: string, token: string): boolean {
+  const bad = TOKEN_FALSE_HITS[token];
+  if (!bad) return title.includes(token);
+  for (let i = title.indexOf(token); i >= 0; i = title.indexOf(token, i + 1)) {
+    const win = title.slice(Math.max(0, i - 5), i + token.length + 6);
+    if (!bad.test(win)) return true;
+  }
+  return false;
 }
 
 /** 단지명 바로 뒤에 오면 회사 이름이다 — "현대건설"·"신동아건설"·"삼성물산"·"롯데그룹" */

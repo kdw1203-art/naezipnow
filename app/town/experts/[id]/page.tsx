@@ -68,9 +68,10 @@ function feeLabel(v: number): string {
 /* [970 · C-04] 서버(UTC) getDate() → 한국 날짜 고정(후기·등록일이 자정 전후 하루 어긋나던 것) */
 const dateLabel = formatKstDate;
 
-function Section({ title, children, delay = 1 }: { title: string; children: React.ReactNode; delay?: number }) {
+/* [1052] id — 인증 마크(ExpertBadge)가 검증 정보 칸(#verification)으로 바로 온다. 끈적 머리에 가리지 않게 scroll-mt. */
+function Section({ title, children, delay = 1, id }: { title: string; children: React.ReactNode; delay?: number; id?: string }) {
   return (
-    <section className={`rise-in-${delay} card mt-3 flex flex-col gap-2.5 p-5 max-md:p-3.5 md:p-6`}>
+    <section id={id} className={`rise-in-${delay} card mt-3 flex flex-col gap-2.5 p-5 max-md:p-3.5 md:p-6${id ? " scroll-mt-24" : ""}`}>
       <h2 className="t-body font-bold text-ink">{title}</h2>
       {children}
     </section>
@@ -362,7 +363,7 @@ export default async function ExpertDetailPage({
 
         {/* ---------- 검증 정보 ---------- */}
         {e.isVerified && (
-          <Section title="검증 정보" delay={3}>
+          <Section title="검증 정보" delay={3} id="verification">
             <div className="flex flex-col gap-1.5 t-sub text-text-2">
               <div className="flex items-start gap-2">
                 <Icon name="check" size={14} className="mt-0.5 shrink-0 text-success" />
