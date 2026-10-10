@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isLegacyOrigin } from "@/lib/platform-shell";
 
 import { CSP_REVISION } from "@/lib/security/deploy-sync";
 
@@ -421,6 +422,9 @@ export async function GET(req: Request) {
       secret: authSecret,
 
       url: authUrl,
+
+      /* [1053] AUTH_URL 이 옛 도메인(nuguzip.com)이면 true — 구글 로그인 콜백이 옛 주소로 돌아간다(미들웨어가 넘겨 준다) */
+      urlLegacy: isLegacyOrigin(authUrl),
 
       loginReady,
 

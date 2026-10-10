@@ -1,9 +1,11 @@
 import "server-only";
 
 import { unstable_cache } from "next/cache";
-import { getReadOnlySupabase } from "@/lib/newui/supabase-read";
+import { getReadOnlySupabase, readOnlyClientHasServiceRole } from "@/lib/newui/supabase-read";
 import { bboxForRadius } from "@/lib/map/geo-haversine";
 import { logger } from "@/lib/log";
+import { mergeStationRows } from "@/lib/poi/parse";
+import { stationSourceFor, type StationSource } from "@/lib/map/area-parts";
 import {
   AREA_RADIUS_M,
   overpassFailure,
@@ -18,8 +20,10 @@ import {
 } from "@/lib/map/area-pick";
 
 /**
- * [1047 · 단지 위치 지도] 반경 안의 유사 단지(우리 표) · 역 · 관공서(OpenStreetMap). 규칙은 lib/map/area-pick(순수).
+ * [1047 · 단지 위치 지도] 반경 안의 유사 단지(우리 표) · 역 · 관공서. 규칙은 lib/map/area-pick · area-parts(순수).
  * 각 원천은 따로 실패한다 — 하나가 실패해도 나머지는 그린다(호출부가 missing 으로 받는다).
+ * [1053] 역은 공공데이터 표(poi_stations · 전국도시철도역사정보표준데이터)를 먼저 읽는다 — 표가 통째로 비었을 때만
+ *        OpenStreetMap(loadAreaOsm)의 역을 쓴다. 관공서는 OpenStreetMap 뿐이고 따로 부른다(/api/complex/area?part=osm).
  */
 
 /* 공개 Overpass 서버는 가끔 바쁘다(시간 초과 · 429) — 세 곳을 차례로 묻고, 성공한 결과는 서버 캐시에 30일 둔다(아래) */
@@ -97,6 +101,40 @@ export async function loadAreaComplexes(
     })
     .filter((r) => r.regionName && r.complexName && Number.isFinite(r.lat) && Number.isFinite(r.lng));
   return pickSimilarComplexes(rows, { name: self.name, lat: center.lat, lng: center.lng, buildYear: self.buildYear ?? null });
+}
+
+export type AreaStationsResult = { source: "public"; stations: AreaStation[] } | { source: "osm" };
+
+/**
+ * [1053] 역 — 공공데이터 poi_stations 를 반경 bbox 로 읽고, 직선 거리 · 같은 역은 노선을 묶어 하나("강남역 · 2호선·신분당선").
+ * 반경 안 줄이 없으면 표 전체가 비었는지 한 줄만 확인한다(stationSourceFor) — 비었을 때만 { source: "osm" }.
+ * 조회 실패는 던진다(호출부가 missing "stations" — "없음"과 구분). 표는 RLS deny-all 이라 Service Role 로만 읽힌다 —
+ * 그 키가 없으면(로컬 등) 공공 표를 못 읽으므로 OpenStreetMap 으로 넘긴다.
+ */
+export async function loadAreaStations(center: { lat: number; lng: number }): Promise<AreaStationsResult> {
+  if (!readOnlyClientHasServiceRole()) return { source: "osm" };
+  const sb = getReadOnlySupabase();
+  if (!sb) return { source: "osm" };
+  const box = bboxForRadius(center.lat, center.lng, AREA_RADIUS_M);
+  const { data, error } = await sb
+    .from("poi_stations")
+    .select("name,line,lat,lng")
+    .gte("lat", box.minLat)
+    .lte("lat", box.maxLat)
+    .gte("lng", box.minLng)
+    .lte("lng", box.maxLng)
+    .limit(200);
+  if (error) throw new Error(`역(poi_stations) 조회 실패: ${error.message}`);
+  const rows = (data ?? []) as Array<{ name: unknown; line: unknown; lat: unknown; lng: unknown }>;
+  let tableHasRows: boolean | null = null;
+  if (rows.length === 0) {
+    const probe = await sb.from("poi_stations").select("id").limit(1);
+    if (probe.error) throw new Error(`역(poi_stations) 확인 실패: ${probe.error.message}`);
+    tableHasRows = (probe.data ?? []).length > 0;
+  }
+  const source: StationSource = stationSourceFor(rows.length, tableHasRows);
+  if (source === "osm") return { source };
+  return { source, stations: mergeStationRows(rows, center, AREA_RADIUS_M, 6) };
 }
 
 /** 성공만 캐시한다(실패는 던지므로 캐시에 남지 않는다) — 역·관공서는 한 달에 몇 번 바뀌지 않는다.

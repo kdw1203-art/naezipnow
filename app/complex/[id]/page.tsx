@@ -972,6 +972,19 @@ async function loadView(id: string): Promise<HubView | null> {
         "빈 껍데기를 캐시에 남기지 않기 위해 렌더를 중단합니다",
     );
   }
+  /* [1053] 실거래(히어로) 하나만 실패해도 던진다. revalidate 가 7일(604_800)이라, 여기서 "실거래 불러오기
+     실패 · 잠시 후 다시" 화면을 그려 내보내면 그 문장이 ISR 캐시에 7일 동안 얼어붙는다 — "잠시 후"가 일주일이 된다.
+     던지면: 재검증 중이면 Next 는 직전 캐시본을 계속 내보내고(실패한 재렌더는 캐시에 쓰지 않는다), 첫 렌더면
+     app/error.tsx 가 /complex 에서 한 번 자동 재시도한다.
+     거래가 없는 단지는 여기 오지 않는다 — loadTxHistory 는 "거래 없음"에 빈 배열(ok: true)을, 조회 오류에만
+     throw 하고(complex-store loadTradeRowsShared), settle() 은 그 throw 와 8초 예산 초과만 ok: false 로 접는다.
+     아래 loadFailures("실거래")·txFailed 분기는 이제 본문에서 닿지 않지만, 같은 뷰를 쓰는 경로가 생겨도 거짓
+     "없음"을 그리지 않게 남겨 둔다. */
+  if (!txR.ok) {
+    throw new Error(
+      `[/complex/${id}] 실거래 이력 조회 실패(오류·예산 초과) — 실패 화면을 7일 캐시에 남기지 않기 위해 렌더를 중단합니다`,
+    );
+  }
 
   /* 실패한 섹션 이름을 뷰까지 들고 간다 — toView 가 "없음"과 "못 읽음"을
      다른 문장으로 그릴 수 있도록. 좌표·링크는 없어도 화면이 조용히 줄어들
@@ -1058,9 +1071,16 @@ export async function generateMetadata({
   /* [1009 · C] 한 건 단위 매매(loadDeals)도 같이 — 제목·설명·공유 카드의 숫자를 첫 화면 대표가와 맞춘다.
      본문과 같은 인자(canonical_id)라 React cache 적중이고, 행은 loadTxHistory 가 읽은 공용 행이라 추가 질의 0.
      실패·예산 초과는 null → 예전 월평균 문구로 접는다(메타데이터 때문에 페이지가 실패하지 않게). */
+  /* [1053] 실거래에도 본문과 같은 8초 예산(SIDE_SECTION_BUDGET_MS)을 건다. 예전엔 예산 없이 기다려서, 본문이
+     8초에 접은 뒤에도 메타데이터가 읽기 타임아웃(최대 45초)까지 렌더를 붙들 수 있었다. 넘기면 던진다 — 본문도
+     같은 실패에 던지므로(loadView) 결과는 같은 5xx 이고, 캐시에는 아무것도 쓰지 않는다. 같은 약속(React cache)을
+     기다리는 것이라 질의는 늘지 않는다. */
+  const metaTxBudget = startDeadline(SIDE_SECTION_BUDGET_MS);
   const [tx, bands, metaDeals]: [ComplexTransactionRow[], AreaBandRow[] | null, HubDeal[] | null] =
     await Promise.all([
-      loadTxHistory(row.canonical_id, TX_HISTORY_MONTHS),
+      Promise.race([loadTxHistory(row.canonical_id, TX_HISTORY_MONTHS), metaTxBudget.expired]).finally(() =>
+        metaTxBudget.done(),
+      ),
       withSectionBudget(loadAreaBands(id)).then(
         (d) => d,
         () => null,

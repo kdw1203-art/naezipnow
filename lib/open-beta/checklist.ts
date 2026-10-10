@@ -32,7 +32,7 @@ export const OPEN_BETA_TASKS: OpenBetaTask[] = [
     title: "모바일 첫 진입 LCP 최적화",
     priority: "P0",
     status: "done",
-    note: "Pretendard 비차단 preload+media swap (layout). 추후 Lighthouse 재측정 권장.",
+    note: "1053: 본문 웹글꼴(Pretendard 조각 92개) 걷고 기기 기본 글꼴 · 워드마크 네 글자만 824B 글꼴.",
   },
   {
     id: "api-rate-limit",

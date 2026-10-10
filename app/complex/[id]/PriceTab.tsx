@@ -210,7 +210,8 @@ export function PriceTab({
           href={region ? `/analysis/price?region=${encodeURIComponent(region)}` : "/analysis/price"}
           className="btn-soft rounded-xl p-3 text-center t-body"
         >
-          AI 시세 분석 보기
+          {/* [1053] "시세" 낱말 금지 — 이 탭의 숫자는 국토부 실거래뿐이다 */}
+          AI 가격 분석 보기
         </Link>
         {latestAvgManwon > 0 && (
           <Link

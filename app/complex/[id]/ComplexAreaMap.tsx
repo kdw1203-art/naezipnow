@@ -7,26 +7,40 @@ import type { MapMarkerData } from "@/components/map/NaverMap";
 import { Icon } from "@/app/components/Icon";
 import {
   AREA_RADII_M,
-  areaLayerCount,
   formatDistance,
   formatStraightDistance,
-  mergeAreaData,
   similarLayerLabel,
   similarView,
   walkMinutesAtLeast,
-  type AreaData,
   type AreaLayer,
 } from "@/lib/map/area-pick";
+import {
+  areaPartCount,
+  composeAreaView,
+  hasFailedPart,
+  mergeAreaPart,
+  osmFetchPlan,
+  osmShown,
+  reloadPlan,
+  type AreaPartName,
+  type AreaResponse,
+} from "@/lib/map/area-parts";
+import { stationLabel } from "@/lib/poi/parse";
 
 /* [1047 · 단지 위치 지도] 소유자 지시(2026-10-09, 단지 화면 캡처의 오른쪽 레일에 노란 표시):
    "단지를 검색하면 지도에서 위치를 보여주고 · 위치는 노란색 부분에" → 레일 맨 위 카드.
    "확대, 축소 · 인근 반경 범위 · 유사 단지나 전철역, 관공서 위치도 간단하게" →
      · 지도 확대·축소 단추(네이버 지도 기본 조작) · 반경 원(500m / 1km 고르기)
-     · 켜고 끄는 세 겹: 유사 단지(우리 실거래 집계 — 평당가·준공 연도가 닮은 순) · 역 · 관공서(OpenStreetMap)
+     · 켜고 끄는 세 겹: 유사 단지(우리 실거래 집계 — 평당가·준공 연도가 닮은 순) · 역(공공데이터 — 표가 빈 동안만
+       OpenStreetMap) · 관공서(OpenStreetMap)
    지도 SDK 는 지연 로드(NaverMapLazy) · 주변 정보는 /api/complex/area(CDN 7일) — 단지 화면 첫 그림과 무관하다.
    같은 카드가 데스크톱(레일)과 폰(본문)에 하나씩 놓이므로 media 로 한쪽만 켠다(숨은 쪽은 지도를 만들지 않는다).
    [1052] 정직한 이름표 · 실패 처리: 닮음 점수가 없으면 "주변 단지(가까운 순)" · 덜 닮은 단지(0.3 미만)는 빼고 ·
-   거리는 "직선" · 못 읽은 원천의 숫자는 "—" · 실패 뒤 "다시 불러오기"(규칙은 lib/map/area-pick — 단위 시험). */
+   거리는 "직선" · 못 읽은 원천의 숫자는 "—" · 실패 뒤 "다시 불러오기"(규칙은 lib/map/area-pick — 단위 시험).
+   [1053] 두 요청: main(유사 단지 + 공공데이터 역 — DB 만, 빠름)을 먼저 받고, 관공서(OpenStreetMap · 자주 실패)는
+   main 뒤에 part=osm 으로 따로 받는다 — 관공서가 유사 단지 · 역을 기다리게 하지 않는다. 원천별 상태(읽는 중 · 읽음 · 실패)를
+   따로 두고, "다시 불러오기"는 실패한 원천이 든 요청만 다시 부른다(규칙은 lib/map/area-parts — 단위 시험).
+   출처: 역은 공공 표에서 왔으면 "전국도시철도역사정보표준데이터", OpenStreetMap 은 그 자료가 화면에 있을 때만 적는다. */
 
 type Layer = AreaLayer;
 
@@ -47,19 +61,41 @@ function infoHtml(title: string, sub: string): string {
   return `<div style="min-width:140px;padding:2px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeText(title)}</p><p style="font-size:11px;color:var(--text-3);margin:2px 0 0">${escapeText(sub)}</p></div>`;
 }
 
-/** 주변 정보 주소 — retry 는 CDN 캐시 칸을 가르는 값(실패 응답은 5분 캐시라 같은 주소면 같은 실패를 받는다) */
-function areaUrl(lat: number, lng: number, name: string, buildYear: number | null | undefined, retry?: string): string {
-  const qs = new URLSearchParams({ lat: String(lat), lng: String(lng), name });
-  if (buildYear) qs.set("by", String(buildYear));
-  if (retry) qs.set("retry", retry);
+/** 주변 정보 주소 — retry 는 CDN 캐시 칸을 가르는 값(실패 응답은 5분 캐시라 같은 주소면 같은 실패를 받는다).
+ *  v=2: [1053] 응답 모양이 바뀌었다(part · stationSource · pending) — 예전 모양의 캐시 칸을 피한다.
+ *  osm 쪽은 단지 이름 · 준공 연도와 무관하다 — 같은 좌표면 같은 칸. */
+function areaUrl(p: {
+  lat: number;
+  lng: number;
+  part: AreaPartName;
+  name?: string;
+  buildYear?: number | null;
+  st?: boolean;
+  retry?: string;
+}): string {
+  const qs = new URLSearchParams({ lat: String(p.lat), lng: String(p.lng) });
+  if (p.part === "osm") {
+    qs.set("part", "osm");
+    if (p.st) qs.set("st", "1");
+  } else {
+    qs.set("name", p.name ?? "");
+    if (p.buildYear) qs.set("by", String(p.buildYear));
+  }
+  qs.set("v", "2");
+  if (p.retry) qs.set("retry", p.retry);
   return `/api/complex/area?${qs.toString()}`;
 }
 
-async function fetchArea(url: string, signal?: AbortSignal): Promise<AreaData> {
+async function fetchArea(url: string, part: AreaPartName, signal?: AbortSignal): Promise<AreaResponse> {
   const r = await fetch(url, { signal });
   if (!r.ok) throw new Error(String(r.status));
-  return (await r.json()) as AreaData;
+  const json = (await r.json()) as AreaResponse;
+  /* 모양이 다르면(예전 캐시 등) 실패로 — 섞어 그리지 않는다 */
+  if (!json || json.part !== part || !Array.isArray(json.missing)) throw new Error("응답 형식 아님");
+  return json;
 }
+
+const isAbort = (e: unknown) => e instanceof DOMException && e.name === "AbortError";
 
 export function ComplexAreaMap({
   lat,
@@ -78,10 +114,11 @@ export function ComplexAreaMap({
   const [active, setActive] = useState<boolean | null>(null);
   const [radius, setRadius] = useState<number>(1000);
   const [layers, setLayers] = useState<Record<Layer, boolean>>({ similar: true, stations: true, offices: true });
-  const [data, setData] = useState<AreaData | null>(null);
-  const [failed, setFailed] = useState(false);
-  /* 역·관공서(OpenStreetMap)를 못 읽었으면 3초 뒤 한 번만 다시 묻는다(공개 서버가 가끔 바쁘다) */
-  const [retried, setRetried] = useState(false);
+  /* [1053] 쪽별 응답 · 요청 자체의 실패 — 화면에 그릴 것과 원천별 상태는 composeAreaView 가 만든다 */
+  const [main, setMain] = useState<AreaResponse | null>(null);
+  const [mainFailed, setMainFailed] = useState(false);
+  const [osm, setOsm] = useState<AreaResponse | null>(null);
+  const [osmFailed, setOsmFailed] = useState(false);
   /* [1052] 손으로 다시 부른 횟수(캐시 칸 m1, m2 …) · 다시 부르는 중 */
   const [manualTries, setManualTries] = useState(0);
   const [reloading, setReloading] = useState(false);
@@ -94,50 +131,70 @@ export function ComplexAreaMap({
     return () => mq.removeEventListener("change", on);
   }, [media]);
 
+  /* main — 유사 단지 + 역(공공 표). Overpass 를 기다리지 않는다 */
   useEffect(() => {
-    if (!active || data || failed) return;
+    if (!active || main || mainFailed) return;
     const ctrl = new AbortController();
-    fetchArea(areaUrl(lat, lng, name, buildYear), ctrl.signal)
-      .then(setData)
+    fetchArea(areaUrl({ lat, lng, part: "main", name, buildYear }), "main", ctrl.signal)
+      .then(setMain)
       .catch((e: unknown) => {
-        if (!(e instanceof DOMException && e.name === "AbortError")) setFailed(true);
+        if (!isAbort(e)) setMainFailed(true);
       });
     return () => ctrl.abort();
-  }, [active, data, failed, lat, lng, name, buildYear]);
+  }, [active, main, mainFailed, lat, lng, name, buildYear]);
 
+  /* osm — main 이 온(또는 실패한) 뒤에 관공서. 공공 역 표가 비었으면(stationSource "osm") 역도(st) */
+  const osmPlan = active ? osmFetchPlan({ main, mainFailed, osm, osmFailed }) : null;
+  const osmWant = osmPlan ? (osmPlan.st ? "st" : "offices") : null;
   useEffect(() => {
-    if (!data || retried || !data.missing.includes("osm")) return;
-    const t = window.setTimeout(() => {
-      setRetried(true);
-      /* 원천별로 읽은 쪽을 남긴다 — 재시도에서 유사 단지가 실패해도 처음 읽은 것을 지우지 않는다 */
-      fetchArea(areaUrl(lat, lng, name, buildYear, "1"))
-        .then((d) => setData((prev) => mergeAreaData(prev, d)))
-        .catch(() => undefined);
-    }, 3000);
-    return () => window.clearTimeout(t);
-  }, [data, retried, lat, lng, name, buildYear]);
+    if (!osmWant) return;
+    const ctrl = new AbortController();
+    fetchArea(areaUrl({ lat, lng, part: "osm", st: osmWant === "st" }), "osm", ctrl.signal)
+      .then((d) => setOsm((prev) => mergeAreaPart(prev, d)))
+      .catch((e: unknown) => {
+        if (!isAbort(e)) setOsmFailed(true);
+      });
+    return () => ctrl.abort();
+  }, [osmWant, lat, lng]);
 
-  /* [1052] 실패 뒤 "다시 불러오기" — 자동 재시도는 접고(같은 요청 두 번 방지), 읽은 원천은 지키며 합친다 */
+  const view = useMemo(() => composeAreaView({ main, mainFailed, osm, osmFailed }), [main, mainFailed, osm, osmFailed]);
+  const status = view.status;
+
+  /* [1052] 실패 뒤 "다시 불러오기" — 실패한 원천이 든 요청만 다시 부르고, 읽은 원천은 지키며 합친다 */
   const reload = () => {
     if (reloading) return;
+    const plan = reloadPlan(view);
+    if (!plan.main && !plan.osm) return;
     const n = manualTries + 1;
     setManualTries(n);
-    setRetried(true);
     setReloading(true);
-    fetchArea(areaUrl(lat, lng, name, buildYear, `m${n}`))
-      .then((d) => {
-        setData((prev) => mergeAreaData(prev, d));
-        setFailed(false);
-      })
-      .catch(() => undefined)
-      .finally(() => setReloading(false));
+    const jobs: Promise<void>[] = [];
+    if (plan.main) {
+      jobs.push(
+        fetchArea(areaUrl({ lat, lng, part: "main", name, buildYear, retry: `m${n}` }), "main")
+          .then((d) => {
+            setMain((prev) => mergeAreaPart(prev, d));
+            setMainFailed(false);
+          })
+          .catch(() => undefined),
+      );
+    }
+    if (plan.osm) {
+      jobs.push(
+        fetchArea(areaUrl({ lat, lng, part: "osm", st: plan.st, retry: `m${n}` }), "osm")
+          .then((d) => {
+            setOsm((prev) => mergeAreaPart(prev, d));
+            setOsmFailed(false);
+          })
+          .catch(() => undefined),
+      );
+    }
+    void Promise.all(jobs).finally(() => setReloading(false));
   };
 
-  /* 유사 단지 — 닮음 점수가 없으면(이 단지 시세를 모름) "주변 단지 · 가까운 순", 덜 닮은 단지(0.3 미만)는 뺀다 */
-  const similar = useMemo(() => similarView(data?.similar ?? []), [data]);
-  const missingSimilar = data?.missing.includes("similar") ?? false;
-  const missingOsm = data?.missing.includes("osm") ?? false;
-  const similarLabel = missingSimilar || !data ? LAYER_META.similar.label : similarLayerLabel(similar.basis);
+  /* 유사 단지 — 닮음 점수가 없으면(이 단지 평당 실거래가를 모름) "주변 단지 · 가까운 순", 덜 닮은 단지(0.3 미만)는 뺀다 */
+  const similar = useMemo(() => similarView(view.similar), [view.similar]);
+  const similarLabel = status.similar !== "ok" ? LAYER_META.similar.label : similarLayerLabel(similar.basis);
   const layerLabel = (k: Layer) => (k === "similar" ? similarLabel : LAYER_META[k].label);
 
   /* 반경 원 — 같은 값이면 같은 객체(지도 쪽 effect 가 렌더마다 원과 손잡이를 다시 놓지 않게) */
@@ -145,7 +202,6 @@ export function ComplexAreaMap({
 
   const markers = useMemo<MapMarkerData[]>(() => {
     const out: MapMarkerData[] = [{ id: "self", lat, lng, label: name.slice(0, 20), brandPin: true, selected: true }];
-    if (!data) return out;
     if (layers.similar) {
       for (const c of similar.items) {
         if (c.distanceM > radius) continue;
@@ -160,26 +216,30 @@ export function ComplexAreaMap({
       }
     }
     if (layers.stations) {
-      for (const s of data.stations) {
+      for (const s of view.stations) {
         if (s.distanceM > radius) continue;
-        out.push({ id: `st:${s.name}`, lat: s.lat, lng: s.lng, label: s.name, pinColor: LAYER_META.stations.color, infoHtml: infoHtml(s.name, `역 · ${formatStraightDistance(s.distanceM)} · ${walkMinutesAtLeast(s.distanceM)}`) });
+        /* 공공 표의 역은 노선을 묶어 하나 — "2호선·신분당선 · 직선 450m · 도보 6분 이상" */
+        out.push({ id: `st:${s.name}`, lat: s.lat, lng: s.lng, label: s.name, pinColor: LAYER_META.stations.color, infoHtml: infoHtml(s.name, `${s.line ?? "역"} · ${formatStraightDistance(s.distanceM)} · ${walkMinutesAtLeast(s.distanceM)}`) });
       }
     }
     if (layers.offices) {
-      for (const o of data.offices) {
+      for (const o of view.offices) {
         if (o.distanceM > radius) continue;
         out.push({ id: `of:${o.name}`, lat: o.lat, lng: o.lng, label: o.name, pinColor: LAYER_META.offices.color, infoHtml: infoHtml(o.name, `${o.kind} · ${formatStraightDistance(o.distanceM)}`) });
       }
     }
     return out;
-  }, [data, similar, layers, radius, lat, lng, name]);
+  }, [view, similar, layers, radius, lat, lng, name]);
 
   if (active === false) return null;
 
-  /* 못 읽은 원천의 숫자는 "—"(0 이 아니다) · 통째로 실패했으면 셋 다 "—" */
-  const count = (k: Layer) => (failed && !data ? "—" : areaLayerCount(data, k, radius));
-  const nearestStation = data?.stations[0];
-  const showRetry = failed || missingSimilar || missingOsm;
+  /* 원천별 숫자 — 읽는 중 없음 · 못 읽었으면 "—"(0 이 아니다). 관공서 실패는 역 · 유사 단지 숫자에 번지지 않는다 */
+  const count = (k: Layer) => areaPartCount(view, k, radius);
+  const nearestStation = view.stations[0];
+  const allFailed = status.similar === "failed" && status.stations === "failed" && status.offices === "failed";
+  const showRetry = hasFailedPart(view);
+  const stationsFromPublic = view.stationSource === "public" && status.stations === "ok";
+  const showOsmCredit = osmShown(view);
 
   return (
     <section className="card rise-in-1 flex flex-col gap-2.5 rounded-2xl p-3" aria-labelledby={`area-map-title-${media}`}>
@@ -259,18 +319,18 @@ export function ComplexAreaMap({
         <span className="t-caption text-text-3" aria-live="polite">
           {reloading
             ? "주변 정보 불러오는 중"
-            : failed
+            : allFailed
               ? "주변 정보 불러오기 실패 · 잠시 후 다시"
               : nearestStation
-                ? `가까운 역 ${nearestStation.name} · ${formatStraightDistance(nearestStation.distanceM)}`
-                : data
-                  ? missingOsm
-                    ? "역·관공서 불러오기 실패 · 잠시 후 다시"
-                    : `반경 ${formatDistance(radius)} 안 역 없음`
-                  : "주변 정보 불러오는 중"}
+                ? `가까운 역 ${stationLabel(nearestStation)} · ${formatStraightDistance(nearestStation.distanceM)}`
+                : status.stations === "failed"
+                  ? "역 불러오기 실패 · 잠시 후 다시"
+                  : status.stations === "ok"
+                    ? `반경 ${formatDistance(radius)} 안 역 없음`
+                    : "주변 정보 불러오는 중"}
         </span>
         <span className="flex flex-wrap items-center gap-x-3">
-          {/* [1052] 실패 뒤 다시 부르기 — 통째로 실패했거나 한 원천(유사 단지 · 역·관공서)을 못 읽었을 때만 */}
+          {/* [1052] 실패 뒤 다시 부르기 — 한 원천(유사 단지 · 역 · 관공서)이라도 못 읽었을 때만 · 그 원천의 요청만 다시 */}
           {showRetry && (
             <button
               type="button"
@@ -293,11 +353,15 @@ export function ComplexAreaMap({
         </span>
       </div>
       <p className="px-1 t-caption text-text-3">
-        {data && !missingSimilar && similar.basis === "nearest"
-          ? "주변 단지 = 가까운 순 · 비교할 시세 없음"
+        {status.similar === "ok" && similar.basis === "nearest"
+          ? "주변 단지 = 가까운 순 · 비교할 실거래 없음"
           : "유사 단지 = 국토부 실거래 평당가·준공 연도가 닮은 순"}
-        {missingSimilar ? " (지금 못 읽음)" : ""} · 거리는 직선 거리 · 역·관공서 © OpenStreetMap 기여자
-        {missingOsm ? " (지금 못 읽음)" : ""}
+        {status.similar === "failed" ? " (지금 못 읽음)" : ""} · 거리는 직선 거리
+        {stationsFromPublic ? " · 역 = 공공데이터 전국도시철도역사정보표준데이터" : ""}
+        {showOsmCredit
+          ? ` · ${view.stationSource === "osm" && status.stations === "ok" ? "역·관공서" : "관공서"} © OpenStreetMap 기여자`
+          : ""}
+        {status.offices === "failed" ? " · 관공서 (지금 못 읽음)" : ""}
       </p>
     </section>
   );

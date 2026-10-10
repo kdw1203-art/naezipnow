@@ -1,3 +1,4 @@
+import { desktopBaseUrl } from "@/lib/platform-shell";
 import type { Post, PostComment } from "@/lib/types/post";
 import { enqueueEmailNotification } from "@/lib/notifications/outbox";
 import { trySendViaResend } from "@/lib/notifications/resend-send";
@@ -37,7 +38,8 @@ export async function notifyPostAuthorOfNewComment(input: {
      [1007 · P2] 글 상세는 사람 글이면 /town/story/[id], 기사면 /town/news/[id] 다
      (lib/town/post-href). 댓글이 달리는 글은 사실상 전부 사람 글이라 예전 주소는
      메일마다 리다이렉트 한 홉을 더 타고 있었다. */
-  const base = process.env.AUTH_URL?.trim() || SITE_URL;
+  /* [1053] AUTH_URL 이 옛 주소면 정식 주소로(메일 링크가 한 번 더 넘어가지 않게) */
+  const base = desktopBaseUrl() || SITE_URL;
   const postPath = postHref(post);
   const postUrl = `${base}${postPath}#comments`;
   /* 고도화 49 — 알림 메일도 표준 레이아웃(브랜드 헤더 + 수신거부·사업자 푸터) */

@@ -5,6 +5,7 @@
  *
  * 잠그는 사실:
  *  ① 역·관공서는 OpenStreetMap 태그에서 · 반경 안 · 이름 있는 것만 · 같은 역은 하나 · 가까운 순.
+ *     ([1053] 역은 공공데이터 poi_stations 가 먼저 — OpenStreetMap 역은 그 표가 빈 동안만. tests/unit/poi-1053.test.ts)
  *  ② 유사 단지는 반경 안에서 평당가·준공 연도가 닮은 순 · 자기 자신 제외 · 기준이 없으면 가까운 순.
  *  ③ 지도는 레일 맨 위(데스크톱)와 본문(폰) — 한쪽만 켜지고, 첫 로드 JS 와 무관하게 지연 로드.
  *  ④ 확대·축소 단추 · 반경 원 · 출처 표시(© OpenStreetMap).
@@ -101,9 +102,14 @@ test("주변 정보 API — 좌표 검사 · 원천별 실패 표시 · 실패�
   const r = code("app/api/complex/area/route.ts");
   assert.match(r, /if \(!isKoreaCoord\(lat, lng\)\)/);
   assert.match(r, /Promise\.allSettled/);
-  assert.match(r, /missing\.push\("osm"\)/);
-  assert.match(r, /s-maxage=604800/);
-  assert.match(r, /s-maxage=300/);
+  /* [1053] 원천 이름이 "osm" 하나에서 stations · offices 로 갈렸다(관공서 실패가 역을 실패로 만들지 않게) */
+  assert.match(r, /missing\.push\("similar"\)/);
+  assert.match(r, /missing\.push\("stations"\)/);
+  assert.match(r, /\["offices"\] as const/);
+  assert.match(r, /"Cache-Control": areaCacheControl\(data\)/);
+  const parts = code("lib/map/area-parts.ts");
+  assert.match(parts, /s-maxage=604800/);
+  assert.match(parts, /s-maxage=300/);
   const load = code("lib/map/area-load.ts");
   assert.match(load, /AbortSignal\.timeout\(OVERPASS_TIMEOUT_MS\)/);
   assert.match(load, /\.from\("map_price_point_source"\)/);

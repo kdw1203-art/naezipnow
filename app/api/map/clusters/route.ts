@@ -35,6 +35,7 @@ import { encodeComplexId } from "@/lib/complex/complex-store";
 import { krwPerPyeongToManwon } from "@/lib/map/price-tiers";
 import { logger } from "@/lib/log";
 import { POINT_MODE_MIN_ZOOM } from "@/lib/map/pick-zoom";
+import { builderLabel, heatingKey, parkingPerHousehold, type HeatingKey } from "@/lib/map/complex-filters";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -95,6 +96,19 @@ export interface MapPointItem {
   avgAreaM2?: number;
   buildYear?: number;
   households?: number;
+  /* ── [1053] 단지 조건(K-apt 대장 · 실거래) — map_complex_attrs_v2. 모르면 필드가 없다 ── */
+  /** 최근 6개월 매매 건수(국토교통부 · 취소 제외) */
+  recentTrades?: number;
+  /** 세대당 주차 대수(주차대수 ÷ 세대수 · 소수 둘째) */
+  parkingPerHh?: number;
+  /** 동 수 */
+  buildings?: number;
+  /** 승강기 대수 */
+  elevators?: number;
+  /** 난방 묶음(지역 · 개별 · 중앙 · 기타) */
+  heating?: HeatingKey;
+  /** 시공사(이름 바뀐 회사는 한 묶음 — lib/map/complex-filters builderLabel) */
+  builder?: string;
 }
 
 /**
@@ -112,6 +126,12 @@ type FilterAttrs = {
   avgAreaM2?: number;
   buildYear?: number;
   households?: number;
+  recentTrades?: number;
+  parkingPerHh?: number;
+  buildings?: number;
+  elevators?: number;
+  heating?: HeatingKey;
+  builder?: string;
 };
 
 async function fetchFilterAttrs(
@@ -119,13 +139,20 @@ async function fetchFilterAttrs(
   bounds: { minLat: number; maxLat: number; minLng: number; maxLng: number },
 ): Promise<Map<string, FilterAttrs>> {
   const out = new Map<string, FilterAttrs>();
-  const { data, error } = await sb.rpc("map_complex_attrs", {
+  const args = {
     p_min_lat: bounds.minLat,
     p_max_lat: bounds.maxLat,
     p_min_lng: bounds.minLng,
     p_max_lng: bounds.maxLng,
     p_limit: MAX_POINTS,
-  });
+  };
+  /* [1053] v2 = v1 네 축 + 난방 · 시공사 · 주차 · 동 수 · 승강기 · 6개월 매매(마이그레이션 20261010093918 · service_role 전용).
+     v2 가 없거나 실패하면(서버 키 없이 anon 으로 도는 환경 등) v1 로 — 네 축 필터는 그대로 산다. */
+  let { data, error } = await sb.rpc("map_complex_attrs_v2", args);
+  if (error) {
+    logger.warn("[map/clusters] map_complex_attrs_v2 실패 · v1 로", { message: error.message });
+    ({ data, error } = await sb.rpc("map_complex_attrs", args));
+  }
   /* 이 조회가 실패해도 포인트 자체는 그린다 — 속성이 없으면 필터를 켰을 때 그
      마커가 빠질 뿐이고, 마커를 통째로 못 그리는 것보다 낫다. 조용히 넘기지는 않는다. */
   if (error) {
@@ -144,6 +171,12 @@ async function fetchFilterAttrs(
       avgAreaM2: num(r.avg_area_m2),
       buildYear: num(r.build_year),
       households: num(r.households),
+      recentTrades: num(r.recent_trade_count),
+      parkingPerHh: parkingPerHousehold(r.parking_count, r.households) ?? undefined,
+      buildings: num(r.building_count) !== undefined && Number(r.building_count) > 0 ? Number(r.building_count) : undefined,
+      elevators: num(r.elevator_count),
+      heating: heatingKey(r.heating) ?? undefined,
+      builder: builderLabel(r.builder) ?? undefined,
     });
   }
   return out;
@@ -515,6 +548,12 @@ export async function GET(req: NextRequest) {
           if (attrs.avgAreaM2 !== undefined) point.avgAreaM2 = attrs.avgAreaM2;
           if (attrs.buildYear !== undefined) point.buildYear = attrs.buildYear;
           if (attrs.households !== undefined) point.households = attrs.households;
+          if (attrs.recentTrades !== undefined) point.recentTrades = attrs.recentTrades;
+          if (attrs.parkingPerHh !== undefined) point.parkingPerHh = attrs.parkingPerHh;
+          if (attrs.buildings !== undefined) point.buildings = attrs.buildings;
+          if (attrs.elevators !== undefined) point.elevators = attrs.elevators;
+          if (attrs.heating !== undefined) point.heating = attrs.heating;
+          if (attrs.builder !== undefined) point.builder = attrs.builder;
         }
         return point;
       });

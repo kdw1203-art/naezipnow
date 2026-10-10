@@ -63,8 +63,9 @@ export function Logo({ size = 21 }: { size?: number }) {
   return (
     <span className="flex items-center gap-[8px] select-none">
       <BrandSymbol size={size + 2} />
+      {/* [1053] 본문 웹글꼴을 걷은 뒤에도 워드마크 모양은 Pretendard Bold 그대로 — 네 글자 전용 조각(globals.css .nz-wordmark) */}
       <span
-        className="font-bold"
+        className="nz-wordmark font-bold"
         style={{
           fontSize: size * 0.79,
           letterSpacing: "0.09em",

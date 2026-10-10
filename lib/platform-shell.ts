@@ -86,13 +86,31 @@ export function ensureOriginWithScheme(origin: string): string {
   return isLocal ? `http://${s}` : `https://${s}`;
 }
 
+/** [1053] 옛 도메인(도메인 전환 전) — 이 호스트를 가리키는 설정값은 링크 기준으로 쓰지 않는다 */
+export const LEGACY_SITE_HOSTS: readonly string[] = ["nuguzip.com", "www.nuguzip.com", "m.nuguzip.com"];
+
+/** 설정값이 옛 도메인을 가리키는가(정식 도메인이 따로 정해져 있을 때만 의미가 있다) */
+export function isLegacyOrigin(raw: string | null | undefined): boolean {
+  const s = sanitizeOriginUrl(raw);
+  if (!s) return false;
+  try {
+    const host = new URL(ensureOriginWithScheme(s)).hostname.toLowerCase();
+    return LEGACY_SITE_HOSTS.includes(host) && host !== new URL(DEFAULT_DESKTOP_ORIGIN).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
 export function desktopBaseUrl(): string {
+  /* [1053] AUTH_URL 이 옛 주소(nuguzip.com)로 남아 있으면 건너뛴다 — 운영 실측 2026-10-10: 비밀번호 재설정·메일 로그인
+     링크가 nuguzip.com 으로 나가 한 번 더 넘어갔고, Supabase 허용 주소에 옛 주소가 없으면 재설정 화면에 닿지 못한다 */
   const candidates = [
     process.env.NEXT_PUBLIC_DESKTOP_APP_URL?.trim(),
     process.env.AUTH_URL?.trim(),
     process.env.NEXT_PUBLIC_APP_URL?.trim(),
   ];
   for (const raw of candidates) {
+    if (isLegacyOrigin(raw)) continue;
     const s = sanitizeOriginUrl(raw);
     if (s) return ensureOriginWithScheme(s);
   }

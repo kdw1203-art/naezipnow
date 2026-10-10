@@ -63,5 +63,13 @@ export async function GET(request: NextRequest) {
   /* 운영에서는 항상 canonical 도메인으로 — preview 호스트에 세션이 남는 걸 막는다 */
   const base =
     process.env.VERCEL_ENV === "production" ? DEFAULT_DESKTOP_ORIGIN : origin;
+  /* [1053] 가입 확인 링크(next = /login?verified=1…)면 확인 화면으로 한 번 더 — 거기서 방금 심은 세션으로 자동 로그인
+     (Credentials "email-confirm"). 실패하면 그 화면이 예전 목적지(next)로 보낸다 */
+  if (code && next.startsWith("/login?verified=1")) {
+    const finish = new URL("/auth/confirm", base);
+    finish.searchParams.set("finish", "1");
+    finish.searchParams.set("next", next);
+    return NextResponse.redirect(finish);
+  }
   return NextResponse.redirect(new URL(next, base));
 }

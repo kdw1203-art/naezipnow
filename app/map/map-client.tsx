@@ -17,6 +17,25 @@ import { Logo } from "../components/Logo";
 import { WelcomeHandoff } from "./WelcomeHandoff";
 import { summarizeMapFilters } from "@/lib/map/filter-summary";
 import {
+  CX_STORAGE_KEY,
+  EMPTY_CX,
+  HEATING_LABEL,
+  MARKER_METRIC_OPTIONS,
+  cxActive,
+  cxCounts,
+  cxSummary,
+  hoverFacts,
+  metricLabel,
+  parseCx,
+  parseMetric,
+  passesCx,
+  pyeongHistogram,
+  type ComplexExtraFilters,
+  type HeatingKey,
+  type MarkerMetric,
+  type MetricPoint,
+} from "@/lib/map/complex-filters";
+import {
   CHROME_COMPACT_MEDIA,
   CHROME_RESTORE_DELAY_MS,
   nextChromeState,
@@ -413,6 +432,13 @@ interface ClusterPointItem {
   avgAreaM2?: number;
   buildYear?: number;
   households?: number;
+  /* [1053] 단지 조건(K-apt 대장 · 실거래) — lib/map/complex-filters · 모르면 필드가 없다 */
+  recentTrades?: number;
+  parkingPerHh?: number;
+  buildings?: number;
+  elevators?: number;
+  heating?: HeatingKey;
+  builder?: string;
 }
 
 /** item9 — 노트 탭에 싣는 그 단지 임장노트 (GET /api/map/complex-notes) */
@@ -490,6 +516,20 @@ interface ClustersResponse {
 /** bounds 변경 → fetch 디바운스(ms) */
 const CLUSTER_FETCH_DEBOUNCE_MS = 350;
 
+/* [1053] 뷰포트 → 줌별 격자 스냅(밖으로 확장). 처음엔 클러스터 조회 안에만 있었다(아래
+   scheduleClusterFetch 주석 참고). 인기 단지·분포·매물 요청은 원시 bounds(소수점 열몇 자리)를
+   그대로 실어서, 팬 한 번마다 URL 이 달라져 s-maxage CDN 캐시가 한 번도 재사용되지 못했다 —
+   네 요청이 같은 격자를 쓰도록 한 군데로 모은다. 격자는 항상 원래 뷰포트를 포함한다(내림/올림). */
+function snapViewportBounds(
+  b: { swLat: number; swLng: number; neLat: number; neLng: number },
+  mapZoom: number,
+): { swLat: string; swLng: string; neLat: string; neLng: string } {
+  const step = mapZoom >= 15 ? 0.01 : mapZoom >= 12 ? 0.05 : 0.2;
+  const down = (v: number) => (Math.floor(v / step) * step).toFixed(4);
+  const up = (v: number) => (Math.ceil(v / step) * step).toFixed(4);
+  return { swLat: down(b.swLat), swLng: down(b.swLng), neLat: up(b.neLat), neLng: up(b.neLng) };
+}
+
 /* ===== 인기 단지 패널 (/api/map/popular) =====
    예전 좌측 패널은 서버 렌더 때 전국 거래량순 30개를 받아 놓고 그중 한 지역
    이름을 붙여 "수원 단지 30" 이라고 적었다. 목록에 안양·창원·수원이 섞여 있었고
@@ -502,6 +542,13 @@ const POPULAR_NATIONWIDE_MAX_ZOOM = 10;
 const POPULAR_LIMIT = 10;
 /** 지도 idle → 인기 단지 재조회 디바운스(ms) */
 const POPULAR_FETCH_DEBOUNCE_MS = 400;
+/* [1053] 스냅한(넓어진) 범위로 물을 때는 서버 상한(30)만큼 받아 **실제 화면 안**만 남긴 뒤
+   POPULAR_LIMIT 개로 자른다 — 넓어진 격자의 상위 10곳을 그대로 쓰면 화면 밖 단지가 "이 지역"
+   목록에 섞인다. 순위 순서는 서버 그대로라, 격자 상위 30곳 안에 화면 안 단지가 10곳 이상이면
+   결과는 원시 bounds 로 물었을 때와 같다(격자는 화면의 최대 몇 배라 보통 그렇다). */
+const POPULAR_SNAPPED_FETCH_LIMIT = 30;
+/** [1053] 지도 idle → 분포(막대그래프) 재조회 디바운스(ms) — 패널이 열려 있을 때만 조회한다 */
+const FACETS_FETCH_DEBOUNCE_MS = 400;
 
 interface PopularItem {
   id: string;
@@ -631,6 +678,8 @@ const LISTING_TYPE_LABEL_MAP: Record<MapListingItem["listingType"], string> = {
 const LISTING_MARKER_COLOR = "#1d4fd8";
 /** 전세(평균 보증금) 마커 색 — 매매 평단가 색상 티어와 구분되는 단일 색 */
 const JEONSE_MARKER_COLOR = "#177a4a";
+/** [1053] 마커에 평당가 말고 다른 값(거래 수 · 준공 · 세대수 · 주차)을 적을 때의 중립 색 — 가격 색 단계와 섞이지 않게 */
+const METRIC_MARKER_COLOR = "#475569";
 /** 매물 bounds fetch 디바운스(ms) */
 const LISTING_FETCH_DEBOUNCE_MS = 350;
 
@@ -1001,8 +1050,48 @@ export function MapClient({
 
   /* 상세 필터 — 뷰포트 분포(막대그래프)와 선택 범위 */
   const [facets, setFacets] = useState<MapFacets | null>(null);
+  /* [1053] 분포를 한 번도 못 받았을 때 "불러오는 중…"에 머물지 않고 실패라고 말한다 */
+  const [facetsFailed, setFacetsFailed] = useState(false);
   const [ranges, setRanges] = useState<RangeFilters>(() => rangesFromBudget(initialBudget));
+  /* 뷰포트 단지 점(포인트 모드) — [1053] 단지 조건이 목록(filteredDanji)에도 걸리도록 위로 옮겼다(선언 순서) */
+  const [extraPoints, setExtraPoints] = useState<ClusterPointItem[]>([]);
+  /* [1053 · 지도 상세 필터 2] 단지 조건(난방 · 세대당 주차 · 동 수 · 6개월 매매 · 승강기 · 시공사 · 평당가)과
+     마커에 적을 값. 이 기기에만 저장(CX_STORAGE_KEY) — 주소에는 싣지 않는다. */
+  const [cx, setCx] = useState<ComplexExtraFilters>(EMPTY_CX);
+  const [markerMetric, setMarkerMetric] = useState<MarkerMetric>("pyeong");
+  const cxOn = cxActive(cx);
+  const cxLoaded = useRef(false);
+  useEffect(() => {
+    if (!cxLoaded.current) {
+      cxLoaded.current = true;
+      try {
+        const raw = JSON.parse(window.localStorage.getItem(CX_STORAGE_KEY) ?? "null") as { cx?: unknown; metric?: unknown } | null;
+        if (raw) {
+          setCx(parseCx(raw.cx));
+          setMarkerMetric(parseMetric(raw.metric));
+        }
+      } catch {
+        /* 저장값을 못 읽으면 기본 */
+      }
+      return;
+    }
+    try {
+      window.localStorage.setItem(CX_STORAGE_KEY, JSON.stringify({ cx, metric: markerMetric }));
+    } catch {
+      /* 프라이빗 모드 등 — 저장 없이 */
+    }
+  }, [cx, markerMetric]);
+  const pointById = useMemo(() => new Map(extraPoints.map((p) => [p.id, p])), [extraPoints]);
+  /* 칩 옆 수 · 평당가 막대 — 지금 화면에 찍힌 단지(거래 많은 순 최대 300곳) 기준 */
+  const cxc = useMemo(() => cxCounts(extraPoints), [extraPoints]);
+  const pyeongFacet = useMemo(() => pyeongHistogram(extraPoints), [extraPoints]);
   const facetsAbortRef = useRef<AbortController | null>(null);
+  /* [1053] 분포는 필터 패널 안에서만 쓰인다 — 닫혀 있는 동안 지도 idle 마다 조회하던 것을
+     멈추고(디바운스 타이머 + "낡음" 표시), 패널을 여는 순간 마지막 뷰포트로 한 번 받는다. */
+  const facetsTimerRef = useRef<number | null>(null);
+  const facetsStaleRef = useRef(true);
+  const filtersExpandedRef = useRef(filtersExpanded);
+  filtersExpandedRef.current = filtersExpanded;
   /* 최신 범위를 콜백 재생성 없이 참조 — 지도 idle 때마다 콜백을 다시 만들면
      디바운스 타이머가 매번 초기화돼 조회가 밀린다. */
   const rangesRef = useRef(ranges);
@@ -1349,7 +1438,7 @@ export function MapClient({
     } catch {
       /* 주소창 동기화 실패 — 지도 동작과 무관 */
     }
-  }, [showPriceOverlay, showListings, showRedevelopment, showSupply, showMyNotes, showWatchlist, showRentShare, showAuctions, regionMetric, txType, baseMap, showCadastral, redevLabelMode]);
+  }, [showPriceOverlay, showListings, showRedevelopment, showSupply, showMyNotes, showWatchlist, showRentShare, showAuctions, showSchools, showStations, regionMetric, txType, baseMap, showCadastral, redevLabelMode]);
   const [redevItems, setRedevItems] = useState<RedevelopmentProject[]>([]);
   /* 조회 실패와 "정말 0건"은 지도에서 똑같이 보인다 — 둘 다 마커가 없다.
      그래서 실패는 따로 들고 있다가 말로 알린다. */
@@ -1444,8 +1533,8 @@ export function MapClient({
         parkingKey,
         commuteKey,
         ranges,
-      }),
-    [listingTradeKey, propertyKindKey, roomsKey, bathroomsKey, parkingKey, commuteKey, ranges],
+      }).concat(cxSummary(cx)),
+    [listingTradeKey, propertyKindKey, roomsKey, bathroomsKey, parkingKey, commuteKey, ranges, cx],
   );
 
   const resetFilters = useCallback(() => {
@@ -1456,6 +1545,7 @@ export function MapClient({
     setBathroomsKey("all");
     setParkingKey("all");
     setCommuteKey("off");
+    setCx(EMPTY_CX);
     /* [1027] 정비사업 걸러 보기도 같이 푼다 — "전체 초기화" 뒤에 마커가 여전히 안 보이면 없는 줄 안다 */
     setRedevGroups(new Set());
     setRedevStages(new Set());
@@ -1499,14 +1589,21 @@ export function MapClient({
 
   // 출퇴근(#10) 필터를 범위 필터 위에 덧입힘 — 임계 초과 단지는 숨김.
   const filteredDanji = useMemo(() => {
+    /* [1053] 단지 조건 — 값은 뷰포트 점(pointById)에만 있다. 점에 없는 단지는 조건 값을 모르므로 뺀다 */
+    const cxFiltered = cxOn
+      ? rangeFilteredDanji.filter((d) => {
+          const p = pointById.get(d.id);
+          return p !== undefined && passesCx(p, cx, { price: txType !== "rent" });
+        })
+      : rangeFilteredDanji;
     if (!commuteActive || commuteMinutes === null || commuteThreshold === null) {
-      return rangeFilteredDanji;
+      return cxFiltered;
     }
-    return rangeFilteredDanji.filter((d) => {
+    return cxFiltered.filter((d) => {
       const m = commuteMinutes.get(d.id);
       return m !== undefined && m <= commuteThreshold;
     });
-  }, [rangeFilteredDanji, commuteActive, commuteMinutes, commuteThreshold]);
+  }, [rangeFilteredDanji, commuteActive, commuteMinutes, commuteThreshold, cxOn, cx, pointById, txType]);
 
   /* ===== [968 · 25] 모바일 목록 뷰 페이지 — 처음 40개, "더 보기" 마다 +40 =====
      예전엔 filteredDanji 전체를 한 번에 그렸다(전국 시드 수백 개 → 카드 수백 개 마운트).
@@ -1863,7 +1960,7 @@ export function MapClient({
         <button
           type="button"
           onClick={resetFilters}
-          className="whitespace-nowrap t-sub font-bold text-text-3 underline transition-colors hover:text-primary"
+          className="inline-flex min-h-[40px] items-center whitespace-nowrap t-sub font-bold text-text-3 underline transition-colors hover:text-primary md:min-h-6"
         >
           초기화
         </button>
@@ -1908,7 +2005,7 @@ export function MapClient({
         <button
           type="button"
           onClick={() => setRadiusCenter(null)}
-          className="whitespace-nowrap t-sub font-bold text-text-3 underline transition-colors hover:text-primary"
+          className="inline-flex min-h-[40px] items-center whitespace-nowrap t-sub font-bold text-text-3 underline transition-colors hover:text-primary md:min-h-6"
         >
           중심 해제
         </button>
@@ -1940,6 +2037,18 @@ export function MapClient({
   );
 
   // 확장 패널: 모든 범위/유형 필터 (칩 그룹) — 모바일 친화 접이식
+  /* [1053] 단지 조건에 맞는 화면 단지 수(패널 머리줄) */
+  const cxMatchCount = useMemo(
+    () => (cxOn ? extraPoints.filter((p) => passesCx(p, cx, { price: txType !== "rent" })).length : extraPoints.length),
+    [extraPoints, cx, cxOn, txType],
+  );
+  const cxBuilderOptions = useMemo(() => {
+    const top = cxc.builders.map((b) => ({ key: b.label, label: `${b.label} ${b.n}` }));
+    /* 고른 시공사가 지금 화면 상위에 없으면 그 칩도 남긴다(풀 수 있게) */
+    if (cx.builder !== "all" && !cxc.builders.some((b) => b.label === cx.builder)) top.push({ key: cx.builder, label: `${cx.builder} 0` });
+    return [{ key: "all", label: "전체" }, ...top];
+  }, [cxc.builders, cx.builder]);
+
   const filterPanel = filtersExpanded ? (
     /* 높이 상한은 바깥 래퍼가 화면 높이·상단 레인·하단 예약 레인으로 계산해
        내려준다(--nz-filter-max-h). 예전에는 여기서 `calc(100dvh-210px)` 로 잡았는데,
@@ -2025,9 +2134,112 @@ export function MapClient({
             }
           />
         </>
+      ) : facetsFailed ? (
+        <div className="py-2 t-sub text-text-3">분포 불러오기 실패 · 잠시 후 다시</div>
       ) : (
         <div className="py-2 t-sub text-text-3">이 지역 분포를 불러오는 중…</div>
       )}
+      {/* ── [1053 · 지도 상세 필터 2] 단지 조건 ─────────────────────────────
+          K-apt 단지 대장(난방 · 세대당 주차 · 동 수 · 승강기 · 시공사)과 국토교통부 실거래(6개월 매매 · 평당가).
+          수는 지금 화면에 찍힌 단지(거래 많은 순 최대 300곳) 기준 · 대장 없는 단지는 조건을 걸면 빠진다(지어 채우지 않는다). */}
+      <div className="flex flex-col gap-3 border-t border-line pt-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="t-body font-bold text-ink">단지 조건</span>
+          {cxOn && (
+            <button
+              type="button"
+              onClick={() => setCx(EMPTY_CX)}
+              className="inline-flex min-h-[40px] items-center t-sub font-bold text-text-3 underline md:min-h-6"
+            >
+              단지 조건 풀기
+            </button>
+          )}
+        </div>
+        <p className="t-caption text-text-3">
+          {cxc.total > 0
+            ? `화면 단지 ${cxc.total.toLocaleString("ko-KR")}곳 기준${cxOn ? ` · 조건 맞는 단지 ${cxMatchCount.toLocaleString("ko-KR")}곳` : ""} · 확대해 단지가 하나씩 보일 때 적용`
+            : "확대해 단지가 하나씩 보일 때 적용 · 지금 화면 단지 없음"}
+        </p>
+        {pyeongFacet.n > 0 && pyeongFacet.lo !== null && pyeongFacet.hi !== null && (
+          <HistogramRangeSlider
+            label="평당가(실거래 평균)"
+            lo={pyeongFacet.lo}
+            hi={pyeongFacet.hi}
+            bins={pyeongFacet.bins}
+            value={cx.pyeong}
+            onChange={(v) => setCx((p) => ({ ...p, pyeong: v }))}
+            format={(v) => `${Math.round(v).toLocaleString("ko-KR")}만`}
+            available={pyeongFacet.n}
+            total={cxc.total}
+            step={100}
+          />
+        )}
+        <FilterChipGroup
+          label={`난방 · 대장 있는 단지 ${cxc.heatingKnown}곳`}
+          options={[
+            { key: "all", label: "전체" },
+            ...(["district", "individual", "central"] as const).map((k) => ({ key: k, label: `${HEATING_LABEL[k]} ${cxc.heating[k]}` })),
+          ]}
+          valueKey={cx.heating}
+          onSelect={(k) => setCx((p) => ({ ...p, heating: k as ComplexExtraFilters["heating"] }))}
+        />
+        <FilterChipGroup
+          label={`세대당 주차 · 값 있는 단지 ${cxc.parkingKnown}곳`}
+          options={[
+            { key: "all", label: "전체" },
+            ...(["1", "1.2", "1.5"] as const).map((k) => ({ key: k, label: `${k}대 이상 ${cxc.parking[k]}` })),
+          ]}
+          valueKey={cx.parkingMin}
+          onSelect={(k) => setCx((p) => ({ ...p, parkingMin: k as ComplexExtraFilters["parkingMin"] }))}
+        />
+        <FilterChipGroup
+          label={`동 수 · 값 있는 단지 ${cxc.buildingsKnown}곳`}
+          options={[
+            { key: "all", label: "전체" },
+            { key: "2", label: `2개 동 이상(나홀로 제외) ${cxc.buildings["2"]}` },
+            { key: "5", label: `5개 동 이상 ${cxc.buildings["5"]}` },
+            { key: "10", label: `10개 동 이상 ${cxc.buildings["10"]}` },
+          ]}
+          valueKey={cx.buildingsMin}
+          onSelect={(k) => setCx((p) => ({ ...p, buildingsMin: k as ComplexExtraFilters["buildingsMin"] }))}
+        />
+        <FilterChipGroup
+          label="최근 6개월 매매(국토교통부)"
+          options={[
+            { key: "all", label: "전체" },
+            ...(["1", "5", "10"] as const).map((k) => ({ key: k, label: `${k}건 이상 ${cxc.recent[k]}` })),
+          ]}
+          valueKey={cx.recentMin}
+          onSelect={(k) => setCx((p) => ({ ...p, recentMin: k as ComplexExtraFilters["recentMin"] }))}
+        />
+        <FilterChipGroup
+          label={`승강기 · 값 있는 단지 ${cxc.elevatorKnown}곳`}
+          options={[
+            { key: "all", label: "전체" },
+            { key: "yes", label: `있음 ${cxc.elevator}` },
+          ]}
+          valueKey={cx.elevator}
+          onSelect={(k) => setCx((p) => ({ ...p, elevator: k === "yes" ? "yes" : "all" }))}
+        />
+        {cxBuilderOptions.length > 1 && (
+          <FilterChipGroup
+            label={`시공사 · 화면 상위 ${cxc.builders.length}곳`}
+            options={cxBuilderOptions}
+            valueKey={cx.builder}
+            onSelect={(k) => setCx((p) => ({ ...p, builder: k }))}
+          />
+        )}
+        <FilterChipGroup
+          label="마커에 표시"
+          options={MARKER_METRIC_OPTIONS.map((o) => ({ key: o.key, label: o.label }))}
+          valueKey={markerMetric}
+          onSelect={(k) => setMarkerMetric(parseMetric(k))}
+        />
+        <p className="t-caption text-text-3">
+          난방 · 주차 · 동 수 · 승강기 · 시공사 = K-apt 단지 대장 · 6개월 매매 · 평당가 = 국토교통부 실거래. 대장 없는 단지(대부분
+          소규모)는 조건을 걸면 제외 · 인기 단지 순위에는 미반영.
+        </p>
+      </div>
       <FilterChipGroup
         label="거래유형 (매물)"
         options={LISTING_TRADE_OPTIONS}
@@ -2519,7 +2731,7 @@ export function MapClient({
       </div>
 
       <div className="flex items-center justify-between border-t border-[rgba(16,28,54,.08)] pt-2.5">
-        <button type="button" onClick={resetFilters} className="t-sub font-bold text-text-3 underline">
+        <button type="button" onClick={resetFilters} className="inline-flex min-h-[40px] items-center t-sub font-bold text-text-3 underline md:min-h-6">
           전체 초기화
         </button>
         <button
@@ -2536,7 +2748,6 @@ export function MapClient({
   /* ===== 서버 클러스터링 상태 — 낮은 줌에서 42k 단지를 그리드 집계로 표시 ===== */
   const [clusterMode, setClusterMode] = useState<"points" | "clusters">("points");
   const [clusters, setClusters] = useState<ClusterItem[]>([]);
-  const [extraPoints, setExtraPoints] = useState<ClusterPointItem[]>([]);
   /** C1 — 화면에 칠한 색의 출처(최근 계약월·건수). 범례가 이 값을 그대로 읽는다. */
   const [priceMeta, setPriceMeta] = useState<PriceMeta>(EMPTY_PRICE_META);
   /** item5 — 마지막 클러스터 조회 결과. "빈 결과"와 "조회 실패"를 구분해 안내한다. */
@@ -2572,7 +2783,7 @@ export function MapClient({
   /* ===== 매물 레이어 fetch/refs (상태 선언은 상단) ===== */
   const showListingsRef = useRef(showListings);
   showListingsRef.current = showListings;
-  const lastBoundsRef = useRef<MapIdleInfo["bounds"]>(null);
+  /* [1053] 마지막 뷰포트는 lastIdleRef(bounds + zoom) 하나만 — 매물 요청도 줌별 격자로 스냅한다 */
   const listingTimerRef = useRef<number | null>(null);
   const listingAbortRef = useRef<AbortController | null>(null);
   // 거래유형 필터를 최신값으로 참조 (콜백 재생성 없이 type 파라미터 반영)
@@ -2587,17 +2798,20 @@ export function MapClient({
   const parkingKeyRef = useRef(parkingKey);
   parkingKeyRef.current = parkingKey;
 
-  const fetchListings = useCallback((bounds: NonNullable<MapIdleInfo["bounds"]>) => {
+  const fetchListings = useCallback((bounds: NonNullable<MapIdleInfo["bounds"]>, mapZoom: number) => {
     if (listingTimerRef.current !== null) window.clearTimeout(listingTimerRef.current);
     listingTimerRef.current = window.setTimeout(() => {
       listingAbortRef.current?.abort();
       const controller = new AbortController();
       listingAbortRef.current = controller;
+      /* [1053] 클러스터와 같은 격자로 스냅 — URL 이 같아야 s-maxage=60 CDN 캐시를 같이 쓴다.
+         격자가 화면보다 넓어 화면 밖 매물이 조금 더 올 수 있지만 마커는 화면 밖에 그려질 뿐이다. */
+      const snapped = snapViewportBounds(bounds, mapZoom);
       const params = new URLSearchParams({
-        swLat: String(bounds.swLat),
-        swLng: String(bounds.swLng),
-        neLat: String(bounds.neLat),
-        neLng: String(bounds.neLng),
+        swLat: snapped.swLat,
+        swLng: snapped.swLng,
+        neLat: snapped.neLat,
+        neLng: snapped.neLng,
       });
       const tradeType = LISTING_TRADE_OPTIONS.find((o) => o.key === listingTradeRef.current)?.type;
       if (tradeType) params.set("type", tradeType);
@@ -2641,7 +2855,8 @@ export function MapClient({
   // 토글 ON: 마지막 뷰포트로 즉시 로드 / OFF: 매물 마커 비우고 진행 중 요청 취소
   useEffect(() => {
     if (showListings) {
-      if (lastBoundsRef.current) fetchListings(lastBoundsRef.current);
+      const last = lastIdleRef.current;
+      if (last) fetchListings(last.bounds, last.zoom);
     } else {
       if (listingTimerRef.current !== null) window.clearTimeout(listingTimerRef.current);
       listingAbortRef.current?.abort();
@@ -2652,7 +2867,8 @@ export function MapClient({
 
   // 매물 필터 변경 → 레이어가 켜져 있으면 서버 재조회
   useEffect(() => {
-    if (showListings && lastBoundsRef.current) fetchListings(lastBoundsRef.current);
+    const last = lastIdleRef.current;
+    if (showListings && last) fetchListings(last.bounds, last.zoom);
   }, [
     listingTradeKey,
     propertyKindKey,
@@ -2675,15 +2891,14 @@ export function MapClient({
            원시 bounds 는 픽셀 단위로 연속 변동해 팬 한 번마다 URL 이 달라지고,
            s-maxage=300 CDN 캐시가 사실상 한 번도 재사용되지 못했다 — 같은
            동네를 보는 사용자들이 전부 오리진 DB 를 때렸다. 스냅 격자는 항상
-           원래 뷰포트를 포함하므로(밖으로 내림/올림) 화면에 빠지는 마커는 없다. */
-        const snapStep = mapZoom >= 15 ? 0.01 : mapZoom >= 12 ? 0.05 : 0.2;
-        const snapDown = (v: number) => (Math.floor(v / snapStep) * snapStep).toFixed(4);
-        const snapUp = (v: number) => (Math.ceil(v / snapStep) * snapStep).toFixed(4);
+           원래 뷰포트를 포함하므로(밖으로 내림/올림) 화면에 빠지는 마커는 없다.
+           [1053] 격자 계산은 snapViewportBounds 한 군데 — 인기·분포·매물 요청도 같은 격자를 쓴다. */
+        const snapped = snapViewportBounds(bounds, mapZoom);
         const params = new URLSearchParams({
-          minLat: snapDown(bounds.swLat),
-          maxLat: snapUp(bounds.neLat),
-          minLng: snapDown(bounds.swLng),
-          maxLng: snapUp(bounds.neLng),
+          minLat: snapped.swLat,
+          maxLat: snapped.neLat,
+          minLng: snapped.swLng,
+          maxLng: snapped.neLng,
           zoom: String(mapZoom),
         });
         if (txTypeRef.current === "rent") params.set("type", "rent");
@@ -2725,27 +2940,61 @@ export function MapClient({
         const controller = new AbortController();
         popularAbortRef.current = controller;
         const useBounds = bounds !== null && mapZoom > POPULAR_NATIONWIDE_MAX_ZOOM;
-        const qs = new URLSearchParams({ limit: String(POPULAR_LIMIT) });
-        if (useBounds && bounds) {
-          qs.set("minLat", String(bounds.swLat));
-          qs.set("maxLat", String(bounds.neLat));
-          qs.set("minLng", String(bounds.swLng));
-          qs.set("maxLng", String(bounds.neLng));
-        }
-        // 상세 필터 범위를 그대로 서버 조건으로 — 클라이언트에서 자르지 않는다
-        // (화면에 안 온 단지는 클라이언트가 걸러 봐야 알 수 없다).
-        const r = rangesRef.current;
-        const put = (k: string, v: number | null) => {
-          if (v !== null) qs.set(k, String(v));
+        type PopularJson = { scope: "viewport" | "nationwide"; items: PopularItem[] };
+        /* [1053] snap=true: 클러스터와 같은 격자 범위(CDN 캐시 재사용) · false: 원시 화면 범위(예전 요청) */
+        const load = (snap: boolean): Promise<PopularJson> => {
+          const qs = new URLSearchParams({
+            limit: String(useBounds && snap ? POPULAR_SNAPPED_FETCH_LIMIT : POPULAR_LIMIT),
+          });
+          if (useBounds && bounds) {
+            const b = snap
+              ? snapViewportBounds(bounds, mapZoom)
+              : {
+                  swLat: String(bounds.swLat),
+                  swLng: String(bounds.swLng),
+                  neLat: String(bounds.neLat),
+                  neLng: String(bounds.neLng),
+                };
+            qs.set("minLat", b.swLat);
+            qs.set("maxLat", b.neLat);
+            qs.set("minLng", b.swLng);
+            qs.set("maxLng", b.neLng);
+          }
+          // 상세 필터 범위를 그대로 서버 조건으로 — 클라이언트에서 자르지 않는다
+          // (화면에 안 온 단지는 클라이언트가 걸러 봐야 알 수 없다).
+          const r = rangesRef.current;
+          const put = (k: string, v: number | null) => {
+            if (v !== null) qs.set(k, String(v));
+          };
+          put("priceMin", r.price[0]); put("priceMax", r.price[1]);
+          put("areaMin", r.area[0]);   put("areaMax", r.area[1]);
+          put("yearMin", r.year[0]);   put("yearMax", r.year[1]);
+          put("hhMin", r.households[0]); put("hhMax", r.households[1]);
+          return fetch(`/api/map/popular?${qs.toString()}`, { signal: controller.signal }).then((res) =>
+            res.ok ? (res.json() as Promise<PopularJson>) : Promise.reject(new Error(String(res.status))),
+          );
         };
-        put("priceMin", r.price[0]); put("priceMax", r.price[1]);
-        put("areaMin", r.area[0]);   put("areaMax", r.area[1]);
-        put("yearMin", r.year[0]);   put("yearMax", r.year[1]);
-        put("hhMin", r.households[0]); put("hhMax", r.households[1]);
         setPopularLoading(true);
-        fetch(`/api/map/popular?${qs.toString()}`, { signal: controller.signal })
-          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-          .then((j: { scope: "viewport" | "nationwide"; items: PopularItem[] }) => {
+        load(true)
+          .then((j): PopularJson | Promise<PopularJson> => {
+            if (!useBounds || !bounds || j.scope !== "viewport") return j;
+            /* [1053] 격자 → 실제 화면 안만, 서버 순위 그대로 POPULAR_LIMIT 개 */
+            const all = Array.isArray(j.items) ? j.items : [];
+            const inView = all.filter(
+              (it) =>
+                it.lat >= bounds.swLat &&
+                it.lat <= bounds.neLat &&
+                it.lng >= bounds.swLng &&
+                it.lng <= bounds.neLng,
+            );
+            /* 격자 상위 30곳이 꽉 찼는데 화면 안이 10곳 미만이면, 순위 밖에 화면 안 단지가 더 있을 수
+               있다(한산한 화면 옆에 붐비는 동네) — 이때만 원시 범위로 한 번 더 묻는다. */
+            if (inView.length < POPULAR_LIMIT && all.length >= POPULAR_SNAPPED_FETCH_LIMIT) {
+              return load(false);
+            }
+            return { ...j, items: inView.slice(0, POPULAR_LIMIT) };
+          })
+          .then((j) => {
             if (controller.signal.aborted) return;
             const items = Array.isArray(j.items) ? j.items : [];
             setPopular(items);
@@ -2821,37 +3070,80 @@ export function MapClient({
    * 필터를 **걸기 전** 분포를 받는다 — 필터 후 분포를 그리면 손잡이를 좁힐수록
    * 막대가 사라져 되돌릴 기준을 잃는다.
    */
+  /* [1053] 예전엔 지도 idle 마다 **즉시**(디바운스 없이) 불렀고, 패널이 닫혀 있어도 불렀다 —
+     분포는 패널 안 막대그래프에만 쓰이는데 팬 한 번마다 map_filter_facets 집계가 돌았다.
+     이제 ① 패널이 닫혀 있으면 조회하지 않고 "낡음"만 표시 ② 열려 있으면 디바운스 후 조회
+     ③ 패널을 여는 순간(아래 effect) 낡았으면 마지막 뷰포트로 즉시 한 번. 범위는 클러스터와 같은
+     격자로 스냅해 CDN 캐시를 같이 쓴다(분포는 화면보다 조금 넓은 격자 기준이 된다 — 손잡이
+     위치를 고르는 막대라 그 정도 차이는 판단을 바꾸지 않는다). */
   const fetchFacets = useCallback(
-    (bounds: NonNullable<MapIdleInfo["bounds"]> | null, mapZoom: number) => {
-      facetsAbortRef.current?.abort();
-      const controller = new AbortController();
-      facetsAbortRef.current = controller;
-      const useBounds = bounds !== null && mapZoom > POPULAR_NATIONWIDE_MAX_ZOOM;
-      const qs = new URLSearchParams({ buckets: "24" });
-      if (useBounds && bounds) {
-        qs.set("minLat", String(bounds.swLat));
-        qs.set("maxLat", String(bounds.neLat));
-        qs.set("minLng", String(bounds.swLng));
-        qs.set("maxLng", String(bounds.neLng));
+    (bounds: NonNullable<MapIdleInfo["bounds"]> | null, mapZoom: number, immediate = false) => {
+      if (facetsTimerRef.current !== null) {
+        window.clearTimeout(facetsTimerRef.current);
+        facetsTimerRef.current = null;
       }
-      fetch(`/api/map/facets?${qs.toString()}`, { signal: controller.signal })
-        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-        .then((j: MapFacets) => {
-          if (!controller.signal.aborted) setFacets(j);
-        })
-        .catch(() => {
-          /* 분포를 못 받으면 슬라이더를 그리지 않는다(HistogramRangeSlider 가
-             축이 성립하지 않으면 안내 문구로 대체). 직전 분포는 지우지 않는다. */
-        });
+      if (!filtersExpandedRef.current) {
+        facetsStaleRef.current = true;
+        return;
+      }
+      const run = () => {
+        facetsTimerRef.current = null;
+        facetsStaleRef.current = false;
+        facetsAbortRef.current?.abort();
+        const controller = new AbortController();
+        facetsAbortRef.current = controller;
+        const useBounds = bounds !== null && mapZoom > POPULAR_NATIONWIDE_MAX_ZOOM;
+        const qs = new URLSearchParams({ buckets: "24" });
+        if (useBounds && bounds) {
+          const snapped = snapViewportBounds(bounds, mapZoom);
+          qs.set("minLat", snapped.swLat);
+          qs.set("maxLat", snapped.neLat);
+          qs.set("minLng", snapped.swLng);
+          qs.set("maxLng", snapped.neLng);
+        }
+        fetch(`/api/map/facets?${qs.toString()}`, { signal: controller.signal })
+          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+          .then((j: MapFacets) => {
+            if (controller.signal.aborted) return;
+            setFacets(j);
+            setFacetsFailed(false);
+          })
+          .catch(() => {
+            /* 분포를 못 받으면 슬라이더를 그리지 않는다(HistogramRangeSlider 가
+               축이 성립하지 않으면 안내 문구로 대체). 직전 분포는 지우지 않는다.
+               [1053] 다음에 패널을 열 때 다시 묻도록 낡음으로 남긴다. */
+            if (controller.signal.aborted) return;
+            facetsStaleRef.current = true;
+            setFacetsFailed(true);
+          });
+      };
+      if (immediate) run();
+      else facetsTimerRef.current = window.setTimeout(run, FACETS_FETCH_DEBOUNCE_MS);
     },
     [],
   );
 
-  /* 첫 진입 — 지도 idle 이 오기 전에도 패널이 비어 있지 않도록 전국 기준으로 먼저 채운다. */
+  /* 첫 진입 — 지도 idle 이 오기 전에도 패널이 비어 있지 않도록 전국 기준으로 먼저 채운다.
+     [1053] 분포는 아래 패널 effect 가 맡는다(패널이 열린 채 진입하면 그 effect 가 바로 받는다). */
   useEffect(() => {
     schedulePopularFetch(null, 0);
-    fetchFacets(null, 0);
-  }, [schedulePopularFetch, fetchFacets]);
+  }, [schedulePopularFetch]);
+
+  /* [1053] 필터 패널을 열면 — 닫혀 있는 동안 지나간 뷰포트가 있으면(낡음) 마지막 뷰포트로 즉시
+     한 번 받는다(지도 idle 전이면 전국 기준). 닫으면 대기 중인 분포 조회를 버린다. */
+  useEffect(() => {
+    if (!filtersExpanded) {
+      if (facetsTimerRef.current !== null) {
+        window.clearTimeout(facetsTimerRef.current);
+        facetsTimerRef.current = null;
+        facetsStaleRef.current = true;
+      }
+      return;
+    }
+    if (!facetsStaleRef.current) return;
+    const last = lastIdleRef.current;
+    fetchFacets(last?.bounds ?? null, last?.zoom ?? 0, true);
+  }, [filtersExpanded, fetchFacets]);
 
   /* 손잡이를 놓으면 목록을 다시 받는다(분포는 그대로 — 위 주석 참고). */
   useEffect(() => {
@@ -2899,12 +3191,12 @@ export function MapClient({
       setLevel((prev) => syncLevelState(prev, info.zoom));
       const bounds = info.bounds;
       if (!bounds) return;
-      lastBoundsRef.current = bounds;
       lastIdleRef.current = { bounds, zoom: info.zoom };
       setViewBounds(bounds);
-      if (showListingsRef.current) fetchListings(bounds);
+      if (showListingsRef.current) fetchListings(bounds, info.zoom);
       scheduleClusterFetch(bounds, info.zoom);
       schedulePopularFetch(bounds, info.zoom);
+      // [1053] 패널이 닫혀 있으면 조회하지 않고 낡음만 표시 · 열려 있으면 디바운스
       fetchFacets(bounds, info.zoom);
       // 중심 = 뷰포트 사각형의 중점 (idle 시점 기준)
       syncUrl((bounds.swLat + bounds.neLat) / 2, (bounds.swLng + bounds.neLng) / 2, info.zoom);
@@ -3454,6 +3746,26 @@ export function MapClient({
 
   const markers = useMemo<MapMarkerData[]>(() => {
     const infoId = infoComplex?.id ?? null;
+    /* [1053] 마커에 적을 값 · 호버 한 줄. 평당가(기본)면 글자는 예전 그대로 두고 호버 한 줄만 보탠다.
+       다른 값을 고르면 그 값으로 알약을 바꾼다 — 값이 없는 단지는 알약 없이 점(지어 채우지 않는다). */
+    const metricOverride = (id: string, fallback: MetricPoint): Partial<MapMarkerData> => {
+      const p = pointById.get(id);
+      const facts = p ? hoverFacts(p) : [];
+      const extra: Partial<MapMarkerData> = facts.length > 0 ? { hoverFacts: facts } : {};
+      if (markerMetric === "pyeong" || !showPriceOverlay) return extra;
+      const merged: MetricPoint = { ...fallback, ...(p ?? {}) };
+      const label = metricLabel(merged, markerMetric);
+      if (!label) {
+        return { ...extra, priceLabel: undefined, avgPricePerM2: undefined, avgPriceWon: undefined, momPct: undefined, tierColor: undefined };
+      }
+      return {
+        ...extra,
+        priceLabel: label,
+        avgPricePerM2: 1, // 말풍선 스타일 플래그
+        tierColor: markerMetric === "price" ? tierColor(merged.pyeongManwon) : METRIC_MARKER_COLOR,
+        ...(markerMetric === "price" ? {} : { momPct: undefined }),
+      };
+    };
     // 지역 시세 마커는 시·군·구/동 줌에서만 — 매매 평균이라 전세 모드에선 숨김(값 혼동 방지)
     const regionLayer =
       zoom === "danji" || txType === "rent" ? [] : regionMarketMarkers;
@@ -3538,6 +3850,11 @@ export function MapClient({
             households: d.households ?? undefined,
             buildYear: d.buildYear ?? undefined,
             avgAreaM2: d.areaM2 ?? undefined,
+            ...metricOverride(d.id, {
+              avgPriceManwon: d.avgPriceWon != null ? d.avgPriceWon / 10_000 : undefined,
+              buildYear: d.buildYear ?? undefined,
+              households: d.households ?? undefined,
+            }),
           }));
     /* 지도에 실제로 찍히는 마커는 대부분 이 extraPoints 다(서버 렌더 목록은 30개).
        예전에는 여기에 필터로 쓸 값이 없어서 필터가 걸리면 통째로 숨겼는데,
@@ -3560,6 +3877,8 @@ export function MapClient({
         ) {
           continue;
         }
+        /* [1053] 단지 조건 — 전세 보기에서도 대장 조건(난방 · 주차 …)은 건다. 평당가(매매)만 뺀다 */
+        if (cxOn && !passesCx(p, cx, { price: txType !== "rent" })) continue;
         const marker: MapMarkerData = {
           id: p.id,
           lat: p.lat,
@@ -3580,6 +3899,8 @@ export function MapClient({
             marker.avgPricePerM2 = 1; // 시세 말풍선 스타일 플래그
             marker.tierColor = JEONSE_MARKER_COLOR;
           }
+        } else if (markerMetric !== "pyeong") {
+          Object.assign(marker, metricOverride(p.id, p));
         } else {
           // C1 — 단지 줌에서도 색이 이어지도록 실거래 평단가를 말풍선으로.
           // 거래가 없는 단지는 손대지 않는다(기존 원형 마커 = 아무 시세도 주장하지 않음).
@@ -3590,6 +3911,8 @@ export function MapClient({
             marker.tierColor = tierColor(p.pyeongManwon);
           }
         }
+        const facts = hoverFacts(p);
+        if (facts.length > 0) marker.hoverFacts = facts;
         base.push(marker);
       }
     }
@@ -3650,6 +3973,10 @@ export function MapClient({
     radiusM,
     radiusFilterLat,
     radiusFilterLng,
+    cx,
+    cxOn,
+    markerMetric,
+    pointById,
   ]);
 
   /* ===== item5 — 빈 지도 안내. 조회 실패("일시적 오류")와 빈 결과를 구분한다. ===== */
@@ -3983,11 +4310,12 @@ export function MapClient({
         >
           목록으로 보기 ›
         </button>
+        {/* [1053] "시세" 낱말 금지 — /analysis/price 는 면적대별 **실거래가**, /analysis/timing 은 매매가격지수·거래량 흐름 */}
         <Link href="/analysis/price" className="chip chip-soft px-3 py-1.5 t-sub no-underline">
-          면적대별 시세 ›
+          면적대별 실거래가 ›
         </Link>
         <Link href="/analysis/timing" className="chip chip-soft px-3 py-1.5 t-sub no-underline">
-          시세·타이밍 ›
+          가격 흐름·타이밍 ›
         </Link>
       </div>
     </div>
@@ -4009,7 +4337,32 @@ export function MapClient({
    * 고민할 일이 없다.
    */
   /* [1023 · 지도] 실패 고지에는 그 레이어를 다시 조회하는 손잡이(retry)를 단다 — 문구만 있고 손잡이가 없던 7종. */
-  const mapNotices: { key: string; text: string; retry?: () => void; retryLabel?: string }[] = [];
+  /* [1053] onTap — 고지 알약 **전체**가 버튼인 고지(문장이 곧 할 일인 경우). 폰 40px. */
+  const mapNotices: {
+    key: string;
+    text: string;
+    retry?: () => void;
+    retryLabel?: string;
+    onTap?: () => void;
+    tapLabel?: string;
+  }[] = [];
+  /* [1053] 넓게 볼 때(클러스터 모드) 상세 필터(가격·면적·준공·세대수)는 마커에 걸리지 않는다.
+     클러스터는 /api/map/clusters 가 complex_geocode 좌표만(최대 5,000행) 읽어 셀로 세는데,
+     네 축 값은 map_complex_attrs RPC 에만 있고 그 RPC 는 좌표를 돌려주지 않으며 1,000행 상한이다 —
+     DB 함수를 바꾸지 않고는 셀 개수를 필터로 다시 셀 싼 방법이 없다. 그래서 숫자를 고치는 대신
+     "지금 이 숫자는 필터 전"이라고 말하고, 누르면 한 칸 확대한다(포인트 모드부터 필터가 걸린다).
+     전세 모드는 확대해도 범위 필터를 쓰지 않으므로(아래 applyRange) 띄우지 않는다.
+     시·군·구/동 축척의 지역 평균 말풍선(한국부동산원)도 필터와 무관한 값이다 — "10억 이하"를 걸어도 29억 구 평균이
+     그대로 보인다(로컬 실측 1053). 그 말풍선이 떠 있을 때도 같은 고지를 띄운다. */
+  const regionBubblesShown = zoom !== "danji" && regionMarketMarkers.length > 0;
+  if ((rangeActive || cxOn) && txType !== "rent" && ((clusterMode === "clusters" && clusters.length > 0) || regionBubblesShown)) {
+    mapNotices.push({
+      key: "range-cluster",
+      text: "넓게 볼 때 필터 미적용 · 확대하면 적용",
+      onTap: () => setLevel((v) => stepLevel(v, -1)),
+      tapLabel: "한 단계 확대",
+    });
+  }
   if (viewportEmpty || clusterFetchStatus === "error") {
     mapNotices.push({
       key: "cluster",
@@ -4318,6 +4671,10 @@ export function MapClient({
               </div>
             </div>
           </div>
+          {/* [1053] 대장 · 실거래 한 줄 — 난방 · 세대당 주차 · 동 수 · 6개월 매매 · 시공사(값 있는 것만) */}
+          {hoverMarker.hoverFacts && hoverMarker.hoverFacts.length > 0 && (
+            <p className="mt-1.5 t-caption leading-snug text-text-2">{hoverMarker.hoverFacts.join(" · ")}</p>
+          )}
         </div>
       )}
 
@@ -4338,7 +4695,20 @@ export function MapClient({
             } as CSSProperties
           }
         >
-          {mapNotices.map((n) => (
+          {mapNotices.map((n) =>
+            n.onTap ? (
+              /* [1053] 알약 전체가 버튼 — 폰 40px(md 이상 24px). 고지 열은 pointer-events-none 이라 이 줄만 살린다. */
+              <div key={n.key} role="status" className="pointer-events-auto max-w-full">
+                <button
+                  type="button"
+                  onClick={n.onTap}
+                  aria-label={n.tapLabel ? `${n.text} · ${n.tapLabel}` : undefined}
+                  className="min-h-[40px] max-w-full rounded-lg bg-[rgba(16,28,54,.82)] px-3.5 py-2 text-left t-sub font-semibold text-white shadow-[0_6px_18px_rgba(16,28,54,.25)] md:min-h-6 md:w-full"
+                >
+                  {n.text}
+                </button>
+              </div>
+            ) : (
             <div
               key={n.key}
               role="status"
@@ -4381,14 +4751,14 @@ export function MapClient({
                   <button
                     type="button"
                     onClick={resetFilters}
-                    className="rounded-full border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2"
+                    className="inline-flex min-h-[40px] items-center rounded-full border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2 md:min-h-6"
                   >
                     필터 초기화
                   </button>
                 )}
                 <Link
                   href="/listings/new"
-                  className="rounded-full bg-primary px-2.5 py-1 t-sub font-bold text-white"
+                  className="inline-flex min-h-[40px] items-center rounded-full bg-primary px-2.5 py-1 t-sub font-bold text-white md:min-h-6"
                 >
                   매물 등록하기
                 </Link>
@@ -4605,7 +4975,7 @@ export function MapClient({
                 <button
                   type="button"
                   onClick={() => setRadiusCenter(null)}
-                  className="flex-1 rounded-lg border border-line px-2 py-1.5 t-sub font-bold text-text-2"
+                  className="flex-1 rounded-lg border border-line min-h-[40px] px-2 py-1.5 t-sub font-bold text-text-2 md:min-h-6"
                 >
                   중심 삭제
                 </button>
@@ -4614,7 +4984,7 @@ export function MapClient({
                   onClick={() => {
                     setRadiusCenter(center);
                   }}
-                  className="flex-1 rounded-lg border border-line px-2 py-1.5 t-sub font-bold text-text-2"
+                  className="flex-1 rounded-lg border border-line min-h-[40px] px-2 py-1.5 t-sub font-bold text-text-2 md:min-h-6"
                 >
                   화면 중앙으로
                 </button>
@@ -4733,14 +5103,14 @@ export function MapClient({
                     <button
                       type="button"
                       onClick={() => setMeasureRelocate(true)}
-                      className="flex-1 rounded-lg bg-primary px-2 py-1.5 t-sub font-bold text-white"
+                      className="flex-1 rounded-lg bg-primary min-h-[40px] px-2 py-1.5 t-sub font-bold text-white md:min-h-6"
                     >
                       수정
                     </button>
                     <button
                       type="button"
                       onClick={deleteSelectedMeasurePoint}
-                      className="flex-1 rounded-lg border border-danger/40 bg-danger-soft px-2 py-1.5 t-sub font-bold text-danger"
+                      className="flex-1 rounded-lg border border-danger/40 bg-danger-soft min-h-[40px] px-2 py-1.5 t-sub font-bold text-danger md:min-h-6"
                     >
                       삭제
                     </button>
@@ -4757,7 +5127,7 @@ export function MapClient({
                     setMeasureRelocate(false);
                   }}
                   disabled={measurePoints.length === 0}
-                  className="flex-1 rounded-lg border border-line px-2 py-1.5 t-sub font-bold text-text-2 disabled:opacity-40"
+                  className="flex-1 rounded-lg border border-line min-h-[40px] px-2 py-1.5 t-sub font-bold text-text-2 disabled:opacity-40 md:min-h-6"
                 >
                   되돌리기
                 </button>
@@ -4770,7 +5140,7 @@ export function MapClient({
                     setRouteResult(null);
                   }}
                   disabled={measurePoints.length === 0}
-                  className="flex-1 rounded-lg border border-line px-2 py-1.5 t-sub font-bold text-text-2 disabled:opacity-40"
+                  className="flex-1 rounded-lg border border-line min-h-[40px] px-2 py-1.5 t-sub font-bold text-text-2 disabled:opacity-40 md:min-h-6"
                 >
                   전체 삭제
                 </button>
@@ -4783,21 +5153,21 @@ export function MapClient({
                     <button
                       type="button"
                       onClick={() => void copyMeasureSummary()}
-                      className="rounded-lg border border-line px-2 py-1.5 t-sub font-bold text-text-2"
+                      className="rounded-lg border border-line min-h-[40px] px-2 py-1.5 t-sub font-bold text-text-2 md:min-h-6"
                     >
                       거리 복사
                     </button>
                     <button
                       type="button"
                       onClick={() => openExternalDirections("car")}
-                      className="rounded-lg border border-line px-2 py-1.5 t-sub font-bold text-text-2"
+                      className="rounded-lg border border-line min-h-[40px] px-2 py-1.5 t-sub font-bold text-text-2 md:min-h-6"
                     >
                       차량 길찾기
                     </button>
                     <button
                       type="button"
                       onClick={() => openExternalDirections("walk")}
-                      className="rounded-lg border border-line px-2 py-1.5 t-sub font-bold text-text-2"
+                      className="rounded-lg border border-line min-h-[40px] px-2 py-1.5 t-sub font-bold text-text-2 md:min-h-6"
                     >
                       도보 길찾기
                     </button>
@@ -4807,7 +5177,7 @@ export function MapClient({
                         setSelectedMeasureIdx(0);
                         setMeasureRelocate(true);
                       }}
-                      className="rounded-lg border border-line px-2 py-1.5 t-sub font-bold text-text-2"
+                      className="rounded-lg border border-line min-h-[40px] px-2 py-1.5 t-sub font-bold text-text-2 md:min-h-6"
                     >
                       시작점 수정
                     </button>
@@ -4827,7 +5197,7 @@ export function MapClient({
               setMeasureRelocate(false);
               setRouteResult(null);
             }}
-            className="rounded-lg bg-[rgba(16,28,54,.06)] px-2 py-1.5 t-sub font-bold text-text-2"
+            className="rounded-lg bg-[rgba(16,28,54,.06)] min-h-[40px] px-2 py-1.5 t-sub font-bold text-text-2 md:min-h-6"
           >
             끝내기
           </button>
@@ -4915,7 +5285,7 @@ export function MapClient({
               목록 가격은 매매 실거래 평균이에요. 전세 보증금은 지도 마커에 표시돼요.
             </div>
           )}
-          {!danjiLoadFailed && (rangeActive || commuteActive) && filteredDanji.length === 0 && (
+          {!danjiLoadFailed && (rangeActive || commuteActive || cxOn) && filteredDanji.length === 0 && (
             <div className="flex flex-col items-center gap-2 px-5 py-6 text-center">
               <div className="t-sub text-text-2">조건에 맞는 단지 없음</div>
               <button
@@ -4932,6 +5302,10 @@ export function MapClient({
                 틀린 말이었다. 반영되지 않는 것은 출퇴근 조건뿐이라 그때만 적는다. */}
             {commuteActive && popular.length > 0 && (
               <div className="px-2 pb-1 t-caption text-text-3">출퇴근 조건은 인기 순위에 반영되지 않아요.</div>
+            )}
+            {/* [1053] 단지 조건(난방 · 주차 · 시공사 …)도 서버 순위에는 실리지 않는다 */}
+            {cxOn && popular.length > 0 && (
+              <div className="px-2 pb-1 t-caption text-text-3">단지 조건(난방 · 주차 · 시공사 등)은 인기 순위 미반영</div>
             )}
             {!popularFailed && !popularLoading && popular.length === 0 && (
               <div className="px-2 py-6 text-center t-sub text-text-3">
@@ -5470,8 +5844,8 @@ export function MapClient({
       {/* ===== 우하단 세로 스택 =====
            safe-area-inset-bottom 기준으로 위로 쌓는다. 겹치지 않게 한 번에 적어 둔다.
              현재 위치 ◎ (NaverMap 내장)  78 ~ 122
-             줌 컨트롤 ＋ －             134 ~ 208
-             매물 등록                   220 ~ 264
+             줌 컨트롤 ＋ －             134 ~ 220   ([1053] 버튼 34 → 40px)
+             매물 등록                   232 ~ 276
            예전에는 여기 ◎ 가 두 개였다. NaverMap 의 44px 버튼(78~122)과 아래 줌
            열의 34px ◎(88~122)가 같은 자리에 겹쳐 그려져, 실제로는 위에 있는 하나만
            눌렸다. 그런데 가려진 쪽(줌 열)이 아니라 보이는 쪽이 더 나은 구현이라
@@ -5491,7 +5865,7 @@ export function MapClient({
         className={`btn-primary btn-cta absolute right-5 z-30 items-center gap-1.5 rounded-full px-4 py-3 t-body font-bold text-white shadow-[0_10px_28px_rgba(29,79,216,.42)] ${
           filtersExpanded ? "hidden lg:flex" : "flex"
         } ${chromeFoldDownClass}`}
-        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 220px)" }}
+        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 232px)" }}
       >
         <span className="t-body leading-none">＋</span>
         매물 등록
@@ -5508,11 +5882,12 @@ export function MapClient({
         }`}
         style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 134px)" }}
       >
+        {/* [1053] 34px → 40px(폰 탭 하한). 열 높이 74 → 86 이라 아래 매물 등록 버튼을 220 → 232 로 올렸다. */}
         <button
           type="button"
           aria-label="확대"
           onClick={() => setLevel((v) => stepLevel(v, -1))}
-          className="glass flex h-[34px] w-[34px] items-center justify-center rounded-lg t-body text-text-1"
+          className="glass flex h-[40px] w-[40px] items-center justify-center rounded-lg t-body text-text-1"
         >
           ＋
         </button>
@@ -5520,7 +5895,7 @@ export function MapClient({
           type="button"
           aria-label="축소"
           onClick={() => setLevel((v) => stepLevel(v, 1))}
-          className="glass flex h-[34px] w-[34px] items-center justify-center rounded-lg t-body text-text-1"
+          className="glass flex h-[40px] w-[40px] items-center justify-center rounded-lg t-body text-text-1"
         >
           －
         </button>
@@ -5529,8 +5904,8 @@ export function MapClient({
       {/* ===== 우하단 범례 열 (md+) — 기본 범례 + 정비사업 종류 =====
            예전에는 둘을 각각 bottom 오프셋(20 / 60)으로 따로 놓아, 정비사업
            범례가 길어지면 줌 컨트롤 위로 올라타 서로 겹쳤다. 한 열 안에 쌓으면
-           오프셋을 손으로 맞출 일이 없다. right-[70px] 는 34px 줌 열(right-5)을
-           피한 값이고, 높이 상한은 매물 등록 버튼(220~) 아래에 머물게 잡았다.
+           오프셋을 손으로 맞출 일이 없다. right-[70px] 는 줌 열(right-5 · [1053] 40px →
+           20~60)을 피한 값이고, 높이 상한은 매물 등록 버튼(220~) 아래에 머물게 잡았다.
            bottom 은 --nz-map-bottom-lane — bottom-5 였을 때 가운데 카테고리 바가
            이 열의 아래 36px 를 덮었다(834폭 실측 54×36px).
            md 에서 상세 필터 패널(364~664)과 이 열(564~764)은 가로로 겹칠 수밖에
@@ -5539,7 +5914,8 @@ export function MapClient({
            [1027] 높이 상한 180px 는 "매물 등록 버튼(220~) 아래에 머문다"는 위 가정과 맞지 않았다 —
            이 열의 바닥은 20 이 아니라 --nz-map-bottom-lane(1440폭 실측 80px)이라 위끝이 260 까지 올라가
            정비사업 종류가 5개만 돼도 매물 등록 버튼의 왼쪽 42×40px 을 덮었다(운영 2026-10-03 캡처).
-           상한을 버튼 아래끝(220) − 여백 8 − 레인 으로 계산해 넘기고, 종류는 한 줄에 여럿 흐르게 접는다. */}
+           상한을 버튼 아래끝(220) − 여백 8 − 레인 으로 계산해 넘기고, 종류는 한 줄에 여럿 흐르게 접는다.
+           [1053] 버튼이 232 로 올라가 여백이 20 이 됐다 — 상한은 그대로 둔다(겹침 쪽으로는 안 움직인다). */}
       <div
         className={`absolute bottom-[var(--nz-map-bottom-lane)] right-[70px] z-30 hidden w-[200px] max-h-[calc(212px_-_var(--nz-map-bottom-lane))] flex-col items-stretch gap-2 ${
           filtersExpanded ? "lg:flex" : "md:flex"
@@ -5720,6 +6096,13 @@ export function MapClient({
                 />
                 <span>{NO_PRICE_LABEL}</span>
               </div>
+              {/* [1053] 마커에 평당가 말고 다른 값을 적는 중이면 범례가 그 사실을 말한다(색 단계는 단지 묶음 · 평균가에만) */}
+              {markerMetric !== "pyeong" && (
+                <div className="t-caption font-bold text-text-2">
+                  단지 마커 숫자 = {MARKER_METRIC_OPTIONS.find((o) => o.key === markerMetric)?.label ?? ""}
+                  {markerMetric === "price" ? "" : " · 가격 색 없음"}
+                </div>
+              )}
               <div className="t-caption text-text-3">
                 국토교통부 실거래가(매매) 기준 · 매물 호가 아님
                 {ymLabel(priceMeta.latestYm) ? ` · ~${ymLabel(priceMeta.latestYm)} 신고분` : ""}

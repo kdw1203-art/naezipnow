@@ -76,6 +76,8 @@ export interface MapMarkerData {
   buildYear?: number;
   avgAreaM2?: number;
   regionName?: string;
+  /** [1053] 호버 카드 한 줄 — 난방 · 세대당 주차 · 동 수 · 6개월 매매 · 시공사(값 있는 것만). 외형과 무관해 signature 에 넣지 않는다 */
+  hoverFacts?: string[];
 }
 
 type MarkerEntry = {

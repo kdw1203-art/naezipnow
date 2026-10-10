@@ -241,7 +241,6 @@ export function SearchClient() {
         /* 실패 시 섹션 미노출 — 검색 자체와 무관 */
       });
     return () => ac.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* 통합 검색 — 대기 규칙은 lib/search/settle 한 군데에서만 정한다.
@@ -380,10 +379,20 @@ export function SearchClient() {
     });
   }, []);
 
+  /* [1053] 사용자가 손댄 검색어만 주소에 싣는다(아래 effect). 마운트 때 ?q= 로 채운 값은 굳기 전
+     (settledQuery 가 아직 "")에 effect 가 한 번 돌기 때문에, 이 표시 없이 쓰면 공유·복귀로 들어온
+     주소의 ?q= 를 빈 값으로 지운다. */
+  const editedRef = useRef(false);
+  const editQ = useCallback((v: string) => {
+    editedRef.current = true;
+    setQ(v);
+  }, []);
+
   const runSearch = useCallback(
     (keyword: string) => {
       const k = keyword.trim();
       if (!k) return;
+      editedRef.current = true;
       setQ(k);
       saveRecent(k);
       try {
@@ -394,6 +403,24 @@ export function SearchClient() {
     },
     [saveRecent],
   );
+
+  /* [1053] 타이핑한 검색어도 굳으면(settledQuery — 250ms, 한글 조합 중 500ms 대기) 주소에 싣는다.
+     예전엔 Enter·칩(runSearch)만 ?q= 를 썼다 — 쳐서 결과를 보고 단지를 연 뒤 뒤로 오면 주소에
+     검색어가 없어 빈 검색 화면으로 돌아왔다. replaceState 라 기록은 쌓이지 않고(뒤로 한 번 = 이전
+     화면), 지우면 ?q= 도 지운다. 같은 값이면 쓰지 않는다. */
+  useEffect(() => {
+    if (!editedRef.current) return;
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      if ((sp.get("q") ?? "").trim() === settledQuery) return;
+      if (settledQuery) sp.set("q", settledQuery);
+      else sp.delete("q");
+      const qs = sp.toString();
+      window.history.replaceState(null, "", qs ? `/search?${qs}` : "/search");
+    } catch {
+      // history 갱신 실패 — 무시
+    }
+  }, [settledQuery]);
 
   const hasQuery = q.trim().length > 0;
   const total =
@@ -560,13 +587,13 @@ export function SearchClient() {
           ref={inputRef}
           type="search"
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => editQ(e.target.value)}
           {...compositionProps}
           onKeyDown={(e) => {
             /* [1026d] 음영 자동완성 채우기 — Tab(조합 중이어도) · →(글자 끝) */
             if (ghost && (e.key === "Tab" || (e.key === "ArrowRight" && !e.nativeEvent.isComposing && e.currentTarget.selectionStart === q.length))) {
               e.preventDefault();
-              setQ(q + ghost);
+              editQ(q + ghost);
               return;
             }
             /* [941] 한글 조합 중 방향키/Enter 는 IME 몫 — 가로채지 않는다 */
@@ -603,13 +630,14 @@ export function SearchClient() {
           // 모바일 16px, md+ 는 기존 15px 유지.
           className="w-full bg-transparent t-body text-ink outline-none placeholder:text-text-3 md:t-body"
         />
-        {ghost && <GhostText inputRef={inputRef} value={q} rest={ghost} onAccept={() => setQ(q + ghost)} />}
+        {ghost && <GhostText inputRef={inputRef} value={q} rest={ghost} onAccept={() => editQ(q + ghost)} />}
         </span>
         {hasQuery && (
+          /* [1053] 폰 탭 하한 40px — 보이는 ✕ 는 그대로, 음수 여백으로 입력 줄 높이는 안 늘린다 */
           <button
             type="button"
-            onClick={() => setQ("")}
-            className="shrink-0 text-[13px] text-text-3"
+            onClick={() => editQ("")}
+            className="-my-2 -mr-2 inline-flex h-[40px] w-[40px] shrink-0 items-center justify-center t-sub text-text-3"
             aria-label="검색어 지우기"
           >
             ✕
@@ -638,7 +666,7 @@ export function SearchClient() {
             onRemove={(t) => {
               const next = removeToken(q, t);
               if (next) runSearch(next);
-              else setQ("");
+              else editQ("");
             }}
           />
           {relatedShown.length > 0 ? (
@@ -651,7 +679,7 @@ export function SearchClient() {
                   key={c.word}
                   type="button"
                   onClick={() => runSearch(`${q.trim()} ${c.word}`)}
-                  className="group inline-flex h-[36px] shrink-0 items-center whitespace-nowrap"
+                  className="group inline-flex h-[40px] shrink-0 items-center whitespace-nowrap md:h-9"
                 >
                   <span className="inline-flex min-h-[26px] items-center rounded-full border border-line bg-surface px-2.5 t-caption font-bold text-text-2 group-hover:border-primary group-hover:text-primary">
                     + {c.word}
@@ -667,7 +695,7 @@ export function SearchClient() {
                 {intent?.scope?.kind === "sigungu" ? "동네로 좁히기" : "구·군으로 좁히기"}
               </span>
               {children.map((c) => (
-                <button key={c.key} type="button" onClick={() => runSearch(c.q)} className="group inline-flex h-[36px] shrink-0 items-center whitespace-nowrap">
+                <button key={c.key} type="button" onClick={() => runSearch(c.q)} className="group inline-flex h-[40px] shrink-0 items-center whitespace-nowrap md:h-9">
                   <span className="inline-flex min-h-[26px] items-center gap-1 rounded-full bg-bg px-2.5 t-caption font-bold text-text-2 group-hover:text-primary">
                     {c.label.split(" ").pop()}
                     {intent?.chips.length ? null : (
@@ -690,7 +718,7 @@ export function SearchClient() {
                     type="button"
                     aria-pressed={on}
                     onClick={() => !on && setSort(o.word)}
-                    className="group inline-flex h-[36px] shrink-0 items-center whitespace-nowrap"
+                    className="group inline-flex h-[40px] shrink-0 items-center whitespace-nowrap md:h-9"
                   >
                     <span
                       className={`inline-flex min-h-[26px] items-center rounded-full px-2.5 t-caption font-bold ${

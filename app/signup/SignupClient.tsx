@@ -14,6 +14,7 @@ import { stashSignupHandoff } from "@/lib/onboarding/signup-handoff";
 import { useMoment } from "@/app/components/motion/MomentProvider";
 import { safeInternalPath } from "@/lib/safe-path";
 import type { SocialProvider } from "@/lib/auth/configured-social";
+import { InAppBrowserNotice, useInAppBrowser } from "@/app/components/auth/InAppBrowserNotice";
 import { markOncePerSession, useFirstInteraction } from "@/lib/client/human-gate";
 import { browserFamily, deviceClass } from "@/lib/client/browser-family";
 import {
@@ -70,7 +71,11 @@ type RegisterResponse = {
   user?: { id: string | number; email: string; name: string };
 };
 
-export function SignupClient({ social }: { social: SocialProvider[] }) {
+export function SignupClient({ social: socialAll }: { social: SocialProvider[] }) {
+  /* [1053] 앱 안 브라우저에서는 구글 단추 대신 "기본 브라우저로 열기" — 로그인 화면과 같은 규칙 */
+  const inApp = useInAppBrowser();
+  const social = inApp ? socialAll.filter((p) => p !== "google") : socialAll;
+  const googleBlocked = inApp !== null && socialAll.includes("google");
   const router = useRouter();
   const { showMoment } = useMoment();
   const [socialBusy, setSocialBusy] = useState<SocialProvider | null>(null);
@@ -452,6 +457,11 @@ export function SignupClient({ social }: { social: SocialProvider[] }) {
           "이 화면 다음에 무엇이 남았나"를 인증 메일 안내·환영 화면과 같은 띠로 잇는다 */}
       <SignupSteps current={0} className="rise-in" />
 
+      {googleBlocked && inApp && (
+        <div className="rise-in-2">
+          <InAppBrowserNotice kind={inApp} flow="signup" />
+        </div>
+      )}
       {social.length > 0 && (
         <div className="rise-in-2 flex flex-col gap-2.5">
           {social.map((provider) => (

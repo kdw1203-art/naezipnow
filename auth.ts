@@ -238,6 +238,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               );
             },
           }),
+          /* [1053] 메일 인증 뒤 자동 로그인 — 소유자 답 "인증 뒤 자동 로그인". 인증 링크를 확인한 Supabase 세션 토큰으로만,
+             인증 시각 1시간 안(lib/auth/confirm-login). 실패하면 화면이 예전 길(로그인 화면 · 인증 완료 안내)로 간다 */
+          Credentials({
+            id: "email-confirm",
+            name: "메일 인증 뒤 로그인",
+            credentials: {
+              accessToken: { label: "token", type: "text" },
+            },
+            async authorize(credentials, request) {
+              const token = String(credentials?.accessToken ?? "").trim();
+              if (!token || token.length > 8192) return null;
+              /* 한도 키 = 토큰 안의 사용자 id(검증 전이라 키로만 · 판정은 Supabase getUser) + IP */
+              const { jwtSubject } = await import("@/lib/auth/confirm-login");
+              if (await credentialThrottleBlocked("email-confirm", jwtSubject(token) ?? "unknown", request)) return null;
+              const { authorizeConfirmedSession } = await import("@/lib/auth/confirm-session");
+              return authorizeConfirmedSession(token);
+            },
+          }),
         ]
       : []),
     ...(tossLoginEnabled

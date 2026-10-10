@@ -136,12 +136,7 @@ const MSCALE_SCRIPT =
  */
 export const maxDuration = 120;
 
-/* [969 · 16] 본문 폰트 CSS — 셀프호스팅(public/fonts/pretendard/). 전에는
-   cdn.jsdelivr.net 의 pretendardvariable-dynamic-subset.min.css 였다. 파일 내용은
-   원본과 같고 url() 만 /fonts/pretendard/ 로 바뀌었다(파일 머리 주석 참고).
-   슬로건 세리프(Noto Serif KR)는 globals.css 끝의 @font-face 로 옮겨 여기서 링크할
-   CSS 가 없다 — 예전 BRAND_SERIF_CSS(fonts.googleapis.com text= 서브셋) 상수는 삭제. */
-const PRETENDARD_CSS = "/fonts/pretendard/pretendardvariable-dynamic-subset.css";
+/* [1053] 본문 웹글꼴(Pretendard dynamic subset) 링크는 걷었다 — 아래 <head> 의 [1053 · 속도] 주석 */
 
 /* [1027 · 제안 28] 이 HTML 을 만든 빌드의 표식(BUILD_MARK — 빌드 때 박힌 커밋 해시 앞 7자)을 메타로 심는다.
    오류 경계가 보고에 실어 보낸다(lib/client/error-report). 배포 뒤에도 옛 화면을 들고 있던 탭의 오류인지
@@ -180,39 +175,15 @@ export default function RootLayout({
           title="내집나우 — 실거래 리포트·임장노트"
           href={`${DEFAULT_DESKTOP_ORIGIN}/feed.xml`}
         />
-        {/* LCP: Pretendard 비차단 — preload 후 media=print→all 스왑.
-            첫 페인트는 시스템 폰트, 로드 후 Pretendard.
-
-            서브셋도 이미 끝나 있다(2026-08-04 실측). 쓰는 파일은
-            pretendardvariable-**dynamic-subset**.min.css 로, @font-face 92개가
-            unicode-range 로 쪼개져 있어 브라우저가 **실제로 쓰인 글자 구간만**
-            내려받는다. 홈 HTML 의 본문 글자를 unicode-range 에 대입해 세어 보면
-            92조각 중 13조각(약 330KB)만 필요하고, /map 도 13조각(약 338KB)이다.
-            비서브셋 통짜 파일은 2,009KB — 즉 서브셋으로 이미 84% 를 안 받고 있다.
-            더 줄이려면 글자를 직접 골라 셀프호스팅해야 하는데, 사용자가 입력한
-            단지명·지역명이 본문에 그대로 나오는 사이트라 고정 글자 집합을 만들 수
-            없다. 없는 글자가 시스템 폰트로 튀는 쪽이 330KB 보다 나쁘다.
-
-            [969 · 16] 같은 dynamic-subset CSS 를 **셀프호스팅**으로 바꿨다(위
-            PRETENDARD_CSS). 92조각 unicode-range 분할은 그대로라 받는 양은 같고,
-            원점만 cdn.jsdelivr.net → same-origin. 비차단 패턴(preload → print→all
-            스왑 → noscript 폴백)은 그대로 둔다 — 원점이 같아도 CSS 는 여전히
-            첫 페인트 뒤에 와도 되는 자원이다. /fonts/ 는 next.config 가 immutable
-            1년 캐시를 주고 서비스워커가 cache-first 로 든다([968 · 43]). */}
-        <link rel="preload" as="style" href={PRETENDARD_CSS} />
-        {/* [1009] suppressHydrationWarning — 아래 인라인 스크립트가 하이드레이션 **전에** media 를 all 로
-            바꾸는 것이 이 패턴의 목적이라 서버(print)·브라우저(all) 값이 다른 게 정상이다. 경고가 모든
-            화면의 개발 오버레이에 "1 Issue" 로 떠 진짜 하이드레이션 오류를 가렸다(1009 실측). */}
-        <link id="pretendard-font" rel="stylesheet" href={PRETENDARD_CSS} media="print" suppressHydrationWarning />
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "(function(){var l=document.getElementById('pretendard-font');if(!l)return;function a(){l.media='all'}l.addEventListener('load',a);if(l.sheet)a();})();",
-          }}
-        />
-        <noscript>
-          <link rel="stylesheet" href={PRETENDARD_CSS} />
-        </noscript>
+        {/* [1053 · 속도] Pretendard 웹글꼴(dynamic subset · @font-face 92조각)을 걷고 기기 기본 글꼴로 — 소유자 답 "폰·윈도우도 기본 글꼴".
+            운영 실측(2026-10-10 · 폰 · CPU 4배 감속): 92조각이 하나씩 도착할 때마다 글자 배치를 처음부터 다시 해
+            레이아웃 계산이 단지 화면 5.2초 · 홈 3.3~5.8초 · 노트 2.7초 — 웹글꼴을 빼면 1.4 · 0.7 · 1.1초.
+            1051 의 "글꼴 아님" 결론은 woff2 파일만 막은 실험이라 틀렸다(@font-face 선언 자체가 비용).
+            아이폰·맥은 원래 애플 시스템 글꼴이 먼저였다(변화 없음). 안드로이드 = 본고딕(Noto Sans CJK)·삼성 글꼴,
+            윈도우 = 맑은 고딕. 글꼴 순서는 globals.css 끝 [1053] 블록. 파일(public/fonts/pretendard)은 지우지 않았다 —
+            예전 배포의 캐시된 HTML 이 아직 찾을 수 있다. 공유 이미지(OG)는 자기 글꼴(lib/og/fonts)을 그대로 쓴다.
+            로고 워드마크 네 글자만 824바이트 조각(globals.css .nz-wordmark)을 미리 받는다. */}
+        <link rel="preload" as="font" type="font/woff2" href="/fonts/wordmark/naezipnow-wordmark.woff2" crossOrigin="" />
         {/* [946] 브랜드 슬로건 세리프 — text= 파라미터로 슬로건 글자만 서브셋.
             통짜 Noto Serif KR(수백 KB)을 문장 하나 때문에 싣지 않는다.
             [949] 946 에서는 이 링크가 **렌더 차단** stylesheet 였다 — 모든 페이지가

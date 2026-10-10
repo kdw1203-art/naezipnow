@@ -535,6 +535,13 @@ export const config = {
      */
     "/((?!api/|_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|robots\\.txt|security\\.txt|app-ads\\.txt|sitemap[^/]*\\.xml|feed\\.xml|icons/|fonts/|\\.well-known/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
     "/api/admin/:path*",
+    /* [1053] 옛 주소(nuguzip.com)로 돌아온 로그인 콜백 — 위 "구 도메인 → 새 도메인 308"이 /api 에도 걸리게.
+       운영 실측 2026-10-09: 서버 설정 AUTH_URL 이 옛 주소라 구글이 nuguzip.com/api/auth/callback/google 로 돌려보냈고,
+       로그인을 시작한 naezipnow.com 의 확인 쿠키(PKCE)가 없어 "pkceCodeVerifier value could not be parsed" 로 실패했다.
+       여기서 같은 경로·쿼리로 naezipnow.com 에 넘기면 쿠키가 있는 쪽에서 콜백이 끝난다(토큰 교환의 redirect_uri 는
+       처음 보낸 nuguzip.com 그대로라 구글 검사도 통과). AUTH_URL 을 새 주소로 바꾼 뒤에는 이 매처에 걸릴 요청이 없다. */
+    { source: "/api/auth/:path*", has: [{ type: "header", key: "host", value: "(?:www\\.|m\\.)?nuguzip\\.com" }] },
+    { source: "/api/auth/:path*", has: [{ type: "header", key: "x-forwarded-host", value: "(?:www\\.|m\\.)?nuguzip\\.com" }] },
     { source: "/api/:path*", has: [{ type: "header", key: "origin" }] },
     {
       source: "/api/:path*",

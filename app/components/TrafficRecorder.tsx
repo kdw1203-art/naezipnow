@@ -4,12 +4,15 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useCookieConsent } from "@/components/consent/use-cookie-consent";
 import { getSessionLite } from "@/lib/client/session-lite";
+import { isProbeSession } from "@/lib/client/probe";
 /* [1052 · 번들] 가입 경로 규칙(lib/growth/attribution-retry · SHA-256 해시)은 로그인한 동의 방문자에게만 받는다 —
    이 기록기는 모든 화면의 레이아웃에 있어 정적 import 면 모든 화면 첫 로드 JS 가 늘었다(로컬 실측 +0.6~1.5KB) */
 const LEGACY_ATTR_DONE_KEY = "nz_attr_done"; // = attribution-retry LEGACY_ATTR_DONE_KEY(1046 의 브라우저 하나짜리 표시)
 
 /* ============================================================
    1st-party 페이지뷰·체류 기록기 (어드민 트래픽 대시보드용).
+
+   [1053] 예외 하나 — 익명 하루 수(countFacts · t:"count")는 동의와 무관하다(식별자 없음 · 아래 주석).
 
    개인정보 원칙 — GA4 와 같은 게이트를 쓴다:
    - 분석 동의(analytics=true)가 있어야만 동작한다. 동의 전·거부 시 아무것도
@@ -64,6 +67,28 @@ function getVisitorKey(): string | null {
   }
 }
 
+/* [1053 · 방문 집계] 익명 하루 수 — 동의와 무관하게 화면 하나당 한 번 "수"만 보낸다.
+   보내는 것: 화면 주소(서버가 /complex/[id] 처럼 접는다) · 이 문서의 첫 화면인가 · 첫 화면이면 들어온 호스트와 utm_source.
+   쿠키 · 브라우저 저장소 · 식별자를 쓰지 않는다(첫 화면 표시도 이 문서 안의 변수 하나). 점검 로봇 세션은 보내지 않는다.
+   동의한 방문은 아래 view 비콘에 실어 같은 수를 올린다(요청을 늘리지 않는다). */
+let docLanded = false;
+function countFacts(): Record<string, unknown> {
+  if (docLanded) return {};
+  docLanded = true;
+  const out: Record<string, unknown> = { landing: true };
+  try {
+    if (document.referrer) {
+      const u = new URL(document.referrer);
+      if (u.host !== window.location.host) out.referrerHost = u.host;
+    }
+    const utm = new URLSearchParams(window.location.search).get("utm_source");
+    if (utm) out.utmSource = utm;
+  } catch {
+    /* 리퍼러·주소 파싱 실패 — 첫 화면 표시만 */
+  }
+  return out;
+}
+
 function send(payload: Record<string, unknown>, useBeacon: boolean) {
   const body = JSON.stringify(payload);
   if (useBeacon && "sendBeacon" in navigator) {
@@ -86,6 +111,21 @@ export function TrafficRecorder() {
   const pathname = usePathname();
   const { state } = useCookieConsent();
   const consented = state.status === "decided" && state.consent.analytics;
+  const consentKnown = state.status !== "loading";
+
+  /* [1053] 이 화면을 익명 수에 올렸는가 — 화면이 바뀌면 새로. 동의 전에 센 화면에서 동의하면 view 는 수를 다시 올리지 않는다 */
+  const nav = useRef<{ path: string; counted: boolean } | null>(null);
+  useEffect(() => {
+    if (pathname && nav.current?.path !== pathname) nav.current = { path: pathname, counted: false };
+  }, [pathname]);
+  useEffect(() => {
+    if (!consentKnown || consented || !pathname) return;
+    const n = nav.current;
+    if (!n || n.path !== pathname || n.counted) return;
+    n.counted = true;
+    if (isProbeSession()) return;
+    send({ t: "count", path: pathname, ...countFacts() }, false);
+  }, [consentKnown, consented, pathname]);
 
   /* 동의를 거부로 결정하면 방문자 키를 지운다 — 수집이 멈추는 것에 더해
      식별자 자체를 남기지 않는다. */
@@ -196,6 +236,10 @@ export function TrafficRecorder() {
     const viewId = crypto.randomUUID();
     current.current = { viewId, startedAt: Date.now(), closed: false };
     const visitorKey = getVisitorKey();
+    /* [1053] 아직 수에 안 올린 화면이면 이 비콘에 실어 올린다 */
+    const n = nav.current;
+    const agg = n && n.path === pathname && !n.counted && !isProbeSession() ? countFacts() : null;
+    if (n && n.path === pathname) n.counted = true;
     send(
       {
         t: "view",
@@ -204,6 +248,7 @@ export function TrafficRecorder() {
         sessionKey,
         ...(visitorKey ? { visitorKey } : {}),
         ...landing,
+        ...(agg ? { agg } : {}),
       },
       false,
     );

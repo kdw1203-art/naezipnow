@@ -23,6 +23,7 @@ import { Logo } from "@/app/components/Logo";
 import { useMoment } from "@/app/components/motion/MomentProvider";
 
 import type { SocialProvider } from "@/lib/auth/configured-social";
+import { InAppBrowserNotice, useInAppBrowser } from "@/app/components/auth/InAppBrowserNotice";
 import { loginFailHint, type LoginFailHint } from "@/lib/auth/login-fail-hint";
 import { trackPlatformEvent } from "@/lib/platform-events-client";
 
@@ -198,7 +199,11 @@ const ACCOUNT_BENEFITS: { label: string }[] = [
  * `/api/auth/providers` 를 fetch 하는 방법도 있지만, 첫 렌더에 버튼이 있다가
  * 사라지는 깜빡임이 생기고 그 사이 클릭하면 같은 에러를 그대로 맞는다.
  */
-export function LoginClient({ social }: { social: SocialProvider[] }) {
+export function LoginClient({ social: socialAll }: { social: SocialProvider[] }) {
+  /* [1053] 앱 안 브라우저(네이버·카카오톡 등)에서는 구글 단추를 빼고 "기본 브라우저로 열기" 안내 — 구글이 웹뷰 로그인을 막는다 */
+  const inApp = useInAppBrowser();
+  const social = inApp ? socialAll.filter((p) => p !== "google") : socialAll;
+  const googleBlocked = inApp !== null && socialAll.includes("google");
   const router = useRouter();
   const { showMoment } = useMoment();
   const [email, setEmail] = useState("");
@@ -557,6 +562,11 @@ export function LoginClient({ social }: { social: SocialProvider[] }) {
 
         {/* 소셜을 이메일 폼·혜택 카드보다 위에 둔다 — 모바일 첫 화면에서
             스크롤 없이 Google 버튼을 바로 보이게 한다. */}
+        {googleBlocked && inApp && (
+          <div className="rise-in-3">
+            <InAppBrowserNotice kind={inApp} />
+          </div>
+        )}
         {social.length > 0 && (
           <div className="rise-in-3 flex flex-col gap-2.5">
             {social.map((provider) => (

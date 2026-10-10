@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { safeInternalPath } from "@/lib/safe-path";
+import { afterConfirmDestination } from "@/lib/auth/confirm-login";
 
 /* 최적화 19 — supabase-js 는 실제로 쓰는 분기에서만 불러온다.
    정적 import 이던 시절 이 페이지의 First Load JS 는 169kB 였고 그중 약 66kB가
@@ -16,6 +17,35 @@ const loadCreateClient = () =>
 function safeNext(raw: string | null): string {
   /* `!startsWith("//")` 만으로는 `/\evil.com` 이 통과한다 — lib/safe-path.ts 참고. */
   return safeInternalPath(raw, "/login?verified=1");
+}
+
+/* [1053] 메일 인증 뒤 자동 로그인 — 소유자 답 "인증 뒤 자동 로그인". Supabase 가 인증하며 준 세션 토큰으로
+   사이트 로그인(Credentials "email-confirm" · 인증 1시간 안만)을 하고 가입 다음 단계(/welcome)로 간다.
+   가입 확인 링크(next = /login?verified=1…)일 때만 — 비밀번호 재설정 등 다른 링크는 예전 길 그대로.
+   로그인이 안 되면(오래된 링크 · 서버 거절) 예전처럼 로그인 화면의 "인증 완료" 안내로 간다. */
+/* 성공하면 갈 곳(문서를 새로 받는다 — 머리글 · 세션 상태가 새 쿠키로 그려지게), 실패면 null */
+async function finishWithSupabaseSession(
+  supabase: { auth: { getSession: () => Promise<{ data: { session: { access_token: string } | null } }>; signOut: (o: { scope: "local" }) => Promise<unknown> } },
+  next: string,
+): Promise<string | null> {
+  if (!next.startsWith("/login?verified=1")) return null;
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return null;
+    const { signIn } = await import("next-auth/react");
+    const res = await signIn("email-confirm", { accessToken: token, redirect: false });
+    if (!res || res.error || res.ok === false) return null;
+    /* 사이트 로그인은 Auth.js 세션이 맡는다 — Supabase 쪽 세션은 이 탭에서 지운다 */
+    try {
+      await supabase.auth.signOut({ scope: "local" });
+    } catch {
+      /* 무시 */
+    }
+    return afterConfirmDestination(next);
+  } catch {
+    return null;
+  }
 }
 
 export function AuthConfirmClient() {
@@ -63,8 +93,11 @@ export function AuthConfirmClient() {
             window.setTimeout(() => router.replace("/login?error=verify_failed"), 1200);
             return;
           }
-          setMessage("인증이 완료됐어요. 이동합니다…");
-          window.setTimeout(() => router.replace(next), 800);
+          setMessage("인증 완료 · 로그인하는 중");
+          const dest = await finishWithSupabaseSession(supabase, next);
+          if (cancelled) return;
+          if (dest) window.location.replace(dest);
+          else window.setTimeout(() => router.replace(next), 800);
           return;
         } catch {
           if (!cancelled) {
@@ -72,6 +105,22 @@ export function AuthConfirmClient() {
           }
           return;
         }
+      }
+
+      /* [1053] PKCE 서버 콜백(/auth/callback)이 세션 쿠키를 심고 돌려보낸 자리 — 자동 로그인만 이어서 */
+      if (url.searchParams.get("finish") === "1") {
+        try {
+          const supabase = (await loadCreateClient())();
+          setMessage("인증 완료 · 로그인하는 중");
+          const dest = await finishWithSupabaseSession(supabase, next);
+          if (cancelled) return;
+          /* 로그인됐으면 문서를 새로 받는다 — 머리글 · 세션 상태가 새 쿠키로 그려지게 */
+          if (dest) window.location.replace(dest);
+          else router.replace(next);
+        } catch {
+          if (!cancelled) router.replace(next);
+        }
+        return;
       }
 
       /* 해시 토큰 (implicit) — 브릿지에서 넘어온 경우 */
@@ -93,8 +142,11 @@ export function AuthConfirmClient() {
             router.replace("/login?error=verify_failed");
             return;
           }
-          setMessage("인증이 완료됐어요. 이동합니다…");
-          window.setTimeout(() => router.replace(next), 800);
+          setMessage("인증 완료 · 로그인하는 중");
+          const dest = await finishWithSupabaseSession(supabase, next);
+          if (cancelled) return;
+          if (dest) window.location.replace(dest);
+          else window.setTimeout(() => router.replace(next), 800);
           return;
         } catch {
           if (!cancelled) router.replace("/login?error=verify_failed");

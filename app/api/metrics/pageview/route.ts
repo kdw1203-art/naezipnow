@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { logger } from "@/lib/log";
+import { countRow, isCrossSite, normalizeRoute, type CountFacts } from "@/lib/metrics/page-count";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,9 +18,12 @@ export const dynamic = "force-dynamic";
  *    동작한다. 동의 없이 온 요청도 저장은 되지만(구분 불가), 클라이언트가
  *    보내지 않는 것이 1차 방어다.
  *
- * 이벤트 2종:
- *  - view : { t:"view", viewId, path, sessionKey } → 행 삽입
+ * 이벤트 3종:
+ *  - view : { t:"view", viewId, path, sessionKey, agg? } → 행 삽입 (+ agg 가 있으면 익명 하루 수도 1)
  *  - leave: { t:"leave", viewId, durationMs } → 해당 행 duration 갱신(1회성)
+ *  - count: { t:"count", path, landing?, referrerHost?, utmSource? } → [1053] 익명 하루 수만 1(동의 전·거부 방문)
+ *    쿠키·식별자·IP·주소 원문 없음 — lib/metrics/page-count · public.bump_page_view_agg(service_role 전용).
+ *    동의한 방문은 view 의 agg 로 같은 수를 올린다(요청 하나 — 화면 하나당 수 한 번).
  *
  * ── 재시도를 하지 않는 이유 (최적화 34 — 확인 후 기록) ──────────────────────
  * 이 라우트에는 재시도가 한 군데도 없다. 빠뜨린 게 아니라 그렇게 두기로 한
@@ -53,6 +57,8 @@ type Body = {
   durationMs?: number;
   /* 유입 출처 — 랜딩(세션 첫 뷰)에만 온다. referrerHost 는 호스트 문자열만
      허용(URL 금지 — 검색어 등 개인정보가 실릴 수 있다). */
+  /* [1053] 익명 하루 수 — view 에 실린 agg(이 화면을 수에 올릴 때만) */
+  agg?: CountFacts;
   landing?: boolean;
   referrerHost?: string;
   utmSource?: string;
@@ -71,43 +77,6 @@ function cleanUtm(v: unknown): string | null {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SESSION_RE = /^[a-f0-9]{16,64}$/i;
 
-/**
- * 경로 → 집계 라우트 정규화. 동적 세그먼트를 패턴으로 접어 카디널리티 폭발을
- * 막는다. 모르는 경로는 1·2단계 세그먼트만 남긴다.
- */
-function normalizeRoute(path: string): string {
-  const p = path.split("?")[0].split("#")[0];
-  const rules: [RegExp, string][] = [
-    [/^\/complex\/browse/, "/complex/browse"],
-    [/^\/complex\/compare/, "/complex/compare"],
-    [/^\/complex\/[^/]+\/tx/, "/complex/[id]/tx"],
-    [/^\/complex\/[^/]+/, "/complex/[id]"],
-    [/^\/region\/[^/]+/, "/region/[id]"],
-    [/^\/tx\/[^/]+\/(area|price)\/[^/]+/, "/tx/[region]/[band]"],
-    [/^\/tx\/[^/]+/, "/tx/[region]"],
-    [/^\/notes\/new/, "/notes/new"],
-    [/^\/notes\/best/, "/notes/best"],
-    [/^\/notes\/templates/, "/notes/templates"],
-    [/^\/notes\/[^/]+\/deck/, "/notes/[id]/deck"],
-    [/^\/notes\/[^/]+/, "/notes/[id]"],
-    [/^\/town\/news\/[^/]+/, "/town/news/[id]"],
-    [/^\/town\/groups\/[^/]+\/chat/, "/town/groups/[id]/chat"],
-    [/^\/town\/groups\/[^/]+/, "/town/groups/[id]"],
-    [/^\/listings\/[^/]+/, "/listings/[id]"],
-    [/^\/reports\/season\/[^/]+/, "/reports/season/[slug]"],
-    [/^\/reports\/[0-9]{6}/, "/reports/[ym]"],
-    [/^\/analysis\/temperature\/[^/]+/, "/analysis/temperature/[region]"],
-    [/^\/glossary\/[^/]+/, "/glossary/[term]"],
-    [/^\/qna\/[^/]+/, "/qna/[id]"],
-    [/^\/invite\/[^/]+/, "/invite/[code]"],
-    [/^\/digest\/[^/]+/, "/digest/[week]"],
-  ];
-  for (const [re, route] of rules) if (re.test(p)) return route;
-  const segs = p.split("/").filter(Boolean);
-  if (segs.length <= 2) return `/${segs.join("/")}` || "/";
-  return `/${segs[0]}/${segs[1]}/*`;
-}
-
 export async function POST(req: NextRequest): Promise<Response> {
   /* 무인증 텔레메트리 — 페이지 이동당 2요청. 도배만 막는다. */
   const rl = rateLimit(`pageview:${getClientIp(req)}`, { limit: 120, windowMs: 60_000 });
@@ -118,6 +87,14 @@ export async function POST(req: NextRequest): Promise<Response> {
     body = (await req.json()) as Body;
   } catch {
     return NextResponse.json({ ok: false }, { status: 400 });
+  }
+
+  /* [1053 · 방문 집계] 익명 하루 수 — 동의 전·거부 방문의 화면 하나당 한 번(TrafficRecorder) */
+  if (body.t === "count") {
+    const rawPath = String(body.path ?? "");
+    if (!rawPath.startsWith("/") || rawPath.length > 300) return NextResponse.json({ ok: false }, { status: 400 });
+    const stored = await bumpCount(req, rawPath, body);
+    return NextResponse.json({ ok: true, stored });
   }
 
   const viewId = String(body.viewId ?? "");
@@ -144,6 +121,9 @@ export async function POST(req: NextRequest): Promise<Response> {
       isLanding && typeof body.referrerHost === "string" && HOST_RE.test(body.referrerHost.trim())
         ? body.referrerHost.trim().toLowerCase()
         : null;
+    /* [1053] 이 화면을 익명 하루 수에도 올린다(동의 방문 — 따로 요청하지 않고 view 에 실려 온다) */
+    const counting =
+      body.agg && typeof body.agg === "object" ? bumpCount(req, path, body.agg as CountFacts) : Promise.resolve(false);
     const { error } = await sb.from("page_view_events").insert({
       view_id: viewId,
       route: normalizeRoute(path),
@@ -156,6 +136,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       utm_medium: isLanding ? cleanUtm(body.utmMedium) : null,
       utm_campaign: isLanding ? cleanUtm(body.utmCampaign) : null,
     });
+    await counting;
     // unique(view_id) 충돌 = 중복 비콘 — 정상 무시
     if (error && !String(error.code) .startsWith("23")) {
       logger.warn("[pageview] insert 실패", error.message);
@@ -185,4 +166,23 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   return NextResponse.json({ ok: false }, { status: 400 });
+}
+
+/**
+ * [1053] 익명 하루 수 1 — 로봇 · 다른 사이트에서 보낸 요청은 세지 않는다. 실패는 기록만(비콘이라 화면과 무관).
+ * 재시도 없음 — 위 "재시도를 하지 않는 이유"와 같다(추세용 수).
+ */
+async function bumpCount(req: NextRequest, rawPath: string, facts: CountFacts): Promise<boolean> {
+  if (isCrossSite(req.headers.get("sec-fetch-site"))) return false;
+  const path = rawPath.split("?")[0].split("#")[0].slice(0, 300);
+  const row = countRow(normalizeRoute(path), facts, req.headers.get("user-agent"), Date.now());
+  if (!row) return false;
+  const sb = getServiceSupabase();
+  if (!sb) return false;
+  const { error } = await sb.rpc("bump_page_view_agg", row);
+  if (error) {
+    logger.warn("[pageview] 익명 수 실패", error.message);
+    return false;
+  }
+  return true;
 }

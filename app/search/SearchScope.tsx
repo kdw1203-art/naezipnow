@@ -49,7 +49,7 @@ export function ScopeBar({
               type="button"
               onClick={() => onRemove(c.token)}
               aria-label={`${c.label} 조건 빼기`}
-              className="-mr-1 inline-grid h-[24px] w-[24px] place-items-center text-text-3"
+              className="-my-2 -mr-1.5 inline-grid h-[40px] w-[32px] place-items-center text-text-3 md:my-0 md:-mr-1 md:h-[24px] md:w-[24px]"
             >
               ✕
             </button>
@@ -90,8 +90,9 @@ export function RelatedChips({
   className?: string;
 }) {
   if (related.length === 0) return null;
-  /* 누르는 칸은 36px(투명) · 보이는 알약은 그 안 — 촘촘히 줄지어도 옆 칩 탭을 가져가지 않는다 */
-  const hit = "group inline-flex h-[36px] shrink-0 items-center whitespace-nowrap no-underline";
+  /* 누르는 칸은 36px(투명) · 보이는 알약은 그 안 — 촘촘히 줄지어도 옆 칩 탭을 가져가지 않는다.
+     [1053] 폰은 40px(손가락 기준) · 컴퓨터는 36px 그대로. ✕ 도 폰 40px 칸(바깥 여백을 음수로 — 칩 높이는 그대로) */
+  const hit = "group inline-flex h-[40px] shrink-0 items-center whitespace-nowrap no-underline md:h-[36px]";
   const pill =
     "inline-flex min-h-[26px] items-center gap-1 rounded-full border border-line bg-surface px-2.5 t-caption font-bold text-text-2 group-hover:border-primary group-hover:text-primary";
   const body = (r: RelatedJson) => (

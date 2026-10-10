@@ -8223,3 +8223,32 @@ html[data-mscale] li div.t-sub.mscale-wrap {
 :is(.btn-primary, .btn-secondary, .btn-soft, .btn-outline, .btn-ghost, .btn-cta).rounded-3xl {
   border-radius: var(--radius-3xl);
 }
+
+/* ============================================================
+   [1053 · 속도] 본문 글꼴 = 기기 기본 글꼴 — 소유자 답(2026-10-10) "폰·윈도우도 기본 글꼴".
+   Pretendard 웹글꼴(dynamic subset · @font-face 92조각) 링크를 layout 에서 걷었다. 92조각이 하나씩 도착할 때마다
+   글자 배치를 처음부터 다시 해(운영 실측 · 폰 · CPU 4배 감속) 단지 화면 레이아웃 5.2초 → 웹글꼴 없이 1.4초.
+   순서: 애플(맥·아이폰) → 시스템 UI(안드로이드 Roboto·크롬OS) → 윈도우(Segoe UI · 맑은 고딕) → 본고딕.
+   --font-sans 는 @theme inline 위쪽 정의를 덮는다(append-only 규칙 — 위 정의는 그대로 둔다).
+   ============================================================ */
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "SF Pro KR", system-ui, "Segoe UI",
+    "Malgun Gothic", "맑은 고딕", "Noto Sans KR", "Noto Sans CJK KR", Roboto, "Helvetica Neue", sans-serif;
+}
+body {
+  font-family: var(--font-sans);
+}
+
+/* [1053] 워드마크 "내집나우" 네 글자만 — Pretendard Bold 에서 네 글자만 뽑은 824바이트(SIL OFL 1.1 · lib/og/fonts 원본).
+   본문 웹글꼴을 걷어도 로고 글자 모양은 그대로 둔다. 한 조각·네 글자라 배치 비용이 없다(미리 받기 + optional). */
+@font-face {
+  font-family: "NZ Wordmark";
+  src: url(/fonts/wordmark/naezipnow-wordmark.woff2) format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: optional;
+  unicode-range: U+B098, U+B0B4, U+C6B0, U+C9D1;
+}
+.nz-wordmark {
+  font-family: "NZ Wordmark", var(--font-sans);
+}

@@ -14,6 +14,7 @@ import {
 } from "@/lib/coverage/store-db";
 import { loadShareInflow, type ShareInflow } from "@/lib/admin/share-inflow";
 import { GrowthWeekly } from "./GrowthWeekly";
+import { AnonCounts } from "./AnonCounts";
 
 export const metadata: Metadata = {
   title: "트래픽 | 내집나우 관리자",
@@ -288,6 +289,9 @@ export default async function AdminTrafficPage() {
 
       {/* [1046] 성장 주간표 — 1년 1만 회원 계획의 매주 볼 숫자(가입 · 전환 · 채널). 페이지뷰 목표보다 먼저 */}
       <GrowthWeekly />
+
+      {/* [1053] 전체 화면 열림 수 — 동의와 무관한 익명 하루 수(아래 카드들은 동의 표본) */}
+      <AnonCounts />
 
       {/* [G006] 주간 목표 대비 — 이 페이지의 첫 문장은 "이번 주 어땠나"여야 한다 */}
       {daily.length > 0 && (

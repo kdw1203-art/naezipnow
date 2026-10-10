@@ -187,11 +187,14 @@ test("M2·M3·M4 지도 카드 — 원 useMemo · key 에 media · 다시 불러
   assert.doesNotMatch(map, /circle=\{\{/, "렌더마다 새 원 객체를 넘기지 않는다");
   assert.match(map, /key=\{`\$\{media\}-\$\{radius\}`\}/);
   assert.match(map, /id=\{`area-map-title-\$\{media\}`\}/);
-  /* 다시 불러오기 */
+  /* 다시 불러오기 — [1053] 원천별 상태(composeAreaView)에서 하나라도 실패면 · 실패한 원천이 든 요청만 다시 */
   assert.match(map, /\{showRetry && \(\s*<button\s+type="button"\s+onClick=\{reload\}/);
-  assert.match(map, /const showRetry = failed \|\| missingSimilar \|\| missingOsm;/);
-  assert.match(map, /areaUrl\(lat, lng, name, buildYear, `m\$\{n\}`\)/, "손 재시도는 실패 응답 캐시 칸을 피한다");
-  assert.match(map, /setData\(\(prev\) => mergeAreaData\(prev, d\)\)/);
+  assert.match(map, /const showRetry = hasFailedPart\(view\);/);
+  assert.match(map, /const plan = reloadPlan\(view\);/);
+  assert.match(map, /areaUrl\(\{ lat, lng, part: "main", name, buildYear, retry: `m\$\{n\}` \}\)/, "손 재시도는 실패 응답 캐시 칸을 피한다");
+  assert.match(map, /areaUrl\(\{ lat, lng, part: "osm", st: plan\.st, retry: `m\$\{n\}` \}\)/);
+  assert.match(map, /setMain\(\(prev\) => mergeAreaPart\(prev, d\)\)/);
+  assert.match(map, /setOsm\(\(prev\) => mergeAreaPart\(prev, d\)\)/);
   /* 폰 40px · 데스크톱 24px */
   assert.match(map, /className="inline-flex min-h-\[40px\] items-center gap-1 t-sub font-bold text-primary no-underline lg:min-h-6"/);
   assert.match(map, /className="inline-flex min-h-\[40px\] items-center gap-1 t-sub font-bold text-primary disabled:text-text-3 lg:min-h-6"/);
@@ -202,6 +205,8 @@ test("M2·M3·M4 지도 카드 — 원 useMemo · key 에 media · 다시 불러
   assert.match(map, /거리는 직선 거리/);
   assert.match(map, /formatStraightDistance\(nearestStation\.distanceM\)/);
   assert.match(map, /© OpenStreetMap 기여자/);
+  assert.match(map, /비교할 실거래 없음/);
+  assert.doesNotMatch(raw, /비교할 시세/, "실거래만 있는 곳에 '시세'라 쓰지 않는다");
   /* 디자인 규칙 */
   assert.doesNotMatch(raw, /text-\[\d+px\]|font-extrabold|btn-primary|bg-gradient/);
   assert.doesNotMatch(raw, /해 보세요|!"/);
