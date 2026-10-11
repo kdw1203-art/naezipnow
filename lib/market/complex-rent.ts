@@ -2,7 +2,8 @@ import "server-only";
 
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
-import { currentYm, ymMonthsBefore } from "@/lib/complex/complex-facts";
+import { currentYm, ymMonthsBefore } from "@/lib/format/ym";
+import { readPaged } from "@/lib/supabase/read-paged";
 
 /* [#94 잔여, 2026-08-23] 단지 전월세 이력 — 지역 스냅샷(lib/market/rent.ts)의
  * 단지 버전. market_transactions(rent)를 (region_name, complex_name) 등치로 읽어
@@ -48,7 +49,9 @@ export type ComplexRentHistory = {
   samples: ComplexRentSample[];
 };
 
-const ROW_CAP = 2000;
+/* [1055] 4,000 — 끝까지 나눠 읽는다(아래). 예전 2,000 은 PostgREST 상한(1,000행)에서 잘려 큰 단지(헬리오시티 24개월 3,877건 ·
+   더샵부평센트럴시티 3,313 · 파크리오 2,025 …)가 "전월세 1,000건"으로 보였고 표의 이른 달은 반쪽이었으며 truncated 는 영원히 거짓이었다 */
+const ROW_CAP = 4000;
 const MONTHS_BACK = 23; // 이번 달 포함 24개 캘린더 월
 
 function median(sorted: number[]): number | null {
@@ -80,25 +83,30 @@ export async function getComplexRentHistoryByNames(
   if (!sb) return null;
 
   const from = ymMonthsAgo(MONTHS_BACK);
-  let q = sb
-    .from("market_transactions")
-    .select("deposit_krw, monthly_rent_krw, contract_ym")
-    .eq("region_name", dec.region)
-    .eq("complex_name", dec.name)
-    .eq("transaction_type", "rent")
-    .eq("is_cancelled", false)
-    .eq("property_type", "apartment")
-    .gte("contract_ym", from)
-    .not("deposit_krw", "is", null)
-    .order("contract_ym", { ascending: false })
-    .limit(ROW_CAP);
-  if (signal) q = q.abortSignal(signal);
-
-  const { data, error } = await q;
-  if (error) {
-    logger.error(`[complex-rent] 조회 실패(${dec.region} ${dec.name})`, error);
-    throw new Error(`market_transactions(rent, 단지) 조회 실패: ${error.message}`);
+  let paged: { rows: Array<{ deposit_krw: unknown; monthly_rent_krw: unknown; contract_ym: unknown }>; truncated: boolean };
+  try {
+    paged = await readPaged((f, t) => {
+      let q = sb
+        .from("market_transactions")
+        .select("deposit_krw, monthly_rent_krw, contract_ym")
+        .eq("region_name", dec.region)
+        .eq("complex_name", dec.name)
+        .eq("transaction_type", "rent")
+        .eq("is_cancelled", false)
+        .eq("property_type", "apartment")
+        .gte("contract_ym", from)
+        .not("deposit_krw", "is", null)
+        .order("contract_ym", { ascending: false })
+        .order("id", { ascending: true })
+        .range(f, t);
+      if (signal) q = q.abortSignal(signal);
+      return q;
+    }, ROW_CAP);
+  } catch (e) {
+    logger.error(`[complex-rent] 조회 실패(${dec.region} ${dec.name})`, e);
+    throw new Error(`market_transactions(rent, 단지) 조회 실패: ${e instanceof Error ? e.message : String(e)}`);
   }
+  const data = paged.rows;
   const rows = data ?? [];
   if (rows.length === 0) return null;
 
@@ -147,7 +155,7 @@ export async function getComplexRentHistoryByNames(
   return {
     months,
     totalCount: rows.length,
-    truncated: rows.length >= ROW_CAP,
+    truncated: paged.truncated,
     periodLabel: `${fmt(from)}~${fmt(ymMonthsAgo(0))}`,
     samples,
   };

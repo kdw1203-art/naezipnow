@@ -3,6 +3,8 @@ import "server-only";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { transactionNameCandidates } from "@/lib/market/store";
 import { logger } from "@/lib/log";
+import { currentYm, ymMonthsBefore } from "@/lib/format/ym";
+import { readPaged } from "@/lib/supabase/read-paged";
 
 /* [#94, 2026-08-23] 전월세 실거래 표면화 — 46.9만 행(216개 지역, 최근 12개월)이
  * DB에 있는데 보여주는 화면이 없었다. 이 모듈은 지역 단위 전월세 스냅샷을
@@ -46,10 +48,10 @@ function median(sorted: number[]): number | null {
   return sorted.length % 2 === 1 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
 }
 
+/* [1055] 달 산술은 lib/format/ym(한국 달 · 넘침 없음) — 예전 `setMonth(getMonth()-n)` 은 31일에 한 달이 밀리고(8/31 → 7~8월 두 달)
+   매월 1일 00~09시(KST)엔 전달이 "이번 달"이었다 */
 function ymMonthsAgo(n: number): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() - n);
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return ymMonthsBefore(currentYm(), n);
 }
 
 export async function getRegionRentSnapshot(
@@ -74,24 +76,35 @@ export async function getRegionRentSnapshot(
     .limit(14);
   if (signal) volQ = volQ.abortSignal(signal);
 
-  let rowQ = sb
-    .from("market_transactions")
-    .select("deposit_krw, monthly_rent_krw, area_m2, contract_ym")
-    .in("region_name", names)
-    .eq("transaction_type", "rent")
-    .eq("is_cancelled", false)
-    .eq("property_type", "apartment")
-    .gte("contract_ym", from3)
-    .not("deposit_krw", "is", null)
-    .limit(SAMPLE_CAP);
-  if (signal) rowQ = rowQ.abortSignal(signal);
+  /* [1055] 끝까지 나눠 읽는다 — `.limit(4000)` 한 번은 PostgREST 상한(1,000행)에서 조용히 잘려 운영 지역 12곳+(평택 2,329 ·
+     강남 1,996 · 송파 1,921 …)가 "신고분 1,000건 기준"을 사실처럼 적고 중앙값은 임의의 1,000행에서 나왔다(정렬도 없었다).
+     정렬은 (contract_ym, id)로 유일하게 — 쪽이 겹치거나 빠지지 않는다. SAMPLE_CAP 에 닿으면 sampleTruncated. */
+  const rowP = readPaged<Record<string, unknown>>((from, to) => {
+    let q = sb
+      .from("market_transactions")
+      .select("deposit_krw, monthly_rent_krw, area_m2, contract_ym")
+      .in("region_name", names)
+      .eq("transaction_type", "rent")
+      .eq("is_cancelled", false)
+      .eq("property_type", "apartment")
+      .gte("contract_ym", from3)
+      .not("deposit_krw", "is", null)
+      .order("contract_ym", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to);
+    if (signal) q = q.abortSignal(signal);
+    return q;
+  }, SAMPLE_CAP).then(
+    (r) => ({ ok: true as const, ...r }),
+    (e: unknown) => ({ ok: false as const, error: e instanceof Error ? e : new Error(String(e)) }),
+  );
 
-  const [volRes, rowRes] = await Promise.all([volQ, rowQ]);
+  const [volRes, rowRes] = await Promise.all([volQ, rowP]);
   if (volRes.error) {
     logger.error(`[rent] 월별 집계 조회 실패(${regionId})`, volRes.error);
     throw new Error(`market_region_monthly(rent) 조회 실패: ${volRes.error.message}`);
   }
-  if (rowRes.error) {
+  if (!rowRes.ok) {
     logger.error(`[rent] 원본 표본 조회 실패(${regionId})`, rowRes.error);
     throw new Error(`market_transactions(rent) 조회 실패: ${rowRes.error.message}`);
   }
@@ -106,7 +119,7 @@ export async function getRegionRentSnapshot(
     .map(([month, count]) => ({ month, count }))
     .sort((a, b) => a.month.localeCompare(b.month));
 
-  const rows = (rowRes.data ?? []) as Array<Record<string, unknown>>;
+  const rows = rowRes.rows;
   if (monthly.length === 0 && rows.length === 0) return null;
 
   const jeonseDeposits: number[] = [];
@@ -137,7 +150,7 @@ export async function getRegionRentSnapshot(
   return {
     monthly,
     sampleCount: rows.length,
-    sampleTruncated: rows.length >= SAMPLE_CAP,
+    sampleTruncated: rowRes.truncated,
     jeonse: {
       count: jeonseDeposits.length,
       medianDepositKrw: median(jeonseDeposits),

@@ -11,6 +11,7 @@ import { getUserPlanTier } from "@/lib/inspection/quota";
 import type { PlanTier } from "@/lib/subscriptions/access-gate";
 import { monthlyLimitsAsPlanTiers } from "@/lib/subscriptions/access";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { kstMonthStart } from "@/lib/subscriptions/usage-period";
 
 /** ai_analysis_runs.tool 에 기록하는 에이전트 전용 키 */
 export const AGENT_USAGE_TOOL_KEY = "agent";
@@ -20,9 +21,9 @@ export const AGENT_USAGE_TOOL_KEY = "agent";
 export const AGENT_MONTHLY_LIMITS: Record<PlanTier, number | null> =
   monthlyLimitsAsPlanTiers("ai_agent");
 
+/* [1055] 한국 달 1일 0시 — 예전 `new Date(y, m, 1)` 은 서버(UTC) 달이라 1일 00~09시(KST)엔 지난달 사용량이 이번 달로 셌다 */
 function monthStartIso(): string {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
+  return kstMonthStart().toISOString();
 }
 
 /** 이번 달 에이전트 사용 횟수 — ai_analysis_runs(tool='agent') 카운트 */

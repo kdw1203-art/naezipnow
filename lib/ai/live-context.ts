@@ -1,4 +1,5 @@
 import "server-only";
+import { currentYm, ymMonthsBefore } from "@/lib/format/ym";
 import { getRegionRentYieldRows } from "@/lib/market/rent-yield";
 
 import { cache } from "react";
@@ -387,9 +388,8 @@ function unwrapPartial<T>(e: unknown): T {
 async function loadRegionTrend(regionId: string): Promise<RegionTrend | null> {
   const sb = getServiceSupabase();
   if (!sb) return null;
-  const since = new Date();
-  since.setUTCMonth(since.getUTCMonth() - 16);
-  const sinceDay = `${since.getUTCFullYear()}-${String(since.getUTCMonth() + 1).padStart(2, "0")}-01`;
+  const sinceYm = ymMonthsBefore(currentYm(), 16); // [1055] 한국 달 · 31일 넘침 없음(예전 setUTCMonth 는 31일에 15개월 창)
+  const sinceDay = `${sinceYm.slice(0, 4)}-${sinceYm.slice(4, 6)}-01`;
   const { data, error } = await sb
     .from("market_region_series")
     .select("metric,period,value")

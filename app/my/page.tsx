@@ -57,6 +57,8 @@ export const metadata = {
   title: "마이 | 내집나우",
   description:
     "내집나우 마이페이지 · 내 활동 요약 · 임장노트 · 관심 단지 · 저장한 노트 · 알림 구독 · 구독 상태 · 포인트",
+  /* [1055] 개인 화면 — 다른 /my/* 와 같이 noindex(robots.txt disallow 만으로는 링크된 주소가 "제목 없는 결과"로 색인될 수 있다) */
+  robots: { index: false, follow: false },
 };
 
 /* ── 표시 헬퍼 ── */

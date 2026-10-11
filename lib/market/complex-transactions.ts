@@ -5,6 +5,7 @@
  */
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
+import { currentYm, ymMonthsBefore } from "@/lib/format/ym";
 import { SEOUL_DISTRICTS, METRO_EXPLORE_DISTRICTS, METRO_CITY_DISTRICTS } from "@/lib/map/seoul-districts";
 import { AREA_BANDS } from "@/lib/market/bands";
 import { APT_MASTER_SOURCE_KEY } from "@/lib/complex/apartment-master";
@@ -230,11 +231,9 @@ function toRecord(r: RawTxRow): ComplexTransactionRecord | null {
   };
 }
 
-/** 오늘 기준 12개월 전 yyyymm (해당 월 포함) */
+/** 오늘 기준 12개월 전 yyyymm (해당 월 포함) — [1055] 한국 달 · 넘침 없음(예전 setMonth 는 10/31 에 "12개월"이 11개월이 됐다) */
 function twelveMonthsAgoYm(): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() - 11);
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return ymMonthsBefore(currentYm(), 11);
 }
 
 /** ㎡ → 평 환산 평단가 (price_per_pyeong_krw 없을 때 보정) */

@@ -79,7 +79,7 @@ export function NoteComments({
       }
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(data?.error ?? "삭제하지 못했어요. 잠시 후 다시 시도해 주세요");
+        setError(data?.error ?? "댓글 삭제 실패 · 잠시 후 다시");
         return;
       }
       setConfirmId(null);
@@ -300,7 +300,7 @@ function NoteCommentForm({
       }
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(data?.error ?? "댓글을 남기지 못했어요. 잠시 후 다시 시도해 주세요");
+        setError(data?.error ?? "댓글 등록 실패 · 잠시 후 다시");
         return;
       }
       setBody("");

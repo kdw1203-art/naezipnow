@@ -1,4 +1,5 @@
 import "server-only";
+import { currentYm, ymMonthsBefore } from "@/lib/format/ym";
 
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
@@ -53,11 +54,7 @@ export async function buildWatchlistBrief(email: string): Promise<WatchlistBrief
     return buildRegionBrief(watchRows ?? []);
   }
 
-  const fromYm = (() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - 1);
-    return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
-  })();
+  const fromYm = ymMonthsBefore(currentYm(), 1); // [1055] 한국 달 · 31일 넘침 없음(예전 setMonth 는 31일에 지난달 계약을 떨궜다)
 
   const { data: txRows, error: txErr } = await sb
     .from("market_transactions")

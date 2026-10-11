@@ -247,7 +247,8 @@ test("[1025 · Q5] market_transactions 조회 9곳 — property_type='apartment'
     /* [1028] 4 → 6: 직거래·등기 표식을 읽는 두 질의(loadTradeMarkRowsShared)도 같은 조건을 건다 */
     ["lib/complex/complex-store.ts", 6],
     ["lib/complex/asking-trades.ts", 1],
-    ["app/api/analysis/complex-compare/route.ts", 1],
+    /* [1055] 1 → 2: 12개월 건수를 세는 count 질의도 같은 조건을 건다 */
+    ["app/api/analysis/complex-compare/route.ts", 2],
     ["lib/agent/tools.ts", 1],
     ["lib/newui/home-coverage.ts", 1],
     ["lib/social/autopost.ts", 1],

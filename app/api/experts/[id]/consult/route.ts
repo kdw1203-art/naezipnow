@@ -18,6 +18,7 @@ import { invalidateExpertRoutes } from "@/lib/town/invalidate-town";
 import { appendInboxNotification } from "@/lib/notifications/inbox";
 import { checkExpertConsultQuota, resolveQuotaPlan } from "@/lib/subscriptions/usage-summary";
 import { withUserQuotaLock } from "@/lib/subscriptions/quota-lock";
+import { logger } from "@/lib/log";
 import { FUNNEL_EVENT, recordFunnelEvent } from "@/lib/platform-funnel-events";
 import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 
@@ -157,10 +158,9 @@ export async function POST(
       });
       return NextResponse.json({ ok: true, consultation }, { status: 201 });
     } catch (e) {
-      return NextResponse.json(
-        { error: e instanceof Error ? e.message : "상담 신청 실패" },
-        { status: 500 },
-      );
+      /* [1055] DB 원문(영문)을 화면에 내지 않는다 — 상담 폼이 error 를 그대로 띄운다 */
+      logger.errorSampled("expert-consult", `[experts/${expertId}/consult] 상담 신청 저장 실패`, e);
+      return NextResponse.json({ error: "상담 신청 실패 · 잠시 후 다시" }, { status: 500 });
     }
   });
 }

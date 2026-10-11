@@ -230,7 +230,7 @@ test("D7 목록 상태 — 노트 실패≠없음 · 동네 ?mine=1 · 재설정
   assert.match(feed, /if \(onlyMine && myRegions !== null && myRegions\.length === 0\) setOnlyMine\(false\)/);
   const reset = read("app/reset-password/page.tsx");
   assert.match(reset, /"unreachable"/);
-  assert.match(reset, /if \(r\.status >= 500\) throw/);
+  assert.match(reset, /if \(!r\.ok && r\.status !== 400\) throw/); // [1055] 429 도 unreachable
   assert.match(reset, /링크 확인 실패 · 잠시 후 다시/);
   const hero = read("app/components/home/HomeHeroSearch.tsx");
   assert.match(hero, /\.catch\(\(\) => \{[\s\S]*?if \(ac\.signal\.aborted\) return;[\s\S]*?setFailed\(true\)/);

@@ -4,6 +4,8 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { useRef } from "react";
+import { useScrollLockLazy } from "@/lib/client/use-scroll-lock-lazy";
 import { usePathname } from "next/navigation";
 import { BILLING_PERIOD_PRICES, WEEKLY_PASS } from "@/lib/subscriptions/billing-periods";
 
@@ -29,13 +31,21 @@ export function UpgradePaywall({
   href = "/subscription",
   ctaLabel = "요금제 보기",
 }: UpgradePaywallProps) {
+  /* [1055] 스크롤 잠금 + 열리면 초점을 창 안으로, 닫히면 돌려준다(전엔 키보드로 열어도 초점이 뒤 화면에 남았다) */
+  useScrollLockLazy(open, { markModal: true });
+  const cardRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!open) return;
+    const restoreTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    cardRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      restoreTo?.focus?.();
+    };
   }, [open, onClose]);
 
   /* [966] 가격을 말한다 — 예전 페이월은 "요금제 보기" 만 있어 얼마인지 모른 채 넘어가야
@@ -69,7 +79,9 @@ export function UpgradePaywall({
       onClick={onClose}
     >
       <div
-        className="card w-full max-w-[400px] rounded-4xl px-5 py-5 [box-shadow:var(--shadow-lg)]"
+        ref={cardRef}
+        tabIndex={-1}
+        className="card w-full max-w-[400px] rounded-4xl px-5 py-5 outline-none [box-shadow:var(--shadow-lg)]"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="upgrade-paywall-title" className="t-section font-bold text-ink">

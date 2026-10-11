@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getNote } from "@/lib/inspection/store-db";
+import { formatKstDate } from "@/lib/format/kst";
 import { safeAuth } from "@/lib/safe-auth";
 import { inspectionAverageScore } from "@/lib/inspection/store-db";
 import { PrintButton } from "./PrintButton";
@@ -129,7 +130,7 @@ export default async function NotePrintPage({
       <footer className="mt-8 border-t border-[#ddd] pt-3 t-sub text-[#666]">
         이 문서는 작성자의 현장 방문 기록입니다. 개인 기록 기반이며 투자 권유가
         아닙니다. 실거래가·시세 데이터는 naezipnow.com 에서 확인하세요. ·{" "}
-        {new Date().toISOString().slice(0, 10)} 출력
+        {formatKstDate(Date.now()).replace(/\./g, "-")} 출력
       </footer>
     </div>
   );

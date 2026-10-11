@@ -80,6 +80,8 @@ export function VoiceMemoRecorder({
     recRef.current?.stop();
   };
 
+  const memosRef = useRef(memos);
+  memosRef.current = memos;
   const start = async () => {
     if (memos.length >= MAX_MEMOS) return;
     if (typeof MediaRecorder === "undefined" || !navigator.mediaDevices?.getUserMedia) {
@@ -116,7 +118,8 @@ export function VoiceMemoRecorder({
           const res = await fetch("/api/upload", { method: "POST", body: fd });
           const json: { url?: string } = await res.json().catch(() => ({}));
           if (res.ok && json.url) {
-            onChange([...memos, String(json.url)].slice(0, MAX_MEMOS));
+            /* [1055] 녹음 시작 때의 memos 가 아니라 지금 값에 붙인다 — 녹음 중 지운 메모가 되살아나지 않게 */
+            onChange([...memosRef.current, String(json.url)].slice(0, MAX_MEMOS));
             setState("idle");
           } else {
             /* [1026b] 401 = 비회원 — 실패가 아니라 로그인 안내 */
@@ -170,7 +173,7 @@ export function VoiceMemoRecorder({
             disabled={state === "uploading" || memos.length >= MAX_MEMOS}
             className="min-h-[40px] rounded-lg border border-line-strong bg-bg px-3 py-1.5 t-sub font-bold text-text-1 disabled:opacity-50"
           >
-            {state === "uploading" ? "저장 중…" : (<><Icon name="mic" size={14} className="mr-1 inline align-[-2px]" />30초 녹음</>)}
+            {state === "uploading" ? "저장 중…" : (<><Icon name="mic" size={14} className="mr-1 inline align-[-2px]" />{MAX_SEC}초 녹음</>)}
           </button>
         )}
       </div>

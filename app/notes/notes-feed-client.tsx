@@ -1351,6 +1351,7 @@ export function NotesFeedClient({
               <button
                 key={f}
                 type="button"
+                aria-pressed={activeFilter === f}
                 onClick={() => setFilter(f)}
                 className={`chip press shrink-0 px-4 py-2 ${
                   activeFilter === f

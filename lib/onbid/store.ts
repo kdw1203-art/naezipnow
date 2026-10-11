@@ -1,6 +1,7 @@
 import "server-only";
 import { getReadOnlySupabase } from "@/lib/newui/supabase-read";
 import { logger } from "@/lib/log";
+import { kstParts } from "@/lib/format/kst";
 
 /** 온비드 공매 물건 읽기 전용 로더. */
 
@@ -73,10 +74,12 @@ export function isPastBidEnd(bidEnd: string | null, now: Date = new Date()): boo
   const mo = Number(digits.slice(4, 6));
   const da = Number(digits.slice(6, 8));
   if (!y || !mo || !da) return false;
-  const end = new Date(y, mo - 1, da);
-  if (Number.isNaN(end.getTime())) return false;
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  return end.getTime() < today.getTime();
+  /* [1055] 오늘 = 한국 날짜 — 서버 UTC 날짜로는 00~09시(KST)에 어제 마감 물건이 지도에 남았다(목록은 KST 라 둘이 어긋났다) */
+  const end = Date.UTC(y, mo - 1, da);
+  if (Number.isNaN(end)) return false;
+  const p = kstParts(now);
+  const today = p ? Date.UTC(p.year, p.month - 1, p.day) : Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return end < today;
 }
 
 /* 2026-07-26: 아래 두 함수는 실패할 때 `[]`·`0` 을 돌려줬다. 그러면 화면은

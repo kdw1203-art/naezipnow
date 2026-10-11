@@ -1,4 +1,5 @@
 import "server-only";
+import { currentYm, ymMonthsBefore } from "@/lib/format/ym";
 
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
@@ -12,7 +13,7 @@ import {
   matchAnnouncementRegion,
   type AlertRegionTarget,
 } from "@/lib/alerts/region-value";
-import { weekLabelOf } from "@/lib/newui/digest";
+import { weekLabelOf } from "@/lib/newui/week-label";
 import type {
   PersonalDigest,
   PersonalDigestApply,
@@ -343,11 +344,7 @@ async function buildInner(
   const txNames = uniqNames([...watchRefs.map((r) => r.name), ...noteRefs.map((r) => r.name)], MAX_TX_NAMES);
   let txRows: TxRow[] | null = null;
   if (txNames.length > 0) {
-    const fromYm = (() => {
-      const d = new Date(opts.now.getTime());
-      d.setMonth(d.getMonth() - 1);
-      return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
-    })();
+    const fromYm = ymMonthsBefore(currentYm(opts.now), 1); // [1055] 한국 달 · 31일 넘침 없음
     const { data, error } = await sb
       .from("market_transactions")
       .select("complex_name, region_name, deal_amount_krw, contract_ym, created_at, area_m2, floor")

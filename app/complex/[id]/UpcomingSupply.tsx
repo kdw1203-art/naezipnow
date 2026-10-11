@@ -1,5 +1,6 @@
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import { loadUpcomingSupply, withSectionBudget } from "./section-loaders";
+import { currentYm } from "@/lib/format/ym";
 
 /* [948→949] 지역 키 6시간 데이터 캐시 + 요청 내 프리페치 dedupe — 둘 다
    section-loaders.ts 에 있다(실패는 던져서 캐시에 남지 않는다; 아래 .catch 가
@@ -14,11 +15,7 @@ function fmtYm(ym: string): string {
   return s.length === 6 ? `${s.slice(0, 4)}.${s.slice(4)}` : s;
 }
 
-/** 현재 달(YYYYMM) 이상만 향후 공급으로 간주. */
-function currentYm(): string {
-  const d = new Date();
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
+/* [1055] 현재 달은 한국 달(lib/format/ym) — 서버(UTC) 달이면 매월 1일 00~09시(KST)에 지난달 입주가 "향후"로 분류되고 ISR 7일에 남았다 */
 
 export async function UpcomingSupply({
   area,

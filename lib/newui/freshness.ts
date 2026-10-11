@@ -17,6 +17,7 @@
  */
 import "server-only";
 import { getReadOnlySupabase } from "./supabase-read";
+import { formatKstDate } from "@/lib/format/kst";
 
 const TTL_MS = 3600_000; // 성공값 1h
 const RETRY_MS = 60_000; // 실패 후 재시도 간격
@@ -45,11 +46,9 @@ export async function getMarketFreshnessDateLabel(): Promise<string | null> {
         .order("created_at", { ascending: false })
         .limit(1);
       if (!error && data && data.length > 0) {
-        const d = new Date(String(data[0].created_at));
-        if (!Number.isNaN(d.getTime())) {
-          const p = (n: number) => String(n).padStart(2, "0");
-          value = `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}`;
-        }
+        /* [1055] 한국 날짜 — 예전 getDate 는 UTC 라 새벽(05:00 KST) 적재가 전날로 적혔다 */
+        const label = formatKstDate(String(data[0].created_at));
+        if (label) value = label;
       }
     }
   } catch {

@@ -14,6 +14,7 @@ import { decodeComplexId } from "@/lib/complex/complex-store";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { applyRateLimit, READ_RATE_LIMIT } from "@/lib/rate-limit";
 import { logger } from "@/lib/log";
+import { currentYm, ymMonthsBefore } from "@/lib/format/ym";
 
 export const runtime = "nodejs";
 
@@ -49,11 +50,9 @@ export type ComplexCompareItem = {
   } | null;
 };
 
-function ymMonthsAgo(months: number): string {
-  const d = new Date();
-  d.setDate(1);
-  d.setMonth(d.getMonth() - months);
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+/* [1055] 창은 이번 달 포함 n 개 캘린더 월(한국 달) — 예전 ymMonthsAgo(12) 는 13개월, (6)은 7개월이었고 UTC 달이었다 */
+function windowFromYm(months: number): string {
+  return ymMonthsBefore(currentYm(), months - 1);
 }
 
 export async function POST(req: NextRequest) {
@@ -73,8 +72,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "데이터 소스 미설정" }, { status: 503 });
   }
 
-  const from12m = ymMonthsAgo(12);
-  const from6m = ymMonthsAgo(6);
+  const from12m = windowFromYm(12);
+  const from6m = windowFromYm(6);
 
   const items: ComplexCompareItem[] = await Promise.all(
     ids.map(async (id): Promise<ComplexCompareItem> => {
@@ -92,7 +91,8 @@ export async function POST(req: NextRequest) {
       };
       if (!dec) return empty;
 
-      const { data, error } = await sb
+      /* [1055] 12개월 건수는 세어서(exact) — 예전엔 `.limit(300)` 뒤 rows.length 라 대단지는 정확히 "300건"으로 보였다 */
+      const rowQ = sb
         .from("market_transactions")
         .select("area_m2, deal_amount_krw, contract_ym, floor")
         .eq("complex_name", dec.name)
@@ -104,7 +104,18 @@ export async function POST(req: NextRequest) {
         .gte("contract_ym", from12m)
         .order("contract_ym", { ascending: false })
         .order("contract_day", { ascending: false, nullsFirst: false })
-        .limit(300);
+        .limit(1000);
+      const cntQ = sb
+        .from("market_transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("complex_name", dec.name)
+        .eq("region_name", dec.region)
+        .eq("transaction_type", "trade")
+        .eq("property_type", "apartment")
+        .eq("is_cancelled", false)
+        .gt("deal_amount_krw", 0)
+        .gte("contract_ym", from12m);
+      const [{ data, error }, cnt] = await Promise.all([rowQ, cntQ]);
       const rows = (data as TxRow[] | null) ?? [];
       /* [1008 · Q] 못 읽은 것과 없는 것은 다른 사실 — 실패는 표식을 달아 보낸다 */
       if (error) {
@@ -112,6 +123,7 @@ export async function POST(req: NextRequest) {
         return { ...empty, failed: true };
       }
       if (rows.length === 0) return empty;
+      const count12m = !cnt.error && typeof cnt.count === "number" ? Math.max(cnt.count, rows.length) : rows.length;
 
       const recent6 = rows.filter((r) => r.contract_ym >= from6m);
       const avg = (xs: number[]) =>
@@ -130,7 +142,7 @@ export async function POST(req: NextRequest) {
         avg6mKrw: avg6mKrw === null ? null : Math.round(avg6mKrw),
         avgPyeong6mKrw: perPyeong.length ? Math.round(avg(perPyeong) ?? 0) : null,
         count6m: recent6.length,
-        count12m: rows.length,
+        count12m,
         latest: {
           ym: String(latest.contract_ym),
           amountKrw: Number(latest.deal_amount_krw),

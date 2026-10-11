@@ -16,6 +16,9 @@ import type { UiPrefsPatch } from "@/lib/me/ui-prefs-request";
 import { formatKstDateTime } from "@/lib/format/kst";
 import { shouldShowSaveToast } from "./save-toast";
 
+/** 서버 응답의 오류 문구(사용자에게 보여도 되는 것) — 네트워크 예외와 구분 */
+class ServerMessage extends Error {}
+
 /**
  * [1006] 설정 › 기록 — 표시·기록 기본값(UiPrefs).
  *
@@ -73,7 +76,8 @@ export function RecordPrefsTab({ onGoNotification }: { onGoNotification: () => v
           body: JSON.stringify({ uiPrefs: patch }),
         });
         const data = (await res.json().catch(() => ({}))) as { uiPrefs?: UiPrefs; error?: string };
-        if (!res.ok || !data.uiPrefs) throw new Error(data.error ?? "저장 실패");
+        /* [1055] 서버가 준 문구만 화면에 — fetch 의 TypeError("Failed to fetch")가 그대로 띠에 찍히지 않게 표식을 붙인다 */
+        if (!res.ok || !data.uiPrefs) throw new ServerMessage(data.error ?? "저장 실패");
         setPrefs(data.uiPrefs);
         /* 쿠키는 서버가 받아 준 값으로 — 요청값이 아니라 저장된 값을 거울로 둔다 */
         if (patch.areaUnit !== undefined) writeAreaUnitCookie(data.uiPrefs.areaUnit);
@@ -85,9 +89,7 @@ export function RecordPrefsTab({ onGoNotification }: { onGoNotification: () => v
       } catch (e) {
         setPrefs(prev);
         setSaveError(
-          e instanceof Error && e.message !== "저장 실패"
-            ? e.message
-            : "저장 실패 · 잠시 후 다시",
+          e instanceof ServerMessage && e.message !== "저장 실패" ? e.message : "저장 실패 · 잠시 후 다시",
         );
       } finally {
         setBusyKey(null);

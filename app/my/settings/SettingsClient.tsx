@@ -342,7 +342,7 @@ function usePrefs() {
         }
       } catch {
         setPrefs((p) => (p ? { ...p, [key]: prev } : p));
-        setSaveError("저장하지 못했어요. 잠시 후 다시 눌러 주세요.");
+        setSaveError("저장 실패 · 잠시 후 다시");
       }
     },
     [prefs, showToast],
@@ -516,22 +516,27 @@ function usePrivacyConsents() {
 
   async function patch(partial: { marketing?: boolean; location?: boolean }) {
     setSaveError(null);
-    const res = await fetch("/api/me/consents", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(partial),
-    });
-    if (!res.ok) {
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      setSaveError(data.error ?? "저장에 실패했습니다.");
-      return;
+    /* [1055] 네트워크 실패(오프라인)를 잡는다 — 전엔 처리되지 않은 거부로 토글이 움직이지 않고 아무 말도 없었다 */
+    try {
+      const res = await fetch("/api/me/consents", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(partial),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setSaveError(data.error ?? "동의 저장 실패 · 잠시 후 다시");
+        return;
+      }
+      const data = (await res.json()) as {
+        consents?: { marketing?: boolean; location?: boolean; updatedAt?: string | null };
+      };
+      if (typeof data.consents?.marketing === "boolean") setMarketing(data.consents.marketing);
+      if (typeof data.consents?.location === "boolean") setLocation(data.consents.location);
+      if (data.consents?.updatedAt !== undefined) setUpdatedAt(data.consents.updatedAt ?? null);
+    } catch {
+      setSaveError("동의 저장 실패 · 잠시 후 다시");
     }
-    const data = (await res.json()) as {
-      consents?: { marketing?: boolean; location?: boolean; updatedAt?: string | null };
-    };
-    if (typeof data.consents?.marketing === "boolean") setMarketing(data.consents.marketing);
-    if (typeof data.consents?.location === "boolean") setLocation(data.consents.location);
-    if (data.consents?.updatedAt !== undefined) setUpdatedAt(data.consents.updatedAt ?? null);
   }
 
   return { phase, marketing, location, updatedAt, saveError, patch };
@@ -866,7 +871,7 @@ function DeleteAccountSection() {
         purgeAfter?: string;
       };
       if (!res.ok) {
-        setError(data.error ?? "탈퇴 요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data.error ?? "탈퇴 요청 실패 · 잠시 후 다시");
         return;
       }
       const when = data.purgeAfter

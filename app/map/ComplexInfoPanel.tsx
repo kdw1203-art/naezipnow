@@ -524,6 +524,17 @@ export function ComplexInfoPanel({
     setAreaUnit(readAreaUnitCookie());
   }, []);
 
+  /* [1055] role=dialog — Esc 로 닫고 열리면 초점을 시트 안으로(전엔 지도 뒤에 초점이 남았다) */
+  const sheetRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    sheetRef.current?.focus();
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
@@ -754,7 +765,11 @@ export function ComplexInfoPanel({
           지도 딤과 겹쳐, backdrop-filter 가 약한 환경에서 패널이 탁한 어둠으로
           렌더돼 "보기가 힘들다". 시트/모달은 불투명이 정답 — bg-surface 로 고정해
           어떤 GPU·브라우저에서도 같은 흰 패널을 보장한다. */}
-      <aside className="rise-in relative z-10 flex max-h-[min(94dvh,960px)] w-full max-w-[820px] flex-col overflow-hidden rounded-t-3xl bg-surface shadow-[0_28px_70px_rgba(16,28,54,.34)] sm:rounded-3xl">
+      <aside
+        ref={sheetRef}
+        tabIndex={-1}
+        className="rise-in relative z-10 flex max-h-[min(94dvh,960px)] w-full max-w-[820px] flex-col overflow-hidden rounded-t-3xl bg-surface shadow-[0_28px_70px_rgba(16,28,54,.34)] outline-none sm:rounded-3xl"
+      >
         {/* 머리글 — 이름·주소·요약 한 줄 (핵심 숫자 4칸은 스크롤 본문 맨 위) */}
         <div className="relative border-b border-[rgba(16,28,54,.06)] bg-primary-soft px-5 pb-3.5 pt-4">
           <div className="flex items-start justify-between gap-2">

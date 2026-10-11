@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { readAuthedHint } from "@/lib/auth/authed-hint";
+import { useScrollLockLazy } from "@/lib/client/use-scroll-lock-lazy";
 
 /**
  * A1 — 첫 방문 코치마크 투어.
@@ -197,13 +198,21 @@ export function CoachmarkTour({
   );
 
   // ESC 로 닫기 — 모달 a11y 관례
+  /* [1055] 스크롤 잠금 + 초점을 말풍선 안으로(전엔 안내가 떠 있어도 초점이 뒤 화면에 남아 Tab 이 안내를 건너뛰었다) */
+  useScrollLockLazy(active, { markModal: true });
+  const bubbleRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!active) return;
+    const restoreTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    bubbleRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") finish("skip");
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      restoreTo?.focus?.();
+    };
   }, [active, finish]);
 
   if (!active || !step) return null;
@@ -257,8 +266,10 @@ export function CoachmarkTour({
       )}
 
       <div
+        ref={bubbleRef}
+        tabIndex={-1}
         /* [1012 · 규칙 1·2] 8px + 1px 선 + --shadow-lg(플로팅은 허용 자리) — 예전 44px/28% 그림자 */
-        className="absolute w-[280px] rounded-lg border border-line bg-surface p-4 [box-shadow:var(--shadow-lg)]"
+        className="absolute w-[280px] rounded-lg border border-line bg-surface p-4 outline-none [box-shadow:var(--shadow-lg)]"
         style={
           centered
             ? { top: "50%", left: "50%", transform: "translate(-50%,-50%)" }

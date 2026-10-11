@@ -113,10 +113,15 @@ export function ListingForm() {
     setGeoMsg(null);
     try {
       const res = await fetch(`/api/map/geocode?q=${encodeURIComponent(q)}`);
-      const data = (await res.json().catch(() => ({}))) as { items?: GeocodeItem[] };
+      const data = (await res.json().catch(() => ({}))) as { items?: GeocodeItem[]; error?: string };
+      /* [1055] 서비스 장애(502/503)와 "결과 없음"을 가른다 — 전엔 둘 다 "결과 없음"이라 주소를 계속 고쳐 쳤다 */
+      if (!res.ok) {
+        setGeoMsg("주소 검색 실패 · 잠시 후 다시");
+        return;
+      }
       const hit = data.items?.[0];
       if (!hit) {
-        setGeoMsg("검색 결과 없음 · 도로명·지번 주소로 다시 시도해 주세요.");
+        setGeoMsg("검색 결과 없음 · 도로명·지번 주소로 다시");
         return;
       }
       setCenter({ lat: hit.lat, lng: hit.lng });
@@ -125,7 +130,7 @@ export function ListingForm() {
       setPicked({ address: hit.address, lat: hit.lat, lng: hit.lng });
       autoRegion(hit.address);
     } catch {
-      setGeoMsg("주소 검색 중 오류가 발생했어요.");
+      setGeoMsg("주소 검색 실패 · 잠시 후 다시");
     } finally {
       setGeoBusy(false);
     }
@@ -139,15 +144,19 @@ export function ListingForm() {
     try {
       const res = await fetch(`/api/map/geocode?lat=${c.lat}&lng=${c.lng}`);
       const data = (await res.json().catch(() => ({}))) as { items?: GeocodeItem[] };
+      if (!res.ok) {
+        setGeoMsg("주소 변환 실패 · 잠시 후 다시");
+        return;
+      }
       const hit = data.items?.[0];
       if (!hit) {
-        setGeoMsg("이 위치의 주소를 찾지 못했어요. 지도를 조금 옮겨 다시 시도해 주세요.");
+        setGeoMsg("이 위치의 주소 없음 · 지도를 조금 옮겨 다시");
         return;
       }
       setPicked({ address: hit.address, lat: c.lat, lng: c.lng });
       autoRegion(hit.address);
     } catch {
-      setGeoMsg("주소 변환 중 오류가 발생했어요.");
+      setGeoMsg("주소 변환 실패 · 잠시 후 다시");
     } finally {
       setGeoBusy(false);
     }
@@ -189,7 +198,7 @@ export function ListingForm() {
             prev.includes(url) ? prev : [...prev, url].slice(0, MAX_PHOTOS),
           );
         } catch {
-          setPhotoError("사진 업로드 중 네트워크 오류가 발생했어요.");
+          setPhotoError("사진 올리기 실패 · 잠시 후 다시");
         }
       }
     } finally {
@@ -256,7 +265,7 @@ export function ListingForm() {
       setDetailFieldsSaved(data.detailFieldsSaved !== false);
       setDone(true);
     } catch {
-      setError("네트워크 오류가 발생했어요. 잠시 후 다시 시도해 주세요.");
+      setError("매물 등록 실패 · 잠시 후 다시");
     } finally {
       setSubmitting(false);
     }

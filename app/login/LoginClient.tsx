@@ -150,9 +150,9 @@ const AUTH_ERROR_COPY: Record<string, string> = {
   AccessDenied: "로그인이 거부됐어요. 계정 상태를 확인하거나 다른 방법으로 시도해 주세요.",
   OAuthAccountNotLinked:
     "같은 이메일로 다른 방법으로 가입된 계정이 있어요. 처음 가입한 방법으로 로그인해 주세요.",
-  OAuthSignin: "소셜 로그인을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.",
-  OAuthCallback: "소셜 로그인 응답을 확인하지 못했어요. 다시 시도해 주세요.",
-  OAuthCreateAccount: "소셜 계정으로 회원을 만들지 못했어요. 잠시 후 다시 시도해 주세요.",
+  OAuthSignin: "소셜 로그인 시작 실패 · 잠시 후 다시",
+  OAuthCallback: "소셜 로그인 응답 확인 실패 · 다시 시도",
+  OAuthCreateAccount: "소셜 계정 가입 실패 · 잠시 후 다시",
   Callback: "로그인 처리 중 문제가 생겼어요. 다시 시도해 주세요.",
   CredentialsSignin: "이메일 또는 비밀번호가 맞지 않아요.",
   SessionRequired: "이 화면 · 로그인 필요",
@@ -353,7 +353,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
       if (!res.ok || data.resent === false) {
         setResendState("failed");
         setResendNote(
-          data.error ?? data.message ?? "인증 메일을 다시 보내지 못했어요. 잠시 후 다시 시도해 주세요.",
+          data.error ?? data.message ?? "인증 메일 재발송 실패 · 잠시 후 다시",
         );
         return;
       }
@@ -363,7 +363,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
       setResendUntil(Date.now() + RESEND_COOLDOWN_SEC * 1000);
     } catch {
       setResendState("failed");
-      setResendNote("네트워크 오류가 발생했어요.");
+      setResendNote("인증 메일 재발송 실패 · 잠시 후 다시");
     }
   }
 
@@ -431,7 +431,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
       }
       setError("로그인 실패 · 잠시 후 다시");
     } catch {
-      setError("네트워크 오류가 발생했어요.");
+      setError("로그인 실패 · 잠시 후 다시");
     } finally {
       setBusy(null);
     }

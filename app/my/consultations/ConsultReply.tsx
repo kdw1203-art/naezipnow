@@ -42,15 +42,16 @@ export function ConsultReply({
       });
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!res.ok || !json.ok) {
-        setError(json.error ?? "답변 등록 실패");
-        setBusy(false);
+        setError(json.error ?? "답변 등록 실패 · 잠시 후 다시");
         return;
       }
       showToast("답변을 등록했어요");
       setOpen(false);
       router.refresh();
     } catch {
-      setError("네트워크 오류로 답변을 등록하지 못했어요.");
+      setError("답변 등록 실패 · 잠시 후 다시");
+    } finally {
+      /* [1055] 성공 길에서도 busy 를 푼다 — 전엔 등록 뒤 "답변 수정"을 열면 단추가 "등록 중…"으로 영영 잠겼다(router.refresh 는 상태를 안 지운다) */
       setBusy(false);
     }
   }

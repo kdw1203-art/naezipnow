@@ -305,6 +305,7 @@ async function loadHomeDataInternal(): Promise<HomeData> {
         scheduledAt: sched,
         scheduleLabel: sched
           ? new Date(sched).toLocaleDateString("ko-KR", {
+              timeZone: "Asia/Seoul", // [1055] 서버 UTC 로는 밤 모임이 전날로 적혔다
               month: "2-digit",
               day: "2-digit",
               weekday: "short",

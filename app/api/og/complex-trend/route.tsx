@@ -5,6 +5,7 @@
  * 차트 없이 단지명 카드로 폴백(없는 추세를 그리지 않는다).
  */
 import { ImageResponse } from "next/og";
+import { currentYm, ymMonthsBefore } from "@/lib/format/ym";
 import { OG_DYNAMIC_CACHE_CONTROL } from "@/lib/og/cache";
 import { NextRequest } from "next/server";
 import { OG_SIZE } from "@/lib/og/theme";
@@ -23,11 +24,8 @@ type Pt = { ym: string; avg: number };
 async function loadSeries(region: string, name: string): Promise<Pt[]> {
   const sb = getServiceSupabase();
   if (!sb) return [];
-  const from = (() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - 23);
-    return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
-  })();
+  const from = ymMonthsBefore(currentYm(), 23); // [1055] 한국 달 · 31일 넘침 없음(예전 setMonth 는 10/31 에 첫 막대가 빠졌다)
+  /* [1055] 최신 달부터 정렬 — 정렬 없는 limit 은 PostgREST 상한(1,000행)에서 임의로 잘려 거래 많은 단지의 달이 비었다 */
   const { data, error } = await sb
     .from("market_transactions")
     .select("contract_ym, deal_amount_krw")
@@ -37,7 +35,8 @@ async function loadSeries(region: string, name: string): Promise<Pt[]> {
     .eq("is_cancelled", false)
     .gte("contract_ym", from)
     .not("deal_amount_krw", "is", null)
-    .limit(2000);
+    .order("contract_ym", { ascending: false })
+    .limit(1000);
   if (error || !data) return [];
   const byYm = new Map<string, { s: number; n: number }>();
   for (const r of data) {

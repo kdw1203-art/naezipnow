@@ -104,7 +104,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toast && (
           <div
             key={toast.id}
-            role="status"
+            /* [1055] 바깥 aria-live 가 이미 읽어 준다 — 안쪽 role="status"(또 하나의 라이브 영역)는 일부 스크린리더가 두 번 읽었다 */
             data-leaving={toast.leaving ? "true" : "false"}
             className="toast pointer-events-auto flex max-w-[calc(100vw-32px)] items-center gap-2.5 px-4 py-3 t-body font-semibold"
           >

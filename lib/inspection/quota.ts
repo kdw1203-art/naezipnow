@@ -3,6 +3,7 @@ import { monthlyLimitsAsPlanTiers } from "@/lib/subscriptions/access";
 import { normalizePlanToGate, type PlanTier } from "@/lib/subscriptions/access-gate";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
+import { currentYm } from "@/lib/format/ym";
 
 /* FEATURE_RULES.ai_inspection_note 에서 유도 — 한도 숫자의 단일 출처.
    예전엔 여기(free 3 · pro 20)와 access.ts(basic 2 · pro 30)가 서로 다른
@@ -20,9 +21,9 @@ export async function getUserPlanTier(email: string): Promise<PlanTier> {
   return normalizePlanToGate(profile.plan);
 }
 
+/* [1055] 한국 달 — 예전 getMonth 는 UTC 라 매월 1일 00~09시(KST)엔 지난달 한도가 그대로 막았다 */
 function currentYyyymm(): string {
-  const d = new Date();
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return currentYm();
 }
 
 /**

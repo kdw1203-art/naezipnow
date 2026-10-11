@@ -1,8 +1,10 @@
 import "server-only";
+import { currentYm, ymMonthsBefore } from "@/lib/format/ym";
 
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { transactionNameCandidates } from "@/lib/market/store";
 import { logger } from "@/lib/log";
+import { readPaged } from "@/lib/supabase/read-paged";
 
 /* [#79] 월간 지역 리포트 — /region/[id]/report/[ym] 의 데이터 계층.
  *
@@ -66,13 +68,13 @@ export function lastCompletedYm(nowMs: number = Date.now()): string {
 
 /** 최근 n개 완결 월 (최신 먼저), "yyyy-mm" 슬러그 배열 */
 export function recentReportSlugs(n = 12): string[] {
+  /* [1055] 한국 달 기준(lastCompletedYm 과 같은 셈) — 서버 UTC 달이면 1일 새벽 재생성 때 새 완결 월이 목록에서 빠져 7일을 갔다 */
   const out: string[] = [];
-  const d = new Date();
+  const nowYm = currentYm();
   for (let i = 1; i <= n; i++) {
-    const t = new Date(d.getFullYear(), d.getMonth() - i, 1);
-    const slug = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}`;
-    if (`${t.getFullYear()}${String(t.getMonth() + 1).padStart(2, "0")}` < "202401") break;
-    out.push(slug);
+    const ym = ymMonthsBefore(nowYm, i);
+    if (ym < "202401") break;
+    out.push(`${ym.slice(0, 4)}-${ym.slice(4, 6)}`);
   }
   return out;
 }
@@ -121,19 +123,27 @@ export async function getRegionMonthlyReport(
     .eq("period_type", "monthly")
     .in("period", [ym, pym]);
 
-  const txQ = sb
-    .from("market_transactions")
-    .select("complex_name, area_m2, deal_amount_krw, contract_day")
-    .in("region_name", names)
-    .eq("transaction_type", "trade")
-    .eq("is_cancelled", false)
-    .eq("property_type", "apartment")
-    .eq("contract_ym", ym)
-    .not("deal_amount_krw", "is", null)
-    .order("deal_amount_krw", { ascending: false })
-    .limit(SAMPLE_CAP);
+  /* [1055] 끝까지 나눠 읽는다 — 예전 `.order(금액 desc).limit(3000)` 은 PostgREST 상한(1,000행)에서 잘려 거래 1,000건이 넘는
+     달(분당 2025-06 1,157건 · 남양주 2026-07 1,022건 · 동탄 2025-10·11)은 **비싼 쪽 1,000건**의 중앙값을 "중앙값"으로 적었고,
+     "N건 기준"은 1,000 에서 멈췄으며 (상한) 표시는 영원히 안 떴다. 정렬은 (금액 desc, id)로 유일하게. */
+  const txP = readPaged<{ complex_name: unknown; area_m2: unknown; deal_amount_krw: unknown; contract_day: unknown }>(
+    (from, to) =>
+      sb
+        .from("market_transactions")
+        .select("complex_name, area_m2, deal_amount_krw, contract_day")
+        .in("region_name", names)
+        .eq("transaction_type", "trade")
+        .eq("is_cancelled", false)
+        .eq("property_type", "apartment")
+        .eq("contract_ym", ym)
+        .not("deal_amount_krw", "is", null)
+        .order("deal_amount_krw", { ascending: false })
+        .order("id", { ascending: true })
+        .range(from, to),
+    SAMPLE_CAP,
+  );
 
-  const [monthlyR, seriesR, txR] = await Promise.allSettled([monthlyQ, seriesQ, txQ]);
+  const [monthlyR, seriesR, txR] = await Promise.allSettled([monthlyQ, seriesQ, txP]);
 
   const failures: string[] = [];
   let tradeCount: number | null = null;
@@ -180,10 +190,10 @@ export async function getRegionMonthlyReport(
   let medianDealKrw: number | null = null;
   let sampleCount = 0;
   let sampleTruncated = false;
-  if (txR.status === "fulfilled" && !txR.value.error) {
-    const rows = txR.value.data ?? [];
+  if (txR.status === "fulfilled") {
+    const rows = txR.value.rows;
     sampleCount = rows.length;
-    sampleTruncated = rows.length >= SAMPLE_CAP;
+    sampleTruncated = txR.value.truncated;
     topDeals = rows.slice(0, 5).map((r) => ({
       complexName: String(r.complex_name ?? "단지명 미상"),
       areaM2: r.area_m2 === null ? null : Number(r.area_m2),

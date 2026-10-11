@@ -21,14 +21,14 @@ export function CloseConsult({ expertId, consultationId }: { expertId: string; c
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        showToast(data.error ?? "마감하지 못했어요");
+        showToast(data.error ?? "상담 마감 실패 · 잠시 후 다시");
         setBusy(false);
         return;
       }
       showToast("상담을 마감했어요");
       router.refresh();
     } catch {
-      showToast("네트워크 오류가 발생했어요");
+      showToast("상담 마감 실패 · 잠시 후 다시");
       setBusy(false);
     }
   };

@@ -11,6 +11,8 @@ import "server-only";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { transactionNameCandidates } from "@/lib/market/store";
 import { logger } from "@/lib/log";
+import { currentYm, ymMonthsBefore } from "@/lib/format/ym";
+import { readPaged } from "@/lib/supabase/read-paged";
 import {
   rowToNonAptDeal,
   summarizeNonAptRent,
@@ -31,7 +33,7 @@ export {
 } from "@/lib/market/rent-nonapt-core";
 export type { AreaBandKey, NonAptPropertyType, NonAptRentDeal, NonAptRentStats, NonAptRentSummary } from "@/lib/market/rent-nonapt-core";
 
-/** 표본 상한 — PostgREST 응답 상한과 같은 자리. 닿으면 sampleTruncated */
+/** 표본 상한 — [1055] range 로 쪽을 나눠 읽으므로 PostgREST 상한(1,000)과 무관하게 여기까지 받는다. 닿으면 sampleTruncated */
 export const NONAPT_SAMPLE_CAP = 3000;
 
 export interface NonAptRentSnapshot extends NonAptRentSummary {
@@ -48,9 +50,9 @@ export interface NonAptRentSnapshot extends NonAptRentSummary {
   latestYm: string | null;
 }
 
+/* [1055] 한국 달 기준 — 예전 getUTCMonth 는 매월 1일 00~09시(KST)에 창과 라벨이 한 달 뒤로 밀렸다 */
 function ymMonthsAgo(n: number, now = new Date()): string {
-  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - n, 1));
-  return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  return ymMonthsBefore(currentYm(now), n);
 }
 
 /**
@@ -71,26 +73,32 @@ export async function getNonAptRentSnapshot(
   const toYm = ymMonthsAgo(0, now);
   const names = transactionNameCandidates(regionId, regionName);
 
-  let q = sb
-    .from("market_transactions")
-    .select("contract_ym,contract_day,property_type,address,area_m2,floor,deposit_krw,monthly_rent_krw,complex_name,build_year")
-    .in("region_name", names)
-    .eq("transaction_type", "rent")
-    .eq("property_type", opts.type)
-    .eq("is_cancelled", false)
-    .gte("contract_ym", fromYm)
-    .not("deposit_krw", "is", null)
-    .order("contract_ym", { ascending: false })
-    .order("contract_day", { ascending: false, nullsFirst: false })
-    .limit(NONAPT_SAMPLE_CAP);
-  if (signal) q = q.abortSignal(signal);
-  const { data, error } = await q;
-  if (error) {
-    logger.error(`[rent-nonapt] 조회 실패(${regionId}/${opts.type})`, error);
-    throw new Error(`market_transactions(rent · ${opts.type}) 조회 실패: ${error.message}`);
+  /* [1055] 끝까지 나눠 읽는다(PostgREST 상한 1,000행 · 예전 limit 3000 은 1,000에서 조용히 잘리고 상한 표시는 영원히 안 떴다) */
+  let paged: { rows: Record<string, unknown>[]; truncated: boolean };
+  try {
+    paged = await readPaged<Record<string, unknown>>((f, t) => {
+      let q = sb
+        .from("market_transactions")
+        .select("contract_ym,contract_day,property_type,address,area_m2,floor,deposit_krw,monthly_rent_krw,complex_name,build_year")
+        .in("region_name", names)
+        .eq("transaction_type", "rent")
+        .eq("property_type", opts.type)
+        .eq("is_cancelled", false)
+        .gte("contract_ym", fromYm)
+        .not("deposit_krw", "is", null)
+        .order("contract_ym", { ascending: false })
+        .order("contract_day", { ascending: false, nullsFirst: false })
+        .order("id", { ascending: true })
+        .range(f, t);
+      if (signal) q = q.abortSignal(signal);
+      return q;
+    }, NONAPT_SAMPLE_CAP);
+  } catch (e) {
+    logger.error(`[rent-nonapt] 조회 실패(${regionId}/${opts.type})`, e);
+    throw new Error(`market_transactions(rent · ${opts.type}) 조회 실패: ${e instanceof Error ? e.message : String(e)}`);
   }
   const deals: NonAptRentDeal[] = [];
-  for (const r of (data ?? []) as Record<string, unknown>[]) {
+  for (const r of paged.rows) {
     const d = rowToNonAptDeal(r);
     if (d) deals.push(d);
   }
@@ -106,7 +114,7 @@ export async function getNonAptRentSnapshot(
     toYm,
     periodLabel: `${fmt(fromYm)}~${fmt(toYm)}`,
     sampleCount: deals.length,
-    sampleTruncated: (data?.length ?? 0) >= NONAPT_SAMPLE_CAP,
+    sampleTruncated: paged.truncated,
     latestYm,
   };
 }

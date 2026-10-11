@@ -446,13 +446,24 @@ export function ComplexHubTabs({
           44px 로 넓힌다(globals.css `button.chip::after`, pointer: coarse). `.chip` 이
           font-weight 600 을 강제하므로 선택 탭의 700 은 `font-bold!` 로 지킨다. */}
       <div className="rise-in-2 flex flex-wrap gap-1.5 t-body" role="tablist" aria-label="단지 정보 탭">
-        {TABS.map((t) => (
+        {/* [1055] 탭 ↔ 판을 id 로 잇고(aria-controls/labelledby) ←/→ 로 옮긴다 — 전엔 role 만 있어 보조기기가 둘을 못 이었다 */}
+        {TABS.map((t, i) => (
           <button
             key={t}
             type="button"
             role="tab"
+            id={`hub-tab-${i}`}
             aria-selected={tab === t}
+            aria-controls="hub-tabpanel"
+            tabIndex={tab === t ? 0 : -1}
             onClick={() => setTab(t)}
+            onKeyDown={(e) => {
+              if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+              e.preventDefault();
+              const next = TABS[(i + (e.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length];
+              setTab(next);
+              document.getElementById(`hub-tab-${TABS.indexOf(next)}`)?.focus();
+            }}
             className={`chip px-3.5 py-2 transition-colors ${
               /* [970 · B-06] 네이비 탭 글자 text-surface → text-on-dark(다크에서 안 보였다) */
               tab === t
@@ -467,7 +478,7 @@ export function ComplexHubTabs({
 
       {/* ===== 요약 ===== */}
       {tab === "요약" && (
-        <div className="rise-in-3 flex flex-col gap-3" role="tabpanel">
+        <div className="rise-in-3 flex flex-col gap-3" id="hub-tabpanel" aria-labelledby={`hub-tab-${TABS.indexOf(tab)}`} role="tabpanel">
           {/* [1009 · C] 예전엔 "AI" 표식이 붙은 패널(AIPanel)이었는데 AI 가 쓴 글이 아니라 공공데이터를 규칙으로 이은
               문장이다 — AI 분석 결과 요약과 같은 이름("공공데이터 자동 계산")으로 적는다. */}
           <div className="card flex flex-col gap-1.5 rounded-lg px-[15px] py-3.5">
@@ -561,7 +572,7 @@ export function ComplexHubTabs({
 
       {/* ===== 이야기 (동네이야기 글) ===== */}
       {tab === "이야기" && (
-        <div className="rise-in-3 flex flex-col gap-2.5" role="tabpanel">
+        <div className="rise-in-3 flex flex-col gap-2.5" id="hub-tabpanel" aria-labelledby={`hub-tab-${TABS.indexOf(tab)}`} role="tabpanel">
           {notes.length === 0 && (
             <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
               {notesFailed ? (
@@ -606,7 +617,7 @@ export function ComplexHubTabs({
 
       {/* ===== 매물 ===== */}
       {tab === "매물" && (
-        <div className="rise-in-3 flex flex-col gap-2.5" role="tabpanel">
+        <div className="rise-in-3 flex flex-col gap-2.5" id="hub-tabpanel" aria-labelledby={`hub-tab-${TABS.indexOf(tab)}`} role="tabpanel">
           <div className="px-1 text-xs font-bold text-text-3">{listingsLabel}</div>
           {listings.length === 0 && (
             /* [1012 · 규칙 6] "확인해 보세요" → 사실만(다음 행동은 아래 버튼) */
@@ -646,7 +657,7 @@ export function ComplexHubTabs({
 
       {/* ===== 시세 ===== [968 · 4] 본문은 PriceTab.tsx(동적 청크) — 필터·정렬·전체 표 */}
       {tab === "실거래" && (
-        <div className="rise-in-3 flex flex-col gap-2.5" role="tabpanel">
+        <div className="rise-in-3 flex flex-col gap-2.5" id="hub-tabpanel" aria-labelledby={`hub-tab-${TABS.indexOf(tab)}`} role="tabpanel">
           <PriceTab
             trades={trades}
             deals={deals}
@@ -661,7 +672,7 @@ export function ComplexHubTabs({
 
       {/* ===== 내 기록 ===== [967 · 15] 실데이터 — 탭이 열릴 때 클라이언트가 읽는다 */}
       {tab === "내 기록" && (
-        <div className="rise-in-3 flex flex-col gap-2.5" role="tabpanel">
+        <div className="rise-in-3 flex flex-col gap-2.5" id="hub-tabpanel" aria-labelledby={`hub-tab-${TABS.indexOf(tab)}`} role="tabpanel">
           {complexId ? (
             <MyRecordsTab
               complexId={complexId}

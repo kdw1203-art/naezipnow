@@ -1,5 +1,6 @@
 import type { LiveToolContext } from "@/lib/ai/live-context";
 import { formatKrwWon } from "@/lib/format/krw";
+import { formatKstDate } from "@/lib/format/kst";
 
 /* ============================================================
    [944 · AI 대개편] 임장노트 AI 초안 — "쓰기 전에 절반을 채워 준다".
@@ -123,8 +124,7 @@ const BASE_TODOS = [
 ];
 
 function draftTitle(input: NoteDraftInput): string {
-  const d = new Date();
-  const dateLabel = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  const dateLabel = formatKstDate(Date.now()); // [1055] 한국 날짜(서버 UTC 로는 아침 초안 제목이 전날이었다)
   const target = input.aptName?.trim() || input.regionName.trim();
   return `${target} 임장노트 (${dateLabel})`;
 }

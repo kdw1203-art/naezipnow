@@ -1,6 +1,7 @@
 import "server-only";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
+import { kstDayStart, kstMonthStart } from "@/lib/subscriptions/usage-period";
 
 /** 적립합계 조회 상한(#32) — 닿으면 합계를 신뢰할 수 없으므로 던진다 */
 const EARNED_SINCE_LIMIT = 5_000;
@@ -183,9 +184,10 @@ export async function awardPoints(
       return { ok: false, awarded: 0, balance, reason: "already_ref" };
     }
     // 일/월 상한
+    /* [1055] 한국 하루·한국 달 — 서버 UTC 로는 09:00 KST 에 일·월 상한이 풀렸다 */
     const now = new Date();
-    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const dayStart = kstDayStart(now).toISOString();
+    const monthStart = kstMonthStart(now).toISOString();
     const [dayEarned, monthEarned] = await Promise.all([
       earnedSince(email, dayStart),
       earnedSince(email, monthStart),

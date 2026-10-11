@@ -323,6 +323,7 @@ export function CreatorClient(props: CreatorClientProps) {
           <button
             key={t}
             type="button"
+            aria-pressed={tab === t}
             onClick={() => setTab(t)}
             className={tab === t ? "chip-active" : "chip"}
           >

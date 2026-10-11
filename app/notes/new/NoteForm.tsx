@@ -1204,9 +1204,13 @@ export function NoteForm({
   );
   useUnsavedGuard(!saving && draftPending);
 
-  const loginHref = `/login?callbackUrl=${encodeURIComponent(
-    editId ? `/notes/${editId}/edit` : "/notes/new",
-  )}`;
+  /* [1055] 돌아올 주소에 쿼리까지(?apt=·?complexId=·?revisit=·?tpl=) — 전엔 /notes/new 만 넘겨 로그인 뒤 미리 채움·회차·템플릿이 사라졌다.
+     search 는 마운트 뒤에 읽는다(서버 렌더와 첫 렌더 일치). */
+  const loginBasePath = editId ? `/notes/${editId}/edit` : "/notes/new";
+  const [loginHref, setLoginHref] = useState(`/login?callbackUrl=${encodeURIComponent(loginBasePath)}`);
+  useEffect(() => {
+    setLoginHref(`/login?callbackUrl=${encodeURIComponent(loginBasePath + window.location.search)}`);
+  }, [loginBasePath]);
 
   /* #45 복구 배너용 드래프트 스냅샷 — [967 · 10] 수정 모드도(노트별 키) */
   const [pendingDraft, setPendingDraft] = useState<NoteDraft | null>(null);

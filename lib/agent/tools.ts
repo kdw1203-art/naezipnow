@@ -10,6 +10,7 @@
  * 시세 도구는 공개 실거래 집계만 읽는다.
  */
 import { listNotes, getNote, inspectionAverageScore } from "@/lib/inspection/store-db";
+import { currentYm, ymMonthsBefore } from "@/lib/format/ym";
 import {
   searchComplexes,
   decodeComplexId,
@@ -174,12 +175,8 @@ async function runGetComplexStats(complexId: string): Promise<ToolResult> {
   const sb = getServiceSupabase();
   if (!sb) return { label: "단지 통계 조회 실패", data: { error: "데이터 소스 미설정" } };
 
-  const ago = (m: number) => {
-    const d = new Date();
-    d.setDate(1);
-    d.setMonth(d.getMonth() - m);
-    return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
-  };
+  /* [1055] 한국 달 · 이번 달 포함 m 개월(예전엔 UTC 달 + m+1 개월) */
+  const ago = (m: number) => ymMonthsBefore(currentYm(), m - 1);
   const { data, error } = await sb
     .from("market_transactions")
     .select("area_m2, deal_amount_krw, contract_ym, floor")
@@ -224,8 +221,10 @@ async function runGetComplexStats(complexId: string): Promise<ToolResult> {
   const latest = rows[0];
   const bands = await getAreaBands(complexId);
 
+  /* [1055] 300건 상한에 닿으면 "이상"으로 — 모델이 "정확히 300건"을 사실로 말하지 않게 */
+  const capped = rows.length >= 300;
   return {
-    label: `단지 「${dec.name}」 실거래 ${rows.length}건 집계`,
+    label: `단지 「${dec.name}」 실거래 ${rows.length}건${capped ? " 이상" : ""} 집계`,
     data: {
       complex: dec.name,
       region: dec.region,
@@ -233,6 +232,7 @@ async function runGetComplexStats(complexId: string): Promise<ToolResult> {
       per_pyeong_6m_manwon: perPyeong !== null ? Math.round(perPyeong / 10_000) : null,
       count_6m: recent6.length,
       count_12m: rows.length,
+      count_12m_capped: capped,
       latest_deal: {
         ym: latest.contract_ym,
         amount: eok(Number(latest.deal_amount_krw)),

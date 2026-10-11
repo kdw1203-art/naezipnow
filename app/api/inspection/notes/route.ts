@@ -377,9 +377,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ note });
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "생성 실패" },
-      { status: 500 },
-    );
+    /* [1055] DB 원문(영문 PostgREST)을 화면에 내지 않는다 — 폼은 json.error 를 그대로 보여 준다. PATCH 와 같은 503 + Retry-After */
+    return dbUnavailable("inspection-note-create", e, "노트 저장 실패 · 잠시 후 다시");
   }
 }

@@ -59,7 +59,10 @@ export default function ForgotPasswordPage() {
     });
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) {
-      setError(res.status === 429 ? "요청 한도 초과 · 10분 뒤 다시" : (data.error ?? "메일 보내기 실패 · 잠시 후 다시"));
+      /* [1055] 기다릴 시간은 서버의 Retry-After 로 — "10분"을 박아 두면 실제 한도(응답 헤더)와 어긋난다 */
+      const retry = Number(res.headers.get("Retry-After") ?? "");
+      const wait = Number.isFinite(retry) && retry > 0 ? `${Math.max(1, Math.ceil(retry / 60))}분 뒤 다시` : "잠시 후 다시";
+      setError(res.status === 429 ? `요청 한도 초과 · ${wait}` : (data.error ?? "메일 보내기 실패 · 잠시 후 다시"));
       return false;
     }
     setResendUntil(Date.now() + RESEND_COOLDOWN_SEC * 1000);

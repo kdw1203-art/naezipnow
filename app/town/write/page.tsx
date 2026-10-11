@@ -256,7 +256,7 @@ function TownWriteForm() {
             prev.includes(data.url!) ? prev : [...prev, data.url!].slice(0, MAX_POST_IMAGES),
           );
         } catch {
-          setUploadError("사진 업로드 중 오류가 났어요. 잠시 후 다시 시도해 주세요.");
+          setUploadError("사진 올리기 실패 · 잠시 후 다시");
         } finally {
           setUploading((n) => Math.max(0, n - 1));
         }
@@ -304,6 +304,11 @@ function TownWriteForm() {
     }
     if (!city || !district) {
       setError("시·도와 시·군·구를 선택해 주세요.");
+      return;
+    }
+    /* [1055] 사진이 올라가는 중엔 등록을 막는다 — 전엔 바로 눌리면 올라가던 사진이 글에서 빠졌다(NoteForm 과 같은 규칙) */
+    if (uploading > 0) {
+      setError("사진 올리는 중 · 끝나면 등록");
       return;
     }
     setSubmitting(true);
@@ -376,7 +381,7 @@ function TownWriteForm() {
       );
       router.refresh();
     } catch {
-      setError("네트워크 오류가 발생했어요. 잠시 후 다시 시도해 주세요.");
+      setError("글 등록 실패 · 잠시 후 다시");
     } finally {
       setSubmitting(false);
     }
@@ -450,6 +455,7 @@ function TownWriteForm() {
               <button
                 key={c.id}
                 type="button"
+                aria-pressed={category === c.label}
                 onClick={() => setCategory(c.label)}
                 className={`chip px-3 py-[7px] t-sub ${
                   category === c.label
@@ -600,10 +606,10 @@ function TownWriteForm() {
           <button
             type="button"
             onClick={onSubmit}
-            disabled={submitting}
+            disabled={submitting || uploading > 0}
             className="btn-primary btn-cta flex-[2] rounded-lg p-3 text-center t-body disabled:opacity-60"
           >
-            {submitting ? "등록 중…" : "등록하기"}
+            {submitting ? "등록 중…" : uploading > 0 ? "사진 올리는 중…" : "등록하기"}
           </button>
         </div>
       </div>

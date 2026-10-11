@@ -18,6 +18,7 @@
  * 대조해서만 id 를 만든다(lib/market/tx-bands.ts 의 같은 원칙).
  */
 import { REGION_CATALOG } from "@/lib/region/catalog";
+import { currentYm, ymMonthsBefore } from "@/lib/format/ym";
 import { marketRegionNameCandidates } from "@/lib/market/region-name-candidates";
 
 /**
@@ -139,14 +140,13 @@ export function catalogIdsForNoteRegion(noteRegion: string): string[] {
  * 라우트 전체를 비우면 그런 달까지 stale 이 되어 크롤러가 올 때마다 다시 그린다.
  */
 export function recentReportMonths(n = 3, now: Date = new Date()): Array<{ ym: string; slug: string }> {
+  /* [1055] 한국 달 기준 — 서버 UTC 달이면 1일 00~09시(KST)엔 비울 달이 한 달 어긋났다 */
   const out: Array<{ ym: string; slug: string }> = [];
+  const nowYm = currentYm(now);
   for (let i = 1; i <= n; i += 1) {
-    const t = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const yyyy = String(t.getFullYear());
-    const mm = String(t.getMonth() + 1).padStart(2, "0");
-    const ym = `${yyyy}${mm}`;
+    const ym = ymMonthsBefore(nowYm, i);
     if (ym < "202401") break;
-    out.push({ ym, slug: `${yyyy}-${mm}` });
+    out.push({ ym, slug: `${ym.slice(0, 4)}-${ym.slice(4, 6)}` });
   }
   return out;
 }

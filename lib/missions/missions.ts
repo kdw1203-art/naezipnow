@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { kstParts } from "@/lib/format/kst";
 
 /* ============================================================
    [#119·#120] 미션 — 시작 3미션 + 주간 미션.
@@ -25,9 +26,15 @@ export type MissionState = {
   points: number;
 };
 
+/* [1055] 한국 날짜로 주를 센다 — 예전엔 서버(UTC) 날짜라 월요일 00~09시(KST)엔 지난주 키·지난주 시작이었다(이미 받은 주에 다시 셈) */
+function kstDateUtc(d: Date): Date {
+  const p = kstParts(d);
+  return p ? new Date(Date.UTC(p.year, p.month - 1, p.day)) : new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
 export function isoWeekKey(d = new Date()): string {
   // ISO 주차 (목요일 규칙) — apply 캘린더의 주 슬러그와 같은 계산 철학
-  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const t = kstDateUtc(d);
   const day = t.getUTCDay() || 7;
   t.setUTCDate(t.getUTCDate() + 4 - day);
   const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
@@ -36,11 +43,11 @@ export function isoWeekKey(d = new Date()): string {
 }
 
 function isoWeekStartIso(d = new Date()): string {
-  const t = new Date(d);
-  const day = t.getDay() || 7;
-  t.setDate(t.getDate() - day + 1);
-  t.setHours(0, 0, 0, 0);
-  return t.toISOString();
+  /* 한국 월요일 0시 = UTC 일요일 15:00 */
+  const t = kstDateUtc(d);
+  const day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() - day + 1);
+  return new Date(t.getTime() - 9 * 3_600_000).toISOString();
 }
 
 async function alreadyAwardedRef(

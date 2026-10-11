@@ -1,19 +1,30 @@
 import { encodingKeyForUrl } from "@/lib/public-data/data-go-kr-keys";
+import { kstParts } from "@/lib/format/kst";
 
 /** 서울 강남구 근처 격자 (임장 기본) */
 const DEFAULT_GRID = { nx: 61, ny: 126 };
 
+/* [1055] 기상청 발표 시각(02·05·…·23시)은 한국 시간이다 — 예전엔 서버(UTC) 시각으로 골라 늘 9시간 묵은 발표를 받고,
+   02~09시(KST)엔 전날 날짜라 전날 예보가 "오늘"로 붙었다. 발표 뒤 10분은 지나야 자료가 나오므로 그 전엔 직전 발표를 쓴다. */
 function latestBaseTime(): { baseDate: string; baseTime: string } {
-  const now = new Date();
+  const p = kstParts(Date.now());
+  const year = p?.year ?? new Date().getUTCFullYear();
+  const month = p?.month ?? new Date().getUTCMonth() + 1;
+  const day = p?.day ?? new Date().getUTCDate();
+  const hour = p?.hour ?? new Date().getUTCHours();
+  const minute = p?.minute ?? 0;
   const hours = [2, 5, 8, 11, 14, 17, 20, 23];
-  let h = hours[0];
-  for (const hour of hours) {
-    if (now.getHours() >= hour) h = hour;
+  let h: number | null = null;
+  for (const bh of hours) {
+    if (hour > bh || (hour === bh && minute >= 10)) h = bh;
   }
-  const d = new Date(now);
-  if (now.getHours() < 2) d.setDate(d.getDate() - 1);
+  let d = new Date(Date.UTC(year, month - 1, day));
+  if (h === null) {
+    h = 23;
+    d = new Date(d.getTime() - 86_400_000);
+  }
   return {
-    baseDate: `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`,
+    baseDate: `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`,
     baseTime: `${String(h).padStart(2, "0")}00`,
   };
 }

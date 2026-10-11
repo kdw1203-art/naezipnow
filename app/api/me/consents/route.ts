@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { dbUnavailable } from "@/lib/api/db-unavailable";
+import { logger } from "@/lib/log";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -94,7 +95,9 @@ export async function PATCH(req: Request) {
     .from("user_consents")
     .upsert(consentUpsert, { onConflict: "user_email" });
   if (cErr) {
-    return NextResponse.json({ error: cErr.message }, { status: 500 });
+    /* [1055] DB 원문(영문)을 화면에 내지 않는다 — 설정 탭이 error 를 그대로 띄운다 */
+    logger.errorSampled("me-consents", "[me/consents] user_consents 저장 실패", cErr);
+    return NextResponse.json({ error: "동의 저장 실패 · 잠시 후 다시" }, { status: 500 });
   }
 
   await sb.from("app_users").update(userPatch).eq("email", email);

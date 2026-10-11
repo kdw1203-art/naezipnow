@@ -133,6 +133,13 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
+  /* [1055] 서버 상한 — 화면은 제목 80자뿐이고 본문은 상한이 없어 fetch 로 수 MB 본문도 저장됐다 */
+  if (title.length > 80) {
+    return NextResponse.json({ error: "제목은 80자 안으로." }, { status: 400 });
+  }
+  if (content.length > 20_000) {
+    return NextResponse.json({ error: "본문은 20,000자 안으로." }, { status: 400 });
+  }
   if (!city || !district || !category) {
     return NextResponse.json(
       { error: "시·도, 시·군·구, 카테고리를 선택해 주세요." },

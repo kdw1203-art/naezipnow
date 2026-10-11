@@ -73,7 +73,8 @@ export default function ResetPasswordPage() {
       setMode("checking");
       fetch(`/api/auth/reset-password?token=${encodeURIComponent(qsToken)}`)
         .then((r) => {
-          if (r.status >= 500) throw new Error(`HTTP ${r.status}`);
+          /* [1055] 5xx 뿐 아니라 429(속도 제한)도 "링크가 틀렸다"가 아니다 — 200 의 valid:false 와 400(토큰 없음)만 invalid */
+          if (!r.ok && r.status !== 400) throw new Error(`HTTP ${r.status}`);
           return r.json() as Promise<{ valid?: boolean }>;
         })
         .then((d) => setMode(d.valid ? "token" : "invalid"))

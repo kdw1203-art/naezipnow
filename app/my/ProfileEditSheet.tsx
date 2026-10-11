@@ -106,7 +106,7 @@ export function ProfileEditSheet({ initial, variant = "hero", onSaved }: Profile
       setOpen(false);
       router.refresh();
     } catch {
-      setError("네트워크 오류가 발생했어요. 잠시 후 다시 시도해 주세요.");
+      setError("프로필 저장 실패 · 잠시 후 다시");
     } finally {
       setBusy(false);
     }

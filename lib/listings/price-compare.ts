@@ -5,6 +5,7 @@
  * 실거래(market_transactions)는 매매(trade)만 로드되므로 매매 매물에 한해 비교한다.
  * 데이터 미설정·부족 시 graceful 하게 null / 빈 배열 반환.
  */
+import { currentYm, ymMonthsBefore } from "@/lib/format/ym";
 import {
   listComplexTransactions,
   type ComplexTxRegion,
@@ -59,9 +60,7 @@ export function isSameAreaBand(a: number | null, b: number | null): boolean {
 
 /** 오늘 기준 (monthsBack-1)개월 전 yyyymm (해당 월 포함) */
 function recentCutoffYm(monthsBack = 12): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() - (monthsBack - 1));
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return ymMonthsBefore(currentYm(), monthsBack - 1); // [1055] 한국 달 · 31일 넘침 없음
 }
 
 /* ---------- 비교 대상 실거래 로드 ---------- */

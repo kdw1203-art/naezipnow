@@ -206,7 +206,8 @@ export function HistogramRangeSlider({
             aria-valuetext={format(v)}
             onPointerDown={onPointerDown(which)}
             onKeyDown={onKey(which)}
-            className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-[1.5px] border-primary bg-surface shadow-[0_2px_6px_rgba(16,28,54,.25)] focus:outline-none focus:ring-2 focus:ring-primary/40 active:cursor-grabbing"
+            /* [1055] 손잡이 그림은 16px 그대로, 히트는 가짜 요소로 28×28(폰에서 잡기 쉽게 · 두 손잡이가 가까워도 겹침은 6px 뿐) */
+            className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-[1.5px] border-primary bg-surface shadow-[0_2px_6px_rgba(16,28,54,.25)] after:absolute after:-inset-[6px] after:content-[''] focus:outline-none focus:ring-2 focus:ring-primary/40 active:cursor-grabbing"
             style={{ left: `${pct}%` }}
           />
         ))}

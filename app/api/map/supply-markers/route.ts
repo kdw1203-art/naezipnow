@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { currentYm } from "@/lib/format/ym";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { getCachedCoordMap, coordKey } from "@/lib/map/complex-geocode";
 import { dbUnavailable } from "@/lib/api/db-unavailable";
@@ -26,10 +27,7 @@ type SupplyMarker = {
   households: number | null;
 };
 
-function currentYm(): string {
-  const d = new Date();
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
+/* [1055] 현재 달은 한국 달(lib/format/ym · 서버 UTC 달이면 1일 새벽에 지난달 입주가 지도에 "예정"으로 남았다) */
 
 export async function GET() {
   const sb = getServiceSupabase();

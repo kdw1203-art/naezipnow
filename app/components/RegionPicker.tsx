@@ -219,35 +219,37 @@ export function RegionPicker({
           aria-expanded={open && list.length > 0}
           aria-controls={`${inputId}-listbox`}
           aria-autocomplete="list"
+          aria-activedescendant={open && cursor >= 0 && cursor < list.length ? `${inputId}-opt-${cursor}` : undefined}
           className="w-full rounded-lg border border-line bg-surface px-4 py-2.5 t-body text-ink outline-none focus:border-primary"
         />
+        {/* [1055] 상태 글(찾는 중·실패·없음)은 listbox 밖(role=status) — 보조기기가 선택지로 읽지 않게.
+            ↑↓ 자리는 aria-activedescendant 로 알리고(id), aria-selected 는 가리키는 자리, 이미 고른 것은 aria-checked. */}
         {open && query.trim() !== "" && (
-          <div
-            id={`${inputId}-listbox`}
-            role="listbox"
-            className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-[260px] overflow-y-auto rounded-lg border border-line bg-surface shadow-lg"
-          >
+          <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-[260px] overflow-y-auto rounded-lg border border-line bg-surface shadow-lg">
             {busy && list.length === 0 && (
-              <div className="px-4 py-3 t-sub text-text-3">찾는 중…</div>
+              <div role="status" className="px-4 py-3 t-sub text-text-3">찾는 중…</div>
             )}
             {!busy && failed && (
-              <div className="px-4 py-3 t-sub text-text-3">
+              <div role="status" className="px-4 py-3 t-sub text-text-3">
 지역 불러오기 실패 · 잠시 후 다시
               </div>
             )}
             {!busy && !failed && list.length === 0 && (
-              <div className="px-4 py-3 t-sub text-text-3">
-일치하는 시·군·구 없음 · 구 이름(예: 마포구)으로 다시 찾으면 돼요.
+              <div role="status" className="px-4 py-3 t-sub text-text-3">
+일치하는 시·군·구 없음 · 구 이름(예: 마포구)으로 다시 찾기
               </div>
             )}
+            <div id={`${inputId}-listbox`} role="listbox" aria-label="지역 선택지">
             {list.map((it, i) => {
               const active = value.includes(it.name);
               return (
                 <button
                   key={it.code}
+                  id={`${inputId}-opt-${i}`}
                   type="button"
                   role="option"
-                  aria-selected={active}
+                  aria-selected={i === cursor}
+                  aria-checked={active}
                   onMouseEnter={() => setCursor(i)}
                   onClick={() => {
                     toggle(it.name);
@@ -267,6 +269,7 @@ export function RegionPicker({
                 </button>
               );
             })}
+            </div>
           </div>
         )}
       </div>

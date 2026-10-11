@@ -449,8 +449,10 @@ function NotificationCard({
         </div>
       </div>
       {!isPoint && !item.read && (
-        /* 제목 첫 줄(21px)의 세로 중앙에 맞춘다 — (21-8)/2 ≈ 6.5 */
+        /* 제목 첫 줄(21px)의 세로 중앙에 맞춘다 — (21-8)/2 ≈ 6.5
+           [1055] 그림 역할 — 역할 없는 span 의 aria-label 은 읽히지 않아 "안 읽음"이 색뿐이었다 */
         <span
+          role="img"
           className="mt-[12px] h-2 w-2 shrink-0 rounded-full bg-primary"
           aria-label="안 읽음"
         />
@@ -676,6 +678,7 @@ export default function NotificationsPage() {
               <button
                 key={t.key}
                 type="button"
+                aria-pressed={active}
                 onClick={() => setTab(t.key)}
                 className={`chip whitespace-nowrap px-[13px] py-1.5 t-sub ${
                   active
@@ -690,6 +693,7 @@ export default function NotificationsPage() {
                 {/* 운영 탭에만 안 읽음 점 — 숫자 배지는 사용자 알림 몫이다 */}
                 {t.key === "운영" && mode === "live" && opsUnread > 0 && (
                   <span
+                    role="img"
                     aria-label={`안 읽은 점검 경보 ${opsUnread}건`}
                     className="ml-1 inline-block h-1.5 w-1.5 rounded-full align-middle"
                     style={{ background: "var(--danger)" }}

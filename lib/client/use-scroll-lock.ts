@@ -75,18 +75,24 @@ export function useScrollLock(active: boolean, opts?: { markModal?: boolean }): 
   const markModal = opts?.markModal ?? false;
   useEffect(() => {
     if (!active) return;
-    lock();
-    if (markModal) {
-      const depth = Number(document.body.dataset.modalOpen ?? "0") + 1;
-      document.body.dataset.modalOpen = String(depth);
-    }
-    return () => {
-      unlock();
-      if (markModal) {
-        const next = Number(document.body.dataset.modalOpen ?? "1") - 1;
-        if (next > 0) document.body.dataset.modalOpen = String(next);
-        else delete document.body.dataset.modalOpen;
-      }
-    };
+    return acquireScrollLock({ markModal });
   }, [active, markModal]);
+}
+
+/** [1055] 훅 밖에서 쓰는 꼴 — 잠그고 푸는 함수를 돌려준다(늦게 받는 쪽(use-scroll-lock-lazy)이 import() 뒤에 부른다) */
+export function acquireScrollLock(opts?: { markModal?: boolean }): () => void {
+  const markModal = opts?.markModal ?? false;
+  lock();
+  if (markModal) {
+    const depth = Number(document.body.dataset.modalOpen ?? "0") + 1;
+    document.body.dataset.modalOpen = String(depth);
+  }
+  return () => {
+    unlock();
+    if (markModal) {
+      const next = Number(document.body.dataset.modalOpen ?? "1") - 1;
+      if (next > 0) document.body.dataset.modalOpen = String(next);
+      else delete document.body.dataset.modalOpen;
+    }
+  };
 }

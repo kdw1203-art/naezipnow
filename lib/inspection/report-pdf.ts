@@ -2,6 +2,7 @@ import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import type { StructuredReport } from "@/lib/inspection/ontology";
 import type { PdfBranding } from "@/lib/inspection/pdf-branding";
+import { formatKstDate } from "@/lib/format/kst";
 
 const FONT_URL =
   "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/OTF/Korean/NotoSansCJKkr-Regular.otf";
@@ -121,7 +122,7 @@ export async function buildInspectionReportPdf(opts: {
   }
 
   ctx = drawLines(ctx, title, 18, 6);
-  const dateStr = new Date(startedAt).toLocaleDateString("ko-KR");
+  const dateStr = formatKstDate(startedAt); // [1055] 한국 날짜(서버 UTC 로는 새벽 방문이 전날로 찍혔다)
   const meta = [region, dateStr, branding?.authorLabel].filter(Boolean).join(" · ");
   ctx = drawLines(ctx, meta, 10, 8);
   ctx = drawLines(ctx, `종합 ${report.scores.overall}점`, 14, 10);

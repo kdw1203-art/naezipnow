@@ -3,6 +3,8 @@ import "server-only";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { transactionNameCandidates } from "@/lib/market/store";
 import { logger } from "@/lib/log";
+import { currentYm, ymMonthsBefore } from "@/lib/format/ym";
+import { readPaged } from "@/lib/supabase/read-paged";
 
 /* [#52, 2026-08-23] 지역 페이지 평형대별 시세 섹션용 경량 로더.
  * "강남구 30평대 시세" 류 검색 수요를 지역 페이지 안에서 받는다(새 URL 없음).
@@ -40,10 +42,9 @@ function median(sorted: number[]): number {
   return sorted.length % 2 === 1 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
 }
 
+/* [1055] 한국 달 · 넘침 없음(예전 setMonth 는 31일에 두 달 창, 1일 새벽엔 전달 기준) */
 function ymMonthsAgo(n: number): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() - n);
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return ymMonthsBefore(currentYm(), n);
 }
 
 export async function getRegionTradeAreaBands(
@@ -54,24 +55,31 @@ export async function getRegionTradeAreaBands(
   const sb = getServiceSupabase();
   if (!sb) return null;
   const from3 = ymMonthsAgo(2);
-  let q = sb
-    .from("market_transactions")
-    .select("deal_amount_krw, area_m2")
-    .in("region_name", transactionNameCandidates(regionId, regionName))
-    .eq("transaction_type", "trade")
-    .eq("is_cancelled", false)
-    .eq("property_type", "apartment")
-    .gte("contract_ym", from3)
-    .not("deal_amount_krw", "is", null)
-    .not("area_m2", "is", null)
-    .limit(CAP);
-  if (signal) q = q.abortSignal(signal);
-  const { data, error } = await q;
-  if (error) {
-    logger.error(`[area-bands] 조회 실패(${regionId})`, error);
-    throw new Error(`market_transactions(면적대) 조회 실패: ${error.message}`);
+  /* [1055] 끝까지 나눠 읽는다 — `.limit(4000)` 은 PostgREST 상한(1,000행)에서 잘려 큰 구의 3개월 매매 표본이 임의의 1,000행이었다 */
+  let paged: { rows: Array<Record<string, unknown>>; truncated: boolean };
+  try {
+    paged = await readPaged<Record<string, unknown>>((f, t) => {
+      let q = sb
+        .from("market_transactions")
+        .select("deal_amount_krw, area_m2")
+        .in("region_name", transactionNameCandidates(regionId, regionName))
+        .eq("transaction_type", "trade")
+        .eq("is_cancelled", false)
+        .eq("property_type", "apartment")
+        .gte("contract_ym", from3)
+        .not("deal_amount_krw", "is", null)
+        .not("area_m2", "is", null)
+        .order("contract_ym", { ascending: false })
+        .order("id", { ascending: true })
+        .range(f, t);
+      if (signal) q = q.abortSignal(signal);
+      return q;
+    }, CAP);
+  } catch (e) {
+    logger.error(`[area-bands] 조회 실패(${regionId})`, e);
+    throw new Error(`market_transactions(면적대) 조회 실패: ${e instanceof Error ? e.message : String(e)}`);
   }
-  const rows = (data ?? []) as Array<Record<string, unknown>>;
+  const rows = paged.rows;
   if (rows.length === 0) return null;
 
   const buckets = new Map<string, { prices: number[]; perPyeong: number[] }>();
@@ -108,7 +116,7 @@ export async function getRegionTradeAreaBands(
   return {
     bands,
     sampleCount: rows.length,
-    truncated: rows.length >= CAP,
+    truncated: paged.truncated,
     periodLabel: `${fmtYm(from3)}~${fmtYm(ymMonthsAgo(0))}`,
   };
 }

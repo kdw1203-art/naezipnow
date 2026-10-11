@@ -127,12 +127,12 @@ export function SupportContactForm({ supportEmail }: { supportEmail: string }) {
         ticketNo?: string | null;
       };
       if (!res.ok || !data.ok) {
-        setError(data.error ?? "접수하지 못했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data.error ?? "문의 접수 실패 · 잠시 후 다시");
         return;
       }
       setDone({ ticketNo: data.ticketNo ?? null });
     } catch {
-      setError("네트워크 오류가 발생했어요. 잠시 후 다시 시도해 주세요.");
+      setError("문의 접수 실패 · 잠시 후 다시");
     } finally {
       setBusy(false);
     }

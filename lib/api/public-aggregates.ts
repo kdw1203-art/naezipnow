@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getReadOnlySupabase } from "@/lib/newui/supabase-read";
+import { readPaged } from "@/lib/supabase/read-paged";
 
 /**
  * N20 — 공개 집계 JSON API 의 데이터 레이어.
@@ -183,18 +184,25 @@ function escapeLike(v: string): string {
 export async function listAvailableMonths(): Promise<MonthSummary[]> {
   /* PostgREST 는 GROUP BY 를 못 하므로 집계는 JS 에서 한다. 행이 지역×월이라
      (62 × 월수) 규모다 — 전국으로 늘어도 수천 행이라 한 번에 읽고 접어도 된다. */
-  const { data, error } = await client()
-    .from("market_region_monthly")
-    .select("month, transaction_count, updated_at")
-    .eq("deal_type", SCOPE.deal_type)
-    .eq("property_type", SCOPE.property_type)
-    .limit(20_000);
-
-  if (error) {
-    throw new Error(
-      `market_region_monthly 월 목록 조회 실패 — ${error.message}` +
-        `${error.code ? ` [${error.code}]` : ""}`,
+  /* [1055] 끝까지 나눠 읽는다 — `.limit(20_000)` 은 PostgREST 상한(1,000행)에서 잘려 3,552행(운영 실측) 중 임의의 1,000행으로
+     월별 지역 수·건수를 셌다(1009 가 /reports 목록에서 고친 것과 같은 결함). 정렬 (month, region_code)는 유일. */
+  let data: Array<{ month: unknown; transaction_count: unknown; updated_at: unknown }>;
+  try {
+    const r = await readPaged<{ month: unknown; transaction_count: unknown; updated_at: unknown }>(
+      (from, to) =>
+        client()
+          .from("market_region_monthly")
+          .select("month, transaction_count, updated_at")
+          .eq("deal_type", SCOPE.deal_type)
+          .eq("property_type", SCOPE.property_type)
+          .order("month", { ascending: false })
+          .order("region_code", { ascending: true })
+          .range(from, to),
+      20_000,
     );
+    data = r.rows;
+  } catch (e) {
+    throw new Error(`market_region_monthly 월 목록 조회 실패 — ${e instanceof Error ? e.message : String(e)}`);
   }
 
   const byMonth = new Map<string, MonthSummary>();

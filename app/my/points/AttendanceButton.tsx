@@ -84,6 +84,7 @@ export function AttendanceButton() {
       </button>
       {msg && (
         <div
+          role="status"
           className={`text-center text-[12px] font-bold ${
             msg.tone === "error"
               ? "text-ai-danger"

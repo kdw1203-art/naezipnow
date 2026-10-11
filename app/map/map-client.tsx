@@ -187,6 +187,7 @@ function ZoomTabButtons({ zoom, onSelect }: { zoom: Zoom; onSelect: (k: Zoom) =>
         <button
           key={t.key}
           type="button"
+          aria-pressed={zoom === t.key}
           onClick={() => onSelect(t.key)}
           className={`chip px-3 py-1.5 t-sub transition-colors ${
             zoom === t.key ? "bg-[rgba(29,79,216,.12)] font-bold text-primary" : "text-text-1"
@@ -307,6 +308,7 @@ function FilterChipGroup({
             <button
               key={o.key}
               type="button"
+              aria-pressed={active}
               onClick={() => onSelect(o.key)}
               className={`chip whitespace-nowrap px-2.5 py-1.5 t-sub transition-colors ${
                 active
@@ -880,6 +882,18 @@ export function MapClient({
   };
 
   const selected = danji.find((d) => d.id === selectedId) ?? null;
+
+  /* [1055] 단지 상세(role=dialog) — Esc 로 닫고, 열리면 초점을 패널 안으로. 전엔 둘 다 없어 키보드로 닫을 길이 없었다 */
+  const detailPanelRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelectedId(null);
+    };
+    window.addEventListener("keydown", onKey);
+    detailPanelRef.current?.focus();
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected]);
 
   /* ===== 검색 선택 · 단지 정보 패널 (item1·item2) =====
      infoComplex: 목록 밖 단지(검색/포인트)용 정보 패널 대상.
@@ -5516,7 +5530,11 @@ export function MapClient({
           />
           {/* ComplexInfoPanel 과 같은 판단(2026-08-16): 어두운 딤 위 반투명 시트는
               backdrop-filter 가 약한 환경에서 탁해진다 — 불투명 bg-surface 로 고정. */}
-          <aside className="rise-in relative z-10 flex max-h-[min(88dvh,860px)] w-full max-w-[860px] flex-col overflow-hidden rounded-3xl bg-surface shadow-[0_28px_70px_rgba(16,28,54,.32)]">
+          <aside
+            ref={detailPanelRef}
+            tabIndex={-1}
+            className="rise-in relative z-10 flex max-h-[min(88dvh,860px)] w-full max-w-[860px] flex-col overflow-hidden rounded-3xl bg-surface shadow-[0_28px_70px_rgba(16,28,54,.32)] outline-none"
+          >
           <div className="flex items-start justify-between border-b border-[rgba(16,28,54,.06)] px-[22px] pb-3.5 pt-5">
             <div>
               <div className="flex items-center gap-2">
@@ -5547,11 +5565,12 @@ export function MapClient({
               >
                 단지 홈 보기 ›
               </Link>
+              {/* [1055] 40×40 실상자 — 전엔 글자 크기(약 15px)뿐이라 폰에서 닫기 어려웠다 */}
               <button
                 type="button"
                 onClick={() => setSelectedId(null)}
                 aria-label="패널 닫기"
-                className="t-body text-text-3"
+                className="-mr-[10px] -mt-[6px] inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl t-body text-text-3"
               >
                 ✕
               </button>
@@ -5562,6 +5581,7 @@ export function MapClient({
               <button
                 key={t}
                 type="button"
+                aria-pressed={detailTab === t}
                 onClick={() => setDetailTab(t)}
                 className={`px-3.5 py-[11px] t-body ${
                   detailTab === t

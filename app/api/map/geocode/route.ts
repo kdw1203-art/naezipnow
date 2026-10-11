@@ -1,5 +1,6 @@
 import { logger } from "@/lib/log";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { applyRateLimit, READ_RATE_LIMIT } from "@/lib/rate-limit";
 import {
   isNaverMapsRestConfigured,
   naverGeocode,
@@ -13,7 +14,10 @@ import {
  * GET ?q=강남구          — 주소 검색
  * GET ?lat=37.5&lng=127  — 역지오코딩
  */
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+  /* [1055] 익명 공개 경로 · 유료 API 중계 — 다른 중계 경로와 같은 읽기 속도 제한 */
+  const limited = await applyRateLimit(req, READ_RATE_LIMIT);
+  if (limited) return limited;
   if (!isNaverMapsRestConfigured()) {
     return NextResponse.json(
       {

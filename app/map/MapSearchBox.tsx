@@ -164,6 +164,9 @@ export function MapSearchBox({
      280ms, 헤더가 200ms, 통합검색이 250ms 를 각자 적어 뒀고 왜 다른지는
      아무 데도 없었다. 한글 조합 중에는 더 길게 기다린다 — 조합 중간 상태는
      검색어가 아니다. */
+  /* [1055] 고른 뒤에는 목록을 다시 열지 않는다 — 골라서 setQuery(이름) 하면 settledQuery 가 바뀌어 아래 효과가 다시 돌고
+     응답이 오면 setOpen(true) 라 닫은 목록이 250ms 뒤 지도 위로 다시 떴다(주소·장소·지역 고를 때). 고른 글자 그대로의 검색에서만 건너뛴다. */
+  const suppressOpenRef = useRef<string | null>(null);
   useEffect(() => {
     const q = settledQuery;
     if (q.length < 1) {
@@ -250,7 +253,9 @@ export function MapSearchBox({
         setFailed(sug.failed);
         setNotice(sug.notice);
         setLoading(false);
-        setOpen(true);
+        const picked = suppressOpenRef.current;
+        suppressOpenRef.current = null;
+        if (picked === null || picked.trim() !== q) setOpen(true);
       });
       return () => controller.abort();
     }
@@ -293,6 +298,7 @@ export function MapSearchBox({
   const pickComplex = useCallback(
     (c: SuggestItem) => {
       onSelectComplex({ id: c.id, name: c.name, region: c.region, address: c.address });
+      suppressOpenRef.current = c.name;
       setQuery(c.name);
       setOpen(false);
     },
@@ -302,6 +308,7 @@ export function MapSearchBox({
   const pickAddress = useCallback(
     (a: GeocodeItem) => {
       onSelectAddress({ address: a.address, lat: a.lat, lng: a.lng });
+      suppressOpenRef.current = a.address;
       setQuery(a.address);
       setOpen(false);
     },
@@ -313,6 +320,7 @@ export function MapSearchBox({
     (p: PlaceItem) => {
       const label = p.address ? `${p.name} (${p.address})` : p.name;
       onSelectAddress({ address: label, lat: p.lat, lng: p.lng });
+      suppressOpenRef.current = p.name;
       setQuery(p.name);
       setOpen(false);
     },
@@ -324,6 +332,7 @@ export function MapSearchBox({
     (a: AreaJson) => {
       if (a.lat != null && a.lng != null) {
         onSelectAddress({ address: a.label, lat: a.lat, lng: a.lng });
+        suppressOpenRef.current = a.q;
         setQuery(a.q);
         setOpen(false);
       } else setQuery(a.q);

@@ -17,6 +17,7 @@ import {
   type ListingType,
 } from "@/lib/listings/store-db";
 import { dbUnavailable } from "@/lib/api/db-unavailable";
+import { getExpertStatus } from "@/lib/experts/is-verified";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -71,24 +72,17 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  // IP당 1시간 3회 (인스턴스별 best-effort)
-  const rlIp = rateLimit(`listing-create:${getClientIp(req)}`, {
-    limit: 3,
-    windowMs: 60 * 60_000,
-  });
-  if (!rlIp.ok) return tooManyRequests(rlIp.retryAfterSec);
-
   const session = await safeAuth();
   if (!session?.user?.email) {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }
 
-  // 계정당 1시간 3회
-  const rlUser = rateLimit(`listing-create:user:${session.user.email}`, {
-    limit: 3,
-    windowMs: 60 * 60_000,
-  });
-  if (!rlUser.ok) return tooManyRequests(rlUser.retryAfterSec);
+  /* [1055] 매물 등록은 공인중개사 인증(isBroker)만 — 화면(/listings/new)만 막고 API 는 로그인만 봤다(fetch 로 우회 가능).
+     화면과 같은 규칙을 API 에서도 확인한다. */
+  const expert = await getExpertStatus(session.user.email);
+  if (!expert.isBroker) {
+    return NextResponse.json({ error: "공인중개사 인증 뒤 등록할 수 있습니다." }, { status: 403 });
+  }
 
   let body: Record<string, unknown>;
   try {
@@ -195,6 +189,13 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
+
+  /* [1055] 속도 제한(IP · 계정당 1시간 3회)은 검증을 통과한 요청에만 — 예전엔 400 으로 끝난 시도도 횟수를 먹어
+     빈칸 세 번이면 한 시간을 기다렸다. */
+  const rlIp = rateLimit(`listing-create:${getClientIp(req)}`, { limit: 3, windowMs: 60 * 60_000 });
+  if (!rlIp.ok) return tooManyRequests(rlIp.retryAfterSec);
+  const rlUser = rateLimit(`listing-create:user:${session.user.email}`, { limit: 3, windowMs: 60 * 60_000 });
+  if (!rlUser.ok) return tooManyRequests(rlUser.retryAfterSec);
 
   try {
     const { id, detailFieldsSaved } = await createListing({

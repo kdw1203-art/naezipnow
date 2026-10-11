@@ -25,6 +25,12 @@ export function kstMonthStart(now: Date | number | string = Date.now()): Date {
   return new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), 1) - KST_OFFSET_MS);
 }
 
+/** [1055] 한국 시간 오늘 0시 — 일 상한(포인트 적립 등)의 시작 */
+export function kstDayStart(now: Date | number | string = Date.now()): Date {
+  const k = new Date(toMs(now) + KST_OFFSET_MS);
+  return new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), k.getUTCDate()) - KST_OFFSET_MS);
+}
+
 /** 한국 시간 다음 달 1일 0시 — 월 한도가 다시 열리는 때 */
 export function kstNextMonthStart(now: Date | number | string = Date.now()): Date {
   const k = new Date(toMs(now) + KST_OFFSET_MS);

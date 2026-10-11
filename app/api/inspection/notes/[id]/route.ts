@@ -45,7 +45,7 @@ export async function GET(
   const loaded = await loadNote(id);
   if (!loaded.ok) return loaded.res;
   const note = loaded.note;
-  if (!note) return NextResponse.json({ error: "없음" }, { status: 404 });
+  if (!note) return NextResponse.json({ error: "노트 없음 · 삭제됐을 수 있음" }, { status: 404 });
   const email = session?.user?.email?.trim().toLowerCase();
   const isOwner = Boolean(email && note.authorEmail.toLowerCase() === email);
   if (!note.isPublic && !isOwner) {
@@ -81,7 +81,7 @@ export async function PATCH(
   const loaded = await loadNote(id);
   if (!loaded.ok) return loaded.res;
   const exists = loaded.note;
-  if (!exists) return NextResponse.json({ error: "없음" }, { status: 404 });
+  if (!exists) return NextResponse.json({ error: "노트 없음 · 삭제됐을 수 있음" }, { status: 404 });
   if (exists.authorEmail.toLowerCase() !== session.user.email.trim().toLowerCase()) {
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
@@ -130,7 +130,7 @@ export async function PATCH(
   } catch (e) {
     return dbUnavailable("inspection-note-update", e);
   }
-  if (!updated) return NextResponse.json({ error: "없음" }, { status: 404 });
+  if (!updated) return NextResponse.json({ error: "노트 없음 · 삭제됐을 수 있음" }, { status: 404 });
   /* [969 · 20] 상세의 데이터 캐시(노트 행·공개 회차·관련 노트 풀)를 비운다 — 저장 직후
      리다이렉트되는 /notes/[id] 가 5분 전 본문을 보여 주면 "저장이 안 됐다" 로 읽힌다.
      공개→비공개 전환도 여기서 잡힌다(행 캐시가 비워지고 다음 조회는 null 을 저장한다). */
@@ -191,7 +191,7 @@ export async function DELETE(
   const loaded = await loadNote(id);
   if (!loaded.ok) return loaded.res;
   const exists = loaded.note;
-  if (!exists) return NextResponse.json({ error: "없음" }, { status: 404 });
+  if (!exists) return NextResponse.json({ error: "노트 없음 · 삭제됐을 수 있음" }, { status: 404 });
   if (exists.authorEmail.toLowerCase() !== session.user.email.trim().toLowerCase()) {
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }

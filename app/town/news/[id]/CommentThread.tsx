@@ -106,7 +106,7 @@ export function CommentThread({
       }
       router.refresh();
     } catch {
-      setError("네트워크 오류가 발생했어요.");
+      setError("댓글 저장 실패 · 잠시 후 다시");
     } finally {
       setBusyAdopt(null);
     }
@@ -141,7 +141,7 @@ export function CommentThread({
       setConfirmDeleteId(null);
       router.refresh();
     } catch {
-      setError("네트워크 오류가 발생했어요.");
+      setError("댓글 저장 실패 · 잠시 후 다시");
     } finally {
       setBusyDelete(null);
     }
@@ -163,7 +163,7 @@ export function CommentThread({
   if (comments.length === 0) {
     return (
       <p className="py-2 t-body text-text-3">
-        댓글 0건
+        댓글 없음
       </p>
     );
   }

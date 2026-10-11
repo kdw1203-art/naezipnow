@@ -87,7 +87,7 @@ export function AiDraftPanel({
         return;
       }
       if (!res.ok || !json.ok || !json.draft) {
-        setErrorMsg(json.error ?? "초안을 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
+        setErrorMsg(json.error ?? "초안 만들기 실패 · 잠시 후 다시");
         /* [1015] 문구는 그대로 — 오류 한 줄은 대화체 허용 */
         setState("error");
         return;
@@ -96,7 +96,7 @@ export function AiDraftPanel({
       setApplied(json.draft);
       setState("applied");
     } catch {
-      setErrorMsg("연결이 불안정해요. 잠시 후 다시 시도해 주세요.");
+      setErrorMsg("초안 만들기 실패 · 잠시 후 다시");
       setState("error");
     }
   }

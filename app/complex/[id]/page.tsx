@@ -153,6 +153,11 @@ import {
   type PublicListing,
 } from "@/lib/listings/store-db";
 
+/* [1055] 한국 연도(준공 연차 셈) */
+function kstYear(): number {
+  return kstParts(Date.now())?.year ?? new Date().getUTCFullYear();
+}
+
 /* ============================================================
    단지 허브 (연동 중심축 화면, SEO 핵심 랜딩 겸용)
    실데이터: market_transactions(국토부 실거래) → getComplexById·getTransactionHistory
@@ -716,7 +721,7 @@ function toView(
   const chips: string[] = [];
   if (row.build_year) {
     chips.push(
-      `${row.build_year}년 · ${new Date().getFullYear() - row.build_year}년차`,
+      `${row.build_year}년 · ${kstYear() - row.build_year}년차`,
     );
   }
   if (row.households) chips.push(`${row.households.toLocaleString("ko-KR")}세대`);
@@ -731,7 +736,7 @@ function toView(
 
   const infoRows: { label: string; value: string }[] = [];
   if (row.build_year) {
-    const age = new Date().getFullYear() - row.build_year;
+    const age = kstYear() - row.build_year;
     infoRows.push({ label: "준공", value: `${row.build_year}년 (경과 ${age}년)` });
   }
   if (row.households)
@@ -793,7 +798,7 @@ function toView(
          실제로 센 계약월 범위를 적는다 — "26.01~26.08" */
       dealsSub: txFailed ? "조회 실패" : dealSum > 0 && txRange ? txRange : "실거래 없음",
       age: row.build_year
-        ? `${new Date().getFullYear() - row.build_year}년`
+        ? `${kstYear() - row.build_year}년`
         : "—",
       ageSub: row.build_year ? `${row.build_year}년 준공` : "준공 미확인",
     },
@@ -1105,8 +1110,7 @@ export async function generateMetadata({
     latest && metaDeals && metaDeals.length > 0
       ? hubHeadline(metaDeals, new Date(), { capped: metaDeals.length >= COMPLEX_DEALS_ROW_CAP })
       : null;
-  /** 제목·설명 괄호 — 이 가격이 무엇의 값인지(lib/complex/hub-meta, 테스트 hub-price-1009) */
-  let titleNote: string | null = null;
+  /** 설명 괄호 — 이 가격이 무엇의 값인지(lib/complex/hub-meta, 테스트 hub-price-1009). [1055] 제목에는 더 붙이지 않는다(60자 안) */
   let descNote: string | null = null;
   /** 공유 카드 큰 숫자 — 언제나 짧은 표기(한 건의 정밀 표기는 카드에서 두 줄로 떨어진다) */
   let ogPrice: string | null = null;
@@ -1116,7 +1120,6 @@ export async function generateMetadata({
     ogPrice = m.ogPrice;
     deltaPct = m.deltaPct;
     delta = m.ogDelta;
-    titleNote = m.titleNote;
     descNote = m.descNote;
   }
 
@@ -1136,10 +1139,11 @@ export async function generateMetadata({
   const n12 = countDealsInWindow(tx, nowYm, 12);
   const bandsText = areaBandTitle(bands, bandPriceLabel, 2);
   const emdPrefix = emd ? `${emd} ` : "";
-  const titleParen = titleNote ?? ymLabel;
+  /* [1054] "시세" → 실거래 낱말(이 화면의 가격은 전부 국토부 실거래 · 1009·C 표기 표준을 제목·JSON-LD 까지)
+     [1055] 제목을 60자 안으로 — 괄호 설명(평형·기간·건수)과 "평형별 실거래·거래 이력"까지 붙여 56~70자라 검색 결과에서
+     읍면동·브랜드가 잘렸다. 괄호 설명은 설명(description)에 그대로 있다. */
   const title = latest
-    ? /* [1054] "시세" → 실거래 낱말(이 화면의 가격은 전부 국토부 실거래 · 1009·C 표기 표준을 제목·JSON-LD 까지) */
-      `${name} 실거래가 ${price}${titleParen ? ` (${titleParen})` : ""} · ${emdPrefix}평형별 실거래·거래 이력 | 내집나우`
+    ? `${name} 실거래가 ${price} · ${emdPrefix}실거래·거래 이력 | 내집나우`
     : `${name} ${emdPrefix}실거래·매물·임장노트 | 내집나우`;
   const placeLabel = `${region}${emd ? ` ${emd}` : ""}`;
   const priceNote = [ymLabel ? `${ymLabel} 신고분` : null, deltaPct ? `전월비 ${deltaPct}` : null]
@@ -1337,6 +1341,7 @@ export default async function ComplexHubPage({
      "조회 실패"를 인용 문장에 실을 수는 없다. */
   const latestPoint = v.priceSeries.length > 0 ? v.priceSeries[v.priceSeries.length - 1] : null;
   const nowKst = kstParts(Date.now());
+  /* [1055] 연차는 한국 연도 — 서버 UTC 연도면 1월 1일 00~09시(KST) 재생성이 작년 연차를 7일 캐시했다 */
   const nowYmForSummary = nowKst ? `${nowKst.year}${String(nowKst.month).padStart(2, "0")}` : "";
   const citable = buildComplexCitableSummary({
     name: v.name,

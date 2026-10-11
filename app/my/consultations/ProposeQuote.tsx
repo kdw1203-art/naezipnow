@@ -41,7 +41,7 @@ export function ProposeQuote({
       }
       setStatus("done");
     } catch {
-      setError("네트워크 오류가 발생했어요.");
+      setError("견적 제안 실패 · 잠시 후 다시");
       setStatus("idle");
     }
   };

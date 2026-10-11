@@ -205,6 +205,8 @@ export function SearchClient() {
   >([]);
   const abortRef = useRef<AbortController | null>(null);
   const { query: settledQuery, compositionProps } = useSettledSearchQuery(q);
+  const settledQueryRef = useRef(settledQuery);
+  settledQueryRef.current = settledQuery;
   /* 아직 굳지 않은 입력은 "아직 안 물어본 상태"다. 이걸 대기로 안 치면 치는
      도중에 "검색 결과 없음"가 떴다 사라진다 — 확인한 적 없는 사실을
      화면에 쓰는 셈이다. */
@@ -493,7 +495,7 @@ export function SearchClient() {
     [results, filter],
   );
   const [activeIdx, setActiveIdx] = useState(-1);
-  useEffect(() => setActiveIdx(-1), [results]);
+  useEffect(() => setActiveIdx(-1), [results, filter]); // [1055] 필터 칩을 바꾸면 가리키던 자리도 뜻을 잃는다
   useEffect(() => {
     if (activeIdx < 0) return;
     document
@@ -559,7 +561,8 @@ export function SearchClient() {
       if (!res.ok) throw new Error(String(res.status));
       const j = (await res.json()) as { suggestions?: ComplexPreview[]; failed?: boolean };
       if (j.failed) throw new Error("failed");
-      if (asked !== settledQuery) return;
+      /* [1055] 늦게 온 "더 보기" 응답이 새 검색어의 목록에 붙지 않게 — 전엔 같은 클로저 값끼리 비교해 늘 통과했다 */
+      if (asked !== settledQueryRef.current) return;
       setResults((prev) => {
         const seen = new Set(prev.complexes.map((c) => c.id));
         return { ...prev, complexes: [...prev.complexes, ...(j.suggestions ?? []).filter((c) => !seen.has(c.id))] };
@@ -617,10 +620,9 @@ export function SearchClient() {
               if (!openActive()) runSearch(q);
             }
           }}
-          role="combobox"
-          aria-controls="search-results"
-          aria-expanded={flatRows.length > 0}
-          aria-activedescendant={activeIdx >= 0 ? `search-opt-${activeIdx}` : undefined}
+          /* [1055] 콤보박스 표식을 걷었다 — 결과 칸은 필터·제목·카드가 섞인 일반 목록이라 listbox/option 이 아니고,
+             activedescendant 가 option 아닌 요소를 가리켜 보조기기가 ↑↓ 이동을 읽지 못했다. 이동은 aria-current 로 알린다. */
+          aria-describedby="search-kbd-hint"
           placeholder="단지·지역·조건 — 예: 마포구 신축 · 잠실 30평대"
           aria-label="통합 검색"
           autoComplete="off"
@@ -644,6 +646,9 @@ export function SearchClient() {
           </button>
         )}
       </div>
+      <span id="search-kbd-hint" className="sr-only">
+        위·아래 화살표로 결과를 옮기고 Enter 로 연다
+      </span>
 
       {/* 검색↔지도 연동 (#9b) — 현재 검색어로 지도 이동 */}
       {hasQuery && (
@@ -1057,6 +1062,7 @@ export function SearchClient() {
                         <Link
                           key={r.id}
                           id={optId}
+                        aria-current={active ? "true" : undefined}
                           href={hrefFor(g.key, r.id)}
                           onClick={onClick}
                           className={`story-card tile flex min-h-10 flex-col gap-1.5 px-3 py-2.5 no-underline ${
@@ -1099,6 +1105,7 @@ export function SearchClient() {
                         <Link
                           key={r.id}
                           id={optId}
+                        aria-current={active ? "true" : undefined}
                           href={hrefFor(g.key, r.id)}
                           onClick={onClick}
                           className={`flex min-h-10 flex-col gap-0.5 py-2.5 transition-colors hover:text-primary ${
@@ -1137,6 +1144,7 @@ export function SearchClient() {
                         <Link
                           key={r.id}
                           id={optId}
+                        aria-current={active ? "true" : undefined}
                           href={hrefFor(g.key, r.id)}
                           onClick={onClick}
                           className={`news-row min-h-10 no-underline ${active ? "-mx-1.5 bg-primary-soft px-1.5" : ""}`}
@@ -1160,6 +1168,7 @@ export function SearchClient() {
                       <Link
                         key={r.id}
                         id={optId}
+                        aria-current={active ? "true" : undefined}
                         href={hrefFor(g.key, r.id)}
                         onClick={onClick}
                         className={`flex items-center justify-between gap-3 py-2.5 transition-colors hover:text-primary ${

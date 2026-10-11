@@ -21,7 +21,6 @@
 import { areaBandOf } from "@/lib/market/bands";
 import { areaBandDisplayLabel } from "@/lib/complex/area-band-label";
 import { formatKrwWon } from "@/lib/format/krw";
-import { kstParts } from "@/lib/format/kst";
 
 /* ── 입력 ────────────────────────────────────────────────────────────── */
 
@@ -236,26 +235,9 @@ const MASTER_KEYS: ReadonlyArray<{
 
 /* ── 유틸 ────────────────────────────────────────────────────────────── */
 
-/**
- * 이번 달(yyyymm) — **KST 기준**. 서버는 UTC 로 돌아 `getMonth()` 가 KST 월초 0~9시에
- * 전달을 가리킨다(9월 1일 새벽에 "202508"). 사용자는 전부 한국에 있으므로 시간대를 고정한다.
- * KST 를 못 구하는 입력(NaN)이면 UTC 달로 후퇴한다.
- */
-export function currentYm(d: Date = new Date()): string {
-  const p = kstParts(d);
-  if (p) return `${p.year}${String(p.month).padStart(2, "0")}`;
-  return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-/** nowYm 에서 n 개월 전 yyyymm (n=0 이면 그대로). 창은 [from, now] 양끝 포함 → 달 수 = n+1 */
-export function ymMonthsBefore(nowYm: string, n: number): string {
-  const y = Number(nowYm.slice(0, 4));
-  const m = Number(nowYm.slice(4, 6));
-  const total = y * 12 + (m - 1) - n;
-  const yy = Math.floor(total / 12);
-  const mm = (total % 12) + 1;
-  return `${yy}${String(mm).padStart(2, "0")}`;
-}
+/* [1055] 달 산술은 lib/format/ym 으로 모았다(여기서 다시 내보내 쓰던 곳은 그대로) */
+import { currentYm, ymMonthsBefore } from "@/lib/format/ym";
+export { currentYm, ymMonthsBefore };
 
 /** 정렬 안 된 배열의 중앙값(짝수면 가운데 둘의 반올림 평균). 빈 배열 → null */
 export function medianOf(values: ReadonlyArray<number>): number | null {

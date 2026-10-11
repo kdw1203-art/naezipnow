@@ -235,6 +235,7 @@ export function TemplateBrowser({ initial }: { initial: NoteTemplate[] }) {
           <button
             key={c}
             type="button"
+            aria-pressed={category === c}
             onClick={() => setCategory(c)}
             className={`chip px-4 py-2 ${
               category === c

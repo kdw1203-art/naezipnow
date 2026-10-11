@@ -34,6 +34,7 @@
  */
 import { getReadOnlySupabase } from "@/lib/newui/supabase-read";
 import { isValidYm, type ReportMonthSummary } from "./monthly";
+import { readPaged } from "@/lib/supabase/read-paged";
 
 export type SeasonDef = {
   slug: string;
@@ -262,20 +263,27 @@ export async function getSeasonReport(slug: string, now = new Date()): Promise<S
     );
   }
 
-  const { data, error } = await sb
-    .from("market_region_monthly")
-    .select(SELECT)
-    .eq("deal_type", "trade")
-    .eq("property_type", "apartment")
-    .limit(20_000);
-
-  if (error) {
-    throw new Error(
-      `market_region_monthly 조회 실패 (계절 ${def.slug}) — ${error.message}` +
-        `${error.code ? ` [${error.code}]` : ""}${error.hint ? ` · 힌트: ${error.hint}` : ""}`,
+  /* [1055] 끝까지 나눠 읽는다 — `.limit(20_000)` 한 번은 PostgREST 상한(1,000행)에서 잘려 3,552행(26개월 × 255곳 · 운영 실측)
+     중 임의의 1,000행으로 계절 합계·"공통 지역 N곳"·전년 대비를 셌다(1009 가 리포트 목록에서 고친 것과 같은 결함 · 여기만 남아 있었다).
+     정렬 (month, region_code)는 이 조건에서 유일. */
+  let data: unknown[];
+  try {
+    const r = await readPaged<unknown>(
+      (from, to) =>
+        sb
+          .from("market_region_monthly")
+          .select(SELECT)
+          .eq("deal_type", "trade")
+          .eq("property_type", "apartment")
+          .order("month", { ascending: false })
+          .order("region_code", { ascending: true })
+          .range(from, to),
+      20_000,
     );
+    data = r.rows;
+  } catch (e) {
+    throw new Error(`market_region_monthly 조회 실패 (계절 ${def.slug}) — ${e instanceof Error ? e.message : String(e)}`);
   }
-  if (!data) return null;
 
   /* 1) 월 × 지역으로 접는다. */
   const byYm = new Map<string, MonthAgg>();

@@ -189,6 +189,9 @@ async function signUpWithSupabaseAuth(
   resendOnly?: boolean,
   /* [E001] 퍼널 기록의 UA 판별용 — 없으면 이벤트만 건너뛴다(가입은 영향 없음) */
   req?: Request,
+  /* [1055] 동의 기록은 **새 계정이 만들어진 뒤**에만 — 예전엔 signUp 전에 upsert 해, 로그인 없이 남의 이메일로 이 API 를 부르면
+     그 계정의 user_consents(마케팅·위치 동의 · 갱신 시각 · IP/UA)가 바뀌었다(409 로 끝나도 기록은 남았다). */
+  onNewAccount?: () => Promise<void>,
 ) {
   if (resendOnly) {
     const recovered = await recoverUnconfirmedSignup({
@@ -257,6 +260,7 @@ async function signUpWithSupabaseAuth(
   }
 
   if (!error && data.user?.email) {
+    if (onNewAccount) await onNewAccount().catch(() => undefined);
     try {
       const { ensureAppUserRow } = await import("@/lib/auth/ensure-app-user");
       await ensureAppUserRow({
@@ -452,7 +456,6 @@ export async function POST(req: NextRequest) {
   // 본인 이메일 확인을 강제(기본 ON)하고 공개 키가 있으면
   // Supabase Auth 가입(인증 메일 발송) 경로를 우선 사용합니다.
   if (emailConfirmationEnabled() && supabaseUrl && supabasePublicKey) {
-    if (!resendOnly) await recordConsent(sb, email, consent, ip, ua);
     /* /auth/confirm 은 PKCE·token_hash·해시 토큰을 모두 처리한다.
        Site URL 이 옛 my-project 호스트여도 브릿지가 여기로 모은다. */
     const verifyRedirect = `${canonicalOrigin(req)}/auth/confirm?next=${encodeURIComponent(verifyNext)}`;
@@ -467,12 +470,12 @@ export async function POST(req: NextRequest) {
       verifyRedirect,
       resendOnly,
       req,
+      () => recordConsent(sb, email, consent, ip, ua),
     );
   }
 
   // Service Role이 없는 배포에서도 Supabase Auth 회원가입은 허용
   if (!sb && supabaseUrl && supabasePublicKey) {
-    await recordConsent(sb, email, consent, ip, ua);
     const verifyRedirect = emailConfirmationEnabled()
       ? `${canonicalOrigin(req)}/auth/confirm?next=${encodeURIComponent(verifyNext)}`
       : undefined;
@@ -543,7 +546,6 @@ export async function POST(req: NextRequest) {
     }
     if (supabaseUrl && supabasePublicKey && shouldFallbackToSupabaseAuth(finalError)) {
       // 운영 DB 스키마/권한 편차가 있으면 Supabase Auth 기본 경로로 자동 우회
-      await recordConsent(sb, email, consent, ip, ua);
       const verifyRedirect = emailConfirmationEnabled()
         ? `${canonicalOrigin(req)}/auth/confirm?next=${encodeURIComponent(verifyNext)}`
         : undefined;
@@ -558,6 +560,7 @@ export async function POST(req: NextRequest) {
         verifyRedirect,
         undefined,
         req,
+        () => recordConsent(sb, email, consent, ip, ua),
       );
     }
     const duplicated =

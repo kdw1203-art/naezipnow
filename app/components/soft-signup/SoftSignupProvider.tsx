@@ -14,6 +14,7 @@ import {
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useExperiment } from "@/lib/experiments/client";
+import { useScrollLockLazy } from "@/lib/client/use-scroll-lock-lazy";
 
 /**
  * A3 — 비로그인 액션 → 소프트 가입 프롬프트.
@@ -134,14 +135,20 @@ export function SoftSignupProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  /* [1055] 시트 뒤 본문 스크롤 잠금 + 닫은 뒤 초점 복귀 — 전엔 폰에서 시트 뒤가 스크롤됐고 "로그인 없이 계속 보기" 뒤 초점이 body 로 떨어졌다 */
+  useScrollLockLazy(!!intent, { markModal: true });
   useEffect(() => {
     if (!intent) return;
+    const restoreTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     closeRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") dismiss();
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      restoreTo?.focus?.();
+    };
   }, [intent, dismiss]);
 
   /* [1054] 돌아올 주소에 쿼리까지(?region=·?district=·?q= …) — 전에는 pathname 만 넘겨 가입 뒤 필터가 풀린 화면으로 돌아왔다.

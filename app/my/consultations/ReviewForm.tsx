@@ -50,7 +50,7 @@ export function ReviewForm({
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setError(data.error ?? "후기를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
+        setError(data.error ?? "후기 저장 실패 · 잠시 후 다시");
         setBusy(false);
         return;
       }
@@ -58,7 +58,7 @@ export function ReviewForm({
       showToast("후기를 남겼어요. 전문가 프로필에 반영됐어요");
       router.refresh();
     } catch {
-      setError("네트워크 오류가 발생했어요.");
+      setError("후기 저장 실패 · 잠시 후 다시");
       setBusy(false);
     }
   };

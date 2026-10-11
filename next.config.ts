@@ -203,9 +203,12 @@ const nextConfig: NextConfig = {
            않는 창이 생긴다(2026-09 토스 도메인 심사 반려 맥락에서 점검).
            와일드카드는 Permissions-Policy 문법에 없으므로 오리진을 명시한다 —
            CSP frame-src 에 이미 있는 두 곳뿐이고, 그 밖에는 여전히 차단된다. */
+        /* [1055] microphone=(self) — 임장노트 음성 메모(getUserMedia · app/notes/new/VoiceMemoRecorder)가 운영에서
+           늘 "마이크 권한이 거부돼" 로 끝났다: `microphone=()` 는 **우리 문서 자체**에도 마이크를 막는다(실측: 운영
+           document.featurePolicy.allowsFeature("microphone") = false). 사진은 <input capture> 라 camera 권한이 필요 없다 — 그대로 둔다. */
         key: "Permissions-Policy",
         value:
-          'camera=(), microphone=(), geolocation=(self), payment=(self "https://js.tosspayments.com" "https://payment-gateway.tosspayments.com"), usb=(), interest-cohort=()',
+          'camera=(), microphone=(self), geolocation=(self), payment=(self "https://js.tosspayments.com" "https://payment-gateway.tosspayments.com"), usb=(), interest-cohort=()',
       },
       { key: "X-DNS-Prefetch-Control", value: "on" },
       /* 크로스오리진 격리. `same-origin` 이 아니라 `same-origin-allow-popups` 인 이유는

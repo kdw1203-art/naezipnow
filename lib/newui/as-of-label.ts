@@ -15,6 +15,7 @@
  * 여기서는 모양만 통일한다. 해석할 수 없는 값은 **지어내지 않고 null** 을
  * 돌려 라벨 자체가 안 나오게 한다(틀린 날짜보다 없는 날짜가 낫다).
  */
+import { kstParts } from "@/lib/format/kst";
 
 /** `YYYYMMDD` | `YYYY-MM-DD` | `YYYYMM` | `YYYY-MM` | `YYYY.MM(.DD)` → `2026.08.04` / `2026.08` */
 export function formatAsOfLabel(raw: string | null | undefined): string | null {
@@ -61,7 +62,11 @@ export function monthsBehind(raw: string | null | undefined, now = new Date()): 
   const y = Number(digits.slice(0, 4));
   const m = Number(digits.slice(4, 6));
   if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return null;
-  const diff = (now.getFullYear() - y) * 12 + (now.getMonth() + 1 - m);
+  /* [1055] 한국 달 — 서버 UTC 달이면 1일 00~09시(KST)에 "3개월 지연"이 "공표 주기상 최신"으로 하루 캐시됐다 */
+  const p = kstParts(now);
+  const ny = p ? p.year : now.getUTCFullYear();
+  const nm = p ? p.month : now.getUTCMonth() + 1;
+  const diff = (ny - y) * 12 + (nm - m);
   return diff < 0 ? null : diff;
 }
 
