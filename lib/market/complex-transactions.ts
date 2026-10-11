@@ -491,12 +491,16 @@ export interface MonthlyTxPoint {
 }
 
 /** 최근 12개월 월별 거래량·평균가 (빈 달 포함, 오름차순) */
-export function summarizeMonthly(rows: ComplexTransactionRecord[]): MonthlyTxPoint[] {
+export function summarizeMonthly(rows: ComplexTransactionRecord[], nowMs: number = Date.now()): MonthlyTxPoint[] {
   const points: MonthlyTxPoint[] = [];
-  const d = new Date();
-  d.setMonth(d.getMonth() - 11);
-  for (let i = 0; i < 12; i++) {
-    const ym = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+  /* [1054] 한국 달 기준 · 1일로 세어 달을 옮긴다 — 예전엔 UTC `setMonth(getMonth()-11)` 이라 31일에 날짜 넘침으로
+     한 달이 밀렸고(10/31 → 11/31 → 12/1), 매월 1일 00~09시(KST)엔 지난달이 "이번 달"이었다 */
+  const k = new Date(nowMs + 9 * 3_600_000);
+  const y0 = k.getUTCFullYear();
+  const m0 = k.getUTCMonth();
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(Date.UTC(y0, m0 - i, 1));
+    const ym = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
     const inMonth = rows.filter((r) => r.contractYm === ym);
     points.push({
       ym,
@@ -506,7 +510,6 @@ export function summarizeMonthly(rows: ComplexTransactionRecord[]): MonthlyTxPoi
           ? inMonth.reduce((s, r) => s + r.dealAmountKrw, 0) / inMonth.length
           : null,
     });
-    d.setMonth(d.getMonth() + 1);
   }
   return points;
 }

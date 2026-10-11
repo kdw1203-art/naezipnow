@@ -13,8 +13,8 @@ export default function Error({
   return (
     <AreaError
       area="analysis"
-      title="분석 화면에 문제가 생겼어요"
-      desc="실행 횟수는 결과가 저장된 경우에만 차감돼요. 다시 시도하거나 분석 허브에서 다른 도구를 열어 보세요."
+      title="분석 화면 불러오기 실패 · 잠시 후 다시"
+      desc="실행 횟수는 결과가 저장된 경우에만 차감됨 · 다시 시도 또는 분석 허브의 다른 도구"
       error={error}
       reset={reset}
       links={[{ href: "/analysis", label: "분석 허브" }, { href: "/", label: "홈" }]}

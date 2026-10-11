@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { HScroll } from "@/app/components/HScroll";
 import Link from "next/link";
 import { cache } from "react";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
@@ -479,7 +480,7 @@ export default async function ComplexComparePage({
         {/* [1015 · 규칙 D] "한눈에"(마케팅 부사) → "요약" · 표 껍데기는 blue 리퀴드 판(스크롤 상자는 그 안쪽) */}
         <h2 className="t-section text-ink">요약 비교</h2>
         <div className="lq-panel mt-3 py-1" data-tone="blue">
-        <div className="overflow-x-auto">
+        <HScroll>
           <table className="w-full min-w-[420px] t-body">
             <thead>
               <tr className="border-b border-border t-sub text-text-3">
@@ -541,7 +542,7 @@ export default async function ComplexComparePage({
               />
             </tbody>
           </table>
-        </div>
+        </HScroll>
         </div>
         {priceGap && (
           <p className="mt-3 t-sub text-text-2">
@@ -559,7 +560,7 @@ export default async function ComplexComparePage({
               {windowLabel} 평균 · 거래 있는 구간만
             </span>
           </h2>
-          <div className="mt-3 overflow-x-auto">
+          <HScroll className="mt-3">
             <table className="w-full min-w-[460px] text-left t-body">
               <thead>
                 <tr className="border-b border-border t-sub text-text-3">
@@ -623,7 +624,7 @@ export default async function ComplexComparePage({
                 })}
               </tbody>
             </table>
-          </div>
+          </HScroll>
           {bothBands.length === 0 && (
             <p className="mt-2 t-sub text-text-3">
               두 단지가 같이 거래된 면적 구간이 없습니다. 이 경우 평균 거래가 비교는 면적이
@@ -656,10 +657,12 @@ export default async function ComplexComparePage({
             {b.name}
           </span>
         </div>
+        {/* [1054] 폰은 칸 하나가 22px 라 열두 달 글자("25.10")가 겹쳤다 — 폰에서는 첫·중간·마지막 달만 적고 나머지는 자리만(invisible) */}
         <div className="mt-3 flex h-[110px] items-end gap-[5px]">
-          {months.map((ym) => {
+          {months.map((ym, i) => {
             const ca = a.countByYm.get(ym) ?? 0;
             const cb = b.countByYm.get(ym) ?? 0;
+            const showYm = i === 0 || i === months.length - 1 || i === Math.floor((months.length - 1) / 2);
             return (
               <div
                 key={ym}
@@ -683,7 +686,7 @@ export default async function ComplexComparePage({
                     }}
                   />
                 </div>
-                <span className="t-caption text-text-3">{shortYm(ym)}</span>
+                <span className={`whitespace-nowrap t-caption text-text-3 ${showYm ? "" : "max-md:invisible"}`}>{shortYm(ym)}</span>
               </div>
             );
           })}

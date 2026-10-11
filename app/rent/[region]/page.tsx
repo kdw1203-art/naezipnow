@@ -2,6 +2,7 @@
    데이터는 담당 Q 의 lib/market/rent-nonapt.ts(지금 운영 DB 0행 — 빈 상태는 사실 문장으로, 화면은 깨지지 않는다).
    시안: scratchpad mock1024/rent-{d,m}.html. */
 import type { Metadata } from "next";
+import { HScroll } from "@/app/components/HScroll";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
@@ -82,7 +83,7 @@ function DealTable({ deals, withMonthly, emptyLabel }: { deals: readonly NonAptR
   const rows = deals.slice(0, TABLE_ROWS);
   const cols = withMonthly ? 7 : 6;
   return (
-    <div data-tone="plain" className="lq-panel mt-2 overflow-x-auto">
+    <div data-tone="plain"><HScroll className="lq-panel mt-2">
       <table className={`w-full text-left t-body ${withMonthly ? "min-w-[520px]" : "min-w-[440px]"}`}>
         <thead>
           <tr className="border-b border-border t-caption text-text-3">
@@ -117,7 +118,7 @@ function DealTable({ deals, withMonthly, emptyLabel }: { deals: readonly NonAptR
           )}
         </tbody>
       </table>
-    </div>
+    </HScroll></div>
   );
 }
 

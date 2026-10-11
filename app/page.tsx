@@ -100,7 +100,7 @@ function HomeAiGateway({
           미리보기"([1002])는 검색 아래 문 ② "후보가 있어요 → 단지 종합 진단"이 같은 화면으로 간다(중복 제거).
           [989] 카드 안에 단독으로 서는 링크 — 위아래 6px 로 31px. */}
       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
-        <Link href="/analysis" className="w-fit py-1.5 t-sub font-bold text-ai-accent no-underline">
+        <Link href="/analysis" className="tap-line w-fit py-1.5 t-sub font-bold text-ai-accent no-underline">
           AI 분석 도구 보기 ›
         </Link>
         {exampleNoteId && (
@@ -165,6 +165,11 @@ export default async function Home() {
   const saleIndexSeoul = data.saleIndexSeoul ?? "—";
   const loanRate = data.loanRate;
   const baseRate = baseRateData?.label ?? "—";
+  /* [1054] 두 금리의 시점 — 기준금리는 ECOS cycle(YYYYMMDD) · 주담대는 finlife 공시월(YYYY-MM). 시점 없는 금리는
+     일 단위 기준금리와 월 공시 금리를 같은 날 값으로 읽게 한다(home-data 의 loanRateAsOf 주석) */
+  const cyc = baseRateData?.cycle ?? "";
+  const baseRateAsOf = /^\d{8}$/.test(cyc) ? `${cyc.slice(0, 4)}.${cyc.slice(4, 6)}.${cyc.slice(6, 8)}` : /^\d{6}$/.test(cyc) ? `${cyc.slice(0, 4)}.${cyc.slice(4, 6)}` : null;
+  const loanRateAsOf = data.loanRateAsOf ? data.loanRateAsOf.replace("-", ".") : null;
   let kpiTemp: KpiTemp | null = null;
   try {
     const t = await loadLatestTemperatures();
@@ -178,6 +183,8 @@ export default async function Home() {
         score: row.current.score,
         headline: row.current.headline,
         weekLabel: m ? `${Number(m[1])}.${m[2]} 주` : row.current.weekStart,
+        /* [1054] 지역 이름 — 고른 행이 관심 지역이 아닐 수도 있다(첫 행). 문장에 지역을 적어야 점수가 누구 것인지 안다 */
+        regionName: row.current.regionLabel ?? null,
       };
     }
   } catch {
@@ -271,7 +278,9 @@ export default async function Home() {
               temp={kpiTemp}
               saleIndex={saleIndexSeoul}
               baseRate={baseRate}
+              baseRateAsOf={baseRateAsOf}
               loanRate={loanRate}
+              loanRateAsOf={loanRateAsOf}
               publicNotes={data.publicNotesTotal}
             />
           </div>
@@ -321,7 +330,7 @@ export default async function Home() {
                     )}
                     <Link
                       href="/notes"
-                      className="inline-block py-[5px] t-sub text-text-3 transition-colors hover:text-primary"
+                      className="tap-line inline-block py-[5px] t-sub text-text-3 transition-colors hover:text-primary"
                     >
                       더보기
                     </Link>
@@ -395,7 +404,7 @@ export default async function Home() {
                   <h2 className="t-section text-ink">지역 동향</h2>
                   <Link
                     href="/map"
-                    className="inline-block py-[5px] t-sub font-bold text-primary no-underline"
+                    className="tap-line inline-block py-[5px] t-sub font-bold text-primary no-underline"
                   >
                     지도에서 전체 보기 ›
                   </Link>

@@ -108,7 +108,8 @@ export default async function PricePage({
   } catch {
     return (
       <PageShell breadcrumb="분석 · 면적대별 실거래가">
-        <EmptyState msg="실거래 집계를 일시적으로 읽지 못했어요. 잠시 후 다시 시도해 주세요." />
+        {/* [1054] 오류 문구 꼴 "○○ 불러오기 실패 · 잠시 후 다시"(빈 상태 "없음"과 구분) */}
+        <EmptyState msg="실거래 집계 불러오기 실패 · 잠시 후 다시" />
       </PageShell>
     );
   }

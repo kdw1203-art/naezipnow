@@ -728,7 +728,9 @@ function ProfileRows() {
   if (phase === "guest") return null;
 
   return (
-    <div className="card flex flex-col rounded-2xl px-4 py-1">
+    /* [1054] id="region" — 홈 "내 지역으로 바꾸기"(/my/settings#region)가 이 프로필 판(관심 지역 행 · 편집 단추)에
+       내려앉는다. 전에는 같은 이름의 앵커가 없어 화면 맨 위에 멈췄다. scroll-mt 는 붙는 헤더 높이만큼. */
+    <div id="region" className="card flex scroll-mt-[72px] flex-col rounded-2xl px-4 py-1">
       <div className="flex items-center justify-between gap-2 pb-1 pt-2">
         <span className="t-sub font-bold text-text-3">프로필</span>
         {phase === "ready" && profile && (

@@ -157,7 +157,7 @@ export default async function DataSourcesPage() {
         </h1>
         <p className="rise-in-1 mt-2 t-body leading-[1.75] text-text-2">
           원천 · 갱신 주기 · 알려진 한계. 계산 공식은{" "}
-          <Link href="/methodology" className="font-bold text-primary">
+          <Link href="/methodology" className="tap-line font-bold text-primary">
             데이터 방법론
           </Link>
           에 있습니다.

@@ -1,5 +1,6 @@
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
+import { HScroll } from "@/app/components/HScroll";
 import { AdZone } from "@/app/components/ads/AdZone";
 /* [1015 · 규칙 H] 노트 행 40px 정사각 썸네일 — 커버가 없으면 단색 칸(값은 단색 토큰) */
 import { seedGradient } from "@/lib/town/shared";
@@ -891,8 +892,9 @@ export default async function RegionHubPage({
         )}
       </section>
 
-      {/* 단지별 현황 — market_transactions 그룹 요약. [1009 · H] 표(가로 스크롤) → 누르는 목록 행(RegionComplexList) */}
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
+      {/* 단지별 현황 — market_transactions 그룹 요약. [1009 · H] 표(가로 스크롤) → 누르는 목록 행(RegionComplexList)
+          [1054] id="complexes" — 서울 밖 단지 실거래 화면의 "다른 단지"가 여기로 온다(/complex/browse 는 서울 25구만). */}
+      <section id="complexes" className="rise-in-2 card mb-6 scroll-mt-[72px] p-[var(--pad-card)]">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="t-section text-ink">
             단지별 현황{" "}
@@ -1023,7 +1025,7 @@ export default async function RegionHubPage({
               {areaBands.truncated ? " 표본" : ""} 기준
             </span>
           </h2>
-          <div className="mt-3 overflow-x-auto" tabIndex={0}>
+          <HScroll className="mt-3">
             <table className="w-full min-w-[420px] t-body">
               <thead>
                 <tr className="border-b border-line text-left t-sub text-text-3">
@@ -1050,7 +1052,7 @@ export default async function RegionHubPage({
                 ))}
               </tbody>
             </table>
-          </div>
+          </HScroll>
           <p className="mt-2 t-sub text-text-3">표본 5건 미만 면적대 제외 · 중앙값 기준 · 단지·층·연식별 차이 있음</p>
         </section>
       )}

@@ -57,12 +57,14 @@ export function RegionComplexList({
             >
               <span className="flex min-w-0 flex-col">
                 <span className="t-body font-bold text-ink break-words">{s.complexName}</span>
-                {/* 조각 단위로만 줄바꿈 — "평균 평당 / 1.5억"처럼 한 값이 두 줄로 갈라지지 않게 */}
+                {/* 조각 단위로만 줄바꿈 — "평균 평당 / 1.5억"처럼 한 값이 두 줄로 갈라지지 않게.
+                    [1054] 구분점·빈칸은 nowrap 밖에 둔다 — 안에 있으면 조각 사이에도 줄바꿈 자리가 없어
+                    한 줄이 통째로 오른쪽 값 열 위로 넘쳤다(폰 390 실측 · 긴 단지 이름). */}
                 <span className="t-caption text-text-3">
                   {meta.map((m, i) => (
-                    <span key={i} className="whitespace-nowrap">
+                    <span key={i}>
                       {i > 0 ? " · " : ""}
-                      {m}{" "}
+                      <span className="whitespace-nowrap">{m}</span>
                     </span>
                   ))}
                 </span>

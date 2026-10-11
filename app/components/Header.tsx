@@ -170,7 +170,10 @@ export function Header() {
             겹친 구간에서 나중에 그려진 ☰ 가 벨의 탭을 가져갔다(실측: 벨의 실효 폭 40px).
             12px 이면 두 히트 영역이 정확히 맞닿고 겹치지 않는다 — 검색 필드는 4px 만
             줄어든다(flex-1 이라 체감 없음). */}
-        <div className="flex shrink-0 items-center gap-3 text-text-1 md:hidden">
+        {/* [1054] 폰 배율(1012 · --spacing 3px) 뒤로는 h-8 = 24px · after:-inset-1.5 = 4.5px 라 실효 탭이 33px 로
+            줄어 있었다(운영 실측 390px). 가짜 요소 대신 단추 상자를 40×40(h-10/w-10 은 배율과 무관하게 40px 고정)으로
+            하고 사이 간격 0 — 두 상자가 맞닿아 겹치지 않는다. 아이콘 자리는 그대로(-mr 8px 로 패딩 안쪽으로 당김). */}
+        <div className="-mr-[8px] flex shrink-0 items-center gap-0 text-text-1 md:hidden">
           <NotificationBell variant="mobile" />
           <MobileMenu />
         </div>

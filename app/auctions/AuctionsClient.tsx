@@ -20,6 +20,7 @@
  */
 
 import Link from "next/link";
+import { HScroll } from "@/app/components/HScroll";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AIPanel } from "@/app/components/AIPanel";
 import { Explain } from "@/app/components/explain/Explain";
@@ -631,7 +632,7 @@ export function AuctionsClient({
               </div>
             ) : (
               /* [1015] 표 껍데기 = 리퀴드 판(sand — 공매 톤, 브리프 규칙 I) */
-              <div className="rise-in-4 lq-panel overflow-x-auto py-1" data-tone="sand">
+              <div data-tone="sand"><HScroll className="rise-in-4 lq-panel py-1">
                 <div className="min-w-[560px]">
                   <div className="grid grid-cols-[1.9fr_.8fr_.8fr_.8fr_1fr] gap-2 border-b border-divider py-2 t-caption text-text-3">
                     <span>물건 · 소재지</span>
@@ -687,7 +688,7 @@ export function AuctionsClient({
                     갱신
                   </div>
                 </div>
-              </div>
+              </HScroll></div>
             )}
 
             {/* e) 지난 공고 */}
@@ -696,7 +697,7 @@ export function AuctionsClient({
                 <summary className="cursor-pointer text-xs font-bold text-text-3">
                   지난 공고 (최근 마감 {pastCards.length}건 보기)
                 </summary>
-                <div className="mt-2 overflow-x-auto">
+                <HScroll className="mt-2">
                   <div className="min-w-[560px]">
                     <div className="grid grid-cols-[1.9fr_.8fr_.8fr_.8fr_1fr] gap-2 border-b border-divider py-2 t-caption text-text-3">
                       <span>물건 · 소재지</span>
@@ -732,7 +733,7 @@ export function AuctionsClient({
                       입찰 마감 공고 · 결과·재공고 여부는 온비드 원문 기준
                     </div>
                   </div>
-                </div>
+                </HScroll>
               </details>
             )}
 

@@ -142,8 +142,11 @@ export function DesktopSideNav() {
         onFocus={show}
         onClick={() => (open ? setOpen(false) : show())}
         onPointerEnter={show}
+        /* [1054] 열린 동안은 마우스에 안 잡히게(pointer-events-none) — 손잡이에 마우스가 닿으면 이미 열리므로(onPointerEnter)
+           그 자리에서 누르면 onClick 이 "열림 → 닫기"로 읽어 패널이 바로 접혔다. 키보드 Enter 는 pointer-events 와 무관해
+           포커스 → 열기, Enter → 닫기 토글은 그대로다. */
         className={`fixed left-0 top-1/2 z-40 flex h-12 w-[10px] -translate-y-1/2 items-center justify-center rounded-r-full border border-l-0 border-line bg-surface transition-opacity duration-150 ${
-          open ? "opacity-0" : "opacity-70 hover:opacity-100"
+          open ? "pointer-events-none opacity-0" : "opacity-70 hover:opacity-100"
         }`}
       >
         <span aria-hidden="true" className="block h-6 w-[3px] rounded-full bg-text-3" />

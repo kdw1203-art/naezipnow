@@ -373,9 +373,10 @@ export default async function TownNewsDetailPage({
               {regionId && (
                 <Link
                   href={`/region/${regionId}`}
-                  className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline"
+                  className="tap-line inline-flex min-h-[24px] items-center font-bold text-primary no-underline"
                 >
-                  {regionLinkName ?? region} 시세 보기 ›
+                  {/* [1054] "시세" → 지역 허브는 실거래·가격지수 화면 */}
+                  {regionLinkName ?? region} 실거래 보기 ›
                 </Link>
               )}
             </div>

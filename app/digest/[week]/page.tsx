@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { HScroll } from "@/app/components/HScroll";
 import Link from "next/link";
 import { newsHref, storyHref } from "@/lib/town/post-href";
 import { notFound } from "next/navigation";
@@ -229,7 +230,7 @@ export default async function DigestWeekPage({
           </div>
           {data.temperature.length > 0 ? (
             /* [1015] 표 껍데기 = 리퀴드 판(blue — 시장 지수 톤, 브리프 규칙 I) */
-            <div className="lq-panel mt-3 overflow-x-auto py-1" data-tone="blue">
+            <div data-tone="blue"><HScroll className="lq-panel mt-3 py-1">
               <table className="w-full min-w-[420px] border-collapse t-body">
                 <thead>
                   <tr className="border-b border-border text-left text-text-3">
@@ -258,10 +259,10 @@ export default async function DigestWeekPage({
                   ))}
                 </tbody>
               </table>
-            </div>
+            </HScroll></div>
           ) : (
             <p className="mt-3 t-body text-text-3">
-              그 주에 기록된 시장 온도 스냅샷이 없습니다. 다른 주 값으로 대신 채우지 않습니다.
+              이 주 시장 온도 스냅샷 없음 · 다른 주 값으로 채우지 않음
             </p>
           )}
         </section>

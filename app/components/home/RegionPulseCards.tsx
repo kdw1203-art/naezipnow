@@ -116,6 +116,12 @@ function PriceCountUp({ price, active }: { price: string; active: boolean }) {
   const [text, setText] = useState(price);
   const doneRef = useRef(false);
 
+  /* [1054] 값이 나중에 바뀌면(클라이언트 재조회 · 지역 카드 교체) 한 번 센 뒤라 애니메이션은 안 돌고 글자만 옛 값에 멈춰 있었다 —
+     센 뒤의 값 변경은 바로 새 값으로. 세는 중에 바뀌면 cleanup 이 프레임을 끊고 이 효과가 새 값으로 마무리한다. */
+  useEffect(() => {
+    if (doneRef.current) setText(price);
+  }, [price]);
+
   useEffect(() => {
     if (!parsed || doneRef.current) return;
     if (!active) return;

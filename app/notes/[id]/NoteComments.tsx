@@ -4,6 +4,7 @@
 import { useState, type FormEvent } from "react";
 import { ExpertBadge, type ExpertBadgeData } from "@/app/components/ExpertBadge";
 import { useRouter } from "next/navigation";
+import { loginHrefWithNext } from "@/lib/auth/auth-ux";
 import { ReportButton } from "@/app/components/ReportButton";
 import { CharCount } from "@/app/components/ui/CharCount";
 import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
@@ -72,7 +73,8 @@ export function NoteComments({
         body: JSON.stringify({ commentId }),
       });
       if (res.status === 401) {
-        router.push("/login");
+        /* [1054] 로그인 뒤 이 노트의 댓글 자리로 */
+        router.push(loginHrefWithNext(`/notes/${encodeURIComponent(noteId)}#comments`));
         return;
       }
       if (!res.ok) {

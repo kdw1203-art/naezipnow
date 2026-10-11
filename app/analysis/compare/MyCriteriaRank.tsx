@@ -97,7 +97,7 @@ export function MyCriteriaRank({ items }: { items: CriteriaInput[] }) {
         <p className="rounded-xl bg-bg px-3 py-2.5 t-sub text-text-2">기준을 하나 이상 &quot;보통&quot;이나 &quot;중요&quot;로 골라 주세요.</p>
       ) : result.used.length === 0 ? (
         <p className="rounded-xl bg-bg px-3 py-2.5 t-sub text-text-2">
-          고른 기준으로는 후보를 가를 수 없어요 — 기준마다 값이 한 곳에만 있거나 모두 같아요. 다른 기준을 켜 보세요.
+          고른 기준으로는 후보가 갈리지 않음 — 기준마다 값이 한 곳에만 있거나 모두 같음 · 다른 기준 필요
         </p>
       ) : (
         <>
@@ -133,7 +133,7 @@ export function MyCriteriaRank({ items }: { items: CriteriaInput[] }) {
                     <p className="mt-0.5 t-caption text-text-3">
                       {/* 조회 실패와 "거래 없음"은 다른 사실이다(리뷰 C) */}
                       {inputById.get(s.id)?.failed
-                        ? "실거래를 불러오지 못해 이번 순위에서 뺐어요 — 잠시 후 다시 열어 보세요"
+                        ? "실거래 불러오기 실패 · 이번 순위에서 제외 · 잠시 후 다시"
                         : inputById.get(s.id)?.hasData
                           ? "고른 기준에 쓸 값이 이 단지에는 없어 순위에서 뺐어요"
                           : "최근 12개월 실거래가 없어 순위에서 뺐어요"}

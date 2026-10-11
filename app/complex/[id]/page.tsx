@@ -1138,8 +1138,9 @@ export async function generateMetadata({
   const emdPrefix = emd ? `${emd} ` : "";
   const titleParen = titleNote ?? ymLabel;
   const title = latest
-    ? `${name} 실거래가 ${price}${titleParen ? ` (${titleParen})` : ""} · ${emdPrefix}시세·평형별 실거래 | 내집나우`
-    : `${name} ${emdPrefix}시세·매물·임장노트 | 내집나우`;
+    ? /* [1054] "시세" → 실거래 낱말(이 화면의 가격은 전부 국토부 실거래 · 1009·C 표기 표준을 제목·JSON-LD 까지) */
+      `${name} 실거래가 ${price}${titleParen ? ` (${titleParen})` : ""} · ${emdPrefix}평형별 실거래·거래 이력 | 내집나우`
+    : `${name} ${emdPrefix}실거래·매물·임장노트 | 내집나우`;
   const placeLabel = `${region}${emd ? ` ${emd}` : ""}`;
   const priceNote = [ymLabel ? `${ymLabel} 신고분` : null, deltaPct ? `전월비 ${deltaPct}` : null]
     .filter(Boolean)
@@ -1360,7 +1361,7 @@ export default async function ComplexHubPage({
        speakable 도 넣지 않는다(없는 셀렉터를 가리키지 않는다). */
     webPageJsonLd({
       path: `/complex/${encodeURIComponent(complexId)}`,
-      name: `${v.name} 실거래 시세·임장노트`,
+      name: `${v.name} 실거래가·임장노트`,
       description: citable?.text ?? null,
       dateModified: dataModifiedIso,
       speakableSelectors: citable ? [AI_SUMMARY_SELECTOR] : [],
@@ -1482,10 +1483,18 @@ export default async function ComplexHubPage({
   if (dealsThisYear > 0) {
     railStats.push({ key: "year", label: `${thisYear} 거래`, value: `${dealsThisYear.toLocaleString("ko-KR")}건`, sub: "매매 · 해제 제외" });
   }
+  /* [1054] 읽기 상한(COMPLEX_DEALS_ROW_CAP)에 걸린 대단지는 "1,000건 · 20XX-XX 부터"가 사실이 아니다 — 받은 행의
+     가장 이른 달일 뿐이고 그 앞에 더 있다. 상한이면 "이상"으로 적고 시작 달은 적지 않는다 */
   const headFacts = [
-    txFailed ? "실거래를 불러오지 못함" : trend?.firstYm ? `국토교통부 실거래 ${ymDash(trend.firstYm)} 부터` : "신고된 실거래 없음",
+    txFailed
+      ? "실거래를 불러오지 못함"
+      : dealsCapped
+        ? "국토교통부 실거래"
+        : trend?.firstYm
+          ? `국토교통부 실거래 ${ymDash(trend.firstYm)} 부터`
+          : "신고된 실거래 없음",
     !txFailed && (dealsForV2.length > 0 || (rentHist?.totalCount ?? 0) > 0)
-      ? `매매 ${dealsForV2.length.toLocaleString("ko-KR")}건${rentHist ? ` · 전월세 ${rentHist.totalCount.toLocaleString("ko-KR")}건` : ""}`
+      ? `매매 ${dealsForV2.length.toLocaleString("ko-KR")}건${dealsCapped ? " 이상" : ""}${rentHist ? ` · 전월세 ${rentHist.totalCount.toLocaleString("ko-KR")}건` : ""}`
       : null,
     latestDeal ? `최근 계약 ${dealDateLabel(latestDeal.ym, latestDeal.day).replace(/\./g, "-")}` : null,
   ].filter((x): x is string => Boolean(x));

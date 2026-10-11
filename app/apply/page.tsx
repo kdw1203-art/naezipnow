@@ -176,7 +176,7 @@ export default async function ApplyPage() {
 
             <p className="px-1 t-caption text-text-3">
               출처 청약홈(한국부동산원) 공공데이터포털 ·{" "}
-              <Link href="/data-sources" className="font-bold text-primary no-underline">
+              <Link href="/data-sources" className="tap-line font-bold text-primary no-underline">
                 데이터 출처와 한계
               </Link>
             </p>

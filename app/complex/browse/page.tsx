@@ -98,7 +98,7 @@ export default async function ComplexBrowsePage({
 
       {/* A5 — 면적대·가격대 랜딩 진입점 */}
       <p className="rise-in mb-4 -mt-2 t-body">
-        <Link href="/tx" className="font-bold text-primary underline">
+        <Link href="/tx" className="tap-line font-bold text-primary underline">
           지역별 면적대·가격대 실거래 보기 →
         </Link>
       </p>

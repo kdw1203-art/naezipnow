@@ -144,7 +144,13 @@ export function SoftSignupProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [intent, dismiss]);
 
-  const callback = intent?.callbackUrl ?? pathname ?? "/";
+  /* [1054] 돌아올 주소에 쿼리까지(?region=·?district=·?q= …) — 전에는 pathname 만 넘겨 가입 뒤 필터가 풀린 화면으로 돌아왔다.
+     search 는 렌더 중 window 를 읽지 않도록 시트가 열릴 때(intent 바뀔 때)만 읽는다(SSR 과 첫 렌더 일치). */
+  const [search, setSearch] = useState("");
+  useEffect(() => {
+    if (intent) setSearch(window.location.search);
+  }, [intent]);
+  const callback = intent?.callbackUrl ?? `${pathname ?? "/"}${search}`;
 
   return (
     <SoftSignupContext.Provider value={{ promptSignup }}>

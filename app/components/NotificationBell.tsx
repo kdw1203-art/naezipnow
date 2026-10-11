@@ -84,7 +84,8 @@ export function NotificationBell({ variant }: { variant: "desktop" | "mobile" })
   const cls =
     variant === "desktop"
       ? "press relative hidden h-9 w-9 items-center justify-center rounded-xl bg-[var(--glass-bg)] text-text-1 transition-colors hover:text-primary md:flex"
-      : "press relative flex h-8 w-8 items-center justify-center after:absolute after:-inset-1.5 after:content-['']";
+      : /* [1054] 40×40 실상자(폰 배율에서도 40px) — 가짜 요소 히트 영역(33px) 대신 */
+        "press relative -my-[2px] flex h-10 w-10 items-center justify-center";
   const size = variant === "desktop" ? 18 : 19;
 
   return (

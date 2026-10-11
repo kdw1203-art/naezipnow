@@ -82,7 +82,7 @@ export async function NearbyRedevelopment({
       )}
       <Link
         href="/redevelopment"
-        className="mt-2 inline-block px-1 t-body font-bold text-primary"
+        className="tap-line mt-2 inline-block px-1 t-body font-bold text-primary"
       >
         정비사업 지도에서 전체 보기 →
       </Link>

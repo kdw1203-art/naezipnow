@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { loginHrefWithNext } from "@/lib/auth/auth-ux";
 import { useToast } from "../../components/toast/ToastProvider";
 import { ShareLinkButton } from "../../components/ShareLinkButton";
 
@@ -42,7 +43,8 @@ export function NoteDetailActions({
     try {
       const res = await fetch(`/api/inspection/notes/${noteId}`, { method: "DELETE" });
       if (res.status === 401) {
-        router.push("/login");
+        /* [1054] 로그인 뒤 이 노트로 돌아온다(전에는 홈으로 떨어졌다) */
+        router.push(loginHrefWithNext(`/notes/${encodeURIComponent(noteId)}`));
         return;
       }
       if (!res.ok) {
@@ -79,7 +81,7 @@ export function NoteDetailActions({
         body: JSON.stringify({ isPublic: nextPublic }),
       });
       if (res.status === 401) {
-        router.push("/login");
+        router.push(loginHrefWithNext(`/notes/${encodeURIComponent(noteId)}`));
         return;
       }
       if (!res.ok) {

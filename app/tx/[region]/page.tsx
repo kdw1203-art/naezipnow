@@ -1,3 +1,5 @@
+import { formatKstDate } from "@/lib/format/kst";
+import { HScroll } from "@/app/components/HScroll";
 import type { Metadata } from "next";
 import { AdZone } from "@/app/components/ads/AdZone";
 import Link from "next/link";
@@ -95,15 +97,17 @@ function BandTable({
       <p className="mt-0.5 t-caption text-text-3">
         {kind === "area" ? "전용면적 기준" : "거래금액 기준"} · {cells.length}구간
       </p>
-      <div data-tone="blue" className="lq-panel mt-3 overflow-x-auto max-md:mt-2">
-        <table className="w-full min-w-[460px] text-left t-body">
+      <div data-tone="blue"><HScroll className="lq-panel mt-3 max-md:mt-2">
+        {/* [1054] min-w-[460px] 걷음 — 다섯 열 값이 짧아(구간·억·건·곳) 폰 334px 틀에 다 들어간다. 칸은 nowrap 으로
+            한 값이 두 줄로 갈라지지 않게 하고, 그래도 넘치면 HScroll 이 "옆으로 밀어" 단서를 낸다. */}
+        <table className="w-full whitespace-nowrap text-left t-body">
           <thead>
             <tr className="border-b border-border t-sub text-text-3">
               <th className="py-2 font-medium">{kind === "area" ? "전용면적" : "거래금액"}</th>
-              <th className="py-2 text-right font-medium">중앙값</th>
-              <th className="py-2 text-right font-medium">평균</th>
-              <th className="py-2 text-right font-medium">거래</th>
-              <th className="py-2 text-right font-medium">단지</th>
+              <th className="py-2 pl-3 text-right font-medium">중앙값</th>
+              <th className="py-2 pl-3 text-right font-medium">평균</th>
+              <th className="py-2 pl-3 text-right font-medium">거래</th>
+              <th className="py-2 pl-3 text-right font-medium">단지</th>
             </tr>
           </thead>
           <tbody>
@@ -112,20 +116,20 @@ function BandTable({
                 <td className="py-2.5">
                   <Link
                     href={`/tx/${encodeURIComponent(region.slug)}/${kind}/${c.bandSlug}`}
-                    className="font-bold text-primary underline"
+                    className="inline-flex min-h-[40px] items-center font-bold text-primary underline md:min-h-6"
                   >
                     {c.bandLabel}
                   </Link>
                 </td>
-                <td className="py-2.5 text-right t-num font-bold text-ink">{formatKrwShort(c.medianKrw)}</td>
-                <td className="py-2.5 text-right tabular-nums text-text-2">{formatKrwShort(c.avgKrw)}</td>
-                <td className="py-2.5 text-right tabular-nums text-text-2">{c.txCount.toLocaleString("ko-KR")}건</td>
-                <td className="py-2.5 text-right tabular-nums text-text-2">{c.complexCount.toLocaleString("ko-KR")}곳</td>
+                <td className="py-2.5 pl-3 text-right t-num font-bold text-ink">{formatKrwShort(c.medianKrw)}</td>
+                <td className="py-2.5 pl-3 text-right tabular-nums text-text-2">{formatKrwShort(c.avgKrw)}</td>
+                <td className="py-2.5 pl-3 text-right tabular-nums text-text-2">{c.txCount.toLocaleString("ko-KR")}건</td>
+                <td className="py-2.5 pl-3 text-right tabular-nums text-text-2">{c.complexCount.toLocaleString("ko-KR")}곳</td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
+      </HScroll></div>
     </section>
   );
 }
@@ -296,7 +300,7 @@ export default async function TxRegionPage({
         </nav>
         <p className="px-1 t-caption leading-[1.6] text-text-3">
           데이터 출처: 국토교통부 실거래가 공개시스템 신고분(해제 신고분 제외){range ? ` · ${range}` : ""}
-          {region.lastDataAt ? ` · 갱신 ${region.lastDataAt.toISOString().slice(0, 10)}` : ""}
+          {region.lastDataAt ? ` · 갱신 ${formatKstDate(region.lastDataAt).replace(/\./g, "-")}` : ""}
         </p>
         <AdZone placement="sidebar" seed={2} plan={null} className="hidden lg:block" />
       </aside>

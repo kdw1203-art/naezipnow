@@ -48,7 +48,8 @@ test("임장노트 — 표 · 폰 격자: 첫 누름 펼침(피드 카드) · �
   assert.match(f, /<td\s+colSpan=\{span\}\s+className="bg-bg p-2 md:p-3"[\s\S]{0,500}?<PostCard n=\{n\} \/>/, "펼친 줄 = 피드 카드 그대로");
   assert.match(f, /if \(isOpen\) router\.push\(href\);/, "링크 밖을 다시 눌러도 노트");
   assert.match(f, /grid grid-flow-row-dense grid-cols-3/, "격자 — 누른 줄 아래에 펼침");
-  assert.match(f, /<GridTile n=\{n\} priority=\{i === 0\} open=\{gridOpen === n\.id\} onOpen=\{\(\) => setGridOpen\(n\.id\)\} \/>/);
+  /* [1054] 첫 줄 세 칸 priority(LCP 가 두 번째 타일 사진이었다) */
+  assert.match(f, /<GridTile n=\{n\} priority=\{i < 3\} open=\{gridOpen === n\.id\} onOpen=\{\(\) => setGridOpen\(n\.id\)\} \/>/);
   assert.match(f, /className="col-span-3 bg-bg px-2 pb-1 pt-2">\s*<PostCard n=\{n\} \/>/);
   assert.match(f, /접기 ▴/);
   assert.match(f, /노트 열기 ›/, "펼친 줄 · 펼친 타일에 다음 동작");
@@ -92,7 +93,7 @@ test("홈 중복 검토 — 구별 막대는 지역 동향 안 접힘 · 브리�
   const line = code("app/components/home/HomeTodayLine.tsx");
   assert.match(line, /if \(shown && personalized\) out\.push\(\{ key: "region"/);
   assert.match(line, /const tradeText = shown && personalized \? todayTradeSentence\(shown\) : null;/);
-  assert.match(line, /\[shown, personalized, temp, saleIndex, baseRate, loanRate, publicNotes\]/);
+  assert.match(line, /\[shown, personalized, temp, saleIndex, baseRate, baseRateAsOf, loanRate, loanRateAsOf, publicNotes\]/); // [1054] 기준일 포함
   assert.doesNotMatch(line, /"대표 지역"/, "지역 문장이 없으면 대표 지역 배지도 없다");
   assert.match(line, /\{personalized && \(/);
 });

@@ -262,7 +262,7 @@ export function DeckViewer({ deck }: { deck: NoteDeck }) {
         ref={railRef}
         onScroll={onScroll}
         tabIndex={0}
-        aria-label={`카드 ${total}장 — 좌우로 넘겨 보세요`}
+        aria-label={`카드 ${total}장 · 좌우로 넘김`}
         className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-1 outline-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {deck.pages.map((p, i) => (

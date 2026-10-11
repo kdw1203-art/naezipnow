@@ -56,13 +56,13 @@ export function AreaError({
         {links.map((l, i) => (
           <span key={l.href} className="flex items-center gap-2">
             {i > 0 && <span className="text-text-3">·</span>}
-            <Link href={l.href} className="inline-block py-[5px] font-bold text-primary">
+            <Link href={l.href} className="tap-line inline-block py-[5px] font-bold text-primary">
               {l.label}
             </Link>
           </span>
         ))}
         <span className="text-text-3">·</span>
-        <Link href="/support" className="inline-block py-[5px] font-bold text-primary">
+        <Link href="/support" className="tap-line inline-block py-[5px] font-bold text-primary">
           문의하기
         </Link>
       </div>

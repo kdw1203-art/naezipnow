@@ -38,6 +38,7 @@ import { decoratedParam } from "@/lib/seo/complex-slug";
 import { foldTradesByMonth, type TxMonthBandSlice } from "@/lib/complex/tx-month-fold";
 import { latestTradeRow, type HubDeal } from "@/lib/complex/hub-price";
 import { dealMarkKey, type DealMarks } from "@/lib/complex/deal-marks";
+import { findCatalogRegionStrict } from "@/lib/region/catalog";
 export { applyDealMarks, dealMarkKey, type DealMarks } from "@/lib/complex/deal-marks";
 
 /**
@@ -1138,13 +1139,20 @@ export async function getRegionRelative(complexId: string): Promise<RegionRelati
   if (!dec) return null;
   const sb = getServiceSupabase();
   if (!sb) return null;
-  const { district } = splitRegion(dec.region);
+  /* [1054] 부동산원 표(market_region_price)의 region_name 은 카탈로그 이름이다 — 서울은 "송파구", 다른 시·도는
+     "부산 중구"처럼 시·도를 붙인다(lib/map/seoul-districts). 예전엔 실거래 지역("부산 중구")의 뒷낱말 "중구"만으로
+     찾아 부산·대구·대전·인천 중구 단지가 **서울 중구** 평균과 비교됐다(운영 실측 2026-10-11 · 서구·동구·남구·북구도 같다).
+     전체 이름을 먼저 정확히 찾고, 서울일 때만 구 이름으로 다시 찾는다 — 못 찾으면 비교하지 않는다(틀린 비교보다 없음이 낫다). */
+  const { city, district } = splitRegion(dec.region);
   if (!district) return null;
+  const catalogRegion =
+    findCatalogRegionStrict(dec.region) ?? (city === "서울" ? findCatalogRegionStrict(district) : undefined);
+  if (!catalogRegion) return null;
 
   const { data: reg, error: regError } = await sb
     .from("market_region_price")
     .select("per_m2_sale, sale_change, jeonse_ratio, period")
-    .eq("region_name", district)
+    .eq("region_name", catalogRegion.name)
     .order("period", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -1169,7 +1177,8 @@ export async function getRegionRelative(complexId: string): Promise<RegionRelati
   const deltaPct = Math.round(((complexPerM2 - districtPerM2) / districtPerM2) * 1000) / 10;
 
   return {
-    district,
+    /* 화면 표기도 비교한 표의 지역 이름으로("부산 중구" — "중구"만 적으면 어느 중구인지 모른다) */
+    district: catalogRegion.name,
     complexPerM2Manwon: Math.round(complexPerM2 / 10000),
     districtPerM2Manwon: Math.round(districtPerM2 / 10000),
     deltaPct,

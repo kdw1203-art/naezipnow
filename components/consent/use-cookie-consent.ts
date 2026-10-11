@@ -27,7 +27,13 @@ type ConsentState =
   | { status: "undecided" }
   | { status: "decided"; consent: CookieConsent };
 
+/* [1054] 이 문서 안에서 내린 결정 — 저장소가 막힌 브라우저("모든 쿠키 차단" · 일부 프라이빗 모드)에서는 setItem 이
+   예외를 던지고, 그 뒤 같은 훅이 LOCAL_EVENT 를 받아 저장소를 다시 읽으면 null 이라 "결정 전"으로 되돌아갔다 —
+   "필수만 허용"·"모두 허용"을 눌러도 배너가 안 닫혔다(운영 코드 실측). 저장소보다 이 값을 먼저 본다. */
+let memoryConsent: CookieConsent | null = null;
+
 function readStored(): CookieConsent | null {
+  if (memoryConsent) return memoryConsent;
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
@@ -51,6 +57,7 @@ export function useCookieConsent(): {
     // 다른 탭에서 결정하면 이 탭도 따라간다
     const onStorage = (e: StorageEvent) => {
       if (e.key !== KEY) return;
+      if (e.newValue === null) memoryConsent = null; // 다른 탭에서 결정을 지웠다(쿠키 설정 다시 열기)
       const v = readStored();
       setState(v ? { status: "decided", consent: v } : { status: "undecided" });
     };
@@ -69,10 +76,11 @@ export function useCookieConsent(): {
 
   const decide = useCallback((analytics: boolean) => {
     const consent: CookieConsent = { analytics, decidedAt: new Date().toISOString() };
+    memoryConsent = consent;
     try {
       localStorage.setItem(KEY, JSON.stringify(consent));
     } catch {
-      /* 저장 실패해도 이번 세션 동안은 상태 유지 */
+      /* 저장 실패해도 이번 문서 안에서는 memoryConsent 로 유지(새로고침하면 다시 묻는다) */
     }
     setState({ status: "decided", consent });
     try {

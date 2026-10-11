@@ -161,7 +161,7 @@ test("tallyNewsRegions — 연결 · 시·도만 · 지역 없음", () => {
 test("뉴스 상세 · 관리 화면이 같은 해석기를 쓴다", () => {
   const page = read("app/town/news/[id]/page.tsx");
   assert.match(page, /resolveNewsRegion\(\{/);
-  assert.match(page, /\{regionLinkName \?\? region\} 시세 보기 ›/);
+  assert.match(page, /\{regionLinkName \?\? region\} 실거래 보기 ›/); // [1054] "시세" → 실거래
   const loader = read("lib/admin/news-region-link.ts");
   assert.match(loader, /geo:automation_meta->geo/);
   assert.match(loader, /tallyNewsRegions\(inputs\)/);

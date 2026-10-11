@@ -287,9 +287,10 @@ function GridTile({
         </span>
       )}
       {/* [1015 · 규칙 M 직방] 사진이 여러 장이면 장수 — photoCount 는 실제 photos.length(lib/notes/feed-note) */}
+      {/* [1054] 자료 조사 노트(lab)의 그림은 현장 사진이 아니라 카드·차트 — "자료 N" 으로 적는다(사실 낱말) */}
       {!n.isExample && (n.photoCount ?? 0) >= 2 && (
         <span className="absolute left-1.5 top-1.5 rounded-md bg-brand-navy/80 chip-pad-tight t-caption font-bold text-on-dark backdrop-blur-sm md:left-2.5 md:top-2.5">
-          사진 {n.photoCount}
+          {n.lab ? "자료" : "사진"} {n.photoCount}
         </span>
       )}
       {/* 하단 스크림 + 제목·지역 오버레이 — [1012 · 썸네일] 템플릿 썸네일(제목·사실·지역이 그림 안에 있음)이면
@@ -359,14 +360,14 @@ function PostMedia({ n, priority, href }: { n: FeedNote; priority: boolean; href
             <Link
               key={`${idx}-${src ?? "none"}`}
               href={href}
-              aria-label={idx === 0 ? `${n.title} 노트 보기` : `${n.title} 사진 ${idx + 1}`}
+              aria-label={idx === 0 ? `${n.title} 노트 보기` : `${n.title} ${n.lab ? "자료" : "사진"} ${idx + 1}`}
               className="press relative block aspect-square bg-bg"
             >
               {/* [1017] 소유자: "사이즈가 네모칸에 맞게 세로 가로 정렬을 제대로" — 잘라 채우지(cover) 않고 칸 안에
                   통째로 들어가게(contain) 가운데 정렬. 비율이 다른 사진은 위아래·좌우에 바탕색이 남는다. */}
               <CoverImage
                 src={src}
-                alt={idx === 0 ? `${n.title} 커버 사진` : `${n.title} 사진 ${idx + 1}`}
+                alt={idx === 0 ? `${n.title} ${n.lab ? "커버 자료" : "커버 사진"}` : `${n.title} ${n.lab ? "자료" : "사진"} ${idx + 1}`}
                 priority={priority && idx === 0}
                 sizes="(max-width: 768px) 50vw, 320px"
                 imgClassName="absolute inset-0 h-full w-full object-contain object-center"
@@ -468,7 +469,7 @@ function PostCard({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
         {n.footer.map((f, i) => (
           <span key={f}>{i > 0 ? `· ${f}` : f}</span>
         ))}
-        {(n.photoCount ?? 0) > 0 && <span>· 사진 {n.photoCount}장</span>}
+        {(n.photoCount ?? 0) > 0 && <span>· {n.lab ? "자료" : "사진"} {n.photoCount}장</span>}
       </div>
       {/* ⑤ 행동 줄 — 실제 길만 */}
       <div className="flex border-t border-line">
@@ -1499,6 +1500,9 @@ export function NotesFeedClient({
               action={{ label: "임장노트 쓰기", href: "/notes/new" }}
             />
             )
+          ) : activeLoadError ? (
+            /* [1054] 조회 실패로 0건이면 위 실패 고지만 — "공개된 임장노트 없음"을 같이 적으면 둘이 서로 어긋난다 */
+            null
           ) : (
             <EmptyState
               icon="file-text"
@@ -1520,11 +1524,12 @@ export function NotesFeedClient({
             {/* 폰 격자 보기: 가장자리까지 붙는 촘촘한 3열(인스타 앱). md+ 에서는 그리지 않는다(아래 피드가 항상) */}
             {view === "grid" && (
               <div className="-mx-3.5 grid grid-flow-row-dense grid-cols-3 gap-0.5 md:hidden">
-                {/* [968 · 17] 첫 타일만 priority — 폰 격자 첫 칸(LCP 후보) */}
+                {/* [968 · 17] 첫 타일만 priority — 폰 격자 첫 칸(LCP 후보)
+                    [1054] 첫 줄 세 칸 — 운영 Lighthouse(폰) LCP 요소가 두 번째 타일 사진이었는데 lazy 라 3.4s. 같은 줄은 같이 먼저 */}
                 {/* [1050 · 펼침] 누른 타일 줄 바로 아래 피드 카드 — 같은 줄의 나머지 타일은 dense 로 제 줄에 남는다 */}
                 {visible.map((n, i) => (
                   <Fragment key={n.id}>
-                    <GridTile n={n} priority={i === 0} open={gridOpen === n.id} onOpen={() => setGridOpen(n.id)} />
+                    <GridTile n={n} priority={i < 3} open={gridOpen === n.id} onOpen={() => setGridOpen(n.id)} />
                     {gridOpen === n.id && (
                       <div id={`grid-open-${n.id}`} className="col-span-3 bg-bg px-2 pb-1 pt-2">
                         <PostCard n={n} />

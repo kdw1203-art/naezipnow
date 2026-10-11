@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { HScroll } from "@/app/components/HScroll";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "../../../../components/PageShell";
@@ -230,10 +231,10 @@ export default async function TxBandPage({ params }: { params: Promise<Params> }
           </p>
         ) : complexes.length === 0 ? (
           <p className="py-6 text-center t-body text-text-3 max-md:py-4">
-            이 구간에서 거래된 단지 내역이 아직 정리되지 않았습니다.
+            이 구간 단지별 내역 없음
           </p>
         ) : (
-          <div data-tone="blue" className="lq-panel mt-3 overflow-x-auto max-md:mt-2">
+          <div data-tone="blue"><HScroll className="lq-panel mt-3 max-md:mt-2">
             <table className="w-full min-w-[520px] text-left t-body">
               <thead>
                 <tr className="border-b border-border t-sub text-text-3">
@@ -273,7 +274,7 @@ export default async function TxBandPage({ params }: { params: Promise<Params> }
                 ))}
               </tbody>
             </table>
-          </div>
+          </HScroll></div>
         )}
       </section>
 

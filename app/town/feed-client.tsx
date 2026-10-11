@@ -632,9 +632,13 @@ export function TownFeed({
     () => (myRegions && myRegions.length > 0 ? allCards.filter(matchesMine).length : 0),
     [allCards, myRegions, matchesMine],
   );
+  /* [1054] 관심지역이 없는 계정(또는 비로그인)이 ?mine=1 을 열면 거를 기준이 없다 — 필터를 끈다(URL 도 같이 정리됨). */
+  useEffect(() => {
+    if (onlyMine && myRegions !== null && myRegions.length === 0) setOnlyMine(false);
+  }, [onlyMine, myRegions]);
 
   const visible = useMemo(() => {
-    let list = onlyMine ? allCards.filter(matchesMine) : allCards;
+    const list = onlyMine ? allCards.filter(matchesMine) : allCards;
     /* 포인트 추천글은 정렬과 무관하게 맨 앞 — 배지('추천글')로 이유를 밝힌다 */
     const byBoost = (a: FeedCard, b: FeedCard) => Number(b.boosted ?? false) - Number(a.boosted ?? false);
     if (sort === "latest")
@@ -648,7 +652,9 @@ export function TownFeed({
       <div className="mb-2 flex flex-wrap items-center gap-2 empty:hidden">
         {/* 홈에서 정한 관심지역을 여기서도 쓴다 (B21) — 없으면 그리지 않는다.
             "0개"가 나오는 칩을 만들어 두면 눌러 보고 실망하게 된다. */}
-        {myRegions && myRegions.length > 0 && mineCount > 0 && (
+        {/* [1054] ?mine=1 로 들어왔는데 내 지역 글이 0건이면 칩이 안 그려져 "내 관심지역 글 없음"에서 못 빠져나왔다 —
+            켜져 있는 동안은 0건이어도 칩을 그려 끌 수 있게 한다. */}
+        {myRegions && myRegions.length > 0 && (mineCount > 0 || onlyMine) && (
           <button
             type="button"
             aria-pressed={onlyMine}

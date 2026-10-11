@@ -5,6 +5,7 @@ import { hasSession } from "@/lib/client/has-session";
 import { ExpertBadge, type ExpertBadgeData } from "@/app/components/ExpertBadge";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { loginHrefWithNext } from "@/lib/auth/auth-ux";
 import { CommentForm } from "./PostInteractions";
 import { ReportButton } from "@/app/components/ReportButton";
 
@@ -124,7 +125,8 @@ export function CommentThread({
         body: JSON.stringify({ commentId }),
       });
       if (res.status === 401) {
-        router.push("/login");
+        /* [1054] 로그인 뒤 이 글로 돌아온다(전에는 홈으로 떨어졌다) */
+        router.push(loginHrefWithNext(`/town/news/${encodeURIComponent(postId)}`));
         return;
       }
       if (!res.ok) {

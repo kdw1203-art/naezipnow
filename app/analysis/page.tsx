@@ -113,7 +113,7 @@ function TierHead({ id, count }: { id: TierId; count: number }) {
             [1023] 배지는 그 계열 앵커 링크(24px 하한) — 위 계열 칩과 같은 목적지 */}
         <a
           href={`#tier-${id}`}
-          className="t-caption ml-auto inline-flex min-h-[24px] min-w-[24px] shrink-0 items-center justify-end text-text-3 tabular-nums no-underline hover:underline"
+          className="tap-line t-caption ml-auto inline-flex min-h-[24px] min-w-[24px] shrink-0 items-center justify-end text-text-3 tabular-nums no-underline hover:underline"
         >
           {count}종
         </a>

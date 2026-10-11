@@ -57,7 +57,7 @@ function decide(p: Personal | null): Pick {
         : "/analysis/price",
       icon: "bar",
       title: "면적대별 실거래",
-      why: `최근 노트한 ${p.recentNote.aptName}의 면적대를 비교해 보세요`,
+      why: `최근 노트한 ${p.recentNote.aptName}의 면적대별 실거래`,
     };
   }
   if (p.primaryRegion) {

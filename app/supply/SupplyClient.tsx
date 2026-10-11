@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { HScroll } from "@/app/components/HScroll";
 import { SUPPLY_WINDOW_MONTHS, inSupplyWindow, shownMonths, supplyWindow, validYm, type SupplyWindow } from "@/lib/supply/window";
 import { Bars } from "@/app/components/viz/Bars";
 // server-only 체인이 있는 모듈이라 값 import 는 불가 — 타입은 컴파일에서 소거되므로 안전.
@@ -126,8 +127,10 @@ function kstYm(ms: number): string {
   return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+/* [1054] 한국 날짜 기준 분기 키 — 예전엔 환경 시간대(서버 UTC)의 월을 썼다 */
 function quarterKey(d: Date): string {
-  return `${d.getFullYear()}-${Math.ceil((d.getMonth() + 1) / 3)}`;
+  const k = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  return `${k.getUTCFullYear()}-${Math.ceil((k.getUTCMonth() + 1) / 3)}`;
 }
 
 function readRegionFromLocation(): string | null {
@@ -192,7 +195,10 @@ export function SupplyClient({
 
   const nowKey = quarterKey(new Date(nowMs));
   let currentIdx = groups.findIndex((g) => g.key === nowKey);
-  if (currentIdx < 0) currentIdx = groups.findIndex((g) => g.key !== "unknown");
+  /* [1054] 이번 분기 물량이 없으면 **이번 분기 뒤** 첫 분기를 "다음 입주"로 — 예전엔 목록의 첫 분기(지난 분기일 수 있음)를
+     "이번 분기 입주"라 적었고, 그 뒤 지난 분기들까지 "다가오는 입주"에 섞였다 */
+  const thisQuarterIsNow = currentIdx >= 0;
+  if (currentIdx < 0) currentIdx = groups.findIndex((g) => g.key !== "unknown" && g.key > nowKey);
   const thisQuarter = currentIdx >= 0 ? groups[currentIdx] : null;
   const upcomingItems =
     currentIdx >= 0
@@ -365,7 +371,7 @@ export function SupplyClient({
           <>
             <div className="rise-in-2 flex items-baseline justify-between px-1">
               <h2 className="text-xs font-bold text-primary">
-                이번 분기 입주 · {thisQuarter?.items.length ?? 0}곳
+                {thisQuarterIsNow ? "이번 분기 입주" : "다음 입주 분기"} · {thisQuarter?.items.length ?? 0}곳
               </h2>
               {thisQuarter && (
                 <span className="t-sub text-text-3">
@@ -377,7 +383,7 @@ export function SupplyClient({
             {featured.length > 0 && (() => {
               const maxHh = featured.reduce((m, s) => Math.max(m, s.households ?? 0), 0);
               return (
-                <div className="rise-in-2 overflow-x-auto rounded-2xl border-[1.5px] border-primary bg-surface px-3 py-2">
+                <HScroll className="rise-in-2 rounded-2xl border-[1.5px] border-primary bg-surface px-3 py-2">
                   <table className="w-full min-w-[320px] border-collapse t-sub">
                     <thead>
                       <tr className="text-left t-caption text-text-3">
@@ -409,7 +415,7 @@ export function SupplyClient({
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </HScroll>
               );
             })()}
             {featuredMore > 0 && (
@@ -479,9 +485,13 @@ export function SupplyClient({
           </div>
         ) : (
           /* [1015] 표 껍데기 = 리퀴드 판(sand — 입주 일정 톤, 브리프 규칙 I) */
-          <div className="rise-in-4 lq-panel overflow-x-auto py-1" data-tone="sand">
-            <div className="min-w-[520px]">
-              <div className="grid grid-cols-[1.8fr_.8fr_.8fr_.9fr] gap-2 border-b border-divider py-2 t-caption text-text-3">
+          <div data-tone="sand"><HScroll className="rise-in-4 lq-panel py-1">
+            {/* [1054] 폰은 520px 고정 폭을 걷고 네 열을 틀 안에 넣는다 — 단지 이름 열만 줄이고(minmax(0,1fr)) 나머지는 고정 폭
+                (머리 줄과 행이 따로 그리는 격자라 auto 로 두면 행마다 열 자리가 어긋난다 · 입주월 54 · 세대수 40 · 유형 48px).
+                지역은 폰에서 이름 아래 줄로. 데스크톱 비율(1.8/.8/.8/.9)은 그대로. 폰에서 "세대수·사업유형" 열이 잘려
+                안 보이던 것(운영 실측 390px)을 고친다. */}
+            <div className="md:min-w-[520px]">
+              <div className="grid grid-cols-[minmax(0,1fr)_54px_40px_48px] gap-x-2 gap-y-2 border-b border-divider py-2 t-caption text-text-3 md:grid-cols-[1.8fr_.8fr_.8fr_.9fr] md:gap-x-3">
                 <span>단지 · 지역</span>
                 <span className="text-center">입주월</span>
                 <span className="text-center">세대수</span>
@@ -490,13 +500,13 @@ export function SupplyClient({
               {tableRows.map((item, i, arr) => (
                 <div
                   key={`row-${item.aptName ?? "미정"}-${i}`}
-                  className={`grid grid-cols-[1.8fr_.8fr_.8fr_.9fr] items-center gap-2 py-2.5 text-xs ${
+                  className={`grid grid-cols-[minmax(0,1fr)_54px_40px_48px] items-center gap-x-2 gap-y-2 py-2.5 text-xs md:grid-cols-[1.8fr_.8fr_.8fr_.9fr] md:gap-x-3 ${
                     i < arr.length - 1 ? "border-b border-divider" : ""
                   }`}
                 >
-                  <span className="truncate font-bold text-ink">
-                    {item.aptName ?? "미정"}
-                    <span className="ml-1 t-caption font-medium text-text-3">
+                  <span className="min-w-0 font-bold text-ink">
+                    <span className="block truncate md:inline">{item.aptName ?? "미정"}</span>
+                    <span className="block truncate t-caption font-medium text-text-3 md:ml-1 md:inline">
                       {item.region}
                     </span>
                   </span>
@@ -528,7 +538,7 @@ export function SupplyClient({
                 {asOfLabel ? ` · ${asOfLabel} 기준` : ""}
               </div>
             </div>
-          </div>
+          </HScroll></div>
         )}
       </div>
 

@@ -1152,7 +1152,8 @@ export function NaverMap({
           disabled={!loaded || geoLoading}
           /* 모바일22 — 36→44px(터치 하한). bottom-right 는 한 손 조작 반경
              (우하단)이며 모바일 탭바(바닥 6px + 높이 ~59px) 위로 띄운다. */
-          className={`absolute z-20 flex h-11 w-11 items-center justify-center rounded-full bg-white text-[15px] shadow-md ring-1 ring-black/10 hover:bg-slate-50 disabled:opacity-60 ${
+          /* [1054] h-11/w-11 은 폰 배율(--spacing 3px)에서 33px — 44px 그대로 두려면 px 로 */
+          className={`absolute z-20 flex h-[44px] w-[44px] items-center justify-center rounded-full bg-white text-[15px] shadow-md ring-1 ring-black/10 hover:bg-slate-50 disabled:opacity-60 ${
             geolocationButtonPosition === "bottom-left"
               ? "bottom-3 left-3"
               : geolocationButtonPosition === "bottom-right"

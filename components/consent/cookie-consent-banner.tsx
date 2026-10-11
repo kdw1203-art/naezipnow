@@ -17,6 +17,10 @@ export function CookieConsentBanner() {
   const { state, decide } = useCookieConsent();
   const pathname = usePathname() ?? "/";
   const open = state.status === "undecided";
+  /* [1054 · 속도] 결정 전(loading 포함)에는 서버 HTML 에도 그린다 — 이미 결정한 브라우저는 layout 의 CONSENT_SCRIPT 가
+     그리기 전에 html[data-cc="1"] 을 세워 CSS 로 숨기고, 하이드레이션 뒤 decided 가 되면 여기서 내린다.
+     예전엔 하이드레이션 뒤에야 나타나 글이 적은 화면에선 이 배너가 LCP(4.1초)였다. */
+  const visible = state.status !== "decided";
 
   /* [970 · A-39 · A-20] 배너가 떠 있는 동안 body 에 표식을 남긴다 — globals.css 가
      .nz-consent-open 으로 "맨 위로" FAB 를 숨기고(배너 밑에 깔려 눌리지 않았다),
@@ -29,7 +33,7 @@ export function CookieConsentBanner() {
     return () => document.body.classList.remove(...classes);
   }, [open, pathname]);
 
-  if (!open) return null;
+  if (!visible) return null;
 
   return (
     <div
@@ -49,6 +53,7 @@ export function CookieConsentBanner() {
       style={{ "--nz-consent-bottom": consentBannerBottom(pathname) } as CSSProperties}
       /* [966] 인쇄 제외 표식 — 고정 클래스가 없어 속성으로 잡는다(globals.css @media print) */
       data-noprint
+      data-consent-banner
     >
       {/* 모바일 실측(2026-08-02): 글래스 60% 불투명이라 밑 본문 글자가 배너 문구와
           겹쳐 읽혔고, 패딩까지 더해 화면 하단 1/3 을 차지했다. 동의는 법적 행위의

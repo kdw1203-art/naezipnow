@@ -1,6 +1,7 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 import Link from "next/link";
+import { HScroll } from "@/app/components/HScroll";
 import {
   buildComplexTxSlug,
   type ComplexSummary,
@@ -49,7 +50,7 @@ export function ComplexSummaryTable({
     );
   }
   return (
-    <div className="mt-3 overflow-x-auto">
+    <HScroll className="mt-3">
       <table className="w-full min-w-[560px] text-left t-body">
         <thead>
           <tr className="border-b border-border t-sub text-text-3">
@@ -103,6 +104,6 @@ export function ComplexSummaryTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </HScroll>
   );
 }

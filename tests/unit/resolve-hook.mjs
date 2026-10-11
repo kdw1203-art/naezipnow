@@ -49,6 +49,17 @@ function firstExisting(baseNoExt) {
 }
 
 export async function resolve(specifier, context, nextResolve) {
+  /* [1054] `import "server-only"` — 표식 패키지가 node_modules 에 따로 없을 때(Next 가 컴파일본만 가진 설치)
+     Next 의 빈 사본(empty.js)으로 푼다. 서버 전용 순수 함수(lib/region/monthly-report 등)를 테스트에서 그대로 부르기 위해서다. */
+  if (specifier === "server-only") {
+    try {
+      return await nextResolve(specifier, context);
+    } catch {
+      const empty = path.resolve(ROOT, "node_modules/next/dist/compiled/server-only/empty.js");
+      if (existsSync(empty)) return nextResolve(pathToFileURL(empty).href, context);
+      throw new Error("server-only 를 풀 수 없음");
+    }
+  }
   // @/foo/bar → <root>/foo/bar(.ts|.tsx|/index.ts)
   if (specifier.startsWith("@/")) {
     const hit = firstExisting(path.resolve(ROOT, specifier.slice(2)));

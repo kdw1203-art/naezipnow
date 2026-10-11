@@ -244,7 +244,8 @@ export function MobileMenu() {
         aria-controls={sheetId}
         onPointerDown={openMenu}
         onClick={openMenu}
-        className="relative flex h-8 w-8 items-center justify-center rounded-xl text-text-1 transition-colors after:absolute after:-inset-1.5 after:content-[''] active:bg-[rgba(29,79,216,.08)] md:hidden"
+        /* [1054] 40×40 실상자(h-10/w-10 은 폰 배율에서도 40px) — after:-inset 히트 영역(33px) 대신 */
+        className="relative -my-[2px] flex h-10 w-10 items-center justify-center rounded-xl text-text-1 transition-colors active:bg-[rgba(29,79,216,.08)] md:hidden"
       >
         <Icon name="menu" size={20} />
       </button>
@@ -312,7 +313,7 @@ export function MobileMenu() {
                 aria-label="메뉴 닫기"
                 onPointerDown={() => setOpen(false)}
                 onClick={() => setOpen(false)}
-                className="relative flex h-8 w-8 items-center justify-center rounded-xl text-text-2 transition-colors after:absolute after:-inset-1.5 after:content-[''] active:bg-[rgba(29,79,216,.08)]"
+                className="relative -mr-[8px] flex h-10 w-10 items-center justify-center rounded-xl text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)]"
               >
                 <Icon name="x" size={18} />
               </button>

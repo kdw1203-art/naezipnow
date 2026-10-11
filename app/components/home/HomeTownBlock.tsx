@@ -47,15 +47,16 @@ export function HomeTownBlock({
         <div className="flex items-center justify-between gap-2">
           {/* [1015 · 규칙 C] 제목 옆 부연("사람의 기록") 삭제 — 소유자 지시 */}
           <h2 className="t-section text-ink">동네이야기</h2>
+          {/* [1054] tap-line — 폰에서 27px 이던 세로 히트를 32px 로(레이아웃 불변) */}
           <Link
             href="/town"
-            className="inline-block py-[5px] t-sub text-text-3 transition-colors hover:text-primary"
+            className="tap-line inline-block py-[5px] t-sub text-text-3 transition-colors hover:text-primary"
           >
             더보기
           </Link>
         </div>
         {failed ? (
-          <p className="m-0 t-sub text-text-3">이웃 글 불러오기 실패</p>
+          <p className="m-0 t-sub text-text-3">이웃 글 불러오기 실패 · 잠시 후 다시</p>
         ) : stories.length === 0 ? (
           /* 0건 — 빈 방을 뉴스로 채우지 않는다(뉴스는 옆 칸의 다른 재질). 첫 글로 안내한다. [1030] 한 줄 띠 */
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 md:ml-auto">
@@ -118,13 +119,13 @@ export function HomeTownBlock({
           <h2 className="t-section text-ink">뉴스룸</h2>
           <Link
             href="/town/news"
-            className="inline-block py-[5px] t-sub text-text-3 transition-colors hover:text-primary"
+            className="tap-line inline-block py-[5px] t-sub text-text-3 transition-colors hover:text-primary"
           >
             더보기
           </Link>
         </div>
         {failed ? (
-          <p className="m-0 t-sub text-text-3">뉴스 불러오기 실패</p>
+          <p className="m-0 t-sub text-text-3">뉴스 불러오기 실패 · 잠시 후 다시</p>
         ) : news.length === 0 ? (
           <p className="m-0 t-sub text-text-3">최근 기사 없음</p>
         ) : (

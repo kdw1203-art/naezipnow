@@ -1,3 +1,4 @@
+import { deltaDir } from "@/lib/format/delta";
 /**
  * [1009 · H] 홈 AI 입구 "오늘의 시장 브리핑" 문장 — 순수 함수(테스트로 잠근다).
  *
@@ -18,10 +19,13 @@ export function briefingFromDeltas(
   const vals = deltas.filter((d) => Number.isFinite(d));
   const n = vals.length;
   if (n < (opts.minRegions ?? 5) || !period) return null;
-  const falling = vals.filter((d) => d < -0.1).length;
-  const rising = vals.filter((d) => d > 0.1).length;
+  /* [1054] 오름·내림 문턱은 사이트 공통 FLAT_PCT(0.05 · lib/format/delta)로 — 예전엔 여기만 ±0.1 이라
+     바로 아래 "서울 25개 구 막대"(±0.05 로 색칠 · "AI 브리핑과 같은 기준"이라 적힘)의 빨간 막대 수와 "N곳 상승"이 어긋났다 */
+  const falling = vals.filter((d) => deltaDir(d) === "down").length;
+  const rising = vals.filter((d) => deltaDir(d) === "up").length;
   const avg = vals.reduce((a, b) => a + b, 0) / n;
-  const arrow = avg > 0.05 ? "▲" : avg < -0.05 ? "▼" : "—";
+  const avgDir = deltaDir(avg);
+  const arrow = avgDir === "up" ? "▲" : avgDir === "down" ? "▼" : "—";
   const lead = rising >= falling ? `서울 ${n}개 구 중 ${rising}곳 상승` : `서울 ${n}개 구 중 ${falling}곳 하락`;
   const avgLabel = arrow === "—" ? "평균 보합" : `평균 ${arrow}${Math.abs(avg).toFixed(1)}%`;
   const ym = /^\d{6}$/.test(period) ? `${period.slice(0, 4)}.${period.slice(4, 6)}` : period;

@@ -24,9 +24,13 @@ export const metadata: Metadata = {
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 
+/* [1054] 날짜 글자(YYYY-MM-DD)를 그대로 읽는다 — 예전엔 `+09:00` 으로 Date 를 만들고 서버(UTC)의 getDate()를 써서
+   모든 날짜가 하루 앞(전날 15:00 UTC)으로 찍혔다. 요일은 UTC 자정 기준으로 세면 달력 날짜와 같다. */
 function dateLabel(iso: string): string {
-  const d = new Date(`${iso}T00:00:00+09:00`);
-  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]})`;
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return `${m}월 ${d}일 (${DOW[dow]})`;
 }
 
 function todayKst(): string {

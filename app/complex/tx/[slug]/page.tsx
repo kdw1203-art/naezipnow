@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { HScroll } from "@/app/components/HScroll";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -91,7 +92,9 @@ const loadPageData = cache(
        가드로 흘러 notFound() + robots:noindex,nofollow 가 됐다 — 잠깐 못 읽은
        것을 크롤러에게 "이 페이지는 없어졌다"고 확정 신고한 셈이다. 이제 실패는
        그대로 던져 5xx("나중에 다시 오라")가 되고, 404 는 진짜 0건일 때만 난다. */
-    const transactions = await listComplexTransactions(parsed.complexName, region, 30);
+    /* [1054] 집계(면적대 · 월별 · 최근 12개월 건수)는 120건으로, 표는 30건으로 — 예전엔 30건만 받아
+       거래가 많은 단지의 "최근 12개월 거래"가 30건에서 끊기고 앞 달이 0건으로 보였다(조회 자체는 어차피 120건을 읽는다) */
+    const transactions = await listComplexTransactions(parsed.complexName, region, 120);
     if (transactions.length === 0) return null;
     return { complexName: parsed.complexName, region, transactions };
   },
@@ -115,7 +118,7 @@ export async function generateMetadata({
   const title = `${complexName} 실거래가 — 최근 ${formatKrwShort(latest.dealAmountKrw)} | 내집나우`;
   const description = `${regionLabel} ${complexName} 아파트 실거래 — 최근 거래 ${formatKrwShort(
     latest.dealAmountKrw,
-  )} (${formatYmd(latest.contractYm, latest.contractDay)}). 국토교통부 실거래가 기반 거래 이력·면적대별 시세·월별 거래량을 확인하세요. 매물 호가가 아닙니다.`;
+  )} (${formatYmd(latest.contractYm, latest.contractDay)}). 국토교통부 실거래가 기반 거래 이력·면적대별 실거래가·월별 거래량. 매물 호가가 아닙니다.`;
   /* 항목 42 — 같은 단지를 렌더하는 색인 가능 URL 이 둘(/complex/{id} 와 이
      페이지)이라 서로 잠식했다. 사이트맵이 내는 /complex/{id} 를 정본으로
      선언한다. id 는 최근 거래 행의 실제 region_name 으로 조립 — 추측 없음.
@@ -169,12 +172,16 @@ export default async function ComplexTxPage({
   const monthly = summarizeMonthly(transactions);
   const maxMonthlyCount = Math.max(1, ...monthly.map((m) => m.count));
   const count12m = monthly.reduce((s, m) => s + m.count, 0);
+  /* 받은 120건이 전부 12개월 안이면 그 뒤가 더 있을 수 있다 — 상한에 걸린 수는 "이상"으로 적는다 */
+  const count12mCapped = transactions.length >= 120 && count12m >= 120;
+  /* 거래 이력 표는 최근 30건만 */
+  const tableRows = transactions.slice(0, 30);
 
   const overviewRows: Array<{ label: string; value: string }> = [
     { label: "지역", value: regionLabel },
     ...(address ? [{ label: "주소", value: address }] : []),
     ...(buildYear ? [{ label: "건축년도", value: `${buildYear}년` }] : []),
-    { label: "최근 12개월 거래", value: `${count12m}건` },
+    { label: "최근 12개월 거래", value: `${count12m}건${count12mCapped ? " 이상" : ""}` },
     {
       label: "최근 실거래",
       value: `${formatKrwShort(latest.dealAmountKrw)} (${formatYmd(latest.contractYm, latest.contractDay)})`,
@@ -234,7 +241,7 @@ export default async function ComplexTxPage({
               최근 {transactions.length}건 기준
             </span>
           </h2>
-          <div className="mt-3 overflow-x-auto">
+          <HScroll className="mt-3">
             <table className="w-full min-w-[420px] text-left t-body">
               <thead>
                 <tr className="border-b border-border t-sub text-text-3">
@@ -262,7 +269,7 @@ export default async function ComplexTxPage({
                 ))}
               </tbody>
             </table>
-          </div>
+          </HScroll>
         </section>
       )}
 
@@ -276,8 +283,15 @@ export default async function ComplexTxPage({
           <p className="py-6 text-center t-body text-text-3">최근 12개월 거래 없음 · 과거 거래는 아래 거래 이력에</p>
         ) : (
           <>
+            {/* [1054] 폰은 막대 하나가 22px 뿐이라 열두 평균가 글자가 서로 겹쳐 읽히지 않았다 — 폰에서는 첫 거래달·최다 거래달·
+                마지막 거래달 셋만 적고 나머지는 자리만 남긴다(invisible · 막대 높이 정렬 유지). md+ 는 전부. */}
+            {(() => {
+              const withData = monthly.map((m, i) => (m.count > 0 ? i : -1)).filter((i) => i >= 0);
+              const maxIdx = monthly.reduce((best, m, i) => (m.count > monthly[best].count ? i : best), 0);
+              const labelIdx = new Set([withData[0], maxIdx, withData[withData.length - 1]]);
+              return (
             <div className="mt-4 flex h-[110px] items-end gap-[6px]">
-              {monthly.map((m) => (
+              {monthly.map((m, i) => (
                 <div
                   key={m.ym}
                   className="flex min-w-0 flex-1 flex-col items-center gap-1"
@@ -285,7 +299,7 @@ export default async function ComplexTxPage({
                     m.avgAmountKrw !== null ? ` · 평균 ${formatKrwShort(m.avgAmountKrw)}` : ""
                   }`}
                 >
-                  <span className="t-caption font-bold text-text-3">
+                  <span className={`whitespace-nowrap t-caption font-bold text-text-3 ${labelIdx.has(i) ? "" : "max-md:invisible"}`}>
                     {m.avgAmountKrw !== null ? formatKrwShort(m.avgAmountKrw) : ""}
                   </span>
                   <div
@@ -299,6 +313,8 @@ export default async function ComplexTxPage({
                 </div>
               ))}
             </div>
+              );
+            })()}
             <div className="mt-1 flex justify-between t-caption text-text-3">
               <span>{shortYm(monthly[0].ym)}</span>
               <span>{shortYm(monthly[monthly.length - 1].ym)}</span>
@@ -312,7 +328,7 @@ export default async function ComplexTxPage({
         <h2 className="t-section text-ink">
           거래 이력{" "}
           <span className="t-sub font-medium text-text-3">
-            최근 {transactions.length}건 · 국토부 실거래가
+            최근 {tableRows.length}건 · 국토부 실거래가
           </span>
         </h2>
         <div className="mt-3 overflow-x-auto">
@@ -326,7 +342,7 @@ export default async function ComplexTxPage({
               </tr>
             </thead>
             <tbody>
-              {transactions.map((t, i) => (
+              {tableRows.map((t, i) => (
                 <tr
                   key={`${t.contractYm}-${t.contractDay ?? 0}-${t.areaM2 ?? 0}-${i}`}
                   className="border-b border-border last:border-b-0"
@@ -415,8 +431,14 @@ export default async function ComplexTxPage({
         <Link href="/map" className="card tile px-5 py-3 t-body font-bold text-ink">
           지도에서 보기
         </Link>
+        {/* [1054] /complex/browse 는 서울 25구 칩뿐이라 다른 도시 이름은 조용히 강남구로 떨어졌다(부산 해운대구 → 강남구 표).
+            서울 밖은 지역 허브의 단지별 현황(#complexes)으로. */}
         <Link
-          href={`/complex/browse?district=${encodeURIComponent(regionLabel)}`}
+          href={
+            region.city === "서울"
+              ? `/complex/browse?district=${encodeURIComponent(regionLabel)}`
+              : `/region/${region.id}#complexes`
+          }
           className="card tile px-5 py-3 t-body font-bold text-ink"
         >
           {region.name} 다른 단지

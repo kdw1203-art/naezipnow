@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { HScroll } from "@/app/components/HScroll";
 import { Segmented } from "@/app/components/ui/Segmented";
 import { Explain } from "@/app/components/explain/Explain";
 import {
@@ -170,7 +171,7 @@ export function BrokerageFeeCalc() {
       {/* 요율표 전문 — 계산 근거를 그대로 공개한다 (검색 사용자가 찾는 표이기도 하다) */}
       <div className="card flex flex-col gap-3 rounded-3xl p-[18px] max-md:p-3.5">
         <span className="t-body font-bold text-ink">주택 중개보수 상한요율표</span>
-        <div className="overflow-x-auto">
+        <HScroll>
           <table className="w-full min-w-[420px] t-sub">
             <thead>
               <tr className="border-b border-line text-left t-sub text-text-3">
@@ -190,7 +191,7 @@ export function BrokerageFeeCalc() {
               <tr><td className="py-1.5 pr-2">15억 이상</td><td className="pr-2">0.7%</td><td>0.6%</td></tr>
             </tbody>
           </table>
-        </div>
+        </HScroll>
         <p className="t-sub leading-[1.7] text-text-3">
           오피스텔(전용 85㎡ 이하·주거설비 갖춤): 매매 0.5% · 임대차 0.4%. 토지·상가 등
           주택 외: 0.9% 이내 협의. 근거: 공인중개사법 시행규칙 제20조(법정 상한요율) ·

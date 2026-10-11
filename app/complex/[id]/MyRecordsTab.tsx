@@ -94,7 +94,7 @@ export function MyRecordsTab({
     return (
       <EmptyState
         title="로그인하면 이 단지에 남긴 임장노트가 여기에 모여요"
-        desc="방문 회차·점수·판정이 단지별로 쌓이고, 관심 단지로 저장하면 시세 변동 알림도 받아요"
+        desc="방문 회차·점수·판정이 단지별로 쌓이고, 관심 단지로 저장하면 새 실거래 알림도 받아요"
         action={{ label: "로그인", href: recordsLoginHref(pathname ?? "", search) }}
       />
     );
@@ -121,7 +121,7 @@ export function MyRecordsTab({
         />
         {watching === true && (
           <p className="px-1 t-caption text-text-3" role="status">
-            관심 단지로 저장돼 있어요 · 시세가 움직이면 알림을 보내요
+            관심 단지로 저장돼 있어요 · 새 실거래가 신고되면 알림을 보내요
           </p>
         )}
       </div>

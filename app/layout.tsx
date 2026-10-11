@@ -87,6 +87,9 @@ export const viewport: Viewport = {
    노출(0.25~8 의 2의 거듭제곱)하고 사파리는 undefined → 표식 없음(= 지금과 동일).
    인라인인 이유: 하이드레이션 뒤 붙이면 그 사이 블러가 한 번 그려진다. nonce 불요 —
    CSP script-src 가 'unsafe-inline'(폰트 스왑 인라인 스크립트와 같은 조건). */
+/* [1054] 결정한 동의가 있으면 그리기 전에 표식 — CookieConsentBanner 주석 */
+const CONSENT_SCRIPT =
+  "(function(){try{if(localStorage.getItem('nz_cookie_consent'))document.documentElement.setAttribute('data-cc','1')}catch(e){}})();";
 const LOWEND_SCRIPT =
   "(function(){try{var m=navigator.deviceMemory;if(typeof m==='number'&&m<=4)document.documentElement.setAttribute('data-lowend','1');}catch(e){}})();";
 
@@ -156,6 +159,10 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: LOWEND_SCRIPT }} />
         {/* [1012 · 모바일 60%] 폰에서만 뷰포트 배율 0.6 — 위 MSCALE_SCRIPT 주석 참고 */}
         <script dangerouslySetInnerHTML={{ __html: MSCALE_SCRIPT }} />
+        {/* [1054 · 속도] 쿠키 동의 배너를 서버 HTML 에 넣고(첫 그림에 바로 보이게), 이미 결정한 브라우저는 그리기 전에
+            html[data-cc] 로 숨긴다(globals.css). 예전엔 배너가 하이드레이션 뒤에야 나타나 운영 Lighthouse 에서 /town/강남구 의
+            가장 큰 요소(LCP)가 이 배너 글이었고 4.1초였다(TTFB 0.7초 + 그리기 지연 3.4초). 결정 뒤엔 컴포넌트가 스스로 내린다. */}
+        <script dangerouslySetInnerHTML={{ __html: CONSENT_SCRIPT }} />
         {/* [969 · 16] 폰트 원점 3 → 0. 여기 있던 G7 preconnect/dns-prefetch(cdn.jsdelivr.net)
             와 아래 [949] preconnect(fonts.gstatic.com)를 지웠다 — 폰트 CSS·woff2 가 전부
             same-origin(/fonts/) 이 되어 미리 열 연결이 없다. 예전에는 폰트 때문에

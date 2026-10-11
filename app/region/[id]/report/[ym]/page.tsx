@@ -1,5 +1,6 @@
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
+import { HScroll } from "@/app/components/HScroll";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
@@ -203,7 +204,8 @@ export default async function RegionMonthlyReportPage({
         {region.name} 아파트 시장 · {label}
       </h1>
       <p className="rise-in-1 mt-1.5 t-sub text-text-3">
-        {label} 고정 월간 스냅샷 · 신고 지연분 반영을 위해 하루 1회 갱신 ·{" "}
+        {/* [1054] "하루 1회 갱신"은 1010 전(24h TTL) 문구 — 지금은 새 실거래 적재 때 비우고, 안전망 TTL 7일 */}
+        {label} 고정 월간 스냅샷 · 새 실거래 신고분이 들어오면 갱신 ·{" "}
         <Link href={`/region/${id}`} className="font-bold text-primary">
           {region.name} 최신 시황 ›
         </Link>
@@ -248,7 +250,7 @@ export default async function RegionMonthlyReportPage({
           </h2>
           {/* [1015 · 규칙 I] 실거래 표 껍데기 = blue 리퀴드 판(스크롤 상자는 안쪽) */}
           <div className="lq-panel py-2" data-tone="blue">
-          <div className="overflow-x-auto">
+          <HScroll>
             <table className="w-full min-w-[420px] t-body">
               <thead>
                 <tr className="border-b border-line text-left t-sub text-text-3">
@@ -279,7 +281,7 @@ export default async function RegionMonthlyReportPage({
                 ))}
               </tbody>
             </table>
-          </div>
+          </HScroll>
           </div>
           <p className="t-caption mt-1.5 px-1 text-text-3">
             국토교통부 실거래 신고 기준(취소 신고 제외) · 신고 기한이 계약 후 30일이라 이후 추가·정정될 수 있음

@@ -3,6 +3,7 @@
 import { hasSession } from "@/lib/client/has-session";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { loginHrefWithNext } from "@/lib/auth/auth-ux";
 
 /* [개선 #5, 2026-08-22] 공개 노트 소프트월 — 비회원 하루 3편까지.
  *
@@ -85,13 +86,14 @@ export function NoteSoftWall({ noteId }: { noteId: string }) {
             가입 후 임장노트 열람 제한 없음 · 내 노트 기록 · 출석 포인트
           </p>
           <Link
-            href="/signup"
+            href={`/signup?callbackUrl=${encodeURIComponent(`/notes/${encodeURIComponent(noteId)}`)}`}
             className="btn-primary btn-cta rounded-2xl p-3.5 t-body no-underline"
           >
             무료 가입하고 계속 읽기
           </Link>
+          {/* [1054] 로그인 뒤 이 노트로 돌아온다 */}
           <Link
-            href="/login"
+            href={loginHrefWithNext(`/notes/${encodeURIComponent(noteId)}`)}
             className="t-sub font-bold text-text-3 no-underline"
           >
             로그인

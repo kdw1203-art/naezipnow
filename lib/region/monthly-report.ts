@@ -54,10 +54,14 @@ export function parseReportMonth(slug: string): string | null {
 }
 
 /** 지난달(완결 월) yyyymm */
-export function lastCompletedYm(): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() - 1);
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+export function lastCompletedYm(nowMs: number = Date.now()): string {
+  /* [1054] 한국 날짜로 달을 읽고 "1일" 기준으로 한 달을 뺀다 — 예전엔 UTC `setMonth(getMonth()-1)` 이라
+     31일(3·5·7·10·12월)엔 날짜 넘침으로 이번 달이 "완결 월"이 됐고(10/31 → 9/31 → 10/1), 매월 1일 00~09시(KST)엔 두 달 전이 됐다 */
+  const k = new Date(nowMs + 9 * 3_600_000);
+  const y = k.getUTCFullYear();
+  const m0 = k.getUTCMonth(); // 0~11 (이번 달)
+  const prev = new Date(Date.UTC(y, m0 - 1, 1));
+  return `${prev.getUTCFullYear()}${String(prev.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 /** 최근 n개 완결 월 (최신 먼저), "yyyy-mm" 슬러그 배열 */

@@ -1273,7 +1273,14 @@ export default async function NoteDetailPage({
                 가로로 늘어놓기만 해서 차트가 섞인 사진을 읽을 수 없었다.
                 본문 글은 사진 아래로 내린다(요청). slice(0,10) 로 조용히 잘라
                 내던 것도 없앴다 — 캐러셀은 장수에 상관없이 다 보여 준다. */}
-            {v.photos.length > 0 && <NotePhotoCarousel photos={v.photos} roles={photoRolesFromMetadata(realNote.metadata)} />}
+            {/* [1054] 자료 조사 노트의 그림은 카드·차트 — 스크린리더 이름도 "자료 이미지" */}
+            {v.photos.length > 0 && (
+              <NotePhotoCarousel
+                photos={v.photos}
+                roles={photoRolesFromMetadata(realNote.metadata)}
+                label={v.lab ? "자료 이미지" : "현장 사진"}
+              />
+            )}
 
             {/* [987 · 26] 다녀온 사람이 쓴 글 — 종이 면 위에 둔다. 이 화면에서 제일
                 귀한 글인데 예전에는 카드 안의 맨 <p> 였다(AI 요약만 제 면을 갖고

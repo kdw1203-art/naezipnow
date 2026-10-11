@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { HScroll } from "@/app/components/HScroll";
 import { EmptyState, ErrorState } from "@/app/components/ui/EmptyState";
 import { APPLYHOME_REGIONS } from "@/lib/applyhome/regions";
 import { competitionLabel, houseTypeLabel } from "@/lib/applyhome/normalize";
@@ -465,7 +466,7 @@ export function ApplySearchClient({ initial }: Props) {
           )}
 
           {/* [1015] 표 껍데기는 리퀴드 판(sand — 청약 톤). 가로 스크롤은 globals.css 가 lq-panel 에서도 auto 로 둔다(규칙 I). */}
-          <div className="rise-in-2 lq-panel overflow-x-auto py-1" data-tone="sand">
+          <div data-tone="sand"><HScroll className="rise-in-2 lq-panel py-1">
             <div className="min-w-[540px]">
               {state.tab === "competition" ? (
                 <>
@@ -665,7 +666,7 @@ export function ApplySearchClient({ initial }: Props) {
                 {state.fetchedAt ? ` · ${state.fetchedAt.slice(0, 10)} 조회` : ""}
               </div>
             </div>
-          </div>
+          </HScroll></div>
         </>
       )}
 

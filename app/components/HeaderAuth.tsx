@@ -39,7 +39,9 @@ const MENU = [
   { label: "내 매물", href: "/my/listings" },
   { label: "포인트 지갑", href: "/my/points" },
   { label: "크리에이터", href: "/my/creator" },
-  { label: "구독 관리", href: "/subscription" },
+  /* [1054] "구독 관리"는 내 구독 화면(/my/subscription)으로 — 요금제 비교(/subscription)로 가던 것을 바로잡음.
+     모바일 전체 메뉴·좌측 내비와 같은 목적지. 요금제 비교 진입은 아래 "무료" 배지가 맡는다. */
+  { label: "구독 관리", href: "/my/subscription" },
   { label: "설정", href: "/my/settings" },
   { label: "고객센터", href: "/support" },
 ] as const;

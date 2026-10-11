@@ -111,7 +111,7 @@ export function BetaNoticeModal() {
         <Link
           href="/support"
           onClick={close}
-          className="whitespace-nowrap font-bold text-primary underline"
+          className="tap-line whitespace-nowrap font-bold text-primary underline"
         >
           의견 보내기
         </Link>
@@ -120,7 +120,8 @@ export function BetaNoticeModal() {
         type="button"
         onClick={close}
         aria-label="베타 안내 닫기"
-        className="tap shrink-0 rounded-full px-1.5 py-0.5 t-caption font-bold text-text-3 hover:text-ink"
+        /* [1054] 가짜 요소(.tap) 대신 40×40 실상자 — 띠 높이는 음수 여백으로 그대로 */
+        className="-my-[8px] inline-flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded-full px-1.5 t-caption font-bold text-text-3 hover:text-ink"
       >
         닫기
       </button>

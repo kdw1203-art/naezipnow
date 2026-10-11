@@ -38,6 +38,8 @@ export interface KpiTemp {
   score: number;
   headline: string;
   weekLabel: string;
+  /** [1054] 어느 지역의 온도인가 — 없으면 적지 않는다 */
+  regionName?: string | null;
 }
 
 /* HomeKpiRow 컴포넌트는 2026-08-26 에 제거했다.

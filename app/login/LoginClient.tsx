@@ -446,8 +446,8 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
       style={{ paddingTop: "max(20px, env(safe-area-inset-top, 0px))" }}
     >
       <div className="flex justify-end">
-        {/* [966] .tap — ✕ 링크 주변 8px 까지 눌린다 */}
-        <Link href="/" className="tap text-[15px] text-text-3" aria-label="닫기">
+        {/* [966] .tap — ✕ 링크 주변 8px 까지 눌린다 · [1054] 가짜 요소 대신 40×40 실상자(음수 여백으로 자리 그대로) */}
+        <Link href="/" className="-mr-[12px] -mt-[12px] inline-flex h-10 w-10 items-center justify-center text-[15px] text-text-3" aria-label="닫기">
           ✕
         </Link>
       </div>
@@ -687,18 +687,18 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
           {/* [970 · A-14] 가입 링크에 callbackUrl 을 넘긴다 — 구독·페이월에서 로그인 벽을 만나
               가입으로 갈아탄 사람이 가입 뒤 홈(/welcome → 노트)으로 떨어져 하던 일을 잃었다.
               SignupClient 가 이 값을 읽어 /welcome?next= 로 잇는다. */}
-          <Link href={signupHref} className="font-bold text-primary">
+          <Link href={signupHref} className="tap-line font-bold text-primary">
             회원가입
           </Link>
         </div>
         {/* [970 · A-13] 동의 문구에 약관·방침 실링크 — 동의 대상 문서를 열 수 없었다 */}
         <p className="text-center text-[12px] leading-[1.6] text-text-3">
           로그인하면{" "}
-          <Link href="/legal/terms" className="underline underline-offset-2">
+          <Link href="/legal/terms" className="tap-line underline underline-offset-2">
             이용약관
           </Link>
           ·
-          <Link href="/legal/privacy" className="underline underline-offset-2">
+          <Link href="/legal/privacy" className="tap-line underline underline-offset-2">
             개인정보처리방침
           </Link>
           에 동의하게 됩니다 · 만 14세 이상

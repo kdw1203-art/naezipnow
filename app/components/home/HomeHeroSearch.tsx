@@ -180,7 +180,17 @@ export function HomeHeroSearch({
         setSearched(query);
         setOpen(true);
       })
-      .catch(() => {});
+      .catch(() => {
+        /* [1054] 네트워크 실패(오프라인·끊김)를 조용히 삼키면 이전 결과나 빈 칸이 그대로 남아 "검색이 안 되는" 이유를 알 수 없었다.
+           중단(abort)은 다음 입력이 이어받는 정상 흐름이라 제외하고, 그 밖은 실패 줄("검색 실패 · 잠시 후 다시")을 띄운다. */
+        if (ac.signal.aborted) return;
+        setItems([]);
+        setSimilar([]);
+        setFailed(true);
+        setNotice(null);
+        setSearched(query);
+        setOpen(true);
+      });
     return () => ac.abort();
   }, [settledQuery]);
 
@@ -368,7 +378,8 @@ export function HomeHeroSearch({
                 onClick={() => pushRecentSearch(k)}
                 className="chip max-w-[160px] shrink-0 truncate bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
               >
-                ⌕ {k}
+                <span aria-hidden="true">⌕ </span>
+                {k}
               </Link>
             ))}
             {recentComplexes.slice(0, 3).map((c) => (

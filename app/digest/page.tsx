@@ -1,3 +1,4 @@
+import { formatKstShortDate } from "@/lib/format/kst";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { HouseMark } from "@/app/components/Logo";
@@ -27,11 +28,9 @@ export const metadata = buildPageMetadata({
    적재(SOURCE_MAP)가 이제 경로를 직접 비우므로 시간 TTL 은 안전망으로만 둔다. */
 export const revalidate = 86_400;
 
+/* [1054] 한국 날짜로 — 예전엔 서버(UTC) getDate() 라 00~09시(KST) 기사가 전날로 찍혔다(lib/format/kst) */
 function shortDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${p(d.getMonth() + 1)}.${p(d.getDate())}`;
+  return formatKstShortDate(iso);
 }
 
 function asOfLabel(iso: string): string {

@@ -64,8 +64,17 @@ export function RollingPanel({
     <div
       ref={hostRef}
       className={`home-roll ${className}`}
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      /* [1054] 폰에서 한 번 탭하면 mouseenter 가 흉내로 들어와 mouseleave 없이 영영 멈춰 있었다(다른 곳을 탭할 때까지).
+         마우스일 때만 올려 멈춤, 손가락은 누르고 있는 동안만 멈춤(읽는 중 넘어가지 않게) · 떼면 다시 돈다. */
+      onPointerEnter={(e) => {
+        if (e.pointerType === "mouse") setPaused(true);
+      }}
+      onPointerLeave={(e) => {
+        if (e.pointerType === "mouse") setPaused(false);
+      }}
+      onTouchStart={() => setPaused(true)}
+      onTouchEnd={() => setPaused(false)}
+      onTouchCancel={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={(e) => {
         if (!hostRef.current?.contains(e.relatedTarget as Node | null)) setPaused(false);

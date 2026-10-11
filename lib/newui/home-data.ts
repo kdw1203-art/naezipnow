@@ -349,7 +349,12 @@ async function loadSaleIndexSeoul(): Promise<string | null> {
   for (const candidate of ["seoul", "서울"]) {
     const rows = await getRegionSeries(candidate, "sale_index", "weekly", 1).catch(() => []);
     const latest = rows[rows.length - 1];
-    if (latest && Number.isFinite(latest.value)) return latest.value.toFixed(2);
+    /* [1054] 폴백에도 시점을 붙인다(위 [A006] 과 같은 이유 — 주간 지수라 "YYYY.MM.DD 주") */
+    if (latest && Number.isFinite(latest.value)) {
+      const d = String(latest.period ?? "");
+      const label = /^\d{4}-\d{2}-\d{2}/.test(d) ? ` (${d.slice(0, 4)}.${d.slice(5, 7)}.${d.slice(8, 10)} 주)` : "";
+      return `${latest.value.toFixed(2)}${label}`;
+    }
   }
   /* 여기까지 왔으면 서울 지수는 없는 것이다 — null("—") 로 둔다.
      예전엔 강남·마포·송파 3개 구 주간 지수를 평균해 돌려줬는데, 홈 KPI 는
@@ -452,6 +457,7 @@ const loadCardSeriesCached = unstable_cache(
         .from("market_region_series")
         .select("region_id, period, value")
         .eq("property_type", "apt")
+        .eq("source", "reb") // [1054] 화면 각주가 "한국부동산원"이다 — 다른 원천(KB 적재)이 섞이지 않게 고정
         .eq("metric", metric)
         .eq("period_type", periodType)
         .in("region_id", ids)

@@ -50,7 +50,8 @@ export default async function CreatorDashboardPage() {
             <div className="t-sub text-text-3">
               공개 노트 수 · 저장 수 · 탑 임장러 현황
             </div>
-            <Link href="/login" className="btn-primary btn-md mt-2">
+            {/* [1054] 로그인 뒤 이 화면으로 */}
+            <Link href="/login?callbackUrl=%2Fmy%2Fcreator" className="btn-primary btn-md mt-2">
               로그인하고 내 노트 성과 보기
             </Link>
             <Link href="/notes" className="t-sub font-bold text-text-3">

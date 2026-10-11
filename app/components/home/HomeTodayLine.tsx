@@ -59,7 +59,9 @@ export function HomeTodayLine({
   temp,
   saleIndex,
   baseRate,
+  baseRateAsOf = null,
   loanRate,
+  loanRateAsOf = null,
   publicNotes,
   shell,
 }: {
@@ -67,7 +69,11 @@ export function HomeTodayLine({
   temp: KpiTemp | null;
   saleIndex?: string | null;
   baseRate?: string | null;
+  /** [1054] 기준금리 시점(YYYY.MM.DD) */
+  baseRateAsOf?: string | null;
   loanRate?: string | null;
+  /** [1054] 주담대 공시월(YYYY.MM) */
+  loanRateAsOf?: string | null;
   publicNotes?: number | null;
   /** [968 · 8] 어느 벌인지 — 안 보이는 벌은 개인화 조회·회전 타이머를 시작하지 않는다 */
   shell?: Shell;
@@ -122,9 +128,11 @@ export function HomeTodayLine({
        바로 아래 지역 동향 카드가 같은 가격·등락·거래를 보인다. 관심 지역 문장(내 지역)은 그대로 */
     if (shown && personalized) out.push({ key: "region", text: todayRegionSentence(shown), href: shown.href });
     if (temp)
+      /* [1054] 어느 주 · 어느 지역의 온도인지 적는다 — 예전엔 "이번 주"가 고정 글자라 아카이브가 늦으면 지난주 값이
+         이번 주 값처럼 읽혔고, 지역도 없었다(MarketTempWidget 의 "기준 주를 반드시 표기"와 같은 규칙) */
       out.push({
         key: "temp",
-        text: `이번 주 시장 온도 ${temp.score}점 · ${temp.headline}`,
+        text: `${temp.weekLabel} ${temp.regionName ? `${temp.regionName} ` : ""}시장 온도 ${temp.score}점 · ${temp.headline}`,
         href: "/analysis/temperature",
       });
     /* [1009 · H 리뷰] 건수의 실제 달·원천으로만(today-line.ts) — 카드 기준월을 붙이면 다른 달 건수를 그 달 것처럼 말한다 */
@@ -145,7 +153,7 @@ export function HomeTodayLine({
       out.push({
         key: "rate",
         /* [1052] 문장(~예요) → 사실 낱말 — 다른 슬라이드("서울 매매지수 …")와 같은 꼴 */
-        text: `기준금리 ${baseRate}${loanRate ? ` · 주담대 변동 ${loanRate}` : ""}`,
+        text: `기준금리 ${baseRate}${baseRateAsOf ? ` (${baseRateAsOf})` : ""}${loanRate ? ` · 주담대 변동 ${loanRate}${loanRateAsOf ? ` (${loanRateAsOf} 공시)` : ""}` : ""}`,
         href: "/analysis/scenario",
       });
     if (typeof publicNotes === "number" && publicNotes > 0)
@@ -155,7 +163,7 @@ export function HomeTodayLine({
         href: "/notes",
       });
     return out;
-  }, [shown, personalized, temp, saleIndex, baseRate, loanRate, publicNotes]);
+  }, [shown, personalized, temp, saleIndex, baseRate, baseRateAsOf, loanRate, loanRateAsOf, publicNotes]);
 
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -319,7 +327,10 @@ export function HomeTodayLine({
           점(그림)은 안쪽 span 으로 내리고 버튼은 24px 정사각으로. 줄이 위아래로
           8px 씩 자라는 만큼 -my-2 로 되돌려 배치는 그대로 둔다. */}
       {slides.length > 1 && (
-        <div ref={tabsRef} role="tablist" aria-label="오늘의 한 줄 넘기기" className="-my-2 mt-0.5 flex items-center gap-1.5">
+        /* [1054] 폰 배율에서 24px 단추가 24px 그대로(px 값)라 40px 하한 아래였다(운영 실측). 높이를 40px 로 올리고
+            자란 16px 은 위 6 · 아래 10px 음수 여백으로 되돌린다 — 점의 자리는 그대로, 아래는 카드 패딩(12px) 안,
+            위는 큰 슬라이드 링크의 끝 6px 만 겹친다. 폭은 28px(점 사이가 좁아 40 으로 벌리면 셋이 겹친다). */
+        <div ref={tabsRef} role="tablist" aria-label="오늘의 한 줄 넘기기" className="-mb-[10px] -mt-[6px] flex items-center gap-1">
           {slides.map((s, n) => (
             <button
               key={s.key}
@@ -330,7 +341,7 @@ export function HomeTodayLine({
               tabIndex={n === i ? 0 : -1}
               aria-label={`${n + 1}번째 소식`}
               onClick={() => go(n)}
-              className="flex min-h-[24px] min-w-[24px] items-center justify-center p-2 transition-opacity duration-200 hover:opacity-80"
+              className="flex min-h-[40px] min-w-[28px] items-center justify-center px-[6px] transition-opacity duration-200 hover:opacity-80"
             >
               {/* 비활성 점이 6px·연한 회색이라 흰 카드 위에서 거의 안 보였다 —
                   지름을 키우고 대비를 올린다. 몇 개인지 세어질 만큼은 보여야 한다.

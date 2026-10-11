@@ -1014,7 +1014,7 @@ export function SearchClient() {
                       <Link
                         href={`/map?q=${encodeURIComponent(q.trim())}`}
                         onClick={() => saveRecent(q)}
-                        className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary"
+                        className="tap-line inline-flex min-h-[24px] items-center t-sub font-bold text-primary"
                       >
                         지도 ›
                       </Link>

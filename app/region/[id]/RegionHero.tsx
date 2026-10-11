@@ -182,7 +182,7 @@ export function RegionHero({
         <p className="m-0 t-caption text-text-3 break-words">{overview.headlineCaption}</p>
       )}
       <h2 id="region-hero-h" className="mt-0.5 t-title text-ink break-words">
-        {overview.headline ?? `${name} 아파트 시세 한눈에`}
+        {overview.headline ?? `${name} 아파트 실거래·가격지수 한눈에`}
       </h2>
       {overview.subline && <p className="m-0 mt-0.5 t-body font-bold text-text-2">{overview.subline}</p>}
       {!overview.hasReb && (

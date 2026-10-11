@@ -1,3 +1,4 @@
+import { formatKstDate } from "@/lib/format/kst";
 import { seoAlternates } from "@/lib/seo/alternates";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
@@ -49,12 +50,9 @@ function displayTime(p: Post): number {
   return Number.isFinite(t) ? t : 0;
 }
 
+/* [1054] 한국 날짜로 — 예전엔 서버(UTC) getDate() 라 00~09시(KST) 기사가 전날로 찍혔다 */
 function shortDate(iso: string | undefined): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}`;
+  return iso ? formatKstDate(iso) : "";
 }
 
 type NewsData = {

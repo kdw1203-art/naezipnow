@@ -68,7 +68,8 @@ export default function AppError({
   }, [error]);
 
   return (
-    <main className="mx-auto flex min-h-[60vh] w-full max-w-[520px] flex-col items-center justify-center gap-4 px-6">
+    /* [1054] id="main-content" — 헤더 "본문으로 건너뛰기"가 오류 화면에서도 닿게 · 링크는 tap-line(폰 32px) */
+    <main id="main-content" className="mx-auto flex min-h-[60vh] w-full max-w-[520px] flex-col items-center justify-center gap-4 px-6">
       <ErrorState
         /* [1028 · 제안 3·12] 오류 문구 표준 — "불러오지 못했어요" + "잠시 후 다시 시도해 주세요." */
         title={retrying ? "다시 불러오는 중" : "화면 불러오기 실패"}
@@ -79,11 +80,11 @@ export default function AppError({
         className="w-full"
       />
       <div className="flex gap-2 t-body">
-        <Link href="/" className="font-bold text-primary">
+        <Link href="/" className="tap-line font-bold text-primary">
           홈으로
         </Link>
         <span className="text-text-3">·</span>
-        <Link href="/support" className="font-bold text-primary">
+        <Link href="/support" className="tap-line font-bold text-primary">
           문의하기
         </Link>
       </div>

@@ -478,11 +478,11 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
           {/* [1039] 소셜 가입에도 동의 대상을 밝힌다 — 로그인 화면과 같은 한 줄(예전: 체크 없이 통과 · 문구 없음) */}
           <p className="text-center text-[12px] leading-[1.6] text-text-3">
             소셜 가입 ={" "}
-            <Link href="/legal/terms" target="_blank" rel="noreferrer" className="underline underline-offset-2">
+            <Link href="/legal/terms" target="_blank" rel="noreferrer" className="tap-line underline underline-offset-2">
               이용약관
             </Link>
             ·
-            <Link href="/legal/privacy" target="_blank" rel="noreferrer" className="underline underline-offset-2">
+            <Link href="/legal/privacy" target="_blank" rel="noreferrer" className="tap-line underline underline-offset-2">
               개인정보처리방침
             </Link>{" "}
             동의 · 만 14세 이상
@@ -671,11 +671,11 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
                 새 탭으로 열어 작성 중인 폼을 잃지 않게 한다. */}
             <span>
               <b className="text-ink">(필수)</b>{" "}
-              <Link href="/legal/terms" target="_blank" rel="noreferrer" className="underline underline-offset-2">
+              <Link href="/legal/terms" target="_blank" rel="noreferrer" className="tap-line underline underline-offset-2">
                 이용약관
               </Link>
               ·
-              <Link href="/legal/privacy" target="_blank" rel="noreferrer" className="underline underline-offset-2">
+              <Link href="/legal/privacy" target="_blank" rel="noreferrer" className="tap-line underline underline-offset-2">
                 개인정보처리방침
               </Link>{" "}
               동의 · 만 14세 이상
@@ -713,7 +713,7 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
                 이 이메일로 로그인 ›
               </Link>
               <Link
-                href="/forgot-password"
+                href={loginHref.replace(/^\/login/, "/forgot-password")}
                 onClick={() => stashAuthEmail(dupEmail)}
                 className="inline-flex min-h-10 items-center rounded-lg border border-danger/40 bg-surface px-3 text-[12px] font-bold text-danger no-underline"
               >
@@ -740,7 +740,7 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
         </button>
         <div className="text-center text-xs text-text-3">
           이미 계정이 있다면{" "}
-          <Link href={loginHref} className="inline-block py-[5px] font-bold text-primary">
+          <Link href={loginHref} className="tap-line inline-block py-[5px] font-bold text-primary">
             로그인
           </Link>
         </div>

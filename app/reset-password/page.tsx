@@ -25,7 +25,9 @@ const loadSupabase = () =>
  *  1) `?token=` 쿼리 — 자체 토큰 (/api/auth/reset-password GET 검증 → POST 변경)
  *  2) URL hash 의 access_token — Supabase Auth 복구 링크 (updateUser)
  */
-type Mode = "checking" | "token" | "supabase" | "invalid";
+/* [1054] "unreachable" = 링크 확인 요청 자체가 실패(5xx·네트워크). 링크가 틀린 것("invalid")과 다른 일이라
+   "비밀번호 찾기 다시" 대신 "다시 확인"을 준다 — 멀쩡한 링크를 서버 순간 장애 때문에 버리게 하지 않는다. */
+type Mode = "checking" | "token" | "supabase" | "invalid" | "unreachable";
 
 /* [1040 · 로그인·가입 기능]
  *  · 강도 규칙은 가입 화면과 같은 함수(lib/auth/signup-form scorePassword) — 여기 따로 있던 복사본을 지웠다
@@ -61,17 +63,24 @@ export default function ResetPasswordPage() {
   const strength = useMemo(() => scorePassword(password), [password]);
   const matched = password2.length > 0 && password === password2;
 
+  /* [1054] 토큰 링크 확인 — 5xx·네트워크 실패는 "unreachable"(다시 확인 단추), 200 의 valid:false 만 "invalid" */
+  const [checkTick, setCheckTick] = useState(0);
   useEffect(() => {
     setNext(safeNextPath(new URLSearchParams(window.location.search).get("next")));
     const qsToken = new URLSearchParams(window.location.search).get("token") ?? "";
     if (qsToken) {
       setToken(qsToken);
+      setMode("checking");
       fetch(`/api/auth/reset-password?token=${encodeURIComponent(qsToken)}`)
-        .then((r) => r.json())
-        .then((d: { valid?: boolean }) => setMode(d.valid ? "token" : "invalid"))
-        .catch(() => setMode("invalid"));
+        .then((r) => {
+          if (r.status >= 500) throw new Error(`HTTP ${r.status}`);
+          return r.json() as Promise<{ valid?: boolean }>;
+        })
+        .then((d) => setMode(d.valid ? "token" : "invalid"))
+        .catch(() => setMode("unreachable"));
       return;
     }
+    if (checkTick > 0) return; // 다시 확인은 토큰 링크에만 뜻이 있다
 
     // Supabase 복구 링크 — hash 의 access_token 처리 대기
     if (window.location.hash.includes("access_token")) {
@@ -119,7 +128,7 @@ export default function ResetPasswordPage() {
       unsubscribe?.();
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [checkTick]);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -230,6 +239,21 @@ export default function ResetPasswordPage() {
             >
               로그인
             </Link>
+          </div>
+        ) : mode === "unreachable" ? (
+          <div className="rise-in card flex flex-col gap-2.5 rounded-2xl px-5 py-6 text-center">
+            <Icon name="⚠" size={28} />
+            <div className="text-[15px] font-bold text-ink">링크 확인 실패 · 잠시 후 다시</div>
+            <p className="text-[13px] leading-[1.6] text-text-2">
+              링크가 틀린 것이 아니라 확인 요청이 닿지 않았습니다. 같은 링크로 다시 확인할 수 있습니다.
+            </p>
+            <button
+              type="button"
+              onClick={() => setCheckTick((t) => t + 1)}
+              className="btn-outline btn-md mt-2 w-full"
+            >
+              다시 확인
+            </button>
           </div>
         ) : mode === "checking" ? (
           <div className="rise-in card rounded-2xl px-5 py-6 text-center text-[13px] text-text-2">

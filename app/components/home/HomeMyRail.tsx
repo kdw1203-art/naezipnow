@@ -64,7 +64,7 @@ export function HomeMyRail({
       {any && (
         <div className="flex items-baseline justify-between px-1">
           <h2 className="t-section text-ink">내 관심</h2>
-          <Link href="/my/watchlist" className="t-sub font-semibold text-primary no-underline">
+          <Link href="/my/watchlist" className="tap-line t-sub font-semibold text-primary no-underline">
             관심 단지 관리 ›
           </Link>
         </div>

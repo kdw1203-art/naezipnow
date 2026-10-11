@@ -2,6 +2,7 @@
    값은 아래 배점 표와 같은 month.picks[].breakdown — 새 계산 없음. 막대 폭은 points/max 뿐(inline width). */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import type { Metadata } from "next";
+import { HScroll } from "@/app/components/HScroll";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
@@ -262,7 +263,7 @@ export default async function BestNotesMonthPage({
               )}
 
               {/* [1015 · 규칙 I] 배점 표 = 리퀴드 판(점수 = blue) */}
-              <div className="lq-panel mt-3 overflow-x-auto" data-tone="blue">
+              <div data-tone="blue"><HScroll className="lq-panel mt-3">
                 <table className="w-full min-w-[420px] border-collapse t-sub">
                   <thead>
                     <tr className="border-b border-border text-left text-text-3">
@@ -287,7 +288,7 @@ export default async function BestNotesMonthPage({
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </HScroll></div>
 
               <p className="mt-3">
                 <Link

@@ -581,7 +581,8 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
                     {f.href ? (
                       <Link
                         href={f.href}
-                        className={`mt-0.5 block t-sub no-underline ${f.tone === "up" ? "text-up" : f.tone === "down" ? "text-down" : "text-text-1"}`}
+                        /* [1054] 폰 배율에서 한 줄 소식 링크가 20px — tap-line 으로 세로 32px(check:mobile 24px 하한) */
+                        className={`tap-line mt-0.5 block t-sub no-underline ${f.tone === "up" ? "text-up" : f.tone === "down" ? "text-down" : "text-text-1"}`}
                       >
                         <span className="line-clamp-2">{f.text}</span>
                       </Link>

@@ -272,7 +272,8 @@ export default async function RedevelopmentZonePage({
                             <div className="t-caption text-text-3">{c.regionName}</div>
                           </td>
                           <td className="py-2.5 text-right t-num font-bold text-ink">
-                            {pp != null ? `${pp.toLocaleString("ko-KR")}만/평` : "—"}
+                            {/* [1054] "12,340만/평" → 다른 표(ComplexSummaryTable · 지역 허브)와 같은 "1.2억/평" */}
+                            {pp != null ? `${formatKrwShort(c.avgPerPyeongKrw)}/평` : "—"}
                           </td>
                           <td className="py-2.5 text-right tabular-nums text-text-2 max-md:hidden">
                             {formatKrwShort(c.avgKrw)}

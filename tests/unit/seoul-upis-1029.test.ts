@@ -413,7 +413,9 @@ test("[1030 · 3차] 청약 화면 — 라이트 토큰 인라인 고정(THEME_A
 test("[1030 · 3차] 키보드 — 가로 스크롤 영역 tabIndex · 본문 바로가기 목적지 · main 랜드마크 · 여정 id 중복 없음", () => {
   assert.ok(src1030("app/components/StepLine.tsx").includes("tabIndex={0}"));
   assert.ok((src1030("app/map/MapSearchBox.tsx").match(/"[^"]*\bfield-focus\b[^"]*"/g) ?? []).length >= 2);
-  assert.ok(src1030("app/region/[id]/page.tsx").includes('<div className="mt-3 overflow-x-auto" tabIndex={0}>'));
+  /* [1054] 표 틀은 HScroll — 넘칠 때만 tabIndex=0(넘치지 않는 틀은 탭 정거장이 아니다) */
+  assert.ok(src1030("app/region/[id]/page.tsx").includes('<HScroll className="mt-3">'));
+  assert.ok(src1030("app/components/HScroll.tsx").includes("tabIndex={overflowing ? 0 : undefined}"));
   assert.ok(src1030("app/redevelopment/page.tsx").includes('<div className="mt-3 -mx-1 overflow-x-auto px-1 pb-1" tabIndex={0}>'));
   assert.equal((src1030("app/developers/page.tsx").match(/<pre tabIndex=\{0\}/g) ?? []).length, 2);
   assert.ok(src1030("app/not-found.tsx").includes('<main id="main-content"'));

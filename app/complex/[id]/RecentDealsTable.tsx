@@ -33,8 +33,12 @@ export function RecentDealsTable({
         <h2 id="recent-deals-title" className="t-section text-ink">
           최근 실거래
         </h2>
+        {/* [1054] 표에는 해제 신고 행(취소선)이 함께 실리는데 머리는 "해제 제외"라고만 적혀 어긋났다 — 건수에만 (해제 제외)를 붙이고
+            해제 행이 있으면 그 사실을 적는다 */}
         <span className="t-caption text-text-3 tabular-nums">
-          매매 · 전체 타입 · 해제 제외{total != null ? ` ${total.toLocaleString("ko-KR")}건` : ""}
+          매매 · 전체 타입
+          {total != null ? ` · ${total.toLocaleString("ko-KR")}건(해제 제외)` : ""}
+          {rows.some((r) => r.cancelled) ? " · 해제 신고는 취소선" : ""}
         </span>
       </div>
       {rows.length === 0 ? (

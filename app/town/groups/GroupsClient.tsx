@@ -53,7 +53,9 @@ const STATUS_META: Record<
  *  일정 미정(MAX_SAFE_INTEGER)이면 null 을 내고 배지를 안 그린다. */
 function ddayLabel(whenTs: number, nowMs: number): string | null {
   if (!Number.isFinite(whenTs) || whenTs === Number.MAX_SAFE_INTEGER) return null;
-  const days = Math.ceil((whenTs - nowMs) / 86_400_000);
+  /* [1054] 달력 날짜 차이(KST) — 전에는 남은 시간을 24h 로 올림해 오늘 오후 모임이 "내일", 내일 오전 모임이 "D-2"로 나왔다 */
+  const KST = 9 * 3_600_000;
+  const days = Math.floor((whenTs + KST) / 86_400_000) - Math.floor((nowMs + KST) / 86_400_000);
   if (days < 0) return null;
   if (days === 0) return "오늘";
   if (days === 1) return "내일";

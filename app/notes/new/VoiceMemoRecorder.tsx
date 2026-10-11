@@ -192,7 +192,8 @@ export function VoiceMemoRecorder({
                       ? "옮기는 중…"
                       : txState[u] === "done"
                         ? "✓ 옮김"
-                        : "✍ 글로"}
+                        : /* [1054] ✍ 는 폰에서 색 이모지로 그려진다 — 활자만 */
+                          "글로 옮기기"}
                   </button>
                 )}
                 <button

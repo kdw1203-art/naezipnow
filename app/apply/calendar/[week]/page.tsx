@@ -23,15 +23,23 @@ export const revalidate = 86_400;
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 
+/* [1054] 날짜 글자를 그대로 읽는다 — 예전엔 `+09:00` Date 의 getDate()(서버 UTC)라 하루 앞으로 찍혔다 */
 function dateLabel(iso: string): string {
-  const d = new Date(`${iso}T00:00:00+09:00`);
-  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]})`;
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return `${m}월 ${d}일 (${DOW[dow]})`;
 }
 
+/* [1054] 슬러그의 주차는 ISO 연간 주차(lib/applyhome/calendar)다 — 예전엔 달 이름과 붙여 "8월 35주차"가 됐다.
+   "2026년 35주차 (8.24~8.30)" 로 적는다(제목에도 같은 글자가 들어간다). */
 function weekLabel(slug: string, range: { start: string; end: string }): string {
-  const s = new Date(`${range.start}T00:00:00+09:00`);
   const weekNo = slug.split("-w")[1];
-  return `${s.getFullYear()}년 ${s.getMonth() + 1}월 ${weekNo}주차`;
+  const md = (iso: string) => {
+    const [, m, d] = iso.split("-").map(Number);
+    return m && d ? `${m}.${d}` : iso;
+  };
+  return `${range.start.slice(0, 4)}년 ${Number(weekNo)}주차 (${md(range.start)}~${md(range.end)})`;
 }
 
 export async function generateMetadata({
@@ -179,7 +187,7 @@ export default async function ApplyWeekPage({
         </div>
         <p className="px-1 t-caption text-text-3">
           출처 청약홈(한국부동산원) 공공데이터 ·{" "}
-          <Link href="/data-sources" className="font-bold text-primary no-underline">
+          <Link href="/data-sources" className="tap-line font-bold text-primary no-underline">
             데이터 출처와 한계
           </Link>
         </p>
@@ -205,7 +213,8 @@ function WeekRow({
     winnerDate?: string | null;
   };
 }) {
-  const today = new Date().toISOString().slice(0, 10);
+  /* [1054] 한국 날짜 — UTC 로 자르면 00~09시(KST)에 어제가 "오늘"이 된다 */
+  const today = new Date(Date.now() + 9 * 3_600_000).toISOString().slice(0, 10);
   const winner = it.winnerDate ?? null;
   const winnerLabel =
     winner === null
