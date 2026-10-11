@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { safeAuth } from "@/lib/safe-auth";
-import { listWatchlist, addToWatchlist, removeFromWatchlist, isWatching } from "@/lib/watchlist/store-db";
+import {
+  listWatchlist,
+  addToWatchlist,
+  removeFromWatchlist,
+  isWatching,
+  setWatchlistAlertRange,
+} from "@/lib/watchlist/store-db";
+import { alertRangeOrdered } from "@/lib/watchlist/alert-range";
 import { applyRateLimit } from "@/lib/rate-limit";
 import { appendOnboardingStep } from "@/lib/onboarding/append-step";
 import { FUNNEL_EVENT, recordFunnelEvent } from "@/lib/platform-funnel-events";
@@ -76,13 +83,22 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const item = await addToWatchlist(
-      email,
-      complexId,
-      complexName,
-      body.alertPriceMin ? Number(body.alertPriceMin) : undefined,
-      body.alertPriceMax ? Number(body.alertPriceMax) : undefined,
-    );
+    /* [1057 · B9] addToWatchlist 가 던지는 DB 오류를 감싸지 않아 일반 500 HTML 이 나갔다(화면은 "알 수 없는 오류") —
+       다른 핸들러와 같은 503 + 고정 문구. 범위 값은 숫자일 때만 넘긴다(없으면 undefined = 기존 범위 유지). */
+    const min = Number(body.alertPriceMin);
+    const max = Number(body.alertPriceMax);
+    let item: Awaited<ReturnType<typeof addToWatchlist>>;
+    try {
+      item = await addToWatchlist(
+        email,
+        complexId,
+        complexName,
+        body.alertPriceMin != null && body.alertPriceMin !== "" && Number.isFinite(min) && min > 0 ? min : undefined,
+        body.alertPriceMax != null && body.alertPriceMax !== "" && Number.isFinite(max) && max > 0 ? max : undefined,
+      );
+    } catch (err) {
+      return dbUnavailable(`관심 단지 저장 실패 (complex=${complexId})`, err, "관심 단지 저장 실패 · 잠시 후 다시");
+    }
     void recordFunnelEvent(req, {
       eventName: FUNNEL_EVENT.WATCHLIST_ADD,
       userEmail: email,
@@ -92,6 +108,42 @@ export async function POST(req: NextRequest) {
     void appendOnboardingStep(email, "explore");
     return NextResponse.json(item, { status: 201 });
   });
+}
+
+/* [1057 · B10] PATCH { complexId, alertPriceMin: 원|null, alertPriceMax: 원|null } — 실거래 알림 범위만 바꾼다(null = 지움).
+   예전엔 범위를 받는 길이 POST(upsert) 뿐이라 범위 수정이 "관심 단지 담기" 퍼널 이벤트·온보딩 단계로 기록됐다. */
+export async function PATCH(req: NextRequest) {
+  const limited = await applyRateLimit(req);
+  if (limited) return limited;
+  const session = await safeAuth();
+  if (!session?.user?.email) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  let body: Record<string, unknown>;
+  try {
+    body = (await req.json()) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "JSON이 필요합니다." }, { status: 400 });
+  }
+  const complexId = String(body.complexId ?? "").trim();
+  if (!complexId) return NextResponse.json({ error: "complexId 가 필요합니다." }, { status: 400 });
+  const bound = (v: unknown): number | null | undefined => {
+    if (v == null || v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  };
+  const min = bound(body.alertPriceMin);
+  const max = bound(body.alertPriceMax);
+  if (min === undefined || max === undefined) {
+    return NextResponse.json({ error: "알림 범위는 0 보다 큰 원 단위 숫자 또는 비움" }, { status: 400 });
+  }
+  if (!alertRangeOrdered(min, max)) return NextResponse.json({ error: "최소가 최대보다 큼" }, { status: 400 });
+  let found: boolean;
+  try {
+    found = await setWatchlistAlertRange(session.user.email, complexId, min, max);
+  } catch (err) {
+    return dbUnavailable(`알림 범위 저장 실패 (complex=${complexId})`, err, "알림 범위 저장 실패 · 잠시 후 다시");
+  }
+  if (!found) return NextResponse.json({ error: "관심 단지가 아님" }, { status: 404 });
+  return NextResponse.json({ ok: true, alertPriceMin: min, alertPriceMax: max });
 }
 
 export async function DELETE(req: NextRequest) {

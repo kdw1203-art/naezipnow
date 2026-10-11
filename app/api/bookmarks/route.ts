@@ -35,8 +35,13 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const t = url.searchParams.get("type");
   const type = isValidType(t) ? t : undefined;
-  const items = await listBookmarks(session.user.email, type);
-  return NextResponse.json({ items });
+  /* [1057 · C8] listBookmarks 가 조회 실패를 던지게 되면서(1057-B) 여기선 500 HTML 이 나갔다 — 503 + 고정 문구로 답한다 */
+  try {
+    const items = await listBookmarks(session.user.email, type);
+    return NextResponse.json({ items });
+  } catch (e) {
+    return dbUnavailable("bookmark-list", e, "저장 목록 불러오기 실패 · 잠시 후 다시");
+  }
 }
 
 export async function POST(req: Request) {

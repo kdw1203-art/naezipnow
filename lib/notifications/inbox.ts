@@ -179,7 +179,12 @@ export async function markAllInboxRead(
     .eq("user_email", key)
     .is("read_at", null);
   if (channel) q = q.eq("channel", channel);
-  await q;
+  /* [1057 · B6] 갱신 오류를 버려 라우트가 늘 ok:true 였다 — 화면은 전부 읽음, 벨은 0, 서버는 그대로. 던지면 라우트가 503 */
+  const { error } = await q;
+  if (error) {
+    logger.error("[inbox] 모두 읽음 처리 실패", error.message);
+    throw new Error(`user_inbox_notifications 읽음 처리 실패: ${error.message}`);
+  }
 }
 
 /** 미읽음 알림 수 — 헤더 벨 배지용(B10). read_at null 카운트.

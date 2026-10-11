@@ -4,7 +4,7 @@ import { isAdmin } from "@/lib/auth/is-admin";
 import { logger } from "@/lib/log";
 import { listInboxForEmail } from "@/lib/notifications/inbox";
 import { getHistory } from "@/lib/points/ledger";
-import { EARN_RULES, getSpendItem } from "@/lib/points/catalog";
+import { reasonLabel } from "@/lib/points/reason-label";
 
 /**
  * 통합 알림 센터 데이터 소스.
@@ -25,13 +25,10 @@ export type PointNotification = {
   createdAt: string;
 };
 
-/** 원장 reason(룰/상품 키) → 사람이 읽는 라벨. 매핑 없으면 원문 유지. */
-function pointLabel(reason: string): string {
-  const earn = EARN_RULES[reason];
-  if (earn) return earn.label;
-  const spend = getSpendItem(reason);
-  if (spend) return spend.label;
-  return reason || "포인트 변동";
+/** 원장 reason(룰/상품 키) → 사람이 읽는 라벨.
+    [1057] "spend:post_boost_3d"·"expire"·"listing_boost"·"report:<id>" 가 원문 그대로 보였다 — lib/points/reason-label 한 곳 */
+function pointLabel(reason: string, delta: number): string {
+  return reasonLabel(reason, delta);
 }
 
 export async function GET() {
@@ -71,7 +68,7 @@ export async function GET() {
   const points: PointNotification[] = history.map((r, i) => ({
     id: `pt-${new Date(r.createdAt).getTime() || 0}-${i}`,
     delta: r.delta,
-    label: pointLabel(r.reason),
+    label: pointLabel(r.reason, r.delta),
     balance: r.balance,
     createdAt: r.createdAt,
   }));

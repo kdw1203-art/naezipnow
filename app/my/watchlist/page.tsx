@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { PageShell } from "../../components/PageShell";
 import { EmptyState, ErrorState } from "@/app/components/ui/EmptyState";
 import { safeAuth } from "@/lib/safe-auth";
-import { listWatchlist, type WatchlistItem } from "@/lib/watchlist/store-db";
+import { listWatchlistPage, type WatchlistItem } from "@/lib/watchlist/store-db";
+import { alertRangeLabel } from "@/lib/watchlist/alert-range";
 import { resolveComplexPrice, type ComplexPriceResult } from "@/lib/market/complex-price";
 import { countRecentPublicNotesByComplex } from "@/lib/inspection/store-db";
 import { formatKrwShort } from "@/lib/market/format";
@@ -75,7 +76,13 @@ function WatchTabs({ active }: { active: WatchTab }) {
   );
 }
 
-const MAX_ROWS = 30;
+/* [1057 · B2] 한 쪽 30곳 — 예전엔 전체를 읽어 앞 30곳만 보여 주고 머리 수도 30으로 잘렸다(플랜 한도 100·무제한).
+   ?page=N 으로 다음 30곳(서버 링크 — 행 목록 컴포넌트 구조를 바꾸지 않는다). */
+const PAGE_SIZE = 30;
+
+function pageHref(page: number): string {
+  return page <= 1 ? "/my/watchlist" : `/my/watchlist?page=${page}`;
+}
 
 function ymLabel(s: string): string {
   return s.length === 6 ? `${s.slice(0, 4)}.${s.slice(4)}` : s;
@@ -98,14 +105,14 @@ function skipLabel(r: Extract<ComplexPriceResult, { ok: false }>["reason"]): str
 export default async function WatchlistDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; page?: string }>;
 }) {
   const session = await safeAuth();
   if (!session?.user?.email) {
     redirect("/login?callbackUrl=/my/watchlist");
   }
   const email = session.user.email;
-  const { tab: rawTab } = await searchParams;
+  const { tab: rawTab, page: rawPage } = await searchParams;
   const tab: WatchTab =
     rawTab === "listings" || rawTab === "searches" || rawTab === "saved" ? rawTab : "complex";
   if (tab !== "complex") {
@@ -123,10 +130,15 @@ export default async function WatchlistDashboardPage({
     );
   }
 
+  const pageNum = Math.max(1, Math.floor(Number(rawPage)) || 1);
+  const offset = (pageNum - 1) * PAGE_SIZE;
   let items: WatchlistItem[] = [];
+  let total = 0;
   let listFailed = false;
   try {
-    items = (await listWatchlist(email)).slice(0, MAX_ROWS);
+    const page = await listWatchlistPage(email, { offset, limit: PAGE_SIZE });
+    items = page.items;
+    total = page.total;
   } catch (e) {
     /* [970 · C-09] 원인 원문은 로그로만 — 화면엔 고정 문구 */
     logger.error("[my/watchlist] 관심 단지 조회 실패", e);
@@ -171,12 +183,8 @@ export default async function WatchlistDashboardPage({
       href: complexHrefFromId(w.complexId),
       alertPriceMin: w.alertPriceMin,
       alertPriceMax: w.alertPriceMax,
-      alertLabel:
-        w.alertPriceMin != null || w.alertPriceMax != null
-          ? `알림 범위 ${w.alertPriceMin != null ? formatKrwShort(w.alertPriceMin) : ""}~${
-              w.alertPriceMax != null ? formatKrwShort(w.alertPriceMax) : ""
-            }`
-          : null,
+      /* [1057 · B10] 저장 직후 클라이언트가 같은 글자를 만든다 — 한 함수(lib/watchlist/alert-range) */
+      alertLabel: alertRangeLabel(w.alertPriceMin, w.alertPriceMax),
       priceText: p.ok ? formatKrwShort(p.price.priceKrw) : null,
       priceSub: p.ok
         ? `${p.price.bandLabel} · 최근 ${p.price.sampleSize}건 평균 · ${ymLabel(p.price.latestYm)}까지`
@@ -197,7 +205,7 @@ export default async function WatchlistDashboardPage({
           /* [970 · C-20] 해요체 통일 · [1028 · 제안 3] 오류 문구 표준("0곳인 게 아니라 조회 실패" 구문 제거) */
           desc="잠시 후 다시 시도해 주세요."
         />
-      ) : items.length === 0 ? (
+      ) : total === 0 ? (
         /* [966] 빈 상태 정본화 · [1009 · H] 무엇을 하면 채워지는지 + 채우면 무엇을 받는지 */
         <EmptyState
           icon="pin"
@@ -207,6 +215,14 @@ export default async function WatchlistDashboardPage({
           desc="단지 화면의 “단지 팔로우”나 지도의 “관심 단지 담기”로 담은 단지가 여기에 모여요."
           action={{ label: "지도에서 단지 찾기", href: "/map" }}
         />
+      ) : items.length === 0 ? (
+        /* [1057 · B2] 범위 밖 쪽(?page=) — "없음"이 아니라 쪽이 비었다 */
+        <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
+          이 쪽에 관심 단지 없음 · 전체 {total}곳 ·{" "}
+          <Link href={pageHref(1)} className="tap-line font-bold text-primary">
+            첫 쪽 ›
+          </Link>
+        </div>
       ) : (
         <>
           {!notesR.ok && (
@@ -215,8 +231,29 @@ export default async function WatchlistDashboardPage({
             </p>
           )}
           <div className="rise-in">
-            <WatchlistRows initial={rows} max={MAX_ROWS} />
+            <WatchlistRows initial={rows} total={total} offset={offset} />
           </div>
+          {total > PAGE_SIZE && (
+            <nav aria-label="관심 단지 쪽" className="mt-3 flex items-center justify-between gap-2 t-body">
+              {pageNum > 1 ? (
+                <Link href={pageHref(pageNum - 1)} className="tap-line font-bold text-primary no-underline">
+                  ‹ 이전 {PAGE_SIZE}곳
+                </Link>
+              ) : (
+                <span />
+              )}
+              <span className="t-sub tabular-nums text-text-3">
+                {pageNum} / {Math.ceil(total / PAGE_SIZE)}쪽
+              </span>
+              {offset + items.length < total ? (
+                <Link href={pageHref(pageNum + 1)} className="tap-line font-bold text-primary no-underline">
+                  다음 {Math.min(PAGE_SIZE, total - offset - items.length)}곳 ›
+                </Link>
+              ) : (
+                <span />
+              )}
+            </nav>
+          )}
         </>
       )}
     </PageShell>

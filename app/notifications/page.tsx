@@ -104,9 +104,10 @@ const UNREAD_STYLE: Record<Category, { bg: string; color: string; border: string
 /* [1015 · 규칙 B] 빈 화면은 한 줄 — 권유 꼬리("구독하면 … 받아볼 수 있어요")를 뺐다(구독 폼이 바로 위에 있다) */
 const EMPTY: Record<TabKey, string> = {
   전체: "알림 없음",
-  매물: "매물 승인·소유확인 알림 없음",
+  /* [1057 · B5] 탭이 담는 것과 같은 낱말 — 매물 탭엔 관심 단지 실거래·가격 변동, 활동 탭엔 임장 일정도 온다 */
+  매물: "매물 승인·소유확인·관심 단지 실거래 알림 없음",
   관심지역: "관심 지역 새 매물 알림 없음",
-  활동: "댓글·좋아요 알림 없음",
+  활동: "댓글·좋아요·임장 일정 알림 없음",
   포인트: "포인트 적립·소비 내역 없음",
   운영: "점검 경보 없음",
 };
@@ -126,16 +127,24 @@ function classifyInbox(title: string, body: string): Category {
     t.includes("채택") ||
     t.includes("팔로워") ||
     t.includes("후기 도움") ||
-    t.includes("레벨 상승")
+    t.includes("레벨 상승") ||
+    /* [1057 · B5] "내일 임장 일정"(schedule-reminders) · "오늘 출석 전"(attendance-reminders) = 내 활동 */
+    t.includes("임장 일정") ||
+    t.includes("출석")
   ) {
     return "활동";
   }
+  /* [1057 · B5] "포인트 기한 만료 안내" · "포인트 만료 7일 전" · "친구 초대 성사 · +NP"(points-expiry-sweep · referral/redeem)가
+     어떤 낱말에도 걸리지 않아 활동 탭으로 갔다 — 포인트 탭 */
+  if (title.includes("포인트") || t.includes("초대 성사")) return "포인트";
   if (
     t.includes("매물") ||
     t.includes("승인") ||
     t.includes("소유확인") ||
     t.includes("가격") ||
-    t.includes("시세")
+    t.includes("시세") ||
+    /* [1057 · B5] "관심단지 새 실거래 N건"(watchlist-new-tx) — 관심 단지 가격 변동("가격")과 같은 매물 탭 */
+    t.includes("실거래")
   ) {
     return "매물";
   }
@@ -224,6 +233,8 @@ function AlertSubscriptionSection() {
   const { showToast } = useToast();
   const [subs, setSubs] = useState<AlertSubscription[]>([]);
   const [loaded, setLoaded] = useState(false);
+  /* [1057 · B7] 조회 실패가 "구독한 지역·키워드 없음"으로 보였다 — 실패는 따로 적는다 */
+  const [loadFailed, setLoadFailed] = useState(false);
   const [region, setRegion] = useState("");
   const [keyword, setKeyword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -237,9 +248,11 @@ function AlertSubscriptionSection() {
         if (!res.ok) throw new Error(String(res.status));
         const data = (await res.json()) as { items?: AlertSubscription[] };
         if (cancelled) return;
-        setSubs(Array.isArray(data.items) ? data.items : []);
+        if (!Array.isArray(data.items)) throw new Error("items");
+        setSubs(data.items);
+        setLoadFailed(false);
       } catch {
-        // 실패 시 빈 목록 유지 (섹션은 계속 표시)
+        if (!cancelled) setLoadFailed(true);
       } finally {
         if (!cancelled) setLoaded(true);
       }
@@ -313,9 +326,9 @@ function AlertSubscriptionSection() {
         {loaded && subs.length > 0 && <span className="t-caption t-num text-text-3">{subs.length}건</span>}
       </div>
 
-      {/* 현재 구독 칩 */}
+      {/* 현재 구독 칩 — [1057 · B7] 못 읽은 것과 없는 것을 가른다 */}
       {loaded && subs.length === 0 && (
-        <div className="t-sub text-text-3">구독한 지역·키워드 없음</div>
+        <div className="t-sub text-text-3">{loadFailed ? "구독 불러오기 실패 · 잠시 후 다시" : "구독한 지역·키워드 없음"}</div>
       )}
       {subs.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -473,7 +486,8 @@ function NotificationCard({
   );
 
   const wrapper = `rise-in-${Math.min(index + 1, 6)}`;
-  if (isPoint) return <div className={wrapper}>{card}</div>;
+  /* [1057 · B5] 읽은 알림에 갈 곳(actionUrl)이 없으면 누를 일이 없다 — 예전엔 아무 일도 안 하는 <button>(죽은 조작, 1055 잔재) */
+  if (isPoint || (item.read && !item.actionUrl)) return <div className={wrapper}>{card}</div>;
   return (
     <button
       type="button"
@@ -489,6 +503,7 @@ function NotificationCard({
 
 export default function NotificationsPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   /* 2026-07-26: 예전에는 401(비로그인)과 서버 오류를 똑같이 "guest" 로 떨어뜨렸다.
      그러면 로그인한 사용자가 조회 실패를 만났을 때 "로그인하면 알림을 모아볼 수
      있어요" 라는 엉뚱한 안내를 보고, 조회가 성공했지만 비어 있는 것처럼 보인다.
@@ -501,6 +516,10 @@ export default function NotificationsPage() {
      빈 배열과 구분해야 '운영' 탭을 그릴지 말지를 사실대로 정할 수 있다. */
   const [ops, setOps] = useState<InboxItem[] | null>(null);
   const [tab, setTab] = useState<TabKey>("전체");
+  /* [1057 · B7] 사용자 채널 미읽음 **전체** 수(countUnreadInbox · /api/notifications/unread-count) — 목록은 최근 100건이라
+     그 안에서 센 수는 100건 밖의 미읽음을 빠뜨렸다. 못 셌으면 null(화면·벨은 창 안의 수로). */
+  const [unreadTotal, setUnreadTotal] = useState<number | null>(null);
+  const [readAllBusy, setReadAllBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -516,7 +535,14 @@ export default function NotificationsPage() {
           setMode("guest");
           return;
         }
-        const res = await fetch("/api/notifications");
+        const [res, countRes] = await Promise.all([
+          fetch("/api/notifications"),
+          fetch("/api/notifications/unread-count", { cache: "no-store" }).catch(() => null),
+        ]);
+        if (countRes?.ok) {
+          const c = (await countRes.json().catch(() => null)) as { count?: number | null } | null;
+          if (!cancelled && c && typeof c.count === "number") setUnreadTotal(c.count);
+        }
         if (res.status === 401) {
           if (!cancelled) setMode("guest");
           return;
@@ -562,13 +588,10 @@ export default function NotificationsPage() {
 
   /* 헤더 카운트·"모두 읽음" 은 지금 보고 있는 탭의 채널만 대상으로 한다.
      운영 경보가 사용자 알림 카운트를 밀어 올리던 것이 이 화면의 출발점이었다. */
-  const unreadCount = useMemo(
-    () =>
-      tab === "운영"
-        ? opsFolded.filter((u) => !u.read).length
-        : unified.filter((u) => u.kind === "inbox" && !u.read).length,
-    [tab, unified, opsFolded],
-  );
+  const windowUnread = useMemo(() => unified.filter((u) => u.kind === "inbox" && !u.read).length, [unified]);
+  /* [1057 · B7] 사용자 채널은 서버가 센 전체 수(없으면 창 안의 수) — 벨과 같은 수 */
+  const unreadCount = tab === "운영" ? opsFolded.filter((u) => !u.read).length : (unreadTotal ?? windowUnread);
+  const beyondWindow = unreadTotal !== null && unreadTotal > windowUnread;
 
   const counts = useMemo(() => {
     const c: Record<TabKey, number> = {
@@ -591,21 +614,29 @@ export default function NotificationsPage() {
     return unified.filter((u) => u.category === tab);
   }, [tab, unified, opsFolded]);
 
+  /* [1057 · B6] "모두 읽음"이 거짓말할 수 있었다 — 서버 응답 전에 목록을 읽음으로 바꾸고 벨에 0 을 보냈고, 실패는 삼켰다.
+     이제 응답(ok)을 받은 뒤에만 바꾸고, 실패면 한 줄로 알린다(목록·벨 그대로). */
   const markAllRead = async () => {
-    if (mode !== "live") return;
-    const now = new Date().toISOString();
+    if (mode !== "live" || readAllBusy) return;
     const channel = tab === "운영" ? "ops" : "user";
+    setReadAllBusy(true);
+    try {
+      const res = await fetch(`/api/notifications/read-all?channel=${channel}`, { method: "POST" });
+      if (!res.ok) throw new Error(String(res.status));
+    } catch {
+      showToast("읽음 처리 실패 · 잠시 후 다시");
+      return;
+    } finally {
+      setReadAllBusy(false);
+    }
+    const now = new Date().toISOString();
     if (channel === "ops") setOps((prev) => prev?.map((i) => ({ ...i, readAt: i.readAt ?? now })) ?? prev);
     else {
       setInbox((prev) => prev.map((i) => ({ ...i, readAt: i.readAt ?? now })));
-      /* [967 · 24] 헤더 벨에 바로 알린다 — 벨은 사용자 채널만 세므로 운영 탭의
+      setUnreadTotal(0);
+      /* [967 · 24] 헤더 벨에 알린다 — 벨은 사용자 채널만 세므로 운영 탭의
          "모두 읽음"은 벨 숫자와 무관하다(그래서 여기서만 보낸다). */
       emitNotificationsRead(0);
-    }
-    try {
-      await fetch(`/api/notifications/read-all?channel=${channel}`, { method: "POST" });
-    } catch {
-      // 네트워크 실패 시에도 화면 표시는 유지
     }
   };
 
@@ -625,9 +656,13 @@ export default function NotificationsPage() {
         setInbox((prev) =>
           prev.map((i) => (idSet.has(i.id) ? { ...i, readAt: i.readAt ?? now } : i)),
         );
-        /* [967 · 24] 남은 미읽음 = 지금 목록에서 이 묶음을 뺀 수(목록 상한 100건 안에서
-           센 값 — 벨이 focus 때 다시 세어 맞춘다) */
-        emitNotificationsRead(inbox.filter((i) => !i.readAt && !idSet.has(i.id)).length);
+        /* [967 · 24] 남은 미읽음 — [1057 · B7] 서버가 센 전체 수에서 지금 읽는 묶음(창 안의 미읽음)을 뺀다.
+           못 셌으면 예전처럼 창 안에서 센 값(벨이 focus 때 다시 세어 맞춘다) */
+        const newlyRead = inbox.filter((i) => !i.readAt && idSet.has(i.id)).length;
+        const windowLeft = inbox.filter((i) => !i.readAt && !idSet.has(i.id)).length;
+        const left = unreadTotal !== null ? Math.max(windowLeft, unreadTotal - newlyRead) : windowLeft;
+        setUnreadTotal((prev) => (prev === null ? prev : Math.max(windowLeft, prev - newlyRead)));
+        emitNotificationsRead(left);
       }
       try {
         await Promise.all(
@@ -669,14 +704,20 @@ export default function NotificationsPage() {
                 {unreadCount}
               </span>
             )}
+            {/* [1057 · B7] 미읽음이 목록 창(100건)보다 많다 — 목록은 최근 100건이라는 사실 */}
+            {mode === "live" && tab !== "운영" && beyondWindow && (
+              <span className="t-caption text-text-3">최근 100건</span>
+            )}
           </div>
           {mode === "live" && unreadCount > 0 && (
             <button
               type="button"
               onClick={markAllRead}
-              className="t-sub font-bold text-primary"
+              disabled={readAllBusy}
+              aria-busy={readAllBusy}
+              className="inline-flex min-h-[40px] items-center t-sub font-bold text-primary disabled:opacity-60 md:min-h-6"
             >
-              모두 읽음
+              {readAllBusy ? "읽음 처리 중" : "모두 읽음"}
             </button>
           )}
         </div>

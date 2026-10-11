@@ -113,7 +113,8 @@ test("pending-watch — 24시간이 지났거나 깨진 기록은 버린다", ()
 
 test("관심 버튼 — 401 이면 단지를 적어 두고, 로그인 상태로 돌아오면 replay 로 한 번 담는다", () => {
   const src = code("app/complex/[id]/hub-client.tsx");
-  assert.match(src, /if \(target\) savePendingWatch\(complexId, complexName\)/);
+  /* [1057] 해제 길이 먼저 return 하므로 401 분기는 담기일 때만 — `if (target)` 가드가 사라졌다 */
+  assert.match(src, /if \(res\.status === 401\) \{[\s\S]*?savePendingWatch\(complexId, complexName\)/);
   assert.match(src, /if \(opts\.replay\) return;/, "다시 담기 중 세션이 끊기면 가입 창을 또 띄우지 않는다");
   assert.match(src, /takePendingWatch\(complexId\)\) void applyRef\.current\?\.\(true, \{ replay: true \}\)/);
   assert.match(src, /가입 전에 누른 관심 등록을 마쳤어요/);

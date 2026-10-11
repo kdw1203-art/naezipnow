@@ -87,6 +87,13 @@ export async function POST(req: NextRequest) {
       { status: 503, headers: { "Retry-After": "30" } },
     );
   }
+  /* [1057] 기존 계정(가입 7일 초과)의 리딤 — 결론이 난 상태(409). 클라이언트는 쿠키를 지우고 토스트는 띄우지 않는다. */
+  if (!result.ok && result.reason === "not_new") {
+    return NextResponse.json(
+      { ok: false, reason: "not_new", error: "초대 코드는 가입 7일 안에만 적용" },
+      { status: 409 },
+    );
+  }
   /* [1056 · A8] 성사 시 추천인 수신함 알림(await — 서버리스는 응답 뒤 작업을 보장하지 않는다) */
   if (result.ok) await notifyReferrer(code, email);
   /* awarded: 피추천인(지금 로그인한 사람)에게 실제 지급된 포인트 — 클라이언트 토스트 문구용 */

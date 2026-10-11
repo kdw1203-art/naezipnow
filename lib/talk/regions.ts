@@ -6,6 +6,9 @@
  */
 import { METRO_EXPLORE_DISTRICTS, SEOUL_DISTRICTS, type SeoulDistrictInfo } from "@/lib/map/seoul-districts";
 import { marketRegionNameCandidates } from "@/lib/market/region-name-candidates";
+/* 순수 해독기(lib/seo/complex-slug · 엣지 겸용) — complex-store 는 supabase·react cache 를 끌고 와 이 모듈(단위 시험 대상)을 무겁게 한다 */
+import { decodeNameIdSafe } from "@/lib/seo/complex-slug";
+import { complexInRegion } from "@/lib/talk/rules";
 
 export type TalkRegion = {
   id: string;
@@ -52,6 +55,20 @@ const BY_ID = new Map(TALK_REGIONS.map((r) => [r.id, r]));
 
 export function talkRegionById(id: string | null | undefined): TalkRegion | null {
   return BY_ID.get(String(id ?? "").trim()) ?? null;
+}
+
+/* [1057 · B8] 단지 화면의 단지 토론 범위 — 단지 id 가 해독되고(kapt.* 는 안 된다) 그 지역이 토론 지역(수도권)이며 POST 의 같은 판정
+   (complexInRegion)을 통과할 때만. 아니면 null(판을 그리지 않는다 — 글을 써도 서버가 받지 않을 자리를 만들지 않는다). */
+export function talkScopeForComplex(
+  complexId: string,
+  regionId: string | null | undefined,
+): { regionId: string; regionName: string; complexId: string; complexName: string } | null {
+  const region = talkRegionById(regionId);
+  if (!region) return null;
+  const decoded = decodeNameIdSafe(complexId);
+  if (!decoded) return null;
+  if (!region.txNames.some((n) => complexInRegion(decoded.region, n))) return null;
+  return { regionId: region.id, regionName: region.name, complexId, complexName: decoded.name.slice(0, 80) };
 }
 
 /** 노트·글의 지역 표기에서 찾을 낱말 — 마지막 낱말("분당구" · "남양주시"), 두 글자 구(중구·서구)는 시·도까지 */

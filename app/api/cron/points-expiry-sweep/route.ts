@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authorizeCron } from "@/lib/cron/authorize";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { readPaged } from "@/lib/supabase/read-paged";
 import { appendInboxNotification } from "@/lib/notifications/inbox";
 import { ingestErrorMessage, logIngest } from "@/lib/market/store";
 import { logger } from "@/lib/log";
@@ -11,6 +12,9 @@ export const dynamic = "force-dynamic";
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** 한 번의 스윕에서 처리할 최대 사용자 수 */
 const MAX_USERS = 500;
+/** [1057] 후보 행 조회 상한(쪽 단위로 끝까지 읽는다) · 사용자 한 명의 원장 행 상한 */
+const CANDIDATE_MAX_ROWS = 20_000;
+const USER_LEDGER_MAX_ROWS = 20_000;
 
 /**
  * 포인트 만료 스윕 — 하루 1회(etl.yml alerts 잡).
@@ -64,28 +68,43 @@ export async function GET(req: Request) {
 
   try {
     // 대상 사용자: (a) 만료 시각이 지난 적립 행 보유, (b) 6~7일 내 만료 예정 적립 행 보유
+    /* [1057] `.limit(2000)` 은 정렬 없이 1,000행에서 조용히 잘렸다(PostgREST 상한) — 유일 정렬(expires_at, id)로 쪽을 나눠 읽는다 */
+    type CandRow = { user_email: unknown };
     const [expiredCand, noticeCand] = await Promise.all([
-      sb
-        .from("point_ledger")
-        .select("user_email")
-        .gt("delta", 0)
-        .not("expires_at", "is", null)
-        .lt("expires_at", nowIso)
-        .limit(2000),
-      sb
-        .from("point_ledger")
-        .select("user_email")
-        .gt("delta", 0)
-        .gt("expires_at", noticeFromIso)
-        .lte("expires_at", noticeToIso)
-        .limit(2000),
+      readPaged<CandRow>(
+        (from, to) =>
+          sb
+            .from("point_ledger")
+            .select("user_email")
+            .gt("delta", 0)
+            .not("expires_at", "is", null)
+            .lt("expires_at", nowIso)
+            .order("expires_at", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to),
+        CANDIDATE_MAX_ROWS,
+      ),
+      readPaged<CandRow>(
+        (from, to) =>
+          sb
+            .from("point_ledger")
+            .select("user_email")
+            .gt("delta", 0)
+            .gt("expires_at", noticeFromIso)
+            .lte("expires_at", noticeToIso)
+            .order("expires_at", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to),
+        CANDIDATE_MAX_ROWS,
+      ),
     ]);
-    if (expiredCand.error) throw new Error(expiredCand.error.message);
-    if (noticeCand.error) throw new Error(noticeCand.error.message);
+    if (expiredCand.truncated || noticeCand.truncated) {
+      logger.warn("[points-expiry-sweep] 후보 행이 상한에 닿음 — 남은 사용자는 다음 스윕", CANDIDATE_MAX_ROWS);
+    }
 
     const emails = [
       ...new Set(
-        [...(expiredCand.data ?? []), ...(noticeCand.data ?? [])]
+        [...expiredCand.rows, ...noticeCand.rows]
           .map((r) => String(r.user_email ?? "").trim())
           .filter(Boolean),
       ),
@@ -96,12 +115,31 @@ export async function GET(req: Request) {
     let notified = 0;
 
     for (const email of emails) {
-      const { data: rows, error } = await sb
-        .from("point_ledger")
-        .select("delta, balance, expires_at, created_at")
-        .eq("user_email", email)
-        .order("created_at", { ascending: true });
-      if (error || !Array.isArray(rows) || rows.length === 0) continue;
+      /* [1057] 사용자 원장도 상한 없는 조회라 1,000행에서 잘려 FIFO 잔여분이 틀릴 수 있었다 — 쪽을 나눠 끝까지 읽는다.
+         상한에 닿은 사용자는 건너뛴다(잘린 원장으로 만료를 집행하지 않는다). */
+      let rows: Array<Record<string, unknown>>;
+      try {
+        const paged = await readPaged<Record<string, unknown>>(
+          (from, to) =>
+            sb
+              .from("point_ledger")
+              .select("delta, balance, expires_at, created_at")
+              .eq("user_email", email)
+              .order("created_at", { ascending: true })
+              .order("id", { ascending: true })
+              .range(from, to),
+          USER_LEDGER_MAX_ROWS,
+        );
+        if (paged.truncated) {
+          logger.warn("[points-expiry-sweep] 원장 행이 상한에 닿아 건너뜀", email);
+          continue;
+        }
+        rows = paged.rows;
+      } catch (e) {
+        logger.warn("[points-expiry-sweep] 원장 조회 실패 — 건너뜀", email, e);
+        continue;
+      }
+      if (rows.length === 0) continue;
 
       const lite: LedgerLite[] = rows.map((r) => ({
         delta: Number(r.delta) || 0,
@@ -119,6 +157,8 @@ export async function GET(req: Request) {
       if (toExpire > 0) {
         const amount = Math.min(toExpire, Math.max(0, currentBalance));
         if (amount > 0) {
+          /* [1057] 알려진 한계: 이 insert 는 point_ledger_spend/award 의 자물쇠 밖이라, 같은 순간의 적립·차감과 겹치면 러닝 잔액이
+             어긋날 수 있다(만료 행을 RPC 로 옮기는 일은 이 묶음 밖). */
           const { error: insErr } = await sb.from("point_ledger").insert({
             user_email: email,
             delta: -amount,
@@ -149,7 +189,7 @@ export async function GET(req: Request) {
         await appendInboxNotification({
           userEmail: email,
           title: "포인트 만료 7일 전",
-          body: `${expiringSoon.toLocaleString("ko-KR")}P가 7일 뒤 만료돼요. 상점에서 먼저 사용해 보세요.`,
+          body: `${expiringSoon.toLocaleString("ko-KR")}P가 7일 뒤 만료돼요 · 상점에서 사용 가능`,
           actionUrl: "/points/shop",
         });
         notified += 1;

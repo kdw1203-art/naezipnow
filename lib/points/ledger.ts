@@ -28,6 +28,35 @@ export type LedgerRow = {
 };
 
 /**
+ * [1057] n개월 뒤 — 같은 날짜가 없는 달은 그 달 말일로 맞춘다(UTC 산술 · 순수).
+ * 예전 `setMonth(+6)` 은 8/31 → "2/31" 이 3/3 으로 넘쳐 29~31일 적립의 만료가 며칠 늦었다.
+ *   1/31 +6 → 7/31 · 8/31 +6 → 2/28(윤년 2/29) · 10/31 +6 → 4/30
+ */
+export function addMonthsClamped(from: Date, months: number): Date {
+  const y = from.getUTCFullYear();
+  const m = from.getUTCMonth();
+  const d = from.getUTCDate();
+  const targetFirst = Date.UTC(y, m + months, 1);
+  const lastDay = new Date(Date.UTC(new Date(targetFirst).getUTCFullYear(), new Date(targetFirst).getUTCMonth() + 1, 0)).getUTCDate();
+  return new Date(
+    Date.UTC(
+      new Date(targetFirst).getUTCFullYear(),
+      new Date(targetFirst).getUTCMonth(),
+      Math.min(d, lastDay),
+      from.getUTCHours(),
+      from.getUTCMinutes(),
+      from.getUTCSeconds(),
+      from.getUTCMilliseconds(),
+    ),
+  );
+}
+
+/** 적립 행의 만료 시각 — 적립 시각 + POINT_EXPIRY_MONTHS(말일 보정) */
+export function pointExpiryFrom(now: Date): Date {
+  return addMonthsClamped(now, POINT_EXPIRY_MONTHS);
+}
+
+/**
  * 현재 잔액 = 가장 최근 원장 행의 balance. 원장 행이 하나도 없으면 0 이다.
  *
  * 조회에 **실패하면 던진다.** 예전에는 `if (error || !data) return 0` 이라
@@ -218,8 +247,8 @@ export async function awardPoints(
     if (amount <= 0) {
       return { ok: false, awarded: 0, balance: await balanceForFailure(email), reason: "cap" };
     }
-    const expires = new Date(now);
-    expires.setMonth(expires.getMonth() + POINT_EXPIRY_MONTHS);
+    /* [1057] setMonth(+6) 은 29~31일 적립에서 다음 달로 넘쳤다 — 말일 보정 */
+    const expires = pointExpiryFrom(now);
 
     /* 적립도 차감과 같은 자물쇠 안에서 한다(point_ledger_award).
        예전에는 "잔액 조회 → insert" 두 왕복이라, 같은 사용자의 적립과 차감이
@@ -352,5 +381,71 @@ export async function spendPoints(
   } catch (e) {
     logger.error("[spendPoints]", e);
     return { ok: false, spent: 0, balance: await balanceForFailure(email), reason: "error" };
+  }
+}
+
+export type RefundResult = { ok: boolean; refunded: number; balance: number; reason?: string };
+
+/**
+ * [1057] 환불 — 상점에서 차감(spendPoints)은 됐는데 효과 적용이 실패했을 때 그 금액을 되돌린다.
+ * 양수 행(reason=`refund:<itemKey>`)을 적립과 같은 자물쇠(point_ledger_award)로 쓴다 — 잔액 RPC 의 뜻은 바꾸지 않는다.
+ * refId 로 멱등: 같은 (reason, refId) 행이 이미 있으면 다시 적지 않는다. 만료는 적립과 같은 6개월(말일 보정).
+ * 던지지 않고 결과 객체를 돌려준다(awardPoints·spendPoints 와 같은 계약).
+ */
+export async function refundPoints(
+  email: string,
+  amount: number,
+  itemKey: string,
+  refId: string,
+): Promise<RefundResult> {
+  const sb = getServiceSupabase();
+  const reason = `refund:${itemKey}`;
+  if (!sb || !email || !Number.isFinite(amount) || amount <= 0 || !itemKey || !refId) {
+    return { ok: false, refunded: 0, balance: await balanceForFailure(email), reason: "invalid" };
+  }
+  try {
+    if (await alreadyAwarded(email, reason, refId)) {
+      return { ok: false, refunded: 0, balance: await balanceForFailure(email), reason: "already_ref" };
+    }
+    const expires = pointExpiryFrom(new Date());
+    const { data, error } = await sb.rpc("point_ledger_award", {
+      p_user_email: email,
+      p_amount: Math.round(amount),
+      p_reason: reason,
+      p_ref_id: refId,
+      p_expires_at: expires.toISOString(),
+    });
+    if (!error) {
+      const r = (data ?? {}) as { ok?: boolean; awarded?: number; balance?: number; reason?: string };
+      return {
+        ok: Boolean(r.ok),
+        refunded: Number(r.awarded) || 0,
+        balance: Number(r.balance) || 0,
+        reason: r.ok ? undefined : (r.reason ?? "error"),
+      };
+    }
+    if (!isMissingRpc(error, "point_ledger_award")) {
+      logger.error("[refundPoints] rpc", error);
+      return { ok: false, refunded: 0, balance: await balanceForFailure(email), reason: "db" };
+    }
+    // ── 폴백(비원자): RPC 함수가 아직 없는 환경 전용 ──
+    const bal = await getBalance(email);
+    const newBal = bal + Math.round(amount);
+    const { error: insertError } = await sb.from("point_ledger").insert({
+      user_email: email,
+      delta: Math.round(amount),
+      reason,
+      ref_id: refId,
+      balance: newBal,
+      expires_at: expires.toISOString(),
+    });
+    if (insertError) {
+      logger.error("[refundPoints] insert", insertError);
+      return { ok: false, refunded: 0, balance: bal, reason: "db" };
+    }
+    return { ok: true, refunded: Math.round(amount), balance: newBal };
+  } catch (e) {
+    logger.error("[refundPoints]", e);
+    return { ok: false, refunded: 0, balance: await balanceForFailure(email), reason: "error" };
   }
 }

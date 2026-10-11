@@ -83,7 +83,8 @@ export function ShopClient({ initialBalance }: { initialBalance: number }) {
           const st = states[item.key] ?? { status: "idle", message: "" };
           const insufficient = balance < item.cost;
           const busy = st.status === "busy";
-          const disabled = busy || (insufficient && st.status !== "done");
+          /* [1057] 교환 완료 뒤에도 버튼이 살아 있어 한 번 더 누르면 다시 차감됐다 — 완료면 잠근다(다시 사려면 새로고침) */
+          const disabled = busy || st.status === "done" || insufficient;
           return (
             <div
               key={item.key}
@@ -137,8 +138,9 @@ export function ShopClient({ initialBalance }: { initialBalance: number }) {
         })}
       </div>
 
+      {/* [1057] "환불되지 않는다"가 더는 전부 사실이 아니다 — 효과 적용 실패 시엔 자동 환불 · 재구매는 남은 기간 뒤에 이어 붙는다 */}
       <p className="rise-in-2 px-1 text-[12px] leading-[1.6] text-text-3">
-        교환한 효과는 즉시 적용돼요. 포인트는 환불되지 않으니 신중히 교환해 주세요.
+        교환한 효과는 즉시 적용 · 적용 실패 시에만 자동 환불 · 그 외 환불 없음 · 같은 효과를 다시 사면 남은 기간 뒤에 이어 붙음
       </p>
     </div>
   );

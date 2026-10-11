@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { QueueItem, QueueStatus } from "@/lib/admin/moderation-queue";
+import { formatKstDate } from "@/lib/format/kst";
 
 /**
  * 실제 신고 큐 — content_reports · chat_reports 실행.
@@ -136,7 +137,8 @@ export function ModerationQueue({ items }: { items: QueueItem[] }) {
                       </code>
                     </span>
                   )}
-                  {item.handledAt && <span>처리 {item.handledAt.slice(0, 10)}</span>}
+                  {/* [1057 · C9] ISO 앞 10자 = UTC 날짜라 KST 자정~09:00 처리분이 전날로 찍혔다 — KST 날짜로 */}
+                  {item.handledAt && <span>처리 {formatKstDate(item.handledAt) || item.handledAt.slice(0, 10)}</span>}
                 </div>
 
                 {item.status === "open" && (

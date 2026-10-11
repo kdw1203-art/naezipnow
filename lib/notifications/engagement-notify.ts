@@ -22,6 +22,7 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { isWebPushConfigured, sendPush, type PushPayload } from "@/lib/push/vapid";
 import { kstParts } from "@/lib/format/kst";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
+import { maskNoteAuthor } from "@/lib/town/shared";
 import { logger } from "@/lib/log";
 
 /* ---------- 순수 규칙 ---------- */
@@ -302,13 +303,40 @@ export async function notifyReviewHelpfulMilestone(input: {
   });
 }
 
-/** B4 — 새 팔로워(팔로우 당한 사람에게). 팔로워 닉네임이 없으면 이메일 앞부분 */
+/** [1057] 같은 사람의 "새 팔로워" 알림이 7일 안에 이미 있는가(팔로우↔취소 반복으로 같은 줄이 쌓이지 않게).
+    제목 일치 · 본문이 `${label} ·` 로 시작 · 7일. 조회 실패는 "모름" → 보낸다(알림 한 줄이 더 가는 쪽이 덜 나쁘다). */
+export const FOLLOWER_NOTICE_DEDUPE_DAYS = 7;
+async function hasRecentFollowerNotice(userEmail: string, label: string): Promise<boolean> {
+  const sb = getServiceSupabase();
+  if (!sb) return false;
+  const since = new Date(Date.now() - FOLLOWER_NOTICE_DEDUPE_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  /* 본문 앞머리 비교는 JS 에서 한다 — PostgREST 의 like 는 `*` 를 `%` 로 바꾸는데 가린 라벨("kd** 이웃")에 `*` 가 들어 있다 */
+  const prefix = `${label} ·`;
+  try {
+    const { data, error } = await sb
+      .from("user_inbox_notifications")
+      .select("body")
+      .eq("user_email", userEmail.trim().toLowerCase())
+      .eq("title", "새 팔로워")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error || !Array.isArray(data)) return false;
+    return data.some((r) => String((r as { body?: unknown }).body ?? "").startsWith(prefix));
+  } catch {
+    return false;
+  }
+}
+
+/** B4 — 새 팔로워(팔로우 당한 사람에게). 닉네임·핸들이 없으면 가린 이메일("kd** 이웃") */
 export async function notifyNewFollower(input: {
   followedEmail: string;
   followerEmail: string;
 }): Promise<void> {
   const prof = await lookupProfileHandle(input.followerEmail);
-  const shown = prof.name || prof.handle || emailLocalPart(input.followerEmail);
+  /* [1057] 닉네임 없는 팔로워는 이메일 앞부분이 그대로 보였다 — 공개 노트와 같은 가림(maskNoteAuthor) */
+  const shown = maskNoteAuthor(prof.name || prof.handle, input.followerEmail);
+  if (await hasRecentFollowerNotice(input.followedEmail, shown)) return;
   await notifyEngagement({
     userEmail: input.followedEmail,
     title: "새 팔로워",

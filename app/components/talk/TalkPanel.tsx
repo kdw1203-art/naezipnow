@@ -42,6 +42,11 @@ import {
   type TalkTab,
 } from "@/lib/talk/rules";
 import { authorProfileHref } from "@/lib/profile/author-href";
+import { complexHrefFromId } from "@/lib/seo/complex-slug";
+
+/* [1057 · B8] 단지 범위 — 단지 화면의 "단지 토론": 그 단지에 붙은 글만 받고(GET ?complexId=), 쓰면 단지·지역이 함께 저장된다.
+   왼쪽 지역 순위·탭·단지 고르기는 없다(지역·단지가 정해져 있다). 지역 전체 토론은 머리의 "지역 토론 ›"로. */
+export type TalkScope = { regionId: string; regionName: string; complexId: string; complexName: string };
 
 type FeedState =
   | { status: "idle" | "loading" }
@@ -63,13 +68,22 @@ function valueHead(tab: TalkTab, board: TalkBoard | null): string {
   return board?.indexYm ? `${ymMonthLabel(board.indexYm)} 지수 전월비` : "지수 전월비";
 }
 
-export function TalkPanel({ variant = "home", initialRegion = null }: { variant?: "home" | "page"; initialRegion?: string | null }) {
+export function TalkPanel({
+  variant = "home",
+  initialRegion = null,
+  scope = null,
+}: {
+  variant?: "home" | "page";
+  initialRegion?: string | null;
+  /** [1057 · B8] 단지 범위(단지 화면) — 있으면 지역·단지가 고정된다 */
+  scope?: TalkScope | null;
+}) {
   const { showToast } = useToast();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [board, setBoard] = useState<TalkBoard | null>(null);
   const [boardFailed, setBoardFailed] = useState(false);
   const [tab, setTab] = useState<TalkTab | null>(null);
-  const [regionId, setRegionId] = useState<string | null>(initialRegion);
+  const [regionId, setRegionId] = useState<string | null>(scope?.regionId ?? initialRegion);
   const [feed, setFeed] = useState<FeedState>({ status: "idle" });
   const [now, setNow] = useState(() => Date.now());
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
@@ -99,7 +113,7 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
   /* 토론 화면(/talk?region=…)은 주소의 지역으로 시작하고, 고른 지역을 주소에 적는다(공유 · 뒤로 가기).
      주소에 없으면(홈 포함) 이 브라우저에서 마지막으로 본 지역 — 없으면 탭 1위 */
   useEffect(() => {
-    if (initialRegion) return;
+    if (initialRegion || scope) return;
     let fromUrl: string | null = null;
     if (variant === "page") {
       try {
@@ -118,7 +132,7 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
     } catch {
       /* 저장소 막힘 — 1위 지역 */
     }
-  }, [variant, initialRegion]);
+  }, [variant, initialRegion, scope]);
 
   const pickRegion = useCallback((id: string) => {
     setRegionId(id);
@@ -149,9 +163,12 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
     }
   }, []);
 
+  /* 단지 범위는 순위 판이 없다 — /api/talk/board 를 부르지 않는다 */
+  const scoped = Boolean(scope);
   useEffect(() => {
+    if (scoped) return;
     void loadBoard();
-  }, [loadBoard]);
+  }, [loadBoard, scoped]);
 
   useEffect(() => {
     let alive = true;
@@ -174,8 +191,16 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
 
   const ranked = useMemo(() => (board && tab ? rankTalkBoard(board.regions, tab) : []), [board, tab]);
   const byId = useMemo(() => new Map((board?.regions ?? []).map((r) => [r.id, r])), [board]);
+  /* 단지 범위의 지역 줄 — 순위 판 없이 id·이름만(숫자는 모름) */
+  const scopeRegion = useMemo<TalkBoardRegion | null>(
+    () =>
+      scope
+        ? { id: scope.regionId, name: scope.regionName, sido: "", txName: "", pct: null, indexYm: null, trades: null, tradesYm: null, talks: 0, lastTalkAt: null }
+        : null,
+    [scope],
+  );
   /* 고른 지역이 없으면 이 탭의 1위 */
-  const selected = (regionId ? byId.get(regionId) : undefined) ?? ranked[0] ?? null;
+  const selected = scopeRegion ?? (regionId ? byId.get(regionId) : undefined) ?? ranked[0] ?? null;
   /* 지역 찾기 — 찾는 중이면 이 탭 순위에 없는 지역도(순위 있는 것 먼저) */
   const shown = useMemo(() => {
     if (!board || !q.trim()) return ranked.map((r, i) => ({ r, rank: i + 1 as number | null }));
@@ -185,6 +210,7 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
       .sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9) || a.r.name.localeCompare(b.r.name, "ko"));
   }, [board, ranked, q]);
 
+  const scopeComplexId = scope?.complexId ?? null;
   const loadFeed = useCallback(async (id: string, quiet: boolean) => {
     wantRef.current = id;
     if (!quiet) {
@@ -194,7 +220,8 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
     const ac = new AbortController();
     if (!quiet) feedAbortRef.current = ac;
     try {
-      const r = await fetch(`/api/talk?region=${encodeURIComponent(id)}`, { cache: "no-store", signal: ac.signal });
+      const url = `/api/talk?region=${encodeURIComponent(id)}${scopeComplexId ? `&complexId=${encodeURIComponent(scopeComplexId)}` : ""}`;
+      const r = await fetch(url, { cache: "no-store", signal: ac.signal });
       if (!r.ok) throw new Error(String(r.status));
       const j = (await r.json()) as { regionId: string; posts: TalkPost[]; facts: TalkFact[]; factsFailed?: boolean };
       /* 그 사이 다른 지역을 골랐으면 버린다 — 늦게 온 앞 지역 글이 새 지역 칸을 덮지 않게 */
@@ -224,20 +251,20 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
       if (ac.signal.aborted || wantRef.current !== id) return;
       if (!quiet) setFeed({ status: "error" });
     }
-  }, []);
+  }, [scopeComplexId]);
 
   const selectedId = selected?.id ?? null;
   useEffect(() => {
     if (!selectedId) return;
     void loadFeed(selectedId, false);
-    if (variant === "page") {
+    if (variant === "page" && !scoped) {
       try {
         window.history.replaceState(window.history.state, "", `/talk?region=${encodeURIComponent(selectedId)}`);
       } catch {
         /* 주소 갱신 실패는 무시 */
       }
     }
-  }, [selectedId, loadFeed, variant]);
+  }, [selectedId, loadFeed, variant, scoped]);
 
   /* 보이는 동안만 — 글은 30초, 왼쪽 순위는 2분마다. 다른 탭에서 돌아오면 바로 한 번 */
   useEffect(() => {
@@ -246,7 +273,7 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
       if (document.visibilityState === "visible") void loadFeed(selectedId, true);
     }, TALK_POLL_MS);
     const tb = window.setInterval(() => {
-      if (document.visibilityState === "visible") void loadBoard();
+      if (!scoped && document.visibilityState === "visible") void loadBoard();
     }, 120_000);
     const onVis = () => {
       if (document.visibilityState === "visible") void loadFeed(selectedId, true);
@@ -257,7 +284,7 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
       window.clearInterval(tb);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [selectedId, visible, loadFeed, loadBoard]);
+  }, [selectedId, visible, loadFeed, loadBoard, scoped]);
 
   /* 지역을 바꾸면 붙인 단지는 뗀다(다른 지역 단지) */
   useEffect(() => {
@@ -310,7 +337,8 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
       const r = await fetch("/api/talk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ regionId: selected.id, body, complexId: complex?.id ?? null }),
+        /* [1057 · B8] 단지 범위에서 쓴 글은 그 단지·지역으로 저장된다(서버가 id 를 해독해 이름·지역을 다시 확인) */
+        body: JSON.stringify({ regionId: selected.id, body, complexId: scope?.complexId ?? complex?.id ?? null }),
       });
       const j = (await r.json().catch(() => ({}))) as { post?: TalkPost; error?: string };
       if (!r.ok || !j.post) {
@@ -376,7 +404,16 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
   const tone = talkCountTone(len);
   /* 고른 지역이 지금 순위(찾기 결과)에 없으면 맨 위에 고정 줄 */
   const pinned = selected && !shown.some((x) => x.r.id === selected.id) ? selected : null;
-  const loginBack = variant === "page" && selected ? `/talk?region=${encodeURIComponent(selected.id)}` : variant === "page" ? "/talk" : "/#talk";
+  const loginBack = scope
+    ? `${complexHrefFromId(scope.complexId)}#complex-talk`
+    : variant === "page" && selected
+      ? `/talk?region=${encodeURIComponent(selected.id)}`
+      : variant === "page"
+        ? "/talk"
+        : "/#talk";
+  /* 단지 범위의 머리·빈 글 — 단지 이름으로 */
+  const feedTitle = scope ? `${scope.complexName} 토론` : selected ? `${selected.name} 토론` : "지역 토론";
+  const placeName = scope?.complexName ?? selected?.name ?? null;
   const smallBtn = "inline-flex min-h-[40px] items-center px-1.5 t-caption md:min-h-6";
 
   function regionRow(r: TalkBoardRegion, rank: number | null, pin: boolean) {
@@ -404,7 +441,8 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
 
   return (
     <div ref={rootRef} className="flex flex-col gap-3">
-      {/* 탭 */}
+      {/* 탭 — 단지 범위엔 순위가 없다 */}
+      {!scoped && (
       <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="지역 순위 기준">
         {TALK_TABS.map((t) => (
           <button
@@ -421,9 +459,11 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
           </button>
         ))}
       </div>
+      )}
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
-        {/* 왼쪽 — 지역 순위 */}
+      <div className={`grid grid-cols-1 gap-3 ${scoped ? "" : "md:grid-cols-[minmax(0,300px)_minmax(0,1fr)]"}`}>
+        {/* 왼쪽 — 지역 순위(단지 범위엔 없다) */}
+        {!scoped && (
         <div className="overflow-hidden rounded-xl border border-line bg-surface">
           <div className="flex items-center justify-between border-b border-line bg-bg px-3 py-1.5 t-caption font-bold text-text-3">
             <span>지역</span>
@@ -465,16 +505,22 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
             </ol>
           )}
         </div>
+        )}
 
         {/* 오른쪽 — 고른 지역의 글 */}
         <div ref={feedBoxRef} className="flex min-w-0 scroll-mt-20 flex-col overflow-hidden rounded-xl border border-line bg-surface">
           <div className="flex items-center justify-between gap-2 border-b border-line px-3.5 py-2">
-            <span className="min-w-0 truncate t-body font-bold text-ink">{selected ? `${selected.name} 토론` : "지역 토론"}</span>
-            {selected && (
+            <span className="min-w-0 truncate t-body font-bold text-ink">{feedTitle}</span>
+            {scope ? (
+              /* 단지 범위 — 지역 전체 토론으로 */
+              <Link href={`/talk?region=${encodeURIComponent(scope.regionId)}`} className="tap-line shrink-0 t-sub font-bold text-primary no-underline">
+                {scope.regionName} 토론 ›
+              </Link>
+            ) : selected ? (
               <Link href={`/region/${encodeURIComponent(selected.id)}`} className="tap-line shrink-0 t-sub font-bold text-primary no-underline">
                 지역 화면 ›
               </Link>
-            )}
+            ) : null}
           </div>
 
           <p className="sr-only" aria-live="polite">
@@ -519,7 +565,7 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
                 ))}
               </div>
             ) : posts.length === 0 && facts.length === 0 ? (
-              <p className="m-0 px-3.5 py-8 text-center t-sub text-text-3">{selected?.name} 토론글 없음</p>
+              <p className="m-0 px-3.5 py-8 text-center t-sub text-text-3">{placeName} 토론글 없음</p>
             ) : (
               <ul className="m-0 list-none p-0">
                 {posts.length === 0 && (
@@ -537,9 +583,10 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
                         <span className="t-sub font-bold text-ink">{p.author}</span>
                       )}
                       <span>{talkTimeLabel(p.createdAt, now)}</span>
-                      {p.complexId && p.complexName && (
+                      {/* [1057 · B8] 단지 칩 — 날 base64 주소(/complex/{id} → 308 한 번 더)가 아니라 정규 슬러그 주소. 단지 범위에선 칩이 곧 이 화면이라 뺀다 */}
+                      {!scope && p.complexId && p.complexName && (
                         <Link
-                          href={`/complex/${encodeURIComponent(p.complexId)}`}
+                          href={complexHrefFromId(p.complexId)}
                           className="inline-flex min-h-6 items-center gap-0.5 rounded bg-bg px-1.5 t-caption font-bold text-text-2 no-underline"
                         >
                           <Icon name="building" size={12} />
@@ -610,14 +657,14 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
           <div className="border-t border-line bg-bg px-3 py-2.5">
             {loggedIn === false ? (
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="t-sub text-text-3">{selected ? `${selected.name} 이야기 한 줄 · 로그인 후 쓰기` : "로그인 후 쓰기"}</span>
+                <span className="t-sub text-text-3">{placeName ? `${placeName} 이야기 한 줄 · 로그인 후 쓰기` : "로그인 후 쓰기"}</span>
                 <Link href={`/login?callbackUrl=${encodeURIComponent(loginBack)}`} className="btn-soft inline-flex min-h-10 items-center px-4 t-sub font-bold no-underline">
                   로그인
                 </Link>
               </div>
             ) : (
               <form onSubmit={submit} className="flex flex-col gap-2">
-                {complexOpen && (
+                {!scoped && complexOpen && (
                   <div className="flex flex-col gap-1">
                     <input
                       value={complexQ}
@@ -667,7 +714,7 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
                   </div>
                 )}
                 <div className="flex items-center gap-1.5">
-                  {complex ? (
+                  {scoped ? null : complex ? (
                     <button
                       type="button"
                       onClick={() => setComplex(null)}
@@ -692,7 +739,7 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
                     value={text}
                     onChange={(e) => setText(clipTalkInput(e.target.value))}
                     disabled={!selected || loggedIn === null}
-                    placeholder={selected ? `${selected.name} 이야기 한 줄` : "지역을 고르면 쓰기"}
+                    placeholder={placeName ? `${placeName} 이야기 한 줄` : "지역을 고르면 쓰기"}
                     aria-label="토론 한 줄"
                     className="min-h-10 min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 t-body text-ink"
                   />

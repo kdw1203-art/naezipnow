@@ -119,6 +119,9 @@ import { complexPageIndexable, complexShowsAds } from "@/lib/seo/complex-index-p
 import type { FaqItem } from "@/lib/seo/jsonld";
 /* [968 · 3 · 4] 후기 섹션은 뷰포트 근처에서 청크·데이터를 함께 받는 래퍼로 */
 import { ComplexReviewsLazy } from "./ComplexReviewsLazy";
+/* [1057 · B8] 단지 토론 — 같은 지연 래퍼 방식(판 코드는 라우트 번들 밖). 범위 판정은 서버(talkScopeForComplex) */
+import { ComplexTalkLazy } from "./ComplexTalkLazy";
+import { talkScopeForComplex } from "@/lib/talk/regions";
 import { ComplexAreaBands } from "./ComplexAreaBands";
 import { RegionRelative } from "./RegionRelative";
 import { NearbyRedevelopment } from "./NearbyRedevelopment";
@@ -1319,6 +1322,8 @@ export default async function ComplexHubPage({
      알약이 같은 값을 쓴다(resolveRegionId 주석 참고). */
   const regionId = resolveRegionId(v.city, v.dong);
   const regionLabel = axisRegionName(v.city, v.dong) || v.dong;
+  /* [1057 · B8] 단지 토론 범위 — 실단지(v.id === complexId)이고 토론 지역·해독 가능한 id 일 때만(목업·kapt 는 null) */
+  const talkScope = v.id === complexId && complexId !== "mock-1" ? talkScopeForComplex(complexId, regionId) : null;
 
   /* JSON-LD — 이 페이지가 설명하는 실체는 "단지 하나"다.
      G6 이전엔 ApartmentComplex(@id 있음)와 별도의 Residence(@id 없음) 두 노드를
@@ -1792,6 +1797,24 @@ export default async function ComplexHubPage({
           {v.id === complexId && complexId !== "mock-1" && (
             <section className="cv-auto rise-in-5 mt-6 max-md:mt-3">
               <ComplexReviewsLazy complexId={complexId} complexName={v.name} />
+            </section>
+          )}
+
+          {/* [1057 · B8] 단지 토론 — 수도권 토론 지역의 해독 가능한 단지만(서버 판정 · 아니면 자리 자체가 없다) */}
+          {talkScope && (
+            <section id="complex-talk" aria-labelledby="complex-talk-title" className="cv-auto rise-in-5 mt-6 scroll-mt-24 max-md:mt-3">
+              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 px-1">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <h2 id="complex-talk-title" className="t-section text-ink">
+                    단지 토론
+                  </h2>
+                  <span className="t-caption text-text-3">이 단지 한 줄 · 새 글 30초마다</span>
+                </div>
+                <Link href={`/talk?region=${encodeURIComponent(talkScope.regionId)}`} className="tap-line t-sub font-bold text-primary no-underline">
+                  {talkScope.regionName} 토론 ›
+                </Link>
+              </div>
+              <ComplexTalkLazy scope={talkScope} />
             </section>
           )}
 

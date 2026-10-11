@@ -1,7 +1,7 @@
 "use client";
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { ExpertBadge, type ExpertBadgeData } from "@/app/components/ExpertBadge";
 import { useRouter } from "next/navigation";
 import { loginHrefWithNext } from "@/lib/auth/auth-ux";
@@ -35,6 +35,17 @@ export type NoteCommentView = {
 };
 
 const MAX_LEN = 1000;
+
+/* [1057 · C7] 등록이 401 이면(세션 만료) 로그인 시트 → 전체 이동으로 입력한 글이 사라졌다. 로그인으로 가기 전에 sessionStorage(노트 id 키)에
+   두고, 돌아와 마운트하면 맨 위 댓글칸에 되살린다(한 번 읽고 지운다). */
+const draftKey = (noteId: string) => `nz:note-comment-draft:${noteId}`;
+function stashDraft(noteId: string, text: string) {
+  try {
+    if (text) window.sessionStorage.setItem(draftKey(noteId), text);
+  } catch {
+    /* 저장 공간 막힘 — 이번엔 못 남긴다 */
+  }
+}
 
 export function NoteComments({
   noteId,
@@ -268,6 +279,20 @@ function NoteCommentForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /* [1057 · C7] 로그인 전에 남긴 초안 복원 — 맨 위 댓글칸만(답글칸은 돌아왔을 때 열려 있지 않다) */
+  useEffect(() => {
+    if (parentId) return;
+    try {
+      const d = window.sessionStorage.getItem(draftKey(noteId));
+      if (d) {
+        setBody(d);
+        window.sessionStorage.removeItem(draftKey(noteId));
+      }
+    } catch {
+      /* 읽기 막힘 — 빈 칸 */
+    }
+  }, [noteId, parentId]);
+
   const askLogin = () =>
     promptSignup({
       action: "note_comment",
@@ -278,6 +303,7 @@ function NoteCommentForm({
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!loggedIn) {
+      stashDraft(noteId, body.trim());
       askLogin();
       return;
     }
@@ -295,6 +321,8 @@ function NoteCommentForm({
         body: JSON.stringify({ body: text, ...(parentId ? { parentId } : {}) }),
       });
       if (res.status === 401) {
+        /* [1057 · C7] 세션 만료 — 초안을 남기고 로그인으로 */
+        stashDraft(noteId, text);
         askLogin();
         return;
       }

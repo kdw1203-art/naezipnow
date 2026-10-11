@@ -26,7 +26,11 @@ export async function followUser(followerEmail: string, followedEmail: string): 
     }
     return;
   }
-  await sb.from("user_follows").upsert({ follower_email: followerEmail, followed_email: followedEmail });
+  /* [1057] upsert 의 error 를 보지 않아 쓰기 실패가 성공으로 돌아갔다(알림까지 나갔다) — 실패는 던진다 */
+  const { error } = await sb
+    .from("user_follows")
+    .upsert({ follower_email: followerEmail, followed_email: followedEmail });
+  if (error) throw new Error(`user_follows 저장 실패: ${error.message}`);
 }
 
 export async function unfollowUser(followerEmail: string, followedEmail: string): Promise<void> {
@@ -38,10 +42,13 @@ export async function unfollowUser(followerEmail: string, followedEmail: string)
     if (idx !== -1) inMemory.splice(idx, 1);
     return;
   }
-  await sb.from("user_follows")
+  /* [1057] delete 의 error 를 보지 않아 실패해도 "취소됨"으로 답했다 — 실패는 던진다 */
+  const { error } = await sb
+    .from("user_follows")
     .delete()
     .eq("follower_email", followerEmail)
     .eq("followed_email", followedEmail);
+  if (error) throw new Error(`user_follows 삭제 실패: ${error.message}`);
 }
 
 export async function isFollowing(followerEmail: string, followedEmail: string): Promise<boolean> {
@@ -119,19 +126,48 @@ export async function resolveEmailByHandle(handleOrName: string): Promise<string
   if (!q) return null;
   const sb = getServiceSupabase();
   if (!sb) return null;
-  try {
-    const pattern = escapeLike(q);
-    const byHandle = await sb.from("profiles").select("email").ilike("handle", pattern).limit(1);
-    let row = byHandle.error ? null : (byHandle.data?.[0] ?? null);
-    if (!row) {
-      const byName = await sb.from("profiles").select("email").ilike("full_name", pattern).limit(1);
-      row = byName.error ? null : (byName.data?.[0] ?? null);
-    }
-    const email = row?.email ? String(row.email).trim() : "";
-    return email || null;
-  } catch {
-    return null;
+  /* [1057] 조회 실패를 null 로 접어 "사용자를 찾을 수 없습니다"(404)가 됐다 — 실패는 던진다(라우트가 503). null 은 오직 "없음" */
+  const pattern = escapeLike(q);
+  const byHandle = await sb.from("profiles").select("email").ilike("handle", pattern).limit(1);
+  if (byHandle.error) throw new Error(`profiles(handle) 조회 실패: ${byHandle.error.message}`);
+  let row = byHandle.data?.[0] ?? null;
+  if (!row) {
+    const byName = await sb.from("profiles").select("email").ilike("full_name", pattern).limit(1);
+    if (byName.error) throw new Error(`profiles(full_name) 조회 실패: ${byName.error.message}`);
+    row = byName.data?.[0] ?? null;
   }
+  const email = row?.email ? String(row.email).trim() : "";
+  return email || null;
+}
+
+export type FollowingPublic = { handle: string | null; name: string | null; since: string };
+
+/**
+ * [1057] 팔로잉 목록 공개용 — 이메일 대신 profiles 의 handle·full_name 만. 한 번의 `.in("email", …)` 조회.
+ * 프로필 행이 없는 사람은 handle·name 둘 다 null(이메일은 어떤 경우에도 내려가지 않는다). 조회 실패는 던진다.
+ */
+export async function listFollowingPublic(followerEmail: string): Promise<FollowingPublic[]> {
+  const records = await listFollowing(followerEmail);
+  if (records.length === 0) return [];
+  const sb = getServiceSupabase();
+  const byEmail = new Map<string, { handle: string | null; name: string | null }>();
+  if (sb) {
+    const emails = [...new Set(records.flatMap((r) => [r.followedEmail, r.followedEmail.toLowerCase()]))];
+    const { data, error } = await sb.from("profiles").select("email, handle, full_name").in("email", emails);
+    if (error) throw new Error(`profiles 조회 실패: ${error.message}`);
+    for (const row of (data ?? []) as Array<{ email?: unknown; handle?: unknown; full_name?: unknown }>) {
+      const key = String(row.email ?? "").trim().toLowerCase();
+      if (!key) continue;
+      byEmail.set(key, {
+        handle: typeof row.handle === "string" && row.handle.trim() ? row.handle.trim() : null,
+        name: typeof row.full_name === "string" && row.full_name.trim() ? row.full_name.trim() : null,
+      });
+    }
+  }
+  return records.map((r) => {
+    const p = byEmail.get(r.followedEmail.trim().toLowerCase()) ?? { handle: null, name: null };
+    return { handle: p.handle, name: p.name, since: r.createdAt };
+  });
 }
 
 export async function followCounts(email: string): Promise<{ following: number; followers: number }> {

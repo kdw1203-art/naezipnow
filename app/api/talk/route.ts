@@ -15,7 +15,8 @@ import { addRegionTalk, listRecentTalksByAuthor, listRegionTalks, softDeleteRegi
 export const runtime = "nodejs";
 
 /* [1051 · 홈 실시간 토론] 지역(+단지) 한 줄 토론.
- *  GET    ?region=<id>  — 그 지역 사람 글(최신 40) + 자동 소식(지수·거래·뉴스·임장노트). 누구나.
+ *  GET    ?region=<id>[&complexId=<순수 id>]  — 그 지역 사람 글(최신 40) + 자동 소식(지수·거래·뉴스·임장노트). 누구나.
+ *         [1057 · B8] complexId 를 주면 그 단지에 붙은 글만(단지 화면) — 자동 소식은 지역 단위라 싣지 않는다.
  *  POST   { regionId, body, complexId? } — 로그인. 금칙어 · 도배(24시간 같은 글 · 10분 10줄) · 계정당 분당 5건.
  *  DELETE { id } — 작성자 본인 · 관리자.
  * 글은 사람이 쓰는 즉시 보여야 한다 — GET 은 캐시하지 않는다(소식은 서버에서 10분 캐시).
@@ -30,6 +31,20 @@ export async function GET(req: NextRequest) {
   if (!region) return NextResponse.json({ error: "지역을 찾을 수 없어요." }, { status: 404 });
   const session = await safeAuth();
   const email = session?.user?.email?.trim().toLowerCase() ?? null;
+  /* [1057 · B8] 단지 필터 — 저장된 complex_id(순수 id)와 글자 그대로 비교한다. 해독이 안 되는 값은 400 */
+  const complexId = (req.nextUrl.searchParams.get("complexId") ?? "").trim() || null;
+  if (complexId && !decodeComplexId(complexId)) return NextResponse.json({ error: "단지 id 가 올바르지 않아요." }, { status: 400 });
+  if (complexId) {
+    try {
+      const posts = await listRegionTalks(region.id, email, 40, complexId);
+      return NextResponse.json(
+        { regionId: region.id, regionName: region.name, complexId, posts, facts: [], factsFailed: false },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    } catch (e) {
+      return dbUnavailable("region-talks(complex)", e);
+    }
+  }
   const [postsR, factsR] = await Promise.allSettled([listRegionTalks(region.id, email), loadRegionFacts(region.id)]);
   if (postsR.status === "rejected") return dbUnavailable("region-talks", postsR.reason);
   /* 소식 실패는 글 목록을 막지 않는다 — 소식 칸만 비고 화면이 "소식 불러오기 실패"를 적는다 */

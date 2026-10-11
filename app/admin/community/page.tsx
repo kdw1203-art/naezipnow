@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { SeedReplyForm } from "./SeedReplyForm";
 import { storyHref } from "@/lib/town/post-href";
+import { formatKstDate } from "@/lib/format/kst";
 
 /* [#121·#123] 커뮤니티 운영 — 참여 지표 + 미답변 글 시드 답글 도구.
    0→1 구간의 계기판: 이번 주 글·댓글·채택률·미답변, 그리고 빈 스레드 처방. */
@@ -73,7 +74,8 @@ export default async function AdminCommunityPage() {
       unanswered = ((unansweredR.data ?? []) as Array<Record<string, unknown>>).map((p) => ({
         id: String(p.id),
         title: String(p.title ?? ""),
-        createdAt: String(p.created_at ?? "").slice(0, 10),
+        /* [1057 · C9] ISO 앞 10자 = UTC 날짜라 KST 자정~09:00 글이 전날로 찍혔다 — KST 날짜로 */
+        createdAt: formatKstDate(String(p.created_at ?? "")) || String(p.created_at ?? "").slice(0, 10),
         comments: Number(p.comment_count) || 0,
       }));
 

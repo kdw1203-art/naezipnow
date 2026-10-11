@@ -174,6 +174,25 @@ const JOBS: Job[] = [
     schedule: "하루 1회",
     sends: true,
   },
+  /* [1057 · C3] etl.yml alerts 잡에는 있는데 이 목록에 없던 두 작업 — "etl.yml 과 1:1" 이라는 위 약속이 깨져 있었다 */
+  {
+    key: "schedule-reminders",
+    label: "임장 일정 리마인드",
+    path: "/api/cron/schedule-reminders",
+    hint: "내일(KST) 예정 임장 일정의 작성자에게 수신함 + 웹푸시 · 같은 알림이 2일 안에 있으면 건너뜀",
+    group: "알림",
+    schedule: "하루 1회",
+    sends: true,
+  },
+  {
+    key: "journey-reminders",
+    label: "여정 D-day 리마인드",
+    path: "/api/cron/journey-reminders",
+    hint: "계약일·중도금일·잔금일·입주일이 D-7·D-1(KST)인 사람에게 수신함 + 웹푸시 · 같은 알림이 10일 안에 있으면 건너뜀",
+    group: "알림",
+    schedule: "하루 1회",
+    sends: true,
+  },
   {
     key: "reengage",
     label: "이탈 리마인드 (모의)",

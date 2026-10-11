@@ -8,6 +8,8 @@ import { Explain } from "@/app/components/explain/Explain";
 import { EmptyState } from "@/app/components/ui/EmptyState";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { createDeferredRemover, type DeferredRemover } from "./deferred-remove";
+import { AlertRangeEditor } from "./AlertRangeEditor";
+import { alertRangeLabel } from "@/lib/watchlist/alert-range";
 
 /* [1009 · H] 관심 단지 목록 — 행 전체가 단지 화면 링크(눌림), 오른쪽 ✕ 로 빼고 토스트 "되돌리기"로 되살린다.
  *
@@ -53,10 +55,32 @@ export type WatchRow = {
   noteCount: number | null;
 };
 
-export function WatchlistRows({ initial, max }: { initial: WatchRow[]; max: number }) {
+/* [1057 · B2] 머리 "관심 단지 N곳"은 화면에 실린 행(최대 30)을 셌다 — 전체 수(total)와 이 쪽의 자리(offset)를 서버가 넘긴다.
+   이 화면에서 뺀 만큼은 전체 수에서도 뺀다(서버 수 − 뺀 행 수). */
+export function WatchlistRows({
+  initial,
+  total,
+  offset = 0,
+}: {
+  initial: WatchRow[];
+  /** 서버가 센 관심 단지 전체 수(이 쪽에 실린 행 수가 아니다) */
+  total: number;
+  /** 이 쪽 첫 행의 전체 순서(0부터) — 쪽 나누기 표시용 */
+  offset?: number;
+}) {
   const { showToast } = useToast();
   const [rows, setRows] = useState<WatchRow[]>(initial);
   const mounted = useRef(true);
+  const shownTotal = Math.max(0, total - (initial.length - rows.length));
+  const paged = total > initial.length;
+
+  /* [1057 · B10] 알림 범위 저장 직후 행의 표기를 서버 값과 같게 */
+  const setRange = (complexId: string, min: number | null, max: number | null) =>
+    setRows((cur) =>
+      cur.map((r) =>
+        r.complexId === complexId ? { ...r, alertPriceMin: min, alertPriceMax: max, alertLabel: alertRangeLabel(min, max) } : r,
+      ),
+    );
 
   const insertAt = (row: WatchRow, index: number) =>
     setRows((cur) => {
@@ -148,7 +172,7 @@ export function WatchlistRows({ initial, max }: { initial: WatchRow[]; max: numb
     showToast("관심 단지에서 뺐어요", { label: "되돌리기", onClick: () => void removerRef.current!.undo(removal) });
   }
 
-  if (rows.length === 0) {
+  if (rows.length === 0 && shownTotal === 0) {
     return (
       <EmptyState
         icon="pin"
@@ -163,10 +187,18 @@ export function WatchlistRows({ initial, max }: { initial: WatchRow[]; max: numb
     <>
       {/* [1015 · 규칙 D] "알림을 보내드려요" → 사실 한 줄 */}
       <p className="mb-2 t-body text-text-3">
-        관심 단지 <span className="tabular-nums">{rows.length}</span>곳
-        {initial.length >= max && ` (최근 ${max}곳 표시)`} · 현재가 ±1% 변동 시 알림
+        관심 단지 <span className="tabular-nums">{shownTotal}</span>곳
+        {paged && rows.length > 0 && (
+          <>
+            {" "}· <span className="tabular-nums">{offset + 1}~{offset + rows.length}</span>번째 표시
+          </>
+        )}
+        {" "}· 현재가 ±1% 변동 시 알림
       </p>
-      {/* [1015 · 규칙 I] 관심 단지·실거래 = blue 톤 리퀴드 판(카드 안 행 목록 → lq-panel) */}
+      {rows.length === 0 ? (
+        <p className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">이 쪽의 관심 단지를 모두 뺐어요 · 다른 쪽에 {shownTotal}곳</p>
+      ) : (
+      /* [1015 · 규칙 I] 관심 단지·실거래 = blue 톤 리퀴드 판(카드 안 행 목록 → lq-panel) */
       <div className="lq-panel py-1" data-tone="blue">
         <div className="flex items-center justify-between gap-2 border-b py-2 t-caption text-text-3">
           <span>단지</span>
@@ -187,44 +219,57 @@ export function WatchlistRows({ initial, max }: { initial: WatchRow[]; max: numb
         </div>
         <ul className="flex flex-col">
           {rows.map((r) => (
-            <li key={r.id} className="flex items-center gap-1 border-b last:border-b-0">
-              <Link
-                href={r.href}
-                className="press -mx-2 flex min-w-0 flex-1 items-start justify-between gap-3 rounded-xl px-2 py-2.5 no-underline transition-colors hover:bg-bg"
-              >
-                <span className="flex min-w-0 flex-col">
-                  <span className="t-body font-bold text-ink break-words">{r.complexName}</span>
-                  <span className="t-caption text-text-3 break-words">{r.priceSub}</span>
-                  {r.alertLabel && <span className="t-caption text-text-3">{r.alertLabel}</span>}
-                </span>
-                <span className="flex shrink-0 flex-col items-end text-right">
-                  {r.priceText ? (
-                    <span className="t-body font-bold t-num text-ink">{r.priceText}</span>
-                  ) : (
-                    <span className="t-sub text-text-3">현재가 없음</span>
-                  )}
-                  {r.deltaPct !== null ? (
-                    <Delta pct={r.deltaPct} srContext="기준가보다" className="t-sub" />
-                  ) : r.deltaNote ? (
-                    <span className="t-caption text-text-3">{r.deltaNote}</span>
-                  ) : null}
-                  <span className="t-caption tabular-nums text-text-3">
-                    {r.noteCount === null ? "새 노트 조회 실패" : `새 노트 ${r.noteCount}개 · 30일`}
+            <li key={r.id} className="flex flex-col border-b last:border-b-0">
+              <div className="flex items-center gap-1">
+                <Link
+                  href={r.href}
+                  className="press -mx-2 flex min-w-0 flex-1 items-start justify-between gap-3 rounded-xl px-2 py-2.5 no-underline transition-colors hover:bg-bg"
+                >
+                  <span className="flex min-w-0 flex-col">
+                    <span className="t-body font-bold text-ink break-words">{r.complexName}</span>
+                    <span className="t-caption text-text-3 break-words">{r.priceSub}</span>
+                    {r.alertLabel && <span className="t-caption text-text-3">{r.alertLabel}</span>}
                   </span>
-                </span>
-              </Link>
-              <button
-                type="button"
-                onClick={() => remove(r)}
-                aria-label={`${r.complexName} 관심 단지에서 빼기`}
-                className="press inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-text-3 transition-colors hover:bg-bg hover:text-ink"
-              >
-                <Icon name="x" size={16} />
-              </button>
+                  <span className="flex shrink-0 flex-col items-end text-right">
+                    {r.priceText ? (
+                      <span className="t-body font-bold t-num text-ink">{r.priceText}</span>
+                    ) : (
+                      <span className="t-sub text-text-3">현재가 없음</span>
+                    )}
+                    {r.deltaPct !== null ? (
+                      <Delta pct={r.deltaPct} srContext="기준가보다" className="t-sub" />
+                    ) : r.deltaNote ? (
+                      <span className="t-caption text-text-3">{r.deltaNote}</span>
+                    ) : null}
+                    <span className="t-caption tabular-nums text-text-3">
+                      {r.noteCount === null ? "새 노트 조회 실패" : `새 노트 ${r.noteCount}개 · 30일`}
+                    </span>
+                  </span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => remove(r)}
+                  aria-label={`${r.complexName} 관심 단지에서 빼기`}
+                  className="press inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-text-3 transition-colors hover:bg-bg hover:text-ink"
+                >
+                  <Icon name="x" size={16} />
+                </button>
+              </div>
+              {/* [1057 · B10] 실거래 알림 범위 — 행 아래 억 단위 두 칸(열면) */}
+              <div className="pb-1.5">
+                <AlertRangeEditor
+                  complexId={r.complexId}
+                  complexName={r.complexName}
+                  min={r.alertPriceMin}
+                  max={r.alertPriceMax}
+                  onSaved={(min, max) => setRange(r.complexId, min, max)}
+                />
+              </div>
             </li>
           ))}
         </ul>
       </div>
+      )}
       {/* [1015 · 규칙 B] 목록 아래 설명 문단은 열 머리의 <Explain>(현재가 · 기준가 대비)과 같은 내용이라 뺐다 —
           데스크톱 hover 미리보기 · 폰 탭 시트. */}
     </>

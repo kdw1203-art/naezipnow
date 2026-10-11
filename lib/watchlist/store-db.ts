@@ -7,11 +7,9 @@
  * 등록 여부는 `false`(= 관심 등록 안 함)로. 셋 다 사실이 아닌데 사실처럼 보인다.
  */
 import { getServiceSupabase } from "@/lib/supabase/service";
-import { pushInboxNotification } from "@/lib/notifications/inbox";
-import { logger } from "@/lib/log";
 
-/** 단지별 알림 대상 조회 상한(#32) — 닿으면 알림 누락이므로 기록한다 */
-const WATCHERS_LIMIT = 10_000;
+/* [1057] notifyPriceChange(가격 변동 인앱 알림)는 부르는 곳이 없는 죽은 코드였다(실제 알림은 app/api/cron/price-alerts) — 함수와
+   그 전용 import(pushInboxNotification · logger)·상수(WATCHERS_LIMIT)를 지웠다. */
 
 export interface WatchlistItem {
   id: string;
@@ -61,6 +59,33 @@ export async function listWatchlist(userEmail: string): Promise<WatchlistItem[]>
   return data.map(dbToItem);
 }
 
+/* [1057 · B2] /my/watchlist 는 전체를 읽어 앞 30곳만 잘라 "관심 단지 N곳"을 잘린 수로 적었다(플랜 한도 100·무제한) —
+   한 쪽(offset·limit)과 전체 수(count exact)를 같은 조건으로 한 번에 받는다. 정렬은 유일 열(id)까지 — 쪽이 겹치거나 빠지지 않게. */
+export async function listWatchlistPage(
+  userEmail: string,
+  opts: { offset: number; limit: number },
+): Promise<{ items: WatchlistItem[]; total: number }> {
+  const offset = Math.max(0, Math.floor(opts.offset));
+  const limit = Math.max(1, Math.min(Math.floor(opts.limit), 1000));
+  const sb = getServiceSupabase();
+  if (!sb) {
+    const all = inMemory.filter((w) => w.userEmail === userEmail);
+    return { items: all.slice(offset, offset + limit), total: all.length };
+  }
+  const { data, error, count } = await sb
+    .from("user_watchlist")
+    .select("*", { count: "exact" })
+    .eq("user_email", userEmail)
+    .not("complex_id", "like", "alert:%")
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: true })
+    .range(offset, offset + limit - 1);
+  if (error) throw new Error(`user_watchlist 조회 실패: ${error.message}`);
+  if (!Array.isArray(data)) throw new Error("user_watchlist 조회 실패: 응답이 배열이 아닙니다");
+  if (typeof count !== "number") throw new Error("user_watchlist 조회 실패: count 를 받지 못했습니다");
+  return { items: data.map(dbToItem), total: count };
+}
+
 /** 관심 단지 개수 (한도 검사용). */
 export async function countWatchlist(userEmail: string): Promise<number> {
   const em = userEmail.trim().toLowerCase();
@@ -83,6 +108,9 @@ export async function countWatchlist(userEmail: string): Promise<number> {
   return count;
 }
 
+/* [1057 · B9] 이미 담긴 단지를 다시 담으면(단지 화면 "관심 등록" 재클릭 · 되돌리기) 알림 범위가 null 로 덮였다 —
+   요청에 없는(undefined) 범위 열은 upsert 본문에서 뺀다. PostgREST 의 ON CONFLICT DO UPDATE 는 본문에 있는 열만 SET 하므로
+   기존 alert_price_min/max · last_price_* · created_at 이 그대로 남는다(명시한 값만 바뀐다). */
 export async function addToWatchlist(
   userEmail: string,
   complexId: string,
@@ -93,24 +121,28 @@ export async function addToWatchlist(
   const sb = getServiceSupabase();
   if (!sb) {
     const existing = inMemory.findIndex((w) => w.userEmail === userEmail && w.complexId === complexId);
+    const prev = existing >= 0 ? inMemory[existing] : null;
     const item: WatchlistItem = {
-      id: `mem-${Date.now()}`,
+      id: prev?.id ?? `mem-${Date.now()}`,
       userEmail,
       complexId,
       complexName,
-      alertPriceMin: alertPriceMin ?? null,
-      alertPriceMax: alertPriceMax ?? null,
-      createdAt: new Date().toISOString(),
-      lastPriceKrw: null,
-      lastPriceBand: null,
+      alertPriceMin: alertPriceMin ?? prev?.alertPriceMin ?? null,
+      alertPriceMax: alertPriceMax ?? prev?.alertPriceMax ?? null,
+      createdAt: prev?.createdAt ?? new Date().toISOString(),
+      lastPriceKrw: prev?.lastPriceKrw ?? null,
+      lastPriceBand: prev?.lastPriceBand ?? null,
     };
     if (existing >= 0) inMemory[existing] = item;
     else inMemory.unshift(item);
     return item;
   }
+  const payload: Record<string, unknown> = { user_email: userEmail, complex_id: complexId, complex_name: complexName };
+  if (alertPriceMin !== undefined) payload.alert_price_min = alertPriceMin;
+  if (alertPriceMax !== undefined) payload.alert_price_max = alertPriceMax;
   const { data, error } = await sb
     .from("user_watchlist")
-    .upsert({ user_email: userEmail, complex_id: complexId, complex_name: complexName, alert_price_min: alertPriceMin ?? null, alert_price_max: alertPriceMax ?? null }, { onConflict: "user_email,complex_id" })
+    .upsert(payload, { onConflict: "user_email,complex_id" })
     .select("*")
     .single();
   if (error) throw new Error(error.message);
@@ -144,59 +176,27 @@ export async function isWatching(userEmail: string, complexId: string): Promise<
   return !!data;
 }
 
-/** 가격 변동 시 관심 등록 사용자에게 인앱 알림 전송 */
-export async function notifyPriceChange(
+/* [1057 · B10] 실거래 알림 범위만 바꾼다 — null 은 지우기. 행이 없으면 false(관심 단지가 아니다 — 새로 담지 않는다). */
+export async function setWatchlistAlertRange(
+  userEmail: string,
   complexId: string,
-  complexName: string,
-  currentPricePerM2: number,
-): Promise<void> {
+  alertPriceMin: number | null,
+  alertPriceMax: number | null,
+): Promise<boolean> {
   const sb = getServiceSupabase();
-  let watchers: Array<{
-    user_email: unknown;
-    alert_price_min: unknown;
-    alert_price_max: unknown;
-  }>;
-  if (sb) {
-    const { data, error } = await sb
-      .from("user_watchlist")
-      .select("user_email, alert_price_min, alert_price_max")
-      .eq("complex_id", complexId)
-      /* #32 — 상한 명시. 여기가 잘리면 뒤쪽 구독자에게만 알림이 조용히 안 간다. */
-      .limit(WATCHERS_LIMIT);
-    /* 여기서는 던지지 않는다 — 이 함수를 부르는 쪽은 가격 갱신 파이프라인이라
-       알림 하나 때문에 갱신 자체를 되돌릴 이유가 없다. 다만 예전처럼 `.data ?? []`
-       로 삼키면 "이 단지를 관심 등록한 사람이 아무도 없다"가 되어 알림이 조용히
-       사라진다. 보내지 않는 것까지는 같아도, 왜 안 갔는지는 남긴다. */
-    if (error) {
-      logger.error(`[watchlist] 알림 대상 조회 실패 (complex=${complexId}):`, error.message);
-      return;
-    }
-    if ((data?.length ?? 0) >= WATCHERS_LIMIT) {
-      logger.error(
-        `[watchlist] 알림 대상이 조회 상한(${WATCHERS_LIMIT}행)에 도달 (complex=${complexId}) — 일부에게 알림이 가지 않습니다.`,
-      );
-    }
-    watchers = data ?? [];
-  } else {
-    watchers = inMemory
-      .filter((w) => w.complexId === complexId)
-      .map((w) => ({
-        user_email: w.userEmail,
-        alert_price_min: w.alertPriceMin,
-        alert_price_max: w.alertPriceMax,
-      }));
+  if (!sb) {
+    const row = inMemory.find((w) => w.userEmail === userEmail && w.complexId === complexId);
+    if (!row) return false;
+    row.alertPriceMin = alertPriceMin;
+    row.alertPriceMax = alertPriceMax;
+    return true;
   }
-
-  for (const w of watchers) {
-    const min = w.alert_price_min;
-    const max = w.alert_price_max;
-    if (min !== null && currentPricePerM2 < Number(min)) continue;
-    if (max !== null && currentPricePerM2 > Number(max)) continue;
-    await pushInboxNotification({
-      userEmail: String(w.user_email),
-      title: `${complexName} 가격 변동 알림`,
-      body: `현재 평균 ${(currentPricePerM2 / 10_000).toFixed(0)}만원/㎡`,
-      actionUrl: `/complex/${complexId}`,
-    });
-  }
+  const { data, error } = await sb
+    .from("user_watchlist")
+    .update({ alert_price_min: alertPriceMin, alert_price_max: alertPriceMax })
+    .eq("user_email", userEmail)
+    .eq("complex_id", complexId)
+    .select("id");
+  if (error) throw new Error(`user_watchlist 알림 범위 저장 실패: ${error.message}`);
+  return (data ?? []).length > 0;
 }

@@ -169,10 +169,13 @@ export default async function InvitePage({
         <div className="mt-5 flex flex-col gap-2 text-left">
           {[
             { icon: "coin", t: "가입 즉시 300P", d: "나와 초대한 친구 모두 적립" },
-            /* [#126] 시작 3미션(#119) 연결 — 300P 다음의 두 번째 계단을 미리 보여준다 */
-            { icon: "target", t: "시작 3미션 +200P", d: "관심 단지·키워드 알림·첫 기록이면 끝" },
+            /* [#126] 시작 3미션(#119) 연결 — 300P 다음의 두 번째 계단을 미리 보여준다
+               [1057] 미션 셋이 "관심 단지·키워드 알림·첫 기록"으로 적혀 있었다 — 실제(lib/missions START_MISSION_DEFS)는
+               관심 단지 또는 지역 알림 · 첫 임장노트 · 노트 1편 공개 */
+            { icon: "target", t: "시작 3미션 +200P", d: "관심 단지 또는 지역 알림 · 첫 임장노트 · 노트 1편 공개" },
             { icon: "trending-up", t: "실거래가·시세 열람", d: "관심 단지 가격을 한눈에" },
-            { icon: "sparkles", t: "AI 분석·리포트", d: "포인트로 바로 이용" },
+            /* [1057] "AI 분석·리포트 · 포인트로 바로 이용"은 사실이 아니었다(그 소비 항목은 제거됨) — 실제 상점 품목(lib/points/catalog SPEND_ITEMS) */
+            { icon: "sparkles", t: "포인트 상점", d: "매물 상단 노출 · 추천글 · 닉네임 효과 · 배지" },
           ].map((b) => (
             <div
               key={b.t}

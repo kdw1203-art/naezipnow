@@ -44,6 +44,7 @@ import {
 import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 import { buildMyActivity } from "@/lib/me/my-activity";
 import { MyHubView, type MyHubData, type MyHubNote } from "./MyHubView";
+import { FollowedAuthorsNotes } from "./FollowedAuthorsNotes";
 
 /* 마이 허브 — 프로필·활동 요약·임장노트·관심·구독·포인트를 한 화면에.
    [1006] 이 파일은 **로더**만이다: 실데이터(서버)를 읽어 MyHubData(평범한 JSON)로 만들고
@@ -416,6 +417,8 @@ export default async function MyPage() {
           </ul>
         )}
       </section>
+      {/* [1057 · C2] 팔로우한 작성자의 새 노트 — 피드 API 는 있었으나 어느 화면도 그리지 않았다. 5건 · 자기 조회·자기 상태(서버 컴포넌트) */}
+      <FollowedAuthorsNotes email={email} />
       {/* [1025 · 결정·비서] 진입 링크 두 줄 — 헤더는 통합자 영역이라 여기(마이)에만 */}
       <section className="card mt-4 max-md:mt-3 rounded-lg px-4 py-0.5" aria-label="결정 카드 · AI 비서">
         <ul className="m-0 flex list-none flex-col divide-y p-0" data-tone="plain">

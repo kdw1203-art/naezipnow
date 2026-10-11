@@ -116,6 +116,57 @@ function writeJson(key: string, value: unknown) {
   }
 }
 
+/** [1057 · C4] 로그인 전(게스트) 결정은 nz:decisions:v1 에만 남아 로그인 뒤에도 계정에 합쳐지지 않았고, 로그아웃하면 다시 나타났다.
+    세션이 있고 게스트 결정이 있으면 오래된 것부터 한 건씩 POST /api/me/decisions(배치 API 없음 · 상한 30건 < 분당 60).
+    성공한 건은 그때그때 로컬에서 지운다(응답 유실로 같은 건을 두 번 보내는 창을 줄인다). 400 은 다시 보내도 같으니 버리고,
+    그 밖의 실패(401·429·503·연결 끊김)는 로컬에 남겨 다음에 다시 시도한다 — 화면에는 말하지 않는다. 합친 건수를 돌려준다. */
+async function mergeGuestDecisions(): Promise<number> {
+  const guest = readJson(GUEST_DECISIONS_KEY, parseDecisionList);
+  if (guest.length === 0) return 0;
+  let remaining = [...guest];
+  let merged = 0;
+  for (const rec of [...guest].reverse()) {
+    let drop = false;
+    try {
+      const res = await fetch("/api/me/decisions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          complexIds: rec.complexIds,
+          chosenId: rec.chosenId,
+          chosenName: rec.chosenName,
+          verdict: rec.verdict,
+          memo: rec.memo,
+          weights: rec.weights,
+        }),
+      });
+      if (res.ok) {
+        merged += 1;
+        drop = true;
+      } else if (res.status === 400) {
+        drop = true;
+      } else if (res.status === 401) {
+        break;
+      }
+    } catch {
+      /* 연결 끊김 — 로컬에 남긴다 */
+    }
+    if (drop) {
+      remaining = remaining.filter((r) => r.id !== rec.id);
+      if (remaining.length === 0) {
+        try {
+          window.localStorage.removeItem(GUEST_DECISIONS_KEY);
+        } catch {
+          /* 사생활 보호 모드 — 다음 로드에서 다시 시도 */
+        }
+      } else {
+        writeJson(GUEST_DECISIONS_KEY, remaining);
+      }
+    }
+  }
+  return merged;
+}
+
 /** 칩 — 세그먼트·후보 고르기 공용(흰 바탕 · 고르면 chip-active). 네이비 채움은 쓰지 않는다 */
 const CHIP = "chip press inline-flex min-h-10 items-center gap-1 border px-3 t-sub";
 const CHIP_OFF = "border-line bg-surface text-text-2";
@@ -457,6 +508,8 @@ export function DecideClient({ signedIn, initialWeights }: { signedIn: boolean; 
   const [past, setPast] = useState<DecisionRecord[] | null>(null);
   const [pastFailed, setPastFailed] = useState(false);
   const [pastAll, setPastAll] = useState(false);
+  /* [1057 · C4] 로그인 전 결정을 계정에 합친 건수 — 한 줄 상태("로그인 전 결정 N건 합침") */
+  const [mergedCount, setMergedCount] = useState(0);
   const fetched = useRef(new Set<string>());
 
   /* 후보 풀 — 비교함(이 기기) + 관심 단지(로그인). 처음 3곳(저장된 선택이 있으면 그것)을 고른다 */
@@ -570,6 +623,10 @@ export function DecideClient({ signedIn, initialWeights }: { signedIn: boolean; 
     }
     let cancelled = false;
     void (async () => {
+      /* [1057 · C4] 게스트 결정을 먼저 계정에 합친 뒤 목록을 받는다 — 합친 건이 서버 목록에 바로 들어 있다 */
+      const merged = await mergeGuestDecisions();
+      if (cancelled) return;
+      if (merged > 0) setMergedCount(merged);
       try {
         const res = await fetch("/api/me/decisions");
         const j = (await res.json().catch(() => null)) as { items?: unknown[] } | null;
@@ -877,6 +934,7 @@ export function DecideClient({ signedIn, initialWeights }: { signedIn: boolean; 
                 <span className="t-caption text-text-3">{pastList.length > 0 ? `${pastList.length}건 · ` : ""}
                   {signedIn ? "내 계정" : "이 기기"}</span>
               </div>
+              {mergedCount > 0 && <p className="mt-1 t-caption text-text-3">로그인 전 결정 {mergedCount}건 합침</p>}
               {pastFailed && pastList.length === 0 ? (
                 <p className="mt-2 t-sub text-text-3">지난 결정 불러오기 실패 · 잠시 후 다시</p>
               ) : pastList.length === 0 ? (

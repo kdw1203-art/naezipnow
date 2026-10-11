@@ -109,11 +109,11 @@ const PREF_GROUPS: {
   {
     title: "이메일 알림",
     channel: "email",
+    /* [1057 · C5] emailLikes("좋아요 · 저장") · emailExpert("전문가 상담 답변") 스위치를 뺐다 — 두 값을 읽는 메일 발송자가 어디에도 없어
+       (1056 확인) 켜도 꺼도 아무 메일이 오가지 않는 죽은 스위치였다. 타입·컬럼(PrefKey · notification_preferences)은 그대로 둔다. */
     rows: [
       { key: "emailComments", label: "댓글 · 답글", desc: "내 글·노트에 반응이 달리면" },
-      { key: "emailLikes", label: "좋아요 · 저장" },
       { key: "emailMeeting", label: "임장 모임 · 모임 채팅", desc: "새 메시지 · 일정 변경" },
-      { key: "emailExpert", label: "전문가 상담 답변" },
       {
         key: "emailWatchlistTx",
         label: "관심단지 새 실거래",

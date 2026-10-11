@@ -180,8 +180,8 @@ export async function ReferralSection({ email }: { email: string }) {
               <Icon name="coin" size={13} />
               적립 포인트
             </div>
-            {/* 적립 P 는 성사 수 × 300 이라, 성사 수를 못 세면 이것도 모른다.
-                "0P"라고 쓰면 적립이 없었다는 말이 되므로 같이 "—"로 둔다. */}
+            {/* [1057] 적립 P 가 성사 수 × 300 이었다 — 하루 5명·일 500P 상한에 걸려 건너뛴 성사까지 적립된 것처럼 보였다.
+                이제 원장(point_ledger · reason=referral · referee:*)의 실제 합이다. 못 읽었으면 "—". */}
             <div className="t-title leading-none text-primary">
               {stats.pointsEarned === null ? (
                 "—"

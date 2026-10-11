@@ -14,7 +14,6 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { followCounts } from "@/lib/follows/store-db";
 import { logger } from "@/lib/log";
 import { FollowButton } from "../../components/FollowButton";
-import { ErrorState } from "../../components/ui/EmptyState";
 import { loadExpertBadges } from "@/lib/experts/badges";
 import { ExpertBadge } from "@/app/components/ExpertBadge";
 
@@ -205,18 +204,15 @@ export default async function PublicProfilePage({
     }
   }
 
-  /* 조회가 실패해 아무것도 못 찾은 것을 404 로 답하면 "그런 사용자 없음"이 된다.
-     못 읽었을 뿐이라고 말하고, 새로고침으로 되돌아올 수 있게 둔다. */
-  if (!profile && authored.length === 0 && loadFailed) {
-    return (
-      <PageShell breadcrumb={`발견 › @${displayName}`}>
-        <div className="mx-auto max-w-[640px] py-10">
-          <ErrorState
-            title="프로필 불러오기 실패"
-            desc="잠시 후 다시 시도해 주세요."
-          />
-        </div>
-      </PageShell>
+  /* 조회가 실패해 아무것도 못 찾은 것을 404 로 답하면 "그런 사용자 없음"이 된다. 못 읽었을 뿐이라고 말한다.
+     [1057] 이 화면은 ISR(하루)이라, 실패를 **그려서** 돌려주면 그 실패 화면이 하루 동안 캐시된다 — 프로필이 있는데
+     공개 노트 조회만 실패한 경우는 "공개한 임장노트 없음" 으로 굳었다. 던져서 error.tsx(app/u/[handle]/error.tsx)가 받게 한다 —
+     렌더가 던지면 Next 는 그 결과를 캐시하지 않고(기존 캐시가 있으면 그것을 계속 낸다) 다음 요청에 다시 시도한다. */
+  if (loadFailed) {
+    throw new Error(
+      profile
+        ? `[u/[handle]] 공개 노트 조회 실패 (${profile.email})`
+        : `[u/[handle]] 프로필 조회 실패 (${displayName})`,
     );
   }
 
@@ -235,14 +231,20 @@ export default async function PublicProfilePage({
   const followEmail = profile?.email || authored[0]?.authorEmail || "";
   const followHidden = !followEmail; // 이메일이 가려져 셀 수 없는 경우 (실패와 구분)
   let followerCount: number | null = null;
+  /* [1057 · C1] followCounts 는 팔로잉 수도 같은 호출(head count 2개)로 돌려주는데 버리고 있었다 — 추가 조회 0 으로 같이 적는다.
+     ※ POST·DELETE /api/me/follows 는 **팔로우당한** 사람의 프로필만 비운다 — 내가 누군가를 팔로우해도 내 프로필의 팔로잉 수는
+       ISR(1일) 만료까지 그대로일 수 있다(팔로워 수와 달리). 그 라우트에 scheduleProfileInvalidation(팔로우한 사람) 한 줄이 필요하다. */
+  let followingCount: number | null = null;
   if (followEmail) {
-    followerCount = await followCounts(followEmail).then(
-      (c) => c.followers,
+    const counts = await followCounts(followEmail).then(
+      (c) => c,
       (err: unknown) => {
         logger.error(`[u/[handle]] 팔로워 수 조회 실패 (${followEmail})`, err);
         return null;
       },
     );
+    followerCount = counts?.followers ?? null;
+    followingCount = counts?.following ?? null;
   }
 
   const grid: GridNote[] = authored.slice(0, GRID_CAP).map((n) => {
@@ -348,7 +350,9 @@ export default async function PublicProfilePage({
                   ? followHidden
                     ? "팔로워 (비공개)"
                     : "팔로워 (못 불러옴)"
-                  : "팔로워"}
+                  : followingCount === null
+                    ? "팔로워"
+                    : `팔로워 · 팔로잉 ${followingCount.toLocaleString("ko-KR")}`}
               </div>
             </div>
             {firstNoteYm && (

@@ -8,6 +8,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { OwnerVerificationItem } from "@/lib/listings/owner-verification";
+import { formatKstDate } from "@/lib/format/kst";
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
   pending: { label: "심사 대기", color: "#f2c94c", bg: "rgba(242,201,76,.14)" },
@@ -119,7 +120,8 @@ function Row({ item }: { item: OwnerVerificationItem }) {
       {item.status !== "pending" && item.adminNote && (
         <div className="text-[10px] text-[#6b7688]">
           {item.adminNote}
-          {item.reviewedAt ? ` · ${item.reviewedAt.slice(0, 10)}` : ""}
+          {/* [1057 · C9] ISO 앞 10자 = UTC 날짜라 KST 자정~09:00 처리분이 전날로 찍혔다 — KST 날짜로 */}
+          {item.reviewedAt ? ` · ${formatKstDate(item.reviewedAt) || item.reviewedAt.slice(0, 10)}` : ""}
         </div>
       )}
 

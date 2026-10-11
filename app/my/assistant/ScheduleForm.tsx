@@ -3,11 +3,19 @@
    등록되면 router.refresh() 로 서버가 목록(D-day)을 다시 그린다. 채움 파랑은 이 화면의 AgentChat 링크 하나라 여기는 btn-secondary.
    [1025b] page.tsx 의 접힌 <details> "일정 추가" 안에 놓인다 — 부연 캡션은 없애고 오류만 한 줄. */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ComplexPicker, type PickedComplex } from "@/app/analysis/ComplexPicker";
 import { Icon } from "@/app/components/Icon";
 import { useToast } from "@/app/components/toast/ToastProvider";
+import { kstParts } from "@/lib/format/kst";
+
+/** 오늘(KST) YYYY-MM-DD — 날짜 입력의 min. 서버 렌더와 어긋나지 않게 마운트 뒤에만 계산한다 */
+function kstTodayString(): string {
+  const p = kstParts(new Date());
+  if (!p) return "";
+  return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
+}
 
 export function ScheduleForm() {
   const router = useRouter();
@@ -17,6 +25,13 @@ export function ScheduleForm() {
   const [time, setTime] = useState("10:00");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /* [1057] 날짜 입력에 min 이 없어 지난 날짜로 "등록"이 되고 목록(daysUntil ≥ 0)에는 안 보였다 — 오늘(KST)부터 */
+  const [minDate, setMinDate] = useState("");
+  useEffect(() => {
+    setMinDate(kstTodayString());
+  }, []);
+  /* [1057] 등록 뒤 setPicked(null) 만 했고 ComplexPicker 는 제 선택을 들고 있어 다음 등록이 "단지를 고르세요" 로 막혔다 — key 로 다시 마운트 */
+  const [pickerKey, setPickerKey] = useState(0);
 
   const submit = async () => {
     if (busy) return;
@@ -26,6 +41,10 @@ export function ScheduleForm() {
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       setError("날짜를 고르세요");
+      return;
+    }
+    if (minDate && date < minDate) {
+      setError("지난 날짜 · 오늘부터 등록 가능");
       return;
     }
     const hm = /^\d{2}:\d{2}$/.test(time) ? time : "10:00";
@@ -54,6 +73,7 @@ export function ScheduleForm() {
       }
       showToast(`${picked.name} · ${date} ${hm} 등록`);
       setPicked(null);
+      setPickerKey((k) => k + 1);
       setDate("");
       router.refresh();
     } catch {
@@ -67,13 +87,14 @@ export function ScheduleForm() {
     <div className="mt-2">
       <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
         <div className="md:col-span-2">
-          <ComplexPicker label="단지" placeholder="단지 검색" onSelect={setPicked} onMapClick={null} />
+          <ComplexPicker key={pickerKey} label="단지" placeholder="단지 검색" onSelect={setPicked} onMapClick={null} />
         </div>
         <label className="flex min-w-0 flex-col gap-1">
           <span className="t-caption text-text-3">날짜</span>
           <input
             type="date"
             value={date}
+            min={minDate || undefined}
             onChange={(e) => setDate(e.target.value)}
             className="min-h-10 w-full rounded-lg border border-line-strong bg-surface px-3 t-body text-ink tabular-nums"
           />

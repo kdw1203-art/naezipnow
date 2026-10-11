@@ -7,7 +7,7 @@
  * - 팔로우: POST /api/me/follows { handle } · 언팔로우: DELETE (이메일 비노출)
  */
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
 import { readAuthedHint } from "@/lib/auth/authed-hint";
 import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
@@ -15,9 +15,11 @@ import { useToast } from "@/app/components/toast/ToastProvider";
 
 export function FollowButton({ handle }: { handle: string }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { promptSignup } = useSoftSignup();
   const { showToast } = useToast();
-  const [state, setState] = useState<"loading" | "anon" | "off" | "on">("loading");
+  /* [1057] self — 내 프로필에는 팔로우 버튼을 그리지 않는다(눌러도 "자기 자신은 팔로우할 수 없습니다"였다) */
+  const [state, setState] = useState<"loading" | "anon" | "off" | "on" | "self">("loading");
   const [busy, setBusy] = useState(false);
 
   /* [1028 · 제안 5] 물음형 제목 → "~하려면 로그인이 필요해요", 혜택 문장 → 짧은 사실 한 줄.
@@ -52,8 +54,8 @@ export function FollowButton({ handle }: { handle: string }) {
           setState("off");
           return;
         }
-        const data = (await res.json()) as { following?: boolean };
-        setState(data.following ? "on" : "off");
+        const data = (await res.json()) as { following?: boolean; self?: boolean };
+        setState(data.self ? "self" : data.following ? "on" : "off");
       })
       .catch(() => alive && setState("off"));
     return () => {
@@ -88,6 +90,8 @@ export function FollowButton({ handle }: { handle: string }) {
       if (undo) showToast(follow ? "다시 팔로우했어요" : "팔로우를 취소했어요");
       else if (follow) showToast("팔로우했어요");
       else showToast("팔로우를 취소했어요", { label: "되돌리기", onClick: () => void send(true, true) });
+      /* [1057] /u 의 팔로워 수는 서버가 그린다 — 토글 뒤 다시 받아 숫자가 바로 바뀌게 */
+      router.refresh();
     } catch {
       showToast("연결이 끊겼어요. 다시 눌러 주세요");
     } finally {
@@ -97,7 +101,7 @@ export function FollowButton({ handle }: { handle: string }) {
   };
 
   const toggle = () => {
-    if (busy || state === "loading") return;
+    if (busy || state === "loading" || state === "self") return;
     if (state === "anon") {
       askSignup();
       return;
@@ -105,6 +109,7 @@ export function FollowButton({ handle }: { handle: string }) {
     void send(state !== "on");
   };
 
+  if (state === "self") return null;
   const following = state === "on";
   return (
     <button

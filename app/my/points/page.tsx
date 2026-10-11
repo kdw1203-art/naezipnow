@@ -5,10 +5,11 @@ import { ErrorState } from "@/app/components/ui/EmptyState";
 import { safeAuth } from "@/lib/safe-auth";
 import { logger } from "@/lib/log";
 import { getBalance, getHistory, type LedgerRow } from "@/lib/points/ledger";
+import { reasonLabel } from "@/lib/points/reason-label";
+import { readPaged } from "@/lib/supabase/read-paged";
+import { kstMonthStart } from "@/lib/subscriptions/usage-period";
 import {
-  EARN_RULES,
   earnGuideRules,
-  getSpendItem,
   POINTS_GRATUITOUS_NOTICE,
   type EarnRule,
 } from "@/lib/points/catalog";
@@ -16,7 +17,7 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { getExpertStatus } from "@/lib/experts/is-verified";
 import { AttendanceButton } from "./AttendanceButton";
 import { GuestGate } from "@/app/components/GuestGate";
-import { formatKstDate, isSameKstMonth } from "@/lib/format/kst";
+import { formatKstDate } from "@/lib/format/kst";
 import { MissionsSection } from "./MissionsSection";
 import { ReferralSection } from "./ReferralSection";
 
@@ -69,21 +70,42 @@ function fmtP(n: number): string {
 /* [970 · C-01] 서버(UTC) getDate() → 한국 날짜로 고정(자정 전후 적립이 전날로 찍히던 것) */
 const fmtDate = formatKstDate;
 
-/** 원장 reason → 한글 라벨 (적립: EARN_RULES · 소비: SPEND_ITEMS · 만료: expire)
-    판매 중단 상품(spend:ai_analysis · spend:complex_report)의 과거 이력은
-    "포인트 사용" 폴백으로 계속 표시된다. */
-function reasonLabel(reason: string): string {
-  if (reason === "expire") return "포인트 기한 만료";
-  if (reason.startsWith("spend:")) {
-    const item = getSpendItem(reason.slice("spend:".length));
-    return item ? item.label : "포인트 사용";
-  }
-  return EARN_RULES[reason]?.label ?? "포인트 적립";
-}
+/* [1057] 라벨은 lib/points/reason-label 한 곳 — 예전엔 listing_boost(매물 상단 노출 차감)·report:*(리포트 구매) 같은
+   **사용** 행을 "포인트 적립" 으로 적었다. */
 
-/* [970 · C-01] "이번 달" 도 한국 달력 기준으로 */
-function sameMonth(iso: string, now: Date): boolean {
-  return isSameKstMonth(iso, now);
+/** [1057] 이번 달(KST) 적립·사용 합 — 원장을 달 단위로 직접 센다. 예전엔 최근 50행만 더해, 행이 50개를 넘는 달엔 합이 모자랐다.
+    못 읽었으면 null(화면은 "—"). 상한에 닿아도 null(모자란 합을 사실처럼 적지 않는다). */
+const MONTH_SUM_MAX_ROWS = 20_000;
+async function loadMonthSums(email: string, now: Date): Promise<{ earned: number; spent: number } | null> {
+  const sb = getServiceSupabase();
+  if (!sb) return { earned: 0, spent: 0 };
+  const since = kstMonthStart(now).toISOString();
+  try {
+    const { rows, truncated } = await readPaged<{ delta: unknown }>(
+      (from, to) =>
+        sb
+          .from("point_ledger")
+          .select("delta")
+          .eq("user_email", email)
+          .gte("created_at", since)
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      MONTH_SUM_MAX_ROWS,
+    );
+    if (truncated) throw new Error(`point_ledger 이번 달 행이 상한(${MONTH_SUM_MAX_ROWS})에 닿음`);
+    let earned = 0;
+    let spent = 0;
+    for (const r of rows) {
+      const d = Number(r.delta) || 0;
+      if (d > 0) earned += d;
+      else spent += Math.abs(d);
+    }
+    return { earned, spent };
+  } catch (e) {
+    logger.error("[my/points] 이번 달 적립·사용 합 조회 실패", e);
+    return null;
+  }
 }
 
 /** 포인트로 산 닉네임 오로라가 지금 켜져 있는지 — 지갑에서 상태를 보여준다.
@@ -205,23 +227,19 @@ function GuestView() {
 function WalletView({
   balance,
   history,
+  month,
   nickEffect,
   isBroker,
 }: {
   balance: number;
   history: LedgerRow[];
+  /** [1057] 이번 달(KST) 적립·사용 합 — 원장 달 단위 조회. null = 못 읽음("—") */
+  month: { earned: number; spent: number } | null;
   /** 활성 닉네임 효과(오로라·노을)와 만료 시각 — 없으면 미적용 */
   nickEffect: { kind: "aurora" | "sunset"; until: string } | null;
   /** [1056 · A5] 인증 공인중개사 — 매물 적립 규칙을 보일지 */
   isBroker: boolean;
 }) {
-  const now = new Date();
-  const monthEarned = history
-    .filter((r) => r.delta > 0 && sameMonth(r.createdAt, now))
-    .reduce((s, r) => s + r.delta, 0);
-  const monthSpent = history
-    .filter((r) => r.delta < 0 && sameMonth(r.createdAt, now))
-    .reduce((s, r) => s + Math.abs(r.delta), 0);
 
   return (
     /* [1015 · 규칙 F] 데스크톱에서 640px 한 열 옆이 비었다 → lg: 본문(잔액·내역) + 오른쪽 340px 레일(적립 방법).
@@ -243,13 +261,13 @@ function WalletView({
           <div className="flex-1 rounded-xl bg-[rgba(255,255,255,.07)] p-3 text-center">
             <div className="t-sub text-ai-muted">이번 달 적립</div>
             <div className="t-num mt-0.5 text-[15px] text-ai-accent">
-              +{monthEarned.toLocaleString("ko-KR")}P
+              {month ? `+${month.earned.toLocaleString("ko-KR")}P` : "—"}
             </div>
           </div>
           <div className="flex-1 rounded-xl bg-[rgba(255,255,255,.07)] p-3 text-center">
             <div className="t-sub text-ai-muted">이번 달 사용</div>
             <div className="t-num mt-0.5 text-[15px] text-ai-text">
-              −{monthSpent.toLocaleString("ko-KR")}P
+              {month ? `−${month.spent.toLocaleString("ko-KR")}P` : "—"}
             </div>
           </div>
         </div>
@@ -308,7 +326,7 @@ function WalletView({
                 >
                   <div className="min-w-0">
                     <div className="truncate text-[13px] font-bold text-ink">
-                      {reasonLabel(r.reason)}
+                      {reasonLabel(r.reason, r.delta)}
                     </div>
                     <div className="t-sub text-text-3">
                       {fmtDate(r.createdAt)}
@@ -378,7 +396,7 @@ export default async function PointsWalletPage({
   /* 2026-07-26: 내역 조회가 실패하면 예전에는 빈 배열이 내려와서 "아직 포인트
 내역 없음" 라고 썼다 — 적립한 적 없는 사람과 원장을 못 읽은 사람이
      구분되지 않았다. 실패는 실패라고 쓴다. */
-  const [loaded, nickEffect, expert] = await Promise.all([
+  const [loaded, month, nickEffect, expert] = await Promise.all([
     Promise.all([getBalance(email), getHistory(email, 50)]).then(
       ([balance, history]) => ({ ok: true as const, balance, history }),
       (err: unknown) => {
@@ -387,6 +405,7 @@ export default async function PointsWalletPage({
         return { ok: false as const };
       },
     ),
+    loadMonthSums(email, new Date()),
     readNicknameEffectUntil(email),
     /* [1056 · A5] 중개사 여부(expert_profiles 1행) — 실패는 getExpertStatus 가 false 로 접는다 */
     getExpertStatus(email),
@@ -415,6 +434,7 @@ export default async function PointsWalletPage({
       <WalletView
         balance={loaded.balance}
         history={loaded.history}
+        month={month}
         nickEffect={nickEffect}
         isBroker={expert.isBroker}
       />

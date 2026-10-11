@@ -8,6 +8,8 @@
  * 조회 실패는 던진다 — 빈 목록으로 접으면 "글 없음"이 된다(화면이 실패와 없음을 구분한다).
  */
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { readPaged } from "@/lib/supabase/read-paged";
+import { logger } from "@/lib/log";
 import { TALK_HOT_DAYS, TALK_REPORT_HIDE_THRESHOLD, type TalkPost } from "@/lib/talk/rules";
 
 type Row = {
@@ -40,28 +42,37 @@ function toPost(r: Row, viewer: string | null): TalkPost {
   };
 }
 
-/** 한 지역의 최근 글(최신 순) */
-export async function listRegionTalks(regionId: string, viewerEmail: string | null, limit = 40): Promise<TalkPost[]> {
+/** 한 지역의 최근 글(최신 순). [1057 · B8] complexId 를 주면 그 단지에 붙은 글만(단지 화면의 단지 토론) */
+export async function listRegionTalks(
+  regionId: string,
+  viewerEmail: string | null,
+  limit = 40,
+  complexId: string | null = null,
+): Promise<TalkPost[]> {
   const viewer = viewerEmail?.trim().toLowerCase() || null;
   const sb = getServiceSupabase();
   if (!sb) {
     return memory
-      .filter((r) => r.region_id === regionId && !r.hidden_at && !r.deleted_at)
+      .filter((r) => r.region_id === regionId && !r.hidden_at && !r.deleted_at && (!complexId || r.complex_id === complexId))
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, limit)
       .map((r) => toPost(r, viewer));
   }
-  const { data, error } = await sb
+  let q = sb
     .from("region_talks")
     .select(SELECT)
     .eq("region_id", regionId)
     .is("hidden_at", null)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(Math.max(1, Math.min(limit, 100)));
+    .is("deleted_at", null);
+  if (complexId) q = q.eq("complex_id", complexId);
+  const { data, error } = await q.order("created_at", { ascending: false }).limit(Math.max(1, Math.min(limit, 100)));
   if (error) throw new Error(`region_talks 조회 실패: ${error.message}`);
   return ((data ?? []) as Row[]).map((r) => toPost(r, viewer));
 }
+
+/* [1057 · B8] 집계가 `.limit(5000)` 한 번이었다 — PostgREST 는 1,000행에서 조용히 자르므로 7일 글이 1,000건을 넘으면 뒤쪽 지역 수가
+   빠졌다. 쪽 나누기(readPaged · 유일 정렬 created_at desc, id asc)로 끝까지 읽고, 상한에 닿으면 기록만 남긴다. */
+const RECENT_TALKS_MAX_ROWS = 20_000;
 
 /** 최근 TALK_HOT_DAYS 일 지역별 글 수 · 마지막 글 시각 */
 export async function countRecentTalks(nowMs = Date.now()): Promise<Map<string, { count: number; last: string }>> {
@@ -79,16 +90,27 @@ export async function countRecentTalks(nowMs = Date.now()): Promise<Map<string, 
     for (const r of memory) if (!r.hidden_at && !r.deleted_at && r.created_at >= since) add(r.region_id, r.created_at);
     return out;
   }
-  const { data, error } = await sb
-    .from("region_talks")
-    .select("region_id,created_at")
-    .gte("created_at", since)
-    .is("hidden_at", null)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(5000);
-  if (error) throw new Error(`region_talks 집계 실패: ${error.message}`);
-  for (const r of (data ?? []) as { region_id: string; created_at: string }[]) add(String(r.region_id), String(r.created_at));
+  let rows: { region_id: string; created_at: string }[];
+  let truncated: boolean;
+  try {
+    ({ rows, truncated } = await readPaged<{ region_id: string; created_at: string }>(
+      (from, to) =>
+        sb
+          .from("region_talks")
+          .select("region_id,created_at")
+          .gte("created_at", since)
+          .is("hidden_at", null)
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, to),
+      RECENT_TALKS_MAX_ROWS,
+    ));
+  } catch (e) {
+    throw new Error(`region_talks 집계 실패: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  if (truncated) logger.warn(`[talk] 최근 ${TALK_HOT_DAYS}일 글이 ${RECENT_TALKS_MAX_ROWS}행 상한에 닿음 — 지역별 글 수가 적게 셈`);
+  for (const r of rows) add(String(r.region_id), String(r.created_at));
   return out;
 }
 

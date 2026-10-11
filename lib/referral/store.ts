@@ -3,6 +3,7 @@ import "server-only";
 import { getReadOnlySupabase } from "@/lib/newui/supabase-read";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { awardPoints } from "@/lib/points/ledger";
+import { readPaged } from "@/lib/supabase/read-paged";
 import { logger } from "@/lib/log";
 
 /**
@@ -16,10 +17,14 @@ import { logger } from "@/lib/log";
  * 포인트 지급은 ledger.awardPoints("referral") — refId 로 중복 방어한다.
  */
 
-/** referral 규칙 포인트 (EARN_RULES.referral 과 동일 — 표시·통계 계산용). */
-const REFERRAL_POINTS = 300;
 const CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"; // [A-Z0-9]
 const CODE_LEN = 6;
+/** [1057] 초대 코드는 **새 계정**만 적용 — app_users.created_at 이 이 일수 안이어야 한다 */
+export const REFERRAL_NEW_ACCOUNT_DAYS = 7;
+/** 추천인 적립 행 합산 상한(원장 reason=referral · ref_id=referee:*) — 닿으면 못 센 것으로 본다 */
+const REFERRAL_LEDGER_MAX_ROWS = 20_000;
+/** 리더보드 집계 상한 — 닿으면 표본이 잘린 것이므로 null(못 읽음) */
+const LEADERBOARD_MAX_ROWS = 50_000;
 
 export type ReferralLookup = { referrerEmail: string };
 export type ReferralStats = {
@@ -30,10 +35,19 @@ export type ReferralStats = {
    * "지금 셀 수 없다"는 전혀 다른 말이고 화면에는 앞의 것만 보였다.
    */
   invitedCount: number | null;
-  /** 성사 수 × 300P. invitedCount 를 못 셌으면 이것도 null. */
+  /** [1057] 원장(point_ledger · reason=referral · ref_id=referee:*)의 실제 적립 합. 못 읽었으면 null. */
   pointsEarned: number | null;
 };
-export type RedeemResult = { ok: boolean; reason?: string; awarded?: number };
+export type RedeemReason = "invalid_code" | "invalid" | "self" | "unavailable" | "already" | "not_new" | "db" | "error";
+export type RedeemResult = { ok: boolean; reason?: RedeemReason; awarded?: number };
+
+/** [1057] 가입 시각이 기준 시각으로부터 days 일 안인가 — 순수(단위 시험 대상). 읽을 수 없는 값은 false */
+export function isNewAccount(createdAt: string | null | undefined, now: Date = new Date(), days = REFERRAL_NEW_ACCOUNT_DAYS): boolean {
+  if (!createdAt) return false;
+  const t = Date.parse(createdAt);
+  if (!Number.isFinite(t)) return false;
+  return now.getTime() - t <= days * 24 * 60 * 60 * 1000;
+}
 
 /** 코드 정규화 — 대문자 + [A-Z0-9] 만. 링크·쿠키·수기 입력 모두 안전화. */
 function normalizeCode(code: string): string {
@@ -161,25 +175,70 @@ export async function getReferralByCode(code: string): Promise<ReferralLookup | 
   return { referrerEmail: String(data.user_email) };
 }
 
-/** 내 코드 + 초대 성사 수 + 적립 포인트(성사 수 × 300). */
+/**
+ * [1057] 추천인에게 실제로 들어간 초대 적립 합 — point_ledger(reason=referral · ref_id like 'referee:%').
+ * 예전엔 성사 수 × 300 이었는데, 하루 5명 상한(EARN_RULES.referral.dailyCap)·일 500P 상한에 걸린 성사는 추천인 적립이
+ * 건너뛰어지므로 실제보다 많게 보였다. 못 읽었으면 null.
+ */
+async function referrerPointsFromLedger(email: string): Promise<number | null> {
+  const sb = getServiceSupabase();
+  if (!sb) return null;
+  try {
+    const { rows, truncated } = await readPaged<{ delta: unknown }>(
+      (from, to) =>
+        sb
+          .from("point_ledger")
+          .select("delta")
+          .eq("user_email", email)
+          .eq("reason", "referral")
+          .like("ref_id", "referee:%")
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      REFERRAL_LEDGER_MAX_ROWS,
+    );
+    if (truncated) throw new Error(`point_ledger 초대 적립 행이 상한(${REFERRAL_LEDGER_MAX_ROWS})에 닿음`);
+    return rows.reduce((s, r) => s + (Number(r.delta) || 0), 0);
+  } catch (e) {
+    logger.error("[referral] 초대 적립 합 조회 실패", e);
+    return null;
+  }
+}
+
+/** 내 코드 + 초대 성사 수 + 적립 포인트(원장 실제 합). */
 export async function getReferralStats(email: string): Promise<ReferralStats> {
   const code = await getOrCreateCode(email);
   const read = getReadOnlySupabase();
   if (!read || !email) {
     return { code, invitedCount: null, pointsEarned: null };
   }
-  const { count, error } = await read
-    .from("referral_redemptions")
-    .select("id", { count: "exact", head: true })
-    .eq("referrer_email", email);
+  const [{ count, error }, pointsEarned] = await Promise.all([
+    read.from("referral_redemptions").select("id", { count: "exact", head: true }).eq("referrer_email", email),
+    referrerPointsFromLedger(email),
+  ]);
   /* 여기서 던지지 않는 것은 코드·초대 링크가 이 조회와 무관하게 이미 있기
      때문이다. 화면은 링크를 계속 보여 주되, 못 센 숫자는 null 로 넘겨
      "0명"이 아니라 "—"로 그린다. */
   if (error || typeof count !== "number") {
     if (error) logger.error("[referral] 초대 성사 수 조회 실패", error);
-    return { code, invitedCount: null, pointsEarned: null };
+    return { code, invitedCount: null, pointsEarned };
   }
-  return { code, invitedCount: count, pointsEarned: count * REFERRAL_POINTS };
+  return { code, invitedCount: count, pointsEarned };
+}
+
+/** [1057] 피추천인의 가입 시각(app_users.created_at · 이메일 소문자). 행이 없거나 못 읽으면 null(= 모름) */
+async function readAccountCreatedAt(
+  client: NonNullable<ReturnType<typeof getServiceSupabase>>,
+  email: string,
+): Promise<string | null> {
+  const { data, error } = await client
+    .from("app_users")
+    .select("created_at")
+    .eq("email", email.trim().toLowerCase())
+    .maybeSingle();
+  if (error) throw new Error(`app_users 조회 실패: ${error.message}`);
+  const v = data?.created_at;
+  return typeof v === "string" && v ? v : null;
 }
 
 /**
@@ -213,6 +272,19 @@ export async function redeemReferral(
       .eq("referee_email", refereeEmail)
       .maybeSingle();
     if (existing) return { ok: false, reason: "already" };
+
+    /* [1057] 피추천인이 새 계정인지 보지 않았다 — 기존 회원이 아무 초대 링크나 열면 하이드레이션에서 리딤돼
+       기존 계정 둘이 서로 초대해 1,200P 를 만들 수 있었다. app_users.created_at 이 7일 안일 때만 적용.
+       가입 시각을 못 읽으면(행 없음·조회 실패) 판정 보류 — "db"(재시도 가능) 로 돌려 쿠키를 남긴다. */
+    let createdAt: string | null;
+    try {
+      createdAt = await readAccountCreatedAt(write, refereeEmail);
+    } catch (e) {
+      logger.error("[referral] 피추천인 가입 시각 조회 실패", e);
+      return { ok: false, reason: "db" };
+    }
+    if (!createdAt) return { ok: false, reason: "db" };
+    if (!isNewAccount(createdAt)) return { ok: false, reason: "not_new" };
 
     const { error: insErr } = await write.from("referral_redemptions").insert({
       code: c,
@@ -260,16 +332,27 @@ export async function getReferralLeaderboard(
 ): Promise<ReferralLeaderRow[] | null> {
   const read = getReadOnlySupabase();
   if (!read) return null;
-  const { data, error } = await read
-    .from("referral_redemptions")
-    .select("referrer_email")
-    .limit(3000);
-  if (error || !Array.isArray(data)) {
-    if (error) logger.error("[referral] 리더보드 조회 실패", error);
+  /* [1057] `.limit(3000)` 은 정렬 없이 1,000행에서 조용히 잘렸다(PostgREST 상한) — 유일 정렬(created_at, id)로 쪽을 나눠 끝까지 읽는다 */
+  let data: Array<Record<string, unknown>>;
+  try {
+    const { rows, truncated } = await readPaged<Record<string, unknown>>(
+      (from, to) =>
+        read
+          .from("referral_redemptions")
+          .select("referrer_email")
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      LEADERBOARD_MAX_ROWS,
+    );
+    if (truncated) throw new Error(`referral_redemptions 가 상한(${LEADERBOARD_MAX_ROWS})에 닿음`);
+    data = rows;
+  } catch (e) {
+    logger.error("[referral] 리더보드 조회 실패", e);
     return null;
   }
   const counts = new Map<string, number>();
-  for (const r of data as Array<Record<string, unknown>>) {
+  for (const r of data) {
     const em = String(r.referrer_email ?? "").toLowerCase();
     if (!em) continue;
     counts.set(em, (counts.get(em) ?? 0) + 1);

@@ -134,9 +134,33 @@ export async function loadWatchCount(email: string): Promise<Loaded<number>> {
   }
 }
 
-/** listSavedSearches 는 실패를 [] 로 접는다(그쪽 관례) — 여기서는 그대로 센다 */
-export async function loadSavedSearchCount(email: string): Promise<number> {
-  return (await listSavedSearches(email)).length;
+/* [1057] listSavedSearches 는 실패를 [] 로 접어 저장 검색 수가 "0" 으로 보였다 — 실패와 0 을 가르기 위해
+   같은 표(saved_searches · user_email 소문자)를 count 로 직접 센다. 못 셌으면 null(화면은 "—"). */
+export async function loadSavedSearchCount(email: string): Promise<number | null> {
+  const owner = email.trim().toLowerCase();
+  if (!owner) return 0;
+  const sb = getServiceSupabase();
+  if (!sb) {
+    /* [1057 · C8] listSavedSearches 가 실패를 던지게 되면서(1057-B) 이 줄은 try 밖이라 화면 전체를 죽였다 — 못 셌으면 null */
+    try {
+      return (await listSavedSearches(email)).length;
+    } catch (e) {
+      logger.warn("[assistant] 저장 검색 수 조회 실패", e);
+      return null;
+    }
+  }
+  try {
+    const { count, error } = await sb
+      .from("saved_searches")
+      .select("id", { count: "exact", head: true })
+      .eq("user_email", owner);
+    if (error) throw new Error(error.message);
+    if (typeof count !== "number") throw new Error("count 를 받지 못했습니다");
+    return count;
+  } catch (e) {
+    logger.warn("[assistant] 저장 검색 수 조회 실패", e);
+    return null;
+  }
 }
 
 export async function loadNotifyPrefs(email: string): Promise<Loaded<NotificationPrefs>> {

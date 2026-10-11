@@ -97,7 +97,8 @@ export async function listBookmarks(
     .limit(200);
   if (type) q = q.eq("target_type", type);
   const { data, error } = await q;
-  if (error) return [];
+  /* [1057 · B3] 실패를 [] 로 접어 "저장한 글 없음 · 저장한 매물 없음"이 됐고, 부르는 쪽의 ok:false 분기는 죽은 코드였다 — 던진다 */
+  if (error) throw new Error(`bookmarks 조회 실패: ${error.message ?? "알 수 없는 오류"}`);
   return (data ?? []).map(mapRow);
 }
 

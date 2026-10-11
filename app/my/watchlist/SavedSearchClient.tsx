@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import {
@@ -9,7 +10,11 @@ import {
   type SavedSearchScope,
 } from "@/lib/saved-search/types";
 
+/* [1057 · B4] 목록 한 줄 = 저장 검색 + 검색을 실행하는 주소(서버·API 가 scopeActionUrl 로 붙인다 — 알림이 가는 곳과 같다) */
+export type SavedSearchView = SavedSearch & { actionUrl: string };
+
 const SCOPES: SavedSearchScope[] = ["map", "listings", "complex", "auctions", "news", "apply"];
+const LOAD_FAILED = "저장한 검색 불러오기 실패 · 잠시 후 다시";
 
 function riseClass(index: number): string {
   if (index <= 0) return "rise-in";
@@ -17,9 +22,11 @@ function riseClass(index: number): string {
   return "rise-in-2";
 }
 
-export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
+export function SavedSearchClient({ initial, initialFailed = false }: { initial: SavedSearchView[]; initialFailed?: boolean }) {
   const { showToast } = useToast();
-  const [items, setItems] = useState<SavedSearch[]>(initial);
+  const [items, setItems] = useState<SavedSearchView[]>(initial);
+  /* [1057 · B4] 서버 첫 조회 실패 — "없음"이 아니라 "못 읽음" */
+  const [loadFailed, setLoadFailed] = useState(initialFailed);
   const [label, setLabel] = useState("");
   const [scope, setScope] = useState<SavedSearchScope>("map");
   const [query, setQuery] = useState("");
@@ -27,15 +34,17 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  /** GET 으로 목록을 다시 읽어 상태를 동기화한다. */
+  /** GET 으로 목록을 다시 읽어 상태를 동기화한다. [1057 · B4] 실패하면 지금 목록을 그대로 두고 한 줄로 알린다(예전엔 비웠다). */
   async function refresh(): Promise<void> {
     try {
       const res = await fetch("/api/saved-searches", { cache: "no-store" });
-      if (!res.ok) throw new Error("목록 불러오기 실패");
-      const data = (await res.json()) as { items?: SavedSearch[] };
-      setItems(Array.isArray(data.items) ? data.items : []);
+      if (!res.ok) throw new Error(LOAD_FAILED);
+      const data = (await res.json()) as { items?: SavedSearchView[] };
+      if (!Array.isArray(data.items)) throw new Error(LOAD_FAILED);
+      setItems(data.items);
+      setLoadFailed(false);
     } catch {
-      setError("목록을 새로고침하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      setError(LOAD_FAILED);
     }
   }
 
@@ -114,7 +123,8 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
       showToast("검색을 삭제했어요", {
         label: "되돌리기",
         onClick: () => {
-          /* [1009 · H] 되돌리기 실패도 말한다 — 예전엔 결과를 보지 않아 실패해도 조용히 사라졌다 */
+          /* [1009 · H] 되돌리기 실패도 말한다 — 예전엔 결과를 보지 않아 실패해도 조용히 사라졌다
+             [1057 · B4] alertEnabled 를 빠뜨려 알림 켜진 검색을 되돌리면 꺼진 채 돌아왔다 — 같이 보낸다 */
           void fetch("/api/saved-searches", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -123,6 +133,7 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
               query: item.query ?? "",
               scope: item.scope,
               filters: item.filters ?? {},
+              alertEnabled: item.alertEnabled,
             }),
           })
             .then(async (r) => {
@@ -213,8 +224,15 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
         </div>
       )}
 
-      {/* 목록 */}
-      {items.length === 0 ? (
+      {/* 목록 — [1057 · B4] 첫 조회 실패는 "없음"이 아니다 */}
+      {items.length === 0 && loadFailed ? (
+        <div className="card rise-in flex flex-col items-center gap-2 py-8 text-center">
+          <p className="t-body font-bold text-ink">{LOAD_FAILED}</p>
+          <button type="button" onClick={() => void refresh()} className="btn-soft inline-flex min-h-10 items-center px-4 t-sub font-bold">
+            다시 불러오기
+          </button>
+        </div>
+      ) : items.length === 0 ? (
         <div className="card rise-in flex flex-col items-center gap-2 py-8 text-center">
           <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-soft text-primary">
             <Icon name="search" size={20} />
@@ -251,6 +269,13 @@ export function SavedSearchClient({ initial }: { initial: SavedSearch[] }) {
                     <p className="t-sub text-text-3">검색어 없음</p>
                   )}
                 </div>
+                {/* [1057 · B4] 저장한 검색을 실행하는 길이 없었다 — 알림이 가는 곳과 같은 주소 */}
+                <Link
+                  href={item.actionUrl}
+                  className="tap-line inline-flex min-h-[40px] shrink-0 items-center t-sub font-bold text-primary no-underline md:min-h-6"
+                >
+                  검색 열기 ›
+                </Link>
               </div>
 
               <div className="flex items-center justify-between gap-2 border-t border-line pt-2.5">

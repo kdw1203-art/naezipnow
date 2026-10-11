@@ -3,8 +3,10 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 export type NotificationPrefs = {
   userEmail: string;
   emailComments: boolean;
+  /** [1057 · C5] 읽는 메일 발송자가 없다(좋아요·저장 메일은 어디서도 안 나간다) — 설정 화면에서 스위치를 뺐고 컬럼·기본값만 남는다 */
   emailLikes: boolean;
   emailMeeting: boolean;
+  /** [1057 · C5] 읽는 메일 발송자가 없다(전문가 답변은 pushExpert 로만 나간다) — 설정 화면에서 스위치를 뺐고 컬럼·기본값만 남는다 */
   emailExpert: boolean;
   emailMarketing: boolean;
   pushComments: boolean;

@@ -18,6 +18,7 @@ import { primeWatching, readWatching } from "./watchlist-status";
 import { canOfferPush, pushResultMessage, subscribeToPush } from "@/lib/push/subscribe-client";
 import { clearPendingWatch, hasPendingWatch, savePendingWatch, takePendingWatch } from "@/lib/client/pending-watch";
 import { getSessionLite } from "@/lib/client/session-lite";
+import type { DeferredRemover, Removal } from "@/app/my/watchlist/deferred-remove";
 
 /* [968 · 4] 기본 탭(요약)이 아닌 탭의 본문은 서버 HTML 에 없고 탭을 열 때만 필요하다.
    정적 import 는 첫 로드 JS 에 그대로 실리므로 next/dynamic 으로 뗀다. ssr:false 인
@@ -69,6 +70,69 @@ export { CompareTrayButton } from "@/app/components/CompareTrayButton";
 const WATCHLIST_EVENT = "nuguzip:watchlist";
 type WatchlistDetail = { complexId: string; watching: boolean };
 
+/* [1057 · B1] 관심 해제가 **즉시 DELETE** 하고 "되돌리기"가 POST 로 새 행을 만들었다 — 크론 기준가(last_price_krw ·
+   last_price_band)·담은 날짜가 사라져 한 주기 알림을 놓쳤다. /my/watchlist([1009 · H])와 같은 지연 삭제 제어기를 쓴다:
+   토스트가 닫힌 뒤(5.5초) DELETE, 그 전 되돌리기는 타이머 취소뿐(서버 행 그대로). 제어기는 모듈에 하나 — 히어로·하단 바
+   두 인스턴스(하단 바는 스크롤마다 다시 마운트)가 같은 기다림을 본다. 화면은 window 이벤트([967 · 17])로 맞춘다.
+   페이지가 가려지면(pagehide · hidden) 기다리던 삭제를 keepalive 로 바로 보낸다. */
+const WATCH_COMMIT_DELAY_MS = 5_500;
+type WatchItem = { complexId: string; complexName: string };
+type ShowToast = ReturnType<typeof useToast>["showToast"];
+const watchSink: { toast: ShowToast | null } = { toast: null };
+const lastRemoval = new Map<string, Removal<WatchItem>>();
+let watchRemover: DeferredRemover<WatchItem> | null = null;
+
+function syncWatching(complexId: string, watching: boolean): void {
+  primeWatching(complexId, watching);
+  window.dispatchEvent(new CustomEvent<WatchlistDetail>(WATCHLIST_EVENT, { detail: { complexId, watching } }));
+}
+
+async function getWatchRemover(): Promise<DeferredRemover<WatchItem>> {
+  if (watchRemover) return watchRemover;
+  /* [1057] 지연 삭제기는 처음 뺄 때 내려받는다 — /complex/[id] 첫 번들 상한(480KB)에 1KB 를 더 싣지 않기 위해 */
+  const { createDeferredRemover } = await import("@/app/my/watchlist/deferred-remove");
+  if (watchRemover) return watchRemover;
+  const toast = (m: string) => watchSink.toast?.(m);
+  watchRemover = createDeferredRemover<WatchItem>({
+    delayMs: WATCH_COMMIT_DELAY_MS,
+    setTimer: (fn, ms) => window.setTimeout(fn, ms),
+    clearTimer: (h) => window.clearTimeout(h as number),
+    sendDelete: (complexId, keepalive) =>
+      fetch(`/api/me/watchlist?complexId=${encodeURIComponent(complexId)}`, { method: "DELETE", keepalive })
+        .then((r) => r.ok)
+        .catch(() => false),
+    sendRestore: async (item) => {
+      const res = await fetch("/api/me/watchlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(item),
+      });
+      if (res.ok) return { ok: true };
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
+      return { ok: false, error: j.error };
+    },
+    onDeleteFailed: (r) => {
+      syncWatching(r.key, true);
+      toast("관심 단지에서 빼지 못했어요 · 연결을 확인해 주세요");
+    },
+    onUndoLocal: (r) => {
+      syncWatching(r.key, true);
+      toast("다시 관심 단지에 담았어요");
+    },
+    onRestored: (r) => {
+      syncWatching(r.key, true);
+      toast("다시 담았어요 · 알림 기준가는 새로 잡혀요");
+    },
+    onRestoreFailed: (_r, error) => toast(error ? `되돌리지 못했어요. ${error}` : "되돌리지 못했어요. 다시 눌러 주세요"),
+  });
+  const flush = () => watchRemover?.flush(true);
+  window.addEventListener("pagehide", flush);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flush();
+  });
+  return watchRemover;
+}
+
 /* ===== 관심 단지(팔로우) 버튼 =====
    2026-07-27 이전 단지 홈 제목 옆의 "+ 단지 팔로우" 는 onClick 이 없는
    <button> 이었다. 파란 글씨로 눌러 보라고 말해 놓고 아무 일도 안 했다.
@@ -78,7 +142,7 @@ type WatchlistDetail = { complexId: string; watching: boolean };
    [1009 · C] 액션 반응(토스 관례) — 예전엔 켜도 꺼도 버튼 글자만 바뀌었고(히어로는 10px 한 줄 문구, 하단 바는 토스트),
    실수로 뺀 관심 단지를 되돌릴 길이 없었다. 이제
      · 켤 때: 하트가 한 번 튄다(njn-pop-once — 키를 바꿔 다시 재생, 모션 최소화면 꺼짐) + 토스트,
-     · 끌 때: 토스트 "관심 단지에서 뺐어요" + **되돌리기**(onClick 이 실제 API 로 다시 담는다 — 확인 모달 대신),
+     · 끌 때: 토스트 "관심 단지에서 뺐어요" + **되돌리기**([1057 · B1] 지연 삭제 취소 — 서버 행 그대로. 보낸 뒤면 다시 담는다),
      · 요청 중: 글자 "저장 중…" + aria-busy, 두 번 눌러도 한 번만 나간다(busyRef),
      · 실패: 원인 + 할 일을 토스트로("…담지 못했어요 — 잠시 후 다시 눌러 주세요").
    히어로·하단 바 두 인스턴스는 [967 · 17] window 이벤트로 같은 상태를 말한다(되돌리기도 같은 길). */
@@ -104,7 +168,7 @@ export function WatchlistButton({
   const [pop, setPop] = useState(0);
   const busyRef = useRef(false);
   /* [1046] 가입 뒤 관심 등록 마저 담기 — 비동기 콜백에서 최신 apply 를 부르기 위한 손잡이 */
-  const applyRef = useRef<((target: boolean, opts?: { undo?: boolean; replay?: boolean }) => Promise<void>) | null>(null);
+  const applyRef = useRef<((target: boolean, opts?: { replay?: boolean }) => Promise<void>) | null>(null);
 
   /* [968 · 3] 세션이 비면 요청 없이 false, 있으면 단지별 공유 프라미스(30초) —
      히어로 버튼과 하단 바가 같은 왕복 하나를 나눠 받고, 하단 바가 스크롤마다
@@ -137,26 +201,44 @@ export function WatchlistButton({
     return () => window.removeEventListener(WATCHLIST_EVENT, onChange);
   }, [complexId]);
 
-  /** 서버를 target 상태로 맞춘다 — 버튼과 토스트의 "되돌리기"가 같은 길을 탄다 */
-  async function apply(target: boolean, opts: { undo?: boolean; replay?: boolean } = {}) {
+  /* [1057 · B1] 토스트는 전역(Provider)이라 모듈 제어기가 마지막으로 마운트된 버튼의 showToast 를 빌려 쓴다 */
+  useEffect(() => {
+    watchSink.toast = showToast;
+  }, [showToast]);
+
+  /** 서버를 target 상태로 맞춘다 — 켜기는 POST, 끄기는 지연 DELETE(되돌리기 = 취소) */
+  async function apply(target: boolean, opts: { replay?: boolean } = {}) {
     if (busyRef.current) return;
+    if (!target) {
+      /* [1057 · B1] 즉시 DELETE 대신 기다림만 건다 — 화면은 바로 꺼지고 서버 행은 토스트가 닫힌 뒤에 지운다 */
+      const remover = await getWatchRemover();
+      const removal = remover.remove(complexId, { complexId, complexName }, 0);
+      if (!removal) return;
+      lastRemoval.set(complexId, removal);
+      setWatching(false);
+      syncWatching(complexId, false);
+      showToast("관심 단지에서 뺐어요", { label: "되돌리기", onClick: () => void remover.undo(removal) });
+      return;
+    }
+    /* 기다리는 삭제가 있으면 새 행(POST)이 아니라 그 삭제를 취소한다 — 안 그러면 5.5초 뒤 타이머가 방금 담은 행을 지운다 */
+    const pending = lastRemoval.get(complexId);
+    if (pending && pending.state === "pending") {
+      await (await getWatchRemover()).undo(pending);
+      return;
+    }
     busyRef.current = true;
     setBusy(true);
     try {
-      const res = target
-        ? await fetch("/api/me/watchlist", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ complexId, complexName }),
-          })
-        : await fetch(`/api/me/watchlist?complexId=${encodeURIComponent(complexId)}`, {
-            method: "DELETE",
-          });
+      const res = await fetch("/api/me/watchlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ complexId, complexName }),
+      });
       if (res.status === 401) {
         /* [1046] 다시 담기 중 세션이 끊겼으면 가입 창을 또 띄우지 않는다 */
         if (opts.replay) return;
         /* [1046] 가입을 마치고 이 단지로 돌아오면 마저 담는다 */
-        if (target) savePendingWatch(complexId, complexName);
+        savePendingWatch(complexId, complexName);
         promptSignup({
           action: "watchlist_add",
           title: "관심 단지로 저장할까요?",
@@ -177,33 +259,14 @@ export function WatchlistButton({
         return;
       }
       if (!res.ok) {
-        showToast(
-          j.error ??
-            (target
-              ? "관심 단지에 담지 못했어요. 잠시 후 다시 시도해 주세요."
-              : "관심 단지에서 빼지 못했어요. 잠시 후 다시 시도해 주세요."),
-        );
+        showToast(j.error ?? "관심 단지에 담지 못했어요. 잠시 후 다시 시도해 주세요.");
         return;
       }
-      setWatching(target);
-      primeWatching(complexId, target);
-      window.dispatchEvent(
-        new CustomEvent<WatchlistDetail>(WATCHLIST_EVENT, { detail: { complexId, watching: target } }),
-      );
-      if (!target) {
-        showToast("관심 단지에서 뺐어요", {
-          label: "되돌리기",
-          onClick: () => {
-            void apply(true, { undo: true });
-          },
-        });
-        return;
-      }
+      setWatching(true);
+      syncWatching(complexId, true);
       setPop((n) => n + 1);
       if (opts.replay) {
         showToast("가입 전에 누른 관심 등록을 마쳤어요 · 새 실거래가 올라오면 알려 드려요");
-      } else if (opts.undo) {
-        showToast("다시 관심 단지에 담았어요");
       } else if (canOfferPush()) {
         /* [968 · 46] 관심 등록의 뜻이 "시세 변동 알림"인데 그 자리에서 푸시를 권하지 않았다. 아직 묻지 않은
            (default) 브라우저에만 토스트 액션으로 권한다 — 권한 프롬프트는 액션 탭(사용자 제스처)에서만 열린다. */

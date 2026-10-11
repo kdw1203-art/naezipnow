@@ -107,8 +107,22 @@ export async function PATCH(req: Request) {
     );
   }
 
-  const result = await updateScheduleStatus(id, status, body.noteId);
-  return NextResponse.json(result);
+  /* [1057] 작성자 확인 없이 id 만으로 갱신됐고 noteId 없는 PATCH 가 연결을 지웠으며 DB 오류가 200 이었다 —
+     작성자 일치 조건 · noteId 는 넘겼을 때만 · 없으면 404 · 실패 503 */
+  const noteId = typeof body.noteId === "string" && body.noteId.trim() ? body.noteId.trim() : undefined;
+  let result: Awaited<ReturnType<typeof updateScheduleStatus>>;
+  try {
+    result = await updateScheduleStatus(id, session.user.email, status, noteId);
+  } catch (e) {
+    return dbUnavailable("inspection-schedule-update", e, "일정 저장 실패 · 잠시 후 다시");
+  }
+  if (!result.ok) {
+    if (result.reason === "not_found") {
+      return NextResponse.json({ ok: false, error: "일정 없음" }, { status: 404 });
+    }
+    return dbUnavailable("inspection-schedule-update", new Error("Supabase 미설정"), "일정 저장 실패 · 잠시 후 다시");
+  }
+  return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(req: Request) {
@@ -123,6 +137,18 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: "id 파라미터가 필요합니다." }, { status: 400 });
   }
 
-  const result = await deleteSchedule(id, session.user.email);
-  return NextResponse.json(result);
+  /* [1057] 삭제 실패가 200 {ok:false} 로 나갔다 — 없으면 404 · DB 실패 503 */
+  let result: Awaited<ReturnType<typeof deleteSchedule>>;
+  try {
+    result = await deleteSchedule(id, session.user.email);
+  } catch (e) {
+    return dbUnavailable("inspection-schedule-delete", e, "일정 삭제 실패 · 잠시 후 다시");
+  }
+  if (!result.ok) {
+    if (result.reason === "not_found") {
+      return NextResponse.json({ ok: false, error: "일정 없음" }, { status: 404 });
+    }
+    return dbUnavailable("inspection-schedule-delete", new Error("Supabase 미설정"), "일정 삭제 실패 · 잠시 후 다시");
+  }
+  return NextResponse.json({ ok: true });
 }

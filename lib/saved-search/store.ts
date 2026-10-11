@@ -79,7 +79,7 @@ function rowToSavedSearch(row: Record<string, unknown>): SavedSearch {
 
 /* ---------------- 읽기 ---------------- */
 
-/** 사용자의 저장 검색 목록(최신순, 최대 100건). 미설정·빈 결과·오류 시 []. */
+/** 사용자의 저장 검색 목록(최신순, 최대 100건). 미설정(클라이언트 없음)·빈 결과는 [] — 조회 **실패는 던진다**. */
 export async function listSavedSearches(email: string): Promise<SavedSearch[]> {
   const owner = normEmail(email);
   if (!owner) return [];
@@ -87,24 +87,21 @@ export async function listSavedSearches(email: string): Promise<SavedSearch[]> {
   const sb = getReadOnlySupabase();
   if (!sb) return [];
 
-  try {
-    const { data, error } = await sb
-      .from(TABLE)
-      .select("*")
-      .eq("user_email", owner)
-      .order("created_at", { ascending: false })
-      .limit(LIST_LIMIT);
+  /* [1057 · B4] 실패를 [] 로 접어 /my/watchlist?tab=searches 가 "저장한 검색 없음"을 그리고 API 가 200 을 돌려줬다 —
+     없음과 못 읽음은 다른 사실이다. 던지면 API 는 503, 화면은 "불러오기 실패"를 적는다. */
+  const { data, error } = await sb
+    .from(TABLE)
+    .select("*")
+    .eq("user_email", owner)
+    .order("created_at", { ascending: false })
+    .limit(LIST_LIMIT);
 
-    if (error) {
-      logger.error("[saved-search] listSavedSearches", error);
-      return [];
-    }
-    if (!Array.isArray(data)) return [];
-    return data.map((r) => rowToSavedSearch(r as Record<string, unknown>));
-  } catch (e) {
-    logger.error("[saved-search] listSavedSearches", e);
-    return [];
+  if (error) {
+    logger.error("[saved-search] listSavedSearches", error);
+    throw new Error(`saved_searches 조회 실패: ${error.message}`);
   }
+  if (!Array.isArray(data)) throw new Error("saved_searches 조회 실패: 응답이 배열이 아닙니다");
+  return data.map((r) => rowToSavedSearch(r as Record<string, unknown>));
 }
 
 /**

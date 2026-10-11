@@ -17,7 +17,7 @@
  *      app/town/shared.tsx:97 maskNoteAuthor(label, email)   ← 가장 일반형
  *      app/notes/page.tsx:42 maskAuthor(note)                = A(n.authorLabel, n.authorEmail)
  *      app/notes/best/[ym]/page.tsx:38 maskAuthor(note)      = 위와 동일
- *      app/api/me/follows/feed/route.ts:26 maskAuthor(note)  = 위와 동일
+ *      (app/api/me/follows/feed 는 [1057] 부터 maskNoteAuthor 를 직접 쓴다 — 자체 maskAuthor 없음)
  *      app/api/complex-reviews/route.ts:12 maskAuthor(email) = A(null, email)
  *   B) "kd***@domain" — 2곳, **폴백만 다른 게 아니다**
  *      app/admin/payments/page.tsx:62 (null→"—", @없음→"***", split("@"))

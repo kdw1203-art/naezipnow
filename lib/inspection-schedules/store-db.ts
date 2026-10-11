@@ -132,31 +132,43 @@ export async function createSchedule(input: {
   return mapRow(data as Record<string, unknown>);
 }
 
+/** 쓰기 결과 — 바뀐 행이 없으면(남의 일정·없는 id) not_found. DB 실패는 던진다(호출부가 503 으로 옮긴다). */
+export type ScheduleWriteResult = { ok: true } | { ok: false; reason: "not_found" | "unavailable" };
+
+/* [1057] 예전엔 `.eq("id", id)` 만 걸어 id 만 알면 남의 일정 상태를 바꿀 수 있었고, noteId 없는 PATCH 가 note_id 를 null 로 덮었으며,
+   DB 오류도 200 {ok:false} 로 나갔다 — 작성자 일치 조건 · note_id 는 넘겼을 때만 · 바뀐 행 없음은 not_found · 실패는 던진다. */
 export async function updateScheduleStatus(
   id: string,
+  authorEmail: string,
   status: ScheduleStatus,
   noteId?: string,
-): Promise<{ ok: boolean }> {
+): Promise<ScheduleWriteResult> {
   const sb = getServiceSupabase();
-  if (!sb) return { ok: false };
-  const { error } = await sb
+  if (!sb) return { ok: false, reason: "unavailable" };
+  const patch: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
+  if (noteId !== undefined && noteId !== null && String(noteId).trim()) patch.note_id = String(noteId).trim();
+  const { data, error } = await sb
     .from("inspection_schedules")
-    .update({
-      status,
-      note_id: noteId ?? null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id);
-  return { ok: !error };
+    .update(patch)
+    .eq("id", id)
+    .eq("author_email", authorEmail)
+    .select("id");
+  if (error) throw scheduleQueryError(`inspection_schedules (일정 ${id} 상태 변경)`, error);
+  if (!Array.isArray(data) || data.length === 0) return { ok: false, reason: "not_found" };
+  return { ok: true };
 }
 
-export async function deleteSchedule(id: string, authorEmail: string): Promise<{ ok: boolean }> {
+export async function deleteSchedule(id: string, authorEmail: string): Promise<ScheduleWriteResult> {
   const sb = getServiceSupabase();
-  if (!sb) return { ok: false };
-  const { error } = await sb
+  if (!sb) return { ok: false, reason: "unavailable" };
+  const { data, error } = await sb
     .from("inspection_schedules")
     .delete()
     .eq("id", id)
-    .eq("author_email", authorEmail);
-  return { ok: !error };
+    .eq("author_email", authorEmail)
+    .select("id");
+  /* [1057] 삭제 실패도 200 {ok:false} 였다 — 실패는 던지고, 지운 행이 없으면 not_found */
+  if (error) throw scheduleQueryError(`inspection_schedules (일정 ${id} 삭제)`, error);
+  if (!Array.isArray(data) || data.length === 0) return { ok: false, reason: "not_found" };
+  return { ok: true };
 }

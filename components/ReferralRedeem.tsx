@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { hasSession } from "@/lib/client/has-session";
 import { useToast } from "@/app/components/toast/ToastProvider";
 
@@ -16,6 +17,10 @@ import { useToast } from "@/app/components/toast/ToastProvider";
  * [1056 · A8] 성사(ok:true)면 토스트 한 번 — 예전엔 300P 가 들어와도 새 회원에게 아무 표시가 없었다.
  * app/layout.tsx 에서 ToastProvider 안쪽에 마운트돼 있어 useToast 가 실제 토스트를 띄운다
  * (Provider 밖이면 no-op 이라 안전).
+ *
+ * [1057] 페이지 로드당 한 번(done ref)만 돌아, 비밀번호 로그인(router.push · 전체 새로고침 없음) 뒤에는 다시 돌지 않았다 —
+ * 경로(usePathname)가 바뀔 때 다시 확인한다. 같은 경로에서는 한 번만(lastPath ref).
+ * 409(가입 7일 초과 · 기존 계정)는 결론이 난 상태라 쿠키를 지우되 토스트는 띄우지 않는다.
  */
 
 const COOKIE_NAME = "ref_code";
@@ -34,12 +39,14 @@ function clearCookie(name: string): void {
 }
 
 export function ReferralRedeem() {
-  const done = useRef(false);
+  const pathname = usePathname();
+  const lastPath = useRef<string | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
-    if (done.current) return;
-    done.current = true;
+    const path = pathname ?? "";
+    if (lastPath.current === path) return;
+    lastPath.current = path;
 
     const code = readCookie(COOKIE_NAME);
     if (!code) return;
@@ -48,7 +55,7 @@ export function ReferralRedeem() {
       try {
         /* [970 · C-43] 비로그인이면 서버가 어차피 401 이다 — 요청을 보내지 않는다(콘솔의
            빨간 401 줄이 초대 링크로 들어온 방문마다 찍혔다). 쿠키는 그대로 남겨 로그인 뒤
-           다음 마운트에서 리딤한다(세션 판정은 hasSession — 헤더와 같은 1회 호출). */
+           다음 경로 이동에서 리딤한다(세션 판정은 hasSession — 헤더와 같은 1회 호출). */
         if (!(await hasSession())) return;
         const res = await fetch("/api/referral/redeem", {
           method: "POST",
@@ -60,6 +67,11 @@ export function ReferralRedeem() {
         // 401(비로그인)·503(DB 일시 실패)은 쿠키를 남겨 다음 마운트에 재시도한다.
         // 서버가 "지금 못 한다"를 2xx 로 답하지 않는다는 약속에 기대는 코드다
         // (app/api/referral/redeem/route.ts 의 RETRYABLE_REASONS).
+        if (res.status === 409) {
+          /* [1057] 기존 계정 — 결론이 났다. 쿠키만 지운다(토스트 없음) */
+          clearCookie(COOKIE_NAME);
+          return;
+        }
         if (res.ok) {
           clearCookie(COOKIE_NAME);
           const j = (await res.json().catch(() => ({}))) as { ok?: boolean; awarded?: number };
@@ -76,7 +88,7 @@ export function ReferralRedeem() {
         /* 네트워크 오류 등은 무시 (쿠키 유지) */
       }
     })();
-  }, [showToast]);
+  }, [pathname, showToast]);
 
   return null;
 }

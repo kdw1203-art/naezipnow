@@ -42,6 +42,7 @@ import {
 import { INBOX_KIND_LABEL, assistantLine, dDayLabel, daysUntil, kstDay, weekRangeLabel, type WeekStripDay } from "@/lib/assistant/weekly";
 import { dealDayLabel } from "@/lib/assistant/watch-series";
 import { ScheduleForm } from "./ScheduleForm";
+import { ScheduleRowActions } from "./ScheduleRowActions";
 import { WatchAddForm } from "./WatchAddForm";
 
 export const runtime = "nodejs";
@@ -329,7 +330,11 @@ export default async function AssistantPage() {
                           {s.region ? ` · ${s.region}` : ""}
                         </span>
                       </span>
-                      <Dday days={daysUntil(s.scheduledAt, now)} />
+                      {/* [1057] 일정 줄에 완료·취소·삭제가 없어 등록 뒤 손댈 수 없었다 */}
+                      <span className="flex shrink-0 items-center gap-2">
+                        <Dday days={daysUntil(s.scheduledAt, now)} />
+                        <ScheduleRowActions id={s.id} label={s.aptName?.trim() || s.title} />
+                      </span>
                     </li>
                   ))
                 )}
@@ -383,12 +388,13 @@ export default async function AssistantPage() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/my/watchlist" className="flex min-h-10 items-center justify-between gap-3 py-2.5 no-underline">
+                  {/* [1057] "저장 검색" 줄이 관심 단지 탭(/my/watchlist)으로 갔고, 조회 실패가 0 으로 보였다 — 저장 검색 탭 · 실패는 — */}
+                  <Link href="/my/watchlist?tab=searches" className="flex min-h-10 items-center justify-between gap-3 py-2.5 no-underline">
                     <span>
                       <span className="block t-body font-bold text-ink">저장 검색</span>
                       <span className="block t-caption text-text-3">조건에 맞는 새 결과</span>
                     </span>
-                    <span className="t-body font-bold t-num text-ink">{savedCount} ›</span>
+                    <span className="t-body font-bold t-num text-ink">{savedCount === null ? NA : savedCount} ›</span>
                   </Link>
                 </li>
                 <li className="flex items-center justify-between gap-3 py-2.5">
