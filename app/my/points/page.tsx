@@ -5,8 +5,15 @@ import { ErrorState } from "@/app/components/ui/EmptyState";
 import { safeAuth } from "@/lib/safe-auth";
 import { logger } from "@/lib/log";
 import { getBalance, getHistory, type LedgerRow } from "@/lib/points/ledger";
-import { EARN_RULES, getSpendItem, POINTS_GRATUITOUS_NOTICE } from "@/lib/points/catalog";
+import {
+  EARN_RULES,
+  earnGuideRules,
+  getSpendItem,
+  POINTS_GRATUITOUS_NOTICE,
+  type EarnRule,
+} from "@/lib/points/catalog";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { getExpertStatus } from "@/lib/experts/is-verified";
 import { AttendanceButton } from "./AttendanceButton";
 import { GuestGate } from "@/app/components/GuestGate";
 import { formatKstDate, isSameKstMonth } from "@/lib/format/kst";
@@ -110,7 +117,45 @@ async function readNicknameEffectUntil(
 }
 
 /* ── 적립 방법 (로그인 여부 무관) — [1015 · 규칙 I] 적립 규칙표 = blue 톤(이웃 내역 판은 mint) ── */
-function EarnGuide() {
+function EarnRuleRows({ rules }: { rules: EarnRule[] }) {
+  return (
+    <div className="lq-panel mt-3 flex flex-col" data-tone="blue">
+      {rules.map((rule, i, arr) => (
+        <div
+          key={rule.key}
+          className={`flex items-center justify-between py-2.5 ${
+            i < arr.length - 1 ? "border-b" : ""
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span className="t-body font-semibold text-text-1">
+              {rule.label}
+            </span>
+            {rule.once && (
+              <span className="chip-tag chip-pad-tight t-caption">
+                최초 1회
+              </span>
+            )}
+            {rule.dailyCap && (
+              <span className="chip-tag chip-pad-tight t-caption">
+                하루 {rule.dailyCap}회
+              </span>
+            )}
+          </div>
+          <span className="t-num t-body font-bold">
+            +{rule.points.toLocaleString("ko-KR")}P
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* [1056 · A5] 예전엔 EARN_RULES 전부를 나열했다 — 보관된 체크리스트 공유(template_used)와 중개사 전용
+   매물 적립(listing_*)이 일반 회원에게도 "적립 방법"으로 보였다. 받을 수 없는 항목은 빼고, 중개사에게만
+   매물 묶음을 따로 보인다(earnGuideRules). */
+function EarnGuide({ isBroker }: { isBroker: boolean }) {
+  const { general, broker } = earnGuideRules({ isBroker });
   return (
     <div className="rise-in-3 card rounded-2xl p-5 max-md:p-3.5">
       <div className="text-[13px] font-bold text-ink">포인트 적립 방법</div>
@@ -120,35 +165,14 @@ function EarnGuide() {
       <div className="mt-0.5 t-sub text-text-3">
         현금 전환·구매 불가 무상 리워드 · 서비스 내 혜택 전용
       </div>
-      <div className="lq-panel mt-3 flex flex-col" data-tone="blue">
-        {Object.values(EARN_RULES).map((rule, i, arr) => (
-          <div
-            key={rule.key}
-            className={`flex items-center justify-between py-2.5 ${
-              i < arr.length - 1 ? "border-b" : ""
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <span className="t-body font-semibold text-text-1">
-                {rule.label}
-              </span>
-              {rule.once && (
-                <span className="chip-tag chip-pad-tight t-caption">
-                  최초 1회
-                </span>
-              )}
-              {rule.dailyCap && (
-                <span className="chip-tag chip-pad-tight t-caption">
-                  하루 {rule.dailyCap}회
-                </span>
-              )}
-            </div>
-            <span className="t-num t-body font-bold">
-              +{rule.points.toLocaleString("ko-KR")}P
-            </span>
-          </div>
-        ))}
-      </div>
+      <EarnRuleRows rules={general} />
+      {broker.length > 0 && (
+        <>
+          <div className="mt-4 t-sub font-bold text-ink">공인중개사 매물 적립</div>
+          <div className="mt-0.5 t-sub text-text-3">인증 공인중개사 계정에만 적립</div>
+          <EarnRuleRows rules={broker} />
+        </>
+      )}
     </div>
   );
 }
@@ -171,7 +195,8 @@ function GuestView() {
         <span className="t-section text-text-3">›</span>
       </Link>
 
-      <EarnGuide />
+      {/* 게스트는 중개사 여부를 모른다 — 일반 규칙만 */}
+      <EarnGuide isBroker={false} />
     </GuestGate>
   );
 }
@@ -181,11 +206,14 @@ function WalletView({
   balance,
   history,
   nickEffect,
+  isBroker,
 }: {
   balance: number;
   history: LedgerRow[];
   /** 활성 닉네임 효과(오로라·노을)와 만료 시각 — 없으면 미적용 */
   nickEffect: { kind: "aurora" | "sunset"; until: string } | null;
+  /** [1056 · A5] 인증 공인중개사 — 매물 적립 규칙을 보일지 */
+  isBroker: boolean;
 }) {
   const now = new Date();
   const monthEarned = history
@@ -312,7 +340,7 @@ function WalletView({
       </div>
 
       <aside className="flex min-w-0 flex-col gap-3">
-        <EarnGuide />
+        <EarnGuide isBroker={isBroker} />
       </aside>
     </div>
   );
@@ -350,7 +378,7 @@ export default async function PointsWalletPage({
   /* 2026-07-26: 내역 조회가 실패하면 예전에는 빈 배열이 내려와서 "아직 포인트
 내역 없음" 라고 썼다 — 적립한 적 없는 사람과 원장을 못 읽은 사람이
      구분되지 않았다. 실패는 실패라고 쓴다. */
-  const [loaded, nickEffect] = await Promise.all([
+  const [loaded, nickEffect, expert] = await Promise.all([
     Promise.all([getBalance(email), getHistory(email, 50)]).then(
       ([balance, history]) => ({ ok: true as const, balance, history }),
       (err: unknown) => {
@@ -360,6 +388,8 @@ export default async function PointsWalletPage({
       },
     ),
     readNicknameEffectUntil(email),
+    /* [1056 · A5] 중개사 여부(expert_profiles 1행) — 실패는 getExpertStatus 가 false 로 접는다 */
+    getExpertStatus(email),
   ]);
 
   if (!loaded.ok) {
@@ -386,6 +416,7 @@ export default async function PointsWalletPage({
         balance={loaded.balance}
         history={loaded.history}
         nickEffect={nickEffect}
+        isBroker={expert.isBroker}
       />
     </PageShell>
   );

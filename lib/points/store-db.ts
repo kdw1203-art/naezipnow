@@ -1,4 +1,5 @@
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { attendanceRewardFor } from "@/lib/points/attendance-rules";
 
 export interface AttendanceRecord {
   date: string;
@@ -63,7 +64,8 @@ export async function checkIn(userEmail: string): Promise<{ date: string; streak
   // 스트릭 티어 — 기본 10P, 3일 연속 20P, 7일 연속 50P.
   // 실제 지급은 라우트(app/api/me/attendance)가 원장 규칙
   // (attendance + attendance_streak_3/7)으로 집행한다. 여기 값은 그 합과 일치해야 한다.
-  const pointsEarned = streak >= 7 ? 50 : streak >= 3 ? 20 : 10;
+  // [1056] 티어 계산이 여기와 라우트 GET(다음 보상 표시)에 따로 있으면 어긋난다 — attendance-rules 한 곳으로
+  const pointsEarned = attendanceRewardFor(streak);
 
   // Save attendance
   if (sb) {

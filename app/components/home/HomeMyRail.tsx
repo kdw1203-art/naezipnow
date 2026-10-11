@@ -2,10 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { useShellActive, type Shell } from "@/lib/client/viewport-shell";
 import { HomeWatchlistBrief } from "@/app/components/HomeWatchlistBrief";
 import { RecentComplexChips } from "@/app/components/RecentComplexes";
+
+/* [1056] "오늘의 활동"(출석·포인트·미션·관심지역) 카드 — 로그인 확인 뒤에만 동적 import.
+   정적 import 는 홈 첫 번들(488KB · 상한 495KB)에 들어가므로 세션이 확인된 사용자에게만 내려받는다. */
+const HomeEngagementCard = dynamic(
+  () => import("@/app/components/home/HomeEngagementCard").then((m) => m.HomeEngagementCard),
+  { ssr: false },
+);
 
 /* [967 · 27] 홈 "내 관심" 레일 — 로그인 사용자에게만, 관심단지 변동(HomeWatchlistBrief)
  * 과 최근 본 단지(RecentComplexChips)를 히어로 바로 아래 한 묶음으로.
@@ -57,23 +65,27 @@ export function HomeMyRail({
      두 번 나간다). 둘 다 비었거나 아직 모르면 껍데기는 `contents` 로 상자를 만들지
      않고, 하나라도 채워지면 그때 제목과 테두리를 입힌다. */
   return (
-    <section
-      aria-label="내 관심"
-      className={any ? `rise-in flex flex-col gap-2.5 ${className}` : "contents"}
-    >
-      {any && (
-        <div className="flex items-baseline justify-between px-1">
-          <h2 className="t-section text-ink">내 관심</h2>
-          <Link href="/my/watchlist" className="tap-line t-sub font-semibold text-primary no-underline">
-            관심 단지 관리 ›
-          </Link>
-        </div>
-      )}
-      <HomeWatchlistBrief onResolved={setBriefHas} />
-      <RecentComplexChips
-        onResolved={setRecentHas}
-        className="rounded-2xl border border-line bg-surface p-4"
-      />
-    </section>
+    <>
+      {/* [1056] 오늘의 활동 — 관심 단지가 없는 사용자에게도 늘 그린다(출석은 누구나 가능) */}
+      <HomeEngagementCard />
+      <section
+        aria-label="내 관심"
+        className={any ? `rise-in flex flex-col gap-2.5 ${className}` : "contents"}
+      >
+        {any && (
+          <div className="flex items-baseline justify-between px-1">
+            <h2 className="t-section text-ink">내 관심</h2>
+            <Link href="/my/watchlist" className="tap-line t-sub font-semibold text-primary no-underline">
+              관심 단지 관리 ›
+            </Link>
+          </div>
+        )}
+        <HomeWatchlistBrief onResolved={setBriefHas} />
+        <RecentComplexChips
+          onResolved={setRecentHas}
+          className="rounded-2xl border border-line bg-surface p-4"
+        />
+      </section>
+    </>
   );
 }

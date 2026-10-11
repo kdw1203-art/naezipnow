@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authorizeCron } from "@/lib/cron/authorize";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { kstDateString } from "@/lib/points/store-db";
 import { sendPush, type PushPayload } from "@/lib/push/vapid";
 
 export const runtime = "nodejs";
@@ -8,17 +9,15 @@ export const dynamic = "force-dynamic";
 
 /**
  * 출석 리마인드 — 오늘 아직 출석하지 않은 웹푸시 구독자에게 1회 발송.
+ * 주기: `.github/workflows/etl.yml` 의 `alerts` 잡이 매일 06:00 UTC = 15:00 KST 에 호출한다.
  *
  * 보호: lib/cron/authorize.ts (CRON_SECRET 헤더 · 관리자 세션)
  * 다른 크론과 같은 규칙으로 맞춘 것은 어드민 "수집 작업 실행" 패널에서
  * 이 라우트만 403 이 나던 문제 때문이다(관리자 세션 인가가 빠져 있었다).
  *
- * ⚠️ 알려진 한계(고치지 않고 남겨 둠): `today` 는 UTC 날짜다. 적립 쪽
- *    (lib/points/store-db.ts checkIn)도 같은 UTC 기준이라 이 크론의 "오늘 출석했나"
- *    판정 자체는 어긋나지 않는다. 다만 한국 사용자에게는 하루가 09:00 KST 에
- *    바뀌는 셈이라 연속 출석 스트릭이 그 시각 경계에서 끊길 수 있다. 기준을
- *    KST 로 옮기려면 이미 쌓인 user_attendance 행의 의미까지 함께 옮겨야 해서
- *    이 변경과 분리했다.
+ * [1056 · A6] "오늘"은 출석 기록(lib/points/store-db.checkIn)과 같은 KST 날짜다. 예전엔 여기만
+ * UTC 날짜라, 15:00 KST 실행 시점(06:00 UTC)엔 날짜가 같아 당장 어긋나진 않았지만 수동 실행(어드민
+ * 패널)을 KST 0~9시에 하면 어제 출석자를 "오늘 미출석"으로 세었다. 같은 함수를 쓴다.
  */
 export async function GET(req: Request) {
   const authorized = await authorizeCron(req);
@@ -29,7 +28,7 @@ export async function GET(req: Request) {
   const sb = getServiceSupabase();
   if (!sb) return NextResponse.json({ ok: true, sent: 0, note: "Supabase 미설정" });
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = kstDateString();
   const { data: subs, error } = await sb
     .from("push_subscriptions")
     .select("user_email, endpoint, p256dh, auth")
@@ -60,7 +59,7 @@ export async function GET(req: Request) {
   /* 이 조회가 실패하면 제외 집합이 비어 "아무도 끄지 않았다"가 되고, 알림을 끈
      사람 전원에게 그대로 발송된다. 껐는지 모르는 채로 보내는 쪽이 한 번 덜
      보내는 쪽보다 나쁘다 — 아무에게도 보내지 않는다(lib/listings/staleness.ts 와
-     같은 태도). 다음 크론(매일 18:00 KST)에 다시 시도된다. */
+     같은 태도). 다음 크론(매일 15:00 KST 쯤 · etl.yml alerts 잡)에 다시 시도된다. */
   const { data: optedOut, error: prefsError } = await sb
     .from("notification_preferences")
     .select("user_email")
@@ -77,8 +76,9 @@ export async function GET(req: Request) {
   );
 
   const payload: PushPayload = {
-    title: "오늘 출석 체크를 잊지 마세요",
-    body: "연속 출석 포인트를 받고 투자 루틴을 이어가세요.",
+    /* [1056] 권유문("잊지 마세요 · 이어가세요") → 사실 한 줄(티어는 lib/points/attendance-rules 와 같다) */
+    title: "오늘 출석 전",
+    body: "출석 10P · 연속 3일 20P · 7일 50P",
     // 출석 체크 버튼은 /my/points 안에 있다(app/my/points/AttendanceButton.tsx).
     // 예전에는 `/attendance` 로 보냈는데 그런 라우트가 없어서 알림을 누르면
     // not-found 로 떨어졌다.

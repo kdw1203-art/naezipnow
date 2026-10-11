@@ -9,7 +9,11 @@ import {
   NOTE_COMMENT_MAX_LEN,
 } from "@/lib/inspection/note-comments";
 import { invalidateNoteCache } from "@/lib/inspection/note-cache";
-import { appendInboxNotification } from "@/lib/notifications/inbox";
+import {
+  loadNoteCommentAuthorEmail,
+  notifyEngagement,
+  notifyReplyToComment,
+} from "@/lib/notifications/engagement-notify";
 import { applyRateLimit, rateLimit, tooManyRequests, WRITE_RATE_LIMIT } from "@/lib/rate-limit";
 import { dbUnavailable } from "@/lib/api/db-unavailable";
 import { logger } from "@/lib/log";
@@ -128,15 +132,34 @@ export async function POST(
   invalidateNoteCache(id, "comment");
 
   /* 소유자에게 인앱 알림 — 착지점은 상세의 #comments. 본인 댓글은 알리지 않는다.
-     알림 실패가 댓글 성공을 바꾸지 않는다(fail-soft). */
-  if (!isOwner && note.authorEmail) {
-    const title = (note.aptName?.trim() || note.title).slice(0, 30);
-    void appendInboxNotification({
-      userEmail: note.authorEmail,
+     알림 실패가 댓글 성공을 바꾸지 않는다(fail-soft).
+     [1056 · B7] 인앱만 있고 설정의 "댓글 · 답글" 푸시(pushComments)를 읽는 곳이 없었다 —
+     같은 내용으로 푸시까지(설정 켜진 사람만). 인앱은 그대로. */
+  const noteTitle = (note.aptName?.trim() || note.title).slice(0, 30);
+  const ownerEmail = note.authorEmail?.trim().toLowerCase() ?? "";
+  if (!isOwner && ownerEmail) {
+    void notifyEngagement({
+      userEmail: ownerEmail,
       title: "임장노트에 댓글이 달렸어요",
-      body: `"${title}"에 ${result.comment.authorLabel}님이 댓글을 남겼어요.`,
+      body: `"${noteTitle}"에 ${result.comment.authorLabel}님이 댓글을 남겼어요.`,
       actionUrl: `/notes/${id}#comments`,
+      push: { pref: "pushComments", tag: `note-comment-${id}`, eventType: "comment" },
     }).catch((e) => logger.error("[note-comment-notify]", e));
+  }
+  /* [1056 · B5] 답글은 부모 댓글 작성자에게 조용했다 — 노트 소유자만 알림을 받았다. 부모 댓글의
+     작성자가 소유자도, 답글 쓴 본인도 아닐 때 "내 댓글에 답글" 을 보낸다(소유자 알림은 위 그대로). */
+  const parentCommentId = result.comment.parentId;
+  if (parentCommentId) {
+    void (async () => {
+      const parentAuthor = await loadNoteCommentAuthorEmail(id, parentCommentId);
+      if (!parentAuthor || parentAuthor === email || parentAuthor === ownerEmail) return;
+      await notifyReplyToComment({
+        parentAuthorEmail: parentAuthor,
+        noteId: id,
+        noteTitle,
+        replierLabel: result.comment.authorLabel,
+      });
+    })().catch((e) => logger.error("[note-reply-notify]", e));
   }
 
   return NextResponse.json({ comment: result.comment }, { status: 201 });

@@ -117,7 +117,19 @@ const EMPTY: Record<TabKey, string> = {
 function classifyInbox(title: string, body: string): Category {
   const t = `${title} ${body}`;
   if (t.includes("관심 지역") || t.includes("관심지역")) return "관심지역";
-  if (t.includes("댓글") || t.includes("좋아요")) return "활동";
+  /* [1056 · B9] 새 참여 알림 제목(댓글 채택·내 댓글에 답글·새 팔로워·후기 도움 N·지역 임장 레벨 상승)이
+     "댓글·좋아요" 두 낱말만 보던 분류를 지나 매물 탭으로 새지 않게 — 활동 낱말을 먼저 본다 */
+  if (
+    t.includes("댓글") ||
+    t.includes("좋아요") ||
+    t.includes("답글") ||
+    t.includes("채택") ||
+    t.includes("팔로워") ||
+    t.includes("후기 도움") ||
+    t.includes("레벨 상승")
+  ) {
+    return "활동";
+  }
   if (
     t.includes("매물") ||
     t.includes("승인") ||

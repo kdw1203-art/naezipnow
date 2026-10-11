@@ -4,6 +4,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+/* [1056] 서버 사유 → 짧은 사실 문구. 예전엔 상한 외 모든 실패를 "이미 적립됐어요"로 적었다(DB 오류도). */
+function reasonText(reason: string | undefined): string {
+  if (reason === "cap" || reason === "rule_cap") return "오늘 적립 상한 도달";
+  if (reason === "already_once" || reason === "already_ref") return "이미 적립됨";
+  return "적립 실패 · 잠시 후 다시";
+}
+
 /* 미션 청구 버튼 — 서버 재검증 후 지급. 성공 시 새로고침으로 claimed 반영. */
 export function MissionClaim({
   kind,
@@ -25,7 +32,7 @@ export function MissionClaim({
   if (claimed) {
     return (
       <span className="rounded-full bg-success-soft px-3 py-1.5 t-sub font-bold text-success">
-        적립 완료 ✓
+        적립 완료
       </span>
     );
   }
@@ -51,14 +58,14 @@ export function MissionClaim({
               return;
             }
             if (json.ok) router.refresh();
-            else setMsg(json.reason === "cap" || json.reason === "rule_cap" ? "오늘 적립 상한에 도달했어요" : "이미 적립됐어요");
+            else setMsg(reasonText(json.reason));
           } catch {
-            setMsg("네트워크 오류");
+            setMsg("적립 저장 실패 · 잠시 후 다시");
           } finally {
             setBusy(false);
           }
         }}
-        className={`rounded-full px-3.5 py-1.5 text-[12px] font-bold ${
+        className={`min-h-[40px] rounded-full px-3.5 py-1.5 text-[12px] font-bold md:min-h-6 ${
           disabled ? "bg-bg text-text-3" : "bg-primary text-white"
         } disabled:opacity-60`}
       >

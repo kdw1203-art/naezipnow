@@ -24,15 +24,16 @@ export type NotificationPrefs = {
    */
   pushListingStale: boolean;
   /**
-   * 출석 리마인드 푸시(매일 18:00 KST, 오늘 미출석자에게 1회). 기본 true.
+   * 출석 리마인드 푸시(매일 오후 15시쯤 KST — etl.yml alerts 잡 06:00 UTC, 오늘 미출석자에게 1회). 기본 true.
+   * [1056 · A6] 저녁 6시로 적혀 있었으나 실제 실행 시각은 15:00 KST 다.
    * 위 두 개와 같은 "본인 루틴 안내" 계열이라 기본 켜짐 — 끄면
    * attendance-reminders 크론이 이 사람을 발송 대상에서 제외한다.
    */
   pushAttendance: boolean;
   /**
-   * 주간 다이제스트 수신함·푸시. 기본 **false**.
-   * 위 두 개와 달리 "본인 기록 관리 안내"가 아니라 주기적 소식지라서 옵트인이다.
-   * /digest 화면 문구도 "켜면 보내드려요"이므로 기본값이 켜져 있으면 안 된다.
+   * 주간 다이제스트 수신함·푸시(월요일 오후 15시쯤 KST). 기본 **true**(옵트아웃).
+   * [1056 · A6] "기본 false · 옵트인" 이라 적혀 있었으나 DEFAULT_PREFS 는 2026-08-01(항목 40)부터 true 다.
+   * 설정 화면에서 끌 수 있고, 끈 사람은 weekly-digest 크론이 제외한다.
    */
   pushWeeklyDigest: boolean;
   /**

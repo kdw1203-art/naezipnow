@@ -6,6 +6,8 @@ import { adoptComment, getPost } from "@/lib/posts-store";
 import { awardPoints } from "@/lib/points/ledger";
 import { logger } from "@/lib/log";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { postHref } from "@/lib/town/post-href";
+import { notifyCommentAdopted } from "@/lib/notifications/engagement-notify";
 
 export const runtime = "nodejs";
 
@@ -102,6 +104,14 @@ export async function POST(
     } catch (e) {
       logger.error("[comment-adopt-points]", e);
     }
+    /* [1056 · B2] 채택이 댓글 작성자에게 조용했다 — 포인트만 들어갔다. 인앱(+pushComments 켜진 사람은 푸시).
+       "+NP" 는 실제 지급된 액수만(상한·중복으로 0이면 적지 않는다). fail-soft. */
+    void notifyCommentAdopted({
+      commenterEmail: result.adoptedAuthorEmail,
+      postTitle: result.post.title,
+      pointsAwarded,
+      postPath: postHref(result.post),
+    }).catch((e) => logger.error("[comment-adopt-notify]", e));
   }
 
   revalidatePath(`/town/story/${id}`); // [1006] 이야기 상세

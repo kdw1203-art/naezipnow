@@ -55,6 +55,10 @@ type LinkItem = { label: string; href: string; icon: string };
    포인트·알림·매물은 마이 안에서, 법적 고지·가이드는 푸터에서 닿는다. */
 const ACCOUNT_LINKS: LinkItem[] = [
   { label: "마이페이지", href: "/my", icon: "user" },
+  /* [1056 · C4] 관심 단지 · 포인트·미션 — 데스크톱 좌측 내비(DesktopSideNav 마이 묶음)에는 있는데 폰 전체 메뉴에만 없었다.
+     아이콘은 Icon.tsx ICON_PATHS 에 있는 이름만(heart = 관심, coin = 포인트). */
+  { label: "관심 단지", href: "/my/watchlist", icon: "heart" },
+  { label: "포인트·미션", href: "/my/points", icon: "coin" },
   /* [1000] 구독 "관리"는 /my/subscription(내 플랜·결제 내역·해지) — /subscription 은 파는 화면 */
   { label: "구독 관리", href: "/my/subscription", icon: "crown" },
   { label: "설정", href: "/my/settings", icon: "settings" },
@@ -365,7 +369,7 @@ export function MobileMenu() {
                 ))}
               </nav>
 
-              {/* [991] 내 계정 + 고객지원 — 한 묶음, 네 줄. 서비스 12개 묶음은 삭제(파일 위 주석). */}
+              {/* [991] 내 계정 + 고객지원 — 한 묶음(2열). 서비스 12개 묶음은 삭제(파일 위 주석). [1056 · C4] 관심 단지 · 포인트·미션 추가로 일곱 줄. */}
               <div className="mt-5">
                 <div className="mb-1 px-1 t-sub font-bold uppercase tracking-wide text-text-3">
                   내 계정 · 지원

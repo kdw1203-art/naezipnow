@@ -3,6 +3,7 @@ import type { Post, PostComment } from "@/lib/types/post";
 import { enqueueEmailNotification } from "@/lib/notifications/outbox";
 import { trySendViaResend } from "@/lib/notifications/resend-send";
 import { pushInboxNotification } from "@/lib/notifications/inbox";
+import { pushIfPrefAllows } from "@/lib/notifications/engagement-notify";
 import { emailLayout } from "@/lib/email/templates";
 import { SITE_URL } from "@/lib/news-seo";
 import { postHref } from "@/lib/town/post-href";
@@ -50,11 +51,22 @@ export async function notifyPostAuthorOfNewComment(input: {
   `);
 
   // 인앱 받은편지함 알림 (Supabase 연동 여부와 관계없이 시도)
+  const inboxTitle = "새 댓글이 달렸어요";
+  const inboxBody = `"${post.title.slice(0, 30)}"에 ${comment.authorLabel}님이 댓글을 남겼습니다.`;
   void pushInboxNotification({
     userEmail: to,
-    title: "새 댓글이 달렸어요",
-    body: `"${post.title.slice(0, 30)}"에 ${comment.authorLabel}님이 댓글을 남겼습니다.`,
+    title: inboxTitle,
+    body: inboxBody,
     actionUrl: `${postPath}#comments`,
+  }).catch(() => {});
+  /* [1056 · B7] 설정의 "댓글 · 답글" 푸시(pushComments)를 읽는 발송자가 없었다 — 여기는 인앱+메일만.
+     같은 내용으로 웹푸시(설정 켜진 사람·구독 있는 사람만). 메일은 종전대로 글의 notifyComments 가 정한다. */
+  void pushIfPrefAllows(to, "pushComments", {
+    title: inboxTitle,
+    body: inboxBody,
+    url: `${postPath}#comments`,
+    tag: `post-comment-${post.id}`,
+    eventType: "comment",
   }).catch(() => {});
 
   const sent = await trySendViaResend({ to, subject, html });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { buildMissionBoard } from "@/lib/missions/missions";
 import { awardPoints } from "@/lib/points/ledger";
+import { getVerifiedOnboarding } from "@/app/api/me/onboarding/verify";
 
 /* [#119·#120] 미션 적립 청구 — 서버가 진행도를 재검증하고 나서만 지급한다
    (클라이언트 주장 불신). 멱등: once/refId 는 awardPoints 가 막는다. */
@@ -31,8 +32,20 @@ export async function POST(req: Request) {
     if (!board.startAllDone) {
       return NextResponse.json({ error: "아직 3가지가 모두 완료되지 않았어요." }, { status: 400 });
     }
-    const r = await awardPoints(email, "onboarding_complete");
-    return NextResponse.json({ ok: r.ok, awarded: r.awarded, reason: r.reason ?? null });
+    /* [1056 · A3] 여기서 awardPoints 를 따로 부르지 않는다 — /my 허브와 같은 판정·지급 경로
+       (getVerifiedOnboarding: 3스텝 재검증 + onboarding_completed_at 기록 + once 멱등 지급). */
+    if (board.startClaimed) {
+      return NextResponse.json({ ok: false, awarded: 0, reason: "already_once" });
+    }
+    const v = await getVerifiedOnboarding(email);
+    if (!v.isComplete) {
+      return NextResponse.json({ error: "아직 3가지가 모두 완료되지 않았어요." }, { status: 400 });
+    }
+    return NextResponse.json({
+      ok: v.bonusAwarded > 0,
+      awarded: v.bonusAwarded,
+      reason: v.bonusAwarded > 0 ? null : "error",
+    });
   }
 
   /* [AI-39] 첫 AI 분석 100P — 서버가 실행 기록(runs≥1)을 재검증한 뒤 1회 지급 */

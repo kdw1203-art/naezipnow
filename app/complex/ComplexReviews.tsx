@@ -129,6 +129,8 @@ export function ComplexReviews({
   const [isVisitVerified, setIsVisitVerified] = useState(false);
   const [residentPeriod, setResidentPeriod] = useState("");
   const [submitState, setSubmitState] = useState<"idle" | "sending" | "done">("idle");
+  /* [1056 · B3] 저장 뒤 실제 적립액 — 재작성·상한이면 0 이라 문구에 "+30P" 를 고정으로 적지 않는다 */
+  const [savedPoints, setSavedPoints] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   // 도움돼요 — 서버 authoritative count 오버라이드 + 투표 완료 표시(중복 방지)
@@ -249,12 +251,13 @@ export function ComplexReviews({
         });
         return;
       }
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      const data = (await res.json().catch(() => ({}))) as { error?: string; pointsAwarded?: number };
       if (!res.ok) {
         setError(data.error ?? "후기 등록 실패 · 잠시 후 다시");
         setSubmitState("idle");
         return;
       }
+      setSavedPoints(typeof data.pointsAwarded === "number" ? data.pointsAwarded : 0);
       setSubmitState("done");
       setFormOpen(false);
       setComment("");
@@ -291,7 +294,8 @@ export function ComplexReviews({
 
       {submitState === "done" && (
         <div className="mt-2 rounded-lg bg-primary-soft px-3 py-2 t-sub font-bold text-primary">
-          후기가 등록됐어요. 이웃에게 큰 도움이 됩니다.
+          {/* [1056 · B3] "등록됐어요. 큰 도움이 됩니다" → 저장 사실 + 실제 적립액(0이면 적지 않는다) */}
+          {savedPoints > 0 ? `후기 저장 · +${savedPoints}P` : "후기 저장"}
         </div>
       )}
 

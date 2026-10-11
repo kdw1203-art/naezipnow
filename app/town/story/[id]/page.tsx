@@ -1,6 +1,7 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 import type { Metadata } from "next";
 import Link from "next/link";
+import { authorProfileHref } from "@/lib/profile/author-href";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
 import { ReportButton } from "@/app/components/ReportButton";
@@ -165,6 +166,8 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
   const region = regionLabel(post);
   const author = post.authorLabel?.trim() || "이웃";
   const initial = author.slice(0, 1);
+  /* [1056 · B8] 작성자 이름 → 공개 프로필(/u/{이름}) — 사람 이름일 때만(마스킹·운영진 표기는 글자 그대로) */
+  const authorHref = authorProfileHref(author);
   const photos = postAttachments(post);
   const bodyParas = paragraphs(post.body);
   const activeComments = post.comments.filter((c) => !c.deletedAt);
@@ -218,13 +221,24 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span
-                    className={`t-body font-bold text-ink ${
-                      nickEffect.nick === "aurora" ? "nick-aurora" : nickEffect.nick === "sunset" ? "nick-sunset" : ""
-                    }`}
-                  >
-                    {author}
-                  </span>
+                  {authorHref ? (
+                    <Link
+                      href={authorHref}
+                      className={`tap-line t-body font-bold text-ink no-underline ${
+                        nickEffect.nick === "aurora" ? "nick-aurora" : nickEffect.nick === "sunset" ? "nick-sunset" : ""
+                      }`}
+                    >
+                      {author}
+                    </Link>
+                  ) : (
+                    <span
+                      className={`t-body font-bold text-ink ${
+                        nickEffect.nick === "aurora" ? "nick-aurora" : nickEffect.nick === "sunset" ? "nick-sunset" : ""
+                      }`}
+                    >
+                      {author}
+                    </span>
+                  )}
                   <ExpertBadge badge={authorBadge} />
                   {nickEffect.badge && (
                     <span title="가을 산책 배지 — 포인트 상점" aria-label="가을 산책 배지">

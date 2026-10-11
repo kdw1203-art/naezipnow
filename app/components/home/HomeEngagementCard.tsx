@@ -1,268 +1,210 @@
 "use client";
 
-import { hasSession } from "@/lib/client/has-session";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useShellActive, type Shell } from "@/lib/client/viewport-shell";
+import { attendanceLine, pointsLink } from "@/lib/home/engagement-line";
 
-/* [개선 #11·#12·#29, 2026-08-22] 홈 참여 카드 — 로그인 사용자 전용.
+/* [1056] 홈 "오늘의 활동" 카드 — 로그인 사용자에게만, HomeMyRail 이 세션을 확인한 뒤
+ * 동적 import 로 붙인다(홈 첫 번들 밖 — / 예산 495KB 안에서 488KB 라 정적 import 는 못 넣는다).
  *
- * 실측 배경: 포인트 사용자 1명 · 30일 노트 작성 2건 · 출석 루프 미가동.
- * 출석(하루 +10P)·연속 보너스·온보딩 200P 보상이 코드에 다 있는데 지갑 깊숙이
- * 숨어 있어 아무도 못 봤다. 홈에서 원탭으로 잇는다:
- *   ① 출석 체크(연속 표시) — #12
- *   ② 포인트 → 상점 최고 아이템(상단 노출 7일, 500P) 진행바 — #29 (2026-08-23 목표 변경)
- *   ③ 첫 임장노트 미션(+300P) — #11 (온보딩 inspection 스텝 미완일 때만)
+ * 예전 이 파일(2026-08-22)은 홈 어디에서도 import 되지 않은 고아였다 — 출석·연속 보너스·
+ * 미션·완주 200P 가 전부 지갑 깊숙이(/my/points) 있어 홈에서는 보이지 않았다. 다시 붙이며
+ * 한 번의 조회(/api/me/engagement)로 바꾸고, 관심지역 판정 오류(steps 에 없는
+ * profile_region 을 찾아 늘 "미설정")도 그 API 쪽에서 고쳤다.
  *
- * 캐시·CLS 규율: 홈은 ISR 공유 캐시라 서버는 로그인 상태를 모른다. 이 카드는
- * 전부 클라이언트 조회이고, 게스트(401)면 아무것도 그리지 않는다. 로그인
- * 사용자는 첫 클라이언트 렌더에서 세션 쿠키 존재로 자리(고정 높이)를 먼저
- * 잡고 데이터로 채운다 — 늦게 불쑥 나타나 아래를 밀지 않게.
- */
+ * 그리는 것(전부 사실 낱말):
+ *   ① 출석 — "연속 출석 N일 · 오늘 20P" + 단추 "출석 +20P" / 완료 뒤 "오늘 출석 완료 · 연속 N일"
+ *   ② 포인트 잔액 · 이번 주 미션 n/3(적립 가능 n) → /my/points
+ *   ③ 시작 3미션 n/3(완주 보너스 200P) — 완주 전에만
+ *   ④ 관심지역 미설정 — 설정 전에만 → /welcome
+ * 게스트·조회 실패는 아무것도 그리지 않는다(빈 상자·훈계 없음). */
 
-type State =
-  | { phase: "none" } // 게스트 또는 조회 실패 — 아무것도 안 그림
-  | { phase: "loading" }
-  | {
-      phase: "ready";
-      checkedToday: boolean;
-      streak: number;
-      balance: number;
-      needNoteMission: boolean;
-      /** [E004] 관심지역 미설정 — 개인화 홈·알림·다이제스트가 전부 이걸 전제한다 */
-      needRegionSetup: boolean;
-    };
+type Engagement = {
+  attendance: { checkedToday: boolean; streak: number; nextReward: 10 | 20 | 50; lastDate: string | null } | null;
+  balance: number | null;
+  missions: {
+    weekDone: number;
+    weekTotal: number;
+    claimable: number;
+    startDone: number;
+    startTotal: number;
+    startClaimed: boolean;
+  } | null;
+  regionsSet: boolean | null;
+};
 
-/* 2026-08-23: 구 PLAN_PRO_COST(2,900P → 플러스 1개월) 진행바는 제거 —
-   포인트↔유료 구독 교환이 사라지면서(토스 회신, lib/points/catalog.ts 주석)
-   목표를 상점 최고 아이템(매물 상단 노출 7일, 500P)으로 바꿨다. */
-const SHOP_GOAL_COST = 500; // lib/points/catalog.ts listing_boost_7d 와 동일 (표시용)
+type State = { phase: "loading" } | { phase: "none" } | { phase: "ready"; data: Engagement };
 
-/* [968 · 8] 카드 데이터 3건(출석·포인트·온보딩)을 페이지 수명 안에서 한 번만 받는다.
-   홈은 이 카드를 모바일·데스크톱 두 벌로 마운트하므로 예전엔 로그인 홈 한 번에
-   fetch 6건이 나갔다. shell 판정으로 안 보이는 벌은 아예 안 부르지만, 경계를 넘나드는
-   창(태블릿 회전)처럼 두 벌이 다 살아나는 경우를 위해 공유 프라미스도 둔다.
-   실패는 캐시하지 않는다(일시 오류가 30초 "카드 없음"으로 굳지 않게). 출석 체크(POST)
-   뒤 값은 컴포넌트 상태로 갱신하므로 이 캐시를 건드릴 필요가 없다. */
-type AttendanceJson = { checkedToday?: unknown; streak?: unknown; totalPoints?: unknown };
-type PointsJson = { balance?: unknown };
-type OnboardingJson = { steps?: unknown };
-type EngagementPayload = [AttendanceJson | null, PointsJson | null, OnboardingJson | null];
-const ENGAGEMENT_TTL_MS = 30_000;
-let engagementCache: { at: number; promise: Promise<EngagementPayload> } | null = null;
-function fetchEngagement(): Promise<EngagementPayload> {
-  if (engagementCache && Date.now() - engagementCache.at < ENGAGEMENT_TTL_MS) {
-    return engagementCache.promise;
-  }
-  const promise: Promise<EngagementPayload> = Promise.all([
-    fetch("/api/me/attendance", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
-    fetch("/api/me/points", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
-    fetch("/api/me/onboarding", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
-  ]).then(
-    (v) => {
-      if (!v[0] && engagementCache?.promise === promise) engagementCache = null;
-      return v as EngagementPayload;
-    },
-    (e) => {
-      if (engagementCache?.promise === promise) engagementCache = null;
-      throw e;
-    },
-  );
-  engagementCache = { at: Date.now(), promise };
-  return promise;
-}
-
-export function HomeEngagementCard({ shell }: { shell?: Shell } = {}) {
-  const [st, setSt] = useState<State>({ phase: "none" });
+export function HomeEngagementCard({ onResolved }: { onResolved?: (has: boolean) => void } = {}) {
+  const [st, setSt] = useState<State>({ phase: "loading" });
   const [checking, setChecking] = useState(false);
-  const [justEarned, setJustEarned] = useState<number | null>(null);
-  /* [968 · 8] 안 보이는 벌은 세션 조회·데이터 3건을 시작하지 않는다(null 그대로) */
-  const active = useShellActive(shell);
+  const [earned, setEarned] = useState<{ awarded: number; bonus: number } | null>(null);
+  const [checkError, setCheckError] = useState(false);
 
   useEffect(() => {
-    if (!active) return;
-    let cancelled = false;
-    /* [967 · 33] 게스트 판정은 세션 API 로(httpOnly 쿠키는 스크립트에 안 보인다 —
-       예전 정규식 판정은 항상 게스트라 이 카드가 한 번도 렌더되지 않았다). */
-    void hasSession().then((authed) => {
-      if (cancelled || !authed) return; // 게스트 — 자리도 만들지 않는다
-      load();
-    });
+    let alive = true;
+    fetch("/api/me/engagement", { cache: "no-store" })
+      .then((r) => (r.ok ? (r.json() as Promise<Engagement>) : null))
+      .then((j) => {
+        if (!alive) return;
+        if (!j || (!j.attendance && j.balance === null && !j.missions)) {
+          setSt({ phase: "none" });
+          onResolved?.(false);
+          return;
+        }
+        setSt({ phase: "ready", data: j });
+        onResolved?.(true);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setSt({ phase: "none" });
+        onResolved?.(false);
+      });
     return () => {
-      cancelled = true;
+      alive = false;
     };
-    function load() {
-      setSt({ phase: "loading" });
-      fetchEngagement()
-        .then(([att, pts, onb]) => {
-          if (cancelled) return;
-          if (!att) {
-            setSt({ phase: "none" });
-            return;
-          }
-          const steps: string[] = Array.isArray(onb?.steps)
-            ? onb.steps.filter((x): x is string => typeof x === "string")
-            : [];
-          setSt({
-            phase: "ready",
-            checkedToday: Boolean(att.checkedToday),
-            streak: Number(att.streak) || 0,
-            balance: Number(pts?.balance ?? att.totalPoints) || 0,
-            needNoteMission: !steps.includes("inspection"),
-            needRegionSetup: !steps.includes("profile_region"),
-          });
-        })
-        .catch(() => {
-          if (!cancelled) setSt({ phase: "none" });
-        });
-    }
-  }, [active]);
+  }, [onResolved]);
 
   const checkIn = useCallback(async () => {
     if (checking) return;
     setChecking(true);
+    setCheckError(false);
     try {
       const res = await fetch("/api/me/attendance", { method: "POST" });
       const data = (await res.json().catch(() => null)) as {
         awarded?: number;
+        bonusAwarded?: number;
         streak?: number;
+        nextReward?: 10 | 20 | 50;
         balance?: number | null;
+        alreadyChecked?: boolean;
       } | null;
-      if (res.ok && data) {
-        setJustEarned(typeof data.awarded === "number" ? data.awarded : null);
-        setSt((prev) =>
-          prev.phase === "ready"
-            ? {
-                ...prev,
-                checkedToday: true,
-                streak: data.streak ?? prev.streak,
-                balance:
-                  typeof data.balance === "number"
-                    ? data.balance
-                    : prev.balance,
-              }
-            : prev,
-        );
+      if (!res.ok || !data) {
+        setCheckError(true);
+        return;
       }
+      setEarned({ awarded: data.awarded ?? 0, bonus: data.bonusAwarded ?? 0 });
+      setSt((prev) =>
+        prev.phase === "ready"
+          ? {
+              phase: "ready",
+              data: {
+                ...prev.data,
+                attendance: prev.data.attendance
+                  ? {
+                      ...prev.data.attendance,
+                      checkedToday: true,
+                      streak: data.streak ?? prev.data.attendance.streak,
+                      nextReward: data.nextReward ?? prev.data.attendance.nextReward,
+                    }
+                  : prev.data.attendance,
+                balance: typeof data.balance === "number" ? data.balance : prev.data.balance,
+              },
+            }
+          : prev,
+      );
     } catch {
-      /* 실패 시 조용히 — 다음 방문에 다시 */
+      setCheckError(true);
     } finally {
       setChecking(false);
     }
   }, [checking]);
 
   if (st.phase === "none") return null;
+  if (st.phase === "loading") {
+    return (
+      <section aria-label="오늘의 활동" aria-busy="true" className="card rounded-2xl px-4 py-3.5">
+        <div className="h-[72px] animate-pulse rounded-xl bg-bg" />
+      </section>
+    );
+  }
+
+  const { attendance, balance, missions, regionsSet } = st.data;
+  const showStart = missions && !missions.startClaimed && missions.startDone < missions.startTotal;
 
   return (
-    <section
-      aria-label="오늘의 활동"
-      className="card min-h-[104px] rounded-3xl px-4 py-3.5"
-    >
-      {st.phase === "loading" ? (
-        <div className="h-[76px] animate-pulse rounded-xl bg-bg" />
-      ) : (
-        <div className="flex flex-col gap-2.5">
-          {/* ① 출석 — 하루의 첫 탭 */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="t-body font-bold text-ink">
-                {st.checkedToday
-                  ? "오늘 출석 완료"
-                  : "오늘 출석하고 포인트 받기"}
-                {st.streak > 1 && (
-                  <span className="ml-1.5 t-sub font-bold text-warning">
-                    연속 {st.streak}일
-                  </span>
-                )}
-              </div>
-              <div className="t-sub text-text-3">
-                {st.checkedToday
-                  ? justEarned
-                    ? `+${justEarned}P 적립됐어요`
-                    : "내일 또 만나요 — 3·7일 연속이면 보너스가 붙어요"
-                  : "매일 +10P · 3일 연속 +10P · 7일 연속 +40P 보너스"}
-              </div>
-            </div>
-            {st.checkedToday ? (
-              <span className="shrink-0 rounded-full bg-success-soft px-3 py-1.5 t-body font-bold text-success">
-                ✓ 완료
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={checkIn}
-                disabled={checking}
-                className="btn-primary press shrink-0 rounded-full px-4 py-2 t-body font-bold disabled:opacity-60"
-              >
-                {checking ? "체크 중…" : "출석 +10P"}
-              </button>
-            )}
-          </div>
-
-          {/* ② 포인트 → 상점 최고 아이템(상단 노출 7일) 진행바 */}
-          <div>
-            <div className="mb-1 flex items-center justify-between t-sub">
-              <span className="text-text-3">
-                내 포인트{" "}
-                <b className="text-ink">
-                  {st.balance.toLocaleString("ko-KR")}P
-                </b>
-              </span>
-              {st.balance >= SHOP_GOAL_COST ? (
-                <Link
-                  href="/points/shop"
-                  className="font-bold text-primary no-underline"
-                >
-                  상점에서 교환 가능 ›
-                </Link>
-              ) : (
-                <span className="text-text-3">
-                  상단 노출 7일까지{" "}
-                  <b className="text-primary">
-                    {(SHOP_GOAL_COST - st.balance).toLocaleString("ko-KR")}P
-                  </b>
-                </span>
-              )}
-            </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg">
-              <div
-                className="h-full rounded-full bg-primary transition-all"
-                style={{
-                  width: `${Math.min(100, Math.round((st.balance / SHOP_GOAL_COST) * 100))}%`,
-                }}
-              />
+    <section aria-label="오늘의 활동" className="card flex flex-col gap-2.5 rounded-2xl px-4 py-3.5">
+      {/* ① 출석 */}
+      {attendance && (
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="t-body font-bold text-ink">출석</div>
+            <div className="t-sub text-text-3">
+              {earned && earned.awarded > 0
+                ? `+${earned.awarded}P 적립${earned.bonus > 0 ? ` · 연속 ${attendance.streak}일 보너스 포함` : ""}`
+                : checkError
+                  ? "출석 저장 실패 · 잠시 후 다시"
+                  : attendanceLine(attendance)}
             </div>
           </div>
-
-          {/* [E004] 관심지역 유도 — 미설정자에게만. 개인화 홈·관심단지 알림·
-              주간 다이제스트가 전부 관심지역을 전제하는데, 이 설정으로 가는
-              문이 지도 폴백 화면에만 있었다. 매일 여는 카드에 문을 하나 더. */}
-          {st.needRegionSetup && (
-            <Link
-              href="/welcome"
-              className="flex items-center justify-between rounded-xl bg-primary-soft px-3 py-2 no-underline"
+          {attendance.checkedToday ? (
+            <span className="shrink-0 rounded-full bg-success-soft px-3 py-1.5 t-sub font-bold text-success">
+              완료
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={checkIn}
+              disabled={checking}
+              aria-busy={checking || undefined}
+              className="btn-primary press min-h-[40px] shrink-0 rounded-full px-4 t-body font-bold disabled:opacity-60 md:min-h-6"
             >
-              <span className="t-body font-bold text-primary">
-                관심지역을 정하면 홈·알림이 내 동네 기준으로 바뀌어요
-              </span>
-              <span className="t-body font-bold text-primary">›</span>
-            </Link>
-          )}
-
-          {/* ③ 첫 노트 미션 — 이미 쓴 사람에겐 안 보인다 */}
-          {st.needNoteMission && (
-            <Link
-              href="/notes/new"
-              className="flex items-center justify-between rounded-xl bg-primary-soft px-3 py-2 no-underline"
-            >
-              <span className="t-body font-bold text-primary">
-                첫 임장노트 쓰면 +300P (공개 100P + 완주 보너스 200P)
-              </span>
-              <span className="t-body font-bold text-primary">›</span>
-            </Link>
+              {checking ? "확인 중" : `출석 +${attendance.nextReward}P`}
+            </button>
           )}
         </div>
+      )}
+
+      {/* ② 포인트 · 이번 주 미션 */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-line pt-2.5 t-sub">
+        <span className="text-text-3">
+          {balance !== null ? (
+            <>
+              내 포인트 <b className="tabular-nums text-ink">{balance.toLocaleString("ko-KR")}P</b>
+            </>
+          ) : (
+            "포인트 불러오기 실패"
+          )}
+          {missions && (
+            <>
+              {" · "}이번 주 미션{" "}
+              <b className="tabular-nums text-ink">
+                {missions.weekDone}/{missions.weekTotal}
+              </b>
+              {missions.claimable > 0 && <> · 적립 가능 {missions.claimable}</>}
+            </>
+          )}
+        </span>
+        <Link href={pointsLink(missions?.claimable ?? 0).href} className="tap-line font-bold text-primary no-underline">
+          {pointsLink(missions?.claimable ?? 0).label}
+        </Link>
+      </div>
+
+      {/* ③ 시작 3미션 — 완주 전에만 */}
+      {showStart && missions && (
+        <Link
+          href="/my/points?tab=missions"
+          className="flex items-center justify-between rounded-xl bg-primary-soft px-3 py-2 no-underline"
+        >
+          <span className="t-sub font-bold text-primary">
+            시작 미션 {missions.startDone}/{missions.startTotal} · 완주 보너스 200P
+          </span>
+          <span className="t-sub font-bold text-primary">›</span>
+        </Link>
+      )}
+
+      {/* ④ 관심지역 — 설정 전에만 */}
+      {regionsSet === false && (
+        <Link
+          href="/welcome"
+          className="flex items-center justify-between rounded-xl bg-primary-soft px-3 py-2 no-underline"
+        >
+          <span className="t-sub font-bold text-primary">관심지역 미설정 · 설정하면 홈·알림이 내 동네 기준</span>
+          <span className="t-sub font-bold text-primary">›</span>
+        </Link>
       )}
     </section>
   );
 }
+
+export default HomeEngagementCard;

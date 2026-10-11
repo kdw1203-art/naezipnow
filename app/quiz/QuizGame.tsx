@@ -26,12 +26,15 @@ import {
   type QuizGuess,
   type QuizStore,
 } from "@/lib/quiz/price-game";
+import { hasSession } from "@/lib/client/has-session";
 import { QuizReveal } from "./QuizReveal";
 import { QuizRail } from "./QuizRail";
 
-/* [1008 · Q] 실거래가 게임 — 문제는 페이지(ISR)가 싣고 온 것만 쓴다. 이 컴포넌트는 **네트워크를
+/* [1008 · Q] 실거래가 게임 — 문제는 페이지(ISR)가 싣고 온 것만 쓴다. 이 컴포넌트는 **읽기 네트워크를
    부르지 않는다**(봇이 JS 를 실행해도 API 호출 0 — 1007 실측: 함수 호출의 99% 가 봇).
    기록(오늘·최고)은 이 기기의 localStorage 에만 — 개인화 서버 읽기가 없어야 CDN 캐시가 산다.
+   [1056 · A7] 예외 하나: **로그인한 사람이 오늘 첫 판을 끝낸 순간** POST /api/quiz/complete 1회(하루 10P).
+   로그인 판정은 hasSession — 힌트 쿠키(nz_authed)가 없으면 요청 자체를 내지 않으므로 비회원·봇은 여전히 0회.
 
    [1020] 소유자 지시("시안대로 좀더 고도화", quiz-d/m.png) — "좌우 대결판 + 답 뒤에 배우는 칸".
    · 루트는 `contents` — page.tsx 의 lg 그리드에 본문(가운데 열)·레일(오른쪽 300px, QuizRail)이 각각 칸으로 들어간다.
@@ -41,6 +44,46 @@ import { QuizRail } from "./QuizRail";
    · 끝 화면·키보드·공유·다시 풀기·조각(confetti)·기록 저장 로직은 그대로. */
 
 type Phase = "play" | "reveal" | "done";
+
+/* [1056 · A7] 완주 적립 상태 — 결과 카드 한 줄. guest 는 요청 없이 정해진다(hasSession 이 힌트 쿠키로 판정) */
+type Reward =
+  | { kind: "earned"; points: number }
+  | { kind: "already" }
+  | { kind: "cap" }
+  | { kind: "guest" }
+  | { kind: "failed" };
+
+function rewardText(r: Reward): string {
+  switch (r.kind) {
+    case "earned":
+      return `+${r.points}P 적립`;
+    case "already":
+      return "오늘 적립 완료";
+    case "cap":
+      return "오늘 적립 상한 도달";
+    case "guest":
+      return "로그인하면 하루 10P 적립";
+    case "failed":
+      return "포인트 적립 실패 · 다시 풀기 완주 시 재시도";
+  }
+}
+
+/** 오늘 첫 판 완주 → 서버에 1회 알린다(멱등: refId=KST 날짜). 실패해도 게임·기록은 그대로 */
+async function claimQuizReward(rec: QuizDayRecord): Promise<Reward> {
+  if (!(await hasSession())) return { kind: "guest" };
+  const res = await fetch("/api/quiz/complete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ score: rec.score, total: rec.total }),
+  });
+  const j = (await res.json().catch(() => ({}))) as { ok?: boolean; awarded?: number; reason?: string | null };
+  if (!res.ok) return { kind: "failed" };
+  if (j.ok && typeof j.awarded === "number" && j.awarded > 0) return { kind: "earned", points: j.awarded };
+  if (j.reason === "already_ref" || j.reason === "rule_cap") return { kind: "already" };
+  if (j.reason === "cap") return { kind: "cap" };
+  return { kind: "failed" };
+}
 
 function readStore(): QuizStore {
   try {
@@ -211,6 +254,8 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
   const [replay, setReplay] = useState(false);
   /** 방금 끝낸 판인가(조각은 이때만) */
   const [justFinished, setJustFinished] = useState(false);
+  /** [1056 · A7] 완주 적립 결과 — 오늘 첫 판을 이 자리에서 끝냈을 때만 값이 생긴다 */
+  const [reward, setReward] = useState<Reward | null>(null);
   /* 다음 버튼은 둘(md+ 공개 카드 안 · 폰 sticky) — 포커스는 보이는 쪽에 */
   const cardNextRef = useRef<HTMLButtonElement | null>(null);
   const stickyNextRef = useRef<HTMLButtonElement | null>(null);
@@ -261,9 +306,14 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
       writeStore(saved);
       setStore(saved);
     }
+    /* [1056 · A7] 첫 판 완주(또는 앞선 적립 요청이 실패한 뒤의 다시 풀기 완주)에만 서버에 1회.
+       서버는 refId=KST 날짜로 멱등이라 재시도가 이중 지급이 되지 않는다. */
+    if (!replay || reward?.kind === "failed") {
+      claimQuizReward(rec).then(setReward, () => setReward({ kind: "failed" }));
+    }
     setJustFinished(true);
     setPhase("done");
-  }, [phase, round, total, results, bestStreak, replay, store, day.date]);
+  }, [phase, round, total, results, bestStreak, replay, store, day.date, reward]);
 
   const restart = () => {
     setRound(0);
@@ -375,6 +425,17 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
                 : ""}
               {replay ? " · 오늘 기록은 첫 판만" : ""}
             </p>
+            {/* [1056 · A7] 완주 적립 한 줄 — 적립됨 / 오늘 이미 적립 / 비회원 안내 / 실패 */}
+            {reward && (
+              <p
+                role="status"
+                className={`mt-1 t-sub font-bold ${
+                  reward.kind === "earned" ? "text-success" : reward.kind === "failed" ? "text-danger" : "text-text-3"
+                }`}
+              >
+                {rewardText(reward)}
+              </p>
+            )}
             <div className="mt-4 grid grid-cols-2 gap-2">
               {/* [1009 · T] 복사로 넘어간 공유는 버튼 자리에서도 "복사했어요" + 체크가 한 번 튄다(토스트와 함께) */}
               <button

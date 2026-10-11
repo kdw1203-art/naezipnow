@@ -17,8 +17,9 @@ import { relativeTimeLabel } from "@/lib/format/relative-time";
  * - 세션당 1회: 닫으면 sessionStorage 에 기록해 이 탭에서는 다시 안 뜬다.
  * - 위치: 데스크탑 우하단, 모바일은 탭바 위. 화면을 가리는 모달이 아니라
  *   구석 카드다 — 첫 화면(검색)의 주도권을 뺏지 않는다.
- * - 나머지 개인화(최근 본 단지·임장 레벨)는 이미 새 홈에 흡수됐다
- *   (검색 칩·KPI ④) — 여기 다시 그리지 않는다.
+ * - 나머지 개인화 중 최근 본 단지는 새 홈(검색 칩)에 흡수됐다 — 여기 다시 그리지 않는다.
+ *   [1056 · C8] "임장 레벨은 KPI ④ 에 흡수됐다"는 틀린 말이었다 — HomeLevelKpi 는 어디서도
+ *   렌더되지 않는 고아 컴포넌트다(app/page.tsx 가 import 하지 않는다). 레벨은 /my(지역 레벨)에만 있다.
  */
 
 const DISMISS_KEY = "nz_resume_popup_dismissed";

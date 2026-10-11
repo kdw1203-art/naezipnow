@@ -1,5 +1,10 @@
 import { getServiceSupabase } from "@/lib/supabase/service";
 
+/* [1056 · C1] 임장노트 저장("note")은 여기 못 넣는다 — 운영 DB 의 CHECK 제약(bookmarks_target_type_check)이
+   post · report · expert · meeting · market · complex 만 허용한다(2026-10-11 pg_constraint 실측). 마이그레이션 없이
+   타입만 더하면 API 가 받고 DB 가 거절해 500 이 된다. 같은 이유로 아래 "listing" 도 CHECK 목록에 **없다** —
+   매물 저장(components/ListingSaveButton)은 insert 단계에서 거절된다(가산 마이그레이션으로 note · listing 을 CHECK 에
+   더해야 한다 — 이 묶음은 스키마를 바꾸지 않는다). /my "저장한 노트" 가 늘 0건이던 원인이 이것이다. */
 export type BookmarkTargetType =
   | "post"
   | "report"

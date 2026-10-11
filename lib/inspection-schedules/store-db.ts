@@ -59,6 +59,26 @@ export async function listSchedules(
   return (data ?? []).map(mapRow);
 }
 
+/** [1056 · C7] 상태 planned 이고 scheduled_at 이 [startIso, endIso) 인 일정 — 작성자 무관(리마인드 크론용).
+    실패는 던진다 — []로 누르면 크론이 "내일 일정 없음"으로 보내지 않고 조용히 지나간다. */
+export async function listPlannedSchedulesBetween(
+  startIso: string,
+  endIso: string,
+): Promise<InspectionSchedule[]> {
+  const sb = getServiceSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from("inspection_schedules")
+    .select("*")
+    .eq("status", "planned")
+    .gte("scheduled_at", startIso)
+    .lt("scheduled_at", endIso)
+    .order("scheduled_at", { ascending: true })
+    .limit(500);
+  if (error) throw scheduleQueryError("inspection_schedules (내일 일정)", error);
+  return (data ?? []).map(mapRow);
+}
+
 export async function getSchedule(id: string): Promise<InspectionSchedule | null> {
   const sb = getServiceSupabase();
   if (!sb) return null;

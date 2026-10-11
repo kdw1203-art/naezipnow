@@ -39,8 +39,9 @@ export const maxDuration = 120;
  * fail-soft: hard-throw 하지 않고 JSON 요약을 반환한다.
  * dryRun: ?dry=1 이면 명단만 세고 아무것도 보내지 않으며 단계도 올리지 않는다.
  *
- * 주기: `.github/workflows/etl.yml` 의 `alerts` 잡이 하루 한 번(09:00 UTC = 18:00 KST)
+ * 주기: `.github/workflows/etl.yml` 의 `alerts` 잡이 하루 한 번(06:00 UTC = 15:00 KST · 오후 15시쯤)
  *       호출한다. 매일 돌아도 매물당 단계가 올라갈 때만 나가므로 최대 2번이다.
+ *       [1056 · C8] 예전 주석 "09:00 UTC = 18:00 KST"는 틀렸다 — 2026-08-10 감축 뒤 스케줄은 '0 6 * * *' 하나다.
  *       (Vercel 크론은 이 플랜에서 실행되지 않는다. 스케줄러는 etl.yml 하나뿐이다.)
  */
 

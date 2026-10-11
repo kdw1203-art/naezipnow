@@ -5,6 +5,9 @@ import { invalidateComplexById } from "@/lib/complex/complex-invalidate";
 import { safeAuth } from "@/lib/safe-auth";
 import { togglePostLike } from "@/lib/posts-store";
 import { lookupPost, postLookupErrorResponse } from "@/lib/community/post-lookup";
+import { postHref } from "@/lib/town/post-href";
+import { likeMilestone, notifyPostLikeMilestone } from "@/lib/notifications/engagement-notify";
+import { logger } from "@/lib/log";
 
 export const runtime = "nodejs";
 
@@ -49,6 +52,21 @@ export async function POST(
       { error: "공감 처리에 실패했습니다. Supabase에 post_likes 테이블이 있는지 확인하세요." },
       { status: 503 },
     );
+  }
+
+  /* [1056 · B1] 좋아요가 작성자에게 조용했다 — 카운트만 올랐다. 경계(1·5·10·25·50·100)에 닿을 때,
+     누른 사람이 작성자 본인이 아닐 때만 인앱(+설정 켜진 사람은 푸시). 수신 주소는 Post 에 실리는
+     notifyEmail(authorEmail 은 rowToPost 가 응답용 Post 에 싣지 않는다). fail-soft. */
+  const authorEmail = found.post.notifyEmail?.trim().toLowerCase() ?? "";
+  const likerEmail = session?.user?.email?.trim().toLowerCase() ?? "";
+  if (result.liked && authorEmail && authorEmail !== likerEmail && likeMilestone(result.likeCount)) {
+    void notifyPostLikeMilestone({
+      authorEmail,
+      postId,
+      postTitle: found.post.title,
+      likeCount: result.likeCount,
+      postPath: postHref(found.post),
+    }).catch((e) => logger.error("[post-like-notify]", e));
   }
 
   revalidatePath(`/town/story/${postId}`); // ISR 이야기 상세의 공감 수 즉시 재생성 [1006]

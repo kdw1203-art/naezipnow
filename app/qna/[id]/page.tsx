@@ -88,20 +88,17 @@ export async function generateMetadata({
   };
 }
 
+/* [1056 · C5] "채택된 답변" 배지·테두리를 뺐다 — complex_answers.is_accepted 를 true 로 만드는 API 가 없다
+   (app/api/qna/[id]/answers 는 POST 등록뿐 · 채택 라우트 없음 · 운영 DB 채택 행 0건 실측). 데이터가 가질 수 없는
+   상태를 그리는 코드는 "채택 기능이 있다"는 거짓 신호다. 채택 API 가 생기면 그때 다시 그린다. */
 function AnswerCard({ a }: { a: QnaAnswer }) {
   return (
-    <article className={`card ${a.isAccepted ? "border border-primary" : ""}`}>
+    <article className="card">
       <div className="flex items-center gap-2 t-sub text-text-3">
         <span className="inline-flex items-center gap-1">
           <Icon name="user" size={13} />
           {a.authorLabel}
         </span>
-        {a.isAccepted && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft chip-pad t-sub font-semibold text-primary">
-            <Icon name="check" size={12} />
-            채택된 답변
-          </span>
-        )}
         <span className="ml-auto">{shortDate(a.createdAt)}</span>
       </div>
       <p className="mt-2 whitespace-pre-wrap t-body text-text-1">{a.body}</p>

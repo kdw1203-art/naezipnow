@@ -12,6 +12,7 @@ import { logger } from "@/lib/log";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { WishlistSection } from "./WishlistSection";
 import { SavedSearchesSection } from "./SavedSearchesSection";
+import { SavedPostsSection } from "./SavedPostsSection";
 import { WatchlistRows, type WatchRow } from "./WatchlistRows";
 import { pctChange } from "@/lib/format/delta";
 
@@ -42,12 +43,18 @@ export const metadata: Metadata = {
 
 /* [994] /my 17 → 7 — 관심 단지·관심 매물(옛 /my/wishlist)·저장 검색(옛 /my/saved-searches)을
    한 화면의 탭으로. 옛 URL 은 redirect-map 이 ?tab= 으로 보낸다. */
-type WatchTab = "complex" | "listings" | "searches";
+/* [1056 · C2] "저장한 글" 탭 — 동네 글의 저장(북마크 type=post)이 어디에도 모이지 않았다. */
+type WatchTab = "complex" | "listings" | "searches" | "saved";
 const TABS: { key: WatchTab; label: string }[] = [
   { key: "complex", label: "관심 단지" },
   { key: "listings", label: "관심 매물" },
   { key: "searches", label: "저장 검색" },
+  { key: "saved", label: "저장한 글" },
 ];
+const TAB_LABEL: Record<WatchTab, string> = Object.fromEntries(TABS.map((t) => [t.key, t.label])) as Record<
+  WatchTab,
+  string
+>;
 function WatchTabs({ active }: { active: WatchTab }) {
   return (
     <nav aria-label="관심 종류" className="mb-4 flex flex-wrap gap-1.5">
@@ -99,12 +106,19 @@ export default async function WatchlistDashboardPage({
   }
   const email = session.user.email;
   const { tab: rawTab } = await searchParams;
-  const tab: WatchTab = rawTab === "listings" || rawTab === "searches" ? rawTab : "complex";
+  const tab: WatchTab =
+    rawTab === "listings" || rawTab === "searches" || rawTab === "saved" ? rawTab : "complex";
   if (tab !== "complex") {
     return (
-      <PageShell breadcrumb={`마이 › 관심 › ${tab === "listings" ? "관심 매물" : "저장 검색"}`} title="관심">
+      <PageShell breadcrumb={`마이 › 관심 › ${TAB_LABEL[tab]}`} title="관심">
         <WatchTabs active={tab} />
-        {tab === "listings" ? <WishlistSection email={email} /> : <SavedSearchesSection email={email} />}
+        {tab === "listings" ? (
+          <WishlistSection email={email} />
+        ) : tab === "saved" ? (
+          <SavedPostsSection email={email} />
+        ) : (
+          <SavedSearchesSection email={email} />
+        )}
       </PageShell>
     );
   }

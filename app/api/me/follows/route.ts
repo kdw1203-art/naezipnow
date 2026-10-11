@@ -19,6 +19,8 @@ import {
 import { applyRateLimit, WRITE_RATE_LIMIT, READ_RATE_LIMIT } from "@/lib/rate-limit";
 import { scheduleProfileInvalidation } from "@/lib/town/invalidate-town";
 import { dbUnavailable } from "@/lib/api/db-unavailable";
+import { notifyNewFollower } from "@/lib/notifications/engagement-notify";
+import { logger } from "@/lib/log";
 
 export const runtime = "nodejs";
 
@@ -104,10 +106,22 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    /* [1056 · B4] 팔로우가 상대에게 조용했다 — 팔로워 수만 바뀌었다. followUser 는 upsert 라
+       이미 팔로우 중인 사람이 다시 눌러도 조용히 지나가므로, 그 전에 상태를 봐 **새 팔로우일 때만**
+       알린다(조회 실패는 "모름" — 알리지 않는다). 알림 실패는 팔로우를 되돌리지 않는다. */
+    const wasFollowing = await isFollowing(session.user.email, followedEmail).catch(
+      (): boolean | null => null,
+    );
     await followUser(session.user.email, followedEmail);
     /* [1010 · 동네축] 공개 프로필(/u/{handle}, TTL 900초 → 1일)이 팔로워 수를 서버에서 그린다 —
        늘린 TTL 만큼 숫자가 굳지 않게 그 사람 프로필만 비운다. 실패는 헬퍼가 삼킨다. */
     scheduleProfileInvalidation(followedEmail);
+    if (wasFollowing === false) {
+      void notifyNewFollower({
+        followedEmail,
+        followerEmail: session.user.email,
+      }).catch((e) => logger.error("[follow-notify]", e));
+    }
     return NextResponse.json({ ok: true });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "팔로우 실패";

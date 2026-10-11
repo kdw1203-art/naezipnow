@@ -35,6 +35,9 @@ export const EARN_RULES: Record<string, EarnRule> = {
      실데이터 진행도를 재검증한 뒤에만 청구를 통과시킨다(app/api/missions/claim). */
   weekly_mission: { key: "weekly_mission", label: "주간 미션 달성", points: 50, dailyCap: 3 },
   attendance: { key: "attendance", label: "출석", points: 10, dailyCap: 1 },
+  /* [1056 · A7] 실거래가 게임(/quiz) 하루 1판 완주 — 참여형 무상 리워드. refId=KST 날짜 멱등
+     (app/api/quiz/complete). 점수와 무관하게 완주 1회 10P. */
+  quiz_daily: { key: "quiz_daily", label: "실거래가 게임 하루 1회", points: 10, dailyCap: 1 },
   /* 연속 출석 보너스 — 출석 기본 10P 에 얹는 추가분(3일 +10P → 합 20P, 7일 +40P → 합 50P).
      lib/points/store-db.checkIn 의 스트릭 티어(10/20/50)와 합이 일치해야 한다. */
   attendance_streak_3: {
@@ -69,6 +72,27 @@ export const EARN_RULES: Record<string, EarnRule> = {
     once: true,
   },
 };
+
+/**
+ * [1056 · A5] 적립 방법 표(/my/points EarnGuide)에 보일 규칙.
+ *  - template_used 는 숨긴다: 체크리스트 공유(/notes/templates)가 보관 화면(lib/seo/archived-routes.ts)이라
+ *    새로 적립할 길이 없다. 규칙 자체는 과거 내역 라벨용으로 남긴다.
+ *  - listing_* 는 인증 공인중개사만 적립 가능(app/api/listings 가 isBroker 로 막는다) — 일반 회원·게스트에겐
+ *    받을 수 없는 항목이므로 숨기고, 중개사에게는 "공인중개사 매물 적립" 묶음으로 따로 보인다.
+ */
+export function earnGuideRules(opts: { isBroker: boolean }): { general: EarnRule[]; broker: EarnRule[] } {
+  const general: EarnRule[] = [];
+  const broker: EarnRule[] = [];
+  for (const rule of Object.values(EARN_RULES)) {
+    if (rule.key === "template_used") continue;
+    if (rule.key.startsWith("listing_")) {
+      if (opts.isBroker) broker.push(rule);
+      continue;
+    }
+    general.push(rule);
+  }
+  return { general, broker };
+}
 
 export type SpendItem = {
   key: string;

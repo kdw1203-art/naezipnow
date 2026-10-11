@@ -2,7 +2,6 @@ import "server-only";
 import { postHref } from "@/lib/town/post-href";
 import { cache } from "react";
 import { getComplexRentHistoryByNames } from "@/lib/market/complex-rent";
-import { listQuestionsForComplex } from "@/lib/qna/store";
 import { listProjects } from "@/lib/redevelopment/store";
 import { getAreaBands, getRegionRelative } from "@/lib/complex/complex-store";
 import { getSupplyForAreaStrict } from "@/lib/market/supply";
@@ -32,7 +31,7 @@ import { noteCoverUrl } from "@/lib/notes/cover/resolve";
    인자가 다르면 조용히 두 번 조회한다(틀리진 않지만 이득이 사라진다). 그래서
    지역 문자열 같은 파생 인자는 아래 헬퍼로만 만든다. */
 
-/** ComplexRentSection·ComplexQna 가 쓰는 지역 문자열 — 본문 v.city/v.dong 과 같은 규칙. */
+/** ComplexRentSection 이 쓰는 지역 문자열 — 본문 v.city/v.dong 과 같은 규칙. ([1056 · C6] ComplexQna 는 없는 컴포넌트였다) */
 export function sectionRegionLabel(city: string | null | undefined, district: string | null | undefined): string {
   const dong = district || city || "지역";
   return `${city ?? ""} ${dong}`.trim();
@@ -47,7 +46,8 @@ export const loadRentHistory = cache((region: string, name: string) =>
   getComplexRentHistoryByNames(region, name),
 );
 
-export const loadComplexQuestions = cache((name: string) => listQuestionsForComplex(name, 5));
+/* [1056 · C6] loadComplexQuestions(단지 Q&A 5건 preload)를 지웠다 — 단지 화면의 어떤 컴포넌트도 questions 를 그리지 않는다
+   (ComplexQna 컴포넌트 없음 · /qna 는 보관 경로). 쓰는 곳 없는 조회가 단지 콜드 렌더마다 complex_questions 를 1번 읽고 있었다. */
 
 /* [970 · B-02] 시/도 + 자치구 — "중구"만으로는 서울·인천·대구·울산·부산·대전 중구가 섞였다.
    city 가 비어 있으면(대표행에 시/도 없음) 예전처럼 자치구만으로 찾는다. */
@@ -310,7 +310,6 @@ export function prefetchComplexSections(args: {
   const dong = args.district || args.city || "지역";
   const city = (args.city ?? "").trim();
   swallow(loadRentHistory(region, args.name));
-  swallow(loadComplexQuestions(args.name.trim()));
   /* [970 · B-02] 섹션 컴포넌트와 같은 (자치구, 시/도) 인자 — 달라지면 dedupe 가 깨진다 */
   swallow(loadRedevelopment(dong.trim(), city));
   swallow(loadAreaBands(args.complexId));

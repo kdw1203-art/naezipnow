@@ -7,6 +7,7 @@ import { areaBandDisplayLabel } from "@/lib/complex/area-band-label";
 import Link from "next/link";
 import { CommentsRetry } from "./comments-retry";
 import { displayAuthorLabel, isLabAuthor } from "@/lib/notes/author-label";
+import { authorProfileHref } from "@/lib/profile/author-href";
 import { cache, Suspense } from "react";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { notFound } from "next/navigation";
@@ -110,7 +111,10 @@ type NoteView = {
   oneLiner: string; // 한 줄 총평 = 제목 (20a ③)
   directVisit: boolean; // 직접 방문 배지 (20a ①)
   fieldVerified: boolean; // [#71] 현장 인증 배지 (위치 확인 통과)
-  visitMeta: string; // 방문일·작성자 (20a ②)
+  visitMeta: string; // 방문일·날씨 (20a ②) — 작성자는 아래 author 로 따로(링크를 달기 위해)
+  /** [1056 · B8] 작성자 이름 · 사람이면 공개 프로필(/u/{이름}) 주소, 아니면 null */
+  author: string;
+  authorHref: string | null;
   /** [983] 운영진(Lab)이 쓴 글인가 — 화면에 "운영진 예시"로 적는다 */
   lab: boolean;
   axes: Axis[]; // 채광·소음·주차·교통 4축 (20a ④)
@@ -279,8 +283,10 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
   const doneCount = n.checklist.filter((c) => c.done).length;
   const meta: string[] = [`방문 ${n.visitDate}`];
   if (n.weather) meta.push(n.weather);
-  /* [983] Lab 표기 7종을 하나로 — 저장값은 그대로 둔다(lib/notes/author-label) */
-  meta.push(displayAuthorLabel(n.authorLabel) || "내집나우 스카우트");
+  /* [983] Lab 표기 7종을 하나로 — 저장값은 그대로 둔다(lib/notes/author-label)
+     [1056 · B8] 작성자는 meta 줄에 섞지 않고 따로 — 사람 이름이면 /u/{이름} 링크를 단다(/u 로 들어오는
+     링크가 사이트에 0개였다). Lab·마스킹·익명은 글자 그대로. */
+  const author = displayAuthorLabel(n.authorLabel) || "내집나우 스카우트";
 
   const chips = [n.region, displayTitle].filter(Boolean);
   const weakest = scoreEntries
@@ -314,6 +320,8 @@ function toView(n: InspectionNote, visitsOverride?: Visit[]): NoteView {
     /* [#71] 현장 인증 — 작성 시점 위치 확인(거리 버킷만 저장) 통과 여부 */
     fieldVerified: Boolean(n.metadata?.visitVerified),
     visitMeta: meta.join(" · "),
+    author,
+    authorHref: authorProfileHref(author),
     lab: isLabAuthor(n.authorLabel),
     axes,
     body:
@@ -1176,7 +1184,17 @@ export default async function NoteDetailPage({
                   />
                 </span>
               )}
-              <span className="text-text-3">{v.visitMeta}</span>
+              <span className="text-text-3">
+                {v.visitMeta} ·{" "}
+                {/* [1056 · B8] 작성자 — 사람이면 공개 프로필 링크(글자 모양은 종전과 같다) */}
+                {v.authorHref ? (
+                  <Link href={v.authorHref} className="tap-line text-text-3">
+                    {v.author}
+                  </Link>
+                ) : (
+                  v.author
+                )}
+              </span>
               <ExpertBadge badge={authorExpertBadge} />
               {/* [1015 · 규칙 C] "운영진 예시" 설명 배지는 뺐다 — visitMeta 끝의 작성자 이름이 이미
                   "내집나우 Lab"(displayAuthorLabel)이라 메타 줄의 이름만으로 구분된다. */}

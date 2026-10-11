@@ -28,6 +28,7 @@ import { FUNNEL_EVENT, recordFunnelEvent } from "@/lib/platform-funnel-events";
 import { looksLikeEmail } from "@/lib/privacy/mask-email";
 import { addToWatchlist, isWatching } from "@/lib/watchlist/store-db";
 import { appendInboxNotification } from "@/lib/notifications/inbox";
+import { notifyRegionLevelUp } from "@/lib/notifications/engagement-notify";
 import { checkWatchlistAddQuota, resolveQuotaPlan } from "@/lib/subscriptions/usage-summary";
 import { withUserQuotaLock } from "@/lib/subscriptions/quota-lock";
 import { logger } from "@/lib/log";
@@ -315,7 +316,17 @@ export async function POST(req: Request) {
         const count = await countNotesByRegionToken(session.user!.email!, gu);
         const tier = tierReachedAt(count);
         if (tier) {
-          await awardPoints(session.user!.email!, "region_level_up", `${gu}:${tier.level}`);
+          const award = await awardPoints(session.user!.email!, "region_level_up", `${gu}:${tier.level}`);
+          /* [1056 · B6] 레벨업 50P 가 조용히 들어갔다 — 받은편지함에 아무 줄도 없었다. 실제 지급(>0)됐을 때만
+             알린다(멱등 refId 로 0 이면 이미 받은 경계다). 지급 판정은 그대로, 알림 실패는 삼킨다. */
+          if (award.ok && award.awarded > 0) {
+            await notifyRegionLevelUp({
+              userEmail: session.user!.email!,
+              regionName: gu,
+              levelLabel: tier.label,
+              pointsAwarded: award.awarded,
+            }).catch(() => {});
+          }
         }
       } catch {
         /* 지급 판정 실패는 조용히 넘긴다 — 다음 경계에서 다시 기회가 있다 */

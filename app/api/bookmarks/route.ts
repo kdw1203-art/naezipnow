@@ -81,13 +81,20 @@ export async function POST(req: Request) {
       return NextResponse.json(payload, { status: 403 });
     }
 
-    const rec = await addBookmark({
-      userEmail: email,
-      targetType,
-      targetId,
-      label: body.label ?? null,
-      note: body.note ?? null,
-    });
+    /* [1056 · C1] DB 가 insert 를 거절하면(예: CHECK 제약 밖의 target_type — "listing" 이 그렇다, lib/bookmarks/store.ts)
+       예전엔 던진 채로 500 HTML 이 나가 버튼이 "저장됨" 으로 남았다. 사실대로 503 + 고정 문구로 답한다. */
+    let rec: Awaited<ReturnType<typeof addBookmark>>;
+    try {
+      rec = await addBookmark({
+        userEmail: email,
+        targetType,
+        targetId,
+        label: body.label ?? null,
+        note: body.note ?? null,
+      });
+    } catch (e) {
+      return dbUnavailable("bookmark-add", e, "저장 실패 · 잠시 후 다시");
+    }
     return NextResponse.json({ bookmark: rec });
   });
 }

@@ -111,24 +111,25 @@ export default async function DigestPage() {
           </div>
         </div>
 
-        {/* 구독 CTA — 매주 받아보기 → 알림 설정 */}
-        {/* 설정 → 푸시 알림 → "주간 다이제스트". 예전에는 이 링크가 수신함(/notifications)
+        {/* 받는 설정 — 설정 → 푸시 알림 → "주간 다이제스트". 예전에는 이 링크가 수신함(/notifications)
             으로 갔고, 정작 켤 스위치도 보내는 크론도 없어서 지킬 수 없는 안내였다.
-            지금은 옵트인 스위치(notification_preferences.push_weekly_digest)와
-            발송 크론(/api/cron/weekly-digest, 월 18:00 KST)이 실제로 있다. */}
+            지금은 스위치(notification_preferences.push_weekly_digest)와 발송 크론이 실제로 있다.
+            [1056 · C3] 틀린 사실 둘을 고쳤다 — ① 크론은 etl.yml alerts 잡 월 06:00 UTC = **15:00 KST**(오후)지 18:00·저녁이
+            아니다. ② 스위치 기본값이 켜짐(lib/notification-prefs DEFAULT_PREFS.pushWeeklyDigest=true · 크론은 명시적 false 만
+            제외)이라 "매주 받아보기"(옵트인 권유)가 아니라 이미 받는 사람이 **끄는** 설정이다. */}
         <Link
           href="/my/settings"
           className="rise-in-1 tile flex items-center justify-between rounded-2xl border border-line bg-surface px-4 py-3.5 no-underline"
         >
           <div>
-            <div className="t-body font-bold text-ink">매주 받아보기</div>
+            <div className="t-body font-bold text-ink">받는 설정 · 마이 › 설정</div>
             {/* [1015] 안내문 → 사실 한 줄(브리프 규칙 D) */}
             <div className="mt-0.5 t-sub text-text-2">
-              설정 › 알림 › 푸시 알림 ‘주간 다이제스트’ · 매주 월요일 저녁 1회
+              푸시 알림 ‘주간 다이제스트’ · 기본 켜짐 · 매주 월요일 오후(15시쯤) 1회
             </div>
           </div>
           <span className="shrink-0 rounded-lg bg-primary-soft px-3.5 py-2 text-xs font-bold text-primary">
-            알림 설정 ›
+            알림 설정 보기 ›
           </span>
         </Link>
 

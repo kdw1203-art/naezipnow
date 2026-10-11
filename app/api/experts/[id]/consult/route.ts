@@ -15,7 +15,7 @@ import {
 } from "@/lib/expert-consultations/store-db";
 import { getExpert, refreshExpertResponseStats } from "@/lib/experts/store-db";
 import { invalidateExpertRoutes } from "@/lib/town/invalidate-town";
-import { appendInboxNotification } from "@/lib/notifications/inbox";
+import { notifyExpertConsultReply } from "@/lib/notifications/engagement-notify";
 import { checkExpertConsultQuota, resolveQuotaPlan } from "@/lib/subscriptions/usage-summary";
 import { withUserQuotaLock } from "@/lib/subscriptions/quota-lock";
 import { logger } from "@/lib/log";
@@ -226,11 +226,11 @@ export async function PATCH(
   /* 답변 알림 — 신청 완료 화면이 "답변은 알림으로 안내됩니다"라고 약속한다.
      [953] 의뢰자 상담함(/my/consultations)이 생겼으므로 거기로 딥링크한다 — 답변
      전문과 후기 작성 버튼이 그 화면에 있다. */
-  void appendInboxNotification({
-    userEmail: result.userEmail,
-    title: `${expert.name} 전문가 답변이 도착했어요`,
-    body: replyMessage.length > 160 ? `${replyMessage.slice(0, 159)}…` : replyMessage,
-    actionUrl: "/my/consultations#sent",
+  /* [1056] 설정의 "전문가 답변" 푸시 스위치(pushExpert)를 읽는 발송자가 없었다 — 인앱 + 설정 게이트 푸시 */
+  void notifyExpertConsultReply({
+    requesterEmail: result.userEmail,
+    expertName: expert.name,
+    replyMessage,
   }).catch(() => {});
   /* [953] 응답률·상담 완료 수를 프로필 컬럼에 반영 — 목록 정렬("응답 빠른 순")과
      카드 지표가 실측값을 쓴다. 실패해도 답변 자체는 이미 저장됐다. */

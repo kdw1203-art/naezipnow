@@ -38,39 +38,58 @@ const EMPTY: VerifiedOnboarding = {
   bonusAwarded: 0,
 };
 
+/**
+ * [1056 · A3] 3스텝 판정 조회만 — 지급 없음. /my 허브(getVerifiedOnboarding)와 미션 센터의
+ * "시작 3미션"(lib/missions/missions.ts)이 **같은 질의**로 같은 사실을 보게 하기 위해 분리했다.
+ * 예전엔 미션 쪽이 다른 3개(관심 단지·키워드 알림·노트)를 세면서 같은 onboarding_complete 200P
+ * 를 청구해, 어느 쪽이 먼저 끝나든 다른 쪽은 자기 항목이 미완인데도 "적립 완료"가 됐다.
+ * 조회 실패는 던진다(호출부가 "진행도 불러오기 실패"로 접는다).
+ */
+export async function readVerifiedOnboardingSteps(email: string): Promise<RealOnboardingStep[]> {
+  const sb = getServiceSupabase();
+  const em = email.trim().toLowerCase();
+  if (!sb || !em) return [];
+  // watchlist·노트 적재 경로는 세션 이메일 원문을 그대로 쓰므로 두 표기를 모두 조회
+  const emailForms = [...new Set([em, email.trim()])];
+  const [watchlistRes, noteRes, publicNoteRes] = await Promise.all([
+    sb
+      .from("user_watchlist")
+      .select("id", { count: "exact", head: true })
+      .in("user_email", emailForms),
+    sb
+      .from("inspection_notes")
+      .select("id", { count: "exact", head: true })
+      .in("author_email", emailForms),
+    sb
+      .from("inspection_notes")
+      .select("id", { count: "exact", head: true })
+      .in("author_email", emailForms)
+      .eq("is_public", true),
+  ]);
+  for (const r of [watchlistRes, noteRes, publicNoteRes]) {
+    if (r.error) throw new Error(`온보딩 3스텝 조회 실패: ${r.error.message}`);
+  }
+  const completedSteps: RealOnboardingStep[] = [];
+  if ((watchlistRes.count ?? 0) > 0) completedSteps.push("explore");
+  if ((noteRes.count ?? 0) > 0) completedSteps.push("inspection");
+  if ((publicNoteRes.count ?? 0) > 0) completedSteps.push("share");
+  return completedSteps;
+}
+
 export async function getVerifiedOnboarding(email: string): Promise<VerifiedOnboarding> {
   const sb = getServiceSupabase();
   const em = email.trim().toLowerCase();
   if (!sb || !em) return EMPTY;
-  // watchlist·노트 적재 경로는 세션 이메일 원문을 그대로 쓰므로 두 표기를 모두 조회
-  const emailForms = [...new Set([em, email.trim()])];
 
   try {
-    const [watchlistRes, noteRes, publicNoteRes, userRes] = await Promise.all([
-      sb
-        .from("user_watchlist")
-        .select("id", { count: "exact", head: true })
-        .in("user_email", emailForms),
-      sb
-        .from("inspection_notes")
-        .select("id", { count: "exact", head: true })
-        .in("author_email", emailForms),
-      sb
-        .from("inspection_notes")
-        .select("id", { count: "exact", head: true })
-        .in("author_email", emailForms)
-        .eq("is_public", true),
+    const [completedSteps, userRes] = await Promise.all([
+      readVerifiedOnboardingSteps(email),
       sb
         .from("app_users")
         .select("onboarding_completed_at")
         .eq("email", em)
         .maybeSingle(),
     ]);
-
-    const completedSteps: RealOnboardingStep[] = [];
-    if ((watchlistRes.count ?? 0) > 0) completedSteps.push("explore");
-    if ((noteRes.count ?? 0) > 0) completedSteps.push("inspection");
-    if ((publicNoteRes.count ?? 0) > 0) completedSteps.push("share");
 
     const isComplete = completedSteps.length >= REAL_ONBOARDING_STEPS.length;
     let completedAt: string | null = userRes.data?.onboarding_completed_at

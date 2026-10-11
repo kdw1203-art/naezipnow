@@ -4,7 +4,8 @@ import { logger } from "@/lib/log";
 
 /* [#119·#120] 미션 센터 — 시작 3미션 + 주간 미션.
    진행도는 실데이터 파생(lib/missions), 적립은 서버 재검증 청구(claim API).
-   실측 0(글·구독·적립) 상태에 대한 처방: 첫 행동을 계단 3개로 쪼개고 보상을 명시. */
+   실측 0(글·구독·적립) 상태에 대한 처방: 첫 행동을 계단 3개로 쪼개고 보상을 명시.
+   [1056 · A3] 시작 3미션은 /my 허브의 온보딩 3스텝과 같은 항목이다(이전엔 다른 3개를 세면서 같은 200P 를 청구했다). */
 
 import { MissionClaim } from "./MissionClaim";
 
@@ -30,7 +31,7 @@ export async function MissionsSection({ email }: { email: string }) {
     <>
       <h2 className="rise-in t-section text-ink">미션</h2>
       <p className="rise-in-1 mt-1 t-body text-text-2">
-        실제 활동으로 진행도가 자동 채워지고, 달성하면 포인트를 받아갈 수 있어요.
+        실제 활동으로 진행도가 채워짐 · 달성 시 적립 청구
       </p>
 
       {!board ? (
@@ -58,10 +59,8 @@ export async function MissionsSection({ email }: { email: string }) {
                   className="card tile flex items-center justify-between gap-3 rounded-2xl px-4 py-3.5"
                 >
                   <div className="min-w-0">
-                    <div className="t-body font-bold text-ink">
-                      {m.done ? "✓ " : ""}
-                      {m.label}
-                    </div>
+                    {/* [1056] "✓ " 접두 제거 — 완료 여부는 오른쪽 칩이 말한다(기호 금지 규칙) */}
+                    <div className="t-body font-bold text-ink">{m.label}</div>
                     <p className="mt-0.5 t-sub text-text-2">{m.desc}</p>
                   </div>
                   <span
@@ -75,7 +74,7 @@ export async function MissionsSection({ email }: { email: string }) {
               ))}
             </div>
             <p className="t-caption mt-1.5 px-1 text-text-3">
-              3가지를 모두 마치면 완주 보너스 200P를 받을 수 있어요 (1회).
+              3가지 완료 시 완주 보너스 200P · 1회 · 마이 홈의 시작 체크리스트와 같은 항목
             </p>
           </section>
 
@@ -94,10 +93,7 @@ export async function MissionsSection({ email }: { email: string }) {
                   className="card tile flex items-center justify-between gap-3 rounded-2xl px-4 py-3.5"
                 >
                   <div className="min-w-0">
-                    <div className="t-body font-bold text-ink">
-                      {ai.done ? "✓ " : ""}
-                      {ai.label}
-                    </div>
+                    <div className="t-body font-bold text-ink">{ai.label}</div>
                     <p className="mt-0.5 t-sub text-text-2">{ai.desc}</p>
                   </div>
                   <span className="shrink-0 t-sub font-bold text-primary">+{ai.points}P ›</span>

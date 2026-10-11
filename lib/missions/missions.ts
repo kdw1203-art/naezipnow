@@ -2,16 +2,50 @@ import "server-only";
 
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { kstParts } from "@/lib/format/kst";
+import {
+  readVerifiedOnboardingSteps,
+  type RealOnboardingStep,
+} from "@/app/api/me/onboarding/verify";
 
 /* ============================================================
    [#119·#120] 미션 — 시작 3미션 + 주간 미션.
    원칙: 진행도는 **전부 기존 실데이터에서 파생**한다(전용 진행 테이블 없음).
    달성→적립은 point_ledger 의 refId 멱등으로 이중 지급을 막는다.
-     시작 3미션: 관심 단지 1곳 · 키워드 알림 1개 · 첫 기록 1편
-                → 전부 달성 시 onboarding_complete(200P, once) 청구 가능
+     시작 3미션: /my 허브의 온보딩 3스텝과 **같은 것**(app/api/me/onboarding/verify.ts)
+                — 관심 단지·지역 알림 1개(user_watchlist) · 첫 임장노트 1편 · 노트 1편 공개
+                → 전부 달성 시 onboarding_complete(200P, once). 청구는 getVerifiedOnboarding 이 멱등 지급.
+                [1056 · A3] 예전엔 여기서 다른 3개(관심 단지·키워드 알림·노트)를 세면서 같은 200P
+                를 청구했다 — 두 체크리스트 중 먼저 끝난 쪽이 받고, 다른 쪽은 미완인데 "적립 완료"였다.
      주간 미션(ISO 주 단위 리셋): 노트 1편 · 출석 3회 · 관심 단지 +2곳
                 → 각 달성 시 weekly_mission(50P) 청구, refId=주차:키 멱등
    ============================================================ */
+
+/* [1056 · A3] 시작 3미션의 표시 정의 — 순서·id 는 verify.ts 의 REAL_ONBOARDING_STEPS 와 같다 */
+export const START_MISSION_DEFS: ReadonlyArray<{
+  key: RealOnboardingStep;
+  label: string;
+  desc: string;
+  href: string;
+}> = [
+  {
+    key: "explore",
+    label: "관심 단지 또는 지역 알림 1개",
+    desc: "지도·단지 페이지의 관심 담기 또는 지역 알림 구독",
+    href: "/map",
+  },
+  {
+    key: "inspection",
+    label: "첫 임장노트 1편",
+    desc: "현장 퀵모드로 사진·메모만 저장해도 1편",
+    href: "/notes/new?quick=1",
+  },
+  {
+    key: "share",
+    label: "임장노트 1편 공개",
+    desc: "내 노트 목록에서 공개로 전환",
+    href: "/notes?mine=1",
+  },
+];
 
 export type MissionState = {
   key: string;
@@ -82,61 +116,42 @@ export async function buildMissionBoard(email: string): Promise<MissionBoard> {
   const weekKey = isoWeekKey();
   const weekStart = isoWeekStartIso();
 
-  const [watchAll, savedAll, notesAll, notesWeek, attendWeek, watchWeek, startClaimed, aiRunsAll, aiClaimed] =
+  const [verifiedSteps, notesWeek, attendWeek, watchWeek, startClaimed, aiRunsAll, aiClaimed] =
     await Promise.all([
-      sb.from("user_watchlist").select("complex_id", { count: "exact", head: true }).eq("user_email", email),
-      sb.from("saved_searches").select("id", { count: "exact", head: true }).eq("user_email", email),
-      sb.from("inspection_notes").select("id", { count: "exact", head: true }).eq("author_email", email),
+      /* [1056 · A3] 시작 3미션 = /my 허브의 온보딩 3스텝과 같은 질의(verify.ts) */
+      readVerifiedOnboardingSteps(email),
       sb.from("inspection_notes").select("id", { count: "exact", head: true }).eq("author_email", email).gte("created_at", weekStart),
       sb.from("point_ledger").select("id", { count: "exact", head: true }).eq("user_email", email).eq("reason", "attendance").gte("created_at", weekStart),
-      sb.from("user_watchlist").select("complex_id", { count: "exact", head: true }).eq("user_email", email).gte("created_at", weekStart),
+      /* [1056 · A4] 지역 알림 구독도 user_watchlist 에 `alert:region:*` 행으로 들어간다 — "관심 단지 2곳"에 세면 안 된다 */
+      sb
+        .from("user_watchlist")
+        .select("complex_id", { count: "exact", head: true })
+        .eq("user_email", email)
+        .not("complex_id", "like", "alert:%")
+        .gte("created_at", weekStart),
       alreadyAwardedRef(email, "onboarding_complete", null),
       /* [AI-39] 첫 AI 분석 — 워크벤치 실행 기록 */
       sb.from("ai_analysis_runs").select("id", { count: "exact", head: true }).eq("author_email", email),
       alreadyAwardedRef(email, "ai_first", null),
     ]);
-  for (const r of [watchAll, savedAll, notesAll, notesWeek, attendWeek, watchWeek]) {
+  for (const r of [notesWeek, attendWeek, watchWeek]) {
     if ((r as { error?: unknown }).error) throw new Error("미션 진행도 조회 실패");
   }
   const n = (r: { count: number | null }) => r.count ?? 0;
 
-  const start: MissionState[] = [
-    {
-      key: "watch",
-      label: "관심 단지 1곳 담기",
-      desc: "지도나 단지 페이지에서 ♥ 를 누르면 시세 변동을 추적해 드려요.",
-      href: "/map",
-      target: 1,
-      progress: Math.min(1, n(watchAll)),
-      done: n(watchAll) >= 1,
-      claimed: startClaimed,
-      points: 0,
-    },
-    {
-      key: "alert",
-      label: "키워드 알림 1개 켜기",
-      desc: "동네 이름을 등록하면 새 뉴스·청약이 잡히는 대로 알림함으로.",
-      href: "/town/news",
-      target: 1,
-      progress: Math.min(1, n(savedAll)),
-      done: n(savedAll) >= 1,
-      claimed: startClaimed,
-      points: 0,
-    },
-    {
-      key: "note",
-      label: "첫 기록 1편 남기기",
-      desc: "현장 퀵모드로 사진·메모만 먼저 저장해도 됩니다.",
-      href: "/notes/new?quick=1",
-      target: 1,
-      progress: Math.min(1, n(notesAll)),
-      done: n(notesAll) >= 1,
-      claimed: startClaimed,
-      points: 0,
-    },
-  ];
-  /* 시작 3미션 완주 판정은 기존 3개 기준 그대로(200P 조건 불변) —
-     [AI-39] 4번째 줄은 별도 100P 미션으로 뒤에 붙인다. */
+  const doneSteps = new Set<RealOnboardingStep>(verifiedSteps);
+  const start: MissionState[] = START_MISSION_DEFS.map((d) => ({
+    key: d.key,
+    label: d.label,
+    desc: d.desc,
+    href: d.href,
+    target: 1,
+    progress: doneSteps.has(d.key) ? 1 : 0,
+    done: doneSteps.has(d.key),
+    claimed: startClaimed,
+    points: 0,
+  }));
+  /* 시작 3미션 완주 판정(200P 조건) — [AI-39] 4번째 줄은 별도 100P 미션으로 뒤에 붙인다. */
   const startAllDone = start.every((m) => m.done);
   start.push({
     key: "first_ai",
@@ -154,7 +169,8 @@ export async function buildMissionBoard(email: string): Promise<MissionBoard> {
     {
       key: "note1",
       label: "임장노트 1편",
-      desc: "이번 주 다녀온 곳 한 곳이면 충분해요.",
+      /* [1056] 권유문 → 사실 */
+      desc: "이번 주 저장한 임장노트 1편",
       href: "/notes/new?quick=1",
       target: 1,
       progress: n(notesWeek),
@@ -162,7 +178,7 @@ export async function buildMissionBoard(email: string): Promise<MissionBoard> {
     {
       key: "attend3",
       label: "출석 3회",
-      desc: "출석 체크 3일 — 연속이 아니어도 됩니다.",
+      desc: "이번 주 출석 3일 · 연속이 아니어도 됨",
       href: "/my/points",
       target: 3,
       progress: n(attendWeek),
@@ -170,7 +186,8 @@ export async function buildMissionBoard(email: string): Promise<MissionBoard> {
     {
       key: "watch2",
       label: "관심 단지 2곳 추가",
-      desc: "비교하고 싶은 단지를 이번 주에 2곳 담아 보세요.",
+      /* [1056 · A4] 권유문("담아 보세요") → 사실 · 지역 알림은 세지 않는다는 기준을 적는다 */
+      desc: "이번 주 새로 담은 관심 단지 2곳 · 지역 알림 구독은 제외",
       href: "/map",
       target: 2,
       progress: n(watchWeek),

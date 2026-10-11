@@ -2,11 +2,21 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { safeAuth } from "@/lib/safe-auth";
 import { checkIn, getAttendanceHistory, kstDateString } from "@/lib/points/store-db";
+import {
+  attendanceRewardFor,
+  currentStreak,
+  latestAttendance,
+  nextAttendanceReward,
+} from "@/lib/points/attendance-rules";
 import { awardPoints, getBalance, getHistory } from "@/lib/points/ledger";
 import { applyRateLimit } from "@/lib/rate-limit";
 import { logger } from "@/lib/log";
 
 export const runtime = "nodejs";
+
+/* [1056 · A9] `attendance` 배열은 종전대로 최근 7일만 내려보내고(호환), 마지막 출석일(lastDate)은 30일 안에서 찾는다 */
+const ATTENDANCE_WINDOW_DAYS = 7;
+const LAST_DATE_WINDOW_DAYS = 30;
 
 export async function GET() {
   const session = await safeAuth();
@@ -17,7 +27,7 @@ export async function GET() {
      이미 되어 있어서, 실패하면 스트릭 표시가 조용히 빠질 뿐이다. */
   const loaded = await Promise.all([
     getBalance(session.user.email),
-    getAttendanceHistory(session.user.email, 7),
+    getAttendanceHistory(session.user.email, LAST_DATE_WINDOW_DAYS),
     getHistory(session.user.email, 10),
   ]).then(
     ([totalPoints, attendance, ledgerHistory]) =>
@@ -33,7 +43,7 @@ export async function GET() {
       { status: 503 },
     );
   }
-  const { totalPoints, attendance, ledgerHistory } = loaded;
+  const { totalPoints, attendance: attendance30, ledgerHistory } = loaded;
   const pointsHistory = ledgerHistory.map((r, i) => ({
     id: `${r.createdAt}-${i}`,
     delta: r.delta,
@@ -42,9 +52,25 @@ export async function GET() {
   }));
   // "오늘"은 출석 기록과 같은 KST 기준 (UTC 로 보면 KST 0~9시에 어긋난다)
   const today = kstDateString();
-  const checkedToday = attendance.some((a) => a.date === today);
-  const streak = attendance[0]?.streak ?? 0;
-  return NextResponse.json({ totalPoints, checkedToday, streak, attendance, pointsHistory });
+  const since7 = kstDateString(new Date(Date.now() - ATTENDANCE_WINDOW_DAYS * 86_400_000));
+  const attendance = attendance30.filter((a) => a.date >= since7);
+  const checkedToday = attendance30.some((a) => a.date === today);
+  /* [1056 · A1] 예전엔 `attendance[0]?.streak`(7일 안 최근 행)를 그대로 썼다 — 4일 전 출석한 사람도
+     "연속 출석 N일"로 보였고, 누르면 1일로 리셋됐다. 최근 행이 오늘·어제일 때만 유효한 스트릭이다. */
+  const streak = currentStreak(attendance30, today);
+  /* [1056 · A2] 다음 출석의 지급액(10/20/50) — 버튼이 늘 "+10P" 라고 적던 것의 수정 */
+  const nextReward = nextAttendanceReward(attendance30, today);
+  /* [1056 · A9] 마지막 출석일 — 스트릭이 끊긴 사람에게 "마지막 출석 10/7" 을 보여 주기 위해 */
+  const lastDate = latestAttendance(attendance30)?.date ?? null;
+  return NextResponse.json({
+    totalPoints,
+    checkedToday,
+    streak,
+    nextReward,
+    lastDate,
+    attendance,
+    pointsHistory,
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -65,10 +91,12 @@ export async function POST(req: NextRequest) {
         return { ok: false as const };
       },
     );
+    /* [1056 · A2] 내일 출석의 지급액도 같이 — 클라이언트가 티어표를 따로 들고 있지 않게 */
+    const nextReward = attendanceRewardFor(result.streak + 1);
     return NextResponse.json(
       read.ok
-        ? { ok: true, awarded: 0, balance: read.balance, ...result }
-        : { ok: true, awarded: 0, balance: null, ...result },
+        ? { ok: true, awarded: 0, balance: read.balance, nextReward, ...result }
+        : { ok: true, awarded: 0, balance: null, nextReward, ...result },
       { status: 200 },
     );
   }
@@ -96,6 +124,8 @@ export async function POST(req: NextRequest) {
       baseAwarded: base.awarded,
       bonusAwarded,
       balance,
+      /* [1056 · A2] 내일 출석의 지급액 — 출석 직후 "연속 N일 · 내일 20P" 표시용 */
+      nextReward: attendanceRewardFor(result.streak + 1),
       ...result,
     },
     { status: 201 },

@@ -10,11 +10,12 @@ import { expertBadgeText } from "@/lib/experts/taxonomy";
 import { getBalance } from "@/lib/points/ledger";
 import {
   listNotes,
-  getNote,
   inspectionAverageScore,
   type InspectionNote,
 } from "@/lib/inspection/store-db";
 import { listBookmarks } from "@/lib/bookmarks/store";
+import { getPost } from "@/lib/posts-store";
+import { postHref } from "@/lib/town/post-href";
 import { listMyPurchases } from "@/lib/report-purchases/store-db";
 import { getReport } from "@/lib/reports/store-db";
 import { listAlertSubscriptions } from "@/lib/alerts/subscriptions";
@@ -99,18 +100,34 @@ async function loadPlanExpiresAt(email: string): Promise<string | null> {
   }
 }
 
-/** 북마크 target_id 를 임장노트로 해석 (노트가 아니면 null → 자연 필터). 최대 10개만 조회.
-    조회 실패를 빈 배열로 누르면 "저장한 노트 없음"가 된다 — ok:false 로 구분한다. */
-async function loadSavedNotes(email: string): Promise<Loaded<InspectionNote[]>> {
+/** [1056 · C1] 저장한 노트 — 예전엔 **모든** 북마크 id(동네 글·매물·단지)를 getNote 로 풀어(최대 10 조회) 노트가 아닌 것을
+    걸렀다. 그런데 노트를 저장하는 버튼도, "note" 북마크 타입도 없다(운영 DB CHECK 가 막는다 — lib/bookmarks/store.ts).
+    조회 없이 0건으로 말한다 — 저장 기능이 생기면(가산 마이그레이션 + 버튼) listBookmarks(email, "note") 로 바꾼다. */
+function loadSavedNotes(): Loaded<InspectionNote[]> {
+  return loaded([]);
+}
+
+type SavedPost = { id: string; title: string; href: string; meta: string };
+
+/** [1056 · C2] 저장한 글(동네 글 북마크 type=post, PostInteractions 가 만든다) — 어디에도 목록이 없었다.
+    여기엔 3건만(전체는 /my/watchlist?tab=saved). 조회 실패는 ok:false — 빈 배열로 누르면 "없음"이 되고, 그건 거짓이다. */
+async function loadSavedPosts(email: string): Promise<Loaded<SavedPost[]>> {
   try {
-    const bms = await listBookmarks(email);
-    const ids = Array.from(new Set(bms.map((b) => b.targetId))).slice(0, 10);
-    const resolved = await Promise.all(ids.map((id) => getNote(id).catch(() => null)));
+    const bms = await listBookmarks(email, "post");
+    const ids = Array.from(new Set(bms.map((b) => b.targetId))).slice(0, 3);
+    const resolved = await Promise.all(ids.map((id) => getPost(id).catch(() => null)));
     return loaded(
-      resolved.filter((n): n is InspectionNote => n !== null && n.authorEmail !== email),
+      resolved
+        .filter((p): p is NonNullable<typeof p> => p !== null)
+        .map((p) => ({
+          id: p.id,
+          title: p.title,
+          href: postHref(p),
+          meta: [p.district || p.city, shortDate(p.createdAt)].filter(Boolean).join(" · "),
+        })),
     );
   } catch (e) {
-    logger.error("[my] 관심 임장노트 조회 실패", e);
+    logger.error("[my] 저장한 글 조회 실패", e);
     return { ok: false };
   }
 }
@@ -196,6 +213,7 @@ export default async function MyPage() {
     ledger,
     notesLoaded,
     savedNotesLoaded,
+    savedPostsLoaded,
     purchasedLoaded,
     alertsLoaded,
     watchlistCount,
@@ -212,7 +230,8 @@ export default async function MyPage() {
     }),
     toLoaded(getBalance(email), warn("포인트")),
     toLoaded(listNotes(email), warn("내 노트")),
-    loadSavedNotes(email),
+    loadSavedNotes(),
+    loadSavedPosts(email),
     loadMyPurchasedReports(email),
     toLoaded(listAlertSubscriptions(email), warn("알림 구독")),
     toLoaded(countWatchlist(email), warn("관심 단지 개수")),
@@ -369,6 +388,34 @@ export default async function MyPage() {
   return (
     <PageShell title="마이">
       <MyHubView data={data} />
+      {/* [1056 · C2] 저장한 글 — 동네 글의 "저장"(북마크 type=post)이 어디에도 모이지 않았다. 3건 + 전체(/my/watchlist?tab=saved). */}
+      <section className="card mt-4 max-md:mt-3 rounded-lg px-4 py-3" aria-label="저장한 글">
+        <div className="flex items-center justify-between gap-3">
+          <span className="t-caption font-bold text-text-3">저장한 글</span>
+          <Link
+            href="/my/watchlist?tab=saved"
+            className="tap-line inline-flex min-h-[40px] shrink-0 items-center t-sub font-bold text-primary no-underline md:min-h-6"
+          >
+            전체 보기 ›
+          </Link>
+        </div>
+        {!savedPostsLoaded.ok ? (
+          <p className="m-0 mt-1 t-sub text-text-2">저장한 글 불러오기 실패 · 잠시 후 다시</p>
+        ) : savedPostsLoaded.value.length === 0 ? (
+          <p className="m-0 mt-1 t-body font-bold text-ink">저장한 글 없음</p>
+        ) : (
+          <ul className="m-0 mt-1 flex list-none flex-col divide-y p-0" data-tone="plain">
+            {savedPostsLoaded.value.map((p) => (
+              <li key={p.id}>
+                <Link href={p.href} className="flex min-h-10 flex-col justify-center py-2 no-underline">
+                  <span className="block truncate t-body font-semibold text-text-1">{p.title}</span>
+                  <span className="block t-caption text-text-3">{p.meta}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
       {/* [1025 · 결정·비서] 진입 링크 두 줄 — 헤더는 통합자 영역이라 여기(마이)에만 */}
       <section className="card mt-4 max-md:mt-3 rounded-lg px-4 py-0.5" aria-label="결정 카드 · AI 비서">
         <ul className="m-0 flex list-none flex-col divide-y p-0" data-tone="plain">

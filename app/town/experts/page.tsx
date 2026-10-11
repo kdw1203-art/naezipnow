@@ -262,8 +262,9 @@ export default async function TownExpertsPage() {
       {/* 베타 공급 부족의 실제 대안 */}
       <div className="flex flex-wrap items-center justify-center gap-2">
         <span className="t-sub text-text-3">다른 경로</span>
-        <Link href="/qna" className="press chip border border-line bg-surface px-3 py-1.5 t-sub text-text-2 no-underline">
-          이웃에게 묻기 (단지 Q&A)
+        {/* [1056 · C5] /qna 는 보관(비노출) 경로다(lib/seo/archived-routes.ts) — 보관 화면으로 보내던 링크를 동네이야기로 바꾼다 */}
+        <Link href="/town" className="press chip border border-line bg-surface px-3 py-1.5 t-sub text-text-2 no-underline">
+          이웃에게 묻기 (동네이야기)
         </Link>
         <Link href="/notes" className="press chip border border-line bg-surface px-3 py-1.5 t-sub text-text-2 no-underline">
           실거주 기록 읽기 (임장노트)

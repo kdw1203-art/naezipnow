@@ -41,6 +41,7 @@ import {
   type TalkPost,
   type TalkTab,
 } from "@/lib/talk/rules";
+import { authorProfileHref } from "@/lib/profile/author-href";
 
 type FeedState =
   | { status: "idle" | "loading" }
@@ -527,7 +528,14 @@ export function TalkPanel({ variant = "home", initialRegion = null }: { variant?
                 {posts.map((p) => (
                   <li key={p.id} className="border-b border-line px-3.5 py-2.5">
                     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 t-caption text-text-3">
-                      <span className="t-sub font-bold text-ink">{p.author}</span>
+                      {/* [1056 · B8] 작성자 — 사람 이름이면 공개 프로필(/u/{이름}) 링크(마스킹 표기는 글자 그대로) */}
+                      {authorProfileHref(p.author) ? (
+                        <Link href={authorProfileHref(p.author) as string} className="tap-line t-sub font-bold text-ink no-underline">
+                          {p.author}
+                        </Link>
+                      ) : (
+                        <span className="t-sub font-bold text-ink">{p.author}</span>
+                      )}
                       <span>{talkTimeLabel(p.createdAt, now)}</span>
                       {p.complexId && p.complexName && (
                         <Link

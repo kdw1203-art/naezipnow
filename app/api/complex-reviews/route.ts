@@ -93,8 +93,16 @@ export async function POST(req: NextRequest) {
     residentPeriod: residentPeriodRaw || null,
   });
   // 후기 작성 적립 — refId=review.id 로 재작성(upsert) 중복 지급 방지.
+  /* [1056 · B3] 화면이 "30P 적립" 을 고정 문구로 썼다 — 재작성(같은 refId)·상한이면 0P 인데도.
+     실제 지급액을 응답에 실어 화면이 그 수를 적게 한다. 지급 실패는 후기 저장을 되돌리지 않는다. */
+  let pointsAwarded = 0;
   if (session.user.email) {
-    await awardPoints(session.user.email, "review_written", review.id);
+    try {
+      const award = await awardPoints(session.user.email, "review_written", review.id);
+      if (award.ok) pointsAwarded = award.awarded;
+    } catch {
+      /* fail-soft */
+    }
   }
-  return NextResponse.json(review, { status: 201 });
+  return NextResponse.json({ ...review, pointsAwarded }, { status: 201 });
 }

@@ -142,12 +142,14 @@ const PREF_GROUPS: {
       {
         key: "pushAttendance",
         label: "출석 리마인드",
-        desc: "오늘 출석을 아직 안 했으면 저녁에 1회 (기본 켜짐)",
+        /* [1056 · A6] "저녁" → 실제 실행 시각(etl.yml alerts 잡 06:00 UTC = 15:00 KST) */
+        desc: "오늘 출석을 아직 안 했으면 매일 오후(15시쯤) 1회 (기본 켜짐)",
       },
       {
         key: "pushWeeklyDigest",
         label: "주간 다이제스트",
-        desc: "매주 월요일 저녁, 최근 7일 뉴스·시세 요약 1회 (기본 꺼짐)",
+        /* [1056 · A6] "저녁 · 기본 꺼짐" → 월요일 오후(15시쯤) · 기본 켜짐(DEFAULT_PREFS.pushWeeklyDigest=true) */
+        desc: "매주 월요일 오후(15시쯤), 최근 7일 뉴스·시세 요약 1회 (기본 켜짐)",
       },
     ],
   },
