@@ -31,7 +31,7 @@ jobs:
           npm run review:prod
           echo "exit=$?" >> "$GITHUB_OUTPUT"
           echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: review-${{ steps.probe.outputs.week }}
