@@ -4,6 +4,7 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { appendInboxNotification } from "@/lib/notifications/inbox";
 import { sendPush, type PushPayload } from "@/lib/push/vapid";
 import { getWeeklyDigest } from "@/lib/newui/digest";
+import { dropUnreachableImages } from "@/lib/email/verify-image";
 import { captureException } from "@/lib/monitoring/capture";
 import { sendEmail, isEmailConfigured } from "@/lib/email/send";
 import { weeklyDigestEmail } from "@/lib/email/templates";
@@ -216,9 +217,12 @@ async function loadSiteFallback(emailReady: boolean): Promise<{ fallback: SiteFa
     captureException(e, { where: "cron/weekly-digest" });
     return { fallback: null, failed: true };
   }
+  /* [1061] 메일에 실릴 뉴스 사진은 보내기 전에 받아지는지 본다(4초 · 앞 5건 · 동시) — 메일은 깨진 사진을 숨길 수 없다 */
+  const newsForMail = emailReady ? await dropUnreachableImages(digest.news, 5) : digest.news;
   const parts: string[] = [];
   if (digest.news.length > 0) parts.push(`뉴스 ${digest.news.length}건`);
-  if (digest.market.length > 0) parts.push(`주요 지역 시세 ${digest.market.length}곳`);
+  /* [1061] "시세" → "시장 요약" — 값은 부동산원 지수·실거래 평균이지 호가 시세가 아니다(/digest 화면 제목과 같은 낱말) */
+  if (digest.market.length > 0) parts.push(`시장 요약 ${digest.market.length}곳`);
   if (digest.community.count > 0) parts.push(`이웃 글 ${digest.community.count}건`);
   if (parts.length === 0) {
     const anyFailed = digest.failed.news || digest.failed.market || digest.failed.community;
@@ -237,7 +241,14 @@ async function loadSiteFallback(emailReady: boolean): Promise<{ fallback: SiteFa
         ? weeklyDigestEmail({
             weekLabel: digest.weekLabel,
             market: digest.market.map((m) => ({ name: m.name, price: m.price, delta: m.delta, tone: m.tone })),
-            news: digest.news.map((n) => ({ title: n.title, sourceName: n.sourceName })),
+            /* [1061] 제목 링크(우리 뉴스 상세) · 원문 사진 · 원문 주소까지 — 메일에서 바로 눌러 들어오게 */
+            news: newsForMail.map((n) => ({
+              title: n.title,
+              sourceName: n.sourceName,
+              href: n.href,
+              imageUrl: n.imageUrl,
+              sourceUrl: n.sourceUrl,
+            })),
             communityCount: digest.community.count,
           })
         : null,

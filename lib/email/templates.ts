@@ -200,7 +200,15 @@ export function supportInquiryEmail(params: {
 export function weeklyDigestEmail(params: {
   weekLabel: string;
   market: Array<{ name: string; price: string; delta: string; tone: "up" | "down" | "flat" }>;
-  news: Array<{ title: string; sourceName: string | null }>;
+  /* [1061] 뉴스는 제목만이 아니라 **우리 뉴스 상세 링크(href · 사이트 안 경로) · 원문 사진 · 원문 주소**를 싣는다.
+     메일에서 제목을 누르면 우리 사이트로 오고(유입), 사진이 있으면 64px 썸네일, 원문은 작은 링크. 없는 값은 안 그린다. */
+  news: Array<{
+    title: string;
+    sourceName: string | null;
+    href?: string | null;
+    imageUrl?: string | null;
+    sourceUrl?: string | null;
+  }>;
   communityCount: number;
 }) {
   /* [995] 마케팅 동의(email_marketing)한 사람에게만 나가는 메일이 됐다 — 개인 요약과 같은
@@ -219,28 +227,49 @@ export function weeklyDigestEmail(params: {
       </tr>`,
     )
     .join("");
+  const absolute = (href: string) => (href.startsWith("/") ? `https://naezipnow.com${href}` : href);
+  const safeHttp = (u: string | null | undefined) => (u && /^https?:\/\//i.test(u) ? u : null);
   const newsRows = params.news
     .slice(0, 5)
-    .map(
-      (n) => `<li style="margin:0 0 8px;font-size:14px;line-height:1.55;color:#191f28;">
-        ${escapeHtml(n.title)}${n.sourceName ? ` <span style="color:#8a94a6;font-size:12px;">· ${escapeHtml(n.sourceName)}</span>` : ""}
-      </li>`,
-    )
+    .map((n) => {
+      const href = n.href ? absolute(n.href) : null;
+      const img = safeHttp(n.imageUrl);
+      const src = safeHttp(n.sourceUrl);
+      const title = href
+        ? `<a href="${escapeHtml(href)}" style="color:#191f28;text-decoration:none;font-weight:700;">${escapeHtml(n.title)}</a>`
+        : `<span style="font-weight:700;">${escapeHtml(n.title)}</span>`;
+      const source = n.sourceName
+        ? src
+          ? `<a href="${escapeHtml(src)}" style="color:#8a94a6;font-size:12px;text-decoration:none;">원문 · ${escapeHtml(n.sourceName)}</a>`
+          : `<span style="color:#8a94a6;font-size:12px;">· ${escapeHtml(n.sourceName)}</span>`
+        : "";
+      const thumb = img
+        ? `<td style="width:64px;padding:0 12px 12px 0;vertical-align:top;">
+             ${href ? `<a href="${escapeHtml(href)}">` : ""}<img src="${escapeHtml(img)}" alt="${escapeHtml(n.title)}" width="64" height="64" style="display:block;width:64px;height:64px;object-fit:cover;border-radius:8px;border:0;" />${href ? "</a>" : ""}
+           </td>`
+        : "";
+      return `<tr>
+        ${thumb}
+        <td style="padding:0 0 12px;vertical-align:top;font-size:14px;line-height:1.55;color:#191f28;"${img ? "" : ' colspan="2"'}>
+          ${title}${source ? `<br />${source}` : ""}
+        </td>
+      </tr>`;
+    })
     .join("");
 
   const html = emailLayout(`
     <h1 style="margin:0 0 6px;font-size:19px;color:#191f28;">${escapeHtml(params.weekLabel)} 주간 다이제스트</h1>
-    <p style="margin:0 0 18px;font-size:13px;color:#8a94a6;">국토교통부 실거래 기준 · 매물 호가가 아닙니다</p>
+    <p style="margin:0 0 18px;font-size:13px;color:#8a94a6;">국토교통부 실거래 · 한국부동산원 지수 기준 · 매물 호가가 아닙니다</p>
     ${
       marketRows
-        ? `<h2 style="margin:0 0 6px;font-size:14px;color:#191f28;">주요 지역 시세</h2>
+        ? `<h2 style="margin:0 0 6px;font-size:14px;color:#191f28;">시장 요약 · 주요 지역</h2>
            <table style="width:100%;border-collapse:collapse;margin:0 0 18px;">${marketRows}</table>`
         : ""
     }
     ${
       newsRows
         ? `<h2 style="margin:0 0 8px;font-size:14px;color:#191f28;">이번 주 뉴스</h2>
-           <ul style="margin:0 0 18px;padding:0 0 0 18px;">${newsRows}</ul>`
+           <table style="width:100%;border-collapse:collapse;margin:0 0 10px;">${newsRows}</table>`
         : ""
     }
     ${
@@ -254,7 +283,7 @@ export function weeklyDigestEmail(params: {
   const text = [
     `${params.weekLabel} 주간 다이제스트`,
     ...params.market.slice(0, 6).map((m) => `${m.name} ${m.price} ${m.delta}`),
-    ...params.news.slice(0, 5).map((n) => `- ${n.title}`),
+    ...params.news.slice(0, 5).map((n) => `- ${n.title}${n.href ? ` ${absolute(n.href)}` : ""}`),
     "전체 보기: https://naezipnow.com/digest",
   ].join("\n");
 

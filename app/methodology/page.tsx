@@ -3,6 +3,10 @@ import Link from "next/link";
 import { PageShell } from "../components/PageShell";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { jsonLdScript } from "@/lib/seo/jsonld";
+import { Fineprint } from "../components/Fineprint";
+import { FactTable } from "../components/compact/FactTable";
+import { KeyPoints, type KeyPoint } from "../components/compact/KeyPoints";
+import { KeywordChips } from "../components/compact/KeywordChips";
 import {
   SIGNAL_FACTOR_META,
   SIGNAL_FACTOR_ORDER,
@@ -113,6 +117,46 @@ const SECTIONS: { id: string; q: string; a: string[]; items?: { id: string; labe
   },
 ];
 
+/* [1062 · 글 줄이기] 항목별 핵심 요약(2~4줄) — 접힌 본문(SECTIONS.a)을 대신 보여 준다. 낱말·숫자는 본문에 있는 것만
+   (본문에 없는 말 금지). 본문은 지우지 않고 "자세히" 접기 아래 그대로 둔다(JSON-LD·검사 문장·앵커 유지). */
+const SECTION_POINTS: Record<string, KeyPoint[]> = {
+  source: [
+    { k: "출처", v: "국토교통부 실거래가 공개시스템(공공데이터포털)의 아파트 매매·전월세 신고 자료" },
+    { k: "집계", v: "호가·추정치가 아니라 실제로 신고된 계약만" },
+    { k: "기준월", v: "전국 시군구를 주기적으로 순회 수집 · 모든 화면의 수치에 기준월 표기" },
+  ],
+  cancelled: [
+    { k: "해제거래", v: "시세 평균에서 제외" },
+    { k: "근거", v: "실측 검증에서 해제거래를 포함하면 일부 단지 평균가가 20% 이상 왜곡" },
+    { k: "원본", v: "해제 사실도 데이터 · 원본 기록은 보존" },
+  ],
+  lag: [
+    { k: "신고 기한", v: "계약 후 30일" },
+    { k: "이번 달·직전 달", v: "아직 신고되지 않은 계약만큼 실제보다 적게 집계" },
+    { k: "처리", v: "거래량 차트는 이번 달을 다른 색으로 · 시장 온도는 신고가 완결되지 않은 달 제외" },
+  ],
+  average: [
+    { k: "지역 평균", v: "해당 시군구의 기간 내 실거래 단순 평균 · 면적·타입 구분 없음" },
+    { k: "단지 화면", v: "면적대별 시세 따로 · 평균과 함께 거래 건수 항상 표기" },
+  ],
+  temperature: [
+    { k: "범위", v: "0~100 · 50이 중립" },
+    { k: "계산", v: "50점 기준에 ① 매매가격지수 모멘텀(월 ±1%를 ±25점으로 환산) ② 거래량 추이(±50%를 ±25점으로 환산)" },
+    { k: "거래량 완결월", v: "4개 미만이면 지수 모멘텀만 반영 · 화면에 그 사실을 표시" },
+    { k: "뜻", v: "매수·매도 추천이 아니라 시장 상태의 서술 · 실측 입력값 함께 표시" },
+  ],
+  signals: [
+    { k: "방식", v: `AI가 만든 판단이 아니라 정해진 규칙으로 계산 · 현재 공식 v${SIGNAL_FORMULA_VERSION} · 8가지 요인` },
+    { k: "점수", v: "요인마다 −2~+2 · 가중 평균에 22.5를 곱해 50에 더함(0~100, 5~95로 제한) · 50이 중립" },
+    { k: "반영", v: "점수가 있는 요인이 3개 미만이면 \"자료 부족\" · 자료 없음·불러오기 실패·표본 적음은 계산에서 뺌" },
+    { k: "쪽", v: `±${SIGNAL_LEAN.lean} 이상 오름 쪽·내림 쪽 · ±${SIGNAL_LEAN.strong} 이상 강함 · 매수·매도 추천 아님` },
+  ],
+  missing: [
+    { k: "없는 데이터", v: "비워 둠 · 추정 시세를 만들지 않음 · 화면에 \"아직 없다\"고 적음" },
+    { k: "AI 기능", v: "모든 수치는 DB 조회 결과에서만 인용 · 조회한 데이터 목록을 답변과 함께 표시" },
+  ],
+};
+
 /* 웹11 — 방법론 최근 변경 이력. "바뀌면 이 페이지를 갱신합니다"라는 하단 약속을
    실제 목록으로 이행한다. 실제로 일어난 변경만, 커밋 날짜 그대로 적는다
    (각 항목의 출처 커밋: #150 해제거래, 5ecb5d2 온도 아카이브, 208abe8 집계 복구,
@@ -171,67 +215,83 @@ export default function MethodologyPage() {
           서비스가 실제로 동작하는 방식을 그대로 적었습니다.
         </p>
 
+        {/* [1062 · 글 줄이기] 항목마다 문단 2~4개가 늘 펼쳐져 있던 것 → 핵심 요약(SECTION_POINTS) 먼저, 본문은 "자세히" 접기.
+            글은 지우지 않는다(JSON-LD · 시장 온도 ⓘ 와 대조하는 문장 · 앵커 #id 그대로). */}
         <div className="mt-6 flex flex-col gap-4 max-md:mt-4 max-md:gap-3">
           {SECTIONS.map((s, i) => (
             <section
               key={s.id}
               id={s.id}
-              className={`rise-in-${Math.min(i + 2, 6)} card rounded-3xl p-6 max-md:p-4`}
+              className={`rise-in-${Math.min(i + 2, 6)} card scroll-mt-24 rounded-3xl p-6 max-md:p-4`}
             >
               <h2 className="t-section text-ink">{s.q}</h2>
-              {s.a.map((p, j) => (
-                <p key={j} className="mt-2 t-body leading-[1.75] text-text-1">
-                  {p}
-                </p>
-              ))}
-              {/* [1052] 요인별 칸 — 다요인 분석 판의 요인 이름 링크(#signal-<key>)가 닿는 자리 */}
+              {SECTION_POINTS[s.id] ? <KeyPoints className="mt-2" points={SECTION_POINTS[s.id]} /> : null}
+              {/* [1052 · 1062] 요인 이름 칩 — 접힌 요인별 칸을 대신 보여 준다(이름은 엔진 표 SIGNAL_FACTOR_META 그대로) */}
+              {s.items ? <KeywordChips className="mt-2" label="요인" items={s.items.map((it) => it.label)} /> : null}
+              <Fineprint className="mt-2" label="자세히">
+                {s.a.map((p, j) => (
+                  <p key={j} className={`${j > 0 ? "mt-2" : ""} m-0 t-sub leading-[1.7] text-text-2`}>
+                    {p}
+                  </p>
+                ))}
+              </Fineprint>
+              {/* [1052] 요인별 칸 — 다요인 분석 판의 요인 이름 링크(#signal-<key>)가 닿는 자리.
+                  [1062] 접기 안에 둔다 — 조각 링크로 들어오면 브라우저가 감싼 details 를 펼친다(id 는 details 안쪽 div). */}
               {s.items ? (
-                <dl className="m-0 mt-3 flex flex-col divide-y" data-tone="plain">
-                  {s.items.map((it) => (
-                    <div key={it.id} id={it.id} className="scroll-mt-24 py-2.5">
-                      <dt className="t-body font-bold text-ink">{it.label}</dt>
-                      <dd className="m-0 mt-1 t-body leading-[1.75] text-text-1">{it.text}</dd>
-                    </div>
-                  ))}
-                </dl>
+                <Fineprint className="mt-1" label={`요인별 계산 방법 · ${s.items.length}`}>
+                  <dl className="m-0 flex flex-col divide-y divide-line" data-tone="plain">
+                    {s.items.map((it) => (
+                      <div key={it.id} id={it.id} className="scroll-mt-24 py-2.5">
+                        <dt className="t-sub font-bold text-ink">{it.label}</dt>
+                        <dd className="m-0 mt-1 t-sub leading-[1.7] text-text-2">{it.text}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </Fineprint>
               ) : null}
             </section>
           ))}
         </div>
 
-        {/* 웹11 — 방법론 최근 변경. CHANGELOG 배열(실제 배포된 변경만) 렌더 */}
-        <section id="changelog" className="card mt-6 rounded-3xl p-6 max-md:mt-4 max-md:p-4">
+        {/* 웹11 — 방법론 최근 변경. CHANGELOG 배열(실제 배포된 변경만) 렌더.
+            [1062] 날짜 + 문장 행 → "날짜 | 변경" 표(문구 그대로) */}
+        <section id="changelog" className="card mt-6 scroll-mt-24 rounded-3xl p-6 max-md:mt-4 max-md:p-4">
           <h2 className="t-section text-ink">최근 변경</h2>
-          {/* [1015 · 규칙 I] 변경 이력 → 리퀴드 행 목록(sand = 일정) */}
-          <ul data-tone="sand" className="lq-panel m-0 mt-3 flex list-none flex-col divide-y p-0">
-            {CHANGELOG.map((c) => (
-              <li key={`${c.date}-${c.text.slice(0, 8)}`} className="flex gap-3 py-2.5 t-body leading-[1.7]">
-                <span className="t-num shrink-0 font-bold text-text-3">{c.date}</span>
-                <span className="text-text-1">{c.text}</span>
-              </li>
-            ))}
-          </ul>
+          <FactTable
+            dense
+            className="mt-3"
+            rows={CHANGELOG.map((c) => ({ label: c.date, value: c.text }))}
+          />
         </section>
 
         {/* G21 — 정정 이력. 데이터·집계 오류를 고치면 여기 남긴다.
-            아직 0건이라고 정직하게 적는 것부터가 이 제도의 시작이다. */}
-        <section id="corrections" className="card mt-6 rounded-3xl p-6 max-md:mt-4 max-md:p-4">
+            아직 0건이라고 정직하게 적는 것부터가 이 제도의 시작이다.
+            [1062] 요약 두 줄 먼저, 문단은 접기(문구 그대로) */}
+        <section id="corrections" className="card mt-6 scroll-mt-24 rounded-3xl p-6 max-md:mt-4 max-md:p-4">
           <h2 className="t-section text-ink">정정 이력</h2>
-          <p className="mt-2 t-body leading-[1.75] text-text-1">
+          <KeyPoints
+            className="mt-2"
+            points={[
+              { k: "기록", v: "오류를 발견해 정정하면 날짜와 내용을 이 목록에 남김" },
+              { k: "현황", v: "이 페이지 공개(2026년 7월) 이후 기록된 정정은 아직 없음 · 오류 제보는 고객센터로" },
+            ]}
+          />
+          <Fineprint className="mt-2" label="자세히">
             공개된 수치·집계에서 오류를 발견해 정정하면 날짜와 내용을 이 목록에
             남깁니다. 이 페이지 공개(2026년 7월) 이후 기록된 정정은 아직 없습니다.
             오류 제보는 고객센터로 부탁드립니다.
-          </p>
+          </Fineprint>
         </section>
 
-        <div className="mt-6 rounded-lg bg-bg p-4 t-sub leading-[1.7] text-text-3 max-md:mt-4">
+        {/* [1062] 하단 고지 문단 → 접기(글·링크 그대로) */}
+        <Fineprint className="mt-6 max-md:mt-4" label="고지 · 문의">
           본 문서의 방식은 서비스 개선에 따라 바뀔 수 있으며, 바뀌면 이 페이지를
           갱신합니다. 집계·분석 결과는 참고용 정보이며 투자 판단의 책임은 이용자
           본인에게 있습니다. 문의:{" "}
           <Link href="/support" className="inline-block py-[5px] font-bold text-primary">
             고객센터
           </Link>
-        </div>
+        </Fineprint>
       </div>
     </PageShell>
   );

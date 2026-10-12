@@ -10,6 +10,7 @@ import { Explain } from "@/app/components/explain/Explain";
 import { logger } from "@/lib/log";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { newsHref, storyHref } from "@/lib/town/post-href";
+import { DigestThumb } from "./DigestThumb";
 
 export const metadata = buildPageMetadata({
   title: "주간 다이제스트",
@@ -79,7 +80,7 @@ export default async function DigestPage() {
 
   const previewParts: string[] = [];
   if (news.length > 0) previewParts.push(`뉴스 ${news.length}건`);
-  if (market.length > 0) previewParts.push(`주요 지역 시세 ${market.length}곳`);
+  if (market.length > 0) previewParts.push(`시장 요약 ${market.length}곳`);
   if (community.count > 0) previewParts.push(`이웃 글 ${community.count}건`);
   /* 일부가 조회 실패면 "0건"이라고 말하지 않는다 — 그건 사실이 아니다. */
   const previewLine =
@@ -156,17 +157,29 @@ export default async function DigestPage() {
 최근 7일 수집된 뉴스 없음
               </div>
             ))}
+          {/* [1061] 원문 사진 썸네일(있을 때만 · 실패하면 상자째 사라짐) + 제목은 우리 뉴스 상세(정식 경로) + 원문 링크 */}
           {news.map((n) => (
-            <Link key={n.id} href={newsHref(n.id)} className="group press -mx-1 block rounded-lg px-1 py-0.5 no-underline">
-              <div className="t-sub font-bold text-ink group-hover:text-primary">
-                {n.title}
+            <div key={n.id} className="-mx-1 flex items-start gap-3 rounded-lg px-1 py-1">
+              {n.imageUrl && <DigestThumb src={n.imageUrl} href={n.href || newsHref(n.id)} />}
+              <div className="min-w-0 flex-1">
+                <Link href={n.href || newsHref(n.id)} className="group press block no-underline">
+                  <div className="t-sub font-bold text-ink group-hover:text-primary">{n.title}</div>
+                </Link>
+                <div className="mt-[2px] flex flex-wrap items-center gap-x-1.5 t-caption text-text-3">
+                  <span>{[n.sourceName, shortDate(n.publishedAt), n.region].filter(Boolean).join(" · ")}</span>
+                  {n.sourceUrl && (
+                    <a
+                      href={n.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer nofollow"
+                      className="tap-line inline-flex min-h-[24px] items-center font-bold text-primary no-underline"
+                    >
+                      원문 ›
+                    </a>
+                  )}
+                </div>
               </div>
-              <div className="mt-[2px] t-caption text-text-3">
-                {[n.sourceName, shortDate(n.publishedAt), n.region]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </div>
-            </Link>
+            </div>
           ))}
         </div>
 
@@ -201,7 +214,7 @@ export default async function DigestPage() {
               </div>
             ) : (
               <div className="t-sub text-text-3">
-주요 지역 시세로 표시할 최신 스냅샷 없음
+시장 요약으로 표시할 최신 스냅샷 없음
               </div>
             ))}
           {/* [1015] 가격·등락 행 목록 = 리퀴드 판(blue — 시세 톤, 브리프 규칙 I)

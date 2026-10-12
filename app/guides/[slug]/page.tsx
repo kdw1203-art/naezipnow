@@ -4,15 +4,23 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
 import { GUIDES, GUIDE_BY_SLUG } from "@/lib/guides/catalog";
-import { breadcrumbJsonLd, faqJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
+import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
+import { Fineprint } from "@/app/components/Fineprint";
+import { FaqCompact } from "@/app/components/compact/FaqCompact";
+import { KeyPoints } from "@/app/components/compact/KeyPoints";
+import { KeywordChips } from "@/app/components/compact/KeywordChips";
 
 /* [945 · 실사용50 #25] 검색 유입용 가이드 — 카탈로그(lib/guides/catalog.ts) 렌더러.
    전 편이 정적(순수 상수)이라 dynamicParams=false 로 빌드에 굳힌다.
    각 편의 도구 링크가 이 글의 존재 이유다 — 글에서 끝나면 유입이 이탈이다.
    [1015] 데스크톱은 본문 + 340px 레일(목차 · 도구 · 관련 가이드 · 광고 1). 도구·관련 가이드는 리퀴드 행 목록
-   (도구 = blue · 가이드 = hanji). 폰은 한 열(목차는 본문 위), 광고는 글 끝 1. */
+   (도구 = blue · 가이드 = hanji). 폰은 한 열(목차는 본문 위), 광고는 글 끝 1.
+   [1062 · 글 줄이기] 소유자 지시 "글씨가 많은 페이지를 표·요약·키워드로". 머리글 아래 글 전체 핵심(keyPoints) 요약,
+   절마다 제목 + 핵심 낱말 칩(keys) 먼저, 문단은 "자세히" 접기(글은 그대로 DOM 에 — 검색·발췌 유지). FAQ 는 접힌
+   FAQ(FaqCompact)로 — FAQPage JSON-LD 는 그 컴포넌트가 같은 배열에서 낸다(여기서 따로 내지 않는다 · 단일 출처).
+   카탈로그에 keys 가 없는 절은 예전처럼 문단이 펼쳐진다(요약 없는 접기는 만들지 않는다). */
 
 export const dynamic = "force-static";
 export const dynamicParams = false;
@@ -118,18 +126,18 @@ export default async function GuidePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumb) }}
       />
-      {guide.faq.length > 0 && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: jsonLdScript(faqJsonLd(guide.faq)) }}
-        />
-      )}
+      {/* FAQPage JSON-LD 는 아래 FaqCompact 가 같은 guide.faq 배열에서 낸다 — 여기서 겹쳐 내지 않는다 */}
 
       <div className="mx-auto grid w-full max-w-[1100px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
         <article className="min-w-0 lg:max-w-[720px]">
           <p className="rise-in t-caption font-bold text-primary">{guide.category} 가이드</p>
           <h1 className="rise-in mt-1 t-title leading-[1.3] text-ink">{guide.title}</h1>
           <p className="rise-in-1 mt-3 t-body leading-[1.75] text-text-2 max-md:mt-2">{guide.intro}</p>
+
+          {/* [1062] 글 전체 핵심 — 절 제목과 같은 라벨, 한 줄씩(본문 낱말만 · 카탈로그 keyPoints) */}
+          {guide.keyPoints && guide.keyPoints.length > 0 && (
+            <KeyPoints className="rise-in-1 mt-3 max-md:mt-2" points={guide.keyPoints} />
+          )}
 
           {/* 목차 — 섹션 3개 이상일 때만. 폰은 본문 위, 데스크톱은 레일 */}
           {toc && (
@@ -139,18 +147,33 @@ export default async function GuidePage({
             </nav>
           )}
 
-          {guide.sections.map((section, i) => (
-            <section key={section.heading} id={`g-${i + 1}`} className="mt-7 scroll-mt-24 max-md:mt-5">
-              <h2 className="t-section text-ink md:text-[19px]">{section.heading}</h2>
+          {guide.sections.map((section, i) => {
+            const body = (
               <div className="mt-2.5 flex flex-col gap-3 max-md:gap-2">
                 {section.body.map((p) => (
-                  <p key={p.slice(0, 24)} className="t-body leading-[1.8] text-text-1">
+                  <p key={p.slice(0, 24)} className="m-0 t-body leading-[1.8] text-text-1">
                     {p}
                   </p>
                 ))}
               </div>
-            </section>
-          ))}
+            );
+            return (
+              <section key={section.heading} id={`g-${i + 1}`} className="mt-7 scroll-mt-24 max-md:mt-5">
+                <h2 className="t-section text-ink md:text-[19px]">{section.heading}</h2>
+                {/* [1062] keys 가 있으면 칩 + "자세히" 접기(문단 그대로), 없으면 예전처럼 펼친 문단 */}
+                {section.keys && section.keys.length > 0 ? (
+                  <>
+                    <KeywordChips className="mt-2" items={section.keys} />
+                    <Fineprint className="mt-1.5" label="자세히">
+                      {body}
+                    </Fineprint>
+                  </>
+                ) : (
+                  body
+                )}
+              </section>
+            );
+          })}
 
           {/* 도구 연결 — 이 가이드의 다음 행동. 폰은 본문 끝, 데스크톱은 레일 */}
           <section className="mt-8 max-md:mt-5 lg:hidden">
@@ -159,18 +182,12 @@ export default async function GuidePage({
             {tools}
           </section>
 
+          {/* [1062] 질문·답 카드가 늘 펼쳐져 있던 것 → 접힌 FAQ(질문 + 핵심 낱말 칩). JSON-LD 도 여기서(같은 배열). */}
           {guide.faq.length > 0 && (
-            <section className="mt-8 max-md:mt-5">
-              <h2 className="t-section text-ink md:text-[19px]">자주 묻는 질문</h2>
-              <div className="mt-2.5 flex flex-col gap-3 max-md:gap-2">
-                {guide.faq.map((f) => (
-                  <div key={f.q} className="rounded-2xl border border-line bg-surface px-4 py-3.5 max-md:px-3.5 max-md:py-3">
-                    <div className="t-body font-bold text-ink">Q. {f.q}</div>
-                    <p className="mt-1.5 t-body leading-[1.7] text-text-2">{f.a}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <FaqCompact
+              className="mt-8 rounded-2xl max-md:mt-5"
+              items={guide.faq.map((f) => ({ q: f.q, a: f.a, keys: f.keys }))}
+            />
           )}
 
           {relatedRows && (

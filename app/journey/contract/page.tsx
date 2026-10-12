@@ -2,7 +2,8 @@ import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { breadcrumbJsonLd, howToJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
-import { buildContractTimeline, CONTRACT_PHASES } from "@/lib/journey/contract";
+import { buildContractTimeline, CONTRACT_PHASES, PHASE_ORDER } from "@/lib/journey/contract";
+import { KeyPoints } from "@/app/components/compact/KeyPoints";
 import { ContractPlanner } from "./ContractPlanner";
 import { PreContractCheckLazy } from "./PreContractCheckLazy";
 
@@ -69,10 +70,19 @@ export default function ContractSchedulePage() {
             ‹ 내 집 마련 여정 · 6단계 계약·잔금·입주
           </Link>
           <h1 className="m-0 t-title text-ink">계약·잔금 일정표</h1>
-          <p className="m-0 t-sub text-text-2">
-            {/* 숫자는 lib/journey/contract CONTRACT_PHASES(법정 기한)에서 — 손으로 적지 않는다 */}
-            {`거래신고 ${CONTRACT_PHASES.report.offsetDays}일 · 취득세·등기 ${CONTRACT_PHASES.afterBalance.offsetDays}일 · 전입신고 ${CONTRACT_PHASES.moveIn.offsetDays}일 · 캘린더(.ics)·인쇄`}
-          </p>
+          {/* [1062 · 글 줄이기] 가운뎃점으로 이은 부제 한 줄("거래신고 30일 · 취득세·등기 60일 · …") → "항목 — 기한" 요약 줄.
+              이름·기한은 lib/journey/contract CONTRACT_PHASES(법정 기한 · legal=true)에서 — 손으로 적지 않는다. */}
+          <KeyPoints
+            label="법정 기한"
+            className="mt-1"
+            points={[
+              ...PHASE_ORDER.filter((p) => CONTRACT_PHASES[p].legal).map((p) => ({
+                k: CONTRACT_PHASES[p].title,
+                v: CONTRACT_PHASES[p].dueText,
+              })),
+              { k: "캘린더", v: ".ics 저장 · 인쇄" },
+            ]}
+          />
         </div>
         <ContractPlanner />
         {/* [1025 · 담당 S] 계약 전 자동 확인 — 건축물대장(건축HUB) 조회 + 등기소·자가진단 링크. 일정표 아래 카드 하나 */}

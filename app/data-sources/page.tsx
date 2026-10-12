@@ -8,12 +8,20 @@ import {
   isStale,
   loadDataFreshness,
 } from "@/lib/newui/data-freshness";
+import { FactTable } from "@/app/components/compact/FactTable";
+import { FaqCompact } from "@/app/components/compact/FaqCompact";
+import { Fineprint } from "@/app/components/Fineprint";
 
 /* [945 · 실사용50 #33] 데이터 출처·갱신 주기·한계 — 한 장짜리 신뢰 문서.
    화면 곳곳의 각주("국토부 신고 기준" 등)를 한 페이지로 모은다.
    갱신 주기는 실제 파이프라인(etl.yml·크론) 기준으로 적는다 — 여기 적힌
    주기와 코드가 어긋나면 코드가 아니라 이 페이지를 고칠 일이 먼저인지 본다.
    계산 공식은 /methodology 가 원천이다(중복 서술 금지 — 링크로 넘긴다). */
+
+/* [1062 · 글 줄이기] 소유자 지시 "글씨가 많이 나온 페이지들을 표·요약·키워드 형식으로 심플하게"(10-12).
+   출처 11장이 각각 테두리 카드 + 네 문단(원천·주기·쓰이는 곳·한계)이었다 — 한 화면이 글로 덮였다.
+   이제 한 판 안 행 11줄(이름 왼쪽 · 갱신 주기 오른쪽)이고, 원천·쓰이는 곳·한계는 접기 뒤 "항목 | 사실" 표다.
+   AI 라벨 정책 5장도 접힌 행 + 낱말 칩. 문장은 한 줄도 지우지 않았다 — 접혀만 있다. */
 
 /* [987 · 신뢰 근거] force-static → 실수치를 읽어야 해서 서버 렌더로 바꾼다.
    숫자 자체는 6시간 캐시(loadHomeCoverage·loadDataFreshness)라 매 요청마다
@@ -117,26 +125,32 @@ const SOURCES: SourceRow[] = [
   },
 ];
 
-const AI_POLICY: Array<{ label: string; rule: string }> = [
+/* [1062] keys = 규칙 문장(rule)에 있는 사실 낱말만 — 접힌 상태에서 문장을 대신 보여 준다. 문장은 그대로 둔다. */
+const AI_POLICY: Array<{ label: string; rule: string; keys: string[] }> = [
   {
     label: "“AI 생성” 배지",
     rule: "노트 요약·뉴스 요약 등 AI 모델이 만든 문장에는 AI 생성 표시를 붙입니다. 규칙 기반 요약은 별도로 구분합니다.",
+    keys: ["AI 생성 표시", "규칙 기반 요약은 별도로 구분"],
   },
   {
     label: "“AI 추정 (현장 확인 전)” 라벨",
     rule: "AI가 제안한 체크 점수·만족도에는 추정 라벨과 산출 근거 한 줄이 반드시 함께 보입니다. 근거를 서술하지 못한 점수는 서버가 버립니다.",
+    keys: ["추정 라벨", "산출 근거 한 줄", "서버가 버립니다"],
   },
   {
     label: "봇 명의 자동 글",
     rule: "주간 시황·동네 데이터 브리핑 등 자동 발행 글은 자동 집계 계정 명의로만 올라가며(is_automated), 사람 글로 위장하지 않습니다. 가짜 이웃 글·가짜 후기는 만들지 않습니다.",
+    keys: ["자동 집계 계정 명의", "is_automated", "가짜 후기는 만들지 않습니다"],
   },
   {
     label: "숫자에는 출처·시점",
     rule: "AI가 언급하는 수치는 수집한 자료 안의 값만 허용하고, 출처와 기준 시점을 함께 표기합니다. 자료에 없는 수치를 지어내는 것은 차단 대상 결함으로 다룹니다.",
+    keys: ["수집한 자료 안의 값만", "출처와 기준 시점", "차단 대상 결함"],
   },
   {
     label: "투자 권유 금지",
     rule: "모든 AI 출력에는 참고용 고지가 붙고, 매수·매도 권유 문장은 생성 단계에서 금지됩니다. 투자 판단의 책임은 이용자 본인에게 있습니다.",
+    keys: ["참고용 고지", "매수·매도 권유 금지", "책임은 이용자 본인"],
   },
 ];
 
@@ -155,7 +169,7 @@ export default async function DataSourcesPage() {
         <h1 className="rise-in text-[24px] font-bold leading-[1.3] text-ink">
           데이터 출처와 한계
         </h1>
-        <p className="rise-in-1 mt-2 t-body leading-[1.75] text-text-2">
+        <p className="rise-in-1 measure mt-2 t-body leading-[1.75] text-text-2">
           원천 · 갱신 주기 · 알려진 한계. 계산 공식은{" "}
           <Link href="/methodology" className="tap-line font-bold text-primary">
             데이터 방법론
@@ -171,22 +185,25 @@ export default async function DataSourcesPage() {
 
             후기가 아직 한 건도 없는 서비스가 "왜 믿어야 하나"에 답하는 방법은
             지어낸 추천사가 아니라 **가진 것을 그대로 보여 주는 것**이다.
-            전부 실카운트이고, 못 읽은 줄은 뺀다. 밀린 것은 밀렸다고 적는다. */}
+            전부 실카운트이고, 못 읽은 줄은 뺀다. 밀린 것은 밀렸다고 적는다.
+
+            [1062] 숫자 셋을 감싸던 색면 상자를 걷고 머리카락 선으로만 나눈다 — 숫자가 내용이고
+            상자는 내용이 아니다. 설명 문장("직접 센 값" · "성공한 갱신만 셉니다")은 접기 뒤로. */}
         <div className="rise-in-1 card mt-5 flex flex-col gap-4 p-5">
           <div>
-            <h2 className="t-section text-ink">지금 실제로 가지고 있는 것</h2>
-            <p className="mt-1 t-sub text-text-3">
+            <h2 className="t-section font-bold text-ink">지금 실제로 가지고 있는 것</h2>
+            <Fineprint className="mt-1" label="세는 방법">
               아래 수치는 이 페이지를 열 때 데이터베이스에서 직접 센 값입니다.
               소개용으로 적어 둔 숫자가 아닙니다.
-            </p>
+            </Fineprint>
           </div>
 
           {(coverage.txCount !== null ||
             coverage.complexCount !== null ||
             coverage.regionCount !== null) && (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 divide-x divide-line">
               {coverage.txCount !== null && (
-                <div className="flex flex-col gap-0.5 rounded-lg bg-bg px-3 py-2.5">
+                <div className="flex flex-col gap-0.5 px-3 first:pl-0 last:pr-0">
                   <span className="t-num t-section text-ink">
                     {formatCount(coverage.txCount)}
                   </span>
@@ -194,7 +211,7 @@ export default async function DataSourcesPage() {
                 </div>
               )}
               {coverage.complexCount !== null && (
-                <div className="flex flex-col gap-0.5 rounded-lg bg-bg px-3 py-2.5">
+                <div className="flex flex-col gap-0.5 px-3 first:pl-0 last:pr-0">
                   <span className="t-num t-section text-ink">
                     {formatCount(coverage.complexCount)}
                   </span>
@@ -202,7 +219,7 @@ export default async function DataSourcesPage() {
                 </div>
               )}
               {coverage.regionCount !== null && (
-                <div className="flex flex-col gap-0.5 rounded-lg bg-bg px-3 py-2.5">
+                <div className="flex flex-col gap-0.5 px-3 first:pl-0 last:pr-0">
                   <span className="t-num t-section text-ink">
                     {formatCount(coverage.regionCount)}
                   </span>
@@ -215,14 +232,14 @@ export default async function DataSourcesPage() {
           {freshness && freshness.some((f) => f.lastOkAt) && (
             <div className="flex flex-col gap-1.5">
               <span className="t-sub font-bold text-text-3">마지막으로 들어온 때</span>
-              <ul className="flex flex-col gap-1">
+              <ul data-tone="plain" className="m-0 flex list-none flex-col divide-y divide-line p-0">
                 {freshness.map((f) => {
                   if (!f.lastOkAt) return null;
                   const label = freshnessLabel(f.lastOkAt, now);
                   if (!label) return null;
                   const stale = isStale(f.lastOkAt, now);
                   return (
-                    <li key={f.source} className="flex items-baseline justify-between gap-3 t-sub">
+                    <li key={f.source} className="flex items-baseline justify-between gap-3 py-1.5 t-sub">
                       <span className="min-w-0 text-text-2">{f.label}</span>
                       <span
                         className={`shrink-0 tabular-nums ${
@@ -236,10 +253,10 @@ export default async function DataSourcesPage() {
                   );
                 })}
               </ul>
-              <p className="t-caption text-text-3">
+              <Fineprint label="세는 방법 · 밀림 기준">
                 성공한 갱신만 셉니다. 실패한 시도를 &ldquo;갱신됨&rdquo;으로 적지 않습니다.
                 48시간이 넘으면 밀렸다고 표시합니다.
-              </p>
+              </Fineprint>
             </div>
           )}
 
@@ -251,50 +268,61 @@ export default async function DataSourcesPage() {
           )}
         </div>
 
-        <div className="rise-in-2 mt-6 flex flex-col gap-3">
-          {SOURCES.map((s) => (
-            <section key={s.name} className="rounded-2xl border border-line bg-surface p-4">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                <h2 className="t-body font-bold text-ink">{s.name}</h2>
-                <span className="t-caption font-bold text-primary">{s.cadence}</span>
-              </div>
-              <p className="mt-1 t-sub text-text-2">
-                <span className="font-bold text-text-1">원천</span> {s.origin}
-              </p>
-              <p className="mt-0.5 t-sub text-text-2">
-                <span className="font-bold text-text-1">쓰이는 곳</span> {s.used}
-              </p>
-              <p className="mt-1.5 t-sub leading-[1.65] text-text-3">
-                <span className="font-bold">한계</span> {s.limits}
-              </p>
-            </section>
-          ))}
-        </div>
-
-        <section className="mt-8">
-          <h2 className="text-[19px] font-bold text-ink">AI 콘텐츠 라벨 정책</h2>
-          <p className="mt-1.5 t-body leading-[1.7] text-text-2">
-            내집나우는 AI가 만든 것과 사람이 쓴 것, 실측과 추정을 화면에서 구분합니다.
-            이 정책은 코드 게이트로 강제됩니다. 라벨 없는 AI 수치는 배포 단계에서 막힙니다.
-          </p>
-          <div className="mt-3 flex flex-col gap-2">
-            {AI_POLICY.map((p) => (
-              <div key={p.label} className="rounded-2xl border border-line bg-surface px-4 py-3">
-                <div className="t-body font-bold text-ink">{p.label}</div>
-                <p className="mt-1 t-sub leading-[1.65] text-text-2">{p.rule}</p>
+        {/* [1062] 테두리 카드 11장(각 네 문단) → 한 판 안 행 11줄. 이름 왼쪽 · 갱신 주기 오른쪽,
+            원천·쓰이는 곳·한계는 접기 뒤 "항목 | 사실" 표(문장 그대로). */}
+        <section className="rise-in-2 card mt-6 p-5">
+          <h2 className="t-section font-bold text-ink">원천 · 갱신 주기 · 한계</h2>
+          {/* li 가 아니라 div 행 — 폰 배율의 한 줄 규칙(html[data-mscale] li p·div.t-sub/.t-caption)이
+              접기 안의 "항목 | 사실" 표를 한 줄로 잘라 버린다(globals.css). */}
+          <div data-tone="plain" className="mt-2 flex flex-col divide-y divide-line">
+            {SOURCES.map((s) => (
+              <div key={s.name} className="py-2.5">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                  <h3 className="m-0 t-body font-bold text-ink">{s.name}</h3>
+                  <span className="t-caption font-bold text-primary">{s.cadence}</span>
+                </div>
+                <Fineprint label="원천 · 쓰이는 곳 · 한계">
+                  <FactTable
+                    dense
+                    rows={[
+                      { label: "원천", value: s.origin },
+                      { label: "쓰이는 곳", value: s.used },
+                      { label: "한계", value: s.limits },
+                    ]}
+                  />
+                </Fineprint>
               </div>
             ))}
           </div>
         </section>
 
-        <p className="mt-8 t-caption leading-[1.7] text-text-3">
-          갱신 주기는 수집 파이프라인 기준이며, 원천 기관의 발표 일정에 따라 실제 최신
-          시점은 다를 수 있습니다. 파이프라인이 멈추면 내부 신선도 감시가 경보를
-          울리고, 각 화면은 마지막 갱신 시점을 함께 표기합니다. 문의:{" "}
-          <Link href="/support" className="font-bold text-primary">
-            고객센터
-          </Link>
+        {/* [1062] 정책 카드 5장(제목+문단) → 접힌 행 + 낱말 칩. 질문·답이 아니므로 FAQPage JSON-LD 는 내지 않는다 */}
+        <p className="mt-8 measure t-body leading-[1.7] text-text-2">
+          내집나우는 AI가 만든 것과 사람이 쓴 것, 실측과 추정을 화면에서 구분합니다.
         </p>
+        <Fineprint className="mt-1" label="강제 방법">
+          이 정책은 코드 게이트로 강제됩니다. 라벨 없는 AI 수치는 배포 단계에서 막힙니다.
+        </Fineprint>
+        <FaqCompact
+          className="mt-3"
+          title="AI 콘텐츠 라벨 정책"
+          jsonLd={false}
+          items={AI_POLICY.map((p) => ({ q: p.label, a: p.rule, keys: p.keys }))}
+        />
+
+        <div className="mt-8">
+          <Fineprint label="갱신 주기 기준">
+            갱신 주기는 수집 파이프라인 기준이며, 원천 기관의 발표 일정에 따라 실제 최신
+            시점은 다를 수 있습니다. 파이프라인이 멈추면 내부 신선도 감시가 경보를
+            울리고, 각 화면은 마지막 갱신 시점을 함께 표기합니다.
+          </Fineprint>
+          <p className="mt-1.5 t-caption leading-[1.7] text-text-3">
+            문의:{" "}
+            <Link href="/support" className="tap-line font-bold text-primary">
+              고객센터
+            </Link>
+          </p>
+        </div>
       </div>
     </PageShell>
   );

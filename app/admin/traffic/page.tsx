@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { FUNNEL_EVENT } from "@/lib/platform-funnel-events";
 import {
@@ -576,12 +577,21 @@ export default async function AdminTrafficPage() {
       {/* 유입 경로 — 어디서·어떤 링크로 왔는가 (랜딩 기준) */}
       <section className="card rounded-2xl p-5">
         <h2 className="text-[15px] font-bold text-ink">
-          유입 출처{" "}
+          유입 출처 · 동의 방문 표본{" "}
           <span className="text-[12px] font-medium text-text-3">
             최근 30일 · 세션 첫 방문(랜딩) 기준 · 리퍼러는 호스트만 저장(검색어 등
             전체 URL 미저장)
           </span>
         </h2>
+        {/* [1061] 이 표는 쿠키 동의한 방문만 담는다 — 네이버·구글에서 온 전체 착지(동의 무관)는 검색 유입 화면 */}
+        <p className="mt-1 text-[12px] text-text-3">
+          동의 배너에서 허용한 방문만 셉니다. 네이버·구글 검색에서 온 <b className="text-ink">전체</b> 착지와 서치콘솔·서치어드바이저
+          실적은{" "}
+          <Link href="/admin/search" className="tap-line font-bold text-primary no-underline">
+            검색 유입
+          </Link>
+          에서 봅니다.
+        </p>
         {referrers.length === 0 ? (
           <p className="mt-3 text-[13px] text-text-3">
             아직 유입 기록이 없어요. 유입 수집은 2026-08-03 저녁부터 시작됐어요 —

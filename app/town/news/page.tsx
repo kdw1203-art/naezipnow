@@ -59,7 +59,7 @@ export const metadata = buildPageMetadata({
 function digestSummaryLine(d: WeeklyDigest): string {
   const parts: string[] = [];
   if (d.news.length > 0) parts.push(`뉴스 ${d.news.length}건`);
-  if (d.market.length > 0) parts.push(`주요 지역 시세 ${d.market.length}곳`);
+  if (d.market.length > 0) parts.push(`시장 요약 ${d.market.length}곳`);
   if (d.community.count > 0) parts.push(`이웃 글 ${d.community.count}건`);
   return parts.length > 0 ? `이번 주 ${parts.join(" · ")}` : "이번 주 요약 준비 중";
 }
@@ -67,7 +67,7 @@ function digestSummaryLine(d: WeeklyDigest): string {
 /* 다이제스트 티저 — 최신 뉴스 제목(없으면 시장 요약) */
 function digestTeaserOf(d: WeeklyDigest): string | null {
   if (d.news.length > 0) return d.news[0].title;
-  if (d.market.length > 0) return `${d.market[0].name} 등 주요 지역 시세 요약`;
+  if (d.market.length > 0) return `${d.market[0].name} 등 주요 지역 시장 요약`;
   return null;
 }
 

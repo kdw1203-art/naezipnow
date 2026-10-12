@@ -27,6 +27,8 @@ import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { DEFAULT_DESKTOP_ORIGIN } from "@/lib/platform-shell";
 import { rawQrSvg } from "@/lib/brief/qr";
 import { BRIEF_SAMPLE, PRO_CONCLUSION, PRO_RESULT_LINES, PRO_STEPS } from "@/lib/brief/sample";
+import { KeywordChips } from "@/app/components/compact/KeywordChips";
+import { Fineprint } from "@/app/components/Fineprint";
 import { OfficeLeadForm } from "@/app/widget/OfficeLeadForm";
 import { ProBriefPicker } from "./ProBriefPicker";
 import { BriefSample } from "./BriefSample";
@@ -59,14 +61,10 @@ function CardHead({ id, icon, title }: { id: string; icon: string; title: string
   );
 }
 
-/** 결과 한 줄 — "무엇이 나오는지"(견본 값) · 체크 아이콘은 success 하나 */
+/** 결과 한 줄 — "무엇이 나오는지"(견본 값).
+ *  [1062 · 글 줄이기] 회색 면 + 초록 체크 아이콘을 걷고 머리카락 선 한 줄로 — 값이 내용이고 강조는 굵기로 준다. */
 function ResultLine({ text }: { text: string }) {
-  return (
-    <p className="m-0 mt-2 flex items-start gap-1.5 rounded-lg bg-bg px-2.5 py-2 t-sub text-text-1">
-      <Icon name="check" size={16} className="mt-0.5 shrink-0 text-success" />
-      <span>{text}</span>
-    </p>
-  );
+  return <p className="m-0 mt-2 border-t border-line pt-2 t-sub font-bold text-ink">{text}</p>;
 }
 
 const CARD = "card rounded-2xl p-4 max-md:p-3.5";
@@ -123,7 +121,9 @@ export default async function ProPage() {
           <h2 id="pro-how" className="t-title text-ink">
             {PRO_CONCLUSION}
           </h2>
-          <p className="m-0 mt-1 t-sub text-text-2">개요 8칸 · 타입별 12개월 미니 차트 · 최근 실거래 표 · 전세가율 · 주의 · QR. 사무소명은 이 기기에만 저장</p>
+          {/* [1062 · 글 줄이기] 중점으로 이어 붙인 한 문장 → 읽는 칩(같은 낱말 그대로) + 저장 위치 한 줄 */}
+          <KeywordChips className="mt-2" label="브리핑에 들어가는 것" items={["개요 8칸", "타입별 12개월 미니 차트", "최근 실거래 표", "전세가율", "주의", "QR"]} />
+          <p className="m-0 mt-1.5 t-caption text-text-3">사무소명은 이 기기에만 저장</p>
           <StepLine className="mt-3" current={0} steps={PRO_STEPS} />
           <div id={SEARCH_ID} className="mt-3 scroll-mt-20">
             <ProBriefPicker />
@@ -139,27 +139,34 @@ export default async function ProPage() {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <section aria-labelledby="pro-brief" className={CARD}>
             <CardHead id="pro-brief" icon="file-text" title="브리핑 리포트" />
-            <p className="m-0 mt-1 t-body text-text-1">단지 개요 · 타입별 최근 실거래 · 전세가율 · 주의 사항을 A4 1장으로 인쇄</p>
             <ResultLine text={PRO_RESULT_LINES.brief} />
-            <p className="m-0 mt-1 t-caption text-text-3">로그인 없이 · 사무소명·연락처는 이 기기에만 저장</p>
+            {/* [1062 · 글 줄이기] 설명 두 줄은 "자세히" 뒤로 — 늘 보이는 것은 이름과 결과 값뿐이다(문구 그대로) */}
+            <Fineprint className="mt-1.5" label="자세히">
+              <p className="m-0">단지 개요 · 타입별 최근 실거래 · 전세가율 · 주의 사항을 A4 1장으로 인쇄</p>
+              <p className="m-0 mt-1">로그인 없이 · 사무소명·연락처는 이 기기에만 저장</p>
+            </Fineprint>
             <a href={`#${SEARCH_ID}`} className="btn-secondary btn-md press mt-2 w-full no-underline">
               단지 검색
             </a>
           </section>
           <section aria-labelledby="pro-widget" className={CARD}>
             <CardHead id="pro-widget" icon="grid-3x3" title="위젯 퍼가기" />
-            <p className="m-0 mt-1 t-body text-text-1">단지 화면 맨 끝 &quot;데이터 출처&quot;의 퍼가기 카드에서 코드 복사 · 사무소 홈페이지에 실거래 표 삽입</p>
             <ResultLine text={PRO_RESULT_LINES.widget} />
-            <p className="m-0 mt-1 t-caption text-text-3">실거래 갱신 시 반영 · 출처 표기 포함</p>
+            <Fineprint className="mt-1.5" label="자세히">
+              <p className="m-0">단지 화면 맨 끝 &quot;데이터 출처&quot;의 퍼가기 카드에서 코드 복사 · 사무소 홈페이지에 실거래 표 삽입</p>
+              <p className="m-0 mt-1">실거래 갱신 시 반영 · 출처 표기 포함</p>
+            </Fineprint>
             <Link href="/complex/browse" className="btn-secondary btn-md press mt-2 w-full no-underline">
               단지 찾기
             </Link>
           </section>
           <section aria-labelledby="pro-watch" className={CARD}>
             <CardHead id="pro-watch" icon="bell" title="관심 단지 알림" />
-            <p className="m-0 mt-1 t-body text-text-1">담당 단지 관심 등록 → 새 실거래·가격 변동 수신함 알림</p>
             <ResultLine text={PRO_RESULT_LINES.watch} />
-            <p className="m-0 mt-1 t-caption text-text-3">로그인 필요 · 무료</p>
+            <Fineprint className="mt-1.5" label="자세히">
+              <p className="m-0">담당 단지 관심 등록 → 새 실거래·가격 변동 수신함 알림</p>
+              <p className="m-0 mt-1">로그인 필요 · 무료</p>
+            </Fineprint>
             <Link href="/login?callbackUrl=%2Fmy" className="btn-secondary btn-md press mt-2 w-full no-underline">
               로그인
             </Link>

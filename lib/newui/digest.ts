@@ -25,6 +25,8 @@ import { logger } from "@/lib/log";
 import type { Post } from "@/lib/types/post";
 import { formatKrwWon } from "@/lib/format/krw";
 import { DELTA_UNKNOWN } from "@/lib/newui/delta-label";
+import { canonicalNewsPath, readNewsMeta } from "@/lib/news-seo";
+import { newsImageUrl } from "@/lib/town/shared";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const NEWS_LIMIT = 8;
@@ -39,6 +41,12 @@ export interface DigestNewsItem {
   region: string | null;
   /** 표시용 게시 시각 (source_published_at ?? created_at, ISO) */
   publishedAt: string;
+  /** [1061] 우리 뉴스 상세의 정식 경로(/town/news/<slug>-<uuid>) — 메일·카드가 제목을 링크로 */
+  href: string;
+  /** [1061] 원문 사진(og:image) — 뉴스 상세와 같은 원천(newsImageUrl). 없으면 null(빈 상자 금지) */
+  imageUrl: string | null;
+  /** [1061] 원문 주소 — "원문 · 출처" 링크용 */
+  sourceUrl: string | null;
 }
 
 export interface DigestMarketItem {
@@ -137,6 +145,9 @@ async function computeNews(sinceMs: number): Promise<DigestNewsItem[]> {
       sourceName: p.sourceName ?? null,
       region: p.city || null,
       publishedAt: new Date(displayTime(p)).toISOString(),
+      href: canonicalNewsPath(readNewsMeta(p.automationMeta).seo.slug, p.id),
+      imageUrl: newsImageUrl(p),
+      sourceUrl: p.sourceUrl && /^https?:\/\//.test(p.sourceUrl) ? p.sourceUrl : null,
     }));
 }
 

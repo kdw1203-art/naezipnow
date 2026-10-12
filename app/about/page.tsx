@@ -5,6 +5,7 @@ import { PageShell } from "../components/PageShell";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { loadCoverage } from "@/lib/stats/coverage";
+import { FaqCompact } from "@/app/components/compact/FaqCompact";
 
 /* 고도화 50 — 실적 숫자는 llms.txt 와 같은 로더에서 온다(1시간 재검증).
    손으로 적은 숫자는 낡는다 — 로더가 실패하면 숫자 문장을 통째로 생략한다. */
@@ -23,22 +24,27 @@ export const metadata = buildPageMetadata({
    브랜드 서사가 아니라 실제로 지키고 있는 원칙만 적는다 — 각 문장은
    서비스 어딘가에서 확인 가능한 동작이다(방법론 페이지가 그 증거다). */
 
-const PRINCIPLES: { title: string; body: string }[] = [
+/* [1062 · 글 줄이기] keys = 본문(body)에 있는 사실 낱말만 — 접힌 상태에서 본문을 대신 보여 준다. 본문은 그대로(지우지 않는다). */
+const PRINCIPLES: { title: string; body: string; keys: string[] }[] = [
   {
     title: "사실이 최우선입니다",
     body: "모든 가격은 국토교통부에 신고된 실거래만 집계하고, 수치에는 기준 시점을 붙입니다. 매물 호가·추정치를 실거래처럼 부르지 않습니다.",
+    keys: ["신고된 실거래만 집계", "기준 시점", "호가·추정치를 실거래처럼 부르지 않음"],
   },
   {
     title: "없는 데이터는 없다고 말합니다",
     body: "실거래가 없는 단지에 추정 가격을 만들지 않고, 데이터가 부족하면 화면에 그대로 '아직 없다'고 적습니다. AI 기능도 조회된 데이터에서만 답하며, 어떤 데이터를 읽었는지 답변과 함께 보여줍니다.",
+    keys: ["추정 가격 만들지 않음", "'아직 없다'고 적음", "AI는 조회된 데이터에서만"],
   },
   {
     title: "계산 방식을 공개합니다",
     body: "해제거래 제외, 신고 지연 처리, 시장 온도 공식 등 집계 방식 전부를 데이터 방법론 페이지에 공개합니다. 방식이 바뀌면 문서를 갱신합니다.",
+    keys: ["해제거래 제외", "신고 지연 처리", "시장 온도 공식", "데이터 방법론 페이지"],
   },
   {
     title: "판단은 사용자의 것입니다",
     body: "내집나우는 매수·매도를 추천하지 않습니다. 데이터와 본인의 임장 기록을 나란히 두고, 판단의 근거를 쌓는 것을 돕습니다.",
+    keys: ["매수·매도 추천하지 않음", "데이터와 임장 기록 나란히", "판단의 근거"],
   },
 ];
 
@@ -85,14 +91,14 @@ export default async function AboutPage() {
           </div>
         )}
 
-        <div className="mt-6 flex flex-col gap-4 max-md:mt-4 max-md:gap-3">
-          {PRINCIPLES.map((p, i) => (
-            <section key={p.title} className={`rise-in-${Math.min(i + 2, 6)} card rounded-3xl p-6 max-md:p-4`}>
-              <h2 className="t-section text-ink">{p.title}</h2>
-              <p className="mt-2 t-body leading-[1.75] text-text-1">{p.body}</p>
-            </section>
-          ))}
-        </div>
+        {/* [1062 · 글 줄이기] 원칙 4장(제목 + 문단)이 늘 펼쳐져 있던 것 → 한 카드 안 원칙 한 줄 + 핵심 낱말 칩, 문단은 눌러야 펼쳐진다.
+            글은 그대로 DOM 에 있다. 질문·답이 아니므로 FAQPage JSON-LD 는 내지 않는다(jsonLd=false). */}
+        <FaqCompact
+          className="rise-in-2 mt-6 rounded-3xl max-md:mt-4"
+          title="운영 원칙"
+          jsonLd={false}
+          items={PRINCIPLES.map((p) => ({ q: p.title, a: p.body, keys: p.keys }))}
+        />
 
         <div className="mt-6 flex flex-wrap gap-2 t-sub max-md:mt-4">
           <Link href="/methodology" className="chip chip-soft px-3.5 py-2 no-underline">

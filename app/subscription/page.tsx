@@ -14,8 +14,10 @@ import { isTossBillingEnabled } from "@/lib/payments/toss-billing";
 import { BillingPanel } from "./BillingPanel";
 import { getPlan, PLAN_FEATURE_MATRIX } from "@/lib/subscriptions/plans";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
-import { faqJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
+import type { FaqItem } from "@/lib/seo/jsonld";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
+import { FaqCompact } from "@/app/components/compact/FaqCompact";
+import { FactTable } from "@/app/components/compact/FactTable";
 import { DEFAULT_DESKTOP_ORIGIN } from "@/lib/platform-shell";
 import { PAYMENT_METHODS_PATH, REVIEW_CHECKOUT_PATH } from "@/lib/payments/payment-methods";
 import { isTierOnSale, SELLABLE_PAID_TIERS } from "@/lib/subscriptions/sell-config";
@@ -60,6 +62,30 @@ function subscriptionFaq(recurringOpen: boolean): FaqItem[] {
       a: "커뮤니티 글·공개 노트·채팅 등 닉네임이 노출되는 모든 지점에 동일하게 표시되며, 설정에서 숨길 수 있어요.",
     },
   ];
+}
+
+/* [1062] 접힌 FAQ 의 핵심 낱말 칩 — 답 안에 있는 사실 낱말만(답에 없는 말 금지 · 결제 방식에 따라 갈린다) */
+function faqKeys(q: string, recurringOpen: boolean): string[] {
+  switch (q) {
+    case "무료로 쓸 수 있는 기능은 무엇인가요?":
+      return ["임장노트", "지도 비교", "실거래 조회", "유료 = AI 깊이·한도"];
+    case "결제는 어떻게 하나요?":
+      return recurringOpen
+        ? [`${WEEKLY_PASS.label} 단건`, "월간·연간 자동결제", "토스 결제창", "포인트 무관"]
+        : ["모두 1회성 단건", "자동 반복청구 없음", "포인트 무관"];
+    case "이용권은 자동으로 갱신되나요?":
+      return recurringOpen
+        ? [`${WEEKLY_PASS.label} 갱신 없음`, "월간·연간 자동 갱신", "구독 관리에서 해지"]
+        : ["자동 갱신 없음", "만료 시 무료 플랜", "만료 전 알림"];
+    case "해지·환불은 어떻게 하나요?":
+      return recurringOpen
+        ? ["7일 이내 전액 환불", "구독 관리에서 해지", "고객센터 1:1"]
+        : ["7일 이내 전액 환불", "해지할 것 없음", "고객센터 1:1"];
+    case "플랜 배지는 어디에 표시되나요?":
+      return ["닉네임 노출 지점", "설정에서 숨김"];
+    default:
+      return [];
+  }
 }
 
 export const metadata = buildPageMetadata({
@@ -570,20 +596,10 @@ export default async function SubscriptionPage() {
       {/* 고도화 32 — 구독 FAQ. 결제 수단·환불·해지가 화면 곳곳에 흩어져 있던
           것을 한 자리에 모은다. 아래 JSON-LD 는 이 배열 그대로에서 생성한다
           (화면에 없는 질문을 스키마에만 넣지 않는다 — faqJsonLd 규칙). */}
-      <section className="rise-in-4 card mx-auto mt-8 w-full max-w-[1080px] rounded-3xl px-[22px] py-5 max-md:mt-5 max-md:px-4 max-md:py-4">
-        <h2 className="t-section text-ink">자주 묻는 질문</h2>
-        <div className="mt-3 flex flex-col gap-3">
-          {faq.map((f) => (
-            <div key={f.q} className="border-l-2 border-line pl-3">
-              <div className="t-body font-bold text-text-1">{f.q}</div>
-              <p className="mt-0.5 t-sub text-text-3">{f.a}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript(faqJsonLd(faq)) }}
+      {/* [1062 · 글 줄이기] 다섯 문단이 늘 펼쳐져 있던 FAQ → 질문 한 줄 + 핵심 낱말 칩, 답은 눌러야 펼쳐진다(글·JSON-LD 는 그대로). */}
+      <FaqCompact
+        className="rise-in-4 mx-auto mt-8 w-full max-w-[1080px] rounded-3xl max-md:mt-5"
+        items={faq.map((f) => ({ ...f, keys: faqKeys(f.q, recurringOpen) }))}
       />
 
       {/* [969] 하이드레이션 불일치 원인 수정 — 예전엔 아래 안내 <div>(안에 <p>)가 이 <p>
@@ -594,16 +610,26 @@ export default async function SubscriptionPage() {
         {/* 수익 문구 미기재 방침 + 서비스 제공기간(무형재화 판매정책 필수 표기) */}
         <ComplianceNotice variant="payment" recurringOpen={recurringOpen} />
       </div>
-      <p className="mx-auto mt-5 w-full max-w-[1080px] t-sub text-text-3">
-        {/* "언제든 해지 가능"만 적어 두면 화면 어딘가에 해지 버튼이 있다는 뜻으로 읽힌다.
-            [970 · A-22] 빌링 개방 후엔 자동결제 해지 버튼이 구독 관리(BillingAutopayCard)에
-            실제로 있다 — 환불 접수만 고객센터. 개방 전엔 전부 단건이라 해지할 것이 없고
-            환불 접수만 남는다. 위 FAQ·ComplianceNotice 와 같은 recurringOpen 을 본다. */}
-        {recurringOpen
-          ? `${WEEKLY_PASS.label}은 단건, 월간·연간은 자동결제(해지는 구독 관리에서) · 환불 접수는 고객센터 1:1 문의 · 결제 7일 이내 전액 환불 · 부가세 포함 · `
-          : "모든 이용권은 1회성 단건 결제(자동 갱신 없음) · 환불 접수는 고객센터 1:1 문의 · 결제 7일 이내 전액 환불 · 부가세 포함 · "}
-        커뮤니티 글·공개 노트·채팅 등 모든 닉네임 노출 지점에 동일 배지 적용
-      </p>
+      {/* "언제든 해지 가능"만 적어 두면 화면 어딘가에 해지 버튼이 있다는 뜻으로 읽힌다.
+          [970 · A-22] 빌링 개방 후엔 자동결제 해지 버튼이 구독 관리(BillingAutopayCard)에
+          실제로 있다 — 환불 접수만 고객센터. 개방 전엔 전부 단건이라 해지할 것이 없고
+          환불 접수만 남는다. 위 FAQ·ComplianceNotice 와 같은 recurringOpen 을 본다.
+          [1062 · 글 줄이기] 가운뎃점으로 이어 붙인 한 줄 → "항목 | 사실" 표(문구는 같은 사실). */}
+      <FactTable
+        dense
+        className="mx-auto mt-5 w-full max-w-[1080px]"
+        rows={[
+          {
+            label: "결제 방식",
+            value: recurringOpen
+              ? `${WEEKLY_PASS.label}은 단건 · 월간·연간은 자동결제(해지는 구독 관리에서)`
+              : "모든 이용권은 1회성 단건 결제(자동 갱신 없음)",
+          },
+          { label: "환불", value: "결제 7일 이내 전액 환불 · 환불 접수는 고객센터 1:1 문의" },
+          { label: "세금", value: "부가세 포함" },
+          { label: "배지", value: "커뮤니티 글·공개 노트·채팅 등 모든 닉네임 노출 지점에 동일 배지 적용" },
+        ]}
+      />
     </PageShell>
   );
 }

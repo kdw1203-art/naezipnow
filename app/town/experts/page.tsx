@@ -12,6 +12,9 @@ import { EXPERT_TYPES } from "@/lib/experts/taxonomy";
 import { countExpertTypes } from "@/lib/experts/type-counts";
 import { EXPERT_FAQ } from "@/lib/experts/faq";
 import { Icon } from "@/app/components/Icon";
+import { FaqCompact } from "@/app/components/compact/FaqCompact";
+import { KeywordChips } from "@/app/components/compact/KeywordChips";
+import { Fineprint } from "@/app/components/Fineprint";
 import { JsonLd } from "@/app/components/JsonLd";
 import { faqJsonLd } from "@/lib/seo/jsonld";
 import { TownCategoryNav } from "../TownCategoryNav";
@@ -74,6 +77,27 @@ function toPublicRow(e: UserExpertProfile): ExpertPublicRow {
   };
 }
 
+/* [1062 · 글 줄이기] 접힌 FAQ 의 핵심 낱말 칩 — 답(EXPERT_FAQ) 안에 있는 사실 낱말만 적는다(답에 없는 말 금지).
+   답은 지우지 않는다 — FaqCompact 안 <details> 에 그대로 있고 FAQPage JSON-LD 도 같은 배열에서 나온다. */
+function faqKeys(q: string): string[] {
+  switch (q) {
+    case "전문가 상담은 어떻게 진행되나요?":
+      return ["글로 답변", "마이 › 상담함", "로그인 후 가능", "플러스 월 2회 · 프로 월 10회"];
+    case "'인증' 배지는 무엇을 확인한 건가요?":
+      return ["면허·등록증·사업자등록증", "운영자 심사·승인", "협회·기관 공개 조회", "인증 전문가만 상담 신청"];
+    case "후기와 평점은 누가 남기나요?":
+      return ["답변이 완료된 상담의 의뢰자만", "상담 1건당 1번", "후기 없는 전문가는 평가 없음"];
+    case "견적 요청은 상담 신청과 무엇이 다른가요?":
+      return ["필요한 내용·지역", "인증 전문가들이 제안", "마이 › 상담함에서 비교", "시간당 3회"];
+    case "상담료는 어떻게 되나요?":
+      return ["전문가가 직접 적은 안내 금액", "플랫폼에서 처리하지 않음", "플랫폼 밖 선결제 신고 대상"];
+    case "법률 상담도 받을 수 있나요?":
+      return ["법률 서비스 상담 제공하지 않음", "법률 전문가에게 직접 문의", "가이드(계약 전 체크리스트)"];
+    default:
+      return [];
+  }
+}
+
 export default async function TownExpertsPage() {
   const loaded = await listExpertsAll();
   const verified = loaded.items.filter((e) => e.isVerified);
@@ -125,17 +149,8 @@ export default async function TownExpertsPage() {
             <p className="mt-2 t-body text-text-2">
               글 상담 · 상담함 답변 · 견적 요청 1건으로 여러 전문가 제안 비교
             </p>
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 t-sub text-text-2">
-              <span className="inline-flex items-center gap-1">
-                <Icon name="shield" size={13} className="text-ink" /> 서류·신원 확인 후 인증
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Icon name="star" size={13} className="text-brand-red" /> 후기는 답변 완료 의뢰자만
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Icon name="lock" size={13} className="text-ink" /> 연락처·계좌 교환 차단
-              </span>
-            </div>
+            {/* [1062 · 글 줄이기] 아이콘 세 개가 붙은 보증 문구 줄 → 읽는 칩 세 개(문구 그대로). 강조는 굵기·크기로, 색은 하나만 쓴다 */}
+            <KeywordChips className="mt-3" label="보증" items={["서류·신원 확인 후 인증", "후기는 답변 완료 의뢰자만", "연락처·계좌 교환 차단"]} />
           </div>
           {/* [972] "전문가로 참여" 는 공통 머리의 action 으로 올라갔다 — 같은 화면에
               같은 링크가 둘이면 어느 쪽이 주인지 알 수 없다. 여기는 목록으로
@@ -193,21 +208,25 @@ export default async function TownExpertsPage() {
       <section className="mb-6 max-md:mb-4">
         {/* [1015] 물음형 제목("어떤 전문가에게 무엇을 물을까") → 명사(브리프 규칙 D) */}
         <h2 className="mb-3 t-section text-ink">분야별 전문가</h2>
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+        {/* [1062 · 글 줄이기] 테두리 카드 7장(한 장에 세 줄) → 한 판 안 머리카락 선 행 7줄: 왼쪽 이름, 오른쪽 인원.
+            설명·자격 확인 출처는 같은 행 둘째 줄에 그대로 둔다(문구 삭제 없음). */}
+        <div className="card flex flex-col divide-y divide-line rounded-2xl">
           {typeCounts
             .filter((t) => t.id !== "other")
             .map((t) => (
               <Link
                 key={t.id}
                 href={`/town/experts/c/${t.id}`}
-                className="card tile flex flex-col gap-1 rounded-2xl p-4 no-underline"
+                className="press flex min-h-[40px] items-baseline justify-between gap-3 px-4 py-3 no-underline max-md:px-3.5"
               >
-                <div className="flex items-center justify-between gap-2">
+                <span className="min-w-0">
                   <span className="t-body font-bold text-ink">{t.label}</span>
-                  <span className="t-caption text-text-3">{t.count > 0 ? `인증 ${t.count}명` : "모집 중"}</span>
-                </div>
-                <span className="t-sub text-text-2">{t.desc}</span>
-                {t.source && <span className="t-caption text-text-3">자격 확인 · {t.source.label}</span>}
+                  <span className="mt-0.5 block t-sub text-text-2">
+                    {t.desc}
+                    {t.source ? ` · 자격 확인 · ${t.source.label}` : ""}
+                  </span>
+                </span>
+                <span className="shrink-0 t-caption text-text-3">{t.count > 0 ? `인증 ${t.count}명` : "모집 중"}</span>
               </Link>
             ))}
         </div>
@@ -222,14 +241,15 @@ export default async function TownExpertsPage() {
           <div className="max-w-[560px]">
             <h2 className="t-section text-ink">전문가 등록</h2>
             <p className="mt-1 t-sub text-text-2">면허·사업자 서류 심사 · 관리자 승인 · 인증 마크 · 분야별 목록과 단지 화면 무료 노출</p>
-            <p className="mt-3 t-caption text-text-3">
+            {/* [1062 · 글 줄이기] 늘 펼쳐져 있던 인증 대상·정책 문단 → 한 줄 접기(문구·링크 그대로 DOM 에 있다) */}
+            <Fineprint className="mt-2" label="인증 대상 · 운영정책">
               인증 대상: {EXPERT_TYPES.filter((t) => t.id !== "other").map((t) => t.label).join("·")} 및 서류·인터뷰 심사를 거친 기타 전문가.
               법률 서비스는 정책상 유료 입점 불가. 절차·검증 기준은{" "}
               <Link href="/legal/expert" className="inline-block py-[5px] font-bold text-primary underline underline-offset-2">
                 전문가 운영정책
               </Link>
               에 있습니다.
-            </p>
+            </Fineprint>
           </div>
           <div className="flex shrink-0 flex-col items-start gap-2 md:items-end">
             <ExpertApplyCta />
@@ -243,21 +263,14 @@ export default async function TownExpertsPage() {
         </div>
       </section>
 
-      {/* ---------- FAQ (JSON-LD 와 같은 배열) ---------- */}
-      <section className="mb-6">
-        <h2 className="mb-3 t-section text-ink">자주 묻는 질문</h2>
-        <div data-tone="hanji" className="card flex flex-col divide-y divide-line rounded-2xl px-5">
-          {EXPERT_FAQ.map((f) => (
-            <details key={f.q} className="group py-3.5">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 t-body font-bold text-ink">
-                {f.q}
-                <span className="shrink-0 text-text-3 transition-transform group-open:rotate-45">+</span>
-              </summary>
-              <p className="mt-2 t-sub text-text-2">{f.a}</p>
-            </details>
-          ))}
-        </div>
-      </section>
+      {/* ---------- FAQ (JSON-LD 와 같은 배열) ----------
+          [1062 · 글 줄이기] 제목 h2 + 기호(+) 토글을 손으로 그린 판 → 공용 접힌 FAQ(질문 한 줄 + 핵심 낱말 칩).
+          FAQPage JSON-LD 는 머리의 <JsonLd data={faqJsonLd(EXPERT_FAQ)} /> 하나뿐이므로 여기서는 내지 않는다(jsonLd=false). */}
+      <FaqCompact
+        className="mb-6 rounded-2xl"
+        jsonLd={false}
+        items={EXPERT_FAQ.map((f) => ({ q: f.q, a: f.a, keys: faqKeys(f.q) }))}
+      />
 
       {/* 베타 공급 부족의 실제 대안 */}
       <div className="flex flex-wrap items-center justify-center gap-2">

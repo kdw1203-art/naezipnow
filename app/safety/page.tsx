@@ -5,6 +5,8 @@ import { scrollBehavior } from "@/lib/ui/scroll";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { AIPanel } from "@/app/components/AIPanel";
+import { FaqCompact } from "@/app/components/compact/FaqCompact";
+import { Fineprint } from "@/app/components/Fineprint";
 import { JeonseSelfCheck, SELF_CHECK_ANCHOR_ID } from "./JeonseSelfCheck";
 
 /* P0-5 목업 정직화: 특정 단지의 가짜 진단 "결과"를 통째로 보여주던 화면을
@@ -22,32 +24,40 @@ import { JeonseSelfCheck, SELF_CHECK_ANCHOR_ID } from "./JeonseSelfCheck";
    매매는 준비 중이라고 문장으로 밝힌다. */
 
 /* 실제 진단 시 대조하는 항목 안내 — 판정값 없이 항목만 (지어낸 결과 금지) */
-const CHECK_ITEMS = [
+/* [1062 · 글 줄이기] 항목 6개가 "항목 + 확인 방법" 두 줄씩 늘 펼쳐져 있던 것 → 항목 한 줄 + 확인 낱말 칩,
+   확인 방법은 눌러야 펼쳐진다(FaqCompact). keys 는 how 안에 있는 말만 쓴다 — 글은 지우지 않고 접어 둘 뿐이다. */
+const CHECK_ITEMS: { label: string; how: string; keys: string[] }[] = [
   {
     label: "소유자 = 계약 상대방 일치",
     how: "등기부등본 갑구에서 소유자 확인 · 신분증 대조",
+    keys: ["등기부등본 갑구", "신분증 대조"],
   },
   {
     label: "깡통전세 위험 (매매가 대비 보증금+선순위 채권)",
     how: "통상 80% 초과 시 위험 신호 · 실거래가와 비교",
+    keys: ["80% 초과 시 위험 신호", "실거래가와 비교"],
   },
   {
     label: "선순위 근저당·가압류",
     how: "등기부등본 을구 확인 · 잔금일 말소 특약 필요 여부",
+    keys: ["등기부등본 을구", "잔금일 말소 특약"],
   },
   {
     label: "불법 건축물 여부",
     how: "건축물대장에서 위반건축물 표기 확인",
+    keys: ["건축물대장", "위반건축물 표기"],
   },
   {
     label: "임대인 세금 체납",
     how: "계약 전 국세·지방세 완납증명 열람 동의 요청",
+    keys: ["국세·지방세 완납증명", "열람 동의 요청"],
   },
   {
     label: "HUG·SGI 보증보험 가입 가능성",
     how: "보증금·주택 요건 충족 여부를 공사 홈페이지에서 조회",
+    keys: ["보증금·주택 요건", "공사 홈페이지"],
   },
-] as const;
+];
 
 export default function SafetyPage() {
   const [address, setAddress] = useState("");
@@ -137,22 +147,19 @@ export default function SafetyPage() {
             </p>
           )}
 
-          {/* 세입자 체크리스트 — 항목·확인 방법 안내 (판정값 없음). [1015 · 규칙 I] 행 목록 → 리퀴드 판(sand = 주의·확인) */}
-          <div className="rise-in-2 card flex flex-col gap-2.5 rounded-3xl p-[22px] max-md:p-3.5">
-            <div className="t-section text-ink">세입자 체크리스트</div>
-            <div data-tone="sand" className="lq-panel flex flex-col divide-y">
-              {CHECK_ITEMS.map((c) => (
-                <div key={c.label} className="flex flex-col gap-0.5 py-[9px]">
-                  <span className="t-body font-bold text-text-1">{c.label}</span>
-                  <span className="t-sub text-text-3">{c.how}</span>
-                </div>
-              ))}
-            </div>
-            <div className="t-caption leading-[1.6] text-text-3">
-              등기부등본: 인터넷등기소(iros.go.kr) · 건축물대장: 정부24(gov.kr). 임차(전세·월세) 계약 기준, 매매 계약 위험 진단은
-              준비 중.
-            </div>
-          </div>
+          {/* 세입자 체크리스트 — 항목·확인 방법 안내 (판정값 없음).
+              [1062 · 글 줄이기] 카드 안 또 한 겹의 판(lq-panel)과 12줄 → 항목 6줄(접힘) + 접기 뒤 열람처 한 줄.
+              질문·답이 아니므로 FAQPage JSON-LD 는 내지 않는다(jsonLd=false · 이 화면엔 FAQ JSON-LD 가 없다). */}
+          <FaqCompact
+            className="rise-in-2 rounded-3xl"
+            title="세입자 체크리스트"
+            jsonLd={false}
+            items={CHECK_ITEMS.map((c) => ({ q: c.label, a: c.how, keys: c.keys }))}
+          />
+          <Fineprint className="px-1" label="열람처 · 기준">
+            등기부등본: 인터넷등기소(iros.go.kr) · 건축물대장: 정부24(gov.kr). 임차(전세·월세) 계약 기준, 매매 계약 위험 진단은
+            준비 중.
+          </Fineprint>
         </div>
 
         <aside className="flex flex-col gap-3.5 max-md:gap-3">

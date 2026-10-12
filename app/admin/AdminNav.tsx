@@ -23,6 +23,8 @@ const NAV_GROUPS: Array<{ title: string; items: NavItem[]; defaultOpen: boolean 
     items: [
       { href: "/admin", label: "대시보드" },
       { href: "/admin/traffic", label: "트래픽" },
+      /* [1061] 네이버·구글 유입 — 우리 측정 착지 · 서치콘솔 실적 · 서치어드바이저 손 기록 */
+      { href: "/admin/search", label: "검색 유입" },
       { href: "/admin/freshness", label: "데이터 신선도" },
       { href: "/admin/moderation", label: "신고 · 모더레이션" },
       { href: "/admin/ops", label: "운영 · 공지" },
