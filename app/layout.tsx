@@ -39,7 +39,9 @@ export const metadata: Metadata = {
      을 전부 갖춘다. 스니펫은 아래 <head>, ads.txt 는 app/ads.txt/route.ts, 메타는 여기. */
   other: { "google-adsense-account": getAdSenseClient() ?? "" },
   verification: {
-    google: "d4jn9bf7SyTraz2EEnn4aNIPemHwz-Bqqflre4DEuXU",
+    /* [1060] 구글 토큰 2개 — 첫 값은 기존 속성, 둘째는 2026-10-12 소유자가 서치콘솔에서 새로 받은 값
+       (HTML 태그 방식). 배열이면 meta 가 두 줄 나간다(네이버와 같은 꼴). 토큰은 공개 값이다. */
+    google: ["d4jn9bf7SyTraz2EEnn4aNIPemHwz-Bqqflre4DEuXU", "muxrOv7pGSpU13sYIdz_GfOZIgsknd2qbhPCYUidGas"],
     /* [955] 네이버 토큰 2개 — 첫 값은 nuguzip.com 속성(유지), 둘째는 naezipnow.com 속성
        (2026-09-03 도메인 전환 뒤 서치어드바이저가 새로 발급). 배열이면 meta 가 두 줄 나간다. */
     other: {
