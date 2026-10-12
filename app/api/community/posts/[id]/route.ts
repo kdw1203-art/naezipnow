@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { safeAuth } from "@/lib/safe-auth";
 import { isAdmin } from "@/lib/auth/is-admin";
+import { findBlockedWord } from "@/lib/community/moderation";
 import { deletePost, updatePost } from "@/lib/posts-store";
 import { lookupPost, postLookupErrorResponse } from "@/lib/community/post-lookup";
 import type { Post } from "@/lib/types/post";
@@ -62,6 +63,22 @@ export async function PATCH(
   const patch: Partial<Post> = {};
   if (b.title !== undefined) patch.title = String(b.title).trim();
   if (b.body !== undefined) patch.body = String(b.body).trim();
+  /* [1058 · B8] 수정에는 길이·금칙어 검사가 없었다(작성은 제목 2~80자 · 본문 5~20,000자 · 금칙어) — 같은 규칙 */
+  if (patch.title !== undefined && (patch.title.length < 2 || patch.title.length > 80)) {
+    return NextResponse.json({ error: "제목은 2~80자" }, { status: 400 });
+  }
+  if (patch.body !== undefined && (patch.body.length < 5 || patch.body.length > 20_000)) {
+    return NextResponse.json({ error: "본문은 5~20,000자" }, { status: 400 });
+  }
+  const blockedWord =
+    (patch.title !== undefined ? findBlockedWord(patch.title) : null) ??
+    (patch.body !== undefined ? findBlockedWord(patch.body) : null);
+  if (blockedWord) {
+    return NextResponse.json(
+      { error: `커뮤니티 규칙에 어긋나는 표현("${blockedWord}") 포함 · 수정 후 저장`, blockedWord },
+      { status: 400 },
+    );
+  }
   if (b.category !== undefined) patch.category = String(b.category).trim();
   if (b.city !== undefined) patch.city = String(b.city).trim();
   if (b.district !== undefined) patch.district = String(b.district).trim();

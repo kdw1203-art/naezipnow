@@ -310,7 +310,8 @@ export function HomeMiniMap({
         <Icon name="map" size={16} />지도 불러오기 실패
       </p>
       <div className="mt-0.5 flex items-center gap-2">
-        <Link href="/welcome" className="btn-soft px-3 py-1.5 t-sub">
+        {/* [1058] /welcome 은 저장 뒤 /notes/new 로 보냈다 — 홈에서 고치러 간 사람이 홈으로 못 돌아왔다. next=/ 로 돌아온다 */}
+        <Link href="/welcome?next=%2F" className="btn-soft px-3 py-1.5 t-sub">
           {focus.regionLabel ? "관심지역 수정" : "관심지역 설정"}
         </Link>
         <Link href={mapHref(focus.regionQuery ?? focus.regionLabel, focus.regionQuery ? focus.center : null)} className="btn-soft px-3 py-1.5 t-sub">

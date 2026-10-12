@@ -21,6 +21,8 @@ import { relativeTime } from "../../shared";
 import { LocationMap } from "../../LocationMap";
 import { PostActions, CommentForm, LikeButton } from "../../news/[id]/PostInteractions";
 import { CommentThread } from "../../news/[id]/CommentThread";
+import { OwnerActions } from "./OwnerActions";
+import { countPostBookmarks } from "@/lib/posts-store";
 import { loadExpertBadges } from "@/lib/experts/badges";
 import { ExpertBadge } from "@/app/components/ExpertBadge";
 import { getServiceSupabase } from "@/lib/supabase/service";
@@ -161,7 +163,16 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
   /* 없음은 404, 실패는 던져 5xx — 못 읽은 것을 "없는 글"로 위장하지 않는다(posts-store 규칙) */
   const post = await getStoryPost(id);
   if (!post) notFound();
-  if (await isPostHidden(id).catch(() => false)) notFound();
+  /* [1058 · B7] 숨김 조회 실패를 false 로 삼켜 신고 누적으로 가린 글이 그대로 열렸다(fail-open) —
+     못 읽었으면 던져 오류 화면(app/error.tsx · 다시 시도)으로 보낸다. 없는 글로 위장하지도 않는다. */
+  let hidden: boolean;
+  try {
+    hidden = await isPostHidden(id);
+  } catch (e) {
+    logger.error(`[/town/story/[id]] 숨김 여부 조회 실패 (${id})`, e);
+    throw new Error("글 불러오기 실패 · 잠시 후 다시");
+  }
+  if (hidden) notFound();
 
   const region = regionLabel(post);
   const author = post.authorLabel?.trim() || "이웃";
@@ -170,7 +181,11 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
   const authorHref = authorProfileHref(author);
   const photos = postAttachments(post);
   const bodyParas = paragraphs(post.body);
-  const activeComments = post.comments.filter((c) => !c.deletedAt);
+  /* [1058 · B3] 지운 댓글도 스레드에 넘긴다(지운 부모의 답글이 사라지지 않게) — 수는 산 댓글만.
+     저장된 comment_count 는 옛 글에서 지운 댓글까지 세고 있어 여기서는 실제 목록으로 센다. */
+  const liveCommentCount = post.comments.filter((c) => !c.deletedAt).length;
+  /* [1058 · B2] Post.bookmarkCount 는 어떤 저장소도 채우지 않아 늘 0 이었다 — bookmarks 를 직접 센다(못 세면 숫자 없이) */
+  const bookmarkCount = await countPostBookmarks(post.id);
   /* [1047] 작성자·댓글 이메일 한 번 읽고 → 닉네임 효과 · 인증 전문가 마크 */
   const emails = await readStoryEmails(post.id);
   const nickEffect = await readAuthorNicknameEffect(emails.author);
@@ -209,7 +224,7 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
       />
 
       {/* 저장·공유 — POST /api/bookmarks(type: post) · Web Share */}
-      <PostActions postId={post.id} title={post.title} saveCount={post.bookmarkCount ?? 0} />
+      <PostActions postId={post.id} title={post.title} saveCount={bookmarkCount} />
 
       <div className="grid grid-cols-1 gap-5 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-4 max-md:gap-3">
@@ -259,6 +274,10 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
             </header>
 
             <h1 className="t-title text-ink">{post.title}</h1>
+
+            {/* [1058 · B8] 글쓴이의 수정·삭제 — PATCH/DELETE /api/community/posts/[id] 는 있었는데 누르는 자리가 없었다.
+                이 화면은 공유 캐시(ISR)라 서버가 뷰어를 모른다 — 조각이 세션이 있을 때만 글쓴이인지 묻고, 아니면 아무것도 그리지 않는다. */}
+            <OwnerActions postId={post.id} />
 
             {/* [B31] 이웃이 올린 사진 — 한 장이면 넓게, 여러 장이면 격자로. 비율로 높이를
                 먼저 잡아 로드 전후 시프트가 0이다. 없으면 아무것도 그리지 않는다. */}
@@ -318,25 +337,25 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
           <section id="comments" className="rise-in-1 card flex scroll-mt-24 flex-col gap-3 px-5 py-5 md:px-[26px]">
             <div className="flex items-center gap-2 t-section text-ink">
               <Icon name="messages-square" size={16} />
-              댓글 {post.commentCount}
+              댓글 {liveCommentCount}
             </div>
-            {activeComments.length === 0 && (
-              <p className="t-sub text-text-3">댓글 없음</p>
-            )}
-            {/* [#65·#66] 채택·대댓글 스레드 — 상대시각은 서버에서 계산해 넘긴다(하이드레이션 불일치 방지) */}
+            {/* [#65·#66] 채택·대댓글 스레드 — 상대시각은 서버에서 계산해 넘긴다(하이드레이션 불일치 방지)
+                [1058 · B3] 빈 상태 문구는 스레드가 한 번만 그린다(페이지와 스레드가 둘 다 적어 두 줄이 나왔다) */}
             <CommentThread
               postId={post.id}
-              comments={activeComments.map((c) => ({
+              comments={post.comments.map((c) => ({
                 id: c.id,
-                authorLabel: c.authorLabel,
+                /* 지운 댓글의 자리에는 이름을 남기지 않는다(공개 API 의 maskDeletedComments 와 같은 규칙) */
+                authorLabel: c.deletedAt ? "익명" : c.authorLabel,
                 body: c.body,
                 createdAt: c.createdAt,
                 parentId: c.parentId ?? null,
                 adopted: c.adopted === true,
+                deletedAt: c.deletedAt ?? null,
                 /* [1047] 인증 전문가 댓글 마크 — 이메일 대신 마크 문구·프로필 id 만 넘긴다 */
                 expertBadge: expertBadges.get(emails.comments[c.id] ?? "") ?? null,
               }))}
-              relativeLabels={Object.fromEntries(activeComments.map((c) => [c.id, relativeTime(c.createdAt)]))}
+              relativeLabels={Object.fromEntries(post.comments.map((c) => [c.id, relativeTime(c.createdAt)]))}
             />
             <CommentForm postId={post.id} />
           </section>

@@ -5,6 +5,7 @@ import {
   softDeleteCommentBody,
   type CommentDeleteActor,
 } from "@/lib/moderation/comment-soft-delete";
+import { liveCommentCount } from "@/lib/community/comment-rules";
 import type { Post, PostComment } from "@/lib/types/post";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -35,14 +36,20 @@ function normalizePost(row: unknown): Post {
     commentCount: Number(p.commentCount ?? (p.comments?.length ?? 0)),
     viewCount: Number(p.viewCount ?? 0),
     comments: Array.isArray(p.comments)
-      ? p.comments.map((c) => ({
-          id: String((c as PostComment).id),
-          authorLabel: String((c as PostComment).authorLabel ?? "익명"),
-          body: String((c as PostComment).body ?? ""),
-          createdAt: String(
-            (c as PostComment).createdAt ?? new Date().toISOString(),
-          ),
-        }))
+      ? p.comments.map((c) => {
+          const pc = c as PostComment;
+          return {
+            id: String(pc.id),
+            authorLabel: String(pc.authorLabel ?? "익명"),
+            body: String(pc.body ?? ""),
+            createdAt: String(pc.createdAt ?? new Date().toISOString()),
+            /* [1058 · B3] 삭제·답글·채택 상태를 떨어뜨려 되쓰기마다 지워졌다 — Supabase rowToPost 와 같은 칸을 싣는다
+               (authorEmail 은 종전대로 싣지 않는다 — 이 Post 는 그대로 응답으로 나간다) */
+            ...(pc.deletedAt ? { deletedAt: String(pc.deletedAt) } : {}),
+            ...(pc.parentId ? { parentId: String(pc.parentId) } : {}),
+            ...(pc.adopted === true ? { adopted: true } : {}),
+          };
+        })
       : [],
     relatedSite: p.relatedSite ? String(p.relatedSite) : undefined,
     sourceUrl: (() => {
@@ -170,10 +177,13 @@ export async function deletePostFile(id: string): Promise<boolean> {
   return true;
 }
 
+/* [1058 · B3] comment_count 는 산 댓글 수(Supabase 백엔드와 같은 규칙). 파일 백엔드는 authorEmail 을
+   저장하지 않아 중복(60초) 판정을 할 수 없다 — "duplicate" 를 돌려주지 않는다. */
 export async function appendCommentFile(
   id: string,
   comment: PostComment,
-): Promise<Post | null> {
+  _opts: { rejectDuplicate?: boolean } = {},
+): Promise<Post | "duplicate" | null> {
   const posts = await readPostsFile();
   const idx = posts.findIndex((p) => p.id === id);
   if (idx === -1) return null;
@@ -182,12 +192,20 @@ export async function appendCommentFile(
   const next: Post = {
     ...post,
     comments,
-    commentCount: comments.length,
+    commentCount: liveCommentCount(comments),
     updatedAt: new Date().toISOString(),
   };
   posts[idx] = next;
   await writePostsFile(posts);
   return next;
+}
+
+/** [1058 · B3] 파일 백엔드는 댓글 작성자 이메일을 저장하지 않는다 — 답글 알림 수신자를 알 수 없다 */
+export async function loadPostCommentAuthorEmailFile(
+  _postId: string,
+  _commentId: string,
+): Promise<string | null> {
+  return null;
 }
 
 /** 권한이 없으면 아무것도 하지 않고 `"forbidden"` — Supabase 백엔드와 같은 규칙. */
@@ -211,7 +229,8 @@ export async function softDeleteCommentFile(
       ? { ...c, body: softDeleteCommentBody(), deletedAt: now }
       : c,
   );
-  const next: Post = { ...post, comments, updatedAt: now };
+  /* [1058 · B3] 지운 댓글이 "댓글 N"에 남지 않게 — 산 댓글 수로 내린다 */
+  const next: Post = { ...post, comments, commentCount: liveCommentCount(comments), updatedAt: now };
   posts[idx] = next;
   await writePostsFile(posts);
   return next;

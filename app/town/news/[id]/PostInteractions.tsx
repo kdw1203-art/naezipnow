@@ -3,6 +3,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { hasSession } from "@/lib/client/has-session";
 import { Icon } from "@/app/components/Icon";
 import { ShareLinkButton } from "@/app/components/ShareLinkButton";
 import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
@@ -32,8 +33,9 @@ export function PostActions({
 }: {
   postId: string;
   title: string;
-  /** 서버가 센 실제 저장(북마크) 수 — 내 토글은 여기에 더하지 않는다(다음 렌더에 반영). */
-  saveCount: number;
+  /** 서버가 센 실제 저장(북마크) 수 — 내 토글은 여기에 더하지 않는다(다음 렌더에 반영).
+      [1058 · B2] null = 못 셌다 — 숫자 없이 "저장"만(0 으로 적지 않는다). */
+  saveCount: number | null;
 }) {
   const router = useRouter();
   const { promptSignup } = useSoftSignup();
@@ -133,7 +135,8 @@ export function PostActions({
           <Icon name="bookmark" size={14} style={saved ? { fill: "currentColor" } : undefined} />
           {saved && <span className="njn-burst" aria-hidden="true" />}
         </span>
-        {saved ? "저장됨" : "저장"} {saveCount}
+        {saved ? "저장됨" : "저장"}
+        {saveCount !== null ? ` ${saveCount}` : ""}
       </button>
       <ShareLinkButton
         title={title}
@@ -157,6 +160,25 @@ export function LikeButton({
   const [count, setCount] = useState(initialCount);
   const [liked, setLiked] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
+
+  /* [1058 · B1] liked 가 늘 null 로 시작해 전에 공감한 사람도 안 눌린 버튼을 봤고, 누르면 공감이 **취소**됐다.
+     상세는 공유 캐시(ISR)라 서버 렌더가 뷰어를 모른다 — 로그인 세션이 있을 때만 GET /like 로 묻는다
+     (CommentThread 의 채택 권한 조회와 같은 방식). 실패는 null 그대로(서버 응답이 최종이다). */
+  useEffect(() => {
+    let cancelled = false;
+    hasSession()
+      .then((authed) =>
+        authed ? fetch(`/api/community/posts/${postId}/like`, { cache: "no-store" }) : null,
+      )
+      .then((r) => (r && r.ok ? r.json() : null))
+      .then((d: { liked?: unknown } | null) => {
+        if (!cancelled && typeof d?.liked === "boolean") setLiked(d.liked);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [postId]);
 
   async function toggle() {
     if (busy) return;
@@ -217,7 +239,8 @@ export function LikeButton({
       onClick={() => void toggle()}
       disabled={busy}
       aria-pressed={liked ?? false}
-      className={`t-sub font-bold transition-colors disabled:opacity-50 ${
+      /* [1058 · B9] 글자만 있는 버튼이 폰에서 20px 였다 — 40px 히트(폰) · 24px(데스크톱) */
+      className={`inline-flex min-h-[40px] items-center px-2 t-sub font-bold transition-colors disabled:opacity-50 md:min-h-6 md:px-0 ${
         liked ? "text-primary underline underline-offset-2" : "text-primary"
       }`}
     >
@@ -302,10 +325,11 @@ export function CommentForm({
           placeholder={parentId ? "답글 남기기…" : "댓글 남기기…"}
           className="min-w-0 flex-1 bg-transparent py-[6px] t-body text-ink outline-none placeholder:text-text-3"
         />
+        {/* [1058 · B9] "등록" 글자 버튼 20px → 폰 40px 히트 */}
         <button
           type="submit"
           disabled={busy || body.trim().length === 0}
-          className="shrink-0 t-sub font-bold text-primary disabled:opacity-40"
+          className="inline-flex min-h-[40px] shrink-0 items-center px-2 t-sub font-bold text-primary disabled:opacity-40 md:min-h-6 md:px-0"
         >
           {busy ? "등록 중…" : "등록"}
         </button>

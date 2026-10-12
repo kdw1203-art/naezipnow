@@ -14,6 +14,7 @@ import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { WishlistSection } from "./WishlistSection";
 import { SavedSearchesSection } from "./SavedSearchesSection";
 import { SavedPostsSection } from "./SavedPostsSection";
+import { SavedNotesSection } from "./SavedNotesSection";
 import { WatchlistRows, type WatchRow } from "./WatchlistRows";
 import { pctChange } from "@/lib/format/delta";
 
@@ -50,7 +51,7 @@ const TABS: { key: WatchTab; label: string }[] = [
   { key: "complex", label: "관심 단지" },
   { key: "listings", label: "관심 매물" },
   { key: "searches", label: "저장 검색" },
-  { key: "saved", label: "저장한 글" },
+  { key: "saved", label: "저장" },
 ];
 const TAB_LABEL: Record<WatchTab, string> = Object.fromEntries(TABS.map((t) => [t.key, t.label])) as Record<
   WatchTab,
@@ -122,7 +123,11 @@ export default async function WatchlistDashboardPage({
         {tab === "listings" ? (
           <WishlistSection email={email} />
         ) : tab === "saved" ? (
-          <SavedPostsSection email={email} />
+          <>
+            <SavedPostsSection email={email} />
+            {/* [1059] 저장한 노트 — 노트 저장이 생겨 같은 탭 둘째 묶음 */}
+            <SavedNotesSection email={email} />
+          </>
         ) : (
           <SavedSearchesSection email={email} />
         )}

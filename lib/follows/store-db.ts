@@ -116,12 +116,20 @@ function escapeLike(s: string): string {
   return s.replace(/[\\%_]/g, (m) => `\\${m}`);
 }
 
+/** [1058] 같은 이름이 여럿이라 한 사람을 고를 수 없다 — 호출부는 "핸들 주소로 구분"이라고 답한다 */
+export const AMBIGUOUS_HANDLE = "ambiguous" as const;
+export type ResolvedHandle = string | null | typeof AMBIGUOUS_HANDLE;
+
 /**
  * 핸들(또는 닉네임) → profiles.email 해석.
- * /u/[handle]과 동일한 매칭 규칙: handle 일치(대소문자 무시) → full_name 폴백.
+ * /u/[handle]과 동일한 매칭 규칙: handle 일치(대소문자 무시) → full_name 폴백 → 공개 노트 작성자 라벨 폴백.
  * 클라이언트에 이메일을 노출하지 않고 팔로우하기 위한 서버 전용 헬퍼.
+ *
+ * [1058] full_name 폴백이 limit(1) 로 **첫 사람**을 골랐다 — 같은 이름이 둘이면 엉뚱한 사람을 팔로우했다.
+ * 둘 이상이면 `"ambiguous"` 를 돌려준다(이메일이 아니므로 호출부는 반드시 가른다). 공개 노트 라벨 폴백은
+ * /u 가 프로필 행 없는 작성자를 그 라벨로 찾아 그리므로(FollowButton 이 그 이름으로 묻는다) 같은 규칙으로 잇는다.
  */
-export async function resolveEmailByHandle(handleOrName: string): Promise<string | null> {
+export async function resolveEmailByHandle(handleOrName: string): Promise<ResolvedHandle> {
   const q = handleOrName.trim();
   if (!q) return null;
   const sb = getServiceSupabase();
@@ -130,14 +138,35 @@ export async function resolveEmailByHandle(handleOrName: string): Promise<string
   const pattern = escapeLike(q);
   const byHandle = await sb.from("profiles").select("email").ilike("handle", pattern).limit(1);
   if (byHandle.error) throw new Error(`profiles(handle) 조회 실패: ${byHandle.error.message}`);
-  let row = byHandle.data?.[0] ?? null;
-  if (!row) {
-    const byName = await sb.from("profiles").select("email").ilike("full_name", pattern).limit(1);
-    if (byName.error) throw new Error(`profiles(full_name) 조회 실패: ${byName.error.message}`);
-    row = byName.data?.[0] ?? null;
+  const handleRow = byHandle.data?.[0] ?? null;
+  if (handleRow?.email) return String(handleRow.email).trim() || null;
+
+  const byName = await sb
+    .from("profiles")
+    .select("email", { count: "exact" })
+    .ilike("full_name", pattern)
+    .limit(1);
+  if (byName.error) throw new Error(`profiles(full_name) 조회 실패: ${byName.error.message}`);
+  if (typeof byName.count === "number" && byName.count > 1) return AMBIGUOUS_HANDLE;
+  const nameRow = byName.data?.[0] ?? null;
+  if (nameRow?.email) return String(nameRow.email).trim() || null;
+
+  /* 3) 공개 노트의 author_label 일치 — 서로 다른 author_email 이 둘 이상이면 ambiguous */
+  const byLabel = await sb
+    .from("inspection_notes")
+    .select("author_email")
+    .eq("is_public", true)
+    .ilike("author_label", pattern)
+    .limit(50);
+  if (byLabel.error) throw new Error(`inspection_notes(author_label) 조회 실패: ${byLabel.error.message}`);
+  const emails = new Set<string>();
+  for (const r of (byLabel.data ?? []) as Array<{ author_email?: unknown }>) {
+    const e = typeof r.author_email === "string" ? r.author_email.trim().toLowerCase() : "";
+    if (e) emails.add(e);
   }
-  const email = row?.email ? String(row.email).trim() : "";
-  return email || null;
+  if (emails.size > 1) return AMBIGUOUS_HANDLE;
+  const [only] = [...emails];
+  return only ?? null;
 }
 
 export type FollowingPublic = { handle: string | null; name: string | null; since: string };

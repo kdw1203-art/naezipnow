@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { revalidatePath } from "next/cache";
 import { invalidateTownFeed } from "@/lib/cache/invalidate";
 import { invalidateComplexById } from "@/lib/complex/complex-invalidate";
@@ -6,18 +6,27 @@ import { invalidatePromptThreads } from "@/lib/town/invalidate-town";
 import { safeAuth } from "@/lib/safe-auth";
 import { isAdmin } from "@/lib/auth/is-admin";
 import { notifyPostAuthorOfNewComment } from "@/lib/notifications/comment-notify";
-import { appendComment, getPost } from "@/lib/posts-store";
+import { clipTitle, notifyEngagement } from "@/lib/notifications/engagement-notify";
+import { appendComment, getPost, loadPostCommentAuthorEmail } from "@/lib/posts-store";
+import { postHref } from "@/lib/town/post-href";
+import { findBlockedWord } from "@/lib/community/moderation";
+import { applyRateLimit } from "@/lib/rate-limit";
 import type { PostComment } from "@/lib/types/post";
 import { FUNNEL_EVENT, recordFunnelEvent } from "@/lib/platform-funnel-events";
 import { awardPoints } from "@/lib/points/ledger";
+import { resolveDisplayName } from "@/lib/account/display-name";
 import { logger } from "@/lib/log";
 
 export const runtime = "nodejs";
 
 export async function POST(
-  req: Request,
+  req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
+  /* [1058 · B3] 글 쓰기(posts/route.ts)에는 금칙어·도배 검사가 있는데 댓글에는 상한도 금칙어도 없었다 — 1분 10회(IP) */
+  const limited = await applyRateLimit(req, { max: 10, windowMs: 60_000 });
+  if (limited) return limited;
+
   const { id } = await ctx.params;
   const session = await safeAuth();
   if (!session?.user?.email) {
@@ -34,12 +43,19 @@ export async function POST(
   const b = body as Record<string, unknown>;
   const text = String(b.body ?? "").trim();
   // posts/route.ts 와 같은 정정 — local part 전체 저장 금지, 마스킹으로 통일
-  const authorLabel =
-    session.user.name?.trim() ||
-    `${session.user.email.split("@")[0]?.slice(0, 2) || "이웃"}** 이웃`;
+  /* [1058] 세션 이름(로그인 때 굳은 공급자 이름)을 그대로 넣어 프로필에서 바꾼 이름이 새 댓글에 안 보였다 — app_users.name 먼저 */
+  const authorLabel = await resolveDisplayName(session.user.email, session.user.name);
 
   if (text.length < 1) {
     return NextResponse.json({ error: "댓글 내용을 입력해 주세요." }, { status: 400 });
+  }
+  /* [1058 · B3] 금칙어 — 글과 같은 필터(lib/community/moderation) */
+  const blockedWord = findBlockedWord(text);
+  if (blockedWord) {
+    return NextResponse.json(
+      { error: `커뮤니티 규칙에 어긋나는 표현("${blockedWord}") 포함 · 수정 후 등록`, blockedWord },
+      { status: 400 },
+    );
   }
 
   /* [#66] 대댓글 — parentId 는 실제 존재하는 최상위 댓글일 때만 붙인다(1단계 제한).
@@ -74,7 +90,14 @@ export async function POST(
     ...(parentId ? { parentId } : {}),
   };
 
-  const post = await appendComment(id, comment);
+  const post = await appendComment(id, comment, { rejectDuplicate: true });
+  /* [1058 · B3] 도배 — 같은 사람이 같은 본문을 60초 안에 다시 달면 429(글 쓰기의 flood-guard 와 같은 정규화) */
+  if (post === "duplicate") {
+    return NextResponse.json(
+      { error: "같은 댓글을 방금 달았음 · 1분 뒤 다시" },
+      { status: 429, headers: { "Retry-After": "60" } },
+    );
+  }
   if (!post) {
     return NextResponse.json({ error: "게시글을 찾을 수 없습니다." }, { status: 404 });
   }
@@ -84,6 +107,24 @@ export async function POST(
     comment,
     commenterEmail: session?.user?.email ?? undefined,
   }).catch((e) => logger.error("[comment-notify]", e));
+
+  /* [1058 · B3] 답글이 부모 댓글 작성자에게 조용했다 — 글쓴이만 "새 댓글"을 받았다. 부모 댓글 작성자가 글쓴이도,
+     답글 쓴 본인도 아닐 때 "내 댓글에 답글"(인앱 + pushComments 켜진 사람은 푸시). 임장노트 댓글(1056 · B5)과 같은 틀. */
+  if (parentId) {
+    const replierEmail = session.user.email.trim().toLowerCase();
+    const postAuthorEmail = post.notifyEmail?.trim().toLowerCase() ?? "";
+    void (async () => {
+      const parentAuthor = await loadPostCommentAuthorEmail(id, parentId);
+      if (!parentAuthor || parentAuthor === replierEmail || parentAuthor === postAuthorEmail) return;
+      await notifyEngagement({
+        userEmail: parentAuthor,
+        title: "내 댓글에 답글",
+        body: `${clipTitle(post.title)} · ${comment.authorLabel}`,
+        actionUrl: `${postHref(post)}#comments`,
+        push: { pref: "pushComments", tag: `post-reply-${id}`, eventType: "comment" },
+      });
+    })().catch((e) => logger.error("[post-reply-notify]", e));
+  }
 
   if (session?.user?.email) {
     void recordFunnelEvent(req, {
@@ -119,7 +160,7 @@ export async function POST(
 }
 
 export async function DELETE(
-  req: Request,
+  req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id: postId } = await ctx.params;

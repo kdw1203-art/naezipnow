@@ -105,6 +105,14 @@ export function NoteRating({
       }
       setSummary({ count: data.count, average: data.average ?? null });
       setMine(data.mine ?? stars);
+      /* [1058 · C5] 머리 칩(NoteRatingChip)에 서버 값 그대로 알린다 — 틀린 사실: 머리의 "독자 평가 N · M명"은 새로고침 전까지 옛 값 */
+      try {
+        window.dispatchEvent(
+          new CustomEvent("nz:note-rating", { detail: { noteId, avg: data.average ?? null, count: data.count } }),
+        );
+      } catch {
+        /* 이벤트 전달 실패는 머리 칩만 옛 값으로 남는다 */
+      }
       showToast(before.mine ? "평가를 바꿨어요" : "평가를 남겼어요");
     } catch {
       setSummary(before.summary);

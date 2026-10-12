@@ -14,7 +14,10 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { NAV, navGroupOf } from "./nav-data";
 import { ThemeToggle } from "./ThemeToggle";
-import { PushSubscribe } from "@/components/PushSubscribe";
+import nextDynamic from "next/dynamic";
+
+/* [1058] PushSubscribe(+ lib/push/subscribe-client)는 시트가 열린 뒤에만 내려받는다 — 이 메뉴는 레이아웃에 있어 정적 import 는 모든 화면의 첫 번들에 실린다(1058 에서 커져 /my/settings 497KB · /complex 479KB). */
+const PushSubscribe = nextDynamic(() => import("@/components/PushSubscribe").then((m) => m.PushSubscribe), { ssr: false });
 import { Icon } from "./Icon";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { loginReturnHref } from "@/lib/client/shell-gates";
@@ -391,8 +394,21 @@ export function MobileMenu() {
                 </div>
                 <div className="grid grid-cols-2 items-center gap-x-1">
                   <ThemeToggle />
-                  {/* [1007 · V2a-3] 처음 열릴 때부터 마운트 — 닫힌 시트에서 서비스워커를 두드리지 않는다 */}
-                  {everOpened && <PushSubscribe />}
+                  {/* [1007 · V2a-3] 처음 열릴 때부터 마운트 — 닫힌 시트에서 서비스워커를 두드리지 않는다.
+                      [1058] 비로그인은 구독하지 않는다 — 권한을 허용해도 서버 저장이 401 이라 "알림 켜짐"만 남고 알림은 안 왔다.
+                      로그인(설정으로 복귀)으로 보낸다. 판정 전(null)은 PushSubscribe 가 로그인 힌트로 스스로 가른다. */}
+                  {loggedIn === false ? (
+                    <Link
+                      prefetch={false}
+                      href="/login?callbackUrl=%2Fmy%2Fsettings"
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-[9px] t-body font-semibold text-text-2 transition-colors active:text-primary"
+                    >
+                      <Icon name="bell" size={17} />
+                      <span className="truncate">알림 켜기 · 로그인</span>
+                    </Link>
+                  ) : (
+                    <>{everOpened && <PushSubscribe />}</>
+                  )}
                   {/* [968 · 47] 홈 화면에 추가 — 설치 배너(3일째 방문 조건)를 기다리지 않고
                       사용자가 직접 누르는 진입점. 설치 앱에서는 숨긴다. */}
                   {showInstallItem && (

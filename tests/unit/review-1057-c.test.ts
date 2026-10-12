@@ -264,7 +264,7 @@ test("C7 NoteComments — 401 이면 sessionStorage(노트 id 키)에 초안을 
 test("C8 bookmarks GET try/catch → 503 · assistant 저장 검색 수(서비스 키 없음 경로)도 try → null", () => {
   const route = strip(read("app/api/bookmarks/route.ts"));
   const get = route.slice(route.indexOf("export async function GET"), route.indexOf("export async function POST"));
-  assert.match(get, /try \{\s*const items = await listBookmarks\(session\.user\.email, type\);/);
+  assert.match(get, /try \{[\s\S]*?const items = await listBookmarks\(session\.user\.email, type\);/ /* [1059] try 안에 ?type=&id= 분기가 먼저 온다 */);
   assert.match(get, /dbUnavailable\("bookmark-list", e, "저장 목록 불러오기 실패 · 잠시 후 다시"\)/);
   const load = strip(read("lib/assistant/load.ts"));
   assert.match(load, /if \(!sb\) \{\s*try \{\s*return \(await listSavedSearches\(email\)\)\.length;\s*\} catch/);

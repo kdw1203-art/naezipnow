@@ -16,6 +16,7 @@ import {
 } from "@/lib/notifications/engagement-notify";
 import { applyRateLimit, rateLimit, tooManyRequests, WRITE_RATE_LIMIT } from "@/lib/rate-limit";
 import { dbUnavailable } from "@/lib/api/db-unavailable";
+import { resolveDisplayName } from "@/lib/account/display-name";
 import { logger } from "@/lib/log";
 
 export const runtime = "nodejs";
@@ -109,7 +110,8 @@ export async function POST(
     result = await addNoteComment({
       noteId: id,
       authorEmail: email,
-      authorLabel: commentAuthorLabel(session?.user?.name, email),
+      /* [1058] 세션 이름(로그인 때 굳은 공급자 이름)을 그대로 넣어 프로필에서 바꾼 이름이 새 댓글에 안 보였다 — app_users.name 먼저 */
+      authorLabel: commentAuthorLabel(await resolveDisplayName(email, session?.user?.name), email),
       body: text,
       parentId,
     });

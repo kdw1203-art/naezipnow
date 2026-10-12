@@ -15,7 +15,6 @@ import { TradeRow } from "./TradeRow";
 import type { MonthDeltaView } from "@/lib/complex/month-delta";
 import { DealListLazy as DealList } from "./DealListLazy";
 import { primeWatching, readWatching } from "./watchlist-status";
-import { canOfferPush, pushResultMessage, subscribeToPush } from "@/lib/push/subscribe-client";
 import { clearPendingWatch, hasPendingWatch, savePendingWatch, takePendingWatch } from "@/lib/client/pending-watch";
 import { getSessionLite } from "@/lib/client/session-lite";
 import type { DeferredRemover, Removal } from "@/app/my/watchlist/deferred-remove";
@@ -267,20 +266,24 @@ export function WatchlistButton({
       setPop((n) => n + 1);
       if (opts.replay) {
         showToast("가입 전에 누른 관심 등록을 마쳤어요 · 새 실거래가 올라오면 알려 드려요");
-      } else if (canOfferPush()) {
-        /* [968 · 46] 관심 등록의 뜻이 "시세 변동 알림"인데 그 자리에서 푸시를 권하지 않았다. 아직 묻지 않은
-           (default) 브라우저에만 토스트 액션으로 권한다 — 권한 프롬프트는 액션 탭(사용자 제스처)에서만 열린다. */
-        showToast("관심 단지에 담았어요 · 실거래가 변동을 푸시로도 받을 수 있어요", {
-          label: "푸시로 받기",
-          onClick: () => {
-            void subscribeToPush().then((r) => {
-              const m = pushResultMessage(r);
-              if (m) showToast(m);
-            });
-          },
-        });
       } else {
-        showToast("관심 단지에 담았어요 · 실거래가 변동을 알려 드려요");
+        /* [1058] 푸시 모듈(lib/push/subscribe-client · 1058 에서 커짐)은 담기에 성공한 뒤에만 내려받는다 — /complex/[id] 첫 번들 상한 480KB.
+           [968 · 46] 관심 등록의 뜻이 "시세 변동 알림"인데 그 자리에서 푸시를 권하지 않았다. 아직 묻지 않은
+           (default) 브라우저에만 토스트 액션으로 권한다 — 권한 프롬프트는 액션 탭(사용자 제스처)에서만 열린다. */
+        const push = await import("@/lib/push/subscribe-client").catch(() => null);
+        if (push && push.canOfferPush()) {
+          showToast("관심 단지에 담았어요 · 실거래가 변동을 푸시로도 받을 수 있어요", {
+            label: "푸시로 받기",
+            onClick: () => {
+              void push.subscribeToPush().then((r) => {
+                const m = push.pushResultMessage(r);
+                if (m) showToast(m);
+              });
+            },
+          });
+        } else {
+          showToast("관심 단지에 담았어요 · 실거래가 변동을 알려 드려요");
+        }
       }
     } catch {
       showToast("네트워크 오류로 저장하지 못했어요. 연결을 확인하고 다시 시도해 주세요.");

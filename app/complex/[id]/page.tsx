@@ -846,7 +846,9 @@ function toView(
     dealCount: txFailed ? null : dealSum,
     notes,
     notesFailed: postsFailed,
-    notesWriteHref: `/town/write?complex=${encodeURIComponent(row.id)}&complexName=${encodeURIComponent(
+    /* [1058 · C2] 글쓰기 링크의 단지 키는 canonical_id(name-id). 틀린 사실: row.id(K-apt 매칭 시 `kapt.A…`)를 넘겼는데
+       POST /api/community/posts 는 decodeComplexId 로 풀리는 값만 받아 kapt id 는 버린다 — 글이 단지에 안 묶인 채 저장됐다. */
+    notesWriteHref: `/town/write?complex=${encodeURIComponent(row.canonical_id)}&complexName=${encodeURIComponent(
       row.name,
     )}`,
     priceSeries,
@@ -913,9 +915,12 @@ async function loadView(id: string): Promise<HubView | null> {
        "실거래 없음 · 시세 준비 중"으로 그려지고 있었다(2026-08-05 표본 12개 중 6개).
        canonical_id 는 항상 name-id 라 decode 가 반드시 성공한다. */
     settle(`${row.name} 실거래 이력`, loadTxHistory(row.canonical_id, TX_HISTORY_MONTHS), heroBudget.expired),
+    /* [1058 · C2] 단지 이야기 조회 키도 canonical_id. 틀린 사실: "글은 kapt id 로 묶여 있다" — 글 API 는 kapt id 를
+       받지 않으므로(위 notesWriteHref 주석) kapt id 로 묶인 글은 존재할 수 없고, 운영 DB 실측(2026-10-12)도 0건이다.
+       정규 키로 저장된 글이 이 칸에 보이게 한다. */
     settle(
       `${row.name} 단지 이야기`,
-      rowP.then((r) => getComplexPosts((r ?? row).id, 12, budget.signal)),
+      rowP.then((r) => getComplexPosts((r ?? row).canonical_id, 12, budget.signal)),
       budget.expired,
     ),
     // #34: 같은 동 다른 단지 — 자기 자신 제외분 확보 위해 더 넓게.
@@ -1322,8 +1327,13 @@ export default async function ComplexHubPage({
      알약이 같은 값을 쓴다(resolveRegionId 주석 참고). */
   const regionId = resolveRegionId(v.city, v.dong);
   const regionLabel = axisRegionName(v.city, v.dong) || v.dong;
-  /* [1057 · B8] 단지 토론 범위 — 실단지(v.id === complexId)이고 토론 지역·해독 가능한 id 일 때만(목업·kapt 는 null) */
-  const talkScope = v.id === complexId && complexId !== "mock-1" ? talkScopeForComplex(complexId, regionId) : null;
+  /* [1058 · C2] 후기·토론의 단지 키 = canonical_id(name-id · kapt URL 로 열려도 같은 값). 틀린 사실: `v.id === complexId` 로
+     실단지를 가렸는데 K-apt 대장에 연결된 단지는 enrich 가 v.id 를 `kapt.A…` 로 바꿔 정규 주소에서 그 비교가 늘 거짓 —
+     거주민 후기·단지 토론 섹션이 그 단지들에서 영영 안 그려졌다. 목업(mock-1)·해독 안 되는 id 는 그대로 숨긴다. */
+  const socialId = rowForFacts?.canonical_id ?? complexId;
+  const socialOk = complexId !== "mock-1" && decodeComplexId(socialId) !== null;
+  /* [1057 · B8] 단지 토론 범위 — 토론 지역·해독 가능한 id 일 때만(아니면 null) */
+  const talkScope = socialOk ? talkScopeForComplex(socialId, regionId) : null;
 
   /* JSON-LD — 이 페이지가 설명하는 실체는 "단지 하나"다.
      G6 이전엔 ApartmentComplex(@id 있음)와 별도의 Residence(@id 없음) 두 노드를
@@ -1793,10 +1803,10 @@ export default async function ComplexHubPage({
             </section>
           )}
 
-          {/* 거주민 후기 — 실단지 매칭 시에만 */}
-          {v.id === complexId && complexId !== "mock-1" && (
+          {/* 거주민 후기 — 실단지(정규 name-id 로 해독되는 단지)에만. [1058 · C2] 키는 socialId(canonical_id) */}
+          {socialOk && (
             <section className="cv-auto rise-in-5 mt-6 max-md:mt-3">
-              <ComplexReviewsLazy complexId={complexId} complexName={v.name} />
+              <ComplexReviewsLazy complexId={socialId} complexName={v.name} />
             </section>
           )}
 

@@ -2,16 +2,38 @@
  * POST /api/push/subscribe   — 푸시 구독 저장
  * DELETE /api/push/subscribe — 구독 삭제 (알림 끄기)
  * GET /api/push/subscribe    — VAPID 공개키 반환
+ * GET /api/push/subscribe?endpoint=<endpoint> — [1058] 이 브라우저 구독이 **서버에** 있는지 { subscribed } (로그인 · 내 행만)
  */
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/log";
 import { safeAuth } from "@/lib/safe-auth";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { getVapidPublicKey } from "@/lib/push/vapid";
+import { dbUnavailable } from "@/lib/api/db-unavailable";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req: Request) {
+  /* [1058] 브라우저에 구독 객체가 있어도 서버 저장(POST)이 실패했거나 비로그인(401)으로 안 됐으면 알림은 오지 않는다 —
+     PushSubscribe 가 "알림 켜짐"을 그리기 전에 여기로 묻는다. 읽기 전용 · endpoint + 내 이메일로만 찾는다. */
+  const endpoint = new URL(req.url).searchParams.get("endpoint")?.trim() ?? "";
+  if (endpoint) {
+    const session = await safeAuth();
+    if (!session?.user?.email) {
+      return NextResponse.json({ subscribed: false, requiresLogin: true }, { status: 401 });
+    }
+    const sb = getServiceSupabase();
+    if (!sb) return NextResponse.json({ subscribed: false, stored: false });
+    const { data, error } = await sb
+      .from("push_subscriptions")
+      .select("endpoint")
+      .eq("endpoint", endpoint)
+      .eq("user_email", session.user.email)
+      .limit(1);
+    if (error) return dbUnavailable("push-subscribe-status", error, "알림 상태 확인 실패 · 잠시 후 다시");
+    return NextResponse.json({ subscribed: Array.isArray(data) && data.length > 0 }, { headers: { "Cache-Control": "private, no-store" } });
+  }
+
   const publicKey = getVapidPublicKey();
   if (!publicKey) {
     return NextResponse.json({

@@ -80,9 +80,10 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json(result);
   } catch (e) {
+    /* [1058 · C3] 집계 실패도 여기로 온다(countHelpful 이 던진다 — 0 을 쓰지 않는다). 문구는 오류 표준형 */
     logger.error("[api/complex-reviews/helpful] 실패", e);
     return NextResponse.json(
-      { error: "도움돼요 처리에 실패했어요. 잠시 후 다시 시도해 주세요." },
+      { error: "도움 표시 실패 · 잠시 후 다시" },
       { status: 500 },
     );
   }

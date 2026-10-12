@@ -18,7 +18,9 @@ export async function notifyPostAuthorOfNewComment(input: {
   commenterEmail?: string;
 }): Promise<void> {
   const { post, comment, commenterEmail } = input;
-  if (!post.notifyComments) return;
+  /* [1058 · B7] notifyComments 가 undefined(저장소가 값을 못 읽은 행·파일 백엔드)면 꺼진 것으로 다뤄 알림이 안 갔다 —
+     posts.notify_comments 의 기본값은 true 다. 명시적으로 끈(false) 글만 건너뛴다. */
+  if (post.notifyComments === false) return;
   const to = post.notifyEmail?.trim();
   if (!to) return;
   if (

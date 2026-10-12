@@ -4,6 +4,7 @@ import {
   deletePostFile,
   getPostFile,
   incrementViewCountFile,
+  loadPostCommentAuthorEmailFile,
   prependPostFile,
   readPostsFile,
   softDeleteCommentFile,
@@ -13,9 +14,11 @@ import {
 } from "@/lib/posts-store-file";
 import {
   appendCommentSb,
+  countPostBookmarksSb,
   deletePostSb,
   getPostSb,
   incrementViewCountSb,
+  loadPostCommentAuthorEmailSb,
   prependPostSb,
   POSTS_READ_LIMIT,
   readPostsSb,
@@ -83,13 +86,40 @@ export async function incrementViewCount(id: string): Promise<Post | null> {
     : incrementViewCountFile(id);
 }
 
+/**
+ * 댓글 추가. [1058 · B3] `rejectDuplicate` 를 켜면 같은 작성자가 같은 본문을 60초 안에 다시 달 때 `"duplicate"` —
+ * 사람 댓글 라우트만 켠다(관리자 시드 답글은 그대로). 파일 백엔드는 작성자 이메일을 저장하지 않아 판정하지 않는다.
+ */
+export async function appendComment(id: string, comment: PostComment): Promise<Post | null>;
 export async function appendComment(
   id: string,
   comment: PostComment,
-): Promise<Post | null> {
+  opts: { rejectDuplicate: true },
+): Promise<Post | "duplicate" | null>;
+export async function appendComment(
+  id: string,
+  comment: PostComment,
+  opts: { rejectDuplicate?: boolean } = {},
+): Promise<Post | "duplicate" | null> {
+  const result = storageBackendIsSupabase()
+    ? await appendCommentSb(id, comment, opts)
+    : await appendCommentFile(id, comment, opts);
+  return result === "duplicate" && !opts.rejectDuplicate ? null : result;
+}
+
+/** [1058 · B3] 댓글 작성자 이메일(서버 전용) — 답글 알림 수신자. 없음·실패·파일 백엔드는 null */
+export async function loadPostCommentAuthorEmail(
+  postId: string,
+  commentId: string,
+): Promise<string | null> {
   return storageBackendIsSupabase()
-    ? appendCommentSb(id, comment)
-    : appendCommentFile(id, comment);
+    ? loadPostCommentAuthorEmailSb(postId, commentId)
+    : loadPostCommentAuthorEmailFile(postId, commentId);
+}
+
+/** [1058 · B2] 글의 저장(북마크) 수 — 못 세면 null(화면은 숫자 없이 "저장"). 파일 백엔드는 북마크 표가 없다 */
+export async function countPostBookmarks(postId: string): Promise<number | null> {
+  return storageBackendIsSupabase() ? countPostBookmarksSb(postId) : null;
 }
 
 /**

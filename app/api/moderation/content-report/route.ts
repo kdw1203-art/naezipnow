@@ -3,12 +3,12 @@ import { safeAuth } from "@/lib/safe-auth";
 import {
   createContentReport,
   markContentReportTarget,
+  resolveReportTarget,
   type ReportTargetType,
 } from "@/lib/moderation/reports-store";
 import { applyRateLimit, WRITE_RATE_LIMIT } from "@/lib/rate-limit";
 import { FUNNEL_EVENT, recordFunnelEvent } from "@/lib/platform-funnel-events";
-import { getListingById, markListingReport } from "@/lib/listings/store-db";
-import { getNote } from "@/lib/inspection/store-db";
+import { markListingReport } from "@/lib/listings/store-db";
 import { logger } from "@/lib/log";
 
 export const runtime = "nodejs";
@@ -22,9 +22,21 @@ const ALLOWED_CATEGORIES = new Set([
   "other",
 ]);
 
+/** 본문의 targetType — 'board' 는 기사(board_posts), 'post' 는 이야기(posts). 모르는 값은 무시(자동 해석) */
+function parseTargetType(v: unknown): ReportTargetType | null {
+  const s = String(v ?? "").trim();
+  return s === "post" || s === "board" || s === "note" || s === "listing" ? s : null;
+}
+
 /**
  * POST /api/moderation/content-report
  * 커뮤니티 글·댓글 신고 (기존 /api/reports 와 구분 — 리포트 상품 생성 API와 혼동 방지)
+ *
+ * 본문: { targetType?: 'post'|'board'|'note'|'listing', targetId?: string, postId?: string(옛 이름), commentId?, reason, reportCategory? }
+ * [1058 · B5] 예전엔 노트만 가려내고 나머지는 전부 post_id(FK → posts)에 넣었다 — 기사 id 는 FK 위반, "complex-review:<id>" 는
+ * uuid 오류, 이야기 id 는 CHECK(report_target_required) 위반으로 **모든 신고가 503** 이었고 실패 문구에 DB 원문이 실렸다.
+ * 이제 대상을 표에서 확인해(resolveReportTarget) 기사·노트는 content_reports 에, 이야기·매물은 문의 티켓에 적재한다.
+ * 어느 표에도 없는 대상(단지 후기 등)은 400 "이 항목은 신고 대상이 아님".
  */
 export async function POST(req: NextRequest) {
   const limited = await applyRateLimit(req, WRITE_RATE_LIMIT);
@@ -38,7 +50,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "JSON이 필요합니다." }, { status: 400 });
   }
 
-  const postId = String(body.postId ?? "").trim();
+  const targetId = String(body.targetId ?? body.postId ?? "").trim();
+  const hint = parseTargetType(body.targetType);
   const reason = String(body.reason ?? "").trim();
   const commentId =
     body.commentId != null && String(body.commentId).trim()
@@ -47,45 +60,56 @@ export async function POST(req: NextRequest) {
   const rawCat = String(body.reportCategory ?? body.category ?? "other").trim();
   const reportCategory = ALLOWED_CATEGORIES.has(rawCat) ? rawCat : "other";
 
-  if (!postId) {
-    return NextResponse.json({ error: "postId가 필요합니다." }, { status: 400 });
+  if (!targetId) {
+    return NextResponse.json({ error: "신고 대상 id 필요" }, { status: 400 });
   }
   if (reason.length < 3) {
-    return NextResponse.json({ error: "신고 사유를 3자 이상 입력해 주세요." }, { status: 400 });
+    return NextResponse.json({ error: "신고 사유 3자 이상 필요" }, { status: 400 });
   }
 
-  // FK 버그 수정(#1) — 노트 신고 버튼도 postId 에 노트 id 를 담아 보낸다. 노트 id 를
-  // content_reports.post_id(->posts FK)에 넣으면 위반이므로, 대상이 임장노트면
-  // target_note_id 로 분기한다. 호출부(ReportButton 등) 시그니처는 그대로 유지.
-  /* [967 · 12] 노트 **댓글** 신고도 commentId 를 싣고 온다(app/notes/[id]/NoteComments).
-     예전엔 commentId 가 있으면 노트 확인을 건너뛰어 post_id 에 노트 id 가 들어갔다
-     (→ posts FK 위반으로 접수 실패). 이제 commentId 유무와 무관하게 대상 id 가
-     노트면 target_note_id 로 적재한다 — comment_id 는 FK 없는 text 라 그대로 싣는다.
-     아래 누적 자동 숨김은 여전히 본문 신고(!commentId)만 센다. */
-  let targetType: ReportTargetType = "post";
-  {
-    const note = await getNote(postId).catch(() => null);
-    if (note) targetType = "note";
+  let targetType: ReportTargetType | null;
+  try {
+    targetType = await resolveReportTarget(targetId, hint);
+  } catch (e) {
+    logger.error("[content-report] 대상 조회 실패", e);
+    return NextResponse.json(
+      { error: "신고 접수 실패 · 잠시 후 다시" },
+      { status: 503, headers: { "Retry-After": "10" } },
+    );
+  }
+  if (!targetType) {
+    return NextResponse.json({ error: "이 항목은 신고 대상이 아님" }, { status: 400 });
+  }
+  const reporterEmail = session?.user?.email?.trim() ?? null;
+  /* 이야기·매물 신고는 문의 티켓으로 남는다(reports-store 주석) — 연락 이메일이 필요해 로그인 신고만 */
+  if ((targetType === "post" || targetType === "listing") && !reporterEmail) {
+    return NextResponse.json({ error: "로그인 필요 · 신고" }, { status: 401 });
   }
 
   const res = await createContentReport({
-    postId,
+    postId: targetId,
     targetType,
     commentId,
-    reporterEmail: session?.user?.email?.trim() ?? null,
+    reporterEmail,
     reason,
     reportCategory,
   });
   if (!res.ok) {
-    return NextResponse.json({ error: res.error ?? "접수 실패" }, { status: 503 });
+    /* 사용자에게는 일반 문구 — DB 원문(제약 이름·열 이름)은 로그로만 */
+    logger.error(`[content-report] 접수 실패 (${targetType}/${targetId}): ${res.error}`);
+    const notTarget = res.error === "이 항목은 신고 대상이 아님";
+    return NextResponse.json(
+      { error: notTarget ? res.error : "신고 접수 실패 · 잠시 후 다시" },
+      { status: notTarget ? 400 : 503 },
+    );
   }
 
-  if (session?.user?.email) {
+  if (reporterEmail) {
     void recordFunnelEvent(req, {
       eventName: FUNNEL_EVENT.CONTENT_REPORT_SUBMIT,
-      userEmail: session.user.email,
+      userEmail: reporterEmail,
       path: "/api/moderation/content-report",
-      metadata: { postId, reportCategory, hasComment: Boolean(commentId) },
+      metadata: { postId: targetId, targetType, reportCategory, hasComment: Boolean(commentId), via: res.via },
     });
   }
 
@@ -94,13 +118,8 @@ export async function POST(req: NextRequest) {
   // 실패는 best-effort 로 무시.
   if (!commentId) {
     try {
-      if (targetType === "note") {
-        await markContentReportTarget("note", postId);
-      } else {
-        const listing = await getListingById(postId);
-        if (listing) await markListingReport(postId);
-        else await markContentReportTarget("post", postId);
-      }
+      if (targetType === "listing") await markListingReport(targetId);
+      else await markContentReportTarget(targetType, targetId);
     } catch (e) {
       logger.warn("[content-report] 신고 누적 처리 실패", e);
     }

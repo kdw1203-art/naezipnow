@@ -20,6 +20,7 @@ import type { Post } from "@/lib/types/post";
 import { FUNNEL_EVENT, recordFunnelEvent } from "@/lib/platform-funnel-events";
 import { awardPoints } from "@/lib/points/ledger";
 import { parsePromptIndex, promptTag } from "@/lib/town/prompts";
+import { resolveDisplayName } from "@/lib/account/display-name";
 import { logger } from "@/lib/log";
 
 export const runtime = "nodejs";
@@ -69,9 +70,9 @@ export async function POST(req: Request) {
   // 이름 미설정 계정: 이메일 local part 전체를 공개 라벨로 저장하던 것을
   // 마스킹으로 교체 (inspection/notes·complex-reviews 등과 같은 규칙).
   // 이미 저장된 라벨은 이 코드로는 안 바뀐다 — 데이터 정정은 별건.
-  const authorLabel =
-    session.user.name?.trim() ||
-    `${session.user.email?.split("@")[0]?.slice(0, 2) || "이웃"}** 이웃`;
+  /* [1058] 세션 이름(로그인 때 굳은 공급자 이름)을 그대로 넣어 프로필에서 바꾼 이름이 새 글에 안 보였다 —
+     app_users.name → profiles.full_name → 세션 이름 → 마스킹(lib/account/display-name) */
+  const authorLabel = await resolveDisplayName(session.user.email, session.user.name);
   const tagsRaw = b.tags;
   const tags =
     typeof tagsRaw === "string"

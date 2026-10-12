@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { PageShell } from "../components/PageShell";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { GuestGate } from "@/app/components/GuestGate";
+import { PushStatusRow } from "@/components/PushStatusRow";
 import { hasSession } from "@/lib/client/has-session";
 import { isInternalPath } from "@/lib/safe-path";
 import { emitNotificationsRead } from "@/lib/notifications/read-event";
@@ -721,6 +722,9 @@ export default function NotificationsPage() {
             </button>
           )}
         </div>
+
+        {/* [1058] 브라우저 푸시가 서버까지 확인해 꺼져 있을 때만 한 줄 — 알림함에 와서야 "왜 안 왔지"를 아는 자리 */}
+        {mode === "live" && <PushStatusRow />}
 
         {/* 탭 — 조회 실패 상태에서는 탭을 그리지 않는다(빈 탭 = "알림 없음"으로 읽힌다) */}
         {mode !== "guest" && mode !== "error" && (

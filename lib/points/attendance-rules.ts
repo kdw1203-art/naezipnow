@@ -25,6 +25,30 @@ export function prevDateString(date: string): string {
   return new Date(Date.UTC(y, m - 1, d) - 86_400_000).toISOString().slice(0, 10);
 }
 
+/** [1058 · C8] ms → KST "YYYY-MM-DD" — store-db.kstDateString 과 같은 셈(그 파일은 server-only 라 클라이언트가 못 부른다) */
+const KST_OFFSET_MS = 9 * 3_600_000;
+export function kstDateOf(ms: number): string {
+  return new Date(ms + KST_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/** 최근 7일(오늘 포함 · 오름차순) 한 칸 */
+export interface AttendanceDay {
+  date: string;
+  attended: boolean;
+  today: boolean;
+}
+
+/**
+ * [1058 · C8] 최근 7일 출석 점 — 오늘(KST)로 끝나는 7일, 오래된 날부터. rows 에 없는 날은 빈 점.
+ * 틀린 사실: 지갑 출석 칸이 "연속 N일" 한 줄만 적어 어느 날을 빠뜨렸는지 보이지 않았다(GET 이 7일 행을 이미 내려보내는데도).
+ */
+export function lastSevenDays(rows: readonly { date: string }[], todayKst: string): AttendanceDay[] {
+  const have = new Set(rows.map((r) => r.date));
+  const days: string[] = [todayKst];
+  while (days.length < 7) days.unshift(prevDateString(days[0]!));
+  return days.map((date) => ({ date, attended: have.has(date), today: date === todayKst }));
+}
+
 /** 가장 최근 출석 행(날짜 문자열 사전순 최대) — 비면 null */
 export function latestAttendance(rows: readonly AttendanceRow[]): AttendanceRow | null {
   let best: AttendanceRow | null = null;

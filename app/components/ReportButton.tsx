@@ -10,9 +10,15 @@
  * (실측 390px: 칩 높이 20px) → 12px 글자 · 높이 32px, "신고"·"취소"는 글 속 단추 기준 24px.
  */
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
 import { useToast } from "@/app/components/toast/ToastProvider";
+
+/* [1058 · C3] 신고 대상 종류 — 거주민 후기는 content_reports 에 들어갈 수 없다(CHECK target_type ∈ post·comment·note ·
+   complex_reviews 에 신고 열도 없다). 틀린 사실: 후기의 "신고"가 글 신고 API 로 가서 400("이 항목은 신고 대상이 아님")을 받았다.
+   후기는 문의(support_tickets)로 접수한다 — 미리 채운 문의 폼 링크. */
+export type ReportTargetType = "post" | "comment" | "review";
 
 const CATEGORIES = [
   { id: "spam", label: "스팸" },
@@ -27,16 +33,31 @@ export function ReportButton({
   postId,
   commentId,
   className,
+  targetType,
 }: {
   postId: string;
   commentId?: string;
   className?: string;
+  /** [1058 · C3] "review" 면 글 신고 API 대신 문의 폼(/support?topic=report&ref=review:<id>) 링크 */
+  targetType?: ReportTargetType;
 }) {
   const router = useRouter();
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [busyId, setBusyId] = useState<CategoryId | null>(null);
   const [state, setState] = useState<"idle" | "done" | "error">("idle");
+
+  if (targetType === "review") {
+    const ref = `review:${postId.replace(/^complex-review:/, "")}`;
+    return (
+      <Link
+        href={`/support?topic=report&ref=${encodeURIComponent(ref)}`}
+        className={`tap-line inline-flex items-center t-sub text-text-3 underline decoration-line underline-offset-2 transition-colors hover:text-danger ${className ?? ""}`}
+      >
+        신고 · 문의로 접수
+      </Link>
+    );
+  }
 
   async function submit(category: (typeof CATEGORIES)[number]) {
     if (busyId) return;

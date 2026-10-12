@@ -1,10 +1,19 @@
 import { getServiceSupabase } from "@/lib/supabase/service";
+import {
+  SAVED_KINDS,
+  addSaved,
+  countSaved,
+  isSaved,
+  listSaved,
+  removeSaved,
+  type SavedKind,
+} from "./settings-store";
 
-/* [1056 · C1] 임장노트 저장("note")은 여기 못 넣는다 — 운영 DB 의 CHECK 제약(bookmarks_target_type_check)이
-   post · report · expert · meeting · market · complex 만 허용한다(2026-10-11 pg_constraint 실측). 마이그레이션 없이
-   타입만 더하면 API 가 받고 DB 가 거절해 500 이 된다. 같은 이유로 아래 "listing" 도 CHECK 목록에 **없다** —
-   매물 저장(components/ListingSaveButton)은 insert 단계에서 거절된다(가산 마이그레이션으로 note · listing 을 CHECK 에
-   더해야 한다 — 이 묶음은 스키마를 바꾸지 않는다). /my "저장한 노트" 가 늘 0건이던 원인이 이것이다. */
+/* [1056 · C1 → 1059] 임장노트("note")·매물("listing") 저장은 bookmarks 표에 못 넣는다 — 운영 DB 의 CHECK 제약
+   (bookmarks_target_type_check)이 post · report · expert · meeting · market · complex 만 허용한다(2026-10-11 pg_constraint 실측).
+   1056~1058 은 소유자에게 제약 교체 SQL 을 부탁했으나 소유자가 "코드로 되게 해 달라" → [1059] 두 종류는 사용자 프로필 설정 jsonb
+   (profiles.settings.saved · lib/bookmarks/settings-store)에 저장한다. 바깥 API(add/remove/list/is/count)는 그대로고
+   종류에 따라 표와 설정 중 한 곳으로 간다. 스키마 변경 없음. */
 export type BookmarkTargetType =
   | "post"
   | "report"
@@ -12,7 +21,8 @@ export type BookmarkTargetType =
   | "meeting"
   | "market"
   | "complex"
-  | "listing";
+  | "listing"
+  | "note";
 
 export type Bookmark = {
   id: string;
@@ -26,6 +36,15 @@ export type Bookmark = {
 
 const memory = new Map<string, Bookmark>();
 
+/** 설정 jsonb 로 가는 종류인가(note · listing) */
+function isSettingsKind(type: BookmarkTargetType): type is SavedKind {
+  return SAVED_KINDS.has(type);
+}
+
+function fromSaved(userEmail: string, e: { id: string; at: string; label?: string | null; kind: SavedKind }): Bookmark {
+  return { id: `${e.kind}:${e.id}`, userEmail, targetType: e.kind, targetId: e.id, label: e.label ?? null, note: null, createdAt: e.at };
+}
+
 function key(userEmail: string, type: BookmarkTargetType, id: string) {
   return `${userEmail}|${type}|${id}`;
 }
@@ -33,6 +52,10 @@ function key(userEmail: string, type: BookmarkTargetType, id: string) {
 export async function addBookmark(
   input: Omit<Bookmark, "id" | "createdAt">,
 ): Promise<Bookmark> {
+  if (isSettingsKind(input.targetType)) {
+    const e = await addSaved(input.userEmail, input.targetType, input.targetId, input.label ?? null);
+    return fromSaved(input.userEmail, { ...e, kind: input.targetType });
+  }
   const sb = getServiceSupabase();
   const now = new Date().toISOString();
   const k = key(input.userEmail, input.targetType, input.targetId);
@@ -66,6 +89,10 @@ export async function removeBookmark(
   type: BookmarkTargetType,
   id: string,
 ): Promise<void> {
+  if (isSettingsKind(type)) {
+    await removeSaved(userEmail, type, id);
+    return;
+  }
   const sb = getServiceSupabase();
   if (!sb) {
     memory.delete(key(userEmail, type, id));
@@ -83,6 +110,9 @@ export async function listBookmarks(
   userEmail: string,
   type?: BookmarkTargetType,
 ): Promise<Bookmark[]> {
+  if (type && isSettingsKind(type)) {
+    return (await listSaved(userEmail, type)).map((e) => fromSaved(userEmail, e));
+  }
   const sb = getServiceSupabase();
   if (!sb) {
     return [...memory.values()]
@@ -99,7 +129,11 @@ export async function listBookmarks(
   const { data, error } = await q;
   /* [1057 · B3] 실패를 [] 로 접어 "저장한 글 없음 · 저장한 매물 없음"이 됐고, 부르는 쪽의 ok:false 분기는 죽은 코드였다 — 던진다 */
   if (error) throw new Error(`bookmarks 조회 실패: ${error.message ?? "알 수 없는 오류"}`);
-  return (data ?? []).map(mapRow);
+  const rows = (data ?? []).map(mapRow);
+  if (type) return rows;
+  /* 종류를 안 가린 목록은 설정 쪽(노트·매물)도 합쳐 최신순 */
+  const extra = (await listSaved(userEmail)).map((e) => fromSaved(userEmail, e));
+  return [...rows, ...extra].sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
 }
 
 /** 북마크 개수 (한도 검사용 — head count). */
@@ -121,7 +155,8 @@ export async function countBookmarks(userEmail: string): Promise<number> {
   if (error) {
     throw new Error(`bookmarks 개수 조회 실패: ${error.message ?? "알 수 없는 오류"}`);
   }
-  return count ?? 0;
+  /* [1059] 한도는 표 + 설정(노트·매물) 합산 */
+  return (count ?? 0) + (await countSaved(em));
 }
 
 export async function isBookmarked(
@@ -129,6 +164,7 @@ export async function isBookmarked(
   type: BookmarkTargetType,
   id: string,
 ): Promise<boolean> {
+  if (isSettingsKind(type)) return isSaved(userEmail, type, id);
   const sb = getServiceSupabase();
   if (!sb) return memory.has(key(userEmail, type, id));
   const { data } = await sb

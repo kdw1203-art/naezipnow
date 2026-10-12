@@ -3,10 +3,14 @@
 
 /**
  * 거주민 후기 섹션 (호갱노노 "이야기" 벤치마크 — docs/benchmark-proposals.md D4 계열)
- * - GET /api/complex-reviews?complexId= 로 목록·평균 표시 (빈 상태 정직)
- * - 로그인 시 작성: 항목별 별점(1~5) + 한줄 후기 → POST /api/complex-reviews (5회/시간 제한)
+ * - GET /api/complex-reviews?complexId=&offset= 로 목록(50건씩)·평균·내 후기 표시 (빈 상태 정직)
+ * - 로그인 시 작성: 항목별 별점(1~5) + 한줄 후기 → POST /api/complex-reviews (계정당 5회/시간)
  * - 비로그인 작성 시도(401) → A3 소프트 가입 프롬프트 (즉시 리다이렉트 대신 그 자리에서 설명)
- * - 신고: 기존 ReportButton 재사용 (postId = "complex-review:<id>")
+ * - 신고: ReportButton(targetType="review") — 후기는 글 신고 API 대상이 아니라 문의 폼으로 접수
+ *
+ * [1058 · C3] 틀린 사실들의 수정 — 이미 쓴 사람에게 폼이 빈 채 열렸다(GET 이 내 후기를 안 줬다) → `mine` 프리필·"후기 수정";
+ * 목록 상한 없음 → 50건 + 더 보기; 날짜가 브라우저 시간대 → KST; 별·도움돼요 누름 면 19·26px → 폰 40px;
+ * 로그인 안내 "등록하면 30P가 적립돼요"(재작성·상한이면 0P) → "후기 저장 시 30P · 하루 5회".
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -14,6 +18,9 @@ import { ReportButton } from "../components/ReportButton";
 import { Icon } from "@/app/components/Icon";
 import { CharCount } from "@/app/components/ui/CharCount";
 import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { kstParts } from "@/lib/format/kst";
+import { reviewEditedAt } from "@/lib/complex-reviews/rules";
+import { useNearViewport } from "./[id]/use-near-viewport";
 
 type ReviewItem = {
   id: string;
@@ -25,10 +32,25 @@ type ReviewItem = {
   transportScore: number;
   comment: string | null;
   createdAt: string;
+  updatedAt?: string | null;
   helpfulCount?: number;
   isResident?: boolean;
   isVisitVerified?: boolean;
   residentPeriod?: string | null;
+};
+
+/** 내 후기(로그인 시 GET 이 돌려준다) — 폼 프리필 원본 */
+type MyReview = {
+  id: string;
+  noiseScore: number;
+  parkingScore: number;
+  mgmtScore: number;
+  neighborScore: number;
+  transportScore: number;
+  comment: string | null;
+  isResident: boolean;
+  isVisitVerified: boolean;
+  residentPeriod: string | null;
 };
 
 type Summary = {
@@ -50,6 +72,14 @@ const CATEGORIES = [
 ] as const;
 
 type ScoreKey = (typeof CATEGORIES)[number]["key"];
+
+const EMPTY_SCORES: Record<ScoreKey, number> = {
+  noiseScore: 0,
+  parkingScore: 0,
+  mgmtScore: 0,
+  neighborScore: 0,
+  transportScore: 0,
+};
 
 function Stars({ value, size = 12 }: { value: number; size?: number }) {
   return (
@@ -75,9 +105,10 @@ function StarInput({
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="w-[42px] shrink-0 text-xs font-bold text-text-2">{label}</span>
-      <div className="flex gap-0.5" role="radiogroup" aria-label={`${label} 별점`}>
+      <span className="w-[42px] shrink-0 t-caption font-bold text-text-2">{label}</span>
+      <div className="flex" role="radiogroup" aria-label={`${label} 별점`}>
         {[1, 2, 3, 4, 5].map((n) => (
+          /* [1058 · C3] 별 글자(19px)가 곧 누름 면이었다 — 폰은 40×40 칸, md+ 는 24×24 */
           <button
             key={n}
             type="button"
@@ -85,7 +116,7 @@ function StarInput({
             aria-checked={value === n}
             aria-label={`${n}점`}
             onClick={() => onChange(n)}
-            className={`text-[19px] leading-none transition-colors ${
+            className={`inline-flex h-10 w-10 items-center justify-center text-[19px] leading-none transition-colors md:h-6 md:w-6 ${
               n <= value ? "text-brand-red" : "text-line hover:text-brand-red/50"
             }`}
           >
@@ -97,10 +128,11 @@ function StarInput({
   );
 }
 
+/** [1058 · C3] "YYYY.MM.DD" — KST 고정. 틀린 사실: new Date(iso).getDate() 는 보는 사람의 브라우저 시간대라 해외·UTC 기기에서 하루 어긋났다 */
 function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "";
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  const p = kstParts(iso);
+  if (!p) return "";
+  return `${p.year}.${String(p.month).padStart(2, "0")}.${String(p.day).padStart(2, "0")}`;
 }
 
 export function ComplexReviews({
@@ -114,16 +146,13 @@ export function ComplexReviews({
   const { promptSignup } = useSoftSignup();
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [mine, setMine] = useState<MyReview | null>(null);
+  const [nextOffset, setNextOffset] = useState<number | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
+  const [moreState, setMoreState] = useState<"idle" | "loading" | "error">("idle");
 
   const [formOpen, setFormOpen] = useState(false);
-  const [scores, setScores] = useState<Record<ScoreKey, number>>({
-    noiseScore: 0,
-    parkingScore: 0,
-    mgmtScore: 0,
-    neighborScore: 0,
-    transportScore: 0,
-  });
+  const [scores, setScores] = useState<Record<ScoreKey, number>>(EMPTY_SCORES);
   const [comment, setComment] = useState("");
   const [isResident, setIsResident] = useState(false);
   const [isVisitVerified, setIsVisitVerified] = useState(false);
@@ -137,10 +166,13 @@ export function ComplexReviews({
   const [helpfulOverride, setHelpfulOverride] = useState<Record<string, number>>({});
   const [votedIds, setVotedIds] = useState<Record<string, boolean>>({});
   const [helpfulBusy, setHelpfulBusy] = useState<Record<string, boolean>>({});
+  /* [1058 · C3] 실패를 조용히 삼키던 것 → 그 칩 옆에 "도움 표시 실패 · 잠시 후 다시" */
+  const [helpfulFailed, setHelpfulFailed] = useState<Record<string, boolean>>({});
 
   const voteHelpful = async (reviewId: string) => {
     if (votedIds[reviewId] || helpfulBusy[reviewId]) return;
     setHelpfulBusy((m) => ({ ...m, [reviewId]: true }));
+    setHelpfulFailed((m) => ({ ...m, [reviewId]: false }));
     try {
       const res = await fetch("/api/complex-reviews/helpful", {
         method: "POST",
@@ -150,75 +182,107 @@ export function ComplexReviews({
       if (res.status === 401) {
         promptSignup({
           action: "review_helpful_vote",
-          title: "도움된 후기에 표시할까요?",
-          benefit:
-            "가입하면 후기마다 한 번씩 '도움돼요'를 남길 수 있어요. 도움 표시가 많은 후기가 위로 올라가서, 다음 사람이 실제로 쓸모 있는 이야기를 먼저 봅니다.",
+          title: "로그인 필요 · 도움돼요",
+          benefit: "후기마다 한 번 · 도움 표시가 많은 후기가 위로",
           callbackUrl: pathname ?? "/",
         });
         return;
       }
       const data = (await res.json().catch(() => ({}))) as { count?: number; already?: boolean };
-      if (!res.ok) return;
+      if (!res.ok) {
+        setHelpfulFailed((m) => ({ ...m, [reviewId]: true }));
+        return;
+      }
       if (typeof data.count === "number") {
         setHelpfulOverride((m) => ({ ...m, [reviewId]: data.count as number }));
       }
       setVotedIds((m) => ({ ...m, [reviewId]: true }));
     } catch {
-      // 네트워크 오류 시 조용히 무시 — 재시도 가능하도록 상태 유지
+      setHelpfulFailed((m) => ({ ...m, [reviewId]: true }));
     } finally {
       setHelpfulBusy((m) => ({ ...m, [reviewId]: false }));
     }
   };
 
-  const load = useCallback(async () => {
-    try {
+  type Page = { reviews?: ReviewItem[]; summary?: Summary | null; mine?: MyReview | null; nextOffset?: number | null };
+
+  const fetchPage = useCallback(
+    async (offset: number): Promise<Page> => {
       const res = await fetch(
-        `/api/complex-reviews?complexId=${encodeURIComponent(complexId)}`,
+        `/api/complex-reviews?complexId=${encodeURIComponent(complexId)}${offset > 0 ? `&offset=${offset}` : ""}`,
         { cache: "no-store" },
       );
       if (!res.ok) throw new Error();
-      const data = (await res.json()) as { reviews?: ReviewItem[]; summary?: Summary };
+      return (await res.json()) as Page;
+    },
+    [complexId],
+  );
+
+  const load = useCallback(async () => {
+    try {
+      const data = await fetchPage(0);
       setReviews(Array.isArray(data.reviews) ? data.reviews : []);
       setSummary(data.summary ?? null);
+      setMine(data.mine ?? null);
+      setNextOffset(typeof data.nextOffset === "number" ? data.nextOffset : null);
       setLoadState("ready");
     } catch {
       setLoadState("error");
     }
-  }, [complexId]);
+  }, [fetchPage]);
+
+  const loadMore = async () => {
+    if (nextOffset === null || moreState === "loading") return;
+    setMoreState("loading");
+    try {
+      const data = await fetchPage(nextOffset);
+      const got = Array.isArray(data.reviews) ? data.reviews : [];
+      setReviews((cur) => {
+        const seen = new Set(cur.map((r) => r.id));
+        return [...cur, ...got.filter((r) => !seen.has(r.id))];
+      });
+      setNextOffset(typeof data.nextOffset === "number" ? data.nextOffset : null);
+      setMoreState("idle");
+    } catch {
+      setMoreState("error");
+    }
+  };
 
   /* [968 · 3] 이 섹션은 단지 페이지 아래쪽(탭·인근 단지 아래)인데 마운트 즉시 조회했다 —
      첫 화면만 보고 떠나는 방문자에게도 하이드레이션 직후 XHR 하나가 나갔다.
      뷰포트 200px 앞에 들어올 때 한 번만 읽는다. IntersectionObserver 가 없는 환경은
-     예전처럼 바로 읽는다(기능을 빼지 않는다). 후기 등록 뒤의 재조회(submit → load)는 그대로. */
+     예전처럼 바로 읽는다(기능을 빼지 않는다). 후기 등록 뒤의 재조회(submit → load)는 그대로.
+     [1058 · C1] 관찰자는 use-near-viewport 한 훅으로. */
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const [nearViewport, setNearViewport] = useState(false);
-
-  useEffect(() => {
-    const el = rootRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") {
-      setNearViewport(true);
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setNearViewport(true);
-          io.disconnect();
-        }
-      },
-      { rootMargin: "200px 0px" },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
+  const nearViewport = useNearViewport(rootRef, "200px 0px");
 
   useEffect(() => {
     if (nearViewport) void load();
   }, [nearViewport, load]);
 
+  /** 폼 열기 — 내 후기가 있으면 그 값으로 채운다(없으면 빈 폼) */
+  const openForm = () => {
+    if (mine) {
+      setScores({
+        noiseScore: mine.noiseScore,
+        parkingScore: mine.parkingScore,
+        mgmtScore: mine.mgmtScore,
+        neighborScore: mine.neighborScore,
+        transportScore: mine.transportScore,
+      });
+      setComment(mine.comment ?? "");
+      setIsResident(mine.isResident);
+      setIsVisitVerified(mine.isVisitVerified);
+      setResidentPeriod(mine.residentPeriod ?? "");
+    }
+    setFormOpen(true);
+    setSubmitState("idle");
+    setError(null);
+  };
+
   const submit = async () => {
     if (CATEGORIES.some((c) => scores[c.key] < 1)) {
-      setError("모든 항목의 별점을 선택해 주세요.");
+      setError("별점 미선택 항목 있음 · 5개 항목 모두 필요");
       return;
     }
     setSubmitState("sending");
@@ -245,31 +309,29 @@ export function ComplexReviews({
         promptSignup({
           action: "complex_review_create",
           title: "로그인 필요 · 후기",
-          benefit:
-            "후기는 로그인한 계정으로만 남길 수 있어요. 같은 사람이 반복해서 올리는 걸 막기 위해서입니다. 등록하면 30P가 적립돼요.",
+          /* [1058 · C3] 틀린 사실: "등록하면 30P가 적립돼요" — 재작성·하루 상한이면 0P. 규칙 그대로(catalog review_written) */
+          benefit: "후기 저장 시 30P · 하루 5회",
           callbackUrl: pathname ?? "/",
         });
         return;
       }
       const data = (await res.json().catch(() => ({}))) as { error?: string; pointsAwarded?: number };
       if (!res.ok) {
-        setError(data.error ?? "후기 등록 실패 · 잠시 후 다시");
+        setError(data.error ?? "후기 저장 실패 · 잠시 후 다시");
         setSubmitState("idle");
         return;
       }
       setSavedPoints(typeof data.pointsAwarded === "number" ? data.pointsAwarded : 0);
       setSubmitState("done");
       setFormOpen(false);
-      setComment("");
-      setIsResident(false);
-      setIsVisitVerified(false);
-      setResidentPeriod("");
       await load();
     } catch {
-      setError("후기 등록 실패 · 네트워크를 확인해 주세요.");
+      setError("후기 저장 실패 · 잠시 후 다시");
       setSubmitState("idle");
     }
   };
+
+  const openLabel = mine ? "후기 수정" : "후기 쓰기";
 
   return (
     <div ref={rootRef} className="card rounded-2xl px-[18px] py-4 max-md:px-3.5 max-md:py-3">
@@ -278,15 +340,11 @@ export function ComplexReviews({
         {!formOpen && (
           <button
             type="button"
-            onClick={() => {
-              setFormOpen(true);
-              setSubmitState("idle");
-              setError(null);
-            }}
+            onClick={openForm}
             /* [1015 · 규칙 J] 채움 파랑은 화면당 1개 — 여기는 outline(등록 버튼은 폼 안에서만 채움) */
-            className="btn-outline rounded-lg px-3.5 py-2 t-sub"
+            className="btn-outline min-h-[40px] rounded-lg px-3.5 py-2 t-sub md:min-h-6"
           >
-            후기 쓰기
+            {openLabel}
           </button>
         )}
       </div>
@@ -302,6 +360,7 @@ export function ComplexReviews({
       {/* 작성 폼 */}
       {formOpen && (
         <div className="mt-3 flex flex-col gap-2.5 rounded-lg border border-line bg-bg p-3.5">
+          {mine && <p className="t-caption text-text-3">내 후기 수정 · 같은 단지는 한 건 · 저장하면 기존 후기가 갱신</p>}
           {CATEGORIES.map((c) => (
             <StarInput
               key={c.key}
@@ -327,7 +386,7 @@ export function ComplexReviews({
           <div className="flex flex-col gap-2">
             <span className="t-sub font-bold text-text-2">신뢰 정보 (선택)</span>
             <div className="flex flex-wrap gap-2">
-              <label className="flex cursor-pointer items-center gap-1.5 t-sub text-text-1">
+              <label className="flex min-h-[40px] cursor-pointer items-center gap-1.5 t-sub text-text-1 md:min-h-6">
                 <input
                   type="checkbox"
                   checked={isResident}
@@ -336,7 +395,7 @@ export function ComplexReviews({
                 />
                 실거주 (자가/세입자)
               </label>
-              <label className="flex cursor-pointer items-center gap-1.5 t-sub text-text-1">
+              <label className="flex min-h-[40px] cursor-pointer items-center gap-1.5 t-sub text-text-1 md:min-h-6">
                 <input
                   type="checkbox"
                   checked={isVisitVerified}
@@ -364,7 +423,7 @@ export function ComplexReviews({
               disabled={submitState === "sending"}
               className="btn-primary flex-1 rounded-xl p-2.5 t-body disabled:opacity-60"
             >
-              {submitState === "sending" ? "등록 중…" : "후기 등록"}
+              {submitState === "sending" ? "저장 중…" : mine ? "후기 수정" : "후기 등록"}
             </button>
             <button
               type="button"
@@ -378,7 +437,7 @@ export function ComplexReviews({
             </button>
           </div>
           <p className="t-caption text-text-3">
-            개인 특정·비방 내용은 삭제될 수 있어요 · 시간당 5회까지 등록 가능
+            개인 특정·비방 내용은 삭제될 수 있음 · 계정당 시간당 5회 · 저장 시 30P(하루 5회 · 재작성은 적립 없음)
           </p>
         </div>
       )}
@@ -413,8 +472,11 @@ export function ComplexReviews({
         </div>
       )}
       {loadState === "error" && (
-        <div className="mt-3 py-6 text-center t-sub text-text-3">
-후기 불러오기 실패 · 잠시 후 다시
+        <div className="mt-3 flex flex-col items-center gap-2 py-6 text-center t-sub text-text-3">
+          후기 불러오기 실패 · 잠시 후 다시
+          <button type="button" onClick={() => void load()} className="btn-soft inline-flex min-h-10 items-center px-4 t-sub font-bold">
+            다시 불러오기
+          </button>
         </div>
       )}
       {loadState === "ready" && reviews.length === 0 && (
@@ -424,16 +486,21 @@ export function ComplexReviews({
 {complexName} 거주민 후기 없음
           </div>
           <div className="t-sub text-text-3">
-            직접 살아봤거나 임장에서 확인한 내용만 받아요
+            직접 살아봤거나 임장에서 확인한 내용만
           </div>
         </div>
       )}
       {loadState === "ready" && reviews.length > 0 && (
         <ul className="lq-panel mt-3 flex flex-col divide-y" data-tone="hanji">
-          {reviews.map((r) => (
+          {reviews.map((r) => {
+            const edited = reviewEditedAt(r.createdAt, r.updatedAt);
+            return (
             <li key={r.id} className="flex flex-col gap-1.5 py-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="t-sub font-bold text-ink">{r.author}</span>
+                <span className="t-sub font-bold text-ink">
+                  {r.author}
+                  {mine?.id === r.id && <span className="ml-1 t-caption font-normal text-text-3">내 후기</span>}
+                </span>
                 <Stars
                   value={
                     (r.noiseScore +
@@ -444,8 +511,13 @@ export function ComplexReviews({
                     5
                   }
                 />
-                <span className="t-caption text-text-3">{formatDate(r.createdAt)}</span>
-                <ReportButton postId={`complex-review:${r.id}`} className="ml-auto" />
+                <span className="t-caption text-text-3">
+                  {formatDate(r.createdAt)}
+                  {/* [1058 · C3] 재작성된 후기는 "수정 YYYY.MM.DD" — created_at 만 적어 갱신 사실이 안 보였다 */}
+                  {edited ? ` · 수정 ${formatDate(edited)}` : ""}
+                </span>
+                {/* [1058 · C3] 후기 신고는 문의 폼으로(후기는 글 신고 API 대상이 아니다) */}
+                <ReportButton postId={`complex-review:${r.id}`} targetType="review" className="ml-auto" />
               </div>
 
               {/* 신뢰 배지 — 실거주 / 방문 / 시기 */}
@@ -481,26 +553,50 @@ export function ComplexReviews({
                 <p className="t-body text-text-1">{r.comment}</p>
               )}
 
-              {/* 도움돼요 투표 */}
-              <div className="mt-0.5 flex items-center">
+              {/* 도움돼요 투표 — [1058 · C3] 칩 높이 26px → 폰 40px(md+ 24px) · 실패 문구 */}
+              <div className="mt-0.5 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => void voteHelpful(r.id)}
                   disabled={votedIds[r.id] || helpfulBusy[r.id]}
                   aria-pressed={votedIds[r.id] ?? false}
-                  className={`press chip inline-flex items-center gap-1 border border-line px-2.5 py-1 text-[12px] ${
+                  className={`press chip inline-flex min-h-[40px] items-center gap-1 border border-line px-2.5 t-caption md:min-h-6 ${
                     votedIds[r.id]
                       ? "bg-primary-soft text-primary"
                       : "bg-surface text-text-2 hover:text-primary"
                   } disabled:opacity-70`}
                 >
-                  <Icon name="👍" size={13} />
+                  <Icon name="thumbs-up" size={13} />
                   도움돼요 {helpfulOverride[r.id] ?? r.helpfulCount ?? 0}
                 </button>
+                {helpfulFailed[r.id] && (
+                  <span role="alert" className="t-caption font-bold text-danger">
+                    도움 표시 실패 · 잠시 후 다시
+                  </span>
+                )}
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
+      )}
+      {/* [1058 · C3] 더 보기 — 50건씩. 상한 없는 목록이 1,000행에서 조용히 잘리던 것의 수정 */}
+      {loadState === "ready" && nextOffset !== null && (
+        <div className="mt-2 flex flex-col items-center gap-1">
+          <button
+            type="button"
+            onClick={() => void loadMore()}
+            disabled={moreState === "loading"}
+            className="btn-soft inline-flex min-h-10 items-center px-4 t-sub font-bold disabled:opacity-60"
+          >
+            {moreState === "loading" ? "불러오는 중…" : "더 보기"}
+          </button>
+          {moreState === "error" && (
+            <span role="alert" className="t-caption font-bold text-danger">
+              후기 불러오기 실패 · 잠시 후 다시
+            </span>
+          )}
+        </div>
       )}
     </div>
   );

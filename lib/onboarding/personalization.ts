@@ -15,6 +15,7 @@ import {
   sanitizeProfile,
   type OnboardingProfile,
 } from "@/lib/onboarding/profile-options";
+import { mergePersonalization, type PersonalizationPatch } from "@/lib/onboarding/personalization-merge";
 
 export {
   PROFILE_OPTIONS,
@@ -197,7 +198,14 @@ export async function getOnboardingPersonalization(
   return res.status === "ok" ? res.value : null;
 }
 
-/** 온보딩 개인화 저장(전체 덮어쓰기) — email 기준 upsert. 실패는 흡수. */
+/**
+ * 온보딩 개인화 저장 — email 기준 upsert.
+ *
+ * [1058] 전체 덮어쓰기였다: /welcome 재진입("관심지역 수정")이 budget·purpose·persona 를 null 로 보내면 설정에서
+ * 고른 값이 통째로 지워졌다. 이제 **요청에 있고 null 이 아닌 키만** 바꾼다(lib/onboarding/personalization-merge).
+ * 지금 값을 못 읽으면(조회 실패·서비스 키 없음) 합칠 수 없으므로 **던진다** — 모르는 채로 덮어쓰면 그게 곧 삭제다.
+ * 저장 실패도 던진다(예전엔 warn 만 찍고 200 이었다) — 라우트가 503 으로 옮긴다.
+ */
 export async function saveOnboardingPersonalization(
   email: string,
   input: {
@@ -208,22 +216,25 @@ export async function saveOnboardingPersonalization(
     profile?: unknown;
   },
 ): Promise<OnboardingPersonalization> {
-  const value: OnboardingPersonalization = {
-    regions: sanitizeRegions(input.regions),
-    budget: sanitizeBudget(input.budget),
-    purpose: sanitizePurpose(input.purpose),
-    persona: sanitizePersona(input.persona),
-    profile: sanitizeProfile(input.profile),
-    updatedAt: new Date().toISOString(),
+  /* 요청에 없거나 null 인 키 → null(손대지 않음). 있으면 정규화 — 정규화 결과가 null(형식 불량)이어도 손대지 않는다 */
+  const patch: PersonalizationPatch = {
+    regions: input.regions == null ? null : sanitizeRegions(input.regions),
+    budget: input.budget == null ? null : sanitizeBudget(input.budget),
+    purpose: input.purpose == null ? null : sanitizePurpose(input.purpose),
+    persona: input.persona == null ? null : sanitizePersona(input.persona),
+    profile: input.profile == null ? null : sanitizeProfile(input.profile),
   };
   const sb = getServiceSupabase();
-  if (!sb) return value;
+  if (!sb) throw new Error("user_personalization 저장 실패: 서비스 클라이언트 없음");
+  const current = await loadOnboardingPersonalization(email);
+  if (current.status === "error") throw new Error("user_personalization 조회 실패: 지금 값을 못 읽어 합칠 수 없음");
+  const value = mergePersonalization(current.value, patch, new Date().toISOString());
   const { error } = await sb
     .from("user_personalization")
     .upsert(
       { email: normEmail(email), personalization: value, updated_at: value.updatedAt },
       { onConflict: "email" },
     );
-  if (error) logger.warn("[onboarding] save personalization failed", error.message);
+  if (error) throw new Error(`user_personalization 저장 실패: ${error.message}`);
   return value;
 }

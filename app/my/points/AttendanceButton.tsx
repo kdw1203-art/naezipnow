@@ -7,6 +7,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { kstDateOf, lastSevenDays, type AttendanceDay } from "@/lib/points/attendance-rules";
+
+/* [1058 · C8] 최근 7일 점 — GET 이 이미 내려보내는 attendance(7일 행)로 "어느 날 출석했는지"를 점 7개로.
+   틀린 사실: "연속 N일" 한 줄뿐이라 빠진 날이 보이지 않았다. 오늘(KST)은 큰 점. */
 
 type Msg = { text: string; tone: "ok" | "info" | "error" };
 type Status = {
@@ -16,6 +20,8 @@ type Status = {
   nextReward: number;
   /** 마지막 출석일 "YYYY-MM-DD" — 없으면 null */
   lastDate: string | null;
+  /** 최근 7일 점 — GET 성공 전엔 null(그리지 않는다) */
+  days: AttendanceDay[] | null;
 };
 
 /** "2026-10-07" → "10/7" */
@@ -33,6 +39,7 @@ export function AttendanceButton() {
     checkedToday: false,
     nextReward: 10,
     lastDate: null,
+    days: null,
   });
 
   // 마운트 시 현재 스트릭·오늘 출석 여부 로드 (실패해도 버튼은 동작).
@@ -47,14 +54,19 @@ export function AttendanceButton() {
             checkedToday?: boolean;
             nextReward?: number;
             lastDate?: string | null;
+            attendance?: { date?: unknown }[];
           } | null,
         ) => {
           if (cancelled || !j) return;
+          const rows = Array.isArray(j.attendance)
+            ? j.attendance.filter((a): a is { date: string } => typeof a?.date === "string")
+            : [];
           setStatus((s) => ({
             streak: typeof j.streak === "number" ? j.streak : s.streak,
             checkedToday: typeof j.checkedToday === "boolean" ? j.checkedToday : s.checkedToday,
             nextReward: typeof j.nextReward === "number" ? j.nextReward : s.nextReward,
             lastDate: typeof j.lastDate === "string" ? j.lastDate : s.lastDate,
+            days: lastSevenDays(rows, kstDateOf(Date.now())),
           }));
         },
       )
@@ -88,6 +100,8 @@ export function AttendanceButton() {
         checkedToday: true,
         nextReward: typeof data.nextReward === "number" ? data.nextReward : s.nextReward,
         lastDate: typeof data.date === "string" ? data.date : s.lastDate,
+        /* 오늘 점을 바로 채운다(점이 있을 때만 — GET 이 실패했으면 그대로 없음) */
+        days: s.days ? s.days.map((d) => (d.today ? { ...d, attended: true } : d)) : s.days,
       }));
       if (data.alreadyChecked || !data.awarded) {
         setMsg({ text: "오늘 출석 완료 · 이미 적립됨", tone: "info" });
@@ -108,7 +122,8 @@ export function AttendanceButton() {
     }
   }, [router]);
 
-  const { streak, checkedToday, nextReward, lastDate } = status;
+  const { streak, checkedToday, nextReward, lastDate, days } = status;
+  const attendedCount = days ? days.filter((d) => d.attended).length : 0;
   /* 스트릭 줄 — 살아 있으면 "연속 출석 N일 · 오늘/내일 XP", 끊겼으면 "마지막 출석 M/D · 오늘 10P" */
   const line =
     streak > 0
@@ -119,6 +134,23 @@ export function AttendanceButton() {
 
   return (
     <div className="flex flex-col gap-2">
+      {days && (
+        <div className="flex items-center justify-center gap-2">
+          <span className="t-caption text-ai-muted">최근 7일</span>
+          <ol className="m-0 flex list-none items-center gap-1.5 p-0" aria-hidden="true">
+            {days.map((d) => (
+              <li
+                key={d.date}
+                title={d.date}
+                className={`rounded-full ${d.today ? "h-3 w-3" : "h-2 w-2"} ${
+                  d.attended ? "bg-ai-accent" : "border border-ai-muted"
+                }`}
+              />
+            ))}
+          </ol>
+          <span className="sr-only">최근 7일 출석 {attendedCount}일</span>
+        </div>
+      )}
       {line && (
         <div className="flex items-center justify-center gap-1.5 t-sub font-bold text-ai-accent">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-ai-accent" />

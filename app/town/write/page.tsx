@@ -10,7 +10,9 @@ import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
 import { useMoment } from "@/app/components/motion/MomentProvider";
 import { COMMUNITY_SUBCATEGORIES } from "@/lib/subcategories";
 import { CITY_OPTIONS, DISTRICTS } from "@/lib/regions";
+import { parseWriteRegion, type WriteCity } from "@/lib/town/write-region";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
+import { Icon } from "@/app/components/Icon";
 import { compressImage } from "@/lib/client/image-compress";
 import { MAX_POST_IMAGES } from "@/lib/community/attachments";
 import { useDirtyTracker, useUnsavedGuard } from "@/lib/client/use-unsaved-guard";
@@ -21,7 +23,8 @@ import { useDirtyTracker, useUnsavedGuard } from "@/lib/client/use-unsaved-guard
    401 → 인라인 로그인 안내, 성공 → 방금 쓴 글 상세로 이동(+ 적립 안내) [970 · C-02]
    ============================================================ */
 
-type CityOption = (typeof CITY_OPTIONS)[number];
+/** [1058 · B6] "" = 아직 고르지 않음 — select 의 "선택" 자리. 등록 때 "지역 선택 필요" */
+type CityOption = WriteCity | "";
 
 const CATEGORIES = COMMUNITY_SUBCATEGORIES.filter((c) => c.id !== "all");
 
@@ -130,34 +133,18 @@ function TownWriteForm() {
   /* 지역을 URL 로 받아 미리 채운다. (B22)
      "글쓰기" 가 아니라 "관양동에 글쓰기" 로 시작해야 한다 — 어느 동네 이야기인지가
      이 서비스의 축인데, 매번 서울특별시/강남구부터 다시 고르게 하고 있었다.
-     ?city=경기도&district=안양시 동안구 또는 ?region=안양시 동안구 둘 다 받는다. */
-  const initialCity = ((): CityOption => {
-    const q = (searchParams.get("city") ?? "").trim();
-    return (CITY_OPTIONS as readonly string[]).includes(q) ? (q as CityOption) : "서울특별시";
-  })();
-  const initialDistrict = ((): string => {
-    const list = DISTRICTS[initialCity] ?? [];
-    const raw = (searchParams.get("district") ?? searchParams.get("region") ?? "").trim();
-    if (!raw) return list[0] ?? "";
-    /* 표기 차이 흡수. 목록의 세밀도가 지역마다 다르다 —
-       서울은 "강남구"(구 단위)인데 경기는 "안양시"(시 단위)라,
-       관심지역이 "안양시 동안구" 로 와도 "안양시" 를 찾아야 한다.
-       정확 → 접미 → 접두 → 부분 포함 순으로 좁힌다. */
-    const norm = raw.replace(/\s+/g, "");
-    const N = (d: string) => d.replace(/\s+/g, "");
-    const hit =
-      list.find((d) => N(d) === norm) ??
-      list.find((d) => norm.endsWith(N(d)) || N(d).endsWith(norm)) ??
-      list.find((d) => norm.startsWith(N(d)) || N(d).startsWith(norm)) ??
-      list.find((d) => norm.includes(N(d)) || N(d).includes(norm));
-    /* 못 찾으면 첫 항목으로 두되, 그건 "이 지역이 목록에 없다" 는 뜻이다 —
-       조용히 엉뚱한 지역을 고르는 것보다 사용자가 직접 고르게 하는 편이 낫지만,
-       select 는 빈 값을 가질 수 없어 첫 항목이 기본이 된다. */
-    return hit ?? list[0] ?? "";
-  })();
+     ?city=경기도&district=안양시 동안구 또는 ?region=안양시 동안구 둘 다 받는다.
+     [1058 · B6] ?city= 없이 ?region=성남시 분당구 만 오면(피드·뉴스 상세의 글쓰기 링크) 시·도가 서울로 굳고
+     서울 목록에서 못 찾아 첫 항목 강남구가 조용히 골라졌다 — 지역 카탈로그로 시·도까지 푼다(lib/town/write-region).
+     못 풀면 "선택" 자리로 두고 등록 때 "지역 선택 필요"로 막는다(틀린 지역을 대신 고르지 않는다). */
+  const initialRegion = parseWriteRegion({
+    region: searchParams.get("region"),
+    city: searchParams.get("city"),
+    district: searchParams.get("district"),
+  });
 
-  const [city, setCity] = useState<CityOption>(initialCity);
-  const [district, setDistrict] = useState(initialDistrict);
+  const [city, setCity] = useState<CityOption>(initialRegion.city);
+  const [district, setDistrict] = useState(initialRegion.district);
   const [title, setTitle] = useState(topic);
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -181,7 +168,7 @@ function TownWriteForm() {
   const unsynced = useDirtyTracker(draftSnapshot, savedSnapshot);
   useUnsavedGuard(Boolean(title.trim() || content.trim()) && unsynced && !posted);
 
-  const districts = DISTRICTS[city] ?? [];
+  const districts = city ? (DISTRICTS[city] ?? []) : [];
 
   /* 마운트 때 한 번 — 되살릴 초안이 있으면 **묻고** 되살린다.
      조용히 덮어쓰면 "단지에서 이야기 쓰기"로 들어온 사람이 엉뚱한 옛 글을 보게 된다. */
@@ -270,9 +257,10 @@ function TownWriteForm() {
     setContent(d.content);
     if (d.category) setCategory(d.category);
     if (d.city && (CITY_OPTIONS as readonly string[]).includes(d.city)) {
-      setCity(d.city as CityOption);
-      const list = DISTRICTS[d.city as CityOption] ?? [];
-      setDistrict(list.includes(d.district) ? d.district : (list[0] ?? ""));
+      setCity(d.city as WriteCity);
+      const list = DISTRICTS[d.city as WriteCity] ?? [];
+      /* [1058 · B6] 목록에 없는 시·군·구는 첫 항목으로 때우지 않는다 — 고르게 한다 */
+      setDistrict(list.includes(d.district) ? d.district : "");
     }
     setRestorable(null);
     setSavedAt(d.savedAt);
@@ -288,7 +276,9 @@ function TownWriteForm() {
 
   const onCityChange = (next: CityOption) => {
     setCity(next);
-    setDistrict(DISTRICTS[next]?.[0] ?? "");
+    /* [1058 · B6] 시·도만 고른 상태 — 시·군·구는 "선택" 자리(첫 항목을 대신 고르지 않는다 · 항목이 하나뿐이면 그것) */
+    const list = next ? (DISTRICTS[next] ?? []) : [];
+    setDistrict(list.length === 1 ? list[0]! : "");
   };
 
   const onSubmit = async () => {
@@ -303,7 +293,7 @@ function TownWriteForm() {
       return;
     }
     if (!city || !district) {
-      setError("시·도와 시·군·구를 선택해 주세요.");
+      setError("지역 선택 필요");
       return;
     }
     /* [1055] 사진이 올라가는 중엔 등록을 막는다 — 전엔 바로 눌리면 올라가던 사진이 글에서 빠졌다(NoteForm 과 같은 규칙) */
@@ -371,9 +361,10 @@ function TownWriteForm() {
         kind: points > 0 ? "celebrate" : "success",
       });
       const newId = data?.post?.id ? String(data.post.id) : "";
+      /* [1058 · B6] 단지에서 온 글은 base64 주소(/complex/<id>)로 보내 정식 슬러그로 한 번 더 넘어갔다 — 정식 주소로 */
       router.push(
         complexId
-          ? `/complex/${encodeURIComponent(complexId)}`
+          ? complexHrefFromId(complexId)
           : newId
             ? /* [1006] 이야기 상세는 /town/story — 뉴스 주소가 아니다 */
               `/town/story/${encodeURIComponent(newId)}`
@@ -480,6 +471,8 @@ function TownWriteForm() {
               className={inputClass}
               aria-label="시·도"
             >
+              {/* [1058 · B6] 고르지 않은 상태를 표현하는 자리 — 등록은 "지역 선택 필요"로 막는다 */}
+              <option value="">시·도 선택</option>
               {CITY_OPTIONS.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -491,7 +484,9 @@ function TownWriteForm() {
               onChange={(e) => setDistrict(e.target.value)}
               className={inputClass}
               aria-label="시·군·구"
+              disabled={!city}
             >
+              <option value="">{city ? "시·군·구 선택" : "시·도 먼저"}</option>
               {districts.map((d) => (
                 <option key={d} value={d}>
                   {d}
@@ -556,13 +551,14 @@ function TownWriteForm() {
                       alt=""
                       className="h-[72px] w-[72px] rounded-lg border border-line object-cover"
                     />
+                    {/* [1058 · B9] 22px 둥근 버튼은 폰에서 못 누른다 — 40px(폰) · 24px(데스크톱) */}
                     <button
                       type="button"
                       aria-label="사진 빼기"
                       onClick={() => setImages((prev) => prev.filter((u) => u !== url))}
-                      className="absolute -right-1.5 -top-1.5 flex h-[22px] w-[22px] items-center justify-center rounded-full bg-brand-navy t-caption font-bold text-white"
+                      className="absolute -right-2 -top-2 flex h-10 w-10 items-center justify-center rounded-full bg-brand-navy text-white md:-right-1.5 md:-top-1.5 md:h-6 md:w-6"
                     >
-                      ×
+                      <Icon name="x" size={14} strokeWidth={2.4} />
                     </button>
                   </div>
                 ))}

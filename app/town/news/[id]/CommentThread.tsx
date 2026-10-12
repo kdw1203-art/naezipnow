@@ -24,6 +24,9 @@ import { ReportButton } from "@/app/components/ReportButton";
 /** [970 · C-34] 처음 펼치는 최상위 댓글 수 — 예전 서버 상한(8)과 같은 수 */
 const INITIAL_THREADS = 8;
 
+/** [1058 · B9] 글자 버튼의 히트 — 폰 40px · 데스크톱 24px(보이는 무게는 그대로) */
+const TEXT_TAP = "inline-flex min-h-[40px] items-center px-2 t-sub font-bold md:min-h-6 md:px-0";
+
 export type ThreadComment = {
   id: string;
   authorLabel: string;
@@ -33,6 +36,8 @@ export type ThreadComment = {
   adopted?: boolean;
   /** [1047] 인증 전문가 마크(작성자 이메일 대신 문구·프로필 id) — 서버가 채운다 */
   expertBadge?: ExpertBadgeData | null;
+  /** [1058 · B3] soft-delete 시각 — 지운 최상위 댓글은 산 답글이 있을 때만 자리(본문은 저장소가 이미 "[삭제된 댓글입니다]")로 남는다 */
+  deletedAt?: string | null;
 };
 
 export function CommentThread({
@@ -147,20 +152,25 @@ export function CommentThread({
     }
   }
 
-  const topLevel = comments.filter((c) => !c.parentId);
-  const repliesOf = (id: string) => comments.filter((c) => c.parentId === id);
+  /* [1058 · B3] 페이지가 지운 댓글을 걸러 넘기면 지운 부모의 답글이 통째로 사라졌다 — 이제 전부 받아
+     지운 답글은 숨기고, 지운 최상위는 산 답글이 있을 때만 자리로 남긴다. */
+  const live = comments.filter((c) => !c.deletedAt);
+  const repliesOf = (id: string) => live.filter((c) => c.parentId === id);
+  const topLevel = comments.filter((c) => !c.parentId && (!c.deletedAt || repliesOf(c.id).length > 0));
   // 채택된 댓글을 맨 위로 — 질문 글에서 정답이 먼저 보여야 한다
   const ordered = [...topLevel].sort(
     (a, b) => Number(b.adopted === true) - Number(a.adopted === true),
   );
   const canDelete = (id: string) => isAuthor || ownIds.has(id);
+  /* [1058 · B3] 채택 버튼이 글쓴이 자신의 댓글에도 보였다(서버는 "self" 400) — 내 댓글이면 그리지 않는다 */
+  const canAdopt = (c: ThreadComment) => isAuthor && !c.adopted && !c.deletedAt && !ownIds.has(c.id);
   /* [970 · C-34] 스레드(최상위 + 답글) 단위로 접는다 — 답글만 잘려 문맥이 끊기지 않게 */
   const shown = expanded ? ordered : ordered.slice(0, INITIAL_THREADS);
   const hiddenCount = expanded
     ? 0
     : ordered.slice(INITIAL_THREADS).reduce((n, c) => n + 1 + repliesOf(c.id).length, 0);
 
-  if (comments.length === 0) {
+  if (live.length === 0) {
     return (
       <p className="py-2 t-body text-text-3">
         댓글 없음
@@ -181,12 +191,12 @@ export function CommentThread({
             postId={postId}
             c={c}
             label={relativeLabels[c.id] ?? ""}
-            isAuthor={isAuthor}
+            canAdopt={canAdopt(c)}
             busy={busyAdopt === c.id}
             onAdopt={() => void adopt(c.id)}
-            onReply={() => setReplyTo(replyTo === c.id ? null : c.id)}
+            onReply={c.deletedAt ? undefined : () => setReplyTo(replyTo === c.id ? null : c.id)}
             replying={replyTo === c.id}
-            canDelete={canDelete(c.id)}
+            canDelete={!c.deletedAt && canDelete(c.id)}
             confirming={confirmDeleteId === c.id}
             deleting={busyDelete === c.id}
             onAskDelete={() =>
@@ -201,7 +211,7 @@ export function CommentThread({
                 postId={postId}
                 c={r}
                 label={relativeLabels[r.id] ?? ""}
-                isAuthor={false}
+                canAdopt={false}
                 busy={false}
                 canDelete={canDelete(r.id)}
                 confirming={confirmDeleteId === r.id}
@@ -238,7 +248,7 @@ function CommentRow({
   postId,
   c,
   label,
-  isAuthor,
+  canAdopt,
   busy,
   onAdopt,
   onReply,
@@ -253,7 +263,7 @@ function CommentRow({
   postId: string;
   c: ThreadComment;
   label: string;
-  isAuthor: boolean;
+  canAdopt: boolean;
   busy: boolean;
   onAdopt?: () => void;
   onReply?: () => void;
@@ -281,23 +291,24 @@ function CommentRow({
           )}
           <span className="t-caption text-text-3">{label}</span>
         </div>
-        <p className="t-body leading-[1.55] text-text-1">{c.body}</p>
-        <div className="flex flex-wrap items-center gap-3">
+        <p className={`t-body leading-[1.55] ${c.deletedAt ? "text-text-3" : "text-text-1"}`}>{c.body}</p>
+        {/* [1058 · B9] 글자만 있는 답글·채택·삭제·취소 버튼이 폰에서 20px 히트였다 — 40px(폰) · 24px(데스크톱) */}
+        <div className="flex flex-wrap items-center gap-x-1 gap-y-0 md:gap-3">
           {onReply && (
             <button
               type="button"
               onClick={onReply}
-              className="t-sub font-bold text-text-3"
+              className={`${TEXT_TAP} text-text-3`}
             >
               {replying ? "답글 닫기" : "답글"}
             </button>
           )}
-          {isAuthor && !c.adopted && onAdopt && (
+          {canAdopt && onAdopt && (
             <button
               type="button"
               onClick={onAdopt}
               disabled={busy}
-              className="t-sub font-bold text-primary disabled:opacity-50"
+              className={`${TEXT_TAP} text-primary disabled:opacity-50`}
             >
               {busy ? "채택 중…" : "채택하기 (+30P)"}
             </button>
@@ -307,7 +318,7 @@ function CommentRow({
             <button
               type="button"
               onClick={onAskDelete}
-              className="t-sub font-bold text-text-3 hover:text-danger"
+              className={`${TEXT_TAP} text-text-3 hover:text-danger`}
             >
               삭제
             </button>
@@ -325,7 +336,7 @@ function CommentRow({
                 type="button"
                 onClick={onConfirmDelete}
                 disabled={deleting}
-                className="rounded-md bg-danger px-2 py-0.5 t-sub font-bold text-on-dark disabled:opacity-60"
+                className="inline-flex min-h-[40px] items-center rounded-md bg-danger px-2.5 t-sub font-bold text-on-dark disabled:opacity-60 md:min-h-6 md:px-2"
               >
                 {deleting ? "삭제 중…" : "삭제"}
               </button>
@@ -333,14 +344,14 @@ function CommentRow({
                 type="button"
                 onClick={onCancelDelete}
                 disabled={deleting}
-                className="t-sub font-bold text-text-2"
+                className={`${TEXT_TAP} text-text-2`}
               >
                 취소
               </button>
             </span>
           )}
-          {/* [967 · 25] 신고 — 남의 댓글에만(내 댓글·글쓴이 자신의 글은 삭제로 충분하다) */}
-          {!canDelete && <ReportButton postId={postId} commentId={c.id} />}
+          {/* [967 · 25] 신고 — 남의 댓글에만(내 댓글·글쓴이 자신의 글은 삭제로 충분하다) · 지운 댓글은 신고할 것이 없다 */}
+          {!canDelete && !c.deletedAt && <ReportButton postId={postId} commentId={c.id} />}
         </div>
       </div>
     </div>

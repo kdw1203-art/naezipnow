@@ -13,6 +13,12 @@ export type MeProfile = {
   primaryRegion?: string | null;
   /** 이사·투자 시점(선택) */
   intentHorizon?: string | null;
+  /** [1058] 공개 프로필 주소(/u/<handle>) — profiles.handle. 없으면 null */
+  handle?: string | null;
+  /** [1058] 공개 소개 한 줄 — profiles.bio. 없으면 null */
+  bio?: string | null;
+  /** [1058] profiles 조회 결과 — false 면 handle·bio 는 "모름"(없음이 아니다). 시트는 두 칸을 잠근다 */
+  publicProfileOk?: boolean;
 };
 
 const PERSONA_SET = new Set(["residential", "family", "invest"]);
@@ -55,12 +61,26 @@ export async function loadMeProfile(
   };
   const sb = getServiceSupabase();
   if (!sb) return base;
-  const { data, error } = await sb
-    .from("app_users")
-    .select("email, name, plan, role, created_at, avatar_url, persona, primary_region, intent_horizon")
-    .eq("email", email)
-    .maybeSingle();
-  if (error || !data) return base;
+  const lower = email.trim().toLowerCase();
+  /* [1058] 핸들·소개는 profiles 표에 있다 — 프로필 편집 시트가 미리 채우도록 같은 이메일로 한 번 더 읽는다(병렬).
+     예전엔 app_users 만 읽어 시트가 핸들·소개를 알 길이 없었다. 실패는 null(없음이 아니라 모름 — 시트는 비워 둔다). */
+  const [{ data, error }, pub] = await Promise.all([
+    sb
+      .from("app_users")
+      .select("email, name, plan, role, created_at, avatar_url, persona, primary_region, intent_horizon")
+      .eq("email", email)
+      .maybeSingle(),
+    sb
+      .from("profiles")
+      .select("handle, bio")
+      .in("email", [...new Set([email.trim(), lower])])
+      .limit(1),
+  ]);
+  const publicProfileOk = !pub.error;
+  const pubRow = pub.error ? null : ((pub.data?.[0] as { handle?: string | null; bio?: string | null } | undefined) ?? null);
+  const handle = pubRow ? (typeof pubRow.handle === "string" && pubRow.handle.trim() ? pubRow.handle.trim() : null) : null;
+  const bio = pubRow ? (typeof pubRow.bio === "string" && pubRow.bio.trim() ? pubRow.bio.trim() : null) : null;
+  if (error || !data) return { ...base, handle, bio, publicProfileOk };
   return {
     email: String(data.email ?? email),
     name: (data.name as string | null) ?? base.name,
@@ -75,6 +95,9 @@ export async function loadMeProfile(
     persona: (data.persona as string | null) ?? null,
     primaryRegion: (data.primary_region as string | null) ?? null,
     intentHorizon: (data.intent_horizon as string | null) ?? null,
+    handle,
+    bio,
+    publicProfileOk,
   };
 }
 

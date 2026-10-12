@@ -13,6 +13,7 @@ import {
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { followCounts } from "@/lib/follows/store-db";
 import { logger } from "@/lib/log";
+import { kstParts } from "@/lib/format/kst";
 import { FollowButton } from "../../components/FollowButton";
 import { loadExpertBadges } from "@/lib/experts/badges";
 import { ExpertBadge } from "@/app/components/ExpertBadge";
@@ -61,16 +62,18 @@ function escapeLike(s: string): string {
    "그런 사용자는 없습니다"라고 답하는 화면이다. 못 읽은 것은 못 읽었다고
    구분해 두고, 404 대신 "지금은 불러올 수 없어요"를 그린다. */
 type ProfileLookup =
-  | { ok: true; profile: PublicProfile | null }
-  | { ok: false; profile: null };
+  | { ok: true; profile: PublicProfile | null; ambiguous: null }
+  /* [1058] 핸들은 없고 같은 full_name 이 여럿 — 아무나 고르지 않는다(예전엔 limit(1) 로 첫 사람을 보여 줬다) */
+  | { ok: true; profile: null; ambiguous: { count: number } }
+  | { ok: false; profile: null; ambiguous: null };
 
 /** profiles 조회: handle 일치(대소문자 무시) → full_name(닉네임) 폴백. env 미설정 시 ok+null */
 const findProfile = cache(async (input: string): Promise<ProfileLookup> => {
   const q = input.trim();
-  if (!q) return { ok: true, profile: null };
+  if (!q) return { ok: true, profile: null, ambiguous: null };
   try {
     const sb = getServiceSupabase();
-    if (!sb) return { ok: true, profile: null };
+    if (!sb) return { ok: true, profile: null, ambiguous: null };
     const cols = "email, full_name, handle, region, bio";
 
     // 1) handle 일치 (lower unique — 대소문자 무시)
@@ -81,24 +84,28 @@ const findProfile = cache(async (input: string): Promise<ProfileLookup> => {
       .limit(1);
     if (byHandle.error) {
       logger.error(`[u/[handle]] profiles(handle) 조회 실패 (${q})`, byHandle.error);
-      return { ok: false, profile: null };
+      return { ok: false, profile: null, ambiguous: null };
     }
     let row = byHandle.data?.[0] ?? null;
 
     // 2) nickname(full_name) 일치 폴백 — 대소문자 무시
     if (!row) {
+      /* [1058] 같은 이름이 몇 명인지 센다(count) — 둘 이상이면 첫 사람을 고르지 않고 "같은 이름 N명"으로 답한다 */
       const byName = await sb
         .from("profiles")
-        .select(cols)
+        .select(cols, { count: "exact" })
         .ilike("full_name", escapeLike(q))
         .limit(1);
       if (byName.error) {
         logger.error(`[u/[handle]] profiles(full_name) 조회 실패 (${q})`, byName.error);
-        return { ok: false, profile: null };
+        return { ok: false, profile: null, ambiguous: null };
+      }
+      if (typeof byName.count === "number" && byName.count > 1) {
+        return { ok: true, profile: null, ambiguous: { count: byName.count } };
       }
       row = byName.data?.[0] ?? null;
     }
-    if (!row) return { ok: true, profile: null };
+    if (!row) return { ok: true, profile: null, ambiguous: null };
     const email = String(row.email ?? "");
     /* [970 · C-41] 아바타 — 마이(/my)가 쓰는 app_users.avatar_url 을 같은 이메일로 읽는다.
        곁다리라 실패는 null(자리표시자)로 — 프로필 본문 렌더를 막지 않는다. */
@@ -118,10 +125,11 @@ const findProfile = cache(async (input: string): Promise<ProfileLookup> => {
         bio: (row.bio as string | null)?.trim() || null,
         avatarUrl,
       },
+      ambiguous: null,
     };
   } catch (e) {
     logger.error(`[u/[handle]] profiles 조회 실패 (${q})`, e);
-    return { ok: false, profile: null };
+    return { ok: false, profile: null, ambiguous: null };
   }
 });
 
@@ -157,8 +165,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { handle: rawHandle } = await params;
   const input = decodeURIComponent(rawHandle);
-  const { profile } = await findProfile(input);
+  const { profile, ambiguous } = await findProfile(input);
   const name = profile?.name ?? resolveDisplayName(input);
+  if (ambiguous) {
+    return {
+      title: `${name} · 같은 이름 ${ambiguous.count}명 | 내집나우`,
+      description: `${name} 이름의 프로필이 ${ambiguous.count}개 · 핸들 주소(/u/핸들)로 구분 · 내집나우`,
+      robots: { index: false, follow: false },
+    };
+  }
   return {
     /* [970 · C-25] 제목 접미 통일 `| 내집나우` */
     title: `${name}님의 임장 프로필 | 내집나우`,
@@ -180,6 +195,25 @@ export default async function PublicProfilePage({
   const lookup = await findProfile(input);
   const profile = lookup.profile;
   const displayName = profile?.name ?? resolveDisplayName(input);
+
+  /* [1058] 같은 full_name 이 N명 — 예전엔 limit(1) 이 고른 첫 사람의 프로필(노트·팔로워)을 그 이름의 프로필로 보여 줬다.
+     누구를 뜻하는지 알 수 없으므로 고르지 않고 사실을 적는다. 핸들(/u/핸들)이 있는 사람은 위 1) 에서 먼저 잡힌다. */
+  if (lookup.ambiguous) {
+    const n = lookup.ambiguous.count;
+    return (
+      <PageShell breadcrumb={`발견 › ${displayName}`}>
+        <div className="mx-auto max-w-[640px]">
+          <div className="rise-in card px-5 py-8 text-center">
+            <h1 className="t-section font-bold text-ink">{displayName}</h1>
+            <p className="mt-2 t-body text-text-2">
+              같은 이름 {n}명 · 핸들 주소(/u/핸들)로 구분
+            </p>
+            <p className="mt-1 t-sub text-text-3">핸들은 마이 › 프로필 편집에서 정한다</p>
+          </div>
+        </div>
+      </PageShell>
+    );
+  }
   /* [1047] 인증 전문가 마크 — 프로필 주인이 승인된 전문가면 이름 옆에 */
   const expertBadge = profile?.email
     ? ((await loadExpertBadges([profile.email])).get(profile.email.trim().toLowerCase()) ?? null)
@@ -255,14 +289,15 @@ export default async function PublicProfilePage({
   });
   const noteCount = authored.length;
   /* [1015 · 규칙 M 숨고] 고수 프로필 카드의 "활동 기간" 자리 — 첫 공개 노트의 작성 월(실데이터에서만). 0편이면 없음 */
+  /* [1058] createdAt.slice(0,7) 은 UTC 월이었다 — 한국 시간으로 1일 0~9시에 쓴 첫 노트는 전달로 찍혔다. KST(kstParts) */
   const firstNoteYm = (() => {
     const first = authored
       .map((n) => n.createdAt)
       .filter((d) => typeof d === "string" && d.length >= 7)
       .sort()[0];
     if (!first) return null;
-    const [y, m] = first.slice(0, 7).split("-");
-    return y && m ? `${y}.${Number(m)}` : null;
+    const k = kstParts(first);
+    return k ? `${k.year}.${k.month}` : null;
   })();
   // 사실 우선: 지역·소개는 실데이터가 있을 때만 (허위 기본값 금지)
   const region = profile?.region || authored[0]?.region?.trim() || null;
@@ -307,24 +342,16 @@ export default async function PublicProfilePage({
                 <ExpertBadge badge={expertBadge} />
               </div>
               {/* [970 · C-10] 표시 주소가 "naezipnow.com/@닉네임" 이었는데 /@… 라우트는 없어 404 —
-                  실제 경로(/u/{handle})로 적는다. */}
+                  실제 경로(/u/{handle})로 적는다. [1058] 핸들이 있으면 @핸들 로(주소 /u/핸들 과 같은 값) */}
               <div className="mt-[2px] t-sub text-text-3">
-                naezipnow.com/u/{handleLabel}
+                {profile?.handle ? `@${profile.handle}` : `naezipnow.com/u/${handleLabel}`}
                 {region ? ` · ${region}` : ""}
               </div>
             </div>
-            {/* 팔로우 실배선 (user_follows) — 프로필 매칭 시에만, 미매칭은 로그인 유도 유지 */}
-            {profile ? (
-              <FollowButton handle={profile.handle ?? profile.name} />
-            ) : (
-              /* [970 · C-41] 로그인 뒤 이 프로필로 돌아오게 callbackUrl */
-              <Link
-                href={`/login?callbackUrl=${encodeURIComponent(`/u/${encodeURIComponent(input)}`)}`}
-                className="mb-1 shrink-0 rounded-full bg-primary px-4 py-[7px] t-sub font-bold text-white"
-              >
-                팔로우
-              </Link>
-            )}
+            {/* 팔로우 실배선 (user_follows).
+                [1058] 프로필 행이 없고 공개 노트의 작성자 라벨로만 찾은 사람(아래 else 가지)에게도 로그인한 사람에게까지
+                /login 링크를 그렸다 — FollowButton 이 세션·본인 여부를 스스로 가른다(핸들 해석은 서버 /api/me/follows). */}
+            <FollowButton handle={profile ? (profile.handle ?? profile.name) : displayName} />
           </div>
 
           {/* 소개 — 실데이터가 있을 때만 (허위 소개·태그 금지) */}

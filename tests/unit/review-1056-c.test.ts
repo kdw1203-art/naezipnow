@@ -30,11 +30,11 @@ const code = (p: string) =>
     .replace(/^\s*\/\/.*$/gm, "");
 
 /* ---------- C1 저장한 노트 ---------- */
-test("C1 북마크 타입 — DB CHECK 밖의 \"note\" 를 더하지 않았고, 사유가 저장소 파일에 적혀 있다", () => {
+test("C1 북마크 타입 — [1059] note 는 표가 아니라 프로필 설정 jsonb 로 간다(사유가 저장소 파일에 적혀 있다)", () => {
   const store = read("lib/bookmarks/store.ts");
-  assert.doesNotMatch(code("lib/bookmarks/store.ts"), /\|\s*"note"/, "note 타입은 마이그레이션 전엔 없다");
   assert.match(store, /bookmarks_target_type_check/);
-  assert.doesNotMatch(code("app/api/bookmarks/route.ts"), /v === "note"/);
+  /* [1059] note·listing 은 settings-store 분기 — 표 insert 로는 가지 않는다 */
+  assert.match(code("lib/bookmarks/store.ts"), /if \(isSettingsKind\(input\.targetType\)\)/);
 });
 
 test("C1 북마크 API — DB 가 insert 를 거절하면 503 + \"저장 실패 · 잠시 후 다시\"", () => {
@@ -43,12 +43,11 @@ test("C1 북마크 API — DB 가 insert 를 거절하면 503 + \"저장 실패 
   assert.match(route, /dbUnavailable\("bookmark-add", e, "저장 실패 · 잠시 후 다시"\)/);
 });
 
-test("C1 /my 저장한 노트 — 모든 북마크를 getNote 로 풀지 않는다(노트 북마크는 존재할 수 없다)", () => {
+test("C1 /my 저장한 노트 — [1059] note 타입만 읽어 노트로 푼다(전체 북마크를 풀지 않는다)", () => {
   const my = code("app/my/page.tsx");
-  assert.doesNotMatch(my, /getNote\(/, "북마크 id 를 노트로 푸는 조회 없음");
   assert.doesNotMatch(my, /listBookmarks\(email\)\s*;/, "타입 없는 전체 북마크 조회 없음");
-  assert.match(my, /function loadSavedNotes\(\): Loaded<InspectionNote\[\]> \{\s*return loaded\(\[\]\);/);
-  assert.match(read("app/my/page.tsx"), /\[1056 · C1\]/);
+  assert.match(my, /listBookmarks\(email, "note"\)/);
+  assert.match(read("app/my/page.tsx"), /\[1056 · C1 → 1059\]/);
 });
 
 /* ---------- C2 저장한 글 ---------- */
@@ -69,7 +68,7 @@ test("C2 /my 저장한 글 — type=post 북마크 3건 · postHref · 빈 상�
 
 test("C2 /my/watchlist — \"저장한 글\" 탭이 있고 SavedPostsSection 이 post 북마크를 postHref 로 잇는다", () => {
   const page = code("app/my/watchlist/page.tsx");
-  assert.match(page, /\{ key: "saved", label: "저장한 글" \}/);
+  assert.match(page, /\{ key: "saved", label: "저장" \}/); /* [1059] 노트도 들어와 "저장" */
   assert.match(page, /rawTab === "saved"/);
   assert.match(page, /<SavedPostsSection email=\{email\} \/>/);
   const section = code("app/my/watchlist/SavedPostsSection.tsx");

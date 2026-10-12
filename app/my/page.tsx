@@ -9,6 +9,7 @@ import { getExpertStatus } from "@/lib/experts/is-verified";
 import { expertBadgeText } from "@/lib/experts/taxonomy";
 import { getBalance } from "@/lib/points/ledger";
 import {
+  getNote,
   listNotes,
   inspectionAverageScore,
   type InspectionNote,
@@ -101,11 +102,19 @@ async function loadPlanExpiresAt(email: string): Promise<string | null> {
   }
 }
 
-/** [1056 · C1] 저장한 노트 — 예전엔 **모든** 북마크 id(동네 글·매물·단지)를 getNote 로 풀어(최대 10 조회) 노트가 아닌 것을
-    걸렀다. 그런데 노트를 저장하는 버튼도, "note" 북마크 타입도 없다(운영 DB CHECK 가 막는다 — lib/bookmarks/store.ts).
-    조회 없이 0건으로 말한다 — 저장 기능이 생기면(가산 마이그레이션 + 버튼) listBookmarks(email, "note") 로 바꾼다. */
-function loadSavedNotes(): Loaded<InspectionNote[]> {
-  return loaded([]);
+/** [1056 · C1 → 1059] 저장한 노트 — 1056 은 저장 기능 자체가 없어 0건으로 말했다. [1059] 노트 저장(프로필 설정 jsonb)이 생겨
+    listBookmarks(email, "note") 로 읽는다(최신 10건). 공개가 풀렸거나 지워진 노트는 자연 제외(getNote null · 비공개).
+    조회 실패는 ok:false — 빈 배열로 누르면 "없음"이 되고, 그건 거짓이다. */
+async function loadSavedNotes(email: string): Promise<Loaded<InspectionNote[]>> {
+  try {
+    const bms = await listBookmarks(email, "note");
+    const ids = Array.from(new Set(bms.map((b) => b.targetId))).slice(0, 10);
+    const resolved = await Promise.all(ids.map((id) => getNote(id).catch(() => null)));
+    return loaded(resolved.filter((n): n is InspectionNote => n !== null && n.isPublic));
+  } catch (e) {
+    logger.error("[my] 저장한 노트 조회 실패", e);
+    return { ok: false };
+  }
 }
 
 type SavedPost = { id: string; title: string; href: string; meta: string };
@@ -231,7 +240,7 @@ export default async function MyPage() {
     }),
     toLoaded(getBalance(email), warn("포인트")),
     toLoaded(listNotes(email), warn("내 노트")),
-    loadSavedNotes(),
+    loadSavedNotes(email),
     loadSavedPosts(email),
     loadMyPurchasedReports(email),
     toLoaded(listAlertSubscriptions(email), warn("알림 구독")),

@@ -9,6 +9,7 @@ import { getTownPost, readRelatedTownPosts } from "@/lib/newui/board-posts";
 import { isStoryPost } from "@/lib/town/story";
 import { relatedInCluster } from "@/lib/news/cluster";
 import { isPostHidden } from "@/lib/moderation/reports-store";
+import { countPostBookmarks } from "@/lib/posts-store";
 import type { Post } from "@/lib/types/post";
 import { logger } from "@/lib/log";
 import { hostOf, newsImageUrl } from "../../shared";
@@ -268,7 +269,8 @@ export default async function TownNewsDetailPage({
     : paragraphs(post.body)
         .slice(0, 3)
         .map((t, i) => `${["①", "②", "③"][i] ?? "·"} ${t.slice(0, 55)}`);
-  const saveCount = post.bookmarkCount ?? 0;
+  /* [1058 · B2] Post.bookmarkCount 는 어떤 저장소도 채우지 않아 "저장 0"이 늘 적혔다 — bookmarks 를 직접 센다(못 세면 숫자 없이) */
+  const saveCount = await countPostBookmarks(post.id);
   const heroImage = newsImageUrl(post);
 
   /* [1006] NewsArticle JSON-LD — 항상. DB 가 만든 노드(우리 요약 있을 때)에 빠진 필드

@@ -23,12 +23,15 @@ import {
   TALK_MAX_LEN,
   TALK_POLL_MS,
   TALK_TABS,
+  addTalkTombstone,
   bumpBoardTalk,
   clipTalkInput,
   complexInRegion,
   countFreshPosts,
   defaultTalkTab,
+  dropBoardTalk,
   filterTalkRegions,
+  filterTombstoned,
   mergeIncomingPosts,
   rankTalkBoard,
   signedPct,
@@ -94,7 +97,11 @@ export function TalkPanel({
   const [complexOpen, setComplexOpen] = useState(false);
   const [complexQ, setComplexQ] = useState("");
   const [complexHits, setComplexHits] = useState<ComplexHit[] | null>(null);
+  /* [1058 · C4·e] 단지 검색 실패 — 틀린 사실: 실패를 빈 결과([])로 바꿔 "이 지역 단지 없음"이라고 적었다 */
+  const [complexSearchFailed, setComplexSearchFailed] = useState(false);
   const [visible, setVisible] = useState(true);
+  /* [1058 · C4·d] 지운·숨긴 글의 묘비(id → 시각) — 떠나 있던 새로고침 응답이 그 글을 되살리지 않게(lib/talk/rules) */
+  const tombsRef = useRef<Map<string, number>>(new Map());
   const [q, setQ] = useState("");
   const [fresh, setFresh] = useState(0);
   const [announce, setAnnounce] = useState("");
@@ -236,7 +243,8 @@ export function TalkPanel({
         return {
           status: "ok",
           regionId: j.regionId,
-          posts: same ? mergeIncomingPosts(cur.posts, j.posts) : j.posts,
+          /* [1058 · C4·d] 합친 뒤 묘비(방금 지운·숨긴 글)를 걸러 낸다 */
+          posts: filterTombstoned(same ? mergeIncomingPosts(cur.posts, j.posts) : j.posts, tombsRef.current, Date.now()),
           facts: j.facts,
           factsFailed: Boolean(j.factsFailed),
         };
@@ -291,6 +299,7 @@ export function TalkPanel({
     setComplex(null);
     setComplexOpen(false);
     setComplexHits(null);
+    setComplexSearchFailed(false);
     setComplexQ("");
     setFormError(null);
     setFresh(0);
@@ -304,17 +313,24 @@ export function TalkPanel({
     const cq = complexQ.trim();
     if (cq.length < 2) {
       setComplexHits(null);
+      setComplexSearchFailed(false);
       return;
     }
     const ac = new AbortController();
     const t = window.setTimeout(async () => {
       try {
         const r = await fetch(`/api/search/suggest?q=${encodeURIComponent(cq)}`, { signal: ac.signal });
+        if (!r.ok) throw new Error(String(r.status));
         const j = (await r.json()) as { suggestions?: ComplexHit[] };
         const list = (j.suggestions ?? []).filter((s) => s && s.id && complexInRegion(s.region, selectedTx));
+        setComplexSearchFailed(false);
         setComplexHits(list.slice(0, 5));
       } catch {
-        if (!ac.signal.aborted) setComplexHits([]);
+        /* [1058 · C4·e] 실패는 실패로 — 빈 결과("이 지역 단지 없음")로 위장하지 않는다 */
+        if (!ac.signal.aborted) {
+          setComplexHits(null);
+          setComplexSearchFailed(true);
+        }
       }
     }, 300);
     return () => {
@@ -365,6 +381,17 @@ export function TalkPanel({
     }
   }
 
+  /* [1058 · C4·d] 목록에서 빼기 + 묘비(60초) + 왼쪽 순위 글 수 −1(지운 글이 최근 7일 안이면).
+     틀린 사실: 지운 글이 떠나 있던 30초 새로고침 응답에 실려 되살아났고, 왼쪽 "최근 7일 글" 수는 올릴 때만(+1) 맞췄다. */
+  function bury(id: string) {
+    const now = Date.now();
+    tombsRef.current = addTalkTombstone(tombsRef.current, id, now);
+    const cur = feedNowRef.current;
+    const gone = cur.status === "ok" ? cur.posts.find((p) => p.id === id) : undefined;
+    setFeed((f) => (f.status === "ok" ? { ...f, posts: f.posts.filter((p) => p.id !== id) } : f));
+    if (gone && cur.status === "ok") setBoard((b) => (b ? dropBoardTalk(b, cur.regionId, gone.createdAt, now) : b));
+  }
+
   async function remove(id: string) {
     setConfirm(null);
     const r = await fetch("/api/talk", {
@@ -376,7 +403,7 @@ export function TalkPanel({
       showToast("지우기 실패 · 잠시 후 다시");
       return;
     }
-    setFeed((cur) => (cur.status === "ok" ? { ...cur, posts: cur.posts.filter((p) => p.id !== id) } : cur));
+    bury(id);
     showToast("글을 지웠어요");
   }
 
@@ -392,7 +419,7 @@ export function TalkPanel({
       return;
     }
     const j = (await r.json().catch(() => ({}))) as { result?: string };
-    if (j.result === "hidden") setFeed((cur) => (cur.status === "ok" ? { ...cur, posts: cur.posts.filter((p) => p.id !== id) } : cur));
+    if (j.result === "hidden") bury(id);
     showToast(j.result === "already" ? "이미 신고한 글" : "신고를 접수했어요");
   }
 
@@ -547,7 +574,15 @@ export function TalkPanel({
                 </button>
               </div>
             )}
-            {!selected && board ? (
+            {!scoped && boardFailed && !board ? (
+              /* [1058 · C4·b] 틀린 사실: 순위 판이 실패하면 고른 지역이 없어 글 칸이 뼈대(skeleton)로 영영 남았다 */
+              <div className="flex flex-col items-center gap-2 px-3.5 py-8 text-center">
+                <p className="m-0 t-sub text-text-3">토론판 불러오기 실패 · 잠시 후 다시</p>
+                <button type="button" onClick={() => void loadBoard()} className="btn-soft inline-flex min-h-10 items-center px-4 t-sub font-bold">
+                  다시
+                </button>
+              </div>
+            ) : !selected && board ? (
               <p className="m-0 px-3.5 py-8 text-center t-sub text-text-3">지역 선택 없음 · 순위에서 고르기</p>
             ) : feed.status === "error" ? (
               <div className="flex flex-col items-center gap-2 px-3.5 py-8 text-center">
@@ -563,6 +598,16 @@ export function TalkPanel({
                 {[0, 1, 2].map((i) => (
                   <div key={i} className="skeleton h-12 w-full rounded-lg" />
                 ))}
+              </div>
+            ) : posts.length === 0 && facts.length === 0 && feed.factsFailed ? (
+              /* [1058 · C4·c] 틀린 사실: 글 0 + 소식 실패를 "토론글 없음"으로 적었다 — 못 읽은 것은 못 읽었다고 */
+              <div className="flex flex-col items-center gap-2 px-3.5 py-8 text-center">
+                <p className="m-0 t-sub text-text-3">사람 글 없음 · 소식 불러오기 실패 · 잠시 후 다시</p>
+                {selectedId && (
+                  <button type="button" onClick={() => void loadFeed(selectedId, false)} className="btn-soft inline-flex min-h-10 items-center px-4 t-sub font-bold">
+                    다시
+                  </button>
+                )}
               </div>
             ) : posts.length === 0 && facts.length === 0 ? (
               <p className="m-0 px-3.5 py-8 text-center t-sub text-text-3">{placeName} 토론글 없음</p>
@@ -675,6 +720,20 @@ export function TalkPanel({
                           setComplexOpen(false);
                           setComplexQ("");
                           setComplexHits(null);
+                          setComplexSearchFailed(false);
+                          return;
+                        }
+                        /* [1058 · C4·a] 틀린 사실: 단지 검색 칸의 Enter 가 바깥 form 을 제출해 쓰던 한 줄이 올라갔다.
+                           Enter 는 첫 검색 결과를 붙인다(결과가 없으면 아무 일도 없다) · 한글 조합 중엔 무시 */
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (e.nativeEvent.isComposing) return;
+                          const first = complexHits?.[0];
+                          if (!first) return;
+                          setComplex(first);
+                          setComplexOpen(false);
+                          setComplexQ("");
+                          setComplexHits(null);
                         }
                       }}
                       autoFocus
@@ -682,8 +741,11 @@ export function TalkPanel({
                       aria-label="붙일 단지 검색"
                       className="min-h-10 w-full rounded-lg border border-line bg-surface px-3 t-sub text-ink"
                     />
-                    {!complexHits && complexQ.trim().length < 2 && (
-                      <span className="px-1 t-caption text-text-3">2자 이상 · 이 지역 단지만 · Esc 닫기</span>
+                    {!complexHits && !complexSearchFailed && complexQ.trim().length < 2 && (
+                      <span className="px-1 t-caption text-text-3">2자 이상 · 이 지역 단지만 · Enter 첫 결과 · Esc 닫기</span>
+                    )}
+                    {complexSearchFailed && (
+                      <span role="alert" className="px-1 t-caption font-bold text-danger">단지 검색 실패 · 잠시 후 다시</span>
                     )}
                     {complexHits && (
                       <ul className="m-0 list-none rounded-lg border border-line bg-surface p-1">

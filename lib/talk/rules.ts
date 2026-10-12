@@ -289,5 +289,51 @@ export function bumpBoardTalk(board: TalkBoard, regionId: string, atIso: string)
   return hit ? { ...board, regions, totalTalks: board.totalTalks + 1 } : board;
 }
 
+/* ── [1058 · C4] 지운 글의 묘비 — 순수 규칙(단위 시험) ─────────────────────
+   틀린 사실: 지우기·신고 숨김 응답으로 목록에서 뺀 글이, 그보다 먼저 떠난 30초 새로고침(quiet) 응답에 실려 와
+   mergeIncomingPosts 에서 다시 살아났다(서버 목록에 있으면 그대로 합친다). 지운 id 를 60초 동안 기억해 두고
+   합친 결과를 걸러 낸다 — 60초면 떠나 있던 응답은 전부 돌아오고, 그 뒤 서버 목록에는 없다. */
+export const TALK_TOMBSTONE_MS = 60_000;
+
+/** id → 묻은 시각(ms). 지난 묘비는 넣을 때 같이 치운다(무한히 자라지 않게) */
+export function addTalkTombstone(
+  tombs: ReadonlyMap<string, number>,
+  id: string,
+  nowMs: number,
+  ttlMs: number = TALK_TOMBSTONE_MS,
+): Map<string, number> {
+  const next = new Map<string, number>();
+  for (const [k, at] of tombs) if (nowMs - at < ttlMs) next.set(k, at);
+  next.set(id, nowMs);
+  return next;
+}
+
+/** 묘비가 살아 있는(ttl 안) 글은 뺀다 */
+export function filterTombstoned(
+  posts: readonly TalkPost[],
+  tombs: ReadonlyMap<string, number>,
+  nowMs: number,
+  ttlMs: number = TALK_TOMBSTONE_MS,
+): TalkPost[] {
+  if (tombs.size === 0) return [...posts];
+  return posts.filter((p) => {
+    const at = tombs.get(p.id);
+    return at === undefined || nowMs - at >= ttlMs;
+  });
+}
+
+/** 지운 직후 왼쪽 순위의 글 수를 바로 −1(bumpBoardTalk 의 반대). 최근 TALK_HOT_DAYS 일 안의 글만 세는 수라 그 밖의 글은 건드리지 않는다 */
+export function dropBoardTalk(board: TalkBoard, regionId: string, createdAtIso: string, nowMs: number): TalkBoard {
+  const t = Date.parse(createdAtIso);
+  if (!Number.isFinite(t) || nowMs - t > TALK_HOT_DAYS * 86_400_000) return board;
+  let hit = false;
+  const regions = board.regions.map((r) => {
+    if (r.id !== regionId || r.talks <= 0) return r;
+    hit = true;
+    return { ...r, talks: r.talks - 1 };
+  });
+  return hit ? { ...board, regions, totalTalks: Math.max(0, board.totalTalks - 1) } : board;
+}
+
 /** 마지막으로 본 지역(홈·토론 화면 공용 · 이 브라우저에만) */
 export const TALK_LAST_REGION_KEY = "talk:last-region";

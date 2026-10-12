@@ -87,6 +87,14 @@ export function SupportContactForm({ supportEmail }: { supportEmail: string }) {
       }
       /* [1002] /forgot-password 가 보내는 딥링크 — 메일이 안 왔을 때 무엇을 적어야 하는지 미리 채운다.
          이메일은 주소창에 싣지 않는다(개인정보) — 아래 이메일 칸에 직접 적는다. */
+      /* [1058 · C3] 거주민 후기 신고 — 후기는 content_reports 에 들어갈 수 없어(CHECK target_type) 문의로 받는다.
+         ReportButton(targetType="review") 이 보내는 ?topic=report&ref=review:<id>. ref 는 표시 글자로만(서버가 다시 검증). */
+      const ref = (sp.get("ref") ?? "").replace(/[^A-Za-z0-9:_-]/g, "").slice(0, 80);
+      if (sp.get("topic") === "report" && ref) {
+        setCategory("악성 콘텐츠 신고");
+        setSubject((v) => v || `신고 · ${ref}`);
+        setMessage((v) => v || [`신고 대상: ${ref}`, "사유: (스팸 · 욕설·비방 · 허위 정보 · 기타)", "내용: "].join("\n"));
+      }
       if (sp.get("topic") === "password-reset") {
         setSubject((v) => v || "비밀번호 재설정 메일이 오지 않아요");
         setMessage(

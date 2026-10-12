@@ -26,6 +26,7 @@ import { guToken, tierReachedAt } from "@/lib/gamification/region-levels";
 import { appendOnboardingStep } from "@/lib/onboarding/append-step";
 import { FUNNEL_EVENT, recordFunnelEvent } from "@/lib/platform-funnel-events";
 import { looksLikeEmail } from "@/lib/privacy/mask-email";
+import { resolveDisplayName } from "@/lib/account/display-name";
 import { addToWatchlist, isWatching } from "@/lib/watchlist/store-db";
 import { appendInboxNotification } from "@/lib/notifications/inbox";
 import { notifyRegionLevelUp } from "@/lib/notifications/engagement-notify";
@@ -253,9 +254,10 @@ export async function POST(req: Request) {
       authorEmail: session.user.email,
       /* 이름이 없으면 이메일을 넣고 있었다. author_label 은 공개 목록에 그대로
          실리는 값이라(위 publicAuthorLabel), 이름 없는 계정은 노트를 쓸 때마다
-         자기 이메일을 공개했다. 이름이 없으면 **아무것도 넣지 않는다** — 표시는
-         이미 있는 "○○** 이웃" 폴백이 맡는다. 안 들어가면 샐 값이 없다. */
-      authorLabel: session.user.name?.trim() || undefined,
+         자기 이메일을 공개했다. 이름이 없으면 "○○** 이웃" 마스킹(이메일 아님)이 들어간다 —
+         이야기·토론·댓글이 저장하는 것과 같은 값이다. 이메일 모양은 어느 단계에서도 통과하지 않는다.
+         [1058] 세션 이름(로그인 때 굳은 공급자 이름)을 그대로 넣어 프로필에서 바꾼 이름이 새 노트에 안 보였다 — app_users.name 먼저 */
+      authorLabel: await resolveDisplayName(session.user.email, session.user.name),
       title,
       region,
       aptName: body.aptName ? String(body.aptName) : undefined,

@@ -1,55 +1,60 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { revalidatePath } from "next/cache";
 import { invalidateTownFeed } from "@/lib/cache/invalidate";
 import { invalidateComplexById } from "@/lib/complex/complex-invalidate";
 import { safeAuth } from "@/lib/safe-auth";
-import { togglePostLike } from "@/lib/posts-store";
+import { togglePostLike, userHasLikedPost } from "@/lib/posts-store";
 import { lookupPost, postLookupErrorResponse } from "@/lib/community/post-lookup";
 import { postHref } from "@/lib/town/post-href";
 import { likeMilestone, notifyPostLikeMilestone } from "@/lib/notifications/engagement-notify";
+import { applyRateLimit } from "@/lib/rate-limit";
 import { logger } from "@/lib/log";
 
 export const runtime = "nodejs";
 
-export async function POST(
-  req: Request,
+/* [1058 · B1] 공감 키 — 로그인 이메일(소문자)뿐. 예전엔 본문의 guestId 를 그대로 `guest:<id>` 키로 받아
+   비로그인도 상한 없이 임의 문자열마다 공감 1 을 더할 수 있었다(어떤 화면도 guestId 를 보내지 않는다). */
+function likeUserKey(session: Awaited<ReturnType<typeof safeAuth>>): string | null {
+  const email = session?.user?.email?.trim().toLowerCase() ?? "";
+  return email ? `user:${email}` : null;
+}
+
+/** GET — 뷰어가 이 글을 공감했는지. 상세는 공유 캐시(ISR)라 서버 렌더가 뷰어를 모른다 — 버튼이 마운트 뒤 묻는다 */
+export async function GET(
+  _req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
+  const { id: postId } = await ctx.params;
+  const session = await safeAuth();
+  const userKey = likeUserKey(session);
+  const liked = userKey ? await userHasLikedPost(postId, userKey) : false;
+  return NextResponse.json({ liked }, { headers: { "Cache-Control": "no-store" } });
+}
+
+export async function POST(
+  req: NextRequest,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  /* [1058 · B1] 상한이 없었다 — 1분 30회(IP) */
+  const limited = await applyRateLimit(req, { max: 30, windowMs: 60_000 });
+  if (limited) return limited;
+
   const { id: postId } = await ctx.params;
   const found = await lookupPost(postId);
   if (found.state !== "ok") {
     return postLookupErrorResponse(found, "글을 찾을 수 없습니다.");
   }
 
-  let guestId = "";
-  try {
-    const b = (await req.json()) as { guestId?: string };
-    guestId = String(b?.guestId ?? "").trim();
-  } catch {
-    /* empty body ok */
-  }
-
   const session = await safeAuth();
-  const userKey = session?.user?.email?.trim()
-    ? `user:${session.user.email.trim()}`
-    : guestId
-      ? `guest:${guestId}`
-      : "";
-
+  const userKey = likeUserKey(session);
   if (!userKey) {
-    return NextResponse.json(
-      {
-        error:
-          "로그인하거나, 비로그인 시 브라우저에 저장된 guestId가 필요합니다.",
-      },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: "로그인 필요 · 공감" }, { status: 401 });
   }
 
   const result = await togglePostLike(postId, userKey);
   if (!result) {
     return NextResponse.json(
-      { error: "공감 처리에 실패했습니다. Supabase에 post_likes 테이블이 있는지 확인하세요." },
+      { error: "공감 저장 실패 · 잠시 후 다시" },
       { status: 503 },
     );
   }

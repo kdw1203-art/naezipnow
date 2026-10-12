@@ -5,10 +5,68 @@ import {
   softDeleteCommentBody,
   type CommentDeleteActor,
 } from "@/lib/moderation/comment-soft-delete";
+import {
+  findDuplicateComment,
+  liveCommentCount,
+  nextUpdatedAt,
+} from "@/lib/community/comment-rules";
 import type { Post, PostAutomationMeta, PostComment } from "@/lib/types/post";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/* ── [1058 · B4] 읽고-쓰기 사이의 유실 방지(낙관적 동시성) ─────────────────────────
+ * 댓글 추가·소프트 삭제·채택·조회수는 행을 읽어 고친 뒤 통째로 다시 썼다 — 두 요청이 겹치면
+ * 나중 쓰기가 먼저 쓰기를 지웠다(댓글 jsonb 한 칸이 통째로 사라진다). posts.updated_at
+ * (NOT NULL · 모든 쓰기가 바꾼다)을 버전으로 삼아 `.eq("updated_at", 읽은 값)` 으로만 쓰고,
+ * 0행이면 다시 읽어 최대 3번 시도한다. select 를 붙여 0행을 구분한다(.single() 은 0행을 오류로 뭉갠다). */
+const OCC_MAX_TRIES = 3;
+
+type PostRow = Record<string, unknown>;
+type SbClient = NonNullable<ReturnType<typeof getServiceSupabase>>;
+
+/** 버전(updated_at) 조건부 갱신 — "conflict" = 그 사이 누가 썼다(0행), null = 실패 */
+async function updatePostIfUnchanged(
+  sb: SbClient,
+  id: string,
+  prevUpdatedAt: string,
+  patch: Record<string, unknown>,
+): Promise<PostRow | "conflict" | null> {
+  const { data, error } = await sb
+    .from("posts")
+    .update({ ...patch, updated_at: nextUpdatedAt(prevUpdatedAt) })
+    .eq("id", id)
+    .eq("updated_at", prevUpdatedAt)
+    .select("*");
+  if (error) {
+    logger.error(`[posts] 조건부 갱신 실패 (${id})`, error);
+    return null;
+  }
+  if (!data || data.length === 0) return "conflict";
+  return data[0] as PostRow;
+}
+
+/** 원본 행의 일부 칸을 읽는다(comments jsonb 는 authorEmail 까지 그대로) — 없으면 null, 실패는 던진다 */
+async function readPostRaw(
+  sb: SbClient,
+  id: string,
+  columns: string,
+): Promise<PostRow | null> {
+  if (!UUID_RE.test(id)) return null;
+  const { data, error } = await sb
+    .from("posts")
+    .select(`${columns}, updated_at`)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) {
+    throw new Error(`posts (${id}) 조회 실패: ${error.message ?? "알 수 없는 오류"}`);
+  }
+  return (data as PostRow | null) ?? null;
+}
+
+function commentsOf(row: PostRow): PostComment[] {
+  return Array.isArray(row.comments) ? (row.comments as PostComment[]) : [];
+}
 
 function rowToPost(row: Record<string, unknown>): Post {
   const rawComments = row.comments;
@@ -332,45 +390,60 @@ export async function togglePostLikeSb(
   return { liked: !existing, likeCount };
 }
 
+/* [1058 · B4] 조회수 — 원자적 증가 RPC 가 posts 에는 없다(increment_board_post_view 는 board_posts 용).
+   읽고-쓰기를 updated_at 조건부로 바꾸되, 3번 겹치면 한 번의 조회는 버린다(조회수 1은 잃어도 해가 없다). */
 export async function incrementViewCountSb(id: string): Promise<Post | null> {
   const sb = getServiceSupabase();
   if (!sb) return null;
-  const cur = await getPostSb(id);
-  if (!cur) return null;
-  const nextCount = cur.viewCount + 1;
-  const now = new Date().toISOString();
-  const { data, error } = await sb
-    .from("posts")
-    .update({ view_count: nextCount, updated_at: now })
-    .eq("id", id)
-    .select("*")
-    .single();
-  if (error || !data) return null;
-  return rowToPost(data as Record<string, unknown>);
+  for (let attempt = 0; attempt < OCC_MAX_TRIES; attempt += 1) {
+    const row = await readPostRaw(sb, id, "view_count");
+    if (!row) return null;
+    const written = await updatePostIfUnchanged(sb, id, String(row.updated_at), {
+      view_count: Number(row.view_count ?? 0) + 1,
+    });
+    if (written === "conflict") continue;
+    if (!written) return null;
+    return rowToPost(written);
+  }
+  return getPostSb(id);
 }
 
+/**
+ * 댓글 추가.
+ * [1058 · B4] 예전엔 getPostSb(→ rowToPost)로 읽은 댓글을 되썼다 — rowToPost 는 authorEmail 을 벗기므로
+ * 댓글이 하나 달릴 때마다 **앞선 댓글 전부의 작성자 이메일이 지워졌다**(내 댓글 삭제 권한·답글 알림의 근거).
+ * 원본 jsonb 를 읽어 그대로 잇고, updated_at 조건부로 쓴다. comment_count 는 산 댓글 수.
+ * [1058 · B3] 같은 사람이 같은 본문을 60초 안에 다시 달면 `"duplicate"`.
+ */
 export async function appendCommentSb(
   id: string,
   comment: PostComment,
-): Promise<Post | null> {
+  opts: { rejectDuplicate?: boolean } = {},
+): Promise<Post | "duplicate" | null> {
   const sb = getServiceSupabase();
   if (!sb) return null;
-  const cur = await getPostSb(id);
-  if (!cur) return null;
-  const comments = [...cur.comments, comment];
-  const now = new Date().toISOString();
-  const { data, error } = await sb
-    .from("posts")
-    .update({
+  for (let attempt = 0; attempt < OCC_MAX_TRIES; attempt += 1) {
+    const row = await readPostRaw(sb, id, "comments");
+    if (!row) return null;
+    const cur = commentsOf(row);
+    if (
+      opts.rejectDuplicate &&
+      comment.authorEmail &&
+      findDuplicateComment(cur, { authorEmail: comment.authorEmail, body: comment.body }, Date.now())
+    ) {
+      return "duplicate";
+    }
+    const comments = [...cur, comment];
+    const written = await updatePostIfUnchanged(sb, id, String(row.updated_at), {
       comments,
-      comment_count: comments.length,
-      updated_at: now,
-    })
-    .eq("id", id)
-    .select("*")
-    .single();
-  if (error || !data) return null;
-  return rowToPost(data as Record<string, unknown>);
+      comment_count: liveCommentCount(comments),
+    });
+    if (written === "conflict") continue;
+    if (!written) return null;
+    return rowToPost(written);
+  }
+  logger.error(`[posts] 댓글 추가 ${OCC_MAX_TRIES}회 충돌 (${id})`);
+  return null;
 }
 
 /**
@@ -378,6 +451,7 @@ export async function appendCommentSb(
  *
  * 저장된 comments JSON 을 **직접** 읽는다 — rowToPost 는 authorEmail 을 응답에 싣지
  * 않으려고 일부러 버리기 때문에, getPostSb 를 거치면 작성자를 판정할 근거가 사라진다.
+ * [1058 · B3·B4] comment_count 를 산 댓글 수로 내리고(예전엔 그대로였다), updated_at 조건부로 쓴다.
  */
 export async function softDeleteCommentSb(
   postId: string,
@@ -386,46 +460,52 @@ export async function softDeleteCommentSb(
 ): Promise<Post | "forbidden" | null> {
   const sb = getServiceSupabase();
   if (!sb) return null;
-  const { data: row, error: readError } = await sb
-    .from("posts")
-    .select("comments, notify_email")
-    .eq("id", postId)
-    .maybeSingle();
-  if (readError || !row) return null;
+  for (let attempt = 0; attempt < OCC_MAX_TRIES; attempt += 1) {
+    let row: PostRow | null;
+    try {
+      row = await readPostRaw(sb, postId, "comments, notify_email");
+    } catch (e) {
+      logger.error(`[posts] 댓글 삭제 조회 실패 (${postId})`, e);
+      return null;
+    }
+    if (!row) return null;
 
-  const raw = Array.isArray(row.comments) ? (row.comments as PostComment[]) : [];
-  const target = raw.find((c) => String(c.id) === commentId);
-  if (!target) return null;
-  if (
-    !canDeleteComment(target, {
-      ...actor,
-      postOwnerEmail: row.notify_email ? String(row.notify_email) : null,
-    })
-  ) {
-    return "forbidden";
+    const raw = commentsOf(row);
+    const target = raw.find((c) => String(c.id) === commentId);
+    if (!target) return null;
+    if (
+      !canDeleteComment(target, {
+        ...actor,
+        postOwnerEmail: row.notify_email ? String(row.notify_email) : null,
+      })
+    ) {
+      return "forbidden";
+    }
+
+    const now = new Date().toISOString();
+    const comments = raw.map((c) =>
+      String(c.id) === commentId
+        ? { ...c, body: softDeleteCommentBody(), deletedAt: now }
+        : c,
+    );
+    const written = await updatePostIfUnchanged(sb, postId, String(row.updated_at), {
+      comments,
+      comment_count: liveCommentCount(comments),
+    });
+    if (written === "conflict") continue;
+    if (!written) return null;
+    return rowToPost(written);
   }
-
-  const now = new Date().toISOString();
-  const comments = raw.map((c) =>
-    String(c.id) === commentId
-      ? { ...c, body: softDeleteCommentBody(), deletedAt: now }
-      : c,
-  );
-  const { data, error } = await sb
-    .from("posts")
-    .update({ comments, updated_at: now })
-    .eq("id", postId)
-    .select("*")
-    .single();
-  if (error || !data) return null;
-  return rowToPost(data as Record<string, unknown>);
+  logger.error(`[posts] 댓글 삭제 ${OCC_MAX_TRIES}회 충돌 (${postId})`);
+  return null;
 }
 
 /* ── [#65] 답변 채택 ──────────────────────────────────────────────
  * 글쓴이(notify_email 기준 — softDeleteCommentSb 와 같은 판정 근거)만 댓글
  * 하나를 채택한다. 글당 1개: 기존 채택은 해제하고 대상만 켠다. 반환값에
  * 채택된 댓글의 authorEmail 을 함께 준다 — 호출부(라우트)가 포인트를 지급할
- * 유일한 근거이고, 이 값은 API 응답에는 싣지 않는다. */
+ * 유일한 근거이고, 이 값은 API 응답에는 싣지 않는다.
+ * [1058 · B4] updated_at 조건부 쓰기 — 채택과 댓글 추가가 겹쳐도 한쪽이 지워지지 않는다. */
 export async function adoptCommentSb(
   postId: string,
   commentId: string,
@@ -438,42 +518,80 @@ export async function adoptCommentSb(
 > {
   const sb = getServiceSupabase();
   if (!sb) return null;
-  const { data: row, error: readError } = await sb
-    .from("posts")
-    .select("comments, notify_email")
-    .eq("id", postId)
-    .maybeSingle();
-  if (readError || !row) return null;
+  for (let attempt = 0; attempt < OCC_MAX_TRIES; attempt += 1) {
+    let row: PostRow | null;
+    try {
+      row = await readPostRaw(sb, postId, "comments, notify_email");
+    } catch (e) {
+      logger.error(`[posts] 채택 조회 실패 (${postId})`, e);
+      return null;
+    }
+    if (!row) return null;
 
-  const owner = String((row as Record<string, unknown>).notify_email ?? "")
-    .trim()
-    .toLowerCase();
-  if (!owner || owner !== actorEmail.trim().toLowerCase()) return "forbidden";
+    const owner = String(row.notify_email ?? "").trim().toLowerCase();
+    if (!owner || owner !== actorEmail.trim().toLowerCase()) return "forbidden";
 
-  const rawComments = (row as Record<string, unknown>).comments;
-  if (!Array.isArray(rawComments)) return null;
-  const comments = rawComments as Array<Record<string, unknown>>;
-  const target = comments.find((c) => String(c.id) === commentId);
-  if (!target || target.deletedAt) return null;
-  const targetAuthor = String(target.authorEmail ?? "").trim().toLowerCase();
-  if (targetAuthor && targetAuthor === owner) return "self"; // 자기 댓글 채택 금지
+    if (!Array.isArray(row.comments)) return null;
+    const comments = (row.comments as Array<Record<string, unknown>>).map((c) => ({ ...c }));
+    const target = comments.find((c) => String(c.id) === commentId);
+    if (!target || target.deletedAt) return null;
+    const targetAuthor = String(target.authorEmail ?? "").trim().toLowerCase();
+    if (targetAuthor && targetAuthor === owner) return "self"; // 자기 댓글 채택 금지
 
-  for (const c of comments) {
-    if (String(c.id) === commentId) c.adopted = true;
-    else if (c.adopted) delete c.adopted;
+    for (const c of comments) {
+      if (String(c.id) === commentId) c.adopted = true;
+      else if (c.adopted) delete c.adopted;
+    }
+
+    const written = await updatePostIfUnchanged(sb, postId, String(row.updated_at), { comments });
+    if (written === "conflict") continue;
+    if (!written) return null;
+    return {
+      post: rowToPost(written),
+      adoptedAuthorEmail: targetAuthor || null,
+    };
   }
+  logger.error(`[posts] 채택 ${OCC_MAX_TRIES}회 충돌 (${postId})`);
+  return null;
+}
 
-  const { data, error } = await sb
-    .from("posts")
-    .update({ comments, updated_at: new Date().toISOString() })
-    .eq("id", postId)
-    .select("*")
-    .single();
-  if (error || !data) return null;
-  return {
-    post: rowToPost(data as Record<string, unknown>),
-    adoptedAuthorEmail: targetAuthor || null,
-  };
+/** [1058 · B3] 댓글 작성자 이메일(서버 전용) — 답글 알림의 수신자. 없음·실패는 null */
+export async function loadPostCommentAuthorEmailSb(
+  postId: string,
+  commentId: string,
+): Promise<string | null> {
+  const sb = getServiceSupabase();
+  if (!sb) return null;
+  try {
+    const row = await readPostRaw(sb, postId, "comments");
+    const c = row ? commentsOf(row).find((x) => String(x.id) === commentId) : undefined;
+    const email = String(c?.authorEmail ?? "").trim().toLowerCase();
+    return email || null;
+  } catch (e) {
+    logger.warn(`[posts] 댓글 작성자 조회 실패 (${postId}/${commentId})`, e);
+    return null;
+  }
+}
+
+/** [1058 · B2] 글의 저장(북마크) 수 — bookmarks(target_type=post) 정확 count. 못 세면 null(0 이 아니다) */
+export async function countPostBookmarksSb(postId: string): Promise<number | null> {
+  const sb = getServiceSupabase();
+  if (!sb) return null;
+  try {
+    const { count, error } = await sb
+      .from("bookmarks")
+      .select("id", { count: "exact", head: true })
+      .eq("target_type", "post")
+      .eq("target_id", postId);
+    if (error) {
+      logger.warn(`[posts] 저장 수 조회 실패 (${postId})`, error.message);
+      return null;
+    }
+    return typeof count === "number" ? count : null;
+  } catch (e) {
+    logger.warn(`[posts] 저장 수 조회 실패 (${postId})`, e);
+    return null;
+  }
 }
 
 /* [#63] 태그로 글 목록 — 글감 스레드(/town/prompt/[idx])용.

@@ -1,5 +1,7 @@
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
+import { readPaged } from "@/lib/supabase/read-paged";
+import { REVIEW_PAGE_SIZE } from "./rules";
 
 export interface ComplexReview {
   id: string;
@@ -13,6 +15,8 @@ export interface ComplexReview {
   transportScore: number;
   comment: string | null;
   createdAt: string;
+  /** [1058 · C3] 마지막 저장 시각(재작성 upsert 가 적는다) — 없으면 null */
+  updatedAt: string | null;
   /** 도움돼요 누적 수 */
   helpfulCount: number;
   /** 실거주(자가/세입자) 인증 */
@@ -29,7 +33,7 @@ export interface ComplexReview {
  */
 export type ComplexReviewInput = Omit<
   ComplexReview,
-  "id" | "createdAt" | "helpfulCount" | "isResident" | "isVisitVerified" | "residentPeriod"
+  "id" | "createdAt" | "updatedAt" | "helpfulCount" | "isResident" | "isVisitVerified" | "residentPeriod"
 > & {
   isResident?: boolean;
   isVisitVerified?: boolean;
@@ -63,6 +67,7 @@ function dbToReview(r: Record<string, unknown>): ComplexReview {
     transportScore: Number(r.transport_score),
     comment: r.comment ? String(r.comment) : null,
     createdAt: String(r.created_at),
+    updatedAt: r.updated_at ? String(r.updated_at) : null,
     helpfulCount: Number(r.helpful_count ?? 0),
     isResident: Boolean(r.is_resident),
     isVisitVerified: Boolean(r.is_visit_verified),
@@ -89,10 +94,23 @@ function byTrustThenHelpful(a: ComplexReview, b: ComplexReview): number {
   return a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0;
 }
 
-export async function listReviews(complexId: string): Promise<ComplexReview[]> {
+/**
+ * 후기 한 쪽(기본 50건). [1058 · C3] 틀린 사실: 상한 없이 전부 읽어 PostgREST 1,000행 상한에 조용히 잘렸고(그 이상은
+ * 영영 안 보임), 정렬 끝에 유일 열이 없어 같은 시각의 행이 쪽마다 겹치거나 빠질 수 있었다 — id 로 끝을 묶고 range 로 쪽을 나눈다.
+ * 정렬은 그대로 신뢰(실거주 > 방문) → 도움돼요 → 최신 → id.
+ */
+export async function listReviews(
+  complexId: string,
+  opts: { limit?: number; offset?: number } = {},
+): Promise<ComplexReview[]> {
+  const limit = Math.max(1, Math.min(opts.limit ?? REVIEW_PAGE_SIZE, REVIEW_PAGE_SIZE));
+  const offset = Math.max(0, opts.offset ?? 0);
   const sb = getServiceSupabase();
   if (!sb)
-    return inMemory.filter((r) => r.complexId === complexId).sort(byTrustThenHelpful);
+    return inMemory
+      .filter((r) => r.complexId === complexId)
+      .sort(byTrustThenHelpful)
+      .slice(offset, offset + limit);
   const { data, error } = await sb
     .from("complex_reviews")
     .select("*")
@@ -102,7 +120,9 @@ export async function listReviews(complexId: string): Promise<ComplexReview[]> {
     .order("is_resident", { ascending: false, nullsFirst: false })
     .order("is_visit_verified", { ascending: false, nullsFirst: false })
     .order("helpful_count", { ascending: false })
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: true })
+    .range(offset, offset + limit - 1);
   /* 못 읽은 것을 [] 로 돌려주면 화면에는 "후기 0건"에 더해 calcSummary([]) 가 만든
      0점짜리 요약까지 붙는다 — 후기를 남긴 이웃들이 있는 단지에 대고 "평가가 없다"고
      단정하는 셈이다. 못 읽었으면 던진다(라우트가 503 으로 답한다). */
@@ -112,6 +132,55 @@ export async function listReviews(complexId: string): Promise<ComplexReview[]> {
     );
   }
   return (data ?? []).map(dbToReview);
+}
+
+/** 요약(평균·건수)에 쓰는 점수 열 */
+export type ReviewScores = Pick<
+  ComplexReview,
+  "noiseScore" | "parkingScore" | "mgmtScore" | "neighborScore" | "transportScore"
+>;
+
+/** 요약용 점수 상한 — 한 단지 후기가 이보다 많으면 요약이 "표본 상한" 이다(현실적으로 닿지 않는다) */
+const REVIEW_SUMMARY_MAX_ROWS = 10_000;
+
+/**
+ * [1058 · C3] 요약은 쪽이 아니라 **전체** 후기로 — 목록이 50건씩 나뉘자 calcSummary(한 쪽) 는 첫 50건의 평균이 됐을 것이다.
+ * 점수 다섯 열만 readPaged 로 끝까지 읽는다(1,000행 상한을 넘어도 끝까지). 실패는 던진다(라우트가 503).
+ */
+export async function listReviewScores(complexId: string): Promise<ReviewScores[]> {
+  const sb = getServiceSupabase();
+  if (!sb) return inMemory.filter((r) => r.complexId === complexId);
+  const { rows } = await readPaged<Record<string, unknown>>(
+    (from, to) =>
+      sb
+        .from("complex_reviews")
+        .select("noise_score,parking_score,mgmt_score,neighbor_score,transport_score,id")
+        .eq("complex_id", complexId)
+        .order("id", { ascending: true })
+        .range(from, to),
+    REVIEW_SUMMARY_MAX_ROWS,
+  );
+  return rows.map((r) => ({
+    noiseScore: Number(r.noise_score),
+    parkingScore: Number(r.parking_score),
+    mgmtScore: Number(r.mgmt_score),
+    neighborScore: Number(r.neighbor_score),
+    transportScore: Number(r.transport_score),
+  }));
+}
+
+/** [1058 · C3] 보는 사람 본인의 후기(같은 단지는 한 사람 한 건 — UNIQUE complex_id,author_email). 없으면 null · 실패는 던진다 */
+export async function getMyReview(complexId: string, authorEmail: string): Promise<ComplexReview | null> {
+  const sb = getServiceSupabase();
+  if (!sb) return inMemory.find((r) => r.complexId === complexId && r.authorEmail === authorEmail) ?? null;
+  const { data, error } = await sb
+    .from("complex_reviews")
+    .select("*")
+    .eq("complex_id", complexId)
+    .eq("author_email", authorEmail)
+    .maybeSingle();
+  if (error) throw new Error(`complex_reviews 내 후기 조회 실패 (${complexId}): ${error.message ?? "알 수 없는 오류"}`);
+  return data ? dbToReview(data as Record<string, unknown>) : null;
 }
 
 export async function upsertReview(review: ComplexReviewInput): Promise<ComplexReview> {
@@ -136,6 +205,7 @@ export async function upsertReview(review: ComplexReviewInput): Promise<ComplexR
       comment: review.comment,
       id: existing >= 0 ? inMemory[existing]!.id : `mem-${Date.now()}`,
       createdAt: existing >= 0 ? inMemory[existing]!.createdAt : now,
+      updatedAt: now,
       // 재작성 시 기존 도움돼요 수 유지
       helpfulCount: existing >= 0 ? inMemory[existing]!.helpfulCount : 0,
       isResident,
@@ -180,16 +250,20 @@ function isUniqueViolation(err: { code?: string; message?: string } | null): boo
   return /duplicate key|unique constraint/i.test(err.message ?? "");
 }
 
-/** 특정 리뷰의 도움돼요 총 수를 votes 테이블에서 직접 집계(정합성 우선). */
+/** 특정 리뷰의 도움돼요 총 수를 votes 테이블에서 직접 집계(정합성 우선).
+ *  [1058 · C3] 틀린 사실: 집계 오류를 무시하고 0 을 돌려줬고, markReviewHelpful 이 그 0 을 helpful_count 에 **써서**
+ *  표가 수십 개인 후기가 0 표로 뒤집혔다. 세지 못했으면 던진다(라우트가 500 · 화면이 "도움 표시 실패") — 절대 0 을 쓰지 않는다. */
 async function countHelpful(
   sb: NonNullable<ReturnType<typeof getServiceSupabase>>,
   reviewId: string,
 ): Promise<number> {
-  const { count } = await sb
+  const { count, error } = await sb
     .from("complex_review_helpful")
     .select("*", { count: "exact", head: true })
     .eq("review_id", reviewId);
-  return count ?? 0;
+  if (error) throw new Error(`complex_review_helpful 집계 실패 (${reviewId}): ${error.message ?? "알 수 없는 오류"}`);
+  if (typeof count !== "number") throw new Error(`complex_review_helpful 집계 결과 없음 (${reviewId})`);
+  return count;
 }
 
 /**
@@ -226,6 +300,7 @@ export async function markReviewHelpful(
     }
   }
 
+  /* 집계가 던지면 여기서 함께 던진다 — 실패한 집계로 helpful_count 를 덮어쓰지 않는다 */
   const count = await countHelpful(sb, reviewId);
   const { error: updErr } = await sb
     .from("complex_reviews")
@@ -251,9 +326,9 @@ export async function hasVotedHelpful(
   return (count ?? 0) > 0;
 }
 
-export function calcSummary(reviews: ComplexReview[]): ReviewSummary {
+export function calcSummary(reviews: readonly ReviewScores[]): ReviewSummary {
   if (!reviews.length) return { count: 0, avgNoise: 0, avgParking: 0, avgMgmt: 0, avgNeighbor: 0, avgTransport: 0, overall: 0 };
-  const avg = (key: keyof ComplexReview) =>
+  const avg = (key: keyof ReviewScores) =>
     reviews.reduce((s, r) => s + (r[key] as number), 0) / reviews.length;
   const avgNoise = avg("noiseScore");
   const avgParking = avg("parkingScore");

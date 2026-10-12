@@ -85,6 +85,20 @@ async function claimQuizReward(rec: QuizDayRecord): Promise<Reward> {
   return { kind: "failed" };
 }
 
+/** [1058 · C7] 오늘 완주·적립한 사람 수(/api/quiz/today · 공개 · 5분 캐시). 실패·0명은 null → 줄을 적지 않는다.
+ *  판을 끝낸 뒤에만 부른다(봇·첫 화면 이탈은 요청 0 — 이 컴포넌트의 "읽기 네트워크 없음" 원칙은 게임 중에 그대로다) */
+async function loadTodayFinishers(): Promise<number | null> {
+  try {
+    const res = await fetch("/api/quiz/today");
+    if (!res.ok) return null;
+    const j = (await res.json().catch(() => null)) as { finishers?: unknown } | null;
+    const n = j && typeof j.finishers === "number" && Number.isFinite(j.finishers) ? Math.floor(j.finishers) : null;
+    return n !== null && n > 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
 function readStore(): QuizStore {
   try {
     return parseQuizStore(window.localStorage.getItem(QUIZ_STORE_KEY));
@@ -256,6 +270,8 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
   const [justFinished, setJustFinished] = useState(false);
   /** [1056 · A7] 완주 적립 결과 — 오늘 첫 판을 이 자리에서 끝냈을 때만 값이 생긴다 */
   const [reward, setReward] = useState<Reward | null>(null);
+  /** [1058 · C7] 오늘 완주·적립 인원 — 결과 화면에 들어올 때 한 번(실패·0명이면 null · 줄 없음) */
+  const [finishers, setFinishers] = useState<number | null>(null);
   /* 다음 버튼은 둘(md+ 공개 카드 안 · 폰 sticky) — 포커스는 보이는 쪽에 */
   const cardNextRef = useRef<HTMLButtonElement | null>(null);
   const stickyNextRef = useRef<HTMLButtonElement | null>(null);
@@ -325,6 +341,18 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
     setJustFinished(false);
     setPhase("play");
   };
+
+  /* [1058 · C7] 결과 화면(오늘 이미 푼 뒤 다시 열었을 때 포함)에서 오늘 완주 인원을 한 번 받는다 — 참여 신호의 닻 */
+  useEffect(() => {
+    if (phase !== "done") return;
+    let alive = true;
+    void loadTodayFinishers().then((n) => {
+      if (alive) setFinishers(n);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [phase]);
 
   /* 공개 뒤 "다음" 버튼으로 포커스 — 키보드만으로 끝까지 간다(스크롤은 건드리지 않는다). 숨은(display:none) 쪽은 건너뛴다 */
   useEffect(() => {
@@ -435,6 +463,10 @@ export function QuizGame({ days }: { days: QuizDay[] }) {
               >
                 {rewardText(reward)}
               </p>
+            )}
+            {/* [1058 · C7] 오늘 완주·적립한 사람 수 — 1명 이상일 때만(0명·실패는 줄 자체가 없다) */}
+            {finishers !== null && (
+              <p className="mt-1 t-sub text-text-3">오늘 적립 {finishers.toLocaleString("ko-KR")}명</p>
             )}
             <div className="mt-4 grid grid-cols-2 gap-2">
               {/* [1009 · T] 복사로 넘어간 공유는 버튼 자리에서도 "복사했어요" + 체크가 한 번 튄다(토스트와 함께) */}

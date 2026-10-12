@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { loginHrefWithNext } from "@/lib/auth/auth-ux";
 import { useToast } from "../../components/toast/ToastProvider";
 import { ShareLinkButton } from "../../components/ShareLinkButton";
+import { NoteSaveButton } from "./NoteSaveButton";
 
 /* 노트 상세 실동작 액션 (더미 버튼 제거)
    - 공유(#바이럴 회로, 전략 정본 §5): 모바일은 OS 공유 시트(카카오톡·문자로
@@ -24,10 +25,13 @@ export function NoteDetailActions({
   noteId,
   isOwner,
   initialIsPublic,
+  noteTitle,
 }: {
   noteId: string;
   isOwner: boolean;
   initialIsPublic: boolean;
+  /** [1059] 저장 목록에 적을 제목 */
+  noteTitle?: string;
 }) {
   const router = useRouter();
   const { showToast } = useToast();
@@ -119,6 +123,8 @@ export function NoteDetailActions({
         {/* [1012 · 규칙 4] UI 이모지 없음 — "나만의 카드" 글자만 */}
         {isOwner ? "카드 만들기" : "카드 보기"}
       </Link>
+      {/* [1059] 남의 공개 노트 저장 — 프로필 설정 jsonb 에 담긴다(마이 › 관심 › 저장) */}
+      {!isOwner && isPublic && <NoteSaveButton noteId={noteId} label={noteTitle ?? ""} />}
       {isOwner && (
         <Link
           href={`/notes/${noteId}/edit`}

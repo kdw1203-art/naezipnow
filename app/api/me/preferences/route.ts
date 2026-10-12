@@ -5,7 +5,9 @@
  *        · uiPrefs:         [1006] 표시·기록 기본값(UiPrefs — lib/prefs/ui-prefs.ts).
  *                           **항상 있다** — 비로그인·행 없음·조회 실패 전부 DEFAULT_UI_PREFS.
  *        · authenticated:   [1006] 세션 유무 — 설정 화면이 게스트 카드를 가를 때 쓴다
- * POST /api/me/preferences — 온보딩 개인화 저장 { regions, budget, purpose }
+ * POST /api/me/preferences — 온보딩 개인화 저장 { regions, budget, purpose, persona, profile }
+ *        · [1058] 부분 갱신 — 본문에 있고 null 이 아닌 키만 바꾼다(관심 지역만 보내면 예산·목적·페르소나는 그대로).
+ *          저장·조회 실패는 503(예전엔 로그만 찍고 200).
  * PUT  /api/me/preferences — 페르소나·우선순위 부분 업데이트(기존)
  * PATCH /api/me/preferences — [1006] 표시·기록 기본값 부분 저장 { uiPrefs: {...} } → { uiPrefs }
  * 비로그인: GET 은 빈 값(graceful), POST/PUT/PATCH 은 401.
@@ -21,6 +23,7 @@ import {
   saveOnboardingPersonalization,
 } from "@/lib/onboarding/personalization";
 import { logger } from "@/lib/log";
+import { dbUnavailable } from "@/lib/api/db-unavailable";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -101,18 +104,24 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "잘못된 요청" }, { status: 400 });
   }
-  const personalization = await saveOnboardingPersonalization(session.user.email, {
-    regions: body.regions,
-    budget: body.budget,
-    purpose: body.purpose,
-    /* 타깃 페르소나(실전 투자자/실수요자/스터디 크루/탐색 중) — 방향성 리밸런싱.
-       sanitizePersona 화이트리스트로 거른다. user_personalization jsonb 라 마이그레이션 불필요. */
-    persona: body.persona,
-    /* 가입 화면 기본 정보(나이대·성별·가구·직업·생애최초·보유 주택).
-       예전엔 /signup 이 물어만 보고 아무 데도 보내지 않아 통째로 버려졌다.
-       허용 항목·값은 sanitizeProfile 이 화이트리스트로 거른다. */
-    profile: body.profile,
-  });
+  let personalization: Awaited<ReturnType<typeof saveOnboardingPersonalization>>;
+  try {
+    personalization = await saveOnboardingPersonalization(session.user.email, {
+      regions: body.regions,
+      budget: body.budget,
+      purpose: body.purpose,
+      /* 타깃 페르소나(실전 투자자/실수요자/스터디 크루/탐색 중) — 방향성 리밸런싱.
+         sanitizePersona 화이트리스트로 거른다. user_personalization jsonb 라 마이그레이션 불필요. */
+      persona: body.persona,
+      /* 가입 화면 기본 정보(나이대·성별·가구·직업·생애최초·보유 주택).
+         예전엔 /signup 이 물어만 보고 아무 데도 보내지 않아 통째로 버려졌다.
+         허용 항목·값은 sanitizeProfile 이 화이트리스트로 거른다. */
+      profile: body.profile,
+    });
+  } catch (err) {
+    /* [1058] 저장 실패가 warn + 200 이었다 — 화면이 "저장됨"으로 넘어갔다. 503 + Retry-After */
+    return dbUnavailable("personalization-save", err, "관심 지역 저장 실패 · 잠시 후 다시");
+  }
   return NextResponse.json({
     personalization,
     regions: personalization.regions,

@@ -25,7 +25,8 @@ function isValidType(v: unknown): v is BookmarkTargetType {
     v === "meeting" ||
     v === "market" ||
     v === "complex" ||
-    v === "listing"
+    v === "listing" ||
+    v === "note"
   );
 }
 
@@ -35,8 +36,14 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const t = url.searchParams.get("type");
   const type = isValidType(t) ? t : undefined;
+  const id = url.searchParams.get("id");
   /* [1057 · C8] listBookmarks 가 조회 실패를 던지게 되면서(1057-B) 여기선 500 HTML 이 나갔다 — 503 + 고정 문구로 답한다 */
   try {
+    /* [1059] ?type=&id= — 한 대상의 저장 여부(노트 저장 단추가 마운트 뒤 묻는다) */
+    if (type && id) {
+      const saved = await isBookmarked(session.user.email, type, id);
+      return NextResponse.json({ saved });
+    }
     const items = await listBookmarks(session.user.email, type);
     return NextResponse.json({ items });
   } catch (e) {
@@ -115,6 +122,10 @@ export async function DELETE(req: Request) {
   if (!isValidType(type) || !id) {
     return NextResponse.json({ error: "invalid query" }, { status: 400 });
   }
-  await removeBookmark(session.user.email, type, id);
+  try {
+    await removeBookmark(session.user.email, type, id);
+  } catch (e) {
+    return dbUnavailable("bookmark-remove", e, "저장 해제 실패 · 잠시 후 다시");
+  }
   return NextResponse.json({ ok: true });
 }

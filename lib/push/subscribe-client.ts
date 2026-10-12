@@ -25,6 +25,8 @@ export type PushSubscribeResult =
   | "dismissed"
   /** 서비스워커·PushManager·Notification 중 하나라도 없음 */
   | "unsupported"
+  /** [1058] 서버 저장이 401 — 로그인해야 구독이 남는다(브라우저 구독 객체만 생긴 상태) */
+  | "login_required"
   /** 서버 비활성(VAPID 미설정)·구독 실패·저장 실패·네트워크 오류 */
   | "error";
 
@@ -74,10 +76,50 @@ export function isPushSupported(): boolean {
 
 /**
  * 관심 등록 성공 직후 "푸시로 받기"를 **권할 수 있는** 상태인가.
- * 지원되고, 아직 묻지 않은(default) 경우에만 true — 이미 허용/차단했으면 권하지 않는다.
+ * 지원되고, 아직 묻지 않은(default) 경우 true — 이미 차단했으면 권하지 않는다.
+ * [1058] 허용(granted)인데 서버에 구독이 없는 것을 아는 호출부(serverSubscribed === false)도 권할 수 있다 —
+ * 예전엔 granted 면 무조건 "이미 됐다"고 보고 권하지 않았는데, 브라우저 허용과 서버 저장은 다른 일이다.
  */
-export function canOfferPush(): boolean {
-  return isPushSupported() && Notification.permission === "default";
+export function canOfferPush(opts: { serverSubscribed?: boolean | null } = {}): boolean {
+  if (!isPushSupported()) return false;
+  const p = Notification.permission;
+  if (p === "default") return true;
+  return p === "granted" && opts.serverSubscribed === false;
+}
+
+/** [1058] 서버 구독 상태 — GET /api/push/subscribe?endpoint= → { subscribed }. 401 은 "login_required", 실패는 null(모름) */
+export async function fetchPushServerStatus(
+  endpoint: string,
+  fetchImpl: PushEnv["fetchImpl"] = (i, init) => fetch(i, init),
+): Promise<{ subscribed: boolean } | "login_required" | null> {
+  try {
+    const res = await fetchImpl(`/api/push/subscribe?endpoint=${encodeURIComponent(endpoint)}`, { cache: "no-store" });
+    if (res.status === 401) return "login_required";
+    if (!res.ok) return null;
+    const data = (await res.json()) as { subscribed?: unknown };
+    return { subscribed: data.subscribed === true };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * [1058] canOfferPush 의 비동기판 — granted 인데 서버에 이 브라우저 구독이 없으면(저장 실패·비로그인 때 눌렀던 경우) 다시 권한다.
+ * 브라우저 구독 객체가 없으면 서버에 물을 것도 없다(canOfferPush 의 동기 판정 그대로).
+ */
+export async function canOfferPushAsync(env: PushEnv = browserEnv()): Promise<boolean> {
+  if (!env.isSupported()) return false;
+  if (env.permission() === "default") return true;
+  if (env.permission() !== "granted") return false;
+  try {
+    const reg = await env.swReady();
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return true;
+    const st = await fetchPushServerStatus(sub.endpoint, env.fetchImpl);
+    return st !== null && st !== "login_required" && st.subscribed === false;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -166,6 +208,8 @@ export async function subscribeToPush(opts: {
         keys: { p256dh: json.keys?.p256dh, auth: json.keys?.auth },
       }),
     });
+    /* [1058] 401 을 error 로 뭉개니 "다시 시도" 만 보였고, 그 사이 브라우저 구독 객체는 남아 다음 마운트에 "알림 켜짐"이 됐다 */
+    if (res.status === 401) return "login_required";
     return res.ok ? "subscribed" : "error";
   } catch {
     return "error";
@@ -178,9 +222,12 @@ export function pushResultMessage(result: PushSubscribeResult): string | null {
     case "subscribed":
       return "푸시 알림을 켰어요 · 시세 변동 시 바로 알려 드려요";
     case "denied":
-      return "브라우저에서 알림이 차단돼 있어요 · 사이트 설정에서 허용할 수 있어요";
+      /* [1058] 어디서 푸는지 — 주소창 자물쇠 › 알림 허용 */
+      return "브라우저 알림 차단됨 · 주소창 자물쇠 › 알림 허용 뒤 다시";
+    case "login_required":
+      return "푸시 알림은 로그인 뒤 · 설정 › 알림에서";
     case "error":
-      return "푸시 설정 실패 · 잠시 후 다시 시도해 주세요";
+      return "푸시 설정 실패 · 잠시 후 다시";
     case "dismissed":
     case "unsupported":
       return null;

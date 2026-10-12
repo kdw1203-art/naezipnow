@@ -11,6 +11,7 @@ import { checkTalkBody, complexInRegion, talkAuthorLabel, talkBodyMessage, TALK_
 import { talkRegionById } from "@/lib/talk/regions";
 import { loadRegionFacts } from "@/lib/talk/board";
 import { addRegionTalk, listRecentTalksByAuthor, listRegionTalks, softDeleteRegionTalk } from "@/lib/talk/store";
+import { resolveDisplayName } from "@/lib/account/display-name";
 
 export const runtime = "nodejs";
 
@@ -138,7 +139,8 @@ export async function POST(req: NextRequest) {
       complexId,
       complexName,
       authorEmail: email,
-      authorLabel: talkAuthorLabel(session?.user?.name, email),
+      /* [1058] 세션 이름(로그인 때 굳은 공급자 이름)을 그대로 넣어 프로필에서 바꾼 이름이 새 글에 안 보였다 — app_users.name 먼저 */
+      authorLabel: talkAuthorLabel(await resolveDisplayName(email, session?.user?.name), email),
       body,
     });
     return NextResponse.json({ post }, { status: 201 });

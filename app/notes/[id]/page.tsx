@@ -66,8 +66,8 @@ import { resolveComplexPrice } from "@/lib/market/complex-price";
 import { noteCoordsFromMetadata } from "@/lib/notes/note-coords";
 import type { NoteCommentView } from "./NoteComments";
 import { NoteRatingLazy } from "./NoteRatingLazy";
+import { NoteRatingChip } from "./NoteRatingChip";
 import { getNoteRating } from "@/lib/inspection/note-ratings";
-import { ratingFact } from "@/lib/inspection/note-rating-math";
 import { listNoteCommentsForViewer, type NoteComment } from "@/lib/inspection/note-comments";
 import {
   getPublicNoteCached,
@@ -1020,6 +1020,7 @@ export default async function NoteDetailPage({
           noteId={id}
           isOwner={isOwner}
           initialIsPublic={realNote.isPublic}
+          noteTitle={realNote.title}
         />
         {/* [993] "카드 덱"(/notes/[id]/deck) 버튼 제거 — 노트 출력 3종 중 card 만 남기고 보관(992) */}
         {isOwner && !hasLlmAi && (
@@ -1145,11 +1146,11 @@ export default async function NoteDetailPage({
                   자료 조사
                 </span>
               )}
-              {/* [1043 · 임장노트 참여] 독자 평가·댓글 수 — 있을 때만, 누르면 아래 평가·댓글 칸으로 */}
-              {ratingR.ok && ratingFact(ratingR) && (
-                <a href="#rating" className="rounded-md bg-bg chip-pad t-sub font-bold text-text-2 no-underline">
-                  {ratingFact(ratingR)}
-                </a>
+              {/* [1043 · 임장노트 참여] 독자 평가·댓글 수 — 있을 때만, 누르면 아래 평가·댓글 칸으로.
+                  [1058 · C5] 평가 칩은 클라이언트 조각(NoteRatingChip) — 평가를 남기면 머리 숫자도 바로 바뀐다(nz:note-rating).
+                  서버가 그리는 첫 글자는 ratingFact 와 같은 규칙(0명이면 없음). */}
+              {ratingR.ok && (
+                <NoteRatingChip noteId={realNote.id} initial={{ count: ratingR.count, average: ratingR.average }} />
               )}
               {commentViews.filter((c) => !c.deleted).length > 0 && (
                 <a href="#comments" className="rounded-md bg-bg chip-pad t-sub font-bold text-text-2 no-underline">
