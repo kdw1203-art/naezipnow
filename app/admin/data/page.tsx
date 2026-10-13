@@ -193,6 +193,11 @@ export default async function AdminDataPage() {
           : "지금은 일부 집계를 불러오지 못해 아래 수치가 불완전합니다 — 실패한 칸은 “—”로 표시했습니다."}
       </div>
 
+      {/* [1064] 레일포털(철도산업정보센터) 연결 상태 — 키·마지막 배치·받은 수·열 이름.
+          열 이름을 보여 주는 이유: 규격 문서가 로그인·첨부 뒤에 있어 응답 열 이름을 코드가 **추측**으로 읽는다.
+          첫 배치 뒤 여기서 실제 이름을 보고 lib/rail/kric-parse 의 별칭 표를 한 번 맞춘다. */}
+      <RailPanel />
+
       {/* 요약 */}
       <div className="rise-in-1 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
@@ -552,5 +557,71 @@ export default async function AdminDataPage() {
         <RebCatalogPanel />
       </div>
     </>
+  );
+}
+
+/* [1064] 레일포털 연결 상태 패널 — 읽기만 한다(배치는 크론이 돈다). 실패·미설정·정상을 각각 다른 문장으로. */
+async function RailPanel() {
+  const { isKricConfigured, readRailState } = await import("@/lib/rail/store");
+  const configured = isKricConfigured();
+  let state: Awaited<ReturnType<typeof readRailState>> | null = null;
+  let failed: string | null = null;
+  if (configured) {
+    try {
+      state = await readRailState();
+    } catch (e) {
+      failed = e instanceof Error ? e.message : String(e);
+    }
+  }
+  const box = "rounded-2xl border border-[rgba(255,255,255,.06)] bg-[#12161f] p-5";
+  const label = "text-[12px] text-[#9aa6b8]";
+  return (
+    <section className={`rise-in ${box}`} aria-label="레일포털 연결">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-[13px] font-bold text-[#e8eef8]">
+          도시철도 — 레일포털 <span className="text-[10px] font-medium text-[#6b7688]">1064</span>
+        </h2>
+        <span className={label}>도시·광역철도만 · 일반역·KTX 제외 · 하루 1회 배치</span>
+      </div>
+      {!configured ? (
+        <p className="mt-2 text-[12px] leading-[1.7] text-[#9aa6b8]">
+          아직 켜지지 않았습니다. Vercel 환경변수에 <code className="text-[#c9d2e0]">KRIC_SERVICE_KEY</code> 를 넣고 재배포하면
+          매일 ETL 때 노선·환승·시각표를 받습니다. 키 값은 이 화면에도, 코드에도 적지 않습니다.
+        </p>
+      ) : failed ? (
+        <p className="mt-2 text-[12px] leading-[1.7] text-[#9aa6b8]">
+          기록을 불러오지 못했습니다 — 데이터가 없다는 뜻이 아니라 조회에 실패했다는 뜻입니다. ({failed})
+        </p>
+      ) : (
+        <>
+          <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {[
+              { k: "역", v: state?.counts.stations ?? 0 },
+              { k: "좌표 있는 역", v: state?.counts.withCoords ?? 0 },
+              { k: "환승 역", v: state?.counts.transfers ?? 0 },
+              { k: "시각표 받은 역", v: state?.counts.timetables ?? 0 },
+            ].map((c) => (
+              <div key={c.k} className="rounded-xl bg-[rgba(255,255,255,.03)] p-3">
+                <div className={label}>{c.k}</div>
+                <div className="mt-1 text-[15px] font-bold text-[#e8eef8]">{c.v.toLocaleString("ko-KR")}</div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-[12px] leading-[1.7] text-[#9aa6b8]">
+            마지막 배치 {state?.lastRunAt ? new Date(state.lastRunAt).toLocaleString("ko-KR") : "없음"} ·{" "}
+            {state?.lastOk ? "오류 없음" : `마지막 메시지: ${state?.lastMessage ?? "없음"}`}
+          </p>
+          {(["lines", "transfers", "timetable"] as const).map((k) => {
+            const cols = state?.sampleColumns[k] ?? [];
+            if (cols.length === 0) return null;
+            return (
+              <p key={k} className="mt-1 break-all text-[10px] leading-[1.6] text-[#6b7688]">
+                {k} 열 이름: {cols.join(" · ")}
+              </p>
+            );
+          })}
+        </>
+      )}
+    </section>
   );
 }

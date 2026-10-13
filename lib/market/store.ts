@@ -201,6 +201,8 @@ export type IngestSource =
   | "news"
   /** 생활 인프라 표준데이터 — 학교·도시철도역(app/api/cron/poi-ingest, #96) */
   | "poi"
+  /** [1064] 레일포털(철도산업정보센터) 도시철도 노선·환승·시각표(app/api/cron/rail-sync) */
+  | "rail"
   | "geocode"
   /** 구독 만료 스윕(app/api/cron/plan-expiry-sweep) — 시장 데이터는 아니지만 크론 실행 기록은 같은 로그로 남긴다 */
   | "plan-expiry"

@@ -68,6 +68,8 @@ const pipelineKeys = [
   [["DATA_GO_KR_ENCODING_KEY", "MOLIT_SERVICE_KEY"], "국토부 실거래·단지(apis.data.go.kr)"],
   ["SEOUL_DATA_API_KEY", "서울 도시계획 결정 조서(redevelopment-ingest) · 서울 시설·실거래 보조"],
   [["POI_SCHOOLS_API_PATH", "POI_STATIONS_API_PATH"], "학교·역(poi-ingest)"],
+  /* [1064] 레일포털(철도산업정보센터) — 도시·광역철도 노선·환승·시각표. 일반역·KTX 는 제공 범위 밖이다. */
+  ["KRIC_SERVICE_KEY", "도시철도 노선·환승·시각표(rail-sync)"],
   ["NAVER_MAP_CLIENT_SECRET", "단지 좌표(geocode-complexes)"],
   /* [1042] 메일은 Resend 키 또는 SMTP 호스트 중 하나면 나간다 — 둘 다 없을 때만 꺼진 것으로 적는다 */
   [{ anyOf: ["RESEND_API_KEY", "SMTP_HOST"] }, "메일 발송(환영·영수증·경보)"],

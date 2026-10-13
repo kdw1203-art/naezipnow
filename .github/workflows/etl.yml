@@ -182,6 +182,11 @@ jobs:
             curl -sS --max-time 290 -H "x-cron-secret: $CRS" "${SITE}/api/cron/poi-ingest" | head -c 500 || true
             echo
           fi
+          # [1064] 레일포털(철도산업정보센터) — 하루 1회. 공급자가 "1일 1회 GET 또는 배치"를 요청했다(승인 메일 2026-10-12).
+          # 노선·환승은 통째로, 역별 시각표는 돌아가며 60곳씩. KRIC_SERVICE_KEY 가 없으면 라우트가 skipped 로 답한다(실패 아님).
+          echo "== rail-sync (KRIC urban rail, soft) =="
+          curl -sS --max-time 290 -H "x-cron-secret: $CRS" "${SITE}/api/cron/rail-sync" | head -c 500 || true
+          echo
           # 집계 MV 재계산 HTTP 호출은 삭제했다 (2026-08-10).
           # 본체는 pg_cron 'market-aggregates-daily'(jobid 12, 09:00·19:00 UTC,
           # DB 내부 실행 — Vercel 소모 0)로 이전 완료됐고, HTTP 경로는 예산
