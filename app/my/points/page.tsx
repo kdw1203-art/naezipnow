@@ -180,7 +180,7 @@ function EarnGuide({ isBroker }: { isBroker: boolean }) {
   const { general, broker } = earnGuideRules({ isBroker });
   return (
     <div className="rise-in-3 card rounded-2xl p-5 max-md:p-3.5">
-      <div className="text-[13px] font-bold text-ink">포인트 적립 방법</div>
+      <div className="t-body font-bold text-ink">포인트 적립 방법</div>
       {/* [970 · A-11] "1P≈1원" 은 2026-08-23 토스 회신(원화 환산 표기 제거)과 어긋나는
           환금성 암시 문구다 — 무상 리워드 규칙(현금 전환·구매 불가, 서비스 내 혜택 전용)만 적는다.
           [1015] "활동하면 자동으로 쌓여요" 부연 제거 — 무상성 사실만 남긴다. */}
@@ -213,7 +213,7 @@ function GuestView() {
         href="/points/shop"
         className="rise-in-1 card flex items-center justify-between rounded-lg px-4 py-3 no-underline"
       >
-        <span className="text-[13px] font-bold text-ink">포인트 상점</span>
+        <span className="t-body font-bold text-ink">포인트 상점</span>
         <span className="t-section text-text-3">›</span>
       </Link>
 
@@ -254,7 +254,7 @@ function WalletView({
             <span className="t-title t-num leading-none text-ai-text">
               {balance.toLocaleString("ko-KR")}
             </span>
-            <span className="mb-1 text-[19px] font-bold text-ai-accent">P</span>
+            <span className="mb-1 t-title font-bold text-ai-accent">P</span>
           </div>
         </div>
         <div className="flex gap-2">
@@ -275,7 +275,7 @@ function WalletView({
         {/* [1015 · 규칙 J] 채움 파랑은 출석 버튼 하나 — 상점 링크는 네이비 면 위 보조(brand-photo-chip) */}
         <Link
           href="/points/shop"
-          className="brand-photo-chip rounded-lg py-2.5 text-center text-[13px] font-bold no-underline"
+          className="brand-photo-chip rounded-lg py-2.5 text-center t-body font-bold no-underline"
         >
           포인트 상점 가기
         </Link>
@@ -306,7 +306,7 @@ function WalletView({
 
       {/* 적립·소비 내역 — [1015 · 규칙 I] 포인트 = mint 톤 리퀴드 판 */}
       <div className="rise-in-2 card rounded-2xl p-5 max-md:p-3.5">
-        <div className="text-[13px] font-bold text-ink">포인트 내역</div>
+        <div className="t-body font-bold text-ink">포인트 내역</div>
         {history.length === 0 ? (
           <div className="flex flex-col items-center gap-1.5 py-8 text-center max-md:py-5">
             <div className="t-body font-bold text-ink">
@@ -325,7 +325,7 @@ function WalletView({
                   }`}
                 >
                   <div className="min-w-0">
-                    <div className="truncate text-[13px] font-bold text-ink">
+                    <div className="truncate t-body font-bold text-ink">
                       {reasonLabel(r.reason, r.delta)}
                     </div>
                     <div className="t-sub text-text-3">
@@ -338,7 +338,7 @@ function WalletView({
                   <div className="shrink-0 pl-3 text-right">
                     {/* [1009 · T] 포인트 적립·사용 — 줄마다 자릿수가 세로로 맞게 tabular-nums(t-num) */}
                     <div
-                      className={`t-num text-[13px] ${
+                      className={`t-num t-body ${
                         earn ? "" : "text-text-3"
                       }`}
                     >

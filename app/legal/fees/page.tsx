@@ -22,7 +22,7 @@ export default function FeesPolicyPage() {
       <h1 className="text-2xl font-bold text-ink">거래·수수료 안내</h1>
       {/* [970 · A-10] 구 브랜드 "nuguzip" 표기 → 내집나우(본문 3곳 + 데이터 필드 ours).
           metadata description 의 같은 표기는 I5 몫. */}
-      <p className="mt-2 text-[13px] leading-relaxed text-text-2">
+      <p className="mt-2 t-body leading-relaxed text-text-2">
         내집나우는 부동산 의사결정 도구에 맞게 거래 조건을 공개합니다. VAT·PG 실비는 별도 안내가
         없는 한 결제 영수증 기준입니다. 멤버십 요금은{" "}
         <Link href="/subscription" className="font-semibold text-primary hover:underline">
@@ -32,7 +32,7 @@ export default function FeesPolicyPage() {
       </p>
 
       <section className="mt-8">
-        <h2 className="text-[19px] font-bold text-ink">마켓플레이스 수수료</h2>
+        <h2 className="t-title font-bold text-ink">마켓플레이스 수수료</h2>
         <p className="mt-1 text-xs text-text-3">
           내집나우가 실제로 정산에 적용하는 요율만 싣습니다. 리포트 판매 수수료는 정산
           계산·요금제 비교표와 같은 값이에요.

@@ -68,7 +68,7 @@ export function GuestClaimForm({
   if (done) {
     return (
       <div className="flex flex-col gap-2">
-        <p className="text-[13px] leading-[1.6] text-text-2">
+        <p className="t-body leading-[1.6] text-text-2">
           {done.applied ? (
             <>
               <strong className="text-ink">{done.email}</strong> 계정에 7일 이용권을 켰어요. 로그인하면
@@ -83,7 +83,7 @@ export function GuestClaimForm({
         </p>
         <Link
           href={done.applied ? "/login" : signupHref}
-          className="btn-primary rounded-lg p-[13px] text-center text-[13px] font-bold"
+          className="btn-primary rounded-lg p-[13px] text-center t-body font-bold"
         >
           {done.applied ? "로그인하고 이용권 쓰기" : "가입하고 이용권 받기"}
         </Link>
@@ -93,10 +93,10 @@ export function GuestClaimForm({
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-2">
-      <label htmlFor="guest-claim-email" className="text-[13px] font-bold text-ink">
+      <label htmlFor="guest-claim-email" className="t-body font-bold text-ink">
         이용권을 받을 이메일
       </label>
-      <p className="text-[12px] leading-[1.6] text-text-3">
+      <p className="t-sub leading-[1.6] text-text-3">
         결제는 끝났어요. 이메일을 알려 주시면 이 결제에 7일 이용권을 연결해 드려요. 영수증도 같은
         주소로 보내드립니다.
       </p>
@@ -111,21 +111,21 @@ export function GuestClaimForm({
         className="min-h-11 rounded-lg border border-line bg-surface px-3 text-[15px] text-ink"
       />
       {error && (
-        <p role="alert" className="text-[12px] font-bold text-danger">
+        <p role="alert" className="t-sub font-bold text-danger">
           {error}
         </p>
       )}
       <button
         type="submit"
         disabled={busy}
-        className="btn-primary rounded-lg p-[13px] text-center text-[13px] font-bold disabled:opacity-60"
+        className="btn-primary rounded-lg p-[13px] text-center t-body font-bold disabled:opacity-60"
       >
         {busy ? "연결 중…" : "이 이메일로 이용권 받기"}
       </button>
       {/* 이 화면을 닫아 버렸다면 여기로 — 주문번호가 문의에 함께 담긴다 */}
       <Link
         href={`/support?category=payment&order=${encodeURIComponent(orderId)}`}
-        className="inline-block self-start py-[5px] text-[12px] font-bold text-text-3"
+        className="inline-block self-start py-[5px] t-sub font-bold text-text-3"
       >
         연결이 안 되면 고객센터에 문의하기
       </Link>

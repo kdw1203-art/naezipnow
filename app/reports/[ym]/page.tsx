@@ -14,6 +14,8 @@ import { deltaText as stdDeltaText, signedPctText } from "@/lib/format/delta";
 import { Delta } from "@/app/components/num/Delta";
 import { Explain } from "@/app/components/explain/Explain";
 import { reportingClosed, reportingDeadlineLabel } from "@/lib/newui/reporting-window";
+import { MiniBar } from "@/app/components/compact/MiniBar";
+import { Fineprint } from "@/app/components/Fineprint";
 import { logger } from "@/lib/log";
 import { commonRegionCompare, reportSummary, type CommonCompare } from "./report-compare";
 import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
@@ -133,6 +135,9 @@ export default async function MonthlyReportPage({
     compare,
   });
 
+  /* [1063 · 표·그래프] 거래량 상위 — rows 는 거래량순이라 앞 5줄이 상위 5곳이다(새로 세지 않는다) */
+  const topRows = report.rows.slice(0, 5);
+
   const citation = `내집나우(naezipnow.com) 집계에 따르면, ${label} 집계 지역 ${report.regionCount}곳의 아파트 매매 실거래는 ${report.txCount.toLocaleString("ko-KR")}건이다 (국토교통부 실거래 신고 기반).`;
 
   const faq: FaqItem[] = [
@@ -246,7 +251,37 @@ export default async function MonthlyReportPage({
               </>
             )}
           </div>
+          {/* [1063 · 표·그래프] 거래량 상위 — 아래 표의 맨 윗줄들을 길이로 본다(같은 집계값, 새 계산 없음).
+              폰에서는 표 전체가 화면 한 장 아래라, 어디가 많이 거래됐는지가 숫자 줄에 묻혀 있었다. */}
+          {topRows.length > 1 && (
+            <div className="mt-3 border-t border-line pt-3">
+              <p className="m-0 mb-1.5 t-caption text-text-3">거래량 상위 {topRows.length}곳</p>
+              <MiniBar
+                rows={topRows.map((r) => ({ label: r.regionName, value: r.txCount }))}
+                unit="건"
+                label={`${label} 거래량 상위`}
+              />
+            </div>
+          )}
         </section>
+
+        {/* [1063 · 행동] 이 화면에서 할 일 하나 — 지역을 골라 그 지역 실거래(단지까지)로 간다.
+            머리 카드 바로 아래라 폰에서 스크롤을 되돌릴 필요가 없다. 나머지(목차·다른 달·방법론)는 조용한 보조 링크. */}
+        <div className="rise-in-1 mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 max-md:mt-2">
+          <Link
+            href="/tx"
+            className="btn-primary inline-flex min-h-[40px] w-full items-center justify-center px-4 t-body md:min-h-9 md:w-fit"
+          >
+            지역별 실거래 상세
+          </Link>
+          {/* 데스크톱은 오른쪽 레일의 목차가 같은 자리로 데려간다 — 폰에서만 둔다(같은 링크 두 번 금지) */}
+          <a
+            href="#regions"
+            className="inline-flex min-h-[40px] items-center t-sub font-bold text-primary underline lg:hidden"
+          >
+            지역별 거래량·평균가
+          </a>
+        </div>
         {/* [1015 · 규칙 E] 첫 문단(G12 인용용 전문)은 머리 카드와 같은 숫자를 되풀이한다 — 폰에서는 숨긴다(HTML 에는 남는다) */}
         <p className="rise-in-1 mt-3 t-body leading-[1.7] text-text-2 max-md:hidden">{leadSentence}</p>
         {/* [1009 · H] 신고 중인 달이라는 사실은 머리 카드("신고 중(기한 10/30)")와 첫 문단이 말한다 — 같은 말을 한 번 더 두지 않는다 */}
@@ -340,7 +375,8 @@ export default async function MonthlyReportPage({
               </tbody>
             </table>
           </div>
-          <p className="mt-3 t-caption leading-[1.6] text-text-3">
+          {/* [1063] 표 아래 기준 세 문장 → 접기 뒤(문장·링크 그대로) */}
+          <Fineprint className="mt-3" label="기준 · 집계 방법">
             평균가·평당가는 면적·타입 구분 없는 단순 평균.{" "}
             {open
               ? "신고 기한이 지나지 않은 달이라 전월과 비교하지 않음."
@@ -349,7 +385,7 @@ export default async function MonthlyReportPage({
             <Link href="/methodology" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
               집계 방법론
             </Link>
-          </p>
+          </Fineprint>
         </section>
 
         {/* G8 인용 블록 + N18 언론 인용 요약 + G5/G13 Q&A */}

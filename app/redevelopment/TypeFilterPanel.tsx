@@ -62,7 +62,7 @@ export function TypeFilterPanel({
                       type="button"
                       onClick={() => onToggle(t.key)}
                       aria-pressed={active}
-                      className={`press inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-semibold ${
+                      className={`press inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 t-sub font-semibold ${
                         active ? "border-transparent" : "border-line bg-surface text-text-2"
                       }`}
                       style={active ? { background: `${t.color}1a`, color: t.color } : undefined}

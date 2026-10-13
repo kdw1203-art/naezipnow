@@ -161,7 +161,7 @@ export function AttendanceButton() {
         type="button"
         onClick={checkIn}
         disabled={busy || checkedToday}
-        className="btn-primary min-h-[40px] rounded-lg py-2.5 text-center text-[13px] disabled:opacity-60 md:min-h-6"
+        className="btn-primary min-h-[40px] rounded-lg py-2.5 text-center t-body disabled:opacity-60 md:min-h-6"
       >
         {busy
           ? "출석 확인 중…"
@@ -172,7 +172,7 @@ export function AttendanceButton() {
       {msg && (
         <div
           role="status"
-          className={`text-center text-[12px] font-bold ${
+          className={`text-center t-sub font-bold ${
             msg.tone === "error"
               ? "text-ai-danger"
               : msg.tone === "info"

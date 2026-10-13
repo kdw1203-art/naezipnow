@@ -75,7 +75,7 @@ function LevelBadge({ level }: { level: Level }) {
   const s = LEVEL_STYLE[level];
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-full chip-pad text-[12px] font-bold"
+      className="inline-flex items-center gap-1 rounded-full chip-pad t-sub font-bold"
       style={{ background: s.soft, color: s.color }}
     >
       <Icon name={level === "안전" ? "check" : "warning"} size={12} />
@@ -174,7 +174,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
   }, [ready, type, depositN, priceN, lienN]);
 
   const inputCls =
-    "w-full rounded-lg border border-line bg-surface px-3.5 py-2 text-[13px] text-ink outline-none placeholder:text-text-3 focus:border-primary";
+    "w-full rounded-lg border border-line bg-surface px-3.5 py-2 t-body text-ink outline-none placeholder:text-text-3 focus:border-primary";
 
   return (
     <section id={SELF_CHECK_ANCHOR_ID} className="mt-5 scroll-mt-[72px]">
@@ -200,7 +200,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
         {/* 입력 */}
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="flex flex-col gap-1.5">
-            <span className="text-[12px] font-bold text-text-1">
+            <span className="t-sub font-bold text-text-1">
               전세보증금 <span className="text-text-3">(만원)</span>
             </span>
             <input
@@ -212,7 +212,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-[12px] font-bold text-text-1">
+            <span className="t-sub font-bold text-text-1">
               매매가(추정) <span className="text-text-3">(만원)</span>
             </span>
             <div className="flex gap-1.5">
@@ -231,7 +231,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
                 onClick={runLookup}
                 disabled={!subject?.trim() || lookingUp}
                 title={subject?.trim() ? "입력한 주소/단지명의 최근 실거래 평균 조회" : "상단에 주소/단지명을 먼저 입력"}
-                className="btn-soft shrink-0 whitespace-nowrap rounded-lg px-2.5 py-2 text-[12px] font-bold disabled:opacity-50"
+                className="btn-soft shrink-0 whitespace-nowrap rounded-lg px-2.5 py-2 t-sub font-bold disabled:opacity-50"
               >
                 {lookingUp ? "조회 중…" : "실거래 평균"}
               </button>
@@ -241,7 +241,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
             ) : null}
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-[12px] font-bold text-text-1">
+            <span className="t-sub font-bold text-text-1">
               선순위 근저당 <span className="text-text-3">(채권최고액·만원)</span>
             </span>
             <input
@@ -256,7 +256,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
 
         {/* 주택유형 (선택) */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[12px] font-bold text-text-1">
+          <span className="t-sub font-bold text-text-1">
             주택유형 <span className="font-medium text-text-3">(선택)</span>
           </span>
           <div className="flex flex-wrap gap-1.5">
@@ -265,7 +265,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
                 key={h}
                 type="button"
                 onClick={() => setType(h)}
-                className={`chip px-3 py-1.5 text-[12px] ${
+                className={`chip px-3 py-1.5 t-sub ${
                   type === h ? "chip-active" : "chip-soft"
                 }`}
               >
@@ -295,7 +295,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
             >
               <Icon name={LEVEL_STYLE[result.overall].icon} size={24} />
               <div className="flex flex-col">
-                <span className="text-[15px] font-bold">
+                <span className="t-section font-bold">
                   종합 {result.overall}
                 </span>
                 <span className="t-sub font-medium leading-[1.5] opacity-90">
@@ -314,7 +314,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-[13px] font-bold text-text-1">
+                      <span className="t-body font-bold text-text-1">
                         {ind.key}
                       </span>
                       <span className="t-caption text-text-3">
@@ -323,7 +323,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
                     </div>
                     <div className="flex items-center gap-2">
                       <span
-                        className="text-[15px] font-bold"
+                        className="t-section font-bold"
                         style={{ color: LEVEL_STYLE[ind.level].color }}
                       >
                         {ind.value.toFixed(1)}%
@@ -331,7 +331,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
                       <LevelBadge level={ind.level} />
                     </div>
                   </div>
-                  <p className="mt-1 text-[12px] leading-[1.6] text-text-2">
+                  <p className="mt-1 t-sub leading-[1.6] text-text-2">
                     {ind.explain}
                   </p>
                 </div>
@@ -340,14 +340,14 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
 
             {/* 실행 팁 */}
             <div className="rounded-lg bg-bg px-4 py-3">
-              <div className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold text-ink">
+              <div className="mb-1.5 flex items-center gap-1.5 t-sub font-bold text-ink">
                 <Icon name="check" size={14} /> 계약 전 실행 팁
               </div>
               <ul className="flex flex-col gap-1.5">
                 {TIPS.map((tip) => (
                   <li
                     key={tip}
-                    className="flex gap-1.5 text-[12px] leading-[1.6] text-text-2"
+                    className="flex gap-1.5 t-sub leading-[1.6] text-text-2"
                   >
                     <span className="text-primary">·</span>
                     <span>{tip}</span>
@@ -360,7 +360,7 @@ export function JeonseSelfCheck({ subject }: { subject?: string | null }) {
 
         {/* 면책 */}
         <div
-          className="flex items-start gap-1.5 rounded-lg px-3 py-2.5 text-[12px] leading-[1.6]"
+          className="flex items-start gap-1.5 rounded-lg px-3 py-2.5 t-sub leading-[1.6]"
           style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
         >
           <Icon name="warning" size={14} className="mt-0.5 shrink-0" />

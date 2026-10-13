@@ -271,13 +271,13 @@ export function ApplySearchClient({ initial }: Props) {
   /* [1015] 탭 활성 = chip-active(한지 + 남색). 채움 파랑은 검색 버튼 1개만(브리프 규칙 J · /qna 와 같은 규칙). */
   const tabPill = (on: boolean) =>
     on
-      ? "press chip-active min-h-10 rounded-full px-4 py-2 text-[13px] font-bold"
-      : "press glass min-h-10 rounded-full px-4 py-2 text-[13px] font-semibold text-text-2";
+      ? "press chip-active min-h-10 rounded-full px-4 py-2 t-body font-bold"
+      : "press glass min-h-10 rounded-full px-4 py-2 t-body font-semibold text-text-2";
 
   const regionPill = (on: boolean) =>
     on
-      ? "press chip-active shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold"
-      : "press chip shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold";
+      ? "press chip-active shrink-0 rounded-full px-3 py-1.5 t-sub font-bold"
+      : "press chip shrink-0 rounded-full px-3 py-1.5 t-sub font-semibold";
 
   const tabLabel = state.tab === "competition" ? "청약 경쟁률" : "특별공급 접수현황";
   const showTiles = !error && state.mode === "live" && state.items.length > 0;
@@ -287,8 +287,8 @@ export function ApplySearchClient({ initial }: Props) {
   /* [970 · B-06] 네이비 알약 글자 text-surface → text-on-dark(다크에서 안 보였다) */
   const sortPill = (on: boolean) =>
     on
-      ? "press rounded-full bg-brand-navy px-3 py-1.5 text-[12px] font-bold text-on-dark"
-      : "press glass rounded-full px-3 py-1.5 text-[12px] font-semibold text-text-2";
+      ? "press rounded-full bg-brand-navy px-3 py-1.5 t-sub font-bold text-on-dark"
+      : "press glass rounded-full px-3 py-1.5 t-sub font-semibold text-text-2";
 
   return (
     <div className="flex flex-col gap-3">

@@ -8,7 +8,7 @@ import { CharCount } from "@/app/components/ui/CharCount";
 import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
 
 const INPUT =
-  "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[13px] text-ink placeholder:text-text-3";
+  "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 t-body text-ink placeholder:text-text-3";
 
 /** 질문 작성 폼 — 접힘/펼침. 제출 성공 시 router.refresh + 폼 초기화. localStorage 미사용. */
 export function AskForm() {

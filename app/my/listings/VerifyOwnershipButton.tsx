@@ -102,7 +102,7 @@ export function VerifyOwnershipButton({ listingId }: { listingId: string }) {
       />
       {msg && (
         <span
-          className={`text-[12px] font-bold ${
+          className={`t-sub font-bold ${
             phase === "error" ? "text-danger" : "text-success"
           }`}
         >

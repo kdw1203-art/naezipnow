@@ -57,6 +57,9 @@ import { logger } from "@/lib/log";
 import { buildMarketRead } from "@/lib/region/market-read";
 import { getRegionRentSnapshot, type RegionRentSnapshot } from "@/lib/market/rent";
 import { getRegionTradeAreaBands, type RegionAreaBands } from "@/lib/market/area-bands-lite";
+/* [1063] 공용 조각 — 작은 비율 막대(이미 센 건수) · 기준·출처 접기 */
+import { MiniBar } from "@/app/components/compact/MiniBar";
+import { Fineprint } from "@/app/components/Fineprint";
 import { KeywordAlertButton } from "@/app/components/KeywordAlertButton";
 import { RegionAlertButton } from "@/app/components/RegionAlertButton";
 import { EmbedSnippet } from "@/app/components/EmbedSnippet";
@@ -667,6 +670,26 @@ export default async function RegionHubPage({
     }실거래와 거래량은 국토교통부 실거래가 공개시스템, 입주 예정 물량과 정비사업은 공공기관 공개 자료입니다. 매물 호가나 중개사 제공 가격은 쓰지 않으며, 값이 없는 항목은 추정치로 채우지 않고 비워 둡니다.`,
   });
 
+  /* [1063 · 행동] 머리 아래 행동 하나 — 단지 목록(이 화면 안 '단지별 현황')으로. 단지가 비었거나 못 읽었으면
+     최근 실거래로, 그것도 없으면 아무것도 내지 않는다(없는 자리로 보내는 단추를 만들지 않는다). */
+  const complexJump =
+    complexR.ok && complexSummaries.length > 0
+      ? {
+          href: "#complexes",
+          label: `단지 목록 보기 ${
+            complexSummaries.length >= complexLimit
+              ? `${complexLimit.toLocaleString("ko-KR")}곳 이상`
+              : `${complexSummaries.length.toLocaleString("ko-KR")}곳`
+          }`,
+        }
+      : null;
+  const txJump =
+    transactionsR.ok && transactions.length > 0
+      ? { href: "#recent-tx", label: `최근 실거래 ${transactions.length.toLocaleString("ko-KR")}건` }
+      : null;
+  const primaryJump = complexJump ?? txJump;
+  const secondaryJump = complexJump ? txJump : null;
+
   // JSON-LD(BreadcrumbList + Place) — 실데이터 스냅샷, 존재 필드만
   // (FAQPage 는 QaBlock 이 화면에 보이는 items 로 직접 생성한다)
   const regionJsonLd = [
@@ -764,6 +787,30 @@ export default async function RegionHubPage({
         freshnessLine={<MarketFreshnessLine label={freshness} className="mt-0.5" />}
       />
 
+      {/* [1063 · 행동] 이 화면에서 할 일 하나 — 이 지역 단지 목록으로 내려간다(같은 화면 안 '단지별 현황').
+          머리 카드·요약 바로 아래라 폰에서 스크롤을 되돌릴 필요가 없다. 지도·월간 리포트·동네 홈은 머리 카드의
+          조용한 칩이고, 아래 섹션 링크(서울 전체 단지·구간 전체·정비사업 지도)도 그대로 보조다.
+          곳·건수는 이 화면이 이미 읽어 온 실측값이고, 비었거나 못 읽었으면 그 자리로 보내지 않는다(빈 약속 금지).
+          조회 상한(30곳)에 걸리면 "이상"으로 적는다 — 입주 예정 물량 문구와 같은 규칙. */}
+      {primaryJump && (
+        <div className="rise-in mb-5 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <a
+            href={primaryJump.href}
+            className="btn-primary inline-flex min-h-[40px] w-full items-center justify-center px-4 t-body md:min-h-9 md:w-fit"
+          >
+            {primaryJump.label}
+          </a>
+          {secondaryJump && (
+            <a
+              href={secondaryJump.href}
+              className="inline-flex min-h-[40px] items-center t-sub font-bold text-primary underline md:min-h-6"
+            >
+              {secondaryJump.label}
+            </a>
+          )}
+        </div>
+      )}
+
       {/* G12 — 이 문단만 떼어 인용해도 뜻이 통해야 한다.
           [1006 · E] data-ai-summary — 위 WebPage JSON-LD 의 speakable.cssSelector 가 이 블록을
           가리킨다(문단은 그대로, 껍데기만 section 으로). 새 요약 블록을 따로 만들지 않는다.
@@ -850,8 +897,9 @@ export default async function RegionHubPage({
         </section>
       )}
 
-      {/* 최근 실거래 5건 — [1009 · H] 한 건의 가격은 정밀 표기("12억 4,500만", 네이버 부동산 관례) */}
-      <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
+      {/* 최근 실거래 5건 — [1009 · H] 한 건의 가격은 정밀 표기("12억 4,500만", 네이버 부동산 관례)
+          [1063] id="recent-tx" — 머리 아래 보조 링크가 여기로 온다 */}
+      <section id="recent-tx" className="rise-in-2 card mb-6 scroll-mt-[72px] p-[var(--pad-card)]">
         <h2 className="t-section text-ink">
           최근 실거래{" "}
           <span className="t-sub font-medium text-text-3">
@@ -1003,14 +1051,14 @@ export default async function RegionHubPage({
               ariaLabel={`${name} 아파트 전월세 월별 신고 건수`}
             />
           )}
-          {/* [1029 · 5] 낱말 꼴 각주 — 문장 셋을 "사실 · 사실 · 사실"로 */}
-          <p className="mt-3 t-sub text-text-3">
+          {/* [1029 · 5] 낱말 꼴 각주 — 문장 셋을 "사실 · 사실 · 사실"로. [1063] 그 줄을 접기 뒤로(낱말 그대로) */}
+          <Fineprint className="mt-3">
             국토교통부 전월세 신고 기준
             {rentOpen.length > 0
               ? ` · ${rentOpen.map((m) => `${ymMonth(m.month)} ${m.count.toLocaleString("ko-KR")}건`).join("·")} = 신고 기한 내(계약 후 30일) · 그래프 제외`
               : ""}
             {" · "}갱신·신규 계약 혼합 · 지역 전체 중앙값 · 단지별 편차 큼
-          </p>
+          </Fineprint>
         </section>
       )}
 
@@ -1025,6 +1073,14 @@ export default async function RegionHubPage({
               {areaBands.truncated ? " 표본" : ""} 기준
             </span>
           </h2>
+          {/* [1063 · 표·그래프] 면적대별 거래 건수 — 표의 "거래" 열과 같은 값을 길이로 본다(새로 세지 않는다).
+              390px 에서 표는 가로 스크롤 안이라 어느 평형이 많이 거래됐는지가 가장 늦게 읽혔다. */}
+          <MiniBar
+            className="mt-3"
+            rows={areaBands.bands.map((b) => ({ label: b.label, value: b.count }))}
+            unit="건"
+            label={`${name} 면적대별 거래 건수`}
+          />
           <HScroll className="mt-3">
             <table className="w-full min-w-[420px] t-body">
               <thead>
@@ -1053,7 +1109,7 @@ export default async function RegionHubPage({
               </tbody>
             </table>
           </HScroll>
-          <p className="mt-2 t-sub text-text-3">표본 5건 미만 면적대 제외 · 중앙값 기준 · 단지·층·연식별 차이 있음</p>
+          <Fineprint className="mt-2">표본 5건 미만 면적대 제외 · 중앙값 기준 · 단지·층·연식별 차이 있음</Fineprint>
         </section>
       )}
 
@@ -1096,29 +1152,18 @@ export default async function RegionHubPage({
             }
             const years = [...byYear.entries()].sort((a, b) => a[0].localeCompare(b[0]));
             if (years.length < 2) return null;
-            const max = Math.max(...years.map(([, v]) => v));
             return (
+              /* [1063] 손으로 그린 막대 세 겹(라벨·바탕·값 칸) → 공용 조각(MiniBar). 값·단위·집계 기준은 그대로 */
               <div className="mt-3 flex flex-col gap-1.5">
-                {years.map(([y, v]) => (
-                  <div key={y} className="flex items-center gap-2.5 t-sub">
-                    <span className="w-[38px] shrink-0 font-bold tabular-nums text-text-2">
-                      {y}
-                    </span>
-                    <span className="h-[8px] flex-1 overflow-hidden rounded-full bg-bg">
-                      <span
-                        className="block h-full rounded-full bg-primary/55"
-                        style={{ width: `${Math.max(2, Math.round((v / max) * 100))}%` }}
-                      />
-                    </span>
-                    <span className="w-[76px] shrink-0 text-right tabular-nums text-text-2">
-                      {v.toLocaleString("ko-KR")}세대
-                    </span>
-                  </div>
-                ))}
-                <p className="t-caption text-text-3">
+                <MiniBar
+                  rows={years.map(([y, v]) => ({ label: y, value: v }))}
+                  unit="세대"
+                  label={`${name} 연도별 입주 예정 세대`}
+                />
+                <Fineprint label="세는 방법">
                   조회분 {supply.length}건 중 세대수 확인분 합계
                   {unknown > 0 && ` (세대수 미상 ${unknown}건 제외)`} · 일정 변동 가능
-                </p>
+                </Fineprint>
               </div>
             );
           })()}
@@ -1191,7 +1236,8 @@ export default async function RegionHubPage({
               </li>
             ))}
           </ul>
-          <p className="mt-3 t-caption text-text-3">진행 단계는 공개 고시·언론 공개정보 기준 참고값 · 확정 일정·조건은 조합·지자체 공고</p>
+          {/* [1063] 기준 한 줄 → 접기 뒤(낱말 그대로) */}
+          <Fineprint className="mt-3">진행 단계는 공개 고시·언론 공개정보 기준 참고값 · 확정 일정·조건은 조합·지자체 공고</Fineprint>
           <Link
             href="/redevelopment"
             className="mt-2 inline-flex min-h-[24px] items-center t-sub font-bold text-primary"
@@ -1217,19 +1263,19 @@ export default async function RegionHubPage({
               조서 보기 ›
             </Link>
           </div>
-          <dl className="mt-2 grid grid-cols-3 gap-2">
-            {[
-              ["정비사업", upisGu.rebuild],
-              ["도시개발", upisGu.urbanDev],
-              ["지구단위계획", upisGu.distUnitPlan],
-            ].map(([label, n]) => (
-              <div key={String(label)} className="rounded-lg bg-bg px-3 py-2">
-                <dt className="t-caption text-text-3">{label}</dt>
-                <dd className="t-body t-num font-bold text-ink">{Number(n).toLocaleString("ko-KR")}건</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="mt-2 t-caption text-text-3">열린데이터광장 원문 · 참고용(법적 효력 없음)</p>
+          {/* [1063 · 표·그래프] 세 칸(정비사업·도시개발·지구단위계획)은 같은 단위의 건수 비교다 —
+              색면 칸 세 개보다 막대 세 줄이 "어느 쪽이 많은가"를 먼저 말한다(값은 뷰가 센 그대로). */}
+          <MiniBar
+            className="mt-2"
+            rows={[
+              { label: "정비사업", value: upisGu.rebuild },
+              { label: "도시개발", value: upisGu.urbanDev },
+              { label: "지구단위계획", value: upisGu.distUnitPlan },
+            ]}
+            unit="건"
+            label={`${shortName} 도시계획 결정 조서 구분별 건수`}
+          />
+          <Fineprint className="mt-2">열린데이터광장 원문 · 참고용(법적 효력 없음)</Fineprint>
         </section>
       )}
 
@@ -1361,17 +1407,19 @@ export default async function RegionHubPage({
         />
       )}
 
-      {/* CTA — [1012 · 규칙 5] 동사 + 구체 대상(지역명) · 지도는 이 지역으로 여는 딥링크 · 채움 파랑 1개 */}
+      {/* CTA — [1012 · 규칙 5] 동사 + 구체 대상(지역명) · 지도는 이 지역으로 여는 딥링크
+          [1063 · 행동] 이 화면의 채움 파랑은 머리 아래 "단지 목록 보기" 하나다 — 끝자리 세 갈래는
+          같은 무게의 조용한 단추로 내렸다(노트 쓰기·지도·알림 구독. 목적지·문구는 그대로). */}
       <section className="rise-in-3 mb-4 flex flex-wrap gap-2">
         <Link
           href="/notes/new"
-          className="rounded-xl bg-primary px-5 py-3 t-body font-bold text-white"
+          className="card tile inline-flex min-h-[40px] items-center px-5 py-3 t-body font-bold text-ink md:min-h-9"
         >
           {name} 임장노트 쓰기
         </Link>
         <Link
           href={`/map?region=${encodeURIComponent(mapRegion)}`}
-          className="card tile px-5 py-3 t-body font-bold text-ink"
+          className="card tile inline-flex min-h-[40px] items-center px-5 py-3 t-body font-bold text-ink md:min-h-9"
         >
           {name} 지도에서 보기
         </Link>

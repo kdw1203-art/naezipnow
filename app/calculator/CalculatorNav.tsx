@@ -27,7 +27,7 @@ export function CalculatorNav({ current }: { current: string }) {
           <span
             key={c.href}
             aria-current="page"
-            className="chip-active shrink-0 rounded-full px-3.5 py-2 text-[12px] font-bold"
+            className="chip-active shrink-0 rounded-full px-3.5 py-2 t-sub font-bold"
           >
             {c.label}
           </span>
@@ -35,7 +35,7 @@ export function CalculatorNav({ current }: { current: string }) {
           <Link
             key={c.href}
             href={c.href}
-            className="chip press shrink-0 border border-line bg-surface px-3.5 py-2 text-[12px] font-semibold text-text-2 no-underline"
+            className="chip press shrink-0 border border-line bg-surface px-3.5 py-2 t-sub font-semibold text-text-2 no-underline"
           >
             {c.label}
           </Link>

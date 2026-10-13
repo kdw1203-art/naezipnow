@@ -142,26 +142,26 @@ export default async function InvitePage({
         </div>
 
         {inviter ? (
-          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-[12px] font-bold text-primary">
+          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 t-sub font-bold text-primary">
             <Icon name="user-plus" size={13} />
             <span>{inviter} 님의 초대</span>
           </div>
         ) : (
-          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-[12px] font-bold text-primary">
+          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 t-sub font-bold text-primary">
             <Icon name="user-plus" size={13} />
             <span>친구의 초대</span>
           </div>
         )}
 
         {/* [970 · C-42] h1 안의 <br> — 제목이 한 문장으로 읽히지 않았다. 한 줄 제목 + 부제로 */}
-        <h1 className="text-[21px] font-bold leading-[1.35] text-text-1">
+        <h1 className="t-title font-bold leading-[1.35] text-text-1">
           친구가 초대했어요
         </h1>
-        <p className="mt-1 text-[19px] font-bold leading-[1.35] text-text-1">
+        <p className="mt-1 t-title font-bold leading-[1.35] text-text-1">
           가입하면 <span className="text-primary">둘 다 300P</span>
         </p>
 
-        <p className="mt-2 text-[13px] leading-[1.6] text-text-3">
+        <p className="mt-2 t-body leading-[1.6] text-text-3">
           초대 링크로 가입을 완료하면 초대한 친구와 나 모두에게
           <br className="hidden sm:block" /> 300P 지급.
         </p>
@@ -186,8 +186,8 @@ export default async function InvitePage({
                 <Icon name={b.icon} size={16} />
               </span>
               <div>
-                <div className="text-[13px] font-bold text-text-1">{b.t}</div>
-                <div className="text-[12px] text-text-3">{b.d}</div>
+                <div className="t-body font-bold text-text-1">{b.t}</div>
+                <div className="t-sub text-text-3">{b.d}</div>
               </div>
             </div>
           ))}
@@ -196,25 +196,25 @@ export default async function InvitePage({
         <div className="mt-6 flex flex-col gap-2.5">
           <Link
             href="/signup"
-            className="btn-primary btn-cta press rounded-lg py-3.5 text-center text-[15px] font-bold no-underline"
+            className="btn-primary btn-cta press rounded-lg py-3.5 text-center t-section font-bold no-underline"
           >
             Google로 3초 가입하고 300P 받기
           </Link>
           <Link
             href="/login"
-            className="press rounded-lg py-2.5 text-center text-[13px] font-semibold text-text-2 no-underline"
+            className="press rounded-lg py-2.5 text-center t-body font-semibold text-text-2 no-underline"
           >
             이미 계정이 있어요 · 로그인
           </Link>
         </div>
 
-        <p className="mt-4 flex items-center justify-center gap-1 text-[12px] text-text-3">
+        <p className="mt-4 flex items-center justify-center gap-1 t-sub text-text-3">
           <Icon name="check" size={12} className="text-primary" />
           가입만 완료하면 포인트가 자동으로 적립돼요
         </p>
       </div>
 
-      <p className="mt-4 text-center text-[12px] text-text-3">
+      <p className="mt-4 text-center t-sub text-text-3">
         내집나우 · 실거래가 · 임장노트 · 부동산 커뮤니티
       </p>
     </main>

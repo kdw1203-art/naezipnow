@@ -29,8 +29,8 @@ const STATUS_LABEL: Record<string, string> = {
 
 function pillClass(active: boolean): string {
   return active
-    ? "chip-active px-3.5 py-2 text-[13px] no-underline press"
-    : "chip glass px-3.5 py-2 text-[13px] font-semibold text-text-2 no-underline press";
+    ? "chip-active px-3.5 py-2 t-body no-underline press"
+    : "chip glass px-3.5 py-2 t-body font-semibold text-text-2 no-underline press";
 }
 
 function statusStyle(status: string): CSSProperties {
@@ -65,7 +65,7 @@ function DealCard({ d }: { d: DevDeal }) {
     <article className="card tile flex flex-col gap-3 rounded-2xl p-[var(--pad-card)]">
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="rounded-full bg-primary-soft px-2.5 py-1 text-[12px] font-bold text-primary">
+          <span className="rounded-full bg-primary-soft px-2.5 py-1 t-sub font-bold text-primary">
             {d.dealType}
           </span>
           {d.isVerified && (
@@ -88,24 +88,24 @@ function DealCard({ d }: { d: DevDeal }) {
 
       <div>
         {d.isSample ? (
-          <span className="line-clamp-2 text-[15px] font-bold leading-[1.4] text-ink">
+          <span className="line-clamp-2 t-section font-bold leading-[1.4] text-ink">
             {d.title}
           </span>
         ) : (
           <Link
             href={`/dev-deals/${d.id}`}
-            className="line-clamp-2 text-[15px] font-bold leading-[1.4] text-ink no-underline"
+            className="line-clamp-2 t-section font-bold leading-[1.4] text-ink no-underline"
           >
             {d.title}
           </Link>
         )}
-        <div className="mt-1 text-[12px] text-text-3">
+        <div className="mt-1 t-sub text-text-3">
           {[d.region, d.address].filter(Boolean).join(" · ") || "지역 미정"}
         </div>
       </div>
 
       {d.summary && (
-        <p className="line-clamp-2 text-[12px] leading-[1.6] text-text-2">{d.summary}</p>
+        <p className="line-clamp-2 t-sub leading-[1.6] text-text-2">{d.summary}</p>
       )}
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -113,14 +113,14 @@ function DealCard({ d }: { d: DevDeal }) {
           <div className="t-caption" style={{ color: "var(--primary-strong)" }}>
             총사업비
           </div>
-          <div className="mt-0.5 text-[15px] font-bold text-primary">
+          <div className="mt-0.5 t-section font-bold text-primary">
             {formatKrwEok(d.totalCostKrw)}
           </div>
         </div>
         {stats.slice(0, 2).map((s) => (
           <div key={s.label} className="rounded-xl bg-bg px-3 py-2.5">
             <div className="t-caption text-text-3">{s.label}</div>
-            <div className="mt-0.5 text-[13px] font-bold text-ink">{s.value}</div>
+            <div className="mt-0.5 t-body font-bold text-ink">{s.value}</div>
           </div>
         ))}
       </div>
@@ -151,7 +151,7 @@ function DealCard({ d }: { d: DevDeal }) {
           </div>
         </div>
         {d.isSample ? (
-          <span className="chip shrink-0 bg-bg px-3 py-2 text-[12px] font-bold text-text-3">
+          <span className="chip shrink-0 bg-bg px-3 py-2 t-sub font-bold text-text-3">
             예시 카드 · 문의 불가
           </span>
         ) : (
@@ -256,13 +256,13 @@ export function DevDealsListClient({
           <div className="flex flex-wrap gap-1.5">
             <Link
               href="/dev-deals/partners"
-              className="glass rounded-full px-3.5 py-2 text-[12px] font-bold text-text-1 no-underline press"
+              className="glass rounded-full px-3.5 py-2 t-sub font-bold text-text-1 no-underline press"
             >
               협력업체 디렉토리
             </Link>
             <Link
               href="/dev-deals/fees"
-              className="glass rounded-full px-3.5 py-2 text-[12px] font-bold text-primary no-underline press"
+              className="glass rounded-full px-3.5 py-2 t-sub font-bold text-primary no-underline press"
             >
               수수료 안내
             </Link>
@@ -271,13 +271,13 @@ export function DevDealsListClient({
               /* [976] 인라인 color:#fff 였다. 색을 인라인으로 박으면 다크 모드 규칙
                  (.dark .bg-primary.text-white → 채움 토큰)이 이 자리를 못 집어서
                  앰버 위 흰 글자가 2.93:1 이었다(axe 실측). 색은 클래스로만 정한다. */
-              className="rounded-full bg-primary px-4 py-2 text-[12px] font-bold text-white no-underline press"
+              className="rounded-full bg-primary px-4 py-2 t-sub font-bold text-white no-underline press"
             >
               개발물건 등록
             </Link>
           </div>
         </div>
-        <div className="text-[12px] text-text-3">
+        <div className="t-sub text-text-3">
           {loadFailed ? (
             <>등록 물건 수 불러오기 실패</>
           ) : (
@@ -349,25 +349,25 @@ export function DevDealsListClient({
           </div>
 
           <div className="flex items-center justify-between">
-            <h2 className="text-[15px] font-bold text-ink">등록된 개발물건</h2>
-            <span className="text-[12px] text-text-3">{deals.length.toLocaleString()}건</span>
+            <h2 className="t-section font-bold text-ink">등록된 개발물건</h2>
+            <span className="t-sub text-text-3">{deals.length.toLocaleString()}건</span>
           </div>
 
           {loadFailed ? (
             /* 실패는 목록 자리에서만 말한다 — 예시 카드도 그리지 않는다.
                DB 원문(cause)은 싣지 않는다(에러 노출 마감 정책). */
             <div className="card rounded-2xl p-[var(--pad-card)] text-center">
-              <div className="text-[13px] font-bold text-ink">
+              <div className="t-body font-bold text-ink">
 개발물건 목록 불러오기 실패
               </div>
-              <p className="mx-auto mt-1 max-w-md text-[12px] leading-[1.6] text-text-3">
+              <p className="mx-auto mt-1 max-w-md t-sub leading-[1.6] text-text-3">
                 잠시 후 다시 시도해 주세요.
               </p>
             </div>
           ) : deals.length === 0 ? (
             /* [1015 · 규칙 B] 예시 카드(가공 데이터)·권유 문단 제거 — 한 줄 + 등록 버튼 */
             <div className="card rounded-2xl p-[var(--pad-card)] text-center">
-              <div className="text-[13px] font-bold text-ink">
+              <div className="t-body font-bold text-ink">
                 {filterActive ? "조건에 맞는 개발물건 없음" : "등록된 개발물건 없음"}
               </div>
               <Link
@@ -401,21 +401,21 @@ function DevDealsSidebar() {
   return (
     <aside className="rise-in-3 flex flex-col gap-3">
       <div className="card rounded-2xl p-[var(--pad-card)]">
-        <div className="text-[13px] font-bold text-ink">중개 수수료</div>
-        <p className="mt-1.5 text-[12px] leading-[1.6] text-text-2">
+        <div className="t-body font-bold text-ink">중개 수수료</div>
+        <p className="mt-1.5 t-sub leading-[1.6] text-text-2">
           매칭 성사 시 총사업비 기준으로 부과. 결제·정산은 당사자 간.
         </p>
         <Link
           href="/dev-deals/fees"
-          className="mt-3 inline-flex min-h-[24px] items-center text-[12px] font-bold text-primary no-underline press"
+          className="mt-3 inline-flex min-h-[24px] items-center t-sub font-bold text-primary no-underline press"
         >
           수수료 기준표 보기 ›
         </Link>
       </div>
 
       <div className="card rounded-2xl p-[var(--pad-card)]">
-        <div className="text-[13px] font-bold text-ink">협력업체 디렉토리</div>
-        <p className="mt-1.5 text-[12px] leading-[1.6] text-text-2">
+        <div className="t-body font-bold text-ink">협력업체 디렉토리</div>
+        <p className="mt-1.5 t-sub leading-[1.6] text-text-2">
           시공 · 설계 · 신탁 · PF · 마케팅 · 감리
         </p>
         <div className="mt-3 flex flex-col gap-2">

@@ -31,10 +31,10 @@ export default function ComplexCompareNotFound() {
         <circle className="empty-dot-breathe" cx="60" cy="86" r="8.5" fill="var(--brand-dot)" style={{ transformOrigin: "60px 86px" }} />
       </svg>
       <div className="rise-in t-caption font-bold tracking-[0.2em] text-text-3">404</div>
-      <h1 className="rise-in-1 text-[15px] font-bold text-ink">
+      <h1 className="rise-in-1 t-section font-bold text-ink">
         이 비교는 지금 제공되지 않아요<span className="text-brand-red">.</span>
       </h1>
-      <p className="rise-in-2 text-[13px] leading-[1.6] text-text-3">
+      <p className="rise-in-2 t-body leading-[1.6] text-text-3">
         최근 12개월 거래가 충분한 조합만 비교 페이지를 만들어요.
         <br />
         거래가 뜸해지면 페이지도 잠시 내려가요.
@@ -45,7 +45,7 @@ export default function ComplexCompareNotFound() {
             <Link
               key={name}
               href={`/search?q=${encodeURIComponent(name)}`}
-              className="btn-primary btn-cta rounded-lg px-[18px] py-3 text-[13px]"
+              className="btn-primary btn-cta rounded-lg px-[18px] py-3 t-body"
             >
               {name} 검색
             </Link>
@@ -56,19 +56,19 @@ export default function ComplexCompareNotFound() {
         {/* [1012 · 규칙 5] "둘러보기"·"시세" → 동사 + 구체 대상(실거래만 있는 곳에 "시세" 금지) */}
         <Link
           href="/complex/browse"
-          className="rounded-full bg-primary-soft px-[13px] py-[7px] text-[12px] font-bold text-primary"
+          className="rounded-full bg-primary-soft px-[13px] py-[7px] t-sub font-bold text-primary"
         >
           서울 단지별 실거래 보기
         </Link>
         <Link
           href="/tx"
-          className="rounded-full bg-bg px-[13px] py-[7px] text-[12px] font-bold text-text-1"
+          className="rounded-full bg-bg px-[13px] py-[7px] t-sub font-bold text-text-1"
         >
           지역별 실거래 구간 보기
         </Link>
         <Link
           href="/search"
-          className="rounded-full bg-bg px-[13px] py-[7px] text-[12px] font-bold text-text-1"
+          className="rounded-full bg-bg px-[13px] py-[7px] t-sub font-bold text-text-1"
         >
           단지 검색
         </Link>

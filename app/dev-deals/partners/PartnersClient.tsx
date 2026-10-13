@@ -29,7 +29,7 @@ function PartnerCard({ p }: { p: DevPartner }) {
     <div className="card p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="rounded-full bg-primary-soft chip-pad text-[12px] font-semibold text-primary">
+          <span className="rounded-full bg-primary-soft chip-pad t-sub font-semibold text-primary">
             {p.partnerType}
           </span>
           {p.isVerified && (
@@ -51,11 +51,11 @@ function PartnerCard({ p }: { p: DevPartner }) {
         </div>
       </div>
 
-      <div className="mt-2 text-[13px] font-bold text-ink">{p.companyName}</div>
-      <div className="mt-0.5 text-[12px] text-text-3">{p.region ?? "지역 전국·협의"}</div>
+      <div className="mt-2 t-body font-bold text-ink">{p.companyName}</div>
+      <div className="mt-0.5 t-sub text-text-3">{p.region ?? "지역 전국·협의"}</div>
 
       {p.intro && (
-        <p className="mt-2 line-clamp-3 text-[12px] leading-[1.6] text-text-2">
+        <p className="mt-2 line-clamp-3 t-sub leading-[1.6] text-text-2">
           {p.intro}
         </p>
       )}
@@ -73,7 +73,7 @@ function PartnerCard({ p }: { p: DevPartner }) {
         </div>
       )}
 
-      <div className="mt-3 flex items-center justify-between text-[12px] text-text-3">
+      <div className="mt-3 flex items-center justify-between t-sub text-text-3">
         <span>연락처 {p.contactMasked ?? "문의 시 공개"}</span>
         {p.portfolioUrl && (
           <a
@@ -143,7 +143,7 @@ export function PartnersClient({
       </section>
 
       {truncated && (
-        <p className="rise-in-1 mb-3 text-[12px] leading-[1.6] text-text-3">
+        <p className="rise-in-1 mb-3 t-sub leading-[1.6] text-text-3">
           등록 업체가 조회 상한에 도달해 일부가 잘렸을 수 있어요 — 유형별 수가
           실제보다 적게 보일 수 있습니다.
         </p>
@@ -151,7 +151,7 @@ export function PartnersClient({
 
       {shown.length === 0 ? (
         <section className="rise-in-2 card p-[var(--pad-card)]">
-          <div className="rounded-lg border border-line bg-surface px-4 py-10 text-center text-[13px] text-text-3">
+          <div className="rounded-lg border border-line bg-surface px-4 py-10 text-center t-body text-text-3">
 해당 유형의 협력업체 없음{" "}
             <Link
               href="/dev-deals/partners/new"

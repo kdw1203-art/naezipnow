@@ -176,7 +176,7 @@ export function WelcomeClient() {
       /* [968 · 31] 100vh → dvh: iOS 주소창이 보일 때 100vh 는 실제 화면보다 커서
          가운데 정렬·아래 버튼이 주소창 뒤로 밀렸다 */
       <main className="mx-auto flex min-h-dvh w-full max-w-[440px] items-center justify-center px-7">
-        <span className="text-[13px] text-text-3">준비 중…</span>
+        <span className="t-body text-text-3">준비 중…</span>
       </main>
     );
   }
@@ -196,7 +196,7 @@ export function WelcomeClient() {
         <Link
           href={skipHref}
           onClick={() => trackPlatformEvent({ eventName: "welcome_skip", source: "welcome", campaign: "funnel", metadata: { funnel: "signup", reentry: reentry === true } })}
-          className="inline-flex min-h-10 items-center px-2 text-[13px] text-text-3"
+          className="inline-flex min-h-10 items-center px-2 t-body text-text-3"
         >
           {reentry ? "변경 없이 돌아가기" : signupNext ? "건너뛰고 하던 화면으로" : "건너뛰고 노트 쓰기"}
         </Link>
@@ -204,10 +204,10 @@ export function WelcomeClient() {
 
       {/* [962] 첫 화면의 첫 줄은 브랜드 — 한지 띠 위 세리프 슬로건 */}
       <BrandSloganBand className="rise-in" />
-      <h1 className="rise-in text-[21px] font-bold leading-[1.35] text-ink">
+      <h1 className="rise-in t-title font-bold leading-[1.35] text-ink">
         {reentry ? "관심 지역 수정" : "관심 지역 선택"}
       </h1>
-      <p className="rise-in-1 -mt-2 text-[13px] text-text-2">
+      <p className="rise-in-1 -mt-2 t-body text-text-2">
         전국 시·군·구에서 1~{MAX_REGIONS}곳. 고른 동네의 실거래·소식이 먼저 보입니다.
       </p>
       <div className="rise-in-2">

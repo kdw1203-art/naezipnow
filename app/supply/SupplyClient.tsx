@@ -370,7 +370,8 @@ export function SupplyClient({
         {featured.length > 0 && (
           <>
             <div className="rise-in-2 flex items-baseline justify-between px-1">
-              <h2 className="text-xs font-bold text-primary">
+              {/* [1063] 섹션 제목은 램프 한 단(t-section) — 12px 굵은 라벨이 제목 노릇을 하던 줄들을 맞춘다 */}
+              <h2 className="t-section font-bold text-primary">
                 {thisQuarterIsNow ? "이번 분기 입주" : "다음 입주 분기"} · {thisQuarter?.items.length ?? 0}곳
               </h2>
               {thisQuarter && (
@@ -426,55 +427,59 @@ export function SupplyClient({
           </>
         )}
 
-        {/* 다가오는 입주 (예정) — 청약 센터 예정 카드 */}
+        {/* 다가오는 입주 (예정)
+            [1063 · 표·그래프] 테두리 카드 6장(장마다 3줄) → 한 판 안 머리카락 선 6줄.
+            왼쪽은 월 칩 + 단지 이름(굵게) + 사업유형, 오른쪽은 숫자(세대수) 한 칸.
+            입주월은 보조 줄에 "입주 YYYY.MM" 으로 그대로 남는다 — 한 줄도 지우지 않고 자리만 옮겼다.
+            폰 390px: 이름 열이 접히고(min-w-0 truncate) 숫자는 오른쪽에 붙어 있는다(shrink-0). */}
         {upcomingShown.length > 0 && (
-          <>
-            <h2 className="rise-in-3 px-1 pt-1.5 text-xs font-bold text-text-3">
-              다가오는 입주 (예정) · {upcomingItems.length.toLocaleString()}곳
-            </h2>
-            {upcomingShown.map((s, i) => (
-              <div
-                key={`next-${s.aptName ?? "미정"}-${i}`}
-                className="rise-in-3 card flex items-center justify-between gap-3 rounded-2xl px-[18px] py-3.5"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="shrink-0 rounded-md bg-bg chip-pad t-sub font-bold text-text-2">
-                    {monthLabel(s.moveInYm)}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 text-[13px] font-bold text-ink">
-                      <span className="truncate">{s.aptName ?? "미정"}</span>
-                      {s.bizType && (
-                        <span className="shrink-0 rounded bg-primary-soft px-[7px] py-0.5 t-caption font-bold text-primary">
-                          {s.bizType}
-                        </span>
-                      )}
-                    </div>
-                    <div className="truncate t-sub text-text-3">
-                      {s.households
-                        ? `${s.households.toLocaleString()}세대 · `
-                        : ""}
-                      {s.address ?? s.region} · 입주 {fmtYm(s.moveInYm)}
+          <section className="rise-in-3 card p-[var(--pad-card)]">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <h2 className="m-0 t-section font-bold text-ink">다가오는 입주 (예정)</h2>
+              <span className="t-caption text-text-3">{upcomingItems.length.toLocaleString()}곳</span>
+            </div>
+            <div data-tone="plain" className="mt-1.5 flex flex-col divide-y divide-line">
+              {upcomingShown.map((s, i) => (
+                <div
+                  key={`next-${s.aptName ?? "미정"}-${i}`}
+                  className="flex min-h-[40px] items-center justify-between gap-3 py-2"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="shrink-0 rounded-md bg-bg chip-pad t-caption font-bold text-text-2">
+                      {monthLabel(s.moveInYm)}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex min-w-0 items-center gap-1.5 t-body font-bold text-ink">
+                        <span className="truncate">{s.aptName ?? "미정"}</span>
+                        {s.bizType && (
+                          <span className="shrink-0 rounded bg-primary-soft px-[7px] py-0.5 t-caption font-bold text-primary">
+                            {s.bizType}
+                          </span>
+                        )}
+                      </div>
+                      <div className="truncate t-caption text-text-3">
+                        {s.address ?? s.region} · 입주 {fmtYm(s.moveInYm)}
+                      </div>
                     </div>
                   </div>
+                  <span className="shrink-0 whitespace-nowrap t-num t-sub text-primary">
+                    {s.households ? `${s.households.toLocaleString()}세대` : "—"}
+                  </span>
                 </div>
-                <span className="shrink-0 t-sub font-bold text-primary">
-                  입주 {fmtYm(s.moveInYm)}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
             {/* [1015] 설명문("…추려 보여드려요 — …확인하세요") → 숫자 한 줄(브리프 규칙 D) */}
-            <p className="rise-in-3 px-1 t-sub text-text-3">
+            <p className="mt-1.5 t-caption text-text-3">
               {upcomingMore > 0
                 ? `대표 ${upcomingShown.length}곳 · 나머지 ${upcomingMore.toLocaleString()}곳 아래 표`
                 : `대표 ${upcomingShown.length}곳 · 전체 목록 아래 표`}
             </p>
-          </>
+          </section>
         )}
 
         {/* 지난·전체 입주 예정 단지 — 곳수는 전량 기준(조용한 200 상한 정정),
             표는 200행에서 시작하고 "더 보기"로 펼친다 (상한을 가리지 않는다). */}
-        <h2 className="rise-in-4 px-1 pt-1.5 text-xs font-bold text-text-3">
+        <h2 className="rise-in-4 px-1 pt-1.5 t-section font-bold text-text-2">
           {list.length > 0
             ? `지난·전체 입주 예정 단지 · ${list.length.toLocaleString()}곳`
             : "지난·전체 입주 예정 단지"}

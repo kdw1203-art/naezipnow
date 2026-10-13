@@ -25,7 +25,7 @@ export function CopyLink({
         <button
           type="button"
           onClick={() => void copy(value)}
-          className="btn-primary press rounded-lg px-6 py-2.5 text-[13px]"
+          className="btn-primary press rounded-lg px-6 py-2.5 t-body"
         >
           {copied ? "복사됨" : "코드 복사"}
         </button>
@@ -41,7 +41,7 @@ export function CopyLink({
       <button
         type="button"
         onClick={() => void copy(value)}
-        className="btn-primary press shrink-0 rounded-lg px-4 py-3 text-[13px]"
+        className="btn-primary press shrink-0 rounded-lg px-4 py-3 t-body"
       >
         {copied ? "복사됨" : "링크 복사"}
       </button>

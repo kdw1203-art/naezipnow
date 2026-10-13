@@ -82,7 +82,7 @@ function Field({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           aria-describedby={hint ? hintId : undefined}
-          className="input w-full px-3 py-2.5 pr-12 text-right text-[13px] font-bold text-ink"
+          className="input w-full px-3 py-2.5 pr-12 text-right t-body font-bold text-ink"
         />
         <span className="pointer-events-none absolute right-3 t-sub font-semibold text-text-3">
           {unit}

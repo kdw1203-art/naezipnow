@@ -456,15 +456,15 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
         <div className="rise-in">
           <Logo size={34} />
         </div>
-        <h1 className="rise-in-1 text-[21px] font-bold leading-[1.35] text-ink">
+        <h1 className="rise-in-1 t-title font-bold leading-[1.35] text-ink">
           {ctx.line1}
         </h1>
-        {ctx.sub && <p className="rise-in-2 text-[13px] text-text-2">{ctx.sub}</p>}
+        {ctx.sub && <p className="rise-in-2 t-body text-text-2">{ctx.sub}</p>}
 
         {verifiedNotice && (
           <div
             role="status"
-            className="rise-in rounded-lg bg-primary-soft px-4 py-3 text-[13px] font-bold text-primary"
+            className="rise-in rounded-lg bg-primary-soft px-4 py-3 t-body font-bold text-primary"
           >
             이메일 인증이 완료됐어요. 이제 로그인해 주세요.
           </div>
@@ -472,7 +472,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
         {signupDoneNotice && !verifiedNotice && (
           <div
             role="status"
-            className="rise-in rounded-lg bg-primary-soft px-4 py-3 text-[13px] font-bold text-primary"
+            className="rise-in rounded-lg bg-primary-soft px-4 py-3 t-body font-bold text-primary"
           >
             가입이 완료됐어요. 방금 만든 계정으로 로그인해 주세요.
           </div>
@@ -496,7 +496,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
         {error && (
           <div
             role="alert"
-            className="rise-in rounded-lg bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger"
+            className="rise-in rounded-lg bg-danger-soft px-4 py-3 t-body font-bold text-danger"
           >
             {error}
             {failHint?.kind === "rate_limited" && (
@@ -505,7 +505,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
               </div>
             )}
             {failHint?.kind === "social" && (
-              <div className="mt-2 text-[12px] font-semibold text-text-2">
+              <div className="mt-2 t-sub font-semibold text-text-2">
                 {social.includes(failHint.provider)
                   ? `아래 "${SOCIAL_BUTTON[failHint.provider].label}" 버튼으로 로그인해 주세요.`
                   : `${SOCIAL_LABEL[failHint.provider]} 로그인이 지금 이 화면에 없어요. 고객센터로 알려 주시면 계정을 이어 드릴게요.`}
@@ -516,7 +516,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
                 href={signupHref}
                 /* [1039] 방금 친 이메일을 가입 화면이 이어받는다(다시 치지 않게) */
                 onClick={() => stashAuthEmail(email)}
-                className="mt-2 inline-block rounded-lg border border-danger/40 bg-surface px-3 py-1.5 text-[12px] font-bold text-danger no-underline"
+                className="mt-2 inline-block rounded-lg border border-danger/40 bg-surface px-3 py-1.5 t-sub font-bold text-danger no-underline"
               >
                 이 이메일로 가입하기 ›
               </Link>
@@ -526,7 +526,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
                 /* [1040] 이메일은 주소(쿼리)가 아니라 탭 저장소로 · 가려던 곳(callbackUrl)은 이어 간다 */
                 href={forgotHref}
                 onClick={() => stashAuthEmail(email)}
-                className="mt-2 inline-block rounded-lg border border-danger/40 bg-surface px-3 py-1.5 text-[12px] font-bold text-danger no-underline"
+                className="mt-2 inline-block rounded-lg border border-danger/40 bg-surface px-3 py-1.5 t-sub font-bold text-danger no-underline"
               >
                 비밀번호 찾기 ›
               </Link>
@@ -537,7 +537,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
                   type="button"
                   onClick={resendConfirmation}
                   disabled={resendState === "busy" || resendLeft > 0}
-                  className="w-fit rounded-lg border border-danger/40 bg-surface px-3 py-1.5 text-[12px] font-bold text-danger disabled:opacity-60"
+                  className="w-fit rounded-lg border border-danger/40 bg-surface px-3 py-1.5 t-sub font-bold text-danger disabled:opacity-60"
                 >
                   {resendState === "busy"
                     ? "보내는 중…"
@@ -550,7 +550,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
                 {resendNote && (
                   <span
                     role="status"
-                    className={`text-[12px] font-bold ${resendState === "sent" ? "text-ink" : "text-danger"}`}
+                    className={`t-sub font-bold ${resendState === "sent" ? "text-ink" : "text-danger"}`}
                   >
                     {resendNote}
                   </span>
@@ -586,7 +586,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
                 )}
               </button>
             ))}
-            <div className="flex items-center gap-3 text-[12px] text-text-3">
+            <div className="flex items-center gap-3 t-sub text-text-3">
               <span className="h-px flex-1 bg-bg" />
               또는 이메일로
               {lastMethod === "password" && <span className="font-bold text-ink">· 최근 사용</span>}
@@ -649,7 +649,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
               onClick={() => setShowPw((v) => !v)}
               aria-pressed={showPw}
               aria-label={showPw ? "비밀번호 숨기기" : "비밀번호 표시"}
-              className="absolute right-1 top-1/2 inline-flex h-10 min-w-10 -translate-y-1/2 items-center justify-center rounded-lg px-2 text-[12px] font-bold text-text-3"
+              className="absolute right-1 top-1/2 inline-flex h-10 min-w-10 -translate-y-1/2 items-center justify-center rounded-lg px-2 t-sub font-bold text-text-3"
             >
               {showPw ? "숨김" : "표시"}
             </button>
@@ -662,7 +662,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
             disabled={(busy !== null && busy !== "password") || waitLeft > 0}
             busyLabel="로그인 중"
             errorLabel="정보를 확인해 주세요"
-            className="rounded-lg p-3 text-center text-[13px] font-bold"
+            className="rounded-lg p-3 text-center t-body font-bold"
           >
             {waitLeft > 0 ? `${waitLabel(waitLeft)} 뒤 다시` : "이메일로 로그인"}
           </ActionButton>
@@ -678,7 +678,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
           </div>
         </form>
 
-        <p className="rise-in-4 text-center text-[12px] leading-[1.6] text-text-3">
+        <p className="rise-in-4 text-center t-sub leading-[1.6] text-text-3">
           로그인 후 {ACCOUNT_BENEFITS.map((b) => b.label).join(" · ")}
         </p>
 
@@ -692,7 +692,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
           </Link>
         </div>
         {/* [970 · A-13] 동의 문구에 약관·방침 실링크 — 동의 대상 문서를 열 수 없었다 */}
-        <p className="text-center text-[12px] leading-[1.6] text-text-3">
+        <p className="text-center t-sub leading-[1.6] text-text-3">
           로그인하면{" "}
           <Link href="/legal/terms" className="tap-line underline underline-offset-2">
             이용약관

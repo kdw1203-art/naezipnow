@@ -367,11 +367,11 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-[21px]">
             <Icon name="✉" size={24} />
           </span>
-          <h1 ref={doneTitleRef} tabIndex={-1} className="text-[19px] font-bold text-ink outline-none">
+          <h1 ref={doneTitleRef} tabIndex={-1} className="t-title font-bold text-ink outline-none">
             인증 메일을 보냈어요
           </h1>
           {/* [1039] 다음에 할 일 세 칸 — 문장 두 줄 대신 순서(메일 열기 → 링크 누르기 → 로그인) */}
-          <p className="break-all text-[13px] font-bold text-ink">{sentTo}</p>
+          <p className="break-all t-body font-bold text-ink">{sentTo}</p>
           {/* [1040] 번호 동그라미 3개 → 한 줄. 위의 가입 3단계 띠와 "1·2·3"이 두 벌이 되지 않게 */}
           <p className="t-caption text-text-3">메일함 열기 › 인증 링크 누르기 › 로그인</p>
           <p aria-live="polite" className="min-h-[18px] t-sub font-bold text-primary">
@@ -392,7 +392,7 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
             <Link
               href={loginAfter}
               onClick={() => stashAuthEmail(sentTo)}
-              className="w-full rounded-2xl border border-line bg-surface p-[15px] text-center text-[15px] font-bold text-ink no-underline"
+              className="w-full rounded-2xl border border-line bg-surface p-[15px] text-center t-section font-bold text-ink no-underline"
             >
               인증 뒤 로그인하러 가기
             </Link>
@@ -401,7 +401,7 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
             type="button"
             disabled={resendBusy || resendWait > 0}
             onClick={resendConfirm}
-            className="inline-flex min-h-10 items-center px-3 text-[13px] font-bold text-primary disabled:text-text-3"
+            className="inline-flex min-h-10 items-center px-3 t-body font-bold text-primary disabled:text-text-3"
           >
             {resendBusy ? "보내는 중…" : resendWait > 0 ? `인증 메일 다시 보내기 · ${resendWait}초` : "인증 메일 다시 보내기"}
           </button>
@@ -443,14 +443,14 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
         <Link href={loginHref} className="-ml-3 inline-flex h-10 w-10 items-center justify-center text-[15px] text-text-1" aria-label="뒤로">
           ‹
         </Link>
-        <Link href="/" className="-mr-2 inline-flex min-h-10 items-center px-2 text-[13px] text-text-3">
+        <Link href="/" className="-mr-2 inline-flex min-h-10 items-center px-2 t-body text-text-3">
           건너뛰기
         </Link>
       </div>
 
       {/* [1015 · 규칙 D] 마케팅 제목("30초면 시작할 수 있어요")·"만들어 드려요" 부제 → 명사 제목 + 사실 한 줄 */}
       {/* [1028 · 제안 5] 부제("가입 후 관심 지역·목표 선택 화면으로 이어집니다")를 지웠다 — 다음 화면 설명은 다음 화면이 한다 */}
-      <h1 className="rise-in text-[21px] font-bold leading-[1.35] text-ink">
+      <h1 className="rise-in t-title font-bold leading-[1.35] text-ink">
         회원가입
       </h1>
       {/* [1040] 가입 3단계 — 계정 → 메일 인증 → 관심 지역. 머리의 채움 막대(칸을 채운 비율)를 대신한다:
@@ -476,7 +476,7 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
             </button>
           ))}
           {/* [1039] 소셜 가입에도 동의 대상을 밝힌다 — 로그인 화면과 같은 한 줄(예전: 체크 없이 통과 · 문구 없음) */}
-          <p className="text-center text-[12px] leading-[1.6] text-text-3">
+          <p className="text-center t-sub leading-[1.6] text-text-3">
             소셜 가입 ={" "}
             <Link href="/legal/terms" target="_blank" rel="noreferrer" className="tap-line underline underline-offset-2">
               이용약관
@@ -487,7 +487,7 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
             </Link>{" "}
             동의 · 만 14세 이상
           </p>
-          <div className="flex items-center gap-3 text-[12px] text-text-3">
+          <div className="flex items-center gap-3 t-sub text-text-3">
             <span className="h-px flex-1 bg-bg" />
             또는 이메일로 가입
             <span className="h-px flex-1 bg-bg" />
@@ -592,7 +592,7 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
             onClick={() => setShowPw((v) => !v)}
             aria-pressed={showPw}
             aria-label={showPw ? "비밀번호 숨기기" : "비밀번호 표시"}
-            className="absolute right-1 top-1/2 inline-flex h-10 min-w-10 -translate-y-1/2 items-center justify-center rounded-lg px-2 text-[12px] font-bold text-text-3"
+            className="absolute right-1 top-1/2 inline-flex h-10 min-w-10 -translate-y-1/2 items-center justify-center rounded-lg px-2 t-sub font-bold text-text-3"
           >
             {showPw ? "숨김" : "표시"}
           </button>
@@ -702,20 +702,20 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
 
         {/* [1039] 이미 가입된 이메일 — 다음 행동 두 개를 바로 잇는다(예전: 서로 어긋나는 안내 한 문장 · 링크 없음) */}
         {dupEmail && (
-          <div role="alert" className="rounded-lg bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger">
+          <div role="alert" className="rounded-lg bg-danger-soft px-4 py-3 t-body font-bold text-danger">
             이미 가입된 이메일
             <div className="mt-2 flex flex-wrap gap-2">
               <Link
                 href={loginHref}
                 onClick={() => stashAuthEmail(dupEmail)}
-                className="inline-flex min-h-10 items-center rounded-lg border border-danger/40 bg-surface px-3 text-[12px] font-bold text-danger no-underline"
+                className="inline-flex min-h-10 items-center rounded-lg border border-danger/40 bg-surface px-3 t-sub font-bold text-danger no-underline"
               >
                 이 이메일로 로그인 ›
               </Link>
               <Link
                 href={loginHref.replace(/^\/login/, "/forgot-password")}
                 onClick={() => stashAuthEmail(dupEmail)}
-                className="inline-flex min-h-10 items-center rounded-lg border border-danger/40 bg-surface px-3 text-[12px] font-bold text-danger no-underline"
+                className="inline-flex min-h-10 items-center rounded-lg border border-danger/40 bg-surface px-3 t-sub font-bold text-danger no-underline"
               >
                 비밀번호 찾기 ›
               </Link>
@@ -725,7 +725,7 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
         {error && (
           <div
             role="alert"
-            className="rounded-lg bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger"
+            className="rounded-lg bg-danger-soft px-4 py-3 t-body font-bold text-danger"
           >
             {error}
           </div>

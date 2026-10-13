@@ -24,6 +24,8 @@ import { HScroll } from "@/app/components/HScroll";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AIPanel } from "@/app/components/AIPanel";
 import { Explain } from "@/app/components/explain/Explain";
+import { MiniBar } from "@/app/components/compact/MiniBar";
+import { Fineprint } from "@/app/components/Fineprint";
 import type { AuctionApiItem } from "@/app/api/auctions/route";
 import { sigunguDistribution } from "@/lib/onbid/region-summary";
 
@@ -185,6 +187,65 @@ function onbidToCard(a: AuctionApiItem, now: Date): AuctionCardData {
 
 /* [개선 #23] SourceTabs·CourtAuctionPlaceholder 제거 — 경매 탭 폐지(위 주석). */
 
+/* [1063 · 표·그래프] 물건 한 줄 — 예전에는 묶음마다 테두리 카드가 4~6장 쌓였다(장마다 3줄 + 오른쪽 버튼).
+   이제 한 판 안 머리카락 선 줄이고, 줄 전체가 온비드 검색 링크다(폰 탭 면 40px).
+   왼쪽: D-day · 물건 이름(굵게) · 용도 / 보조 줄: 소재지 · 감정가 · 감정가 대비 % · 입찰마감.
+   오른쪽: 최저입찰가 숫자. 카드에 있던 값은 하나도 빼지 않았다 — 자리만 한 줄로 모았다. */
+function AuctionLine({ c }: { c: AuctionCardData }) {
+  return (
+    <a
+      href={c.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`${c.name} 온비드 검색`}
+      className="flex min-h-[40px] items-center justify-between gap-3 py-2 no-underline"
+    >
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="flex min-w-0 items-center gap-1.5">
+          {c.dday && (
+            /* [970 · B-35] 좁은 카드에서 "D-17"이 두 줄로 꺾였다 — 줄바꿈·수축 금지 */
+            <span
+              className={`shrink-0 whitespace-nowrap rounded-md chip-pad t-caption font-bold text-white ${
+                c.dday.urgent ? "bg-danger" : "bg-primary"
+              }`}
+            >
+              {c.dday.label}
+            </span>
+          )}
+          <span className="truncate t-body font-bold text-ink">{c.name}</span>
+          {c.usage && (
+            <span className="shrink-0 rounded bg-primary-soft px-[7px] py-0.5 t-caption font-bold text-primary">
+              {c.usage}
+            </span>
+          )}
+        </span>
+        {/* 보조 줄은 말줄임하지 않는다 — 390px 에서 두 줄로 접히더라도 감정가·%·마감일이 잘리지 않아야 한다 */}
+        <span className="t-caption text-text-3">
+          {c.region || "—"} · 감정가 {c.appraisalValue}
+          {/* [1038 · 19] 감정가 대비 최저입찰가 % — 낮을수록 유찰이 쌓인 물건(70% 미만 빨강 · 90% 미만 노랑) */}
+          {c.bidRatio != null && (
+            <>
+              {" · 감정가 대비 "}
+              <b
+                className={`t-num ${
+                  c.bidRatio < 70 ? "text-danger" : c.bidRatio < 90 ? "text-warning" : "text-text-2"
+                }`}
+              >
+                {c.bidRatio}%
+              </b>
+            </>
+          )}
+          {` · 입찰마감 ${c.dateValue}`}
+        </span>
+      </span>
+      <span className="shrink-0 whitespace-nowrap text-right">
+        <b className="block t-num t-sub text-primary">{c.minBidValue}</b>
+        <span className="block t-caption font-medium text-text-3">최저입찰가 ↗</span>
+      </span>
+    </a>
+  );
+}
+
 /* [1030 · G6] 시도 칩 — 값은 온비드 소재지 시도 원문(DB sido 열과 같은 글자). 2026-10-04 진행 물건이 있는 시도 7곳. */
 const AUCTION_SIDO_CHIPS: readonly { value: string; label: string }[] = [
   { value: "서울특별시", label: "서울" },
@@ -317,15 +378,25 @@ export function AuctionsClient({
     const pastCards = pastItems.map((a) => onbidToCard(a, now));
     const dist = usageDistribution(activeItems);
     const guDist = sigunguDistribution(activeItems);
-    const max = Math.max(1, ...dist.map((d) => d.count));
     const withDday = cards.filter((c) => c.dday !== null);
     const imminent = withDday.filter((c) => c.dday?.urgent).slice(0, 4);
     const ongoing = withDday.filter((c) => !c.dday?.urgent).slice(0, 6);
+    /* [1063 · 표·그래프] 머리 숫자 — 지금 보이는 목록에서 **직접 센** 값만. 임박 건수는 묶음에 그리는 4장이 아니라 전체이고,
+       마감 범위는 가진 입찰마감일의 처음·끝이다(없는 날짜를 만들지 않는다). */
+    const urgentCount = withDday.filter((c) => c.dday?.urgent).length;
+    const endDigits = cards
+      .map((c) => (c.targetDate ?? "").replace(/\D/g, ""))
+      .filter((d) => d.length >= 8)
+      .sort();
+    const endRange =
+      endDigits.length > 0
+        ? `${fmtDt(endDigits[0])}~${fmtDt(endDigits[endDigits.length - 1])}`
+        : null;
     const { monthLabel, cells } = buildCalendar(cards.map((c) => c.targetDate), now);
-    return { cards, pastCards, dist, guDist, max, imminent, ongoing, monthLabel, cells };
+    return { cards, pastCards, dist, guDist, imminent, ongoing, urgentCount, endRange, monthLabel, cells };
   }, [items, nowMs]);
 
-  const { cards, pastCards, dist, guDist, max, imminent, ongoing, monthLabel, cells } = derived;
+  const { cards, pastCards, dist, guDist, imminent, ongoing, urgentCount, endRange, monthLabel, cells } = derived;
   /* [1028] 요약 칸(지역별·용도별)의 기준 — 받은 목록이 전체(또는 조건 전체)보다 적을 때만 적는다 */
   const listTotal = f.usage || f.gu || f.sido ? matchTotal : activeTotal;
   const basisNote = listTotal != null && cards.length > 0 && cards.length < listTotal ? `표시 중 ${cards.length.toLocaleString()}건 기준` : null;
@@ -396,44 +467,25 @@ export function AuctionsClient({
           ))}
         </div>
         <div className="flex-1" />
-        <div className="flex gap-1.5 text-xs">
+        {/* [1063] 이 화면의 주 액션 하나 — 채움 파랑은 "저장 검색으로 알림 받기"뿐이고(필터를 걸어 둔 채 알림),
+            AI 요약 칸의 같은 링크는 패널 기본 꼴(cta)로 내렸다. 폰 탭 면 40px. */}
+        <div className="flex flex-wrap items-center gap-1.5">
           <a
             href="https://www.onbid.co.kr"
             target="_blank"
             rel="noopener noreferrer"
-            className="press glass rounded-full px-3.5 py-2 font-bold text-primary no-underline"
+            className="press glass inline-flex min-h-[40px] items-center rounded-full px-3.5 t-sub font-bold text-primary no-underline md:min-h-9"
           >
             온비드 바로가기 ↗
           </a>
           <Link
             href="/my/watchlist?tab=searches"
-            className="press rounded-full bg-primary-soft px-3.5 py-2 font-bold text-primary no-underline"
+            className="btn-primary press inline-flex min-h-[40px] items-center rounded-full px-4 t-sub no-underline md:min-h-9"
           >
             저장 검색으로 알림 받기
           </Link>
         </div>
       </div>
-
-      {/* 요약 한 줄 — 사실만(숫자·출처). [1015] 아래에 있던 안내 띠("…기준이며 매일 자동 갱신됩니다. …반드시
-          확인하세요")는 걷고 ⓘ 하나로 접었다(브리프 규칙 B). 갱신 주기·원문 우선 원칙은 시트 안에 그대로. */}
-      <p className="rise-in mb-4 flex flex-wrap items-center gap-x-1 t-body text-text-2 max-md:mb-3">
-        <span>
-          온비드 입찰 중·예정 물건{" "}
-          <strong className="text-ink">{activeTotal.toLocaleString()}건</strong> · 한국자산관리공사 공공데이터
-        </span>
-        <Explain
-          title="공매 물건 자료"
-          body={[
-            "감정가·최저입찰가·입찰일정은 한국자산관리공사 온비드 공공데이터 기준이고 매일 갱신됩니다.",
-            "갱신 사이에 변경·취소될 수 있어 실제 입찰·명도 조건은 온비드(onbid.co.kr) 공고 원문이 우선합니다.",
-          ]}
-          how={[
-            "진행·예정 = 입찰 마감일이 오늘 이후인 물건. 마감 임박 = D-3 이내.",
-            "용도 분류(아파트·오피스텔·빌라·단독·토지·상가)는 온비드 용도 문자열을 그대로 묶은 것입니다.",
-          ]}
-          source="한국자산관리공사 온비드(공공데이터포털) · 매일 갱신"
-        />
-      </p>
 
       {fetchFailed ? (
         /* 필터 조회 실패 — "0건"이 아니라 실패라고 말한다 */
@@ -458,156 +510,95 @@ export function AuctionsClient({
       ) : (
         <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex flex-col gap-3">
-            {/* a) 입찰 캘린더 */}
-            <div className="rise-in-1 card flex flex-col gap-2.5 rounded-2xl px-5 py-4 max-md:px-3.5 max-md:py-3">
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-[13px] font-bold text-ink">
-                  {monthLabel} 입찰 캘린더
-                </span>
-                <div className="flex gap-2.5 t-sub">
-                  <span className="flex items-center gap-1 text-text-2">
-                    <span className="h-2 w-2 rounded-sm bg-primary" />
-                    입찰마감일
-                  </span>
-                </div>
-              </div>
-              <div className="grid grid-cols-7 gap-1 text-center t-caption text-text-3">
-                {weekdays.map((d) => (
-                  <span key={d}>{d}</span>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 gap-1">
-                {cells.map((c, i) => (
+            {/* a) [1063 · 표·그래프] 숫자 넉 칸 + 용도 막대 + 접기 한 판.
+                예전에 이 자리는 42칸 달력이었고, 건수 문장은 그 위 한 줄, 용도 막대는 오른쪽 레일 맨 아래였다 —
+                폰 첫 화면이 날짜 격자로 덮여 "지금 몇 건이 어떤 용도로 떠 있나"를 스크롤해야 알았다.
+                달력은 표 아래로 내렸고(날짜 표시는 그대로), 숫자는 전부 받은 목록에서 센 값이다. */}
+            <section className="rise-in-1 card p-[var(--pad-card)]" aria-label="공매 물건 요약">
+              <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+                {[
+                  { k: "입찰 중·예정", v: `${activeTotal.toLocaleString()}건` },
+                  { k: "표시 중", v: `${cards.length.toLocaleString()}건` },
+                  { k: "마감 임박 · D-3 이내", v: `${urgentCount.toLocaleString()}건` },
+                  ...(endRange ? [{ k: "입찰마감", v: endRange }] : []),
+                ].map((f) => (
                   <div
-                    key={i}
-                    className={`h-11 rounded-lg px-1.5 py-1 t-caption ${
-                      c.mark
-                        ? "border border-line bg-primary-soft text-text-1"
-                        : c.muted
-                          /* [975] on-dark-* 는 어두운 면 위 글자용이다. 밝은 칸에
-                             얹혀서 1.05:1 이었다. 흐린 날은 색 단계로 낮춘다. */
-                          ? "bg-bg text-text-3"
-                          : "bg-bg text-text-2"
-                    }`}
+                    key={f.k}
+                    className="flex min-w-0 flex-col-reverse gap-0.5 sm:border-l sm:border-line sm:pl-3 sm:first:border-l-0 sm:first:pl-0"
                   >
-                    {c.day}
-                    {c.mark && <div className="mt-0.5 h-1.5 rounded-sm bg-primary" />}
+                    <dt className="t-caption text-text-3">{f.k}</dt>
+                    <dd className="m-0 t-num t-section text-ink">{f.v}</dd>
                   </div>
                 ))}
-              </div>
-            </div>
+              </dl>
 
-            {/* b) 진행 중 물건 */}
-            {ongoing.length > 0 && (
-              <>
-                {/* [1028] 괄호 건수를 뺐다 — 이 묶음에 보이는 카드 수(최대 6)라 전체 건수(위 "입찰 중·예정 N건")와 다르게 읽혔다 */}
-                <div className="rise-in-2 px-1 text-xs font-bold text-primary">
-                  진행 중 물건
+              {/* 용도별 요약 — 한 그래프에 한 단위(건)만. 값은 지금 받은 목록에서 센 수다 */}
+              <div className="mt-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+                  <h2 className="m-0 t-section font-bold text-ink">용도별 요약</h2>
+                  {/* [1028] 이 건수는 지금 받은 목록(마감 임박순 최대 200건)에서 센 값이다 — 전체 건수로 읽히지 않게 기준을 적는다 */}
+                  {basisNote && <span className="t-caption font-medium tabular-nums text-text-3">{basisNote}</span>}
                 </div>
-                {ongoing.map((c) => (
-                  <div
-                    key={c.key}
-                    className="rise-in-2 flex flex-col gap-3 rounded-2xl border-[1.5px] border-primary bg-surface px-[18px] py-3.5 md:flex-row md:items-center md:justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      {c.dday && (
-                        <span
-                          /* [970 · B-35] 좁은 카드에서 "D-17"이 두 줄로 꺾였다 — 줄바꿈·수축 금지 */
-                          className={`shrink-0 whitespace-nowrap rounded-md chip-pad text-[12px] font-bold text-white ${
-                            c.dday.urgent ? "bg-danger" : "bg-primary"
-                          }`}
-                        >
-                          {c.dday.label}
-                        </span>
-                      )}
-                      <div>
-                        <div className="flex flex-wrap items-center gap-1.5 text-[13px] font-bold text-ink">
-                          {c.name}
-                          {c.usage && (
-                            <span className="rounded bg-primary-soft px-[7px] py-0.5 t-caption font-bold text-primary">
-                              {c.usage}
-                            </span>
-                          )}
-                        </div>
-                        <div className="t-sub text-text-3">{c.region || "—"}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3.5">
-                      {/* [1038 · 19] 감정가 대비 최저입찰가 % 막대 — 짧을수록 유찰이 쌓인 물건 */}
-                      {c.bidRatio != null && (
-                        <div className="hidden w-32 flex-col gap-1 md:flex" aria-label={`감정가 대비 최저입찰가 ${c.bidRatio}%`}>
-                          <div className="flex items-baseline justify-between t-caption text-text-3">
-                            <span>감정가 대비</span>
-                            <b className={`t-num ${c.bidRatio < 70 ? "text-danger" : c.bidRatio < 90 ? "text-warning" : "text-ink"}`}>{c.bidRatio}%</b>
-                          </div>
-                          <div className="relative h-2 rounded bg-bg">
-                            <div className={`absolute left-0 h-2 rounded ${c.bidRatio < 70 ? "bg-danger" : c.bidRatio < 90 ? "bg-warning" : "bg-primary"}`} style={{ width: `${Math.min(100, c.bidRatio)}%` }} />
-                          </div>
-                        </div>
-                      )}
-                      <div className="text-right">
-                        <div className="t-sub text-text-3">감정가</div>
-                        <div className="t-body font-bold text-ink">{c.appraisalValue}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="t-sub text-text-3">최저입찰가</div>
-                        <div className="t-body font-bold text-primary">{c.minBidValue}</div>
-                      </div>
-                      {/* [1015] 행마다 채움 파랑이던 버튼을 outline 으로 — 채움 파랑은 화면당 1개(브리프 규칙 J) */}
-                      <a
-                        href={c.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn-outline rounded-lg px-4 py-[9px] text-xs no-underline"
-                      >
-                        온비드 검색 ↗
-                      </a>
-                    </div>
-                  </div>
-                ))}
-              </>
+                {dist.length > 0 ? (
+                  <MiniBar
+                    className="mt-2"
+                    rows={dist.map((d) => ({ label: d.label, value: d.count }))}
+                    unit="건"
+                    label="용도별 물건 수"
+                  />
+                ) : (
+                  <p className="mt-2 t-caption text-text-3">표시할 용도 분포 없음</p>
+                )}
+              </div>
+
+              {/* 요약 한 줄 — 사실만(숫자·출처). [1015] 아래에 있던 안내 띠("…기준이며 매일 자동 갱신됩니다. …반드시
+                  확인하세요")는 걷고 ⓘ 하나로 접었다(브리프 규칙 B). 갱신 주기·원문 우선 원칙은 시트 안에 그대로.
+                  [1063] 그 한 줄도 접기 뒤로 — 같은 건수를 위 숫자 칸이 먼저 말한다(문장은 그대로 둔다). */}
+              <Fineprint className="mt-3" label="기준 · 출처">
+                <span className="flex flex-wrap items-center gap-x-1">
+                  <span>
+                    온비드 입찰 중·예정 물건{" "}
+                    <strong className="text-ink">{activeTotal.toLocaleString()}건</strong> · 한국자산관리공사 공공데이터
+                  </span>
+                  <Explain
+                    title="공매 물건 자료"
+                    body={[
+                      "감정가·최저입찰가·입찰일정은 한국자산관리공사 온비드 공공데이터 기준이고 매일 갱신됩니다.",
+                      "갱신 사이에 변경·취소될 수 있어 실제 입찰·명도 조건은 온비드(onbid.co.kr) 공고 원문이 우선합니다.",
+                    ]}
+                    how={[
+                      "진행·예정 = 입찰 마감일이 오늘 이후인 물건. 마감 임박 = D-3 이내.",
+                      "용도 분류(아파트·오피스텔·빌라·단독·토지·상가)는 온비드 용도 문자열을 그대로 묶은 것입니다.",
+                    ]}
+                    source="한국자산관리공사 온비드(공공데이터포털) · 매일 갱신"
+                  />
+                </span>
+              </Fineprint>
+            </section>
+
+            {/* b) 진행 중 물건 — [1063] 테두리 카드 6장 → 한 판 안 머리카락 선 6줄(줄 전체가 온비드 검색 링크) */}
+            {ongoing.length > 0 && (
+              <section className="rise-in-2 card p-[var(--pad-card)]">
+                {/* [1028] 괄호 건수를 뺐다 — 이 묶음에 보이는 카드 수(최대 6)라 전체 건수(위 "입찰 중·예정 N건")와 다르게 읽혔다 */}
+                <h2 className="m-0 t-section font-bold text-primary">진행 중 물건</h2>
+                <div data-tone="plain" className="mt-1.5 flex flex-col divide-y divide-line">
+                  {ongoing.map((c) => (
+                    <AuctionLine key={c.key} c={c} />
+                  ))}
+                </div>
+              </section>
             )}
 
             {/* c) 마감 임박 / 예정 */}
             {imminent.length > 0 && (
-              <>
-                <div className="rise-in-3 px-1 pt-1.5 text-xs font-bold text-danger">
-                  마감 임박 · D-3 이내
+              <section className="rise-in-3 card p-[var(--pad-card)]">
+                <h2 className="m-0 t-section font-bold text-danger">마감 임박 · D-3 이내</h2>
+                <div data-tone="plain" className="mt-1.5 flex flex-col divide-y divide-line">
+                  {imminent.map((c) => (
+                    <AuctionLine key={c.key} c={c} />
+                  ))}
                 </div>
-                {imminent.map((c) => (
-                  <div
-                    key={c.key}
-                    className="rise-in-3 card flex items-center justify-between rounded-2xl px-[18px] py-3.5"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="rounded-md bg-danger-fill chip-pad t-sub font-bold text-white">
-                        {c.dday?.label}
-                      </span>
-                      <div>
-                        <div className="flex flex-wrap items-center gap-1.5 text-[13px] font-bold text-ink">
-                          {c.name}
-                          {c.usage && (
-                            <span className="rounded bg-primary-soft px-[7px] py-0.5 t-caption font-bold text-primary">
-                              {c.usage}
-                            </span>
-                          )}
-                        </div>
-                        <div className="t-sub text-text-3">
-                          {c.region || "—"} · 최저입찰가 {c.minBidValue}
-                        </div>
-                      </div>
-                    </div>
-                    <a
-                      href={c.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-lg bg-primary-soft px-4 py-[9px] text-xs font-bold text-primary no-underline"
-                    >
-                      온비드 검색 ›
-                    </a>
-                  </div>
-                ))}
-              </>
+              </section>
             )}
 
             {/* d) 진행·예정 물건 표 */}
@@ -691,6 +682,42 @@ export function AuctionsClient({
               </HScroll></div>
             )}
 
+            {/* d-2) 입찰 캘린더 — [1063] 첫 화면의 42칸 격자를 표 아래로 내렸다(값·표시 규칙은 그대로).
+                이 달에 마감이 걸린 날을 한 장으로 보는 자리이고, 날짜 자체는 위 표의 "입찰마감" 칸이 먼저 말한다. */}
+            <details className="rise-in-4 card rounded-2xl px-[18px] py-3">
+              <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-x-2 t-sub font-bold text-text-2">
+                <span>{monthLabel} 입찰 캘린더</span>
+                <span className="flex items-center gap-1 t-caption font-medium text-text-3">
+                  <span className="h-2 w-2 rounded-sm bg-primary" />
+                  입찰마감일
+                </span>
+              </summary>
+              <div className="mt-2 grid grid-cols-7 gap-1 text-center t-caption text-text-3">
+                {weekdays.map((d) => (
+                  <span key={d}>{d}</span>
+                ))}
+              </div>
+              <div className="mt-1 grid grid-cols-7 gap-1">
+                {cells.map((c, i) => (
+                  <div
+                    key={i}
+                    className={`h-11 rounded-lg px-1.5 py-1 t-caption ${
+                      c.mark
+                        ? "border border-line bg-primary-soft text-text-1"
+                        : c.muted
+                          /* [975] on-dark-* 는 어두운 면 위 글자용이다. 밝은 칸에
+                             얹혀서 1.05:1 이었다. 흐린 날은 색 단계로 낮춘다. */
+                          ? "bg-bg text-text-3"
+                          : "bg-bg text-text-2"
+                    }`}
+                  >
+                    {c.day}
+                    {c.mark && <div className="mt-0.5 h-1.5 rounded-sm bg-primary" />}
+                  </div>
+                ))}
+              </div>
+            </details>
+
             {/* e) 지난 공고 */}
             {pastCards.length > 0 && (
               <details className="rise-in-4 card rounded-2xl px-[18px] py-3">
@@ -737,17 +764,25 @@ export function AuctionsClient({
               </details>
             )}
 
-            <p className="rise-in-4 mt-1 px-1 t-sub text-text-3">
+            {/* [1063] 출처·면책 문장은 한 자도 바꾸지 않고 접기 뒤로 */}
+            <Fineprint className="rise-in-4 mt-1 px-1" label="출처 · 면책">
               출처: 한국자산관리공사 온비드(공공데이터포털) · 참고용 정보이며 권리분석·명도·정확한
               입찰조건은 온비드 공고 원문과 전문가 확인이 필요합니다.
-            </p>
+            </Fineprint>
           </div>
 
           {/* 우측 사이드 */}
           <aside className="flex flex-col gap-3.5 max-md:gap-3">
             <div className="rise-in-2">
               {/* [1028] 건수·최다 용도를 센 값이다(AI 결과 아님) — "AI" 배지와 "인사이트"를 뗐다 */}
-              <AIPanel title="공매 요약" ai={false} className="rounded-3xl">
+              {/* [1063] 채움 파랑은 화면당 하나 — 같은 링크를 위 머리 줄이 채움 파랑으로 들고 있으므로
+                  여기서는 패널 기본 액션 꼴(cta)로 둔다(링크·문구는 그대로). */}
+              <AIPanel
+                title="공매 요약"
+                ai={false}
+                className="rounded-3xl"
+                cta={{ href: "/my/watchlist?tab=searches", label: "저장 검색으로 알림 받기" }}
+              >
                 <div className="mb-1.5 flex justify-between rounded-lg bg-[rgba(255,255,255,.07)] px-3 py-2 text-xs">
                   <span className="text-ai-muted">입찰 중·예정</span>
                   <span className="font-bold text-white">
@@ -768,13 +803,6 @@ export function AuctionsClient({
                 ) : (
                   <>현재 조건에 표시할 물건 없음</>
                 )}
-                <Link
-                  href="/my/watchlist?tab=searches"
-                  style={{ color: "#fff" }}
-                  className="btn-primary mt-2.5 block rounded-lg p-[11px] text-center text-xs no-underline"
-                >
-                  저장 검색으로 알림 받기
-                </Link>
               </AIPanel>
             </div>
 
@@ -825,39 +853,8 @@ export function AuctionsClient({
               )}
             </div>
 
-            {/* 용도별 요약 */}
-            <div className="rise-in-3 card flex flex-col gap-2 p-[18px]">
-              <div className="flex items-center gap-1.5 t-body font-bold text-ink">
-                용도별 요약
-                {basisNote && <span className="t-caption font-medium text-text-3 tabular-nums">{basisNote}</span>}
-              </div>
-              {dist.length > 0 ? (
-                dist.map((d) => (
-                  <div key={d.label} className="flex items-center gap-2">
-                    <span className="w-16 shrink-0 t-sub text-text-1">{d.label}</span>
-                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-primary-soft">
-                      <span
-                        className="block h-full rounded-full bg-primary"
-                        style={{ width: `${Math.round((d.count / max) * 100)}%` }}
-                      />
-                    </span>
-                    <span className="w-7 shrink-0 text-right t-sub font-bold text-ink">
-                      {d.count}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="t-caption text-text-3">표시할 용도 분포 없음</p>
-              )}
-              <a
-                href="https://www.onbid.co.kr"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-0.5 inline-flex min-h-[24px] items-center self-start t-sub font-bold text-primary no-underline"
-              >
-                온비드 바로가기 ↗
-              </a>
-            </div>
+            {/* [1063] 용도별 요약은 본문 머리 판으로 올렸다(공용 비율 막대 MiniBar) — 레일 맨 아래에 있어
+                폰에서는 목록을 다 지나야 보이던 분포다. 손으로 그린 막대와 값은 같고, 단위도 "건" 하나뿐이다. */}
 
             {/* 광고 — 서버 조각 */}
             <div className="rise-in-4">{adSlot}</div>

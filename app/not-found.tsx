@@ -49,7 +49,7 @@ export default function NotFound() {
         <circle className="empty-dot-breathe" cx="60" cy="86" r="8.5" fill="var(--brand-dot)" style={{ transformOrigin: "60px 86px" }} />
       </svg>
       <div className="rise-in t-caption font-bold tracking-[0.2em] text-text-3">404</div>
-      <h1 className="rise-in-1 text-[15px] font-bold text-ink">
+      <h1 className="rise-in-1 t-section font-bold text-ink">
         이 집은 이사 갔어요<span className="text-brand-red">.</span>
       </h1>
       {/* [1015 · 규칙 D] 두 문장 → 사실 한 줄(검색창이 곧 다음 행동이다) */}
@@ -75,7 +75,7 @@ export default function NotFound() {
         />
         <button
           type="submit"
-          className="btn-primary btn-cta shrink-0 rounded-xl px-3.5 py-2 text-[13px]"
+          className="btn-primary btn-cta shrink-0 rounded-xl px-3.5 py-2 t-body"
         >
           검색
         </button>
@@ -85,13 +85,13 @@ export default function NotFound() {
       <div className="rise-in-3 flex gap-2">
         <Link
           href="/"
-          className="inline-flex min-h-10 items-center rounded-lg border border-line bg-surface px-[22px] py-3 text-[13px] font-bold text-text-1 no-underline"
+          className="inline-flex min-h-10 items-center rounded-lg border border-line bg-surface px-[22px] py-3 t-body font-bold text-text-1 no-underline"
         >
           홈으로
         </Link>
         <Link
           href="/map"
-          className="inline-flex min-h-10 items-center rounded-lg border border-line bg-surface px-[22px] py-3 text-[13px] font-bold text-text-1 no-underline"
+          className="inline-flex min-h-10 items-center rounded-lg border border-line bg-surface px-[22px] py-3 t-body font-bold text-text-1 no-underline"
         >
           지도 열기
         </Link>
@@ -103,7 +103,7 @@ export default function NotFound() {
           <Link
             key={p.href}
             href={p.href}
-            className={`inline-flex min-h-10 items-center rounded-full px-[13px] text-[12px] font-bold no-underline ${
+            className={`inline-flex min-h-10 items-center rounded-full px-[13px] t-sub font-bold no-underline ${
               "primary" in p && p.primary ? "bg-primary-soft text-primary" : "bg-bg text-text-1"
             }`}
           >

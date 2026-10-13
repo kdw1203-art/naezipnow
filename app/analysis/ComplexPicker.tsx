@@ -413,7 +413,7 @@ export function ComplexPicker({
       {/* [970 · B-27] label="" 이면 줄 자체를 안 그린다 — 호출측이 이미 제목을 붙인 자리
           (워크벤치 "① 단지 선택")에서 라벨이 두 번 보였다. 접근성 이름은 아래 폴백. */}
       {label && (
-        <span className={`text-[12px] font-bold ${labelClassName}`}>{label}</span>
+        <span className={`t-sub font-bold ${labelClassName}`}>{label}</span>
       )}
       {/* 검색 입력 + 지도로 찾기 — 이름을 모르면 지도에서 눌러 고른다.
           지도(/map)는 단지 선택 시 '/analysis?complexId=' 로 되돌려보내고,
@@ -447,7 +447,7 @@ export function ComplexPicker({
           <button
             type="button"
             onClick={onMapClick}
-            className="press flex shrink-0 items-center gap-1 rounded-lg border border-line bg-surface px-2.5 text-[12px] font-bold text-primary hover:border-primary"
+            className="press flex shrink-0 items-center gap-1 rounded-lg border border-line bg-surface px-2.5 t-sub font-bold text-primary hover:border-primary"
             aria-label="지도에서 단지 찾기"
           >
             <Icon name="map" size={14} /> 지도로 찾기
@@ -455,7 +455,7 @@ export function ComplexPicker({
         ) : (
           <Link
             href="/map"
-            className="flex shrink-0 items-center gap-1 rounded-lg border border-line bg-surface px-2.5 text-[12px] font-bold text-primary no-underline hover:border-primary"
+            className="flex shrink-0 items-center gap-1 rounded-lg border border-line bg-surface px-2.5 t-sub font-bold text-primary no-underline hover:border-primary"
             aria-label="지도에서 단지 찾기"
           >
             <Icon name="map" size={14} /> 지도로 찾기

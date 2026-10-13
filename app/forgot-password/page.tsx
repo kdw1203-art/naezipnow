@@ -121,17 +121,17 @@ export default function ForgotPasswordPage() {
         <div className="rise-in">
           <Logo size={34} />
         </div>
-        <h1 className="rise-in-1 text-[21px] font-bold leading-[1.35] text-ink">
+        <h1 className="rise-in-1 t-title font-bold leading-[1.35] text-ink">
           비밀번호 찾기
         </h1>
-        <p className="rise-in-2 text-[13px] text-text-2">
+        <p className="rise-in-2 t-body text-text-2">
           {sent ? "재설정 링크 보냄 · 60분 유효" : "가입 이메일 · 재설정 링크 발송"}
         </p>
 
         {error && (
           <div
             role="alert"
-            className="rise-in rounded-lg bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger"
+            className="rise-in rounded-lg bg-danger-soft px-4 py-3 t-body font-bold text-danger"
           >
             {error}
           </div>
@@ -152,7 +152,7 @@ export default function ForgotPasswordPage() {
               onClick={() => {
                 if (!mailbox) stashAuthEmail(email);
               }}
-              className="btn-primary rounded-lg p-3 text-center text-[13px] font-bold no-underline"
+              className="btn-primary rounded-lg p-3 text-center t-body font-bold no-underline"
             >
               {mailbox ? `${mailbox.label} 열기` : "로그인으로"}
             </a>
@@ -231,7 +231,7 @@ export default function ForgotPasswordPage() {
                 state={busy ? "busy" : error ? "error" : "idle"}
                 busyLabel="전송 중"
                 errorLabel="다시 확인"
-                className="rounded-lg p-3 text-center text-[13px] font-bold"
+                className="rounded-lg p-3 text-center t-body font-bold"
               >
                 재설정 링크 받기
               </ActionButton>

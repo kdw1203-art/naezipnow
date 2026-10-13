@@ -63,7 +63,7 @@ export function ShopClient({ initialBalance }: { initialBalance: number }) {
       {/* 잔액 */}
       <div className="rise-in card flex items-center justify-between rounded-2xl px-5 py-4">
         <div>
-          <div className="text-[12px] text-text-3">보유 포인트</div>
+          <div className="t-sub text-text-3">보유 포인트</div>
           <div className="mt-0.5 text-2xl font-bold text-ink">
             {balance.toLocaleString("ko-KR")}
             <span className="ml-0.5 text-[15px] text-primary">P</span>
@@ -90,7 +90,7 @@ export function ShopClient({ initialBalance }: { initialBalance: number }) {
               key={item.key}
               className="card tile flex flex-col rounded-2xl p-5"
             >
-              <div className="text-[13px] font-bold text-ink">
+              <div className="t-body font-bold text-ink">
                 {item.label}
                 {item.season && (
                   <span className="ml-1.5 align-middle rounded-full bg-warning-soft px-2 py-0.5 t-caption font-bold text-warning">
@@ -98,11 +98,11 @@ export function ShopClient({ initialBalance }: { initialBalance: number }) {
                   </span>
                 )}
               </div>
-              <div className="mt-1 flex-1 text-[12px] leading-[1.5] text-text-3">
+              <div className="mt-1 flex-1 t-sub leading-[1.5] text-text-3">
                 {item.desc}
               </div>
               <div className="mt-3 flex items-center justify-between">
-                <div className="text-[15px] font-bold text-primary">
+                <div className="t-section font-bold text-primary">
                   {item.cost.toLocaleString("ko-KR")}P
                 </div>
                 <button
@@ -117,19 +117,19 @@ export function ShopClient({ initialBalance }: { initialBalance: number }) {
 
               {/* 상태 안내 */}
               {st.status === "done" && (
-                <div className="mt-2 rounded-lg bg-success-soft px-3 py-2 text-[12px] font-semibold text-success">
+                <div className="mt-2 rounded-lg bg-success-soft px-3 py-2 t-sub font-semibold text-success">
                   {st.message}
                 </div>
               )}
               {st.status === "error" && (
-                <div className="mt-2 rounded-lg bg-danger-soft px-3 py-2 text-[12px] font-semibold text-danger">
+                <div className="mt-2 rounded-lg bg-danger-soft px-3 py-2 t-sub font-semibold text-danger">
                   {st.message}
                 </div>
               )}
               {st.status !== "done" &&
                 st.status !== "error" &&
                 insufficient && (
-                  <div className="mt-2 text-[12px] font-semibold text-text-3">
+                  <div className="mt-2 t-sub font-semibold text-text-3">
                     포인트가 부족해요
                   </div>
                 )}
@@ -139,7 +139,7 @@ export function ShopClient({ initialBalance }: { initialBalance: number }) {
       </div>
 
       {/* [1057] "환불되지 않는다"가 더는 전부 사실이 아니다 — 효과 적용 실패 시엔 자동 환불 · 재구매는 남은 기간 뒤에 이어 붙는다 */}
-      <p className="rise-in-2 px-1 text-[12px] leading-[1.6] text-text-3">
+      <p className="rise-in-2 px-1 t-sub leading-[1.6] text-text-3">
         교환한 효과는 즉시 적용 · 적용 실패 시에만 자동 환불 · 그 외 환불 없음 · 같은 효과를 다시 사면 남은 기간 뒤에 이어 붙음
       </p>
     </div>

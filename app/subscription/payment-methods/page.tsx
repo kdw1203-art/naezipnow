@@ -55,7 +55,7 @@ export default function PaymentMethodsPage() {
   return (
     <PageShell breadcrumb="결제 수단 안내">
       <div className="mx-auto w-full max-w-[760px]">
-        <h1 className="rise-in text-[24px] font-bold leading-[1.3] text-ink">
+        <h1 className="rise-in t-display font-bold leading-[1.3] text-ink">
           결제 수단 안내
         </h1>
         <p className="rise-in-1 mt-2 t-body leading-[1.75] text-text-2">

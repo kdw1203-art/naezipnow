@@ -65,8 +65,8 @@ export function InquiryForm({
   if (done) {
     return (
       <div className="flex flex-col items-start gap-2 rounded-xl bg-[rgba(29,79,216,.06)] px-4 py-5">
-        <div className="text-[15px] font-bold text-ink">참여 문의가 접수됐어요</div>
-        <p className="text-[13px] leading-[1.7] text-text-2">
+        <div className="t-section font-bold text-ink">참여 문의가 접수됐어요</div>
+        <p className="t-body leading-[1.7] text-text-2">
           등록자에게 문의가 전달됩니다. 이후 계약·정산 조건은 <b>당사자 간에 직접</b>{" "}
           협의·확인해 주세요. 내집나우는 소개·매칭만 담당합니다.
         </p>
@@ -74,13 +74,13 @@ export function InquiryForm({
     );
   }
 
-  const label = "mb-1.5 block text-[13px] font-bold text-ink";
+  const label = "mb-1.5 block t-body font-bold text-ink";
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       {isSample && (
         <div
-          className="rounded-xl px-4 py-2.5 text-[12px] leading-[1.6]"
+          className="rounded-xl px-4 py-2.5 t-sub leading-[1.6]"
           style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
         >
           예시 데이터입니다. 실제 문의는 접수되지만 응답을 받지 못할 수 있어요.
@@ -150,7 +150,7 @@ export function InquiryForm({
       </div>
 
       {needLogin && (
-        <div className="rounded-xl bg-danger-soft px-4 py-3 text-[13px] leading-[1.7] text-danger">
+        <div className="rounded-xl bg-danger-soft px-4 py-3 t-body leading-[1.7] text-danger">
           문의 · 로그인 필요{" · "}
           <Link
             href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`}
@@ -162,7 +162,7 @@ export function InquiryForm({
       )}
 
       {error && (
-        <div className="rounded-xl bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger">
+        <div className="rounded-xl bg-danger-soft px-4 py-3 t-body font-bold text-danger">
           {error}
         </div>
       )}
@@ -170,7 +170,7 @@ export function InquiryForm({
       <button type="submit" className="btn-primary btn-md" disabled={submitting}>
         {submitting ? "접수 중…" : "참여 문의 보내기"}
       </button>
-      <p className="text-[12px] leading-[1.6] text-text-3">
+      <p className="t-sub leading-[1.6] text-text-3">
         소개·문의는 무료입니다. 중개 수수료는 매칭 성사 시에만, 사업 규모에 따라 협의됩니다.
       </p>
     </form>

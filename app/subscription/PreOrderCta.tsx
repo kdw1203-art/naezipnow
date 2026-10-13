@@ -78,12 +78,12 @@ export function PreOrderCta({
       <>
         <Link
           href={`/login?callbackUrl=${encodeURIComponent(back)}`}
-          className={`block rounded-lg p-[13px] text-center text-[13px] font-bold no-underline ${className}`}
+          className={`block rounded-lg p-[13px] text-center t-body font-bold no-underline ${className}`}
         >
           로그인하고 오픈 알림 받기
         </Link>
         <p
-          className={`text-center text-[12px] leading-[1.6] ${dark ? "text-ai-muted" : "text-text-3"}`}
+          className={`text-center t-sub leading-[1.6] ${dark ? "text-ai-muted" : "text-text-3"}`}
         >
           {hint} 로그인하면 열릴 때 알림을 받습니다.
         </p>
@@ -99,12 +99,12 @@ export function PreOrderCta({
         type="button"
         onClick={register}
         disabled={state === "busy"}
-        className={`rounded-lg p-[13px] text-center text-[13px] font-bold disabled:opacity-60 ${className}`}
+        className={`rounded-lg p-[13px] text-center t-body font-bold disabled:opacity-60 ${className}`}
       >
         {state === "busy" ? "등록 중…" : "오픈 알림 받기"}
       </button>
       <p
-        className={`text-center text-[12px] leading-[1.6] ${dark ? "text-ai-muted" : "text-text-3"}`}
+        className={`text-center t-sub leading-[1.6] ${dark ? "text-ai-muted" : "text-text-3"}`}
       >
         {hint}
         {state === "error" && " 등록에 실패했어요. 잠시 후 다시 눌러 주세요."}

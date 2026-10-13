@@ -38,7 +38,7 @@ export function InquiryForm({
 
   if (phase === "done") {
     return (
-      <div className="rounded-xl bg-success-soft px-4 py-3 text-[13px] font-bold text-success">
+      <div className="rounded-xl bg-success-soft px-4 py-3 t-body font-bold text-success">
         문의를 남겼어요. 등록자가 확인하면 남겨 주신 연락처로 회신할 수 있어요.
       </div>
     );
@@ -91,16 +91,16 @@ export function InquiryForm({
         onChange={(e) => setMessage(e.target.value.slice(0, MESSAGE_MAX))}
         rows={3}
         placeholder="궁금한 점(입주 가능일, 실제 상태, 방문 희망일 등)을 남겨 주세요."
-        className="w-full resize-none rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[13px] leading-[1.6] text-ink outline-none focus:border-primary"
+        className="w-full resize-none rounded-xl border border-line bg-surface px-3.5 py-2.5 t-body leading-[1.6] text-ink outline-none focus:border-primary"
       />
       <input
         value={contact}
         onChange={(e) => setContact(e.target.value.slice(0, 120))}
         placeholder="회신받을 연락처(선택) · 전화·카톡 등"
-        className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[13px] text-ink outline-none focus:border-primary"
+        className="w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 t-body text-ink outline-none focus:border-primary"
       />
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[12px] text-text-3">
+        <span className="t-sub text-text-3">
           {message.length}/{MESSAGE_MAX}
         </span>
         <div className="flex gap-2">
@@ -124,8 +124,8 @@ export function InquiryForm({
           </button>
         </div>
       </div>
-      {error && <span className="text-[12px] font-bold text-danger">{error}</span>}
-      <p className="text-[12px] leading-[1.6] text-text-3">
+      {error && <span className="t-sub font-bold text-danger">{error}</span>}
+      <p className="t-sub leading-[1.6] text-text-3">
         문의는 등록자(개업공인중개사)에게 전달돼요. 내집나우는 중개 당사자가 아니에요.
       </p>
     </div>

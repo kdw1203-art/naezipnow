@@ -121,7 +121,7 @@ function HomeAiGateway({
         {briefing ? (
           <div className="t-body t-fit">
             {briefing.text}
-            <span className="ml-1.5 inline-flex items-center rounded border border-white/20 px-1 py-px align-middle text-[10px] font-semibold text-ai-muted">
+            <span className="ml-1.5 inline-flex items-center rounded border border-white/20 px-1 py-px align-middle t-caption font-semibold text-ai-muted">
               {briefing.asOfLabel}
             </span>
           </div>

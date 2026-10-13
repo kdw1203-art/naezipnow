@@ -40,15 +40,15 @@ export default function PartnersPage() {
       {/* [970 · A-37] 데스크톱 폭 혼재(720 · 전폭 · 640 · 720)를 한 래퍼(760px 가운데)로 통일 */}
       <div className="mx-auto w-full max-w-[760px]">
       <div className="mb-6">
-        <h1 className="rise-in text-[24px] font-bold leading-[1.35] text-ink">
+        <h1 className="rise-in t-display font-bold leading-[1.35] text-ink">
           동네 매물, 내집나우에서 더 많은 이웃에게
         </h1>
-        <p className="mt-2 text-[13px] leading-[1.7] text-text-2">
+        <p className="mt-2 t-body leading-[1.7] text-text-2">
           {/* [1030 · 2차] 해요체 → 낱말 */}
           내집나우 = 국토부 실거래가를 보는 이웃이 모이는 곳 · 제휴 중개사무소 = 그 이웃에게 보유 매물
           노출 · 중개 행위는 제휴 중개사가 직접 수행 · 내집나우는 광고 매체로서 매물 정보 게재
         </p>
-        <p className="mt-2 text-[13px] leading-[1.7] text-text-3">
+        <p className="mt-2 t-body leading-[1.7] text-text-3">
           상담·리포트 판매용 전문가 인증(세무사·감정평가사 포함)은{" "}
           <Link href="/town/experts" className="font-bold text-primary underline underline-offset-2">
             전문가 페이지
@@ -60,18 +60,18 @@ export default function PartnersPage() {
       <div className="rise-in-1 mb-8 grid grid-cols-1 gap-3 md:grid-cols-3">
         {BENEFITS.map((b) => (
           <div key={b.title} className="card card-pad-sm">
-            <div className="text-[15px] font-bold text-ink">{b.title}</div>
-            <p className="mt-1.5 text-[13px] leading-[1.7] text-text-2">{b.desc}</p>
+            <div className="t-section font-bold text-ink">{b.title}</div>
+            <p className="mt-1.5 t-body leading-[1.7] text-text-2">{b.desc}</p>
           </div>
         ))}
       </div>
 
       <div className="rise-in-1">
-        <h2 className="mb-3 text-[15px] font-bold text-ink">제휴 신청</h2>
+        <h2 className="mb-3 t-section font-bold text-ink">제휴 신청</h2>
         <PartnerForm />
       </div>
 
-      <div className="mt-8 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[12px] leading-[1.7] text-text-3">
+      <div className="mt-8 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 t-sub leading-[1.7] text-text-3">
         제휴는 개업공인중개사(중개사무소 등록번호 보유)에 한해 가능합니다. 신청
         내용은 검토 목적으로만 사용하며,{" "}
         <Link href="/legal/privacy" className="underline">

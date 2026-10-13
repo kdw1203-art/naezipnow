@@ -222,21 +222,21 @@ export default function ResetPasswordPage() {
         <div className="rise-in">
           <Logo size={34} />
         </div>
-        <h1 className="rise-in-1 text-[21px] font-bold leading-[1.35] text-ink">
+        <h1 className="rise-in-1 t-title font-bold leading-[1.35] text-ink">
           새 비밀번호 설정
         </h1>
-        <p className="rise-in-2 text-[13px] text-text-2">
+        <p className="rise-in-2 t-body text-text-2">
           {PASSWORD_MIN}자 이상 · 대소문자·숫자·기호 섞기
         </p>
 
         {done ? (
           <div className="rise-in card flex flex-col gap-2.5 rounded-2xl px-5 py-6 text-center">
             <Icon name="✅" size={28} />
-            <div className="text-[15px] font-bold text-ink">비밀번호 변경 완료</div>
-            <p className="text-[13px] text-text-2" aria-live="polite">{passwordChangedLine("reset", noticeSent)}</p>
+            <div className="t-section font-bold text-ink">비밀번호 변경 완료</div>
+            <p className="t-body text-text-2" aria-live="polite">{passwordChangedLine("reset", noticeSent)}</p>
             <Link
               href={loginHref}
-              className="btn-primary mt-2 rounded-lg p-3 text-center text-[13px] font-bold"
+              className="btn-primary mt-2 rounded-lg p-3 text-center t-body font-bold"
             >
               로그인
             </Link>
@@ -244,8 +244,8 @@ export default function ResetPasswordPage() {
         ) : mode === "unreachable" ? (
           <div className="rise-in card flex flex-col gap-2.5 rounded-2xl px-5 py-6 text-center">
             <Icon name="⚠" size={28} />
-            <div className="text-[15px] font-bold text-ink">링크 확인 실패 · 잠시 후 다시</div>
-            <p className="text-[13px] leading-[1.6] text-text-2">
+            <div className="t-section font-bold text-ink">링크 확인 실패 · 잠시 후 다시</div>
+            <p className="t-body leading-[1.6] text-text-2">
               링크가 틀린 것이 아니라 확인 요청이 닿지 않았습니다. 같은 링크로 다시 확인할 수 있습니다.
             </p>
             <button
@@ -257,20 +257,20 @@ export default function ResetPasswordPage() {
             </button>
           </div>
         ) : mode === "checking" ? (
-          <div className="rise-in card rounded-2xl px-5 py-6 text-center text-[13px] text-text-2">
+          <div className="rise-in card rounded-2xl px-5 py-6 text-center t-body text-text-2">
             링크를 확인하는 중입니다…
           </div>
         ) : mode === "invalid" ? (
           <div className="rise-in card flex flex-col gap-2.5 rounded-2xl px-5 py-6 text-center">
             <Icon name="⚠" size={28} />
-            <div className="text-[15px] font-bold text-ink">링크가 유효하지 않습니다</div>
-            <p className="text-[13px] leading-[1.6] text-text-2">
+            <div className="t-section font-bold text-ink">링크가 유효하지 않습니다</div>
+            <p className="t-body leading-[1.6] text-text-2">
               링크가 만료됐거나 이미 사용됐습니다. 이메일의 링크로 접근했는지 확인하고, 다시
               비밀번호 찾기를 요청해 주세요.
             </p>
             <Link
               href={forgotHrefWithNext(next)}
-              className="btn-primary mt-2 rounded-lg p-3 text-center text-[13px] font-bold"
+              className="btn-primary mt-2 rounded-lg p-3 text-center t-body font-bold"
             >
               비밀번호 찾기 다시 하기
             </Link>
@@ -280,7 +280,7 @@ export default function ResetPasswordPage() {
             {error && (
               <div
                 role="alert"
-                className="rise-in rounded-lg bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger"
+                className="rise-in rounded-lg bg-danger-soft px-4 py-3 t-body font-bold text-danger"
               >
                 {error}
               </div>
@@ -360,7 +360,7 @@ export default function ResetPasswordPage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="btn-primary rounded-lg p-3 text-center text-[13px] font-bold disabled:opacity-60"
+                className="btn-primary rounded-lg p-3 text-center t-body font-bold disabled:opacity-60"
               >
                 {busy ? "변경 중…" : "비밀번호 변경"}
               </button>

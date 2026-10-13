@@ -224,7 +224,7 @@ export default async function MyListingsPage() {
               <div key={l.id} className="card card-pad-sm flex flex-col gap-2.5">
                 <div className="flex items-center gap-1.5">
                   <span
-                    className={`rounded-md chip-pad text-[12px] font-bold ${meta.cls}`}
+                    className={`rounded-md chip-pad t-sub font-bold ${meta.cls}`}
                   >
                     {meta.label}
                   </span>
@@ -243,7 +243,7 @@ export default async function MyListingsPage() {
                   )}
                   {staleMeta && (
                     <span
-                      className={`rounded-md chip-pad text-[12px] font-bold ${staleMeta.cls}`}
+                      className={`rounded-md chip-pad t-sub font-bold ${staleMeta.cls}`}
                     >
                       {staleMeta.label}
                     </span>
@@ -282,7 +282,7 @@ export default async function MyListingsPage() {
 
                 {staleMeta && (
                   <div
-                    className={`rounded-lg px-3 py-2 text-[12px] leading-[1.6] ${staleMeta.noticeCls}`}
+                    className={`rounded-lg px-3 py-2 t-sub leading-[1.6] ${staleMeta.noticeCls}`}
                   >
                     {staleAgeDays(l)}일째 갱신되지 않았어요.{" "}
                     {staleStage === 2

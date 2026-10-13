@@ -57,7 +57,10 @@ test("[1038 · 14·16·17·19] 다이제스트 타일 · 정비 단계 막대 ·
   assert.match(read("app/digest/page.tsx"), /grid grid-cols-2 gap-1\.5 md:grid-cols-3/);
   const redev = read("app/redevelopment/page.tsx");
   assert.match(redev, /redevStageCounts\(projects, new Set\(\)\)/);
-  assert.match(redev, /stageCounts\[s\.key\]\.toLocaleString/);
+  /* [1063] 단계 칩마다 박혀 있던 1px 막대·숫자는 공용 비율 막대(MiniBar)로 모았다 —
+     세는 자리(stageCounts[s.key])와 "단계별 구역 수 막대"라는 사실은 그대로다. */
+  assert.match(redev, /value: stageCounts\[s\.key\]/);
+  assert.match(redev, /rows=\{stageRows\} unit="곳"/);
   const supply = read("app/supply/SupplyClient.tsx");
   assert.match(supply, /<th className="border-b border-line py-1\.5 font-semibold">세대<\/th>/);
   assert.match(supply, /maxHh/);

@@ -64,7 +64,7 @@ export async function MissionsSection({ email }: { email: string }) {
                     <p className="mt-0.5 t-sub text-text-2">{m.desc}</p>
                   </div>
                   <span
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold ${
+                    className={`shrink-0 rounded-full px-2.5 py-1 t-sub font-bold ${
                       m.done ? "bg-success-soft text-success" : "bg-bg text-text-3"
                     }`}
                   >

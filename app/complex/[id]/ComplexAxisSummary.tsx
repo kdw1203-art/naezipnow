@@ -50,7 +50,7 @@ export async function ComplexAxisSummary({
     <section aria-label="이 단지 결과 요약" className="mt-4 rounded-2xl border border-line bg-surface p-4 max-md:mt-3 max-md:p-3.5">
       <div className="flex items-baseline justify-between gap-2">
         {/* [1015 · 규칙 C·D] 제목 옆 부연("— 공공데이터 자동 계산")은 걷었다 — 결과 카드(VerdictCard)가 같은 말을 이미 단다 */}
-        <h2 className="text-[13px] font-bold text-ink">이 단지 결과 요약</h2>
+        <h2 className="t-body font-bold text-ink">이 단지 결과 요약</h2>
         {/* [1012 · R2 · B] "AI 진단으로 ›"(동사 없음) → 동사 + 구체 대상 */}
         <Link
           href={`/analysis/ai/ai-diagnosis?complexId=${encodeURIComponent(complexId)}`}

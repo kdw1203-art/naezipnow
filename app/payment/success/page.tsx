@@ -233,19 +233,18 @@ export default async function PaymentSuccessPage({
     <PageShell breadcrumb="구독 · 결제 결과">
       <PaymentSuccessMoment status={status} />
       <section className="rise-in mx-auto flex w-full max-w-[480px] flex-col items-center gap-3 pt-10 text-center">
-        {/* 체크 배지 — 이모지 대신 브랜드 색 원형. 실패면 경고색. */}
+        {/* [1063] 상태 배지 — 글리프(✓·!) 대신 색 고리 하나. 기호 금지 규칙과 램프(임의 px 금지)를 함께 지킨다.
+            뜻은 아래 제목 문장이 말한다(그림은 거드는 것뿐이라 aria-hidden). */}
         <span
           aria-hidden
-          className={`flex h-16 w-16 items-center justify-center rounded-full text-[28px] text-white shadow-[0_10px_28px_rgba(16,28,54,.18)] ${
-            ok ? "bg-primary" : "bg-danger"
-          }`}
+          className={`flex h-16 w-16 items-center justify-center rounded-full ${ok ? "bg-primary-soft" : "bg-danger-soft"}`}
         >
-          {ok ? "✓" : "!"}
+          <span className={`block h-6 w-6 rounded-full ${ok ? "bg-primary" : "bg-danger"}`} />
         </span>
-        <h1 className="text-[21px] font-bold tracking-[-0.4px] text-ink">
+        <h1 className="t-title font-bold text-ink">
           {ok ? "결제가 완료되었습니다" : "결제 확인에 실패했습니다"}
         </h1>
-        <p className="text-[13px] leading-[1.6] text-text-2">{message}</p>
+        <p className="t-body leading-[1.6] text-text-2">{message}</p>
 
         {/* 영수증 카드 — 무엇을 얼마에 샀는지 이 화면에서 확인된다.
             예전에는 "완료되었습니다" 한 줄과 주문번호뿐이라, 방금 얼마가
@@ -253,19 +252,19 @@ export default async function PaymentSuccessPage({
         {receiptRows.length > 0 && (
           <div className="mt-2 w-full overflow-hidden rounded-3xl border border-line bg-surface text-left shadow-[0_8px_24px_rgba(16,28,54,.06)]">
             <div className="border-b border-dashed border-line px-5 py-3.5">
-              <div className="text-[12px] font-bold text-text-3">결제 내역</div>
+              <div className="t-sub font-bold text-text-3">결제 내역</div>
             </div>
             <dl className="flex flex-col gap-2.5 px-5 py-4">
               {receiptRows.map((r) => (
                 <div key={r.label} className="flex items-baseline justify-between gap-3">
-                  <dt className="text-[12px] text-text-3">{r.label}</dt>
-                  <dd className="text-[13px] font-bold text-ink">{r.value}</dd>
+                  <dt className="t-sub text-text-3">{r.label}</dt>
+                  <dd className="t-body font-bold text-ink">{r.value}</dd>
                 </div>
               ))}
               {orderId && (
                 <div className="flex items-baseline justify-between gap-3 border-t border-divider pt-2.5">
-                  <dt className="text-[12px] text-text-3">주문번호</dt>
-                  <dd className="break-all text-right text-[12px] text-text-3">{orderId}</dd>
+                  <dt className="t-sub text-text-3">주문번호</dt>
+                  <dd className="break-all text-right t-sub text-text-3">{orderId}</dd>
                 </div>
               )}
             </dl>
@@ -274,7 +273,7 @@ export default async function PaymentSuccessPage({
                 href={record.receiptUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="block border-t border-line bg-bg px-5 py-3 text-center text-[12px] font-bold text-primary"
+                className="block border-t border-line bg-bg px-5 py-3 text-center t-sub font-bold text-primary"
               >
                 매출전표(영수증) 보기 ›
               </a>
@@ -289,34 +288,34 @@ export default async function PaymentSuccessPage({
         {billingSub && (
           <div className="w-full overflow-hidden rounded-3xl border border-line bg-surface text-left shadow-[0_8px_24px_rgba(16,28,54,.06)]">
             <div className="border-b border-dashed border-line px-5 py-3.5">
-              <div className="text-[12px] font-bold text-text-3">자동결제 정보</div>
+              <div className="t-sub font-bold text-text-3">자동결제 정보</div>
             </div>
             <dl className="flex flex-col gap-2.5 px-5 py-4">
               <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-[12px] text-text-3">적용 플랜</dt>
-                <dd className="text-[13px] font-bold text-ink">
+                <dt className="t-sub text-text-3">적용 플랜</dt>
+                <dd className="t-body font-bold text-ink">
                   {planLabel(billingSub.plan)} ·{" "}
                   {billingSub.billing === "annual" ? "연간" : "월간"} 자동결제
                 </dd>
               </div>
               <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-[12px] text-text-3">등록 카드</dt>
-                <dd className="text-[13px] font-bold text-ink">
+                <dt className="t-sub text-text-3">등록 카드</dt>
+                <dd className="t-body font-bold text-ink">
                   {billingSub.cardCompany || billingSub.cardNumberMasked
                     ? `${billingSub.cardCompany ?? "카드"} ${billingSub.cardNumberMasked ?? ""}`.trim()
                     : "카드"}
                 </dd>
               </div>
               <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-[12px] text-text-3">결제 금액</dt>
-                <dd className="text-[13px] font-bold text-ink">
+                <dt className="t-sub text-text-3">결제 금액</dt>
+                <dd className="t-body font-bold text-ink">
                   {billingSub.amount.toLocaleString("ko-KR")}원 /{" "}
                   {billingSub.billing === "annual" ? "년" : "월"}
                 </dd>
               </div>
               <div className="flex items-baseline justify-between gap-3 border-t border-divider pt-2.5">
-                <dt className="text-[12px] text-text-3">다음 결제일</dt>
-                <dd className="text-[13px] font-bold text-ink">
+                <dt className="t-sub text-text-3">다음 결제일</dt>
+                <dd className="t-body font-bold text-ink">
                   {billingSub.nextChargeAt
                     ? new Date(billingSub.nextChargeAt).toLocaleDateString("ko-KR", {
                         timeZone: "Asia/Seoul",
@@ -328,7 +327,7 @@ export default async function PaymentSuccessPage({
                 </dd>
               </div>
             </dl>
-            <p className="border-t border-line bg-bg px-5 py-3 text-[12px] leading-[1.6] text-text-3">
+            <p className="border-t border-line bg-bg px-5 py-3 t-sub leading-[1.6] text-text-3">
               해지·카드 변경은 구독 페이지의 구독 관리에서 언제든 가능해요. 해지하면 다음
               결제일에 청구되지 않아요.
             </p>
@@ -346,17 +345,17 @@ export default async function PaymentSuccessPage({
             <>
               <Link
                 href={`/support?category=payment${orderId ? `&order=${encodeURIComponent(orderId)}` : ""}`}
-                className="btn-primary rounded-lg p-[13px] text-center text-[13px] font-bold"
+                className="btn-primary rounded-lg p-[13px] text-center t-body font-bold"
               >
                 고객센터에 결제 확인 문의하기
               </Link>
               <Link
                 href="/subscription"
-                className="rounded-lg border border-line bg-surface p-[13px] text-center text-[13px] font-bold text-text-1"
+                className="rounded-lg border border-line bg-surface p-[13px] text-center t-body font-bold text-text-1"
               >
                 구독 안내로 돌아가기
               </Link>
-              <p className="text-[12px] leading-[1.6] text-text-3">
+              <p className="t-sub leading-[1.6] text-text-3">
                 이 화면이 떴다면 이용권은 아직 켜지지 않았어요. 다시 결제하기 전에 문의를
                 먼저 남겨 주세요.{orderId ? " 주문번호가 문의에 함께 담겨요." : ""}
               </p>
@@ -372,31 +371,31 @@ export default async function PaymentSuccessPage({
           ) : guestPending ? (
             <>
               {/* [1001] 비회원 결제 — 이용권은 결제 이메일로 발급됐고, 같은 이메일로 가입/로그인하면 자동 연결 */}
-              <p className="text-[13px] leading-[1.6] text-text-2">
+              <p className="t-body leading-[1.6] text-text-2">
                 이용권은 결제할 때 적은 이메일{guestBuyerEmail ? ` (${guestBuyerEmail})` : ""}로 발급됐어요.
                 같은 이메일로 가입하거나 로그인하면 바로 연결돼요.
               </p>
               <Link
                 href={`/signup?callbackUrl=${encodeURIComponent(selfHref)}`}
-                className="btn-primary rounded-lg p-[13px] text-center text-[13px] font-bold"
+                className="btn-primary rounded-lg p-[13px] text-center t-body font-bold"
               >
                 가입하고 이용권 연결하기
               </Link>
               <Link
                 href={`/login?callbackUrl=${encodeURIComponent(selfHref)}`}
-                className="rounded-lg border border-line bg-surface p-[13px] text-center text-[13px] font-bold text-text-1"
+                className="rounded-lg border border-line bg-surface p-[13px] text-center t-body font-bold text-text-1"
               >
                 로그인하고 이용권 연결하기
               </Link>
             </>
           ) : returnTo ? (
             <>
-              <Link href={returnTo} className="btn-primary rounded-lg p-[13px] text-center text-[13px] font-bold">
+              <Link href={returnTo} className="btn-primary rounded-lg p-[13px] text-center t-body font-bold">
                 이어서 사용하기
               </Link>
               <Link
                 href="/my"
-                className="rounded-lg border border-line bg-surface p-[13px] text-center text-[13px] font-bold text-text-1"
+                className="rounded-lg border border-line bg-surface p-[13px] text-center t-body font-bold text-text-1"
               >
                 마이 페이지에서 플랜 확인
               </Link>
@@ -408,13 +407,13 @@ export default async function PaymentSuccessPage({
                   진단으로 바로 보낸다. 플랜 확인은 둘째 버튼. */}
               <Link
                 href="/analysis/ai/ai-diagnosis"
-                className="btn-primary rounded-lg p-[13px] text-center text-[13px] font-bold"
+                className="btn-primary rounded-lg p-[13px] text-center t-body font-bold"
               >
                 단지 종합 진단 받기
               </Link>
               <Link
                 href="/my"
-                className="rounded-lg border border-line bg-surface p-[13px] text-center text-[13px] font-bold text-text-1"
+                className="rounded-lg border border-line bg-surface p-[13px] text-center t-body font-bold text-text-1"
               >
                 마이 페이지에서 플랜 확인
               </Link>
@@ -422,7 +421,7 @@ export default async function PaymentSuccessPage({
           )}
         </div>
         {ok && (
-          <p className="mt-1 text-[12px] leading-[1.6] text-text-3">
+          <p className="mt-1 t-sub leading-[1.6] text-text-3">
             결제 7일 이내 청약철회(환불)가 가능합니다 ·{" "}
             <Link href="/legal/terms#refund" className="underline underline-offset-2">
               환불 규정

@@ -60,15 +60,15 @@ export function TossCallbackClient() {
       <div className="w-full max-w-[360px] rounded-3xl border border-line bg-surface p-6 text-center shadow-[0_10px_30px_rgba(16,28,54,.08)]">
         {failed ? (
           <>
-            <p className="text-[15px] font-bold text-ink">
+            <p className="t-section font-bold text-ink">
 토스 로그인 실패
             </p>
-            <p className="mt-2 text-[12px] leading-[1.7] text-text-3">
+            <p className="mt-2 t-sub leading-[1.7] text-text-3">
               인증이 취소됐거나 코드가 만료됐을 수 있어요. 다시 시도해 주세요.
             </p>
             <Link
               href="/login"
-              className="btn-primary btn-cta mt-4 block rounded-xl p-3 text-[13px] font-bold text-white"
+              className="btn-primary btn-cta mt-4 block rounded-xl p-3 t-body font-bold text-white"
             >
               로그인 화면으로
             </Link>
@@ -78,10 +78,10 @@ export function TossCallbackClient() {
             <div className="mx-auto flex justify-center">
               <OrbitLoader light label="토스 로그인 처리 중" />
             </div>
-            <p className="mt-3 text-[13px] font-bold text-ink">
+            <p className="mt-3 t-body font-bold text-ink">
               토스 로그인 처리 중…
             </p>
-            <p className="mt-1 text-[12px] text-text-3">잠시만 기다려 주세요</p>
+            <p className="mt-1 t-sub text-text-3">잠시만 기다려 주세요</p>
           </>
         )}
       </div>

@@ -329,7 +329,7 @@ export default async function PublicProfilePage({
             ) : (
               <span
                 aria-hidden="true"
-                className="flex h-[56px] w-[56px] shrink-0 items-center justify-center rounded-full border-[3px] border-bg bg-brand-navy text-[19px] font-bold text-on-dark"
+                className="flex h-[56px] w-[56px] shrink-0 items-center justify-center rounded-full border-[3px] border-bg bg-brand-navy t-title font-bold text-on-dark"
               >
                 {Array.from(displayName.trim())[0] ?? "?"}
               </span>

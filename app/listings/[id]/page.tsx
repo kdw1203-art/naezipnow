@@ -31,6 +31,13 @@ import { JsonLd } from "@/app/components/JsonLd";
 import { RoadviewButton } from "@/components/map/RoadviewButton";
 import { formatKrwShort } from "@/lib/market/format";
 import { krwText, listingPriceLine, marketCompare } from "../price-text";
+import { FactTable } from "@/app/components/compact/FactTable";
+import { Fineprint } from "@/app/components/Fineprint";
+
+/* [1063 · 행동] 이 화면의 채움 파랑 하나 — 클래스를 상수로 둬 분기마다 리터럴이 늘지 않게 한다
+   (파일당 btn-primary 1개 규칙 · scripts/check-ai-look.mjs 6a). 폰 40px · 데스크톱 36px 하한. */
+const CONTACT_ACTION_CLASS =
+  "btn-primary inline-flex min-h-[40px] w-full items-center justify-center px-4 t-body md:min-h-9 md:w-fit";
 
 /** undefined 값을 가진 키를 제거한다(JSON-LD 직렬화 전 정리용). */
 function pruneUndefined<T extends Record<string, unknown>>(obj: T): T {
@@ -158,6 +165,13 @@ export default async function ListingDetailPage({
   const stale = isListingStale(listing);
 
   const { category, body } = splitCategory(listing.description);
+  /* [1063 · 행동] 머리 사실에 "갱신 시점" — 끌어올린 적이 있으면 그 날, 없으면 등록일(신선도 판정과 같은 기준: listingStaleStage) */
+  const updatedAtIso = listing.refreshedAt ?? listing.createdAt;
+  const updatedLabel = /^\d{4}-\d{2}-\d{2}/.test(updatedAtIso)
+    ? updatedAtIso.slice(0, 10).replace(/-/g, ".")
+    : null;
+  /* 문의 폼이 실제로 그려지는 경우만 "문의 남기기"(앵커)를 낸다 — 없는 자리로 보내지 않는다 */
+  const canInquire = listing.status === "approved" && !isOwner;
   const txHref = txCompareHref(listing);
   const boostOn = isBoostActive(listing.boostUntil);
   const hasCoord = listing.lat !== null && listing.lng !== null;
@@ -228,7 +242,7 @@ export default async function ListingDetailPage({
       {productJsonLd && <JsonLd data={productJsonLd} />}
       {/* 상태 안내 (소유주가 검수중/반려 매물을 볼 때) */}
       {listing.status !== "approved" && (
-        <div className="rise-in mb-4 rounded-xl bg-[rgba(29,79,216,.06)] px-4 py-3 text-[13px] leading-[1.7] text-text-2">
+        <div className="rise-in mb-4 rounded-xl bg-[rgba(29,79,216,.06)] px-4 py-3 t-body leading-[1.7] text-text-2">
           {listing.status === "pending" && "이 매물은 검수 중이에요. 승인 전까지는 나에게만 보여요."}
           {listing.status === "rejected" && (
             <>
@@ -270,7 +284,7 @@ export default async function ListingDetailPage({
               ))}
             </div>
           ) : (
-            <div className="flex h-[200px] w-full items-center justify-center rounded-2xl bg-[rgba(0,0,0,.03)] text-[13px] text-text-3">
+            <div className="flex h-[200px] w-full items-center justify-center rounded-2xl bg-[rgba(0,0,0,.03)] t-body text-text-3">
 등록된 사진 없음
             </div>
           )}
@@ -278,7 +292,7 @@ export default async function ListingDetailPage({
           {/* 배지 */}
           <div className="flex flex-wrap items-center gap-1.5">
             <span
-              className={`rounded-md chip-pad text-[12px] font-bold ${
+              className={`rounded-md chip-pad t-sub font-bold ${
                 listing.source === "owner"
                   ? "bg-[rgba(29,79,216,.08)] text-primary"
                   : "bg-warning-soft text-warning"
@@ -286,27 +300,27 @@ export default async function ListingDetailPage({
             >
               {LISTING_SOURCE_LABEL[listing.source]}
             </span>
-            <span className="rounded-md bg-bg chip-pad text-[12px] font-bold text-text-2">
+            <span className="rounded-md bg-bg chip-pad t-sub font-bold text-text-2">
               {LISTING_TYPE_LABEL[listing.listingType]}
             </span>
             {category && (
-              <span className="rounded-md bg-bg chip-pad text-[12px] font-bold text-text-2">
+              <span className="rounded-md bg-bg chip-pad t-sub font-bold text-text-2">
                 {category}
               </span>
             )}
             {listing.ownerVerified && (
-              <span className="rounded-md bg-success-soft chip-pad text-[12px] font-bold text-success">
+              <span className="rounded-md bg-success-soft chip-pad t-sub font-bold text-success">
                 소유확인
               </span>
             )}
             {boostOn && (
-              <span className="rounded-md bg-[rgba(245,158,11,.14)] chip-pad text-[12px] font-bold text-warning">
+              <span className="rounded-md bg-[rgba(245,158,11,.14)] chip-pad t-sub font-bold text-warning">
                 부스트
               </span>
             )}
             {stale && (
               <span
-                className="rounded-md chip-pad text-[12px] font-bold"
+                className="rounded-md chip-pad t-sub font-bold"
                 style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
               >
                 확인 필요
@@ -317,35 +331,21 @@ export default async function ListingDetailPage({
           {/* 가격 · 제목 — [1015 · 규칙 M · 직방] 가격이 가장 크게 먼저, 단지명은 그 아래(h1 은 그대로 단지명) */}
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="t-num text-[24px] font-bold leading-[1.3] text-ink">{priceLine(listing)}</span>
+              <span className="t-num t-display font-bold leading-[1.3] text-ink">{priceLine(listing)}</span>
               {compareBadge && (
                 <span className={compareBadge.badgeClass}>
                   {compareBadge.dir === "flat" ? compareBadge.label : `실거래 대비 ${compareBadge.label}`}
                 </span>
               )}
             </div>
-            <h1 className="mt-1 text-[19px] font-bold leading-[1.3] text-ink">
+            <h1 className="mt-1 t-title font-bold leading-[1.3] text-ink">
               {listing.complexName}
             </h1>
           </div>
 
-          {/* 관심 저장(#1) · 소유주 끌어올리기(#6) */}
-          <div className="flex flex-wrap items-center gap-2">
-            <ListingSaveButton
-              listingId={listing.id}
-              label={listing.complexName}
-              initialSaved={savedInitial}
-            />
-            {isOwner && stale && <RefreshButton listingId={listing.id} />}
-          </div>
-          {stale && (
-            <p className="text-[12px] leading-[1.6] text-text-3">
-              마지막 갱신 이후 시간이 지난 매물입니다. 정보가 유효한지 등록자에게 확인해 주세요.
-            </p>
-          )}
-
-          {/* 스펙 — [1015 · 규칙 M · 직방] 면적·층·방/욕실·주차를 칸으로(있는 값만) · 실거래·가격 = blue 톤 판 */}
-          <dl className="lq-panel grid grid-cols-3 gap-y-3 py-3 text-[13px] sm:grid-cols-5" data-tone="blue">
+          {/* 스펙 — [1015 · 규칙 M · 직방] 면적·층·방/욕실·주차를 칸으로(있는 값만) · 실거래·가격 = blue 톤 판
+              [1063 · 행동] 가격 → 사실 → 행동 순서로 올렸다(예전엔 저장 단추가 사실보다 먼저였다). 갱신 시점 칸 추가. */}
+          <dl className="lq-panel grid grid-cols-3 gap-y-3 py-3 t-body sm:grid-cols-5" data-tone="blue">
             {(
               [
                 listing.areaM2 !== null ? ["전용면적", `${listing.areaM2}㎡`] : null,
@@ -355,6 +355,7 @@ export default async function ListingDetailPage({
                   : null,
                 listing.parkingSpaces !== null ? ["주차", `${listing.parkingSpaces}대`] : null,
                 listing.regionName ? ["지역", listing.regionName] : null,
+                updatedLabel ? [listing.refreshedAt ? "갱신" : "등록", updatedLabel] : null,
                 ["조회", listing.viewCount.toLocaleString("ko-KR")],
               ] as ([string, string] | null)[]
             )
@@ -366,19 +367,66 @@ export default async function ListingDetailPage({
                 </div>
               ))}
           </dl>
+          {stale && (
+            /* [1063] 배지("확인 필요")가 말한 뒤의 설명 문장 — 접기 뒤로(문장은 그대로) */
+            <Fineprint label="확인 필요">
+              마지막 갱신 이후 시간이 지난 매물입니다. 정보가 유효한지 등록자에게 확인해 주세요.
+            </Fineprint>
+          )}
+
+          {/* [1063 · 행동] 연락 — 이 화면에서 할 일 하나를 머리 사실 바로 아래에 둔다.
+              예전에는 지도·거리뷰 뒤 오른쪽 칸에 있어 390px 에서 화면 두 장 아래였다(보려면 되돌아 내려가야 했다).
+              문구(연락처 정책)·저장·끌어올리기·신고 흐름은 글자 그대로 옮겼을 뿐이다. */}
+          <section id="contact" className="card card-pad-sm flex flex-col gap-2.5" aria-label="연락처">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <h2 className="m-0 t-body font-bold text-ink">연락처</h2>
+              <span className="t-sub text-text-3">등록자 · {listing.authorLabel}</span>
+            </div>
+            {viewerEmail ? (
+              listing.contact ? (
+                <div className="t-section font-bold text-ink break-all">{listing.contact}</div>
+              ) : (
+                <div className="t-body text-text-3">
+등록된 연락처 없음 · 등록자에게 직접 문의가 어려울 수 있어요.
+                </div>
+              )
+            ) : (
+              <Link
+                href={`/login?callbackUrl=/listings/${listing.id}`}
+                className={CONTACT_ACTION_CLASS}
+              >
+                로그인 후 연락처 확인
+              </Link>
+            )}
+            {/* 관심 저장(#1) · 소유주 끌어올리기(#6) · 문의 폼으로(같은 화면 안) — 전부 보조 */}
+            <div className="flex flex-wrap items-center gap-2">
+              <ListingSaveButton
+                listingId={listing.id}
+                label={listing.complexName}
+                initialSaved={savedInitial}
+              />
+              {isOwner && stale && <RefreshButton listingId={listing.id} />}
+              {canInquire && (
+                <a
+                  href="#inquiry"
+                  className="inline-flex min-h-[40px] items-center t-sub font-bold text-primary underline md:min-h-6"
+                >
+                  문의 남기기
+                </a>
+              )}
+            </div>
+          </section>
 
           {/* 주소 */}
           {listing.address && (
-            <div className="rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[13px] leading-[1.6] text-text-2">
-              <span className="font-bold text-ink">주소</span> · {listing.address}
-            </div>
+            <FactTable dense rows={[{ label: "주소", value: listing.address }]} />
           )}
 
           {/* 설명 */}
           {body.trim() && (
             <div>
-              <div className="mb-1.5 text-[13px] font-bold text-ink">상세 설명</div>
-              <p className="whitespace-pre-wrap text-[13px] leading-[1.75] text-text-2">
+              <div className="mb-1.5 t-body font-bold text-ink">상세 설명</div>
+              <p className="whitespace-pre-wrap t-body leading-[1.75] text-text-2">
                 {body.trim()}
               </p>
             </div>
@@ -389,7 +437,7 @@ export default async function ListingDetailPage({
           {priceCompare && compareBadge ? (
             <section className="card card-pad-sm flex flex-col gap-3">
               <div className="flex items-baseline justify-between gap-2">
-                <h2 className="flex items-center gap-0.5 text-[15px] font-bold text-ink">
+                <h2 className="flex items-center gap-0.5 t-section font-bold text-ink">
                   실거래 비교
                   <Explain
                     title="실거래 대비"
@@ -406,13 +454,23 @@ export default async function ListingDetailPage({
                 </h2>
                 <span className={`shrink-0 ${compareBadge.badgeClass}`}>{compareBadge.label}</span>
               </div>
-              <p className="text-[15px] font-bold text-ink">{compareBadge.sentence}</p>
-              <p className="text-[13px] leading-[1.6] text-text-2">
-                최근 실거래 중위가{" "}
-                <b className="t-num font-bold text-ink">{formatKrwShort(priceCompare.medianKrw)}</b> · 표본{" "}
-                {priceCompare.sampleCount}건
-                {listing.areaM2 !== null ? ` · 전용 ${listing.areaM2}㎡ 안팎` : ""}
-              </p>
+              <p className="t-section font-bold text-ink">{compareBadge.sentence}</p>
+              {/* [1063] 근거 한 줄(중위가 · 표본 · 면적)을 "항목 | 사실" 표로 — 값·단위는 그대로 */}
+              <FactTable
+                dense
+                rows={[
+                  {
+                    label: "최근 실거래 중위가",
+                    value: (
+                      <b className="t-num font-bold text-ink">{formatKrwShort(priceCompare.medianKrw)}</b>
+                    ),
+                  },
+                  { label: "표본", value: `${priceCompare.sampleCount}건` },
+                  ...(listing.areaM2 !== null
+                    ? [{ label: "전용", value: `${listing.areaM2}㎡ 안팎` }]
+                    : []),
+                ]}
+              />
               {comparableTx.length > 0 && (
                 <ul className="flex flex-col">
                   {comparableTx.slice(0, 4).map((t, i) => (
@@ -420,21 +478,21 @@ export default async function ListingDetailPage({
                       key={i}
                       className="flex items-center justify-between gap-3 border-b border-line py-2 last:border-0"
                     >
-                      <span className="t-num text-[12px] text-text-3">
+                      <span className="t-num t-sub text-text-3">
                         {formatYm(t.contractYm)}
                         {t.contractDay ? `.${String(t.contractDay).padStart(2, "0")}` : ""}
                         {t.areaM2 !== null ? ` · ${t.areaM2.toFixed(1)}㎡` : ""}
                         {t.floor !== null ? ` · ${t.floor}층` : ""}
                       </span>
-                      <span className="t-num text-[13px] font-bold text-ink">{krwText(t.dealAmountKrw)}</span>
+                      <span className="t-num t-body font-bold text-ink">{krwText(t.dealAmountKrw)}</span>
                     </li>
                   ))}
                 </ul>
               )}
-              <p className="text-[12px] text-text-3">국토교통부 실거래가 · 같은 단지·면적대 최근 거래 기준 · 호가는 등록자가 적은 값</p>
+              <Fineprint>국토교통부 실거래가 · 같은 단지·면적대 최근 거래 기준 · 호가는 등록자가 적은 값</Fineprint>
               <Link
                 href={txHref ?? "/complex/browse"}
-                className="inline-flex min-h-[24px] w-fit items-center text-[13px] font-bold text-primary"
+                className="inline-flex min-h-[24px] w-fit items-center t-body font-bold text-primary"
               >
                 이 단지 실거래 전체 →
               </Link>
@@ -443,7 +501,7 @@ export default async function ListingDetailPage({
             <Link
               /* [970 · B-18] /complex/tx 인덱스는 리다이렉트만 있다 — 목적지로 바로 보낸다 */
               href={txHref ?? "/complex/browse"}
-              className="inline-flex min-h-[24px] w-fit items-center text-[13px] font-bold text-primary underline"
+              className="inline-flex min-h-[24px] w-fit items-center t-body font-bold text-primary underline"
             >
               실거래가 비교 →
             </Link>
@@ -451,12 +509,12 @@ export default async function ListingDetailPage({
 
           {/* 신고 */}
           <div className="flex items-center gap-3">
-            <span className="text-[12px] text-text-3">매물 신고</span>
+            <span className="t-sub text-text-3">매물 신고</span>
             <ReportButton postId={listing.id} />
           </div>
         </div>
 
-        {/* 우: 지도 + 연락 */}
+        {/* 우: 지도 + 거리뷰 + 문의 (연락처는 [1063] 에서 왼쪽 머리 사실 아래로) */}
         <div className="flex flex-col gap-4">
           {hasCoord && (
             <div className="h-[240px] w-full overflow-hidden rounded-2xl">
@@ -486,32 +544,11 @@ export default async function ListingDetailPage({
             />
           )}
 
-          {/* 연락처 — 로그인 시 노출 */}
-          <div className="card card-pad-sm flex flex-col gap-2">
-            <div className="text-[13px] font-bold text-ink">연락처</div>
-            {viewerEmail ? (
-              listing.contact ? (
-                <div className="text-[13px] font-bold text-ink break-all">{listing.contact}</div>
-              ) : (
-                <div className="text-[13px] text-text-3">
-등록된 연락처 없음 · 등록자에게 직접 문의가 어려울 수 있어요.
-                </div>
-              )
-            ) : (
-              <Link
-                href={`/login?callbackUrl=/listings/${listing.id}`}
-                className="btn-primary btn-md w-fit"
-              >
-                로그인 후 연락처 확인
-              </Link>
-            )}
-            <div className="text-[12px] text-text-3">등록자 · {listing.authorLabel}</div>
-          </div>
-
-          {/* 문의 남기기 — 승인 매물 + 등록자 본인이 아닐 때만 */}
-          {listing.status === "approved" && !isOwner && (
-            <div className="card card-pad-sm flex flex-col gap-2.5">
-              <div className="text-[13px] font-bold text-ink">문의하기</div>
+          {/* 문의 남기기 — 승인 매물 + 등록자 본인이 아닐 때만
+              [1063] 연락처 카드는 왼쪽 머리 사실 아래로 옮겼다(폰 도달 거리) — 이 칸은 지도·거리뷰·문의 폼 */}
+          {canInquire && (
+            <div id="inquiry" className="card card-pad-sm flex scroll-mt-[72px] flex-col gap-2.5">
+              <div className="t-body font-bold text-ink">문의하기</div>
               {/* [1015 · 규칙 B] 사용법 문장 제거 — 폼 자체가 말한다 */}
               <InquiryForm listingId={listing.id} loggedIn={viewerEmail !== null} />
             </div>
@@ -519,8 +556,8 @@ export default async function ListingDetailPage({
         </div>
       </div>
 
-      {/* 법적 고지 */}
-      <div className="mt-8 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[12px] leading-[1.7] text-text-3">
+      {/* 법적 고지 — 접지 않는다(광고 매체·책임 고지는 눌러야 보이면 안 된다). 글자만 램프로. */}
+      <div className="mt-8 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 t-sub leading-[1.7] text-text-3">
         내집나우는 광고 매체이며 중개하지 않습니다. 매물 정보의 정확성과 권리관계에 대한 책임은
         등록자에게 있으며, 내집나우의 검수는 형식 요건 확인일 뿐 진위를 보증하지 않습니다. 중개
         행위는 해당 매물을 등록한 개업공인중개사가 수행합니다.

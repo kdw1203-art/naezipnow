@@ -37,7 +37,7 @@ export default async function DevPartnersPage() {
 
   return (
     <PageShell breadcrumb="홈 › 개발물건 중개 › 협력업체" title="협력업체 디렉터리">
-      <p className="rise-in mb-4 text-[13px] leading-[1.7] text-text-2">
+      <p className="rise-in mb-4 t-body leading-[1.7] text-text-2">
         시공사·설계사·신탁·PF·마케팅·감리 등 개발사업 <strong className="text-ink">협력업체</strong>를 찾아보세요.
         우리 회사를 등록하면 조건에 맞는 <strong className="text-ink">개발물건 매칭</strong>과 참여 기회를 받을 수
         있어요.
@@ -57,13 +57,13 @@ export default async function DevPartnersPage() {
       ) : (
         /* 조회 실패 — "아직 없어요"(빈 상태)와 구별한다. 0건인 게 아니라 조회 실패다. */
         <section className="rise-in-2 card p-[var(--pad-card)]">
-          <div className="rounded-lg border border-line bg-surface px-4 py-10 text-center text-[13px] text-text-2">
+          <div className="rounded-lg border border-line bg-surface px-4 py-10 text-center t-body text-text-2">
 협력업체 목록 불러오기 실패 · 잠시 후 다시
           </div>
         </section>
       )}
 
-      <div className="mt-8 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[12px] leading-[1.7] text-text-3">
+      <div className="mt-8 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 t-sub leading-[1.7] text-text-3">
         {DISCLAIMER}
       </div>
       {/* 수익 문구 미기재 방침(소유자 방침 2026-08-11) — 마켓 표면 공통 고지 */}

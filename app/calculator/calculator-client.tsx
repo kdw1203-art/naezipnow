@@ -150,7 +150,7 @@ const YEAR_OPTIONS = [10, 20, 30, 40] as const;
 const LOAN_STEP_MANWON = 100;
 
 const numInputCls =
-  "w-[118px] rounded-lg border border-line bg-bg px-3 py-[7px] text-right text-[13px] font-bold text-ink outline-none focus:border-primary";
+  "w-[118px] rounded-lg border border-line bg-bg px-3 py-[7px] text-right t-body font-bold text-ink outline-none focus:border-primary";
 
 const extLinkCls =
   "inline-flex min-h-[24px] items-center font-bold text-primary no-underline underline-offset-2 hover:underline";
@@ -367,7 +367,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
   };
 
   const chipCls = (active: boolean) =>
-    `press min-h-[40px] rounded-full px-3.5 text-[13px] ${
+    `press min-h-[40px] rounded-full px-3.5 t-body ${
       active
         ? "border-[1.5px] border-primary bg-primary-soft font-bold text-primary"
         : "border border-line bg-surface font-semibold text-text-2"
@@ -404,7 +404,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                 1. 지역 · 보유 주택 · 매매가
               </h2>
               <div className="flex flex-col gap-1.5">
-                <span className="text-[12px] font-bold text-text-2">지역</span>
+                <span className="t-sub font-bold text-text-2">지역</span>
                 <div className="grid grid-cols-3 gap-1.5" role="group" aria-label="지역">
                   {LOAN_REGIONS.map((r) => {
                     const active = region === r.key;
@@ -427,7 +427,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                   })}
                 </div>
                 {region === "regulated" && (
-                  <details className="text-[12px] text-text-3">
+                  <details className="t-sub text-text-3">
                     <summary className="inline-flex min-h-[40px] cursor-pointer items-center font-bold text-primary">
                       규제지역 명단 보기
                     </summary>
@@ -444,7 +444,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <span className="text-[12px] font-bold text-text-2">보유 주택</span>
+                <span className="t-sub font-bold text-text-2">보유 주택</span>
                 <div className="flex flex-wrap gap-1.5" role="group" aria-label="보유 주택">
                   {OWNERSHIPS.map((c) => (
                     <button
@@ -458,12 +458,12 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                     </button>
                   ))}
                 </div>
-                <p className="text-[12px] text-text-3">{OWNERSHIP_HINTS[ownership]}</p>
+                <p className="t-sub text-text-3">{OWNERSHIP_HINTS[ownership]}</p>
               </div>
 
               <div className="flex flex-col gap-1.5 border-t border-divider pt-3">
                 <div className="flex items-center justify-between gap-2">
-                  <label htmlFor="calc-price" className="text-[13px] text-text-2">
+                  <label htmlFor="calc-price" className="t-body text-text-2">
                     매매가
                   </label>
                   <span className="flex items-center gap-1">
@@ -520,8 +520,8 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                 2. 대출 조건
               </h2>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[13px] text-text-2">
-                  대출 금액 <span className="t-num text-[12px] font-medium text-text-3">(최대 {manwonText(maxLoan)})</span>
+                <span className="t-body text-text-2">
+                  대출 금액 <span className="t-num t-sub font-medium text-text-3">(최대 {manwonText(maxLoan)})</span>
                 </span>
                 <span className="t-num text-[15px] text-ink">{manwonText(loan)}</span>
               </div>
@@ -541,7 +541,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                     className="h-9 w-full cursor-pointer accent-primary max-md:h-[40px]"
                     aria-label="대출 금액"
                   />
-                  <div className="flex items-center justify-between text-[12px] text-text-3">
+                  <div className="flex items-center justify-between t-sub text-text-3">
                     <span>매매가의 {loanPct}%</span>
                     {loanPick !== null && loanPick < maxLoan && (
                       <button
@@ -563,13 +563,13 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
               )}
 
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-[13px] text-text-2">
+                <span className="flex items-center gap-1.5 t-body text-text-2">
                   금리{" "}
-                  <span className="text-[12px] text-text-3">
+                  <span className="t-sub text-text-3">
                     {rateIsLive ? "(공시 평균)" : "(직접 정하는 가정치)"}
                   </span>
                 </span>
-                <span className="text-[15px] font-bold text-primary">{rate}%</span>
+                <span className="t-section font-bold text-primary">{rate}%</span>
               </div>
               {/* 공시 실데이터가 없으면 금리를 사용자가 직접 정한다 — 임의값을 시장 금리처럼 굳혀두지 않는다. */}
               {!rateIsLive && (
@@ -585,7 +585,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                 />
               )}
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[13px] text-text-2">상환 기간</span>
+                <span className="t-body text-text-2">상환 기간</span>
                 <div className="flex gap-1">
                   {YEAR_OPTIONS.map((y) => {
                     const blocked = termCap !== null && y > termCap;
@@ -635,7 +635,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
               </summary>
               <div className="flex flex-col gap-2.5 pb-3 pt-1">
                 {/* [1015 · 규칙 B] "소득·현금은 이 기기에서만 쓰여요…" 사용법 두 문장 삭제 · [규칙 B] 예시 placeholder("예: 7,000") 제거 */}
-                <label className="flex items-center justify-between gap-2 text-[13px]">
+                <label className="flex items-center justify-between gap-2 t-body">
                   <span className="text-text-2">연 소득 (세전)</span>
                   <span className="flex items-center gap-1">
                     <input
@@ -649,7 +649,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                     <span className="text-xs font-bold text-text-2">만원</span>
                   </span>
                 </label>
-                <label className="flex items-center justify-between gap-2 text-[13px]">
+                <label className="flex items-center justify-between gap-2 t-body">
                   <span className="text-text-2">보유 현금 (예적금·주식)</span>
                   <span className="flex items-center gap-1">
                     <input
@@ -663,7 +663,7 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
                     <span className="text-xs font-bold text-text-2">만원</span>
                   </span>
                 </label>
-                <label className="flex items-center justify-between gap-2 text-[13px]">
+                <label className="flex items-center justify-between gap-2 t-body">
                   <span className="text-text-2">기존 대출 월 상환액</span>
                   <span className="flex items-center gap-1">
                     <input

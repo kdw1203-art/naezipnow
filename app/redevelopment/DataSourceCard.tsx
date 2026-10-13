@@ -15,7 +15,7 @@ export function DataSourceCard({
         <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary-soft text-primary">
           <Icon name="file-text" size={14} />
         </span>
-        <h2 className="text-[13px] font-bold text-ink">데이터 출처</h2>
+        <h2 className="t-body font-bold text-ink">데이터 출처</h2>
       </div>
 
       {/* [1030 · G6] 폰(md 미만)은 3열 표가 낱말마다 줄바꿈되고 주기 칸이 "…"로 잘렸다(2026-10-04 운영 실측) →

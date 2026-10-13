@@ -112,7 +112,7 @@ export default async function MyLeadsPage() {
               >
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span
-                    className={`rounded-md chip-pad text-[12px] font-bold ${meta.cls}`}
+                    className={`rounded-md chip-pad t-sub font-bold ${meta.cls}`}
                   >
                     {meta.label}
                   </span>

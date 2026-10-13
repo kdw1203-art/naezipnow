@@ -166,7 +166,7 @@ export default async function DataSourcesPage() {
     <PageShell breadcrumb="데이터 출처">
       <div className="mx-auto w-full max-w-[760px]">
         {/* [1015] 물음형 제목("이 숫자, 어디서 왔나요") → 명사, 머리말은 사실 한 줄(브리프 규칙 D) */}
-        <h1 className="rise-in text-[24px] font-bold leading-[1.3] text-ink">
+        <h1 className="rise-in t-display font-bold leading-[1.3] text-ink">
           데이터 출처와 한계
         </h1>
         <p className="rise-in-1 measure mt-2 t-body leading-[1.75] text-text-2">

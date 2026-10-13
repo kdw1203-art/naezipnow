@@ -233,8 +233,8 @@ export function QnaListClient({
   const tabPill = (on: boolean) =>
     on
       /* [1012] 규칙 9 — 채움 파랑은 검색 버튼 1개. 탭 활성 = chip-active, 비활성 = 1px 선 칩 */
-      ? "press chip-active rounded-full px-4 py-2 text-[13px] font-bold"
-      : "press chip rounded-full border border-line bg-surface px-4 py-2 text-[13px] font-semibold text-text-2";
+      ? "press chip-active rounded-full px-4 py-2 t-body font-bold"
+      : "press chip rounded-full border border-line bg-surface px-4 py-2 t-body font-semibold text-text-2";
   const chip = (on: boolean) =>
     on
       ? "chip-active px-3 py-1.5 text-xs"

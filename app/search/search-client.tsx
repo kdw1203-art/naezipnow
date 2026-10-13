@@ -848,7 +848,7 @@ export function SearchClient() {
 
       {/* 로딩 */}
       {hasQuery && busy && total === 0 && (
-        <div className="mt-6 text-center text-[13px] text-text-3">검색 중…</div>
+        <div className="mt-6 text-center t-body text-text-3">검색 중…</div>
       )}
 
       {/* [1008 · 리뷰 B] 검색어가 너무 길다 — 장애도 결과 없음도 아니다 */}

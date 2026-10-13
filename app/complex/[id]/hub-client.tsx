@@ -699,10 +699,10 @@ export function ComplexHubTabs({
               className="card flex flex-col gap-1.5 rounded-2xl px-[15px] py-3.5"
             >
               <div className="flex items-center gap-1.5">
-                <span className="rounded-md bg-bg chip-pad text-[12px] font-medium text-text-2">
+                <span className="rounded-md bg-bg chip-pad t-sub font-medium text-text-2">
                   {l.badge}
                 </span>
-                <span className="text-[13px] font-bold text-ink">{l.price}</span>
+                <span className="t-body font-bold text-ink">{l.price}</span>
                 {l.priceNote && (
                   <span className="text-xs font-bold text-primary">{l.priceNote}</span>
                 )}

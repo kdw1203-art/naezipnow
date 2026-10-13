@@ -65,7 +65,7 @@ export function MissionClaim({
             setBusy(false);
           }
         }}
-        className={`min-h-[40px] rounded-full px-3.5 py-1.5 text-[12px] font-bold md:min-h-6 ${
+        className={`min-h-[40px] rounded-full px-3.5 py-1.5 t-sub font-bold md:min-h-6 ${
           disabled ? "bg-bg text-text-3" : "bg-primary text-white"
         } disabled:opacity-60`}
       >

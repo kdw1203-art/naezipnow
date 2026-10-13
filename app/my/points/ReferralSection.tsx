@@ -65,7 +65,7 @@ function MilestoneStrip({ invitedCount }: { invitedCount: number }) {
                 <Icon name={reached ? m.icon : "lock"} size={18} />
               </div>
               <div
-                className={`text-[12px] font-bold ${
+                className={`t-sub font-bold ${
                   reached ? "text-text-1" : "text-text-3"
                 }`}
               >

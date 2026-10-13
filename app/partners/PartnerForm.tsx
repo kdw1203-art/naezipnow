@@ -45,8 +45,8 @@ export function PartnerForm() {
   if (done) {
     return (
       <div className="card card-pad-sm flex flex-col items-start gap-2 py-8">
-        <div className="text-[15px] font-bold text-ink">제휴 신청이 접수됐어요</div>
-        <p className="text-[13px] leading-[1.7] text-text-2">
+        <div className="t-section font-bold text-ink">제휴 신청이 접수됐어요</div>
+        <p className="t-body leading-[1.7] text-text-2">
           <b>검토 후 연락드립니다.</b> 남겨주신 연락처(이메일·전화)로 영업일 기준
           2~3일 내 안내합니다.
         </p>
@@ -54,7 +54,7 @@ export function PartnerForm() {
     );
   }
 
-  const label = "mb-1.5 block text-[13px] font-bold text-ink";
+  const label = "mb-1.5 block t-body font-bold text-ink";
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -169,7 +169,7 @@ export function PartnerForm() {
       </div>
 
       {error && (
-        <div className="rounded-xl bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger">
+        <div className="rounded-xl bg-danger-soft px-4 py-3 t-body font-bold text-danger">
           {error}
         </div>
       )}

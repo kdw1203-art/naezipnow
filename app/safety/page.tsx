@@ -94,7 +94,7 @@ export default function SafetyPage() {
             if (e.key === "Enter" && !e.nativeEvent.isComposing) submit();
           }}
           placeholder="주소 또는 단지명"
-          className="min-w-[220px] flex-1 rounded-lg border border-line bg-surface px-3.5 py-2 text-[13px] text-ink outline-none placeholder:text-text-3 focus:border-primary"
+          className="min-w-[220px] flex-1 rounded-lg border border-line bg-surface px-3.5 py-2 t-body text-ink outline-none placeholder:text-text-3 focus:border-primary"
         />
         {/* [970 · A-35] disabled:opacity-50 제거 — btn-primary 가 이미 :disabled 를 토큰으로
             처리해 두 번 흐려졌다 */}
@@ -102,7 +102,7 @@ export default function SafetyPage() {
           type="button"
           onClick={submit}
           disabled={!address.trim()}
-          className="btn-primary rounded-lg px-4 py-2 text-[13px]"
+          className="btn-primary rounded-lg px-4 py-2 t-body"
         >
           안전 진단
         </button>

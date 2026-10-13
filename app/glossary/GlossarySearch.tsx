@@ -44,7 +44,7 @@ export function GlossarySearch({ groups }: { groups: GlossaryGroupData[] }) {
           onChange={(e) => setQ(e.target.value)}
           placeholder="용어 검색"
           aria-label="용어 검색"
-          className="w-full bg-transparent text-[15px] text-ink outline-none placeholder:text-text-3 md:text-[13px]"
+          className="w-full bg-transparent text-[15px] text-ink outline-none placeholder:text-text-3 md:t-body"
         />
         {searching && (
           <button

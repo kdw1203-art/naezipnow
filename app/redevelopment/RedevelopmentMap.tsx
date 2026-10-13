@@ -216,7 +216,7 @@ export function RedevelopmentMap({
             type="button"
             onClick={() => setTypePanelOpen((v) => !v)}
             aria-expanded={typePanelOpen}
-            className={`press inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13px] font-bold ${
+            className={`press inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 t-body font-bold ${
               typePanelOpen || types.size > 0
                 ? "border-primary bg-primary-soft text-primary"
                 : "border-line bg-surface text-text-1"
@@ -264,7 +264,7 @@ export function RedevelopmentMap({
                 type="button"
                 onClick={() => toggleStage(s.key)}
                 aria-pressed={active}
-                className={`chip press border px-2.5 py-1 text-[12px] ${
+                className={`chip press border px-2.5 py-1 t-sub ${
                   active
                     ? "chip-active border-transparent"
                     : "border-line bg-surface text-text-2"
@@ -307,7 +307,7 @@ export function RedevelopmentMap({
                 type="button"
                 onClick={() => handleSigunguClick(null)}
                 aria-pressed={sigungu === null}
-                className={`chip press shrink-0 border px-2.5 py-1 text-[12px] ${
+                className={`chip press shrink-0 border px-2.5 py-1 t-sub ${
                   sigungu === null
                     ? "chip-active border-transparent"
                     : "border-line bg-surface text-text-2"
@@ -321,7 +321,7 @@ export function RedevelopmentMap({
                   type="button"
                   onClick={() => handleSigunguClick(s.name)}
                   aria-pressed={sigungu === s.name}
-                  className={`chip press shrink-0 border px-2.5 py-1 text-[12px] ${
+                  className={`chip press shrink-0 border px-2.5 py-1 t-sub ${
                     sigungu === s.name
                       ? "chip-active border-transparent"
                       : "border-line bg-surface text-text-2"
@@ -358,7 +358,7 @@ export function RedevelopmentMap({
               aria-selected={active}
               onClick={() => setView(v.key)}
               /* [1030 · 4차] 활성 탭 = 한지 + 남색(.chip-active) — 채움 파랑 알약은 화면의 유일 파랑(지역 노트 쓰기 등)과 겹쳤다(규칙 9 · 칩 활성색 규칙) */
-              className={`press flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-full border border-transparent px-3 py-2 text-[13px] font-bold ${
+              className={`press flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-full border border-transparent px-3 py-2 t-body font-bold ${
                 active ? "chip-active" : "text-text-2"
               }`}
             >
@@ -557,7 +557,7 @@ export function RedevelopmentMap({
                       type="button"
                       onClick={() => toggleStage(stage.key)}
                       aria-pressed={stages.has(stage.key)}
-                      className={`w-[92px] shrink-0 truncate text-left text-[12px] font-semibold ${
+                      className={`w-[92px] shrink-0 truncate text-left t-sub font-semibold ${
                         stages.has(stage.key) ? "text-primary" : "text-text-1"
                       }`}
                     >

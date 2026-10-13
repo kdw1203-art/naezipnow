@@ -187,8 +187,8 @@ export default function DevelopersPage() {
         dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd()) }}
       />
       <div className="mx-auto max-w-[760px]">
-        <h1 className="rise-in text-[24px] font-bold text-ink">공개 집계 API</h1>
-        <p className="rise-in-1 measure mt-2 text-[13px] leading-[1.7] text-text-2">
+        <h1 className="rise-in t-display font-bold text-ink">공개 집계 API</h1>
+        <p className="rise-in-1 measure mt-2 t-body leading-[1.7] text-text-2">
           내집나우(naezipnow.com)은 국토교통부 실거래 신고 자료로 만든 아파트 매매 월간 지역
           집계를 인증 없이 JSON 으로 제공합니다. 사이트 화면에 이미 공개된 수치와 같은
           값이며, 출처를 표기하면 누구나 쓸 수 있습니다.
@@ -199,7 +199,7 @@ export default function DevelopersPage() {
         <section className="rise-in-2 card mt-6 rounded-3xl p-6 max-md:mt-4 max-md:p-4">
           <h2 className="t-section font-bold text-ink">첫 호출</h2>
           <p className="mt-2 t-body leading-[1.75] text-text-1">키 발급·등록 없음. 아래 한 줄로 최신 월 집계.</p>
-          <pre tabIndex={0} className="mt-3 overflow-x-auto rounded-lg bg-bg p-3 text-[12px] leading-[1.6] text-text-1">
+          <pre tabIndex={0} className="mt-3 overflow-x-auto rounded-lg bg-bg p-3 t-sub leading-[1.6] text-text-1">
             <code>{`curl "${BASE}/regions/monthly?limit=5"`}</code>
           </pre>
           <FactTable
@@ -228,7 +228,7 @@ export default function DevelopersPage() {
                   <code className="t-sub font-bold text-ink">{e.path}</code>
                   <span className="t-sub text-text-2">{e.title}</span>
                 </div>
-                <pre tabIndex={0} className="mt-2 overflow-x-auto rounded-lg bg-bg p-3 text-[12px] leading-[1.6] text-text-1">
+                <pre tabIndex={0} className="mt-2 overflow-x-auto rounded-lg bg-bg p-3 t-sub leading-[1.6] text-text-1">
                   <code>{e.example}</code>
                 </pre>
                 <Fineprint label={e.params ? "설명 · 파라미터" : "설명"}>
@@ -268,10 +268,10 @@ export default function DevelopersPage() {
 
         <section className="card mt-6 rounded-3xl p-6 max-md:mt-4 max-md:p-4">
           <h2 className="t-section font-bold text-ink">인용 조건</h2>
-          <p className="measure mt-2 text-[13px] leading-[1.75] text-text-1">
+          <p className="measure mt-2 t-body leading-[1.75] text-text-1">
             출처를 표기하면 상업적 이용을 포함해 자유롭게 쓸 수 있습니다.
           </p>
-          <div className="mt-3 rounded-lg bg-bg p-3 text-[12px] leading-[1.7] text-text-1">
+          <div className="mt-3 rounded-lg bg-bg p-3 t-sub leading-[1.7] text-text-1">
             내집나우(naezipnow.com) 집계, {PUBLIC_API_LICENSE.sources[0].name} 자료 기반, ○○○○년
             ○월 기준
           </div>
@@ -295,7 +295,7 @@ export default function DevelopersPage() {
         {/* [1062] 문답 7개(제목+문단) → 접힌 FAQ. FAQPage JSON-LD 는 위 jsonLd() 가 이미 내므로 여기서는 내지 않는다 */}
         <FaqCompact className="mt-6 rounded-3xl max-md:mt-4" jsonLd={false} items={QA} />
 
-        <div className="mt-6 rounded-lg bg-bg p-4 text-[12px] leading-[1.7] text-text-3">
+        <div className="mt-6 rounded-lg bg-bg p-4 t-sub leading-[1.7] text-text-3">
           제공 범위·한도는 서비스 사정에 따라 바뀔 수 있으며, 바뀌면 이 페이지를 먼저
           갱신합니다. 데이터 오류 제보와 이용 문의는{" "}
           <Link href="/support" className="tap-line font-bold text-primary">

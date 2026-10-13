@@ -89,10 +89,10 @@ export default function UnifiedSuggestPanel(p: Props) {
                 onClick={() => p.onPickRecent?.(k)}
                 className={rowClass(i)}
               >
-                <span aria-hidden className="shrink-0 text-[12px] text-text-3">
+                <span aria-hidden className="shrink-0 t-sub text-text-3">
                   ⌕
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-text-1">{k}</span>
+                <span className="min-w-0 flex-1 truncate t-body font-semibold text-text-1">{k}</span>
               </button>
             ))}
           </div>
@@ -118,25 +118,25 @@ export default function UnifiedSuggestPanel(p: Props) {
             <p className="t-caption text-text-3">조건을 줄이면 결과가 나올 수 있어요</p>
           </div>
         ) : p.notice ? (
-          <div role="status" className="px-3 py-3 text-center text-[12px] font-bold text-text-2">
+          <div role="status" className="px-3 py-3 text-center t-sub font-bold text-text-2">
             {p.notice}
           </div>
         ) : p.failed && empty ? (
-          <div role="status" className="px-3 py-3 text-center text-[12px] text-text-3">
+          <div role="status" className="px-3 py-3 text-center t-sub text-text-3">
 검색 결과 불러오기 실패 · 잠시 후 다시
           </div>
         ) : empty ? (
           <div className="flex flex-col gap-1 px-3 pb-1 pt-2.5">
             <div role="status" className="flex flex-col gap-1">
-              <p className="break-words text-[13px] font-bold text-ink">{noMatchTitle(q)}</p>
-              <p className="break-words text-[12px] text-text-3">
+              <p className="break-words t-body font-bold text-ink">{noMatchTitle(q)}</p>
+              <p className="break-words t-sub text-text-3">
                 {NO_MATCH_HINT} · {NO_MATCH_EXAMPLE}
               </p>
             </div>
             <Link
               href={`/map?q=${encodeURIComponent(q)}`}
               prefetch={false}
-              className="mt-0.5 inline-flex min-h-10 w-fit items-center text-[12px] font-bold text-primary no-underline"
+              className="mt-0.5 inline-flex min-h-10 w-fit items-center t-sub font-bold text-primary no-underline"
             >
               지도에서 찾기 ›
             </Link>
@@ -171,7 +171,7 @@ export default function UnifiedSuggestPanel(p: Props) {
                 <span className="grid h-6 w-6 shrink-0 place-items-center text-text-3">
                   <Icon name="search" size={14} />
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[13px] text-text-2">
+                <span className="min-w-0 flex-1 truncate t-body text-text-2">
                   {it.title.slice(0, it.title.length - (it.kwWord ?? "").length)}
                   <b className="font-bold text-ink">{it.kwWord}</b>
                 </span>
@@ -203,7 +203,7 @@ export default function UnifiedSuggestPanel(p: Props) {
               )}
               <span className="min-w-0 flex-1">
                 <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="min-w-0 truncate text-[13px] font-semibold text-text-1">
+                  <span className="min-w-0 truncate t-body font-semibold text-text-1">
                     {it.area ? <Hl text={it.title} q={q} /> : it.complex ? <Hl text={it.title} q={nameHighlightQuery(q, p.intent)} /> : it.title}
                   </span>
                   {it.fuzzy && !empty && <FuzzyBadge />}
@@ -213,13 +213,13 @@ export default function UnifiedSuggestPanel(p: Props) {
                 ) : it.complex && it.preview ? (
                   <ComplexShade p={it.preview} />
                 ) : it.complex && (it.meta || it.facts) ? (
-                  <span className="block truncate text-[12px] text-text-3">
+                  <span className="block truncate t-sub text-text-3">
                     {[it.meta, it.facts].filter(Boolean).join(" · ")}
                   </span>
                 ) : null}
               </span>
               {!it.complex && it.meta && (
-                <span className="max-w-[96px] shrink-0 truncate text-[12px] text-text-3">{it.meta}</span>
+                <span className="max-w-[96px] shrink-0 truncate t-sub text-text-3">{it.meta}</span>
               )}
             </Link>
             ),
@@ -235,7 +235,7 @@ export default function UnifiedSuggestPanel(p: Props) {
         <button
           type="button"
           onClick={p.onSubmit}
-          className="mt-0.5 flex min-h-10 w-full items-center rounded-lg border-t border-divider px-3 text-left text-[12px] font-bold text-primary transition-colors hover:bg-primary-soft"
+          className="mt-0.5 flex min-h-10 w-full items-center rounded-lg border-t border-divider px-3 text-left t-sub font-bold text-primary transition-colors hover:bg-primary-soft"
         >
           {p.submitLabel}
         </button>

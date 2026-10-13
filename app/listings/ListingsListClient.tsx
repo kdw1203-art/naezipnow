@@ -127,14 +127,14 @@ export function ListingsListClient({
   return (
     <>
       {filter.complex && (
-        <div className="rise-in mb-3 flex items-center gap-2 text-[13px] text-text-2">
+        <div className="rise-in mb-3 flex items-center gap-2 t-body text-text-2">
           <span>
             단지 <b className="text-ink">{filter.complex}</b> 매물만 보는 중
           </span>
           <button
             type="button"
             onClick={() => set({ complex: "" })}
-            className="font-bold text-primary underline"
+            className="inline-flex min-h-[40px] items-center font-bold text-primary underline md:min-h-6"
           >
             전체 보기
           </button>
@@ -142,7 +142,7 @@ export function ListingsListClient({
       )}
 
       {/* 유형 필터 */}
-      <div className="rise-in mb-2 flex gap-1.5 overflow-x-auto text-[13px]">
+      <div className="rise-in mb-2 flex gap-1.5 overflow-x-auto t-body">
         {TYPE_FILTERS.map((f) => (
           <button
             key={f.key || "all"}
@@ -160,7 +160,7 @@ export function ListingsListClient({
 
       {/* 서울 구 필터 — [1030 · 2차] 등록 매물이 0건이면 구 칩 26개는 고를 것이 없다(운영 실측: 0건 위에 칩 줄만) → 숨긴다 */}
       {items.length > 0 && (
-      <div className="rise-in-1 mb-5 flex gap-1.5 overflow-x-auto pb-1 text-[12px] max-md:mb-3 md:flex-wrap md:overflow-visible">
+      <div className="rise-in-1 mb-5 flex gap-1.5 overflow-x-auto pb-1 t-sub max-md:mb-3 md:flex-wrap md:overflow-visible">
         <button
           type="button"
           onClick={() => set({ gu: "" })}
@@ -192,13 +192,13 @@ export function ListingsListClient({
            필터로 0건이면 "베타라 공급이 적다" 는 엉뚱한 말이고, 초기화 버튼이 없어
            칩을 하나씩 되돌려야 했다. */
         <div className="rise-in-1 card card-pad-sm flex flex-col items-center gap-3 py-14 text-center">
-          <div className="text-[15px] font-bold text-ink">
+          <div className="t-section font-bold text-ink">
             {filtersActive
               ? "이 조건에 맞는 매물 없음"
               : "검수를 통과한 매물 없음"}
           </div>
           {/* [1015 · 규칙 B] 빈 화면의 긴 권유문(베타·집주인·중개사무소·임장노트 세 문장) → 사실 한 줄 */}
-          <p className="max-w-[420px] text-[13px] leading-[1.7] text-text-3">
+          <p className="max-w-[420px] t-body leading-[1.7] text-text-3">
             {filtersActive
               ? `필터를 초기화하면 전체 ${items.length}건`
               : "집주인 직접 등록 · 제휴 중개사 등록 매물이 검수 뒤 여기에 실립니다"}
@@ -220,6 +220,32 @@ export function ListingsListClient({
           </div>
         </div>
       ) : (
+        <>
+        {/* [1063 · 행동] 결과 줄 — 지금 몇 건인지(실측)와 걸린 조건, 그리고 되돌리는 단추를 목록 바로 위에.
+            예전에는 조건을 풀려면 칩 줄(유형 4 + 구 27)까지 올라가 하나씩 다시 눌러야 했다. 폰에서는 그게 화면 한 장 위다. */}
+        <div className="rise-in-1 mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <span className="t-sub text-text-2">
+            <b className="t-num font-bold text-ink">{list.length.toLocaleString("ko-KR")}</b>건
+            {filtersActive
+              ? ` · ${[
+                  filter.type ? TYPE_FILTERS.find((f) => f.key === filter.type)?.label : null,
+                  filter.gu,
+                  filter.complex,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")} · 전체 ${items.length.toLocaleString("ko-KR")}건`
+              : ""}
+          </span>
+          {filtersActive && (
+            <button
+              type="button"
+              onClick={() => set({ type: "", gu: "", complex: "" })}
+              className="inline-flex min-h-[40px] items-center t-sub font-bold text-primary underline md:min-h-6"
+            >
+              필터 초기화
+            </button>
+          )}
+        </div>
         <div className="rise-in-1 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {list.map((l) => {
             const boostOn = isBoostActive(l.boostUntil);
@@ -245,11 +271,11 @@ export function ListingsListClient({
                   />
                 )}
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="rounded-md bg-bg chip-pad text-[12px] font-bold text-text-2">
+                  <span className="rounded-md bg-bg chip-pad t-sub font-bold text-text-2">
                     {LISTING_TYPE_LABEL[l.listingType]}
                   </span>
                   <span
-                    className={`rounded-md chip-pad text-[12px] font-bold ${
+                    className={`rounded-md chip-pad t-sub font-bold ${
                       l.source === "owner"
                         ? "bg-[rgba(29,79,216,.08)] text-primary"
                         : "bg-warning-soft text-warning"
@@ -258,23 +284,24 @@ export function ListingsListClient({
                     {LISTING_SOURCE_LABEL[l.source]}
                   </span>
                   {l.ownerVerified && (
-                    <span className="rounded-md bg-success-soft chip-pad text-[12px] font-bold text-success">
+                    <span className="rounded-md bg-success-soft chip-pad t-sub font-bold text-success">
                       소유확인
                     </span>
                   )}
                   {boostOn && (
-                    <span className="rounded-md bg-[rgba(245,158,11,.14)] chip-pad text-[12px] font-bold text-warning">
+                    <span className="rounded-md bg-[rgba(245,158,11,.14)] chip-pad t-sub font-bold text-warning">
                       부스트
                     </span>
                   )}
                 </div>
-                <div className="t-num text-[19px] font-bold leading-[1.3] text-ink">
+                <div className="t-num t-title font-bold leading-[1.3] text-ink">
                   {priceLine(l)}
                 </div>
-                <div className="text-[15px] font-bold leading-[1.4] text-ink">
+                <div className="t-section font-bold leading-[1.4] text-ink">
                   {l.complexName}
                 </div>
-                <div className="text-[12px] text-text-2">
+                {/* [1063] 면적·층과 동네·갱신·조회는 라벨 없는 사실 줄 — 값만 모아 둔다(글자 두 단) */}
+                <div className="t-sub text-text-2">
                   {[
                     l.areaM2 !== null ? `${l.areaM2}㎡` : null,
                     l.floor !== null ? `${l.floor}층` : null,
@@ -282,18 +309,18 @@ export function ListingsListClient({
                     .filter(Boolean)
                     .join(" · ")}
                 </div>
-                <div className="text-[12px] text-text-3">
+                <div className="t-caption text-text-3">
                   {[l.regionName, when, `조회 ${l.viewCount.toLocaleString("ko-KR")}`, l.authorLabel]
                     .filter(Boolean)
                     .join(" · ")}
                 </div>
                 {desc.trim() && (
-                  <p className="line-clamp-2 text-[13px] leading-[1.6] text-text-2">
+                  <p className="line-clamp-2 t-sub leading-[1.6] text-text-2">
                     {desc.trim()}
                   </p>
                 )}
                 <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-                  <span className="text-[12px] font-bold text-primary">상세 보기 →</span>
+                  <span className="t-sub font-bold text-primary">상세 보기 →</span>
                   {/* [1009 · T 리뷰 MED-10] 비교 담기는 보관 경로(/listings/compare)의 입구라 소유자 결정 전까지 끈다(./compare-entry).
                       꺼 두면 카드 링크(<a>) 안에 단추가 들어 있던 중첩 조작도 없어진다. */}
                   {LISTING_COMPARE_ENTRY_OPEN && <ListingCompareToggle item={toCompareListing(l)} />}
@@ -302,6 +329,7 @@ export function ListingsListClient({
             );
           })}
         </div>
+        </>
       )}
     </>
   );

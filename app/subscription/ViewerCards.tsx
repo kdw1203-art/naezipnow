@@ -122,7 +122,7 @@ export function WeeklyPassCta({
       <div className="flex flex-col gap-1.5">
         <Link
           href={href}
-          className="press block w-full rounded-lg bg-brand-navy p-[13px] text-center text-[13px] font-bold text-on-dark no-underline"
+          className="press block w-full rounded-lg bg-brand-navy p-[13px] text-center t-body font-bold text-on-dark no-underline"
         >
           {`카드로 ${weeklyTotalKrw.toLocaleString("ko-KR")}원 결제하기 (${weeklyDays}일 이용권)`}
         </Link>

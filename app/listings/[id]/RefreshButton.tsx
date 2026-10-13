@@ -48,7 +48,7 @@ export function RefreshButton({
   if (phase === "done") {
     /* [1012 · 규칙 4] "✓" 활자 → 선 아이콘 check */
     return (
-      <span className="inline-flex items-center gap-1 text-[12px] font-bold text-success">
+      <span className="inline-flex items-center gap-1 t-sub font-bold text-success">
         <Icon name="check" size={12} /> 끌어올렸어요
       </span>
     );
@@ -65,7 +65,7 @@ export function RefreshButton({
         {phase === "busy" ? "갱신 중…" : "끌어올리기(갱신)"}
       </button>
       {phase === "error" && (
-        <span className="text-[12px] font-bold text-danger">
+        <span className="t-sub font-bold text-danger">
           갱신하지 못했어요. 잠시 후 다시 시도해 주세요.
         </span>
       )}

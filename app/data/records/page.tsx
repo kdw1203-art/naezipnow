@@ -48,16 +48,16 @@ export default async function DataRecordsPage() {
       breadcrumb="홈 › 데이터 › 공공 자료 현황"
       title="공공 부동산 자료 현황"
     >
-      <p className="rise-in mb-5 text-[13px] leading-[1.6] text-text-2">
+      <p className="rise-in mb-5 t-body leading-[1.6] text-text-2">
         준비 중인 공공 자료 목록이에요. 지금 쓰는 자료는 &lsquo;데이터 출처&rsquo;에 있어요.
       </p>
 
       {/* 자료별 제공 상태 — [1028 · 제안 8] 내부 말("데이터셋 연동 현황·적재") → 일반 말. 합계는 1건 이상일 때만 */}
       <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
-        <h2 className="text-[15px] font-bold text-ink">
+        <h2 className="t-section font-bold text-ink">
           자료별 제공 상태
           {totalRows > 0 && (
-            <span className="text-[12px] font-medium text-text-3">
+            <span className="t-sub font-medium text-text-3">
               {" "}
               총 {totalRows.toLocaleString()}건
             </span>
@@ -73,14 +73,14 @@ export default async function DataRecordsPage() {
                 className="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2.5"
               >
                 <div className="min-w-0">
-                  <div className="text-[13px] font-bold text-ink">{p.label}</div>
-                  <div className="mt-0.5 truncate text-[12px] text-text-3">
+                  <div className="t-body font-bold text-ink">{p.label}</div>
+                  <div className="mt-0.5 truncate t-sub text-text-3">
                     {p.description}
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
                   {rows > 0 ? (
-                    <span className="text-[12px] font-bold text-primary">
+                    <span className="t-sub font-bold text-primary">
                       {rows.toLocaleString()}건
                     </span>
                   ) : (
@@ -96,7 +96,7 @@ export default async function DataRecordsPage() {
         {/* [1011] "‘연동 대기’ 자료는 CODEF(codef.io) 자격 증명 설정 후 자동 적재됩니다" 를 걷었다
             (소유자 지시) — 어떤 중계사와 어떤 자격 증명으로 자료를 끌어오는지는 쓰는 사람이 알 필요가
             없다. 칸마다 붙은 "준비 중" 배지([1028] 옛 "연동 대기")가 아직 못 보여 준다는 사실을 이미 말한다. */}
-        <p className="mt-3 text-[12px] leading-[1.6] text-text-3">
+        <p className="mt-3 t-sub leading-[1.6] text-text-3">
           {/* [1028 · 제안 11] "KB"를 뺐다 — 지역 통계는 전부 한국부동산원 자료다(2026-10-03 운영: market_region_price 109개 지역 source=reb, market_price_indices REB·BOK, KB 수집 기록 0건). KB 자료가 실제로 들어오면 되살린다. */}
           실거래 지도는 국토교통부 실거래가, 지역 통계는 한국부동산원 자료로 운영 중이에요.
         </p>
@@ -104,11 +104,11 @@ export default async function DataRecordsPage() {
 
       {/* 단지 검색 */}
       <section className="rise-in-2 card mb-6 p-[var(--pad-card)]">
-        <h2 className="text-[15px] font-bold text-ink">단지 자료 조회</h2>
+        <h2 className="t-section font-bold text-ink">단지 자료 조회</h2>
         <RecordsSearchClient />
       </section>
 
-      <p className="mb-4 text-[12px] leading-[1.6] text-text-3">
+      <p className="mb-4 t-sub leading-[1.6] text-text-3">
         본 자료는 공공·공개 데이터를 취합한 참고용 정보이며, 실제 거래·계약 조건과 다를 수
         있습니다. 투자 판단의 책임은 이용자 본인에게 있습니다.
       </p>

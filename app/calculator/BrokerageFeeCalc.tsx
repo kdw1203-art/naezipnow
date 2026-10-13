@@ -45,7 +45,7 @@ const PROPS = [
 ] as const;
 
 const inputCls =
-  "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[13px] text-ink placeholder:text-text-3";
+  "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 t-body text-ink placeholder:text-text-3";
 
 export function BrokerageFeeCalc() {
   const [deal, setDeal] = useState<BrokerageDeal>("sale");

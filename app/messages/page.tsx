@@ -23,26 +23,26 @@ export default function MessagesPage() {
   return (
     <PageShell>
       <div className="mx-auto w-full max-w-[480px]">
-        <h1 className="rise-in text-[21px] font-bold text-ink">쪽지함</h1>
+        <h1 className="rise-in t-title font-bold text-ink">쪽지함</h1>
 
         <div className="rise-in-1 card mt-4 flex flex-col items-center gap-3 rounded-3xl px-6 py-12 text-center max-md:py-8">
           {/* [1015 · 규칙 4] UI 이모지(✉️) → 선 아이콘 */}
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
             <Icon name="mail" size={22} />
           </div>
-          <div className="text-[15px] font-bold text-ink">
+          <div className="t-section font-bold text-ink">
             쪽지 기능 준비 중
           </div>
           {/* [992 · A1] 임장 모임 채팅(/town/groups)은 보관(비노출) — 안내 링크를 뺐다.
               이 화면 자체도 보관 목록(lib/seo/archived-routes.ts)에 있다. */}
-          <p className="text-[13px] leading-[1.7] text-text-2">
+          <p className="t-body leading-[1.7] text-text-2">
             1:1 쪽지는 아직 열리지 않았어요.
             <br />
             지금은 공개 임장노트의 댓글로 이웃과 이야기할 수 있어요.
           </p>
           <Link
             href="/notes"
-            className="btn-primary mt-1 rounded-xl px-6 py-3 text-[13px] no-underline"
+            className="btn-primary mt-1 rounded-xl px-6 py-3 t-body no-underline"
           >
             공개 임장노트 보기
           </Link>
@@ -58,7 +58,7 @@ export default function MessagesPage() {
           </Link>
         </div>
 
-        <div className="rise-in-2 mt-3 text-center text-[12px] text-text-3">
+        <div className="rise-in-2 mt-3 text-center t-sub text-text-3">
           쪽지는 닉네임으로만 오가도록 준비하고 있어요 · 연락처 요구는 신고
           대상입니다
         </div>

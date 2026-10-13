@@ -199,7 +199,7 @@ export function AgentChat({ models }: { models: AgentModelChoice[] }) {
           <div className="flex flex-1 flex-col items-center justify-center gap-3 py-8 text-center">
             {/* [1012-R2 · 규칙 9] 흰 카드 위 "AI" 표시 — 파랑 채움 → 잉크 외곽선(.ai-chip 은 어두운 패널용) */}
             <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-line t-body font-bold text-ink">AI</div>
-            <div className="text-[13px] font-bold text-ink">
+            <div className="t-body font-bold text-ink">
               내 임장노트와 실거래 데이터로 답하는 에이전트예요
             </div>
             <div className="max-w-sm text-xs leading-[1.6] text-text-3">

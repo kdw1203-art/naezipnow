@@ -231,7 +231,7 @@ export default async function DigestPage() {
                 <Delta
                   pct={m.changePct}
                   srContext={m.changeBasis === "weekly" ? "매매지수 전주보다" : "매매지수 전월보다"}
-                  className="text-[12px]"
+                  className="t-sub"
                 />
                 <span className="t-caption text-text-3">{m.changeBasis === "weekly" ? "전주 대비" : "전월 대비"}</span>
               </span>

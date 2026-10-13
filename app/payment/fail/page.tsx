@@ -127,10 +127,10 @@ export default async function PaymentFailPage({
         >
           {category === "user_cancel" ? "−" : "!"}
         </span>
-        <h1 className="text-[21px] font-bold tracking-[-0.4px] text-ink">
+        <h1 className="t-title font-bold tracking-[-0.4px] text-ink">
           {category === "user_cancel" ? "결제를 취소했습니다" : "결제가 완료되지 않았습니다"}
         </h1>
-        <p className="text-[13px] leading-[1.6] text-text-2">{CATEGORY_MESSAGE[category]}</p>
+        <p className="t-body leading-[1.6] text-text-2">{CATEGORY_MESSAGE[category]}</p>
         {(orderIdShown || codeShown) && (
           <p className="text-xs text-text-3">
             {orderIdShown ? `주문번호 ${orderIdShown}` : null}
@@ -149,13 +149,13 @@ export default async function PaymentFailPage({
                   ? "/subscription"
                   : retryHref
             }
-            className="btn-primary rounded-lg p-[13px] text-center text-[15px] font-bold"
+            className="btn-primary rounded-lg p-[13px] text-center t-section font-bold"
           >
             {CATEGORY_ACTION[category].label}
           </Link>
           <Link
             href="/support?category=payment"
-            className="rounded-lg border border-line bg-surface p-[13px] text-center text-[15px] font-bold text-text-1"
+            className="rounded-lg border border-line bg-surface p-[13px] text-center t-section font-bold text-text-1"
           >
             문의하기
           </Link>

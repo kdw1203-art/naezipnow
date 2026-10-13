@@ -77,7 +77,7 @@ export default async function DevDealsHubPage() {
               "안내" 색면 배너(면책 — 아래 DISCLAIMER 와 같은 사실의 반복)를 지웠다. 역할·면책은 페이지 끝 DISCLAIMER
               한 곳과 제목 옆 ⓘ 하나로. */}
           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-            <h1 className="text-[19px] font-bold leading-[1.3] text-ink md:text-[21px]">
+            <h1 className="t-title font-bold leading-[1.3] text-ink md:text-[21px]">
               개발물건 중개
             </h1>
             <Explain
@@ -98,7 +98,7 @@ export default async function DevDealsHubPage() {
         <AdZone placement="page_bottom" seed={4} plan={null} className="mt-8 max-md:mt-5" />
 
         {/* 면책 고지 — [1015 · 규칙 C] 앰버 색면 → 흰 카드 + 1px 선(문구는 그대로) */}
-        <div className="rise-in-4 card mt-4 rounded-xl px-4 py-3 text-[12px] leading-[1.7] text-text-3">
+        <div className="rise-in-4 card mt-4 rounded-xl px-4 py-3 t-sub leading-[1.7] text-text-3">
           {DISCLAIMER}
         </div>
         {/* 수익 문구 미기재 방침(소유자 방침 2026-08-11) — 마켓 표면 공통 고지 */}

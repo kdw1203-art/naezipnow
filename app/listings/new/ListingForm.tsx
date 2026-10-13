@@ -274,13 +274,13 @@ export function ListingForm() {
   if (done) {
     return (
       <div className="rise-in card card-pad-sm mx-auto flex w-full max-w-[760px] flex-col items-start gap-3 py-8">
-        <div className="text-[15px] font-bold text-ink">매물 등록이 접수됐어요</div>
-        <p className="text-[13px] leading-[1.7] text-text-2">
+        <div className="t-section font-bold text-ink">매물 등록이 접수됐어요</div>
+        <p className="t-body leading-[1.7] text-text-2">
           <b>검수 후 노출됩니다 (1~2일)</b>. 형식 요건 확인이 끝나면 실매물 목록에 공개돼요.{" "}
           <b>승인되면 포인트가 지급돼요.</b> 반려 시 사유를 안내드립니다.
         </p>
         {!detailFieldsSaved && (
-          <p className="rounded-xl bg-bg px-3 py-2.5 text-[12px] leading-[1.6] text-text-2">
+          <p className="rounded-xl bg-bg px-3 py-2.5 t-sub leading-[1.6] text-text-2">
             거래유형·가격·위치는 저장됐어요. 다만 방·화장실·주차·건물유형 필드는 아직
             DB에 반영되지 않아 이번에는 저장되지 않았습니다. 검수·필터에는 기본 정보만
             쓰입니다.
@@ -298,7 +298,7 @@ export function ListingForm() {
     );
   }
 
-  const label = "mb-1.5 block text-[13px] font-bold text-ink";
+  const label = "mb-1.5 block t-body font-bold text-ink";
 
   return (
     <form onSubmit={onSubmit} className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
@@ -307,7 +307,7 @@ export function ListingForm() {
         <span className={label}>
           위치 지정 <span className="text-danger">*</span>
         </span>
-        <p className="mb-2 text-[12px] leading-[1.6] text-text-3">
+        <p className="mb-2 t-sub leading-[1.6] text-text-3">
           지도를 움직여 중앙 핀을 매물 위치에 맞춘 뒤 <b>‘이 위치로 주소 찾기’</b>를 누르거나,
           아래에서 주소를 검색하세요.
         </p>
@@ -367,10 +367,10 @@ export function ListingForm() {
         </div>
 
         {geoMsg && (
-          <p className="mt-2 text-[12px] font-bold text-danger">{geoMsg}</p>
+          <p className="mt-2 t-sub font-bold text-danger">{geoMsg}</p>
         )}
         {picked && (
-          <div className="mt-2 rounded-xl bg-[rgba(29,79,216,.06)] px-3 py-2.5 text-[13px] leading-[1.6] text-text-2">
+          <div className="mt-2 rounded-xl bg-[rgba(29,79,216,.06)] px-3 py-2.5 t-body leading-[1.6] text-text-2">
             선택한 위치: <b className="text-ink">{picked.address}</b>
           </div>
         )}
@@ -390,7 +390,7 @@ export function ListingForm() {
               key={s.key}
               type="button"
               onClick={() => setSource(s.key)}
-              className={`chip px-4 py-2 text-[13px] ${
+              className={`chip px-4 py-2 t-body ${
                 source === s.key ? "chip-active" : "bg-[var(--glass-bg)] text-text-2"
               }`}
             >
@@ -410,7 +410,7 @@ export function ListingForm() {
               key={t.key}
               type="button"
               onClick={() => setListingType(t.key)}
-              className={`chip px-4 py-2 text-[13px] ${
+              className={`chip px-4 py-2 t-body ${
                 listingType === t.key
                   ? "chip-active"
                   : "bg-[var(--glass-bg)] text-text-2"
@@ -431,7 +431,7 @@ export function ListingForm() {
               key={c.key}
               type="button"
               onClick={() => setCategory(c.key)}
-              className={`chip px-4 py-2 text-[13px] ${
+              className={`chip px-4 py-2 t-body ${
                 category === c.key
                   ? "chip-active"
                   : "bg-[var(--glass-bg)] text-text-2"
@@ -649,7 +649,7 @@ export function ListingForm() {
       {/* 매물 사진 업로드 */}
       <div>
         <span className={label}>매물 사진 (선택 · 최대 {MAX_PHOTOS}장)</span>
-        <p className="mb-2 text-[12px] leading-[1.6] text-text-3">
+        <p className="mb-2 t-sub leading-[1.6] text-text-3">
           기기에서 사진을 골라 올리면 <b>첫 번째 사진</b>이 대표 이미지로 사용돼요.
         </p>
         <div className="flex flex-wrap gap-2">
@@ -669,7 +669,7 @@ export function ListingForm() {
                 type="button"
                 onClick={() => removePhoto(url)}
                 aria-label="사진 삭제"
-                className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[rgba(0,0,0,.55)] text-[13px] leading-none text-white"
+                className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[rgba(0,0,0,.55)] t-body leading-none text-white"
               >
                 ×
               </button>
@@ -677,7 +677,7 @@ export function ListingForm() {
           ))}
           {photos.length < MAX_PHOTOS && (
             <label
-              className={`flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[rgba(0,0,0,.18)] text-[12px] text-text-3 ${
+              className={`flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[rgba(0,0,0,.18)] t-sub text-text-3 ${
                 photosUploading
                   ? "pointer-events-none opacity-60"
                   : "cursor-pointer hover:border-primary hover:text-primary"
@@ -703,7 +703,7 @@ export function ListingForm() {
           )}
         </div>
         {photoError && (
-          <p className="mt-2 text-[12px] font-bold text-danger">{photoError}</p>
+          <p className="mt-2 t-sub font-bold text-danger">{photoError}</p>
         )}
       </div>
 
@@ -738,7 +738,7 @@ export function ListingForm() {
       </div>
 
       {/* 책임 고지 동의 */}
-      <label className="flex items-start gap-2 text-[12px] leading-[1.7] text-text-2">
+      <label className="flex items-start gap-2 t-sub leading-[1.7] text-text-2">
         <input
           type="checkbox"
           checked={agree}
@@ -753,7 +753,7 @@ export function ListingForm() {
       </label>
 
       {error && (
-        <div className="rounded-xl bg-danger-soft px-4 py-3 text-[13px] font-bold text-danger">
+        <div className="rounded-xl bg-danger-soft px-4 py-3 t-body font-bold text-danger">
           {error}
         </div>
       )}

@@ -33,7 +33,7 @@ function Fact({ label, value, muted }: { label: string; value: string; muted?: b
   return (
     <div className="rounded-lg border border-line bg-surface px-3 py-2">
       <dt className="t-caption font-bold text-text-3">{label}</dt>
-      <dd className={`mt-0.5 text-[12px] leading-[1.5] ${muted ? "text-text-3" : "text-ink"}`}>
+      <dd className={`mt-0.5 t-sub leading-[1.5] ${muted ? "text-text-3" : "text-ink"}`}>
         {value}
       </dd>
     </div>
@@ -141,7 +141,7 @@ export function ProjectDetailPanel({
                   {s.order}단계
                 </span>
                 <span
-                  className={`text-[12px] font-bold leading-[1.35] ${
+                  className={`t-sub font-bold leading-[1.35] ${
                     state === "now"
                       ? "text-primary"
                       : state === "past"

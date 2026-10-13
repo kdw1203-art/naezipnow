@@ -108,7 +108,7 @@ function FeatureList({ features }: { features: PlanFeature[] }) {
        네이비 카드 안에서도 글자는 밝은 판 위의 어두운 글자(text-text-1)여야 한다 — 예전 text-ai-text(한지색)는
        그 판 위에서 읽히지 않았다. */
     <div
-      className="flex flex-col divide-y divide-line py-1 text-[13px] leading-[1.5] text-text-1"
+      className="flex flex-col divide-y divide-line py-1 t-body leading-[1.5] text-text-1"
       data-tone="mint"
     >
       {features.map((f, i) => (
@@ -124,7 +124,7 @@ function FeatureList({ features }: { features: PlanFeature[] }) {
           type="button"
           onClick={() => setExpanded(true)}
           /* [989] 실측 36px — 모바일에서만 보이는 버튼인데 손가락 기준에 못 미쳤다 */
-          className="min-h-[44px] py-2 text-left text-[13px] font-bold text-primary md:hidden"
+          className="min-h-[44px] py-2 text-left t-body font-bold text-primary md:hidden"
         >
           전체 기능 {features.length}개 보기 ▾
         </button>
@@ -133,7 +133,7 @@ function FeatureList({ features }: { features: PlanFeature[] }) {
   );
 }
 
-/* [1015] 밝은 리퀴드 판 위의 행 — dark 카드에서도 같은 색(판이 밝다). 한도 배지 text-[10px] → t-caption. */
+/* [1015] 밝은 리퀴드 판 위의 행 — dark 카드에서도 같은 색(판이 밝다). 한도 배지 t-caption → t-caption. */
 function FeatureRow({ f }: { f: PlanFeature }) {
   const off = f.included === false;
   return (
@@ -302,7 +302,7 @@ export function PlanCards({
               <div className="flex flex-col gap-1">
                 <div className={`text-[15px] font-bold ${p.nameTone}`}>{p.name}</div>
                 {/* 단일 출처 tagline — "누구를 위한 플랜인가" 한 줄 */}
-                <div className={`text-[12px] ${p.dark ? "text-ai-muted" : "text-text-3"}`}>
+                <div className={`t-sub ${p.dark ? "text-ai-muted" : "text-text-3"}`}>
                   {def.tagline}
                 </div>
               </div>
@@ -313,12 +313,12 @@ export function PlanCards({
                     {tierPrice == null ? "0원" : fmtWon(monthlyShown)}
                   </span>
                   {tierPrice != null && (
-                    <span className={`text-[13px] ${p.dark ? "text-ai-muted" : "text-text-3"}`}>/월</span>
+                    <span className={`t-body ${p.dark ? "text-ai-muted" : "text-text-3"}`}>/월</span>
                   )}
                 </div>
                 {tierPrice != null && billing === "annual" && (
                   <>
-                    <span className={`text-[12px] ${p.dark ? "text-ai-muted" : "text-text-3"}`}>
+                    <span className={`t-sub ${p.dark ? "text-ai-muted" : "text-text-3"}`}>
                       연 {fmtWon(tierPrice.annualTotal)} · -{Math.round(tierPrice.annualDiscountPct)}%
                     </span>
                     {/* 월 환산가는 싸 보이게 만드는 표기일 뿐, **얼마를 아끼는지**는
@@ -357,7 +357,7 @@ export function PlanCards({
                 <button
                   type="button"
                   disabled
-                  className="rounded-lg bg-bg p-[13px] text-center text-[15px] font-bold text-text-1 opacity-70"
+                  className="rounded-lg bg-bg p-[13px] text-center t-section font-bold text-text-1 opacity-70"
                 >
                   현재 이용 중
                 </button>

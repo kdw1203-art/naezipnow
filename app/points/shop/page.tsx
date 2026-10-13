@@ -28,7 +28,7 @@ function GuestView() {
       <div className="rise-in ai-panel flex flex-col items-center gap-2 rounded-3xl px-5 py-8 text-center">
         <div className="text-2xl"><Icon name="shopping-bag" size={24} /></div>
         {/* [1028 · 제안 5] 권유 제목("교환하세요")·설명 부제 → "~하려면 로그인이 필요해요" + 교환 품목 명사 한 줄(아래 목록과 같은 품목) */}
-        <div className="mt-1 text-[15px] font-bold text-white">
+        <div className="mt-1 t-section font-bold text-white">
           로그인 필요 · 교환
         </div>
         <div className="text-xs leading-[1.6] text-ai-muted">
@@ -36,7 +36,7 @@ function GuestView() {
         </div>
         <Link
           href="/login?callbackUrl=/points/shop"
-          className="btn-primary mt-3 rounded-lg px-6 py-2.5 text-[13px]"
+          className="btn-primary mt-3 rounded-lg px-6 py-2.5 t-body"
         >
           로그인하고 포인트 보기
         </Link>
@@ -45,7 +45,7 @@ function GuestView() {
       <div className="rise-in-1 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {SPEND_ITEMS.map((item) => (
           <div key={item.key} className="card rounded-2xl p-5 opacity-80">
-            <div className="text-[13px] font-bold text-ink">
+            <div className="t-body font-bold text-ink">
               {item.label}
               {item.season && (
                 <span className="ml-1.5 align-middle rounded-full bg-warning-soft px-2 py-0.5 t-caption font-bold text-warning">
@@ -53,16 +53,16 @@ function GuestView() {
                 </span>
               )}
             </div>
-            <div className="mt-1 text-[12px] leading-[1.5] text-text-3">
+            <div className="mt-1 t-sub leading-[1.5] text-text-3">
               {item.desc}
             </div>
-            <div className="mt-3 text-[15px] font-bold text-primary">
+            <div className="mt-3 t-section font-bold text-primary">
               {item.cost.toLocaleString("ko-KR")}P
             </div>
           </div>
         ))}
       </div>
-      <p className="rise-in-3 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[12px] leading-[1.7] text-text-3">
+      <p className="rise-in-3 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 t-sub leading-[1.7] text-text-3">
         {POINTS_GRATUITOUS_NOTICE}
       </p>
     </div>
@@ -113,7 +113,7 @@ export default async function PointsShopPage() {
       <ShopClient initialBalance={loaded.balance} />
       {/* [992 · A1] "자료실 유료 리포트도 포인트로 구매" 배너 제거 — 자료실(/town/library)은 보관(비노출) */}
       {/* 무상성 고지 — PG 심사·소비자 오인 방지 공용(단일 출처) */}
-      <p className="mx-auto mt-4 w-full max-w-[720px] rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 text-[12px] leading-[1.7] text-text-3">
+      <p className="mx-auto mt-4 w-full max-w-[720px] rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 t-sub leading-[1.7] text-text-3">
         {POINTS_GRATUITOUS_NOTICE}
       </p>
     </PageShell>
