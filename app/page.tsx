@@ -366,7 +366,7 @@ export default async function Home() {
                       <span className="flex min-w-0 items-center gap-2.5">
                         <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-divider" aria-hidden="true">
                           {n.cover && (
-                            <CoverImage src={n.cover} alt="" sizes="44px" imgClassName="absolute inset-0 h-full w-full object-cover" />
+                            <CoverImage src={n.cover} alt={`${n.title} 노트 커버`} sizes="44px" imgClassName="absolute inset-0 h-full w-full object-cover" />
                           )}
                         </span>
                         <span className="flex min-w-0 flex-col gap-0.5">

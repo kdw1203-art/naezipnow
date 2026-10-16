@@ -209,7 +209,7 @@ test("TTL 을 올린 라우트가 되돌아가지 않는다(비움 배선과 짝
     ["app/analysis/temperature/page.tsx", "86_400"],
     ["app/analysis/temperature/[region]/page.tsx", "86_400"],
     ["app/analysis/ai/[tool]/page.tsx", "86_400"],
-    ["app/reports/page.tsx", "86_400"],
+    ["app/reports/(index)/page.tsx", "86_400"],
     ["app/reports/season/[slug]/page.tsx", "86_400"],
   ];
   for (const [file, value] of expected) {

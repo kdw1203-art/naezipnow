@@ -95,7 +95,7 @@ test("공개 노트가 실리는 목록 경로 — 실제로 그 화면이 공�
     "/town/library",
   ]);
   /* 목록에 적은 근거를 소스에서 되짚는다 — 화면이 안 읽는 경로를 비우고 있으면 안 된다 */
-  assert.match(read("app/notes/page.tsx"), /listPublicNotes(Page|WithFallback)/);
+  assert.match(read("app/notes/(index)/page.tsx"), /listPublicNotes(Page|WithFallback)/);
   assert.match(read("app/notes/best/page.tsx"), /listBestNoteMonths/);
   assert.match(read("app/notes/market/page.tsx"), /listPublicNotes\(/);
   assert.match(read("app/town/library/page.tsx"), /listPublicNotes\(/);
@@ -112,7 +112,7 @@ test("동네 데이터 캐시 태그는 'news' 와 겹치지 않는다(지역 �
 /** 소스에 적힌 리터럴 그대로 적는다(브리프 규칙 5: 긴 값은 `86_400`·`604_800`). */
 const ROUTE_TTL: Record<string, string> = {
   "app/town/page.tsx": "86_400",
-  "app/town/news/page.tsx": "86_400",
+  "app/town/news/(index)/page.tsx": "86_400",
   "app/town/news/tag/[tag]/page.tsx": "86_400",
   "app/town/library/page.tsx": "86_400",
   "app/town/groups/page.tsx": "86_400",
@@ -120,7 +120,7 @@ const ROUTE_TTL: Record<string, string> = {
   "app/town/experts/[id]/page.tsx": "86_400",
   "app/town/prompt/[idx]/page.tsx": "86_400",
   "app/qna/page.tsx": "86_400",
-  "app/notes/page.tsx": "86_400",
+  "app/notes/(index)/page.tsx": "86_400",
   "app/notes/best/page.tsx": "86_400",
   "app/notes/market/page.tsx": "86_400",
   "app/notes/templates/page.tsx": "86_400",
@@ -130,7 +130,7 @@ const ROUTE_TTL: Record<string, string> = {
   "app/town/story/[id]/page.tsx": "604_800",
   "app/town/[region]/page.tsx": "604_800",
   "app/qna/[id]/page.tsx": "604_800",
-  "app/imjang/page.tsx": "604_800",
+  "app/imjang/(index)/page.tsx": "604_800",
   "app/imjang/[slug]/page.tsx": "604_800",
 };
 
@@ -145,7 +145,7 @@ test("동네·노트·Q&A·프로필 축 ISR TTL", () => {
 
 test("데이터 캐시 TTL — 라우트 TTL 을 끌어내리던 자리를 같이 올렸다(태그와 함께)", () => {
   /* Next 는 세그먼트 revalidate 와 데이터 캐시 revalidate 중 **작은 값**을 쓴다.
-     빌드 산출물로 확인한 실측: app/town/news/page.tsx 는 21_600 인데
+     빌드 산출물로 확인한 실측: app/town/news/(index)/page.tsx 는 21_600 인데
      .next/prerender-manifest.json 의 /town/news 는 3600(= 주간 다이제스트 캐시)이었다.
      그래서 데이터 캐시를 올리지 않으면 라우트 TTL 을 올려도 아무 일이 없다. */
   const digest = read("lib/newui/digest.ts");
@@ -159,7 +159,7 @@ test("데이터 캐시 TTL — 라우트 TTL 을 끌어내리던 자리를 같�
   const link = read("lib/newui/complex-link.ts");
   assert.match(link, /\["complex-href-v2"\],\s*\{ revalidate: 604_800, tags: \["market"\] \}/);
 
-  const notes = read("app/notes/page.tsx");
+  const notes = read("app/notes/(index)/page.tsx");
   assert.match(notes, /\["notes-public-feed-v2"\],\s*\{ revalidate: 86_400, tags: \[PUBLIC_NOTES_LIST_TAG\] \}/);
   assert.match(notes, /\["notes-best-has-month-v1"\],\s*\{ revalidate: 86_400, tags: \[PUBLIC_NOTES_LIST_TAG\] \}/);
 });

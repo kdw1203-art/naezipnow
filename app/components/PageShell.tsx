@@ -7,12 +7,17 @@ import { DesktopSideNav } from "./DesktopSideNav";
 export function PageShell({
   children,
   title,
+  titleAs: TitleTag = "h1",
   breadcrumb,
   wide = false,
   toolScope,
 }: {
   children: React.ReactNode;
   title?: string;
+  /* [1066 · h1 하나] 로딩 스켈레톤(loading.tsx)은 "h2" 로 받는다 — 스켈레톤 셸과 실제 화면이
+     한 문서에 함께 담겨 나가므로 둘 다 h1 이면 한 주소에 h1 이 두 개다(2026-10-13 운영 실측:
+     /imjang /dev-deals /my /search). 글자 모양은 t-title 이 정한다. */
+  titleAs?: "h1" | "h2";
   breadcrumb?: string;
   wide?: boolean;
   /**
@@ -52,9 +57,9 @@ export function PageShell({
             </nav>
           )}
           {title && (
-            <h1 className="rise-in mb-3.5 t-title text-ink md:mb-4">
+            <TitleTag className="rise-in mb-3.5 t-title text-ink md:mb-4">
               {title}
-            </h1>
+            </TitleTag>
           )}
           {children}
         </div>

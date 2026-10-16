@@ -117,7 +117,7 @@ export default async function NotesMarketPage() {
                   {/* [1015 · 규칙 H] 커버 주소는 lib/notes/cover/resolve 한 곳 — 이 자리는 넓은 커버(150px 가로) → 통합자가 wide 판으로 바꾼다(보고서) */}
                   <CoverImage
                     src={noteCoverUrl(note, "wide")}
-                    alt=""
+                    alt={`${note.title} 노트 커버`}
                     /* [970 · B-24] 세로(3:4) 사진은 가운데 크롭에서 건물이 잘렸다 — 위쪽 기준 */
                     imgClassName="absolute inset-0 h-full w-full object-cover object-top"
                     fallback={

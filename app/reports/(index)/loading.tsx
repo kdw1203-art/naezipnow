@@ -1,4 +1,4 @@
-import { PageShell } from "../components/PageShell";
+import { PageShell } from "../../components/PageShell";
 import { LoadingHint } from "@/app/components/ui/LoadingHint";
 import { Skeleton } from "@/components/Skeleton";
 

@@ -289,10 +289,10 @@ test("[1028 · 17] 공매 — 묶음 제목에 그 묶음의 카드 수를 건�
 });
 
 test("[1028 · 3·8] 괄호 꼬리 \"(조회 실패)\"와 남은 내부 말(실데이터 · 실시세)", () => {
-  for (const p of ["app/digest/page.tsx", "app/redevelopment/[id]/page.tsx"]) {
+  for (const p of ["app/digest/(index)/page.tsx", "app/redevelopment/[id]/page.tsx"]) {
     assert.ok(!/\(조회 실패\)|\(일부 조회 실패\)/.test(code(p)), `${p} 괄호 꼬리 없음`);
   }
-  assert.ok(code("app/digest/page.tsx").includes("시세 불러오기 실패 · 잠시 후 다시"));
+  assert.ok(code("app/digest/(index)/page.tsx").includes("시세 불러오기 실패 · 잠시 후 다시"));
   assert.ok(code("app/redevelopment/[id]/page.tsx").includes("가까운 구역 불러오기 실패 · 잠시 후 다시"));
   assert.ok(!code("lib/missions/missions.ts").includes("실데이터로"));
   assert.ok(!/>\s*실시세 \{/.test(code("app/analysis/ai-note-analysis.tsx")));

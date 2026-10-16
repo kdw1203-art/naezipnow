@@ -2,7 +2,7 @@ import { PageShell } from "../components/PageShell";
 
 export default function DevDealsLoading() {
   return (
-    <PageShell breadcrumb="홈 › 개발물건 중개" title="개발물건 중개 (B2B 디벨로퍼 매칭)">
+    <PageShell titleAs="h2" breadcrumb="홈 › 개발물건 중개" title="개발물건 중개 (B2B 디벨로퍼 매칭)">
       <div className="mb-4 h-4 w-3/4 animate-pulse rounded bg-[rgba(0,0,0,.06)]" />
       <div className="mb-5 flex flex-wrap gap-1.5">
         {Array.from({ length: 6 }).map((_, i) => (

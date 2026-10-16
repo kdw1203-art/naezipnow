@@ -19,8 +19,9 @@ import { seoAlternates } from "@/lib/seo/alternates";
 export const SITE_NAME = "내집나우";
 
 export const SITE_DEFAULT = {
-  /* 브랜드 포지션(전략 정본 §6) — 루트 레이아웃 타이틀과 같은 문장을 쓴다 */
-  title: "내집나우 | 시세는 누구나 봅니다, 현장은 가 본 사람만 압니다",
+  /* 브랜드 포지션(전략 정본 §6) — 루트 레이아웃 타이틀과 **같은 문장**을 쓴다(app/layout.tsx).
+     [1066 · 검색어] 검색되는 말을 앞에, 브랜드 문장을 뒤에. */
+  title: "아파트 실거래가 조회·임장노트 — 내집나우 | 시세는 누구나 봅니다, 현장은 가 본 사람만 압니다",
   description:
     "지도·시세·임장노트·동네 커뮤니티를 한 곳에서. 살고 싶은 곳을 기록하고 비교하세요.",
 } as const;

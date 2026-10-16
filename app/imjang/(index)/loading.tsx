@@ -1,4 +1,4 @@
-import { PageShell } from "../components/PageShell";
+import { PageShell } from "../../components/PageShell";
 import { LoadingHint } from "@/app/components/ui/LoadingHint";
 import { Skeleton } from "@/components/Skeleton";
 
@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/Skeleton";
    같은 자리를 먼저 잡는다. [1015] 체크포인트 2열 카드 → 행 목록 모양으로. */
 export default function ImjangLoading() {
   return (
-    <PageShell breadcrumb="홈 › 임장 가이드" title="임장 가이드">
+    <PageShell titleAs="h2" breadcrumb="홈 › 임장 가이드" title="임장 가이드">
       <LoadingHint className="mb-3" />
       <div className="mb-4 max-w-[720px]">
         <Skeleton className="h-3.5 w-2/3 rounded" />

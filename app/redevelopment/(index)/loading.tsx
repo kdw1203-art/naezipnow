@@ -1,4 +1,4 @@
-import { PageShell } from "../components/PageShell";
+import { PageShell } from "../../components/PageShell";
 import { Skeleton } from "@/components/Skeleton";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
 import { TownHero } from "@/app/town/TownHero";
@@ -13,7 +13,7 @@ export default function RedevelopmentLoading() {
    /qna 화면이 정확히 이 로딩 상태다("홈 › 동네이야기 › 단지 Q&A" + 카테고리 줄 위 제목).
    제목·한 줄·브레드크럼 모두 lib/town/category-links.ts 한 곳에서 온다. */
     <PageShell breadcrumb={townBreadcrumb("/redevelopment")} wide>
-      <TownHero href="/redevelopment" />
+      <TownHero as="h2" href="/redevelopment" />
       <TownCategoryNav stick />
 
       <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-6">

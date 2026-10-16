@@ -414,13 +414,23 @@ test("icsEscape(RFC 5545 3.3.11) · foldIcsLine — 글자를 쪼개지 않는�
 
 /* ───────────────────────── 여정 단계 · 링크 ───────────────────────── */
 
-/** app/ 아래 실제 라우트(정적·동적) — check-route-links 와 같은 판정(간이) */
+/** app/ 아래 실제 라우트(정적·동적) — check-route-links 와 같은 판정(간이)
+ *  [1066] 라우트 그룹 `(이름)` 은 주소에 나타나지 않는다(/notes 는 app/notes/(index)/page.tsx).
+ *  그래서 세그먼트를 먹지 않고 그 안으로도 내려가 본다 — check-route-links.mjs 와 같은 규칙. */
 function routeExists(href: string): boolean {
   const p = (href.split("?")[0] ?? href).replace(/\/$/, "") || "/";
   const segs = p.split("/").filter(Boolean);
+  const groups = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && d.name.startsWith("(") && d.name.endsWith(")"))
+      .map((d) => d.name);
   const walk = (dir: string, i: number): boolean => {
-    if (i === segs.length) return existsSync(path.join(dir, "page.tsx")) || existsSync(path.join(dir, "route.ts"));
+    if (i === segs.length) {
+      if (existsSync(path.join(dir, "page.tsx")) || existsSync(path.join(dir, "route.ts"))) return true;
+      return groups(dir).some((g) => walk(path.join(dir, g), i));
+    }
     if (existsSync(path.join(dir, segs[i])) && walk(path.join(dir, segs[i]), i + 1)) return true;
+    if (groups(dir).some((g) => walk(path.join(dir, g), i))) return true;
     return readdirSync(dir, { withFileTypes: true }).some(
       (d) => d.isDirectory() && /^\[[^.]+\]$/.test(d.name) && walk(path.join(dir, d.name), i + 1),
     );

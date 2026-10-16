@@ -657,7 +657,9 @@ function NotesTable({
                     <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-bg">
                       <CoverImage
                         src={n.coverUrl}
-                        alt=""
+                        /* [1066 · 이미지 설명] 운영 실측: /notes 의 <img> 142장 중 38장이 alt="" 였다.
+                           206행과 같은 문장 꼴("<제목> 노트 커버")로 맞춘다 — 커버는 정말 그 노트의 표지다. */
+                        alt={`${n.title} 노트 커버`}
                         sizes="44px"
                         imgClassName="absolute inset-0 h-full w-full object-cover"
                         fallback={<span className="absolute inset-0" style={{ background: seedGradient(n.id) }} />}
@@ -847,7 +849,7 @@ function RightRail({ notes, ad }: { notes: FeedNote[]; ad: ReactNode }) {
                   <span className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-bg">
                     <CoverImage
                       src={n.coverUrl}
-                      alt=""
+                      alt={`${n.title} 노트 커버`}
                       sizes="36px"
                       imgClassName="h-full w-full object-cover"
                       fallback={

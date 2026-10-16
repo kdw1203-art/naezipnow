@@ -17,8 +17,8 @@ import { TownCategoryNav } from "@/app/town/TownCategoryNav";
 import { TownHero } from "@/app/town/TownHero";
 import { MiniBar } from "@/app/components/compact/MiniBar";
 import { Fineprint } from "@/app/components/Fineprint";
-import { RedevelopmentMap } from "./RedevelopmentMap";
-import { SeoulPlanSection } from "./SeoulPlanSection";
+import { RedevelopmentMap } from "../RedevelopmentMap";
+import { SeoulPlanSection } from "../SeoulPlanSection";
 import { STAGE_GUIDES, REDEV_GLOSSARY } from "@/lib/redevelopment/stage-guide";
 
 /* ============================================================

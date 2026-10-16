@@ -88,9 +88,9 @@ test("[1023 · 동네 ③] 피드 빈 상태 — 설명문 꼬리 삭제, 사실
 /* ── 뉴스룸 주제 칩 줄 ─────────────────────────────────────────────────────── */
 
 test("[1023 · 동네 ①] 뉴스룸 — 주제 칩 줄이 첫 화면에 선다, 레일의 같은 칩은 없다", () => {
-  const src = read("app/town/news/page.tsx");
+  const src = read("app/town/news/(index)/page.tsx");
   assert.match(src, /^\/\* \[1023/m);
-  const c = code("app/town/news/page.tsx");
+  const c = code("app/town/news/(index)/page.tsx");
   /* [1044] 뉴스는 동네의 한 칸이 아니다 — 머리(NewsHead) → 주제 칩(본문 첫 줄). 동네 카테고리 줄은 없다 */
   const head = c.indexOf("<NewsHead />");
   const chips = c.indexOf("NEWS_TAGS.map(");

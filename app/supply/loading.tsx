@@ -13,7 +13,7 @@ export default function SupplyLoading() {
    /qna 화면이 정확히 이 로딩 상태다("홈 › 동네이야기 › 단지 Q&A" + 카테고리 줄 위 제목).
    제목·한 줄·브레드크럼 모두 lib/town/category-links.ts 한 곳에서 온다. */
     <PageShell breadcrumb={townBreadcrumb("/supply")} wide>
-      <TownHero href="/supply" />
+      <TownHero as="h2" href="/supply" />
       <TownCategoryNav stick />
 
       <Skeleton className="mb-5 h-4 w-3/4 rounded" />

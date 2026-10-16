@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { listPublicNotesPage } from "@/lib/inspection/store-db";
 import { listPublicNotesWithFallback } from "@/lib/inspection/public-notes-cached";
-import { NotesFeedClient, type FeedNote } from "./notes-feed-client";
+import { NotesFeedClient, type FeedNote } from "../notes-feed-client";
 import { buildFeedNotes } from "@/lib/notes/feed-note";
 import { listBestNoteMonths } from "@/lib/inspection/best-notes";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
@@ -21,10 +21,11 @@ import { AdZone } from "@/app/components/ads/AdZone";
    관심 지역은 /api/me/alerts). 서버 렌더에 사용자별 값은 없다 — CDN 한 벌을 모두에게 줘도
    새는 것이 없다. 60초 데이터 캐시는 페이지 눈금(300)과 맞췄다. */
 
+/* [1069 · 검색어] "임장노트" 네 글자뿐이라 "아파트 임장 체크리스트"·"임장 후기" 같은 말이 하나도 없었다. */
 export const metadata = buildPageMetadata({
-  title: "임장노트",
+  title: "아파트 임장 후기·체크리스트 — 공개 임장노트",
   description:
-    "공개 임장노트 · 직접 다녀온 기록 · 단지별 항목 점수 · 현장 메모 · 사진", /* [1029 · 20] 낱말 꼴 */
+    "직접 다녀온 사람이 쓴 공개 임장노트 — 단지별 항목 점수 · 현장 체크리스트 · 메모 · 사진 · 지역별 모아보기", /* [1029 · 20] 낱말 꼴 */
   path: "/notes",
   og: { badge: "임장노트", sub: "직접 걸어본 사람들의 공개 기록" },
 });

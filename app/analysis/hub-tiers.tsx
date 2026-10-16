@@ -145,9 +145,12 @@ export function WorkbenchGrid({
       </td>
       <td className="hidden px-2 py-1.5 t-sub text-text-2 md:table-cell">{c.premise}</td>
       <td className="hidden w-[180px] px-2 py-1.5 t-caption text-text-3 lg:table-cell">{c.result ?? "—"}</td>
-      <td className={`px-3 text-right ${isOpen ? "w-16 whitespace-nowrap t-caption font-bold text-primary" : "w-8 t-body text-text-3"}`} aria-hidden="true">
+      {/* [1067 · 칸 흔들림] 펼치면 이 칸이 w-8 → w-16("열기 ›")로 넓어져 **표 전체의 칸 자리가 밀렸다**
+          (결과 칸이 줄마다 다른 x 로 보인다 — 소유자 캡처 2026-10-13). 폭을 한 값으로 고정하고 상태는 캐럿 방향으로만
+          말한다. "열기"는 펼친 칸 안의 단추가 이미 이름까지 붙여 말하고 있다(중복). */}
+      <td className="w-10 px-3 text-right t-body text-text-3" aria-hidden="true">
         {/* dead-control-ok: 줄 전체가 펼침 단추(tr onClick · 첫 칸 링크의 첫 누름) — 캐럿은 그 상태 표시 */}
-        {isOpen ? "열기 ›" : "▾"}
+        {isOpen ? "▴" : "▾"}
       </td>
     </tr>
     {isOpen && (
@@ -169,9 +172,9 @@ export function WorkbenchGrid({
             <tr className="border-b border-line bg-bg text-left t-caption text-text-3">
               <th scope="col" className="px-3 py-2 font-bold">도구</th>
               <th scope="col" className="px-2 py-2 font-bold">하는 일</th>
-              <th scope="col" className="hidden px-2 py-2 font-bold lg:table-cell">결과</th>
-              <th scope="col" className="px-3 py-2">
-                <span className="sr-only">열기</span>
+              <th scope="col" className="hidden w-[180px] px-2 py-2 font-bold lg:table-cell">결과</th>
+              <th scope="col" className="w-10 px-3 py-2">
+                <span className="sr-only">펼치기</span>
               </th>
             </tr>
           </thead>
@@ -180,7 +183,8 @@ export function WorkbenchGrid({
         {/* 그 밖의 8종 — 같은 판 아래 촘촘한 칸(글리프 · 이름). 폰 2열 · 데스크톱 4열 — 표 한 줄씩이면 화면이 길어진다 */}
         {more.length > 0 && (
           <div className="border-t border-line bg-bg/60 px-3 py-2">
-            <p className="m-0 pb-1 t-caption font-bold text-text-3">그 밖의 도구 {more.length}</p>
+            {/* [1067] 같은 판 안인데 이 줄만 표 머리와 꼴이 달랐다 — 표 머리(t-caption · text-text-3 · 굵게)와 맞춘다 */}
+            <p className="m-0 pb-1.5 t-caption font-bold text-text-3">그 밖의 도구 {more.length}</p>
             {/* [1050 · 펼침] 누른 칸 줄 바로 아래에 내용 — 같은 줄의 나머지 칸은 dense 로 제 줄에 남는다 */}
             <ul className="m-0 grid list-none grid-flow-row-dense grid-cols-2 gap-x-2 p-0 md:grid-cols-4">
               {more.map((c) => {
@@ -202,7 +206,9 @@ export function WorkbenchGrid({
                       <ToolGlyph id={c.glyph} size={18} />
                     </span>
                     <span className="min-w-0 flex-1 truncate t-sub font-bold text-text-1">{c.title}</span>
-                    {isOpen && <span className="shrink-0 t-caption font-bold text-primary">열기 ›</span>}
+                    {/* [1067] 열렸을 때만 "열기 ›" 를 붙이던 자리 — 글자 폭만큼 이름 칸이 줄어 말줄임 자리가 줄마다 달랐다.
+                        캐럿을 늘 그려 봤더니(실측 캡처) 여덟 칸에 화살표가 줄지어 서서 더 어수선했다 — 아무것도 두지 않는다.
+                        펼친 칸은 배경색(bg-surface)과 바로 아래 열리는 내용이 이미 말한다. */}
                   </Link>
                 </li>
                 {isOpen && (

@@ -83,7 +83,7 @@ test("C2 /my/watchlist — \"저장한 글\" 탭이 있고 SavedPostsSection 이
 
 /* ---------- C3 다이제스트 ---------- */
 test("C3 다이제스트 — 18:00·저녁·\"매주 받아보기\" 없음 · 받는 설정 링크(알림 설정 보기 ›) · 오후(15시쯤)", () => {
-  const src = code("app/digest/page.tsx");
+  const src = code("app/digest/(index)/page.tsx");
   assert.doesNotMatch(src, /18:00/);
   assert.doesNotMatch(src, /저녁/);
   assert.doesNotMatch(src, /매주 받아보기/);

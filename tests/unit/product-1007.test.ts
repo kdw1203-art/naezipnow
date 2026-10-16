@@ -57,11 +57,11 @@ test("이웃 글 링크를 만드는 화면들이 /town/news/${id} 대신 postHr
   const sites: Array<[file: string, must: RegExp]> = [
     ["lib/notifications/comment-notify.ts", /postHref\(post\)/],
     ["app/admin/community/page.tsx", /storyHref\(p\.id\)/],
-    ["app/digest/page.tsx", /storyHref\(t\.id\)/],
+    ["app/digest/(index)/page.tsx", /storyHref\(t\.id\)/],
     ["app/digest/[week]/page.tsx", /storyHref\(item\.id\)/],
     ["app/town/prompt/[idx]/page.tsx", /postHref\(p\)/],
     ["app/support/page.tsx", /href: postHref\(p\)/],
-    ["app/redevelopment/page.tsx", /postHref\(n\)/],
+    ["app/redevelopment/(index)/page.tsx", /postHref\(n\)/],
     ["app/api/search/route.ts", /url: postHref\(p\)/],
     ["app/search/search-client.tsx", /storyHref\(id\)/],
   ];
@@ -314,9 +314,9 @@ test("뉴스룸 — GNB·화면 머리·하위 화면 링크의 라벨이 '뉴�
   const newsGroup = NAV.find((g) => g.label === "뉴스");
   assert.equal(newsGroup?.children?.find((c) => c.href === "/town/news")?.label, "뉴스룸");
   assert.match(read("app/town/news/NewsHead.tsx"), /title: "뉴스룸"/);
-  assert.match(read("app/redevelopment/page.tsx"), /뉴스룸 전체 ›/);
-  assert.match(read("app/digest/page.tsx"), /뉴스룸 전체 ›/);
-  assert.doesNotMatch(read("app/redevelopment/page.tsx"), /전체 뉴스 ›/);
+  assert.match(read("app/redevelopment/(index)/page.tsx"), /뉴스룸 전체 ›/);
+  assert.match(read("app/digest/(index)/page.tsx"), /뉴스룸 전체 ›/);
+  assert.doesNotMatch(read("app/redevelopment/(index)/page.tsx"), /전체 뉴스 ›/);
   /* 공지(비자동 글)는 뉴스룸에 없으므로 고객지원의 "전체" 는 동네이야기로 */
   assert.match(read("app/support/page.tsx"), /href="\/town" className="inline-block py-\[5px\] t-sub font-bold text-primary no-underline">\s*동네이야기에서 전체 ›/);
 });

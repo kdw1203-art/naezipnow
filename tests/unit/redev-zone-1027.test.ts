@@ -163,7 +163,7 @@ test("사이트맵·캐시 — 구역 상세 유형 등록(슬러그·로더·�
   const inv = readFileSync("lib/cache/invalidate.ts", "utf8");
   assert.ok(inv.includes('pageRoutes: ["/analysis/ai/[tool]", "/reports/season/[slug]", "/redevelopment/[id]"],'));
   assert.ok(inv.includes('pageRoutes: [TOWN_REGION_ROUTE, "/redevelopment/[id]"],'));
-  assert.ok(readFileSync("app/redevelopment/page.tsx", "utf8").includes('<section id="stage-guide"'));
+  assert.ok(readFileSync("app/redevelopment/(index)/page.tsx", "utf8").includes('<section id="stage-guide"'));
   /* 공개 캐시 정책 — 이 줄이 없으면 미들웨어가 문서 응답에 no-store 를 붙여 크롤러 요청마다 오리진이 그린다 */
   const policy = readFileSync("lib/http/cache-policy.ts", "utf8");
   assert.ok(policy.includes('{ route: "/redevelopment/[id]", test: /^\\/redevelopment\\/[^/]+$/, sMaxAge: 86_400, swr: 86400 },'));

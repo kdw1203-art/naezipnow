@@ -96,7 +96,7 @@ export async function RelatedNotes({
               <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-divider">
                 <CoverImage
                   src={cover}
-                  alt=""
+                  alt={`${n.title} 노트 커버`}
                   sizes="44px"
                   imgClassName="h-full w-full object-cover"
                   fallback={

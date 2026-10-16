@@ -56,7 +56,7 @@ const PAGES: Record<string, { mode: "static" | "isr"; revalidate?: number | stri
   /* [1010] 300 → 86_400. 공개 노트가 바뀌는 모든 지점이 /notes 를 비운다
      (invalidatePublicNoteRoutes) — 같은 판에서 이 페이지의 데이터 캐시도 1일 + public-notes
      태그로 올렸다(그 캐시가 300초인 동안에는 라우트 TTL 이 300초로 눌렸다). */
-  "app/notes/page.tsx": { mode: "isr", revalidate: "86_400" },
+  "app/notes/(index)/page.tsx": { mode: "isr", revalidate: "86_400" },
   /* [1010] 3600 → 86_400. 비회원 기준 요금 카드·FAQ·JSON-LD 뿐이고 값은 코드 상수라
      배포로만 바뀐다(로그인 조각은 클라이언트). cache-policy 의 sMaxAge 도 같이 올려야 한다. */
   "app/subscription/page.tsx": { mode: "isr", revalidate: "86_400" },

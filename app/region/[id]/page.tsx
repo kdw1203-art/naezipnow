@@ -1380,12 +1380,20 @@ export default async function RegionHubPage({
               </div>
             );
           })}
-          <p className="mt-3 t-sub text-text-3">
+          {/* [1069 · 끊긴 묶음] 임장 가이드(/imjang/<지역>)로 가는 길이 사이트 어디에도 없었다(운영 실측 2026-10-15).
+              /tx 와 **같은 지역 원천·같은 slug** 라(lib/imjang/guide 주석) 여기 실리는 주소는 전부 실데이터가 있는 쪽이다. */}
+          <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 t-sub text-text-3">
             <Link
               href={`/tx/${encodeURIComponent(txBandRegion.slug)}`}
               className="inline-flex min-h-[24px] items-center font-bold text-primary underline"
             >
               {txBandRegion.name} 구간 전체 보기 →
+            </Link>
+            <Link
+              href={`/imjang/${encodeURIComponent(txBandRegion.slug)}`}
+              className="inline-flex min-h-[24px] items-center font-bold text-primary underline"
+            >
+              {txBandRegion.name} 임장 가이드 →
             </Link>
           </p>
         </section>

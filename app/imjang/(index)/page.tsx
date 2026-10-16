@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PageShell } from "../components/PageShell";
+import { PageShell } from "../../components/PageShell";
 import { listImjangRegions } from "@/lib/imjang/guide";
 import { IMJANG_CHECKPOINTS } from "@/lib/imjang/checkpoints";
 import type { TxRegionSummary } from "@/lib/market/tx-bands";

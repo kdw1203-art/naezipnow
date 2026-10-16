@@ -82,7 +82,10 @@ function NewsRowView({ row, lead = false }: { row: NewsRow; lead?: boolean }) {
         {thumb ? (
           <CoverImage
             src={row.image}
-            alt=""
+            /* [1066 · 이미지 설명] 운영 실측 2026-10-13: /town/news 의 <img> 40장 전부 alt="" 였다 —
+               이미지 검색에 한 장도 잡히지 않는다. 이 썸네일 링크는 aria-hidden 장식(제목 링크가 옆에 있다)이라
+               읽기 보조기기에는 영향이 없고, 크롤러만 이 문장을 읽는다. 기사 제목 그대로 — 없는 말을 붙이지 않는다. */
+            alt={row.title}
             imgClassName="absolute inset-0 h-full w-full object-cover"
             sizes="88px"
             fallback={thumbFallback}

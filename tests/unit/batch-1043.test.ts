@@ -109,14 +109,14 @@ test("동네이야기 피드는 이웃 글만 — 노트를 읽지 않는다 · 
 });
 
 test("뉴스룸 머리 — 다른 동네 카테고리와 같은 부품(PageHead 한 줄) · 숫자 줄 없음", () => {
-  const news = code("app/town/news/page.tsx");
+  const news = code("app/town/news/(index)/page.tsx");
   /* [1044] 뉴스가 동네에서 떨어져 나와 머리를 TownHero(카테고리 목록) 대신 NewsHead 에서 받는다 — 부품은 같은 PageHead */
   assert.match(news, /<NewsHead \/>/);
   assert.match(code("app/town/news/NewsHead.tsx"), /<PageHead/);
   assert.ok(!news.includes("<PageHead"), "화면 안에 따로 짠 머리 없음");
   for (const s of ["같은 사건 묶어", "최근 <b", "todayCount"]) assert.ok(!news.includes(s), `숫자 줄 없음: ${s}`);
   /* 같은 부품을 쓰는 화면들 */
-  for (const p of ["app/apply/page.tsx", "app/supply/page.tsx", "app/auctions/page.tsx", "app/redevelopment/page.tsx"]) {
+  for (const p of ["app/apply/page.tsx", "app/supply/page.tsx", "app/auctions/page.tsx", "app/redevelopment/(index)/page.tsx"]) {
     assert.match(code(p), /<TownHero/, p);
   }
   const town = code("app/town/page.tsx");

@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/Skeleton";
    제목(h1)은 PageShell 이 그린다. */
 export default function MyLoading() {
   return (
-    <PageShell title="마이">
+    <PageShell titleAs="h2" title="마이">
       <div className="mx-auto flex max-w-[1040px] flex-col gap-4">
         {/* 프로필 히어로 + 활동 요약 */}
         <div className="lg-glass flex flex-col gap-4 rounded-lg p-5">

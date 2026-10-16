@@ -382,7 +382,15 @@ export async function loadRegionEntries(): Promise<MetadataRoute.Sitemap> {
         ...(at ? { lastModified: at } : {}),
         priority: 0.8,
       });
-      entries.push({ url: `${BASE_URL}/region/${s.regionId}/report`, priority: 0.5 });
+      /* [1069 · 수정일] /report(인덱스)는 **그 지역의 최신 달**을 그린다 — 바뀌는 시점이 지역 페이지와 같다.
+         그래서 위에서 구한 at 을 그대로 쓴다(추가 조회 0).
+         반면 /report/<지난달>은 끝난 달의 표라 내용이 더는 바뀌지 않는다 — 여기에 "방금 바뀌었다"를 적으면
+         G6 에서 걷어낸 그 잡음이 돌아온다. 그래서 지난달 쪽은 lastmod 없이 그대로 둔다. */
+      entries.push({
+        url: `${BASE_URL}/region/${s.regionId}/report`,
+        ...(at ? { lastModified: at } : {}),
+        priority: 0.5,
+      });
       for (const slug of reportSlugs) {
         entries.push({
           url: `${BASE_URL}/region/${s.regionId}/report/${slug}`,
@@ -511,13 +519,30 @@ export async function loadReportEntries(): Promise<MetadataRoute.Sitemap> {
     /* N12 — 계절 리포트는 같은 월 요약에서 순수 계산으로 나오므로 조회가 늘지
        않는다. 관측된 계절(모든 달이 확정 집계된 해가 1개 이상)만 싣는다 —
        페이지가 404 로 답할 URL 을 사이트맵에 넣지 않는다. */
+    /* [1069 · 수정일] 운영 실측 2026-10-15: 월간 리포트 30쪽에 <lastmod> 가 하나도 없었다.
+       추측한 날짜를 적지 않는다는 원칙(위 G6 주석)은 그대로지만, 여기엔 **확인된 시각**이 이미 있다 —
+       ReportMonthSummary.updatedAt(그 달 집계가 마지막으로 갱신된 시각, RSS pubDate 가 쓰는 값).
+       조회가 늘지 않는다(같은 listReportMonths 결과). 계절 리포트는 그 달들에서 순수 계산으로 나오므로
+       여기 실린 달 중 가장 최근 갱신 시각을 쓴다 — 내용이 바뀌는 시점이 정확히 그때다. */
+    const monthAt = (iso: string | null): Date | null => {
+      if (!iso) return null;
+      const d = new Date(iso);
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
+    let newestMonthAt: Date | undefined;
+    for (const m of months) newestMonthAt = latestOf(newestMonthAt, monthAt(m.updatedAt));
     return [
-      ...months.map((m) => ({
-        url: `${BASE_URL}/reports/${m.ym}`,
-        priority: 0.7,
-      })),
+      ...months.map((m) => {
+        const at = monthAt(m.updatedAt);
+        return {
+          url: `${BASE_URL}/reports/${m.ym}`,
+          ...(at ? { lastModified: at } : {}),
+          priority: 0.7,
+        };
+      }),
       ...listSeasonAvailability(months).map((s) => ({
         url: `${BASE_URL}/reports/season/${s.def.slug}`,
+        ...(newestMonthAt ? { lastModified: newestMonthAt } : {}),
         priority: 0.6,
       })),
     ];

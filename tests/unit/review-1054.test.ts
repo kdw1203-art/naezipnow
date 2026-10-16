@@ -71,8 +71,8 @@ test("D1 청약 달력 — 요일은 ISO 날짜에서 UTC 로 계산(시간대 �
   const week = read("app/apply/calendar/[week]/page.tsx");
   assert.match(week, /주차 \(/);
   assert.match(week, /9 \* 3_?600_?000|9 \* 60 \* 60 \* 1000/);
-  assert.match(read("app/digest/page.tsx"), /formatKstShortDate\(/);
-  assert.match(read("app/redevelopment/page.tsx"), /formatKstDate\(/);
+  assert.match(read("app/digest/(index)/page.tsx"), /formatKstShortDate\(/);
+  assert.match(read("app/redevelopment/(index)/page.tsx"), /formatKstDate\(/);
   assert.match(read("app/tx/[region]/page.tsx"), /formatKstDate\(region\.lastDataAt\)/);
 });
 

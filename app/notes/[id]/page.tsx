@@ -9,6 +9,7 @@ import { CommentsRetry } from "./comments-retry";
 import { displayAuthorLabel, isLabAuthor } from "@/lib/notes/author-label";
 import { authorProfileHref } from "@/lib/profile/author-href";
 import { cache, Suspense } from "react";
+import { loadNote, type LoadResult } from "./load-note";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -149,33 +150,9 @@ type NoteView = {
    실제 URL 로 그대로 내보냈다. 존재하지 않는 임장 기록을 사실처럼 읽히게 하므로 삭제하고,
    아래 loadNote() 의 3분기(정상·미존재·조회실패)로 대체한다. */
 
-type LoadResult =
-  | { kind: "ok"; note: InspectionNote; source: "cache" | "db" }
-  | { kind: "missing"; source: "db" }
-  | { kind: "error"; message: string };
-
-/* [969 · 20] 노트 행 — 공개 노트는 데이터 캐시(5분, note:<id>)에서 먼저 찾는다.
-   누가 보든 같은 값이라 뷰어별 분기(소유자·구매 열람)는 이 결과 위에서 그대로 한다.
-   캐시 로더(lib/inspection/note-cache.ts)는 공개가 아닌 행을 절대 돌려주지 않고(null),
-   여기서는 그 null 을 "비공개거나 없음" 으로만 읽어 실조회로 내려간다 — 비공개 본문은
-   캐시에 실리지 않는다. 캐시 결과를 쓰기 전에 isPublic 을 한 번 더 확인한다(방어).
-
-   React cache(): generateMetadata 와 페이지가 같은 요청 안에서 getNote 를 **각각**
-   불렀다 — 요청당 노트 조회 2회 중 1회는 그냥 중복이었다. 이제 한 번만 한다
-   (공개·비공개 모두). 실패는 던지지 않고 3분기(정상·미존재·조회실패)로 돌려준다. */
-const loadNote = cache(async (id: string): Promise<LoadResult> => {
-  try {
-    const cached = await getPublicNoteCached(id);
-    if (cached && cached.isPublic) return { kind: "ok", note: cached, source: "cache" };
-    const note = await getNote(id);
-    return note ? { kind: "ok", note, source: "db" } : { kind: "missing", source: "db" };
-  } catch (err) {
-    return {
-      kind: "error",
-      message: err instanceof Error ? err.message : String(err),
-    };
-  }
-});
+/* [1066] LoadResult·loadNote 는 app/notes/[id]/load-note.ts 로 옮겼다 —
+   같은 요청 안에서 레이아웃(존재 확인 → 진짜 404)과 본문이 **같은** React cache() 를 보게 하려면
+   두 파일이 한 모듈을 가져와야 한다. 내용은 그대로(캐시 먼저 · 비공개는 실조회 · 3분기 반환). */
 
 /* ---------- 실데이터 → 표준 뷰 변환 ---------- */
 

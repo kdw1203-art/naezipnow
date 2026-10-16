@@ -142,7 +142,7 @@ export function HomeTownBlock({
                 <Link href={newsHref(n.id)} className="flex items-center gap-3 py-2 no-underline">
                   {n.image && (
                     <span className="relative h-[52px] w-[72px] shrink-0 overflow-hidden rounded-lg bg-divider">
-                      <CoverImage src={n.image} alt="" sizes="72px" imgClassName="absolute inset-0 h-full w-full object-cover" />
+                      <CoverImage src={n.image} alt={n.title} sizes="72px" imgClassName="absolute inset-0 h-full w-full object-cover" />
                     </span>
                   )}
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">

@@ -115,7 +115,7 @@ test("shouldSkipBuild — 문서·테스트·CI 설정만 바뀐 커밋은 생�
    신선도를 맡는다" 는 골격이 그대로인지만 본다. */
 test("동네 ISR TTL — /town 1일, 뉴스룸 1일, 뉴스·이야기 상세·동네 홈 7일", () => {
   assert.match(read("app/town/page.tsx"), /export const revalidate = 86_400;/);
-  assert.match(read("app/town/news/page.tsx"), /export const revalidate = 86_400;/);
+  assert.match(read("app/town/news/(index)/page.tsx"), /export const revalidate = 86_400;/);
   for (const p of ["app/town/news/[id]/page.tsx", "app/town/story/[id]/page.tsx", "app/town/[region]/page.tsx"]) {
     assert.match(read(p), /export const revalidate = 604_800;/, p);
   }

@@ -243,7 +243,7 @@ test("[1029] API — /api/seoul/upis 는 구 이름을 검사하고 CDN 하루 �
 });
 
 test("[1029] 화면 — /redevelopment 조서 칸 · 구역 상세 결정 이력 · /region 머리칸이 이어져 있고, 출처 한 줄과 참고용 표기가 있다", () => {
-  const page = code("app/redevelopment/page.tsx");
+  const page = code("app/redevelopment/(index)/page.tsx");
   assert.ok(page.includes("<SeoulPlanSection />"));
   const section = code("app/redevelopment/SeoulPlanSection.tsx");
   assert.ok(section.includes('id="seoul-plan"'));
@@ -352,7 +352,7 @@ test("[1030 · G5] 지도 — 정비구역 이름표는 시세 핀에 양보(pri
 test("[1030 · G2] 정비사업 단계 설명 — 해요체 없음 · 폰 한 줄 규칙 예외 클래스", () => {
   const g = src1030("lib/redevelopment/stage-guide.ts");
   assert.ok(!/(해요|예요|에요|세요|어요|아요|돼요)["”.]/.test(g), "해요체 잔여");
-  assert.ok(src1030("app/redevelopment/page.tsx").includes('className="mscale-wrap mt-1 t-sub text-text-1"'));
+  assert.ok(src1030("app/redevelopment/(index)/page.tsx").includes('className="mscale-wrap mt-1 t-sub text-text-1"'));
   assert.ok(src1030("app/globals.css").includes("html[data-mscale] li p.t-sub.mscale-wrap"));
 });
 
@@ -416,7 +416,7 @@ test("[1030 · 3차] 키보드 — 가로 스크롤 영역 tabIndex · 본문 �
   /* [1054] 표 틀은 HScroll — 넘칠 때만 tabIndex=0(넘치지 않는 틀은 탭 정거장이 아니다) */
   assert.ok(src1030("app/region/[id]/page.tsx").includes('<HScroll className="mt-3">'));
   assert.ok(src1030("app/components/HScroll.tsx").includes("tabIndex={overflowing ? 0 : undefined}"));
-  assert.ok(src1030("app/redevelopment/page.tsx").includes('<div className="mt-3 -mx-1 overflow-x-auto px-1 pb-1" tabIndex={0}>'));
+  assert.ok(src1030("app/redevelopment/(index)/page.tsx").includes('<div className="mt-3 -mx-1 overflow-x-auto px-1 pb-1" tabIndex={0}>'));
   assert.equal((src1030("app/developers/page.tsx").match(/<pre tabIndex=\{0\}/g) ?? []).length, 2);
   assert.ok(src1030("app/not-found.tsx").includes('<main id="main-content"'));
   assert.ok(src1030("app/login/LoginClient.tsx").includes('id="main-content"'));
@@ -513,5 +513,5 @@ test("[1031 · 성능·운영] 동네 피드 첫 3장 커버 eager · 검색 결
   assert.ok(f.includes("priority={i < 3}") && f.includes("priority={priority}"));
   /* [1043] 70vh → 100dvh — 푸터가 첫 화면 밖에서 시작한다 */
   assert.ok(src1030("app/search/search-client.tsx").includes('<div className="flex min-h-[100dvh] flex-col gap-4">'));
-  assert.ok(src1030("app/redevelopment/page.tsx").includes('alternates: seoAlternates("/redevelopment")'));
+  assert.ok(src1030("app/redevelopment/(index)/page.tsx").includes('alternates: seoAlternates("/redevelopment")'));
 });

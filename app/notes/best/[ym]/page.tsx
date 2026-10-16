@@ -202,7 +202,7 @@ export default async function BestNotesMonthPage({
                 >
                   <CoverImage
                     src={noteCoverUrl(p.note)}
-                    alt=""
+                    alt={`${p.note.title} 노트 커버`}
                     sizes="48px"
                     imgClassName="h-full w-full object-cover"
                     fallback={

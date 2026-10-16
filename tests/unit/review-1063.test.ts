@@ -51,21 +51,21 @@ test("V1 글자 크기 — 사용자 화면의 임의 px 는 램프 유틸로(�
     "app/reports/[ym]/page.tsx",
     "app/supply/page.tsx",
     "app/auctions/AuctionsClient.tsx",
-    "app/redevelopment/page.tsx",
+    "app/redevelopment/(index)/page.tsx",
   ]) {
     assert.doesNotMatch(read(f), /text-\[\d+(?:\.\d+)?px\]/, `${f} 임의 px`);
   }
 });
 
 test("V2 데이터 화면 — 머리 숫자 · 비율 막대 · 접힌 기준·출처", () => {
-  for (const f of ["app/supply/page.tsx", "app/auctions/AuctionsClient.tsx", "app/redevelopment/page.tsx", "app/reports/[ym]/page.tsx", "app/region/[id]/page.tsx"]) {
+  for (const f of ["app/supply/page.tsx", "app/auctions/AuctionsClient.tsx", "app/redevelopment/(index)/page.tsx", "app/reports/[ym]/page.tsx", "app/region/[id]/page.tsx"]) {
     const src = code(f);
     assert.match(src, /<MiniBar/, `${f} 비율 막대`);
     assert.match(src, /unit=/, `${f} 막대 단위`);
     assert.match(src, /<Fineprint/, `${f} 기준·출처 접기`);
   }
   /* 막대는 실측에서 온다 — 상수 배열을 그려 넣지 않는다(값이 식에서 와야 한다) */
-  for (const f of ["app/supply/page.tsx", "app/redevelopment/page.tsx", "app/reports/[ym]/page.tsx"]) {
+  for (const f of ["app/supply/page.tsx", "app/redevelopment/(index)/page.tsx", "app/reports/[ym]/page.tsx"]) {
     assert.match(code(f), /rows=\{[A-Za-z_]/, `${f} 막대 값은 계산된 배열`);
   }
 });
@@ -74,7 +74,7 @@ test("V3 액션 — 주 단추 하나 · 폰 40px", () => {
   const ONE: Array<[string, number]> = [
     ["app/supply/page.tsx", 1],
     ["app/auctions/AuctionsClient.tsx", 1],
-    ["app/redevelopment/page.tsx", 1],
+    ["app/redevelopment/(index)/page.tsx", 1],
     ["app/reports/[ym]/page.tsx", 1],
     ["app/region/[id]/page.tsx", 1],
     ["app/listings/[id]/page.tsx", 1],
@@ -92,7 +92,7 @@ test("V4 사실 보존 — 문장·수치·법정 문구는 자리만 옮긴다"
   const samples: Array<[string, string]> = [
     ["app/supply/page.tsx", "청약홈"],
     ["app/auctions/AuctionsClient.tsx", "한국자산관리공사"],
-    ["app/redevelopment/page.tsx", "정비사업"],
+    ["app/redevelopment/(index)/page.tsx", "정비사업"],
     ["app/reports/[ym]/page.tsx", "단순 평균"],
     ["app/listings/[id]/page.tsx", "국토교통부 실거래가"],
     ["app/region/[id]/page.tsx", "열린데이터광장"],

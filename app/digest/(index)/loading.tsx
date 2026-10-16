@@ -1,4 +1,4 @@
-import { PageShell } from "../components/PageShell";
+import { PageShell } from "../../components/PageShell";
 import { Skeleton } from "@/components/Skeleton";
 
 /* 주간 다이제스트 로딩 스켈레톤 (#41) — 헤더 + 섹션별 요약 블록 (단일 컬럼) */

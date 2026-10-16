@@ -46,6 +46,14 @@ const LEGAL_LINKS = [
   { label: "결정 카드", href: "/decide", bold: false },
   { label: "살까, 빌릴까", href: "/calculator/rent-vs-buy", bold: false },
   { label: "중개사·임대인", href: "/pro", bold: false },
+  /* [1069 · 끊긴 묶음] 운영 실측 2026-10-15 — 사이트맵에는 있는데 **어디서도 링크되지 않던** 묶음들.
+     /imjang(임장 가이드 200쪽)은 임장노트 목록 한 곳에서만 닿았고, /analysis/temperature(69쪽)와
+     /tx(실거래 구간 1,923쪽)는 홈 한 줄·지역 상세뿐이었다. 검색엔진이 사이트맵으로만 발견하면
+     들어오는 속도도 우선순위도 떨어진다. 위 줄들과 같은 목적(전 페이지 크롤 경로)이라 같은 자리에 둔다.
+     "임장"은 이 사이트의 핵심 낱말인데 사이트가 스스로 가리키지 않고 있었다. */
+  { label: "임장 가이드", href: "/imjang", bold: false },
+  { label: "실거래 구간", href: "/tx", bold: false },
+  { label: "시장 온도", href: "/analysis/temperature", bold: false },
   /* N20 — 공개 집계 API 문서. 링크가 없으면 크롤러도 사람도 도달하지 못한다. */
   { label: "공개 API", href: "/developers", bold: false },
 ] as const;

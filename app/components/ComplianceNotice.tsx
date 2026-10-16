@@ -53,18 +53,22 @@ export function ComplianceNotice({
 }) {
   return (
     <div
-      /* [1030 · 4차 · 61] 안쪽 문단에 measure — 고지가 데스크톱에서 117자/행이었다(청약·공매·개발물건·매물 실측). 72자 상한(상자는 전폭) */
-      className={`rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 t-sub leading-[1.7] text-text-3 ${className}`}
+      /* [1030 · 4차 · 61] 안쪽 문단에 measure — 고지가 데스크톱에서 117자/행이었다(청약·공매·개발물건·매물 실측). 72자 상한.
+         [1067 · 칸에 맞게] 소유자 캡처(2026-10-13): 72자에서 끊긴 글이 전폭 상자의 왼쪽에만 쌓여 오른쪽이 통째로 비었다.
+         글줄을 늘려 상자를 채우면 117자/행로 되돌아가므로, 데스크톱에서만 **두 단**으로 흘린다 — 한 단의 폭이 곧 읽기 좋은
+         길이가 되고 상자는 가득 찬다. 문단에는 measure 를 두지 않는다(단 폭이 이미 상한이다). 폰은 한 단 그대로.
+         글자·문장은 한 자도 바꾸지 않았다(심사 고정 문구 · check-toss-review-freeze). */
+      className={`rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 t-sub leading-[1.7] text-text-3 md:columns-2 md:gap-x-8 ${className}`}
     >
-      <p className="measure">{NO_PROFIT_GUARANTEE_TEXT}</p>
+      <p className="measure m-0 md:max-w-none">{NO_PROFIT_GUARANTEE_TEXT}</p>
       {variant === "payment" && (
-        <p className="measure mt-1.5">
+        <p className="measure mt-1.5 md:max-w-none">
           {recurringOpen ? MIXED_SERVICE_PERIOD_TEXT : SUBSCRIPTION_SERVICE_PERIOD_TEXT}
         </p>
       )}
-      {variant === "billing" && <p className="measure mt-1.5">{BILLING_SERVICE_PERIOD_TEXT}</p>}
+      {variant === "billing" && <p className="measure mt-1.5 md:max-w-none">{BILLING_SERVICE_PERIOD_TEXT}</p>}
       {variant === "market" && (
-        <p className="measure mt-1.5">
+        <p className="measure mt-1.5 md:max-w-none">
           게시된 매물·물건 정보의 정확성 책임은 등록자에게 있으며, 내집나우는 거래
           당사자 간 계약·수익·자금 정산을 보장하거나 관여하지 않습니다.
         </p>

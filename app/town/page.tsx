@@ -12,10 +12,15 @@ import { TownCategoryNav } from "./TownCategoryNav";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { groupRegionsByCity } from "@/lib/town/region-groups";
 
+/* [1069 · 검색어] 운영 실측 2026-10-15 — 허브 제목이 전부 우리끼리 쓰는 이름이라 검색에 걸릴 말이 없었다
+   (홈은 1066 에서 고쳤다). "동네이야기"는 사람이 치는 말이 아니다. 설명도 25자뿐이라 발췌가 비었다.
+   브랜드 이름(| 내집나우)은 buildPageMetadata 가 뒤에 붙인다 — 앞자리는 검색어에 쓴다. */
 export const metadata = buildPageMetadata({
-  title: "동네이야기",
+  title: "동네 아파트 시세·이웃 이야기",
   description:
-    "이웃이 쓴 동네 글 피드 · 지역별 동네 홈.",
+    /* [1044] 이 화면은 기사를 싣지 않는다 — 설명에도 "뉴스"를 적지 않는다(news-1044 시험이 잠근다).
+       나열한 다섯은 실제로 이 화면의 카테고리 칸이다(TownCategoryNav: 동네이야기·청약·공매·입주·정비사업). */
+    "지역별 동네 홈 — 이웃이 쓴 동네 글 · 아파트 실거래 요약 · 입주 물량 · 정비사업 · 공매 물건 · 청약 일정",
   path: "/town",
   og: { badge: "동네이야기", sub: "이웃 글 · 동네 단위" },
 });

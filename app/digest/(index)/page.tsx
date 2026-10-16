@@ -10,7 +10,7 @@ import { Explain } from "@/app/components/explain/Explain";
 import { logger } from "@/lib/log";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { newsHref, storyHref } from "@/lib/town/post-href";
-import { DigestThumb } from "./DigestThumb";
+import { DigestThumb } from "../DigestThumb";
 
 export const metadata = buildPageMetadata({
   title: "주간 다이제스트",

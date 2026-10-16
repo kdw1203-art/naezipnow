@@ -1,7 +1,7 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PageShell } from "../components/PageShell";
+import { PageShell } from "../../components/PageShell";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { formatYmKo, listReportMonths, type ReportMonthSummary } from "@/lib/reports/monthly";
 /* [1009 · 리뷰 H] 목록 로더(listReportMonths)가 1,000행에서 잘리던 것은 lib 에서 고쳤다 — 끝까지 나눠 읽는다 */

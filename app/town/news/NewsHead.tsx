@@ -17,13 +17,16 @@ export const NEWS_HEAD = {
   sub: "매일 아침 모은 부동산 기사 요약과 주간 다이제스트",
 } as const;
 
-export function NewsHead() {
+/* [1066 · h1 하나] as="h2" 는 로딩 스켈레톤용 — 같은 문서에 스켈레톤 머리와 실제 머리가
+   함께 담겨 나가므로 둘 다 h1 이면 /town/news 의 h1 이 두 개가 된다(2026-10-13 운영 실측). */
+export function NewsHead({ as = "h1" }: { as?: "h1" | "h2" } = {}) {
   return (
     <PageHead
       icon={NEWS_HEAD.icon}
       tone={NEWS_HEAD.tone}
       title={NEWS_HEAD.title}
       sub={NEWS_HEAD.sub}
+      as={as}
       className="mb-4"
       actions={
         <Link href="/digest" className="btn-outline btn-md rounded-xl no-underline">

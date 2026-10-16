@@ -62,6 +62,7 @@ export function TownHero({
   stats = [],
   note,
   action,
+  as = "h1",
 }: {
   /** 카테고리 목록의 href — 제목·한 줄·아이콘·색·버튼을 여기서 찾는다 */
   href: string;
@@ -71,6 +72,11 @@ export function TownHero({
   note?: string;
   /** heroCta 대신 그릴 조각(클라이언트 버튼 등). 주면 heroCta 는 안 그린다. */
   action?: ReactNode;
+  /* [1066 · h1 하나] 로딩 스켈레톤(loading.tsx)은 h2 로 받는다 — 스켈레톤과 실제 머리가 같은
+     문서에 함께 담겨 나가므로(스트리밍 셸), 둘 다 h1 이면 한 주소에 h1 이 두 개가 된다.
+     실측: /supply /auctions /redevelopment /imjang /town/news 가 h1 2개(2026-10-13, 운영).
+     모양은 램프 클래스(t-title)가 정하므로 h1↔h2 로 바뀌는 것은 없다. */
+  as?: "h1" | "h2";
 }) {
   const link = TOWN_CATEGORY_LINKS.find((l) => l.href === href);
   if (!link) return null;
@@ -129,6 +135,7 @@ export function TownHero({
       sub={link.headSub}
       actions={actionNode}
       facts={facts}
+      as={as}
       className="mb-4"
     />
   );
