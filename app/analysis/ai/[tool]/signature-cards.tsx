@@ -1,4 +1,5 @@
 "use client";
+/* [1072 · 세부 디자인] 다른 도구 칩 줄(VerdictChips)은 결론 아래 → 카드 맨 위 탭 줄. 결론 · 근거 · 다음 행동 한 줄 · 그림이 끊기지 않고 잇는다. */
 /* [1026 · 단지 분석 4종] 1025 표준 — 카드 첫 줄이 **결론 히어로**(SummaryLine): t-title 결론(headline, 실제 숫자 포함) + 판정 칩 하나
    (좋음 초록 · 보통 파랑 · 주의 주황 — lib/ai/conclusion-next BAND_CHIP_CLASS) · 근거 t-sub 한 줄(bandReason · 기준 시점) ·
    "다음 행동 한 줄"(가장 약한 축/신호 → 이어서 볼 도구, conclusionNext) · 다른 도구 칩 줄(VerdictChips — ResultView 가 넘긴다).
@@ -71,6 +72,9 @@ export function SummaryLine({
   const reason = [verdict?.bandReason ?? null, asOf ? `기준 ${asOf}` : null].filter(Boolean).join(" · ");
   return (
     <div className="flex flex-col gap-1.5" data-testid="cxw-summary">
+      {/* [1072] 다른 도구 줄 — 결론과 그림 사이(칩 다섯 개가 결론을 끊었다) → 카드 맨 위 탭 줄(카드 가장자리까지 · 아래 가는 선).
+          SummaryLine 은 늘 SigCard(p-4 md:p-5)의 첫 자식이라 같은 값만큼 바깥으로 편다 */}
+      {tools && <div className="-mx-4 -mt-4 mb-2.5 border-b border-line px-1.5 md:-mx-5 md:-mt-5 md:px-2.5">{tools}</div>}
       <div className="flex items-start gap-3">
         {lead}
         <h2 className="cxw-sum-h min-w-0 flex-1 t-title font-bold text-ink break-words" style={{ textWrap: "balance" }}>
@@ -96,7 +100,6 @@ export function SummaryLine({
           </Link>
         </p>
       )}
-      {tools}
     </div>
   );
 }

@@ -28,10 +28,11 @@ test("Z2·Z3 표 — 펼쳐도 칸 폭 고정 · 상태는 캐럿 하나", () =>
   const src = read("app/analysis/hub-tiers.tsx");
   /* 폭이 상태에 따라 갈리던 자리가 없다 */
   assert.doesNotMatch(src, /isOpen \? "w-16/);
-  assert.match(src, /<td className="w-10 px-3 text-right/);
+  /* [1071] 칸 폭은 세 표가 같이 쓰는 상수(tool-cols)로 — 머리·몸이 같은 값을 쓴다 */
+  assert.match(src, /<td className=\{`px-3 text-right t-body text-text-3 \$\{TOOL_COL_GO\}`\}/);
   assert.match(src, /\{isOpen \? "▴" : "▾"\}/);
-  /* 결과 칸은 머리·몸 모두 180px — 줄마다 같은 자리 */
-  assert.equal((src.match(/w-\[180px\]/g) ?? []).length, 2);
+  assert.equal((src.match(/TOOL_COL_RESULT\}/g) ?? []).length, 2);
+  assert.match(read("app/analysis/tool-cols.ts"), /TOOL_COL_GO = "w-10"/);
   /* 표 줄·칸 목록이 상태에 따라 "열기 ›" 글자를 내지 않는다(펼친 칸의 단추가 이름까지 붙여 말한다) */
   assert.doesNotMatch(src, /isOpen \? "열기 ›"/);
   assert.doesNotMatch(src, /isOpen && <span[^>]*>열기/);

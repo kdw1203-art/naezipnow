@@ -165,7 +165,9 @@ test("[1026] 세부 — 실거래가 흐름은 진단·예측·타이밍 데스�
   const fold = branchOf(resultView, "function FoldCard(", "function PriceFlowCard(");
   assert.doesNotMatch(fold, /Explain/);
   const ev = branchOf(resultView, "function EvidenceCard(", "export function ResultView(");
-  assert.match(ev, /<details className="card group rounded-2xl p-4 max-md:p-3\.5" aria-label="근거 · 출처">/);
+  /* [1072] 근거·출처 + 자세히 보기는 카드 하나 안의 접힘 두 줄 — details 는 카드 면을 벗고 바깥 카드(cxw-more)가 감싼다 */
+  assert.match(ev, /<details className="group px-4 max-md:px-3\.5" aria-label="근거 · 출처">/);
+  assert.match(resultView, /<div className="card rounded-2xl" data-testid="cxw-more">\s*<div className="flex flex-col divide-y divide-line" data-tone="plain">[\s\S]{0,160}<EvidenceCard/);
   assert.doesNotMatch(ev, /<details[^>]*\sopen/);
   assert.match(ev, /근거 \$\{evidenceN\}개 · 오래된 자료 \$\{staleN\}개/);
   /* 순서 — 히어로(그림) → KPI → 폰 내 조건 → 해마다 → AI 해설 → 실거래 흐름 → 근거 → 자세히 */
@@ -174,7 +176,8 @@ test("[1026] 세부 — 실거래가 흐름은 진단·예측·타이밍 데스�
   for (let i = 0; i < at.length; i++) assert.ok(at[i] > 0, order[i]);
   for (let i = 1; i < at.length; i++) assert.ok(at[i] > at[i - 1], `${order[i - 1]} → ${order[i]}`);
   /* KPI 4칸은 그대로(VerdictTiles · 한 줄 sm:grid-cols-4) */
-  assert.match(read("app/analysis/ai/[tool]/VerdictCard.tsx"), /tiles\.length >= 4 \? "sm:grid-cols-4"/);
+  /* [1072] 칸 사이 가는 선 — 홀수 칸이면 마지막 칸이 폰에서 두 칸을 차지하고 sm 이상에서 되돌린다 */
+  assert.match(read("app/analysis/ai/[tool]/VerdictCard.tsx"), /tiles\.length >= 4 \? "sm:grid-cols-4 sm:\[&>li:last-child:nth-child\(odd\)\]:col-span-1"/);
 });
 
 /* ── 절차 · 레일 · 액션 ────────────────────────────────────────────────────────── */
@@ -235,12 +238,14 @@ test("[1026→1026b] 도구 색 — .tool-scope·personaVars 를 걷어 전역 �
 test("[1026] 빈 상태 — 카드 하나 + 회색 견본(제자리 · 흐린 바닥 깔기 없음) + 한 문장(서버가 넘김) + 최근 거래 많은 단지 칩", () => {
   assert.match(frameBranch, /<EmptyFrame tool=\{tool\} \/>/);
   assert.doesNotMatch(frameBranch, /cxw-frame pointer-events-none absolute/);
-  assert.match(frameBranch, /!picked && emptyLine && <p className="t-body font-bold text-ink">\{emptyLine\}<\/p>/);
+  /* [1072] 한 문장 → 카드 제목 "단지 고르기" + 고르는 방법 한 줄(서버) */
+  assert.match(frameBranch, /\{emptyLine && <p className="t-sub text-text-3">\{emptyLine\}<\/p>\}/);
   assert.match(frameBranch, /최근 6개월 거래가 많은 단지 \{quickPicks\.length\}곳/);
   /* 문장은 서버 페이지(page.tsx)에만 — 첫 로드 번들에 싣지 않는다 */
   assert.match(page, /emptyLine=\{EMPTY_LINE\[tid\] \?\? null\}/);
   /* [1028] 도구마다 달랐던 문장 → 공통 한 줄(무엇이 나오는지는 머리 한 줄이 말한다) */
-  for (const t of FRAME_TOOLS) assert.ok(page.includes(`"${t}": "단지 선택 → 결과"`), t);
+  /* [1072] "단지 선택 → 결과" → PICK_WAYS(이름 검색 · 지도에서 찾기) */
+  for (const t of FRAME_TOOLS) assert.ok(page.includes(`"${t}": PICK_WAYS,`), t);
   assert.doesNotMatch(frames, /<text/);
 });
 

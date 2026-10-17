@@ -16,7 +16,7 @@ export function HubRecordStart({ guest }: { guest: ReactNode }) {
   const { loggedIn, myNoteCount } = useHubViewer();
   if (!loggedIn) return <>{guest}</>;
   return (
-    <div className="card tile hub-start flex flex-col gap-3 rounded-lg p-4 md:flex-row md:items-center md:justify-between">
+    <div className="card tile hub-start flex flex-col gap-3 rounded-2xl p-4 md:flex-row md:items-center md:justify-between">
       <div className="flex flex-col gap-1">
         {/* [1015 · 규칙 D] 사실 한 줄(숫자) — 기능 설명("점수화하고 … 정리해 드려요")은 걷었다 */}
         <span className="t-section text-ink">
@@ -42,9 +42,18 @@ export function HubRecordStart({ guest }: { guest: ReactNode }) {
 }
 
 /** 노트 도구 카드의 티저 — 로그인 + 내 노트 1건 이상일 때만(예전 noteTeaser 와 같은 마크업) */
-export function HubMyNoteTeaser() {
+export function HubMyNoteTeaser({ bare = false }: { bare?: boolean } = {}) {
   const { loggedIn, myNoteCount } = useHubViewer();
   if (!loggedIn || !myNoteCount) return null;
+  /* [1071] bare = 표 한 칸 안 — 회색 상자 없이 값·설명 두 줄(옆 칸의 실측 값과 같은 꼴) */
+  if (bare) {
+    return (
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="t-num t-body font-bold text-ink">{myNoteCount}건</span>
+        <span className="t-caption text-text-3">분석을 기다리는 내 임장노트</span>
+      </span>
+    );
+  }
   return (
     <span className="fit flex flex-col gap-0.5 rounded-lg bg-bg px-2.5 py-1.5">
       <span className="t-num t-section t-fit text-ink">{myNoteCount}건</span>

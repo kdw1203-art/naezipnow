@@ -195,14 +195,16 @@ test("[1026b] 워크벤치 — 옛 8종 화면(① 단지 고르기 · ② 내 �
 
 test("[1026b] 빈 상태 — 카드 하나 + 회색 견본(12종 모두 윤곽 · 글자·숫자 없음) + 한 문장(서버) + 단지 검색", () => {
   assert.match(workbench, /<EmptyFrame tool=\{tool\} \/>/);
-  assert.match(workbench, /!picked && emptyLine && <p className="t-body font-bold text-ink">\{emptyLine\}<\/p>/);
+  /* [1072] 한 문장은 카드 제목("단지 고르기") 아래 고르는 방법 한 줄로 */
+  assert.match(workbench, /<h2 className="t-section font-bold text-ink">단지 고르기<\/h2>\s*\{emptyLine && <p className="t-sub text-text-3">\{emptyLine\}<\/p>\}/);
   assert.match(frames, /export function EmptyFrame\(\{ tool \}: \{ tool: AiAnalysisToolId \}\)/);
   for (const f of ["ListFrame", "TableFrame", "BarsFrame"]) assert.match(frames, new RegExp(`function ${f}\\(`), f);
   assert.doesNotMatch(frames, /<text|#[0-9a-fA-F]{3,6}\b/);
   /* 한 문장은 서버 페이지에만 — 경제지표(단지를 고르지 않는다)를 뺀 11종 · [1028] 11종 공통 한 줄(도구별 문장은 머리 한 줄과 같은 말이었다) */
   for (const t of AI_TOOL_IDS) {
     if (t === "ai-economy") assert.doesNotMatch(page, /"ai-economy": "/);
-    else assert.ok(page.includes(`"${t}": "단지 선택 → 결과"`), t);
+    /* [1072] "단지 선택 → 결과" → 고르는 방법(PICK_WAYS — 비교·자산 구성은 그 도구에 있는 단추를 앞에) */
+    else assert.match(page, new RegExp(`"${t}": (PICK_WAYS|\`[^\`]*\\$\\{PICK_WAYS\\}\`)`), t);
   }
   assert.doesNotMatch(page, /바로 나와요|채워져요/, "도구별 빈 상태 문장이 남았다");
   assert.match(page, /emptyLine=\{EMPTY_LINE\[tid\] \?\? null\}/);

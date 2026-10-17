@@ -30,19 +30,15 @@ const AiNoteAnalysisCard = nextDynamic(
 /** 세션 판정·묶음 다운로드 동안의 자리표시자 — 실제 카드의 머리글·버튼과 같은 높이 규칙 */
 function NoteAnalysisPlaceholder() {
   return (
-    <div className="card flex h-full flex-col gap-2.5 rounded-lg p-4" aria-busy="true">
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-warning-soft text-warning">
-        <Icon name="bot" size={17} />
+    /* [1071] 실제 카드의 새 머리줄(칩 · 이름 · 오른쪽 단추 한 줄)과 같은 모양 — 판정 뒤 바꿔 끼울 때 덜컹거리지 않게 */
+    <div className="card flex flex-col gap-2.5 rounded-2xl px-3 py-3" aria-busy="true">
+      <div className="flex min-h-11 items-center gap-2.5">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning-soft text-warning" aria-hidden="true">
+          <Icon name="bot" size={17} />
+        </span>
+        <span className="min-w-0 flex-1 t-body font-bold text-ink">임장노트 AI 분석</span>
+        <span className="h-10 w-24 shrink-0 rounded-lg bg-bg" aria-hidden="true" />
       </div>
-      {/* [1015 · 규칙 B] 기능 설명 한 줄은 걷었다(실제 카드 ai-note-analysis 와 같은 머리글) */}
-      <div className="t-section text-ink">임장노트 AI 분석</div>
-      <button
-        type="button"
-        disabled
-        className="btn-primary btn-cta mt-auto rounded-lg p-2.5 text-center t-body disabled:opacity-60"
-      >
-        분석 실행
-      </button>
     </div>
   );
 }

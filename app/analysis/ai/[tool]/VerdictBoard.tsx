@@ -110,10 +110,14 @@ function useBoardTiles({ tool, complexId, complexName, region, verdict }: BoardP
 export function VerdictChips(props: BoardProps) {
   const { tool, complexId } = props;
   const { sectionRef, tileOf } = useBoardTiles(props);
-  const chip = "chip inline-flex min-h-[40px] items-center gap-1.5 border px-3 t-sub font-bold no-underline";
+  /* [1072] 테두리 알약 다섯 개 → 탭(밑줄 2px · 지금 도구는 파란 밑줄 + 진한 글자). 자료 없는 칸의 "—" 는 걷었다(배지가 없으면 판정 없음) */
+  const chip = "inline-flex min-h-[40px] shrink-0 items-center gap-1.5 border-b-2 px-3 t-sub font-bold no-underline";
   const q = `?complexId=${encodeURIComponent(complexId)}`;
+  /* 지금 도구가 탭에 없는 도구(수익률 계산·갭·체크리스트 …)는 줄 앞에 "같은 단지" — 탭이 아니라 다른 도구 줄이라는 것 */
+  const onBoard = tool === "ai-inspection" || (BOARD_TOOLS as readonly string[]).includes(tool);
   return (
-    <nav ref={sectionRef} aria-label="다른 도구로 본 이 단지" className="scroll-x-hidden-bar -mx-1 flex gap-1.5 overflow-x-auto px-1 pt-1 md:flex-wrap md:overflow-visible">
+    <nav ref={sectionRef} aria-label="다른 도구로 본 이 단지" className="scroll-x-hidden-bar flex overflow-x-auto">
+      {!onBoard && <span className="inline-flex min-h-[40px] shrink-0 items-center px-3 t-caption font-bold text-text-3">같은 단지</span>}
       {BOARD_TOOLS.map((t) => {
         const x = tileOf(t);
         const badge =
@@ -121,27 +125,25 @@ export function VerdictChips(props: BoardProps) {
             <span className={`rounded-full px-1.5 t-caption font-bold ${BAND_CHIP_CLASS[x.item.band]}`}>{x.item.bandLabel}</span>
           ) : x.status === "loading" ? (
             <span className="h-3 w-7 rounded-full bg-line" aria-hidden="true" />
-          ) : (
-            <span className="t-caption text-text-3">—</span>
-          );
+          ) : null;
         return t === tool ? (
-          <span key={t} aria-current="page" className={`${chip} shrink-0 border-primary bg-primary-soft text-primary`}>
+          <span key={t} aria-current="page" className={`${chip} border-primary text-ink`}>
             {BOARD_TOOL_LABEL[t]}
             {badge}
           </span>
         ) : (
-          <Link key={t} href={`/analysis/ai/${t}${q}`} className={`${chip} press shrink-0 border-line bg-surface text-text-1`}>
+          <Link key={t} href={`/analysis/ai/${t}${q}`} className={`${chip} press border-transparent text-text-2 hover:text-ink`}>
             {BOARD_TOOL_LABEL[t]}
             {badge}
           </Link>
         );
       })}
       {tool === "ai-inspection" ? (
-        <span aria-current="page" className={`${chip} shrink-0 border-primary bg-primary-soft text-primary`}>
+        <span aria-current="page" className={`${chip} border-primary text-ink`}>
           임장 동선
         </span>
       ) : (
-        <Link href={`/analysis/ai/ai-inspection${q}`} className={`${chip} press shrink-0 border-line bg-surface text-text-1`}>
+        <Link href={`/analysis/ai/ai-inspection${q}`} className={`${chip} press border-transparent text-text-2 hover:text-ink`}>
           임장 동선
         </Link>
       )}

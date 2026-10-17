@@ -521,13 +521,28 @@ function useWideOpen(wideOpen: boolean): [boolean, (v: boolean) => void] {
   return [open, setOpen];
 }
 
+/** [1072] 접힘 줄 오른쪽 끝 — 닫혀 있으면 "펼치기 ▾", 열려 있으면 "접기 ▴"(허브 펼친 칸의 "접기 ▴" 와 같은 말).
+    예전 요약 줄에는 접힌다는 표시가 하나도 없었다(summary 가 flex 라 기본 삼각형도 숨는다). 글자만 — 누르는 곳은 요약 줄 전체 */
+function FoldWord() {
+  return (
+    <span className="shrink-0 t-caption font-bold text-text-2" aria-hidden="true">
+      {/* dead-control-ok: 늘 <details><summary> 안에서만 쓴다 — 요약 줄 전체가 네이티브 펼침 컨트롤이고 이 글자는 그 상태 표시 */}
+      <span className="group-open:hidden">펼치기 ▾</span>
+      <span className="hidden group-open:inline">접기 ▴</span>
+    </span>
+  );
+}
+
 function FoldCard({ title, sub, wideOpen, children }: { title: string; sub?: ReactNode; wideOpen: boolean; children: ReactNode }) {
   const [open, setOpen] = useWideOpen(wideOpen);
   return (
     <details className="card group rounded-2xl p-4 max-md:p-3.5" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
-      <summary className="flex min-h-[40px] cursor-pointer flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
-        <h2 className="t-section font-bold text-ink">{title}</h2>
-        {sub && <span className="t-caption tabular-nums text-text-3">{sub}</span>}
+      <summary className="flex min-h-[40px] cursor-pointer items-center justify-between gap-3">
+        <h2 className="min-w-0 t-section font-bold text-ink">{title}</h2>
+        <span className="flex min-w-0 items-center gap-3">
+          {sub && <span className="min-w-0 truncate t-caption tabular-nums text-text-3">{sub}</span>}
+          <FoldWord />
+        </span>
       </summary>
       <div className="mt-3 flex flex-col gap-3">{children}</div>
     </details>
@@ -604,13 +619,22 @@ function PriceFlowCard({
         </>
       ) : (
         <p className="rounded-lg bg-bg px-3 py-3 t-sub text-text-2">
-          {failed || hasPrice
-            ? "그래프 자료 불러오기 실패 · 잠시 후 다시"
-            : "이 단지는 최근 매매 실거래가 없어 그래프를 그리지 않았어요."}
+          {failed || hasPrice ? "그래프 자료 불러오기 실패 · 잠시 후 다시" : "최근 매매 실거래 없음"}
         </p>
       )}
     </>
   );
+  /* [1072] 그릴 달이 없으면 접힘 카드(데스크톱은 펼쳐 회색 상자 한 칸) → 제목 | 까닭 한 줄 카드. 빈 상태는 "○○ 없음" 말투 */
+  if (months.length === 0) {
+    return (
+      <section className="card flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 rounded-2xl px-4 py-3 max-md:px-3.5" aria-label={title}>
+        <h2 className="t-body font-bold text-ink">{title}</h2>
+        <p className={`t-sub ${failed || hasPrice ? "text-warning" : "text-text-3"}`}>
+          {failed || hasPrice ? "그래프 자료 불러오기 실패 · 잠시 후 다시" : "최근 매매 실거래 없음"}
+        </p>
+      </section>
+    );
+  }
   if (fold) {
     /* 요약 줄 안에는 누르는 것(ⓘ)을 두지 않는다 — 누르면 접힘이 같이 바뀐다. 읽는 법은 펼친 뒤 첫 줄에 */
     return (
@@ -765,14 +789,17 @@ function Details({
   };
 
   return (
-    <details className="card group rounded-2xl p-4">
-      <summary className="flex min-h-[40px] cursor-pointer items-center justify-between gap-2 t-body font-bold text-ink">
-        자세히 보기
-        <span className="t-caption font-bold text-text-3">
-          {hideEvidence ? "" : `데이터 출처 ${evidence.length}곳 · `}결과가 달라지는 경우 · 공유
+    <details className="group px-4 max-md:px-3.5">
+      <summary className="flex min-h-[52px] cursor-pointer items-center justify-between gap-3">
+        <h2 className="t-body font-bold text-ink">자세히 보기</h2>
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="min-w-0 truncate t-caption text-text-3">
+            {hideEvidence ? "" : `데이터 출처 ${evidence.length}곳 · `}결과가 달라지는 경우 · 공유
+          </span>
+          <FoldWord />
         </span>
       </summary>
-      <div className="mt-3 flex flex-col gap-4">
+      <div className="flex flex-col gap-4 pb-4 pt-1">
         <div className={hideEvidence ? "hidden" : ""}>
           <h3 className="t-sub font-bold text-text-1">데이터 출처</h3>
           <ul className="mt-1.5 flex flex-col gap-1.5">
@@ -937,13 +964,17 @@ function EvidenceCard({ tool, picked, verdict, footnotes }: { tool: AiAnalysisTo
   const evidenceN = evidence.length;
   const staleN = evidence.filter((e) => e.confidence === "stale").length;
   return (
-    <details className="card group rounded-2xl p-4 max-md:p-3.5" aria-label="근거 · 출처">
-      <summary className="flex min-h-[40px] cursor-pointer flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
+    <details className="group px-4 max-md:px-3.5" aria-label="근거 · 출처">
+      <summary className="flex min-h-[52px] cursor-pointer items-center justify-between gap-3">
         <h2 className="t-body font-bold text-ink">근거 · 출처</h2>
-        <span className="t-caption tabular-nums text-text-3">{`근거 ${evidenceN}개 · 오래된 자료 ${staleN}개`}</span>
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="min-w-0 truncate t-caption tabular-nums text-text-3">{`근거 ${evidenceN}개 · 오래된 자료 ${staleN}개`}</span>
+          <FoldWord />
+        </span>
       </summary>
+      <div className="pb-3">
       {evidence.length > 0 ? (
-        <ul className="mt-2 flex flex-col divide-y divide-line" data-tone="plain">
+        <ul className="flex flex-col divide-y divide-line" data-tone="plain">
           {evidence.map((e) => (
             <li key={e.label} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-2 t-sub">
               <span className="min-w-0 font-bold text-ink break-words">{e.label}</span>
@@ -961,10 +992,10 @@ function EvidenceCard({ tool, picked, verdict, footnotes }: { tool: AiAnalysisTo
           ))}
         </ul>
       ) : (
-        <p className="mt-2 t-sub text-text-3">데이터 출처 없음</p>
+        <p className="t-sub text-text-3">데이터 출처 없음</p>
       )}
       {(picked || next) && (
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-2">
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-2">
           <span className="flex flex-wrap gap-1.5">{picked && <MyNotesChip complexId={picked.id} />}</span>
           {next && (
             <Link href={next.href} className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary no-underline">
@@ -973,6 +1004,7 @@ function EvidenceCard({ tool, picked, verdict, footnotes }: { tool: AiAnalysisTo
           )}
         </div>
       )}
+      </div>
     </details>
   );
 }
@@ -1225,8 +1257,9 @@ export function ResultView({
       {!verdict && <p className="card rounded-2xl p-4 t-body text-text-2">결과를 만들 자료 없음</p>}
 
       {/* ② KPI 4칸(한 줄) + 출처·기준 한 줄 */}
+      {/* [1072] 칸 넷 + 출처 줄을 카드 하나로(칸 사이 가는 선 · 출처는 카드 아랫단) — 예전엔 카드 밖 바탕에 떠 있었다 */}
       {tiles.length > 0 && (
-        <div className="flex flex-col gap-1.5">
+        <section className="card overflow-hidden rounded-2xl" aria-label="핵심 숫자">
           <VerdictTiles
             tiles={tiles}
             tileAside={(t) => {
@@ -1234,13 +1267,13 @@ export function ResultView({
               return c ? <Explain {...c} size={12} /> : null;
             }}
           />
-          <p className="t-caption text-text-3 break-words">
+          <p className="border-t border-line px-4 py-2.5 t-caption text-text-3 break-words max-md:px-3.5">
             {sources ? `출처 ${sources} · ` : ""}공공데이터 자동 계산{asOf ? ` · 기준 ${asOf}` : ""}
             {result?.ok && at && (result.appliedCalc || external)
               ? ` · ${result.appliedCalc ? "내 조건 반영 · " : ""}${at.getHours()}:${String(at.getMinutes()).padStart(2, "0")} 계산`
               : ""}
           </p>
-        </div>
+        </section>
       )}
 
       {/* 폰 한 열: 결론 → 그림 → 손잡이(내 조건, 접이식) → 세부 */}
@@ -1274,20 +1307,26 @@ export function ResultView({
         />
       )}
 
-      {/* ⑤ 근거 · 출처(닫힘) + 단지 홈 링크 */}
-      <EvidenceCard tool={tool} picked={hasComplex ? picked : null} verdict={verdict} footnotes={footnotes} />
+      {/* [1072] ⑤ 근거 · 출처 + ⑥ 자세히 보기 — 카드 두 장(각 70px) → 카드 하나 안의 접힘 두 줄(가는 선으로 나눔 · 오른쪽 펼치기/접기) */}
+      {/* divide-y 는 전역 lq 판(색 면 + 테두리)을 부른다 — 카드 안 목록이라 plain(판 없이 선만) · 카드는 바깥 div 가 맡는다 */}
+      <div className="card rounded-2xl" data-testid="cxw-more">
+        <div className="flex flex-col divide-y divide-line" data-tone="plain">
+          {/* ⑤ 근거 · 출처(닫힘) + 단지 홈 링크 */}
+          <EvidenceCard tool={tool} picked={hasComplex ? picked : null} verdict={verdict} footnotes={footnotes} />
 
-      {/* ⑥ 자세히 보기 — 출처는 위 카드가 말했다 */}
-      <Details
-        tool={tool}
-        picked={hasComplex ? picked : null}
-        verdict={verdict}
-        footnotes={footnotes}
-        counters={verdict?.counters?.length ? verdict.counters : insight.counters}
-        ctx={ctx}
-        result={result}
-        hideEvidence
-      />
+          {/* ⑥ 자세히 보기 — 출처는 위 카드가 말했다 */}
+          <Details
+            tool={tool}
+            picked={hasComplex ? picked : null}
+            verdict={verdict}
+            footnotes={footnotes}
+            counters={verdict?.counters?.length ? verdict.counters : insight.counters}
+            ctx={ctx}
+            result={result}
+            hideEvidence
+          />
+        </div>
+      </div>
     </div>
   );
 }

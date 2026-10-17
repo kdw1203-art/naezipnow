@@ -8344,3 +8344,10 @@ html[data-mscale] li .fineprint-body :is(p, div):is(.t-sub, .t-caption) {
   overflow: visible;
   text-overflow: clip;
 }
+
+/* [1071 · AI 분석 한 가지 꼴] 기록 계열 시작 상자(.hub-start, 게스트·로그인 두 벌)는 이제 **한 줄**이다
+   (왼쪽 제목·글자 링크 | 오른쪽 단추 — 게스트는 폰에서도 한 줄). 7.5rem 최소 높이가 그대로라 한 줄짜리 상자 위아래로
+   큰 빈칸이 남았다(데스크톱·폰 캡처). 로그인 상자는 폰에서 세로로 쌓여 이 값을 넘으므로 그쪽 높이는 그대로다. */
+.hub-start {
+  min-height: 4.5rem;
+}

@@ -23,6 +23,7 @@ import { HubNoteAnalysis } from "./hub-picker";
 import { HubMyNoteTeaser, HubRecordStart } from "./hub-record-start";
 import { CompareTrayCount } from "./tool-cards-client";
 import { ToolCard } from "./hub-tool-card";
+import { ToolRows } from "./hub-tool-rows";
 import { AI_TOOL_COUNT, MARKET_LIVE, RECORD_LIVE, SIM_TOOLS, TIERS, type TierId } from "./tool-catalog";
 
 
@@ -204,29 +205,14 @@ export default async function AnalysisHubPage() {
             className="rise-in-2 flex scroll-mt-24 flex-col gap-3"
           >
             <TierHead id="market" count={MARKET_LIVE.length} />
-            <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-              {MARKET_LIVE.map((t) => {
-                const key = t.teaser;
-                /* [1023] 이 카드의 티저를 지역별로 모은다(있는 지역만). 비면 서버 렌더 그대로 */
-                const byRegion: Record<string, HubTeaser> = {};
-                if (key) {
-                  for (const [rid, set] of Object.entries(teasersByRegion)) {
-                    const v = (set as Record<string, HubTeaser | undefined>)[key];
-                    if (v) byRegion[rid] = v;
-                  }
-                }
-                return (
-                  <ToolCard
-                    key={t.href}
-                    t={t}
-                    teaser={
-                      key && key in teasers ? (teasers as Record<string, HubTeaser>)[key] : null
-                    }
-                    teaserByRegion={byRegion}
-                  />
-                );
-              })}
-            </div>
+            {/* [1071 · 한 가지 꼴] 큰 카드 4장(두 장만 숫자 상자가 있어 들쭉날쭉) → 단지 분석과 같은 표.
+                실측 값 · 출처 줄 · 추세선 · 지역 바꿔 보기는 "지금 값" 칸으로 그대로 옮겼다(hub-tool-rows). */}
+            <ToolRows
+              tools={MARKET_LIVE}
+              nowLabel="지금 값"
+              teasers={teasers as Partial<Record<string, HubTeaser>>}
+              teasersByRegion={teasersByRegion as Record<string, Partial<Record<string, HubTeaser>>>}
+            />
           </section>
 
           {/* ── 계열 3 · 내가 쓴 기록 ── */}
@@ -274,69 +260,65 @@ export default async function AnalysisHubPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="card hub-start flex flex-col gap-2.5 rounded-lg p-4">
+                  /* [1071] 같은 무게의 단추 셋이 한 줄에 서 있어 무엇부터 누르는지 흐렸다 — 할 일 하나(단추)와
+                     갈 곳 둘(글자 링크)로 나눈다. 목적지·문구는 그대로. */
+                  <div className="card hub-start flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 rounded-2xl p-4">
                     {/* 공개 AI 미리보기 0건 — 샘플 리포트로 채우지 않는다. [1015 · 규칙 B·D] 빈 화면은 한 줄 */}
-                    <span className="t-section text-ink">공개된 AI 정리 없음</span>
-                    <div className="flex flex-wrap gap-2">
-                      <Link href="/notes/new" className="btn-outline btn-md no-underline">
-                        임장노트 쓰고 AI 받기
-                      </Link>
-                      <Link href="/notes" className="btn-soft btn-md no-underline">
-                        공개 노트 보기
-                      </Link>
-                      <Link href="/login" className="btn-soft btn-md no-underline">
-                        로그인
-                      </Link>
-                    </div>
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="t-section text-ink">공개된 AI 정리 없음</span>
+                      <span className="flex flex-wrap items-center gap-x-3 t-sub text-text-3">
+                        <Link href="/notes" className="tap-line font-semibold text-text-2 no-underline hover:underline">
+                          공개 노트 보기 ›
+                        </Link>
+                        <Link href="/login" className="tap-line font-semibold text-text-2 no-underline hover:underline">
+                          로그인 ›
+                        </Link>
+                      </span>
+                    </span>
+                    <Link href="/notes/new" className="btn-outline btn-md shrink-0 no-underline">
+                      임장노트 쓰고 AI 받기
+                    </Link>
                   </div>
                 )
               }
             />
 
-            {/* 도구 2장 + 노트 AI 실행 카드를 한 그리드에 둔다. 따로 두면
-                데스크톱에서 도구 카드가 화면 절반씩 늘어나 텅 비어 보였다. */}
-            <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-              {RECORD_LIVE.map((t) => (
-                <ToolCard
-                  key={t.href}
-                  t={t}
-                  teaser={null}
-                  extra={
-                    /* [1007] 내 노트 수 티저는 클라이언트가 세션 판정 뒤 붙인다(HubMyNoteTeaser) */
-                    t.teaser === "notes" ? (
-                      <HubMyNoteTeaser />
-                    ) : t.teaser === "compare" ? (
-                      <CompareTrayCount />
-                    ) : undefined
-                  }
-                />
-              ))}
-              {/* 히어로에서 고른 단지를 컨텍스트로 받는다 — ?noteId=·로그인 여부는 카드가 스스로 읽는다 */}
-              <HubNoteAnalysis className="col-span-2" />
-            </div>
+            {/* [1071 · 한 가지 꼴] 도구 카드 2장 → 위 두 계열과 같은 표. 내 노트 수 · 비교 후보 수는
+                "내 기록" 칸으로(세션 판정 뒤 클라이언트가 붙인다 — HubMyNoteTeaser · CompareTrayCount). */}
+            <ToolRows
+              tools={RECORD_LIVE}
+              nowLabel="내 기록"
+              extras={{
+                "/notes": <HubMyNoteTeaser bare />,
+                "/analysis/compare": <CompareTrayCount bare />,
+              }}
+            />
+            {/* 히어로에서 고른 단지를 컨텍스트로 받는다 — ?noteId=·로그인 여부는 카드가 스스로 읽는다 */}
+            <HubNoteAnalysis />
           </section>
 
           {/* ── 계열을 가로지르는 하나: 에이전트 ──
               예전엔 도구 카드 8장 사이에 끼어 있어 "9번째 도구"처럼 보였다.
               하는 일이 다르다 — 도구는 한 대상을 깊게, 에이전트는 여러 데이터를
               검색·조합해 질문에 답한다. 그래서 자리를 따로 준다. */}
+          {/* [1071] 남색 띠(ai-panel)가 이 화면에서 혼자 어두운 덩어리라 눈이 가장 먼저 거기로 갔다 — 도구 표와 같은
+              흰 판 · 같은 칩 크기(36px) · 같은 글자 단계로 맞춘다. 에이전트라는 성격은 칩 색(ai-chip)이 말한다. */}
           <Link
             href="/agent"
-            className="ai-panel tile rise-in-3 flex flex-col gap-2.5 rounded-3xl p-5 no-underline md:flex-row md:items-center md:gap-5"
+            className="card press rise-in-3 flex min-h-11 items-center gap-2.5 rounded-2xl px-3 py-3 no-underline hover:bg-bg"
           >
-            <span className="ai-chip tile-ico flex h-11 w-11 shrink-0 items-center justify-center rounded-lg">
-              <Icon name="bot" size={20} />
+            {/* .ai-chip 은 어두운 판 위 전용(글자색 = on-dark)이라 흰 판에서는 아이콘이 사라졌다(캡처) — 표의 칩과 같은 옅은 바탕 */}
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary" aria-hidden="true">
+              <Icon name="bot" size={18} />
             </span>
             {/* [1015 · 규칙 B·D] 물음형 제목·예시 질문은 걷고 명사 제목 + 사실 한 줄 */}
-            <span className="flex min-w-0 flex-1 flex-col gap-1">
-              <span className="t-section text-ai-text">에이전트</span>
-              <span className="t-sub text-ai-text">
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="t-body font-bold text-ink">에이전트</span>
+              <span className="t-sub text-text-2">
                 내 임장노트·실거래 조회 · 참고한 자료 목록 표시 · 수도권 실거래 기준
               </span>
             </span>
-            <span className="tile-go t-sub shrink-0 font-bold text-ai-accent">
-              에이전트 열기 ›
-            </span>
+            <span className="shrink-0 t-sub font-bold text-primary">열기 ›</span>
           </Link>
 
           {/* ── 체험 구역 (UI-04) — 실데이터와 섞지 않는다. 기본 접힘 ── */}

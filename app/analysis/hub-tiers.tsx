@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ToolGlyph } from "./ToolGlyph";
 import type { WorkbenchCardDto } from "./workbench-cards";
 import { useHubPicked } from "./hub-context";
+import { TOOL_COL_GO, TOOL_COL_NAME, TOOL_COL_RESULT } from "./tool-cols";
 
 /* ============================================================
    워크벤치 그리드 — [UI-03 · UI-06 · UI-08 · UI-10 · 958]
@@ -94,7 +95,9 @@ export function WorkbenchGrid({
       }}
     >
       {details[c.id]}
-      <div className="flex items-center gap-1">
+      {/* [1070] 할 일 하나와 되돌리기 하나가 나란히 붙어 있어 어느 쪽이 주된 행동인지 흐렸다
+          (소유자 2026-10-16). 주 단추는 왼쪽에 그대로 두고 "접기"는 줄 오른쪽 끝으로 — 눈이 왼쪽만 보면 된다. */}
+      <div className="flex items-center justify-between gap-2">
         {/* [1052] 누르면 무엇이 일어나는지 단추에 — 단지를 골랐으면 그 단지로, 안 골랐으면 지도에서 단지부터 */}
         <Link href={`${c.href}${query}`} onClick={open(c)} className="btn-soft inline-flex min-h-10 items-center px-4 t-sub font-bold no-underline">
           {picked ? `${picked.name} ${c.title} 열기 ›` : `단지 고르고 ${c.title} 열기 ›`}
@@ -103,7 +106,7 @@ export function WorkbenchGrid({
           type="button"
           onClick={() => setOpenId(null)}
           aria-label={`${c.title} 접기`}
-          className="inline-flex min-h-10 items-center rounded-full px-3 t-sub font-bold text-text-2 hover:bg-surface"
+          className="inline-flex min-h-10 shrink-0 items-center rounded-full px-3 t-caption text-text-3 hover:bg-surface hover:text-text-2"
         >
           접기 ▴
         </button>
@@ -144,11 +147,11 @@ export function WorkbenchGrid({
         </Link>
       </td>
       <td className="hidden px-2 py-1.5 t-sub text-text-2 md:table-cell">{c.premise}</td>
-      <td className="hidden w-[180px] px-2 py-1.5 t-caption text-text-3 lg:table-cell">{c.result ?? "—"}</td>
+      <td className={`hidden px-2 py-1.5 t-caption text-text-3 lg:table-cell ${TOOL_COL_RESULT}`}>{c.result ?? "—"}</td>
       {/* [1067 · 칸 흔들림] 펼치면 이 칸이 w-8 → w-16("열기 ›")로 넓어져 **표 전체의 칸 자리가 밀렸다**
           (결과 칸이 줄마다 다른 x 로 보인다 — 소유자 캡처 2026-10-13). 폭을 한 값으로 고정하고 상태는 캐럿 방향으로만
           말한다. "열기"는 펼친 칸 안의 단추가 이미 이름까지 붙여 말하고 있다(중복). */}
-      <td className="w-10 px-3 text-right t-body text-text-3" aria-hidden="true">
+      <td className={`px-3 text-right t-body text-text-3 ${TOOL_COL_GO}`} aria-hidden="true">
         {/* dead-control-ok: 줄 전체가 펼침 단추(tr onClick · 첫 칸 링크의 첫 누름) — 캐럿은 그 상태 표시 */}
         {isOpen ? "▴" : "▾"}
       </td>
@@ -167,13 +170,14 @@ export function WorkbenchGrid({
   return (
     <div className="flex flex-col gap-2.5">
       <div className="card overflow-hidden rounded-2xl">
-        <table className="w-full border-collapse">
+        {/* [1071] 칸 폭을 지역 시세·내 임장노트 표와 같은 숫자로(tool-cols) — 세 표의 칸이 위아래로 줄을 맞춘다 */}
+        <table className="w-full border-collapse md:table-fixed">
           <thead className="max-md:hidden">
             <tr className="border-b border-line bg-bg text-left t-caption text-text-3">
-              <th scope="col" className="px-3 py-2 font-bold">도구</th>
+              <th scope="col" className={`px-3 py-2 font-bold ${TOOL_COL_NAME}`}>도구</th>
               <th scope="col" className="px-2 py-2 font-bold">하는 일</th>
-              <th scope="col" className="hidden w-[180px] px-2 py-2 font-bold lg:table-cell">결과</th>
-              <th scope="col" className="w-10 px-3 py-2">
+              <th scope="col" className={`hidden px-2 py-2 font-bold lg:table-cell ${TOOL_COL_RESULT}`}>결과</th>
+              <th scope="col" className={`px-3 py-2 ${TOOL_COL_GO}`}>
                 <span className="sr-only">펼치기</span>
               </th>
             </tr>

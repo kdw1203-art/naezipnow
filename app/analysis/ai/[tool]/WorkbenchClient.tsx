@@ -98,7 +98,7 @@ export function WorkbenchClient({
 }: {
   tool: AiAnalysisToolId;
   /** [1021] 단지 분석 4종의 머리 — 아이콘(서버가 그린 글리프)·useCase 한 줄·빵부스러기. 없으면 서버 PageHead 가 머리다(나머지 8종) */
-  header?: { icon: ReactNode; useCase: string; crumb: string } | null;
+  header?: { icon: ReactNode; useCase: string } | null;
   /** [1026 → 1026b] 빈 상태 한 문장(12종 — 서버가 넘긴다, 경제지표 모니터는 없음) */
   emptyLine?: string | null;
   /** 도구 이름 — 지도 서랍 제목("시세 예측")에 쓴다 */
@@ -665,13 +665,8 @@ export function WorkbenchClient({
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary" aria-hidden="true">
               {header.icon}
             </span>
+            {/* [1072] 둘째 경로 줄(AI 분석 › 단지 분석)을 걷었다 — 바로 위 PageShell 경로 줄과 겹쳤다 */}
             <div className="min-w-0">
-              <nav className="t-caption text-text-3">
-                <Link href="/analysis" className="inline-flex min-h-[24px] items-center text-text-3 no-underline hover:underline">
-                  AI 분석
-                </Link>{" "}
-                › {header.crumb}
-              </nav>
               <h1 className="t-title text-ink">{title}</h1>
               <p className="t-sub text-text-2">{header.useCase}</p>
             </div>
@@ -750,17 +745,20 @@ export function WorkbenchClient({
             </section>
           )}
 
-          {/* [1026 → 1026b] 빈 상태 — 카드 하나 + 회색 견본(대표 그림 윤곽 · 값 없음) + 한 문장 + 단지 검색 + 최근 거래 많은 단지 칩 */}
+          {/* [1026 → 1026b] 빈 상태 — 카드 하나 + 회색 견본(대표 그림 윤곽 · 값 없음) + 한 문장 + 단지 검색 + 최근 거래 많은 단지 칩
+              [1072] 순서·모양 — 왼쪽(폰은 위)이 고르기: 제목 "단지 고르기" + 고르는 방법 한 줄(서버 emptyLine) + 검색 + 거래 많은 단지 줄.
+              회색 견본은 오른쪽 옅은 면으로 물러나 "결과가 들어갈 자리" 한 줄을 단다(로딩 뼈대로 읽히지 않게) · 폰에서는 숨긴다
+              (검색이 첫 화면 위로). 거래 많은 단지는 두 줄 알약 → 이름 · 지역 | 건수 행(2열). */}
           {showPickCard && (
-            <section className="card rounded-2xl p-4 max-md:p-3.5" aria-label="단지 고르기">
-              <div className={picked ? "flex flex-col gap-3" : "grid grid-cols-1 items-center gap-4 md:grid-cols-2"}>
-                {!picked && (
-                  <div className="mx-auto w-full max-w-[240px] md:max-w-[320px]" aria-hidden="true">
-                    <EmptyFrame tool={tool} />
-                  </div>
-                )}
-                <div className="flex min-w-0 flex-col gap-3">
-                  {!picked && emptyLine && <p className="t-body font-bold text-ink">{emptyLine}</p>}
+            <section className={`card rounded-2xl ${picked ? "p-4 max-md:p-3.5" : "overflow-hidden p-0"}`} aria-label="단지 고르기">
+              <div className={picked ? "flex flex-col gap-3" : "grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_260px] lg:grid-cols-[minmax(0,1fr)_320px]"}>
+                <div className={`flex min-w-0 flex-col gap-3 ${picked ? "" : "p-4 max-md:p-3.5 md:p-6"}`}>
+                  {!picked && (
+                    <div className="flex flex-col gap-0.5">
+                      <h2 className="t-section font-bold text-ink">단지 고르기</h2>
+                      {emptyLine && <p className="t-sub text-text-3">{emptyLine}</p>}
+                    </div>
+                  )}
                   {isPortfolio && (
                     <div className="flex flex-wrap items-center gap-2">
                       <button type="button" onClick={() => void loadPortfolio()} className="btn-secondary btn-md px-3 t-sub">
@@ -803,9 +801,9 @@ export function WorkbenchClient({
                     </div>
                   )}
                   {quickPicks.length > 0 && (
-                    <div className="flex flex-col gap-2">
-                      <span className="t-sub font-bold text-text-1">최근 6개월 거래가 많은 단지 {quickPicks.length}곳</span>
-                      <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-col gap-1.5 border-t border-line pt-3">
+                      <span className="t-caption font-bold text-text-3">최근 6개월 거래가 많은 단지 {quickPicks.length}곳</span>
+                      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                         {quickPicks.map((q) => (
                           <button
                             key={q.id}
@@ -814,18 +812,27 @@ export function WorkbenchClient({
                               setPickerOpen(false);
                               onPick({ id: q.id, name: q.name, region: q.region, regionId: null, regionLabel: q.region, priceLabel: null } as PickedComplex);
                             }}
-                            className="chip press flex min-h-[40px] flex-col items-start border border-line bg-surface px-3 py-1.5 text-left"
+                            className="press flex min-h-[48px] min-w-0 items-center justify-between gap-3 rounded-xl border border-line bg-surface px-3 py-2 text-left hover:border-primary"
                           >
-                            <span className="t-sub font-bold text-ink">{q.name}</span>
-                            <span className="t-caption text-text-3">
-                              {q.region} · 최근 6개월 {q.recentTrades.toLocaleString("ko-KR")}건
+                            <span className="flex min-w-0 flex-col">
+                              <span className="truncate t-sub font-bold text-ink">{q.name}</span>
+                              <span className="truncate t-caption text-text-3">{q.region}</span>
                             </span>
+                            <span className="shrink-0 t-caption font-bold tabular-nums text-text-2">{q.recentTrades.toLocaleString("ko-KR")}건</span>
                           </button>
                         ))}
                       </div>
                     </div>
                   )}
                 </div>
+                {!picked && (
+                  <div className="flex flex-col items-center justify-center gap-2 border-line bg-bg p-6 max-md:hidden md:border-l" aria-hidden="true">
+                    <div className="w-full max-w-[220px]">
+                      <EmptyFrame tool={tool} />
+                    </div>
+                    <span className="t-caption text-text-3">결과가 들어갈 자리</span>
+                  </div>
+                )}
               </div>
             </section>
           )}

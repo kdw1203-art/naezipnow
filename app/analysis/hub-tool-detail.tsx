@@ -57,24 +57,27 @@ export function ToolDetailBody({
           {/* [1067 · 낱말로] 여덟 가지를 가운뎃점으로 이어 붙인 한 줄 끝에 링크까지 달려 있었다 — 어디까지가 신호
               이름이고 어디부터가 링크인지 읽어야 알 수 있었다(소유자 캡처 2026-10-13). 낱말은 칩으로 끊어 놓고,
               모수("고른 실행에 N가지")와 링크는 그 아래 한 줄로 내린다. 사실·개수·문구는 그대로. */}
-          <dd className="m-0 flex flex-col gap-1.5 text-text-2">
-            <ul className="m-0 flex list-none flex-wrap gap-1 p-0" aria-label="시장 신호">
+          {/* [1070 · 줄 줄이기] 칩 줄 아래에 모수 한 줄 + 링크가 따로 서 있어 칸이 세 줄이었다(소유자 2026-10-16
+              "분석 순서·계산 방법·접기 디자인을 보기 편하고 심플하게"). 모수와 링크를 **칩 줄 끝에** 이어 붙여
+              한 줄로 접는다 — 사실("고른 실행에 N가지")도 링크도 그대로다. 좁아지면 자연스럽게 다음 줄로 넘어간다. */}
+          <dd className="m-0">
+            <ul className="m-0 flex list-none flex-wrap items-center gap-1 p-0" aria-label="시장 신호">
               {signalLabels.map((s) => (
                 /* 순서 칩과 같은 꼴 — 펼친 칸 바탕이 회색(bg-bg)이라 칩은 흰 바탕이어야 칩으로 읽힌다 */
                 <li key={s} className="rounded-full border border-line bg-surface px-2.5 py-1 t-caption font-medium text-text-2">
                   {s}
                 </li>
               ))}
+              <li className="ml-1 t-caption text-text-3">고른 실행에 {signalLabels.length}가지</li>
+              <li>
+                <Link
+                  href="/methodology#signals"
+                  className="-my-2.5 inline-flex min-h-[40px] items-center t-caption font-semibold text-primary no-underline md:-my-0.5 md:min-h-6"
+                >
+                  계산 방법 ›
+                </Link>
+              </li>
             </ul>
-            <span className="flex flex-wrap items-center gap-x-2 t-caption text-text-3">
-              단지·지역을 고른 실행에 {signalLabels.length}가지
-              <Link
-                href="/methodology#signals"
-                className="-my-2.5 inline-flex min-h-[40px] items-center font-semibold text-primary no-underline md:-my-0.5 md:min-h-6"
-              >
-                계산 방법 ›
-              </Link>
-            </span>
           </dd>
         </>
       )}

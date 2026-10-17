@@ -229,12 +229,34 @@ export function AiNoteAnalysisCard({
   };
 
   return (
-    <div className="card flex h-full flex-col gap-2.5 rounded-lg p-4">
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-warning-soft text-warning">
-        <Icon name="bot" size={17} />
+    /* [1071 · 한 가지 꼴] 칩이 제 줄을 차지하고, 맨 아래에 화면 폭만 한 파란 단추가 있었다 — 로그아웃 상태에서는
+       그 단추가 흐린 채(비활성)로 화면에서 가장 큰 덩어리가 됐다(소유자 "디자인 개선을 제대로").
+       위 도구 표와 같은 머리줄로: 칩 · 이름 · (한 줄 설명) | 오른쪽에 할 일 하나. 노트 고르기·결과·오류는 그 아래 그대로. */
+    <div className="card flex flex-col gap-2.5 rounded-2xl px-3 py-3">
+      <div className="flex min-h-11 items-center gap-2.5">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning-soft text-warning" aria-hidden="true">
+          <Icon name="bot" size={17} />
+        </span>
+        {/* [1015 · 규칙 B] 기능 설명 한 줄("점수·기록과 지역 실시세를 합쳐 … 정리해요")은 걷었다 */}
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="t-body font-bold text-ink">임장노트 AI 분석</span>
+          {!loggedIn && <span className="t-caption text-text-3">로그인 필요</span>}
+        </span>
+        {loggedIn ? (
+          <button
+            type="button"
+            onClick={() => run(state.kind === "done")}
+            disabled={state.kind === "running" || (notesLoaded && notes.length === 0)}
+            className="btn-primary btn-md shrink-0 disabled:opacity-60"
+          >
+            {state.kind === "running" ? "분석 중…" : state.kind === "done" ? "다시 분석하기" : "분석 실행"}
+          </button>
+        ) : (
+          <Link href="/login" className="btn-outline btn-md shrink-0 no-underline">
+            로그인
+          </Link>
+        )}
       </div>
-      {/* [1015 · 규칙 B] 기능 설명 한 줄("점수·기록과 지역 실시세를 합쳐 … 정리해요")은 걷었다 */}
-      <div className="t-section text-ink">임장노트 AI 분석</div>
 
       {/* 노트 선택 */}
       {notesLoaded && notes.length > 0 && (
@@ -358,7 +380,9 @@ export function AiNoteAnalysisCard({
             {state.result.disclaimer}.
           </div>
         </div>
-      ) : state.kind === "login" ? (
+      ) : state.kind === "login" && loggedIn ? (
+        /* [1071] 로그아웃 상태는 머리줄이 이미 "로그인 필요 · 로그인"을 말한다 — 이 띠는 화면은 로그인으로 알았는데
+           서버가 세션 만료를 돌려준 경우에만 남긴다(같은 말을 두 번 하지 않는다). */
         <div className="flex items-center justify-between rounded-lg bg-primary-soft px-3 py-2.5">
           <span className="t-sub font-bold text-primary">AI 분석 · 로그인 필요</span>
           <Link href="/login" className="inline-flex min-h-[24px] shrink-0 items-center t-sub font-bold text-primary">
@@ -383,20 +407,6 @@ export function AiNoteAnalysisCard({
         </div>
       ) : null}
 
-      <button
-        type="button"
-        onClick={() => run(state.kind === "done")}
-        disabled={
-          state.kind === "running" || !loggedIn || (notesLoaded && notes.length === 0)
-        }
-        className="btn-primary btn-cta mt-auto rounded-lg p-2.5 text-center t-body disabled:opacity-60"
-      >
-        {state.kind === "running"
-          ? "분석 중…"
-          : state.kind === "done"
-            ? "다시 분석하기"
-            : "분석 실행"}
-      </button>
     </div>
   );
 }

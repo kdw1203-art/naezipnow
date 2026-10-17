@@ -1,3 +1,5 @@
+/* [1072 · 세부 디자인] 단지 분석 4종 머리의 둘째 경로 줄("AI 분석 › 단지 분석")을 걷었다 — PageShell 경로 줄과 겹쳤다(경로 줄은
+   화면에 하나). 빈 상태 한 줄은 "단지 선택 → 결과" → 고르는 방법(PICK_WAYS). 면책은 문장 그대로 · 모양만(선 + 작은 글씨 + 읽는 폭). */
 /* [1026b · AI 분석 8종] 나머지 8종(리스크 점검·비교·수익률 계산·갭·경제지표·자산 구성·체크리스트·계약 점검)도 1026 틀 — 도구 색 래퍼
    (.tool-scope + personaVars: 리스크 빨강·수익률 초록 …)를 12종 모두에서 걷고 전역 파랑 하나. 빈 상태 한 문장(EMPTY_LINE)은 12종 모두
    서버가 넘긴다(클라이언트 번들 0). 8종 머리는 흰 PageHead(premise 한 줄) 그대로 · 4종 머리는 WorkbenchClient. 면책·캐시·메타 그대로. */
@@ -17,7 +19,7 @@ import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
 import { PageHead } from "@/app/components/PageHead";
 import { ToolGlyph, WORKBENCH_GLYPH } from "../../ToolGlyph";
-import { TIERS, WORKBENCH_ICONS } from "../../tool-catalog";
+import { WORKBENCH_ICONS } from "../../tool-catalog";
 import { AI_TOOL_IDS, isAiAnalysisToolId, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
 import { TOOL_PERSONAS } from "@/lib/ai/tool-persona";
@@ -39,18 +41,21 @@ import { PREDICTION_COST_FIELDS } from "./prediction-cost-fields";
    [1026b] 나머지 8종도 같은 자리에 한 문장(경제지표 모니터는 단지를 고르지 않아 빈 상태가 없다)
    [1028] 도구마다 달랐던 문장("단지를 고르면 … 바로 나와요")은 바로 위 머리 한 줄(useCase · premise)과 같은 말이었다 —
    무엇이 나오는지는 머리가 말하고, 빈 상태는 11종 공통 한 줄. */
+/* [1072] "단지 선택 → 결과"(화살표 기호 문장) → 빈 상태 카드 제목("단지 고르기", 클라이언트) 아래 고르는 방법 한 줄.
+   사실 낱말만 — 비교는 2~3곳을 담고, 자산 구성은 관심 단지를 불러온다(그 도구에 실제로 있는 단추). */
+const PICK_WAYS = "이름 검색 · 지도에서 찾기";
 const EMPTY_LINE: Partial<Record<AiAnalysisToolId, string>> = {
-  "ai-diagnosis": "단지 선택 → 결과",
-  "ai-prediction": "단지 선택 → 결과",
-  "ai-inspection": "단지 선택 → 결과",
-  "ai-timing": "단지 선택 → 결과",
-  "ai-risk": "단지 선택 → 결과",
-  "ai-compare": "단지 선택 → 결과",
-  "ai-simulator": "단지 선택 → 결과",
-  "ai-gap": "단지 선택 → 결과",
-  "ai-portfolio": "단지 선택 → 결과",
-  "my-checklist": "단지 선택 → 결과",
-  "contract-risk": "단지 선택 → 결과",
+  "ai-diagnosis": PICK_WAYS,
+  "ai-prediction": PICK_WAYS,
+  "ai-inspection": PICK_WAYS,
+  "ai-timing": PICK_WAYS,
+  "ai-risk": PICK_WAYS,
+  "ai-compare": `2~3곳 담기 · ${PICK_WAYS}`,
+  "ai-simulator": PICK_WAYS,
+  "ai-gap": PICK_WAYS,
+  "ai-portfolio": `관심 단지 불러오기 · ${PICK_WAYS}`,
+  "my-checklist": PICK_WAYS,
+  "contract-risk": PICK_WAYS,
 };
 
 /* [1010] 1h → 1일. 실측(2026-09-20~22) 하루 1,512 렌더 — 도구 12개짜리 라우트가
@@ -98,7 +103,7 @@ export default async function AiToolPage({
   const quickPicks = tid === "ai-economy" || tid === "contract-risk" ? [] : await getActiveComplexes(6);
   /* [1021] 단지 분석 4종 — 머리는 클라이언트가 그린다(아이콘은 서버가 그린 글리프를 넘긴다) */
   const complexHeader = isFrameTool(tid)
-    ? { icon: <ToolGlyph id={WORKBENCH_GLYPH[tid] ?? "radar"} size={26} />, useCase: identity.useCase, crumb: TIERS.complex.label }
+    ? { icon: <ToolGlyph id={WORKBENCH_GLYPH[tid] ?? "radar"} size={26} />, useCase: identity.useCase }
     : null;
 
   return (
@@ -132,10 +137,11 @@ export default async function AiToolPage({
           emptyLine={EMPTY_LINE[tid] ?? null}
         />
 
-        {/* 면책 — check-ai-compliance.mjs 가 이 마커의 존재를 검사한다 */}
+        {/* 면책 — check-ai-compliance.mjs 가 이 마커의 존재를 검사한다
+            [1072] 회색 면(bg-bg · 화면 폭 한 줄 150자) → 위 가는 선 + t-caption + 읽는 폭(72자). 문장은 한 글자도 바꾸지 않았다 */}
         <p
           data-ai-compliance="notice"
-          className="rounded-lg bg-bg px-4 py-3 t-sub text-text-3"
+          className="max-w-[72ch] border-t border-line pt-3 t-caption text-text-3"
         >
           {/* [1015 · 규칙 D] 어미만 다듬었다 — "투자 권유"·"책임" 등 면책 낱말은 그대로(check:ai-compliance) */}
           이 화면의 숫자는 공공데이터(국토교통부 실거래·전월세 신고, 한국부동산원, 청약홈 등)를 정해진

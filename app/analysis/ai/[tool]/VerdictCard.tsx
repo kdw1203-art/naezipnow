@@ -86,28 +86,37 @@ export function VerdictTiles({
   tileAside?: (t: VerdictTile) => ReactNode;
 }) {
   if (tiles.length === 0) return null;
+  /* [1072] 칸 넷 — 바탕색과 같은 회색 칸(bg-bg)이 카드 밖에 떠 있었다 → 흰 칸 + 칸 사이 가는 선(gap-px 위 bg-line).
+     부르는 쪽(ResultView)이 카드로 감싸고 출처 줄을 카드 아랫단에 둔다. 폰 2열에서 칸이 홀수면 마지막 칸이 두 칸을 차지한다(빈 회색 칸 없음).
+     값 없는 칸은 큰 "—" + 아래 "자료 없음 · …" 두 번 → 값 자리에 "자료 없음" 한 번 · 아래는 까닭(note)만. */
   return (
-    <ul className={`grid grid-cols-2 gap-2 ${tiles.length >= 4 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`} aria-label="핵심 숫자">
+    <ul
+      className={`grid grid-cols-2 gap-px bg-line [&>li:last-child:nth-child(odd)]:col-span-2 ${
+        tiles.length >= 4 ? "sm:grid-cols-4 sm:[&>li:last-child:nth-child(odd)]:col-span-1" : "sm:grid-cols-3 sm:[&>li:last-child:nth-child(odd)]:col-span-1"
+      }`}
+      aria-label="핵심 숫자"
+    >
       {tiles.map((t) => {
         const when = ymLabel(t.asOf);
         const display = tileDisplay(t);
         const aside = tileAside?.(t);
+        const caption = t.value ? tileCaption(t, when) : (t.note ?? "");
         return (
-          <li key={t.key} className="flex min-w-0 flex-col rounded-lg bg-bg px-3 py-2.5">
+          <li key={t.key} className="flex min-w-0 flex-col bg-surface px-4 py-3 max-md:px-3.5">
             <span className="flex items-center gap-0.5 t-caption font-bold text-text-3">
               <span className="min-w-0 break-words">{t.label}</span>
               {aside}
             </span>
-            <span className="mt-0.5 min-w-0">
+            <span className="mt-1 min-w-0">
               {t.value ? (
                 <ShownValue value={t.value} display={display} size="t-title" unit="만" />
               ) : (
-                <b className="t-title font-bold text-text-3">—</b>
+                <b className="t-body font-bold text-text-3">자료 없음</b>
               )}
             </span>
             {/* 등락 칸은 비교 기준을 값 바로 아래에 — "기준 없는 %" 를 두지 않는다 */}
             {display?.kind === "delta" && <span className="t-caption font-bold text-text-2">{display.base}</span>}
-            <span className="mt-0.5 t-caption leading-snug text-text-3 break-words">{tileCaption(t, when)}</span>
+            {caption && <span className="mt-0.5 t-caption leading-snug text-text-3 break-words">{caption}</span>}
             {t.value && t.confidence !== "ok" && CONF_TEXT[t.confidence] && (
               <span className="mt-1 self-start rounded bg-warning-soft px-1.5 py-px t-caption font-bold text-warning">
                 {CONF_TEXT[t.confidence]}

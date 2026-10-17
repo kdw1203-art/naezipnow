@@ -7,7 +7,7 @@ import Link from "next/link";
 import { NaverMap } from "@/components/map/NaverMapLazy";
 import type { MapIdleInfo, MapMarkerData } from "@/components/map/NaverMap";
 import { Icon } from "@/app/components/Icon";
-import { PICK_DEFAULT_LEVEL } from "@/lib/map/pick-zoom";
+import { PICK_DEFAULT_LEVEL, approxBounds, levelToZoom } from "@/lib/map/pick-zoom";
 import { syncCenterState, syncLevelState } from "@/lib/map/viewport-sync";
 import {
   ComplexPicker,
@@ -105,6 +105,15 @@ export function MapPickDrawer({
   const [mapDown, setMapDown] = useState(false);
   /* 뷰포트가 여러 번 바뀌는 동안 늦게 온 응답이 최신 것을 덮지 않게 한다. */
   const reqRef = useRef(0);
+
+  /* [1070] 열리자마자 한 번 — 지도가 뜨지 않아도(OSM 대체) 목록은 서게 한다.
+     지도가 뜨면 곧 onIdle 이 진짜 경계로 덮어쓴다(늦게 온 응답은 reqRef 가 버린다). */
+  useEffect(() => {
+    if (!open) return;
+    void loadViewport({ bounds: approxBounds(center, levelToZoom(level)), zoom: levelToZoom(level) } as MapIdleInfo);
+    /* 열릴 때 한 번만 — center·level 이 바뀌는 건 지도가 움직였다는 뜻이고 그쪽은 onIdle 이 맡는다 */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   /* Esc 로 닫기 — 서랍은 화면을 덮으므로 키보드 탈출구가 반드시 있어야 한다. */
   useEffect(() => {
@@ -286,18 +295,61 @@ export function MapPickDrawer({
             rounded={false}
             showControls
           />
+          {/* [1070 · 자연스럽게] 지금 화면의 단지를 **목록으로도** 보여 준다.
+              소유자(2026-10-16): "지도에서 단지를 누르면 분석으로 넘어가지 않는 것 같아".
+              마커만으로 고르게 하면 세 가지가 한꺼번에 막힌다 —
+                ① 서랍이 처음 서는 자리(서울시청)에는 실거래 단지가 몇 곳 없어 빈 지도처럼 보인다,
+                ② 지도 SDK 가 안 뜨면 OSM 대체 지도에는 **마커 자체가 없다**(그때는 고를 길이 검색뿐이었다),
+                ③ 작은 마커를 정확히 누르는 일이 폰에서 특히 어렵다.
+              한 줄 목록은 셋 다 비껴간다 — 보이는 것을 그대로 누르면 그 도구로 넘어간다.
+              값은 마커와 **같은 뷰포트 응답**이라 지도와 목록이 어긋날 수 없다. */}
+          {view.mode === "points" && view.points.length > 0 && (
+            <div
+              /* 지도가 안 뜬 상태에서는 빈 회색 칸을 크게 둘 이유가 없다 — 목록에 자리를 더 준다 */
+              className={`pointer-events-auto absolute inset-x-0 bottom-0 overflow-y-auto border-t border-line bg-surface/95 backdrop-blur ${
+                mapDown ? "max-h-[78%]" : "max-h-[46%]"
+              }`}
+            >
+              <p className="sticky top-0 m-0 border-b border-divider bg-surface/95 px-4 py-1.5 t-caption text-text-3">
+                이 화면의 단지 {view.points.length.toLocaleString("ko-KR")}곳 · 눌러서 고르기
+              </p>
+              <ul className="m-0 flex list-none flex-col divide-y divide-divider p-0">
+                {view.points.slice(0, 12).map((p) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      disabled={resolving !== null}
+                      onClick={() => void handleMarker({ id: p.id, lat: p.lat, lng: p.lng, label: p.name })}
+                      className="press flex min-h-11 w-full items-center justify-between gap-3 px-4 py-1.5 text-left disabled:opacity-50"
+                    >
+                      <span className="min-w-0 truncate t-body font-bold text-ink">{p.name}</span>
+                      {p.pyeongManwon ? (
+                        <span className="shrink-0 t-caption text-text-3">
+                          {formatKrwManwon(p.pyeongManwon, { style: "eok1" })}/평
+                        </span>
+                      ) : null}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {/* 상태 한 줄 — 지금 무엇을 눌러야 하는지 항상 말해 준다.
               지도가 대체(OSM)로 내려가면 아래쪽이 그쪽 안내로 차므로 위로 올린다. */}
           <div
+            /* [1070] 아래쪽은 이제 단지 목록이 차지한다 — 상태 줄은 위로 올린다(목록이 없을 때만 아래). */
             className={`pointer-events-none absolute inset-x-3 flex justify-center ${
-              mapDown ? "top-3" : "bottom-3"
+              mapDown || (view.mode === "points" && view.points.length > 0) ? "top-3" : "bottom-3"
             }`}
           >
             <span className="pointer-events-auto rounded-full bg-[rgba(11,37,69,.86)] px-3.5 py-1.5 t-sub text-on-dark">
               {resolving
                 ? "단지를 불러오는 중…"
                 : mapDown
-                  ? "지도 불러오기 실패 · 위 검색창에 단지명을 넣어 주세요."
+                  ? /* [1070] 목록이 생긴 뒤로는 "검색뿐"이 사실이 아니다 — 있는 길을 그대로 말한다 */
+                    view.mode === "points" && view.points.length > 0
+                    ? "지도를 불러오지 못했어요 · 아래 목록이나 검색으로 고르세요"
+                    : "지도 불러오기 실패 · 위 검색창에 단지명을 넣어 주세요."
                   : failed
                     ? "단지 목록 불러오기 실패 · 지도를 조금 움직여 주세요."
                     : loading
@@ -305,8 +357,8 @@ export function MapPickDrawer({
                       : view.mode === "clusters"
                         ? "묶음을 누르면 그 자리로 확대돼요"
                         : view.points.length > 0
-                          ? `이 화면에 ${view.points.length.toLocaleString("ko-KR")}곳 · 마커를 누르면 선택`
-                          : "이 화면에는 실거래가 있는 단지 없음"}
+                          ? "마커를 누르거나 아래 목록에서 고르세요"
+                          : "이 화면에는 실거래가 있는 단지 없음 · 지도를 옮기거나 위에서 검색"}
             </span>
           </div>
         </div>

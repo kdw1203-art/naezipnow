@@ -118,9 +118,12 @@ test("[1023] 허브 — 시장 카드 티저는 대표 지역 8곳을 서버가 
   assert.match(card, /<RegionTeaser slot="value"/);
   const page = code("app/analysis/page.tsx");
   assert.match(page, /loadHubTeasersByRegion\(\)/);
-  assert.match(page, /teaserByRegion=\{byRegion\}/);
-  /* 시장 계열만 — 기록·예시 카드는 그대로 */
-  assert.equal((page.match(/teaserByRegion=/g) ?? []).length, 1);
+  /* [1071] 시장 계열은 카드 대신 표(hub-tool-rows)로 그린다 — 지역 바꿔 보기는 표의 "지금 값" 칸이 같은
+     RegionTeaser 로 한다. 지킬 것은 그대로: 시장 계열만 지역별 티저를 받는다(기록·예시는 받지 않는다). */
+  assert.equal((page.match(/teasersByRegion=\{/g) ?? []).length, 1);
+  const rows = code("app/analysis/hub-tool-rows.tsx");
+  assert.match(rows, /<RegionTeaser slot="value" variant="row"/);
+  assert.match(rows, /<RegionTeaser slot="spark" variant="row"/);
 });
 
 test("[1023] 허브 — 계열 머리 \"N종\" 배지는 그 계열 앵커 링크(24px) · 기록 시작 카드는 게스트·로그인 같은 .hub-start · 최근 사용 칩은 권유 꼬리 없음", () => {

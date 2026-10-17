@@ -35,6 +35,15 @@ function readLastTool(): LastTool | null {
   }
 }
 
+/** [1071] 마지막으로 연 도구를 기억한다 — 카드 링크와 표의 줄 클릭이 같은 기록을 남기게 한 곳에 둔다. */
+export function rememberTool(href: string, title: string) {
+  try {
+    window.localStorage.setItem(LAST_TOOL_KEY, JSON.stringify({ href, title, at: Date.now() } satisfies LastTool));
+  } catch {
+    /* 저장 실패는 기능 자체(이동)에 영향 없음 */
+  }
+}
+
 export function ToolLink({
   href,
   title,
@@ -62,16 +71,7 @@ export function ToolLink({
       href={target}
       className={className}
       style={style}
-      onClick={() => {
-        try {
-          window.localStorage.setItem(
-            LAST_TOOL_KEY,
-            JSON.stringify({ href, title, at: Date.now() } satisfies LastTool),
-          );
-        } catch {
-          /* 저장 실패는 기능 자체(이동)에 영향 없음 */
-        }
-      }}
+      onClick={() => rememberTool(href, title)}
     >
       {children}
     </Link>
@@ -94,7 +94,7 @@ export function LastToolChip() {
   );
 }
 
-export function CompareTrayCount() {
+export function CompareTrayCount({ bare = false }: { bare?: boolean } = {}) {
   const [count, setCount] = useState(0);
   useEffect(() => {
     try {
@@ -104,6 +104,15 @@ export function CompareTrayCount() {
     }
   }, []);
   if (count <= 0) return null;
+  /* [1071] bare = 표 한 칸 안 — 상자 없이 값·설명 두 줄 */
+  if (bare) {
+    return (
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="t-num t-body font-bold text-ink">{count}개</span>
+        <span className="t-caption text-text-3">담은 후보</span>
+      </span>
+    );
+  }
   return (
     <span className="t-num inline-flex w-fit items-baseline gap-1.5 rounded-xl bg-bg px-3 py-1.5">
       <span className="t-section font-bold text-ink">{count}개</span>

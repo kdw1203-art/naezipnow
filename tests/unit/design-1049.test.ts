@@ -66,7 +66,8 @@ test("임장노트 목록 — 표(데스크톱 기본) · 피드는 전환 · �
 
 test("AI 분석 — 도구 12종 판 한 장(4종 표 + 8종 칸) · 왼쪽 색 띠 걷음 · 지도 서랍 동작 그대로", () => {
   const t = code("app/analysis/hub-tiers.tsx");
-  assert.match(t, /<table className="w-full border-collapse">/);
+  /* [1071] 칸 폭을 지역 시세·내 임장노트 표와 맞추려고 데스크톱에서 table-fixed 를 더했다(tool-cols) */
+  assert.match(t, /<table className="w-full border-collapse(?: md:table-fixed)?">/);
   assert.match(t, /<tbody>\{core\.map\(row\)\}<\/tbody>/);
   assert.match(t, /그 밖의 도구 \{more\.length\}/);
   assert.match(t, /grid-cols-2 gap-x-2 p-0 md:grid-cols-4/, "그 밖의 8종은 촘촘한 칸(화면 길이)");

@@ -26,3 +26,40 @@ export const PICK_DEFAULT_LEVEL = 6;
 export function isPointZoom(zoom: number): boolean {
   return Math.round(zoom) >= POINT_MODE_MIN_ZOOM;
 }
+
+/**
+ * [1070] 지도 없이도 "이 화면의 단지"를 물어볼 수 있게 — 중심·축척으로 대략의 경계 상자를 만든다.
+ *
+ * 왜 필요한가(실측 2026-10-16): 지도 SDK 가 뜨지 않으면 NaverMap 은 OSM 대체 지도로 내려가는데,
+ * 거기에는 **마커가 없다**. 뷰포트 조회는 지도의 onIdle 에서만 돌았으므로 그때는 목록도 비었고,
+ * 결국 고를 길이 검색 하나만 남았다(소유자: "지도에서 단지를 누르면 분석으로 넘어가지 않는 것 같아").
+ * 서랍이 열리는 순간 이 상자로 한 번 물어보면, 지도가 떠도 안 떠도 목록은 선다.
+ * 지도가 뜨면 곧바로 onIdle 이 **진짜** 경계로 덮어쓴다 — 이 값은 첫 화면용 근사치다.
+ *
+ * 위도 1도 ≈ 111.32km, 경도 1도 ≈ 111.32km × cos(위도). 네이버 줌의 해상도는
+ * 156543.03392 × cos(위도) / 2^zoom m/px (웹 메르카토르 표준).
+ */
+export function approxBounds(
+  center: { lat: number; lng: number },
+  zoom: number,
+  widthPx = 880,
+  heightPx = 420,
+): { swLat: number; neLat: number; swLng: number; neLng: number } {
+  const rad = (center.lat * Math.PI) / 180;
+  const mPerPx = (156543.03392 * Math.cos(rad)) / Math.pow(2, zoom);
+  const halfW = (widthPx * mPerPx) / 2;
+  const halfH = (heightPx * mPerPx) / 2;
+  const dLat = halfH / 111_320;
+  const dLng = halfW / (111_320 * Math.max(Math.cos(rad), 0.01));
+  return {
+    swLat: center.lat - dLat,
+    neLat: center.lat + dLat,
+    swLng: center.lng - dLng,
+    neLng: center.lng + dLng,
+  };
+}
+
+/** level(네이버 지도 단계) → zoom. 두 곳에서 따로 계산하지 않도록 여기 한 줄로 둔다. */
+export function levelToZoom(level: number): number {
+  return 21 - level;
+}

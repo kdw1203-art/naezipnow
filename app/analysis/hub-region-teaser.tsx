@@ -21,10 +21,13 @@ export function RegionTeaser({
   slot,
   fallback,
   byRegion,
+  variant = "tile",
 }: {
   slot: "spark" | "value";
   fallback: HubTeaser | null;
   byRegion: Record<string, HubTeaser>;
+  /** [1071] "row" = 표 한 칸 안 — 회색 상자 없이 값·출처 두 줄만(표의 다른 칸과 같은 바탕) */
+  variant?: "tile" | "row";
 }) {
   const { picked } = useHubPicked();
   const rid = picked?.regionId ?? null;
@@ -33,8 +36,20 @@ export function RegionTeaser({
   if (slot === "spark") {
     if (teaser.series.length < 2) return null;
     return (
-      <span className={`tile-spark ml-auto ${tone(teaser.series)}`}>
-        <Sparkline values={teaser.series} width={72} height={24} />
+      <span className={`${variant === "row" ? "inline-flex shrink-0" : "tile-spark ml-auto"} ${tone(teaser.series)}`}>
+        <Sparkline values={teaser.series} width={variant === "row" ? 56 : 72} height={variant === "row" ? 20 : 24} />
+      </span>
+    );
+  }
+  if (variant === "row") {
+    return (
+      <span className="flex min-w-0 flex-col gap-0.5">
+        {teaser.deltaPct != null ? (
+          <Delta pct={teaser.deltaPct} className="t-num t-body font-bold" />
+        ) : (
+          <span className="t-num t-body font-bold text-ink">{teaser.value}</span>
+        )}
+        <span className="t-caption text-text-3">{teaser.caption}</span>
       </span>
     );
   }
