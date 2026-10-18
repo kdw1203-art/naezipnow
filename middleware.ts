@@ -28,6 +28,14 @@ import {
   hasSessionCookieName,
 } from "@/lib/auth/authed-hint";
 import { loginRedirectHref, needsLoginAtEdge } from "@/lib/auth/edge-login-guard";
+import {
+  KEEP_LOGIN_COOKIE,
+  KEEP_LOGIN_OFF,
+  SESSION_MARK_COOKIE,
+  SESSION_MARK_VALUE,
+  sessionCookieNamesIn,
+  shouldEndSession,
+} from "@/lib/auth/keep-login";
 import { isBotUserAgent } from "@/lib/client/is-bot-ua";
 
 /* [1007 · V2a-1] 로그인 힌트 쿠키(nz_authed) — 세션 쿠키 **유무**가 힌트와 다를 때만 Set-Cookie.
@@ -58,6 +66,31 @@ function applyAuthedHint(request: NextRequest, response: NextResponse): void {
     httpOnly: false,
     maxAge: 0,
   });
+}
+
+/* [1076] 자동 로그인을 끈 사람(nz_keep=0)이 브라우저를 닫았다 열면(nz_sess 사라짐) 세션을 여기서 끝낸다 —
+   세션 쿠키(조각 포함)·nz_keep·nz_authed 를 지우고 **같은 주소로 302**(다음 요청은 비회원 · 서버 가드가 평소처럼).
+   nz_keep 을 같이 지우므로 되돌이표는 없다. 문서 GET/HEAD 에만. 판정·이름은 lib/auth/keep-login.ts 한 곳. */
+function endSessionIfBrowserClosed(request: NextRequest): NextResponse | null {
+  if (request.method !== "GET" && request.method !== "HEAD") return null;
+  const names = request.cookies.getAll().map((c) => c.name);
+  const sessionNames = sessionCookieNamesIn(names);
+  const end = shouldEndSession({
+    hasSession: sessionNames.length > 0,
+    keepOff: request.cookies.get(KEEP_LOGIN_COOKIE)?.value === KEEP_LOGIN_OFF,
+    hasMark: request.cookies.get(SESSION_MARK_COOKIE)?.value === SESSION_MARK_VALUE,
+  });
+  if (!end) return null;
+  const isDev = process.env.NODE_ENV === "development";
+  const redirect = NextResponse.redirect(new URL(request.nextUrl.pathname + request.nextUrl.search, request.url), 302);
+  redirect.headers.set("Cache-Control", "no-store");
+  for (const name of sessionNames) {
+    /* `__Secure-` 이름은 Secure 가 없으면 브라우저가 Set-Cookie 를 버린다 — 삭제도 같은 속성으로 */
+    redirect.cookies.set(name, "", { path: "/", sameSite: "lax", secure: name.startsWith("__Secure-") || !isDev, httpOnly: true, maxAge: 0 });
+  }
+  redirect.cookies.set(KEEP_LOGIN_COOKIE, "", { path: "/", sameSite: "lax", secure: !isDev, httpOnly: false, maxAge: 0 });
+  redirect.cookies.set(AUTHED_HINT_COOKIE, "", { path: "/", sameSite: "lax", secure: !isDev, httpOnly: false, maxAge: 0 });
+  return redirect;
 }
 
 function applySecurityHeaders(response: NextResponse, request?: NextRequest) {
@@ -478,6 +511,13 @@ export async function middleware(request: NextRequest) {
      세션 쿠키가 **없으면** 여기서 /login 으로 302. 실측 /my/analyses 367회/일이 함수를 띄워
      safeAuth() → redirect 로 끝나고 있었다. 서버 가드는 그대로(쿠키가 있으나 무효인 경우 담당).
      302 인 이유: 로그인하면 같은 URL 이 열린다 — 영구 이전이 아니다. */
+  /* [1076] 자동 로그인 끔 + 브라우저 다시 열림 → 세션 종료(302 같은 주소). 로그인 가드보다 앞 — 종료 뒤 두 번째
+     요청이 /my 류면 그때 가드가 /login 으로 보낸다. */
+  if (!isApi) {
+    const ended = endSessionIfBrowserClosed(request);
+    if (ended) return applySecurityHeaders(ended, request);
+  }
+
   if (
     !isApi &&
     needsLoginAtEdge(path) &&

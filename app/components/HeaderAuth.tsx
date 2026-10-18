@@ -168,14 +168,18 @@ export function HeaderAuth() {
           /* [989] 실측(390×844) 33×20 — 헤더의 주요 조작인데 손가락 기준에 한참 못 미쳤다.
              글자 크기는 그대로 두고 좌우·상하 여백으로 44px 를 만든다(-mx 로 시각적
              정렬은 유지). 옆 아이콘과 gap-3(12px) 이라 히트 영역이 겹치지 않는다. */
-          className="-mx-2 whitespace-nowrap px-2 py-3 t-body font-bold text-text-1 transition-colors hover:text-primary"
+          /* [1076] 폰에서는 숨긴다 — 회원가입 단추(소유자 "잘 보이도록")와 둘 다 두면 검색 칸이 40px 로 줄어 글자가 사라졌다
+             (390px 실측). 폰 로그인은 전체 메뉴 첫 줄 · "마이" 탭(로그인 벽) · 가입 화면의 로그인 링크가 맡는다. */
+          className="-mx-2 hidden whitespace-nowrap px-2 py-3 t-body font-bold text-text-1 transition-colors hover:text-primary md:inline"
         >
           로그인
         </Link>
+        {/* [1076] 소유자 "회원가입이 잘 보이도록" — 폰에서는 아예 숨었고 PC 에서도 로그인보다 옅은 글자였다 → 채움 단추,
+            폰에도 보인다(폰은 "노트 쓰기"가 숨어 있어 헤더의 채움 단추는 이것 하나). 손끝 칸 40px. */}
         <Link
           href="/signup"
           prefetch={false}
-          className="hidden whitespace-nowrap py-3 t-body font-bold text-text-2 transition-colors hover:text-primary md:inline"
+          className="btn-primary press inline-flex min-h-10 shrink-0 items-center whitespace-nowrap rounded-full px-3 t-body font-bold no-underline md:min-h-9 md:px-3.5"
         >
           회원가입
         </Link>

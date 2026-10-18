@@ -11,6 +11,7 @@ import {
   type LoginMethod,
 } from "@/lib/auth/auth-ux";
 import { readAuthedHint } from "@/lib/auth/authed-hint";
+import { applyKeepLoginChoice, keepLoginDefault } from "@/lib/auth/keep-login";
 import { CapsLockNote } from "@/app/components/auth/CapsLockNote";
 import { ActionButton } from "@/app/components/ui/ActionButton";
 
@@ -262,6 +263,12 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
   const [ctx, setCtx] = useState<LoginContext>(generic);
   /* [970 · A-14] 가입 링크 — callbackUrl 이 홈이 아니면 그대로 싣는다(마운트 후, 같은 이유) */
   const [signupHref, setSignupHref] = useState("/signup");
+  /* [1076] 자동 로그인(로그인 유지) — 기본 켬(세션 쿠키 30일 · 지금까지와 같다). 끄면 브라우저를 닫을 때 로그아웃.
+     지난번에 껐으면(nz_keep=0) 꺼진 채로 시작한다(마운트 뒤 — 쿠키는 서버 렌더에 없다). lib/auth/keep-login.ts */
+  const [keep, setKeep] = useState(true);
+  useEffect(() => {
+    setKeep(keepLoginDefault(document.cookie));
+  }, []);
   useEffect(() => {
     setCtx(contextForCallback(resolveCallbackUrl(), generic));
     const cb = resolveCallbackUrl();
@@ -314,6 +321,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
     setBusy(provider);
     /* [1040] 다음 방문에 이 단추에 "최근 사용"을 붙인다(돌아오지 못하는 흐름이라 누를 때 적고, 실패로 돌아오면 지운다) */
     rememberLoginMethod(provider);
+    applyKeepLoginChoice(keep);
     // 토스는 NextAuth OAuth 가 아니라 자체 리다이렉트 시작점을 쓴다 —
     // 인가 후 /auth/toss/callback 에서 세션이 만들어진다.
     if (provider === "toss") {
@@ -383,6 +391,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
       return;
     }
     setBusy("password");
+    applyKeepLoginChoice(keep);
     try {
       const res = await signIn("password", {
         email: email.trim().toLowerCase(),
@@ -655,6 +664,19 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
             </button>
           </div>
           <CapsLockNote on={caps} />
+          {/* [1076] 자동 로그인 — 20px 체크(1074 규칙) · 줄 전체가 손끝 칸(min-h-10) */}
+          <label className="flex min-h-10 cursor-pointer items-center gap-2 px-0.5 t-sub text-text-2">
+            <input
+              type="checkbox"
+              checked={keep}
+              onChange={(e) => setKeep(e.target.checked)}
+              className="h-[20px] w-[20px] shrink-0 accent-primary"
+            />
+            {/* 한 줄(폰 390px 포함) — 설명은 지금 상태의 사실 하나만 */}
+            <span className="truncate">
+              <b className="font-bold text-ink">자동 로그인</b> · {keep ? "30일 유지" : "브라우저를 닫을 때 로그아웃"}
+            </span>
+          </label>
           <ActionButton
             type="submit"
             /* [1040] 시도 한도 대기 중에는 제출을 막고 단추가 남은 시간을 말한다(눌러도 같은 답 — 한도만 더 쓴다) */
@@ -682,14 +704,18 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
           로그인 후 {ACCOUNT_BENEFITS.map((b) => b.label).join(" · ")}
         </p>
 
-        <div className="rise-in-5 text-center text-xs text-text-3">
-          계정이 없다면{" "}
-          {/* [970 · A-14] 가입 링크에 callbackUrl 을 넘긴다 — 구독·페이월에서 로그인 벽을 만나
-              가입으로 갈아탄 사람이 가입 뒤 홈(/welcome → 노트)으로 떨어져 하던 일을 잃었다.
-              SignupClient 가 이 값을 읽어 /welcome?next= 로 잇는다. */}
-          <Link href={signupHref} className="tap-line font-bold text-primary">
+        {/* [1076] 소유자 "회원가입이 잘 보이도록" — 작은 글자 링크("계정이 없다면 회원가입")였다 → 로그인 단추와 같은 폭의
+            테두리 단추. 화면의 채움 파랑은 "이메일로 로그인" 하나 그대로.
+            [970 · A-14] 가입 링크에 callbackUrl 을 넘긴다 — 구독·페이월에서 로그인 벽을 만나 가입으로 갈아탄 사람이
+            가입 뒤 홈(/welcome → 노트)으로 떨어져 하던 일을 잃었다. SignupClient 가 이 값을 읽어 /welcome?next= 로 잇는다. */}
+        <div className="rise-in-5 flex flex-col gap-1.5">
+          <Link
+            href={signupHref}
+            className="btn-outline flex min-h-11 items-center justify-center rounded-lg px-3 text-center t-body font-bold no-underline"
+          >
             회원가입
           </Link>
+          <p className="text-center t-caption text-text-3">계정이 없다면 · 무료 가입</p>
         </div>
         {/* [970 · A-13] 동의 문구에 약관·방침 실링크 — 동의 대상 문서를 열 수 없었다 */}
         <p className="text-center t-sub leading-[1.6] text-text-3">

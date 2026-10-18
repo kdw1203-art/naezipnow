@@ -435,9 +435,16 @@ export function MobileMenu() {
                     로그인
                   </Link>
                 )}
-                <Link prefetch={false} href="/my" className="glass flex-1 rounded-xl py-2.5 text-center t-body font-bold text-text-1">
-                  마이페이지
-                </Link>
+                {/* [1076] 비회원에게 "마이페이지"는 로그인 벽으로 가는 길일 뿐 — 그 자리에 회원가입(소유자 "잘 보이도록") */}
+                {loggedIn === false ? (
+                  <Link prefetch={false} href="/signup" className="glass flex-1 rounded-xl py-2.5 text-center t-body font-bold text-primary">
+                    회원가입
+                  </Link>
+                ) : (
+                  <Link prefetch={false} href="/my" className="glass flex-1 rounded-xl py-2.5 text-center t-body font-bold text-text-1">
+                    마이페이지
+                  </Link>
+                )}
                 {loggedIn === true && (
                   /* [965] /logout 화면 — 프리페치되면 안 되므로 <a> (HeaderAuth 와 동일 사유) */
                   <a href="/logout" className="glass flex-1 rounded-xl py-2.5 text-center t-body font-bold text-text-2">
