@@ -816,7 +816,8 @@ export default async function RegionHubPage({
           가리킨다(문단은 그대로, 껍데기만 section 으로). 새 요약 블록을 따로 만들지 않는다.
           [1009 · H] 결론·숫자는 위 카드가 먼저 말한다 — 이 문단은 그 아래 한 단계 옅게(요약 전문). */}
       <section data-ai-summary="" id="ai-summary" aria-label={`${name} 시세 요약`} className="rise-in mb-5">
-        <p className="t-sub text-text-2">{lead}</p>
+        {/* [1074] 화면 폭 한 줄(89자/줄 실측) → 읽는 폭 */}
+        <p className="max-w-[72ch] t-sub text-text-2">{lead}</p>
       </section>
 
       {/* [1015 · 규칙 F] 데스크톱 2단 — 본문(시세 흐름 ~ 정비사업) + 오른쪽 340px 레일(임장노트·면적대·Q&A·퍼가기·CTA·광고 1).

@@ -249,10 +249,11 @@ export default async function TxBandPage({ params }: { params: Promise<Params> }
               <tbody>
                 {complexes.map((c) => (
                   <tr key={c.name} className="border-b border-border last:border-b-0">
-                    <td className="py-2.5">
+                    {/* [1074] 밑줄 파란 글자 40줄이 표를 덮었다 · 폰 세로 히트 16px — 밑줄은 손을 올렸을 때만, 폰은 이름 칸이 40px */}
+                    <td className="py-0.5 md:py-2.5">
                       <Link
                         href={complexHrefFromNames(region.name, c.name)}
-                        className="font-bold text-primary underline"
+                        className="inline-flex min-h-[40px] items-center font-bold text-primary no-underline hover:underline md:min-h-0"
                       >
                         {c.name}
                       </Link>

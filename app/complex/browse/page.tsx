@@ -98,8 +98,8 @@ export default async function ComplexBrowsePage({
 
       {/* A5 — 면적대·가격대 랜딩 진입점 */}
       <p className="rise-in mb-4 -mt-2 t-body">
-        <Link href="/tx" className="tap-line font-bold text-primary underline">
-          지역별 면적대·가격대 실거래 보기 →
+        <Link href="/tx" className="tap-line font-bold text-primary no-underline hover:underline">
+          지역별 면적대·가격대 실거래 보기 ›
         </Link>
       </p>
 
@@ -111,7 +111,8 @@ export default async function ComplexBrowsePage({
             <Link
               key={r.id}
               href={`/complex/browse?district=${encodeURIComponent(regionDisplayName(r))}`}
-              className={`rounded-full px-3 py-1.5 t-sub font-bold transition ${
+              /* [1074] 폰 31px → 40px(눌리는 칩의 하한) · PC 는 그대로 */
+              className={`inline-flex min-h-[40px] items-center rounded-full px-3 py-1.5 t-sub font-bold transition md:min-h-0 ${
                 /* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
                 active
                   ? "bg-brand-navy text-on-dark"

@@ -115,9 +115,11 @@ export default function CreatorsPage() {
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-soft t-sub font-bold text-primary">
               {s.no}
             </span>
-            <div>
+            {/* [1073] 폰 한 줄 규칙(li 안 t-sub → 말줄임)에 설명 문장까지 걸려 칸이 539px 밖으로 밀렸다(390px 실측 가로 넘침).
+                설명은 끝까지 읽혀야 하는 글이라 nz-wrap · 묶음에 min-w-0 */}
+            <div className="min-w-0">
               <div className="t-sub font-bold text-ink">{s.title}</div>
-              <p className="mt-0.5 t-sub leading-[1.6] text-text-2">{s.desc}</p>
+              <p className="nz-wrap mt-0.5 t-sub leading-[1.6] text-text-2">{s.desc}</p>
             </div>
           </li>
         ))}

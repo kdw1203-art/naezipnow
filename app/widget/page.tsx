@@ -63,7 +63,7 @@ export default function WidgetPage() {
       />
 
       <div className="mx-auto max-w-[820px]">
-        <h1 className="rise-in text-[24px] font-bold text-ink">실거래 시세 위젯</h1>
+        <h1 className="rise-in t-title text-ink">실거래 시세 위젯</h1>
         <p className="rise-in-1 mt-2 text-[13px] leading-[1.7] text-text-2">
           단지의 최근 실거래 시세를 블로그·카페 글에 한 줄로 붙여넣을 수 있습니다.
           국토교통부 실거래 신고 자료를 그대로 보여 주고, 시세가 갱신되면 이미 붙여넣은

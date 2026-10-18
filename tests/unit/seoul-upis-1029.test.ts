@@ -444,7 +444,8 @@ test("[1030 · 3차] 커버리지 수치 — 미리 센 표(coverage_totals · 4
 /* ── [1030 · 4차 · 디자인] ─────────────────────────────────────────────── */
 test("[1030 · 4차] 헤더 '노트 쓰기'는 outline — 채움 파랑은 화면의 행동 하나에만", () => {
   const h = src1030("app/components/Header.tsx");
-  assert.ok(h.includes('className="btn-outline btn-cta press hidden px-4 py-[9px] t-body'));
+  /* [1073] 1024px 두 줄 접힘을 막는 shrink-0 · whitespace-nowrap 이 끼었다 — outline 이라는 뜻은 그대로 */
+  assert.match(h, /className="btn-outline btn-cta press hidden (shrink-0 whitespace-nowrap )?px-4 py-\[9px\] t-body/);
   assert.ok(!h.includes("btn-primary"));
 });
 

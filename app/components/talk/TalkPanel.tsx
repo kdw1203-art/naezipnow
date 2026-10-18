@@ -455,7 +455,8 @@ export function TalkPanel({
           onClick={() => pickRegion(r.id)}
           className={`flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left ${on ? "bg-primary-soft" : "hover:bg-bg"}`}
         >
-          <span className="w-5 shrink-0 text-center t-sub font-bold tabular-nums text-text-3">{rank ?? "·"}</span>
+          {/* [1074] 폰 간격 단위 3px 에서 w-5 는 15px — 두 자리 순위(10~)가 칸 밖으로 3px 삐져나왔다(47줄). 고정 폭 22px */}
+          <span className="w-[22px] shrink-0 text-center t-sub font-bold tabular-nums text-text-3">{rank ?? "·"}</span>
           <span className="min-w-0 flex-1 truncate t-sub font-bold text-ink">
             {r.name}
             <span className="ml-1 t-caption font-normal text-text-3">{pin ? `${r.sido} · ${q.trim() ? "고른 지역" : "이 순위 밖"}` : r.sido}</span>

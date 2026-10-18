@@ -151,11 +151,13 @@ export function Header() {
         {/* [1030 · 4차] 헤더 "노트 쓰기"는 outline — 채움 파랑은 화면의 행동 하나에만(규칙 9 · 1014 "보조 채움은 다음 판에 outline").
             2026-10-04 운영 데스크톱 실측: 43경로 중 22경로가 헤더 파랑 + 화면 파랑(단지 홈·공개 노트는 둘 다 "노트 쓰기")으로 둘이었다.
             헤더는 모든 화면에 있으니 헤더 쪽을 내리면 화면마다 그 화면의 행동(알림 받기·검색·쓰기)이 유일한 파랑이 된다.
-            폰 헤더엔 이 버튼이 없어 폰은 전과 같다. (마이크로 인터랙션: 리프트 + 글로우 유지) */}
+            폰 헤더엔 이 버튼이 없어 폰은 전과 같다. (마이크로 인터랙션: 리프트 + 글로우 유지)
+            [1073] PC 글자 단계를 올리자(본문 13 → 14) 1024px 에서 "노트  쓰기"가 두 줄로 접혔다 — 한 줄 고정 · 줄지 않음.
+            남는 폭은 가운데 검색칸(flex-1 min-w-0)이 내준다. */}
         <Link
           href="/notes/new"
           prefetch={false}
-          className="btn-outline btn-cta press hidden px-4 py-[9px] t-body transition-transform hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-glow)] md:block"
+          className="btn-outline btn-cta press hidden shrink-0 whitespace-nowrap px-4 py-[9px] t-body transition-transform hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-glow)] md:block"
         >
           노트 쓰기
         </Link>

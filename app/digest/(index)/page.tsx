@@ -63,7 +63,7 @@ export default async function DigestPage() {
     return (
       <PageShell breadcrumb="뉴스룸 › 주간 다이제스트">
         <div className="mx-auto flex w-full max-w-[480px] flex-col gap-2.5">
-          <h1 className="mt-2 t-section text-ink">주간 다이제스트</h1>
+          <h1 className="mt-2 t-title text-ink">주간 다이제스트</h1>
           <ErrorState
             title="주간 요약 불러오기 실패"
             desc="잠시 후 다시 시도해 주세요."
@@ -134,7 +134,7 @@ export default async function DigestPage() {
           </span>
         </Link>
 
-        <h1 className="rise-in-1 mt-2 t-section text-ink">
+        <h1 className="rise-in-1 mt-2 t-title text-ink">
           {digest.weekLabel} 주간 다이제스트
         </h1>
 
@@ -162,7 +162,7 @@ export default async function DigestPage() {
             <div key={n.id} className="-mx-1 flex items-start gap-3 rounded-lg px-1 py-1">
               {n.imageUrl && <DigestThumb src={n.imageUrl} href={n.href || newsHref(n.id)} />}
               <div className="min-w-0 flex-1">
-                <Link href={n.href || newsHref(n.id)} className="group press block no-underline">
+                <Link href={n.href || newsHref(n.id)} className="tap-line group press block no-underline">
                   <div className="t-sub font-bold text-ink group-hover:text-primary">{n.title}</div>
                 </Link>
                 <div className="mt-[2px] flex flex-wrap items-center gap-x-1.5 t-caption text-text-3">

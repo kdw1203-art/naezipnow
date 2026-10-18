@@ -169,13 +169,13 @@ export default async function ImjangRegionPage({
           <ol data-tone="hanji" className="lq-panel m-0 flex list-none flex-col divide-y p-0">
             {topComplexes.map((c, i) => (
               <li key={c.name} className="flex min-h-[44px] items-center gap-3 py-2">
-                <span className="t-num w-5 shrink-0 text-center t-body font-bold text-primary">
+                <span className="t-num w-[24px] shrink-0 text-center t-body font-bold text-primary">
                   {i + 1}
                 </span>
                 <Link
                   prefetch={false}
                   href={`/search?q=${encodeURIComponent(c.name)}`}
-                  className="min-w-0 flex-1 truncate t-body font-bold text-ink no-underline hover:text-primary"
+                  className="tap-line min-w-0 flex-1 truncate t-body font-bold text-ink no-underline hover:text-primary"
                 >
                   {c.name}
                 </Link>

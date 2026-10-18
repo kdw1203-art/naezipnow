@@ -187,7 +187,7 @@ export default function DevelopersPage() {
         dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd()) }}
       />
       <div className="mx-auto max-w-[760px]">
-        <h1 className="rise-in t-display font-bold text-ink">공개 집계 API</h1>
+        <h1 className="rise-in t-title text-ink">공개 집계 API</h1>
         <p className="rise-in-1 measure mt-2 t-body leading-[1.7] text-text-2">
           내집나우(naezipnow.com)은 국토교통부 실거래 신고 자료로 만든 아파트 매매 월간 지역
           집계를 인증 없이 JSON 으로 제공합니다. 사이트 화면에 이미 공개된 수치와 같은

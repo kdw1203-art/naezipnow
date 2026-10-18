@@ -204,7 +204,7 @@ export default async function PublicProfilePage({
       <PageShell breadcrumb={`발견 › ${displayName}`}>
         <div className="mx-auto max-w-[640px]">
           <div className="rise-in card px-5 py-8 text-center">
-            <h1 className="t-section font-bold text-ink">{displayName}</h1>
+            <h1 className="t-title text-ink">{displayName}</h1>
             <p className="mt-2 t-body text-text-2">
               같은 이름 {n}명 · 핸들 주소(/u/핸들)로 구분
             </p>
@@ -336,7 +336,7 @@ export default async function PublicProfilePage({
             )}
             <div className="min-w-0 flex-1 pb-1">
               <div className="flex flex-wrap items-center gap-[6px]">
-                <h1 className="t-section font-bold text-ink">
+                <h1 className="t-title text-ink">
                   {displayName}
                 </h1>
                 <ExpertBadge badge={expertBadge} />

@@ -137,7 +137,8 @@ test("D4 실거래 구간표 — 고정 폭 없음 · 칸 nowrap · 구간 링�
   const src = code("app/tx/[region]/page.tsx");
   assert.doesNotMatch(src, /min-w-\[460px\]/);
   assert.match(src, /<table className="w-full whitespace-nowrap text-left t-body">/);
-  assert.match(src, /min-h-\[40px\] items-center font-bold text-primary underline md:min-h-6/);
+  /* [1074] 밑줄은 손을 올렸을 때만(no-underline hover:underline) — 40px 은 그대로 */
+  assert.match(src, /min-h-\[40px\] items-center font-bold text-primary no-underline hover:underline md:min-h-6/);
 });
 
 test("D4 입주 물량 목록 — 폰은 네 열이 틀 안(이름 열만 가변 · 값 열 고정 폭) · md 부터 520px", () => {

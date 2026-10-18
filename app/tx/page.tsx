@@ -251,9 +251,11 @@ export default async function TxIndexPage() {
                             href={`/tx/${encodeURIComponent(r.slug)}`}
                             className="tile flex flex-col gap-1.5 rounded-lg border border-border px-3 py-2.5 t-body"
                           >
-                            <span className="flex items-baseline justify-between gap-3">
+                            {/* [1074] 네 칸 줄에서 "용인 수지구"처럼 띄어 쓴 이름이 두 줄로 접혀(이름 | 건수 한 줄 꼴) 칸 높이가
+                                들쭉날쭉했다 — 여러 칸 줄(sm+)에서는 이름 한 줄 · 그 아래 건수 한 줄로 쌓아 모든 칸이 같은 높이. 폰(한 칸 줄)은 예전처럼 한 줄 */}
+                            <span className="flex min-w-0 items-baseline justify-between gap-3 sm:flex-col sm:items-start sm:justify-start sm:gap-0.5">
                               <span className="font-bold text-ink">{r.name}</span>
-                              <span className="shrink-0 t-sub text-text-3">
+                              <span className="shrink-0 t-sub tabular-nums text-text-3">
                                 {r.txCount.toLocaleString("ko-KR")}건 · 구간{" "}
                                 {r.areaCells.length + r.priceCells.length}
                               </span>

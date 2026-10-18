@@ -513,7 +513,7 @@ export function ApplyForm() {
       </Section>
 
       <label className="flex items-start gap-2 t-sub text-text-2">
-        <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-primary" />
+        <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-0.5 h-[20px] w-[20px] shrink-0 accent-primary" />
         <span>
           <Link href="/legal/expert" className="font-bold text-primary" target="_blank">
             전문가 운영정책

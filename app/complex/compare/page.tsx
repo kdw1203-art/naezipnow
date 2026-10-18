@@ -231,12 +231,17 @@ export default async function ComplexComparePage() {
         <div className="rise-in-1 mb-6 space-y-4 max-md:mb-3 max-md:space-y-3">
           {/* [1030 · 2차] 63개 지역 1,148개 조합을 한 번에 펼쳐 데스크톱 42,782px(운영 실측) → 지역 칩(이동) + 첫 지역만 펼침,
               나머지는 접힌 <details>. 링크는 전부 HTML 에 그대로(검색 색인 동일). */}
-          <nav aria-label="지역 바로가기" className="flex flex-wrap gap-1.5">
+          {/* [1074] 폰에서 63개 칩이 줄바꿈으로 쌓여 첫 화면(약 700px)을 다 덮었다 — 폰은 한 줄 가로 밀기(PC 는 그대로 줄바꿈).
+              칩·순서·이동 대상은 그대로 */}
+          <nav
+            aria-label="지역 바로가기"
+            className="scroll-x-hidden-bar flex gap-1.5 max-md:-mx-3.5 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3.5 md:flex-wrap"
+          >
             {groups.map((group) => (
               <a
                 key={`jump-${group.regionId}`}
                 href={`#region-${group.regionId}`}
-                className="chip bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline shadow-sm"
+                className="chip shrink-0 whitespace-nowrap bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline shadow-sm"
               >
                 {group.label} <span className="font-medium text-text-3">{group.pairs.length}</span>
               </a>
@@ -256,7 +261,7 @@ export default async function ComplexComparePage() {
                   <span className="hidden group-open:inline">닫기</span>
                 </span>
               </summary>
-              <Link href={`/region/${group.regionId}`} className="mt-1 inline-flex min-h-[24px] items-center t-sub font-bold text-primary">
+              <Link href={`/region/${group.regionId}`} className="mt-1 inline-flex min-h-[40px] items-center t-sub font-bold text-primary md:min-h-6">
                 {group.label} 지역 화면 ›
               </Link>
               <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">

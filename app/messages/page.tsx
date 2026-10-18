@@ -52,7 +52,7 @@ export default function MessagesPage() {
               링크가 실제로 하는 일(알림 센터 이동)로 문구를 맞춘다. */}
           <Link
             href="/notifications"
-            className="text-xs font-semibold text-primary no-underline"
+            className="tap-line text-xs font-semibold text-primary no-underline"
           >
             알림 센터 보기 ›
           </Link>

@@ -60,7 +60,7 @@ export default function LegalHubPage() {
     <main className="mx-auto w-full max-w-3xl">
       {/* [1015 · 규칙 C] 제목 위 영문 부연 라벨("Legal Center") 삭제. 본문 문장은 그대로 */}
       <header className="card rise-in p-6 max-md:p-4">
-        <h1 className="text-2xl font-bold text-ink">법적 고지</h1>
+        <h1 className="t-title text-ink">법적 고지</h1>
         <p className="mt-2 t-body leading-relaxed text-text-2">
           약관 및 정책은 서비스 운영 상황에 맞춰 업데이트될 수 있으며, 중요한 변경 사항은
           공지 또는 이메일로 사전 안내합니다.

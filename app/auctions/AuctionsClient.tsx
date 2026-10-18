@@ -527,7 +527,8 @@ export function AuctionsClient({
                     className="flex min-w-0 flex-col-reverse gap-0.5 sm:border-l sm:border-line sm:pl-3 sm:first:border-l-0 sm:first:pl-0"
                   >
                     <dt className="t-caption text-text-3">{f.k}</dt>
-                    <dd className="m-0 t-num t-section text-ink">{f.v}</dd>
+                    {/* [1073] "2026.10.19~2026.10.31" 은 띄어쓰기가 없어 칸(폰 2열 · 태블릿 4열) 밖으로 37~80px 삐져나왔다 — 칸 안에서 접는다 */}
+                    <dd className="m-0 t-num t-section text-ink [overflow-wrap:anywhere]">{f.v}</dd>
                   </div>
                 ))}
               </dl>

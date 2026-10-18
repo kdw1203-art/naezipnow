@@ -13,7 +13,7 @@ export default function YouthPolicyPage() {
   return (
     <main className="mx-auto w-full max-w-3xl">
       <article className="card rise-in p-6">
-        <h1 className="text-2xl font-bold text-ink">청소년 보호정책</h1>
+        <h1 className="t-title text-ink">청소년 보호정책</h1>
         <p className="mt-2 text-xs text-text-3">시행일: 2026년 4월 23일</p>
 
         <p className="mt-4 rounded-lg border border-line bg-bg p-3 t-body text-text-1">

@@ -12,7 +12,7 @@ export default function LocationLegalPage() {
   return (
     <main className="mx-auto w-full max-w-3xl">
       <article className="card rise-in p-6">
-        <h1 className="text-2xl font-bold text-ink">위치기반서비스 이용약관</h1>
+        <h1 className="t-title text-ink">위치기반서비스 이용약관</h1>
         <p className="mt-2 text-xs text-text-3">시행일: 2026년 4월 23일</p>
 
         <section className="mt-6 space-y-2 t-body leading-7 text-text-1">

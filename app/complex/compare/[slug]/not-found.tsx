@@ -31,7 +31,7 @@ export default function ComplexCompareNotFound() {
         <circle className="empty-dot-breathe" cx="60" cy="86" r="8.5" fill="var(--brand-dot)" style={{ transformOrigin: "60px 86px" }} />
       </svg>
       <div className="rise-in t-caption font-bold tracking-[0.2em] text-text-3">404</div>
-      <h1 className="rise-in-1 t-section font-bold text-ink">
+      <h1 className="rise-in-1 t-title text-ink">
         이 비교는 지금 제공되지 않아요<span className="text-brand-red">.</span>
       </h1>
       <p className="rise-in-2 t-body leading-[1.6] text-text-3">

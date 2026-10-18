@@ -43,7 +43,7 @@ const OFFLINE_CSS = `
 .nz-off-btn{-webkit-appearance:none;appearance:none;display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 24px;border:0;border-radius:8px;background:var(--primary,#1d4fd8);color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:transform .12s ease}
 .nz-off-btn:active{transform:scale(.97)}
 .nz-off-status{margin:0;min-height:18px;font-size:12px;color:var(--text-3,#606a77)}
-.nz-off-home{font-size:13px;font-weight:600;color:var(--primary,#1d4fd8);text-decoration:underline;text-underline-offset:4px}
+.nz-off-home{display:inline-flex;align-items:center;min-height:40px;padding:0 8px;font-size:13px;font-weight:600;color:var(--primary,#1d4fd8);text-decoration:underline;text-underline-offset:4px}
 /* 루트 레이아웃의 "본문 바로가기"는 sr-only 유틸에 기대는데, 번들 없이는 맨 글자로 노출된다 */
 a[href="#main-content"]:not(:focus){position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media (prefers-reduced-motion:reduce){.nz-off-btn{transition:none}.nz-off-btn:active{transform:none}}

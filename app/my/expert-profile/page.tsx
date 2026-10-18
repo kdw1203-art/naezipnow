@@ -165,7 +165,7 @@ function ApplicationStatusCard({
     return (
       <div className="card mx-auto mt-8 max-w-[560px] rounded-2xl px-5 py-7">
         <p className="t-caption font-bold text-danger">인증 신청 반려</p>
-        <h1 className="mt-1 t-section text-ink">이번 신청은 승인되지 않았어요</h1>
+        <h1 className="mt-1 t-title text-ink">이번 신청은 승인되지 않았어요</h1>
         <p className="mt-2 t-sub text-text-2">
           {submitted} 접수 · {application.expertType ?? application.specialty}
         </p>
@@ -187,7 +187,7 @@ function ApplicationStatusCard({
   if (application.status === "approved") {
     return (
       <div className="card mx-auto mt-8 max-w-[560px] rounded-2xl px-5 py-7 text-center">
-        <h1 className="t-section text-ink">인증은 승인됐는데 프로필을 아직 못 찾았어요</h1>
+        <h1 className="t-title text-ink">인증은 승인됐는데 프로필을 아직 못 찾았어요</h1>
         <p className="mt-2 t-sub text-text-2">
           잠시 후 새로고침해 보시고, 계속 보이지 않으면 고객센터에 알려 주세요. 승인일:{" "}
           {application.reviewedAt ? formatKstDate(application.reviewedAt) : "-"}
@@ -202,7 +202,7 @@ function ApplicationStatusCard({
   return (
     <div className="card mx-auto mt-8 max-w-[560px] rounded-2xl px-5 py-7">
       <p className="t-caption font-bold text-primary">인증 심사 중</p>
-      <h1 className="mt-1 t-section text-ink">신청서를 검토하고 있어요</h1>
+      <h1 className="mt-1 t-title text-ink">신청서를 검토하고 있어요</h1>
       <p className="mt-2 t-sub text-text-2">
         {submitted} 접수 · {application.expertType ?? application.specialty}
         {application.regions[0] ? ` · ${application.regions[0]}` : ""}

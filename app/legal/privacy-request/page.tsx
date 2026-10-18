@@ -19,7 +19,7 @@ export default function PrivacyRequestPage() {
   return (
     <main className="mx-auto w-full max-w-3xl">
       <article className="card rise-in p-6">
-        <h1 className="text-2xl font-bold text-ink">개인정보 열람·정정·삭제 요청</h1>
+        <h1 className="t-title text-ink">개인정보 열람·정정·삭제 요청</h1>
         <p className="mt-2 t-body leading-relaxed text-text-2">
           정보주체는 개인정보보호법에 따라 본인의 개인정보 처리에 대해 아래 요청을 할 수 있습니다.
         </p>

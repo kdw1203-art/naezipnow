@@ -25,7 +25,7 @@ export default function CommunityPolicyPage() {
     <main className="mx-auto w-full max-w-3xl">
       {/* 페이지 전환 모션 일관화 — globals.css riseIn(dur-md) 재사용 */}
       <article className="rise-in">
-        <h1 className="text-2xl font-bold text-ink">커뮤니티 운영정책</h1>
+        <h1 className="t-title text-ink">커뮤니티 운영정책</h1>
         <p className="mt-1 text-xs text-text-3">시행일: {EFFECTIVE_DATE}</p>
 
         <p className="mt-4 t-body leading-relaxed text-text-1">

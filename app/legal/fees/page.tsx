@@ -19,7 +19,7 @@ export default function FeesPolicyPage() {
   return (
     // 페이지 전환 모션 일관화 — globals.css riseIn(dur-md) 재사용
     <main className="rise-in mx-auto w-full max-w-3xl">
-      <h1 className="text-2xl font-bold text-ink">거래·수수료 안내</h1>
+      <h1 className="t-title text-ink">거래·수수료 안내</h1>
       {/* [970 · A-10] 구 브랜드 "nuguzip" 표기 → 내집나우(본문 3곳 + 데이터 필드 ours).
           metadata description 의 같은 표기는 I5 몫. */}
       <p className="mt-2 t-body leading-relaxed text-text-2">

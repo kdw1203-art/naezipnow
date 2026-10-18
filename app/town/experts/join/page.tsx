@@ -229,7 +229,7 @@ export default function ExpertJoinPage() {
             ))}
           </dl>
         </div>
-        <Link href="/legal/fees" className="mt-3 inline-block t-caption font-bold text-primary underline underline-offset-2">
+        <Link href="/legal/fees" className="tap-line mt-3 inline-block t-caption font-bold text-primary underline underline-offset-2">
           거래·수수료 안내 전체 보기 ›
         </Link>
       </section>

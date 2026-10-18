@@ -116,7 +116,7 @@ function BandTable({
                 <td className="py-2.5">
                   <Link
                     href={`/tx/${encodeURIComponent(region.slug)}/${kind}/${c.bandSlug}`}
-                    className="inline-flex min-h-[40px] items-center font-bold text-primary underline md:min-h-6"
+                    className="inline-flex min-h-[40px] items-center font-bold text-primary no-underline hover:underline md:min-h-6"
                   >
                     {c.bandLabel}
                   </Link>

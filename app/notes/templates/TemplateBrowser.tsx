@@ -210,7 +210,7 @@ export function TemplateBrowser({ initial }: { initial: NoteTemplate[] }) {
         <button
           type="button"
           onClick={() => setShareOpen((v) => !v)}
-          className="flex items-center justify-between text-left"
+          className="flex min-h-[40px] items-center justify-between text-left"
           aria-expanded={shareOpen}
         >
           <span className="t-section text-ink">

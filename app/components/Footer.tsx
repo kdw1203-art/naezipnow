@@ -14,55 +14,65 @@ import { NO_PROFIT_GUARANTEE_TEXT } from "@/app/components/ComplianceNotice";
    [970 · A-29] 탭바 여유는 **여기 한 곳**만 — PageShell·홈 <main> 은 pb-6 로 내렸다. */
 
 const LEGAL_LINKS = [
-  { label: "이용약관", href: "/legal/terms", bold: false },
-  { label: "개인정보처리방침", href: "/legal/privacy", bold: true },
-  { label: "위치기반서비스 약관", href: "/legal/location", bold: false },
-  { label: "청소년보호", href: "/legal/youth", bold: false },
-  { label: "법적 고지", href: "/legal", bold: false },
-  { label: "고객센터", href: "/support", bold: false },
+  { label: "이용약관", href: "/legal/terms", bold: false, group: "policy" },
+  { label: "개인정보처리방침", href: "/legal/privacy", bold: true, group: "policy" },
+  { label: "위치기반서비스 약관", href: "/legal/location", bold: false, group: "policy" },
+  { label: "청소년보호", href: "/legal/youth", bold: false, group: "policy" },
+  { label: "법적 고지", href: "/legal", bold: false, group: "policy" },
+  { label: "고객센터", href: "/support", bold: false, group: "help" },
   /* [1003] "구독 안내" → "요금제·결제 수단". 심사 세션(2026-09-16)은 푸터의 이
      한 줄로만 요금제에 닿을 수 있었는데, "구독 안내"는 결제가 가능한 화면이라는
      신호가 아니다. 목적지(요금제 + 카드 결제)를 라벨에 적는다. */
-  { label: "요금제·결제 수단", href: "/subscription", bold: false },
+  { label: "요금제·결제 수단", href: "/subscription", bold: false, group: "help" },
   /* [990] 취급 결제수단(신용/체크카드) 고지 — 전자상거래법 고지이자 카드사·PG
      심사가 판매 페이지에서 확인하는 항목이다. 푸터에 두어 모든 페이지에서
      한 번에 닿는다(2026-09 토스 도메인 심사 반려 사유: 결제수단 미확인).
      [1003] 위 줄과 라벨이 겹치지 않게 "결제 수단" → "카드 결제 수단 안내" —
      둘은 목적지가 다르다(판매 화면 / 고지 한 장). */
-  { label: "카드 결제 수단 안내", href: "/subscription/payment-methods", bold: false },
+  { label: "카드 결제 수단 안내", href: "/subscription/payment-methods", bold: false, group: "help" },
   /* S20 — 신뢰·데이터 페이지 내부 링크 (전 페이지 크롤 경로 확보) */
-  { label: "소개", href: "/about", bold: false },
-  { label: "데이터 방법론", href: "/methodology", bold: false },
+  { label: "소개", href: "/about", bold: false, group: "help" },
+  { label: "데이터 방법론", href: "/methodology", bold: false, group: "data" },
   /* [945 #33] 출처·한계 한 장 — 신뢰 문서의 크롤·도달 경로 */
-  { label: "데이터 출처", href: "/data-sources", bold: false },
-  { label: "용어사전", href: "/glossary", bold: false },
+  { label: "데이터 출처", href: "/data-sources", bold: false, group: "data" },
+  { label: "용어사전", href: "/glossary", bold: false, group: "data" },
   /* [945 #25] 가이드 허브 — 검색 유입 콘텐츠의 내부 크롤 경로 */
-  { label: "실전 가이드", href: "/guides", bold: false },
+  { label: "실전 가이드", href: "/guides", bold: false, group: "service" },
   /* [1008 · J] 내 집 마련 여정·계약·잔금 일정표 — 모든 페이지에서 닿는 크롤·도달 경로(GNB 맨 앞 묶음과 같은 목적지) */
-  { label: "내 집 마련 여정", href: "/journey", bold: false },
-  { label: "계약·잔금 일정표", href: "/journey/contract", bold: false },
-  { label: "월간 리포트", href: "/reports", bold: false },
+  { label: "내 집 마련 여정", href: "/journey", bold: false, group: "service" },
+  { label: "계약·잔금 일정표", href: "/journey/contract", bold: false, group: "service" },
+  { label: "월간 리포트", href: "/reports", bold: false, group: "data" },
   /* [1025] 시장 12가지 반영 — 결정 카드(⑨)·살까 빌릴까(⑪)·중개사·임대인(③⑫) 입구를 모든 페이지에서 닿게 */
-  { label: "결정 카드", href: "/decide", bold: false },
-  { label: "살까, 빌릴까", href: "/calculator/rent-vs-buy", bold: false },
-  { label: "중개사·임대인", href: "/pro", bold: false },
+  { label: "결정 카드", href: "/decide", bold: false, group: "service" },
+  { label: "살까, 빌릴까", href: "/calculator/rent-vs-buy", bold: false, group: "service" },
+  { label: "중개사·임대인", href: "/pro", bold: false, group: "service" },
   /* [1069 · 끊긴 묶음] 운영 실측 2026-10-15 — 사이트맵에는 있는데 **어디서도 링크되지 않던** 묶음들.
      /imjang(임장 가이드 200쪽)은 임장노트 목록 한 곳에서만 닿았고, /analysis/temperature(69쪽)와
      /tx(실거래 구간 1,923쪽)는 홈 한 줄·지역 상세뿐이었다. 검색엔진이 사이트맵으로만 발견하면
      들어오는 속도도 우선순위도 떨어진다. 위 줄들과 같은 목적(전 페이지 크롤 경로)이라 같은 자리에 둔다.
      "임장"은 이 사이트의 핵심 낱말인데 사이트가 스스로 가리키지 않고 있었다. */
-  { label: "임장 가이드", href: "/imjang", bold: false },
-  { label: "실거래 구간", href: "/tx", bold: false },
-  { label: "시장 온도", href: "/analysis/temperature", bold: false },
+  { label: "임장 가이드", href: "/imjang", bold: false, group: "service" },
+  { label: "실거래 구간", href: "/tx", bold: false, group: "data" },
+  { label: "시장 온도", href: "/analysis/temperature", bold: false, group: "data" },
   /* N20 — 공개 집계 API 문서. 링크가 없으면 크롤러도 사람도 도달하지 못한다. */
-  { label: "공개 API", href: "/developers", bold: false },
+  { label: "공개 API", href: "/developers", bold: false, group: "data" },
+] as const;
+
+/* [1073 · 전 페이지 공통 틀] 링크 23개가 한 덩어리로 흘러 7줄(폰)·2줄(PC)이었다 — 어디에 무엇이 있는지 훑을 수 없었다.
+   국내 서비스 푸터의 흔한 꼴(묶음 제목 + 세로 목록, PC 4열 · 폰 2열)로 나눈다. 링크·라벨·목적지·순서(묶음 안)는 그대로.
+   사업자 고지·수익 보장 미기재 문구는 그 아래 한 칸에 그대로 보인다(전자상거래법 · 심사 요건 — 접지 않는다). */
+const LINK_GROUPS = [
+  { id: "service", title: "서비스" },
+  { id: "data", title: "데이터" },
+  { id: "help", title: "회사 · 고객" },
+  { id: "policy", title: "약관 · 정책" },
 ] as const;
 
 export function Footer() {
   const biz = getBusinessInfo();
 
   return (
-    <footer className="mt-auto border-t border-line bg-surface px-5 pb-[76px] pt-6 md:pb-6">
+    <footer className="mt-auto border-t border-line bg-surface px-5 pb-[76px] pt-6 md:pb-10 md:pt-10">
       <div className="mx-auto flex max-w-[1240px] flex-col gap-2 t-sub text-text-3">
         {/* [962] 0행: 브랜드 잠금 + 슬로건 — 모든 페이지의 마지막 줄이 브랜드로 끝난다 */}
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3 border-b border-divider pb-4">
@@ -85,77 +95,81 @@ export function Footer() {
             </span>
           </span>
         </div>
-        {/* 1행: 사업자 고지 */}
-        <div>
-          내집나우 · 상호: {biz.legalName}({biz.domain}) · 대표:{" "}
-          {biz.representative || "—"} · 사업자등록번호:{" "}
-          {biz.registrationNumber || "—"}
-        </div>
-        <div>
-          주소: {biz.address || "—"}
-          {/* 신고번호가 아직 없으면 "—" 대신 진행 상태를 적는다(소유자 확인:
-              정부24 신고 진행 중). 번호가 env 로 들어오면 자동으로 번호 표기로
-              바뀐다 — 문구가 낡은 채 남을 수 없는 구조다. */}
-          {biz.mailOrderSalesNumber
-            ? ` · 통신판매업 신고번호: ${biz.mailOrderSalesNumber}`
-            : " · 통신판매업 신고번호: 신고 진행 중"}
-          {" · 대표전화: "}
-          {/* 유선번호는 토스페이먼츠 상점 심사 필수 항목이다. 번호가 있으면
-              바로 걸 수 있게 tel: 로 건다 — 적어만 두면 모바일에서 쓸모가 적다. */}
-          {biz.phone ? (
+        {/* [1073] 2행(링크)을 위로 — 묶음 제목 + 세로 목록. 폰은 2열(세로 피치 34px — [989] 링크 18px + 간격 16px 규칙 그대로),
+            PC 는 4열. 각 열은 items-start 라 링크가 글자 폭만큼만 눌린다(줄 전체가 눌리지 않게). */}
+        <nav aria-label="사이트 안내" className="grid grid-cols-2 gap-x-4 gap-y-7 pb-5 pt-1 md:grid-cols-4 md:gap-x-8 md:pb-6">
+          {LINK_GROUPS.map((g) => (
+            <div key={g.id} className="flex min-w-0 flex-col items-start gap-y-5 md:gap-y-2.5">
+              <h2 className="t-caption font-bold text-text-2">{g.title}</h2>
+              {LEGAL_LINKS.filter((l) => l.group === g.id).map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  prefetch={false}
+                  className={
+                    l.bold
+                      ? "tap-line font-semibold text-text-2 underline-offset-2 hover:underline"
+                      : "tap-line text-text-3 underline-offset-2 hover:underline"
+                  }
+                >
+                  {l.label}
+                </Link>
+              ))}
+              {/* S22 — 동의 철회·변경 경로: 저장된 결정을 지우고 배너를 다시 띄운다 */}
+              {g.id === "policy" && <CookieSettingsLink />}
+            </div>
+          ))}
+        </nav>
+
+        {/* 1행: 사업자 고지 — [1073] 링크 묶음 아래 한 칸(가는 선 위) · 보조 글자. 문장·값은 그대로 */}
+        <div className="flex flex-col gap-1 border-t border-divider pt-4 t-caption">
+          <div>
+            내집나우 · 상호: {biz.legalName}({biz.domain}) · 대표:{" "}
+            {biz.representative || "—"} · 사업자등록번호:{" "}
+            {biz.registrationNumber || "—"}
+          </div>
+          <div>
+            주소: {biz.address || "—"}
+            {/* 신고번호가 아직 없으면 "—" 대신 진행 상태를 적는다(소유자 확인:
+                정부24 신고 진행 중). 번호가 env 로 들어오면 자동으로 번호 표기로
+                바뀐다 — 문구가 낡은 채 남을 수 없는 구조다. */}
+            {biz.mailOrderSalesNumber
+              ? ` · 통신판매업 신고번호: ${biz.mailOrderSalesNumber}`
+              : " · 통신판매업 신고번호: 신고 진행 중"}
+            {" · 대표전화: "}
+            {/* 유선번호는 토스페이먼츠 상점 심사 필수 항목이다. 번호가 있으면
+                바로 걸 수 있게 tel: 로 건다 — 적어만 두면 모바일에서 쓸모가 적다. */}
+            {biz.phone ? (
+              <a
+                href={`tel:${biz.phone.replace(/[^0-9+]/g, "")}`}
+                /* [989] 문장 속 링크에는 tap-line(44px)을 쓰지 않는다 — 위아래 줄과 겹쳐
+                   서로의 탭을 훔친다. 이런 자리의 기준은 WCAG 2.5.8 의 24px 이다:
+                   inline-block + 세로 패딩으로 글자줄(14px)만 24px 로 키운다.
+                   같은 줄에 나란히 선 링크라 좌우로는 서로를 침범하지 않는다. */
+                className="inline-block py-[5px] text-text-3 underline-offset-2 hover:underline"
+              >
+                {biz.phone}
+              </a>
+            ) : (
+              "—"
+            )}{" "}
+            ·{" "}
             <a
-              href={`tel:${biz.phone.replace(/[^0-9+]/g, "")}`}
-              /* [989] 문장 속 링크에는 tap-line(44px)을 쓰지 않는다 — 위아래 줄과 겹쳐
-                 서로의 탭을 훔친다. 이런 자리의 기준은 WCAG 2.5.8 의 24px 이다:
-                 inline-block + 세로 패딩으로 글자줄(14px)만 24px 로 키운다.
-                 같은 줄에 나란히 선 링크라 좌우로는 서로를 침범하지 않는다. */
+              href={`mailto:${biz.supportEmail}`}
               className="inline-block py-[5px] text-text-3 underline-offset-2 hover:underline"
             >
-              {biz.phone}
+              문의 {biz.supportEmail}
             </a>
-          ) : (
-            "—"
-          )}{" "}
-          ·{" "}
-          <a
-            href={`mailto:${biz.supportEmail}`}
-            className="inline-block py-[5px] text-text-3 underline-offset-2 hover:underline"
-          >
-            문의 {biz.supportEmail}
-          </a>
-        </div>
-        {/* 예전에는 여기에 "고지 미완 — 유료 결제가 열리지 않습니다" 경고를
-            빨간 글씨로 띄웠다. 주소·전화가 채워지고 신고번호만 처리 대기인
-            지금은 방문자에게 불안만 주는 문구라 소유자 요청으로 내렸다.
-            결제 게이트(isBusinessDisclosureComplete) 자체는 그대로다 — 화면
-            문구만 내려갔지 신고번호 없이 결제가 열리지는 않는다. */}
+          </div>
+          {/* 예전에는 여기에 "고지 미완 — 유료 결제가 열리지 않습니다" 경고를
+              빨간 글씨로 띄웠다. 주소·전화가 채워지고 신고번호만 처리 대기인
+              지금은 방문자에게 불안만 주는 문구라 소유자 요청으로 내렸다.
+              결제 게이트(isBusinessDisclosureComplete) 자체는 그대로다 — 화면
+              문구만 내려갔지 신고번호 없이 결제가 열리지는 않는다. */}
 
-        {/* 수익 보장 문구 영구 미기재 방침 — 전 페이지 고지(소유자 방침 2026-08-11).
-            문구 단일 출처는 app/components/ComplianceNotice.tsx */}
-        <div>{NO_PROFIT_GUARANTEE_TEXT}</div>
-
-        {/* 2행: 약관·고객센터 링크 */}
-        {/* [989] 세로 간격 1.5 → 4 (모바일). 실측에서 이 줄의 링크들이 세로 히트 18px 였고,
-            44px 로 넓히면 위아래 줄끼리 겹쳐 엉뚱한 약관이 열린다.
-            이런 촘촘한 링크 줄의 기준은 44px 가 아니라 WCAG 2.5.8(24px + 간격)이다 —
-            넓히는 대신 띄운다: 링크 18px + 간격 16px = 세로 피치 34px. */}
-        <div className="flex flex-wrap gap-x-4 gap-y-4 md:gap-x-3 md:gap-y-1.5">
-          {LEGAL_LINKS.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              prefetch={false}
-              className={
-                l.bold
-                  ? "tap-line font-semibold text-text-2 underline-offset-2 hover:underline"
-                  : "tap-line text-text-3 underline-offset-2 hover:underline"
-              }
-            >
-              {l.label}
-            </Link>
-          ))}
-          {/* S22 — 동의 철회·변경 경로: 저장된 결정을 지우고 배너를 다시 띄운다 */}
-          <CookieSettingsLink />
+          {/* 수익 보장 문구 영구 미기재 방침 — 전 페이지 고지(소유자 방침 2026-08-11).
+              문구 단일 출처는 app/components/ComplianceNotice.tsx */}
+          <div>{NO_PROFIT_GUARANTEE_TEXT}</div>
         </div>
 
         {/* 3행: 출처 + 브랜드·상호 관계.

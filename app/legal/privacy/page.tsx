@@ -67,7 +67,7 @@ export default function PrivacyPage() {
     <main className="mx-auto w-full max-w-3xl">
       <article className="card rise-in p-6 md:p-8">
         <div className="mb-6 border-b border-line pb-6">
-          <h1 className="text-2xl font-bold text-ink">개인정보처리방침</h1>
+          <h1 className="t-title text-ink">개인정보처리방침</h1>
           <p className="mt-1 t-body text-text-3">시행일: {UPDATED}</p>
           <div className="mt-3 rounded-lg bg-primary-soft p-3 text-xs leading-relaxed text-primary">
             우리동네이야기(이하 &quot;회사&quot;)는 「개인정보보호법」 및 「정보통신망 이용촉진 및 정보보호 등에

@@ -77,7 +77,7 @@ export default async function DevDealsHubPage() {
               "안내" 색면 배너(면책 — 아래 DISCLAIMER 와 같은 사실의 반복)를 지웠다. 역할·면책은 페이지 끝 DISCLAIMER
               한 곳과 제목 옆 ⓘ 하나로. */}
           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-            <h1 className="t-title font-bold leading-[1.3] text-ink md:text-[21px]">
+            <h1 className="t-title text-ink">
               개발물건 중개
             </h1>
             <Explain

@@ -108,13 +108,13 @@ export default async function TownLibraryPage() {
               /creators 는 입점 피치 랜딩(성장 U4) — 절차·요율·정직 고지를 담는다 */}
           <Link
             href="/creators"
-            className="ml-auto t-sub font-bold text-primary no-underline"
+            className="tap-line ml-auto t-sub font-bold text-primary no-underline"
           >
             크리에이터 입점 안내 ›
           </Link>
           <Link
             href="/my/creator"
-            className="t-sub font-bold text-primary no-underline"
+            className="tap-line t-sub font-bold text-primary no-underline"
           >
             내 노트 판매하기 ›
           </Link>
@@ -135,13 +135,13 @@ export default async function TownLibraryPage() {
             <div className="mt-3 flex flex-wrap gap-4">
               <Link
                 href="/notes"
-                className="t-sub font-bold text-primary no-underline"
+                className="tap-line t-sub font-bold text-primary no-underline"
               >
                 공개 임장노트 보기 ›
               </Link>
               <Link
                 href="/my/creator"
-                className="t-sub font-bold text-primary no-underline"
+                className="tap-line t-sub font-bold text-primary no-underline"
               >
                 내 노트를 리포트로 판매하기 ›
               </Link>
@@ -180,13 +180,13 @@ export default async function TownLibraryPage() {
             {/* 노트를 읽다 생긴 궁금증의 다음 행동 — 단지 Q&A (키워드 필터 지원) */}
             <Link
               href="/qna"
-              className="t-sub font-bold text-primary no-underline"
+              className="tap-line t-sub font-bold text-primary no-underline"
             >
               단지 Q&A ›
             </Link>
             <Link
               href="/notes"
-              className="t-sub font-bold text-primary no-underline"
+              className="tap-line t-sub font-bold text-primary no-underline"
             >
               모두 보기 ›
             </Link>

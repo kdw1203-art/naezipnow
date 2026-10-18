@@ -145,7 +145,7 @@ export default async function NoteCardPage({
       <div className="mx-auto w-full max-w-[860px]">
         <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
           <div>
-            <h1 className="t-section text-ink">나만의 임장 카드</h1>
+            <h1 className="t-title text-ink">나만의 임장 카드</h1>
             <p className="t-sub text-text-3">
               {aptLabel}
               {note.region ? ` · ${note.region}` : ""}

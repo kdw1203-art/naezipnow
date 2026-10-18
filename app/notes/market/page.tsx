@@ -58,7 +58,7 @@ export default async function NotesMarketPage() {
       {/* 헤더 */}
       <div className="flex flex-col gap-2">
         <nav className="t-sub font-semibold text-text-3">
-          <Link href="/notes" className="no-underline hover:underline">
+          <Link href="/notes" className="tap-line no-underline hover:underline">
             임장노트
           </Link>{" "}
           › 리포트 진열대
