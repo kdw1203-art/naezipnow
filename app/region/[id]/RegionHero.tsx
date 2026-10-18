@@ -185,17 +185,13 @@ export function RegionHero({
         {overview.headline ?? `${name} 아파트 실거래·가격지수 한눈에`}
       </h2>
       {overview.subline && <p className="m-0 mt-0.5 t-body font-bold text-text-2">{overview.subline}</p>}
-      {!overview.hasReb && (
-        <p className="m-0 mt-1.5 t-sub text-text-3">
-          한국부동산원 지역 통계 아직 없음(공표되면 반영) · 아래 숫자는 국토교통부 실거래 신고 자료
-        </p>
-      )}
       {tiles.length > 0 && (
         <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">{tiles}</div>
       )}
+      {/* [1075] 제목 아래 설명 두 줄("…통계 아직 없음 · 아래 숫자는 …" + "출처 · …")을 출처 한 줄로 — 사실은 그대로 */}
       <p className="m-0 mt-2.5 t-caption text-text-3 break-words">
         출처 ·{" "}
-        {[overview.hasReb ? "한국부동산원(R-ONE) 월간 통계" : null, "국토교통부 실거래 신고"]
+        {[overview.hasReb ? "한국부동산원(R-ONE) 월간 통계" : "국토교통부 실거래 신고(한국부동산원 지역 통계 없음 · 공표되면 반영)", overview.hasReb ? "국토교통부 실거래 신고" : null]
           .filter(Boolean)
           .join(" · ")}{" "}
         · 매물 호가 아님

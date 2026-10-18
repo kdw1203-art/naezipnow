@@ -13,7 +13,6 @@ import { countExpertTypes } from "@/lib/experts/type-counts";
 import { EXPERT_FAQ } from "@/lib/experts/faq";
 import { Icon } from "@/app/components/Icon";
 import { FaqCompact } from "@/app/components/compact/FaqCompact";
-import { KeywordChips } from "@/app/components/compact/KeywordChips";
 import { Fineprint } from "@/app/components/Fineprint";
 import { JsonLd } from "@/app/components/JsonLd";
 import { faqJsonLd } from "@/lib/seo/jsonld";
@@ -142,15 +141,21 @@ export default async function TownExpertsPage() {
           <div className="max-w-[560px]">
             {/* [1012] 규칙 5 — "지금 물어보기" 슬로건 → 명사형 사실
                 [1015] 대시 잇기·설명 두 문장("…상담함으로 와요. …비교할 수 있어요")을 명사 줄로(브리프 규칙 D) */}
-            <p className="t-section text-ink">
-              인증 전문가 · {EXPERT_TYPES.filter((t) => t.id !== "other").map((t) => t.label).join(" · ")}
-            </p>
-            <p className="mt-1 t-sub text-text-2">개인 · 개인사업자 · 법인 모두 · 면허·사업자 서류 심사 뒤 관리자 승인</p>
-            <p className="mt-2 t-body text-text-2">
-              글 상담 · 상담함 답변 · 견적 요청 1건으로 여러 전문가 제안 비교
-            </p>
-            {/* [1062 · 글 줄이기] 아이콘 세 개가 붙은 보증 문구 줄 → 읽는 칩 세 개(문구 그대로). 강조는 굵기·크기로, 색은 하나만 쓴다 */}
-            <KeywordChips className="mt-3" label="보증" items={["서류·신원 확인 후 인증", "후기는 답변 완료 의뢰자만", "연락처·계좌 교환 차단"]} />
+            {/* [1075] 소유자(2026-10-18, 이 칸 캡처): "2줄로 되어 있는 부분, 불필요 설명이 있는 부분 — 신뢰도 하락".
+                두 줄 제목(인증 전문가 · 분야 7개 나열) + 설명 세 줄(자격·절차·보증)을 걷고 제목 한 줄 + 분야 칩(누르면 그 분야 목록)으로.
+                자격·심사·보증은 머리 한 줄("면허·사업자 서류 심사 뒤 승인된 전문가")과 아래 FAQ 가 이미 말한다 — 같은 사실 두 곳 금지. */}
+            <p className="t-section text-ink">인증 전문가</p>
+            <nav className="mt-2 flex flex-wrap gap-1.5" aria-label="분야별 전문가">
+              {EXPERT_TYPES.filter((t) => t.id !== "other").map((t) => (
+                <Link
+                  key={t.id}
+                  href={`/town/experts/c/${t.id}`}
+                  className="chip inline-flex min-h-[40px] items-center border border-line bg-surface px-2.5 t-sub font-bold text-text-2 no-underline md:min-h-[32px]"
+                >
+                  {t.label}
+                </Link>
+              ))}
+            </nav>
           </div>
           {/* [972] "전문가로 참여" 는 공통 머리의 action 으로 올라갔다 — 같은 화면에
               같은 링크가 둘이면 어느 쪽이 주인지 알 수 없다. 여기는 목록으로

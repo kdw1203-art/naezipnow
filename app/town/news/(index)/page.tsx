@@ -124,22 +124,8 @@ export default async function TownNewsPage() {
           머리 모양은 1043 그대로(공용 PageHead — 아이콘 칩 · 제목 · 사실 한 줄 · 버튼 하나), 문구만 NewsHead 가 든다.
           숫자("오늘 n건 · 최근 n건")는 1043 에서 내린 그대로다 — 목록 위 "40 / 254건 · 같은 사건은 한 건으로 묶음"이 말한다. */}
       <NewsHead />
-      {/* [1023 · 동네 ①] 주제 칩 줄 — /town/news/tag/[tag] 에서만 보이던 다른 주제 칩이 첫 화면에도 선다. [1044] 머리 바로 아래(본문 첫 줄).
-          NEWS_TAGS 정적 목록(추가 조회 없음) · 폰은 가로 스크롤 · 칩 높이 ≥24px. */}
-      <nav
-        aria-label="주제별 뉴스"
-        className="mb-3 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {NEWS_TAGS.map((t) => (
-          <Link
-            key={t.slug}
-            href={`/town/news/tag/${t.slug}`}
-            className="chip inline-flex min-h-[24px] shrink-0 items-center border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline"
-          >
-            {t.label}
-          </Link>
-        ))}
-      </nav>
+      {/* [1075] 머리 아래 주제 칩 18개 줄은 레일 "주제" 카드로 내렸다 — 소유자(2026-10-18): "뉴스 이외의 요소들이 너무 복잡".
+          첫 화면은 머리 → 분류 탭 → 지역 줄 → 목록. 주제 링크 18개는 그대로(레일, 검색 색인 동일). */}
 
       {/* [1015 · 네이버 뉴스 방식] 데스크톱 2단 — 왼쪽 헤드라인 목록(사진 + 제목 + 요약 + 매체·시각), 오른쪽 레일(많이 본 뉴스 ·
           주간 다이제스트 · 키워드 알림 · 주제 · 광고 1). 폰은 한 열 — 목록 뒤에 레일 순서 그대로. */}
@@ -193,39 +179,44 @@ export default async function TownNewsPage() {
             </section>
           )}
 
-          {/* 주간 다이제스트 요약 (#6) — 실패·빈 데이터 시 생략(fail-soft) */}
+          {/* 주간 다이제스트 요약 (#6) — 실패·빈 데이터 시 생략(fail-soft)
+              [1075] 어두운 남색 판 → 레일의 다른 칸과 같은 흰 카드(레일에 남색 한 장만 튀었다). 내용·링크 그대로 */}
           {digest && digestHasContent && (
             <Link
               href="/digest"
-              className="rise-in ai-panel flex items-center justify-between gap-3 rounded-2xl p-4 no-underline"
+              className="rise-in card flex items-center justify-between gap-3 rounded-2xl px-4 py-4 no-underline"
             >
               <div className="flex min-w-0 flex-col gap-1">
-                <div className="flex items-center gap-1.5 t-sub font-bold text-ai-accent">
+                <div className="flex items-center gap-1.5 t-sub font-bold text-primary">
                   <Icon name="file-text" size={14} />
                   주간 다이제스트
-                  <span className="rounded bg-white/10 px-1.5 py-px t-caption text-ai-text">{digest.weekLabel}</span>
+                  <span className="rounded bg-primary-soft px-1.5 py-px t-caption text-primary">{digest.weekLabel}</span>
                 </div>
-                <div className="t-body font-bold text-white">{digestSummaryLine(digest)}</div>
-                {digestTeaser && <div className="truncate t-caption text-ai-text">{digestTeaser}</div>}
+                <div className="t-body font-bold text-ink">{digestSummaryLine(digest)}</div>
+                {digestTeaser && <div className="truncate t-caption text-text-3">{digestTeaser}</div>}
               </div>
-              <span className="shrink-0 t-sub font-bold text-white">›</span>
+              <span className="shrink-0 t-sub font-bold text-text-3">›</span>
             </Link>
           )}
 
           {/* [개선 #13] 키워드 알림 구독 */}
           <NewsAlertSubscribe />
 
-          {/* [#103] 주제 허브 진입 — [1023 · 동네 ①] 주제 칩은 머리 아래로 올라갔다(같은 칩을 두 번 그리지 않는다). 지도·물량 링크만 남는다. */}
-          <section className="card rounded-2xl px-4 py-4" aria-label="정비사업 · 입주 물량">
-            <h2 className="t-section text-ink">정비사업 · 입주 물량</h2>
-            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 t-sub">
-              <Link href="/redevelopment" className="tap-line font-bold text-text-2 no-underline">
-                정비사업 지도 ›
-              </Link>
-              <Link href="/supply" className="tap-line font-bold text-text-2 no-underline">
-                입주 예정 물량 ›
-              </Link>
-            </div>
+          {/* [#103 → 1075] 주제 허브 — 머리 아래 있던 주제 칩 18개가 여기로(NEWS_TAGS 정적 목록). "정비사업 · 입주 물량" 두 링크 카드는
+              걷었다 — 헤더 "동네" 메뉴에 같은 목적지가 있다. */}
+          <section className="card rounded-2xl px-4 py-4" aria-label="주제별 뉴스">
+            <h2 className="t-section text-ink">주제</h2>
+            <nav className="mt-2 flex flex-wrap gap-1.5" aria-label="주제별 뉴스">
+              {NEWS_TAGS.map((t) => (
+                <Link
+                  key={t.slug}
+                  href={`/town/news/tag/${t.slug}`}
+                  className="chip inline-flex min-h-[40px] items-center border border-line bg-surface px-2.5 t-sub font-bold text-text-2 no-underline md:min-h-[32px]"
+                >
+                  {t.label}
+                </Link>
+              ))}
+            </nav>
           </section>
 
           {/* [1015 · 규칙 G] 광고 — 레일 끝 1곳(폰에서는 목록·레일 뒤) */}

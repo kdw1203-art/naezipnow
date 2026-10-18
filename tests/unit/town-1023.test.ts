@@ -98,7 +98,8 @@ test("[1023 · 동네 ①] 뉴스룸 — 주제 칩 줄이 첫 화면에 선다,
   assert.ok(!c.includes("TownCategoryNav") && !c.includes("TownHero"), "동네 카테고리 줄·머리 없음");
   assert.equal((c.match(/NEWS_TAGS\./g) ?? []).length, 1, "주제 칩은 한 번만 그린다");
   assert.match(c, /aria-label="주제별 뉴스"/);
-  assert.ok(c.includes("min-h-[24px]"), "칩 24px 하한");
+  /* [1075] 주제 칩은 레일 "주제" 카드로(머리 아래 줄은 걷음) · 칩 폰 40px · PC 32px */
+  assert.ok(c.includes("min-h-[40px] items-center border border-line bg-surface px-2.5 t-sub font-bold text-text-2 no-underline md:min-h-[32px]"), "칩 폰 40 · PC 32px");
   assert.match(c, /export const revalidate = 86_400;/, "ISR 정책 유지");
 });
 

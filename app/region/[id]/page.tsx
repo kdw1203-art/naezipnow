@@ -548,8 +548,9 @@ export default async function RegionHubPage({
             jeonseRatio !== "—" ? `, 전세가율은 ${jeonseRatio}` : ""
           }입니다(출처 한국부동산원 R-ONE 월간 통계).`
         : !overview.hasReb
-          ? /* [998] 통계가 없는 사실만 적는다 — 이유(개편 뒤 미공표·집계 단위 불일치)는 지역마다 달라 단정하지 않는다 */
-            `${name}의 한국부동산원(R-ONE) 지역 시세 통계는 아직 없습니다. 이 구 단위 집계가 공표되면 그때 붙습니다. 아래 실거래·거래량은 국토교통부 신고 자료입니다.`
+          ? /* [998] 통계가 없는 사실만 적는다 — 이유(개편 뒤 미공표·집계 단위 불일치)는 지역마다 달라 단정하지 않는다
+               [1075] 세 문장 → 한 문장(머리 출처 줄이 같은 사실을 이미 말한다 · 사실은 그대로) */
+            `${name}의 실거래·거래량은 국토교통부 신고 자료입니다(한국부동산원 R-ONE 지역 시세 통계는 공표되면 반영).`
           : `${name}의 한국부동산원 지역 시세 지표는 아직 수집된 항목이 없습니다.`,
   );
   const monthlyChange =
@@ -859,9 +860,8 @@ export default async function RegionHubPage({
           {!seriesR.ok || !volumeR.ok ? (
             <LoadFailed what="시세 흐름을" />
           ) : (
-            <p className="py-6 text-center t-body text-text-3">
-              이 지역의 매매가격지수·월별 거래량이 아직 두 달 치 이상 모이지 않았어요.
-            </p>
+            /* [1075] 해요체 → 빈 상태 꼴("○○ 없음") */
+            <p className="py-6 text-center t-body text-text-3">매매가격지수·월별 거래량 두 달 치 이상 없음</p>
           )}
         </section>
       )}
@@ -1352,12 +1352,11 @@ export default async function RegionHubPage({
       {/* A5 — 면적대·가격대별 실거래 랜딩 내부 링크 */}
       {txBandRegion && (
         <section className="rise-in-3 card mb-6 p-[var(--pad-card)]">
-          <h2 className="t-section text-ink">
-            면적대·가격대별 실거래{" "}
-            <span className="t-sub font-medium text-text-3">
-              국토부 신고 {txBandRegion.txCount.toLocaleString("ko-KR")}건 기준
-            </span>
-          </h2>
+          {/* [1075] 제목 글자와 기준 글자가 한 줄 안에서 접혀 두 줄 — 제목 | 오른쪽 기준(한 줄) */}
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+            <h2 className="t-section text-ink">면적대·가격대별 실거래</h2>
+            <span className="t-caption tabular-nums text-text-3">국토부 신고 {txBandRegion.txCount.toLocaleString("ko-KR")}건 기준</span>
+          </div>
           {(["area", "price"] as const).map((kind) => {
             const cells = kind === "area" ? txBandRegion.areaCells : txBandRegion.priceCells;
             if (cells.length === 0) return null;

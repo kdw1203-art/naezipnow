@@ -56,10 +56,11 @@ async function handle(req: Request) {
   const active = foldHealthAlerts((alerts ?? []) as Array<Record<string, unknown>>, new Date(), 200).filter(
     (a) => a.severity === "critical" && a.active,
   );
-  /* 아래 요약이 쓰는 모양(줄 = 발생 1회)으로 편다 — 발생 횟수는 접힌 묶음의 count */
-  const rows = active.flatMap((a) =>
-    Array.from({ length: a.count }, (): Record<string, unknown> => ({ check_name: a.checkName, detail: a.detail })),
-  );
+  /* [1075] 메일 줄은 **대상 단위**(접기 결과 그대로) — 예전엔 검사 이름으로 다시 접어 첫 detail 만 실었다.
+     2026-10-08 발송분: "seo.sitemap_source — 2회" 한 줄에 죽은 원천·lastmod 사라짐 두 문제가 뭉쳐 둘째 문제가 메일에 없었다.
+     발생 횟수(count)는 묶음 뒤에 붙이고, 제목의 건수는 발생 합계 그대로다. */
+  const rows = active;
+  const total = rows.reduce((n, a) => n + a.count, 0);
   if (rows.length === 0) {
     return NextResponse.json({ ok: true, criticals: 0, sent: false, reason: "무경보" });
   }
@@ -71,7 +72,7 @@ async function handle(req: Request) {
     | undefined;
   const lastSent = last?.sent_at ? new Date(String(last.sent_at)).getTime() : 0;
   if (Date.now() - lastSent < 23 * 3_600_000) {
-    return NextResponse.json({ ok: true, criticals: rows.length, sent: false, reason: "쿨다운" });
+    return NextResponse.json({ ok: true, criticals: total, sent: false, reason: "쿨다운" });
   }
 
   const to = process.env.ALERT_EMAIL_TO?.trim();
@@ -80,28 +81,20 @@ async function handle(req: Request) {
        (RESEND_API_KEY · ALERT_EMAIL_TO 는 소유자가 Vercel 에 등록해야 한다) */
     return NextResponse.json({
       ok: true,
-      criticals: rows.length,
+      criticals: total,
       sent: false,
       reason: !to ? "ALERT_EMAIL_TO 미설정" : "메일 발송 미설정",
     });
   }
 
-  // check_name 별로 접어 요약
-  const folded = new Map<string, { n: number; detail: string | null }>();
-  for (const r of rows) {
-    const k = String(r.check_name ?? "");
-    const prev = folded.get(k);
-    if (prev) prev.n += 1;
-    else folded.set(k, { n: 1, detail: r.detail == null ? null : String(r.detail) });
-  }
-  const lines = [...folded.entries()].map(
-    ([name, v]) => `• ${name} — ${v.n}회${v.detail ? `\n  ${v.detail}` : ""}`,
-  );
-  const summary = [...folded.keys()].join(", ");
+  // 대상(검사 · 서명 열쇠) 단위 한 줄씩 — 같은 검사의 다른 문제는 다른 줄
+  const lines = rows.map((a) => `• ${a.checkName} — ${a.count}회${a.detail ? `\n  ${a.detail}` : ""}`);
+  const names = [...new Set(rows.map((a) => a.checkName))];
+  const summary = names.join(", ");
 
   const result = await sendEmail({
     to,
-    subject: `[내집나우 경보] 심각 ${folded.size}종 · ${rows.length}건 (24시간)`,
+    subject: `[내집나우 경보] 심각 ${names.length}종 · ${total}건 (24시간)`,
     text: `최근 24시간 critical 경보입니다.\n\n${lines.join("\n")}\n\n운영 콘솔: https://naezipnow.com/admin/ops`,
     html: `<p>최근 24시간 <b>critical</b> 경보입니다.</p><pre style="font-family:inherit;white-space:pre-wrap">${lines
       .map((l) => l.replace(/&/g, "&amp;").replace(/</g, "&lt;"))
@@ -110,11 +103,11 @@ async function handle(req: Request) {
 
   if (result.sent) {
     await sb.rpc("admin_log_alert_email", {
-      p_alert_count: rows.length,
+      p_alert_count: total,
       p_summary: summary.slice(0, 500),
     });
   }
-  return NextResponse.json({ ok: true, criticals: rows.length, sent: result.sent, ...(result.sent ? {} : { reason: (result as { reason?: string }).reason }) });
+  return NextResponse.json({ ok: true, criticals: total, sent: result.sent, ...(result.sent ? {} : { reason: (result as { reason?: string }).reason }) });
 }
 
 export async function GET(req: Request) {

@@ -8394,3 +8394,26 @@ html[data-mscale] li .fineprint-body :is(p, div):is(.t-sub, .t-caption) {
     font-size: var(--fs-section);
   }
 }
+
+/* ============================================================
+   [1075 · 한 가지 테마] 화면마다 다르던 강조색을 하나로.
+   소유자(2026-10-18): "동네이야기, 청약센터, 공매물건, 입주물량, 정비사업지도, 전문가의 디자인 테마가 달라 … 신뢰도 하락".
+   실측: 공매(/auctions)는 보라(.theme-auction) · 입주 물량(/supply)은 초록(.theme-supply) · 개발물건(/dev-deals)은 앰버 ·
+   Q&A(/qna)는 청록 — 막대·단추·칩·순위 숫자가 화면마다 다른 색이라 한 사이트로 읽히지 않았다. 1025 규칙("채움 파랑 하나 ·
+   초록·주황 채움 금지")이 AI 도구 12종에는 적용됐는데 이 네 화면은 그대로였다.
+   네 클래스의 --primary 계열을 바깥 값으로 되돌린다(inherit — 라이트·다크 모두 루트 토큰). 위 정의와 대비 검사
+   (scripts/check-contrast-tokens.mjs PAGE_THEMES)는 그대로 둔다 — 이 블록이 뒤에서 이긴다. 의미색(--up/--down·--danger·--success)은
+   테마와 무관하므로 그대로다. */
+.theme-auction,
+.theme-supply,
+.theme-dev-deals,
+.qna-theme,
+.dark .theme-auction,
+.dark .theme-supply,
+.dark .theme-dev-deals,
+.dark .qna-theme {
+  --primary: inherit;
+  --primary-soft: inherit;
+  --primary-strong: inherit;
+  --primary-fill: inherit;
+}

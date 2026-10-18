@@ -6,7 +6,6 @@ import { SUPPLY_WINDOW_MONTHS, inSupplyWindow, shownMonths, supplyWindow, validY
 import { Bars } from "@/app/components/viz/Bars";
 // server-only 체인이 있는 모듈이라 값 import 는 불가 — 타입은 컴파일에서 소거되므로 안전.
 import type { SupplyItem } from "@/lib/market/supply";
-import { AIPanel } from "@/app/components/AIPanel";
 import { Explain } from "@/app/components/explain/Explain";
 
 /**
@@ -549,26 +548,8 @@ export function SupplyClient({
 
       {/* ── 우측 사이드 (청약 센터 aside 구성) ── */}
       <aside className="flex flex-col gap-3.5 max-md:gap-3">
-        {/* AI 인사이트 패널 (실 수치 — 최다 입주 시기·총 세대수)
-            [1015] 폰에서는 숨긴다 — 위 KPI 줄과 같은 숫자라 한 화면에 두 번 나온다(브리프 규칙 E). 데스크톱 레일은 그대로. */}
-        <div className="rise-in-2 max-md:hidden">
-          {/* [1015] 위 KPI 줄(합계·가장 많은 달)과 같은 숫자를 다시 적던 두 칸과 "…유리할 수 있어요" 조언 문장을 걷고
-              사실 한 줄만(브리프 규칙 D·J — 같은 사실 두 곳 금지). */}
-          {/* [1028] 월별 합계를 센 값이다(AI 결과 아님) — "AI" 배지와 "인사이트"를 뗐다 */}
-          <AIPanel title="입주 물량 요약" ai={false} className="rounded-3xl">
-            {monthly.length === 0 ? (
-              <>표시할 입주 물량 데이터 없음</>
-            ) : (
-              <>
-                {scope}기준 최다 입주 <b className="text-ai-accent">{peak ? fmtYm(peak.ym) : "—"}</b>
-                {peak ? ` · ${peak.households.toLocaleString()}세대 · ${peak.count}곳` : ""}
-                {" · "}
-                {windowed ? spanLabel : shownRange} 합계 {totalHouseholds.toLocaleString()}세대
-              </>
-            )}
-          </AIPanel>
-        </div>
-
+        {/* [1075] 어두운 남색 "입주 물량 요약" 판을 걷었다 — 최다 입주 달 · 합계 세대수는 바로 왼쪽 월별 그래프 아래 세 칸(합계 · 가장 많은 달 · 단지 수)과
+            같은 숫자였다(폰에서는 1015 가 이미 숨기던 판). 한 가지 테마 — 동네 묶음 화면에 남색 판은 홈의 AI 칸 말고 두지 않는다. */}
         {/* 지역별 입주 요약 — 예전엔 ?region= 링크(서버 재렌더)였다. 이제 얕은
             pushState 버튼이라 서버 왕복이 없고, 활성 지역을 다시 누르면 전국으로
             돌아온다 (예전엔 전국으로 돌아갈 컨트롤 자체가 없었다). */}

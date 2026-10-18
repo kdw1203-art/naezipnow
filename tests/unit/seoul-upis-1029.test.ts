@@ -380,7 +380,8 @@ test("[1030 · 2차] 단지 비교 목록 — 지역 바로가기 + 첫 지역�
   const c = src1030("app/complex/compare/page.tsx");
   assert.ok(c.includes('aria-label="지역 바로가기"'));
   assert.ok(c.includes("open={gi === 0}"));
-  assert.ok(src1030("app/notes/market/page.tsx").includes('className="relative aspect-[1200/630] w-full overflow-hidden bg-bg"'));
+  /* [1075] 연구소 커버(4:5)는 제 비율, 넓은 커버는 그대로 1200:630 */
+  assert.ok(src1030("app/notes/market/page.tsx").includes('className={`relative w-full overflow-hidden bg-bg ${lab ? "aspect-[4/5]" : "aspect-[1200/630]"}`}'));
 });
 
 test("[1030 · 2차] 열린 면적 구간 화면 이름 — /tx 셀·면적대별 실거래가 선반·노트 상세도 같은 함수", () => {

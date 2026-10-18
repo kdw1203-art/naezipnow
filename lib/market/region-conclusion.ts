@@ -221,11 +221,15 @@ export function temperatureConclusion(i: TemperatureInput): Conclusion | null {
   /* 시·도를 고르면 머리에 이미 "서울"이 있으므로 지역 이름에서 떼어 적는다("서울 강남구" → "강남구") */
   const nm = (label: string) => (i.sido && label.startsWith(`${i.sido} `) ? label.slice(i.sido.length + 1) : label);
   const same = !i.coldest || i.count <= 1 || (i.coldest.label === i.hottest.label && i.coldest.score === i.hottest.score);
-  const title = same
-    ? `${head} ${nm(i.hottest.label)} ${i.hottest.score}`
-    : `${head} 가장 뜨거운 곳 ${nm(i.hottest.label)} ${i.hottest.score} · 가장 차가운 곳 ${nm(i.coldest!.label)} ${i.coldest!.score}`;
+  /* [1075] 결론 한 줄에 뜨거운 곳·차가운 곳을 다 적으면 PC 에서도 두 줄로 접혔다(45자 · t-title) — 제목은 가장 뜨거운 곳 하나,
+     가장 차가운 곳은 근거 줄 맨 앞으로(사실은 그대로) */
+  const title = same ? `${head} ${nm(i.hottest.label)} ${i.hottest.score}` : `${head} 가장 뜨거운 곳 ${nm(i.hottest.label)} ${i.hottest.score}`;
   const chip: Verdict | null = i.avg !== null ? { label: `평균 ${i.avg}`, tone: temperatureTone(i.avg) } : null;
-  const sub = [`${n(i.count)}곳 기록`, i.compared > 0 ? `직전 주보다 오른 곳 ${n(i.rising)} · 내린 곳 ${n(i.falling)}` : null]
+  const sub = [
+    same ? null : `가장 차가운 곳 ${nm(i.coldest!.label)} ${i.coldest!.score}`,
+    `${n(i.count)}곳 기록`,
+    i.compared > 0 ? `직전 주보다 오른 곳 ${n(i.rising)} · 내린 곳 ${n(i.falling)}` : null,
+  ]
     .filter(Boolean)
     .join(" · ");
   return { title, chip, sub };

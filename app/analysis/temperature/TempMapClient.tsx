@@ -308,8 +308,10 @@ export function TempMapClient({
               <div className="min-w-0 max-md:hidden">
                 <div className="kpi h-full">
                   <span className="kpi-k">가장 뜨거운 곳</span>
-                  <span className="kpi-v truncate">
-                    {stats.hottest.current.regionLabel} {stats.hottest.current.score}
+                  {/* [1075] "경기 수원시 권선구 79" 가 칸에서 잘려 점수가 사라졌다(PC 실측) — 지역만 줄이고 점수는 늘 보인다 */}
+                  <span className="kpi-v flex items-baseline gap-1.5">
+                    <span className="min-w-0 truncate">{stats.hottest.current.regionLabel}</span>
+                    <span className="shrink-0">{stats.hottest.current.score}</span>
                   </span>
                   <span className="kpi-d truncate">{stats.hottest.current.headline}</span>
                 </div>
@@ -319,8 +321,10 @@ export function TempMapClient({
               <div className="min-w-0 max-md:hidden">
                 <div className="kpi h-full">
                   <span className="kpi-k">가장 차가운 곳</span>
-                  <span className="kpi-v truncate">
-                    {stats.coldest.current.regionLabel} {stats.coldest.current.score}
+                  {/* [1075] "경기 수원시 권선구 79" 가 칸에서 잘려 점수가 사라졌다(PC 실측) — 지역만 줄이고 점수는 늘 보인다 */}
+                  <span className="kpi-v flex items-baseline gap-1.5">
+                    <span className="min-w-0 truncate">{stats.coldest.current.regionLabel}</span>
+                    <span className="shrink-0">{stats.coldest.current.score}</span>
                   </span>
                   <span className="kpi-d truncate">{stats.coldest.current.headline}</span>
                 </div>
@@ -344,14 +348,16 @@ export function TempMapClient({
                     {stats.falling}
                   </span>
                 </span>
-                <span className="kpi-d">비교 가능한 {stats.compared}곳 중 오른 곳 · 내린 곳</span>
+                {/* [1075] "… 중 오른 곳 · 내린 곳" 은 칸에서 두 줄 — ▲·▼ 색은 사이트 표준(1029)이라 설명 없이 기준만 */}
+                <span className="kpi-d">비교 가능한 {stats.compared}곳 기준</span>
               </div>
             )}
             {mine && (
               <Link href={`${PATH}/${encodeURIComponent(mine.current.regionId)}`} className="kpi tile no-underline">
                 <span className="kpi-k">내 관심 지역</span>
-                <span className="kpi-v truncate">
-                  {mine.current.regionLabel} {mine.current.score}
+                <span className="kpi-v flex items-baseline gap-1.5">
+                  <span className="min-w-0 truncate">{mine.current.regionLabel}</span>
+                  <span className="shrink-0">{mine.current.score}</span>
                 </span>
                 <span className="kpi-d inline-flex items-center gap-1">
                   {mine.previous ? <DiffBadge diff={mine.current.score - mine.previous.score} /> : mine.current.headline}

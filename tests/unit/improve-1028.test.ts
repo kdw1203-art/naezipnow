@@ -121,7 +121,8 @@ test("[1028 · 18] 입주 물량 — 창은 달력 기준 '이번 달부터 24�
   assert.ok(src.includes("const totalHouseholds = monthlyShown.reduce("), "합계는 보이는 달만");
   assert.ok(/const peak =\s*monthlyShown\.length > 0\s*\? monthlyShown\.reduce/.test(src), "가장 많은 달도 보이는 달 안에서");
   assert.ok(!/monthly\.slice\(-24\)/.test(src) && !src.includes("{monthlyShown.length}개월"), "자료 있는 달 수를 '개월'로 적지 않는다");
-  assert.ok(src.includes('<AIPanel title="입주 물량 요약" ai={false}'), "규칙 계산 요약에는 AI 배지가 없다");
+  /* [1075] 남색 "입주 물량 요약" 판은 걷었다(머리 숫자와 같은 수) — AI 배지가 붙은 판이 생기지 않았는지만 본다 */
+  assert.ok(!src.includes("<AIPanel"), "규칙 계산 화면에 AI 판 없음");
 });
 
 /* ── 19. 단지 결과 요약 키 ─────────────────────────────────────────────── */

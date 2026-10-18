@@ -26,13 +26,9 @@ export default async function AgentPage() {
     <PageShell breadcrumb="AI 분석 › AI 에이전트">
       <div className="mb-4">
         <h1 className="rise-in t-title text-ink">내집나우 AI 에이전트</h1>
+        {/* [1030 · 2차] 해요체 → 낱말 · [1075] 설명 두 줄 → 사실 한 줄(AI 분석과의 비교 문장은 걷음 · 기준 범위는 남김) */}
         <p className="rise-in-1 mt-1 max-w-xl t-body text-text-2">
-          {/* [1030 · 2차] 해요체 → 낱말 */}
-          내 임장노트 · 국토교통부 실거래 <b>직접 조회</b> 후 답변 · 기억·추정 시세 없음 · 조회한 데이터 목록을 답변과 함께 표시
-        </p>
-        <p className="rise-in-1 mt-1.5 max-w-xl t-sub text-text-3">
-          AI 분석은 단지·노트 1건을 깊게, 에이전트는 여러 데이터를 검색·조합해
-          질문에 답합니다 · 현재 수도권 실거래 기준
+          내 임장노트 · 국토교통부 실거래 <b>직접 조회</b> 후 답변 · 기억·추정 시세 없음 · 조회한 데이터 목록 표시 · 수도권 실거래 기준
         </p>
       </div>
 

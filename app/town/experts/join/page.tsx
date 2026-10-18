@@ -96,13 +96,10 @@ export default function ExpertJoinPage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="max-w-[580px]">
             {/* [1012] 규칙 5·8 — 슬로건("지금 참여하세요") → 명사형 제목(t-title), 본문은 사실만 */}
-            <h1 className="mt-1 t-title text-balance text-ink">
-              전문가 참여 신청 · 공인중개사 · 세무사 · 감정평가사 · 대출상담사 · 건축사
-            </h1>
-            {/* [1015] "~하고, ~하고, ~해요" 문장 → 명사 나열(브리프 규칙 D) */}
-            <p className="mt-2 max-w-[52ch] t-body text-text-2">
-              글 상담 답변 · 견적 요청 제안 · 답변 완료 의뢰자 후기
-            </p>
+            {/* [1075] 두 줄 제목(제목 + 분야 다섯) → 제목 한 줄, 분야는 아래 사실 한 줄로. "글 상담 답변 · 견적 요청 제안 · 후기" 줄은
+                바로 아래 세 칸(심사비 · 인증 · 24시간)과 아래 "하는 일" 섹션이 말한다 — 걷음 */}
+            <h1 className="mt-1 t-title text-ink">전문가 참여 신청</h1>
+            <p className="mt-2 t-body text-text-2">공인중개사 · 세무사 · 감정평가사 · 대출상담사 · 건축사</p>
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 t-sub text-text-2">
               <span className="inline-flex items-center gap-1">
                 <Icon name="check" size={13} className="text-brand-red" /> 가입 심사비 {feeRow("전문가 가입 심사비")}

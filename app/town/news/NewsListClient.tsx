@@ -62,6 +62,7 @@ function RelatedFold({ related }: { related: NewsRow["related"] }) {
 
 /* 뉴스 행 — 규칙은 globals.css .news-row. 제목·요약은 상세(/town/news/[id]) 로,
    ↗ 는 원문(새 탭 · nofollow) 으로. 두 링크가 한 행에 있어도 중첩 앵커가 아니다. */
+/* [1075] lead(톱기사 확대)는 더 이상 쓰지 않는다 — 모든 행이 같은 꼴. 매개변수는 호환을 위해 남긴다 */
 function NewsRowView({ row, lead = false }: { row: NewsRow; lead?: boolean }) {
   /* 원문 매체의 og:image 가 죽었으면(핫링크 차단·삭제) 썸네일 칸을 **통째로** 뺀다 —
      빈 회색 상자가 남으면 "이미지 없는 기사에 <img> 를 그리지 말 것" 규칙을 어기는 셈이다. */
@@ -103,7 +104,8 @@ function NewsRowView({ row, lead = false }: { row: NewsRow; lead?: boolean }) {
           {row.city && <span>· {row.city}</span>}
         </div>
         <Link href={`/town/news/${row.id}`} className="news-row__title no-underline">
-          <span className={lead ? "line-clamp-3" : "line-clamp-2"}>{row.title}</span>
+          {/* [1075] 제목은 한 줄(넘치면 말줄임) — 두 줄 제목이 목록의 결을 끊었다. 전문은 기사 화면에 */}
+          <span className={lead ? "line-clamp-3" : "line-clamp-1"}>{row.title}</span>
         </Link>
         {row.summary && (
           <p className={`news-row__summary ${lead ? "line-clamp-2" : "line-clamp-1"}`}>{row.summary}</p>
@@ -326,11 +328,12 @@ export function NewsListClient({
           : `${allRows.length.toLocaleString("ko-KR")} / ${total.toLocaleString("ko-KR")}건 · 같은 사건은 한 건으로 묶음`}
       </p>
 
-      {/* 행 목록 — 첫 행은 톱기사(제목 크게 · 요약 두 줄) */}
+      {/* 행 목록 — [1075] 첫 행 톱기사(제목 t-title · 두 줄 접힘)를 걷었다. 소유자(2026-10-18): "이것도 두 줄이고 뉴스 이외의 요소가 복잡".
+          모든 행이 같은 꼴(제목 한 줄 굵게 · 요약 한 줄) — 네이버 뉴스 목록처럼 훑는다 */}
       {list.length > 0 && (
         <div className="news-list rise-in">
-          {list.map((row, i) => (
-            <NewsRowView key={row.id} row={row} lead={i === 0} />
+          {list.map((row) => (
+            <NewsRowView key={row.id} row={row} />
           ))}
         </div>
       )}

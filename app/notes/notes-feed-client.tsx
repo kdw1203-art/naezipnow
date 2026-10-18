@@ -295,7 +295,9 @@ function GridTile({
       )}
       {/* 하단 스크림 + 제목·지역 오버레이 — [1012 · 썸네일] 템플릿 썸네일(제목·사실·지역이 그림 안에 있음)이면
           겹쳐 적지 않는다(같은 제목이 두 번 보였다). 사진 커버·폴백 면에만 그린다. */}
-      {!n.coverTemplate && (
+      {/* [1075] 자료 조사 노트(lab)의 커버도 제목·사실이 그림 안에 있는 카드다 — 폰 3열 격자에서 그 위에 제목·지역을 또 겹쳐 적어
+          글자가 글자 위에 포개졌다(실측 390px: "문정시영" 이 "리모델링보다 가격대였다" 위에). 템플릿 커버와 같은 규칙 */}
+      {!n.coverTemplate && !n.lab && (
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/78 via-black/25 to-transparent px-2 pb-2 pt-7 md:px-3 md:pb-3">
           <p className="line-clamp-2 t-sub font-bold text-white drop-shadow-sm">
             {n.title}

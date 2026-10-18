@@ -109,13 +109,16 @@ test("[1026] 시장 온도 — 결론 '이번 주 가장 뜨거운 곳 경기 �
     compared: 69,
   };
   const c = temperatureConclusion(base)!;
-  assert.equal(c.title, "이번 주 가장 뜨거운 곳 경기 화성시 병점구 95 · 가장 차가운 곳 경기 과천시 16");
+  /* [1075] 제목은 가장 뜨거운 곳 하나(두 줄 접힘 방지) · 가장 차가운 곳은 근거 줄 맨 앞 */
+  assert.equal(c.title, "이번 주 가장 뜨거운 곳 경기 화성시 병점구 95");
   assert.deepEqual(c.chip, { label: "평균 53.1", tone: "neutral" });
-  assert.equal(c.sub, "69곳 기록 · 직전 주보다 오른 곳 0 · 내린 곳 0");
+  assert.equal(c.sub, "가장 차가운 곳 경기 과천시 16 · 69곳 기록 · 직전 주보다 오른 곳 0 · 내린 곳 0");
   const seoul = temperatureConclusion({ ...base, sido: "서울", count: 25, avg: 52.9, hottest: { label: "서울 성동구", score: 70 }, coldest: { label: "서울 강남구", score: 37 } })!;
-  assert.equal(seoul.title, "이번 주 서울 가장 뜨거운 곳 성동구 70 · 가장 차가운 곳 강남구 37");
+  assert.equal(seoul.title, "이번 주 서울 가장 뜨거운 곳 성동구 70");
+  assert.match(seoul.sub ?? "", /^가장 차가운 곳 강남구 37 · /);
   assert.equal(temperatureConclusion({ ...base, count: 1, coldest: base.hottest })!.title, "이번 주 경기 화성시 병점구 95", "한 곳뿐이면 그 한 곳만");
-  assert.equal(temperatureConclusion({ ...base, compared: 0 })!.sub, "69곳 기록", "비교할 직전 주가 없으면 오른·내린 곳을 적지 않는다");
+  assert.equal(temperatureConclusion({ ...base, compared: 0 })!.sub, "가장 차가운 곳 경기 과천시 16 · 69곳 기록", "비교할 직전 주가 없으면 오른·내린 곳을 적지 않는다");
+  assert.equal(temperatureConclusion({ ...base, count: 1, coldest: base.hottest, compared: 0 })!.sub, "1곳 기록", "한 곳뿐이면 차가운 곳 줄도 없다");
   assert.equal(temperatureConclusion({ ...base, avg: 70.2 })!.chip?.tone, "caution");
   assert.equal(temperatureConclusion({ ...base, hottest: null }), null);
   const nation = temperatureSteps("이번 주", null, 69, 3);

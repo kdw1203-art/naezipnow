@@ -153,7 +153,8 @@ export default async function RedevelopmentPage() {
         stats={[{ label: "지도에 실린 구역", value: projects.length, unit: "곳" }]}
       />
       <TownCategoryNav stick />
-      <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-6 max-md:gap-3">
+      {/* [1075 · 한 틀] 형제(공매·입주·청약)는 칸 전폭인데 이 화면만 1080px 가운데 — 같은 폭으로 */}
+      <div className="flex w-full flex-col gap-6 max-md:gap-3">
         {/* ===== [1063 · 표·그래프] 요약 판 — 숫자 · 단계 막대 · 주 액션 =====
             소유자 지시 "표 및 그래프, 액션 적극 활용 · 글자크기 간결화"(10-12).
             첫 화면이 지도 → 조서 표 → 7단계 설명 벽으로 이어져, "지금 몇 구역이 어느 단계에 있나"를

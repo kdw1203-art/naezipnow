@@ -53,7 +53,7 @@ export default async function SeoulPlanIndexPage() {
       />
       <PageHead
         icon="map"
-        tone="bg-success-soft text-success"
+        tone="bg-primary-soft text-primary"
         title="서울 자치구별 도시계획 결정 조서"
         sub="서울시 정비사업 · 도시개발 · 지구단위계획 결정 조서 · 자치구 25곳"
         className="mb-4 max-md:mb-3"

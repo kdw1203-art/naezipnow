@@ -6,6 +6,7 @@ import Link from "next/link";
 import { listPublicNotes, type InspectionNote } from "@/lib/inspection/store-db";
 import { maskNoteAuthor } from "@/app/town/shared";
 import { noteCoverUrl } from "@/lib/notes/cover/resolve";
+import { isLabAuthor } from "@/lib/notes/author-label";
 import { CoverImage } from "@/app/components/CoverImage";
 import { Icon } from "@/app/components/Icon";
 import { PageHead } from "@/app/components/PageHead";
@@ -104,16 +105,18 @@ export default async function NotesMarketPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        /* [1075] 연구소 커버는 1080×1350(4:5) — 넓은 칸(1200/630)에 넣으면 아래 글자가 잘렸다 → 커버 비율대로 · PC 3열 */
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {qualified.map(({ note, textLen }) => {
             const verified = Boolean(note.metadata?.visitVerified);
+            const lab = isLabAuthor(note.authorLabel);
             return (
               <div
                 key={note.id}
                 className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface"
               >
                 {/* [1030 · 2차] 고정 150px 높이가 넓은 커버(1200×630)의 아래를 잘라 제목 글자가 끊겼다 → 커버 비율 그대로 */}
-                <div className="relative aspect-[1200/630] w-full overflow-hidden bg-bg">
+                <div className={`relative w-full overflow-hidden bg-bg ${lab ? "aspect-[4/5]" : "aspect-[1200/630]"}`}>
                   {/* [1015 · 규칙 H] 커버 주소는 lib/notes/cover/resolve 한 곳 — 이 자리는 넓은 커버(150px 가로) → 통합자가 wide 판으로 바꾼다(보고서) */}
                   <CoverImage
                     src={noteCoverUrl(note, "wide")}
@@ -128,7 +131,7 @@ export default async function NotesMarketPage() {
                   />
                   {verified && (
                     <span className="absolute left-2.5 top-2.5 rounded-full bg-success px-2 py-0.5 t-caption font-bold text-surface">
-                      ✓ 직접 방문 인증
+                      직접 방문 인증
                     </span>
                   )}
                 </div>

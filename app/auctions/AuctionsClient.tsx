@@ -22,7 +22,6 @@
 import Link from "next/link";
 import { HScroll } from "@/app/components/HScroll";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { AIPanel } from "@/app/components/AIPanel";
 import { Explain } from "@/app/components/explain/Explain";
 import { MiniBar } from "@/app/components/compact/MiniBar";
 import { Fineprint } from "@/app/components/Fineprint";
@@ -63,6 +62,14 @@ function fmtKrw(won: number | null): string {
 function fmtDt(v: string | null): string {
   if (!v || v.length < 8) return "—";
   return `${v.slice(0, 4)}.${v.slice(4, 6)}.${v.slice(6, 8)}`;
+}
+/* [1075] 처음~끝 날짜 — 같은 해면 뒤의 해를, 같은 달이면 달까지 줄인다(2026.10.19~21 · 2026.10.19~11.02 · 2026.12.30~2027.01.05) */
+function fmtDtRange(a: string, b: string): string {
+  if (a.length < 8 || b.length < 8) return `${fmtDt(a)}~${fmtDt(b)}`;
+  if (a === b) return fmtDt(a);
+  if (a.slice(0, 6) === b.slice(0, 6)) return `${fmtDt(a)}~${b.slice(6, 8)}`;
+  if (a.slice(0, 4) === b.slice(0, 4)) return `${fmtDt(a)}~${b.slice(4, 6)}.${b.slice(6, 8)}`;
+  return `${fmtDt(a)}~${fmtDt(b)}`;
 }
 function parseDigitsDate(v: string | null): Date | null {
   if (!v) return null;
@@ -388,10 +395,9 @@ export function AuctionsClient({
       .map((c) => (c.targetDate ?? "").replace(/\D/g, ""))
       .filter((d) => d.length >= 8)
       .sort();
+    /* [1075] "2026.10.19~2026.10.21" 은 PC 넉 칸에서도 두 줄로 접혔다(실측) — 같은 해·달은 한 번만 적는다(fmtDtRange) */
     const endRange =
-      endDigits.length > 0
-        ? `${fmtDt(endDigits[0])}~${fmtDt(endDigits[endDigits.length - 1])}`
-        : null;
+      endDigits.length > 0 ? fmtDtRange(endDigits[0], endDigits[endDigits.length - 1]) : null;
     const { monthLabel, cells } = buildCalendar(cards.map((c) => c.targetDate), now);
     return { cards, pastCards, dist, guDist, imminent, ongoing, urgentCount, endRange, monthLabel, cells };
   }, [items, nowMs]);
@@ -774,39 +780,8 @@ export function AuctionsClient({
 
           {/* 우측 사이드 */}
           <aside className="flex flex-col gap-3.5 max-md:gap-3">
-            <div className="rise-in-2">
-              {/* [1028] 건수·최다 용도를 센 값이다(AI 결과 아님) — "AI" 배지와 "인사이트"를 뗐다 */}
-              {/* [1063] 채움 파랑은 화면당 하나 — 같은 링크를 위 머리 줄이 채움 파랑으로 들고 있으므로
-                  여기서는 패널 기본 액션 꼴(cta)로 둔다(링크·문구는 그대로). */}
-              <AIPanel
-                title="공매 요약"
-                ai={false}
-                className="rounded-3xl"
-                cta={{ href: "/my/watchlist?tab=searches", label: "저장 검색으로 알림 받기" }}
-              >
-                <div className="mb-1.5 flex justify-between rounded-lg bg-[rgba(255,255,255,.07)] px-3 py-2 text-xs">
-                  <span className="text-ai-muted">입찰 중·예정</span>
-                  <span className="font-bold text-white">
-                    {activeTotal.toLocaleString()}건
-                  </span>
-                </div>
-                <div className="mb-2 flex justify-between rounded-lg bg-[rgba(255,255,255,.07)] px-3 py-2 text-xs">
-                  <span className="text-ai-muted">현재 목록 표시</span>
-                  <span className="font-bold text-ai-accent">
-                    {cards.length.toLocaleString()}건
-                  </span>
-                </div>
-                {/* [1015] 문장 대신 사실 한 줄(브리프 규칙 D) — 권리·명도 원문 확인 원칙은 위 ⓘ와 아래 각주에 있다 */}
-                {dist.length > 0 ? (
-                  <>
-                    현재 목록 최다 용도 <b className="text-ai-accent">{dist[0].label}</b> {dist[0].count}건.
-                  </>
-                ) : (
-                  <>현재 조건에 표시할 물건 없음</>
-                )}
-              </AIPanel>
-            </div>
-
+            {/* [1075] 어두운 남색 "공매 요약" 판을 걷었다 — 입찰 중·예정 건수 · 표시 건수는 본문 머리 숫자 칸에, 최다 용도는 바로 아래
+                용도 막대에, "저장 검색으로 알림 받기"는 머리 줄 단추에 이미 있다(같은 사실 두 곳 금지 · 한 가지 테마). */}
             {/* 지역(자치구)별 요약 — 버튼이 gu 필터를 세팅한다 */}
             <div className="rise-in-3 card flex flex-col gap-2 p-[18px]">
               <div className="flex items-center justify-between gap-2 t-body font-bold text-ink">

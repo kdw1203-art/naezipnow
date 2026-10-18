@@ -131,7 +131,7 @@ export default async function SeoulGuPlanPage({ params }: { params: Promise<Para
 
       <PageHead
         icon="map"
-        tone="bg-success-soft text-success"
+        tone="bg-primary-soft text-primary"
         title={`${gu.name} 도시계획 결정 조서`}
         sub="서울시 정비사업 · 도시개발 · 지구단위계획 결정 조서 · 자치구 단위"
         className="mb-4 max-md:mb-3"
